@@ -25,7 +25,7 @@ env -u AOS_DAEMON aos-exec --stack /absolute/image /absolute/root_definition
 aos-daemon-ctl --daemon /absolute/image ping
 ```
 
-根回信不代表所有子服務都 ready；需要 llm daemon 可呼叫，就對它自己的 stack ping。沒有信箱的 loop 可讀它自己的 `state.json`，等 `counter_runs >= 1`；這只保證身體已跑完一次，不保證成功。父只看子「活著、叫得動」的公開訊號，不讀子的信箱、子項表或業務內容。
+根回信不代表所有子服務都 ready；需要 llm daemon 可呼叫，就對它自己的 stack ping。沒有信箱的 loop，起它時給了 `--enable-counters` 就可讀它 state 窗旁的 `counter_runs.txt`，等數字 >= 1；這只保證第一次已經開跑（開跑時就寫），不保證身體跑完、更不保證成功。父只看子「活著、叫得動」的公開訊號，不讀子的信箱、子項表或業務內容。
 
 </details>
 

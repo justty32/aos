@@ -43,6 +43,8 @@
 **/aos-mcp-logs.jsonl
 **/mailbox_warning.txt
 **/transcripts/
+# 計數器（--enable-counters 才寫的 counter_*.txt）只給人看，照 #20-1 不進 image（11-09 clock-and-hot-writes）
+**/counter_*.txt
 
 # Public observation ledgers and retained child ledgers
 **/observed.jsonl

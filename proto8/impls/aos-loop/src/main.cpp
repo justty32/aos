@@ -1,6 +1,6 @@
 // main.cpp：aos-loop 命令列——block_signals、解命令列、讀設定、Loop::serve（公開 API 見 aos/loop.hpp）。
 //
-//     aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] loop.json [-- 參數...]
+//     aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] [--enable-counters] loop.json [-- 參數...]
 //
 // 唯一的位置參數就是設定檔（必給、只能一個；可寫 `檔#/指標`）；旗標放前面、規則同 aos-exec；起跑時 旗標 ＞ loop.json ＞ 預設
 // （10-21 傍晚 ideas § 9）。exec＝字串或 [目標, 參數...]，每次 `aos-exec -- 目標 參數...`；max 沒寫＝不限。
@@ -28,6 +28,7 @@ flags:
   --ctl FILE            control window (JSON commands: pause, resume, stop, ...)
   --state FILE          state window (aos-loop writes its phase there)
   --enable-logs         print one JSON line per run to stdout
+  --enable-counters     write counter_runs.txt (runs so far) next to the state window
   -h, --help            show this help
 
 exit codes: 0 done; 1 own error ("aos-loop: error: CODE ..." on stderr);

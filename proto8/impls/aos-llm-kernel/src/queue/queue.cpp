@@ -1,4 +1,4 @@
-// queue.cpp：【queue】queue.json、後端狀態驗型與黏著排隊（說明見 queue.hpp）。
+// queue.cpp：【queue】queue.json 有變才寫、後端狀態驗型與黏著排隊（說明見 queue.hpp）。
 #include "queue/queue.hpp"
 
 #include "aos/util/files.hpp"
@@ -21,17 +21,17 @@ Queue read_queue(const std::string& stack) {
         }
         throw Error{code::QueueBad, "cannot read " + path + ": " + std::strerror(err)};
     }
-    std::optional<Json> doc = aos::read_json(path);
-    if (!doc || !doc->is_object() || !aos::is_count(doc->value("counter_runs", Json())) ||
-        (doc->contains("seen_at_ms") && !(*doc)["seen_at_ms"].is_object()) ||
-        (doc->contains("seen_at_ticks") && !(*doc)["seen_at_ticks"].is_object())) {
-        throw Error{code::QueueBad, path + " must contain counter_runs (non-negative integer) and optional seen_at_ms/seen_at_ticks objects (delete it to start over)"};
+    Json doc = Json::parse(*text, nullptr, false);
+    if (!doc.is_object() ||
+        (doc.contains("seen_at_ms") && !doc["seen_at_ms"].is_object()) ||
+        (doc.contains("seen_at_ticks") && !doc["seen_at_ticks"].is_object())) {
+        throw Error{code::QueueBad, path + " must be an object with optional seen_at_ms/seen_at_ticks objects (delete it to start over)"};
     }
-    q.runs = (*doc)["counter_runs"].get<long long>();
-    q.seen_at_ms = doc->value("seen_at_ms", Json::object());
-    q.seen_at_ticks = doc->value("seen_at_ticks", Json::object());
-    if (doc->contains("backends")) {
-        q.backends = (*doc)["backends"];
+    q.original_doc = doc;
+    q.seen_at_ms = doc.value("seen_at_ms", Json::object());
+    q.seen_at_ticks = doc.value("seen_at_ticks", Json::object());
+    if (doc.contains("backends")) {
+        q.backends = doc["backends"];
         if (!q.backends.is_object()) {
             throw Error{code::QueueBad, path + " backends must be an object"};
         }
@@ -49,13 +49,15 @@ Queue read_queue(const std::string& stack) {
 
 void write_queue(const std::string& stack, const Queue& q) {
     Json doc = Json::object();
-    doc["counter_runs"] = q.runs;
     doc["seen_at_ms"] = q.seen_at_ms;
     if (q.on_tick) {
         doc["seen_at_ticks"] = q.seen_at_ticks;
     }
     if (!q.backends.empty()) {
         doc["backends"] = q.backends;
+    }
+    if (doc == q.original_doc) {
+        return;
     }
     std::optional<std::string> err = aos::write_json(aos::join(stack, "queue.json"), doc);
     if (err) {

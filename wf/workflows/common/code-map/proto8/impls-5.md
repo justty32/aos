@@ -10,12 +10,12 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`CMakeLists.txt`](../../../../../proto8/impls/aos-loop/CMakeLists.txt) | `aos-loop loop.json`——一次次跑 exec，看結束碼決定下一步。 |
-| [`include/aos/loop.hpp`](../../../../../proto8/impls/aos-loop/include/aos/loop.hpp) | aos-loop 的公開介面——跑「一次」、反覆跑的骨架與 ctl／state 公開格式。 |
+| [`include/aos/loop.hpp`](../../../../../proto8/impls/aos-loop/include/aos/loop.hpp) | aos-loop 的公開介面——跑「一次」、反覆跑的骨架、ctl／state 公開格式與選開計數檔。 |
 | [`src/common/common.hpp`](../../../../../proto8/impls/aos-loop/src/common/common.hpp) | aos-loop 好幾個元素都用到的：型別別名。 |
 | [`src/engine/config.cpp`](../../../../../proto8/impls/aos-loop/src/engine/config.cpp) | Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、解指示詞（resolve_keys，10-23 晚）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）； |
 | [`src/engine/engine.hpp`](../../../../../proto8/impls/aos-loop/src/engine/engine.hpp) | 反覆跑的程式的骨架 Loop（公開介面在 aos/loop.hpp）。 |
 | [`src/engine/loop.cpp`](../../../../../proto8/impls/aos-loop/src/engine/loop.cpp) | Loop 每次怎麼走（說明見 aos/loop.hpp）。 |
-| [`src/engine/window.cpp`](../../../../../proto8/impls/aos-loop/src/engine/window.cpp) | ctl／state 兩扇窗（NORMS N-06～N-09、N-17、N-32、N-33）。 |
+| [`src/engine/window.cpp`](../../../../../proto8/impls/aos-loop/src/engine/window.cpp) | ctl／state 兩扇窗與選開的 counter_runs.txt（NORMS N-06～N-09、N-17、N-32、N-33）。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-loop/src/main.cpp) | aos-loop 命令列——block_signals、解命令列、讀設定、Loop::serve（公開 API 見 aos/loop.hpp）。 |
 | [`src/run/folder.cpp`](../../../../../proto8/impls/aos-loop/src/run/folder.cpp) | run_folder——`aos-exec -- 目標 參數...`，在 fork 出來的子行程裡呼叫 aos-exec 的 run_cli。 |
 | [`src/run/inline.cpp`](../../../../../proto8/impls/aos-loop/src/run/inline.cpp) | run_inline——exec 是物件（內嵌單子）時，行程內跑它（10-24；說明見 aos/loop.hpp 的 run_once）。 |

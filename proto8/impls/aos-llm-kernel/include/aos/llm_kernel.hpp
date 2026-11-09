@@ -50,6 +50,7 @@ inline constexpr const char* DaemonMissing = "DaemonMissing";   // kernel：沒�
 inline constexpr const char* ReplyBad = "ReplyBad";             // 回信：endpoint 函數的 stdout 讀不懂；aos-llm：回信讀不懂
 inline constexpr const char* LockFailed = "LockFailed";         // kernel：信箱被另一個 kernel 鎖著
 inline constexpr const char* QueueBad = "QueueBad";             // kernel：$AOS_STACK/queue.json 在但讀不懂
+inline constexpr const char* CounterBad = "CounterBad";         // kernel：$AOS_STACK/counter_kernel_runs.txt 在但讀不懂或超出可計數範圍
 inline constexpr const char* UsedBad = "UsedBad";               // kernel：$AOS_STACK/used.json（用量帳）在但讀不懂
 inline constexpr const char* BudgetMissing = "BudgetMissing";   // 回信：這一窗的額度（kernel.json 的 budget）用完了，沒跑（10-15 稿叫 BudgetExhausted，照 C-54 四種結尾改）
 // 11-04 think-as-function（02 § 1～§ 3）：

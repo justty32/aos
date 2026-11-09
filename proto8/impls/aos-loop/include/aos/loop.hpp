@@ -1,4 +1,4 @@
-// aos/loop.hpp：aos-loop 的公開介面——跑「一次」、反覆跑的骨架與 ctl／state 公開格式。
+// aos/loop.hpp：aos-loop 的公開介面——跑「一次」、反覆跑的骨架、ctl／state 公開格式與選開計數檔。
 //
 //   block_signals   轉交 aos-util，擋住 SIGINT／SIGTERM／SIGHUP（整支程式的壽命；要在第一次之前、開任何執行緒之前呼叫）
 //   take_signal     轉交 aos-util；兩次之間：有排著的那三個訊號之一就取出來回它（0＝沒有）
@@ -8,12 +8,12 @@
 //   place_inline    內嵌單子在哪：設定檔（AOS_CF）、在檔裡的指標（AOS_CO）、單子裡相對 $ref 的起點
 //   config_file     設定檔的實際路徑（解開捷徑；同 aos-exec 的 AOS_CF）——設定檔裡相對 $ref 的起點與內嵌單子的 AOS_CF／AOS_CD 都從它算
 //   run_once        跑一次：目標＝子行程裡 `aos-exec -- 目標 參數...`（aos-exec 的 run_cli）；單子＝行程內 aos-exec 的 run_inst
-//   loop_cli        命令列 `程式 [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] 設定檔 [-- 參數...]`（aos-loop、aos-daemon 共用）
+//   loop_cli        命令列 `程式 [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] [--enable-counters] 設定檔 [-- 參數...]`（aos-loop、aos-daemon 共用）
 //   add_args        `-- 參數...` 接到 exec 後面（11-02 晚）
 //   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；10-21 傍晚）：
 //                   讀設定（旗標 ＞ 設定檔 ＞ 預設：exec／max／interval_ms／ctl／state）、每次讀 ctl 窗（11-03 起一道指令、新的才照做）→ tend() → 跑一次 → 寫 state 窗（＋write_more；11-02 起有變才寫）、
 //                   --enable-logs 時每跑完一次在 stdout 印一行 log（11-02；11-02 晚改預設不印）
-//                   新 ctl 處理完（含拒用壞指令）、身體跑完一次會更新 responded_at；已套用過的第一道、檔不在、睡著不更新
+//                   responded_at 只在處理新 ctl（含拒用壞指令）、收到信、起或收子項時更新；已套用過的第一道、檔不在不算
 //   write_window    透過 aos-util write_text 寫窗：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
 //   proc_fields     state 裡「這支程式是誰」的欄位 {pid, started_at_ticks, boot_id}（11-02 原 heartbeat：心跳拿掉、recorded_at 收掉）
 //   resolve_keys    轉交 aos-directive；設定檔、ctl 的指示詞（10-23 晚：aos 讀的 JSON 都解）：整份先換一層，再把自己讀的那幾格整個解，其他 key 不碰
@@ -125,8 +125,8 @@ std::string pointer_escape(const std::string& key);
 Run run_once(const Target& t);
 
 // 命令列（10-21 傍晚 ideas § 9；規則同 aos-exec，aos-util 的 parse_cli）：唯一的位置參數＝設定檔（必給、只能一個；
-// 可寫 `檔#/指標`）。旗標 --max、--interval-ms、--ctl、--state（帶值）、--enable-logs（不帶值的開關，11-02 晚：給了＝opts["enable_logs"] 是 "1"，印 log；
-// 原 --no-log、預設印，使用者「應該要改成默認不印」）。設定檔之後可接 `-- 參數...`（11-02 晚，使用者「aos-XXX ... ... -- ...」）：回的 rest＝[設定檔, 參數...]
+// 可寫 `檔#/指標`）。旗標 --max、--interval-ms、--ctl、--state 帶值；--enable-logs、--enable-counters 是不帶值的開關，
+// 給了＝對應 opts key 是 "1"；不是設定檔的 key。設定檔之後可接 `-- 參數...`：回的 rest＝[設定檔, 參數...]
 // （那個 `--` 剝掉）；設定檔之後接的不是 `--`＝ArgumentsBad。不認得的旗標丟 FlagUnknown；旗標缺值、沒給設定檔丟 ArgumentsBad（msg＝「原因 (usage: <prog> [...] CONFIG.json [-- ARGS...])」，R5）。
 // argv 不含程式名；回旗標（opts）與設定檔（rest[0]）。help＝`--help` 印的說明（英文，parse_cli 印到 stdout、退 0）。
 // cfg_name：錯誤行 usage 裡設定檔的寫法（跟 help 一致；aos-daemon 給 "daemon.json"）。
@@ -171,6 +171,7 @@ struct Defaults {
 //   interval_ms   一次結束到下一次開始至少隔幾毫秒（非負整數；沒寫＝Defaults::interval_ms）
 //   ctl, state    兩扇窗的檔名，在 $AOS_STACK 底下（11-04 起沒寫＝ctl.json／state.json、寫 null＝不開；要開卻沒設 AOS_STACK＝StackMissing）
 // log 不是 key（11-02 使用者「把log輸出到stdout」；11-02 晚「應該要改成默認不印」）：預設不印，命令列 --enable-logs 才印到 stdout；不寫任何 log 檔。
+// --enable-counters 也是命令列開關：開了 state 窗才每輪寫同資料夾的 counter_runs.txt（本行程起來後跑過幾次）；預設不碰檔。
 // ctl、state 寫 null＝不開（11-04 前沒寫也是不開，現在沒寫＝預設名）。
 // 其他 key 忽略（body、_entry…）。設定壞丟 Error（CfgMissing、CfgBad、StackMissing；指示詞解不開 DirectiveBad）。
 // 指示詞（10-23 晚）：設定檔整份先換一層，上面五格整個解（resolve_keys，起點＝設定檔的資料夾；exec 走 resolve_exec，單子裡面不解）；ctl 整份先換一層，
@@ -183,11 +184,11 @@ struct Defaults {
 // stop 過就結束（0）、跑滿就結束（0）→ 暫停中或還沒到時間就睡一下（最多 1 秒，收到訊號就醒）回頭再看 →
 // 跑一次：0＝下一次、10＝結束（0）、其他非 0＝stderr 一行、以那個碼結束；跑的期間收到訊號＝收完以 128＋N 結束。
 // 沒有身體（exec 沒寫，daemon 純監工）：一輪＝讀 ctl → tend → 算一次 → 寫一份 waiting → 睡到下一次，一輪只讀一次 ctl、
-// 只 tend 一次、最多寫一次 state、不寫 running（那一刻沒東西在跑）；11-02 起 counter_runs 不算變動，所以睡著的 daemon 窗不動（10-23 壓測）。
-// state 只在兩次之間寫，而且有變才寫（11-02）：每次要寫先組好一份（不含 updated_at），跟上一份寫出去的比，counter_runs 不算
-// （比的時候排除，寫出去照帶當下的快照），phase 在 running／waiting 之間換也不算（11-02 晚使用者「running/waiting確實不該算變動」；
+// 只 tend 一次、最多寫一次 state、不寫 running（那一刻沒東西在跑）；睡著的 daemon 窗不動（10-23 壓測）。
+// state 只在兩次之間寫，而且有變才寫（11-02）：每次要寫先組好一份（不含 updated_at），跟上一份寫出去的比，
+// phase 在 running／waiting 之間換不算變動（11-02 晚使用者「running/waiting確實不該算變動」；
 // 寫出去的照帶當下的 phase）；一樣就不碰檔，不一樣才加 updated_at 寫。啟動後第一份、結束那份（帶 code）一定寫。
-// state 的 proc_fields 後帶 responded_at（起來是 null、有反應才更新），算進有變才寫的比較；子類別也能呼叫 responded() 記自己的反應。
+// state 的 proc_fields 後帶 responded_at（起來是 null），只在處理新 ctl、收到信、起或收子項時更新，算進有變才寫的比較。
 // log（下面）預設不印，--enable-logs 才印。
 // 心跳拿掉（11-02）：睡著時窗不動，判活著看 pid＋started_at_ticks＋boot_id。每次要寫 state 都接著呼叫 write_more（子類別自己的狀態窗，
 // 有沒有變由它自己比）。
@@ -197,7 +198,7 @@ struct Defaults {
 // $AOS_STACK 不在＝state 寫不了＝WriteFailed、退 1，不自己建（建 stack 只在 aos-exec 做，N-59 第 1 件）。
 class Loop {
 public:
-    // opts＝命令列旗標（loop_cli 解出來的：max、interval_ms、ctl、state、enable_logs），spec＝設定檔（`檔` 或 `檔#/指標`），
+    // opts＝命令列旗標（loop_cli 解出來的：max、interval_ms、ctl、state、enable_logs、enable_counters），spec＝設定檔（`檔` 或 `檔#/指標`），
     // args＝`--` 後面的附加參數（add_args 接到 exec 後面；沒有 exec 卻給了＝ArgumentsBad）。
     Loop(const std::map<std::string, std::string>& opts, const std::string& spec, const Defaults& d,
          const std::vector<std::string>& args = {});
@@ -225,7 +226,7 @@ protected:
 
     int fail_line(const std::string& code, const std::string& msg);   // 錯誤行「程式名: error: 代號 原因」（aos::fail；回 1）
     void warn(const std::string& msg);                                // 提醒行「程式名: warning: 句子」（不退出；11-05 stdio-unify R1）
-    void responded();                                               // 記下這次有反應的 UTC 毫秒時間
+    void responded();                                               // 處理新 ctl、收到信、起或收子項時記下 UTC 毫秒時間
 
     // 要寫一份 state（沒開 state 窗就不寫；跟上一份一樣也不寫，見上）再呼叫 write_more：phase＝這份的階段，code＝結束碼
     // （null＝還沒結束；非 null＝一定寫）。寫不了丟 StateError（WriteFailed）。
@@ -258,10 +259,12 @@ private:
     void read_ctl();              // 讀 ctl：新的指令才照做（改 paused_、stopping_、max_、interval_ms_、ctl_seq_）
     void read_old_state();       // 起來時：接回舊 state.json 的 paused 與有效 ctl_seq（第一道去重用）
     void write_main(const std::string& phase, const Json& code, const Json& me);   // write_state 的 state 窗那份（有變才寫）
+    void write_counter();         // 開旗標與 state 窗才寫 counter_runs.txt；失敗丟 StateError
     int signal_got();             // 第一個收到的訊號（記住；0＝沒有）
     void nap(double secs);        // 睡 secs 秒（最多 1 秒），收到訊號就提早醒
 
     long long runs_ = 0;
+    bool counters_ = false;       // --enable-counters 才寫 counter_runs.txt
     std::optional<long long> max_base_;   // 設定檔（旗標）的 max：ctl 寫 null 回這個
     long long interval_base_ = 0;         // 設定檔（旗標）的 interval_ms：ctl 寫 null 回這個
     bool ctl_seen_ = false;       // 讀過第一次 ctl 沒（第一次比舊 state 的 ctl_seq 去重）
@@ -270,7 +273,7 @@ private:
     Json ctl_warning_;           // null 或字串
     int got_ = 0;
     bool wrote_ = false;          // 寫過 state 窗沒（啟動後第一份一定寫）
-    Json last_main_;              // 上一份寫出去的 state（不含 counter_runs、updated_at；比有沒有變用）
+    Json last_main_;              // 上一份寫出去的 state（不含 updated_at；比有沒有變用）
 };
 
 }  // namespace aos::loop

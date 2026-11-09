@@ -54,7 +54,7 @@ endpoint 函數的契約（stdin `{"endpoint", "request", "priority"}` → stdou
 
 ### 一次
 
-1. 建信箱三格；找 daemon（沒 `AOS_DAEMON`＝`DaemonMissing`、沒 ctl 信箱＝`MailboxMissing`，都退 1）；flock；`queue.json` 的 `counter_runs`＋1；讀 `used.json`（換窗了先歸零）、讀 daemon 的表；寫窗 `endpoints.json`（有變才寫）。
+1. 建信箱三格；找 daemon（沒 `AOS_DAEMON`＝`DaemonMissing`、沒 ctl 信箱＝`MailboxMissing`，都退 1）；flock；給了 `--enable-counters` 才把 `counter_kernel_runs.txt`＋1（壞＝`CounterBad`）；讀 `used.json`（換窗了先歸零）、讀 daemon 的表；寫窗 `endpoints.json`（有變才寫）。
 2. **收成品**：`cur/` 裡有 `proc.json` 的照上面「跑一封」第 4 步看，收尾的寄回信、刪掉，還在飛的記一格。沒有 `proc.json` 的：有讀得懂的 `reply.json`＝上一次寄到一半，照寄；都沒有＝認領了還沒掛就停了，改名回 `new/` 重排。
 3. **收拾**（只看有 `sender.flock` 的信）：`tmp/` 裡寄信的人不在了的刪掉；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑）。沒有 `sender.flock` 的一律不碰。
 4. **看 `new/`**：`LetterBad`、`RequestBad`、`EndpointMissing`、`EndpointUnknown`、那組壞了（`DirectiveBad`、`CfgBad`）、deadline 已過（`DeadlineBad`）＝直接回信（都不佔格、不跑）。
@@ -69,7 +69,7 @@ endpoint 函數的契約（stdin `{"endpoint", "request", "priority"}` → stdou
    - **寄件人的額度**（`budget.senders` 列了這封的信封 `sender`）到頂（`senders.<寄件人>.counter_calls`＋這人在飛＋這次新掛的 ≥ `max_calls`、或 `counter_tokens` ≥ `max_tokens`）＝同包的做法：`refuse` 回 `BudgetMissing`（`sender /home/me/ws_a: max_calls 1 reached in this window (day); not run`）；`wait` 時那封留在 `new/` 等、**別人照跑**。
    - **包的格**（那組的 `slots`）：這包在飛＋這次新掛的已到它的 `slots`＝**跳過、看下一封**（不是停下），讓別包的信補位。
    - 不然照「跑一封」1～3 步掛上去。
-7. 寫 `queue.json`；結束碼 0。**不等問腦跑完**：一次只花看信、寄信的時間。
+7. 寫 `queue.json`（內容跟原來一樣就不寫）；結束碼 0。**不等問腦跑完**：一次只花看信、寄信的時間。
 
 ### 訊號
 

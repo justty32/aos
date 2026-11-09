@@ -1,4 +1,4 @@
-// window.cpp：【engine】ctl／state 兩扇窗（NORMS N-06～N-09、N-17、N-32、N-33）。
+// window.cpp：【engine】ctl／state 兩扇窗與選開的 counter_runs.txt（NORMS N-06～N-09、N-17、N-32、N-33）。
 //
 //   read_ctl      ctl＝一道指令（11-03，thinking 2026-11-03-ctl-commands）：認 cmd（"pause"／"resume"／"stop"）、max、interval_ms（非負整數或 null）、
 //                 seq（非負整數），加上子類別的 check_ctl；其他 key 忽略。指示詞先解（resolve_keys；10-23 晚）。
@@ -8,12 +8,13 @@
 //                 照做了一道好的清回 null（check_ctl 填了 ctl_note_＝那一句）。檔不在＝沒有新指令、維持原狀（之後再寫的一律算新的）。讀的人不刪不改 ctl
 //                 新的好壞指令處理完都算有反應（responded）；已套用過的第一道、檔不在不算
 //   read_old_state  起來時：開了 state 窗、舊的 state.json 是物件而且 paused 是 true＝起來先暫停（11-03 代定，使用者四態「繼續暫停」）；並接回有效 ctl_seq，供第一道指令去重
-//   write_state   state 一份：phase、counter_runs（跑過幾次；10-25 原 runs、同日再改 counter_runs）、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 的指令改過之後）
+//   write_state   state 一份：phase、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 的指令改過之後）
 //                 ＋info()＋code（結束時）＋proc_fields＋responded_at＋updated_at（updated_at 最後一欄）；responded_at 算進變動比較，沒開 state 窗就不寫；
-//                 有變才寫（11-02）：組好的這份（不含 updated_at、counter_runs；running／waiting 互換當沒變，11-02 晚）跟上一份寫出去的一樣就不碰檔；第一份、帶 code 的一定寫；
+//                 有變才寫（11-02）：組好的這份（不含 updated_at；running／waiting 互換當沒變，11-02 晚）跟上一份寫出去的一樣就不碰檔；第一份、帶 code 的一定寫；
 //                 接著呼叫 write_more（子類別的窗，自己比有沒有變；10-29）。11-02 拿掉 beat（每秒的心跳）
 //   log_line      stdout 一行 JSON（11-02；11-02 晚起 --enable-logs 才印）：一次 write；寫的那一下擋 SIGPIPE、排著的吃掉、還原遮罩；印不了＝之後不印、不退出
 //   write_window  透過 aos-util write_text 先寫同資料夾的 .名字 再改名（N-05）
+//   write_counter 開了 --enable-counters 與 state 窗，每輪把次數寫到窗同資料夾的 counter_runs.txt，先寫 .counter_runs.txt 再改名
 //   proc_fields   pid、started_at_ticks、boot_id（11-02 原 heartbeat，時間欄拿掉）
 #include "engine/engine.hpp"
 
@@ -235,7 +236,6 @@ void Loop::write_state(const std::string& phase, const Json& code) {
 void Loop::write_main(const std::string& phase, const Json& code, const Json& me) {
     Json doc = Json::object();
     doc[StateWindow::phase] = phase;
-    doc["counter_runs"] = runs_;
     doc["max"] = max_ ? Json(*max_) : Json();
     doc["interval_ms"] = interval_ms_;
     doc["paused"] = paused_;
@@ -252,9 +252,7 @@ void Loop::write_main(const std::string& phase, const Json& code, const Json& me
         doc[k] = v;
     }
     doc["responded_at"] = responded_at_;
-    // 有變才寫（11-02）：counter_runs 不算變動（使用者「對」）——比的時候拿掉，寫出去照帶當下的快照
     Json key = doc;
-    key.erase("counter_runs");
     if (phase == "running" || phase == "waiting") {
         key[StateWindow::phase] = "running|waiting";   // 11-02 晚：running ⇄ waiting 不算變動（只比進出 paused／stopping／stopped／done）
     }
@@ -269,6 +267,23 @@ void Loop::write_main(const std::string& phase, const Json& code, const Json& me
     }
     wrote_ = true;
     last_main_ = std::move(key);
+}
+
+void Loop::write_counter() {
+    if (!counters_ || state_path_.empty()) {
+        return;
+    }
+    std::string dir = aos::dirname(state_path_);
+    std::string dst = aos::join(dir, "counter_runs.txt");
+    std::string tmp = aos::join(dir, ".counter_runs.txt");
+    std::optional<aos::TextWriteError> error = aos::write_text(dst, std::to_string(runs_) + "\n", tmp);
+    if (error) {
+        std::string failed_path = dst;
+        if (error->operation == aos::TextWriteOperation::open) {
+            failed_path = tmp;
+        }
+        throw StateError{Error{code::WriteFailed, "cannot write " + failed_path + ": " + std::strerror(error->number)}};
+    }
 }
 
 }  // namespace aos::loop

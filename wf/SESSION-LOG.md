@@ -8,7 +8,7 @@
 
 ## 最新進度
 
-- **open｜clock-and-hot-writes（使用者 11-09 早兩個想法；只盤點）**：名字已裁 clock＋cycle、想法 2 五題已裁照推薦；施工排在大重構剩下的步之後 → [clock-and-hot-writes](../proto8/thinking/2026-11/09/clock-and-hot-writes/README.md)
+- **open｜clock-and-hot-writes（使用者 11-09 早兩個想法）**：第一段省寫檔已施工過關；第二段 tick→clock（單位 cycle）施工中 → [04 施工結果](../proto8/thinking/2026-11/09/clock-and-hot-writes/04-施工結果.md)
 
 - **open｜node-pool（11-08，想法 20 節點池＋想法 21 蒸餾後壓縮）**：想法 20 決定頁使用者已裁（q1 改抽象分數，03 已改）；想法 21 簡報 04→fable 05→圖紙 06 寫好，5 題在桌面決定頁 `aos-np21-1108-待你裁.html` 等裁、照推薦代定；第五輪開工照 03 §7 N2～N5、06 §6 N6～N10（N1 第四輪已修）；真庫兩條錯連（傑克／傑克遜、耶拉／耶拉岡德像）已知會 arknights-kb → [node-pool](../proto8/thinking/2026-11/08/node-pool/README.md)
 

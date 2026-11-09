@@ -37,7 +37,6 @@ void Daemon::run_body() {
         b.code = 1;   // 起不來（LaunchFailed、單子壞……）：Loop 原本也是以 1 收工
         bad = e.code + " " + e.msg;
     }
-    responded();   // 起不來也有回應；訊號收工那條也要記下
     body_next_ = Clock::now() + std::chrono::milliseconds(interval_ms_);
     if (b.received != 0) {
         kill(getpid(), b.received);   // 三個訊號擋著：排回去，Loop 兩次之間取出

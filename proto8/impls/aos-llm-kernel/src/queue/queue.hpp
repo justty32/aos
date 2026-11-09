@@ -1,7 +1,7 @@
 // queue.hpp：【queue】排隊——kernel 自己記的帳（$AOS_STACK/queue.json）、後端最後掛的包與黏著排序。
 //
-//   read_queue / write_queue   queue.json＝counter_runs、seen_at_ms，及有時鐘才寫的 seen_at_ticks；另存 backends 的 pack／switched_at／counter_switches；兩份 seen 表都只留排隊信。
-//                              （沒有＝從 0 起；在但讀不懂＝QueueBad；寫：先寫暫存再改名，N-05）
+//   read_queue / write_queue   queue.json＝seen_at_ms，及有時鐘才寫的 seen_at_ticks；另存 backends 的 pack／switched_at／counter_switches；兩份 seen 表都只留排隊信。
+//                              （沒有＝空帳；在但讀不懂＝QueueBad；跟讀到的 JSON 不同才先寫暫存再改名，N-05）
 //                              queue.json 的排法是優先序（見 order），不是先來先處理（C-54 R14，11-06）。
 //   effective                  這封信現在算幾級：level＋waited_ticks÷aging_ticks（預設 3 格；不封頂）。
 //                              有時鐘數格，沒有時鐘或首次記錄沒 tick 則用牆鐘差÷AOS_TICK_INTERVAL；凍住時鐘不升級。
@@ -19,7 +19,7 @@
 namespace aos::llm_kernel {
 
 struct Queue {
-    long long runs = 0;
+    Json original_doc;   // 讀進來的原 JSON；檔不在＝null，寫出前比有沒有變
     Json seen_at_ms = Json::object();
     Json seen_at_ticks = Json::object();
     bool on_tick = false;

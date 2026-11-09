@@ -1,4 +1,4 @@
-// windows.cpp：【daemon】管轄手把 procs_ctl 與含樹時鐘 tick 的 procs_state 狀態窗（說明見 daemon.hpp）。
+// windows.cpp：【daemon】管轄手把 procs_ctl 與有變才寫的 procs_state 狀態窗（說明見 daemon.hpp）。
 //
 //   read_procs_ctl  每圈讀一次（tend 開頭）。同 aos-loop 的 read_ctl 的不採用規則（N-06～N-08）：認 procs、procs_added、procs_removed、procs_stopped、procs_started、seq，
 //                   其他 key 忽略（舊名 loops*／execs* 也是，C-48）；讀到壞的（讀不了、不是 JSON 物件、seq 不是非負整數、名單壞、指示詞解不開、
@@ -6,8 +6,8 @@
 //                   讀到好的清回 null，跟上一份好的不同才更新 responded_at；檔不在＝回初始值、不算問題
 //   check_lists     procs、procs_added（read_procs）、procs_removed／procs_stopped／procs_started（名字的陣列）；信也用
 //   write_more      procs_state 一份：{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox,
-//                   daemon, responded_at, tick?（有 AOS_TICK 才寫，壞檔＝null）, procs, pid, started_at_ticks, boot_id, updated_at}；
-//                   tick 變動會刷新這扇窗；responded_at 只記回應，不跟時鐘前進。
+//                   daemon, responded_at, procs, pid, started_at_ticks, boot_id, updated_at}；
+//                   responded_at 只在處理新 ctl、收到信、起或收子項時更新。
 //                   Loop 每次 write_state 都呼叫、daemon 表變了也呼叫（flush_table）；有變才寫（11-02）：先組好分檔前的那份（不含 proc_fields、updated_at）
 //                   跟上一份寫出去的比，一樣就不碰檔，不一樣才寫分檔→清舊分檔→寫主檔（主檔改名是唯一的提交點）
 //   write_parts     procs 表超過 PART_ROWS 列就切檔（10-23 晚）；clean_parts 寫好才清舊分檔
@@ -15,11 +15,9 @@
 
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
-#include "aos/util/tick.hpp"
 
 #include <cerrno>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 
@@ -212,18 +210,9 @@ void Daemon::write_more(const Json& me) {
     doc["procs_ctl_mailbox"] = mbox_path_.empty() ? Json() : Json(mbox_name_);
     doc["daemon"] = parent_;
     doc["responded_at"] = responded_at_;
-    const char* clock = std::getenv("AOS_TICK");
-    if (clock != nullptr && clock[0] != '\0') {
-        try {
-            std::optional<long long> tick = aos::now_tick();
-            doc["tick"] = tick ? Json(*tick) : Json();
-        } catch (const Error&) {
-            doc["tick"] = nullptr;   // 觀測窗不因壞時鐘收工，也不印每圈提醒
-        }
-    }
     doc["procs"] = rows;
     if (more_wrote_ && doc == last_more_) {
-        // 有變才寫：表、ctl、warning、daemon、responded_at、tick 都一樣＝不碰檔。上一次寫時留著的「再上一次」的分檔
+        // 有變才寫：表、ctl、warning、daemon、responded_at 都一樣＝不碰檔。上一次寫時留著的「再上一次」的分檔
         // （讀的人可能剛讀了舊主檔）等到這一下（主檔已換過、隔了一次）才清——原本靠下一份心跳清，心跳拿掉後改在這裡
         if (parts_stale_) {
             std::set<std::string> keep = parts_prev_;

@@ -1,14 +1,17 @@
-// serve.cpp：【serve】鎖信箱、清理寄件人已離開的信、按宣告級數留 high 格、檢查後端限制與記換包，再串起每輪流程（說明見 serve.hpp）。
+// serve.cpp：【serve】鎖信箱、選開計數、清理寄件人已離開的信、按宣告級數留 high 格、檢查後端限制與記換包，再串起每輪流程（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
 #include "aos/util/files.hpp"
 #include "aos/util/signals.hpp"
+#include "aos/util/text.hpp"
 #include "aos/util/tick.hpp"
 
 #include <cerrno>
+#include <charconv>
 #include <chrono>
 #include <cstring>
 #include <filesystem>
+#include <limits>
 
 #include <fcntl.h>
 #include <sys/file.h>
@@ -18,6 +21,41 @@ namespace fs = std::filesystem;
 namespace aos::llm_kernel {
 
 namespace {
+
+// 開計數時才讀寫 $AOS_STACK/counter_kernel_runs.txt；同一個信箱的 flock 保護讀、加一、原子寫回。
+void count_run(const std::string& stack) {
+    std::string path = aos::join(stack, "counter_kernel_runs.txt");
+    long long runs = 0;
+    int err = 0;
+    std::optional<std::string> text = aos::read_file(path, err);
+    if (!text && err != ENOENT) {
+        throw Error{code::CounterBad, "cannot read " + path + ": " + std::strerror(err)};
+    }
+    if (text) {
+        std::string value = aos::strip(*text);
+        bool digits = aos::is_utf8(*text) && !value.empty();
+        for (char ch : value) {
+            if (ch < '0' || ch > '9') {
+                digits = false;
+            }
+        }
+        std::from_chars_result parsed = std::from_chars(value.data(), value.data() + value.size(), runs);
+        if (!digits || parsed.ec != std::errc{} || parsed.ptr != value.data() + value.size()) {
+            throw Error{code::CounterBad, path + " must contain a non-negative integer within signed 64-bit range (delete it to start over)"};
+        }
+    }
+    if (runs == std::numeric_limits<long long>::max()) {
+        throw Error{code::CounterBad, path + " is too large to increment (delete it to start over)"};
+    }
+    std::string tmp = aos::join(stack, ".counter_kernel_runs.txt");
+    std::optional<aos::TextWriteError> error = aos::write_text(path, std::to_string(runs + 1) + "\n", tmp);
+    if (error) {
+        if (error->operation == aos::TextWriteOperation::rename) {
+            throw Error{code::WriteFailed, "cannot rename " + tmp + " -> " + path + ": " + std::strerror(error->number)};
+        }
+        throw Error{code::WriteFailed, "cannot write " + tmp + ": " + std::strerror(error->number)};
+    }
+}
 
 // 窗 $AOS_STACK/endpoints.json（11-05 feat-proto 件 2）：包的屬性表，給人與 aos-llm ls 挑代號；跟現有的一樣就不寫（N-05 暫存改名）。
 void write_window(const std::string& stack, const Json& w) {
@@ -81,7 +119,9 @@ int Server::run() {
     }
     lock();
     q_ = read_queue(stack_);
-    q_.runs += 1;
+    if (enable_counters_) {
+        count_run(stack_);
+    }
     used_ = read_used(stack_, budget_.window);
     table_ = read_table(host_);
     write_window(stack_, window_of(cfg_.packs));
@@ -246,8 +286,8 @@ int Server::run() {
     return 0;
 }
 
-int serve(const Cfg& cfg, const std::string& stack) {
-    Server s(cfg, stack);
+int serve(const Cfg& cfg, const std::string& stack, bool enable_counters) {
+    Server s(cfg, stack, enable_counters);
     return s.run();
 }
 

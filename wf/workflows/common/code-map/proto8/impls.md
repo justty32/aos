@@ -54,7 +54,7 @@
 | [`src/daemon/stuck.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/stuck.cpp) | 依公開 ctl/state 窗的刺激與兩鐘期限標記卡住，並選擇收回重起。 |
 | [`src/daemon/table.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/table.cpp) | 維護 proc 表、記錄子項與處理狀態窗寫入結果（說明見 daemon.hpp）。 |
 | [`src/daemon/tend.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/tend.cpp) | 停止、收回與照顧子項，並在 daemon 收工時等它們退完（說明見 daemon.hpp）。 |
-| [`src/daemon/windows.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/windows.cpp) | 管轄手把 procs_ctl 與含樹時鐘 tick 的 procs_state 狀態窗（說明見 daemon.hpp）。 |
+| [`src/daemon/windows.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/windows.cpp) | 管轄手把 procs_ctl 與有變才寫的 procs_state 狀態窗（說明見 daemon.hpp）。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-daemon/src/main.cpp) | aos-daemon 命令列——block_signals、解命令列、讀設定、Daemon::serve（10-21 傍晚）。 |
 | [`tests/support.py`](../../../../../proto8/impls/aos-daemon/tests/support.py) | Build isolated real-daemon fixtures and retain evidence for the B lifecycle tests. |
 | [`tests/test_ctl.py`](../../../../../proto8/impls/aos-daemon/tests/test_ctl.py) | Exercise public controls, prune inspection and age selection, command errors and help. |

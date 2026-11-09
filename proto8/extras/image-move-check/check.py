@@ -10,6 +10,8 @@ import sys
 import tempfile
 import time
 
+KERNEL_COUNTER = "counter_kernel_runs.txt"
+
 
 class Check:
     def __init__(self, timeout, work_prefix="aos-image-move-"):
@@ -39,6 +41,13 @@ class Check:
             return json.loads(path.read_text())
         except (OSError, ValueError):
             return {}
+
+    @staticmethod
+    def counter(stack, name="counter_runs.txt"):
+        try:
+            return int((stack / name).read_text().strip())
+        except (OSError, ValueError):
+            return 0
 
     def wait(self, label, predicate):
         deadline = time.monotonic() + self.timeout
@@ -112,12 +121,13 @@ class Check:
                 "foreman": {"exec": "../foreman", "auto_restart": True}}},
             "foreman": {"tick": True, "interval_ms": 100, "procs": {}},
             "kernel": {"tick": True, "interval_ms": 100,
-                       "exec": {"argv": ["aos-llm-kernel", "kernel.json"]}},
+                       "exec": {"argv": ["aos-llm-kernel", "--enable-counters", "kernel.json"]}},
         }
         for name, config in configs.items():
             folder = defs / name
             folder.mkdir()
-            (folder / "_entry").write_text('["aos-daemon", "--enable-logs", "daemon.json"]\n')
+            (folder / "_entry").write_text(
+                '["aos-daemon", "--enable-logs", "--enable-counters", "daemon.json"]\n')
             (folder / "daemon.json").write_text(json.dumps(config) + "\n")
         (defs / "kernel/kernel.json").write_text(json.dumps({
             "slots": 2, "timeout_ms": 10000, "endpoint": "fake",
@@ -125,6 +135,7 @@ class Check:
                 "fake": {"exec": "../../lib/base/llm_fake"}}}) + "\n")
         (defs / "agent/tools.json").write_text('{"tools": {}}\n')
         (defs / "agent/llm.json").write_text('{"endpoint": "fake"}\n')
+        (defs / "agent/body.json").write_text('["aos-loop", "--enable-counters", "loop.json"]\n')
         self.layout(image)
 
     def start(self, label):
@@ -137,7 +148,7 @@ class Check:
                                         start_new_session=True)
         for stack in (self.root, self.kernel, self.foreman):
             self.wait(f"ready {stack}", lambda s=stack:
-                      self.read(s / "state.json").get("counter_runs", 0) >= 1)
+                      self.counter(s) >= 1)
             self.run(["aos-daemon-ctl", "--daemon", str(stack), "ping"])
 
     def table(self, stack):
@@ -206,18 +217,19 @@ class Check:
             "commit": commit, "commit_parent_count": len(parents), "tracked_files": len(tracked),
             "queue_retained": queue_relative in tracked,
             "empty_directories_omitted": missing_empty,
-            "note": "The documented filter keeps queue.json; its counter continues after clone."},
+            "note": "The documented filter keeps queue.json with the queue's scheduling state."},
             indent=2) + "\n")
         self.layout(destination)
+        self.clone_counter_retained = (self.kernel / KERNEL_COUNTER).is_file()
 
     def check(self):
         self.make()
         self.start("original")
         self.run(["aos-agent", "ctl", "add", "--name", "worker", str(self.image / "defs/agent")])
-        worker = self.foreman / "procs/worker/state.json"
-        self.wait("worker ran several times", lambda: self.read(worker).get("counter_runs", 0) >= 3)
+        worker = self.foreman / "procs/worker"
+        self.wait("worker ran several times", lambda: self.counter(worker) >= 3)
         self.ask("before relocation")
-        before_queue = self.read(self.kernel / "queue.json")["counter_runs"]
+        before_queue = self.counter(self.kernel, KERNEL_COUNTER)
         before = self.stop()
         self.run(["sync"])
         self.run(["cp", "-a", str(self.image), str(self.work / "relocated")])
@@ -229,12 +241,12 @@ class Check:
             if any(row["phase"] != "running" for row in after[name]["table"]["procs"].values()):
                 raise RuntimeError(f"{name} has a child that did not wake")
         final = self.stop()
-        after_queue = self.read(self.kernel / "queue.json")["counter_runs"]
+        after_queue = self.counter(self.kernel, KERNEL_COUNTER)
         if after_queue <= before_queue:
-            raise RuntimeError("persistent kernel queue counter did not continue")
+            raise RuntimeError("persistent kernel counter did not continue")
         (self.work / "counter-comparison.json").write_text(json.dumps({
             "kernel_queue_before": before_queue, "kernel_queue_after": after_queue,
-            "note": "Loop state counters restart at zero; queue counter is persistent."}, indent=2) + "\n")
+            "note": "Loop counters restart at zero; the kernel counter is persistent."}, indent=2) + "\n")
         print(f"PASS persistent kernel counter: {before_queue} -> {after_queue}", flush=True)
         print("PASS copy relocation: sleeping phases, running phases, fake replies", flush=True)
         self.clone_image()
@@ -244,14 +256,17 @@ class Check:
         for name, item in cloned.items():
             if any(row["phase"] != "running" for row in item["table"]["procs"].values()):
                 raise RuntimeError(f"{name} has a child that did not wake after clone")
-        clone_queue = self.read(self.kernel / "queue.json")["counter_runs"]
+        clone_queue = self.counter(self.kernel, KERNEL_COUNTER)
         self.stop()
-        if clone_queue <= after_queue:
-            raise RuntimeError("kernel queue counter did not continue after git clone")
+        if self.clone_counter_retained and clone_queue <= after_queue:
+            raise RuntimeError("kernel counter did not continue after git clone")
+        if not self.clone_counter_retained and clone_queue <= 0:
+            raise RuntimeError("kernel counter did not restart after git clone")
         (self.work / "clone-result.json").write_text(json.dumps({
             "queue_before_clone": after_queue, "queue_after_clone": clone_queue,
+            "kernel_counter_retained": self.clone_counter_retained,
             "all_children_running": True, "fake_reply_received": True,
-            "note": "queue.json travels with the image; its counter continues after clone."},
+            "note": "A retained kernel counter continues; an omitted counter restarts."},
             indent=2) + "\n")
         print("PASS local git clone: third location, running phases, fake reply", flush=True)
 

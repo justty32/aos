@@ -20,13 +20,13 @@
 | [`src/main.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/main.cpp) | aos-llm-kernel 命令列——LLM kernel 跑一次：從信箱挑最該跑的信、跑、回信（多半是 daemon.json 的身體，給 daemon 一次次拍；要在 daemon 底下）。 |
 | [`src/pack/pack.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/pack/pack.cpp) | endpoint 能力包、後端歸屬驗證與屬性窗（說明見 pack.hpp）。 |
 | [`src/pack/pack.hpp`](../../../../../proto8/impls/aos-llm-kernel/src/pack/pack.hpp) | endpoint 能力包（11-05 feat-proto 件 2、件 3）——後端宣告、backend 歸屬與 kernel.json 的 endpoints 一組＝一個包（代號就是能力名：smart-high、stupid-fast…）。 |
-| [`src/queue/queue.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/queue/queue.cpp) | queue.json、後端狀態驗型與黏著排隊（說明見 queue.hpp）。 |
+| [`src/queue/queue.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/queue/queue.cpp) | queue.json 有變才寫、後端狀態驗型與黏著排隊（說明見 queue.hpp）。 |
 | [`src/queue/queue.hpp`](../../../../../proto8/impls/aos-llm-kernel/src/queue/queue.hpp) | 排隊——kernel 自己記的帳（$AOS_STACK/queue.json）、後端最後掛的包與黏著排序。 |
 | [`src/serve/config.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/config.cpp) | 讀 kernel 設定、驗 slots、high 保留格與後端格數、解指示詞與 endpoint 函數路徑（說明見 serve.hpp）。 |
 | [`src/serve/proc.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/proc.cpp) | 掛問腦 proc、判斷收尾與透明錯誤、沿用換包旗標重掛並收集各後端在飛信件（說明見 serve.hpp）。 |
 | [`src/serve/reply.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/reply.cpp) | 寫回信、寄送與撤回回信、記用量與含換包旗標的逐封帳並收掉信件（說明見 serve.hpp）。 |
 | [`src/serve/scan.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/scan.cpp) | 檢查排隊信件、挑選與解析含後端歸屬的 endpoint 能力包（說明見 serve.hpp）。 |
-| [`src/serve/serve.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/serve.cpp) | 鎖信箱、清理寄件人已離開的信、按宣告級數留 high 格、檢查後端限制與記換包，再串起每輪流程（說明見 serve.hpp）。 |
+| [`src/serve/serve.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/serve.cpp) | 鎖信箱、選開計數、清理寄件人已離開的信、按宣告級數留 high 格、檢查後端限制與記換包，再串起每輪流程（說明見 serve.hpp）。 |
 | [`src/serve/serve.hpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/serve.hpp) | kernel 跑一次——讀設定、鎖信箱、收拾、排隊、認領、請 daemon 掛問腦 proc、收成品、回信。 |
 | [`tests/test_backends.py`](../../../../../proto8/impls/aos-llm-kernel/tests/test_backends.py) | Verify backend limits, durable switch records, and priority-safe sticky ordering with prepared mailboxes. |
 | [`tests/test_batch8_live.py`](../../../../../proto8/impls/aos-llm-kernel/tests/test_batch8_live.py) | Verify copied kernel templates nest through two real daemons and batch local packs without blocking urgent mail. |

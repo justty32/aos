@@ -20,7 +20,7 @@
 //   serve      跑一次（給 daemon 一次次拍，多半是 daemon.json 的身體），回結束碼（0；開始前收到訊號＝128＋N）。
 //              11-05（kernel-daemon 03）起 kernel 不自己 fork 跑 endpoint 函數：每封請 daemon 掛成 max: 1 的 loop 型 proc，下一次收。
 //                0. 找 daemon（daemon.hpp 的 find_host：沒 AOS_DAEMON＝DaemonMissing、沒 ctl 信箱＝MailboxMissing；有 AOS_KERNEL 掛信寄那裡）
-//                1. 建信箱三格（tmp／new／cur）、flock 住 .flock（鎖不到＝LockFailed）；queue.json 的 counter_runs＋1；讀 daemon 的表；
+//                1. 建信箱三格（tmp／new／cur）、flock 住 .flock（鎖不到＝LockFailed）；開 --enable-counters 才更新 $AOS_STACK/counter_kernel_runs.txt；讀 daemon 的表；
 //                   寫窗 $AOS_STACK/endpoints.json（包的屬性表，pack.hpp 的 window_of；有變才寫）
 //                2. 收成品（collect）：cur/<id>/ 有 proc.json＝在飛，看表與 <id>/state.json（settle）：收尾 code 0＝reply.json 成功物件拿掉 child 當回信（child 進 ledger）（讀不懂＝ReplyBad）、
 //                   其他碼的合格單行 error 原樣回，不合格＝EndpointFailed（reply.json 或 stderr.txt 第一行）、143／137 且過了 timeout_ms＝逾時；被收掉／死在半路＝重掛一次、第二次 EndpointFailed；
@@ -79,7 +79,7 @@ struct Cfg {
 };
 
 Cfg read_cfg(const std::string& spec, const std::string& stack);
-int serve(const Cfg& cfg, const std::string& stack);
+int serve(const Cfg& cfg, const std::string& stack, bool enable_counters);
 
 // serve 元素各分檔共用的內部接縫。
 std::string target_abs(const std::string& t, const std::string& base);
@@ -88,8 +88,9 @@ extern const char* PROC_JSON;
 
 class Server {
 public:
-    Server(const Cfg& cfg, const std::string& stack)
-        : cfg_(cfg), mb_{cfg.requests}, slots_(cfg.slots), budget_(cfg.budget), stack_(stack) {}
+    Server(const Cfg& cfg, const std::string& stack, bool enable_counters)
+        : cfg_(cfg), mb_{cfg.requests}, slots_(cfg.slots), budget_(cfg.budget), stack_(stack),
+          enable_counters_(enable_counters) {}
     ~Server() {
         if (lock_fd_ >= 0) {
             close(lock_fd_);
@@ -106,6 +107,7 @@ private:
     long long slots_;
     Budget budget_;
     std::string stack_;
+    bool enable_counters_;
     int lock_fd_ = -1;
     Queue q_;
     Used used_;

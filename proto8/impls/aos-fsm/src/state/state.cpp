@@ -1,4 +1,4 @@
-// state.cpp：【state】stage.txt（說明見 state.hpp）。
+// state.cpp：【state】讀取 stage.txt，狀態內容有變才原子寫入（說明見 state.hpp）。
 #include "state/state.hpp"
 
 #include "aos/util/files.hpp"
@@ -32,7 +32,13 @@ std::string read_state(const std::string& stack, const std::string& start) {
 void write_state(const std::string& stack, const std::string& name) {
     std::string tmp = aos::join(stack, ".stage.txt");
     std::string dst = aos::join(stack, "stage.txt");
-    std::optional<aos::TextWriteError> error = aos::write_text(dst, name + "\n", tmp);
+    std::string text = name + "\n";
+    int err = 0;
+    std::optional<std::string> current = aos::read_file(dst, err);
+    if (current && *current == text) {
+        return;
+    }
+    std::optional<aos::TextWriteError> error = aos::write_text(dst, text, tmp);
     if (error) {
         if (error->operation == aos::TextWriteOperation::open) {
             throw Error{code::WriteFailed, "cannot write " + tmp + ": " + std::strerror(error->number)};

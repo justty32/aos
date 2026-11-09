@@ -80,7 +80,7 @@ aos-daemon-ctl -d "$PWD/foreman_image" ping --timeout-s 30
 aos-daemon-ctl -d "$PWD/foreman_image" ls --json
 ```
 
-各 ping 收到 applied 回信，領班表 ann 為 running，agent 若已完成至少一次身體，可讀 `agent_image/state.json` 的 `counter_runs >= 1` 作觀察；它不是心跳，也不跨重啟累加，長跑身體未返回時不會增加。是否叫得動以 ping／實際問答確認，不等待 counter 持續增加。根重開會 adopt 接回仍活的子項；換機／重開機 `boot_id` 不同，全當死，照表起與醒。`pid` 等舊值不用人修。
+各 ping 收到 applied 回信，領班表 ann 為 running，agent 的 loop 起時若給了 `--enable-counters`，可讀 `agent_image/counter_runs.txt` >= 1 作觀察（11-09 起 state.json 沒有 `counter_runs`，預設也不寫這個檔）；它在每次開跑時寫，>= 1 只代表第一次已開跑；它不是心跳，也不跨重啟累加，長跑身體未返回時不會增加。是否叫得動以 ping／實際問答確認，不等待計數持續增加。根重開會 adopt 接回仍活的子項；換機／重開機 `boot_id` 不同，全當死，照表起與醒。`pid` 等舊值不用人修。
 
 </details>
 

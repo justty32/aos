@@ -1,5 +1,5 @@
 // config.cpp：【engine】Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、解指示詞（resolve_keys，10-23 晚）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）；
-// 還有 parse_target（exec 的寫法）、resolve_exec、place_inline（內嵌單子在哪，10-24）、loop_cli（命令列；11-02 加開關 --enable-logs〔原 --no-log〕、
+// 還有 parse_target（exec 的寫法）、resolve_exec、place_inline（內嵌單子在哪，10-24）、loop_cli（命令列；--enable-logs、--enable-counters 開關、
 // 設定檔後面的 `-- 參數...`）、add_args（附加參數接到 exec 後面）
 // （10-21 傍晚 ideas § 9）；錯誤分代號。
 #include "engine/engine.hpp"
@@ -103,12 +103,12 @@ std::string config_file(const std::string& spec) {
 
 aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog, const std::string& help,
                   const std::string& cfg_name) {
-    std::string usage = prog + " [--max N] [--interval-ms N] [--ctl FILE] [--state FILE] [--enable-logs] " + cfg_name +
+    std::string usage = prog + " [--max N] [--interval-ms N] [--ctl FILE] [--state FILE] [--enable-logs] [--enable-counters] " + cfg_name +
                         " [-- ARGS...]";
     aos::Cli cli;
     try {
         cli = aos::parse_cli(argv, {{"--max", "max"}, {"--interval-ms", "interval_ms"}, {"--ctl", CtlWindow::config_key}, {"--state", StateWindow::config_key}},
-                             {{"--enable-logs", "enable_logs"}}, help);   // 11-02 晚：不帶值的開關，給了才印 log（同 aos-mcp；原 --no-log）
+                             {{"--enable-logs", "enable_logs"}, {"--enable-counters", "enable_counters"}}, help);
     } catch (const Error& e) {
         throw aos::usage_error(e.code, e.msg, usage);   // FlagUnknown／ArgumentsBad
     }
@@ -175,6 +175,7 @@ void add_args(Target& t, const std::vector<std::string>& args) {
 Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& spec, const Defaults& d,
            const std::vector<std::string>& args) : d_(d) {
     log_ = opts.count("enable_logs") > 0;   // 11-02 晚：log 預設不印（使用者「應該要改成默認不印」），--enable-logs 才印到 stdout
+    counters_ = opts.count("enable_counters") > 0;
     cfg_ = aos::load_cfg(spec);
     std::string exec_base;   // exec 那格裡相對 $ref 的起點（內嵌單子用）
     try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45；捷徑解開，10-24 審後，config_file）

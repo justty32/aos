@@ -15,7 +15,7 @@
 
 | 檔 | 放哪 | 做什麼 |
 |---|---|---|
-| [`stack.gitignore`](../../stack.gitignore) | `cp stack.gitignore ws/.stack/.gitignore`（每台 daemon stack 各一份） | 擋暫存、鎖、可重建檔與 log（[完整規則與理由](../../../../thinking/2026-11/06/git-image/04-gitignore建議.md)），包含 `think/request.json`；保留 state、procs 表、history、stage、pending、在途 `new/`／`cur/`／問腦回信、設定覆蓋層與額度帳 |
+| [`stack.gitignore`](../../stack.gitignore) | `cp stack.gitignore ws/.stack/.gitignore`（每台 daemon stack 各一份） | 擋暫存、鎖、可重建檔、log 與計數器 `counter_*.txt`（[完整規則與理由](../../../../thinking/2026-11/06/git-image/04-gitignore建議.md)），包含 `think/request.json`；保留 state、procs 表、history、stage、pending、在途 `new/`／`cur/`／問腦回信、設定覆蓋層與額度帳 |
 | [`stack.gitattributes`](../../stack.gitattributes) | `cp stack.gitattributes <git repo 根>/.gitattributes` | `* -text`：一律不轉換行（放根＝定義的 `_entry` 也管到） |
 
 `.gitignore` 放 `.stack` 裡而不是 ws 根：放 ws 根也擋得對 image，但 `**/tmp/`、`**/.*` 會連你 ws 裡自己的 `tmp/`、`.env` 一起擋。
@@ -64,6 +64,6 @@ git reset --hard origin/main
 find ws/.stack/ -type f -path '*/think/request.json' -delete
 ```
 
-只刪指定 stack 裡各個 `think/request.json`，避免沿用上一份 image 的 request；其他被忽略的 log、快取與暫存都留著，其他 daemon stack 也各做一次（11-07 使用者裁定 sol 審查 #20-3）。歸檔信 `archive/` 跟著 image 走；stderr、live、turns、transcripts 等紀錄仍只留原機（11-07 使用者裁定 sol 審查 #20-1、#20-2）。
+只刪指定 stack 裡各個 `think/request.json`，避免沿用上一份 image 的 request；其他被忽略的 log、快取與暫存都留著，其他 daemon stack 也各做一次（11-07 使用者裁定 sol 審查 #20-3）。歸檔信 `archive/` 跟著 image 走；stderr、live、turns、transcripts、計數器 `counter_*.txt`（11-09）等紀錄仍只留原機（11-07 使用者裁定 sol 審查 #20-1、#20-2）。
 
 因為每版都沒有上一版，不能用一般 `git pull` 合併。醒在 wait 的 agent 若沒 pending、也沒 request，會先回 think 重組再寄；同樹已寄出的可靠 pending＋回信繼續收；跨樹在飛請求照搬家食譜作廢重寄，不沿用舊回信地址。

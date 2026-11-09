@@ -54,9 +54,8 @@
 //   進 stopped 集合（start 才再起）；退 0、接回的（拿不到碼）照舊拿掉。
 //   同名改寫法：已在跑的不重起（N-54）。
 // procs_state.json＝{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox（11-04：名字回報，沒開信箱＝null）,
-//   daemon（上一層的 AOS_DAEMON，根或指自己＝null）, responded_at, tick?（有 AOS_TICK 才寫 now_tick；壞檔＝null）, procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫；
-// tick 變動只刷新 procs_state、不更新 responded_at 或印 log；取樣沿用 daemon 每圈節奏，值沒變不寫、分檔內容不變不重寫。
-// state.json 也有 daemon；兩扇窗的 responded_at 記最近一次有反應（收信、採用不同的 procs_ctl、起／收子項、身體跑完），睡著不刷新。
+//   daemon（上一層的 AOS_DAEMON，根或指自己＝null）, responded_at, procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫；分檔內容不變不重寫。
+// state.json 也有 daemon；兩扇窗的 responded_at 只在處理新 ctl、收到信、起或收子項時更新。
 // 每列 {pid, started_at_ticks, phase（running／stuck／stopping／stopped／sleeping）, code, signal, stack, exec, def, reason, launch, stop_mode?（stopping 時）, ws?, limits?（11-05：生效的份額）}（exec 11-04 晚：起它時的目標，見 exec_of；def 11-04：見 def_of）；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
 // ctl 的 stop（這圈收工）或 pause（整圈暫停）時不調表：不收多的、不起少的、起停也等解除，但照讀兩份 ctl、照寫兩扇 state、照收已在收的、照記自己結束的。
 // log（--enable-logs 才印到 stdout）：行程起來一行、結束一行 {"at", "name", "phase"（running／done／stopped／sleeping）, "pid", "code", "signal", "ws"?}。

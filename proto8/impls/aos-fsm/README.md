@@ -19,7 +19,7 @@ AOS_STACK=st/ aos-fsm fsm.json; echo $?   # 跑 idle 那格（aos-exec -- idle�
 ```
 
 語意以 [NORMS 組合子 § fsm](../../docs/NORMS/07-基礎設施-組合子.md)（N-36、N-38、N-39、N-41）為準，另照 N-05、N-43、N-60 與 CONVENTION P-07～P-10、P-20、P-21、P-36、P-38；本頁只寫用法與實作。本支是唯一實作（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」）。
-**不寫 `trace.jsonl`**（使用者「整個拿掉」，[thinking 11-03 trace](../../thinking/2026-11/03/trace.md)）：每次只動 `stage.txt`。
+**不寫 `trace.jsonl`**（使用者「整個拿掉」，[thinking 11-03 trace](../../thinking/2026-11/03/trace.md)）：每次只動 `stage.txt`，而且狀態有變才寫（11-09；閒著停在同一格時不碰檔）。
 
 **11-04 起狀態檔叫 `stage.txt`**（原 `state.txt`；使用者題 10「fsm改名，嘗試用同義詞」——`state` 跟 aos-loop 的 `state.json` 窗同在 stack 根、一詞二義，[four-elements 07](../../thinking/2026-11/04/four-elements/07-實作步驟.md) 步 3）；格式、讀寫規則不變，fsm.json 的 `start`／`states` 不改。
 格的 `exec` 可以直接放單子（使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」，[thinking 10-24](../../thinking/2026-10/24/exec-relative/README.md#10-24-exec-直接放單子)）：物件＝aos-fsm 行程內 `run_inst`（aos-loop 的 `run_once`）。
