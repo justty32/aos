@@ -17,6 +17,7 @@
 1. **授權與狀態**：同下一條（隨意 push、opus／sonnet 分工、/goal 到 11-10 06:20 當 arcagi 支援、安全邊界見下一條第 5 點）。使用者經 arcagi 轉達：「順便寄信給aos agent，跟他說我要給他接mcp。」→ 重開後 **先重掛 `wf/inbox/` Monitor**（腳本見 SESSION-LOG 續行點那條的寫法：每 5 秒比對頂層 *.md、另查 ~/arcagi-STOP），再讀 SESSION-LOG「今晚當 arcagi 支援」續行點。
 2. **在辦**：arcagi 第四封（23:21 接 aos mcp／wf 轉知識庫）由 opus 回 DONE 中，信裡含 arcagi 與 aos 兩邊各自的 mcp 接法；回完原信與 23:23 PROGRESS 都歸 done。若重開時還沒看到 DONE（`ls ~/repo/arcagi/wf/inbox/ | grep aos-DONE`），就重派。
 3. 無新條號。`proto8/thinking/2026-11/09/local-model-bench/` 是停掉評比的殘留未追蹤夾，等使用者說刪不刪。
+4. **push 規矩改了（使用者 23:3x）**：「今晚都不要push，就在我睡醒前十分鐘準備好要push的東西(注意檔案大小)，我醒來後再push。」→ 今晚只 commit 到本地 main、不 push；06:10 前整理待 push 清單（`git log origin/main..main`、各 commit 新增檔大小、有無大檔／二進位），寫進 SESSION-LOG 續行點，等使用者醒來 push。
 
 ## 2026-11-09 深夜 23:xx 家機頂層（使用者開新 session）
 
