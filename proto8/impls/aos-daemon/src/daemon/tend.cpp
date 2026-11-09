@@ -195,6 +195,8 @@ bool Daemon::look(const std::string& name, Child& c, bool stop, bool watch) {
 }
 
 void Daemon::tend() {
+    int mode = poke_;
+    poke_ = 0;
     read_procs_ctl();   // 每圈先讀 ctl.json（Loop）、再讀 procs_ctl.json；停著、暫停也照讀
     if (stopping_ || paused_) {   // ctl 的 stop／pause（11-03 起是指令，Loop 照做完放在這兩格）
         // 這圈收工／整圈暫停（10-29 medium-plan § 四 2）：不調表、起停也等解除，只看一眼
@@ -216,7 +218,7 @@ void Daemon::tend() {
     }
     // 信箱與 procs_ctl 共存——先套信（一次性的改動，改的是底 want_／stopped_），再把 procs_ctl（宣告）疊在底上算期望表
     Letters got;
-    if (!mbox_path_.empty()) {
+    if (mode != 1 && !mbox_path_.empty()) {
         for (auto it = ended_.begin(); it != ended_.end();) {   // 底來的已經從底拿掉了：放掉，信再加同名就起（procs_ctl 疊的留著）
             if (from_ctl(*it)) {
                 ++it;
@@ -236,10 +238,12 @@ void Daemon::tend() {
         }
     }
     reconcile(want, ctl_stopped(pctl_good_), ctl_slept(pctl_good_));
-    if (!mbox_path_.empty()) {
+    if (mode != 1 && !mbox_path_.empty()) {
         done_letters(got);
     }
-    run_body();   // 11-05：身體在對完表之後跑（同 Loop：tend 之後才跑那次）
+    if (mode == 0 || mode == 3) {
+        run_body(mode == 3);   // all 提前跑完整一圈；ctl／mail 不跑身體
+    }
 }
 void Daemon::finish() {
     bool any = false;

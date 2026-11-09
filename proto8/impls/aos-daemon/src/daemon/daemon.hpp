@@ -82,6 +82,10 @@
 
 namespace aos::daemon {
 
+// 公開 poke 訊號：mode 1／2／3＝ctl／mail／all，集合不含只阻擋的 SIGUSR1／SIGUSR2。
+int poke_signal(int mode);
+sigset_t poke_signals();
+
 inline constexpr int REVIVE_MS = 3000;   // 起後 3 秒內退出：原因字樣與 auto_restart 連敗計數共用
 
 // 小格裡有活著的子 loop 時回 pid 與 ticks；adopt.cpp 與 reconcile.cpp 共用。
@@ -131,6 +135,7 @@ public:
 
 protected:
     void tend() override;
+    bool woke(int sig) override;
     void finish() override;
     void write_more(const Json& me) override;   // procs_state.json（沒開＝不寫；有變才寫，11-02）
     Json flux_more() override;            // state_flux 的 procs_ctl 回音與信箱警告
@@ -155,7 +160,7 @@ private:
     bool look(const std::string& name, Child& c, bool stop, bool watch = true);   // 不調表地看一眼（見 tend.cpp）；回 true＝結束了、要拿掉
     // stuck 是 running 列的公開投影；期限由父首見 ctl 刺激起算，任何回應重設連續重起次數。
     void check_stuck(const std::string& name, Child& c); // P7：只讀公開 ctl/state_flux 窗，paused 只標記
-    void run_body();                      // 11-05：tend 最後跑身體一次（到時間才跑；失敗＝stderr 一行、下一圈再跑，見 body.cpp）
+    void run_body(bool force);            // tend 最後跑身體；force 提前跑（max 照算），失敗下一圈再跑
     std::string fail_reason(const Child& c) const;   // 11-05：出錯結束留成 stopped 的 reason（英文；起不來／跑到一半掛了＋碼＋小格 stderr 最後一行）
     Child start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws = Json(),
                 const Json& kept_exec = Json(), const Json& kept_def = Json(),
@@ -218,6 +223,7 @@ private:
     int lock_fd_ = -1;                                   // check_running 鎖著的 stack 資料夾（不關，行程結束自己放）
     aos::loop::Target body_;                             // 11-05：daemon 自己的身體（設定檔的 exec；Loop 的 exec_ 收過來）
     bool has_body_ = false;
+    int poke_ = 0;                                     // 待處理的最強 poke：0 無、1 ctl、2 mail、3 all
     long long body_runs_ = 0;                            // 身體跑過幾次（max 照算）
     std::chrono::steady_clock::time_point body_next_{};  // 下一次最早什麼時候跑（上一次結束＋interval_ms）
     std::string body_bad_;                               // 上一次失敗的「碼或錯」（空＝上一次好的；變了才印）

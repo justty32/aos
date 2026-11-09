@@ -45,7 +45,7 @@
 | [`src/daemon/adopt.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/adopt.cpp) | 按保存的入口與控制意圖接回 proc 表，不以小格檔案分類（說明見 daemon.hpp）。 |
 | [`src/daemon/body.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/body.cpp) | 執行 daemon 自己的身體並記錄結果（說明見 daemon.hpp）。 |
 | [`src/daemon/ctl.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/ctl.cpp) | 由控制窗推得期望表、停止與睡眠集合（說明見 daemon.hpp）。 |
-| [`src/daemon/daemon.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.cpp) | 初始化設定、展開 clock 普通子項、設定環境、路徑、信箱與 stack 鎖（說明見 daemon.hpp）。 |
+| [`src/daemon/daemon.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.cpp) | 初始化設定、環境、信箱與 stack 鎖，定義並合併 poke 訊號（說明見 daemon.hpp）。 |
 | [`src/daemon/daemon.hpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.hpp) | Daemon 管普通 proc 表、stuck 判定、clock 設定展開、手把與狀態窗；aos-loop 的 Loop 子類別，內部標頭。 |
 | [`src/daemon/failure.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/failure.cpp) | 從子項結束碼與 stderr 整理停止原因（說明見 daemon.hpp）。 |
 | [`src/daemon/mailbox.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/mailbox.cpp) | 信箱 procs_ctl_mailbox（10-29，medium-plan § 二 4、§ 四 3；NORMS N-28 的 10-29 補、N-16；11-03 改名 procs、多 stop／start；說明見 daemon.hpp）。 |
@@ -55,8 +55,9 @@
 | [`src/daemon/table.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/table.cpp) | 維護 proc 表、記錄子項與處理狀態窗寫入結果（說明見 daemon.hpp）。 |
 | [`src/daemon/tend.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/tend.cpp) | 停止、收回與照顧子項，並在 daemon 收工時等它們退完（說明見 daemon.hpp）。 |
 | [`src/daemon/windows.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/windows.cpp) | 管轄手把 procs_ctl 與有變才寫的 procs_state 狀態窗（說明見 daemon.hpp）。 |
-| [`src/main.cpp`](../../../../../proto8/impls/aos-daemon/src/main.cpp) | aos-daemon 命令列——block_signals、解命令列、讀設定、Daemon::serve（10-21 傍晚）。 |
+| [`src/main.cpp`](../../../../../proto8/impls/aos-daemon/src/main.cpp) | aos-daemon 命令列——先阻擋收工、poke 與 SIGUSR1/2 訊號，再解設定並服務。 |
 | [`tests/support.py`](../../../../../proto8/impls/aos-daemon/tests/support.py) | Build isolated real-daemon fixtures and retain evidence for the B lifecycle tests. |
 | [`tests/test_ctl.py`](../../../../../proto8/impls/aos-daemon/tests/test_ctl.py) | Exercise public controls, prune inspection and age selection, command errors and help. |
 | [`tests/test_lifecycle.py`](../../../../../proto8/impls/aos-daemon/tests/test_lifecycle.py) | Verify B lifecycle rules against real daemons, command tools and minimal bodies. |
+| [`tests/test_poke.py`](../../../../../proto8/impls/aos-daemon/tests/test_poke.py) | Verify daemon poke modes, prompt wakeups and pid identity guards with isolated fixtures. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-daemon/vcpkg.json) | aos-daemon：照一張名單把幾個 proc 各自起在小格裡、看著它們（C++） |

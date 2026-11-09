@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢與清理舊列；說明在 cmd/docs/03、04。
+# aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列與門鈴；說明在 cmd/docs/03、04。
 HELP = """aos-daemon-ctl - attach procs to an aos-daemon and start / stop / sleep / wake / pause them
 
 usage: aos-daemon-ctl [--daemon D] SUBCOMMAND [FLAGS...] [ARGS...]
@@ -17,6 +17,7 @@ subcommands:
   resume NAME    the same with "resume"
   ls [-j]        the table: NAME  PHASE  PID  CODE  WS  REASON; last line = the supervisor's view
   where --stack NAME   print its stack (one absolute path)
+  poke [--ctl|--mail|--all]   wake now: read ctl (default), ctl + mailbox, or run a full round early
   ping [--timeout-s S]   wait for the daemon's ping reply; prints "replied in N ms"
 
 Mutation commands drop letters into the daemon's ctl mailbox (procs_added, procs_removed,
@@ -36,6 +37,26 @@ more: proto8/cmd/docs/03-aos-daemon-ctl.md
 """
 
 HELPS = {
+    "poke": """aos-daemon-ctl poke - wake the daemon now
+
+usage: aos-daemon-ctl [--daemon D] poke [--ctl|--mail|--all]
+
+--ctl (default) reads ctl and reconciles procs, without mailbox or body work.
+--mail also handles the mailbox, without running the body.
+--all runs a full round early, including the body even before its next scheduled run.
+Choose at most one mode; no positional arguments are accepted.
+
+This is a doorbell: first write ctl with another command or yourself, or send a letter,
+then poke. Repeated pokes merge into the strongest mode. A running body is not
+interrupted; the daemon checks queued pokes as soon as the body finishes.
+
+The state window's pid, started_at_ticks and boot_id must match /proc before a
+signal is sent through pidfd; otherwise DaemonMissing. The daemon must declare its
+poke signals in that window. Cross-account or sandbox permission denial is PokeFailed.
+
+exit codes: 0 sent (no output); 1 error (ArgumentsBad, DaemonMissing, StateMissing,
+  StateBad, PokeFailed).
+""",
     "prune": """aos-daemon-ctl prune - check rows and detach old stopped or sleeping procs
 
 usage: aos-daemon-ctl [--daemon D] prune [--older-than DUR] [--apply]
@@ -447,6 +468,16 @@ def cmd_ls(opts, args):
     print(CTRL.sub(" ", line))
 
 
+def cmd_poke(opts, args):
+    switches = {"--" + mode: mode for mode in dc.MODES}
+    o, rest = aos_flags.parse(args, {}, switches, help=HELPS["poke"])
+    if rest or sum(arg in switches for arg in args) > 1:
+        raise Fail("ArgumentsBad", "poke takes at most one of --ctl, --mail, --all and no arguments")
+    mode = next((mode for mode in dc.MODES if o.get(mode)), "ctl")
+    d = dc.find_daemon(opts.get("daemon"))
+    dc.poke(d, mode)
+
+
 def cmd_ping(opts, args):
     o, rest = aos_flags.parse(args, {"--timeout-s": "timeout"}, help=HELPS["ping"])
     try:
@@ -473,7 +504,7 @@ def cmd_where(opts, args):
 
 COMMANDS = {"add": cmd_add, "rm": cmd_rm, "prune": cmd_prune, "stop": cmd_stop, "start": cmd_start, "sleep": cmd_sleep, "wake": cmd_wake,
             "pause": cmd_pause, "resume": cmd_resume,
-            "ls": cmd_ls, "where": cmd_where, "ping": cmd_ping}
+            "ls": cmd_ls, "where": cmd_where, "ping": cmd_ping, "poke": cmd_poke}
 
 
 def main():

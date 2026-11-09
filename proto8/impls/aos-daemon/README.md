@@ -16,6 +16,7 @@ daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `sto
 11-06（no-pid P7）：父只看公開 ctl／state_flux 窗判卡住，任何有窗的 proc 都能用；每列 **`stuck_after_cycles`** 預設 10，沒刺激不判、預設只標 `stuck`，回應後回 `running`；寫 `restart_on_stuck: true` 才收掉再起，父 paused 時只標，[docs/04](docs/04-兩個手把-兩扇狀態窗.md#判卡住-stuck11-06-p7)。
 11-06 起選填 **`clock: true`** 自帶時鐘：展開普通 loop 型 proc（預設 `_clock`、`auto_restart: true`），先把 `AOS_CLOCK` 設給身體與子項；想看時鐘走不走就 `cat "$AOS_CLOCK"` 或看表上 `_clock` 列是不是 `running`（`procs_state.json` 頂層的時鐘觀察值 11-09 拿掉），[docs/02](docs/02-看寫法決定怎麼起.md#自帶時鐘-clock選填)、[docs/04](docs/04-兩個手把-兩扇狀態窗.md)。程式預設不開，kernel 範本出廠開時鐘與 log。
 11-09：state 沒有 `counter_runs`；給 **`--enable-counters`** 而且有 state 窗時，每一圈開跑時把這個行程起來後跑到第幾圈寫進 state 窗同資料夾的 `counter_runs.txt`（同 aos-loop 的次數；沒有身體也照數；預設不寫），[docs/04](docs/04-兩個手把-兩扇狀態窗.md)、[N-09 的 11-09 補](../../docs/NORMS/05-基礎設施-窗/02-N-09～N-11.md)。
+11-09 **poke（門鈴）**：`aos-daemon-ctl poke [--ctl|--mail|--all]` 叫 daemon 不等下一圈、立刻看一次檔——`SIGRTMIN+1`＝讀 ctl＋procs_ctl、對表（不收信、不跑身體）、`+2`＝再加信箱、`+3`＝提前一整圈（含身體，`max` 照算）；號碼寫在 state 的穩定欄 **`poke`**，連 poke 幾下合併成最強的那種跑一次，身體跑到一半不打斷、跑完立刻補看。**SIGUSR1／SIGUSR2 一律擋住**（不再把 daemon 打死），子項照常收得到。平常的圈不變，[docs/04](docs/04-兩個手把-兩扇狀態窗.md#poke-門鈴11-09)、[N-17 的 11-09 例外](../../docs/NORMS/05-基礎設施-窗/06-N-17.md)、[thinking daemon-interrupt](../../thinking/2026-11/09/daemon-interrupt/README.md)。
 舊名 `loops`、`execs`、`loops_ctl`、`loops_state`、`loops_ctl_mailbox`、`loops_added`……**當沒看到**（C-48，使用者「1. 當沒看到。」）：不報錯、不提醒。
 
 像一個領班：手上一張名單（`procs`），名單上每個人各有一個小隔間（`$AOS_STACK/procs/<名字>/`，或他自己指定的 `stack`）。他每隔一會兒（`interval_ms`）看一眼兩塊佈告欄：

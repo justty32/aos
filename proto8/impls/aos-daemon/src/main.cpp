@@ -1,4 +1,4 @@
-// main.cpp：aos-daemon 命令列——block_signals、解命令列、讀設定、Daemon::serve（10-21 傍晚）。
+// main.cpp：aos-daemon 命令列——先阻擋收工、poke 與 SIGUSR1/2 訊號，再解設定並服務。
 //
 //     aos-daemon [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--state-flux 檔] [--enable-logs] [--enable-counters] daemon.json [-- 參數...]
 //
@@ -22,6 +22,8 @@ Look after a group of procs (daemon.json "procs"): start them, restart or stop t
 as the ctl window says, and report them in the state windows. Optional own body
 ("exec") runs like aos-loop; a failing body is retried next round (warning line).
 ARGS after -- are appended to the daemon's own exec.
+Poke: SIGRTMIN+1/+2/+3 wake it at once to read ctl / ctl + mailbox / run a full
+round early (aos-daemon-ctl poke). SIGUSR1 and SIGUSR2 are blocked.
 All procs share lifecycle rules regardless of launch syntax: stop writes their public
 ctl and waits (no SIGTERM fallback); sleep sends SIGTERM and keeps a sleeping row.
 Natural exit 0 removes the row; known nonzero exits keep stopped with a reason
@@ -48,6 +50,10 @@ exit codes: 0 done; 1 own error ("aos-daemon: error: CODE ..." on stderr); 128+N
 int main(int argc, char** argv) {
     try {
         aos::block_signals();
+        sigset_t blocked = aos::daemon::poke_signals();
+        sigaddset(&blocked, SIGUSR1);
+        sigaddset(&blocked, SIGUSR2);
+        aos::block_more(blocked);
         aos::Cli cli = aos::loop::loop_cli(std::vector<std::string>(argv + 1, argv + argc), "aos-daemon", HELP, "daemon.json");
         aos::daemon::Daemon d(cli.opts, cli.rest[0], std::vector<std::string>(cli.rest.begin() + 1, cli.rest.end()));
         return d.serve();

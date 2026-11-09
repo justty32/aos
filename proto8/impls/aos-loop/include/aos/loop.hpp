@@ -29,6 +29,7 @@
 #include <chrono>
 #include <map>
 #include <optional>
+#include <signal.h>
 #include <string>
 #include <vector>
 
@@ -203,6 +204,8 @@ struct Defaults {
 // log（11-02）：有身體時每跑完一次在 stdout 印一行 JSON {"started_at", "counter_runs", "code", "signal", "elapsed_ms"}（log_line）；
 // 沒有身體不印。身體繼承這支程式的 stdout，所以身體的輸出跟 log 同一條（混在一起由使用者自己處理，11-02 晚使用者）。
 // 結束前呼叫 finish()（不論為什麼結束）。呼叫前要先 block_signals()。
+// 子類別可把已阻擋的喚醒訊號放入 wake_，nap 收到後呼叫 woke；回 true＝提前算一圈到時間。
+// aos-loop 不設喚醒訊號；aos-daemon 用這個掛鉤接 poke（不當成收工訊號、不轉給身體）。
 // $AOS_STACK 不在＝state 寫不了＝WriteFailed、退 1，不自己建（建 stack 只在 aos-exec 做，N-59 第 1 件）。
 class Loop {
 public:
@@ -221,6 +224,7 @@ public:
 protected:
     // 子類別可覆寫以下掛鉤
     virtual void tend();                                             // 每次讀完 ctl 後（這時 paused_／stopping_ 已照新指令改好）
+    virtual bool woke(int sig);                                     // nap 的喚醒訊號；true＝這一圈當作到時間了
     virtual void finish();                                           // 結束前（不論為什麼結束）
     virtual Json flux_more();                                        // 寫進 state_flux 的額外欄位（預設空物件）
     virtual Json info();                                             // 寫進 state 的額外欄位（物件）
@@ -247,6 +251,11 @@ protected:
     // 之後都不印、不退出；寫的那一下用 pthread_sigmask 擋著 SIGPIPE、排著的吃掉再還原遮罩（不改 SIGPIPE 的處置，子行程不受影響）。
     void log_line(const Json& doc);
 
+    sigset_t wake_ = [] {           // 子類別額外的喚醒訊號（建構時先清空）
+        sigset_t set;
+        sigemptyset(&set);
+        return set;
+    }();
     Defaults d_;
     Json cfg_;                    // 設定檔整份（旗標已蓋上；子類別讀自己的 key，指示詞要自己解：resolve_keys）
     aos::Resolved cfg_dirs_;      // cfg_ 各 key 裡相對 $ref 的起點（cfg_dirs_.dir_of(key)；設定檔所在的資料夾，整份換過 $ref＝那份檔的；value 不用）
@@ -283,6 +292,7 @@ private:
     Json ctl_seq_;                // 最後一道照做的指令的 seq（null＝沒帶或還沒有）
     Json ctl_warning_;           // null 或字串
     int got_ = 0;
+    bool due_ = false;
     bool wrote_ = false;          // 寫過 state 窗沒（啟動後第一份一定寫）
     bool wrote_flux_ = false;     // 啟動後第一份 state_flux 一定寫
     Json last_flux_;              // 上一份寫出去的完整 state_flux

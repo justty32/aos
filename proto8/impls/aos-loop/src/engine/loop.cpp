@@ -5,6 +5,7 @@
 //
 // 訊號：block_signals 擋著的三個訊號排在 kernel 裡；signal_got 兩次之間取出第一個並記住（之後一直回它）；
 // nap 用 sigtimedwait 睡，收到就醒。跑的期間收到的由 run_once 轉給那次、放在 Run::received。
+// nap 也等子類別 wake_ 的訊號，交 woke 決定是否提前算一圈；aos-loop 不設，daemon 用來接 poke。
 #include "engine/engine.hpp"
 
 #include "run/run.hpp"
@@ -21,6 +22,7 @@ namespace aos::loop {
 using Clock = std::chrono::steady_clock;
 
 void Loop::tend() {}
+bool Loop::woke(int) { return false; }
 void Loop::finish() {}
 Json Loop::flux_more() { return Json::object(); }
 Json Loop::info() { return Json::object(); }
@@ -50,15 +52,28 @@ void Loop::nap(double secs) {
     if (secs > 1.0) {
         secs = 1.0;
     }
-    if (secs <= 0 || signal_got() != 0) {
+    if ((secs <= 0 && sigisemptyset(&wake_)) || signal_got() != 0) {
         return;
+    }
+    if (secs < 0) {
+        secs = 0;   // 有喚醒訊號時不睡也照取一次排著的（interval 0 時 poke 不會一直排著）
     }
     long long ns = (long long)(secs * 1e9);
     timespec ts{(time_t)(ns / 1000000000LL), (long)(ns % 1000000000LL)};
-    sigset_t set = the_signals();
-    int sig = sigtimedwait(&set, nullptr, &ts);   // 被別的訊號打斷（EINTR）就當睡完，回頭再看
-    if (sig > 0 && got_ == 0) {
+    sigset_t stop = the_signals();
+    sigset_t set = stop;
+    for (int sig = 1; sig < NSIG; ++sig) {
+        if (sigismember(&wake_, sig) == 1) {
+            sigaddset(&set, sig);
+        }
+    }
+    int sig = sigtimedwait(&set, nullptr, &ts);   // 被別的訊號打斷（EINTR）、零逾時沒東西（EAGAIN）就當睡完，回頭再看
+    if (sig > 0 && sigismember(&stop, sig) == 1 && got_ == 0) {
         got_ = sig;
+    } else if (sig > 0 && sigismember(&wake_, sig) == 1) {
+        if (woke(sig)) {
+            due_ = true;
+        }
     }
 }
 
@@ -94,6 +109,12 @@ int Loop::main_loop() {
         }
         if (mx && runs_ >= *mx) {
             return end(0, StateWindow::done);
+        }
+        if (due_) {
+            due_ = false;
+            if (!paused) {
+                next_at = Clock::now();
+            }
         }
         double wait = std::chrono::duration<double>(next_at - Clock::now()).count();
         if (paused || wait > 0) {

@@ -1,8 +1,11 @@
-// daemon.cpp：【daemon】初始化設定、展開 clock 普通子項、設定環境、路徑、信箱與 stack 鎖（說明見 daemon.hpp）。
+// daemon.cpp：【daemon】初始化設定、環境、信箱與 stack 鎖，定義並合併 poke 訊號（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
 #include "child/limits.hpp"
 #include "aos/util/files.hpp"
 #include "aos/util/clock.hpp"
+#include <algorithm>
+#include <cerrno>
+#include <ctime>
 #include <cstdlib>
 #include <filesystem>
 #include <fcntl.h>
@@ -12,6 +15,44 @@
 #include <unistd.h>
 
 namespace aos::daemon {
+
+int poke_signal(int mode) {
+    return SIGRTMIN + mode;
+}
+
+sigset_t poke_signals() {
+    sigset_t set;
+    sigemptyset(&set);
+    for (int mode = 1; mode <= 3; ++mode) {
+        sigaddset(&set, poke_signal(mode));
+    }
+    return set;
+}
+
+static int poke_mode(int sig) {
+    for (int mode = 1; mode <= 3; ++mode) {
+        if (sig == poke_signal(mode)) {
+            return mode;
+        }
+    }
+    return 0;
+}
+
+bool Daemon::woke(int sig) {
+    poke_ = std::max(poke_, poke_mode(sig));
+    timespec zero{0, 0};
+    while (true) {
+        int next = sigtimedwait(&wake_, nullptr, &zero);
+        if (next < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            break;
+        }
+        poke_ = std::max(poke_, poke_mode(next));
+    }
+    return poke_ == 3;
+}
 
 static aos::loop::Defaults daemon_defaults() {
     aos::loop::Defaults d;
@@ -76,6 +117,7 @@ static void expand_clock(const Json& clock, const std::string& stack, Json& proc
 
 Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string& spec, const std::vector<std::string>& args)
     : Loop(opts, spec, daemon_defaults(), args) {
+    wake_ = poke_signals();
     if (has_exec_) {   // 11-05（edge-daemon 題 1）：身體 daemon 自己跑（run_body，失敗下一圈再跑）；Loop 當沒有身體
         body_ = exec_;
         has_body_ = true;

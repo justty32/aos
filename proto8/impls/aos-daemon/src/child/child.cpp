@@ -5,7 +5,7 @@
 // run_cli——它 cd 進小格、讀小格的 .env（若有）、exec 成 PATH 上的 aos-loop（指到 #/_entry，不受 $AOS_ENTRY 影響）。
 // 所以 ps 看到的子 loop 叫 aos-loop（原本 fork 後在子行程裡直接跑 aos-loop 的 Loop、名字是 aos-daemon，那是 10-20 頂層代定的做法，換掉）。
 // fork 時 daemon 只有一條執行緒，子行程裡做 C++ 配置、setenv 不會撞鎖。三個訊號 daemon 一開始就擋著（block_signals），
-// 子行程 exec 之前解開（遮罩會跨 exec 繼承；子行程不擋）。
+// 子行程 exec 之前還原 block_signals 前的遮罩（遮罩會跨 exec 繼承；含 daemon 額外擋住的訊號）。
 // 11-03（thinking 2026-11-03-procs）：loops／execs 統稱 procs；小格＝proc 的 stack（寫了 stack＝它，沒寫＝$AOS_STACK/procs/<名字>/）。
 // 10-30 execs（thinking 2026-10-30-agent-lifecycle B-12 ②、使用者「讓daemon可以掛aos-exec，也是不錯的」）：exec 型子項走同一條 launch
 // （小格、stderr.txt、setsid、/dev/null、AOS_STACK、cd 到 daemon 的 cwd），只是不寫 loop.json、run_cli 直接拿 {"--", 目標, 參數...}——中間沒有 aos-loop。
@@ -19,6 +19,7 @@
 
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
+#include "aos/util/signals.hpp"
 
 #include <cerrno>
 #include <csignal>
@@ -59,12 +60,7 @@ namespace aos::daemon {
         close(err_fd);
     }
     apply_limits(lim);   // 等同 s6-softlimit／s6-setuidgid（daemon 自己做、不 exec s6）；proc 自己不知道（「偷偷」，C-52）
-    sigset_t set;
-    sigemptyset(&set);
-    sigaddset(&set, SIGINT);
-    sigaddset(&set, SIGTERM);
-    sigaddset(&set, SIGHUP);
-    sigprocmask(SIG_UNBLOCK, &set, nullptr);
+    aos::restore_signals();
     int rc = 1;
     setenv("AOS_STACK", (cell + "/").c_str(), 1);
     setenv("AOS_DAEMON", dstack.c_str(), 1);

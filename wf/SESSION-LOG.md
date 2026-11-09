@@ -10,7 +10,7 @@
 
 - **open｜clock-decouple（使用者 11-09「_clock是與daemon耦合很深...我希望別那麼深」）**：耦合點全表＋四方案寫好（推薦 B：拿掉 `clock` key、鐘＝範本裡一列普通 proc、`AOS_CLOCK` 由定義 `.env` 給），三題已裁（B、預設聽外層＋範本預設不帶鐘只根帶、照用鐘＋鐘列牆鐘）；施工排在 poke 之後；沒改程式與條文 → [clock-decouple](../proto8/thinking/2026-11/09/clock-decouple/README.md)
 
-- **open｜daemon-interrupt（使用者 11-09「如果要做真正的interrupt，那有幾條路」＋補充「這套希望是可選的」）**：只規劃（opus 實測＋fable 規劃＋opus 補邊緣），三條路做成可選門鈴；方向題 4 題等使用者裁，裁完等 state 拆分做完再照 04 順序施工 → [daemon-interrupt](../proto8/thinking/2026-11/09/daemon-interrupt/README.md)
+- **open｜daemon-interrupt（使用者 11-09 裁「先做訊號就好」「那就poke」）**：`aos-daemon-ctl poke` 已施工、實測過（05）；使用者說「這些都可以再討論」，等他試用回饋；socket、搶占、daemon 叫子項沒做 → [daemon-interrupt](../proto8/thinking/2026-11/09/daemon-interrupt/README.md)
 
 - **open｜node-pool（11-08，想法 20 節點池＋想法 21 蒸餾後壓縮）**：想法 20 決定頁使用者已裁（q1 改抽象分數，03 已改）；想法 21 簡報 04→fable 05→圖紙 06 寫好，5 題在桌面決定頁 `aos-np21-1108-待你裁.html` 等裁、照推薦代定；第五輪開工照 03 §7 N2～N5、06 §6 N6～N10（N1 第四輪已修）；真庫兩條錯連（傑克／傑克遜、耶拉／耶拉岡德像）已知會 arknights-kb → [node-pool](../proto8/thinking/2026-11/08/node-pool/README.md)
 

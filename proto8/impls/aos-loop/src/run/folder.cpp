@@ -1,7 +1,7 @@
 // folder.cpp：【run】run_folder——`aos-exec -- 目標 參數...`，在 fork 出來的子行程裡呼叫 aos-exec 的 run_cli。
 //
 //   1. 擋住 SIGCHLD（那三個訊號 block_signals 已擋）、開 signalfd，再 fork
-//   2. 子行程：關掉 signalfd、解開四個訊號，aos::exec::run_cli（定工作區、找入口、讀 .env、cd、開跑——可執行檔／argv 陣列是 exec；
+//   2. 子行程：關掉 signalfd、還原 block_signals 前的訊號遮罩，aos::exec::run_cli（定工作區、找入口、讀 .env、cd、開跑——可執行檔／argv 陣列是 exec；
 //      inst 單子在這個子行程裡跑、回來以子程式的碼 _exit）。它自己的錯印一行「aos-exec: 代號 原因」、_exit(1)
 //      （aos-exec 子程序退 1）。每次重找，入口改了下一次就生效
 //   3. 這個行程：poll signalfd——三個訊號 kill 給子行程（記下第一個）；SIGCHLD 就 waitpid 看是不是它結束了
@@ -13,6 +13,7 @@
 // fork 出來的子行程只有這一條執行緒，不會撞到別條執行緒握著的鎖，所以安全。
 // 子行程跟呼叫者同一個行程群組（不另開）：終端機的 Ctrl-C 兩個都收得到（CONVENTION P-36）。
 #include "run/run.hpp"
+#include "aos/util/signals.hpp"
 
 #include <cerrno>
 #include <chrono>
@@ -73,8 +74,7 @@ unsigned long long ms_since(Clock::time_point t0) {
 // 子行程：一支 aos-exec。不回來。
 [[noreturn]] void child(const std::vector<std::string>& argv, int sig_fd) {
     close(sig_fd);
-    sigset_t set = run_signals();
-    sigprocmask(SIG_UNBLOCK, &set, nullptr);
+    aos::restore_signals();
     int rc = aos::exec::run_cli(argv);   // exec 成功就不回來；inst 單子回子程式的碼；自己的錯已印好、回 1
     std::fflush(nullptr);
     _exit(rc);

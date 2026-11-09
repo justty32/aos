@@ -15,8 +15,8 @@ using Clock = std::chrono::steady_clock;
 // 下一圈（interval_ms 後）再跑。照 Loop 的：到時間才跑（Loop 一輪可能 tend 好幾次）、max 照算、每跑完一次印 log 一行（--enable-logs）、
 // 跑前寫一份 running；退 10＝daemon 收工（同 ctl 的 stop：stopping_，state phase stopped、碼 0）；跑的期間收到訊號＝原樣排回自己（kill），
 // Loop 下一次取訊號就以 128＋N 收工。要整台停用 ctl 的 stop 或 Ctrl-C。
-void Daemon::run_body() {
-    if (!has_body_ || (max_ && body_runs_ >= *max_) || Clock::now() < body_next_) {
+void Daemon::run_body(bool force) {
+    if (!has_body_ || (max_ && body_runs_ >= *max_) || (!force && Clock::now() < body_next_)) {
         return;
     }
     body_runs_ += 1;

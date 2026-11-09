@@ -91,6 +91,7 @@ void Daemon::state_ok() {
 Json Daemon::info() {
     Json o = Json::object();
     o["daemon"] = parent_;
+    o["poke"] = Json::object({{"ctl", poke_signal(1)}, {"mail", poke_signal(2)}, {"all", poke_signal(3)}});
     if (has_body_) {
         o["body_code"] = body_code_;   // 11-05：身體最後一次的結束碼（null＝還沒跑過）
     }

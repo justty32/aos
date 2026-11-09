@@ -16,7 +16,7 @@
 | [`include/aos/util/files.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/files.hpp) | 檔案的小工具——路徑、目錄操作、讀檔與文字及 JSON 原子寫入。 |
 | [`include/aos/util/io.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/io.hpp) | aos 這一家命令列工具的「三扇門」——stdin 讀一份 JSON、stdout 印一行 JSON、stderr 只有兩種行。 |
 | [`include/aos/util/proc.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/proc.hpp) | 整群送訊號、/proc 身分資訊、UTC 時間與唯一名稱。 |
-| [`include/aos/util/signals.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/signals.hpp) | 建立、阻擋與非阻塞取出 SIGINT／SIGTERM／SIGHUP。 |
+| [`include/aos/util/signals.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/signals.hpp) | 建立、阻擋與取出收工訊號，並保留及還原阻擋前的遮罩。 |
 | [`include/aos/util/text.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/text.hpp) | UTF-8 字串的小工具（10-22 起 aos-exec 的 .env、aos-fsm 的 state 檔用）。 |
 | [`src/cli.cpp`](../../../../../proto8/impls/aos-util/src/cli.cpp) | 命令列旗標（含各支自定短名）與設定檔讀取（規則見 include/aos/util/cli.hpp）。 |
 | [`src/clock.cpp`](../../../../../proto8/impls/aos-util/src/clock.cpp) | 讀時鐘與標稱間隔，用樹時鐘或 UTC epoch 毫秒計算期限。 |
@@ -24,7 +24,7 @@
 | [`src/files.cpp`](../../../../../proto8/impls/aos-util/src/files.cpp) | 路徑、讀檔與文字及 JSON 原子寫入（說明見 include/aos/util/files.hpp）。 |
 | [`src/io.cpp`](../../../../../proto8/impls/aos-util/src/io.cpp) | 三扇門——stdin 讀一份 JSON、stdout 印一行、stderr 印錯誤行／提醒行（說明見 include/aos/util/io.hpp）。 |
 | [`src/proc.cpp`](../../../../../proto8/impls/aos-util/src/proc.cpp) | 整群送訊號、/proc 身分資訊、UTC 時間與唯一名稱（說明見 include/aos/util/proc.hpp）。 |
-| [`src/signals.cpp`](../../../../../proto8/impls/aos-util/src/signals.cpp) | 建立訊號集合、阻擋與非阻塞取出 SIGINT／SIGTERM／SIGHUP（說明見 include/aos/util/signals.hpp）。 |
+| [`src/signals.cpp`](../../../../../proto8/impls/aos-util/src/signals.cpp) | 阻擋與取出收工訊號、保存舊遮罩並供子行程還原（說明見 include/aos/util/signals.hpp）。 |
 | [`src/text.cpp`](../../../../../proto8/impls/aos-util/src/text.cpp) | UTF-8 字串的小工具（說明見 include/aos/util/text.hpp）。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-util/vcpkg.json) | aos-util：aos 這一家命令列工具共用的小函式庫（錯誤、stdin 讀一份 JSON、印結果與錯誤） |
 
