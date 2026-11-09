@@ -1,0 +1,11 @@
+// extensions.json：建議裝的擴充——clangd（補完／排版）、C/C++ Debug（gdb）、CMake Tools（preset）；不要 cpptools 的 IntelliSense 跟 clangd 打架。
+{
+  "recommendations": [
+    "kylinideteam.kylin-clangd",
+    "kylinideteam.cppdebug",
+    "ms-vscode.cmake-tools"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.cpptools"
+  ]
+}

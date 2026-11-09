@@ -1,0 +1,170 @@
+// tasks.json：VS Code 的 configure／build／test 工作，三個 preset 各一組（build 前自動 configure、test 前自動 build；build 用 nice -n 15、-j2）。
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "configure: debug",
+      "type": "process",
+      "command": "cmake",
+      "args": [
+        "--preset",
+        "debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build: debug",
+      "type": "process",
+      "command": "nice",
+      "args": [
+        "-n",
+        "15",
+        "cmake",
+        "--build",
+        "--preset",
+        "debug",
+        "-j2"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": [
+        "configure: debug"
+      ],
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "test: debug",
+      "type": "process",
+      "command": "ctest",
+      "args": [
+        "--preset",
+        "debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": [
+        "build: debug"
+      ],
+      "problemMatcher": [],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "configure: release",
+      "type": "process",
+      "command": "cmake",
+      "args": [
+        "--preset",
+        "release"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build: release",
+      "type": "process",
+      "command": "nice",
+      "args": [
+        "-n",
+        "15",
+        "cmake",
+        "--build",
+        "--preset",
+        "release",
+        "-j2"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": [
+        "configure: release"
+      ],
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "test: release",
+      "type": "process",
+      "command": "ctest",
+      "args": [
+        "--preset",
+        "release"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": [
+        "build: release"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "configure: asan",
+      "type": "process",
+      "command": "cmake",
+      "args": [
+        "--preset",
+        "asan"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build: asan",
+      "type": "process",
+      "command": "nice",
+      "args": [
+        "-n",
+        "15",
+        "cmake",
+        "--build",
+        "--preset",
+        "asan",
+        "-j2"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": [
+        "configure: asan"
+      ],
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "test: asan",
+      "type": "process",
+      "command": "ctest",
+      "args": [
+        "--preset",
+        "asan"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": [
+        "build: asan"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

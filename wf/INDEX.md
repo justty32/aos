@@ -1,6 +1,6 @@
 # INDEX — aos 專案地圖
 
-整個專案的頂層導航。aos = **「資料夾＝程式」的 AI agent 體系，本體是 [proto8/](../proto8/README.md)**（各夾一覽在它的 README）；repo 根只放入口、`wf/` 與 `archive/`（08～09 月那一代單一執行檔 `aos` 11-05 封存在 `archive/aos-v1/`）。[AGENTS.md](../AGENTS.md) 只放主工作流 + 指向本檔；細節從這裡分流出去。
+整個專案的頂層導航。aos = **「資料夾＝程式」的 AI agent 體系，本體是 [proto8/](../proto8/README.md)**（各夾一覽在它的 README）；repo 根只放入口、`wf/` 與 `archive/`（另有 [`impl_cpp/`](../impl_cpp/README.md)＝使用者 11-09 起手寫重寫的 C++ 實作；08～09 月那一代單一執行檔 `aos` 11-05 封存在 `archive/aos-v1/`）。[AGENTS.md](../AGENTS.md) 只放主工作流 + 指向本檔；細節從這裡分流出去。
 
 ---
 

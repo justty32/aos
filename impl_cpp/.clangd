@@ -1,0 +1,5 @@
+# clangd 設定：去 build/debug/ 找 compile_commands.json（要先跑過 cmake --preset debug）。
+CompileFlags:
+  CompilationDatabase: build/debug
+Diagnostics:
+  UnusedIncludes: Strict

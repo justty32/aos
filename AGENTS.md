@@ -1,6 +1,6 @@
 # aos — AI agent 專案備忘
 
-aos = **「資料夾＝程式」的 AI agent 體系**，本體是 **[`proto8/`](proto8/README.md)**（第八版原型；使用者 11-05「我們在proto8內……畢竟是prototype-8」）：C／C++ 的基礎層與標準庫在 `proto8/impls/`（每個專案一夾、各自 CMake＋vcpkg、C++20），給人打的指令、腦叫的工具、agent 範本是 Python／sh，概念／規範／慣例條文在 `proto8/docs/`；各夾一覽看 proto8/README。repo 根只放入口、[`wf/`](wf/) 與 [`archive/`](archive/README.md)——08～09 月那一代單一執行檔 `aos`（根目錄 CMake）11-05 整組封存在 `archive/aos-v1/`，不再建、不再維護。
+aos = **「資料夾＝程式」的 AI agent 體系**，本體是 **[`proto8/`](proto8/README.md)**（第八版原型；使用者 11-05「我們在proto8內……畢竟是prototype-8」）：C／C++ 的基礎層與標準庫在 `proto8/impls/`（每個專案一夾、各自 CMake＋vcpkg、C++20），給人打的指令、腦叫的工具、agent 範本是 Python／sh，概念／規範／慣例條文在 `proto8/docs/`；各夾一覽看 proto8/README。repo 根只放入口、[`wf/`](wf/) 與 [`archive/`](archive/README.md)（另有 [`impl_cpp/`](impl_cpp/README.md)＝使用者 11-09 起手寫重寫的 C++ 實作）——08～09 月那一代單一執行檔 `aos`（根目錄 CMake）11-05 整組封存在 `archive/aos-v1/`，不再建、不再維護。
 
 本檔是**最頂層路由器**：只指向下一層，**durable 細節一律不寫這裡**（分層原則與結構整理見 [wf/STRUCTURE.md](wf/STRUCTURE.md)，被動參考、整理結構時才取用）。
 

@@ -1,0 +1,5 @@
+# impl_cpp 不進版控的東西：建置目錄（含 vcpkg_installed）、clangd 索引快取。
+build/
+vcpkg_installed/
+.cache/
+CMakeUserPresets.json

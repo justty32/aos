@@ -1,0 +1,9 @@
+{
+  "name": "aos-impl-cpp",
+  "version": "0.1.0",
+  "description": "impl_cpp 的 vcpkg 相依清單（manifest 模式）：目前只有 nlohmann-json；baseline＝~/dev/vcpkg 現在的 commit，跟 proto8/impls、archive/aos-v1 同一個",
+  "builtin-baseline": "b781af668027bbf77f2f827f47b5c6cd8d825c08",
+  "dependencies": [
+    "nlohmann-json"
+  ]
+}

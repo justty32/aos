@@ -1,0 +1,20 @@
+// settings.json：impl_cpp 的 VS Code 設定——CMake 走 CMakePresets、補完走 clangd（資料庫位置寫在 ../.clangd）、存檔時照 ../.clang-format 排版。
+{
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": false,
+  "cmake.parallelJobs": 2,
+  "clangd.arguments": [
+    "--background-index",
+    "--header-insertion=never",
+    "--clang-tidy=false"
+  ],
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "C_Cpp.formatting": "disabled",
+  "[cpp]": {
+    "editor.defaultFormatter": "kylinideteam.kylin-clangd",
+    "editor.formatOnSave": true
+  },
+  "files.associations": {
+    "*.inc": "cpp"
+  }
+}

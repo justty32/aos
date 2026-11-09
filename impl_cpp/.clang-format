@@ -1,0 +1,7 @@
+# 排版規則：照 archive/aos-v1 手寫的樣子（四格縮排、`char *p` 星號貼名字、namespace 結尾註解）；aos-v1 與 proto8 本身都沒有 .clang-format。
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 100
+PointerAlignment: Right
+AllowShortFunctionsOnASingleLine: Empty
+SpacesBeforeTrailingComments: 2
