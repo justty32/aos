@@ -60,6 +60,7 @@ enable_testing()
 # 外部相依（vcpkg.json 裡列的）。要加新套件：vcpkg.json 加一項 → 這裡 find_package →
 # 多數小專案都用的話加進 common/CMakeLists.txt 的 aos_common_private，否則寫在該小專案的 PRIVATE_DEPS。
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(Catch2 3 CONFIG REQUIRED)   # 只給 core/inst 搬回來的 aos-v1 測試用
 
 # common 要最先，其餘小專案都相依它。
 add_subdirectory(common)

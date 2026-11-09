@@ -1,11 +1,12 @@
 # common：所有小專案共用的東西——C++23 要求、warning 全開、通用私有相依（nlohmann_json）；沒有實作檔。
 #
 # aos::common 是 INTERFACE（不產出檔案），PUBLIC 連給每個小專案：目前只帶 C++23 要求。
-# 之後跨小專案共享的標頭放 common/include/aos/，再把下面那行 target_include_directories 打開。
+# 跨小專案共享的標頭放 common/include/aos/（目前只有 export.h 的 AOS_API）。全是靜態庫，所以定義 AOS_STATIC 讓 AOS_API 展開成空。
 add_library(aos_common INTERFACE)
 add_library(aos::common ALIAS aos_common)
 target_compile_features(aos_common INTERFACE cxx_std_23)
-# target_include_directories(aos_common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(aos_common INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_definitions(aos_common INTERFACE AOS_STATIC)
 
 # ── 通用私有相依 ────────────────────────────────────────────────────────
 #
