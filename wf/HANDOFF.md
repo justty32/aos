@@ -16,7 +16,7 @@
 
 1. **授權與狀態**：使用者在公司、今天通通允許 push、全機 agent CLI 最多 3 個；17:00 下班，已收工、兩份 clone（Windows `C:\code\mine\simple_toolsos`、WSL `~/repo/aos-tools`）同步到收工 commit。WSL vcpkg 重裝在 `~/dev/vcpkg`；公司試驗場 `~/code/playground` 已改三層、只有根帶鐘。大修材料在桌面 `aos-大修材料/`、**不進 repo**（使用者之後自己打包 zip）。
 2. **設計**：今天已定——clock＋單位 cycle 大改、熱寫檔省寫、state 拆出 `state_flux`（[clock-and-hot-writes](../proto8/thinking/2026-11/09/clock-and-hot-writes/README.md)）；`aos-daemon-ctl poke [--ctl|--mail|--all]` 訊號門鈴、擋 SIGUSR1／2（[daemon-interrupt](../proto8/thinking/2026-11/09/daemon-interrupt/README.md)）；daemon 不認鐘、方案 B（[clock-decouple](../proto8/thinking/2026-11/09/clock-decouple/README.md)）；格式版本轉正＝使用者大修之後、種子 S1／S3／S4 與 `.bad-*` gitignore 已做（[format-versioning](../proto8/thinking/2026-11/09/format-versioning/README.md)）；大修材料不凍結核心、跟著 main。**未定**：poke 等使用者試用（「這些都可以再討論」，socket／搶占／daemon 叫子項沒做）；大修材料問題清單 56 列待裁；kernel／cases／extras 先放著。其餘 open 看 [SESSION-LOG](SESSION-LOG.md)。
-3. **新定條號與在跑的 agent**：N-17 加 11-09 poke 例外、N-09 省寫檔原則與 11-09 註、C-48 加註、N-28／N-05 加註、NORMS 附錄 4 持久檔清單；本 session 開的子 agent 都收了；另有大修材料**第四批**（使用者 15:3x「在嘗試多幫我擴充一些東西吧」選的時序圖、骨架偽碼、4 題 why、速查＋FAQ）由另一隊長寫桌面施工中、不碰 repo、16:35 前收。
+3. **新定條號與在跑的 agent**：N-17 加 11-09 poke 例外、N-09 省寫檔原則與 11-09 註、C-48 加註、N-28／N-05 加註、NORMS 附錄 4 持久檔清單；本 session 開的子 agent 都收了；另有大修材料**第四批**（使用者 15:3x「在嘗試多幫我擴充一些東西吧」選的時序圖、骨架偽碼、4 題 why、速查＋FAQ）11-09 已完成（網頁 179 頁；70 流程時序未實跑驗證），寫桌面、不碰 repo。
 
 ## 2026-11-08 晚 19:50 家機頂層（20:00 起美國高峰，停止推進）
 
