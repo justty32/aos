@@ -144,8 +144,7 @@ struct Checker {
 }  // namespace
 
 std::vector<std::string> problems_of(Docs& docs, const std::string& spec, bool env) {
-    Checker ck{docs};
-    ck.env = env;
+    Checker ck{docs, env, {}, {}};
     Located at = locate(docs, parse_spec(spec), Mode{});
     if (!at.rest.empty()) {
         throw Error{code::PointerMissing, "no such pointer: " + spec};
