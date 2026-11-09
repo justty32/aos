@@ -12,6 +12,16 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-09 深夜 23:xx 家機頂層（使用者換 session 改用 fable）
+
+1. **授權與狀態**：同下一條（隨意 push、opus／sonnet 分工、只用 e4b、不 load/unload、顯卡跑到 07:30）。使用者覺得頂層變笨，重開 session 改用 fable。
+2. **舊 session 留下的背景工作（新 session 先查還活著沒）**：
+   - soak 長跑：腳本 `/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/74d55541-5004-44aa-b8d6-5fec53a393a2/scratchpad/soak/soak.py`（23:0x 剛啟動）；派它的 opus 隊長跟舊 session 一起結束，**沒人收報告**。查 `pgrep -af soak.py`；活著就由新 session 等到早上收、寫 `proto8/thinking/2026-11/09/soak-1109/`；死了就看使用者要不要重派。試驗場備份 `~/code/playground.bak-1109soak`。
+   - 本地模型評比：隊長在修 report.py 重跑，同樣隨舊 session 結束，產物看 `proto8/thinking/2026-11/09/local-model-bench/`（可能未 commit）。
+   - arcagi：22:30 回 PROGRESS（`wf/inbox/20261109T2230-arcagi-PROGRESS.md`，未處理），N1 蠟模、N2 CUDA 跑到 06:45，07:30 前回 DONE；看板 `~/repo/arcagi/notes/rounds/gpu-night-1109/`。它是使用者自己的 session，不受影響。
+   - 23:0x 實測：LM Studio 只載 e4b、閒置，GPU 7%／6 W——整夜負載還沒起來。
+3. **未決**：amber_sword 今晚跑不跑；`impl_cpp/core/inst/差異.md` 補不補。無新條號。
+
 ## 2026-11-09 深夜 22:3x 家機頂層（compact 前）
 
 1. **授權與狀態**：使用者在家、本 session 隨意 push；子 agent 普通 opus、雜活 sonnet，派前讀 wf 規矩（雜活除外）。使用者要睡了，要**顯卡跑整夜到明早 07:30**（天冷當暖爐，「不用降低負載」）。**LM Studio 一次只載一個模型照舊**（使用者 22:2x 選「照規矩，大家共用 e4b」）：只用 `google/gemma-4-e4b`；使用者自己開了 LM Studio 與 litellm proxy；他說要下載 qwen3.8 27B，今晚不評（16GB 塞不下、也違反一次一個）。
