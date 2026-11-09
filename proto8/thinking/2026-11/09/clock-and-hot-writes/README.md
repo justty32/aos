@@ -21,7 +21,12 @@
 - **想法 1 範圍＝大改**（使用者「我其實會希望大改」）：proc 名 `_tick`、daemon 設定 `tick` key、`AOS_TICK`／`AOS_TICK_INTERVAL`、`aos-tick` 指令、tick 這個概念在條文裡的用語，一起改。
 - **新名字已裁**。使用者 11-09 原話：「clock＋單位 cycle」。裁定：時鐘一律改名 clock（proc 名、daemon 設定 key、AOS_TICK→AOS_CLOCK 之類、aos-tick 指令、條文用語），單位字改 cycle（例 `timeout_ticks`→`timeout_cycles`）；turn 不採用。
 - **代定（照盤點推薦，可翻案）**：腦的工具 `lib/base/clock` 改名 `wall_clock`；`TickBad` 併成 `ClockBad`；`started_at_ticks`（Linux 真 tick）不改。
-- 想法 2：五題方向題仍待使用者裁，題目在 [03](03-衝突與方向題.md)。
+- **想法 2 五題方向題已裁**。使用者 11-09 原話：「都照推薦」。逐題採用 [03](03-衝突與方向題.md) 的推薦：
+  - 題 1：搬出 json 的判準兩條都要符合（只因時間或每跑一次而變、除寫它的程式外沒人讀）；`counter_runs` 搬出，有人讀的 `responded_at`／`tick`／`phase` 不搬，改它們何時寫。
+  - 題 2：拿掉 `responded_at`「身體跑完一次」這個觸發，只留 ctl 處理、收到信、起或收子項；改 P5b 那句條文，P9 卡住實測要全過。
+  - 題 3：`procs_state.json` 拿掉 `tick` 觀察值，看時鐘讀鐘檔或看 `_clock` 列；改 N-65 ② 與 T7 那句。
+  - 題 4：旗標預設不寫，各程式同名（例 `--enable-counters`），走 `parse_cli`／`aos_flags`，一個計數器一個 .txt（名字照 C-54）。
+  - 題 5：.txt 計數器照 N-05 先寫暫存再改名。
 
 ## 結論
 
