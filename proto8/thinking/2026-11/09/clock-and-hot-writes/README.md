@@ -19,8 +19,9 @@
 ## 裁定
 
 - **想法 1 範圍＝大改**（使用者「我其實會希望大改」）：proc 名 `_tick`、daemon 設定 `tick` key、`AOS_TICK`／`AOS_TICK_INTERVAL`、`aos-tick` 指令、tick 這個概念在條文裡的用語，一起改。
-- **新名字：待使用者在 clock／turn 二選一**（先說 clock、又說 turn 也可以）。
-- 想法 2：還沒裁，方向題在 [03](03-衝突與方向題.md)。
+- **新名字已裁**。使用者 11-09 原話：「clock＋單位 cycle」。裁定：時鐘一律改名 clock（proc 名、daemon 設定 key、AOS_TICK→AOS_CLOCK 之類、aos-tick 指令、條文用語），單位字改 cycle（例 `timeout_ticks`→`timeout_cycles`）；turn 不採用。
+- **代定（照盤點推薦，可翻案）**：腦的工具 `lib/base/clock` 改名 `wall_clock`；`TickBad` 併成 `ClockBad`；`started_at_ticks`（Linux 真 tick）不改。
+- 想法 2：五題方向題仍待使用者裁，題目在 [03](03-衝突與方向題.md)。
 
 ## 結論
 

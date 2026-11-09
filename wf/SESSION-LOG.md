@@ -8,7 +8,7 @@
 
 ## 最新進度
 
-- **open｜clock-and-hot-writes（使用者 11-09 早兩個想法；只盤點）**：想法 1 `_tick` 改名裁「大改」、名字待使用者在 clock／turn 二選一（推薦 clock＋單位 cycle，`started_at_ticks` 是 Linux 的不改）；想法 2 熱寫檔 5 題方向題待裁（推薦：`responded_at` 不因身體跑完更新、表拿掉 `tick` 欄、沒人讀的計數器搬 .txt 預設不寫）；裁完再排施工 → [clock-and-hot-writes](../proto8/thinking/2026-11/09/clock-and-hot-writes/README.md)
+- **open｜clock-and-hot-writes（使用者 11-09 早兩個想法；只盤點）**：名字已裁 clock＋cycle；想法 2 五題待裁；施工排在大重構剩下的步之後 → [clock-and-hot-writes](../proto8/thinking/2026-11/09/clock-and-hot-writes/README.md)
 
 - **open｜node-pool（11-08，想法 20 節點池＋想法 21 蒸餾後壓縮）**：想法 20 決定頁使用者已裁（q1 改抽象分數，03 已改）；想法 21 簡報 04→fable 05→圖紙 06 寫好，5 題在桌面決定頁 `aos-np21-1108-待你裁.html` 等裁、照推薦代定；第五輪開工照 03 §7 N2～N5、06 §6 N6～N10（N1 第四輪已修）；真庫兩條錯連（傑克／傑克遜、耶拉／耶拉岡德像）已知會 arknights-kb → [node-pool](../proto8/thinking/2026-11/08/node-pool/README.md)
 
