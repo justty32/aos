@@ -12,9 +12,9 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-11-09 深夜 23:xx 家機頂層（使用者換 session 改用 fable）
+## 2026-11-09 深夜 23:xx 家機頂層（使用者開新 session）
 
-1. **授權與狀態**：同下一條（隨意 push、opus／sonnet 分工、只用 e4b、不 load/unload、顯卡跑到 07:30）。使用者覺得頂層變笨，重開 session 改用 fable。
+1. **授權與狀態**：同下一條（隨意 push、opus／sonnet 分工、只用 e4b、不 load/unload、顯卡跑到 07:30）。使用者要開新 session。
 2. **舊 session 留下的背景工作（新 session 先查還活著沒）**：
    - soak 長跑：腳本 `/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/74d55541-5004-44aa-b8d6-5fec53a393a2/scratchpad/soak/soak.py`（23:0x 剛啟動）；派它的 opus 隊長跟舊 session 一起結束，**沒人收報告**。查 `pgrep -af soak.py`；活著就由新 session 等到早上收、寫 `proto8/thinking/2026-11/09/soak-1109/`；死了就看使用者要不要重派。試驗場備份 `~/code/playground.bak-1109soak`。
    - 本地模型評比：隊長在修 report.py 重跑，同樣隨舊 session 結束，產物看 `proto8/thinking/2026-11/09/local-model-bench/`（可能未 commit）。
