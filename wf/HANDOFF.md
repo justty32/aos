@@ -21,7 +21,8 @@
    - arcagi：22:30 回 PROGRESS（`wf/inbox/20261109T2230-arcagi-PROGRESS.md`，未處理），N1 蠟模、N2 CUDA 跑到 06:45，07:30 前回 DONE；看板 `~/repo/arcagi/notes/rounds/gpu-night-1109/`。它是使用者自己的 session，不受影響。
    - 23:0x 實測：LM Studio 只載 e4b、閒置，GPU 7%／6 W——整夜負載還沒起來。
 3. **已裁（新 session）**：使用者「amber_sword不用跑。差異也不用補。」新 session 曾派兩個 opus 接手 soak 與本地模型評比，22:4x 使用者改口「arcagi 那個 agent 才是主要的暖爐提供者，你這邊配合他，這兩件可以不用做了」→ 兩個 agent 停掉、soak driver 與試驗場 stack 收掉（Ctrl-C 根），已寄 PROGRESS 給 arcagi 說 e4b／GPU 全讓出；soak、評比都沒產報告、沒 commit
-4. **新 session 的角色（使用者 22:5x）**：「你的用途主要是在arcagi agent那邊，如果他對aos體系有問題，或是想要參考過去thinking或一些東西，你就負責解答。除此之外，如果他有相關需求，你這邊也可以對aos相關資產進行修改與改進。」→ 頂層掛 Monitor 盯 `wf/inbox/` 新信（30 分到期要重掛），已寄 PROGRESS 告知 arcagi 怎麼找我；impl_cpp 核心仍是使用者親手寫、不代寫。使用者 22:5x：「你這邊，今晚就先仍用proto8的東西，大修這塊不急。」——今晚支援 arcagi 一律以 proto8 為準，impl_cpp 不動。無新條號。
+4. **新 session 的角色（使用者 22:5x）**：「你的用途主要是在arcagi agent那邊，如果他對aos體系有問題，或是想要參考過去thinking或一些東西，你就負責解答。除此之外，如果他有相關需求，你這邊也可以對aos相關資產進行修改與改進。」→ 頂層掛 Monitor 盯 `wf/inbox/` 新信（30 分到期要重掛），已寄 PROGRESS 告知 arcagi 怎麼找我；impl_cpp 核心仍是使用者親手寫、不代寫。使用者 22:5x：「你這邊，今晚就先仍用proto8的東西，大修這塊不急。」——今晚支援 arcagi 一律以 proto8 為準，impl_cpp 不動。
+5. **使用者 22:58 下 /goal（到 06:20）安全邊界**：寫入只限 aos repo（impl_cpp 除外）與自己 scratchpad；不寫 ~/repo/arcagi（只寄信到它 wf/inbox/）、不寫 ~/code/playground-arc1；不 sudo、不裝套件、不改系統與 LM Studio／litellm 設定；不讀 ~/.ssh、keyring、瀏覽器資料、別專案金鑰；codex 明帶 -m 與 -s、不用 astra；~/arcagi-STOP 存在就停止派新工作；子 agent 交接書帶安全邊界段並原樣傳給孫 agent；一線一里程碑；同一分鐘同 STATUS 只寄一封；每次 commit 更新 SESSION-LOG 續行點並 push。無新條號。
 
 ## 2026-11-09 深夜 22:3x 家機頂層（compact 前）
 
