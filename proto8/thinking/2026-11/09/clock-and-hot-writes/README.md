@@ -1,6 +1,6 @@
-# 2026-11-09 時鐘改名＋熱寫檔拉出 json（clock-and-hot-writes；兩段都已施工過關；第三段 state 拆分規劃中）
+# 2026-11-09 時鐘改名＋熱寫檔拉出 json（clock-and-hot-writes；兩段都已施工過關；第三段 state 拆分也已施工過關）
 
-← [2026-11-09](../README.md)｜細節：[01 想法 1 改名盤點](01-想法1-改名盤點.md)、[02 想法 2 熱寫檔實測](02-想法2-熱寫檔實測.md)、[03 衝突與方向題](03-衝突與方向題.md)、[04 施工結果](04-施工結果.md)、[05 state 拆分規劃](05-state拆分規劃.md)＋[05 續：衝突、方向題、施工](05-續-衝突方向題與施工.md)
+← [2026-11-09](../README.md)｜細節：[01 想法 1 改名盤點](01-想法1-改名盤點.md)、[02 想法 2 熱寫檔實測](02-想法2-熱寫檔實測.md)、[03 衝突與方向題](03-衝突與方向題.md)、[04 施工結果](04-施工結果.md)、[05 state 拆分規劃](05-state拆分規劃.md)＋[05 續：衝突、方向題、施工](05-續-衝突方向題與施工.md)、[06 state 拆分施工結果](06-state拆分施工結果.md)
 
 ## 使用者原話（11-09 早，整理版）
 
@@ -40,10 +40,21 @@
   - 題 4：旗標預設不寫，各程式同名（例 `--enable-counters`），走 `parse_cli`／`aos_flags`，一個計數器一個 .txt（名字照 C-54）。
   - 題 5：.txt 計數器照 N-05 先寫暫存再改名。
 
-## 第三段：state 拆分（規劃中，等使用者看方向題）
+## 第三段：state 拆分（兩題已裁，已施工過關）
 
-- 規劃（fable 一次性規劃＋opus 補）：[05](05-state拆分規劃.md)、[05 續](05-續-衝突方向題與施工.md)。結論：窗從兩扇變三扇——`state.json` 只留「我的樣子」（phase、paused、max、interval_ms、daemon、body_code、code、pid 三欄、updated_at），外面敲一下就變的回音欄（`responded_at`、`ctl_seq`、`ctl_warning`、daemon 的 procs_ctl 回音與 `mailbox_warning`）搬到同資料夾的新公開窗（暫名 `echo.json`）；父判卡住、aos-daemon-ctl 等回音改讀它；不設旗標、進 image。
-- 方向題 2 題（[05 續](05-續-衝突方向題與施工.md#方向題原則推不出的才列推薦放第一)）：題 1 `responded_at` 三種觸發要不要縮成只剩 ctl（推薦不縮）；題 2 新窗名字（推薦 `echo`）。不寫程式、不改條文，等裁。
+使用者裁兩題（11-09，經頂層轉述，逐字）：
+
+> echo這個名字，容易跟linux shell的echo指令混淆...
+>
+> state_variant，後面那個variant感覺可以用一些變化型，或是拉丁？更新時機不縮小。
+>
+> 那就state_flux，歐天啊，有點高雅
+
+（中間頂層列了 state_flux／state_varia／state_mutabilis／state_vary 四個。）
+
+- 規劃：[05](05-state拆分規劃.md)、[05 續](05-續-衝突方向題與施工.md)。窗從兩扇變三扇：`state.json` 只留「我的樣子」（phase、paused、max、interval_ms、daemon、body_code、code、pid 三欄、updated_at），外面敲一下就變的回音欄（`responded_at`、`ctl_seq`、`ctl_warning`、daemon 的 procs_ctl 回音與 `mailbox_warning`）搬到同資料夾的新公開窗 **`state_flux.json`**；父判卡住、aos-daemon-ctl 等回音改讀它；不設旗標、進 image。
+- **裁定**：新窗名 `state_flux`（key `state_flux`、旗標 `--state-flux`）；`responded_at` 更新時機不縮（三種觸發照舊）。其餘代定（03 題 1 翻成兩層原則、kernel 帳本不套、關掉 state_flux＝不判卡住、一個程式一份 state_flux）使用者沒有異議，照代定。
+- **施工結果**（[06](06-state拆分施工結果.md)）：寄 30 封 ping 時 state.json、procs_state.json 重寫從 60 次降到 0 次（state_flux.json 30 次）；各情境 state／procs_state 每次重寫都有穩定欄真的變；P9 卡住列 11／11、試驗場三層假腦、image clone 後 stopped 列 start 都過。施工代定 5 條見 06。
 
 ## 結論
 

@@ -17,6 +17,7 @@ namespace fs = std::filesystem;
 namespace aos::llm_kernel {
 
 static const char* PROCS_STATE = "procs_state.json";
+static const char* STATE_FLUX = "state_flux.json";
 
 static std::string env(const char* name) {
     const char* v = std::getenv(name);
@@ -61,12 +62,13 @@ Host find_host() {
 
 Table read_table(const Host& h) {
     Table t;
+    std::optional<Json> flux = aos::read_json(aos::join(h.daemon, STATE_FLUX));
+    if (flux && flux->is_object() && flux->value("mailbox_warning", Json()).is_string()) {
+        t.warning = (*flux)["mailbox_warning"].get<std::string>();
+    }
     std::optional<Json> st = aos::read_json(aos::join(h.daemon, PROCS_STATE));
     if (!st || !st->is_object()) {
         return t;
-    }
-    if (st->value("mailbox_warning", Json()).is_string()) {
-        t.warning = (*st)["mailbox_warning"].get<std::string>();
     }
     Json p = st->value("procs", Json::object());
     try {

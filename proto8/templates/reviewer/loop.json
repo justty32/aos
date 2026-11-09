@@ -1,1 +1,1 @@
-{"description": "Schedule the reviewer FSM and expose public control and state files.", "exec": "fsm.json", "interval_ms": 300, "ctl": "ctl.json", "state": "state.json"}
+{"description": "Schedule the reviewer FSM and expose public control and state files.", "exec": "fsm.json", "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}

@@ -20,7 +20,7 @@ for f in _tooldef.json _metainfo.json; do ln -sfn $P/lib/agent/memory/$f bob/too
 agent-fsm/
   _entry       {"argv": ["aos-agent", "ctl", "add", {"$env": "AOS_CD"}], "cwd": {"$env": "AOS_WS"}}（單子，沒 +x；11-05：aos-exec 這個資料夾＝掛上 daemon）
   body.json    ["aos-loop", "loop.json"]（身體的入口；interfaces.json 的 entry 指它，aos-agent ctl add 掛的是它）
-  loop.json    {"exec": "fsm.json", "interval_ms": 300, "ctl": "ctl.json", "state": "state.json"}（沒有 max：常駐，靠 ctl 的 stop 收工）
+  loop.json    {"exec": "fsm.json", "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}（沒有 max：常駐，靠 ctl 的 stop 收工）
   fsm.json     四格：idle {"0": "think", "10": "idle"}、think（brain.py --system system.txt --memory memory）{"0": "wait", "10": "idle"}、
                wait {"0": "act", "10": "wait", "11": "think"}、act（timeout_ms: 1800000）{"0": "think", "10": "idle"}；start: idle
   idle.py      收信：$AOS_STACK/queue/ 全部收進 history.jsonl（接進去就 aos-post done）；有好信退 0、沒有退 10；[--prompt FILE] 開場白

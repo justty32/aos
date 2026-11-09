@@ -1,1 +1,1 @@
-{"exec": "fsm.json", "interval_ms": 300, "ctl": "ctl.json", "state": "state.json"}
+{"description": "Schedule the agent FSM and expose public control, stable state, and state flux files.", "exec": "fsm.json", "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}

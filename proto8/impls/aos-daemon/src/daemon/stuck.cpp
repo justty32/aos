@@ -1,4 +1,4 @@
-// stuck.cpp：【daemon】依公開 ctl/state 窗的刺激與兩鐘期限標記卡住，並選擇收回重起。
+// stuck.cpp：【daemon】依公開 ctl/state_flux 窗的刺激與兩鐘期限標記卡住，並選擇收回重起。
 #include "daemon/daemon.hpp"
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
@@ -16,29 +16,29 @@ void Daemon::check_stuck(const std::string& name, Child& c) {
         return;
     }
     using aos::loop::CtlWindow;
-    using aos::loop::StateWindow;
+    using aos::loop::StateFluxWindow;
     Json ctl = ctl_name(c.stack, names_);
-    Json state = StateWindow::default_name;
+    Json flux = StateFluxWindow::default_name;
     // 父寫的設定只提供公開窗名，不據此分類。
     auto cfg = aos::read_json(aos::join(c.stack, names_.loop));
     if (cfg && cfg->is_object()) {
-        state = cfg->value(StateWindow::config_key, state);
+        flux = cfg->value(StateFluxWindow::config_key, flux);
     }
-    if (!ctl.is_string() || !state.is_string()) {
+    if (!ctl.is_string() || !flux.is_string()) {
         clear();
         return;
     }
     std::string ctl_path = aos::join(c.stack, ctl.get<std::string>());
-    std::string state_path = aos::join(c.stack, state.get<std::string>());
+    std::string flux_path = aos::join(c.stack, flux.get<std::string>());
     struct stat st {};
-    auto response = aos::read_json(state_path);
+    auto response = aos::read_json(flux_path);
     if (stat(ctl_path.c_str(), &st) != 0 || !S_ISREG(st.st_mode) || !response || !response->is_object()) {
         clear();
         return;
     }
     // 公開時間欄是 UTC 毫秒，與 ctl mtime 截到毫秒後使用同一格式比較。
     std::string modified = aos::utc_ms_at(static_cast<long long>(st.st_mtim.tv_sec) * 1000000000LL + st.st_mtim.tv_nsec);
-    Json at = response->value(StateWindow::responded_at, Json());
+    Json at = response->value(StateFluxWindow::responded_at, Json());
     if (!at.is_null() && !at.is_string()) {
         clear();
         return;

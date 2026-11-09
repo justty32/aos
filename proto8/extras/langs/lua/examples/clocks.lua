@@ -13,5 +13,5 @@ end
 
 return aos.dir {
   _entry = { "aos-daemon", "daemon.json" },   -- 入口寫成 argv 陣列（沒 +x 的 JSON 檔），不用 sh
-  ["daemon.json"] = aos.daemon { max = 15, interval_ms = 100, state = "state.json", procs = procs },
+  ["daemon.json"] = aos.daemon { max = 15, interval_ms = 100, state = "state.json", state_flux = "state_flux.json", procs = procs },
 }

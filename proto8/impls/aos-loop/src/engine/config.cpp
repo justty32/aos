@@ -103,11 +103,11 @@ std::string config_file(const std::string& spec) {
 
 aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog, const std::string& help,
                   const std::string& cfg_name) {
-    std::string usage = prog + " [--max N] [--interval-ms N] [--ctl FILE] [--state FILE] [--enable-logs] [--enable-counters] " + cfg_name +
+    std::string usage = prog + " [--max N] [--interval-ms N] [--ctl FILE] [--state FILE] [--state-flux FILE] [--enable-logs] [--enable-counters] " + cfg_name +
                         " [-- ARGS...]";
     aos::Cli cli;
     try {
-        cli = aos::parse_cli(argv, {{"--max", "max"}, {"--interval-ms", "interval_ms"}, {"--ctl", CtlWindow::config_key}, {"--state", StateWindow::config_key}},
+        cli = aos::parse_cli(argv, {{"--max", "max"}, {"--interval-ms", "interval_ms"}, {"--ctl", CtlWindow::config_key}, {"--state", StateWindow::config_key}, {"--state-flux", StateFluxWindow::config_key}},
                              {{"--enable-logs", "enable_logs"}, {"--enable-counters", "enable_counters"}}, help);
     } catch (const Error& e) {
         throw aos::usage_error(e.code, e.msg, usage);   // FlagUnknown／ArgumentsBad
@@ -180,7 +180,7 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
     std::string exec_base;   // exec 那格裡相對 $ref 的起點（內嵌單子用）
     try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45；捷徑解開，10-24 審後，config_file）
         aos::Resolved r = resolve_keys(cfg_, aos::dirname(config_file(spec)),
-                                       {"max", "interval_ms", CtlWindow::config_key, StateWindow::config_key});
+                                       {"max", "interval_ms", CtlWindow::config_key, StateWindow::config_key, StateFluxWindow::config_key});
         if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解（10-24，resolve_exec）
             aos::Resolved ex = resolve_exec(r.value["exec"], r.dir_of("exec"));
             r.value["exec"] = std::move(ex.value);
@@ -211,7 +211,7 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
         }
         cfg_[k] = n;
     }
-    const char* wins[2] = {CtlWindow::config_key, StateWindow::config_key};
+    const char* wins[3] = {CtlWindow::config_key, StateWindow::config_key, StateFluxWindow::config_key};
     for (const char* k : wins) {
         auto it = opts.find(k);
         if (it != opts.end()) {
@@ -247,11 +247,11 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
     if (s != nullptr) {
         stack_ = s;
     }
-    // 11-04（使用者題 5「留 key、沒寫時預設就是這兩個名」）：沒寫＝ctl.json／state.json；寫 null＝不開
-    const char* keys[2] = {CtlWindow::config_key, StateWindow::config_key};
-    const char* default_names[2] = {CtlWindow::default_name, StateWindow::default_name};
-    std::string* paths[2] = {&ctl_path_, &state_path_};
-    for (int i = 0; i < 2; ++i) {
+    // 11-04（使用者題 5「留 key、沒寫時預設就是這組名」）：沒寫＝ctl.json／state.json／state_flux.json；寫 null＝不開
+    const char* keys[3] = {CtlWindow::config_key, StateWindow::config_key, StateFluxWindow::config_key};
+    const char* default_names[3] = {CtlWindow::default_name, StateWindow::default_name, StateFluxWindow::default_name};
+    std::string* paths[3] = {&ctl_path_, &state_path_, &state_flux_path_};
+    for (int i = 0; i < 3; ++i) {
         Json v = cfg_.contains(keys[i]) ? cfg_[keys[i]] : Json(default_names[i]);
         if (v.is_null()) {
             continue;

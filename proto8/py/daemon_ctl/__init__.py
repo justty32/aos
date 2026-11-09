@@ -3,6 +3,7 @@ PROG = "aos-daemon-ctl"
 
 from .base import (
     STATE,
+    STATE_FLUX,
     PATHS,
     NAMES,
     Fail,

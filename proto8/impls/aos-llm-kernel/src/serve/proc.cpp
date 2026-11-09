@@ -98,7 +98,7 @@ void Server::mount(const std::string& id, const std::string& exec, Json proc) {
 //              stopped 而列上有 reason（11-05：問腦 loop 退非 0，daemon 不再下表、留 stopped＋reason）＝同樣收尾（照下面看 code）、寄 procs_removed；
 //              stopped、沒 reason、沒跑完（有人下了 stop）＝在飛（等）
 //   表上沒有：state.json 收尾了（done／stopped）＝看 code；state.json 在、沒收尾＝跑到一半死了→重掛；
-//            不在＝daemon 還沒套（暫停中、還沒輪到）＝在飛，或拒了（mailbox_warning 提到這封掛信）＝LaunchFailed
+//            不在＝daemon 還沒套（暫停中、還沒輪到）＝在飛，或拒了（state_flux.json 的 mailbox_warning 提到這封掛信）＝LaunchFailed
 //   重掛時列還在（出錯留的 stopped）：先寄 procs_removed、proc.json 記 remount，等 daemon 把列拔了下一次才寄掛信（同名 add 不會把 stopped 的拉起來；
 //   直接 procs_started 的話，daemon 還沒套信前下一次 collect 會把舊列的 reason 當成第二次失敗）
 std::optional<Json> Server::settle(const std::string& id, Json proc) {

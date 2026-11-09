@@ -1,6 +1,6 @@
 // main.cpp：aos-daemon 命令列——block_signals、解命令列、讀設定、Daemon::serve（10-21 傍晚）。
 //
-//     aos-daemon [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] [--enable-counters] daemon.json [-- 參數...]
+//     aos-daemon [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--state-flux 檔] [--enable-logs] [--enable-counters] daemon.json [-- 參數...]
 //
 // 命令列同 aos-loop（loop_cli；唯一的位置參數＝設定檔，可寫 `檔#/指標`；10-21 傍晚 ideas § 9）。
 // 管一群 proc（C-36、N-28；11-03 起 loops／execs 統稱 procs）；每個 proc 的小格是它寫的 stack，沒寫＝$AOS_STACK/procs/<名字>/（P-17）。規則見 README 與 daemon/daemon.hpp。
@@ -36,7 +36,8 @@ flags:
   --max N               stop after N rounds
   --interval-ms N       wait N ms between rounds (default 200)
   --ctl FILE            control window
-  --state FILE          state window
+  --state FILE          stable state window
+  --state-flux FILE     response window
   --enable-logs         print JSON lines for proc start/end/stuck restart and body runs
   --enable-counters     write counter_runs.txt (runs so far) next to the state window
   -h, --help            show this help

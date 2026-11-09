@@ -6,7 +6,8 @@ import re
 import stat
 import time
 
-from .base import Fail, NAMES, PATHS, STATE
+from .base import Fail, NAMES, PATHS, STATE, STATE_FLUX
+from .entry import read_loop
 
 
 
@@ -68,8 +69,23 @@ def resolve(d, row):
 
 
 
+def mailbox_warning(d):
+    """獨立讀 daemon 的 state_flux；設定讀不到用預設名，關窗或讀不到回音就沒有警告。"""
+    try:
+        name = read_loop(os.path.join(d, "daemon.json")).get("state_flux", STATE_FLUX)
+    except Fail:
+        name = STATE_FLUX
+    if not isinstance(name, str) or not name:
+        return None
+    try:
+        with open(os.path.join(d, name), encoding="utf-8") as fh:
+            return json.load(fh).get("mailbox_warning")
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
 def state(d):
-    """讀名單窗與切檔；解析失敗時稍等一次，避免讀到寫入交界。"""
+    """讀名單窗與切檔，警告獨立讀 state_flux；名單解析失敗時稍等一次。"""
     path = os.path.join(d, STATE)
     if not os.path.isfile(path):
         raise Fail("StateMissing", "%s not found (daemon not started yet, or procs_state is off)" % path)
@@ -78,8 +94,8 @@ def state(d):
             with open(path, encoding="utf-8") as fh:
                 st = json.load(fh)
             procs = table(d, st.get("procs", {}))
-            return {"daemon": st.get("daemon"), "responded_at": st.get("responded_at"),
-                    "mailbox_warning": st.get("mailbox_warning"),
+            return {"daemon": st.get("daemon"),
+                    "mailbox_warning": mailbox_warning(d),
                     "procs": {n: resolve(d, r) if isinstance(r, dict) else r for n, r in procs.items()}}
         except (OSError, ValueError, AttributeError, TypeError) as exc:
             if attempt:

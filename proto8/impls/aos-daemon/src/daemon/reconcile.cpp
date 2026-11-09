@@ -131,7 +131,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
         }
         ++it;
     }
-    flush_table();   // 起之前先寫一份（退掉的、ctl_seq 變了的；起一大批要好一陣子），沒變就不寫
+    flush_table();   // 起之前先寫一份（退掉的、回音待更新的；起一大批要好一陣子），沒變就不寫
     // null＝信箱模式接回的（只留名、沒有設定），只從 held 的列照保留的型別與目標再起；收的途中（stopping）的同名項還在表上：等它退了、下一次才起；
     // 本次執行已自己結束的（ended_）不起
     // 11-05 第二輪：起的途中每 FLUSH_MS 最多寫一次 procs_state（原本每一列寫一次整張表：表上千列、一批上千封信＝平方慢，21 秒、Ctrl-C 33 秒才退）；
@@ -151,7 +151,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                 c.failed = false;   // 11-05：剛留成 stopped＋原因的，這圈不起；下一圈起 stopped 集合已有它
                 continue;
             }
-            if (c.held && stopped.count(n) == 0 && !(c.phase == "sleeping" && slept.count(n) > 0)) {   // 11-05：sleep 叫睡的不自己醒   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（子 loop 比舊 state 的 ctl_seq，已套用過的不重做）
+            if (c.held && stopped.count(n) == 0 && !(c.phase == "sleeping" && slept.count(n) > 0)) {   // 11-05：sleep 叫睡的不自己醒   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（子 loop 比舊 state_flux 的 ctl_seq，已套用過的不重做）
                 Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits, c.launch, c.auto_restart, c.restart_on_stuck, c.stuck_after_cycles);   // 信箱接回只留名時照列上的值
                 nc.revived = true;   // 11-05：REVIVE_MS 內退了＝留成 stopped＋原因（衝突 3）
                 nc.revived_at = Clock::now();

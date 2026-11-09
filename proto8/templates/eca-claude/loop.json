@@ -1,2 +1,2 @@
-{"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000}, "interval_ms": 300,
- "ctl": "ctl.json", "state": "state.json"}
+{"description": "Schedule the Claude agent turn and expose public control, stable state, and state flux files.", "exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000}, "interval_ms": 300,
+ "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}

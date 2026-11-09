@@ -104,7 +104,7 @@
    "abbr": "seq",
    "full": "sequence number",
    "meaning": "流水號",
-   "example": "ctl 的 seq、state 的 ctl_seq"
+   "example": "ctl 的 seq、state_flux 的 ctl_seq"
   },
   {
    "abbr": "id",

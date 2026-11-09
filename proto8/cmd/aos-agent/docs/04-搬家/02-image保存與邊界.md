@@ -4,7 +4,7 @@
 
 **別信、別帶的**：
 
-- 表與 state 窗的 `pid`、`started_at_ticks`、`boot_id` 是上一台（上一次）的；新 daemon 對不上就當「沒在跑」，照起、照醒。
+- 表與 state 窗的 `pid`、`started_at_ticks`、`boot_id` 是上一台（上一次）的；新 daemon 對不上就當「沒在跑」，照起、照醒。state_flux 窗的 `responded_at` 也是舊值，父接回時以接回那一刻為基準，不拿它判卡住。
 - eca（claude／codex 當 agent）的對話本體在那台的 `~/.claude/projects/…`，image 裡只有 `session.txt` 的 id；換一台 `--resume` 找不到就從頭開（`history.jsonl` 還在、看得到以前聊什麼）。`transcripts/` 的 symlink 到別台是斷的，無害。畫面的 `tty.sock` 是死的，醒來 `aos-agent open` 重開。
 - git 不收空資料夾（信箱的 `tmp/ new/ cur/`、工具小格）：第一圈 daemon、aos-post、aos-tools 會自己建回，不用管。
 - **只在 Linux 檔案系統 checkout**：Windows 端 checkout 會丟 `+x`（定義裡的 `_entry`）、`core.autocrlf` 會在 `stage.txt`、`_entry` 尾巴加 `\r`；`/mnt/c` 底下又每個檔都 `+x`（aos-exec 會把 JSON 當執行檔）。真的要過 Windows，pull 完 `chmod +x` 那幾個 `_entry`，並放下面的 `.gitattributes`。
@@ -15,7 +15,7 @@
 
 | 檔 | 放哪 | 做什麼 |
 |---|---|---|
-| [`stack.gitignore`](../../stack.gitignore) | `cp stack.gitignore ws/.stack/.gitignore`（每台 daemon stack 各一份） | 擋暫存、鎖、可重建檔、log 與計數器 `counter_*.txt`（[完整規則與理由](../../../../thinking/2026-11/06/git-image/04-gitignore建議.md)），包含 `think/request.json`；保留 state、procs 表、history、stage、pending、在途 `new/`／`cur/`／問腦回信、設定覆蓋層與額度帳 |
+| [`stack.gitignore`](../../stack.gitignore) | `cp stack.gitignore ws/.stack/.gitignore`（每台 daemon stack 各一份） | 擋暫存、鎖、可重建檔、log 與計數器 `counter_*.txt`（[完整規則與理由](../../../../thinking/2026-11/06/git-image/04-gitignore建議.md)），包含 `think/request.json`；保留 state、state_flux（`ctl_seq` 讓 stop→start 不被同一道 stop 再停；暫存 `.state_flux.json` 被 `**/.*` 擋）、procs 表、history、stage、pending、在途 `new/`／`cur/`／問腦回信、設定覆蓋層與額度帳 |
 | [`stack.gitattributes`](../../stack.gitattributes) | `cp stack.gitattributes <git repo 根>/.gitattributes` | `* -text`：一律不轉換行（放根＝定義的 `_entry` 也管到） |
 
 `.gitignore` 放 `.stack` 裡而不是 ws 根：放 ws 根也擋得對 image，但 `**/tmp/`、`**/.*` 會連你 ws 裡自己的 `tmp/`、`.env` 一起擋。

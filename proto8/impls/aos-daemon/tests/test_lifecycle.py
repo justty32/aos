@@ -142,9 +142,82 @@ class Lifecycle(unittest.TestCase):
                            ('procs_slept', 'sleeping'), ('procs_woken', 'running')):
             write(f.stack / 'procs_ctl.json', {'procs_added': {'job': str(target)}, key: ['job']})
             f.phase(phase)
-            self.assertIsNone(read(f.stack / 'procs_state.json')['ctl_warning'])
+            self.assertIsNone(read(f.stack / 'state_flux.json')['procs_ctl_warning'])
         write(f.stack / 'procs_ctl.json', {'procs_stopped': 4})
-        until(lambda: read(f.stack / 'procs_state.json').get('ctl_warning'))
+        until(lambda: read(f.stack / 'state_flux.json').get('procs_ctl_warning'))
+
+    def test_response_only_changes_leave_stable_windows_untouched(self):
+        f = self.fixture('flux_only').start()
+        stable = [f.stack / name for name in ('state.json', 'procs_state.json')]
+        before = [(p.read_bytes(), p.stat().st_mtime_ns) for p in stable]
+        flux = f.stack / 'state_flux.json'
+        self.assertNotIn('updated_at', read(flux))
+        for seq in (1, 2):
+            write(f.stack / 'ctl.json', {'cmd': 'resume', 'seq': seq})
+            until(lambda: read(flux, {}).get('ctl_seq') == seq)
+        write(f.stack / 'procs_ctl.json', {'seq': 7})
+        until(lambda: read(flux, {}).get('procs_ctl_seq') == 7)
+        write(f.stack / 'procs_ctl.json', {'procs_stopped': 4})
+        until(lambda: read(flux, {}).get('procs_ctl_warning'))
+        previous_response = read(flux)['responded_at']
+        dc.ask(str(f.stack), {'ping': True})
+        until(lambda: read(flux)['responded_at'] != previous_response)
+        self.assertEqual(before, [(p.read_bytes(), p.stat().st_mtime_ns) for p in stable])
+        for p in stable:
+            self.assertTrue({'ctl_seq', 'ctl_warning', 'responded_at', 'mailbox_warning'}.isdisjoint(read(p)))
+        snapshot = (flux.read_bytes(), flux.stat().st_mtime_ns)
+        time.sleep(.12)
+        self.assertEqual(snapshot, (flux.read_bytes(), flux.stat().st_mtime_ns))
+
+    def test_flux_ack_follows_stable_state_and_restart_deduplicates_stop(self):
+        f = self.fixture('flux_restart').start()
+        flux = f.stack / 'state_flux.json'
+        write(f.stack / 'ctl.json', {'cmd': 'pause', 'seq': 11})
+        until(lambda: read(flux, {}).get('ctl_seq') == 11)
+        self.assertTrue(read(f.stack / 'state.json')['paused'])
+        write(f.stack / 'ctl.json', {'cmd': 'stop', 'seq': 12})
+        f.proc.wait(timeout=7)
+        self.assertEqual(read(flux)['ctl_seq'], 12)
+        self.assertEqual(read(f.stack / 'state.json')['phase'], 'stopped')
+        f.close()
+        f.start()
+        until(lambda: read(f.stack / 'state.json', {}).get('pid') == f.proc.pid)
+        self.assertIsNone(f.proc.poll())
+        self.assertEqual(read(flux)['ctl_seq'], 12)
+        self.assertTrue(read(f.stack / 'state.json')['paused'])
+
+    def test_own_control_settings_are_stable_before_ack(self):
+        f = self.fixture('flux_settings').start()
+        flux = f.stack / 'state_flux.json'
+        write(f.stack / 'ctl.json', {'cmd': 'resume', 'max': 100000,
+                                     'interval_ms': 25, 'seq': 101})
+        until(lambda: read(flux, {}).get('ctl_seq') == 101)
+        state = read(f.stack / 'state.json')
+        self.assertEqual(state['max'], 100000)
+        self.assertEqual(state['interval_ms'], 25)
+        self.assertFalse(state['paused'])
+
+    def test_failed_stable_write_prevents_early_ack(self):
+        f = self.fixture('flux_write_order').start()
+        state = f.stack / 'state.json'
+        backup = f.stack / 'saved_state.json'
+        flux = f.stack / 'state_flux.json'
+        state.rename(backup)
+        state.mkdir()  # rename of the stable window fails deterministically, including as root.
+        try:
+            write(f.stack / 'ctl.json', {'cmd': 'resume', 'max': 100000,
+                                         'interval_ms': 25, 'seq': 101})
+            until(lambda: 'cannot write the state windows' in (f.root / 'daemon.err').read_text())
+            time.sleep(.12)
+            self.assertNotEqual(read(flux)['ctl_seq'], 101)
+            self.assertEqual(read(backup)['interval_ms'], 20)
+        finally:
+            state.rmdir()
+            backup.replace(state)
+        until(lambda: read(flux, {}).get('ctl_seq') == 101)
+        self.assertEqual(read(state)['max'], 100000)
+        self.assertEqual(read(state)['interval_ms'], 25)
+        self.assertIsNone(f.proc.poll())
 
     def test_signal_exit_stays_stopped(self):
         f = self.fixture('signal').start()
@@ -309,11 +382,36 @@ time.sleep(12)
         f.phase('running')
         until(lambda: (f.cell / 'ready').exists())
         first = f.row()['pid']
-        write(f.cell / 'state.json', {'responded_at': None})
+        write(f.cell / 'state_flux.json', {'responded_at': None})
         time.sleep(.03)
         write(f.cell / 'ctl.json', {'cmd': 'pause', 'seq': 1})
         until(lambda: f.row() and f.row()['phase'] == 'running' and f.row()['pid'] != first)
         self.assertIn('control window response timed out; restarting', (f.root / 'daemon.log').read_text())
+
+    def test_stuck_uses_custom_flux_and_skips_disabled_or_bad_windows(self):
+        f = self.fixture('stuck_custom')
+        target = f.body('script', 'stop', seconds=30)
+        write(f.config, {'interval_ms': 20, 'procs': {'job': {
+            'exec': str(target), 'stuck_after_cycles': 1}}})
+        f.start()
+        f.phase('running')
+        until(lambda: (f.cell / 'ready').exists())
+        # Stable state has no response fields; only the selected flux counts.
+        write(f.cell / 'state.json', {'phase': 'running'})
+        write(f.cell / 'state_flux.json', {'responded_at': None})
+        for name in (None, 12, 'reply.json'):
+            write(f.cell / 'loop.json', {'state_flux': name})
+            write(f.cell / 'reply.json', [])
+            time.sleep(.03)
+            write(f.cell / 'ctl.json', {'cmd': 'pause', 'seq': str(name)})
+            time.sleep(1.15)
+            self.assertEqual(f.row()['phase'], 'running')
+        write(f.cell / 'reply.json', {'responded_at': None})
+        f.phase('stuck')
+        from datetime import datetime, timezone
+        at = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+        write(f.cell / 'reply.json', {'responded_at': at})
+        f.phase('running')
 
     def test_pause_resume_without_parent_loop_config(self):
         f = self.fixture('real_pause').start()

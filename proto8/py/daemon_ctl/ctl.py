@@ -6,7 +6,7 @@ import time
 import aos_flags
 import daemon_ctl as _pkg
 
-from .base import Fail
+from .base import Fail, STATE_FLUX
 from .entry import read_loop
 from .table import cell_of, names_of, row_of
 
@@ -83,11 +83,11 @@ def write_ctl(d, name, cmd, timeout_s=APPLY_S):
 
 
 def wait_applied(d, name, stack, cmd, seq, timeout_s=APPLY_S):
-    """等子 loop 的 state 窗 ctl_seq 追上 seq（11-05 晚 listen paused bug）；state 窗是 null＝不等；等不到＝提醒行。"""
+    """等子 loop 的 state_flux 窗 ctl_seq 追上 seq；state_flux 窗是 null＝不等；等不到＝提醒行。"""
     try:
-        sname = read_loop(os.path.join(stack, names_of(d)["procs_loop"])).get("state", "state.json")
+        sname = read_loop(os.path.join(stack, names_of(d)["procs_loop"])).get("state_flux", STATE_FLUX)
     except Fail:
-        sname = "state.json"
+        sname = STATE_FLUX
     if not isinstance(sname, str) or not sname:
         return
     spath, end = os.path.join(stack, sname), time.monotonic() + timeout_s

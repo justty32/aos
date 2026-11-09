@@ -1,12 +1,12 @@
 // main.cpp：aos-loop 命令列——block_signals、解命令列、讀設定、Loop::serve（公開 API 見 aos/loop.hpp）。
 //
-//     aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] [--enable-counters] loop.json [-- 參數...]
+//     aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--state-flux 檔] [--enable-logs] [--enable-counters] loop.json [-- 參數...]
 //
 // 唯一的位置參數就是設定檔（必給、只能一個；可寫 `檔#/指標`）；旗標放前面、規則同 aos-exec；起跑時 旗標 ＞ loop.json ＞ 預設
 // （10-21 傍晚 ideas § 9）。exec＝字串或 [目標, 參數...]，每次 `aos-exec -- 目標 參數...`；max 沒寫＝不限。
 // 那次的碼：0＝下一次；10＝正常停（以 0 結束）；其他非 0＝失敗，stderr 錯誤行「aos-loop: error: RunFailed run N: 誰 failed with exit code C」、以那個碼結束（11-05 D4）。
 // 跑滿 max 以 0 結束、stderr 不寫（N-43）。收到 SIGINT／SIGTERM／SIGHUP：轉給正在跑的那次、等它結束，再以 128＋N 結束
-// （兩次之間收到就不起下一次）。選填 interval_ms、ctl、state。
+// （兩次之間收到就不起下一次）。選填 interval_ms、ctl、state、state_flux。
 // log（11-02；11-02 晚改預設不印）：--enable-logs 時每跑完一次在 stdout 印一行 JSON {"started_at", "counter_runs", "code", "signal", "elapsed_ms"}；
 // 身體繼承同一個 stdout，混在一起由使用者自己處理。印不了（管子關了）就不印、照跑。
 // `-- 參數...`（11-02 晚）：設定檔之後的附加參數，每次接在 exec 後面（字串、陣列接在最後；單子接在 argv 最後）。
@@ -27,6 +27,7 @@ flags:
   --interval-ms N       wait N ms between runs
   --ctl FILE            control window (JSON commands: pause, resume, stop, ...)
   --state FILE          state window (aos-loop writes its phase there)
+  --state-flux FILE     response window (ctl sequence, warnings, response time)
   --enable-logs         print one JSON line per run to stdout
   --enable-counters     write counter_runs.txt (runs so far) next to the state window
   -h, --help            show this help

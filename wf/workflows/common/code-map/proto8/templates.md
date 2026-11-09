@@ -25,7 +25,7 @@
 | [`idle.py`](../../../../../proto8/templates/agent-fsm/idle.py) | idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。 |
 | [`interfaces.json`](../../../../../proto8/templates/agent-fsm/interfaces.json) | 設定（鍵：aos-agent、aos-observed） |
 | [`llm.json`](../../../../../proto8/templates/agent-fsm/llm.json) | （檔頭沒有一句話） |
-| [`loop.json`](../../../../../proto8/templates/agent-fsm/loop.json) | 設定（鍵：exec、interval_ms、ctl、state） |
+| [`loop.json`](../../../../../proto8/templates/agent-fsm/loop.json) | Schedule the agent FSM and expose public control, stable state, and state flux files. |
 | [`system.txt`](../../../../../proto8/templates/agent-fsm/system.txt) | （檔頭沒有一句話） |
 | [`tests/test_batch3.py`](../../../../../proto8/templates/agent-fsm/tests/test_batch3.py) | Verify daemon-managed fake-brain parent and child observations through public interfaces. |
 | [`tests/test_cells.py`](../../../../../proto8/templates/agent-fsm/tests/test_cells.py) | Verify task context, tool limits, and best-effort observations with local fake commands. |
@@ -44,7 +44,7 @@
 | [`cli.json`](../../../../../proto8/templates/eca-claude/cli.json) | 設定（鍵：kind、flags、print_flags、tools_flags、timeout_ms） |
 | [`interfaces.json`](../../../../../proto8/templates/eca-claude/interfaces.json) | 設定（鍵：aos-agent） |
 | [`llm.json`](../../../../../proto8/templates/eca-claude/llm.json) | 設定（鍵：model） |
-| [`loop.json`](../../../../../proto8/templates/eca-claude/loop.json) | 設定（鍵：exec、interval_ms、ctl、state） |
+| [`loop.json`](../../../../../proto8/templates/eca-claude/loop.json) | Schedule the Claude agent turn and expose public control, stable state, and state flux files. |
 | [`screen/_entry`](../../../../../proto8/templates/eca-claude/screen/_entry) | 入口：`aos-eca-screen --eca ..` |
 | [`screen/interfaces.json`](../../../../../proto8/templates/eca-claude/screen/interfaces.json) | 設定（鍵：aos-agent/screen） |
 | [`tools.json`](../../../../../proto8/templates/eca-claude/tools.json) | 設定（鍵：tools） |

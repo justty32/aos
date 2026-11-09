@@ -1,17 +1,15 @@
-// window.cpp：【engine】ctl／state 兩扇窗與選開的 counter_runs.txt（NORMS N-06～N-09、N-17、N-32、N-33）。
+// window.cpp：【engine】ctl／state／state_flux 三扇窗與選開的 counter_runs.txt（NORMS N-06～N-09、N-17、N-32、N-33）。
 //
 //   read_ctl      ctl＝一道指令（11-03，thinking 2026-11-03-ctl-commands）：認 cmd（"pause"／"resume"／"stop"）、max、interval_ms（非負整數或 null）、
 //                 seq（非負整數），加上子類別的 check_ctl；其他 key 忽略。指示詞先解（resolve_keys；10-23 晚）。
 //                 新舊比內容：這次讀到的跟上一次讀到的一樣＝同一道、不再做；不一樣才照做一次（pause／resume 改 paused_、stop 設 stopping_、
-//                 max／interval_ms 寫了才改、null 回設定檔的值；ctl_seq 回音這道的 seq）。起來第一次只略過 seq 與舊 state 的 ctl_seq 相同的已套用指令，其餘照做。
-//                 讀到新的壞的（讀不了、不是 JSON 物件、型別不對、cmd 不認得、指示詞解不開）整份不採用、維持原狀，原因記 ctl_warning（N-08）；
+//                 max／interval_ms 寫了才改、null 回設定檔的值；ctl_seq 回音這道的 seq）。起來第一次只略過 seq 與舊 state_flux 的 ctl_seq 相同的已套用指令，其餘照做。
+//                 讀到新的壞的（讀不了、不是 JSON 物件、型別不對、cmd 不認得、指示詞解不開）整份不採用、維持原狀，原因記 state_flux 的 ctl_warning（N-08）；
 //                 照做了一道好的清回 null（check_ctl 填了 ctl_note_＝那一句）。檔不在＝沒有新指令、維持原狀（之後再寫的一律算新的）。讀的人不刪不改 ctl
 //                 新的好壞指令處理完都算有反應（responded）；已套用過的第一道、檔不在不算
-//   read_old_state  起來時：開了 state 窗、舊的 state.json 是物件而且 paused 是 true＝起來先暫停（11-03 代定，使用者四態「繼續暫停」）；並接回有效 ctl_seq，供第一道指令去重
-//   write_state   state 一份：phase、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 的指令改過之後）
-//                 ＋info()＋code（結束時）＋proc_fields＋responded_at＋updated_at（updated_at 最後一欄）；responded_at 算進變動比較，沒開 state 窗就不寫；
-//                 有變才寫（11-02）：組好的這份（不含 updated_at；running／waiting 互換當沒變，11-02 晚）跟上一份寫出去的一樣就不碰檔；第一份、帶 code 的一定寫；
-//                 接著呼叫 write_more（子類別的窗，自己比有沒有變；10-29）。11-02 拿掉 beat（每秒的心跳）
+//   read_old_state  起來時從 state 接 paused、從 state_flux 接有效 ctl_seq 供第一道指令去重
+//   write_state   state（穩定欄有變才寫）→ write_more（子類別穩定窗）→ write_flux
+//   write_flux    responded_at、ctl_seq、ctl_warning ＋ flux_more；第一份必寫、之後整份比，沒有 updated_at
 //   log_line      stdout 一行 JSON（11-02；11-02 晚起 --enable-logs 才印）：一次 write；寫的那一下擋 SIGPIPE、排著的吃掉、還原遮罩；印不了＝之後不印、不退出
 //   write_window  透過 aos-util write_text 先寫同資料夾的 .名字 再改名（N-05）
 //   write_counter 開了 --enable-counters 與 state 窗，每輪把次數寫到窗同資料夾的 counter_runs.txt，先寫 .counter_runs.txt 再改名
@@ -130,7 +128,7 @@ void Loop::read_ctl() {
         return;
     }
     // 新舊比內容（11-03）：seen＝這次讀到的（好的＝解完那份的字串；壞的＝"!"＋原文；檔不在＝空）。
-    // 第一次讀也照一般指令處理；只有 seq 與舊 state 的 ctl_seq 相同才略過。
+    // 第一次讀也照一般指令處理；只有 seq 與舊 state_flux 的 ctl_seq 相同才略過。
     bool first = !ctl_seen_;
     ctl_seen_ = true;
     int err = 0;
@@ -171,7 +169,7 @@ void Loop::read_ctl() {
     }
     ctl_last_ = seen;
     if (first && !bad && doc.contains(CtlWindow::seq) && !ctl_seq_.is_null() && doc[CtlWindow::seq] == ctl_seq_) {
-        return;   // 舊 state 已回音這道指令；保留 ctl_seq，不再執行（stop 後 start 也能繼續）
+        return;   // 舊 state_flux 已回音這道指令；保留 ctl_seq，不再執行（stop 後 start 也能繼續）
     }
     if (bad) {
         ctl_warning_ = (doc.is_discarded() ? "ctl: " : "ctl rejected: ") + *bad;
@@ -199,23 +197,20 @@ void Loop::read_ctl() {
 }
 
 void Loop::read_old_state() {
-    if (state_path_.empty()) {
-        return;
-    }
     int err = 0;
-    std::optional<std::string> text = aos::read_file(state_path_, err);
-    if (!text) {
-        return;
+    if (!state_path_.empty()) {
+        auto text = aos::read_file(state_path_, err);
+        Json old = text ? Json::parse(*text, nullptr, false) : Json();
+        if (old.is_object() && old.contains("paused") && old["paused"] == true) {
+            paused_ = true;
+        }
     }
-    Json old = Json::parse(*text, nullptr, false);
-    if (!old.is_object()) {
-        return;
-    }
-    if (old.contains("paused") && old["paused"] == true) {
-        paused_ = true;
-    }
-    if (old.contains("ctl_seq") && aos::is_count(old["ctl_seq"])) {
-        ctl_seq_ = old["ctl_seq"];
+    if (!state_flux_path_.empty()) {
+        auto text = aos::read_file(state_flux_path_, err);
+        Json old = text ? Json::parse(*text, nullptr, false) : Json();
+        if (old.is_object() && old.contains(StateFluxWindow::ctl_seq) && aos::is_count(old[StateFluxWindow::ctl_seq])) {
+            ctl_seq_ = old[StateFluxWindow::ctl_seq];
+        }
     }
 }
 
@@ -226,6 +221,7 @@ void Loop::write_state(const std::string& phase, const Json& code) {
     }
     try {   // 子類別自己的狀態窗（10-29 daemon 的 loops_state）：有沒有變它自己比（11-02）
         write_more(me);
+        write_flux();
     } catch (const StateError&) {
         throw;
     } catch (const Error& e) {
@@ -239,8 +235,6 @@ void Loop::write_main(const std::string& phase, const Json& code, const Json& me
     doc["max"] = max_ ? Json(*max_) : Json();
     doc["interval_ms"] = interval_ms_;
     doc["paused"] = paused_;
-    doc["ctl_seq"] = ctl_seq_;
-    doc["ctl_warning"] = ctl_warning_;
     Json more = info();
     for (auto& [k, v] : more.items()) {
         doc[k] = v;
@@ -251,7 +245,6 @@ void Loop::write_main(const std::string& phase, const Json& code, const Json& me
     for (auto& [k, v] : me.items()) {
         doc[k] = v;
     }
-    doc["responded_at"] = responded_at_;
     Json key = doc;
     if (phase == "running" || phase == "waiting") {
         key[StateWindow::phase] = "running|waiting";   // 11-02 晚：running ⇄ waiting 不算變動（只比進出 paused／stopping／stopped／done）
@@ -267,6 +260,30 @@ void Loop::write_main(const std::string& phase, const Json& code, const Json& me
     }
     wrote_ = true;
     last_main_ = std::move(key);
+}
+
+void Loop::write_flux() {
+    if (state_flux_path_.empty()) {
+        return;
+    }
+    Json doc = Json::object();
+    doc[StateFluxWindow::responded_at] = responded_at_;
+    doc[StateFluxWindow::ctl_seq] = ctl_seq_;
+    doc[StateFluxWindow::ctl_warning] = ctl_warning_;
+    Json more = flux_more();
+    for (auto& [k, v] : more.items()) {
+        doc[k] = v;
+    }
+    if (wrote_flux_ && doc == last_flux_) {
+        return;
+    }
+    try {
+        write_window(state_flux_path_, doc);
+    } catch (const Error& e) {
+        throw StateError{e};
+    }
+    wrote_flux_ = true;
+    last_flux_ = std::move(doc);
 }
 
 void Loop::write_counter() {

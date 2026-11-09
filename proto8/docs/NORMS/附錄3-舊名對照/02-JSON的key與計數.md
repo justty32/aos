@@ -13,6 +13,8 @@
 | state 的 `lap`（10-23 `beats`、10-23 晚 `runs`）；11-09 前 state 的 `counter_runs` | `counter_runs`；11-09 起搬出 state、開 `--enable-counters` 才寫 `counter_runs.txt` | 10-23、10-25（原話在[命名](../命名.md)）；11-09 [clock-and-hot-writes](../../../thinking/2026-11/09/clock-and-hot-writes/README.md)（N-09 的 11-09 補） |
 | loop／daemon state.json 的 `at`（10-25 `recorded_at`）；`kind` | 拿掉；時間欄改成最後一欄 `updated_at` | 10-25 使用者「state.json中，runs改counter，at改成recorded_at」；11-02 [state-window](../../../thinking/2026-11/02/state-window/01-使用者原文-11-02-逐字.md#決定11-02使用者)，使用者「kind沒人在用，那就拿掉」、方向題 3「收掉」（N-09、N-32） |
 | `letter_warning`（aos agent 的 `letter_warning.txt`） | `mailbox_warning`（`mailbox_warning.txt`） | 11-02 晚，使用者「letter_warning改成mailbox_warning」（N-16、N-28） |
+| loop／daemon `state.json` 的 `responded_at`、`ctl_seq`、`ctl_warning`；daemon `procs_state.json` 的 `responded_at`、`mailbox_warning` | 搬到同資料夾 `state_flux.json` 的 `responded_at`、`ctl_seq`、`ctl_warning`、`mailbox_warning`（名字不變；`responded_at` 只放這一處） | 11-09，使用者裁 state_flux，[clock-and-hot-writes 05](../../../thinking/2026-11/09/clock-and-hot-writes/05-state拆分規劃.md)（N-09、N-32、N-33） |
+| daemon `procs_state.json` 的 `ctl_seq`（`procs_ctl.json` 的回音）、`ctl_warning`（壞 `procs_ctl`） | `state_flux.json` 的 `procs_ctl_seq`、`procs_ctl_warning` | 11-09，同上（N-28、N-54） |
 | 指示詞位置的修飾詞 `$at` | 拿掉，位置只認 `檔#/指標` | 10-23（N-45） |
 | trace 的 `ms`、`at` | `elapsed_ms`、`started_at`；trace.jsonl 11-03 整個拿掉（[trace](../../../thinking/2026-11/03/trace.md)） | 10-23、10-25 |
 | `interfaces.json` 的 `"llm": "llm"`（指子介面入口資料夾 `llm/`） | `"llm": "llm.json"`（定義裡的腦設定檔，跟 `"tools": "tools.json"` 同形；值不是檔＝`LlmBad`） | 11-04 晚，[think-as-function](../../../thinking/2026-11/04/think-as-function/README.md)（P-43（續）） |

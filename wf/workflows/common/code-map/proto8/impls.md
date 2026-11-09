@@ -51,7 +51,7 @@
 | [`src/daemon/mailbox.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/mailbox.cpp) | 信箱 procs_ctl_mailbox（10-29，medium-plan § 二 4、§ 四 3；NORMS N-28 的 10-29 補、N-16；11-03 改名 procs、多 stop／start；說明見 daemon.hpp）。 |
 | [`src/daemon/procs.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/procs.cpp) | 解讀 proc 名單、辨認寫法、整理路徑與合併期望表（說明見 daemon.hpp）。 |
 | [`src/daemon/reconcile.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/reconcile.cpp) | 按期望表啟動、收回與調整子項（說明見 daemon.hpp）。 |
-| [`src/daemon/stuck.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/stuck.cpp) | 依公開 ctl/state 窗的刺激與兩鐘期限標記卡住，並選擇收回重起。 |
+| [`src/daemon/stuck.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/stuck.cpp) | 依公開 ctl/state_flux 窗的刺激與兩鐘期限標記卡住，並選擇收回重起。 |
 | [`src/daemon/table.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/table.cpp) | 維護 proc 表、記錄子項與處理狀態窗寫入結果（說明見 daemon.hpp）。 |
 | [`src/daemon/tend.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/tend.cpp) | 停止、收回與照顧子項，並在 daemon 收工時等它們退完（說明見 daemon.hpp）。 |
 | [`src/daemon/windows.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/windows.cpp) | 管轄手把 procs_ctl 與有變才寫的 procs_state 狀態窗（說明見 daemon.hpp）。 |

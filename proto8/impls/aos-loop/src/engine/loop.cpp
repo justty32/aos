@@ -1,7 +1,7 @@
 // loop.cpp：【engine】Loop 每次怎麼走（說明見 aos/loop.hpp）。
 // 10-23 壓測後：沒有身體時一輪只 tend 一次、只寫一份 state（11-02 起有變才寫，睡著的 daemon 窗不動）。
 // 11-02：有身體時每跑完一次在 stdout 印一行 log（log_line，11-02 晚起 --enable-logs 才印）；心跳（beat）拿掉。
-// responded_at 只在處理新 ctl、收到信、起或收子項時更新。
+// state_flux 的 responded_at 只在處理新 ctl、收到信、起或收子項時更新。
 //
 // 訊號：block_signals 擋著的三個訊號排在 kernel 裡；signal_got 兩次之間取出第一個並記住（之後一直回它）；
 // nap 用 sigtimedwait 睡，收到就醒。跑的期間收到的由 run_once 轉給那次、放在 Run::received。
@@ -22,6 +22,7 @@ using Clock = std::chrono::steady_clock;
 
 void Loop::tend() {}
 void Loop::finish() {}
+Json Loop::flux_more() { return Json::object(); }
 Json Loop::info() { return Json::object(); }
 std::optional<std::string> Loop::check_ctl(Json&, const aos::Resolved&) { return std::nullopt; }
 void Loop::write_more(const Json&) {}
@@ -71,7 +72,7 @@ int Loop::main_loop() {
     Clock::time_point next_at = Clock::now();
     max_base_ = max_;               // ctl 寫 null 回這兩個（11-03）
     interval_base_ = interval_ms_;
-    read_old_state();              // 先接回 paused 與 ctl_seq；第一輪讀 ctl 前不得覆寫舊 state
+    read_old_state();              // 先接回 paused 與 ctl_seq；第一輪讀 ctl 前不得覆寫舊 state／state_flux
     while (true) {
         if (signal_got() != 0) {
             return end(128 + signal_got(), "stopped");

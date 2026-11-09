@@ -121,7 +121,7 @@ def loop_spec(found):
         cfg["exec"] = [abs_target(ex[0], base)] + ex[1:]
     elif isinstance(ex, dict) and "$ref" not in ex and "$env" not in ex:   # 內嵌單子：指回原檔，AOS_CD 與相對路徑照原地
         cfg["exec"] = path + "#" + ptr + "/exec"
-    # 11-04（four-elements 08 步 6「不補名」）：ctl／state 不補（aos-loop 自己沒寫＝ctl.json／state.json）。只有 exec 的 loop 設定
+    # 11-04（four-elements 08 步 6「不補名」）：ctl／state／state_flux 不補（aos-loop 自己沒寫＝ctl.json／state.json／state_flux.json）。只有 exec 的 loop 設定
     # 交給 daemon 會被認成 exec 型（題 3：物件只有 exec＝跑一次），所以補一格 "interval_ms": 0——aos-loop 的預設本來就是 0，行為不變
     if set(cfg) <= {"exec", "ws", "stack", "def", "limits"}:   # 同 daemon 的 is_once 認的那幾個 key
         cfg["interval_ms"] = 0

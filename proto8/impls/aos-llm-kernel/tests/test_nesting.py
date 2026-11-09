@@ -22,6 +22,18 @@ class NestingFixtures(unittest.TestCase):
         replies = [json.loads(p.read_text()) for p in (box / 'new').glob('*/letter.json')]
         return next(reply['body'] for reply in replies if reply['in_reply_to'] == name)
 
+    def test_daemon_rejection_comes_from_state_flux_without_table(self):
+        name = 'rejected'
+        folder = self.prepare(name, {}, ran=False)
+        (folder / 'proc.json').write_text(json.dumps({
+            'endpoint': 'fake', 'name': 'llm_' + name,
+            'mounted_at': time.time(), 'retries': 0, 'mount_letter': 'add-rejected'}))
+        (self.stack / 'state_flux.json').write_text(json.dumps({
+            'mailbox_warning': 'letter add-rejected rejected: bad launch'}))
+        body = self.reply_body(name)
+        self.assertEqual(body['error']['code'], 'LaunchFailed')
+        self.assertIn('add-rejected', body['error']['msg'])
+
     def test_strict_error_shape(self):
         error = {'error': {'code': 'X', 'msg': 'y', 'details': {'kept': [1, 'two']}}}
         valid = json.dumps(error)

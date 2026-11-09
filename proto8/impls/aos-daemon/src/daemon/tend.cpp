@@ -209,7 +209,7 @@ void Daemon::tend() {
         return;   // 接著 Loop 寫 paused／stopped 的 state（連 procs_state），不必另寫
     }
     if (was_paused_) {
-        // 11-05 第二輪：resume 那一圈先寫一份 state（paused false、新的 ctl_seq）再套信對表。原本對完表才寫：一大批信要好幾秒，
+        // 11-05 第二輪：resume 那一圈先寫一份 state（paused false）、state_flux（新的 ctl_seq）再套信對表。原本對完表才寫：一大批信要好幾秒，
         // 這段時間 state 還寫著暫停；這時 kill -9 再起＝照舊 state「起來先暫停」、舊實作又把 ctl 裡那道 resume 當基準線＝一直停著；11-07 起未套用的 resume 第一拍也會照做
         was_paused_ = false;
         write_state("waiting", Json());

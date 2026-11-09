@@ -75,7 +75,8 @@ sys.exit(code)
         self.err = open(self.root / 'daemon.err', 'a')
         self.proc = subprocess.Popen(['aos-daemon', '--enable-logs', str(self.config)], cwd=self.root,
             env=dict(ENV, AOS_STACK=str(self.stack)), stdout=self.log, stderr=self.err)
-        until(lambda: read(self.stack / 'procs_state.json'))
+        until(lambda: read(self.stack / 'procs_state.json', {}).get('pid') == self.proc.pid)
+        until(lambda: read(self.stack / 'state_flux.json'))
         return self
 
     def close(self):

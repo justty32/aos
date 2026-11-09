@@ -45,7 +45,8 @@ class Batch3Integration(unittest.TestCase):
                 write(target / 'llm.json', {'endpoint': endpoint})
                 write(target / 'tools.json', {'tools': tools})
                 write(target / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10,
-                                             'ctl': 'ctl.json', 'state': 'state.json'})
+                                             'ctl': 'ctl.json', 'state': 'state.json',
+                                             'state_flux': 'state_flux.json'})
                 return target
 
             bash = PROTO / 'lib/base/bash'

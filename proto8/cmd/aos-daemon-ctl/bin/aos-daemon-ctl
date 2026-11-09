@@ -175,9 +175,9 @@ exit codes: 0 sent; 1 error (including PhaseBad).
 usage: aos-daemon-ctl [--daemon D] pause [--timeout-s S] NAME
 
 Writes {"cmd": "pause", "seq": N} directly to the proc's ctl window (same filename rule as stop) and prints N.
-Waits up to --timeout-s seconds for its state ctl_seq to reach N; a timeout warns and exits 0.
-Explicit state: null in the parent-written loop config disables the wait; otherwise
-the state filename comes from that config or defaults to state.json.
+Waits up to --timeout-s seconds for its state_flux ctl_seq to reach N; a timeout warns and exits 0.
+Explicit state_flux: null in the parent-written loop config disables the wait; otherwise
+the state_flux filename comes from that config or defaults to state_flux.json.
 
 flags:
       --timeout-s S   positive apply timeout in seconds (default: 5)
@@ -190,9 +190,9 @@ exit codes: 0 written; 1 error (including PhaseBad or WriteFailed).
 usage: aos-daemon-ctl [--daemon D] resume [--timeout-s S] NAME
 
 Writes {"cmd": "resume", "seq": N} directly to the proc's ctl window (same filename rule as stop) and prints N.
-Waits up to --timeout-s seconds for its state ctl_seq to reach N; a timeout warns and exits 0.
-Explicit state: null in the parent-written loop config disables the wait; otherwise
-the state filename comes from that config or defaults to state.json.
+Waits up to --timeout-s seconds for its state_flux ctl_seq to reach N; a timeout warns and exits 0.
+Explicit state_flux: null in the parent-written loop config disables the wait; otherwise
+the state_flux filename comes from that config or defaults to state_flux.json.
 
 flags:
       --timeout-s S   positive apply timeout in seconds (default: 5)

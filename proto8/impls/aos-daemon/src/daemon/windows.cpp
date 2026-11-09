@@ -2,12 +2,12 @@
 //
 //   read_procs_ctl  每圈讀一次（tend 開頭）。同 aos-loop 的 read_ctl 的不採用規則（N-06～N-08）：認 procs、procs_added、procs_removed、procs_stopped、procs_started、seq，
 //                   其他 key 忽略（舊名 loops*／execs* 也是，C-48）；讀到壞的（讀不了、不是 JSON 物件、seq 不是非負整數、名單壞、指示詞解不開、
-//                   ）整份不採用、維持上一份好的，原因記 pctl_warning_（procs_state 的 ctl_warning）；
-//                   讀到好的清回 null，跟上一份好的不同才更新 responded_at；檔不在＝回初始值、不算問題
+//                   ）整份不採用、維持上一份好的，原因記 pctl_warning_（state_flux 的 procs_ctl_warning）；
+//                   讀到好的清回 null，跟上一份好的不同才更新 state_flux 的 responded_at；檔不在＝回初始值、不算問題
 //   check_lists     procs、procs_added（read_procs）、procs_removed／procs_stopped／procs_started（名字的陣列）；信也用
-//   write_more      procs_state 一份：{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox,
-//                   daemon, responded_at, procs, pid, started_at_ticks, boot_id, updated_at}；
-//                   responded_at 只在處理新 ctl、收到信、起或收子項時更新。
+//   flux_more       daemon 的回音：procs_ctl_seq、procs_ctl_warning、mailbox_warning（開了信箱才有）。
+//   write_more      procs_state 一份：{procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox,
+//                   daemon, procs, pid, started_at_ticks, boot_id, updated_at}；
 //                   Loop 每次 write_state 都呼叫、daemon 表變了也呼叫（flush_table）；有變才寫（11-02）：先組好分檔前的那份（不含 proc_fields、updated_at）
 //                   跟上一份寫出去的比，一樣就不碰檔，不一樣才寫分檔→清舊分檔→寫主檔（主檔改名是唯一的提交點）
 //   write_parts     procs 表超過 PART_ROWS 列就切檔（10-23 晚）；clean_parts 寫好才清舊分檔
@@ -34,7 +34,7 @@ void Daemon::read_procs_ctl() {
             pctl_warning_ = std::string("procs_ctl: cannot read or not JSON: ") + std::strerror(err);
         } else {
             // 11-05 第二輪：檔不在＝什麼都沒宣告＝回初始值（N-06「沒寫的欄位＝回初始值，不是維持上一版」）。原本沿用最後一份好的：
-            // 刪掉 procs_ctl.json，它的 procs_added 照留、rm 的信照被蓋回去，前一份的 ctl_warning 也一直掛著
+            // 刪掉 procs_ctl.json，它的 procs_added 照留、rm 的信照被蓋回去，前一份 state_flux 的 procs_ctl_warning 也一直掛著
             pctl_good_ = Json::object();
             pctl_warning_ = nullptr;
         }
@@ -71,7 +71,7 @@ void Daemon::read_procs_ctl() {
 }
 
 std::optional<std::string> Daemon::check_lists(Json& doc, const aos::Resolved& where) {
-    // procs_ctl 改名單寫壞＝整份不採用（N-08；原因進 procs_state 的 ctl_warning）；信寫壞＝壞信。指示詞解不開丟 DirectiveBad（呼叫者當不採用）。
+    // procs_ctl 改名單寫壞＝整份不採用（N-08；原因進 state_flux 的 procs_ctl_warning）；信寫壞＝壞信。指示詞解不開丟 DirectiveBad（呼叫者當不採用）。
     for (const char* k : {"procs", "procs_added"}) {
         if (!doc.contains(k)) {
             continue;
@@ -186,6 +186,16 @@ void Daemon::clean_parts(const std::set<std::string>& now) {
     parts_wrote_ = true;
 }
 
+Json Daemon::flux_more() {
+    Json doc = Json::object();
+    doc["procs_ctl_seq"] = pctl_good_.contains("seq") ? pctl_good_["seq"] : Json();
+    doc["procs_ctl_warning"] = pctl_warning_;
+    if (!mbox_path_.empty()) {
+        doc["mailbox_warning"] = mailbox_warning_;
+    }
+    return doc;
+}
+
 void Daemon::write_more(const Json& me) {
     if (pstate_path_.empty()) {
         return;
@@ -198,21 +208,15 @@ void Daemon::write_more(const Json& me) {
         vec.emplace_back(n, row(c, dstack_));
     }
     Json doc = Json::object();
-    doc["ctl_seq"] = pctl_good_.contains("seq") ? pctl_good_["seq"] : Json();
-    doc["ctl_warning"] = pctl_warning_;
-    if (!mbox_path_.empty()) {
-        doc["mailbox_warning"] = mailbox_warning_;   // 開了信箱才有：最後一封壞信（11-02 晚原 letter_warning）
-    }
     // 11-04（four-elements 題 6、題 5 後半）：回報小格裡三個檔名與信箱名（null＝沒開），讀小格的人（aos-daemon-ctl、aos-agent）從這裡拿、不寫死；欄名＝key 名
     doc["procs_loop"] = names_.loop;
     doc["procs_exec"] = names_.exec;
     doc["procs_stderr"] = names_.err;
     doc["procs_ctl_mailbox"] = mbox_path_.empty() ? Json() : Json(mbox_name_);
     doc["daemon"] = parent_;
-    doc["responded_at"] = responded_at_;
     doc["procs"] = rows;
     if (more_wrote_ && doc == last_more_) {
-        // 有變才寫：表、ctl、warning、daemon、responded_at 都一樣＝不碰檔。上一次寫時留著的「再上一次」的分檔
+        // 有變才寫：表、公開檔名、daemon 都一樣＝不碰檔。上一次寫時留著的「再上一次」的分檔
         // （讀的人可能剛讀了舊主檔）等到這一下（主檔已換過、隔了一次）才清——原本靠下一份心跳清，心跳拿掉後改在這裡
         if (parts_stale_) {
             std::set<std::string> keep = parts_prev_;
