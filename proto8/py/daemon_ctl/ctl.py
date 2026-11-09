@@ -92,11 +92,8 @@ def wait_applied(d, name, stack, cmd, seq, timeout_s=APPLY_S):
         return
     spath, end = os.path.join(stack, sname), time.monotonic() + timeout_s
     while True:
-        try:
-            with open(spath, encoding="utf-8") as fh:
-                got = json.load(fh).get("ctl_seq")
-        except (OSError, ValueError, AttributeError):
-            got = None
+        st = aos_flags.read_window(_pkg.PROG, spath)
+        got = st.get("ctl_seq") if st is not None else None
         if got == seq:
             return
         if time.monotonic() >= end:

@@ -38,7 +38,7 @@ Mailbox kernel() {
 // 只看那個 stack 的 state.json（daemon 自己寫的窗）：不在＝不是一台 daemon 的 stack；phase 不是 running／stopping、或 pid 不在＝停了。
 void warn_idle(const Mailbox& mb) {
     std::string stack = aos::dirname(mb.root);
-    std::optional<Json> st = aos::read_json(aos::join(stack, "state.json"));
+    std::optional<Json> st = aos::read_window("aos-llm", aos::join(stack, "state.json"));
     std::string why;
     if (!st || !st->is_object()) {
         why = "no llm daemon here (no state.json: never started, pointing at def/, or started without --stack .?)";

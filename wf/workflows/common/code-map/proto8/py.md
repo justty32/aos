@@ -9,7 +9,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`aos_flags.py`](../../../../../proto8/py/aos_flags.py) | 命令列旗標解析（含各支自定短名）、互動確認與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 lib/tool_… |
+| [`aos_flags.py`](../../../../../proto8/py/aos_flags.py) | 命令列旗標解析（含各支自定短名）、互動確認、公開狀態窗讀取與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 l… |
 | [`aos_ws.py`](../../../../../proto8/py/aos_ws.py) | 「放一則訊息、等答案、讀 stack」與兩鐘期限的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。 |
 
 ## `proto8/py/daemon_ctl/`

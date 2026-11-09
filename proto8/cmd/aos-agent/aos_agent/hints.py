@@ -1,4 +1,5 @@
 # aos_agent/hints.py - 讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。
+import aos_flags
 import aos_ws
 import daemon_ctl as dc
 import json
@@ -13,12 +14,8 @@ def loop_state(a):
             name = json.load(f).get("state")
     except (OSError, ValueError, AttributeError):
         name = None
-    try:
-        with open(os.path.join(a.stack, name if isinstance(name, str) and name else "state.json"), encoding="utf-8") as f:
-            st = json.load(f)
-    except (OSError, ValueError):
-        return {}
-    return st if isinstance(st, dict) else {}
+    path = os.path.join(a.stack, name if isinstance(name, str) and name else "state.json")
+    return aos_flags.read_window("aos-agent", path) or {}
 
 
 def loop_paused(a):

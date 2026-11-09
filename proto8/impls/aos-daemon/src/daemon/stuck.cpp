@@ -32,7 +32,7 @@ void Daemon::check_stuck(const std::string& name, Child& c) {
     std::string ctl_path = aos::join(c.stack, ctl.get<std::string>());
     std::string flux_path = aos::join(c.stack, flux.get<std::string>());
     struct stat st {};
-    auto response = aos::read_json(flux_path);
+    auto response = aos::read_window("aos-daemon", flux_path);
     if (stat(ctl_path.c_str(), &st) != 0 || !S_ISREG(st.st_mode) || !response || !response->is_object()) {
         clear();
         return;

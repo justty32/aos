@@ -51,6 +51,8 @@ std::optional<TextWriteError> write_text(const std::string& path, const std::str
 - `move` 成功回 true；遇 ENOENT／ENOTEMPTY／EEXIST 回 false，其他丟 `WriteFailed`。`remove_tree` 遞迴刪除並忽略錯誤。
 - `write_text` 不建目錄、不修改文字；先以 open（0666 受 umask 影響，既有 tmp 保留權限）開啟指定 `tmp`，write 重試 EINTR，完整寫入並檢查 close 後 rename 至 `path`。成功回 nullopt；任一步失敗都嘗試 unlink tmp，回操作與 errno（close 失敗歸 write，write 回 0 歸 EIO），讓呼叫者決定錯誤代號與訊息。清 tmp 的錯誤忽略。
 
+`aos/util/files.hpp` 另提供 `keep_bad` 與 `read_window`：前者把壞檔改名（或複製）留成 `<檔名>.bad-<UTC 毫秒時間>`，冒號換連字號、撞名加尾碼，失敗丟 WriteFailed；後者旁觀別人的 JSON 物件窗，缺檔安靜、讀不了／JSON 壞／根非物件則當沒有，每個行程對同一路徑只提醒一次，不改動對方檔案。
+
 `aos/util/signals.hpp` 另提供 `sigset_t the_signals()`、`void block_signals()`、`int take_signal()`：同一組 SIGINT／SIGTERM／SIGHUP；開執行緒前阻擋，之後非阻塞取出一個訊號，沒有就回 0。`block_signals` 第一次呼叫時順手記下擋之前的遮罩。
 11-09 加兩個（給 aos-daemon 的 poke）：`void block_more(const sigset_t&)` 額外擋一組訊號（例 daemon 的 poke 三訊號與 SIGUSR1／SIGUSR2），不改已記下的舊遮罩；`void restore_signals()` 給 fork 之後、exec 之前的子行程用，把遮罩還原成 `block_signals` 之前的樣子（含 `block_more` 多擋的一併解開；沒呼叫過 `block_signals` 就只解三個收工訊號），只用 async-signal-safe 呼叫、不配置記憶體。aos-loop 的 `run_folder` 與 aos-daemon 起子項都用它，取代原本各自寫死只解三個訊號。
 

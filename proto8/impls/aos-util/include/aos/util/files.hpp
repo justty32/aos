@@ -1,4 +1,4 @@
-// aos/util/files.hpp：【aos-util】檔案的小工具——路徑、目錄操作、讀檔與文字及 JSON 原子寫入。
+// aos/util/files.hpp：【aos-util】檔案的小工具——路徑、目錄操作、讀檔、壞檔留證與文字及 JSON 原子寫入。
 //
 //   abspath / dirname / join   路徑（照 Python 的 os.path.abspath、dirname、join）
 //   read_file / read_json      讀整個檔；read_json 讀不了或不是 JSON＝nullopt
@@ -47,6 +47,12 @@ std::optional<std::string> read_file(const std::string& path, int& errno_out);
 
 // 讀一份 JSON 檔。讀不了、不是合法 JSON 都回 nullopt。
 std::optional<Json> read_json(const std::string& path);
+
+// 讀旁觀狀態窗：不存在安靜回 nullopt；讀不了、壞 JSON 或根非物件每行程每路徑提醒一次。
+std::optional<Json> read_window(const std::string& prog, const std::string& path);
+
+// 壞檔改名（copy=false）或複製留證，禁止覆蓋、撞名加尾碼；回 basename，失敗丟 WriteFailed。
+std::string keep_bad(const std::string& path, bool copy);
 
 // 原子寫入：先寫同資料夾的 `.名字.tmp`、再改名蓋過去；所在的資料夾沒有就建。
 // 成功回 nullopt；失敗回原因（白話），暫存檔清掉。排版同 Python json.dump(indent=2)。

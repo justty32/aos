@@ -6,6 +6,9 @@ import re
 import stat
 import time
 
+import aos_flags
+import daemon_ctl as _pkg
+
 from .base import Fail, NAMES, PATHS, STATE, STATE_FLUX
 from .entry import read_loop
 
@@ -26,11 +29,7 @@ def find_daemon(flag=None):
 
 def names_of(d):
     """讀取 daemon 回報的檔名；壞值用預設，信箱 null 保留。"""
-    try:
-        with open(os.path.join(d, STATE), encoding="utf-8") as fh:
-            st = json.load(fh)
-    except (OSError, ValueError):
-        st = {}
+    st = aos_flags.read_window(_pkg.PROG, os.path.join(d, STATE))
     out = dict(NAMES)
     if isinstance(st, dict):
         for key in NAMES:
@@ -77,11 +76,8 @@ def mailbox_warning(d):
         name = STATE_FLUX
     if not isinstance(name, str) or not name:
         return None
-    try:
-        with open(os.path.join(d, name), encoding="utf-8") as fh:
-            return json.load(fh).get("mailbox_warning")
-    except (OSError, ValueError, AttributeError):
-        return None
+    st = aos_flags.read_window(_pkg.PROG, os.path.join(d, name))
+    return st.get("mailbox_warning") if st is not None else None
 
 
 def state(d):

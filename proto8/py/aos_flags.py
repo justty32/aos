@@ -1,4 +1,4 @@
-"""aos_flags：命令列旗標解析（含各支自定短名）、互動確認與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 lib/tool_io.py 的 tokenize_flags、stdout 被關退 141）。純標準庫＋lib/tool_io.py。
+"""aos_flags：命令列旗標解析（含各支自定短名）、互動確認、公開狀態窗讀取與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 lib/tool_io.py 的 tokenize_flags、stdout 被關退 141）。純標準庫＋lib/tool_io.py。
 aos 自己的 Python 程式（cmd/ 的 aos-clock、aos-tools、aos-daemon-ctl、aos-agent、aos-mcp、aos-grow、aos-sandbox…）都用它，
 形狀照 CONVENTION P-44「aos 自己程式的命令列形狀」（11-04；C++ 那邊是 aos-util 的 aos::parse_cli）。
 Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 10-23 刪了，只有它們用的 load_cfg（設定檔讀取）、target（目標的寫法）跟著拿掉，在 git 歷史。
@@ -33,7 +33,7 @@ short 傳短名字串序列時從 SHORT 挑，傳 {短名: 長旗標} 時用自�
 
 錯誤代號（代號照 10-23 命名統合（thinking/2026-10/23/naming）；使用者 10-22「錯誤訊息多代號也遵循」）：Error 帶 code——
 parse：不認得的旗標 FlagUnknown、其他（缺值、開關帶值）ArgumentsBad。"""
-import os, select, sys
+import errno, json, os, select, sys
 
 # 共用模組只在 import 時加入需要的根，避免 lib/ 的同名 namespace 留在呼叫者路徑。
 from pathlib import Path
@@ -88,6 +88,37 @@ def die(prog, code, reason, also_stdout=False):
 def warn(prog, sentence):
     """提醒行 `程式: warning: 句子` 到 stderr（不退出）。"""
     print("%s: warning: %s" % (prog, _one(sentence)), file=sys.stderr, flush=True)
+
+
+# 去重含 pid，fork 後的子行程仍會各自提醒一次。
+_window_warnings = set()
+
+
+def read_window(prog, path):
+    """公開狀態窗：缺檔安靜；不可讀或非物件提醒一次，皆當作缺檔。"""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            value = json.load(fh)
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            try:
+                os.lstat(path)
+            except OSError as entry_exc:
+                if entry_exc.errno == errno.ENOENT:
+                    return None
+                exc = entry_exc
+        reason = "cannot read file: %s" % exc.strerror
+    except (ValueError, UnicodeError):
+        reason = "invalid JSON"
+    else:
+        if isinstance(value, dict):
+            return value
+        reason = "root is not an object"
+    key = (os.getpid(), os.path.abspath(path))
+    if key not in _window_warnings:
+        _window_warnings.add(key)
+        warn(prog, "%s is unreadable (%s); treating it as missing" % (path, reason))
+    return None
 
 
 def run(main):

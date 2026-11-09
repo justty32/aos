@@ -1,4 +1,4 @@
-# Verify proc lifecycle and damaged-state adoption against real daemons and minimal bodies.
+# Verify proc lifecycle, damaged-state adoption and owned-state recovery against real daemons.
 import json
 import os
 from pathlib import Path
@@ -658,6 +658,81 @@ time.sleep(12)
                     self.assertEqual(p.returncode, 0, p.stderr)
                     f.phase(phase)
                 f.close()
+
+
+class StateRecovery(unittest.TestCase):
+    def fixture(self, name):
+        f = Fixture('state_recovery_' + name)
+        self.addCleanup(f.close)
+        return f
+
+    def assert_preserved_warning(self, directory, filename, contents, stderr, program, reason=None):
+        copies = list(directory.glob(filename + '.bad-*'))
+        self.assertEqual(len(copies), 1)
+        self.assertEqual(copies[0].read_text(), contents)
+        self.assertNotIn(':', copies[0].name)
+        lines = stderr.read_text().splitlines()
+        matches = [line for line in lines if line.startswith(
+            program + ': warning: ' + filename + ' is unreadable (')]
+        self.assertEqual(len(matches), 1, lines)
+        self.assertTrue(matches[0].endswith(
+            '); kept it as ' + copies[0].name + ' and started fresh'), matches[0])
+        if reason:
+            self.assertIn('(' + reason + ')', matches[0])
+
+    def check_daemon_state(self, filename, contents, reason=None):
+        f = self.fixture(filename).start()
+        f.close()
+        target = f.body('script', 'stop', seconds=30)
+        write(f.config, {'interval_ms': 20, 'procs': {'declared': {'exec': str(target)}}})
+        (f.stack / filename).write_text(contents)
+        f.start()
+        until(lambda: f.rows().get('declared', {}).get('phase') == 'running')
+        self.assertIsNone(f.proc.poll())
+        self.assert_preserved_warning(f.stack, filename, contents,
+                                      f.root / 'daemon.err', 'aos-daemon', reason)
+
+    def test_daemon_truncated_state_is_preserved_and_declared_proc_starts(self):
+        self.check_daemon_state('state.json', '{"paused":')
+
+    def test_daemon_non_object_flux_is_preserved_and_declared_proc_starts(self):
+        self.check_daemon_state('state_flux.json', '[]', 'root is not an object')
+
+    def test_child_loop_preserves_bad_state_on_wake_and_keeps_running(self):
+        f = self.fixture('child').start()
+        f.add(f.body('loop_object', 'stop', seconds=.1))
+        f.ctl('sleep', 'job')
+        f.phase('sleeping')
+        contents = '{"paused":'
+        (f.cell / 'state.json').write_text(contents)
+        previous_ready = (f.cell / 'ready').stat().st_mtime_ns
+        f.ctl('wake', 'job')
+        f.phase('running')
+        until(lambda: (f.cell / 'ready').stat().st_mtime_ns != previous_ready)
+        # 表上的 pid 是 aos-exec 那層，不一定是 aos-loop 本身：只等新的 state 窗寫出來。
+        until(lambda: read(f.cell / 'state.json', {}).get('phase') in ('running', 'waiting'))
+        self.assertFalse(read(f.cell / 'state.json')['paused'])
+        self.assert_preserved_warning(f.cell, 'state.json', contents,
+                                      f.cell / 'stderr.txt', 'aos-loop')
+        self.assertIsNone(f.proc.poll())
+        self.assertEqual(f.row()['phase'], 'running')
+
+    def test_normal_start_sleep_wake_and_restart_have_no_bad_files_or_warning(self):
+        f = self.fixture('clean').start()
+        f.add(f.body('loop_object', 'stop', seconds=.1))
+        f.ctl('sleep', 'job')
+        f.phase('sleeping')
+        f.ctl('wake', 'job')
+        f.phase('running')
+        f.close()
+        f.start()
+        f.phase('running')
+        f.close()
+        for directory, stderr in ((f.stack, f.root / 'daemon.err'),
+                                  (f.cell, f.cell / 'stderr.txt')):
+            with self.subTest(directory=directory):
+                self.assertFalse(list(directory.glob('*.bad-*')))
+                self.assertNotIn('is unreadable', stderr.read_text())
 
 
 if __name__ == '__main__':

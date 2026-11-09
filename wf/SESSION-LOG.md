@@ -8,7 +8,6 @@
 
 ## 最新進度
 
-- **open｜format-versioning（使用者 11-09「json的格式或資料夾布局有變化，那我們有相容，或是升級/更新機制嗎？」＋「我擔心的是變成正式版之後的事情」）**：四題已裁（轉正＝使用者主持的大型審查大修後；其餘照推薦）；必修兩條已做（1：[procs-state-bad](../proto8/thinking/2026-11/09/procs-state-bad/README.md)；2：公司試驗場本來就沒有舊 stack、家機記 WAIT_USER）；種子 S1／S3／S4 與 C-48 註待派 → [format-versioning](../proto8/thinking/2026-11/09/format-versioning/README.md)
 - **open｜daemon-interrupt（使用者 11-09 裁「先做訊號就好」「那就poke」）**：`aos-daemon-ctl poke` 已施工、實測過（05）；使用者說「這些都可以再討論」，等他試用回饋；socket、搶占、daemon 叫子項沒做 → [daemon-interrupt](../proto8/thinking/2026-11/09/daemon-interrupt/README.md)
 
 - **open｜node-pool（11-08，想法 20 節點池＋想法 21 蒸餾後壓縮）**：想法 20 決定頁使用者已裁（q1 改抽象分數，03 已改）；想法 21 簡報 04→fable 05→圖紙 06 寫好，5 題在桌面決定頁 `aos-np21-1108-待你裁.html` 等裁、照推薦代定；第五輪開工照 03 §7 N2～N5、06 §6 N6～N10（N1 第四輪已修）；真庫兩條錯連（傑克／傑克遜、耶拉／耶拉岡德像）已知會 arknights-kb → [node-pool](../proto8/thinking/2026-11/08/node-pool/README.md)

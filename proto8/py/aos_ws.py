@@ -161,16 +161,27 @@ def put(stack, text):
     return post(["send", "--ordered", box], json.dumps({"role": "user", "content": text.rstrip("\n")}, ensure_ascii=False))
 
 
+# 同一路徑的壞行只提醒一次；fork 後各行程分開計算。
+_history_warnings = set()
+
+
 def history(stack):
-    """history.jsonl 的每一則（解不開、不是物件的那行略過）；沒有＝[]。"""
+    """history.jsonl 的每一則（解不開、不是物件的那行提醒一次後略過）；沒有＝[]。"""
     out = []
-    for line in (read(os.path.join(stack, "history.jsonl"), "") or "").splitlines():
+    path = os.path.join(stack, "history.jsonl")
+    for number, line in enumerate((read(path, "") or "").splitlines(), 1):
         try:
             m = json.loads(line)
         except ValueError:
-            continue
+            m = None
         if isinstance(m, dict):
             out.append(m)
+        else:
+            key = (os.getpid(), os.path.abspath(path))
+            if key not in _history_warnings:
+                _history_warnings.add(key)
+                aos_flags.warn(os.path.basename(sys.argv[0]),
+                               "history.jsonl line %d is not a JSON object; skipped it" % number)
     return out
 
 

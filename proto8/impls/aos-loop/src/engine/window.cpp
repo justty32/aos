@@ -7,7 +7,7 @@
 //                 讀到新的壞的（讀不了、不是 JSON 物件、型別不對、cmd 不認得、指示詞解不開）整份不採用、維持原狀，原因記 state_flux 的 ctl_warning（N-08）；
 //                 照做了一道好的清回 null（check_ctl 填了 ctl_note_＝那一句）。檔不在＝沒有新指令、維持原狀（之後再寫的一律算新的）。讀的人不刪不改 ctl
 //                 新的好壞指令處理完都算有反應（responded）；已套用過的第一道、檔不在不算
-//   read_old_state  起來時從 state 接 paused、從 state_flux 接有效 ctl_seq 供第一道指令去重
+//   read_old_state  起來時從 state 接 paused、從 state_flux 接有效 ctl_seq 供第一道指令去重；壞窗各自改名留證、提醒並從頭開始
 //   write_state   state（穩定欄有變才寫）→ write_more（子類別穩定窗）→ write_flux
 //   write_flux    responded_at、ctl_seq、ctl_warning ＋ flux_more；第一份必寫、之後整份比，沒有 updated_at
 //   log_line      stdout 一行 JSON（11-02；11-02 晚起 --enable-logs 才印）：一次 write；寫的那一下擋 SIGPIPE、排著的吃掉、還原遮罩；印不了＝之後不印、不退出
@@ -23,6 +23,7 @@
 #include <csignal>
 #include <cstring>
 #include <ctime>
+#include <filesystem>
 
 #include <pthread.h>
 #include <signal.h>
@@ -196,18 +197,43 @@ void Loop::read_ctl() {
     responded();
 }
 
-void Loop::read_old_state() {
+// 自己的舊窗讀不了就先留證；兩扇窗分開處理，不影響另一扇接回。
+static Json read_old_window(const std::string& prog, const std::string& path) {
     int err = 0;
+    std::optional<std::string> text = aos::read_file(path, err);
+    std::string reason;
+    if (!text) {
+        std::error_code ec;
+        std::filesystem::file_status st = std::filesystem::symlink_status(path, ec);
+        if (err == ENOENT && st.type() == std::filesystem::file_type::not_found) {
+            return Json();
+        }
+        reason = "cannot read file: " + std::string(std::strerror(err));
+    } else {
+        Json old = Json::parse(*text, nullptr, false);
+        if (old.is_discarded()) {
+            reason = "invalid JSON";
+        } else if (!old.is_object()) {
+            reason = "root is not an object";
+        } else {
+            return old;
+        }
+    }
+    std::string kept = aos::keep_bad(path, false);
+    aos::warn(prog, std::filesystem::path(path).filename().string() + " is unreadable (" + reason +
+              "); kept it as " + kept + " and started fresh");
+    return Json();
+}
+
+void Loop::read_old_state() {
     if (!state_path_.empty()) {
-        auto text = aos::read_file(state_path_, err);
-        Json old = text ? Json::parse(*text, nullptr, false) : Json();
+        Json old = read_old_window(d_.prog, state_path_);
         if (old.is_object() && old.contains("paused") && old["paused"] == true) {
             paused_ = true;
         }
     }
     if (!state_flux_path_.empty()) {
-        auto text = aos::read_file(state_flux_path_, err);
-        Json old = text ? Json::parse(*text, nullptr, false) : Json();
+        Json old = read_old_window(d_.prog, state_flux_path_);
         if (old.is_object() && old.contains(StateFluxWindow::ctl_seq) && aos::is_count(old[StateFluxWindow::ctl_seq])) {
             ctl_seq_ = old[StateFluxWindow::ctl_seq];
         }

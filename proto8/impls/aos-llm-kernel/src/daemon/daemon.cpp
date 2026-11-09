@@ -49,7 +49,7 @@ Host find_host() {
         return h;
     }
     Json mb = Json("procs_ctl_mailbox");
-    std::optional<Json> st = aos::read_json(aos::join(h.daemon, PROCS_STATE));
+    std::optional<Json> st = aos::read_window("aos-llm-kernel", aos::join(h.daemon, PROCS_STATE));
     if (st && st->is_object() && st->contains("procs_ctl_mailbox")) {
         mb = (*st)["procs_ctl_mailbox"];
     }
@@ -62,11 +62,11 @@ Host find_host() {
 
 Table read_table(const Host& h) {
     Table t;
-    std::optional<Json> flux = aos::read_json(aos::join(h.daemon, STATE_FLUX));
+    std::optional<Json> flux = aos::read_window("aos-llm-kernel", aos::join(h.daemon, STATE_FLUX));
     if (flux && flux->is_object() && flux->value("mailbox_warning", Json()).is_string()) {
         t.warning = (*flux)["mailbox_warning"].get<std::string>();
     }
-    std::optional<Json> st = aos::read_json(aos::join(h.daemon, PROCS_STATE));
+    std::optional<Json> st = aos::read_window("aos-llm-kernel", aos::join(h.daemon, PROCS_STATE));
     if (!st || !st->is_object()) {
         return t;
     }

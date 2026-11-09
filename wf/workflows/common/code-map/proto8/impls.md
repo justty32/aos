@@ -58,6 +58,6 @@
 | [`src/main.cpp`](../../../../../proto8/impls/aos-daemon/src/main.cpp) | aos-daemon 命令列——先阻擋收工、poke 與 SIGUSR1/2 訊號，再解設定並服務。 |
 | [`tests/support.py`](../../../../../proto8/impls/aos-daemon/tests/support.py) | Build isolated real-daemon fixtures and retain evidence for the B lifecycle tests. |
 | [`tests/test_ctl.py`](../../../../../proto8/impls/aos-daemon/tests/test_ctl.py) | Exercise public controls, prune inspection and age selection, command errors and help. |
-| [`tests/test_lifecycle.py`](../../../../../proto8/impls/aos-daemon/tests/test_lifecycle.py) | Verify proc lifecycle and damaged-state adoption against real daemons and minimal bodies. |
+| [`tests/test_lifecycle.py`](../../../../../proto8/impls/aos-daemon/tests/test_lifecycle.py) | Verify proc lifecycle, damaged-state adoption and owned-state recovery against real daemons. |
 | [`tests/test_poke.py`](../../../../../proto8/impls/aos-daemon/tests/test_poke.py) | Verify daemon poke modes, prompt wakeups and pid identity guards with isolated fixtures. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-daemon/vcpkg.json) | aos-daemon：照一張名單把幾個 proc 各自起在小格裡、看著它們（C++） |

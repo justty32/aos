@@ -116,7 +116,7 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
         }
         return std::nullopt;
     }
-    std::optional<Json> st = aos::read_json(aos::join(dir, "state.json"));
+    std::optional<Json> st = aos::read_window("aos-llm-kernel", aos::join(dir, "state.json"));
     std::string phase = st && st->is_object() ? st->value("phase", "") : "";
     bool ended = phase == "done" || phase == "stopped";
     bool held = table_.procs.contains(name);

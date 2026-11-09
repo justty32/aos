@@ -3,14 +3,9 @@
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
 
-#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <filesystem>
-#include <fcntl.h>
-#include <linux/fs.h>
-#include <sys/syscall.h>
-#include <unistd.h>
 
 namespace aos::daemon {
 
@@ -39,7 +34,7 @@ static std::optional<Json> cell_state(const std::string& cell, const std::string
     if (!name.is_string() || name.get<std::string>().empty()) {
         return std::nullopt;
     }
-    std::optional<Json> st = aos::read_json(aos::join(cell, name.get<std::string>()));
+    std::optional<Json> st = aos::read_window("aos-daemon", aos::join(cell, name.get<std::string>()));
     if (!st || !st->is_object()) {
         return std::nullopt;
     }
@@ -71,33 +66,6 @@ std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell,
     return std::make_pair((pid_t)pid.get<long long>(), ticks.get<long long>());
 }
 
-// 留證只動主檔；改名與複製都禁止覆蓋已有的 bad 檔，撞名就加尾碼。
-static std::string keep_bad_state(const std::string& path, bool copy) {
-    std::string stamp = aos::utc_now_ms();
-    std::replace(stamp.begin(), stamp.end(), ':', '-');
-    std::string base = path + ".bad-" + stamp;
-    for (size_t suffix = 0; ; ++suffix) {
-        std::string kept = base;
-        if (suffix > 0) {
-            kept += "-" + std::to_string(suffix);
-        }
-        std::error_code ec;
-        if (copy) {
-            std::filesystem::copy_file(path, kept, std::filesystem::copy_options::none, ec);
-        } else if (::syscall(SYS_renameat2, AT_FDCWD, path.c_str(), AT_FDCWD, kept.c_str(),
-                             RENAME_NOREPLACE) != 0) {
-            ec = std::error_code(errno, std::generic_category());
-        }
-        if (!ec) {
-            return std::filesystem::path(kept).filename().string();
-        }
-        if (ec == std::errc::file_exists) {
-            continue;
-        }
-        throw Error{code::WriteFailed, "cannot keep " + path + " as " + kept + ": " + ec.message()};
-    }
-}
-
 void Daemon::adopt_warn(std::string reason) {
     for (char& ch : reason) {
         if (ch == '\n' || ch == '\r' || ch == '\0') {
@@ -114,7 +82,7 @@ void Daemon::adopt_warn(std::string reason) {
 }
 
 void Daemon::adopt_bad(const std::string& reason) {
-    std::string kept = keep_bad_state(pstate_path_, false);
+    std::string kept = aos::keep_bad(pstate_path_, false);
     adopt_warn("procs_state.json is unreadable (" + reason + "); kept it as " + kept +
                " and started with an empty table");
 }
@@ -163,7 +131,7 @@ void Daemon::adopt() {
     for (auto& [name, r] : table.items()) {
         if (!r.is_object()) {
             if (kept.empty()) {
-                kept = keep_bad_state(pstate_path_, true);
+                kept = aos::keep_bad(pstate_path_, true);
             }
             adopt_warn("procs_state.json row " + name + " is not an object; skipped it (copy kept as " + kept + ")");
         }
