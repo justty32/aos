@@ -20,7 +20,7 @@
    - 本地模型評比：隊長在修 report.py 重跑，同樣隨舊 session 結束，產物看 `proto8/thinking/2026-11/09/local-model-bench/`（可能未 commit）。
    - arcagi：22:30 回 PROGRESS（`wf/inbox/20261109T2230-arcagi-PROGRESS.md`，未處理），N1 蠟模、N2 CUDA 跑到 06:45，07:30 前回 DONE；看板 `~/repo/arcagi/notes/rounds/gpu-night-1109/`。它是使用者自己的 session，不受影響。
    - 23:0x 實測：LM Studio 只載 e4b、閒置，GPU 7%／6 W——整夜負載還沒起來。
-3. **未決**：amber_sword 今晚跑不跑；`impl_cpp/core/inst/差異.md` 補不補。無新條號。
+3. **已裁（新 session）**：使用者「amber_sword不用跑。差異也不用補。」新 session 已派兩個 opus 接手 soak 與本地模型評比（背景跑，完成通知頂層）。無新條號。
 
 ## 2026-11-09 深夜 22:3x 家機頂層（compact 前）
 
