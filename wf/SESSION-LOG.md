@@ -8,7 +8,7 @@
 
 ## 最新進度
 
-- **open｜format-versioning（使用者 11-09「json的格式或資料夾布局有變化，那我們有相容，或是升級/更新機制嗎？」＋「我擔心的是變成正式版之後的事情」）**：只審；必修 2（adopt 讀不了 procs_state 默默蓋空表、11-09 前的 image／stack 要刪 stack 重建）、設計問題 8、要使用者裁 4 題（正式版判準、現在埋哪些種子、正式版舊 key 政策、C-48 嚴格子物件判準）→ [format-versioning](../proto8/thinking/2026-11/09/format-versioning/README.md)
+- **open｜format-versioning（使用者 11-09「json的格式或資料夾布局有變化，那我們有相容，或是升級/更新機制嗎？」＋「我擔心的是變成正式版之後的事情」）**：四題已裁（轉正＝使用者主持的大型審查大修後；其餘照推薦）；必修兩條施工中（clock 解耦隊長接手）；種子 S1／S3／S4 與 C-48 註待派 → [format-versioning](../proto8/thinking/2026-11/09/format-versioning/README.md)
 
 - **open｜clock-decouple（使用者 11-09「_clock是與daemon耦合很深...我希望別那麼深」）**：耦合點全表＋四方案寫好（推薦 B：拿掉 `clock` key、鐘＝範本裡一列普通 proc、`AOS_CLOCK` 由定義 `.env` 給），三題已裁（B、預設聽外層＋範本預設不帶鐘只根帶、照用鐘＋鐘列牆鐘）；施工排在 poke 之後；沒改程式與條文 → [clock-decouple](../proto8/thinking/2026-11/09/clock-decouple/README.md)
 
