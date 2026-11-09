@@ -1,4 +1,4 @@
-# Verify B lifecycle rules against real daemons, command tools and minimal bodies.
+# Verify proc lifecycle and damaged-state adoption against real daemons and minimal bodies.
 import json
 import os
 from pathlib import Path
@@ -246,6 +246,97 @@ class Lifecycle(unittest.TestCase):
         write(f.config, {'interval_ms': 20, 'procs': {'job': {'exec': str(target), 'auto_restart': True}}})
         f.start()
         self.assertIn('restarted 3 times', f.phase('stopped')['reason'])
+
+    def stopped_adopt_fixture(self, name):
+        f = self.fixture(name).start()
+        f.add(f.body('loop_object', 'stop', seconds=.2))
+        f.ctl('stop', 'job')
+        f.phase('stopped')
+        f.close()
+        return f
+
+    def assert_adopt_warning(self, f, prefix, suffix):
+        warning = until(lambda: read(f.stack / 'state_flux.json', {}).get('adopt_warning'))
+        self.assertIsInstance(warning, str)
+        self.assertTrue(warning)
+        lines = (f.root / 'daemon.err').read_text().splitlines()
+        matches = [line for line in lines if line.startswith('aos-daemon: warning: ' + prefix)]
+        self.assertEqual(len(matches), 1, lines)
+        self.assertTrue(matches[0].endswith(suffix), matches[0])
+        self.assertIn(warning, matches[0])
+        logs = [json.loads(line) for line in (f.root / 'daemon.log').read_text().splitlines()]
+        self.assertTrue(any(warning in value for entry in logs for value in entry.values()
+                            if isinstance(value, str)), logs)
+        dc.ask(str(f.stack), {'ping': True})
+        self.assertEqual(read(f.stack / 'state_flux.json')['adopt_warning'], warning)
+        self.assertIsNone(f.proc.poll())
+        return matches[0]
+
+    def test_adopt_invalid_json_preserves_original_and_starts_declared_procs(self):
+        self.check_unreadable_adopt('invalid_json', '{bad')
+
+    def test_adopt_non_object_preserves_original_and_starts_declared_procs(self):
+        self.check_unreadable_adopt('non_object', '[]')
+
+    def check_unreadable_adopt(self, name, contents):
+        f = self.stopped_adopt_fixture('adopt_' + name)
+        target = f.body('script', 'stop', seconds=30)
+        write(f.config, {'interval_ms': 20, 'procs': {'declared': {'exec': str(target)}}})
+        state = f.stack / 'procs_state.json'
+        state.write_text(contents)
+        f.start()
+        until(lambda: f.rows().get('declared', {}).get('phase') == 'running')
+        self.assertNotIn('job', f.rows())
+        copies = list(f.stack.glob('procs_state.json.bad-*'))
+        self.assertEqual(len(copies), 1)
+        self.assertEqual(copies[0].read_text(), contents)
+        line = self.assert_adopt_warning(f, 'procs_state.json is unreadable (',
+            '; kept it as ' + copies[0].name + ' and started with an empty table')
+        self.assertIn('); kept it as ', line)
+
+    def test_adopt_skips_non_object_row_and_keeps_valid_row(self):
+        f = self.stopped_adopt_fixture('adopt_bad_row')
+        f.start()
+        target = f.body('script', 'fail', seconds=.2)
+        f.ctl('add', '--name', 'broken', str(target))
+        until(lambda: f.rows().get('broken', {}).get('phase') == 'stopped')
+        f.close()
+        state = f.stack / 'procs_state.json'
+        original = read(state)
+        good = original['procs']['job'].copy()
+        original['procs']['broken'] = 42
+        write(state, original)
+        contents = state.read_bytes()
+        f.start()
+        self.assertEqual(f.phase('stopped'), good)
+        self.assertNotIn('broken', f.rows())
+        copies = list(f.stack.glob('procs_state.json.bad-*'))
+        self.assertEqual(len(copies), 1)
+        self.assertEqual(copies[0].read_bytes(), contents)
+        line = self.assert_adopt_warning(f,
+            'procs_state.json row broken is not an object; skipped it (copy kept as ',
+            copies[0].name + ')')
+        self.assertEqual(line, 'aos-daemon: warning: procs_state.json row broken '
+            'is not an object; skipped it (copy kept as ' + copies[0].name + ')')
+
+    def test_adopt_normal_or_missing_state_has_no_warning(self):
+        for missing in (False, True):
+            with self.subTest(missing=missing):
+                f = self.stopped_adopt_fixture('adopt_clean_' + str(missing))
+                good = f.row().copy()
+                state = f.stack / 'procs_state.json'
+                if missing:
+                    state.rename(f.root / 'saved_procs_state.json')
+                f.start()
+                self.assertIsNone(read(f.stack / 'state_flux.json')['adopt_warning'])
+                self.assertFalse(list(f.stack.glob('procs_state.json.bad-*')))
+                self.assertNotIn('aos-daemon: warning:', (f.root / 'daemon.err').read_text())
+                if missing:
+                    self.assertEqual(f.rows(), {})
+                else:
+                    self.assertEqual(f.phase('stopped'), good)
+                self.assertIsNone(f.proc.poll())
+                f.close()
 
     def test_adopt_stopping_keeps_stop_cooperative(self):
         f = self.fixture('adopt_stop').start()

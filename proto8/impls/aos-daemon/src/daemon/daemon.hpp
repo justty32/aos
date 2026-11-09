@@ -11,7 +11,7 @@
 //   連 3 次卡住（起初一輪計入，最多實際重起 2 次）沒任何新回應＝收完留 stopped＋英文 reason、要人 start；起／接回後的新回應清連敗。
 //   人工 stop／sleep／rm 優先於卡住重起；卡住重起收途中父收工，該列改留 sleeping。
 //   daemon.cpp   建構子、環境與 stack 鎖；procs.cpp 解 procs 與合併名單
-//   adopt.cpp    接回上次的表、尋找小格裡活著的子 loop
+//   adopt.cpp    接回上次表的好列、警告並留存壞檔、尋找小格裡活著的子 loop
 //   table.cpp    維護表、log 與 state 寫入結果
 //   tend.cpp     term／halt／hold／settle／look／tend／finish；stuck.cpp 公開窗刺激、期限與重起
 //   failure.cpp  整理停止原因；body.cpp 跑 daemon 身體
@@ -50,7 +50,8 @@
 //   同名改寫法：已在跑的不重起（N-54）。
 // procs_state.json＝{procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox（沒開信箱＝null）,
 //   daemon（上一層的 AOS_DAEMON，根或指自己＝null）, procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫。
-// state_flux.json＝Loop 的 ctl 回音與 responded_at，再加 procs_ctl_seq、procs_ctl_warning、mailbox_warning（開了信箱才有）。
+// state_flux.json＝Loop 的 ctl 回音與 responded_at，再加 procs_ctl_seq、procs_ctl_warning、adopt_warning、mailbox_warning（開了信箱才有）。
+// adopt_warning 這次開門沒事＝null；壞檔／壞列的英文原因照 stderr 與 log，這次活著期間不變，多列以換行串接。
 // responded_at 只在處理新 ctl、收到信、起或收子項時更新；穩定窗先寫、回音窗最後寫。
 // 每列 {pid, started_at_ticks, phase（running／stuck／stopping／stopped／sleeping）, code, signal, stack, exec, def, reason, launch, stop_mode?（stopping 時）, ws?, limits?（11-05：生效的份額）}（exec 11-04 晚：起它時的目標，見 exec_of；def 11-04：見 def_of）；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
 // ctl 的 stop（這圈收工）或 pause（整圈暫停）時不調表：不收多的、不起少的、起停也等解除，但照讀兩份 ctl、照寫兩扇 state、照收已在收的、照記自己結束的。
@@ -142,6 +143,8 @@ private:
     using Table = std::list<std::pair<std::string, Child>>;
 
     void adopt();
+    void adopt_warn(std::string reason);                  // stderr、log 與 adopt_warning 同一個英文原因
+    void adopt_bad(const std::string& reason);            // 整份壞：主檔改名留證，從空表開始
     void add(const std::string& name, const Child& c);   // 放上表＋印 log 一行（running；stopped 的列不印）
     Table::iterator drop(Table::iterator it);             // 從表上拿掉：行程結束的印 log 一行、done 的記成本次不再起；回下一列
     void log_child(const std::string& name, const Child& c);   // log 一行（見檔頭）
@@ -194,6 +197,7 @@ private:
     std::string pstate_path_;                            // procs_state.json（空＝不開）
     Json pctl_good_ = Json::object();                    // 最後一份好的 procs_ctl（一份都沒讀到過＝{}）
     Json pctl_warning_;                                  // null 或字串（state_flux 的 procs_ctl_warning）
+    Json adopt_warning_;                                 // null 或字串（本次開門接表的警告，之後不變）
     std::string parts_dir_;                              // procs_state 分檔的資料夾（沒開 procs_state＝空）
     std::set<std::string> parts_prev_;                   // 上一次寫的 state 用到的分檔檔名（清舊分檔時留著）
     bool parts_wrote_ = false;                           // 這個行程寫過 state 了沒（第一次不清：磁碟上的主檔可能還指著舊的）

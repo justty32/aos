@@ -42,7 +42,7 @@
 | [`src/child/limits.hpp`](../../../../../proto8/impls/aos-daemon/src/child/limits.hpp) | proc 的份額 limits（11-05 feat-proto 件 5，使用者「會想要限制特定aos proc所占用的資源。 |
 | [`src/child/refs.cpp`](../../../../../proto8/impls/aos-daemon/src/child/refs.cpp) | 把表與內嵌單子的路徑改寫成相對 daemon 或小格的參照。 |
 | [`src/common/common.hpp`](../../../../../proto8/impls/aos-daemon/src/common/common.hpp) | aos-daemon 好幾個元素都用到的：型別別名、錯誤代號。 |
-| [`src/daemon/adopt.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/adopt.cpp) | 按保存的入口與控制意圖接回 proc 表，不以小格檔案分類（說明見 daemon.hpp）。 |
+| [`src/daemon/adopt.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/adopt.cpp) | 接回 proc 表的好列，警告並留存壞檔，尋找小格裡活著的子 loop（說明見 daemon.hpp）。 |
 | [`src/daemon/body.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/body.cpp) | 執行 daemon 自己的身體並記錄結果（說明見 daemon.hpp）。 |
 | [`src/daemon/ctl.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/ctl.cpp) | 由控制窗推得期望表、停止與睡眠集合（說明見 daemon.hpp）。 |
 | [`src/daemon/daemon.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.cpp) | 初始化設定、環境、信箱與 stack 鎖，定義並合併 poke 訊號（說明見 daemon.hpp）。 |
@@ -58,6 +58,6 @@
 | [`src/main.cpp`](../../../../../proto8/impls/aos-daemon/src/main.cpp) | aos-daemon 命令列——先阻擋收工、poke 與 SIGUSR1/2 訊號，再解設定並服務。 |
 | [`tests/support.py`](../../../../../proto8/impls/aos-daemon/tests/support.py) | Build isolated real-daemon fixtures and retain evidence for the B lifecycle tests. |
 | [`tests/test_ctl.py`](../../../../../proto8/impls/aos-daemon/tests/test_ctl.py) | Exercise public controls, prune inspection and age selection, command errors and help. |
-| [`tests/test_lifecycle.py`](../../../../../proto8/impls/aos-daemon/tests/test_lifecycle.py) | Verify B lifecycle rules against real daemons, command tools and minimal bodies. |
+| [`tests/test_lifecycle.py`](../../../../../proto8/impls/aos-daemon/tests/test_lifecycle.py) | Verify proc lifecycle and damaged-state adoption against real daemons and minimal bodies. |
 | [`tests/test_poke.py`](../../../../../proto8/impls/aos-daemon/tests/test_poke.py) | Verify daemon poke modes, prompt wakeups and pid identity guards with isolated fixtures. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-daemon/vcpkg.json) | aos-daemon：照一張名單把幾個 proc 各自起在小格裡、看著它們（C++） |

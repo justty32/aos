@@ -8,6 +8,8 @@
 **透出**：proc 失敗時，將這次執行寫進 `stderr.txt` 的最後非空行接進表上 `reason`，給看表的人與 `aos-daemon-ctl`；不依下層程式名或錯誤字句挑行（11-06 K-2；細節見 [08](docs/08-當機復原與已知限制.md#reason-的細節接-03出錯結束一律留)）。
 規範（語意以它為準）：[N-28、N-54](../../docs/NORMS/04-基礎設施-loop與daemon.md)；窗 [N-06～N-17](../../docs/NORMS/05-基礎設施-窗.md)；`AOS_DAEMON` [N-63、N-64](../../docs/NORMS/10-基礎設施-定義與工作區.md)。
 
+開門接回 `procs_state.json` 時，整份壞會改名留證、壞列會備份後跳過，好列照接；警告同步進 stderr、log 與 `state_flux.json` 的 `adopt_warning`，見 [狀態窗](docs/04-兩個手把-兩扇狀態窗.md)。
+
 照「資料夾＝程式」的做法寫（使用者「daemon也用新做法重寫吧」、「照預設」，[ideas § 25](../../thinking/2026-10/19/ideas/README.md)）。名詞見 [thinking procs](../../thinking/2026-11/03/procs/README.md)：
 daemon 管的子項不論包在 aos-loop 裡一直跑的（loop 型）還是 aos-exec 跑一次的（exec 型）都叫 **proc**；**一份名單 `procs`**、**看寫法決定怎麼起**（沒有 `kind`）、**每項可寫自己的 `stack`**、
 daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `stopped`、用同一個 stack 再起）、收工時的 **sleep／開門的 wake**（收工時 running 的睡下（sleeping），stop 途中的留 stopped，sleep 途中的睡下，rm 途中的拿掉；收工途中被 kill -9，重開時照表上的 `stop_mode` 做，結果一樣。睡下的再開自動起，[下「收工與開門」](docs/03-起-停-暫停.md#收工與開門sleepwake)）；11-05 起 **sleep／wake 也是指令**（`procs_slept`／`procs_woken`）、**表上的路徑相對 daemon 的 stack**（整份 `ws/` 搬走照樣醒）、**所有 proc 出錯結束（退非 0）一律留成 `stopped`＋`reason`**（11-05 晚：原本只留 wake／start 起不來的）、**身體失敗＝記一行、下一圈再跑**（11-05 晚，[docs/06](docs/06-結束碼等.md#結束碼)）、**狀態窗寫不了也是記一行、下一圈再寫**（11-05，同上）、**同一個 stack 已有 daemon 在跑＝`DaemonExists`**（[下「11-05 搬家相關」](docs/03-起-停-暫停.md#11-05-搬家相關)）；11-05 起每列可寫**份額 `limits`**（daemon 在子行程 setrlimit，等同 s6-softlimit；**份額是每個行程各自的上限，不從 daemon 總額扣**，[docs/09](docs/09-份額.md)）；手把 `procs_ctl.json`、窗 `procs_state.json`（一張表）、信箱 `procs_ctl_mailbox/`、proc 的 stack `procs/<名字>/`。

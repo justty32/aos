@@ -75,7 +75,9 @@ sys.exit(code)
         self.err = open(self.root / 'daemon.err', 'a')
         self.proc = subprocess.Popen(['aos-daemon', '--enable-logs', str(self.config)], cwd=self.root,
             env=dict(ENV, AOS_STACK=str(self.stack)), stdout=self.log, stderr=self.err)
-        until(lambda: read(self.stack / 'procs_state.json', {}).get('pid') == self.proc.pid)
+        # 壞表測試開門前 procs_state.json 可能是陣列：不是物件就繼續等
+        until(lambda: (lambda d: isinstance(d, dict) and d.get('pid') == self.proc.pid)(
+            read(self.stack / 'procs_state.json', {})))
         until(lambda: read(self.stack / 'state_flux.json'))
         return self
 

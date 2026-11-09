@@ -5,7 +5,7 @@
 //                   ）整份不採用、維持上一份好的，原因記 pctl_warning_（state_flux 的 procs_ctl_warning）；
 //                   讀到好的清回 null，跟上一份好的不同才更新 state_flux 的 responded_at；檔不在＝回初始值、不算問題
 //   check_lists     procs、procs_added（read_procs）、procs_removed／procs_stopped／procs_started（名字的陣列）；信也用
-//   flux_more       daemon 的回音：procs_ctl_seq、procs_ctl_warning、mailbox_warning（開了信箱才有）。
+//   flux_more       daemon 的回音：procs_ctl_seq、procs_ctl_warning、adopt_warning、mailbox_warning（開了信箱才有）。
 //   write_more      procs_state 一份：{procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox,
 //                   daemon, procs, pid, started_at_ticks, boot_id, updated_at}；
 //                   Loop 每次 write_state 都呼叫、daemon 表變了也呼叫（flush_table）；有變才寫（11-02）：先組好分檔前的那份（不含 proc_fields、updated_at）
@@ -153,6 +153,9 @@ Json Daemon::write_parts(Json rows, std::set<std::string>& now) {
 }
 
 void Daemon::clean_parts(const std::set<std::string>& now) {
+    if (!adopt_warning_.is_null()) {
+        return;   // 留證的主檔可能還指著舊分檔；這一班不清分檔，避免破壞證據。
+    }
     // 清舊分檔：留這次與上一次的（磁碟上的主檔現在還指著上一次的）；這個行程第一次寫時不清（上一個行程的主檔可能還指著）。
     // 11-05 第二輪：不在這兩次裡的先「退役」，退役滿 PARTS_KEEP_MS 才刪——daemon 一秒寫好幾次表時，讀的人剛讀到的主檔可能已是兩次以前的，
     // 原本它指的分檔已經刪了（aos-daemon-ctl ls 偶發 StateBad「No such file」）。
@@ -190,6 +193,7 @@ Json Daemon::flux_more() {
     Json doc = Json::object();
     doc["procs_ctl_seq"] = pctl_good_.contains("seq") ? pctl_good_["seq"] : Json();
     doc["procs_ctl_warning"] = pctl_warning_;
+    doc["adopt_warning"] = adopt_warning_;
     if (!mbox_path_.empty()) {
         doc["mailbox_warning"] = mailbox_warning_;
     }

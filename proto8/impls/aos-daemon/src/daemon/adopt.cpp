@@ -1,7 +1,16 @@
-// adopt.cpp：【daemon】按保存的入口與控制意圖接回 proc 表，不以小格檔案分類（說明見 daemon.hpp）。
+// adopt.cpp：【daemon】接回 proc 表的好列，警告並留存壞檔，尋找小格裡活著的子 loop（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
+
+#include <algorithm>
+#include <cerrno>
+#include <cstring>
+#include <filesystem>
+#include <fcntl.h>
+#include <linux/fs.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 namespace aos::daemon {
 
@@ -62,26 +71,101 @@ std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell,
     return std::make_pair((pid_t)pid.get<long long>(), ticks.get<long long>());
 }
 
+// 留證只動主檔；改名與複製都禁止覆蓋已有的 bad 檔，撞名就加尾碼。
+static std::string keep_bad_state(const std::string& path, bool copy) {
+    std::string stamp = aos::utc_now_ms();
+    std::replace(stamp.begin(), stamp.end(), ':', '-');
+    std::string base = path + ".bad-" + stamp;
+    for (size_t suffix = 0; ; ++suffix) {
+        std::string kept = base;
+        if (suffix > 0) {
+            kept += "-" + std::to_string(suffix);
+        }
+        std::error_code ec;
+        if (copy) {
+            std::filesystem::copy_file(path, kept, std::filesystem::copy_options::none, ec);
+        } else if (::syscall(SYS_renameat2, AT_FDCWD, path.c_str(), AT_FDCWD, kept.c_str(),
+                             RENAME_NOREPLACE) != 0) {
+            ec = std::error_code(errno, std::generic_category());
+        }
+        if (!ec) {
+            return std::filesystem::path(kept).filename().string();
+        }
+        if (ec == std::errc::file_exists) {
+            continue;
+        }
+        throw Error{code::WriteFailed, "cannot keep " + path + " as " + kept + ": " + ec.message()};
+    }
+}
+
+void Daemon::adopt_warn(std::string reason) {
+    for (char& ch : reason) {
+        if (ch == '\n' || ch == '\r' || ch == '\0') {
+            ch = ' ';   // 壞列名稱或指示詞原因也不能把一則提醒拆成多行。
+        }
+    }
+    aos::warn("aos-daemon", reason);
+    log_line(Json::object({{"at", aos::utc_now_ms()}, {"phase", "adopt"}, {"reason", reason}}));
+    if (adopt_warning_.is_null()) {
+        adopt_warning_ = reason;
+    } else {
+        adopt_warning_ = adopt_warning_.get<std::string>() + "\n" + reason;
+    }
+}
+
+void Daemon::adopt_bad(const std::string& reason) {
+    std::string kept = keep_bad_state(pstate_path_, false);
+    adopt_warn("procs_state.json is unreadable (" + reason + "); kept it as " + kept +
+               " and started with an empty table");
+}
+
 void Daemon::adopt() {
     if (pstate_path_.empty()) {
         return;
     }
-    std::optional<Json> old = aos::read_json(pstate_path_);
-    if (!old || !old->is_object() || !old->contains("procs")) {
-        return;   // 第一次起來、或舊的讀不了：沒東西可接
+    int err = 0;
+    std::optional<std::string> text = aos::read_file(pstate_path_, err);
+    if (!text) {
+        // 只有目錄項真的不在才算第一次；壞掉的捷徑仍要留證並警告。
+        std::error_code ec;
+        std::filesystem::file_status st = std::filesystem::symlink_status(pstate_path_, ec);
+        if (err == ENOENT && st.type() == std::filesystem::file_type::not_found) {
+            return;
+        }
+        adopt_bad("cannot read file: " + std::string(std::strerror(err)));
+        return;
+    }
+    Json old = Json::parse(*text, nullptr, false);
+    if (old.is_discarded()) {
+        adopt_bad("invalid JSON");
+        return;
+    }
+    if (!old.is_object()) {
+        adopt_bad("root is not an object");
+        return;
+    }
+    if (!old.contains("procs")) {
+        adopt_bad("missing procs");
+        return;
     }
     Json table;
     try {   // 切檔（10-23）：是 {"$ref": [分檔, …]}，用 aos-directive 解開就是合好的表；分檔讀不到＝舊的讀不了
-        table = aos::resolve((*old)["procs"], aos::dirname(pstate_path_));
-    } catch (const Error&) {
+        table = aos::resolve(old["procs"], aos::dirname(pstate_path_));
+    } catch (const Error& e) {
+        adopt_bad("cannot resolve procs: " + e.code + " " + e.msg);
         return;
     }
     if (!table.is_object()) {
+        adopt_bad("procs is not an object");
         return;
     }
+    std::string kept;
     for (auto& [name, r] : table.items()) {
         if (!r.is_object()) {
-            return;   // 有一列壞就整份不接
+            if (kept.empty()) {
+                kept = keep_bad_state(pstate_path_, true);
+            }
+            adopt_warn("procs_state.json row " + name + " is not an object; skipped it (copy kept as " + kept + ")");
         }
     }
     // 上一個 daemon 收工時還記為 running 的列要睡下；stopping 的列只看自己的 stop_mode。
@@ -89,8 +173,11 @@ void Daemon::adopt() {
     bool finishing = me && me->is_object() && me->value("phase", Json()) == "stopping";
     // 11-06（no-pid P1）：表頂層的 boot_id 跟這次開機不同（或沒寫）＝表上的行程都不在了（重開機後 pid＋ticks 可能撞上別的行程）；這台讀不到 boot_id＝照舊只比 pid＋ticks
     std::optional<std::string> boot = aos::boot_id();
-    bool same_boot = !boot || old->value("boot_id", Json()) == Json(*boot);
+    bool same_boot = !boot || old.value("boot_id", Json()) == Json(*boot);
     for (auto& [name, r] : table.items()) {
+        if (!r.is_object()) {
+            continue;
+        }
         Json phase = r.value("phase", Json());
         if (phase == "stuck") {
             phase = "running";
