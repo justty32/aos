@@ -29,10 +29,17 @@ image/
 `root_def/daemon.json`：
 
 ```json
-{"clock":true,"procs_ctl_mailbox":"procs_ctl_mailbox","procs":{
+{"procs_ctl_mailbox":"procs_ctl_mailbox","procs":{
+  "_clock":{"exec":{"argv":["aos-clock",{"$env":"AOS_DAEMON","$path":"clock"}]},"interval_ms":1000,"auto_restart":true,"stuck_after_ms":10000},
   "switchboard":{"exec":"../llm_def","stack":"../llm_image","auto_restart":true},
   "foreman":{"exec":"../foreman_def","stack":"../foreman_image","ws":"../ws","auto_restart":true}
 }}
+```
+
+`root_def/.env`：
+
+```sh
+AOS_CLOCK=${AOS_STACK}/clock
 ```
 
 `llm_def/daemon.json` 沿用 kernel daemon 定義，另加 `"procs_ctl_mailbox":"procs_ctl_mailbox"` 才能用下方 ping 確認總機；其 `exec` 身體繼續跑 aos-llm-kernel。
@@ -40,12 +47,12 @@ image/
 `foreman_def/daemon.json`：
 
 ```json
-{"clock":true,"procs_ctl_mailbox":"procs_ctl_mailbox","procs":{
+{"procs_ctl_mailbox":"procs_ctl_mailbox","procs":{
   "ann":{"exec":"../agent_def/fsm.json","interval_ms":0,"stack":"../agent_image","ws":"../ws","def":"../agent_def"}
 }}
 ```
 
-三層（根、領班、總機）各帶 `clock: true`、各自一個鐘，照使用者 11-06 選的「都留著」（11-07 sol 審查 #14）。定義中的相對 exec／stack／ws 從各 daemon 的 cwd（此例是其定義資料夾）算。父只把 switchboard／foreman 當普通 exec，`auto_restart: true` 才有常駐 sleep／wake 與退了重起。
+只有根帶鐘（鐘列＋`.env`），鐘檔在 `root_image/clock`；領班、總機不帶，照繼承聽根的鐘（使用者 11-09「預設聽外層……大家也通常只在root daemon才開」，[thinking clock-decouple](../../../../thinking/2026-11/09/clock-decouple/README.md)）。凍住整棵樹＝根 sleep；只停時間＝`pause` 根的 `_clock`。定義中的相對 exec／stack／ws 從各 daemon 的 cwd（此例是其定義資料夾）算。父只把 switchboard／foreman 當普通 exec，`auto_restart: true` 才有常駐 sleep／wake 與退了重起。
 
 1. 建帳號可略；若用了 `limits.user`，先由人把帳號、stack／信箱寫入權限配好。
 2. 包 root 可略；家機有 systemd 委派時可用下方 scope。
@@ -53,7 +60,7 @@ image/
 
 ```sh
 export AOS_LLM_KERNEL="$PWD/llm_image"
-unset AOS_KERNEL AOS_DAEMON AOS_CLOCK
+unset AOS_KERNEL AOS_DAEMON AOS_CLOCK   # 殼裡留著 AOS_CLOCK 的話，根的 .env 不會蓋它
 # 有判官才另 export AOS_KERNEL；端點需要的金鑰在此殼 export。
 ```
 

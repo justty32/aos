@@ -23,7 +23,7 @@ python3 proto8/extras/image-move-check/check.py
 <summary>驗什麼、證據在哪、限制與清理</summary>
 
 - 前置：Linux `/proc`、Python 3、`cp`、`sync`、`git`、`pgrep`，以及已裝在 `~/.local/bin` 的 aos 指令；沿用現有執行檔，不自動安裝。
-- 每次用 `tempfile.mkdtemp` 建獨立 `/tmp/aos-image-move-*`，複製 repo 的 lib／py／templates；兩個子 daemon 在根的表上都是 exec 型、`auto_restart: true`。三台 daemon 都開 `clock: true`。
+- 每次用 `tempfile.mkdtemp` 建獨立 `/tmp/aos-image-move-*`，複製 repo 的 lib／py／templates；兩個子 daemon 在根的表上都是 exec 型、`auto_restart: true`。只有根 daemon 帶普通 `_clock` 列，根定義的 `.env` 設 `AOS_CLOCK=${AOS_STACK}/clock`，兩個子 daemon 繼承這個鐘。
 - 三台 daemon、總機 kernel 與員工 loop 都加 `--enable-counters`；等各台 state 窗旁的 `counter_runs.txt` >= 1，再逐台 ping；沒有用固定睡幾秒猜啟動。輪詢的 0.1 秒只是檢查間隔。員工至少跑三拍，再用 `say`／`listen` 驗回信。
 - 根收 SIGINT 後等它退出，讀三台 `ctl ls --json` 驗所有列都是 `sleeping`；`sync` 後 `cp -a` 到另一位置，重設 `AOS_LLM_KERNEL` 再起根，驗列回到 `running`，再問一次假腦。
 - **計數語義**：loop／daemon 的 `counter_runs.txt` 每次重啟從零開始（11-09 起 state 不再有 `counter_runs`），兩次數字變大不能證明累加。這裡用跨次累加的總機 `$AOS_STACK/counter_kernel_runs.txt`（aos-llm-kernel 開 `--enable-counters` 才寫）驗搬家後累加；各台 state 與所有 ctl 表仍完整留證。這不主張 loop 的執行次數能跨重啟延續。

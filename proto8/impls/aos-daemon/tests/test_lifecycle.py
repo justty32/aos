@@ -3,11 +3,13 @@ import json
 import os
 from pathlib import Path
 import signal
+import subprocess
 import sys
 import time
 import unittest
+from unittest.mock import patch
 
-from support import Fixture, EVIDENCE, SCRATCH, dc, read, until, write
+from support import ENV, Fixture, EVIDENCE, SCRATCH, dc, read, until, write
 
 
 class Lifecycle(unittest.TestCase):
@@ -412,6 +414,92 @@ time.sleep(12)
         at = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
         write(f.cell / 'reply.json', {'responded_at': at})
         f.phase('running')
+
+    def test_frozen_clock_stuck_deadlines_use_selected_unit(self):
+        for unit, threshold in (('ms', 300), ('cycles', 1)):
+            with self.subTest(unit=unit):
+                f = self.fixture('frozen_clock_' + unit)
+                clock = f.stack / 'clock'
+                clock.write_text('5\n')
+                target = f.body('script', 'stop', seconds=30)
+                write(f.config, {'interval_ms': 20, 'procs': {'job': {
+                    'exec': str(target), 'stuck_after_' + unit: threshold}}})
+                with patch.dict(ENV, AOS_CLOCK=str(clock)):
+                    f.start()
+                f.phase('running')
+                until(lambda: (f.cell / 'ready').exists())
+                write(f.cell / 'state_flux.json', {'responded_at': None})
+                time.sleep(.03)
+                write(f.cell / 'ctl.json', {'cmd': 'pause', 'seq': 1})
+                if unit == 'ms':
+                    row = f.phase('stuck')
+                    self.assertIn('300 ms', row['reason'])
+                    self.assertNotIn('cycles', row['reason'])
+                else:
+                    time.sleep(1.5)
+                    self.assertEqual(f.row()['phase'], 'running')
+                self.assertEqual(clock.read_text(), '5\n')
+                f.close()
+
+    def test_stuck_deadline_rejects_conflicting_and_invalid_ms(self):
+        bad = ({'stuck_after_cycles': 1, 'stuck_after_ms': 300},
+               {'stuck_after_ms': 0}, {'stuck_after_ms': -1},
+               {'stuck_after_ms': '300'}, {'stuck_after_ms': True},
+               {'stuck_after_ms': 1.5}, {'stuck_after_ms': None},
+               {'stuck_after_ms': 2**63}, {'stuck_after_ms': 2**64})
+        for i, fields in enumerate(bad):
+            with self.subTest(fields=fields):
+                f = self.fixture('bad_stuck_ms_' + str(i))
+                target = f.body('script', 'stop', seconds=30)
+                write(f.config, {'interval_ms': 20, 'procs': {'job': {
+                    'exec': str(target), **fields}}})
+                result = subprocess.run(['aos-daemon', str(f.config)], cwd=f.root,
+                    env=dict(ENV, AOS_STACK=str(f.stack)), capture_output=True,
+                    text=True, timeout=5)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn('CfgBad', result.stderr)
+
+    def test_clock_key_is_ignored_without_exporting_clock(self):
+        f = self.fixture('ignored_clock_key')
+        f.script.write_text(f.script.read_text().replace(
+            "(s / 'ready').write_text('ready')",
+            "(s / 'clock_env.json').write_text(__import__('json').dumps("
+            "{'AOS_CLOCK': os.environ.get('AOS_CLOCK')}))\n"
+            "(s / 'ready').write_text('ready')"))
+        target = f.body('script', 'stop', seconds=30)
+        write(f.config, {'clock': True, 'interval_ms': 20,
+                         'procs': {'job': {'exec': str(target)}}})
+        with patch.dict(ENV):
+            ENV.pop('AOS_CLOCK', None)
+            f.start()
+        f.phase('running')
+        until(lambda: (f.cell / 'ready').exists())
+        self.assertNotIn('_clock', f.rows())
+        self.assertIsNone(read(f.cell / 'clock_env.json')['AOS_CLOCK'])
+        self.assertFalse((f.stack / 'clock').exists())
+        self.assertIsNone(f.proc.poll())
+
+    def test_explicit_clock_proc_writes_exported_clock_path(self):
+        f = self.fixture('explicit_clock')
+        clock = f.stack / 'clock'
+        write(f.config, {'interval_ms': 20, 'procs': {'_clock': {
+            'exec': {'argv': ['aos-clock', {'$env': 'AOS_DAEMON', '$path': 'clock'}]},
+            'interval_ms': 100, 'auto_restart': True, 'stuck_after_ms': 10000}}})
+        with patch.dict(ENV, AOS_CLOCK=str(clock)):
+            f.start()
+        row = until(lambda: (r if (r := f.rows().get('_clock')) and
+                             r['phase'] == 'running' else None))
+        first = until(lambda: read(clock))
+        until(lambda: (value := read(clock)) is not None and value > first)
+        # The persistent loop owns the environment used to resolve its inline argv.
+        raw = Path('/proc', str(row['pid']), 'environ').read_bytes()
+        child_env = dict(entry.split(b'=', 1) for entry in raw.split(b'\0') if b'=' in entry)
+        written = Path(os.fsdecode(child_env[b'AOS_DAEMON'])) / 'clock'
+        exported = Path(os.fsdecode(child_env[b'AOS_CLOCK']))
+        self.assertEqual(written.resolve(), exported.resolve())
+        self.assertEqual(exported.resolve(), clock.resolve())
+        self.assertFalse((f.stack / 'procs' / '_clock' / 'clock').exists())
+        self.assertEqual(f.rows()['_clock']['phase'], 'running')
 
     def test_pause_resume_without_parent_loop_config(self):
         f = self.fixture('real_pause').start()

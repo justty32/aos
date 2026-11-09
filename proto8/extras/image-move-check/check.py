@@ -116,11 +116,13 @@ class Check:
         defs.mkdir()
         self.run(["cp", "-a", str(self.repo / "templates/agent-fsm"), str(defs / "agent")])
         configs = {
-            "root": {"clock": True, "interval_ms": 100, "procs": {
+            "root": {"interval_ms": 100, "procs": {
+                "_clock": {"exec": {"argv": ["aos-clock", {"$env": "AOS_DAEMON", "$path": "clock"}]},
+                           "interval_ms": 1000, "auto_restart": True, "stuck_after_ms": 10000},
                 "kernel": {"exec": "../kernel", "auto_restart": True},
                 "foreman": {"exec": "../foreman", "auto_restart": True}}},
-            "foreman": {"clock": True, "interval_ms": 100, "procs": {}},
-            "kernel": {"clock": True, "interval_ms": 100,
+            "foreman": {"interval_ms": 100, "procs": {}},
+            "kernel": {"interval_ms": 100,
                        "exec": {"argv": ["aos-llm-kernel", "--enable-counters", "kernel.json"]}},
         }
         for name, config in configs.items():
@@ -129,6 +131,7 @@ class Check:
             (folder / "_entry").write_text(
                 '["aos-daemon", "--enable-logs", "--enable-counters", "daemon.json"]\n')
             (folder / "daemon.json").write_text(json.dumps(config) + "\n")
+        (defs / "root/.env").write_text("AOS_CLOCK=${AOS_STACK}/clock\n")
         (defs / "kernel/kernel.json").write_text(json.dumps({
             "slots": 2, "timeout_ms": 10000, "endpoint": "fake",
             "exec": "../../lib/base/llm_fake", "endpoints": {

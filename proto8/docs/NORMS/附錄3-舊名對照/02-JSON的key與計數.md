@@ -19,7 +19,7 @@
 | trace 的 `ms`、`at` | `elapsed_ms`、`started_at`；trace.jsonl 11-03 整個拿掉（[trace](../../../thinking/2026-11/03/trace.md)） | 10-23、10-25 |
 | `interfaces.json` 的 `"llm": "llm"`（指子介面入口資料夾 `llm/`） | `"llm": "llm.json"`（定義裡的腦設定檔，跟 `"tools": "tools.json"` 同形；值不是檔＝`LlmBad`） | 11-04 晚，[think-as-function](../../../thinking/2026-11/04/think-as-function/README.md)（P-43（續）） |
 | aos-llm-kernel：kernel.json `accept`；信頂層的 `inst`／`env`／`priority`；排序依據 `_metainfo.time_ms`／`llm_tokens` | 拿掉（信裡沒單子）；信 body `{"endpoint"?, "request", "priority"?}`（舊信＝`LetterBad`）；kernel.json 新鍵 `exec`、`endpoints`、`endpoint`、`timeout_ms` | 11-04 晚，[think-as-function](../../../thinking/2026-11/04/think-as-function/README.md)（N-42 (1)、N-16） |
-| daemon.json 的 `tick`（`true` 或 `{file, interval_ms, name}`）；`*_ticks`（`timeout_ticks`、`stuck_after_ticks`、`lease_ticks`、`acquired_at_ticks`、`seen_at_ticks`、`aging_ticks`…） | `clock`（形狀不變）；`*_cycles`（`timeout_cycles`、`stuck_after_cycles`…；Linux 的 `started_at_ticks` 不改） | 11-09，[clock-and-hot-writes](../../../thinking/2026-11/09/clock-and-hot-writes/README.md)，使用者裁時鐘叫 clock、單位叫 cycle（N-28、N-65） |
+| daemon.json 的 `tick`（`true` 或 `{file, interval_ms, name}`）；`*_ticks`（`timeout_ticks`、`stuck_after_ticks`、`lease_ticks`、`acquired_at_ticks`、`seen_at_ticks`、`aging_ticks`…） | `clock`（形狀不變；同日 [clock-decouple](../../../thinking/2026-11/09/clock-decouple/README.md) 再拿掉、無替代 key：時鐘改寫成根 daemon.json 一列普通 proc＋定義資料夾 `.env`）；`*_cycles`（`timeout_cycles`、`stuck_after_cycles`…；Linux 的 `started_at_ticks` 不改） | 11-09，[clock-and-hot-writes](../../../thinking/2026-11/09/clock-and-hot-writes/README.md)，使用者裁時鐘叫 clock、單位叫 cycle（N-28、N-65） |
 
 ### 10-25 計數、時間點、上限（規則與原話在[命名](../命名.md)）
 

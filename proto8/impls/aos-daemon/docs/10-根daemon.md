@@ -29,6 +29,24 @@ aos-daemon-ctl --daemon /absolute/image ping
 
 </details>
 
+<details><summary>時鐘只放在根</summary>
+
+樹要時鐘就讓根帶（使用者 11-09「大家也通常只在root daemon才開」，[thinking clock-decouple](../../../thinking/2026-11/09/clock-decouple/README.md)）：根的 daemon.json `procs` 加一列、根的定義資料夾 `.env` 加一行，底下的子 daemon 什麼都不寫，照繼承聽根的鐘。
+
+```json
+{"procs": {"_clock": {"exec": {"argv": ["aos-clock", {"$env": "AOS_DAEMON", "$path": "clock"}]}, "interval_ms": 1000, "auto_restart": true, "stuck_after_ms": 10000},
+           "llm": {"exec": "/absolute/llm_definition", "auto_restart": true}}}
+```
+
+```sh
+# /absolute/root_definition/.env
+AOS_CLOCK=${AOS_STACK}/clock
+```
+
+鐘檔在根的 stack（image）裡，搬家接著數。凍住整棵樹＝根 sleep，或 `aos-daemon-ctl --daemon /absolute/image pause _clock`（子樹都聽根的鐘）。寫法的坑與子 daemon 要用自己的鐘怎麼辦見 [02](02-看寫法決定怎麼起.md#時鐘普通一列)。
+
+</details>
+
 <details><summary>用 target 換一份名單</summary>
 
 在根 stack 放兩份名單（目標路徑按 daemon cwd 算，自行換成實際定義）：

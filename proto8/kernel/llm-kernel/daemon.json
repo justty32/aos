@@ -1,1 +1,1 @@
-{"clock": true, "exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300}
+{"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300}

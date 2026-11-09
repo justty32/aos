@@ -12,7 +12,7 @@
 
 例：`aos-daemon-ctl add --stack /tmp/c --name c ../agents/clock`、`aos-daemon-ctl pause c`、`cat /tmp/c/state.json`、`aos-daemon-ctl resume c`、`aos-daemon-ctl stop c`（`ls` 見 `c TAB stopped TAB - TAB 0 TAB -`）、`aos-daemon-ctl start c`、`aos-daemon-ctl sleep c`（`ls` 見 `c TAB sleeping …`）、`aos-daemon-ctl start c`（`PhaseBad c is sleeping; use wake (start only starts stopped ones)`）、`aos-daemon-ctl wake c`、`aos-daemon-ctl rm c`（`/tmp/c` 留著）、`aos-daemon-ctl ping`（`replied in 120 ms`）。
 
-自帶時鐘的 daemon 在 `ls` 中會有普通 proc `_clock`（或 `clock.name`）；`pause _clock`／`resume _clock` 可停走時間，其他工作照跑。表上不記時鐘的值（`procs_state.json` 頂層的時鐘觀察值 11-09 拿掉）：想看時鐘走不走，`cat "$AOS_CLOCK"` 讀鐘檔，或看 `ls` 裡 `_clock` 列是不是 `running`。改時鐘設定先 sleep 整台、再改、再 wake／重開；詳見 [daemon 時鐘](../../impls/aos-daemon/docs/02-看寫法決定怎麼起.md#自帶時鐘-clock選填)。
+帶鐘的那台（通常只有根）在 `ls` 中會有普通 proc `_clock`（範本取的名）；對它 `pause _clock`／`resume _clock` 可停走整棵樹的時間（子樹預設都聽根的鐘），其他工作照跑；沒帶鐘的子 daemon 表上沒有這列。表上不記時鐘的值（`procs_state.json` 頂層的時鐘觀察值 11-09 拿掉）：想看時鐘走不走，`cat "$AOS_CLOCK"` 讀鐘檔，或看根的 `ls` 裡 `_clock` 列是不是 `running`（鐘列寫了 `stuck_after_ms`，鐘被凍住時會變 `stuck`）。改時鐘設定（鐘列或根定義資料夾的 `.env`）先 sleep 整台、再改、再 wake／重開；詳見 [daemon 時鐘](../../impls/aos-daemon/docs/02-看寫法決定怎麼起.md#時鐘普通一列)。
 
 ## prune：自檢與清理舊列
 

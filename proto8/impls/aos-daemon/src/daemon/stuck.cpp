@@ -2,6 +2,7 @@
 #include "daemon/daemon.hpp"
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
+#include <limits>
 #include <sys/stat.h>
 
 namespace aos::daemon {
@@ -54,7 +55,19 @@ void Daemon::check_stuck(const std::string& name, Child& c) {
         return;
     }
     if (!c.stuck_deadline) {
-        c.stuck_deadline = aos::deadline_after(c.stuck_after_cycles);
+        if (c.stuck_after_ms) {
+            long long now = aos::utc_now_epoch_ms();
+            long long ms = *c.stuck_after_ms;
+            long long max = std::numeric_limits<long long>::max();
+            // 正毫秒加到牆鐘若超過 signed 64-bit，期限飽和，避免相加溢位。
+            long long at = max;
+            if (now <= max - ms) {
+                at = now + ms;
+            }
+            c.stuck_deadline = aos::Deadline{false, at};
+        } else {
+            c.stuck_deadline = aos::deadline_after(c.stuck_after_cycles);
+        }
     }
     if (!aos::expired(*c.stuck_deadline)) {
         return;

@@ -10,7 +10,7 @@
 ```
 llm-kernel/
   _entry       ["aos-daemon", "--enable-logs", "daemon.json"]
-  daemon.json  {"clock": true, "exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300}（身體＝kernel；procs 不寫，表上另有普通時鐘 proc `_clock`）
+  daemon.json  {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300}（身體＝kernel；procs 不寫、不帶鐘列，聽外層的 `AOS_CLOCK`）
   kernel.json  slots 2、reserved＝{"high": 1}（11-07 使用者裁定 sol 審查 #7）、timeout_ms 120000、exec＝預設 endpoint 函數 ../../lib/base/llm_http、endpoint＝預設代號 fake、
                budget＝只有一格寄件人額度的例子（/tmp/aos-demo-sender 每天 1 次，03 件 5 演；別的寄件人不限）、
                endpoints＝能力包表（下表）
@@ -60,7 +60,7 @@ aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 
 - **起 llm daemon 的殼別設 `AOS_KERNEL`**：問腦會掛到別台；非空路徑的 `new/` 不是資料夾時，每行程每路徑 warning 一次，仍用原路徑、不改退路、不因此報錯，後續掛 proc 失敗照舊（[已知限制](../../impls/aos-llm-kernel/docs/04-已知限制.md)）。
 - agent-fsm 問腦一定經這裡（沒設 `AOS_LLM_KERNEL`＝`LlmKernelMissing`），要先起這個。
 
-範本出廠帶時鐘與 stdout log；正式使用可在自己的副本拿掉 `_entry` 的 `--enable-logs`，或移除 `daemon.json` 的 `clock`。時鐘的路徑、間隔、繼承與 pause 手把見 [aos-daemon docs/02](../../impls/aos-daemon/docs/02-看寫法決定怎麼起.md#自帶時鐘-clock選填)。
+範本出廠帶 stdout log、**不帶鐘列**（11-09 clock-decouple：鐘只放在根 daemon，總機掛在樹裡就聽根的鐘；單獨起又沒設 `AOS_CLOCK`＝退牆鐘）；正式使用可在自己的副本拿掉 `_entry` 的 `--enable-logs`。真要總機自己的鐘，照 [aos-daemon docs/02](../../impls/aos-daemon/docs/02-看寫法決定怎麼起.md#時鐘普通一列) 加鐘列＋`.env`（掛在樹裡時還要掛它的那列加 `--dotenv-override`）。
 
 ## 隊 kernel 範本 llm-team：一封信走兩層
 

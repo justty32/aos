@@ -1,6 +1,6 @@
-# 2026-11-09 `_clock` 跟 daemon 解耦（clock-decouple；只規劃、沒改程式與條文，方向題 3 題使用者 11-09 已裁；施工排在 poke 線之後）
+# 2026-11-09 `_clock` 跟 daemon 解耦（clock-decouple；方向題 3 題使用者 11-09 已裁；11-09 已施工，結果 [04](04-施工結果.md)）
 
-← [2026-11-09](../README.md)｜細節：[01 耦合點全表](01-耦合點全表.md)、[02 解耦方案](02-解耦方案.md)、[03 衝突、邊緣與方向題](03-衝突邊緣與方向題.md)｜相關：[clock-and-hot-writes](../clock-and-hot-writes/README.md)（今天的改名）、[tick-time 03](../../05/tick-time/03-11-06-裁定與新設計.md)（`clock` key 的來源）、[no-pid 15 P6 去耦合](../../05/no-pid/15-P6去耦合.md)（同型先例）
+← [2026-11-09](../README.md)｜細節：[01 耦合點全表](01-耦合點全表.md)、[02 解耦方案](02-解耦方案.md)、[03 衝突、邊緣與方向題](03-衝突邊緣與方向題.md)、[04 施工結果](04-施工結果.md)｜相關：[clock-and-hot-writes](../clock-and-hot-writes/README.md)（今天的改名）、[tick-time 03](../../05/tick-time/03-11-06-裁定與新設計.md)（`clock` key 的來源）、[no-pid 15 P6 去耦合](../../05/no-pid/15-P6去耦合.md)（同型先例）
 
 ## 使用者原話（11-09，逐字）
 

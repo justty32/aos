@@ -157,6 +157,7 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
     cfg.erase("def");   // def 同（11-04）：只記進表
     cfg.erase("limits");   // limits 同（11-05 feat-proto 件 5）：daemon 在子行程裡做，子 loop 不知道
     cfg.erase("stuck_after_cycles");
+    cfg.erase("stuck_after_ms");
     cfg.erase("auto_restart");   // 11-06（no-pid P6）：通用重起旗標只歸 daemon 管
     cfg.erase("restart_on_stuck");
     Json ex = cfg.value("exec", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗；單子見下）
@@ -284,14 +285,23 @@ Json row(const Child& c, const std::string& dstack) {
     }
     r["exec"] = rel(c.exec);   // 11-04 晚（aos-agent 方向題 1）：一律寫，目標（絕對）或 null
     r["def"] = rel(c.def);     // 11-04（使用者「那就b。」）：一律寫，定義資料夾或 null（11-05 起相對 daemon 的 stack）
-    r["reason"] = c.stuck && c.phase == "running" ? Json("control window has not been answered within " + std::to_string(c.stuck_after_cycles) + " cycles") : c.reason;    // 11-05（portable-flow 衝突 3）：null 或 daemon 把它留成 stopped 的原因
+    r["reason"] = c.reason;   // 11-05（portable-flow 衝突 3）：null 或 daemon 把它留成 stopped 的原因
+    if (c.stuck && c.phase == "running") {
+        if (c.stuck_after_ms) {
+            r["reason"] = "control window has not been answered within " + std::to_string(*c.stuck_after_ms) + " ms";
+        } else {
+            r["reason"] = "control window has not been answered within " + std::to_string(c.stuck_after_cycles) + " cycles";
+        }
+    }
     if (!c.limits.is_null()) {
         r["limits"] = c.limits;   // 11-05（feat-proto 件 5）：生效的份額，有才寫
     }
     if (c.auto_restart) {
         r["auto_restart"] = true;
     }
-    if (c.stuck_after_cycles != 10) {
+    if (c.stuck_after_ms) {
+        r["stuck_after_ms"] = *c.stuck_after_ms;
+    } else if (c.stuck_after_cycles != 10) {
         r["stuck_after_cycles"] = c.stuck_after_cycles;   // P7：不是預設 10 才寫，adopt 沒這欄＝10
     }
     if (c.restart_on_stuck) {

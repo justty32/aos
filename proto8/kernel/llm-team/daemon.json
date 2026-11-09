@@ -1,1 +1,1 @@
-{"description":"Run the team llm kernel with its own clock", "clock":true,"exec":{"argv":["aos-llm-kernel","kernel.json"]},"interval_ms":300}
+{"description":"Run the team llm kernel", "exec":{"argv":["aos-llm-kernel","kernel.json"]},"interval_ms":300}

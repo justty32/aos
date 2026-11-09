@@ -54,7 +54,7 @@ echo '{"cmd": "stop", "seq": 1}' > ~/proj/.stack/ctl.json  # 收工（這格跑�
 
 # 掛 daemon（AOS_DAEMON＝daemon 的 $AOS_STACK，沒設＝cwd 的 ./.stack；daemon 的環境要有上面的 PATH 與 AOS_LLM_KERNEL；PATH 再加 cmd/aos-agent/bin 的 aos-agent）
 # 先起一台跑 agent 的 daemon（同 kernel/docs/03 件 1；它的環境帶著 AOS_LLM_KERNEL，子項才寄得到）：
-echo '{"clock": true, "interval_ms": 300}' > ~/daemon.json && mkdir -p ~/proj/.stack
+echo '{"interval_ms": 300}' > ~/daemon.json && mkdir -p ~/proj/.stack
 (cd ~ && AOS_STACK=~/proj/.stack/ aos-daemon daemon.json &) && cd ~/proj   # cwd 有 .stack＝aos-agent 找得到這台
 aos-agent ctl add --ws ~/proj --name fsm1 proto8/templates/agent-fsm
 # 或（11-05）：cd ~/proj && aos-exec <定義資料夾>  ＝跑它的 _entry＝aos-agent ctl add <定義資料夾>（ws＝~/proj、名字＝資料夾名）

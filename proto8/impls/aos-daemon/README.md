@@ -14,7 +14,7 @@ daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `sto
 11-06 起（no-pid P2，[thinking no-pid](../../thinking/2026-11/05/no-pid/README.md)）回音窗 `state_flux.json` 記 **`responded_at`**（最近一次有反應的時間：收信、採用新 ctl、起收子項；身體跑完不算〔11-09〕；閒著、睡著不動，不是心跳）；穩定的 state／procs_state 保留 **`daemon`**（管這台的上一層 daemon 的 stack，`null`＝根），[docs/04](docs/04-兩個手把-兩扇狀態窗.md)；信箱認 **`{"ping": true}`**（不改名單、有 `reply_to` 就回 `{"applied": true}`；paused 時不回＝呼叫失敗），[docs/05](docs/05-信箱.md)。
 11-06（no-pid P6）：任何 proc 可寫通用布林 **`auto_restart`**（常駐：退了同一拍重起、連 3 次在 3 秒內退才留 `stopped`＋reason）與 **`restart_on_stuck`**（卡住才重起）；子 daemon 就是普通 proc（使用者「不要耦合」），整棵樹睡醒是每層自己做的，[docs/02](docs/02-看寫法決定怎麼起.md)、[docs/03](docs/03-起-停-暫停.md#auto_restart常駐11-06)。
 11-06（no-pid P7）：父只看公開 ctl／state_flux 窗判卡住，任何有窗的 proc 都能用；每列 **`stuck_after_cycles`** 預設 10，沒刺激不判、預設只標 `stuck`，回應後回 `running`；寫 `restart_on_stuck: true` 才收掉再起，父 paused 時只標，[docs/04](docs/04-兩個手把-兩扇狀態窗.md#判卡住-stuck11-06-p7)。
-11-06 起選填 **`clock: true`** 自帶時鐘：展開普通 loop 型 proc（預設 `_clock`、`auto_restart: true`），先把 `AOS_CLOCK` 設給身體與子項；想看時鐘走不走就 `cat "$AOS_CLOCK"` 或看表上 `_clock` 列是不是 `running`（`procs_state.json` 頂層的時鐘觀察值 11-09 拿掉），[docs/02](docs/02-看寫法決定怎麼起.md#自帶時鐘-clock選填)、[docs/04](docs/04-兩個手把-兩扇狀態窗.md)。程式預設不開，kernel 範本出廠開時鐘與 log。
+11-09（clock-decouple）：daemon 程式**不認時鐘**——沒有 `clock` key（寫了當沒看到），不設 `AOS_CLOCK`；時鐘＝**根** daemon.json `procs` 裡一列普通 proc（範本慣例名 `_clock`）＋根定義資料夾 `.env` 一行 `AOS_CLOCK=${AOS_STACK}/clock`，子 daemon 預設聽外層的鐘；新列欄 **`stuck_after_ms`**（跟 `stuck_after_cycles` 擇一，用牆鐘判卡住，給鐘列用），[docs/02](docs/02-看寫法決定怎麼起.md#時鐘普通一列)、[thinking clock-decouple](../../thinking/2026-11/09/clock-decouple/README.md)。想看時鐘走不走就 `cat "$AOS_CLOCK"` 或看跑鐘那列是不是 `running`。kernel 範本不帶鐘列，出廠開 log。
 11-09：state 沒有 `counter_runs`；給 **`--enable-counters`** 而且有 state 窗時，每一圈開跑時把這個行程起來後跑到第幾圈寫進 state 窗同資料夾的 `counter_runs.txt`（同 aos-loop 的次數；沒有身體也照數；預設不寫），[docs/04](docs/04-兩個手把-兩扇狀態窗.md)、[N-09 的 11-09 補](../../docs/NORMS/05-基礎設施-窗/02-N-09～N-11.md)。
 11-09 **poke（門鈴）**：`aos-daemon-ctl poke [--ctl|--mail|--all]` 叫 daemon 不等下一圈、立刻看一次檔——`SIGRTMIN+1`＝讀 ctl＋procs_ctl、對表（不收信、不跑身體）、`+2`＝再加信箱、`+3`＝提前一整圈（含身體，`max` 照算）；號碼寫在 state 的穩定欄 **`poke`**，連 poke 幾下合併成最強的那種跑一次，身體跑到一半不打斷、跑完立刻補看。**SIGUSR1／SIGUSR2 一律擋住**（不再把 daemon 打死），子項照常收得到。平常的圈不變，[docs/04](docs/04-兩個手把-兩扇狀態窗.md#poke-門鈴11-09)、[N-17 的 11-09 例外](../../docs/NORMS/05-基礎設施-窗/06-N-17.md)、[thinking daemon-interrupt](../../thinking/2026-11/09/daemon-interrupt/README.md)。
 舊名 `loops`、`execs`、`loops_ctl`、`loops_state`、`loops_ctl_mailbox`、`loops_added`……**當沒看到**（C-48，使用者「1. 當沒看到。」）：不報錯、不提醒。
@@ -26,9 +26,9 @@ daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `sto
 
 ```sh
 cat daemon.json
-# {"clock": true, "max": 10, "interval_ms": 200, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json",
+# {"max": 10, "interval_ms": 200, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json",
 #  "procs": {"bob": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agents/bob"]}, "max": 1}}}
-AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法是 aos-exec 它（11-04 前的例子 proto8/demo/daemon 刪了）；PATH 上要有 aos-exec、aos-loop、aos-clock
+AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法是 aos-exec 它（11-04 前的例子 proto8/demo/daemon 刪了）；PATH 上要有 aos-exec、aos-loop（帶鐘列才要 aos-clock）
 ```
 
 **起 daemon 要看 log 就加 `--enable-logs`**（用 aos-exec 起的，旗標寫進定義的 `_entry`、放在設定檔前面：`["aos-daemon", "--enable-logs", "daemon.json"]`；`aos-exec 定義 --enable-logs` 會接在設定檔後面＝`ArgumentsBad`，訊息 `flag --enable-logs must come before the config file…` 會這樣提示）：不加的話 daemon 什麼都不印（stdout、stderr 都安靜，只有出錯時 stderr 一行），看起來像卡住，其實照常在跑；子項起落要看就加它（見下「log」），或看 `aos-daemon-ctl ls`。
