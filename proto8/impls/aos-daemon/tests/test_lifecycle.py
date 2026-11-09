@@ -304,7 +304,7 @@ time.sleep(12)
         f = self.fixture('stuck_exec')
         target = f.body('script', 'stop', seconds=4)
         write(f.config, {'interval_ms': 20, 'procs': {'job': {
-            'exec': str(target), 'stuck_after_ticks': 1, 'restart_on_stuck': True}}})
+            'exec': str(target), 'stuck_after_cycles': 1, 'restart_on_stuck': True}}})
         f.start()
         f.phase('running')
         until(lambda: (f.cell / 'ready').exists())

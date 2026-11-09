@@ -16,7 +16,7 @@
 #include <fcntl.h>
 #include <sys/file.h>
 #include <pthread.h>
-#include "aos/util/tick.hpp"
+#include "aos/util/clock.hpp"
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -181,8 +181,8 @@ static void reap(const std::string& lock_dir, const Seen& judged) {
 }
 
 bool try_acquire(const std::string& lock_dir, const Holder& h) {
-    if (h.lease_ticks && *h.lease_ticks < 0) {
-        throw Error{code::ArgumentsBad, "lease_ticks must be non-negative"};
+    if (h.lease_cycles && *h.lease_cycles < 0) {
+        throw Error{code::ArgumentsBad, "lease_cycles must be non-negative"};
     }
     register_fork_cleanup();
     for (int i = 0; i < 3; ++i) {
@@ -198,7 +198,7 @@ bool try_acquire(const std::string& lock_dir, const Holder& h) {
             try {
                 Holder current = h;
                 current.acquired_at = aos::utc_now_ms();
-                current.acquired_at_ticks = aos::now_tick();
+                current.acquired_at_cycles = aos::now_cycle();
                 if (h.flock) {
                     marker.value = openat(dir.value, "holder.flock", O_RDWR | O_CREAT | O_CLOEXEC, 0666);
                     if (marker.value < 0) {

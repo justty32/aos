@@ -9,7 +9,7 @@
 //     archive/<信件名稱>/  選用：done 時 keep＝留在這裡（沒有就建）；aos-post 永遠不讀它
 //   new/、cur/ 裡 . 開頭的名字不算信（N-05）。
 //   信＝一個資料夾，名字＝信件名稱，裡面必有 letter.json：{"sender": 寄信人身分, "sent_at": ISO 8601 UTC 到毫秒,
-//     "sent_at_ticks"?: 非負整數（有 tick 時鐘才寫）, "reply_to"?: 信箱路徑,
+//     "sent_at_cycles"?: 非負整數（有 樹時鐘才寫）, "reply_to"?: 信箱路徑,
 //     "in_reply_to"?: 原信的信件名稱, "body": 內容（形狀由收信的程式定）}。沒有 kind（11-03 拿掉；讀到也忽略）
 //   reply_to 存成相對「這封信所在信箱的根」（11-05 portable-flow 步 2：整份資料夾搬走，回信跟著落在新位置）：
 //     send 用字串算（不 realpath、不解捷徑）；兩邊沒有共同的第一層（例 /tmp/… 對 /home/…）就存絕對。
@@ -36,7 +36,7 @@
 //   first_in_cur  cur/ 裡照處理順序第一封；cur/ 空＝nullopt（see、done 不給信件名稱時用）
 //   see           讀 cur/<名>/letter.json、驗信封：好信 ok＝true、letter＝整份；壞信 ok＝false、reason＝原因。不在 cur/ 丟 LetterMissing。
 //                 壞信＝讀不了或不是 JSON 物件、sender／sent_at 不是字串、沒有 body、reply_to／in_reply_to 有但不是字串、
-//                 sent_at_ticks 有但不是非負整數
+//                 sent_at_cycles 有但不是非負整數
 //   reply         照 cur/<名> 那封的 reply_to 投一封回信（in_reply_to＝原信件名稱、body＝給的）；
 //                 那封沒寫 reply_to 或是壞信＝不回、回 nullopt；寄得出去回回信的名字（寄不出去照 send 丟）
 //   done          處理完：keep＝rename cur→archive（archive/ 沒有就建），否則 rename cur→tmp 再刪；壞信一律丟掉（不管 keep）。

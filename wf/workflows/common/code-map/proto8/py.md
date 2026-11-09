@@ -20,5 +20,5 @@
 | [`base.py`](../../../../../proto8/py/daemon_ctl/base.py) | daemon_ctl 基礎：共用錯誤類別與 daemon 檔名常數。 |
 | [`ctl.py`](../../../../../proto8/py/daemon_ctl/ctl.py) | daemon_ctl 控制：檢查 proc 階段、依公開窗名寫入控制並等待套用。 |
 | [`entry.py`](../../../../../proto8/py/daemon_ctl/entry.py) | daemon_ctl 入口：保留目標與 argv 寫法，讀取直接 loop 設定並組成掛子信。 |
-| [`post.py`](../../../../../proto8/py/daemon_ctl/post.py) | daemon_ctl 信件：寄送、認領與清理回信，並以秒或 tick 等待 daemon 回應。 |
+| [`post.py`](../../../../../proto8/py/daemon_ctl/post.py) | daemon_ctl 信件：寄送、認領與清理回信，並以秒或 cycle 等待 daemon 回應。 |
 | [`table.py`](../../../../../proto8/py/daemon_ctl/table.py) | daemon_ctl 名單：尋找 daemon、解析狀態表、自檢子項與篩選已有 stack 的久未修改列。 |

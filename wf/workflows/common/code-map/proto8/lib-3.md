@@ -11,7 +11,6 @@
 |---|---|
 | [`bash/`](../../../../../proto8/lib/base/bash/) | 在工作區裡用 bash 跑一行指令，回 stdout＋stderr 合在一起的輸出 |
 | [`bash/tests/test_observed.py`](../../../../../proto8/lib/base/bash/tests/test_observed.py) | Verify command ledgers preserve inner outcomes and block unwritable execution. |
-| [`clock/`](../../../../../proto8/lib/base/clock/) | 在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z） |
 | [`copy/`](../../../../../proto8/lib/base/copy/) | 在工作區裡複製一個檔或整個資料夾（捷徑照捷徑複製、不跟進去；to 的上層自動建） |
 | [`edit/`](../../../../../proto8/lib/base/edit/) | 在工作區裡一個檔做一處或幾處「整段原文照字面換掉」，一處不合就整個不改 |
 | [`json_edit/`](../../../../../proto8/lib/base/json_edit/) | 照 JSON 指標改工作區裡一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫 |
@@ -28,6 +27,7 @@
 | [`stat/`](../../../../../proto8/lib/base/stat/) | 看工作區裡單一個檔或資料夾的屬性，回 JSON |
 | [`trash/`](../../../../../proto8/lib/base/trash/) | 刪除工作區裡一個檔或資料夾：不真的刪，搬進 $AOS_WS/.trash/<時間>/<原路徑> |
 | [`view/`](../../../../../proto8/lib/base/view/) | 漸進看工作區裡一個檔：JSON 一次看一層、大的文字檔先給大綱 |
+| [`wall_clock/`](../../../../../proto8/lib/base/wall_clock/) | 在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z） |
 | [`write/`](../../../../../proto8/lib/base/write/) | 把整份內容寫進工作區裡一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建 |
 
 ## `proto8/lib/tests/`

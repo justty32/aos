@@ -4,7 +4,7 @@
 #include "aos/util/files.hpp"
 #include "aos/util/signals.hpp"
 #include "aos/util/text.hpp"
-#include "aos/util/tick.hpp"
+#include "aos/util/clock.hpp"
 
 #include <cerrno>
 #include <charconv>
@@ -127,10 +127,10 @@ int Server::run() {
     write_window(stack_, window_of(cfg_.packs));
     collect();
     sweep();
-    std::optional<long long> now_tick = aos::now_tick();
+    std::optional<long long> now_cycle = aos::now_cycle();
     long long now_ms = aos::utc_now_epoch_ms();
-    std::vector<Waiting> ws = scan(now_ms, now_tick);
-    order(ws, cfg_.aging_ticks, q_);
+    std::vector<Waiting> ws = scan(now_ms, now_cycle);
+    order(ws, cfg_.aging_cycles, q_);
 
     int got = aos::take_signal();
     if (got == 0) {
@@ -142,7 +142,7 @@ int Server::run() {
                     break;   // 留在 new/ 等下一窗（寄信的一直等，由它自己那邊守）
                 }
                 q_.seen_at_ms.erase(w.id);
-                q_.seen_at_ticks.erase(w.id);
+                q_.seen_at_cycles.erase(w.id);
                 refuse(w.id, error_reply(code::BudgetMissing, "budget for this window (" + budget_.window + ") is used up; not run"));
                 continue;
             }
@@ -160,7 +160,7 @@ int Server::run() {
                         continue;   // 這包到頂：這封留在 new/ 等下一窗，別包照跑
                     }
                     q_.seen_at_ms.erase(w.id);
-                    q_.seen_at_ticks.erase(w.id);
+                    q_.seen_at_cycles.erase(w.id);
                     bool by_calls = spent_pack(used_, w.endpoint, w.pack.max_calls, std::nullopt, inflight);
                     std::string which = by_calls ? "max_calls " + std::to_string(*w.pack.max_calls)
                                                  : "max_tokens " + std::to_string(*w.pack.max_tokens);
@@ -180,7 +180,7 @@ int Server::run() {
                         continue;
                     }
                     q_.seen_at_ms.erase(w.id);
-                    q_.seen_at_ticks.erase(w.id);
+                    q_.seen_at_cycles.erase(w.id);
                     bool by_calls = spent_of(used_.senders, who, l.max_calls, std::nullopt, mine);
                     std::string which = by_calls ? "max_calls " + std::to_string(*l.max_calls) : "max_tokens " + std::to_string(*l.max_tokens);
                     refuse(w.id, error_reply(code::BudgetMissing, "sender " + w.sender + ": " + which + " reached in this window (" +
@@ -212,7 +212,7 @@ int Server::run() {
                 seen_at = nullptr;
             }
             q_.seen_at_ms.erase(w.id);
-            q_.seen_at_ticks.erase(w.id);
+            q_.seen_at_cycles.erase(w.id);
             double mounted_at = std::chrono::duration<double>(
                 std::chrono::system_clock::now().time_since_epoch()).count();
             Json req = Json::object();

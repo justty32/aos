@@ -20,12 +20,12 @@ Facts that follow from the model:
 - A definition is read-only for you. Humans edit definitions. Per-instance changes (your tools, your brain endpoint) live in your stack as an "overlay": only the differences are stored.
 - A proc is always under exactly one daemon. "My daemon" is the one in `$AOS_DAEMON`. Child agents you start go on the same daemon.
 - Everything persists as files, so a daemon can sleep, be copied elsewhere with its stacks and workspace, and wake up there.
-- Environment variables you can rely on: `AOS_WS`, `AOS_STACK`, `AOS_DAEMON`, and, when set up for you, `AOS_LLM_KERNEL`, `AOS_KERNEL`, `AOS_MEMORY`, `AOS_TICK`, `AOS_TICK_INTERVAL`. Do not invent others.
+- Environment variables you can rely on: `AOS_WS`, `AOS_STACK`, `AOS_DAEMON`, and, when set up for you, `AOS_LLM_KERNEL`, `AOS_KERNEL`, `AOS_MEMORY`, `AOS_CLOCK`, `AOS_CLOCK_INTERVAL`. Do not invent others.
 
 ## Time
 
-- The tree has a clock like a board's crystal: when `AOS_TICK` is set, it names a file holding one integer, the current tick. The daemon advances it (a `_tick` row in `aos-agent ctl ls`).
-- Between procs, write waits in ticks: `thought` and `agents ask` take `timeout_ticks` instead of `timeout_s` (give one, not both). With a clock, a wait ends after that many ticks; if the clock is paused or the tree sleeps, time does not pass and the wait does not expire.
-- No clock (`AOS_TICK` not set): ticks fall back to wall time, 1 tick = `AOS_TICK_INTERVAL` ms (default 1000).
+- The tree has a clock like a board's crystal: when `AOS_CLOCK` is set, it names a file holding one integer, the current cycle. The daemon advances it (a `_clock` row in `aos-agent ctl ls`).
+- Between procs, write waits in cycles: `thought` and `agents ask` take `timeout_cycles` instead of `timeout_s` (give one, not both). With a clock, a wait ends after that many cycles; if the clock is paused or the tree sleeps, time does not pass and the wait does not expire.
+- No clock (`AOS_CLOCK` not set): cycles fall back to wall time, 1 cycle = `AOS_CLOCK_INTERVAL` ms (default 1000).
 - Waits for people, for outside services and for Linux processes stay in seconds or milliseconds.
-- Tick numbers only compare inside one tree; in letters to another tree, use milliseconds.
+- Cycle numbers only compare inside one tree; in letters to another tree, use milliseconds.

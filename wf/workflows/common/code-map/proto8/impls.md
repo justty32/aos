@@ -45,8 +45,8 @@
 | [`src/daemon/adopt.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/adopt.cpp) | 按保存的入口與控制意圖接回 proc 表，不以小格檔案分類（說明見 daemon.hpp）。 |
 | [`src/daemon/body.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/body.cpp) | 執行 daemon 自己的身體並記錄結果（說明見 daemon.hpp）。 |
 | [`src/daemon/ctl.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/ctl.cpp) | 由控制窗推得期望表、停止與睡眠集合（說明見 daemon.hpp）。 |
-| [`src/daemon/daemon.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.cpp) | 初始化設定、展開 tick 普通子項、設定環境、路徑、信箱與 stack 鎖（說明見 daemon.hpp）。 |
-| [`src/daemon/daemon.hpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.hpp) | Daemon 管普通 proc 表、stuck 判定、tick 設定展開、手把與狀態窗；aos-loop 的 Loop 子類別，內部標頭。 |
+| [`src/daemon/daemon.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.cpp) | 初始化設定、展開 clock 普通子項、設定環境、路徑、信箱與 stack 鎖（說明見 daemon.hpp）。 |
+| [`src/daemon/daemon.hpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.hpp) | Daemon 管普通 proc 表、stuck 判定、clock 設定展開、手把與狀態窗；aos-loop 的 Loop 子類別，內部標頭。 |
 | [`src/daemon/failure.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/failure.cpp) | 從子項結束碼與 stderr 整理停止原因（說明見 daemon.hpp）。 |
 | [`src/daemon/mailbox.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/mailbox.cpp) | 信箱 procs_ctl_mailbox（10-29，medium-plan § 二 4、§ 四 3；NORMS N-28 的 10-29 補、N-16；11-03 改名 procs、多 stop／start；說明見 daemon.hpp）。 |
 | [`src/daemon/procs.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/procs.cpp) | 解讀 proc 名單、辨認寫法、整理路徑與合併期望表（說明見 daemon.hpp）。 |

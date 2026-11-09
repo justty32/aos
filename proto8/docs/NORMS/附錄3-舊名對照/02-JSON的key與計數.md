@@ -17,11 +17,12 @@
 | trace 的 `ms`、`at` | `elapsed_ms`、`started_at`；trace.jsonl 11-03 整個拿掉（[trace](../../../thinking/2026-11/03/trace.md)） | 10-23、10-25 |
 | `interfaces.json` 的 `"llm": "llm"`（指子介面入口資料夾 `llm/`） | `"llm": "llm.json"`（定義裡的腦設定檔，跟 `"tools": "tools.json"` 同形；值不是檔＝`LlmBad`） | 11-04 晚，[think-as-function](../../../thinking/2026-11/04/think-as-function/README.md)（P-43（續）） |
 | aos-llm-kernel：kernel.json `accept`；信頂層的 `inst`／`env`／`priority`；排序依據 `_metainfo.time_ms`／`llm_tokens` | 拿掉（信裡沒單子）；信 body `{"endpoint"?, "request", "priority"?}`（舊信＝`LetterBad`）；kernel.json 新鍵 `exec`、`endpoints`、`endpoint`、`timeout_ms` | 11-04 晚，[think-as-function](../../../thinking/2026-11/04/think-as-function/README.md)（N-42 (1)、N-16） |
+| daemon.json 的 `tick`（`true` 或 `{file, interval_ms, name}`）；`*_ticks`（`timeout_ticks`、`stuck_after_ticks`、`lease_ticks`、`acquired_at_ticks`、`seen_at_ticks`、`aging_ticks`…） | `clock`（形狀不變）；`*_cycles`（`timeout_cycles`、`stuck_after_cycles`…；Linux 的 `started_at_ticks` 不改） | 11-09，[clock-and-hot-writes](../../../thinking/2026-11/09/clock-and-hot-writes/README.md)，使用者裁時鐘叫 clock、單位叫 cycle（N-28、N-65） |
 
 ### 10-25 計數、時間點、上限（規則與原話在[命名](../命名.md)）
 
 | 舊名 | 現名 |
 |---|---|
-| aos-llm-kernel：queue.json `runs`（11-09 前 queue.json 的 `counter_runs`）；used.json `calls`／`tokens`／`all_calls`／`all_tokens`；served.jsonl `tokens`／`waited_runs`、`at`（served.jsonl 11-05 整個不寫了；11-06 排隊帳改為 queue.json 的 `seen_at_ms`／選填 `seen_at_ticks`，aging 用 `aging_ticks`，見 [現行用法](../../../impls/aos-llm-kernel/docs/01-用法.md)）；kernel.json `budget.calls`／`budget.tokens` | `counter_runs`（11-09 起搬出 queue.json、開 `--enable-counters` 才寫 `$AOS_STACK/counter_kernel_runs.txt`）；`counter_calls`／`counter_tokens`／`counter_all_calls`／`counter_all_tokens`；`counter_tokens`／`counter_waited_runs`、`served_at`；`max_calls`／`max_tokens`（舊名＝`CfgBad`） |
+| aos-llm-kernel：queue.json `runs`（11-09 前 queue.json 的 `counter_runs`）；used.json `calls`／`tokens`／`all_calls`／`all_tokens`；served.jsonl `tokens`／`waited_runs`、`at`（served.jsonl 11-05 整個不寫了；11-06 排隊帳改為 queue.json 的 `seen_at_ms`／選填 `seen_at_cycles`，aging 用 `aging_cycles`，見 [現行用法](../../../impls/aos-llm-kernel/docs/01-用法.md)）；kernel.json `budget.calls`／`budget.tokens` | `counter_runs`（11-09 起搬出 queue.json、開 `--enable-counters` 才寫 `$AOS_STACK/counter_kernel_runs.txt`）；`counter_calls`／`counter_tokens`／`counter_all_calls`／`counter_all_tokens`；`counter_tokens`／`counter_waited_runs`、`served_at`；`max_calls`／`max_tokens`（舊名＝`CfgBad`） |
 | 信（send_message，已封存）的 `at`、`hops`；claude／codex 互動畫面 turns.jsonl 的 `at` | `sent_at`、`counter_hops`（現行信封沒有這欄）；`answered_at` |
 | lib 工具輸出的計數（ls、stat、view、json_read、json_edit、copy）；參數 `limit` | `counter_*`；`max_lines`（read）／`max_items`（ls）／`max_results`（memory，已封存） |

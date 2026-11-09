@@ -34,7 +34,7 @@ class JudgeTest(unittest.TestCase):
         self.env = dict(os.environ, AOS_STACK=str(self.stack), AOS_DAEMON=str(self.daemon),
                         PYTHONDONTWRITEBYTECODE="1",
                         PATH=os.pathsep.join([str(POST.parent), str(DIRECTIVE), os.environ["PATH"]]))
-        self.env.pop("AOS_TICK", None)
+        self.env.pop("AOS_CLOCK", None)
         for box in (self.requests, self.replies, self.ctl, self.sender):
             self.post("init", box)
 

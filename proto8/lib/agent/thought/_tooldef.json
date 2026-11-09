@@ -16,7 +16,7 @@
     "DepthExceeded",
     "ToolMissing",
     "MkdirFailed",
-    "TickBad"
+    "ClockBad"
   ],
   "parameters": {
     "type": "object",
@@ -75,16 +75,16 @@
       "timeout_s": {
         "default": 600,
         "type": "number",
-        "description": "finite positive seconds to wait for the conclusion; default 600, no fixed upper limit; mutually exclusive with timeout_ticks"
+        "description": "finite positive seconds to wait for the conclusion; default 600, no fixed upper limit; mutually exclusive with timeout_cycles"
       },
       "keep": {
         "default": false,
         "type": "boolean",
         "description": "true keeps the helper (stopped) and adds a last line details: <its stack>/ for later inspection; default false"
       },
-      "timeout_ticks": {
+      "timeout_cycles": {
         "type": "integer",
-        "description": "positive integer ticks to wait; mutually exclusive with timeout_s; without AOS_TICK, one tick is AOS_TICK_INTERVAL milliseconds (default 1000)"
+        "description": "positive integer cycles to wait; mutually exclusive with timeout_s; without AOS_CLOCK, one cycle is AOS_CLOCK_INTERVAL milliseconds (default 1000)"
       }
     },
     "required": [

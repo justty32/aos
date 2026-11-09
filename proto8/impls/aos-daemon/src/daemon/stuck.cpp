@@ -54,7 +54,7 @@ void Daemon::check_stuck(const std::string& name, Child& c) {
         return;
     }
     if (!c.stuck_deadline) {
-        c.stuck_deadline = aos::deadline_after(c.stuck_after_ticks);
+        c.stuck_deadline = aos::deadline_after(c.stuck_after_cycles);
     }
     if (!aos::expired(*c.stuck_deadline)) {
         return;

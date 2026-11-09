@@ -3,7 +3,7 @@
 
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
-#include "aos/util/tick.hpp"
+#include "aos/util/clock.hpp"
 #include <fcntl.h>
 #include <sys/file.h>
 #include <limits>
@@ -47,7 +47,7 @@ Holder holder_of(bool flock) {
     h.holder = aos::identity();
     h.flock = flock;
     h.acquired_at = aos::utc_now_ms();
-    h.acquired_at_ticks = aos::now_tick();
+    h.acquired_at_cycles = aos::now_cycle();
     return h;
 }
 
@@ -56,11 +56,11 @@ Json to_json(const Holder& h) {
     if (h.flock) {
         j["flock"] = true;
     }
-    if (h.acquired_at_ticks) {
-        j["acquired_at_ticks"] = *h.acquired_at_ticks;
+    if (h.acquired_at_cycles) {
+        j["acquired_at_cycles"] = *h.acquired_at_cycles;
     }
-    if (h.lease_ticks) {
-        j["lease_ticks"] = *h.lease_ticks;
+    if (h.lease_cycles) {
+        j["lease_cycles"] = *h.lease_cycles;
     }
     if (h.note) {
         j["note"] = *h.note;
@@ -131,26 +131,26 @@ bool reapable(const Seen& s) {
     }
     const Json& j = *s.holder;
     std::optional<long long> at = parse_at(j["acquired_at"].get<std::string>());
-    if (!at || (j.contains("lease_ticks") && !count(j, "lease_ticks")) ||
-        (j.contains("acquired_at_ticks") && !count(j, "acquired_at_ticks")) ||
+    if (!at || (j.contains("lease_cycles") && !count(j, "lease_cycles")) ||
+        (j.contains("acquired_at_cycles") && !count(j, "acquired_at_cycles")) ||
         (j.contains("flock") && !j["flock"].is_boolean())) {
         return s.age_ms >= STALE_MS || s.age_ms <= -STALE_MS;
     }
     if (s.alive && !*s.alive) {
         return true;
     }
-    std::optional<long long> lease = count(j, "lease_ticks");
+    std::optional<long long> lease = count(j, "lease_cycles");
     if (!lease) {
         return false;
     }
-    std::optional<long long> tick = aos::now_tick();
-    std::optional<long long> at_tick = count(j, "acquired_at_ticks");
-    if (tick && at_tick) {
-        return *tick >= *at_tick && *tick - *at_tick >= *lease;
+    std::optional<long long> cycle = aos::now_cycle();
+    std::optional<long long> at_cycle = count(j, "acquired_at_cycles");
+    if (cycle && at_cycle) {
+        return *cycle >= *at_cycle && *cycle - *at_cycle >= *lease;
     }
     // 用寬整數比較，乘法與期限加法都不溢位。
     return static_cast<__int128>(now_ms()) >= static_cast<__int128>(*at) +
-        static_cast<__int128>(*lease) * aos::tick_interval_ms();
+        static_cast<__int128>(*lease) * aos::clock_interval_ms();
 }
 
 }  // namespace aos::lock

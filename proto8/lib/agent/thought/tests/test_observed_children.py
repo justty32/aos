@@ -79,7 +79,7 @@ class ChildrenTests(unittest.TestCase):
                     raise SystemExit(code)
                 ns = dict(OPENING='{goal}', max_chars=600, goal='task', context=[], kid='kid',
                           stack='tool', kid_stack='/daemon/kid', keep=keep,
-                          timeout_ticks=None, timeout_s=600, agent=agent,
+                          timeout_cycles=None, timeout_s=600, agent=agent,
                           copy_child=lambda *args: events.append('copy'),
                           mark=Mock(), forget=Mock(), tool_io=Mock(), rel=lambda value: value,
                           sys=SimpleNamespace(stdout=io.StringIO(), exit=exit))

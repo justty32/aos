@@ -26,9 +26,9 @@ All procs share lifecycle rules regardless of launch syntax: stop writes their p
 ctl and waits (no SIGTERM fallback); sleep sends SIGTERM and keeps a sleeping row.
 Natural exit 0 removes the row; known nonzero exits keep stopped with a reason
 (unless auto_restart requests a restart). Shutdown sleeps all live procs for next startup.
-Optional "tick": true (or {file, interval_ms, name}) adds an ordinary auto-restarting
-clock loop and passes AOS_TICK to children. No tick key leaves the clock inherited.
-Each proc may set stuck_after_ticks (positive integer, default 10). Unanswered
+Optional "clock": true (or {file, interval_ms, name}) adds an ordinary auto-restarting
+clock loop and passes AOS_CLOCK to children. No clock key leaves the clock inherited.
+Each proc may set stuck_after_cycles (positive integer, default 10). Unanswered
 control windows project phase stuck; restart_on_stuck: true restarts the proc
 (unless paused), stopping after 3 consecutive stuck runs without a response.
 

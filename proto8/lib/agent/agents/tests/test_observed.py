@@ -39,7 +39,7 @@ class ObservedTests(unittest.TestCase):
                     raise SystemExit(code)
                 ns = dict(op=op, args={'text': 'hello'}, my_child=lambda args: 'kid',
                           need_str=lambda args, key: args[key], must=must,
-                          timeout_ticks=None, timeout_s=600, ctl_s=30, STEP_S=90,
+                          timeout_cycles=None, timeout_s=600, ctl_s=30, STEP_S=90,
                           preserve_child=lambda name: events.append('copy'),
                           write_children=lambda value: events.append('write'),
                           load_json=lambda *args: [], children_path='children.json',

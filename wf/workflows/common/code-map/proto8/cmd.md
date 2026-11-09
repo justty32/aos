@@ -22,7 +22,7 @@
 | [`aos_agent/ctl/who.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/who.py) | 由 stack 路徑查詢所屬 agent。 |
 | [`aos_agent/decl.py`](../../../../../proto8/cmd/aos-agent/aos_agent/decl.py) | 讀取介面宣告並呼叫定義中的子介面入口。 |
 | [`aos_agent/hints.py`](../../../../../proto8/cmd/aos-agent/aos_agent/hints.py) | 讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。 |
-| [`aos_agent/listen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/listen.py) | 以秒或 tick 等待回答，或列出與追蹤歷史對話。 |
+| [`aos_agent/listen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/listen.py) | 以秒或 cycle 等待回答，或列出與追蹤歷史對話。 |
 | [`aos_agent/llm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/llm.py) | 分層解析腦設定命令並管理 agent 的覆蓋鍵與重設確認。 |
 | [`aos_agent/say.py`](../../../../../proto8/cmd/aos-agent/aos_agent/say.py) | 寄一則訊息到 agent 的 queue。 |
 | [`aos_agent/screen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/screen.py) | 開啟、關閉與追蹤 agent 的畫面子介面。 |
@@ -31,6 +31,12 @@
 | [`stack.gitattributes`](../../../../../proto8/cmd/aos-agent/stack.gitattributes) | 把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件） |
 | [`stack.gitignore`](../../../../../proto8/cmd/aos-agent/stack.gitignore) | daemon stack 的 image 排除範本：暫存、鎖、可重建請求與紀錄（11-06 git-image 裁定）。 |
 | [`using-aos-agent.sh`](../../../../../proto8/cmd/aos-agent/using-aos-agent.sh) | 給人的殼 source 用（不是跑）：之後直接打 say／listen／chat／status，像命名空間（11-04 aos-agent 02）。 |
+
+## `proto8/cmd/aos-clock/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`bin/aos-clock`](../../../../../proto8/cmd/aos-clock/bin/aos-clock) | 時鐘往前走一格（CONCEPTS C-44、NORMS N-01；規格 10-12「做吧」，計畫 10-21 第 4 段）。 |
 
 ## `proto8/cmd/aos-daemon-ctl/`
 

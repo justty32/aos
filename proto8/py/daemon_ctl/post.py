@@ -1,4 +1,4 @@
-"""daemon_ctl 信件：寄送、認領與清理回信，並以秒或 tick 等待 daemon 回應。"""
+"""daemon_ctl 信件：寄送、認領與清理回信，並以秒或 cycle 等待 daemon 回應。"""
 import datetime
 import fcntl
 import json
@@ -133,15 +133,15 @@ def take_reply(box, letter):
     return None
 
 
-def ask(d, body, timeout_s=None, direct=False, *, timeout_ticks=None):
-    """等回信：未指定期限沿用 3 秒；秒與正整數 tick 擇一。"""
-    if timeout_ticks is not None:
+def ask(d, body, timeout_s=None, direct=False, *, timeout_cycles=None):
+    """等回信：未指定期限沿用 3 秒；秒與正整數 cycle 擇一。"""
+    if timeout_cycles is not None:
         if timeout_s is not None:
-            raise Fail("ArgumentsBad", "timeout_s and timeout_ticks are mutually exclusive")
-        if isinstance(timeout_ticks, bool) or not isinstance(timeout_ticks, int) or not 0 < timeout_ticks <= 9223372036854775807:
-            raise Fail("ArgumentsBad", "timeout_ticks must be a positive integer within signed 64-bit range")
+            raise Fail("ArgumentsBad", "timeout_s and timeout_cycles are mutually exclusive")
+        if isinstance(timeout_cycles, bool) or not isinstance(timeout_cycles, int) or not 0 < timeout_cycles <= 9223372036854775807:
+            raise Fail("ArgumentsBad", "timeout_cycles must be a positive integer within signed 64-bit range")
     try:
-        deadline = aos_ws.deadline_after(timeout_ticks) if timeout_ticks is not None else None
+        deadline = aos_ws.deadline_after(timeout_cycles) if timeout_cycles is not None else None
         box = reply_box(d)
         letter = send(d, body, reply_to=box, direct=direct)
         end = time.monotonic() + (3 if timeout_s is None else timeout_s) if deadline is None else None
@@ -157,8 +157,8 @@ def ask(d, body, timeout_s=None, direct=False, *, timeout_ticks=None):
         raise Fail(exc.code, str(exc)) from exc
 
 
-def ping(d, timeout_s=None, direct=False, *, timeout_ticks=None):
-    return ask(d, {"ping": True}, timeout_s, direct, timeout_ticks=timeout_ticks)
+def ping(d, timeout_s=None, direct=False, *, timeout_cycles=None):
+    return ask(d, {"ping": True}, timeout_s, direct, timeout_cycles=timeout_cycles)
 
 
 def wait_taken(box, letter, secs=3):

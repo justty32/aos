@@ -15,7 +15,7 @@ class BackendFixtures(unittest.TestCase):
 
     def config_backends(self, slots=1, max_packs=1, total=8):
         cfg = {'exec': str(test_ledger.FAKE.parent), 'slots': total,
-               'aging_ticks': 1000000,
+               'aging_cycles': 1000000,
                'backends': {'local': {'slots': slots}},
                'endpoints': {'a': {'backend': 'local', 'speed': 'slow'},
                              'b': {'backend': 'local', 'speed': 'fast'}, 'free': {}}}
@@ -120,7 +120,7 @@ class BackendFixtures(unittest.TestCase):
                           {'level': 'normal', 'deadline': time.time()+3600} if kind == 'deadline' else None)
                 if kind == 'aging':
                     cfg = json.loads(self.config.read_text())
-                    cfg['aging_ticks'] = 1
+                    cfg['aging_cycles'] = 1
                     self.config.write_text(json.dumps(cfg))
                     q = self.state()
                     q['seen_at_ms'] = {b: int(time.time()*1000)-10000}

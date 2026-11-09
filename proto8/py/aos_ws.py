@@ -23,7 +23,7 @@ class Error(Exception):
         self.code = code
 
 
-def _tick_decimal(text, source, positive=False):
+def _clock_decimal(text, source, positive=False):
     """只收 ASCII 十進位整數，範圍與 C++ 的 long long 相同。"""
     if not text or any(ch < "0" or ch > "9" for ch in text):
         value = -1
@@ -34,30 +34,30 @@ def _tick_decimal(text, source, positive=False):
             value = -1
     if value < (1 if positive else 0) or value > 9223372036854775807:
         kind = "positive" if positive else "non-negative"
-        raise Error("TickBad", "%s must be a %s decimal integer within signed 64-bit range" % (source, kind))
+        raise Error("ClockBad", "%s must be a %s decimal integer within signed 64-bit range" % (source, kind))
     return value
 
 
-def now_tick():
-    """沒設 AOS_TICK＝None；缺檔 warning 每行程每路徑一次且當 0；空檔＝0；壞檔＝TickBad。"""
-    path = os.environ.get("AOS_TICK")
+def now_cycle():
+    """沒設 AOS_CLOCK＝None；缺檔 warning 每行程每路徑一次且當 0；空檔＝0；壞檔＝ClockBad。"""
+    path = os.environ.get("AOS_CLOCK")
     if not path:
         return None
     try:
         with open(path, "rb") as f:
             text = f.read().strip(b" \t\n\r\f\v").decode("ascii")
     except FileNotFoundError:
-        aos_flags.warn_missing_tick(path, prog=os.path.basename(sys.argv[0]))
+        aos_flags.warn_missing_clock(path, prog=os.path.basename(sys.argv[0]))
         return 0
     except (OSError, UnicodeError, ValueError) as e:
-        raise Error("TickBad", "cannot read AOS_TICK file %s: %s" % (path, e)) from None
-    return _tick_decimal(text, "AOS_TICK file") if text else 0
+        raise Error("ClockBad", "cannot read AOS_CLOCK file %s: %s" % (path, e)) from None
+    return _clock_decimal(text, "AOS_CLOCK file") if text else 0
 
 
-def tick_interval_ms():
-    """AOS_TICK_INTERVAL 的正整數毫秒，沒設或空＝1000。"""
-    text = os.environ.get("AOS_TICK_INTERVAL")
-    return _tick_decimal(text, "AOS_TICK_INTERVAL", positive=True) if text else 1000
+def clock_interval_ms():
+    """AOS_CLOCK_INTERVAL 的正整數毫秒，沒設或空＝1000。"""
+    text = os.environ.get("AOS_CLOCK_INTERVAL")
+    return _clock_decimal(text, "AOS_CLOCK_INTERVAL", positive=True) if text else 1000
 
 
 def utc_now_epoch_ms():
@@ -65,29 +65,29 @@ def utc_now_epoch_ms():
     return time.time_ns() // 1000000
 
 
-def deadline_after(ticks):
-    """回 (on_tick, at)；有時鐘數 tick，否則換成 UTC epoch 毫秒。"""
-    if not isinstance(ticks, int) or isinstance(ticks, bool) or not -9223372036854775808 <= ticks <= 9223372036854775807:
-        raise Error("TickBad", "deadline ticks must be an integer within signed 64-bit range")
-    now = now_tick()
-    on_tick = now is not None
-    if on_tick:
-        at = now + ticks
+def deadline_after(cycles):
+    """回 (on_clock, at)；有時鐘數 cycle，否則換成 UTC epoch 毫秒。"""
+    if not isinstance(cycles, int) or isinstance(cycles, bool) or not -9223372036854775808 <= cycles <= 9223372036854775807:
+        raise Error("ClockBad", "deadline cycles must be an integer within signed 64-bit range")
+    now = now_cycle()
+    on_clock = now is not None
+    if on_clock:
+        at = now + cycles
     else:
-        duration = ticks * tick_interval_ms()
+        duration = cycles * clock_interval_ms()
         if not -9223372036854775808 <= duration <= 9223372036854775807:
-            raise Error("TickBad", "deadline duration is outside signed 64-bit range")
+            raise Error("ClockBad", "deadline duration is outside signed 64-bit range")
         at = utc_now_epoch_ms() + duration
     if not -9223372036854775808 <= at <= 9223372036854775807:
-        raise Error("TickBad", "deadline is outside signed 64-bit range")
-    return on_tick, at
+        raise Error("ClockBad", "deadline is outside signed 64-bit range")
+    return on_clock, at
 
 
 def expired(deadline):
     """依期限種類判到期；同一行程不應失去時鐘，若失去就回 False。"""
-    on_tick, at = deadline
-    if on_tick:
-        now = now_tick()
+    on_clock, at = deadline
+    if on_clock:
+        now = now_cycle()
         return now is not None and now >= at
     return utc_now_epoch_ms() >= at
 

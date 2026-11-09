@@ -132,20 +132,20 @@ Result run_inst(const Json& doc, const std::string& base_dir, const std::vector<
     }
     inst.argv = argv0(inst.argv, cwd);   // 帶 / 又 exec 不了＝交給 PATH 上的 aos-exec（10-20 ideas D3）
     std::optional<Deadline> deadline;
-    if (inst.timeout_ticks) {
+    if (inst.timeout_cycles) {
         constexpr auto high = std::numeric_limits<long long>::max();
-        if (*inst.timeout_ticks > static_cast<unsigned long long>(high)) {
-            throw Error{code::TickBad, "inst timeout_ticks is outside signed 64-bit range"};
+        if (*inst.timeout_cycles > static_cast<unsigned long long>(high)) {
+            throw Error{code::ClockBad, "inst timeout_cycles is outside signed 64-bit range"};
         }
-        long long ticks = static_cast<long long>(*inst.timeout_ticks);
-        long long interval = aos::tick_interval_ms(); // 有時鐘也先驗設定，起子前報 TickBad
-        if (aos::now_tick()) {
-            deadline = aos::deadline_after(ticks);
+        long long cycles = static_cast<long long>(*inst.timeout_cycles);
+        long long interval = aos::clock_interval_ms(); // 有時鐘也先驗設定，起子前報 ClockBad
+        if (aos::now_cycle()) {
+            deadline = aos::deadline_after(cycles);
         } else {
-            if (ticks > high / interval) {
-                throw Error{code::TickBad, "inst timeout_ticks duration is outside signed 64-bit range"};
+            if (cycles > high / interval) {
+                throw Error{code::ClockBad, "inst timeout_cycles duration is outside signed 64-bit range"};
             }
-            inst.timeout_ms = static_cast<unsigned long long>(ticks * interval);
+            inst.timeout_ms = static_cast<unsigned long long>(cycles * interval);
         }
     }
     LibInput lib;
@@ -183,10 +183,10 @@ Result run_inst(const Json& doc, const std::string& base_dir, const std::vector<
         throw;
     }
     int received = 0;
-    bool tick_timed_out = false;
+    bool clock_timed_out = false;
     try {
         received = forward_signals_until_done(pid, inst.grace_ms, sig_fd.fd, done_fd.fd,
-                                             deadline, tick_timed_out);
+                                             deadline, clock_timed_out);
     } catch (...) {
         killpg(pid, SIGKILL);
         worker.join();
@@ -201,7 +201,7 @@ Result run_inst(const Json& doc, const std::string& base_dir, const std::vector<
     Result r;
     r.code = out.code;
     r.signal = out.signal;
-    r.timed_out = out.timed_out || tick_timed_out;
+    r.timed_out = out.timed_out || clock_timed_out;
     r.pid = out.pid;
     r.ms = out.ms;
     r.received = received;

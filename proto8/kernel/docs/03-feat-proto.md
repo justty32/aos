@@ -13,7 +13,7 @@ P=~/repo/simple_tools/aos/proto8
 T=/tmp/feat-s9-self && rm -rf $T && mkdir -p $T/ws/.stack && cd $T
 aos-exec --stack $T/k $P/kernel/llm-kernel > k.log 2>&1 & K=$!     # llm daemon（假腦包都在它的 kernel.json）；K 記它的 pid 好收工
 export AOS_LLM_KERNEL=$T/k
-echo '{"tick": true, "interval_ms": 300}' > daemon.json
+echo '{"clock": true, "interval_ms": 300}' > daemon.json
 AOS_STACK=$T/ws/.stack/ aos-daemon daemon.json > d.log 2>&1 & D=$!   # 跑 agent 的 daemon（環境帶著 AOS_LLM_KERNEL）
 sleep 1 && cd ws                                                   # cwd 有 .stack＝aos-agent 找得到 daemon
 aos-agent ctl add --name fsm1 $P/templates/agent-fsm
@@ -41,7 +41,7 @@ echo '{"endpoint": "smart-high", "request": {"messages": [{"role": "user", "cont
 for e in fake-demo-slow fake-demo-slow fake-demo-fast fake-demo-fast; do
   echo "{\"endpoint\": \"$e\", \"request\": {\"messages\": [{\"role\": \"user\", \"content\": \"hi $e\"}]}}" | aos-llm send --reply-to box
 done                                      # 印四個信件名稱（先寄兩封 slow、再兩封 fast）
-sleep 1 && aos-daemon-ctl --daemon $T/k ls   # 三列 running：_tick、第 3 封（fast）、第 1 封（slow）
+sleep 1 && aos-daemon-ctl --daemon $T/k ls   # 三列 running：_clock、第 3 封（fast）、第 1 封（slow）
 sleep 8 && ls box/new | wc -l             # 4：四封回信都到了（FAKE ANSWER to: hi …）
 kill $K
 ```
@@ -50,7 +50,7 @@ kernel 總 `slots` 2、兩包各 `slots` 1、每封 3 秒：同級的信 fast �
 
 ### 件 4：agent 生 agent（`agents`；判官 `max_running` 5）
 
-先複製 `kernel/daemon-judge` 到自己的定義資料夾，把那份 `judge.json` 的 `max_running` 改成 5（`_tick`＋fsm1＋三隻孩子），並把 `daemon.json` 裡判官的相對目標改成 `$P/lib/aos/judge` 的絕對路徑。下方 `JUDGE` 指向這份副本。這是配合出廠時鐘調整的跑法；固定假腦回答仍寫「4 running」，實際容量看判官的回信與表，不以假腦文字判斷。
+先複製 `kernel/daemon-judge` 到自己的定義資料夾，把那份 `judge.json` 的 `max_running` 改成 5（`_clock`＋fsm1＋三隻孩子），並把 `daemon.json` 裡判官的相對目標改成 `$P/lib/aos/judge` 的絕對路徑。下方 `JUDGE` 指向這份副本。這是配合出廠時鐘調整的跑法；固定假腦回答仍寫「4 running」，實際容量看判官的回信與表，不以假腦文字判斷。
 
 ```sh
 T=/tmp/feat-s9-spawn && rm -rf $T && mkdir -p $T/ws && cd $T
@@ -64,15 +64,15 @@ aos-agent say --target fsm1 start a kid and ask it the time && aos-agent listen 
 # I started kid, asked it the time (its answer is in the tool result above) and removed it again.
 aos-agent say --target fsm1 now start four kids && aos-agent listen --target fsm1
 # 查看判官拒絕 kid4 的 SlotMissing 回信；假腦文字是固定劇本，不拿它的 running 數字判容量。
-aos-agent ctl ls                          # 只剩 _tick、fsm1
+aos-agent ctl ls                          # 只剩 _clock、fsm1
 ls ws/defs/helper                         # kid1 那時寫出的定義留著（普通定義資料夾，可再 add）
 rg SlotMissing d.log                     # 預期判官因總共五列 running 拒絕 kid4；以實際回信／log 為準
 kill $K $D && unset AOS_DAEMON AOS_KERNEL
 ```
 
-第一題劇本（生法 (b) 用現有定義）：`agents add {"name": "kid", "def": "<repo>/proto8/templates/agent-fsm", "llm": {"endpoint": "fake"}}`（`llm` 走 kid 自己的覆蓋層 `<kid stack>/llm.json`，定義不動）→ `ask kid "what time is it?"`（kid 的假腦先叫 clock〔`fake` 包寫 `"tool": "clock"`〕、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`。第二題一次叫四個：kid1 用生法 (a) `agents new {"path": "defs/helper", "from": "<repo>/proto8/templates/agent-fsm", "files": {"system.txt": …}, "llm": {"endpoint": "fake"}}`——範本整份抄到 `ws/defs/helper`、換掉 `system.txt`、`llm.json` 寫進 `endpoint`、`tools.json` 的相對路徑改成絕對，再掛上；kid2、kid3 用 (b) `add {"def": "defs/helper"}` 重用它（kid3 另給 `"ws": "kid3"`＝`ws/kid3/`）；_tick＋fsm1＋三隻＝5 隻 running，kid4 被判官擋，回給腦一則 `agents: error: AddRejected AOS_KERNEL refused the add letter: SlotMissing …`；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的）；`ws` 沒給＝跟 fsm1 同一個；`agents` 只收自己生的（`$AOS_STACK/children.json`）。
+第一題劇本（生法 (b) 用現有定義）：`agents add {"name": "kid", "def": "<repo>/proto8/templates/agent-fsm", "llm": {"endpoint": "fake"}}`（`llm` 走 kid 自己的覆蓋層 `<kid stack>/llm.json`，定義不動）→ `ask kid "what time is it?"`（kid 的假腦先叫 wall_clock〔`fake` 包寫 `"tool": "wall_clock"`〕、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`。第二題一次叫四個：kid1 用生法 (a) `agents new {"path": "defs/helper", "from": "<repo>/proto8/templates/agent-fsm", "files": {"system.txt": …}, "llm": {"endpoint": "fake"}}`——範本整份抄到 `ws/defs/helper`、換掉 `system.txt`、`llm.json` 寫進 `endpoint`、`tools.json` 的相對路徑改成絕對，再掛上；kid2、kid3 用 (b) `add {"def": "defs/helper"}` 重用它（kid3 另給 `"ws": "kid3"`＝`ws/kid3/`）；_clock＋fsm1＋三隻＝5 隻 running，kid4 被判官擋，回給腦一則 `agents: error: AddRejected AOS_KERNEL refused the add letter: SlotMissing …`；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的）；`ws` 沒給＝跟 fsm1 同一個；`agents` 只收自己生的（`$AOS_STACK/children.json`）。
 
-**兩道關**：`agents` 工具自己數這隻父生了幾隻（`max_children`，範本 `agents.json` 寫 4；記在父 stack 裡工具小格的 `children.json`，每次叫先跟 daemon 表對帳），超過＝工具直接回錯、不寄信；判官 `max_running` 數的是整台 daemon 的總量（含父與 `_tick`）。上面第二題撞的是判官（父只有三隻，工具放行）。要看工具那道，照 act 格的叫法手叫一次（接在上面 `kill` 之前；`FS` 是 fsm1 的 stack）：
+**兩道關**：`agents` 工具自己數這隻父生了幾隻（`max_children`，範本 `agents.json` 寫 4；記在父 stack 裡工具小格的 `children.json`，每次叫先跟 daemon 表對帳），超過＝工具直接回錯、不寄信；判官 `max_running` 數的是整台 daemon 的總量（含父與 `_clock`）。上面第二題撞的是判官（父只有三隻，工具放行）。要看工具那道，照 act 格的叫法手叫一次（接在上面 `kill` 之前；`FS` 是 fsm1 的 stack）：
 
 ```sh
 FS=$T/st/procs/fsm1 && export AOS_STACK=$FS/ AOS_WS=$T/ws
@@ -91,7 +91,7 @@ rm $FS/agents.json && unset AOS_STACK AOS_WS
 
 ```sh
 T=/tmp/feat-s9-limits && rm -rf $T && mkdir -p $T/ws/.stack $T/hog && cd $T
-echo '{"tick": true, "interval_ms": 300}' > daemon.json
+echo '{"clock": true, "interval_ms": 300}' > daemon.json
 echo '{"aos-agent": {"limits": {"mem_mb": 256}}}' > hog/interfaces.json     # 這隻建議的份額
 echo '["aos-loop", "loop.json"]' > hog/_entry
 echo '{"exec": {"argv": ["python3", "-c", "b = bytearray(300 * 2**20)"]}, "max": 1}' > hog/loop.json   # 吃 300 MB

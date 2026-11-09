@@ -1,4 +1,4 @@
-// main.cpp：aos-lock 命令列——無存活標記的持久鎖、tick 租約、放鎖與查看。
+// main.cpp：aos-lock 命令列——無存活標記的持久鎖、時鐘租約、放鎖與查看。
 #include "aos/util/cli.hpp"
 #include "aos/lock.hpp"
 
@@ -34,7 +34,7 @@ more: aos-lock/README.md
 )";
 
 const std::map<std::string, std::string> SUB_USAGE = {
-    {"acquire", "aos-lock acquire [--lease-ticks N] [--note TEXT] [--wait-ms N] TARGET"},
+    {"acquire", "aos-lock acquire [--lease-cycles N] [--note TEXT] [--wait-ms N] TARGET"},
     {"release", "aos-lock release TARGET"},
     {"show", "aos-lock show TARGET"},
 };
@@ -42,11 +42,11 @@ const std::map<std::string, std::string> SUB_USAGE = {
 const std::map<std::string, std::string> SUB_HELP = {
     {"acquire", R"(aos-lock acquire - Acquire a lock next to TARGET.
 
-usage: aos-lock acquire [--lease-ticks N] [--note TEXT] [--wait-ms N] TARGET
+usage: aos-lock acquire [--lease-cycles N] [--note TEXT] [--wait-ms N] TARGET
        aos-lock acquire --help
 
 flags:
-  --lease-ticks N   expire the lease after N ticks (default: no expiry)
+  --lease-cycles N   expire the lease after N cycles (default: no expiry)
   --note TEXT    store a note in the holder tag
   --wait-ms N    wait up to N milliseconds (default: 0)
   -h, --help     show this help
@@ -117,10 +117,10 @@ long long count_of(const aos::Cli& cli, const std::string& name, const std::stri
 }
 
 int cmd_acquire(const Args& args) {
-    aos::Cli cli = parse(args, {{"--lease-ticks", "lease_ticks"}, {"--note", "note"}, {"--wait-ms", "wait_ms"}});
+    aos::Cli cli = parse(args, {{"--lease-cycles", "lease_cycles"}, {"--note", "note"}, {"--wait-ms", "wait_ms"}});
     l::Holder h = l::holder_of(false);
-    if (cli.opts.count("lease_ticks")) {
-        h.lease_ticks = count_of(cli, "lease_ticks", "--lease-ticks");
+    if (cli.opts.count("lease_cycles")) {
+        h.lease_cycles = count_of(cli, "lease_cycles", "--lease-cycles");
     }
     if (cli.opts.count("note")) {
         h.note = cli.opts["note"];

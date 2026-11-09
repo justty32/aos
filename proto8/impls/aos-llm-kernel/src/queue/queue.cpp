@@ -24,12 +24,12 @@ Queue read_queue(const std::string& stack) {
     Json doc = Json::parse(*text, nullptr, false);
     if (!doc.is_object() ||
         (doc.contains("seen_at_ms") && !doc["seen_at_ms"].is_object()) ||
-        (doc.contains("seen_at_ticks") && !doc["seen_at_ticks"].is_object())) {
-        throw Error{code::QueueBad, path + " must be an object with optional seen_at_ms/seen_at_ticks objects (delete it to start over)"};
+        (doc.contains("seen_at_cycles") && !doc["seen_at_cycles"].is_object())) {
+        throw Error{code::QueueBad, path + " must be an object with optional seen_at_ms/seen_at_cycles objects (delete it to start over)"};
     }
     q.original_doc = doc;
     q.seen_at_ms = doc.value("seen_at_ms", Json::object());
-    q.seen_at_ticks = doc.value("seen_at_ticks", Json::object());
+    q.seen_at_cycles = doc.value("seen_at_cycles", Json::object());
     if (doc.contains("backends")) {
         q.backends = doc["backends"];
         if (!q.backends.is_object()) {
@@ -50,8 +50,8 @@ Queue read_queue(const std::string& stack) {
 void write_queue(const std::string& stack, const Queue& q) {
     Json doc = Json::object();
     doc["seen_at_ms"] = q.seen_at_ms;
-    if (q.on_tick) {
-        doc["seen_at_ticks"] = q.seen_at_ticks;
+    if (q.on_clock) {
+        doc["seen_at_cycles"] = q.seen_at_cycles;
     }
     if (!q.backends.empty()) {
         doc["backends"] = q.backends;
@@ -65,18 +65,18 @@ void write_queue(const std::string& stack, const Queue& q) {
     }
 }
 
-long long effective(const Waiting& w, long long aging_ticks) {
-    long long age = w.waited_ticks / aging_ticks;
+long long effective(const Waiting& w, long long aging_cycles) {
+    long long age = w.waited_cycles / aging_cycles;
     if (w.priority.level > 0 && age > std::numeric_limits<long long>::max() - w.priority.level) {
         return std::numeric_limits<long long>::max();
     }
     return w.priority.level + age;
 }
 
-void order(std::vector<Waiting>& ws, long long aging_ticks, const Queue& q) {
-    std::stable_sort(ws.begin(), ws.end(), [aging_ticks](const Waiting& a, const Waiting& b) {
-        long long ea = effective(a, aging_ticks);
-        long long eb = effective(b, aging_ticks);
+void order(std::vector<Waiting>& ws, long long aging_cycles, const Queue& q) {
+    std::stable_sort(ws.begin(), ws.end(), [aging_cycles](const Waiting& a, const Waiting& b) {
+        long long ea = effective(a, aging_cycles);
+        long long eb = effective(b, aging_cycles);
         if (ea != eb) {
             return ea > eb;
         }
@@ -89,8 +89,8 @@ void order(std::vector<Waiting>& ws, long long aging_ticks, const Queue& q) {
         if (a.pack.speed != b.pack.speed) {   // 11-05 feat-proto：同級、同 deadline 時快的包先（早放格；慢的靠 aging 不會餓死）
             return a.pack.speed < b.pack.speed;
         }
-        long long wa = a.waited_ticks;
-        long long wb = b.waited_ticks;
+        long long wa = a.waited_cycles;
+        long long wb = b.waited_cycles;
         if (wa != wb) {
             return wa > wb;
         }
@@ -101,7 +101,7 @@ void order(std::vector<Waiting>& ws, long long aging_ticks, const Queue& q) {
     size_t start = 0;
     while (start < ws.size()) {
         size_t end = start + 1;
-        while (end < ws.size() && effective(ws[start], aging_ticks) == effective(ws[end], aging_ticks) &&
+        while (end < ws.size() && effective(ws[start], aging_cycles) == effective(ws[end], aging_cycles) &&
                ws[start].priority.deadline == ws[end].priority.deadline) {
             ++end;
         }

@@ -6,7 +6,7 @@
 //     cur/<id>/    kernel 認領了、請 daemon 掛成問腦 proc（stack＝這個資料夾：request.json、proc.json、daemon 寫的 loop.json／state.json／stderr.txt、函數寫的 reply.json）；寄出回信就整封刪掉
 //                  （11-04 夜使用者「舊信根本不用留，就是刪」：沒有 done/）
 //     .flock       kernel 跑一次的期間 flock 住（同一個信箱同時只有一個 kernel）
-//   信：letter.json＝N-16 的信（aos-post 寫）：{"sender", "sent_at", "sent_at_ticks"?（只限同一時鐘比較）, "reply_to": 回信信箱（必有，沒有就沒人收得到回信）,
+//   信：letter.json＝N-16 的信（aos-post 寫）：{"sender", "sent_at", "sent_at_cycles"?（只限同一時鐘比較）, "reply_to": 回信信箱（必有，沒有就沒人收得到回信）,
 //                    "body": {"endpoint"?: 代號（kernel.json 的 endpoints 表；沒寫＝kernel 的預設）,
 //                             "request": OpenAI chat completions 的 body 去掉端點（messages 必有；stream 真＝RequestBad）,
 //                             "priority"?: 原樣（parse_priority）}}
@@ -24,7 +24,7 @@
 //                  （flock 跟著檔走，不看 pid，所以沙箱〔別的 pid、mount namespace〕裡的寄信人也認得）
 //   parse_priority 信裡的 priority（10-15 LLM kernel 稿）：沒寫＝normal；"low"／"normal"／"high"；數字看正負；
 //                  物件 {"level", "deadline", 其他 key 忽略}；deadline＝ISO 8601（要帶時區）或 epoch 秒。壞了丟 PriorityBad
-//                  跨樹信的期限＝牆鐘（N-65 ③）；kernel 自己的 aging 才用自己樹的鐘，不讀信裡任何 tick 欄。
+//                  跨樹信的期限＝牆鐘（N-65 ③）；kernel 自己的 aging 才用自己樹的鐘，不讀信裡任何時鐘值欄。
 //   priority_of    一封信的排隊依據＝parse_priority(letter["body"]["priority"])（11-04 起 `_metainfo` 的兩個依據拿掉：信裡沒單子）
 //   reply_of       回信的內容合不合（{"message": 物件, …} 或 {"error": {"code": 字串, "msg": 字串}}）：合＝原樣、不合＝nullopt
 //   read_reply     讀 reply.json、照 reply_of 驗；壞了回 nullopt

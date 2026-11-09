@@ -58,9 +58,9 @@ endpoint 函數的契約（stdin `{"endpoint", "request", "priority"}` → stdou
 2. **收成品**：`cur/` 裡有 `proc.json` 的照上面「跑一封」第 4 步看，收尾的寄回信、刪掉，還在飛的記一格。沒有 `proc.json` 的：有讀得懂的 `reply.json`＝上一次寄到一半，照寄；都沒有＝認領了還沒掛就停了，改名回 `new/` 重排。
 3. **收拾**（只看有 `sender.flock` 的信）：`tmp/` 裡寄信的人不在了的刪掉；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑）。沒有 `sender.flock` 的一律不碰。
 4. **看 `new/`**：`LetterBad`、`RequestBad`、`EndpointMissing`、`EndpointUnknown`、那組壞了（`DirectiveBad`、`CfgBad`）、deadline 已過（`DeadlineBad`）＝直接回信（都不佔格、不跑）。
-5. **排隊**（11-05 使用者「讓kernel能根據信件中額外附送的priority之類資訊做排程」，[feat-proto 03](../../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：`level`＋`waited_ticks / aging_ticks`（整數除法；每 `aging_ticks` 格升一級，預設 3，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ 同一 backend 的信黏著最後掛的包 → **那封的包的 `speed`**（`fast` → `normal` → `slow`）→ 等得久的先 → 先寄的先。
-   `waited_ticks`：kernel 有時鐘而這封信也有 `seen_at_ticks`，用現在 tick 減那一格；否則用 `(現在 UTC epoch 毫秒 − seen_at_ms) / AOS_TICK_INTERVAL`（預設 1000 毫秒），負的當 0。「等得久」也比同一個值。同一輪掃描只各讀一次 tick 與牆鐘。時鐘凍住，已有 tick 記錄的信就不升級；沒有時鐘時凍住再醒仍會計入牆鐘經過的時間。
-   跨樹信的 `priority.deadline` 仍是牆鐘（帶時區 ISO 8601 或 epoch 秒；N-65 ③），kernel 不讀信裡任何 tick 欄。
+5. **排隊**（11-05 使用者「讓kernel能根據信件中額外附送的priority之類資訊做排程」，[feat-proto 03](../../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：`level`＋`waited_cycles / aging_cycles`（整數除法；每 `aging_cycles` 格升一級，預設 3，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ 同一 backend 的信黏著最後掛的包 → **那封的包的 `speed`**（`fast` → `normal` → `slow`）→ 等得久的先 → 先寄的先。
+   `waited_cycles`：kernel 有時鐘而這封信也有 `seen_at_cycles`，用現在的格數減那一格；否則用 `(現在 UTC epoch 毫秒 − seen_at_ms) / AOS_CLOCK_INTERVAL`（預設 1000 毫秒），負的當 0。「等得久」也比同一個值。同一輪掃描只各讀一次時鐘與牆鐘。時鐘凍住，已有格數記錄的信就不升級；沒有時鐘時凍住再醒仍會計入牆鐘經過的時間。
+   跨樹信的 `priority.deadline` 仍是牆鐘（帶時區 ISO 8601 或 epoch 秒；N-65 ③），kernel 不讀信裡任何時鐘欄。
    不搶位、不保留格；要保證 high 不等＝短 deadline 或多開一包。
    同級、同 deadline 狀態下，慢包的信會被後寄的快包信超過（今天就有 priority 超車，aging 保底不會餓死）。
 6. 掛之前看一眼訊號（有＝不認領、寫完 `queue.json` 以 128＋N 結束）。照排好的順序一封封看：

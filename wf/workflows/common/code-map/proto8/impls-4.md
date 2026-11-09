@@ -44,5 +44,5 @@
 | [`src/common/common.hpp`](../../../../../proto8/impls/aos-lock/src/common/common.hpp) | aos-lock 跨元素共用的小東西（內部標頭，不對外）。 |
 | [`src/holder/holder.cpp`](../../../../../proto8/impls/aos-lock/src/holder/holder.cpp) | 名牌與 flock 存活快照、兩鐘租約判斷。 |
 | [`src/lock/lock.cpp`](../../../../../proto8/impls/aos-lock/src/lock/lock.cpp) | mkdir 取鎖、目錄 fd 原子刊登名牌、保管 flock fd、收屍與放鎖。 |
-| [`src/main.cpp`](../../../../../proto8/impls/aos-lock/src/main.cpp) | aos-lock 命令列——無存活標記的持久鎖、tick 租約、放鎖與查看。 |
+| [`src/main.cpp`](../../../../../proto8/impls/aos-lock/src/main.cpp) | aos-lock 命令列——無存活標記的持久鎖、時鐘租約、放鎖與查看。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-lock/vcpkg.json) | aos-lock：鎖（N-15：mkdir .lock/、名牌 holder.json、收屍）的 lib 與命令列 |

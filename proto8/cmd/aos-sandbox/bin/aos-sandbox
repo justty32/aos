@@ -13,7 +13,7 @@
 #   ro、rw   路徑陣列：唯讀／可寫看得到（相對的從 cwd 算；rw 最後綁，可蓋在 ro 裡面）
 #   net      布林：能不能連網（預設 false：只有自己的 loopback）
 #   mem_mb、cpu_s、procs、file_mb、files  正整數 → s6-softlimit 的 -a＋-d、-t、-p、-f、-o
-#   env      環境變數名陣列：只帶這幾個進去（外面有設的才帶；bwrap --clearenv＋--setenv）；沒寫＝ENV_BASE 那幾個（PATH、語系、aos 的六個、hub 型的 AOS_DAEMON／AOS_LLM_KERNEL／AOS_KERNEL／AOS_MEMORY／AOS_TICK）；
+#   env      環境變數名陣列：只帶這幾個進去（外面有設的才帶；bwrap --clearenv＋--setenv）；沒寫＝ENV_BASE 那幾個（PATH、語系、aos 的六個、hub 型的 AOS_DAEMON／AOS_LLM_KERNEL／AOS_KERNEL／AOS_MEMORY／AOS_CLOCK）；
 #            寫了＝整份取代 ENV_BASE，不是往預設上加（要預設那幾個就自己列）
 #   沒列到的路徑一律看不到；/proc、/dev、/tmp（空的）一定有。
 #   能不能用 LLM kernel 不另設開關（使用者 10-24「就是看他能不能存取檔案」）：信箱有綁進來（rw 列了 {"$env": "AOS_LLM_KERNEL", "$path": "/requests"}；
@@ -34,7 +34,7 @@ BASE = ["/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc"]
 ENV_BASE = ["PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "PYTHONDONTWRITEBYTECODE", "PYTHONIOENCODING",
             "AOS_ENTRY", "AOS_WS", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO",
             "AOS_DAEMON", "AOS_LLM_KERNEL",   # hub 型（N-63）也帶：子 process 預設繼承（11-04 四元素審查）
-            "AOS_KERNEL", "AOS_MEMORY", "AOS_TICK"]   # 其餘 hub 型（N-63 ③ 字面；使用者 11-06 選項框「預設補上」）
+            "AOS_KERNEL", "AOS_MEMORY", "AOS_CLOCK"]   # 其餘 hub 型（N-63 ③ 字面；使用者 11-06 選項框「預設補上」）
 # mem_mb 只設 -a（位址空間）與 -d（資料），不用 -m：-m 連堆疊上限也設成同一個數，glibc 開執行緒照堆疊上限配，
 # 一開執行緒就超過位址空間上限（aos-exec 退 1「Resource temporarily unavailable」；10-24 真腦實測 self-improve 撞到）
 LIMITS = [("mem_mb", ("-a", "-d"), 1024 * 1024), ("cpu_s", ("-t",), 1), ("procs", ("-p",), 1),
@@ -52,7 +52,7 @@ It builds one chain-loading argv, [s6-softlimit LIMITS...] [s6-setuidgid USER] b
 Config keys (all optional; unknown keys are ignored): user (account or uid:gid, needs root), base, commands, ro, rw (path arrays),
   net (boolean, default false), mem_mb, cpu_s, procs, file_mb, files (positive integers), env (variable names to pass in;
   default PATH, locale, TZ, PYTHON*, the six AOS_ run variables and the hub ones AOS_DAEMON, AOS_LLM_KERNEL, AOS_KERNEL,
-  AOS_MEMORY, AOS_TICK; an env list replaces that default as a whole, it does not add to it).
+  AOS_MEMORY, AOS_CLOCK; an env list replaces that default as a whole, it does not add to it).
 Errors: one stderr line `aos-sandbox: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, CfgMissing, CfgBad, PathMissing,
   CommandMissing, UserBad. After the exec every exit code is prog's (killed by signal N = 128+N): exiting non-zero with an
   `aos-sandbox: error:` line on stderr means aos-sandbox failed; without it the code comes from below."""

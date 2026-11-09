@@ -4,7 +4,7 @@
 #include "aos/directive.hpp"
 #include "aos/util/files.hpp"
 
-#include "aos/util/tick.hpp"
+#include "aos/util/clock.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -65,13 +65,13 @@ std::optional<Json> Server::pick(Waiting& w) {
     return std::nullopt;
 }
 
-std::vector<Waiting> Server::scan(long long now_ms, std::optional<long long> now_tick) {
+std::vector<Waiting> Server::scan(long long now_ms, std::optional<long long> now_cycle) {
     std::vector<Waiting> ws;
     double now = static_cast<double>(now_ms) / 1000.0;
     Json seen_ms = Json::object();
-    Json seen_ticks = Json::object();
+    Json seen_cycles = Json::object();
     std::optional<long long> interval_ms;
-    q_.on_tick = now_tick.has_value();
+    q_.on_clock = now_cycle.has_value();
     for (const std::string& id : aos::names_in(mb_.fresh(), true)) {
         std::string path = aos::join(aos::join(mb_.fresh(), id), "letter.json");
         std::optional<Json> letter = aos::read_json(path);
@@ -123,25 +123,25 @@ std::vector<Waiting> Server::scan(long long now_ms, std::optional<long long> now
             seen_at_ms = old_ms.get<long long>();
         }
         seen_ms[id] = seen_at_ms;
-        Json old_tick = q_.seen_at_ticks.value(id, Json());
-        if (now_tick && (!known || timestamp_ok(old_tick))) {
-            long long seen_at_ticks = *now_tick;
+        Json old_cycle = q_.seen_at_cycles.value(id, Json());
+        if (now_cycle && (!known || timestamp_ok(old_cycle))) {
+            long long seen_at_cycles = *now_cycle;
             if (known) {
-                seen_at_ticks = old_tick.get<long long>();
+                seen_at_cycles = old_cycle.get<long long>();
             }
-            seen_ticks[id] = seen_at_ticks;
-            w.waited_ticks = std::max(0LL, *now_tick - seen_at_ticks);
+            seen_cycles[id] = seen_at_cycles;
+            w.waited_cycles = std::max(0LL, *now_cycle - seen_at_cycles);
         } else {
-            // 先前沒時鐘的記錄繼續用牆鐘，不能在切換時憑空補一個過去的 tick。
+            // 先前沒時鐘的記錄繼續用牆鐘，不能在切換時憑空補一個過去的時鐘值。
             if (!interval_ms) {
-                interval_ms = aos::tick_interval_ms();
+                interval_ms = aos::clock_interval_ms();
             }
-            w.waited_ticks = std::max(0LL, now_ms - seen_at_ms) / *interval_ms;
+            w.waited_cycles = std::max(0LL, now_ms - seen_at_ms) / *interval_ms;
         }
         ws.push_back(w);
     }
     q_.seen_at_ms = seen_ms;   // 只留還在排的
-    q_.seen_at_ticks = seen_ticks;
+    q_.seen_at_cycles = seen_cycles;
     return ws;
 }
 

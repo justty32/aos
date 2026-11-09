@@ -116,11 +116,11 @@ class Check:
         defs.mkdir()
         self.run(["cp", "-a", str(self.repo / "templates/agent-fsm"), str(defs / "agent")])
         configs = {
-            "root": {"tick": True, "interval_ms": 100, "procs": {
+            "root": {"clock": True, "interval_ms": 100, "procs": {
                 "kernel": {"exec": "../kernel", "auto_restart": True},
                 "foreman": {"exec": "../foreman", "auto_restart": True}}},
-            "foreman": {"tick": True, "interval_ms": 100, "procs": {}},
-            "kernel": {"tick": True, "interval_ms": 100,
+            "foreman": {"clock": True, "interval_ms": 100, "procs": {}},
+            "kernel": {"clock": True, "interval_ms": 100,
                        "exec": {"argv": ["aos-llm-kernel", "--enable-counters", "kernel.json"]}},
         }
         for name, config in configs.items():

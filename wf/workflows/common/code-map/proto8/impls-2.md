@@ -37,7 +37,7 @@
 | [`src/inst/inst.hpp`](../../../../../proto8/impls/aos-exec/src/inst/inst.hpp) | 行程內跑一張 inst 單子（公開的 run_inst 在 aos/exec.hpp）。 |
 | [`src/inst/lib_input.cpp`](../../../../../proto8/impls/aos-exec/src/inst/lib_input.cpp) | Inst → aos-inst 的單子（aos_inst_input_t）。 |
 | [`src/inst/run.cpp`](../../../../../proto8/impls/aos-exec/src/inst/run.cpp) | run_inst——行程內跑一張 inst 單子（公開介面見 aos/exec.hpp）。 |
-| [`src/inst/signals.cpp`](../../../../../proto8/impls/aos-exec/src/inst/signals.cpp) | 訊號與 tick 逾時監工——轉送訊號與逾時終止子程式的整個行程群組。 |
+| [`src/inst/signals.cpp`](../../../../../proto8/impls/aos-exec/src/inst/signals.cpp) | 訊號與 時鐘逾時監工——轉送訊號與逾時終止子程式的整個行程群組。 |
 | [`src/launch/launch.cpp`](../../../../../proto8/impls/aos-exec/src/launch/launch.cpp) | 開跑（說明見 launch.hpp）。 |
 | [`src/launch/launch.hpp`](../../../../../proto8/impls/aos-exec/src/launch/launch.hpp) | 開跑（公開介面 run_inst、argv0 在 aos/exec.hpp）。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-exec/src/main.cpp) | aos-exec 命令列——把參數交給公開 API 的 run_cli（aos/exec.hpp、src/cli/）。 |

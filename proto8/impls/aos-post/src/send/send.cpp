@@ -1,4 +1,4 @@
-// send.cpp：【send】驗信箱與名稱、記牆鐘與選填 tick 寄信，並以鎖保證有序投遞。
+// send.cpp：【send】驗信箱與名稱、記牆鐘與選填時鐘值 寄信，並以鎖保證有序投遞。
 //
 // 寄＝只用 Linux 的原子動作（N-16、medium-plan § 二 3）：
 //   0. 入口檢查（C-53 (a)）：信箱的 tmp/、new/ 是資料夾（MailboxMissing）、對自己可寫（access W_OK|X_OK，照字面驗、不試寫；MailboxBad）；
@@ -19,7 +19,7 @@
 #include "aos/util/files.hpp"
 #include "aos/lock.hpp"
 #include "aos/util/proc.hpp"
-#include "aos/util/tick.hpp"
+#include "aos/util/clock.hpp"
 
 #include <filesystem>
 
@@ -135,8 +135,8 @@ std::string send(const Mailbox& mb, const Json& body, const SendOpts& opts) {
         }
     }
     std::string who = aos::identity();   // aos-util：$AOS_WS ＞ $AOS_STACK ＞ $AOS_CF ＞ cwd（cwd 拿不到丟 Internal）
-    // 在建 tmp/ 信件前讀鐘；壞鐘直接 TickBad，不留下半封信。
-    std::optional<long long> sent_at_ticks = aos::now_tick();
+    // 在建 tmp/ 信件前讀鐘；壞鐘直接 ClockBad，不留下半封信。
+    std::optional<long long> sent_at_cycles = aos::now_cycle();
     // 1. mkdir tmp/<名>（預設名撞名換一個；同一奈秒同一行程才會撞）
     Stamp s;
     std::string t;
@@ -174,8 +174,8 @@ std::string send(const Mailbox& mb, const Json& body, const SendOpts& opts) {
     Json letter = Json::object();
     letter["sender"] = who;
     letter["sent_at"] = s.sent_at;
-    if (sent_at_ticks) {
-        letter["sent_at_ticks"] = *sent_at_ticks;
+    if (sent_at_cycles) {
+        letter["sent_at_cycles"] = *sent_at_cycles;
     }
     if (reply_to) {
         letter["reply_to"] = *reply_to;

@@ -15,7 +15,7 @@ flowchart TD
 
 <details><summary>三層佈局與啟動指令</summary>
 
-以下是 image 根內的佈局；`root_image` 是根 stack，`llm_image` 與 `foreman_image` 是子 stack，`ws` 是工作成果。定義的 `_entry` 均為 `["aos-daemon", "daemon.json"]`。此例把 repo 的 `kernel/llm-kernel` 複製成 `llm_def`、`templates/agent-fsm` 複製成 `agent_def`，並帶同層的 `lib/`、`py/`。搬平一層後，先把 kernel.json 的 `exec`／fake 端點路徑改為 `../lib/base/llm_http`／`../lib/base/llm_fake`，agent 的 clock 工具 path 改為 `../lib/base/clock`；其他有用到的工具也照實際相對位置改。外部複本須安裝 repo 的 Python 共用模組，或在起根殼設 `PYTHONPATH="$PWD/py:$PWD/lib${PYTHONPATH:+:$PYTHONPATH}"`。agent 的啟動目標照其定義（例如 `fsm.json`），不要把會自掛的入口再掛一次。
+以下是 image 根內的佈局；`root_image` 是根 stack，`llm_image` 與 `foreman_image` 是子 stack，`ws` 是工作成果。定義的 `_entry` 均為 `["aos-daemon", "daemon.json"]`。此例把 repo 的 `kernel/llm-kernel` 複製成 `llm_def`、`templates/agent-fsm` 複製成 `agent_def`，並帶同層的 `lib/`、`py/`。搬平一層後，先把 kernel.json 的 `exec`／fake 端點路徑改為 `../lib/base/llm_http`／`../lib/base/llm_fake`，agent 的 wall_clock 工具 path 改為 `../lib/base/wall_clock`；其他有用到的工具也照實際相對位置改。外部複本須安裝 repo 的 Python 共用模組，或在起根殼設 `PYTHONPATH="$PWD/py:$PWD/lib${PYTHONPATH:+:$PYTHONPATH}"`。agent 的啟動目標照其定義（例如 `fsm.json`），不要把會自掛的入口再掛一次。
 
 ```text
 image/
@@ -29,7 +29,7 @@ image/
 `root_def/daemon.json`：
 
 ```json
-{"tick":true,"procs_ctl_mailbox":"procs_ctl_mailbox","procs":{
+{"clock":true,"procs_ctl_mailbox":"procs_ctl_mailbox","procs":{
   "switchboard":{"exec":"../llm_def","stack":"../llm_image","auto_restart":true},
   "foreman":{"exec":"../foreman_def","stack":"../foreman_image","ws":"../ws","auto_restart":true}
 }}
@@ -40,12 +40,12 @@ image/
 `foreman_def/daemon.json`：
 
 ```json
-{"tick":true,"procs_ctl_mailbox":"procs_ctl_mailbox","procs":{
+{"clock":true,"procs_ctl_mailbox":"procs_ctl_mailbox","procs":{
   "ann":{"exec":"../agent_def/fsm.json","interval_ms":0,"stack":"../agent_image","ws":"../ws","def":"../agent_def"}
 }}
 ```
 
-三層（根、領班、總機）各帶 `tick: true`、各自一個鐘，照使用者 11-06 選的「都留著」（11-07 sol 審查 #14）。定義中的相對 exec／stack／ws 從各 daemon 的 cwd（此例是其定義資料夾）算。父只把 switchboard／foreman 當普通 exec，`auto_restart: true` 才有常駐 sleep／wake 與退了重起。
+三層（根、領班、總機）各帶 `clock: true`、各自一個鐘，照使用者 11-06 選的「都留著」（11-07 sol 審查 #14）。定義中的相對 exec／stack／ws 從各 daemon 的 cwd（此例是其定義資料夾）算。父只把 switchboard／foreman 當普通 exec，`auto_restart: true` 才有常駐 sleep／wake 與退了重起。
 
 1. 建帳號可略；若用了 `limits.user`，先由人把帳號、stack／信箱寫入權限配好。
 2. 包 root 可略；家機有 systemd 委派時可用下方 scope。
@@ -53,7 +53,7 @@ image/
 
 ```sh
 export AOS_LLM_KERNEL="$PWD/llm_image"
-unset AOS_KERNEL AOS_DAEMON AOS_TICK
+unset AOS_KERNEL AOS_DAEMON AOS_CLOCK
 # 有判官才另 export AOS_KERNEL；端點需要的金鑰在此殼 export。
 ```
 

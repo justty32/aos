@@ -1,1 +1,1 @@
-{"allowed": ["clock", "clock2"], "max_running": 2}
+{"allowed": ["wall_clock", "wall_clock2"], "max_running": 2}

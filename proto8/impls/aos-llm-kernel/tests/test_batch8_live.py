@@ -159,7 +159,7 @@ r = subprocess.run(['aos-exec','''+repr(str(PROTO/'lib/base/llm_fake'))+'''],inp
 sys.exit(r.returncode)
 ''')
         entry.chmod(0o755)
-        (stack/'def/kernel.json').write_text(json.dumps({'slots':4,'aging_ticks':1000000,
+        (stack/'def/kernel.json').write_text(json.dumps({'slots':4,'aging_cycles':1000000,
             'exec':str(endpoint),'backends':{'local':{'slots':1,'max_packs':1}},
             'endpoints':{'a':{'backend':'local'},'b':{'backend':'local'}}}))
         (stack/'def/daemon.json').write_text('{"exec":{"argv":["aos-llm-kernel","kernel.json"]},"interval_ms":10}')

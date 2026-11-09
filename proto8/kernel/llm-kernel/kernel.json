@@ -13,8 +13,8 @@
                    "summary": "LiteLLM gpt-6 luna, low effort"},
    "sol":         {"exec": "endpoints/litellm", "url": "http://localhost:4000/v1", "model": "chatgpt-gpt-6-sol", "fixed": {"temperature": 0.2}, "cost": "high",
                    "summary": "LiteLLM gpt-6 sol"},
-   "fake":        {"exec": "../../lib/base/llm_fake", "speed": "fast", "cost": "free", "tool": "clock",
-                   "summary": "fake brain: calls clock (or the first tool), then answers FAKE ANSWER to ..."},
+   "fake":        {"exec": "../../lib/base/llm_fake", "speed": "fast", "cost": "free", "tool": "wall_clock",
+                   "summary": "fake brain: calls wall_clock (or the first tool), then answers FAKE ANSWER to ..."},
    "fake-demo-self": {"exec": "../../lib/base/llm_fake", "speed": "fast", "cost": "free",
                    "summary": "scripted fake brain for kernel/docs/03 part 1: adds math to its own tools, then uses it",
                    "script": [

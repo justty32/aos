@@ -20,7 +20,7 @@
 |---|---|
 | [docs/](docs/README.md) | 使用者條文：[CONCEPTS](docs/CONCEPTS.md)（概念）、[NORMS](docs/NORMS.md)（規範）、[CONVENTION](docs/CONVENTION.md)（agent 慣例） |
 | [impls/](impls/README.md) | aos-exec、aos-loop、aos-fsm、aos-daemon 等 C++ 專案（各自 CMake；`build/`、`bin/`、`lib/` 是建置產物、不進 git） |
-| [cmd/](cmd/README.md) | Python 指令：aos-agent、aos-daemon-ctl、aos-tools、aos-tick、aos-eca（turn、screen）、aos-mcp、aos-sandbox、aos-grow |
+| [cmd/](cmd/README.md) | Python 指令：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-eca（turn、screen）、aos-mcp、aos-sandbox、aos-grow |
 | [py/](py/README.md) | cmd 共用模組：`aos_flags.py`、`aos_ws.py`、`daemon_ctl/`（CLI 對話與介面宣告共用模組在 `lib/agent/`） |
 | [install.sh](install.sh) | 把 `impls/*/bin/*` 與 `cmd/*/bin/*` symlink 進 `~/.local/bin`，並在 Python user site 寫兩行 repo `py`／`lib` 絕對路徑的 `aos-proto8.pth`（11-06 晚 K-5；參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉；用法在 [cmd/README](cmd/README.md)） |
 | [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），templates 用相對捷徑引用 |
@@ -39,8 +39,8 @@
 ## 現況
 
 - **資料夾＝程式**（使用者 10-19 定）：aos 只訂六個環境變數和一支 `aos-exec [--ws WS] XXX [args...]`；入口四種、`XXX` 的找法、`#/` 尋址、`+x` 但沒 `#!` 的檔用 `/bin/sh` 跑（§ 21「不擋」、§ 22「乙」）都在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62）。巢狀由程式自己訂子 stack；這次要做啥隨意。10-16 那套作廢，原話與裁定在 [thinking/2026-10/19/ideas/README.md](thinking/2026-10/19/ideas/README.md)（使用者：「那是帶著鐐銬跳舞跳得很棒，終究不如我們現在直接把鐐銬拿掉」）。範例：agent-bob 叫 cathy 叫 stamp 四層、agent-ann 全內嵌對照（11-04 先搬進 tests/fixtures、同天隨 proto8/tests 刪了）。
-- **實作**：[impls/](impls/README.md) 是唯一實作（C／C++；使用者 10-23「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也用 C++、tick 先留 Python，[cmd/](cmd/README.md) 是 Python 的 aos-tick 等），命令列有 aos-exec、aos-loop、aos-fsm、aos-daemon 等（全表見它的 README）；刻意沒有 aos-inst 命令列。loop／daemon／fsm 格「要跑什麼」那一格叫 `exec`（使用者「exec，loop／daemon 的 run 也一起改 exec」，[thinking](thinking/2026-10/23/naming.md)）。
-- **kernel** 已有 [kernel/](kernel/README.md) 的 llm-kernel（問腦）、daemon-judge 與 procs-kernel（判官的兩種掛法）；底層用 impls 的 `aos-daemon`／`aos-loop`。tasks 仍無實作，待照新做法重寫（[NORMS 待定](docs/NORMS/08-待定.md)）；tick 是 `cmd/aos-tick`，腦的工具呼叫範本是 `templates/agent-fsm`、慣例 [P-41](docs/CONVENTION.md)。
+- **實作**：[impls/](impls/README.md) 是唯一實作（C／C++；使用者 10-23「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也用 C++、時鐘先留 Python，[cmd/](cmd/README.md) 是 Python 的 aos-clock 等），命令列有 aos-exec、aos-loop、aos-fsm、aos-daemon 等（全表見它的 README）；刻意沒有 aos-inst 命令列。loop／daemon／fsm 格「要跑什麼」那一格叫 `exec`（使用者「exec，loop／daemon 的 run 也一起改 exec」，[thinking](thinking/2026-10/23/naming.md)）。
+- **kernel** 已有 [kernel/](kernel/README.md) 的 llm-kernel（問腦）、daemon-judge 與 procs-kernel（判官的兩種掛法）；底層用 impls 的 `aos-daemon`／`aos-loop`。tasks 仍無實作，待照新做法重寫（[NORMS 待定](docs/NORMS/08-待定.md)）；時鐘是 `cmd/aos-clock`，腦的工具呼叫範本是 `templates/agent-fsm`、慣例 [P-41](docs/CONVENTION.md)。
 
 ## 入口
 

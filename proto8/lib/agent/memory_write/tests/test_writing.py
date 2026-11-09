@@ -49,7 +49,7 @@ class WritingTest(unittest.TestCase):
         (self.root / "README.md").write_text("# Memory\n")
         self.env = dict(os.environ, AOS_MEMORY=str(self.root),
                         AOS_CD=str(ENTRY.parent), PYTHONDONTWRITEBYTECODE="1")
-        self.env.pop("AOS_TICK", None)
+        self.env.pop("AOS_CLOCK", None)
 
     def start_tool(self, op, path, env=None, **args):
         child = subprocess.Popen([str(ENTRY)], stdin=subprocess.PIPE,

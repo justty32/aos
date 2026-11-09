@@ -1,4 +1,4 @@
-{"tools": {"clock": {"path": "../../lib/base/clock"},
+{"tools": {"wall_clock": {"path": "../../lib/base/wall_clock"},
            "self_tools": {"path": "../../lib/agent/self_tools"},
            "agents": {"path": "../../lib/agent/agents"},
            "memory": {"path": "tools/memory"}}}

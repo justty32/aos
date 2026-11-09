@@ -1,21 +1,21 @@
-// daemon.hpp：【daemon】Daemon 管普通 proc 表、stuck 判定、tick 設定展開、手把與狀態窗；aos-loop 的 Loop 子類別，內部標頭。
+// daemon.hpp：【daemon】Daemon 管普通 proc 表、stuck 判定、clock 設定展開、手把與狀態窗；aos-loop 的 Loop 子類別，內部標頭。
 //
 // 11-06（no-pid P6）：通用布林 auto_restart 讓任何 proc 常駐（可 stop／sleep、收工睡／開門醒），退了同一拍重起；連 3 次起後 3 秒內退＝stopped＋reason、要 start。
 //   表上 auto_restart、restart_on_stuck 只在 true 時寫，不看子項型別。
-// 11-06（no-pid P7）：stuck_after_ticks 每列選填正整數、預設 10，寫壞＝CfgBad；有效值寫回表供 adopt 保留。
+// 11-06（no-pid P7）：stuck_after_cycles 每列選填正整數、預設 10，寫壞＝CfgBad；有效值寫回表供 adopt 保留。
 //   任何 proc 都讀父設定的公開窗名或預設 ctl.json／state.json，不認子程式身分。
 //   只判內部 running 列；任一窗缺、state 非物件、窗 null＝清 stuck 與期限、不判。
-//   ctl mtime（UTC 截到毫秒）> responded_at（null 最舊），且 > 父這次起／接回基準＝刺激；首見記 deadline_after(ticks)，expired 後標 stuck。
+//   ctl mtime（UTC 截到毫秒）> responded_at（null 最舊），且 > 父這次起／接回基準＝刺激；首見記 deadline_after(cycles)，expired 後標 stuck。
 //   stuck 是 bool，表上投影 phase／reason，不改內部生命週期；刺激消失清期限與標記，回 running；adopt 將 stuck 當 running 接回、重設基準。
 //   restart_on_stuck=true 時同拍 SIGTERM，10 秒後 SIGKILL 整群，settle 後照表重起；父 paused 只標、不起停。
 //   連 3 次卡住（起初一輪計入，最多實際重起 2 次）沒任何新回應＝收完留 stopped＋英文 reason、要人 start；起／接回後的新回應清連敗。
 //   人工 stop／sleep／rm 優先於卡住重起；卡住重起收途中父收工，該列改留 sleeping。
-// 11-06（T7）：tick 沒寫／null／false 不管時鐘；true 或 {file?, interval_ms?, name?} 在入口展開成第一列普通 loop proc。
-//   預設 file＝daemon stack/tick、name＝_tick、interval_ms＝aos::tick_interval_ms()；exec 用內嵌單子 argv 跑 PATH 上的 aos-tick，auto_restart＝true。
+// 11-06（T7）：clock 沒寫／null／false 不管時鐘；true 或 {file?, interval_ms?, name?} 在入口展開成第一列普通 loop proc。
+//   預設 file＝daemon stack/clock、name＝_clock、interval_ms＝aos::clock_interval_ms()；exec 用內嵌單子 argv 跑 PATH 上的 aos-clock，auto_restart＝true。
 //   名字與 daemon.json 的 procs 撞到、未知 key／型別／值壞＝CfgBad；指示詞同其他設定格。後續流程不辨認哪列是時鐘。
-//   起任何子項／身體之前設 AOS_TICK＝file 絕對路徑；明寫 interval_ms 就設 AOS_TICK_INTERVAL（寫 1000 也設），沒寫就繼承。
-//   改 tick 要整台 sleep 再改再 wake；兩份定義勿共用同一時鐘檔。pause 那列只停時間、工作照跑。
-//   daemon.cpp   建構子、tick 展開與環境、stack 鎖；procs.cpp 解 procs 與合併名單
+//   起任何子項／身體之前設 AOS_CLOCK＝file 絕對路徑；明寫 interval_ms 就設 AOS_CLOCK_INTERVAL（寫 1000 也設），沒寫就繼承。
+//   改 clock 要整台 sleep 再改再 wake；兩份定義勿共用同一時鐘檔。pause 那列只停時間、工作照跑。
+//   daemon.cpp   建構子、clock 展開與環境、stack 鎖；procs.cpp 解 procs 與合併名單
 //   adopt.cpp    接回上次的表、尋找小格裡活著的子 loop
 //   table.cpp    維護表、log 與 state 寫入結果
 //   tend.cpp     term／halt／hold／settle／look／tend／finish；stuck.cpp 公開窗刺激、期限與重起
@@ -29,7 +29,7 @@
 // procs_ctl、procs_state（在 $AOS_STACK 底下的檔名；沒寫＝procs_ctl.json、procs_state.json，null＝不開）、procs_ctl_mailbox（11-04 起沒寫＝procs_ctl_mailbox、null＝不開）、
 // procs_loop、procs_exec、procs_stderr（11-04：小格裡 daemon 寫的三個檔名，沒寫＝loop.json、exec.json、stderr.txt；見 child.hpp 的 CellNames）。
 // 舊名 loops、execs、loops_ctl、loops_state、loops_ctl_mailbox 不認（C-48，使用者 11-03「當沒看到」）。命令列 `-- 參數...` 只接在 daemon 自己的 exec。
-// 每個 proc 怎麼起看寫法（沒有 kind，procs § 2）：字串、陣列、或 key 只有 exec（＋ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_ticks）的物件＝exec 型（aos-exec 一次）；其他物件＝loop 型（包成子 aos-loop）。
+// 每個 proc 怎麼起看寫法（沒有 kind，procs § 2）：字串、陣列、或 key 只有 exec（＋ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_cycles）的物件＝exec 型（aos-exec 一次）；其他物件＝loop 型（包成子 aos-loop）。
 // 物件的 stack（procs § 2b）：proc 的 stack（從 daemon 的 cwd 轉絕對、不在就 mkdir -p、不查不擋）；沒寫＝$AOS_STACK/procs/<名字>/。ws＝子行程的 AOS_WS。
 // 物件的 def（11-04，aos-agent，使用者「那就b。」）：定義資料夾（從 daemon 的 cwd 轉絕對；不驗、只記進表的 def 欄，不灌進 loop.json）。
 // 物件的 limits（11-05 feat-proto 件 5）：份額（child/limits.hpp；不灌進 loop.json）；daemon.json 頂層 limits＝沒寫的列用的預設。
@@ -89,7 +89,7 @@ std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell,
 // 讀一份 procs（daemon.json 的 procs，procs_ctl 的 procs、procs_added，信的 procs_added 共用）：回 {名字: proc}（照寫的順序）。
 //   寫法：物件 {名字: proc}（拆成好幾份檔＝{"$ref": [檔, …]}，aos-directive 合物件、同名後面的蓋前面的）。
 //   指示詞（base＝v 裡相對 $ref 的起點）：procs 本身、每個 proc 本身先換一層（子項的起點＝它來自的那份檔的）；字串或陣列（aos-exec 的目標）
-//   就整個解、要是字串或非空字串陣列；物件只解 daemon 認的格（exec、max、interval_ms、ctl、state、ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_ticks），其他 key（body…）原樣交給子 loop。
+//   就整個解、要是字串或非空字串陣列；物件只解 daemon 認的格（exec、max、interval_ms、ctl、state、ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_cycles），其他 key（body…）原樣交給子 loop。
 //   exec 是單子（物件）：只換一層、裡面不解，相對的 $ref 檔名照它來自的那份檔轉成絕對（abs_refs）。
 //   名字非空、不含 /、不含 #、不以 . 開頭。物件的 ws、stack、def：要是非空字串（null＝拿掉）、從 daemon 的 cwd 轉絕對（stack 結尾不帶 /）。
 //   exec 型的物件（is_once）的 exec 要是目標或單子。
@@ -110,7 +110,7 @@ Json def_of(const Json& spec);
 bool auto_restart_of(const Json& spec);
 bool ros_of(const Json& spec);
 
-// 只供起法與目標格式檢查：這個 proc 直接交 aos-exec 嗎（procs § 2）：字串、陣列，或 key 只有 exec（＋ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_ticks）的物件＝是；其他（loop 設定、null）＝不是。
+// 只供起法與目標格式檢查：這個 proc 直接交 aos-exec 嗎（procs § 2）：字串、陣列，或 key 只有 exec（＋ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_cycles）的物件＝是；其他（loop 設定、null）＝不是。
 bool is_once(const Json& spec);
 Json launch_of(const Json& spec, const std::string& cwd);   // 可重放設定：固定入口路徑、保留完整參數
 
@@ -158,7 +158,7 @@ private:
     Child start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws = Json(),
                 const Json& kept_exec = Json(), const Json& kept_def = Json(),
                 const Json& kept_limits = Json(), const Json& kept_launch = Json(), bool kept_auto_restart = false,
-                bool kept_ros = false, long long kept_stuck_after_ticks = 10);   // 照寫法起（spawn／spawn_exec）；spec null 用列上記的 kept_*（含入口與兩個布林）
+                bool kept_ros = false, long long kept_stuck_after_cycles = 10);   // 照寫法起（spawn／spawn_exec）；spec null 用列上記的 kept_*（含入口與兩個布林）
     Json limits_of(const Json& spec, const Json& kept) const;   // 11-05：生效的份額＝列的 limits，沒寫＝daemon 預設 limits_；spec null＝kept；{}＝null（不限）
     std::string cell_of(const std::string& name, const Json& spec) const;   // proc 的 stack：寫了 stack＝它，沒寫＝$AOS_STACK/procs/<名字>
     void read_procs_ctl();                // 讀 procs_ctl.json：好的進 pctl_good_、清 pctl_warning_；壞的不採用、原因進 pctl_warning_；檔不在＝不動

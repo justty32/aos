@@ -20,7 +20,7 @@
 
 `memory read /` 會列出兩部分；`find` 跨捷徑查，命中保留 `aos/rules` 這種掛載路徑；`memory_export` 也跟捷徑，遇到繞回上層就停止。
 
-要讓 agent 寫自己的庫，另配 [memory_write](../lib/agent/memory_write/)；它沿用同一套找根，`add` 建葉、`edit` 整段換文、`rm` 刪節點（子樹要 `recursive: true`）。根本身唯讀，`rm` 根層捷徑回 `PathBad`，更深的捷徑只拆捷徑；出廠 `knowledge/aos` 仍由人寫，範本接線屬 W5。**掛出廠庫要由人設成唯讀**（11-07 晚審裁定 7 選推薦，[晚審 04](../../wf/workflows/refactor/reports/2026-11-07-晚審/04b-要使用者裁定-續.md)）：跑 agent 的通常就是 repo 主人，「沒權限＝唯讀」不成立，經捷徑 `edit aos/rules` 會真的改到 repo、污染每隻 agent 的 system prompt；所以把 `knowledge/aos` 掛進別的記憶根時，由人先設唯讀（`chmod -R a-w` 那份，或掛一份唯讀副本）。寫前自動拿資料夾鎖、寫後釋放，租約固定為牆鐘 10 秒，不沿用呼叫者的 tick 或 tick 間隔；Linux 權限決定能不能寫，PATH 需有 `aos-lock`。既有檔用暫存後原子替換並保留權限。
+要讓 agent 寫自己的庫，另配 [memory_write](../lib/agent/memory_write/)；它沿用同一套找根，`add` 建葉、`edit` 整段換文、`rm` 刪節點（子樹要 `recursive: true`）。根本身唯讀，`rm` 根層捷徑回 `PathBad`，更深的捷徑只拆捷徑；出廠 `knowledge/aos` 仍由人寫，範本接線屬 W5。**掛出廠庫要由人設成唯讀**（11-07 晚審裁定 7 選推薦，[晚審 04](../../wf/workflows/refactor/reports/2026-11-07-晚審/04b-要使用者裁定-續.md)）：跑 agent 的通常就是 repo 主人，「沒權限＝唯讀」不成立，經捷徑 `edit aos/rules` 會真的改到 repo、污染每隻 agent 的 system prompt；所以把 `knowledge/aos` 掛進別的記憶根時，由人先設唯讀（`chmod -R a-w` 那份，或掛一份唯讀副本）。寫前自動拿資料夾鎖、寫後釋放，租約固定為牆鐘 10 秒，不沿用呼叫者的時鐘或時鐘間隔；Linux 權限決定能不能寫，PATH 需有 `aos-lock`。既有檔用暫存後原子替換並保留權限。
 
 庫在 git 下時，`.gitignore` 加 `.lock/`、`.tmp.*`、`.rm.*`；葉升級的暫存資料夾另加 `.new.*`。不要把鎖與暫存檔當知識提交。
 

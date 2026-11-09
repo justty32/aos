@@ -1,8 +1,8 @@
-// daemon.cpp：【daemon】初始化設定、展開 tick 普通子項、設定環境、路徑、信箱與 stack 鎖（說明見 daemon.hpp）。
+// daemon.cpp：【daemon】初始化設定、展開 clock 普通子項、設定環境、路徑、信箱與 stack 鎖（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
 #include "child/limits.hpp"
 #include "aos/util/files.hpp"
-#include "aos/util/tick.hpp"
+#include "aos/util/clock.hpp"
 #include <cstdlib>
 #include <filesystem>
 #include <fcntl.h>
@@ -23,22 +23,22 @@ static aos::loop::Defaults daemon_defaults() {
 }
 
 // 只在入口展開；之後起停、重起與表列都走普通 proc。相對 file 從 daemon stack 算。
-static void expand_tick(const Json& tick, const std::string& stack, Json& procs) {
-    if (tick.is_null() || tick == Json(false)) {
+static void expand_clock(const Json& clock, const std::string& stack, Json& procs) {
+    if (clock.is_null() || clock == Json(false)) {
         return;
     }
-    if (tick != Json(true) && !tick.is_object()) {
-        throw Error{code::CfgBad, "tick must be a boolean, an object or null"};
+    if (clock != Json(true) && !clock.is_object()) {
+        throw Error{code::CfgBad, "clock must be a boolean, an object or null"};
     }
-    Json opts = tick.is_object() ? tick : Json::object();
+    Json opts = clock.is_object() ? clock : Json::object();
     for (auto& [k, v] : opts.items()) {
         if (k != "file" && k != "interval_ms" && k != "name") {
-            throw Error{code::CfgBad, "tick: unknown key " + k};
+            throw Error{code::CfgBad, "clock: unknown key " + k};
         }
     }
     for (const char* k : {"file", "name"}) {
         if (opts.contains(k) && (!opts[k].is_string() || opts[k].get<std::string>().empty())) {
-            throw Error{code::CfgBad, std::string("tick.") + k + " must be a non-empty string"};
+            throw Error{code::CfgBad, std::string("clock.") + k + " must be a non-empty string"};
         }
     }
     long long interval = 0;
@@ -47,30 +47,30 @@ static void expand_tick(const Json& tick, const std::string& stack, Json& procs)
         if (!aos::is_count(n) || n == Json(0) ||
             (n.is_number_unsigned() && n.get<unsigned long long>() >
              static_cast<unsigned long long>(std::numeric_limits<long long>::max()))) {
-            throw Error{code::CfgBad, "tick.interval_ms must be a positive integer within signed 64-bit range"};
+            throw Error{code::CfgBad, "clock.interval_ms must be a positive integer within signed 64-bit range"};
         }
         interval = n.get<long long>();
     } else {
-        interval = aos::tick_interval_ms();
+        interval = aos::clock_interval_ms();
     }
-    std::string file = aos::abspath(aos::join(stack, opts.value("file", std::string("tick"))));
-    std::string name = opts.value("name", std::string("_tick"));
+    std::string file = aos::abspath(aos::join(stack, opts.value("file", std::string("clock"))));
+    std::string name = opts.value("name", std::string("_clock"));
     if (procs.contains(name)) {
-        throw Error{code::CfgBad, "tick.name conflicts with procs: " + name};
+        throw Error{code::CfgBad, "clock.name conflicts with procs: " + name};
     }
     // exec 陣列是 aos-exec 的檔案目標；PATH 指令用現有的內嵌單子 argv，不另開特殊規則。
-    Json proc = Json::object({{"exec", Json::object({{"argv", Json::array({"aos-tick", file})}})},
+    Json proc = Json::object({{"exec", Json::object({{"argv", Json::array({"aos-clock", file})}})},
                               {"interval_ms", interval}, {"auto_restart", true}});
-    Json expanded = read_procs(Json::object({{name, proc}}), stack, "tick");   // 同一般 proc 驗名字
+    Json expanded = read_procs(Json::object({{name, proc}}), stack, "clock");   // 同一般 proc 驗名字
     for (auto& [n, spec] : procs.items()) {
         expanded[n] = spec;
     }
     procs = std::move(expanded);
     // 在任何子項（含身體）開始前設好；明寫 interval_ms 就設（寫 1000 也設，近的贏；11-07 sol 審查 #10），沒寫不動繼承的。
-    setenv("AOS_TICK", file.c_str(), 1);
+    setenv("AOS_CLOCK", file.c_str(), 1);
     if (opts.contains("interval_ms")) {
         std::string value = std::to_string(interval);
-        setenv("AOS_TICK_INTERVAL", value.c_str(), 1);
+        setenv("AOS_CLOCK_INTERVAL", value.c_str(), 1);
     }
 }
 
@@ -88,8 +88,8 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         if (cfg_.contains("procs")) {
             procs_ = read_procs(cfg_["procs"], cfg_dirs_.dir_of("procs"), "procs");
         }
-        if (cfg_.contains("tick")) {
-            cfg_["tick"] = aos::loop::resolve_keys(cfg_["tick"], cfg_dirs_.dir_of("tick"),
+        if (cfg_.contains("clock")) {
+            cfg_["clock"] = aos::loop::resolve_keys(cfg_["clock"], cfg_dirs_.dir_of("clock"),
                                                   {"file", "interval_ms", "name"}).value;
         }
         for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_ctl_mailbox", "procs_loop", "procs_exec", "procs_stderr", "limits"}) {
@@ -185,7 +185,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     // 11-05（kernel-daemon 02 § 1 模式 1「繼承式」、06 步 1）：daemon 自己的身體（exec）也拿得到 AOS_DAEMON＝自己的 stack——
     // 身體是 daemon 起的，照 N-64 ④ 同一句；判官／llm kernel 當身體時靠它找自己這台的 ctl 信箱。子項照舊在 run_child 一律蓋過去。
     setenv("AOS_DAEMON", dstack_.c_str(), 1);
-    expand_tick(cfg_.value("tick", Json()), dstack_, procs_);
+    expand_clock(cfg_.value("clock", Json()), dstack_, procs_);
     check_running();   // 11-05（portable-flow 步 5「沒有才起、有就沿用」）
     if (a.get<bool>()) {
         adopt();

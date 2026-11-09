@@ -17,8 +17,8 @@ def run_lock(args, release=False):
         old = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT})
         try:
             env = dict(os.environ)
-            env.pop("AOS_TICK", None)
-            env.pop("AOS_TICK_INTERVAL", None)
+            env.pop("AOS_CLOCK", None)
+            env.pop("AOS_CLOCK_INTERVAL", None)
             child = subprocess.Popen(["aos-lock"] + args, stdin=subprocess.DEVNULL,
                                      stdout=subprocess.PIPE, env=env)
             out, _ = child.communicate(timeout=5)
@@ -55,7 +55,7 @@ def holder(folder):
 
 
 def live(folder, value):
-    lease = value.get("lease_ticks")
+    lease = value.get("lease_cycles")
     if lease is not None:
         try:
             at = datetime.datetime.fromisoformat(value["acquired_at"].replace("Z", "+00:00"))
@@ -113,7 +113,7 @@ def with_lock(folder, note):
     acquired = False
     held = HeldLock(folder)
     try:
-        code, _ = run_lock(["acquire", "--wait-ms", "3000", "--lease-ticks", "10",
+        code, _ = run_lock(["acquire", "--wait-ms", "3000", "--lease-cycles", "10",
                             "--note", note, folder + "/"])
         acquired = code == 0
         signal.pthread_sigmask(signal.SIG_SETMASK, old)

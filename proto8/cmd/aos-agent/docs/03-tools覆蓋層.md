@@ -11,7 +11,7 @@
 `aos-agent tools add／rm` 只在 `interfaces.json` 的 `aos-agent.tools` **宣告的相對路徑**記這一隻自己加的、拿掉的（11-06 K-6）：定義讀 `<定義>/<tools 路徑>`，覆蓋層寫 `<stack>/<同一 tools 路徑>`。例如宣告 `"tools": "cfg/my_tools.json"`，覆蓋層就是 `<stack>/cfg/my_tools.json`。`tools`／`llm` 宣告都只能是定義內的相對檔名；不可絕對、不可含 `..`、不可指資料夾。不複製定義，只存差異：
 
 ```json
-{"add": {"math": {"path": "../../../../agents/lib/math"}}, "rm": ["clock"]}
+{"add": {"math": {"path": "../../../../agents/lib/math"}}, "rm": ["wall_clock"]}
 ```
 
 - `add`：名字 → 登記內容（跟 aos-tools 登記檔裡一項一樣：`path`，可執行檔另有 `cache`）。**`path` 存相對覆蓋層這份檔所在的資料夾**（宣告路徑沒有子資料夾時就是這隻的 stack；有則是該子資料夾），字串算、不 realpath——整份 image（`ws/.stack/`）搬家時跟著走。選「相對覆蓋層」而不是「相對 daemon stack」：aos-tools 本來的規則就是「手寫的相對路徑從這份檔的資料夾算」，覆蓋層照同一條，aos-tools 不用知道 daemon；覆蓋層在 stack 裡，兩種基準點一起搬，效果一樣。
@@ -39,4 +39,4 @@
 
 - **覆蓋層壞掉或 `add` 的工具不見了＝整隻停下**（11-05 [edge-agent](../../../thinking/2026-11/05/edge-agent/README.md) 實測）：brain／act 每格 `aos-tools ls`，覆蓋層 JSON 壞、或 `add` 指的路徑不在，aos-tools 報 `RegistryBad`／`PathMissing`、身體報 `ToolsBad` 退 1，那隻留在表上 `stopped`＋`reason`（11-05 使用者裁「留表標 stopped (Recommended)」）；修好後 `aos-agent tools reset`（或 `tools rm` 那個、手動改 `<stack>/<宣告的 tools 路徑>`）再 `aos-agent ctl start`，同一個 stack 從停的那格接著做；不要了 `aos-agent ctl rm`。照 aos-tools「不猜不跳過」，不改成略過壞的那個。
 - **跟定義同名的**：`tools add 名 路徑` 撞到定義裡已有的名字＝aos-tools `ToolExists`；要這隻改用自己的就 `tools add --override 名 路徑`（寫進覆蓋層的 `add`，疊的時候蓋過定義）。
-- 指到 image 外面的工具（例 repo 裡的 `lib/base/clock`）存的也是相對路徑（`../../../../../../home/…`）：整份搬到另一層深度或別台、那邊沒有同樣相對位置的檔＝那個工具找不到（aos-tools 報 `PathMissing`）。照 [portable-flow 03 原則 5](../../../thinking/2026-11/05/portable-flow/03-絕對路徑盤點.md)「指到 daemon 外面自擔」；要帶著走就把工具放進定義旁的 `lib/`。
+- 指到 image 外面的工具（例 repo 裡的 `lib/base/wall_clock`）存的也是相對路徑（`../../../../../../home/…`）：整份搬到另一層深度或別台、那邊沒有同樣相對位置的檔＝那個工具找不到（aos-tools 報 `PathMissing`）。照 [portable-flow 03 原則 5](../../../thinking/2026-11/05/portable-flow/03-絕對路徑盤點.md)「指到 daemon 外面自擔」；要帶著走就把工具放進定義旁的 `lib/`。

@@ -1,6 +1,6 @@
 {"description": "Start, talk to and remove child agents on your daemon. op add starts an existing definition def; op new writes a new definition at path (copy of from plus files) and starts it. A child does not inherit your brain or tools: give llm and tools. op say sends and returns; op ask waits for the answer; op rm removes; op ls shows the daemon table. Errors: ChildSlotMissing, ChildUnknown, ChildMissing, DefMissing, AddRejected. Details: memory node agents.",
  "env": ["AOS_DAEMON"],
- "errors": ["TickBad", "ArgumentsBad", "LaunchFailed", "CommandFailed", "NameBad", "WsMissing", "PathBad", "ReadFailed", "WriteFailed", "MkdirFailed", "CfgBad", "ChildSlotMissing", "ChildMissing", "ChildUnknown", "DefBad", "ToolMissing", "OpUnknown", "DaemonMissing", "DaemonFailed", "StackMissing", "DefExists", "DefMissing"],
+ "errors": ["ClockBad", "ArgumentsBad", "LaunchFailed", "CommandFailed", "NameBad", "WsMissing", "PathBad", "ReadFailed", "WriteFailed", "MkdirFailed", "CfgBad", "ChildSlotMissing", "ChildMissing", "ChildUnknown", "DefBad", "ToolMissing", "OpUnknown", "DaemonMissing", "DaemonFailed", "StackMissing", "DefExists", "DefMissing"],
  "parameters": {"type": "object",
                 "properties": {"op": {"type": "string", "enum": ["new", "add", "say", "ask", "rm", "ls"], "description": "what to do"},
                                "name": {"type": "string", "description": "the child's name (new, add, say, ask, rm); letters, digits, _ and -"},
@@ -19,8 +19,8 @@
                                "text": {"type": "string", "description": "say, ask: the message"},
                                "on_queued": {"default": "fail", "type": "string", "enum": ["fail", "ok"], "description": "new, add: fail on queue timeout (default), or ok to return queue position and start when a slot frees (op add: not with llm, tools or tools_rm)"},
                                "ctl_timeout_s": {"default": 30, "type": "number", "description": "new, add, rm: seconds to wait for the daemon to attach or remove the child; default 30, at most 1700"},
-                               "timeout_ticks": {"type": "integer", "description": "ask: positive integer ticks to wait, at most 9223372036854775777; the current clock/interval must also fit 30 extra ticks, otherwise ArgumentsBad before starting any subprocess; mutually exclusive with timeout_s; without AOS_TICK, one tick is AOS_TICK_INTERVAL milliseconds (default 1000)"},
+                               "timeout_cycles": {"type": "integer", "description": "ask: positive integer cycles to wait, at most 9223372036854775777; the current clock/interval must also fit 30 extra cycles, otherwise ArgumentsBad before starting any subprocess; mutually exclusive with timeout_s; without AOS_CLOCK, one cycle is AOS_CLOCK_INTERVAL milliseconds (default 1000)"},
                                "reason": {"type": "string", "enum": ["specialize", "split", "fix", "manual"], "default": "manual", "description": "new: birth reason recorded in lineage; default manual"},
                                "review": {"type": "string", "description": "new: optional review.json path; stored exactly as supplied in lineage.review"},
-                               "timeout_s": {"default": 600, "type": "number", "description": "ask: finite positive seconds to wait for the answer; default 600, no upper limit; waits use bounded segments; mutually exclusive with timeout_ticks"}},
+                               "timeout_s": {"default": 600, "type": "number", "description": "ask: finite positive seconds to wait for the answer; default 600, no upper limit; waits use bounded segments; mutually exclusive with timeout_cycles"}},
                 "required": ["op"]}}

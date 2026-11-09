@@ -39,7 +39,7 @@ inline constexpr const char* LaunchFailed = "LaunchFailed"; // 子程序起不�
 inline constexpr const char* CommandUnknown = "CommandUnknown"; // 命令列：不認得的子命令（aos-json、aos-post、aos-lock）
 // 程式環境
 inline constexpr const char* StackMissing = "StackMissing"; // 要 AOS_STACK 卻沒設
-inline constexpr const char* TickBad = "TickBad";           // tick 時鐘／標稱間隔讀不了、格式不合或期限超出範圍
+inline constexpr const char* ClockBad = "ClockBad";           // 時鐘／標稱間隔讀不了、格式不合或期限超出範圍
 // 其他
 inline constexpr const char* Internal = "Internal";         // 照理不會發生的例外（記憶體不夠、cwd 被刪）
 }  // namespace code

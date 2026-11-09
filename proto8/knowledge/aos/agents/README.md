@@ -6,7 +6,7 @@ A child agent runs on the same daemon as you. It does not inherit your brain or 
 
 Two ways to start one:
 
-- from an existing definition: `{"op": "add", "name": "kid", "def": "agents/kid"}`. Options change only this child (they go to its own stack, the definition stays as it is): `"llm": {"endpoint": "fake"}` (which brain pack it uses), `"tools": [{"name": "clock", "path": "tools/clock"}]`, `"tools_rm": ["self_tools"]`.
+- from an existing definition: `{"op": "add", "name": "kid", "def": "agents/kid"}`. Options change only this child (they go to its own stack, the definition stays as it is): `"llm": {"endpoint": "fake"}` (which brain pack it uses), `"tools": [{"name": "wall_clock", "path": "tools/wall_clock"}]`, `"tools_rm": ["self_tools"]`.
 - by writing a new definition: `{"op": "new", "name": "kid", "path": "defs/kid", "from": "agents/kid", "files": {"system.txt": "You are ..."}}`. `from` is copied to `path` (inside your workspace, must not exist yet), then `files` (full text per file), `llm`, `tools`, `tools_rm` are written into the copy. Without `from`, `files` must hold the whole definition. The folder stays; start it again later with `add` and `"def": "defs/kid"`.
 
 Both take `"ws": "kid_ws"` (the child's workspace: relative to yours, or absolute; default: your own workspace, shared files) and `"limits": {"mem_mb": 512}`.

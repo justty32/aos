@@ -8,8 +8,8 @@
 | 冊 | 夾 | 段 | 列／檔 |
 |---|---|---|---|
 | [cases](cases.md) | `proto8/cases/` | `box-probe/`、`smoke/` | 11／11 |
-| [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/`、`aos-daemon-ctl/`、`aos-eca/`、`aos-feedback/`、`aos-grow/`、`aos-mcp/` | 46／49 |
-| [cmd-2](cmd-2.md) | `proto8/cmd/` | `aos-sandbox/`、`aos-tick/`、`aos-tools/` |  |
+| [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/`、`aos-clock/`、`aos-daemon-ctl/`、`aos-eca/`、`aos-feedback/`、`aos-grow/`、`aos-mcp/` | 46／49 |
+| [cmd-2](cmd-2.md) | `proto8/cmd/` | `aos-sandbox/`、`aos-tools/` |  |
 | [extras](extras.md) | `proto8/extras/` | `image-move-check/`、`langs/` | 12／12 |
 | [feedback](feedback.md) | `proto8/feedback/` | 頂層 | 5／5 |
 | [impls](impls.md) | `proto8/impls/` | 依賴圖、頂層、`aos-daemon/` | 180／180 |

@@ -6,7 +6,7 @@
 
 **一句話：誰決定「這個 proc 掛不掛到 daemon 上」，誰就是 kernel。** 掛 proc 只有一條路——往 daemon 的 ctl 信箱（`procs_ctl_mailbox/`）寄一封 `procs_added` 信；三種模式的差別只在「寄進 ctl 信箱之前有沒有人先看一眼」。看一眼的那支程式是同一支：[`lib/aos/judge`](../../lib/aos/judge/_entry)（判官），用法與代號寫在它 `_entry` 開頭。
 
-`daemon-judge` 範本出廠帶 `tick: true` 與 `--enable-logs`：表上 `_tick` 也是普通 running proc，會算進判官的 `max_running`；停 `_tick` 只停時間，工作照跑。
+`daemon-judge` 範本出廠帶 `clock: true` 與 `--enable-logs`：表上 `_clock` 也是普通 running proc，會算進判官的 `max_running`；停 `_clock` 只停時間，工作照跑。
 
 ### 三種模式
 
@@ -17,8 +17,8 @@
 | 2：0 號 proc 式 | daemon 底下一個專門收請求的 proc（像 Linux 的 0 號），判過了替你寄進 daemon 的 ctl 信箱 | `<0 號 proc 的 stack>/requests` | [`kernel/procs-kernel/`](../procs-kernel) |
 
 - **判官怎麼判**（政策檔 `judge.json`，放在定義裡）：`allowed`＝名字的白名單（`null` 或沒寫＝不限）；`max_running`＝同時最多幾個 running（數 daemon 表上 `running` 的列，`null` 或沒寫＝不限）。判 `procs_added`；`procs_started`、`procs_woken`（start／wake 讓停著、睡著的回來跑）不看 `allowed`、但照樣算進 `max_running`（11-05 edge-agent：原本照原樣轉，sleep 一隻、add 一隻、再 wake 就超過）；`procs_removed`、`procs_stopped`、`procs_slept` 照原樣轉。`{"ping": true}`（`aos-daemon-ctl ping`，11-06 [no-pid](../../thinking/2026-11/05/no-pid/README.md) P3）不判、帶原 `reply_to` 原樣轉寄，daemon 直接回給寄件人；判官不在＝沒人轉＝寄件人逾時，正好是它該知道的。不掛的每封都在判官的 stderr 印一行提醒 `judge: warning: letter <名> refused: 代號 …`（跟回信的 `code`、`msg` 同一句、英文；拒信是判官的答案、不是它的錯，照樣退 0）。
-- **排隊選項**：`judge.json` 的 `queue` 預設 `false`（沒寫也一樣），格滿立刻 `SlotMissing`；寫 `true` 才把要格的 add／start／wake 留在 `requests/cur/`，**先來先掛（FIFO）**，不看 priority。stop／rm／sleep／ping 照樣立即轉寄，能騰出格的信不會被隊首擋住。排隊不算 running；整台 daemon 的總額只由判官 `max_running` 管（含 `_tick` 與模式 2 的判官自己），`agents.max_children` 只管 agents 工具自己的孩子，thought／直接 ctl 不受它限制。程式預設仍關；`daemon-judge/judge.json` 範本開 `queue: true`。（11-07 使用者裁定 sol 審查 #1）
-- **排隊窗與期限**：`$AOS_STACK/queue.json` 是先來先掛的公開進度窗：`{"queued": [{"letter", "names", "queued_at", "queued_at_ticks"?, "expires_at"?}]}`，陣列順序就是順位（已在隊的照舊；同一輪新進的照 aos-post 處理順序：有序信先、再照信名，跟不開排隊時一樣——11-07 sol 審查 #2，原本照 `sent_at`）；有 `AOS_TICK` 才記 `queued_at_ticks`。窗讀不懂（搬家、人手改壞）＝判官印一行 `judge: warning:`、當空窗，從 `requests/cur/` 照處理順序重排，不整輪退 1（11-07 sol 審查 #5）。信 body 的選填 `queue_wait_ms` 必須是非負整數，`0`＝不排、沒格就拒；正值從信封 `sent_at` 起按牆鐘算 `expires_at`，不是從判官首次看到信起算。到期不轉、回 `SlotMissing` 並收信；睡醒後連從未看過、已過期的信也拒，不能補掛。即使 `queue: false`，也先拒絕已過期的帶期限信，不會因關閉排隊而補掛。沒有期限就一直排；凍住時信與窗留在樹裡，醒來繼續。**期限維持牆鐘；凍住期間牆鐘照走，醒來第一輪已過期的排隊信一起拒絕；要跨凍住排隊，用 `--on-queued ok`。**（11-07 使用者裁定 sol 審查 #6）`--on-queued ok` 不帶期限，表示信可能永遠排著。（11-07 使用者裁定 sol 審查 #4）一封請求只有最後一封回信，排隊中不另回 queued 信。
+- **排隊選項**：`judge.json` 的 `queue` 預設 `false`（沒寫也一樣），格滿立刻 `SlotMissing`；寫 `true` 才把要格的 add／start／wake 留在 `requests/cur/`，**先來先掛（FIFO）**，不看 priority。stop／rm／sleep／ping 照樣立即轉寄，能騰出格的信不會被隊首擋住。排隊不算 running；整台 daemon 的總額只由判官 `max_running` 管（含 `_clock` 與模式 2 的判官自己），`agents.max_children` 只管 agents 工具自己的孩子，thought／直接 ctl 不受它限制。程式預設仍關；`daemon-judge/judge.json` 範本開 `queue: true`。（11-07 使用者裁定 sol 審查 #1）
+- **排隊窗與期限**：`$AOS_STACK/queue.json` 是先來先掛的公開進度窗：`{"queued": [{"letter", "names", "queued_at", "queued_at_cycles"?, "expires_at"?}]}`，陣列順序就是順位（已在隊的照舊；同一輪新進的照 aos-post 處理順序：有序信先、再照信名，跟不開排隊時一樣——11-07 sol 審查 #2，原本照 `sent_at`）；有 `AOS_CLOCK` 才記 `queued_at_cycles`。窗讀不懂（搬家、人手改壞）＝判官印一行 `judge: warning:`、當空窗，從 `requests/cur/` 照處理順序重排，不整輪退 1（11-07 sol 審查 #5）。信 body 的選填 `queue_wait_ms` 必須是非負整數，`0`＝不排、沒格就拒；正值從信封 `sent_at` 起按牆鐘算 `expires_at`，不是從判官首次看到信起算。到期不轉、回 `SlotMissing` 並收信；睡醒後連從未看過、已過期的信也拒，不能補掛。即使 `queue: false`，也先拒絕已過期的帶期限信，不會因關閉排隊而補掛。沒有期限就一直排；凍住時信與窗留在樹裡，醒來繼續。**期限維持牆鐘；凍住期間牆鐘照走，醒來第一輪已過期的排隊信一起拒絕；要跨凍住排隊，用 `--on-queued ok`。**（11-07 使用者裁定 sol 審查 #6）`--on-queued ok` 不帶期限，表示信可能永遠排著。（11-07 使用者裁定 sol 審查 #4）一封請求只有最後一封回信，排隊中不另回 queued 信。
 - **判「掛」與有序選項**：`judge.json` 的 `keep_ordered` 選填布林，沒寫或 `null` 都是 `false`（11-07 使用者裁定 sol 審查 #3），其餘非布林值報 `CfgBad`；關時有序信用 `name.split('.', 1)[1]` 的尾名當一般信轉寄，保留原 `reply_to`，防重看 ctl 信箱 `new/` 的尾名；**經判官不保有序，daemon 回信的 `in_reply_to` 是尾名，要對上請寄一般信**。（代定（11-07 落實時，可翻案）；11-07 晚審裁定 5 選推薦「維持現況、標成落實代定」：目前只有人手寄有序信才會撞到，[晚審 04](../../../wf/workflows/refactor/reports/2026-11-07-晚審/04-要使用者裁定.md)）開時用 `--ordered` 轉寄，有原 `reply_to` 才改指 `$AOS_STACK/judge_replies/`，將 stdout 新名記進 `$AOS_STACK/judge_ordered.json`：`{新名: {"letter": 原名, "reply_to": 原回信箱絕對路徑或 null}}`，暫存檔 rename 寫入；防重查表內 `letter` 原名。（代定（11-07 落實時，可翻案））每輪先領回信，以 `in_reply_to` 查表，用原名代回原回信箱；成功才刪列、收信，查無對照則 warning 並收信；原信無 `reply_to` 不帶回信箱、不記表。（代定（11-07 落實時，可翻案））一般信原樣轉寄，daemon 套完直接回 `{"applied": true}` 給原寄件人；判官只判斷、轉寄與代回，不自己跑任何東西。（代定（11-07 落實時，可翻案））
 - **判「不掛」**：判官回 `{"applied": false, "error": {"code": "…", "msg": "…"}}` 給原寄件人。代號：`NameUnknown`（不在白名單）、`SlotMissing`（running 滿了）、`BodyBad`（body 或 `procs_added` 不是物件）、`ForwardFailed`（轉不進 ctl 信箱）。信沒 `reply_to`＝只收掉、只有 stderr 那行。
 - **`aos-daemon-ctl --reply-to BOX`／`aos-agent ctl`**（11-05 [edge-agent 題 2](../../thinking/2026-11/05/edge-agent/README.md)，使用者選「加 --reply-to 等回信」）：`aos-daemon-ctl` 的寄信子命令收 `--reply-to`（11-07 起它一律直寄 daemon、不經判官，回信只會是 daemon 的）；`aos-agent ctl add` 等每封都帶共用回信信箱（`$AOS_STACK/daemon_reply/`，人殼＝`<daemon stack>/procs_ctl_mailbox/reply/`），判官不掛＝立刻 `AddRejected`（start／wake 被 `max_running` 擋＝`CtlRejected`）＋判官的代號與原因，不用等滿 `--timeout-s`（預設 30 秒）（[aos-agent README「等回信」](../../cmd/aos-agent/README.md)）。
@@ -50,15 +50,15 @@ P=<repo>/proto8
 mkdir -p /tmp/judge-try/m1 /tmp/judge-try/me && cd /tmp/judge-try/m1
 aos-exec --stack /tmp/judge-try/m1/st $P/kernel/daemon-judge    # 一台 daemon；身體每 300 ms 跑一次 judge（另開視窗或丟背景）
 aos-post init /tmp/judge-try/me/box                              # 收回信的信箱
-echo "{\"procs_added\": {\"clock\": {\"exec\": \"$P/lib/base/clock\", \"interval_ms\": 1000}}}" \
+echo "{\"procs_added\": {\"wall_clock\": {\"exec\": \"$P/lib/base/wall_clock\", \"interval_ms\": 1000}}}" \
   | aos-post send --reply-to /tmp/judge-try/me/box /tmp/judge-try/m1/st/requests
-AOS_DAEMON=/tmp/judge-try/m1/st aos-daemon-ctl ls                # clock  running
+AOS_DAEMON=/tmp/judge-try/m1/st aos-daemon-ctl ls                # wall_clock  running
 cat /tmp/judge-try/me/box/new/*/letter.json                      # body {"applied": true}（daemon 回的）
 ```
 
-白名單外的（`evil`）回 `{"applied": false, "error": {"code": "NameUnknown", "msg": "evil not in allowed"}}`；範本 `max_running` 是 4（11-05 午從 1 改成 4、`allowed` 多了 `fsm1`、`kid`、`kid1`～`kid4`，給 [03](03-feat-proto.md) 件 4 的 agent 生 agent 劇本用），所以 clock 在跑時再寄 `clock2` 也放行；要看 `SlotMissing` 就照 03 件 4 跑，或把 `judge.json` 的 `max_running` 改成 2（含 `_tick`；判官每圈重讀）再寄 `clock2`——這時 `{"procs_stopped": ["clock"]}` 原樣轉、回 `applied: true`，之後 `clock2` 就放行。收工：在 daemon 的視窗 Ctrl-C。
+白名單外的（`evil`）回 `{"applied": false, "error": {"code": "NameUnknown", "msg": "evil not in allowed"}}`；範本 `max_running` 是 4（11-05 午從 1 改成 4、`allowed` 多了 `fsm1`、`kid`、`kid1`～`kid4`，給 [03](03-feat-proto.md) 件 4 的 agent 生 agent 劇本用），所以 wall_clock 在跑時再寄 `wall_clock2` 也放行；要看 `SlotMissing` 就照 03 件 4 跑，或把 `judge.json` 的 `max_running` 改成 2（含 `_clock`；判官每圈重讀）再寄 `wall_clock2`——這時 `{"procs_stopped": ["wall_clock"]}` 原樣轉、回 `applied: true`，之後 `wall_clock2` 就放行。收工：在 daemon 的視窗 Ctrl-C。
 
-模式 2：一台普通 daemon（這個固定兩格的示例刻意不開 tick；若加 `"tick": true`，把自己的判官設定 `max_running` 加一，預留 `_tick` 那格），把 procs-kernel 掛上去當 0 號，寄信進它的 `requests/`：
+模式 2：一台普通 daemon（這個固定兩格的示例刻意不開時鐘；若加 `"clock": true`，把自己的判官設定 `max_running` 加一，預留 `_clock` 那格），把 procs-kernel 掛上去當 0 號，寄信進它的 `requests/`：
 
 ```sh
 mkdir -p /tmp/judge-try/m2/st && cd /tmp/judge-try/m2
@@ -67,12 +67,12 @@ AOS_STACK=/tmp/judge-try/m2/st/ aos-daemon daemon.json            # 另開視窗
 export AOS_DAEMON=/tmp/judge-try/m2/st
 aos-daemon-ctl add $P/kernel/procs-kernel                        # 表上多一列 procs-kernel  running
 aos-post init /tmp/judge-try/me/box2
-echo "{\"procs_added\": {\"clock\": {\"exec\": \"$P/lib/base/clock\", \"interval_ms\": 1000}}}" \
+echo "{\"procs_added\": {\"wall_clock\": {\"exec\": \"$P/lib/base/wall_clock\", \"interval_ms\": 1000}}}" \
   | aos-post send --reply-to /tmp/judge-try/me/box2 $AOS_DAEMON/procs/procs-kernel/requests
-aos-daemon-ctl ls                                                # procs-kernel、clock 兩列 running；回信 {"applied": true}
+aos-daemon-ctl ls                                                # procs-kernel、wall_clock 兩列 running；回信 {"applied": true}
 ```
 
-範本 `max_running` 是 2（含 procs-kernel 自己），這時再寄 `clock2` 回 `SlotMissing`；`evil` 回 `NameUnknown`。
+範本 `max_running` 是 2（含 procs-kernel 自己），這時再寄 `wall_clock2` 回 `SlotMissing`；`evil` 回 `NameUnknown`。
 
 ### 改成自己的
 

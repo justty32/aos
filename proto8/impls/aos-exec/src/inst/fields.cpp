@@ -2,7 +2,7 @@
 //
 // 17 個 key 與檢查順序（10-19 版 10 個，11-04 補 6 個）：
 //   argv（非空字串陣列，必填）→ envs（{名: 字串}）→ cwd／stdin／stdout／stderr（字串或 null）→
-//   stdout_append／stderr_append（true／false）→ timeout_ms／timeout_ticks（正整數或 null，擇一）→ grace_ms（非負整數，沒寫 2000）→
+//   stdout_append／stderr_append（true／false）→ timeout_ms／timeout_cycles（正整數或 null，擇一）→ grace_ms（非負整數，沒寫 2000）→
 //   envs_clear／cwd_mkdir／stdout_mkdir／stderr_mkdir／stderr_merge（true／false，沒寫 false）；id 是標籤，收下不看。
 // 其他 key 一律忽略。驗不過一律 EntryBad（單子就是入口，寫壞＝入口壞）。
 #include "inst/inst.hpp"
@@ -92,14 +92,14 @@ Inst parse_inst(const Json& doc, const std::vector<std::string>& args) {
         }
         inst.timeout_ms = t.get<unsigned long long>();
     }
-    Json ticks = doc.value("timeout_ticks", Json());
-    if (!ticks.is_null()) {
-        if (!is_int_at_least(ticks, 1)) {
-            bad("timeout_ticks", "a positive integer or null", ticks);
+    Json cycles = doc.value("timeout_cycles", Json());
+    if (!cycles.is_null()) {
+        if (!is_int_at_least(cycles, 1)) {
+            bad("timeout_cycles", "a positive integer or null", cycles);
         }
-        inst.timeout_ticks = ticks.get<unsigned long long>();
+        inst.timeout_cycles = cycles.get<unsigned long long>();
         if (inst.timeout_ms != 0) {
-            throw Error{code::EntryBad, "inst timeout_ticks and timeout_ms must not both be non-null"};
+            throw Error{code::EntryBad, "inst timeout_cycles and timeout_ms must not both be non-null"};
         }
     }
     if (doc.contains("grace_ms")) {

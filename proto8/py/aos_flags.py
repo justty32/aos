@@ -1,5 +1,5 @@
 """aos_flags：命令列旗標解析（含各支自定短名）、互動確認與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 lib/tool_io.py 的 tokenize_flags、stdout 被關退 141）。純標準庫＋lib/tool_io.py。
-aos 自己的 Python 程式（cmd/ 的 aos-tick、aos-tools、aos-daemon-ctl、aos-agent、aos-mcp、aos-grow、aos-sandbox…）都用它，
+aos 自己的 Python 程式（cmd/ 的 aos-clock、aos-tools、aos-daemon-ctl、aos-agent、aos-mcp、aos-grow、aos-sandbox…）都用它，
 形狀照 CONVENTION P-44「aos 自己程式的命令列形狀」（11-04；C++ 那邊是 aos-util 的 aos::parse_cli）。
 Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 10-23 刪了，只有它們用的 load_cfg（設定檔讀取）、target（目標的寫法）跟著拿掉，在 git 歷史。
 
@@ -52,7 +52,7 @@ finally:
         sys.path.remove(_path)
 
 # 缺鐘檔提醒與 lib 共用同一份去重狀態，呼叫者不用知道底層模組。
-warn_missing_tick = tool_io.warn_missing_tick
+warn_missing_clock = tool_io.warn_missing_clock
 
 HELP = None
 

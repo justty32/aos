@@ -115,9 +115,9 @@ void Daemon::adopt() {
         c.own = false;
         c.auto_restart = auto_restart_of(r);
         c.restart_on_stuck = ros_of(r);
-        Json threshold = r.value("stuck_after_ticks", Json(10));
+        Json threshold = r.value("stuck_after_cycles", Json(10));
         if (aos::is_count(threshold) && threshold.get<long long>() > 0) {
-            c.stuck_after_ticks = threshold.get<long long>();
+            c.stuck_after_cycles = threshold.get<long long>();
         }
         // 11-05（portable-flow）：表上的路徑相對 daemon 的 stack（dstack_）拼回；絕對的（舊表）照用
         c.stack = st.is_string() && !st.get<std::string>().empty() ? unrel(st).get<std::string>() : cell_of(name, Json());

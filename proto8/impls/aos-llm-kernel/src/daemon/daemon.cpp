@@ -39,7 +39,7 @@ Host find_host() {
     if (!k.empty()) {
         h.box = aos::abspath(k);
         if (!fs::is_directory(aos::join(h.box, "new"), ec)) {
-            // 與 AOS_TICK 相同：每行程每路徑一次；fork 後仍有自己的提醒。
+            // 與 AOS_CLOCK 相同：每行程每路徑一次；fork 後仍有自己的提醒。
             static std::set<std::pair<pid_t, std::string>> warned;
             if (warned.emplace(::getpid(), h.box).second) {
                 aos::warn("aos-llm-kernel", "AOS_KERNEL points to a missing mailbox: " + h.box + "; letters to it fail until it exists");

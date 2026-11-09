@@ -58,10 +58,10 @@ class WaitTests(unittest.TestCase):
                 self.assertIn('error: ' + code + ' ', result.stdout)
                 self.assertNotIn('Traceback', result.stderr)
 
-    def test_tick_wait_keeps_short_poll(self):
+    def test_clock_wait_keeps_short_poll(self):
         ns, proc = self.scope([0])
         ns['tool_io'].expired.return_value = False
-        self.assertEqual(ns['agent'](['listen'], timeout_ticks=10), ('answer', None))
+        self.assertEqual(ns['agent'](['listen'], timeout_cycles=10), ('answer', None))
         self.assertTrue(all(c.kwargs['timeout'] == .2 for c in proc.communicate.call_args_list))
 
 

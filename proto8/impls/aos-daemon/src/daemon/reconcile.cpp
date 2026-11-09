@@ -22,13 +22,13 @@ Json Daemon::limits_of(const Json& spec, const Json& kept) const {
 }
 
 Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws, const Json& kept_exec,
-                    const Json& kept_def, const Json& kept_limits, const Json& kept_launch, bool kept_auto_restart, bool kept_ros, long long kept_stuck_after_ticks) {
+                    const Json& kept_def, const Json& kept_limits, const Json& kept_launch, bool kept_auto_restart, bool kept_ros, long long kept_stuck_after_cycles) {
     Json lim = limits_of(spec, kept_limits);
     Json launch_spec = spec.is_null() ? kept_launch : spec;
     bool once = is_once(launch_spec);
     bool auto_restart = spec.is_null() ? kept_auto_restart : auto_restart_of(spec);
     bool ros = spec.is_null() ? kept_ros : ros_of(spec);
-    long long stuck_ticks = spec.is_null() ? kept_stuck_after_ticks : spec.is_object() ? spec.value("stuck_after_ticks", 10LL) : 10;
+    long long stuck_cycles = spec.is_null() ? kept_stuck_after_cycles : spec.is_object() ? spec.value("stuck_after_cycles", 10LL) : 10;
     bool deep = cell != dstack_ + "procs/" + name;   // 不是預設小格＝proc 自己的 stack：不在就 mkdir -p
     if (auto live = live_in_cell(cell, names_.loop)) {   // 11-05 第二輪：小格裡已有活著的子 loop（上一個 daemon 起了、沒記進表就死）＝接回、不再起一份
         Child c;
@@ -47,7 +47,7 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
         c.limits = lim;
         c.auto_restart = auto_restart;
         c.restart_on_stuck = ros;
-        c.stuck_after_ticks = stuck_ticks;
+        c.stuck_after_cycles = stuck_cycles;
         std::error_code ec;
         std::uintmax_t sz = std::filesystem::file_size(aos::join(cell, names_.err), ec);
         c.err_off = ec ? 0 : (long long)sz;
@@ -84,7 +84,7 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
     c.def = spec.is_null() ? kept_def : def_of(spec);              // 11-04：列上的 def 欄
     c.auto_restart = auto_restart;
     c.restart_on_stuck = ros;
-    c.stuck_after_ticks = stuck_ticks;
+    c.stuck_after_cycles = stuck_cycles;
     return c;
 }
 
@@ -152,7 +152,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                 continue;
             }
             if (c.held && stopped.count(n) == 0 && !(c.phase == "sleeping" && slept.count(n) > 0)) {   // 11-05：sleep 叫睡的不自己醒   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（子 loop 比舊 state 的 ctl_seq，已套用過的不重做）
-                Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits, c.launch, c.auto_restart, c.restart_on_stuck, c.stuck_after_ticks);   // 信箱接回只留名時照列上的值
+                Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits, c.launch, c.auto_restart, c.restart_on_stuck, c.stuck_after_cycles);   // 信箱接回只留名時照列上的值
                 nc.revived = true;   // 11-05：REVIVE_MS 內退了＝留成 stopped＋原因（衝突 3）
                 nc.revived_at = Clock::now();
                 if (nc.auto_restart && c.phase == "sleeping") {
@@ -178,7 +178,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
             c.launch = launch_of(spec, cwd_);
             c.auto_restart = auto_restart_of(spec);
             c.restart_on_stuck = ros_of(spec);
-            c.stuck_after_ticks = spec.is_object() ? spec.value("stuck_after_ticks", 10LL) : 10;
+            c.stuck_after_cycles = spec.is_object() ? spec.value("stuck_after_cycles", 10LL) : 10;
             c.stack = cell_of(n, spec);
             c.exec = exec_of(spec, cwd_);
             c.def = def_of(spec);

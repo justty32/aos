@@ -7,7 +7,7 @@ include(../cmake/settings.cmake)
 project(aos-lock CXX)
 
 # 用到的兄弟專案（包一層 if(NOT TARGET)，全家都這樣寫）。
-#   aos-util  錯誤、三扇門、旗標、路徑、身分、UTC 時間與 tick 兩鐘
+#   aos-util  錯誤、三扇門、旗標、路徑、身分、UTC 時間與樹時鐘兩鐘
 if(NOT TARGET aos-util)
   add_subdirectory(../aos-util aos-util-build)
 endif()

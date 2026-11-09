@@ -23,7 +23,7 @@
 # 選填 queue: true：滿格信留 requests/cur/、queue.json 的 queued 陣列先來先掛；既有隊序優先，新信照 aos-post 處理順序（有序先、再名字）。
 #   queue.json 讀不懂＝提醒行、當空窗，隊序從 requests/cur/ 重排（11-07 sol 審查 #2、#5）。
 #   隊首所需新格不足時後方要新格者不能插隊；stop／ping 等不加新格的信照轉。窗 names 是新名字陣列、queued_at／expires_at 是 ISO UTC 毫秒。
-#   queued_at_ticks 透過 tool_io.now_tick 讀，有 AOS_TICK 才加。只有進隊時讀；每輪重用原時間。預設 queue: false＝滿格立即拒信。
+#   queued_at_cycles 透過 tool_io.now_cycle 讀，有 AOS_CLOCK 才加。只有進隊時讀；每輪重用原時間。預設 queue: false＝滿格立即拒信。
 #   每輪所有 cur（含首次、關排隊）先驗 queue_wait_ms：非負整數；正數由 sent_at 起算、到期不轉；0 有格照轉、沒格不排。
 #   壞 sent_at＝BodyBad；到期＝SlotMissing。極大期限用 ISO 擴展年份表示。排隊不寄中間回信，轉寄保留原 body。
 # ctl 信箱＝$AOS_DAEMON/<procs_state.json 頂層的 procs_ctl_mailbox>；procs_state.json 還沒寫（daemon 第一圈）＝預設 procs_ctl_mailbox、running 0 列（同 aos-daemon-ctl）。
@@ -427,15 +427,15 @@ def main():
             row = {"letter": name, "names": fresh,
                    "queued_at": previous.get(name, {}).get("queued_at") or
                    datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")}
-            if name in previous and "queued_at_ticks" in previous[name]:
-                row["queued_at_ticks"] = previous[name]["queued_at_ticks"]
+            if name in previous and "queued_at_cycles" in previous[name]:
+                row["queued_at_cycles"] = previous[name]["queued_at_cycles"]
             elif name not in previous:
                 try:
-                    tick = tool_io.now_tick()
+                    cycle = tool_io.now_cycle()
                 except tool_io.Error as e:
                     die(e.code, str(e))
-                if tick is not None:
-                    row["queued_at_ticks"] = tick
+                if cycle is not None:
+                    row["queued_at_cycles"] = cycle
             if "queue_wait_ms" in body:
                 row["expires_at"] = utc_text(utc_ms(letter["sent_at"]) + body["queue_wait_ms"])
             queued.append(row)

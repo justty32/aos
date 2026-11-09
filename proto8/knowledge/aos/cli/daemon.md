@@ -3,8 +3,8 @@
 Use aos-daemon-ctl for arbitrary procs; a sent letter is not proof that the requested change finished.
 
 ```sh
-aos-daemon-ctl --daemon /srv/d add --name clock --stack /tmp/clock ../lib/base/clock
-aos-daemon-ctl --daemon /srv/d where --stack clock
+aos-daemon-ctl --daemon /srv/d add --name wall_clock --stack /tmp/wall_clock ../lib/base/wall_clock
+aos-daemon-ctl --daemon /srv/d where --stack wall_clock
 aos-daemon-ctl --daemon /srv/d ping --timeout-s 3
 ```
 

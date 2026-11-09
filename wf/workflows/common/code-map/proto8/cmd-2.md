@@ -20,12 +20,6 @@
 | [`examples/thought-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/sandbox.json) | Sandbox (mode 1, no judge) for a tool that talks to the daemon (thought; agents and self_tools the same way): rw the daemon stack AOS_DAEMON (letters… |
 | [`root/setup.sh`](../../../../../proto8/cmd/aos-sandbox/root/setup.sh) | 沙箱的「身分層」要 root 做的事：裝 s6 到 /usr/local、建帳號 aos-run、給它一個工作的地方、讓我（$SUDO_USER）能換成它 |
 
-## `proto8/cmd/aos-tick/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-tick`](../../../../../proto8/cmd/aos-tick/bin/aos-tick) | 時鐘往前走一格（CONCEPTS C-44、NORMS N-01；規格 10-12「做吧」，計畫 10-21 第 4 段）。 |
-
 ## `proto8/cmd/aos-tools/`
 
 | 檔 | 負責什麼 |
