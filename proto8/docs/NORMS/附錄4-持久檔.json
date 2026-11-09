@@ -379,9 +379,9 @@
    "lifetime": "持久",
    "writer": "aos-daemon（procs_state）、aos-loop（state、state_flux，11-09 S3）",
    "reader": "人",
-   "image": "進",
+   "image": "不進（stack.gitignore 的 **/*.bad-* 擋；11-09 使用者裁）",
    "on_bad": "沒有程式讀",
-   "note": "不自動清；不是點開頭，stack.gitignore 沒擋，會一直累積進 image",
+   "note": "不自動清（11-09 使用者裁：擋掉，不自動清）；只留原機",
    "evidence": "proto8/impls/aos-util/src/files.cpp:157-161、proto8/impls/aos-daemon/src/daemon/adopt.cpp:85、proto8/impls/aos-loop/src/engine/window.cpp:222"
   },
   {

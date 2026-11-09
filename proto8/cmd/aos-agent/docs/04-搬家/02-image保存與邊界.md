@@ -15,7 +15,7 @@
 
 | 檔 | 放哪 | 做什麼 |
 |---|---|---|
-| [`stack.gitignore`](../../stack.gitignore) | `cp stack.gitignore ws/.stack/.gitignore`（每台 daemon stack 各一份） | 擋暫存、鎖、可重建檔、log 與計數器 `counter_*.txt`（[完整規則與理由](../../../../thinking/2026-11/06/git-image/04-gitignore建議.md)），包含 `think/request.json`；保留 state、state_flux（`ctl_seq` 讓 stop→start 不被同一道 stop 再停；暫存 `.state_flux.json` 被 `**/.*` 擋）、procs 表、history、stage、pending、在途 `new/`／`cur/`／問腦回信、設定覆蓋層與額度帳 |
+| [`stack.gitignore`](../../stack.gitignore) | `cp stack.gitignore ws/.stack/.gitignore`（每台 daemon stack 各一份） | 擋暫存、鎖、可重建檔、log 與計數器 `counter_*.txt`、狀態檔壞掉時的留證檔 `*.bad-*`（11-09 使用者裁：擋掉，不自動清）（[完整規則與理由](../../../../thinking/2026-11/06/git-image/04-gitignore建議.md)），包含 `think/request.json`；保留 state、state_flux（`ctl_seq` 讓 stop→start 不被同一道 stop 再停；暫存 `.state_flux.json` 被 `**/.*` 擋）、procs 表、history、stage、pending、在途 `new/`／`cur/`／問腦回信、設定覆蓋層與額度帳 |
 | [`stack.gitattributes`](../../stack.gitattributes) | `cp stack.gitattributes <git repo 根>/.gitattributes` | `* -text`：一律不轉換行（放根＝定義的 `_entry` 也管到） |
 
 `.gitignore` 放 `.stack` 裡而不是 ws 根：放 ws 根也擋得對 image，但 `**/tmp/`、`**/.*` 會連你 ws 裡自己的 `tmp/`、`.env` 一起擋。

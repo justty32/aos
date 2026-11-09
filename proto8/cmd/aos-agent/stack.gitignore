@@ -46,6 +46,9 @@
 # 計數器（--enable-counters 才寫的 counter_*.txt）只給人看，照 #20-1 不進 image（11-09 clock-and-hot-writes）
 **/counter_*.txt
 
+# S3 (format-versioning) keeps an unreadable state file as <name>.bad-<UTC ms> for evidence; never auto-cleaned, so keep it out of the image (user ruling 11-09)
+**/*.bad-*
+
 # Public observation ledgers and retained child ledgers
 **/observed.jsonl
 **/observed/

@@ -36,6 +36,7 @@
 **/mailbox_warning.txt        # ★ 只留最後一封壞信
 **/transcripts/               # ★ 指到 ~/.claude 的 symlink，別台是斷鏈
 **/archive/                   # ★ done --keep 的歸檔信（今天沒人用；開了就是紀錄）
+**/*.bad-*                    # ★ S3 壞檔留證 <名>.bad-<時間>（11-09 使用者裁：擋掉，不自動清）
 ```
 
 image repo 根那份：
