@@ -8,6 +8,7 @@
 
 ## 最新進度
 
+- **open｜大修材料（使用者 11-09「這次的主角是我，就當作是我要重新手寫吧，幫我準備各種材料」；「這批大修材料不用push，放到桌面就好，我之後打包成.zip」）**：大修材料第一批在桌面 `aos-大修材料/`，不進 repo（核心六件說明書、why 15 題、問題清單 132 列、驗收、重寫順序＋名詞表、agent-index、離線網頁）；問題清單必修-06（大修前核心凍不凍、材料追不追 main）、必修-07（新程式放哪）待使用者裁；第二批（cmd、py、lib、templates、knowledge、aos-fsm／json／directive／util／lock／inst）待做
 - **open｜daemon-interrupt（使用者 11-09 裁「先做訊號就好」「那就poke」）**：`aos-daemon-ctl poke` 已施工、實測過（05）；使用者說「這些都可以再討論」，等他試用回饋；socket、搶占、daemon 叫子項沒做 → [daemon-interrupt](../proto8/thinking/2026-11/09/daemon-interrupt/README.md)
 
 - **open｜node-pool（11-08，想法 20 節點池＋想法 21 蒸餾後壓縮）**：想法 20 決定頁使用者已裁（q1 改抽象分數，03 已改）；想法 21 簡報 04→fable 05→圖紙 06 寫好，5 題在桌面決定頁 `aos-np21-1108-待你裁.html` 等裁、照推薦代定；第五輪開工照 03 §7 N2～N5、06 §6 N6～N10（N1 第四輪已修）；真庫兩條錯連（傑克／傑克遜、耶拉／耶拉岡德像）已知會 arknights-kb → [node-pool](../proto8/thinking/2026-11/08/node-pool/README.md)
