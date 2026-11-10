@@ -458,7 +458,7 @@ def cmd_add(opts, args):
             o[plain] = dc.path_json(o[js], "--%s-json" % plain)
     d = dc.find_daemon(opts.get("daemon"))
     _, body = dc.add_letter(rest[0], extra, o.get("name"), o.get("ws"), o.get("stack"), o.get("def"), limits,
-                            auto_restart=o.get("auto_restart", False, written=written))
+                            auto_restart=o.get("auto_restart", False), written=written)
     deliver(d, body, reply_arg(o), seconds)
 
 
