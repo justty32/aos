@@ -13,6 +13,7 @@
 
 ## 待使用者項
 
+- **self-family：eca 真對話驗收**（11-10 晚，燒一兩句 claude 額度）：掛一隻 eca-claude、問兩題、`aos-agent history -t 名字 rm／summarize` 改掉、再問一題，看有沒有 `starting a new claude conversation` 而且只記得改過的 → [self-family 01](../proto8/thinking/2026-11/10/self-family/01-施工結果.md#留給使用者的eca-真對話驗收會燒額度)
 - **家機 11-10 晚開工**：照 proto8/thinking/2026-11/10/two-machines/15-回家那台開工.md 拉到最新、重建、刷新試驗場、假腦問一題；真腦 gemma 與 eca_bob 公司驗不了 → [15-回家那台開工](../proto8/thinking/2026-11/10/two-machines/15-回家那台開工.md)
 - **two-machines T7 真機驗證**（11-10；約 30～40 分鐘，標 💬 的步驟各燒一兩句額度）：真 claude／codex 找不到對話時的反應、eca 換台整條、/mnt/c 起一棵、公司↔家機真的來回一次；結果貼回來 → [14-真機驗證](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md)
 - **`~/code/playground-ak5` 的 image 是 11-09 前凍的，要用前先刪 stack 重建，只改定義不夠**（家機試驗場 `~/code/playground` 11-09 晚已改好、刪掉重建、假腦自動驗過，見 [11-09 日誌](session_logs/2026-11/2026-11-09.md)）：舊 stack 裡曾 stop→start 的列一開門就被重做 stop、默默下表，還有 `_tick` 孤兒列；ak5 的 tag 沒動 → [format-versioning 必修 2](../proto8/thinking/2026-11/09/format-versioning/README.md#必修proto-期就該處理跟要不要做版本無關)

@@ -18,3 +18,14 @@ self_tools、self_llm 在 [self-tools](../self-tools/README.md)；這夾記 self
 - 改掉的原文：預設搬到旁邊一個檔、可選搬到哪、也可選不留。
 - eca 給縮水版。
 - 人用的 `aos-agent history` 先有，`self_history` 是它的純包裝（目標＝自己）；10-30 [「停著時改 history 再繼續」](../../../2026-10/30/eca/09-方向題.md#之後再改停著時改-history-再繼續10-30使用者先記下)由它解。
+
+## 檔案
+
+| 檔 | 是什麼 |
+|---|---|
+| [01-施工結果](01-施工結果.md) | 每個 commit 做了什麼、驗收、代定清單、留給使用者的 eca 真對話驗收、給知識庫的節點內容 |
+| [hook/](hook/README.md) | self_hook 那條線（另一隊） |
+
+## 做了（11-10 晚）
+
+`aos-agent history`（ls／rm／summarize／set，原文搬到 `history_removed.jsonl`）→ `self_history` 包裝（這一步鎖著）→ eca 縮水版（history 被改過＝下一輪開新對話）→ 文件。假腦與 gemma 真腦都驗過；eca 真對話留給使用者。細節見 [01](01-施工結果.md)。

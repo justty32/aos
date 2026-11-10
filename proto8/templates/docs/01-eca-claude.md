@@ -14,10 +14,10 @@ eca-claude/
   llm.json    腦設定：{"model": "sonnet"}（11-04 晚；cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔11-04 起，相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
-  tools.json  aos-tools 的登記檔：wall_clock、self_tools、self_llm、agents、memory（跟 agent-fsm 同一份：都寫 `{"$env": "AOS_HOME", …}`，memory 直接登記 lib/agent/memory、`env.AOS_MEMORY` 指知識庫；後兩個 11-05 使用者裁「內建」）；
+  tools.json  aos-tools 的登記檔：wall_clock、self_tools、self_llm、self_history、agents、memory（跟 agent-fsm 同一份：都寫 `{"$env": "AOS_HOME", …}`，memory 直接登記 lib/agent/memory、`env.AOS_MEMORY` 指知識庫；後兩個 11-05 使用者裁「內建」）；
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__wall_clock…）；不要工具就刪掉它
   agents.json 工具 agents 的設定：{"max_children": 4}（這隻最多同時生幾隻；這隻的 stack 裡放一份 agents.json 只寫改過的鍵＝覆蓋）
-  interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json"}}（11-04；aos-agent ctl add 只看這個宣告）
+  interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "history": "history.jsonl"}}（11-04；history 鍵 11-10 加，給 aos-agent history 找檔；aos-agent ctl add 只看這個宣告）
   screen/     子介面：_entry＝["aos-eca-screen", "--eca", ".."]（aos-agent open／close／watch 叫它；動作接在最後）
 ```
 
@@ -36,6 +36,8 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 不掛 daemon、直接 `aos-exec --ws ~/code/myproj proto8/templates/eca-claude &` 跑的，aos-agent 不管：`aos-post send --ordered ~/code/myproj/.stack/queue` 寫信（stdin＝`{"role": "user", "content": 話}`）、看 `.stack/history.jsonl`、寫 `.stack/ctl.json` 停（`{"cmd": "pause"}`／`{"cmd": "stop"}`）。
 
 `aos-eca-turn` 一次答一批（怎麼答、`--on-empty`／`--on-busy`、錯見 [cmd/docs/01](../../cmd/docs/01-逐支說明.md)）。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就放一份檔、aos-eca-turn 加 `--prompt 那個檔`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。
+
+**history 被改過＝開新對話**（11-10 [self-family](../../thinking/2026-11/10/self-family/README.md) ⑩，解 10-30 eca 09「停著時改 history 再繼續」縮水版）：每輪 assistant 接進 history 後，把整份 history 的 sha256 寫進小格的 `.history_sum`；下一輪交出去前算出來不一樣（人用 `aos-agent history` 或直接改了）＝`drop_session`、開新的 claude 對話，題目前面照換台那套帶改過的 user／assistant 紀錄（上限 `reseed_bytes`），stderr 一行 `warning: history.jsonl was changed since the last turn; starting a new claude conversation that carries the changed record`。這一輪中間被改（claude 叫 `self_history`）＝`.history_sum` 寫 `edited`、下一輪照樣開新的。畫面開著時不換、只 warning。用法：`aos-agent history -t 名字 ls`、`rm 3-4`、`summarize 1-6 "…"`；原文搬到 stack 裡 `history_removed.jsonl`。
 
 
 **長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 預設 600000（10 分鐘），限制 CLI 呼叫；`loop.json.exec.timeout_ms` 預設 900000（15 分鐘），限制整次 aos-eca-turn，要留得比 CLI 那層長，讓它有時間收尾。長任務要同時檢查這兩層，增加額度不會延長逾時。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
