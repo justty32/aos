@@ -22,7 +22,7 @@ class Mailbox(unittest.TestCase):
         (self.tmp / "bob").mkdir()
         (self.daemon / "procs_state.json").write_text(json.dumps({"procs": {"bob": {"stack": "../bob", "phase": "running"}}}))
         self.env = dict(os.environ, HOME=str(self.home), USER="alice", PYTHONDONTWRITEBYTECODE="1")
-        for k in ("AOS_MY_STACK", "AOS_DAEMON", "AOS_WS", "AOS_STACK"):
+        for k in ("AOS_LINUX_USER_STACK", "AOS_DAEMON", "AOS_WS", "AOS_STACK"):
             self.env.pop(k, None)
 
     def tearDown(self):
@@ -39,7 +39,7 @@ class Mailbox(unittest.TestCase):
 
     def test_default_stack_is_home_dot_stack(self):
         self.assertEqual(self.ok("where").strip(), str(self.home / ".stack" / "mailbox"))
-        self.env["AOS_MY_STACK"] = str(self.tmp / "me")
+        self.env["AOS_LINUX_USER_STACK"] = str(self.tmp / "me")
         self.assertEqual(self.ok("where").strip(), str(self.tmp / "me" / "mailbox"))
         self.assertEqual(self.ok("-s", "other", "where").strip(), str(self.tmp / "other" / "mailbox"))
 

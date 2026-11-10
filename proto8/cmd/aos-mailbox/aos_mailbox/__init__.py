@@ -29,7 +29,7 @@ subcommands:
   send    send a letter to an agent (--to NAME [-d DAEMON]) or to a mailbox folder (--box PATH)
 
 flags:
-  -s, --stack STACK   my stack folder (default: $AOS_MY_STACK, else ~/.stack); the mailbox is STACK/mailbox
+  -s, --stack STACK   my stack folder (default: $AOS_LINUX_USER_STACK, else ~/.stack); the mailbox is STACK/mailbox
   -h, --help          show this help
 Flags may go anywhere after the name they belong to (-s also after the subcommand);
 send's WHAT and everything after it is text.
@@ -119,7 +119,7 @@ STACK = None   # main 從 --stack 定
 
 
 def my_stack():
-    s = STACK or os.environ.get("AOS_MY_STACK", "") or os.path.join(os.path.expanduser("~"), ".stack")
+    s = STACK or os.environ.get("AOS_LINUX_USER_STACK", "") or os.path.join(os.path.expanduser("~"), ".stack")
     return os.path.abspath(s)
 
 
