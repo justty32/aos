@@ -284,8 +284,9 @@ Checks that the daemon is running (state window pid, started_at_ticks and boot_i
 N is one more than the larger of the ctl's current seq and its state_flux ctl_seq.
 The daemon stops like on its own ctl stop: procs still running get SIGTERM (SIGKILL after
 10 s) and stay sleeping on the table; the next start wakes them.
-Then waits up to --timeout-s seconds for the daemon process to exit; still running is a
-warning line, exit 0 (the stop stays in ctl and applies on its next round).
+Then waits up to --timeout-s seconds for the daemon process to exit; still running is
+StillRunning, exit 1: it is not safe to commit or copy the stacks yet (the stop stays in
+ctl and applies on its next round; run shutdown again to wait again).
 A daemon that is a proc of another daemon leaves that table when it exits 0 (warning line);
 to keep its row there, stop it through the upper daemon instead.
 

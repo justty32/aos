@@ -5,6 +5,12 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/cmd/aos-grow/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`bin/aos-grow`](../../../../../proto8/cmd/aos-grow/bin/aos-grow) | 把一個函數往上長一級（或縮回一級），呼叫方跟著改、行為不變。 |
+
 ## `proto8/cmd/aos-mcp/`
 
 | 檔 | 負責什麼 |

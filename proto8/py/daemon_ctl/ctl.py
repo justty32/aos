@@ -148,11 +148,11 @@ def shutdown(d, timeout_s=SHUTDOWN_S):
             check_alive(d, state)
         except Fail:
             return seq
-        if time.monotonic() >= end:
-            aos_flags.warn(_pkg.PROG, "the daemon at %s (pid %d) is still running after %g s (it stops between rounds: "
-                           "a long body, or procs that take up to 10 s to exit, delay it); it stops when it applies stop (seq %d)"
-                           % (d, pid, timeout_s, seq))
-            return seq
+        if time.monotonic() >= end:   # 11-10 two-machines：退 0 會讓人以為停乾淨、可以 commit／push 了，所以改成錯誤行退 1
+            raise Fail("StillRunning", "the daemon at %s (pid %d) is still running after %g s, so it is not safe to commit or copy "
+                       "yet (it stops between rounds: a long body, or procs that take up to 10 s to exit, delay it); it stops "
+                       "when it applies stop (seq %d); run shutdown again (it waits again) or give a longer --timeout-s"
+                       % (d, pid, timeout_s, seq))
         time.sleep(0.05)
 
 
