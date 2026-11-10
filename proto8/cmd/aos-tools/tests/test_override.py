@@ -215,7 +215,7 @@ class Override(unittest.TestCase):
                          ["a", "b"])
         moved = self.tmp / "defs2"
         shutil.move(str(self.defs), str(moved))
-        r = self.ok("--file", self.mine, "ls", TC_DEFS=str(moved))
+        r = self.ok("--file", self.mine, "ls", "-l", TC_DEFS=str(moved))
         self.assertIn(str(moved / "lib" / "a"), r.stdout)
         self.bad("DirectiveBad", "--file", self.mine, "ls")
 
@@ -226,7 +226,7 @@ class Override(unittest.TestCase):
         moved.mkdir()
         shutil.move(str(self.defs), str(moved / "defs"))
         shutil.move(str(self.stack), str(moved / "stack"))
-        self.assertIn(str(moved / "defs" / "lib" / "a"), self.ok("--file", moved / "stack" / "tools.json", "ls").stdout)
+        self.assertIn(str(moved / "defs" / "lib" / "a"), self.ok("--file", moved / "stack" / "tools.json", "ls", "-l").stdout)
 
     # ---- writes go only to F ----
 

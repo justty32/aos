@@ -1,4 +1,4 @@
-"""Test the aos-tools command line (11-10 aos-tools-cli step 1): --file on either side, usage line, late flags, default-file warning, success lines, ls -l, ls -b, call NAME ARGS_JSON, naming the tool whose directive fails."""
+"""Test the aos-tools command line (11-10 aos-tools-cli step 1): --file on either side, usage line, late flags, default-file warning, success lines, ls (short by default), ls -l, call NAME ARGS_JSON, naming the tool whose directive fails."""
 import json
 import os
 from pathlib import Path
@@ -66,23 +66,24 @@ class Base(unittest.TestCase):
 
 
 class Brief(Base):
-    def test_brief_is_name_and_first_sentence(self):
+    def test_default_is_name_and_first_sentence(self):
+        """11-10 深夜使用者「默認是給出短板，然後用-l才是給長版」：不帶旗標＝短版；-b 拿掉。"""
         self.ok("--file", self.reg, "add", TOOL)
         self.echo_tool()
         self.ok("--file", self.reg, "add", self.tmp / "bin" / "echo")
-        r = self.ok("--file", self.reg, "ls", "-b")
+        r = self.ok("--file", self.reg, "ls")
         self.assertEqual(r.stdout, "echo\techo stdin\npeek_now_time\tGet the current UTC time in ISO 8601, e.g. 2026-10-23T08:00:00Z.\n")
-        self.assertEqual(self.ok("--file", self.reg, "ls", "--brief").stdout, r.stdout)
 
-    def test_brief_with_other_forms_is_bad(self):
-        self.bad("ArgumentsBad", "--file", self.reg, "ls", "-b", "--json")
-        self.bad("ArgumentsBad", "--file", self.reg, "ls", "-b", "-l")
+    def test_brief_flag_gone_and_long_with_json_bad(self):
+        self.bad("FlagUnknown", "--file", self.reg, "ls", "-b")
+        self.bad("FlagUnknown", "--file", self.reg, "ls", "--brief")
+        self.bad("ArgumentsBad", "--file", self.reg, "ls", "-l", "--json")
 
 
 class FileEitherSide(Base):
     def test_file_after_subcommand(self):
         self.ok("add", "--file", self.reg, TOOL)
-        r = self.ok("ls", "--file", self.reg, cwd="/")
+        r = self.ok("ls", "-l", "--file", self.reg, cwd="/")
         self.assertIn("peek_now_time\tdir\t%s" % TOOL, r.stdout)
 
     def test_file_before_subcommand(self):

@@ -55,8 +55,10 @@ class ToolsOverride(unittest.TestCase):
     def names(self, **env):
         return [l.split("\t")[0] for l in self.agent("ls", **env).stdout.splitlines()]
 
-    def test_ls_brief_passes_through(self):
-        self.assertEqual(self.agent("ls", "-b").stdout, "clock\tGet the current UTC time in ISO 8601, e.g. 2026-10-23T08:00:00Z.\n")
+    def test_ls_default_is_brief(self):
+        """11-10 深夜使用者「默認是給出短板，然後用-l才是給長版」：不帶旗標＝名 TAB 說明第一句；-b 拿掉。"""
+        self.assertEqual(self.agent("ls").stdout, "clock\tGet the current UTC time in ISO 8601, e.g. 2026-10-23T08:00:00Z.\n")
+        self.assertIn("FlagUnknown", self.agent("ls", "-b", ok=False).stderr)
 
     def test_first_add_creates_override_relative(self):
         before = self.reg.read_bytes()

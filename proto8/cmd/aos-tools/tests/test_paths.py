@@ -59,12 +59,12 @@ class PathForms(unittest.TestCase):
     def test_overlay_env_path_resolved_each_time_and_not_written_back(self):
         self.over_with({"wc": {"path": {"$env": "TC_ROOT", "$path": "/lib/base/peek_now_time"}}})
         before = self.over.read_text()
-        r = self.ok("--file", self.over, "ls", TC_ROOT=str(PROTO))
+        r = self.ok("--file", self.over, "ls", "-l", TC_ROOT=str(PROTO))
         self.assertIn("wc\tdir\t%s" % TOOL, r.stdout)
         # 換一份「proto8」：值跟著換（每次用到才解）
         other = self.tmp / "other"
         shutil.copytree(TOOL, other / "lib" / "base" / "peek_now_time")
-        r = self.ok("--file", self.over, "ls", TC_ROOT=str(other))
+        r = self.ok("--file", self.over, "ls", "-l", TC_ROOT=str(other))
         self.assertIn(str(other / "lib" / "base" / "peek_now_time"), r.stdout)
         self.assertEqual(self.over.read_text(), before)
 
@@ -96,7 +96,7 @@ class PathForms(unittest.TestCase):
 
     def test_overlay_plain_unchanged(self):
         self.over_with({"wc": {"path": os.path.relpath(TOOL, self.over.parent)}})
-        r = self.ok("--file", self.over, "ls")
+        r = self.ok("--file", self.over, "ls", "-l")
         self.assertIn(str(TOOL), r.stdout)
 
     # ---- 8. add keeps the user's form ----
@@ -122,7 +122,7 @@ class PathForms(unittest.TestCase):
         r = self.ok("--file", self.reg, "add", "--path-json", json.dumps(value), TC_ROOT=str(PROTO))
         self.assertIn("added peek_now_time -> %s" % TOOL, r.stdout)
         self.assertEqual(self.stored(self.reg, "tools", "peek_now_time", "path"), value)
-        r = self.ok("--file", self.reg, "ls", TC_ROOT=str(PROTO))
+        r = self.ok("--file", self.reg, "ls", "-l", TC_ROOT=str(PROTO))
         self.assertIn(str(TOOL), r.stdout)
 
     def test_add_path_json_relative_string_from_registry_dir(self):

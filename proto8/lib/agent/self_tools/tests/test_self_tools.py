@@ -62,7 +62,7 @@ class SelfTools(unittest.TestCase):
 
     def test_each_op(self):
         d = {"$env": "AOS_HOME", "$path": "/lib/base/math"}
-        for args, want in (({"op": "ls"}, ["ls", "-b"]),
+        for args, want in (({"op": "ls"}, ["ls"]),
                            ({"op": "ls", "long": True}, ["ls", "-l"]),
                            ({"op": "get", "name": "math"}, ["get", "math"]),
                            ({"op": "add", "path": "/anywhere/tool"}, ["add", "/anywhere/tool"]),
