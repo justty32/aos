@@ -121,6 +121,32 @@ def folder_cell(root, folder, loc, description=None, remove=False):
         fs.aos_json(["set", index + "#/" + fs.esc(key)], json.dumps({"_description": description}, ensure_ascii=False), "WriteFailed")
 
 
+def missing_folder(root, loc):
+    """add 時上一層資料夾不在：NodeMissing 照舊附上一層有哪些，再教先開資料夾（小模型照抄出廠例子 notes/amy.json 會撞到）。"""
+    parent = os.path.dirname(loc.fs)
+    if os.path.lexists(parent):                 # 上一層是檔：fs.missing 會提示 file.json#/key 的寫法
+        return fs.missing(root, loc)
+    error = fs.missing(root, fs.Loc(parent, None))
+    top = parent
+    while not os.path.lexists(os.path.dirname(top)) and os.path.dirname(top) != top:
+        top = os.path.dirname(top)
+    if os.path.lexists(top) or not os.path.isdir(os.path.dirname(top)):
+        return error                            # 路上有同名的檔：fs.missing 的提示已經說了
+    folder = fs.show(root, fs.Loc(top, None)).rstrip("/") + "/"
+    return Error("NodeMissing", '%s; the folder %s does not exist yet: first call {"op": "add", "path": "%s", "description": "<what goes in it>"}, then add again'
+                 % (str(error), folder, folder))
+
+
+def missing_file(root, loc):
+    """add 物件裡的 key 而那份 .json 檔不在：教先用 value {} 開檔。"""
+    error = fs.missing(root, loc)
+    name = fs.show(root, fs.Loc(loc.fs, None))
+    if not os.path.isdir(os.path.dirname(loc.fs)) or not loc.fs.endswith(".json"):
+        return error
+    return Error("NodeMissing", '%s; the file %s does not exist yet: first call {"op": "add", "path": "%s", "value": {}, "description": "<what goes in it>"}, then add again'
+                 % (str(error), name, name))
+
+
 def object_parent(root, loc):
     """物件裡一個 key 的上一層：回 (原文整份, 上一層物件)；不在＝NodeMissing、陣列＝TargetBad。"""
     if not os.path.isfile(loc.fs):
@@ -157,12 +183,12 @@ def add(root, loc, folder, has_value, value, description):
         check_name(os.path.basename(loc.fs))
         parent = os.path.dirname(loc.fs)
         if not os.path.isdir(parent):
-            raise fs.missing(root, fs.Loc(parent, None))
+            raise missing_folder(root, loc)
         if os.path.lexists(loc.fs):
             raise Error("NodeExists", "%s already exists; use set to change it" % fs.show(root, loc))
         require_inside(root, parent)
         if folder:
-            if has_value:
+            if has_value and value not in (None, ""):   # 小模型常給 "value": null 或 ""，當作沒給
                 raise Error("ValueBad", "a folder takes no value; add files into it afterwards")
             os.mkdir(loc.fs)
             fs.aos_json(["set", os.path.join(loc.fs, "_index.json")], "{}", "WriteFailed")
@@ -176,6 +202,8 @@ def add(root, loc, folder, has_value, value, description):
     if not has_value:
         raise Error("ValueBad", "value is required")
     check_value(value)
+    if not os.path.lexists(loc.fs):
+        raise missing_file(root, loc)
     _, parent = object_parent(root, loc)
     if loc.tokens[-1] in parent:
         raise Error("NodeExists", "%s already exists; use set to change it" % fs.show(root, loc))

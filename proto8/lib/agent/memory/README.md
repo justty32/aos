@@ -18,11 +18,13 @@
 
 - `read`：資料夾或有 `_index` 的物件＝簡介＋`children:`＋`not in index:`；字串＝原文；其他 JSON（物件沒 `_index`、陣列、數字…）＝縮排 JSON，內容裡的 `$ref`／`$env` 交給 aos-json `--resolve` 解；非 `.json` 檔＝UTF-8 原文，不是 UTF-8＝`binary file, N bytes`。
 - `ls`：只印表（資料夾、物件、陣列；陣列沒有表，元素都在 `not in index:`）；對字串等＝`TargetBad`。
-- `find`：`query`（不分大小寫）比對名字（最後一段）、說明、字串與文字檔內容；`tag` 比對表那格（或 `"."` 格）的 `tags`；兩個都給要同時符合；範圍＝`path` 底下的樹＋表指到外面的格；不解內容裡的 `$ref`；記走過的（實體路徑, 指標）防繞圈，`$env` 格只跳一次；最多 20 筆。
+- `find`：`query`（不分大小寫）比對名字（最後一段）、說明、字串與文字檔內容；`tag` 比對表那格（或 `"."` 格）的 `tags`；兩個都給要同時符合；範圍＝`path` 底下的樹＋表指到外面的格；不解內容裡的 `$ref`；記走過的（實體路徑, 指標）防繞圈，`$env` 格只跳一次；最多 20 筆。命中在內文（不在印出來的名字或說明裡）＝那行後面附 `[match: 命中那一行]`（最多 160 字、以命中為中心切；11-10 S3：小模型照它挑對節點、常常不用再 read）。
 - 輸出超過 `max_bytes`（預設 8000）截斷、附 `[truncated: N more bytes]`。
 
 ## 實作
 
 單點讀走 PATH 上的 `aos-json get --follow`（值裡有指示詞再加 `--resolve`）；表讀原文（`$env` 格才留得住）。aos-json 失敗＝它最後一行的代號照圖紙 03 換（`FileMissing`／`PointerMissing`→`NodeMissing`、`SpecBad`→`PathBad`、`FollowMissing`→`TargetBad`，其餘同名），原因照接；PATH 上沒有＝`LaunchFailed`。find 直接用 Python 讀 JSON。
+
+`NodeMissing` 的提示：路徑少了 `.json`（`me/self_tools`、`rules`）而補上會在＝附 `(did you mean me.json#/self_tools? …)`；路上有檔＝提示 `file.json#/key` 寫法；`/` 開頭而拿掉就在庫裡＝提示拿掉 `/`。寫入那支另教「先開資料夾／先開檔」，見 [memory_write](../memory_write/writing.py)。
 
 錯誤代號：`ArgumentsBad`、`OpUnknown`、`PathBad`、`MemoryMissing`、`CfgBad`、`NodeMissing`（附上一層有哪些）、`TargetBad`、`FileBad`、`DirectiveBad`、`ReadFailed`、`LaunchFailed`。

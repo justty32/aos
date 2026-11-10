@@ -154,13 +154,27 @@ class MemoryTest(unittest.TestCase):
 
     def test_find_query_tag_and_both(self):
         self.assertEqual(self.find(query="lockfailed"),
-                         ["errors.json#/codes  What each Code ending means.", "far/common.json#/c/x"])
+                         ["errors.json#/codes  What each Code ending means.  [match: LockFailed and friends.]",
+                          "far/common.json#/c/x  [match: common LockFailed]"])   # 命中在內文＝附那一行
         self.assertEqual(self.find(tag="people"), ["errors.json#/codes  What each Code ending means."])
         self.assertEqual(self.find(tag="core", query="never"), ["rules.json  Things you must never do."])
         self.assertEqual(self.find(tag="core", query="lockfailed"), [])
         self.assertIn("matches: (none)", self.ok(op="find", query="zzz-nothing"))
         self.assertEqual(self.find(query="outside", path="cli/"), [])
         self.assertIn("%s  Outside thing." % self.outside, self.find(query="outside"))
+
+    def test_missing_extension_hint(self):
+        self.assertIn("(did you mean errors.json#/codes? keep the .json and put # before the key)",
+                      self.fails("NodeMissing", op="read", path="errors/codes"))
+        self.assertIn("(did you mean rules.json? keep the .json)", self.fails("NodeMissing", op="read", path="rules"))
+        self.assertNotIn("did you mean", self.fails("NodeMissing", op="read", path="nope/x"))
+
+    def test_find_snippet_long_line(self):
+        write(self.root / "long.json", "a" * 300 + " needle " + "b" * 300)
+        hit = self.find(query="NEEDLE", path="long.json")[0]
+        self.assertRegex(hit, r"^long\.json  \[match: …a+ needle b+…\]$")
+        self.assertLess(len(hit), 200)
+        self.assertEqual(self.find(query="never"), ["rules.json  Things you must never do."])   # 命中在說明＝不附
 
     def test_find_env_cell_once(self):
         hits = self.find(query="team", env={"TEAM_KB": str(self.root / "far")})
@@ -172,7 +186,7 @@ class MemoryTest(unittest.TestCase):
         write(self.root / "loop" / "a.json", {"_index": {"..": {}, "x": {}, "../a.json": {}}, "x": "needle"})
         os.symlink(self.root / "loop", self.root / "loop" / "again")
         hits = self.find(query="needle", path="loop/")
-        self.assertEqual(hits, ["loop/a.json#/x"])
+        self.assertEqual(hits, ["loop/a.json#/x  [match: needle]"])
 
     def test_errors(self):
         self.fails("ArgumentsBad")

@@ -156,7 +156,12 @@ class WritingTest(unittest.TestCase):
         self.fails("OpUnknown", op="edit", path="notes/a.json")
         self.fails("NodeExists", op="add", path="notes/a.json", value=1, description="x")
         self.fails("NodeExists", op="add", path="notes/a.json#/list", value=1, description="x")
-        self.assertIn("/ has: notes/", self.fails("NodeMissing", op="add", path="nope/x.json", value=1, description="x"))
+        missing = self.fails("NodeMissing", op="add", path="nope/deep/x.json", value=1, description="x")
+        self.assertIn("/ has: notes/", missing)
+        self.assertIn('first call {"op": "add", "path": "nope/", "description": ', missing)   # 教先開最上面那層資料夾
+        self.assertIn('first call {"op": "add", "path": "notes/new.json", "value": {}, ',
+                      self.fails("NodeMissing", op="add", path="notes/new.json#/k", value=1, description="x"))
+        self.assertNotIn("first call", self.fails("NodeMissing", op="add", path="notes/a.json/x.json", value=1, description="x"))
         self.fails("NodeMissing", op="add", path="notes/a.json#/no/x", value=1, description="x")
         self.fails("NodeMissing", op="set", path="notes/zz.json", value=1)
         self.fails("NodeMissing", op="set", path="notes/a.json#/zz", value=1)
@@ -166,6 +171,9 @@ class WritingTest(unittest.TestCase):
         self.fails("ValueBad", op="add", path="notes/n.json", value="x" * 8001, description="x")
         self.fails("ValueBad", op="set", path="notes/a.json")
         self.fails("ValueBad", op="add", path="notes/dir/", value=1, description="x")
+        self.ok(op="add", path="notes/dir0/", value=None, description="null value = no value")   # 小模型常帶 "value": null
+        self.ok(op="add", path="notes/dir1/", value="", description="empty value = no value")
+        self.assertNotIn('"value"', self.fails("ArgumentsBad", op="add", path="notes/dir2/", value=""))
         self.fails("TargetBad", op="add", path="notes/a.json#/list/2", value=1, description="x")
         self.fails("TargetBad", op="rm", path="notes/a.json#/list/0")
         self.fails("TargetBad", op="add", path="notes/a.json#/r/z", value=1, description="x")

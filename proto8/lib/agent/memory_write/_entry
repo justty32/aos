@@ -6,6 +6,7 @@
 #   set：位置要已在；換 value、換 description，或兩個一起。rm：刪檔、資料夾（不空要 recursive: true）或 key，連表裡那格一起拔。
 #   不加鎖（使用者「不管，自行承擔風險」）；每份檔由 aos-json 暫存後原子 rename。
 # 結果 stdout：node: <路徑>，下一行 added／set／removed。錯：stderr 與 stdout 各一行「memory_write: error: 代號 原因」、退 1。
+import json
 import os
 import sys
 
@@ -63,8 +64,13 @@ path = args.get("path")
 description = args.get("description")
 if description is not None and (not isinstance(description, str) or not description.strip()):
     tool_io.die("ArgumentsBad", "description must be a non-empty string")
-if op == "add" and description is None:
-    tool_io.die("ArgumentsBad", "add needs description (one line saying what this is)")
+if op == "add" and description is None:          # 小模型最常漏這個：直接給它補好的那一次叫法（11-10 S3 實測）
+    again = {"op": "add", "path": args.get("path")}
+    if "value" in args and not str(args.get("path")).endswith("/"):   # 資料夾不帶 value
+        again["value"] = args["value"] if len(json.dumps(args["value"], ensure_ascii=False)) <= 200 else "..."
+    again["description"] = "<one line saying what this is>"
+    tool_io.die("ArgumentsBad", "add needs description (one line saying what this is); call again like %s"
+                % json.dumps(again, ensure_ascii=False))
 recursive = args.get("recursive", False)
 if not isinstance(recursive, bool):
     tool_io.die("ArgumentsBad", "recursive must be true or false")

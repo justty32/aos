@@ -24,13 +24,14 @@
 | [`cli/errors.json`](../../../../../proto8/knowledge/aos/cli/errors.json) | （檔頭沒有一句話） |
 | [`cli/flags.json`](../../../../../proto8/knowledge/aos/cli/flags.json) | （檔頭沒有一句話） |
 | [`cli/grow_screen.json`](../../../../../proto8/knowledge/aos/cli/grow_screen.json) | （檔頭沒有一句話） |
+| [`cli/history.json`](../../../../../proto8/knowledge/aos/cli/history.json) | （檔頭沒有一句話） |
 | [`cli/safety.json`](../../../../../proto8/knowledge/aos/cli/safety.json) | （檔頭沒有一句話） |
 | [`cli/talk_settings.json`](../../../../../proto8/knowledge/aos/cli/talk_settings.json) | （檔頭沒有一句話） |
 | [`cli/tool_env.json`](../../../../../proto8/knowledge/aos/cli/tool_env.json) | （檔頭沒有一句話） |
 | [`cli/tool_flags.json`](../../../../../proto8/knowledge/aos/cli/tool_flags.json) | （檔頭沒有一句話） |
 | [`cli/tools.json`](../../../../../proto8/knowledge/aos/cli/tools.json) | （檔頭沒有一句話） |
 | [`errors.json`](../../../../../proto8/knowledge/aos/errors.json) | 設定（鍵：_index、codes、common） |
-| [`me.json`](../../../../../proto8/knowledge/aos/me.json) | 設定（鍵：_index、self_tools、self_llm） |
+| [`me.json`](../../../../../proto8/knowledge/aos/me.json) | 設定（鍵：_index、self_tools、self_llm、self_history） |
 | [`memory.json`](../../../../../proto8/knowledge/aos/memory.json) | （檔頭沒有一句話） |
 | [`rules.json`](../../../../../proto8/knowledge/aos/rules.json) | （檔頭沒有一句話） |
 | [`status.json`](../../../../../proto8/knowledge/aos/status.json) | （檔頭沒有一句話） |

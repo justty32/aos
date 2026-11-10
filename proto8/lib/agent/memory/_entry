@@ -9,7 +9,7 @@
 #     read：資料夾或有 _index 的物件＝"." 格的簡介＋children:（表）＋not in index:；字串＝原文；其他 JSON＝縮排 JSON；
 #           非 .json 檔＝UTF-8 原文、不是 UTF-8＝binary file, N bytes。內容的 $ref／$env 交給 aos-json --resolve 解。
 #     ls：只印表（資料夾、物件、陣列）；對字串等枝葉＝TargetBad。
-#     find：path 底下（含表指到外面的格）名字、說明、字串內容含 query（不分大小寫）、且表那格 tags 含 tag 的位置；最多 20 筆。
+#     find：path 底下（含表指到外面的格）名字、說明、字串內容含 query（不分大小寫）、且表那格 tags 含 tag 的位置；最多 20 筆；命中在內文＝附 [match: 那一行]。
 #   輸出超過 max_bytes（預設 8000）截斷並附 [truncated: N more bytes]。
 # 錯：stderr 與 stdout 各一行「memory: error: 代號 原因」、退 1；代號見 _tooldef.json 的 errors（aos-json 的照圖紙 03 換）。
 # 不寫任何檔、不碰 $AOS_WS。子行程只有 aos-json（find 不起子行程，除了 $env 格的 aos-directive）；被 TERM 先收掉它、退 128＋N。
@@ -25,7 +25,8 @@ absolute file system paths.
         other files: the text, or "binary file, N bytes".
   ls    only the index of a folder, object or array.
   find  paths under path whose name, description or text contains query
-        (case-insensitive) and whose index entry has tag in its tags; max 20.
+        (case-insensitive) and whose index entry has tag in its tags; max 20;
+        a hit inside the text ends with [match: that line].
 Every path printed can be passed back as path. Output over max_bytes is cut.
 Needs aos-json on PATH. The root comes from _memory.json next to the tool,
 otherwise AOS_MEMORY.
@@ -61,6 +62,7 @@ except ModuleNotFoundError as error:
 Loc, ToolError = fs.Loc, fs.ToolError
 DEFAULT_MAX_BYTES = 8000
 FIND_LIMIT = 20
+SNIPPET = 160                          # find 附的命中那一行最多幾個字
 
 
 def truncate(text, max_bytes):
@@ -164,6 +166,22 @@ def walk(loc, descs, tags, via_env, seen, cache):
             yield from walk(k, [], [], via_env, seen, cache)
 
 
+def snippet(sources, q):
+    """第一個含 q 的那一行（去頭尾空白；太長就切 SNIPPET 字、以命中為中心）。"""
+    for src in sources:
+        for row in src.splitlines():
+            at = row.casefold().find(q)
+            if at < 0:
+                continue
+            row = row.strip()
+            at = row.casefold().find(q)
+            if len(row) <= SNIPPET:
+                return row
+            start = max(0, min(at - SNIPPET // 3, len(row) - SNIPPET))
+            return ("…" if start else "") + row[start:start + SNIPPET] + ("…" if start + SNIPPET < len(row) else "")
+    return ""
+
+
 def op_find(root, loc, query, tag):
     fs.load(root, loc)                          # 起點要在（NodeMissing 附上一層有哪些）
     q = query.casefold() if query is not None else None
@@ -175,7 +193,10 @@ def op_find(root, loc, query, tag):
             continue
         if tag is not None and tag not in tags:
             continue
-        hits.append(("  %s  %s" % (fs.show(root, at), descs[0].replace("\n", " ") if descs else "")).rstrip())
+        line = ("  %s  %s" % (fs.show(root, at), descs[0].replace("\n", " ") if descs else "")).rstrip()
+        if q is not None and q not in line.casefold():   # 命中在內文：附命中那一行，腦不用再 read 就知道哪格最對（11-10 S3 小模型實測）
+            line += "  [match: %s]" % snippet(([text] if text is not None else []) + descs[1:], q)
+        hits.append(line)
     lines = ["node: " + fs.show(root, loc)]
     if not hits:
         return lines + ["matches: (none)"]

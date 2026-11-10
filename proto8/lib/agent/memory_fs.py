@@ -283,8 +283,23 @@ def missing(root, loc):
     hint = ""
     if loc.tokens is None and any(os.path.isfile(p) for p in parents_of(loc.fs)):
         hint = " (a file is not a folder: write file.json#/key to go inside a .json file)"
+    elif loc.tokens is None and loc.fs.startswith(prefix):
+        guess = guess_json(root, loc.fs[len(prefix):])
+        if guess:
+            hint = " (did you mean %s? keep the .json%s)" % (guess, " and put # before the key" if "#" in guess else "")
     return ToolError("NodeMissing", "%s not found; %s has: %s%s%s" % (
         show(root, loc), show(root, up), ", ".join(names[:LIST_LIMIT]) or "(nothing)", more, hint))
+
+
+def guess_json(root, rel):
+    """少寫 .json 的路徑（小模型常把 me.json#/self_tools 寫成 me/self_tools）：猜一個真的在的寫法，沒有＝None。"""
+    parts = [p for p in rel.split("/") if p]
+    for i in range(len(parts)):
+        name = "/".join(parts[:i + 1])
+        if not name.endswith(".json") and os.path.isfile(os.path.join(root, name + ".json")):
+            rest = parts[i + 1:]
+            return name + ".json" + ("#/" + "/".join(rest) if rest else "")
+    return None
 
 
 def parents_of(fs):
