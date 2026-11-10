@@ -8,7 +8,7 @@
 
 ## 最新進度
 
-- **open｜prefix-fixes（使用者 11-10 行程有變、提前用現行 aos）**：207 列分桶完，直接修 61 列分五條施工線、A＋B 待裁 2 題、30 列擱著；施工在公司 WSL `~/repo/aos-tools` → [prefix-fixes](../proto8/thinking/2026-11/10/prefix-fixes/README.md)
+- **open｜prefix-fixes（使用者 11-10 行程有變、提前用現行 aos）**：第 1 桶 61 列做完（60 做、坑-10 不用改）、坑-74 選項 A、線 6 改名 procs_requests、坑-73／92 路徑照使用者裁 A（`.aos-proto8` 錨點＋`copy-out --relink`），WSL `~/repo/aos-tools` 本地 commit、**待 push**；剩：試驗場 `~/code/playground` 刷新與假腦驗收、大修材料補 坑-73／92 一句 → [04-施工結果](../proto8/thinking/2026-11/10/prefix-fixes/04-施工結果.md)
 - **暫停｜arcagi（使用者 11-10「arcagi那邊我已經先停下來了，我決定等aos體系大修完後再繼續他們那邊」）**：等 aos 大修完再續；跟著擱著的待裁題：遺傳搜尋 4 題（`.py` 葉子算不算基因、往返比位元組還是比行為、共用子樹先複製再改、要不要自動淘汰）、wf 轉知識庫三選項（信在 [inbox/done](inbox/done/) 11-09 那幾封）；家機未追蹤殘留 `proto8/thinking/2026-11/09/local-model-bench/` 等使用者說刪不刪 → [11-09 日誌](session_logs/2026-11/2026-11-09.md)
 - **open｜大修材料（使用者 11-09「這次的主角是我，就當作是我要重新手寫吧，幫我準備各種材料」；「這批大修材料不用push，放到桌面就好，我之後打包成.zip」）**：桌面 `aos-大修材料/`、不進 repo；三批 11-09 都做完（說明書與驗收卡、why 21 題、問題清單 207 列、名詞表 01～07、全景／重寫順序、agent-index、網頁 155 頁；第三批對準 `37a6dfcec`）；使用者已裁不凍結核心、材料持續跟著 main 更新、手寫程式放哪不限；使用者 11-09 15:3x「在嘗試多幫我擴充一些東西吧」選四項→**第四批（時序圖、骨架偽碼、why 22～25、速查＋FAQ）11-09 完成；網頁 179 頁；70 流程時序未實跑驗證**；**11-09 晚家機**：材料對過 main（第四批後 `proto8/` 沒改，免同步）；使用者開始手寫，起點 repo 根 `impl_cpp/`（骨架取自 archive/aos-v1、C++23，第一個零件 `core/inst` 原封搬 v1、跟現行差異攤在 `core/inst/差異.md`，使用者 11-09 晚裁「差異也不用補」）；**待**：問題清單第二三批 56 列待裁、main 之後有改要同步回材料；kernel／cases／extras 使用者說先放著 → [11-09 日誌](session_logs/2026-11/2026-11-09.md#2026-11-09)
 - **open｜daemon-interrupt（使用者 11-09 裁「先做訊號就好」「那就poke」）**：`aos-daemon-ctl poke` 已施工、實測過（05）；使用者說「這些都可以再討論」，等他試用回饋；socket、搶占、daemon 叫子項沒做 → [daemon-interrupt](../proto8/thinking/2026-11/09/daemon-interrupt/README.md)
