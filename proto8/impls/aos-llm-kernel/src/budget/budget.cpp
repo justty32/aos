@@ -91,9 +91,39 @@ Budget parse_budget(const Json& v, const std::string& base, const std::string& s
                 throw Error{code::CfgBad, "budget.senders: " + k + " names the same sender (" + sender + ") as another key"};
             }
             b.senders[who] = parse_limit(x, "budget.senders." + k);
+            b.senders[who].key = k;
+            std::error_code ec;
+            if (!fs::is_directory(sender, ec)) {   // B09：key 對不上任何資料夾＝這格多半不會生效，提醒一行（agent 還沒建也可能，照樣收）
+                b.warnings.push_back("budget.senders key " + aos::dumps(Json(k)) + " is not a folder: " + sender +
+                                     " (relative keys count from " + base + ", the kernel config's folder); this limit only applies to letters whose sender is exactly that path");
+            }
         }
     }
     return b;
+}
+
+void warn_budget(const Budget& b, const std::string& stack) {
+    std::string text;
+    for (const std::string& w : b.warnings) {
+        text += w + "\n";
+    }
+    std::string path = aos::join(stack, "budget_warned.txt");
+    int err = 0;
+    std::optional<std::string> was = aos::read_file(path, err);
+    if (text.empty()) {
+        if (was) {
+            std::error_code ec;
+            fs::remove(path, ec);   // 好了：下次再壞再印
+        }
+        return;
+    }
+    if (was && *was == text) {
+        return;   // 上一拍印過同樣的：kernel 每拍一個新行程，不重複印
+    }
+    for (const std::string& w : b.warnings) {
+        aos::warn("aos-llm-kernel", w);
+    }
+    aos::write_text(path, text, aos::join(stack, ".budget_warned.txt.tmp"));   // 寫不成＝下一拍再印一次，不算錯
 }
 
 Json window_since(const std::string& window, std::time_t now) {

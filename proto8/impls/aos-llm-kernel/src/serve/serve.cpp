@@ -183,8 +183,8 @@ int Server::run() {
                     q_.seen_at_cycles.erase(w.id);
                     bool by_calls = spent_of(used_.senders, who, l.max_calls, std::nullopt, mine);
                     std::string which = by_calls ? "max_calls " + std::to_string(*l.max_calls) : "max_tokens " + std::to_string(*l.max_tokens);
-                    refuse(w.id, error_reply(code::BudgetMissing, "sender " + w.sender + ": " + which + " reached in this window (" +
-                                                                       budget_.window + "); not run"));
+                    refuse(w.id, error_reply(code::BudgetMissing, "budget.senders key " + aos::dumps(Json(l.key)) + " (sender " + w.sender + "): " + which +
+                                                                       " reached in this window (" + budget_.window + "); not run"));
                     continue;
                 }
             }

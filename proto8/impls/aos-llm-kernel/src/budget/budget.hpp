@@ -5,7 +5,8 @@
 //                 senders（11-05 feat-proto 件 5：每個寄件人的額度＝{信封 sender: {"max_calls", "max_tokens"}}；窗與 spent 同 kernel 的；
 //                 設定的相對路徑從 base〔kernel.json 所在〕算；讀進來與記帳的 key 一律相對 kernel stack，搬家照用；沒列的寄件人不限）
 //   sender_key    寄件人與 kernel stack 先各自 abspath／lexically_normal，再 lexically_relative；stack 外面以 ../ 開頭
-//   parse_budget  讀 budget 那格（沒寫＝不限、window day）；壞了 CfgBad
+//   parse_budget  讀 budget 那格（沒寫＝不限、window day）；壞了 CfgBad。11-10 晚 two-machines B09：senders 的 key 解出來的資料夾不在＝
+//                 記一條提醒進 warnings（warn_budget 印；寫錯或兩台相對位置不同時額度會安靜不生效），照樣收這格
 //   Used          $AOS_STACK/used.json＝{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens"}：這一窗用了多少、開 kernel 以來一共多少
 //                 （10-25 計數改 counter_*，原 calls、tokens、all_calls、all_tokens）；
 //                 11-05 feat-proto 多一格 packs＝{代號: {"counter_calls", "counter_tokens"}}：這一窗每個包（endpoints 的一組）用了多少（換窗一起歸零）；
@@ -29,12 +30,14 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace aos::llm_kernel {
 
 struct Limit {
     std::optional<long long> max_calls;
     std::optional<long long> max_tokens;
+    std::string key;   // 11-10 晚 two-machines B10：kernel.json 裡寫的那個 key（原樣；BudgetMissing 的訊息印它）
 };
 
 struct Budget {
@@ -43,7 +46,12 @@ struct Budget {
     std::string window = "day";
     bool wait = false;                       // spent: "wait"
     std::map<std::string, Limit> senders;    // 寄件人（相對 kernel stack）→ 這人每窗上限
+    std::vector<std::string> warnings;       // 11-10 晚 B09：讀設定時的提醒（英文一句一條；warn_budget 印）
 };
+
+// 11-10 晚 two-machines B09：印 b.warnings（每條一行 aos-llm-kernel: warning:）。kernel 每拍是新行程，所以只在內容變了才印：
+// 印過的全文記在 $AOS_STACK/budget_warned.txt，一樣就不印；沒有提醒＝刪掉那個檔。寫不成只是下一拍再印。
+void warn_budget(const Budget& b, const std::string& stack);
 
 struct Used {
     std::string window = "day";

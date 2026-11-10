@@ -81,6 +81,7 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
         }
     }
     c.budget = parse_budget(doc.value("budget", Json()), base, stack);   // senders 從設定檔算位置、以相對 kernel stack 記帳
+    warn_budget(c.budget, stack);   // 11-10 晚 B09：senders 的 key 不是資料夾＝提醒（變了才印）
     Json ex = doc.value("exec", Json());
     if (!ex.is_string() || ex.get<std::string>().empty()) {
         throw Error{code::CfgBad, "exec must be a non-empty string (the endpoint function: a directory, a file or `file#/pointer`, relative to kernel.json's directory), got " + aos::dumps(ex)};

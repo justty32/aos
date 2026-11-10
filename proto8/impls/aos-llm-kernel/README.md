@@ -32,7 +32,7 @@ echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | AOS_LLM_
 # {"role": "assistant", "content": "FAKE ANSWER to: hi"}
 aos-daemon-ctl --daemon ~/llm_kernel ls           # 正在飛的問腦：llm_<信件名稱> 一封一列
 cat used.json   # {"window": "day", "since": "2026-11-05T00:00:00+08:00", "counter_calls": 3, "counter_tokens": 129, "counter_all_calls": 3, "counter_all_tokens": 129, "packs": {"fake": {"counter_calls": 3, "counter_tokens": 129}}, "senders": {"../ws": {"counter_calls": 3, "counter_tokens": 129}}}
-# 每個寄件人的額度：kernel.json 的 "budget": {"senders": {"/home/me/ws": {"max_calls": 1}}} → 那人第二封 aos-llm: error: BudgetMissing sender /home/me/ws: max_calls 1 reached in this window (day); not run
+# 每個寄件人的額度：kernel.json 的 "budget": {"senders": {"/home/me/ws": {"max_calls": 1}}} → 那人第二封 aos-llm: error: BudgetMissing budget.senders key "/home/me/ws" (sender /home/me/ws): max_calls 1 reached in this window (day); not run
 # used.json 的 senders key 相對 kernel stack；上例 stack=/home/me/llm_kernel、sender=/home/me/ws。
 cat endpoints.json   # 窗：包的屬性表 {"fake": {"speed": "fast", "cost": "free"}, "smart-high": {"slots": 4, "speed": "normal", "cost": "high", "summary": "..."}}
 echo '{"endpoint": "smart-high", "request": {"messages": [{"role": "user", "content": "hi"}], "temperature": 1}}' | AOS_LLM_KERNEL=~/llm_kernel aos-llm ask

@@ -34,5 +34,5 @@
 | [`tests/test_nesting.py`](../../../../../proto8/impls/aos-llm-kernel/tests/test_nesting.py) | Verify nested-kernel error boundaries, ledger fields, and remount invariants with prepared mailboxes. |
 | [`tests/test_nesting_live.py`](../../../../../proto8/impls/aos-llm-kernel/tests/test_nesting_live.py) | Verify priority stdin, child accounting, and error replies through a real daemon and kernel. |
 | [`tests/test_stopped_slot.py`](../../../../../proto8/impls/aos-llm-kernel/tests/test_stopped_slot.py) | Check a brain call someone stopped on the daemon frees its slot after STOPPED_GIVE_UP_S (設計-56). |
-| [`tests/test_two_machines.py`](../../../../../proto8/impls/aos-llm-kernel/tests/test_two_machines.py) | Check in-flight brain calls never pin this machine's absolute endpoint path (two-machines): mount letters and remounts. |
+| [`tests/test_two_machines.py`](../../../../../proto8/impls/aos-llm-kernel/tests/test_two_machines.py) | Check two-machines kernel fixes: in-flight brain calls never pin an absolute endpoint path; budget.senders keys that are not folders warn, and sender… |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-llm-kernel/vcpkg.json) | aos-llm-kernel：LLM kernel 跑一次——從信箱挑最該跑的信、跑、回信（信箱、信的格式也給 aos-llm 用） |
