@@ -119,7 +119,13 @@ class TwoMachines(unittest.TestCase):
             row = b.running(n)
             self.assertNotEqual(row['pid'], orig[n], n)
             self.assertTrue(alive(orig[n]), n)
-            seen = read(b.stack / 'procs' / n / 'seen.json')
+            # seen.json 是 cp 時從原樹帶過來的舊檔；等副本自己的子項寫上它（機器忙時要一點時間）
+            end = time.monotonic() + 10
+            while True:
+                seen = read(b.stack / 'procs' / n / 'seen.json')
+                if str(seen.get('stack', '')).startswith(str(b.root)) or time.monotonic() > end:
+                    break
+                time.sleep(.05)
             self.assertTrue(seen['stack'].startswith(str(b.root)), seen)
             self.assertTrue(environ(row['pid'])['AOS_STACK'].startswith(str(b.root)))
         b.stop()
