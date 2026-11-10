@@ -1,4 +1,4 @@
-// wait.hpp：【wait】收回信——在回信信箱裡找回某封信的那封、印 body.message 或帶信名的完整 body、錯誤 body、收掉；ask 的等待與撤信。
+// wait.hpp：【wait】收回信（放 recv 子命令與 ask 的等待 ask_wait；沒有 wait 子命令，資料夾名只是「等回信」那一半）——在回信信箱裡找回某封信的那封、印 body.message 或帶信名的完整 body、錯誤 body、收掉；ask 的等待與撤信。
 //
 //   recv   回信信箱 BOX 的 new/ 裡找 letter.json 的 in_reply_to＝name 的回信（別人的不碰）：
 //            沒到＝回 10（BOX 不是資料夾＝MailboxMissing）；到了＝認領（new → cur）→ deliver

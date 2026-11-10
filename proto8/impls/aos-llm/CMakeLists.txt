@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-# aos-llm：`aos-llm send|recv|ask|regret`——寄請求信進 LLM kernel 的信箱（$AOS_LLM_KERNEL）、收回信的基礎工具（11-04 由 aos-llm-send 改名）。
+# aos-llm：`aos-llm send|recv|ask|regret|ls`——寄請求信進 LLM kernel 的信箱（$AOS_LLM_KERNEL）、收回信的基礎工具（11-04 由 aos-llm-send 改名）。
 # 兩個產物：lib/libaos-llm.a、bin/aos-llm。
 # CMake 的共通設定（vcpkg、Release、compile_commands、PIC、AOS_STATIC_PIE）在 ../cmake/settings.cmake。
 # 照 aos-fsm 的 CMakeLists.txt 改名。

@@ -62,7 +62,12 @@ Json& parent_of(Json& doc, const std::vector<std::string>& toks, bool parents, c
             n = &(*cur)[toks[i]];
         }
         if (n == nullptr) {
-            throw Error{code::PointerMissing, "no such pointer: " + spec + " (" + pointer_of({toks.begin(), toks.begin() + (long)i}) +
+            // 父指標是根（空字串）就印 the root，不留一個空位（坑-87）
+            std::string where = pointer_of({toks.begin(), toks.begin() + (long)i});
+            if (where.empty()) {
+                where = "the root";
+            }
+            throw Error{code::PointerMissing, "no such pointer: " + spec + " (" + where +
                                                   " has no " + toks[i] + "; add --parents to create objects along the way)"};
         }
         cur = n;

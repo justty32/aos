@@ -6,7 +6,7 @@
 //     aos-llm regret 信件名稱                                 撤回還在 new/ 的信；已被認領＝RegretFailed
 //     aos-llm ls [--json]                                     列 kernel 的包（讀 $AOS_LLM_KERNEL 的 stack 底下 endpoints.json）：一行一包；沒窗＝EndpointsMissing
 //
-//   block_signals → 子命令 → 命令列（旗標在位置參數前，P-44；aos-util 的 parse_cli）→ $AOS_LLM_KERNEL（send、ask、regret）→ 做事
+//   block_signals → 子命令 → 命令列（旗標在位置參數前，P-44；aos-util 的 parse_cli）→ $AOS_LLM_KERNEL（send、ask、regret、ls；send／ask 先驗 body 才看它，坑-100）→ 做事
 //   body＝{"endpoint"?: 代號, "request": {"messages": [...], ...}, "priority"?}（呼叫端自己組；--priority 有給就蓋 body.priority）。
 // 自己出錯、或回信是 error：stderr 一行「aos-llm: error: 代號 原因」、退 1（11-05 stdio-unify R1）。
 // 子命令前先 parse_cli（旗標表是空的；只認 --help）：不認得的旗標＝FlagUnknown，子命令不認得才 CommandUnknown（R4）；子命令後的 --help＝那個子命令的說明。
@@ -185,9 +185,10 @@ int main(int argc, char** argv) {
             if (!rt || rt->empty()) {
                 throw aos::usage_error(g::code::ArgumentsBad, "send needs --reply-to BOX", u);
             }
+            // 先驗 body／priority，驗過才看 kernel 在不在、印 warning（坑-100：壞 body 不該先印「letter sent anyway」）
+            aos::Json body = g::read_body(opt(cli, "priority"));
             g::Mailbox mb = g::kernel();
             g::warn_idle(mb);
-            aos::Json body = g::read_body(opt(cli, "priority"));
             std::string id = g::send(mb, body, *rt);
             std::printf("%s\n", id.c_str());
             std::fflush(stdout);
@@ -199,9 +200,9 @@ int main(int argc, char** argv) {
         }
         if (cmd == "ask") {
             aos::Cli cli = parse(args, {{"--priority", "priority"}}, 0, "ask takes no positional arguments", "ask", {{"--full", "full"}});
+            aos::Json body = g::read_body(opt(cli, "priority"));   // 同 send：先驗 body 再看 kernel（坑-100）
             g::Mailbox mb = g::kernel();
             g::warn_idle(mb);
-            aos::Json body = g::read_body(opt(cli, "priority"));
             std::string id = g::send_held(mb, body);
             return g::ask_wait(mb, id, cli.opts.count("full") > 0);
         }

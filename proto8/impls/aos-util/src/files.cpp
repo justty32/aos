@@ -3,7 +3,8 @@
 // 為什麼要「原子寫入」：ctl 窗、state 窗是兩個行程透過檔案講話。如果直接打開舊檔、清空、再寫，
 // 讀的人剛好在中間讀到，就會讀到半份（壞 JSON）或空的。改成「寫到旁邊的暫存檔 → rename 蓋過去」：
 // rename 在同一個檔案系統裡是原子的，讀的人只會看到「整份舊的」或「整份新的」，不會看到一半。
-// 暫存檔放在同一個資料夾（.名字.tmp），才保證在同一個檔案系統上（跨檔案系統的 rename 會失敗）。
+// 暫存檔放在同一個資料夾，才保證在同一個檔案系統上（跨檔案系統的 rename 會失敗）。
+// 暫存名：write_json 用 .名字.<pid>.tmp（帶 pid，多人同寫一個檔不互踩；改名前 fsync）；write_text 由呼叫的人給。
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
 
@@ -242,7 +243,7 @@ static bool write_all(int fd, const std::string& text) {
 std::optional<std::string> write_json(const std::string& path, const Json& doc) {
     std::string dir = dirname(path);
     std::string name = path.substr(path.rfind('/') + 1);
-    std::string tmp = join(dir, "." + name + ".tmp");
+    std::string tmp = join(dir, "." + name + "." + std::to_string(getpid()) + ".tmp");
 
     // 1. 所在的資料夾沒有就建
     if (!dir.empty()) {
@@ -252,7 +253,7 @@ std::optional<std::string> write_json(const std::string& path, const Json& doc) 
             return "cannot create directory " + dir + ": " + ec.message();
         }
     }
-    // 2. 寫暫存檔
+    // 2. 寫暫存檔（.名.<pid>.tmp，多人同寫不互踩），改名前 fsync（照 aos-json save_file；不 fsync 資料夾）
     std::string text = doc.dump(2, ' ', false, Json::error_handler_t::replace);
     int fd = open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);
     if (fd < 0) {
@@ -260,11 +261,15 @@ std::optional<std::string> write_json(const std::string& path, const Json& doc) 
     }
     bool ok = write_all(fd, text);
     int saved = errno;
+    if (ok && fsync(fd) != 0) {
+        ok = false;
+        saved = errno;
+    }
     if (close(fd) != 0 && ok) {
         ok = false;
         saved = errno;
     }
-    // 3. 改名蓋過去（原子）
+    // 3. 改名蓋過去（原子）；任何一步失敗都清掉暫存檔
     if (ok && rename(tmp.c_str(), path.c_str()) == 0) {
         return std::nullopt;
     }

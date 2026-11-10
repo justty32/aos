@@ -113,7 +113,10 @@ class Lifecycle(unittest.TestCase):
     def test_no_term_when_stop_window_unwritable(self):
         f = self.fixture('write_failed').start()
         f.add(f.body('script', 'stop'))
-        (f.cell / '.ctl.json').mkdir()  # Atomic window write fails even when run as root.
+        # ctl.json as a non-empty directory: renaming the temp file over it fails (EISDIR) even as root,
+        # whatever the temp file is called.
+        (f.cell / 'ctl.json').mkdir()
+        (f.cell / 'ctl.json' / 'keep').write_text('')
         f.ctl('stop', 'job')
         f.phase('stopping')
         row = f.phase('stopped')

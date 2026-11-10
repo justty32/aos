@@ -10,6 +10,7 @@ inst 的語意以 [NORMS inst](../../docs/NORMS/03-基礎設施-inst.md)（N-04�
 就像你請人幫忙跑腿：你填一張單子（`aos_inst_input_t`）寫清楚「做什麼（argv）、去哪（cwd）、帶什麼（envs、stdin）、
 東西放哪（stdout／stderr）、最晚幾點回來（timeout_ms）」，他回來時在回條（`aos_inst_result_t`）上寫「辦完了，結果是幾號；
 或是超時了，被叫回來」。盡量少做事：路徑一律絕對路徑、找程式交給 glibc 的 `execvp`、不幫忙建資料夾、不 malloc。
+**父死子跟著死**（Linux PDEATHSIG）：起它的那條執行緒結束（呼叫者被 `kill -9`…），子程式就收到 SIGKILL；所以要在活得比子程式久的執行緒上起，見 [行為細節](docs/02-行為細節等.md#行為細節)。
 
 ```c
 aos_inst_input_t in = {

@@ -1,6 +1,6 @@
 /* inst_proc.c：起子程式、等它、收它。
- *   inst_start           fork＋exec；exec 失敗的 errno 經一條 CLOEXEC pipe
- * 傳回來 inst_open_pidfd      拿代表子程式的 pidfd（拿不到回 -1）
+ *   inst_start           fork＋exec；chdir／exec 失敗的「哪一步＋errno」經一條 CLOEXEC pipe 傳回來
+ *   inst_open_pidfd      拿代表子程式的 pidfd（拿不到回 -1）
  *   inst_wait_child      等到結束；時間到就 SIGTERM，過 grace_ms 再 SIGKILL
  *   inst_now_ms          單調時鐘的毫秒數
  *   inst_deadline_after  現在＋幾毫秒的期限
@@ -13,9 +13,14 @@
  *   編譯時加 -DAOS_INST_NO_PIDFD 會強制走退路（給測試用）。
  *
  * fork 之後，子程式那一側只呼叫 async-signal-safe 的函數
- * （setsid、dup2、chdir、sigaction、execvp、write、_exit…），
+ * （setsid、prctl、getppid、dup2、chdir、sigaction、execvp、write、_exit…），
  * 不配記憶體：要用的字串都在 fork 前備好。
  * 這樣呼叫者是多執行緒程式也不會卡死。
+ *
+ * 父死子跟著死（Linux，坑-52）：子程式那側 prctl(PR_SET_PDEATHSIG, SIGKILL)，
+ * 呼叫 aos_inst_start 的那條執行緒（＝fork 的那條）一結束，子程式就收到 SIGKILL。
+ * 所以呼叫者要在不會先結束的執行緒上起子程式（aos-exec 的 run_inst 在呼叫者的執行緒起、工人執行緒只等）。
+ * 只打子程式本身，它自己再 fork 的子孫不管（PDEATHSIG 不繼承給 fork 出來的）。
  */
 #define _GNU_SOURCE /* pipe2、close_range、syscall */
 
@@ -27,6 +32,9 @@
 #include <poll.h>
 #include <signal.h>
 #include <string.h>
+#ifdef __linux__
+#include <sys/prctl.h>
+#endif
 #include <sys/syscall.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -74,7 +82,18 @@ static void cloexec_from_3(void) {
   }
 }
 
-/* 子程式那一側：（new_session 就 setsid）、接好串流、恢復訊號、chdir、exec。
+/* 子程式回報給父程式的「失敗在哪一步」（pipe 裡寫兩個 int：step、errno） */
+enum { STEP_CHDIR = 1, STEP_EXEC = 2 };
+
+/* 寫 step、errno 回報，結束子程式。 */
+_Noreturn static void report_and_exit(int report, int step, int error) {
+  int msg[2] = {step, error};
+  ssize_t ignored = write(report, msg, sizeof msg); /* 8 bytes < PIPE_BUF，一次寫完 */
+  (void)ignored;
+  _exit(127);
+}
+
+/* 子程式那一側：（new_session 就 setsid）、父死子跟著死、接好串流、恢復訊號、chdir、exec。
  * in／out／err＝-1 的那個 fd 不動（inherits：直接用呼叫者的 0／1／2）。
  * envp 不是 NULL 就先 environ = envp，再 execvp：
  *   execvp 用 getenv("PATH") 找程式，並把 environ 交給新程式，
@@ -82,15 +101,31 @@ static void cloexec_from_3(void) {
  *   改 environ 只發生在 fork 出來的子行程，不影響呼叫者。
  * envp 是 NULL＝不動 environ，沿用呼叫者的。
  * glibc 的 execvp 不 malloc（找的路徑放在堆疊上），fork 之後可以用。
- * 失敗就把 errno 寫進 report 然後結束。
+ * 失敗就把「哪一步＋errno」寫進 report 然後結束。
+ * parent＝fork 前父程式記下的自己的 pid（getppid 比對用）。
  * 這裡只用 async-signal-safe 的呼叫。 */
 static void child_side(int in, int out, int err, int report, const char *cwd,
-                       char *const *argv, char *const *envp, bool new_session) {
+                       char *const *argv, char *const *envp, bool new_session,
+                       pid_t parent) {
   /* 自成一個 session／行程群組（群組號＝自己的 pid），收掉時才能整群送。
    * 剛 fork 出來的子行程不是群組組長，setsid 不會失敗，所以不檢查 */
   if (new_session) {
     setsid();
   }
+
+#ifdef __linux__
+  /* 父死子跟著死：起它的那條執行緒結束（監工被 kill -9、OOM）就收 SIGKILL，
+   * 不留孤兒（坑-52）。exec 之後照樣有效（setuid 程式除外）。
+   * prctl 給合法訊號不會失敗，不檢查。
+   * 設之前父程式可能已經死了（訊號不會補發）：getppid 跟 fork 前記下的不同＝已被別人收養，
+   * 直接 _exit(127)，不回報（沒人在讀）。 */
+  prctl(PR_SET_PDEATHSIG, SIGKILL);
+  if (getppid() != parent) {
+    _exit(127);
+  }
+#else
+  (void)parent;
+#endif
 
   /* 訊號處置恢復預設、遮罩清空：
    * 呼叫者怎麼設是呼叫者的事，不傳給子程式 */
@@ -119,13 +154,11 @@ static void child_side(int in, int out, int err, int report, const char *cwd,
     dup2(err, 2);
   }
 
-  int error = 0;
+  /* chdir 失敗另報一步（坑-81）：cwd 在 aos_inst_start 檢查後才被刪／改權限，
+   * 報 CwdMissing，不跟 exec 失敗混成 CommandMissing */
   if (cwd != NULL) {
     if (chdir(cwd) != 0) {
-      error = errno;
-      ssize_t ignored = write(report, &error, sizeof error);
-      (void)ignored;
-      _exit(127);
+      report_and_exit(report, STEP_CHDIR, errno);
     }
   }
 
@@ -137,14 +170,16 @@ static void child_side(int in, int out, int err, int report, const char *cwd,
     environ = (char **)envp; /* 只是指標賦值；exec 不會改內容 */
   }
   execvp(argv[0], argv);
-  error = errno; /* 走到這裡＝exec 失敗 */
-  ssize_t ignored = write(report, &error, sizeof error);
-  (void)ignored;
-  _exit(127);
+  report_and_exit(report, STEP_EXEC, errno); /* 走到這裡＝exec 失敗 */
 }
 
-/* exec 失敗的 errno → 錯誤代號。 */
-static int launch_error(int error) {
+/* 子程式回報的那一步＋errno → 錯誤代號。
+ * chdir 那步一律 CwdMissing（不新增代號；不存在、不是資料夾、沒權限都算 cwd 進不去）；
+ * exec 那步照 errno 分。 */
+static int launch_error(int step, int error) {
+  if (step == STEP_CHDIR) {
+    return AOS_INST_ERR_CWD_MISSING;
+  }
   if (error == ENOENT || error == ENOTDIR) {
     return AOS_INST_ERR_COMMAND_MISSING;
   }
@@ -157,7 +192,7 @@ static int launch_error(int error) {
 /* fork＋exec。成功把 pid 放進 *pid、回 AOS_INST_OK。 */
 int inst_start(int in, int out, int err, const char *cwd, char *const *argv,
                char *const *envp, bool new_session, pid_t *pid) {
-  /* 子程式 exec 失敗就把 errno 寫進這條 pipe；
+  /* 子程式 chdir／exec 失敗就把 step、errno 寫進這條 pipe；
    * exec 成功它自動關掉（CLOEXEC），父程式讀到 0 bytes */
   int report[2];
   if (pipe2(report, O_CLOEXEC) != 0) {
@@ -175,9 +210,10 @@ int inst_start(int in, int out, int err, const char *cwd, char *const *argv,
     return AOS_INST_ERR_LAUNCH_FAILED;
   }
 
+  pid_t parent = getpid(); /* fork 前取：子程式拿來比 getppid，看父是不是已經死了 */
   pid_t p = fork();
   if (p == 0) {
-    child_side(in, out, err, wr, cwd, argv, envp, new_session); /* 不會回來 */
+    child_side(in, out, err, wr, cwd, argv, envp, new_session, parent); /* 不會回來 */
   }
   close(wr);
   if (p < 0) {
@@ -185,17 +221,17 @@ int inst_start(int in, int out, int err, const char *cwd, char *const *argv,
     return AOS_INST_ERR_LAUNCH_FAILED;
   }
 
-  /* 讀子程式回報的 errno；被訊號打斷就再讀 */
-  int error = 0;
+  /* 讀子程式回報的 step、errno；被訊號打斷就再讀 */
+  int msg[2] = {0, 0};
   ssize_t n = -1;
   while (n < 0) {
-    n = read(rd, &error, sizeof error);
+    n = read(rd, msg, sizeof msg);
     if (n < 0 && errno != EINTR) {
       break;
     }
   }
   close(rd);
-  if (n != (ssize_t)sizeof error) {
+  if (n != (ssize_t)sizeof msg) {
     *pid = p; /* 讀到 0 bytes＝exec 成功 */
     return AOS_INST_OK;
   }
@@ -206,7 +242,7 @@ int inst_start(int in, int out, int err, const char *cwd, char *const *argv,
       break;
     }
   }
-  return launch_error(error);
+  return launch_error(msg[0], msg[1]);
 }
 
 /* ---- 等與收 ---- */

@@ -54,7 +54,7 @@ std::optional<Json> read_window(const std::string& prog, const std::string& path
 // 壞檔改名（copy=false）或複製留證，禁止覆蓋、撞名加尾碼；回 basename，失敗丟 WriteFailed。
 std::string keep_bad(const std::string& path, bool copy);
 
-// 原子寫入：先寫同資料夾的 `.名字.tmp`、再改名蓋過去；所在的資料夾沒有就建。
+// 原子寫入：先寫同資料夾的 `.名字.<pid>.tmp`、fsync、再改名蓋過去；所在的資料夾沒有就建。
 // 成功回 nullopt；失敗回原因（白話），暫存檔清掉。排版同 Python json.dump(indent=2)。
 std::optional<std::string> write_json(const std::string& path, const Json& doc);
 

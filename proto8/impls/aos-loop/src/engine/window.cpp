@@ -11,8 +11,8 @@
 //   write_state   state（穩定欄有變才寫）→ write_more（子類別穩定窗）→ write_flux
 //   write_flux    responded_at、ctl_seq、ctl_warning ＋ flux_more；第一份必寫、之後整份比，沒有 updated_at
 //   log_line      stdout 一行 JSON（11-02；11-02 晚起 --enable-logs 才印）：一次 write；寫的那一下擋 SIGPIPE、排著的吃掉、還原遮罩；印不了＝之後不印、不退出
-//   write_window  透過 aos-util write_text 先寫同資料夾的 .名字 再改名（N-05）
-//   write_counter 開了 --enable-counters 與 state 窗，每輪把次數寫到窗同資料夾的 counter_runs.txt，先寫 .counter_runs.txt 再改名
+//   write_window  透過 aos-util write_text 先寫同資料夾的 .名字.<pid>.tmp 再改名（N-05；暫存帶 pid，多人同寫一扇窗〔例 ctl.json〕不互踩）
+//   write_counter 開了 --enable-counters 與 state 窗，每輪把次數寫到窗同資料夾的 counter_runs.txt，先寫 .counter_runs.txt.<pid>.tmp 再改名
 //   proc_fields   pid、started_at_ticks、boot_id（11-02 原 heartbeat，時間欄拿掉）
 #include "engine/engine.hpp"
 
@@ -34,7 +34,7 @@ namespace aos::loop {
 void write_window(const std::string& path, const Json& doc) {
     std::string dir = aos::dirname(path);
     std::string name = path.substr(path.rfind('/') + 1);
-    std::string tmp = aos::join(dir, "." + name);
+    std::string tmp = aos::join(dir, "." + name + "." + std::to_string(getpid()) + ".tmp");
     std::string text = aos::dumps(doc) + "\n";
     std::optional<aos::TextWriteError> error = aos::write_text(path, text, tmp);
     if (error) {
@@ -318,7 +318,7 @@ void Loop::write_counter() {
     }
     std::string dir = aos::dirname(state_path_);
     std::string dst = aos::join(dir, "counter_runs.txt");
-    std::string tmp = aos::join(dir, ".counter_runs.txt");
+    std::string tmp = aos::join(dir, ".counter_runs.txt." + std::to_string(getpid()) + ".tmp");
     std::optional<aos::TextWriteError> error = aos::write_text(dst, std::to_string(runs_) + "\n", tmp);
     if (error) {
         std::string failed_path = dst;

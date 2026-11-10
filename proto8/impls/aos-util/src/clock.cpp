@@ -25,7 +25,7 @@ void warn_missing_clock(const std::string& path) {
     static std::set<std::pair<pid_t, std::string>> warned;
     if (warned.emplace(::getpid(), path).second) {
         // aos-util 只支援 Linux；用 glibc 的程式名，不把名稱參數加進整條期限 API。
-        warn(::program_invocation_short_name, "AOS_CLOCK points to a missing file; treating the clock as 0");
+        warn(::program_invocation_short_name, "AOS_CLOCK points to a missing file; treating the clock as 0 (normal right after start, before the first tick)");
     }
 }
 
