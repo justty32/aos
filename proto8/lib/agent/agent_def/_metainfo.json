@@ -1,0 +1,14 @@
+{
+  "summary": "Copy a template folder into a new agent definition (rebasing relative tool paths), or check one definition (wraps lib/aos/defs check)",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": true,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 300
+  },
+  "timeout_ms": 60000
+}

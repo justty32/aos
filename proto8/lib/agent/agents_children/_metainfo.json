@@ -1,0 +1,16 @@
+{
+  "summary": "Start, talk to, stop and adjust my own child agents (wraps aos-agent ctl / say / listen and the self_* tools; keeps a record and a quota)",
+  "resource": [
+    "cpu",
+    "llm"
+  ],
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "unsafe",
+  "parallel": false,
+  "arbitrary_exec": true,
+  "cost": {
+    "time_ms": 5000
+  }
+}

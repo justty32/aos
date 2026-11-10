@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+# agents_ctl - aos-agent ctl 的完整純包裝：對 daemon 表上任何一隻 add／rm／ls／state／where／who／start／stop／sleep／wake／pause／resume；不記帳、不算配額
+# 使用者 11-10 晚（thinking 2026-11/10/agents-split）：1b「普通的aos-agent ctl add(能不能成要看自身權限)，起來後不管」；之後補「有權限就能做」＝ctl 每個動作都給、
+#   不設人為限制。**對應關係**：aos-agent ctl 加了動作或旗標，這支要跟著加（參數一對一，不多給、不多擋；沒給的鍵＝下層的預設）。
+# 介面（lib/README 的契約）：stdin 收 {"op": …, …}；別的鍵＝ArgumentsBad：
+#   add {def | def_json, name?, ws | ws_json, stack | stack_json, limits?, envs?, auto_restart?, timeout_s?, on_queued?}
+#        ＝ctl add [--name] [--ws | --ws-json] [--stack | --stack-json] [--path-json] [--limits JSON] [--envs K=V]… [--auto-restart] [--timeout-s] [--on-queued] [DEF]
+#        （*_json 收物件或字串，轉成 JSON 原樣交下去；ws 給了又不在＝先建，相對從 $AOS_WS 算）
+#   rm {name, purge?, timeout_s?}  ＝ctl rm [--purge -y] [--timeout-s] NAME（預設留 stack）
+#   ls {long?}                     ＝ctl ls --json（long: true＝ctl ls -l 的文字）
+#   state／pause／resume {name}     ＝ctl state／pause／resume --target NAME
+#   stop／sleep {name, timeout_s?}  start／wake {name, timeout_s?, on_queued?}  ＝ctl 同名動作 --target NAME
+#   where {name, what?}            ＝ctl where --target NAME [--stack | --ws]（what: "stack"｜"ws"；沒給＝下層預設 stack）
+#   who {stack?}                   ＝ctl who --json [--stack S]
+#   aos-agent 在 $AOS_WS 跑（相對路徑從工作區算、daemon 照環境的 $AOS_DAEMON）。結果＝下層 stdout 原樣。
+#   錯：stderr 與 stdout 各一行「agents_ctl: error: 代號 原因」、退 1；下層 stderr 原樣透出；它退非 0＝它最後一行錯誤行的代號與原因接成自己的（C-52 例外 ⑤）。
+# 跟 agents_children 的分界：這支什麼都不記，之後要對那隻說話、調它的工具／腦／對話，得用 agents_children 生它。旗標組裝與跑子行程在 ../agents_cmd.py。
+import os, sys
+HELP = """\
+usage: agents_ctl < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Manage any agent on the daemon table: aos-agent ctl add | rm | ls | state | where | who |
+start | stop | sleep | wake | pause | resume, keys one-to-one with its flags. No record, no quota.
+Result on stdout. On error: one line "agents_ctl: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、旁邊的 lib/agent（agents_cmd）、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE, os.path.dirname(HERE)] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+    import agents_cmd as cmd  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name not in ("tool_io", "agents_cmd"):
+        raise
+    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), error.name)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = os.path.basename(HERE)
+tool_io.start(NAME, HELP)
+cmd.install_signals()
+OPS = dict({"add": cmd.ADD_KEYS, "ls": ("long",), "where": ("name", "what"), "who": ("stack",)}, **cmd.LIFE_OPS)
+args = tool_io.arguments()
+op = cmd.check_op(args, OPS)
+
+if op == "add":
+    argv = cmd.add_argv(args)
+    cmd.make_ws(args)
+    cmd.emit(cmd.agent(argv, timeout_s=cmd.guard(args)))
+elif op == "ls":
+    cmd.emit(cmd.agent(["ctl", "ls", "-l" if cmd.flag(args, "long") else "--json"]))
+elif op == "where":
+    what = args.get("what")
+    if what not in (None, "stack", "ws"):
+        cmd.die("ArgumentsBad", "what must be stack or ws")
+    cmd.emit(cmd.agent(["ctl", "where", "--target", cmd.text(args, "name", True)] + (["--" + what] if what else [])))
+elif op == "who":
+    stack = cmd.text(args, "stack")
+    cmd.emit(cmd.agent(["ctl", "who", "--json"] + (["--stack", stack] if stack else [])))
+else:
+    cmd.emit(cmd.agent(cmd.life_argv(op, args), timeout_s=cmd.life_guard(op, args)))

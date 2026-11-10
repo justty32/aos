@@ -1,0 +1,229 @@
+#!/usr/bin/env python3
+# agents_children - 我生的子 agent：生、殺、停起、說話、出生後調它的工具／腦／對話／hook；工具自己記帳（children.json）、算配額，只碰自己生的
+# 使用者 11-10 晚（thinking 2026-11/10/agents-split）：「具備生殺大權的才能在出生後調整子agent的東西」；大權＝工具自己記帳（用這支生的記帳、歸我管、算配額）；
+#   say／listen「如果要讓agent使用的話，我會希望只讓他能夠對子agent做」；11-05「工具自己有紀錄，會看到說超過四個，直接回error」。
+# 介面（lib/README 的契約）：stdin 收 {"op": …, …}；別的鍵＝ArgumentsBad。
+#   add {def | def_json, name, ws | ws_json, stack | stack_json, limits?, envs?, auto_restart?, timeout_s?, on_queued?}
+#        先對帳、數配額（滿＝ChildSlotMissing、不寄信）→ ctl add（旗標一對一，同 agents_ctl；../agents_cmd.py）→ 記帳；印 added … ; children N/MAX
+#   rm {name, purge?, timeout_s?}  先抄公開子帳 → ctl rm [--purge -y]（預設留 stack）→ 從帳上拿掉
+#   stop／sleep {name, timeout_s?}；start／wake {name, timeout_s?, on_queued?}；pause／resume／state {name}＝ctl 同名動作 --target
+#   ls {}  ＝{"children": [表上我生的那幾列；排隊中的＝{name, queued_letter}], "max_children": N}
+#   say {name, text}＝say --target（話走 stdin）；listen {name, timeout_s | timeout_cycles | last}＝listen --target（都沒給＝等 600 秒）；ask {name, text, timeout_s | timeout_cycles}＝say 接 listen
+#   tools／llm／history／hook {name, args}：跑旁邊 self_tools／self_llm／self_history／self_hook 的 _entry，stdin＝args、AOS_STACK＝<子的 stack>/tools/<那支>/
+#        （那支靠 ctl who 認自己＝變成改子的）；stdout 原樣（「your」改成子的名字）；它的錯誤代號與原因接成自己的；旁邊沒那支＝ToolMissing；子還在排隊＝ChildQueued。
+#   每個帶 name 的動作先對帳：不是我生的＝ChildUnknown；記過但不在表上＝ChildMissing（之後就忘掉）。ask／listen／rm 抄公開子帳（observed_children.copy_child）。
+# 記帳：$AOS_STACK/children.json＝[{name, stack（相對 $AOS_DAEMON 的真實路徑）} | {name, queued_letter}]；對帳＝名字與 stack 都對得上 ctl ls --json 那列才算還在。
+# 配額：max_children 從 children.json 讀——我的定義那份疊我的 stack 那份（ctl who --json 的 def 與 stack；只放改過的鍵）；都沒有＝4。
+# 錯：stderr 與 stdout 各一行「agents_children: error: 代號 原因」、退 1；下層 stderr 原樣透出；下層最後一行錯誤行接成自己的（C-52 例外 ⑤）。
+import json, os, re, sys
+HELP = """\
+usage: agents_children < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Your own child agents: add | rm | ls | state | stop | start | sleep | wake | pause | resume |
+say | listen | ask, and tools | llm | history | hook (the self_* tool's arguments, aimed at the child).
+Only agents started with this tool; counted against max_children (children.json; default 4).
+Result on stdout. On error: one line "agents_children: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、旁邊的 lib/agent（agents_cmd）、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE, os.path.dirname(HERE)] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+    import agents_cmd as cmd  # noqa: E402
+    from observed_children import copy_child  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name not in ("tool_io", "agents_cmd", "observed_children"):
+        raise
+    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), error.name)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = os.path.basename(HERE)
+tool_io.start(NAME, HELP)
+cmd.install_signals()
+die = tool_io.die
+MAX_CHILDREN_DEFAULT = 4
+CFG = "children.json"          # 配額設定檔（定義與 stack 裡），跟記帳檔同名、不同處
+FORWARD = {"tools": "self_tools", "llm": "self_llm", "history": "self_history", "hook": "self_hook"}
+OPS = dict({"add": cmd.ADD_KEYS, "ls": (), "say": ("name", "text"), "listen": ("name", "timeout_s", "timeout_cycles", "last"),
+            "ask": ("name", "text", "timeout_s", "timeout_cycles")},
+           **cmd.LIFE_OPS, **{op: ("name", "args") for op in FORWARD})
+
+
+def load_json(path, missing):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return missing
+    except (OSError, ValueError) as e:
+        die("ReadFailed", "cannot read %s: %s" % (path, e))
+
+
+def write_children(kids):
+    tmp = os.path.join(stack, ".%s.%d" % (CFG, os.getpid()))
+    try:
+        os.makedirs(stack, exist_ok=True)
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(kids, ensure_ascii=False) + "\n")
+        os.replace(tmp, children_path)
+    except OSError as e:
+        die("WriteFailed", "cannot write %s: %s" % (children_path, e))
+
+
+def stack_rel(p):
+    """表上的（絕對）stack → 存進帳的：相對 $AOS_DAEMON 的真實路徑（daemon 拼表也從那裡）。"""
+    return os.path.relpath(os.path.normpath(p), daemon_base)
+
+
+def stack_abs(rel):
+    return os.path.normpath(os.path.join(daemon_base, rel))
+
+
+def reconcile():
+    """對帳：名字與 stack 都對得上表上那列的才算還在；不在的忘掉（寫回）。回 (還在的, 忘掉的名字, 表)。"""
+    kids = load_json(children_path, [])
+    if not isinstance(kids, list) or not all(isinstance(k, dict) and isinstance(k.get("name"), str) for k in kids):
+        die("ReadFailed", "%s is not a JSON array of {name, stack}" % children_path)
+    rows = json.loads(cmd.agent(["ctl", "ls", "--json"]) or "[]")
+    rows = [r for r in rows if isinstance(r, dict) and isinstance(r.get("stack"), str)] if isinstance(rows, list) else []
+    on_table = {(r.get("name"), os.path.normpath(r["stack"])) for r in rows}
+    by_name = {r.get("name"): r for r in rows}
+    alive = []
+    for kid in kids:
+        if kid.get("queued_letter") and not isinstance(kid.get("stack"), str):
+            row = by_name.get(kid["name"])            # 排隊中：還沒上表就照記；上表後改記表上的 stack
+            alive.append({"name": kid["name"], "stack": stack_rel(row["stack"])} if row else kid)
+        elif isinstance(kid.get("stack"), str) and (kid["name"], stack_abs(kid["stack"])) in on_table:
+            alive.append(kid)
+    gone = [k["name"] for k in kids if k["name"] not in {a["name"] for a in alive}]
+    if alive != kids:
+        write_children(alive)
+    return alive, gone, rows
+
+
+def max_children():
+    me = json.loads(cmd.agent(["ctl", "who", "--json"]))
+    cfg = {}
+    for d in (me.get("def"), me.get("stack")):
+        if d:
+            v = load_json(os.path.join(d, CFG), {})
+            if not isinstance(v, dict):
+                die("CfgBad", "%s is not a JSON object" % os.path.join(d, CFG))
+            cfg.update(v)
+    n = cfg.get("max_children", MAX_CHILDREN_DEFAULT)
+    if isinstance(n, bool) or not isinstance(n, int) or n < 0:
+        die("CfgBad", "max_children in %s must be a non-negative integer, not %s" % (CFG, json.dumps(n)))
+    return n
+
+
+def my_child(name):
+    """name 是我生的、還在表上（或還在排隊）＝回帳上那筆；不然 ChildUnknown／ChildMissing。"""
+    alive, gone, _ = reconcile()
+    if name in gone:
+        die("ChildMissing", "%s is no longer on the daemon table (removed elsewhere); forgotten" % name)
+    for kid in alive:
+        if kid["name"] == name:
+            return kid
+    die("ChildUnknown", "%s was not started by you with %s (op ls lists yours)" % (name, NAME))
+
+
+def preserve_child(name):
+    for record in load_json(children_path, []):
+        if isinstance(record, dict) and record.get("name") == name and isinstance(record.get("stack"), str):
+            copy_child(stack, name, stack_abs(record["stack"]))
+            break
+
+
+args = tool_io.arguments()
+op = cmd.check_op(args, OPS)
+# ---- 先把參數查完（不碰 daemon、不寄信）----
+if op == "add":
+    argv = cmd.add_argv(args)
+    name = cmd.text(args, "name") or ("" if "def_json" in args else os.path.basename(os.path.normpath(args["def"])))
+    if not name:
+        die("ArgumentsBad", "add with def_json needs name")
+elif op != "ls":
+    name = cmd.text(args, "name", True)
+if op in cmd.LIFE_OPS:
+    argv = cmd.life_argv(op, args)
+elif op in ("say", "listen", "ask"):
+    waits = [k for k in ("timeout_s", "timeout_cycles", "last") if k in args]
+    if len(waits) > 1:
+        die("ArgumentsBad", "give only one of %s (got %s)" % (", ".join(k for k in OPS[op] if k not in ("name", "text")), " and ".join(waits)))
+    cyc, sec, last = cmd.cycles(args), cmd.seconds(args), args.get("last")
+    if last is not None and (isinstance(last, bool) or not isinstance(last, int) or last < 0):
+        die("ArgumentsBad", "last must be a whole number (0 or more)")
+    words = cmd.text(args, "text", True) if op != "listen" else None
+elif op in FORWARD:
+    sub = FORWARD[op]
+    entry = os.path.join(os.path.dirname(HERE), sub, "_entry")
+    if not os.path.isfile(entry):
+        die("ToolMissing", "op %s needs the tool %s next to this one (%s), and it is not there" % (op, sub, entry))
+    if not isinstance(args.get("args"), dict):
+        die("ArgumentsBad", "args must be an object: what %s takes, like {\"op\": \"ls\"}" % sub)
+daemon = os.environ.get("AOS_DAEMON")
+if not daemon:
+    die("DaemonMissing", "AOS_DAEMON is not set (this tool manages children on the daemon that runs you)")
+stack = os.environ.get("AOS_STACK")
+if not stack:
+    die("StackMissing", "AOS_STACK is not set")
+children_path = os.path.join(stack, "children.json")
+daemon_base = os.path.realpath(daemon)
+
+if op == "add":
+    alive, gone, _ = reconcile()
+    n = max_children()
+    if len(alive) >= n:
+        die("ChildSlotMissing", "you already have %d of max %d children (%s); remove one with op rm first "
+            "(max_children is set in %s of your definition or your stack)" % (len(alive), n, ", ".join(k["name"] for k in alive) or "-", CFG))
+    cmd.make_ws(args)
+    result = cmd.parse_added(cmd.agent(argv, timeout_s=cmd.guard(args)))
+    record = {"name": name, "queued_letter": result["queued_letter"]} if "queued_letter" in result else {"name": name, "stack": stack_rel(result["stack"])}
+    write_children([k for k in alive if k["name"] != name] + [record])
+    print("%s; children %d/%d" % (result.get("message") or "added %s (stack %s)" % (name, result["stack"]), len(alive) + 1, n))
+    sys.exit(0)
+
+if op == "ls":
+    alive, _, rows = reconcile()
+    on = {k["name"]: stack_abs(k["stack"]) for k in alive if "stack" in k}
+    listed = [r for r in rows if on.get(r.get("name")) == os.path.normpath(r["stack"])]
+    queued = [{"name": k["name"], "queued_letter": k["queued_letter"]} for k in alive if "stack" not in k]
+    print(json.dumps({"children": listed + queued, "max_children": max_children()}, ensure_ascii=False))
+    sys.exit(0)
+
+kid = my_child(name)
+if op in cmd.LIFE_OPS:
+    if op == "rm":
+        preserve_child(name)
+    out = cmd.agent(argv, timeout_s=cmd.life_guard(op, args))
+    if op == "rm":
+        write_children([k for k in load_json(children_path, []) if k.get("name") != name])
+elif op in ("say", "listen", "ask"):
+    if op != "listen":
+        out = cmd.agent(["say", "--target", name], text=words)
+    if op != "say":
+        try:
+            if cyc is not None:
+                out = cmd.agent(["listen", "--target", name, "--timeout-cycles", str(cyc)], timeout_cycles=cyc + 30)
+            elif last is not None:
+                out = cmd.agent(["listen", "--target", name, "--last", str(last)])
+            else:
+                sec = sec or cmd.LISTEN_DEFAULT_S
+                out = cmd.agent(["listen", "--target", name, "--timeout-s", "%g" % sec], timeout_s=sec + 30)
+        finally:
+            preserve_child(name)
+else:                                           # tools／llm／history／hook：用子的身分跑旁邊的 self_*
+    if not isinstance(kid.get("stack"), str):
+        die("ChildQueued", "%s is still queued (letter %s) and has no stack yet; try again when op ls shows it on the table" % (name, kid.get("queued_letter")))
+    env = dict(os.environ, AOS_STACK=os.path.join(stack_abs(kid["stack"]), "tools", sub))
+    out = cmd.must([entry], text=json.dumps(args["args"], ensure_ascii=False), timeout_s=150, env=env,
+                   err_re=re.compile(re.escape(sub) + r": error: ([A-Z][A-Za-z]+) (.*)\Z"))
+    out = out.replace("your next", "%s's next" % name).replace("your body", "%s's body" % name)
+cmd.emit(out)

@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+# self_hook - aos-agent hook 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份 hooks 清單，定義不動
+# 使用者 11-10 晚：「還有self_hook，用於在有東西進到queue，或是一些事件發生……時，執行指定aos函數」；圖紙 thinking/2026-11/10/self-family/hook/01-圖紙.md § 5。
+# **對應關係**：aos-agent hook 加了動作或旗標，這支要跟著加（參數一對一，不多給、不多擋）。
+# 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"get"|"add"|"rm"|"reset", …}；別的鍵＝ArgumentsBad：
+#   ls {long?}                   ＝hook ls --json（long: true＝ls -l 的文字，含被設成 null 的格）
+#   get {name}                   ＝hook get NAME
+#   add {on, path | path_json, name?, match?（字串或字串陣列）, change?, wait?（false＝--no-wait）, on_fail?, timeout_ms?, replace?}
+#                                ＝hook add --on E [--name] [--match M]… [--change] [--no-wait] [--on-fail] [--timeout-ms] [--replace] (XXX | --path-json)
+#   rm {name}                    ＝hook rm NAME
+#   reset {}                     ＝hook reset -y（腦叫了就算確認過）
+#   先 aos-agent ctl who（$AOS_STACK＝<agent stack>/tools/self_hook/ 查 daemon 表）認出是哪隻；aos-agent 在 $AOS_WS 跑（相對 path 從工作區算）。
+#   結果：下層 stdout 原樣（add／rm／reset 多一句「下一個事件起生效」）。錯：同 self_tools（stderr 與 stdout 各一行「self_hook: error: 代號 原因」、退 1；
+#   下層 stderr 原樣透出，它退非 0＝把最後一行錯誤行的代號與原因接上，沒那行＝CommandFailed）。op 沒給＝ArgumentsBad、不認得＝OpUnknown。
+#   --help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉 aos-agent，退 130）。
+# 需要 PATH 上有 aos-agent（proto8/install.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
+import json, os, re, signal, subprocess, sys
+HELP = """\
+usage: self_hook < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Change the hooks of the agent that calls me (its own list, not its definition):
+op ls | get | add | rm | reset (aos-agent hook with the target = me). Changes apply from the next event.
+Result on stdout. On error: one line "self_hook: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "self_hook"
+tool_io.start(NAME, HELP)
+TIMEOUT_S = 60
+ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
+child = None
+
+
+die = tool_io.die
+
+
+def on_term(signum, frame):
+    if child is not None and child.poll() is None:
+        try:
+            os.killpg(child.pid, signal.SIGTERM)
+        except OSError:
+            pass
+    sys.exit(128 + signum)
+
+
+workspace = tool_io.workspace
+arguments = tool_io.arguments
+
+
+def agent(*args):
+    """aos-agent args…：stderr 原樣往上；退非 0＝它最後一行錯誤行的代號與原因當自己的錯（沒有＝CommandFailed）。回 stdout。"""
+    global child
+    try:
+        child = subprocess.Popen(["aos-agent"] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, text=True, start_new_session=True, cwd=workspace())
+    except OSError as e:
+        die("LaunchFailed", "cannot run aos-agent (put it on PATH with proto8/install.sh): %s" % e)
+    try:
+        out, err = child.communicate(timeout=TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        os.killpg(child.pid, signal.SIGKILL)
+        child.communicate()
+        die("CommandFailed", "aos-agent %s took over %d s and was killed" % (" ".join(args[:2]), TIMEOUT_S))
+    if err:                                     # 下層的 stderr 原樣透出（R10）
+        sys.stderr.write(err if err.endswith("\n") else err + "\n")
+        sys.stderr.flush()
+    if child.returncode != 0:                   # 給腦用的工具把下層錯翻成自己的錯（同 agents）
+        mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
+        if mine:
+            die(mine[-1].group(1), mine[-1].group(2))
+        die("CommandFailed", "aos-agent %s exited %d" % (" ".join(args[:2]), child.returncode))
+    return out
+
+
+signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
+args = arguments()
+OPS = {"ls": ("long",), "get": ("name",),
+       "add": ("on", "path", "path_json", "name", "match", "change", "wait", "on_fail", "timeout_ms", "replace"),
+       "rm": ("name",), "reset": ()}
+op = args.get("op")
+if op is None:
+    die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
+if op not in OPS:
+    die("OpUnknown", "op must be one of %s (got %r)" % (", ".join(OPS), op))
+extra = sorted(k for k in args if k != "op" and k not in OPS[op])
+if extra:
+    die("ArgumentsBad", "op %s does not take %s (it takes %s)" % (op, ", ".join(extra), ", ".join(OPS[op]) or "nothing else"))
+
+
+def text(key, need=False):
+    v = args.get(key)
+    if v is None and not need:
+        return None
+    if not isinstance(v, str) or not v:
+        die("ArgumentsBad", "%s %s a non-empty string" % (key, "needs" if v is None else "must be"))
+    return v
+
+
+def flag(key, default=False):
+    v = args.get(key, default)
+    if not isinstance(v, bool):
+        die("ArgumentsBad", "%s must be true or false" % key)
+    return v
+
+
+cmd = ["hook", "--target", None, op]
+if op == "ls":
+    cmd += ["-l"] if flag("long") else ["--json"]
+elif op in ("get", "rm"):
+    cmd += [text("name", True)]
+elif op == "reset":
+    cmd += ["-y"]
+else:
+    if ("path" in args) == ("path_json" in args):
+        die("ArgumentsBad", "add needs path (a tool folder, JSON file or executable) or path_json, not both")
+    match = args.get("match", [])
+    match = [match] if isinstance(match, str) else match
+    if not isinstance(match, list) or not all(isinstance(m, str) and m for m in match):
+        die("ArgumentsBad", "match must be a tool name / error code, or an array of them")
+    timeout = args.get("timeout_ms")
+    if timeout is not None and (not isinstance(timeout, int) or isinstance(timeout, bool)):
+        die("ArgumentsBad", "timeout_ms must be a whole number of milliseconds")
+    on, name, on_fail = text("on", True), text("name"), text("on_fail")
+    cmd += ["--on", on] + (["--name", name] if name else []) + [x for m in match for x in ("--match", m)] \
+        + (["--change"] if flag("change") else []) + ([] if flag("wait", True) else ["--no-wait"]) \
+        + (["--on-fail", on_fail] if on_fail else []) + (["--timeout-ms", str(timeout)] if timeout is not None else []) \
+        + (["--replace"] if flag("replace") else [])
+    if "path_json" in args:
+        pj = args["path_json"]
+        if not ((isinstance(pj, str) and pj) or (isinstance(pj, dict) and pj)):
+            die("ArgumentsBad", "path_json must be a path string or a directive object like {\"$env\": \"AOS_HOME\", \"$path\": \"/lib/x\"}")
+        cmd += ["--path-json", json.dumps(pj, ensure_ascii=False)]
+    else:
+        cmd += [text("path", True)]
+
+cmd[2] = agent("ctl", "who").strip()
+out = agent(*cmd)
+sys.stdout.write(out if not out or out.endswith("\n") else out + "\n")
+if op in ("add", "rm", "reset"):
+    print("(takes effect from the next event)")

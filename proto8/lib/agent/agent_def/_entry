@@ -1,0 +1,229 @@
+#!/usr/bin/env python3
+# agent_def - 定義的創造：new＝把範本資料夾整份複製成新定義（tools 檔的相對路徑換算），check＝轉叫 lib/aos/defs 的 check 看一份定義合不合格
+# 使用者 11-10 晚（thinking 2026-11/10/agents-split）：「掌管agent定義的創造修改」「先做粗的，細的之後慢慢添加」「血統記錄...可以先不做」；
+#   名字「agent_def」（B：只有定義這支叫 agent_def）。粗的＝只複製與檢查；改內容用一般的檔案工具，跑起來用 agents_children／agents_ctl。
+# 介面（lib/docs/01 的契約）：stdin 收 {"op": "new"|"check", …}；別的鍵＝ArgumentsBad：
+#   new {from, path}  from（範本資料夾；字串路徑，或指示詞 {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}）整份複製到 path：
+#       symlinks 照搬、略過 __pycache__；path 哪裡都行（能不能寫交給 Linux 權限）、已經在＝DefExists；from 不是資料夾＝DefMissing。
+#       相對路徑從 $AOS_WS 算。from 用字面路徑、不解開捷徑（同舊 agents 11-10 TC）；path 解開捷徑（同舊 agents 的 write_path）。
+#       指示詞：act／aos-tools call／aos-exec 都把 arguments 原樣交給工具（11-10 實測），所以這裡自己經 lib/directive_value.py（aos-directive）解，
+#       相對 $ref 從工作區算；解出相對路徑也從工作區算；$env 指的變數沒設＝DirectiveBad（先看、不叫 aos-directive）。
+#       先寫同層暫存夾 .<名>.new-<pid> 再改名；失敗（含被 TERM）把暫存夾清掉。定義 interfaces.json 的 aos-agent 宣告了 tools 檔：
+#       裡面相對的 path／env_file／$override 原本從範本那份算，換算成從新位置走回同一個目標（舊 agents 的 rebase_tools）；絕對的、指示詞照抄；
+#       沒有可換的就不重寫（保留原排版）。沒有 interfaces.json 或沒宣告 aos-agent／tools＝只複製。不寫血統、不掛、不改其他內容。
+#       成功印一行 wrote definition <path> (copied from <from>)。
+#   check {path}  轉叫 ../../aos/defs/_entry（相對本資料夾）{"op": "check", "root": <path 的絕對路徑>}；它的 JSON stdout 原樣印、stderr 原樣透出；
+#       它退非 0＝把它 stderr 最後一行錯誤行的代號與原因接成自己的（有問題＝DefBad，stdout 的 JSON 仍在）；path 不是資料夾＝DefMissing。
+#   錯：stderr 與 stdout 各一行「agent_def: error: 代號 原因」、退 1；op 沒給＝ArgumentsBad、不認得＝OpUnknown（R11）。
+#   工具名從資料夾名取。--help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉子行程，退 130）。
+import json, os, re, shutil, signal, subprocess, sys
+HERE = os.path.dirname(os.path.realpath(__file__))
+NAME = os.path.basename(HERE)
+HELP = """\
+usage: %s < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Make agent definitions: op new copies a template folder to a new folder (relative tool paths in
+its tools file are rewritten so they still point at the same place); op check checks one definition
+(wraps lib/aos/defs check). New only copies: edit the copy with file tools.
+Result on stdout. On error: one line "%s: error: CODE reason" on stderr and stdout, exit 1.
+""" % (NAME, NAME)
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % NAME
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+tool_io.start(NAME, HELP)
+DEFS = os.path.normpath(os.path.join(HERE, "..", "..", "aos", "defs", "_entry"))
+TIMEOUT_S = 60
+ERR_RE = re.compile(r"[A-Za-z0-9_.-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
+OPS = {"new": ("from", "path"), "check": ("path",)}
+die = tool_io.die
+child = None
+
+
+def on_term(signum, frame):
+    if child is not None and child.poll() is None:
+        try:
+            os.killpg(child.pid, signal.SIGTERM)
+        except OSError:
+            pass
+    sys.exit(128 + signum)                      # new 的暫存夾由下面 except SystemExit 清
+
+
+def text(key):
+    v = args.get(key)
+    if not isinstance(v, str) or not v:
+        die("ArgumentsBad", "%s %s a non-empty string" % (key, "needs" if v is None else "must be"))
+    return v
+
+
+def from_ws(p):
+    """相對從工作區算、絕對照用；只字串拼（不解開捷徑）。"""
+    return os.path.normpath(p if os.path.isabs(p) else os.path.join(tool_io.workspace(), p))
+
+
+def source_path():
+    """from：字串＝路徑；物件＝指示詞，經 aos-directive 解成路徑字串。"""
+    v = args.get("from")
+    if isinstance(v, dict):
+        written = json.dumps(v, ensure_ascii=False)
+        env = v.get("$env")
+        if isinstance(env, str) and env and not os.environ.get(env):   # 先看：沒設就不叫 aos-directive
+            die("DirectiveBad", "from %s: environment variable %s is not set" % (written, env))
+        import directive_value                  # 用到才載
+        try:
+            got = directive_value.resolve(v, tool_io.workspace())
+        except tool_io.Error as e:
+            die(e.code, "from %s cannot be resolved: %s" % (written, e))
+        if not isinstance(got, str) or not got:
+            die("DirectiveBad", "from %s resolves to %s, not a folder path" % (written, json.dumps(got, ensure_ascii=False)))
+        return from_ws(got), got
+    return from_ws(text("from")), v
+
+
+def load_json(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError, UnicodeError) as e:
+        die("DefBad", "cannot read %s: %s" % (path, e))
+
+
+def tools_file(defdir):
+    """interfaces.json 的 aos-agent.tools 指的檔；沒 interfaces.json、沒宣告＝None（只複製、不換算）。"""
+    ifile = os.path.join(defdir, "interfaces.json")
+    if not os.path.isfile(ifile):
+        return None
+    decl = load_json(ifile)
+    agent = decl.get("aos-agent") if isinstance(decl, dict) else None
+    p = agent.get("tools") if isinstance(agent, dict) else None
+    if p is None:
+        return None
+    if not isinstance(p, str) or not p or os.path.isabs(p) or ".." in p.split("/"):
+        die("DefBad", "interfaces.json aos-agent tools must be a relative path inside the definition")
+    f = os.path.join(defdir, p)
+    return f if os.path.isfile(f) else None
+
+
+def rebase_tools(tf, src, dest, tmp):
+    """複製來的 tools 檔：相對 path／env_file／$override 原本從範本那份的資料夾算，改成從最終位置 dest 那份的資料夾走回同一個目標。
+    指範本裡的也指回範本那份；絕對的、指示詞（{"$env": …}）照抄。只做字串換算、不 realpath。沒得換＝不重寫。"""
+    reg = load_json(tf)
+    if not isinstance(reg, dict) or not isinstance(reg.get("tools"), dict):
+        return
+    sub = os.path.relpath(os.path.dirname(tf), tmp)                 # tools 檔在定義裡的哪一層
+    src_dir, dest_dir = os.path.normpath(os.path.join(src, sub)), os.path.normpath(os.path.join(dest, sub))
+    changed = []
+
+    def moved(v):
+        if isinstance(v, str) and v and not os.path.isabs(v):
+            new = os.path.relpath(os.path.normpath(os.path.join(src_dir, v)), dest_dir)
+            if new != v:
+                changed.append(v)
+            return new
+        return v
+    for entry in reg["tools"].values():
+        if isinstance(entry, dict):
+            for k in ("path", "env_file"):
+                if k in entry:
+                    entry[k] = moved(entry[k])
+    if "$override" in reg:
+        o = reg["$override"]
+        reg["$override"] = [moved(x) for x in o] if isinstance(o, list) else moved(o)
+    if not changed:
+        return
+    part = tf + ".rebase"
+    with open(part, "w", encoding="utf-8") as f:
+        f.write(json.dumps(reg, ensure_ascii=False, indent=2) + "\n")
+    shutil.copymode(tf, part)
+    os.replace(part, tf)
+
+
+def op_new():
+    literal = from_ws(text("path"))
+    src, given = source_path()
+    if not os.path.isdir(src):
+        die("DefMissing", "from %s is not a folder" % json.dumps(given, ensure_ascii=False))
+    dest = os.path.realpath(literal)          # 捷徑（含斷的）本身就算已經在
+    if os.path.lexists(literal) or os.path.lexists(dest):
+        die("DefExists", "path %r already exists (pick a new folder)" % args["path"])
+    parent = os.path.dirname(dest)
+    try:
+        os.makedirs(parent, exist_ok=True)
+    except OSError as e:
+        die("MkdirFailed", "cannot create %s: %s" % (parent, e))
+    tmp = os.path.join(parent, ".%s.new-%d" % (os.path.basename(dest), os.getpid()))
+    try:
+        try:
+            shutil.copytree(src, tmp, symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
+        except (OSError, shutil.Error) as e:
+            die("WriteFailed", "cannot copy %s to %s: %s" % (src, tmp, e))
+        tf = tools_file(tmp)
+        if tf:
+            try:
+                rebase_tools(tf, src, dest, tmp)
+            except OSError as e:
+                die("WriteFailed", "cannot rewrite %s: %s" % (os.path.relpath(tf, tmp), e))
+        try:
+            os.rename(tmp, dest)
+        except OSError as e:
+            die("WriteFailed", "cannot move the new definition into %s: %s" % (dest, e))
+    except BaseException:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
+    print("wrote definition %s (copied from %s)" % (dest, src))
+
+
+def op_check():
+    global child
+    root = os.path.realpath(from_ws(text("path")))
+    if not os.path.isdir(root):
+        die("DefMissing", "path %r is not a folder" % args["path"])
+    try:
+        child = subprocess.Popen([sys.executable, DEFS], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 text=True, start_new_session=True, env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
+    except OSError as e:
+        die("LaunchFailed", "cannot run %s: %s" % (DEFS, e))
+    try:
+        out, err = child.communicate(json.dumps({"op": "check", "root": root}), timeout=TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        os.killpg(child.pid, signal.SIGKILL)
+        child.communicate()
+        die("CommandFailed", "defs check took over %d s and was killed" % TIMEOUT_S)
+    if err:                                     # 下層的 stderr 原樣透出（R10）
+        sys.stderr.write(err if err.endswith("\n") else err + "\n")
+        sys.stderr.flush()
+    if out:
+        sys.stdout.write(out if out.endswith("\n") else out + "\n")
+        sys.stdout.flush()
+    if child.returncode != 0:                   # 給腦用的工具把下層錯翻成自己的錯
+        mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
+        if mine:
+            die(mine[-1].group(1), mine[-1].group(2))
+        die("CommandFailed", "%s exited %d" % (DEFS, child.returncode))
+
+
+signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
+args = tool_io.arguments()
+op = args.get("op")
+if op is None:
+    die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
+if op not in OPS:
+    die("OpUnknown", "op must be one of %s (got %r)" % (", ".join(OPS), op))
+extra = sorted(k for k in args if k != "op" and k not in OPS[op])
+if extra:
+    die("ArgumentsBad", "op %s does not take %s (it takes %s)" % (op, ", ".join(extra), ", ".join(OPS[op])))
+op_new() if op == "new" else op_check()
