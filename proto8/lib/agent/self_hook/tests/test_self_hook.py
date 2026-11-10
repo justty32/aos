@@ -50,11 +50,11 @@ class SelfHook(unittest.TestCase):
 
     def test_add_with_every_key(self):
         r = self.run_tool({"op": "add", "on": "tool_before", "path": "hooks/guard", "name": "g", "match": ["a", "b"],
-                           "change": True, "wait": True, "on_fail": "continue", "timeout_ms": 500, "replace": True})
+                           "change": False, "wait": True, "on_fail": "continue", "timeout_ms": 500, "replace": True})
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("(takes effect from the next event)", r.stdout)
         self.assertEqual(self.calls()[-1], [str(self.ws), "hook", "--target", "bob", "add", "--on", "tool_before", "--name", "g",
-                                            "--match", "a", "--match", "b", "--change", "--on-fail", "continue",
+                                            "--match", "a", "--match", "b", "--no-change", "--on-fail", "continue",
                                             "--timeout-ms", "500", "--replace", "hooks/guard"])
 
     def test_each_op(self):

@@ -100,7 +100,8 @@ sys.exit(code)
 
     # ---- queue
     def test_queue_before_changes_content_and_queue_after_sees_it(self):
-        self.declare({"a_up": {"on": "queue_before", "change": True,
+        self.declare({"a_up": {"on": "queue_before",          # change 預設開（11-10 深夜）
+
                                "exec": self.hook("up", 'print(json.dumps({"content": ev["content"].upper()}))')},
                       "b_after": {"on": "queue_after", "exec": self.hook("after")}})
         self.letter("hello")
@@ -123,7 +124,7 @@ sys.exit(code)
         self.assertEqual([e["event"] for e in self.events()], ["queue_before"])
 
     def test_without_change_stdout_and_10_do_nothing(self):
-        self.declare({"n": {"on": "queue_before", "exec": self.hook("n", 'print(json.dumps({"content": "X"})); sys.exit(10)')}})
+        self.declare({"n": {"on": "queue_before", "change": False, "exec": self.hook("n", 'print(json.dumps({"content": "X"})); sys.exit(10)')}})
         self.letter("keep")
         self.run_cell("idle")
         self.assertEqual(self.history(), [{"role": "user", "content": "keep"}])
@@ -270,15 +271,22 @@ sys.exit(code)
         self.letter("x")
         r = self.run_cell("idle", code=1)
         self.assertIn("agent-fsm: error: HooksBad hook a in", r.stderr)
-        for entry in ({"on": "queue_after", "exec": "x", "change": True},
-                      {"on": "queue_before", "exec": "x", "match": "m"},
-                      {"on": "tool_before", "exec": "x", "change": True, "wait": False},
+        for entry in ({"on": "queue_before", "exec": "x", "match": "m"},
                       {"on": "tool_before", "exec": "x", "on_fail": "maybe"},
                       {"on": "tool_before", "exec": "x", "timeout_ms": 0},
                       {"on": "nope", "exec": "x"}):
             with self.assertRaises(hooks.HooksBad):
                 hooks.validate_entry(entry)
         hooks.validate_entry({"on": "tool_before", "exec": "x", "change": True, "match": ["a"], "whatever": 1})
+        # change 預設開之後：不能改的事件、不等的 hook 寫 change: true＝自然不看回話，不報錯（11-10 深夜）
+        hooks.validate_entry({"on": "queue_after", "exec": "x", "change": True})
+        hooks.validate_entry({"on": "tool_before", "exec": "x", "change": True, "wait": False})
+
+    def test_change_on_unchangeable_event_ignores_stdout(self):
+        self.declare({"talk": {"on": "queue_after", "exec": self.hook("talk", 'print("not json at all")')}})
+        self.letter("hi")
+        self.run_cell("idle")
+        self.assertEqual(self.history(), [{"role": "user", "content": "hi"}])
 
     def test_nothing_declared_starts_nothing(self):
         (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {}}))

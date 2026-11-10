@@ -39,7 +39,7 @@ exit codes: 0 printed; 1 error (HookMissing, HooksMissing...).
 """,
     "add": """aos-agent hook add - add a hook for this agent only
 
-usage: aos-agent [--daemon D] hook [--target NAME] add --on EVENT [-n N] [--match M]... [--change] [--no-wait] [--on-fail stop|continue] [--timeout-ms N] [--replace] (XXX | --path-json JSON)
+usage: aos-agent [--daemon D] hook [--target NAME] add --on EVENT [-n N] [--match M]... [--no-change] [--no-wait] [--on-fail stop|continue] [--timeout-ms N] [--replace] (XXX | --path-json JSON)
        aos-agent hook add --help
 
 Run XXX (anything aos-exec runs: a tool folder, a JSON file, an executable) when
@@ -55,9 +55,11 @@ flags:
   -n, --name N            the hook's name (default: XXX's file or folder name)
       --match M           run only when the tool name / error code is M (repeatable;
                           not for queue_before / queue_after)
-      --change            read its reply: exit 0 + JSON on stdout changes the event,
-                          exit 10 blocks it (queue_before, tool_before, tool_after)
-      --no-wait           start it and do not wait (cannot be used with --change)
+      --no-change         do not read its reply (by default it is read: exit 0 + JSON on
+                          stdout changes the event, exit 10 blocks it; only for
+                          queue_before, tool_before, tool_after; other events and
+                          --no-wait hooks never have their reply read)
+      --no-wait           start it and do not wait
       --on-fail W         stop (default: the agent stops) or continue (a warning)
       --timeout-ms N      give up waiting after N ms (default 60000)
       --replace           replace a hook already listed under that name
@@ -197,8 +199,8 @@ def build(topts, args, own, help):
     entry = {"on": topts["on"], "exec": target_v}
     if "match" in topts:
         entry["match"] = topts["match"][0] if len(topts["match"]) == 1 else topts["match"]
-    if topts.get("change"):
-        entry["change"] = True
+    if topts.get("no_change"):                    # 預設開（11-10 深夜使用者「3.幫我改成預設是開」）；關＝寫 false
+        entry["change"] = False
     if topts.get("no_wait"):
         entry["wait"] = False
     if "on_fail" in topts:
@@ -221,7 +223,7 @@ def cmd(argv):
     flags = {"add": {"--on": "on", "--name": "name", "--on-fail": "on_fail", "--timeout-ms": "timeout_ms",
                      "--path-json": "path_json"}}.get(act, {})
     switches = {"ls": {"--json": "json", "--long": "long"},
-                "add": {"--change": "change", "--no-wait": "no_wait", "--replace": "replace"},
+                "add": {"--no-change": "no_change", "--no-wait": "no_wait", "--replace": "replace"},
                 "reset": {"--yes": "yes"}}.get(act, {})
     shorts = {"ls": {"-j": "--json", "-l": "--long"}, "add": ("-n",), "reset": ("-y",)}.get(act, ())
     try:

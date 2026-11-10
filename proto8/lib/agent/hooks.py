@@ -7,7 +7,8 @@ agent-fsm 的四格、aos-eca-turn、aos-mcp、aos-agent hook 都用這份，不
 對外（另兩條線要用，改了要一起改）：
     EVENTS[事件] = {"match": 事件 JSON 裡拿來比 match 的欄位名或 None（不收 match）,
                     "change": 能改的鍵（tuple）, "block": 能不能攔（結束碼 10）}
-    DEFAULTS = {"change": False, "wait": True, "on_fail": "stop", "timeout_ms": 60000}
+    DEFAULTS = {"change": True, "wait": True, "on_fail": "stop", "timeout_ms": 60000}
+                    （change 預設開：11-10 深夜使用者「3.幫我改成預設是開」；不能改的事件、不等的 hook＝自然不看回話、不報錯）
     declared(def_folder) -> 宣告的相對路徑字串 | None
     load(def_folder, stack) -> {名字: 格}；格＝原格的鍵＋DEFAULTS 補齊＋"from"（來自哪份檔的絕對路徑）＋"base"（解 exec 相對路徑的資料夾）
     nulled(def_folder, stack) -> [stack 那份設成 null 的名字]（排好）
@@ -37,7 +38,7 @@ EVENTS = {
     "brain_failed": {"match": "name", "change": (), "block": False},
     "tool_added": {"match": "name", "change": (), "block": False},
 }
-DEFAULTS = {"change": False, "wait": True, "on_fail": "stop", "timeout_ms": 60000}
+DEFAULTS = {"change": True, "wait": True, "on_fail": "stop", "timeout_ms": 60000}
 BLOCK = 10                                       # 攔下（N-43：10＝「不要」，不是錯）
 CELLS = "hooks"                                  # 小格：$AOS_STACK/hooks/<名>/
 SEEN = "hook_tools_seen.json"                    # tool_added 上次看到的工具名單
@@ -78,11 +79,6 @@ def validate_entry(entry):
             raise HooksBad("match must be a string or an array of strings")
         if EVENTS[on]["match"] is None:
             raise HooksBad("event %s takes no match" % on)
-    if entry.get("change") is True:
-        if not EVENTS[on]["change"]:
-            raise HooksBad("event %s cannot be changed (change: true is not allowed)" % on)
-        if entry.get("wait") is False:
-            raise HooksBad("change: true needs wait (a hook that is not waited for cannot change anything)")
     if "on_fail" in entry and entry["on_fail"] not in ("stop", "continue"):
         raise HooksBad("on_fail must be stop or continue")
     if "timeout_ms" in entry:
@@ -269,8 +265,8 @@ def fire(event, data, def_folder, stack, warn=None):
                 continue
             if code not in (0, BLOCK):
                 raise ValueError("exited %d" % code)
-            if not entry["change"]:
-                continue
+            if not entry["change"] or not (EVENTS[event]["change"] or EVENTS[event]["block"]):
+                continue                         # 不看回話：關掉的、或這個事件本來沒東西能改能擋（不報錯）
             got = _changes(event, out) if not (code == BLOCK and EVENTS[event]["block"]) else {}
         except ValueError as e:
             why = "hook %s (event %s) failed: %s" % (name, event, e)

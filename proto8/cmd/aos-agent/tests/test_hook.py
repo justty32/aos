@@ -60,11 +60,11 @@ class Hook(unittest.TestCase):
 
     def test_add_every_flag_relative(self):
         before = self.mine.read_bytes()
-        r = self.agent("add", "--on", "tool_before", "--match", "x", "--match", "y", "--change", "--on-fail", "continue",
+        r = self.agent("add", "--on", "tool_before", "--match", "x", "--match", "y", "--no-change", "--on-fail", "continue",
                        "--timeout-ms", "500", "h/guard")
         self.assertIn("created %s" % self.own, r.stderr)
         self.assertEqual(self.own_hooks(), {"guard": {"on": "tool_before", "exec": os.path.relpath(self.tmp / "h" / "guard", self.stack),
-                                                      "match": ["x", "y"], "change": True, "on_fail": "continue", "timeout_ms": 500}})
+                                                      "match": ["x", "y"], "change": False, "on_fail": "continue", "timeout_ms": 500}})
         self.assertEqual(self.mine.read_bytes(), before)
 
     def test_add_minimal_absolute_no_wait_and_folder_name(self):
@@ -111,23 +111,22 @@ class Hook(unittest.TestCase):
         self.agent("add", "--on", "tool_added", "-n", "pj", "--path-json", json.dumps(d))
         self.assertEqual(self.agent().stdout, 'audit\ttool_after\taudit.sh\npj\ttool_added\t{"$env":"AOS_HOME","$path":"/lib/x"}\n')
         rows = [l.split("\t") for l in self.agent("ls", "--long").stdout.splitlines()]
-        self.assertEqual(rows[0], ["audit", "tool_after", "audit.sh", "a,b", "true", "stop", "false", "60000", str(self.mine)])
+        self.assertEqual(rows[0], ["audit", "tool_after", "audit.sh", "a,b", "true", "stop", "true", "60000", str(self.mine)])
         self.assertEqual(rows[1][3], "-")
         got = json.loads(self.agent("ls", "-j").stdout)
-        self.assertEqual(got[0], {"name": "audit", "on": "tool_after", "exec": "audit.sh", "match": ["a", "b"], "change": False,
+        self.assertEqual(got[0], {"name": "audit", "on": "tool_after", "exec": "audit.sh", "match": ["a", "b"], "change": True,
                                   "wait": True, "on_fail": "stop", "timeout_ms": 60000, "from": str(self.mine)})
         self.assertEqual(json.loads(self.agent("get", "pj").stdout)["exec"], d)
         self.fails("HookMissing", "get", "nope")
 
     def test_bad_arguments(self):
-        for args in (("add", "--on", "queue_after", "--change", "h/guard"),       # cannot be changed
-                     ("add", "--on", "tool_before", "--change", "--no-wait", "h/guard"),
-                     ("add", "--on", "nope", "h/guard"),
+        self.fails("FlagUnknown", "add", "--on", "queue_after", "--change", "h/guard")   # --change is gone (on by default)
+        for args in (("add", "--on", "nope", "h/guard"),
                      ("add", "--on", "queue_before", "--match", "x", "h/guard"),
                      ("add", "--on", "tool_after", "--timeout-ms", "0", "h/guard"),
                      ("add", "--on", "tool_after", "--on-fail", "maybe", "h/guard"),
                      ("add", "h/guard"),                                           # no --on
-                     ("add", "--on", "tool_after", "h/guard", "--change")):
+                     ("add", "--on", "tool_after", "h/guard", "--no-change")):
             p = self.fails("ArgumentsBad", *args)
             self.assertIn("(usage: ", p.stderr, args)
         self.assertFalse(self.own.exists())

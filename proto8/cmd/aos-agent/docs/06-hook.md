@@ -21,11 +21,11 @@
 
 ## 回話協定
 
-只有設了 `change: true` 的 hook 才看它的回話；沒設＝純通知，stdout 丟掉。
+`change` **預設開**（11-10 深夜 [tonight-rulings](../../../thinking/2026-11/10/tonight-rulings/README.md) 題 3，使用者「3.幫我改成預設是開」）：能改的三個事件（`queue_before`、`tool_before`、`tool_after`）看 hook 的回話；寫 `change: false`（`--no-change`）＝純通知、stdout 丟掉。不能改的事件、`wait: false` 的 hook 本來就沒回話可看，`change` 開著也不讀、不報錯。所以掛在那三個事件上、只想記一筆的 hook，stdout 要嘛不印、要嘛加 `--no-change`，不然印了不是 JSON 的東西＝hook 失敗。
 
 | 結束碼 | 意思 |
 |---|---|
-| 0 | 放行。`change` 而且 stdout 非空＝stdout 是一個 JSON 物件，認得的鍵（`content`／`arguments`）拿來改；stdout 空＝不改 |
+| 0 | 放行。`change` 開著而且 stdout 非空＝stdout 是一個 JSON 物件，認得的鍵（`content`／`arguments`）拿來改；stdout 空＝不改 |
 | 10 | 攔下（`queue_before`＝這封信收掉；`tool_before`＝工具不跑，腦看到的結果＝hook 的 stdout，空就給 `(tool NAME blocked by hook HOOK)`）；別的事件的 10＝當 0 |
 | 其他、逾時、起不來、該是 JSON 卻不是 | hook 自己失敗：`on_fail` 決定 |
 
@@ -36,12 +36,12 @@
 | `on`（`--on`） | 事件名，必填 | — |
 | `exec`（XXX 或 `--path-json`） | 目標：aos-exec 跑得動的東西（工具夾、JSON、執行檔）；相對路徑從寫它的那份檔的資料夾算 | — |
 | `match`（`--match`，可重複） | 只在工具名／代號完全相等時跑 | 全部 |
-| `change`（`--change`） | 看不看它的回話 | false |
-| `wait`（`--no-wait`＝false） | 等不等它跑完；不等的＝放出去不管、不能配 `change` | true |
+| `change`（`--no-change`＝false） | 看不看它的回話（只有那三個事件有回話可看） | true |
+| `wait`（`--no-wait`＝false） | 等不等它跑完；不等的＝放出去不管、不看回話 | true |
 | `on_fail`（`--on-fail`） | `stop`＝那格印 `agent-fsm: error: HookFailed …`、agent 停下等人；`continue`＝一行 warning、當沒這個 hook | stop |
 | `timeout_ms`（`--timeout-ms`） | 等它的上限，到了整群收掉、算失敗 | 60000 |
 
-不能改的事件（`queue_after`、`brain_failed`、`tool_added`）寫 `--change`、`--change` 配 `--no-wait`、queue 事件給 `--match`＝`add` 直接 `ArgumentsBad`（由 `hooks.validate_entry` 說原因）。
+queue 事件給 `--match`＝`add` 直接 `ArgumentsBad`（由 `hooks.validate_entry` 說原因）。不能改的事件（`queue_after`、`brain_failed`、`tool_added`）或 `--no-wait` 的 hook 寫 `change: true`＝不報錯、自然不看回話（11-10 深夜改，以前是 `ArgumentsBad`）。
 
 ## 兩份檔怎麼疊
 
@@ -56,7 +56,7 @@ aos-agent hook -t bob                       # = ls：NAME TAB EVENT TAB EXEC
 aos-agent hook -t bob ls -l                 # 多 MATCH WAIT ON_FAIL CHANGE TIMEOUT_MS FROM，也列被設成 null 的
 aos-agent hook -t bob ls --json             # 一個 JSON 陣列（補完預設、帶 name 與 from）
 aos-agent hook -t bob get guard             # 一格的 JSON
-aos-agent hook -t bob add --on tool_before --match agents_ctl --change hooks/guard
+aos-agent hook -t bob add --on tool_before --match agents_ctl hooks/guard
 aos-agent hook -t bob add --on brain_failed --on-fail continue --no-wait -n ping --path-json '{"$env": "AOS_HOME", "$path": "/lib/x"}'
 aos-agent hook -t bob rm guard              # 定義裡有的＝寫 null；自己加的＝刪掉那格
 aos-agent hook -t bob reset -y              # 刪自己那份，回到定義的
@@ -69,7 +69,7 @@ aos-agent hook -t bob reset -y              # 刪自己那份，回到定義的
 
 ## 最小 hook 範例
 
-擋掉腦叫 `agent_def` 工具時 `op` 是 `new` 的呼叫（造新定義）（`add --on tool_before --match agent_def --change hooks/no_spawn`）：
+擋掉腦叫 `agent_def` 工具時 `op` 是 `new` 的呼叫（造新定義）（`add --on tool_before --match agent_def hooks/no_spawn`；`change` 預設開，結束碼 10 就算數）：
 
 ```python
 #!/usr/bin/env python3
@@ -82,7 +82,7 @@ if isinstance(ev["arguments"], dict) and ev["arguments"].get("op") == "new":
 sys.exit(0)                                                  # empty stdout = no change
 ```
 
-只想記一筆、不改什麼的（不設 `change`）：
+只想記一筆、不改什麼的（`queue_after` 沒回話可看；掛在能改的事件上就加 `--no-change`）：
 
 ```sh
 #!/bin/sh

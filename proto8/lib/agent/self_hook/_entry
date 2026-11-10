@@ -5,8 +5,8 @@
 # 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"get"|"add"|"rm"|"reset", …}；別的鍵＝ArgumentsBad：
 #   ls {long?}                   ＝hook ls --json（long: true＝ls -l 的文字，含被設成 null 的格）
 #   get {name}                   ＝hook get NAME
-#   add {on, path | path_json, name?, match?（字串或字串陣列）, change?, wait?（false＝--no-wait）, on_fail?, timeout_ms?, replace?}
-#                                ＝hook add --on E [--name] [--match M]… [--change] [--no-wait] [--on-fail] [--timeout-ms] [--replace] (XXX | --path-json)
+#   add {on, path | path_json, name?, match?（字串或字串陣列）, change?（false＝--no-change；預設開）, wait?（false＝--no-wait）, on_fail?, timeout_ms?, replace?}
+#                                ＝hook add --on E [--name] [--match M]… [--no-change] [--no-wait] [--on-fail] [--timeout-ms] [--replace] (XXX | --path-json)
 #   rm {name}                    ＝hook rm NAME
 #   reset {}                     ＝hook reset -y（腦叫了就算確認過）
 #   先 aos-agent ctl who（$AOS_STACK＝<agent stack>/tools/self_hook/ 查 daemon 表）認出是哪隻；aos-agent 在 $AOS_WS 跑（相對 path 從工作區算）。
@@ -140,7 +140,7 @@ else:
         die("ArgumentsBad", "timeout_ms must be a whole number of milliseconds")
     on, name, on_fail = text("on", True), text("name"), text("on_fail")
     cmd += ["--on", on] + (["--name", name] if name else []) + [x for m in match for x in ("--match", m)] \
-        + (["--change"] if flag("change") else []) + ([] if flag("wait", True) else ["--no-wait"]) \
+        + ([] if flag("change", True) else ["--no-change"]) + ([] if flag("wait", True) else ["--no-wait"]) \
         + (["--on-fail", on_fail] if on_fail else []) + (["--timeout-ms", str(timeout)] if timeout is not None else []) \
         + (["--replace"] if flag("replace") else [])
     if "path_json" in args:
