@@ -23,4 +23,6 @@ agent 跟 agent（含把自己當一隻 agent 的使用者）互相寄信。這�
 
 ## 結論
 
-見 [01 設計](01-設計.md)（指令、工具、信的欄位、信箱位置、代定清單）。施工結果寫在 02。
+見 [01 設計](01-設計.md)（指令、工具、信的欄位、信箱位置、代定清單）。
+
+已施工（[02](02-施工結果.md)）：`aos-mailbox`（where／peek／read／send）與 `mailbox_peek`／`mailbox_read`／`mailbox_send`，兩個範本預設登記；fsm 假腦、gemma 真腦、eca haiku 都驗過。人的預設 stack `~/.stack` 仍未定。

@@ -39,12 +39,12 @@
 | [`memory/tests/test_memory.py`](../../../../../proto8/lib/agent/memory/tests/test_memory.py) | memory（純 JSON 樹）：read／ls／find 在各種位置上的輸出、表與 not in index、$ref／$env、迴圈、錯誤代號。 |
 | [`memory_export/`](../../../../../proto8/lib/agent/memory_export/) | 把記憶庫（資料夾＋.json 的 JSON 樹）或其中一棵子樹整棵印成一份 Markdown，給人看；唯讀。 |
 | [`memory_export/tests/test_export.py`](../../../../../proto8/lib/agent/memory_export/tests/test_export.py) | memory_export（純 JSON 樹）：node 行、簡介、字串原樣、其他 JSON 包 ```json、表的順序與 not in index、防繞圈、截斷、錯誤。 |
-| [`memory_fs.py`](../../../../../proto8/lib/agent/memory_fs.py) | 記憶庫（純 JSON 樹）共用：找根、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 "." 格／$env 格的認法、列枝幹、find 逛樹的迴圈防護。 |
+| [`memory_fs.py`](../../../../../proto8/lib/agent/memory_fs.py) | 記憶庫（純 JSON 樹）共用：找根、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 $env 格的認法、自己的簡介、列枝幹、find 逛樹的迴圈防護。 |
 | [`memory_sync/`](../../../../../proto8/lib/agent/memory_sync/) | Synchronize an optional Git knowledge base with origin. |
 | [`memory_sync/tests/test_sync.py`](../../../../../proto8/lib/agent/memory_sync/tests/test_sync.py) | Exercise memory_sync against temporary local Git repositories and tool errors. |
-| [`memory_write/`](../../../../../proto8/lib/agent/memory_write/) | 改記憶庫：add／set／rm 一次寫好內容與它在表（_index.json 或 _index key）裡的那格；只寫庫根底下。 |
-| [`memory_write/tests/test_writing.py`](../../../../../proto8/lib/agent/memory_write/tests/test_writing.py) | memory_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、只寫庫根底下、各錯誤代號；寫完用 memory 讀回來對。 |
-| [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | memory_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫入只准落在庫根底下。 |
+| [`memory_write/`](../../../../../proto8/lib/agent/memory_write/) | 改記憶庫：add／set／rm 一次寫好內容與它在表（_index.json 或 _index key）裡的那格；寫到哪都行，看檔案權限。 |
+| [`memory_write/tests/test_writing.py`](../../../../../proto8/lib/agent/memory_write/tests/test_writing.py) | memory_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、寫到庫外也行、自己的簡介當普通路徑寫、各錯誤代號；寫完用 memory 讀回來對。 |
+| [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | memory_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫到哪都行，能不能成看檔案權限。 |
 | [`self_history/`](../../../../../proto8/lib/agent/self_history/) | aos-agent history 的包裝，目標改成叫我的那隻自己：ls、rm、summarize、set；正在進行的這一步（叫我的那則訊息與之後）不准動 |
 | [`self_history/tests/test_self_history.py`](../../../../../proto8/lib/agent/self_history/tests/test_self_history.py) | Test self_history builds the aos-agent history command line (ls, rm, summarize, set) and refuses the step in progress, with a fake aos-agent. |
 | [`self_hook/`](../../../../../proto8/lib/agent/self_hook/) | aos-agent hook 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份 hooks 清單，定義不動 |

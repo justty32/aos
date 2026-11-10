@@ -15,10 +15,10 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`_index.json`](../../../../../proto8/knowledge/aos/_index.json) | 設定（鍵：.、me.json、errors.json、world.json、status.json、brain.json…） |
-| [`agents.json`](../../../../../proto8/knowledge/aos/agents.json) | 設定（鍵：_index、thought） |
+| [`_index.json`](../../../../../proto8/knowledge/aos/_index.json) | 設定（鍵：me.json、errors.json、world.json、status.json、brain.json、agents.json…） |
+| [`agents.json`](../../../../../proto8/knowledge/aos/agents.json) | 設定（鍵：_description、_index、thought） |
 | [`brain.json`](../../../../../proto8/knowledge/aos/brain.json) | （檔頭沒有一句話） |
-| [`cli/_index.json`](../../../../../proto8/knowledge/aos/cli/_index.json) | 設定（鍵：.、agent.json、daemon.json、errors.json、flags.json、grow_screen.json…） |
+| [`cli/_index.json`](../../../../../proto8/knowledge/aos/cli/_index.json) | 設定（鍵：agent.json、daemon.json、errors.json、flags.json、grow_screen.json、safety.json…） |
 | [`cli/agent.json`](../../../../../proto8/knowledge/aos/cli/agent.json) | （檔頭沒有一句話） |
 | [`cli/daemon.json`](../../../../../proto8/knowledge/aos/cli/daemon.json) | （檔頭沒有一句話） |
 | [`cli/errors.json`](../../../../../proto8/knowledge/aos/cli/errors.json) | （檔頭沒有一句話） |
@@ -30,8 +30,8 @@
 | [`cli/tool_env.json`](../../../../../proto8/knowledge/aos/cli/tool_env.json) | （檔頭沒有一句話） |
 | [`cli/tool_flags.json`](../../../../../proto8/knowledge/aos/cli/tool_flags.json) | （檔頭沒有一句話） |
 | [`cli/tools.json`](../../../../../proto8/knowledge/aos/cli/tools.json) | （檔頭沒有一句話） |
-| [`errors.json`](../../../../../proto8/knowledge/aos/errors.json) | 設定（鍵：_index、codes、common） |
-| [`me.json`](../../../../../proto8/knowledge/aos/me.json) | 設定（鍵：_index、self_tools、self_llm、self_history） |
+| [`errors.json`](../../../../../proto8/knowledge/aos/errors.json) | 設定（鍵：_description、_index、codes、common） |
+| [`me.json`](../../../../../proto8/knowledge/aos/me.json) | 設定（鍵：_description、_index、self_tools、self_llm、self_history） |
 | [`memory.json`](../../../../../proto8/knowledge/aos/memory.json) | （檔頭沒有一句話） |
 | [`rules.json`](../../../../../proto8/knowledge/aos/rules.json) | （檔頭沒有一句話） |
 | [`status.json`](../../../../../proto8/knowledge/aos/status.json) | （檔頭沒有一句話） |
