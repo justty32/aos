@@ -10,7 +10,7 @@ import unittest
 
 CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
 PROTO = CELLS.parents[1]
-CLOCK = PROTO / "lib" / "base" / "wall_clock"
+CLOCK = PROTO / "lib" / "base" / "peek_now_time"
 
 
 class OwnTools(unittest.TestCase):
@@ -21,11 +21,11 @@ class OwnTools(unittest.TestCase):
             d.mkdir()
         (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"llm": "llm.json", "tools": "tools.json"}}))
         (self.defn / "llm.json").write_text('{"model":"fake"}')
-        (self.defn / "tools.json").write_text(json.dumps({"tools": {"wall_clock": {"path": str(CLOCK)}}}))
+        (self.defn / "tools.json").write_text(json.dumps({"tools": {"peek_now_time": {"path": str(CLOCK)}}}))
         (self.stack / "history.jsonl").write_text('{"role":"user","content":"hi"}\n')
         self.own = self.stack / "tools.json"
         self.own.write_text(json.dumps({"$override": "../def/tools.json",
-                                        "tools": {"wall_clock": None, "clock2": {"path": str(CLOCK)}}}))
+                                        "tools": {"peek_now_time": None, "clock2": {"path": str(CLOCK)}}}))
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         bins = [str(p) for p in (PROTO / "impls").glob("*/bin")] + [str(PROTO / "cmd" / "aos-tools" / "bin")]
         env["PATH"] = os.pathsep.join(bins + [env["PATH"]])
@@ -50,7 +50,7 @@ class OwnTools(unittest.TestCase):
     def test_brain_sees_own_registry_then_definition_after_reset(self):
         self.assertEqual(self.offered(), ["clock2"])
         self.own.unlink()                                   # what aos-agent tools reset does
-        self.assertEqual(self.offered(), ["wall_clock"])
+        self.assertEqual(self.offered(), ["peek_now_time"])
 
     def test_act_calls_tool_added_in_own_registry(self):
         call = {"role": "assistant", "content": None, "tool_calls": [

@@ -1,4 +1,4 @@
-# Verify agent cells through the real local kernel, llm_fake endpoint, and wall_clock tool.
+# Verify agent cells through the real local kernel, llm_fake endpoint, and peek_now_time tool.
 import json
 import os
 from pathlib import Path
@@ -26,7 +26,7 @@ class KernelIntegration(unittest.TestCase):
                 'llm':'llm.json', 'tools':'tools.json'}}))
             (definition / 'llm.json').write_text('{"model":"fake"}')
             (definition / 'tools.json').write_text(json.dumps({'tools':{
-                'wall_clock':{'path':str(PROTO / 'lib/base/wall_clock')}}}))
+                'peek_now_time':{'path':str(PROTO / 'lib/base/peek_now_time')}}}))
             (agent_stack / 'history.jsonl').write_text('{"role":"user","content":"local test"}\n')
             config = root / 'kernel.json'
             config.write_text(json.dumps({'exec':str(PROTO / 'lib/base/llm_fake'),

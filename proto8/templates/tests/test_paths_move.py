@@ -192,7 +192,7 @@ class PathsMove(unittest.TestCase):
         m.run("aos-agent", "-d", "stacks/root", "-t", "ann", "say", text, cwd=proj)
         ans = m.run("aos-agent", "-d", "stacks/root", "-t", "ann", "listen", "--timeout-s", "60", cwd=proj).stdout
         self.assertIn("FAKE ANSWER to: %s" % text, ans)
-        self.assertIn("tool said:", ans)              # 腦叫了 wall_clock：登記檔的路徑解得開
+        self.assertIn("tool said:", ans)              # 腦叫了 peek_now_time：登記檔的路徑解得開
         log("  ann answered: %s" % ans.strip()[:100])
         return ans
 

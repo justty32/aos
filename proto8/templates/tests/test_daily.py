@@ -377,7 +377,7 @@ class Daily(unittest.TestCase):
         (tool / "_metainfo.json").write_text('{"summary": "Say hello", "resource": "cpu", "side_effect": false,'
                                              ' "idempotent": true, "deterministic": true, "interrupt": "safe",'
                                              ' "parallel": true, "cost": {"time_ms": 10}, "timeout_ms": 5000}\n')
-        # llms：llm kernel，端點只留假腦（fake＝先叫 wall_clock；fake-greet＝先叫 another 的 greet）
+        # llms：llm kernel，端點只留假腦（fake＝先叫 peek_now_time；fake-greet＝先叫 another 的 greet）
         m.cp_template("kernel/llm-kernel", "def", cwd=h.llms)
         kj = h.llms / "def" / "kernel.json"
         k = json.loads(kj.read_text())
