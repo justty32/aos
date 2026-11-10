@@ -30,6 +30,7 @@
 | [`bin/aos-agent`](../../../../../proto8/cmd/aos-agent/bin/aos-agent) | 統一的 agent 介面：管掛在 aos-daemon 上的一隻 agent（eca、loop／fsm agent 都一樣），每個子命令只管一隻（11-04）。 |
 | [`stack.gitattributes`](../../../../../proto8/cmd/aos-agent/stack.gitattributes) | 把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件） |
 | [`stack.gitignore`](../../../../../proto8/cmd/aos-agent/stack.gitignore) | 可選的 stack 排除範本：暫存、鎖、本機資料與可重建紀錄不進 git。 |
+| [`tests/test_ls_health.py`](../../../../../proto8/cmd/aos-agent/tests/test_ls_health.py) | Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table. |
 | [`using-aos-agent.sh`](../../../../../proto8/cmd/aos-agent/using-aos-agent.sh) | 給人的殼 source 用（不是跑）：之後直接打 say／listen／chat／status，像命名空間（11-04 aos-agent 02）。 |
 
 ## `proto8/cmd/aos-clock/`
@@ -56,14 +57,3 @@
 | [`tests/fake_claude`](../../../../../proto8/cmd/aos-eca/tests/fake_claude) | stand-in for the claude CLI in aos-eca tests: -p with --session-id/--resume, keeps conversations as files, never calls a model |
 | [`tests/fake_codex`](../../../../../proto8/cmd/aos-eca/tests/fake_codex) | stand-in for the codex CLI in aos-eca tests: exec / exec resume ID with --json and -o, keeps threads as files, never calls a model |
 | [`tests/test_switch.py`](../../../../../proto8/cmd/aos-eca/tests/test_switch.py) | Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs. |
-
-## `proto8/cmd/aos-feedback/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`aos_feedback/__init__.py`](../../../../../proto8/cmd/aos-feedback/aos_feedback/__init__.py) | Parse feedback commands through aos_flags and present records and comfort reports. |
-| [`aos_feedback/comfort.py`](../../../../../proto8/cmd/aos-feedback/aos_feedback/comfort.py) | Calculate AI comfort from scored feedback and consecutive observed tool calls. |
-| [`aos_feedback/storage.py`](../../../../../proto8/cmd/aos-feedback/aos_feedback/storage.py) | Append command feedback and read its local model classification rules. |
-| [`bin/aos-feedback`](../../../../../proto8/cmd/aos-feedback/bin/aos-feedback) | Collect command feedback and report observed AI comfort scores. |
-| [`tests/test_boundaries.py`](../../../../../proto8/cmd/aos-feedback/tests/test_boundaries.py) | Verify concurrent feedback writes, CLI argument boundaries and damaged input handling. |
-| [`tests/test_feedback.py`](../../../../../proto8/cmd/aos-feedback/tests/test_feedback.py) | Verify feedback CLI storage, comfort calculations and the real aos-exec tool boundary. |

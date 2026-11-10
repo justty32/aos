@@ -5,6 +5,17 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/cmd/aos-feedback/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`aos_feedback/__init__.py`](../../../../../proto8/cmd/aos-feedback/aos_feedback/__init__.py) | Parse feedback commands through aos_flags and present records and comfort reports. |
+| [`aos_feedback/comfort.py`](../../../../../proto8/cmd/aos-feedback/aos_feedback/comfort.py) | Calculate AI comfort from scored feedback and consecutive observed tool calls. |
+| [`aos_feedback/storage.py`](../../../../../proto8/cmd/aos-feedback/aos_feedback/storage.py) | Append command feedback and read its local model classification rules. |
+| [`bin/aos-feedback`](../../../../../proto8/cmd/aos-feedback/bin/aos-feedback) | Collect command feedback and report observed AI comfort scores. |
+| [`tests/test_boundaries.py`](../../../../../proto8/cmd/aos-feedback/tests/test_boundaries.py) | Verify concurrent feedback writes, CLI argument boundaries and damaged input handling. |
+| [`tests/test_feedback.py`](../../../../../proto8/cmd/aos-feedback/tests/test_feedback.py) | Verify feedback CLI storage, comfort calculations and the real aos-exec tool boundary. |
+
 ## `proto8/cmd/aos-grow/`
 
 | 檔 | 負責什麼 |
