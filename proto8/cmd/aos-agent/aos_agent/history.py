@@ -25,17 +25,18 @@ KEEP_FLAGS = """      --keep FILE     append the removed messages to FILE (relat
 HELPS = {
     "ls": """aos-agent history ls - list this agent's conversation, one message per line
 
-usage: aos-agent [--daemon D] history [--target NAME] ls [-j | --json] [RANGE]
+usage: aos-agent [--daemon D] history [--target NAME] ls [-l | -j] [RANGE]
        aos-agent history ls --help
 
 flags:
+  -l, --long   print each message in full (default: TEXT cut at %d characters, ending with …)
   -j, --json   print one JSON array of {"line": N, "message": {...}} ({"line": N, "raw": TEXT} for a line that is not JSON)
   -h, --help   show this help
 
 Print LINE TAB ROLE TAB TEXT per message (newlines shown as \\n; tool calls as -> name(arguments)).
 RANGE = N, A-B or A- (to the end); default: all. Line numbers count messages from 1.
 exit codes: 0 listed; 1 error (HistoryMissing, RangeBad...).
-""",
+""" % 200,
     "rm": """aos-agent history rm - delete some messages
 
 usage: aos-agent [--daemon D] history [--target NAME] rm [--keep FILE | --no-keep [-y]] RANGE
@@ -162,10 +163,17 @@ def one_line(s):
     return str(s).replace("\\", "\\\\").replace("\n", "\\n").replace("\t", " ")
 
 
-def show(n, raw):
+SHORT = 200                                     # ls 預設每則 TEXT 最多幾個字（使用者 11-10 深夜「幫我改成默認都短板吧」；-l 全文）
+
+
+def cut(text, long):
+    return text if long or len(text) <= SHORT else text[:SHORT] + "…"
+
+
+def show(n, raw, long=False):
     m = message(raw)
     if m is None:
-        return "%d\t?\t%s" % (n, one_line(raw))
+        return "%d\t?\t%s" % (n, cut(one_line(raw), long))
     c = m.get("content")
     text = c if isinstance(c, str) else ("" if c is None else json.dumps(c, ensure_ascii=False))
     if m.get("role") == "tool" and m.get("tool_call_id"):
@@ -174,7 +182,7 @@ def show(n, raw):
         f = call.get("function") if isinstance(call, dict) else None
         if isinstance(f, dict):
             text += "%s-> %s(%s)" % (" " if text else "", f.get("name"), f.get("arguments", ""))
-    return "%d\t%s\t%s" % (n, one_line(m.get("role", "?")), one_line(text))
+    return "%d\t%s\t%s" % (n, one_line(m.get("role", "?")), cut(one_line(text), long))
 
 
 def summary_text(lo, hi, text):
@@ -248,8 +256,8 @@ def cmd(argv):
     if act not in HELPS:
         raise Fail("CommandUnknown", "history: unknown action %s (%s; see aos-agent history --help)" % (act, ", ".join(HELPS)))
     flags = {"--keep": "keep"} if act != "ls" else {}
-    switches = {"--json": "json"} if act == "ls" else {"--no-keep": "no_keep", "--yes": "yes"}
-    shorts = {"-j": "--json"} if act == "ls" else {"-y": "--yes"}
+    switches = {"--json": "json", "--long": "long"} if act == "ls" else {"--no-keep": "no_keep", "--yes": "yes"}
+    shorts = {"-j": "--json", "-l": "--long"} if act == "ls" else {"-y": "--yes"}
     if act == "summarize":
         flags["--role"] = "role"
     topts, args = parse(args, flags, switches, help=HELPS[act], short=shorts,
@@ -262,6 +270,8 @@ def cmd(argv):
         raise bad_args(HELPS[act], "give --keep FILE or --no-keep, not both")
     if topts.get("yes") and not topts.get("no_keep"):
         raise bad_args(HELPS[act], "-y only goes with --no-keep")
+    if topts.get("json") and topts.get("long"):
+        raise bad_args(HELPS[act], "give -l or -j, not both")
     a = target(opts)
     path = history_file(a)
     if act == "ls":
@@ -273,7 +283,7 @@ def cmd(argv):
                                                   else {"raw": rows[n - 1]})) for n in picked], ensure_ascii=False))
         else:
             for n in picked:
-                print(show(n, rows[n - 1]))
+                print(show(n, rows[n - 1], topts.get("long", False)))
         return
     where = keep_target(path, topts)
     if where is None and not aos_flags.confirm(PROG, "delete these messages of %s for good (--no-keep)?" % a.name, yes=topts.get("yes", False)):

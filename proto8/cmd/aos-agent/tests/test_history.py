@@ -74,6 +74,12 @@ class History(unittest.TestCase):
         rows = json.loads(self.agent("ls", "--json", "2").stdout)
         self.assertEqual(rows, [{"line": 2, "message": MSGS[1]}])
 
+    def test_ls_short_by_default_long_with_l(self):
+        self.agent("set", "5", json.dumps({"role": "user", "content": "x" * 250}))
+        self.assertEqual(self.agent("ls", "5").stdout, "5\tuser\t" + "x" * 200 + "…\n")
+        self.assertEqual(self.agent("ls", "-l", "5").stdout, "5\tuser\t" + "x" * 250 + "\n")
+        self.assertIn("not both", self.agent("ls", "-l", "-j", ok=False).stderr)
+
     def test_rm_keeps_originals_next_to_it(self):
         r = self.agent("rm", "2-3")
         self.assertIn("removed 2 messages from line 2", r.stdout)

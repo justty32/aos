@@ -3,7 +3,7 @@
 # 使用者 11-10 晚 self_history 五題：「1.全給，風險自己擔。2.可以。3.可選，默認搬到旁邊(可以選要搬到哪) 4.接受縮水版。5.對」（thinking 2026-11/10/self-family）；
 #   原則同 self_tools（「這支工具就是aos-agent tools的包裝，只是目標改自己」：純包裝、參數一對一）。**對應關係**：aos-agent history 加了動作或旗標，這支要跟著加。
 # 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"rm"|"summarize"|"set", …}；別的鍵＝ArgumentsBad：
-#   ls {range?, json?}                         ＝history ls [--json] [RANGE]；最後多一行說哪幾行是這一步、動不了
+#   ls {range?, json?, long?}                  ＝history ls [--json] [--long] [RANGE]（預設每則 TEXT 截 200 字，long＝全文）；最後多一行說哪幾行是這一步、動不了
 #   rm {range, keep?, no_keep?}                ＝history rm [--keep FILE | --no-keep -y] RANGE
 #   summarize {range, text, role?, keep?, no_keep?} ＝history summarize [--role] [--keep | --no-keep -y] -- RANGE TEXT（新那則內容＝「[aos] summary: lines A-B, N messages. text」，下層套的）
 #   set {line, message, keep?, no_keep?}       ＝history set [--keep | --no-keep -y] -- LINE JSON（message 是物件）
@@ -94,7 +94,7 @@ signal.signal(signal.SIGTERM, on_term)
 signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
 args = arguments()
 KEEP = ("keep", "no_keep")
-OPS = {"ls": ("range", "json"), "rm": ("range",) + KEEP, "summarize": ("range", "text", "role") + KEEP,
+OPS = {"ls": ("range", "json", "long"), "rm": ("range",) + KEEP, "summarize": ("range", "text", "role") + KEEP,
        "set": ("line", "message") + KEEP}
 op = args.get("op")
 if op is None:
@@ -169,7 +169,7 @@ rng = spot("range", op in ("rm", "summarize")) if op != "set" else None
 line = spot("line", True) if op == "set" else None
 cmd = [op]
 if op == "ls":
-    cmd += (["--json"] if flag("json") else []) + ([rng] if rng else [])
+    cmd += (["--json"] if flag("json") else []) + (["--long"] if flag("long") else []) + ([rng] if rng else [])
 else:
     cmd += keep_flags()
     if op == "summarize":

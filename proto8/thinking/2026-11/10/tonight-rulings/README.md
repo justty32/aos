@@ -110,3 +110,18 @@
 - 信箱壞信、hook 丟信寫的 `mailbox_warning.txt`：寫檔給人看，不進對話。
 
 **代定**：種類名（summary、session、clock、hook、tool、warning、knowledge）；括號資訊改成句子開頭的短語、句點收尾；只有一則的摘要寫 `line 3, 1 message.`；知識庫根多一個種類 `knowledge`（頂層例子沒列，是 aos 放進 system 的話，所以一起改）。
+
+### 項 B：有短版／長版之分的，預設都是短版
+
+| 指令／工具 | 以前預設 | 現在預設 | 長版 | commit |
+|---|---|---|---|---|
+| `aos-tools ls`、`aos-agent tools ls` | 名 TAB 種類 TAB 路徑 | 名 TAB 說明第一句 | `-l`（名、種類、路徑、FROM、STORED、ENV；原本的預設三欄併進來）；`--json` 照舊完整；`-b/--brief` 拿掉 | `25f83f0d9` |
+| `self_tools` ls | 叫 `ls -b` | 叫 `ls` | `"long": true` | `25f83f0d9` |
+| `aos-agent history ls`、`self_history` ls | 每則全文 | 每則內容截 200 字、結尾 `…` | `-l/--long`、`"long": true`（`-l` 跟 `-j` 擇一） | 見 git log |
+| `aos-agent ctl ls`、`hook ls`、`llm ls`、`ctl state`、self_state、self_hook／self_llm ls、`aos-mailbox peek`、memory_read | 本來就是短版 | — | 各自的 `-l`／`-j`／`long`／`max_bytes` | 不動 |
+| `aos-clock-register ls`、`aos-daemon-ctl ls` | 一列一行，沒有短長之分 | — | `-j` | 不硬加 |
+| `aos-tools get` | 一支工具的完整 JSON（就是看細項用的） | — | — | 不動 |
+
+**代定**：`ctl state tools` 跟著改成印名字加一句說明，要路徑用 `tools ls -l`；history ls 截 200 字（跟 `ctl state history` 同），不預設只印最後幾則。
+
+**拿不準、先不動**：`agents_children` 的 `"long": true` 是 JSON，`agents_ctl` 的 `"long": true` 是多幾欄文字（JSON 另用 `"json": true`），兩支口徑不一，是今晚另一隊照使用者裁定改的；`lib/base/ls` 預設回 JSON、每項帶大小時間，偏長（通用工具包那區）；`lib/aos/defs ls` 每個定義附整張工具表，但那是給程式吃的 JSON（review_round 在用）。

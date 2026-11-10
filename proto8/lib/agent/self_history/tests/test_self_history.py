@@ -68,6 +68,7 @@ class SelfHistory(unittest.TestCase):
         base = ["history", "--target", "bob"]
         for args, want in (({"op": "ls"}, ["ls"]),
                            ({"op": "ls", "range": "2-3", "json": True}, ["ls", "--json", "2-3"]),
+                           ({"op": "ls", "long": True}, ["ls", "--long"]),
                            ({"op": "rm", "range": 2}, ["rm", "--", "2"]),
                            ({"op": "rm", "range": "1-3", "keep": "old.jsonl"}, ["rm", "--keep", "old.jsonl", "--", "1-3"]),
                            ({"op": "summarize", "range": "1-2", "text": "-x", "role": "assistant", "no_keep": True},
