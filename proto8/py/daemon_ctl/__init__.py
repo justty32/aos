@@ -1,4 +1,4 @@
-"""daemon_ctl：daemon 的找址、名單自檢清理、寄信回信、門鈴與子 loop 控制共用介面。"""
+"""daemon_ctl：daemon 的找址、名單自檢清理、寄信回信、門鈴、子 loop 控制與停 daemon 本身的共用介面。"""
 PROG = "aos-daemon-ctl"
 
 from .base import (
@@ -42,6 +42,11 @@ from .ctl import (
     write_ctl,
     APPLY_S,
     wait_applied,
+    flux_name,
+    next_seq,
+    put_ctl,
+    SHUTDOWN_S,
+    shutdown,
 )
 from .post import (
     _post,
@@ -59,4 +64,4 @@ from .post import (
     wait_taken,
 )
 
-from .poke import poke, MODES
+from .poke import poke, MODES, read_state, check_alive

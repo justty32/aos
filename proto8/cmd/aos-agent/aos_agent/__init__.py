@@ -9,7 +9,7 @@ import aos_ws
 PROG = "aos-agent"
 HELP = """aos-agent - talk to and manage one agent hosted on an aos-daemon
 
-usage: aos-agent [--daemon D] SUBCOMMAND [FLAGS...] [ARGS...]
+usage: aos-agent [--daemon D] [--target NAME] SUBCOMMAND [FLAGS...] [ARGS...]
        aos-agent SUBCOMMAND --help        that subcommand's own help
 
 subcommands:
@@ -24,11 +24,13 @@ subcommands:
   llm      its brain settings: show, set, reset
 
 flags:
-  -d, --daemon D   the daemon's stack folder (default: $AOS_DAEMON, else ./.stack)
-  -h, --help       show this help
+  -d, --daemon D       the daemon's stack folder (default: $AOS_DAEMON, else ./.stack)
+  -t, --target NAME    which agent, for every subcommand that takes one (same as after it)
+  -h, --help           show this help
 
 target: every subcommand except ctl add / rm / ls / who acts on -t, --target NAME
-  (default: $AOS_AGENT); neither = TargetMissing.
+  (default: $AOS_AGENT); neither = TargetMissing. -t may go before or after the
+  subcommand; two different names = ArgumentsBad; before ctl add / rm / ls / who = ArgumentsBad.
 output: results on stdout only (one line per item, TAB-separated; --json where listed);
   reminders on stderr as "aos-agent: warning: ...".
 exit codes: 0 ok; 1 error ("aos-agent: error: CODE reason" on stderr); 130 on Ctrl-C.
@@ -61,8 +63,9 @@ def main():
     aos_flags.HELP = HELP                        # --help（旗標的位置，子命令後也認）：英文說明到 stdout、退 0
     a = sys.argv[1:]
     try:
-        opts, rest = parse(a, {"--daemon": "daemon"}, help=HELP, short=("-d",))
+        opts, rest = parse(a, {"--daemon": "daemon", "--target": "target"}, help=HELP, short=("-d", "-t"))
         common.DAEMON = opts.get("daemon")
+        common.TOP_TARGET = opts.get("target")       # 坑-68（11-10）：子命令前的 -t 傳給子命令（common.target 合併、兩邊不同＝ArgumentsBad）
         if not rest:
             raise Fail("ArgumentsBad", "missing subcommand (%s; see aos-agent --help)" % ", ".join(SUBS))
         if rest[0] not in SUBS:

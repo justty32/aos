@@ -21,6 +21,7 @@ IFACE = "aos-agent"
 # ---------------------------------------------------------------- daemon（共用 daemon_ctl 模組）
 
 DAEMON = None                                   # main 裡從 --daemon 定
+TOP_TARGET = None                               # main 裡從子命令前的 --target 定（坑-68）
 
 
 
@@ -246,9 +247,17 @@ def find(name, quiet=False):
     return Agent(name, r)
 
 
+def target_name(opts):
+    """子命令後的 --target ＞ 子命令前的 --target ＞ $AOS_AGENT；前後都給又不同＝ArgumentsBad（11-10 坑-68 代定）。"""
+    sub = opts.get("target")
+    if sub and TOP_TARGET and sub != TOP_TARGET:
+        raise Fail("ArgumentsBad", "two different targets: %s before the subcommand, %s after it; give --target once" % (TOP_TARGET, sub))
+    return sub or TOP_TARGET or os.environ.get("AOS_AGENT", "")
+
+
 def target(opts, quiet=False):
-    """--target ＞ $AOS_AGENT；都沒有＝TargetMissing。"""
-    name = opts.get("target") or os.environ.get("AOS_AGENT", "")
+    """target_name；都沒有＝TargetMissing。"""
+    name = target_name(opts)
     if not name:
         raise Fail("TargetMissing", "no target: add --target NAME, or export AOS_AGENT=NAME (or source using-aos-agent.sh NAME)")
     return find(name, quiet)

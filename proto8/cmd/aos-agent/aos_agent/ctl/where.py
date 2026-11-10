@@ -1,7 +1,7 @@
 # aos_agent/ctl/where.py - 顯示 agent 的 stack 或工作區路徑。
 import daemon_ctl as dc
 import os
-from ..common import bad_args, Fail, call_dc, daemon_path, find, parse, target
+from ..common import bad_args, Fail, call_dc, daemon_path, find, parse, target, target_name
 
 
 HELP = """aos-agent ctl where - print its stack or workspace path
@@ -26,7 +26,7 @@ def cmd(argv):
         raise bad_args(HELP, "where takes no positional arguments: %s (pick the target with --target)" % rest[0])
     if opts.get("stack") and opts.get("ws"):
         raise bad_args(HELP, "where takes only one of --stack and --ws (neither = --stack)")
-    name = opts.get("target") or os.environ.get("AOS_AGENT", "")
+    name = target_name(opts)
     if not name:
         target(opts)                                    # TargetMissing
     if not opts.get("ws"):

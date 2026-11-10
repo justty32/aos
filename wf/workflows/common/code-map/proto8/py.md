@@ -16,9 +16,9 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`__init__.py`](../../../../../proto8/py/daemon_ctl/__init__.py) | daemon_ctl：daemon 的找址、名單自檢清理、寄信回信、門鈴與子 loop 控制共用介面。 |
+| [`__init__.py`](../../../../../proto8/py/daemon_ctl/__init__.py) | daemon_ctl：daemon 的找址、名單自檢清理、寄信回信、門鈴、子 loop 控制與停 daemon 本身的共用介面。 |
 | [`base.py`](../../../../../proto8/py/daemon_ctl/base.py) | daemon_ctl 基礎：共用錯誤類別與 daemon 檔名常數。 |
-| [`ctl.py`](../../../../../proto8/py/daemon_ctl/ctl.py) | daemon_ctl 控制：檢查 proc 階段、依公開窗名寫入控制並等待套用。 |
+| [`ctl.py`](../../../../../proto8/py/daemon_ctl/ctl.py) | daemon_ctl 控制：檢查 proc 階段、依公開窗名寫入控制並等待套用；也寫 daemon 自己的 ctl 停它本身。 |
 | [`entry.py`](../../../../../proto8/py/daemon_ctl/entry.py) | daemon_ctl 入口：保留目標與 argv 寫法，讀取直接 loop 設定並組成掛子信。 |
 | [`poke.py`](../../../../../proto8/py/daemon_ctl/poke.py) | daemon_ctl 門鈴：核對公開窗與 Linux 行程身分後，用 pidfd 送出宣告的 poke 訊號。 |
 | [`post.py`](../../../../../proto8/py/daemon_ctl/post.py) | daemon_ctl 信件：寄送、認領與清理回信，並以秒或 cycle 等待 daemon 回應。 |

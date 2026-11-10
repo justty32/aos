@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列與門鈴；說明在 cmd/docs/03、04。
+# aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴與停 daemon 本身；說明在 cmd/docs/03、04。
 HELP = """aos-daemon-ctl - attach procs to an aos-daemon and start / stop / sleep / wake / pause them
 
 usage: aos-daemon-ctl [--daemon D] SUBCOMMAND [FLAGS...] [ARGS...]
@@ -19,6 +19,9 @@ subcommands:
   where --stack NAME   print its stack (one absolute path)
   poke [--ctl|--mail|--all]   wake now: read ctl (default), ctl + mailbox, or run a full round early
   ping [--timeout-s S]   wait for the daemon's ping reply; prints "replied in N ms"
+
+daemon itself:
+  shutdown [--timeout-s S]   stop this daemon: write stop to its own ctl, poke, wait for exit; prints N
 
 Mutation commands drop letters into the daemon's ctl mailbox (procs_added, procs_removed,
 procs_stopped, ...) or write the proc's own ctl window (pause / resume). A letter only
@@ -262,6 +265,28 @@ flags:
 
 exit codes: 0 replied; 1 error.
 """,
+    "shutdown": """aos-daemon-ctl shutdown - stop this daemon itself
+
+usage: aos-daemon-ctl [--daemon D] shutdown [--timeout-s S]
+
+Checks that the daemon is running (state window pid, started_at_ticks and boot_id match
+/proc, as poke does), writes {"cmd": "stop", "seq": N} to the daemon's own ctl window
+(D/ctl.json, or the ctl name in D/daemon.json), pokes it, and prints N.
+N is one more than the larger of the ctl's current seq and its state_flux ctl_seq.
+The daemon stops like on its own ctl stop: procs still running get SIGTERM (SIGKILL after
+10 s) and stay sleeping on the table; the next start wakes them.
+Then waits up to --timeout-s seconds for the daemon process to exit; still running is a
+warning line, exit 0 (the stop stays in ctl and applies on its next round).
+A daemon that is a proc of another daemon leaves that table when it exits 0 (warning line);
+to keep its row there, stop it through the upper daemon instead.
+
+flags:
+      --timeout-s S   positive exit timeout in seconds (default: 15)
+  -h, --help          show this help
+
+exit codes: 0 written; 1 error (ArgumentsBad, DaemonMissing, StateMissing, StateBad,
+  CtlMissing, WriteFailed, PokeFailed).
+""",
 }
 
 import json
@@ -502,9 +527,20 @@ def cmd_where(opts, args):
     print(dc.cell_of(dc.find_daemon(opts.get("daemon")), o["stack"]))
 
 
+def cmd_shutdown(opts, args):
+    """停 daemon 本身（open-11，11-10）：寫它自己 ctl 的 stop、poke、等退出；印 seq。"""
+    o, rest = aos_flags.parse(args, TIMEOUT, help=HELPS["shutdown"])
+    if rest:
+        raise Fail("ArgumentsBad", "shutdown takes no arguments")
+    seconds = timeout_arg(o, dc.SHUTDOWN_S)
+    print(dc.shutdown(dc.find_daemon(opts.get("daemon")), seconds), flush=True)
+
+
+# 子命令表：一列一組，新子命令接在對應那組（或新開一組）後面。
 COMMANDS = {"add": cmd_add, "rm": cmd_rm, "prune": cmd_prune, "stop": cmd_stop, "start": cmd_start, "sleep": cmd_sleep, "wake": cmd_wake,
             "pause": cmd_pause, "resume": cmd_resume,
-            "ls": cmd_ls, "where": cmd_where, "ping": cmd_ping, "poke": cmd_poke}
+            "ls": cmd_ls, "where": cmd_where, "ping": cmd_ping, "poke": cmd_poke,
+            "shutdown": cmd_shutdown}
 
 
 def main():

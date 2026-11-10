@@ -44,6 +44,7 @@ finally:
         sys.path.remove(_path)
 
 PROG = "aos-eca-screen"
+dc.PROG = PROG                                   # 坑-64：daemon_ctl 讀窗出錯的提醒行用本程式名（照 aos-agent）
 HELP = """aos-eca-screen - open, close or watch an eca's screen
 
 usage: aos-eca-screen --eca ECA_DIR SUBCOMMAND [FLAGS...]
