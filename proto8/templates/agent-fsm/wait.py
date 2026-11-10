@@ -11,6 +11,11 @@
 # 不看 queue：思考中來的信等答完回 idle 再收（使用者 11-04「等答完回 idle 再收」）。沒有自己的逾時（kernel 的 timeout_ms／priority.deadline 守）。
 #   等太久只提醒（11-10 坑-74 選項 A）：寄出（pending.txt 的 mtime）滿 10 分鐘印一行 warning、之後每滿 10 分鐘再一行，照樣退 10 繼續等；
 #   印到第幾個 10 分鐘記在 think/wait_warned.txt（一個整數；寄新信與收掉回信時刪），每拍是新行程也不重複印。
+# 失敗後冷卻（two-machines 06，使用者 11-10 裁「失敗後冷卻」）：BrainFailed、SendFailed（send 退非 0）是外面服務的錯，
+#   先用 lib/agent/cooldown.py 記一筆 $AOS_STACK/cooldown.json（30 秒起、加倍到 30 分鐘；dropped 一直是 0——重寄同一份請求、不掉信），
+#   再照舊退 1；寫不成只 warning 一行、不改原本的錯。寄之前（沒 pending、request.json 在、endpoint 對得上）冷卻中＝不寄、退 10 留在 wait；
+#   冷卻到了（due）或沒有＝照寄。好的回信接進 history 之後刪 cooldown.json（刪不掉＝warning）。ReplyBad、WriteFailed 等不寫冷卻。
+#   開了 auto_restart 的列：退 1 → daemon 重起 → 在 wait 冷卻裡活過 3 秒，不會被三次判停；沒開的照舊停著等人。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1——StackMissing、BrainFailed（kernel 回錯）、
 #   SendFailed（aos-llm send 退非 0；它自己的 stderr 原樣在上面，例 LlmKernelMissing）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
 # --help 印英文用法；Ctrl-C 退 130。
@@ -31,8 +36,13 @@ try:
         from agent_files import declared_files  # noqa: E402
     else:
         from agent.agent_files import declared_files  # noqa: E402
-except ModuleNotFoundError as _error:
-    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "observed", "observed_children"):
+    if (Path(__file__).resolve().parent / "cooldown.py").is_file():
+        import cooldown  # noqa: E402
+    else:
+        from agent import cooldown  # noqa: E402
+except (ModuleNotFoundError, ImportError) as _error:
+    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "observed", "observed_children",
+                           "cooldown", "agent.cooldown"):
         raise
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
           file=sys.stderr)
@@ -51,6 +61,11 @@ go back to think to rebuild. A pending request is received even without request.
 Waiting never times out here: after every full 10 minutes without a reply (counted from
 think/pending.txt) one warning line goes to stderr, and the cell keeps waiting.
 Append think letter, endpoint, model, usage and elapsed_ms to observed.jsonl (best effort).
+Cooldown after a failure of the outside service: on SendFailed (aos-llm send exited nonzero)
+or BrainFailed (the kernel replied with an error) the cell records $AOS_STACK/cooldown.json
+(30 s, then 1, 2, 4, 8, 15, 30 minutes, then every 30 minutes) and still exits 1. While that
+cooldown runs, a request about to be sent is held back (exit 10, stay in wait); once it is
+due the same request is sent again. A good reply deletes cooldown.json.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
@@ -117,6 +132,14 @@ def forget_warned():
         aos_flags.warn("agent-fsm", "cannot remove %s: %s" % (warned_path, e))
 
 
+def record_failure(code, reason):
+    """外面服務的錯：記一筆冷卻（dropped 0）；寫不成只提醒，呼叫的人照舊 die。"""
+    try:
+        cooldown.fail(stack, code, reason)
+    except OSError as e:
+        aos_flags.warn("agent-fsm", "cannot write %s: %s" % (cooldown.path(stack), e))
+
+
 def warn_if_slow(letter):
     """Warn once per full 10 minutes since the letter was sent; never fails the cell."""
     try:
@@ -164,6 +187,8 @@ if not name:                                     # 還沒寄
     body = read_obj(request)
     if cfg.get("endpoint") != body.get("endpoint"):
         sys.exit(REBUILD)                        # 腦設定改過（多半是上次 kernel 回錯、人改了代號再起）：brain 重組再寄
+    if cooldown.state(stack)[0] == "cooling":
+        sys.exit(NOT_YET)                        # 冷卻中：不寄、留在 wait；到了（due）才重寄同一份
     if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
         r = run(["aos-post", "init", box])
         if r.returncode != 0:
@@ -176,6 +201,8 @@ if not name:                                     # 還沒寄
     with open(request, encoding="utf-8") as f:
         r = run(["aos-llm", "send", "--reply-to", box], stdin=f)
     name = r.stdout.strip()
+    if r.returncode != 0:
+        record_failure("SendFailed", "aos-llm send exited %d" % r.returncode)
     if r.returncode != 0 or not name:
         die("SendFailed", "aos-llm send exited %d" % r.returncode)
     forget_warned()                              # 新的一封：提醒從頭算
@@ -216,6 +243,7 @@ def observe(reply):
 
 if r.returncode != 0:                            # kernel 回錯：aos-llm 已在 stderr 說了，這格只多寫自己一行
     observe({})
+    record_failure("BrainFailed", "aos-llm recv exited %d" % r.returncode)
     die("BrainFailed", "aos-llm recv exited %d (its reason is above)" % r.returncode)
 try:
     reply = json.loads(r.stdout)
@@ -230,4 +258,8 @@ try:
         f.write(json.dumps(message, ensure_ascii=False) + "\n")
 except OSError as e:
     die("WriteFailed", "cannot append to history.jsonl: %s" % e)
+try:                                             # 好的回信：冷卻歸零
+    cooldown.clear(stack)
+except OSError as e:
+    aos_flags.warn("agent-fsm", "cannot remove %s: %s" % (cooldown.path(stack), e))
 sys.exit(0)

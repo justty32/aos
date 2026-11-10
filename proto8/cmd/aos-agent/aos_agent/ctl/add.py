@@ -12,7 +12,7 @@ from ..decl import read_decl
 
 HELP = """aos-agent ctl add - attach one agent to the daemon
 
-usage: aos-agent [--daemon D] ctl add [-n N] [-w WS] [-s S] [--limits JSON] [--envs K=V ...] [--timeout-s S] [--on-queued fail|ok] XXX
+usage: aos-agent [--daemon D] ctl add [-n N] [-w WS] [-s S] [--limits JSON] [--envs K=V ...] [--auto-restart] [--timeout-s S] [--on-queued fail|ok] XXX
 
 XXX is the agent folder; it must declare aos-agent in interfaces.json. The letter goes
 through $AOS_KERNEL when that is set (a warning line says so). Waits until the agent is on
@@ -24,6 +24,11 @@ flags:
   -s, --stack S       its stack (default: <daemon stack>/procs/<name>/)
       --envs K=V      child environment variable (repeatable; set through an exec single)
       --limits JSON   resource limits, the aos-sandbox keys ('{}' = none)
+      --auto-restart  the daemon restarts it whenever it exits (row gets "auto_restart": true);
+                      only for agents that stay up; a fire-and-forget agent (eca with
+                      --on-empty stop) would end, restart and end again until the daemon
+                      stops it after 3 quick exits. To turn it on later: ctl rm, then
+                      ctl add --auto-restart (rm keeps the stack, it carries on)
       --timeout-s S   seconds to wait for the daemon (default 30)
       --on-queued MODE  fail or ok when still queued (default fail)
   -h, --help          show this help
@@ -34,7 +39,8 @@ exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, 
 def cmd(argv):
     try:
         opts, rest = aos_flags.parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits", "--timeout-s": "timeout_s", "--on-queued": "on_queued"},
-                                     help=HELP, short=("-n", "-w", "-s"), multi={"--envs": "envs"})
+                                     switches={"--auto-restart": "auto_restart"}, help=HELP, short=("-n", "-w", "-s"),
+                                     multi={"--envs": "envs"})
     except aos_flags.Error as e:
         raise bad_args(HELP, str(e)) if e.code == "ArgumentsBad" else Fail(e.code, str(e))
     envs = {}
@@ -94,7 +100,8 @@ def cmd(argv):
         raise Fail("InstanceExists", "%s is already on the daemon; pick another name (--name), or first aos-agent ctl rm %s%s" % (name, name, hint))
     try:
         _, request = call_dc(dc.add_letter, entry_target, name=name, ws=ws, stack=stack,
-                                  def_dir=def_dir, limits=limits, envs=envs)
+                                  def_dir=def_dir, limits=limits, envs=envs,
+                                  auto_restart=opts.get("auto_restart", False))
         row = ctl_wait("add", request,
                        lambda letter: row_named(name) or rejected(letter),
                        "the daemon has not put %s on the table yet (see aos-agent ctl ls and the daemon's log)" % name, "AddRejected", secs=secs, on_queued=on_queued, name=name)

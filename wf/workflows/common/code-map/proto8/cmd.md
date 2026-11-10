@@ -43,6 +43,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-daemon-ctl`](../../../../../proto8/cmd/aos-daemon-ctl/bin/aos-daemon-ctl) | 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 py/aos_sweep）；說明在 cmd/docs/03、04。 |
+| [`tests/test_auto_restart.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_auto_restart.py) | Verify --auto-restart: add_letter puts "auto_restart": true on the row for loop, exec and envs types, and both add commands take the switch. |
 
 ## `proto8/cmd/aos-eca/`
 

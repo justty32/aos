@@ -151,8 +151,9 @@ def check_limits(v, where, code):
 
 
 
-def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limits=None, envs=None):
-    """判型並組成掛子信；給定的路徑從目前目錄算起。"""
+def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limits=None, envs=None, auto_restart=False):
+    """判型並組成掛子信；給定的路徑從目前目錄算起。auto_restart＝True：那一列多 "auto_restart": true（daemon 的 key，
+    放在列的頂層、跟 exec／ws 同層；loop 型、exec 型、帶 envs 的都一樣，two-machines 06）；False＝不寫這個 key。"""
     xxx = abs_target(xxx, os.getcwd())
     path = xxx.partition("#")[0]
     if not os.path.exists(path):
@@ -198,4 +199,6 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
         spec["limits"] = limits     # 11-05：原樣（{}＝不限、蓋過 daemon 的預設）
     if limits is not None:
         check_limits(limits, "limits", "ArgumentsBad")
+    if auto_restart:
+        spec["auto_restart"] = True
     return name, {"procs_added": {name: spec}}

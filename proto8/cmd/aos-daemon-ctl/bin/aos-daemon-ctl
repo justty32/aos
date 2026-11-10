@@ -93,7 +93,7 @@ exit codes: 0 checked / previewed / sent; 1 error (ArgumentsBad, StateBad, rm er
     "add": """aos-daemon-ctl add - attach one proc (register + start)
 
 usage: aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--timeout-s S] [--name N] [--ws WS]
-                      [--stack S] [--def DEF] [--limits JSON] XXX [-- ARGS...]
+                      [--stack S] [--def DEF] [--limits JSON] [--auto-restart] XXX [-- ARGS...]
 
 XXX follows the aos-exec entry chain: an object with exec and no argv supplies a loop
 config (no ARGS allowed); arrays and argv objects stay unchanged as aos-exec targets.
@@ -114,6 +114,11 @@ flags:
   -s, --stack S        its stack (default: <D>/procs/<name>/)
       --def DEF        the definition folder recorded on the table (default: XXX)
       --limits JSON    resource limits, the aos-sandbox keys ('{}' = none)
+      --auto-restart   the daemon restarts it whenever it exits (row gets "auto_restart": true);
+                       only for procs that stay up; a fire-and-forget agent (eca with
+                       --on-empty stop) would end, restart and end again until the daemon
+                       stops it after 3 quick exits. To turn it on later: rm, then add again
+                       with --auto-restart (rm keeps the stack)
   -h, --help           show this help
 
 exit codes: 0 sent; 1 error (ArgumentsBad, DaemonMissing, MailboxMissing, PathMissing,
@@ -418,7 +423,7 @@ def deliver(d, body, reply_to=None, timeout_s=3, *, print_letter=True):
 
 def cmd_add(opts, args):
     o, rest = aos_flags.parse(args, dict(REPLY, **{"--name": "name", "--ws": "ws", "--stack": "stack", "--def": "def", "--limits": "limits"}),
-                              help=HELPS["add"], short=("-n", "-w", "-s"))
+                              switches={"--auto-restart": "auto_restart"}, help=HELPS["add"], short=("-n", "-w", "-s"))
     seconds = timeout_arg(o, 3)
     limits = limits_arg(o["limits"]) if o.get("limits") is not None else None
     if not rest:
@@ -429,7 +434,8 @@ def cmd_add(opts, args):
             raise Fail("ArgumentsBad", "add takes only one XXX; to pass arguments write XXX -- ARGS...")
         extra = extra[1:]
     d = dc.find_daemon(opts.get("daemon"))
-    _, body = dc.add_letter(rest[0], extra, o.get("name"), o.get("ws"), o.get("stack"), o.get("def"), limits)
+    _, body = dc.add_letter(rest[0], extra, o.get("name"), o.get("ws"), o.get("stack"), o.get("def"), limits,
+                            auto_restart=o.get("auto_restart", False))
     deliver(d, body, reply_arg(o), seconds)
 
 
