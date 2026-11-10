@@ -103,7 +103,7 @@
 - **Q2**：A（分工照舊、差別收到最少）。
 - **Q3**：「兩支都留 stack，要刪另外說」→ `aos-agent ctl rm` 預設留 stack、要刪加 `--purge`（先前他反問「aos-daemon-ctl竟然會留著stack？」，說明後這樣答）。
 - **Q4**：A（已停再停，兩支都算成功）。
-- **Q5**：A（根範本自己清掉繼承來的 `AOS_DAEMON`）。
+- **Q5**：先答 A（根範本自己清掉繼承來的 `AOS_DAEMON`）；頂層告知行不通（`.env` 是外層贏、清不掉）後改答「喔沒關係，root這東西本來使用者就要多注意一點。」→ **已裁不修**：不另想辦法、不動範本與 C++，只在文件提醒起根前 `unset AOS_DAEMON`。
 - **Q6**：A（不動，對照表放 help 第一屏）。
 - **Q7** copy-out：「範本改成必給的旗標」→ `copy-out --template 名 目的地`，沒給範本就報錯，另加 `--list`。使用者問過 copy-out 是什麼（他不熟這支）：明天 help 改寫時第一句要用一句白話講清楚它是「把範本抄出去開新 agent／新根」。
 - **Q8**：「改」→ `aos-agent tools add [--name 名] 路徑`，補 `--envs`、`--env-file`，寫法跟 aos-tools add 一致；lv6 的 agents／self_tools 那幾行呼叫照「只改那幾行」的例外跟著改。

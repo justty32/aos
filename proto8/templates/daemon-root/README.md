@@ -20,7 +20,7 @@ cd <你的專案>
 <repo>/proto8/templates/copy-out --template agent-fsm defs/ann # 一隻 agent 的定義
 mkdir -p stacks && cp <repo>/proto8/cmd/aos-agent/stack.gitignore stacks/.gitignore   # stack 進 git 時擋掉不該帶的
 export AOS_LLM_KERNEL=<llm kernel 專案的 stack>            # 在起根的殼設，子項照繼承
-unset AOS_CLOCK AOS_DAEMON AOS_STACK
+unset AOS_CLOCK AOS_DAEMON AOS_STACK   # 起根前一定清掉：殼裡留著 AOS_DAEMON，根會以為自己是那台的下屬（.env 清不掉，外層贏）
 aos-exec --stack stacks/root defs                          # 前景起根；stacks/、stacks/root 不在會自己建
 ```
 
