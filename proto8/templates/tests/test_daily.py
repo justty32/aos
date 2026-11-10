@@ -183,7 +183,7 @@ class Machine:
         return r
 
     def copy_out(self, *args, cwd):
-        return self.run(sys.executable, self.proto / "templates" / "copy-out", "--proto8", "env", *args, cwd=cwd)
+        return self.run(sys.executable, self.proto / "templates" / "copy-out", "--proto8", "env", "--template", *args, cwd=cwd)
 
     def start(self, stack, defs, cwd, label):
         """使用者那一行：aos-exec --stack <根 stack> <defs>（前景；這裡放背景、輸出進 log）。"""

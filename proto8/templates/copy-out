@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# copy-out - 把範本（templates/<名> 或 kernel/<名>）抄到 repo 外，指回 repo 的路徑照 --proto8 寫法改寫（預設 env：{"$env":"AOS_PROTO8",…}）。
+# copy-out - 把範本（templates/<名> 或 kernel/<名>）整夾抄到 repo 外開新 agent／新根／新 kernel；--template 必給（--list 列可用的），指回 repo 的路徑照 --proto8 寫法改寫（預設 env）。
 # 放在 templates/ 底下、不在範本裡：範本資料夾整份會被抄進每隻 agent，腳本放裡面就會跟著被抄走。
 # repo 的位置從自己的 realpath 往上推（不靠環境變數）：範本＝<本檔所在資料夾>/<範本名> 或 proto8/kernel/<名>，proto8＝本檔所在資料夾的上一層。
 # 寫法（11-10 TC，使用者「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」「兩台各自設一次...不要限制只設一次」）：
@@ -31,16 +31,18 @@ finally:
 PROG = "copy-out"
 HERE = Path(__file__).resolve().parent             # proto8/templates
 PROTO = str(HERE.parent)                           # proto8（這台）
-DEFAULT = "agent-fsm"
-USAGE = "(usage: copy-out [--proto8 MODE] [TEMPLATE] DEST)"
+USAGE = "(usage: copy-out --template NAME [--proto8 MODE] DEST)"
 HELP = """\
-copy-out - copy an agent or kernel template out of the repo
+copy-out - copy a whole template folder out of the repo to start a new agent, root
+or kernel of your own
 
-usage: copy-out [--proto8 MODE] [TEMPLATE] DEST
+usage: copy-out --template NAME [--proto8 MODE] DEST
+       copy-out --list
 
-TEMPLATE is a folder name under proto8/templates/ (default: agent-fsm) or kernel/NAME
-for a folder under proto8/kernel/ (e.g. kernel/llm-kernel); DEST is the new folder
-(relative to cwd) and must not exist yet. Copies the whole template (without
+--template NAME (required; there is no default) is a folder name under
+proto8/templates/ (e.g. agent-fsm, eca-claude, daemon-root) or kernel/NAME for a
+folder under proto8/kernel/ (e.g. kernel/llm-kernel); --list prints the names you can
+use, one per line. DEST is the new folder (relative to cwd) and must not exist yet. Copies the whole template (without
 __pycache__). Paths that point from the template into the repo's proto8/ are rewritten
 in the form MODE picks; paths that stay inside the template stay as they were.
 
@@ -56,7 +58,7 @@ endpoints...), {"$env": "AOS_CD", "$path": "../x"}, and relative symlinks. A sym
 cannot hold an environment variable, so in env mode a symlinked _entry becomes the
 equivalent JSON one-shot, a symlink to a file becomes a copy of that file, and a
 symlink to a folder falls back to an absolute symlink (one warning each).
-Prints: copied TEMPLATE -> DEST (N paths written as MODE), then one line saying what
+Prints: copied NAME -> DEST (N paths written as MODE), then one line saying what
 this copy needs on the machine (e.g. needs AOS_PROTO8 set to this machine's proto8
 folder).
 
@@ -99,17 +101,36 @@ def template_dir(template):
     return (base / name).resolve()
 
 
+def templates():
+    """可用的範本名：templates/ 底下有 _entry 的資料夾，與 kernel/ 底下的（寫成 kernel/<名>）。"""
+    out = sorted(d.name for d in HERE.iterdir() if (d / "_entry").is_file())
+    kernel = HERE.parent / "kernel"
+    if kernel.is_dir():
+        out += sorted("kernel/" + d.name for d in kernel.iterdir() if (d / "_entry").is_file())
+    return out
+
+
 def main():
     try:
-        opts, rest = aos_flags.parse(sys.argv[1:], {"--proto8": "proto8"}, {}, help=HELP)
+        opts, rest = aos_flags.parse(sys.argv[1:], {"--proto8": "proto8", "--template": "template"}, {"--list": "list"}, help=HELP)
     except aos_flags.Error as e:
         aos_flags.die(PROG, e.code, "%s %s" % (e, USAGE))
+    if opts.get("list"):                              # 11-10 cli-sweep Q7：列可用的範本
+        if rest or "template" in opts or "proto8" in opts:
+            aos_flags.die(PROG, "ArgumentsBad", "--list takes nothing else %s" % USAGE)
+        print("\n".join(templates()))
+        return
     mode = opts.get("proto8", "env")
     if mode not in copy_def.MODES:
         aos_flags.die(PROG, "ArgumentsBad", "--proto8 must be one of %s (got %r) %s" % (", ".join(copy_def.MODES), mode, USAGE))
-    if not rest or len(rest) > 2:
+    template = opts.get("template")                   # 11-10 cli-sweep Q7「範本改成必給的旗標」：沒有預設
+    if not template:
+        aos_flags.die(PROG, "ArgumentsBad", "missing --template NAME (copy-out --list shows the names) %s" % USAGE)
+    if len(rest) != 1:
+        if len(rest) > 1 and rest[1].startswith("-"):
+            aos_flags.die(PROG, "ArgumentsBad", "flags go before DEST: %s %s" % (rest[1], USAGE))
         aos_flags.die(PROG, "ArgumentsBad", "%s %s" % ("missing DEST" if not rest else "too many arguments", USAGE))
-    template, dest = (DEFAULT, rest[0]) if len(rest) == 1 else rest
+    dest = rest[0]
     src = template_dir(template)
     dest = Path(os.path.abspath(dest))
     if os.path.lexists(dest):

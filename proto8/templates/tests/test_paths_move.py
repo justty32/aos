@@ -157,10 +157,10 @@ class PathsMove(unittest.TestCase):
         proj, llms = base / "proj", base / "llms"
         proj.mkdir(parents=True)
         llms.mkdir(parents=True)
-        out = m.copy_out("--proto8", mode, "daemon-root", "defs", cwd=proj).stdout
-        out += m.copy_out("--proto8", mode, "agent-fsm", "defs/ann", cwd=proj).stdout
+        out = m.copy_out("--proto8", mode, "--template", "daemon-root", "defs", cwd=proj).stdout
+        out += m.copy_out("--proto8", mode, "--template", "agent-fsm", "defs/ann", cwd=proj).stdout
         (proj / "defs" / "ann" / "llm.json").write_text('{"endpoint": "fake"}\n')
-        out += m.copy_out("--proto8", mode, "kernel/llm-kernel", "def", cwd=llms).stdout
+        out += m.copy_out("--proto8", mode, "--template", "kernel/llm-kernel", "def", cwd=llms).stdout
         for stacks in (proj / "stacks", llms / "stacks"):
             stacks.mkdir()
             shutil.copyfile(REPO / "cmd" / "aos-agent" / "stack.gitignore", stacks / ".gitignore")

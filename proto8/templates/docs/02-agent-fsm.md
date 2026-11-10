@@ -8,7 +8,7 @@ aos 體系自己的 agent：**一隻＝一個範本資料夾**，複製一份、
 
 ```sh
 export AOS_PROTO8=$HOME/repo/aos-tools/proto8   # 每台設一次＝這台 proto8 的位置（改了值重起樹就生效）
-proto8/templates/copy-out bob              # = copy-out --proto8 env agent-fsm bob；別的範本：eca-claude、reviewer、daemon-root、kernel/llm-kernel…
+proto8/templates/copy-out --template agent-fsm bob   # = --proto8 env（預設）；--template 必給（11-10 Q7），copy-out --list 列別的範本
 # copied agent-fsm -> /home/me/bob (5 paths written as env)
 # needs AOS_PROTO8 set to this machine's proto8 folder (now: /home/me/repo/aos-tools/proto8; this repo: …)
 ```
@@ -25,7 +25,7 @@ proto8/templates/copy-out bob              # = copy-out --proto8 env agent-fsm b
 
 換台不用跑任何重建指令：照選的寫法備好（上表右欄）就直接起。`aos-agent tools add` 照使用者給的寫法存（絕對存絕對、相對存相對覆蓋層），要寫環境變數指示詞用 `aos-tools add --path-json`（[aos-tools](../../cmd/aos-tools/README.md)）。11-10 午在 /tmp 用 [`templates/tests/test_paths_move.py`](../tests/test_paths_move.py) 跑每種寫法各一輪「A 起→問一題→shutdown→git 搬到另一個 HOME 與前綴（A 的 proto8 刪掉）→B 直接起→接著答」，加一輪同機改 `AOS_PROTO8`，都過。
 
-目的已存在＝`copy-out: error: DestExists …`、不蓋；範本名不是 `templates/<名>` 或 `kernel/<名>`（有 `_entry` 的資料夾）＝`TemplateMissing`；其餘錯 `ArgumentsBad`（含 `--proto8` 不認得）、`FlagUnknown`、`TemplateBad`（範本裡的 JSON 讀不懂）、`WriteFailed`（半路失敗會把這次建的目的資料夾刪掉）；`--help` 印英文用法。四支格找共用模組依序看自己的資料夾、自己的 realpath 往上找到的 repo `py/`／`lib/`、標準 `sys.path`（11-06 晚 K-5），抄出 repo 後靠第三條：先跑過 `install.sh`，讓 user site 的 `aos-proto8.pth` 帶入這份 repo 的兩個絕對路徑，或明給 `PYTHONPATH`（換了 `HOME` 就沒有 user site，要靠 `PYTHONPATH`）；介面宣告讀法共用 `lib/agent/agent_files.py`。
+目的已存在＝`copy-out: error: DestExists …`、不蓋；範本名不是 `templates/<名>` 或 `kernel/<名>`（有 `_entry` 的資料夾）＝`TemplateMissing`；其餘錯 `ArgumentsBad`（含 `--proto8` 不認得、沒給 `--template`）、`FlagUnknown`、`TemplateBad`（範本裡的 JSON 讀不懂）、`WriteFailed`（半路失敗會把這次建的目的資料夾刪掉）；`--help` 印英文用法。四支格找共用模組依序看自己的資料夾、自己的 realpath 往上找到的 repo `py/`／`lib/`、標準 `sys.path`（11-06 晚 K-5），抄出 repo 後靠第三條：先跑過 `install.sh`，讓 user site 的 `aos-proto8.pth` 帶入這份 repo 的兩個絕對路徑，或明給 `PYTHONPATH`（換了 `HOME` 就沒有 user site，要靠 `PYTHONPATH`）；介面宣告讀法共用 `lib/agent/agent_files.py`。
 
 沒用 `copy-out`、只 `cp -r`＝五處相對路徑出了 repo 就斷（第一題 `aos-tools: error: PathMissing tool agents (…)`〔或 `ToolDefMissing tool memory (…) … needs _tooldef.json inside`〕、`agent-fsm: error: ToolsBad aos-tools ls exited 1`，那隻留 `stopped`；11-05 夜第二輪邊緣，11-10 重驗）。五處：`tools.json` 的 `../../lib/…`、`tools/memory/_entry` 單子裡的 `../../../../lib/agent/memory/_entry`、`tools/memory/_memory.json` 的 `base`、`tools/memory/` 裡的兩個捷徑 `_tooldef.json`、`_metainfo.json`（`cp -r` 照原樣抄相對捷徑）。手動改就照上表任一種寫法改這五處。
 
