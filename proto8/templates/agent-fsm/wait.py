@@ -16,7 +16,7 @@
 #   AOS_LLM_KERNEL 沒設或解不到資料夾＝不判斷、照舊等。
 # 結束碼（fsm.json 照碼分岔，N-36）：0＝回信接進 history（→ act）；10＝還沒回（→ wait）；11＝請求不在、腦設定改過或請求比 history 舊，回 think 重組請求。
 # 不看 queue：思考中來的信等答完回 idle 再收（使用者 11-04「等答完回 idle 再收」）。沒有自己的逾時（kernel 的 timeout_ms／priority.deadline 守）。
-#   等太久只提醒（11-10 坑-74 選項 A）：寄出（pending.txt 的 mtime）滿 10 分鐘印一行 warning、之後每滿 10 分鐘再一行，照樣退 10 繼續等；
+#   等太久只提醒（11-10 坑-74 選項 A）：寄出（pending.txt 的 mtime）滿 10 分鐘印一行 warning（說信在 kernel 的哪一格，11-10 晚 B10）、之後每滿 10 分鐘再一行，照樣退 10 繼續等；
 #   印到第幾個 10 分鐘記在 think/wait_warned.txt（一個整數；寄新信與收掉回信時刪），每拍是新行程也不重複印。
 #   平常每拍帶 recv --quiet（不印「為什麼還沒回」那行，免得每 300 ms 一行刷屏，I3 C1）；只有要印 10 分鐘提醒的那一拍不帶，
 #   讓 aos-llm 自己把原因印在這格那行前面（不讀它的 stderr）。
@@ -197,8 +197,26 @@ def warn_slow(letter, step):
         waited_s = time.time() - os.stat(pending).st_mtime
     except OSError:
         waited_s = step * WARN_EVERY_S
-    aos_flags.warn("agent-fsm", "no reply from the brain for %d minutes to letter %s (llm kernel: %s); still waiting"
-                   % (waited_s // 60, letter, os.environ.get("AOS_LLM_KERNEL") or "AOS_LLM_KERNEL not set"))
+    aos_flags.warn("agent-fsm", "no reply from the brain for %d minutes to letter %s: %s; still waiting"
+                   % (waited_s // 60, letter, slow_reason(letter)))
+
+
+def slow_reason(letter):
+    """10 分鐘提醒的原因（11-10 晚 two-machines B10）：信在 kernel 的哪一格。kernel 沒在跑由 aos-llm recv 那行說。"""
+    k = os.environ.get("AOS_LLM_KERNEL")
+    if not k:
+        return "AOS_LLM_KERNEL is not set, so this cell cannot tell where the letter is"
+    kernel = kernel_dir()
+    if kernel is None:
+        return "AOS_LLM_KERNEL (%s) is not a folder" % k
+    kernel = os.path.abspath(kernel)
+    if os.path.exists(os.path.join(kernel, "requests", "new", letter)):
+        return ("it is still queued at the llm kernel %s and not started yet (the kernel is not running, all slots are busy, "
+                "or a budget with spent: wait is used up)" % kernel)
+    if os.path.exists(os.path.join(kernel, "requests", "cur", letter)):
+        return "the llm kernel %s is running it; the brain call itself is slow (see %s)" % (
+            kernel, os.path.join(kernel, "requests", "cur", letter, "stderr.txt"))
+    return "the letter is no longer at the llm kernel %s; the reply may be on its way" % kernel
 
 
 def kernel_dir():

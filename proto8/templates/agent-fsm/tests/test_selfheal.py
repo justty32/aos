@@ -194,9 +194,24 @@ class QuietRecv(Base):
         self.assertEqual(len(lines), 2, result.stderr)
         self.assertIn('aos-llm: warning: fake reason', lines[0])
         self.assertIn('agent-fsm: warning: no reply from the brain for 11 minutes', lines[1])
+        self.assertIn('AOS_LLM_KERNEL is not set', lines[1])
         result = self.wait(10, FAKE_RECV='10')           # 同一個 10 分鐘不再印
         self.assertIn('--quiet', self.recvs()[-1])
         self.assertEqual(result.stderr, '')
+
+    def test_ten_minute_warning_says_where_the_letter_is(self):
+        # B10：提醒說出信在 kernel 的哪一格（排隊沒開始、正在跑）
+        kernel = self.root / 'llms/stacks/kernel'
+        old = time.time() - 11 * 60
+        for part, words in (('new', 'still queued at the llm kernel %s and not started yet'),
+                            ('cur', 'the llm kernel %s is running it; the brain call itself is slow')):
+            with self.subTest(part=part):
+                (kernel / 'requests' / part / 'letter-1').mkdir(parents=True)
+                os.utime(self.stack / 'think/pending.txt', (old, old))
+                (self.stack / 'think/wait_warned.txt').unlink(missing_ok=True)
+                result = self.wait(10, FAKE_RECV='10', AOS_LLM_KERNEL=str(kernel))
+                self.assertIn(words % kernel, result.stderr.splitlines()[-1])
+                (kernel / 'requests' / part / 'letter-1').rmdir()
 
 
 class SendFailed(Base):

@@ -190,8 +190,9 @@ int main(int argc, char** argv) {
             // 先驗 body／priority，驗過才看 kernel 在不在、印 warning（坑-100：壞 body 不該先印「letter sent anyway」）
             aos::Json body = g::read_body(opt(cli, "priority"));
             g::Mailbox mb = g::kernel();
-            g::warn_idle(mb);
+            std::string why = g::idle_reason(mb);   // 寄之前看（寄的途中 kernel 起來也照實說寄時的狀況）
             std::string id = g::send(mb, body, *rt);
+            g::warn_idle(mb, why, id);
             std::printf("%s\n", id.c_str());
             std::fflush(stdout);
             return 0;
@@ -204,8 +205,9 @@ int main(int argc, char** argv) {
             aos::Cli cli = parse(args, {{"--priority", "priority"}}, 0, "ask takes no positional arguments", "ask", {{"--full", "full"}});
             aos::Json body = g::read_body(opt(cli, "priority"));   // 同 send：先驗 body 再看 kernel（坑-100）
             g::Mailbox mb = g::kernel();
-            g::warn_idle(mb);
+            std::string why = g::idle_reason(mb);
             std::string id = g::send_held(mb, body);
+            g::warn_idle(mb, why, id);
             return g::ask_wait(mb, id, cli.opts.count("full") > 0);
         }
         if (cmd == "ls") {

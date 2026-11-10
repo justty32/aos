@@ -55,10 +55,11 @@ std::string idle_reason(const Mailbox& mb) {
     return why;
 }
 
-void warn_idle(const Mailbox& mb) {
-    std::string why = idle_reason(mb);
+// 11-10 晚 two-machines B10：寄完才印，說出信寫到哪（AOS_LLM_KERNEL 指錯時信會躺在別人的 stack 裡，要知道去哪刪）。
+void warn_idle(const Mailbox& mb, const std::string& why, const std::string& id) {
     if (!why.empty()) {
-        aos::warn("aos-llm", aos::dirname(mb.root) + ": " + why + "; letter sent anyway, the reply comes once it runs");
+        aos::warn("aos-llm", aos::dirname(mb.root) + ": " + why + "; letter " + id + " was written anyway to " + aos::join(mb.fresh(), id) +
+                                 ", the reply comes once it runs (if AOS_LLM_KERNEL points to the wrong place, fix it and delete that letter)");
     }
 }
 
