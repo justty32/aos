@@ -32,6 +32,8 @@
 **/tmux.conf
 **/busy.txt
 **/tools/run_python/main.py
+# 可執行檔工具的定義快取（aos-tools 寫；key 是這台的絕對路徑、stamp 是這台的修改時間，可重建；11-10 aos-tools-cli）
+**/tooldef_cache.json
 # ctl 呼叫者凍住後已不在；不可擴成 **/reply/，問腦回信必須帶走
 **/procs_requests/reply/
 **/daemon_reply/

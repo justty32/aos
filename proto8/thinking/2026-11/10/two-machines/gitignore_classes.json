@@ -1059,6 +1059,16 @@
     "kill9"
    ],
    "ignored_now": "對：ignored; sample=stacks/root/procs_requests/reply/.reply.lock"
+  },
+  {
+   "id": "G087",
+   "pattern": "stacks/**/tooldef_cache.json",
+   "writer": "proto8/cmd/aos-tools/bin/aos-tools (exe_tooldef)",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "可執行檔工具的 --tooldef 快取（11-10 aos-tools-cli 步 2）；key 是這台的絕對路徑、stamp 是這台的修改時間，可重建。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/tooldef_cache.json"
   }
  ]
 }

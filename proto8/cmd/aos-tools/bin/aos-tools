@@ -23,11 +23,13 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   dir   資料夾裡有 _tooldef.json；_metainfo.json 有就一起給（11-04 起只認帶 .json 的：_ 開頭的資料檔一律帶副檔名，
         不帶的 _tooldef／_metainfo 不認——沒 _tooldef.json＝ToolDefMissing）。叫＝aos-exec 資料夾，arguments 進 stdin。
   json  JSON 檔（aos-exec 跑得動的那種）頂層要有 _tooldef 物件；_metainfo key 有就一起給。叫＝aos-exec 檔，arguments 進 stdin。
-  exe   python 或其他可執行檔：`XXX --tooldef` 在 stdout 吐工具定義（JSON 物件，10 秒內、退 0）；結果快取在註冊檔裡
-        （檔的 mtime 與大小沒變就用快取；變了就重跑、不寫回——跑起來時不寫定義資料夾，P-15）。
-        add --no-cache（11-03）＝那一項記 "cache": false、不存快取：之後 ls／get 每次都重跑 --tooldef、不讀不寫快取
+  exe   python 或其他可執行檔：`XXX --tooldef` 在 stdout 吐工具定義（JSON 物件，10 秒內、退 0）；結果快取在
+        $AOS_STACK/tooldef_cache.json（11-10 aos-tools-cli 步 2：{絕對路徑: {"stamp": "mtime奈秒-大小", "tooldef": …}}；
+        stamp 相符就用，不符重跑並寫回（寫的是 stack，不是定義資料夾，P-15）；檔壞＝當沒有、重寫；
+        AOS_STACK 沒設或不是資料夾＝不快取、不寫任何檔）。登記檔不再存快取。
+        add --no-cache（11-03）＝那一項記 "cache": false：之後 ls／get 每次都重跑 --tooldef、不讀不寫快取檔
         （快取有時候礙事，例如定義是工具 import 的別的檔算出來的、檔本身沒變）。手寫也行（aos-json set …#/tools/名/cache false）。
-        cache 只收 false 或物件，別的＝RegistryBad；dir／json 項寫 false＝RegistryBad、add --no-cache 給 dir／json＝ArgumentsBad。
+        cache 只收 false，別的＝RegistryBad；dir／json 項寫 false＝RegistryBad、add --no-cache 給 dir／json＝ArgumentsBad。
         --override 重登記時沒帶 --no-cache＝回到有快取（整項重寫）。
         叫＝aos-exec 檔，arguments 原樣從 stdin 進；三種工具都不要求呼叫方設 AOS_STACK。
 --overlay O（11-05 portable-flow 步 4，使用者「tools只存差異那塊可以先做」）：F 疊一層覆蓋層 O 再用（aos-agent tools 的「這隻自己加減的」，
@@ -109,7 +111,7 @@ flags:
       --overlay O   overlay before add; write only this overlay
       --override    replace an existing name
   -n, --name N      register under this name
-      --no-cache    disable executable --tooldef caching (executables only)
+      --no-cache    ask the executable for its definition every time (executables only)
       --path-json J store this JSON path value (string or directive) instead of XXX
       --env-file F  read a dotenv file now, relative to cwd; store its values
       --envs K=V    override file values (repeatable; value taken literally)
@@ -141,6 +143,8 @@ usage: aos-tools [--file F] [--overlay O] ls [-l | --json]
 
 Prints NAME TAB KIND TAB PATH, sorted by name; an empty registry prints nothing.
 Kinds are dir, json and exe. Tool definitions are inspected; broken tools are errors.
+Executables are asked with --tooldef; with AOS_STACK set to a folder, answers are
+cached in $AOS_STACK/tooldef_cache.json until the file changes (add --no-cache: never).
 
 flags:
       --file F      registry file (default: ./tools.json)
@@ -319,9 +323,63 @@ def first_file(d, names):
     return None
 
 
+CACHE_FILE = "tooldef_cache.json"
+
+
+def cache_file():
+    """可執行檔定義快取的位置：$AOS_STACK/tooldef_cache.json（11-10 aos-tools-cli 步 2，使用者 Q2「快取搬到 stack 裡」）。
+    AOS_STACK 沒設、或不是資料夾＝None（不讀不寫不建）。"""
+    stack = os.environ.get("AOS_STACK")
+    if not stack or not os.path.isdir(stack):
+        return None
+    return os.path.join(stack, CACHE_FILE)
+
+
+def read_cache(cf):
+    """快取檔 → {絕對路徑: {stamp, tooldef}}；不在、壞了（不是 JSON、不是物件）＝當沒有（可重建，下次整份重寫）。"""
+    try:
+        with open(cf, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def write_cache(cf, data):
+    """先寫暫存再改名；寫不了只是少了快取，不算這支的錯（不印、不退非 0）。"""
+    tmp = "%s.%d.tmp" % (cf, os.getpid())
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(data, ensure_ascii=False) + "\n")
+        os.replace(tmp, cf)
+    except OSError:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
+def exe_tooldef(path):
+    """可執行檔的定義：stack 有快取且 stamp（mtime 奈秒＋大小）相符就用，否則重跑 --tooldef 並寫回快取檔。"""
+    cf = cache_file()
+    if cf is None:
+        return run_tooldef(path)
+    key, s = os.path.abspath(path), stamp(path)
+    data = read_cache(cf)
+    hit = data.get(key)
+    if isinstance(hit, dict) and hit.get("stamp") == s and isinstance(hit.get("tooldef"), dict):
+        return hit["tooldef"]
+    td = run_tooldef(path)
+    data = read_cache(cf)                            # 跑 --tooldef 的這段時間別人可能寫過，重讀再併
+    data[key] = {"stamp": s, "tooldef": td}
+    write_cache(cf, data)
+    return td
+
+
 def inspect(path, cache=None):
-    """登記對象 → {kind, tooldef, metainfo?, cache?}；不符合要求丟 Fail。cache＝註冊檔裡存的 exe 快取；
-    False＝不用快取（11-03 --no-cache）：exe 每次重跑 --tooldef、不給 cache；dir／json 碰到 False＝RegistryBad。"""
+    """登記對象 → {kind, tooldef, metainfo?}；不符合要求丟 Fail。cache＝登記格的 cache（只收 False）：
+    False＝不用快取（11-03 --no-cache）：exe 每次重跑 --tooldef、不讀不寫快取檔；dir／json 碰到 False＝RegistryBad。
+    其餘 exe 的快取在 $AOS_STACK/tooldef_cache.json（exe_tooldef）。"""
     kind = kind_of(path)
     if cache is False and kind != "exe":
         raise Fail("RegistryBad", "%s is %s; \"cache\": false is only for executables (exe)" % (path, kind))
@@ -345,16 +403,8 @@ def inspect(path, cache=None):
         out["tooldef"] = check_tooldef(td, path + "#/_tooldef")
         meta = read_json(path, "_metainfo", "ToolDefBad")[1] if "_metainfo" in raw else None
     else:
-        if cache is False:
-            out["tooldef"] = check_tooldef(run_tooldef(path), path + " --tooldef")
-        else:
-            s = stamp(path)
-            if isinstance(cache, dict) and cache.get("stamp") == s and isinstance(cache.get("tooldef"), dict):
-                td = cache["tooldef"]
-            else:
-                td = run_tooldef(path)
-            out["tooldef"] = check_tooldef(td, path + " --tooldef")
-            out["cache"] = {"stamp": s, "tooldef": td}
+        td = run_tooldef(path) if cache is False else exe_tooldef(path)
+        out["tooldef"] = check_tooldef(td, path + " --tooldef")
         meta = None
     if isinstance(meta, dict):
         out["metainfo"] = meta
@@ -411,8 +461,9 @@ def entries(reg, where, tools, raw_tools=None):
     for name, e in tools.items():
         if not isinstance(e, dict) or not isinstance(e.get("path"), str) or not e["path"]:
             raise Fail("RegistryBad", "%s: %s/%s must be {\"path\": non-empty string}" % (reg, where, name))
-        if "cache" in e and e["cache"] is not False and not isinstance(e["cache"], dict):
-            raise Fail("RegistryBad", "%s: %s/%s/cache must be false (no cache) or an object (cache)" % (reg, where, name))
+        if "cache" in e and e["cache"] is not False:     # 11-10 步 2：快取搬到 $AOS_STACK/tooldef_cache.json，登記格只記 false
+            raise Fail("RegistryBad", "%s: %s/%s/cache must be false (no cache); cached definitions live in $AOS_STACK/%s"
+                       % (reg, where, name, CACHE_FILE))
         env = e.get("env", {})
         if not isinstance(env, dict) or not all(isinstance(k, str) and ENV_KEY_RE.match(k) and isinstance(v, str) and "\0" not in v
                                               for k, v in env.items()):
@@ -651,8 +702,8 @@ def cmd_add(args):
     entry = {"path": stored}
     if env:
         entry["env"] = env
-    if info["kind"] == "exe":
-        entry["cache"] = False if opts.get("no_cache") else info["cache"]
+    if opts.get("no_cache"):                         # 只有 --no-cache 才寫；定義快取在 stack，不進登記檔（步 2）
+        entry["cache"] = False
     written = OVERLAY if OVERLAY is not None else reg
     if OVERLAY is not None:                          # 只寫覆蓋層
         ov = overlay_for_write()
