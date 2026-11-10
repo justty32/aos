@@ -173,7 +173,7 @@
    "symptom": "用 aos-agent 看不出哪隻開了",
    "direction": "ctl/ls.py 加一欄",
    "needs": "Python",
-   "status": "open"
+   "status": "已修（4c62a8905）"
   },
   {
    "id": "B19",
