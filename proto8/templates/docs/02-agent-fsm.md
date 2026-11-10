@@ -41,7 +41,7 @@ agent-fsm/
                等回信不設期限，寄出（pending.txt 的 mtime）每滿 10 分鐘印一行 agent-fsm: warning、照樣等（記在 think/wait_warned.txt，11-10 坑-74）
   act.py       跑工具：逐個 aos-tools call，照 metainfo 限時；失敗附 stderr 尾，結果各接一則 tool、退 0；沒有 tool_calls（最後答案）退 10
   system.txt   system 訊息（brain.py 的 --system 指到它；每次從檔讀、不存進 history；11-05 晚改英文）
-  tools.json   aos-tools 登記檔：wall_clock、self_tools（改自己的工具）、agents（生子 agent）、memory（查知識庫，11-05 晚）（都寫 `{"$env": "AOS_HOME", …}`；memory 直接登記 lib/agent/memory、`env.AOS_MEMORY` 指知識庫；跟 eca-claude 同一份；後兩個 11-05 使用者裁「內建」）；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
+  tools.json   aos-tools 登記檔：wall_clock、self_tools（改自己的工具）、self_llm（改自己的腦設定，11-10 晚）、agents（生子 agent）、memory（查知識庫，11-05 晚）（都寫 `{"$env": "AOS_HOME", …}`；memory 直接登記 lib/agent/memory、`env.AOS_MEMORY` 指知識庫；跟 eca-claude 同一份；後兩個 11-05 使用者裁「內建」）；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
   llm.json     腦設定：{}＝用 kernel 的預設代號；只認一個鍵 endpoint（kernel 的 endpoint 包代號，例 "smart-high"；model、temperature 等屬性固定在包上，llm.json 不寫、信裡也不帶 model）
   interfaces.json  {"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json"}, "aos-observed": {"file": "observed.jsonl"}}（沒有 screen；11-10 templates-cp 拿掉 memory 鍵與 tools/ 包裝夾）
   agents.json  工具 agents 的設定 {"max_children": 4}（這隻最多同時生幾隻；stack 裡的 agents.json 只放改過的鍵＝這隻的覆蓋）

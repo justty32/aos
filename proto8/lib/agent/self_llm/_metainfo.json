@@ -1,0 +1,14 @@
+{
+  "summary": "Show or change the brain settings of the agent calling me (aos-agent ctl who + llm show / set / reset)",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": true,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

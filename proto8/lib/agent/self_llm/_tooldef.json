@@ -1,0 +1,7 @@
+{"description": "See or change your own brain settings (only yours; your definition and other agents do not change). Changes work from your next turn. One op per call:\n- see: {\"op\": \"show\"}  (one KEY=VALUE per line)\n- change: {\"op\": \"set\", \"settings\": {\"endpoint\": \"smart-high\"}}\n- undo all your changes: {\"op\": \"reset\"}\nIf you set a brain that does not work, you stop answering until a human fixes it; use show first. Errors: ArgumentsBad, OpUnknown, LlmMissing, LlmBad, DaemonMissing, DaemonFailed, InstanceMissing.",
+ "env": ["AOS_DAEMON"],
+ "errors": ["ArgumentsBad", "OpUnknown", "LlmMissing", "LlmBad", "CommandMissing", "WsMissing", "LaunchFailed", "CommandFailed", "DaemonMissing", "DaemonFailed", "InstanceMissing"],
+ "parameters": {"type": "object",
+                "properties": {"op": {"type": "string", "enum": ["show", "set", "reset"], "description": "show = see your settings, set = change some, reset = undo all your changes"},
+                               "settings": {"type": "object", "additionalProperties": {"type": "string"}, "description": "set: the keys to change and their new values (strings), like {\"endpoint\": \"smart-high\"}"}},
+                "required": ["op"]}}
