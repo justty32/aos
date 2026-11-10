@@ -76,7 +76,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         if (cfg_.contains("procs")) {
             procs_ = read_procs(cfg_["procs"], cfg_dirs_.dir_of("procs"), "procs");
         }
-        for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_ctl_mailbox", "procs_loop", "procs_exec", "procs_stderr", "limits"}) {
+        for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_requests", "procs_loop", "procs_exec", "procs_stderr", "limits"}) {
             if (cfg_.contains(k)) {
                 cfg_[k] = aos::resolve(cfg_[k], cfg_dirs_.dir_of(k));
             }
@@ -87,11 +87,11 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         }
         throw;
     }
-    // 信箱（10-29 medium-plan § 四 3）：11-04 起沒寫＝預設名 procs_ctl_mailbox、null＝不開（跟 procs_ctl 同形；four-elements 題 5 後半）。跟 procs_ctl 可以同時開
-    Json mb = cfg_.contains("procs_ctl_mailbox") ? cfg_["procs_ctl_mailbox"] : Json("procs_ctl_mailbox");
+    // 信箱（10-29 medium-plan § 四 3）：11-04 起沒寫＝預設名 procs_requests、null＝不開（跟 procs_ctl 同形；four-elements 題 5 後半）。跟 procs_ctl 可以同時開
+    Json mb = cfg_.contains("procs_requests") ? cfg_["procs_requests"] : Json("procs_requests");
     if (!mb.is_null()) {
         if (!mb.is_string() || mb.get<std::string>().empty()) {
-            throw Error{code::CfgBad, "procs_ctl_mailbox must be a mailbox path or null"};
+            throw Error{code::CfgBad, "procs_requests must be a mailbox path or null"};
         }
         mbox_name_ = mb.get<std::string>();
         mbox_path_ = aos::join(stack_, mbox_name_);

@@ -10,6 +10,9 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`aos_flags.py`](../../../../../proto8/py/aos_flags.py) | 命令列旗標解析（含各支自定短名）、互動確認、公開狀態窗讀取與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 l… |
+| [`aos_sweep.py`](../../../../../proto8/py/aos_sweep.py) | 一輪（封存、保留期、封存總量、行程）與 purge 的流程、鎖、找列、報告；檔案細節在 aos_sweep_files、行程在 aos_sweep_proc；aos-sweeper 與 aos-daemon-ctl sweep 共用。 |
+| [`aos_sweep_files.py`](../../../../../proto8/py/aos_sweep_files.py) | stderr 的 copytruncate 封存（gzip）、封存檔名的 UTC 時間戳、保留期刪除、purge、.bad- 計數；aos_sweep 叫它。 |
+| [`aos_sweep_proc.py`](../../../../../proto8/py/aos_sweep_proc.py) | 認出這台 daemon 預設小格裡「表上沒有、但還活著、確定是這台生的」子 loop，先寫它的 ctl stop，過寬限還在才 TERM／10 秒後 KILL；真 zombie 只報。 |
 | [`aos_ws.py`](../../../../../proto8/py/aos_ws.py) | 「放一則訊息、等答案、讀 stack」與兩鐘期限的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。 |
 
 ## `proto8/py/daemon_ctl/`

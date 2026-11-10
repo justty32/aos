@@ -20,6 +20,13 @@
 | [`examples/thought-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/sandbox.json) | Sandbox (mode 1, no judge) for a tool that talks to the daemon (thought; agents and self_tools the same way): rw the daemon stack AOS_DAEMON (letters… |
 | [`root/setup.sh`](../../../../../proto8/cmd/aos-sandbox/root/setup.sh) | 沙箱的「身分層」要 root 做的事：裝 s6 到 /usr/local、建帳號 aos-run、給它一個工作的地方、讓我（$SUDO_USER）能換成它 |
 
+## `proto8/cmd/aos-sweeper/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`bin/aos-sweeper`](../../../../../proto8/cmd/aos-sweeper/bin/aos-sweeper) | 清道夫跑一輪（掛在 daemon 表上當 loop 列 `_sweeper`，每 interval_ms 一次；使用者 11-10）。 |
+| [`tests/test_sweep.py`](../../../../../proto8/cmd/aos-sweeper/tests/test_sweep.py) | Test aos-sweeper tasks 1–17 with isolated files, real locks, and owned child processes. |
+
 ## `proto8/cmd/aos-tools/`
 
 | 檔 | 負責什麼 |

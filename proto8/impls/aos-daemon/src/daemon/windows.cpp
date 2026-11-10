@@ -6,7 +6,7 @@
 //                   讀到好的清回 null，跟上一份好的不同才更新 state_flux 的 responded_at；檔不在＝回初始值、不算問題
 //   check_lists     procs、procs_added（read_procs）、procs_removed／procs_stopped／procs_started（名字的陣列）；信也用
 //   flux_more       daemon 的回音：procs_ctl_seq、procs_ctl_warning、adopt_warning、mailbox_warning（開了信箱才有）。
-//   write_more      procs_state 一份：{procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox,
+//   write_more      procs_state 一份：{procs_loop, procs_exec, procs_stderr, procs_requests,
 //                   daemon, procs, pid, started_at_ticks, boot_id, updated_at}；
 //                   Loop 每次 write_state 都呼叫、daemon 表變了也呼叫（flush_table）；有變才寫（11-02）：先組好分檔前的那份（不含 proc_fields、updated_at）
 //                   跟上一份寫出去的比，一樣就不碰檔，不一樣才寫分檔→清舊分檔→寫主檔（主檔改名是唯一的提交點）
@@ -216,7 +216,7 @@ void Daemon::write_more(const Json& me) {
     doc["procs_loop"] = names_.loop;
     doc["procs_exec"] = names_.exec;
     doc["procs_stderr"] = names_.err;
-    doc["procs_ctl_mailbox"] = mbox_path_.empty() ? Json() : Json(mbox_name_);
+    doc["procs_requests"] = mbox_path_.empty() ? Json() : Json(mbox_name_);
     doc["daemon"] = parent_;
     doc["procs"] = rows;
     if (more_wrote_ && doc == last_more_) {

@@ -6,7 +6,8 @@
 |---|---|---|
 | 「要跑什麼」：loop／daemon 的 `run`（10-23 統合一度改 `val`、10-23 晚改回）；fsm 格的 `val` | `exec`（`val` 只留給 C-55 的雙形） | 10-23 晚、深夜（原話在[命名](../命名.md)） |
 | `children`（10-23 `loops`）、`execs`（10-30）；小格 `loops/<名字>/`；子項的 `kind` | `procs`；`procs/<名字>/`；`kind` 拿掉（看寫法決定怎麼起） | 10-23；11-03 [procs](../../../thinking/2026-11/03/procs/README.md)，使用者「連名單也合一」「2.kind這東西沒用吧，刪掉」（N-28） |
-| `loops_ctl`／`loops_state`；`loops_mailbox`（11-02 晚 `loops_ctl_mailbox`）；ctl 的 `loops_added`／`loops_removed`、`execs_added`／`execs_removed` | `procs_ctl`／`procs_state`；`procs_ctl_mailbox`；`procs_added`／`procs_removed` | 11-02 晚使用者「loops_mailbox改名為loops_ctl_mailbox」；11-03 procs（N-28、N-54） |
+| `loops_ctl`／`loops_state`；`loops_mailbox`（11-02 晚 `loops_ctl_mailbox`）；ctl 的 `loops_added`／`loops_removed`、`execs_added`／`execs_removed` | `procs_ctl`／`procs_state`；`procs_requests`；`procs_added`／`procs_removed` | 11-02 晚使用者「loops_mailbox改名為loops_ctl_mailbox」；11-03 procs（N-28、N-54） |
+| daemon 的名單信箱 `procs_ctl_mailbox`（資料夾預設名、daemon.json 的 key、`procs_state.json` 的欄位；回信箱 `procs_ctl_mailbox/reply/`） | `procs_requests`（回信箱 `procs_requests/reply/`） | 11-10，使用者「我覺得可以將其改為procs_ctls。」「或是procs_requests」「1.requests」（C-54 R14 的 11-10 註、N-28） |
 | loop 的 ctl 兩個布林 `paused`／`stopped` | 一道指令 `cmd`＝`pause`／`resume`／`stop` | 11-03，[ctl-commands](../../../thinking/2026-11/03/ctl-commands/README.md)（N-06、N-07） |
 | state 窗的 `state` 欄；子項 `exited` | `phase`；`done`／`stopped` | 10-23（N-17、N-32） |
 | ctl 的 `stop`；state 窗的 `last_warning`；`start_ticks` | `cmd`＝`stop`（10-23 晚曾叫 `stopped`，11-03 改成指令，見上）；`ctl_warning`；`started_at_ticks` | 10-23 晚，[naming-method](../../../thinking/2026-10/23/naming-method/README.md)，使用者「寫進去吧」 |

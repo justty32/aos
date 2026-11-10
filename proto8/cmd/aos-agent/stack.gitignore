@@ -31,7 +31,7 @@
 **/busy.txt
 **/tools/run_python/main.py
 # ctl 呼叫者凍住後已不在；不可擴成 **/reply/，問腦回信必須帶走
-/procs_ctl_mailbox/reply/
+**/procs_requests/reply/
 **/daemon_reply/
 # 未寄且請求不在時，wait 退 11 回 think，從 history＋定義重組
 **/think/request.json

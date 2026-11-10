@@ -36,7 +36,7 @@ def names_of(d):
             value = st.get(key)
             if isinstance(value, str) and value:
                 out[key] = value
-            elif key == "procs_ctl_mailbox" and key in st and value is None:
+            elif key == "procs_requests" and key in st and value is None:
                 out[key] = None
     return out
 

@@ -12,7 +12,7 @@ project(aos-daemon C CXX)
 if(NOT TARGET aos-loop)
   add_subdirectory(../aos-loop aos-loop-build)
 endif()
-# 信箱模式（procs_ctl_mailbox，10-29 起；11-02 晚前叫 loops_mailbox）連 aos-post 的庫（公開標頭 aos/post.hpp：take_all、see、reply、done、sort_letters；它再帶進 aos-lock）。
+# 信箱模式（procs_requests，10-29 起；歷代舊名見 NORMS 附錄3）連 aos-post 的庫（公開標頭 aos/post.hpp：take_all、see、reply、done、sort_letters；它再帶進 aos-lock）。
 if(NOT TARGET aos-post)
   add_subdirectory(../aos-post aos-post-build)
 endif()

@@ -29,7 +29,7 @@ image/
 `root_def/daemon.json`：
 
 ```json
-{"procs_ctl_mailbox":"procs_ctl_mailbox","procs":{
+{"procs_requests":"procs_requests","procs":{
   "_clock":{"exec":{"argv":["aos-clock",{"$env":"AOS_DAEMON","$path":"clock"}]},"interval_ms":1000,"auto_restart":true,"stuck_after_ms":10000},
   "switchboard":{"exec":"../llm_def","stack":"../llm_image","auto_restart":true},
   "foreman":{"exec":"../foreman_def","stack":"../foreman_image","ws":"../ws","auto_restart":true}
@@ -42,12 +42,12 @@ image/
 AOS_CLOCK=${AOS_STACK}/clock
 ```
 
-`llm_def/daemon.json` 沿用 kernel daemon 定義，另加 `"procs_ctl_mailbox":"procs_ctl_mailbox"` 才能用下方 ping 確認總機；其 `exec` 身體繼續跑 aos-llm-kernel。
+`llm_def/daemon.json` 沿用 kernel daemon 定義，另加 `"procs_requests":"procs_requests"` 才能用下方 ping 確認總機；其 `exec` 身體繼續跑 aos-llm-kernel。
 
 `foreman_def/daemon.json`：
 
 ```json
-{"procs_ctl_mailbox":"procs_ctl_mailbox","procs":{
+{"procs_requests":"procs_requests","procs":{
   "ann":{"exec":"../agent_def/fsm.json","interval_ms":0,"stack":"../agent_image","ws":"../ws","def":"../agent_def"}
 }}
 ```

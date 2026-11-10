@@ -87,7 +87,7 @@ class Poke(unittest.TestCase):
 
     def letter(self):
         name = dc.send(str(self.stack), {'ping': True}, direct=True)
-        path = self.stack / 'procs_ctl_mailbox' / 'new' / name
+        path = self.stack / 'procs_requests' / 'new' / name
         self.assertTrue(path.exists())
         return path
 

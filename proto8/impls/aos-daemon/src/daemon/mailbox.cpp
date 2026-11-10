@@ -1,4 +1,4 @@
-// mailbox.cpp：【daemon】信箱 procs_ctl_mailbox（10-29，medium-plan § 二 4、§ 四 3；NORMS N-28 的 10-29 補、N-16；11-03 改名 procs、多 stop／start；說明見 daemon.hpp）。
+// mailbox.cpp：【daemon】信箱 procs_requests（10-29，medium-plan § 二 4、§ 四 3；NORMS N-28 的 10-29 補、N-16；11-03 改名 procs、多 stop／start；說明見 daemon.hpp）。
 // 跟 procs_ctl 可以同時開；信改的是「底」want_／stopped_，procs_ctl 每圈疊在底上（tend）。
 //
 //   open_mailbox   起來時（建構子最後、adopt 之後）：aos::post::init 建 tmp/ new/ cur/（已在就沿用；$AOS_STACK 不在＝不建、MkdirFailed）、

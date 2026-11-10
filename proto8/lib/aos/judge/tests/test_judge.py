@@ -27,7 +27,7 @@ class JudgeTest(unittest.TestCase):
         self.daemon.mkdir()
         self.requests = self.stack / "requests"
         self.replies = self.stack / "judge_replies"
-        self.ctl = self.daemon / "procs_ctl_mailbox"
+        self.ctl = self.daemon / "procs_requests"
         self.sender = self.root / "sender"
         self.policy = self.root / "judge.json"
         self.policy.write_text(json.dumps(policy))

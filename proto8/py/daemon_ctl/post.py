@@ -33,9 +33,9 @@ def mailbox_of(d, direct=False):
         if not os.path.isdir(os.path.join(box, "new")):
             raise Fail("MailboxMissing", "%s (AOS_KERNEL) is not a mailbox (check the declared AOS_KERNEL path)" % box)
         return box
-    mb = names_of(d)["procs_ctl_mailbox"]
+    mb = names_of(d)["procs_requests"]
     if not mb:
-        raise Fail("MailboxMissing", "the daemon of %s has no mailbox (procs_ctl_mailbox in procs_state.json is null; do not set procs_ctl_mailbox to null in daemon.json)" % d)
+        raise Fail("MailboxMissing", "the daemon of %s has no mailbox (procs_requests in procs_state.json is null; do not set procs_requests to null in daemon.json)" % d)
     box = os.path.join(d, mb)
     if not os.path.isdir(os.path.join(box, "new")):
         raise Fail("MailboxMissing", "%s is not a mailbox (daemon not started yet, or its mailbox is off)" % box)

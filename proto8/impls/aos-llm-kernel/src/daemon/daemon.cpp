@@ -48,13 +48,13 @@ Host find_host() {
         }
         return h;
     }
-    Json mb = Json("procs_ctl_mailbox");
+    Json mb = Json("procs_requests");
     std::optional<Json> st = aos::read_window("aos-llm-kernel", aos::join(h.daemon, PROCS_STATE));
-    if (st && st->is_object() && st->contains("procs_ctl_mailbox")) {
-        mb = (*st)["procs_ctl_mailbox"];
+    if (st && st->is_object() && st->contains("procs_requests")) {
+        mb = (*st)["procs_requests"];
     }
     if (!mb.is_string() || mb.get<std::string>().empty()) {
-        throw Error{code::MailboxMissing, h.daemon + ": the daemon has no ctl mailbox (procs_ctl_mailbox in procs_state.json is null)"};
+        throw Error{code::MailboxMissing, h.daemon + ": the daemon has no ctl mailbox (procs_requests in procs_state.json is null)"};
     }
     h.box = aos::abspath(aos::join(h.daemon, mb.get<std::string>()));
     return h;

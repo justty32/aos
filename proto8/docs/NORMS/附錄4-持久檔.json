@@ -191,7 +191,7 @@
    "reader": "aos-daemon",
    "image": "進",
    "on_bad": "壞＝整份不採用、原因進 state_flux procs_ctl_warning；不在＝不動（照上一份好的）",
-   "note": "程式沒人寫它（程式改名單走 procs_ctl_mailbox 的信）",
+   "note": "程式沒人寫它（程式改名單走 procs_requests 的信）",
    "evidence": "proto8/impls/aos-daemon/src/daemon/windows.cpp:26-65"
   },
   {
@@ -265,7 +265,7 @@
    "evidence": "proto8/templates/agent-fsm/brain.py:105-121、proto8/py/aos_ws.py:168-185、proto8/cmd/aos-eca/bin/aos-eca-turn:175"
   },
   {
-   "path": "<信箱>/{new,cur}/<信名>/letter.json（queue/、procs_ctl_mailbox/、kernel requests/、think/reply/）",
+   "path": "<信箱>/{new,cur}/<信名>/letter.json（queue/、procs_requests/、kernel requests/、think/reply/）",
    "lifetime": "持久",
    "writer": "aos-post send（aos-daemon-ctl、aos-agent、aos-llm、aos-llm-kernel 回信、idle 開場白）",
    "reader": "aos-post take／see（aos-daemon、templates/agent-fsm idle、aos-llm-kernel、aos-llm recv、lib/aos/judge）",
@@ -455,7 +455,7 @@
    "evidence": "proto8/lib/agent/cli_session.py:355、proto8/lib/agent/cli_session.py:407-421、proto8/templates/agent-fsm/idle.py:134"
   },
   {
-   "path": "<信箱>/tmp/、$AOS_STACK/daemon_reply/、<daemon stack>/procs_ctl_mailbox/reply/",
+   "path": "<信箱>/tmp/、$AOS_STACK/daemon_reply/、<daemon stack>/procs_requests/reply/",
    "lifetime": "暫時",
    "writer": "aos-post（半封信）、aos-agent／aos-daemon-ctl（共用回信信箱）",
    "reader": "aos-agent、aos-daemon-ctl",

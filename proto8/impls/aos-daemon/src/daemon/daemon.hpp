@@ -17,11 +17,11 @@
 //   failure.cpp  整理停止原因；body.cpp 跑 daemon 身體
 //   reconcile.cpp 依期望表起停子項；ctl.cpp 控制窗的名單與集合
 //   windows.cpp  管轄那一對窗：read_procs_ctl（procs_ctl.json）、check_lists、write_more（procs_state.json）、write_parts／clean_parts（切檔）
-//   mailbox.cpp  信箱（procs_ctl_mailbox）：open_mailbox、take_letters、apply_letter、done_letters
+//   mailbox.cpp  信箱（procs_requests）：open_mailbox、take_letters、apply_letter、done_letters
 //
 // daemon.json＝loop.json 的超集：exec、max、interval_ms、ctl、state 同 aos-loop，但 exec 選填、max 沒寫＝不限、interval_ms 沒寫＝200
 // （ctl、state 寫 null＝不開）；多幾個 key——procs＝{名字: proc}（拆檔＝{"$ref": [檔, …]}）、adopt（布林，沒寫＝true）、
-// procs_ctl、procs_state（在 $AOS_STACK 底下的檔名；沒寫＝procs_ctl.json、procs_state.json，null＝不開）、procs_ctl_mailbox（11-04 起沒寫＝procs_ctl_mailbox、null＝不開）、
+// procs_ctl、procs_state（在 $AOS_STACK 底下的檔名；沒寫＝procs_ctl.json、procs_state.json，null＝不開）、procs_requests（11-04 起沒寫＝procs_requests、null＝不開）、
 // procs_loop、procs_exec、procs_stderr（11-04：小格裡 daemon 寫的三個檔名，沒寫＝loop.json、exec.json、stderr.txt；見 child.hpp 的 CellNames）。
 // 舊名 loops、execs、loops_ctl、loops_state、loops_ctl_mailbox 不認（C-48，使用者 11-03「當沒看到」）。命令列 `-- 參數...` 只接在 daemon 自己的 exec。
 // 每個 proc 怎麼起看寫法（沒有 kind，procs § 2）：字串、陣列、或 key 只有 exec（＋ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_cycles、stuck_after_ms）的物件＝exec 型（aos-exec 一次）；其他物件＝loop 型（包成子 aos-loop）。
@@ -33,7 +33,7 @@
 // procs_ctl.json 認（N-54）：procs＝整份名單、procs_added、procs_removed、procs_stopped（要停的名字）、procs_started（要起的名字）、seq。
 // 期望表＝（procs_ctl 的 procs，沒寫＝底 want_）＋procs_added－procs_removed；stopped 集合＝底 stopped_＋procs_stopped－procs_started（同名兩邊都寫＝起）。
 // 底（記憶體）：want_＝daemon.json 的 procs（開了信箱再加 adopt 接回、不在上面的，設定記 null）＋信改過的；stopped_＝adopt 接回的 stopped 列＋信改過的。
-// 信（procs_ctl_mailbox）body 認 procs_added、procs_removed、procs_stopped、procs_started、procs_slept、procs_woken，改的是底；ping 必須是 true，只回信、不改底；壞信原因進 state_flux 的 mailbox_warning。
+// 信（procs_requests）body 認 procs_added、procs_removed、procs_stopped、procs_started、procs_slept、procs_woken，改的是底；ping 必須是 true，只回信、不改底；壞信原因進 state_flux 的 mailbox_warning。
 // procs_stopped／procs_started／procs_slept／procs_woken 適用所有 proc；不在期望表的名字＝不管。
 // 四態（procs § 0、§ 2c；ctl-commands § 5）：running（表上、活著）、stopping（收的途中）、stopped（表上、行程不在、stack 留著）、表上沒有；
 //   11-03 多一態 sleeping（procs § 8 sleep／wake）：daemon 收工（ctl 的 stop、SIGTERM／SIGINT）時 running 的 proc＝SIGTERM 收掉、列留成 sleeping
@@ -48,7 +48,7 @@
 //   11-05（edge-agent 題 1、edge-daemon 題 2，使用者選「留表標 stopped」「一起改成留表」）：任何 proc 退非 0（含被訊號打掉）＝列留成 stopped＋reason、
 //   進 stopped 集合（start 才再起）；退 0、接回的（拿不到碼）照舊拿掉。
 //   同名改寫法：已在跑的不重起（N-54）。
-// procs_state.json＝{procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox（沒開信箱＝null）,
+// procs_state.json＝{procs_loop, procs_exec, procs_stderr, procs_requests（沒開信箱＝null）,
 //   daemon（上一層的 AOS_DAEMON，根或指自己＝null）, procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫。
 // state_flux.json＝Loop 的 ctl 回音與 responded_at，再加 procs_ctl_seq、procs_ctl_warning、adopt_warning、mailbox_warning（開了信箱才有）。
 // adopt_warning 這次開門沒事＝null；壞檔／壞列的英文原因照 stderr 與 log，這次活著期間不變，多列以換行串接。
@@ -202,8 +202,8 @@ private:
     std::set<std::string> parts_prev_;                   // 上一次寫的 state 用到的分檔檔名（清舊分檔時留著）
     bool parts_wrote_ = false;                           // 這個行程寫過 state 了沒（第一次不清：磁碟上的主檔可能還指著舊的）
     std::map<std::string, std::chrono::steady_clock::time_point> retired_;   // 11-05 第二輪：退役的分檔（不在這次／上一次）→ 退役那一刻；滿 PARTS_KEEP_MS 才刪
-    std::string mbox_path_;                              // procs_ctl_mailbox（空＝不開）
-    std::string mbox_name_;                              // daemon.json 寫的信箱名（沒寫＝procs_ctl_mailbox；procs_state 回報用）
+    std::string mbox_path_;                              // procs_requests（空＝不開）
+    std::string mbox_name_;                              // daemon.json 寫的信箱名（沒寫＝procs_requests；procs_state 回報用）
     CellNames names_;                                    // 小格裡三個檔名（procs_loop／procs_exec／procs_stderr，11-04）
     aos::post::Mailbox mbox_;
     std::vector<std::string> redo_;                      // 起來時 cur/ 裡的（上次做到一半死掉），第一個認領的圈排在 new/ 前面重做

@@ -21,7 +21,7 @@ class LedgerTests(unittest.TestCase):
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
         self.env.update(AOS_STACK=str(self.stack), AOS_DAEMON=str(self.stack))
         for folder in ('requests/new', 'requests/cur', 'requests/tmp',
-                       'procs_ctl_mailbox/new', 'procs_ctl_mailbox/tmp', 'procs_ctl_mailbox/cur'):
+                       'procs_requests/new', 'procs_requests/tmp', 'procs_requests/cur'):
             (self.stack / folder).mkdir(parents=True)
         self.config = self.stack / 'kernel.json'
         self.config.write_text(json.dumps({'exec': str(FAKE.parent), 'endpoints': {'fake': {}},
