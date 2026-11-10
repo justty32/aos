@@ -1,5 +1,6 @@
-"""Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm) and an llm kernel project move by git to another HOME and prefix under each copy-out --proto8 mode, and keep answering."""
-# 四輪：env、absolute（兩台同一個絕對位置）、relative（兩台同相對擺法），各跑
+"""Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm, copied with cp -r) and an llm kernel project move by git to another HOME and prefix with AOS_HOME given three ways, and keep answering."""
+# 範本照 README 用 cp -r 抄出（檔裡一律 {"$env": "AOS_HOME", ...}）；AOS_HOME 三種給法各一輪：
+#   env＝殼裡 export；absolute＝兩份 .env 寫絕對路徑（兩台同一個絕對位置）；relative＝兩份 .env 寫 ${AOS_WS}/..（兩台同相對擺法）。各跑
 #   A 起 → 問一題 → aos-daemon-ctl -d stacks/root shutdown → git 搬到另一個 HOME、另一個前綴（A 的 proto8 複本與整個 A 刪掉）
 #   → B aos-exec --stack stacks/root defs → 不用其他指令就接著答；
 # 加一輪同一台：env 跑通 → 停 → AOS_HOME 改指另一份 proto8 複本（舊的刪掉）→ 再起 → 照樣答、檔裡沒殘留舊值。
@@ -23,6 +24,7 @@ PARTS = ("lib", "py", "templates", "kernel", "knowledge")
 T0 = time.monotonic()
 # 只給人看的歷史紀錄（記當時的路徑，不拿來解路徑）：log、llm kernel 的帳 ledger.jsonl、觀測帳 observed.jsonl
 LOGS = (".log", "/ledger.jsonl", "/observed.jsonl")
+COMMENTED = "# AOS_HOME=${HOME}/repo/aos-tools/proto8"      # 範本 .env 裡示範寫法的那行註解
 
 
 def log(msg):
@@ -33,7 +35,6 @@ def copy_proto(dest):
     dest.mkdir(parents=True)
     for n in PARTS:
         shutil.copytree(REPO / n, dest / n, symlinks=True, ignore=shutil.ignore_patterns("__pycache__", "tests"))
-    # templates/copy-out 本身要在（is_proto8 認它）；tests 被略過不影響
     return dest
 
 
@@ -60,8 +61,9 @@ class Machine:
             raise AssertionError("failed %r (cwd %s): rc=%d\n%s%s" % (args, cwd, r.returncode, r.stdout, r.stderr))
         return r
 
-    def copy_out(self, *args, cwd):
-        return self.run(sys.executable, self.proto / "templates" / "copy-out", *args, cwd=cwd)
+    def cp_template(self, src, dest, cwd):
+        """照 README：cp -r $AOS_HOME/templates/名 目的地（src 是 proto8 底下的相對路徑）。"""
+        return self.run("cp", "-r", self.proto / src, dest, cwd=cwd)
 
     def start(self, stack, defs, cwd, label):
         logname = self.work / ("%s-%d-%d.log" % (label, len(self.procs), time.monotonic_ns()))
@@ -157,10 +159,18 @@ class PathsMove(unittest.TestCase):
         proj, llms = base / "proj", base / "llms"
         proj.mkdir(parents=True)
         llms.mkdir(parents=True)
-        out = m.copy_out("--proto8", mode, "--template", "daemon-root", "defs", cwd=proj).stdout
-        out += m.copy_out("--proto8", mode, "--template", "agent-fsm", "defs/ann", cwd=proj).stdout
+        m.cp_template("templates/daemon-root", "defs", cwd=proj)
+        m.cp_template("templates/agent-fsm", "defs/ann", cwd=proj)
         (proj / "defs" / "ann" / "llm.json").write_text('{"endpoint": "fake"}\n')
-        out += m.copy_out("--proto8", mode, "--template", "kernel/llm-kernel", "def", cwd=llms).stdout
+        m.cp_template("kernel/llm-kernel", "def", cwd=llms)
+        if mode != "env":                              # 不 export：把範本 .env 那行註解換成自己的值（README 教的寫法）
+            value = {"absolute": str(m.proto),
+                     "relative": "${AOS_WS}/" + os.path.relpath(m.proto, proj)}[mode]
+            for env in (proj / "defs" / ".env", llms / "def" / ".env"):
+                text = env.read_text()
+                self.assertIn(COMMENTED, text)
+                env.write_text(text.replace(COMMENTED, "AOS_HOME=" + value))
+        out = "AOS_HOME %s" % {"env": "exported"}.get(mode, "in .env: " + (proj / "defs" / ".env").read_text().split("AOS_HOME=", 1)[1].split("\n", 1)[0])
         for stacks in (proj / "stacks", llms / "stacks"):
             stacks.mkdir()
             shutil.copyfile(REPO / "cmd" / "aos-agent" / "stack.gitignore", stacks / ".gitignore")

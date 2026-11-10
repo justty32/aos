@@ -2,7 +2,7 @@
   "description": "Forward team requests to the adjacent main llm kernel",
   "slots": 4,
   "timeout_ms": 180000,
-  "exec": "../../lib/aos/llm_forward",
+  "exec": {"$env": "AOS_HOME", "$path": "/lib/aos/llm_forward"},
   "endpoint": "fake",
   "budget": {
     "max_calls": 3000,

@@ -47,11 +47,24 @@ def tools(path, agent):
     if not isinstance(entries, dict):
         raise ValueError('tools must contain an object')
     for entry in entries.values():
-        if not isinstance(entry, dict) or not isinstance(entry.get('path'), str) or not entry['path']:
+        if not isinstance(entry, dict) or not (isinstance(entry.get('path'), str) and entry['path']
+                                               or is_directive(entry.get('path'))):
             raise ValueError('each tool must declare a path')
         if not isinstance(entry.get('env', {}), dict):
             raise ValueError('tool env must be an object')
     return entries
+
+
+def is_directive(value):
+    """{"$env": NAME, "$path": ...}: a tool path written for each machine's own value; kept as written, never resolved here."""
+    return isinstance(value, dict) and isinstance(value.get('$env'), str) and bool(value['$env'])
+
+
+def tool_key(table_dir, tool_path, root):
+    """How a tool path shows in ls/dup: a relative string from the root, or the directive itself as compact JSON."""
+    if is_directive(tool_path):
+        return json.dumps(tool_path, sort_keys=True, separators=(',', ':'))
+    return relative(table_dir / tool_path, root)
 
 
 def describe(path, root):
@@ -81,7 +94,7 @@ def describe(path, root):
         elif memory is not None and not isinstance(memory, dict):
             raise ValueError('memory base must be a path or environment object')
     table_dir = (path / agent['tools']).parent
-    row.update(tools=sorted({relative(table_dir / t['path'], root) for t in entries.values()}),
+    row.update(tools=sorted({tool_key(table_dir, t['path'], root) for t in entries.values()}),
                endpoint=endpoint, memory=memory)
     return row
 
@@ -138,6 +151,8 @@ def run(args):
                 continue
             agent = declared(path)
             for entry in tools(path, agent).values():
+                if is_directive(entry['path']):        # written for each machine's own value: not a path into this root
+                    continue
                 source = ((path / agent['tools']).parent / entry['path']).resolve()
                 thought = entry.get('env', {}).get('AOS_THOUGHT_FROM')
                 thought_path = None

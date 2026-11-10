@@ -10,6 +10,7 @@
 
 ```sh
 P=~/repo/simple_tools/aos/proto8
+export AOS_HOME=$P                                                # 範本與 kernel 的路徑都寫 {"$env": "AOS_HOME", …}（11-10 templates-cp）
 T=/tmp/feat-s9-self && rm -rf $T && mkdir -p $T/ws/.stack && cd $T
 aos-exec --stack $T/k $P/kernel/llm-kernel > k.log 2>&1 & K=$!     # llm daemon（假腦包都在它的 kernel.json）；K 記它的 pid 好收工
 export AOS_LLM_KERNEL=$T/k
@@ -71,7 +72,7 @@ rg SlotMissing d.log                     # 預期判官因總共五列 running�
 kill $K $D && unset AOS_DAEMON AOS_KERNEL
 ```
 
-第一題劇本（生法 (b) 用現有定義）：`agents add {"name": "kid", "def": "<repo>/proto8/templates/agent-fsm", "llm": {"endpoint": "fake"}}`（`llm` 走 kid 自己的覆蓋層 `<kid stack>/llm.json`，定義不動）→ `ask kid "what time is it?"`（kid 的假腦先叫 wall_clock〔`fake` 包寫 `"tool": "wall_clock"`〕、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`。第二題一次叫四個：kid1 用生法 (a) `agents new {"path": "defs/helper", "from": "<repo>/proto8/templates/agent-fsm", "files": {"system.txt": …}, "llm": {"endpoint": "fake"}}`——範本整份抄到 `ws/defs/helper`、換掉 `system.txt`、`llm.json` 寫進 `endpoint`、`tools.json` 的相對路徑改成絕對，再掛上；kid2、kid3 用 (b) `add {"def": "defs/helper"}` 重用它（kid3 另給 `"ws": "kid3"`＝`ws/kid3/`）；fsm1＋三隻＝4 隻 running，kid4 被判官擋，回給腦一則 `agents: error: AddRejected AOS_KERNEL refused the add letter: SlotMissing …`；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的）；`ws` 沒給＝跟 fsm1 同一個；`agents` 只收自己生的（`$AOS_STACK/children.json`）。
+第一題劇本（生法 (b) 用現有定義）：`agents add {"name": "kid", "def": "<repo>/proto8/templates/agent-fsm", "llm": {"endpoint": "fake"}}`（`llm` 走 kid 自己的覆蓋層 `<kid stack>/llm.json`，定義不動）→ `ask kid "what time is it?"`（kid 的假腦先叫 wall_clock〔`fake` 包寫 `"tool": "wall_clock"`〕、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`。第二題一次叫四個：kid1 用生法 (a) `agents new {"path": "defs/helper", "from": "<repo>/proto8/templates/agent-fsm", "files": {"system.txt": …}, "llm": {"endpoint": "fake"}}`——範本整份抄到 `ws/defs/helper`、換掉 `system.txt`、`llm.json` 寫進 `endpoint`、`tools.json` 的 `{"$env": "AOS_HOME", …}` 照抄，再掛上；kid2、kid3 用 (b) `add {"def": "defs/helper"}` 重用它（kid3 另給 `"ws": "kid3"`＝`ws/kid3/`）；fsm1＋三隻＝4 隻 running，kid4 被判官擋，回給腦一則 `agents: error: AddRejected AOS_KERNEL refused the add letter: SlotMissing …`；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的）；`ws` 沒給＝跟 fsm1 同一個；`agents` 只收自己生的（`$AOS_STACK/children.json`）。
 
 **兩道關**：`agents` 工具自己數這隻父生了幾隻（`max_children`，範本 `agents.json` 寫 4；記在父 stack 裡工具小格的 `children.json`，每次叫先跟 daemon 表對帳），超過＝工具直接回錯、不寄信；判官 `max_running` 數的是整台 daemon 的總量（含父；自己加了鐘列也算它）。上面第二題撞的是判官（父只有三隻，工具放行）。要看工具那道，照 act 格的叫法手叫一次（接在上面 `kill` 之前；`FS` 是 fsm1 的 stack）：
 

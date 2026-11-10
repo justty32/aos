@@ -3,5 +3,5 @@
  "ro": ["inner", "../../../../lib", "../../../../templates/agent-fsm", "../../../aos-agent/aos_agent", {"$env": "AOS_DAEMON"}],
  "rw": [{"$env": "AOS_DAEMON", "$path": "/procs"}, {"$env": "AOS_KERNEL"}, {"$env": "AOS_WS"}, {"$env": "AOS_STACK"}],
  "env": ["PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "PYTHONDONTWRITEBYTECODE", "PYTHONIOENCODING",
-         "AOS_ENTRY", "AOS_WS", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_DAEMON", "AOS_KERNEL", "AOS_MEMORY", "AOS_CLOCK", "AOS_THOUGHT_DEPTH", "AOS_THOUGHT_FROM"],
+         "AOS_ENTRY", "AOS_WS", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_DAEMON", "AOS_KERNEL", "AOS_MEMORY", "AOS_HOME", "AOS_CLOCK", "AOS_THOUGHT_DEPTH", "AOS_THOUGHT_FROM"],
  "net": false}

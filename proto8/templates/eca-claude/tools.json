@@ -1,4 +1,5 @@
-{"tools": {"wall_clock": {"path": "../../lib/base/wall_clock"},
-           "self_tools": {"path": "../../lib/agent/self_tools"},
-           "agents": {"path": "../../lib/agent/agents"},
-           "memory": {"path": "tools/memory"}}}
+{"tools": {"wall_clock": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/wall_clock"}},
+           "self_tools": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_tools"}},
+           "agents": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agents"}},
+           "memory": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/memory"},
+                      "env": {"AOS_MEMORY": {"$env": "AOS_HOME", "$path": "/knowledge/aos"}}}}}

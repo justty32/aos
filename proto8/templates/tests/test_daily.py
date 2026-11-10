@@ -182,8 +182,10 @@ class Machine:
             raise AssertionError("failed %r (cwd %s): rc=%d\n%s%s" % (args, cwd, r.returncode, r.stdout, r.stderr))
         return r
 
-    def copy_out(self, *args, cwd):
-        return self.run(sys.executable, self.proto / "templates" / "copy-out", "--proto8", "env", "--template", *args, cwd=cwd)
+    def cp_template(self, name, dest, cwd):
+        """照 README 的用法：cp -r $AOS_HOME/templates/名（kernel/名＝$AOS_HOME/kernel/名）目的地。"""
+        src = self.proto / name if name.startswith("kernel/") else self.proto / "templates" / name
+        return self.run("cp", "-r", src, dest, cwd=cwd)
 
     def start(self, stack, defs, cwd, label):
         """使用者那一行：aos-exec --stack <根 stack> <defs>（前景；這裡放背景、輸出進 log）。"""
@@ -351,7 +353,7 @@ class Daily(unittest.TestCase):
         self.pushed[name] = [self.git(m, path, "rev-parse", "HEAD").stdout.strip()]
 
     def build(self, m, h):
-        """A 機第一次：專案已有自己的歷史；照 README 的用法 copy-out、手動 cp gitignore 樣板。"""
+        """A 機第一次：專案已有自己的歷史；照 README 的用法 cp -r 範本、手動 cp gitignore 樣板。"""
         for n in self.repos():
             if n != "defs":
                 self.new_project(m, self.repo_dir(h, n), n)
@@ -367,7 +369,7 @@ class Daily(unittest.TestCase):
                                              ' "idempotent": true, "deterministic": true, "interrupt": "safe",'
                                              ' "parallel": true, "cost": {"time_ms": 10}, "timeout_ms": 5000}\n')
         # llms：llm kernel，端點只留假腦（fake＝先叫 wall_clock；fake-greet＝先叫 another 的 greet）
-        m.copy_out("kernel/llm-kernel", "def", cwd=h.llms)
+        m.cp_template("kernel/llm-kernel", "def", cwd=h.llms)
         kj = h.llms / "def" / "kernel.json"
         k = json.loads(kj.read_text())
         fake = k["endpoints"]["fake"]
@@ -376,14 +378,14 @@ class Daily(unittest.TestCase):
         kj.write_text(json.dumps(k, indent=1) + "\n")
         (h.llms / "stacks").mkdir()
         shutil.copyfile(GITIGNORE, h.llms / "stacks" / ".gitignore")
-        # something：根定義＋fsm＋eca（defs 在外面時：先 copy-out，再把那個夾做成使用者自己的 repo）
+        # something：根定義＋fsm＋eca（defs 在外面時：先 cp -r，再把那個夾做成使用者自己的 repo）
         defs_cwd = h.outside if self.defs_out else h.something
         root_def = "defs" if self.defs_out else self.root_def
         adir = "defs" if self.defs_out else self.agent_dir
-        m.copy_out("daemon-root", root_def, cwd=defs_cwd)
+        m.cp_template("daemon-root", root_def, cwd=defs_cwd)
         (defs_cwd / adir).mkdir(exist_ok=True)
-        m.copy_out("agent-fsm", adir + "/fsm", cwd=defs_cwd)
-        m.copy_out("eca-claude", adir + "/eca", cwd=defs_cwd)
+        m.cp_template("agent-fsm", adir + "/fsm", cwd=defs_cwd)
+        m.cp_template("eca-claude", adir + "/eca", cwd=defs_cwd)
         if self.defs_out:
             self.new_project(m, h.outside / "defs", "defs")
         fsm = defs_cwd / adir / "fsm"

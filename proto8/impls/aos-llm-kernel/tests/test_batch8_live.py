@@ -21,6 +21,7 @@ class Batch8Live(unittest.TestCase):
         self.root = Path(self.tmp.name)
         (self.root / 'lib').symlink_to(PROTO / 'lib', target_is_directory=True)
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
+        self.env['AOS_HOME'] = str(PROTO)          # kernel templates point into proto8 through AOS_HOME (11-10 templates-cp)
         bins = [str(p) for p in (PROTO / 'impls').glob('*/bin')]
         cmds = [str(p) for p in (PROTO / 'cmd').glob('*/bin')]
         self.env['PATH'] = os.pathsep.join(bins + cmds + [self.env['PATH']])
@@ -79,7 +80,7 @@ class Batch8Live(unittest.TestCase):
     def test_unmodified_templates_two_daemons_success_error_and_missing_kernel(self):
         lower = self.copy_template('llm-kernel')
         upper = self.copy_template('llm-team')
-        self.assertFalse(any(k.startswith('AOS_') for k in self.env))
+        self.assertEqual([k for k in self.env if k.startswith('AOS_')], ['AOS_HOME'])   # only the proto8 location
         self.launch(lower)
         self.launch(upper)
         direct = self.llm(lower, ['ask','--full'], {'request': REQUEST})

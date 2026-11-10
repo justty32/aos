@@ -4,32 +4,28 @@
 
 aos 體系自己的 agent：**一隻＝一個範本資料夾**，複製一份、改 `llm.json`／`system.txt`／`tools.json` 就是另一隻（四支格的程式也放在範本裡，每隻複製；使用者 11-04「放範本裡，每隻複製」）。`body.json` 讓 aos-loop 跑 `loop.json`，loop 每次跑 `fsm.json` 的一格；`_entry` 是「把自己掛上 daemon」（11-05，下面）；格是範本裡四支純標準庫的 Python。設計與代定：[thinking 11-04 loop-fsm-agent](../../thinking/2026-11/04/loop-fsm-agent/README.md)；問腦 11-04 晚改成寄信給 llm kernel：[think-as-function 03 § 1](../../thinking/2026-11/04/think-as-function/03-呼叫端.md)；條文 P-11、P-19、P-35 的 11-04 註。
 
-**複製出 repo**（11-05 晚試驗場回報；11-10 坑-73 起用 `copy-out`；11-10 午 TC 依使用者「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」「兩台各自設一次...不要限制只設一次」加 `--proto8` 寫法、預設改環境變數）：開一隻新 agent 用範本旁的 `proto8/templates/copy-out`（不放範本裡：範本整份會被抄進每隻 agent），一行做完：
+**複製出 repo**（11-10 templates-cp，使用者「copy-out能刪就刪」；copy-out 與 `lib/agent/copy_def.py` 當天刪掉）：開一隻新 agent 就 `cp -r`：
 
 ```sh
-export AOS_HOME=$HOME/repo/aos-tools/proto8   # 每台設一次＝這台 proto8 的位置（改了值重起樹就生效）
-proto8/templates/copy-out --template agent-fsm bob   # = --proto8 env（預設）；--template 必給（11-10 Q7），copy-out --list 列別的範本
-# copied agent-fsm -> /home/me/bob (5 paths written as env)
-# needs AOS_HOME set to this machine's proto8 folder (now: /home/me/repo/aos-tools/proto8; this repo: …)
+export AOS_HOME=$HOME/repo/aos-tools/proto8   # 每台設一次＝這台 proto8 的位置（改了值重起樹就生效；也可寫進根的 .env）
+cp -r $AOS_HOME/templates/agent-fsm bob
 ```
 
-**`--proto8 MODE`＝指回 repo 的路徑怎麼寫**（範本裡指出範本資料夾、落在 repo `proto8/` 裡的相對路徑才改；指在範本裡的照舊相對；解出來的值不寫回任何檔，每次用到才由讀它的程式解）：
+範本裡指到範本外、落在 proto8 的路徑一律寫成 `{"$env": "AOS_HOME", "$path": "/…"}`（`tools.json` 的四個工具、`memory` 那格 `env` 裡的 `AOS_MEMORY`、reviewer 的 `fsm.json` 借 agent-fsm 的格、kernel 範本的 `exec` 與 `endpoints`、daemon.json／loop.json 的 argv），範本裡沒有捷徑；解出來的值不寫回任何檔，每次用到才由讀它的程式解。所以抄到哪、兩台各放哪，檔都一字不差，只要每台的 `AOS_HOME` 對。`AOS_HOME` 三種給法（使用者 11-10 午「要用相對位置、絕對位置、環境變數指定都可」）：
 
-| MODE | 寫成 | 這台要備好 |
+| 給法 | 寫在哪 | 這台要備好 |
 |---|---|---|
-| `env`（預設） | `{"$env": "AOS_HOME", "$path": "/lib/base/wall_clock"}` | 每台設一次 `AOS_HOME`；檔兩台一字不差、clone 下來不用跑指令 |
-| `absolute` | 這台 proto8 的絕對路徑 | 每台把 proto8 放同一個位置（或在那裡放捷徑） |
-| `relative` | 從那個檔的資料夾到 proto8 的相對路徑 | 每台同樣的相對擺法 |
+| 殼裡 export | `export AOS_HOME=…` | 每台設一次 |
+| 絕對 | 根 `.env` 那行註解換成 `AOS_HOME=/絕對路徑` | 每台把 proto8 放同一個位置（或在那裡放捷徑） |
+| 相對 | 根 `.env` 寫 `AOS_HOME=${AOS_WS}/../aos/proto8`（`AOS_WS`＝起根時站的地方） | 每台同樣的相對擺法 |
 
-改的地方：任一 JSON（與 JSON 形的 `_entry`）裡相對、指得到 repo 東西的字串（`tools.json` 的 `tools.*.path`、`tools/memory/_entry` 單子、`_memory.json` 的 `base`、kernel 範本 `kernel.json` 的 `exec` 與 `endpoints`、daemon.json 的 argv）、`{"$env": "AOS_CD", "$path": "../…"}`（reviewer 的 `fsm.json` 借 `../agent-fsm/` 的格），與相對捷徑。**捷徑放不了環境變數**：`env` 下 `_entry` 捷徑換成等價的 JSON 單子、指到檔的捷徑換成那份檔的複本（agent-fsm 的 `tools/memory/_tooldef.json`、`_metainfo.json`，快照、之後 repo 改了不跟著變）、指到資料夾的退回 absolute，各提醒一行。改寫邏輯在 `lib/agent/copy_def.py`（agents 工具 `new` 從 repo 範本生子定義也用它）。repo 位置從 `copy-out` 自己的 realpath 往上推。
+殼裡 export 的贏過 `.env`（`.env` 只放預設）。根範本 `.env` 最後一行 `AOS_HOME=${AOS_HOME}`＝三種都沒給就在起根當下報 `aos-exec: error: DotenvBad bad .env: …/defs/.env line N`；agent 範本不帶 `.env`、從根繼承。沒有根、自己在殼裡打 `aos-tools call／ls` 時，那個殼要有 `AOS_HOME`，沒有就是 `DirectiveBad … AOS_HOME is not set`。
 
-換台不用跑任何重建指令：照選的寫法備好（上表右欄）就直接起。`aos-agent tools add` 照使用者給的寫法存（絕對存絕對、相對存相對覆蓋層），要寫環境變數指示詞用 `aos-tools add --path-json`（[aos-tools](../../cmd/aos-tools/README.md)）。11-10 午在 /tmp 用 [`templates/tests/test_paths_move.py`](../tests/test_paths_move.py) 跑每種寫法各一輪「A 起→問一題→shutdown→git 搬到另一個 HOME 與前綴（A 的 proto8 刪掉）→B 直接起→接著答」，加一輪同機改 `AOS_HOME`，都過。
+換台不用跑任何重建指令：備好 `AOS_HOME` 就直接起。`aos-agent tools add` 照使用者給的寫法存（絕對存絕對、相對存相對覆蓋層），要寫環境變數指示詞用 `aos-tools add --path-json`（[aos-tools](../../cmd/aos-tools/README.md)）。[`templates/tests/test_paths_move.py`](../tests/test_paths_move.py) 在 /tmp 跑三種給法各一輪「`cp -r` 起→問一題→shutdown→git 搬到另一個 HOME 與前綴（A 的 proto8 刪掉）→B 直接起→接著答」，加一輪同機改 `AOS_HOME`。
 
-目的已存在＝`copy-out: error: DestExists …`、不蓋；範本名不是 `templates/<名>` 或 `kernel/<名>`（有 `_entry` 的資料夾）＝`TemplateMissing`；其餘錯 `ArgumentsBad`（含 `--proto8` 不認得、沒給 `--template`）、`FlagUnknown`、`TemplateBad`（範本裡的 JSON 讀不懂）、`WriteFailed`（半路失敗會把這次建的目的資料夾刪掉）；`--help` 印英文用法。四支格找共用模組依序看自己的資料夾、自己的 realpath 往上找到的 repo `py/`／`lib/`、標準 `sys.path`（11-06 晚 K-5），抄出 repo 後靠第三條：先跑過 `install.sh`，讓 user site 的 `aos-proto8.pth` 帶入這份 repo 的兩個絕對路徑，或明給 `PYTHONPATH`（換了 `HOME` 就沒有 user site，要靠 `PYTHONPATH`）；介面宣告讀法共用 `lib/agent/agent_files.py`。
+四支格找共用模組依序看自己的資料夾、自己的 realpath 往上找到的 repo `py/`／`lib/`、標準 `sys.path`（11-06 晚 K-5），抄出 repo 後靠第三條：先跑過 `install.sh`，讓 user site 的 `aos-proto8.pth` 帶入這份 repo 的兩個絕對路徑，或明給 `PYTHONPATH`（換了 `HOME` 就沒有 user site，要靠 `PYTHONPATH`）；介面宣告讀法共用 `lib/agent/agent_files.py`。範本的 `tests/`、`README.md` 會一起抄過去，`tests/` 可以刪。
 
-沒用 `copy-out`、只 `cp -r`＝五處相對路徑出了 repo 就斷（第一題 `aos-tools: error: PathMissing tool agents (…)`〔或 `ToolDefMissing tool memory (…) … needs _tooldef.json inside`〕、`agent-fsm: error: ToolsBad aos-tools ls exited 1`，那隻留 `stopped`；11-05 夜第二輪邊緣，11-10 重驗）。五處：`tools.json` 的 `../../lib/…`、`tools/memory/_entry` 單子裡的 `../../../../lib/agent/memory/_entry`、`tools/memory/_memory.json` 的 `base`、`tools/memory/` 裡的兩個捷徑 `_tooldef.json`、`_metainfo.json`（`cp -r` 照原樣抄相對捷徑）。手動改就照上表任一種寫法改這五處。
-
-改完整包（定義＋工作區＋llm kernel）`cp -a`／git 到別處照樣起得來：daemon 表存相對路徑、上面五處照選的寫法解（`env` 每台設好 `AOS_HOME`；`absolute`／`relative` 照擺法），只要把 `AOS_LLM_KERNEL` 換成新位置。
+改完整包（定義＋工作區＋llm kernel）`cp -a`／git 到別處照樣起得來：daemon 表存相對路徑、指到 proto8 的照 `AOS_HOME` 解，`AOS_LLM_KERNEL` 照根 `.env` 的預設（`${AOS_WS}/../llms/stacks/llm`）或在殼裡換成新位置。
 
 ```
 agent-fsm/
@@ -45,16 +41,13 @@ agent-fsm/
                等回信不設期限，寄出（pending.txt 的 mtime）每滿 10 分鐘印一行 agent-fsm: warning、照樣等（記在 think/wait_warned.txt，11-10 坑-74）
   act.py       跑工具：逐個 aos-tools call，照 metainfo 限時；失敗附 stderr 尾，結果各接一則 tool、退 0；沒有 tool_calls（最後答案）退 10
   system.txt   system 訊息（brain.py 的 --system 指到它；每次從檔讀、不存進 history；11-05 晚改英文）
-  tools.json   aos-tools 登記檔：wall_clock、self_tools（改自己的工具）、agents（生子 agent）、memory（查知識庫，11-05 晚）（"../../lib/…"；跟 eca-claude 同一份；後兩個 11-05 使用者裁「內建」）；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
+  tools.json   aos-tools 登記檔：wall_clock、self_tools（改自己的工具）、agents（生子 agent）、memory（查知識庫，11-05 晚）（都寫 `{"$env": "AOS_HOME", …}`；memory 直接登記 lib/agent/memory、`env.AOS_MEMORY` 指知識庫；跟 eca-claude 同一份；後兩個 11-05 使用者裁「內建」）；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
   llm.json     腦設定：{}＝用 kernel 的預設代號；只認一個鍵 endpoint（kernel 的 endpoint 包代號，例 "smart-high"；model、temperature 等屬性固定在包上，llm.json 不寫、信裡也不帶 model）
-  interfaces.json  {"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json", "memory": "tools/memory/_memory.json"}, "aos-observed": {"file": "observed.jsonl"}}（沒有 screen）
-  tools/memory/  memory 的包裝資料夾：_tooldef.json／_metainfo.json 捷徑指回 lib/agent/memory，_entry 是一行單子
-               ["../../../../lib/agent/memory/_entry"]（不能是捷徑：aos-exec 解開捷徑後 AOS_CD 會是 lib 那格，找不到這裡的設定），
-               _memory.json {"base": "../../../../knowledge/aos"}＝這隻的知識庫（換庫改這行；agent-knowledge 01）
+  interfaces.json  {"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json"}, "aos-observed": {"file": "observed.jsonl"}}（沒有 screen；11-10 templates-cp 拿掉 memory 鍵與 tools/ 包裝夾）
   agents.json  工具 agents 的設定 {"max_children": 4}（這隻最多同時生幾隻；stack 裡的 agents.json 只放改過的鍵＝這隻的覆蓋）
 ```
 
-**記憶介面與自稱**（11-07 批 2）：`interfaces.json` 的 `aos-agent.memory` 宣告 `tools/memory/_memory.json`，沿用現有 `base` 掛到 `knowledge/aos`；換庫改該設定。範本 `_metainfo.json` 的 `summary` 與 README 首行一致，`cost.time_ms: 30000` 是估時、`resource: ["llm"]` 是資源；範本本身未宣告頂層 `timeout_ms`。
+**記憶與自稱**（11-07 批 2；11-10 templates-cp 改）：知識庫位置寫在 `tools.json` 的 `memory` 那格：`"env": {"AOS_MEMORY": {"$env": "AOS_HOME", "$path": "/knowledge/aos"}}`；換庫改這個值。`interfaces.json` 不再宣告 `memory`（`lib/aos/defs` 依它分群，沒宣告＝`memory: null`）。範本 `_metainfo.json` 的 `summary` 與 README 首行一致，`cost.time_ms: 30000` 是估時、`resource: ["llm"]` 是資源；範本本身未宣告頂層 `timeout_ms`。
 
 **覆蓋層位置**（11-06 K-6）：brain／wait 的腦設定、brain／act 的工具登記檔都讀 `interfaces.json` 的 `aos-agent.llm`／`tools` 宣告；定義與 stack 使用同一相對路徑。改成 `cfg/brain.json`、`cfg/my_tools.json` 時，身體與 `aos-agent llm／tools` 讀寫的是同一份，沒有寫死 `llm.json`／`tools.json`。未宣告 tools／llm 就沒有工具／腦設定，不去猜檔名。brain／act 的 `--tools` 明給檔案時照旗標，不套 tools 介面覆蓋層。
 
@@ -97,4 +90,4 @@ aos-agent ctl resume         # ctl 下也有 stop／start、sleep／wake（同�
 
 共用記帳由 `lib/observed.py` 處理：首寫先補 `self` 行，含 `def`（`AOS_CD`）、`ws`（`AOS_WS`）、UTC 毫秒 `started_at`，設了 `AOS_LLM_KERNEL` 才帶 `llm_kernel`；同時合併 stack 的 `aos-observed` 宣告。工具行的 `def` 是登記路徑的絕對值、`stack` 是相對本 stack 的小格；有子帳時 `child` 指向收子前保存的帳本，相對本 stack。thought／agents 只照子 stack 的公開介面抄整棵帳，不猜帳名。
 
-**長跑與知識寫入**：長時間接不同任務的 fsm，在 `fsm.json` 的 think 格、`brain.py` 的 argv 加 `"--history", "task"`，每次只把最後一封 user 起的任務帶給腦，避免舊任務一直累積進請求；磁碟 history 仍完整保留。需要跨任務記住的穩定知識另寫入知識庫。範本已備好 `tools/memory_write/`，但沒有登記；先把 `tools/memory/_memory.json` 的 `base` 改成有權寫的庫（相對、絕對或 `{"$env": "MY_KNOWLEDGE"}`），再切到這隻 agent 的定義資料夾，以 `aos-agent -t <名> tools add memory_write tools/memory_write` 登記（路徑從目前資料夾算）（這裡的相對路徑依登記指令解析；`self_tools` 的相對路徑則從工作區算，不能直接假定範本內的路徑可用）。寫入與讀取共用同一份設定；出廠庫由人維護。agent 的寫入指引在知識節點 `memory`。
+**長跑與知識寫入**：長時間接不同任務的 fsm，在 `fsm.json` 的 think 格、`brain.py` 的 argv 加 `"--history", "task"`，每次只把最後一封 user 起的任務帶給腦，避免舊任務一直累積進請求；磁碟 history 仍完整保留。需要跨任務記住的穩定知識另寫入知識庫。範本沒有登記 `memory_write`；要寫入的那隻，先把 `memory` 那格的 `env.AOS_MEMORY` 改成有權寫的庫（相對、絕對或 `{"$env": "MY_KNOWLEDGE"}`），再在定義的 `tools.json` 照同樣寫法加一格 `"memory_write": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/memory_write"}, "env": {"AOS_MEMORY": <跟 memory 那格同一個值>}}`（`aos-agent tools add` 不收 `--envs`，所以手改登記檔）。寫入與讀取看同一個 `AOS_MEMORY`；出廠庫由人維護。agent 的寫入指引在知識節點 `memory`。

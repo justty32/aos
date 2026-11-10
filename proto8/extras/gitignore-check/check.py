@@ -82,7 +82,7 @@ class Check:
         self.env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         self.env.update(HOME=str(self.work / "home-a"),
                         PYTHONPATH=os.pathsep.join([str(PROTO / "py"), str(PROTO / "lib")]),
-                        AOS_LLM_KERNEL=str(self.kernel), AOS_DAEMON=str(self.root), AOS_MEMORY=str(self.work / "kb"),
+                        AOS_LLM_KERNEL=str(self.kernel), AOS_DAEMON=str(self.root), AOS_MEMORY=str(self.work / "kb"), AOS_HOME=str(PROTO),
                         FAKE_CLI_LOG=str(self.work / "fake-cli.jsonl"))
         self.env["PATH"] = os.pathsep.join([str(self.work / "bin"), str(Path.home() / ".local/bin"), os.environ["PATH"]])
         self.processes = []
@@ -160,19 +160,11 @@ class Check:
     def copy_agent(self, kind, dest):
         source = PROTO / "templates" / kind
         shutil.copytree(source, dest, symlinks=True, ignore=shutil.ignore_patterns("__pycache__", "tests"))
-        for folder, dirs, files in os.walk(dest):
-            for n in dirs + files:
-                p = Path(folder) / n
-                if p.is_symlink():
-                    target = source / p.relative_to(dest)
-                    resolved = target.resolve()
-                    p.unlink(); p.symlink_to(resolved)
+        kb = {"AOS_MEMORY": str(self.work / "kb")}
         tools = {"wall_clock": {"path": str(PROTO / "lib/base/wall_clock")},
-                 "memory": {"path": "tools/memory"},
-                 "memory_write": {"path": str(PROTO / "lib/agent/memory_write")}}
+                 "memory": {"path": str(PROTO / "lib/agent/memory"), "env": kb},
+                 "memory_write": {"path": str(PROTO / "lib/agent/memory_write"), "env": kb}}
         save(dest / "tools.json", {"tools": tools})
-        save(dest / "tools/memory/_entry", [str(PROTO / "lib/agent/memory/_entry")])
-        save(dest / "tools/memory/_memory.json", {"base": str(self.work / "kb")})
         save(dest / "llm.json", {"endpoint": "fake"})
 
     def daemon(self, folder, config):

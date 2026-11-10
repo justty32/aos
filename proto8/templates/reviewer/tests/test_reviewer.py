@@ -37,13 +37,12 @@ class ReviewerIntegration(unittest.TestCase):
             env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib'), str(PROTO / 'py')])
             env['PYTHONDONTWRITEBYTECODE'] = '1'
             env.update(AOS_STACK=str(daemon_stack), AOS_DAEMON=str(daemon_stack),
-                       AOS_LLM_KERNEL=str(kernel_stack), AOS_CD=str(root), AOS_WS=str(root))
+                       AOS_LLM_KERNEL=str(kernel_stack), AOS_CD=str(root), AOS_WS=str(root),
+                       AOS_HOME=str(PROTO))
 
-            # Preserve the template's relative paths and reuse cells without copying them.
+            # The template points into proto8 through AOS_HOME, so a plain copy runs anywhere.
             templates = root / 'templates'
             templates.mkdir()
-            (templates / 'agent-fsm').symlink_to(PROTO / 'templates/agent-fsm', target_is_directory=True)
-            (root / 'lib').symlink_to(PROTO / 'lib', target_is_directory=True)
             reviewer = templates / 'reviewer'
             shutil.copytree(REVIEWER, reviewer,
                             ignore=shutil.ignore_patterns('tests', '__pycache__'))
@@ -55,7 +54,6 @@ class ReviewerIntegration(unittest.TestCase):
 
             defs = root / 'defs'
             defs.mkdir()
-            (defs / 'agent-fsm').symlink_to(PROTO / 'templates/agent-fsm', target_is_directory=True)
             worker = defs / 'worker'
             worker.mkdir()
             for name in ('body.json', 'loop.json', 'interfaces.json', 'fsm.json'):

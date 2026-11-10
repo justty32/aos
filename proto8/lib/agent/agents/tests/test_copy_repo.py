@@ -1,6 +1,7 @@
-# Verify op new from a repo template uses the copy-out rewrite (env when AOS_HOME is set, else absolute) and keeps literal from paths.
+# Verify op new copies a repo template as written ($env AOS_HOME paths, no symlinks, with or without AOS_HOME) and keeps literal from paths.
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -44,21 +45,18 @@ class CopyRepoTests(unittest.TestCase):
     def tools(self):
         return json.loads((self.root / 'born' / 'tools.json').read_text())['tools']
 
-    def test_repo_template_env_mode(self):
-        r = self.run_new(str(PROTO / 'templates' / 'agent-fsm'), AOS_HOME=str(PROTO))
-        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
-        self.assertEqual(self.tools()['wall_clock']['path'], {'$env': 'AOS_HOME', '$path': '/lib/base/wall_clock'})
-        self.assertEqual(self.tools()['memory']['path'], 'tools/memory')
-        mem = json.loads((self.root / 'born' / 'tools' / 'memory' / '_memory.json').read_text())
-        self.assertEqual(mem['base'], {'$env': 'AOS_HOME', '$path': '/knowledge/aos'})
-        text = (self.root / 'born' / 'tools.json').read_text()
-        self.assertNotIn(str(PROTO), text)
-
-    def test_repo_template_absolute_when_env_unset(self):
-        r = self.run_new(str(PROTO / 'templates' / 'agent-fsm'))
-        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
-        self.assertEqual(self.tools()['wall_clock']['path'], str(PROTO / 'lib' / 'base' / 'wall_clock'))
-        self.assertIn('note: AOS_HOME is not set', r.stdout)
+    def test_repo_template_is_copied_as_written(self):
+        tpl = PROTO / 'templates' / 'agent-fsm'
+        for env in ({'AOS_HOME': str(PROTO)}, {}):
+            with self.subTest(env=env):
+                r = self.run_new(str(tpl), **env)
+                self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+                self.assertNotIn('note:', r.stdout)
+                self.assertEqual(self.tools(), json.loads((tpl / 'tools.json').read_text())['tools'])
+                self.assertEqual(self.tools()['memory']['path'], {'$env': 'AOS_HOME', '$path': '/lib/agent/memory'})
+                self.assertNotIn(str(PROTO), (self.root / 'born' / 'tools.json').read_text())
+                self.assertFalse(any(p.is_symlink() for p in (self.root / 'born').rglob('*')))
+                shutil.rmtree(self.root / 'born')
 
     def test_outside_template_through_symlink_uses_literal_path(self):
         real = self.root / 'far' / 'deep' / 'tpl'

@@ -5,15 +5,6 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
-## `proto8/templates/judge-llm/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`judge.json`](../../../../../proto8/templates/judge-llm/judge.json) | Configure the comparator endpoint and per-section byte limit |
-| [`prompt.txt`](../../../../../proto8/templates/judge-llm/prompt.txt) | （檔頭沒有一句話） |
-| [`tests/endpoint.py`](../../../../../proto8/templates/judge-llm/tests/endpoint.py) | Return deterministic semantic-comparison replies with nonzero fake token usage. |
-| [`tests/test_judge.py`](../../../../../proto8/templates/judge-llm/tests/test_judge.py) | Verify judge reply normalization, truncation, kernel failures, and measured check costs. |
-
 ## `proto8/templates/reviewer/`
 
 | 檔 | 負責什麼 |
@@ -33,6 +24,5 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`test_copy_out.py`](../../../../../proto8/templates/tests/test_copy_out.py) | Test copy-out: the three --proto8 modes (env, absolute, relative), kernel/NAME templates, env-mode symlink fallbacks and the needs line. |
 | [`test_daily.py`](../../../../../proto8/templates/tests/test_daily.py) | Acceptance (/tmp, fake brain, fake claude): the user's daily routine across two machines - git clone/pull, one aos-exec line, work, aos-daemon-ctl sh… |
-| [`test_paths_move.py`](../../../../../proto8/templates/tests/test_paths_move.py) | Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm) and an llm kernel project move by git to another HOME and prefix u… |
+| [`test_paths_move.py`](../../../../../proto8/templates/tests/test_paths_move.py) | Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm, copied with cp -r) and an llm kernel project move by git to anothe… |

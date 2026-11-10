@@ -30,7 +30,9 @@
 | [`bin/aos-agent`](../../../../../proto8/cmd/aos-agent/bin/aos-agent) | 統一的 agent 介面：管掛在 aos-daemon 上的一隻 agent（eca、loop／fsm agent 都一樣），每個子命令只管一隻（11-04）。 |
 | [`stack.gitattributes`](../../../../../proto8/cmd/aos-agent/stack.gitattributes) | 把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件） |
 | [`stack.gitignore`](../../../../../proto8/cmd/aos-agent/stack.gitignore) | 可選的 stack 排除範本：暫存、鎖、本機資料與可重建紀錄不進 git。 |
+| [`tests/test_daemon_down.py`](../../../../../proto8/cmd/aos-agent/tests/test_daemon_down.py) | Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing. |
 | [`tests/test_ls_health.py`](../../../../../proto8/cmd/aos-agent/tests/test_ls_health.py) | Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table. |
+| [`tests/test_rm_keep.py`](../../../../../proto8/cmd/aos-agent/tests/test_rm_keep.py) | Test aos-agent ctl rm keeps the stack by default and deletes it only with --purge (cli-sweep Q3), on a real aos-daemon. |
 | [`tests/test_tools_override.py`](../../../../../proto8/cmd/aos-agent/tests/test_tools_override.py) | Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with "$override" (N2 poin… |
 | [`using-aos-agent.sh`](../../../../../proto8/cmd/aos-agent/using-aos-agent.sh) | 給人的殼 source 用（不是跑）：之後直接打 say／listen／chat／status，像命名空間（11-04 aos-agent 02）。 |
 

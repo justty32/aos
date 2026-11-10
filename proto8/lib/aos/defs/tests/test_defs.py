@@ -59,6 +59,20 @@ class DefinitionsTest(unittest.TestCase):
         _, data = self.call('dup')
         self.assertEqual(data['groups'][0]['members'], ['a', 'b'])
 
+    def test_directive_tool_paths_kept_as_written(self):
+        home = {'$env': 'AOS_HOME', '$path': '/lib/base/wall_clock'}
+        self.definition('a', tool={'clock': {'path': home}})
+        self.definition('b', tool={'time': {'path': {'$path': '/lib/base/wall_clock', '$env': 'AOS_HOME'}}})
+        self.definition('c', tool={'clock': {'path': {'$env': 'AOS_HOME', '$path': '/lib/base/read'}}})
+        result, data = self.call('dup')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([g['members'] for g in data['groups']], [['a', 'b']])
+        result, data = self.call('refs', **{'def': 'c'})
+        self.assertEqual((result.returncode, data), (0, {'refs': []}))
+        self.definition('d', tool={'x': {'path': {'$path': '/x'}}})
+        result, data = self.call('check')
+        self.assertIn('each tool must declare a path', json.dumps(data))
+
     def test_memory_paths_and_literal_environment(self):
         self.definition('a', memory='../../kb')
         self.definition('b', memory='../../kb')

@@ -11,7 +11,7 @@ flowchart TD
     F --> A[agent ann]
 ```
 
-五步是建帳號（可略）→包 root（可略）→備好指到 proto8 的路徑（env 寫法每台設一次 `AOS_HOME`；absolute／relative 照擺法放好，不用跑任何指令，11-10）→export→`aos-exec --stack <image> <定義>`。根是普通 daemon；沒有上層替它重起，正常運行由使用者顧。
+五步是建帳號（可略）→包 root（可略）→備好指到 proto8 的路徑（每台給一次 `AOS_HOME`：export，或寫進根 `.env`；不用跑任何指令，11-10）→export→`aos-exec --stack <image> <定義>`。根是普通 daemon；沒有上層替它重起，正常運行由使用者顧。
 
 <details><summary>三層佈局與啟動指令</summary>
 
@@ -57,12 +57,12 @@ AOS_CLOCK=${AOS_STACK}/clock
 
 1. 建帳號可略；若用了 `limits.user`，先由人把帳號、stack／信箱寫入權限配好。
 2. 包 root 可略；家機有 systemd 委派時可用下方 scope。
-3. 備好指到 proto8 的路徑，照抄出時選的寫法（`copy-out --proto8 env|relative|absolute`、`aos-tools add` 給的寫法）：預設的 env 寫法在第 4 步 export `AOS_HOME`；`absolute` 把 proto8 放在跟原機同一個位置；`relative` 保持同樣的相對擺法。換了機器或 repo 位置（git pull、cp 到別台）也不用跑任何重建指令；沒備好＝第一題 `PathMissing`，訊息指名哪份檔哪一格、解出什麼。
+3. 備好指到 proto8 的路徑：範本（`cp -r` 抄出的）一律寫 `{"$env": "AOS_HOME", …}`，在第 4 步 export `AOS_HOME`；根 `.env` 寫了 `AOS_HOME=/絕對路徑` 的，把 proto8 放在跟原機同一個位置；寫 `${AOS_WS}/…` 的保持同樣的相對擺法；`aos-tools add` 存的照你給的寫法。換了機器或 repo 位置（git pull、cp 到別台）也不用跑任何重建指令；沒備好＝第一題 `PathMissing`，訊息指名哪份檔哪一格、解出什麼。
 4. 在 image 根 export 這台的外接位置：
 
 ```sh
 export AOS_LLM_KERNEL="$PWD/llm_image"
-export AOS_HOME="$HOME/repo/aos-tools/proto8"   # 這台 proto8 的位置；copy-out 預設的 env 寫法靠它（11-10）
+export AOS_HOME="$HOME/repo/aos-tools/proto8"   # 這台 proto8 的位置；範本的 {"$env": "AOS_HOME", …} 寫法靠它（11-10）
 unset AOS_KERNEL AOS_DAEMON AOS_CLOCK   # 殼裡留著 AOS_CLOCK 的話，根的 .env 不會蓋它
 # 有判官才另 export AOS_KERNEL；端點需要的金鑰在此殼 export。
 ```

@@ -14,7 +14,7 @@ eca-claude/
   llm.json    腦設定：{"model": "sonnet"}（11-04 晚；cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔11-04 起，相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
-  tools.json  aos-tools 的登記檔：wall_clock、self_tools、agents、memory（memory 指 tools/memory/ 包裝資料夾，同 agent-fsm；"../../lib/…"，相對路徑從這份檔的資料夾算；後兩個 11-05 使用者裁「內建」）；
+  tools.json  aos-tools 的登記檔：wall_clock、self_tools、agents、memory（跟 agent-fsm 同一份：都寫 `{"$env": "AOS_HOME", …}`，memory 直接登記 lib/agent/memory、`env.AOS_MEMORY` 指知識庫；後兩個 11-05 使用者裁「內建」）；
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__wall_clock…）；不要工具就刪掉它
   agents.json 工具 agents 的設定：{"max_children": 4}（這隻最多同時生幾隻；這隻的 stack 裡放一份 agents.json 只寫改過的鍵＝覆蓋）
   interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json"}}（11-04；aos-agent ctl add 只看這個宣告）
@@ -40,4 +40,4 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 
 **長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 預設 600000（10 分鐘），限制 CLI 呼叫；`loop.json.exec.timeout_ms` 預設 900000（15 分鐘），限制整次 aos-eca-turn，要留得比 CLI 那層長，讓它有時間收尾。長任務要同時檢查這兩層，增加額度不會延長逾時。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
 
-**知識寫入**：範本備有 `tools/memory_write/`，但不預先登記；先把 `tools/memory/_memory.json` 的 `base` 指到有權寫的庫（相對、絕對或 `{"$env": "MY_KNOWLEDGE"}`），再切到這隻 agent 的定義資料夾，以 `aos-agent -t <名> tools add memory_write tools/memory_write` 登記（路徑從目前資料夾算）。它與 `memory` 共用設定，透過 aos-mcp 提供給 Claude，`cli.json` 的內建 `--tools Read,Glob,Grep` 不必改。出廠庫由人維護；agent 寫前先讀知識節點 `memory`。
+**知識寫入**：範本不預先登記 `memory_write`；先把 `memory` 那格的 `env.AOS_MEMORY` 指到有權寫的庫（相對、絕對或 `{"$env": "MY_KNOWLEDGE"}`），再在定義的 `tools.json` 照同樣寫法加 `memory_write` 一格（`env` 給同一個 `AOS_MEMORY`，寫法見 [02-agent-fsm](02-agent-fsm.md)「長跑與知識寫入」）。它與 `memory` 看同一個庫，透過 aos-mcp 提供給 Claude，`cli.json` 的內建 `--tools Read,Glob,Grep` 不必改。出廠庫由人維護；agent 寫前先讀知識節點 `memory`。

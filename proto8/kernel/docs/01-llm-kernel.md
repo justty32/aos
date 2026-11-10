@@ -24,7 +24,7 @@ llm-kernel/
 | `stupid-fast` | LM Studio `localhost:1234` 的 `qwen3-1.7b`（本機載的是別的就改這包的 `model`，真名看 `curl localhost:1234/v1/models`；家機試驗場指 `google/gemma-4-e4b`） | `fixed.temperature` 0.7、`slots` 1、`speed` fast、`cost` free、`context` 4096 |
 | `luna`、`sol` | LiteLLM 的 gpt-6 luna（low）、sol | `sol` 有 `fixed.temperature` 0.2；`cost` high |
 | `fake`（預設） | `lib/base/llm_fake`：有工具先叫 `tool` 寫的那個（範本 `wall_clock`，沒有就第一個）、再答「FAKE ANSWER to: …」 | `speed` fast、`cost` free |
-| `fake-demo-self`、`fake-demo-spawn` | `llm_fake`＋`script` 劇本（[03](03-feat-proto.md) 件 1、件 4） | 劇本裡的路徑寫 `{"$env": "AOS_CD", "$path": "../../templates/agent-fsm"}`：kernel 用到那組時解，`AOS_CD`＝起 llm daemon 時 aos-exec 給的定義資料夾，所以**只在直接跑 repo 裡這份定義時對** |
+| `fake-demo-self`、`fake-demo-spawn` | `llm_fake`＋`script` 劇本（[03](03-feat-proto.md) 件 1、件 4） | 劇本裡的路徑寫 `{"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}`：用到那組時解，`cp -r` 抄出去也指得對（11-10 templates-cp） |
 | `fake-demo-fast`、`fake-demo-slow` | `fake_slow`，每封 3 秒 | `slots` 1；`speed` fast／slow（[03](03-feat-proto.md) 件 3）；`fake_slow` 從找到的 `aos_flags.py`（`proto8/py`）旁找 `lib/`，複製出 repo 也對（11-05 夜第二輪邊緣：原本從自己的位置找、出 repo＝`EndpointFailed … can't open file …/lib/base/llm_fake/_entry`） |
 
 **包怎麼讀**（全文在 [aos-llm-kernel docs/01](../../impls/aos-llm-kernel/docs/01-用法.md)）：信與 agent 的 `llm.json` 只寫代號；kernel 自己看 `exec`／`slots`／`budget`／`speed` 與 `backend` 五個（拿掉後才交給 endpoint 函數），其餘（`url`、`model`、`fixed`、`script`、`delay_s`…）原樣交給函數。金鑰由端點小 proc 自己讀環境，kernel 不讀、不寫、不轉交。**`fixed` 是釘死的**：信的 `request` 寫了 `fixed` 裡的 key、或那包有 `model` 而信寫了 `model`＝那封回 `RequestBad`；換溫度、換模型＝換代號（多登記一包）。`cost`／`context`／`summary` 只給人與腦挑代號用，kernel 每拍寫進窗 `$AOS_STACK/endpoints.json`，`aos-llm ls` 印它。

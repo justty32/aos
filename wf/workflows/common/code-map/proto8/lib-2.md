@@ -13,7 +13,7 @@
 | [`agent_files.py`](../../../../../proto8/lib/agent/agent_files.py) | 依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。 |
 | [`agent_tool.py`](../../../../../proto8/lib/agent/agent_tool.py) | claude、codex 共用的工具形入口 ask_cli。 |
 | [`agents/`](../../../../../proto8/lib/agent/agents/) | 生、叫、收另一隻 agent，記錄新定義的 lineage 並同步公開子帳。 |
-| [`agents/tests/test_copy_repo.py`](../../../../../proto8/lib/agent/agents/tests/test_copy_repo.py) | Verify op new from a repo template uses the copy-out rewrite (env when AOS_HOME is set, else absolute) and keeps literal from paths. |
+| [`agents/tests/test_copy_repo.py`](../../../../../proto8/lib/agent/agents/tests/test_copy_repo.py) | Verify op new copies a repo template as written ($env AOS_HOME paths, no symlinks, with or without AOS_HOME) and keeps literal from paths. |
 | [`agents/tests/test_lineage.py`](../../../../../proto8/lib/agent/agents/tests/test_lineage.py) | Verify new agent births preserve metadata and record literal lineage arguments. |
 | [`agents/tests/test_observed.py`](../../../../../proto8/lib/agent/agents/tests/test_observed.py) | Verify agent account synchronization resolves only registered child stacks. |
 | [`agents/tests/test_wait.py`](../../../../../proto8/lib/agent/agents/tests/test_wait.py) | Verify segmented agent waits, argument checks and cleanup. |
@@ -23,7 +23,6 @@
 | [`codex/`](../../../../../proto8/lib/agent/codex/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 codex CLI；對話續在工具小格（$AOS_STACK） |
 | [`codex/cli.json`](../../../../../proto8/lib/agent/codex/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
 | [`cooldown.py`](../../../../../proto8/lib/agent/cooldown.py) | 失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。 |
-| [`copy_def.py`](../../../../../proto8/lib/agent/copy_def.py) | 把一份定義（範本、kernel）抄到別處時，改寫「指進 proto8」的路徑：env／absolute／relative 三種寫法（templates/copy-out 與 agents new 共用）。 |
 | [`json_rewrite/`](../../../../../proto8/lib/agent/json_rewrite/) | 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 act 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。 |
 | [`memory/`](../../../../../proto8/lib/agent/memory/) | 唯讀查詢共用知識庫：read 節點或 JSON Pointer、ls 列子節點、find 關鍵字與單一標籤搜尋。 |
 | [`memory/tests/test_base_directive.py`](../../../../../proto8/lib/agent/memory/tests/test_base_directive.py) | 驗 _memory.json 的 base：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次用到才解、不寫回，解不開時錯誤行指名檔與欄。 |
@@ -42,6 +41,5 @@
 | [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | Write, promote and remove knowledge nodes atomically under directory locks. |
 | [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | 讓叫我的 agent 改自己的工具箱：加（add）、拿掉（rm）、列（ls）；改的是那隻的覆蓋層，定義不動 |
 | [`tests/test_cli_tools_directive.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_directive.py) | 驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。 |
-| [`tests/test_copy_def.py`](../../../../../proto8/lib/agent/tests/test_copy_def.py) | Test lib/agent/copy_def.Rewriter on a fake proto8: string values, AOS_CD directives, symlinks per mode, and env-mode symlink fallbacks. |
 | [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定或工具設定預設定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
 | [`thought/tests/test_observed_children.py`](../../../../../proto8/lib/agent/thought/tests/test_observed_children.py) | Verify child account preservation and thought cleanup ordering. |

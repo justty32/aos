@@ -9,6 +9,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
+| [`.env`](../../../../../proto8/kernel/daemon-judge/.env) | AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here. |
 | [`_entry`](../../../../../proto8/kernel/daemon-judge/_entry) | 入口：`aos-daemon --enable-logs daemon.json` |
 | [`daemon.json`](../../../../../proto8/kernel/daemon-judge/daemon.json) | 設定（鍵：exec、interval_ms、procs） |
 | [`judge.json`](../../../../../proto8/kernel/daemon-judge/judge.json) | 設定（鍵：allowed、max_running、queue、keep_ordered） |
@@ -17,6 +18,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
+| [`.env`](../../../../../proto8/kernel/llm-kernel/.env) | AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here. |
 | [`_entry`](../../../../../proto8/kernel/llm-kernel/_entry) | 入口：`aos-daemon --enable-logs daemon.json` |
 | [`daemon.json`](../../../../../proto8/kernel/llm-kernel/daemon.json) | 設定（鍵：exec、interval_ms、procs） |
 | [`endpoints/litellm/_entry`](../../../../../proto8/kernel/llm-kernel/endpoints/litellm/_entry) | Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable. |
@@ -28,6 +30,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
+| [`.env`](../../../../../proto8/kernel/llm-team/.env) | AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here. |
 | [`_entry`](../../../../../proto8/kernel/llm-team/_entry) | Start the team llm daemon with stdout logs |
 | [`daemon.json`](../../../../../proto8/kernel/llm-team/daemon.json) | Run the team llm kernel |
 | [`interfaces.json`](../../../../../proto8/kernel/llm-team/interfaces.json) | Declare the stack ledger interface |
@@ -37,6 +40,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
+| [`.env`](../../../../../proto8/kernel/procs-kernel/.env) | AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here. |
 | [`_entry`](../../../../../proto8/kernel/procs-kernel/_entry) | 入口：`aos-loop loop.json` |
 | [`judge.json`](../../../../../proto8/kernel/procs-kernel/judge.json) | 設定（鍵：allowed、max_running） |
 | [`loop.json`](../../../../../proto8/kernel/procs-kernel/loop.json) | 設定（鍵：exec、interval_ms） |

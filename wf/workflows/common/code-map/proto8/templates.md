@@ -10,7 +10,6 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`agent-fsm/`](../../../../../proto8/templates/agent-fsm/) | Run an aos agent with loop and FSM cells. |
-| [`copy-out`](../../../../../proto8/templates/copy-out) | 把範本（templates/<名> 或 kernel/<名>）整夾抄到 repo 外開新 agent／新根／新 kernel；--template 必給（--list 列可用的），指回 repo 的路徑照 --proto8 寫法改寫（預設 env）。 |
 | [`judge-llm/`](../../../../../proto8/templates/judge-llm/) | Compare artifacts with one LLM request and public think accounting. |
 | [`reviewer/`](../../../../../proto8/templates/reviewer/) | Review measured definition costs and prescribe a fix or split when model downgrades fail. |
 
@@ -35,17 +34,13 @@
 | [`tests/test_own_tools.py`](../../../../../proto8/templates/agent-fsm/tests/test_own_tools.py) | Test that brain and act use the agent's own tools registry in its stack ("$override" of the definition's; 11-10 aos-tools-cli step 4), and fall back … |
 | [`tests/test_selfheal.py`](../../../../../proto8/templates/agent-fsm/tests/test_selfheal.py) | Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools. |
 | [`tools.json`](../../../../../proto8/templates/agent-fsm/tools.json) | 設定（鍵：tools） |
-| [`tools/memory/`](../../../../../proto8/templates/agent-fsm/tools/memory/) | Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the chil… |
-| [`tools/memory/_memory.json`](../../../../../proto8/templates/agent-fsm/tools/memory/_memory.json) | 設定（鍵：base） |
-| [`tools/memory_write/`](../../../../../proto8/templates/agent-fsm/tools/memory_write/) | Change the shared knowledge base. add creates a node under an existing parent, promoting Markdown leaves only; JSON leaves cannot have child nodes. e… |
-| [`tools/memory_write/_memory.json`](../../../../../proto8/templates/agent-fsm/tools/memory_write/_memory.json) | → `../memory/_memory.json` |
 | [`wait.py`](../../../../../proto8/templates/agent-fsm/wait.py) | wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。 |
 
 ## `proto8/templates/daemon-root/`
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`.env`](../../../../../proto8/templates/daemon-root/.env) | root clock file lives in this daemon's stack; child daemons inherit it. |
+| [`.env`](../../../../../proto8/templates/daemon-root/.env) | defaults for this root (a value already exported in the shell wins); every agent and child daemon inherits them. |
 | [`_entry`](../../../../../proto8/templates/daemon-root/_entry) | Start the root daemon with stdout logs |
 | [`daemon.json`](../../../../../proto8/templates/daemon-root/daemon.json) | Root daemon: owns the clock and the sweeper; agents join through procs_requests |
 
@@ -62,7 +57,12 @@
 | [`screen/_entry`](../../../../../proto8/templates/eca-claude/screen/_entry) | 入口：`aos-eca-screen --eca ..` |
 | [`screen/interfaces.json`](../../../../../proto8/templates/eca-claude/screen/interfaces.json) | 設定（鍵：aos-agent/screen） |
 | [`tools.json`](../../../../../proto8/templates/eca-claude/tools.json) | 設定（鍵：tools） |
-| [`tools/memory/`](../../../../../proto8/templates/eca-claude/tools/memory/) | Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the chil… |
-| [`tools/memory/_memory.json`](../../../../../proto8/templates/eca-claude/tools/memory/_memory.json) | 設定（鍵：base） |
-| [`tools/memory_write/`](../../../../../proto8/templates/eca-claude/tools/memory_write/) | Change the shared knowledge base. add creates a node under an existing parent, promoting Markdown leaves only; JSON leaves cannot have child nodes. e… |
-| [`tools/memory_write/_memory.json`](../../../../../proto8/templates/eca-claude/tools/memory_write/_memory.json) | → `../memory/_memory.json` |
+
+## `proto8/templates/judge-llm/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`judge.json`](../../../../../proto8/templates/judge-llm/judge.json) | Configure the comparator endpoint and per-section byte limit |
+| [`prompt.txt`](../../../../../proto8/templates/judge-llm/prompt.txt) | （檔頭沒有一句話） |
+| [`tests/endpoint.py`](../../../../../proto8/templates/judge-llm/tests/endpoint.py) | Return deterministic semantic-comparison replies with nonzero fake token usage. |
+| [`tests/test_judge.py`](../../../../../proto8/templates/judge-llm/tests/test_judge.py) | Verify judge reply normalization, truncation, kernel failures, and measured check costs. |
