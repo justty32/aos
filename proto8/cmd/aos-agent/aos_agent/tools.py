@@ -59,7 +59,8 @@ usage: aos-agent [--daemon D] tools [--target NAME] rm NAME
 flags:
   -h, --help   show this help
 
-Record the removal ("NAME": null) in this agent's own registry; the definition stays as it is.
+Write "NAME": null in this agent's own registry (an entry whose value is null is not
+a tool); the definition stays as it is.
 exit codes: 0 removed; 1 error (ToolMissing, ToolsMissing...).
 """,
     "reset": """aos-agent tools reset - delete this agent's own tools registry
@@ -144,7 +145,7 @@ def check_pointer(over, orig):
 
 def cmd(argv):
     """tools（11-05 portable-flow 步 4，使用者「tools只存差異」；11-10 aos-tools-cli 步 4 改形狀）：<stack>/<宣告相對路徑> 是這隻自己那份，
-    {"$override": 定義那份, "tools": {加的…, "拿掉的": null}}；在就用它，不在就用定義那份。說明在 cmd/aos-agent/README.md「tools 覆蓋層」。"""
+    {"$override": 定義那份, "tools": {加的…, "不要的": null}}（null 那格不算工具）；在就用它，不在就用定義那份。說明在 cmd/aos-agent/README.md「tools 覆蓋層」。"""
     opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",))
     act, args = (rest[0], rest[1:]) if rest else ("ls", [])
     if act not in SUBS:

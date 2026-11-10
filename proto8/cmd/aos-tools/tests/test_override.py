@@ -112,7 +112,7 @@ class Override(unittest.TestCase):
         self.write(other, {"tools": {"a": {"path": "../defs/lib/c", "env": {"K3": "o"}}, "b": None}})
         self.write(self.mine, {KEY: ["../defs/tools.json", "../other/tools.json"], "tools": {}})
         t = self.long(self.mine)
-        self.assertEqual(sorted(t), ["a", "b"])                   # null in a later base does not remove an earlier one's tool
+        self.assertEqual(sorted(t), ["a"])                        # one ordered sequence: the later base's null covers b
         self.assertEqual(t["a"][2], str(self.defs / "lib" / "c"))
         self.assertEqual(t["a"][3], "%s#/tools/a" % other)
         self.assertEqual(t["a"][5], "K1,K2,K3")                   # patch merge: env keys from both
@@ -132,8 +132,23 @@ class Override(unittest.TestCase):
         self.write(left, {KEY: "../defs/tools.json", "tools": {"c": {"path": "../defs/lib/c"}}})
         self.write(right, {KEY: "../defs/tools.json", "tools": {"a": None}})
         self.write(self.mine, {KEY: ["../l/tools.json", "../r/tools.json"], "tools": {}})
-        # defs reached twice is fine; each base is merged as the list it shows, so r hiding a does not hide a in l
-        self.assertEqual(self.names(self.mine), ["a", "b", "c"])
+        # sequence = defs, l, defs, r, mine: defs twice is not a loop; r's null covers a last
+        self.assertEqual(self.names(self.mine), ["b", "c"])
+
+    def test_dict_after_null_starts_fresh(self):
+        other = self.tmp / "other" / "tools.json"
+        self.write(other, {"tools": {"a": None}})
+        self.write(self.mine, {KEY: ["../defs/tools.json", "../other/tools.json"],
+                               "tools": {"a": {"path": "../defs/lib/c"}}})
+        cols = self.long(self.mine)["a"]
+        self.assertEqual(cols[2], str(self.defs / "lib" / "c"))
+        self.assertEqual(cols[5], "-")                            # env from defs was covered by null, not merged back
+
+    def test_null_field_is_unset(self):
+        self.write(self.mine, {KEY: "../defs/tools.json", "tools": {"a": {"env": {"K1": None}}}})
+        self.assertEqual(self.long(self.mine)["a"][5], "K2")
+        self.write(self.mine, {KEY: "../defs/tools.json", "tools": {"a": {"env": None}}})
+        self.assertEqual(self.long(self.mine)["a"][5], "-")
 
     def test_loop_is_registry_bad(self):
         other = self.tmp / "other" / "tools.json"
@@ -211,7 +226,7 @@ class Override(unittest.TestCase):
         self.ok("--file", self.mine, "override", self.base)
         self.ok("--file", self.mine, "add", self.defs / "lib" / "c")
         r = self.ok("--file", self.mine, "rm", "a")
-        self.assertEqual(r.stdout, "removed a (%s)\n" % self.mine)
+        self.assertEqual(r.stdout, "removed a (%s: set to null over %s)\n" % (self.mine, self.base))
         self.ok("--file", self.mine, "rm", "c")
         self.assertEqual(self.base.read_bytes(), before)
         data = json.loads(self.mine.read_text())

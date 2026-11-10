@@ -34,14 +34,15 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
         --replace 重登記時沒帶 --no-cache＝回到有快取（整項重寫）。
         叫＝aos-exec 檔，arguments 原樣從 stdin 進；三種工具都不要求呼叫方設 AOS_STACK。
 "$override"（11-10 aos-tools-cli 步 4；使用者 Q4「"override":"../another_tools.json"」、N1「跟一般清單同形狀。想要rm的話，就是指定的key : null」、
-  K1「現在就寫 $override」、「$override希望能支援array…跟$ref一樣」）：{"$override": BASE, "tools": {"名": {…}, "拿掉的": null}}。
+  K1「現在就寫 $override」、「$override希望能支援array…跟$ref一樣」）：{"$override": BASE, "tools": {"名": {…}, "不要的": null}}（11-10 改口「null就是null，我們不做rm功能」「寫成 null，讀的人當它不是工具」）。
   BASE＝路徑字串（相對從這份檔的資料夾算、絕對）或指示詞物件（每次用到才交 aos-directive 解），或它們的陣列；空陣列＝沒有底檔。
-  疊法＝補丁式往下合（JSON Merge Patch）：底檔照陣列順序各自疊好再合、後蓋前，最後疊這份自己的；物件逐 key 合、null＝拿掉、其餘整個換
-  （所以只寫 {"env": {…}} 的同名格會沿用底檔的 path；add --replace 要整格換時把底檔有、這次沒給的 key 寫成 null）。
-  沒有 $override 的一般登記檔裡的 null＝當不存在。底檔可以再 $override（鏈）；環以真實路徑判、只看往上那幾層（菱形不算環）＝RegistryBad。
+  疊法＝照順序疊，後面蓋前面（使用者 11-10「都按你的建議」）：每個底檔先展開成它自己的序列，照陣列順序接起來，最後接這份自己的，一份一份補丁式往下合；
+  物件逐 key 合，其餘（含 null）整個蓋過去——合併沒有刪除，null 只是值。讀的時候值是 null 的工具格不算工具；工具格裡值是 null 的欄位＝當沒設
+  （所以只寫 {"env": {…}} 的同名格會沿用底檔的 path；add --replace 要整格換時用 null 蓋過底檔有、這次沒給的欄位）。
+  底檔可以再 $override（鏈）；同一份經兩條路被引到＝序列裡出現兩次、照樣疊（菱形不算環）；環以真實路徑判、只看往上那幾層＝RegistryBad。
   底檔指不到＝PathMissing（檔#/$override[/i]: 路徑 does not exist）、不是物件＝RegistryBad（訊息帶 from 檔#/$override）；頂層有 add／rm＝RegistryBad。
   tools 那格先照 lv0 解 $ref／$env（aos-json get --follow --resolve），再做 $override 合併；寫入只寫 F（aos-json set／del --follow），
-  rm 一個底檔也有的名字＝在 F 寫 null，底檔一個位元組都不動。
+  rm：只有 F 自己記的名字＝刪那個 key；底檔也有的＝在 F 寫 "名": null（成功行說是哪一種）；底檔一個位元組都不動。
   路徑指不到＝PathMissing，訊息帶工具名、解出的路徑與它來自哪份檔的哪一格（檔#/tools/名/path，檔＝寫那個 path 的那份）。
 登記格選填 env（11-05 晚 agent-knowledge R1）：{"名": {"path": …, "env": {"AOS_MEMORY": "/x/knowledge/aos"}}}，call 時合進那次呼叫的環境
   （蓋過外面同名的）；值照字面用、不當路徑解（C-56；要相對就靠讀它的工具自己的規則，例 memory 的 AOS_MEMORY 相對 $AOS_DAEMON）。
@@ -84,8 +85,9 @@ with _tooldef.json, a JSON file with a _tooldef key, or an executable that answe
 --tooldef. Agents read the list before each thought and call tools through it.
 
 A registry may carry one line, "$override": OTHER_FILE (or a list of files). It then
-holds only the differences from OTHER_FILE (which may override another file in turn);
-"NAME": null takes a tool away. Each agent's own additions and removals are kept this way.
+holds only the differences from OTHER_FILE (which may override another file in turn).
+Files are applied in order, later wins; an entry whose value is null is not a tool.
+Each agent's own changes to its definition's tools are kept this way.
 
 subcommands:
   add XXX          put a tool on the list (XXX = folder, JSON file or executable)
@@ -156,9 +158,10 @@ exit codes: 0 added; 1 error (PathMissing, ToolDefMissing, ToolDefBad, NameBad, 
 usage: aos-tools [--file F] rm XXX
 
 A listed name wins. Otherwise XXX is read as a path, and every name that points
-there is removed. When the tool comes from a file that F overrides, F records the
-removal ("NAME": null) and that file is left alone. Prints one line per name:
-removed NAME (F). The tool's own files are never deleted.
+there is removed. When the tool comes from a file that F overrides, F gets "NAME": null
+(an entry whose value is null is not a tool) and that file is left alone; otherwise
+the name's key is deleted from F. Prints one line per name:
+removed NAME (F: key deleted | F: set to null over FILE). The tool's own files are never deleted.
 
 flags:
   -h, --help   show this help
@@ -219,8 +222,8 @@ exit codes: the tool's code (killed by signal N = 128+N);
 usage: aos-tools [--file F] override (BASE... | --path-json JSON)
 
 Writes "$override": BASE into F (creating F when missing; several BASEs make a list).
-From then on F shows everything in BASE, plus what you add to F, minus what you rm
-from F. With a list, the BASEs are merged in order (later wins), then F on top.
+From then on F shows BASE with F applied on top: files are applied in order, later
+wins (a list of BASEs in its order, then F); an entry whose value is null is not a tool.
 BASE is stored like a tool path: absolute stays absolute, relative is stored
 relative to F, --path-json is stored as given and resolved on every use. BASE may
 itself override another file. Prints: F $override -> STORED_VALUE
@@ -498,7 +501,7 @@ def read_layer(reg, raw=None):
         raise Fail("RegistryBad", "%s must be a JSON object ({\"tools\": {...}})" % reg)
     if "add" in raw or "rm" in raw:
         raise Fail("RegistryBad", "%s: top-level add / rm are not registry keys (a registry is {\"%s\"?: BASE, \"tools\": {...}}; "
-                   "removals are \"NAME\": null)" % (reg, OVERRIDE_KEY))
+                   "an entry whose value is null is not a tool)" % (reg, OVERRIDE_KEY))
     if tools is None:
         tools = {}
     if not isinstance(tools, dict):
@@ -534,64 +537,68 @@ def read_bases(reg, pointer):
 
 
 def patch(acc, layer, reg):
-    """補丁式往下合（11-10 N1「想要rm的話，就是指定的key : null」；07：通行的 JSON Merge Patch）：
-    物件逐 key 合、null＝拿掉、其餘整個換。acc＝{名: {"entry": 合好的格, "origin": {格名: 寫它的那份檔}, "src": …}}。"""
+    """一層疊上去（補丁式往下合）：物件逐 key 合，其餘（字串、數字、null…）整個蓋過去。合併沒有刪除：
+    null 跟別的值一樣蓋過去、key 還在（使用者 11-10 改口：「null就是null，我們不做rm功能」「寫成 null，讀的人當它不是工具」）；
+    值是 null 的工具格在 finish 才當「不是工具」。acc＝{名: {"entry": 合好的格, "origin": {格名: 寫它的那份檔}, "last": 檔} 或 {"null": 檔}}。"""
     for name, e in layer.items():
         if e is None:
-            acc.pop(name, None)                      # 底下已經沒有＝忽略
+            acc[name] = {"null": reg}
             continue
         if not isinstance(e, dict):
             raise Fail("RegistryBad", "%s: tools/%s must be an object ({\"path\": ...}) or null" % (reg, name))
-        cur = acc.setdefault(name, {"entry": {}, "origin": {}})
+        cur = acc.get(name)
+        if cur is None or "null" in cur:             # 前面沒有、或被 null 蓋過：從空的開始（null 不是物件，不往下合）
+            cur = acc[name] = {"entry": {}, "origin": {}}
         for k, v in e.items():
-            if v is None:
-                cur["entry"].pop(k, None)
-                cur["origin"].pop(k, None)
-            elif isinstance(v, dict) and isinstance(cur["entry"].get(k), dict):
+            if isinstance(v, dict) and isinstance(cur["entry"].get(k), dict):
                 merged = dict(cur["entry"][k])
-                for kk, vv in v.items():
-                    if vv is None:
-                        merged.pop(kk, None)
-                    else:
-                        merged[kk] = vv
+                merged.update(v)                     # env 之類再往下一層；裡面的 null 也只是值
                 cur["entry"][k] = merged
-                cur["origin"][k] = reg
             else:
                 cur["entry"][k] = v
-                cur["origin"][k] = reg
+            cur["origin"][k] = reg
         cur["last"] = reg
 
 
-def merged_tools(reg, raw=None, chain=()):
-    """reg 疊完所有底檔之後的 {名: 合好的格}（底檔照陣列順序合、後蓋前，最後疊 reg 自己的；底檔可以再有 $override）。
-    環以真實路徑判（只看往上那幾層，同一份經兩條路被引到＝菱形、不算環，跟 $ref 陣列同）。"""
+def layers(reg, raw=None, chain=()):
+    """reg 展開成照順序的疊加序列 [(檔, tools)…]：每個底檔先遞迴展開成它自己的序列，照 $override 陣列順序接起來，最後接 reg 自己的
+    （使用者 11-10「照順序疊，後面蓋前面」）。同一份經兩條路被引到（菱形）＝序列裡出現兩次、照樣疊，不算環；
+    環以真實路徑判，只看往上那幾層（跟 $ref 陣列同）。"""
     real = os.path.realpath(reg)
     if real in chain:
         raise Fail("RegistryBad", "%s chain loops: %s" % (OVERRIDE_KEY, " -> ".join(list(chain[chain.index(real):]) + [real])))
     raw, tools, pointer = read_layer(reg, raw)
-    acc = {}
+    seq = []
     if pointer is not None:
         for base, at in read_bases(reg, pointer):
             try:
-                below = merged_tools(base, None, chain + (real,))
+                seq += layers(base, None, chain + (real,))
             except Fail as e:
                 if e.code == "RegistryBad" and "chain loops" in str(e):
                     raise
                 raise Fail(e.code, "%s (from %s)" % (e, at))
-            for name, t in below.items():          # 底檔之間也照順序補丁式合
-                patch(acc, {name: dict(t["entry"])}, None)
-                for k in t["entry"]:
-                    acc[name]["origin"][k] = t["origin"].get(k)
-                acc[name]["last"] = t["last"]
-    patch(acc, tools, reg)
+    return seq + [(reg, tools)]
+
+
+def merged_tools(reg, raw=None):
+    """reg 疊完整條序列之後的 {名: 合好的格}（含被 null 蓋過的名字）。"""
+    acc = {}
+    for f, tools in layers(reg, raw):
+        patch(acc, tools, f)
     return acc
 
 
 def finish(merged):
-    """合好的格 → {名: {path(絕對，從寫 path 的那份檔算), entry, field, src, stored, env_file?…}}；壞的＝RegistryBad。"""
+    """合好的格 → {名: {path(絕對，從寫 path 的那份檔算), entry, field, src, stored, env_file?…}}；壞的＝RegistryBad。
+    值是 null 的工具格不算工具；工具格裡值是 null 的欄位（env、env_file、cache、env 裡的變數）＝當沒設。"""
     out = {}
     for name, t in merged.items():
-        e, origin = t["entry"], t["origin"]
+        if "null" in t:
+            continue
+        origin = t["origin"]
+        e = {k: v for k, v in t["entry"].items() if v is not None}
+        if isinstance(e.get("env"), dict):
+            e["env"] = {k: v for k, v in e["env"].items() if v is not None}
         where = "%s#/tools/%s" % (t["last"], name)
         if not isinstance(e.get("path"), str) or not e["path"]:
             raise Fail("RegistryBad", "%s: tools/%s needs \"path\": non-empty string (after merging what it overrides)" % (t["last"], name))
@@ -634,11 +641,11 @@ def load_tools(reg):
 
 
 def base_tools(reg):
-    """reg 的底檔們合起來的樣子（不含 reg 自己的）；add --replace 用它找要寫成 null 的 key，rm 用它判要不要記 null。"""
+    """reg 的底檔們疊起來的樣子（不含 reg 自己的、不含被 null 蓋過的）；add --replace 用它找要用 null 蓋掉的欄位，rm 用它判要寫 null 還是刪 key。"""
     raw, _tools, pointer = read_layer(reg)
     if pointer is None:
         return {}
-    return merged_tools(reg, dict(raw, tools={}))
+    return {n: t for n, t in merged_tools(reg, dict(raw, tools={})).items() if "null" not in t}
 
 
 def own_tools(reg):
@@ -848,10 +855,11 @@ def cmd_add(args):
         entry["env_file"] = env_file
     if opts.get("no_cache"):                         # 只有 --no-cache 才寫；定義快取在 stack，不進登記檔（步 2）
         entry["cache"] = False
-    below = base_tools(reg).get(name)                # 步 4：補丁式往下合，要整格換就把底檔那格有、這次沒給的 key 寫成 null
+    below = base_tools(reg).get(name)                # 步 4：補丁式往下合，要整格換就用 null 蓋過底檔那格有、這次沒給的欄位
     if below is not None:
-        for k in below["entry"]:
-            entry.setdefault(k, None)
+        for k, v in below["entry"].items():
+            if v is not None:
+                entry.setdefault(k, None)
     write_entry(reg, name, entry)
     written = reg
     missing = [k for k in dict.fromkeys(hubs) if k not in os.environ and k not in env and k not in file_names]
@@ -867,14 +875,17 @@ def cmd_rm(args):
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "rm needs one XXX")
     names = match(load_tools(reg), rest[0])
-    below, own = base_tools(reg), own_tools(reg)     # 步 4：只寫 reg；底檔也有的名字記成 null（底檔位元組不動）
+    below, own = base_tools(reg), own_tools(reg)     # 步 4：只寫 reg，底檔位元組不動
+    done = []
     for n in names:
-        if n in below:
+        if n in below:                               # 底檔有同名＝在 reg 寫 "名": null（值是 null 的那格不算工具）
             write_entry(reg, n, None)
-        elif own is None or n in own:
+            done.append((n, "set to null over %s" % below[n]["last"]))
+        else:                                        # 只有 reg 自己記的＝刪那個 key
             aos_json(["del", "--follow", "%s#/tools/%s" % (reg, n)])
-    for n in names:
-        print("removed %s (%s)" % (n, reg))
+            done.append((n, "key deleted"))
+    for n, how in done:
+        print("removed %s (%s: %s)" % (n, reg, how))
 
 
 def write_entry(reg, name, entry):

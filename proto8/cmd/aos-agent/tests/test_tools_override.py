@@ -102,7 +102,7 @@ class ToolsOverride(unittest.TestCase):
         self.agent("rm", "clock")
         p = subprocess.run([str(BIN), "--daemon", str(self.d), "ctl", "state", "--target", "bob"],
                            env=clean_env(), capture_output=True, text=True, timeout=60)
-        self.assertIn("own: 1 added, 1 removed (+extra, -clock) over %s" % json.dumps(os.path.relpath(self.reg, self.stack)),
+        self.assertIn("own: 1 listed, 1 set to null (+extra, null:clock) over %s" % json.dumps(os.path.relpath(self.reg, self.stack)),
                       p.stdout + p.stderr)
 
 

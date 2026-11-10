@@ -149,7 +149,7 @@ class SuccessLines(Base):
     def test_removed_names_file(self):
         self.ok("--file", self.reg, "add", TOOL)
         r = self.ok("--file", self.reg, "rm", "wall_clock")
-        self.assertEqual(r.stdout, "removed wall_clock (%s)\n" % self.reg)
+        self.assertEqual(r.stdout, "removed wall_clock (%s: key deleted)\n" % self.reg)
 
 
 class LongListing(Base):

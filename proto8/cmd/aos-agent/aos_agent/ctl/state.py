@@ -70,13 +70,13 @@ def overlay_count(a):
     try:
         with open(p, encoding="utf-8") as f:
             o = json.load(f)
-        tools = o.get("tools") or {}                 # 11-10 aos-tools-cli 步 4：{"$override": 底檔, "tools": {加的…, "拿掉的": null}}
+        tools = o.get("tools") or {}                 # 11-10 aos-tools-cli 步 4：{"$override": 底檔, "tools": {加的…, "不要的": null}}（null 那格不算工具）
         if not isinstance(tools, dict):
             raise TypeError("tools is not an object")
         add = sorted(n for n, e in tools.items() if e is not None)
         rm = sorted(n for n, e in tools.items() if e is None)
         base = o.get("$override")
         over = " over %s" % json.dumps(base, ensure_ascii=False) if base is not None else ""
-        return "own: %d added, %d removed (%s)%s" % (len(add), len(rm), ", ".join(["+" + n for n in add] + ["-" + n for n in rm]) or "empty", over)
+        return "own: %d listed, %d set to null (%s)%s" % (len(add), len(rm), ", ".join(["+" + n for n in add] + ["null:" + n for n in rm]) or "empty", over)
     except (OSError, ValueError, AttributeError, TypeError) as e:
         return "own tools file unreadable: %s (%s)" % (p, e)

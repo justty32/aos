@@ -8,7 +8,7 @@
 
 ### 存什麼
 
-`aos-agent tools add／rm` 只在 `interfaces.json` 的 `aos-agent.tools` **宣告的相對路徑**記這一隻自己加的、拿掉的（11-06 K-6）：定義讀 `<定義>/<tools 路徑>`，這隻自己那份寫 `<stack>/<同一 tools 路徑>`。例如宣告 `"tools": "cfg/my_tools.json"`，自己那份就是 `<stack>/cfg/my_tools.json`。`tools`／`llm` 宣告都只能是定義內的相對檔名；不可絕對、不可含 `..`、不可指資料夾。不複製定義，只存差異。**11-10 起長得跟一般登記檔一樣**（[aos-tools-cli](../../../thinking/2026-11/10/aos-tools-cli/README.md) 步 4；使用者 N1「跟一般清單同形狀。想要rm的話，就是指定的key : null」、K1「現在就寫 $override」）：
+`aos-agent tools add／rm` 只在 `interfaces.json` 的 `aos-agent.tools` **宣告的相對路徑**記這一隻自己加的、拿掉的（11-06 K-6）：定義讀 `<定義>/<tools 路徑>`，這隻自己那份寫 `<stack>/<同一 tools 路徑>`。例如宣告 `"tools": "cfg/my_tools.json"`，自己那份就是 `<stack>/cfg/my_tools.json`。`tools`／`llm` 宣告都只能是定義內的相對檔名；不可絕對、不可含 `..`、不可指資料夾。不複製定義，只存差異。**11-10 起長得跟一般登記檔一樣**（[aos-tools-cli](../../../thinking/2026-11/10/aos-tools-cli/README.md) 步 4；使用者 N1「跟一般清單同形狀。想要rm的話，就是指定的key : null」（11-10 改口：「null就是null，我們不做rm功能」「寫成 null，讀的人當它不是工具」）、K1「現在就寫 $override」）：
 
 ```json
 {"$override": "../../defs/bob/tools.json",
@@ -16,8 +16,8 @@
 ```
 
 - `$override`：底檔（定義那份）。第一次 `tools add／rm` 由 aos-agent 寫（`aos-tools --file 自己那份 override …`），寫法照當初 `ctl add` 給定義的寫法（使用者 N2「跟你加 agent 時的寫法走」）：daemon 表 `as_written.def` 是 `$env` 指示詞＝原樣接上宣告的 tools 路徑（例 `{"$env": "DEFS", "$path": "/bob/tools.json"}`）；其餘（表上只有解好的絕對路徑，分不出原寫法）＝相對自己那份的資料夾。定義那份不存在時不寫 `$override`，`add` 直接建一般登記檔。
-- `tools`：加的（跟登記檔裡一項一樣：`path`，可加 `env`／`env_file`／`cache: false`）與拿掉的（`"名": null`）。`path` 保留使用者的寫法（11-10 午 TC）——給絕對＝存絕對、給相對＝存相對自己那份所在資料夾（字串算、不 realpath）；要寫指示詞直接 `aos-tools --file <stack>/<tools 路徑> add --path-json …`。
-- 疊法是補丁式往下合：只寫 `{"env": {…}}` 的同名格會沿用定義那格的 `path`；`tools add --replace` 要整格換時，aos-tools 會把定義那格有、這次沒給的 key 寫成 `null`。
+- `tools`：加的（跟登記檔裡一項一樣：`path`，可加 `env`／`env_file`／`cache: false`）與不要的（`"名": null`——值是 null 的那格不算工具）。`path` 保留使用者的寫法（11-10 午 TC）——給絕對＝存絕對、給相對＝存相對自己那份所在資料夾（字串算、不 realpath）；要寫指示詞直接 `aos-tools --file <stack>/<tools 路徑> add --path-json …`。
+- 疊法是照順序疊，後面蓋前面（補丁式往下合，合併沒有刪除、`null` 只是值）：只寫 `{"env": {…}}` 的同名格會沿用定義那格的 `path`；`tools add --replace` 要整格換時，aos-tools 用 `null` 蓋過定義那格有、這次沒給的欄位（值是 null 的欄位＝當沒設）。`tools rm` 定義也有的名字＝寫 `"名": null`，只有自己那份記的＝刪那個 key。
 - 沒改過＝沒有這份檔＝就是定義那份。`tools reset`＝刪掉這份。
 - `llm` 也按它自己的宣告相對路徑放覆蓋層，只存改過的鍵（例宣告 `"llm": "cfg/brain.json"` 就寫 `<stack>/cfg/brain.json`）。
 - **要重建什麼**（11-10）：舊形狀 `{"add": {…}, "rm": […]}` 的檔讀不了（`RegistryBad … top-level add / rm are not registry keys`）：`aos-agent tools reset` 後重新 `tools add`／`rm`。
@@ -29,7 +29,7 @@
 - `aos-agent tools ls／get／add／rm`（stderr 一行說用的是自己那份還是定義那份；自己那份的 `$override` 解出來不是這隻定義的那份時多印一行 warning——stack 被 cp 去配另一個定義時指標不會跟著變）。
 - agent-fsm 的身體 `brain.py`（給腦看的工具清單）、`act.py`（叫工具）：沒給 `--tools` 時照上面的共同規則選一份；每格重讀＝下一題生效。
 - eca agent：`proto8/lib/agent/cli_session.py` 的 `stack_copies`（cli.json 沒明寫 `tools` 時）同樣依宣告，自己那份在就把它當登記檔交給 `aos-mcp`；每次起 CLI 重接。
-- `aos-agent ctl state` 的 tools 那行：`own: N added, M removed (+名, -名…) over <$override 原樣值>`。
+- `aos-agent ctl state` 的 tools 那行：`own: N listed, M set to null (+名, null:名…) over <$override 原樣值>`。
 
 ### 定義後來改了怎麼辦
 
