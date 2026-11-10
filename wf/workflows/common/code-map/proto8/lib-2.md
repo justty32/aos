@@ -24,12 +24,12 @@
 | [`codex/cli.json`](../../../../../proto8/lib/agent/codex/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
 | [`cooldown.py`](../../../../../proto8/lib/agent/cooldown.py) | 失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。 |
 | [`json_rewrite/`](../../../../../proto8/lib/agent/json_rewrite/) | 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 act 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。 |
-| [`memory/`](../../../../../proto8/lib/agent/memory/) | 唯讀查詢共用知識庫：read 節點或 JSON Pointer、ls 列子節點、find 關鍵字與單一標籤搜尋。 |
+| [`memory/`](../../../../../proto8/lib/agent/memory/) | 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）：read 一個位置、ls 列枝幹的表、find 依關鍵字／標籤找路徑。 |
 | [`memory/tests/test_base_directive.py`](../../../../../proto8/lib/agent/memory/tests/test_base_directive.py) | 驗 _memory.json 的 base：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次用到才解、不寫回，解不開時錯誤行指名檔與欄。 |
 | [`memory/tests/test_find.py`](../../../../../proto8/lib/agent/memory/tests/test_find.py) | 以本地知識庫驗證 memory 單一標籤與關鍵字交集搜尋。 |
 | [`memory/tests/test_pointer.py`](../../../../../proto8/lib/agent/memory/tests/test_pointer.py) | 以本地假資料驗證 memory 的 JSON Pointer 與既有節點路徑行為。 |
 | [`memory_export/`](../../../../../proto8/lib/agent/memory_export/) | 把一個知識庫（或其中一棵子樹）整棵印成一份 Markdown，給人看；唯讀 |
-| [`memory_fs.py`](../../../../../proto8/lib/agent/memory_fs.py) | 知識庫共用的找根、節點與 JSON Pointer 定址、讀取、摘要與子節點列舉。 |
+| [`memory_fs.py`](../../../../../proto8/lib/agent/memory_fs.py) | 記憶庫（純 JSON 樹）共用：找根、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 "." 格／$env 格的認法、列枝幹、find 逛樹的迴圈防護。 |
 | [`memory_sync/`](../../../../../proto8/lib/agent/memory_sync/) | Synchronize an optional Git knowledge base with origin. |
 | [`memory_sync/tests/test_sync.py`](../../../../../proto8/lib/agent/memory_sync/tests/test_sync.py) | Exercise memory_sync against temporary local Git repositories and tool errors. |
 | [`memory_write/`](../../../../../proto8/lib/agent/memory_write/) | Add, replace or remove shared knowledge nodes with atomic writes and directory locks. |
@@ -39,6 +39,8 @@
 | [`memory_write/tests/test_prerequisites.py`](../../../../../proto8/lib/agent/memory_write/tests/test_prerequisites.py) | Verify hard-link failures preserve nodes and explain filesystem prerequisites. |
 | [`memory_write/tests/test_writing.py`](../../../../../proto8/lib/agent/memory_write/tests/test_writing.py) | Verify memory writes, leaf promotion and concurrent removal through the real tool. |
 | [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | Write, promote and remove knowledge nodes atomically under directory locks. |
+| [`self_llm/`](../../../../../proto8/lib/agent/self_llm/) | aos-agent llm 的包裝，目標改成叫我的那隻自己：show、set、reset；改的是那隻 stack 裡自己那份 llm 設定，定義不動 |
+| [`self_llm/tests/test_self_llm.py`](../../../../../proto8/lib/agent/self_llm/tests/test_self_llm.py) | Test self_llm builds the aos-agent llm command line (show, set, reset) and checks its arguments, with a fake aos-agent. |
 | [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | aos-agent tools 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份登記檔，定義不動 |
 | [`self_tools/tests/test_self_tools.py`](../../../../../proto8/lib/agent/self_tools/tests/test_self_tools.py) | Test self_tools builds the aos-agent tools command line (replace, envs, env_file) and checks its arguments, with a fake aos-agent. |
 | [`tests/test_cli_tools_directive.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_directive.py) | 驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。 |
