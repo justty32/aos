@@ -4,6 +4,7 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -15,7 +16,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[3]
 TURN = REPO / "proto8" / "cmd" / "aos-eca" / "bin" / "aos-eca-turn"
 sys.path.insert(0, str(REPO / "proto8" / "lib"))
-from agent import cooldown  # noqa: E402
+from agent import cli_session, cooldown  # noqa: E402
 
 LOCAL_BIN = os.path.expanduser("~/.local/bin")
 
@@ -99,6 +100,11 @@ class Base(unittest.TestCase):
     def mark(self):
         return json.loads((self.cell / ".session_home").read_text())
 
+    def make_due(self):
+        rec = json.loads(cooldown.path(str(self.stack)) and Path(cooldown.path(str(self.stack))).read_text())
+        rec["until"] = cooldown.iso(time.time() - 5)
+        Path(cooldown.path(str(self.stack))).write_text(json.dumps(rec))
+
 
 class ClaudeSwitch(Base):
     def test_1_same_machine_resumes(self):
@@ -114,7 +120,8 @@ class ClaudeSwitch(Base):
         self.assertEqual(c2["argv"][c2["argv"].index("--resume") + 1], first)
         self.assertEqual(c2["stdin"], "again")
         self.assertEqual(self.mark(), {"session": first, "ws": os.path.realpath(self.ws),
-                                       "home": os.path.realpath(self.home / ".claude")})
+                                       "home": os.path.realpath(self.home / ".claude"),
+                                       "machine": cli_session.machine_id()})
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant", "user", "assistant"])
 
     def check_new_with_record(self, old):
@@ -186,35 +193,25 @@ class ClaudeSwitch(Base):
         self.assertEqual(last["stdin"], "again")
         self.assertEqual(self.mark()["session"], old)
 
-    def test_6_resume_fails_transcript_gone(self):
+    def test_6_transcript_gone_opens_new(self):
+        # 11-10 stored_here: the CLI's own record of the conversation is gone (claude cleaned it up, or a first turn
+        # was cut before claude saved it) = seen before handing over, so the next letter opens a new conversation
+        # with the record instead of resuming into a failure (no letter lost).
         self.say("hello")
         self.ok_turn()
         old = self.sid()
         for p in (self.home / ".claude" / "projects").glob("*/%s.jsonl" % old):
             p.unlink()
-        self.say("lost")
-        r = self.turn()
-        self.assertEqual(r.returncode, 1)
-        self.assertIn("aos-eca-turn: error: CliFailed", r.stderr)
-        self.assertFalse((self.cell / "session.txt").exists())
-        self.assertFalse((self.cell / ".session_home").exists())
-        self.assertEqual(self.queue(), [])                       # that letter was taken (decision 5)
-        self.assertEqual(self.history()[-1], {"role": "user", "content": "lost"})
-        state, rec = cooldown.state(str(self.stack))
-        self.assertEqual((state, rec["failures"], rec["dropped"]), ("cooling", 1, 1))
-        self.make_due()
         self.say("next")
         self.ok_turn()
         last = self.calls()[-1]
         self.assertIn("--session-id", last["argv"])
-        self.assertIn("[user] lost\n", last["stdin"])           # the unanswered one is in the record
+        self.assertNotIn("--resume", last["argv"])
+        self.assertIn("[user] hello\n", last["stdin"])
         self.assertTrue(last["stdin"].endswith("\n\nnext"))
         self.assertTrue(self.sid() and self.sid() != old)
-
-    def make_due(self):
-        rec = json.loads(cooldown.path(str(self.stack)) and Path(cooldown.path(str(self.stack))).read_text())
-        rec["until"] = cooldown.iso(time.time() - 5)
-        Path(cooldown.path(str(self.stack))).write_text(json.dumps(rec))
+        self.assertEqual(self.queue(), [])
+        self.assertEqual(cooldown.state(str(self.stack))[0], "none")
 
     def test_8_cooldown(self):
         self.say("a1", "a2")
@@ -226,8 +223,7 @@ class ClaudeSwitch(Base):
         self.assertEqual((rec["failures"], rec["dropped"], rec["code"]), (1, 2, "CliFailed"))
         self.assertEqual(self.queue(), [])
         self.assertEqual(len(self.history()), 2)
-        first_sid = self.sid()
-        self.assertTrue(first_sid)                               # ⑩ the new conversation's id is written even though it failed
+        self.assertFalse(self.sid())                             # TS 9: the CLI saved nothing, so the new id is dropped
         # cooling: nothing is taken
         self.say("b1", "b2", "b3")
         before = (self.queue(), self.history())
@@ -290,11 +286,59 @@ class ClaudeSwitch(Base):
 
     def test_10_first_turn_fails_session_written(self):
         self.say("x")
-        r = self.turn(FAKE_CLI_FAIL="1")
+        r = self.turn(FAKE_CLI_FAIL="1", FAKE_CLI_FAIL_SAVED="1")       # the CLI saved the conversation before failing
         self.assertEqual(r.returncode, 1)
         sid = self.sid()
         self.assertEqual(self.calls()[-1]["argv"][self.calls()[-1]["argv"].index("--session-id") + 1], sid)
         self.assertEqual(self.mark()["session"], sid)
+
+    def test_ts9_first_turn_fails_nothing_saved(self):
+        """TS 9: a new conversation fails on its first turn and the CLI saved nothing: both files go, the next turn starts new."""
+        self.say("x")
+        r = self.turn(FAKE_CLI_FAIL="1")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("aos-eca-turn: error: CliFailed", r.stderr)
+        failed = self.calls()[-1]["argv"]
+        self.assertIn("--session-id", failed)
+        self.assertFalse((self.cell / "session.txt").exists())
+        self.assertFalse((self.cell / ".session_home").exists())
+        self.make_due()
+        self.say("y")
+        self.ok_turn()
+        self.assertEqual(len(self.calls()), 2)                   # no wasted --resume of a conversation that never existed
+        last = self.calls()[-1]["argv"]
+        self.assertNotIn("--resume", last)
+        self.assertNotEqual(last[last.index("--session-id") + 1], failed[failed.index("--session-id") + 1])
+        self.assertEqual(self.history()[-1], {"role": "assistant", "content": "FAKE: y"})
+        self.assertFalse(os.path.exists(cooldown.path(str(self.stack))))
+
+    def test_ts8_other_machine_new_with_record(self):
+        """TS 8: the marker names another machine (cp -a carried it over): new conversation with the record."""
+        self.say("hello")
+        self.ok_turn()
+        old = self.sid()
+        mark = self.mark()
+        mark["machine"] = "some-other-machine"
+        (self.cell / ".session_home").write_text(json.dumps(mark))
+        self.say("again")
+        self.ok_turn()
+        self.check_new_with_record(old)
+        self.assertEqual(self.mark()["machine"], cli_session.machine_id())
+
+    def test_ts8_marker_without_machine_still_resumes(self):
+        """TS 8: an older marker without the machine key is not compared on machine (gentle on running ecas)."""
+        self.say("hello")
+        self.ok_turn()
+        old = self.sid()
+        mark = self.mark()
+        del mark["machine"]
+        (self.cell / ".session_home").write_text(json.dumps(mark))
+        self.say("again")
+        self.ok_turn()
+        self.assertEqual(self.sid(), old)
+        last = self.calls()[-1]
+        self.assertEqual(last["argv"][last["argv"].index("--resume") + 1], old)
+        self.assertEqual(last["stdin"], "again")
 
     def test_cooling_untouched_cur(self):
         """A letter left in cur/ (an earlier yield) stays there while cooling."""
@@ -347,23 +391,38 @@ class CodexSwitch(Base):
 
     def test_11_thread_written_on_failure(self):
         self.say("x")
-        r = self.turn(FAKE_CLI_FAIL="1")
+        r = self.turn(FAKE_CLI_FAIL="1", FAKE_CLI_FAIL_SAVED="1")       # codex saved the thread before failing
         self.assertEqual(r.returncode, 1)
         self.assertIn("CliFailed", r.stderr)
         self.assertTrue(self.sid())
         self.assertEqual(self.mark()["session"], self.sid())
         self.assertEqual(cooldown.read(str(self.stack))["dropped"], 1)
 
-    def test_codex_resume_fails_thread_gone(self):
-        self.say("hello")
-        self.ok_turn()
-        for p in (self.home / ".codex" / "sessions").rglob("*.jsonl"):
-            p.unlink()
-        self.say("lost")
-        r = self.turn()
+    def test_ts9_codex_first_turn_fails_nothing_saved(self):
+        """TS 9: thread.started came but codex saved no thread file: both files go, the next turn starts a new thread."""
+        self.say("x")
+        r = self.turn(FAKE_CLI_FAIL="1")
         self.assertEqual(r.returncode, 1)
         self.assertFalse((self.cell / "session.txt").exists())
         self.assertFalse((self.cell / ".session_home").exists())
+        self.make_due()
+        self.say("y")
+        self.ok_turn()
+        self.assertEqual(len(self.calls()), 2)
+        self.assertNotIn("resume", self.calls()[-1]["argv"])
+        self.assertTrue(self.sid())
+
+    def test_codex_thread_gone_opens_new(self):
+        self.say("hello")
+        self.ok_turn()
+        old = (self.cell / "session.txt").read_text().strip()
+        for p in (self.home / ".codex" / "sessions").rglob("*.jsonl"):
+            p.unlink()
+        self.say("next")
+        r = self.turn()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        new = (self.cell / "session.txt").read_text().strip()
+        self.assertTrue(new and new != old)
 
 
 class Reseed(unittest.TestCase):
@@ -521,6 +580,11 @@ class Screen(unittest.TestCase):
 
     def test_start_keeps_own_session(self):
         self.cs.mark_session("claude", self.cell, str(self.ws), "mine")
+        import re as _re
+        saved = os.path.join(self.cs.account_dir("claude"), "projects",
+                             _re.sub(r"[^A-Za-z0-9]", "-", os.path.realpath(str(self.ws))))
+        os.makedirs(saved, exist_ok=True)
+        open(os.path.join(saved, "mine.jsonl"), "w").close()            # the CLI saved this conversation here
         seen = []
 
         def tmux(*args, **kw):
@@ -558,7 +622,99 @@ class Screen(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.cell.read("session.txt"), "hook-id")
         self.assertEqual(json.loads(self.cell.read(".session_home")),
-                         {"session": "hook-id", "ws": os.path.realpath(self.ws), "home": os.path.realpath(self.home / ".claude")})
+                         {"session": "hook-id", "ws": os.path.realpath(self.ws), "home": os.path.realpath(self.home / ".claude"),
+                          "machine": cli_session.machine_id()})
+
+    def test_ts8_machine_id_falls_back_to_hostname(self):
+        import socket
+        with self.mock.patch.object(self.cs, "open", create=True, side_effect=OSError("no machine-id")):
+            self.assertEqual(self.cs.machine_id(), socket.gethostname())
+        self.assertTrue(self.cs.machine_id())
+
+
+class TtySocket(unittest.TestCase):
+    """TS 10: the screen's tmux socket lives under ${XDG_RUNTIME_DIR:-/tmp}/aos-tty-<uid>/, not in the cell."""
+
+    def setUp(self):
+        from unittest import mock
+        import hashlib
+        self.mock, self.cs = mock, cli_session
+        self.tmp = tempfile.TemporaryDirectory(prefix="ts-tty-")
+        self.addCleanup(self.tmp.cleanup)
+        self.t = Path(self.tmp.name)
+        self.xdg = self.t / "xdg"
+        self.xdg.mkdir(mode=0o700)
+        self.cell = cli_session.Cell(str(self.t / "stack" / "claude"))
+        self.hash = hashlib.sha256(os.path.realpath(self.cell.path).encode()).hexdigest()[:16]
+        for patcher in (mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": str(self.xdg)}),
+                        mock.patch.object(cli_session, "die", Screen.raise_die)):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.dir = self.xdg / ("aos-tty-%d" % os.getuid())
+
+    def test_path_and_length(self):
+        sock = self.cs.tty_socket(self.cell.path)
+        self.assertEqual(sock, str(self.dir / (self.hash + ".sock")))
+        self.assertLess(len(sock.encode()), 108)
+        self.assertFalse(self.dir.exists())                      # looking does not create anything
+        self.assertEqual(self.cell.sock(), sock)
+
+    def test_xdg_missing_or_unusable_falls_back_to_tmp(self):
+        tmp_dir = "/tmp/aos-tty-%d" % os.getuid()
+        for bad in (str(self.t / "nope"), "", "relative/dir", str(self.t / "file")):
+            (self.t / "file").write_text("")
+            with self.mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": bad}):
+                self.assertEqual(self.cs.tty_socket(self.cell.path), os.path.join(tmp_dir, self.hash + ".sock"))
+        with self.mock.patch.dict(os.environ):
+            os.environ.pop("XDG_RUNTIME_DIR")
+            self.assertEqual(self.cs.tty_socket(self.cell.path), os.path.join(tmp_dir, self.hash + ".sock"))
+
+    def test_make_creates_0700_and_fixes_mode(self):
+        sock = self.cs.tty_socket(self.cell.path, make=True)
+        self.assertEqual(os.stat(self.dir).st_mode & 0o777, 0o700)
+        self.assertEqual(os.path.dirname(sock), str(self.dir))
+        os.chmod(self.dir, 0o755)
+        self.cs.tty_socket(self.cell.path, make=True)
+        self.assertEqual(os.stat(self.dir).st_mode & 0o777, 0o700)
+
+    def test_make_refuses_symlinked_folder(self):
+        other = self.t / "other"
+        other.mkdir()
+        os.symlink(other, self.dir)
+        with self.assertRaises(RuntimeError) as e:
+            self.cs.tty_socket(self.cell.path, make=True)
+        self.assertEqual(str(e.exception), "CellBad")
+
+    def test_moved_cell_other_hash(self):
+        a = self.cs.tty_socket(self.cell.path)
+        moved = self.t / "stack2"
+        os.rename(self.t / "stack", moved)
+        b = self.cs.tty_socket(str(moved / "claude"))
+        self.assertNotEqual(a, b)
+
+    def test_old_socket_in_cell_still_found(self):
+        """A screen opened before TS 10 (socket in the cell) is still found; a new one never goes there."""
+        import socket
+        old = socket.socket(socket.AF_UNIX)
+        self.addCleanup(old.close)
+        old.bind(self.cell.file("tty.sock"))
+        self.assertEqual(self.cs.tty_socket(self.cell.path), self.cell.file("tty.sock"))
+        self.assertEqual(self.cs.tty_socket(self.cell.path, make=True), str(self.dir / (self.hash + ".sock")))
+
+    @unittest.skipUnless(shutil.which("tmux"), "tmux not installed")
+    def test_real_tmux_screen_outside_the_cell(self):
+        sock = self.cs.tty_socket(self.cell.path, make=True)
+        self.addCleanup(subprocess.run, ["tmux", "-S", sock, "kill-server"], capture_output=True)
+        self.assertFalse(self.cell.alive())
+        r = self.cell.tmux("new-session", "-d", "-s", self.cs.TMUX_SESSION, "sleep 60", new=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.cell.alive())
+        self.assertTrue(os.path.exists(sock))
+        self.assertEqual(sorted(os.listdir(self.cell.path)), [])   # nothing made in the cell (no tty.sock)
+        self.assertTrue(self.cs.close(self.cell))
+        self.assertFalse(self.cell.alive())
+        self.assertFalse(os.path.exists(sock))                   # close removes the socket file too
+        self.assertEqual(subprocess.run(["tmux", "-S", sock, "has-session"], capture_output=True).returncode, 1)
 
 
 if __name__ == "__main__":

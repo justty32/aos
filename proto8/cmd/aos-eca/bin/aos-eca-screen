@@ -149,11 +149,11 @@ def cmd_open(eca, opts):
     cli_session.note_cell(cell, eca, ws, stack)          # open_cell 照 tool.txt（定義）、ws.txt、stack.txt（給 aos-mcp）開
     opened = cli_session.open_cell(cell)                 # 正在答題就等它答完（格的 lock）、等畫面穩
     if opts.get("detach"):
-        print("screen %s: %s" % ("opened (resumed with --resume if a conversation exists)" if opened else "already open", cell.file("tty.sock")))
+        print("screen %s: %s" % ("opened (resumed with --resume if a conversation exists)" if opened else "already open", cell.sock()))
         return
     env = {k: v for k, v in os.environ.items() if k != "TMUX"}
     aos_flags.warn(PROG, "attaching to %s (Ctrl-] detaches; the instance keeps running)" % ws)
-    os.execvpe("tmux", ["tmux", "-S", cell.file("tty.sock"), "attach", "-t", cli_session.TMUX_SESSION], env)
+    os.execvpe("tmux", ["tmux", "-S", cell.sock(), "attach", "-t", cli_session.TMUX_SESSION], env)
 
 
 def cmd_close(eca, opts):

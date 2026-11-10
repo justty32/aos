@@ -2,22 +2,37 @@
 # loop 照跑、不卡著等：每拍一下就退，ctl 的 pause／stop 每拍都看得到。
 #   think/pending.txt 不在＝還沒寄：aos-post init think/reply（沒有才建）、aos-llm send --reply-to think/reply < request.json，
 #     request.json 不在＝退 11 回 think，從 history＋定義重組；在才寄、信件名稱寫進 pending.txt、退 10（下一拍再來看）。
-#   在＝已寄：aos-llm recv think/reply <名>：沒到（10）＝退 10；到了（0）＝那則 assistant 接進 history.jsonl、刪 pending.txt、退 0（→ act）；
+#   在＝已寄：think/reply 缺 tmp／new／cur 任一＝先 aos-post init（11-10 TS：clone 後空的 reply 夾不在 git，recv 會 MailboxMissing）；
+#     aos-llm recv --quiet think/reply <名>：沒到（10）＝退 10；到了（0）＝那則 assistant 接進 history.jsonl、刪 pending.txt、退 0（→ act）；
 #     kernel 回錯（1）＝刪 pending.txt、aos-llm 的 stderr 原樣、這格再多寫自己一行 BrainFailed、退 1（P-20 停下等人；人重跑＝沒 pending、request.json 還在→重寄＝重試）。
 #   寄之前看 request.json 的 endpoint 跟現在的 llm.json（interfaces.json 宣告的定義檔疊這隻的 stack 同相對路徑檔，疊法同 brain.py）
 #     對不對得上：對不上＝退 11 回 think 重組（11-05 edge-agent：代號寫錯停下、人 aos-agent llm set／改或刪 llm.json 再起，
 #     原本照舊的 request.json 重寄、又是同一個錯，要人手動把 stage.txt 寫成 think）。llm.json 讀不懂＝當 {}（brain 重組時會報 CfgBad）。
-# 結束碼（fsm.json 照碼分岔，N-36）：0＝回信接進 history（→ act）；10＝還沒回（→ wait）；11＝請求不在或腦設定改過、回 think 重組請求。
+#   寄之前也看 request.json 是不是從現在的 history 組的（11-10 TS，I2 L01：git reset／clone 後，這台舊的 request.json 會擺在新的 history 旁邊）：
+#     messages 最後一則跟 history.jsonl 最後一則（都 JSON 正規化：sort_keys）不一樣＝退 11 回 think 重組、不寄；history 空、request 沒 messages＝不比。
+# 信不見了（11-10 TS，I3 C2）：recv 回 10、而 $AOS_LLM_KERNEL（解法同 aos-llm：相對＝從 $AOS_DAEMON 算，沒有＝cwd）解得到資料夾時，
+#   看 <kernel>/requests/{new,cur}/<名>（只讀不寫）；兩處都沒有＝再 recv 一次（kernel 先寄回信才刪 cur，這次不會誤判）；
+#   還是 10＝刪 pending.txt、印一行 warning、退 10（下一拍 request.json 在就重寄，不在就退 11 回 think 重組）。
+#   AOS_LLM_KERNEL 沒設或解不到資料夾＝不判斷、照舊等。
+# 結束碼（fsm.json 照碼分岔，N-36）：0＝回信接進 history（→ act）；10＝還沒回（→ wait）；11＝請求不在、腦設定改過或請求比 history 舊，回 think 重組請求。
 # 不看 queue：思考中來的信等答完回 idle 再收（使用者 11-04「等答完回 idle 再收」）。沒有自己的逾時（kernel 的 timeout_ms／priority.deadline 守）。
 #   等太久只提醒（11-10 坑-74 選項 A）：寄出（pending.txt 的 mtime）滿 10 分鐘印一行 warning、之後每滿 10 分鐘再一行，照樣退 10 繼續等；
 #   印到第幾個 10 分鐘記在 think/wait_warned.txt（一個整數；寄新信與收掉回信時刪），每拍是新行程也不重複印。
+#   平常每拍帶 recv --quiet（不印「為什麼還沒回」那行，免得每 300 ms 一行刷屏，I3 C1）；只有要印 10 分鐘提醒的那一拍不帶，
+#   讓 aos-llm 自己把原因印在這格那行前面（不讀它的 stderr）。
 # 失敗後冷卻（two-machines 06，使用者 11-10 裁「失敗後冷卻」）：BrainFailed、SendFailed（send 退非 0）是外面服務的錯，
-#   先用 lib/agent/cooldown.py 記一筆 $AOS_STACK/cooldown.json（30 秒起、加倍到 30 分鐘；dropped 一直是 0——重寄同一份請求、不掉信），
-#   再照舊退 1；寫不成只 warning 一行、不改原本的錯。寄之前（沒 pending、request.json 在、endpoint 對得上）冷卻中＝不寄、退 10 留在 wait；
+#   先用 lib/agent/cooldown.py 記一筆 $AOS_STACK/cooldown.json（30 秒起、加倍到 30 分鐘；dropped 一直是 0——重寄同一份請求、不掉信）；
+#   寫不成只 warning 一行、不改原本的結果。寄之前（沒 pending、request.json 在、endpoint 對得上）冷卻中＝不寄、退 10 留在 wait；
 #   冷卻到了（due）或沒有＝照寄。好的回信接進 history 之後刪 cooldown.json（刪不掉＝warning）。ReplyBad、WriteFailed 等不寫冷卻。
-#   開了 auto_restart 的列：退 1 → daemon 重起 → 在 wait 冷卻裡活過 3 秒，不會被三次判停；沒開的照舊停著等人。
+#   BrainFailed（kernel 收了、回了錯＝端點本身壞）：照舊退 1；開了 auto_restart 的列：退 1 → daemon 重起 → 在 wait 冷卻裡活過 3 秒，
+#     不會被三次判停；沒開的照舊停著等人。
+#   SendFailed（11-10 TS，I3 C4；使用者「如果llms那邊我沒開aos daemon，那就是我自己的問題，但我也希望他不要搞壞」）：
+#     記冷卻、印一行 warning（不是 error）、退 10 留在 wait，冷卻到了再寄——有沒有 --auto-restart 都不會停。
+#     **改了 P-20 在這個情況的行為：kernel 不在＝等它來，不停下。** 記冷卻時 kernel 資料夾解不到，reason 尾巴多寫
+#     「(llm kernel folder not found)」；之後冷卻中而 AOS_LLM_KERNEL 已解得到資料夾＝當作到了、立刻寄（I3 C3：不用等滿 30 分鐘）。
+#     kernel 資料夾在、send 還是失敗（例 body 壞）＝照冷卻間隔重試，不每拍刷屏。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1——StackMissing、BrainFailed（kernel 回錯）、
-#   SendFailed（aos-llm send 退非 0；它自己的 stderr 原樣在上面，例 LlmKernelMissing）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
+#   SendFailed（aos-llm 起不來、或 send 退 0 卻沒印信件名稱）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
 # --help 印英文用法；Ctrl-C 退 130。
 import json, os, signal, subprocess, sys, time
 from pathlib import Path
@@ -56,16 +71,28 @@ HELP = """\
 usage: wait.py   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
 The wait cell: send $AOS_STACK/think/request.json to the llm kernel (aos-llm send), then on
 each later run look for the reply (aos-llm recv). Exit 0 = reply appended to history (go act);
-10 = not yet; 11 = no pending request and request.json is missing, or brain settings changed;
-go back to think to rebuild. A pending request is received even without request.json.
+10 = not yet; 11 = no pending request and request.json is missing, brain settings changed,
+or request.json was built from an older history (its last message is not the last line of
+history.jsonl); go back to think to rebuild. A pending request is received even without
+request.json; a missing think/reply mailbox is created first (aos-post init).
 Waiting never times out here: after every full 10 minutes without a reply (counted from
-think/pending.txt) one warning line goes to stderr, and the cell keeps waiting.
+think/pending.txt) one warning line goes to stderr, and the cell keeps waiting. Other ticks
+call aos-llm recv --quiet; the warning tick does not, so aos-llm prints why there is no reply.
+Lost letter: when aos-llm recv says "not yet" and $AOS_LLM_KERNEL resolves to a folder
+(relative to $AOS_DAEMON, else the current folder) but the letter is in neither
+requests/new/ nor requests/cur/ there, the cell receives once more; still nothing = it
+forgets the letter (deletes think/pending.txt), prints one warning and sends again next tick.
 Append think letter, endpoint, model, usage and elapsed_ms to observed.jsonl (best effort).
-Cooldown after a failure of the outside service: on SendFailed (aos-llm send exited nonzero)
-or BrainFailed (the kernel replied with an error) the cell records $AOS_STACK/cooldown.json
-(30 s, then 1, 2, 4, 8, 15, 30 minutes, then every 30 minutes) and still exits 1. While that
-cooldown runs, a request about to be sent is held back (exit 10, stay in wait); once it is
-due the same request is sent again. A good reply deletes cooldown.json.
+Cooldown after a failure of the outside service, recorded in $AOS_STACK/cooldown.json
+(30 s, then 1, 2, 4, 8, 15, 30 minutes, then every 30 minutes):
+  SendFailed (aos-llm send exited nonzero, e.g. the llm kernel folder is missing): one
+    warning line, exit 10 and stay in wait; the agent does not stop. This changes P-20 for
+    this case: no llm kernel yet = wait for it, do not stop.
+  BrainFailed (the kernel replied with an error): exit 1 as before.
+While that cooldown runs, a request about to be sent is held back (exit 10, stay in wait);
+once it is due the same request is sent again. A SendFailed cooldown recorded while the
+kernel folder was missing counts as due as soon as $AOS_LLM_KERNEL resolves to a folder.
+A good reply deletes cooldown.json.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
@@ -140,22 +167,25 @@ def record_failure(code, reason):
         aos_flags.warn("agent-fsm", "cannot write %s: %s" % (cooldown.path(stack), e))
 
 
-def warn_if_slow(letter):
-    """Warn once per full 10 minutes since the letter was sent; never fails the cell."""
+def slow_step():
+    """這一拍要不要印 10 分鐘提醒：要＝回第幾個 10 分鐘（整數），不要＝None。只看、不記。"""
     try:
         waited_s = time.time() - os.stat(pending).st_mtime
     except OSError:
-        return
+        return None
     step = int(waited_s // WARN_EVERY_S)
     if step < 1:
-        return
+        return None
     try:
         with open(warned_path, encoding="utf-8") as f:
             done = int(f.read().strip() or "0")
     except (OSError, ValueError):
         done = 0
-    if step <= done:
-        return
+    return step if step > done else None
+
+
+def warn_slow(letter, step):
+    """Warn once per full 10 minutes since the letter was sent; never fails the cell."""
     tmp = os.path.join(think, ".wait_warned.txt.%d.tmp" % os.getpid())
     try:
         with open(tmp, "w", encoding="utf-8") as f:
@@ -163,8 +193,63 @@ def warn_if_slow(letter):
         os.replace(tmp, warned_path)
     except OSError:
         return                                   # 記不下來就不提醒，免得每拍都印
+    try:
+        waited_s = time.time() - os.stat(pending).st_mtime
+    except OSError:
+        waited_s = step * WARN_EVERY_S
     aos_flags.warn("agent-fsm", "no reply from the brain for %d minutes to letter %s (llm kernel: %s); still waiting"
                    % (waited_s // 60, letter, os.environ.get("AOS_LLM_KERNEL") or "AOS_LLM_KERNEL not set"))
+
+
+def kernel_dir():
+    """$AOS_LLM_KERNEL 解成資料夾（同 aos-llm：相對＝從 $AOS_DAEMON 算，沒有＝cwd）；沒設或不是資料夾＝None。"""
+    k = os.environ.get("AOS_LLM_KERNEL")
+    if not k:
+        return None
+    d = os.environ.get("AOS_DAEMON")
+    if not os.path.isabs(k) and d:
+        k = os.path.join(d, k)
+    return k if os.path.isdir(k) else None
+
+
+KERNEL_GONE = "(llm kernel folder not found)"    # SendFailed 時 kernel 資料夾解不到：記進冷卻的 reason，之後看它在不在
+
+
+def stale_request(body):
+    """request.json 是不是從比較舊的 history 組的：messages 最後一則≠history.jsonl 最後一則（JSON 正規化後比）。
+    history 空或讀不懂、request 沒 messages＝不比（False）。"""
+    messages = body.get("request", {}).get("messages") if isinstance(body.get("request"), dict) else None
+    if not isinstance(messages, list) or not messages:
+        return False
+    last = None
+    try:
+        with open(history_path, encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    last = line
+    except OSError:
+        return False
+    if last is None:
+        return False
+    try:
+        last = json.loads(last)
+    except ValueError:
+        return False                             # history 壞了交給 brain 報 HistoryBad
+    norm = lambda m: json.dumps(m, sort_keys=True, ensure_ascii=False)
+    return norm(messages[-1]) != norm(last)
+
+
+def recv(quiet=True):
+    return run(["aos-llm", "recv", "--full"] + (["--quiet"] if quiet else []) + [box, name], stdin=subprocess.DEVNULL)
+
+
+def ensure_box():
+    """回信箱缺 tmp／new／cur 任一＝aos-post init（沒有才建）。"""
+    if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
+        r = run(["aos-post", "init", box])
+        if r.returncode != 0:
+            die("PostFailed", "aos-post init %s exited %d" % (box, r.returncode))
+
 
 try:
     with open(pending, encoding="utf-8") as f:
@@ -187,12 +272,13 @@ if not name:                                     # 還沒寄
     body = read_obj(request)
     if cfg.get("endpoint") != body.get("endpoint"):
         sys.exit(REBUILD)                        # 腦設定改過（多半是上次 kernel 回錯、人改了代號再起）：brain 重組再寄
-    if cooldown.state(stack)[0] == "cooling":
-        sys.exit(NOT_YET)                        # 冷卻中：不寄、留在 wait；到了（due）才重寄同一份
-    if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
-        r = run(["aos-post", "init", box])
-        if r.returncode != 0:
-            die("PostFailed", "aos-post init %s exited %d" % (box, r.returncode))
+    if stale_request(body):
+        sys.exit(REBUILD)                        # 請求比 history 舊（reset／clone 後留下的）：brain 重組再寄
+    phase, rec = cooldown.state(stack)
+    if phase == "cooling" and not (rec.get("code") == "SendFailed" and KERNEL_GONE in str(rec.get("reason"))
+                                   and kernel_dir()):
+        sys.exit(NOT_YET)                        # 冷卻中：不寄、留在 wait；到了（due）或 kernel 剛出現才重寄同一份
+    ensure_box()
     try:
         with open(sent_path, "w", encoding="utf-8") as f:
             f.write(json.dumps({"started_ns": time.time_ns(), "endpoint": body.get("endpoint")}) + "\n")
@@ -201,18 +287,42 @@ if not name:                                     # 還沒寄
     with open(request, encoding="utf-8") as f:
         r = run(["aos-llm", "send", "--reply-to", box], stdin=f)
     name = r.stdout.strip()
-    if r.returncode != 0:
-        record_failure("SendFailed", "aos-llm send exited %d" % r.returncode)
-    if r.returncode != 0 or not name:
-        die("SendFailed", "aos-llm send exited %d" % r.returncode)
+    if r.returncode != 0:                        # kernel 不在等：記冷卻、warning、留在 wait（不停下，改了 P-20 這一處）
+        gone = kernel_dir() is None
+        reason = "aos-llm send exited %d" % r.returncode + (" " + KERNEL_GONE if gone else "")
+        record_failure("SendFailed", reason)
+        aos_flags.warn("agent-fsm", "aos-llm send exited %d (its reason is above); the request stays and is sent again "
+                       "%s" % (r.returncode, "once AOS_LLM_KERNEL is a folder or the cooldown ends" if gone
+                               else "when the cooldown ends"))
+        sys.exit(NOT_YET)
+    if not name:
+        die("SendFailed", "aos-llm send exited 0 but printed no letter name")
     forget_warned()                              # 新的一封：提醒從頭算
     write_atomic(pending, name + "\n")
     sys.exit(NOT_YET)
 
-r = run(["aos-llm", "recv", "--full", box, name], stdin=subprocess.DEVNULL)
+ensure_box()                                     # clone 後空的 think/reply 不在 git：recv 前補（TG 實跑抓到的 MailboxMissing）
+step = slow_step()
+r = recv(quiet=step is None)                     # 要提醒的那一拍不帶 --quiet：aos-llm 自己印原因
 if r.returncode == NOT_YET:
-    warn_if_slow(name)
-    sys.exit(NOT_YET)
+    kernel = kernel_dir()
+    if kernel and not any(os.path.exists(os.path.join(kernel, "requests", q, name)) for q in ("new", "cur")):
+        r = recv()                               # kernel 先寄回信才刪 cur：再收一次就分得出「剛答完」
+        if r.returncode == NOT_YET:
+            try:
+                os.remove(pending)
+            except FileNotFoundError:
+                pass
+            except OSError as e:
+                die("WriteFailed", "cannot remove %s: %s" % (pending, e))
+            forget_warned()
+            aos_flags.warn("agent-fsm", "the letter %s is no longer queued at the llm kernel %s; sending the request again"
+                           % (name, kernel))
+            sys.exit(NOT_YET)
+    if r.returncode == NOT_YET:
+        if step is not None:
+            warn_slow(name, step)
+        sys.exit(NOT_YET)
 try:                                             # 回信收掉了（或 kernel 回錯）：這封了結，之後停下的話人重跑＝重寄
     os.remove(pending)
 except FileNotFoundError:

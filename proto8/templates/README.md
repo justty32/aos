@@ -11,6 +11,8 @@
 
 **開一隻新 agent 用 [`copy-out`](copy-out)**（11-10 坑-73）：`proto8/templates/copy-out [--proto8 MODE] [範本名，預設 agent-fsm；或 kernel/<名>] 目的資料夾`＝整份抄出、範本裡指出範本資料夾、落在 repo 的相對路徑（`tools.json` 的 `../../lib/…`、`tools/memory/` 的單子／`_memory.json`／兩個捷徑、reviewer 借 `../agent-fsm/` 的格、kernel 範本的 `exec`）照 MODE 改寫：預設 `env`＝`{"$env": "AOS_PROTO8", "$path": "/…"}`（每台設一次 `AOS_PROTO8`，檔兩台一字不差、不用建捷徑），另有 `anchor`（經本機錨點捷徑 `.aos-proto8`，換機 `copy-out --relink <根>`；可選的一種）、`absolute`、`relative`（11-10 午 TC，使用者「要用相對位置、絕對位置、環境變數指定都可」）；抄完多印一行這隻需要本機備好什麼；它放在 `templates/` 底下而不在範本裡，因為範本整份會被抄進每隻 agent。細節在 [02-agent-fsm](docs/02-agent-fsm.md)；「`defs/` 本身就是根入口」的根 daemon 範本是 [`daemon-root/`](daemon-root/README.md)（名字只是例子）。
 
+兩份 agent 範本都備有 `tools/memory_write/`，與 `tools/memory/` 共用 `_memory.json`，但**不預先登記**。要寫入的那隻再登記；先把 `tools/memory/_memory.json` 的 `base` 指到有權寫的庫，可用相對路徑、絕對路徑或 `{"$env": "MY_KNOWLEDGE"}`，不要讓 agent 寫出廠庫。用法見 [agent-fsm](docs/02-agent-fsm.md) 與 [eca-claude](docs/01-eca-claude.md)。
+
 **PATH 由呼叫的人放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），定義裡寫的 `aos-loop`、`aos-exec`、`aos-eca-turn` 要呼叫端事先放進 PATH：C++ 的 `proto8/impls/<名>/bin/`（要先建，見 [testing](../../wf/workflows/testing.md#proto8)）與 Python 的 `proto8/cmd/<名>/bin/`（`proto8/install.sh` 一次放好）。
 
 [`judge-llm`](judge-llm/README.md) 是同步呼叫 llm kernel 的裁判比對器，供 measure 的 `compare` 使用；複製後改 `judge.json` 與 `prompt.txt` 就能換模型與規則。

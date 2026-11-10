@@ -7,6 +7,7 @@ Threads live in ${CODEX_HOME:-$HOME/.codex}/sessions/2026/11/10/rollout-x-<id>.j
 --json: a {"type": "thread.started", "thread_id": ...} line first. -o FILE: the last answer is written there on success.
 resume ID with no such file: one stderr line, exit 1 (no thread.started).
 FAKE_CLI_FAIL=1: thread.started is printed, then "usage limit reached" on stderr, exit 1, no -o file.
+FAKE_CLI_FAIL_SAVED=1 (with FAKE_CLI_FAIL=1): the thread file is created before failing (the CLI saved it).
 FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": "..."} as one JSON line per call."""
 import json, os, sys, uuid
 
@@ -44,6 +45,9 @@ sid = sid or str(uuid.uuid4())
 if "--json" in opts:
     print(json.dumps({"type": "thread.started", "thread_id": sid}), flush=True)
 if os.environ.get("FAKE_CLI_FAIL") == "1":
+    if os.environ.get("FAKE_CLI_FAIL_SAVED") == "1":
+        os.makedirs(folder, exist_ok=True)
+        open(os.path.join(folder, "rollout-x-%s.jsonl" % sid), "a").close()
     sys.stderr.write("fake_codex: usage limit reached\n")
     sys.exit(1)
 os.makedirs(folder, exist_ok=True)

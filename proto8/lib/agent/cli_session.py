@@ -3,9 +3,12 @@
 # 一個工具的小格（$AOS_STACK，act 給的是 $AOS_STACK/tools/<工具名>/，11-02 起）裡放：
 #   session.txt   這段對話的 id（claude 的 session id／codex 的 thread id）：claude 新對話在交出去那一刻就寫（id 是我們產的）；
 #                 codex 新對話讀到輸出的 thread.started 就寫（成敗都寫）；畫面那條路是 hook 收到第一輪時寫（11-10 two-machines 05）
-#   .session_home 記號檔（不進 git）：{"session", "ws", "home"}——這段對話是在哪個工作區（realpath）、哪個帳號資料夾
-#                 （claude：CLAUDE_CONFIG_DIR 或 ~/.claude；codex：CODEX_HOME 或 ~/.codex）開的；跟 session.txt 一起寫、一起刪
-#   tty.sock      tmux 的 socket：互動畫面活著時，CLI 的終端就接在這裡（attach＝tmux -S tty.sock attach）
+#   .session_home 記號檔（不進 git）：{"session", "ws", "home", "machine"}——這段對話是在哪台機器（machine_id()）、哪個工作區（realpath）、
+#                 哪個帳號資料夾（claude：CLAUDE_CONFIG_DIR 或 ~/.claude；codex：CODEX_HOME 或 ~/.codex）開的；跟 session.txt 一起寫、一起刪
+#                 （machine 是 11-10 TS 8 加的：cp -a 時記號檔會跟過去；舊記號檔沒有這個 key＝不比機器）
+#   （畫面的 tmux socket 不在小格裡，11-10 TS 10：/mnt/c 上 AF_UNIX bind 不了）實際放 ${XDG_RUNTIME_DIR:-/tmp}/aos-tty-<uid>/<小格 realpath
+#                 sha256 前 16 hex>.sock（資料夾 0700），路徑只由 tty_socket() 算（attach＝tmux -S "$(那條)" attach）；小格搬了＝雜湊不同＝
+#                 畫面當作沒開（本來就是死的）。11-10 以前開的畫面 socket 在小格的 tty.sock：還找得到就照用（過渡），不再新建
 #   tmux.conf     attach 開畫面時寫的 tmux 設定（Ctrl-] 或 Ctrl-\ 跳出、不用 prefix）
 #   turns.jsonl   互動畫面每講完一輪，hook 接一行 {"answered_at", "text"}（answered_at＝講完的時間，10-25 前叫 at）（agent 從這裡拿回答，不去解析畫面）
 #   busy.txt      claude 的畫面正在跑一輪（有人送出、還沒講完）
@@ -36,6 +39,8 @@
 #   整理過的紀錄接在題目前面（上限＝cli.json 選填 reseed_bytes，預設 48000；畫面那條路取 min(它, 8000)）；沒給（工具形）＝stderr
 #   一行 warning、照樣開新的。記號檔不在但 transcripts() 找得到＝功能上線前就在跑的，當這台的、補寫記號檔（過渡補丁）。
 #   以為是這台的、resume 卻失敗而且 transcripts() 找不到那個 id＝刪 session.txt 與 .session_home 再報錯（那封掉了，下一封開新的）。
+#   新對話第一輪就失敗、而 transcripts() 找不到這次的新 id（CLI 沒建出對話）＝同樣刪兩個檔（11-10 TS 9，T3 缺口 1）：
+#   下一輪直接開新的，不再拿一封去 --resume 一個不存在的對話。畫面那條路沒這個情況（session.txt 由 hook 在一輪講完才寫）。
 #   畫面（start）：session.txt 在但不是這台的＝刪兩個檔、不帶 --resume 開新的。人想重開＝手刪 session.txt（正式用法）。
 # 開場白不歸這層（11-04 翻案，使用者「不該在json中指定檔案名稱，應該改成用旗標指定」）：是 aos-eca-turn 的 --prompt FILE；
 #   cli.json 寫了 prompt 跟其他沒認的鍵一樣不看。
@@ -48,7 +53,7 @@
 # 放哪：proto8/lib/agent/cli_session.py；claude、codex 經 agent_tool.py 的 ask_cli 共用 ask，call_main 只給 aos-eca-turn --one；
 # 掛它的 agent 根目錄可以放一份 cli_session.py（或捷徑）給 attach 用（原本的例子 demo/agent-fay 11-03 晚刪了）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
-import datetime, fcntl, glob, json, os, shlex, shutil, signal, subprocess, sys, threading, time, uuid
+import datetime, fcntl, glob, hashlib, json, os, re, shlex, shutil, signal, socket, stat, subprocess, sys, threading, time, uuid
 
 # hook 直接執行此檔時只補父層 lib；import 後還原，不影響呼叫者的查找順序。
 _lib = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -203,6 +208,82 @@ def mcp_argv(cfg, cell, ws, stack):
     return ["--mcp-config", cell.file("mcp.json"), "--allowedTools", "mcp__aos"]
 
 
+def machine_id():
+    """這台機器的識別（記號檔的 machine，11-10 TS 8）：/etc/machine-id 的內容；讀不到或空的＝socket.gethostname()。"""
+    try:
+        with open("/etc/machine-id", encoding="utf-8") as f:
+            mid = f.read().strip()
+        if mid:
+            return mid
+    except (OSError, ValueError):
+        pass
+    return socket.gethostname()
+
+
+TTY_HASH = 16                                            # 小格 realpath 的 sha256 取前幾個 hex（路徑短，遠低於 AF_UNIX 的 108 bytes）
+
+
+def tty_base():
+    """放畫面 socket 的資料夾：${XDG_RUNTIME_DIR}/aos-tty-<uid>；XDG_RUNTIME_DIR 沒設、不是資料夾、不可寫、或太長＝/tmp/aos-tty-<uid>。"""
+    sub = "aos-tty-%d" % os.getuid()
+    xdg = os.environ.get("XDG_RUNTIME_DIR") or ""
+    if (os.path.isabs(xdg) and os.path.isdir(xdg) and os.access(xdg, os.W_OK | os.X_OK)
+            and len(os.path.join(xdg, sub).encode()) <= 80):
+        return os.path.join(xdg, sub)
+    return os.path.join("/tmp", sub)
+
+
+def tty_dir_ok(folder, make=False):
+    """socket 的資料夾是這個使用者自己的（不是 symlink、owner 是自己）＝True；權限多給了就收回 0700。
+    不在：make＝建（mode 0700）、否則 False。別人的或修不了＝False（不連別人的 tmux server）。"""
+    try:
+        st = os.lstat(folder)
+    except FileNotFoundError:
+        if not make:
+            return False
+        try:
+            os.makedirs(folder, mode=0o700)
+        except FileExistsError:
+            pass
+        except OSError:
+            return False
+        try:
+            st = os.lstat(folder)
+        except OSError:
+            return False
+    except OSError:
+        return False
+    if not stat.S_ISDIR(st.st_mode) or st.st_uid != os.getuid():
+        return False
+    if st.st_mode & 0o077:
+        try:
+            os.chmod(folder, 0o700)
+        except OSError:
+            return False
+    return True
+
+
+def tty_socket(cell_path, make=False):
+    """小格的畫面（tmux）socket 在哪：唯一入口（11-10 TS 10）。一律回 <tty_base()>/<小格 realpath 的短雜湊>.sock，例外只有
+    「那裡沒有、但另一個候選有」：XDG_RUNTIME_DIR 有無不同的行程（daemon、人的 shell）各算出 /run/user/… 或 /tmp/…，
+    兩處都看；11-10 以前開的畫面在小格的 tty.sock（過渡，只認、不建）。make＝要開新畫面：只回首選、資料夾不在就建、
+    不是自己的＝CellBad。資料夾不是自己的候選一律跳過。"""
+    h = hashlib.sha256(os.path.realpath(cell_path).encode()).hexdigest()[:TTY_HASH] + ".sock"
+    first = os.path.join(tty_base(), h)
+    if make:
+        if not tty_dir_ok(os.path.dirname(first), make=True):
+            die("CellBad", "%s is not a private folder of this user (cannot put the screen socket there)" % os.path.dirname(first))
+        return first
+    for cand in (first, os.path.join("/tmp", "aos-tty-%d" % os.getuid(), h), os.path.join(cell_path, "tty.sock")):
+        try:
+            is_sock = stat.S_ISSOCK(os.stat(cand).st_mode)
+        except OSError:
+            continue
+        if is_sock and (cand.startswith(cell_path + os.sep) or tty_dir_ok(os.path.dirname(cand))):
+            return cand
+    return first
+
+
 class Cell:
     def __init__(self, path):
         self.path = os.path.abspath(path)
@@ -239,13 +320,18 @@ class Cell:
             return f, False
         return f, True
 
-    def tmux(self, *args, **kw):
+    def sock(self, make=False):
+        """畫面的 tmux socket（tty_socket，11-10 TS 10；不在小格裡）。"""
+        return tty_socket(self.path, make)
+
+    def tmux(self, *args, new=False, **kw):
+        """new＝開新畫面（start 的 new-session）：socket 放首選位置、資料夾不在就建。"""
         kw.setdefault("capture_output", True)
         kw.setdefault("text", True)
-        return subprocess.run(["tmux", "-S", self.file("tty.sock")] + list(args), **kw)
+        return subprocess.run(["tmux", "-S", self.sock(new)] + list(args), **kw)
 
     def alive(self):
-        if not os.path.exists(self.file("tty.sock")):
+        if not os.path.exists(self.sock()):
             return False
         try:
             return self.tmux("has-session", "-t", TMUX_SESSION).returncode == 0
@@ -272,7 +358,13 @@ def close(cell):
     """關掉畫面（tmux 和裡面的 CLI；對話是 CLI 邊講邊存的，id 留在 session.txt）。回 True＝本來開著。"""
     if not cell.alive():
         return False
+    sock = cell.sock()
     cell.tmux("kill-server")
+    if not sock.startswith(cell.path + os.sep):          # tmux 3.4 kill-server 後 socket 檔還留著：收掉（在小格的舊 socket 照舊不動）
+        try:
+            os.remove(sock)
+        except OSError:
+            pass
     return True
 
 
@@ -300,7 +392,8 @@ def mark_session(kind, cell, ws, sid):
     try:
         cell.write("session.txt", sid + "\n")
         cell.write(".session_home", json.dumps({"session": sid, "ws": os.path.realpath(ws),
-                                                "home": os.path.realpath(account_dir(kind))}, ensure_ascii=False) + "\n")
+                                                "home": os.path.realpath(account_dir(kind)),
+                                                "machine": machine_id()}, ensure_ascii=False) + "\n")
         return True
     except OSError as e:
         warn("cannot write %s or .session_home: %s" % (cell.file("session.txt"), e))
@@ -320,7 +413,8 @@ def drop_session(cell):
 
 def session_here(cfg, cell, ws, sid):
     """sid 這段對話是不是在這台（這個帳號資料夾、claude 再加這個工作區）開的（11-10 two-machines 05）：看記號檔，
-    session 與 home 一樣、claude 的 ws 也一樣＝True。記號檔不在或讀不懂、但 transcripts() 找得到＝功能上線前就在跑的，
+    session 與 home 一樣、claude 的 ws 也一樣＝True；記號檔有 machine＝再比 machine_id()（11-10 TS 8；舊記號檔沒有＝不比，
+    免得已在跑的全部開新對話）。記號檔不在或讀不懂、但 transcripts() 找得到＝功能上線前就在跑的，
     當這台的、補寫記號檔（過渡補丁）。不讀 CLI 的任何檔內容、不靠它的錯誤訊息。"""
     kind = cfg["kind"]
     try:
@@ -330,11 +424,28 @@ def session_here(cfg, cell, ws, sid):
         mark = None
     if isinstance(mark, dict) and isinstance(mark.get("session"), str) and isinstance(mark.get("home"), str):
         return (mark["session"] == sid and mark["home"] == os.path.realpath(account_dir(kind))
-                and (kind != "claude" or mark.get("ws") == os.path.realpath(ws)))
-    if transcripts(kind, sid):
+                and (kind != "claude" or mark.get("ws") == os.path.realpath(ws))
+                and ("machine" not in mark or mark["machine"] == machine_id())
+                and stored_here(cfg, ws, sid))
+    if stored_here(cfg, ws, sid):
         mark_session(kind, cell, ws, sid)
         return True
     return False
+
+
+def stored_here(cfg, ws, sid):
+    """CLI 自己存的這段對話在這台、這個工作區找得到嗎（11-10 TA 實跑：shutdown 打斷第一輪、claude 還沒建檔就被殺，
+    記號檔相符卻 resume 不到＝下一封白掉；同帳號資料夾、專案換了路徑時過渡補丁會認錯）。只看檔在不在、不讀內容：
+    claude＝<帳號資料夾>/projects/<工作區真實路徑把非英數字元換成 -（照 CLI 的命名，未經真機驗證）>/<id>.jsonl；
+    codex＝transcripts() 找得到。flags 帶 --no-session-persistence＝CLI 不存檔，不看（當作在）。"""
+    flags = list(cfg.get("flags", [])) + list(cfg.get("print_flags", []))
+    if "--no-session-persistence" in flags:
+        return True
+    found = transcripts(cfg["kind"], sid)
+    if cfg["kind"] != "claude":
+        return bool(found)
+    want = re.sub(r"[^A-Za-z0-9]", "-", os.path.realpath(ws))
+    return any(os.path.basename(os.path.dirname(f)) == want for f in found)
 
 
 def transcript_link(cell_path, kind, sid):
@@ -470,6 +581,8 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
     if out is None or code != 0 or out.get("is_error"):
         if sid and not transcripts("claude", sid):          # 以為是這台的、這台卻找不到：清掉，下一封開新的（05）
             drop_session(cell)
+        elif new and not transcripts("claude", new):        # 新對話第一輪就失敗、CLI 沒建出來：清掉，下一輪直接開新的（TS 9）
+            drop_session(cell)
     if out is None:
         die("CliFailed", "claude exited %d with no result in its output: %s" % (code, tail(stdout)))
     if code != 0 or out.get("is_error"):   # result 行自己帶原因（例 模型不存在）就印它；stdout 尾巴會切在 JSON 中間
@@ -509,6 +622,8 @@ def print_codex(cfg, cell, ws, stack, prompt, handed=None, sid=None):
         mark_session("codex", cell, ws, thread)
     if r.returncode != 0 or not os.path.exists(last):
         if sid and not transcripts("codex", sid):           # 以為是這台的、這台卻找不到：清掉，下一封開新的（05）
+            drop_session(cell)
+        elif not sid and thread and not transcripts("codex", thread):   # 新 thread 第一輪就失敗、CLI 沒存檔：清掉（TS 9）
             drop_session(cell)
         die("CliFailed", "codex exited %d (its reason is on stderr)" % r.returncode)
     with open(last, encoding="utf-8") as f:
@@ -742,7 +857,7 @@ def start(cfg, cell, ws, stack):
             os.remove(cell.file(name))
     try:
         r = cell.tmux("-f", cell.file("tmux.conf"), "new-session", "-d", "-s", TMUX_SESSION,
-                      "-x", "160", "-y", "45", "-c", ws, "--", *argv)
+                      "-x", "160", "-y", "45", "-c", ws, "--", *argv, new=True)
     except FileNotFoundError:
         die("TmuxMissing", "tmux is not on PATH")
     if r.returncode != 0:
@@ -809,10 +924,10 @@ def attach_main(argv, agent_dir):
     note_cell(cell, os.path.realpath(os.path.join(tools_dir, names[0])), ws, cell.path)   # 工具形：stack＝這格（同 call_main）
     opened = open_cell(cell)
     if detached:
-        print("%s screen %s: %s" % (names[0], "opened" if opened else "already open", cell.file("tty.sock")))
+        print("%s screen %s: %s" % (names[0], "opened" if opened else "already open", cell.sock()))
         return
     warn("attaching to %s (Ctrl-\\ detaches, the screen stays; /exit inside to end)" % names[0])
-    os.execvp("tmux", ["tmux", "-S", cell.file("tty.sock"), "attach", "-t", TMUX_SESSION])
+    os.execvp("tmux", ["tmux", "-S", cell.sock(), "attach", "-t", TMUX_SESSION])
 
 
 def open_cell(cell):

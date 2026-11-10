@@ -37,3 +37,7 @@ aos-agent ctl rm myproj              # 拔掉並刪它的 stack
 
 `aos-eca-turn` 一次答一批（怎麼答、`--on-empty`／`--on-busy`、錯見 [cmd/docs/01](../../cmd/docs/01-逐支說明.md)）。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就放一份檔、aos-eca-turn 加 `--prompt 那個檔`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。
 
+
+**長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 預設 600000（10 分鐘），限制 CLI 呼叫；`loop.json.exec.timeout_ms` 預設 900000（15 分鐘），限制整次 aos-eca-turn，要留得比 CLI 那層長，讓它有時間收尾。長任務要同時檢查這兩層，增加額度不會延長逾時。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
+
+**知識寫入**：範本備有 `tools/memory_write/`，但不預先登記；先把 `tools/memory/_memory.json` 的 `base` 指到有權寫的庫（相對、絕對或 `{"$env": "MY_KNOWLEDGE"}`），再切到這隻 agent 的定義資料夾，以 `aos-agent -t <名> tools add memory_write tools/memory_write` 登記（路徑從目前資料夾算）。它與 `memory` 共用設定，透過 aos-mcp 提供給 Claude，`cli.json` 的內建 `--tools Read,Glob,Grep` 不必改。出廠庫由人維護；agent 寫前先讀知識節點 `memory`。

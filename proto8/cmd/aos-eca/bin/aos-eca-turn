@@ -38,7 +38,7 @@
   ⑥ 11-03 起不寫 $AOS_STACK/trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）；要看狀態用 aos-agent ctl status。
   ⑦ 拿到 session id 就在小格建 transcripts/<kind>-<id>.jsonl symlink（cli_session.link_transcript，C-15～17）。
   ⑧ 換台開新對話（11-10 two-machines 05）：session.txt 沒有、或 cli_session 認出它不是這台的（記號檔 .session_home 的 session／home、
-     claude 再加 ws 不同）＝在交出去之前改開新對話，題目前面接一段開場白＝這支組的「整理過的紀錄」（reseed；cli_session.ask 叫它）：
+     claude 再加 ws 不同；記號檔有 machine 的再比機器，11-10 TS 8）＝在交出去之前改開新對話，題目前面接一段開場白＝這支組的「整理過的紀錄」（reseed；cli_session.ask 叫它）：
      來源＝這輪交出去之前的 $AOS_STACK/history.jsonl；英文說明一段＋`--- record: N messages, M shown ---`＋`[user]`／`[assistant]` 一則一段
      ＋`--- end of record ---`＋一個空行。第一則 user 一定帶、其餘從最新往回裝到上限，中間省掉的寫一行 `[... K earlier messages left out ...]`；
      單則超過 6000 bytes 留頭 4000＋尾 2000、中間寫 `[... N bytes left out ...]`（照 UTF-8 bytes 算、不切壞字）。上限＝cli.json 選填
@@ -112,7 +112,7 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
     answer: wait and answer anyway.
   --prompt FILE: opening message (relative to DEF_DIR) queued when history and queue are both empty.
   New conversation: when there is no session.txt, or the earlier conversation is not on this machine (its .session_home names
-    another session, account folder or - for claude - workspace), a new one is started before the letters are handed over, and
+    another session, account folder, machine or - for claude - workspace), a new one is started before the letters are handed over, and
     a record built from history.jsonl goes in front of the prompt: a short note, the first user message, then the newest messages
     that fit. Its size limit is cli.json's optional reseed_bytes (default 48000; at most 8000 when pasting into a screen; 0 = the
     note only). Delete session.txt by hand to restart the conversation on purpose.

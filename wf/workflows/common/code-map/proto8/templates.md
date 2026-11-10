@@ -32,6 +32,7 @@
 | [`tests/test_cells.py`](../../../../../proto8/templates/agent-fsm/tests/test_cells.py) | Verify task context, tool limits, and best-effort observations with local fake commands. |
 | [`tests/test_cooldown.py`](../../../../../proto8/templates/agent-fsm/tests/test_cooldown.py) | Verify the wait cell's cooldown after outside failures (two-machines 06) with a fake aos-llm on PATH. |
 | [`tests/test_integration.py`](../../../../../proto8/templates/agent-fsm/tests/test_integration.py) | Verify agent cells through the real local kernel, llm_fake endpoint, and wall_clock tool. |
+| [`tests/test_selfheal.py`](../../../../../proto8/templates/agent-fsm/tests/test_selfheal.py) | Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools. |
 | [`tools.json`](../../../../../proto8/templates/agent-fsm/tools.json) | 設定（鍵：tools） |
 | [`tools/memory/`](../../../../../proto8/templates/agent-fsm/tools/memory/) | Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the chil… |
 | [`tools/memory/_memory.json`](../../../../../proto8/templates/agent-fsm/tools/memory/_memory.json) | 設定（鍵：base） |
@@ -64,12 +65,3 @@
 | [`tools/memory/_memory.json`](../../../../../proto8/templates/eca-claude/tools/memory/_memory.json) | 設定（鍵：base） |
 | [`tools/memory_write/`](../../../../../proto8/templates/eca-claude/tools/memory_write/) | Change the shared knowledge base. add creates a node under an existing parent, promoting Markdown leaves only; JSON leaves cannot have child nodes. e… |
 | [`tools/memory_write/_memory.json`](../../../../../proto8/templates/eca-claude/tools/memory_write/_memory.json) | → `../memory/_memory.json` |
-
-## `proto8/templates/judge-llm/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`judge.json`](../../../../../proto8/templates/judge-llm/judge.json) | Configure the comparator endpoint and per-section byte limit |
-| [`prompt.txt`](../../../../../proto8/templates/judge-llm/prompt.txt) | （檔頭沒有一句話） |
-| [`tests/endpoint.py`](../../../../../proto8/templates/judge-llm/tests/endpoint.py) | Return deterministic semantic-comparison replies with nonzero fake token usage. |
-| [`tests/test_judge.py`](../../../../../proto8/templates/judge-llm/tests/test_judge.py) | Verify judge reply normalization, truncation, kernel failures, and measured check costs. |

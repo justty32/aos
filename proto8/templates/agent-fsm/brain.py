@@ -8,7 +8,9 @@
 # --system FILE：讀成一則 system 放最前面、不存進 history（P-41）；沒給＝沒有 system。
 # --memory NAME（11-05 晚 agent-knowledge K2）：登記名 NAME 的工具（memory）叫一次 {"op": "read"}，它印的知識庫根接在 system 後面、
 #   同一則 system 訊息（每格重叫＝知識庫改了下一題就看到；不存進 history）。叫的是腦之後叫的同一個工具＝腦看到的根跟它自己查的一樣。
-#   工具清單（疊覆蓋層後）沒有 NAME＝不給根（這隻把 memory 拿掉了）；叫了退非 0、或 30 秒沒叫完（整群收掉）＝MemoryFailed（工具自己那行照樣在 stderr）。
+#   工具清單（疊覆蓋層後）沒有 NAME＝不給根（這隻把 memory 拿掉了）；叫了起不來、退非 0、或 30 秒沒叫完（整群收掉）＝
+#   warning 一行（工具自己那行照樣在 stderr）、system 裡改放一句「Knowledge base is not available right now: 原因」、照樣寫請求
+#   （11-10 TS，圖紙 07 K01：知識庫一時讀不到不擋問腦，狀態不壞；原本是 MemoryFailed 退 1）。
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝不給工具）；腦看到的工具名＝登記名。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1（P-20）。--help 印英文用法；Ctrl-C 退 130。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
@@ -46,7 +48,9 @@ tools) and write $AOS_STACK/think/request.json. Exit 0 = written (go wait); 10 =
 --history full|task: include all history (default), or only messages from the last user.
 --max-tool-calls N: omit tools after N calls in the current task (non-negative integer).
 --memory NAME: call tool NAME with {"op": "read"} and append the knowledge base root it prints
-to the system message (skipped when NAME is not among the tools).
+to the system message (skipped when NAME is not among the tools). If that call fails or
+takes over 30 s, one warning line goes to stderr, the system message says "Knowledge base is
+not available right now: <reason>" instead, and the request is written as usual.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 USAGE = HELP.splitlines()[0].removeprefix("usage: ")
@@ -154,12 +158,15 @@ if system_file:
     except OSError as e:
         die("SystemMissing", "cannot read %s: %s" % (system_file, e))
 memory = opts.get("--memory")
-if memory and any(t["function"]["name"] == memory for t in tools):   # 這隻把 memory 拿掉了＝不給根
+
+
+def memory_root():
+    """叫 memory 拿知識庫根：(根, None)；叫不成＝(None, 原因)（11-10 TS，圖紙 07 K01：知識庫一時讀不到不擋問腦）。"""
     try:
         p = subprocess.Popen(TOOLS + ["call", memory], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              text=True, start_new_session=True)   # 繼承自己的 stack；aos-tools call 算小格。stderr 不吞：工具自己說哪裡壞
     except OSError as e:
-        die("MemoryFailed", "aos-tools cannot start: %s" % e)
+        return None, "aos-tools cannot start: %s" % e
     try:
         out, _ = p.communicate('{"op": "read"}', timeout=MEMORY_TIMEOUT_S)
     except subprocess.TimeoutExpired:            # 卡住的 memory 不讓 think 格一直卡（11-05 夜第二輪邊緣）：整群收掉
@@ -172,13 +179,21 @@ if memory and any(t["function"]["name"] == memory for t in tools):   # 這隻把
                 continue
             except OSError:
                 break
-        die("MemoryFailed", "tool %s (op read of the root) did not finish in %d s (killed)" % (memory, MEMORY_TIMEOUT_S))
+        return None, "tool %s (op read of the root) did not finish in %d s (killed)" % (memory, MEMORY_TIMEOUT_S)
     if p.returncode != 0:
-        die("MemoryFailed", "tool %s (op read of the root) exited %d" % (memory, p.returncode))
-    root = out.strip()
+        return None, "tool %s (op read of the root) exited %d" % (memory, p.returncode)
+    return out.strip(), None
+
+
+if memory and any(t["function"]["name"] == memory for t in tools):   # 這隻把 memory 拿掉了＝不給根
+    root, why = memory_root()
+    if why:                                      # 讀不到知識庫：warning 一行、照樣問腦，system 裡說一句（狀態不壞）
+        aos_flags.warn("agent-fsm", "%s; asking the brain without the knowledge base" % why)
+        root = "Knowledge base is not available right now: %s" % why
+    elif root:
+        root = "Knowledge base root (from tool %s; call it for more):\n\n%s" % (memory, root)
     if root:
-        system_text = (system_text.rstrip("\n") + "\n\n" if system_text.strip() else "") + \
-            "Knowledge base root (from tool %s; call it for more):\n\n%s\n" % (memory, root)
+        system_text = (system_text.rstrip("\n") + "\n\n" if system_text.strip() else "") + root + "\n"
 system = [{"role": "system", "content": system_text}] if system_text else []
 
 

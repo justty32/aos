@@ -25,7 +25,7 @@ class Cooldown(unittest.TestCase):
         (self.definition / 'interfaces.json').write_text(json.dumps({'aos-agent': {'llm': 'llm.json'}}))
         (self.definition / 'llm.json').write_text('{"endpoint":"local"}')
         self.calls = self.root / 'calls.txt'
-        self.env = dict(os.environ, AOS_STACK=str(self.stack), AOS_CD=str(self.definition),
+        self.env = dict({k: v for k, v in os.environ.items() if not k.startswith('AOS_')}, AOS_STACK=str(self.stack), AOS_CD=str(self.definition),
                         FAKE_CALLS=str(self.calls), FAKE_SEND='0', FAKE_RECV='0',
                         PATH=str(self.root) + os.pathsep + os.environ['PATH'])
         self.command('aos-llm', '''import json, os, sys
@@ -100,8 +100,9 @@ sys.exit(code)
         self.assertEqual(last, {'role': 'assistant', 'content': 'ok'})
 
     def test_send_failed_cools(self):
-        result = self.wait(1, FAKE_SEND='3')
-        self.assertIn('agent-fsm: error: SendFailed aos-llm send exited 3', result.stderr)
+        result = self.wait(10, FAKE_SEND='3')             # 11-10 TS：send 失敗＝warning、留在 wait，不停
+        self.assertIn('agent-fsm: warning: aos-llm send exited 3', result.stderr)
+        self.assertNotIn('error:', result.stderr)
         rec = self.record()
         self.assertEqual((rec['failures'], rec['code']), (1, 'SendFailed'))
         self.assertEqual(self.gap(rec), 30)
@@ -116,9 +117,9 @@ sys.exit(code)
 
     def test_cooldown_unwritable_only_warns(self):
         (self.stack / cooldown.NAME).mkdir()             # 擋住改名：寫不成
-        result = self.wait(1, FAKE_SEND='2')
+        result = self.wait(10, FAKE_SEND='2')
         self.assertIn('agent-fsm: warning: cannot write', result.stderr)
-        self.assertIn('agent-fsm: error: SendFailed', result.stderr)
+        self.assertIn('agent-fsm: warning: aos-llm send exited 2', result.stderr)
 
     def test_endpoint_mismatch_still_rebuilds_while_cooling(self):
         cooldown.fail(str(self.stack), 'BrainFailed', 'x')

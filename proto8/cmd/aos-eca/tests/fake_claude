@@ -3,11 +3,13 @@
 """Usage: fake_claude -p [--output-format stream-json] [--verbose] [--session-id ID | --resume ID] [other flags ignored] < prompt
        fake_claude --version
 
-Conversations live in ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/<realpath of cwd with / -> ->/<id>.jsonl.
+Conversations live in ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/<realpath of cwd with every non-alphanumeric character -> ->/<id>.jsonl (like the real CLI).
 --resume ID with no such file: one stderr line, a result line with is_error true, exit 1.
 Success: stdin appended to the conversation file; stdout a system line then a result line "FAKE: <last stdin line>".
 FAKE_CLI_FAIL=1: always an error result ("usage limit reached"), exit 1.
+FAKE_CLI_FAIL_SAVED=1 (with FAKE_CLI_FAIL=1): the conversation file is created before failing (the CLI saved it).
 FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": "..."} as one JSON line per call."""
+import re
 import json, os, sys, uuid
 
 argv = sys.argv[1:]
@@ -37,10 +39,13 @@ def out(ev):
 
 
 home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.environ.get("HOME", "/"), ".claude")
-folder = os.path.join(home, "projects", os.path.realpath(os.getcwd()).replace("/", "-"))
+folder = os.path.join(home, "projects", re.sub(r"[^A-Za-z0-9]", "-", os.path.realpath(os.getcwd())))
 sid = opts.get("--resume") or opts.get("--session-id") or str(uuid.uuid4())
 conv = os.path.join(folder, sid + ".jsonl")
 if os.environ.get("FAKE_CLI_FAIL") == "1":
+    if os.environ.get("FAKE_CLI_FAIL_SAVED") == "1":
+        os.makedirs(folder, exist_ok=True)
+        open(conv, "a").close()
     sys.stderr.write("fake_claude: usage limit reached\n")
     out({"type": "result", "is_error": True, "session_id": sid, "result": "usage limit reached"})
     sys.exit(1)
