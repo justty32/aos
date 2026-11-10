@@ -1,0 +1,53 @@
+{
+ "_description": "Your tools come in packs. Which packs you have, what each tool does in one sentence, and how a pack is turned off.",
+ "_index": {
+  "about": {
+   "_description": "How packs work and how to turn one off."
+  },
+  "look": {
+   "_description": "Pack look."
+  },
+  "change": {
+   "_description": "Pack change."
+  },
+  "delete": {
+   "_description": "Pack delete."
+  },
+  "shell": {
+   "_description": "Pack shell."
+  },
+  "gadgets": {
+   "_description": "Pack gadgets."
+  },
+  "events": {
+   "_description": "Pack events."
+  },
+  "self": {
+   "_description": "Pack self."
+  },
+  "children": {
+   "_description": "Pack children."
+  },
+  "def": {
+   "_description": "Pack def."
+  },
+  "mailbox": {
+   "_description": "Pack mailbox."
+  },
+  "memory": {
+   "_description": "Pack memory."
+  }
+ },
+ "about": "# Tool packs\n\nYour tools are registered pack by pack: each pack is one tool list in $AOS_HOME/lib/packs/<pack>.json, and a definition's tools.json stacks the packs it wants with \"$override\". The agent-fsm template has all eleven packs; eca-claude has the seven agent packs (not look, change, delete, shell: claude has its own file tools).\n\n- See where each of your tools comes from: self_tools {\"op\": \"ls\", \"long\": true} (FROM shows lib/packs/<pack>.json).\n- Turn one tool off for yourself: self_tools {\"op\": \"rm\", \"name\": \"shell\"}.\n- A whole pack is turned off by removing it from the \"$override\" list of the definition's tools.json (a person or a definition change, not a tool call).",
+ "look": "Pack look: Read-only file tools: read (a text file), ls (a folder), view (a file with its type), stat (facts about one path), json_read (a JSON file or one value in it).",
+ "change": "Pack change: Editing files: write (whole file), edit (replace exact text), copy, move (also rename), mkdir, json_write (set or delete values by JSON pointer).",
+ "delete": "Pack delete: trash (move into your workspace .trash/, can be moved back) and remove (delete for real; a folder needs recursive).",
+ "shell": "Pack shell: shell (one bash command; not a sandbox) and run_python (a short Python program).",
+ "gadgets": "Pack gadgets: Small tools that change nothing: peek_clock (the daemon clock: current cycle and interval_ms; ClockMissing when you have no daemon clock), peek_now_time (current UTC time), math (one arithmetic expression).",
+ "events": "Pack events: Things that run later: clock_register (a fixed letter every N cycles; leave out box to wake yourself) and self_hook (run a program when something happens to you).",
+ "self": "Pack self: Look at and change yourself: self_tools (your tools), self_llm (your brain settings), self_state (facts and numbers about you), self_ctl (stop, pause, sleep or remove yourself), self_history (your conversation).",
+ "children": "Pack children: Other agents: agents_children (agents you start yourself; counted against your quota) and agents_ctl (any agent on your daemon table; not counted).",
+ "def": "Pack def: Definitions: agent_def (copy a template into a new agent definition, or check one) and tools_def (make a new tool from the Python skeleton, or check a tool).",
+ "mailbox": "Pack mailbox: Letters: mailbox_peek (what is waiting, without taking it), mailbox_read (read the oldest), mailbox_send (send one).",
+ "memory": "Pack memory: The knowledge base: memory_read (read, ls, find) and memory_write (add, set, rm). Which base they use is set in your tools.json (env AOS_MEMORY)."
+}

@@ -60,7 +60,7 @@ eca 那隻：`cp -r $AOS_HOME/templates/eca-claude defs/eb && echo '{"model": "h
 | **memory** | 讀純 JSON 記憶庫（ls、read、find） | `"Search the memory for DaemonMissing and tell me in one sentence what it means."` |
 | **memory_write** | 寫記憶庫（add／set／rm）；**不預設登記**，要手加一格並指一個可寫的庫（出廠那份別寫） | `"Remember in the memory that Amy likes tea."` |
 
-**工具分包**（11-10 深夜 tool-packs）：上面這些加上通用工具，現在一包一包登記，清單在 `proto8/lib/packs/`。小工具 gadgets（**peek_clock** 看 daemon 時鐘第幾 cycle、**peek_now_time** 看 UTC 時間〔舊名 wall_clock〕、math）、事件（clock_register、self_hook）、自我管理（self_*）、子 agent（agents_children、agents_ctl）、定義（agent_def）、信箱（mailbox_*）、記憶（memory_read、memory_write）——兩個範本都開；通用四包（看／改／刪／殼）只有 agent-fsm 開。fsm 33 支、eca 18 支。關一包＝從定義 `tools.json` 的 `$override` 串拿掉那一項；看某支從哪包來＝`aos-agent -d stacks/root tools -t ann ls -l` 的 FROM 欄。照抄：`"What cycle is the daemon clock at?"`（叫 peek_clock）。
+**工具分包**（11-10 深夜 tool-packs）：上面這些加上通用工具，現在一包一包登記，清單在 `proto8/lib/packs/`。小工具 gadgets（**peek_clock** 看 daemon 時鐘第幾 cycle、**peek_now_time** 看 UTC 時間〔舊名 wall_clock〕、math）、事件（clock_register、self_hook）、自我管理（self_*）、子 agent（agents_children、agents_ctl）、定義（agent_def、tools_def）、信箱（mailbox_*）、記憶（memory_read、memory_write）——兩個範本都開；通用四包（看／改／刪／殼）只有 agent-fsm 開。fsm 34 支、eca 19 支。關一包＝從定義 `tools.json` 的 `$override` 串拿掉那一項；看某支從哪包來＝`aos-agent -d stacks/root tools -t ann ls -l` 的 FROM 欄。照抄：`"What cycle is the daemon clock at?"`（叫 peek_clock）。
 
 <details><summary>memory_write 怎麼加（照抄）</summary>
 

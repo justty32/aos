@@ -73,6 +73,19 @@ class DefinitionsTest(unittest.TestCase):
         result, data = self.call('check')
         self.assertIn('each tool must declare a path', json.dumps(data))
 
+    def test_override_packs_are_merged(self):
+        """11-10 tool-packs：tools.json 疊 "$override"（範本疊 lib/packs），只帶 env 的格沿用底檔的 path。"""
+        pack = {'$env': 'AOS_HOME', '$path': '/lib/packs/gadgets.json'}
+        a = self.definition('a')
+        self.write(a / 'tools.json', {'$override': [pack], 'tools': {'math': {'env': {'X': '1'}}}})
+        b = self.definition('b')
+        self.write(b / 'tools.json', {'$override': pack, 'tools': {}})
+        result, data = self.call('check')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        result, data = self.call('dup')
+        self.assertEqual([g['members'] for g in data['groups']], [['a', 'b']])
+        self.assertIn('/lib/base/peek_clock', data['groups'][0]['key'])
+
     def test_memory_paths_and_literal_environment(self):
         self.definition('a', memory='../../kb')
         self.definition('b', memory='../../kb')

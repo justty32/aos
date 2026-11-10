@@ -34,5 +34,8 @@
  },
  "tools.json": {
   "_description": "Making your own tools: tool tools_def (new from the Python skeleton, check) and the Python helper tool_spec."
+ },
+ "packs.json": {
+  "_description": "Your tools come in packs (look, change, delete, shell, gadgets, events, self, children, def, mailbox, memory): one sentence per tool, and how a pack is turned off."
  }
 }

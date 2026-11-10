@@ -20,7 +20,7 @@ stdin：`{"op":"ls|dup|refs|check","root":"/absolute/defs","match":"optional sub
 - 遞迴遇 `interfaces.json` 或 `_metainfo.json` 就當作定義並停止往下；不走隱藏夾或目錄捷徑；退休樹應放 defs 根旁同層。
 - `dup` 回 `{"groups":[{"key":"canonical JSON signature","members":["category/a","category/b"]}]}`。只算 `aos-agent`；工具解析真實路徑、去重排序，不比登記名與 env；端點未提供時為 `default`，明給空字串照空字串；沒有記憶為 `null`。記憶 `base` 字串相對宣告檔所在夾，環境物件照字面比較。輸出路徑相對 root。
 - `refs` 必須給 `def`，回 `{"refs":["category/caller"]}`；讀各 agent 公開工具宣告的 `path` 與 env 的 `AOS_THOUGHT_FROM`，工具 path 相對工具表所在夾；AOS_THOUGHT_FROM 相對目前 AOS_WS（未設時無法解析的相對值不計），絕對值直接解析。回引用者路徑，排序去重，不包含自己。
-- `check` 回 `{"problems":[{"path":"category/a","reason":"English reason"}]}`。README 第一行非空、meta 有非空 summary、interfaces 是物件；agent 宣告的 tools／llm 必須存在且可讀，選填 memory 有宣告才檢查。定義路徑各段符合 `[a-z0-9_-]+`。不要求 lineage 親代還在。
+- `check` 回 `{"problems":[{"path":"category/a","reason":"English reason"}]}`。README 第一行非空、meta 有非空 summary、interfaces 是物件；agent 宣告的 tools／llm 必須存在且可讀，選填 memory 有宣告才檢查。tools.json 有 `"$override"`（範本疊 `lib/packs`）時交給 `aos-tools ls -l` 合併再看，只帶 `env` 的格沿用底檔的 `path`；沒設 `AOS_HOME` 用這份 proto8（11-10 tool-packs）。定義路徑各段符合 `[a-z0-9_-]+`。不要求 lineage 親代還在。
 - `check` 發現問題仍保留 JSON stdout，stderr 一行 `defs: error: DefBad ...`，退 1；正常退 0。根不在為 `RootMissing`，其他壞宣告為 `DefBad`。所有 op 只讀；根指向空目錄時回空清單。
 
 </details>

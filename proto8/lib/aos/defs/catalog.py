@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import re
+import subprocess
 
 from tool_io import Error
 
@@ -43,7 +44,10 @@ def tools(path, agent):
     filename = agent.get('tools')
     if not isinstance(filename, str) or not filename:
         raise ValueError('aos-agent.tools must name a file')
-    entries = read(path / filename).get('tools')
+    table = read(path / filename)
+    if '$override' in table:
+        return stacked(path / filename)
+    entries = table.get('tools')
     if not isinstance(entries, dict):
         raise ValueError('tools must contain an object')
     for entry in entries.values():
@@ -52,6 +56,30 @@ def tools(path, agent):
             raise ValueError('each tool must declare a path')
         if not isinstance(entry.get('env', {}), dict):
             raise ValueError('tool env must be an object')
+    return entries
+
+
+AOS_TOOLS = Path(__file__).resolve().parents[3] / 'cmd' / 'aos-tools' / 'bin' / 'aos-tools'
+
+
+def stacked(table):
+    """tools.json 疊了 "$override"（11-10 tool-packs，範本疊 lib/packs）：交給 aos-tools ls -l 合併，取每格寫的 path 原樣（STORED 欄）。
+    合併規則只在 aos-tools 一處；沒設 AOS_HOME 時用這份 proto8（底檔多半寫 {"$env": "AOS_HOME", …}）。"""
+    env = dict(os.environ)
+    env.setdefault('AOS_HOME', str(AOS_TOOLS.parents[3]))
+    try:
+        r = subprocess.run([str(AOS_TOOLS), '--file', str(table), 'ls', '-l'], stdin=subprocess.DEVNULL,
+                           capture_output=True, text=True, env=env, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise ValueError('cannot merge %s with aos-tools: %s' % (table, e))
+    if r.returncode:
+        raise ValueError(' '.join((r.stderr or r.stdout).strip().splitlines()[-1:]) or 'aos-tools ls failed')
+    entries = {}
+    for line in r.stdout.splitlines():
+        cols = line.split('\t')
+        if len(cols) < 5 or cols[1] == 'null':
+            continue
+        entries[cols[0]] = {'path': json.loads(cols[4])}
     return entries
 
 

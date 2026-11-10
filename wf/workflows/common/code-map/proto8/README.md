@@ -3,12 +3,12 @@
 
 # proto8 逐檔 code map 生成冊索引
 
-`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：683 個檔、565 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
+`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：687 個檔、569 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
 
 | 冊 | 夾 | 段 | 列／檔 |
 |---|---|---|---|
 | [cases](cases.md) | `proto8/cases/` | `box-probe/`、`smoke/` | 11／11 |
-| [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/`、`aos-clock/`、`aos-clock-register/` | 81／84 |
+| [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/`、`aos-clock/`、`aos-clock-register/` | 82／85 |
 | [cmd-2](cmd-2.md) | `proto8/cmd/` | `aos-daemon-ctl/`、`aos-eca/`、`aos-feedback/`、`aos-grow/`、`aos-mailbox/`、`aos-mcp/` |  |
 | [cmd-3](cmd-3.md) | `proto8/cmd/` | `aos-sandbox/`、`aos-sweeper/`、`aos-tools/` |  |
 | [extras](extras.md) | `proto8/extras/` | `gitignore-check/`、`image-move-check/`、`langs/` | 13／13 |
@@ -21,7 +21,7 @@
 | [impls-6](impls-6.md) | `proto8/impls/` | `aos-lock/`、`aos-loop/`、`aos-post/` |  |
 | [impls-7](impls-7.md) | `proto8/impls/` | `aos-util/`、`cmake/` |  |
 | [kernel](kernel.md) | `proto8/kernel/` | `daemon-judge/`、`llm-kernel/`、`llm-team/`、`procs-kernel/` | 20／20 |
-| [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層、`aos/` | 29／29 |
+| [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層、`aos/` | 32／32 |
 | [lib](lib.md) | `proto8/lib/` | 頂層 | 143／253 |
 | [lib-2](lib-2.md) | `proto8/lib/` | `agent/` |  |
 | [lib-3](lib-3.md) | `proto8/lib/` | `aos/` |  |

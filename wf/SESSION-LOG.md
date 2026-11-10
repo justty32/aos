@@ -8,7 +8,7 @@
 
 ## 最新進度
 
-- **open｜11-10 深夜 tool-packs（通用工具包線）**：四包 lib/packs、改名 shell／json_write、新做 remove、拿掉工作區限制已做；memory_read 改名與庫指 knowledge/ 施工中 → [tool-packs](../proto8/thinking/2026-11/10/tool-packs/README.md)
+- **done｜11-10 深夜 tool-packs（通用工具包線）**：十一包 lib/packs（通用四包只 fsm 開、agent 七包兩範本都開）、shell／json_write／peek_now_time 改名、新做 remove／peek_clock、檔案工具拿掉工作區限制、memory_read 與庫指 knowledge/ → [tool-packs](../proto8/thinking/2026-11/10/tool-packs/README.md)
 - **open｜11-10 晚總整合（家機；使用者授權隨意 push）**：今晚七條線（self-tools、json-memory、self-family＋hook、agents-split、mailbox、clock-letters）都施工完、收攏進 main——知識庫補節點（`b515395a9`）、附錄 4／索引／install／gitignore 分類／eca-claude 範本補 README 與 _metainfo（`bdffed43d`）、整棵從零實跑（假腦 15 支全過、gemma 與 haiku 各 7 支，`db4505fcf`）、全套 Python 測試 803 支綠（aos-eca 4 支只在長 TMPDIR 下紅＝AF_UNIX 路徑太長）；「怎麼玩」→ [tonight](../proto8/thinking/2026-11/10/tonight/README.md)。**續行點**：① 試驗場刷新照 [tonight/03](../proto8/thinking/2026-11/10/tonight/03-試驗場刷新.md)（只在複本跑過，使用者看過再決定誰跑）；② 待使用者裁的彙整在 [HANDOFF](HANDOFF.md) 最上面那條；③ 小事沒修：kernel 範本 `budget.senders` 的 `/tmp/aos-demo-sender` 每次印 warning、`aos-clock-register` 只收 `-c`（不收 `-d`）、agent 被刪時 clock 登記不跟著清
 - **open｜json-memory 剩的**：其餘代定等使用者看（[05](../proto8/thinking/2026-11/10/json-memory/05-步驟與代定.md#代定清單可翻案)）；arknights 庫（playground-ak5，暫停中）是舊格式，要用得重轉
 - **open｜11-10 晚家機施工隊長剩的待裁**：templates-cp（defs 分群不看 AOS_MEMORY、`~/.local/bin/copy-out` 斷捷徑要手動刪）、cli-sweep Q1 施工前再確認（[10c](../proto8/thinking/2026-11/10/cli-sweep/10c-施工結果-甲6Q3Q6.md)）、two-machines B07～B10 待裁三條（[17](../proto8/thinking/2026-11/10/two-machines/17-B07到B10施工結果.md)）

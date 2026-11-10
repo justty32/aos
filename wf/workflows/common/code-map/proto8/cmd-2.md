@@ -59,5 +59,6 @@
 |---|---|
 | [`bin/aos-mcp`](../../../../../proto8/cmd/aos-mcp/bin/aos-mcp) | 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。 |
 | [`tests/test_hooks.py`](../../../../../proto8/cmd/aos-mcp/tests/test_hooks.py) | Verify aos-mcp's --hooks DEF: before_tool changes / blocks a call, after_tool changes the result, no --hooks = no hooks, a failing hook = isError. |
+| [`tests/test_memory_root.py`](../../../../../proto8/cmd/aos-mcp/tests/test_memory_root.py) | Verify aos-mcp --memory NAME: a knowledge base given = its root in the initialize instructions; none given (MemoryMissing) = quiet; given but not a f… |
 | [`tests/test_own_registry.py`](../../../../../proto8/cmd/aos-mcp/tests/test_own_registry.py) | Verify aos-mcp serves an agent's own registry ("$override" of the definition's) and the definition's, and has no --overlay flag (11-10 aos-tools-cli … |
 | [`tests/test_timeout.py`](../../../../../proto8/cmd/aos-mcp/tests/test_timeout.py) | Verify MCP reads shared timeout metadata and keeps its CLI fallback. |
