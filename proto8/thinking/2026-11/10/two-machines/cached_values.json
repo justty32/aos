@@ -1,0 +1,183 @@
+{
+ "contract": "wf-table/1",
+ "source": "13-施工結果.md",
+ "extracted": "2026-11-10",
+ "columns": [
+  "id",
+  "what",
+  "stores",
+  "kind",
+  "effect_on_move",
+  "fix"
+ ],
+ "rows": [
+  {
+   "id": "C01",
+   "what": "daemon 表 `procs_state.json` 每列的 `stack`／`ws`／`def`／`exec`／`launch`",
+   "stores": "`add_letter` 把給的路徑轉絕對（py/daemon_ctl/entry.py:157、167、173、189、193；aos-agent 的 ctl/add.py:57、86、93），**daemon 寫表時改成相對它自己 stack 真實路徑的相對路徑**（impls/aos-daemon/src/child/child.cpp:263-290、refs.cpp:8-49）；daemon_ctl 讀時拼回（py/daemon_ctl/table.py:58-67）",
+   "kind": "目標在 image 裡＝只是相對、跟著走（可以）；**目標在 image 外**（def 直接掛 repo 範本、ws 在別處、`-w` 沒給時預設成當下目錄 ctl/add.py:86）＝存成跨出 image 的 `../../..` 相對路徑＝固化了這台的「image 跟那個目標的相對位置」",
+   "effect_on_move": "實測（全在 image 裡）：cp -a 到不同深度，表全對、全醒。image 外的目標：image 換深度或另一台佈局不同就指錯地方或 PathMissing（未實測）",
+   "fix": "Python、加法：aos-agent ctl add／daemon-ctl add 發現 def、ws、stack 不在 daemon stack 所在的 image（往上找 image.json）裡時印 warning（例：會進表成跨 image 的相對路徑）。真要支援 image 外的目標就要動 C++：child.cpp 的 rel_spec 只對同一棵樹裡的路徑相對化、外面的留絕對（或存經錨點）"
+  },
+  {
+   "id": "C02",
+   "what": "子項小格的 `loop.json` 的 exec 與內嵌單子的 cwd",
+   "stores": "`{\"$env\": \"AOS_DAEMON\", \"$path\": 相對 daemon stack}`（child.cpp:136-142、160-170）",
+   "kind": "可以（每次由 aos-loop 從現在的 AOS_DAEMON 拼回）；cwd 是加列當下 daemon 的 cwd，若 daemon 是在 image 外的目錄起的，同 C01 會跨出 image",
+   "effect_on_move": "實測從 image 根起：正常。從 image 外起再換深度：未實測",
+   "fix": "同 C01（文件：根從 image 根起）"
+  },
+  {
+   "id": "C03",
+   "what": "kernel 在途請求的 `loop.json`／`proc.json` 端點路徑",
+   "stores": "**絕對**（impls/aos-llm-kernel/src/serve/proc.cpp:65、81）",
+   "kind": "固化（只在那一封的生命期）",
+   "effect_on_move": "見表 A 的 L19：別台＝EntryMissing、同台＝跑舊位置那份",
+   "fix": "要動 C++：proc.cpp 改存指示詞或重掛時重解"
+  },
+  {
+   "id": "C04",
+   "what": "kernel `ledger.jsonl`、`proc.json`、`letter.json` 的 `sender`",
+   "stores": "寄件人的 `identity()`＝AOS_WS／AOS_STACK 的絕對路徑（impls/aos-util/src/proc.cpp:80-95；aos-post send.cpp:175）",
+   "kind": "ledger：只給人看；proc.json 的 sender：算「這人在飛幾封」（aos-llm-kernel serve/proc.cpp:227），只活一封的時間",
+   "effect_on_move": "實測 ledger 前後兩段 sender 一段舊路徑、一段新路徑，帳分成兩個人；在途那封的 sender 是舊的，收掉就沒了",
+   "fix": "不用補（要按人看帳時把 sender 換成相對 image 根，屬 C++）"
+  },
+  {
+   "id": "C05",
+   "what": "`aos-agent` 寫進 stack 的覆蓋層 `tools.json`／`llm.json`",
+   "stores": "aos-agent tools add 把路徑轉絕對交給 `aos-tools --overlay`（cmd/aos-agent/aos_agent/tools.py:145），aos-tools 存成相對覆蓋層資料夾、repo 裡的經 `.aos-proto8`（cmd/aos-tools/bin/aos-tools:520-540、574-580）；llm.json 只存代號（brain.py:199-209）",
+   "kind": "可以（相對＋錨點）；錨點本身見 C09",
+   "effect_on_move": "跟著 image 走；錨點斷了就斷（C09）",
+   "fix": "同 C09"
+  },
+  {
+   "id": "C06",
+   "what": "aos-tools 主登記檔（不帶 --overlay 的 `aos-tools add`）",
+   "stores": "**絕對路徑**；只有那資料夾已有錨點且目標在 repo 裡才存 `.aos-proto8/…`（aos-tools:581-588；檔頭 16 行）",
+   "kind": "固化",
+   "effect_on_move": "image 換位置或換台後那個工具 PathMissing",
+   "fix": "Python、加法：主登記檔也用 stored_path（目標在登記檔資料夾裡＝相對；在 repo 裡＝經錨點且順手建錨點；其他外面＝印 warning 再存絕對）"
+  },
+  {
+   "id": "C07",
+   "what": "`agents` 工具：`children.json`、`new` 複製定義時改寫的 tools 路徑、lineage",
+   "stores": "children.json 的 stack 相對 daemon 真實路徑（lib/agent/agents/_entry:250-258、500）；new 的 tools 路徑＝從新位置走回範本原目標的相對路徑（_entry:381-393）、絕對的照抄；lineage 的 from／review 照給的字串（_entry:471-473、422）",
+   "kind": "children.json：可以。new 的 tools 路徑：from 是 repo 裡的範本（絕對路徑）時＝存成跨出 image 的相對路徑＝固化（深度、repo 位置）；from 是 copy-out 抄出的 agent 時會經它的錨點（跟著錨點）。lineage：只給人看",
+   "effect_on_move": "from＝repo 範本生的子定義，image 換深度或換台就找不到工具（未實測，讀碼）",
+   "fix": "Python、加法：rebase_tools 遇到目標在 repo 的 proto8 裡時，比照 copy-out 改寫成經新定義自己的 `.aos-proto8`（並建錨點）"
+  },
+  {
+   "id": "C08",
+   "what": "eca 小格的 `ws.txt`／`tool.txt`／`stack.txt`",
+   "stores": "相對小格（cli_session.py:249-256 用 relpath）；工具形的 tool 先 realpath（cli_session.py:798）",
+   "kind": "可以：每次問都重寫（不同才寫），只有叫回畫面（open_cell，cli_session.py:807-818）讀舊值；工具形 realpath 穿過錨點後是跨出 image 的相對路徑",
+   "effect_on_move": "非互動：沒影響；換深度後在下一次問之前 attach 畫面可能 CellBad／指錯（未實測）",
+   "fix": "可選（Python）：note_cell 對 repo 裡的目標不 realpath、存經錨點的路徑"
+  },
+  {
+   "id": "C09",
+   "what": "`.aos-proto8` 錨點（copy-out／aos-tools／aos-image init 建）",
+   "stores": "**這台 repo proto8 的絕對路徑**（templates/copy-out 檔頭 5-7；aos_image_init.py:92；aos-tools:531-535）",
+   "kind": "固化（解一次就存成捷徑）；設計上靠「不進 git＋換台跑 relink」",
+   "effect_on_move": "見表 A 的 L24：cp -a 帶過來上一台的值；repo 換位置或換台＝全斷、永遠答不出；使用者改 repo 位置後也一樣",
+   "fix": "見 L24：用到時比對「正在跑的這份 proto8」、不同就重指（Python）；C++ aos-exec 那段要動 C++ 或靠清道夫先修"
+  },
+  {
+   "id": "C10",
+   "what": "`local/`（端點、金鑰、機器名、起法）與 `kb` 掛點",
+   "stores": "放在 image 根裡（aos_image_init.py:62、77、89；two-machines 01 的佈局）",
+   "kind": "固化（cp -a 會把整份帶走並蓋掉另一台的）",
+   "effect_on_move": "見 L25、L26",
+   "fix": "把機器專屬的值移出 image：`AOS_LOCAL`／`AOS_KB` 環境變數（預設例 `~/.config/aos/local`），每次用時解、不存。Python 端：aos-image、memory 工具。C++ 端：kernel.json 的 `$ref` 要能接環境變數（aos-llm-kernel serve/config.cpp）"
+  },
+  {
+   "id": "C11",
+   "what": "eca `.session_home`",
+   "stores": "realpath(ws)、realpath(帳號資料夾)、session id（cli_session.py:286-296）",
+   "kind": "只當偵測換了環境用＝可以（值變了＝開新對話，正常事件）",
+   "effect_on_move": "見 L22：cp -a 帶過來、兩台路徑一樣時會誤判",
+   "fix": "加 machine-id（Python）"
+  },
+  {
+   "id": "C12",
+   "what": "eca `mcp.json` 的 --ws／--stack／登記檔",
+   "stores": "絕對（cli_session.py:174-192）",
+   "kind": "固化但每次起 claude 前重寫＝等於每次解，可以",
+   "effect_on_move": "無影響（實際重寫）",
+   "fix": "不用補"
+  },
+  {
+   "id": "C13",
+   "what": "eca `transcripts/` 捷徑",
+   "stores": "絕對（cli_session.py:351）",
+   "kind": "只給人看",
+   "effect_on_move": "斷捷徑",
+   "fix": "可選：斷了就重建（L14）"
+  },
+  {
+   "id": "C14",
+   "what": "`_metainfo.json`",
+   "stores": "工具的靜態說明；agents new 加 `lineage`（照給的字串，_entry:471-473）",
+   "kind": "只給人看",
+   "effect_on_move": "無影響",
+   "fix": "不用補"
+  },
+  {
+   "id": "C15",
+   "what": "`image_info.json` 的 machine、aos_commit、cli 版本",
+   "stores": "aos_image_mark.py:355-365（machine 來自 local/machine.json，aos_image_find.py:76-84）",
+   "kind": "只當偵測／防呆用（thaw 比版本只 warning，aos_image_check.py:100-124）",
+   "effect_on_move": "cp -a 後寫著上一台；local 也是上一台的（C10）＝這台會自稱上一台",
+   "fix": "C10 解掉後就對了"
+  },
+  {
+   "id": "C16",
+   "what": "`think/request.json` 裡的 system（含知識庫根）、工具清單、endpoint",
+   "stores": "think 那一刻的快照（brain.py:132-209）",
+   "kind": "固化一輪：endpoint 寄前會跟現在的 llm.json 比（wait.py:184-189），其他不比",
+   "effect_on_move": "這一輪用舊的知識庫根／工具清單；下一輪重組",
+   "fix": "L01 的修法（比 history 最後一則）順便涵蓋 git 流程；要更嚴可再比工具登記檔的 mtime（Python）"
+  },
+  {
+   "id": "C17",
+   "what": "`history.jsonl` 裡的路徑",
+   "stores": "工具輸出原樣進 history（agent 自己的記憶）",
+   "kind": "只給腦與人看；腦可能照著舊的絕對路徑再叫工具",
+   "effect_on_move": "叫工具時 PathMissing，錯誤行回給腦、它自己改（未實測）",
+   "fix": "不能也不該改（是記憶）。範本 system 已叫腦用相對 ws 的路徑"
+  },
+  {
+   "id": "C18",
+   "what": "`observed.jsonl` 的 self 紀錄",
+   "stores": "AOS_CD、AOS_WS、AOS_LLM_KERNEL 的絕對值（lib/observed.py:27-31）",
+   "kind": "只給人看",
+   "effect_on_move": "新位置多一筆新的",
+   "fix": "不用補"
+  },
+  {
+   "id": "C19",
+   "what": "`AOS_LLM_KERNEL`（fsm 問腦找總機）",
+   "stores": "不存檔：aos-image 每次從 image.json 解（aos_image_start.py:176-177）；直接起根則要人 export 新位置的絕對路徑",
+   "kind": "每次解＝可以；但 cp -a 後直接起根時是「要準備的環境變數」之一",
+   "effect_on_move": "沒設或設成舊位置：aos-llm send 失敗（LlmKernelMissing，wait.py:19-20）",
+   "fix": "Python、加法（未實測）：aos-image init 在 `root_def/.env` 多寫 `AOS_LLM_KERNEL=${AOS_STACK}/../llm_image`（跟 AOS_CLOCK 同一種寫法），直接起根就不用 export"
+  },
+  {
+   "id": "C20",
+   "what": "aos-tools `--envs K=V` 存的值",
+   "stores": "照字面存在登記檔或覆蓋層（files_in_git F31）",
+   "kind": "固化（若使用者放了這台的絕對路徑或金鑰）",
+   "effect_on_move": "到別台用的是上一台的值",
+   "fix": "不用補（文件：別放機器值）"
+  },
+  {
+   "id": "C21",
+   "what": "daemon 子項的環境（AOS_STACK、AOS_DAEMON、AOS_WS…）",
+   "stores": "不存：每次起子項時由 daemon 算（實測新位置的 /proc environ 是新路徑）",
+   "kind": "可以",
+   "effect_on_move": "無",
+   "fix": "不用補"
+  }
+ ]
+}

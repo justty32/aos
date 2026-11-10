@@ -1,0 +1,288 @@
+{
+ "contract": "wf-table/1",
+ "source": "13-施工結果.md",
+ "extracted": "2026-11-10",
+ "description": "11-10 午後各施工線隊員自己拿的小決定（真的落地的；作廢的 aos-image 那些不列）。全部可翻案，overturn 寫改哪裡。",
+ "columns": [
+  "id",
+  "line",
+  "what",
+  "decided",
+  "why",
+  "overturn"
+ ],
+ "rows": [
+  {
+   "id": "D01",
+   "line": "T3、T4",
+   "what": "冷卻間隔",
+   "decided": "30 秒起、每次加倍、封頂 30 分鐘；成功一次歸零；用牆上時鐘",
+   "why": "圖紙 06 的代定照做；要等的是外面的服務",
+   "overturn": "lib/agent/cooldown.py 的常數"
+  },
+  {
+   "id": "D02",
+   "line": "T3",
+   "what": "開場白上限",
+   "decided": "`reseed_bytes` 預設 48000；畫面開著時 8000；單則超過 6000 留頭 4000＋尾 2000",
+   "why": "圖紙 05 的代定照做",
+   "overturn": "cli.json 的 reseed_bytes；aos-eca-turn 的常數"
+  },
+  {
+   "id": "D03",
+   "line": "T3",
+   "what": "開場白說明段措辭",
+   "decided": "「continues in a new session (it moved to another machine or folder, or was restarted)」；不附紀錄時改用只說明路徑的那段",
+   "why": "觸發開新對話的不只換台，還有搬位置、換帳號、手刪 session.txt",
+   "overturn": "aos-eca-turn 的 reseed()"
+  },
+  {
+   "id": "D04",
+   "line": "T3",
+   "what": "第一則 user 一定帶 vs 整段上限",
+   "decided": "上限優先：放不下就只給說明",
+   "why": "超過上限等於沒守住 reseed_bytes",
+   "overturn": "aos-eca-turn 的 reseed()"
+  },
+  {
+   "id": "D05",
+   "line": "T3",
+   "what": "記號檔寫不成",
+   "decided": "只印 warning，不擋那一輪",
+   "why": "這時 claude 已經在跑，擋下來反而掉回答；下一輪頂多開新對話",
+   "overturn": "cli_session.py 的 mark_session"
+  },
+  {
+   "id": "D06",
+   "line": "T3",
+   "what": "冷卻到了卻全是壞信",
+   "decided": "壞信丟掉、退 0（跟整批模式一致）",
+   "why": "—",
+   "overturn": "aos-eca-turn 的 pick_one()"
+  },
+  {
+   "id": "D07",
+   "line": "T4",
+   "what": "fsm 冷卻檢查放哪",
+   "decided": "endpoint 比對之後、寫 think/sent.json 之前；冷卻中連 sent.json 都不重寫",
+   "why": "endpoint 對不上要先回 think 重組",
+   "overturn": "templates/agent-fsm/wait.py"
+  },
+  {
+   "id": "D08",
+   "line": "T4",
+   "what": "哪些失敗算冷卻",
+   "decided": "BrainFailed、send 退非 0 的 SendFailed；ReplyBad、aos-llm 不在 PATH 不算",
+   "why": "後兩者是設定錯，不是外面服務的錯",
+   "overturn": "templates/agent-fsm/wait.py；55bc1205b 起 SendFailed 不停（退 10＋warning），見 D28"
+  },
+  {
+   "id": "D09",
+   "line": "T4",
+   "what": "cooldown.json 的 reason",
+   "decided": "只記 wait 自己那句（例 aos-llm recv exited 1），真正原因看 stderr.txt",
+   "why": "C-52 不讀下層 stderr",
+   "overturn": "wait.py；或開 C-52 例外"
+  },
+  {
+   "id": "D10",
+   "line": "T4",
+   "what": "事後打開 --auto-restart",
+   "decided": "沒有開關指令：aos-daemon-ctl rm（留 stack）再 add --auto-restart；aos-agent ctl rm 會刪 stack（next_todo B23）",
+   "why": "圖紙 06 的代定",
+   "overturn": "兩支 add 的說明；要的話加 ctl set"
+  },
+  {
+   "id": "D11",
+   "line": "C++",
+   "what": "+x 判型的細則",
+   "decided": "+x 且開頭 #!／ELF，或 +x 而整份不是 JSON＝程式（沒 #! 的 sh 腳本照舊）；+x 但整份是 JSON＝當 JSON；沒 +x 照現行",
+   "why": "N-59 與 § 22 使用者選「乙」：+x 沒 #! 的檔用 /bin/sh 跑；ext4 行為完全不變",
+   "overturn": "impls/aos-exec/src/find/classify.cpp、py/daemon_ctl/entry.py 的 is_program"
+  },
+  {
+   "id": "D12",
+   "line": "C++",
+   "what": "aos-lock 放鎖順序",
+   "decided": "先建 .reaping 牌、關 fd、再改名；改名遇 EACCES 重試約 0.5 秒",
+   "why": "改名的原子性留著，名字一消失就沒人誤收",
+   "overturn": "impls/aos-lock/src/lock/lock.cpp"
+  },
+  {
+   "id": "D13",
+   "line": "C++",
+   "what": "怎麼認「這棵樹的行程」",
+   "decided": "/proc/<pid>/environ 的 AOS_STACK 或 AOS_DAEMON 任一指到那格或這台 daemon 的 stack；別棵樹的 running 列照收工那樣睡下、第一圈起",
+   "why": "內嵌單子 fork 後不 exec，environ 是 daemon 的",
+   "overturn": "impls/aos-daemon/src/daemon/adopt.cpp 的 same_tree"
+  },
+  {
+   "id": "D14",
+   "line": "C++",
+   "what": "表上保留指示詞原形",
+   "decided": "選填新 key `as_written`；原本的 ws／stack／exec／def 欄照舊放解好的字串；adopt 讀表改 resolve_shallow",
+   "why": "Python 讀表的人都當字串讀，直接換成物件等於改既有格式",
+   "overturn": "impls/aos-daemon/src/daemon/procs.cpp、child.cpp"
+  },
+  {
+   "id": "D15",
+   "line": "C++",
+   "what": "kernel proc.json 的 exec",
+   "decided": "照舊寫絕對路徑當紀錄，重掛時改從 kernel.json 照代號重算",
+   "why": "不改持久格式",
+   "overturn": "impls/aos-llm-kernel/src/serve/proc.cpp；要拿掉就刪那格"
+  },
+  {
+   "id": "D16",
+   "line": "快修",
+   "what": "stop→sleep→start",
+   "decided": "再起前把公開 ctl 的 cmd 拿掉、seq 留著；只處理 stop",
+   "why": "halt 靠舊 ctl 的 seq 往上數",
+   "overturn": "impls/aos-daemon/src/daemon/reconcile.cpp 的 drop_stale_stop"
+  },
+  {
+   "id": "D17",
+   "line": "快修",
+   "what": "被 stop 的問腦列",
+   "decided": "停滿 300 秒（從 kernel 第一次看到它停著起算）放格、回 EndpointFailed；中途又跑起來就重算",
+   "why": "—",
+   "overturn": "impls/aos-llm-kernel/src/serve/proc.cpp 的 STOPPED_GIVE_UP_S"
+  },
+  {
+   "id": "D18",
+   "line": "快修",
+   "what": "aos-lock release 認主",
+   "decided": "比名牌的 holder 和這個行程的身分；不同＝warning、退 10、不放；`--force` 照放；名牌讀不到照舊放",
+   "why": "10＝查了、不是你的（N-43）",
+   "overturn": "impls/aos-lock/src/main.cpp"
+  },
+  {
+   "id": "D19",
+   "line": "快修",
+   "what": "鎖殘骸清理",
+   "decided": "名字裡的時間超過 10 分鐘才清；stack 往下 3 層；不進 procs/、stderr_archives、不跟捷徑",
+   "why": "—",
+   "overturn": "py/aos_sweep_files.py 的 RELEASING_AGE_S、RELEASING_DEPTH"
+  },
+  {
+   "id": "D20",
+   "line": "快修",
+   "what": "recv 退 10 的原因提醒",
+   "decided": "沒設 AOS_LLM_KERNEL 就不判；「寄不進」只看權限位（主群組）；退出碼照舊 10",
+   "why": "原本「信已不在 kernel」那條分不出「已經收過」，拿掉了",
+   "overturn": "impls/aos-llm/src/wait/wait.cpp"
+  },
+  {
+   "id": "D21",
+   "line": "快修",
+   "what": "recv --quiet 的範圍",
+   "decided": "只蓋退 10 時那行提醒；錯誤行照印；ask 不加",
+   "why": "錯誤行不准吞",
+   "overturn": "impls/aos-llm/src/main.cpp"
+  },
+  {
+   "id": "D22",
+   "line": "路徑",
+   "what": "指到 proto8 的預設寫法",
+   "decided": "copy-out 預設 `--proto8 env`；新環境變數 AOS_PROTO8，歸 NORMS「③ 人殼預設」",
+   "why": "每台設一次就好、不用跑任何指令；repo 裡原本沒有這種變數",
+   "overturn": "templates/copy-out 的預設；NORMS 10-…/07-…/03"
+  },
+  {
+   "id": "D23",
+   "line": "路徑",
+   "what": "env 模式下指到檔的捷徑",
+   "decided": "換成那份檔的複本（快照），印一行 warning；指到資料夾的退回絕對捷徑",
+   "why": "捷徑裝不了環境變數；`$ref` 的值也不能是 `$env`",
+   "overturn": "lib/agent/copy_def.py；或讓 aos-directive 的 $ref 收 $env"
+  },
+  {
+   "id": "D24",
+   "line": "路徑",
+   "what": "agents new 沒設 AOS_PROTO8",
+   "decided": "寫 absolute、多一行 note",
+   "why": "硬寫 env 會讓子 agent 一起來就 DirectiveBad",
+   "overturn": "lib/agent/agents/_entry"
+  },
+  {
+   "id": "D25",
+   "line": "路徑",
+   "what": "aos-tools add 存法",
+   "decided": "給絕對存絕對；給相對存相對「寫進的那份檔的資料夾」；`--path-json` 原樣存；`--anchor` 才經錨點（坑-92 舊行為改成要明講）",
+   "why": "使用者「要用相對位置、絕對位置、環境變數指定都可」",
+   "overturn": "cmd/aos-tools/bin/aos-tools"
+  },
+  {
+   "id": "D26",
+   "line": "路徑",
+   "what": "copy_def 改寫範圍",
+   "decided": "任一 JSON 裡相對、而且指得到 repo 東西的字串都改；JSON key、別的指示詞不動",
+   "why": "kernel 範本的 exec、endpoints、argv 才能一起處理",
+   "overturn": "lib/agent/copy_def.py"
+  },
+  {
+   "id": "D27",
+   "line": "gitignore",
+   "what": "樣板擺法與 kernel 在途請求",
+   "decided": "推薦樣板放各 stack 根或只裝 stack 的父資料夾；kernel 在途請求（requests/cur）暫列帶走",
+   "why": "專案根套寬規則會撞使用者自己的檔；在途請求擋掉＝無聲掉工作",
+   "overturn": "05-gitignore指南、stack.gitignore"
+  },
+  {
+   "id": "D28",
+   "line": "TS",
+   "what": "kernel 剛出現就立刻重寄",
+   "decided": "只有「記冷卻那一刻 kernel 資料夾就解不到」的 SendFailed（reason 尾巴記 (llm kernel folder not found)）才在資料夾出現時當作到期；別的 send 失敗照冷卻間隔",
+   "why": "資料夾在、send 因別的原因失敗時，照字面會每 300 ms 重寄、刷屏",
+   "overturn": "templates/agent-fsm/wait.py"
+  },
+  {
+   "id": "D29",
+   "line": "TS",
+   "what": "send 失敗的範圍",
+   "decided": "send 退非 0 一律 warning、退 10、原地等；仍 error 退 1 的只剩 aos-llm 起不來與 send 退 0 卻沒印信名",
+   "why": "wait 不讀下層 stderr，分不出是不是 LlmKernelMissing",
+   "overturn": "templates/agent-fsm/wait.py"
+  },
+  {
+   "id": "D30",
+   "line": "TS",
+   "what": "信不見了重寄時",
+   "decided": "刪 pending 順手刪 wait_warned.txt（下一封的提醒從頭算）；刪 pending 失敗＝WriteFailed 退 1",
+   "why": "那封信已經了結",
+   "overturn": "templates/agent-fsm/wait.py"
+  },
+  {
+   "id": "D31",
+   "line": "TS",
+   "what": "畫面 socket 位置",
+   "decided": "${XDG_RUNTIME_DIR:-/tmp}/aos-tty-<uid>/<sha256 前 16 字>.sock，資料夾 0700；超過 80 bytes 退回 /tmp；找的時候另看同雜湊的 /tmp 版與小格舊 tty.sock",
+   "why": "unix socket 不能放 /mnt/c；daemon 與人殼的 XDG_RUNTIME_DIR 可能不同",
+   "overturn": "lib/agent/cli_session.py 的 tty_socket()"
+  },
+  {
+   "id": "D32",
+   "line": "TS",
+   "what": "記號檔的機器識別",
+   "decided": "/etc/machine-id，讀不到退回 hostname；記號檔沒有 machine 這個 key 就不比",
+   "why": "舊記號檔照用",
+   "overturn": "lib/agent/cli_session.py 的 machine_id()"
+  },
+  {
+   "id": "D33",
+   "line": "TK",
+   "what": "memory_write 鎖等待",
+   "decided": "acquire 等 10000 ms、外層期限 15 秒；租約仍是牆鐘 10 秒",
+   "why": "多隻寫同一層才會撞；外層期限不放寬 10 秒等不到",
+   "overturn": "lib/agent/memory_write/locking.py"
+  },
+  {
+   "id": "D34",
+   "line": "TK",
+   "what": "memory_sync 的合併",
+   "decided": "add -A → 有變才 commit（hostname＋UTC 時間）→ pull --no-rebase -X ours → push；刪改相撞＝merge --abort、回 SyncConflict；只認 git 工作樹根、要 attached branch",
+   "why": "後同步的贏（裁定 7）；不硬解",
+   "overturn": "lib/agent/memory_sync/_entry"
+  }
+ ]
+}

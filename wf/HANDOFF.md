@@ -12,6 +12,33 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-10 下午 公司頂層（compact 前）
+
+1. **授權與狀態**：公司電腦（Windows 桌面 app；施工一律在 WSL `~/repo/aos-tools`，這台 Windows 沒 python）。**今天不 push，下班前統一 push**（使用者早上先說隨便 push、隨即改口）；子 agent 也不准 push。普通工作 opus、雜活 sonnet、規劃可開 fable（使用者 11-10「好，可以開fable agent」）；頂層只交流。使用者：「不要因為太敢就省略東西，時間沒有緊急到那樣。」（不砍範圍、不跳驗收，做不完跨天）；今天的裁定多是選項框快裁（「主要靠直覺…大修的時候再來處理」）。arcagi 停線、等大修完再續。
+   - **兩份 clone 的同步**：所有施工 commit 都在 WSL 那份本地 main（領先 origin 20 個以上，含早上 Windows 這份的 `67a0d67d1`、`7963f5d74`）；Windows 這份只多**本檔這段未 commit 的改動**。下班前：整理 WSL 那份 `git log origin/main..main`（各 commit 新檔有無 >1 MB／二進位；prefix-fixes 隊長回報過到 `233514b4a` 為止都沒有）給使用者看→他點頭後從 WSL push→Windows 這份 `git checkout wf/HANDOFF.md` 之前先把這段搬進 WSL 那份 commit，再 pull。
+2. **今天做完的（都在 WSL 本地 main）**：
+   - **prefix-fixes**（桌面問題清單 207 列分桶；直接修 61 列做了 60）：線 1～5、線 6 `procs_ctl_mailbox`→`procs_requests`、坑-52 PDEATHSIG 全套＋eca 的 CLI、坑-74 等腦 10 分鐘提醒、新子命令 `aos-daemon-ctl shutdown`、`copy-out`（坑-73）與 `.aos-proto8` 錨點（坑-92）、收尾修 `caf9a32f7`。試驗場 `~/code/playground` 已刷新（備份 `.bak-1110`），桌面大修材料同步到 `6efb876fe`（220 列）。→ `proto8/thinking/2026-11/10/prefix-fixes/`（04 施工結果）。**沒修、等使用者說要不要**：adopt 接回的列失敗後直接下表看不到原因；stop→sleep→start 後新 loop 照做舊 stop 馬上退出；「ctl 信箱」說法要不要照新命名原則改。
+   - **sweeper 清道夫**：`_sweeper` 列（每台 daemon 自己掛、只管自己）、`aos-daemon-ctl sweep [--purge] [--dry-run]`、保留期預設 7 天、判官範本 `max_running` 5。→ `thinking/2026-11/10/sweeper/`。沙箱帳號沒實跑。
+   - **two-machines 圖紙**（fable，`2d5d61905`）：之後被使用者大幅改向，見下。
+3. **還在跑：two-machines 施工隊長（opus，ListAgents 找「two-machines 施工隊長」）**。圖紙原是「專用 image repo＋`aos-image freeze/thaw`」，使用者下午連續改向，**以這些原話為準**（都已轉給它）：
+   - 「換台還要特別跑東西...，我原本預期他就是cp過去，起daemon她就自動繼續了。頂多就是各種路徑(ws,知識庫)和環境變數準備好就好。」→ 不可有換台必跑的步驟，零件自己認出殘留並自癒。
+   - 指到外面的路徑：「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」「兩台各自設一次...不要限制只設一次」→ 三種寫法都收、每次用到才解、不固化；`.aos-proto8`／`copy-out --relink` 降為可選方式；不做起根自動 relink。
+   - 目標用法：「我在C:/code/mine/something，建立defs/, stacks/，剩下就是something自身的東西。git clone下來之後直接aos-exec --stack stacks/daemon defs」；下班前對根下 **`shutdown`**（他先說 sleep、更正「喔不是，就shutdown」）再 `git push`。stacks 跟著專案自己的 repo（正常歷史，aos 不可 force push／代 commit）——「stacks 進專案 repo 正常歷史」我先這樣假設，未正式裁。
+   - 「gitignore要弄好」（獨立交付項：實跑分類、兩方向都對、自動檢查釘住）。
+   - 「要自動繼續的話，有需要的話可以加上boot指令」（只有零件自癒做不到時才加，與 shutdown 成對）。
+   - 「aos image...拿掉吧。」；跨專案：`another/` 放可被引用的 def、`llms/` 是最終的 llm kernel（獨立起停）；「llms我可能會用環境變數指定。然後如果llms那邊我沒開aos daemon，那就是我自己的問題，但我也希望他不要搞壞」。
+   - 位置：「喔喔，其實是/mnt/c」「或者說，WSL能訪問到的都可能是目標」→ /mnt/c 實測最優先（結果要先短訊回頂層、有硬傷立刻告訴使用者），寫成「依賴哪些檔案系統特性」的通則，能不依賴就改、做不到就啟動時探測並清楚拒絕。
+   - 早上選項框已裁、仍有效的：eca 換台用 aos 紀錄重開對話；失敗的信掉那封＋自動重起；加 `--auto-restart`；eca 失敗後冷卻只拿一封試；金鑰只給問腦那支行程；知識庫編輯不加版本檢查；不做金鑰掃描；知識庫＝「就是一個資料夾…不要與其耦合」，工具層可假設 git 與鎖。
+   - **等它回的**：圖紙對照表（照舊／要改／作廢）、/mnt/c 實測短訊、要不要 `boot`（清單＋指令長相）、gitignore 分類結果、T7 給使用者親手做的真機驗證步驟（真 claude，約 15 分鐘）。
+4. **新條號**：無新編號；條文加註在各線結果檔（N-17 例外二、N-28、N-67、C-54 R14 的 11-10 註等）。使用者今天的命名原則：「mailbox，他是底層的aos post機制…應該是用承載的機制作命名」；隨想「有序無序感覺也沒差」未處理（agent 的 `queue/` 不動）。
+5. **還沒問／沒回的小事**：未追蹤殘留夾（Windows 這份 `proto8/impls/aos-schema/`、`inst/`；WSL 另有 `aos-gate/`、`aos-kernel-llm/`）刪不刪；上面第 2 點三件沒修的要不要修。
+6. **之後的裁定（午後到傍晚，逐字見 [two-machines README 午後方向改變](../proto8/thinking/2026-11/10/two-machines/README.md#午後方向改變逐字)）**：
+   - 隊長兩題：「1.可以。2.可以，這個就隨意，不要去假設或限制，然後defs/, stacks/都只是舉例，搞不好他會是其他名字，乃至於分散於defs_1, defs_2, stacks/root，或其中一些放在其他外部資料夾。」（1＝准動 C++；2＝stacks 進不進專案 repo 隨使用者——上面第 3 點「先這樣假設」已由這句定掉）
+   - 「他有需要的話可以派fable」；六項快修照勾（stop→sleep→start、設計-56、設計-52、open-14、坑-76、坑-102，已做），留大修：設計-44、adopt 接回失敗看不到原因。
+   - 「總之我五點下班，下班前全部弄好。剩下的明天再做」
+   - kernel 不在＝印 warning、原地等，不論有沒有 auto-restart，kernel 回錯照舊停；kernel 排隊信樣板與指南不擋、照帶：「都按照推薦」。
+   - boot 不做（起根本身就會叫醒睡下的列）。施工九個 commit 到 `875aff2b2`、文件未 commit；續行點與明天清單見 [13](../proto8/thinking/2026-11/10/two-machines/13-施工結果/03-不同之處與留給明天.md#留給明天大修)。
+
 ## 2026-11-09 深夜 23:2x 家機頂層（使用者要接 aos mcp 後重開／resume）
 
 1. **授權與狀態**：同下一條（隨意 push、opus／sonnet 分工、/goal 到 11-10 06:20 當 arcagi 支援、安全邊界見下一條第 5 點）。使用者經 arcagi 轉達：「順便寄信給aos agent，跟他說我要給他接mcp。」→ 重開後 **先重掛 `wf/inbox/` Monitor**（腳本見 SESSION-LOG 續行點那條的寫法：每 5 秒比對頂層 *.md、另查 ~/arcagi-STOP），再讀 SESSION-LOG「今晚當 arcagi 支援」續行點。

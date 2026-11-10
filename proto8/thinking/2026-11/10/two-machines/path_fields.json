@@ -1,0 +1,368 @@
+{
+ "contract": "wf-table/1",
+ "source": "13-施工結果.md",
+ "extracted": "2026-11-10",
+ "description": "I1 調查：所有會寫「指到外面（repo 的 proto8/lib、ws、知識庫…）的路徑」的欄位／檔，三種寫法（相對、絕對、$env 指示詞）現在收不收、誰讀誰寫、怎麼補。依據行號以 WSL ~/repo/aos-tools 工作樹 233514b4a＋未 commit 改動為準（proto8/ 開頭）。實測在 /tmp mktemp -d、~/.local/bin、假程式，跑完已刪。",
+ "columns": [
+  "id",
+  "where",
+  "reader",
+  "relative",
+  "absolute",
+  "env",
+  "writer",
+  "fix"
+ ],
+ "rows": [
+  {
+   "id": "P01 tools-main-path",
+   "where": "定義的工具登記檔（interfaces.json aos-agent.tools，預設 tools.json）`tools.<名>.path`",
+   "reader": "Python cmd/aos-tools/bin/aos-tools：read_json 203-225、load_registry 325-336、entries 339-353；被 templates/agent-fsm/brain.py 134、act.py、cmd/aos-mcp（每次叫工具轉 aos-tools call）、cmd/aos-agent/aos_agent/tools.py 96-97 叫",
+   "relative": "收。從登記檔所在資料夾算（entries 341、352）。坑：登記檔用 `$ref` 拆檔時，子檔裡的相對 path 仍從主登記檔的資料夾算、不是子檔的（實測 tools:{$ref:[sub/more.json]} 裡 path math → 找 def/math、PathMissing）",
+   "absolute": "收（os.path.join 遇絕對直接用，352）",
+   "env": "收。檔裡有任一 $ref／$env（has_directive 195-200）＝整格 #/tools 交 `aos-json get --follow --resolve`（C++ aos-directive 全解，aos-json src/cmd/read.cpp 37-38）。實測 {\"$env\":\"TMX\",\"$path\":\"wall_clock\"} ls 得絕對路徑；TMX 沒設＝aos-json DirectiveBad、aos-tools DirectiveBad 退 1、訊息清楚。注意 $path 是字串拼接，寫 \"/x\" 也是接在後面不取代（NORMS 06 N-45）",
+   "writer": "範本手寫相對（templates/agent-fsm/tools.json `../../lib/...`）；copy-out 改成經 `.aos-proto8/...`（templates/copy-out 174-184）；`aos-tools add`（不帶 --overlay）存絕對，該資料夾已有錨點且目標在 repo proto8 裡才存 `.aos-proto8/...`（aos-tools 581-590）；agents 工具 new 寫相對（P29）",
+   "fix": "三種都收，不必補。可選加法：aos-tools add 加旗標存 {\"$env\": VAR, \"$path\": 相對} 形（現在 add 只寫得出絕對／錨點相對）；`$ref` 子檔基準點的落差寫進 --help 與 README（要改成從子檔算得知道每格來源檔，aos-json 不給，不建議動）"
+  },
+  {
+   "id": "P02 tools-main-env",
+   "where": "同上登記格 `tools.<名>.env.<K>` 的值",
+   "reader": "Python aos-tools entries 348-351（只驗是字串）、cmd_call 650（合進那次呼叫的環境）",
+   "relative": "不當路徑解，照字面交給工具（docstring 33-34，C-56）；相對與否看讀它的工具（例 AOS_MEMORY 相對 $AOS_DAEMON，P10）",
+   "absolute": "收（字面）",
+   "env": "收。同 P01 整格解；實測 env FOO={\"$env\":\"TMX\",\"$path\":\"x\"}，工具拿到 FOO=<TMX>/x",
+   "writer": "aos-tools add --env-file／--envs K=V 照字面存（aos-tools 549-554、570-571）：殼先展開的 $X 會凍成這台的值",
+   "fix": "讀端不必補。可選加法：add 加 `--envs-from K=VAR` 存 {\"$env\": \"VAR\"}"
+  },
+  {
+   "id": "P03 tools-overlay-path",
+   "where": "stack 覆蓋層 `<stack>/<宣告的相對路徑>`（預設 <stack>/tools.json）`add.<名>.path`",
+   "reader": "Python aos-tools read_overlay 356-373 → entries 339-353；brain.py 101-102、act.py、cli_session.py stack_copies 133-139（給 aos-mcp --overlay）",
+   "relative": "收，從覆蓋層所在資料夾算（entries 341）",
+   "absolute": "收",
+   "env": "不收。read_overlay 直接 json.load、docstring 32 明寫「O 不解指示詞」；物件＝RegistryBad `add/<名> must be {\"path\": non-empty string}`（實測）",
+   "writer": "aos-agent tools add（tools.py 145 傳絕對）與 self_tools（經 aos-agent）→ aos-tools --overlay add 的 stored_path 520-540：覆蓋層資料夾裡＝相對、在這份 repo proto8 裡＝`.aos-proto8/...` 並在覆蓋層資料夾建錨點、其他外面＝相對（同包搬才對，爬出 image 就跟兩台相對位置綁死）",
+   "fix": "Python：read_overlay 照 read_json 的做法——有指示詞就 `aos-json get --follow --resolve O#/add` 解（同一套 C++ 解法，不發明第二套），entries 照舊驗字串；O 的寫回（write_overlay）只改 add／rm 那一格，不碰別格的指示詞原形。stored_path「其他外面＝相對」那支可加 warning（爬出 image 根時）"
+  },
+  {
+   "id": "P04 tools-overlay-env",
+   "where": "覆蓋層 `add.<名>.env.<K>`",
+   "reader": "同 P03",
+   "relative": "照字面（同 P02）",
+   "absolute": "收（字面）",
+   "env": "不收：實測 RegistryBad `add/e2/env must be an object of NAME -> string without NUL`",
+   "writer": "aos-agent tools add 帶 --envs 時經 aos-tools add --overlay 照字面寫",
+   "fix": "同 P03（一處解開就兩格都收）"
+  },
+  {
+   "id": "P05 entry-argv",
+   "where": "單子 `_entry`（JSON 陣列，或物件的 argv）；body.json；loop.json／fsm.json／daemon.json／kernel 端點裡內嵌單子的 argv",
+   "reader": "C++ aos-exec run_inst（aos-directive）；aos-loop／aos-fsm／aos-daemon 行程內呼叫同一個 run_inst",
+   "relative": "argv[0] 帶 / ＝從單子解出來的 cwd 算（預設入口檔所在資料夾＝AOS_CD），exec 不了＝前插 aos-exec（impls/aos-exec/docs/02-種類.md 17、03-環境變數.md 24、40）；其餘元素照字面給程式、由程式自己解",
+   "absolute": "收",
+   "env": "收：任一元素可寫 {\"$env\",\"$path\"}／$ref，aos-exec 設好六個 AOS_* 之後解，解完不是字串＝EntryBad（NORMS 06 N-45「argv 陣列裡也能放」；範本 agent-fsm/_entry、reviewer/fsm.json 已這樣用）",
+   "writer": "範本手寫；copy-out 只改第一個元素、且要帶 / 的相對才改成經錨點（copy-out 200-207）；copy-out 也改任一 JSON 裡 {\"$env\":\"AOS_CD\",\"$path\":相對}（154-163，只認 AOS_CD 這一種）",
+   "fix": "不必補"
+  },
+  {
+   "id": "P06 entry-cwd-streams",
+   "where": "單子的 `cwd`、`stdin`、`stdout`、`stderr`",
+   "reader": "C++ aos-exec（src/inst/fields.cpp 63 path_keys）",
+   "relative": "cwd 從入口所在資料夾算；串流從解出的 cwd 算（03-環境變數.md 24、26）",
+   "absolute": "收",
+   "env": "收（03-環境變數.md 39 例 \"stdout\": {\"$env\": \"AOS_STACK\", \"$path\": \"out\"}）",
+   "writer": "手寫；daemon 把內嵌單子的 cwd 改寫成 {\"$env\":\"AOS_DAEMON\",\"$path\":相對}（impls/aos-daemon/src/child/child.cpp pin_cwd 136-144）",
+   "fix": "不必補"
+  },
+  {
+   "id": "P07 entry-envs",
+   "where": "單子的 `envs` 值（例 llm_def/endpoints/litellm/_entry 的金鑰）",
+   "reader": "C++ aos-exec run_inst",
+   "relative": "不轉，照字面成環境值",
+   "absolute": "收（字面）",
+   "env": "收（$env／$ref 都解；two-machines/02 實測 4：{\"$ref\": \"../../local/keys.json#/litellm\"} 子程式拿得到值，檔不在＝$ref cannot read）",
+   "writer": "手寫；aos-agent ctl add --envs 照字面包（P24）",
+   "fix": "讀端不必補"
+  },
+  {
+   "id": "P08 dotenv",
+   "where": "定義資料夾的 `.env`（例根的 AOS_CLOCK=${AOS_STACK}/clock、AOS_LLM_KERNEL=…）",
+   "reader": "C++ aos-exec src/env/dotenv.cpp load_env 169（find.cpp 121 走進每一層時讀）",
+   "relative": "不自動轉（docs/02-種類.md 39）；要相對寫 ${AOS_CD}/…",
+   "absolute": "收",
+   "env": "收，但語法是 ${名字}（.env 不是 JSON，沒有 $env 物件）；${名字} 沒設＝DotenvBad",
+   "writer": "人手寫（進 git）",
+   "fix": "不必補（既有規則；文件裡講明「要相對就 ${AOS_CD}/..」）"
+  },
+  {
+   "id": "P09 memory-base",
+   "where": "`tools/<memory|memory_write|memory_export>/_memory.json` 的 `base`",
+   "reader": "Python lib/agent/memory_fs.py memory_root 14-30（三支工具共用）",
+   "relative": "收，從 $AOS_CD 算（17、27）。AOS_CD 是 aos-exec 解開捷徑後的資料夾（impls/aos-exec/src/find/find.cpp real 53-59、locate 92-107、206-220）：工具資料夾或它的 _entry 若是指進 repo 的捷徑，讀的就變成 repo 那邊的 _memory.json（實測 _entry 做成捷徑時旁邊的 _memory.json 被跳過＝MemoryMissing）；範本是真資料夾＋陣列 _entry，沒事",
+   "absolute": "收（27 join 遇絕對直接用；實測 OK）",
+   "env": "不收：base 不是字串＝CfgBad `must be an object with a non-empty string key base`（25-26；實測 {\"base\": {\"$env\": \"KBX\"}}）",
+   "writer": "範本手寫 `../../../../knowledge/aos`；copy-out 改成經錨點（copy-out 208-213）；two-machines/07 的樣板寫 `../../../../kb`；工具資料夾可另放捷徑共用一份（範本 memory_write）",
+   "fix": "Python：memory_root 讀到 base 是物件時，把整份 cfg 交 `aos-directive`（cwd＝here；judge 已這樣叫，lib/aos/judge/_entry 136）解完再取 base；解不開照 aos-directive 的錯轉成 CfgBad 一行。改一處三支工具一起收"
+  },
+  {
+   "id": "P10 AOS_MEMORY",
+   "where": "環境變數 AOS_MEMORY（沒有 _memory.json 時才看）",
+   "reader": "Python memory_fs.py 31-38",
+   "relative": "收，從 $AOS_DAEMON 算（沒設＝cwd）",
+   "absolute": "收",
+   "env": "本身就是環境變數（值經殼／local/env／登記格 env／單子 envs 設）",
+   "writer": "人：起根的殼、local/env、aos-tools 登記格 env（P02）、ctl add --envs、daemon.json 單子 envs",
+   "fix": "不必補；文件提醒範本預設帶 _memory.json（它優先），用 AOS_MEMORY 要刪掉那份"
+  },
+  {
+   "id": "P11 interfaces-json",
+   "where": "定義 interfaces.json 的 aos-agent.entry／tools／llm（另有 memory、screen 宣告）",
+   "reader": "Python lib/agent/agent_files.py declared_files 6-30；cmd/aos-agent/aos_agent/ctl/add.py 64-70（entry）；lib/agent/agents/_entry decl_file",
+   "relative": "只收定義資料夾內的相對（不准 ..、不准資料夾）",
+   "absolute": "不收（設計：InterfaceBad／CfgBad）",
+   "env": "不收（要字串）",
+   "writer": "人手寫／範本",
+   "fix": "不屬「指到外面」：是定義內的檔名，照現行限制即可，不補"
+  },
+  {
+   "id": "P12 cli-json-tools",
+   "where": "eca 定義 cli.json 的 `tools`（登記檔路徑）",
+   "reader": "Python lib/agent/cli_session.py load_cfg 86-109、registry 154-171（plain json.load，不解指示詞）",
+   "relative": "收，從 cli.json 的資料夾算（162）",
+   "absolute": "收（os.path.join）",
+   "env": "不收：實測 {\"tools\": {\"$env\": \"TMX\"}} ＝ CfgBad `tools must be the path of a registry file (a non-empty string)`",
+   "writer": "人手寫（範本不寫，走同層 tools.json 或 interfaces.json 宣告）",
+   "fix": "Python：load_cfg 讀完若 tools 是物件，交 `aos-json get --resolve <cli.json>#/tools`（或 aos-directive，cwd＝tool_dir）解成字串再照舊；其他鍵不動。低優先（少用）"
+  },
+  {
+   "id": "P13 llm-json",
+   "where": "定義與 stack 的 llm.json",
+   "reader": "Python cli_session.py read_llm 112-123／stack_copies 140-151；templates/agent-fsm/brain.py read_llm（endpoint／model）",
+   "relative": "—（沒有路徑欄：只有 model、endpoint 代號）",
+   "absolute": "—",
+   "env": "不解（plain json.load）；代號兩台同名就不用換（two-machines/02）",
+   "writer": "人、aos-agent llm set（stack 那份）",
+   "fix": "不屬路徑欄，不補"
+  },
+  {
+   "id": "P14 loop-json-exec",
+   "where": "loop.json `exec`（字串／陣列目標，或內嵌單子）；ctl／state／state_flux 窗名",
+   "reader": "C++ aos-loop（impls/aos-loop/docs/01-用法.md 19-24、44；02-窗.md 7）",
+   "relative": "字串／陣列目標從 aos-loop 的 cwd 算（loop 不 cd 不轉；經 aos-exec 起時 cwd＝定義資料夾）；內嵌單子裡相對從 loop.json 的資料夾算；窗名在 $AOS_STACK 底下",
+   "absolute": "收",
+   "env": "收（exec 整格解，單子留到每次跑由 run_inst 解）",
+   "writer": "人手寫；daemon 起 loop 型 proc 時把 exec 寫進 proc stack 的 loop.json 成 {\"$env\":\"AOS_DAEMON\",\"$path\":相對 daemon stack}（child.cpp spawn 165-174）",
+   "fix": "不必補"
+  },
+  {
+   "id": "P15 fsm-json-exec",
+   "where": "fsm.json `states.<名>.exec`（字串／陣列／單子）、`$ref` 拆檔",
+   "reader": "C++ aos-fsm（impls/aos-fsm/docs/01-用法.md 14-22、30）",
+   "relative": "字串／陣列從 fsm 的 cwd 算（通常是定義資料夾）；單子裡相對從 fsm.json 資料夾算；$ref 從 fsm.json（解開捷徑）的資料夾",
+   "absolute": "收",
+   "env": "收（範本 reviewer/fsm.json 用 {\"$env\":\"AOS_CD\",\"$path\":\"../agent-fsm/idle.py\"}）",
+   "writer": "人／範本；copy-out 改 AOS_CD 形（copy-out 154-163）",
+   "fix": "不必補"
+  },
+  {
+   "id": "P16 body-json",
+   "where": "aos-agent 宣告的 entry（範本 body.json＝[\"aos-loop\", \"loop.json\"]）",
+   "reader": "C++ aos-exec（單子規則，同 P05）；aos-agent ctl add 只看它存在（add.py 64-70）",
+   "relative": "收（同 P05，從 body.json 的資料夾）",
+   "absolute": "收",
+   "env": "收",
+   "writer": "範本",
+   "fix": "不必補"
+  },
+  {
+   "id": "P17 kernel-json-exec",
+   "where": "llm kernel 的 kernel.json：頂層 `exec`、`endpoints.<代號>.exec`、`endpoints` 的 $ref（例 [\"endpoints.json\", \"../local/endpoints.json\"]）",
+   "reader": "C++ aos-llm-kernel（impls/aos-llm-kernel/docs/01-用法.md 14、22、26、30）",
+   "relative": "收，從 kernel 定義資料夾（kernel.json 所在）算，kernel 轉絕對寫進掛信；$ref 從寫著它的檔",
+   "absolute": "收",
+   "env": "收：頂層 exec 等整格先解；每組端點的指示詞用到那組時才解、解不開＝那封 DirectiveBad、kernel 照跑（two-machines/02 實測 1～3）",
+   "writer": "人手寫；範本 kernel/llm-kernel/kernel.json 寫 `../../lib/base/llm_http`（只在 repo 裡對）。copy-out 不管 kernel/（copy-out 329 只收 templates/ 底下有 _entry 的）",
+   "fix": "讀端不必補。Python 加法：copy-out 擴到 kernel/ 底下的定義（同一套 fix()），或 init 樣板直接寫經錨點的形"
+  },
+  {
+   "id": "P18 kernel-budget-senders",
+   "where": "kernel.json `budget.senders` 的 key（寄件人＝agent 的工作區）",
+   "reader": "C++ aos-llm-kernel budget（docs/02-token-回報與額度.md 49-50）",
+   "relative": "收，從 kernel 定義資料夾算，再轉成相對 kernel stack 的 key；整包搬、相對位置不變就同一格帳（04-已知限制.md 20）",
+   "absolute": "收",
+   "env": "key 不能寫指示詞（JSON key 只能是純字串）；能做的是整個 senders（或 budget）寫 {\"$ref\": \"../local/senders.json\"}，那份本機檔裡寫絕對（budget 整格會解，01-用法.md 30）",
+   "writer": "人手寫",
+   "fix": "不動 C++；文件寫明「要換台不同就 $ref 一份 local 檔」"
+  },
+  {
+   "id": "P19 daemon-json-procs",
+   "where": "定義 daemon.json `procs.<名>` 的 `exec`、`ws`、`stack`、`def`（procs_ctl.json、ctl 信同形）",
+   "reader": "C++ aos-daemon：procs.cpp fix_path 60-73、192-194，exec_of 90-104；docs/05-信箱.md 34、50-53",
+   "relative": "收，從 daemon 的 cwd（＝aos-exec 進定義資料夾後的真實路徑）算、轉絕對",
+   "absolute": "收",
+   "env": "收，而且「活的」：每次 daemon 起都重讀 daemon.json、有設定的列用新設定起（reconcile.cpp start 28）。實測 ws={\"$env\":\"TMWS\"}，換 TMWS 重起後表上 ws 跟著換",
+   "writer": "人手寫（範本 kernel/*/daemon.json、root_def）",
+   "fix": "不必補"
+  },
+  {
+   "id": "P20 daemon-json-body",
+   "where": "daemon.json 頂層 `exec`（daemon 的身體），例 kernel/daemon-judge/daemon.json [\"aos-exec\", \"../../lib/aos/judge\", {\"$env\": \"AOS_CD\", \"$path\": \"judge.json\"}]、llm-kernel [\"aos-llm-kernel\", \"kernel.json\"]",
+   "reader": "C++ aos-daemon → 單子規則（P05）；judge 本身 lib/aos/judge/_entry 128-148 從 $AOS_DAEMON 找表與信箱",
+   "relative": "收（從定義資料夾）",
+   "absolute": "收",
+   "env": "收",
+   "writer": "人手寫；判官範本的 `../../lib/aos/judge` 抄出 repo 就斷，copy-out 不管 kernel/",
+   "fix": "同 P17：copy-out 擴到 kernel/（Python）。judge.json 只有名字與數字、沒有路徑"
+  },
+  {
+   "id": "P21 ctl-add-xxx-def",
+   "where": "`aos-agent ctl add XXX`（與 aos-daemon-ctl add XXX／--def）→ 表上 `def`、`exec`、`launch`",
+   "reader": "Python cmd/aos-agent/aos_agent/ctl/add.py 57（abspath，字面不解捷徑）→ py/daemon_ctl/entry.py add_letter 154-204 → C++ daemon 存表 child.cpp row 253-285（rel_to，refs.cpp 8-41）；之後讀者 aos-agent decl.py def_of、daemon adopt.cpp 155-168",
+   "relative": "收（從呼叫時 cwd）",
+   "absolute": "收",
+   "env": "只能殼展開（ctl add \"$X/a\"），當下凍成路徑。信本身可帶指示詞，但 daemon 套信時就解掉，表上存解完的相對路徑；信箱加的列重起時照表上 launch 重放、不回頭看信（reconcile.cpp start 28、69-71、164）",
+   "writer": "daemon 寫 procs_state.json：一律相對 daemon stack 的真實路徑（實測 exec/def `../../agents/p/run`）。image 裡＝搬家不斷；image 外＝存成爬出去的 `../../../…`，兩台相對位置不同就斷；image 根本身若經捷徑進來（字面路徑 vs 真實基準）也會爬錯",
+   "fix": "Python：add_letter（或 aos-agent ctl add）算出的相對路徑若爬出 image 根（找得到 image.json 就用它，否則爬出 daemon stack 上兩層）印一行 warning，建議改經 image 內的捷徑（.aos-proto8／kb／local/…）。要讓 env 寫法在表上「活著」＝要動 C++：aos-daemon 套信與存表（procs.cpp fix_path 60-73／192-194、child.cpp row 253-285、reconcile.cpp start 28／69-71、adopt.cpp 155-168）保留指示詞原形、每次起再解"
+  },
+  {
+   "id": "P22 ctl-add-ws",
+   "where": "`aos-agent ctl add -w WS`（aos-daemon-ctl add -w）→ 表 `ws` → 子的 AOS_WS（eca 的 CLI cwd）",
+   "reader": "Python add.py 86-88、entry.py 164-169 → C++ fix_path、row 263-266；子行程環境 AOS_WS",
+   "relative": "收（從 cwd；沒給＝非空 $AOS_WS，再沒有＝cwd）",
+   "absolute": "收",
+   "env": "同 P21：殼展開、凍結。實測：daemon.json 寫 $env 的列換環境重起後 ws 換成 wsB；信箱 -w 加的列仍是 wsA",
+   "writer": "daemon 存相對 daemon stack（實測 `../../../outside/wsA`）",
+   "fix": "同 P21"
+  },
+  {
+   "id": "P23 ctl-add-stack",
+   "where": "`aos-agent ctl add -s S` → 表 `stack`",
+   "reader": "Python add.py 89-93、entry.py 170-173 → C++ row 264；aos-agent／daemon_ctl 拼回",
+   "relative": "收（從 cwd；沒給＝<daemon stack>/procs/<名>）",
+   "absolute": "收",
+   "env": "同 P21",
+   "writer": "daemon 存相對 daemon stack（預設 procs/<名>）",
+   "fix": "同 P21"
+  },
+  {
+   "id": "P24 ctl-add-envs",
+   "where": "`aos-agent ctl add --envs K=V` → proc stack 的 exec.json（單子 {argv: [aos-exec, --, XXX], envs}）",
+   "reader": "Python add.py 46-51 → entry.py 179-188 包單子 → C++ daemon 寫進小格 exec.json（child.cpp pin_cwd 136-144 只改 cwd 與 $ref，不改 argv）",
+   "relative": "值照字面",
+   "absolute": "值照字面",
+   "env": "值不收指示詞（只收 K=V 字串，殼展開後凍結）",
+   "writer": "aos-agent。**現有破口**：包單子時 argv 的 XXX 存絕對路徑、daemon 不改寫 argv，實測 procs/pe/exec.json 留 `/tmp/…/agents/p/run`——帶 --envs 掛的 agent 換台就起不來",
+   "fix": "Python：entry.py 188 把目標寫成 {\"$env\": \"AOS_DAEMON\", \"$path\": 相對 daemon stack 的真實路徑}（aos-exec 解 argv 指示詞；跟 daemon 給 cwd 同一套）；add_letter 要多拿 daemon stack（呼叫端 aos-agent 有 daemon_path）。值的 env 形可選加 `--envs-from K=VAR` 存 {\"$env\": \"VAR\"}"
+  },
+  {
+   "id": "P25 daemon-table",
+   "where": "daemon stack 的 procs_state.json 每列 `stack`／`ws`／`exec`／`def`／`launch`，proc stack 的 loop.json／exec.json",
+   "reader": "C++ aos-daemon adopt.cpp 23、155-168（從新的 stack 拼回）；Python daemon_ctl、aos-agent、judge（經 aos-directive）",
+   "relative": "存的就是相對 AOS_DAEMON（真實路徑）",
+   "absolute": "舊表的絕對照用（docs/03 59）",
+   "env": "proc stack loop.json 的 exec、內嵌單子 cwd 存 {\"$env\":\"AOS_DAEMON\",\"$path\":…}（child.cpp 136-144、165-174），表本身存解完的字串",
+   "writer": "daemon 自己",
+   "fix": "只有 P21～P24 的來源要補；表本身不動"
+  },
+  {
+   "id": "P26 eca-workdir",
+   "where": "eca 的工作目錄＝CLI 的 cwd＝$AOS_WS；小格 .session_home",
+   "reader": "Python cli_session.py call_main 615、start 733（tmux -c ws）、session_here 310-326",
+   "relative": "AOS_WS 由 aos-exec／daemon 給絕對（來源見 P22）",
+   "absolute": "—",
+   "env": "就是 AOS_WS",
+   "writer": "cli_session mark_session 286-296 寫 .session_home（realpath 的 ws 與帳號資料夾；機器記號、點開頭被 stack.gitignore 擋）",
+   "fix": "不必補：換位置＝認出不是這台、開新對話接紀錄（設計如此）"
+  },
+  {
+   "id": "P27 eca-cell-txt",
+   "where": "小格 ws.txt／tool.txt／stack.txt",
+   "reader": "Python cli_session.py open_cell 807-818（join 小格）、hook_main 676-678",
+   "relative": "收（寫的就是相對小格）",
+   "absolute": "讀時收（os.path.join 遇絕對直接用）",
+   "env": "不收（純文字檔）",
+   "writer": "cli_session note_cell 249-257：每輪 ask（557）、attach（798）、aos-eca-screen open（149）前重寫成相對小格。tool.txt 來自 AOS_CD／realpath：定義若是指進 repo 的捷徑，相對路徑會爬過家目錄；下一輪就重寫，只影響「搬完還沒答一輪就 attach」",
+   "fix": "不必補（自己寫自己讀、每輪重算）"
+  },
+  {
+   "id": "P28 eca-cell-generated",
+   "where": "小格 mcp.json、transcripts/<kind>-<id>.jsonl 捷徑、stack 的 sweeper_report 等",
+   "reader": "claude（--mcp-config）、人",
+   "relative": "—",
+   "absolute": "寫絕對（cli_session.py mcp_argv 184-192；link_transcript 351 os.symlink(abspath)）",
+   "env": "—",
+   "writer": "每次起 CLI 前重寫／拿到 id 就建；stack.gitignore 擋 mcp.json、transcripts/",
+   "fix": "不必補（機器本地、可重建、不進 git）"
+  },
+  {
+   "id": "P29 agents-new",
+   "where": "agents 工具 op new 生的子定義：新 tools 檔的 path、抄來的捷徑／_memory.json／_entry、父的 children.json",
+   "reader": "Python lib/agent/agents/_entry build_def 395-447、rebase_tools 381-393；children.json 由 stack_rel 250-251",
+   "relative": "tools 檔 path 存相對新位置（391、446），但只做字串換算：from 經 read_path realpath（193-197）——from 指 repo 範本（含經 .aos-proto8）時 src 變成 repo 真實路徑，換算出來是爬過家目錄的 `../../../repo/…`，兩台不同就斷。copytree(symlinks=True)（399）原樣抄範本裡的相對捷徑與 _memory.json／_entry 相對路徑，不做 copy-out 那套改寫：從 repo 範本生時 tools/memory 的 `../../../../lib/...` 捷徑在新位置是斷的（讀碼，未實跑）",
+   "absolute": "tools 檔裡原本絕對的照抄；tools 參數 path 絕對照用再轉相對（lex_path 200-204、446）",
+   "env": "參數只收字串（不收 $env）；寫出的檔也不會有 env 形",
+   "writer": "agents 工具（腦叫）；children.json 存相對 $AOS_DAEMON（OK）",
+   "fix": "Python：build_def 對 repo 裡的目標改用跟 aos-tools stored_path／copy-out fix 同一套（經新定義的 .aos-proto8 錨點，並建錨點、寫 .gitignore），from 是 repo 範本時直接呼叫 copy-out 的改寫；from 改用字面路徑（不 realpath）再判斷在不在 proto8"
+  },
+  {
+   "id": "P30 agents-args",
+   "where": "agents 工具參數 def／from／ws／tools[].path（腦給的）",
+   "reader": "Python agents/_entry read_path 193-197、lex_path 200-204",
+   "relative": "收，從 $AOS_WS 算",
+   "absolute": "收",
+   "env": "不收（要非空字串，ArgumentsBad）",
+   "writer": "腦",
+   "fix": "不必補（腦給的是當下這台的路徑，結果寫成什麼見 P21／P29）"
+  },
+  {
+   "id": "P31 self_tools-path",
+   "where": "self_tools 參數 path（腦給，加進自己的覆蓋層）",
+   "reader": "Python lib/agent/self_tools/_entry tool_path 65-77",
+   "relative": "收，從 $AOS_WS 算，解開後要在 ws 或 lib/ 裡",
+   "absolute": "只收 lib/ 底下",
+   "env": "不收",
+   "writer": "→ aos-agent tools add → aos-tools stored_path（repo 裡＝經錨點，P03）",
+   "fix": "不必補"
+  },
+  {
+   "id": "P32 fs-shortcuts",
+   "where": "資料夾內的捷徑：.aos-proto8 錨點、image 根 kb、範本 tools/memory 的 _tooldef/_metainfo 捷徑、memory_write/_memory.json -> ../memory/_memory.json、使用者自己放的 ws／知識庫捷徑",
+   "reader": "OS（所有讀者經檔案系統）；copy-out --relink 掃（relink 255-304）；aos-tools PathMissing 提示 relink（272）",
+   "relative": "收（相對捷徑從捷徑所在資料夾算；copy-out 抄出時把指進 repo 的相對捷徑改成經錨點，191-199）",
+   "absolute": "收",
+   "env": "不可能（捷徑目標是純字串，OS 不展開）",
+   "writer": "copy-out／aos-tools add --overlay 建錨點，一律寫這台 proto8 的絕對路徑（make_anchor 109-130、stored_path 527-537；PROTO 從自己的 realpath 推，不看環境變數）；kb 由人放",
+   "fix": "Python：copy-out --relink 加 `--to DIR`（給了就指那裡；不給才照自己的位置），使用者可寫 `copy-out --relink --to \"$AOS_PROTO8\" ROOT`；make_anchor 對「已有、指向存在的 proto8 的相對捷徑」視為 already（現在只認 readlink==PROTO，相對錨會被改寫成絕對）——兩條都是讓「使用者自己準備錨點」不被工具蓋掉"
+  },
+  {
+   "id": "P33 AOS_LLM_KERNEL",
+   "where": "環境變數 AOS_LLM_KERNEL（llm kernel 的 stack）",
+   "reader": "C++ impls/aos-llm/src/send/send.cpp kernel() 17-34",
+   "relative": "收，從 $AOS_DAEMON 算（沒設＝cwd）",
+   "absolute": "收",
+   "env": "本身是環境變數（定義 .env 可寫 ${AOS_CD}/..，kernel/docs/01-llm-kernel.md 53）",
+   "writer": "人：根殼、.env、local/env",
+   "fix": "不必補"
+  },
+  {
+   "id": "P34 AOS_KERNEL",
+   "where": "環境變數 AOS_KERNEL（判官收件箱）",
+   "reader": "Python cmd/aos-agent/aos_agent/common.py kernel_box 117-120（realpath）、py/daemon_ctl/post.py mailbox_of 29-34（abspath）",
+   "relative": "收，但從 cwd 算——跟 AOS_MEMORY、AOS_LLM_KERNEL（從 $AOS_DAEMON）不一致",
+   "absolute": "收",
+   "env": "本身是環境變數",
+   "writer": "人：根殼、.env",
+   "fix": "Python：兩處改成相對時先接 $AOS_DAEMON（有設才接），跟另外兩個同基準"
+  },
+  {
+   "id": "P35 judge-files",
+   "where": "判官範本 kernel/daemon-judge（daemon.json 見 P20）、judge.json、stack 的 judge_ordered.json",
+   "reader": "Python lib/aos/judge/_entry 128-148（ctl 信箱＝$AOS_DAEMON/<procs_requests>）、250-266",
+   "relative": "judge.json 由 argv 給（範本用 {\"$env\":\"AOS_CD\",\"$path\":\"judge.json\"}）；judge.json 本身沒有路徑欄",
+   "absolute": "keep_ordered 時 judge_ordered.json 的 reply_to 存絕對（256、266），stack.gitignore 沒擋",
+   "env": "—",
+   "writer": "判官每輪寫",
+   "fix": "Python（低優先）：judge_ordered.json 的 reply_to 存相對 requests 信箱根、讀時拼回；只影響收工時還在飛、開了 keep_ordered 的信"
+  }
+ ]
+}

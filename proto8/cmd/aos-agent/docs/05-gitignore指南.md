@@ -56,6 +56,7 @@ cp "$P/cmd/aos-agent/stack.gitignore" "$STACK/.gitignore"
 **/.sweeper.lock
 **/.sweeper_pending.json
 **/stderr.txt
+# 11-10 以前的畫面 socket；之後放在 ${XDG_RUNTIME_DIR:-/tmp}/aos-tty-<uid>/，不在 stack 裡
 **/tty.sock
 **/lock
 **/sender.flock
@@ -95,14 +96,10 @@ B 有兩個檔名無法解決的界線。其一，`endpoints.json` 在 kernel st
 
 要保存一致的狀態，先讓使用中的 daemon 整棵 shutdown，再由你自行檢查、commit、push。根 daemon 與另一個專案的 llm kernel 各自保存；`AOS_LLM_KERNEL` 由你在新機指向那邊已啟動的 kernel，aos 不替你安排兩個 repo 的同步。
 
-分類表先保留在途 kernel 請求，避免只因寄件人此刻不在就靜默丟工作；但跨 repo 的請求、端點單子及回信地址可能指向舊位置。**這項保存政策待隊長裁**。帶走信件不等於另一個 repo 已同步，也不保證舊地址能回到新位置；若你的兩份 repo 分開搬，請一併確認尚未完成的工作與路徑。
+kernel 收件匣裡排隊、在途的信（`requests/new/`、`requests/cur/`）**樣板與指南都不擋、照帶**（使用者 11-10 裁「都按照推薦」）：避免只因寄件人此刻不在就靜默丟工作。代價：換台前最好讓 kernel 把它們處理完，否則接受重寄——帶走的信在另一台被答時，回信地址可能指向舊位置、**回信可能沒人收**；寄件那邊的 agent 發現信不在 kernel 了會自己重寄一次（11-10 起 wait 格會認）。帶走信件不等於另一個 repo 已同步；兩份 repo 分開搬時，請一併確認尚未完成的工作與路徑。
 
 git 不保存空資料夾。本次 clone 實跑，一般 daemon 控制信箱、已進入初始化流程的 agent 信箱與 kernel `requests/` 會建回；未使用的領班 ctl 回信箱、尚未進入 idle 的子 agent `queue/` 則按需建立。
 
-**目前有一個需要修零件的邊界**：子 agent 保留 `think/pending.txt`，但它的空 `think/reply/` 沒被 git 保存時，wait 直接續收，沒有先補信箱，首次出現以下錯誤，接著 `BrainFailed`、`RunFailed`；後續失敗重寄才建回目錄，不代表首次續收成功。回歸工具將這項 clone 在途接續列為 `expectedFailure`，不是要求使用者多跑一道檢查。
-
-```text
-aos-llm: error: MailboxMissing mailbox not found: /tmp/aos-gitignore-li3r9mqb/other-prefix/deep/something/stacks/root/procs/foreman/procs/child-worker/think/reply
-```
+**11-10 已修**（`55bc1205b`）：子 agent 保留 `think/pending.txt`、空的 `think/reply/` 沒被 git 保存時，wait 現在會先補回信箱再續收；以前首次會報 `MailboxMissing`。
 
 任意自行建立的信箱仍須按 `aos-post init` 的契約準備；單獨實跑確認，一般 `aos-post send` 不會替缺少的空信箱補好。新機上的執行檔、路徑、外部知識庫與 CLI 登入，也仍由你準備。

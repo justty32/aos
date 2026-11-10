@@ -1,0 +1,224 @@
+{
+ "contract": "wf-table/1",
+ "source": "13-施工結果/03-不同之處與留給明天.md",
+ "extracted": "2026-11-10",
+ "description": "11-10 午後施工抓到、留給明天或大修的問題；B01～B04 會在日常用法碰到，其餘是訊息、邊緣或大修題。",
+ "columns": [
+  "id",
+  "status",
+  "what",
+  "found_by",
+  "symptom",
+  "direction",
+  "needs"
+ ],
+ "rows": [
+  {
+   "id": "B01",
+   "what": "專案外的 stack／定義換了相對位置就起不來",
+   "found_by": "TA bug 1",
+   "symptom": "表上 ws／def／exec 存成相對根 stack 的路徑，使用者給的絕對路徑沒留下；B 機相對位置不同＝WsMissing／EntryMissing，重起 3 次後 stopped（信不掉、沒人答）",
+   "direction": "表上也記使用者給的形（絕對或 $env），或讓 ctl add 收 {\"$env\": …}；現在的解法是 ctl rm 再 add",
+   "needs": "改既有對外介面、要使用者點頭",
+   "status": "open"
+  },
+  {
+   "id": "B02",
+   "what": "shutdown 打斷 eca 正在答的那輪",
+   "found_by": "TA bug 2",
+   "symptom": "那封不重答、沒提醒；同一台再起，下一封會去 resume 一段沒建成的對話、失敗、掉信、進冷卻",
+   "direction": "要裁語意：收工打斷的那封要不要重答；技術上可在 resume 失敗且找不到對話時刪 session.txt",
+   "needs": "使用者裁＋cli_session.py／aos-eca-turn",
+   "status": "已修（55bc1205b）：被打斷的那封照裁定 5 不重答；下一封由 stored_here 認出對話沒存下、開新對話帶紀錄（test_daily 那條已綠）"
+  },
+  {
+   "id": "B03",
+   "what": "同一個帳號資料夾＋專案換路徑時 eca 卡住",
+   "found_by": "TD 實跑（T3 缺口 2）",
+   "symptom": "`.session_home` 不進 git；新路徑沒有記號檔→過渡補丁在帳號資料夾找到舊路徑的對話→當成這台的→resume 失敗→每輪一樣。實測錯誤：No conversation found with session ID",
+   "direction": "過渡補丁只認 projects/<這個 ws 換破折號>/ 那一夾，或過渡期結束後拿掉過渡補丁",
+   "needs": "cli_session.py",
+   "status": "已修（55bc1205b）：stored_here 只認這個工作區的專案夾，換路徑就開新對話帶紀錄"
+  },
+  {
+   "id": "B04",
+   "what": "新對話首輪失敗且 CLI 沒建檔",
+   "found_by": "T3 缺口 1",
+   "symptom": "冷卻到了的那封試探信白掉一封、failures 多加 1",
+   "direction": "新對話失敗時 transcripts 找不到就刪 session.txt 與記號檔",
+   "needs": "cli_session.py",
+   "status": "已修（55bc1205b）：新對話第一輪失敗且找不到對話檔＝刪 session.txt 與記號檔，下一封直接開新的"
+  },
+  {
+   "id": "B05",
+   "what": "ledger.jsonl、信封 sender 存絕對路徑",
+   "found_by": "TG、I3",
+   "symptom": "只是歷史紀錄、不拿來解路徑；但讓 gitignore 完整檢查的「追蹤檔不准有本機路徑」永遠紅",
+   "direction": "sender 改存相對 kernel stack，或那項檢查排除帳本類",
+   "needs": "C++（aos-util proc.cpp、aos-llm-kernel reply.cpp）",
+   "status": "open"
+  },
+  {
+   "id": "B06",
+   "what": "gitignore 完整檢查第 ③ 項紅",
+   "found_by": "TG",
+   "symptom": "shutdown、kill -9 兩個時點各 26 個追蹤檔含本機路徑（使用者寫的絕對路徑、外部知識庫設定、sender、子 daemon 公開 state、ledger）",
+   "direction": "調整檢查口徑（使用者寫的絕對路徑本來就允許），或等 B05",
+   "needs": "隊長或使用者裁口徑",
+   "status": "open"
+  },
+  {
+   "id": "B07",
+   "what": "daemon.json 的 $ref 一列壞，整台根起不來",
+   "found_by": "I3 A1",
+   "symptom": "another/ 少一個檔＝DirectiveBad、_clock、_sweeper 與所有 agent 一起停",
+   "direction": "解 procs.<名> 失敗時只把那列記成 stopped、其他照起",
+   "needs": "C++（aos-daemon daemon.cpp:86）",
+   "status": "open"
+  },
+  {
+   "id": "B08",
+   "what": "$ref 進來的檔的相對路徑、EntryMissing 只印字面值",
+   "found_by": "I3 A2",
+   "symptom": "相對路徑從引用者算，使用者自然會寫錯；錯誤只印字面值看不出從哪算",
+   "direction": "EntryMissing 加「從哪算、解成什麼」；文件寫清楚",
+   "needs": "C++（aos-exec）＋文件",
+   "status": "open"
+  },
+  {
+   "id": "B09",
+   "what": "budget.senders 的 key 對不上時安靜不生效",
+   "found_by": "I3 E1",
+   "symptom": "兩台相對位置不同、或 ws 不是專案根時，額度不擋",
+   "direction": "kernel 載入設定時路徑不存在就印 warning",
+   "needs": "C++（aos-llm-kernel budget.cpp）",
+   "status": "open"
+  },
+  {
+   "id": "B10",
+   "what": "幾條訊息不夠清楚",
+   "found_by": "I3",
+   "symptom": "AOS_LLM_KERNEL 指錯時信寫進別人的 repo，warning 沒說寫到哪；BudgetMissing 印絕對路徑不印 key；10 分鐘提醒沒說原因",
+   "direction": "照 I3 的建議句改",
+   "needs": "C++＋wait.py",
+   "status": "open"
+  },
+  {
+   "id": "B11",
+   "what": "kernel 排隊信進不進 git",
+   "found_by": "I3 C5",
+   "symptom": "commit llms 會把 requests/new、cur 的排隊信帶走；到另一台回信可能沒人收",
+   "direction": "方向題：擋或帶；要擋就跟「信不見會自己重寄」一起",
+   "needs": "使用者裁",
+   "status": "已裁（使用者 11-10「都按照推薦」）：樣板與指南不擋、照帶；代價寫進 05-gitignore指南"
+  },
+  {
+   "id": "B12",
+   "what": "env 模式的 tooldef／metainfo 是快照複本",
+   "found_by": "TC",
+   "symptom": "repo 改了 lib/agent/memory/_tooldef.json，抄出去的那份不會跟著變",
+   "direction": "aos-directive 讓 $ref 的值也能是 $env，就能改回指過去",
+   "needs": "C++（aos-directive）",
+   "status": "open"
+  },
+  {
+   "id": "B13",
+   "what": "clone 後在途的子 agent 首次續收 MailboxMissing",
+   "found_by": "TG",
+   "symptom": "think/pending.txt 帶走了、空的 think/reply/ 沒進 git，wait 直接 recv",
+   "direction": "wait.py 有 pending 時先 aos-post init 回信箱（TS 第 1 點）",
+   "needs": "TS",
+   "status": "已修（55bc1205b）：有 pending 時 recv 前先補回信箱"
+  },
+  {
+   "id": "B14",
+   "what": "aos-lock 認主分不出同一工作區的兩方",
+   "found_by": "TX2",
+   "symptom": "身分一樣就當成自己的",
+   "direction": "每次拿鎖給 token，release 帶 token",
+   "needs": "C++、對外加法",
+   "status": "open"
+  },
+  {
+   "id": "B15",
+   "what": "清道夫不管 stack 外的鎖殘骸",
+   "found_by": "TX2",
+   "symptom": "知識庫裡 memory_write 的節點鎖殘骸沒人清",
+   "direction": "—",
+   "needs": "大修",
+   "status": "open"
+  },
+  {
+   "id": "B16",
+   "what": "問腦被 pause 的列沒兜底",
+   "found_by": "TX2",
+   "symptom": "pause 的列照樣是 running、一直佔格",
+   "direction": "—",
+   "needs": "大修",
+   "status": "open"
+  },
+  {
+   "id": "B17",
+   "what": "aos-tools 的 kind_of 仍用 +x 判型",
+   "found_by": "TX",
+   "symptom": "/mnt/c 上把 JSON 工具當成可執行檔（工具清單的種類欄會錯）",
+   "direction": "改成 from daemon_ctl.entry import is_program",
+   "needs": "Python 一行",
+   "status": "open"
+  },
+  {
+   "id": "B18",
+   "what": "aos-agent ctl ls --json 沒有 auto_restart 欄",
+   "found_by": "T4",
+   "symptom": "用 aos-agent 看不出哪隻開了",
+   "direction": "ctl/ls.py 加一欄",
+   "needs": "Python",
+   "status": "open"
+  },
+  {
+   "id": "B19",
+   "what": "文件小洞",
+   "found_by": "TC",
+   "symptom": "cli_session.py 檔頭講 tools 的註解沒提指示詞；wf/workflows/dev-env.md 還寫 copy-out「路徑改絕對」",
+   "direction": "順手改",
+   "needs": "文件",
+   "status": "open"
+  },
+  {
+   "id": "B20",
+   "what": "使用者原本就留給大修的",
+   "found_by": "使用者 11-10",
+   "symptom": "設計-44；adopt 接回失敗看不到原因",
+   "direction": "—",
+   "needs": "大修",
+   "status": "open"
+  },
+  {
+   "id": "B21",
+   "what": "daemon 層的重起退避",
+   "found_by": "圖紙 06",
+   "symptom": "退避現在做在 agent 那層（cooldown.json）；通用解是 daemon 的 restart_delay_ms 之類",
+   "direction": "—",
+   "needs": "大修、C++",
+   "status": "open"
+  },
+  {
+   "id": "B22",
+   "what": "檔太長",
+   "found_by": "T3、TA",
+   "symptom": "cli_session.py 945 行、aos-eca-turn 470 行、test_daily.py 933 行（慣例 300 行要考慮拆）",
+   "direction": "開場白那段拆模組；test 的 helper 拆 _daily_lib.py",
+   "needs": "重構",
+   "status": "open"
+  },
+  {
+   "id": "B23",
+   "what": "aos-agent ctl add --help 教「rm 再 add」，但 aos-agent ctl rm 會刪 stack",
+   "found_by": "TD 實跑",
+   "symptom": "add 的說明寫「ctl rm, then ctl add --auto-restart (rm keeps the stack)」；aos-agent ctl rm 其實會刪 stack，而且不在終端機時不問。照說明做會丟 history；aos-daemon-ctl rm 才留 stack",
+   "direction": "說明改成 aos-daemon-ctl -d <stack> rm <名> 再 aos-agent ctl add（11-10 TD 實跑：stack 留著、history 接著）",
+   "needs": "Python 說明一句",
+   "status": "已改：兩支 add 的 --help 由隊長改成 aos-daemon-ctl rm（留 stack）"
+  }
+ ]
+}

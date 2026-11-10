@@ -5,9 +5,9 @@
 **別信、別帶的**：
 
 - 表與 state 窗的 `pid`、`started_at_ticks`、`boot_id` 是上一台（上一次）的；新 daemon 對不上就當「沒在跑」，照起、照醒。state_flux 窗的 `responded_at` 也是舊值，父接回時以接回那一刻為基準，不拿它判卡住。
-- eca（claude／codex 當 agent）的對話本體在那台的 `~/.claude/projects/…`，image 裡只有 `session.txt` 的 id；換一台 `--resume` 找不到就從頭開（`history.jsonl` 還在、看得到以前聊什麼）。`transcripts/` 的 symlink 到別台是斷的，無害。畫面的 `tty.sock` 是死的，醒來 `aos-agent open` 重開。
+- eca（claude／codex 當 agent）的對話本體在那台的 `~/.claude/projects/…`，image 裡只有 `session.txt` 的 id；換一台時 eca 在交信之前就認出「這段對話不在這台」（小格的記號檔 `.session_home` 不進 git），改開新對話、把 aos 記的 `history.jsonl` 整理成開場白接著做，換台本身不掉信（11-10，[兩台輪流](04-兩台輪流.md)）。`transcripts/` 的 symlink 到別台是斷的，無害。畫面的 tmux socket 不在 stack 裡（11-10 起在 `${XDG_RUNTIME_DIR:-/tmp}/aos-tty-<uid>/`，檔名是小格 realpath 的雜湊），搬了位置或換台＝雜湊不同＝畫面當作沒開，醒來 `aos-agent open` 重開。
 - git 不收空資料夾（信箱的 `tmp/ new/ cur/`、工具小格）：第一圈 daemon、aos-post、aos-tools 會自己建回，不用管。
-- **只在 Linux 檔案系統 checkout**：Windows 端 checkout 會丟 `+x`（定義裡的 `_entry`）、`core.autocrlf` 會在 `stage.txt`、`_entry` 尾巴加 `\r`；`/mnt/c` 底下又每個檔都 `+x`（aos-exec 會把 JSON 當執行檔）。真的要過 Windows，pull 完 `chmod +x` 那幾個 `_entry`，並放下面的 `.gitattributes`。
+- **用 WSL／Linux 的 git checkout**：Windows 版 git checkout 會丟 `+x`、`core.autocrlf` 會在 `stage.txt`、`_entry` 尾巴加 `\r`，要過 Windows 版 git 就放下面的 `.gitattributes`。放在 `/mnt/c` 用 WSL 的 git 可以（11-10 起 aos-exec 看內容判型、不靠 `+x`）；但 `/mnt/c` 上新加的腳本 commit 時會掉 `+x`（`core.filemode=false`），新腳本要 `git update-index --chmod=+x <檔>`。
 - **`ws/.stack` 是捷徑**（指到別的磁碟）：就地照常跑（daemon 的基準點取 stack 的真實路徑，11-05 B 線）；但 `cp -a` 只帶走捷徑、新舊兩份會共用同一個實體 stack——搬家要把捷徑指到的實體一起帶走、換成真資料夾（自擔）。
 - 同一份 image 一次只在一台醒著：pull 前先 Ctrl-C；同一個 stack 已有 daemon 在跑，再 `aos-exec ../daemon` 會 `DaemonExists` 退 1。
 

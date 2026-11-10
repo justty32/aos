@@ -1,0 +1,134 @@
+{
+ "contract": "wf-table/1",
+ "source": "13-施工結果/03-不同之處與留給明天.md",
+ "extracted": "2026-11-10",
+ "description": "11-10 午後施工靠著、但沒在真機（真 claude／codex、真的兩台、真 LLM）驗過的假設；A01～A08 是 T3 回報那 8 條。",
+ "columns": [
+  "id",
+  "about",
+  "assumption",
+  "if_wrong",
+  "check"
+ ],
+ "rows": [
+  {
+   "id": "A01",
+   "about": "claude 畫面",
+   "assumption": "互動畫面的 Stop hook payload 帶 session_id，hook 靠它寫 session.txt＋記號檔",
+   "if_wrong": "畫面那條路永遠不寫記號檔，只能靠過渡補丁",
+   "check": "14 第 6 步開畫面時看小格有沒有 .session_home"
+  },
+  {
+   "id": "A02",
+   "about": "claude -p",
+   "assumption": "`--resume <不存在的 id>` 會失敗（非 0）",
+   "if_wrong": "若默默開新對話且退 0，session.txt 留舊 id，每輪都新開卻記不住",
+   "check": "14 第 1 步"
+  },
+  {
+   "id": "A03",
+   "about": "claude 對話檔",
+   "assumption": "在 <帳號資料夾>/projects/<cwd 換破折號>/<id>.jsonl；換 cwd 或換 CLAUDE_CONFIG_DIR 就 resume 不到",
+   "if_wrong": "比 ws／home 的判斷與「resume 失敗才刪」都失準",
+   "check": "14 第 2～4 步"
+  },
+  {
+   "id": "A04",
+   "about": "claude 失敗",
+   "assumption": "新對話第一輪失敗（額度、登入過期）時有沒有先建出 <id>.jsonl",
+   "if_wrong": "沒建的話，T3 缺口 1 會發生：下一封白掉",
+   "check": "額度用完時看一次 projects 夾"
+  },
+  {
+   "id": "A05",
+   "about": "codex",
+   "assumption": "`exec resume <不存在的 id>`：stderr 一行、退 1、不吐 thread.started",
+   "if_wrong": "若開新 thread 並吐新 id，現行程式在 resume 時不讀，session.txt 一直留舊的",
+   "check": "14 第 5 步"
+  },
+  {
+   "id": "A06",
+   "about": "codex",
+   "assumption": "失敗時也會先吐 thread.started",
+   "if_wrong": "讀不到 id，新對話 id 丟失、下一輪又開新的（跟今天以前一樣，不更差）",
+   "check": "額度用完時看一次 stdout"
+  },
+  {
+   "id": "A07",
+   "about": "codex 對話檔",
+   "assumption": "在 $CODEX_HOME/sessions/**/*<id>.jsonl",
+   "if_wrong": "過渡補丁與「resume 失敗才刪」找不到",
+   "check": "14 第 5 步後 ls 一次"
+  },
+  {
+   "id": "A08",
+   "about": "開場白長度",
+   "assumption": "最大 48 KB 經 stdin 給 claude -p 沒問題；畫面貼 8 KB 不會被截斷或半路送出",
+   "if_wrong": "開場白被截、或貼一半就送出",
+   "check": "14 第 6 步加長 history 後試"
+  },
+  {
+   "id": "A09",
+   "about": "兩台路徑",
+   "assumption": "兩台路徑第一層就不同時（/home 對 /mnt/c）回信地址會存絕對；budget.senders 的 key 對不上（讀碼推論）",
+   "if_wrong": "回信寄不回、額度不生效",
+   "check": "14 第 9 步"
+  },
+  {
+   "id": "A10",
+   "about": "/mnt/c",
+   "assumption": "數字只在公司這台量（9p drvfs、沒掛 metadata、WSL 2.7.3）",
+   "if_wrong": "別台或改了 wsl.conf 會不同",
+   "check": "家機沒有 /mnt/c，不適用"
+  },
+  {
+   "id": "A11",
+   "about": "/mnt/c 鎖殘骸",
+   "assumption": "偶發的 order.lock.releasing.* 殘骸（約每 200～300 次放鎖一次）是 9p 快取造成、無害",
+   "if_wrong": "若是別的原因，可能在別處留下會擋人的殘骸",
+   "check": "清道夫已清；大修再追"
+  },
+  {
+   "id": "A12",
+   "about": "舊 binary",
+   "assumption": "防副本接管與 as_written 的測試在舊 binary 上會紅（沒有舊版可親手驗）",
+   "if_wrong": "測試可能沒真的釘住那個 bug",
+   "check": "—"
+  },
+  {
+   "id": "A13",
+   "about": "真 LLM",
+   "assumption": "kernel 被停在一半的那封重跑一次只是多花一次錢",
+   "if_wrong": "接真 LLM 時重跑的成本或副作用比想的大",
+   "check": "接真端點時看 ledger"
+  },
+  {
+   "id": "A14",
+   "about": "WSL",
+   "assumption": "WSL 閒置自動關機、SIGHUP 時 daemon 乾淨收工",
+   "if_wrong": "沒收乾淨，下一次起根要靠接回與自癒",
+   "check": "沒測"
+  },
+  {
+   "id": "A15",
+   "about": "claude 專案夾命名",
+   "assumption": "stored_here 認為 claude 的專案夾名＝工作區真實路徑裡非英數字元都換成 -",
+   "if_wrong": "猜錯＝每輪都開新對話（變差：每輪附開場白、記得大意而已），但不會卡住",
+   "check": "14 第 6 步看 ~/.claude/projects/ 底下的資料夾名"
+  },
+  {
+   "id": "A16",
+   "about": "machine-id",
+   "assumption": "兩台的 /etc/machine-id 不同；整個 WSL distro 原樣複製到另一台時會一樣",
+   "if_wrong": "一樣時機器比對無效，只剩 ws、home 的比對",
+   "check": "14 第 9 步兩台各 cat /etc/machine-id"
+  },
+  {
+   "id": "A17",
+   "about": "畫面 socket",
+   "assumption": "daemon 和人的殼的 XDG_RUNTIME_DIR 不同時，靠「首選位置＋同雜湊的 /tmp 版＋小格舊 tty.sock」三處找得到開著的畫面",
+   "if_wrong": "attach 找不到 agent 開的畫面，兩個 CLI 搶同一段對話",
+   "check": "systemd 起 daemon 時試一次 aos-agent open"
+  }
+ ]
+}

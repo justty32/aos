@@ -1,0 +1,255 @@
+{
+ "contract": "wf-table/1",
+ "source": "13-施工結果.md",
+ "extracted": "2026-11-10",
+ "columns": [
+  "id",
+  "what",
+  "owner",
+  "stale_effect",
+  "self_heals",
+  "fix"
+ ],
+ "rows": [
+  {
+   "id": "L01",
+   "what": "`think/request.json`（fsm 的問腦請求）",
+   "owner": "think 格 brain.py 寫（templates/agent-fsm/brain.py:202-222）、wait 格 wait.py 讀與寄（wait.py:181-210）",
+   "stale_effect": "內容只有 `{endpoint, request:{messages: system＋整份 history, tools}}`（brain.py:202-209）：**沒有回信地址**（回信信箱是寄的那一刻用 `$AOS_STACK/think/reply` 給 aos-llm，wait.py:120、202；信封裡存相對信箱根，aos-post send.cpp:123-126）、**沒有絕對路徑**、工具清單只有名字／說明／參數（brain.py:144-147）。system 裡帶的是 think 那一刻 memory 工具印的知識庫根（brain.py:156-181）、工具清單是那一刻的登記檔。cp -a 帶過來＝跟 history、pending 是同一刻的快照，**一致、無害**：沒 pending 時 wait 照寄（endpoint 先跟現在的 llm.json 比，不同就退 11 重組，wait.py:184-189），頂多這一輪用的是舊 system／舊工具清單。實測（cp -a 到不同深度、不同 HOME）：沒刪也照答。**會壞的是 git 流程**：request.json 不進 git，`reset --hard` 後這台工作樹裡**自己上一次留下的舊 request.json** 還在，旁邊是新拉來的 history；沒 pending 時 wait 會把舊的那份寄出去＝答一題過時的問題。11-07 裁 20-3A「新機只清 request.json」的理由就在這：sol 審查 04-設計規劃/02-git-image.md:49、52（原本 `clean -fdX` 會連這台只留原機的紀錄一起刪，改成只刪 request.json）；request 可重建的本體是 11-06 git-image 裁定（thinking/2026-11/06/git-image/04-gitignore建議.md:72）",
+   "self_heals": "**不會自己認**：wait.py 只看「在不在」（wait.py:182-183）與 endpoint（188-189），不看它跟 history 對不對得上。現在靠 `aos-image thaw` 的 clear_requests 手動刪（py/aos_image_thaw.py:15-26、121-122）＝「換台後一定要先跑某指令」",
+   "fix": "補在 wait.py（擁有者）：寄之前比 `request.messages` 最後一則跟 `history.jsonl` 最後一行是否相同（brain 寫的時候兩者一定相同；wait 收到回信才往 history 接），不同＝退 11 回 think 重組。這樣 git 與 cp -a 都對，thaw 的刪除步可拿掉。純 Python、加法"
+  },
+  {
+   "id": "L02",
+   "what": "`think/pending.txt`、`think/reply/`（已寄出的問腦信與回信箱）",
+   "owner": "wait.py（wait.py:169-215）；回信箱是 maildir（aos-post）",
+   "stale_effect": "pending 記的是 kernel 信件名稱；kernel 的 `requests/new|cur/` 也在 image 裡，所以醒來接著收。**實測**：問題在飛（kernel 已掛上、端點還在跑）時停根、cp -a、新位置起根→**能答**；但中間有一次失敗（見 L19）",
+   "self_heals": "會：同樹的回信照收（wait.py:212-215），回信地址是相對信箱根（aos-llm send.cpp:117）",
+   "fix": "不用補（失敗那段在 L19）"
+  },
+  {
+   "id": "L03",
+   "what": "`think/sent.json`（寄出時刻與 endpoint）",
+   "owner": "wait.py:196-200 寫、221-233 讀",
+   "stale_effect": "只拿來算 observed 的 `elapsed_ms`；cp -a 帶過來＝那題的耗時把停機時間也算進去（實測 ledger 一題 47 秒）。只給人看",
+   "self_heals": "會（壞了只 warning，wait.py:232-233；下一封重寫）",
+   "fix": "不用補"
+  },
+  {
+   "id": "L04",
+   "what": "`think/wait_warned.txt`（等腦提醒印到第幾個 10 分鐘）",
+   "owner": "wait.py:143-167（以 `pending.txt` 的 mtime 起算）",
+   "stale_effect": "cp -a 保留 mtime，兩檔一致；結果是醒來後把停機時間也算成「等了很久」，可能馬上印一行 warning。git 流程才會錯配（mtime 變成 checkout 時刻、計數卻帶著）",
+   "self_heals": "會（寄新信與收回信時刪，wait.py:126-132、208、220）",
+   "fix": "不用補（stack.gitignore 照 files_in_git F22 擋掉即可）"
+  },
+  {
+   "id": "L05",
+   "what": "state／state_flux／procs_state 窗裡的 `pid`、`started_at_ticks`、`boot_id`",
+   "owner": "aos-daemon（impls/aos-daemon/src/daemon/adopt.cpp:46-66、142-217）",
+   "stale_effect": "**別台帶來**：boot_id 不同＝表上全當不在、照起照醒（adopt.cpp:142-144、53-56）——實測三台 daemon、兩隻 agent 全醒。**同一台、原樹還在跑時 cp -a 一份再起副本的根**：實測副本把原樹的行程**全部認成自己的**（7 列 pid 一模一樣，`/proc/<pid>/environ` 的 AOS_STACK 指原樹），副本的 llm／foreman 兩台 daemon 根本沒起（ping 失敗），停副本的根會把原樹的子項 TERM 掉",
+   "self_heals": "別台：會（boot_id）。同台另一份還在跑：**不會**——adopt 只比 pid＋ticks＋boot_id（adopt.cpp:212-217），不看那支行程是不是這個格的",
+   "fix": "要動 C++：adopt.cpp 的 live_in_cell 與表接回（212-217）多比 `/proc/<pid>/environ` 的 AOS_STACK＝這格（清道夫已這樣做，py/aos_sweep_proc.py:1-5）。Python 端最多在文件寫「cp -a 前先停根」"
+  },
+  {
+   "id": "L06",
+   "what": "`lock`（eca 小格的 flock 檔）、`sender.flock`、信箱 `.flock`、`.sweeper.lock`",
+   "owner": "lib/agent/cli_session.py:223-229；aos-post／aos-llm；py/aos_sweep.py:5、53",
+   "stale_effect": "都是 flock：鎖在行程身上、不在檔案內容裡，cp 過來只是一個空檔",
+   "self_heals": "會（新行程照常 flock 得到）",
+   "fix": "不用補"
+  },
+  {
+   "id": "L07",
+   "what": "`*.sock`（eca 畫面的 `tty.sock`）",
+   "owner": "cli_session.py:232-242（alive）、725-736（開畫面）",
+   "stale_effect": "cp -a 會把 socket 檔照樣複製（實測 `srw-------`）。tmux 連不上",
+   "self_heals": "會：實測 `tmux -S <舊 socket> has-session` 退 1（`no server running`）→ alive() 回 False → 走非互動；`new-session` 在舊 socket 上直接開得起來",
+   "fix": "不用補"
+  },
+  {
+   "id": "L08",
+   "what": "`busy.txt`（claude 畫面正在跑一輪）",
+   "owner": "cli_session.py:662（hook 寫）、684-685（hook 刪）、517-523（live 看）、729-731（開畫面時刪）",
+   "stale_effect": "只有「畫面開著」那條路看它；換台後畫面一定不在（L07），非互動那條不看",
+   "self_heals": "會：開畫面時先刪（cli_session.py:729-731）",
+   "fix": "不用補"
+  },
+  {
+   "id": "L09",
+   "what": "`order.lock/`（有序投遞的鎖資料夾）",
+   "owner": "aos-post（impls/aos-post/src/send/send.cpp:12、68）＋aos-lock（impls/aos-lock/src/lock/lock.cpp:1）",
+   "stale_effect": "只有選了 ordered 的寄法才用（預設不帶有序）。持有者是上一台的行程",
+   "self_heals": "會：拿不到時看持有者死活、死了收屍（send.cpp:12；lock.cpp 的收屍牌）",
+   "fix": "不用補"
+  },
+  {
+   "id": "L10",
+   "what": "`.sweeper_pending.json`（清道夫寫過 stop 的格）",
+   "owner": "py/aos_sweep_proc.py:5、14",
+   "stale_effect": "記的是上一台的行程；下一輪送訊號前會再比 pid＋ticks＋boot_id＋environ（aos_sweep_proc.py:1-5）",
+   "self_heals": "會（對不上就不動）",
+   "fix": "不用補"
+  },
+  {
+   "id": "L11",
+   "what": "`sweeper_report.json`、`stderr_archives/`",
+   "owner": "aos-sweeper（py/aos_sweep.py、aos_sweep_files.py）",
+   "stale_effect": "報告含上一台的 pid 與絕對路徑（實測三份都含舊路徑），只給人看；每輪重寫",
+   "self_heals": "會（下一輪覆蓋）",
+   "fix": "不用補"
+  },
+  {
+   "id": "L12",
+   "what": "`mcp.json`（claude 的 MCP 設定，含 --ws／--stack／登記檔絕對路徑）",
+   "owner": "cli_session.py:174-192",
+   "stale_effect": "內容是上一台、上一個位置的絕對路徑",
+   "self_heals": "會：每次起 claude 前重寫（cli_session.py:174、188-190）",
+   "fix": "不用補"
+  },
+  {
+   "id": "L13",
+   "what": "`tmux.conf`",
+   "owner": "cli_session.py:727-728",
+   "stale_effect": "無內容依賴",
+   "self_heals": "會：開畫面時重寫",
+   "fix": "不用補"
+  },
+  {
+   "id": "L14",
+   "what": "`transcripts/` 捷徑（指到 `~/.claude/projects/…`）",
+   "owner": "cli_session.py:329-354",
+   "stale_effect": "絕對 symlink，到別台是斷的；只給人看",
+   "self_heals": "半會：新對話的 id 不同，會另建新捷徑；**舊的斷捷徑不會被修**（已在就 return，cli_session.py:342-343）",
+   "fix": "可選（Python）：link_transcript 發現捷徑斷了就重找、重建；不影響執行"
+  },
+  {
+   "id": "L15",
+   "what": "`counter_*.txt`（--enable-counters 的計數器）",
+   "owner": "各 C++ 程式；只給人看（stack.gitignore 47 行附近）",
+   "stale_effect": "cp -a 帶過來＝kernel 的計數接著數（image-move-check 也驗這件事）；loop／daemon 的每次重起從 0",
+   "self_heals": "會（無害）",
+   "fix": "不用補"
+  },
+  {
+   "id": "L16",
+   "what": "`stderr.txt`",
+   "owner": "各 daemon 的 procs_stderr",
+   "stale_effect": "cp -a 帶過來＝上一台的錯誤行也在，新行附加在後；分不出哪行是哪台",
+   "self_heals": "會（無害）",
+   "fix": "可選：清道夫封存照舊；要分辨就看 root log 時間"
+  },
+  {
+   "id": "L17",
+   "what": "kernel 的 `queue.json`",
+   "owner": "aos-llm-kernel",
+   "stale_effect": "seen_at、隊序都是牆上時間；實測檔內沒有絕對路徑；接著排",
+   "self_heals": "會（無害）",
+   "fix": "不用補"
+  },
+  {
+   "id": "L18",
+   "what": "kernel 的 `used.json`（額度帳）",
+   "owner": "aos-llm-kernel",
+   "stale_effect": "額度窗照牆上時間算，接著扣；實測沒有絕對路徑",
+   "self_heals": "會（無害）",
+   "fix": "不用補"
+  },
+  {
+   "id": "L19",
+   "what": "kernel 的 `requests/cur/<信>/`（在途請求：`loop.json`、`proc.json`、`letter.json`、`request.json`）",
+   "owner": "aos-llm-kernel 掛 proc（impls/aos-llm-kernel/src/serve/proc.cpp:65、81；serve.cpp:255）",
+   "stale_effect": "**loop.json 的端點函數寫死絕對路徑**（`[\"aos-exec\", \"/…/舊位置/llm_def/slow_fake\"]`，proc.cpp:65）、proc.json 的 exec、sender 也是絕對。實測：舊位置還在（同台）＝**默默跑舊位置那份端點的程式**；舊位置不在（模擬別台）＝`aos-llm: error: EndpointFailed endpoint function exited with code 1: aos-exec: error: EntryMissing entry not found: /tmp/…/a/img/llm_def/slow_fake` → `agent-fsm: error: BrainFailed aos-llm recv exited 1` → `aos-loop: error: RunFailed run 2: fsm.json failed with exit code 1`",
+   "self_heals": "半會：開了 `--auto-restart` 的 fsm 走冷卻（wait.py:14-18、244-247），30 秒後用同一份 request.json 重寄、新請求的路徑是新的，實測答出來了；**沒開 auto-restart 的就停在 stopped 等人**（P-20）",
+   "fix": "要動 C++：proc.cpp 寫 loop.json／proc.json 時把端點路徑存成相對 kernel stack 的指示詞（`{\"$env\": \"AOS_DAEMON\", \"$path\": …}`，daemon 的 child.cpp:160-170 已是這種寫法），或重掛時從現在的 kernel.json 重解。Python 端沒辦法替它修"
+  },
+  {
+   "id": "L20",
+   "what": "信箱 `tmp/`（寫到一半的信）",
+   "owner": "aos-post（include/aos/post.hpp:6、32）",
+   "stale_effect": "半封信；「處理者永遠不看這格」（post.hpp:6）＝留著只佔空間",
+   "self_heals": "不會清，但無害",
+   "fix": "可選：清道夫加一條清舊的 tmp/（Python）"
+  },
+  {
+   "id": "L21",
+   "what": "`cooldown.json`（新：失敗後冷卻到幾點）",
+   "owner": "lib/agent/cooldown.py:60-80；wait.py:135-141、190-191",
+   "stale_effect": "until 是牆上時間；cp -a 帶過來＝在新位置照樣冷卻到那個時刻（兩台時鐘差不多時等於接著冷卻）；壞了＝當沒有（cooldown.py:43-50）",
+   "self_heals": "會（到期就 due、成功就刪，wait.py:261-264）",
+   "fix": "不用補（git 照 F25 擋）"
+  },
+  {
+   "id": "L22",
+   "what": "`.session_home`（新：這段 eca 對話是哪個 ws、哪個帳號資料夾開的）",
+   "owner": "cli_session.py:286-296（寫）、310-327（比）",
+   "stale_effect": "設計假設它「不跟著走」（點開頭被 git 擋），但 **cp -a 會帶過來**。只比 session、realpath(ws)、realpath(帳號資料夾)：兩台使用者名、image 位置一樣時（例如都 `/home/guanyu/aos/img`）會誤判「是這台的」→ `--resume` 一段這台沒有的對話 → 失敗、那封信掉、session 被清（cli_session.py:459-461）",
+   "self_heals": "半會：路徑不同（本案 guanyu／lorkhan）就認得出；路徑相同時要掉一封才自癒",
+   "fix": "Python、加法：記號檔多記 `/etc/machine-id`（讀不到就記 hostname），比對時一起比"
+  },
+  {
+   "id": "L23",
+   "what": "`procs_requests/reply/`、`daemon_reply/`（ctl 呼叫者的回信箱）",
+   "owner": "py/daemon_ctl/post.py:32、101-103",
+   "stale_effect": "等回信的人已不在；留著的回信沒人讀",
+   "self_heals": "不會清，但無害",
+   "fix": "可選：清道夫清舊回信（Python）"
+  },
+  {
+   "id": "L24",
+   "what": "`.aos-proto8` 錨點捷徑（copy-out、aos-tools 建，指到這台 repo 的 proto8）",
+   "owner": "templates/copy-out（檔頭 5-7 行、--relink）；cmd/aos-tools/bin/aos-tools:520-540",
+   "stale_effect": "**cp -a 會把上一台的絕對捷徑帶過來**。另一台 repo 位置不同（家機 `/home/lorkhan/…`）＝全斷。實測（把錨點指到不存在的位置）：`aos-llm: error: EndpointFailed endpoint function exited with code 2: python3: can't open file '…/llm_def/slow_fake/../.aos-proto8/lib/base/llm_fake/_entry'`，接著 BrainFailed、冷卻、每次重試都失敗，永遠答不出來。kernel 的 `fake`／`llm_http` 端點、範本工具 `wall_clock`／`agents`／`self_tools`、memory 的 `_memory.json` 都經錨點（init.py:76-80、88；copy-out 改寫的 tools.json）。aos-tools 只會在錯誤行提示 `run templates/copy-out --relink`（aos-tools:272）",
+   "self_heals": "**不會**：只有 aos-tools 寫入時順手換（aos-tools:528-535「舊機留下的錨點也換成這台」），讀的時候不修；要人跑 `copy-out --relink`（或 aos-image thaw 步 5）",
+   "fix": "Python（主要）：在用錨點的 Python 端「第一次用到時」自癒——aos-tools 解路徑、copy-out 的邏輯抽成共用函式：錨點斷了或指的不是「正在跑的這份 proto8」（`Path(__file__).resolve()` 往上找）就原子地重指（同 aos-tools:531-535 的寫法）；再讓每台 daemon 的 `_sweeper`（起來就跑）對自己 def 與表上各列的 def 跑一次。kernel 端點經錨點那段是 C++ aos-exec 在解，靠清道夫先修好；要保證第一題就對，要動 C++：aos-exec 遇到路徑裡有 `.aos-proto8` 而解不到時改用環境變數（例 `AOS_PROTO8`）或自己的執行檔位置"
+  },
+  {
+   "id": "L25",
+   "what": "image 根的 `local/`（machine.json、endpoints.json、keys.json、launch.json、env）",
+   "owner": "py/aos_image_init.py:62、73-90（kernel.json `$ref ../local/endpoints.json`、端點 envs `$ref ../../../local/keys.json`）；py/aos_image_find.py:76-84",
+   "stale_effect": "設計是「不進 git、每台自己一份」，但 **cp -a 會把上一台的整份帶過來、蓋掉這台的**：kernel 直接用上一台的端點 url／model／slots 與金鑰（沒有任何提示）；`aos-image` 會以為自己是上一台（machine.json 的 name）。來回 cp 兩次＝兩台的 local 互相覆蓋",
+   "self_heals": "**不會**",
+   "fix": "見表 B 的 C10：機器專屬的值不能放在會被整份複製的 image 裡；改成 image 外、用環境變數指（Python 端 aos-image 可直接做；kernel.json 的 `$ref` 由 C++ 解，要接受環境變數就要動 C++：aos-llm-kernel 的 serve/config.cpp）"
+  },
+  {
+   "id": "L26",
+   "what": "image 根的 `kb` 掛點（指到這台知識庫的捷徑）",
+   "owner": "使用者自建；py/aos_image_check.py:146-147（只 warning）",
+   "stale_effect": "cp -a 帶過來的是上一台的絕對捷徑：別台通常是斷的（memory 回 MemoryMissing、brain 的 --memory 根給不出來）；兩台路徑剛好一樣時默默用這台同路徑的庫。來回 cp 互相覆蓋",
+   "self_heals": "**不會**",
+   "fix": "同 L25：掛點放 image 外、用環境變數（例 `AOS_KB`）指；memory 工具（lib/agent/memory_fs.py，Python）讀 `_memory.json` 的 base 時接受 `{\"$env\": …}`"
+  },
+  {
+   "id": "L27",
+   "what": "`image_info.json`（新：誰在跑、第幾代）",
+   "owner": "py/aos_image_mark.py:310-365；thaw.py:48-71",
+   "stale_effect": "cp -a 帶過來＝寫著「running on <上一台>」。直接起根不看它（不影響）；但之後在這台跑 `aos-image freeze／thaw` 會 OwnerMismatch／OwnerElsewhere（mark.py:323-327）",
+   "self_heals": "不會（設計上它就是要跟著走）",
+   "fix": "不用補（cp -a 搬家不走 aos-image 時，文件寫一句；或 aos-image 偵測到「標記的機器≠local 的機器、但根正在這台跑」時只 warning）"
+  },
+  {
+   "id": "L28",
+   "what": "`state.json`／`procs_state.json` 頂層的 `daemon`（上層 daemon 的絕對路徑）",
+   "owner": "aos-daemon（daemon/windows.cpp:220、table.cpp:93）",
+   "stale_effect": "上一台的絕對路徑；實測新位置起來後兩台子 daemon 都改寫成新路徑",
+   "self_heals": "會（每次起來重寫）",
+   "fix": "不用補"
+  },
+  {
+   "id": "L29",
+   "what": "`observed.jsonl` 的 `self` 紀錄（def、ws、llm_kernel 絕對路徑）",
+   "owner": "lib/observed.py:27-31",
+   "stale_effect": "只給人看；新位置會多寫一筆新的",
+   "self_heals": "會（附加新的一筆）",
+   "fix": "不用補"
+  },
+  {
+   "id": "L30",
+   "what": "kernel stack 的 `endpoints.json`、`tools/run_python/main.py`",
+   "owner": "aos-llm-kernel；lib/base/run_python",
+   "stale_effect": "醒來／第一次用前重建（stack.gitignore:25-32 的註解）",
+   "self_heals": "會",
+   "fix": "不用補"
+  }
+ ]
+}

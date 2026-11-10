@@ -181,8 +181,8 @@
    "reader": "aos-daemon（adopt）、aos-daemon-ctl、aos-agent、aos-llm-kernel、lib/aos/judge",
    "image": "進",
    "on_bad": "daemon：不在＝第一次安靜；整份壞＝改名 .bad-<時間>＋warning＋照定義開空表；壞幾列＝複製留證、跳過那列；原因進 state_flux adopt_warning。ctl 讀壞＝StateBad",
-   "note": "11-09 必修 1 已改；分檔夾名＝主檔名去副檔名＋_procs",
-   "evidence": "proto8/impls/aos-daemon/src/daemon/adopt.cpp:84-136、proto8/impls/aos-daemon/src/daemon/daemon.cpp:130、proto8/py/daemon_ctl/table.py:87-98、proto8/impls/aos-llm-kernel/src/daemon/daemon.cpp:52"
+   "note": "11-09 必修 1 已改；分檔夾名＝主檔名去副檔名＋_procs；11-10 列多選填 as_written（ctl add 經信箱加的列裡 ws／stack／exec／def 的指示詞原形，每次起照當下環境重解；原本的欄照舊放解好的字串；加法，舊表照讀，不用重建；11-10 前加的列要 rm 再 add 才有原形）",
+   "evidence": "proto8/impls/aos-daemon/src/daemon/adopt.cpp:84-136、proto8/impls/aos-daemon/src/daemon/daemon.cpp:130、proto8/py/daemon_ctl/table.py:87-98、proto8/impls/aos-llm-kernel/src/daemon/daemon.cpp:52、proto8/impls/aos-daemon/src/daemon/procs.cpp（written_of）、proto8/impls/aos-daemon/src/daemon/reconcile.cpp（refresh）"
   },
   {
    "path": "$AOS_STACK/procs_ctl.json",
@@ -345,6 +345,16 @@
    "evidence": "proto8/lib/agent/cli_session.py:188-199、proto8/lib/agent/cli_session.py:237、proto8/lib/agent/cli_session.py:682-688"
   },
   {
+   "path": "<eca 小格>/.session_home",
+   "lifetime": "暫時",
+   "writer": "lib/agent/cli_session（mark_session，跟 session.txt 一起寫、一起刪）",
+   "reader": "lib/agent/cli_session（session_here：交信前判斷這段對話在不在這台）",
+   "image": "不進：這台的記號；點開頭被 stack.gitignore 的 **/.* 擋（gitignore_classes G012）",
+   "on_bad": "不在而 transcripts() 找得到那個 id＝當這台的、補寫；不在又找不到＝開新對話（開場白接 history）；寫不成＝warning 一行、不擋",
+   "note": "11-10 two-machines 05 新增：{session, ws, home, machine}（machine＝/etc/machine-id，讀不到退回 hostname；記號檔沒有 machine 就不比，55bc1205b）；刻意不帶，換台才認得出要開新對話。新檔，不用重建",
+   "evidence": "proto8/lib/agent/cli_session.py（mark_session、session_here、drop_session）"
+  },
+  {
    "path": "$AOS_STACK/think/（pending.txt、reply/ 信箱）",
    "lifetime": "持久",
    "writer": "templates/agent-fsm（brain、wait）",
@@ -471,8 +481,8 @@
    "reader": "aos-llm-kernel",
    "image": "進",
    "on_bad": "回信讀不懂＝回錯給寄信人；收完整夾刪",
-   "note": "在飛的信跟 image 走；proc.json／loop.json 存絕對路徑是 N-67 ⑦ 已知待驗",
-   "evidence": "proto8/impls/aos-llm-kernel/src/serve/proc.cpp:67-68、proto8/impls/aos-llm-kernel/src/serve/proc.cpp:119-183、proto8/impls/aos-llm-kernel/src/serve/serve.cpp:240"
+   "note": "在飛的信跟 image 走；proc.json／loop.json 存絕對路徑是 N-67 ⑦ 已知待驗；11-10：掛信單子改寫相對 AOS_DAEMON 的指示詞、重掛時照 kernel.json 重算（proc.json 的 exec 只當紀錄）；proc.json 多選填 stopped_seen_at（問腦列被 stop 時第一次看到的時間，停滿 300 秒放格回 EndpointFailed；加法，不用重建）",
+   "evidence": "proto8/impls/aos-llm-kernel/src/serve/proc.cpp:67-68、proto8/impls/aos-llm-kernel/src/serve/proc.cpp:119-183、proto8/impls/aos-llm-kernel/src/serve/serve.cpp:240、proto8/impls/aos-llm-kernel/src/serve/proc.cpp（host_ref、exec_for、STOPPED_GIVE_UP_S）"
   },
   {
    "path": "<kernel stack>/endpoints.json",
@@ -513,6 +523,16 @@
    "on_bad": "缺了或指錯＝經過它的工具 PathMissing（訊息提示 copy-out --relink）、agent-fsm ToolsBad；換機 pull 後、起根前 copy-out --relink <image 根> 重建（冪等）",
    "note": "11-10 坑-73／坑-92，使用者裁選項 A「每個資料夾放一條不進 git 的捷徑 .aos-proto8 指向這台的 repo」；進 git 的檔只寫經過它的相對路徑",
    "evidence": "proto8/templates/copy-out（make_anchor、relink）、proto8/cmd/aos-tools/bin/aos-tools（stored_path）"
+  },
+  {
+   "path": "$AOS_STACK/cooldown.json",
+   "lifetime": "暫時",
+   "writer": "lib/agent/cooldown.py（templates/agent-fsm wait.py、aos-eca-turn）",
+   "reader": "同左",
+   "image": "不進：本機的牆鐘期限；stack.gitignore 的 **/cooldown.json 擋（two-machines gitignore_classes G003）",
+   "on_bad": "不在＝沒在冷卻；寫不成＝warning 一行、照舊；殘留的舊檔 until 早過＝下一次照常（eca 是只拿一封試）",
+   "note": "11-10 two-machines 06 新增：{failures, until, at, code, reason, dropped}；30 秒起加倍、封頂 30 分鐘，成功一次刪檔。新檔，不用重建",
+   "evidence": "proto8/lib/agent/cooldown.py、proto8/templates/agent-fsm/wait.py、proto8/cmd/aos-eca/bin/aos-eca-turn"
   }
  ]
 }

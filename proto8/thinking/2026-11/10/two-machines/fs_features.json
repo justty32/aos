@@ -1,0 +1,147 @@
+{
+ "contract": "wf-table/1",
+ "source": "13-施工結果.md",
+ "extracted": "2026-11-10",
+ "columns": [
+  "feature",
+  "used_by",
+  "mntc_result",
+  "if_missing",
+  "grade"
+ ],
+ "rows": [
+  {
+   "feature": "執行位元 +x（X_OK 判斷）",
+   "used_by": "aos-exec impls/aos-exec/src/find/classify.cpp:63（有 +x＝可執行檔、不當 JSON 讀）；impls/aos-exec/src/launch/launch.cpp:51；py/daemon_ctl/entry.py:91",
+   "mntc_result": "9p drvfs 沒掛 metadata：所有檔一律 0777、chmod 無效、X_OK 永遠真；chmod 644 的 sh 照樣能 ./ 跑",
+   "if_missing": "JSON 入口（_entry、daemon.json、daemon 生成在 stack 裡的 loop.json）全被當可執行檔：defs 在 /mnt/c → /bin/sh 把 _entry 當腳本跑，『_entry: 1: [aos-daemon,: not found』退 127；stack 在 /mnt/c → 『EntryBad bad entry: an executable cannot take #/: …/loop.json#/_entry』，_sweeper/_clock 反覆退 1",
+   "grade": "硬傷（目前）。可修：aos 不靠 +x 分類（例如先看開頭是 #! 或 ELF 魔數、或 JSON 能解析就當 JSON），或使用者 /etc/wsl.conf [automount] options=\"metadata\"（改設定，未實測）"
+  },
+  {
+   "feature": "改名一個『裡面有檔開著』的資料夾",
+   "used_by": "aos-lock impls/aos-lock/src/lock/lock.cpp:137-145 move_away（放鎖＝把鎖資料夾改名 .releasing.<id>）；同檔 :203-207 拿鎖時開 holder.flock 並一直開著",
+   "mntc_result": "資料夾裡有檔案 fd 開著（不論有沒有 flock）→ rename 回 EACCES；檔全關了才行；只開資料夾 fd 不影響",
+   "if_missing": "stack 在 /mnt/c：aos-agent say 失敗『aos-post: error: WriteFailed cannot rename …/procs/worker/queue/order.lock: Permission denied』，第一題就送不出去",
+   "grade": "硬傷（目前）。可修：放鎖先關 holder.flock 的 fd 再改名（或改成刪檔＋rmdir）；aos 端改，不靠平台"
+  },
+  {
+   "feature": "os.replace／rename 蓋檔對讀者是原子的",
+   "used_by": "aos-util impls/aos-util/src/files.cpp:98、:272（write_text／寫 json 都是暫存＋rename）；aos-lock lock.cpp:130；aos-json file.cpp；Python 端多處 tempfile＋replace",
+   "mntc_result": "寫者能蓋（目標被別的行程開著也行、舊 fd 讀到舊內容）；但同時讀的人約 2%（1539 次裡 32 次）拿到 ENOENT，讀不到半截檔。ext4 0 次",
+   "if_missing": "讀 state.json、order.json、clock 等的人偶爾以為檔不在（例如當成剛起、當成沒資料、印 missing 提醒）",
+   "grade": "有差異但可修：讀端遇 ENOENT 短暫重試一兩次；或把 stack 放 ext4"
+  },
+  {
+   "feature": "AF_UNIX socket 檔",
+   "used_by": "lib/agent/cli_session.py:8、:234（cell 裡 tty.sock，tmux -S）",
+   "mntc_result": "bind 回 EOPNOTSUPP；tmux -S 指到 /mnt/c『error creating …tm.sock (Operation not supported)』",
+   "if_missing": "stack 在 /mnt/c 時 claude／codex 格的 attach 畫面開不起來（本次沒跑真 CLI，只測到 tmux 這層）",
+   "grade": "硬傷（只限 CLI 格的畫面）。繞法：socket 改放 $XDG_RUNTIME_DIR 或 /tmp 下以 stack 雜湊命名；aos 端改"
+  },
+  {
+   "feature": "mkfifo",
+   "used_by": "aos 沒用到（grep 無）",
+   "mntc_result": "EOPNOTSUPP",
+   "if_missing": "無",
+   "grade": "沒問題（aos 不依賴）"
+  },
+  {
+   "feature": "flock／lockf",
+   "used_by": "aos-lock holder.cpp:97、lock.cpp:207；aos-llm-kernel .flock／sender.flock；py/aos_sweep.py:68；py/daemon_ctl/post.py:91；py/aos_image_busy.py:47；lib/agent/cli_session.py:226",
+   "mntc_result": "兩個行程互搶 LOCK_EX|LOCK_NB 正確擋住、放了另一邊拿得到；lockf 同；flock(1) 同",
+   "if_missing": "—",
+   "grade": "沒問題（但 flock 開著的檔會卡住上一列的資料夾改名）"
+  },
+  {
+   "feature": "mkdir 當鎖、O_EXCL",
+   "used_by": "aos-lock lock.cpp mkdir 取鎖、.reaping 收屍牌",
+   "mntc_result": "4 行程各 300 次搶，雙持有 0 次；O_EXCL 同",
+   "if_missing": "—",
+   "grade": "沒問題"
+  },
+  {
+   "feature": "跨檔案系統 rename",
+   "used_by": "暫存檔一律開在目標同資料夾（files.cpp tmp、tempfile dir=parent、mkstemp dir=dirname）；aos_image_git.py:82 的 TemporaryDirectory 只讀不搬",
+   "mntc_result": "/tmp→/mnt/c 改名 EXDEV（兩邊都一樣，預期內）",
+   "if_missing": "分散佈局（stacks 在 /tmp、defs 在 /mnt/c）沒看到跨界 rename",
+   "grade": "沒問題（現行寫法已同夾）"
+  },
+  {
+   "feature": "hard link",
+   "used_by": "lib/agent/memory_write/writing.py:67 os.link（不蓋檔的發佈）",
+   "mntc_result": "可用，nlink=2、同 inode",
+   "if_missing": "—",
+   "grade": "沒問題"
+  },
+  {
+   "feature": "symlink",
+   "used_by": "lib/agent/cli_session.py:351（transcripts/）；py/aos_image_init.py:66、:92；py/aos_image_thaw.py:37；lib/aos/promote/swap.py:40",
+   "mntc_result": "相對、絕對、資料夾、懸空、指 /tmp 都能建能讀；Windows 端看是 ReparsePoint；WSL git core.symlinks 未設＝true，commit 成 120000、clone 回來仍是 symlink",
+   "if_missing": "—",
+   "grade": "沒問題（只限 WSL 內；Windows 版 git／工具不一定認）"
+  },
+  {
+   "feature": "git core.filemode",
+   "used_by": "push／clone 搬專案（defs 裡真的要 +x 的工具，例如 lib/base/llm_fake 這類）",
+   "mntc_result": "在 /mnt/c git init 自動設 core.filemode=false、core.ignorecase=true；新加的 +x 腳本記成 100644；從 ext4 clone 來的 100755 在 /mnt/c 不顯示變更",
+   "if_missing": "在 /mnt/c 新增的腳本推上去會掉 +x；另一台若在 ext4 clone，aos-exec 會把它當 JSON 讀 → EntryBad",
+   "grade": "有差異但可修：git add --chmod=+x 或 git update-index --chmod=+x；根治同第一列（不靠 +x）"
+  },
+  {
+   "feature": "新建檔權限與 chmod",
+   "used_by": "aos-json file.cpp:135 fchmod；aos-sandbox setup.sh 的 chmod 700／2770",
+   "mntc_result": "新檔、新資料夾都是 0777，chmod 任何值都不生效",
+   "if_missing": "權限隔離（sandbox 信箱 chmod 700）在 /mnt/c 無效",
+   "grade": "有差異（sandbox 那條在 /mnt/c 不成立；一般用法無影響）"
+  },
+  {
+   "feature": "大小寫",
+   "used_by": "名字全小寫加底線（C-54），沒看到同名異大小寫",
+   "mntc_result": "不分大小寫：A 在時建 a 回 EEXIST",
+   "if_missing": "—",
+   "grade": "沒問題"
+  },
+  {
+   "feature": "檔名非法字元",
+   "used_by": "aos-util files.cpp:162 .bad-<時間>（冒號已換 -）；py/aos_sweep_files.py:20 封存檔名（冒號換 -）；unique_id＝<20 位奈秒>.<pid>.<ticks>（proc.cpp:104）",
+   "mntc_result": "WSL 內 : ? * < > | \" \\ 結尾點、con/aux/nul 全能建；Windows 端看到的是私用區字元（: → U+F03A）",
+   "if_missing": "aos 產生的名字不含這些字元；只有 Windows 版 git 或 Windows 工具碰到才會出事",
+   "grade": "沒問題"
+  },
+  {
+   "feature": "O_APPEND 並發追加",
+   "used_by": "*.jsonl（history、ledger、observed、turns）、stderr.txt",
+   "mntc_result": "4 行程各 500 行，2000/2000、0 行損壞",
+   "if_missing": "—",
+   "grade": "沒問題"
+  },
+  {
+   "feature": "fsync（含資料夾 fsync）",
+   "used_by": "aos-util files.cpp:266",
+   "mntc_result": "可用（1.2 ms）；資料夾 fsync 也成功",
+   "if_missing": "—",
+   "grade": "沒問題"
+  },
+  {
+   "feature": "mtime 精度",
+   "used_by": "租約用時鐘拍數不用 mtime；daemon_ctl/table.py:213 只顯示",
+   "mntc_result": "100 ns 精度；os.utime 設的次秒部分被丟掉",
+   "if_missing": "—",
+   "grade": "沒問題"
+  },
+  {
+   "feature": "inotify",
+   "used_by": "aos 沒用到（輪詢）",
+   "mntc_result": "沒裝 inotifywait，未測（9p 上一般收不到 Windows 端的改動）",
+   "if_missing": "無",
+   "grade": "沒問題（aos 不依賴）"
+  },
+  {
+   "feature": "每次檔案操作的速度",
+   "used_by": "整棵樹每拍都 stat／讀／寫小 json",
+   "mntc_result": "建檔寫 2.4 ms、stat 0.69 ms、stat 不存在 0.40 ms、列 200 項 1.4 ms、寫＋rename 4.6 ms；ext4 分別 0.015／0.001／0.002／0.031／0.042 ms（約 100～300 倍）",
+   "if_missing": "root 每拍 100 ms 變 113 ms；ping 55～107 ms 變 180～350 ms",
+   "grade": "有差異（慢但能用）"
+  }
+ ]
+}
