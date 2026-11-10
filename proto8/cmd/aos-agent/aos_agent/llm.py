@@ -147,7 +147,7 @@ def write_obj(path, d):
 def cmd(argv):
     """llm ls｜set 鍵=值…｜rm 鍵…｜reset：aos-json 的語法糖（只碰這隻 stack 裡那份改過的鍵；改定義＝人直接 aos-json set <定義>/llm.json#/鍵 值）。
     11-10 晚使用者「換」：show 換成 ls（比照 tools：-l、--json）、加 rm。鍵由那隻身體認（定義的 llm_keys 有寫就對著提醒，照存）；值一律字串。"""
-    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",))
+    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",), sub=True)
     act, args = (rest[0], rest[1:]) if rest else ("ls", [])
     if act not in SUBS:
         raise Fail("CommandUnknown", "llm: unknown subcommand %s (ls, set, rm, reset; see aos-agent llm --help)" % act)

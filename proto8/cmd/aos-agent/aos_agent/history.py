@@ -57,7 +57,8 @@ flags:
   -h, --help          show this help
 
 RANGE = N, A-B or A- (to the end); TEXT = the new message's content, written as given
-(- reads it from stdin). It goes at line A.
+(- reads it from stdin); flags go before TEXT (from TEXT on nothing is read as a flag).
+It goes at line A.
 exit codes: 0 replaced; 1 error (HistoryMissing, RangeBad, WriteFailed...); 130 Ctrl-C.
 """ % KEEP_FLAGS,
     "set": """aos-agent history set - replace one message with any JSON object
@@ -70,7 +71,7 @@ flags:
   -h, --help          show this help
 
 JSON = the whole new message, e.g. '{"role": "user", "content": "hi"}' (- reads it from stdin);
-written as given, nothing checked but that it is one JSON object.
+written as given, nothing checked but that it is one JSON object; flags go before JSON.
 exit codes: 0 replaced; 1 error (HistoryMissing, RangeBad, MessageBad, WriteFailed...); 130 Ctrl-C.
 """ % KEEP_FLAGS,
 }
@@ -231,7 +232,7 @@ def where_said(where):
 
 
 def cmd(argv):
-    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",))
+    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",), sub=True)
     act, args = (rest[0], rest[1:]) if rest else ("ls", [])
     if act not in HELPS:
         raise Fail("CommandUnknown", "history: unknown action %s (%s; see aos-agent history --help)" % (act, ", ".join(HELPS)))
@@ -240,7 +241,8 @@ def cmd(argv):
     shorts = {"-j": "--json"} if act == "ls" else {"-y": "--yes"}
     if act == "summarize":
         flags["--role"] = "role"
-    topts, args = parse(args, flags, switches, help=HELPS[act], short=shorts)
+    topts, args = parse(args, flags, switches, help=HELPS[act], short=shorts,
+                        keep=2 if act in ("summarize", "set") else None)   # 11-10 Q3：TEXT／JSON 起原樣收（內容裡的 - 開頭字不是旗標）
     count = {"ls": (0, 1), "rm": (1, 1), "summarize": (2, 2), "set": (2, 2)}[act]
     if not count[0] <= len(args) <= count[1]:
         raise bad_args(HELPS[act], "%s needs %s" % (act, {"ls": "at most one RANGE", "rm": "one RANGE",

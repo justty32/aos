@@ -20,7 +20,7 @@ IFACE = "aos-agent"
 
 # ---------------------------------------------------------------- daemon（共用 daemon_ctl 模組）
 
-DAEMON = None                                   # main 裡從 --daemon 定
+TOP = {}                                        # main 的頂層 opts（--daemon、--target；11-10 Q1 起寫在子命令後的也寫回這份）
 TOP_TARGET = None                               # main 裡從子命令前的 --target 定（坑-68）
 
 
@@ -62,9 +62,9 @@ def actions(helps, prefix):
     return "\n".join(out)
 
 
-def parse(argv, flags=None, switches=None, *, help=None, short=None):
+def parse(argv, flags=None, switches=None, *, help=None, short=None, sub=None, keep=None):
     try:
-        return aos_flags.parse(argv, flags or {}, switches, help=help, short=short)
+        return aos_flags.parse(argv, flags or {}, switches, help=help, short=short, sub=sub, keep=keep)
     except aos_flags.Error as e:
         if e.code == "ArgumentsBad" and help:
             raise bad_args(help, str(e)) from e
@@ -93,7 +93,7 @@ def call_dc(fn, *args, **kwargs):
 
 
 def daemon_path():
-    return call_dc(dc.find_daemon, DAEMON)
+    return call_dc(dc.find_daemon, TOP.get("daemon"))
 
 
 def need_table():
@@ -286,6 +286,18 @@ def target_name(opts):
     if sub and TOP_TARGET and sub != TOP_TARGET:
         raise Fail("ArgumentsBad", "two different targets: %s before the subcommand, %s after it; give --target once" % (TOP_TARGET, sub))
     return sub or TOP_TARGET or os.environ.get("AOS_AGENT", "")
+
+
+def name_last(opts, rest, help):
+    """11-10 cli-sweep Q2（使用者「2.收。」）：ctl 對單一隻的動作也收「名字放最後」——aos-agent ctl stop ann 與 -t ann 都通；
+    兩個都給又不同＝ArgumentsBad；多於一個位置參數＝ArgumentsBad。"""
+    if not rest:
+        return
+    if len(rest) > 1:
+        raise bad_args(help, "one NAME at most, got %s" % " ".join(rest))
+    if opts.get("target") and opts["target"] != rest[0]:
+        raise bad_args(help, "two different targets: --target %s and %s; give it once" % (opts["target"], rest[0]))
+    opts["target"] = rest[0]
 
 
 def target(opts, quiet=False):

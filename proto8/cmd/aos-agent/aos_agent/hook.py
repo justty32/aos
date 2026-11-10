@@ -46,7 +46,7 @@ Run XXX (anything aos-exec runs: a tool folder, a JSON file, an executable) when
 EVENT happens; the event JSON comes on its stdin. XXX is relative to the current
 directory and is stored relative to this agent's hooks file (absolute stays
 absolute). Written to this agent's own list in its stack; the definition stays as
-it is. Flags go before XXX.
+it is. Flags may go before or after XXX.
 
 events: queue_before, queue_after, tool_before, tool_after, brain_failed, tool_added
 
@@ -216,7 +216,7 @@ def build(topts, args, own, help):
 
 
 def cmd(argv):
-    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",))
+    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",), sub=True)
     act, args = (rest[0], rest[1:]) if rest else ("ls", [])
     if act not in HELPS:
         raise Fail("CommandUnknown", "hook: unknown subcommand %s (ls, get, add, rm, reset; see aos-agent hook --help)" % act)
@@ -234,8 +234,6 @@ def cmd(argv):
             raise bad_args(HELPS[act], str(e)) from e
         raise Fail(e.code, "%s (see aos-agent hook %s --help)" % (e, act)) from e
     count = {"ls": 0, "get": 1, "add": 0 if "path_json" in topts else 1, "rm": 1, "reset": 0}[act]
-    if act == "add" and len(args) > count and args[count].startswith("-"):
-        raise bad_args(HELPS[act], "flags go before XXX: %s" % args[count])
     if len(args) != count:
         raise bad_args(HELPS[act], "add needs one XXX (or --path-json JSON)" if act == "add"
                        else "%s needs %d argument%s" % (act, count, "" if count == 1 else "s"))

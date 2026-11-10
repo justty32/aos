@@ -115,8 +115,11 @@ class ToolsOverride(unittest.TestCase):
         r = self.agent("add", "clock2", "extra", ok=False)
         self.assertEqual(r.returncode, 1)
         self.assertIn("ArgumentsBad", r.stderr)
-        r = self.agent("add", "extra", "--name", "x", ok=False)
-        self.assertIn("flags go before XXX: --name", r.stderr)
+
+    def test_flags_after_xxx(self):
+        """11-10 cli-sweep Q1（使用者「1.收。」）：XXX 後的旗標也收（今天下午的「flags go before XXX」拿掉）。"""
+        self.agent("add", "extra", "--name", "x")
+        self.assertIn("x", json.loads(self.own.read_text())["tools"])
 
     def test_warns_when_overriding_another_definition(self):
         other = self.tmp / "defs" / "other.json"

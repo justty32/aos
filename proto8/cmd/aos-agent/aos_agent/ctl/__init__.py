@@ -1,4 +1,6 @@
 # aos_agent/ctl/__init__.py - 顯式派發 agent 的掛上與管理命令。
+import aos_flags
+
 from .. import common
 from ..common import Fail, actions, parse
 from . import add, rm, phase, ls, state, where, who
@@ -39,7 +41,7 @@ more: proto8/cmd/aos-agent/README.md
 
 def cmd(argv):
     """派發掛上與管理的二層動作。"""
-    _, argv = parse(argv, help=HELP)
+    _, argv = parse(argv, help=HELP, sub=True)
     hint = "(%s; see aos-agent ctl --help)" % ", ".join(SUBS)
     if not argv:
         raise Fail("ArgumentsBad", "ctl needs one of %s (see aos-agent ctl --help)" % ", ".join(SUBS))
@@ -47,4 +49,6 @@ def cmd(argv):
         raise Fail("CommandUnknown", "ctl: unknown subcommand %s %s" % (argv[0], hint))
     if common.TOP_TARGET and argv[0] in NO_TARGET:      # 坑-68：這幾個不吃 --target，前面給了不默默丟掉
         raise Fail("ArgumentsBad", "ctl %s does not take --target (it was given before the subcommand; see aos-agent ctl %s --help)" % (argv[0], argv[0]))
+    if argv[0] in NO_TARGET:
+        aos_flags.hide("--target")                  # 寫在動作後的 -t 也不收（FlagUnknown），不默默寫回頂層
     SUBS[argv[0]](argv[1:])

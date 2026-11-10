@@ -31,9 +31,14 @@ flags:
   -t, --target NAME    which agent, for every subcommand that takes one (same as after it)
   -h, --help           show this help
 
+flag order: a flag belongs to the level it is listed under (aos-agent, the subcommand,
+  the action) and may go anywhere after that level's name, also after later names and
+  arguments: aos-agent ctl stop ann -d D = aos-agent -d D ctl stop ann. After -- nothing
+  is read as a flag.
 target: every subcommand except ctl add / rm / ls / who acts on -t, --target NAME
-  (default: $AOS_AGENT); neither = TargetMissing. -t may go before or after the
-  subcommand; two different names = ArgumentsBad; before ctl add / rm / ls / who = ArgumentsBad.
+  (default: $AOS_AGENT); neither = TargetMissing. ctl start / stop / sleep / wake /
+  pause / resume / where also take NAME as the last argument. Two different names =
+  ArgumentsBad; ctl add / rm / ls / who take no -t (ArgumentsBad or FlagUnknown).
 output: results on stdout only (one line per item, TAB-separated; --json where listed);
   reminders on stderr as "aos-agent: warning: ...".
 exit codes: 0 ok; 1 error ("aos-agent: error: CODE reason" on stderr); 130 on Ctrl-C.
@@ -66,8 +71,8 @@ def main():
     aos_flags.HELP = HELP                        # --help（旗標的位置，子命令後也認）：英文說明到 stdout、退 0
     a = sys.argv[1:]
     try:
-        opts, rest = parse(a, {"--daemon": "daemon", "--target": "target"}, help=HELP, short=("-d", "-t"))
-        common.DAEMON = opts.get("daemon")
+        opts, rest = parse(a, {"--daemon": "daemon", "--target": "target"}, help=HELP, short=("-d", "-t"), sub="root")
+        common.TOP = opts                            # 11-10 Q1：-d／-t 寫在後面也算，下層解到時寫回這份；用的時候才讀
         common.TOP_TARGET = opts.get("target")       # 坑-68（11-10）：子命令前的 -t 傳給子命令（common.target 合併、兩邊不同＝ArgumentsBad）
         if not rest:
             raise Fail("ArgumentsBad", "missing subcommand (%s; see aos-agent --help)" % ", ".join(SUBS))

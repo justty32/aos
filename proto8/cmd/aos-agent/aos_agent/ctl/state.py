@@ -51,7 +51,7 @@ BIN = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 
 def agent_cmd(a, args):
     """轉叫自己的子命令（同一個 daemon、同一隻）；退非 0＝Missing（最後一行錯誤行當原因）。"""
-    argv = [sys.executable, BIN] + (["--daemon", common.DAEMON] if common.DAEMON else []) + args[:1] + ["--target", a.name] + args[1:]
+    argv = [sys.executable, BIN] + (["--daemon", common.TOP["daemon"]] if common.TOP.get("daemon") else []) + args[:1] + ["--target", a.name] + args[1:]
     return run(argv)
 
 

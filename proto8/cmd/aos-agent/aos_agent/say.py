@@ -4,7 +4,8 @@ HELP = """aos-agent say - put one message in the agent's queue
 usage: aos-agent [--daemon D] say [--target NAME] [WORDS...]
        ... | aos-agent [--daemon D] say [--target NAME]
 
-WORDS are joined with single spaces into one message. No WORDS (or "-") = the whole of
+WORDS are joined with single spaces into one message; flags go before them (from the
+first word on everything is the message, -t included). No WORDS (or "-") = the whole of
 stdin is the message (one trailing newline dropped); stdin being a terminal = ArgumentsBad.
 stdout prints the letter name. A paused or sleeping agent still queues it; a warning says so.
 
@@ -21,7 +22,7 @@ from .hints import label, on_table, run_hint
 
 
 def cmd(argv):
-    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",))
+    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",), keep=1)   # 11-10 Q3：WORDS 起原樣交出（訊息裡的 -t 不是旗標）
     a = target(opts)                                # 11-05 edge-agent：先找對象，沒對象不先等 stdin
     piped = not rest or rest == ["-"]               # 11-05 使用者「aos-say,aos-listen，我希望能支援stdin/out。」：沒給話或給 -＝整份 stdin 一則
     if piped and (sys.stdin is None or sys.stdin.isatty()):

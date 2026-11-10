@@ -48,7 +48,7 @@ usage: aos-agent [--daemon D] tools [--target NAME] add [-n N] [--replace] [--en
 Same as aos-tools add (flags and meaning), written to this agent's own registry in
 its stack, which overrides the definition's ("$override"); the definition stays as it
 is. The first add or rm creates that file. XXX is a tool folder, JSON file or
-executable, relative to the current directory; flags go before it.
+executable, relative to the current directory; flags may go before or after it.
 
 flags:
   -n, --name N        list it under this name (default: folder or file name)
@@ -157,7 +157,7 @@ def check_pointer(over, orig):
 def cmd(argv):
     """tools（11-05 portable-flow 步 4，使用者「tools只存差異」；11-10 aos-tools-cli 步 4 改形狀）：<stack>/<宣告相對路徑> 是這隻自己那份，
     {"$override": 定義那份, "tools": {加的…, "不要的": null}}（null 那格不算工具）；在就用它，不在就用定義那份。說明在 cmd/aos-agent/README.md「tools 覆蓋層」。"""
-    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",))
+    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",), sub=True)
     act, args = (rest[0], rest[1:]) if rest else ("ls", [])
     if act not in SUBS:
         raise Fail("CommandUnknown", "tools: unknown subcommand %s (ls, get, add, rm, reset; see aos-agent tools --help)" % act)
@@ -186,8 +186,6 @@ def cmd(argv):
         raise Fail("ToolsBad", str(e)) from e
     orig, over = os.path.join(folder, rel), os.path.join(a.stack, rel)
     count = {"ls": 0, "get": 1, "add": 0 if "path_json" in topts else 1, "rm": 1, "reset": 0}[act]
-    if act == "add" and len(args) > count and args[count].startswith("-"):
-        raise bad_args(HELPS[act], "flags go before XXX: %s" % args[count])
     if len(args) != count:
         raise bad_args(HELPS[act], "add needs one XXX (or --path-json JSON)" if act == "add"
                        else "%s needs %d arguments" % (act, count))

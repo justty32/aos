@@ -125,8 +125,7 @@ class Hook(unittest.TestCase):
                      ("add", "--on", "queue_before", "--match", "x", "h/guard"),
                      ("add", "--on", "tool_after", "--timeout-ms", "0", "h/guard"),
                      ("add", "--on", "tool_after", "--on-fail", "maybe", "h/guard"),
-                     ("add", "h/guard"),                                           # no --on
-                     ("add", "--on", "tool_after", "h/guard", "--no-change")):
+                     ("add", "h/guard")):                                          # no --on
             p = self.fails("ArgumentsBad", *args)
             self.assertIn("(usage: ", p.stderr, args)
         self.assertFalse(self.own.exists())
@@ -134,6 +133,11 @@ class Hook(unittest.TestCase):
         self.fails("NameBad", "add", "--on", "tool_after", "-n", ".x", "h/guard")
         self.fails("FlagUnknown", "add", "--wait", "h/guard")
         self.fails("CommandUnknown", "nope")
+
+    def test_flags_after_xxx(self):
+        """11-10 cli-sweep Q1（使用者「1.收。」）：XXX 後的旗標也收，跟寫在前面一樣。"""
+        self.agent("add", "h/guard", "--on", "tool_after", "--no-change")
+        self.assertEqual(json.loads(self.own.read_text())["hooks"]["guard"]["change"], False)
 
     def test_missing_and_bad_list(self):
         self.own.write_text("{not json")
