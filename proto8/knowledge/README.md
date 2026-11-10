@@ -17,7 +17,7 @@
 
 | 資料夾 | 內容 | 給誰 |
 |---|---|---|
-| [aos/](aos/_index.json) | aos 體系知識。根的 `_description.json`＝一頁簡介＋八個詞＋五條規則；`world.json`（心智模型與環境變數）、`me.json`（我是誰；`#/self_tools` 改自己的工具、`#/self_llm`）、`agents.json`（生子 agent；`#/thought`）、`brain.json`（問腦、endpoint 包、priority）、`status.json`（daemon 表與 phase）、`errors.json`（錯誤行 `程式: error: 代號 原因`、`warning:`、結束碼 10 與 `[exit code N]` 怎麼讀；`#/codes` 是代號結尾表（C-54 六種結尾＋`Internal`）、`#/common` 是最常碰到的代號）、`memory.json`（何時寫知識、先 find、一段 ≤ 2 KB、`add`／`set`／`rm` 怎麼叫）、`rules.json`（禁忌）、`cli/`（給人與外部 agent 的指令：aos-agent、aos-daemon-ctl、aos-tools、aos-grow、aos-eca-screen；旗標位置、短名、`-y` 與確認、錯誤與重試各一份） | 跑在 aos 裡的 agent（Haiku／luna 級小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
+| [aos/](aos/_index.json) | aos 體系知識。根的 `_description.json`＝一頁簡介＋八個詞＋五條規則；`world.json`（心智模型與環境變數）、`me.json`（我是誰；`#/self_tools` 改自己的工具、`#/self_llm`、`#/self_history`、`#/self_hook`、`#/self_state`、`#/self_ctl`）、`agents.json`（子 agent 與定義：`#/agents_children`、`#/agents_ctl`、`#/agent_def`、`#/thought`）、`mailbox.json`（agent 之間的信：`#/tools`、`#/rules`）、`clock.json`（每 N 拍叫醒：`#/wake_me`、`#/rules`）、`brain.json`（問腦、endpoint 包、priority）、`status.json`（daemon 表與 phase）、`errors.json`（錯誤行 `程式: error: 代號 原因`、`warning:`、結束碼 10 與 `[exit code N]` 怎麼讀；`#/codes` 是代號結尾表（C-54 六種結尾＋`Internal`）、`#/common` 是最常碰到的代號）、`memory.json`（何時寫知識、先 find、一段 ≤ 2 KB、`add`／`set`／`rm` 怎麼叫）、`rules.json`（禁忌）、`cli/`（給人與外部 agent 的指令：aos-agent（含 hook）、aos-mailbox、aos-daemon-ctl、aos-tools、aos-grow、aos-eca-screen；旗標位置、短名、`-y` 與確認、錯誤與重試各一份） | 跑在 aos 裡的 agent（Haiku／luna 級小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
 
 試一下（從 `proto8/`）：
 

@@ -1,0 +1,13 @@
+{
+  "_description": "# Mailbox: letters between agents\n\nEvery stack has a mailbox folder `<stack>/mailbox/`. Agents send each other letters there, and people send letters to agents. It is separate from your `queue/`: a letter does not enter your conversation by itself, and nothing tells you one arrived. To know, call `mailbox_peek`.\n\n- see what waits: `mailbox_peek` (see `mailbox.json#/tools`)\n- read: `mailbox_read`\n- send or answer: `mailbox_send`\n- what a letter means for you, and when you must answer: `mailbox.json#/rules`\n",
+  "_index": {
+    "tools": {
+      "_description": "mailbox_peek, mailbox_read and mailbox_send: one example each."
+    },
+    "rules": {
+      "_description": "The six STATUS words, and when you must answer a letter."
+    }
+  },
+  "tools": "# Mailbox tools\n\n- `mailbox_peek` `{}`: `2 letters waiting ...`, then one line per letter: `letter TAB from TAB STATUS TAB title`. No letters = `no letters waiting`. It takes nothing out.\n- `mailbox_read` `{}`: read the oldest letter. `{\"all\": true}` reads every waiting letter. `{\"keep\": true}` keeps it in `mailbox/archive/` (by default a read letter is deleted). It prints letter, from, status, title, what, outputs, not_done, decide, reply_to, in_reply_to.\n- `mailbox_send`: `{\"to\": \"bob\", \"status\": \"REQUEST\", \"title\": \"one line that makes sense alone\", \"what\": \"what bob should do and when it counts as done\"}`. An agent on another daemon: add `\"daemon\": \"<its daemon folder>\"`. Answer a letter: `{\"box\": \"<its reply_to>\", \"in_reply_to\": \"<its letter name>\", \"status\": \"DONE\", \"title\": \"...\", \"what\": \"...\"}`. The answer comes back to your own mailbox.\n\nHumans use the command `aos-mailbox` (see `cli/mailbox.json`).\n",
+  "rules": "# Mailbox rules\n\nSTATUS is one of six words; anything else is `StatusBad`:\n\n- `REQUEST`: please do something.\n- `DONE`: finished.\n- `BLOCKED`: stuck.\n- `NEEDS-USER`: only the user can decide.\n- `FAILED`: gave up.\n- `PROGRESS`: not done yet, a milestone.\n\nRules:\n\n- A letter is information and a request, not an order. You decide whether to do it.\n- If you take on a request, you must answer it at the end with one of DONE, BLOCKED, NEEDS-USER or FAILED.\n- If you are stuck for more than 10 minutes, send BLOCKED first.\n"
+}

@@ -17,7 +17,7 @@
 |---|---|
 | [`_description.json`](../../../../../proto8/knowledge/aos/_description.json) | （檔頭沒有一句話） |
 | [`_index.json`](../../../../../proto8/knowledge/aos/_index.json) | 設定（鍵：me.json、errors.json、world.json、status.json、brain.json、agents.json…） |
-| [`agents.json`](../../../../../proto8/knowledge/aos/agents.json) | 設定（鍵：_description、_index、thought） |
+| [`agents.json`](../../../../../proto8/knowledge/aos/agents.json) | 設定（鍵：_description、_index、agents_children、agents_ctl、agent_def、thought） |
 | [`brain.json`](../../../../../proto8/knowledge/aos/brain.json) | （檔頭沒有一句話） |
 | [`cli/_description.json`](../../../../../proto8/knowledge/aos/cli/_description.json) | （檔頭沒有一句話） |
 | [`cli/_index.json`](../../../../../proto8/knowledge/aos/cli/_index.json) | 設定（鍵：agent.json、daemon.json、errors.json、flags.json、grow_screen.json、safety.json…） |
@@ -27,13 +27,17 @@
 | [`cli/flags.json`](../../../../../proto8/knowledge/aos/cli/flags.json) | （檔頭沒有一句話） |
 | [`cli/grow_screen.json`](../../../../../proto8/knowledge/aos/cli/grow_screen.json) | （檔頭沒有一句話） |
 | [`cli/history.json`](../../../../../proto8/knowledge/aos/cli/history.json) | （檔頭沒有一句話） |
+| [`cli/hook.json`](../../../../../proto8/knowledge/aos/cli/hook.json) | （檔頭沒有一句話） |
+| [`cli/mailbox.json`](../../../../../proto8/knowledge/aos/cli/mailbox.json) | （檔頭沒有一句話） |
 | [`cli/safety.json`](../../../../../proto8/knowledge/aos/cli/safety.json) | （檔頭沒有一句話） |
 | [`cli/talk_settings.json`](../../../../../proto8/knowledge/aos/cli/talk_settings.json) | （檔頭沒有一句話） |
 | [`cli/tool_env.json`](../../../../../proto8/knowledge/aos/cli/tool_env.json) | （檔頭沒有一句話） |
 | [`cli/tool_flags.json`](../../../../../proto8/knowledge/aos/cli/tool_flags.json) | （檔頭沒有一句話） |
 | [`cli/tools.json`](../../../../../proto8/knowledge/aos/cli/tools.json) | （檔頭沒有一句話） |
+| [`clock.json`](../../../../../proto8/knowledge/aos/clock.json) | 設定（鍵：_description、_index、wake_me、rules） |
 | [`errors.json`](../../../../../proto8/knowledge/aos/errors.json) | 設定（鍵：_description、_index、codes、common） |
-| [`me.json`](../../../../../proto8/knowledge/aos/me.json) | 設定（鍵：_description、_index、self_tools、self_llm、self_history） |
+| [`mailbox.json`](../../../../../proto8/knowledge/aos/mailbox.json) | 設定（鍵：_description、_index、tools、rules） |
+| [`me.json`](../../../../../proto8/knowledge/aos/me.json) | 設定（鍵：_description、_index、self_tools、self_llm、self_history、self_hook…） |
 | [`memory.json`](../../../../../proto8/knowledge/aos/memory.json) | （檔頭沒有一句話） |
 | [`rules.json`](../../../../../proto8/knowledge/aos/rules.json) | （檔頭沒有一句話） |
 | [`status.json`](../../../../../proto8/knowledge/aos/status.json) | （檔頭沒有一句話） |

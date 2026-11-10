@@ -15,7 +15,7 @@
   "_description": "How a brain request travels, what an endpoint pack is, and how priority works."
  },
  "agents.json": {
-  "_description": "OUTDATED page about the removed tool `agents`; use tools `agents_children`, `agents_ctl`, `agent_def` instead. Still current: `agents.json#/thought`."
+  "_description": "Tools agents_children, agents_ctl and agent_def: your own child agents, any agent on the daemon table, and new definitions; thought for one-off tasks."
  },
  "rules.json": {
   "_description": "What you must not do, and why. Read this before doing anything that changes the system."
@@ -25,5 +25,11 @@
  },
  "cli/": {
   "_description": "Use these shell commands to manage agents, tools and daemon procs."
+ },
+ "mailbox.json": {
+  "_description": "Letters between agents: tools mailbox_peek, mailbox_read, mailbox_send; when you must answer."
+ },
+ "clock.json": {
+  "_description": "Wake yourself (or another agent) every N cycles with tool clock_register."
  }
 }

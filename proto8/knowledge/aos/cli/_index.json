@@ -31,5 +31,11 @@
  },
  "history.json": {
   "_description": "Use aos-agent history to list, delete, summarize or replace messages in one agent's conversation."
+ },
+ "hook.json": {
+  "_description": "Use aos-agent hook to list, add or remove the hooks of one agent."
+ },
+ "mailbox.json": {
+  "_description": "Use aos-mailbox to peek, read and send mailbox letters from a shell."
  }
 }

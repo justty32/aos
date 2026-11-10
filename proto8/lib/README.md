@@ -34,4 +34,4 @@
 
 `thought` 與 `agents_children` 的 `ask`／`listen` 支援 `timeout_cycles`（與 `timeout_s` 擇一）；沒設 `AOS_CLOCK` 時，1 cycle＝`AOS_CLOCK_INTERVAL` 毫秒，預設 1000。有時鐘時停鐘不會讓時鐘期限到期；詳見 [agent 工具索引](docs/03-索引-agent等.md)。
 
-`memory read` 的 `path` 可寫 `節點#/JSON/Pointer`（RFC6901），只對 `.json` 葉取值；一般節點讀取方式見 [memory 說明](agent/memory/README.md)。
+`memory read` 的 `path` 寫統一路徑 `資料夾/檔.json#/JSON/Pointer`（RFC6901，帶副檔名，例 `me.json#/self_tools`）；工具 tooldef 指向知識節點一律寫 `Details: memory 路徑.`；一般節點讀取方式見 [memory 說明](agent/memory/README.md)。
