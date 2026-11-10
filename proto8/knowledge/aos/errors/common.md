@@ -3,7 +3,7 @@
 The Codes you will meet most, and what each one means for you.
 
 - `DaemonMissing`: `AOS_DAEMON` is unset or its directory does not exist. `DaemonFailed`: the daemon is configured and its directory exists, but no reply arrived within the timeout (busy, paused or down). `InstanceMissing`: no table row for you. Features that need the daemon are unavailable for now: say so, do not retry in a row; you may try once more later.
-- `AddRejected ... SlotMissing max_running N reached`: the judge allows at most N running agents. Remove a child or report.
+- `AddRejected ... SlotMissing max_running N reached`: the judge allows at most N running procs on its daemon's table (the _sweeper row counts too). Remove a child or report.
 - `AnswerMissing`: the agent you asked did not answer in time. Check its row with `agents` `{"op": "ls"}`: phase `stopped` with a `reason` means it crashed (fix or report); `running` means it is slow, ask again with a longer `timeout_s`. Phases: node `status`.
 - `ToolExists`: use `override: true` only if you mean to replace.
 - `LlmKernelMissing`: the brain service is not configured; a human must start it.

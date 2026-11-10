@@ -10,7 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`_entry`](../../../../../proto8/kernel/daemon-judge/_entry) | 入口：`aos-daemon --enable-logs daemon.json` |
-| [`daemon.json`](../../../../../proto8/kernel/daemon-judge/daemon.json) | 設定（鍵：exec、interval_ms） |
+| [`daemon.json`](../../../../../proto8/kernel/daemon-judge/daemon.json) | 設定（鍵：exec、interval_ms、procs） |
 | [`judge.json`](../../../../../proto8/kernel/daemon-judge/judge.json) | 設定（鍵：allowed、max_running、queue、keep_ordered） |
 
 ## `proto8/kernel/llm-kernel/`

@@ -48,16 +48,16 @@ kill $K
 
 kernel 總 `slots` 2、兩包各 `slots` 1、每封 3 秒：同級的信 fast 包排前面；fast 包第二封因為包滿了被**跳過**，讓 slow 包的第一封補上第二格（不是整列卡住）。3 秒後收成品、再掛各包的第二封。`smart-high` 那封沒掛出去：信寫了包釘死的 `temperature`。
 
-### 件 4：agent 生 agent（`agents`；判官 `max_running` 4）
+### 件 4：agent 生 agent（`agents`；判官 `max_running` 5＝清道夫＋4）
 
-直接用出廠的 `kernel/daemon-judge`：`judge.json` 的 `max_running` 4＝fsm1＋三隻孩子（範本不帶鐘列，不用替時鐘多留一格，11-09 clock-decouple）。實際容量看判官的回信與表，不以假腦文字判斷。
+直接用出廠的 `kernel/daemon-judge`：`judge.json` 的 `max_running` 5＝清道夫 `_sweeper`＋fsm1＋三隻孩子（範本不帶鐘列，不用替時鐘多留一格，11-09 clock-decouple；清道夫那列 11-10 起範本預設帶、也算 running，不掛的調回 4）。實際容量看判官的回信與表，不以假腦文字判斷。
 
 ```sh
 T=/tmp/feat-s9-spawn && rm -rf $T && mkdir -p $T/ws && cd $T
 JUDGE=$P/kernel/daemon-judge
 aos-exec --stack $T/k $P/kernel/llm-kernel > k.log 2>&1 & K=$!
 export AOS_LLM_KERNEL=$T/k AOS_DAEMON=$T/st AOS_KERNEL=$T/st/requests   # 掛 proc 都先過判官（kernel/docs/02 模式 1）
-aos-exec --stack $T/st "$JUDGE" > d.log 2>&1 & D=$!         # 帶判官的 daemon：allowed 有 fsm1、kid、kid1～4，max_running 4
+aos-exec --stack $T/st "$JUDGE" > d.log 2>&1 & D=$!         # 帶判官的 daemon：allowed 有 fsm1、kid、kid1～4，max_running 5（含清道夫一格）
 sleep 1
 aos-agent ctl add --name fsm1 --ws $T/ws $P/templates/agent-fsm
 aos-agent llm --target fsm1 set endpoint=fake-demo-spawn             # agents 範本內建（11-05「內建」）
@@ -67,7 +67,7 @@ aos-agent say --target fsm1 now start four kids && aos-agent listen --target fsm
 # 查看判官拒絕 kid4 的 SlotMissing 回信；假腦文字是固定劇本，不拿它的 running 數字判容量。
 aos-agent ctl ls                          # 只剩 fsm1
 ls ws/defs/helper                         # kid1 那時寫出的定義留著（普通定義資料夾，可再 add）
-rg SlotMissing d.log                     # 預期判官因總共四列 running 拒絕 kid4；以實際回信／log 為準
+rg SlotMissing d.log                     # 預期判官因總共五列 running（清道夫＋fsm1＋三隻孩子）拒絕 kid4；以實際回信／log 為準
 kill $K $D && unset AOS_DAEMON AOS_KERNEL
 ```
 

@@ -11,6 +11,11 @@ import tempfile
 import time
 
 KERNEL_COUNTER = "counter_kernel_runs.txt"
+# Every daemon carries the template sweeper row; --min-bytes 1 makes its first round archive something to keep out of git.
+SWEEPER = {"exec": {"argv": ["aos-sweeper", "--retention-days", "7", "--min-bytes", "1", "--report",
+                             {"$env": "AOS_STACK", "$path": "sweeper_report.json"}]},
+           "interval_ms": 600000, "auto_restart": True, "stuck_after_ms": 600000}
+SWEEPER_OUTPUT = ("stderr_archives/", "sweeper_report.json", ".sweeper.lock", ".sweeper_pending.json")
 
 
 class Check:
@@ -117,12 +122,13 @@ class Check:
         self.run(["cp", "-a", str(self.repo / "templates/agent-fsm"), str(defs / "agent")])
         configs = {
             "root": {"interval_ms": 100, "procs": {
+                "_sweeper": SWEEPER,
                 "_clock": {"exec": {"argv": ["aos-clock", {"$env": "AOS_DAEMON", "$path": "clock"}]},
                            "interval_ms": 1000, "auto_restart": True, "stuck_after_ms": 10000},
                 "kernel": {"exec": "../kernel", "auto_restart": True},
                 "foreman": {"exec": "../foreman", "auto_restart": True}}},
-            "foreman": {"interval_ms": 100, "procs": {}},
-            "kernel": {"interval_ms": 100,
+            "foreman": {"interval_ms": 100, "procs": {"_sweeper": SWEEPER}},
+            "kernel": {"interval_ms": 100, "procs": {"_sweeper": SWEEPER},
                        "exec": {"argv": ["aos-llm-kernel", "--enable-counters", "kernel.json"]}},
         }
         for name, config in configs.items():
@@ -210,6 +216,12 @@ class Check:
         queue_relative = str((self.kernel / "queue.json").relative_to(source))
         if queue_relative not in tracked:
             raise RuntimeError("documented stack filter unexpectedly dropped queue.json")
+        swept = [p for p in source.rglob("*") if any(mark.rstrip("/") == p.name for mark in SWEEPER_OUTPUT)]
+        if not swept:
+            raise RuntimeError("the sweeper rows left no archive, report or lock to check")
+        leaked = [p for p in tracked if any(mark in p for mark in SWEEPER_OUTPUT)]
+        if leaked:
+            raise RuntimeError(f"stack filter let sweeper output into the image: {leaked[:5]}")
         empty = [str(p.relative_to(source)) for p in source.rglob("*")
                  if p.is_dir() and ".git" not in p.parts and not any(p.iterdir())]
         destination = self.work / "cloned"
@@ -219,6 +231,7 @@ class Check:
         (self.work / "clone-evidence.json").write_text(json.dumps({
             "commit": commit, "commit_parent_count": len(parents), "tracked_files": len(tracked),
             "queue_retained": queue_relative in tracked,
+            "sweeper_output_on_disk": len(swept), "sweeper_output_tracked": 0,
             "empty_directories_omitted": missing_empty,
             "note": "The documented filter keeps queue.json with the queue's scheduling state."},
             indent=2) + "\n")

@@ -22,7 +22,8 @@ python3 proto8/extras/image-move-check/check.py
 <details>
 <summary>驗什麼、證據在哪、限制與清理</summary>
 
-- 前置：Linux `/proc`、Python 3、`cp`、`sync`、`git`、`pgrep`，以及已裝在 `~/.local/bin` 的 aos 指令；沿用現有執行檔，不自動安裝。
+- 前置：Linux `/proc`、Python 3、`cp`、`sync`、`git`、`pgrep`，以及已裝在 `~/.local/bin` 的 aos 指令（含 11-10 的 `aos-sweeper`：新 clone 或更新後重跑一次 `proto8/install.sh`）；沿用現有執行檔，不自動安裝。
+- **清道夫**（11-10）：三台 daemon 都帶範本那列 `_sweeper`（多給 `--min-bytes 1`，起來第一圈就把 stderr 封存一次、寫報告與鎖）。git image 那段驗：磁碟上真的有封存／報告／鎖，而且 `git ls-files` 一個都沒收（`clone-evidence.json` 記 `sweeper_output_on_disk`）。
 - 每次用 `tempfile.mkdtemp` 建獨立 `/tmp/aos-image-move-*`，複製 repo 的 lib／py／templates；兩個子 daemon 在根的表上都是 exec 型、`auto_restart: true`。只有根 daemon 帶普通 `_clock` 列，根定義的 `.env` 設 `AOS_CLOCK=${AOS_STACK}/clock`，兩個子 daemon 繼承這個鐘。
 - 三台 daemon、總機 kernel 與員工 loop 都加 `--enable-counters`；等各台 state 窗旁的 `counter_runs.txt` >= 1，再逐台 ping；沒有用固定睡幾秒猜啟動。輪詢的 0.1 秒只是檢查間隔。員工至少跑三拍，再用 `say`／`listen` 驗回信。
 - 根收 SIGINT 後等它退出，讀三台 `ctl ls --json` 驗所有列都是 `sleeping`；`sync` 後 `cp -a` 到另一位置，重設 `AOS_LLM_KERNEL` 再起根，驗列回到 `running`，再問一次假腦。

@@ -6,7 +6,7 @@
 
 **一句話：誰決定「這個 proc 掛不掛到 daemon 上」，誰就是 kernel。** 掛 proc 只有一條路——往 daemon 的 ctl 信箱（`procs_requests/`）寄一封 `procs_added` 信；三種模式的差別只在「寄進 ctl 信箱之前有沒有人先看一眼」。看一眼的那支程式是同一支：[`lib/aos/judge`](../../lib/aos/judge/_entry)（判官），用法與代號寫在它 `_entry` 開頭。
 
-`daemon-judge` 範本出廠帶 `--enable-logs`、不帶鐘列（11-09 clock-decouple：鐘只放在根，聽外層的 `AOS_CLOCK`），所以 `max_running` 只數工作 proc。自己加了鐘列的話，它也是普通 running proc、會算進 `max_running`。
+`daemon-judge` 範本出廠帶 `--enable-logs`、不帶鐘列（11-09 clock-decouple：鐘只放在根，聽外層的 `AOS_CLOCK`），鐘列不佔格。**`max_running` 數的是這台表上所有 running 的列**，範本帶的清道夫 `_sweeper`（11-10）也佔一格，所以預設 5＝4 隻工作 proc（agent）＋清道夫；不掛清道夫的（從 daemon.json 刪掉那列）自己把 `judge.json` 的 `max_running` 調回 4。`max_running` 是可選的：寫非負整數＝上限，寫 `null` 或不寫＝不限（使用者 11-10「上限應該是可選的，默認的值就隨意，改5吧。」）。自己加了鐘列的話，它也是普通 running proc、會算進 `max_running`，同樣再加一。
 
 ### 三種模式
 
@@ -56,7 +56,7 @@ AOS_DAEMON=/tmp/judge-try/m1/st aos-daemon-ctl ls                # wall_clock  r
 cat /tmp/judge-try/me/box/new/*/letter.json                      # body {"applied": true}（daemon 回的）
 ```
 
-白名單外的（`evil`）回 `{"applied": false, "error": {"code": "NameUnknown", "msg": "evil not in allowed"}}`；範本 `max_running` 是 4（11-05 午從 1 改成 4、`allowed` 多了 `fsm1`、`kid`、`kid1`～`kid4`，給 [03](03-feat-proto.md) 件 4 的 agent 生 agent 劇本用），所以 wall_clock 在跑時再寄 `wall_clock2` 也放行；要看 `SlotMissing` 就照 03 件 4 跑，或把 `judge.json` 的 `max_running` 改成 1（判官每圈重讀）再寄 `wall_clock2`——這時 `{"procs_stopped": ["wall_clock"]}` 原樣轉、回 `applied: true`，之後 `wall_clock2` 就放行。收工：在 daemon 的視窗 Ctrl-C。
+白名單外的（`evil`）回 `{"applied": false, "error": {"code": "NameUnknown", "msg": "evil not in allowed"}}`；範本 `max_running` 是 5（11-05 午從 1 改成 4、11-10 帶清道夫後改 5＝清道夫＋4 格，`allowed` 多了 `fsm1`、`kid`、`kid1`～`kid4`，給 [03](03-feat-proto.md) 件 4 的 agent 生 agent 劇本用），所以 wall_clock 在跑時再寄 `wall_clock2` 也放行；要看 `SlotMissing` 就照 03 件 4 跑，或把 `judge.json` 的 `max_running` 改成 2（判官每圈重讀；清道夫佔一格、wall_clock 一格）再寄 `wall_clock2`——這時 `{"procs_stopped": ["wall_clock"]}` 原樣轉、回 `applied: true`，之後 `wall_clock2` 就放行。收工：在 daemon 的視窗 Ctrl-C。
 
 模式 2：一台普通 daemon（這個固定兩格的示例不帶鐘列；若自己加了鐘列，把判官設定 `max_running` 加一，預留那格），把 procs-kernel 掛上去當 0 號，寄信進它的 `requests/`：
 

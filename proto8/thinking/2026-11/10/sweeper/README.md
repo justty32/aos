@@ -32,6 +32,12 @@
 
 > 因為是快速抉擇，主要靠直覺，其中可能有些錯誤，但沒關係，大修的時候再來處理
 
+判官範本那題（11-10 選項框）：
+
+> 上限應該是可選的，默認的值就隨意，改5吧。
+
+讀法：`kernel/daemon-judge` 照掛 `_sweeper`，`judge.json` 的 `max_running` 預設改 5（＝4 隻工作 proc＋清道夫；`max_running` 本來就是可選的，`null` 或不寫＝不限）。
+
 讀法（頂層轉達，照做）：
 
 1. 名字：表上 `_sweeper`、程式 `aos-sweeper`、指令 `aos-daemon-ctl sweep`。`prune` 清的是表上久沒動的 stopped／sleeping 列，清道夫**沒有覆蓋**它 → **prune 原樣保留**。
