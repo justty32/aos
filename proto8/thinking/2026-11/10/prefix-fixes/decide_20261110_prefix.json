@@ -1,0 +1,131 @@
+{
+ "description": "Decision questions (A+B bucket) for the pre-overhaul quick-fix pass on the current proto8, 2026-11-10.",
+ "contract": "wf-table/1",
+ "source": "README.md",
+ "extracted": "2026-11-10",
+ "kind": "decide-page/1",
+ "batch": "prefix-1110",
+ "line": "prefix-fixes",
+ "title": "開工前先修：2 題等你一句話",
+ "kicker": "11-10 現行 proto8 快修 · 207 列裡只有這 2 題要你選",
+ "lead": [
+  "**其餘能修的都直接修**：不動環境變數、json 格式、資料夾佈局、lib 介面，不用你裁。",
+  "**這 2 題**都跟「agent 長時間跑著」有關：一題是錯誤紀錄檔會一直長大，一題是等腦回信沒有期限。",
+  "沒回答的照推薦做。"
+ ],
+ "sections": [
+  {
+   "id": "run",
+   "title": "一、長時間跑的時候",
+   "intro": "你開始拿 aos 做事後，agent 會一跑好幾天，這兩件才會碰到。"
+  }
+ ],
+ "columns": [
+  "id",
+  "section",
+  "question",
+  "eli5",
+  "options",
+  "recommend",
+  "why",
+  "quotes",
+  "details",
+  "source_path",
+  "source_lines",
+  "source_excerpt",
+  "answer",
+  "answer_state",
+  "answer_note",
+  "answered_at"
+ ],
+ "link_columns": [
+  "source_path"
+ ],
+ "rows": [
+  {
+   "id": "q-stderr",
+   "section": "run",
+   "question": "每隻 agent 的錯誤紀錄檔 stderr.txt 沒有上限，要不要讓 daemon 自己截？（設計-34（連帶 坑-40））",
+   "eli5": "每隻零件在自己的 stack 裡有一個 `stderr.txt`，只會一直往後加。agent 一直出錯時（例如腦設定錯、每拍都印一行），一天能長到幾十到幾百 MB，跑幾天會把磁碟吃掉，你也很難從一大坨裡找到最近那行。（像一本只會往後寫、不會撕頁的日記本，寫滿了桌子就放不下。）",
+   "options": [
+    {
+     "key": "A",
+     "label": "超過 10 MB 時把整份搬成 stderr.txt.old（只留一份舊的），本檔清空接著寫",
+     "consequence": "stack 裡多一種檔 `stderr.txt.old`（資料夾佈局多一個檔名）；每隻最多約 20 MB；最近的錯誤永遠在 stderr.txt 開頭附近好找。之後大修要照做或改名。"
+    },
+    {
+     "key": "B",
+     "label": "超過 10 MB 時只留最後 1 MB，原地截掉前面",
+     "consequence": "佈局完全不變（還是只有 stderr.txt）；舊的錯誤直接丟掉、留不了證。"
+    },
+    {
+     "key": "C",
+     "label": "不改，照文件自己 `truncate -s 0` 或掛 logrotate",
+     "consequence": "程式不動；跑久了要你自己記得清，忘了就可能塞爆磁碟。"
+    }
+   ],
+   "recommend": "A",
+   "why": "多一個 .old 檔是加法、不破壞既有東西；留一份舊的方便查前因。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話；最相關：「我需要提前使用現有的aos體系去做事了」",
+     "cite": "使用者 11-10"
+    }
+   ],
+   "details": [
+    "問題清單編號：設計-34（連帶 坑-40）（桌面 aos-大修材料/40-問題清單）",
+    "沒回答＝照推薦 A",
+    "現況：aos-daemon 開 `stderr.txt` 用附加寫、不輪替（aos-daemon docs/08 第 31 行明寫「沒有上限、不輪替…一天約 277 MB」）。daemon 已經容忍 copytruncate（截了從 0 接著寫、不留空洞，reason 也照截過的情況看整份），所以 daemon 每圈看一次大小、超過就複製後截短，子程式不用改。改的檔：`impls/aos-daemon/src/daemon/tend.cpp`（每圈檢查）、`docs/08`；上限 10 MB 先寫死、代定可翻案。要跟著改：proto8/docs/NORMS 附錄4-持久檔.json 加 `stderr.txt.old` 一列、aos-daemon docs/08、大修材料 20-parts/aos-daemon 與 40-問題清單 設計-34。",
+    "源碼：impls/aos-daemon/src/child/child.cpp 第 108 行附近開 stderr.txt（附加）；沒有任何大小檢查",
+    "坑-40：身體一直失敗時，身體與 aos-exec 的錯每圈照印，是長大的主因"
+   ],
+   "source_path": "../../../../impls/aos-daemon/docs/08-當機復原與已知限制.md",
+   "source_lines": "31",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "q-wait",
+   "section": "run",
+   "question": "agent 等腦回信等太久（llm kernel 停了）要怎麼辦？（坑-74）",
+   "eli5": "agent-fsm 的 wait 格寄出問題後，就每拍看一次有沒有回信，自己沒有期限。llm kernel 沒開、當掉沒起來時，它會永遠停在 wait，表上看起來一直是 running，你只會覺得「它怎麼都不回答」，看不出原因。（像打電話叫外送，店沒開，你卻一直拿著話筒等，也沒有人告訴你店沒開。）",
+   "options": [
+    {
+     "key": "A",
+     "label": "只提醒：等超過 10 分鐘印一行 warning（說等哪封、從何時起、kernel 有沒有在跑），之後每 10 分鐘再印一次，照樣繼續等",
+     "consequence": "不動任何格式；kernel 回來後 agent 自己接著做；你在 stderr.txt 與 `aos-agent` 的提醒裡看得到原因。"
+    },
+    {
+     "key": "B",
+     "label": "提醒之外，等超過 30 分鐘就當失敗（BrainFailed、退 1、agent 停下等人）",
+     "consequence": "不會無聲卡住，但 kernel 只是排隊很久時也會被停掉，要你手動再起；期限先寫死，日後若要可調得在 llm.json 加欄（動 json 格式）。"
+    }
+   ],
+   "recommend": "A",
+   "why": "排隊久不一定是壞掉，停掉反而要人收拾；先讓原因看得見就好。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話；最相關：「我需要提前使用現有的aos體系去做事了」",
+     "cite": "使用者 11-10"
+    }
+   ],
+   "details": [
+    "問題清單編號：坑-74（桌面 aos-大修材料/40-問題清單）",
+    "沒回答＝照推薦 A",
+    "現況：`templates/agent-fsm/wait.py` 檔頭明寫「沒有自己的逾時（kernel 的 timeout_ms／priority.deadline 守）」；kernel 的 timeout_ms 只管已經開始跑的那封，排隊與 kernel 不在時沒人管。做法：用 `think/pending.txt` 的 mtime 當寄出時間（不加新檔），超過門檻就印提醒（門檻與間隔寫死、代定可翻案）。只改 wait.py 一支 Python，不用重建 impls；驗：templates/agent-fsm/tests 跑過＋試驗場假腦關掉 llm kernel 看提醒。要跟著改：templates/docs/02-agent-fsm.md、大修材料 20-parts/templates 與 坑-74。",
+    "源碼：proto8/templates/agent-fsm/wait.py 第 1～13 行檔頭",
+    "相關：坑-102（aos-llm recv 一直退 10 分不出原因）用同一行提醒順便說明"
+   ],
+   "source_path": "../../../../templates/agent-fsm/wait.py",
+   "source_lines": "1-13",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  }
+ ]
+}

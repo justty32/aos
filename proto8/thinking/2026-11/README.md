@@ -15,3 +15,4 @@
 | [2026-11-07](07/README.md) | 11 | 把 arknights 敘事庫歸納進 aos 知識庫體系（arknights-kb，長線，進行中）：確定性為優化目標、gpt 腦實跑、挖不足再優化 |
 | [2026-11-08](08/README.md) | 1 | 家機 codex 開著沙箱連 LiteLLM（codex-sandbox）：帶 `network_access=true` 即可，使用者裁 A、派工指令已改 |
 | [2026-11-09](09/README.md) | 1 | `_tick` 改名大改（clock／turn 待裁）與熱寫檔拉出 json 的盤點與實測（clock-and-hot-writes），只盤點、5 題待裁 |
+| [2026-11-10](10/README.md) | 1 | 大修前先修（prefix-fixes）：問題清單 207 列分桶、直接修 61 列切五條施工線、A＋B 待裁 2 題 |
