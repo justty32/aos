@@ -1,6 +1,7 @@
-# stack.gitignore - daemon stack 的 image 排除範本：暫存、鎖、可重建請求與紀錄（11-06 git-image 裁定）。
-# 用法：cp proto8/cmd/aos-agent/stack.gitignore ws/.stack/.gitignore（放 .stack 裡＝只管 image、不碰你 ws 裡自己的檔）。
-# 一定先 Ctrl-C 讓 daemon 睡著再 commit：跑著時存＝一張撕一半的照片。
+# stack.gitignore - 可選的 stack 排除範本：暫存、鎖、本機資料與可重建紀錄不進 git。
+# 用法：使用者手動 cp 此檔到自己選的 stack 根/.gitignore；也可放在只裝 stack 的共同父資料夾。
+# 不依賴 stack 名稱或位置；寬規則只適合 stack 範圍，別直接放進有專案成果的 repo 根。
+# 儲存前先 shutdown 整棵 daemon；git add／commit／push 由使用者自己決定。
 # 擋的是「只在這台、這一刻有意義」的東西；state.json、state_flux.json、procs_state.json、queue.json、history.jsonl、queue/、stage.txt、think/、used.json、
 #   llm.json、tools.json（覆蓋層）、session.txt 都要留（醒來要接著用；paused 也要帶著醒；state_flux.json 的 ctl_seq 讓 stop→start 不被同一道 stop 再停）。
 
@@ -8,10 +9,11 @@
 **/tmp/
 # 點開頭的暫存：.名.tmp（寫到一半的檔）、.flock（鎖本身不跟檔走）
 **/.*
-# …但不擋 .stack 本身（這份放在 ws 根時才用得到）與這兩份設定
+# …但保留慣用 .stack 目錄與規則本身；其他點開頭的 stack 名稱需使用者加同類例外
 !**/.stack/
-!/.gitignore
-!/.gitattributes
+# 巢狀 stack 的 .gitignore／.gitattributes 也要帶走
+!**/.gitignore
+!**/.gitattributes
 # 小格的 stderr（每次重開就重寫，只留原機；11-07 使用者裁定 sol 審查 #20-1）
 **/stderr.txt
 # eca 的畫面 socket 與鎖（到別台是死的；醒來 aos-agent open 重開畫面）
@@ -22,9 +24,9 @@
 **/order.lock/
 **/order.lock.releasing.*
 
-# 醒來／第一次使用前會重建；根規則只管這台 kernel 的端點
+# 醒來／第一次使用前會重建；端點觀測窗可在共同 stack 根下任何深度
 # （/queue.json 不擋：llm kernel 的等待時間 seen_at、判官的隊序與 queued_at 都記在裡面，擋了搬家後歸零重排；11-07 sol 審查 #18）
-/endpoints.json
+**/endpoints.json
 **/claude/mcp.json
 **/codex/mcp.json
 **/tmux.conf
@@ -35,18 +37,24 @@
 **/daemon_reply/
 # 未寄且請求不在時，wait 退 11 回 think，從 history＋定義重組
 **/think/request.json
+# 冷卻與等待提醒用這台的時間；sent.json 只供 observed 計算 elapsed_ms，不是待回信的識別
+**/cooldown.json
+**/think/wait_warned.txt
+**/think/sent.json
+# Python 匯入快取可重建
+**/__pycache__/
 
-# 只給人看的紀錄（只留原機器；image 不帶；11-07 使用者裁定 sol 審查 #20-1）
-# 歸檔信 archive/ 跟著 image 走（11-07 使用者裁定 sol 審查 #20-2）
+# 只給人看的紀錄（只留原機器；不進 git；11-07 使用者裁定 sol 審查 #20-1）
+# 歸檔信 archive/ 要帶走（11-07 使用者裁定 sol 審查 #20-2）
 **/live.jsonl
 **/turns.jsonl
 **/aos-mcp-logs.jsonl
 **/mailbox_warning.txt
 **/transcripts/
-# 計數器（--enable-counters 才寫的 counter_*.txt）只給人看，照 #20-1 不進 image（11-09 clock-and-hot-writes）
+# 計數器（--enable-counters 才寫的 counter_*.txt）只給人看，照 #20-1 不進 git（11-09 clock-and-hot-writes）
 **/counter_*.txt
 
-# S3 (format-versioning) keeps an unreadable state file as <name>.bad-<UTC ms> for evidence; never auto-cleaned, so keep it out of the image (user ruling 11-09)
+# S3 (format-versioning) keeps an unreadable state file as <name>.bad-<UTC ms> for evidence; never auto-cleaned, so keep it out of git (user ruling 11-09)
 **/*.bad-*
 
 # 清道夫（aos-sweeper／aos-daemon-ctl sweep，11-10）寫的全是只在這台有意義的：stderr 的 gzip 封存、報告（含 pid 與絕對路徑）、鎖。

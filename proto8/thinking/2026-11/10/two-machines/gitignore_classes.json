@@ -1,0 +1,1064 @@
+{
+ "description": "Classify observed aos files for an optional user-managed stack gitignore.",
+ "contract": "wf-table/1",
+ "source": "01-整體圖像.md",
+ "extracted": "2026-11-10",
+ "pattern_base": "Project-relative POSIX paths; **/ matches zero or more directories. defs/ and stacks/ are normalized test roles, not required user directory names. Runtime/local/temp matches precede definition fallback. Unknown stack files must fail.",
+ "ignored_now_baseline": "git show HEAD:proto8/cmd/aos-agent/stack.gitignore, copied to stacks/.gitignore; values compare actual git check-ignore against in_git.",
+ "seen_note": "Only the three raw find snapshots supply seen values. An empty list means source-reviewed but not captured in those snapshots; no synthetic observation is claimed.",
+ "observations": "Final central run /tmp/aos-gitignore-li3r9mqb; running/shutdown/kill9 raw find snapshots in /tmp/tm-team. 46 of 86 file classes captured; uncaptured source-reviewed classes retain seen=[].",
+ "columns": [
+  "id",
+  "pattern",
+  "writer",
+  "class",
+  "in_git",
+  "why",
+  "seen",
+  "ignored_now"
+ ],
+ "rows": [
+  {
+   "id": "G001",
+   "pattern": "defs/**/.aos-proto8",
+   "writer": "proto8/templates/copy-out:103",
+   "class": "local",
+   "in_git": "不進",
+   "why": "本機 repo 絕對位置；定義外的 stack 範本管不到，須由使用者在定義／專案自己的規則擋。",
+   "seen": [],
+   "ignored_now": "漏擋：tracked; sample=defs/worker/.aos-proto8"
+  },
+  {
+   "id": "G002",
+   "pattern": "defs/**/__pycache__/**",
+   "writer": "Python import; proto8/templates/agent-fsm/brain.py:26",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "Python 匯入快取可重建；定義若出現是執行期污染，stack 範本管不到。",
+   "seen": [],
+   "ignored_now": "漏擋：tracked; sample=defs/worker/__pycache__/brain.cpython-313.pyc"
+  },
+  {
+   "id": "G003",
+   "pattern": "stacks/**/cooldown.json",
+   "writer": "proto8/lib/agent/cooldown.py:74",
+   "class": "local",
+   "in_git": "不進",
+   "why": "失敗後的牆鐘期限屬本機；換台重新試，不攜帶冷卻。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "漏擋：tracked; sample=stacks/root/procs/worker/cooldown.json"
+  },
+  {
+   "id": "G004",
+   "pattern": "stacks/**/think/wait_warned.txt",
+   "writer": "proto8/templates/agent-fsm/wait.py:159",
+   "class": "local",
+   "in_git": "不進",
+   "why": "等腦提醒的本機次數，依 pending mtime，換台不應沿用。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "漏擋：tracked; sample=stacks/root/procs/worker/think/wait_warned.txt"
+  },
+  {
+   "id": "G005",
+   "pattern": "stacks/**/think/sent.json",
+   "writer": "proto8/templates/agent-fsm/wait.py:198",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "只記 started_ns／endpoint 供 observed elapsed_ms；接續靠 pending 與回信，不靠此觀測計時。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "漏擋：tracked; sample=stacks/root/procs/worker/think/sent.json"
+  },
+  {
+   "id": "G006",
+   "pattern": "stacks/**/endpoints.json",
+   "writer": "proto8/impls/aos-llm-kernel/src/serve/serve.cpp:62",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "kernel 的端點觀測窗，每圈重寫；舊 /endpoints.json 放 stacks/ 時漏擋子層。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "漏擋：tracked; sample=stacks/root/procs/worker/endpoints.json"
+  },
+  {
+   "id": "G007",
+   "pattern": "stacks/**/stderr.txt",
+   "writer": "proto8/impls/aos-daemon/src/child/child.cpp:103",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "子項錯誤紀錄只留原機。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/stderr.txt"
+  },
+  {
+   "id": "G008",
+   "pattern": "stacks/**/stderr_archives/**",
+   "writer": "proto8/py/aos_sweep_files.py:73",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "清道夫封存 stderr，只留原機；自訂 stderr 檔名的封存夾須使用者另加。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/stderr_archives/samplesample"
+  },
+  {
+   "id": "G009",
+   "pattern": "stacks/**/sweeper_report.json",
+   "writer": "proto8/py/aos_sweep.py:189",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "清道夫報告含 pid 與本機路徑，每次重建。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/sweeper_report.json"
+  },
+  {
+   "id": "G010",
+   "pattern": "stacks/**/.sweeper_pending.json",
+   "writer": "proto8/py/aos_sweep_proc.py:201",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "清道夫追表外行程的本機 stop／寬限資料。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/.sweeper_pending.json"
+  },
+  {
+   "id": "G011",
+   "pattern": "stacks/**/.sweeper.lock",
+   "writer": "proto8/py/aos_sweep.py:68",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "flock 鎖只對活行程有意義。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/.sweeper.lock"
+  },
+  {
+   "id": "G012",
+   "pattern": "stacks/**/.session_home",
+   "writer": "proto8/lib/agent/cli_session.py:291",
+   "class": "local",
+   "in_git": "不進",
+   "why": "對話的機器／帳號／工作區記號，刻意不帶才能在換台時整理開場白。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/.session_home"
+  },
+  {
+   "id": "G013",
+   "pattern": "stacks/**/.aos-proto8",
+   "writer": "proto8/templates/copy-out:103",
+   "class": "local",
+   "in_git": "不進",
+   "why": "本機 repo 錨點，不是可攜定義。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/.aos-proto8"
+  },
+  {
+   "id": "G014",
+   "pattern": "stacks/**/.flock",
+   "writer": "proto8/impls/aos-llm-kernel/src/serve/serve.cpp:76",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "信箱 flock 不隨行程搬走。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/.flock"
+  },
+  {
+   "id": "G015",
+   "pattern": "stacks/**/sender.flock",
+   "writer": "proto8/impls/aos-llm-kernel/src/letter/letter.cpp:26",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "寄件人的 flock 不隨行程搬走。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/sender.flock"
+  },
+  {
+   "id": "G016",
+   "pattern": "stacks/**/lock",
+   "writer": "proto8/lib/agent/cli_session.py:224",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "外部 CLI 小格行程鎖，只對本機有效。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/lock"
+  },
+  {
+   "id": "G017",
+   "pattern": "stacks/**/*.sock",
+   "writer": "proto8/lib/agent/cli_session.py:234",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "tmux 畫面 socket 只對原機有效。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/sample.sock"
+  },
+  {
+   "id": "G018",
+   "pattern": "stacks/**/order.lock/**",
+   "writer": "proto8/impls/aos-post/src/send/send.cpp:77",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "有序寄信的行程鎖／租約不帶。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/order.lock/samplesample"
+  },
+  {
+   "id": "G019",
+   "pattern": "stacks/**/order.lock.releasing.*/**",
+   "writer": "proto8/impls/aos-lock/src/lock/lock.cpp:227",
+   "class": "temp",
+   "in_git": "不進",
+   "why": "放鎖改名中的殘骸，不是工作狀態。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/order.lock.releasing.sample/samplesample"
+  },
+  {
+   "id": "G020",
+   "pattern": "stacks/**/.lock/**",
+   "writer": "proto8/impls/aos-lock/src/holder/holder.cpp:81",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "holder.json／holder.flock 是本機鎖租約。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/.lock/samplesample"
+  },
+  {
+   "id": "G021",
+   "pattern": "stacks/**/.lock.releasing.*/**",
+   "writer": "proto8/impls/aos-lock/src/lock/lock.cpp:227",
+   "class": "temp",
+   "in_git": "不進",
+   "why": "放鎖改名暫存。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/.lock.releasing.sample/samplesample"
+  },
+  {
+   "id": "G022",
+   "pattern": "stacks/**/tmp/**",
+   "writer": "proto8/impls/aos-post/src/send/send.cpp:187",
+   "class": "temp",
+   "in_git": "不進",
+   "why": "maildir 未提交半封信；rename 到 new 才是完整信。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/tmp/samplesample"
+  },
+  {
+   "id": "G023",
+   "pattern": "stacks/**/*.bad-*",
+   "writer": "proto8/impls/aos-util/src/files.cpp:157",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "狀態損壞的留證檔只留原機，依既有裁定不帶、不自動清。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/sample.bad-sample"
+  },
+  {
+   "id": "G024",
+   "pattern": "stacks/**/procs_requests/reply/**",
+   "writer": "proto8/py/daemon_ctl/post.py:103",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "ctl 等待者已不在；不能擴成擋所有 reply，問腦回信要帶。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/procs_requests/reply/samplesample"
+  },
+  {
+   "id": "G025",
+   "pattern": "stacks/**/daemon_reply/**",
+   "writer": "proto8/py/daemon_ctl/post.py:101",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "人打 ctl 的共用回信，等待者已不在。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/daemon_reply/samplesample"
+  },
+  {
+   "id": "G026",
+   "pattern": "stacks/**/think/request.json",
+   "writer": "proto8/templates/agent-fsm/brain.py:212",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "由 history 與定義重建；有 pending 時仍先收原回信，不能丟 pending。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/think/request.json"
+  },
+  {
+   "id": "G027",
+   "pattern": "stacks/**/live.jsonl",
+   "writer": "proto8/lib/agent/cli_session.py:449",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "CLI 即時輸出紀錄只留原機。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/live.jsonl"
+  },
+  {
+   "id": "G028",
+   "pattern": "stacks/**/turns.jsonl",
+   "writer": "proto8/lib/agent/cli_session.py:682",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "CLI 畫面輪次紀錄只留原機。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/turns.jsonl"
+  },
+  {
+   "id": "G029",
+   "pattern": "stacks/**/aos-mcp-logs.jsonl",
+   "writer": "proto8/cmd/aos-mcp/bin/aos-mcp:219",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "MCP 觀測紀錄只留原機。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/aos-mcp-logs.jsonl"
+  },
+  {
+   "id": "G030",
+   "pattern": "stacks/**/mailbox_warning.txt",
+   "writer": "proto8/templates/agent-fsm/idle.py:136",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "壞信提示只供原機診斷。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/mailbox_warning.txt"
+  },
+  {
+   "id": "G031",
+   "pattern": "stacks/**/transcripts/**",
+   "writer": "proto8/lib/agent/cli_session.py:331",
+   "class": "local",
+   "in_git": "不進",
+   "why": "指到本機 CLI 對話檔的捷徑，對話本體不搬。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/transcripts/samplesample"
+  },
+  {
+   "id": "G032",
+   "pattern": "stacks/**/counter_*.txt",
+   "writer": "proto8/impls/aos-loop/src/engine/window.cpp:290",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "人看的執行次數不攜帶；不是用量額度帳 used.json。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/counter_sample.txt"
+  },
+  {
+   "id": "G033",
+   "pattern": "stacks/**/observed.jsonl",
+   "writer": "proto8/lib/observed.py:48",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "公開觀測紀錄只留原機。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/observed.jsonl"
+  },
+  {
+   "id": "G034",
+   "pattern": "stacks/**/observed/**",
+   "writer": "proto8/lib/observed_children.py:37",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "已移除子項的觀測子帳只留原機。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/observed/samplesample"
+  },
+  {
+   "id": "G035",
+   "pattern": "stacks/**/claude/mcp.json",
+   "writer": "proto8/lib/agent/cli_session.py:188",
+   "class": "local",
+   "in_git": "不進",
+   "why": "每次呼叫重寫，含本機工具／stack 路徑。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/claude/mcp.json"
+  },
+  {
+   "id": "G036",
+   "pattern": "stacks/**/codex/mcp.json",
+   "writer": "proto8/lib/agent/cli_session.py:188",
+   "class": "local",
+   "in_git": "不進",
+   "why": "每次呼叫重寫，含本機工具／stack 路徑。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/codex/mcp.json"
+  },
+  {
+   "id": "G037",
+   "pattern": "stacks/**/tmux.conf",
+   "writer": "proto8/lib/agent/cli_session.py:727",
+   "class": "local",
+   "in_git": "不進",
+   "why": "畫面開啟時重建，含本機 hook 路徑。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/tmux.conf"
+  },
+  {
+   "id": "G038",
+   "pattern": "stacks/**/busy.txt",
+   "writer": "proto8/lib/agent/cli_session.py:662",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "CLI 忙碌記號屬上一輪行程。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/busy.txt"
+  },
+  {
+   "id": "G039",
+   "pattern": "stacks/**/tools/run_python/main.py",
+   "writer": "proto8/lib/base/run_python/_entry:66",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "執行工具的可重建 Python 暫存。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/tools/run_python/main.py"
+  },
+  {
+   "id": "G040",
+   "pattern": "stacks/**/__pycache__/**",
+   "writer": "Python import; proto8/lib/agent/cli_session.py:54",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "Python 匯入快取可重建。",
+   "seen": [],
+   "ignored_now": "漏擋：tracked; sample=stacks/root/procs/worker/__pycache__/samplesample"
+  },
+  {
+   "id": "G041",
+   "pattern": "stacks/**/.*.tmp",
+   "writer": "proto8/impls/aos-util/src/files.cpp:246",
+   "class": "temp",
+   "in_git": "不進",
+   "why": "N-05 同資料夾暫存，rename 前未提交；涵蓋 .state.json.PID.tmp 與 .pending.txt.tmp。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/.sample.tmp"
+  },
+  {
+   "id": "G042",
+   "pattern": "stacks/**/.clock.[0-9]*",
+   "writer": "proto8/cmd/aos-clock/bin/aos-clock:63",
+   "class": "temp",
+   "in_git": "不進",
+   "why": "時鐘先寫 .clock.PID 再改名。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/.clock.[0-9]sample"
+  },
+  {
+   "id": "G043",
+   "pattern": "stacks/**/.stage.txt",
+   "writer": "proto8/impls/aos-fsm/src/state/state.cpp:35",
+   "class": "temp",
+   "in_git": "不進",
+   "why": "FSM stage 原子改名暫存。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/.stage.txt"
+  },
+  {
+   "id": "G044",
+   "pattern": "stacks/**/.counter_kernel_runs.txt",
+   "writer": "proto8/impls/aos-llm-kernel/src/serve/serve.cpp:50",
+   "class": "temp",
+   "in_git": "不進",
+   "why": "kernel 計數器原子改名暫存。",
+   "seen": [],
+   "ignored_now": "對：ignored; sample=stacks/root/procs/worker/.counter_kernel_runs.txt"
+  },
+  {
+   "id": "G045",
+   "pattern": "stacks/**/state.json",
+   "writer": "proto8/impls/aos-loop/src/engine/window.cpp:200",
+   "class": "carry",
+   "in_git": "進",
+   "why": "paused 與狀態窗要接續；舊 pid／boot_id 由啟動時辨別。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/state.json"
+  },
+  {
+   "id": "G046",
+   "pattern": "stacks/**/state_flux.json",
+   "writer": "proto8/impls/aos-loop/src/engine/window.cpp:235",
+   "class": "carry",
+   "in_git": "進",
+   "why": "ctl_seq 防止同一道 stop 重做，狀態通量要接續。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/state_flux.json"
+  },
+  {
+   "id": "G047",
+   "pattern": "stacks/**/ctl.json",
+   "writer": "proto8/py/daemon_ctl/ctl.py:105",
+   "class": "carry",
+   "in_git": "進",
+   "why": "尚未處理的控制命令及 seq 要保留。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/ctl.json"
+  },
+  {
+   "id": "G048",
+   "pattern": "stacks/**/procs_state.json",
+   "writer": "proto8/impls/aos-daemon/src/daemon/windows.cpp:240",
+   "class": "carry",
+   "in_git": "進",
+   "why": "daemon 子項表，重起時接回定義與 stack。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/procs_state.json"
+  },
+  {
+   "id": "G049",
+   "pattern": "stacks/**/procs_state_procs/*.json",
+   "writer": "proto8/impls/aos-daemon/src/daemon/windows.cpp:136",
+   "class": "carry",
+   "in_git": "進",
+   "why": "大表分頁同主表一起帶。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/procs_state_procs/sample.json"
+  },
+  {
+   "id": "G050",
+   "pattern": "stacks/**/procs_ctl.json",
+   "writer": "proto8/impls/aos-daemon/src/daemon/windows.cpp:26",
+   "class": "carry",
+   "in_git": "進",
+   "why": "使用者期望的子項名單。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/procs_ctl.json"
+  },
+  {
+   "id": "G051",
+   "pattern": "stacks/**/stage.txt",
+   "writer": "proto8/impls/aos-fsm/src/state/state.cpp:35",
+   "class": "carry",
+   "in_git": "進",
+   "why": "FSM 下一格的位置。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/stage.txt"
+  },
+  {
+   "id": "G052",
+   "pattern": "stacks/**/clock",
+   "writer": "proto8/cmd/aos-clock/bin/aos-clock:63",
+   "class": "carry",
+   "in_git": "進",
+   "why": "F14：邏輯鐘接著數，不當作無意義熱寫排除。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/clock"
+  },
+  {
+   "id": "G053",
+   "pattern": "stacks/**/history.jsonl",
+   "writer": "proto8/cmd/aos-eca/bin/aos-eca-turn:175; proto8/templates/agent-fsm/wait.py:258",
+   "class": "carry",
+   "in_git": "進",
+   "why": "agent 記憶與 eca 換台開場白；可含工具輸出的路徑，不能靠 gitignore 清內容。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/history.jsonl"
+  },
+  {
+   "id": "G054",
+   "pattern": "stacks/**/queue.json",
+   "writer": "proto8/impls/aos-llm-kernel/src/queue/queue.cpp:62; proto8/lib/aos/judge/_entry:368",
+   "class": "carry",
+   "in_git": "進",
+   "why": "F14：等待時間、隊序、判官 queued_at 接續。kernel sender 可能為跨專案舊路徑，待隊長裁。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/queue.json"
+  },
+  {
+   "id": "G055",
+   "pattern": "stacks/**/used.json",
+   "writer": "proto8/impls/aos-llm-kernel/src/budget/budget.cpp:221",
+   "class": "carry",
+   "in_git": "進",
+   "why": "F14：額度帳不歸零。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/used.json"
+  },
+  {
+   "id": "G056",
+   "pattern": "stacks/**/ledger.jsonl",
+   "writer": "proto8/impls/aos-llm-kernel/src/serve/reply.cpp:101",
+   "class": "carry",
+   "in_git": "進",
+   "why": "F19：額度明細照圖紙帶；sender 為舊絕對路徑，敏感內容檢查會如實指出，待隊長裁。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/ledger.jsonl"
+  },
+  {
+   "id": "G057",
+   "pattern": "stacks/**/loop.json",
+   "writer": "proto8/impls/aos-daemon/src/child/child.cpp:180",
+   "class": "carry",
+   "in_git": "進",
+   "why": "daemon 生成的子 loop 定義，接回時用。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/loop.json"
+  },
+  {
+   "id": "G058",
+   "pattern": "stacks/**/exec.json",
+   "writer": "proto8/impls/aos-daemon/src/child/child.cpp:202",
+   "class": "carry",
+   "in_git": "進",
+   "why": "daemon 生成的子項單子。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/exec.json"
+  },
+  {
+   "id": "G059",
+   "pattern": "stacks/**/interfaces.json",
+   "writer": "proto8/lib/observed.py:17",
+   "class": "carry",
+   "in_git": "進",
+   "why": "stack 的公開介面宣告。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/interfaces.json"
+  },
+  {
+   "id": "G060",
+   "pattern": "stacks/**/tools.json",
+   "writer": "proto8/cmd/aos-tools/bin/aos-tools:320",
+   "class": "carry",
+   "in_git": "進",
+   "why": "使用者增加的工具覆蓋層，不可當快取丟。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/tools.json"
+  },
+  {
+   "id": "G061",
+   "pattern": "stacks/**/llm.json",
+   "writer": "proto8/cmd/aos-agent/aos_agent/llm.py:106",
+   "class": "carry",
+   "in_git": "進",
+   "why": "使用者選的腦覆蓋層。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/llm.json"
+  },
+  {
+   "id": "G062",
+   "pattern": "stacks/**/agents.json",
+   "writer": "proto8/lib/agent/agents/_entry:282",
+   "class": "carry",
+   "in_git": "進",
+   "why": "子 agent 設定覆蓋層。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/agents.json"
+  },
+  {
+   "id": "G063",
+   "pattern": "stacks/**/children.json",
+   "writer": "proto8/lib/agent/agents/_entry:499",
+   "class": "carry",
+   "in_git": "進",
+   "why": "已生子項帳。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/children.json"
+  },
+  {
+   "id": "G064",
+   "pattern": "stacks/**/judge_ordered.json",
+   "writer": "proto8/lib/aos/judge/_entry:351",
+   "class": "carry",
+   "in_git": "進",
+   "why": "判官的有序處理帳。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/judge_ordered.json"
+  },
+  {
+   "id": "G065",
+   "pattern": "stacks/**/order.json",
+   "writer": "proto8/impls/aos-post/src/send/send.cpp:79",
+   "class": "carry",
+   "in_git": "進",
+   "why": "maildir 有序信的下一個序號，避免重排。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/order.json"
+  },
+  {
+   "id": "G066",
+   "pattern": "stacks/**/think/pending.txt",
+   "writer": "proto8/templates/agent-fsm/wait.py:209",
+   "class": "carry",
+   "in_git": "進",
+   "why": "在途問腦信名；丟掉可能重寄，不可擋。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/think/pending.txt"
+  },
+  {
+   "id": "G067",
+   "pattern": "stacks/**/session.txt",
+   "writer": "proto8/lib/agent/cli_session.py:290",
+   "class": "carry",
+   "in_git": "進",
+   "why": "CLI 對話 id 要帶；換台由不帶的 .session_home 判新對話。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/session.txt"
+  },
+  {
+   "id": "G068",
+   "pattern": "stacks/**/tool.txt",
+   "writer": "proto8/lib/agent/cli_session.py:252",
+   "class": "carry",
+   "in_git": "進",
+   "why": "小格回呼的定義相對位置。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/tool.txt"
+  },
+  {
+   "id": "G069",
+   "pattern": "stacks/**/ws.txt",
+   "writer": "proto8/lib/agent/cli_session.py:252",
+   "class": "carry",
+   "in_git": "進",
+   "why": "小格回呼的工作區相對位置。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/ws.txt"
+  },
+  {
+   "id": "G070",
+   "pattern": "stacks/**/stack.txt",
+   "writer": "proto8/lib/agent/cli_session.py:252",
+   "class": "carry",
+   "in_git": "進",
+   "why": "小格回呼的 stack 相對位置。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/stack.txt"
+  },
+  {
+   "id": "G071",
+   "pattern": "stacks/**/last.txt",
+   "writer": "proto8/lib/agent/cli_session.py:477",
+   "class": "carry",
+   "in_git": "進",
+   "why": "codex 最後回答。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/last.txt"
+  },
+  {
+   "id": "G072",
+   "pattern": "stacks/**/.gitignore",
+   "writer": "使用者手動複製 proto8/cmd/aos-agent/stack.gitignore:1",
+   "class": "carry",
+   "in_git": "進",
+   "why": "使用者選的排除規則；原模板只例外根 .gitignore，巢狀那份被誤擋。",
+   "seen": [
+    "kill9"
+   ],
+   "ignored_now": "誤擋：ignored; sample=stacks/root/procs/worker/.gitignore"
+  },
+  {
+   "id": "G073",
+   "pattern": "stacks/**/.gitattributes",
+   "writer": "使用者手動複製 proto8/cmd/aos-agent/stack.gitattributes:1",
+   "class": "carry",
+   "in_git": "進",
+   "why": "使用者選的換行規則。",
+   "seen": [],
+   "ignored_now": "誤擋：ignored; sample=stacks/root/procs/worker/.gitattributes"
+  },
+  {
+   "id": "G074",
+   "pattern": "stacks/**/new/*/letter.json",
+   "writer": "proto8/impls/aos-post/src/send/send.cpp:187",
+   "class": "carry",
+   "in_git": "進",
+   "why": "F15/F16：完整在途／歸檔信保留；kernel requests 跨 repo 時 reply_to 仍指原寄件人，搬到另一處不保證可達，待隊長裁；ctl reply 的排除規則優先。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/new/sample/letter.json"
+  },
+  {
+   "id": "G075",
+   "pattern": "stacks/**/cur/*/letter.json",
+   "writer": "proto8/impls/aos-post/src/send/send.cpp:187",
+   "class": "carry",
+   "in_git": "進",
+   "why": "F15/F16：完整在途／歸檔信保留；kernel requests 跨 repo 時 reply_to 仍指原寄件人，搬到另一處不保證可達，待隊長裁；ctl reply 的排除規則優先。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/cur/sample/letter.json"
+  },
+  {
+   "id": "G076",
+   "pattern": "stacks/**/archive/*/letter.json",
+   "writer": "proto8/impls/aos-post/src/take/take.cpp:128",
+   "class": "carry",
+   "in_git": "進",
+   "why": "F15/F16：完整在途／歸檔信保留；kernel requests 跨 repo 時 reply_to 仍指原寄件人，搬到另一處不保證可達，待隊長裁；ctl reply 的排除規則優先。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/archive/sample/letter.json"
+  },
+  {
+   "id": "G077",
+   "pattern": "stacks/**/requests/cur/*/request.json",
+   "writer": "proto8/impls/aos-llm-kernel/src/serve/serve.cpp:240",
+   "class": "carry",
+   "in_git": "進",
+   "why": "F15：kernel 在途請求／端點回覆要接續；獨立 llms repo 搬家時 sender/reply_to 指舊專案，單靠 gitignore 無法修好。暫維持攜帶避免無聲掉工作，待隊長裁。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/requests/cur/sample/request.json"
+  },
+  {
+   "id": "G078",
+   "pattern": "stacks/**/requests/cur/*/proc.json",
+   "writer": "proto8/impls/aos-llm-kernel/src/serve/proc.cpp:90",
+   "class": "carry",
+   "in_git": "進",
+   "why": "F15：kernel 在途請求／端點回覆要接續；獨立 llms repo 搬家時 sender/reply_to 指舊專案，單靠 gitignore 無法修好。暫維持攜帶避免無聲掉工作，待隊長裁。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/requests/cur/sample/proc.json"
+  },
+  {
+   "id": "G079",
+   "pattern": "stacks/**/requests/cur/*/reply.json",
+   "writer": "proto8/impls/aos-llm-kernel/src/serve/reply.cpp:27",
+   "class": "carry",
+   "in_git": "進",
+   "why": "F15：kernel 在途請求／端點回覆要接續；獨立 llms repo 搬家時 sender/reply_to 指舊專案，單靠 gitignore 無法修好。暫維持攜帶避免無聲掉工作，待隊長裁。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/requests/cur/sample/reply.json"
+  },
+  {
+   "id": "G080",
+   "pattern": "stacks/**/requests/cur/*/reply_letter.txt",
+   "writer": "proto8/impls/aos-llm-kernel/src/serve/reply.cpp:53",
+   "class": "carry",
+   "in_git": "進",
+   "why": "F15：kernel 在途請求／端點回覆要接續；獨立 llms repo 搬家時 sender/reply_to 指舊專案，單靠 gitignore 無法修好。暫維持攜帶避免無聲掉工作，待隊長裁。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/requests/cur/sample/reply_letter.txt"
+  },
+  {
+   "id": "G081",
+   "pattern": "defs/**",
+   "writer": "使用者定義；proto8/templates/copy-out:273",
+   "class": "carry",
+   "in_git": "進",
+   "why": "定義是使用者原始碼（包括 .env 的相對／環境變數關係），不由 stack 範本管理；前列本機錨點與快取排除優先。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：tracked; sample=defs/worker/.env"
+  },
+  {
+   "id": "G082",
+   "pattern": "README.txt",
+   "writer": "回歸檢查 fixture 使用者專案檔；proto8/extras/gitignore-check/check.py:188",
+   "class": "carry",
+   "in_git": "進",
+   "why": "使用者自己的專案檔與 git 規則，原本歷史照留。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=README.txt"
+  },
+  {
+   "id": "G083",
+   "pattern": "app.txt",
+   "writer": "回歸檢查 fixture 使用者專案檔；proto8/extras/gitignore-check/check.py:189",
+   "class": "carry",
+   "in_git": "進",
+   "why": "使用者自己的專案檔與 git 規則，原本歷史照留。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=app.txt"
+  },
+  {
+   "id": "G084",
+   "pattern": ".gitignore",
+   "writer": "使用者的 git 規則；proto8/extras/gitignore-check/check.py:309",
+   "class": "carry",
+   "in_git": "進",
+   "why": "使用者自己的專案檔與 git 規則，原本歷史照留。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=.gitignore"
+  },
+  {
+   "id": "G085",
+   "pattern": ".gitattributes",
+   "writer": "使用者的 git 規則；proto8/extras/gitignore-check/check.py:309",
+   "class": "carry",
+   "in_git": "進",
+   "why": "使用者自己的專案檔與 git 規則，原本歷史照留。",
+   "seen": [],
+   "ignored_now": "對：tracked; sample=.gitattributes"
+  },
+  {
+   "id": "G086",
+   "pattern": "stacks/**/.reply.lock",
+   "writer": "proto8/py/daemon_ctl/post.py:90",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "人打 ctl 共用回信信箱的 flock；本機行程鎖，不帶。",
+   "seen": [
+    "running",
+    "shutdown",
+    "kill9"
+   ],
+   "ignored_now": "對：ignored; sample=stacks/root/procs_requests/reply/.reply.lock"
+  }
+ ]
+}
