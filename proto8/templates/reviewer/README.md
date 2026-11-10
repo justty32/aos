@@ -22,7 +22,7 @@ python3 -m unittest discover -s proto8/templates/reviewer/tests -p 'test_*.py'
 
 `fix` 必須有量測 `consistency.pass: true` 的訊號；沒有訊號就只考慮 `split`。兩者都只開處方，不寫定義。工具清單沒有 bash、thought 或其他任意執行入口。紀錄位於工作區的 `reviews/<round>/review.json`，改好的整棵副本位於同輪的 `defs/`，盯梢狀態在 `reviews/watch.json`。
 
-複製範本時保留 `../agent-fsm/` 與 `../../lib/` 的相對位置，或明確調整定義的路徑；格讀取設定時依 `AOS_CD`，自身檔案位置只用於找共用模組。測試在 `/tmp` 建暫存定義與工作區，使用真 daemon、kernel、review_round、measure 和 json_edit，只替換腦的端點，不叫真 LLM。
+複製範本時保留 `../agent-fsm/` 與 `../../lib/` 的相對位置，或用 `../copy-out reviewer <目的資料夾>` 抄出 repo（那兩種相對路徑改經本機錨點 `.aos-proto8`，換機後 `copy-out --relink`，11-10）；格讀取設定時依 `AOS_CD`，自身檔案位置只用於找共用模組。測試在 `/tmp` 建暫存定義與工作區，使用真 daemon、kernel、review_round、measure 和 json_edit，只替換腦的端點，不叫真 LLM。
 
 </details>
 

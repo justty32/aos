@@ -13,7 +13,7 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
 
 註冊檔：--file ＞ ./tools.json。長這樣：{"tools": {"名": {"path": "/絕對/路徑"}, …}}；沒有這份檔＝沒登記任何工具。
   aos 讀的 JSON 都解指示詞（N-45）：檔裡有 $ref／$env 就交給 aos-json 解（`$ref` 陣列＝把註冊檔拆成好幾份），
-  改的時候 aos-json set／del --follow 穿過 $ref 改被參照的那份。add 未用 --overlay 時寫絕對路徑；有 --overlay 時存相對覆蓋層所在資料夾的路徑（不解捷徑）；手寫的相對路徑從這份檔的資料夾算（範本搬家不斷）。
+  改的時候 aos-json set／del --follow 穿過 $ref 改被參照的那份。add 未用 --overlay 時寫絕對路徑（那資料夾有 copy-out 建的錨點 .aos-proto8、XXX 又在這份 repo 的 proto8 裡＝存 .aos-proto8/…）；有 --overlay 時，XXX 在覆蓋層所在資料夾裡存相對它的路徑、在這份 repo 的 proto8 裡存 .aos-proto8/…（並在覆蓋層資料夾建錨點捷徑 .aos-proto8 → 這台 proto8，不進 git；換機後 copy-out --relink）、其他外面的存相對（11-10 坑-92）；手寫的相對路徑從這份檔的資料夾算（範本搬家不斷）。
 三種登記對象（種類照 aos-exec 認法，N-61：資料夾；檔有 +x＝可執行檔；檔沒 +x＝JSON）：
   dir   資料夾裡有 _tooldef.json；_metainfo.json 有就一起給（11-04 起只認帶 .json 的：_ 開頭的資料檔一律帶副檔名，
         不帶的 _tooldef／_metainfo 不認——沒 _tooldef.json＝ToolDefMissing）。叫＝aos-exec 資料夾，arguments 進 stdin。
@@ -26,9 +26,9 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
         --override 重登記時沒帶 --no-cache＝回到有快取（整項重寫）。
         叫＝aos-exec 檔，arguments 原樣從 stdin 進；三種工具都不要求呼叫方設 AOS_STACK。
 --overlay O（11-05 portable-flow 步 4，使用者「tools只存差異那塊可以先做」）：F 疊一層覆蓋層 O 再用（aos-agent tools 的「這隻自己加減的」，
-  O＝<stack>/tools.json）。O 長這樣：{"add": {"名": {"path": 相對 O 所在資料夾的路徑, "cache"?: …}}, "rm": ["名", …]}（兩格都可省）；
+  O＝<stack>/tools.json）。O 長這樣：{"add": {"名": {"path": 相對 O 所在資料夾的路徑（repo 裡的＝.aos-proto8/…）, "cache"?: …}}, "rm": ["名", …]}（兩格都可省）；
   O 不在＝沒有覆蓋（就是 F）。疊法：F 的工具先拿掉 rm 裡的名字（F 裡沒有的＝忽略），再放上 add 的（同名蓋過 F）。
-  有 --overlay 時 add／rm 只寫 O、不碰 F：add＝寫進 O 的 add（path 存相對 O 的資料夾，字串算、不 realpath）、名字從 rm 拿掉；
+  有 --overlay 時 add／rm 只寫 O、不碰 F：add＝寫進 O 的 add（path 一律存相對 O 的資料夾；repo 裡的經錨點 .aos-proto8）、名字從 rm 拿掉；
   rm＝從 O 的 add 拿掉、F 裡有的名字記進 O 的 rm。撞名照常（看疊好的那份）。O 不解指示詞；O 寫壞＝RegistryBad。
 登記格選填 env（11-05 晚 agent-knowledge R1）：{"名": {"path": …, "env": {"AOS_MEMORY": "/x/knowledge/aos"}}}，call 時合進那次呼叫的環境
   （蓋過外面同名的）；值照字面用、不當路徑解（C-56；要相對就靠讀它的工具自己的規則，例 memory 的 AOS_MEMORY 相對 $AOS_DAEMON）。
@@ -85,8 +85,12 @@ usage: aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-cach
                [--env-file FILE] [--envs K=V]... XXX
 
 XXX is a folder, JSON file or executable, relative to cwd. Prints added NAME -> PATH
-with an absolute path. Without --overlay, the stored path is absolute; with --overlay,
-it is relative to the overlay file's directory (symlinks are not resolved).
+with an absolute path. With --overlay, the stored path is relative to the overlay file's
+directory; a target inside this repo's proto8/ is stored as .aos-proto8/<path in proto8>
+and the overlay directory gets .aos-proto8, a symlink to this machine's proto8/ (keep it
+out of git; after a move run templates/copy-out --relink). Without --overlay the stored
+path is absolute, except .aos-proto8/... when the registry's directory already has that
+anchor (an agent made by copy-out). No stored path holds this machine's home or repo.
 Names default to the folder name or file name without extension;
 only [A-Za-z0-9_-] is accepted, at most 64 characters.
 
@@ -265,7 +269,8 @@ def kind_of(path):
         return "dir"
     if os.path.isfile(path):
         return "exe" if os.access(path, os.X_OK) else "json"
-    raise Fail("PathMissing", "%s does not exist (or is neither a file nor a dir)" % path)
+    hint = "; its .aos-proto8 anchor is missing or stale here, run templates/copy-out --relink" if "/.aos-proto8/" in path else ""
+    raise Fail("PathMissing", "%s does not exist (or is neither a file nor a dir)%s" % (path, hint))
 
 
 def first_file(d, names):
@@ -508,6 +513,33 @@ def read_env_file(path):
     return result
 
 
+ANCHOR = ".aos-proto8"                               # 本機錨點捷徑 → 這台 repo 的 proto8/（templates/copy-out 建；不進 git，11-10 坑-73／坑-92）
+PROTO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))   # cmd/aos-tools/bin → proto8
+
+
+def stored_path(path, folder, make):
+    """登記檔裡存的路徑（相對 folder）：folder 裡＝相對；在這份 repo 的 proto8 裡＝經 folder/.aos-proto8 的相對（make＝錨點沒有就建）；
+    其他＝相對（覆蓋層照舊；同包搬才對）。存的字串不含這台的家目錄或 repo 位置，兩台一字不差。"""
+    if os.path.commonpath([path, folder]) == folder:
+        return os.path.relpath(path, folder)
+    real = os.path.realpath(path)
+    if os.path.commonpath([real, PROTO]) == PROTO:
+        link = os.path.join(folder, ANCHOR)
+        if make and not (os.path.islink(link) and os.readlink(link) == PROTO):
+            if os.path.lexists(link) and not os.path.islink(link):
+                raise Fail("WriteFailed", "%s exists and is not a symlink; cannot anchor %s there" % (link, path))
+            tmp = os.path.join(folder, ".%s.%d.tmp" % (ANCHOR, os.getpid()))
+            try:
+                os.makedirs(folder, exist_ok=True)
+                os.symlink(PROTO, tmp)
+                os.replace(tmp, link)                # 舊機留下的錨點（指別處）也換成這台
+            except OSError as e:
+                raise Fail("WriteFailed", "cannot link %s -> %s: %s" % (link, PROTO, e))
+        rel = os.path.relpath(real, PROTO)
+        return ANCHOR if rel == "." else ANCHOR + "/" + rel
+    return os.path.relpath(path, folder)
+
+
 def cmd_add(reg, args):
     opts, rest = aos_flags.parse(args, {"--name": "name", "--env-file": "env_file"},
                                  {"--override": "override", "--no-cache": "no_cache"},
@@ -539,16 +571,23 @@ def cmd_add(reg, args):
         entry["env"] = env
     if info["kind"] == "exe":
         entry["cache"] = False if opts.get("no_cache") else info["cache"]
-    if OVERLAY is not None:                          # 只寫覆蓋層：path 存相對覆蓋層所在資料夾（跟著 stack 一起搬）
+    if OVERLAY is not None:                          # 只寫覆蓋層：裡面＝相對（跟著 stack 搬）；repo 裡＝經錨點 .aos-proto8；其他外面＝相對（11-10 坑-92）
         ov = overlay_for_write()
-        entry["path"] = os.path.relpath(path, os.path.dirname(os.path.abspath(OVERLAY)))
+        ov_dir = os.path.dirname(os.path.abspath(OVERLAY))
+        entry["path"] = stored_path(path, ov_dir, make=True)
         ov["add"][name] = entry
         ov["rm"] = [n for n in ov["rm"] if n != name]
         write_overlay(ov)
-    elif os.path.exists(reg):
-        aos_json(["set", "--follow", "--parents", "%s#/tools/%s" % (reg, name), json.dumps(entry, ensure_ascii=False)])
-    else:
-        write_new(reg, {"tools": {name: entry}})
+    else:                                            # 主登記檔：這資料夾已有錨點（copy-out 抄的 agent）且目標在 repo 裡＝經錨點，否則照舊絕對
+        reg_dir = os.path.dirname(os.path.abspath(reg))
+        if os.path.islink(os.path.join(reg_dir, ANCHOR)):
+            via = stored_path(path, reg_dir, make=False)
+            if via.split("/")[0] == ANCHOR:
+                entry["path"] = via
+        if os.path.exists(reg):
+            aos_json(["set", "--follow", "--parents", "%s#/tools/%s" % (reg, name), json.dumps(entry, ensure_ascii=False)])
+        else:
+            write_new(reg, {"tools": {name: entry}})
     missing = [k for k in dict.fromkeys(hubs) if k not in os.environ and k not in env]
     if missing:
         aos_flags.warn(NAME, "tool %s has unset hub variables: %s" % (name, ", ".join(missing)))

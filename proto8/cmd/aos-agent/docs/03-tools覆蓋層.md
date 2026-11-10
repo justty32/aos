@@ -14,7 +14,7 @@
 {"add": {"math": {"path": "../../../../agents/lib/math"}}, "rm": ["wall_clock"]}
 ```
 
-- `add`：名字 → 登記內容（跟 aos-tools 登記檔裡一項一樣：`path`，可執行檔另有 `cache`）。**`path` 存相對覆蓋層這份檔所在的資料夾**（宣告路徑沒有子資料夾時就是這隻的 stack；有則是該子資料夾），字串算、不 realpath——整份 image（`ws/.stack/`）搬家時跟著走。選「相對覆蓋層」而不是「相對 daemon stack」：aos-tools 本來的規則就是「手寫的相對路徑從這份檔的資料夾算」，覆蓋層照同一條，aos-tools 不用知道 daemon；覆蓋層在 stack 裡，兩種基準點一起搬，效果一樣。
+- `add`：名字 → 登記內容（跟 aos-tools 登記檔裡一項一樣：`path`，可執行檔另有 `cache`）。**`path`：目標在覆蓋層這份檔所在的資料夾裡＝存相對它的路徑**（宣告路徑沒有子資料夾時就是這隻的 stack；有則是該子資料夾），字串算、不 realpath——整份 image（`ws/.stack/`）搬家時跟著走；**目標在這台 repo 的 `proto8/` 裡＝存 `.aos-proto8/<proto8 裡的路徑>`**，並在覆蓋層資料夾建本機錨點捷徑 `.aos-proto8` → 這台的 `proto8/`（不進 git：stack.gitignore 的 `**/.*` 擋；換機 pull 後 `copy-out --relink <image 根>` 重指）；其他外面的照舊存相對（11-10 坑-92：原本 repo 的工具會存成一串 `../../../home/…`，換機就斷；使用者裁選項 A「每個資料夾放一條不進 git 的捷徑 .aos-proto8 指向這台的 repo」）。選「相對覆蓋層」而不是「相對 daemon stack」：aos-tools 本來的規則就是「手寫的相對路徑從這份檔的資料夾算」，覆蓋層照同一條，aos-tools 不用知道 daemon；覆蓋層在 stack 裡，兩種基準點一起搬，效果一樣。
 - `rm`：拿掉的名字（只記定義裡有的；覆蓋層自己 add 的再 rm＝直接從 `add` 刪）。
 - 沒改過＝沒有這份檔＝就是定義那份。`tools reset`＝刪掉這份。
 - `llm` 也按它自己的宣告相對路徑放覆蓋層，只存改過的鍵（例宣告 `"llm": "cfg/brain.json"` 就寫 `<stack>/cfg/brain.json`）。

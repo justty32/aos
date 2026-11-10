@@ -2,7 +2,7 @@
 
 ← [搬家入口](../04-搬家.md)｜前四段：[六段食譜](01-六段食譜.md)
 
-## ⑤ 重建 root 四步，起根後逐層接回
+## ⑤ 重建 root 五步，起根後逐層接回
 
 ```mermaid
 flowchart TD
@@ -11,7 +11,7 @@ flowchart TD
     F --> A[agent ann]
 ```
 
-四步是建帳號（可略）→包 root（可略）→export→`aos-exec --stack <image> <定義>`。根是普通 daemon；沒有上層替它重起，正常運行由使用者顧。
+五步是建帳號（可略）→包 root（可略）→`copy-out --relink .`（換機才要，11-10）→export→`aos-exec --stack <image> <定義>`。根是普通 daemon；沒有上層替它重起，正常運行由使用者顧。
 
 <details><summary>三層佈局與啟動指令</summary>
 
@@ -57,7 +57,8 @@ AOS_CLOCK=${AOS_STACK}/clock
 
 1. 建帳號可略；若用了 `limits.user`，先由人把帳號、stack／信箱寫入權限配好。
 2. 包 root 可略；家機有 systemd 委派時可用下方 scope。
-3. 在 image 根 export 這台的外接位置：
+3. 換了機器或 repo 位置（git pull、cp 到別台）時，先在 image 根重指本機錨點：`copy-out --relink .`（`proto8/templates/copy-out`；`install.sh` 已連進 PATH；把 `.aos-proto8` 捷徑指到這台的 repo，別的檔不寫、冪等；同機 `cp -a` 可略）。
+4. 在 image 根 export 這台的外接位置：
 
 ```sh
 export AOS_LLM_KERNEL="$PWD/llm_image"
@@ -65,7 +66,7 @@ unset AOS_KERNEL AOS_DAEMON AOS_CLOCK   # 殼裡留著 AOS_CLOCK 的話，根的
 # 有判官才另 export AOS_KERNEL；端點需要的金鑰在此殼 export。
 ```
 
-4. 前景起根：
+5. 前景起根：
 
 ```sh
 aos-exec --stack "$PWD/root_image" "$PWD/root_def"

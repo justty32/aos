@@ -4,17 +4,38 @@
 
 aos 體系自己的 agent：**一隻＝一個範本資料夾**，複製一份、改 `llm.json`／`system.txt`／`tools.json` 就是另一隻（四支格的程式也放在範本裡，每隻複製；使用者 11-04「放範本裡，每隻複製」）。`body.json` 讓 aos-loop 跑 `loop.json`，loop 每次跑 `fsm.json` 的一格；`_entry` 是「把自己掛上 daemon」（11-05，下面）；格是範本裡四支純標準庫的 Python。設計與代定：[thinking 11-04 loop-fsm-agent](../../thinking/2026-11/04/loop-fsm-agent/README.md)；問腦 11-04 晚改成寄信給 llm kernel：[think-as-function 03 § 1](../../thinking/2026-11/04/think-as-function/03-呼叫端.md)；條文 P-11、P-19、P-35 的 11-04 註。
 
-**複製出 repo**（11-05 晚試驗場回報）：四支格找共用模組依序看自己的資料夾、自己的 realpath 往上找到的 repo `py/`／`lib/`、標準 `sys.path`（11-06 晚 K-5）。先跑過 `install.sh`，讓 user site 的 `aos-proto8.pth` 帶入這份 repo 的兩個絕對路徑，或明給 `PYTHONPATH`；介面宣告讀法共用 `lib/agent/agent_files.py`，不再靠 PATH 上 `aos-tools` 的真位置找模組；相對 repo 的五處要自己改成絕對路徑——`tools.json` 的 `../../lib/…`、`tools/memory/_entry` 單子裡的 `../../../../lib/agent/memory/_entry`、`tools/memory/_memory.json` 的 `base`，還有 `tools/memory/` 裡的兩個捷徑 `_tooldef.json`、`_metainfo.json`（`cp -r` 照原樣抄相對捷徑，出了 repo 就斷；沒改＝第一題 `aos-tools: error: ToolDefMissing tool memory (…) … needs _tooldef.json inside`、`agent-fsm: error: ToolsBad`，那隻留 `stopped`；11-05 夜第二輪邊緣）。照做一遍（`P`＝repo 的 proto8 絕對路徑）：
+**複製出 repo**（11-05 晚試驗場回報；11-10 坑-73 起用 `copy-out`，同日依使用者「盡量支援相對路徑」「會頻繁遷移，透過github」改成錨點）：開一隻新 agent 用範本旁的 `proto8/templates/copy-out`（不放範本裡：範本整份會被抄進每隻 agent），一行做完：
+
+```sh
+proto8/templates/copy-out bob              # = copy-out agent-fsm bob；別的範本：copy-out eca-claude bob、copy-out reviewer bob
+# copied agent-fsm -> /home/me/bob (7 paths through .aos-proto8)
+```
+
+**錨點 `.aos-proto8`**：`bob/.aos-proto8` 是指到這台 repo `proto8/` 的絕對捷徑，**只在這台、不進 git**（copy-out 同時寫 `bob/.gitignore` 一行 `/.aos-proto8`）。範本裡指出範本資料夾、落在 repo 裡的相對路徑一律改成「經過 `.aos-proto8` 的相對路徑」（`tools.json` 的 `.aos-proto8/lib/base/wall_clock`、`tools/memory/_entry` 的 `../../.aos-proto8/lib/agent/memory/_entry`、`_memory.json` 的 `../../.aos-proto8/knowledge/aos`、兩個捷徑 `→ ../../.aos-proto8/lib/agent/memory/…`、reviewer `fsm.json` 的 `$path`）；指在範本裡的照舊相對。所以會進 git 的檔不含家目錄、使用者名或 repo 位置，兩台一字不差；讀端（aos-tools、aos-exec、memory、OS 解捷徑）本來就收相對路徑，不用改。repo 位置從 `copy-out` 自己的 realpath 往上推（不加環境變數）。
+
+**換機／repo 搬了**：pull 之後、起來之前跑 `copy-out --relink <agents 或 image 的根>`——掃整棵（定義資料夾與 stack；JSON／`_entry` 裡經過 `.aos-proto8` 的字串、經過它的捷徑、已在的錨點），把每個錨點建好或重指到這台 repo；別的檔一個都不寫，冪等，`git status` 不因路徑起變化。可給多個根、遞迴、不跟捷徑往下走（錨點後面的 repo 不掃）；「開工接回」對整個 image 根叫它。stdout：新建／重指的每個一行 `linked <錨點> -> <proto8>`／`relinked …`，已對的只計數；最後一行一律 `done: N anchors (linked A, relinked B, already C), F failed, under R root(s)`。結束碼：0＝沒有失敗（一個錨都沒找到也是 0）；1＝有根不是資料夾（`PathMissing`）或錨點做不成（`AnchorBad`：那裡有別的東西、不蓋；`WriteFailed`）——每個失敗提醒一行、其餘照做，最後一行錯誤行指第一個。忘了跑＝第一題 `aos-tools: error: PathMissing … its .aos-proto8 anchor is missing or stale here, run templates/copy-out --relink`、`agent-fsm: error: ToolsBad`。每台照舊各跑一次 `install.sh`（PATH、`aos-proto8.pth`）。`aos-agent tools add` 加 repo 裡的工具時，覆蓋層存 `.aos-proto8/…`、在 stack 建同名錨點（stack 的 `.gitignore` 照 `cmd/aos-agent/stack.gitignore` 的 `**/.*` 已擋；[aos-tools](../../cmd/aos-tools/README.md)）。11-10 在 /tmp 模擬兩台（不同家目錄、不同 repo 位置）經 git 來回：每邊 relink 後假腦都答得出、覆蓋層加的工具找得到、`bob/` 與覆蓋層沒有 diff、追蹤檔裡沒有機器路徑。
+
+目的已存在＝`copy-out: error: DestExists …`、不蓋（搬家用 `--relink`）；範本名不是 `templates/` 底下有 `_entry` 的資料夾＝`TemplateMissing`；其餘錯 `ArgumentsBad`、`FlagUnknown`、`TemplateBad`（範本裡的 JSON 讀不懂）、`WriteFailed`（半路失敗會把這次建的目的資料夾刪掉）、`PathMissing`（`--relink` 的根不是資料夾）、`AnchorBad`（該放錨點的地方已有別的東西）；`--help` 印英文用法。四支格找共用模組依序看自己的資料夾、自己的 realpath 往上找到的 repo `py/`／`lib/`、標準 `sys.path`（11-06 晚 K-5），抄出 repo 後靠第三條：先跑過 `install.sh`，讓 user site 的 `aos-proto8.pth` 帶入這份 repo 的兩個絕對路徑，或明給 `PYTHONPATH`；介面宣告讀法共用 `lib/agent/agent_files.py`。
+
+沒用 `copy-out`、只 `cp -r`＝五處相對路徑出了 repo 就斷（第一題 `aos-tools: error: PathMissing tool agents (…)`〔或 `ToolDefMissing tool memory (…) … needs _tooldef.json inside`〕、`agent-fsm: error: ToolsBad aos-tools ls exited 1`，那隻留 `stopped`；11-05 夜第二輪邊緣，11-10 重驗）。`copy-out` 對 agent-fsm 等於做了這些事（`P`＝repo 的 proto8 絕對路徑）：
+
+<details><summary>手動版（等於 copy-out 做的事）</summary>
 
 ```sh
 cp -r $P/templates/agent-fsm bob && rm -rf bob/__pycache__
-sed -i "s#\"\.\./\.\./lib/#\"$P/lib/#g" bob/tools.json
-echo "[\"$P/lib/agent/memory/_entry\"]" > bob/tools/memory/_entry
-echo "{\"base\": \"$P/knowledge/aos\"}" > bob/tools/memory/_memory.json
-for f in _tooldef.json _metainfo.json; do ln -sfn $P/lib/agent/memory/$f bob/tools/memory/$f; done
+ln -s $P bob/.aos-proto8 && echo /.aos-proto8 > bob/.gitignore          # 本機錨點，不進 git
+sed -i 's#"\.\./\.\./lib/#".aos-proto8/lib/#g' bob/tools.json
+echo '["../../.aos-proto8/lib/agent/memory/_entry"]' > bob/tools/memory/_entry
+echo '{"base": "../../.aos-proto8/knowledge/aos"}' > bob/tools/memory/_memory.json
+for f in _tooldef.json _metainfo.json; do ln -sfn ../../.aos-proto8/lib/agent/memory/$f bob/tools/memory/$f; done
+# 換機後：ln -sfn <新機的 proto8> bob/.aos-proto8（= copy-out --relink bob）
 ```
 
-改完整包（定義＋工作區＋llm kernel）`cp -a` 到別處照樣起得來：daemon 表存相對路徑、上面五處是 repo 的絕對路徑（repo 沒搬就對），只要把 `AOS_LLM_KERNEL` 換成新位置。
+五處：`tools.json` 的 `../../lib/…`、`tools/memory/_entry` 單子裡的 `../../../../lib/agent/memory/_entry`、`tools/memory/_memory.json` 的 `base`、`tools/memory/` 裡的兩個捷徑 `_tooldef.json`、`_metainfo.json`（`cp -r` 照原樣抄相對捷徑）。`copy-out` 另外也改 JSON 裡的 `{"$env": "AOS_CD", "$path": "../…"}`（reviewer 的 `fsm.json` 借 `../agent-fsm/` 的格）。
+
+</details>
+
+改完整包（定義＋工作區＋llm kernel）`cp -a` 到別處照樣起得來：daemon 表存相對路徑、上面五處經錨點（同機 `cp -a` 錨點照樣指這台 repo；換機先 `copy-out --relink`），只要把 `AOS_LLM_KERNEL` 換成新位置。
 
 ```
 agent-fsm/
@@ -26,7 +47,8 @@ agent-fsm/
   idle.py      收信：$AOS_STACK/queue/ 全部收進 history.jsonl（接進去就 aos-post done）；有好信退 0、沒有退 10；[--prompt FILE] 開場白
   brain.py     組請求、不碰網路：history（＋system、tools）→ $AOS_STACK/think/request.json（llm kernel 請求信的 body）；退 0；沒事做退 10
   wait.py      寄與收：沒寄＝aos-llm send --reply-to $AOS_STACK/think/reply、名字記進 think/pending.txt、退 10；
-               已寄＝aos-llm recv：沒到退 10（loop 照跑）、到了那則 assistant 接進 history 退 0、kernel 回錯退 1；沒 pending 且請求不在、或寄之前腦設定與請求對不上＝退 11 回 think 重組
+               已寄＝aos-llm recv：沒到退 10（loop 照跑）、到了那則 assistant 接進 history 退 0、kernel 回錯退 1；沒 pending 且請求不在、或寄之前腦設定與請求對不上＝退 11 回 think 重組；
+               等回信不設期限，寄出（pending.txt 的 mtime）每滿 10 分鐘印一行 agent-fsm: warning、照樣等（記在 think/wait_warned.txt，11-10 坑-74）
   act.py       跑工具：逐個 aos-tools call，照 metainfo 限時；失敗附 stderr 尾，結果各接一則 tool、退 0；沒有 tool_calls（最後答案）退 10
   system.txt   system 訊息（brain.py 的 --system 指到它；每次從檔讀、不存進 history；11-05 晚改英文）
   tools.json   aos-tools 登記檔：wall_clock、self_tools（改自己的工具）、agents（生子 agent）、memory（查知識庫，11-05 晚）（"../../lib/…"；跟 eca-claude 同一份；後兩個 11-05 使用者裁「內建」）；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
@@ -42,7 +64,7 @@ agent-fsm/
 
 **覆蓋層位置**（11-06 K-6）：brain／wait 的腦設定、brain／act 的工具登記檔都讀 `interfaces.json` 的 `aos-agent.llm`／`tools` 宣告；定義與 stack 使用同一相對路徑。改成 `cfg/brain.json`、`cfg/my_tools.json` 時，身體與 `aos-agent llm／tools` 讀寫的是同一份，沒有寫死 `llm.json`／`tools.json`。未宣告 tools／llm 就沒有工具／腦設定，不去猜檔名。brain／act 的 `--tools` 明給檔案時照旗標，不套 tools 介面覆蓋層。
 
-**腦＝llm kernel**：think 不自己打端點，wait 把請求寄進 `$AOS_LLM_KERNEL/requests/`（`AOS_LLM_KERNEL`＝[llm kernel](../../kernel/docs/01-llm-kernel.md) 那台 daemon 的 stack，由人設）、之後一拍一拍收回信；寄完 loop 照跑，等回信的期間 `pause`／`stop` 每拍都生效。端點、模型、金鑰都在 kernel 的 `kernel.json`（代號表），agent 只寫代號。範本的 `llm.json` 是 `{}`＝不寫 `endpoint`、用 kernel 的預設（範本 kernel 預設是假腦 `fake`：有工具就先叫 wall_clock〔包寫 `"tool": "wall_clock"`；沒有 wall_clock 就叫第一個〕、再答一句「FAKE ANSWER to: …」），本機沒開 LM Studio 也跑得動。**要真腦**：`llm.json` 寫 `{"endpoint": "stupid-fast"}`（LM Studio 開在 localhost:1234）或 `smart-high`／`luna`／`sol`（LiteLLM），代號要是 kernel 的 `endpoints` 表裡有的（`aos-llm ls` 列出來，[03](../../kernel/docs/01-llm-kernel.md)）；正在跑的那隻只改它自己的就好：`aos-agent llm set endpoint=stupid-fast`（只存改過的鍵、下一題生效、`reset` 回定義）。**工具**：腦看到的名字＝登記名，act 直接 `aos-tools call`（不經 aos-mcp）；brain／act 讀的是「定義裡宣告的 tools 登記檔，疊 `$AOS_STACK/` 下同一宣告路徑的覆蓋層」（此範本宣告 `tools.json`）（`aos-tools --overlay`，aos-agent `tools add／rm` 只存差異，11-05，[aos-agent docs/03](../../cmd/aos-agent/docs/03-tools覆蓋層.md#tools-覆蓋層)），brain（memory 那次）與 act 只傳自己的 stack，小格 `$AOS_STACK/tools/<名>/` 由 aos-tools call 統一算；工具退非 0、逾時、沒登記、arguments 壞都接成 tool 訊息回給腦、不停（P-41）。act 用同一次 `aos-tools ls --json` 的 `metainfo.timeout_ms`（純數或 `{"val": N}`，單位毫秒）當各工具逾時，沒寫＝不設限；工具自成一群，逾時整群 TERM，2 秒後 KILL（群長先退也收掉群內孫行程）。退非 0 的結果保留 stdout 與結束碼；逾時結果保留已印的 stdout，再加一行 `(tool <名> timed out (N s); its process group was killed)`。兩種失敗的尾巴再附 `stderr (last 2048 bytes at most):` 與該次 stderr 最後 2 KB；成功時不附。這是**比照 aos-mcp 的 C-52／C-53 明文例外**（J4 任務授權；條文由 J7 補），stderr 全文照樣轉印到 act 自己的 stderr。**知識庫**（11-05 晚，[agent-knowledge 03](../../thinking/2026-11/05/agent-knowledge/03-接進agent與工具說明.md)）：think 格的 `--memory memory`＝每次組請求前叫一次登記名 `memory` 的工具 `{"op": "read"}`，印出來的根（aos 一頁簡介＋目錄）接在 `system.txt` 後面、同一則 system 訊息；腦要更深的自己叫 `memory`。這隻用 `aos-agent tools rm memory` 拿掉＝也不帶根；叫壞了＝`agent-fsm: error: MemoryFailed …` 停下。**history 就是全貌**：user、assistant（含 tool_calls）、tool 都在 `$AOS_STACK/history.jsonl`；回答＝最新那則沒有 `tool_calls` 的 assistant。stack 裡多一格 `think/`：`request.json`（可重建的這次請求，image 不存）、`pending.txt`（寄出去還沒收的信件名稱）、`reply/`（回信信箱）。
+**腦＝llm kernel**：think 不自己打端點，wait 把請求寄進 `$AOS_LLM_KERNEL/requests/`（`AOS_LLM_KERNEL`＝[llm kernel](../../kernel/docs/01-llm-kernel.md) 那台 daemon 的 stack，由人設）、之後一拍一拍收回信；寄完 loop 照跑，等回信的期間 `pause`／`stop` 每拍都生效。端點、模型、金鑰都在 kernel 的 `kernel.json`（代號表），agent 只寫代號。範本的 `llm.json` 是 `{}`＝不寫 `endpoint`、用 kernel 的預設（範本 kernel 預設是假腦 `fake`：有工具就先叫 wall_clock〔包寫 `"tool": "wall_clock"`；沒有 wall_clock 就叫第一個〕、再答一句「FAKE ANSWER to: …」），本機沒開 LM Studio 也跑得動。**要真腦**：`llm.json` 寫 `{"endpoint": "stupid-fast"}`（LM Studio 開在 localhost:1234）或 `smart-high`／`luna`／`sol`（LiteLLM），代號要是 kernel 的 `endpoints` 表裡有的（`aos-llm ls` 列出來，[03](../../kernel/docs/01-llm-kernel.md)）；正在跑的那隻只改它自己的就好：`aos-agent llm set endpoint=stupid-fast`（只存改過的鍵、下一題生效、`reset` 回定義）。**工具**：腦看到的名字＝登記名，act 直接 `aos-tools call`（不經 aos-mcp）；brain／act 讀的是「定義裡宣告的 tools 登記檔，疊 `$AOS_STACK/` 下同一宣告路徑的覆蓋層」（此範本宣告 `tools.json`）（`aos-tools --overlay`，aos-agent `tools add／rm` 只存差異，11-05，[aos-agent docs/03](../../cmd/aos-agent/docs/03-tools覆蓋層.md#tools-覆蓋層)），brain（memory 那次）與 act 只傳自己的 stack，小格 `$AOS_STACK/tools/<名>/` 由 aos-tools call 統一算；工具退非 0、逾時、沒登記、arguments 壞都接成 tool 訊息回給腦、不停（P-41）。act 用同一次 `aos-tools ls --json` 的 `metainfo.timeout_ms`（純數或 `{"val": N}`，單位毫秒）當各工具逾時，沒寫＝不設限；工具自成一群，逾時整群 TERM，2 秒後 KILL（群長先退也收掉群內孫行程）。退非 0 的結果保留 stdout 與結束碼；逾時結果保留已印的 stdout，再加一行 `(tool <名> timed out (N s); its process group was killed)`。兩種失敗的尾巴再附 `stderr (last 2048 bytes at most):` 與該次 stderr 最後 2 KB；成功時不附。這是**比照 aos-mcp 的 C-52／C-53 明文例外**（J4 任務授權；條文由 J7 補），stderr 全文照樣轉印到 act 自己的 stderr。**知識庫**（11-05 晚，[agent-knowledge 03](../../thinking/2026-11/05/agent-knowledge/03-接進agent與工具說明.md)）：think 格的 `--memory memory`＝每次組請求前叫一次登記名 `memory` 的工具 `{"op": "read"}`，印出來的根（aos 一頁簡介＋目錄）接在 `system.txt` 後面、同一則 system 訊息；腦要更深的自己叫 `memory`。這隻用 `aos-agent tools rm memory` 拿掉＝也不帶根；叫壞了＝`agent-fsm: error: MemoryFailed …` 停下。**history 就是全貌**：user、assistant（含 tool_calls）、tool 都在 `$AOS_STACK/history.jsonl`；回答＝最新那則沒有 `tool_calls` 的 assistant。stack 裡多一格 `think/`：`request.json`（可重建的這次請求，image 不存）、`pending.txt`（寄出去還沒收的信件名稱）、`reply/`（回信信箱）、`wait_warned.txt`（11-10 坑-74：一個整數＝等這封已提醒到第幾個 10 分鐘；寄新信、收掉回信時刪，brain／idle 不看它）。**等太久只提醒**（坑-74 使用者裁選項 A）：wait 不判失敗、不設期限；從寄出起每滿 10 分鐘 stderr 一行 `agent-fsm: warning: no reply from the brain for 11 minutes to letter <信件名> (llm kernel: <AOS_LLM_KERNEL>); still waiting`，照樣退 10 繼續等（kernel 沒開最常見）。
 
 ```sh
 # PATH 要有 impls 的 aos-exec／aos-loop／aos-fsm／aos-post／aos-llm-kernel／aos-llm、proto8/cmd/aos-tools/bin 的 aos-tools

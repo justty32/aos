@@ -1,0 +1,348 @@
+#!/usr/bin/env python3
+# copy-out - 把範本抄到 repo 外成一隻新 agent，指回 repo 的路徑一律寫成經本機錨點捷徑 .aos-proto8 的相對路徑；--relink 換機後重指錨點（11-10 坑-73）。
+# 放在 templates/ 底下、不在範本裡：範本資料夾整份會被抄進每隻 agent，腳本放裡面就會跟著被抄走。
+# repo 的位置從自己的 realpath 往上推（不靠環境變數）：範本＝<本檔所在資料夾>/<範本名>，proto8＝本檔所在資料夾的上一層。
+# 錨點（使用者 11-10「盡量支援相對路徑」「會頻繁遷移，透過github」）：<資料夾>/.aos-proto8 是指到這台 repo proto8/ 的絕對捷徑，只在這台、
+#   不進 git（agent 資料夾由這支寫 .gitignore 擋；stack 裡由 cmd/aos-agent/stack.gitignore 的 **/.* 擋）。會進 git 的檔只寫
+#   「經過 .aos-proto8 的相對路徑」，兩台內容一字不差；換機 pull 後跑 copy-out --relink ROOT 把錨點指到新機的 repo。
+# 抄的時候改的地方（等於 templates/docs/02-agent-fsm.md 那段手動 sh）——範本裡每個相對路徑照「它在範本原位」解開，
+#   落在範本裡＝照舊相對；落在 repo 的 proto8/ 裡（lib/、knowledge/、別的範本）＝改成經 DEST/.aos-proto8 的相對路徑；都不是＝照舊、印 warning：
+#   - interfaces.json 宣告的 aos-agent.tools 登記檔（沒宣告＝tools.json，有才看）的 tools.*.path；
+#   - 單子 _entry（JSON 陣列，或物件的 argv）第一個元素，帶 / 的相對路徑才算（範本根的 _entry 是 aos-agent、不動）；
+#   - 各處 _memory.json 的 base；每個相對捷徑；
+#   - 任一 JSON 裡的 {"$env": "AOS_CD", "$path": 相對}（reviewer 的 fsm.json 借 ../agent-fsm/ 的格；AOS_CD＝這隻的根）。
+# 不抄 __pycache__。目的已存在（含斷掉的捷徑）＝DestExists、不蓋；半路失敗＝刪掉這次建的目的資料夾再報錯。
+# --relink ROOT…：只建或重指錨點，不寫別的檔（冪等；「開工接回」對整個 image 根呼叫）。錨點位置從 ROOT 底下遞迴找：JSON 檔與 _entry
+#   裡經過 .aos-proto8 的相對字串（相對那個檔的資料夾）、目標經過 .aos-proto8 的相對捷徑，加上已經在的 .aos-proto8 捷徑；不跟捷徑往下走，不出 ROOT。
+#   stdout：新建／重指的每個一行，已對的只計數；最後一行 summary。一個壞了提醒一行、其餘照做，最後錯誤行退 1；一個錨都沒有＝退 0。
+# 錯（stderr 一行 `copy-out: error: 代號 原因`、退 1）：ArgumentsBad、FlagUnknown、TemplateMissing、TemplateBad、DestExists、WriteFailed、
+#   PathMissing（--relink 的 ROOT 不是資料夾）、AnchorBad（該放錨點的地方已有別的東西，不蓋）。
+import json, os, shutil, sys
+from pathlib import Path
+
+_import_paths = []
+for _parent in Path(__file__).resolve().parents:
+    if (_parent / "py" / "aos_flags.py").is_file():
+        _import_paths.append(str(_parent / "py"))
+        break
+sys.path[:0] = _import_paths
+try:
+    import aos_flags  # noqa: E402
+except ModuleNotFoundError as _error:
+    if _error.name not in ("aos_flags", "tool_io"):
+        raise
+    print("copy-out: error: ModuleMissing required Python module %s is unavailable" % _error.name, file=sys.stderr)
+    sys.exit(1)
+finally:
+    for _path in _import_paths:
+        sys.path.remove(_path)
+
+PROG = "copy-out"
+HERE = Path(__file__).resolve().parent             # proto8/templates
+PROTO = str(HERE.parent)                           # proto8（這台）
+ANCHOR = ".aos-proto8"
+DEFAULT = "agent-fsm"
+USAGE = "(usage: copy-out [TEMPLATE] DEST | copy-out --relink ROOT...)"
+HELP = """\
+copy-out - copy an agent template out of the repo, pointing at the repo through a local anchor
+
+usage: copy-out [TEMPLATE] DEST
+       copy-out --relink ROOT...
+
+TEMPLATE is a folder name under proto8/templates/ (default: agent-fsm); DEST is the new
+agent folder (relative to cwd) and must not exist yet. Copies the whole template (without
+__pycache__). Paths that pointed from the template into the repo become relative paths
+through DEST/.aos-proto8, a symlink to this machine's proto8/ folder; paths that stay
+inside the template stay as they were. Changed: tools.*.path in the tools registry
+(interfaces.json aos-agent.tools, default tools.json), the first element of one-shot
+_entry files when it is a path, "base" in every _memory.json, relative symlinks, and
+{"$env": "AOS_CD", "$path": "../x"} in any JSON file. DEST/.gitignore gets /.aos-proto8,
+so files that go into git hold no machine path and are identical on every machine.
+Prints one line: copied TEMPLATE -> DEST (N paths through .aos-proto8).
+
+--relink: after moving to another machine (or the repo moved), point every .aos-proto8
+anchor under each ROOT (recursively; give the whole image root) at this machine's
+proto8/. Anchors are found from JSON / _entry strings and symlinks under ROOT that go
+through .aos-proto8, plus existing anchors; symlinks are not followed, so the repo
+behind an anchor is never scanned. Writes nothing else (idempotent). Prints one line per
+anchor it creates or re-points ("linked PATH -> PROTO8", "relinked PATH -> PROTO8");
+anchors that were already right are only counted. The last stdout line is always
+  done: N anchors (linked A, relinked B, already C), F failed, under R root(s)
+Exit 0 when nothing failed, including when no anchor was found (N = 0). Exit 1 when a
+ROOT is not a folder (PathMissing) or an anchor could not be made (AnchorBad: something
+else is there; WriteFailed): one warning per failure, the others are still done, and a
+final error line names the first one.
+
+The repo is found from this script's own real path (no environment variable).
+On error: one line "copy-out: error: CODE reason" on stderr, exit 1.
+Error codes: ArgumentsBad, FlagUnknown, TemplateMissing, TemplateBad, DestExists,
+WriteFailed, PathMissing, AnchorBad.
+"""
+
+
+class Fail(Exception):
+    def __init__(self, code, reason):
+        super().__init__(reason)
+        self.code = code
+
+
+def inside(path, root):
+    return os.path.commonpath([path, root]) == root
+
+
+def load(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError) as e:
+        raise Fail("TemplateBad", "cannot read %s as JSON: %s" % (path, e))
+
+
+def save(path, value):
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(value, ensure_ascii=False) + "\n")
+    except OSError as e:
+        raise Fail("WriteFailed", "cannot write %s: %s" % (path, e))
+
+
+def make_anchor(folder):
+    """folder/.aos-proto8 → PROTO；回 'linked'／'relinked'／'already'。別的東西佔著＝AnchorBad。"""
+    link = os.path.join(folder, ANCHOR)
+    if os.path.islink(link):
+        if os.readlink(link) == PROTO:
+            return "already"
+        state = "relinked"
+    elif os.path.lexists(link):
+        raise Fail("AnchorBad", "%s exists and is not a symlink (not overwritten; move it away and rerun)" % link)
+    else:
+        state = "linked"
+    tmp = os.path.join(folder, ".%s.%d.tmp" % (ANCHOR, os.getpid()))
+    try:
+        os.symlink(PROTO, tmp)
+        os.replace(tmp, link)
+    except OSError as e:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise Fail("WriteFailed", "cannot link %s: %s" % (link, e))
+    return state
+
+
+# ---- 抄出 ----
+
+class Copy:
+    def __init__(self, src, dest):
+        self.src, self.dest, self.count = str(src), str(dest), 0
+
+    def fix(self, src_dir, rel):
+        """rel 從範本裡 src_dir 解開：範本裡＝None（不改）；repo 裡＝經 DEST/.aos-proto8、相對 src_dir 對應的 DEST 資料夾。"""
+        if not isinstance(rel, str) or not rel or os.path.isabs(rel):
+            return None
+        full = os.path.normpath(os.path.join(src_dir, rel))
+        if inside(full, self.src):
+            return None
+        if not inside(full, PROTO):
+            aos_flags.warn(PROG, "%s in %s points outside the repo; left as is" % (rel, src_dir))
+            return None
+        through = os.path.join(self.dest, ANCHOR, os.path.relpath(full, PROTO))
+        here = os.path.join(self.dest, os.path.relpath(src_dir, self.src))
+        self.count += 1
+        return os.path.relpath(through, here)
+
+    def directives(self, value):
+        if isinstance(value, list):
+            return [self.directives(v) for v in value]
+        if not isinstance(value, dict):
+            return value
+        if set(value) == {"$env", "$path"} and value["$env"] == "AOS_CD":
+            new = self.fix(self.src, value["$path"])
+            if new:
+                return {"$env": "AOS_CD", "$path": new}
+        return {k: self.directives(v) for k, v in value.items()}
+
+    def run(self):
+        src, dest = Path(self.src), Path(self.dest)
+        interfaces = src / "interfaces.json"
+        reg = "tools.json"
+        if interfaces.is_file():
+            declared = load(interfaces)
+            agent = declared.get("aos-agent") if isinstance(declared, dict) else None
+            if isinstance(agent, dict) and isinstance(agent.get("tools"), str):
+                reg = agent["tools"]
+        if (src / reg).is_file():
+            data = load(src / reg)
+            tools = data.get("tools") if isinstance(data, dict) else None
+            changed = False
+            if isinstance(tools, dict):
+                for entry in tools.values():
+                    new = self.fix(str((src / reg).parent), entry.get("path")) if isinstance(entry, dict) else None
+                    if new:
+                        entry["path"], changed = new, True
+            if changed:
+                save(dest / reg, data)
+        for directory, dirs, files in os.walk(src):
+            links = [d for d in dirs if (Path(directory) / d).is_symlink()]   # 指到資料夾的捷徑：不往下走、當捷徑改
+            dirs[:] = [d for d in dirs if d != "__pycache__" and d not in links]
+            rel_dir = Path(directory).relative_to(src)
+            for name in files + links:
+                s, out = Path(directory) / name, dest / rel_dir / name
+                if s.is_symlink():
+                    new = self.fix(directory, os.readlink(s))
+                    if new:
+                        try:
+                            os.remove(out)
+                            os.symlink(new, out)
+                        except OSError as e:
+                            raise Fail("WriteFailed", "cannot relink %s: %s" % (out, e))
+                    continue
+                if name == "_entry":
+                    data = load(s) if s.read_bytes()[:1] in (b"[", b"{") else None
+                    argv = data if isinstance(data, list) else data.get("argv") if isinstance(data, dict) else None
+                    if isinstance(argv, list) and argv and isinstance(argv[0], str) and "/" in argv[0]:
+                        new = self.fix(directory, argv[0])
+                        if new:
+                            argv[0] = new
+                            save(out, data)
+                elif name == "_memory.json":
+                    data = load(s)
+                    new = self.fix(directory, data.get("base")) if isinstance(data, dict) else None
+                    if new:
+                        data["base"] = new
+                        save(out, data)
+                elif name.endswith(".json") and not (rel_dir == Path(".") and name == reg):
+                    if '"$path"' in s.read_text(encoding="utf-8"):
+                        before = self.count
+                        data = self.directives(load(s))
+                        if self.count != before:
+                            save(out, data)
+        make_anchor(self.dest)
+        ignore = dest / ".gitignore"
+        line = "/%s\n" % ANCHOR
+        try:
+            old = ignore.read_text(encoding="utf-8") if ignore.exists() else ""
+            if line.strip() not in old.splitlines():
+                ignore.write_text(old + ("" if not old or old.endswith("\n") else "\n") + line, encoding="utf-8")
+        except OSError as e:
+            raise Fail("WriteFailed", "cannot write %s: %s" % (ignore, e))
+        return self.count
+
+
+# ---- 重指錨點 ----
+
+def through_anchor(base_dir, rel):
+    """rel 是經過 .aos-proto8 的相對路徑＝回錨點所在資料夾（normpath），否則 None。"""
+    if not isinstance(rel, str) or not rel or os.path.isabs(rel):
+        return None
+    parts = rel.split("/")
+    if ANCHOR not in parts:
+        return None
+    return os.path.normpath(os.path.join(base_dir, *parts[:parts.index(ANCHOR)]))
+
+
+def strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, list):
+        for v in value:
+            yield from strings(v)
+    elif isinstance(value, dict):
+        for v in value.values():
+            yield from strings(v)
+
+
+def relink(root, tally):
+    """ROOT 底下所有錨點建好或重指；壞的記進 tally["bad"]、不停（其他錨點照做）。"""
+    root = os.path.abspath(root)
+    if not os.path.isdir(root):
+        aos_flags.warn(PROG, "%s is not a folder; skipped" % root)
+        tally["bad"].append(("PathMissing", root))
+        return
+    found = set()
+    for directory, dirs, files in os.walk(root):          # 不跟捷徑往下走：錨點指的 repo 不會被掃
+        links = [d for d in dirs if os.path.islink(os.path.join(directory, d))]
+        dirs[:] = [d for d in dirs if d not in links and d not in ("__pycache__", ".git")]
+        for name in files + links:
+            path = os.path.join(directory, name)
+            if os.path.islink(path):
+                if name == ANCHOR:
+                    found.add(directory)
+                else:
+                    found.add(through_anchor(directory, os.readlink(path)))
+                continue
+            if not (name.endswith(".json") or name == "_entry"):
+                continue
+            try:
+                if os.path.getsize(path) > 1 << 20:
+                    continue
+                with open(path, encoding="utf-8") as f:
+                    text = f.read()
+                if ANCHOR not in text:
+                    continue
+                data = json.loads(text)
+            except (OSError, ValueError, UnicodeError):
+                continue
+            for s in strings(data):
+                found.add(through_anchor(directory, s))
+    found.discard(None)
+    for folder in sorted(found):
+        if not inside(folder, root):
+            aos_flags.warn(PROG, "anchor %s is outside %s; skipped" % (os.path.join(folder, ANCHOR), root))
+            continue
+        if not os.path.isdir(folder):
+            aos_flags.warn(PROG, "%s is referenced but %s is not a folder; skipped" % (ANCHOR, folder))
+            continue
+        try:
+            state = make_anchor(folder)
+        except Fail as e:
+            aos_flags.warn(PROG, str(e))
+            tally["bad"].append((e.code, os.path.join(folder, ANCHOR)))
+            continue
+        tally[state] += 1
+        if state != "already":
+            print("%s %s -> %s" % (state, os.path.join(folder, ANCHOR), PROTO))
+
+
+def main():
+    try:
+        opts, rest = aos_flags.parse(sys.argv[1:], {}, {"--relink": "relink"}, help=HELP)
+    except aos_flags.Error as e:
+        aos_flags.die(PROG, e.code, "%s %s" % (e, USAGE))
+    if opts.get("relink"):
+        if not rest:
+            aos_flags.die(PROG, "ArgumentsBad", "--relink needs at least one ROOT %s" % USAGE)
+        tally = {"linked": 0, "relinked": 0, "already": 0, "bad": []}
+        for root in rest:
+            relink(root, tally)
+        bad = tally["bad"]
+        print("done: %d anchors (linked %d, relinked %d, already %d), %d failed, under %d root(s)"
+              % (tally["linked"] + tally["relinked"] + tally["already"], tally["linked"],
+                 tally["relinked"], tally["already"], len(bad), len(rest)))
+        if bad:
+            aos_flags.die(PROG, bad[0][0], "%d not fixed, first: %s (see the warnings above)" % (len(bad), bad[0][1]))
+        return
+    if not rest or len(rest) > 2:
+        aos_flags.die(PROG, "ArgumentsBad", "%s %s" % ("missing DEST" if not rest else "too many arguments", USAGE))
+    template, dest = (DEFAULT, rest[0]) if len(rest) == 1 else rest
+    src = HERE / template
+    if "/" in template or template in ("", ".", "..") or not (src / "_entry").is_file():   # 範本＝有 _entry 的資料夾（docs/ 不算）
+        aos_flags.die(PROG, "TemplateMissing", "no template folder %s under %s" % (template, HERE))
+    src = src.resolve()
+    dest = Path(os.path.abspath(dest))
+    if os.path.lexists(dest):
+        aos_flags.die(PROG, "DestExists", "%s already exists; pick a new folder (nothing is overwritten; after a move use --relink)" % dest)
+    try:
+        shutil.copytree(src, dest, symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
+    except (OSError, shutil.Error) as e:
+        shutil.rmtree(dest, ignore_errors=True)
+        aos_flags.die(PROG, "WriteFailed", "cannot copy %s to %s: %s" % (src, dest, e))
+    try:
+        n = Copy(src, dest).run()
+    except Fail as e:
+        shutil.rmtree(dest, ignore_errors=True)
+        aos_flags.die(PROG, e.code, e)
+    print("copied %s -> %s (%d paths through %s)" % (template, dest, n, ANCHOR))
+
+
+aos_flags.run(main)
