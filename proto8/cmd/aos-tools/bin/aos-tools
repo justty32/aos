@@ -180,7 +180,8 @@ one broken tool is an error that names it. Executables are asked with --tooldef
 flags:
   -l, --long     also show FROM (the file and key its path comes from), STORED (the
                  path as written there, as JSON) and ENV (variable names and @ the
-                 env file; never values)
+                 env file; never values). Also lists names turned off with null:
+                 NAME null PATH-IT-HIDES FILE-THAT-SAYS-NULL#/tools/NAME null -
   -j, --json     one JSON array with name, kind, path, tooldef and optional metainfo
   -h, --help     show this help
 
@@ -635,6 +636,28 @@ def stored_value(reg, name, key, resolved):
         return resolved
 
 
+def nulled(reg):
+    """ls -l 用（11-10 晚使用者「3.顯示」）：疊完仍是 null 的名字 → (寫 null 的那份檔, 它蓋掉的那格解成的絕對路徑或 None)。"""
+    acc, out = {}, {}
+    for f, tools in layers(reg):
+        before = {n: dict(acc[n]) for n in tools if n in acc}
+        patch(acc, tools, f)
+        for n, e in tools.items():
+            if e is None:
+                hid = None
+                if n in before and "null" not in before[n]:
+                    try:
+                        hid = finish({n: before[n]})[n]["path"]
+                    except Fail:
+                        hid = None
+                elif n in out:
+                    hid = out[n][1]
+                out[n] = (f, hid)
+            else:
+                out.pop(n, None)
+    return {n: v for n, v in out.items() if n in acc and "null" in acc[n]}
+
+
 def load_tools(reg):
     """用的那份：reg 疊完它 $override 的底檔（沒有＝就是 reg；檔不在＝空的）。"""
     return finish(merged_tools(reg))
@@ -961,7 +984,13 @@ def cmd_ls(args):
     if opts.get("json"):
         print(json.dumps(found, ensure_ascii=False))
     elif opts.get("long"):                           # 甲5：FROM（檔#/格/名）、STORED（存的原樣值）、ENV（只印名）
-        for t in found:
+        off = nulled(reg)
+        rows = [(t["name"], t) for t in found] + [(n, None) for n in off]
+        for name, t in sorted(rows, key=lambda r: r[0]):
+            if t is None:                            # 被 null 關掉的格：KIND null、PATH＝它蓋掉的那支（不知道＝-）、FROM＝寫 null 的那份
+                f, hid = off[name]
+                print("\t".join((name, "null", hid or "-", "%s#/tools/%s" % (f, name), "null", "-")))
+                continue
             src = tools[t["name"]]
             print("\t".join((t["name"], t["kind"], t["path"], src["src"],
                              json.dumps(src["stored"], ensure_ascii=False), env_column(src))))

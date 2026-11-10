@@ -74,6 +74,14 @@ class ToolsOverride(unittest.TestCase):
         self.assertEqual(data["tools"], {"clock": None})
         self.assertEqual(self.names(TC_DEFS=str(self.defn.parent)), [])
 
+    def test_rm_by_path_and_long_shows_null(self):
+        """11-10 晚使用者「2.統一」「3.顯示」：rm 收路徑（同 aos-tools rm）；ls -l 列被設成 null 的格與它蓋掉的那支。"""
+        self.agent("rm", "defs/bob/lib/clock")
+        self.assertEqual(json.loads(self.own.read_text())["tools"], {"clock": None})
+        self.assertEqual(self.names(), [])
+        rows = [l.split("\t") for l in self.agent("ls", "-l").stdout.splitlines()]
+        self.assertEqual(rows, [["clock", "null", str(self.defn / "lib" / "clock"), "%s#/tools/clock" % self.own, "null", "-"]])
+
     def test_replace_and_reset(self):
         r = self.agent("add", "--name", "clock", "extra", ok=False)
         self.assertEqual(r.returncode, 1)

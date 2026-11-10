@@ -39,7 +39,8 @@
 | [`memory_write/tests/test_prerequisites.py`](../../../../../proto8/lib/agent/memory_write/tests/test_prerequisites.py) | Verify hard-link failures preserve nodes and explain filesystem prerequisites. |
 | [`memory_write/tests/test_writing.py`](../../../../../proto8/lib/agent/memory_write/tests/test_writing.py) | Verify memory writes, leaf promotion and concurrent removal through the real tool. |
 | [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | Write, promote and remove knowledge nodes atomically under directory locks. |
-| [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | 讓叫我的 agent 改自己的工具箱：加（add）、拿掉（rm）、列（ls）；改的是那隻的覆蓋層，定義不動 |
+| [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | aos-agent tools 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份登記檔，定義不動 |
+| [`self_tools/tests/test_self_tools.py`](../../../../../proto8/lib/agent/self_tools/tests/test_self_tools.py) | Test self_tools builds the aos-agent tools command line (replace, envs, env_file) and checks its arguments, with a fake aos-agent. |
 | [`tests/test_cli_tools_directive.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_directive.py) | 驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。 |
 | [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定或工具設定預設定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
 | [`thought/tests/test_observed_children.py`](../../../../../proto8/lib/agent/thought/tests/test_observed_children.py) | Verify child account preservation and thought cleanup ordering. |

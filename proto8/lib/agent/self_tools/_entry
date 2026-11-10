@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-# self_tools - 讓叫我的 agent 改自己的工具箱：加（add）、拿掉（rm）、列（ls）；改的是那隻的覆蓋層，定義不動
-# 使用者 11-05 午：「讓agent給自己改tool」。規劃：proto8/thinking/2026-11/05/feat-proto/01-self-tools.md。
-# 介面（lib/README 的契約）：stdin 收 {"op": "add"|"rm"|"ls", "name"?, "path"?, "replace"?, "envs"?, "env_file"?}；別的鍵＝ArgumentsBad；
-#   先 aos-agent ctl who（拿 $AOS_STACK＝<agent stack>/tools/self_tools/ 查 daemon 表，C-52 經機制看上層、不爬路徑）認出是哪隻，
-#   再 aos-agent tools --target <那隻> add --name <name> [--replace] [--envs K=V]… [--env-file <絕對路徑>] <絕對路徑>／rm <name>／ls --json
-#   （11-10 晚對齊 aos-tools 改版：override→replace、加 envs／env_file；寫進那隻 stack 裡自己那份 tools.json，"$override" 指回定義那份）。下一格 brain 重讀就看到新清單。
-#   path、env_file：相對路徑從 $AOS_WS 算、解開 .. 與捷徑後要在工作區或 lib/ 裡（工作區裡指到庫的捷徑也收）；絕對路徑要在 lib/（這個工具所在的庫）底下；其他＝PathBad。
-#   結果：add／rm 印一句（下一題起生效）、ls 印 aos-tools ls --json 那一行。
+# self_tools - aos-agent tools 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份登記檔，定義不動
+# 使用者 11-05 午：「讓agent給自己改tool」；11-10 晚：「我原本想說，這支工具就是aos-agent tools的包裝，只是目標改自己」、路徑限制「A，拿掉限制」。
+# **對應關係**：aos-agent tools 加了動作或旗標，這支要跟著加（參數一對一，不多給、不多擋）。
+# 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"get"|"add"|"rm"|"reset", …}；別的鍵＝ArgumentsBad：
+#   ls {long?}                   ＝tools ls --json（long: true＝ls -l 的文字，含被設成 null 的格）
+#   get {name}                   ＝tools get NAME_OR_PATH
+#   add {path | path_json, name?, replace?, envs?, env_file?, no_cache?}
+#                                ＝tools add [--name] [--replace] [--envs K=V]… [--env-file] [--no-cache] (XXX | --path-json)
+#   rm {name}                    ＝tools rm XXX（名字，不然路徑）
+#   reset {}                     ＝tools reset -y（腦叫了就算確認過）
+#   先 aos-agent ctl who（拿 $AOS_STACK＝<agent stack>/tools/self_tools/ 查 daemon 表，C-52 經機制看上層、不爬路徑）認出是哪隻。
+#   aos-agent 在 $AOS_WS 跑：相對路徑（path、env_file、rm／get 的路徑）從工作區算；不另設門（能不能用交給 Linux 權限與下層報錯）。
+#   結果：下層 stdout 原樣（add／rm／reset 多一句「下一題起生效」）。下一格 brain 重讀就看到新清單。
 #   錯：stderr 與 stdout 各一行「self_tools: error: 代號 原因」、退 1；aos-agent（與它轉的 aos-tools）的 stderr 原樣透到 stderr；
-#   它退非 0＝把它 stderr 裡最後一行錯誤行 `aos-…: error: 代號 原因` 的代號與原因接在 `self_tools: error: ` 後面給腦（給腦用的工具把下層錯
-#   翻成自己的錯，同 agents；例 ToolExists、ToolMissing、PathMissing），沒那行才是 CommandFailed＋結束碼。op 沒給＝ArgumentsBad、不認得＝OpUnknown（R11）。
+#   它退非 0＝把它 stderr 裡最後一行錯誤行 `aos-…: error: 代號 原因` 的代號與原因接在 `self_tools: error: ` 後面給腦（C-52 例外 ⑤，同 agents），
+#   沒那行才是 CommandFailed＋結束碼。op 沒給＝ArgumentsBad、不認得＝OpUnknown（R11）。
 #   沒掛在 daemon 下跑的 agent（aos-exec body.json）不支援：ctl who 失敗＝aos-agent 的 DaemonMissing／InstanceMissing。
 #   --help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉 aos-agent，退 130）。
 # 需要 PATH 上有 aos-agent（proto8/install.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
@@ -17,7 +22,7 @@ import json, os, re, signal, subprocess, sys
 HELP = """\
 usage: self_tools < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Change the tool box of the agent that calls me (its overlay, not its definition):
-op add | rm | ls. Changes apply from the next turn.
+op ls | get | add | rm | reset (aos-agent tools with the target = me). Changes apply from the next turn.
 Result on stdout. On error: one line "self_tools: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -43,7 +48,6 @@ NAME = "self_tools"
 tool_io.start(NAME, HELP)
 TIMEOUT_S = 60
 ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
-LIB = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # proto8/lib
 child = None
 
 
@@ -63,26 +67,12 @@ workspace = tool_io.workspace
 arguments = tool_io.arguments
 
 
-def tool_path(p):
-    """相對＝從工作區算、不能出工作區；絕對＝要在 lib/ 底下（照抄庫的工具）。回解開後的絕對路徑。"""
-    if os.path.isabs(p):
-        real = os.path.realpath(p)
-        if os.path.commonpath([LIB, real]) != LIB:
-            die("PathBad", "%s is an absolute path outside the tool library %s; give a path relative to the workspace, or one under %s" % (p, LIB, LIB))
-        return real
-    root = workspace()
-    real = os.path.realpath(os.path.join(root, p))
-    if os.path.commonpath([root, real]) != root and os.path.commonpath([LIB, real]) != LIB:   # 工作區裡指向 lib/ 的捷徑也收（11-05 晚）
-        die("PathBad", "%s resolves to %s, outside the workspace and the tool library %s" % (p, real, LIB))
-    return real
-
-
 def agent(*args):
     """aos-agent args…：stderr 原樣往上；退非 0＝它最後一行錯誤行的代號與原因當自己的錯（沒有＝CommandFailed）。回 stdout。"""
     global child
     try:
         child = subprocess.Popen(["aos-agent"] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE, text=True, start_new_session=True)
+                                 stderr=subprocess.PIPE, text=True, start_new_session=True, cwd=workspace())
     except OSError as e:
         die("LaunchFailed", "cannot run aos-agent (put it on PATH with proto8/install.sh): %s" % e)
     try:
@@ -105,47 +95,61 @@ def agent(*args):
 signal.signal(signal.SIGTERM, on_term)
 signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
 args = arguments()
+OPS = {"ls": ("long",), "get": ("name",), "add": ("path", "path_json", "name", "replace", "envs", "env_file", "no_cache"),
+       "rm": ("name",), "reset": ()}
 op = args.get("op")
 if op is None:
-    die("ArgumentsBad", "op is required (add, rm or ls)")
-if op not in ("add", "rm", "ls"):
-    die("OpUnknown", "op must be one of add, rm, ls (got %r)" % (op,))
-name = args.get("name")
-if op in ("add", "rm") and (not isinstance(name, str) or not name):
-    die("ArgumentsBad", "%s needs name (a string)" % op)
-KEYS = ("op", "name", "path", "replace", "envs", "env_file")
-extra = sorted(k for k in args if k not in KEYS)
+    die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
+if op not in OPS:
+    die("OpUnknown", "op must be one of %s (got %r)" % (", ".join(OPS), op))
+extra = sorted(k for k in args if k != "op" and k not in OPS[op])
 if extra:
-    die("ArgumentsBad", "unknown argument %s (this tool takes %s)" % (", ".join(extra), ", ".join(KEYS)))
-replace = args.get("replace", False)
-if not isinstance(replace, bool):
-    die("ArgumentsBad", "replace must be true or false")
-envs = args.get("envs", {})
-if not isinstance(envs, dict) or not all(isinstance(k, str) and k and "=" not in k and isinstance(v, str) for k, v in envs.items()):
-    die("ArgumentsBad", "envs must be an object of strings, like {\"AOS_MEMORY\": \"/data/memory\"} (names without =)")
-env_file = args.get("env_file")
-if env_file is not None and (not isinstance(env_file, str) or not env_file):
-    die("ArgumentsBad", "env_file must be a non-empty string (relative to the workspace, or absolute under %s)" % LIB)
-if op != "add" and (replace or envs or env_file is not None):
-    die("ArgumentsBad", "replace, envs and env_file only go with op add")
-if op == "add":
-    if not isinstance(args.get("path"), str) or not args["path"]:
-        die("ArgumentsBad", "add needs path (a string: relative to the workspace, or absolute under %s)" % LIB)
-    path = tool_path(args["path"])
-    if env_file is not None:
-        env_file = tool_path(env_file)
+    die("ArgumentsBad", "op %s does not take %s (it takes %s)" % (op, ", ".join(extra), ", ".join(OPS[op]) or "nothing else"))
 
-me = agent("ctl", "who").strip()
+
+def text(key, need=False):
+    v = args.get(key)
+    if v is None and not need:
+        return None
+    if not isinstance(v, str) or not v:
+        die("ArgumentsBad", "%s %s a non-empty string" % (key, "needs" if v is None else "must be"))
+    return v
+
+
+def flag(key):
+    v = args.get(key, False)
+    if not isinstance(v, bool):
+        die("ArgumentsBad", "%s must be true or false" % key)
+    return v
+
+
+cmd = ["tools", "--target", None, op]
 if op == "ls":
-    sys.stdout.write(agent("tools", "--target", me, "ls", "--json"))
-elif op == "add":
-    flags = ["--name", name] + (["--replace"] if replace else [])
-    for k in sorted(envs):
-        flags += ["--envs", "%s=%s" % (k, envs[k])]
-    if env_file is not None:
-        flags += ["--env-file", env_file]
-    agent("tools", "--target", me, "add", *flags, path)
-    print("added %s (%s) to your tools; available from your next turn" % (name, path))
+    cmd += ["-l"] if flag("long") else ["--json"]
+elif op in ("get", "rm"):
+    cmd += [text("name", True)]
+elif op == "reset":
+    cmd += ["-y"]
 else:
-    agent("tools", "--target", me, "rm", name)
-    print("removed %s from your tools; gone from your next turn" % name)
+    envs = args.get("envs", {})
+    if not isinstance(envs, dict) or not all(isinstance(k, str) and k and "=" not in k and isinstance(v, str) for k, v in envs.items()):
+        die("ArgumentsBad", "envs must be an object of strings, like {\"AOS_MEMORY\": \"/data/memory\"}")
+    if ("path" in args) == ("path_json" in args):
+        die("ArgumentsBad", "add needs path (a tool folder, JSON file or executable) or path_json, not both")
+    name, env_file = text("name"), text("env_file")
+    cmd += (["--name", name] if name else []) + (["--replace"] if flag("replace") else []) \
+        + [x for k in sorted(envs) for x in ("--envs", "%s=%s" % (k, envs[k]))] \
+        + (["--env-file", env_file] if env_file else []) + (["--no-cache"] if flag("no_cache") else [])
+    if "path_json" in args:
+        pj = args["path_json"]
+        if not isinstance(pj, dict) or not pj:
+            die("ArgumentsBad", "path_json must be a directive object like {\"$env\": \"AOS_HOME\", \"$path\": \"/lib/base/math\"}")
+        cmd += ["--path-json", json.dumps(pj, ensure_ascii=False)]
+    else:
+        cmd += [text("path", True)]
+
+cmd[2] = agent("ctl", "who").strip()
+out = agent(*cmd)
+sys.stdout.write(out if not out or out.endswith("\n") else out + "\n")
+if op in ("add", "rm", "reset"):
+    print("(takes effect from your next turn)")

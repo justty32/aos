@@ -32,7 +32,7 @@ aos-agent [--daemon D] say [--target 名字] [話...|-]                  stdout 
 aos-agent [--daemon D] listen [--target 名字] [--timeout-s 秒 | --timeout-cycles N] | [--last N] [--follow]   stdout 只有回答
 aos-agent [--daemon D] chat [--target 名字]                           一行一句；Ctrl-C 退出
 aos-agent [--daemon D] open [--detach]|close|watch [--target 名字]    畫面（宣告了 screen 的；入口照收 動作 [--detach]）
-aos-agent [--daemon D] tools [--target 名字] [ls [--json]|get 名|add [--name 名] [--replace] [--no-cache] [--envs K=V]... [--env-file F] (XXX|--path-json J)|rm 名|reset [--yes]]   定義疊這隻的覆蓋層（只存差異）；add 的旗標與意思跟 aos-tools add 一樣（11-10 cli-sweep Q8「改」、C-86）
+aos-agent [--daemon D] tools [--target 名字] [ls [-l|--json]|get 名|add [--name 名] [--replace] [--no-cache] [--envs K=V]... [--env-file F] (XXX|--path-json J)|rm 名或路徑|reset [--yes]]   定義疊這隻的覆蓋層（只存差異）；add 的旗標與意思跟 aos-tools add 一樣（11-10 cli-sweep Q8「改」、C-86）；11-10 晚使用者「2.統一」：`rm` 收名字、不然路徑（同 `aos-tools rm XXX`，相對從目前資料夾）；「3.顯示」：`ls -l` 也列被設成 null 的格（`名 TAB null TAB 它蓋掉的那支 TAB 寫 null 的那份#/tools/名 TAB null TAB -`），一般 `ls` 照舊不列；「4.補上」：`tools --help` 第一屏的 add 那行列出 `--envs`／`--env-file`／`--path-json`
 aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset [--yes]]
 ```
 

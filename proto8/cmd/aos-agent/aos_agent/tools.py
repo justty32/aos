@@ -14,15 +14,18 @@ from .decl import agent_decl, pass_err, warn_shared
 HELPS = {
     "ls": """aos-agent tools ls - list this agent's tools
 
-usage: aos-agent [--daemon D] tools [--target NAME] ls [--json]
+usage: aos-agent [--daemon D] tools [--target NAME] ls [-l | --json]
        aos-agent tools ls --help
 
 flags:
+  -l, --long   also FROM, STORED, ENV (as aos-tools ls -l), and the names this agent
+               turned off: NAME null PATH-IT-HIDES FILE#/tools/NAME null -
   -j, --json   print one JSON array
   -h, --help   show this help
 
 Print NAME TAB KIND TAB PATH per tool: this agent's own registry when it has one
-(it overrides the definition's), else the definition's.
+(it overrides the definition's), else the definition's. Tools turned off with rm
+are not listed; ls -l shows them.
 exit codes: 0 listed; 1 error (ToolsMissing, RegistryBad, ToolDefBad...).
 """,
     "get": """aos-agent tools get - print a tool definition matching a name or path
@@ -38,8 +41,7 @@ exit codes: 0 printed; 1 error (ToolMissing, ToolsMissing...).
 """,
     "add": """aos-agent tools add - add a tool for this agent only
 
-usage: aos-agent [--daemon D] tools [--target NAME] add [--name N] [--replace] [--no-cache]
-                 [--env-file FILE] [--envs K=V]... (XXX | --path-json JSON)
+usage: aos-agent [--daemon D] tools [--target NAME] add [-n N] [--replace] [--envs K=V]... [--env-file FILE] [--no-cache] (XXX | --path-json JSON)
        aos-agent tools add --help
 
 Same as aos-tools add (flags and meaning), written to this agent's own registry in
@@ -60,12 +62,13 @@ exit codes: 0 added; 1 error (ToolExists, PathMissing, ToolsMissing...).
 """,
     "rm": """aos-agent tools rm - remove a tool from this agent's toolbox
 
-usage: aos-agent [--daemon D] tools [--target NAME] rm NAME
+usage: aos-agent [--daemon D] tools [--target NAME] rm XXX
        aos-agent tools rm --help
 
 flags:
   -h, --help   show this help
 
+XXX = a tool name, else a path (relative to the current directory), as aos-tools rm.
 Write "NAME": null in this agent's own registry (an entry whose value is null is not
 a tool); the definition stays as it is.
 exit codes: 0 removed; 1 error (ToolMissing, ToolsMissing...).
@@ -157,10 +160,10 @@ def cmd(argv):
     act, args = (rest[0], rest[1:]) if rest else ("ls", [])
     if act not in SUBS:
         raise Fail("CommandUnknown", "tools: unknown subcommand %s (ls, get, add, rm, reset; see aos-agent tools --help)" % act)
-    switches = {"ls": {"--json": "json"},
+    switches = {"ls": {"--json": "json", "--long": "long"},
                 "add": {"--replace": "replace", "--no-cache": "no_cache"},
                 "reset": {"--yes": "yes"}}.get(act, {})
-    shorts = {"ls": ("-j",), "reset": ("-y",)}.get(act, ())
+    shorts = {"ls": {"-j": "--json", "-l": "--long"}, "reset": ("-y",)}.get(act, ())
     if act == "add":                                  # 11-10 Q8：旗標與 aos-tools add 一樣（C-86），原樣轉交
         try:
             topts, args = aos_flags.parse(args, {"--name": "name", "--env-file": "env_file", "--path-json": "path_json"},
@@ -194,7 +197,7 @@ def cmd(argv):
         else:
             note("using the definition's %s (this agent has no file of its own)" % orig)
         f = over if os.path.isfile(over) else orig
-        return aos_tools(a, f, [act] + (["--json"] if topts.get("json") else []) + args)
+        return aos_tools(a, f, [act] + (["--json"] if topts.get("json") else []) + (["--long"] if topts.get("long") else []) + args)
     if act == "reset":
         if os.path.isfile(over):
             question = "delete the tools file %s of %s (back to the definition's %s)?" % (over, a.name, orig)

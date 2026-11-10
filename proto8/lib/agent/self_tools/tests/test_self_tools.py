@@ -15,7 +15,7 @@ LIB = Path(__file__).resolve().parents[3]
 FAKE = r'''#!/usr/bin/env python3
 import json, os, sys
 with open(os.environ["FAKE_LOG"], "a") as f:
-    f.write(json.dumps(sys.argv[1:]) + "\n")
+    f.write(json.dumps([os.getcwd()] + sys.argv[1:]) + "\n")
 if sys.argv[1:3] == ["ctl", "who"]:
     print("bob")
 elif "ls" in sys.argv:
@@ -51,32 +51,41 @@ class SelfTools(unittest.TestCase):
     def calls(self):
         return [json.loads(l) for l in self.log.read_text().splitlines()] if self.log.exists() else []
 
-    def test_add_with_replace_envs_env_file(self):
-        r = self.run_tool({"op": "add", "name": "math", "path": "tools/math", "replace": True,
+    def test_add_with_every_flag(self):
+        r = self.run_tool({"op": "add", "name": "math", "path": "tools/math", "replace": True, "no_cache": True,
                            "envs": {"B": "2", "A": "x y"}, "env_file": "secrets/m.env"})
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("added math", r.stdout)
-        self.assertEqual(self.calls()[-1], ["tools", "--target", "bob", "add", "--name", "math", "--replace", "--envs", "A=x y",
-                                            "--envs", "B=2", "--env-file", str(self.ws / "secrets" / "m.env"),
-                                            str(self.ws / "tools" / "math")])
+        self.assertIn("next turn", r.stdout)
+        self.assertEqual(self.calls()[-1], [str(self.ws), "tools", "--target", "bob", "add", "--name", "math", "--replace",
+                                            "--envs", "A=x y", "--envs", "B=2", "--env-file", "secrets/m.env", "--no-cache",
+                                            "tools/math"])
 
-    def test_plain_add_rm_ls(self):
-        self.assertEqual(self.run_tool({"op": "add", "name": "math", "path": "tools/math"}).returncode, 0)
-        self.assertEqual(self.calls()[-1], ["tools", "--target", "bob", "add", "--name", "math", str(self.ws / "tools" / "math")])
-        self.assertEqual(self.run_tool({"op": "rm", "name": "math"}).returncode, 0)
-        self.assertEqual(self.calls()[-1], ["tools", "--target", "bob", "rm", "math"])
-        r = self.run_tool({"op": "ls"})
-        self.assertEqual(json.loads(r.stdout), [{"name": "math"}])
+    def test_each_op(self):
+        d = {"$env": "AOS_HOME", "$path": "/lib/base/math"}
+        for args, want in (({"op": "ls"}, ["ls", "--json"]),
+                           ({"op": "ls", "long": True}, ["ls", "-l"]),
+                           ({"op": "get", "name": "math"}, ["get", "math"]),
+                           ({"op": "add", "path": "/anywhere/tool"}, ["add", "/anywhere/tool"]),
+                           ({"op": "add", "path_json": d}, ["add", "--path-json", json.dumps(d)]),
+                           ({"op": "rm", "name": "self_tools"}, ["rm", "self_tools"]),
+                           ({"op": "reset"}, ["reset", "-y"])):
+            r = self.run_tool(args)
+            self.assertEqual(r.returncode, 0, (args, r.stdout, r.stderr))
+            self.assertEqual(self.calls()[-1][1:], ["tools", "--target", "bob"] + want, args)
+            self.assertEqual(self.calls()[-1][0], str(self.ws))
 
     def test_bad_arguments(self):
-        for args, word in (({"op": "add", "name": "m", "path": "tools/math", "override": True}, "unknown argument override"),
-                           ({"op": "add", "name": "m", "path": "tools/math", "envs": {"A": 1}}, "envs must be"),
-                           ({"op": "rm", "name": "m", "replace": True}, "only go with op add"),
-                           ({"op": "add", "name": "m", "path": "tools/math", "env_file": "/etc/passwd"}, "PathBad")):
+        for args, word in (({"op": "add", "path": "tools/math", "override": True}, "does not take override"),
+                           ({"op": "add", "path": "tools/math", "envs": {"A": 1}}, "envs must be"),
+                           ({"op": "rm", "name": "m", "replace": True}, "does not take replace"),
+                           ({"op": "add"}, "path"),
+                           ({"op": "add", "path": "a", "path_json": {"$env": "X"}}, "not both"),
+                           ({"op": "get"}, "name needs"),
+                           ({"op": "nope"}, "OpUnknown")):
             r = self.run_tool(args)
             self.assertEqual(r.returncode, 1, args)
-            self.assertIn(word, r.stdout)
-        self.assertEqual([c for c in self.calls() if c[:1] == ["tools"]], [])
+            self.assertIn(word, r.stdout, args)
+        self.assertEqual([c for c in self.calls() if c[1:2] == ["tools"]], [])
 
     def test_lower_error_passed_up(self):
         r = self.run_tool({"op": "add", "name": "math", "path": "tools/math"}, FAKE_FAIL="1")

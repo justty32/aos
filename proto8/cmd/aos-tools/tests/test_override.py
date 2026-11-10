@@ -75,6 +75,14 @@ class Override(unittest.TestCase):
         self.write(self.mine, {KEY: "../defs/tools.json", "tools": {"c": {"path": "../defs/lib/c"}, "b": None}})
         self.assertEqual(self.names(self.mine), ["a", "c"])
 
+    def test_long_shows_null_rows(self):
+        """11-10 晚使用者「3.顯示」：ls -l 列出被 null 關掉的名字＋它蓋掉的那支；一般 ls 不列。"""
+        self.write(self.mine, {KEY: "../defs/tools.json", "tools": {"b": None, "zz": None}})
+        self.assertNotIn("b", self.names(self.mine))
+        t = self.long(self.mine)
+        self.assertEqual(t["b"][1:], ["null", str(self.defs / "lib" / "b"), "%s#/tools/b" % self.mine, "null", "-"])
+        self.assertEqual(t["zz"][1:3], ["null", "-"])                 # 底檔沒有的名字：PATH＝-
+
     def test_null_in_plain_registry_is_absent(self):
         self.write(self.mine, {"tools": {"a": {"path": "../defs/lib/a", "env": None}, "gone": None}})
         self.assertEqual(self.names(self.mine), ["a"])
@@ -112,7 +120,8 @@ class Override(unittest.TestCase):
         self.write(other, {"tools": {"a": {"path": "../defs/lib/c", "env": {"K3": "o"}}, "b": None}})
         self.write(self.mine, {KEY: ["../defs/tools.json", "../other/tools.json"], "tools": {}})
         t = self.long(self.mine)
-        self.assertEqual(sorted(t), ["a"])                        # one ordered sequence: the later base's null covers b
+        self.assertEqual(sorted(n for n, c in t.items() if c[1] != "null"), ["a"])   # one ordered sequence: the later base's null covers b
+        self.assertEqual(t["b"][1:4], ["null", str(self.defs / "lib" / "b"), "%s#/tools/b" % other])   # ls -l shows what it hides
         self.assertEqual(t["a"][2], str(self.defs / "lib" / "c"))
         self.assertEqual(t["a"][3], "%s#/tools/a" % other)
         self.assertEqual(t["a"][5], "K1,K2,K3")                   # patch merge: env keys from both
