@@ -139,3 +139,16 @@
 - 列表：`agents_children` 的 `long`＝多幾欄文字、`json` 才是 JSON；`lib/base/ls` 預設名字＋類型一行一項、細項 `long`、JSON `json`；`defs ls` 不動；`history ls` 預設最後 20 則（N＝20 頂層代定）、省略了幾則講一句、要全部另帶旗標。
 
 施工結果：見本夾 knowledge 改名與列表長短四項兩份結果檔（施工中）。
+
+## llm_http 金鑰變數沒設就照打（11-10 深夜）
+
+背景：使用者試驗場的 llm kernel 走 LiteLLM 端點（`--key-env LITELLM_KEY`），他的 proxy 沒設金鑰，`llm_http` 卻因 `LITELLM_KEY` 沒設直接 `EndpointFailed`、agent BrainFailed 停下；照說明 export 時把中文佔位字原樣貼進去，又得到誤導的 `bad url … 'latin-1' codec can't encode`（網址沒壞，壞的是金鑰）。
+
+使用者（逐字）：「改成變數沒設就不帶金鑰照打」
+
+決定與改動（`lib/base/llm_http`）：
+
+- `--key-env NAME`：`NAME` 沒設或空字串＝不帶 Authorization 照打，不報錯、不印 warning。
+- 端點回 401／403 時錯誤行才提金鑰：沒帶金鑰＝`EndpointFailed HTTP 401 (the endpoint refused the request and may need a key: environment variable NAME (--key-env) is not set): …`；帶了被拒＝`(the endpoint refused the key from NAME)`；其他狀態碼不提。
+- 金鑰值含標頭放不下的字（非 ASCII、空白、控制字；只收可見 ASCII 0x21～0x7e）＝送出前擋下 `KeyBad environment variable NAME (--key-env) has characters an HTTP header cannot carry (non-ASCII, space or control); value not shown`，不印值；「bad url」只剩網址真的壞時才出。
+- `llm_forward`、`llm_fake` 不碰金鑰，不用改。新測試 `lib/base/llm_http/tests/test_llm_http.py`（本機假端點看收到的標頭）；tooldef、help、kernel／aos-llm-kernel 文件、root 範例 README、litellm 小定義描述跟著改（「LiteLLM 沒驗證也要 export 任意非空值」那句作廢）。

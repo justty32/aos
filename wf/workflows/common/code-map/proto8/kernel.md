@@ -21,7 +21,7 @@
 | [`.env`](../../../../../proto8/kernel/llm-kernel/.env) | AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here. |
 | [`_entry`](../../../../../proto8/kernel/llm-kernel/_entry) | 入口：`aos-daemon --enable-logs daemon.json` |
 | [`daemon.json`](../../../../../proto8/kernel/llm-kernel/daemon.json) | 設定（鍵：exec、interval_ms、procs） |
-| [`endpoints/litellm/_entry`](../../../../../proto8/kernel/llm-kernel/endpoints/litellm/_entry) | Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable. |
+| [`endpoints/litellm/_entry`](../../../../../proto8/kernel/llm-kernel/endpoints/litellm/_entry) | Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable (unset or empty: no key is sent). |
 | [`fake_slow/_entry`](../../../../../proto8/kernel/llm-kernel/fake_slow/_entry) | demo 用的慢假腦 endpoint 函數：先睡 endpoint.delay_s 秒，再把同一份 stdin 交給 lib/base/llm_fake、它的 stdout／結束碼原樣交回 |
 | [`interfaces.json`](../../../../../proto8/kernel/llm-kernel/interfaces.json) | Declare the stack ledger interface |
 | [`kernel.json`](../../../../../proto8/kernel/llm-kernel/kernel.json) | Main llm kernel with backend limits for local models |

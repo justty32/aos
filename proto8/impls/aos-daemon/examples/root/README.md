@@ -17,7 +17,7 @@ flowchart LR
 
 <details><summary>systemd user unit：安裝、啟停</summary>
 
-改好 [aos-root.service](aos-root.service)，複製到 `~/.config/systemd/user/aos-root.service`。把同夾 [root.env.example](root.env.example) 複製成 `~/.config/aos/root.env`，填入 `LITELLM_KEY` 與 service 使用的跨樹 hub 路徑 `AOS_LLM_KERNEL`、`AOS_KERNEL`；未使用的 hub 行刪掉。unit 用 `EnvironmentFile=%h/.config/aos/root.env` 讀入，子 proc 繼承這些值；LiteLLM 沒設金鑰驗證時，`LITELLM_KEY` 填任意非空值亦可（11-07 使用者裁定 sol 審查 #35）。
+改好 [aos-root.service](aos-root.service)，複製到 `~/.config/systemd/user/aos-root.service`。把同夾 [root.env.example](root.env.example) 複製成 `~/.config/aos/root.env`，填入 `LITELLM_KEY` 與 service 使用的跨樹 hub 路徑 `AOS_LLM_KERNEL`、`AOS_KERNEL`；未使用的 hub 行刪掉。unit 用 `EnvironmentFile=%h/.config/aos/root.env` 讀入，子 proc 繼承這些值；LiteLLM 沒設金鑰驗證時，`LITELLM_KEY` 那行刪掉即可（沒設＝不帶金鑰照打，11-10 夜）。
 
 ```sh
 systemctl --user daemon-reload

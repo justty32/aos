@@ -2,8 +2,9 @@
 # llm_http - endpoint 函數：從自己的環境讀金鑰，把請求 POST 到 OpenAI 相容端點，印剪過的回覆
 # 介面（lib/README 的契約）：stdin 一份 {"endpoint": {"url", "model", "fixed"?}, "request": {"messages", ...}}；
 #   送出的 body＝request 先、endpoint.fixed（那組釘死的欄位，例 temperature）蓋上，model 一律用 endpoint.model（11-05 件 2 代定 2；不留舊 body 名）；
-#   --key-env NAME 有才從自己的環境讀 NAME 帶 Bearer；endpoint.key 一律拒絕。stdout 一行 {"message": choices[0].message 只留 role／content／tool_calls, "usage", "model"}、退 0。
-# 錯：stderr 與 stdout 各一行「llm_http: error: 代號 原因」、退 1：ArgumentsBad（stdin 不是這形狀）、EndpointFailed（連不上、HTTP 非 2xx）、
+#   --key-env NAME 有才從自己的環境讀 NAME 帶 Bearer；NAME 沒設或空＝不帶 Authorization 照打（11-10 夜使用者「改成變數沒設就不帶金鑰照打」），
+#   端點回 401／403 時訊息才提 NAME 沒設；值含標頭放不下的字（非 ASCII、空白、控制字）＝KeyBad、送出前擋、不印值；endpoint.key 一律拒絕。stdout 一行 {"message": choices[0].message 只留 role／content／tool_calls, "usage", "model"}、退 0。
+# 錯：stderr 與 stdout 各一行「llm_http: error: 代號 原因」、退 1：ArgumentsBad（stdin 不是這形狀）、KeyBad（金鑰值有壞字）、EndpointFailed（連不上、HTTP 非 2xx）、
 #   ReplyBad（不是 OpenAI 形狀）。沒有自己的逾時旗標（包它的單子守，10-15 KISS）；平常由 aos-llm-kernel 經 aos-exec 跑（kernel.json 的 exec）。
 # 來源：templates/agent-fsm/brain.py 的 ask()（11-04 晚搬過來，brain.py 改成只組請求）。
 import http.client, json, os, sys, urllib.parse
@@ -11,8 +12,11 @@ HELP = """\
 usage: llm_http [--key-env NAME] < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Endpoint function: POST the request to an OpenAI-compatible {url}/chat/completions
 and print {"message", "usage", "model"} trimmed from the reply.
-With --key-env NAME, read the Bearer key from this process's environment variable NAME.
-Without it, send no Authorization header. endpoint.key is not accepted.
+With --key-env NAME, read the Bearer key from this process's environment variable NAME;
+if NAME is unset or empty, or without --key-env, send no Authorization header
+(an HTTP 401/403 reply then says the key variable is unset). A key with characters
+an HTTP header cannot carry (non-ASCII, space, control) is KeyBad before sending.
+endpoint.key is not accepted.
 Result on stdout. On error: one line "llm_http: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -61,14 +65,17 @@ if model:
 else:
     body.pop("model", None)
 headers = {"Content-Type": "application/json"}
+key_env, key = None, ""
 if "key_env" in args:
     key_env = args["key_env"]
     if not isinstance(key_env, str):
         die("ArgumentsBad", "key_env must be a string")
-    key = os.environ.get(key_env)
-    if key is None:
-        die("EndpointFailed", "environment variable %s (--key-env) is not set" % key_env)
-    headers["Authorization"] = "Bearer " + key
+    key = os.environ.get(key_env) or ""                    # 沒設或空＝不帶金鑰照打（11-10 夜）
+    if key:
+        if not all(0x21 <= ord(c) <= 0x7e for c in key):   # 標頭只放得下可見 ASCII；不印值
+            die("KeyBad", "environment variable %s (--key-env) has characters an HTTP header cannot carry "
+                "(non-ASCII, space or control); value not shown" % key_env)
+        headers["Authorization"] = "Bearer " + key
 target = url.rstrip("/") + "/chat/completions"
 payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
 CONNECT_TIMEOUT = 10                                       # 只管連線（SYN 被丟時不必等到外層 timeout_ms）；讀回應不設限，歸包它的單子
@@ -85,7 +92,15 @@ try:
     raw = r.read()
     conn.close()
     if not 200 <= r.status < 300:
-        die("EndpointFailed", "HTTP %d: %s" % (r.status, raw[:200].decode("utf-8", "replace")))
+        refused = ""
+        if r.status in (401, 403):                         # 端點拒絕：只在這時提金鑰
+            if key:
+                refused = " (the endpoint refused the key from %s)" % key_env
+            elif key_env:
+                refused = " (the endpoint refused the request and may need a key: environment variable %s (--key-env) is not set)" % key_env
+            else:
+                refused = " (the endpoint refused the request and may need a key: give --key-env NAME)"
+        die("EndpointFailed", "HTTP %d%s: %s" % (r.status, refused, raw[:200].decode("utf-8", "replace")))
 except ValueError as e:
     die("EndpointFailed", "bad url %s: %s" % (url, e))
 except OSError as e:

@@ -25,7 +25,7 @@ cat def/kernel.json
 #                               "fixed": {"temperature": 0.2}, "slots": 4, "speed": "normal", "cost": "high", "summary": "..."},
 #                "fake": {"exec": "/絕對/proto8/lib/base/llm_fake", "speed": "fast", "cost": "free"}}}
 cat def/endpoints/litellm/_entry
-# {"description": "Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable.",
+# {"description": "Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable (unset or empty: no key is sent).",
 #  "argv": ["aos-exec", "/絕對/proto8/lib/base/llm_http", "--key-env", "LITELLM_KEY"]}
 aos-exec --stack . def &                          # 起 llm 的 daemon（身體＝kernel）；信箱在 ~/llm_kernel/requests/
 echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | AOS_LLM_KERNEL=~/llm_kernel aos-llm ask
@@ -39,7 +39,7 @@ echo '{"endpoint": "smart-high", "request": {"messages": [{"role": "user", "cont
 # aos-llm: error: RequestBad temperature is fixed by endpoint smart-high (remove it from the request; to change it pick another endpoint name)
 ```
 
-金鑰由 endpoint 小 proc 保管：小定義的 `_entry` 只記 `--key-env` 的變數名，值在起 llm daemon 的 root 殼 export；kernel.json 不放金鑰，kernel 不讀、不寫、不轉交。範本的 `smart-high`、`luna`、`sol` 共用 `endpoints/litellm`，讀自己的 `LITELLM_KEY`；沒設＝endpoint 回 `EndpointFailed`，stdin 的 `endpoint` 帶 `key`＝`ArgumentsBad`。`url`、`model` 留在 kernel.json，LM Studio 與假腦不用金鑰。
+金鑰由 endpoint 小 proc 保管：小定義的 `_entry` 只記 `--key-env` 的變數名，值在起 llm daemon 的 root 殼 export；kernel.json 不放金鑰，kernel 不讀、不寫、不轉交。範本的 `smart-high`、`luna`、`sol` 共用 `endpoints/litellm`，讀自己的 `LITELLM_KEY`；沒設或空＝不帶金鑰照打（端點拒絕才 `EndpointFailed`，訊息提變數沒設；值有非 ASCII 等壞字＝`KeyBad`），stdin 的 `endpoint` 帶 `key`＝`ArgumentsBad`。`url`、`model` 留在 kernel.json，LM Studio 與假腦不用金鑰。
 
 設計與決定見 [thinking 2026-11-05 kernel-daemon](../../thinking/2026-11/05/kernel-daemon/README.md)（問腦改掛 daemon 在 [03](../../thinking/2026-11/05/kernel-daemon/03-問腦改掛daemon.md)、`~/llm_kernel` 佈局在 [07](../../thinking/2026-11/05/kernel-daemon/07-llm-daemon佈局.md)）、[thinking 2026-11-04 think-as-function](../../thinking/2026-11/04/think-as-function/README.md)（信與 kernel.json 在 [02](../../thinking/2026-11/04/think-as-function/02-設計-信與kernel.md)）；排隊、額度、收拾的來由見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10/24/llm-kernel/README.md)、[10-15 LLM kernel 稿](../../thinking/2026-10/15/llm-kernel.md)；規範 [N-42](../../docs/NORMS/09-kernel.md)、信箱 [N-16](../../docs/NORMS/05-基礎設施-窗/05-N-16.md)。
 
