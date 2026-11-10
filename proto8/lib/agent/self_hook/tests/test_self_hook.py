@@ -49,12 +49,12 @@ class SelfHook(unittest.TestCase):
         return [json.loads(l) for l in self.log.read_text().splitlines()] if self.log.exists() else []
 
     def test_add_with_every_key(self):
-        r = self.run_tool({"op": "add", "on": "tool_before", "path": "hooks/guard", "name": "g", "match": ["a", "b"],
-                           "change": False, "wait": True, "on_fail": "continue", "timeout_ms": 500, "replace": True})
+        r = self.run_tool({"op": "add", "event": "before_tool", "path": "hooks/guard", "name": "g", "condition": ["a", "b"],
+                           "intercept": False, "async": False, "on_error": "continue", "timeout_ms": 500, "replace": True})
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("(takes effect from the next event)", r.stdout)
-        self.assertEqual(self.calls()[-1], [str(self.ws), "hook", "--target", "bob", "add", "--on", "tool_before", "--name", "g",
-                                            "--match", "a", "--match", "b", "--no-change", "--on-fail", "continue",
+        self.assertEqual(self.calls()[-1], [str(self.ws), "hook", "--target", "bob", "add", "--event", "before_tool", "--name", "g",
+                                            "--condition", "a", "--condition", "b", "--no-intercept", "--on-error", "continue",
                                             "--timeout-ms", "500", "--replace", "hooks/guard"])
 
     def test_each_op(self):
@@ -62,9 +62,9 @@ class SelfHook(unittest.TestCase):
         for args, want in (({"op": "ls"}, ["ls", "--json"]),
                            ({"op": "ls", "long": True}, ["ls", "-l"]),
                            ({"op": "get", "name": "guard"}, ["get", "guard"]),
-                           ({"op": "add", "on": "queue_after", "path": "/abs/h", "wait": False}, ["add", "--on", "queue_after", "--no-wait", "/abs/h"]),
-                           ({"op": "add", "on": "brain_failed", "match": "ReplyBad", "name": "p", "path_json": d},
-                            ["add", "--on", "brain_failed", "--name", "p", "--match", "ReplyBad", "--path-json", json.dumps(d)]),
+                           ({"op": "add", "event": "after_queue", "path": "/abs/h", "async": True}, ["add", "--event", "after_queue", "--async", "/abs/h"]),
+                           ({"op": "add", "event": "brain_failed", "condition": "ReplyBad", "name": "p", "path_json": d},
+                            ["add", "--event", "brain_failed", "--name", "p", "--condition", "ReplyBad", "--path-json", json.dumps(d)]),
                            ({"op": "rm", "name": "guard"}, ["rm", "guard"]),
                            ({"op": "reset"}, ["reset", "-y"])):
             r = self.run_tool(args)
@@ -73,11 +73,11 @@ class SelfHook(unittest.TestCase):
             self.assertEqual(self.calls()[-1][0], str(self.ws))
 
     def test_bad_arguments(self):
-        for args, word in (({"op": "add", "on": "tool_after", "path": "h", "envs": {}}, "ArgumentsBad unknown key envs"),
-                           ({"op": "add", "path": "h"}, "on needs"),
-                           ({"op": "add", "on": "tool_after"}, "path"),
-                           ({"op": "add", "on": "tool_after", "path": "h", "path_json": "x"}, "not both"),
-                           ({"op": "add", "on": "tool_after", "path": "h", "match": [1]}, "ArgumentsBad"),
+        for args, word in (({"op": "add", "event": "after_tool", "path": "h", "envs": {}}, "ArgumentsBad unknown key envs"),
+                           ({"op": "add", "path": "h"}, "event needs"),
+                           ({"op": "add", "event": "after_tool"}, "path"),
+                           ({"op": "add", "event": "after_tool", "path": "h", "path_json": "x"}, "not both"),
+                           ({"op": "add", "event": "after_tool", "path": "h", "condition": [1]}, "ArgumentsBad"),
                            ({"op": "rm", "name": "g", "replace": True}, "does not take replace"),
                            ({"op": "get"}, "name needs"),
                            ({"op": "nope"}, "OpUnknown")):
@@ -87,7 +87,7 @@ class SelfHook(unittest.TestCase):
         self.assertEqual([c for c in self.calls() if c[1:2] == ["hook"]], [])
 
     def test_lower_error_passed_up(self):
-        r = self.run_tool({"op": "add", "on": "tool_after", "path": "h"}, FAKE_FAIL="1")
+        r = self.run_tool({"op": "add", "event": "after_tool", "path": "h"}, FAKE_FAIL="1")
         self.assertEqual(r.returncode, 1)
         self.assertIn("self_hook: error: HookExists", r.stdout)
         self.assertIn("aos-agent: error: HookExists", r.stderr)

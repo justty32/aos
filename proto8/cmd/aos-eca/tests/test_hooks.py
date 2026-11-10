@@ -1,4 +1,4 @@
-"""Test the hooks of aos-eca-turn (eca's reduced set: queue_before, queue_after, brain_failed, tool_added) with a fake claude CLI."""
+"""Test the hooks of aos-eca-turn (eca's reduced set: before_queue, after_queue, brain_failed, tool_added) with a fake claude CLI."""
 import json
 import os
 from pathlib import Path
@@ -80,22 +80,22 @@ class EcaHooks(unittest.TestCase):
 
     # ---- 測試
     def test_queue_before_changes_content_and_queue_after_sees_it(self):
-        self.declare({"up": {"on": "queue_before", "exec": self.hook("up", 'print(json.dumps({"content": ev["content"].upper()}))\n'),
-                             "change": True},
-                      "seen": {"on": "queue_after", "exec": self.hook("seen")}})
+        self.declare({"up": {"event": "before_queue", "handler": self.hook("up", 'print(json.dumps({"content": ev["content"].upper()}))\n'),
+                             "intercept": True},
+                      "seen": {"event": "after_queue", "handler": self.hook("seen")}})
         self.say("hello")
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.read_lines(self.cli_log)[-1]["stdin"], "HELLO")
         self.assertEqual(self.history(), [{"role": "user", "content": "HELLO"}, {"role": "assistant", "content": "FAKE: HELLO"}])
         ev = self.read_lines(self.log)
-        self.assertEqual([(e["event"], e["content"]) for e in ev], [("queue_before", "hello"), ("queue_after", "HELLO")])
+        self.assertEqual([(e["event"], e["content"]) for e in ev], [("before_queue", "hello"), ("after_queue", "HELLO")])
         self.assertEqual(ev[0]["stack"], str(self.stack))
         self.assertTrue(ev[0]["letter"])
 
     def test_queue_before_drops_one_letter(self):
-        self.declare({"drop": {"on": "queue_before", "change": True,
-                               "exec": self.hook("drop", 'sys.exit(10 if ev["content"] == "spam" else 0)\n')}})
+        self.declare({"drop": {"event": "before_queue", "intercept": True,
+                               "handler": self.hook("drop", 'sys.exit(10 if ev["content"] == "spam" else 0)\n')}})
         self.say("spam", "keep")
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -105,7 +105,7 @@ class EcaHooks(unittest.TestCase):
         self.assertEqual(self.queue(), [])
 
     def test_queue_before_drops_all_no_cli(self):
-        self.declare({"drop": {"on": "queue_before", "change": True, "exec": self.hook("drop", "sys.exit(10)\n")}})
+        self.declare({"drop": {"event": "before_queue", "intercept": True, "handler": self.hook("drop", "sys.exit(10)\n")}})
         self.say("a", "b")
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -114,11 +114,11 @@ class EcaHooks(unittest.TestCase):
         self.assertEqual(self.queue(), [])
 
     def test_hook_stops_before_handing_keeps_letter(self):
-        self.declare({"bad": {"on": "queue_before", "exec": self.hook("bad", "sys.exit(3)\n")}})
+        self.declare({"bad": {"event": "before_queue", "handler": self.hook("bad", "sys.exit(3)\n")}})
         self.say("hello")
         r = self.turn()
         self.assertEqual(r.returncode, 1)
-        self.assertIn("aos-eca-turn: error: HookFailed hook bad (event queue_before) failed: exited 3", r.stderr)
+        self.assertIn("aos-eca-turn: error: HookFailed hook bad (event before_queue) failed: exited 3", r.stderr)
         self.assertFalse(self.cli_log.exists())
         self.assertEqual(self.history(), [])
         self.assertEqual(len(self.queue()), 1)
@@ -135,16 +135,16 @@ class EcaHooks(unittest.TestCase):
         self.assertEqual(len(self.queue()), 1)
 
     def test_queue_after_failing_keeps_answer(self):
-        self.declare({"bad": {"on": "queue_after", "exec": self.hook("bad", "sys.exit(3)\n")}})
+        self.declare({"bad": {"event": "after_queue", "handler": self.hook("bad", "sys.exit(3)\n")}})
         self.say("hello")
         r = self.turn()
         self.assertEqual(r.returncode, 1)
-        self.assertIn("HookFailed hook bad (event queue_after)", r.stderr)
+        self.assertIn("HookFailed hook bad (event after_queue)", r.stderr)
         self.assertEqual([m["content"] for m in self.history()], ["hello", "FAKE: hello"])
         self.assertEqual(self.queue(), [])
 
     def test_brain_failed(self):
-        self.declare({"bf": {"on": "brain_failed", "match": "CliFailed", "exec": self.hook("bf")}})
+        self.declare({"bf": {"event": "brain_failed", "condition": "CliFailed", "handler": self.hook("bf")}})
         self.say("hello")
         r = self.turn(FAKE_CLI_FAIL="1")
         self.assertEqual(r.returncode, 1)
@@ -155,7 +155,7 @@ class EcaHooks(unittest.TestCase):
         self.assertTrue((self.stack / "cooldown.json").exists())
 
     def test_brain_failed_hook_stops(self):
-        self.declare({"bf": {"on": "brain_failed", "exec": self.hook("bf", "sys.exit(3)\n")}})
+        self.declare({"bf": {"event": "brain_failed", "handler": self.hook("bf", "sys.exit(3)\n")}})
         self.say("hello")
         r = self.turn(FAKE_CLI_FAIL="1")
         self.assertEqual(r.returncode, 1)
@@ -164,7 +164,7 @@ class EcaHooks(unittest.TestCase):
 
     def test_tool_added(self):
         self.tools(["a"])
-        self.declare({"ta": {"on": "tool_added", "exec": self.hook("ta")}})
+        self.declare({"ta": {"event": "tool_added", "handler": self.hook("ta")}})
         self.say("one")
         self.assertEqual(self.turn().returncode, 0)
         self.assertEqual(self.read_lines(self.log), [])                       # 第一次只記
@@ -181,7 +181,7 @@ class EcaHooks(unittest.TestCase):
     def test_tool_added_uses_stack_registry(self):
         self.tools(["a"])
         (self.stack / "tools.json").write_text("{}")                            # 這隻自己那份在＝用它
-        self.declare({"ta": {"on": "tool_added", "exec": self.hook("ta")}})
+        self.declare({"ta": {"event": "tool_added", "handler": self.hook("ta")}})
         self.say("one")
         self.assertEqual(self.turn().returncode, 0)
         self.assertIn(["--file", str(self.stack / "tools.json"), "ls", "--json"], self.read_lines(self.tools_log))

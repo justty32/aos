@@ -56,10 +56,10 @@
      交出去之後的失敗（CliFailed、ReplyMissing；看 handed 有沒有被叫過）＝cooldown.fail（dropped＝這批的封數）再照舊報錯退 1；
      交出去之前的錯不寫冷卻、SessionBad 退讓不算失敗；寫冷卻檔失敗只多一行 warning。成功（assistant 接進 history 之後）＝cooldown.clear。
   ⑪ hook（11-10 晚 self-family/hook，圖紙 § 6 eca 縮水版；lib/agent/hooks.py，定義＝DEF_DIR、stack＝$AOS_STACK）：好信讀出來、交出去之前每封
-     queue_before（可改 content；攔下＝aos-post done 收掉、不交、不進 history、mailbox_warning.txt 寫 `letter SIG dropped by hook HOOK`；整批都被丟＝同整批壞信）；
-     交出去之前 tool_added（這輪生效的登記檔比上次多的名字；有這種 hook 才多叫一次 aos-tools ls --json）；handed 裡信接進 history、收掉之後每封 queue_after；
-     交出去之後的 CliFailed／ReplyMissing＝記冷卻之前 brain_failed（name＝代號、reason＝這支那行的原因）。tool_before／tool_after 在 aos-mcp（cli_session 帶 --hooks DEF_DIR）。
-     hook 停下＝HookFailed／HooksBad 退 1：交出去之前＝信留 cur/、history 不動；queue_after 停下＝回答照樣接進 history 才報；brain_failed 停下＝冷卻不記。
+     before_queue（可改 content；攔下＝aos-post done 收掉、不交、不進 history、mailbox_warning.txt 寫 `letter SIG dropped by hook HOOK`；整批都被丟＝同整批壞信）；
+     交出去之前 tool_added（這輪生效的登記檔比上次多的名字；有這種 hook 才多叫一次 aos-tools ls --json）；handed 裡信接進 history、收掉之後每封 after_queue；
+     交出去之後的 CliFailed／ReplyMissing＝記冷卻之前 brain_failed（name＝代號、reason＝這支那行的原因）。before_tool／after_tool 在 aos-mcp（cli_session 帶 --hooks DEF_DIR）。
+     hook 停下＝HookFailed／HooksBad 退 1：交出去之前＝信留 cur/、history 不動；after_queue 停下＝回答照樣接進 history 才報；brain_failed 停下＝冷卻不記。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
   人在畫面上自己打的話不進 history（沒經 queue；eca 方向題 2）。
@@ -136,10 +136,10 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
     the next turn starts a new conversation the same way, carrying the changed record (not while the screen is open).
   Cooldown: a failure after the prompt was handed over (CliFailed, ReplyMissing) is recorded in $AOS_STACK/cooldown.json; while
     cooling, no letter is taken (exit 0); when the cooldown is over, only the oldest letter is tried; a success removes the file.
-  Hooks (hooks.json declared in DEF_DIR's interfaces.json, the stack copy on top): queue_before before a good letter is handed over
+  Hooks (hooks.json declared in DEF_DIR's interfaces.json, the stack copy on top): before_queue before a good letter is handed over
     (may change content or drop it; a dropped letter is done and noted in mailbox_warning.txt), tool_added before handing over,
-    queue_after after the letters went into history, brain_failed on CliFailed / ReplyMissing after handing over. tool_before /
-    tool_after run in aos-mcp. A failing hook = HookFailed (letters not yet handed over stay in cur/).
+    after_queue after the letters went into history, brain_failed on CliFailed / ReplyMissing after handing over. before_tool /
+    after_tool run in aos-mcp. A failing hook = HookFailed (letters not yet handed over stay in cur/).
 --one (tool form): stdin {"prompt"} -> stdout the answer; the conversation lives in $AOS_STACK itself. --on-empty / --prompt not allowed.
   If the earlier conversation is not on this machine, a warning is printed and a new one is started without a record. No cooldown.
 Needs aos-post on PATH (loop form) and AOS_STACK.
@@ -279,9 +279,9 @@ def fire(event, data, template, stack):
         raise Fail(type(e).__name__, e)
 
 
-def queue_before(stack, box, sig, body, template):
-    """好信交出去之前跑 queue_before：回（可能改過 content 的）body；被攔下＝aos-post done 收掉、mailbox_warning 一行、回 None。"""
-    r = fire("queue_before", {"letter": sig, "content": body["content"]}, template, stack)
+def before_queue(stack, box, sig, body, template):
+    """好信交出去之前跑 before_queue：回（可能改過 content 的）body；被攔下＝aos-post done 收掉、mailbox_warning 一行、回 None。"""
+    r = fire("before_queue", {"letter": sig, "content": body["content"]}, template, stack)
     if r["blocked"]:
         post(["done", box, sig])
         write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s dropped by hook %s\n" % (sig, r["hook"]))
@@ -365,7 +365,7 @@ def pick_one(stack, box, prompt, template):
         for sig in names(box, "cur"):
             body, why = letter_body(box, sig)
             if body is not None:
-                body = queue_before(stack, box, sig, body, template)
+                body = before_queue(stack, box, sig, body, template)
                 if body is not None:
                     return [sig], [body], dropped
                 dropped += 1
@@ -412,7 +412,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
                 post(["done", box, sig])
                 warn(stack, sig, why)
                 continue
-            body = queue_before(stack, box, sig, body, template)   # hook：可改 content、可丟掉這封（整批都丟＝同整批壞信）
+            body = before_queue(stack, box, sig, body, template)   # hook：可改 content、可丟掉這封（整批都丟＝同整批壞信）
             if body is None:
                 continue
             bodies.append(body)
@@ -421,7 +421,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
             return 0
     tool_added(cfg, template, stack)                                # hook：登記檔多了誰（交出去之前；hook 停下＝信留 cur/）
     history_changed(stack, cell)                                    # ⑩ history 被改過＝開新對話
-    late, given, mid, after = [], [], [], []                        # 交出去那一刻收信時出的錯：CLI 已經在跑，等它答完再報；after＝queue_after hook 停下
+    late, given, mid, after = [], [], [], []                        # 交出去那一刻收信時出的錯：CLI 已經在跑，等它答完再報；after＝after_queue hook 停下
 
     def handed():                                                   # ④ 交出去就算完成（11-03）：user 接進 history、收信
         given.append(True)
@@ -436,7 +436,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
             return
         try:
             for sig, body in zip(good, bodies):                     # hook：接進 history、收掉之後，每封一次
-                fire("queue_after", {"letter": sig, "content": body["content"]}, template, stack)
+                fire("after_queue", {"letter": sig, "content": body["content"]}, template, stack)
         except Fail as e:
             after.append(e)                                         # 回答照樣接進 history，最後才報（不掉回答）
     try:

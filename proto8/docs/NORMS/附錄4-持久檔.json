@@ -571,7 +571,7 @@
    "reader": "lib/agent/hooks.py（templates/agent-fsm 四格；之後 aos-agent hook、aos-eca-turn、aos-mcp）",
    "image": "看情況：定義＝原始碼、不算 image（C-79）",
    "on_bad": "不是 JSON 物件、hooks 不是物件、格形狀不對（on 不認得、exec 空、change 用在不能改的事件…）＝讀它的格 HooksBad 退 1；不在＝沒有 hook；interfaces.json 沒宣告＝沒有 hook 機制",
-   "note": "11-10 晚 self-family/hook 新增：{\"hooks\": {名: {on, exec, match?, change?, wait?, on_fail?, timeout_ms?} 或 null}}；exec 相對路徑從這份檔的資料夾算。新檔，不用重建",
+   "note": "11-10 晚 self-family/hook 新增：{\"hooks\": {名: {event, handler, condition?, intercept?, async?, on_error?, timeout_ms?} 或 null}}；handler 相對路徑從這份檔的資料夾算。11-10 深夜鍵名與事件名改（tonight-rulings 題 3）：舊名寫的要照新名重寫或 hook reset 後重加",
    "evidence": "proto8/lib/agent/hooks.py（_read、validate_entry）、proto8/templates/agent-fsm/interfaces.json"
   },
   {

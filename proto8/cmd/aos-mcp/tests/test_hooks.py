@@ -1,4 +1,4 @@
-# Verify aos-mcp's --hooks DEF: tool_before changes / blocks a call, tool_after changes the result, no --hooks = no hooks, a failing hook = isError.
+# Verify aos-mcp's --hooks DEF: before_tool changes / blocks a call, after_tool changes the result, no --hooks = no hooks, a failing hook = isError.
 import json
 import os
 from pathlib import Path
@@ -63,50 +63,50 @@ class McpHooks(unittest.TestCase):
         return '\n'.join(c['text'] for c in result['content'])
 
     def test_tool_before_changes_arguments(self):
-        self.declare({'ch': {'on': 'tool_before', 'change': True, 'match': 'echo',
-                             'exec': self.hook('ch', 'print(json.dumps({"arguments": {"x": 2}}))\n')}})
+        self.declare({'ch': {'event': 'before_tool', 'intercept': True, 'condition': 'echo',
+                             'handler': self.hook('ch', 'print(json.dumps({"arguments": {"x": 2}}))\n')}})
         (res,), _ = self.serve('--hooks', self.defn)
         self.assertEqual(json.loads(self.text(res)), {'x': 2})
         self.assertFalse(res['isError'])
         (ev,) = self.events()
-        self.assertEqual((ev['event'], ev['name'], ev['id'], ev['arguments']), ('tool_before', 'echo', '7', {'x': 1}))
+        self.assertEqual((ev['event'], ev['name'], ev['id'], ev['arguments']), ('before_tool', 'echo', '7', {'x': 1}))
 
     def test_tool_before_blocks(self):
-        self.declare({'blk': {'on': 'tool_before', 'change': True, 'exec': self.hook('blk', 'print("not now"); sys.exit(10)\n')}})
+        self.declare({'blk': {'event': 'before_tool', 'intercept': True, 'handler': self.hook('blk', 'print("not now"); sys.exit(10)\n')}})
         (res,), _ = self.serve('--hooks', self.defn)
         self.assertEqual((self.text(res), res['isError']), ('not now\n', False))
         self.assertFalse(self.calls.exists())
-        self.declare({'blk': {'on': 'tool_before', 'change': True, 'exec': self.hook('blk', 'sys.exit(10)\n')}})
+        self.declare({'blk': {'event': 'before_tool', 'intercept': True, 'handler': self.hook('blk', 'sys.exit(10)\n')}})
         (res,), _ = self.serve('--hooks', self.defn)
         self.assertEqual(self.text(res), '(tool echo blocked by hook blk)')
-        self.assertEqual([e['event'] for e in self.events()], ['tool_before', 'tool_before'])   # 攔下的不觸發 tool_after
+        self.assertEqual([e['event'] for e in self.events()], ['before_tool', 'before_tool'])   # 攔下的不觸發 after_tool
 
     def test_tool_after_changes_content(self):
-        self.declare({'af': {'on': 'tool_after', 'change': True, 'exec': self.hook('af', 'print(json.dumps({"content": "changed"}))\n')}})
+        self.declare({'af': {'event': 'after_tool', 'intercept': True, 'handler': self.hook('af', 'print(json.dumps({"content": "changed"}))\n')}})
         (res,), _ = self.serve('--hooks', self.defn)
         self.assertEqual((self.text(res), res['isError']), ('changed', False))
         (ev,) = self.events()
-        self.assertEqual((ev['event'], ev['code'], ev['timed_out'], json.loads(ev['content'])), ('tool_after', 0, False, {'x': 1}))
+        self.assertEqual((ev['event'], ev['code'], ev['timed_out'], json.loads(ev['content'])), ('after_tool', 0, False, {'x': 1}))
 
     def test_no_hooks_flag_no_hooks(self):
-        self.declare({'blk': {'on': 'tool_before', 'change': True, 'exec': self.hook('blk', 'sys.exit(10)\n')}})
+        self.declare({'blk': {'event': 'before_tool', 'intercept': True, 'handler': self.hook('blk', 'sys.exit(10)\n')}})
         (res,), _ = self.serve()
         self.assertEqual(json.loads(self.text(res)), {'x': 1})
         self.assertEqual(self.events(), [])
 
     def test_failing_hook_is_error_server_lives(self):
-        self.declare({'bad': {'on': 'tool_before', 'exec': self.hook('bad', 'sys.exit(3)\n')}})
+        self.declare({'bad': {'event': 'before_tool', 'handler': self.hook('bad', 'sys.exit(3)\n')}})
         (r1, r2), _ = self.serve('--hooks', self.defn, n=2)
         for res in (r1, r2):
             self.assertTrue(res['isError'])
-            self.assertIn('aos-mcp: error: HookFailed hook bad (event tool_before) failed: exited 3', self.text(res))
+            self.assertIn('aos-mcp: error: HookFailed hook bad (event before_tool) failed: exited 3', self.text(res))
         self.assertFalse(self.calls.exists())
 
     def test_on_fail_continue_warns(self):
-        self.declare({'bad': {'on': 'tool_after', 'on_fail': 'continue', 'exec': self.hook('bad', 'sys.exit(3)\n')}})
+        self.declare({'bad': {'event': 'after_tool', 'on_error': 'continue', 'handler': self.hook('bad', 'sys.exit(3)\n')}})
         (res,), err = self.serve('--hooks', self.defn)
         self.assertFalse(res['isError'])
-        self.assertIn('aos-mcp: warning: hook bad (event tool_after) failed: exited 3', err)
+        self.assertIn('aos-mcp: warning: hook bad (event after_tool) failed: exited 3', err)
 
     def test_hooks_flag_needs_folder(self):
         r = subprocess.run([str(MCP), '--ws', str(self.root), '--hooks', str(self.root / 'nope'), str(self.reg)],

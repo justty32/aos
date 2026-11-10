@@ -8,12 +8,12 @@
 
 ## 事件
 
-| 事件 | 什麼時候（agent-fsm） | 事件 JSON 多的欄位 | `match` 比什麼 | 能改 |
+| 事件 | 什麼時候（agent-fsm） | 事件 JSON 多的欄位 | `condition` 比什麼 | 能改 |
 |---|---|---|---|---|
-| `queue_before` | idle：信從 queue 拿出來、進 history 之前 | `letter`、`content` | 不收 match | 改 `content`、丟掉這封 |
-| `queue_after` | idle：信進 history 之後 | `letter`、`content` | 不收 match | 不能 |
-| `tool_before` | act：工具要跑之前 | `name`、`id`、`arguments`（解開的 JSON） | 工具名 | 改 `arguments`、攔下不跑 |
-| `tool_after` | act：工具跑完、結果進 history 之前（被攔下的不觸發） | 上面三個＋`content`、`code`（逾時＝null）、`timed_out` | 工具名 | 改 `content` |
+| `before_queue` | idle：信從 queue 拿出來、進 history 之前 | `letter`、`content` | 不收 condition | 改 `content`、丟掉這封 |
+| `after_queue` | idle：信進 history 之後 | `letter`、`content` | 不收 condition | 不能 |
+| `before_tool` | act：工具要跑之前 | `name`、`id`、`arguments`（解開的 JSON） | 工具名 | 改 `arguments`、攔下不跑 |
+| `after_tool` | act：工具跑完、結果進 history 之前（被攔下的不觸發） | 上面三個＋`content`、`code`（逾時＝null）、`timed_out` | 工具名 | 改 `content` |
 | `brain_failed` | wait：`BrainFailed`／`SendFailed`／`ReplyBad` 那一刻 | `name`（代號）、`reason` | 代號 | 不能 |
 | `tool_added` | think：工具清單多了名字（一個名字一次；第一次只記不觸發） | `name`、`path` | 工具名 | 不能 |
 
@@ -21,27 +21,29 @@
 
 ## 回話協定
 
-`change` **預設開**（11-10 深夜 [tonight-rulings](../../../thinking/2026-11/10/tonight-rulings/README.md) 題 3，使用者「3.幫我改成預設是開」）：能改的三個事件（`queue_before`、`tool_before`、`tool_after`）看 hook 的回話；寫 `change: false`（`--no-change`）＝純通知、stdout 丟掉。不能改的事件、`wait: false` 的 hook 本來就沒回話可看，`change` 開著也不讀、不報錯。所以掛在那三個事件上、只想記一筆的 hook，stdout 要嘛不印、要嘛加 `--no-change`，不然印了不是 JSON 的東西＝hook 失敗。
+`intercept` **預設開**（11-10 深夜 [tonight-rulings](../../../thinking/2026-11/10/tonight-rulings/README.md) 題 3，使用者「3.幫我改成預設是開」）：能改的三個事件（`before_queue`、`before_tool`、`after_tool`）看 hook 的回話；寫 `intercept: false`（`--no-intercept`）＝純通知、stdout 丟掉。不能改的事件、`async: true` 的 hook 本來就沒回話可看，`intercept` 開著也不讀、不報錯。所以掛在那三個事件上、只想記一筆的 hook，stdout 要嘛不印、要嘛加 `--no-intercept`，不然印了不是 JSON 的東西＝hook 失敗。
 
 | 結束碼 | 意思 |
 |---|---|
-| 0 | 放行。`change` 開著而且 stdout 非空＝stdout 是一個 JSON 物件，認得的鍵（`content`／`arguments`）拿來改；stdout 空＝不改 |
-| 10 | 攔下（`queue_before`＝這封信收掉；`tool_before`＝工具不跑，腦看到的結果＝hook 的 stdout，空就給 `(tool NAME blocked by hook HOOK)`）；別的事件的 10＝當 0 |
-| 其他、逾時、起不來、該是 JSON 卻不是 | hook 自己失敗：`on_fail` 決定 |
+| 0 | 放行。`intercept` 開著而且 stdout 非空＝stdout 是一個 JSON 物件，認得的鍵（`content`／`arguments`）拿來改；stdout 空＝不改 |
+| 10 | 攔下（`before_queue`＝這封信收掉；`before_tool`＝工具不跑，腦看到的結果＝hook 的 stdout，空就給 `(tool NAME blocked by hook HOOK)`）；別的事件的 10＝當 0 |
+| 其他、逾時、起不來、該是 JSON 卻不是 | hook 自己失敗：`on_error` 決定 |
 
 ## 選項
 
+**名字 11-10 深夜改**（[tonight-rulings](../../../thinking/2026-11/10/tonight-rulings/README.md)；頂層照 C#／Java 的 hook 慣例擬兩組，使用者「hook這塊，主要走A, 但filter改condition。」）：`on`→`event`、`exec`→`handler`、`match`→`condition`、`change`→`intercept`、`wait`→`async`（意思反過來）、`on_fail`→`on_error`、`timeout_ms` 不動；事件 `queue_before`→`before_queue`、`queue_after`→`after_queue`、`tool_before`→`before_tool`、`tool_after`→`after_tool`，`brain_failed`、`tool_added` 不動。不留舊名；**要重建什麼**：舊名寫的 `hooks.json`（定義與 stack 兩份）照新名重寫，或 `aos-agent hook reset -y` 後重加。
+
 | 鍵（`add` 的旗標） | 意思 | 預設 |
 |---|---|---|
-| `on`（`--on`） | 事件名，必填 | — |
-| `exec`（XXX 或 `--path-json`） | 目標：aos-exec 跑得動的東西（工具夾、JSON、執行檔）；相對路徑從寫它的那份檔的資料夾算 | — |
-| `match`（`--match`，可重複） | 只在工具名／代號完全相等時跑 | 全部 |
-| `change`（`--no-change`＝false） | 看不看它的回話（只有那三個事件有回話可看） | true |
-| `wait`（`--no-wait`＝false） | 等不等它跑完；不等的＝放出去不管、不看回話 | true |
-| `on_fail`（`--on-fail`） | `stop`＝那格印 `agent-fsm: error: HookFailed …`、agent 停下等人；`continue`＝一行 warning、當沒這個 hook | stop |
+| `event`（`--event`） | 事件名，必填 | — |
+| `handler`（XXX 或 `--path-json`） | 目標：aos-exec 跑得動的東西（工具夾、JSON、執行檔）；相對路徑從寫它的那份檔的資料夾算 | — |
+| `condition`（`--condition`，可重複） | 只在工具名／代號完全相等時跑 | 全部 |
+| `intercept`（`--no-intercept`＝false） | 看不看它的回話（只有那三個事件有回話可看） | true |
+| `async`（`--async`＝true） | true＝不等它跑完、放出去不管、不看回話 | false |
+| `on_error`（`--on-error`） | `stop`＝那格印 `agent-fsm: error: HookFailed …`、agent 停下等人；`continue`＝一行 warning、當沒這個 hook | stop |
 | `timeout_ms`（`--timeout-ms`） | 等它的上限，到了整群收掉、算失敗 | 60000 |
 
-queue 事件給 `--match`＝`add` 直接 `ArgumentsBad`（由 `hooks.validate_entry` 說原因）。不能改的事件（`queue_after`、`brain_failed`、`tool_added`）或 `--no-wait` 的 hook 寫 `change: true`＝不報錯、自然不看回話（11-10 深夜改，以前是 `ArgumentsBad`）。
+queue 事件給 `--condition`＝`add` 直接 `ArgumentsBad`（由 `hooks.validate_entry` 說原因）。不能改的事件（`after_queue`、`brain_failed`、`tool_added`）或 `--async` 的 hook 寫 `intercept: true`＝不報錯、自然不看回話（11-10 深夜改，以前是 `ArgumentsBad`）。
 
 ## 兩份檔怎麼疊
 
@@ -52,12 +54,12 @@ queue 事件給 `--match`＝`add` 直接 `ArgumentsBad`（由 `hooks.validate_en
 ## 指令
 
 ```
-aos-agent hook -t bob                       # = ls：NAME TAB EVENT TAB EXEC
-aos-agent hook -t bob ls -l                 # 多 MATCH WAIT ON_FAIL CHANGE TIMEOUT_MS FROM，也列被設成 null 的
+aos-agent hook -t bob                       # = ls：NAME TAB EVENT TAB HANDLER
+aos-agent hook -t bob ls -l                 # 多 CONDITION ASYNC ON_ERROR INTERCEPT TIMEOUT_MS FROM，也列被設成 null 的
 aos-agent hook -t bob ls --json             # 一個 JSON 陣列（補完預設、帶 name 與 from）
 aos-agent hook -t bob get guard             # 一格的 JSON
-aos-agent hook -t bob add --on tool_before --match agents_ctl hooks/guard
-aos-agent hook -t bob add --on brain_failed --on-fail continue --no-wait -n ping --path-json '{"$env": "AOS_HOME", "$path": "/lib/x"}'
+aos-agent hook -t bob add --event before_tool --condition agents_ctl hooks/guard
+aos-agent hook -t bob add --event brain_failed --on-error continue --async -n ping --path-json '{"$env": "AOS_HOME", "$path": "/lib/x"}'
 aos-agent hook -t bob rm guard              # 定義裡有的＝寫 null；自己加的＝刪掉那格
 aos-agent hook -t bob reset -y              # 刪自己那份，回到定義的
 ```
@@ -69,11 +71,11 @@ aos-agent hook -t bob reset -y              # 刪自己那份，回到定義的
 
 ## 最小 hook 範例
 
-擋掉腦叫 `agent_def` 工具時 `op` 是 `new` 的呼叫（造新定義）（`add --on tool_before --match agent_def hooks/no_spawn`；`change` 預設開，結束碼 10 就算數）：
+擋掉腦叫 `agent_def` 工具時 `op` 是 `new` 的呼叫（造新定義）（`add --event before_tool --condition agent_def hooks/no_spawn`；`intercept` 預設開，結束碼 10 就算數）：
 
 ```python
 #!/usr/bin/env python3
-# no_spawn - tool_before hook: block agent_def {"op": "new"}
+# no_spawn - before_tool hook: block agent_def {"op": "new"}
 import json, sys
 ev = json.load(sys.stdin)
 if isinstance(ev["arguments"], dict) and ev["arguments"].get("op") == "new":
@@ -82,11 +84,11 @@ if isinstance(ev["arguments"], dict) and ev["arguments"].get("op") == "new":
 sys.exit(0)                                                  # empty stdout = no change
 ```
 
-只想記一筆、不改什麼的（`queue_after` 沒回話可看；掛在能改的事件上就加 `--no-change`）：
+只想記一筆、不改什麼的（`after_queue` 沒回話可看；掛在能改的事件上就加 `--no-intercept`）：
 
 ```sh
 #!/bin/sh
-# log_letters - queue_after hook: append each letter to a log
+# log_letters - after_queue hook: append each letter to a log
 cat >> "$HOME/letters.jsonl"
 ```
 
@@ -96,8 +98,8 @@ eca 的腦是外面的 CLI，aos 只看得到經過自己手的東西（圖紙 �
 
 | 事件 | eca | 在哪 |
 |---|---|---|
-| `queue_before`／`queue_after` | 有 | aos-eca-turn 讀信、交給 CLI 之前／信接進 history 之後 |
-| `tool_before`／`tool_after` | 只有經 aos-mcp 叫的 aos 工具 | aos-mcp 的 tools/call |
+| `before_queue`／`after_queue` | 有 | aos-eca-turn 讀信、交給 CLI 之前／信接進 history 之後 |
+| `before_tool`／`after_tool` | 只有經 aos-mcp 叫的 aos 工具 | aos-mcp 的 tools/call |
 | `brain_failed` | 有（`name`＝`CliFailed`／`ReplyMissing`） | aos-eca-turn |
 | `tool_added` | 有（看 aos 登記檔的名單） | aos-eca-turn 每輪開頭 |
 | CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos |

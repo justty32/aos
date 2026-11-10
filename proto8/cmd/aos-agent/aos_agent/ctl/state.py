@@ -123,7 +123,7 @@ def part_llm(a):
 def part_hooks(a):
     rows = json.loads(agent_cmd(a, ["hook", "ls", "--json"]) or "[]")
     j = {"count": len(rows), "hooks": [{"name": r.get("name"), "on": r.get("on"), "from": r.get("from")} for r in rows if isinstance(r, dict)]}
-    one = "%d hooks" % len(rows) + (" (%s)" % ", ".join("%s on %s" % (h["name"], h["on"]) for h in j["hooks"]) if rows else "")
+    one = "%d hooks" % len(rows) + (" (%s)" % ", ".join("%s on %s" % (h["name"], h["event"]) for h in j["hooks"]) if rows else "")
     return one, agent_cmd(a, ["hook", "ls"]).rstrip("\n") or "(no hooks)", j
 
 

@@ -46,8 +46,8 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 
 | 事件 | eca 有沒有 | 在哪 |
 |---|---|---|
-| `queue_before`（可改 content、可丟信）／`queue_after` | 有 | aos-eca-turn：讀出好信、交給 CLI 之前／信接進 history 之後 |
-| `tool_before`（可改 arguments、可攔）／`tool_after`（可改結果） | 只有經 aos-mcp 叫的 aos 工具 | aos-mcp 的 tools/call（cli_session 起它時帶 `--hooks <定義>`） |
+| `before_queue`（可改 content、可丟信）／`after_queue` | 有 | aos-eca-turn：讀出好信、交給 CLI 之前／信接進 history 之後 |
+| `before_tool`（可改 arguments、可攔）／`after_tool`（可改結果） | 只有經 aos-mcp 叫的 aos 工具 | aos-mcp 的 tools/call（cli_session 起它時帶 `--hooks <定義>`） |
 | `brain_failed` | 有（`name`＝`CliFailed`／`ReplyMissing`，交出去之後才算） | aos-eca-turn |
 | `tool_added` | 有（看這隻生效的 aos 登記檔，交出去之前比一次） | aos-eca-turn |
 | CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos |

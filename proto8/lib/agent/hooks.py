@@ -2,13 +2,14 @@
 
 圖紙：proto8/thinking/2026-11/10/self-family/hook/01-圖紙.md（使用者 11-10 晚「self_hook……事件發生時，執行指定aos函數」）。
 agent-fsm 的四格、aos-eca-turn、aos-mcp、aos-agent hook 都用這份，不各自拼。純標準庫，lib 不 import py；
-不印東西、不 sys.exit：錯丟 HooksBad（清單壞）／HookFailed（on_fail stop 的 hook 自己失敗），由呼叫方說自己那一行。
+不印東西、不 sys.exit：錯丟 HooksBad（清單壞）／HookFailed（on_error stop 的 hook 自己失敗），由呼叫方說自己那一行。
 
 對外（另兩條線要用，改了要一起改）：
-    EVENTS[事件] = {"match": 事件 JSON 裡拿來比 match 的欄位名或 None（不收 match）,
-                    "change": 能改的鍵（tuple）, "block": 能不能攔（結束碼 10）}
-    DEFAULTS = {"change": True, "wait": True, "on_fail": "stop", "timeout_ms": 60000}
-                    （change 預設開：11-10 深夜使用者「3.幫我改成預設是開」；不能改的事件、不等的 hook＝自然不看回話、不報錯）
+    EVENTS[事件] = {"condition": 事件 JSON 裡拿來比 condition 的欄位名或 None（不收 condition）,
+                    "intercept": 能改的鍵（tuple）, "block": 能不能攔（結束碼 10）}
+    DEFAULTS = {"intercept": True, "async": False, "on_error": "stop", "timeout_ms": 60000}
+                    （intercept 預設開：11-10 深夜使用者「3.幫我改成預設是開」；不能改的事件、async 的 hook＝自然不看回話、不報錯）
+    格的鍵（11-10 深夜改名，使用者「hook這塊，主要走A, 但filter改condition。」）：event、handler、condition、intercept、async、on_error、timeout_ms
     declared(def_folder) -> 宣告的相對路徑字串 | None
     load(def_folder, stack) -> {名字: 格}；格＝原格的鍵＋DEFAULTS 補齊＋"from"（來自哪份檔的絕對路徑）＋"base"（解 exec 相對路徑的資料夾）
     nulled(def_folder, stack) -> [stack 那份設成 null 的名字]（排好）
@@ -31,14 +32,14 @@ else:
     from agent_files import declared_files
 
 EVENTS = {
-    "queue_before": {"match": None, "change": ("content",), "block": True},
-    "queue_after": {"match": None, "change": (), "block": False},
-    "tool_before": {"match": "name", "change": ("arguments",), "block": True},
-    "tool_after": {"match": "name", "change": ("content",), "block": False},
-    "brain_failed": {"match": "name", "change": (), "block": False},
-    "tool_added": {"match": "name", "change": (), "block": False},
+    "before_queue": {"condition": None, "intercept": ("content",), "block": True},
+    "after_queue": {"condition": None, "intercept": (), "block": False},
+    "before_tool": {"condition": "name", "intercept": ("arguments",), "block": True},
+    "after_tool": {"condition": "name", "intercept": ("content",), "block": False},
+    "brain_failed": {"condition": "name", "intercept": (), "block": False},
+    "tool_added": {"condition": "name", "intercept": (), "block": False},
 }
-DEFAULTS = {"change": True, "wait": True, "on_fail": "stop", "timeout_ms": 60000}
+DEFAULTS = {"intercept": True, "async": False, "on_error": "stop", "timeout_ms": 60000}
 BLOCK = 10                                       # 攔下（N-43：10＝「不要」，不是錯）
 CELLS = "hooks"                                  # 小格：$AOS_STACK/hooks/<名>/
 SEEN = "hook_tools_seen.json"                    # tool_added 上次看到的工具名單
@@ -49,7 +50,7 @@ class HooksBad(ValueError):
 
 
 class HookFailed(RuntimeError):
-    """on_fail: stop 的 hook 自己失敗（結束碼不是 0／10、逾時、起不來、回話不合）。"""
+    """on_error: stop 的 hook 自己失敗（結束碼不是 0／10、逾時、起不來、回話不合）。"""
 
 
 def declared(def_folder):
@@ -64,23 +65,23 @@ def validate_entry(entry):
     """單格驗證；不認得的鍵不管（C-48）。不對＝HooksBad。"""
     if not isinstance(entry, dict):
         raise HooksBad("must be a JSON object or null")
-    on = entry.get("on")
+    on = entry.get("event")
     if on not in EVENTS:
-        raise HooksBad("on must be one of %s" % ", ".join(EVENTS))
-    target = entry.get("exec")
+        raise HooksBad("event must be one of %s" % ", ".join(EVENTS))
+    target = entry.get("handler")
     if not ((isinstance(target, str) and target) or (isinstance(target, dict) and target)):
-        raise HooksBad("exec must be a non-empty string or a directive object")
-    for key in ("change", "wait"):
+        raise HooksBad("handler must be a non-empty string or a directive object")
+    for key in ("intercept", "async"):
         if key in entry and not isinstance(entry[key], bool):
             raise HooksBad("%s must be true or false" % key)
-    if "match" in entry:
-        m = entry["match"]
+    if "condition" in entry:
+        m = entry["condition"]
         if not (isinstance(m, str) or (isinstance(m, list) and all(isinstance(x, str) for x in m))):
-            raise HooksBad("match must be a string or an array of strings")
-        if EVENTS[on]["match"] is None:
-            raise HooksBad("event %s takes no match" % on)
-    if "on_fail" in entry and entry["on_fail"] not in ("stop", "continue"):
-        raise HooksBad("on_fail must be stop or continue")
+            raise HooksBad("condition must be a string or an array of strings")
+        if EVENTS[on]["condition"] is None:
+            raise HooksBad("event %s takes no condition" % on)
+    if "on_error" in entry and entry["on_error"] not in ("stop", "continue"):
+        raise HooksBad("on_error must be stop or continue")
     if "timeout_ms" in entry:
         t = entry["timeout_ms"]
         if not isinstance(t, int) or isinstance(t, bool) or t <= 0:
@@ -142,14 +143,14 @@ def nulled(def_folder, stack):
 
 
 def has(event, def_folder, stack):
-    return any(e["on"] == event for e in load(def_folder, stack).values())
+    return any(e["event"] == event for e in load(def_folder, stack).values())
 
 
 def _matches(entry, event, data):
-    field = EVENTS[event]["match"]
-    if field is None or "match" not in entry:
+    field = EVENTS[event]["condition"]
+    if field is None or "condition" not in entry:
         return True
-    m = entry["match"]
+    m = entry["condition"]
     return data.get(field) in ([m] if isinstance(m, str) else m)
 
 
@@ -174,22 +175,22 @@ def _stop_group(p):
 
 
 def _target(entry):
-    """exec → aos-exec 的目標（絕對路徑）；解不開＝丟 OSError 帶原因（當成起不來）。指示詞物件照 aos-agent tools 的 check_pointer 解。"""
-    t = entry["exec"]
+    """handler → aos-exec 的目標（絕對路徑）；解不開＝丟 OSError 帶原因（當成起不來）。指示詞物件照 aos-agent tools 的 check_pointer 解。"""
+    t = entry["handler"]
     if isinstance(t, dict):
         try:
             r = subprocess.run(["aos-directive"], input=json.dumps({"v": t}), stdout=subprocess.PIPE,
                                stderr=subprocess.DEVNULL, text=True, cwd=entry["base"])
             t = json.loads(r.stdout).get("v") if r.returncode == 0 else None
         except (OSError, ValueError, AttributeError) as e:
-            raise OSError("cannot resolve exec directive: %s" % e) from e
+            raise OSError("cannot resolve handler directive: %s" % e) from e
         if not isinstance(t, str) or not t:
-            raise OSError("exec directive did not resolve to a non-empty path")
+            raise OSError("handler directive did not resolve to a non-empty path")
     return t if os.path.isabs(t) else os.path.join(entry["base"], t)
 
 
 def _run(name, entry, event, data, stack):
-    """跑一個 hook。回 (結束碼, stdout 字串)；wait false＝(None, "")。自己失敗丟 OSError／TimeoutError 帶原因。"""
+    """跑一個 hook。回 (結束碼, stdout 字串)；async true＝(None, "")。自己失敗丟 OSError／TimeoutError 帶原因。"""
     cell = os.path.join(os.path.abspath(stack), CELLS, name)
     os.makedirs(cell, exist_ok=True)
     doc = {"event": event, "hook": name, "stack": os.path.abspath(stack)}
@@ -199,7 +200,7 @@ def _run(name, entry, event, data, stack):
         f.write(json.dumps(doc, ensure_ascii=False) + "\n")
     os.replace(tmp, path)
     argv = ["aos-exec", "--stack", cell + "/", _target(entry)]
-    wait = entry["wait"]
+    wait = not entry["async"]
     with open(path, "rb") as stdin:
         p = subprocess.Popen(argv, stdin=stdin, stdout=subprocess.PIPE if wait else subprocess.DEVNULL,
                              start_new_session=True)   # 自成一群；stderr 不攔、原樣透出
@@ -226,7 +227,7 @@ def _run(name, entry, event, data, stack):
 
 
 def _changes(event, out):
-    """change 的 hook 結束碼 0／10 時 stdout → {鍵: 值}；stdout 空＝{}。不合丟 ValueError。"""
+    """intercept 的 hook 結束碼 0／10 時 stdout → {鍵: 值}；stdout 空＝{}。不合丟 ValueError。"""
     if not out.strip():
         return {}
     try:
@@ -236,24 +237,24 @@ def _changes(event, out):
     if not isinstance(reply, dict):
         raise ValueError("stdout is not a JSON object")
     got = {}
-    for key in EVENTS[event]["change"]:
+    for key in EVENTS[event]["intercept"]:
         if key not in reply:
             continue
         v = reply[key]
-        if key == "content" and not (isinstance(v, str) and (v.strip() or event != "queue_before")):
-            raise ValueError("content in stdout must be a %sstring" % ("non-empty " if event == "queue_before" else ""))
+        if key == "content" and not (isinstance(v, str) and (v.strip() or event != "before_queue")):
+            raise ValueError("content in stdout must be a %sstring" % ("non-empty " if event == "before_queue" else ""))
         got[key] = v
     return got
 
 
 def fire(event, data, def_folder, stack, warn=None):
     """跑 on==event、match 符合的 hook（照名字排序；前一個改過的後一個看得到；被攔下就停）。
-    沒宣告、沒有符合的＝什麼都不做（不起子行程）。warn＝收一行英文的函式（on_fail continue 時叫）；None＝不說。"""
+    沒宣告、沒有符合的＝什麼都不做（不起子行程）。warn＝收一行英文的函式（on_error continue 時叫）；None＝不說。"""
     if event not in EVENTS:
         raise ValueError("unknown hook event %s" % event)
     result = {"data": copy.deepcopy(data), "changed": [], "blocked": False, "hook": None, "text": ""}
     entries = load(def_folder, stack)
-    names = sorted(n for n, e in entries.items() if e["on"] == event and _matches(e, event, data))
+    names = sorted(n for n, e in entries.items() if e["event"] == event and _matches(e, event, data))
     for name in names:
         entry = entries[name]
         try:
@@ -265,15 +266,15 @@ def fire(event, data, def_folder, stack, warn=None):
                 continue
             if code not in (0, BLOCK):
                 raise ValueError("exited %d" % code)
-            if not entry["change"] or not (EVENTS[event]["change"] or EVENTS[event]["block"]):
+            if not entry["intercept"] or not (EVENTS[event]["intercept"] or EVENTS[event]["block"]):
                 continue                         # 不看回話：關掉的、或這個事件本來沒東西能改能擋（不報錯）
             got = _changes(event, out) if not (code == BLOCK and EVENTS[event]["block"]) else {}
         except ValueError as e:
             why = "hook %s (event %s) failed: %s" % (name, event, e)
-            if entry["on_fail"] == "stop":
+            if entry["on_error"] == "stop":
                 raise HookFailed(why) from None
             if warn:
-                warn(why + "; going on without it (on_fail: continue)")
+                warn(why + "; going on without it (on_error: continue)")
             continue
         if code == BLOCK and EVENTS[event]["block"]:
             result.update(blocked=True, hook=name, text=out)

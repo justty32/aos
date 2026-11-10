@@ -16,14 +16,14 @@ usage: aos-agent [--daemon D] hook [--target NAME] ls [-l | --json]
        aos-agent hook ls --help
 
 flags:
-  -l, --long   also MATCH WAIT ON_FAIL CHANGE TIMEOUT_MS FROM, and the names this
+  -l, --long   also CONDITION ASYNC ON_ERROR INTERCEPT TIMEOUT_MS FROM, and the names this
                agent turned off: NAME null - - - - - - FILE
   -j, --json   print one JSON array (defaults filled in, with "name" and "from")
   -h, --help   show this help
 
-Print NAME TAB EVENT TAB EXEC per hook in effect: the definition's list with this
+Print NAME TAB EVENT TAB HANDLER per hook in effect: the definition's list with this
 agent's own list on top (same name replaces it, null turns it off).
-EXEC that is a directive object is printed as compact JSON.
+HANDLER that is a directive object is printed as compact JSON.
 exit codes: 0 listed; 1 error (HooksMissing, HooksBad...).
 """,
     "get": """aos-agent hook get - print one hook
@@ -39,7 +39,7 @@ exit codes: 0 printed; 1 error (HookMissing, HooksMissing...).
 """,
     "add": """aos-agent hook add - add a hook for this agent only
 
-usage: aos-agent [--daemon D] hook [--target NAME] add --on EVENT [-n N] [--match M]... [--no-change] [--no-wait] [--on-fail stop|continue] [--timeout-ms N] [--replace] (XXX | --path-json JSON)
+usage: aos-agent [--daemon D] hook [--target NAME] add --event EVENT [-n N] [--condition M]... [--no-intercept] [--async] [--on-error stop|continue] [--timeout-ms N] [--replace] (XXX | --path-json JSON)
        aos-agent hook add --help
 
 Run XXX (anything aos-exec runs: a tool folder, a JSON file, an executable) when
@@ -48,19 +48,19 @@ directory and is stored relative to this agent's hooks file (absolute stays
 absolute). Written to this agent's own list in its stack; the definition stays as
 it is. Flags may go before or after XXX.
 
-events: queue_before, queue_after, tool_before, tool_after, brain_failed, tool_added
+events: before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added
 
 flags:
-      --on EVENT          the event (required)
+      --event EVENT       the event (required)
   -n, --name N            the hook's name (default: XXX's file or folder name)
-      --match M           run only when the tool name / error code is M (repeatable;
-                          not for queue_before / queue_after)
-      --no-change         do not read its reply (by default it is read: exit 0 + JSON on
+      --condition M       run only when the tool name / error code is M (repeatable;
+                          not for before_queue / after_queue)
+      --no-intercept      do not read its reply (by default it is read: exit 0 + JSON on
                           stdout changes the event, exit 10 blocks it; only for
-                          queue_before, tool_before, tool_after; other events and
-                          --no-wait hooks never have their reply read)
-      --no-wait           start it and do not wait
-      --on-fail W         stop (default: the agent stops) or continue (a warning)
+                          before_queue, before_tool, after_tool; other events and
+                          --async hooks never have their reply read)
+      --async             start it and do not wait
+      --on-error W        stop (default: the agent stops) or continue (a warning)
       --timeout-ms N      give up waiting after N ms (default 60000)
       --replace           replace a hook already listed under that name
       --path-json J       store this JSON value (path string or directive) instead of XXX
@@ -109,7 +109,7 @@ No ACTION means ls. Changes go to this agent's own list, which sits on top of th
 Changes apply from the next event. More: proto8/cmd/aos-agent/docs/06-hook.md
 exit codes: 0 ok; 1 error (TargetMissing, HooksMissing, HooksBad...); 130 Ctrl-C.
 """ % actions(HELPS.values(), "aos-agent [--daemon D] hook [--target NAME] ")
-COLS = ("on", "exec", "match", "wait", "on_fail", "change", "timeout_ms", "from")
+COLS = ("event", "handler", "condition", "async", "on_error", "intercept", "timeout_ms", "from")
 
 
 def compact(v):
@@ -155,12 +155,12 @@ def ls(entries, folder, stack, own, long, as_json):
     for n in sorted(entries):
         e = entries[n]
         if not long:
-            print("\t".join((n, e["on"], compact(e["exec"]))))
+            print("\t".join((n, e["event"], compact(e["handler"]))))
             continue
-        m = e.get("match")
+        m = e.get("condition")
         m = "-" if m is None else m if isinstance(m, str) else ",".join(m)
-        print("\t".join((n, e["on"], compact(e["exec"]), m, json.dumps(e["wait"]), e["on_fail"],
-                         json.dumps(e["change"]), str(e["timeout_ms"]), e["from"])))
+        print("\t".join((n, e["event"], compact(e["handler"]), m, json.dumps(e["async"]), e["on_error"],
+                         json.dumps(e["intercept"]), str(e["timeout_ms"]), e["from"])))
     if long:
         for n in loaded_nulled(folder, stack):
             print("\t".join((n, "null") + ("-",) * 6 + (own,)))
@@ -175,8 +175,8 @@ def loaded_nulled(folder, stack):
 
 def build(topts, args, own, help):
     """add 的旗標 → (名字, 格)；只寫有給的選項鍵。"""
-    if "on" not in topts:
-        raise bad_args(help, "add needs --on EVENT (%s)" % ", ".join(hooks.EVENTS))
+    if "event" not in topts:
+        raise bad_args(help, "add needs --event EVENT (%s)" % ", ".join(hooks.EVENTS))
     if "path_json" in topts:
         try:
             target_v = json.loads(topts["path_json"])
@@ -196,15 +196,16 @@ def build(topts, args, own, help):
         name = topts.get("name", os.path.basename(full))
     if not name or "/" in name or name.startswith("."):
         raise Fail("NameBad", "hook name %r must be non-empty, without / and not start with . (give one with --name)" % name)
-    entry = {"on": topts["on"], "exec": target_v}
-    if "match" in topts:
-        entry["match"] = topts["match"][0] if len(topts["match"]) == 1 else topts["match"]
-    if topts.get("no_change"):                    # 預設開（11-10 深夜使用者「3.幫我改成預設是開」）；關＝寫 false
-        entry["change"] = False
-    if topts.get("no_wait"):
-        entry["wait"] = False
-    if "on_fail" in topts:
-        entry["on_fail"] = topts["on_fail"]
+    # 鍵名 11-10 深夜改（使用者「hook這塊，主要走A, 但filter改condition。」）
+    entry = {"event": topts["event"], "handler": target_v}
+    if "condition" in topts:
+        entry["condition"] = topts["condition"][0] if len(topts["condition"]) == 1 else topts["condition"]
+    if topts.get("no_intercept"):                 # 預設開（11-10 深夜使用者「3.幫我改成預設是開」）；關＝寫 false
+        entry["intercept"] = False
+    if topts.get("async"):
+        entry["async"] = True
+    if "on_error" in topts:
+        entry["on_error"] = topts["on_error"]
     if "timeout_ms" in topts:
         t = topts["timeout_ms"]
         entry["timeout_ms"] = int(t) if t.isdigit() else t     # 不是正整數交給 validate_entry 說
@@ -220,14 +221,14 @@ def cmd(argv):
     act, args = (rest[0], rest[1:]) if rest else ("ls", [])
     if act not in HELPS:
         raise Fail("CommandUnknown", "hook: unknown subcommand %s (ls, get, add, rm, reset; see aos-agent hook --help)" % act)
-    flags = {"add": {"--on": "on", "--name": "name", "--on-fail": "on_fail", "--timeout-ms": "timeout_ms",
+    flags = {"add": {"--event": "event", "--name": "name", "--on-error": "on_error", "--timeout-ms": "timeout_ms",
                      "--path-json": "path_json"}}.get(act, {})
     switches = {"ls": {"--json": "json", "--long": "long"},
-                "add": {"--no-change": "no_change", "--no-wait": "no_wait", "--replace": "replace"},
+                "add": {"--no-intercept": "no_intercept", "--async": "async", "--replace": "replace"},
                 "reset": {"--yes": "yes"}}.get(act, {})
     shorts = {"ls": {"-j": "--json", "-l": "--long"}, "add": ("-n",), "reset": ("-y",)}.get(act, ())
     try:
-        topts, args = aos_flags.parse(args, flags, switches, {"--match": "match"} if act == "add" else None,
+        topts, args = aos_flags.parse(args, flags, switches, {"--condition": "condition"} if act == "add" else None,
                                       help=HELPS[act], short=shorts)
     except aos_flags.Error as e:
         if e.code == "ArgumentsBad":
