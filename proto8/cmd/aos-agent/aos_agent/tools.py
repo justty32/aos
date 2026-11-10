@@ -14,12 +14,13 @@ from .decl import agent_decl, pass_err, warn_shared
 HELPS = {
     "ls": """aos-agent tools ls - list this agent's tools
 
-usage: aos-agent [--daemon D] tools [--target NAME] ls [-l | --json]
+usage: aos-agent [--daemon D] tools [--target NAME] ls [-l | -b | --json]
        aos-agent tools ls --help
 
 flags:
   -l, --long   also FROM, STORED, ENV (as aos-tools ls -l), and the names this agent
                turned off: NAME null PATH-IT-HIDES FILE#/tools/NAME null -
+  -b, --brief  NAME TAB the first sentence of its description (as aos-tools ls -b)
   -j, --json   print one JSON array
   -h, --help   show this help
 
@@ -160,10 +161,10 @@ def cmd(argv):
     act, args = (rest[0], rest[1:]) if rest else ("ls", [])
     if act not in SUBS:
         raise Fail("CommandUnknown", "tools: unknown subcommand %s (ls, get, add, rm, reset; see aos-agent tools --help)" % act)
-    switches = {"ls": {"--json": "json", "--long": "long"},
+    switches = {"ls": {"--json": "json", "--long": "long", "--brief": "brief"},
                 "add": {"--replace": "replace", "--no-cache": "no_cache"},
                 "reset": {"--yes": "yes"}}.get(act, {})
-    shorts = {"ls": {"-j": "--json", "-l": "--long"}, "reset": ("-y",)}.get(act, ())
+    shorts = {"ls": {"-j": "--json", "-l": "--long", "-b": "--brief"}, "reset": ("-y",)}.get(act, ())
     if act == "add":                                  # 11-10 Q8：旗標與 aos-tools add 一樣（C-86），原樣轉交
         try:
             topts, args = aos_flags.parse(args, {"--name": "name", "--env-file": "env_file", "--path-json": "path_json"},
@@ -197,7 +198,8 @@ def cmd(argv):
         else:
             note("using the definition's %s (this agent has no file of its own)" % orig)
         f = over if os.path.isfile(over) else orig
-        return aos_tools(a, f, [act] + (["--json"] if topts.get("json") else []) + (["--long"] if topts.get("long") else []) + args)
+        return aos_tools(a, f, [act] + (["--json"] if topts.get("json") else []) + (["--long"] if topts.get("long") else [])
+                         + (["--brief"] if topts.get("brief") else []) + args)
     if act == "reset":
         if os.path.isfile(over):
             question = "delete the tools file %s of %s (back to the definition's %s)?" % (over, a.name, orig)

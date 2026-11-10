@@ -1,4 +1,4 @@
-"""Test the aos-tools command line (11-10 aos-tools-cli step 1): --file on either side, usage line, late flags, default-file warning, success lines, ls -l, call NAME ARGS_JSON, naming the tool whose directive fails."""
+"""Test the aos-tools command line (11-10 aos-tools-cli step 1): --file on either side, usage line, late flags, default-file warning, success lines, ls -l, ls -b, call NAME ARGS_JSON, naming the tool whose directive fails."""
 import json
 import os
 from pathlib import Path
@@ -63,6 +63,20 @@ class Base(unittest.TestCase):
         p.write_text(ECHO)
         p.chmod(0o755)
         return p
+
+
+class Brief(Base):
+    def test_brief_is_name_and_first_sentence(self):
+        self.ok("--file", self.reg, "add", TOOL)
+        self.echo_tool()
+        self.ok("--file", self.reg, "add", self.tmp / "bin" / "echo")
+        r = self.ok("--file", self.reg, "ls", "-b")
+        self.assertEqual(r.stdout, "echo\techo stdin\nwall_clock\tGet the current UTC time in ISO 8601, e.g. 2026-10-23T08:00:00Z.\n")
+        self.assertEqual(self.ok("--file", self.reg, "ls", "--brief").stdout, r.stdout)
+
+    def test_brief_with_other_forms_is_bad(self):
+        self.bad("ArgumentsBad", "--file", self.reg, "ls", "-b", "--json")
+        self.bad("ArgumentsBad", "--file", self.reg, "ls", "-b", "-l")
 
 
 class FileEitherSide(Base):

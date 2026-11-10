@@ -55,6 +55,9 @@ class ToolsOverride(unittest.TestCase):
     def names(self, **env):
         return [l.split("\t")[0] for l in self.agent("ls", **env).stdout.splitlines()]
 
+    def test_ls_brief_passes_through(self):
+        self.assertEqual(self.agent("ls", "-b").stdout, "clock\tGet the current UTC time in ISO 8601, e.g. 2026-10-23T08:00:00Z.\n")
+
     def test_first_add_creates_override_relative(self):
         before = self.reg.read_bytes()
         r = self.agent("add", "extra")

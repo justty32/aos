@@ -8,7 +8,7 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
     aos-tools [--file F] add [--replace] [--name N] [--no-cache] [--env-file FILE] [--envs K=V]... XXX|--path-json JSON
                                                            登記 XXX（檔或資料夾；相對路徑從 cwd 算），印 added NAME -> 絕對路徑 (寫進的檔: 存的原樣值)
     aos-tools [--file F] rm XXX                            每個拿掉的名字印 removed NAME (寫進的檔)；拿掉（XXX＝工具名；不是登記過的名字就當路徑，拿掉指到那裡的）
-    aos-tools [--file F] ls [-l | --json]                  列：一行一個「名字 TAB 種類 TAB 路徑」；-l 多 FROM、STORED、ENV（只印名）三欄；--json＝一行 JSON 陣列
+    aos-tools [--file F] ls [-l | -b | --json]             列：一行一個「名字 TAB 種類 TAB 路徑」；-l 多 FROM、STORED、ENV（只印名）三欄；-b＝「名字 TAB 說明第一句」；--json＝一行 JSON 陣列
     aos-tools [--file F] get XXX                           一個工具一行 JSON：name、kind、path、tooldef、metainfo（有才給）
     aos-tools [--file F] call 名 [ARGS_JSON]               叫一次：ARGS_JSON（沒給＝stdin）原樣進工具的 stdin，stdout／結束碼＝工具的
     aos-tools [--file F] override (BASE...|--path-json J)  在 F 寫 "$override"：F 從此只記對 BASE 的差異（BASE 寫法同 XXX；多個＝陣列）
@@ -170,7 +170,7 @@ exit codes: 0 removed; 1 error (ToolMissing, RegistryBad, WriteFailed...).
 """,
     "ls": """aos-tools ls - show the list
 
-usage: aos-tools [--file F] ls [-l | --json]
+usage: aos-tools [--file F] ls [-l | -b | --json]
 
 One line per tool, sorted by name: NAME TAB KIND TAB PATH (absolute).
 KIND is dir (folder), json (JSON file) or exe (executable). Every tool is checked;
@@ -182,6 +182,8 @@ flags:
                  path as written there, as JSON) and ENV (variable names and @ the
                  env file; never values). Also lists names turned off with null:
                  NAME null PATH-IT-HIDES FILE-THAT-SAYS-NULL#/tools/NAME null -
+  -b, --brief    NAME TAB the first sentence of its description, nothing else
+                 (see one tool in full with get NAME)
   -j, --json     one JSON array with name, kind, path, tooldef and optional metainfo
   -h, --help     show this help
 
@@ -972,16 +974,29 @@ def env_column(t):
     return ",".join(names) or "-"
 
 
+def first_sentence(tooldef):
+    """ls -b 用（11-10 使用者「好，有需要的再自己去看細項」）：description 第一行、到第一個「. 接大寫」為止（含句點，e.g. 不算）；沒有＝-。"""
+    d = tooldef.get("description") if isinstance(tooldef, dict) else None
+    if not isinstance(d, str) or not d.strip():
+        return "-"
+    line = d.strip().splitlines()[0].strip()
+    m = re.search(r"\.\s+(?=[A-Z])", line)
+    return line[:m.start() + 1] if m else line
+
+
 def cmd_ls(args):
-    reg, opts, rest = parse_sub("ls", args, None, {"--json": "json", "--long": "long"},
-                                short={"-j": "--json", "-l": "--long"})
+    reg, opts, rest = parse_sub("ls", args, None, {"--json": "json", "--long": "long", "--brief": "brief"},
+                                short={"-j": "--json", "-l": "--long", "-b": "--brief"})
     if rest:
         raise Fail("ArgumentsBad", "ls takes no arguments")
-    if opts.get("json") and opts.get("long"):
-        raise Fail("ArgumentsBad", "ls takes -l or --json, not both")
+    if sum(bool(opts.get(k)) for k in ("json", "long", "brief")) > 1:
+        raise Fail("ArgumentsBad", "ls takes one of -l, -b, --json")
     tools = load_tools(reg)
     found = [describe(n, tools[n]) for n in sorted(tools)]
-    if opts.get("json"):
+    if opts.get("brief"):
+        for t in found:
+            print("%s\t%s" % (t["name"], first_sentence(t["tooldef"])))
+    elif opts.get("json"):
         print(json.dumps(found, ensure_ascii=False))
     elif opts.get("long"):                           # 甲5：FROM（檔#/格/名）、STORED（存的原樣值）、ENV（只印名）
         off = nulled(reg)

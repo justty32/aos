@@ -3,7 +3,8 @@
 # 使用者 11-05 午：「讓agent給自己改tool」；11-10 晚：「我原本想說，這支工具就是aos-agent tools的包裝，只是目標改自己」、路徑限制「A，拿掉限制」。
 # **對應關係**：aos-agent tools 加了動作或旗標，這支要跟著加（參數一對一，不多給、不多擋）。
 # 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"get"|"add"|"rm"|"reset", …}；別的鍵＝ArgumentsBad：
-#   ls {long?}                   ＝tools ls --json（long: true＝ls -l 的文字，含被設成 null 的格）
+#   ls {long?}                   ＝tools ls -b（一行一支「名字 TAB 說明第一句」；11-10 使用者「好，有需要的再自己去看細項」）
+#                                 long: true＝ls -l 的文字（含被設成 null 的格）；細項（整份說明與參數）用 get
 #   get {name}                   ＝tools get NAME_OR_PATH
 #   add {path | path_json, name?, replace?, envs?, env_file?, no_cache?}
 #                                ＝tools add [--name] [--replace] [--envs K=V]… [--env-file] [--no-cache] (XXX | --path-json)
@@ -126,7 +127,7 @@ def flag(key):
 
 cmd = ["tools", "--target", None, op]
 if op == "ls":
-    cmd += ["-l"] if flag("long") else ["--json"]
+    cmd += ["-l"] if flag("long") else ["-b"]
 elif op in ("get", "rm"):
     cmd += [text("name", True)]
 elif op == "reset":
