@@ -429,7 +429,7 @@ if tools is not None:                          # 沒給＝保留定義的工具�
     wanted = {t for t, _ in tool_list}
     steps += [("tools rm " + t["name"], ["tools", "--target", kid, "rm", t["name"]])
               for t in listed if isinstance(t, dict) and t.get("name") not in wanted]
-    steps += [("tools add " + t, ["tools", "--target", kid, "add", "--replace", t, p]) for t, p in tool_list]
+    steps += [("tools add " + t, ["tools", "--target", kid, "add", "--replace", "--name", t, p]) for t, p in tool_list]
 for what, argv in steps:
     _, err = agent(argv)
     if err:

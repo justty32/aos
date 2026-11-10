@@ -607,7 +607,7 @@ if on_queued == "ok":
     report(name, child_stack, alive, n)
 steps = [("llm set %s=%s" % (k, v), ["llm", "--target", name, "set", "%s=%s" % (k, v)]) for k, v in llm.items()] + \
         [("tools rm " + t, ["tools", "--target", name, "rm", t]) for t in tools_rm] + \
-        [("tools add " + t, ["tools", "--target", name, "add", "--replace", t, user_form(p, g)]) for (t, p), g in zip(tool_list, tool_given)]
+        [("tools add " + t, ["tools", "--target", name, "add", "--replace", "--name", t, user_form(p, g)]) for (t, p), g in zip(tool_list, tool_given)]
 for what, argv in steps:
     _, err = agent(argv)
     if err:                    # 全有或全無：設定沒上，收回這隻

@@ -38,17 +38,24 @@ exit codes: 0 printed; 1 error (ToolMissing, ToolsMissing...).
 """,
     "add": """aos-agent tools add - add a tool for this agent only
 
-usage: aos-agent [--daemon D] tools [--target NAME] add [--replace] [--no-cache] NAME PATH
+usage: aos-agent [--daemon D] tools [--target NAME] add [--name N] [--replace] [--no-cache]
+                 [--env-file FILE] [--envs K=V]... (XXX | --path-json JSON)
        aos-agent tools add --help
 
-flags:
-  --replace    replace a tool already listed under NAME
-  --no-cache   inspect executable tool definitions each time
-  -h, --help   show this help
+Same as aos-tools add (flags and meaning), written to this agent's own registry in
+its stack, which overrides the definition's ("$override"); the definition stays as it
+is. The first add or rm creates that file. XXX is a tool folder, JSON file or
+executable, relative to the current directory; flags go before it.
 
-Written to this agent's own registry in its stack, which overrides the definition's
-("$override"); the definition stays as it is. The first add or rm creates that file.
-PATH is resolved from the current directory.
+flags:
+  -n, --name N        list it under this name (default: folder or file name)
+      --replace       replace a tool already listed under that name
+      --path-json J   store this JSON path value (string or directive) instead of XXX
+      --envs K=V      set K to V for every call of this tool (repeatable)
+      --env-file FILE remember where FILE is; it is read on every call
+      --no-cache      inspect executable tool definitions each time
+  -h, --help          show this help
+
 exit codes: 0 added; 1 error (ToolExists, PathMissing, ToolsMissing...).
 """,
     "rm": """aos-agent tools rm - remove a tool from this agent's toolbox
@@ -154,7 +161,16 @@ def cmd(argv):
                 "add": {"--replace": "replace", "--no-cache": "no_cache"},
                 "reset": {"--yes": "yes"}}.get(act, {})
     shorts = {"ls": ("-j",), "reset": ("-y",)}.get(act, ())
-    topts, args = parse(args, {}, switches, help=HELPS[act], short=shorts)
+    if act == "add":                                  # 11-10 Q8：旗標與 aos-tools add 一樣（C-86），原樣轉交
+        try:
+            topts, args = aos_flags.parse(args, {"--name": "name", "--env-file": "env_file", "--path-json": "path_json"},
+                                          switches, {"--envs": "envs"}, help=HELPS[act], short=("-n",))
+        except aos_flags.Error as e:
+            if e.code == "ArgumentsBad":
+                raise bad_args(HELPS[act], str(e)) from e
+            raise Fail(e.code, "%s (see aos-agent tools add --help)" % e) from e
+    else:
+        topts, args = parse(args, {}, switches, help=HELPS[act], short=shorts)
     a = target(opts)
     folder, decl = agent_decl(a)
     rel = decl.get("tools")
@@ -165,9 +181,12 @@ def cmd(argv):
     except ValueError as e:
         raise Fail("ToolsBad", str(e)) from e
     orig, over = os.path.join(folder, rel), os.path.join(a.stack, rel)
-    count = {"ls": 0, "get": 1, "add": 2, "rm": 1, "reset": 0}[act]
+    count = {"ls": 0, "get": 1, "add": 0 if "path_json" in topts else 1, "rm": 1, "reset": 0}[act]
+    if act == "add" and len(args) > count and args[count].startswith("-"):
+        raise bad_args(HELPS[act], "flags go before XXX: %s" % args[count])
     if len(args) != count:
-        raise bad_args(HELPS[act], "%s needs %d arguments" % (act, count))
+        raise bad_args(HELPS[act], "add needs one XXX (or --path-json JSON)" if act == "add"
+                       else "%s needs %d arguments" % (act, count))
     if act in ("ls", "get"):
         if os.path.isfile(over):
             note("using this agent's %s (it overrides the definition's %s)" % (over, orig))
@@ -189,11 +208,15 @@ def cmd(argv):
         return
     if act == "add":                                  # 11-05 edge-agent：撞名時 aos-tools 說「加 --replace」，這裡收得了
         targs = ["add"] + (["--replace"] if topts.get("replace") else []) + (["--no-cache"] if topts.get("no_cache") else []) \
-            + ["--name", args[0], args[1]]           # 照使用者的寫法轉（同一個 cwd）：絕對存絕對、相對存相對 stack 那份（11-10 TC）
+            + (["--name", topts["name"]] if "name" in topts else []) \
+            + (["--env-file", topts["env_file"]] if "env_file" in topts else []) \
+            + [x for kv in topts.get("envs", []) for x in ("--envs", kv)] \
+            + (["--path-json", topts["path_json"]] if "path_json" in topts else []) + args
+        # 照使用者的寫法轉（同一個 cwd）：絕對存絕對、相對存相對 stack 那份（11-10 TC）
     elif act == "rm":
         targs = ["rm", args[0]]
     else:
-        raise Fail("CommandUnknown", "tools: unknown action %s (ls, get, add [--replace] [--no-cache], rm, reset)" % act)
+        raise Fail("CommandUnknown", "tools: unknown action %s (ls, get, add, rm, reset)" % act)
     made = not os.path.isfile(over)
     if made and os.path.isfile(orig):                 # 第一次：先建 {"$override": 定義那份}；定義那份不在＝add 直接新建一般登記檔
         r = subprocess.run([sys.executable, TOOLS, "--file", over, "override", "--path-json",

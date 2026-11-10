@@ -57,7 +57,7 @@ class ToolsOverride(unittest.TestCase):
 
     def test_first_add_creates_override_relative(self):
         before = self.reg.read_bytes()
-        r = self.agent("add", "extra", "extra")
+        r = self.agent("add", "extra")
         self.assertIn("created %s" % self.own, r.stderr)
         data = json.loads(self.own.read_text())
         self.assertEqual(data["$override"], os.path.relpath(self.reg, self.stack))
@@ -75,20 +75,37 @@ class ToolsOverride(unittest.TestCase):
         self.assertEqual(self.names(TC_DEFS=str(self.defn.parent)), [])
 
     def test_replace_and_reset(self):
-        r = self.agent("add", "clock", "extra", ok=False)
+        r = self.agent("add", "--name", "clock", "extra", ok=False)
         self.assertEqual(r.returncode, 1)
         self.assertIn("add --replace to replace it", r.stderr)
         self.assertFalse(self.own.exists())                      # failed first add leaves no file behind
-        self.agent("add", "--replace", "clock", "extra")
+        self.agent("add", "--replace", "--name", "clock", "extra")
         self.assertEqual(json.loads(self.own.read_text())["tools"]["clock"]["env"], None)
         self.agent("reset", "--yes")
         self.assertFalse(self.own.exists())
         self.assertEqual(self.names(), ["clock"])
 
     def test_old_flag_is_unknown(self):
-        r = self.agent("add", "--override", "clock", "extra", ok=False)
+        r = self.agent("add", "--override", "--name", "clock", "extra", ok=False)
         self.assertEqual(r.returncode, 1)
         self.assertIn("FlagUnknown", r.stderr)
+
+    def test_add_same_flags_as_aos_tools(self):
+        secrets = self.tmp / "s.env"
+        secrets.write_text("TC_K=1\n")
+        self.agent("add", "-n", "c2", "--envs", "A=1", "--envs", "B=2", "--env-file", "s.env", "extra")
+        self.agent("add", "--name", "c3", "--path-json", json.dumps({"$env": "TC_X", "$path": "/extra"}), TC_X=str(self.tmp))
+        tools = json.loads(self.own.read_text())["tools"]
+        self.assertEqual(tools["c2"], {"path": os.path.relpath(self.tmp / "extra", self.stack), "env": {"A": "1", "B": "2"},
+                                       "env_file": os.path.relpath(secrets, self.stack)})
+        self.assertEqual(tools["c3"]["path"], {"$env": "TC_X", "$path": "/extra"})
+
+    def test_old_two_positional_form_is_bad(self):
+        r = self.agent("add", "clock2", "extra", ok=False)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("ArgumentsBad", r.stderr)
+        r = self.agent("add", "extra", "--name", "x", ok=False)
+        self.assertIn("flags go before XXX: --name", r.stderr)
 
     def test_warns_when_overriding_another_definition(self):
         other = self.tmp / "defs" / "other.json"
@@ -98,7 +115,7 @@ class ToolsOverride(unittest.TestCase):
         self.assertIn("overrides %s, not its definition's %s" % (other, self.reg), r.stderr)
 
     def test_ctl_state_counts_own_changes(self):
-        self.agent("add", "extra", "extra")
+        self.agent("add", "extra")
         self.agent("rm", "clock")
         p = subprocess.run([str(BIN), "--daemon", str(self.d), "ctl", "state", "--target", "bob"],
                            env=clean_env(), capture_output=True, text=True, timeout=60)

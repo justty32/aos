@@ -3,7 +3,7 @@
 # 使用者 11-05 午：「讓agent給自己改tool」。規劃：proto8/thinking/2026-11/05/feat-proto/01-self-tools.md。
 # 介面（lib/README 的契約）：stdin 收 {"op": "add"|"rm"|"ls", "name"?, "path"?, "override"?}；
 #   先 aos-agent ctl who（拿 $AOS_STACK＝<agent stack>/tools/self_tools/ 查 daemon 表，C-52 經機制看上層、不爬路徑）認出是哪隻，
-#   再 aos-agent tools --target <那隻> add [--replace] <name> <絕對路徑>／rm <name>／ls --json。下一格 brain 重讀就看到新清單。
+#   再 aos-agent tools --target <那隻> add [--replace] --name <name> <絕對路徑>／rm <name>／ls --json。下一格 brain 重讀就看到新清單。
 #   path：相對路徑從 $AOS_WS 算、解開 .. 與捷徑後要在工作區或 lib/ 裡（工作區裡指到庫的捷徑也收）；絕對路徑要在 lib/（這個工具所在的庫）底下；其他＝PathBad。
 #   結果：add／rm 印一句（下一題起生效）、ls 印 aos-tools ls --json 那一行。
 #   錯：stderr 與 stdout 各一行「self_tools: error: 代號 原因」、退 1；aos-agent（與它轉的 aos-tools）的 stderr 原樣透到 stderr；
@@ -124,7 +124,7 @@ me = agent("ctl", "who").strip()
 if op == "ls":
     sys.stdout.write(agent("tools", "--target", me, "ls", "--json"))
 elif op == "add":
-    agent("tools", "--target", me, "add", *(["--replace"] if override else []), name, path)
+    agent("tools", "--target", me, "add", *(["--replace"] if override else []), "--name", name, path)
     print("added %s (%s) to your tools; available from your next turn" % (name, path))
 else:
     agent("tools", "--target", me, "rm", name)
