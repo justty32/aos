@@ -31,6 +31,7 @@ image/
 ```json
 {"procs_requests":"procs_requests","procs":{
   "_clock":{"exec":{"argv":["aos-clock",{"$env":"AOS_DAEMON","$path":"clock"}]},"interval_ms":1000,"auto_restart":true,"stuck_after_ms":10000},
+  "_sweeper":{"exec":{"argv":["aos-sweeper","--retention-days","7","--report",{"$env":"AOS_STACK","$path":"sweeper_report.json"}]},"interval_ms":600000,"auto_restart":true,"stuck_after_ms":600000},
   "switchboard":{"exec":"../llm_def","stack":"../llm_image","auto_restart":true},
   "foreman":{"exec":"../foreman_def","stack":"../foreman_image","ws":"../ws","auto_restart":true}
 }}
@@ -52,7 +53,7 @@ AOS_CLOCK=${AOS_STACK}/clock
 }}
 ```
 
-只有根帶鐘（鐘列＋`.env`），鐘檔在 `root_image/clock`；領班、總機不帶，照繼承聽根的鐘（使用者 11-09「預設聽外層……大家也通常只在root daemon才開」，[thinking clock-decouple](../../../../thinking/2026-11/09/clock-decouple/README.md)）。凍住整棵樹＝根 sleep；只停時間＝`pause` 根的 `_clock`。定義中的相對 exec／stack／ws 從各 daemon 的 cwd（此例是其定義資料夾）算。父只把 switchboard／foreman 當普通 exec，`auto_restart: true` 才有常駐 sleep／wake 與退了重起。
+清道夫列 `_sweeper`（11-10）是每台 daemon 各帶一列、只管自己（領班、總機的 daemon.json 也寫同一列）；它寫的封存、報告、鎖都不進 image，換機後新機器從空的開始。只有根帶鐘（鐘列＋`.env`），鐘檔在 `root_image/clock`；領班、總機不帶，照繼承聽根的鐘（使用者 11-09「預設聽外層……大家也通常只在root daemon才開」，[thinking clock-decouple](../../../../thinking/2026-11/09/clock-decouple/README.md)）。凍住整棵樹＝根 sleep；只停時間＝`pause` 根的 `_clock`。定義中的相對 exec／stack／ws 從各 daemon 的 cwd（此例是其定義資料夾）算。父只把 switchboard／foreman 當普通 exec，`auto_restart: true` 才有常駐 sleep／wake 與退了重起。
 
 1. 建帳號可略；若用了 `limits.user`，先由人把帳號、stack／信箱寫入權限配好。
 2. 包 root 可略；家機有 systemd 委派時可用下方 scope。

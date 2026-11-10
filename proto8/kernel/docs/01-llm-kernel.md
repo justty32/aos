@@ -10,7 +10,7 @@
 ```
 llm-kernel/
   _entry       ["aos-daemon", "--enable-logs", "daemon.json"]
-  daemon.json  {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300}（身體＝kernel；procs 不寫、不帶鐘列，聽外層的 `AOS_CLOCK`）
+  daemon.json  {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300, "procs": {"_sweeper": {…}}}（身體＝kernel；procs 只帶清道夫一列（11-10，見 cmd/aos-sweeper；不要就刪）、不帶鐘列，聽外層的 `AOS_CLOCK`）
   kernel.json  slots 2、reserved＝{"high": 1}（11-07 使用者裁定 sol 審查 #7）、timeout_ms 120000、exec＝預設 endpoint 函數 ../../lib/base/llm_http、endpoint＝預設代號 fake、
                budget＝只有一格寄件人額度的例子（/tmp/aos-demo-sender 每天 1 次，03 件 5 演；別的寄件人不限）、
                endpoints＝能力包表（下表）

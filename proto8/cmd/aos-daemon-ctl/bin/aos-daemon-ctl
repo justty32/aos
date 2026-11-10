@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴與停 daemon 本身；說明在 cmd/docs/03、04。
+# aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 py/aos_sweep）；說明在 cmd/docs/03、04。
 HELP = """aos-daemon-ctl - attach procs to an aos-daemon and start / stop / sleep / wake / pause them
 
 usage: aos-daemon-ctl [--daemon D] SUBCOMMAND [FLAGS...] [ARGS...]
@@ -22,6 +22,10 @@ subcommands:
 
 daemon itself:
   shutdown [--timeout-s S]   stop this daemon: write stop to its own ctl, poke, wait for exit; prints N
+
+sweeper (the same code as the _sweeper row, aos-sweeper):
+  sweep [--dry-run]           one round now: archive big stderr files, stop orphaned loops, report
+  sweep --purge [--dry-run]   delete every stderr archive of this daemon
 
 Mutation commands drop letters into the daemon's ctl mailbox (procs_added, procs_removed,
 procs_stopped, ...) or write the proc's own ctl window (pause / resume). A letter only
@@ -287,6 +291,45 @@ flags:
 exit codes: 0 written; 1 error (ArgumentsBad, DaemonMissing, StateMissing, StateBad,
   CtlMissing, WriteFailed, PokeFailed).
 """,
+    "sweep": """aos-daemon-ctl sweep - run one sweeper round now, or delete all stderr archives
+
+usage: aos-daemon-ctl [--daemon D] sweep [--purge [-y]] [--dry-run] [--retention-days N|none]
+                      [--min-bytes N] [--stop-grace-s S] [--timeout-s S] [-j]
+
+Runs the same code as the resident _sweeper row (aos-sweeper), inside this command, so it
+works when that row is paused, stopped or not attached. Only this daemon: the rows on its
+table and its default cells (D/procs/*/); child daemons are not entered.
+
+sweep: every row's stderr file of at least --min-bytes is copied into
+<stack>/stderr_archives/<UTC>.txt.gz and truncated to 0 (lines written in the last instant
+between the final copy and the truncation may be lost). A loop in D/procs/NAME/ that is off
+the table but proven alive and started there by this daemon gets {"cmd": "stop"} in its ctl;
+a later round, at least --stop-grace-s after that, sends SIGTERM and SIGKILL 10 s later.
+Zombies and what it cannot prove are only reported; with the daemon not running no process
+is touched. Archives are deleted by age only when --retention-days is given here (the
+resident row defaults to 7 days).
+--purge: delete every archive the sweeper wrote for this daemon, whatever its age; asks first
+on a terminal (-y does not ask). Nothing is archived; no stderr file or process is touched.
+--dry-run: print what would be done; no file or process is touched.
+
+Prints one line per action (-j: the round as JSON). Another sweeper working on this daemon:
+wait up to --timeout-s seconds (default: 30), then SweepBusy.
+
+flags:
+      --purge              delete all archives instead of a round
+      --dry-run            only print what would be done
+      --retention-days N   also delete archives older than N days (none = no deletion, the default here)
+      --min-bytes N        archive stderr files of at least N bytes (default: 1048576)
+      --stop-grace-s S     seconds between stop and signals (default: 300)
+      --timeout-s S        wait this long for the sweeper lock (default: 30)
+  -y, --yes                --purge without asking
+  -j, --json               print the round as JSON
+  -h, --help               show this help
+
+exit codes: 0 done (findings and warnings included); 1 error (ArgumentsBad, FlagUnknown,
+  DaemonMissing, StateMissing, StateBad, SweepBusy).
+more: proto8/cmd/aos-sweeper/README.md
+""",
 }
 
 import json
@@ -298,6 +341,7 @@ import time
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
 import aos_flags
+import aos_sweep
 import daemon_ctl as dc
 
 Fail = dc.Fail
@@ -536,11 +580,62 @@ def cmd_shutdown(opts, args):
     print(dc.shutdown(dc.find_daemon(opts.get("daemon")), seconds), flush=True)
 
 
+SWEEP_FLAGS = dict(TIMEOUT, **{"--retention-days": "retention", "--min-bytes": "min_bytes", "--stop-grace-s": "grace"})
+
+
+def cmd_sweep(opts, args):
+    """sweep（11-10 清道夫）：在這個行程裡跑一輪 py/aos_sweep（跟常駐 _sweeper 同一套、flock 錯開）；--purge 刪這台所有封存。
+    保留期只有明帶 --retention-days 才刪（常駐列可能設了 none，人叫一次不照預設偷刪；thinking 11-10 sweeper 代定 3）。"""
+    o, rest = aos_flags.parse(args, SWEEP_FLAGS, {"--purge": "purge", "--dry-run": "dry_run", "--yes": "yes", "--json": "json"},
+                              help=HELPS["sweep"], short=("-y", "-j"))
+    if rest:
+        raise Fail("ArgumentsBad", "sweep takes no arguments")
+    seconds = timeout_arg(o, 30)
+    dry = bool(o.get("dry_run"))
+    if o.get("purge"):
+        given = [f for f, k in SWEEP_FLAGS.items() if k != "timeout" and k in o]
+        if given:
+            raise Fail("ArgumentsBad", "%s does not go with --purge (purge deletes every archive and does nothing else)" % given[0])
+    elif o.get("yes"):
+        raise Fail("ArgumentsBad", "--yes only goes with --purge")
+    try:
+        days = aos_sweep.parse_retention(o["retention"]) if "retention" in o else None
+    except ValueError as e:
+        raise Fail("ArgumentsBad", str(e))
+    numbers = {}
+    for key, flag, default in (("min_bytes", "--min-bytes", aos_sweep.MIN_BYTES), ("grace", "--stop-grace-s", aos_sweep.aos_sweep_proc.STOP_GRACE_S)):
+        v = o.get(key, str(default))
+        if not v.isdigit() or int(v) <= 0:
+            raise Fail("ArgumentsBad", "%s takes a positive whole number, got %r" % (flag, v))
+        numbers[key] = int(v)
+    d = dc.find_daemon(opts.get("daemon"))
+    try:
+        if o.get("purge"):
+            if not dry and not aos_flags.confirm(NAME, "delete every stderr archive of the daemon at %s?" % d, o.get("yes")):
+                aos_flags.warn(NAME, "nothing done")
+                return
+            data = aos_sweep.purge(d, NAME, dry_run=dry, wait_s=seconds)
+        else:
+            data = aos_sweep.sweep(d, NAME, min_bytes=numbers["min_bytes"], retention_days=days,
+                                   stop_grace_s=numbers["grace"], dry_run=dry, wait_s=seconds)
+    except aos_sweep.Busy as e:
+        raise Fail("SweepBusy", "%s; waited %g s (see --timeout-s)" % (e, seconds))
+    if data["table"] != "ok":
+        code, _, reason = data["table"].partition(" ")
+        raise Fail(code if code in ("StateMissing", "StateBad") else "StateBad", reason)
+    if o.get("json"):
+        print(json.dumps(data, ensure_ascii=False))
+        return
+    for line in aos_sweep.lines(data):
+        print(CTRL.sub(" ", line))
+
+
 # 子命令表：一列一組，新子命令接在對應那組（或新開一組）後面。
 COMMANDS = {"add": cmd_add, "rm": cmd_rm, "prune": cmd_prune, "stop": cmd_stop, "start": cmd_start, "sleep": cmd_sleep, "wake": cmd_wake,
             "pause": cmd_pause, "resume": cmd_resume,
             "ls": cmd_ls, "where": cmd_where, "ping": cmd_ping, "poke": cmd_poke,
-            "shutdown": cmd_shutdown}
+            "shutdown": cmd_shutdown,
+            "sweep": cmd_sweep}
 
 
 def main():

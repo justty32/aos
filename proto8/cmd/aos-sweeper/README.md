@@ -21,7 +21,7 @@ daemon.json 的 `procs` 加一列（範本 daemon 預設都帶，不要就刪掉
 
 ## 一輪做什麼
 
-1. **封存**：表上每列 stack 裡的 stderr 檔（名字照 `procs_state.json` 頂層的 `procs_stderr`，預設 `stderr.txt`）≥ `--min-bytes`（預設 1 MiB）就 gzip 複製到同一個 stack 的 `stderr_archives/<UTC 毫秒>.txt.gz`，再把原檔**截成 0**（copytruncate；不能改名——零件的 fd 還指著舊檔）。零件用 O_APPEND 寫，截了從 0 接著寫。狂寫時最後一瞬間寫進來的幾行可能掉（實測每秒約 400 行、連封 9 次 0 行遺失）。
+1. **封存**：表上每列 stack 裡的 stderr 檔（名字照 `procs_state.json` 頂層的 `procs_stderr`，預設 `stderr.txt`）≥ `--min-bytes`（預設 1 MiB）就 gzip 複製到同一個 stack 的 `stderr_archives/<UTC 毫秒>.txt.gz`，再把原檔**截成 0**（copytruncate；不能改名——零件的 fd 還指著舊檔）。零件用 O_APPEND 寫，截了從 0 接著寫；**一律截到 0、不留尾巴**（截在一行中間的話新行會黏在半截後面）。狂寫時最後一瞬間寫進來的幾行可能掉（實測每秒約 400 行、連封 9 次 0 行遺失）。
    - `procs_stderr` 改成 `err.log`＝封存夾 `err_archives/`、檔名 `….log.gz`（`.gitignore` 要自己加對應一行）。
    - symlink、硬連結（連結數 >1）、不是一般檔＝不碰、一行 warning；絕不截 symlink 指到的檔。
    - stack 是 D 自己的列跳過；兩列同 stack 只封一次。
@@ -36,7 +36,7 @@ daemon.json 的 `procs` 加一列（範本 daemon 預設都帶，不要就刪掉
    - 小格與檔一律不刪、不改表（下表照舊用 `rm`／`prune`）。
 4. **報告**：stdout 一事一行（daemon 底下 stdout 是 /dev/null）；給了 `--report FILE` 另寫一份 JSON（暫存再改名）：時間、封存了什麼、刪了什麼、封存總量、`.bad-*` 份數、行程那半做了什麼、warning。
 
-不碰：`*.bad-*` 留證檔（只數份數）、history、observed、ledger、歸檔信、`.trash`。
+不碰：`*.bad-*` 留證檔（只數份數）、history、observed、ledger、歸檔信、`.trash`。不跟 symlink：本機捷徑錨點 `.aos-proto8` 這類捷徑不跟進去、不動它（掃的只有表上各列的 stack 頂層與 `D/procs/*/`，一律 lstat）。只長不消、第一版刻意不碰的其他檔（live.jsonl、history、ledger…）與理由：[設計 § 8](../../thinking/2026-11/10/sweeper/01-設計.md#8-只長不消第一版不碰的之後可加給使用者一眼決定)。
 
 ## 旗標
 
@@ -63,4 +63,4 @@ aos-sweeper [--daemon D] [--report FILE] [--retention-days N|none] [--min-bytes 
 | `.sweeper.lock` | daemon stack | flock |
 | `.sweeper_pending.json` | daemon stack | 寫過 stop 的表外子 loop |
 
-`cmd/aos-agent/stack.gitignore` 擋 `**/stderr_archives/`、`**/sweeper_report.json`（點開頭的被 `**/.*` 擋）。**已經 cp 過舊版 stack.gitignore 的 image 要重 cp 一次。**
+`cmd/aos-agent/stack.gitignore` 擋 `**/stderr_archives/`、`**/sweeper_report.json`、`**/.sweeper.lock`（`.sweeper_pending.json` 被 `**/.*` 擋）；報告裡有 pid 與絕對路徑，更不能進 git。**已經 cp 過舊版 stack.gitignore 的 image 要重 cp 一次。**

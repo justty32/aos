@@ -1,1 +1,1 @@
-{"description":"Run the team llm kernel", "exec":{"argv":["aos-llm-kernel","kernel.json"]},"interval_ms":300}
+{"description":"Run the team llm kernel", "exec":{"argv":["aos-llm-kernel","kernel.json"]},"interval_ms":300,"procs": {"_sweeper": {"exec": {"argv": ["aos-sweeper", "--retention-days", "7", "--report", {"$env": "AOS_STACK", "$path": "sweeper_report.json"}]}, "interval_ms": 600000, "auto_restart": true, "stuck_after_ms": 600000}}}

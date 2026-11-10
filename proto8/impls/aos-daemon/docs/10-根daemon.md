@@ -35,6 +35,7 @@ aos-daemon-ctl --daemon /absolute/image ping
 
 ```json
 {"procs": {"_clock": {"exec": {"argv": ["aos-clock", {"$env": "AOS_DAEMON", "$path": "clock"}]}, "interval_ms": 1000, "auto_restart": true, "stuck_after_ms": 10000},
+           "_sweeper": {"exec": {"argv": ["aos-sweeper", "--retention-days", "7", "--report", {"$env": "AOS_STACK", "$path": "sweeper_report.json"}]}, "interval_ms": 600000, "auto_restart": true, "stuck_after_ms": 600000},
            "llm": {"exec": "/absolute/llm_definition", "auto_restart": true}}}
 ```
 
@@ -44,6 +45,8 @@ AOS_CLOCK=${AOS_STACK}/clock
 ```
 
 鐘檔在根的 stack（image）裡，搬家接著數。凍住整棵樹＝根 sleep，或 `aos-daemon-ctl --daemon /absolute/image pause _clock`（子樹都聽根的鐘）。寫法的坑與子 daemon 要用自己的鐘怎麼辦見 [02](02-看寫法決定怎麼起.md#時鐘普通一列)。
+
+清道夫那列（`_sweeper`，11-10）跟鐘不同：**每台 daemon 自己帶**、只管自己表上的列，子 daemon 的 daemon.json 也各寫一列（見 [02](02-看寫法決定怎麼起.md#清道夫普通一列)）。
 
 </details>
 

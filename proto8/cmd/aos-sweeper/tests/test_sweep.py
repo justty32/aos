@@ -1,4 +1,4 @@
-"""Test aos-sweeper tasks 1–17 with isolated files, real locks, and owned child processes."""
+"""Test aos-sweeper and aos-daemon-ctl sweep (tasks 1–18) with isolated files, real locks, and owned child processes."""
 import datetime
 import fcntl
 import gzip
@@ -699,6 +699,65 @@ class SweepTests(unittest.TestCase):
         self.assertFalse((cell / "ctl.json").exists())
         self.assertFalse(self.pending.exists())
         self.assertEqual(snapshot(cell), before)
+
+    # aos-daemon-ctl sweep runs the same code inside the command.
+    def ctl(self, *args):
+        return self.cli_of(CTL, "--daemon", self.d, "sweep", *args)
+
+    def cli_of(self, program, *args):
+        proc = self.own_process([sys.executable, str(program), *map(str, args)], stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout, stderr = proc.communicate(timeout=8)
+        return subprocess.CompletedProcess(proc.args, proc.returncode, stdout, stderr)
+
+    def test_18_ctl_sweep_round_archives_and_keeps_old_archives_without_retention(self):
+        self.err.write_bytes(b"x" * 10)
+        adir = self.a / "stderr_archives"
+        adir.mkdir()
+        old = adir / "2000-01-01T00-00-00.000Z.txt.gz"
+        old.write_bytes(b"old")
+        result = self.ctl("--min-bytes", "5")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("a: archived ", result.stdout)
+        self.assertIn("archives: 2 file(s)", result.stdout)
+        self.assertTrue(old.exists(), "a manual sweep without --retention-days must not delete by age")
+        self.assertEqual(self.err.read_bytes(), b"")
+        result = self.ctl("--retention-days", "7", "-j")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["expired"][0]["files"], 1)
+        self.assertFalse(old.exists())
+
+    def test_18_ctl_sweep_purge_and_its_argument_rules(self):
+        adir, archive, temporary = self.seed_archives(self.a)
+        dry = self.ctl("--purge", "--dry-run")
+        self.assertEqual(dry.returncode, 0, dry.stderr)
+        self.assertIn("would purge 2 file(s)", dry.stdout)
+        self.assertTrue(archive.exists())
+        for bad in (("--purge", "--min-bytes", "3"), ("--yes",), ("--retention-days", "0"), ("extra",)):
+            with self.subTest(bad=bad):
+                result = self.ctl(*bad)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("aos-daemon-ctl: error: ArgumentsBad", result.stderr)
+        result = self.ctl("--purge")          # stdin is not a terminal: no question asked
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("purged 2 file(s)", result.stdout)
+        self.assertFalse(adir.exists())
+
+    def test_18_ctl_sweep_busy_and_bad_table_fail(self):
+        self.hold_lock()
+        result = self.ctl("--timeout-s", "0.2")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("aos-daemon-ctl: error: SweepBusy", result.stderr)
+        (self.d / "procs_state.json").write_text("{bad", encoding="utf-8")
+        other = self.tmp / "other"
+        other.mkdir()
+        (other / "procs_state.json").write_text("{bad", encoding="utf-8")
+        result = self.cli_of(CTL, "--daemon", other, "sweep")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("aos-daemon-ctl: error: StateBad", result.stderr)
+
+
+CTL = REPO / "proto8" / "cmd" / "aos-daemon-ctl" / "bin" / "aos-daemon-ctl"
 
 
 if __name__ == "__main__":

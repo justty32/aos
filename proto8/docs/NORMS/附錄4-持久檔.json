@@ -395,6 +395,46 @@
    "evidence": "proto8/impls/aos-daemon/src/child/child.hpp:42、proto8/impls/aos-daemon/src/daemon/failure.cpp:22、proto8/impls/aos-llm-kernel/src/serve/proc.cpp:169"
   },
   {
+   "path": "<proc 的 stack>/stderr_archives/<UTC>.txt.gz",
+   "lifetime": "暫時",
+   "writer": "aos-sweeper／aos-daemon-ctl sweep（stderr 封存）",
+   "reader": "人（zcat）",
+   "image": "不進",
+   "on_bad": "壞了不讀；只認自己的檔名樣式，別的檔不碰",
+   "note": "11-10 清道夫；保留期看檔名時間（預設 7 天），sweep --purge 全刪",
+   "evidence": "proto8/py/aos_sweep_files.py、proto8/py/aos_sweep.py、proto8/py/aos_sweep_proc.py"
+  },
+  {
+   "path": "<--report 指的檔>（範本：$AOS_STACK/sweeper_report.json）",
+   "lifetime": "暫時",
+   "writer": "aos-sweeper（每輪重寫）",
+   "reader": "人",
+   "image": "不進",
+   "on_bad": "沒人讀；下一輪整份重寫",
+   "note": "11-10 清道夫；含 pid 與絕對路徑",
+   "evidence": "proto8/py/aos_sweep_files.py、proto8/py/aos_sweep.py、proto8/py/aos_sweep_proc.py"
+  },
+  {
+   "path": "<daemon stack>/.sweeper.lock",
+   "lifetime": "暫時",
+   "writer": "aos-sweeper／aos-daemon-ctl sweep（flock）",
+   "reader": "同上",
+   "image": "不進",
+   "on_bad": "內容不看，只拿來 flock",
+   "note": "11-10 清道夫",
+   "evidence": "proto8/py/aos_sweep_files.py、proto8/py/aos_sweep.py、proto8/py/aos_sweep_proc.py"
+  },
+  {
+   "path": "<daemon stack>/.sweeper_pending.json",
+   "lifetime": "暫時",
+   "writer": "aos-sweeper／aos-daemon-ctl sweep（寫過 stop 的表外子 loop）",
+   "reader": "同上",
+   "image": "不進",
+   "on_bad": "讀不懂＝當空（下一輪重新寫 stop，寬限重算）",
+   "note": "11-10 清道夫",
+   "evidence": "proto8/py/aos_sweep_files.py、proto8/py/aos_sweep.py、proto8/py/aos_sweep_proc.py"
+  },
+  {
    "path": "<同資料夾>/.名字、.名字.pid、.holder.json.tmp（寫到一半的暫存）",
    "lifetime": "暫時",
    "writer": "aos-loop／aos-daemon（窗）、aos-fsm（.stage.txt）、aos-clock、lib/agent/cli_session、lib/agent/agents、aos-lock、aos-daemon-ctl（ctl）",

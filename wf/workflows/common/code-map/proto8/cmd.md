@@ -42,7 +42,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`bin/aos-daemon-ctl`](../../../../../proto8/cmd/aos-daemon-ctl/bin/aos-daemon-ctl) | 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴與停 daemon 本身；說明在 cmd/docs/03、04。 |
+| [`bin/aos-daemon-ctl`](../../../../../proto8/cmd/aos-daemon-ctl/bin/aos-daemon-ctl) | 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 py/aos_sweep）；說明在 cmd/docs/03、04。 |
 
 ## `proto8/cmd/aos-eca/`
 

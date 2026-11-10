@@ -49,6 +49,12 @@
 # S3 (format-versioning) keeps an unreadable state file as <name>.bad-<UTC ms> for evidence; never auto-cleaned, so keep it out of the image (user ruling 11-09)
 **/*.bad-*
 
+# 清道夫（aos-sweeper／aos-daemon-ctl sweep，11-10）寫的全是只在這台有意義的：stderr 的 gzip 封存、報告（含 pid 與絕對路徑）、鎖。
+# 改過 procs_stderr（例 err.log）的自己再加一行 **/err_archives/。.sweeper.lock、.sweeper_pending.json 本來就被上面的 **/.* 擋，這裡明列。
+**/stderr_archives/
+**/sweeper_report.json
+**/.sweeper.lock
+
 # Public observation ledgers and retained child ledgers
 **/observed.jsonl
 **/observed/

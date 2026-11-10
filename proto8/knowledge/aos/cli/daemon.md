@@ -30,4 +30,6 @@ aos-daemon-ctl --daemon /srv/d prune --older-than 7d --apply
 
 `--older-than` selects only stopped/sleeping rows whose latest stack mtime is strictly older than the threshold. This is the newest mtime of the stack directory itself and its direct files; subdirectories are not scanned. Rows without a stack are never selected. Durations are a positive integer plus `s`, `m`, `h` or `d` (for example `7d`). Preview lines are `NAME: would remove (last change ISO_TIME)`.
 
+`sweep` runs one sweeper round now (the same code as the `_sweeper` row, `aos-sweeper`): stderr files of at least 1 MiB on this daemon's table are gzip-archived into `<stack>/stderr_archives/` and truncated to 0; loops in `D/procs/NAME/` that are off the table but proven alive and started by this daemon get a ctl stop, and signals in a later round. Only this daemon; child daemons are not entered. `sweep --purge -y` deletes all archives; `--dry-run` only prints. Archives are deleted by age only with `--retention-days N`.
+
 `--apply` requires `--older-than`. It uses the same removal-letter path as `rm` and prints `NAME: removed`; all stack/workspace files stay. This asks the daemon to detach the proc. The default wait checks only whether the letter was claimed, not whether the removal was applied; `--reply-to BOX` sends only so you can read the applied reply yourself.

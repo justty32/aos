@@ -11,6 +11,7 @@
 | [aos-feedback](aos-feedback/README.md) | 收集指令／函數意見；從 AI 評分與工具帳計算舒適度 |
 | [aos-tools](aos-tools/README.md) | 一個 agent 資料夾一份工具註冊檔（tools.json） |
 | [aos-clock](aos-clock/README.md) | 把時鐘檔的回合數往前走一格 |
+| [aos-sweeper](aos-sweeper/README.md) | 清道夫：一台 daemon 的 stderr 封存、封存保留期、收表外子 loop（掛成 `_sweeper` 列；手動 `aos-daemon-ctl sweep`） |
 | [aos-eca](aos-eca/README.md) | 外部 coding agent（claude／codex）：`aos-eca-turn` 答一輪、`aos-eca-screen` 開畫面 |
 | [aos-mcp](aos-mcp/README.md) | 把 aos-tools 登記的工具當 MCP tools 給外部 agent 叫 |
 | [aos-sandbox](aos-sandbox/README.md) | 照一份設定把 prog 關進沙箱再跑 |

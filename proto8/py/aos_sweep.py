@@ -160,14 +160,17 @@ def purge(d, prog, dry_run=False, wait_s=30.0, now=None):
 
 def lines(data):
     """報告的人看版（stdout，一事一行）。"""
-    would = "would " if data["dry_run"] else ""
+    dry = data["dry_run"]
+
+    def verb(word, past):
+        return "would " + word if dry else past
     out = []
     for a in data["archived"]:
-        out.append("%s: %sarchive %s (%d bytes) to %s" % (a["name"], would, a["file"], a["bytes"], a["archive"]))
+        out.append("%s: %s %s (%d bytes) to %s" % (a["name"], verb("archive", "archived"), a["file"], a["bytes"], a["archive"]))
     for a in data["expired"]:
-        out.append("%s: %sdelete %d expired archive(s) (%d bytes) in %s" % (a["name"], would, a["files"], a["bytes"], a["dir"]))
+        out.append("%s: %s %d expired archive(s) (%d bytes) in %s" % (a["name"], verb("delete", "deleted"), a["files"], a["bytes"], a["dir"]))
     for a in data["purged"]:
-        out.append("%s: %spurge %d file(s) (%d bytes) in %s" % (a["name"], would, a["files"], a["bytes"], a["dir"]))
+        out.append("%s: %s %d file(s) (%d bytes) in %s" % (a["name"], verb("purge", "purged"), a["files"], a["bytes"], a["dir"]))
     if not data["purged"]:
         out.append("archives: %d file(s), %d bytes" % (data["archives"]["files"], data["archives"]["bytes"]))
         out.append("bad files: %d" % data["bad_files"])
