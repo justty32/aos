@@ -381,16 +381,23 @@ def decl_file(defdir, key):
 
 
 def rebase_tools(tools_file, src, dest, tmp):
-    """複製來的 tools 檔：相對 path 原本從範本那份的資料夾算，改成從新定義裡那份（最終位置 dest）的資料夾走回同一個目標。
+    """複製來的 tools 檔：相對 path／env_file／$override 原本從範本那份的資料夾算，改成從新定義裡那份（最終位置 dest）的資料夾走回同一個目標。
     指範本裡的也指回範本那份；絕對的、指示詞（{"$env": …}）照抄。只做字串換算、不 realpath。"""
     reg = load_json(tools_file, None)
     if not isinstance(reg, dict) or not isinstance(reg.get("tools"), dict):
         return
     sub = os.path.relpath(os.path.dirname(tools_file), tmp)          # tools 檔在定義裡的哪一層
     src_dir, dest_dir = os.path.normpath(os.path.join(src, sub)), os.path.normpath(os.path.join(dest, sub))
-    for entry in reg["tools"].values():
-        if isinstance(entry, dict) and isinstance(entry.get("path"), str) and not os.path.isabs(entry["path"]):
-            entry["path"] = os.path.relpath(os.path.normpath(os.path.join(src_dir, entry["path"])), dest_dir)
+    def moved(v):
+        return os.path.relpath(os.path.normpath(os.path.join(src_dir, v)), dest_dir) if isinstance(v, str) and not os.path.isabs(v) else v
+    for entry in reg["tools"].values():   # 11-10 晚：env_file（只記位置、叫時才讀）跟 path 同一套換算
+        if isinstance(entry, dict):
+            for k in ("path", "env_file"):
+                if k in entry:
+                    entry[k] = moved(entry[k])
+    if "$override" in reg:                 # 底檔（字串或陣列）也一樣
+        o = reg["$override"]
+        reg["$override"] = [moved(x) for x in o] if isinstance(o, list) else moved(o)
     write_json(tools_file, reg)
 
 

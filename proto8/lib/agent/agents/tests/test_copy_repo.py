@@ -71,5 +71,20 @@ class CopyRepoTests(unittest.TestCase):
         self.assertEqual(self.tools()['t']['path'], '../tool')
 
 
+    def test_env_file_and_override_rebased(self):
+        """11-10 晚：複製定義時 env_file、$override 的相對路徑跟 path 一樣換算成從新位置走回同一個目標。"""
+        tpl = self.root / 'tpls' / 'tpl'
+        tpl.mkdir(parents=True)
+        (self.root / 'tpls' / 'tool').mkdir()
+        (self.root / 'tpls' / 'k.env').write_text('K=1\n')
+        (self.root / 'tpls' / 'base.json').write_text('{"tools": {}}')
+        (tpl / 'interfaces.json').write_text('{"aos-agent": {"tools": "tools.json"}}')
+        (tpl / 'tools.json').write_text('{"$override": "../base.json", "tools": {"t": {"path": "../tool", "env_file": "../k.env"}}}')
+        r = self.run_new('tpls/tpl')
+        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+        reg = json.loads((self.root / 'born' / 'tools.json').read_text())
+        self.assertEqual(reg['tools']['t'], {'path': '../tpls/tool', 'env_file': '../tpls/k.env'})
+        self.assertEqual(reg['$override'], '../tpls/base.json')
+
 if __name__ == '__main__':
     unittest.main()

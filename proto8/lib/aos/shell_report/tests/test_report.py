@@ -56,9 +56,10 @@ class ShellReportTest(unittest.TestCase):
         self.assertEqual(effective_stage(opened, stack), ('open', ['bash']))
         self.assertEqual(effective_stage(boxed, stack), ('boxed', ['boxed']))
         self.assertEqual(effective_stage(none, stack), ('none', []))
-        write(stack / 'cfg/tools.json', {'rm': ['bash'], 'add': {'boxed': {'path': str(self.root / 'tool_boxed')}}})
+        base = str(opened / 'cfg/tools.json')   # 11-10 aos-tools 改版：stack 那份＝"$override" 指回定義那份、拿掉的寫 null
+        write(stack / 'cfg/tools.json', {'$override': base, 'tools': {'bash': None, 'boxed': {'path': str(self.root / 'tool_boxed')}}})
         self.assertEqual(effective_stage(opened, stack), ('boxed', ['boxed']))
-        write(stack / 'cfg/tools.json', {'rm': ['bash'], 'add': {}})
+        write(stack / 'cfg/tools.json', {'$override': base, 'tools': {'bash': None}})
         self.assertEqual(effective_stage(opened, stack), ('none', []))
 
     def test_shapes_pipeline_quotes_and_redirections(self):
