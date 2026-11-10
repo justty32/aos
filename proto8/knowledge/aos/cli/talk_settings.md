@@ -14,7 +14,7 @@ say prints a letter name. Words are joined with spaces. No words, or `-`, reads 
 
 chat sends one line at a time and waits for each answer. Ctrl-C leaves. open/close/watch require a declared screen interface. `open --detach` opens without attaching. Without a screen, use listen.
 
-`aos-agent tools --target bob ls|get NAME|add NAME PATH|rm NAME|reset` manages the toolbox (choose one action). No action means ls. Changes are saved as this agent's overlay; the definition is not changed. add/rm can print the same result lines as aos-tools. reset deletes the overlay; see [safety](safety.md).
+`aos-agent tools --target bob ls|get NAME|add [--name N] [--replace] [--envs K=V]... [--env-file FILE] PATH|rm NAME|reset` manages the toolbox (choose one action). No action means ls. Changes are saved in this agent's own `tools.json` in its stack, which holds only the differences from the definition's (`"$override"`; a removed tool is `null`); the definition is not changed. add/rm can print the same result lines as aos-tools. reset deletes the overlay; see [safety](safety.md).
 
 `aos-agent llm --target bob show|set KEY=VALUE...|reset` manages changed brain keys. No action means show. Only changed keys are stored; other keys follow the definition. Values are strings. reset removes changes.
 

@@ -14,7 +14,7 @@ aos-agent ctl start --target bob
 
 The definition must declare `aos-agent` in `interfaces.json`. `add` waits for the table and prints the stack. Optional `--stack DIR` chooses its stack. `--limits '{"mem_mb":512}'` replaces the definition's limits; `'{}'` means no limits. Repeatable `--envs NAME=VALUE` supplies environment variables when the agent starts.
 
-`ls` prints NAME, STATE, WORKSPACE, QUEUED, REASON as TAB-separated columns. Empty means no rows. `state` (alias `status`) shows one agent's paths, queue, last answer, reason, limits and tool overlay.
+`ls` prints NAME, STATE, WORKSPACE, QUEUED, REASON as TAB-separated columns. Empty means no rows. `state` (alias `status`) shows one agent's paths, queue, last answer, reason, limits and the agent's own tools (`tools   own: N listed, M set to null`).
 
 `stop` finishes this round, keeps the stack and leaves `stopped`; use `start`. `sleep` sends SIGTERM now, keeps the stack and leaves `sleeping`; use `wake`, or restart the daemon. Wrong pairs give `PhaseBad`; use the command in its reason. An already reached state is a successful no-op in aos-agent.
 

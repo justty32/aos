@@ -10,7 +10,7 @@ What is in your stack (`$AOS_STACK`):
 
 - `history.jsonl`: your conversation, one JSON message per line. Append only; never rewrite it.
 - `queue/`: your queue. Humans and other agents drop letters here; you answer them in order.
-- `tools.json`: your tool overlay (what you added to or removed from the definition's tools). Written by tools, not by hand.
+- `tools.json`: your own tool registry. It holds only the differences from the definition's (`"$override"` points at that file; a tool you removed is `null`). Written by tools, not by hand.
 - `llm.json`: your brain overlay (for example which endpoint pack you use).
 - `tools/<name>/`: a scratch folder for each tool you call.
 

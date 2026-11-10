@@ -8,10 +8,10 @@ Save hub locations at registration time so each tool call uses the intended serv
 aos-tools --file tools.json add --name read --env-file hubs.env --envs AOS_MEMORY=/data/memory ../lib/base/read
 ```
 
-These flags belong to `aos-tools add`. `aos-agent tools --target bob add` currently does not accept `--env-file` or `--envs` (`FlagUnknown`). Use aos-tools when registering hub variables.
+`aos-agent tools --target bob add` takes the same flags (`--name`, `--replace`, `--envs`, `--env-file`, `--path-json`, `--no-cache`) and writes them to that agent's own registry in its stack.
 
-Repeat `--envs K=V` as needed. The last value for a key wins. At registration, envs overrides the file regardless of flag order. The file path is relative to cwd. Values are literal strings; the resulting values are saved in the registry and override inherited environment at call time.
+Repeat `--envs K=V` as needed. The last value for a key wins. Values are literal strings stored in the registry as typed, so do not put secrets there. `--env-file FILE` stores only where the file is (like XXX: absolute stays absolute, relative is stored relative to the registry); the file is read on every call and never copied into the registry, so use it for secrets. On a call, later wins: the tool's own `.env` (fills gaps only), the caller's environment, the env file, `--envs`. A missing env file is a warning at add and an error at call.
 
-Editing hubs.env later has no effect until the registration is replaced with `--override`. Replacement rewrites the whole entry, including env. Registry values cannot override the tool's scratch `AOS_STACK`.
+Editing hubs.env later takes effect on the next call. To change `--envs` values, register again with `--replace`; replacement rewrites the whole entry. Registry values cannot override the tool's scratch `AOS_STACK`.
 
 Missing hubs declared by the tool produce a warning and registration still succeeds. ls/get do not print stored registration env values. Tool input stays in stdin JSON; hub variables are not tool arguments. See [J3 implementation](../../../thinking/2026-11/05/json-argv/10-J3到J7實作結果.md#j3-aos-tools-收口).
