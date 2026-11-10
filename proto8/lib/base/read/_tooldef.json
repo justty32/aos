@@ -1,7 +1,7 @@
-{"description": "Read a text file in your workspace. Shows at most 2000 lines or 50KB, whichever comes first; when cut, the last line tells which offset to continue from. Read big files in parts with offset and max_lines. Errors: PathBad, FileMissing, FileBad (not a text file).",
+{"description": "Read a text file. Shows at most 2000 lines or 50KB, whichever comes first; when cut, the last line tells which offset to continue from. Read big files in parts with offset and max_lines. Errors: FileMissing, FileBad (not a text file).",
  "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "the file, relative to your workspace"},
+                "properties": {"path": {"type": "string", "description": "the file, relative to your workspace, or absolute"},
                                "offset": {"type": "integer", "description": "first line to read (the first line is 1)"},
                                "max_lines": {"type": "integer", "description": "most lines to read"}},
                 "required": ["path"]},
- "errors": ["ArgumentsBad", "PathBad", "FileMissing", "FileBad", "ReadFailed", "WsMissing"]}
+ "errors": ["ArgumentsBad", "FileMissing", "FileBad", "ReadFailed", "WsMissing"]}

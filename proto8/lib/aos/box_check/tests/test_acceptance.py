@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[4]
-BOXED = ROOT / 'cmd/aos-sandbox/examples/bash-boxed'
+BOXED = ROOT / 'cmd/aos-sandbox/examples/shell-boxed'
 CASE = ROOT / 'cases/box-probe'
 CHECK = ROOT / 'lib/aos/box_check'
 
@@ -23,7 +23,7 @@ class Acceptance(unittest.TestCase):
         self.env['PATH'] = os.pathsep.join(bins + [str(s6), self.env['PATH']])
         self.env['PYTHONPATH'] = str(ROOT / 'lib')
         self.env['AOS_WS'] = str(self.root / 'ws')
-        self.env['AOS_STACK'] = str(self.root / 'stack/tools/bash')
+        self.env['AOS_STACK'] = str(self.root / 'stack/tools/shell')
         Path(self.env['AOS_WS']).mkdir()
         Path(self.env['AOS_STACK']).mkdir(parents=True)
 
@@ -49,7 +49,7 @@ class Acceptance(unittest.TestCase):
     def measure(self, tool):
         defs = self.root / 'defs'
         (defs / 'tools').mkdir(parents=True)
-        (defs / 'tools/bash').symlink_to(tool, target_is_directory=True)
+        (defs / 'tools/shell').symlink_to(tool, target_is_directory=True)
         result = self.call(ROOT / 'lib/aos/measure', {'case': str(CASE), 'defs': str(defs), 'check': {'compare': str(CHECK)}})
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout)
@@ -60,7 +60,7 @@ class Acceptance(unittest.TestCase):
         self.assertFalse(Path('/tmp/aos-box-probe').exists())
 
     def test_measure_open_fails_and_cleans_escape(self):
-        result = self.measure(ROOT / 'lib/base/bash')
+        result = self.measure(ROOT / 'lib/base/shell')
         self.assertFalse(result['check']['pass'], result)
         self.assertFalse(Path('/tmp/aos-box-probe').exists())
 

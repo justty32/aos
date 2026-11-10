@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-# move - 在工作區裡搬移或改名一個檔、資料夾或捷徑本身（to 的上層自動建）
+# move - 搬移或改名一個檔、資料夾或捷徑本身（to 的上層自動建）
 # 介面（lib/README 的契約）：stdin 收 {"from", "to"}；stdout 一份 JSON {"from", "to"}。
-# to 已經有東西＝不搬（FileBad），要蓋先 trash；to 不能在 from 裡面。從垃圾桶救回來也用它。路徑從 $AOS_WS 算、不能跑出去。
+# to 已經有東西＝不搬（FileBad），要蓋先 trash；to 不能在 from 裡面。從垃圾桶救回來也用它。跨檔案系統照 mv 用複製再刪。路徑：相對從 $AOS_WS 算、絕對照用（11-10 tool-packs 不限工作區）。
 # 錯：stderr 與 stdout 各一行「move: error: 代號 原因」、退 1。來源：demo/file-tools/move（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
-import json, os, sys
+import json, os, shutil, sys
 HELP = """\
 usage: move < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Move or rename a file, folder or symlink inside the workspace (parents of to are
-created; to must not exist).
+Move or rename a file, folder or symlink (relative paths start at $AOS_WS; parents
+of to are created; to must not exist).
 Result on stdout. On error: one line "move: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -40,41 +40,27 @@ def out(obj):
     print(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
 
 
-workspace = tool_io.workspace
 arguments = tool_io.arguments
 
 
-def inside(rel, root_ok=True):
-    """工作區裡的真實路徑；解開 .. 與捷徑後跑出去＝PathBad。回 (絕對路徑, 給人看的相對路徑)。"""
-    p = os.path.realpath(os.path.join(ROOT, rel))
-    if os.path.commonpath([ROOT, p]) != ROOT or (p == ROOT and not root_ok):
-        die("PathBad", "%s is outside the workspace" % rel)
-    return p, (os.path.relpath(p, ROOT) if p != ROOT else ".")
+def target(rel):
+    """路徑參數 → (絕對路徑, 給腦看的路徑)；最後一節是捷徑時不解開它（搬、複製、丟的是捷徑本身，同 mv／cp -P）。"""
+    p = tool_io.ws_path(rel).rstrip(os.sep) or os.sep
+    return p, tool_io.shown_path(p)
 
 
-def inside_link(rel):
-    """同 inside，但最後一節是捷徑時不解開它（搬、複製、丟的是捷徑本身）。"""
-    head, tail = os.path.split(os.path.normpath(rel))
-    parent, _ = inside(head or ".")
-    p = os.path.join(parent, tail)
-    if tail in ("", ".", "..") or p == ROOT:
-        die("PathBad", "%s cannot be the workspace itself" % rel)
-    return p, os.path.relpath(p, ROOT)
-
-
-ROOT = workspace()
 a = arguments("from", "to")
-src, s_rel = inside_link(a["from"])
-dst, d_rel = inside_link(a["to"])
+src, s_rel = target(a["from"])
+dst, d_rel = target(a["to"])
 if not os.path.lexists(src):
     die("FileMissing", a["from"])
 if os.path.lexists(dst):
     die("FileBad", "%s already exists; trash it first to replace it" % a["to"])
-if dst == src or dst.startswith(src + os.sep):
+if dst == src or os.path.realpath(dst).startswith(os.path.realpath(src) + os.sep):
     die("PathBad", "%s is inside %s" % (a["to"], a["from"]))
 try:
     os.makedirs(os.path.dirname(dst), exist_ok=True)
-    os.rename(src, dst)
-except OSError as e:
-    die("MoveFailed", "%s → %s: %s" % (a["from"], a["to"], e.strerror))
+    shutil.move(src, dst)                       # 同一個檔案系統＝rename；跨的＝複製再刪（同 mv）
+except (OSError, shutil.Error) as e:
+    die("MoveFailed", "%s → %s: %s" % (a["from"], a["to"], getattr(e, "strerror", None) or e))
 out({"from": s_rel, "to": d_rel})

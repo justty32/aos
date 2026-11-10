@@ -1,5 +1,5 @@
 {
-  "summary": "Move or rename a file or folder in the workspace",
+  "summary": "Move or rename a file or folder",
   "resource": "disk",
   "side_effect": true,
   "idempotent": false,

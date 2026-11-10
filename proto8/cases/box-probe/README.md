@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart LR
-  D[agent 定義 tools/bash] --> P[五個逃脫探測] --> C[box_check] --> M[measure 的 check.pass]
+  D[agent 定義 tools/shell] --> P[五個逃脫探測] --> C[box_check] --> M[measure 的 check.pass]
 ```
 
 `defs` 指向待測 agent 定義夾；必須在呼叫 measure 時給 box_check 的絕對路徑。

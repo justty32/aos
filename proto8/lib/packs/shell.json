@@ -1,0 +1,4 @@
+{"description": "Pack 4 (shell): tools that run any command or program - shell (bash) and run_python.",
+ "tools": {
+           "shell": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/shell"}},
+           "run_python": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/run_python"}}}}

@@ -1,5 +1,5 @@
 {
-  "summary": "Move a workspace file or folder into .trash (without actually deleting it)",
+  "summary": "Move a file or folder into the workspace .trash (without actually deleting it)",
   "resource": "disk",
   "side_effect": true,
   "idempotent": false,

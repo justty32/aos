@@ -1,11 +1,11 @@
-"""tool_io - lib 工具共用的開頭：schema 生成旗標位置的 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區、兩鐘期限。
+"""tool_io - lib 工具共用的開頭：schema 生成旗標位置的 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區與檔案工具的路徑、兩鐘期限。
 
 使用者 11-05 裁「收成共用模組」（thinking 2026-11-05 stdio-unify § 剩下的；原則「統一成單一介面，這樣只需要改介面」）：
 錯誤行與提醒行的格式只寫在這裡，各工具不自己拼字串。不是工具（沒有 _entry），是 lib 最底下的共用模組；純標準庫。
 
 工具怎麼找到它（lib/docs/01 規則 9）：先找工具自己的資料夾（複製出 lib 的工具，把這支一起複製進去），
 再沿自身 realpath 的祖先找含 tool_io.py 的 lib/，最後交給標準 Python 路徑（.pth／PYTHONPATH）。
-沙箱裡要看得到這支：綁工具資料夾時把它也綁唯讀（例 cmd/aos-sandbox/examples/bash-boxed/sandbox.json 的 ro）。
+沙箱裡要看得到這支：綁工具資料夾時把它也綁唯讀（例 cmd/aos-sandbox/examples/shell-boxed/sandbox.json 的 ro）。
 
 旗標映射（thinking/2026-11/05/json-argv 的 03、07 與 J1 任務書）：
 _tooldef.json.env 只生成 hub 環境變數說明；parameters 同源生成旗標、說明與 type／required 檢查；旗標優先於 stdin，點路徑只換一葉。
@@ -212,6 +212,22 @@ def workspace():
     if not ws or not os.path.isdir(ws):
         die("WsMissing", "AOS_WS is not set or not a directory")
     return os.path.realpath(ws)
+
+
+def ws_path(rel):
+    """檔案工具的路徑參數 → 絕對路徑（11-10 tool-packs，使用者「3.對」：拿掉工作區限制、有權限就能動）：
+    絕對路徑照用；相對路徑從 $AOS_WS 算（沒設或不是資料夾＝WsMissing）。不解捷徑、不擋工作區外，能不能成看 Linux 權限與下層報錯。"""
+    return rel if os.path.isabs(rel) else os.path.join(workspace(), rel)   # 不 normpath：a/.. 照 Linux 走捷徑的方式解
+
+
+def shown_path(p):
+    """給腦看的路徑：在工作區裡＝相對 $AOS_WS（根＝"."），否則＝絕對路徑。"""
+    ws, p = os.environ.get("AOS_WS"), os.path.abspath(p)     # 只為了給人看：照字面收掉 . 與 ..
+    if ws and os.path.isdir(ws):
+        for root in dict.fromkeys((os.path.abspath(ws), os.path.realpath(ws))):
+            if p == root or p.startswith(root.rstrip(os.sep) + os.sep):
+                return os.path.relpath(p, root)
+    return p
 
 
 def tokenize_flags(argv, kind, anywhere=False, keep=None):

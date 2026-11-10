@@ -11,9 +11,9 @@
 |---|---|
 | [`bin/aos-sandbox`](../../../../../proto8/cmd/aos-sandbox/bin/aos-sandbox) | 照一份設定把 prog 關進沙箱再跑：身分（s6-setuidgid）、上限（s6-softlimit）、看得到哪些路徑與能不能連網（bwrap） |
 | [`examples/agent.json`](../../../../../proto8/cmd/aos-sandbox/examples/agent.json) | 設定（鍵：commands、ro、rw、env、net、mem_mb…） |
-| [`examples/bash-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/) | Run one bash command line in your workspace. Returns stdout and stderr merged; the last line is always [exit code N], your command's exit code (non-z… |
-| [`examples/bash-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/inner) | → `../../../../lib/base/bash` |
 | [`examples/cli-tool.json`](../../../../../proto8/cmd/aos-sandbox/examples/cli-tool.json) | 設定（鍵：commands、ro、rw、env、net） |
+| [`examples/shell-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/shell-boxed/) | Run one bash command line; the working folder is your workspace. Returns stdout and stderr merged; the last line is always [exit code N], your comman… |
+| [`examples/shell-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/shell-boxed/inner) | → `../../../../lib/base/shell` |
 | [`examples/thought-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/) | Hand one task to a fresh helper from an agent definition chosen by from or the tool registry entry env.AOS_THOUGHT_FROM default and get back only its… |
 | [`examples/thought-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/inner) | → `../../../../lib/agent/thought` |
 | [`examples/thought-boxed/sandbox-kernel.json`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/sandbox-kernel.json) | Sandbox (mode 2, judge in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm letters must g… |

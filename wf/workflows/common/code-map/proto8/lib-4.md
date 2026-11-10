@@ -9,31 +9,43 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`bash/`](../../../../../proto8/lib/base/bash/) | 在工作區裡用 bash 跑一行指令，回 stdout＋stderr 合在一起的輸出 |
-| [`bash/tests/test_observed.py`](../../../../../proto8/lib/base/bash/tests/test_observed.py) | Verify command ledgers preserve inner outcomes and block unwritable execution. |
-| [`copy/`](../../../../../proto8/lib/base/copy/) | 在工作區裡複製一個檔或整個資料夾（捷徑照捷徑複製、不跟進去；to 的上層自動建） |
-| [`edit/`](../../../../../proto8/lib/base/edit/) | 在工作區裡一個檔做一處或幾處「整段原文照字面換掉」，一處不合就整個不改 |
-| [`json_edit/`](../../../../../proto8/lib/base/json_edit/) | 照 JSON 指標改工作區裡一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫 |
-| [`json_read/`](../../../../../proto8/lib/base/json_read/) | 看工作區裡一份 JSON 檔的某個位置，一次只展開幾層、大的摺起來，讓腦一層層往下找 |
+| [`copy/`](../../../../../proto8/lib/base/copy/) | 複製一個檔或整個資料夾（捷徑照捷徑複製、不跟進去；to 的上層自動建） |
+| [`edit/`](../../../../../proto8/lib/base/edit/) | 在一個檔做一處或幾處「整段原文照字面換掉」，一處不合就整個不改 |
+| [`json_read/`](../../../../../proto8/lib/base/json_read/) | 看一份 JSON 檔的某個位置，一次只展開幾層、大的摺起來，讓腦一層層往下找 |
+| [`json_write/`](../../../../../proto8/lib/base/json_write/) | 照 JSON 指標改一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫 |
 | [`llm_fake/`](../../../../../proto8/lib/base/llm_fake/) | 假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4） |
 | [`llm_http/`](../../../../../proto8/lib/base/llm_http/) | endpoint 函數：從自己的環境讀金鑰，把請求 POST 到 OpenAI 相容端點，印剪過的回覆 |
-| [`ls/`](../../../../../proto8/lib/base/ls/) | 列工作區裡一個資料夾的子項，一次一頁、回 JSON |
+| [`ls/`](../../../../../proto8/lib/base/ls/) | 列一個資料夾的子項，一次一頁、回 JSON |
 | [`math/`](../../../../../proto8/lib/base/math/) | 算一個算術式子：只認數字、+ - * / // % **、括號、正負號（不用 eval） |
-| [`mkdir/`](../../../../../proto8/lib/base/mkdir/) | 在工作區裡建資料夾（上層一起建；已經有＝沒事） |
-| [`move/`](../../../../../proto8/lib/base/move/) | 在工作區裡搬移或改名一個檔、資料夾或捷徑本身（to 的上層自動建） |
-| [`read/`](../../../../../proto8/lib/base/read/) | 讀工作區裡一個文字檔，太長從頭截、告訴你從第幾行接著讀 |
+| [`mkdir/`](../../../../../proto8/lib/base/mkdir/) | 建資料夾（上層一起建；已經有＝沒事） |
+| [`move/`](../../../../../proto8/lib/base/move/) | 搬移或改名一個檔、資料夾或捷徑本身（to 的上層自動建） |
+| [`read/`](../../../../../proto8/lib/base/read/) | 讀一個文字檔，太長從頭截、告訴你從第幾行接著讀 |
+| [`remove/`](../../../../../proto8/lib/base/remove/) | 真的刪掉一個檔、捷徑或資料夾（rm 的包裝；對比 trash＝丟進工作區的垃圾桶、可以救回） |
+| [`remove/tests/test_remove.py`](../../../../../proto8/lib/base/remove/tests/test_remove.py) | remove（rm 的包裝）：檔、捷徑本身、資料夾要 recursive、. ／.. ／/ 拒絕、工作區外照刪（11-10 tool-packs）。 |
 | [`run_python/`](../../../../../proto8/lib/base/run_python/) | 用 python3 跑一段程式，回結束碼與輸出（stdout＋stderr 合在一起） |
 | [`run_python/tests/test_observed.py`](../../../../../proto8/lib/base/run_python/tests/test_observed.py) | Verify command ledgers preserve inner outcomes and block unwritable execution. |
-| [`stat/`](../../../../../proto8/lib/base/stat/) | 看工作區裡單一個檔或資料夾的屬性，回 JSON |
-| [`trash/`](../../../../../proto8/lib/base/trash/) | 刪除工作區裡一個檔或資料夾：不真的刪，搬進 $AOS_WS/.trash/<時間>/<原路徑> |
-| [`view/`](../../../../../proto8/lib/base/view/) | 漸進看工作區裡一個檔：JSON 一次看一層、大的文字檔先給大綱 |
+| [`shell/`](../../../../../proto8/lib/base/shell/) | 在工作區裡用 bash 跑一行指令，回 stdout＋stderr 合在一起的輸出 |
+| [`shell/tests/test_observed.py`](../../../../../proto8/lib/base/shell/tests/test_observed.py) | Verify command ledgers preserve inner outcomes and block unwritable execution. |
+| [`stat/`](../../../../../proto8/lib/base/stat/) | 看單一個檔或資料夾的屬性，回 JSON |
+| [`trash/`](../../../../../proto8/lib/base/trash/) | 刪除一個檔或資料夾：不真的刪，搬進 $AOS_WS/.trash/<時間>/<原路徑>（真的刪用 remove） |
+| [`view/`](../../../../../proto8/lib/base/view/) | 漸進看一個檔：JSON 一次看一層、大的文字檔先給大綱 |
 | [`wall_clock/`](../../../../../proto8/lib/base/wall_clock/) | 在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z） |
-| [`write/`](../../../../../proto8/lib/base/write/) | 把整份內容寫進工作區裡一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建 |
+| [`write/`](../../../../../proto8/lib/base/write/) | 把整份內容寫進一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建 |
+
+## `proto8/lib/packs/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`change.json`](../../../../../proto8/lib/packs/change.json) | Pack 2 (change): tools that create or change files - write, edit, copy, move, mkdir, json_write. |
+| [`delete.json`](../../../../../proto8/lib/packs/delete.json) | Pack 3 (delete): tools that delete - trash (into the workspace .trash, can be moved back) and remove (for real). |
+| [`look.json`](../../../../../proto8/lib/packs/look.json) | Pack 1 (look): read-only file tools - read, ls, view, stat, json_read. |
+| [`shell.json`](../../../../../proto8/lib/packs/shell.json) | Pack 4 (shell): tools that run any command or program - shell (bash) and run_python. |
 
 ## `proto8/lib/tests/`
 
 | 檔 | 負責什麼 |
 |---|---|
+| [`test_file_tools_paths.py`](../../../../../proto8/lib/tests/test_file_tools_paths.py) | 檔案工具拿掉工作區限制（11-10 tool-packs，使用者「3.對」）：相對從 $AOS_WS、絕對照用，工作區外也能讀寫改搬。 |
 | [`test_metainfo.py`](../../../../../proto8/lib/tests/test_metainfo.py) | Verify optional metadata reading, timeout declarations, and safe cost formulas. |
 | [`test_observed.py`](../../../../../proto8/lib/tests/test_observed.py) | Verify shared observation initialization, strict failures and measured call cells. |
 | [`test_tool_io_keys.py`](../../../../../proto8/lib/tests/test_tool_io_keys.py) | 不認得的 stdin 鍵＝ArgumentsBad（使用者 11-10 晚「那就報錯」）；additionalProperties 與自由物件照舊收。 |

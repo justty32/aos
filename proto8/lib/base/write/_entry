@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-# write - 把整份內容寫進工作區裡一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建
+# write - 把整份內容寫進一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建
 # 介面（lib/README 的契約）：stdin 收 {"path", "content"}；stdout 一行說寫了幾 bytes；
-# 路徑從 $AOS_WS 算、不能跑出去；先寫 . 開頭的暫存檔再改名（N-05）、蓋舊檔時留住它的權限；
+# 路徑：相對從 $AOS_WS 算、絕對照用，不限在工作區裡（11-10 tool-packs）；先寫 . 開頭的暫存檔再改名（N-05）、蓋舊檔時留住它的權限；
 # 錯：stderr 與 stdout 各一行「write: error: 代號 原因」、退 1。來源：demo/pi-tools/write（10-24）。
 import json, os, sys
 HELP = """\
 usage: write < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Write the whole content into a file in the workspace (created or replaced; parent
-folders are created).
+Write the whole content into a file (created or replaced; parent folders are
+created; relative paths start at $AOS_WS).
 Result on stdout. On error: one line "write: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -34,21 +34,12 @@ tool_io.start(NAME, HELP)
 
 
 die = tool_io.die
-workspace = tool_io.workspace
 arguments = tool_io.arguments
 
 
-def inside(root, rel):
-    p = os.path.realpath(os.path.join(root, rel))
-    if os.path.commonpath([root, p]) != root or p == root:
-        die("PathBad", "%s is outside the workspace or is the workspace itself" % rel)
-    return p
-
-
-root = workspace()
 args = arguments("path")
 
-path = inside(root, args["path"])
+path = os.path.realpath(tool_io.ws_path(args["path"]))   # 寫到捷徑指的那個檔（同 shell 的 >）
 if os.path.isdir(path):
     die("FileBad", "%s is a directory" % args["path"])
 try:

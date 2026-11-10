@@ -1,6 +1,6 @@
-{"description": "Move or rename a file or folder in your workspace; parent folders of to are created. Nothing moves if to already exists (FileBad): trash it first if you mean to replace it. Also use it to restore from the trash. Returns JSON {from, to}. Errors: PathBad, FileMissing, MoveFailed.",
+{"description": "Move or rename a file or folder; parent folders of to are created. Nothing moves if to already exists (FileBad): trash it first if you mean to replace it. Also use it to restore from the trash. Returns JSON {from, to}. Errors: PathBad (to is inside from), FileMissing, MoveFailed.",
  "parameters": {"type": "object",
-                "properties": {"from": {"type": "string", "description": "current path, relative to your workspace"},
+                "properties": {"from": {"type": "string", "description": "current path, relative to your workspace, or absolute"},
                                "to": {"type": "string", "description": "the new full path (not the folder to move into)"}},
                 "required": ["from", "to"]},
  "errors": ["ArgumentsBad", "PathBad", "FileMissing", "FileBad", "MoveFailed", "WsMissing"]}

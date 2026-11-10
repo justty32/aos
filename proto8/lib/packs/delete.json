@@ -1,0 +1,4 @@
+{"description": "Pack 3 (delete): tools that delete - trash (into the workspace .trash, can be moved back) and remove (for real).",
+ "tools": {
+           "trash": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/trash"}},
+           "remove": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/remove"}}}}

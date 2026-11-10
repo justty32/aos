@@ -1,5 +1,5 @@
 {
-  "summary": "Write the full contents of a workspace file (create or overwrite the whole file)",
+  "summary": "Write the full contents of a file (create or overwrite the whole file)",
   "resource": "disk",
   "side_effect": true,
   "idempotent": true,

@@ -50,16 +50,16 @@ class ShellReportTest(unittest.TestCase):
 
     def test_stages_and_effective_overlay(self):
         stack = self.root / 'stack'
-        opened = self.definition('open', {'bash': {'arbitrary_exec': True}, 'safe': {}})
+        opened = self.definition('open', {'shell': {'arbitrary_exec': True}, 'safe': {}})
         boxed = self.definition('boxed', {'boxed': {'arbitrary_exec': True, 'sandbox': {}}})
         none = self.definition('none', {'safe': {}})
-        self.assertEqual(effective_stage(opened, stack), ('open', ['bash']))
+        self.assertEqual(effective_stage(opened, stack), ('open', ['shell']))
         self.assertEqual(effective_stage(boxed, stack), ('boxed', ['boxed']))
         self.assertEqual(effective_stage(none, stack), ('none', []))
         base = str(opened / 'cfg/tools.json')   # 11-10 aos-tools 改版：stack 那份＝"$override" 指回定義那份、拿掉的寫 null
-        write(stack / 'cfg/tools.json', {'$override': base, 'tools': {'bash': None, 'boxed': {'path': str(self.root / 'tool_boxed')}}})
+        write(stack / 'cfg/tools.json', {'$override': base, 'tools': {'shell': None, 'boxed': {'path': str(self.root / 'tool_boxed')}}})
         self.assertEqual(effective_stage(opened, stack), ('boxed', ['boxed']))
-        write(stack / 'cfg/tools.json', {'$override': base, 'tools': {'bash': None}})
+        write(stack / 'cfg/tools.json', {'$override': base, 'tools': {'shell': None}})
         self.assertEqual(effective_stage(opened, stack), ('none', []))
 
     def test_shapes_pipeline_quotes_and_redirections(self):
@@ -81,9 +81,9 @@ class ShellReportTest(unittest.TestCase):
         stacks = [self.root / 'run1/stack', self.root / 'run2/stack']
         for stack in stacks:
             ledger(stack, [{'kind': 'self', 'def': str(definition)},
-                           {'kind': 'tool', 'stack': 'tools/bash', 'child': 'observed/kid'},
+                           {'kind': 'tool', 'stack': 'tools/shell', 'child': 'observed/kid'},
                            {'kind': 'tool', 'stack': 'tools/hidden'}])
-            ledger(stack / 'tools/bash', [{'kind': 'self', 'def': '/wrong/tool'},
+            ledger(stack / 'tools/shell', [{'kind': 'self', 'def': '/wrong/tool'},
                                          {'kind': 'cmd', 'command': 'missing -n x', 'exit': 0}])
             ledger(stack / 'observed/kid', [{'kind': 'self', 'def': str(child)},
                                           {'kind': 'cmd', 'command': 'missing y', 'exit': 2}])

@@ -33,7 +33,7 @@ try:
             host.unlink()
             failures.append('host stack history file escaped')
     binaries = set(re.findall(r'^B (.+)$', text, re.M))
-    metadata = Path(__file__).resolve().parents[3] / 'cmd/aos-sandbox/examples/bash-boxed/_metainfo.json'
+    metadata = Path(__file__).resolve().parents[3] / 'cmd/aos-sandbox/examples/shell-boxed/_metainfo.json'
     sandbox = json.loads(metadata.read_text())['sandbox']
     allowed = {path for path in sandbox['ro'] if path.startswith('/usr/bin/')}
     allowed.update(str(Path(path).resolve()) for path in list(allowed))

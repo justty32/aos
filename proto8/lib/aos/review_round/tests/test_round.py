@@ -50,7 +50,7 @@ class ReviewRound(unittest.TestCase):
                         ignore=shutil.ignore_patterns('tests', '__pycache__'))
         write(self.target / 'llm.json', {'model': 'high'})
         write(self.target / 'tools.json', {'tools': {
-            'bash': {'path': str(PROTO / 'lib/base/bash')}}})
+            'shell': {'path': str(PROTO / 'lib/base/shell')}}})
         write(self.target / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10,
                                          'ctl': 'ctl.json', 'state': 'state.json'})
         self.case = self.root / 'case'
@@ -90,7 +90,7 @@ class ReviewRound(unittest.TestCase):
         endpoints = {}
         for name, tokens, answer in levels:
             endpoints[name] = {'prompt_tokens': tokens, 'script': [
-                {'tool_calls': [{'name': 'bash', 'arguments': {
+                {'tool_calls': [{'name': 'shell', 'arguments': {
                     'command': f'printf {answer} > result.txt'}}]},
                 {'content': 'Finished.'}]}
         write(self.kernel_config, {'exec': str(self.root / 'fake'),

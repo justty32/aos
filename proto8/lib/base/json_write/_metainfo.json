@@ -1,5 +1,5 @@
 {
-  "summary": "Change several locations in a workspace JSON file by JSON Pointer; if any change does not match, do not write the file",
+  "summary": "Change several locations in a JSON file by JSON Pointer; if any change does not match, do not write the file",
   "resource": "disk",
   "side_effect": true,
   "idempotent": true,

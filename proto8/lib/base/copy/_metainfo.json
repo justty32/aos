@@ -1,5 +1,5 @@
 {
-  "summary": "Copy a file or a whole folder in the workspace",
+  "summary": "Copy a file or a whole folder",
   "resource": "disk",
   "side_effect": true,
   "idempotent": false,

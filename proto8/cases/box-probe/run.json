@@ -1,1 +1,1 @@
-{"description": "Probe the declared bash sandbox boundary.", "exec": "tools/bash", "stdin": "stdin.json"}
+{"description": "Probe the declared shell sandbox boundary.", "exec": "tools/shell", "stdin": "stdin.json"}

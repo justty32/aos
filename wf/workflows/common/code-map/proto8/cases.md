@@ -10,7 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`check.json`](../../../../../proto8/cases/box-probe/check.json) | Require every sandbox boundary check to pass. |
-| [`run.json`](../../../../../proto8/cases/box-probe/run.json) | Probe the declared bash sandbox boundary. |
+| [`run.json`](../../../../../proto8/cases/box-probe/run.json) | Probe the declared shell sandbox boundary. |
 | [`stdin.json`](../../../../../proto8/cases/box-probe/stdin.json) | Try writes, network and host visibility using bash builtins. |
 
 ## `proto8/cases/smoke/`

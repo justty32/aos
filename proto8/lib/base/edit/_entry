@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-# edit - 在工作區裡一個檔做一處或幾處「整段原文照字面換掉」，一處不合就整個不改
+# edit - 在一個檔做一處或幾處「整段原文照字面換掉」，一處不合就整個不改
 # 介面（lib/README 的契約）：stdin 收 {"path", "edits": [{"old_text", "new_text"}]}；stdout 一行說換了幾處；
 # 規則同 pi：每個 old_text 都拿改之前的原檔比、要剛好出現一次、彼此不重疊、不能空；改完跟原本一樣也算錯；
-# 全有或全無；CRLF 的檔照 LF 比、寫回時還原；不做模糊比對。路徑從 $AOS_WS 算、不能跑出去；
+# 全有或全無；CRLF 的檔照 LF 比、寫回時還原；不做模糊比對。路徑：相對從 $AOS_WS 算、絕對照用（11-10 tool-packs 不限工作區）；
 # 錯：stderr 與 stdout 各一行「edit: error: 代號 原因」、退 1。來源：demo/pi-tools/edit（10-24）。
 import json, os, sys
 HELP = """\
 usage: edit < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Replace exact text in one file in the workspace, at one or more places; every
+Replace exact text in one file (relative paths start at $AOS_WS), at one or more places; every
 old_text must appear exactly once, otherwise nothing is changed.
 Result on stdout. On error: one line "edit: error: CODE reason" on stderr and stdout, exit 1.
 """
@@ -35,18 +35,9 @@ tool_io.start(NAME, HELP)
 
 
 die = tool_io.die
-workspace = tool_io.workspace
 arguments = tool_io.arguments
 
 
-def inside(root, rel):
-    p = os.path.realpath(os.path.join(root, rel))
-    if os.path.commonpath([root, p]) != root:
-        die("PathBad", "%s is outside the workspace" % rel)
-    return p
-
-
-root = workspace()
 args = arguments("path")
 edits = args.get("edits")
 if not isinstance(edits, list) or not edits:
@@ -58,7 +49,7 @@ for i, e in enumerate(edits):
         die("TextBad", "edits[%d].old_text is empty" % i)
 
 name = args["path"]
-path = inside(root, name)
+path = os.path.realpath(tool_io.ws_path(name))   # 改捷徑指的那個檔
 if not os.path.isfile(path):
     die("FileMissing", "%s (use write for a new file)" % name)
 try:

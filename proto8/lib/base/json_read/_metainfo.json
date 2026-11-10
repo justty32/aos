@@ -1,5 +1,5 @@
 {
-  "summary": "Inspect one location in a workspace JSON file, folding large values",
+  "summary": "Inspect one location in a JSON file, folding large values",
   "resource": "disk",
   "side_effect": false,
   "idempotent": true,

@@ -1,5 +1,5 @@
 {
-  "summary": "Read a workspace text file; if it is too long, return only the beginning",
+  "summary": "Read a text file; if it is too long, return only the beginning",
   "resource": "disk",
   "side_effect": false,
   "idempotent": true,

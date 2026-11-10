@@ -1,5 +1,5 @@
 {
-  "summary": "Inspect a workspace file progressively: one level at a time for JSON, an outline first for large text files",
+  "summary": "Inspect a file progressively: one level at a time for JSON, an outline first for large text files",
   "resource": "disk",
   "side_effect": false,
   "idempotent": true,

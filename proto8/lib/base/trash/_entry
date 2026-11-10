@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-# trash - 刪除工作區裡一個檔或資料夾：不真的刪，搬進 $AOS_WS/.trash/<時間>/<原路徑>
+# trash - 刪除一個檔或資料夾：不真的刪，搬進 $AOS_WS/.trash/<時間>/<原路徑>（真的刪用 remove）
 # 介面（lib/README 的契約）：stdin 收 {"path"}；stdout 一份 JSON {"path", "to"}。要救就用 move 搬回來。
-# 垃圾桶裡的東西不再丟（.trash 本身與裡面都不收）；真的要清垃圾桶是人的事。路徑從 $AOS_WS 算、不能跑出去。
+# 垃圾桶裡的東西不再丟（.trash 本身與裡面都不收）；真的要清垃圾桶用 remove。路徑：相對從 $AOS_WS 算、絕對照用（11-10 tool-packs 不限工作區）；
+# 工作區外的東西放進 .trash/<時間>/ 底下它的絕對路徑（去掉開頭 /），跨檔案系統照 mv 用複製再刪。
 # 錯：stderr 與 stdout 各一行「trash: error: 代號 原因」、退 1。來源：demo/file-tools/trash（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
-import json, os, sys, time
+import json, os, shutil, sys, time
 HELP = """\
 usage: trash < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Delete a file or folder in the workspace by moving it into $AOS_WS/.trash/<time>/
-(use move to get it back).
+Delete a file or folder by moving it into $AOS_WS/.trash/<time>/ (relative paths
+start at $AOS_WS; use move to get it back, remove to delete for real).
 Result on stdout. On error: one line "trash: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -40,36 +41,23 @@ def out(obj):
     print(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
 
 
-workspace = tool_io.workspace
 arguments = tool_io.arguments
 
 
-def inside(rel, root_ok=True):
-    """工作區裡的真實路徑；解開 .. 與捷徑後跑出去＝PathBad。回 (絕對路徑, 給人看的相對路徑)。"""
-    p = os.path.realpath(os.path.join(ROOT, rel))
-    if os.path.commonpath([ROOT, p]) != ROOT or (p == ROOT and not root_ok):
-        die("PathBad", "%s is outside the workspace" % rel)
-    return p, (os.path.relpath(p, ROOT) if p != ROOT else ".")
-
-
-def inside_link(rel):
-    """同 inside，但最後一節是捷徑時不解開它（搬、複製、丟的是捷徑本身）。"""
-    head, tail = os.path.split(os.path.normpath(rel))
-    parent, _ = inside(head or ".")
-    p = os.path.join(parent, tail)
-    if tail in ("", ".", "..") or p == ROOT:
-        die("PathBad", "%s cannot be the workspace itself" % rel)
-    return p, os.path.relpath(p, ROOT)
-
-
 TRASH = ".trash"
-ROOT = workspace()
+ROOT = tool_io.workspace()                      # 垃圾桶一律在工作區裡
 a = arguments("path")
-p, rel = inside_link(a["path"])
+p = tool_io.ws_path(a["path"]).rstrip(os.sep) or os.sep     # 捷徑本身，不跟進去
+shown = tool_io.shown_path(p)
 if not os.path.lexists(p):
     die("FileMissing", a["path"])
-if rel.split(os.sep)[0] == TRASH:
+rel = shown if not os.path.isabs(shown) else shown.lstrip(os.sep)
+if shown == "." or not rel:
+    die("PathBad", "%s is the workspace itself; cannot move it into its own trash" % a["path"])
+if rel.split(os.sep)[0] == TRASH and not os.path.isabs(shown):
     die("PathBad", "%s is already in the trash" % a["path"])
+if os.path.realpath(os.path.join(ROOT, TRASH)).startswith(os.path.realpath(p) + os.sep):
+    die("PathBad", "%s contains the trash; cannot move it into the trash" % a["path"])
 stamp = time.strftime("%Y%m%d-%H%M%S")
 n = 0
 while True:
@@ -80,7 +68,7 @@ while True:
 to = os.path.join(box, rel)
 try:
     os.makedirs(os.path.dirname(to), exist_ok=True)
-    os.rename(p, to)
-except OSError as e:
-    die("MoveFailed", "%s → trash: %s" % (a["path"], e.strerror))
-out({"path": rel, "to": os.path.relpath(to, ROOT)})
+    shutil.move(p, to)                          # 跨檔案系統＝複製再刪（同 mv）
+except (OSError, shutil.Error) as e:
+    die("MoveFailed", "%s → trash: %s" % (a["path"], getattr(e, "strerror", None) or e))
+out({"path": shown, "to": os.path.relpath(to, ROOT)})

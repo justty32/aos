@@ -1,5 +1,5 @@
 {
-  "summary": "Create a workspace folder, including its parents",
+  "summary": "Create a folder, including its parents",
   "resource": "disk",
   "side_effect": true,
   "idempotent": true,

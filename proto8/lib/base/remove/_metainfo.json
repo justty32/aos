@@ -1,0 +1,13 @@
+{
+  "summary": "Delete a file, link or folder for real (like rm; folders need recursive)",
+  "resource": "disk",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": true,
+  "interrupt": "unsafe",
+  "parallel": false,
+  "cost": {
+    "time_ms": 10
+  },
+  "timeout_ms": 60000
+}

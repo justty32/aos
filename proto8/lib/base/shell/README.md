@@ -1,4 +1,4 @@
-# bash — 執行指令並在自己的小格留下內層結果。
+# shell — 用 bash 執行一行指令，並在自己的小格留下內層結果（11-10 由 bash 改名）。
 
 設定 `AOS_STACK` 時，執行前透過共用 `observed.prepare_strict` 開好帳檔並宣告 `aos-observed` 介面；不能寫就回 `LogFailed`，不執行指令。沒有 `AOS_STACK` 時照跑、不記帳。
 

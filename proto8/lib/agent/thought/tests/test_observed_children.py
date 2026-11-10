@@ -16,7 +16,7 @@ class ChildrenTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             child, tool = root / 'kid', root / 'tool'
-            for relative, filename in [('', 'ledger.jsonl'), ('tools/bash', 'commands.jsonl'),
+            for relative, filename in [('', 'ledger.jsonl'), ('tools/shell', 'commands.jsonl'),
                                        ('tools/thought/observed/grandkid', 'observed.jsonl')]:
                 folder = child / relative
                 folder.mkdir(parents=True, exist_ok=True)

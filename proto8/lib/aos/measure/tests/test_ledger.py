@@ -114,7 +114,7 @@ class LedgerTests(unittest.TestCase):
 
     def test_command_leaf_without_outer_timer(self):
         self.account(self.stack, [{'kind': 'cmd', 'elapsed_ms': 9}])
-        tree, cost = ledger.fold(self.stack, self.defs, 'bash')
+        tree, cost = ledger.fold(self.stack, self.defs, 'shell')
         self.assertEqual(cost['time_ms'], 9)
         self.assertEqual(tree['kind'], 'script')
 

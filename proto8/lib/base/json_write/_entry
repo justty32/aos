@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-# json_edit - 照 JSON 指標改工作區裡一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫
+# json_write - 照 JSON 指標改一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫
 # 介面（lib/README 的契約）：stdin 收 {"path", "set"?: {指標: 新值}, "del"?: [指標]}；先照順序做 set、再做 del；
 # set 的指標中間缺的物件層自動建，陣列用 "-" 接在尾巴、數字要是既有的那一項；del 的指標一定要指得到。
-# stdout 一份 JSON {"path", "counter_set": 幾個, "counter_del": 幾個, "top": 改完頂層的 key（或 {"type": "array", "counter_items"}）}（計數 10-25 改 counter_*，原 set、del、len）。錯：stderr 與 stdout 各一行「json_edit: error: 代號 原因」、退 1。
+# stdout 一份 JSON {"path", "counter_set": 幾個, "counter_del": 幾個, "top": 改完頂層的 key（或 {"type": "array", "counter_items"}）}（計數 10-25 改 counter_*，原 set、del、len）。錯：stderr 與 stdout 各一行「json_write: error: 代號 原因」、退 1。
 # 做法（10-24 遷移，代定 14「換實作不換介面」）：先在記憶體裡照上面的規則全部做一遍（錯誤代號在這裡定），都合了才交給 C++ 的 aos-json 寫：
 #   連續的 set 一次 `aos-json batch --parents 檔`、接陣列尾巴的 `aos-json append 檔#指標`、del 每個一次 `aos-json del 檔#指標`——
 #   aos-json 原子寫入、只重寫有變的那一塊（排版不換）。aos-json 照 PATH 找；它的 stderr 原樣往上、這裡不讀（C-53），失敗只說結束碼。
 #   不穿 $ref：路上經過 {"$ref"}／{"$env"} 物件時 aos-json 會拒絕（WriteFailed），要穿過去用 aos-json 本身。
 import json, os, subprocess, sys
 HELP = """\
-usage: json_edit < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Change a JSON file in the workspace at JSON pointers: set first, then del; if any
+usage: json_write < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Change a JSON file (relative paths start at $AOS_WS) at JSON pointers: set first, then del; if any
 place does not fit, the file is not written. Prints a one-line JSON summary.
 Result on stdout. On error: one line "json_edit: error: CODE reason" on stderr and stdout, exit 1.
 """
@@ -33,21 +33,13 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.stdout.write(_line)
     sys.exit(1)
 
-NAME = "json_edit"
+NAME = "json_write"
 tool_io.start(NAME, HELP)
 SIZE_MAX = 4 * 1024 * 1024
 
 
 die = tool_io.die
-workspace = tool_io.workspace
 arguments = tool_io.arguments
-
-
-def inside(root, rel):
-    p = os.path.realpath(os.path.join(root, rel))
-    if os.path.commonpath([root, p]) != root:
-        die("PathBad", "%s is outside the workspace" % rel)
-    return p
 
 
 def parts(pointer):
@@ -108,7 +100,6 @@ def do_del(doc, pointer):
         die("PointerMissing", "%s: not found" % pointer)
 
 
-root = workspace()
 args = arguments("path")
 sets, dels = args.get("set", {}), args.get("del", [])
 if not isinstance(sets, dict) or not all(isinstance(k, str) for k in sets):
@@ -118,7 +109,7 @@ if not isinstance(dels, list) or not all(isinstance(k, str) for k in dels):
 if not sets and not dels:
     die("ArgumentsBad", "need at least one of set and del")
 
-path = inside(root, args["path"])
+path = tool_io.ws_path(args["path"])
 if not os.path.exists(path):
     die("FileMissing", "%s (use write for a new file)" % args["path"])
 if os.path.isdir(path):

@@ -23,7 +23,7 @@ if endpoint.get('role') == 'reviewer':
             edit['path'] = str(Path(result['review']).relative_to(endpoint['ws']))
     endpoint['script'] = [
         {'tool_calls': [{'name': 'review_round', 'arguments': endpoint['round_args']}]},
-        {'tool_calls': [{'name': 'json_edit', 'arguments': edit}]},
+        {'tool_calls': [{'name': 'json_write', 'arguments': edit}]},
         {'content': 'Review complete; one split prescription is ready.'}]
 result = subprocess.run([sys.executable, str(PROTO / 'lib/base/llm_fake/_entry')],
                         input=json.dumps(payload), capture_output=True, text=True)

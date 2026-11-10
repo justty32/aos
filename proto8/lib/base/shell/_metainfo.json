@@ -1,5 +1,5 @@
 {
-  "summary": "Run one command with bash in the workspace and return the combined output",
+  "summary": "Run one bash command line in the workspace folder and return the combined output",
   "resource": "cpu",
   "side_effect": true,
   "idempotent": false,

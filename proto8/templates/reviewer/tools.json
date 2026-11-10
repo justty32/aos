@@ -6,6 +6,6 @@
    "rollback": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/rollback"}},
    "measure": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/measure"}},
    "json_read": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_read"}},
-   "json_edit": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_edit"}},
+   "json_write": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_write"}},
    "read": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/read"}},
    "ls": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/ls"}}}}

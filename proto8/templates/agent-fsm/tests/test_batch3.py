@@ -49,22 +49,22 @@ class Batch3Integration(unittest.TestCase):
                                              'state_flux': 'state_flux.json'})
                 return target
 
-            bash = PROTO / 'lib/base/bash'
-            child_def = definition('child_def', 'child', {'bash': {'path': str(bash)}})
+            bash = PROTO / 'lib/base/shell'
+            child_def = definition('child_def', 'child', {'shell': {'path': str(bash)}})
             parent_def = definition('parent_def', 'parent', {
-                'bash': {'path': str(bash)},
+                'shell': {'path': str(bash)},
                 'thought': {'path': str(PROTO / 'lib/agent/thought')}})
             kernel_config = root / 'kernel.json'
             write(kernel_config, {'exec': str(PROTO / 'lib/base/llm_fake'), 'endpoint': 'parent',
                 'endpoints': {
                     'parent': {'script': [
-                        {'tool_calls': [{'name': 'bash', 'arguments': {'command': 'printf parent; exit 7'}}]},
+                        {'tool_calls': [{'name': 'shell', 'arguments': {'command': 'printf parent; exit 7'}}]},
                         {'tool_calls': [{'name': 'thought', 'arguments': {
                             'from': str(child_def), 'goal': 'Run the shell and report completion.',
                             'model': 'child', 'keep': False, 'timeout_s': 30}}]},
                         {'content': 'Parent complete.'}]},
                     'child': {'script': [
-                        {'tool_calls': [{'name': 'bash', 'arguments': {'command': 'printf child; exit 3'}}]},
+                        {'tool_calls': [{'name': 'shell', 'arguments': {'command': 'printf child; exit 3'}}]},
                         {'content': 'Child complete.'}]}}})
             daemon_config = root / 'daemon.json'
             write(daemon_config, {'interval_ms': 10, 'procs': {}})
@@ -103,11 +103,11 @@ class Batch3Integration(unittest.TestCase):
                     self.assertEqual(rows[0]['ws'], str(root))
                     self.assertRegex(rows[0]['started_at'], r'^\d{4}-.*\.\d{3}Z$')
                     tools = [row for row in rows if row['kind'] == 'tool']
-                    self.assertEqual([row['name'] for row in tools], ['bash', 'thought'])
+                    self.assertEqual([row['name'] for row in tools], ['shell', 'thought'])
                     shell, thought = tools
                     self.assertEqual(shell['def'], str(bash))
                     self.assertEqual(shell['code'], 0)
-                    self.assertEqual(shell['stack'], 'tools/bash')
+                    self.assertEqual(shell['stack'], 'tools/shell')
                     for tool in tools:
                         self.assertTrue(Path(tool['def']).is_absolute())
                         for field in ('elapsed_ms', 'in_bytes', 'out_bytes'):
@@ -123,7 +123,7 @@ class Batch3Integration(unittest.TestCase):
                     self.assertEqual(child_rows[0]['def'], str(child_def))
                     self.assertTrue(any(row['kind'] == 'think' for row in child_rows))
                     child_shell = next(row for row in child_rows if row['kind'] == 'tool')
-                    self.assertEqual(child_shell['name'], 'bash')
+                    self.assertEqual(child_shell['name'], 'shell')
                     copied_shell = records(child_stack / child_shell['stack'])
                     self.assertEqual([row['exit'] for row in copied_shell if row['kind'] == 'cmd'], [3])
                     self.assertFalse((daemon_stack / 'procs' / child_stack.name).exists())

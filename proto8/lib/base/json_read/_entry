@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# json_read - 看工作區裡一份 JSON 檔的某個位置，一次只展開幾層、大的摺起來，讓腦一層層往下找
+# json_read - 看一份 JSON 檔的某個位置，一次只展開幾層、大的摺起來，讓腦一層層往下找
 # 介面（lib/README 的契約）：stdin 收 {"path", "pointer"?: "", "depth"?: 1}；stdout 一份 JSON {"path", "pointer", "value"}：
 # value 超過 depth 層的物件摺成 {"type": "object", "keys": [最多 20 個], "counter_keys_more"?: 沒列的個數}、陣列摺成 {"type": "array", "counter_items": N}、
 # 長字串摺成 {"type": "string", "counter_chars": N, "head": 前 100 字}（計數 10-25 改 counter_*，原 len、keys_more）；其餘照原樣。pointer 照 RFC 6901（整份是空字串）。
@@ -7,7 +7,7 @@
 import json, os, sys
 HELP = """\
 usage: json_read < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Look at one place in a JSON file in the workspace, unfolding only depth levels
+Look at one place in a JSON file (relative paths start at $AOS_WS), unfolding only depth levels
 (bigger values are folded into summaries). Prints {"path", "pointer", "value"}.
 Result on stdout. On error: one line "json_read: error: CODE reason" on stderr and stdout, exit 1.
 """
@@ -37,15 +37,7 @@ SIZE_MAX = 4 * 1024 * 1024
 
 
 die = tool_io.die
-workspace = tool_io.workspace
 arguments = tool_io.arguments
-
-
-def inside(root, rel):
-    p = os.path.realpath(os.path.join(root, rel))
-    if os.path.commonpath([root, p]) != root:
-        die("PathBad", "%s is outside the workspace" % rel)
-    return p
 
 
 def walk(doc, pointer):
@@ -88,7 +80,6 @@ def fold(v, depth):
     return v
 
 
-root = workspace()
 args = arguments("path")
 pointer, depth = args.get("pointer", ""), args.get("depth", 1)
 if not isinstance(pointer, str):
@@ -96,7 +87,7 @@ if not isinstance(pointer, str):
 if type(depth) is not int or not 1 <= depth <= DEPTH_MAX:
     die("ArgumentsBad", "depth must be an integer from 1 to %d" % DEPTH_MAX)
 
-path = inside(root, args["path"])
+path = tool_io.ws_path(args["path"])
 if not os.path.exists(path):
     die("FileMissing", args["path"])
 if os.path.isdir(path):

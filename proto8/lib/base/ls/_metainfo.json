@@ -1,5 +1,5 @@
 {
-  "summary": "List a workspace folder one page at a time and return JSON",
+  "summary": "List a folder one page at a time and return JSON",
   "resource": "disk",
   "side_effect": false,
   "idempotent": true,

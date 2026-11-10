@@ -1,5 +1,5 @@
-{"description": "Show the attributes of one file or folder in your workspace as JSON: type, mtime, mode; files add size, exec, text, counter_lines, format (json, python, markdown, shell, text), JSON files add top (a summary of the top level); folders add counter_children and aos; links add link_to. Errors: PathBad, FileMissing.",
+{"description": "Show the attributes of one file or folder as JSON: type, mtime, mode; files add size, exec, text, counter_lines, format (json, python, markdown, shell, text), JSON files add top (a summary of the top level); folders add counter_children and aos; links add link_to. Errors: FileMissing.",
  "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "path relative to your workspace"}},
+                "properties": {"path": {"type": "string", "description": "path relative to your workspace, or absolute"}},
                 "required": ["path"]},
- "errors": ["ArgumentsBad", "PathBad", "FileMissing", "ReadFailed", "WsMissing"]}
+ "errors": ["ArgumentsBad", "FileMissing", "ReadFailed", "WsMissing"]}

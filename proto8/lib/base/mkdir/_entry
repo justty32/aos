@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# mkdir - 在工作區裡建資料夾（上層一起建；已經有＝沒事）
-# 介面（lib/README 的契約）：stdin 收 {"path"}；stdout 一份 JSON {"path", "created"}。路徑從 $AOS_WS 算、不能跑出去、不能是工作區本身。
+# mkdir - 建資料夾（上層一起建；已經有＝沒事）
+# 介面（lib/README 的契約）：stdin 收 {"path"}；stdout 一份 JSON {"path", "created"}。路徑：相對從 $AOS_WS 算、絕對照用（11-10 tool-packs 不限工作區）。
 # 錯：stderr 與 stdout 各一行「mkdir: error: 代號 原因」、退 1。來源：demo/file-tools/mkdir（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
 import json, os, sys
 HELP = """\
 usage: mkdir < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Create a folder in the workspace (parents too; already there is fine).
+Create a folder (relative paths start at $AOS_WS; parents too; already there is fine).
 Result on stdout. On error: one line "mkdir: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -38,21 +38,12 @@ def out(obj):
     print(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
 
 
-workspace = tool_io.workspace
 arguments = tool_io.arguments
 
 
-def inside(rel, root_ok=True):
-    """工作區裡的真實路徑；解開 .. 與捷徑後跑出去＝PathBad。回 (絕對路徑, 給人看的相對路徑)。"""
-    p = os.path.realpath(os.path.join(ROOT, rel))
-    if os.path.commonpath([ROOT, p]) != ROOT or (p == ROOT and not root_ok):
-        die("PathBad", "%s is outside the workspace" % rel)
-    return p, (os.path.relpath(p, ROOT) if p != ROOT else ".")
-
-
-ROOT = workspace()
 a = arguments("path")
-p, shown = inside(a["path"], root_ok=False)
+p = tool_io.ws_path(a["path"])
+shown = tool_io.shown_path(p)
 if os.path.isdir(p):
     out({"path": shown, "created": False})
     sys.exit(0)

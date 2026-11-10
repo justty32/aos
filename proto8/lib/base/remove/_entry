@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+# remove - 真的刪掉一個檔、捷徑或資料夾（rm 的包裝；對比 trash＝丟進工作區的垃圾桶、可以救回）
+# 介面（lib/README 的契約）：stdin 收 {"path", "recursive"?: false}；stdout 一份 JSON {"path", "type"(file／dir／link), "counter_files"?}。
+# 照 rm 的常用面（11-10 tool-packs 使用者「trash/remove」）：資料夾要明講 recursive（同 rm -r，沒講＝FileBad）；捷徑刪捷徑本身、不跟進去；
+# 路徑最後一節是 . 或 ..、或整個是 / ＝PathBad（同 rm 的拒絕）。路徑：相對從 $AOS_WS 算、絕對照用、不限工作區，能不能刪看 Linux 權限。
+# 錯：stderr 與 stdout 各一行「remove: error: 代號 原因」、退 1。
+import json, os, shutil, sys
+HELP = """\
+usage: remove < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Delete a file, symlink or folder for real, like rm (relative paths start at $AOS_WS;
+a folder needs "recursive": true, like rm -r; use trash to keep a way back).
+Result on stdout. On error: one line "remove: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+
+NAME = "remove"
+tool_io.start(NAME, HELP)
+die = tool_io.die
+
+a = tool_io.arguments("path")
+recursive = a.get("recursive", False)
+raw = a["path"]
+if os.path.basename(raw.rstrip(os.sep)) in (".", ".."):
+    die("PathBad", "refusing to remove . or .. (%s)" % raw)
+p = tool_io.ws_path(raw).rstrip(os.sep) or os.sep            # 捷徑本身，不跟進去
+if os.path.realpath(p) == os.sep and not os.path.islink(p):
+    die("PathBad", "refusing to remove /")
+shown = tool_io.shown_path(p)
+if not os.path.lexists(p):
+    die("FileMissing", raw)
+res = {"path": shown}
+try:
+    if os.path.isdir(p) and not os.path.islink(p):
+        if not recursive:
+            die("FileBad", "%s is a folder; give \"recursive\": true to delete it with everything inside" % raw)
+        res["type"] = "dir"
+        res["counter_files"] = sum(len(fs) for _, _, fs in os.walk(p))
+        shutil.rmtree(p)
+    else:
+        res["type"] = "link" if os.path.islink(p) else "file"
+        os.unlink(p)
+except OSError as e:
+    die("RemoveFailed", "%s: %s" % (raw, e.strerror or e))
+print(json.dumps(res, ensure_ascii=False, separators=(",", ":")))

@@ -18,7 +18,7 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   aos 讀的 JSON 都解指示詞（N-45）：檔裡有 $ref／$env 就交給 aos-json 解（`$ref` 陣列＝把註冊檔拆成好幾份），
   改的時候 aos-json set／del --follow 穿過 $ref 改被參照的那份。add 存路徑保留使用者的寫法（11-10 TC，使用者「要用相對位置、絕對位置、環境變數指定都可」）：
   給絕對＝存絕對；給相對（從 cwd 算）＝存成相對「寫進的那份檔（F）的資料夾」的相對；--path-json JSON＝原樣存（字串或指示詞，例
-  '{"$env":"AOS_HOME","$path":"/lib/base/bash"}'；現在解一次只為了驗與取名，解出來的值不寫回）。
+  '{"$env":"AOS_HOME","$path":"/lib/base/shell"}'；現在解一次只為了驗與取名，解出來的值不寫回）。
   手寫的相對路徑從這份檔的資料夾算。
 三種登記對象（種類照 aos-exec 認法，N-61：資料夾；檔有 +x＝可執行檔；檔沒 +x＝JSON）：
   dir   資料夾裡有 _tooldef.json；_metainfo.json 有就一起給（11-04 起只認帶 .json 的：_ 開頭的資料檔一律帶副檔名，
@@ -100,8 +100,8 @@ subcommands:
 examples:
   aos-tools add tools/clock                     # name = clock
   aos-tools add --name now tools/clock          # pick the name
-  aos-tools add "$AOS_HOME/lib/base/bash"     # the shell expands it now
-  aos-tools add --path-json '{"$env":"AOS_HOME","$path":"/lib/base/bash"}'
+  aos-tools add "$AOS_HOME/lib/base/shell"     # the shell expands it now
+  aos-tools add --path-json '{"$env":"AOS_HOME","$path":"/lib/base/shell"}'
                                                 # looked up on every use instead
   aos-tools ls -l
   aos-tools call clock '{"tz": "Asia/Taipei"}'
@@ -129,7 +129,7 @@ usage: aos-tools [--file F] add [--name N] [--replace] [--no-cache]
 XXX is a tool folder, JSON file or executable; flags may go before or after it.
 It is stored the way you give it: absolute stays absolute; relative (to the
 current directory) is stored relative to F. --path-json stores the JSON as given - a path string or a
-directive such as {"$env": "AOS_HOME", "$path": "/lib/base/bash"} - and it is
+directive such as {"$env": "AOS_HOME", "$path": "/lib/base/shell"} - and it is
 resolved on every use.
 
 Prints: added NAME -> ABSOLUTE_PATH (FILE_WRITTEN: STORED_VALUE)

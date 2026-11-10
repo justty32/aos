@@ -1,5 +1,5 @@
 {
-  "summary": "Make several literal replacements in a workspace file; if any replacement does not match, leave the whole file unchanged",
+  "summary": "Make several literal replacements in a file; if any replacement does not match, leave the whole file unchanged",
   "resource": "disk",
   "side_effect": true,
   "idempotent": false,

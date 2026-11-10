@@ -22,7 +22,7 @@ stdin 收 `{"stacks":["絕對 stack 路徑", ...], "defs":"定義根（選填）
 stdout 固定為 `{"reports":[...]}`，按絕對 agent 定義路徑彙整並排序；每份包含 `agent`、`shell_stage`、`arbitrary`、`binaries`、`shapes`。相同定義在多個 stack 用過不同工具時，階段取最鬆的、任意執行工具名取聯集。
 
 ```json
-{"reports":[{"agent":"/abs/defs/worker","shell_stage":"open","arbitrary":["bash"],"binaries":["/usr/bin/rg"],"shapes":[{"shape":"rg -n <arg> <arg>","count":2,"exit_zero":1,"cases":["/abs/run/stack"]}]}]}
+{"reports":[{"agent":"/abs/defs/worker","shell_stage":"open","arbitrary":["shell"],"binaries":["/usr/bin/rg"],"shapes":[{"shape":"rg -n <arg> <arg>","count":2,"exit_zero":1,"cases":["/abs/run/stack"]}]}]}
 ```
 
 公開帳沒有 case 名宣告，所以 `cases` 原樣使用傳入的絕對 stack 路徑；不猜目錄名代表哪個 case。多個 repeat stack 會各列一次，呼叫者可用 measure 的 case／run 對照表解讀。重複傳入同一實際 stack 不重複計數。

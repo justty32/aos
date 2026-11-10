@@ -14,4 +14,4 @@
 | [`observed.py`](../../../../../proto8/lib/observed.py) | Record public stack observations and measured downstream calls. |
 | [`observed_children.py`](../../../../../proto8/lib/observed_children.py) | Preserve declared child observation trees and hand their location to the caller. |
 | [`shell_observed.py`](../../../../../proto8/lib/shell_observed.py) | Reserve a writable shell ledger before execution and record the completed command. |
-| [`tool_io.py`](../../../../../proto8/lib/tool_io.py) | lib 工具共用的開頭：schema 生成旗標位置的 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區、兩鐘期限。 |
+| [`tool_io.py`](../../../../../proto8/lib/tool_io.py) | lib 工具共用的開頭：schema 生成旗標位置的 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區與檔案工具的路徑、兩鐘期限。 |

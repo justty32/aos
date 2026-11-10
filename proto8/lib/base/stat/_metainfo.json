@@ -1,5 +1,5 @@
 {
-  "summary": "Inspect the attributes of one workspace file or folder",
+  "summary": "Inspect the attributes of one file or folder",
   "resource": "disk",
   "side_effect": false,
   "idempotent": true,

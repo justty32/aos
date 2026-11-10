@@ -75,9 +75,9 @@ class FakeAgentMeasure(unittest.TestCase):
                                              'ctl': 'ctl.json', 'state': 'state.json'})
                 return target
 
-            bash = PROTO / 'lib/base/bash'
-            child = definition('child', {'bash': {'path': str(bash)}})
-            definition('parent', {'bash': {'path': str(bash)},
+            bash = PROTO / 'lib/base/shell'
+            child = definition('child', {'shell': {'path': str(bash)}})
+            definition('parent', {'shell': {'path': str(bash)},
                                  'thought': {'path': str(PROTO / 'lib/agent/thought')}})
             definition('single', {})
             # Exercise llm_fake itself, changing only its reported usage at the boundary.
@@ -96,13 +96,13 @@ class FakeAgentMeasure(unittest.TestCase):
             config = root / 'kernel.json'
             write(config, {'exec': str(fake), 'endpoint': 'parent', 'endpoints': {
                 'parent': {'script': [
-                    {'tool_calls': [{'name': 'bash', 'arguments': {'command': 'printf parent > result.txt'}}]},
+                    {'tool_calls': [{'name': 'shell', 'arguments': {'command': 'printf parent > result.txt'}}]},
                     {'tool_calls': [{'name': 'thought', 'arguments': {
                         'from': str(child), 'goal': 'Run the planned shell and finish.',
                         'model': 'child', 'keep': False, 'timeout_s': 30}}]},
                     {'content': 'Parent complete.'}]},
                 'child': {'script': [
-                    {'tool_calls': [{'name': 'bash', 'arguments': {'command': 'printf child'}}]},
+                    {'tool_calls': [{'name': 'shell', 'arguments': {'command': 'printf child'}}]},
                     {'content': 'Child complete.'}]},
                 'single': {'script': [{'content': 'Single step complete.'}]}}})
             case = root / 'case'
