@@ -10,7 +10,24 @@
 |---|---|
 | 本頁 | 每支一兩行＋照抄例子 |
 | [02 整合驗收](02-整合驗收.md) | 從零起一棵、十五支各叫一次的結果、接縫、修了什麼、沒修的 |
-| [03 試驗場刷新](03-試驗場刷新.md) | 把 `~/code/playground` 換成最新版的一段照抄（先備份；**還沒對原件跑，你看過再決定**） |
+| [03 試驗場刷新](03-試驗場刷新.md) | 把 `~/code/playground` 換成最新版的一段照抄；**11-10 22:15 已照你「現在就刷新清空」對原件跑過**（備份 `~/code/playground.bak-1110-2215`），gemma 驗過 |
+
+## 直接玩試驗場（已刷新好，照抄）
+
+`~/code/playground` 11-10 22:15 刷新成最新版：員工 `fsm_ann`（34 支工具、十一包）、`eca_bob`（haiku，19 支），stack 都是空的。根表 `_clock llm_kernel daemon _sweeper`，員工掛在領班（`ws/.stack`）。
+
+```sh
+cd ~/code/playground && source env.sh && unset AOS_DAEMON
+setsid nohup aos-exec root > root.log 2>&1 < /dev/null &                   # 起根（背景）
+cd ws && aos-daemon-ctl ping --timeout-s 30                                  # 領班回 replied 就好
+aos-exec ../agents/fsm_ann && aos-agent ctl add --name eca_bob ../agents/eca_bob
+aos-agent llm --target fsm_ann set model=stupid-fast                         # 用 gemma（不打＝假腦）
+aos-agent say --target fsm_ann "what time is it?" && aos-agent listen --target fsm_ann --timeout-s 180
+aos-agent say --target eca_bob "How many tools do you have? Use self_state." && aos-agent listen --target eca_bob --timeout-s 180
+aos-daemon-ctl -d "$PG/.stack" shutdown                                      # 收工
+```
+
+下面各表的「照抄一句」放進 `say --target fsm_ann "…"` 就行（試驗場用 `--target`，不用 `-d stacks/root -t`）。記憶庫＝試驗場的 `knowledge/`，下次刷新會被換掉。
 
 ## 先準備一棵（照抄）
 
