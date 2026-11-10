@@ -24,6 +24,8 @@ self_tools、self_llm 在 [self-tools](../self-tools/README.md)；這夾記 self
 | 檔 | 是什麼 |
 |---|---|
 | [01-施工結果](01-施工結果.md) | 每個 commit 做了什麼、驗收、代定清單、eca 真對話驗收（haiku）、給知識庫的節點內容 |
+| [02-self_state與self_ctl](02-self_state與self_ctl.md) | 使用者 self_peek 五題、self_ctl 三題原話與決定 |
+| [03-self_state與self_ctl施工結果](03-self_state與self_ctl施工結果.md) | 動作與例子、commit、驗收（假腦、gemma、eca haiku）、代定 8 條、知識節點內容 |
 | [hook/](hook/README.md) | self_hook 那條線（另一隊） |
 
 ## 做了（11-10 晚）
