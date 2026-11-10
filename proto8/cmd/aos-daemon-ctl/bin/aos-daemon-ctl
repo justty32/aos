@@ -296,6 +296,7 @@ StillRunning, exit 1: it is not safe to commit or copy the stacks yet (the stop 
 ctl and applies on its next round; run shutdown again to wait again).
 A daemon that is a proc of another daemon leaves that table when it exits 0 (warning line);
 to keep its row there, stop it through the upper daemon instead.
+On success it prints one line: daemon at D stopped (ctl seq N); M procs asleep, ...
 
 flags:
       --timeout-s S   positive exit timeout in seconds (default: 15)
@@ -459,13 +460,26 @@ def cmd_add(opts, args):
     d = dc.find_daemon(opts.get("daemon"))
     _, body = dc.add_letter(rest[0], extra, o.get("name"), o.get("ws"), o.get("stack"), o.get("def"), limits,
                             auto_restart=o.get("auto_restart", False), written=written)
+    name = next(iter(body["procs_added"]))
+    try:                                   # 11-10 cli-sweep 甲5：撞名＝報錯不寄（代號同 aos-agent ctl add 的 InstanceExists）
+        taken = name in dc.rows(d)
+    except Fail:                           # 表還沒有（daemon 沒起過）＝不查
+        taken = False
+    if taken:
+        raise Fail("InstanceExists", "%s is already on the table of %s (rm it first, or add with --name another name)" % (name, d))
     deliver(d, body, reply_arg(o), seconds)
 
 
 def cmd_rm(opts, args):
     name, o = name_arg("rm", args, REPLY)
     seconds = timeout_arg(o, 3)
-    remove(dc.find_daemon(opts.get("daemon")), name, reply_arg(o), seconds)
+    d = dc.find_daemon(opts.get("daemon"))
+    try:                                   # 11-10 cli-sweep 甲5：表上沒有這個名字＝報錯不寄（原本印信名退 0）
+        dc.row_of(d, name)
+    except Fail as e:
+        if e.code == "ProcMissing":
+            raise
+    remove(d, name, reply_arg(o), seconds)
 
 
 def remove(d, name, reply_to=None, timeout_s=3, *, print_letter=True):
@@ -606,7 +620,14 @@ def cmd_shutdown(opts, args):
     if rest:
         raise Fail("ArgumentsBad", "shutdown takes no arguments")
     seconds = timeout_arg(o, dc.SHUTDOWN_S)
-    print(dc.shutdown(dc.find_daemon(opts.get("daemon")), seconds), flush=True)
+    d = dc.find_daemon(opts.get("daemon"))
+    seq = dc.shutdown(d, seconds)
+    try:                                   # 11-10 cli-sweep 甲4：成功說一句人看得懂的話（原本只印 seq）
+        asleep = sum(1 for r in dc.rows(d).values() if isinstance(r, dict) and r.get("phase") == "sleeping")
+        tail = "; %d procs asleep, they wake when it starts again" % asleep
+    except Fail:
+        tail = ""
+    print("daemon at %s stopped (ctl seq %d)%s" % (d, seq, tail), flush=True)
 
 
 SWEEP_FLAGS = dict(TIMEOUT, **{"--retention-days": "retention", "--min-bytes": "min_bytes", "--stop-grace-s": "grace"})
