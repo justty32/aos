@@ -31,9 +31,13 @@
 | [`memory/tests/test_pointer.py`](../../../../../proto8/lib/agent/memory/tests/test_pointer.py) | 以本地假資料驗證 memory 的 JSON Pointer 與既有節點路徑行為。 |
 | [`memory_export/`](../../../../../proto8/lib/agent/memory_export/) | 把一個知識庫（或其中一棵子樹）整棵印成一份 Markdown，給人看；唯讀 |
 | [`memory_fs.py`](../../../../../proto8/lib/agent/memory_fs.py) | 知識庫共用的找根、節點與 JSON Pointer 定址、讀取、摘要與子節點列舉。 |
+| [`memory_sync/`](../../../../../proto8/lib/agent/memory_sync/) | Synchronize an optional Git knowledge base with origin. |
+| [`memory_sync/tests/test_sync.py`](../../../../../proto8/lib/agent/memory_sync/tests/test_sync.py) | Exercise memory_sync against temporary local Git repositories and tool errors. |
 | [`memory_write/`](../../../../../proto8/lib/agent/memory_write/) | Add, replace or remove shared knowledge nodes with atomic writes and directory locks. |
 | [`memory_write/locking.py`](../../../../../proto8/lib/agent/memory_write/locking.py) | Acquire knowledge directory locks and inspect descendant locks through aos-lock. |
 | [`memory_write/tests/test_locking.py`](../../../../../proto8/lib/agent/memory_write/tests/test_locking.py) | Verify knowledge locks use a fixed wall-clock lease regardless of caller cycles. |
+| [`memory_write/tests/test_memory_reads.py`](../../../../../proto8/lib/agent/memory_write/tests/test_memory_reads.py) | Verify title-first memory search and ignored-name notices without changing node rules. |
+| [`memory_write/tests/test_prerequisites.py`](../../../../../proto8/lib/agent/memory_write/tests/test_prerequisites.py) | Verify hard-link failures preserve nodes and explain filesystem prerequisites. |
 | [`memory_write/tests/test_writing.py`](../../../../../proto8/lib/agent/memory_write/tests/test_writing.py) | Verify memory writes, leaf promotion and concurrent removal through the real tool. |
 | [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | Write, promote and remove knowledge nodes atomically under directory locks. |
 | [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | 讓叫我的 agent 改自己的工具箱：加（add）、拿掉（rm）、列（ls）；改的是那隻的覆蓋層，定義不動 |

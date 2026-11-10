@@ -1,0 +1,13 @@
+{
+  "summary": "Synchronize a Git knowledge base with origin, keeping local conflicting edits",
+  "resource": "io",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "unsafe",
+  "parallel": false,
+  "cost": {
+    "time_ms": 1000
+  },
+  "timeout_ms": 600000
+}

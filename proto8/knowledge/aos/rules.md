@@ -17,6 +17,7 @@ Always:
 - Keep paths relative to your workspace. A path that resolves outside it is refused (`PathBad`) on purpose.
 - After one failure, read the Code before retrying (node `errors`). Two identical failures in a row mean stop and report.
 - Report limits as facts: "the daemon allows 4 agents and 4 are running" is a complete, correct answer.
+- Before writing shared knowledge, find existing nodes, keep each node at most 2 KB, and follow node `memory`.
 - Prefer the smallest change that works: add one tool, not five; one child, not a tree of them.
 
 Why: aos runs many agents on one machine with shared folders. The rules keep one agent's mistake from reaching the others, and keep what a human reads in the table (`reason`, `tools overlay`) truthful.

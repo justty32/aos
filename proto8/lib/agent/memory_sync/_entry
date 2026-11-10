@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+# memory_sync - Synchronize an optional Git knowledge base with origin.
+import datetime
+import json
+import os
+import signal
+import socket
+import subprocess
+import sys
+
+sys.dont_write_bytecode = True
+HERE = os.path.dirname(os.path.realpath(__file__))
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io
+except ModuleNotFoundError as error:
+    if error.name != "tool_io":
+        raise
+    line = "memory_sync: error: ModuleMissing tool_io.py not found in tool folder, lib/ or Python path\n"
+    sys.stdout.write(line)
+    sys.stderr.write(line)
+    sys.exit(1)
+
+tool_io.start("memory_sync", """usage: memory_sync < ARGUMENTS.json
+Inspect or synchronize a Git knowledge base using origin. The knowledge base must
+be the root of its Git working tree. Requires Git, an attached branch and the
+five ignore rules: .lock/, .tmp.*, .new.*, .rm.*, .lock.releasing.*.
+Sync commits all changes, pulls with --no-rebase -X ours, then pushes. Same-hunk
+edits keep this machine's version; delete/modify conflicts abort the merge.
+Status uses cached origin refs (does not fetch). Results are JSON.
+IgnoreMissing prints the five required .gitignore lines before its error on stdout.
+Errors appear on stdout and stderr as memory_sync: error: CODE reason; exit 1.
+""")
+try:
+    try:
+        import memory_fs
+    except ModuleNotFoundError as error:
+        if error.name != "memory_fs":
+            raise
+        from agent import memory_fs
+except ModuleNotFoundError as error:
+    if error.name not in ("memory_fs", "agent", "agent.memory_fs"):
+        raise
+    tool_io.die("ModuleMissing", "memory_fs.py not found in tool folder, lib/agent/ or Python path")
+
+child = None
+TIMEOUT = 120
+
+
+def stop_child():
+    if child is not None and child.poll() is None:
+        os.killpg(child.pid, signal.SIGTERM)
+        try:
+            child.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            os.killpg(child.pid, signal.SIGKILL)
+            child.wait()
+
+
+def on_signal(signum, frame):
+    stop_child()
+    sys.exit(128 + signum)
+
+
+def git(root, *args, check=True, input_data=None):
+    global child
+    try:
+        child = subprocess.Popen(["git", "-C", root, *args], stdin=subprocess.PIPE if input_data is not None else subprocess.DEVNULL,
+                                 stdout=subprocess.PIPE, start_new_session=True,
+                                 env=dict(os.environ, GIT_TERMINAL_PROMPT="0"))
+        try:
+            out, _ = child.communicate(input=input_data, timeout=TIMEOUT)
+        except subprocess.TimeoutExpired:
+            stop_child()
+            tool_io.die("CommandFailed", "git %s timed out after %s seconds" % (args[0], TIMEOUT))
+    except OSError as error:
+        tool_io.die("LaunchFailed", "cannot run git: %s" % error)
+    if check and child.returncode:
+        tool_io.die("CommandFailed", "git %s exited %d; inspect stderr" % (args[0], child.returncode))
+    text = out.decode("utf-8", "surrogateescape")
+    return child.returncode, text if "-z" in args else text.strip()
+
+
+def preflight(root):
+    code, top = git(root, "rev-parse", "--show-toplevel", check=False)
+    if code or os.path.realpath(top) != root:
+        tool_io.die("NotGitRepo", "knowledge base must be the root of a Git working tree")
+    code, _ = git(root, "remote", "get-url", "origin", check=False)
+    if code:
+        tool_io.die("RemoteMissing", "Git remote origin is required")
+    rules = (".lock/", ".tmp.*", ".new.*", ".rm.*", ".lock.releasing.*")
+    try:
+        with open(os.path.join(root, ".gitignore"), encoding="utf-8") as handle:
+            present = {line.strip() for line in handle}
+    except FileNotFoundError:
+        present = set()
+    except (OSError, UnicodeError) as error:
+        tool_io.die("ReadFailed", "cannot read .gitignore: %s" % error)
+    probes = [prefix + name for prefix in ("", "memory_sync_probe/")
+              for name in (".lock/lease", ".tmp.memory_sync_probe", ".new.memory_sync_probe",
+                           ".rm.memory_sync_probe", ".lock.releasing.memory_sync_probe/lease")]
+    _, ignored = git(root, "check-ignore", "--no-index", "-z", "--stdin", check=False,
+                     input_data=("\0".join(probes) + "\0").encode())
+    if not set(rules) <= present or set(ignored.split("\0")) - {""} != set(probes):
+        tool_io.die("IgnoreMissing", "add these five lines to .gitignore and remove overriding exceptions",
+                    before="\n".join(rules) + "\n")
+    code, branch = git(root, "symbolic-ref", "--quiet", "--short", "HEAD", check=False)
+    if code:
+        tool_io.die("CommandFailed", "Git HEAD must be on a branch")
+    for marker in ("MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD"):
+        _, path = git(root, "rev-parse", "--git-path", marker)
+        if os.path.exists(os.path.join(root, path)):
+            tool_io.die("CommandFailed", "finish the existing Git operation before memory_sync")
+    return branch
+
+
+def status(root, branch):
+    _, changes = git(root, "status", "--porcelain=v1", "--untracked-files=all", "-z")
+    # A rename has two NUL fields but represents one changed file.
+    fields = changes.split("\0") if changes else []
+    count, index = 0, 0
+    while index < len(fields):
+        field = fields[index]
+        if field:
+            count += 1
+        index += 2 if field[:1] in ("R", "C") or field[1:2] in ("R", "C") else 1
+    code, _ = git(root, "show-ref", "--verify", "--quiet", "refs/remotes/origin/" + branch,
+                  check=False)
+    head_code, _ = git(root, "rev-parse", "--verify", "--quiet", "HEAD", check=False)
+    ahead, behind = None, None
+    if not code and not head_code:
+        _, counts = git(root, "rev-list", "--left-right", "--count",
+                        "HEAD...refs/remotes/origin/" + branch)
+        ahead, behind = map(int, counts.split())
+    return {"changed_files": count, "ahead": ahead, "behind": behind}
+
+
+def sync(root, branch):
+    git(root, "add", "-A")
+    code, _ = git(root, "diff", "--cached", "--quiet", check=False)
+    if code == 1:
+        stamp = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+        git(root, "commit", "-m", "memory_sync %s %s" % (socket.gethostname(), stamp))
+    elif code:
+        tool_io.die("CommandFailed", "cannot inspect staged changes")
+    code, _ = git(root, "pull", "--no-rebase", "-X", "ours", "origin", branch, check=False)
+    if code:
+        _, files = git(root, "diff", "--name-only", "--diff-filter=U", "-z")
+        if files:
+            git(root, "merge", "--abort")
+            tool_io.die("SyncConflict", "merge aborted; conflicting files: " + json.dumps([name for name in files.split("\0") if name]))
+        tool_io.die("CommandFailed", "git pull exited %d; inspect stderr" % code)
+    git(root, "push", "origin", "HEAD:refs/heads/" + branch)
+    return status(root, branch)
+
+
+signal.signal(signal.SIGTERM, on_signal)
+signal.signal(signal.SIGINT, on_signal)
+args = tool_io.arguments()
+op = args.get("op")
+if op not in ("status", "sync"):
+    tool_io.die("ArgumentsBad" if op is None else "OpUnknown", "op must be status or sync")
+TIMEOUT = args.get("timeout_s", 120)
+if isinstance(TIMEOUT, bool) or not isinstance(TIMEOUT, (float, int)) or not 0 < TIMEOUT <= 600:
+    tool_io.die("ArgumentsBad", "timeout_s must be positive and at most 600")
+root = memory_fs.memory_root(HERE)
+branch = preflight(root)
+print(json.dumps(status(root, branch) if op == "status" else sync(root, branch)))

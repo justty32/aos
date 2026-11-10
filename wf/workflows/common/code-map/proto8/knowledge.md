@@ -35,6 +35,7 @@
 | [`errors/common.md`](../../../../../proto8/knowledge/aos/errors/common.md) | Common error codes |
 | [`me/README.md`](../../../../../proto8/knowledge/aos/me/README.md) | Who am I |
 | [`me/self_tools.md`](../../../../../proto8/knowledge/aos/me/self_tools.md) | Changing your own toolbox |
+| [`memory.md`](../../../../../proto8/knowledge/aos/memory.md) | Writing shared knowledge |
 | [`rules.md`](../../../../../proto8/knowledge/aos/rules.md) | Boundaries |
 | [`status.md`](../../../../../proto8/knowledge/aos/status.md) | Reading state |
 | [`world.md`](../../../../../proto8/knowledge/aos/world.md) | How the pieces fit |

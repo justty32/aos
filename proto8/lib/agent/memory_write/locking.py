@@ -21,7 +21,8 @@ def run_lock(args, release=False):
             env.pop("AOS_CLOCK_INTERVAL", None)
             child = subprocess.Popen(["aos-lock"] + args, stdin=subprocess.DEVNULL,
                                      stdout=subprocess.PIPE, env=env)
-            out, _ = child.communicate(timeout=5)
+            timeout = 15 if args[0] == "acquire" else 5
+            out, _ = child.communicate(timeout=timeout)
             return child.returncode, out
         except subprocess.TimeoutExpired:
             child.kill()
@@ -29,7 +30,7 @@ def run_lock(args, release=False):
             if release:
                 tool_io.warn("aos-lock release did not finish within 5 seconds")
                 return None, b""
-            tool_io.die("LockFailed", "aos-lock did not finish within 5 seconds")
+            tool_io.die("LockFailed", "aos-lock did not finish within %d seconds" % timeout)
         finally:
             signal.pthread_sigmask(signal.SIG_SETMASK, old)
     except OSError as error:
@@ -113,7 +114,7 @@ def with_lock(folder, note):
     acquired = False
     held = HeldLock(folder)
     try:
-        code, _ = run_lock(["acquire", "--wait-ms", "3000", "--lease-cycles", "10",
+        code, _ = run_lock(["acquire", "--wait-ms", "10000", "--lease-cycles", "10",
                             "--note", note, folder + "/"])
         acquired = code == 0
         signal.pthread_sigmask(signal.SIG_SETMASK, old)

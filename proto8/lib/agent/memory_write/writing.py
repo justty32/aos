@@ -67,6 +67,8 @@ def write_text(target, raw, exclusive=False, mode=None):
                 os.link(temporary, target)
             except FileExistsError:
                 tool_io.die("NodeExists", "node already exists")
+            except OSError as error:
+                tool_io.die("WriteFailed", "%s (memory_write needs a file system with hard links and atomic rename)" % error)
         else:
             os.replace(temporary, target)
     finally:

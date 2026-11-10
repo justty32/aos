@@ -29,6 +29,8 @@ usage: memory < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the w
 Read a shared, hierarchical, read-only knowledge base: op read (a node's text and
 its children), ls (children only), find (nodes containing query and/or an exact tag).
 find needs a non-empty query or a string tag; when both are given, both must match.
+Title matches come first, then paths in alphabetical order (up to 20 results).
+ls/read report names ignored in the listed directory at the end.
 Tags come from JSON leaves or a directory's _tags.json (top-level tags string array).
 read path may append #/JSON/Pointer (RFC6901, ~0 = ~, ~1 = /); only .json
 leaf nodes support pointers. Returns the selected value as JSON, within max_bytes.
@@ -127,6 +129,9 @@ def op_read(root, segs, max_bytes, pointer=None):
     kids = child_lines(root, segs, kind, where)
     if kids:
         parts += ["", "children:"] + kids
+    ignored = memory_fs.ignored_count(kind, where)
+    if ignored:
+        parts.append("%d files ignored (names must be [a-z0-9_-])" % ignored)
     print("\n".join(parts))
 
 
@@ -135,6 +140,9 @@ def op_ls(root, segs):
     kids = child_lines(root, segs, kind, where)
     print("node: %s" % show(segs))
     print("\n".join(["children:"] + kids) if kids else "children: (none)")
+    ignored = memory_fs.ignored_count(kind, where)
+    if ignored:
+        print("%d files ignored (names must be [a-z0-9_-])" % ignored)
 
 
 def on_term(signum, frame):
@@ -222,14 +230,15 @@ def op_find(root, segs, query, tag):
         if tag is not None and tag not in node_tags(ck, cw):
             continue
         title, _ = title_summary(read_text(ck, cw, strict=False), cw if ck == "leaf" else "")
-        hits.append((show(s), title or (s[-1] if s else "/")))
-    hits.sort()
+        hits.append((show(s), title or (s[-1] if s else "/"),
+                     query is not None and query.casefold() in title.casefold()))
+    hits.sort(key=lambda hit: (not hit[2], hit[0]))
     print("node: %s" % show(segs))
     if not hits:
         print("matches: (none)")
         return
     print("matches:")
-    for p, t in hits[:FIND_LIMIT]:
+    for p, t, _ in hits[:FIND_LIMIT]:
         print("  %s  %s" % (p, t))
     if len(hits) > FIND_LIMIT:
         print("  … %d more" % (len(hits) - FIND_LIMIT))

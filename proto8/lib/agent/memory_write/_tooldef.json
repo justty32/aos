@@ -1,4 +1,4 @@
-{"description": "Change the shared knowledge base. add creates a node under an existing parent, promoting Markdown leaves only; JSON leaves cannot have child nodes. edit replaces a node's whole text; rm deletes one (recursive: true for a subtree). Start Markdown text with # Title; keep nodes under 2 KB and split when larger. Errors: NodeExists, NodeMissing, TextBad, LockFailed (retry once later), WriteFailed (read-only for you). Details: memory node memory.",
+{"description": "Change the shared knowledge base. add creates a node under an existing parent, promoting Markdown leaves only; JSON leaves cannot have child nodes. edit replaces a node's whole text; rm deletes one (recursive: true for a subtree). Start Markdown text with # Title; keep nodes under 2 KB and split when larger. Errors: NodeExists, NodeMissing, TextBad, LockFailed (retry once later), WriteFailed (read-only for you). Needs a file system with atomic mkdir, atomic rename and hard links; machines writing the same mounted folder at once must keep their clocks in sync. Details: memory node memory.",
   "parameters": {
     "type": "object",
     "properties": {

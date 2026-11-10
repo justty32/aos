@@ -20,9 +20,9 @@
 
 `memory read /` 會列出兩部分；`find` 跨捷徑查，命中保留 `aos/rules` 這種掛載路徑；`memory_export` 也跟捷徑，遇到繞回上層就停止。
 
-要讓 agent 寫自己的庫，另配 [memory_write](../lib/agent/memory_write/)；它沿用同一套找根，`add` 建葉、`edit` 整段換文、`rm` 刪節點（子樹要 `recursive: true`）。根本身唯讀，`rm` 根層捷徑回 `PathBad`，更深的捷徑只拆捷徑；出廠 `knowledge/aos` 仍由人寫，範本接線屬 W5。**掛出廠庫要由人設成唯讀**（11-07 晚審裁定 7 選推薦，[晚審 04](../../wf/workflows/refactor/reports/2026-11-07-晚審/04b-要使用者裁定-續.md)）：跑 agent 的通常就是 repo 主人，「沒權限＝唯讀」不成立，經捷徑 `edit aos/rules` 會真的改到 repo、污染每隻 agent 的 system prompt；所以把 `knowledge/aos` 掛進別的記憶根時，由人先設唯讀（`chmod -R a-w` 那份，或掛一份唯讀副本）。寫前自動拿資料夾鎖、寫後釋放，租約固定為牆鐘 10 秒，不沿用呼叫者的時鐘或時鐘間隔；Linux 權限決定能不能寫，PATH 需有 `aos-lock`。既有檔用暫存後原子替換並保留權限。
+要讓 agent 寫自己的庫，另配 [memory_write](../lib/agent/memory_write/)；它沿用同一套找根，`add` 建葉、`edit` 整段換文、`rm` 刪節點（子樹要 `recursive: true`）。根本身唯讀，`rm` 根層捷徑回 `PathBad`，更深的捷徑只拆捷徑；出廠 `knowledge/aos` 仍由人寫。兩份 agent 範本已備好 `tools/memory_write/`，`_memory.json` 捷徑指向 `../memory/_memory.json`，但不預先登記；要寫的 agent 再登記，並先將 `memory` 那份 `base` 指到有權寫的庫（相對、絕對或 `{"$env": "MY_KNOWLEDGE"}`）。寫入指引在 [aos/memory](aos/memory.md)。**掛出廠庫要由人設成唯讀**（11-07 晚審裁定 7 選推薦，[晚審 04](../../wf/workflows/refactor/reports/2026-11-07-晚審/04b-要使用者裁定-續.md)）：跑 agent 的通常就是 repo 主人，「沒權限＝唯讀」不成立，經捷徑 `edit aos/rules` 會真的改到 repo、污染每隻 agent 的 system prompt；所以把 `knowledge/aos` 掛進別的記憶根時，由人先設唯讀（`chmod -R a-w` 那份，或掛一份唯讀副本）。寫前自動拿資料夾鎖、寫後釋放，租約固定為牆鐘 10 秒，不沿用呼叫者的時鐘或時鐘間隔；Linux 權限決定能不能寫，PATH 需有 `aos-lock`。檔案系統須支援原子 mkdir、原子 rename 與 hard link；多台同時寫同一掛載資料夾時，時鐘須同步。既有檔用暫存後原子替換並保留權限。
 
-庫在 git 下時，`.gitignore` 加 `.lock/`、`.tmp.*`、`.rm.*`；葉升級的暫存資料夾另加 `.new.*`。不要把鎖與暫存檔當知識提交。
+庫在 git 下時，`.gitignore` 加 `.lock/`、`.tmp.*`、`.rm.*`；葉升級的暫存資料夾另加 `.new.*`；釋鎖的過渡目錄另加 `.lock.releasing.*`。不要把鎖與暫存檔當知識提交。
 
 ## 節點怎麼寫（給人改內容時看）
 
@@ -35,6 +35,8 @@
 
 | 資料夾 | 內容 | 給誰 |
 |---|---|---|
-| [aos/](aos/README.md) | aos 體系知識：一頁簡介＋八個詞＋五條規則（根）；`world`（心智模型與環境變數）、`me`（我是誰、`self_tools` 改自己的工具）、`agents`（生子 agent）、`brain`（問腦、endpoint 包、priority）、`status`（daemon 表與 phase）、`errors`（錯誤行 `程式: error: 代號 原因`、`warning:`、結束碼 10 與 `[exit code N]` 怎麼讀；子節點 `codes` 是代號結尾表（C-54 六種結尾＋`Internal`）、`common` 是最常碰到的代號）、`rules`（禁忌）、`cli`（給人與外部 agent 的指令：aos-agent、aos-daemon-ctl、aos-tools、aos-grow、aos-eca-screen；11-06 拆成資料夾，旗標位置、短名、`-y` 與確認、錯誤與重試各一節） | 跑在 aos 裡的 agent（Haiku／luna 級小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
+| [aos/](aos/README.md) | aos 體系知識：一頁簡介＋八個詞＋五條規則（根）；`world`（心智模型與環境變數）、`me`（我是誰、`self_tools` 改自己的工具）、`agents`（生子 agent）、`brain`（問腦、endpoint 包、priority）、`status`（daemon 表與 phase）、`errors`（錯誤行 `程式: error: 代號 原因`、`warning:`、結束碼 10 與 `[exit code N]` 怎麼讀；子節點 `codes` 是代號結尾表（C-54 六種結尾＋`Internal`）、`common` 是最常碰到的代號）、`memory`（何時寫知識、先 find、節點 ≤ 2 KB、LockFailed 重試），`rules`（禁忌）、`cli`（給人與外部 agent 的指令：aos-agent、aos-daemon-ctl、aos-tools、aos-grow、aos-eca-screen；11-06 拆成資料夾，旗標位置、短名、`-y` 與確認、錯誤與重試各一節） | 跑在 aos 裡的 agent（Haiku／luna 級小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
 
 試一下：`cd proto8 && echo '{"op":"read"}' | AOS_MEMORY=knowledge/aos python3 lib/agent/memory/_entry`。
+
+知識庫若是有 `origin` 的 git 工作樹，可選用 [memory_sync](../lib/agent/memory_sync/) 的 `status`／`sync` 在收工前後同步；核心執行流程不會代為同步。工具會檢查上述五條 ignore 規則；同段衝突保留後同步這台的版本，刪改衝突交給人處理。

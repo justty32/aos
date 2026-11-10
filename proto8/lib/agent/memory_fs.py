@@ -168,6 +168,25 @@ def children(kind, where):
     return sorted(found.items())
 
 
+def ignored_count(kind, where):
+    """Count directory entries omitted because their names cannot name nodes."""
+    if kind != "dir":
+        return 0
+    try:
+        entries = os.listdir(where)
+    except OSError as error:
+        die("ReadFailed", "cannot list %s: %s" % (where, error))
+    count = 0
+    for entry in entries:
+        if entry == "README.md":
+            continue
+        full = os.path.join(where, entry)
+        name = entry if os.path.isdir(full) else os.path.splitext(entry)[0]
+        if entry.startswith((".", "_")) or not SEGMENT.match(name):
+            count += 1
+    return count
+
+
 def node_or_die(root, segs):
     hit = locate(root, segs)
     if hit is not None:

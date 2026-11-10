@@ -35,6 +35,8 @@
 | [`tools.json`](../../../../../proto8/templates/agent-fsm/tools.json) | 設定（鍵：tools） |
 | [`tools/memory/`](../../../../../proto8/templates/agent-fsm/tools/memory/) | Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the chil… |
 | [`tools/memory/_memory.json`](../../../../../proto8/templates/agent-fsm/tools/memory/_memory.json) | 設定（鍵：base） |
+| [`tools/memory_write/`](../../../../../proto8/templates/agent-fsm/tools/memory_write/) | Change the shared knowledge base. add creates a node under an existing parent, promoting Markdown leaves only; JSON leaves cannot have child nodes. e… |
+| [`tools/memory_write/_memory.json`](../../../../../proto8/templates/agent-fsm/tools/memory_write/_memory.json) | → `../memory/_memory.json` |
 | [`wait.py`](../../../../../proto8/templates/agent-fsm/wait.py) | wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。 |
 
 ## `proto8/templates/daemon-root/`
@@ -60,6 +62,8 @@
 | [`tools.json`](../../../../../proto8/templates/eca-claude/tools.json) | 設定（鍵：tools） |
 | [`tools/memory/`](../../../../../proto8/templates/eca-claude/tools/memory/) | Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the chil… |
 | [`tools/memory/_memory.json`](../../../../../proto8/templates/eca-claude/tools/memory/_memory.json) | 設定（鍵：base） |
+| [`tools/memory_write/`](../../../../../proto8/templates/eca-claude/tools/memory_write/) | Change the shared knowledge base. add creates a node under an existing parent, promoting Markdown leaves only; JSON leaves cannot have child nodes. e… |
+| [`tools/memory_write/_memory.json`](../../../../../proto8/templates/eca-claude/tools/memory_write/_memory.json) | → `../memory/_memory.json` |
 
 ## `proto8/templates/judge-llm/`
 
