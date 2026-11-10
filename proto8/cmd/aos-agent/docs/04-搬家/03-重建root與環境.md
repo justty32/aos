@@ -11,7 +11,7 @@ flowchart TD
     F --> A[agent ann]
 ```
 
-五步是建帳號（可略）→包 root（可略）→`copy-out --relink .`（換機才要，11-10）→export→`aos-exec --stack <image> <定義>`。根是普通 daemon；沒有上層替它重起，正常運行由使用者顧。
+五步是建帳號（可略）→包 root（可略）→`copy-out --relink .`（只有用 anchor 寫法、換機才要；env 寫法改成每台設一次 `AOS_PROTO8`，11-10）→export→`aos-exec --stack <image> <定義>`。根是普通 daemon；沒有上層替它重起，正常運行由使用者顧。
 
 <details><summary>三層佈局與啟動指令</summary>
 
@@ -57,11 +57,12 @@ AOS_CLOCK=${AOS_STACK}/clock
 
 1. 建帳號可略；若用了 `limits.user`，先由人把帳號、stack／信箱寫入權限配好。
 2. 包 root 可略；家機有 systemd 委派時可用下方 scope。
-3. 換了機器或 repo 位置（git pull、cp 到別台）時，先在 image 根重指本機錨點：`copy-out --relink .`（`proto8/templates/copy-out`；`install.sh` 已連進 PATH；把 `.aos-proto8` 捷徑指到這台的 repo，別的檔不寫、冪等；同機 `cp -a` 可略）。
+3. 用 anchor 寫法（`copy-out --proto8 anchor`／`aos-tools add --anchor`）的，換了機器或 repo 位置（git pull、cp 到別台）時，先在 image 根重指本機錨點（預設的 env 寫法不用這步，改在第 4 步 export `AOS_PROTO8`）：`copy-out --relink .`（`proto8/templates/copy-out`；`install.sh` 已連進 PATH；把 `.aos-proto8` 捷徑指到這台的 repo，別的檔不寫、冪等；同機 `cp -a` 可略）。
 4. 在 image 根 export 這台的外接位置：
 
 ```sh
 export AOS_LLM_KERNEL="$PWD/llm_image"
+export AOS_PROTO8="$HOME/repo/aos-tools/proto8"   # 這台 proto8 的位置；copy-out 預設的 env 寫法靠它（11-10）
 unset AOS_KERNEL AOS_DAEMON AOS_CLOCK   # 殼裡留著 AOS_CLOCK 的話，根的 .env 不會蓋它
 # 有判官才另 export AOS_KERNEL；端點需要的金鑰在此殼 export。
 ```

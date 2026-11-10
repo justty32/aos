@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
-# copy-out - 把範本抄到 repo 外成一隻新 agent，指回 repo 的路徑一律寫成經本機錨點捷徑 .aos-proto8 的相對路徑；--relink 換機後重指錨點（11-10 坑-73）。
+# copy-out - 把範本（templates/<名> 或 kernel/<名>）抄到 repo 外，指回 repo 的路徑照 --proto8 寫法改寫（預設 env：{"$env":"AOS_PROTO8",…}）；--relink 重指錨點。
 # 放在 templates/ 底下、不在範本裡：範本資料夾整份會被抄進每隻 agent，腳本放裡面就會跟著被抄走。
-# repo 的位置從自己的 realpath 往上推（不靠環境變數）：範本＝<本檔所在資料夾>/<範本名>，proto8＝本檔所在資料夾的上一層。
-# 錨點（使用者 11-10「盡量支援相對路徑」「會頻繁遷移，透過github」）：<資料夾>/.aos-proto8 是指到這台 repo proto8/ 的絕對捷徑，只在這台、
-#   不進 git（agent 資料夾由這支寫 .gitignore 擋；stack 裡由 cmd/aos-agent/stack.gitignore 的 **/.* 擋）。會進 git 的檔只寫
-#   「經過 .aos-proto8 的相對路徑」，兩台內容一字不差；換機 pull 後跑 copy-out --relink ROOT 把錨點指到新機的 repo。
-# 抄的時候改的地方（等於 templates/docs/02-agent-fsm.md 那段手動 sh）——範本裡每個相對路徑照「它在範本原位」解開，
-#   落在範本裡＝照舊相對；落在 repo 的 proto8/ 裡（lib/、knowledge/、別的範本）＝改成經 DEST/.aos-proto8 的相對路徑；都不是＝照舊、印 warning：
-#   - interfaces.json 宣告的 aos-agent.tools 登記檔（沒宣告＝tools.json，有才看）的 tools.*.path；
-#   - 單子 _entry（JSON 陣列，或物件的 argv）第一個元素，帶 / 的相對路徑才算（範本根的 _entry 是 aos-agent、不動）；
-#   - 各處 _memory.json 的 base；每個相對捷徑；
-#   - 任一 JSON 裡的 {"$env": "AOS_CD", "$path": 相對}（reviewer 的 fsm.json 借 ../agent-fsm/ 的格；AOS_CD＝這隻的根）。
+# repo 的位置從自己的 realpath 往上推（不靠環境變數）：範本＝<本檔所在資料夾>/<範本名> 或 proto8/kernel/<名>，proto8＝本檔所在資料夾的上一層。
+# 寫法（11-10 TC，使用者「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」「兩台各自設一次...不要限制只設一次」）：
+#   env（預設）＝{"$env": "AOS_PROTO8", "$path": "/<proto8 底下>"}，每台設一次 AOS_PROTO8；anchor＝經 DEST/.aos-proto8 的相對路徑（11-10 坑-73，
+#   錨點只是可選的一種）；absolute＝這台 proto8 的絕對路徑；relative＝從那個檔的資料夾到 proto8 的相對路徑。改哪些地方、捷徑怎麼辦
+#   都在共用模組 lib/agent/copy_def.py（agents new 也用它）。抄完多印一行這隻需要本機備好什麼。
 # 不抄 __pycache__。目的已存在（含斷掉的捷徑）＝DestExists、不蓋；半路失敗＝刪掉這次建的目的資料夾再報錯。
-# --relink ROOT…：只建或重指錨點，不寫別的檔（冪等；「開工接回」對整個 image 根呼叫）。錨點位置從 ROOT 底下遞迴找：JSON 檔與 _entry
-#   裡經過 .aos-proto8 的相對字串（相對那個檔的資料夾）、目標經過 .aos-proto8 的相對捷徑，加上已經在的 .aos-proto8 捷徑；不跟捷徑往下走，不出 ROOT。
+# --relink ROOT…：只建或重指錨點，不寫別的檔（冪等）。錨點位置從 ROOT 底下遞迴找：JSON 檔與 _entry 裡經過 .aos-proto8 的相對字串
+#   （相對那個檔的資料夾）、目標經過 .aos-proto8 的相對捷徑，加上已經在的 .aos-proto8 捷徑；不跟捷徑往下走，不出 ROOT。
+#   已經指得到一份 proto8 的錨點、使用者自己放的相對錨點都不改寫（11-10 TC）；只重指「指不到 proto8 的絕對捷徑」與建沒有的。
 #   stdout：新建／重指的每個一行，已對的只計數；最後一行 summary。一個壞了提醒一行、其餘照做，最後錯誤行退 1；一個錨都沒有＝退 0。
 # 錯（stderr 一行 `copy-out: error: 代號 原因`、退 1）：ArgumentsBad、FlagUnknown、TemplateMissing、TemplateBad、DestExists、WriteFailed、
 #   PathMissing（--relink 的 ROOT 不是資料夾）、AnchorBad（該放錨點的地方已有別的東西，不蓋）。
@@ -23,13 +19,14 @@ from pathlib import Path
 _import_paths = []
 for _parent in Path(__file__).resolve().parents:
     if (_parent / "py" / "aos_flags.py").is_file():
-        _import_paths.append(str(_parent / "py"))
+        _import_paths += [str(_parent / "py"), str(_parent / "lib")]
         break
 sys.path[:0] = _import_paths
 try:
     import aos_flags  # noqa: E402
+    from agent import copy_def  # noqa: E402
 except ModuleNotFoundError as _error:
-    if _error.name not in ("aos_flags", "tool_io"):
+    if _error.name not in ("aos_flags", "tool_io", "agent", "agent.copy_def"):
         raise
     print("copy-out: error: ModuleMissing required Python module %s is unavailable" % _error.name, file=sys.stderr)
     sys.exit(1)
@@ -40,33 +37,46 @@ finally:
 PROG = "copy-out"
 HERE = Path(__file__).resolve().parent             # proto8/templates
 PROTO = str(HERE.parent)                           # proto8（這台）
-ANCHOR = ".aos-proto8"
+ANCHOR = copy_def.ANCHOR
 DEFAULT = "agent-fsm"
-USAGE = "(usage: copy-out [TEMPLATE] DEST | copy-out --relink ROOT...)"
+USAGE = "(usage: copy-out [--proto8 MODE] [TEMPLATE] DEST | copy-out --relink ROOT...)"
 HELP = """\
-copy-out - copy an agent template out of the repo, pointing at the repo through a local anchor
+copy-out - copy an agent or kernel template out of the repo
 
-usage: copy-out [TEMPLATE] DEST
+usage: copy-out [--proto8 MODE] [TEMPLATE] DEST
        copy-out --relink ROOT...
 
-TEMPLATE is a folder name under proto8/templates/ (default: agent-fsm); DEST is the new
-agent folder (relative to cwd) and must not exist yet. Copies the whole template (without
-__pycache__). Paths that pointed from the template into the repo become relative paths
-through DEST/.aos-proto8, a symlink to this machine's proto8/ folder; paths that stay
-inside the template stay as they were. Changed: tools.*.path in the tools registry
-(interfaces.json aos-agent.tools, default tools.json), the first element of one-shot
-_entry files when it is a path, "base" in every _memory.json, relative symlinks, and
-{"$env": "AOS_CD", "$path": "../x"} in any JSON file. DEST/.gitignore gets /.aos-proto8,
-so files that go into git hold no machine path and are identical on every machine.
-Prints one line: copied TEMPLATE -> DEST (N paths through .aos-proto8).
+TEMPLATE is a folder name under proto8/templates/ (default: agent-fsm) or kernel/NAME
+for a folder under proto8/kernel/ (e.g. kernel/llm-kernel); DEST is the new folder
+(relative to cwd) and must not exist yet. Copies the whole template (without
+__pycache__). Paths that point from the template into the repo's proto8/ are rewritten
+in the form MODE picks; paths that stay inside the template stay as they were.
 
---relink: after moving to another machine (or the repo moved), point every .aos-proto8
-anchor under each ROOT (recursively; give the whole image root) at this machine's
-proto8/. Anchors are found from JSON / _entry strings and symlinks under ROOT that go
-through .aos-proto8, plus existing anchors; symlinks are not followed, so the repo
-behind an anchor is never scanned. Writes nothing else (idempotent). Prints one line per
-anchor it creates or re-points ("linked PATH -> PROTO8", "relinked PATH -> PROTO8");
-anchors that were already right are only counted. The last stdout line is always
+--proto8 MODE (how files point at proto8; nothing resolved is ever written back):
+  env       {"$env": "AOS_PROTO8", "$path": "/<path in proto8>"} (default). Set
+            AOS_PROTO8 once per machine to that machine's proto8 folder; files are
+            identical on every machine and no link is needed.
+  anchor    a relative path through DEST/.aos-proto8, a symlink to this machine's
+            proto8/ that copy-out creates (DEST/.gitignore gets /.aos-proto8; after a
+            move run copy-out --relink, or make the link yourself).
+  absolute  this machine's proto8 path (every machine keeps proto8 there).
+  relative  a path from each file's folder to proto8 (same relative layout everywhere).
+Rewritten: relative path strings in any JSON file (and JSON _entry) that reach into
+proto8 (tools.*.path, one-shot argv, _memory.json base, kernel.json exec and
+endpoints...), {"$env": "AOS_CD", "$path": "../x"}, and relative symlinks. A symlink
+cannot hold an environment variable, so in env mode a symlinked _entry becomes the
+equivalent JSON one-shot, a symlink to a file becomes a copy of that file, and a
+symlink to a folder falls back to an absolute symlink (one warning each).
+Prints: copied TEMPLATE -> DEST (N paths written as MODE), then one line saying what
+this copy needs on the machine (e.g. needs AOS_PROTO8 set to this machine's proto8
+folder).
+
+--relink: create or re-point every .aos-proto8 anchor under each ROOT (recursively) at
+this machine's proto8/. Anchors are found from JSON / _entry strings and symlinks under
+ROOT that go through .aos-proto8, plus existing anchors; symlinks are not followed.
+Anchors that already reach a proto8 folder, and relative anchors you made yourself,
+are left alone. Writes nothing else (idempotent). Prints one line per anchor it creates
+or re-points ("linked PATH -> PROTO8", "relinked PATH -> PROTO8"); the last line is
   done: N anchors (linked A, relinked B, already C), F failed, under R root(s)
 Exit 0 when nothing failed, including when no anchor was found (N = 0). Exit 1 when a
 ROOT is not a folder (PathMissing) or an anchor could not be made (AnchorBad: something
@@ -90,27 +100,15 @@ def inside(path, root):
     return os.path.commonpath([path, root]) == root
 
 
-def load(path):
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError) as e:
-        raise Fail("TemplateBad", "cannot read %s as JSON: %s" % (path, e))
-
-
-def save(path, value):
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(json.dumps(value, ensure_ascii=False) + "\n")
-    except OSError as e:
-        raise Fail("WriteFailed", "cannot write %s: %s" % (path, e))
-
-
 def make_anchor(folder):
-    """folder/.aos-proto8 → PROTO；回 'linked'／'relinked'／'already'。別的東西佔著＝AnchorBad。"""
+    """folder/.aos-proto8 → PROTO；回 'linked'／'relinked'／'already'。已指得到一份 proto8、或使用者自己放的相對捷徑＝already（不改寫，
+    相對但指不到的提醒一行）；別的東西佔著＝AnchorBad。"""
     link = os.path.join(folder, ANCHOR)
     if os.path.islink(link):
-        if os.readlink(link) == PROTO:
+        if copy_def.is_proto8(link):
+            return "already"
+        if not os.path.isabs(os.readlink(link)):
+            aos_flags.warn(PROG, "%s is your relative anchor (-> %s) and reaches no proto8 folder; left as is" % (link, os.readlink(link)))
             return "already"
         state = "relinked"
     elif os.path.lexists(link):
@@ -132,93 +130,15 @@ def make_anchor(folder):
 
 # ---- 抄出 ----
 
-class Copy:
-    def __init__(self, src, dest):
-        self.src, self.dest, self.count = str(src), str(dest), 0
-
-    def fix(self, src_dir, rel):
-        """rel 從範本裡 src_dir 解開：範本裡＝None（不改）；repo 裡＝經 DEST/.aos-proto8、相對 src_dir 對應的 DEST 資料夾。"""
-        if not isinstance(rel, str) or not rel or os.path.isabs(rel):
-            return None
-        full = os.path.normpath(os.path.join(src_dir, rel))
-        if inside(full, self.src):
-            return None
-        if not inside(full, PROTO):
-            aos_flags.warn(PROG, "%s in %s points outside the repo; left as is" % (rel, src_dir))
-            return None
-        through = os.path.join(self.dest, ANCHOR, os.path.relpath(full, PROTO))
-        here = os.path.join(self.dest, os.path.relpath(src_dir, self.src))
-        self.count += 1
-        return os.path.relpath(through, here)
-
-    def directives(self, value):
-        if isinstance(value, list):
-            return [self.directives(v) for v in value]
-        if not isinstance(value, dict):
-            return value
-        if set(value) == {"$env", "$path"} and value["$env"] == "AOS_CD":
-            new = self.fix(self.src, value["$path"])
-            if new:
-                return {"$env": "AOS_CD", "$path": new}
-        return {k: self.directives(v) for k, v in value.items()}
-
-    def run(self):
-        src, dest = Path(self.src), Path(self.dest)
-        interfaces = src / "interfaces.json"
-        reg = "tools.json"
-        if interfaces.is_file():
-            declared = load(interfaces)
-            agent = declared.get("aos-agent") if isinstance(declared, dict) else None
-            if isinstance(agent, dict) and isinstance(agent.get("tools"), str):
-                reg = agent["tools"]
-        if (src / reg).is_file():
-            data = load(src / reg)
-            tools = data.get("tools") if isinstance(data, dict) else None
-            changed = False
-            if isinstance(tools, dict):
-                for entry in tools.values():
-                    new = self.fix(str((src / reg).parent), entry.get("path")) if isinstance(entry, dict) else None
-                    if new:
-                        entry["path"], changed = new, True
-            if changed:
-                save(dest / reg, data)
-        for directory, dirs, files in os.walk(src):
-            links = [d for d in dirs if (Path(directory) / d).is_symlink()]   # 指到資料夾的捷徑：不往下走、當捷徑改
-            dirs[:] = [d for d in dirs if d != "__pycache__" and d not in links]
-            rel_dir = Path(directory).relative_to(src)
-            for name in files + links:
-                s, out = Path(directory) / name, dest / rel_dir / name
-                if s.is_symlink():
-                    new = self.fix(directory, os.readlink(s))
-                    if new:
-                        try:
-                            os.remove(out)
-                            os.symlink(new, out)
-                        except OSError as e:
-                            raise Fail("WriteFailed", "cannot relink %s: %s" % (out, e))
-                    continue
-                if name == "_entry":
-                    data = load(s) if s.read_bytes()[:1] in (b"[", b"{") else None
-                    argv = data if isinstance(data, list) else data.get("argv") if isinstance(data, dict) else None
-                    if isinstance(argv, list) and argv and isinstance(argv[0], str) and "/" in argv[0]:
-                        new = self.fix(directory, argv[0])
-                        if new:
-                            argv[0] = new
-                            save(out, data)
-                elif name == "_memory.json":
-                    data = load(s)
-                    new = self.fix(directory, data.get("base")) if isinstance(data, dict) else None
-                    if new:
-                        data["base"] = new
-                        save(out, data)
-                elif name.endswith(".json") and not (rel_dir == Path(".") and name == reg):
-                    if '"$path"' in s.read_text(encoding="utf-8"):
-                        before = self.count
-                        data = self.directives(load(s))
-                        if self.count != before:
-                            save(out, data)
-        make_anchor(self.dest)
-        ignore = dest / ".gitignore"
+def copy_template(src, dest, mode):
+    """src 已整份抄到 dest；照 mode 改寫指進 proto8 的路徑。回改了幾個。"""
+    try:
+        n = copy_def.Rewriter(src, dest, dest, mode, warn=lambda s: aos_flags.warn(PROG, s), proto=PROTO).run()
+    except copy_def.CopyFail as e:
+        raise Fail(e.code, str(e))
+    if mode == "anchor":
+        make_anchor(str(dest))
+        ignore = Path(dest) / ".gitignore"
         line = "/%s\n" % ANCHOR
         try:
             old = ignore.read_text(encoding="utf-8") if ignore.exists() else ""
@@ -226,7 +146,7 @@ class Copy:
                 ignore.write_text(old + ("" if not old or old.endswith("\n") else "\n") + line, encoding="utf-8")
         except OSError as e:
             raise Fail("WriteFailed", "cannot write %s: %s" % (ignore, e))
-        return self.count
+    return n
 
 
 # ---- 重指錨點 ----
@@ -304,12 +224,29 @@ def relink(root, tally):
             print("%s %s -> %s" % (state, os.path.join(folder, ANCHOR), PROTO))
 
 
+def template_dir(template):
+    """TEMPLATE → 範本資料夾：templates/<名>，或 kernel/<名>（proto8/kernel 底下）；範本＝有 _entry 的資料夾（docs/ 不算）。"""
+    parts = template.split("/")
+    if len(parts) == 2 and parts[0] == "kernel":
+        base, name = HERE.parent / "kernel", parts[1]
+    elif len(parts) == 1:
+        base, name = HERE, parts[0]
+    else:
+        base, name = None, ""
+    if base is None or name in ("", ".", "..") or not (base / name / "_entry").is_file():
+        aos_flags.die(PROG, "TemplateMissing", "no template folder %s under %s (or kernel/NAME under %s)"
+                      % (template, HERE, HERE.parent / "kernel"))
+    return (base / name).resolve()
+
+
 def main():
     try:
-        opts, rest = aos_flags.parse(sys.argv[1:], {}, {"--relink": "relink"}, help=HELP)
+        opts, rest = aos_flags.parse(sys.argv[1:], {"--proto8": "proto8"}, {"--relink": "relink"}, help=HELP)
     except aos_flags.Error as e:
         aos_flags.die(PROG, e.code, "%s %s" % (e, USAGE))
     if opts.get("relink"):
+        if "proto8" in opts:
+            aos_flags.die(PROG, "ArgumentsBad", "--relink takes no --proto8 %s" % USAGE)
         if not rest:
             aos_flags.die(PROG, "ArgumentsBad", "--relink needs at least one ROOT %s" % USAGE)
         tally = {"linked": 0, "relinked": 0, "already": 0, "bad": []}
@@ -322,27 +259,28 @@ def main():
         if bad:
             aos_flags.die(PROG, bad[0][0], "%d not fixed, first: %s (see the warnings above)" % (len(bad), bad[0][1]))
         return
+    mode = opts.get("proto8", "env")
+    if mode not in copy_def.MODES:
+        aos_flags.die(PROG, "ArgumentsBad", "--proto8 must be one of %s (got %r) %s" % (", ".join(copy_def.MODES), mode, USAGE))
     if not rest or len(rest) > 2:
         aos_flags.die(PROG, "ArgumentsBad", "%s %s" % ("missing DEST" if not rest else "too many arguments", USAGE))
     template, dest = (DEFAULT, rest[0]) if len(rest) == 1 else rest
-    src = HERE / template
-    if "/" in template or template in ("", ".", "..") or not (src / "_entry").is_file():   # 範本＝有 _entry 的資料夾（docs/ 不算）
-        aos_flags.die(PROG, "TemplateMissing", "no template folder %s under %s" % (template, HERE))
-    src = src.resolve()
+    src = template_dir(template)
     dest = Path(os.path.abspath(dest))
     if os.path.lexists(dest):
-        aos_flags.die(PROG, "DestExists", "%s already exists; pick a new folder (nothing is overwritten; after a move use --relink)" % dest)
+        aos_flags.die(PROG, "DestExists", "%s already exists; pick a new folder (nothing is overwritten)" % dest)
     try:
         shutil.copytree(src, dest, symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
     except (OSError, shutil.Error) as e:
         shutil.rmtree(dest, ignore_errors=True)
         aos_flags.die(PROG, "WriteFailed", "cannot copy %s to %s: %s" % (src, dest, e))
     try:
-        n = Copy(src, dest).run()
+        n = copy_template(src, dest, mode)
     except Fail as e:
         shutil.rmtree(dest, ignore_errors=True)
         aos_flags.die(PROG, e.code, e)
-    print("copied %s -> %s (%d paths through %s)" % (template, dest, n, ANCHOR))
+    print("copied %s -> %s (%d paths written as %s)" % (template, dest, n, mode))
+    print(copy_def.needs(mode, str(dest), PROTO))
 
 
 aos_flags.run(main)

@@ -62,10 +62,10 @@ git reflog expire --expire=now --all && git gc --prune=now
 git fetch origin main
 git reset --hard origin/main
 find ws/.stack/ -type f -path '*/think/request.json' -delete
-copy-out --relink .        # = proto8/templates/copy-out；把每個 .aos-proto8 錨點指到這台的 repo（11-10）
+copy-out --relink .        # 只有用 anchor 寫法時才要：把每個 .aos-proto8 錨點指到這台的 repo（11-10；env 寫法改設 AOS_PROTO8）
 ```
 
-**錨點 `.aos-proto8`**（11-10 坑-73、坑-92，使用者裁「每個資料夾放一條不進 git 的捷徑 .aos-proto8 指向這台的 repo」）：`copy-out` 抄出的 agent 定義與 `aos-tools add` 加過 repo 工具的 stack，會進 git 的檔只寫經過 `.aos-proto8` 的相對路徑，捷徑本身是這台的絕對路徑、不進 git（stack 由 `stack.gitignore` 的 `**/.*` 擋、定義由 copy-out 寫的 `.gitignore` 擋）。所以 pull 後、起根前在 image 根跑一次 `copy-out --relink .`（可給多個根、遞迴、冪等；已對的不動，最後一行 summary，有失敗退 1）；忘了跑＝第一題 `PathMissing … run templates/copy-out --relink`。每台另要先跑過一次 `proto8/install.sh`（PATH 與 `aos-proto8.pth`）。細節在 [templates/docs/02](../../../../templates/docs/02-agent-fsm.md)。
+**錨點 `.aos-proto8`**（11-10 坑-73、坑-92，使用者裁「每個資料夾放一條不進 git 的捷徑 .aos-proto8 指向這台的 repo」）：`copy-out` 抄出的 agent 定義與 `aos-tools add` 加過 repo 工具的 stack，會進 git 的檔只寫經過 `.aos-proto8` 的相對路徑，捷徑本身是這台的絕對路徑、不進 git（stack 由 `stack.gitignore` 的 `**/.*` 擋、定義由 copy-out 寫的 `.gitignore` 擋）。所以用這種寫法時，pull 後、起根前在 image 根跑一次 `copy-out --relink .`（可給多個根、遞迴、冪等；已指得到 proto8 的與使用者自己放的相對錨點不動，最後一行 summary，有失敗退 1）；忘了跑＝第一題 `PathMissing … run templates/copy-out --relink`。**11-10 午 TC 改**：錨點只是可選的一種準備方式——`copy-out` 預設寫 `{"$env": "AOS_PROTO8", …}`（每台設一次 `AOS_PROTO8`，不用跑任何指令），也可選絕對或相對寫法；`aos-tools add` 只有 `--anchor` 時才經錨點（[templates/docs/02](../../../../templates/docs/02-agent-fsm.md)）。每台另要先跑過一次 `proto8/install.sh`（PATH 與 `aos-proto8.pth`）。細節在 [templates/docs/02](../../../../templates/docs/02-agent-fsm.md)。
 
 只刪指定 stack 裡各個 `think/request.json`，避免沿用上一份 image 的 request；其他被忽略的 log、快取與暫存都留著，其他 daemon stack 也各做一次（11-07 使用者裁定 sol 審查 #20-3）。歸檔信 `archive/` 跟著 image 走；stderr、live、turns、transcripts、計數器 `counter_*.txt`（11-09）等紀錄仍只留原機（11-07 使用者裁定 sol 審查 #20-1、#20-2）。
 

@@ -157,9 +157,20 @@ def registry(cfg, tool_dir, path, files):
     給了 tools_flags 卻沒有登記檔＝CfgBad（寫什麼就做什麼，不靜靜吞掉）。"""
     base = os.path.abspath(tool_dir)
     if "tools" in cfg:
-        if not isinstance(cfg["tools"], str) or not cfg["tools"]:
+        tools = cfg["tools"]
+        if isinstance(tools, dict):   # 11-10 two-machines TC：寫指示詞（例 {"$env": "X", "$path": "tools.json"}）＝每次讀才解、不寫回；解完照字串的規則
+            sys.path.insert(0, _lib)  # directive_value 跟 tool_io 同在 lib/（直接執行此檔時 lib 不在 sys.path）
+            try:
+                from directive_value import resolve_path
+            finally:
+                sys.path.pop(0)
+            try:
+                tools = resolve_path(tools, path, "tools")
+            except tool_io.Error as e:
+                die(e.code, str(e))
+        if not isinstance(tools, str) or not tools:
             die("CfgBad", "%s: tools must be the path of a registry file (a non-empty string)" % path)
-        reg = os.path.normpath(os.path.join(base, cfg["tools"]))
+        reg = os.path.normpath(os.path.join(base, tools))
         if not os.path.isfile(reg):
             die("ToolsMissing", "%s: registry file named by tools not found: %s" % (path, reg))
         return reg

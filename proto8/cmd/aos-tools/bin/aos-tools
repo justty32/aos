@@ -5,7 +5,8 @@
 aos agent 想問腦之前先 `aos-tools ls --json` 拿工具清單，腦要叫工具時 `aos-tools call 名`；
 claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的翻譯櫃台）。
 
-    aos-tools [--file F] add [--override] [--name N] [--no-cache] [--env-file FILE] [--envs K=V]... XXX   登記 XXX（檔或資料夾；相對路徑從 cwd 算），印 added NAME -> 絕對路徑
+    aos-tools [--file F] add [--override] [--name N] [--no-cache] [--anchor] [--env-file FILE] [--envs K=V]... XXX|--path-json JSON
+                                                           登記 XXX（檔或資料夾；相對路徑從 cwd 算），印 added NAME -> 絕對路徑
     aos-tools [--file F] rm XXX                            每個拿掉的名字印 removed NAME；拿掉（XXX＝工具名；不是登記過的名字就當路徑，拿掉指到那裡的）
     aos-tools [--file F] ls [--json]                       列：一行一個「名字 TAB 種類 TAB 路徑」；--json＝一行 JSON 陣列
     aos-tools [--file F] get XXX                           一個工具一行 JSON：name、kind、path、tooldef、metainfo（有才給）
@@ -13,7 +14,10 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
 
 註冊檔：--file ＞ ./tools.json。長這樣：{"tools": {"名": {"path": "/絕對/路徑"}, …}}；沒有這份檔＝沒登記任何工具。
   aos 讀的 JSON 都解指示詞（N-45）：檔裡有 $ref／$env 就交給 aos-json 解（`$ref` 陣列＝把註冊檔拆成好幾份），
-  改的時候 aos-json set／del --follow 穿過 $ref 改被參照的那份。add 未用 --overlay 時寫絕對路徑（那資料夾有 copy-out 建的錨點 .aos-proto8、XXX 又在這份 repo 的 proto8 裡＝存 .aos-proto8/…）；有 --overlay 時，XXX 在覆蓋層所在資料夾裡存相對它的路徑、在這份 repo 的 proto8 裡存 .aos-proto8/…（並在覆蓋層資料夾建錨點捷徑 .aos-proto8 → 這台 proto8，不進 git；換機後 copy-out --relink）、其他外面的存相對（11-10 坑-92）；手寫的相對路徑從這份檔的資料夾算（範本搬家不斷）。
+  改的時候 aos-json set／del --follow 穿過 $ref 改被參照的那份。add 存路徑保留使用者的寫法（11-10 TC，使用者「要用相對位置、絕對位置、環境變數指定都可」）：
+  給絕對＝存絕對；給相對（從 cwd 算）＝存成相對「寫進的那份檔（登記檔或覆蓋層）的資料夾」的相對；--path-json JSON＝原樣存（字串或指示詞，例
+  '{"$env":"AOS_PROTO8","$path":"/lib/base/bash"}'；現在解一次只為了驗與取名，解出來的值不寫回）；--anchor（使用者明講才做）＝目標在這份 repo 的
+  proto8 裡存 .aos-proto8/…，那資料夾沒錨點就建（指這台 proto8；已有、指得到一份 proto8 的錨點不改寫）。手寫的相對路徑從這份檔的資料夾算。
 三種登記對象（種類照 aos-exec 認法，N-61：資料夾；檔有 +x＝可執行檔；檔沒 +x＝JSON）：
   dir   資料夾裡有 _tooldef.json；_metainfo.json 有就一起給（11-04 起只認帶 .json 的：_ 開頭的資料檔一律帶副檔名，
         不帶的 _tooldef／_metainfo 不認——沒 _tooldef.json＝ToolDefMissing）。叫＝aos-exec 資料夾，arguments 進 stdin。
@@ -26,10 +30,11 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
         --override 重登記時沒帶 --no-cache＝回到有快取（整項重寫）。
         叫＝aos-exec 檔，arguments 原樣從 stdin 進；三種工具都不要求呼叫方設 AOS_STACK。
 --overlay O（11-05 portable-flow 步 4，使用者「tools只存差異那塊可以先做」）：F 疊一層覆蓋層 O 再用（aos-agent tools 的「這隻自己加減的」，
-  O＝<stack>/tools.json）。O 長這樣：{"add": {"名": {"path": 相對 O 所在資料夾的路徑（repo 裡的＝.aos-proto8/…）, "cache"?: …}}, "rm": ["名", …]}（兩格都可省）；
+  O＝<stack>/tools.json）。O 長這樣：{"add": {"名": {"path": 絕對／相對 O 所在資料夾／指示詞, "cache"?: …}}, "rm": ["名", …]}（兩格都可省）；
   O 不在＝沒有覆蓋（就是 F）。疊法：F 的工具先拿掉 rm 裡的名字（F 裡沒有的＝忽略），再放上 add 的（同名蓋過 F）。
-  有 --overlay 時 add／rm 只寫 O、不碰 F：add＝寫進 O 的 add（path 一律存相對 O 的資料夾；repo 裡的經錨點 .aos-proto8）、名字從 rm 拿掉；
-  rm＝從 O 的 add 拿掉、F 裡有的名字記進 O 的 rm。撞名照常（看疊好的那份）。O 不解指示詞；O 寫壞＝RegistryBad。
+  有 --overlay 時 add／rm 只寫 O、不碰 F：add＝寫進 O 的 add（path 寫法同上）、名字從 rm 拿掉；
+  rm＝從 O 的 add 拿掉、F 裡有的名字記進 O 的 rm。撞名照常（看疊好的那份）。O 跟 F 一樣解指示詞（path、env 都收；11-10 TC）；O 寫壞＝RegistryBad。
+  路徑指不到＝PathMissing，訊息帶工具名、解出的路徑與它來自哪份檔的哪一格（檔#/tools/名/path 或 檔#/add/名/path）。
 登記格選填 env（11-05 晚 agent-knowledge R1）：{"名": {"path": …, "env": {"AOS_MEMORY": "/x/knowledge/aos"}}}，call 時合進那次呼叫的環境
   （蓋過外面同名的）；值照字面用、不當路徑解（C-56；要相對就靠讀它的工具自己的規則，例 memory 的 AOS_MEMORY 相對 $AOS_DAEMON）。
   鍵只收 [A-Za-z_][A-Za-z0-9_]*、值只收字串（不含 NUL，11-05 晚邊緣測試：原本 call 時吐 traceback），別的＝RegistryBad。add --env-file FILE 在登記當下讀 dotenv 基礎子集，再用 --envs K=V（可重複）蓋過，合成 env 存檔；檔相對 add 的 cwd、call 不重讀。ls／get 不印 env。
@@ -82,15 +87,17 @@ HELPS = {
     "add": """aos-tools add - register a tool in the registry or overlay
 
 usage: aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-cache]
-               [--env-file FILE] [--envs K=V]... XXX
+               [--anchor] [--env-file FILE] [--envs K=V]... (XXX | --path-json JSON)
 
 XXX is a folder, JSON file or executable, relative to cwd. Prints added NAME -> PATH
-with an absolute path. With --overlay, the stored path is relative to the overlay file's
-directory; a target inside this repo's proto8/ is stored as .aos-proto8/<path in proto8>
-and the overlay directory gets .aos-proto8, a symlink to this machine's proto8/ (keep it
-out of git; after a move run templates/copy-out --relink). Without --overlay the stored
-path is absolute, except .aos-proto8/... when the registry's directory already has that
-anchor (an agent made by copy-out). No stored path holds this machine's home or repo.
+with an absolute path. The stored path keeps your form: an absolute XXX is stored
+absolute; a relative XXX is stored relative to the directory of the file written (the
+overlay with --overlay, else the registry). --path-json stores JSON as given: a path
+string or a directive such as {"$env": "AOS_PROTO8", "$path": "/lib/base/bash"},
+resolved on every use (relative results from that same directory), never written back.
+--anchor (only when asked) stores a target inside this repo's proto8/ as
+.aos-proto8/<path in proto8> and creates that anchor symlink next to the file if it is
+missing or points at no proto8 folder (keep it out of git).
 Names default to the folder name or file name without extension;
 only [A-Za-z0-9_-] is accepted, at most 64 characters.
 
@@ -100,6 +107,8 @@ flags:
       --override    replace an existing name
   -n, --name N      register under this name
       --no-cache    disable executable --tooldef caching (executables only)
+      --path-json J store this JSON path value (string or directive) instead of XXX
+      --anchor      store a target in this repo's proto8/ through .aos-proto8
       --env-file F  read a dotenv file now, relative to cwd; store its values
       --envs K=V    override file values (repeatable; value taken literally)
   -h, --help        show this help
@@ -349,44 +358,43 @@ def entries(reg, where, tools):
         if not isinstance(env, dict) or not all(isinstance(k, str) and ENV_KEY_RE.match(k) and isinstance(v, str) and "\0" not in v
                                               for k, v in env.items()):
             raise Fail("RegistryBad", "%s: %s/%s/env must be an object of NAME -> string without NUL (NAME like AOS_MEMORY)" % (reg, where, name))
-        out[name] = {"path": os.path.normpath(os.path.join(base, e["path"])), "entry": e}
+        out[name] = {"path": os.path.normpath(os.path.join(base, e["path"])), "entry": e,
+                     "field": "%s#/%s/%s/path" % (reg, where, name)}
     return out
 
 
 def read_overlay():
-    """--overlay 那份 → {"add": {…}, "rm": […]}（不在＝兩格空的）。不解指示詞。"""
+    """--overlay 那份 → (原文 {"add": {…}, "rm": […]}, 解完指示詞的 add)（不在＝兩格空的）。
+    解法跟主登記檔同一套（read_json：有 $ref／$env 就交給 aos-json get --follow --resolve），path 與 env 兩格都收；
+    寫回只寫原文（解出來的值不寫回任何檔，11-10 TC）。"""
     if not os.path.exists(OVERLAY):
-        return {"add": {}, "rm": []}
-    try:
-        with open(OVERLAY, encoding="utf-8") as f:
-            raw = json.load(f)
-    except (OSError, ValueError) as e:
-        raise Fail("RegistryBad", "overlay %s is unreadable or not JSON: %s" % (OVERLAY, e))
-    if not isinstance(raw, dict):
+        return {"add": {}, "rm": []}, {}
+    raw, resolved = read_json(OVERLAY, None, "RegistryBad")
+    if not isinstance(raw, dict) or not isinstance(resolved, dict):
         raise Fail("RegistryBad", "overlay %s must be a JSON object ({\"add\": {...}, \"rm\": [...]})" % OVERLAY)
-    add, rm = raw.get("add", {}), raw.get("rm", [])
-    if not isinstance(add, dict):
+    add, rm = raw.get("add", {}), resolved.get("rm", [])
+    if not isinstance(add, dict) or not isinstance(resolved.get("add", {}), dict):
         raise Fail("RegistryBad", "overlay %s: add must be an object (name -> {\"path\": ...})" % OVERLAY)
     if not isinstance(rm, list) or not all(isinstance(n, str) for n in rm):
         raise Fail("RegistryBad", "overlay %s: rm must be an array of strings (names)" % OVERLAY)
-    entries(OVERLAY, "add", add)                     # 只驗
-    return {"add": add, "rm": rm}
+    entries(OVERLAY, "add", resolved.get("add", {}))     # 只驗（解完的）
+    return {"add": add, "rm": rm}, resolved.get("add", {})
 
 
 def load_tools(reg):
     """用的那份：沒 --overlay＝reg；有＝reg 疊覆蓋層（rm 先拿掉、add 再放上）。"""
     if OVERLAY is None:
         return load_registry(reg)
-    ov = read_overlay()
+    ov, add = read_overlay()
     tools = load_registry(reg)
     for n in ov["rm"]:
         tools.pop(n, None)                           # 定義裡已經沒有＝忽略
-    tools.update(entries(OVERLAY, "add", ov["add"]))
+    tools.update(entries(OVERLAY, "add", add))
     return tools
 
 
 def overlay_for_write():
-    return read_overlay()
+    return read_overlay()[0]
 
 
 def write_overlay(ov):
@@ -401,7 +409,7 @@ def describe(name, t):
     try:
         info = inspect(t["path"], t["entry"].get("cache"))
     except Fail as e:
-        raise Fail(e.code, "tool %s (%s): %s" % (name, t["path"], e))
+        raise Fail(e.code, "tool %s (%s, from %s): %s" % (name, t["path"], t.get("field", "?"), e))
     out = {"name": name, "kind": info["kind"], "path": t["path"], "tooldef": info["tooldef"]}
     if "metainfo" in info:
         out["metainfo"] = info["metainfo"]
@@ -513,46 +521,90 @@ def read_env_file(path):
     return result
 
 
-ANCHOR = ".aos-proto8"                               # 本機錨點捷徑 → 這台 repo 的 proto8/（templates/copy-out 建；不進 git，11-10 坑-73／坑-92）
+ANCHOR = ".aos-proto8"                               # 本機錨點捷徑 → 一份 proto8/（可選的一種準備方式；add --anchor 才用，11-10 TC）
 PROTO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))   # cmd/aos-tools/bin → proto8
 
 
-def stored_path(path, folder, make):
-    """登記檔裡存的路徑（相對 folder）：folder 裡＝相對；在這份 repo 的 proto8 裡＝經 folder/.aos-proto8 的相對（make＝錨點沒有就建）；
-    其他＝相對（覆蓋層照舊；同包搬才對）。存的字串不含這台的家目錄或 repo 位置，兩台一字不差。"""
-    if os.path.commonpath([path, folder]) == folder:
-        return os.path.relpath(path, folder)
+def is_proto8(d):
+    """d 是不是一份 proto8 資料夾（認 templates/copy-out 與 py/aos_flags.py）。"""
+    return os.path.isfile(os.path.join(d, "templates", "copy-out")) and os.path.isfile(os.path.join(d, "py", "aos_flags.py"))
+
+
+def anchored_path(path):
+    """--anchor：目標在這份 repo 的 proto8 裡＝.aos-proto8/<proto8 底下的路徑>；不在＝ArgumentsBad。只算字串，錨點由 ensure_anchor 建。"""
     real = os.path.realpath(path)
-    if os.path.commonpath([real, PROTO]) == PROTO:
-        link = os.path.join(folder, ANCHOR)
-        if make and not (os.path.islink(link) and os.readlink(link) == PROTO):
-            if os.path.lexists(link) and not os.path.islink(link):
-                raise Fail("WriteFailed", "%s exists and is not a symlink; cannot anchor %s there" % (link, path))
-            tmp = os.path.join(folder, ".%s.%d.tmp" % (ANCHOR, os.getpid()))
-            try:
-                os.makedirs(folder, exist_ok=True)
-                os.symlink(PROTO, tmp)
-                os.replace(tmp, link)                # 舊機留下的錨點（指別處）也換成這台
-            except OSError as e:
-                raise Fail("WriteFailed", "cannot link %s -> %s: %s" % (link, PROTO, e))
-        rel = os.path.relpath(real, PROTO)
-        return ANCHOR if rel == "." else ANCHOR + "/" + rel
-    return os.path.relpath(path, folder)
+    if os.path.commonpath([real, PROTO]) != PROTO:
+        raise Fail("ArgumentsBad", "--anchor needs a target inside this repo's proto8 (%s); %s is not" % (PROTO, path))
+    rel = os.path.relpath(real, PROTO)
+    return ANCHOR if rel == "." else ANCHOR + "/" + rel
+
+
+def ensure_anchor(folder):
+    """folder 沒錨點就建（指這台 proto8 的絕對捷徑）。已經有、而且指得到一份 proto8 的錨點（使用者自己放的相對錨點也算）
+    不改寫；指不到 proto8 的捷徑換成這台；別的東西佔著＝WriteFailed。"""
+    link = os.path.join(folder, ANCHOR)
+    if os.path.islink(link) and is_proto8(link):
+        return
+    if os.path.lexists(link) and not os.path.islink(link):
+        raise Fail("WriteFailed", "%s exists and is not a symlink; cannot anchor there" % link)
+    tmp = os.path.join(folder, ".%s.%d.tmp" % (ANCHOR, os.getpid()))
+    try:
+        os.makedirs(folder, exist_ok=True)
+        os.symlink(PROTO, tmp)
+        os.replace(tmp, link)
+    except OSError as e:
+        raise Fail("WriteFailed", "cannot link %s -> %s: %s" % (link, PROTO, e))
+
+
+def resolve_path_value(value, folder):
+    """登記格的 path 值（字串或指示詞物件）→ 絕對路徑；指示詞交給 aos-directive 解（每次用到才解、不寫回），解完的相對路徑從 folder 算。"""
+    if isinstance(value, dict):
+        try:
+            r = subprocess.run(["aos-directive"], input=json.dumps({"path": value}), stdout=subprocess.PIPE,
+                               text=True, cwd=folder)     # stderr 不吞：aos-directive 自己說哪裡解不開
+        except OSError as e:
+            raise Fail("CommandMissing", "--path-json has directives that need aos-directive, which cannot start: %s" % e)
+        if r.returncode != 0:
+            raise Fail("DirectiveBad", "--path-json %s cannot be resolved (aos-directive exited %d)" % (json.dumps(value), r.returncode))
+        value = json.loads(r.stdout).get("path")
+    if not isinstance(value, str) or not value:
+        raise Fail("ArgumentsBad", "--path-json must be a non-empty path string or a directive object resolving to one (got %s)" % json.dumps(value))
+    return os.path.normpath(os.path.join(folder, value))
 
 
 def cmd_add(reg, args):
-    opts, rest = aos_flags.parse(args, {"--name": "name", "--env-file": "env_file"},
-                                 {"--override": "override", "--no-cache": "no_cache"},
+    opts, rest = aos_flags.parse(args, {"--name": "name", "--env-file": "env_file", "--path-json": "path_json"},
+                                 {"--override": "override", "--no-cache": "no_cache", "--anchor": "anchor"},
                                  {"--envs": "envs"}, help=HELPS["add"], short=("-n",))
-    if len(rest) != 1:
-        raise Fail("ArgumentsBad", "add needs one XXX")
+    if "path_json" in opts:
+        if rest:
+            raise Fail("ArgumentsBad", "add takes either XXX or --path-json, not both")
+        if opts.get("anchor"):
+            raise Fail("ArgumentsBad", "--anchor goes with XXX, not with --path-json (the JSON is stored as given)")
+    elif len(rest) != 1:
+        raise Fail("ArgumentsBad", "add needs one XXX (or --path-json JSON)")
     env = read_env_file(opts["env_file"]) if "env_file" in opts else {}
     for kv in opts.get("envs", []):
         k, eq, v = kv.partition("=")
         if not eq or not ENV_KEY_RE.match(k) or "\0" in v:
             raise Fail("ArgumentsBad", "--envs needs NAME=VALUE with a valid name and no NUL")
         env[k] = v
-    path = os.path.normpath(os.path.abspath(rest[0]))
+    folder = os.path.dirname(os.path.abspath(OVERLAY if OVERLAY is not None else reg))   # 存的相對路徑從這裡算（讀的時候也是）
+    if "path_json" in opts:                          # 指示詞（或字串）原樣存；現在解一次只為了驗與取名
+        try:
+            stored = json.loads(opts["path_json"])
+        except ValueError as e:
+            raise Fail("ArgumentsBad", "--path-json is not JSON: %s" % e)
+        path = resolve_path_value(stored, folder)
+    else:
+        given = rest[0]
+        path = os.path.normpath(os.path.abspath(given))
+        if opts.get("anchor"):
+            stored = anchored_path(path)             # 使用者明講才經錨點（錨點寫檔前才建）
+        elif os.path.isabs(given):
+            stored = path                            # 給絕對＝存絕對
+        else:
+            stored = os.path.relpath(path, folder)   # 給相對（從 cwd 算）＝存相對登記檔資料夾的相對
     if opts.get("no_cache") and kind_of(path) != "exe":
         raise Fail("ArgumentsBad", "--no-cache is only for executables (exe); %s is %s, which has no cache anyway" % (path, kind_of(path)))
     info = inspect(path, False if opts.get("no_cache") else None)
@@ -566,28 +618,22 @@ def cmd_add(reg, args):
     tools = load_tools(reg)
     if name in tools and not opts.get("override"):
         raise Fail("ToolExists", "%s is already registered (points to %s); add --override to replace it" % (name, tools[name]["path"]))
-    entry = {"path": path}
+    entry = {"path": stored}
     if env:
         entry["env"] = env
     if info["kind"] == "exe":
         entry["cache"] = False if opts.get("no_cache") else info["cache"]
-    if OVERLAY is not None:                          # 只寫覆蓋層：裡面＝相對（跟著 stack 搬）；repo 裡＝經錨點 .aos-proto8；其他外面＝相對（11-10 坑-92）
+    if opts.get("anchor"):
+        ensure_anchor(folder)
+    if OVERLAY is not None:                          # 只寫覆蓋層
         ov = overlay_for_write()
-        ov_dir = os.path.dirname(os.path.abspath(OVERLAY))
-        entry["path"] = stored_path(path, ov_dir, make=True)
         ov["add"][name] = entry
         ov["rm"] = [n for n in ov["rm"] if n != name]
         write_overlay(ov)
-    else:                                            # 主登記檔：這資料夾已有錨點（copy-out 抄的 agent）且目標在 repo 裡＝經錨點，否則照舊絕對
-        reg_dir = os.path.dirname(os.path.abspath(reg))
-        if os.path.islink(os.path.join(reg_dir, ANCHOR)):
-            via = stored_path(path, reg_dir, make=False)
-            if via.split("/")[0] == ANCHOR:
-                entry["path"] = via
-        if os.path.exists(reg):
-            aos_json(["set", "--follow", "--parents", "%s#/tools/%s" % (reg, name), json.dumps(entry, ensure_ascii=False)])
-        else:
-            write_new(reg, {"tools": {name: entry}})
+    elif os.path.exists(reg):
+        aos_json(["set", "--follow", "--parents", "%s#/tools/%s" % (reg, name), json.dumps(entry, ensure_ascii=False)])
+    else:
+        write_new(reg, {"tools": {name: entry}})
     missing = [k for k in dict.fromkeys(hubs) if k not in os.environ and k not in env]
     if missing:
         aos_flags.warn(NAME, "tool %s has unset hub variables: %s" % (name, ", ".join(missing)))
@@ -646,7 +692,10 @@ def cmd_call(reg, args):
     if not NAME_RE.fullmatch(name):
         raise Fail("RegistryBad", "registered tool name %r is invalid (only [A-Za-z0-9_-], at most 64 chars)" % name)
     path = tools[name]["path"]
-    kind_of(path)                                    # 只驗路徑；三種工具走同一條執行路，不擴充登記對象
+    try:
+        kind_of(path)                                # 只驗路徑；三種工具走同一條執行路，不擴充登記對象
+    except Fail as e:
+        raise Fail(e.code, "tool %s (from %s): %s" % (name, tools[name].get("field", "?"), e))
     env = dict(os.environ, **tools[name]["entry"].get("env", {}))
     stack = os.environ.get("AOS_STACK")
     if stack:

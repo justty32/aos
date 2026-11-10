@@ -142,7 +142,7 @@ def cmd(argv):
         return
     if act == "add":                                  # 11-05 edge-agent：撞名時 aos-tools 說「加 --override」，原本這裡收不了
         targs = ["add"] + (["--override"] if topts.get("override") else []) + (["--no-cache"] if topts.get("no_cache") else []) \
-            + ["--name", args[0], os.path.abspath(args[1])]
+            + ["--name", args[0], args[1]]           # 照使用者的寫法轉（同一個 cwd）：絕對存絕對、相對存相對覆蓋層（11-10 TC）
     elif act == "rm":
         targs = ["rm", args[0]]
     else:

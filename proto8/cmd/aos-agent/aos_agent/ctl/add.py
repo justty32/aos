@@ -101,7 +101,8 @@ def cmd(argv):
     try:
         _, request = call_dc(dc.add_letter, entry_target, name=name, ws=ws, stack=stack,
                                   def_dir=def_dir, limits=limits, envs=envs,
-                                  auto_restart=opts.get("auto_restart", False))
+                                  auto_restart=opts.get("auto_restart", False),
+                                  daemon=daemon_path())   # 11-10：--envs 的目標寫成相對 daemon stack 的指示詞，搬家照樣起
         row = ctl_wait("add", request,
                        lambda letter: row_named(name) or rejected(letter),
                        "the daemon has not put %s on the table yet (see aos-agent ctl ls and the daemon's log)" % name, "AddRejected", secs=secs, on_queued=on_queued, name=name)

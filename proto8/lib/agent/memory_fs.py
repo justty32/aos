@@ -3,12 +3,12 @@ import json
 import os
 import re
 
-from tool_io import die
+from tool_io import Error as ToolError, die
 
 SEGMENT = re.compile(r"^[a-z0-9_-]+$")
 LEAF_EXTS = (".md", ".json")
 
-CFG_NAME = "_memory.json"      # 工具資料夾裡的設定檔（定義配的）：{"base": "<知識庫路徑>"}，相對＝從這個資料夾算
+CFG_NAME = "_memory.json"      # 工具資料夾裡的設定檔（定義配的）：{"base": "<知識庫路徑>"}，相對＝從這個資料夾算；base 也可寫指示詞（11-10）
 
 
 def memory_root(tool_folder=None):
@@ -22,11 +22,19 @@ def memory_root(tool_folder=None):
                 c = json.load(f)
         except (OSError, ValueError) as e:
             die("CfgBad", "%s: %s" % (cfg, e))
-        if not isinstance(c, dict) or not isinstance(c.get("base"), str) or not c["base"]:
+        base, written = c.get("base") if isinstance(c, dict) else None, ""
+        if isinstance(base, dict):              # 11-10 two-machines TC：base 寫指示詞（例 {"$env": "KB", "$path": "x"}），每次用到才解、不寫回
+            written = " " + json.dumps(base, ensure_ascii=False)
+            from directive_value import resolve_path   # 用到才載：只帶 memory_fs／tool_io 複製出去的舊份照舊能讀字串 base
+            try:
+                base = resolve_path(base, cfg, "base")
+            except ToolError as e:
+                die(e.code, str(e))
+        if not isinstance(base, str) or not base:
             die("CfgBad", "%s must be an object with a non-empty string key base" % cfg)
-        real = os.path.realpath(os.path.join(here, c["base"]))   # 絕對路徑時 join 直接用它
+        real = os.path.realpath(os.path.join(here, base))   # 絕對路徑時 join 直接用它
         if not os.path.isdir(real):
-            die("MemoryMissing", "%s base resolves to %s, which is not a directory" % (cfg, real))
+            die("MemoryMissing", "%s base%s resolves to %s, which is not a directory" % (cfg, written, real))
         return real
     m = os.environ.get("AOS_MEMORY", "")
     if not m:

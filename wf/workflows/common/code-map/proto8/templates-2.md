@@ -19,3 +19,10 @@
 | [`tests/endpoint.py`](../../../../../proto8/templates/reviewer/tests/endpoint.py) | Return fake reviewer tool calls using the actual previous review_round result. |
 | [`tests/test_reviewer.py`](../../../../../proto8/templates/reviewer/tests/test_reviewer.py) | Verify real reviewer, review scripts and shared FSM cells through local fake endpoints. |
 | [`tools.json`](../../../../../proto8/templates/reviewer/tools.json) | Offer review scripts and workspace readers without arbitrary execution tools. |
+
+## `proto8/templates/tests/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`test_copy_out.py`](../../../../../proto8/templates/tests/test_copy_out.py) | Test copy-out: the four --proto8 modes, kernel/NAME templates, env-mode symlink fallbacks, the needs line, and --relink leaving good anchors alone. |
+| [`test_paths_move.py`](../../../../../proto8/templates/tests/test_paths_move.py) | Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm) and an llm kernel project move by git to another HOME and prefix u… |

@@ -10,6 +10,9 @@
 #       相對「新定義裡那份 tools 檔的資料夾」（aos-tools 讀手寫相對路徑就從那裡算；整棵樹搬家不斷，N-67 ①、os-impl A19）：複製來的相對
 #       path 原本從範本那份算，換算成從新位置走回同一個目標（指範本裡的工具也指回範本那份，不指複本：複本裡的相對捷徑深度變了會斷）；
 #       複製來的絕對 path 照抄；tools 參數加的也存相對。只做字串換算、不 realpath，對最終位置算（暫存資料夾跟最終位置同層）。
+#       from 是 repo proto8 裡的範本（11-10 TC）：改用 copy-out 同一套（lib/agent/copy_def.py），指進 proto8 的路徑寫成
+#       {"$env": "AOS_PROTO8", …}（AOS_PROTO8 沒設＝寫絕對、結果多一行 note）；from 用字面路徑、不解開捷徑。
+#   add 的 tools：path 相對的轉成相對 cwd 交給 aos-agent tools add，覆蓋層存相對；絕對的存絕對（保留寫法）。
 #       先寫進同層暫存資料夾再改名；掛不上＝把剛寫的資料夾刪掉（全有或全無，規則 6）。
 #   add {name, def, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?, on_queued?}  生法 (b) 用現有定義：def 直接掛（aos-agent ctl add），llm／tools／tools_rm 走
 #       這隻子的覆蓋層（aos-agent llm set／tools add --override／tools rm，stack 只存差異、定義不動、不複製）；後面幾步失敗＝ctl rm 收回。
@@ -68,10 +71,11 @@ sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
 try:
     from observed_children import copy_child
     import tool_io  # noqa: E402
+    from agent import copy_def  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
-    if error.name != "tool_io":
+    if error.name not in ("tool_io", "agent", "agent.copy_def"):
         raise
-    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    _line = "%s: error: ModuleMissing %s not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), error.name)
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)
@@ -392,6 +396,19 @@ def rebase_tools(tools_file, src, dest, tmp):
     write_json(tools_file, reg)
 
 
+notes = []                                      # 改寫路徑時的提醒（接在 new 的結果後面）
+
+
+def proto8_mode():
+    """repo 範本生子定義時指回 proto8 的寫法：AOS_PROTO8 有設、指得到一份 proto8＝env（跟 copy-out 預設同）；
+    沒設＝absolute（這台照樣跑；換台要設 AOS_PROTO8 或自己改），提醒一行。"""
+    v = os.environ.get(copy_def.ENV)
+    if v and copy_def.is_proto8(v):
+        return "env"
+    notes.append("%s is not set to a proto8 folder, so paths into the repo were written absolute (%s)" % (copy_def.ENV, copy_def.PROTO))
+    return "absolute"
+
+
 def build_def(tmp, dest, src, files, llm, tool_list, tools_rm, lineage):
     """在 tmp 寫好新定義（之後改名成 dest）：複製 from → 寫 files → 記 lineage → 改 llm 檔、tools 檔；tools 檔的 path 對 dest 算相對。"""
     try:
@@ -401,7 +418,12 @@ def build_def(tmp, dest, src, files, llm, tool_list, tools_rm, lineage):
             os.makedirs(tmp)
     except OSError as e:
         die("WriteFailed", "cannot copy %s to %s: %s" % (src, tmp, e))
-    if src:
+    if src and inside(os.path.realpath(src), copy_def.PROTO):   # repo 裡的範本：跟 copy-out 同一套改寫（11-10 TC）
+        try:
+            copy_def.Rewriter(src, tmp, dest, proto8_mode(), warn=notes.append).run()
+        except copy_def.CopyFail as e:
+            die(e.code, str(e))
+    elif src:
         tf = decl_file(tmp, "tools")
         if tf and os.path.isfile(tf):
             rebase_tools(tf, src, dest, tmp)
@@ -529,6 +551,11 @@ if op == "rm":
 
 name = need_name(args.get("name"))
 llm, tool_list, tools_rm, child_ws, limits = spawn_args(args)
+tool_given = [t.get("path") for t in args.get("tools", [])]   # 使用者原本的寫法：相對的轉成相對 cwd 交下去，覆蓋層就存相對（11-10 TC）
+
+
+def user_form(p, given):
+    return p if os.path.isabs(given) else os.path.relpath(p)
 
 if op == "new":                                 # 生法 (a)：產出新定義再掛
     dest = write_path(args.get("path"), "path")
@@ -536,7 +563,7 @@ if op == "new":                                 # 生法 (a)：產出新定義�
         die("DefExists", "path %r already exists (pick a new folder; use op add to start an existing definition)" % args.get("path"))
     src = None
     if args.get("from") is not None:
-        src = read_path(args.get("from"), "from")
+        src = lex_path(args.get("from"), "from")   # 字面路徑、不解開捷徑（11-10 TC；相對換算對字面位置算）
         if not os.path.isdir(src):
             die("DefMissing", "from %r is not a folder" % args.get("from"))
     files = args.get("files", {})
@@ -563,7 +590,8 @@ if op == "new":                                 # 生法 (a)：產出新定義�
     if child_stack is None:                     # 全有或全無：掛不上就把剛寫的定義刪掉
         shutil.rmtree(dest, ignore_errors=True)
         die(err[0], err[1] + " (the new definition %s was removed again)" % dest)
-    report(name, child_stack, alive, n, "wrote definition %s%s\n" % (dest, " (copied from %s)" % src if src else ""))
+    report(name, child_stack, alive, n, "wrote definition %s%s\n%s" % (dest, " (copied from %s)" % src if src else "",
+                                                                   "".join("note: %s\n" % s for s in notes)))
 
 # 生法 (b)：用現有定義掛，設定走子的覆蓋層
 definition = read_path(args.get("def"), "def")
@@ -579,7 +607,7 @@ if on_queued == "ok":
     report(name, child_stack, alive, n)
 steps = [("llm set %s=%s" % (k, v), ["llm", "--target", name, "set", "%s=%s" % (k, v)]) for k, v in llm.items()] + \
         [("tools rm " + t, ["tools", "--target", name, "rm", t]) for t in tools_rm] + \
-        [("tools add " + t, ["tools", "--target", name, "add", "--override", t, p]) for t, p in tool_list]
+        [("tools add " + t, ["tools", "--target", name, "add", "--override", t, user_form(p, g)]) for (t, p), g in zip(tool_list, tool_given)]
 for what, argv in steps:
     _, err = agent(argv)
     if err:                    # 全有或全無：設定沒上，收回這隻

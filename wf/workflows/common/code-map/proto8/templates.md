@@ -37,6 +37,14 @@
 | [`tools/memory/_memory.json`](../../../../../proto8/templates/agent-fsm/tools/memory/_memory.json) | 設定（鍵：base） |
 | [`wait.py`](../../../../../proto8/templates/agent-fsm/wait.py) | wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。 |
 
+## `proto8/templates/daemon-root/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`.env`](../../../../../proto8/templates/daemon-root/.env) | root clock file lives in this daemon's stack; child daemons inherit it. |
+| [`_entry`](../../../../../proto8/templates/daemon-root/_entry) | Start the root daemon with stdout logs |
+| [`daemon.json`](../../../../../proto8/templates/daemon-root/daemon.json) | Root daemon: owns the clock and the sweeper; agents join through procs_requests |
+
 ## `proto8/templates/eca-claude/`
 
 | 檔 | 負責什麼 |

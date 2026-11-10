@@ -170,9 +170,22 @@ def check_limits(v, where, code):
 
 
 
-def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limits=None, envs=None, auto_restart=False):
+def daemon_ref(target, daemon):
+    """envs 包的單子 argv 目標（11-10 two-machines TC）：絕對的 `檔#/指標` 寫成 {"$env": "AOS_DAEMON", "$path": 相對 daemon stack}，
+    同 aos-daemon 的 daemon_ref——daemon 給子項的 AOS_DAEMON 是它 stack 的真實路徑（解開捷徑、結尾 /），所以基準也解開捷徑、目標照字面；
+    不在底下照樣寫 `..`（`$path` 是字串拼接，`..` 由 OS 照實體走）。整棵樹搬家後由 aos-exec 從新的 AOS_DAEMON 拼回，不寫這台的絕對路徑。
+    daemon 是 None、目標不是絕對的＝原樣回（舊行為）。"""
+    if not daemon or not isinstance(target, str) or not target.startswith("/"):
+        return target
+    f, h, p = target.partition("#")
+    return {"$env": "AOS_DAEMON", "$path": os.path.relpath(f, os.path.realpath(daemon)) + h + p}
+
+
+def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limits=None, envs=None, auto_restart=False, daemon=None):
     """判型並組成掛子信；給定的路徑從目前目錄算起。auto_restart＝True：那一列多 "auto_restart": true（daemon 的 key，
-    放在列的頂層、跟 exec／ws 同層；loop 型、exec 型、帶 envs 的都一樣，two-machines 06）；False＝不寫這個 key。"""
+    放在列的頂層、跟 exec／ws 同層；loop 型、exec 型、帶 envs 的都一樣，two-machines 06）；False＝不寫這個 key。
+    daemon＝收這封信的 daemon 的 stack（選填，11-10）：給了，envs 包的單子裡的目標寫成相對它的 $env 指示詞（daemon_ref）；
+    沒給＝照舊寫絕對路徑。"""
     xxx = abs_target(xxx, os.getcwd())
     path = xxx.partition("#")[0]
     if not os.path.exists(path):
@@ -203,7 +216,8 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
         if isinstance(target, dict):
             # 指示詞／內嵌單子透過原設定位置執行，保留其相對路徑基準。
             target = found[1] + "#" + found[2] + "/exec"
-        argv = target if isinstance(target, list) else [target]
+        argv = list(target) if isinstance(target, list) else [target]
+        argv[0] = daemon_ref(argv[0], daemon)   # 參數不動，只換目標
         spec["exec"] = {"argv": ["aos-exec", "--"] + argv, "envs": dict(envs)}
     spec["def"] = os.path.abspath(path)   # 11-04（使用者「那就b。」）：定義資料夾，daemon 記進表的 def 欄
     if def_dir is not None:          # 11-05：aos-agent 的定義宣告了 entry（XXX＝定義裡的那個入口）時，def 另給

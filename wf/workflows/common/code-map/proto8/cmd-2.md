@@ -39,3 +39,4 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-tools`](../../../../../proto8/cmd/aos-tools/bin/aos-tools) | 管理工具登記、環境與小格，三種工具一律經 aos-exec 從 stdin 呼叫。 |
+| [`tests/test_paths.py`](../../../../../proto8/cmd/aos-tools/tests/test_paths.py) | Test aos-tools path forms: overlay directives (path and env), add keeping the user's form, --path-json and --anchor. |
