@@ -1,7 +1,10 @@
 # cli_session.py - 把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 attach 接進互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字
 #
 # 一個工具的小格（$AOS_STACK，act 給的是 $AOS_STACK/tools/<工具名>/，11-02 起）裡放：
-#   session.txt   這段對話的 id（claude 的 session id／codex 的 thread id）；第一次講完話才有
+#   session.txt   這段對話的 id（claude 的 session id／codex 的 thread id）：claude 新對話在交出去那一刻就寫（id 是我們產的）；
+#                 codex 新對話讀到輸出的 thread.started 就寫（成敗都寫）；畫面那條路是 hook 收到第一輪時寫（11-10 two-machines 05）
+#   .session_home 記號檔（不進 git）：{"session", "ws", "home"}——這段對話是在哪個工作區（realpath）、哪個帳號資料夾
+#                 （claude：CLAUDE_CONFIG_DIR 或 ~/.claude；codex：CODEX_HOME 或 ~/.codex）開的；跟 session.txt 一起寫、一起刪
 #   tty.sock      tmux 的 socket：互動畫面活著時，CLI 的終端就接在這裡（attach＝tmux -S tty.sock attach）
 #   tmux.conf     attach 開畫面時寫的 tmux 設定（Ctrl-] 或 Ctrl-\ 跳出、不用 prefix）
 #   turns.jsonl   互動畫面每講完一輪，hook 接一行 {"answered_at", "text"}（answered_at＝講完的時間，10-25 前叫 at）（agent 從這裡拿回答，不去解析畫面）
@@ -28,6 +31,12 @@
 #   $AOS_STACK 裡這隻自己的（aos-agent tools／llm 寫的，stack_copies）：tools.json＝覆蓋層（11-05 起只存差異；cli.json 沒明寫 tools 時
 #   給 aos-mcp --overlay，疊在定義的登記檔上，定義那份不在也行）、llm.json 的 model。
 #   模型（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本）的 model＝flags 的 --model（換掉或加在尾）；都沒有＝flags 原樣。
+# 換台（11-10 two-machines 05）：要接舊對話前先認「是不是這台的」（session_here：記號檔的 session、home 一樣，claude 再比 ws；
+#   不讀 CLI 的任何檔內容、不靠它的錯誤訊息）。不是＝在交出去之前改開新對話：呼叫者給了 reseed（aos-eca-turn）＝把 reseed(上限)
+#   整理過的紀錄接在題目前面（上限＝cli.json 選填 reseed_bytes，預設 48000；畫面那條路取 min(它, 8000)）；沒給（工具形）＝stderr
+#   一行 warning、照樣開新的。記號檔不在但 transcripts() 找得到＝功能上線前就在跑的，當這台的、補寫記號檔（過渡補丁）。
+#   以為是這台的、resume 卻失敗而且 transcripts() 找不到那個 id＝刪 session.txt 與 .session_home 再報錯（那封掉了，下一封開新的）。
+#   畫面（start）：session.txt 在但不是這台的＝刪兩個檔、不帶 --resume 開新的。人想重開＝手刪 session.txt（正式用法）。
 # 開場白不歸這層（11-04 翻案，使用者「不該在json中指定檔案名稱，應該改成用旗標指定」）：是 aos-eca-turn 的 --prompt FILE；
 #   cli.json 寫了 prompt 跟其他沒認的鍵一樣不看。
 # 錯：aos-eca-turn --one（call_main）照 lib 契約 stderr 與 stdout 各一行「工具名: error: 代號 原因」、退 1；attach 與 hook 是 stderr 一行「cli_session: error: 代號 原因」、退 1。
@@ -58,6 +67,7 @@ else:
 
 TMUX_SESSION = "cli"
 PROG, ECHO = "cli_session", False                    # 錯誤行開頭、要不要也印到 stdout（call_main 改成工具名、True）
+RESEED_BYTES, SCREEN_RESEED_BYTES = 48000, 8000      # 開新對話時紀錄的上限：cli.json 的 reseed_bytes 預設、畫面那條路的天花板（05）
 
 
 def die(code, reason):
@@ -87,6 +97,9 @@ def load_cfg(tool_dir):
     for k in ("flags", "print_flags", "tools_flags"):
         if not isinstance(cfg.get(k, []), list) or not all(isinstance(a, str) for a in cfg.get(k, [])):
             die("CfgBad", "%s: %s must be an array of strings" % (path, k))
+    rb = cfg.get("reseed_bytes", RESEED_BYTES)                     # 11-10 two-machines 05：開新對話時接在題目前的紀錄上限
+    if not isinstance(rb, int) or isinstance(rb, bool) or rb < 0:
+        die("CfgBad", "%s: reseed_bytes must be a non-negative integer" % path)
     try:
         files = declared_files(tool_dir)
     except ValueError as e:
@@ -252,16 +265,65 @@ def close(cell):
     return True
 
 
+def account_dir(kind):
+    """CLI 的帳號資料夾（對話存在它底下）：claude＝CLAUDE_CONFIG_DIR 或 ~/.claude；codex＝CODEX_HOME 或 ~/.codex。"""
+    if kind == "claude":
+        return os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
+    return os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex")
+
+
 def transcripts(kind, sid):
     """CLI 自己存的這段對話（含中間訊息、工具呼叫等副產物）放在哪：claude ~/.claude/projects/*/<id>.jsonl、
     codex ~/.codex/sessions/年/月/日/rollout-*-<id>.jsonl。小格的 transcripts/ symlink 指到這裡（10-30；10-28 是 stop 時才拷）。"""
     if not sid:
         return []
+    base = account_dir(kind)
     if kind == "claude":
-        base = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
         return sorted(glob.glob(os.path.join(base, "projects", "*", sid + ".jsonl")))
-    base = os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex")
     return sorted(glob.glob(os.path.join(base, "sessions", "**", "*%s.jsonl" % sid), recursive=True))
+
+
+def mark_session(kind, cell, ws, sid):
+    """寫 session.txt 與記號檔 .session_home（11-10 two-machines 05）。寫不成＝提醒一行、回 False（不擋正事：
+    下一輪認不出是這台的，頂多開新對話）。"""
+    try:
+        cell.write("session.txt", sid + "\n")
+        cell.write(".session_home", json.dumps({"session": sid, "ws": os.path.realpath(ws),
+                                                "home": os.path.realpath(account_dir(kind))}, ensure_ascii=False) + "\n")
+        return True
+    except OSError as e:
+        warn("cannot write %s or .session_home: %s" % (cell.file("session.txt"), e))
+        return False
+
+
+def drop_session(cell):
+    """刪 session.txt 與 .session_home（下一次開新對話）；本來不在不算錯，刪不掉不擋（下一次 session_here 照樣認不出）。"""
+    for name in ("session.txt", ".session_home"):
+        try:
+            os.remove(cell.file(name))
+        except FileNotFoundError:
+            pass
+        except OSError as e:
+            warn("cannot remove %s: %s" % (cell.file(name), e))
+
+
+def session_here(cfg, cell, ws, sid):
+    """sid 這段對話是不是在這台（這個帳號資料夾、claude 再加這個工作區）開的（11-10 two-machines 05）：看記號檔，
+    session 與 home 一樣、claude 的 ws 也一樣＝True。記號檔不在或讀不懂、但 transcripts() 找得到＝功能上線前就在跑的，
+    當這台的、補寫記號檔（過渡補丁）。不讀 CLI 的任何檔內容、不靠它的錯誤訊息。"""
+    kind = cfg["kind"]
+    try:
+        with open(cell.file(".session_home"), encoding="utf-8") as f:
+            mark = json.load(f)
+    except (OSError, ValueError):
+        mark = None
+    if isinstance(mark, dict) and isinstance(mark.get("session"), str) and isinstance(mark.get("home"), str):
+        return (mark["session"] == sid and mark["home"] == os.path.realpath(account_dir(kind))
+                and (kind != "claude" or mark.get("ws") == os.path.realpath(ws)))
+    if transcripts(kind, sid):
+        mark_session(kind, cell, ws, sid)
+        return True
+    return False
 
 
 def transcript_link(cell_path, kind, sid):
@@ -368,15 +430,23 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None):
     return p.returncode, lines
 
 
-def print_claude(cfg, cell, ws, stack, prompt, handed=None):
-    sid = cell.read("session.txt")
+def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
+    """sid＝要接的對話（ask 已認過是這台的）；空＝開新對話：我們產 id、--session-id 給，交出去那一刻先寫 session.txt 與
+    記號檔再叫呼叫者的 handed（第一輪就失敗也不留孤兒，05）。沒給 sid（None）＝照舊讀 session.txt。"""
+    sid = cell.read("session.txt") if sid is None else sid
     new = "" if sid else str(uuid.uuid4())
     # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-agent watch 看得到它正在做什麼；
     # 回答取最後一個帶 result 的那行（type: result）
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
     argv += mcp_argv(cfg, cell, ws, stack)
     argv += ["--resume", sid] if sid else ["--session-id", new]
-    code, lines = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"), handed)
+
+    def given():
+        if new:
+            mark_session("claude", cell, ws, new)
+        if handed:
+            handed()
+    code, lines = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"), given)
     out = None
     for line in lines:
         try:
@@ -386,18 +456,24 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None):
         if isinstance(ev, dict) and "result" in ev:
             out = ev
     stdout = "".join(lines)
+    if out is None or code != 0 or out.get("is_error"):
+        if sid and not transcripts("claude", sid):          # 以為是這台的、這台卻找不到：清掉，下一封開新的（05）
+            drop_session(cell)
     if out is None:
         die("CliFailed", "claude exited %d with no result in its output: %s" % (code, tail(stdout)))
     if code != 0 or out.get("is_error"):   # result 行自己帶原因（例 模型不存在）就印它；stdout 尾巴會切在 JSON 中間
         why = out.get("result") if isinstance(out.get("result"), str) and out.get("result") else tail(stdout)
         die("CliFailed", "claude exited %d: %s" % (code, tail(why)))
-    if not sid:
-        cell.write("session.txt", (out.get("session_id") or new) + "\n")
+    got = out.get("session_id")
+    if new and isinstance(got, str) and got and (got != new or cell.read("session.txt") != new):
+        mark_session("claude", cell, ws, got)              # result 帶了不同的 id（或交出去時沒寫成）：以它為準
     return out.get("result") or ""
 
 
-def print_codex(cfg, cell, ws, stack, prompt, handed=None):
-    sid = cell.read("session.txt")
+def print_codex(cfg, cell, ws, stack, prompt, handed=None, sid=None):
+    """sid＝要接的對話（ask 已認過是這台的）；空＝開新對話。thread id 是 codex 自己產的：不管成敗，讀到 thread.started 就寫
+    session.txt 與記號檔（05）。沒給 sid（None）＝照舊讀 session.txt。"""
+    sid = cell.read("session.txt") if sid is None else sid
     last = cell.file("last.txt")
     argv = ["codex", "exec"] + (["resume", sid] if sid else []) + cfg.get("flags", []) + cfg.get("print_flags", [])
     argv += mcp_argv(cfg, cell, ws, stack)
@@ -418,10 +494,12 @@ def print_codex(cfg, cell, ws, stack, prompt, handed=None):
             continue
         if isinstance(ev, dict) and ev.get("type") == "thread.started":
             thread = ev.get("thread_id") or thread
+    if not sid and thread:                       # 成敗之前就寫：第一輪就失敗也不留孤兒（05）
+        mark_session("codex", cell, ws, thread)
     if r.returncode != 0 or not os.path.exists(last):
+        if sid and not transcripts("codex", sid):           # 以為是這台的、這台卻找不到：清掉，下一封開新的（05）
+            drop_session(cell)
         die("CliFailed", "codex exited %d (its reason is on stderr)" % r.returncode)
-    if not sid and thread:
-        cell.write("session.txt", thread + "\n")
     with open(last, encoding="utf-8") as f:
         return f.read()
 
@@ -465,14 +543,17 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None):
         % (cfg.get("timeout_ms", 600000) // 1000))
 
 
-def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None):
+def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, reseed=None):
     """問 CLI 一句 → 回答文字：記下這格（note_cell）→ 拿格的 lock（拿不到：on_busy＝yield（預設）＝SessionBad、
     answer＝等到拿到，同 open_cell）→ 畫面開著走 live（on_busy 照傳）、沒開走非互動
     → 建 transcripts symlink。lib/agent/agent_tool.py 的 ask_cli 與 aos-eca-turn（含 --one 的 call_main）共用這一段。
     tool_dir＝cli.json 所在的資料夾（工具資料夾或 eca 定義）；ws＝CLI 的 cwd（絕對路徑）；stack＝給 aos-mcp 的 --stack
     （平級形＝那隻 eca 的 $AOS_STACK、工具形＝這格本身；11-03 eca-tools）。handed＝選填、不帶參數的函式：題目交給 CLI 的那一刻叫一次
     （非互動＝CLI 起來、題目寫進去；畫面＝貼上按 Enter），在等回答之前（11-03 aos-eca-turn 在這一刻收信；工具形不給）。錯一律走 die
-    （工具形印一行退 1；aos-eca-turn 把 die 換成丟例外）。"""
+    （工具形印一行退 1；aos-eca-turn 把 die 換成丟例外）。
+    reseed＝選填、reseed(上限 bytes) -> 開場白（整理過的舊紀錄，結尾一個空行；沒紀錄回 ""）：這次是新對話（session.txt 沒有，
+    或 session_here 認不出是這台的）就接在題目前面（11-10 two-machines 05；aos-eca-turn 給）。沒給而且是「有舊 id 但不在這台」
+    ＝stderr 一行 warning、照樣開新的（工具形）。"""
     note_cell(cell, tool_dir, ws, stack)
     f, ok = cell.lock()
     if not ok:
@@ -480,12 +561,23 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None):
             die("SessionBad", "this conversation is in use (another call, or attach is opening the screen)")
         fcntl.flock(f, fcntl.LOCK_EX)
     with f:
-        if cell.alive():
+        limit = cfg.get("reseed_bytes", RESEED_BYTES)
+        sid = cell.read("session.txt")
+        if cell.alive():                                 # 畫面開著＝這台的；session.txt 還沒有＝新對話（hook 第一輪才寫）
+            if not sid and reseed:
+                prompt = reseed(min(limit, SCREEN_RESEED_BYTES)) + prompt
             text = live(cfg, cell, prompt, on_busy, handed)
-        elif cfg["kind"] == "claude":
-            text = print_claude(cfg, cell, ws, stack, prompt, handed)
         else:
-            text = print_codex(cfg, cell, ws, stack, prompt, handed)
+            if sid and not session_here(cfg, cell, ws, sid):
+                if not reseed:
+                    warn("the earlier conversation is not on this machine; starting a new one without its record")
+                sid = ""
+            if not sid and reseed:
+                prompt = reseed(limit) + prompt
+            if cfg["kind"] == "claude":
+                text = print_claude(cfg, cell, ws, stack, prompt, handed, sid)
+            else:
+                text = print_codex(cfg, cell, ws, stack, prompt, handed, sid)
         link_transcript(cell, cfg["kind"])               # 工具形也留（方向題 3）
     return text
 
@@ -495,6 +587,8 @@ usage: %(name)s < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_STACK is 
 Hand the prompt to the %(name)s CLI and print its answer; the conversation goes on in this
 tool's cell (session.txt), and a person can attach to its screen (aos-agent attach).
 How the CLI is called (flags, timeout_ms, tools) is in cli.json next to _entry.
+If the earlier conversation was started on another machine, in another workspace (claude) or with another
+account folder (.session_home in the cell says so), a warning is printed and a new conversation is started.
 AOS_WS is required and must be a directory.
 Arguments: one JSON object on stdin:
   prompt  string, required
@@ -579,7 +673,11 @@ def hook_main(kind, cell_path, payload_arg=None):
             text = p.get("last-assistant-message") or ""
             sid = p.get("thread-id") or p.get("thread_id")
         if sid and not cell.read("session.txt"):
-            cell.write("session.txt", sid + "\n")
+            ws = cell.read("ws.txt")                       # 記號檔要工作區：從小格的 ws.txt 解相對路徑（不知道就只寫 session.txt，
+            if ws:                                         # 下一次 session_here 走過渡補丁補寫）
+                mark_session(kind, cell, os.path.normpath(os.path.join(cell.path, ws)), sid)
+            else:
+                cell.write("session.txt", sid + "\n")
         link_transcript(cell, kind)
         with open(cell.file("turns.jsonl"), "a", encoding="utf-8") as f:
             f.write(json.dumps({"answered_at": now(), "text": text}, ensure_ascii=False) + "\n")
@@ -609,10 +707,13 @@ def hook_cmd(kind, cell):
 
 
 def start(cfg, cell, ws, stack):
-    """畫面沒開就開一個（在 tmux 裡、背景）；有對話就接著那段，沒有就開新的。有登記檔＝跟非互動同一段接上 aos-mcp（11-03 eca-tools）。"""
+    """畫面沒開就開一個（在 tmux 裡、背景）；有對話而且是這台的就接著那段，沒有或不是這台的就開新的。有登記檔＝跟非互動同一段接上 aos-mcp（11-03 eca-tools）。"""
     if cell.alive():
         return False
     sid = cell.read("session.txt")
+    if sid and not session_here(cfg, cell, ws, sid):     # 不是這台的（換台、搬位置、換帳號資料夾）：清掉、開新的（05）
+        drop_session(cell)
+        sid = ""
     link_transcript(cell, cfg["kind"])                   # 叫回舊對話：id 早就知道
     if cfg["kind"] == "claude":
         cmd = " ".join(shlex.quote(a) for a in hook_cmd("claude", cell))

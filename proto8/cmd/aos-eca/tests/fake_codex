@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+# fake_codex - stand-in for the codex CLI in aos-eca tests: exec / exec resume ID with --json and -o, keeps threads as files, never calls a model
+"""Usage: fake_codex exec [resume ID] [flags] [--json] [-o FILE] -  < prompt
+       fake_codex --version
+
+Threads live in ${CODEX_HOME:-$HOME/.codex}/sessions/2026/11/10/rollout-x-<id>.jsonl.
+--json: a {"type": "thread.started", "thread_id": ...} line first. -o FILE: the last answer is written there on success.
+resume ID with no such file: one stderr line, exit 1 (no thread.started).
+FAKE_CLI_FAIL=1: thread.started is printed, then "usage limit reached" on stderr, exit 1, no -o file.
+FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": "..."} as one JSON line per call."""
+import json, os, sys, uuid
+
+argv = sys.argv[1:]
+if "--version" in argv:
+    print("codex-cli 0.99.0 (fake)")
+    sys.exit(0)
+if "--help" in argv or "-h" in argv:
+    print(__doc__)
+    sys.exit(0)
+if not argv or argv[0] != "exec":
+    sys.stderr.write("fake_codex: only exec is supported\n")
+    sys.exit(2)
+rest, sid = argv[1:], None
+if rest[:1] == ["resume"]:
+    sid, rest = rest[1], rest[2:]
+VALUED = {"-o", "-c", "--model", "-m"}
+opts, it = {}, iter(rest)
+for a in it:
+    if a in VALUED:
+        opts[a] = next(it, "")
+    else:
+        opts[a] = True
+prompt = sys.stdin.read()
+log = os.environ.get("FAKE_CLI_LOG")
+if log:
+    with open(log, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"argv": sys.argv, "stdin": prompt}, ensure_ascii=False) + "\n")
+home = os.environ.get("CODEX_HOME") or os.path.join(os.environ.get("HOME", "/"), ".codex")
+folder = os.path.join(home, "sessions", "2026", "11", "10")
+if sid and not os.path.isfile(os.path.join(folder, "rollout-x-%s.jsonl" % sid)):
+    sys.stderr.write("fake_codex: no thread found: %s\n" % sid)
+    sys.exit(1)
+sid = sid or str(uuid.uuid4())
+if "--json" in opts:
+    print(json.dumps({"type": "thread.started", "thread_id": sid}), flush=True)
+if os.environ.get("FAKE_CLI_FAIL") == "1":
+    sys.stderr.write("fake_codex: usage limit reached\n")
+    sys.exit(1)
+os.makedirs(folder, exist_ok=True)
+with open(os.path.join(folder, "rollout-x-%s.jsonl" % sid), "a", encoding="utf-8") as f:
+    f.write(json.dumps({"type": "user", "content": prompt}, ensure_ascii=False) + "\n")
+answer = "FAKE: " + prompt.rstrip("\n").split("\n")[-1]
+if "--json" in opts:
+    print(json.dumps({"type": "item.completed", "item": {"type": "agent_message", "text": answer}}), flush=True)
+if opts.get("-o"):
+    with open(opts["-o"], "w", encoding="utf-8") as f:
+        f.write(answer)

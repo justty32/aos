@@ -37,6 +37,18 @@
   ⑤ queue 空（cur/、new/ 都沒信）：照 --on-empty——stop 退 10、idle 退 0（Q-9）。
   ⑥ 11-03 起不寫 $AOS_STACK/trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）；要看狀態用 aos-agent ctl status。
   ⑦ 拿到 session id 就在小格建 transcripts/<kind>-<id>.jsonl symlink（cli_session.link_transcript，C-15～17）。
+  ⑧ 換台開新對話（11-10 two-machines 05）：session.txt 沒有、或 cli_session 認出它不是這台的（記號檔 .session_home 的 session／home、
+     claude 再加 ws 不同）＝在交出去之前改開新對話，題目前面接一段開場白＝這支組的「整理過的紀錄」（reseed；cli_session.ask 叫它）：
+     來源＝這輪交出去之前的 $AOS_STACK/history.jsonl；英文說明一段＋`--- record: N messages, M shown ---`＋`[user]`／`[assistant]` 一則一段
+     ＋`--- end of record ---`＋一個空行。第一則 user 一定帶、其餘從最新往回裝到上限，中間省掉的寫一行 `[... K earlier messages left out ...]`；
+     單則超過 6000 bytes 留頭 4000＋尾 2000、中間寫 `[... N bytes left out ...]`（照 UTF-8 bytes 算、不切壞字）。上限＝cli.json 選填
+     reseed_bytes（預設 48000；畫面那條路取 min(它, 8000)），整段含說明不超過它；0 或說明本身就超過＝只給說明、不附紀錄。history 空＝不接。
+     換台這件事本身不掉信（判斷在交信之前）；人想重開＝停著、手刪小格的 session.txt（可先改 history.jsonl）。
+  ⑨ 失敗後冷卻（11-10 two-machines 06，使用者裁「失敗後冷卻，只拿一封試」；檔＝$AOS_STACK/cooldown.json，讀寫一律走 lib/agent/cooldown.py）：
+     一輪開始、認領信之前看 cooldown.state——cooling＝不認領任何信（new/、cur/、history 都不動）、退 0；due＝這輪只交最舊的一封
+     （cur/ 先、照 letter_key；new/ 用 aos-post take 一次認領一封；壞信照舊丟、記 mailbox_warning，再往下找一封好信）；none＝照舊整批。
+     交出去之後的失敗（CliFailed、ReplyMissing；看 handed 有沒有被叫過）＝cooldown.fail（dropped＝這批的封數）再照舊報錯退 1；
+     交出去之前的錯不寫冷卻、SessionBad 退讓不算失敗；寫冷卻檔失敗只多一行 warning。成功（assistant 接進 history 之後）＝cooldown.clear。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
   人在畫面上自己打的話不進 history（沒經 queue；eca 方向題 2）。
@@ -44,6 +56,7 @@
 --one（工具形，P-41 工具契約）：stdin {"prompt"} → stdout 回答，對話在 $AOS_STACK 這格本身（cli_session.call_main，需有效的 $AOS_WS）；
   lib 的 claude／codex 走 lib/agent/agent_tool.py 的 ask_cli，與這裡共用 cli_session.ask。
   --on-busy 照認（yield 時 SessionBad 照錯退 1）；跟 --on-empty 一起給＝ArgumentsBad（工具形沒有 queue）。
+  工具形沒有 history：舊對話不在這台＝stderr 一行 warning、開新對話不附紀錄（05）；不做冷卻（06）。
   錯照 lib 契約 stderr 與 stdout 各一行「<定義資料夾名>: 代號 原因」、退 1。
 PATH 上要有 aos-post（平級形）。
 錯（平級形與 argv）：stderr 一行「aos-eca-turn: error: 代號 原因」、退 1（P-20 停下等人；11-05 stdio-unify R1，usage 在原因後面）。
@@ -73,6 +86,10 @@ try:
         import cli_session  # noqa: E402
     else:
         import agent.cli_session as cli_session  # noqa: E402
+    if os.path.isfile(os.path.join(HERE, "cooldown.py")):
+        import cooldown  # noqa: E402
+    else:
+        import agent.cooldown as cooldown  # noqa: E402
 finally:
     for _path in _import_paths:
         sys.path.remove(_path)
@@ -94,7 +111,15 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
   --on-busy yield (default): the session is busy (lock taken, someone attached, busy.txt) = leave the batch in cur/, exit 0 |
     answer: wait and answer anyway.
   --prompt FILE: opening message (relative to DEF_DIR) queued when history and queue are both empty.
+  New conversation: when there is no session.txt, or the earlier conversation is not on this machine (its .session_home names
+    another session, account folder or - for claude - workspace), a new one is started before the letters are handed over, and
+    a record built from history.jsonl goes in front of the prompt: a short note, the first user message, then the newest messages
+    that fit. Its size limit is cli.json's optional reseed_bytes (default 48000; at most 8000 when pasting into a screen; 0 = the
+    note only). Delete session.txt by hand to restart the conversation on purpose.
+  Cooldown: a failure after the prompt was handed over (CliFailed, ReplyMissing) is recorded in $AOS_STACK/cooldown.json; while
+    cooling, no letter is taken (exit 0); when the cooldown is over, only the oldest letter is tried; a success removes the file.
 --one (tool form): stdin {"prompt"} -> stdout the answer; the conversation lives in $AOS_STACK itself. --on-empty / --prompt not allowed.
+  If the earlier conversation is not on this machine, a warning is printed and a new one is started without a record. No cooldown.
 Needs aos-post on PATH (loop form) and AOS_STACK.
 Errors: one stderr line `aos-eca-turn: error: CODE reason`, exit 1 (tool form: the line also goes to stdout). aos-post's own stderr
   is passed through as it is. Codes: ArgumentsBad, FlagUnknown, AgentBad, StackMissing, PromptMissing, HistoryBad, PostFailed,
@@ -224,6 +249,25 @@ def opening(stack, box, path):
 SEP = "\n\n"                                   # 一批好幾封時，各封 content 照順序用一個空行接起來（11-03 代定）
 
 
+def pick_one(stack, box, prompt):
+    """冷卻到了（06）：只拿最舊的一封好信——cur/ 先、照 letter_key；cur/ 沒有好信才從 new/ 用 aos-post take 一次認領一封。
+    壞信照舊丟、記 mailbox_warning，再往下找。回 ([sig], [body], 丟了幾封)；一封好信都沒有＝([], [], 丟了幾封)。"""
+    if not names(box, "new") and not names(box, "cur"):
+        opening(stack, box, prompt)
+    dropped = 0
+    while True:
+        for sig in names(box, "cur"):
+            body, why = letter_body(box, sig)
+            if body is not None:
+                return [sig], [body], dropped
+            post(["done", box, sig])
+            warn(stack, sig, why)
+            dropped += 1
+        code, _ = must_post(["take", box], ok=(0, NOT_FOUND))    # new/ 最前面一封 → cur/
+        if code == NOT_FOUND:
+            return [], [], dropped
+
+
 def take_all(stack, box, prompt):
     """new/ 裡的信全部認領到 cur/（aos-post take-all；沒信退 NOT_FOUND＝剛好被撤回，不算錯）；一批幾封沒有上限（11-03）。
     history 空、queue 也空、給了開場白檔（--prompt）＝先投開場白再認領。"""
@@ -239,24 +283,33 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
         must_post(["init", box])                                   # 先建好，aos-agent say／listen 認得
     cfg = cli_session.load_cfg(template)
     cell = cli_session.Cell(os.path.join(stack, cfg["kind"]))
-    take_all(stack, box, prompt)                                   # 這輪要答的＝cur/ 全部（上次沒交出去的＋剛認領的）
-    batch = names(box, "cur")
-    if not batch:
-        return empty_code
-    bodies, good = [], []
-    for sig in batch:                                               # ② 照順序讀信
-        body, why = letter_body(box, sig)
-        if body is None:                                            # 壞信一律丟（N-16、決定 27 不通知寄信人）
-            post(["done", box, sig])
-            warn(stack, sig, why)
-            continue
-        bodies.append(body)
-        good.append(sig)
-    if not good:
-        return 0
-    late = []                                                       # 交出去那一刻收信時出的錯：CLI 已經在跑，等它答完再報
+    cool, _ = cooldown.state(stack)                                # ⑨ 認領信之前看冷卻（06）
+    if cool == "cooling":
+        return 0                                                    # 一封都不認領：new/、cur/、history 都不動
+    if cool == "due":
+        good, bodies, dropped = pick_one(stack, box, prompt)       # 冷卻到了：只試最舊的一封
+        if not good:
+            return 0 if dropped else empty_code
+    else:
+        take_all(stack, box, prompt)                               # 這輪要答的＝cur/ 全部（上次沒交出去的＋剛認領的）
+        batch = names(box, "cur")
+        if not batch:
+            return empty_code
+        bodies, good = [], []
+        for sig in batch:                                           # ② 照順序讀信
+            body, why = letter_body(box, sig)
+            if body is None:                                        # 壞信一律丟（N-16、決定 27 不通知寄信人）
+                post(["done", box, sig])
+                warn(stack, sig, why)
+                continue
+            bodies.append(body)
+            good.append(sig)
+        if not good:
+            return 0
+    late, given = [], []                                            # 交出去那一刻收信時出的錯：CLI 已經在跑，等它答完再報
 
     def handed():                                                   # ④ 交出去就算完成（11-03）：user 接進 history、收信
+        given.append(True)
         try:
             for body in bodies:
                 append_history(stack, body)
@@ -266,15 +319,104 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
             late.append(e)
     try:
         text = cli_session.ask(cfg, cell, template, ws, stack, SEP.join(b["content"] for b in bodies), on_busy,
-                               handed)                              # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
+                               handed, lambda limit: reseed(stack, ws, limit))   # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
     except Fail as e:
         if e.code == "SessionBad":                                  # 只有 --on-busy yield 會丟，一定在交出去之前
             return 0                                                # 整批留 cur/，下一次再試
+        if given and e.code in ("CliFailed", "ReplyMissing"):      # ⑨ 交出去之後的失敗：記冷卻（這批掉了）
+            try:
+                cooldown.fail(stack, e.code, e, dropped=len(good))
+            except OSError as w:
+                aos_flags.warn(NAME, "cannot write %s: %s" % (cooldown.path(stack), w))
         raise
     if late:
         raise late[0]
     append_history(stack, {"role": "assistant", "content": text[:-1] if text.endswith("\n") else text})
+    try:
+        cooldown.clear(stack)                                       # ⑨ 成功一次＝歸零
+    except OSError as w:
+        aos_flags.warn(NAME, "cannot remove %s: %s" % (cooldown.path(stack), w))
     return 0
+
+
+# ---- 開場白（⑧ 換台開新對話；two-machines 05）----
+
+ONE_MAX, ONE_HEAD, ONE_TAIL = 6000, 4000, 2000              # 單則超過 ONE_MAX bytes：留頭 ONE_HEAD＋尾 ONE_TAIL
+
+NOTE = """[aos: this conversation continues in a new session (it moved to another machine or folder, or was restarted).
+The earlier session is not available here. Below is the record aos kept of it: what you were asked and your
+final answers (tool calls and their output are not included; long or old messages are shortened or left out).
+The complete record is the JSON-lines file %s. The new message follows the record.]
+"""
+NOTE_ONLY = """[aos: this conversation continues in a new session (it moved to another machine or folder, or was restarted).
+The earlier session is not available here. aos keeps a record of it (what you were asked and your final answers)
+in the JSON-lines file %s; it is not attached here. The new message follows.]
+"""
+
+
+def nbytes(text):
+    return len(text.encode("utf-8"))
+
+
+def shorten(text):
+    """單則超過 ONE_MAX bytes：留頭 ONE_HEAD＋尾 ONE_TAIL bytes、中間一行說省了多少；照 UTF-8 切、不切壞字。"""
+    raw = text.encode("utf-8")
+    if len(raw) <= ONE_MAX:
+        return text
+    head = raw[:ONE_HEAD].decode("utf-8", "ignore")              # 切在字中間的那幾個 byte 丟掉
+    tail = raw[-ONE_TAIL:].decode("utf-8", "ignore")
+    return "%s\n[... %d bytes left out ...]\n%s" % (head, len(raw) - nbytes(head) - nbytes(tail), tail)
+
+
+def entry(row):
+    """history 一則 → 一段 `[role] content\n`；content 不是字串就印成 JSON。"""
+    content = row.get("content")
+    if not isinstance(content, str):
+        content = json.dumps(content, ensure_ascii=False)
+    return "[%s] %s\n" % (row.get("role") if isinstance(row.get("role"), str) else "unknown", shorten(content))
+
+
+def reseed(stack, ws, limit):
+    """開新對話時接在題目前面的開場白（cli_session.ask 的 reseed；在交出去之前叫，history 還沒接這輪的 user）。
+    history 空＝""。結尾一個空行。整段 ≤ limit bytes；limit 0、或說明加第一則 user 就超過＝只給說明（NOTE_ONLY）。"""
+    rows = history_rows(stack)
+    if not rows:
+        return ""
+    where = os.path.relpath(os.path.join(stack, "history.jsonl"), ws)
+    only = NOTE_ONLY % where + "\n"
+    if limit <= 0:
+        return only
+    n = len(rows)
+    parts = [entry(r) for r in rows]
+    sizes = [nbytes(p) for p in parts]
+    first = next((i for i, r in enumerate(rows) if r.get("role") == "user"), None)
+    gap = nbytes("[... %d earlier messages left out ...]\n" % n)  # 省略行最長也就這樣（K ≤ n）
+    fixed = nbytes(NOTE % where + "\n--- record: %d messages, %d shown ---\n--- end of record ---\n\n" % (n, n))
+
+    def cost(chosen):
+        """chosen（排好的 index）組出來最多幾 bytes：固定段＋各則＋每個空隙一行省略。"""
+        holes = sum(1 for a, b in zip([-1] + chosen, chosen + [n]) if b - a > 1)
+        return fixed + sum(sizes[i] for i in chosen) + holes * gap
+
+    chosen = [first] if first is not None else []
+    if cost(chosen) > limit:
+        return only
+    for i in range(n - 1, -1, -1):                                  # 其餘從最新往回裝，裝不下就停
+        if i == first:
+            continue
+        trial = sorted(chosen + [i])
+        if cost(trial) > limit:
+            break
+        chosen = trial
+    out, prev = [NOTE % where, "\n", "--- record: %d messages, %d shown ---\n" % (n, len(chosen))], -1
+    for i in chosen + [n]:
+        if i - prev > 1:
+            out.append("[... %d earlier messages left out ...]\n" % (i - prev - 1))
+        if i < n:
+            out.append(parts[i])
+        prev = i
+    out.append("--- end of record ---\n\n")
+    return "".join(out)
 
 
 def _cli_die(code, reason):                    # cli_session 出錯時本來 exit；平級形改成丟例外，這支自己說一行

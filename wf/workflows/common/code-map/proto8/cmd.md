@@ -51,6 +51,9 @@
 |---|---|
 | [`bin/aos-eca-screen`](../../../../../proto8/cmd/aos-eca/bin/aos-eca-screen) | eca 的畫面（介面 aos-agent/screen 的身體；templates/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。 |
 | [`bin/aos-eca-turn`](../../../../../proto8/cmd/aos-eca/bin/aos-eca-turn) | 外部 coding agent（claude／codex，eca）的一輪：把 stack 的 queue 裡的信照順序全部一起交給 CLI——交出去就收信——等它答完、回答接進 history。 |
+| [`tests/fake_claude`](../../../../../proto8/cmd/aos-eca/tests/fake_claude) | stand-in for the claude CLI in aos-eca tests: -p with --session-id/--resume, keeps conversations as files, never calls a model |
+| [`tests/fake_codex`](../../../../../proto8/cmd/aos-eca/tests/fake_codex) | stand-in for the codex CLI in aos-eca tests: exec / exec resume ID with --json and -o, keeps threads as files, never calls a model |
+| [`tests/test_switch.py`](../../../../../proto8/cmd/aos-eca/tests/test_switch.py) | Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs. |
 
 ## `proto8/cmd/aos-feedback/`
 
@@ -68,10 +71,3 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-grow`](../../../../../proto8/cmd/aos-grow/bin/aos-grow) | 把一個函數往上長一級（或縮回一級），呼叫方跟著改、行為不變。 |
-
-## `proto8/cmd/aos-mcp/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-mcp`](../../../../../proto8/cmd/aos-mcp/bin/aos-mcp) | 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。 |
-| [`tests/test_timeout.py`](../../../../../proto8/cmd/aos-mcp/tests/test_timeout.py) | Verify MCP reads shared timeout metadata and keeps its CLI fallback. |

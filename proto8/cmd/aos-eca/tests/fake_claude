@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+# fake_claude - stand-in for the claude CLI in aos-eca tests: -p with --session-id/--resume, keeps conversations as files, never calls a model
+"""Usage: fake_claude -p [--output-format stream-json] [--verbose] [--session-id ID | --resume ID] [other flags ignored] < prompt
+       fake_claude --version
+
+Conversations live in ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/<realpath of cwd with / -> ->/<id>.jsonl.
+--resume ID with no such file: one stderr line, a result line with is_error true, exit 1.
+Success: stdin appended to the conversation file; stdout a system line then a result line "FAKE: <last stdin line>".
+FAKE_CLI_FAIL=1: always an error result ("usage limit reached"), exit 1.
+FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": "..."} as one JSON line per call."""
+import json, os, sys, uuid
+
+argv = sys.argv[1:]
+if "--version" in argv:
+    print("2.1.0 (fake)")
+    sys.exit(0)
+if "--help" in argv or "-h" in argv:
+    print(__doc__)
+    sys.exit(0)
+VALUED = {"--output-format", "--session-id", "--resume", "--model", "--tools", "--permission-mode",
+          "--max-budget-usd", "--mcp-config", "--allowedTools", "--settings"}
+opts, it = {}, iter(argv)
+for a in it:
+    if a in VALUED:
+        opts[a] = next(it, "")
+    else:
+        opts[a] = True
+prompt = sys.stdin.read()
+log = os.environ.get("FAKE_CLI_LOG")
+if log:
+    with open(log, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"argv": sys.argv, "stdin": prompt}, ensure_ascii=False) + "\n")
+
+
+def out(ev):
+    print(json.dumps(ev), flush=True)
+
+
+home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.environ.get("HOME", "/"), ".claude")
+folder = os.path.join(home, "projects", os.path.realpath(os.getcwd()).replace("/", "-"))
+sid = opts.get("--resume") or opts.get("--session-id") or str(uuid.uuid4())
+conv = os.path.join(folder, sid + ".jsonl")
+if os.environ.get("FAKE_CLI_FAIL") == "1":
+    sys.stderr.write("fake_claude: usage limit reached\n")
+    out({"type": "result", "is_error": True, "session_id": sid, "result": "usage limit reached"})
+    sys.exit(1)
+if "--resume" in opts and not os.path.isfile(conv):
+    sys.stderr.write("No conversation found with session ID: %s\n" % sid)
+    out({"type": "result", "is_error": True, "result": "No conversation found with session ID: %s" % sid})
+    sys.exit(1)
+os.makedirs(folder, exist_ok=True)
+with open(conv, "a", encoding="utf-8") as f:
+    f.write(json.dumps({"type": "user", "message": {"content": prompt}}, ensure_ascii=False) + "\n")
+lines = prompt.rstrip("\n").split("\n")
+out({"type": "system", "session_id": sid})
+out({"type": "result", "is_error": False, "session_id": sid, "result": "FAKE: " + lines[-1]})
