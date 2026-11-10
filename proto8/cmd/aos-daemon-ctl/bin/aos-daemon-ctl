@@ -246,7 +246,9 @@ usage: aos-daemon-ctl [--daemon D] ls [-j]
 
 One line per proc: NAME TAB PHASE TAB PID TAB CODE TAB WS TAB REASON (none = -); paths are
 absolute. The last line starts with "# " and says what the supervisor thinks of this daemon
-("# root daemon (no supervisor)" for a root). Only reads files; it does not ping.
+("# root daemon (no supervisor)" for a root), after a line saying whether this daemon itself is
+running ("# daemon: running (pid N)" or "# daemon: not running (...)"; --json: "running").
+Only reads files and /proc; it does not ping.
 
 flags:
   -j, --json   one line {"procs": table, "daemon": UP or null, "supervisor": {...} or null}
@@ -560,15 +562,21 @@ def cmd_ls(opts, args):
     st = dc.state(d)
     procs = st["procs"]
     up, phase, detail = dc.supervisor(d, st)
+    try:                                   # 11-10 cli-sweep 甲3：說出這台 daemon 自己活著沒（只看 state 窗＋/proc，不 ping）
+        pid, _ = dc.check_alive(d, dc.read_state(d))
+        alive, alive_line = True, "# daemon: running (pid %d)" % pid
+    except Fail as e:
+        alive, alive_line = False, "# daemon: not running (%s); the table above is what it left" % str(e).replace("no aos-daemon running at %s" % d, "").strip(" ;()") or "not running"
     if o.get("json"):
         sup = None if up is None else {"phase": phase, "reason": detail if phase is not None else None, "note": detail if phase is None else None}
-        print(json.dumps({"procs": procs, "daemon": up, "supervisor": sup}, ensure_ascii=False))
+        print(json.dumps({"procs": procs, "daemon": up, "supervisor": sup, "running": alive}, ensure_ascii=False))
         return
     for n, r in procs.items():
         reason = r.get("reason")
         print("\t".join([n, str(r.get("phase")), "-" if r.get("pid") is None else str(r["pid"]),
                          "-" if r.get("code") is None else str(r["code"]), r.get("ws") or "-",
                          "-" if reason is None else CTRL.sub(" ", str(reason))]))
+    print(CTRL.sub(" ", alive_line))
     if up is None:
         line = "# root daemon (no supervisor)"
     elif phase is not None:
