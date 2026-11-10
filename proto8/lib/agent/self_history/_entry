@@ -3,7 +3,8 @@
 # 使用者 11-10 晚 self_history 五題：「1.全給，風險自己擔。2.可以。3.可選，默認搬到旁邊(可以選要搬到哪) 4.接受縮水版。5.對」（thinking 2026-11/10/self-family）；
 #   原則同 self_tools（「這支工具就是aos-agent tools的包裝，只是目標改自己」：純包裝、參數一對一）。**對應關係**：aos-agent history 加了動作或旗標，這支要跟著加。
 # 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"rm"|"summarize"|"set", …}；別的鍵＝ArgumentsBad：
-#   ls {range?, json?, long?}                  ＝history ls [--json] [--long] [RANGE]（預設每則 TEXT 截 200 字，long＝全文）；最後多一行說哪幾行是這一步、動不了
+#   ls {range?, all?, json?, long?}            ＝history ls [--all] [--json] [--long] [RANGE]（預設只印最後 20 則、每則 TEXT 截 200 字；all＝全部、long＝全文）；
+#        下層的省略行「(…; -a shows all, or give a RANGE)」換成這支的鍵名；最後多一行說哪幾行是這一步、動不了
 #   rm {range, keep?, no_keep?}                ＝history rm [--keep FILE | --no-keep -y] RANGE
 #   summarize {range, text, role?, keep?, no_keep?} ＝history summarize [--role] [--keep | --no-keep -y] -- RANGE TEXT（新那則內容＝「[aos] summary: lines A-B, N messages. text」，下層套的）
 #   set {line, message, keep?, no_keep?}       ＝history set [--keep | --no-keep -y] -- LINE JSON（message 是物件）
@@ -94,7 +95,7 @@ signal.signal(signal.SIGTERM, on_term)
 signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
 args = arguments()
 KEEP = ("keep", "no_keep")
-OPS = {"ls": ("range", "json", "long"), "rm": ("range",) + KEEP, "summarize": ("range", "text", "role") + KEEP,
+OPS = {"ls": ("range", "all", "json", "long"), "rm": ("range",) + KEEP, "summarize": ("range", "text", "role") + KEEP,
        "set": ("line", "message") + KEEP}
 op = args.get("op")
 if op is None:
@@ -169,7 +170,9 @@ rng = spot("range", op in ("rm", "summarize")) if op != "set" else None
 line = spot("line", True) if op == "set" else None
 cmd = [op]
 if op == "ls":
-    cmd += (["--json"] if flag("json") else []) + (["--long"] if flag("long") else []) + ([rng] if rng else [])
+    if flag("all") and rng:
+        die("ArgumentsBad", "give all or range, not both")
+    cmd += (["--all"] if flag("all") else []) + (["--json"] if flag("json") else []) + (["--long"] if flag("long") else []) + ([rng] if rng else [])
 else:
     cmd += keep_flags()
     if op == "summarize":
@@ -194,6 +197,9 @@ if op != "ls":
             "you can only change lines 1-%d" % (lock, n, lock - 1) if lock > 1 else
             "lines 1-%d are the step in progress (the message that called self_history and after); there is nothing before it to change" % n)
 out = history(*cmd)
+if op == "ls" and out.startswith("("):            # 下層的省略行講的是 aos-agent 的旗標，換成這支的鍵名
+    first, nl, rest = out.partition("\n")
+    out = first.replace("-a shows all, or give a RANGE", "\"all\": true shows all, or give a \"range\"") + nl + rest
 sys.stdout.write(out if not out or out.endswith("\n") else out + "\n")
 if op == "ls":
     print("(%d messages; lines %d-%d are the step in progress and cannot be changed)" % (n, lock, n) if lock <= n

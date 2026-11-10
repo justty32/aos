@@ -1,5 +1,5 @@
 {
- "description": "See or change your own conversation history (only yours). Each message has a line number from 1. The step in progress (the message that called this tool, and after) cannot be changed; everything before it can. Removed messages are kept in a file next to the history. Changes work from your next turn. One op per call:\n- list: {\"op\": \"ls\"}  (one line per message: LINE, ROLE, TEXT cut at 200 characters; add \"range\": \"3-8\" for some lines, \"long\": true for full text)\n- delete lines 2 to 5: {\"op\": \"rm\", \"range\": \"2-5\"}\n- replace lines 2 to 5 with a short summary: {\"op\": \"summarize\", \"range\": \"2-5\", \"text\": \"Earlier: the user asked for the time; it was 10:00.\"}\n- replace line 3 with a whole new message: {\"op\": \"set\", \"line\": 3, \"message\": {\"role\": \"user\", \"content\": \"What time is it?\"}}\nA range is \"N\", \"A-B\" or \"A-\" (A to the end). Use ls first to see the line numbers. Errors: ArgumentsBad, OpUnknown, RangeBad, MessageBad, HistoryMissing, WriteFailed, DaemonMissing, DaemonFailed, InstanceMissing.\nDetails: memory_read aos/me.json#/self_history.",
+ "description": "See or change your own conversation history (only yours). Each message has a line number from 1. The step in progress (the message that called this tool, and after) cannot be changed; everything before it can. Removed messages are kept in a file next to the history. Changes work from your next turn. One op per call:\n- list: {\"op\": \"ls\"}  (the last 20 messages, one line each: LINE, ROLE, TEXT cut at 200 characters; a first line says how many earlier ones are not shown; \"all\": true lists every message, \"range\": \"3-8\" some lines, \"long\": true full text)\n- delete lines 2 to 5: {\"op\": \"rm\", \"range\": \"2-5\"}\n- replace lines 2 to 5 with a short summary: {\"op\": \"summarize\", \"range\": \"2-5\", \"text\": \"Earlier: the user asked for the time; it was 10:00.\"}\n- replace line 3 with a whole new message: {\"op\": \"set\", \"line\": 3, \"message\": {\"role\": \"user\", \"content\": \"What time is it?\"}}\nA range is \"N\", \"A-B\" or \"A-\" (A to the end). Use ls first to see the line numbers. Errors: ArgumentsBad, OpUnknown, RangeBad, MessageBad, HistoryMissing, WriteFailed, DaemonMissing, DaemonFailed, InstanceMissing.\nDetails: memory_read aos/me.json#/self_history.",
  "env": [
   "AOS_DAEMON"
  ],
@@ -37,7 +37,11 @@
      "string",
      "integer"
     ],
-    "description": "ls, rm, summarize: which lines, like \"4\", \"2-5\" or \"6-\" (6 to the end); ls without it lists all"
+    "description": "ls, rm, summarize: which lines, like \"4\", \"2-5\" or \"6-\" (6 to the end); ls without it lists the last 20 (or all with \"all\": true)"
+   },
+   "all": {
+    "type": "boolean",
+    "description": "ls: true = list every message, not only the last 20 (not with range)"
    },
    "text": {
     "type": "string",
@@ -60,7 +64,7 @@
    },
    "json": {
     "type": "boolean",
-    "description": "ls: true = one JSON array of {line, message} instead of text lines"
+    "description": "ls: true = one JSON array of {line, message} instead of text lines (always every message, or the range)"
    },
    "long": {
     "type": "boolean",

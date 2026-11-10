@@ -19,6 +19,9 @@ if sys.argv[1:3] == ["ctl", "who"]:
     print("bob")
 elif sys.argv[4:] == ["ls", "--json"]:
     print(os.environ["FAKE_ROWS"])
+elif sys.argv[4:] == ["ls"] and os.environ.get("FAKE_CUT"):
+    print("(5 earlier messages not shown: lines 1-5; -a shows all, or give a RANGE)")
+    print("6\tuser\tm6")
 elif os.environ.get("FAKE_FAIL"):
     sys.stderr.write("aos-agent: error: RangeBad 9 is outside 1-5 (the history has 5 messages)\n")
     sys.exit(1)
@@ -69,6 +72,7 @@ class SelfHistory(unittest.TestCase):
         for args, want in (({"op": "ls"}, ["ls"]),
                            ({"op": "ls", "range": "2-3", "json": True}, ["ls", "--json", "2-3"]),
                            ({"op": "ls", "long": True}, ["ls", "--long"]),
+                           ({"op": "ls", "all": True, "long": True}, ["ls", "--all", "--long"]),
                            ({"op": "rm", "range": 2}, ["rm", "--", "2"]),
                            ({"op": "rm", "range": "1-3", "keep": "old.jsonl"}, ["rm", "--keep", "old.jsonl", "--", "1-3"]),
                            ({"op": "summarize", "range": "1-2", "text": "-x", "role": "assistant", "no_keep": True},
@@ -86,6 +90,10 @@ class SelfHistory(unittest.TestCase):
         self.assertIn("(4 messages; lines 4-4 are the step in progress and cannot be changed)", r.stdout)
         r = self.run_tool({"op": "ls"}, FAKE_ROWS=rows(ECA))
         self.assertIn("lines 3-4 are the step in progress", r.stdout)
+
+    def test_ls_note_names_my_keys(self):
+        r = self.run_tool({"op": "ls"}, FAKE_CUT="1")
+        self.assertEqual(r.stdout.splitlines()[0], '(5 earlier messages not shown: lines 1-5; "all": true shows all, or give a "range")')
 
     def test_step_in_progress_is_locked(self):
         for msgs, args in ((FSM, {"op": "rm", "range": "3-4"}), (FSM, {"op": "rm", "range": "2-"}),
@@ -109,6 +117,7 @@ class SelfHistory(unittest.TestCase):
                            ({"op": "set", "line": 1, "message": "hi"}, "message must be"),
                            ({"op": "rm", "range": "1", "keep": "a", "no_keep": True}, "not both"),
                            ({"op": "ls", "text": "x"}, "does not take text"),
+                           ({"op": "ls", "all": True, "range": "2-"}, "not both"),
                            ({"op": "nope"}, "OpUnknown"), ({}, "missing op")):
             r = self.run_tool(args)
             self.assertEqual(r.returncode, 1, args)

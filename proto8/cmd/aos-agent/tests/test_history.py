@@ -80,6 +80,19 @@ class History(unittest.TestCase):
         self.assertEqual(self.agent("ls", "-l", "5").stdout, "5\tuser\t" + "x" * 250 + "\n")
         self.assertIn("not both", self.agent("ls", "-l", "-j", ok=False).stderr)
 
+    def test_ls_last_20_by_default(self):
+        self.hist.write_text("".join(json.dumps({"role": "user", "content": "m%d" % i}) + "\n" for i in range(1, 26)))
+        out = self.agent("ls").stdout.splitlines()
+        self.assertEqual(out[0], "(5 earlier messages not shown: lines 1-5; -a shows all, or give a RANGE)")
+        self.assertEqual((len(out), out[1], out[-1]), (21, "6\tuser\tm6", "25\tuser\tm25"))
+        self.assertEqual(len(self.agent("ls", "-a").stdout.splitlines()), 25)
+        self.assertEqual(len(self.agent("ls", "--all", "-l").stdout.splitlines()), 25)
+        self.assertEqual(len(self.agent("ls", "1-").stdout.splitlines()), 25)          # a RANGE is printed whole
+        self.assertEqual(len(json.loads(self.agent("ls", "-j").stdout)), 25)           # JSON: always every message
+        self.assertIn("not both", self.agent("ls", "-a", "3", ok=False).stderr)
+        self.hist.write_text("".join(json.dumps({"role": "user", "content": "m%d" % i}) + "\n" for i in range(1, 21)))
+        self.assertEqual(len(self.agent("ls").stdout.splitlines()), 20)                # 20 or fewer: no note
+
     def test_rm_keeps_originals_next_to_it(self):
         r = self.agent("rm", "2-3")
         self.assertIn("removed 2 messages from line 2", r.stdout)

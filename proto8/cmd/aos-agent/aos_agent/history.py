@@ -18,6 +18,8 @@ from . import PROG
 from .common import Fail, actions, bad_args, parse, target
 from .decl import agent_decl
 
+LAST = 20                                       # ls 預設只印最後幾則（使用者「4.好」；-a 全部、給 RANGE 照 RANGE；-j 照舊全部）
+ALL_HINT = "-a shows all, or give a RANGE"      # 省略行的後半；self_history 換成自己的鍵名
 KEEP_FLAGS = """      --keep FILE     append the removed messages to FILE (relative to the current directory)
                       instead of the default <history>_removed.jsonl next to the history file
       --no-keep       do not keep them (asks on a terminal; -y skips)
@@ -25,18 +27,22 @@ KEEP_FLAGS = """      --keep FILE     append the removed messages to FILE (relat
 HELPS = {
     "ls": """aos-agent history ls - list this agent's conversation, one message per line
 
-usage: aos-agent [--daemon D] history [--target NAME] ls [-l | -j] [RANGE]
+usage: aos-agent [--daemon D] history [--target NAME] ls [-a] [-l | -j] [RANGE]
        aos-agent history ls --help
 
 flags:
+  -a, --all    print every message (default: only the last %d)
   -l, --long   print each message in full (default: TEXT cut at %d characters, ending with …)
-  -j, --json   print one JSON array of {"line": N, "message": {...}} ({"line": N, "raw": TEXT} for a line that is not JSON)
+  -j, --json   print one JSON array of {"line": N, "message": {...}} ({"line": N, "raw": TEXT} for a line that is not JSON);
+               always every message (or RANGE)
   -h, --help   show this help
 
 Print LINE TAB ROLE TAB TEXT per message (newlines shown as \\n; tool calls as -> name(arguments)).
-RANGE = N, A-B or A- (to the end); default: all. Line numbers count messages from 1.
+Without -a or RANGE only the last %d messages are printed, after a first line
+  (N earlier messages not shown: lines 1-N; %s)
+RANGE = N, A-B or A- (to the end); a RANGE is printed whole. Line numbers count messages from 1.
 exit codes: 0 listed; 1 error (HistoryMissing, RangeBad...).
-""" % 200,
+""" % (LAST, 200, LAST, ALL_HINT),
     "rm": """aos-agent history rm - delete some messages
 
 usage: aos-agent [--daemon D] history [--target NAME] rm [--keep FILE | --no-keep [-y]] RANGE
@@ -256,8 +262,8 @@ def cmd(argv):
     if act not in HELPS:
         raise Fail("CommandUnknown", "history: unknown action %s (%s; see aos-agent history --help)" % (act, ", ".join(HELPS)))
     flags = {"--keep": "keep"} if act != "ls" else {}
-    switches = {"--json": "json", "--long": "long"} if act == "ls" else {"--no-keep": "no_keep", "--yes": "yes"}
-    shorts = {"-j": "--json", "-l": "--long"} if act == "ls" else {"-y": "--yes"}
+    switches = {"--json": "json", "--long": "long", "--all": "all"} if act == "ls" else {"--no-keep": "no_keep", "--yes": "yes"}
+    shorts = {"-j": "--json", "-l": "--long", "-a": "--all"} if act == "ls" else {"-y": "--yes"}
     if act == "summarize":
         flags["--role"] = "role"
     topts, args = parse(args, flags, switches, help=HELPS[act], short=shorts,
@@ -272,6 +278,8 @@ def cmd(argv):
         raise bad_args(HELPS[act], "-y only goes with --no-keep")
     if topts.get("json") and topts.get("long"):
         raise bad_args(HELPS[act], "give -l or -j, not both")
+    if topts.get("all") and args:
+        raise bad_args(HELPS[act], "give -a or a RANGE, not both")
     a = target(opts)
     path = history_file(a)
     if act == "ls":
@@ -282,6 +290,10 @@ def cmd(argv):
             print(json.dumps([dict({"line": n}, **({"message": message(rows[n - 1])} if message(rows[n - 1]) is not None
                                                   else {"raw": rows[n - 1]})) for n in picked], ensure_ascii=False))
         else:
+            if not args and not topts.get("all") and len(picked) > LAST:     # 預設只印最後 LAST 則，先一行說省略了幾則
+                k = len(picked) - LAST
+                print("(%d earlier message%s not shown: lines 1-%d; %s)" % (k, "" if k == 1 else "s", k, ALL_HINT))
+                picked = picked[k:]
             for n in picked:
                 print(show(n, rows[n - 1], topts.get("long", False)))
         return
