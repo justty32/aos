@@ -7,7 +7,7 @@
 #        ＝ctl add [--name] [--ws | --ws-json] [--stack | --stack-json] [--path-json] [--limits JSON] [--envs K=V]… [--auto-restart] [--timeout-s] [--on-queued] [DEF]
 #        （*_json 收物件或字串，轉成 JSON 原樣交下去；ws 給了又不在＝先建，相對從 $AOS_WS 算）
 #   rm {name, purge?, timeout_s?}  ＝ctl rm [--purge -y] [--timeout-s] NAME（預設留 stack）
-#   ls {long?}                     ＝ctl ls --json（long: true＝ctl ls -l 的文字）
+#   ls {long?, json?}              ＝ctl ls [-l] [--json]（預設＝短的文字表 NAME STATE WORKSPACE QUEUED REASON；11-10 深夜使用者選「改短版」）
 #   state／pause／resume {name}     ＝ctl state／pause／resume --target NAME
 #   stop／sleep {name, timeout_s?}  start／wake {name, timeout_s?, on_queued?}  ＝ctl 同名動作 --target NAME
 #   where {name, what?}            ＝ctl where --target NAME [--stack | --ws]（what: "stack"｜"ws"；沒給＝下層預設 stack）
@@ -45,7 +45,7 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
 NAME = os.path.basename(HERE)
 tool_io.start(NAME, HELP)
 cmd.install_signals()
-OPS = dict({"add": cmd.ADD_KEYS, "ls": ("long",), "where": ("name", "what"), "who": ("stack",)}, **cmd.LIFE_OPS)
+OPS = dict({"add": cmd.ADD_KEYS, "ls": ("long", "json"), "where": ("name", "what"), "who": ("stack",)}, **cmd.LIFE_OPS)
 args = tool_io.arguments()
 op = cmd.check_op(args, OPS)
 
@@ -54,7 +54,7 @@ if op == "add":
     cmd.make_ws(args)
     cmd.emit(cmd.agent(argv, timeout_s=cmd.guard(args)))
 elif op == "ls":
-    cmd.emit(cmd.agent(["ctl", "ls", "-l" if cmd.flag(args, "long") else "--json"]))
+    cmd.emit(cmd.agent(["ctl", "ls"] + (["-l"] if cmd.flag(args, "long") else []) + (["--json"] if cmd.flag(args, "json") else [])))
 elif op == "where":
     what = args.get("what")
     if what not in (None, "stack", "ws"):

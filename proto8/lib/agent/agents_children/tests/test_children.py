@@ -110,7 +110,8 @@ class Children(unittest.TestCase):
         self.assertEqual(self.record(), [{"name": "kid", "stack": "procs/kid"}])
         self.ok({"op": "add", "def": "defs/kid2"})           # name defaults to the folder name, like ctl add
         self.assertEqual([k["name"] for k in self.record()], ["kid", "kid2"])
-        listed = json.loads(self.ok({"op": "ls"}))
+        self.assertEqual(self.ok({"op": "ls"}), "kid\t-\t-\t-\t-\nkid2\t-\t-\t-\t-\nchildren 2/4\n")   # short lines, not mom
+        listed = json.loads(self.ok({"op": "ls", "long": True}))
         self.assertEqual([r["name"] for r in listed["children"]], ["kid", "kid2"])   # not mom
         self.assertEqual(listed["max_children"], 4)
 
@@ -160,7 +161,7 @@ class Children(unittest.TestCase):
         self.assertIn("error: ChildMissing kid", r.stdout)
         r = self.run_tool({"op": "state", "name": "kid"})
         self.assertIn("error: ChildUnknown kid", r.stdout)
-        self.assertEqual(json.loads(self.ok({"op": "ls"}))["children"], [])     # kid2 forgotten by ls
+        self.assertEqual(self.ok({"op": "ls"}), "children 0/4\n")     # kid2 forgotten by ls
         self.assertEqual(self.record(), [])
         self.assertIn("children 1/4", self.ok({"op": "add", "def": "d", "name": "kid3"}))   # quota freed
 
@@ -180,7 +181,8 @@ class Children(unittest.TestCase):
         out = self.ok({"op": "add", "def": "d", "name": "kid", "on_queued": "ok"}, FAKE_QUEUE="1")
         self.assertIn("letter L1", out)
         self.assertEqual(self.record(), [{"name": "kid", "queued_letter": "L1"}])
-        self.assertEqual(json.loads(self.ok({"op": "ls"}))["children"], [{"name": "kid", "queued_letter": "L1"}])
+        self.assertEqual(json.loads(self.ok({"op": "ls", "long": True}))["children"], [{"name": "kid", "queued_letter": "L1"}])
+        self.assertEqual(self.ok({"op": "ls"}), "kid\tqueued\t-\t-\tletter L1\nchildren 1/4\n")
         r = self.run_tool({"op": "tools", "name": "kid", "args": {"op": "ls"}})
         self.assertIn("error: ChildQueued kid", r.stdout)
 

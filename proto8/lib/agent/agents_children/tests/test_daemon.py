@@ -74,7 +74,10 @@ class RealDaemon(unittest.TestCase):
 
     def test_children_on_a_real_daemon(self):
         self.ok(TOOL, {"op": "add", "def": str(TEMPLATE), "name": "kid", "ws": "kid"})
-        self.assertEqual([c["name"] for c in json.loads(self.ok(TOOL, {"op": "ls"}))["children"]], ["kid"])
+        self.assertEqual([c["name"] for c in json.loads(self.ok(TOOL, {"op": "ls", "long": True}))["children"]], ["kid"])
+        short = self.ok(TOOL, {"op": "ls"}).splitlines()
+        self.assertEqual((len(short), short[0].split("\t")[0], short[-1]), (2, "kid", "children 1/4"))
+        self.assertLess(len(short[0]), 200)
         out = self.ok(TOOL, {"op": "tools", "name": "kid", "args": {"op": "add", "path": str(PROTO / "lib" / "base" / "math")}})
         self.assertIn("kid's next turn", out)
         kid_tools = [t["name"] for t in json.loads(self.agent("tools", "--target", "kid", "ls", "--json").stdout)]
@@ -90,8 +93,9 @@ class RealDaemon(unittest.TestCase):
         self.assertIn("error: ChildUnknown mom", r.stdout)
         # someone removes kid with agents_ctl: agents_children forgets it and the slot is free again
         self.ok(CTL_TOOL, {"op": "rm", "name": "kid"})
-        self.assertNotIn('"kid"', self.ok(CTL_TOOL, {"op": "ls"}))
-        self.assertEqual(json.loads(self.ok(TOOL, {"op": "ls"}))["children"], [])
+        self.assertNotIn('"kid"', self.ok(CTL_TOOL, {"op": "ls", "json": True}))
+        self.assertNotIn("kid\t", self.ok(CTL_TOOL, {"op": "ls"}))
+        self.assertEqual(self.ok(TOOL, {"op": "ls"}), "children 0/4\n")
         self.assertIn("error: ChildUnknown kid", self.tool(TOOL, {"op": "state", "name": "kid"}).stdout)
         self.assertIn("children 1/4", self.ok(TOOL, {"op": "add", "def": str(TEMPLATE), "name": "kid2"}))
         self.ok(TOOL, {"op": "rm", "name": "kid2", "purge": True})
