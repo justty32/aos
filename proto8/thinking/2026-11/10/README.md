@@ -13,3 +13,4 @@
 | [prefix-fixes](prefix-fixes/README.md) | 使用者行程有變、要提前用現行 aos：大修問題清單 207 列分桶（直接修 61、A＋B 待裁 2、擱著 30、不用修 114），直接修切五條施工線；不動環境變數、json 格式、資料夾佈局、lib 介面 |
 | [json-memory](json-memory/README.md) | 討論紀錄＋圖紙（fable，[02](json-memory/02-格式規則.md)～[05](json-memory/05-步驟與代定.md)）＋施工中：記憶庫改成資料夾＋`.json` 一棵樹、統一路徑 `檔.json#/JSON Pointer`、`_index.json`／`_index` key 當表、`_description` 說明、工具一次維護內容與指示牌、鎖拿掉、`knowledge/aos` 直接轉；使用者「直接開工」，岔路代定 15 條可翻案 |
 | [self-family](self-family/README.md) | self_history 一家：使用者五題答「全給、這一步動不了、預設搬到旁邊、eca 縮水版、先有 `aos-agent history` 再包」；施工中 |
+| [agents-split](agents-split/README.md) | 把 `agents` 工具拆三塊：使用者定「子 agent 的管理與生滅（有大權的／普通掛上）、定義的創造修改、交流（先不動）」、血統先不做；規劃者提案名字 `children`／`agent_add`／`defs`，等使用者看過名字再施工 |
