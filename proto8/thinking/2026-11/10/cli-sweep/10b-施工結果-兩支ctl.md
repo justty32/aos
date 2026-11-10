@@ -5,7 +5,7 @@
 | 項 | 結果 | commit | 怎麼驗 |
 |---|---|---|---|
 | Q4＝A 已停再停算成功 | 做了：`stop` 對 stopped、`sleep` 對 sleeping、`start`／`wake` 對 running＝stdout `名字: already 狀態`、退 0、不寄信；兩支同一套（`daemon_ctl.Already`） | `1d3ece5e5` | `cmd/aos-daemon-ctl/tests/test_already.py`；`impls/aos-daemon/tests/test_ctl.py`、`test_lifecycle.py` 原本斷言「已停再停＝PhaseBad」的兩處照新裁定改 |
-| 甲5 撞名／rm 不存在＝報錯不寄 | 做了：add 撞名＝`InstanceExists`、rm 不在表上＝`ProcMissing`，都不寄 | 見 git log「甲4、甲5」 | `cmd/aos-daemon-ctl/tests/test_add_rm_checks.py` |
+| 甲5 撞名／rm 不存在＝報錯不寄 | 做了：add 撞名＝`InstanceExists`、rm 不在表上＝`ProcMissing`，都不寄 | `624355ee5` | `cmd/aos-daemon-ctl/tests/test_add_rm_checks.py` |
 | 甲4 shutdown 成功說一句話 | 做了：`daemon at D stopped (ctl seq N); M procs asleep, …` | 同上 | /tmp 實跑 daemon-root 起停 |
 | 甲3、甲6、Q5、Q3、Q1、Q6 | 沒做（今天時間不夠） | — | — |
 

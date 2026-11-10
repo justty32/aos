@@ -21,7 +21,7 @@ subcommands:
   ping [--timeout-s S]   wait for the daemon's ping reply; prints "replied in N ms"
 
 daemon itself:
-  shutdown [--timeout-s S]   stop this daemon: write stop to its own ctl, poke, wait for exit; prints N
+  shutdown [--timeout-s S]   stop this daemon: write stop to its own ctl, poke, wait for exit; prints one line saying so
 
 sweeper (the same code as the _sweeper row, aos-sweeper):
   sweep [--dry-run]           one round now: archive big stderr files, stop orphaned loops, report
@@ -287,7 +287,7 @@ usage: aos-daemon-ctl [--daemon D] shutdown [--timeout-s S]
 
 Checks that the daemon is running (state window pid, started_at_ticks and boot_id match
 /proc, as poke does), writes {"cmd": "stop", "seq": N} to the daemon's own ctl window
-(D/ctl.json, or the ctl name in D/daemon.json), pokes it, and prints N.
+(D/ctl.json, or the ctl name in D/daemon.json) and pokes it.
 N is one more than the larger of the ctl's current seq and its state_flux ctl_seq.
 The daemon stops like on its own ctl stop: procs still running get SIGTERM (SIGKILL after
 10 s) and stay sleeping on the table; the next start wakes them.
