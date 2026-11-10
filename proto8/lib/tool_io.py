@@ -17,7 +17,7 @@ start 只掃旗標位置的說明，不讀 stdin；arguments 第一次才解析�
   --help  argv 在旗標位置有 --help（不含旗標值、首個位置參數後與 -- 後）＝手寫說明加上 schema 生成的旗標段，印 stdout、退 0。
   Ctrl-C  不吐 traceback、退 130（有子行程的工具自己再接 SIGINT，先收那一群）。
   讀的人先關了 stdout（EPIPE，例 `| head -c0`）＝照 Unix 預設被 SIGPIPE 打掉、退 141（128＋13），不吐 traceback（11-05 晚邊緣測試）。"""
-import copy, json, math, os, signal, sys, textwrap, time
+import copy, json, math, os, re, signal, sys, textwrap, time
 
 NAME, ECHO = "tool", True
 _TOOLDEF, _ARGUMENTS = None, None
@@ -214,17 +214,27 @@ def workspace():
     return os.path.realpath(ws)
 
 
-def tokenize_flags(argv, kind):
-    """順序呼叫 kind；第一個位置參數起（或 -- 後）不再解旗標。"""
-    pairs, i = [], 0
+def tokenize_flags(argv, kind, anywhere=False, keep=None):
+    """順序呼叫 kind；第一個位置參數起（或 -- 後）不再解旗標。
+    anywhere＝位置參數後的旗標也解（11-10 cli-sweep Q1，aos_flags 動作那層用）：位置參數照順序收進 rest；
+    `-` 開頭但 kind 不認、又長得像負數（-3、-.5）或名字裡有空白（"- 一條摘要"）且前面已有位置參數＝照舊當位置參數；
+    keep＝N：第 N 個位置參數起原樣交出；-- 在位置參數後＝連它一起原樣交出（呼叫者看得到 XXX -- ARGS）。"""
+    pairs, rest, i = [], [], 0
     while i < len(argv):
         arg = argv[i]
         if arg == "--":
-            return pairs, list(argv[i + 1:])
-        if not arg.startswith("-") or arg == "-":
-            break
+            return pairs, rest + list(argv[i:] if rest else argv[i + 1:])
         flag, equals, value = arg.partition("=") if arg.startswith("--") else (arg, "", "")  # 單槓整個是名（P-44）
-        k = kind(flag)
+        positional = not arg.startswith("-") or arg == "-"
+        k = None if positional else kind(flag)
+        if not positional and k not in ("value", "switch") and rest and anywhere and (_NUMBER.match(arg) or re.search(r"\s", flag)):
+            positional = True
+        if positional:
+            if not anywhere or (keep is not None and len(rest) + 1 >= keep):
+                return pairs, rest + list(argv[i:])
+            rest.append(arg)
+            i += 1
+            continue
         if k not in ("value", "switch"):
             raise Error("FlagUnknown", "unknown flag %s" % flag)
         if k == "switch":
@@ -238,7 +248,10 @@ def tokenize_flags(argv, kind):
             value = argv[i]
         pairs.append((flag, value))
         i += 1
-    return pairs, list(argv[i:])
+    return pairs, rest
+
+
+_NUMBER = re.compile(r"-\.?[0-9]")
 
 
 def _leaf(schema, path, flag):

@@ -16,6 +16,11 @@ Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 10-23 刪了，只有它�
 規則（10-21 ideas § 3）：`[旗標...] XXX [args...]`——第一個不是旗標的參數（不以 - 開頭，或就是 -）起全部是 rest
 （rest[0]＝XXX，之後原樣，不再解析旗標）；`--` 結束旗標（XXX 可以 - 開頭）。帶值的旗標寫 `--x V` 或 `--x=V`，
 重複給＝最後一個算。opts＝{旗標表的值: 字串}。
+11-10 cli-sweep Q1（使用者「1.收。2.收。3.好。」）：每一層（程式、子命令、動作）是一個節點，屬於某一層的旗標可以寫在
+那一層名字之後的任何位置。opt-in：程式入口 parse(..., sub="root")、中間派發的那層 sub=True（解到下一層的名字為止、
+把自己的表推進去）；之後的 parse（動作那層）位置參數後的旗標也收、外層的旗標也認（值寫回外層那份 opts，近的同名先算）；
+keep=N＝第 N 個位置參數起原樣交出（訊息、內容這類原樣交給別人的）；位置參數後的 --＝連它一起原樣交出；
+hide(旗標…)＝下層不再認外層的這幾個。沒有 sub="root" 的程式照舊規則。
 不帶值的旗標（開關，10-22 `--dotenv-override`）另給一張表 switches：給了＝opts[值] 是 True，重複給＝一樣，寫 `--x=V`＝Error。
 可以重複給、每次都收的旗標（11-04，aos-grow 的 `--take`）另給一張表 multi：opts[值]＝照給的順序的字串串列（沒給＝沒這個 key）。不認得的旗標、旗標缺值＝Error；有沒有 XXX 由呼叫者自己判斷（rest 可能是空的）。
 `--help`（11-05 stdio-unify R3，使用者「全都有」「--help要輸出英文」）：旗標的位置（子命令後再 parse 一次也算）看到 `--help`＝把 HELP
@@ -162,15 +167,29 @@ def _print_help(text):
     sys.exit(0)
 
 
-def parse(argv, flags, switches=None, multi=None, help=None, short=None):
-    switches, multi = switches or {}, multi or {}
-    text = help if help is not None else HELP
-    builtin_help = text is not None and "--help" not in flags and "--help" not in switches
-    alias = {}  # 這次開的短名 → 長旗標（呼叫者寫錯＝ValueError，不是使用者的錯）
+# 11-10 cli-sweep Q1（使用者「1.收。2.收。3.好。」）：每一層（程式、子命令、動作）是一個節點，
+# 屬於某一層的旗標可以寫在那一層名字之後的任何位置。派發的那層 parse(..., sub=True) 把自己的旗標表推進來，
+# 下層（直到動作那層）也認得它們、值寫回那層回傳的 opts。sub="root" 先清空（程式的入口）。
+_scopes = []          # [(flags, switches, multi, alias, opts)]，外到內
+
+
+class _HelpNow:
+    """包 kind：前一個 --help 沒帶值（沒被當錯）＝下一次被叫時就印說明（舊行為：後面寫錯也先印說明）。"""
+    def __init__(self, kind, seen, text):
+        self.kind, self.seen, self.text = kind, seen, text
+
+    def __call__(self, flag):
+        if self.seen:
+            _print_help(self.text)
+        return self.kind(flag)
+
+
+def _alias_of(flags, switches, multi, short, builtin_help):
     try:
         selected = short if isinstance(short, dict) else {s: SHORT[s] for s in short or ()}
     except KeyError as e:
         raise ValueError("short flag %r has no default; pass a mapping" % e.args[0]) from None
+    alias = {}  # 這次開的短名 → 長旗標（呼叫者寫錯＝ValueError，不是使用者的錯）
     for s, long_flag in selected.items():
         if not s.startswith("-") or s.startswith("--") or len(s) != 2:
             raise ValueError("invalid short flag %r" % s)
@@ -179,37 +198,72 @@ def parse(argv, flags, switches=None, multi=None, help=None, short=None):
         alias[s] = long_flag
     if builtin_help:
         alias["-h"] = "--help"
-    seen_help = []
+    return alias
 
-    def key_of(flag):  # 單槓 token 整個是名（tool_io 不切 =），查短名；雙槓照原樣
-        return flag if flag.startswith("--") else alias.get(flag, flag)
 
-    def kind(flag):  # tokenize_flags 照 argv 順序叫；前一個 --help 沒帶值（沒被當錯）就在這裡印說明
-        if seen_help:
-            _print_help(text)
-        key = key_of(flag)
-        if key == "--help" and builtin_help:
+def hide(*names):
+    """外層的這些長旗標，下層不再認（例：aos-agent ctl rm 不收 --target，後面寫了＝FlagUnknown，不默默寫回頂層）。"""
+    for i, (flags, switches, multi, alias, opts) in enumerate(_scopes):
+        flags = {k: v for k, v in flags.items() if k not in names}
+        switches = {k: v for k, v in switches.items() if k not in names}
+        multi = {k: v for k, v in multi.items() if k not in names}
+        alias = {k: v for k, v in alias.items() if v not in names}
+        _scopes[i] = (flags, switches, multi, alias, opts)
+
+
+def parse(argv, flags, switches=None, multi=None, help=None, short=None, *, sub=None, keep=None):
+    """sub＝None：外層沒推過表＝舊規則（第一個位置參數起不再解）；推過＝動作那層：位置參數後的旗標也收、外層旗標也認。
+    sub＝True／"root"：派發的一層，解到第一個位置參數（下一層的名字）為止，再把自己的表推進去。
+    keep＝N（動作那層）：第 N 個位置參數起原樣交出、不再解（後面要原樣交給別人的那類）。
+    -- 結束解析：在任何位置參數前＝丟掉它；之後＝連它一起原樣留在 rest（呼叫者看得到 XXX -- ARGS）。"""
+    switches, multi = switches or {}, multi or {}
+    if sub == "root":
+        _scopes.clear()
+    text = help if help is not None else HELP
+    builtin_help = text is not None and "--help" not in flags and "--help" not in switches
+    alias = _alias_of(flags, switches, multi, short, builtin_help)
+    anywhere = sub is None and bool(_scopes)
+    opts = {}
+    own = (flags, switches, multi, alias, opts)
+    scopes = [own] + list(reversed(_scopes))          # 近的先認（同名＝這層的）
+
+    def find(flag):
+        for sc in scopes:
+            f, sw, mu, al, _ = sc
+            key = flag if flag.startswith("--") else al.get(flag, flag)
+            if key == "--help" and sc is own and builtin_help:
+                return sc, key, "help"
+            if key in sw:
+                return sc, key, "switch"
+            if key in f or key in mu:
+                return sc, key, "value"
+        return None, flag, None
+
+    def kind(flag):  # tokenize_flags 照 argv 順序叫；--help 一看到就印（--help=x 先由 tokenize_flags 報）
+        sc, key, k = find(flag)
+        if k == "help":
             seen_help.append(flag)
-            return "switch"  # --help=x 由 tokenize_flags 報 ArgumentsBad「--help takes no value」
-        if key in switches:
             return "switch"
-        return "value" if key in flags or key in multi else None
+        return k
 
+    seen_help = []
     try:
-        pairs, rest = tool_io.tokenize_flags(argv, kind)
+        pairs, rest = tool_io.tokenize_flags(argv, _HelpNow(kind, seen_help, text), anywhere, keep)
     except tool_io.Error as e:
         raise Error(str(e), e.code) from None
     if seen_help:
         _print_help(text)
-    opts = {}
     for flag, val in pairs:
-        key = key_of(flag)
-        if key in switches:
-            opts[switches[key]] = True
-        elif key in multi:
-            opts.setdefault(multi[key], []).append(val)
+        sc, key, k = find(flag)
+        f, sw, mu, _, out = sc
+        if key in sw:
+            out[sw[key]] = True
+        elif key in mu:
+            out.setdefault(mu[key], []).append(val)
         else:
-            opts[flags[key]] = val
+            out[f[key]] = val
+    if sub:
+        _scopes.append(own)
     return opts, rest
 
 
