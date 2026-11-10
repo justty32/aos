@@ -13,4 +13,6 @@
            "agents_ctl": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agents_ctl"}},
            "agent_def": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agent_def"}},
            "memory": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/memory"},
-                      "env": {"AOS_MEMORY": {"$env": "AOS_HOME", "$path": "/knowledge/aos"}}}}}
+                      "env": {"AOS_MEMORY": {"$env": "AOS_HOME", "$path": "/knowledge/aos"}}},
+           "memory_write": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/memory_write"},
+                            "env": {"AOS_MEMORY": {"$env": "AOS_HOME", "$path": "/knowledge/aos"}}}}}

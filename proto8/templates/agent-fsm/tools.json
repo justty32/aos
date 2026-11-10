@@ -1,4 +1,8 @@
-{"tools": {"wall_clock": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/wall_clock"}},
+{"$override": [{"$env": "AOS_HOME", "$path": "/lib/packs/look.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/change.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/delete.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/shell.json"}],
+ "tools": {"wall_clock": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/wall_clock"}},
            "self_tools": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_tools"}},
            "self_llm": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_llm"}},
            "self_hook": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_hook"}},
@@ -13,4 +17,6 @@
            "agents_ctl": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agents_ctl"}},
            "agent_def": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agent_def"}},
            "memory": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/memory"},
-                      "env": {"AOS_MEMORY": {"$env": "AOS_HOME", "$path": "/knowledge/aos"}}}}}
+                      "env": {"AOS_MEMORY": {"$env": "AOS_HOME", "$path": "/knowledge/aos"}}},
+           "memory_write": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/memory_write"},
+                            "env": {"AOS_MEMORY": {"$env": "AOS_HOME", "$path": "/knowledge/aos"}}}}}
