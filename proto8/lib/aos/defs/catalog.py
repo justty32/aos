@@ -1,4 +1,4 @@
-"""Inspect public definition declarations and group agents by tools, endpoint and memory."""
+"""Inspect public definition declarations and group agents by tools, endpoint and knowledge."""
 import json
 import os
 from pathlib import Path
@@ -111,25 +111,25 @@ def describe(path, root):
     endpoint = read(path / llm_file).get('model', 'default')
     if not isinstance(endpoint, str):
         raise ValueError('model in llm.json must be a string')
-    memory = None
-    if agent.get('memory') is not None:
-        filename = agent['memory']
+    knowledge = None
+    if agent.get('knowledge') is not None:
+        filename = agent['knowledge']
         if not isinstance(filename, str) or not filename:
-            raise ValueError('aos-agent.memory must name a file')
-        memory_file = path / filename
-        memory = read(memory_file).get('base')
-        if isinstance(memory, str):
-            memory = relative(memory_file.parent / memory, root)
-        elif memory is not None and not isinstance(memory, dict):
-            raise ValueError('memory base must be a path or environment object')
+            raise ValueError('aos-agent.knowledge must name a file')
+        knowledge_file = path / filename
+        knowledge = read(knowledge_file).get('base')
+        if isinstance(knowledge, str):
+            knowledge = relative(knowledge_file.parent / knowledge, root)
+        elif knowledge is not None and not isinstance(knowledge, dict):
+            raise ValueError('knowledge base must be a path or environment object')
     table_dir = (path / agent['tools']).parent
     row.update(tools=sorted({tool_key(table_dir, t['path'], root) for t in entries.values()}),
-               endpoint=endpoint, memory=memory)
+               endpoint=endpoint, knowledge=knowledge)
     return row
 
 
 def signature(row):
-    return json.dumps({k: row[k] for k in ('tools', 'endpoint', 'memory')},
+    return json.dumps({k: row[k] for k in ('tools', 'endpoint', 'knowledge')},
                       sort_keys=True, separators=(',', ':'))
 
 

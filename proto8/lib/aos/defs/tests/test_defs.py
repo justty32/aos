@@ -19,16 +19,16 @@ class DefinitionsTest(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(value) if not isinstance(value, str) else value)
 
-    def definition(self, name, endpoint='terra', tool=None, memory=None):
+    def definition(self, name, endpoint='terra', tool=None, knowledge=None):
         path = self.root / name
-        self.write(path / 'interfaces.json', {'aos-agent': {'tools': 'tools.json', 'llm': 'llm.json', **({'memory': 'memory/config.json'} if memory is not None else {})}})
+        self.write(path / 'interfaces.json', {'aos-agent': {'tools': 'tools.json', 'llm': 'llm.json', **({'knowledge': 'knowledge/config.json'} if knowledge is not None else {})}})
         self.write(path / '_metainfo.json', {'summary': 'Example worker', 'lineage': {'from': 'retired/missing'}})
         self.write(path / 'README.md', 'Example worker\n')
         self.write(path / 'system.txt', 'A prompt')
         self.write(path / 'tools.json', {'tools': tool or {}})
         self.write(path / 'llm.json', {'model': endpoint})
-        if memory is not None:
-            self.write(path / 'memory/config.json', {'base': memory})
+        if knowledge is not None:
+            self.write(path / 'knowledge/config.json', {'base': knowledge})
         return path
 
     def call(self, op, **extra):
@@ -86,12 +86,12 @@ class DefinitionsTest(unittest.TestCase):
         self.assertEqual([g['members'] for g in data['groups']], [['a', 'b']])
         self.assertIn('/lib/base/peek_clock', data['groups'][0]['key'])
 
-    def test_memory_paths_and_literal_environment(self):
-        self.definition('a', memory='../../kb')
-        self.definition('b', memory='../../kb')
-        self.definition('c', memory={'$env': 'AOS_WS', '$path': 'kb'})
-        self.definition('d', memory={'$path': 'kb', '$env': 'AOS_WS'})
-        self.definition('e', memory={'$env': 'AOS_WS', '$path': 'other'})
+    def test_knowledge_paths_and_literal_environment(self):
+        self.definition('a', knowledge='../../kb')
+        self.definition('b', knowledge='../../kb')
+        self.definition('c', knowledge={'$env': 'AOS_WS', '$path': 'kb'})
+        self.definition('d', knowledge={'$path': 'kb', '$env': 'AOS_WS'})
+        self.definition('e', knowledge={'$env': 'AOS_WS', '$path': 'other'})
         _, data = self.call('dup')
         self.assertEqual(sorted(g['members'] for g in data['groups']), [['a', 'b'], ['c', 'd']])
 
@@ -149,19 +149,19 @@ class DefinitionsTest(unittest.TestCase):
         self.assertIn('interfaces.json', data['problems'][0]['reason'])
 
     def test_check_each_required_field(self):
-        for field in ('readme', 'summary', 'tools', 'llm', 'memory', 'name'):
+        for field in ('readme', 'summary', 'tools', 'llm', 'knowledge', 'name'):
             with self.subTest(field=field):
                 root = self.root / field
                 root.mkdir()
                 old = self.root
                 self.root = root
-                path = self.definition('Bad!' if field == 'name' else 'bad', memory='../../kb')
+                path = self.definition('Bad!' if field == 'name' else 'bad', knowledge='../../kb')
                 if field == 'readme':
                     self.write(path / 'README.md', '\ntext')
                 elif field == 'summary':
                     self.write(path / '_metainfo.json', {})
-                elif field in ('tools', 'llm', 'memory'):
-                    self.write(path / ('memory/config.json' if field == 'memory' else field + '.json'), 'broken')
+                elif field in ('tools', 'llm', 'knowledge'):
+                    self.write(path / ('knowledge/config.json' if field == 'knowledge' else field + '.json'), 'broken')
                 result, data = self.call('check')
                 self.assertEqual(result.returncode, 1)
                 self.assertTrue(data['problems'])

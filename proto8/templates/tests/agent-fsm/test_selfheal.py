@@ -295,27 +295,27 @@ class StaleRequest(Base):
                 self.wait(10)
 
 
-class MemoryMissing(Base):
-    """7：--memory 讀不到知識庫＝warning、system 裡說一句、照樣寫請求。"""
+class KnowledgeMissing(Base):
+    """7：--knowledge 讀不到知識庫＝warning、system 裡說一句、照樣寫請求。"""
 
     def setUp(self):
         super().setUp()
         (self.definition / 'interfaces.json').write_text(json.dumps(
             {'aos-agent': {'llm': 'llm.json', 'tools': 'tools.json'}}))
         (self.definition / 'system.txt').write_text('You are a test.\n')
-        tool = self.root / 'memory_tool'
+        tool = self.root / 'knowledge_tool'
         tool.mkdir()
-        lib_memory = PROTO / 'lib/agent/memory_read'
-        (tool / '_entry').write_text(json.dumps([str(lib_memory / '_entry')]))
+        lib_knowledge = PROTO / 'lib/agent/knowledge_read'
+        (tool / '_entry').write_text(json.dumps([str(lib_knowledge / '_entry')]))
         for name in ('_metainfo.json', '_tooldef.json'):
-            (tool / name).symlink_to(lib_memory / name)
-        (tool / '_memory.json').write_text(json.dumps({'base': str(self.root / 'no-such-knowledge')}))
+            (tool / name).symlink_to(lib_knowledge / name)
+        (tool / '_knowledge.json').write_text(json.dumps({'base': str(self.root / 'no-such-knowledge')}))
         self.tool = tool
-        (self.definition / 'tools.json').write_text(json.dumps({'tools': {'memory_read': {'path': str(tool)}}}))
+        (self.definition / 'tools.json').write_text(json.dumps({'tools': {'knowledge_read': {'path': str(tool)}}}))
 
     def brain(self, timeout=10):
         result = subprocess.run(
-            [sys.executable, str(CELLS / 'brain.py'), '--system', 'system.txt', '--memory', 'memory_read'],
+            [sys.executable, str(CELLS / 'brain.py'), '--system', 'system.txt', '--knowledge', 'knowledge_read'],
             env=self.env, capture_output=True, text=True, timeout=timeout)
         self.assertEqual(result.returncode, 0, result.stderr)
         system = json.loads((self.stack / 'think/request.json').read_text())['request']['messages'][0]
@@ -325,13 +325,13 @@ class MemoryMissing(Base):
         result, system = self.brain()
         warnings = [l for l in result.stderr.splitlines() if l.startswith('agent-fsm:')]
         self.assertEqual(len(warnings), 1, result.stderr)
-        self.assertIn('agent-fsm: warning: tool memory_read (op read of the root) exited', warnings[0])
+        self.assertIn('agent-fsm: warning: tool knowledge_read (op read of the root) exited', warnings[0])
         self.assertTrue(system['content'].startswith('You are a test.'))
-        self.assertIn('[aos] warning: knowledge base is not available right now: tool memory_read', system['content'])
+        self.assertIn('[aos] warning: knowledge base is not available right now: tool knowledge_read', system['content'])
 
     def test_no_knowledge_base_given_is_quiet(self):
-        """工具沒被指定庫（MemoryMissing）＝安靜：沒有 warning、工具那行不轉印、system 只有原文（11-10 深夜 tool-packs）。"""
-        (self.tool / '_memory.json').unlink()
+        """工具沒被指定庫（KnowledgeMissing）＝安靜：沒有 warning、工具那行不轉印、system 只有原文（11-10 深夜 tool-packs）。"""
+        (self.tool / '_knowledge.json').unlink()
         result, system = self.brain()
         self.assertEqual(result.stderr, '')
         self.assertEqual(system['content'], 'You are a test.\n')
@@ -344,7 +344,7 @@ class MemoryMissing(Base):
         started = time.monotonic()
         result, system = self.brain(timeout=60)
         self.assertLess(time.monotonic() - started, 45)
-        self.assertIn('agent-fsm: warning: tool memory_read (op read of the root) did not finish in 30 s', result.stderr)
+        self.assertIn('agent-fsm: warning: tool knowledge_read (op read of the root) did not finish in 30 s', result.stderr)
         self.assertIn('[aos] warning: knowledge base is not available right now:', system['content'])
 
 

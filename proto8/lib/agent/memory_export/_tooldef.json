@@ -1,6 +1,0 @@
-{"description": "Print the whole memory (or the subtree at path) as one Markdown document, for a person who wants to read it. Each place starts with a line <!-- node: PATH -->; strings are printed as they are, other JSON values become ```json blocks. Long output is cut at max_bytes; then export a child path. To look things up yourself use memory_read instead. Errors: NodeMissing, PathBad, MemoryMissing.",
- "env": ["AOS_MEMORY"],
- "errors": ["ArgumentsBad", "CfgBad", "MemoryMissing", "MemoryBad", "ReadFailed", "NodeMissing", "PathBad", "TargetBad", "FileBad", "DirectiveBad", "LaunchFailed"],
- "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "a path like aos/errors.json or aos/cli/ or aos/errors.json#/codes; empty or / is the root (default)"},
-                               "max_bytes": {"default": 50000, "type": "integer", "description": "most bytes to print (default 50000)"}}}}

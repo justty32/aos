@@ -21,7 +21,7 @@
 | 子 agent | [children.json](children.json) | agents_children（自己生的）、agents_ctl（daemon 上任何一隻） |
 | 定義 | [def.json](def.json) | agent_def、tools_def（從 Python 骨架做新工具、檢查工具；11-10 深夜使用者「3.對」） |
 | 信箱 | [mailbox.json](mailbox.json) | mailbox_peek、mailbox_read、mailbox_send |
-| 記憶 | [memory.json](memory.json) | memory_read、memory_write——只寫路徑；用哪個庫由疊這包的那份 `tools.json` 在同名格補 `env`（`AOS_MEMORY`） |
+| 記憶 | [knowledge.json](knowledge.json) | knowledge_read、knowledge_write——只寫路徑；用哪個庫由疊這包的那份 `tools.json` 在同名格補 `env`（`AOS_KNOWLEDGE`） |
 
 ## 怎麼用、怎麼關
 

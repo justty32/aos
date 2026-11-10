@@ -82,7 +82,7 @@ class Check:
         self.env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         self.env.update(HOME=str(self.work / "home-a"),
                         PYTHONPATH=os.pathsep.join([str(PROTO / "py"), str(PROTO / "lib")]),
-                        AOS_LLM_KERNEL=str(self.kernel), AOS_DAEMON=str(self.root), AOS_MEMORY=str(self.work / "kb"), AOS_HOME=str(PROTO),
+                        AOS_LLM_KERNEL=str(self.kernel), AOS_DAEMON=str(self.root), AOS_KNOWLEDGE=str(self.work / "kb"), AOS_HOME=str(PROTO),
                         FAKE_CLI_LOG=str(self.work / "fake-cli.jsonl"))
         self.env["PATH"] = os.pathsep.join([str(self.work / "bin"), str(Path.home() / ".local/bin"), os.environ["PATH"]])
         self.processes = []
@@ -160,10 +160,10 @@ class Check:
     def copy_agent(self, kind, dest):
         source = PROTO / "templates" / kind
         shutil.copytree(source, dest, symlinks=True, ignore=shutil.ignore_patterns("__pycache__", "tests"))
-        kb = {"AOS_MEMORY": str(self.work / "kb")}
+        kb = {"AOS_KNOWLEDGE": str(self.work / "kb")}
         tools = {"peek_now_time": {"path": str(PROTO / "lib/base/peek_now_time")},
-                 "memory_read": {"path": str(PROTO / "lib/agent/memory_read"), "env": kb},
-                 "memory_write": {"path": str(PROTO / "lib/agent/memory_write"), "env": kb}}
+                 "knowledge_read": {"path": str(PROTO / "lib/agent/knowledge_read"), "env": kb},
+                 "knowledge_write": {"path": str(PROTO / "lib/agent/knowledge_write"), "env": kb}}
         save(dest / "tools.json", {"tools": tools})
         save(dest / "llm.json", {"model": "fake"})
 

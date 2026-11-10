@@ -10,11 +10,11 @@ eca-claude/
   loop.json   {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000},
                "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；三扇窗落在 $AOS_STACK）
   cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms），抄 lib/agent/claude 的保守旗標（--model 不寫在這，見 llm.json）；
-              tools_flags ["--memory", "memory_read"]＝aos-mcp 在 MCP initialize 的 instructions 給知識庫根（Claude Code 放進它的 system prompt；11-05 晚）
+              tools_flags ["--knowledge", "knowledge_read"]＝aos-mcp 在 MCP initialize 的 instructions 給知識庫根（Claude Code 放進它的 system prompt；11-05 晚）
   llm.json    腦設定：{"model": "sonnet"}（11-04 晚；cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）；只認 model（claude CLI 沒有 temperature 等取樣旗標，與快取無關的調整鍵這邊沒有對應，11-10 晚）
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔11-04 起，相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
-  tools.json  aos-tools 的登記檔：`"$override"` 一串 [lib/packs](../../lib/packs/README.md) 十一包（通用四包 look、change、delete、shell，加 gadgets、events、self、children、def、mailbox、memory，共 34 支；11-10 深夜使用者「1.算了，把各種東西也一起掛回eca。」，翻掉稍早「對於eca，其實那些基礎工具就不用了」），自己只寫 memory_read、memory_write 兩格的 `env.AOS_MEMORY`（指 `knowledge/`）；
+  tools.json  aos-tools 的登記檔：`"$override"` 一串 [lib/packs](../../lib/packs/README.md) 十一包（通用四包 look、change、delete、shell，加 gadgets、events、self、children、def、mailbox、knowledge，共 34 支；11-10 深夜使用者「1.算了，把各種東西也一起掛回eca。」，翻掉稍早「對於eca，其實那些基礎工具就不用了」），自己只寫 knowledge_read、knowledge_write 兩格的 `env.AOS_KNOWLEDGE`（指 `knowledge/`）；
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__peek_now_time…；帶 `--own <stack>/tools.json`，self_tools 加減工具後 aos-mcp 送 list_changed，同一輪就叫得到，11-10 深夜「3.同一輪就生效」）；不要工具就刪掉它
   children.json 工具 agents_children 的配額設定：{"max_children": 4}（這隻最多同時生幾隻；這隻的 stack 裡放一份 children.json 只寫改過的鍵＝覆蓋；誰是我生的另記在 stack 的 tools/agents_children/children.json）
   interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model"], "history": "history.jsonl", "hooks": "hooks.json"}}（11-04；hooks 鍵 11-10 晚加；history 鍵 11-10 加，給 aos-agent history 找檔；llm_keys 11-10 晚加，aos-agent llm set 不在上面的鍵照存＋warning；aos-agent ctl add 只看這個宣告）
@@ -56,4 +56,4 @@ hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停�
 
 **長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 預設 600000（10 分鐘），限制 CLI 呼叫；`loop.json.exec.timeout_ms` 預設 900000（15 分鐘），限制整次 aos-eca-turn，要留得比 CLI 那層長，讓它有時間收尾。長任務要同時檢查這兩層，增加額度不會延長逾時。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
 
-**知識寫入**：範本預設登記 `memory_read` 與 `memory_write`（11-10 深夜 tool-packs），兩格 `env.AOS_MEMORY` 都指 `{"$env": "AOS_HOME", "$path": "/knowledge"}`＝repo 的 `knowledge/`（使用者「指knowledge/」）：claude 經 aos-mcp 寫了就改到它。要寫自己的庫就改兩格的值，或 `aos-agent tools add --replace --envs AOS_MEMORY=…`，寫法見範本 README。兩支透過 aos-mcp 提供給 Claude，`cli.json` 的內建 `--tools Read,Glob,Grep` 不必改；工具沒被指定庫（`MemoryMissing`）時 aos-mcp 安靜不給 instructions。agent 寫前先讀 `aos/memory.json`。
+**知識寫入**：範本預設登記 `knowledge_read` 與 `knowledge_write`（11-10 深夜 tool-packs），兩格 `env.AOS_KNOWLEDGE` 都指 `{"$env": "AOS_HOME", "$path": "/knowledge"}`＝repo 的 `knowledge/`（使用者「指knowledge/」）：claude 經 aos-mcp 寫了就改到它。要寫自己的庫就改兩格的值，或 `aos-agent tools add --replace --envs AOS_KNOWLEDGE=…`，寫法見範本 README。兩支透過 aos-mcp 提供給 Claude，`cli.json` 的內建 `--tools Read,Glob,Grep` 不必改；工具沒被指定庫（`KnowledgeMissing`）時 aos-mcp 安靜不給 instructions。agent 寫前先讀 `aos/knowledge.json`。

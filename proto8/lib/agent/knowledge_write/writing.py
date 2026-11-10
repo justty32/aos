@@ -1,4 +1,4 @@
-"""memory_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫到哪都行，能不能成看檔案權限。
+"""knowledge_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫到哪都行，能不能成看檔案權限。
 
 圖紙 proto8/thinking/2026-11/10/json-memory/03（使用者 11-10 晚：新增刪除工具一次做完兩處「A」；同時寫「不管，自行承擔風險」＝不加鎖；
 寫入「想怎麽寫就怎麼寫，有權限就能動」＝不限庫根底下，失敗＝WriteFailed）。
@@ -14,7 +14,7 @@ import shutil
 import stat
 import tempfile
 
-import memory_fs as fs
+import knowledge_fs as fs
 from tool_io import Error
 
 MAX_BYTES = 8000
@@ -301,7 +301,7 @@ def remove(root, loc, recursive):
     """刪檔／資料夾（不空要 recursive）／物件裡的 key，並拔掉表裡指到它的那格；根＝PathBad。"""
     if loc.tokens is None:
         if loc.fs == root:
-            raise Error("PathBad", "the memory root cannot be removed")
+            raise Error("PathBad", "the knowledge base root cannot be removed")
         if not os.path.lexists(loc.fs):
             raise fs.missing(root, loc)
         parent = os.path.dirname(loc.fs)

@@ -50,11 +50,11 @@ def suggestions(defs, reviews, config):
                                        {'op': 'refs', 'root': str(defs), 'def': name})['refs'])
     definitions = {row['path']: row for row in listing['defs']}
     reviews[-1]['definition_signatures'] = {name: signature for name, signature in
-        ((row['path'], {key: row.get(key) for key in ('tools', 'endpoint', 'memory')})
+        ((row['path'], {key: row.get(key) for key in ('tools', 'endpoint', 'knowledge')})
          for row in listing['defs'] if row.get('brain'))}
     specialized = []
     def signature(row):
-        return {key: row.get(key) for key in ('tools', 'endpoint', 'memory')}
+        return {key: row.get(key) for key in ('tools', 'endpoint', 'knowledge')}
     def child_pairs(tree):
         pairs = set()
         def walk(node, owner=None, bridge=False):

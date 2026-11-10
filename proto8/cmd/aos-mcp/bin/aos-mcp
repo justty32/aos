@@ -4,11 +4,11 @@
 # 外面的 agent 只會講 MCP；櫃台把「有哪些工具」交給 `aos-tools ls --json`、「叫一次」交給 `aos-tools call 名`，
 # 自己不懂任何一個工具在做什麼、也不管工具是資料夾、JSON 還是可執行檔（C-52）。設計：proto8/thinking/2026-10/28/aos-tools/README.md。
 #
-# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [REGISTRY...]
-#   --memory NAME（11-05 晚 agent-knowledge K4）：initialize 時叫一次登記名 NAME 的工具（memory_read）{"op": "read"}，它印的知識庫根放進回應的
+# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--knowledge NAME] [REGISTRY...]
+#   --knowledge NAME（11-05 晚 agent-knowledge K4）：initialize 時叫一次登記名 NAME 的工具（knowledge_read）{"op": "read"}，它印的知識庫根放進回應的
 #   instructions（MCP 用戶端把它放進自己的 system prompt；Claude Code 會）。叫的是 tools/list 給出去的同一個工具＝外部 agent 看到的根跟它自己查的一樣。
-#   清單裡沒有 NAME、或叫了失敗＝不給 instructions、stderr 一行 warning（不讓整個 MCP 連線起不來）；沒給 --memory＝照舊不給。
-#   工具回 MemoryMissing（沒被指定庫；11-10 深夜 tool-packs「沒有預設，你得自己指定」）＝安靜不給：不印 warning。
+#   清單裡沒有 NAME、或叫了失敗＝不給 instructions、stderr 一行 warning（不讓整個 MCP 連線起不來）；沒給 --knowledge＝照舊不給。
+#   工具回 KnowledgeMissing（沒被指定庫；11-10 深夜 tool-packs「沒有預設，你得自己指定」）＝安靜不給：不印 warning。
 #   這隻自己加減的工具（11-10 aos-tools-cli 步 4）：給 stack 那份登記檔就好——它的 "$override" 指回定義那份，疊法歸 aos-tools。
 #   每個 REGISTRY 是一份登記檔的路徑（相對路徑從啟動時的 cwd 算；不是檔＝ToolMissing）；檔名不限
 #   （11-02 使用者「改成指定檔案」，以前給的是 agent 資料夾、讀它的 tools.json）。一份都沒給＝./tools.json
@@ -48,17 +48,17 @@ from agent import hooks  # noqa: E402  lib/agent/hooks.py：before_tool／after_
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
-USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [--hooks DEF] [--own FILE] [REGISTRY...]"
+USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--knowledge NAME] [--hooks DEF] [--own FILE] [REGISTRY...]"
 OWN = None                                      # --own FILE（11-10 深夜 tools-def）：這隻自己那份登記檔；在＝用它代替 REGISTRY（每次重看，self_tools 第一次加就建出來）
 HOOKS = None                                    # --hooks DEF（11-10）：定義資料夾的絕對路徑；None＝沒有 hook
-MEMORY = None                                   # --memory NAME（11-05 晚 K4）：initialize 時給的知識庫根從這個工具來
+KNOWLEDGE = None                                   # --knowledge NAME（11-05 晚 K4）：initialize 時給的知識庫根從這個工具來
 DEFAULT_REGISTRY = "tools.json"               # 一份都沒給時讀 ./tools.json（跟 aos-tools 一致；11-02 改回）
 LOGS_NAME = "aos-mcp-logs.jsonl"         # --enable-logs 沒給 --logs-path 時記在 <stack>/ 底下的這個檔（11-02）
 LOGS_PATH = None                               # 記呼叫紀錄的檔（絕對路徑）；None＝不記（預設）
 STDERR_TAIL = 2048                             # 失敗時附給外部 agent 的 stderr 最後幾個位元組（11-05，edge-basics 題 1）
 aos_flags.HELP = """aos-mcp - serve the tools of aos-tools registries as MCP tools to an external agent (Claude Code, pi...); stdio JSON-RPC.
 
-    aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [--hooks DEF] [--own FILE] [REGISTRY...]
+    aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--knowledge NAME] [--hooks DEF] [--own FILE] [REGISTRY...]
 
 Short flags: -w = --ws, -s = --stack, -h = --help.
 REGISTRY: registry files (relative to the cwd at start; none = ./tools.json); several are merged, a name clash = ToolsBad.
@@ -69,9 +69,9 @@ Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call
   AOS_WS=WS AOS_STACK=<stack> aos-tools --file REGISTRY call NAME (aos-tools selects tools/NAME/); arguments go to stdin, stdout goes back as the
   result, exit non-zero = isError (the last 2048 bytes of the tool's stderr are attached). Timeout = the tool's _metainfo timeout_ms,
   otherwise --timeout-s (default 60); then TERM to the whole group, KILL 2 s later.
---memory NAME: on initialize, call tool NAME with {"op": "read"} and send what it prints (the knowledge base root) as the
+--knowledge NAME: on initialize, call tool NAME with {"op": "read"} and send what it prints (the knowledge base root) as the
   instructions of the reply; NAME not listed or the call failing = no instructions and a warning line on stderr;
-  the tool answering MemoryMissing (no knowledge base was given to it) = no instructions, no warning.
+  the tool answering KnowledgeMissing (no knowledge base was given to it) = no instructions, no warning.
 --hooks DEF: DEF is the agent definition folder (its interfaces.json declares hooks.json; the stack copy goes on top). On tools/call,
   before_tool may change the arguments or block the call (the result text = the hook's stdout, or "[aos] hook: tool NAME blocked by hook HOOK.";
   not an error), after_tool may change the result text. A failing hook = that call returns isError with a HookFailed line. No --hooks = no hooks.
@@ -106,11 +106,11 @@ def die(code, reason):
 
 def parse_args(argv):
     """命令列 → (ws, stack, timeout_s, registries)；--enable-logs／--logs-path 設進 LOGS_PATH。"""
-    global LOGS_PATH, MEMORY, HOOKS, OWN
+    global LOGS_PATH, KNOWLEDGE, HOOKS, OWN
     try:
         opts, files = aos_flags.parse(argv, {"--ws": "ws", "--stack": "stack", "--timeout-s": "timeout_s",
                                              "--logs-path": "log",
-                                             "--memory": "memory", "--hooks": "hooks", "--own": "own"}, {"--enable-logs": "enable"}, short=("-w", "-s"))
+                                             "--knowledge": "knowledge", "--hooks": "hooks", "--own": "own"}, {"--enable-logs": "enable"}, short=("-w", "-s"))
     except aos_flags.Error as e:
         die(e.code, "%s (usage: %s)" % (e, USAGE))
     ws, stack = opts.get("ws", os.environ.get("AOS_WS")), opts.get("stack", os.environ.get("AOS_STACK"))
@@ -124,10 +124,10 @@ def parse_args(argv):
         die("ArgumentsBad", "--logs-path given without --enable-logs (give both to log; nothing is logged by default)")
     if log == "":
         die("ArgumentsBad", "--logs-path needs a file name")
-    if "memory" in opts:
-        if not opts["memory"]:
-            die("ArgumentsBad", "--memory needs a tool name")
-        MEMORY = opts["memory"]
+    if "knowledge" in opts:
+        if not opts["knowledge"]:
+            die("ArgumentsBad", "--knowledge needs a tool name")
+        KNOWLEDGE = opts["knowledge"]
     if "hooks" in opts:
         if not opts["hooks"] or not os.path.isdir(opts["hooks"]):
             die("ArgumentsBad", "--hooks needs the agent definition folder, got %r" % opts["hooks"])
@@ -292,34 +292,34 @@ def run_tool(params, tools, ws, stack, timeout_s, mid):
     return {"content": content, "isError": code != 0}, None
 
 
-def memory_missing(out):
-    """工具 stdout 最後一行是「名: error: MemoryMissing …」＝這個工具沒被指定知識庫（不是壞掉）。"""
+def knowledge_missing(out):
+    """工具 stdout 最後一行是「名: error: KnowledgeMissing …」＝這個工具沒被指定知識庫（不是壞掉）。"""
     lines = [l for l in out.splitlines() if l.strip()]
-    return bool(lines) and re.match(r"\S+: error: MemoryMissing( |$)", lines[-1]) is not None
+    return bool(lines) and re.match(r"\S+: error: KnowledgeMissing( |$)", lines[-1]) is not None
 
 
 def knowledge_root(regs, ws, stack, timeout_s):
-    """--memory NAME：叫 NAME {"op": "read"} → 給 initialize 的 instructions；不給的情況（沒 --memory、清單沒有、叫失敗）＝None。"""
-    if MEMORY is None:
+    """--knowledge NAME：叫 NAME {"op": "read"} → 給 initialize 的 instructions；不給的情況（沒 --knowledge、清單沒有、叫失敗）＝None。"""
+    if KNOWLEDGE is None:
         return None
     try:
         tools = load_tools(regs)
     except ToolsBad as e:                       # 登記檔壞了：照樣連得上、不給根（11-05 晚邊緣測試：原本整則 initialize 回錯）
-        aos_flags.warn(NAME, "--memory %s: cannot list the tools (%s); no instructions sent" % (MEMORY, e))
+        aos_flags.warn(NAME, "--knowledge %s: cannot list the tools (%s); no instructions sent" % (KNOWLEDGE, e))
         return None
-    if MEMORY not in tools:
-        aos_flags.warn(NAME, "--memory %s is not among the tools; no instructions sent" % MEMORY)
+    if KNOWLEDGE not in tools:
+        aos_flags.warn(NAME, "--knowledge %s is not among the tools; no instructions sent" % KNOWLEDGE)
         return None
-    code, out, tail, _, _ = call(MEMORY, tools[MEMORY], {"op": "read"}, ws, stack, timeout_s, echo=False)
-    if code == 1 and memory_missing(out):       # 工具沒被指定庫（11-10 深夜 tool-packs：沒指定＝安靜）：不給 instructions、不印 warning、工具那行不轉印
+    code, out, tail, _, _ = call(KNOWLEDGE, tools[KNOWLEDGE], {"op": "read"}, ws, stack, timeout_s, echo=False)
+    if code == 1 and knowledge_missing(out):       # 工具沒被指定庫（11-10 深夜 tool-packs：沒指定＝安靜）：不給 instructions、不印 warning、工具那行不轉印
         return None
     if tail:                                    # 其他情況工具的 stderr 照樣轉印（尾巴 STDERR_TAIL 位元組）
         sys.stderr.write(tail + "\n")
     if code != 0 or not out.strip():
-        aos_flags.warn(NAME, "--memory %s (op read of the root) %s; no instructions sent" %
-                       (MEMORY, "timed out" if code is None else "exited %d" % code))
+        aos_flags.warn(NAME, "--knowledge %s (op read of the root) %s; no instructions sent" %
+                       (KNOWLEDGE, "timed out" if code is None else "exited %d" % code))
         return None
-    return aos_flags.aos_note("knowledge", "root of the knowledge base (from tool %s; call it for more):\n\n%s" % (MEMORY, out.strip()))
+    return aos_flags.aos_note("knowledge", "root of the knowledge base (from tool %s; call it for more):\n\n%s" % (KNOWLEDGE, out.strip()))
 
 
 def handle(msg, regs, ws, stack, timeout_s):

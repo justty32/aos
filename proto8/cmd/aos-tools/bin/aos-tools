@@ -47,8 +47,8 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   tools 那格先照 lv0 解 $ref／$env（aos-json get --follow --resolve），再做 $override 合併；寫入只寫 F（aos-json set／del --follow），
   rm：只有 F 自己記的名字＝刪那個 key；底檔也有的＝在 F 寫 "名": null（成功行說是哪一種）；底檔一個位元組都不動。
   路徑指不到＝PathMissing，訊息帶工具名、解出的路徑與它來自哪份檔的哪一格（檔#/tools/名/path，檔＝寫那個 path 的那份）。
-登記格選填 env（11-05 晚 agent-knowledge R1）：{"名": {"path": …, "env": {"AOS_MEMORY": "/x/knowledge/aos"}}}，call 時合進那次呼叫的環境
-  （蓋過外面同名的）；值照字面用、不當路徑解（C-56；要相對就靠讀它的工具自己的規則，例 memory 的 AOS_MEMORY 相對 $AOS_DAEMON）。
+登記格選填 env（11-05 晚 agent-knowledge R1）：{"名": {"path": …, "env": {"AOS_KNOWLEDGE": "/x/knowledge/aos"}}}，call 時合進那次呼叫的環境
+  （蓋過外面同名的）；值照字面用、不當路徑解（C-56；要相對就靠讀它的工具自己的規則，例 knowledge_read 的 AOS_KNOWLEDGE 相對 $AOS_DAEMON）。
   鍵只收 [A-Za-z_][A-Za-z0-9_]*、值只收字串（不含 NUL，11-05 晚邊緣測試：原本 call 時吐 traceback），別的＝RegistryBad。--envs K=V（可重複）存進 env。
   選填 env_file（11-10 aos-tools-cli 步 3，使用者 Q1「只記位置」）：add --env-file FILE 只記位置（寫法同 XXX：絕對存絕對、相對存相對寫進的那份檔），
   不存內容；add 當下檔在就讀一次只為驗格式與 hub 提醒，不在＝warning 照登記。每次 call 才讀（dotenv 基礎子集，${VAR} 照這次呼叫的環境展開），
@@ -657,7 +657,7 @@ def finish(merged):
         env = e.get("env", {})
         if not isinstance(env, dict) or not all(isinstance(k, str) and ENV_KEY_RE.match(k) and isinstance(v, str) and "\0" not in v
                                               for k, v in env.items()):
-            raise Fail("RegistryBad", "%s/env must be an object of NAME -> string without NUL (NAME like AOS_MEMORY)" % where)
+            raise Fail("RegistryBad", "%s/env must be an object of NAME -> string without NUL (NAME like AOS_KNOWLEDGE)" % where)
         ef = e.get("env_file")                       # 11-10 步 3：只記位置，call 才讀（指示詞已跟整格一起解開）
         if "env_file" in e and (not isinstance(ef, str) or not ef or "\0" in ef):
             raise Fail("RegistryBad", "%s/env_file must be a non-empty path string (or a directive resolving to one)" % where)

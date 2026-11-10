@@ -1,5 +1,5 @@
 {
-  "summary": "Export a memory (folders and .json files) or a subtree as one Markdown document for people",
+  "summary": "Read-only lookup in the shared knowledge base (folders and .json files, $AOS_KNOWLEDGE): read a place, list an index, find by keyword or tag",
   "resource": "cpu",
   "side_effect": false,
   "idempotent": true,
@@ -7,7 +7,7 @@
   "interrupt": "safe",
   "parallel": true,
   "cost": {
-    "time_ms": 100
+    "time_ms": 50
   },
   "timeout_ms": 5000
 }

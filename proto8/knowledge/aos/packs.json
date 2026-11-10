@@ -34,8 +34,8 @@
   "mailbox": {
    "_description": "Pack mailbox."
   },
-  "memory": {
-   "_description": "Pack memory."
+  "knowledge": {
+   "_description": "Pack knowledge."
   }
  },
  "about": "# Tool packs\n\nYour tools are registered pack by pack: each pack is one tool list in $AOS_HOME/lib/packs/<pack>.json, and a definition's tools.json stacks the packs it wants with \"$override\". Both templates (agent-fsm and eca-claude) have all eleven packs.\n\n- See where each of your tools comes from: self_tools {\"op\": \"ls\", \"long\": true} (FROM shows lib/packs/<pack>.json).\n- Turn one tool off for yourself: self_tools {\"op\": \"rm\", \"name\": \"shell\"}.\n- A whole pack is turned off by removing it from the \"$override\" list of the definition's tools.json (a person or a definition change, not a tool call).",
@@ -49,5 +49,5 @@
  "children": "Pack children: Other agents: agents_children (agents you start yourself; counted against your quota) and agents_ctl (any agent on your daemon table; not counted).",
  "def": "Pack def: Definitions: agent_def (copy a template into a new agent definition, or check one) and tools_def (make a new tool from the Python skeleton, or check a tool).",
  "mailbox": "Pack mailbox: Letters: mailbox_peek (what is waiting, without taking it), mailbox_read (read the oldest), mailbox_send (send one).",
- "memory": "Pack memory: The knowledge base: memory_read (read, ls, find) and memory_write (add, set, rm). Which base they use is set in your tools.json (env AOS_MEMORY)."
+ "knowledge": "Pack knowledge: The knowledge base: knowledge_read (read, ls, find) and knowledge_write (add, set, rm). Which base they use is set in your tools.json (env AOS_KNOWLEDGE)."
 }

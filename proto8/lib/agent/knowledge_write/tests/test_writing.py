@@ -1,4 +1,4 @@
-"""memory_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、寫到庫外也行、自己的簡介當普通路徑寫、各錯誤代號；寫完用 memory_read 讀回來對。"""
+"""knowledge_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、寫到庫外也行、自己的簡介當普通路徑寫、各錯誤代號；寫完用 knowledge_read 讀回來對。"""
 import json
 import os
 from pathlib import Path
@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 ENTRY = Path(__file__).resolve().parents[1] / "_entry"
-READER = Path(__file__).resolve().parents[2] / "memory_read" / "_entry"
+READER = Path(__file__).resolve().parents[2] / "knowledge_read" / "_entry"
 
 
 @unittest.skipUnless(shutil.which("aos-json"), "aos-json not on PATH")
@@ -24,7 +24,7 @@ class WritingTest(unittest.TestCase):
         self.put("_index.json", {"notes/": {"_description": "Notes."}})
         self.put("notes/_index.json", {})
         self.env = {k: v for k, v in os.environ.items() if k != "AOS_CD"}
-        self.env.update(AOS_MEMORY=str(self.root), AOS_CD=str(ENTRY.parent))
+        self.env.update(AOS_KNOWLEDGE=str(self.root), AOS_CD=str(ENTRY.parent))
 
     def put(self, rel, value):
         p = self.root / rel
@@ -48,7 +48,7 @@ class WritingTest(unittest.TestCase):
         r = self.run_tool(env=env, **args)
         self.assertEqual(r.returncode, 1, r.stdout)
         line = r.stderr.strip().splitlines()[-1]
-        self.assertTrue(line.startswith("memory_write: error: %s " % code), line)
+        self.assertTrue(line.startswith("knowledge_write: error: %s " % code), line)
         self.assertEqual(r.stdout.strip(), line)
         return line
 
@@ -58,10 +58,10 @@ class WritingTest(unittest.TestCase):
         return r.stdout
 
     def test_root_flag_and_no_default(self):
-        """--root DIR 蓋過 AOS_MEMORY；都沒給＝MemoryMissing、不寫任何檔（11-10 深夜：工具沒有內建預設）。"""
-        r = self.run_tool(env={"AOS_MEMORY": ""}, op="add", path="x.json", description="X", value="x")
+        """--root DIR 蓋過 AOS_KNOWLEDGE；都沒給＝KnowledgeMissing、不寫任何檔（11-10 深夜：工具沒有內建預設）。"""
+        r = self.run_tool(env={"AOS_KNOWLEDGE": ""}, op="add", path="x.json", description="X", value="x")
         self.assertEqual(r.returncode, 1)
-        self.assertTrue(r.stdout.startswith("memory_write: error: MemoryMissing "), r.stdout)
+        self.assertTrue(r.stdout.startswith("knowledge_write: error: KnowledgeMissing "), r.stdout)
         other = self.root.parent / "other"
         other.mkdir()
         r = subprocess.run([sys.executable, str(ENTRY), "--root", str(other)], text=True, capture_output=True, env=self.env,
@@ -253,7 +253,7 @@ class WritingTest(unittest.TestCase):
         self.fails("PathBad", op="add", path="notes/a.json#bad", value=1, description="x")
         (self.root / "notes" / "bad.json").write_text("{nope")
         self.fails("FileBad", op="add", path="notes/bad.json#/k", value=1, description="x")
-        self.fails("MemoryMissing", env={"AOS_MEMORY": ""}, op="rm", path="notes/a.json")
+        self.fails("KnowledgeMissing", env={"AOS_KNOWLEDGE": ""}, op="rm", path="notes/a.json")
         empty = self.base / "emptybin"
         empty.mkdir()
         self.fails("LaunchFailed", env={"PATH": str(empty)}, op="add", path="notes/n.json", value=1, description="x")
@@ -263,7 +263,7 @@ class WritingTest(unittest.TestCase):
     def test_help_is_english(self):
         r = subprocess.run([sys.executable, str(ENTRY), "--help"], capture_output=True, text=True)
         self.assertEqual(r.returncode, 0)
-        self.assertIn("usage: memory_write", r.stdout)
+        self.assertIn("usage: knowledge_write", r.stdout)
         self.assertTrue(r.stdout.isascii(), r.stdout)
 
 

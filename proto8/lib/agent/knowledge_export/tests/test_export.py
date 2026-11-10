@@ -1,4 +1,4 @@
-"""memory_export（純 JSON 樹）：node 行、簡介、字串原樣、其他 JSON 包 ```json、表的順序與 not in index、防繞圈、截斷、錯誤。"""
+"""knowledge_export（純 JSON 樹）：node 行、簡介、字串原樣、其他 JSON 包 ```json、表的順序與 not in index、防繞圈、截斷、錯誤。"""
 import json
 import os
 from pathlib import Path
@@ -37,7 +37,7 @@ class ExportTest(unittest.TestCase):
         write(self.root / "cli" / "flags.json", "--help")
         os.symlink(self.root, self.root / "cli" / "loop")
         self.env = {k: v for k, v in os.environ.items() if k != "AOS_CD"}
-        self.env.update(AOS_MEMORY=str(self.root), AOS_CD=str(ENTRY.parent))
+        self.env.update(AOS_KNOWLEDGE=str(self.root), AOS_CD=str(ENTRY.parent))
 
     def run_tool(self, **args):
         return subprocess.run([sys.executable, str(ENTRY)], input=json.dumps(args), text=True,
@@ -75,9 +75,9 @@ class ExportTest(unittest.TestCase):
     def test_errors(self):
         r = self.run_tool(path="nope.json")
         self.assertEqual(r.returncode, 1)
-        self.assertTrue(r.stdout.startswith("memory_export: error: NodeMissing nope.json not found; / has: "), r.stdout)
-        self.assertIn("memory_export: error: ArgumentsBad", self.run_tool(max_bytes=0).stdout)
-        self.assertIn("memory_export: error: PathBad", self.run_tool(path="errors.json#bad").stdout)
+        self.assertTrue(r.stdout.startswith("knowledge_export: error: NodeMissing nope.json not found; / has: "), r.stdout)
+        self.assertIn("knowledge_export: error: ArgumentsBad", self.run_tool(max_bytes=0).stdout)
+        self.assertIn("knowledge_export: error: PathBad", self.run_tool(path="errors.json#bad").stdout)
 
 
 if __name__ == "__main__":

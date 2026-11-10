@@ -9,7 +9,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`README.md`](../../../../../proto8/knowledge/README.md) | proto8/knowledge — 記憶庫（`memory_read` 讀的資料夾＋`.json` 樹） |
+| [`README.md`](../../../../../proto8/knowledge/README.md) | proto8/knowledge — 記憶庫（`knowledge_read` 讀的資料夾＋`.json` 樹） |
 | [`_description.json`](../../../../../proto8/knowledge/_description.json) | （檔頭沒有一句話） |
 | [`_index.json`](../../../../../proto8/knowledge/_index.json) | 設定（鍵：aos/、README.md、docs/） |
 
@@ -38,9 +38,9 @@
 | [`cli/tools.json`](../../../../../proto8/knowledge/aos/cli/tools.json) | （檔頭沒有一句話） |
 | [`clock.json`](../../../../../proto8/knowledge/aos/clock.json) | 設定（鍵：_description、_index、wake_me、rules） |
 | [`errors.json`](../../../../../proto8/knowledge/aos/errors.json) | 設定（鍵：_description、_index、codes、common） |
+| [`knowledge.json`](../../../../../proto8/knowledge/aos/knowledge.json) | （檔頭沒有一句話） |
 | [`mailbox.json`](../../../../../proto8/knowledge/aos/mailbox.json) | 設定（鍵：_description、_index、tools、rules） |
 | [`me.json`](../../../../../proto8/knowledge/aos/me.json) | 設定（鍵：_description、_index、self_tools、self_llm、self_history、self_hook…） |
-| [`memory.json`](../../../../../proto8/knowledge/aos/memory.json) | （檔頭沒有一句話） |
 | [`packs.json`](../../../../../proto8/knowledge/aos/packs.json) | 設定（鍵：_description、_index、about、look、change、delete…） |
 | [`rules.json`](../../../../../proto8/knowledge/aos/rules.json) | （檔頭沒有一句話） |
 | [`status.json`](../../../../../proto8/knowledge/aos/status.json) | （檔頭沒有一句話） |

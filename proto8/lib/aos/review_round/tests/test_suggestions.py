@@ -23,7 +23,7 @@ class Suggestions(unittest.TestCase):
             path = self.defs / name
             path.mkdir(parents=True)
             (path / 'interfaces.json').write_text('{"aos-agent": {}}')
-        self.rows = [{'path': name, 'brain': True, 'tools': ['read'], 'endpoint': 'low', 'memory': None}
+        self.rows = [{'path': name, 'brain': True, 'tools': ['read'], 'endpoint': 'low', 'knowledge': None}
                      for name in ('group/used', 'group/cold', 'solo/only')]
 
     def call(self, name, target, args):
@@ -52,7 +52,7 @@ class Suggestions(unittest.TestCase):
             self.assertIsNone(result['specialize'][1]['proposal'])
             tree['prompt_tokens_median'] = None
             self.rows[1]['endpoint'] = 'high'
-            self.rows[1]['memory'] = 'new-memory'
+            self.rows[1]['knowledge'] = 'new-knowledge'
             changed = rr.suggestions(self.defs, reviews, {})['specialize']
             self.assertEqual(changed[0]['signal'], 'repeated_child')
             self.assertEqual(changed[0]['proposal']['endpoint'], 'high')

@@ -20,7 +20,7 @@
  "rules.json": {
   "_description": "What you must not do, and why. Read this before doing anything that changes the system."
  },
- "memory.json": {
+ "knowledge.json": {
   "_description": "Save reusable facts in the knowledge base, not transient task progress."
  },
  "cli/": {
@@ -36,6 +36,6 @@
   "_description": "Making your own tools: tool tools_def (new from the Python skeleton, check) and the Python helper tool_spec."
  },
  "packs.json": {
-  "_description": "Your tools come in packs (look, change, delete, shell, gadgets, events, self, children, def, mailbox, memory): one sentence per tool, and how a pack is turned off."
+  "_description": "Your tools come in packs (look, change, delete, shell, gadgets, events, self, children, def, mailbox, knowledge): one sentence per tool, and how a pack is turned off."
  }
 }

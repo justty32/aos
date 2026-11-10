@@ -69,7 +69,7 @@ class PathForms(unittest.TestCase):
         self.assertEqual(self.over.read_text(), before)
 
     def test_overlay_env_field_resolved(self):
-        self.over_with({"wc": {"path": str(TOOL), "env": {"AOS_MEMORY": {"$env": "TC_KB"}}}})
+        self.over_with({"wc": {"path": str(TOOL), "env": {"AOS_KNOWLEDGE": {"$env": "TC_KB"}}}})
         self.ok("--file", self.over, "ls", TC_KB="/x/kb")
 
     def test_overlay_env_unset_names_file(self):

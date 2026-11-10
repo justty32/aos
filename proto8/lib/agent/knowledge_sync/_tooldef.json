@@ -1,0 +1,42 @@
+{
+  "description": "Inspect or synchronize a Git knowledge base with origin. Needs a Git working-tree root, origin, attached branch, and .gitignore rules .*.tmp and .tmp.* (temporary files of writes). Sync commits all changes with hostname and UTC time, pulls --no-rebase -X ours (this machine wins same-hunk edits), then pushes. Delete/modify conflicts abort with SyncConflict; missing or ineffective ignore rules print the two required .gitignore lines on stdout, then return IgnoreMissing without changing files. The final error line is knowledge_sync: error: CODE reason on both stdout and stderr (exit 1). Configure the root just like knowledge_read (no default: _knowledge.json next to the tool or AOS_KNOWLEDGE; --root DIR when run by hand). Status uses cached origin refs; absent refs produce null ahead/behind.",
+  "env": [
+    "AOS_KNOWLEDGE"
+  ],
+  "errors": [
+    "ArgumentsBad",
+    "OpUnknown",
+    "KnowledgeMissing",
+    "KnowledgeBad",
+    "CfgBad",
+    "CommandMissing",
+    "NotGitRepo",
+    "RemoteMissing",
+    "IgnoreMissing",
+    "ReadFailed",
+    "LaunchFailed",
+    "CommandFailed",
+    "SyncConflict"
+  ],
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "op": {
+        "type": "string",
+        "enum": [
+          "status",
+          "sync"
+        ],
+        "description": "status counts changed files and ahead/behind commits; sync commits, pulls and pushes."
+      },
+      "timeout_s": {
+        "type": "number",
+        "default": 120,
+        "description": "Per Git command timeout in seconds, positive and at most 600."
+      }
+    },
+    "required": [
+      "op"
+    ]
+  }
+}

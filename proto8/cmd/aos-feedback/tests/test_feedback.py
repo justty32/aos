@@ -83,8 +83,8 @@ class FeedbackAcceptance(FeedbackFixture):
         self.assertNotIn('score', second)
         self.assertNotIn('suggest', second)
         self.env.pop('AOS_CD')
-        self.assertEqual(self.add('lib/agent/memory_read')['by'], 'unknown')
-        self.assertTrue((self.feedback / 'memory_read.jsonl').is_file())
+        self.assertEqual(self.add('lib/agent/knowledge_read')['by'], 'unknown')
+        self.assertTrue((self.feedback / 'knowledge_read.jsonl').is_file())
 
     def test_model_rules_and_explicit_free_strings(self):
         for model, family, tier in [('claude-opus', 'claude', 'high'),
@@ -219,15 +219,15 @@ class FeedbackAcceptance(FeedbackFixture):
         self.assertIn('usage', self.run_cli('--help').stdout.lower())
 
     def test_real_aos_exec_thin_tool(self):
-        payload = {'command': 'lib/agent/memory_read', 'pain': 'unclear', 'suggest': 'example',
+        payload = {'command': 'lib/agent/knowledge_read', 'pain': 'unclear', 'suggest': 'example',
                    'kind': 'args', 'score': .7}
         result = subprocess.run([str(EXEC), str(ROOT / 'lib/aos/feedback')],
                                 input=json.dumps(payload), text=True, capture_output=True,
                                 cwd=self.work, env=self.env, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stderr, '')
-        self.assertEqual(result.stdout, f'aos-feedback: recorded {self.feedback / "memory_read.jsonl"}\n')
-        records = json.loads(self.run_cli('show', 'memory_read', '--json').stdout)
+        self.assertEqual(result.stdout, f'aos-feedback: recorded {self.feedback / "knowledge_read.jsonl"}\n')
+        records = json.loads(self.run_cli('show', 'knowledge_read', '--json').stdout)
         self.assertEqual(records[0]['by'], 'aos-agent')
         for key, value in payload.items():
             self.assertEqual(records[0][key], value)

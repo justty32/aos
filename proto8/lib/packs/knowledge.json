@@ -1,0 +1,4 @@
+{"description": "Pack knowledge: knowledge_read, knowledge_write. Which knowledge base they use is set by the tools.json that stacks this pack (env AOS_KNOWLEDGE on the same names).",
+ "tools": {
+           "knowledge_read": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/knowledge_read"}},
+           "knowledge_write": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/knowledge_write"}}}}

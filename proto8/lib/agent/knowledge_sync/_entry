@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# memory_sync - Synchronize an optional Git knowledge base with origin.
+# knowledge_sync - Synchronize an optional Git knowledge base with origin.
 import datetime
 import json
 import os
@@ -21,35 +21,35 @@ try:
 except ModuleNotFoundError as error:
     if error.name != "tool_io":
         raise
-    line = "memory_sync: error: ModuleMissing tool_io.py not found in tool folder, lib/ or Python path\n"
+    line = "knowledge_sync: error: ModuleMissing tool_io.py not found in tool folder, lib/ or Python path\n"
     sys.stdout.write(line)
     sys.stderr.write(line)
     sys.exit(1)
 
 try:
     try:
-        import memory_fs
+        import knowledge_fs
     except ModuleNotFoundError as error:
-        if error.name != "memory_fs":
+        if error.name != "knowledge_fs":
             raise
-        from agent import memory_fs
+        from agent import knowledge_fs
 except ModuleNotFoundError as error:
-    if error.name not in ("memory_fs", "agent", "agent.memory_fs"):
+    if error.name not in ("knowledge_fs", "agent", "agent.knowledge_fs"):
         raise
-    tool_io.die("ModuleMissing", "memory_fs.py not found in tool folder, lib/agent/ or Python path", prog="memory_sync")
-memory_fs.take_root_flag("memory_sync")         # --root DIR 不是 JSON 參數：先從 argv 拿掉，再交 tool_io 映射其餘旗標
-tool_io.start("memory_sync", """usage: memory_sync [--root DIR] < ARGUMENTS.json
+    tool_io.die("ModuleMissing", "knowledge_fs.py not found in tool folder, lib/agent/ or Python path", prog="knowledge_sync")
+knowledge_fs.take_root_flag("knowledge_sync")         # --root DIR 不是 JSON 參數：先從 argv 拿掉，再交 tool_io 映射其餘旗標
+tool_io.start("knowledge_sync", """usage: knowledge_sync [--root DIR] < ARGUMENTS.json
 Inspect or synchronize a Git knowledge base using origin. The knowledge base must
 be the root of its Git working tree. Requires Git, an attached branch and the
-two ignore rules for temporary files: .*.tmp (aos-json) and .tmp.* (memory_write).
+two ignore rules for temporary files: .*.tmp (aos-json) and .tmp.* (knowledge_write).
 Sync commits all changes, pulls with --no-rebase -X ours, then pushes. Same-hunk
 edits keep this machine's version; delete/modify conflicts abort the merge.
 Status uses cached origin refs (does not fetch). Results are JSON.
 IgnoreMissing prints the two required .gitignore lines before its error on stdout.
 The knowledge base root: --root DIR (command line only, not a JSON argument),
-else _memory.json {"base": DIR} next to the tool, else AOS_MEMORY; no default
-(MemoryMissing); one that is not a folder = MemoryBad.
-Errors appear on stdout and stderr as memory_sync: error: CODE reason; exit 1.
+else _knowledge.json {"base": DIR} next to the tool, else AOS_KNOWLEDGE; no default
+(KnowledgeMissing); one that is not a folder = KnowledgeBad.
+Errors appear on stdout and stderr as knowledge_sync: error: CODE reason; exit 1.
 """)
 
 child = None
@@ -97,7 +97,7 @@ def preflight(root):
     code, _ = git(root, "remote", "get-url", "origin", check=False)
     if code:
         tool_io.die("RemoteMissing", "Git remote origin is required")
-    rules = (".*.tmp", ".tmp.*")   # 寫入時的暫存檔：aos-json 的 .名字.<pid>.tmp、memory_write 非 .json 檔的 .tmp.XXXX（11-10 拿掉鎖）
+    rules = (".*.tmp", ".tmp.*")   # 寫入時的暫存檔：aos-json 的 .名字.<pid>.tmp、knowledge_write 非 .json 檔的 .tmp.XXXX（11-10 拿掉鎖）
     try:
         with open(os.path.join(root, ".gitignore"), encoding="utf-8") as handle:
             present = {line.strip() for line in handle}
@@ -105,8 +105,8 @@ def preflight(root):
         present = set()
     except (OSError, UnicodeError) as error:
         tool_io.die("ReadFailed", "cannot read .gitignore: %s" % error)
-    probes = [prefix + name for prefix in ("", "memory_sync_probe/")
-              for name in (".memory_sync_probe.json.1.tmp", ".tmp.memory_sync_probe")]
+    probes = [prefix + name for prefix in ("", "knowledge_sync_probe/")
+              for name in (".knowledge_sync_probe.json.1.tmp", ".tmp.knowledge_sync_probe")]
     _, ignored = git(root, "check-ignore", "--no-index", "-z", "--stdin", check=False,
                      input_data=("\0".join(probes) + "\0").encode())
     if not set(rules) <= present or set(ignored.split("\0")) - {""} != set(probes):
@@ -118,7 +118,7 @@ def preflight(root):
     for marker in ("MERGE_HEAD", "rebase-merge", "rebase-apply", "CHERRY_PICK_HEAD", "REVERT_HEAD"):
         _, path = git(root, "rev-parse", "--git-path", marker)
         if os.path.exists(os.path.join(root, path)):
-            tool_io.die("CommandFailed", "finish the existing Git operation before memory_sync")
+            tool_io.die("CommandFailed", "finish the existing Git operation before knowledge_sync")
     return branch
 
 
@@ -148,7 +148,7 @@ def sync(root, branch):
     code, _ = git(root, "diff", "--cached", "--quiet", check=False)
     if code == 1:
         stamp = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
-        git(root, "commit", "-m", "memory_sync %s %s" % (socket.gethostname(), stamp))
+        git(root, "commit", "-m", "knowledge_sync %s %s" % (socket.gethostname(), stamp))
     elif code:
         tool_io.die("CommandFailed", "cannot inspect staged changes")
     code, _ = git(root, "pull", "--no-rebase", "-X", "ours", "origin", branch, check=False)
@@ -171,6 +171,6 @@ if op not in ("status", "sync"):
 TIMEOUT = args.get("timeout_s", 120)
 if isinstance(TIMEOUT, bool) or not isinstance(TIMEOUT, (float, int)) or not 0 < TIMEOUT <= 600:
     tool_io.die("ArgumentsBad", "timeout_s must be positive and at most 600")
-root = memory_fs.memory_root(HERE)
+root = knowledge_fs.knowledge_root(HERE)
 branch = preflight(root)
 print(json.dumps(status(root, branch) if op == "status" else sync(root, branch)))

@@ -1,5 +1,5 @@
 {
-  "summary": "Read-only lookup in the shared memory (folders and .json files, $AOS_MEMORY): read a place, list an index, find by keyword or tag",
+  "summary": "Export a knowledge base (folders and .json files) or a subtree as one Markdown document for people",
   "resource": "cpu",
   "side_effect": false,
   "idempotent": true,
@@ -7,7 +7,7 @@
   "interrupt": "safe",
   "parallel": true,
   "cost": {
-    "time_ms": 50
+    "time_ms": 100
   },
   "timeout_ms": 5000
 }

@@ -1,4 +1,4 @@
-"""驗 _memory.json 的 base：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次用到才解、不寫回，解不開時錯誤行指名檔與欄。"""
+"""驗 _knowledge.json 的 base：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次用到才解、不寫回，解不開時錯誤行指名檔與欄。"""
 import contextlib
 import io
 import json
@@ -13,7 +13,7 @@ from unittest.mock import patch
 sys.dont_write_bytecode = True
 sys.path[:0] = [str(Path(__file__).resolve().parents[2]),
                 str(Path(__file__).resolve().parents[3])]
-import memory_fs  # noqa: E402
+import knowledge_fs  # noqa: E402
 
 
 @unittest.skipUnless(shutil.which("aos-directive"), "aos-directive not on PATH")
@@ -22,29 +22,29 @@ class BaseDirective(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(os.path.realpath(self.tmp.name))
-        self.tool = self.root / "defs" / "ann" / "tools" / "memory_read"
+        self.tool = self.root / "defs" / "ann" / "tools" / "knowledge_read"
         self.tool.mkdir(parents=True)
         self.kb1 = self.root / "kb1"
         self.kb2 = self.root / "far" / "kb2"
         self.kb1.mkdir()
         self.kb2.mkdir(parents=True)
-        self.env = {k: v for k, v in os.environ.items() if k not in ("AOS_CD", "AOS_MEMORY") and not k.startswith("KB_")}
+        self.env = {k: v for k, v in os.environ.items() if k not in ("AOS_CD", "AOS_KNOWLEDGE") and not k.startswith("KB_")}
 
     def write(self, base):
-        cfg = self.tool / "_memory.json"
+        cfg = self.tool / "_knowledge.json"
         cfg.write_text(json.dumps({"base": base}))
         return cfg
 
     def root_of(self, **env):
         with patch.dict(os.environ, dict(self.env, **env), clear=True):
-            return memory_fs.memory_root(str(self.tool))
+            return knowledge_fs.knowledge_root(str(self.tool))
 
     def fails(self, **env):
         err, out = io.StringIO(), io.StringIO()
         with patch.dict(os.environ, dict(self.env, **env), clear=True), \
                 contextlib.redirect_stderr(err), contextlib.redirect_stdout(out):
             with self.assertRaises(SystemExit) as cm:
-                memory_fs.memory_root(str(self.tool))
+                knowledge_fs.knowledge_root(str(self.tool))
         self.assertEqual(cm.exception.code, 1)
         return err.getvalue().strip().splitlines()[-1]
 
@@ -101,7 +101,7 @@ class BaseDirective(unittest.TestCase):
     def test_resolves_to_missing_folder(self):
         cfg = self.write({"$env": "KB_HOME", "$path": "nope"})
         line = self.fails(KB_HOME=str(self.root))
-        self.assertIn("error: MemoryBad %s base " % cfg, line)
+        self.assertIn("error: KnowledgeBad %s base " % cfg, line)
         self.assertIn(str(self.root / "nope"), line)
 
     def test_directive_tool_missing(self):

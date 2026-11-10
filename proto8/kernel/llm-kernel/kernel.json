@@ -22,14 +22,14 @@
                                       "path": {"$env": "AOS_HOME", "$path": "/lib/base/math"}}}]},
                      {"tool_calls": [{"name": "math", "arguments": {"expr": "17*23"}}]},
                      {"content": "I added math to my own tools and used it right away: 17*23 = 391."}]},
-   "fake-demo-memory": {"exec": {"$env": "AOS_HOME", "$path": "/lib/base/llm_fake"}, "speed": "fast", "cost": "free",
-                   "summary": "scripted fake brain for kernel/docs/03 part 1 with the knowledge base: reads memory_read aos/me.json#/self_tools, then adds math and uses it",
+   "fake-demo-knowledge": {"exec": {"$env": "AOS_HOME", "$path": "/lib/base/llm_fake"}, "speed": "fast", "cost": "free",
+                   "summary": "scripted fake brain for kernel/docs/03 part 1 with the knowledge base: reads knowledge_read aos/me.json#/self_tools, then adds math and uses it",
                    "script": [
-                     {"tool_calls": [{"name": "memory_read", "arguments": {"op": "read", "path": "aos/me.json#/self_tools"}}]},
+                     {"tool_calls": [{"name": "knowledge_read", "arguments": {"op": "read", "path": "aos/me.json#/self_tools"}}]},
                      {"tool_calls": [{"name": "self_tools", "arguments": {"op": "add", "name": "math",
                                       "path": {"$env": "AOS_HOME", "$path": "/lib/base/math"}}}]},
                      {"tool_calls": [{"name": "math", "arguments": {"expr": "17*23"}}]},
-                     {"content": "I read memory_read aos/me.json#/self_tools, added math to my own tools and used it: 17*23 = 391."}]},
+                     {"content": "I read knowledge_read aos/me.json#/self_tools, added math to my own tools and used it: 17*23 = 391."}]},
    "fake-demo-spawn": {"exec": {"$env": "AOS_HOME", "$path": "/lib/base/llm_fake"}, "speed": "fast", "cost": "free",
                    "summary": "scripted fake brain for kernel/docs/03 part 4: starts kid, sets its brain, asks it, removes it; then copies a template to defs/helper and tries four kids",
                    "script": [

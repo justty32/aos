@@ -1,4 +1,4 @@
-"""Exercise memory_sync against temporary local Git repositories and tool errors."""
+"""Exercise knowledge_sync against temporary local Git repositories and tool errors."""
 import json
 import os
 from pathlib import Path
@@ -13,7 +13,7 @@ RULES = '.*.tmp\n.tmp.*\n'
 
 class SyncTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='memory-sync-', dir='/tmp')
+        self.temp = tempfile.TemporaryDirectory(prefix='knowledge-sync-', dir='/tmp')
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.remote = self.root / 'origin.git'
@@ -42,12 +42,12 @@ class SyncTests(unittest.TestCase):
         self.git(root, 'commit', '-m', 'test setup')
 
     def call(self, root, op='sync', code=None, **args):
-        env = dict(os.environ, AOS_MEMORY=str(root), AOS_CD=str(self.root / 'no-config'))
+        env = dict(os.environ, AOS_KNOWLEDGE=str(root), AOS_CD=str(self.root / 'no-config'))
         p = subprocess.run([str(ENTRY)], input=json.dumps(dict(op=op, **args)),
                            capture_output=True, text=True, env=env)
         self.assertEqual(p.returncode, 1 if code else 0, p.stdout + p.stderr)
         if code:
-            self.assertIn('memory_sync: error: ' + code + ' ', p.stdout)
+            self.assertIn('knowledge_sync: error: ' + code + ' ', p.stdout)
             self.assertIn(p.stdout.splitlines()[-1], p.stderr)
         return p
 
@@ -62,7 +62,7 @@ class SyncTests(unittest.TestCase):
             self.assertTrue((root / 'beta.md').exists())
         message = self.git(self.a, 'log', '--all', '--format=%s')
         self.assertIn(socket.gethostname(), message)
-        self.assertRegex(message, r'memory_sync .* \d{4}-\d\d-\d\dT.*\+00:00')
+        self.assertRegex(message, r'knowledge_sync .* \d{4}-\d\d-\d\dT.*\+00:00')
 
     def test_later_sync_wins_same_hunk(self):
         (self.a / 'node.md').write_text('# Node\nfirst\n')
@@ -110,7 +110,7 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(self.git(self.a, 'status', '--porcelain'), '')
 
     def test_ignore_overrides_are_rejected(self):
-        for exception in ('!.tmp.*', '!memory_sync_probe/.*.tmp'):
+        for exception in ('!.tmp.*', '!knowledge_sync_probe/.*.tmp'):
             (self.a / '.gitignore').write_text(RULES + exception + '\n')
             self.call(self.a, code='IgnoreMissing')
 
@@ -134,10 +134,10 @@ class SyncTests(unittest.TestCase):
         result = json.loads(self.call(self.a, op='status').stdout)
         self.assertEqual(result['changed_files'], 1)
 
-    def test_configuration_uses_shared_memory_root(self):
+    def test_configuration_uses_shared_knowledge_root(self):
         folder = self.root / 'no-config'
         folder.mkdir()
-        (folder / '_memory.json').write_text(json.dumps({'base': '../a'}))
+        (folder / '_knowledge.json').write_text(json.dumps({'base': '../a'}))
         self.call(self.root, op='status')
 
     def test_existing_merge_is_not_changed(self):

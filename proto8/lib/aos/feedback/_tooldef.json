@@ -3,7 +3,7 @@
   "parameters": {
     "type": "object",
     "properties": {
-      "command": {"type": "string", "description": "Command or function being reviewed, preserved literally, for example aos-agent ctl add or lib/agent/memory_read."},
+      "command": {"type": "string", "description": "Command or function being reviewed, preserved literally, for example aos-agent ctl add or lib/agent/knowledge_read."},
       "pain": {"type": "string", "description": "What was confusing or difficult."},
       "suggest": {"type": "string", "description": "Optional suggested improvement."},
       "kind": {"type": "string", "enum": ["usage", "help", "errors", "args", "other"], "default": "other", "description": "Aspect being reviewed."},

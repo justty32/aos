@@ -50,7 +50,7 @@ flags:
 
 Options may precede or follow arguments; -- treats all remaining text literally.
 The key is the first command word's lowercase basename, with other characters
-replaced by underscores. Examples: aos-agent ctl add -> aos-agent; lib/agent/memory_read -> memory_read.
+replaced by underscores. Examples: aos-agent ctl add -> aos-agent; lib/agent/knowledge_read -> knowledge_read.
 ''' % USAGES['add'],
     'ls': '''List one row per non-empty key, sorted by count descending, then key.
 
