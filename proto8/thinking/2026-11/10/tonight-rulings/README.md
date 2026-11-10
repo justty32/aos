@@ -66,4 +66,5 @@
 
 | 題 | 結論 | commit |
 |---|---|---|
-| 1 | `aos-clock` 每 `check_every`（登記表頂層鍵，預設 100）個 cycle 檢查一次，箱子資料夾已不在的格拿掉、各一行 warning；詳見 [clock-letters 02](../clock-letters/02-自我檢查與-d.md) | 見下 |
+| 1 | `aos-clock` 每 `check_every`（登記表頂層鍵，預設 100）個 cycle 檢查一次，箱子資料夾已不在的格拿掉、各一行 warning；詳見 [clock-letters 02](../clock-letters/02-自我檢查與-d.md) | `173deaf11` |
+| 2 | `aos-clock-register` 收 `-d D`（＝`D/clock`），優先 `-c` > `-d` > `$AOS_CLOCK`，`-c` 和 `-d` 同給報錯；工具 clock_register 多 `daemon`；詳見 [clock-letters 02](../clock-letters/02-自我檢查與-d.md#2--d) | 見 git log |

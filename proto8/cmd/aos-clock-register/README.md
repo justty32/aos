@@ -5,9 +5,9 @@
 使用者 11-10 晚「時鐘這塊幫我改成寄信好了，不要用跑任意aos函數。」「指令是aos-clock-register嗎？」：時鐘檔旁邊放一張**登記表**，每格寫「每幾個 cycle、寄到哪個箱子、寄什麼字」。`aos-clock` 每走一格，新數字除得盡的格就各寄一封（用 `aos-post send`）。最常用的是**定時叫醒一隻 agent**：箱子寫它的 `queue/`，信就當一則 user 訊息進它的對話。
 
 ```
-aos-clock-register [-c CLOCK] add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-
-aos-clock-register [-c CLOCK] rm NAME
-aos-clock-register [-c CLOCK] ls [-j]
+aos-clock-register [-c CLOCK | -d D] add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-
+aos-clock-register [-c CLOCK | -d D] rm NAME
+aos-clock-register [-c CLOCK | -d D] ls [-j]
 # aos-clock register … 跟 aos-clock-register … 完全一樣（11-10 深夜；時鐘檔真叫 register 的寫 ./register）
 ```
 
@@ -23,7 +23,7 @@ aos-clock-register rm ann-wake
 
 <details><summary>細節</summary>
 
-- **時鐘檔**：`-c/--clock`（子命令前後都收，前後不同＝`ArgumentsBad`）＞ `$AOS_CLOCK`（根 `.env` 給的，agent 都繼承）；都沒有＝`ClockMissing`。
+- **時鐘檔**：`-c/--clock CLOCK` ＞ `-d/--daemon D`（那台 daemon 的鐘＝`D/clock`；11-10 深夜使用者選「加 -d」）＞ `$AOS_CLOCK`（根 `.env` 給的，agent 都繼承）；`-c`、`-d` 同時給＝`ArgumentsBad`；都沒有＝`ClockMissing`。兩個旗標寫在子命令前後都收（前後不同＝`ArgumentsBad`）。工具 `clock_register` 對應 `daemon` 參數（不收 `clock`）。
 - **登記表**＝時鐘檔同資料夾的 `<時鐘檔名>_register.json`（根 daemon 的鐘是 `<根 stack>/clock` → `<根 stack>/clock_register.json`）。形狀：
   `{"description": …, "check_every": 100（可省）, "letters": {NAME: {"every": 10, "box": "procs/ann/queue", "text": "…", "by": "…"}}}`。
   - `box` 是字串＝路徑：相對路徑**從登記表所在資料夾**算；也可以手寫指示詞物件（`{"$env": "X", "$path": "/queue"}`，用 `aos-directive` 解，cwd＝登記表資料夾），同 tools／hooks 的寫法。

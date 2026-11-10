@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # aos-clock-register - 時鐘登記表的人用指令：add／rm／ls 時鐘檔旁 <時鐘檔名>_register.json 的格（每 every 個 cycle 往一個 aos-post 箱子寄一句；11-10 晚 clock-letters）。
 # 使用者 11-10 晚：「clock那邊看看能不能加上一個hook，有需要的人可以去註冊」「時鐘這塊幫我改成寄信好了，不要用跑任意aos函數。」「指令是aos-clock-register嗎？」
-# 形狀（P-44）：aos-clock-register [-c CLOCK] 子命令 [旗標] 位置…；-c 子命令前後都收（前後不同＝ArgumentsBad，同 aos-mailbox 的 -s）；沒給＝$AOS_CLOCK。
+# 形狀（P-44）：aos-clock-register [-c CLOCK | -d D] 子命令 [旗標] 位置…；-c／-d 子命令前後都收（前後不同＝ArgumentsBad，同 aos-mailbox 的 -s）。
+# 時鐘檔：-c CLOCK ＞ -d D（daemon 的 stack，當成 D/clock；11-10 深夜使用者選「加 -d」）＞ $AOS_CLOCK；-c 與 -d 同時給＝ArgumentsBad。
 #   add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-   BOX 相對路徑從 cwd 算；存進表時同頂層資料夾＝相對登記表資料夾，否則絕對
 #   rm NAME        沒有那格＝EntryMissing
 #   ls [-j]        一行一格 NAME TAB EVERY TAB BOX TAB TEXT；-j＝{"file", "letters"}；沒登記表＝沒輸出退 0
@@ -18,10 +19,10 @@ import aos_flags  # noqa: E402
 import aos_clock_register as reg  # noqa: E402
 
 PROG = "aos-clock-register"
-SHORT = {"-c": "--clock"}
+SHORT = {"-c": "--clock", "-d": "--daemon"}
 HELP = """aos-clock-register - letters from the clock: every N cycles, send a fixed text to a mailbox
 
-usage: aos-clock-register [-c CLOCK] SUBCOMMAND [FLAGS...] [ARGS...]
+usage: aos-clock-register [-c CLOCK | -d D] SUBCOMMAND [FLAGS...] [ARGS...]
        aos-clock-register SUBCOMMAND --help
 
 subcommands:
@@ -31,8 +32,9 @@ subcommands:
 
 flags:
   -c, --clock CLOCK   the clock file (default: $AOS_CLOCK); the register is CLOCK_register.json next to it
+  -d, --daemon D      the clock of daemon D: D/clock (give -c or -d, not both)
   -h, --help          show this help
-Flags may go anywhere after the name they belong to (-c also after the subcommand);
+Flags may go anywhere after the name they belong to (-c and -d also after the subcommand);
 add's TEXT and everything after it is text.
 
 aos-clock reads the register after each cycle: an entry fires when the new cycle number divides by
@@ -47,7 +49,7 @@ more: proto8/cmd/aos-clock-register/README.md"""
 HELPS = {
     "add": """aos-clock-register add - add an entry to the clock register
 
-usage: aos-clock-register [-c CLOCK] add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-
+usage: aos-clock-register [-c CLOCK | -d D] add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-
 
 flags:
   --every N     send when the cycle number divides by N (a positive integer)
@@ -61,12 +63,12 @@ A BOX that is not a mailbox yet is only a warning: the entry is added anyway.
 example: aos-clock-register add --every 10 --box stacks/root/procs/ann/queue ann-wake "Check data/ for new files." """,
     "rm": """aos-clock-register rm - remove an entry from the clock register
 
-usage: aos-clock-register [-c CLOCK] rm NAME
+usage: aos-clock-register [-c CLOCK | -d D] rm NAME
 
 No such entry = EntryMissing.""",
     "ls": """aos-clock-register ls - list the clock register
 
-usage: aos-clock-register [-c CLOCK] ls [-j]
+usage: aos-clock-register [-c CLOCK | -d D] ls [-j]
 
 flags:
   -j, --json   one JSON object {"file": REGISTER, "check_every": N, "letters": {NAME: {every, box, text, by}}}
@@ -83,27 +85,33 @@ class Fail(Exception):
 
 
 CLOCK = None
+DAEMON = None
+WHERE = {"--clock": "clock", "--daemon": "daemon"}
 
 
 def parse(argv, sub, flags=None, switches=None, short=None, keep=None):
-    """子命令的旗標；-c/--clock 子命令前後都收，前後不同＝ArgumentsBad。"""
-    global CLOCK
+    """子命令的旗標；-c/--clock、-d/--daemon 子命令前後都收，前後不同＝ArgumentsBad。"""
+    global CLOCK, DAEMON
     try:
-        opts, rest = aos_flags.parse(argv, dict(flags or {}, **{"--clock": "clock"}), switches or {}, help=HELPS[sub],
+        opts, rest = aos_flags.parse(argv, dict(flags or {}, **WHERE), switches or {}, help=HELPS[sub],
                                      short=dict(short or {}, **SHORT), keep=keep)
     except aos_flags.Error as e:
         raise Fail(e.code, "%s (see %s %s --help)" % (e, PROG, sub))
-    c = opts.get("clock")
-    if c and CLOCK and c != CLOCK:
-        raise Fail("ArgumentsBad", "two different clocks: %s before the subcommand, %s after it; give --clock once" % (CLOCK, c))
-    CLOCK = c or CLOCK
+    for key, flag in (("clock", "--clock"), ("daemon", "--daemon")):
+        v, before = opts.get(key), CLOCK if key == "clock" else DAEMON
+        if v and before and v != before:
+            raise Fail("ArgumentsBad", "two different values for %s: %s before the subcommand, %s after it; give it once"
+                       % (flag, before, v))
+    CLOCK, DAEMON = opts.get("clock") or CLOCK, opts.get("daemon") or DAEMON
     return opts, rest
 
 
 def register():
-    clock = CLOCK or os.environ.get("AOS_CLOCK", "")
+    if CLOCK and DAEMON:
+        raise Fail("ArgumentsBad", "give -c CLOCK or -d D, not both")
+    clock = CLOCK or (os.path.join(DAEMON, "clock") if DAEMON else "") or os.environ.get("AOS_CLOCK", "")
     if not clock:
-        raise Fail("ClockMissing", "no clock file: give -c CLOCK or set AOS_CLOCK")
+        raise Fail("ClockMissing", "no clock file: give -c CLOCK or -d D, or set AOS_CLOCK")
     return reg.path_for(clock)
 
 
@@ -153,6 +161,9 @@ def cmd_add(argv):
     letters = load(path)
     if name in letters and not opts.get("replace"):
         raise Fail("EntryExists", "entry %s is already in %s (give --replace to replace it)" % (name, path))
+    clock = path[:-len(reg.SUFFIX)]
+    if not os.path.exists(clock):
+        aos_flags.warn(PROG, "no clock file %s yet: nothing fires until a clock writes it (only the root daemon has one)" % clock)
     if not reg.is_box(box):
         aos_flags.warn(PROG, "%s is not a mailbox yet (no tmp/, new/, cur/); added anyway, the clock warns until it is" % box)
     letters[name] = {"every": int(every), "box": reg.stored_box(box, os.path.dirname(path)), "text": text,
@@ -197,11 +208,11 @@ SUBS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls}
 
 
 def main():
-    global CLOCK
+    global CLOCK, DAEMON
     aos_flags.HELP = HELP
     try:
-        opts, rest = aos_flags.parse(sys.argv[1:], {"--clock": "clock"}, help=HELP, short=SHORT, sub="root")   # 11-10 Q1
-        CLOCK = opts.get("clock")
+        opts, rest = aos_flags.parse(sys.argv[1:], WHERE, help=HELP, short=SHORT, sub="root")   # 11-10 Q1
+        CLOCK, DAEMON = opts.get("clock"), opts.get("daemon")
         if not rest:
             raise Fail("ArgumentsBad", "missing subcommand (%s; see %s --help)" % (", ".join(SUBS), PROG))
         if rest[0] not in SUBS:

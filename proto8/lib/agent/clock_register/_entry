@@ -5,7 +5,7 @@
 #   add {name, every, text, box?, replace?}＝aos-clock-register add --every N --box BOX --by <我的名字> [--replace] -- NAME TEXT
 #        box 不給＝我的 stack/queue（aos-agent ctl who --json 認出我）；相對路徑從工作區算。
 #   rm {name}＝aos-clock-register rm NAME；ls {}＝aos-clock-register ls（沒有格＝一句 no entries）。
-#   時鐘檔＝$AOS_CLOCK（根 .env 給的，大家都繼承）。誰都能加、能拿掉（寫得到登記表就行）。
+#   三個動作都收 daemon＝-d D（那台 daemon 的鐘 D/clock；11-10 深夜「加 -d」）；不給＝$AOS_CLOCK（根 .env 給的，大家都繼承）。-c 不收（代定）。誰都能加、能拿掉（寫得到登記表就行）。
 #   錯：stderr 與 stdout 各一行「clock_register: error: 代號 原因」、退 1；下層最後一行錯誤行的代號與原因照接（C-52 例外 ⑤，同 mailbox_*）。
 import os, signal, sys
 NAME = "clock_register"
@@ -40,6 +40,7 @@ import mailbox_call  # noqa: E402   叫下層與認出我的共用小函式（ca
 
 args = tool_io.arguments("op")
 op = args["op"]
+where = ["--daemon", args["daemon"]] if args.get("daemon") else []
 if op == "add":
     tool_io.arguments("name", "text")
     every = args.get("every")
@@ -48,14 +49,14 @@ if op == "add":
     who = mailbox_call.me()
     box = args.get("box") or os.path.join(who["stack"], "queue")
     more = ["add", "--every", str(every), "--box", box, "--by", who["name"]] + (["--replace"] if args.get("replace") else [])
-    _, out = mailbox_call.call("aos-clock-register", more + ["--", args["name"], args["text"]])
+    _, out = mailbox_call.call("aos-clock-register", where + more + ["--", args["name"], args["text"]])
     print(out.strip() + ("; it comes to your own queue as a user message" if not args.get("box") else ""))
 elif op == "rm":
     tool_io.arguments("name")
-    _, out = mailbox_call.call("aos-clock-register", ["rm", "--", args["name"]])
+    _, out = mailbox_call.call("aos-clock-register", where + ["rm", "--", args["name"]])
     print(out.strip())
 elif op == "ls":
-    _, out = mailbox_call.call("aos-clock-register", ["ls"])
+    _, out = mailbox_call.call("aos-clock-register", where + ["ls"])
     print("NAME\tEVERY\tBOX\tTEXT\n" + out.strip() if out.strip() else "no entries")
 else:
     tool_io.die("OpUnknown", "op must be add, rm or ls (got %r)" % op)

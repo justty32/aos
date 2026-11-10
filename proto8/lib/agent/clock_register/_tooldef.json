@@ -22,7 +22,11 @@
   "properties": {
    "op": {
     "type": "string",
-    "enum": ["add", "rm", "ls"],
+    "enum": [
+     "add",
+     "rm",
+     "ls"
+    ],
     "description": "add = new entry; rm = remove an entry by name; ls = list all entries"
    },
    "name": {
@@ -44,6 +48,10 @@
    "replace": {
     "type": "boolean",
     "description": "add: true = replace an entry with the same name"
+   },
+   "daemon": {
+    "type": "string",
+    "description": "a daemon's stack folder: use its clock (default: the clock you live under)"
    }
   },
   "required": [

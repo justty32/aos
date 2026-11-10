@@ -58,6 +58,14 @@ class ClockRegisterTool(unittest.TestCase):
         self.assertEqual([l["body"]["content"] for l in letters], ["Time to check. (clock cycle 2)"])
         self.assertEqual(self.tool({"op": "rm", "name": "wake"}).stdout, "removed wake\n")
 
+    def test_daemon(self):
+        (self.tmp / "other").mkdir()
+        r = self.tool({"op": "add", "name": "w", "every": 3, "text": "x", "daemon": str(self.tmp / "other")})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("no clock file", r.stderr)
+        self.assertIn("w\t3\t", self.tool({"op": "ls", "daemon": str(self.tmp / "other")}).stdout)
+        self.assertFalse((self.tmp / "root" / "clock_register.json").exists())
+
     def test_errors(self):
         r = self.tool({"op": "add", "name": "w", "every": 2, "text": "x", "color": "red"})
         self.assertIn("clock_register: error: ArgumentsBad unknown key color", r.stdout)

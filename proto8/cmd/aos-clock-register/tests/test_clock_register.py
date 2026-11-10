@@ -111,6 +111,16 @@ class ClockRegister(unittest.TestCase):
         self.assertEqual(json.loads(path.read_text())["check_every"], 3)
         self.assertEqual(self.tick(3), "")
 
+    def test_daemon_flag(self):
+        env = dict(self.env)
+        env.pop("AOS_CLOCK")
+        run = lambda *a: subprocess.run([sys.executable, str(REG)] + list(a), capture_output=True, text=True, env=env,
+                                        cwd=self.tmp, timeout=30)
+        self.assertEqual(run("-d", "st", "add", "--every", "2", "--box", "st/q", "a", "x").returncode, 0)
+        self.assertTrue((self.tmp / "st" / "clock_register.json").is_file())   # -d st＝st/clock 旁
+        self.assertEqual(run("ls", "-d", "st").stdout, "a\t2\tq\tx\n")
+        self.assertIn("ArgumentsBad give -c CLOCK or -d D, not both", run("-c", "st/clock", "-d", "st", "ls").stderr)
+
     def test_errors(self):
         self.assertEqual(self.reg("add", "--every", "5", "--box", "st/q", "a", "x").returncode, 0)
         r = self.reg("add", "--every", "5", "--box", "st/q", "a", "y")
