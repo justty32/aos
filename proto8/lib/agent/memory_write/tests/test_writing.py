@@ -1,4 +1,4 @@
-"""memory_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、寫到庫外也行、自己的簡介當普通路徑寫、各錯誤代號；寫完用 memory 讀回來對。"""
+"""memory_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、寫到庫外也行、自己的簡介當普通路徑寫、各錯誤代號；寫完用 memory_read 讀回來對。"""
 import json
 import os
 from pathlib import Path
@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 ENTRY = Path(__file__).resolve().parents[1] / "_entry"
-READER = Path(__file__).resolve().parents[2] / "memory" / "_entry"
+READER = Path(__file__).resolve().parents[2] / "memory_read" / "_entry"
 
 
 @unittest.skipUnless(shutil.which("aos-json"), "aos-json not on PATH")
@@ -56,6 +56,19 @@ class WritingTest(unittest.TestCase):
         r = self.run_tool(entry=READER, **args)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         return r.stdout
+
+    def test_root_flag_and_no_default(self):
+        """--root DIR 蓋過 AOS_MEMORY；都沒給＝MemoryMissing、不寫任何檔（11-10 深夜：工具沒有內建預設）。"""
+        r = self.run_tool(env={"AOS_MEMORY": ""}, op="add", path="x.json", description="X", value="x")
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stdout.startswith("memory_write: error: MemoryMissing "), r.stdout)
+        other = self.root.parent / "other"
+        other.mkdir()
+        r = subprocess.run([sys.executable, str(ENTRY), "--root", str(other)], text=True, capture_output=True, env=self.env,
+                           input=json.dumps({"op": "add", "path": "x.json", "description": "X", "value": "x"}), timeout=30)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(json.loads((other / "x.json").read_text()), "x")
+        self.assertFalse((self.root / "x.json").exists())
 
     def test_add_file_writes_value_and_index(self):
         out = self.ok(op="add", path="notes/amy.json", value="Amy likes tea.", description="Who Amy is")

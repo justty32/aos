@@ -162,7 +162,7 @@ class Check:
         shutil.copytree(source, dest, symlinks=True, ignore=shutil.ignore_patterns("__pycache__", "tests"))
         kb = {"AOS_MEMORY": str(self.work / "kb")}
         tools = {"peek_now_time": {"path": str(PROTO / "lib/base/peek_now_time")},
-                 "memory": {"path": str(PROTO / "lib/agent/memory"), "env": kb},
+                 "memory_read": {"path": str(PROTO / "lib/agent/memory_read"), "env": kb},
                  "memory_write": {"path": str(PROTO / "lib/agent/memory_write"), "env": kb}}
         save(dest / "tools.json", {"tools": tools})
         save(dest / "llm.json", {"model": "fake"})

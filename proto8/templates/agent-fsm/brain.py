@@ -7,17 +7,19 @@
 #   temperature、top_p、max_tokens、seed、presence_penalty、frequency_penalty、stop＝與快取無關的調整鍵，轉型後放進 request（llm_settings.py）。其他鍵不看（C-48）。
 # 寫新請求時順手刪 $AOS_STACK/think/pending.txt（上一封的名字）：新請求取代舊的，wait 會重寄。
 # --system FILE：讀成一則 system 放最前面、不存進 history（P-41）；沒給＝沒有 system。
-# --memory NAME（11-05 晚 agent-knowledge K2）：登記名 NAME 的工具（memory）叫一次 {"op": "read"}，它印的知識庫根接在 system 後面、
+# --memory NAME（11-05 晚 agent-knowledge K2）：登記名 NAME 的工具（範本是 memory_read）叫一次 {"op": "read"}，它印的知識庫根接在 system 後面、
 #   同一則 system 訊息（每格重叫＝知識庫改了下一題就看到；不存進 history）。叫的是腦之後叫的同一個工具＝腦看到的根跟它自己查的一樣。
 #   工具清單（疊覆蓋層後）沒有 NAME＝不給根（這隻把 memory 拿掉了）；叫了起不來、退非 0、或 30 秒沒叫完（整群收掉）＝
 #   warning 一行（工具自己那行照樣在 stderr）、system 裡改放一句「Knowledge base is not available right now: 原因」、照樣寫請求
 #   （11-10 TS，圖紙 07 K01：知識庫一時讀不到不擋問腦，狀態不壞；原本是 MemoryFailed 退 1）。
+#   工具最後一行是「名: error: MemoryMissing …」＝沒被指定庫（11-10 深夜 tool-packs：工具沒有預設位置）＝安靜：不印 warning、
+#   工具那行也不轉印、system 裡什麼都不放。
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝不給工具）；腦看到的工具名＝登記名。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝改用這隻自己那份（aos-agent tools add／rm 寫的，只存差異、"$override" 指回定義那份，11-10）。
 # hook（lib/agent/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：有 tool_added hook 時，工具清單比上次（$AOS_STACK/hook_tools_seen.json）
 #   多出來的名字一個觸發一次（第一次只記不觸發；沒有這種 hook＝刪那份檔）。hook 停下＝HookFailed／HooksBad 退 1。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1（P-20）。--help 印英文用法；Ctrl-C 退 130。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
-import json, os, signal, subprocess, sys
+import json, os, re, signal, subprocess, sys
 from pathlib import Path
 
 _import_paths = [str(Path(__file__).resolve().parent)]
@@ -57,7 +59,8 @@ tools) and write $AOS_STACK/think/request.json. Exit 0 = written (go wait); 10 =
 --memory NAME: call tool NAME with {"op": "read"} and append the knowledge base root it prints
 to the system message (skipped when NAME is not among the tools). If that call fails or
 takes over 30 s, one warning line goes to stderr, the system message says "Knowledge base is
-not available right now: <reason>" instead, and the request is written as usual.
+not available right now: <reason>" instead, and the request is written as usual. If the tool
+answers MemoryMissing (no knowledge base was given to it), nothing is added and nothing printed.
 Hooks: with a tool_added hook, each tool name new since the last run (hook_tools_seen.json;
 the first run only records) fires it once. A failing hook = HookFailed, exit 1.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
@@ -186,14 +189,15 @@ memory = opts.get("--memory")
 
 
 def memory_root():
-    """叫 memory 拿知識庫根：(根, None)；叫不成＝(None, 原因)（11-10 TS，圖紙 07 K01：知識庫一時讀不到不擋問腦）。"""
+    """叫 memory_read 拿知識庫根：(根, None)；叫不成＝(None, 原因)（11-10 TS，圖紙 07 K01：知識庫一時讀不到不擋問腦）；
+    工具回 MemoryMissing（沒被指定庫）＝(None, None)：安靜不帶根。"""
     try:
-        p = subprocess.Popen(TOOLS + ["call", memory], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             text=True, start_new_session=True)   # 繼承自己的 stack；aos-tools call 算小格。stderr 不吞：工具自己說哪裡壞
+        p = subprocess.Popen(TOOLS + ["call", memory], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             text=True, start_new_session=True)   # 繼承自己的 stack；aos-tools call 算小格。stderr 先收著：MemoryMissing 要安靜
     except OSError as e:
         return None, "aos-tools cannot start: %s" % e
     try:
-        out, _ = p.communicate('{"op": "read"}', timeout=MEMORY_TIMEOUT_S)
+        out, err = p.communicate('{"op": "read"}', timeout=MEMORY_TIMEOUT_S)
     except subprocess.TimeoutExpired:            # 卡住的 memory 不讓 think 格一直卡（11-05 夜第二輪邊緣）：整群收掉
         for sig in (signal.SIGTERM, signal.SIGKILL):
             try:
@@ -205,6 +209,10 @@ def memory_root():
             except OSError:
                 break
         return None, "tool %s (op read of the root) did not finish in %d s (killed)" % (memory, MEMORY_TIMEOUT_S)
+    lines = [l for l in out.splitlines() if l.strip()]
+    if p.returncode == 1 and lines and re.match(r"\S+: error: MemoryMissing( |$)", lines[-1]):
+        return None, None                        # 工具沒被指定庫（11-10 深夜 tool-packs「沒有預設，你得自己指定」）＝安靜不帶根
+    sys.stderr.write(err)                        # 其他情況工具自己那行照樣在 stderr（工具自己說哪裡壞）
     if p.returncode != 0:
         return None, "tool %s (op read of the root) exited %d" % (memory, p.returncode)
     return out.strip(), None

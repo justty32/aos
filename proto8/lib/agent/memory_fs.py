@@ -1,4 +1,4 @@
-"""記憶庫（純 JSON 樹）共用：找根、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 $env 格的認法、自己的簡介、列枝幹、find 逛樹的迴圈防護。
+"""記憶庫（純 JSON 樹）共用：找根（--root 旗標＞_memory.json＞AOS_MEMORY）、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 $env 格的認法、自己的簡介、列枝幹、find 逛樹的迴圈防護。
 
 圖紙 proto8/thinking/2026-11/10/json-memory/02、03（使用者 11-10 晚）。統一路徑＝`資料夾/檔.json#/JSON Pointer`（RFC 6901）。
 位置在程式裡是 Loc(fs, tokens)：fs＝正規化的絕對路徑（不解捷徑，顯示才會照庫根算相對）；tokens＝None 指整個資料夾／整份檔，否則是指標的段。
@@ -10,7 +10,8 @@ JSON 物件＝它的 _description key（字串）。兩者都不是子節點（_
 單點讀交給 PATH 上的 aos-json（get --follow，有指示詞再 --resolve）；表一律讀原文（不 --resolve，$env 格才留得住）。
 aos-json 失敗＝把它最後一行的代號照圖紙 03 的表換成自己的代號、原因照接（lib/docs/01 規則 2 的例外：給腦用的工具轉接下層）。
 find 例外：直接用 Python 讀 JSON 逛樹（逐檔起子行程太慢），記走過的（實體路徑, 指標）防繞圈，$env 格只跳一次。
-錯誤一律 raise tool_io.Error（代號＋英文原因），由工具入口轉成錯誤行；只有 memory_root 照舊直接 die。"""
+錯誤一律 raise tool_io.Error（代號＋英文原因），由工具入口轉成錯誤行；只有 memory_root 與 take_root_flag 照舊直接 die。
+庫根：argv 的 --root DIR ＞ 工具夾的 _memory.json ＞ $AOS_MEMORY，都沒給＝MemoryMissing（工具沒有內建預設位置，11-10 深夜）。"""
 import json
 import os
 import re
@@ -24,9 +25,53 @@ from tool_io import Error as ToolError, die
 CFG_NAME = "_memory.json"      # 工具資料夾裡的設定檔（定義配的）：{"base": "<知識庫路徑>"}，相對＝從這個資料夾算；base 也可寫指示詞（11-10）
 
 
+ROOT_FLAG = "--root"            # 庫根旗標：只在工具入口的 argv（人手動跑、或 aos-exec 帶參數），不是 JSON 參數＝腦挑不了（11-10 深夜 tool-packs）
+ROOT_GIVEN = None              # take_root_flag() 拿到的值（None＝沒給）
+ROOT_HOWTO = ("give one: %s DIR on the command line, a %s {\"base\": DIR} next to the tool, "
+              "or AOS_MEMORY=DIR (e.g. in the tool's tools.json entry: \"env\": {\"AOS_MEMORY\": ...})" % (ROOT_FLAG, CFG_NAME))
+
+
+def take_root_flag(prog, argv=None):
+    """在 tool_io.start 之前叫（start 才認得 --help 跟在 --root DIR 後面）：從 argv 拿掉 `--root DIR`／`--root=DIR`（只看第一個 -- 之前），值記在 ROOT_GIVEN。
+    給了兩次、或沒給值＝ArgumentsBad（die）。拿掉後其餘旗標照 tool_io 的 schema 映射成 JSON 參數。"""
+    global ROOT_GIVEN
+    argv = sys.argv if argv is None else argv
+    i, seen = 1, []
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--":
+            break
+        if arg == ROOT_FLAG or arg.startswith(ROOT_FLAG + "="):
+            if arg == ROOT_FLAG:
+                if i + 1 >= len(argv):
+                    die("ArgumentsBad", "%s needs a folder" % ROOT_FLAG, prog=prog)
+                value = argv[i + 1]
+                del argv[i:i + 2]
+            else:
+                value = arg[len(ROOT_FLAG) + 1:]
+                del argv[i]
+            if not value:
+                die("ArgumentsBad", "%s needs a folder" % ROOT_FLAG, prog=prog)
+            seen.append(value)
+            continue
+        i += 1
+    if len(seen) > 1:
+        die("ArgumentsBad", "%s given more than once" % ROOT_FLAG, prog=prog)
+    ROOT_GIVEN = seen[0] if seen else None
+    return ROOT_GIVEN
+
+
 def memory_root(tool_folder=None):
-    """知識庫根：① 工具資料夾的 _memory.json 的 base（定義配的、最具體）＞ ② $AOS_MEMORY（daemon／人配的）；都沒有＝MemoryMissing。
+    """知識庫根：① 工具入口 argv 的 --root DIR（叫的人給的；相對從 $AOS_WS，沒設＝cwd）＞ ② 工具資料夾的 _memory.json 的 base（定義配的）
+    ＞ ③ $AOS_MEMORY（登記格 env、daemon／人配的）；都沒有＝MemoryMissing（叫的人看到它＝沒被指定庫，可以安靜略過）；
+    給了但不是資料夾＝MemoryBad（指定了卻讀不到，要讓人知道）。工具本身沒有內建預設位置（使用者 11-10 深夜
+    「memory_read/write，就是吃旗標或目標，或是吃環境變數，啊這些都要自己給。或是在定義中給」）。
     使用者 11-05：「隨意複製，隨意修改，隨意給agent指定、隨意拆卸增添」——知識庫是普通資料夾，不登記。"""
+    if ROOT_GIVEN is not None:                  # 相對從 $AOS_WS（aos-exec 會 cd 進工具夾，WS 預設＝叫的人的 cwd）算，沒設＝cwd；跟檔案工具一樣
+        real = os.path.realpath(os.path.join(os.environ.get("AOS_WS") or os.getcwd(), ROOT_GIVEN))
+        if not os.path.isdir(real):
+            die("MemoryBad", "%s %s resolves to %s, which is not a directory" % (ROOT_FLAG, ROOT_GIVEN, real))
+        return real
     here = os.environ.get("AOS_CD") or tool_folder or os.path.dirname(os.path.abspath(__file__))
     cfg = os.path.join(here, CFG_NAME)
     if os.path.lexists(cfg):                    # 在但不是檔（資料夾、斷捷徑）＝CfgBad，不默默改用 AOS_MEMORY（11-05 夜第二輪邊緣）
@@ -47,15 +92,15 @@ def memory_root(tool_folder=None):
             die("CfgBad", "%s must be an object with a non-empty string key base" % cfg)
         real = os.path.realpath(os.path.join(here, base))   # 絕對路徑時 join 直接用它
         if not os.path.isdir(real):
-            die("MemoryMissing", "%s base%s resolves to %s, which is not a directory" % (cfg, written, real))
+            die("MemoryBad", "%s base%s resolves to %s, which is not a directory" % (cfg, written, real))
         return real
     m = os.environ.get("AOS_MEMORY", "")
     if not m:
-        die("MemoryMissing", "no %s next to the tool and AOS_MEMORY is not set or empty" % CFG_NAME)
+        die("MemoryMissing", "no memory root was given; the tool has no default; " + ROOT_HOWTO)
     base = os.environ.get("AOS_DAEMON") or os.getcwd()
     real = os.path.realpath(os.path.join(base, m))
     if not os.path.isdir(real):
-        die("MemoryMissing", "AOS_MEMORY resolves to %s, which is not a directory" % real)
+        die("MemoryBad", "AOS_MEMORY resolves to %s, which is not a directory" % real)
     return real
 
 

@@ -1,10 +1,12 @@
-# proto8/knowledge — 記憶庫（`memory` 讀的資料夾＋`.json` 樹）
+# proto8/knowledge — 記憶庫（`memory_read` 讀的資料夾＋`.json` 樹）
 
-← [proto8](../README.md)｜工具：[lib/agent/memory](../lib/agent/memory/_entry)（`read`／`ls`／`find`）、[lib/agent/memory_write](../lib/agent/memory_write/_entry)（`add`／`set`／`rm`）｜規劃：[thinking 11-05 agent-knowledge](../thinking/2026-11/05/agent-knowledge/README.md)；現在的形狀：[thinking 11-10 json-memory](../thinking/2026-11/10/json-memory/README.md)（[02 格式規則](../thinking/2026-11/10/json-memory/02-格式規則.md)、[03 工具](../thinking/2026-11/10/json-memory/03-工具.md)）
+← [proto8](../README.md)｜工具：[lib/agent/memory_read](../lib/agent/memory_read/_entry)（`read`／`ls`／`find`）、[lib/agent/memory_write](../lib/agent/memory_write/_entry)（`add`／`set`／`rm`）｜規劃：[thinking 11-05 agent-knowledge](../thinking/2026-11/05/agent-knowledge/README.md)；現在的形狀：[thinking 11-10 json-memory](../thinking/2026-11/10/json-memory/README.md)（[02 格式規則](../thinking/2026-11/10/json-memory/02-格式規則.md)、[03 工具](../thinking/2026-11/10/json-memory/03-工具.md)）
 
 使用者 11-05：「頂層可以是簡介、index目錄之類，並且盡量講簡單……agent有需要的話，再去透過工具……抽取更深一層的知識……層級式記憶工具……這套知識庫還可以給多個agent共享！」11-10：「json本身就是節點樹。然後json跟檔案系統又有同像性，可以用xxx/xxx.json#/xxx/xxx，這個單一路徑取得東西。所以資料夾，配合各.json檔案。其實就是一個好東西了。」
 
-**一個記憶庫＝資料夾＋`.json` 檔，整棵當一棵樹**，照 [wf/STRUCTURE 分層原則](../../wf/STRUCTURE.md#分層原則)：上層只放簡介與目錄、不重講下層細節。agent 用 `memory` 從根讀起、照目錄往下走。多隻 agent 指同一個資料夾就是共用。庫是普通資料夾、**不登記**（使用者 11-05「隨意複製，隨意修改，隨意給agent指定、隨意拆卸增添」）；指法兩種，具體的蓋一般的：① 定義裡給這隻 agent 指定——範本（11-10 templates-cp 起）把 `memory` 直接登記成 `lib/agent/memory`，庫寫在那一格的 `env`：`"AOS_MEMORY": {"$env": "AOS_HOME", "$path": "/knowledge/aos"}`（例 [templates/agent-fsm/tools.json](../templates/agent-fsm/tools.json)）；也可以在工具資料夾放 `_memory.json`＝`{"base": …}`（相對從那個資料夾算）；③ 覆蓋層：`aos-tools … add --envs AOS_MEMORY=/x/kb …` 把變數寫進登記格（11-05 晚 R1）；② 環境變數 `AOS_MEMORY`（絕對路徑，或相對管我的 daemon 的 stack；寫進 daemon 或 agent 定義的 `.env`，跟 `AOS_LLM_KERNEL` 同一套）。一支 memory 工具＝一個庫的根。
+**一個記憶庫＝資料夾＋`.json` 檔，整棵當一棵樹**，照 [wf/STRUCTURE 分層原則](../../wf/STRUCTURE.md#分層原則)：上層只放簡介與目錄、不重講下層細節。agent 用 `memory_read` 從根讀起、照目錄往下走。多隻 agent 指同一個資料夾就是共用。庫是普通資料夾、**不登記**（使用者 11-05「隨意複製，隨意修改，隨意給agent指定、隨意拆卸增添」）。**工具本身沒有預設位置**（使用者 11-10 深夜「memory_read/write，就是吃旗標或目標，或是吃環境變數，啊這些都要自己給。或是在定義中給」），找根的順序：① 命令列 `--root DIR`（人手動跑；不是 JSON 參數，腦改不了）＞ ② 工具資料夾的 `_memory.json`＝`{"base": …}` ＞ ③ 環境變數 `AOS_MEMORY`（範本寫在 `tools.json` 那一格的 `env`；或 `aos-agent tools add --envs AOS_MEMORY=/x/kb …`；或 daemon／定義的 `.env`）。都沒給＝`MemoryMissing`（brain.py、aos-mcp 看到它就安靜不帶根）；給了但不是資料夾＝`MemoryBad`。兩份範本（[agent-fsm](../templates/agent-fsm/tools.json)、[eca-claude](../templates/eca-claude/tools.json)）的 `memory_read`、`memory_write` 都指 `{"$env": "AOS_HOME", "$path": "/knowledge"}`＝**這一層**（使用者 11-10 深夜「指knowledge/」）：agent 寫了就改到 repo 的 `knowledge/`。一支 memory_read＝一個庫的根。
+
+**這一層就是樹根**（11-10 深夜起）：`knowledge/_index.json` 列 `aos/`（先讀它）與給人看的 `README.md`、`docs/`，`knowledge/_description.json` 一句簡介；所以路徑都從這裡寫起：`aos/errors.json#/codes`、`aos/me.json#/self_tools`（工具說明的 `Details: memory_read aos/…` 也是）。
 
 ## 分檔目錄
 
@@ -17,15 +19,15 @@
 
 | 資料夾 | 內容 | 給誰 |
 |---|---|---|
-| [aos/](aos/_index.json) | aos 體系知識。根的 `_description.json`＝一頁簡介＋八個詞＋五條規則；`world.json`（心智模型與環境變數）、`me.json`（我是誰；`#/self_tools` 改自己的工具、`#/self_llm`、`#/self_history`、`#/self_hook`、`#/self_state`、`#/self_ctl`）、`agents.json`（子 agent 與定義：`#/agents_children`、`#/agents_ctl`、`#/agent_def`、`#/thought`）、`mailbox.json`（agent 之間的信：`#/tools`、`#/rules`）、`clock.json`（每 N 拍叫醒：`#/wake_me`、`#/rules`）、`brain.json`（問腦、endpoint 包、priority）、`status.json`（daemon 表與 phase）、`errors.json`（錯誤行 `程式: error: 代號 原因`、`warning:`、結束碼 10 與 `[exit code N]` 怎麼讀；`#/codes` 是代號結尾表（C-54 六種結尾＋`Internal`）、`#/common` 是最常碰到的代號）、`memory.json`（何時寫知識、先 find、一段 ≤ 2 KB、`add`／`set`／`rm` 怎麼叫）、`rules.json`（禁忌）、`cli/`（給人與外部 agent 的指令：aos-agent（含 hook）、aos-mailbox、aos-daemon-ctl、aos-tools、aos-grow、aos-eca-screen；旗標位置、短名、`-y` 與確認、錯誤與重試各一份） | 跑在 aos 裡的 agent（Haiku／luna 級小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
+| [aos/](aos/_index.json) | aos 體系知識（路徑寫 `aos/…`）。根的 `_description.json`＝一頁簡介＋八個詞＋五條規則；`world.json`（心智模型與環境變數）、`me.json`（我是誰；`#/self_tools` 改自己的工具、`#/self_llm`、`#/self_history`、`#/self_hook`、`#/self_state`、`#/self_ctl`）、`agents.json`（子 agent 與定義：`#/agents_children`、`#/agents_ctl`、`#/agent_def`、`#/thought`）、`mailbox.json`（agent 之間的信：`#/tools`、`#/rules`）、`clock.json`（每 N 拍叫醒：`#/wake_me`、`#/rules`）、`brain.json`（問腦、endpoint 包、priority）、`status.json`（daemon 表與 phase）、`errors.json`（錯誤行 `程式: error: 代號 原因`、`warning:`、結束碼 10 與 `[exit code N]` 怎麼讀；`#/codes` 是代號結尾表（C-54 六種結尾＋`Internal`）、`#/common` 是最常碰到的代號）、`memory.json`（何時寫知識、先 find、一段 ≤ 2 KB、`add`／`set`／`rm` 怎麼叫）、`rules.json`（禁忌）、`cli/`（給人與外部 agent 的指令：aos-agent（含 hook）、aos-mailbox、aos-daemon-ctl、aos-tools、aos-grow、aos-eca-screen；旗標位置、短名、`-y` 與確認、錯誤與重試各一份） | 跑在 aos 裡的 agent（Haiku／luna 級小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
 
 試一下（從 `proto8/`）：
 
 ```sh
-echo '{"op":"read"}' | AOS_MEMORY=knowledge/aos python3 lib/agent/memory/_entry
-echo '{"op":"read","path":"errors.json#/codes"}' | AOS_MEMORY=knowledge/aos python3 lib/agent/memory/_entry
-echo '{"op":"find","query":"exit code"}' | AOS_MEMORY=knowledge/aos python3 lib/agent/memory/_entry
-echo '{"path":"cli/"}' | AOS_MEMORY=knowledge/aos python3 lib/agent/memory_export/_entry   # 整棵印成一份 Markdown 給人看
+echo '{"op":"read"}' | python3 lib/agent/memory_read/_entry --root knowledge
+echo '{"op":"read","path":"aos/errors.json#/codes"}' | python3 lib/agent/memory_read/_entry --root knowledge
+echo '{"op":"find","query":"exit code"}' | AOS_MEMORY=knowledge python3 lib/agent/memory_read/_entry   # 環境變數也行
+echo '{"path":"aos/cli/"}' | python3 lib/agent/memory_export/_entry --root knowledge   # 整棵印成一份 Markdown 給人看
 ```
 
 知識庫若是有 `origin` 的 git 工作樹，可選用 [memory_sync](../lib/agent/memory_sync/) 的 `status`／`sync` 在收工前後同步；核心執行流程不會代為同步。工具會檢查 `.*.tmp`、`.tmp.*` 兩條 ignore 規則；同段衝突保留後同步這台的版本，刪改衝突交給人處理。

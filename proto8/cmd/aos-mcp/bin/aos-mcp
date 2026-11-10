@@ -5,9 +5,10 @@
 # 自己不懂任何一個工具在做什麼、也不管工具是資料夾、JSON 還是可執行檔（C-52）。設計：proto8/thinking/2026-10/28/aos-tools/README.md。
 #
 # 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [REGISTRY...]
-#   --memory NAME（11-05 晚 agent-knowledge K4）：initialize 時叫一次登記名 NAME 的工具（memory）{"op": "read"}，它印的知識庫根放進回應的
+#   --memory NAME（11-05 晚 agent-knowledge K4）：initialize 時叫一次登記名 NAME 的工具（memory_read）{"op": "read"}，它印的知識庫根放進回應的
 #   instructions（MCP 用戶端把它放進自己的 system prompt；Claude Code 會）。叫的是 tools/list 給出去的同一個工具＝外部 agent 看到的根跟它自己查的一樣。
 #   清單裡沒有 NAME、或叫了失敗＝不給 instructions、stderr 一行 warning（不讓整個 MCP 連線起不來）；沒給 --memory＝照舊不給。
+#   工具回 MemoryMissing（沒被指定庫；11-10 深夜 tool-packs「沒有預設，你得自己指定」）＝安靜不給：不印 warning。
 #   這隻自己加減的工具（11-10 aos-tools-cli 步 4）：給 stack 那份登記檔就好——它的 "$override" 指回定義那份，疊法歸 aos-tools。
 #   每個 REGISTRY 是一份登記檔的路徑（相對路徑從啟動時的 cwd 算；不是檔＝ToolMissing）；檔名不限
 #   （11-02 使用者「改成指定檔案」，以前給的是 agent 資料夾、讀它的 tools.json）。一份都沒給＝./tools.json
@@ -32,7 +33,7 @@
 #   工具與 aos-tools 的 stderr：aos-mcp 接住後原樣轉印到自己的 stderr（MCP 用戶端的 log）；失敗時最後一段另附給外部 agent
 #   （11-05 使用者選「附 stderr 尾巴（推薦）」，edge-basics 題 1；C-52 的明文例外：出口是給外部 agent 看原因，11-05 R10 照舊）。成功時不附。
 #   命令列形狀照 CONVENTION P-44（11-04）：旗標都在 REGISTRY 前面、`--` 結束旗標、`--x V`／`--x=V`；不認得的旗標＝FlagUnknown。
-import json, os, signal, subprocess, sys, time
+import json, os, re, signal, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
@@ -63,7 +64,8 @@ Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call
   result, exit non-zero = isError (the last 2048 bytes of the tool's stderr are attached). Timeout = the tool's _metainfo timeout_ms,
   otherwise --timeout-s (default 60); then TERM to the whole group, KILL 2 s later.
 --memory NAME: on initialize, call tool NAME with {"op": "read"} and send what it prints (the knowledge base root) as the
-  instructions of the reply; NAME not listed or the call failing = no instructions and a warning line on stderr.
+  instructions of the reply; NAME not listed or the call failing = no instructions and a warning line on stderr;
+  the tool answering MemoryMissing (no knowledge base was given to it) = no instructions, no warning.
 --hooks DEF: DEF is the agent definition folder (its interfaces.json declares hooks.json; the stack copy goes on top). On tools/call,
   before_tool may change the arguments or block the call (the result text = the hook's stdout, or "(tool NAME blocked by hook HOOK)";
   not an error), after_tool may change the result text. A failing hook = that call returns isError with a HookFailed line. No --hooks = no hooks.
@@ -79,12 +81,13 @@ class ToolsBad(Exception):
         self.tail = tail                         # aos-tools 那次 stderr 的最後一段（跑起來之後回給外部 agent 用）
 
 
-def tail_of(err):
-    """stderr（bytes）→ 原樣轉印到自己的 stderr，回最後 STDERR_TAIL 位元組（去頭尾空白；沒東西＝""）。"""
+def tail_of(err, echo=True):
+    """stderr（bytes）→ 原樣轉印到自己的 stderr（echo=False＝不轉印，叫的人自己決定），回最後 STDERR_TAIL 位元組（去頭尾空白；沒東西＝""）。"""
     if not err:
         return ""
-    sys.stderr.buffer.write(err)
-    sys.stderr.buffer.flush()
+    if echo:
+        sys.stderr.buffer.write(err)
+        sys.stderr.buffer.flush()
     t = err[-STDERR_TAIL:].decode("utf-8", "replace").strip()
     return ("..." + t) if len(err) > STDERR_TAIL else t
 
@@ -185,7 +188,7 @@ def load_tools(regs):
     return tools
 
 
-def call(name, tool, args, ws, stack, timeout_s):
+def call(name, tool, args, ws, stack, timeout_s, echo=True):
     """跑一次工具 → (結束碼, stdout, stderr 最後一段, 花幾毫秒, 逾時秒數)。結束碼 None＝逾時被收掉。"""
     env = dict(os.environ, AOS_WS=ws, AOS_STACK=stack)   # 工具小格統一由 aos-tools call 算（P-17）
     # AOS_ENTRY 照常繼承（11-04 四元素審查：原本 pop 掉、怕外面殘留的值讓工具找錯入口；但 P-39 是一路繼承、使用者 11-01 裁留，外面設了＝要它）
@@ -213,7 +216,7 @@ def call(name, tool, args, ws, stack, timeout_s):
         except subprocess.TimeoutExpired:        # 有逃出群組的還拿著管子：不等了
             out, err = b"", b""
         code = None
-    tail = tail_of(err)
+    tail = tail_of(err, echo)
     return code, out.decode("utf-8", "replace"), tail, int((time.monotonic() - t0) * 1000), limit
 
 
@@ -275,6 +278,12 @@ def run_tool(params, tools, ws, stack, timeout_s, mid):
     return {"content": content, "isError": code != 0}, None
 
 
+def memory_missing(out):
+    """工具 stdout 最後一行是「名: error: MemoryMissing …」＝這個工具沒被指定知識庫（不是壞掉）。"""
+    lines = [l for l in out.splitlines() if l.strip()]
+    return bool(lines) and re.match(r"\S+: error: MemoryMissing( |$)", lines[-1]) is not None
+
+
 def knowledge_root(regs, ws, stack, timeout_s):
     """--memory NAME：叫 NAME {"op": "read"} → 給 initialize 的 instructions；不給的情況（沒 --memory、清單沒有、叫失敗）＝None。"""
     if MEMORY is None:
@@ -287,7 +296,11 @@ def knowledge_root(regs, ws, stack, timeout_s):
     if MEMORY not in tools:
         aos_flags.warn(NAME, "--memory %s is not among the tools; no instructions sent" % MEMORY)
         return None
-    code, out, _, _, _ = call(MEMORY, tools[MEMORY], {"op": "read"}, ws, stack, timeout_s)
+    code, out, tail, _, _ = call(MEMORY, tools[MEMORY], {"op": "read"}, ws, stack, timeout_s, echo=False)
+    if code == 1 and memory_missing(out):       # 工具沒被指定庫（11-10 深夜 tool-packs：沒指定＝安靜）：不給 instructions、不印 warning、工具那行不轉印
+        return None
+    if tail:                                    # 其他情況工具的 stderr 照樣轉印（尾巴 STDERR_TAIL 位元組）
+        sys.stderr.write(tail + "\n")
     if code != 0 or not out.strip():
         aos_flags.warn(NAME, "--memory %s (op read of the root) %s; no instructions sent" %
                        (MEMORY, "timed out" if code is None else "exited %d" % code))

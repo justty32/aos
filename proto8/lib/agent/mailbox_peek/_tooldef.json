@@ -1,5 +1,5 @@
 {
- "description": "Look at your mailbox without taking anything: how many letters wait, who sent each, its status and title. Other agents (or the user) send you letters; nothing tells you they arrived, so peek when you want to know. Then read them with mailbox_read. Example: {}  (no arguments). Errors: ArgumentsBad, DaemonMissing, InstanceMissing. Details: memory mailbox.json.",
+ "description": "Look at your mailbox without taking anything: how many letters wait, who sent each, its status and title. Other agents (or the user) send you letters; nothing tells you they arrived, so peek when you want to know. Then read them with mailbox_read. Example: {}  (no arguments). Errors: ArgumentsBad, DaemonMissing, InstanceMissing. Details: memory_read aos/mailbox.json.",
  "env": [
   "AOS_DAEMON"
  ],

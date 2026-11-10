@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # memory_write - 改記憶庫：add／set／rm 一次寫好內容與它在表（_index.json 或 _index key）裡的那格；寫到哪都行，看檔案權限。
 # 圖紙：proto8/thinking/2026-11/10/json-memory/03-工具.md（使用者 11-10 晚）。介面：stdin {"op": "add"|"set"|"rm", "path": 統一路徑,
-#   "value"?: 任何 JSON（非 .json 檔要字串）, "description"?: 字串, "recursive"?: bool, "create"?: bool}。path 寫法與庫根的找法同 memory（memory_fs）。
+#   "value"?: 任何 JSON（非 .json 檔要字串）, "description"?: 字串, "recursive"?: bool, "create"?: bool}。path 寫法與庫根的找法同 memory_read（memory_fs：--root ＞ _memory.json ＞ AOS_MEMORY，都沒有＝MemoryMissing）。
 #   add：path 以 / 結尾＝開資料夾（帶空的 _index.json）；否則新檔或物件裡新 key；description 必給，寫進上一層的表。
 #     不給 value（使用者 11-10 深夜）：目標已在＝只補表裡那格、內容不動；不在＝NodeMissing；create: true＝建空的（空檔／""）再補格。
 #   set：位置要已在；換 value、換 description，或兩個一起。rm：刪檔、資料夾（不空要 recursive: true）或 key，連表裡那格一起拔。
@@ -32,8 +32,8 @@ except ModuleNotFoundError as error:
     sys.exit(1)
 
 HELP = """\
-usage: memory_write [FLAGS] < ARGUMENTS.json   (a tool: run it with aos-exec)
-Change a memory (a tree of folders and .json files; paths as in the memory tool:
+usage: memory_write [--root DIR] [FLAGS] < ARGUMENTS.json   (a tool: run it with aos-exec)
+Change a memory (a tree of folders and .json files; paths as in the memory_read tool:
 folder/file.json#/key, relative to the memory root). Each op also keeps the index
 up to date (the folder's _index.json, or the object's _index key):
   add  a new file, a new key in an object, or a folder (path ends with /);
@@ -49,18 +49,20 @@ object's _description key: add, set and rm it like any path, with a string value
 and no description; it has no index entry.
 Writes may go anywhere the file system lets you (otherwise WriteFailed); the
 memory root itself cannot be removed. No locking: two writers at once may
-overwrite each other. Needs aos-json on PATH. The root
-comes from _memory.json next to the tool, otherwise AOS_MEMORY.
+overwrite each other. Needs aos-json on PATH. The memory root: --root DIR (command line only, not a
+JSON argument), else _memory.json {"base": DIR} next to the tool, else
+AOS_MEMORY. No default: none of them = MemoryMissing; not a folder = MemoryBad.
 Result on stdout: node: PATH, then added, set or removed.
 On error: one line "memory_write: error: CODE reason" on stderr and stdout, exit 1.
 """
-tool_io.start("memory_write", HELP)
 try:
     import memory_fs as fs
 except ModuleNotFoundError as error:
     if error.name != "memory_fs":
         raise
-    tool_io.die("ModuleMissing", "memory_fs.py not in the tool folder, not in lib/agent/, not on the Python path")
+    tool_io.die("ModuleMissing", "memory_fs.py not in the tool folder, not in lib/agent/, not on the Python path", prog="memory_write")
+fs.take_root_flag("memory_write")               # --root DIR 不是 JSON 參數：先從 argv 拿掉，再交 tool_io 映射其餘旗標
+tool_io.start("memory_write", HELP)
 import writing
 
 fs.install_signals()

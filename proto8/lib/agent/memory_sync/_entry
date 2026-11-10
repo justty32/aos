@@ -26,16 +26,6 @@ except ModuleNotFoundError as error:
     sys.stderr.write(line)
     sys.exit(1)
 
-tool_io.start("memory_sync", """usage: memory_sync < ARGUMENTS.json
-Inspect or synchronize a Git knowledge base using origin. The knowledge base must
-be the root of its Git working tree. Requires Git, an attached branch and the
-two ignore rules for temporary files: .*.tmp (aos-json) and .tmp.* (memory_write).
-Sync commits all changes, pulls with --no-rebase -X ours, then pushes. Same-hunk
-edits keep this machine's version; delete/modify conflicts abort the merge.
-Status uses cached origin refs (does not fetch). Results are JSON.
-IgnoreMissing prints the two required .gitignore lines before its error on stdout.
-Errors appear on stdout and stderr as memory_sync: error: CODE reason; exit 1.
-""")
 try:
     try:
         import memory_fs
@@ -46,7 +36,21 @@ try:
 except ModuleNotFoundError as error:
     if error.name not in ("memory_fs", "agent", "agent.memory_fs"):
         raise
-    tool_io.die("ModuleMissing", "memory_fs.py not found in tool folder, lib/agent/ or Python path")
+    tool_io.die("ModuleMissing", "memory_fs.py not found in tool folder, lib/agent/ or Python path", prog="memory_sync")
+memory_fs.take_root_flag("memory_sync")         # --root DIR 不是 JSON 參數：先從 argv 拿掉，再交 tool_io 映射其餘旗標
+tool_io.start("memory_sync", """usage: memory_sync [--root DIR] < ARGUMENTS.json
+Inspect or synchronize a Git knowledge base using origin. The knowledge base must
+be the root of its Git working tree. Requires Git, an attached branch and the
+two ignore rules for temporary files: .*.tmp (aos-json) and .tmp.* (memory_write).
+Sync commits all changes, pulls with --no-rebase -X ours, then pushes. Same-hunk
+edits keep this machine's version; delete/modify conflicts abort the merge.
+Status uses cached origin refs (does not fetch). Results are JSON.
+IgnoreMissing prints the two required .gitignore lines before its error on stdout.
+The knowledge base root: --root DIR (command line only, not a JSON argument),
+else _memory.json {"base": DIR} next to the tool, else AOS_MEMORY; no default
+(MemoryMissing); one that is not a folder = MemoryBad.
+Errors appear on stdout and stderr as memory_sync: error: CODE reason; exit 1.
+""")
 
 child = None
 TIMEOUT = 120

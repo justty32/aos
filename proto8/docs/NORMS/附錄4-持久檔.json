@@ -168,9 +168,9 @@
    "path": "<工具資料夾>/_memory.json",
    "lifetime": "持久",
    "writer": "人手寫",
-   "reader": "lib/agent/memory_fs（memory、memory_write、memory_export）",
+   "reader": "lib/agent/memory_fs（memory_read、memory_write、memory_export、memory_sync）",
    "image": "看情況：在定義裡＝不算 image",
-   "on_bad": "壞或 base 不是非空字串／指示詞＝CfgBad；base 的指示詞解不開＝照 aos-directive 的代號；base 不是資料夾＝MemoryMissing；不在就退 $AOS_MEMORY",
+   "on_bad": "壞或 base 不是非空字串／指示詞＝CfgBad；base 的指示詞解不開＝照 aos-directive 的代號；base 不是資料夾＝MemoryBad；不在就退 $AOS_MEMORY（命令列 --root DIR 蓋過它；三種都沒給＝MemoryMissing，工具沒有內建預設位置，11-10 深夜）",
    "note": "",
    "evidence": "proto8/lib/agent/memory_fs.py:25-57"
   },
@@ -178,10 +178,10 @@
    "path": "<knowledge 根>/…（資料夾的 _index.json 與 _description.json、.json 檔與裡面的 key（物件的 _index 表、_description 簡介）、其他枝葉檔）",
    "lifetime": "持久",
    "writer": "lib/agent/memory_write（add／set／rm；.json 經 aos-json 暫存後原子 rename、非 .json 檔自己原子換）、人手寫",
-   "reader": "lib/agent/memory、memory_export、brain.py（--memory）、aos-mcp（--memory）",
+   "reader": "lib/agent/memory_read、memory_export、brain.py（--memory）、aos-mcp（--memory）",
    "image": "看情況：在 ws 裡跟 ws 走；在 repo（proto8/knowledge）＝原始碼、不算 image",
    "on_bad": ".json 不是合法 JSON＝FileBad；_index.json 不是物件＝FileBad；_description.json 或 _description key 不是字串＝當沒簡介；表裡的格指不到＝列目錄時那格附代號與原因、其餘照列；表沒列的檔／key＝讀得到、ls 列在 not in index；. _ 開頭不列；寫入不限庫根底下，作業系統不讓寫＝WriteFailed；內文過時看不出來",
-   "note": "11-10 改純 JSON 樹（json-memory）：舊的 .md 節點、README.md、_tags.json 不再認，舊格式庫要照新形狀重做；11-10 S5 起表裡的 \".\" 格不再是簡介，要搬成 _description.json／_description key",
+   "note": "11-10 改純 JSON 樹（json-memory）：舊的 .md 節點、README.md、_tags.json 不再認，舊格式庫要照新形狀重做；11-10 S5 起表裡的 \".\" 格不再是簡介，要搬成 _description.json／_description key；11-10 深夜出廠根上移成 proto8/knowledge（_index.json 列 aos/），範本的 AOS_MEMORY 指它，路徑多一層 aos/：自己寫死 knowledge/aos 為根的設定照舊能讀，但節點文字裡的路徑是照 knowledge/ 寫的",
    "evidence": "proto8/lib/agent/memory_fs.py:200-258、proto8/lib/agent/memory_fs.py:313-364、proto8/lib/agent/memory_write/writing.py:59-80"
   },
   {

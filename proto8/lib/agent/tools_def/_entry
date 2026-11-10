@@ -46,6 +46,7 @@ tool_io.start(NAME, HELP)
 SKELETON = os.path.normpath(os.path.join(HERE, "..", "..", "..", "templates", "tool-python"))
 OPS = {"new": ("path", "description"), "check": ("path", "sample")}
 RUN_S = 30
+MARK = "# ---- your tool: change the lines below ----"
 die = tool_io.die
 report = []
 
@@ -130,8 +131,12 @@ def op_new():
     if code != 0:
         die("WriteFailed", "copied, but tool.py --write-defs failed: %s" % last_line(err, out))
     shown = args["path"]
-    print("made tool folder %s (copied from the tool-python skeleton). Next: change %s/tool.py (read %s/README.md), "
-          "then tools_def {\"op\": \"check\", \"path\": %s}" % (dest, shown, shown, json.dumps(shown)))
+    with open(os.path.join(dest, "tool.py"), encoding="utf-8") as f:
+        part = f.read().split(MARK, 1)[-1].strip("\n")
+    print("made tool folder %s (a copy of the tool-python skeleton: a working tool that adds two numbers; more in %s/README.md).\n"
+          "Next: in %s/tool.py change only the part shown below (use edit; keep every line above it, they load tool_spec),\n"
+          "then tools_def {\"op\": \"check\", \"path\": %s, \"sample\": {...}}.\n"
+          "---- %s/tool.py, the part to change ----\n%s" % (dest, shown, shown, json.dumps(shown), shown, part))
 
 
 # ---- check ----
@@ -239,6 +244,11 @@ def regenerate(script, location, base):
     except (OSError, UnicodeError):
         uses = False
     if not uses:
+        if os.path.isfile(os.path.join(os.path.dirname(script), "_entry.json")) and os.path.basename(script) == "tool.py":
+            line("bad", "defs: tool.py does not use tool_spec any more, so nothing describes it (fix: keep the setup lines "
+                 "of the skeleton and write DESCRIPTION, PARAMS, META, def run(args) and the last line ts.main(...); see README.md)")
+            return False
+        line("note", "defs: %s does not use tool_spec; _tooldef and _metainfo are kept by hand" % os.path.basename(script))
         return True
     code, out, err = run([sys.executable, script, "--write-defs", location], base)
     if code != 0:
@@ -246,6 +256,14 @@ def regenerate(script, location, base):
         return False
     line("made", "_tooldef and _metainfo from %s" % os.path.basename(script))
     return True
+
+
+def skeleton_description():
+    try:
+        with open(os.path.join(SKELETON, "_tooldef.json"), encoding="utf-8") as f:
+            return json.load(f).get("description")
+    except (OSError, ValueError):
+        return None
 
 
 def load_part(obj, base, key):
@@ -300,6 +318,8 @@ def op_check():
     has_td, td = load_part(obj, base, "_tooldef")
     if has_td and td is not None:
         probs = tool_spec.tooldef_problems(td)
+        if isinstance(td, dict) and td.get("description") == skeleton_description() and not os.path.samefile(base, SKELETON):
+            probs.append("description is still the skeleton's (\"Add two numbers ...\"): change DESCRIPTION in tool.py")
         if not probs and ptr is None:
             bad = aos_tools_check(path)
             probs = [bad] if bad else []
@@ -314,6 +334,8 @@ def op_check():
             limit = min(int(mi.get("timeout_ms", RUN_S * 1000)) // 1000 + 1, 120) if isinstance(mi, dict) and isinstance(mi.get("timeout_ms"), int) else RUN_S
             code, out, err = run(["aos-exec", "--ws", tool_io.workspace(), full], tool_io.workspace(), json.dumps(sample), limit)
             shown = " | ".join(out.strip().splitlines()[:3])[:300] if out.strip() else last_line(err)
+            if code == 0 and not out.strip():
+                code, shown = "0 but", "no output (run(args) must return the result)"
             line("ok" if code == 0 else "bad", "try: %s -> %s %s" % (json.dumps(sample, ensure_ascii=False), "exit %s:" % code if code is not None else "", shown if code is not None else err))
     missing = [n for n, ok in (("entry", runnable), ("_metainfo", has_mi), ("_tooldef", has_td)) if not ok]
     n = 3 - len(missing)

@@ -1,0 +1,11 @@
+{
+  "aos/": {
+    "_description": "Start here: aos in one page (what aos is, the eight words, five rules), then everything else about aos: you, other agents, tools, letters, errors, commands."
+  },
+  "README.md": {
+    "_description": "For people, in Chinese: how this knowledge folder is laid out. Agents can skip it."
+  },
+  "docs/": {
+    "_description": "For people, in Chinese: how the tree works and how to write nodes. Agents can skip it; aos/memory.json covers writing."
+  }
+}

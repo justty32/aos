@@ -22,7 +22,7 @@ class BaseDirective(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(os.path.realpath(self.tmp.name))
-        self.tool = self.root / "defs" / "ann" / "tools" / "memory"
+        self.tool = self.root / "defs" / "ann" / "tools" / "memory_read"
         self.tool.mkdir(parents=True)
         self.kb1 = self.root / "kb1"
         self.kb2 = self.root / "far" / "kb2"
@@ -101,7 +101,7 @@ class BaseDirective(unittest.TestCase):
     def test_resolves_to_missing_folder(self):
         cfg = self.write({"$env": "KB_HOME", "$path": "nope"})
         line = self.fails(KB_HOME=str(self.root))
-        self.assertIn("error: MemoryMissing %s base " % cfg, line)
+        self.assertIn("error: MemoryBad %s base " % cfg, line)
         self.assertIn(str(self.root / "nope"), line)
 
     def test_directive_tool_missing(self):

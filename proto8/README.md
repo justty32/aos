@@ -27,7 +27,7 @@
 | [cases/](cases/README.md) | measure 的共用考題、固定答案與比對器契約；smoke 用 math 的兩題驗門與自洽 |
 | [kernel/](kernel/README.md) | llm-kernel（問腦的那台）、daemon-judge、procs-kernel（判官的兩種掛法） |
 | [templates/](templates/README.md) | 兩個 agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent，11-04） |
-| [knowledge/](knowledge/README.md) | 知識庫：層級式記憶工具 `lib/agent/memory` 讀的資料夾＋`.json` 樹（11-10 起純 JSON；`AOS_MEMORY` 指它、多隻 agent 共用）；第一本是 `aos/`——給小模型的 aos 體系知識（根表＋九個 `.json` 與 `cli/`，英文；11-05） |
+| [knowledge/](knowledge/README.md) | 知識庫：層級式記憶工具 `lib/agent/memory_read` 讀的資料夾＋`.json` 樹（11-10 起純 JSON；`AOS_MEMORY` 指它、多隻 agent 共用；11-10 深夜起根是 `knowledge/` 這層、範本指這裡）；第一本是 `aos/`——給小模型的 aos 體系知識（根表＋九個 `.json` 與 `cli/`，英文；11-05） |
 | [extras/](extras/README.md) | langs：Janet／Lua 寫 aos |
 | [archive/](archive/README.md) | 封存（llm-kernel 示範、self-improve、nvim 外掛、Lua／Janet agent_dan、aos-chat；清單在它的 README） |
 | [thinking/](thinking/README.md) | 討論紀錄（使用者原文、決定、結論） |

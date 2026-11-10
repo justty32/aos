@@ -2,15 +2,15 @@
 # memory_export - 把記憶庫（資料夾＋.json 的 JSON 樹）或其中一棵子樹整棵印成一份 Markdown，給人看；唯讀。
 # 規劃：proto8/thinking/2026-11/05/agent-knowledge/03-接進agent與工具說明.md K6（使用者 11-05「人類想看的話，要麼直接問agent，
 #   要麼agent弄一份輕鬆轉為markdown/html的工具，把json轉過去也可以」）；11-10 改逛純 JSON 樹（圖紙 thinking/2026-11/10/json-memory/04）。
-# 介面（lib/docs/01 契約）：stdin {"path"?: 統一路徑, "max_bytes"?: N}。庫根與統一路徑的認法跟 memory 一模一樣
-#   （_memory.json 的 base ＞ $AOS_MEMORY；`資料夾/檔.json#/JSON Pointer`，相對從庫根算，"" 或 "/"＝根），共用 lib/agent/memory_fs.py，不 import 隔壁工具。
-# stdout：從 path（沒給＝根）開始深度優先；每個位置先一行「<!-- node: 路徑 -->」（路徑可直接貼回 memory 的 path），接著：
+# 介面（lib/docs/01 契約）：stdin {"path"?: 統一路徑, "max_bytes"?: N}。庫根與統一路徑的認法跟 memory_read 一模一樣
+#   （--root ＞ _memory.json 的 base ＞ $AOS_MEMORY，都沒有＝MemoryMissing；`資料夾/檔.json#/JSON Pointer`，相對從庫根算，"" 或 "/"＝根），共用 lib/agent/memory_fs.py，不 import 隔壁工具。
+# stdout：從 path（沒給＝根）開始深度優先；每個位置先一行「<!-- node: 路徑 -->」（路徑可直接貼回 memory_read 的 path），接著：
 #   資料夾或有 _index 的物件＝自己的簡介（資料夾的 _description.json、物件的 _description key），再依序印表裡的格（照表的順序）、再印表沒列的（not in index）；
 #   只有 _description 沒 _index 的物件＝簡介，其餘 key 包成 ```json 區塊；字串＝原文照接（標題層級不改）；其他 JSON 值（沒 _index 的物件、陣列、數字…）＝包成 ```json 區塊；
 #   非 .json 檔＝UTF-8 原文，不是 UTF-8＝「binary file, N bytes」；指不到／讀不到的格＝一行括號裡的代號與原因、照樣往下。位置之間空一行。
 #   防繞圈：走過的（實體路徑, 指標）再遇到＝只印一行「already exported above; not followed」；$env 格只跳一次、不連跳。
 #   超過 max_bytes（預設 50000）就截，最後一行「[truncated: N more bytes; export a child path]」。
-# 錯：「memory_export: error: 代號 原因」stderr 與 stdout 各一行、退 1：ArgumentsBad、PathBad、MemoryMissing、CfgBad、NodeMissing、
+# 錯：「memory_export: error: 代號 原因」stderr 與 stdout 各一行、退 1：ArgumentsBad、PathBad、MemoryMissing、MemoryBad、CfgBad、NodeMissing、
 #   TargetBad、FileBad、DirectiveBad、ReadFailed、LaunchFailed（起點讀不到才算錯；子孫讀不到印在文件裡）。子行程只有 aos-json（與 $env 格的 aos-directive）。
 import json, os, sys
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -33,28 +33,30 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.exit(1)
 
 HELP = """\
-usage: memory_export < ARGUMENTS.json   (a tool: run it with aos-exec)
+usage: memory_export [--root DIR] < ARGUMENTS.json   (a tool: run it with aos-exec)
 Print a whole memory (folders and .json files), or the subtree at path, as one
 Markdown document, for people. path looks like folder/file.json#/key (as in tool
-memory); "" or "/" is the root (default).
+memory_read); "" or "/" is the root (default).
 Each place starts with a line <!-- node: PATH -->. A folder or an object with
 _index prints its own description (a folder's _description.json, an object's
 _description key), then its index entries in order, then what the index does
 not list. Strings are printed as they are; other JSON values go
 in a ```json block. A place already printed is not followed again. Output over
 max_bytes (default 50000) is cut; then export a child path.
-Needs aos-json on PATH. The root comes from _memory.json next to the tool,
-otherwise AOS_MEMORY.
+Needs aos-json on PATH. The memory root: --root DIR (command line only, not a
+JSON argument), else _memory.json {"base": DIR} next to the tool, else
+AOS_MEMORY. No default: none of them = MemoryMissing; not a folder = MemoryBad.
 Result on stdout. On error: one line "memory_export: error: CODE reason" on stderr and stdout, exit 1.
 """
-tool_io.start("memory_export", HELP)
 die = tool_io.die
 try:
     import memory_fs as fs
 except ModuleNotFoundError as error:
     if error.name != "memory_fs":
         raise
-    die("ModuleMissing", "memory_fs.py not in the tool folder, not in lib/agent/, not on the Python path")
+    die("ModuleMissing", "memory_fs.py not in the tool folder, not in lib/agent/, not on the Python path", prog="memory_export")
+fs.take_root_flag("memory_export")              # --root DIR 不是 JSON 參數：先從 argv 拿掉，再交 tool_io 映射其餘旗標
+tool_io.start("memory_export", HELP)
 ToolError = fs.ToolError
 DEFAULT_MAX_BYTES = 50000
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# memory - 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）：read 一個位置、ls 列枝幹的表、find 依關鍵字／標籤找路徑。
+# memory_read - 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）：read 一個位置、ls 列枝幹的表、find 依關鍵字／標籤找路徑。
 # 圖紙：proto8/thinking/2026-11/10/json-memory/02-格式規則.md、03-工具.md（使用者 11-10 晚「json本身就是節點樹」）。
 # 介面（lib 契約）：stdin {"op": "read"|"ls"|"find", "path"?: 統一路徑, "query"?: 字串, "tag"?: 字串, "max_bytes"?: N}。
-#   庫根（腦不能挑）：工具資料夾（$AOS_CD）的 _memory.json 的 base ＞ $AOS_MEMORY（相對從 $AOS_DAEMON，沒有＝cwd）；
-#   都沒有＝MemoryMissing；設定檔壞＝CfgBad（memory_fs.memory_root）。
+#   庫根（腦不能挑）：argv 的 --root DIR（不是 JSON 參數；相對從 $AOS_WS，沒設＝cwd）＞ 工具資料夾（$AOS_CD）的 _memory.json 的 base
+#   ＞ $AOS_MEMORY（相對從 $AOS_DAEMON，沒有＝cwd）；都沒有＝MemoryMissing（工具沒有內建預設位置，11-10 深夜）；設定檔壞＝CfgBad（memory_fs）。
 #   path＝`資料夾/檔.json#/JSON Pointer`，相對從庫根算；"" 或 "/"＝根；其他 / 開頭＝檔案系統絕對路徑（讀不限範圍）。
 #   stdout 純文字、第一行 node: <路徑>；印出的每條路徑都能直接貼回 path：
 #     read：資料夾或有 _index 的物件＝自己的簡介（資料夾的 _description.json、物件的 _description key；沒有就不印）＋children:（表）＋not in index:；
@@ -12,11 +12,11 @@
 #     ls：只印表（資料夾、物件、陣列）；對字串等枝葉＝TargetBad。
 #     find：path 底下（含表指到外面的格）名字、說明（表那格的與自己的簡介）、字串內容含 query（不分大小寫）、且表那格 tags 含 tag 的位置；最多 20 筆；命中在內文＝附 [match: 那一行]。
 #   輸出超過 max_bytes（預設 8000）截斷並附 [truncated: N more bytes]。
-# 錯：stderr 與 stdout 各一行「memory: error: 代號 原因」、退 1；代號見 _tooldef.json 的 errors（aos-json 的照圖紙 03 換）。
+# 錯：stderr 與 stdout 各一行「memory_read: error: 代號 原因」、退 1；代號見 _tooldef.json 的 errors（aos-json 的照圖紙 03 換）。
 # 不寫任何檔、不碰 $AOS_WS。子行程只有 aos-json（find 不起子行程，除了 $env 格的 aos-directive）；被 TERM 先收掉它、退 128＋N。
 import json, os, sys
 HELP = """\
-usage: memory < ARGUMENTS.json   (a tool: run it with aos-exec)
+usage: memory_read [--root DIR] < ARGUMENTS.json   (a tool: run it with aos-exec)
 Read a memory: a tree of folders and .json files. A path looks like
 folder/file.json#/key/sub (JSON Pointer after #, ~1 = /, ~0 = ~); relative paths
 start at the memory root; "" or "/" is the root; other paths starting with / are
@@ -31,9 +31,10 @@ absolute file system paths.
         (case-insensitive) and whose index entry has tag in its tags; max 20;
         a hit inside the text ends with [match: that line].
 Every path printed can be passed back as path. Output over max_bytes is cut.
-Needs aos-json on PATH. The root comes from _memory.json next to the tool,
-otherwise AOS_MEMORY.
-Result on stdout. On error: one line "memory: error: CODE reason" on stderr and stdout, exit 1.
+Needs aos-json on PATH. The memory root: --root DIR (command line only, not a
+JSON argument), else _memory.json {"base": DIR} next to the tool, else
+AOS_MEMORY. No default: none of them = MemoryMissing; not a folder = MemoryBad.
+Result on stdout. On error: one line "memory_read: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
@@ -54,14 +55,15 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.stdout.write(_line)
     sys.exit(1)
 
-tool_io.start("memory", HELP)
 die = tool_io.die
 try:
     import memory_fs as fs
 except ModuleNotFoundError as error:
     if error.name != "memory_fs":
         raise
-    die("ModuleMissing", "memory_fs.py not in the tool folder, not in lib/agent/, not on the Python path")
+    die("ModuleMissing", "memory_fs.py not in the tool folder, not in lib/agent/, not on the Python path", prog="memory_read")
+fs.take_root_flag("memory_read")                # --root DIR 不是 JSON 參數：先從 argv 拿掉，再交 tool_io 映射其餘旗標
+tool_io.start("memory_read", HELP)
 Loc, ToolError = fs.Loc, fs.ToolError
 DEFAULT_MAX_BYTES = 8000
 FIND_LIMIT = 20

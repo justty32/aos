@@ -1,5 +1,5 @@
 {"kind": "claude",
  "flags": ["--tools", "Read,Glob,Grep", "--permission-mode", "dontAsk", "--strict-mcp-config"],
  "print_flags": ["--max-budget-usd", "0.5"],
- "tools_flags": ["--memory", "memory"],
+ "tools_flags": ["--memory", "memory_read"],
  "timeout_ms": 600000}

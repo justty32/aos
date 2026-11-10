@@ -1,4 +1,4 @@
-"""memory（純 JSON 樹）：read／ls／find 在各種位置上的輸出、表與 not in index、$ref／$env、迴圈、錯誤代號。"""
+"""memory_read（純 JSON 樹）：read／ls／find 在各種位置上的輸出、表與 not in index、$ref／$env、迴圈、錯誤代號。"""
 import json
 import os
 from pathlib import Path
@@ -71,7 +71,7 @@ class MemoryTest(unittest.TestCase):
         r = self.run_tool(env, **args)
         self.assertEqual(r.returncode, 1, r.stdout)
         line = r.stderr.strip().splitlines()[-1]
-        self.assertTrue(line.startswith("memory: error: %s " % code), line)
+        self.assertTrue(line.startswith("memory_read: error: %s " % code), line)
         self.assertEqual(r.stdout.strip(), line)
         return line
 
@@ -229,10 +229,41 @@ class MemoryTest(unittest.TestCase):
         empty.mkdir()
         self.fails("LaunchFailed", env={"PATH": str(empty)}, op="read")
 
+    def test_root_flag_and_no_default(self):
+        """庫根：--root DIR ＞ _memory.json ＞ AOS_MEMORY；都沒給＝MemoryMissing 教三種給法（11-10 深夜：工具沒有內建預設）。"""
+        line = self.fails("MemoryMissing", env={"AOS_MEMORY": ""}, op="read")
+        for how in ("--root DIR", "_memory.json", "AOS_MEMORY"):
+            self.assertIn(how, line)
+        other = Path(self.tmp.name) / "other"
+        write(other / "_description.json", "other kb.")
+        write(other / "_index.json", {})
+        def run(argv, env=None, cwd=None):
+            return subprocess.run([sys.executable, str(ENTRY)] + argv, input='{"op": "read"}', text=True, capture_output=True,
+                                  env=dict(self.env, **(env or {})), cwd=cwd, timeout=30)
+        r = run(["--root", str(other)])                     # 旗標蓋過 AOS_MEMORY
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("other kb.", r.stdout)
+        r = run(["--root=other"], env={"AOS_MEMORY": "", "AOS_WS": self.tmp.name})   # 相對從 $AOS_WS
+        self.assertIn("other kb.", r.stdout)
+        r = run(["--root", "other"], env={"AOS_MEMORY": "", "AOS_WS": ""}, cwd=self.tmp.name)   # 沒 WS＝cwd
+        self.assertIn("other kb.", r.stdout)
+        r = run(["--root", str(other / "nope")])
+        self.assertIn("memory_read: error: MemoryBad --root", r.stdout)
+        for argv in (["--root"], ["--root", str(other), "--root", str(other)], ["--root="]):
+            r = run(argv)
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("memory_read: error: ArgumentsBad --root", r.stdout)
+        r = run(["--root", str(other), "--help"])
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("usage: memory_read [--root DIR]", r.stdout)
+        r = subprocess.run([sys.executable, str(ENTRY)], input=json.dumps({"op": "read", "root": str(other)}), text=True,
+                           capture_output=True, env=self.env, timeout=30)
+        self.assertIn("ArgumentsBad", r.stdout)             # 腦給的 JSON 改不了庫根
+
     def test_help_is_english(self):
         r = subprocess.run([sys.executable, str(ENTRY), "--help"], capture_output=True, text=True)
         self.assertEqual(r.returncode, 0)
-        self.assertIn("usage: memory", r.stdout)
+        self.assertIn("usage: memory_read", r.stdout)
         self.assertTrue(r.stdout.isascii(), r.stdout)
 
 

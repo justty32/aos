@@ -1,6 +1,16 @@
-# memory — 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）
+# memory_read — 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）
 
 圖紙：[thinking 11-10 json-memory](../../../thinking/2026-11/10/json-memory/README.md) 的 [02 格式規則](../../../thinking/2026-11/10/json-memory/02-格式規則.md)、[03 工具](../../../thinking/2026-11/10/json-memory/03-工具.md)。寫入是隔壁的 [memory_write](../memory_write/)；兩支共用 [`memory_fs.py`](../memory_fs.py)。
+
+## 庫根（沒有內建預設）
+
+使用者 11-10 深夜：「memory_read/write，就是吃旗標或目標，或是吃環境變數，啊這些都要自己給。或是在定義中給」。工具本身不指任何地方，照這個順序找，第一個有給的算：
+
+1. 命令列 `--root DIR`（相對從 `$AOS_WS` 算，沒設＝cwd；`aos-exec` 會 cd 進工具夾，但 WS 預設是叫的人所在的資料夾）：人手動跑時用，例 `aos-exec lib/agent/memory_read --root knowledge/ < args.json`。它**不是 JSON 參數**，腦叫工具只給 JSON、改不了庫根；登記格（`tools.json`）也帶不了 argv。
+2. 工具資料夾的 `_memory.json`＝`{"base": DIR}`（相對從那個資料夾算；`base` 可寫指示詞）。
+3. 環境變數 `AOS_MEMORY`（相對從 `$AOS_DAEMON`，沒有＝cwd）：範本寫在登記格的 `env`（`{"$env": "AOS_HOME", "$path": "/knowledge"}`），或 `aos-agent tools add --envs AOS_MEMORY=…`。
+
+都沒有＝`MemoryMissing`，原因那句教這三種給法；給了但不是資料夾＝`MemoryBad`（叫它的 brain.py／aos-mcp 看到 `MemoryMissing` 安靜略過，看到 `MemoryBad` 照常警告）。`memory_write`、`memory_export`、`memory_sync` 共用 `memory_fs.py`，同一套。
 
 ## 路徑
 
@@ -27,4 +37,4 @@
 
 `NodeMissing` 的提示：路徑少了 `.json`（`me/self_tools`、`rules`）而補上會在＝附 `(did you mean me.json#/self_tools? …)`；路上有檔＝提示 `file.json#/key` 寫法；`/` 開頭而拿掉就在庫裡＝提示拿掉 `/`。寫入那支另教「先開資料夾／先開檔」，見 [memory_write](../memory_write/writing.py)。
 
-錯誤代號：`ArgumentsBad`、`OpUnknown`、`PathBad`、`MemoryMissing`、`CfgBad`、`NodeMissing`（附上一層有哪些）、`TargetBad`、`FileBad`、`DirectiveBad`、`ReadFailed`、`LaunchFailed`。
+錯誤代號：`ArgumentsBad`、`OpUnknown`、`PathBad`、`MemoryMissing`、`MemoryBad`、`CfgBad`、`NodeMissing`（附上一層有哪些）、`TargetBad`、`FileBad`、`DirectiveBad`、`ReadFailed`、`LaunchFailed`。

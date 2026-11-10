@@ -66,6 +66,18 @@ class ToolsDef(unittest.TestCase):
                 self.assertIn("fix the lines marked bad", r.stdout)
                 self.assertTrue(r.stdout.endswith("tools_def: error: ToolBad 1 problem(s) above; fix the lines marked bad and check again\n"), r.stdout)
 
+    def test_check_catches_overwritten_or_unchanged_skeleton(self):
+        r = self.run_tool({"op": "new", "path": "t/plain"})
+        self.assertIn("---- t/plain/tool.py, the part to change ----\nDESCRIPTION = ", r.stdout)       # new 直接給要改的那段
+        self.assertTrue(r.stdout.rstrip().endswith("ts.main(run, DESCRIPTION, PARAMS, META)"), r.stdout)
+        r = self.run_tool({"op": "check", "path": "t/plain"})
+        self.assertIn("description is still the skeleton's", r.stdout)
+        (self.ws / "t" / "plain" / "tool.py").write_text("def multiply(a, b):\n    return a * b\n")   # gemma 第 1 輪的寫法
+        r = self.run_tool({"op": "check", "path": "t/plain", "sample": {"a": 6, "b": 7}})
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("bad   defs: tool.py does not use tool_spec any more", r.stdout)
+        self.assertIn("skip  try: not tried", r.stdout)
+
     def test_check_json_file_and_pointer(self):
         script = self.make_mul()
         (self.ws / "j").mkdir()
