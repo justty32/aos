@@ -74,10 +74,12 @@ class RealDaemon(unittest.TestCase):
 
     def test_children_on_a_real_daemon(self):
         self.ok(TOOL, {"op": "add", "def": str(TEMPLATE), "name": "kid", "ws": "kid"})
-        self.assertEqual([c["name"] for c in json.loads(self.ok(TOOL, {"op": "ls", "long": True}))["children"]], ["kid"])
+        self.assertEqual([c["name"] for c in json.loads(self.ok(TOOL, {"op": "ls", "json": True}))["children"]], ["kid"])
         short = self.ok(TOOL, {"op": "ls"}).splitlines()
         self.assertEqual((len(short), short[0].split("\t")[0], short[-1]), (2, "kid", "children 1/4"))
         self.assertLess(len(short[0]), 200)
+        long = self.ok(TOOL, {"op": "ls", "long": True}).splitlines()
+        self.assertEqual((len(long[0].split("\t")), long[-1]), (9, "children 1/4"))
         out = self.ok(TOOL, {"op": "tools", "name": "kid", "args": {"op": "add", "name": "math2", "path": str(PROTO / "lib" / "base" / "math")}})
         self.assertIn("kid's next reply", out)
         kid_tools = [t["name"] for t in json.loads(self.agent("tools", "--target", "kid", "ls", "--json").stdout)]

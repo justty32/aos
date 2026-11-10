@@ -7,8 +7,10 @@
 #        先對帳、數配額（滿＝ChildSlotMissing、不寄信）→ ctl add（旗標一對一，同 agents_ctl；../agents_cmd.py）→ 記帳；印 added … ; children N/MAX
 #   rm {name, purge?, timeout_s?}  先抄公開子帳 → ctl rm [--purge -y]（預設留 stack）→ 從帳上拿掉
 #   stop／sleep {name, timeout_s?}；start／wake {name, timeout_s?, on_queued?}；pause／resume／state {name}＝ctl 同名動作 --target
-#   ls {long?}  一行一隻「NAME TAB STATE TAB WORKSPACE TAB QUEUED TAB REASON」（同 ctl ls；排隊中的＝NAME queued - - letter L），末行 children N/MAX；
-#        long: true＝{"children": [表上我生的那幾列（ctl ls --json 的整列）；排隊中的＝{name, queued_letter}], "max_children": N}（11-10 深夜使用者選「改短版」）
+#   ls {long?, json?}  一行一隻「NAME TAB STATE TAB WORKSPACE TAB QUEUED TAB REASON」（同 ctl ls；排隊中的＝NAME queued - - letter L），末行 children N/MAX；
+#        long: true＝每行多 ctl ls -l 的四欄 QUEUE RESTARTS COOLDOWN LAST ERROR（照抄 ctl ls -l 那行；排隊中的四欄都是 -）；
+#        json: true＝{"children": [表上我生的那幾列（ctl ls --json 的整列）；排隊中的＝{name, queued_letter}], "max_children": N}；long 和 json 同給＝json
+#        （11-10 深夜使用者選「改短版」；之後「1.好」：口徑跟 agents_ctl 一樣，long＝多幾欄文字、json 才是 JSON）
 #   say {name, text}＝say --target（話走 stdin）；listen {name, timeout_s | timeout_cycles | last}＝listen --target（都沒給＝等 600 秒）；ask {name, text, timeout_s | timeout_cycles}＝say 接 listen
 #   tools／llm／history／hook {name, args}：跑旁邊 self_tools／self_llm／self_history／self_hook 的 _entry，stdin＝args、AOS_STACK＝<子的 stack>/tools/<那支>/
 #        （那支靠 ctl who 認自己＝變成改子的）；stdout 原樣（「your」改成子的名字）；它的錯誤代號與原因接成自己的；旁邊沒那支＝ToolMissing；子還在排隊＝ChildQueued。
@@ -52,7 +54,7 @@ die = tool_io.die
 MAX_CHILDREN_DEFAULT = 4
 CFG = "children.json"          # 配額設定檔（定義與 stack 裡），跟記帳檔同名、不同處
 FORWARD = {"tools": "self_tools", "llm": "self_llm", "history": "self_history", "hook": "self_hook"}
-OPS = dict({"add": cmd.ADD_KEYS, "ls": ("long",), "say": ("name", "text"), "listen": ("name", "timeout_s", "timeout_cycles", "last"),
+OPS = dict({"add": cmd.ADD_KEYS, "ls": ("long", "json"), "say": ("name", "text"), "listen": ("name", "timeout_s", "timeout_cycles", "last"),
             "ask": ("name", "text", "timeout_s", "timeout_cycles")},
            **cmd.LIFE_OPS, **{op: ("name", "args") for op in FORWARD})
 
@@ -197,14 +199,19 @@ if op == "ls":
     listed = [r for r in rows if on.get(r.get("name")) == os.path.normpath(r["stack"])]
     queued = [{"name": k["name"], "queued_letter": k["queued_letter"]} for k in alive if "stack" not in k]
     n = max_children()
-    if cmd.flag(args, "long"):
+    if cmd.flag(args, "json"):
         print(json.dumps({"children": listed + queued, "max_children": n}, ensure_ascii=False))
         sys.exit(0)
+    long = cmd.flag(args, "long")
+    lines = {}
+    if long and listed:                         # 多的四欄照抄 ctl ls -l 那行（同名那列）
+        lines = {l.split("\t", 1)[0]: l for l in cmd.agent(["ctl", "ls", "-l"]).splitlines() if l.strip()}
     dash = lambda v: "-" if v is None or v == "" else " ".join(str(v).split())
     for r in listed:
-        print("\t".join([r["name"], dash(r.get("state")), dash(r.get("ws")), dash(r.get("queued")), dash(r.get("reason"))]))
+        cols = [r["name"], dash(r.get("state")), dash(r.get("ws")), dash(r.get("queued")), dash(r.get("reason"))]
+        print(lines.get(r["name"]) or "\t".join(cols + (["-"] * 4 if long else [])))
     for q in queued:
-        print("\t".join([q["name"], "queued", "-", "-", "letter %s" % q["queued_letter"]]))
+        print("\t".join([q["name"], "queued", "-", "-", "letter %s" % q["queued_letter"]] + (["-"] * 4 if long else [])))
     print("children %d/%d" % (len(listed) + len(queued), n))
     sys.exit(0)
 

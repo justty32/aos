@@ -85,7 +85,7 @@ echo '{"op": "add", "name": "kid2", "def": "defs/helper"}' | aos-tools --file $P
 # agents_children: error: ChildSlotMissing you already have 1 of max 1 children (kid1); remove one with op rm first (…)   ← stdout 與 stderr 各一行
 # 1                                         （判官信箱沒多信：工具在寄信前就擋了）
 aos-agent ctl rm kid1                     # 別處收掉也行（含別隻用 agents_ctl rm）：下次叫工具時對帳、kid1 被忘掉
-echo '{"op": "ls"}' | aos-tools --file $P/templates/agent-fsm/tools.json call agents_children   # {"children": [], "max_children": 1}
+echo '{"op": "ls"}' | aos-tools --file $P/templates/agent-fsm/tools.json call agents_children   # children 0/1
 rm $FS/children.json && unset AOS_STACK AOS_WS
 ```
 

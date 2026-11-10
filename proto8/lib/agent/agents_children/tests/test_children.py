@@ -27,7 +27,10 @@ fail = os.environ.get("FAKE_FAIL", "")
 if fail and fail in " ".join(argv):
     sys.stderr.write("aos-agent: error: PhaseBad kid is sleeping; use wake\n")
     sys.exit(1)
-if argv[:2] == ["ctl", "ls"]:
+if argv[:2] == ["ctl", "ls"] and "-l" in argv:
+    for r in table:
+        print("\t".join([r["name"], "running", "-", "-", "-", "2", "0", "-", "-"]))
+elif argv[:2] == ["ctl", "ls"]:
     print(json.dumps(table))
 elif argv[:2] == ["ctl", "who"]:
     s = os.environ["AOS_STACK"]
@@ -111,9 +114,12 @@ class Children(unittest.TestCase):
         self.ok({"op": "add", "def": "defs/kid2"})           # name defaults to the folder name, like ctl add
         self.assertEqual([k["name"] for k in self.record()], ["kid", "kid2"])
         self.assertEqual(self.ok({"op": "ls"}), "kid\t-\t-\t-\t-\nkid2\t-\t-\t-\t-\nchildren 2/4\n")   # short lines, not mom
-        listed = json.loads(self.ok({"op": "ls", "long": True}))
+        listed = json.loads(self.ok({"op": "ls", "json": True}))
         self.assertEqual([r["name"] for r in listed["children"]], ["kid", "kid2"])   # not mom
         self.assertEqual(listed["max_children"], 4)
+        self.assertEqual(self.ok({"op": "ls", "long": True}),        # long = ctl ls -l lines of mine, as text
+                         "kid\trunning\t-\t-\t-\t2\t0\t-\t-\nkid2\trunning\t-\t-\t-\t2\t0\t-\t-\nchildren 2/4\n")
+        self.assertEqual(json.loads(self.ok({"op": "ls", "long": True, "json": True}))["max_children"], 4)   # json wins
 
     def test_each_targeted_op(self):
         self.ok({"op": "add", "def": "d", "name": "kid"})
@@ -181,8 +187,9 @@ class Children(unittest.TestCase):
         out = self.ok({"op": "add", "def": "d", "name": "kid", "on_queued": "ok"}, FAKE_QUEUE="1")
         self.assertIn("letter L1", out)
         self.assertEqual(self.record(), [{"name": "kid", "queued_letter": "L1"}])
-        self.assertEqual(json.loads(self.ok({"op": "ls", "long": True}))["children"], [{"name": "kid", "queued_letter": "L1"}])
+        self.assertEqual(json.loads(self.ok({"op": "ls", "json": True}))["children"], [{"name": "kid", "queued_letter": "L1"}])
         self.assertEqual(self.ok({"op": "ls"}), "kid\tqueued\t-\t-\tletter L1\nchildren 1/4\n")
+        self.assertEqual(self.ok({"op": "ls", "long": True}), "kid\tqueued\t-\t-\tletter L1\t-\t-\t-\t-\nchildren 1/4\n")
         r = self.run_tool({"op": "tools", "name": "kid", "args": {"op": "ls"}})
         self.assertIn("error: ChildQueued kid", r.stdout)
 
