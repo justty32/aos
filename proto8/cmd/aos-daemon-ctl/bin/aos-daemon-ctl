@@ -689,6 +689,8 @@ def main():
             hint = ("see %s %s --help" % (NAME, cmd) if e.code == "FlagUnknown" else
                     "usage: %s" % usage(cmd))
             raise Fail(e.code, "%s (%s)" % (e, hint))
+    except dc.Already as e:          # 11-10 cli-sweep Q4＝A：已在那個狀態＝印一句、退 0
+        print(e, flush=True)
     except Fail as e:
         reason = str(e)
         if cmd is not None and e.code == "ArgumentsBad" and "(usage:" not in reason:

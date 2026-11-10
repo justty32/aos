@@ -29,8 +29,8 @@ class Lifecycle(unittest.TestCase):
                         self.assertEqual(until(lambda: read(f.cell / 'ctl.json'))['cmd'], 'stop')
                         row = f.phase('stopped')
                         self.assertEqual(row['code'], 0)
-                        f.ctl('stop', 'job', ok=1)
-                        self.assertIn('PhaseBad', f.commands[-1]['stderr'])
+                        f.ctl('stop', 'job')     # 11-10 cli-sweep Q4＝A：已停再停＝成功、印一句、不寄
+                        self.assertEqual(f.commands[-1]['stdout'], 'job: already stopped')
                         f.record(kind, case, row)
                         f.ctl('start', 'job')
                         f.phase('running')

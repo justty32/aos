@@ -8,3 +8,7 @@ class Fail(Exception):
     def __init__(self, code, reason):
         super().__init__(reason)
         self.code = code
+
+
+class Already(Exception):
+    """要的狀態本來就是了（cli-sweep Q4＝A，使用者 11-10：已停再停兩支都算成功）：呼叫者印這一句、退 0，不寄信。"""

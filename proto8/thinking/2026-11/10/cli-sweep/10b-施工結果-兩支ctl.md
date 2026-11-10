@@ -1,0 +1,22 @@
+← [入口](README.md)｜涵蓋：11-10 傍晚兩支 ctl（aos-daemon-ctl、aos-agent ctl）已裁項的施工結果與續行｜依據 [08 改法與施工順序](08-改法與施工順序.md)
+
+# 兩支 ctl 的施工結果（11-10 傍晚，two-machines 隊長）
+
+| 項 | 結果 | commit | 怎麼驗 |
+|---|---|---|---|
+| Q4＝A 已停再停算成功 | 做了：`stop` 對 stopped、`sleep` 對 sleeping、`start`／`wake` 對 running＝stdout `名字: already 狀態`、退 0、不寄信；兩支同一套（`daemon_ctl.Already`） | 見 git log「Q4」 | `cmd/aos-daemon-ctl/tests/test_already.py`；`impls/aos-daemon/tests/test_ctl.py`、`test_lifecycle.py` 原本斷言「已停再停＝PhaseBad」的兩處照新裁定改 |
+| 甲5 撞名／rm 不存在＝報錯不寄 | 見下方「續行」 | — | — |
+| 甲4 shutdown 成功說一句話 | 見下方「續行」 | — | — |
+| 甲3、甲6、Q5、Q3、Q1、Q6 | 沒做（今天時間不夠） | — | — |
+
+`templates/daemon-root/README.md` 的 copy-out 用法改成 `copy-out --template …`、`AOS_PROTO8` 改 `AOS_HOME`（跟另一隊的 Q7、改名對齊）。
+
+另：施工途中跑 `impls/aos-daemon/tests/test_lifecycle.py` 抓到 two-machines B01 那次（`7c1791e6e`）把 `aos-daemon-ctl add` 打壞（`written=` 塞進 `o.get(...)` 的括號、每次 TypeError），`c2a6aa976` 修好、已 push。
+
+## 續行（明天）
+
+1. 甲5、甲4：程式已寫好在 `/tmp/tm-team/patch_item2.py`（rm 前查表、ProcMissing 報錯；add 撞名＝`InstanceExists`；shutdown 印 `daemon at D stopped (ctl seq N); M procs asleep, …`），套上後要補測試（test_lifecycle 有沒有斷言 shutdown 印數字、rm 不存在的列）再 commit。
+2. 甲3（`ls` 尾行說 daemon 活著沒）、甲6（`aos-agent ctl add` 對停掉的 daemon 先查、不乾等 30 秒）。
+3. Q5：`.env` 是「外層贏」，清不掉繼承來的 `AOS_DAEMON`；範本要另想（例如根的 `_entry` 改成經 `env -u AOS_DAEMON` 的單子，或 aos-daemon 起動時偵測——後者是 C++）。
+4. Q3（`aos-agent ctl rm` 預設留 stack、`--purge` 才刪）：lv6 `lib/agent/agents/_entry` 收回子 agent 時若要刪 stack，那一行要加 `--purge`（另一隊的檔，交頂層轉）。
+5. Q1（旗標子命令前後都收、位置名字也收）、Q6（help 第一屏三對停與起對照表）。

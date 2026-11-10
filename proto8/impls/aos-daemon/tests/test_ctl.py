@@ -45,7 +45,12 @@ class Control(unittest.TestCase):
             valid_phases = {valid, 'stopping'} if cmd == 'sleep' else {valid}
             for phase in valid_phases:
                 dc.need_phase(cmd, 'job', {'phase': phase})
+            already = {'stop': 'stopped', 'sleep': 'sleeping', 'start': 'running', 'wake': 'running'}[cmd]
             for invalid in {'running', 'stopping', 'stopped', 'sleeping'} - valid_phases:
+                if invalid == already:           # 11-10 cli-sweep Q4＝A：已經是那個狀態＝成功（Already），不是 PhaseBad
+                    with self.assertRaises(dc.Already):
+                        dc.need_phase(cmd, 'job', {'phase': invalid})
+                    continue
                 with self.assertRaises(dc.Fail) as got:
                     dc.need_phase(cmd, 'job', {'phase': invalid})
                 self.assertEqual(got.exception.code, 'PhaseBad')

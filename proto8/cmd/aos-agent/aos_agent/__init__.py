@@ -5,6 +5,7 @@ import sys
 
 import aos_flags
 import aos_ws
+import daemon_ctl as dc
 
 PROG = "aos-agent"
 HELP = """aos-agent - talk to and manage one agent hosted on an aos-daemon
@@ -71,6 +72,8 @@ def main():
         if rest[0] not in SUBS:
             raise Fail("CommandUnknown", "unknown subcommand %s (%s; see aos-agent --help)" % (rest[0], ", ".join(SUBS)))
         SUBS[rest[0]](rest[1:])
+    except dc.Already as e:          # 11-10 cli-sweep Q4＝A：已在那個狀態＝印一句、退 0
+        print(e, flush=True)
     except Fail as e:
         aos_flags.die(PROG, e.code, e)
     except aos_ws.Error as e:

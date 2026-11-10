@@ -6,7 +6,7 @@ import time
 import aos_flags
 import daemon_ctl as _pkg
 
-from .base import Fail, STATE_FLUX
+from .base import Already, Fail, STATE_FLUX
 from .entry import read_loop
 from .poke import check_alive, poke, read_state
 from .table import cell_of, names_of, row_of
@@ -48,6 +48,9 @@ def need_phase(cmd, name, row):
         ph = "running"
     if cmd == "sleep" and ph == "stopping":
         return
+    target = {"stop": "stopped", "sleep": "sleeping", "start": "running", "wake": "running"}[cmd]
+    if ph == target:                 # 11-10 cli-sweep Q4＝A：已經是那個狀態＝成功（呼叫者印一句、退 0、不寄）
+        raise Already("%s: already %s" % (name, target))
     if ph != PHASE_OK[cmd]:
         msg = PHASE_HINT.get((cmd, ph), "%%s is %s; %s only takes %s ones" % (ph, cmd, PHASE_OK[cmd]))
         raise Fail("PhaseBad", msg % name)
