@@ -1,5 +1,5 @@
 {
-  "summary": "List a folder one page at a time and return JSON",
+  "summary": "List a folder one page at a time: names and types, details with long, JSON with json",
   "resource": "disk",
   "side_effect": false,
   "idempotent": true,

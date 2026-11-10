@@ -15,7 +15,7 @@
 | [`json_write/`](../../../../../proto8/lib/base/json_write/) | 照 JSON 指標改一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫 |
 | [`llm_fake/`](../../../../../proto8/lib/base/llm_fake/) | 假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4） |
 | [`llm_http/`](../../../../../proto8/lib/base/llm_http/) | endpoint 函數：從自己的環境讀金鑰，把請求 POST 到 OpenAI 相容端點，印剪過的回覆 |
-| [`ls/`](../../../../../proto8/lib/base/ls/) | 列一個資料夾的子項，一次一頁、回 JSON |
+| [`ls/`](../../../../../proto8/lib/base/ls/) | 列一個資料夾的子項，一次一頁；預設一行一項「名字 TAB 類型」，long 多細項欄，json 回整份 JSON |
 | [`math/`](../../../../../proto8/lib/base/math/) | 算一個算術式子：只認數字、+ - * / // % **、括號、正負號（不用 eval） |
 | [`mkdir/`](../../../../../proto8/lib/base/mkdir/) | 建資料夾（上層一起建；已經有＝沒事） |
 | [`move/`](../../../../../proto8/lib/base/move/) | 搬移或改名一個檔、資料夾或捷徑本身（to 的上層自動建） |

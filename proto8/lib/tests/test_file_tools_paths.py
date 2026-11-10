@@ -38,7 +38,9 @@ class OutsideTest(unittest.TestCase):
         self.assertEqual((self.out / "a.txt").read_text(), "two\n")
         self.assertEqual(json.loads(self.call("stat", path=f))["path"], f)
         self.assertEqual(json.loads(self.call("view", path=f))["text"], "two\n")
-        self.assertEqual(json.loads(self.call("ls", path="../out"))["items"][0]["name"], "a.txt")
+        self.assertEqual(self.call("ls", path="../out"), "a.txt\tfile\n")               # default: NAME TAB TYPE
+        self.assertEqual(self.call("ls", path="../out", long=True).split("\t")[:3], ["a.txt", "file", "4"])
+        self.assertEqual(json.loads(self.call("ls", path="../out", json=True))["items"][0]["name"], "a.txt")
         self.call("mkdir", path=str(self.out / "d"))
         self.call("copy", **{"from": f, "to": "b.txt"})
         self.call("move", **{"from": "b.txt", "to": str(self.out / "c.txt")})

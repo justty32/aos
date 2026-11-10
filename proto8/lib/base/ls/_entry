@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-# ls - 列一個資料夾的子項，一次一頁、回 JSON
-# 介面（lib/README 的契約）：stdin 收 {"path"?: ".", "offset"?: 0, "max_items"?: 100, "hidden"?: false}；
-# stdout 一份 JSON {"path", "counter_items", "items": [{"name", "type"(file／dir／link), "size"?, "mtime", "link_to"?, …}], "next_offset"?, "counter_hidden"?}
+# ls - 列一個資料夾的子項，一次一頁；預設一行一項「名字 TAB 類型」，long 多細項欄，json 回整份 JSON
+# 介面（lib/README 的契約）：stdin 收 {"path"?: ".", "offset"?: 0, "max_items"?: 100, "hidden"?: false, "long"?: false, "json"?: false}；
+# 預設（11-10 深夜使用者「2.好」：只列名字與類型，細項帶 long 才給，JSON 另帶 json，口徑同 agents_ctl）：一行一項「NAME TAB TYPE」（file／dir／link／missing）；
+#   long：一行一項「NAME TAB TYPE TAB SIZE TAB MTIME TAB INFO」（SIZE＝檔的位元組、別的 -；INFO＝資料夾 children N 與 aos 記號、檔 exec 與 .json 的 keys、連結 -> 目標；沒有＝-）；
+#   兩種最後都可能多幾行以「... 」開頭的尾巴：還有下一頁＝「... next_offset N (M items in all)」、有藏起來的＝「... H hidden (names starting with .)」、空資料夾＝「... empty」。
+#   json（long 一起給也一樣）：一份 JSON {"path", "counter_items", "items": [{"name", "type", "size"?, "mtime", "link_to"?, …}], "next_offset"?, "counter_hidden"?}
 # 資料夾多 counter_children（子項數）與 aos（裡面有哪些 _entry、.env、_tooldef.json…）；檔多 exec（可執行）；.json 檔多 keys（頂層 key，最多 12 個；多的個數放 counter_keys_more）。
 # 資料夾在前、照名字排；. 開頭的預設不列（數目放 counter_hidden）；還有就給 next_offset。路徑：相對從 $AOS_WS 算、絕對照用（11-10 tool-packs 不限工作區）。
 # 計數的 key 一律 counter_*（10-25，原 total、children、hidden、keys_more）。
@@ -9,7 +12,8 @@
 import json, os, sys, time
 HELP = """\
 usage: ls < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-List the entries of a folder (relative paths start at $AOS_WS), one page at a time, as JSON.
+List the entries of a folder (relative paths start at $AOS_WS), one page at a time:
+one line "NAME TAB TYPE" per entry; "long": true adds SIZE MTIME INFO; "json": true prints JSON.
 Result on stdout. On error: one line "ls: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -56,8 +60,10 @@ if type(offset) is not int or offset < 0:
     die("ArgumentsBad", "offset must be an integer >= 0")
 if type(max_items) is not int or not 0 < max_items <= LIMIT_MAX:
     die("ArgumentsBad", "max_items must be an integer from 1 to %d" % LIMIT_MAX)
-if not isinstance(hidden, bool):
-    die("ArgumentsBad", "hidden must be a boolean")
+want_long, want_json = args.get("long", False), args.get("json", False)
+for key, v in (("hidden", hidden), ("long", want_long), ("json", want_json)):
+    if not isinstance(v, bool):
+        die("ArgumentsBad", "%s must be a boolean" % key)
 
 d = tool_io.ws_path(rel)
 if not os.path.exists(d):
@@ -135,4 +141,37 @@ if offset + max_items < len(names):
     res["next_offset"] = offset + max_items
 if not hidden and dots:
     res["counter_hidden"] = len(dots)
-print(json.dumps(res, ensure_ascii=False))
+if want_json:
+    print(json.dumps(res, ensure_ascii=False))
+    sys.exit(0)
+
+
+def info(it):
+    """long 的 INFO 欄：資料夾 children N、aos 記號；檔 exec、keys；連結 -> 目標。"""
+    bits = []
+    if "counter_children" in it:
+        bits.append("children %d" % it["counter_children"])
+    if it.get("aos"):
+        bits.append("aos " + ",".join(it["aos"]))
+    if it.get("exec"):
+        bits.append("exec")
+    if "keys" in it:
+        bits.append("keys " + ",".join(it["keys"]) + (" +%d" % it["counter_keys_more"] if "counter_keys_more" in it else ""))
+    if "json" in it:
+        bits.append("json " + it["json"])
+    if "link_to" in it:
+        bits.append("-> " + it["link_to"])
+    return " ".join(" ".join(b.split()) for b in bits) or "-"
+
+
+for it in res["items"]:
+    cols = [it["name"], it["type"]]
+    if want_long:
+        cols += [str(it["size"]) if "size" in it else "-", it.get("mtime", "-"), info(it)]
+    print("\t".join(cols))
+if "next_offset" in res:
+    print("... next_offset %d (%d items in all)" % (res["next_offset"], res["counter_items"]))
+if "counter_hidden" in res:
+    print("... %d hidden (names starting with .)" % res["counter_hidden"])
+if not res["items"] and "counter_hidden" not in res:
+    print("... empty")

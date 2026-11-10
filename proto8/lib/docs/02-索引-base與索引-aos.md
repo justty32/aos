@@ -12,7 +12,7 @@
 | [write](../base/write/) | 整份寫進一個檔（建或蓋）、上層資料夾自動建 | `path`、`content` | 一行：寫了幾 bytes |
 | [edit](../base/edit/) | 幾處照字面替換，一處不合整個不改 | `path`、`edits[{old_text, new_text}]` | 一行：換了幾處 |
 | [shell](../base/shell/) | 用 bash 跑一行指令（cwd＝工作區；11-10 由 bash 改名） | `command`、`timeout_s`（30／300） | stdout＋stderr 合在一起、最後一行一律 `[exit code N]`；留最後 2000 行／50KB |
-| [ls](../base/ls/) | 列一個資料夾的子項，一次一頁 | `path`、`offset`、`max_items`（100／500）、`hidden` | JSON：`counter_items`（一共幾項）、`items[{name, type, size, mtime}]`（資料夾多 `counter_children`、`aos`，檔多 `exec`，`.json` 多 `keys`）、`next_offset`、`counter_hidden` |
+| [ls](../base/ls/) | 列一個資料夾的子項，一次一頁 | `path`、`offset`、`max_items`（100／500）、`hidden`、`long`、`json` | 預設一行一項 `NAME TAB TYPE`（11-10 深夜使用者「2.好」：只列名字與類型）；`long`＝多 `SIZE TAB MTIME TAB INFO`（INFO：資料夾 `children N`、`aos 記號…`，檔 `exec`、`.json` 的 `keys …`，連結 `-> 目標`）；尾巴 `... next_offset N (M items in all)`、`... H hidden (…)`、空資料夾 `... empty`；`json`＝JSON：`counter_items`（一共幾項）、`items[{name, type, size, mtime}]`（資料夾多 `counter_children`、`aos`，檔多 `exec`，`.json` 多 `keys`）、`next_offset`、`counter_hidden` |
 | [stat](../base/stat/) | 單一個檔或資料夾的屬性 | `path` | JSON：`type`、`mtime`、`mode`；檔多 `size`、`exec`、`text`、`counter_lines`、`format`、`top` |
 | [view](../base/view/) | 漸進看一個檔：JSON 照指標一次一層、大文字檔先給大綱 | `path`、`pointer` 或 `start`／`end` | JSON：`value` 或 `children`；文字的 `text` 或 `outline` |
 | [json_read](../base/json_read/) | 看一份 JSON 檔的某個位置，大的摺起來 | `path`、`pointer`、`depth`（1／10） | JSON：`value`，物件摺成 `{type, keys}`、陣列 `{type, counter_items}`、長字串 `{type, counter_chars, head}` |
