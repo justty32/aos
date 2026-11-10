@@ -92,8 +92,9 @@ exit codes: 0 checked / previewed / sent; 1 error (ArgumentsBad, StateBad, rm er
 """,
     "add": """aos-daemon-ctl add - attach one proc (register + start)
 
-usage: aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--timeout-s S] [--name N] [--ws WS]
-                      [--stack S] [--def DEF] [--limits JSON] [--auto-restart] XXX [-- ARGS...]
+usage: aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--timeout-s S] [--name N] [--ws WS | --ws-json J]
+                      [--stack S | --stack-json J] [--def DEF] [--limits JSON] [--auto-restart]
+                      (XXX | --path-json J) [-- ARGS...]
 
 XXX follows the aos-exec entry chain: an object with exec and no argv supplies a loop
 config (no ARGS allowed); arrays and argv objects stay unchanged as aos-exec targets.
@@ -110,6 +111,12 @@ flags:
       --timeout-s S    positive claim timeout (default: 3); excludes --reply-to
       --reply-to BOX   send only; the reply ({"applied": true|false, ...}) goes to BOX
   -n, --name N         its name on the table (default: the folder name of XXX)
+      --ws-json J      the workspace as JSON put into the table as written: a string, or a directive
+                       such as '{"$env": "PROJ"}'; the daemon resolves it again on every start, so each
+                       machine only sets its own environment (excludes --ws)
+      --stack-json J   the same for the stack (excludes --stack)
+      --path-json J    XXX as JSON: a string, or {"$env": "X", "$path": "/sub"}; the table keeps the
+                       directive for exec and def and resolves it again on every start (excludes XXX)
   -w, --ws WS          its workspace (default: the daemon's)
   -s, --stack S        its stack (default: <D>/procs/<name>/)
       --def DEF        the definition folder recorded on the table (default: XXX)
@@ -423,10 +430,20 @@ def deliver(d, body, reply_to=None, timeout_s=3, *, print_letter=True):
 
 
 def cmd_add(opts, args):
-    o, rest = aos_flags.parse(args, dict(REPLY, **{"--name": "name", "--ws": "ws", "--stack": "stack", "--def": "def", "--limits": "limits"}),
+    o, rest = aos_flags.parse(args, dict(REPLY, **{"--name": "name", "--ws": "ws", "--stack": "stack", "--def": "def", "--limits": "limits",
+                                                    "--ws-json": "ws_json", "--stack-json": "stack_json", "--path-json": "path_json"}),
                               switches={"--auto-restart": "auto_restart"}, help=HELPS["add"], short=("-n", "-w", "-s"))
     seconds = timeout_arg(o, 3)
     limits = limits_arg(o["limits"]) if o.get("limits") is not None else None
+    written = None
+    if o.get("path_json") is not None:                # 11-10 B01：XXX 寫成 JSON（指示詞原樣進表、每次起再解）
+        if rest and rest[0] != "--":
+            raise Fail("ArgumentsBad", "--path-json and XXX exclude each other")
+        pj = dc.path_json(o["path_json"], "--path-json")
+        target = dc.resolve_here(pj, "--path-json") if isinstance(pj, dict) else pj
+        if isinstance(pj, dict):
+            written = (pj, target.partition("#")[0] if os.path.isdir(target.partition("#")[0]) else os.path.dirname(target.partition("#")[0]))
+        rest = [target] + rest
     if not rest:
         raise Fail("ArgumentsBad", "add needs one XXX")
     extra = rest[1:]
@@ -434,9 +451,14 @@ def cmd_add(opts, args):
         if extra[0] != "--":
             raise Fail("ArgumentsBad", "add takes only one XXX; to pass arguments write XXX -- ARGS...")
         extra = extra[1:]
+    for plain, js in (("ws", "ws_json"), ("stack", "stack_json")):   # 11-10 B01
+        if o.get(js) is not None:
+            if o.get(plain) is not None:
+                raise Fail("ArgumentsBad", "--%s and --%s-json exclude each other" % (plain, plain))
+            o[plain] = dc.path_json(o[js], "--%s-json" % plain)
     d = dc.find_daemon(opts.get("daemon"))
     _, body = dc.add_letter(rest[0], extra, o.get("name"), o.get("ws"), o.get("stack"), o.get("def"), limits,
-                            auto_restart=o.get("auto_restart", False))
+                            auto_restart=o.get("auto_restart", False, written=written))
     deliver(d, body, reply_arg(o), seconds)
 
 

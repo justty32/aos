@@ -283,6 +283,22 @@
    "decided": "add -A → 有變才 commit（hostname＋UTC 時間）→ pull --no-rebase -X ours → push；刪改相撞＝merge --abort、回 SyncConflict；只認 git 工作樹根、要 attached branch",
    "why": "後同步的贏（裁定 7）；不硬解",
    "overturn": "lib/agent/memory_sync/_entry"
+  },
+  {
+   "id": "D35",
+   "line": "B01",
+   "what": "add 的環境變數寫法旗標",
+   "decided": "--ws-json、--stack-json、--path-json（代替 XXX）；aos-agent ctl add 與 aos-daemon-ctl add 一致；--path-json 只收 $env＋$path 形",
+   "why": "比照 aos-tools --path-json（使用者裁），C-86 寫法一致",
+   "overturn": "改旗標名：entry.py path_json／兩支 add 的 parse"
+  },
+  {
+   "id": "D36",
+   "line": "B01",
+   "what": "表上存什麼（使用者選項框）",
+   "decided": "題 1 絕對路徑原樣存（A，明天做）；題 2 相對路徑換算成相對 daemon stack（A，現狀）；題 3 舊列不動、rm 再 add（A）",
+   "why": "使用者選；「add xxx 會換算(除了絕對路徑)」「add \"xxx\" 就是原樣送」",
+   "overturn": "使用者裁定"
   }
  ]
 }

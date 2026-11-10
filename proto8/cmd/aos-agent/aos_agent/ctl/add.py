@@ -12,7 +12,7 @@ from ..decl import read_decl
 
 HELP = """aos-agent ctl add - attach one agent to the daemon
 
-usage: aos-agent [--daemon D] ctl add [-n N] [-w WS] [-s S] [--limits JSON] [--envs K=V ...] [--auto-restart] [--timeout-s S] [--on-queued fail|ok] XXX
+usage: aos-agent [--daemon D] ctl add [-n N] [-w WS | --ws-json J] [-s S | --stack-json J] [--path-json J] [--limits JSON] [--envs K=V ...] [--auto-restart] [--timeout-s S] [--on-queued fail|ok] XXX
 
 XXX is the agent folder; it must declare aos-agent in interfaces.json. The letter goes
 through $AOS_KERNEL when that is set (a warning line says so). Waits until the agent is on
@@ -22,6 +22,11 @@ flags:
   -n, --name N        its name on the table (default: the folder name of XXX)
   -w, --ws WS         its workspace (default: non-empty $AOS_WS, else the current directory)
   -s, --stack S       its stack (default: <daemon stack>/procs/<name>/)
+      --ws-json J     the workspace as JSON put into the table as written: a string, or a directive
+                      such as '{"$env": "PROJ"}'; resolved again on every start (excludes -w)
+      --stack-json J  the same for the stack (excludes -s)
+      --path-json J   the agent folder as JSON instead of XXX: a string, or {"$env": "X", "$path": "/sub"};
+                      the table keeps the directive and resolves it again on every start
       --envs K=V      child environment variable (repeatable; set through an exec single)
       --limits JSON   resource limits, the aos-sandbox keys ('{}' = none)
       --auto-restart  the daemon restarts it whenever it exits (row gets "auto_restart": true);
@@ -38,7 +43,8 @@ exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, 
 
 def cmd(argv):
     try:
-        opts, rest = aos_flags.parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits", "--timeout-s": "timeout_s", "--on-queued": "on_queued"},
+        opts, rest = aos_flags.parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits", "--timeout-s": "timeout_s", "--on-queued": "on_queued",
+                                             "--ws-json": "ws_json", "--stack-json": "stack_json", "--path-json": "path_json"},
                                      switches={"--auto-restart": "auto_restart"}, help=HELP, short=("-n", "-w", "-s"),
                                      multi={"--envs": "envs"})
     except aos_flags.Error as e:
@@ -51,6 +57,14 @@ def cmd(argv):
         envs[key] = val
     secs = timeout_opt(opts, HELP)
     on_queued = queued_opt(opts, HELP)
+    written = None
+    if opts.get("path_json") is not None:             # 11-10 B01：定義資料夾寫成 JSON（指示詞原樣進表、每次起再解），跟 XXX 二選一
+        if rest:
+            raise bad_args(HELP, "--path-json and XXX exclude each other")
+        pj = dc.path_json(opts["path_json"], "--path-json")
+        rest = [dc.resolve_here(pj, "--path-json") if isinstance(pj, dict) else pj]
+        if isinstance(pj, dict):
+            written = (pj, rest[0])
     if len(rest) != 1:
         raise bad_args(HELP, "add takes one agent folder XXX"
                        + ("; extra argument %s (add takes no -- arguments)" % rest[1] if len(rest) > 1 else ""))
@@ -83,11 +97,19 @@ def cmd(argv):
         limits = decl.get("limits")
         if limits is not None:
             call_dc(dc.check_limits, limits, "the limits declared by %s" % xxx, "InterfaceBad")
-    ws = os.path.abspath(opts.get("ws") or os.environ.get("AOS_WS") or ".")
-    if not os.path.isdir(ws):
-        raise Fail("WsMissing", "workspace does not exist: %s" % ws)
-    stack = opts.get("stack")
-    if stack is not None:
+    for plain in ("ws", "stack"):                      # 11-10 B01：--ws-json／--stack-json 跟 -w／-s 二選一
+        if opts.get(plain + "_json") is not None and opts.get(plain) is not None:
+            raise bad_args(HELP, "--%s and --%s-json exclude each other" % (plain, plain))
+    if opts.get("ws_json") is not None:
+        ws = dc.path_json(opts["ws_json"], "--ws-json")   # 指示詞原樣進表、每次起再解；字串照一般路徑
+    else:
+        ws = opts.get("ws") or os.environ.get("AOS_WS") or "."
+    if isinstance(ws, str):
+        ws = os.path.abspath(ws)
+        if not os.path.isdir(ws):
+            raise Fail("WsMissing", "workspace does not exist: %s" % ws)
+    stack = dc.path_json(opts["stack_json"], "--stack-json") if opts.get("stack_json") is not None else opts.get("stack")
+    if isinstance(stack, str):
         if not stack:
             raise bad_args(HELP, "--stack must not be empty")
         stack = os.path.abspath(stack)
@@ -102,7 +124,7 @@ def cmd(argv):
         _, request = call_dc(dc.add_letter, entry_target, name=name, ws=ws, stack=stack,
                                   def_dir=def_dir, limits=limits, envs=envs,
                                   auto_restart=opts.get("auto_restart", False),
-                                  daemon=daemon_path())   # 11-10：--envs 的目標寫成相對 daemon stack 的指示詞，搬家照樣起
+                                  daemon=daemon_path(), written=written)   # 11-10：--envs 的目標寫成相對 daemon stack 的指示詞，搬家照樣起
         row = ctl_wait("add", request,
                        lambda letter: row_named(name) or rejected(letter),
                        "the daemon has not put %s on the table yet (see aos-agent ctl ls and the daemon's log)" % name, "AddRejected", secs=secs, on_queued=on_queued, name=name)

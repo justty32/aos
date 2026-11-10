@@ -407,6 +407,7 @@ class Daily(unittest.TestCase):
         m.env["AOS_LLM_KERNEL"] = str(h.llms / "stacks" / "kernel")
         if self.another_ref == "env":
             m.env["AOS_ANOTHER"] = str(h.another)
+        m.env["AOS_TEST_PROJ"] = str(h.something)              # 11-10 B01：ws 用 --ws-json 的 $env 寫法時，每台各設自己的值
 
     def start_llms(self, m, h):
         self.beat("start llms", m.start, "stacks/kernel", "def", h.llms, "llms")
@@ -414,10 +415,17 @@ class Daily(unittest.TestCase):
     def start_something(self, m, h):
         self.beat("start something", m.start, self.stack(h), self.defs_arg(h), h.something, "something")
 
+    ws_env = False                                             # True＝ws 寫成 --ws-json '{"$env": "AOS_TEST_PROJ"}'（11-10 B01）
+
     def ctl_add(self, m, h):
+        ws = ["--ws-json", '{"$env": "AOS_TEST_PROJ"}'] if self.ws_env else ["-w", "."]
         for n in ("fsm", "eca"):
+            target = [self.agent_def(h, n)]
+            if self.ws_env:                                 # 定義也經 $env 記（11-10 B01）：--path-json 代替 XXX
+                rel = os.path.relpath(os.path.join(str(h.something), str(self.agent_def(h, n))), str(h.something))
+                target = ["--path-json", json.dumps({"$env": "AOS_TEST_PROJ", "$path": "/" + rel})]
             self.beat("ctl add " + n, m.run, "aos-agent", "-d", self.stack(h), "ctl", "add", "--auto-restart",
-                      "-w", ".", self.agent_def(h, n), cwd=h.something)
+                      *ws, *target, cwd=h.something)
 
     def table(self, m, h):
         r = m.run("aos-daemon-ctl", "-d", self.stack(h), "ls", "--json", cwd=h.something, check=False)
@@ -672,6 +680,12 @@ class T3StackOutside(Daily):
     def test_stack_outside_same_layout(self):
         """② stack 在專案外（另一個 stacks repo，絕對路徑指），外部夾跟專案並排、兩台相對位置一樣。"""
         self.outside_layout = "same"
+        self.two_machines()
+
+    def test_stack_outside_other_layout_ws_env(self):
+        """② stack 在專案外、B 機放到另一個相對位置，ws 用 --ws-json 的 $env 寫法、兩台各設自己的 AOS_TEST_PROJ：
+        表上存指示詞原形（as_written）、每次起照當下環境再解＝不用 rm 再 add 就起得來（11-10 B01）。"""
+        self.ws_env = True
         self.two_machines()
 
     @unittest.expectedFailure

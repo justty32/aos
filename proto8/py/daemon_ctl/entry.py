@@ -181,7 +181,52 @@ def daemon_ref(target, daemon):
     return {"$env": "AOS_DAEMON", "$path": os.path.relpath(f, os.path.realpath(daemon)) + h + p}
 
 
-def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limits=None, envs=None, auto_restart=False, daemon=None):
+def path_json(text, flag):
+    """--ws-json／--stack-json 的值（11-10 B01，比照 aos-tools --path-json：「給的json字串會直接放入，到使用的時候再解析」）：
+    JSON 字串或指示詞物件（$env／$ref，N-45）；別的＝ArgumentsBad。字串照一般路徑處理，物件原樣放進信。"""
+    try:
+        v = json.loads(text)
+    except ValueError as e:
+        raise Fail("ArgumentsBad", "%s needs JSON (a string or a directive object such as {\"$env\": \"X\"}): %s" % (flag, e))
+    if isinstance(v, str) and v:
+        return v
+    if isinstance(v, dict) and v and all(isinstance(k, str) and k.startswith("$") for k in v):
+        return v
+    raise Fail("ArgumentsBad", "%s needs a non-empty JSON string or a directive object such as {\"$env\": \"X\", \"$path\": \"/sub\"}" % flag)
+
+
+def resolve_here(value, flag):
+    """指示詞物件在這台、現在的環境解一次（只為了檢查、不存）；解不開＝ArgumentsBad 指名旗標與寫法。"""
+    try:
+        try:
+            import directive_value
+        except ModuleNotFoundError:
+            from agent import directive_value  # noqa: F401  （舊佈局；正常在 lib/ 頂層）
+        got = directive_value.resolve(value, os.getcwd())
+    except Exception as e:   # tool_io.Error 等：轉成這層的錯
+        raise Fail("ArgumentsBad", "%s %s does not resolve here: %s" % (flag, json.dumps(value), e))
+    if not isinstance(got, str) or not got:
+        raise Fail("ArgumentsBad", "%s %s resolves to %r here, not a path" % (flag, json.dumps(value), got))
+    return os.path.abspath(got)
+
+
+def written_under(value, folder, d):
+    """value 裡指到 folder 底下的絕對字串（exec 目標、def）改寫成 d 這個 $env 指示詞接上後半段（$path 是字串拼接，N-45）。
+    folder 是 d 在這台解出來的資料夾；其他值原樣回。11-10 B01：--path-json 給的定義資料夾，表上記指示詞、每次起再解。"""
+    if isinstance(value, str):
+        f, h, p = value.partition("#")
+        if f == folder or f.startswith(folder + "/"):
+            out = dict(d)
+            out["$path"] = d.get("$path", "") + f[len(folder):] + h + p
+            return out
+        return value
+    if isinstance(value, list) and value:
+        return [written_under(value[0], folder, d)] + list(value[1:])
+    return value
+
+
+def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limits=None, envs=None, auto_restart=False, daemon=None,
+               written=None):
     """判型並組成掛子信；給定的路徑從目前目錄算起。auto_restart＝True：那一列多 "auto_restart": true（daemon 的 key，
     放在列的頂層、跟 exec／ws 同層；loop 型、exec 型、帶 envs 的都一樣，two-machines 06）；False＝不寫這個 key。
     daemon＝收這封信的 daemon 的 stack（選填，11-10）：給了，envs 包的單子裡的目標寫成相對它的 $env 指示詞（daemon_ref）；
@@ -193,13 +238,19 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
     found = find_loop(xxx)
     if found and extra:
         raise Fail("ArgumentsBad", "loop type (the entry of %s leads to loop config %s) takes no arguments; put them in that config's exec" % (path, found[1]))
-    if ws is not None:
+    if isinstance(ws, dict):        # 11-10 B01：--ws-json 的指示詞原樣進表（daemon 記 as_written、每次起照當下環境再解）
+        got = resolve_here(ws, "--ws-json")
+        if not os.path.isdir(got):
+            raise Fail("PathMissing", "--ws-json resolves to %s here, which is not a folder" % got)
+    elif ws is not None:
         if not ws:
             raise Fail("ArgumentsBad", "--ws must not be empty")
         ws = os.path.abspath(ws)   # 從呼叫當下的 cwd 算（daemon 會從它自己的 cwd 算，所以這裡先轉）
         if not os.path.isdir(ws):
             raise Fail("PathMissing", "--ws is not a folder: %s" % ws)
-    if stack is not None:
+    if isinstance(stack, dict):     # 11-10 B01：--stack-json 同上；在不在不驗（daemon 起它時建）
+        resolve_here(stack, "--stack-json")
+    elif stack is not None:
         if not stack:
             raise Fail("ArgumentsBad", "--stack must not be empty")
         stack = os.path.abspath(stack)   # 同 --ws 從呼叫當下的 cwd 算；在不在不驗（daemon 起它時建）
@@ -234,4 +285,12 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
         check_limits(limits, "limits", "ArgumentsBad")
     if auto_restart:
         spec["auto_restart"] = True
+    if written:                      # 11-10 B01：(指示詞, 它在這台解出的資料夾)——exec 目標與 def 改記指示詞原形
+        d, folder = written
+        if set(d) - {"$env", "$path"} or "$env" not in d:
+            raise Fail("ArgumentsBad", "--path-json takes an {\"$env\": NAME, \"$path\": \"/sub\"} directive (or a plain string), got %s" % json.dumps(d))
+        folder = os.path.abspath(folder)
+        for key in ("exec", "def"):
+            if key in spec:
+                spec[key] = written_under(spec[key], folder, d)
     return name, {"procs_added": {name: spec}}

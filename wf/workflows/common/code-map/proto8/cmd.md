@@ -47,6 +47,7 @@
 | [`bin/aos-daemon-ctl`](../../../../../proto8/cmd/aos-daemon-ctl/bin/aos-daemon-ctl) | 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 py/aos_sweep）；說明在 cmd/docs/03、04。 |
 | [`tests/test_auto_restart.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_auto_restart.py) | Verify --auto-restart: add_letter puts "auto_restart": true on the row for loop, exec and envs types, and both add commands take the switch. |
 | [`tests/test_envs_portable.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_envs_portable.py) | Verify add_letter's --envs single: with the daemon stack given, the target is {"$env": "AOS_DAEMON", "$path": relative}, so a moved tree still starts… |
+| [`tests/test_path_json.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_path_json.py) | add 的 --ws-json／--stack-json／--path-json：指示詞原樣進信（表上記原形、每次起再解；11-10 B01）。 |
 | [`tests/test_shutdown_timeout.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_shutdown_timeout.py) | shutdown 等不到 daemon 退出＝StillRunning 錯誤（11-10 two-machines：退 0 會讓人以為可以 commit／push）。 |
 
 ## `proto8/cmd/aos-eca/`
