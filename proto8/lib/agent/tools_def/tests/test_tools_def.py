@@ -1,4 +1,4 @@
-"""Test tools_def new (copy the skeleton, description, PathExists, outside the workspace) and check (folder, JSON file, FILE#/POINTER, bad lines, sample call, stage)."""
+"""Test tools_def new (copy the skeleton, description, PathExists, outside the workspace, into JSON objects), check (folder, JSON file, FILE#/POINTER, bad lines, sample call, stage) and the step-by-step ops add_entry, add_metainfo, add_tooldef."""
 import json
 import os
 from pathlib import Path
@@ -100,8 +100,67 @@ class ToolsDef(unittest.TestCase):
         r = self.run_tool({"op": "check", "path": "j/box.json#/tools/mul", "sample": {"a": 3, "b": 4}})
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("exit 0: 12", r.stdout)
-        self.assertIn("self_tools add cannot take FILE#/POINTER yet", r.stdout)
+        self.assertIn('self_tools {"op": "add", "path": "j/box.json#/tools/mul"}; it works at once: in your next reply', r.stdout)
+        self.assertIn('like any other tool: mul {"a": 3, "b": 4}', r.stdout)
         self.assertIn("_metainfo", json.loads((self.ws / "j" / "box.json").read_text())["tools"]["mul"])
+
+    def test_new_into_json_objects(self):
+        for name in ("mul", "twice"):
+            r = self.run_tool({"op": "new", "path": "k/box.json#/tools/" + name})
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.assertIn("---- k/%s.py, the part to change ----" % name, r.stdout)
+        box = json.loads((self.ws / "k" / "box.json").read_text())["tools"]
+        self.assertEqual(box["mul"]["_entry"], ["python3", "mul.py"])
+        self.assertEqual(sorted(box["twice"]), ["_entry", "_metainfo", "_tooldef"])
+        script = self.ws / "k" / "mul.py"
+        script.write_text(script.read_text().replace("Add two numbers and return the sum. Example: {\"a\": 2, \"b\": 3} -> 5",
+                                                     "Multiply. Example: {\"a\": 6, \"b\": 7} -> 42")
+                          .replace('return args["a"] + args["b"]', 'return args["a"] * args["b"]'))
+        r = self.run_tool({"op": "check", "path": "k/box.json#/tools/mul", "sample": {"a": 6, "b": 7}})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("exit 0: 42", r.stdout)
+        self.assertIn("ok    tooldef: valid", r.stdout)                 # aos-tools add + get took the pointer
+        r = self.run_tool({"op": "new", "path": "k/box.json#/tools/mul"})
+        self.assertTrue(r.stdout.startswith("tools_def: error: PathExists"), r.stdout)
+
+    def test_step_by_step_folder_with_tool_spec_script(self):
+        r = self.run_tool({"op": "add_entry", "path": "fn"})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("stage 1 of 3", r.stdout)
+        self.assertEqual(json.loads((self.ws / "fn" / "_entry.json").read_text()), {"argv": ["python3", "tool.py"]})
+        r = self.run_tool({"op": "add_metainfo", "path": "fn"})
+        self.assertIn("(from tool.py)", r.stdout)
+        self.assertIn("stage 2 of 3", r.stdout)
+        r = self.run_tool({"op": "add_tooldef", "path": "fn"})
+        self.assertIn("stage 3 of 3", r.stdout)
+        self.assertEqual(json.loads((self.ws / "fn" / "_tooldef.json").read_text())["parameters"]["required"], ["a", "b"])
+        r = self.run_tool({"op": "add_entry", "path": "fn"})
+        self.assertTrue(r.stdout.startswith("tools_def: error: PathExists"), r.stdout)
+
+    def test_step_by_step_json_object_with_plain_script(self):
+        (self.ws / "h").mkdir()
+        (self.ws / "h" / "f.py").write_text('import json, sys\na = json.load(sys.stdin)\nprint(a["a"] * a["b"])\n')
+        (self.ws / "h" / "fs.json").write_text('{"note": "kept"}')
+        r = self.run_tool({"op": "add_entry", "path": "h/fs.json#/f"})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("kept the script f.py", r.stdout)
+        r = self.run_tool({"op": "add_metainfo", "path": "h/fs.json#/f"})
+        self.assertTrue(r.stdout.startswith("tools_def: error: ArgumentsBad description is needed"), r.stdout)
+        desc = 'Multiply two numbers. Example: {"a": 6, "b": 7} -> 42'
+        r = self.run_tool({"op": "add_metainfo", "path": "h/fs.json#/f", "description": desc})
+        self.assertIn("stage 2 of 3", r.stdout)
+        r = self.run_tool({"op": "add_tooldef", "path": "h/fs.json#/f", "description": desc,
+                           "params": [{"name": "a", "type": "number", "description": "first"},
+                                      {"name": "b", "type": "number", "description": "second"}]})
+        self.assertIn("stage 3 of 3", r.stdout)
+        r = self.run_tool({"op": "check", "path": "h/fs.json#/f", "sample": {"a": 2, "b": 5}})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("note  defs: f.py does not use tool_spec", r.stdout)
+        self.assertIn("ok    example:", r.stdout)
+        self.assertIn("exit 0: 10", r.stdout)
+        self.assertEqual(json.loads((self.ws / "h" / "fs.json").read_text())["note"], "kept")
+        r = self.run_tool({"op": "add_tooldef", "path": "h/fs.json#/f", "description": desc})
+        self.assertTrue(r.stdout.startswith("tools_def: error: PathExists"), r.stdout)
 
     def test_check_runnable_function_only_and_handwritten_tool(self):
         (self.ws / "f").mkdir()

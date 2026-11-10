@@ -1,6 +1,6 @@
 # tools-def：給腦造新工具的 tools_def＋寫工具的 Python 輔助 lib（11-10 深夜）
 
-← [2026-11-10](../README.md)｜設計與驗收 [01](01-設計與驗收.md)｜對稱的 [agents-split](../agents-split/README.md)（agent_def）｜分包 [tool-packs](../tool-packs/README.md)
+← [2026-11-10](../README.md)｜設計與驗收 [01](01-設計與驗收.md)｜裁定後施工 [02](02-裁定後施工.md)｜對稱的 [agents-split](../agents-split/README.md)（agent_def）｜分包 [tool-packs](../tool-packs/README.md)
 
 ## 使用者原話（逐字）
 
@@ -25,3 +25,4 @@
 - **骨架** `proto8/templates/tool-python/`（加法），測試在 `templates/tests/tool-python/`（範本夾不帶 tests）。
 - **工具** `proto8/lib/agent/tools_def/`：`new`、`check`。
 - 驗收：假腦（工作區內外）全過；gemma-4-e4b 四輪，前三輪各卡一處、每處都改了 lib／骨架／說明，第四輪從骨架做出乘法工具、下一輪叫到得 42；eca haiku 做得出，但 eca 範本沒有檔案工具（見 01）。細節與紅的照貼在 [01](01-設計與驗收.md)。
+- 裁定後（原話 7）：eca 十一包全開；aos-tools／metainfo 收 `檔.json#/指標`；tools_def 加 `new` 進 JSON 物件與分階段 `add_entry`／`add_metainfo`／`add_tooldef`；self_tools 加減工具同一輪就生效（fsm 本來就是、補測試；eca 靠 aos-mcp 的 list_changed 與 `--own`）。細節與代定在 [02](02-裁定後施工.md)。

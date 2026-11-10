@@ -12,6 +12,12 @@
 #       tooldef（tool_spec.tooldef_problems；資料夾與 JSON 檔另經 aos-tools 暫存登記檔 add＋get 驗一次）→
 #       給了 sample 就 aos-exec 試叫一次 → 最後一行 stage（只是能跑的函數／有 metainfo／有 tooldef＝可當工具）。
 #       有 bad＝最後再一行錯誤行 ToolBad、退 1（報告留在 stdout）。
+#   11-10 深夜（使用者「2.收」、理想流程「請把這個資料夾弄成aos函數，寫個_entry.json，旁邊放個小python腳本。然後再說，
+#   請弄個_metainfo.json，再弄個_tooldef.json」）：new 也收 JSON 物件（檔.json#/指標 或 新的 檔.json：物件裡寫 _entry 鍵、
+#   旁邊放 <名>.py，名＝指標最後一段或檔名）；分階段三個 op，資料夾與 JSON 物件都通、已經有了＝PathExists：
+#   add_entry {path, script?}  寫入口（資料夾 _entry.json {"argv": ["python3", 腳本]}／物件的 _entry 鍵）；腳本不在＝抄骨架的 tool.py 過去。
+#   add_metainfo {path, description?, meta?}  寫 _metainfo：入口腳本用 tool_spec 又沒給 description＝照腳本產；否則照 description／meta 產。
+#   add_tooldef {path, description?, params?}  寫 _tooldef：同上；params＝[{name, type, description, default?, enum?, items?, required?}]（＝ts.param 的參數）。
 #   相對路徑從 $AOS_WS 算、絕對照用，不設工作區限制。錯：stderr 與 stdout 各一行「tools_def: error: 代號 原因」、退 1；
 #   op 沒給＝ArgumentsBad、不認得＝OpUnknown。--help＝英文說明印 stdout、退 0；Ctrl-C 退 130。
 import json, os, re, shutil, signal, subprocess, sys, tempfile
@@ -19,9 +25,11 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 NAME = os.path.basename(HERE)
 HELP = """\
 usage: %s < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Make tools: op new copies the Python tool skeleton (templates/tool-python) to a new folder;
+Make tools: op new copies the Python tool skeleton (templates/tool-python) to a new folder
+(or into a JSON object: FILE.json#/POINTER, the script goes next to the JSON file);
 op check checks one tool location (folder, JSON file or FILE.json#/POINTER), remakes the
 generated _tooldef/_metainfo from a tool_spec script, can try one call, and says the stage.
+Step by step instead: add_entry, then add_metainfo, then add_tooldef (same locations).
 Result on stdout, one line per item. On error: one line "%s: error: CODE reason" on stderr and stdout, exit 1.
 """ % (NAME, NAME)
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
@@ -44,7 +52,9 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
 
 tool_io.start(NAME, HELP)
 SKELETON = os.path.normpath(os.path.join(HERE, "..", "..", "..", "templates", "tool-python"))
-OPS = {"new": ("path", "description"), "check": ("path", "sample")}
+OPS = {"new": ("path", "description"), "check": ("path", "sample"), "add_entry": ("path", "script"),
+       "add_metainfo": ("path", "description", "meta"), "add_tooldef": ("path", "description", "params")}
+PARAM_KEYS = ("name", "type", "description", "required", "default", "enum", "items")
 RUN_S = 30
 MARK = "# ---- your tool: change the lines below ----"
 die = tool_io.die
@@ -96,12 +106,107 @@ def last_line(*texts):
     return "no output"
 
 
+# ---- 位置 ----
+def locate(location):
+    """位置字串 → dict：kind（dir／obj）、path（資料夾或 JSON 檔，絕對）、ptr、full（給 aos-exec／tool_spec 的整串）、
+    base（腳本相對的資料夾＝aos-exec 的 cwd）、name（資料夾名；物件＝指標最後一段或檔名去 .json）。"""
+    try:
+        path, ptr = tool_spec.split_location(location)
+    except tool_spec.SpecBad as e:
+        die("ArgumentsBad", str(e))
+    path = from_ws(path)
+    obj = ptr is not None or (path.endswith(".json") and not os.path.isdir(path))
+    if not obj:
+        return {"kind": "dir", "path": path, "ptr": None, "full": path, "base": path, "name": os.path.basename(path.rstrip("/"))}
+    name = ptr.rstrip("/").rsplit("/", 1)[-1].replace("~1", "/").replace("~0", "~") if ptr else \
+        os.path.splitext(os.path.basename(path))[0]
+    return {"kind": "obj", "path": path, "ptr": ptr, "full": path + ("#" + ptr if ptr is not None else ""),
+            "base": os.path.dirname(path), "name": name}
+
+
+def key_at(loc, key):
+    return "%s#%s/%s" % (loc["path"], (loc["ptr"] or "").rstrip("/"), key)
+
+
+def aos_json(argv, what):
+    code, out, err = run(["aos-json"] + argv, None)
+    if code != 0:
+        die("WriteFailed", "cannot write %s: %s" % (what, last_line(err, out) if code is not None else err))
+
+
+def object_exists(loc):
+    if not os.path.isfile(loc["path"]):
+        return False
+    if loc["ptr"] is None:
+        return True
+    return run(["aos-json", "get", loc["full"]], None)[0] == 0
+
+
+def ensure_json_file(loc):
+    """JSON 檔不在＝建一份 {}（資料夾一起建）。"""
+    if os.path.exists(loc["path"]):
+        return
+    try:
+        os.makedirs(loc["base"], exist_ok=True)
+        with open(loc["path"], "w", encoding="utf-8") as f:
+            f.write("{}\n")
+    except OSError as e:
+        die("MkdirFailed", "cannot create %s: %s" % (loc["path"], e))
+
+
+def copy_script(dest, desc=None):
+    """骨架的 tool.py 抄到 dest（description＝先填進 DESCRIPTION）。"""
+    with open(os.path.join(SKELETON, "tool.py"), encoding="utf-8") as f:
+        src = f.read().splitlines(keepends=True)
+    if desc is not None:
+        src = ["DESCRIPTION = %r\n" % desc.strip() if x.startswith("DESCRIPTION = ") else x for x in src]
+    try:
+        with open(dest, "w", encoding="utf-8") as f:
+            f.write("".join(src))
+    except OSError as e:
+        die("WriteFailed", "cannot write %s: %s" % (dest, e))
+
+
+def part_to_change(script):
+    with open(script, encoding="utf-8") as f:
+        return f.read().split(MARK, 1)[-1].strip("\n")
+
+
+def new_object(loc, desc):
+    """new 進 JSON 物件：物件寫 _entry 鍵（["python3", "<名>.py"]），腳本放 JSON 檔旁邊，再 --write-defs 進物件。"""
+    script = os.path.join(loc["base"], loc["name"] + ".py")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", loc["name"]):
+        die("ArgumentsBad", "tool name %r (the last part of the pointer, or the file name) may use only A-Z a-z 0-9 _ -" % loc["name"])
+    if loc["ptr"] is None and os.path.exists(loc["path"]):
+        die("PathExists", "%s already exists (give a new JSON file, or FILE.json#/POINTER to a new key)" % args["path"])
+    if loc["ptr"] is not None and object_exists(loc):
+        die("PathExists", "%s already exists (pick a new key)" % args["path"])
+    if os.path.lexists(script):
+        die("PathExists", "%s already exists (the script would go there; pick another name)" % script)
+    ensure_json_file(loc)
+    copy_script(script, desc)
+    aos_json(["set", "--parents", key_at(loc, "_entry"), json.dumps(["python3", loc["name"] + ".py"])], key_at(loc, "_entry"))
+    code, out, err = run([sys.executable, script, "--write-defs", loc["full"]], loc["base"])
+    if code != 0:
+        die("WriteFailed", "made, but %s --write-defs failed: %s" % (os.path.basename(script), last_line(err, out)))
+    shown = os.path.relpath(script, tool_io.workspace()) if not os.path.isabs(args["path"]) else script
+    print("made tool %s: the object has _entry, _tooldef, _metainfo keys, and %s next to the JSON file runs it\n"
+          "(a copy of the tool-python skeleton: a working tool that adds two numbers).\n"
+          "Next: in %s change only the part shown below (use edit; keep every line above it, they load tool_spec),\n"
+          "then tools_def {\"op\": \"check\", \"path\": %s, \"sample\": {...}}.\n"
+          "---- %s, the part to change ----\n%s" % (loc["full"], os.path.basename(script), shown, json.dumps(args["path"]),
+                                                    shown, part_to_change(script)))
+
+
 # ---- new ----
 def op_new():
-    literal = from_ws(text("path"))
     desc = args.get("description")
     if desc is not None and (not isinstance(desc, str) or not desc.strip()):
         die("ArgumentsBad", "description must be a non-empty string")
+    loc = locate(text("path"))
+    if loc["kind"] == "obj":
+        return new_object(loc, desc)
+    literal = loc["path"]
     if os.path.lexists(literal):
         die("PathExists", "path %r already exists (pick a new folder)" % args["path"])
     dest = os.path.realpath(literal)
@@ -327,19 +432,19 @@ def op_check():
         line("bad" if probs else "ok", "metainfo: " + ("; ".join(probs) if probs else "valid (%s)" % mi.get("summary", "no summary")))
         has_mi = not probs
     elif not has_mi:
-        line("note", "metainfo: none (optional; a tool_spec script makes it)")
+        line("note", "metainfo: none (optional; a tool_spec script makes it, or tools_def add_metainfo)")
     has_td, td = load_part(obj, base, "_tooldef")
     if has_td and td is not None:
         probs = tool_spec.tooldef_problems(td)
         if isinstance(td, dict) and td.get("description") == skeleton_description() and not os.path.samefile(base, SKELETON):
             probs.append("description is still the skeleton's (\"Add two numbers ...\"): change DESCRIPTION in tool.py")
-        if not probs and ptr is None:
-            bad = aos_tools_check(path)
+        if not probs:
+            bad = aos_tools_check(full)
             probs = [bad] if bad else []
         line("bad" if probs else "ok", "tooldef: " + ("; ".join(probs) if probs else "valid, parameters: %s" % (", ".join(td["parameters"].get("properties", {})) or "none")))
         has_td = not probs
     elif not has_td:
-        line("bad", "tooldef: none (fix: describe the tool in a tool_spec script, or write %s)" % ("_tooldef.json" if obj is None else "a _tooldef key"))
+        line("bad", "tooldef: none (fix: describe the tool in a tool_spec script, or tools_def add_tooldef, or write %s)" % ("_tooldef.json" if obj is None else "a _tooldef key"))
     example = EXAMPLE_RE.search(td.get("description", "")) if has_td and isinstance(td, dict) and runnable and made else None
     if example:
         try:
@@ -369,19 +474,142 @@ def op_check():
     bad = sum(1 for r in report if r.startswith("bad"))
     if bad:
         what = "fix the lines marked bad, then check again"
-    elif runnable and has_td and ptr is not None:
-        what = "a tool (self_tools add cannot take FILE#/POINTER yet)"
     elif runnable and has_td:
-        call = "%s %s" % (os.path.basename(path.rstrip("/")) if obj is None else "<its name>", json.dumps(sample, ensure_ascii=False) if sample is not None else "{...}")
-        what = ("a tool: add it with self_tools {\"op\": \"add\", \"path\": %s}; from your next turn call it directly "
-                "by its name, like any other tool: %s" % (json.dumps(location), call))
+        call = "%s %s" % (locate(location)["name"], json.dumps(sample, ensure_ascii=False) if sample is not None else "{...}")
+        what = ("a tool: add it with self_tools {\"op\": \"add\", \"path\": %s}; it works at once: in your next reply "
+                "(this turn) call it directly by its name, like any other tool: %s" % (json.dumps(location), call))
     else:
-        what = "a runnable function" if runnable else "not runnable yet"
+        what = ("a runnable function (next: tools_def add_metainfo, then add_tooldef)" if runnable
+                else "not runnable yet (tools_def add_entry writes an entry)")
     line("stage", "%d of 3 (entry, _metainfo, _tooldef)%s - %s" % (n, "; missing: " + ", ".join(missing) if missing else "", what))
     out = "\n".join(report) + "\n"
     if bad:
         die("ToolBad", "%d problem(s) above; fix the lines marked bad and check again" % bad, before=out)
     sys.stdout.write(out)
+
+
+# ---- 分階段：add_entry → add_metainfo → add_tooldef ----
+def staged(loc):
+    """位置現況（不印報告）：(物件或 None, 有入口, 入口腳本, 有 metainfo, 有 tooldef)。"""
+    obj, base = read_location(loc["path"], loc["ptr"])
+    n = len(report)
+    runnable, script = check_entry(obj, base)
+    del report[n:]
+    has_entry = runnable or (obj is not None and "_entry" in obj) or \
+        (obj is None and any(os.path.exists(os.path.join(base, x)) for x in ("_entry", "_entry.json")))
+    return obj, has_entry, script, load_part(obj, base, "_metainfo")[0], load_part(obj, base, "_tooldef")[0]
+
+
+def stage_line(loc):
+    _, e, _, m, t = staged(loc)
+    missing = [n for n, ok in (("entry", e), ("_metainfo", m), ("_tooldef", t)) if not ok]
+    return "stage %d of 3 (entry, _metainfo, _tooldef)%s" % (3 - len(missing), "; missing: " + ", ".join(missing) if missing else "")
+
+
+def uses_tool_spec(script):
+    try:
+        with open(script, encoding="utf-8") as f:
+            return "tool_spec" in f.read()
+    except (OSError, UnicodeError, TypeError):
+        return False
+
+
+def op_add_entry():
+    loc = locate(text("path"))
+    script_name = args.get("script")
+    if script_name is not None and (not isinstance(script_name, str) or not script_name.endswith(".py") or "/" in script_name):
+        die("ArgumentsBad", "script must be a file name ending in .py, next to the entry (like \"tool.py\")")
+    if loc["kind"] == "dir":
+        if os.path.isfile(loc["path"]):
+            die("ArgumentsBad", "%s is a file, not a folder (give a folder, a JSON file or FILE.json#/POINTER)" % args["path"])
+        try:
+            os.makedirs(loc["path"], exist_ok=True)
+        except OSError as e:
+            die("MkdirFailed", "cannot create %s: %s" % (loc["path"], e))
+        if any(os.path.lexists(os.path.join(loc["path"], x)) for x in ("_entry", "_entry.json")):
+            die("PathExists", "%s already has an entry (_entry or _entry.json); change it with edit" % args["path"])
+        script_name = script_name or "tool.py"
+    else:
+        ensure_json_file(loc)
+        if object_exists(loc):
+            obj = read_location(loc["path"], loc["ptr"])[0]
+            if "_entry" in obj:
+                die("PathExists", "%s already has an _entry key; change it with edit or json_write" % args["path"])
+        script_name = script_name or loc["name"] + ".py"
+    script = os.path.join(loc["base"], script_name)
+    if os.path.exists(script):
+        how = "kept the script %s that is already there" % script_name
+    else:
+        copy_script(script)
+        how = "copied the skeleton script to %s (a working tool that adds two numbers; change the part under %r)" % (script_name, MARK)
+    argv = ["python3", script_name]
+    if loc["kind"] == "dir":
+        try:
+            tool_spec._write_file(os.path.join(loc["path"], "_entry.json"), {"argv": argv})
+        except OSError as e:
+            die("WriteFailed", "cannot write _entry.json: %s" % e)
+        where = "%s/_entry.json" % loc["path"]
+    else:
+        where = key_at(loc, "_entry")
+        aos_json(["set", "--parents", where, json.dumps(argv)], where)
+    print("wrote %s: %s; %s.\n%s - a runnable function (aos-exec %s). Next: tools_def {\"op\": \"add_metainfo\", \"path\": %s}"
+          % (where, json.dumps(argv), how, stage_line(loc), loc["full"], json.dumps(args["path"])))
+
+
+def from_args_or_script(loc, key):
+    """add_metainfo／add_tooldef 共用：已有＝PathExists；腳本用 tool_spec 又沒給 description＝照腳本產，否則照參數產。"""
+    obj, _e, script, has_mi, has_td = staged(loc)
+    if (has_mi if key == "_metainfo" else has_td):
+        die("PathExists", "%s already has %s; change it with edit (or, for a tool_spec script, change the script and run check)" % (args["path"], key))
+    desc = args.get("description")
+    if desc is None and uses_tool_spec(script):
+        code, out, err = run([sys.executable, script, "--metainfo" if key == "_metainfo" else "--tooldef"], loc["base"])
+        if code != 0:
+            die("ArgumentsBad", "%s --%s failed: %s" % (os.path.basename(script), key[1:], last_line(err, out)))
+        return json.loads(out), "from %s" % os.path.basename(script)
+    if not isinstance(desc, str) or not desc.strip():
+        die("ArgumentsBad", "description is needed (what the tool does, one example call); the entry script does not use tool_spec")
+    try:
+        if key == "_metainfo":
+            meta = args.get("meta")
+            if meta is not None and not isinstance(meta, dict):
+                die("ArgumentsBad", "meta must be an object like {\"side_effect\": true}")
+            return tool_spec.metainfo(desc, meta), "from description"
+        params = args.get("params", [])
+        if not isinstance(params, list) or not all(isinstance(p, dict) and isinstance(p.get("name"), str) for p in params):
+            die("ArgumentsBad", "params must be a list of objects like {\"name\": \"a\", \"type\": \"number\", \"description\": \"the first number\"}")
+        for p in params:
+            extra = sorted(set(p) - set(PARAM_KEYS))
+            if extra:
+                die("ArgumentsBad", "param %s: unknown key %s (known: %s)" % (p["name"], ", ".join(extra), ", ".join(PARAM_KEYS)))
+        return tool_spec.tooldef(desc, [tool_spec.param(**p) for p in params]), "from description and params"
+    except tool_spec.SpecBad as e:
+        die("ArgumentsBad", str(e))
+
+
+def write_part(key):
+    loc = locate(text("path"))
+    value, how = from_args_or_script(loc, key)
+    probs = (tool_spec.metainfo_problems if key == "_metainfo" else tool_spec.tooldef_problems)(value)
+    if probs:
+        die("ArgumentsBad", "; ".join(probs))
+    try:
+        where = tool_spec.write_defs(loc["full"], value if key == "_tooldef" else None, value if key == "_metainfo" else None)
+    except (OSError, tool_spec.SpecBad) as e:
+        die("WriteFailed", str(e))
+    return loc, where[0], how
+
+
+def op_add_metainfo():
+    loc, where, how = write_part("_metainfo")
+    print("wrote %s (%s).\n%s. Next: tools_def {\"op\": \"add_tooldef\", \"path\": %s}"
+          % (where, how, stage_line(loc), json.dumps(args["path"])))
+
+
+def op_add_tooldef():
+    loc, where, how = write_part("_tooldef")
+    print("wrote %s (%s).\n%s. Next: tools_def {\"op\": \"check\", \"path\": %s, \"sample\": {...}}, then self_tools add"
+          % (where, how, stage_line(loc), json.dumps(args["path"])))
 
 
 signal.signal(signal.SIGINT, lambda s, f: sys.exit(130))
@@ -394,4 +622,5 @@ if op not in OPS:
 extra = sorted(k for k in args if k != "op" and k not in OPS[op])
 if extra:
     die("ArgumentsBad", "op %s does not take %s (it takes %s)" % (op, ", ".join(extra), ", ".join(OPS[op])))
-op_new() if op == "new" else op_check()
+{"new": op_new, "check": op_check, "add_entry": op_add_entry, "add_metainfo": op_add_metainfo,
+ "add_tooldef": op_add_tooldef}[op]()
