@@ -34,4 +34,4 @@
 ## 結論
 
 - 已施工、三種腦都驗過，見 [01](01-施工結果.md)。用法在 [cmd/aos-clock-register](../../../../cmd/aos-clock-register/README.md)。
-- **要讓使用者知道的衝突**：他的通則「`aos-yyy-zzz` 和 `aos-yyy zzz` 相等」在這裡不成立——`aos-clock register …` 會被 `aos-clock` 當成時鐘檔名 `register`（`aos-clock FILE` 沒有子命令）。這次沒做等價轉發；要做的話得讓 `aos-clock` 認子命令，跟「唯一位置參數就是 FILE」打架。
+- **（11-10 深夜已解，使用者「7.不衝突，要用的人要自己分辨，這很容易分辨的。程式實作上也就自然而然。」：`aos-clock register …`＝`aos-clock-register …`，時鐘檔叫 register 的寫 `./register`，[tonight-rulings](../tonight-rulings/README.md) 題 7）** 當時記的衝突：他的通則「`aos-yyy-zzz` 和 `aos-yyy zzz` 相等」在這裡不成立——`aos-clock register …` 會被 `aos-clock` 當成時鐘檔名 `register`（`aos-clock FILE` 沒有子命令）。這次沒做等價轉發；要做的話得讓 `aos-clock` 認子命令，跟「唯一位置參數就是 FILE」打架。

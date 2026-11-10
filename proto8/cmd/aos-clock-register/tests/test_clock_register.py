@@ -1,4 +1,4 @@
-"""Test aos-clock-register add/rm/ls and aos-clock sending the registered letters (real aos-post; no daemon)."""
+"""Test aos-clock-register add/rm/ls, aos-clock register (the same thing), and aos-clock sending the registered letters (real aos-post; no daemon)."""
 import json
 import os
 from pathlib import Path
@@ -68,6 +68,17 @@ class ClockRegister(unittest.TestCase):
         self.assertEqual(self.reg("rm", "wake").returncode, 0)
         self.tick(10)
         self.assertEqual(len(self.letters()), 2)
+
+    def test_clock_register_word_goes_to_register(self):
+        """11-10 深夜：aos-clock register … ＝ aos-clock-register …；./register 仍是時鐘檔。"""
+        run = lambda *a: subprocess.run([sys.executable, str(CLOCK)] + list(a), capture_output=True, text=True,
+                                        env=self.env, cwd=self.tmp, timeout=30)
+        r = run("register", "add", "--every", "5", "--box", "st/q", "w", "hi")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(run("register", "ls").stdout, self.reg("ls").stdout)
+        self.assertIn("aos-clock-register", run("register", "--help").stdout)
+        self.assertEqual(run("./register").returncode, 0)                    # a clock file named register
+        self.assertEqual((self.tmp / "register").read_text(), "1\n")
 
     def test_failures_only_warn(self):
         self.assertEqual(self.reg("add", "--every", "1", "--box", "st/none", "lost", "x").returncode, 0)

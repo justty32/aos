@@ -8,6 +8,7 @@
 aos-clock-register [-c CLOCK] add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-
 aos-clock-register [-c CLOCK] rm NAME
 aos-clock-register [-c CLOCK] ls [-j]
+# aos-clock register … 跟 aos-clock-register … 完全一樣（11-10 深夜；時鐘檔真叫 register 的寫 ./register）
 ```
 
 例：

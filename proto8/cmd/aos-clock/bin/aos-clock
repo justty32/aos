@@ -15,7 +15,9 @@ FILE 裡是回合數（十進位＋換行）：讀出 n、寫回 n＋1 就結束
 `--help`＝印 HELP（英文）到 stdout、退 0（R3）；Ctrl-C＝退 130、不吐 traceback（R12）。
 寄信（11-10 晚 clock-letters，使用者「時鐘這塊幫我改成寄信好了」）：寫好 n＋1 之後，FILE 旁有 `<FILE名>_register.json`（登記表，aos-clock-register 改）
 就讀它，(n＋1) % every == 0 的格各用 aos-post send 寄一封（py/aos_clock_register.py）。寄不到、表壞＝stderr 提醒行，時鐘照樣成功退 0；
-沒有登記表＝跟以前完全一樣（不多做事、不多印）。"""
+沒有登記表＝跟以前完全一樣（不多做事、不多印）。
+`aos-clock register …`＝`aos-clock-register …`（11-10 深夜，使用者「7.不衝突，要用的人要自己分辨，這很容易分辨的。程式實作上也就自然而然。」）：
+第一個參數正好是 `register` 就整個交給 aos-clock-register（exec，參數原樣）；真的有時鐘檔叫 register 的，寫 `./register`。"""
 import os, re, sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
@@ -31,10 +33,11 @@ FILE holds the cycle number (decimal + newline): read n, write n+1, exit 0. A mi
 Reading follows the same rule as the clock readers: surrounding whitespace is ignored, an empty FILE counts as 0, the value must fit in signed 64-bit.
 The new content goes to .FILE.PID in the same folder first and is then renamed over FILE (readers never see half a file). stdout stays empty.
 No flags yet; -- ends the flags (FILE may start with -). Pacing, stopping and "only N cycles" belong to the loop that runs it.
-Errors: one stderr line `aos-clock: error: CODE reason`, exit 1, FILE untouched. Codes: ArgumentsBad, FlagUnknown, ClockBad, WriteFailed.
+Errors: one stderr line `aos-clock: error: CODE reason`, exit 1, FILE untouched. Codes: ArgumentsBad, FlagUnknown, ClockBad, WriteFailed, LaunchFailed.
 Letters: if FILE_register.json sits next to FILE (edit it with aos-clock-register), each entry whose EVERY divides the
 new cycle number gets one letter sent with aos-post send. A letter that cannot be sent, or a bad register, is one
-`aos-clock: warning: ...` line; the clock still moved and the exit code stays 0. No register = nothing extra."""
+`aos-clock: warning: ...` line; the clock still moved and the exit code stays 0. No register = nothing extra.
+"aos-clock register ARGS..." is "aos-clock-register ARGS..." (a clock file named register: write ./register)."""
 
 
 def die(code, msg):
@@ -42,6 +45,12 @@ def die(code, msg):
 
 
 def main():
+    if sys.argv[1:2] == ["register"]:                # aos-yyy zzz＝aos-yyy-zzz（11-10 深夜）；./register 才是時鐘檔
+        reg = os.path.join(HERE, "..", "..", "aos-clock-register", "bin", "aos-clock-register")
+        try:
+            os.execv(sys.executable, [sys.executable, reg] + sys.argv[2:])
+        except OSError as e:
+            die("LaunchFailed", "cannot run aos-clock-register (%s): %s" % (reg, e))
     try:
         opts, rest = aos_flags.parse(sys.argv[1:], FLAGS)
     except aos_flags.Error as e:
