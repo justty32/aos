@@ -33,6 +33,8 @@
 # 錯：aos-eca-turn --one（call_main）照 lib 契約 stderr 與 stdout 各一行「工具名: error: 代號 原因」、退 1；attach 與 hook 是 stderr 一行「cli_session: error: 代號 原因」、退 1。
 #   CLI（claude／codex）與 tmux 自己的 stderr 原樣透到 stderr、不塞進自己的錯（stdio-unify R10）；stdout 只有自己那一行（D2）。
 #   給人看的狀態句（attaching、等對話空出來）是提醒行「cli_session: warning: …」（R1、D5）。工具形認 --help（英文說明印 stdout、退 0）、Ctrl-C 退 130。
+# 父死子跟著死（11-10 坑-52，Linux）：非互動起的 CLI 設 PR_SET_PDEATHSIG＝SIGTERM——起它的這支（aos-eca-turn、claude／codex 工具）
+#   被 kill -9／OOM，CLI 收 SIGTERM 收掉，不留孤兒拿著同一段對話跟下一輪的 --resume 撞；非 Linux 或載不到 libc 就不設。畫面（tmux）不在此列。
 #
 # 放哪：proto8/lib/agent/cli_session.py；claude、codex 經 agent_tool.py 的 ask_cli 共用 ask，call_main 只給 aos-eca-turn --one；
 # 掛它的 agent 根目錄可以放一份 cli_session.py（或捷徑）給 attach 用（原本的例子 demo/agent-fay 11-03 晚刪了）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
@@ -292,12 +294,34 @@ def link_transcript(cell, kind):
 
 # ---------------------------------------------------------------- 非互動（畫面沒開）
 
+def parent_death_term():
+    """給 Popen 的 preexec_fn：子程式那側設 PR_SET_PDEATHSIG＝SIGTERM（11-10 坑-52），起它的執行緒一結束（這支被 kill -9、OOM）CLI 就收 TERM。
+    設完 getppid 跟 fork 前記的不同＝父在設之前就死了，直接退。非 Linux、載不到 libc＝回 None（不設、不報錯）。
+    PDEATHSIG 看的是 fork 的那條執行緒：這檔的 Popen 都在呼叫者的主執行緒起（Timer 執行緒只負責 kill）。"""
+    if not sys.platform.startswith("linux"):
+        return None
+    try:
+        import ctypes
+        prctl = ctypes.CDLL(None, use_errno=True).prctl          # fork 前先找好，子程式那側只呼叫
+    except (ImportError, OSError, AttributeError):
+        return None
+    parent = os.getpid()
+    args = (ctypes.c_int(1), ctypes.c_ulong(signal.SIGTERM),       # 1＝PR_SET_PDEATHSIG
+            ctypes.c_ulong(0), ctypes.c_ulong(0), ctypes.c_ulong(0))
+
+    def preexec():
+        prctl(*args)
+        if os.getppid() != parent:
+            os._exit(128 + signal.SIGTERM)
+    return preexec
+
+
 def run_cli(argv, prompt, ws, timeout_ms, handed=None):
     """起 CLI、題目從 stdin 給、等它做完；起來了就叫 handed（交出去了，11-03 aos-eca-turn 在這一刻收信）。
     CLI 的 stderr 不攔、原樣透出（R10）。"""
     try:
         p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             text=True, cwd=ws)
+                             text=True, cwd=ws, preexec_fn=parent_death_term())
     except FileNotFoundError:
         die("CliMissing", "%s is not on PATH" % argv[0])
     if handed:
@@ -320,7 +344,7 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None):
     題目寫進 stdin、關掉之後叫 handed（交出去了，11-03）。claude 的 stderr 不攔、原樣透出（R10）。"""
     try:
         p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             text=True, cwd=ws)
+                             text=True, cwd=ws, preexec_fn=parent_death_term())
     except FileNotFoundError:
         die("CliMissing", "%s is not on PATH" % argv[0])
     p.stdin.write(prompt)
