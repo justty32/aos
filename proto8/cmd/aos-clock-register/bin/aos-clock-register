@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+# aos-clock-register - 時鐘登記表的人用指令：add／rm／ls 時鐘檔旁 <時鐘檔名>_register.json 的格（每 every 個 cycle 往一個 aos-post 箱子寄一句；11-10 晚 clock-letters）。
+# 使用者 11-10 晚：「clock那邊看看能不能加上一個hook，有需要的人可以去註冊」「時鐘這塊幫我改成寄信好了，不要用跑任意aos函數。」「指令是aos-clock-register嗎？」
+# 形狀（P-44）：aos-clock-register [-c CLOCK] 子命令 [旗標] 位置…；-c 子命令前後都收（前後不同＝ArgumentsBad，同 aos-mailbox 的 -s）；沒給＝$AOS_CLOCK。
+#   add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-   BOX 相對路徑從 cwd 算；存進表時同頂層資料夾＝相對登記表資料夾，否則絕對
+#   rm NAME        沒有那格＝EntryMissing
+#   ls [-j]        一行一格 NAME TAB EVERY TAB BOX TAB TEXT；-j＝{"file", "letters"}；沒登記表＝沒輸出退 0
+# 誰都能登記、拿掉（寫得到登記表就行，不另外擋）；登記的人走了不自動清，寄不到由 aos-clock 印 warning。
+# 同時兩個人改表不管（後寫的整份蓋過先寫的）。錯：stderr 一行「aos-clock-register: error: 代號 原因」、退 1。本體寄信的部分在 py/aos_clock_register.py。
+import json
+import os
+import sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
+import aos_flags  # noqa: E402
+import aos_clock_register as reg  # noqa: E402
+
+PROG = "aos-clock-register"
+SHORT = {"-c": "--clock"}
+HELP = """aos-clock-register - letters from the clock: every N cycles, send a fixed text to a mailbox
+
+usage: aos-clock-register [-c CLOCK] SUBCOMMAND [FLAGS...] [ARGS...]
+       aos-clock-register SUBCOMMAND --help
+
+subcommands:
+  add   add an entry: every N cycles send TEXT to BOX
+  rm    remove an entry
+  ls    list the entries
+
+flags:
+  -c, --clock CLOCK   the clock file (default: $AOS_CLOCK); the register is CLOCK_register.json next to it
+  -h, --help          show this help
+
+aos-clock reads the register after each cycle: an entry fires when the new cycle number divides by
+its EVERY (cycles 10, 20, 30... for every 10), and sends one letter with aos-post send. The letter body is
+{"role": "user", "content": "TEXT (clock cycle N)", "from": "clock", "status": "PROGRESS", "title", "what", "cycle", "register"}:
+an agent's queue takes it as a user message, aos-mailbox reads it as a letter.
+Anyone who can write the register can add or remove entries. A letter that cannot be sent is one warning
+line from aos-clock; the clock keeps going. Nothing is cleaned up automatically.
+exit codes: 0 ok; 1 error ("aos-clock-register: error: CODE reason" on stderr).
+more: proto8/cmd/aos-clock-register/README.md"""
+HELPS = {
+    "add": """aos-clock-register add - add an entry to the clock register
+
+usage: aos-clock-register [-c CLOCK] add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-
+
+flags:
+  --every N     send when the cycle number divides by N (a positive integer)
+  --box BOX     an aos-post mailbox folder, e.g. an agent's queue: STACK/queue (relative = from here)
+  --by WHO      who added it, shown by ls (default: $AOS_WS, else $AOS_STACK, else this folder)
+  --replace     replace an entry with the same NAME (default: EntryExists)
+
+NAME names the entry; TEXT is the fixed text of every letter (- reads it from stdin).
+A BOX that is not a mailbox yet is only a warning: the entry is added anyway.
+example: aos-clock-register add --every 10 --box stacks/root/procs/ann/queue ann-wake "Check data/ for new files." """,
+    "rm": """aos-clock-register rm - remove an entry from the clock register
+
+usage: aos-clock-register [-c CLOCK] rm NAME
+
+No such entry = EntryMissing.""",
+    "ls": """aos-clock-register ls - list the clock register
+
+usage: aos-clock-register [-c CLOCK] ls [-j]
+
+flags:
+  -j, --json   one JSON object {"file": REGISTER, "letters": {NAME: {every, box, text, by}}}
+
+One line per entry: NAME TAB EVERY TAB BOX TAB TEXT (BOX as stored: relative = from the register's folder).
+No register yet = no output, exit 0.""",
+}
+
+
+class Fail(Exception):
+    def __init__(self, code, msg):
+        super().__init__(msg)
+        self.code = code
+
+
+CLOCK = None
+
+
+def parse(argv, sub, flags=None, switches=None, short=None):
+    """子命令的旗標；-c/--clock 子命令前後都收，前後不同＝ArgumentsBad。"""
+    global CLOCK
+    try:
+        opts, rest = aos_flags.parse(argv, dict(flags or {}, **{"--clock": "clock"}), switches or {}, help=HELPS[sub],
+                                     short=dict(short or {}, **SHORT))
+    except aos_flags.Error as e:
+        raise Fail(e.code, "%s (see %s %s --help)" % (e, PROG, sub))
+    c = opts.get("clock")
+    if c and CLOCK and c != CLOCK:
+        raise Fail("ArgumentsBad", "two different clocks: %s before the subcommand, %s after it; give --clock once" % (CLOCK, c))
+    CLOCK = c or CLOCK
+    return opts, rest
+
+
+def register():
+    clock = CLOCK or os.environ.get("AOS_CLOCK", "")
+    if not clock:
+        raise Fail("ClockMissing", "no clock file: give -c CLOCK or set AOS_CLOCK")
+    return reg.path_for(clock)
+
+
+def load(path):
+    try:
+        return reg.load(path)
+    except reg.Bad as e:
+        raise Fail("RegisterBad", str(e))
+
+
+def save(path, letters):
+    try:
+        reg.save(path, letters)
+    except OSError as e:
+        raise Fail("WriteFailed", "cannot write %s: %s" % (path, e.strerror or e))
+
+
+def identity():
+    for k in ("AOS_WS", "AOS_STACK", "AOS_CF"):
+        if os.environ.get(k):
+            return os.path.abspath(os.environ[k])
+    return os.getcwd()
+
+
+def cmd_add(argv):
+    opts, rest = parse(argv, "add", {"--every": "every", "--box": "box", "--by": "by"}, {"--replace": "replace"})
+    if len(rest) < 2:
+        raise Fail("ArgumentsBad", "give NAME and TEXT (usage: %s add --every N --box BOX NAME TEXT...|-)" % PROG)
+    name = rest[0]
+    why = reg.name_problem(name)
+    if why:
+        raise Fail("ArgumentsBad", "bad NAME %r: %s" % (name, why))
+    text = sys.stdin.read() if rest[1:] == ["-"] else " ".join(rest[1:])
+    text = text[:-1] if text.endswith("\n") else text
+    if not text.strip():
+        raise Fail("ArgumentsBad", "TEXT is empty")
+    every = opts.get("every")
+    if every is None or not every.isdigit() or not every.isascii() or int(every) <= 0:
+        raise Fail("ArgumentsBad", "--every needs a positive integer (got %r)" % every)
+    if not opts.get("box"):
+        raise Fail("ArgumentsBad", "--box needs a mailbox folder")
+    path = register()
+    if not os.path.isdir(os.path.dirname(path)):
+        raise Fail("WriteFailed", "the clock's folder %s does not exist" % os.path.dirname(path))
+    box = os.path.abspath(opts["box"])
+    letters = load(path)
+    if name in letters and not opts.get("replace"):
+        raise Fail("EntryExists", "entry %s is already in %s (give --replace to replace it)" % (name, path))
+    if not reg.is_box(box):
+        aos_flags.warn(PROG, "%s is not a mailbox yet (no tmp/, new/, cur/); added anyway, the clock warns until it is" % box)
+    letters[name] = {"every": int(every), "box": reg.stored_box(box, os.path.dirname(path)), "text": text,
+                     "by": opts.get("by") or identity()}
+    save(path, letters)
+    print("added %s: every %s cycles to %s" % (name, every, box))
+
+
+def cmd_rm(argv):
+    _, rest = parse(argv, "rm")
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "give one NAME (usage: %s rm NAME)" % PROG)
+    path = register()
+    letters = load(path)
+    if rest[0] not in letters:
+        raise Fail("EntryMissing", "no entry %s in %s" % (rest[0], path))
+    del letters[rest[0]]
+    save(path, letters)
+    print("removed %s" % rest[0])
+
+
+def one_line(v):
+    return (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False)).replace("\n", " ").replace("\t", " ")
+
+
+def cmd_ls(argv):
+    opts, rest = parse(argv, "ls", switches={"--json": "json"}, short={"-j": "--json"})
+    if rest:
+        raise Fail("ArgumentsBad", "ls takes no arguments (usage: %s ls [-j])" % PROG)
+    path = register()
+    letters = load(path)
+    if opts.get("json"):
+        print(json.dumps({"file": path, "letters": letters}, ensure_ascii=False))
+        return
+    for name in sorted(letters):
+        e = letters[name] if isinstance(letters[name], dict) else {}
+        print("\t".join(one_line(x) for x in (name, e.get("every", "?"), e.get("box", "?"), e.get("text", "?"))))
+
+
+SUBS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls}
+
+
+def main():
+    global CLOCK
+    aos_flags.HELP = HELP
+    try:
+        opts, rest = aos_flags.parse(sys.argv[1:], {"--clock": "clock"}, help=HELP, short=SHORT)
+        CLOCK = opts.get("clock")
+        if not rest:
+            raise Fail("ArgumentsBad", "missing subcommand (%s; see %s --help)" % (", ".join(SUBS), PROG))
+        if rest[0] not in SUBS:
+            raise Fail("CommandUnknown", "unknown subcommand %s (%s; see %s --help)" % (rest[0], ", ".join(SUBS), PROG))
+        SUBS[rest[0]](rest[1:])
+    except aos_flags.Error as e:
+        aos_flags.die(PROG, e.code, e)
+    except Fail as e:
+        aos_flags.die(PROG, e.code, e)
+    sys.exit(0)
+
+
+aos_flags.run(main)

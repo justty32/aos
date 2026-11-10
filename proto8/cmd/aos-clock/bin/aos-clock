@@ -12,7 +12,10 @@ FILE 裡是回合數（十進位＋換行）：讀出 n、寫回 n＋1 就結束
 （代號照 10-23 命名統合（thinking/2026-10/23/naming），格式同其他四支：usage ArgumentsBad（不認得的旗標 FlagUnknown）、
 時鐘檔讀不到或壞 ClockBad、寫不了 WriteFailed；10-23 統合前不帶代號）。
 同一個 FILE 同時有兩個人在推進時鐘不管（同一個 loop 的每一次本來就不重疊）。
-`--help`＝印 HELP（英文）到 stdout、退 0（R3）；Ctrl-C＝退 130、不吐 traceback（R12）。"""
+`--help`＝印 HELP（英文）到 stdout、退 0（R3）；Ctrl-C＝退 130、不吐 traceback（R12）。
+寄信（11-10 晚 clock-letters，使用者「時鐘這塊幫我改成寄信好了」）：寫好 n＋1 之後，FILE 旁有 `<FILE名>_register.json`（登記表，aos-clock-register 改）
+就讀它，(n＋1) % every == 0 的格各用 aos-post send 寄一封（py/aos_clock_register.py）。寄不到、表壞＝stderr 提醒行，時鐘照樣成功退 0；
+沒有登記表＝跟以前完全一樣（不多做事、不多印）。"""
 import os, re, sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
@@ -28,7 +31,10 @@ FILE holds the cycle number (decimal + newline): read n, write n+1, exit 0. A mi
 Reading follows the same rule as the clock readers: surrounding whitespace is ignored, an empty FILE counts as 0, the value must fit in signed 64-bit.
 The new content goes to .FILE.PID in the same folder first and is then renamed over FILE (readers never see half a file). stdout stays empty.
 No flags yet; -- ends the flags (FILE may start with -). Pacing, stopping and "only N cycles" belong to the loop that runs it.
-Errors: one stderr line `aos-clock: error: CODE reason`, exit 1, FILE untouched. Codes: ArgumentsBad, FlagUnknown, ClockBad, WriteFailed."""
+Errors: one stderr line `aos-clock: error: CODE reason`, exit 1, FILE untouched. Codes: ArgumentsBad, FlagUnknown, ClockBad, WriteFailed.
+Letters: if FILE_register.json sits next to FILE (edit it with aos-clock-register), each entry whose EVERY divides the
+new cycle number gets one letter sent with aos-post send. A letter that cannot be sent, or a bad register, is one
+`aos-clock: warning: ...` line; the clock still moved and the exit code stays 0. No register = nothing extra."""
 
 
 def die(code, msg):
@@ -66,7 +72,21 @@ def main():
         except OSError:
             pass
         die("WriteFailed", f"cannot write clock file {path}: {e.strerror or e}")
+    letters(path, int(text) + 1)
     sys.exit(0)
+
+
+def letters(path, cycle):
+    """登記表的信（時鐘已經走完）：任何問題都只是提醒行，不改結束碼。"""
+    if not os.path.lexists(os.path.join(os.path.dirname(os.path.abspath(path)), os.path.basename(path) + "_register.json")):
+        return
+    try:
+        import aos_clock_register
+        warnings = aos_clock_register.fire(path, cycle)
+    except Exception as e:   # 時鐘不能被登記表弄壞
+        warnings = ["clock register skipped: %s: %s" % (type(e).__name__, e)]
+    for line in warnings:
+        aos_flags.warn("aos-clock", line)
 
 
 aos_flags.run(main)

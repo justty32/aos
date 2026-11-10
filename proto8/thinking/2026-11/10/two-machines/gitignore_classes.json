@@ -1131,6 +1131,26 @@
    "why": "11-10 晚 self-family/hook：tool_added 上次看到的工具名單；不帶走＝到別台第一次只記不觸發。",
    "seen": [],
    "ignored_now": "對：ignored（cmd/aos-agent/stack.gitignore 的 **/hook_tools_seen.json）"
+  },
+  {
+   "id": "G094",
+   "pattern": "stacks/**/clock_register.json",
+   "writer": "proto8/py/aos_clock_register.py（save；aos-clock-register add／rm、clock_register 工具）",
+   "class": "carry",
+   "in_git": "進",
+   "why": "11-10 晚 clock-letters：時鐘登記表（每 N cycle 寄一封），跟時鐘一起帶走；box 同頂層資料夾存相對登記表資料夾，整棵搬走還對。",
+   "seen": [],
+   "ignored_now": "對：tracked（stack.gitignore 沒有規則擋它）"
+  },
+  {
+   "id": "G095",
+   "pattern": "stacks/**/.clock_register.json.[0-9]*",
+   "writer": "proto8/py/aos_clock_register.py（save）",
+   "class": "temp",
+   "in_git": "不進",
+   "why": "登記表先寫 .clock_register.json.PID 再改名（N-05）。",
+   "seen": [],
+   "ignored_now": "對：ignored（stack.gitignore 的 **/.*）"
   }
  ]
 }

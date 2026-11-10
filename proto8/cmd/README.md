@@ -11,6 +11,7 @@
 | [aos-feedback](aos-feedback/README.md) | 收集指令／函數意見；從 AI 評分與工具帳計算舒適度 |
 | [aos-tools](aos-tools/README.md) | 一個 agent 資料夾一份工具註冊檔（tools.json） |
 | [aos-clock](aos-clock/README.md) | 把時鐘檔的回合數往前走一格 |
+| [aos-clock-register](aos-clock-register/README.md) | 時鐘登記表（add／rm／ls）：每 N 個 cycle 往一個 aos-post 箱子寄一句（定時叫醒 agent） |
 | [aos-mailbox](aos-mailbox/README.md) | 我的信箱（`<stack>/mailbox/`，aos-post 箱子）：照 inbox 協議寄信給 agent（名字＋daemon 或信箱路徑）、peek、read；人把自己當一隻 agent 用自己的 stack |
 | [aos-sweeper](aos-sweeper/README.md) | 清道夫：一台 daemon 的 stderr 封存、封存保留期、收表外子 loop（掛成 `_sweeper` 列；手動 `aos-daemon-ctl sweep`） |
 | [aos-eca](aos-eca/README.md) | 外部 coding agent（claude／codex）：`aos-eca-turn` 答一輪、`aos-eca-screen` 開畫面 |

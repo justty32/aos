@@ -1,0 +1,14 @@
+{
+  "summary": "Add, remove or list clock letters (aos-clock-register); without box the letter wakes the calling agent",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

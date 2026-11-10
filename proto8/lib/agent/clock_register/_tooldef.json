@@ -1,0 +1,53 @@
+{
+ "description": "Letters from the clock. An entry sends a fixed text to a mailbox every N cycles (at cycles N, 2N, 3N...). Leave out box to send to your own queue: the text then wakes you up as a user message every N cycles. op is add, rm or ls. Examples:\n- wake me every 10 cycles: {\"op\": \"add\", \"name\": \"check-inbox\", \"every\": 10, \"text\": \"Check data/ for new files.\"}\n- remove it: {\"op\": \"rm\", \"name\": \"check-inbox\"}\n- list all entries: {\"op\": \"ls\"}\nErrors: ArgumentsBad, OpUnknown, EntryExists, EntryMissing, ClockMissing, RegisterBad, WriteFailed.",
+ "env": [
+  "AOS_CLOCK"
+ ],
+ "errors": [
+  "ArgumentsBad",
+  "OpUnknown",
+  "EntryExists",
+  "EntryMissing",
+  "ClockMissing",
+  "RegisterBad",
+  "WriteFailed",
+  "WsMissing",
+  "LaunchFailed",
+  "CommandFailed",
+  "DaemonMissing",
+  "InstanceMissing"
+ ],
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "op": {
+    "type": "string",
+    "enum": ["add", "rm", "ls"],
+    "description": "add = new entry; rm = remove an entry by name; ls = list all entries"
+   },
+   "name": {
+    "type": "string",
+    "description": "add, rm: the entry's name (one word, like check-inbox)"
+   },
+   "every": {
+    "type": "integer",
+    "description": "add: send every this many cycles (a positive integer)"
+   },
+   "text": {
+    "type": "string",
+    "description": "add: the text of every letter"
+   },
+   "box": {
+    "type": "string",
+    "description": "add: a mailbox folder (like an agent's STACK/queue); leave it out = your own queue"
+   },
+   "replace": {
+    "type": "boolean",
+    "description": "add: true = replace an entry with the same name"
+   }
+  },
+  "required": [
+   "op"
+  ]
+ }
+}

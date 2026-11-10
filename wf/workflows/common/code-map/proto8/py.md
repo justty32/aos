@@ -9,6 +9,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
+| [`aos_clock_register.py`](../../../../../proto8/py/aos_clock_register.py) | 時鐘檔旁的 <時鐘檔名>_register.json，每格「每 every 個 cycle 往某個 aos-post 箱子寄一封信」；aos-clock 寄、aos-clock-register 改（11-10 晚 clock-letters）。 |
 | [`aos_flags.py`](../../../../../proto8/py/aos_flags.py) | 命令列旗標解析（含各支自定短名）、互動確認、公開狀態窗讀取與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 l… |
 | [`aos_sweep.py`](../../../../../proto8/py/aos_sweep.py) | 一輪（封存、保留期、封存總量、行程）與 purge 的流程、鎖、找列、報告；檔案細節在 aos_sweep_files、行程在 aos_sweep_proc；aos-sweeper 與 aos-daemon-ctl sweep 共用。 |
 | [`aos_sweep_files.py`](../../../../../proto8/py/aos_sweep_files.py) | stderr 的 copytruncate 封存（gzip）、封存檔名的 UTC 時間戳、保留期刪除、purge、.bad- 計數、放鎖殘骸；aos_sweep 叫它。 |

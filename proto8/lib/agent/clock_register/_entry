@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+# clock_register - aos-clock-register 的包裝（給腦）：add／rm／ls 時鐘登記表的格，每 every 個 cycle 往一個箱子寄一句；box 不給＝叫我的那隻自己的 queue（定時叫醒自己）。
+# 使用者 11-10 晚 clock-letters：「時鐘這塊幫我改成寄信好了，不要用跑任意aos函數。」；指令名「指令是aos-clock-register嗎？」，工具名跟著叫（代定）。
+# 介面：stdin {"op": "add"|"rm"|"ls", …}；別的鍵＝ArgumentsBad（tool_io 擋）：
+#   add {name, every, text, box?, replace?}＝aos-clock-register add --every N --box BOX --by <我的名字> [--replace] -- NAME TEXT
+#        box 不給＝我的 stack/queue（aos-agent ctl who --json 認出我）；相對路徑從工作區算。
+#   rm {name}＝aos-clock-register rm NAME；ls {}＝aos-clock-register ls（沒有格＝一句 no entries）。
+#   時鐘檔＝$AOS_CLOCK（根 .env 給的，大家都繼承）。誰都能加、能拿掉（寫得到登記表就行）。
+#   錯：stderr 與 stdout 各一行「clock_register: error: 代號 原因」、退 1；下層最後一行錯誤行的代號與原因照接（C-52 例外 ⑤，同 mailbox_*）。
+import os, signal, sys
+NAME = "clock_register"
+HELP = """\
+usage: clock_register < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Letters from the clock (aos-clock-register): op add | rm | ls. An entry sends its text to a mailbox
+every N cycles (cycles N, 2N, 3N...); without box it goes to my own queue, so it wakes me up.
+Result on stdout. On error: one line "clock_register: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib（含 lib/agent 的 mailbox_call），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib, os.path.join(_lib, "agent")] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+tool_io.start(NAME, HELP)
+signal.signal(signal.SIGINT, lambda s, f: sys.exit(130))
+import mailbox_call  # noqa: E402   叫下層與認出我的共用小函式（call、me）
+
+args = tool_io.arguments("op")
+op = args["op"]
+if op == "add":
+    tool_io.arguments("name", "text")
+    every = args.get("every")
+    if not isinstance(every, int) or isinstance(every, bool) or every <= 0:
+        tool_io.die("ArgumentsBad", "every must be a positive integer (send every N cycles)")
+    who = mailbox_call.me()
+    box = args.get("box") or os.path.join(who["stack"], "queue")
+    more = ["add", "--every", str(every), "--box", box, "--by", who["name"]] + (["--replace"] if args.get("replace") else [])
+    _, out = mailbox_call.call("aos-clock-register", more + ["--", args["name"], args["text"]])
+    print(out.strip() + ("; it comes to your own queue as a user message" if not args.get("box") else ""))
+elif op == "rm":
+    tool_io.arguments("name")
+    _, out = mailbox_call.call("aos-clock-register", ["rm", "--", args["name"]])
+    print(out.strip())
+elif op == "ls":
+    _, out = mailbox_call.call("aos-clock-register", ["ls"])
+    print("NAME\tEVERY\tBOX\tTEXT\n" + out.strip() if out.strip() else "no entries")
+else:
+    tool_io.die("OpUnknown", "op must be add, rm or ls (got %r)" % op)
