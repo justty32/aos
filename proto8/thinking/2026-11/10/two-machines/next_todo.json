@@ -164,7 +164,7 @@
    "symptom": "/mnt/c 上把 JSON 工具當成可執行檔（工具清單的種類欄會錯）",
    "direction": "改成 from daemon_ctl.entry import is_program",
    "needs": "Python 一行",
-   "status": "open"
+   "status": "已修（aos-tools kind_of 改用 is_program）"
   },
   {
    "id": "B18",

@@ -54,6 +54,7 @@ import json, os, re, shutil, signal, subprocess, sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
 import aos_flags
+from daemon_ctl.entry import is_program   # 11-10 two-machines：看內容判型（/mnt/c 每檔 0777），同 aos-exec
 
 NAME = "aos-tools"
 ENV_KEY_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")              # \Z 不是 $：$ 會放過結尾的換行
@@ -277,7 +278,7 @@ def kind_of(path):
     if os.path.isdir(path):
         return "dir"
     if os.path.isfile(path):
-        return "exe" if os.access(path, os.X_OK) else "json"
+        return "exe" if is_program(path) else "json"
     hint = "; its .aos-proto8 anchor is missing or stale here, run templates/copy-out --relink" if "/.aos-proto8/" in path else ""
     raise Fail("PathMissing", "%s does not exist (or is neither a file nor a dir)%s" % (path, hint))
 
