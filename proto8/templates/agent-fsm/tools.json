@@ -5,6 +5,8 @@
            "mailbox_peek": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/mailbox_peek"}},
            "mailbox_read": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/mailbox_read"}},
            "mailbox_send": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/mailbox_send"}},
-           "agents": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agents"}},
+           "agents_children": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agents_children"}},
+           "agents_ctl": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agents_ctl"}},
+           "agent_def": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agent_def"}},
            "memory": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/memory"},
                       "env": {"AOS_MEMORY": {"$env": "AOS_HOME", "$path": "/knowledge/aos"}}}}}
