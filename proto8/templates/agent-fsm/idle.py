@@ -3,21 +3,28 @@
 # 一次收全部、照處理順序（有序在前照名字＝寄的順序、無序在後照名字；同 aos_ws.letter_key）；cur/ 有上次認領了還沒接完的先接（P-12）。
 # 壞信（body 不是 {"role": "user", "content": 非空字串}）：aos-post done 丟掉、$AOS_STACK/mailbox_warning.txt 覆寫一行（N-16；同 aos-eca-turn）。
 # --prompt FILE＝開場白（相對路徑從範本資料夾＝AOS_CD 算）：history 空、queue 也沒好信時投一次進 queue 再收；沒給＝沒有開場白。
+# hook（lib/agent/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：好信接進 history 之前 queue_before（可改 content；攔下＝aos-post done 丟掉、
+#   不進 history、不算好信、mailbox_warning.txt 寫一行是哪個 hook 丟的），接進去並 done 之後 queue_after。hook 停下（HookFailed／HooksBad）時
+#   還沒 done 的信留在 cur/、下次重跑再接（P-12）。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）。aos-post 的 stderr 不攔、原樣透出（stdio-unify R10）。--help 印英文用法；Ctrl-C 退 130。設計：proto8/thinking/2026-11/04/loop-fsm-agent/01-設計.md § 3。
 import json, os, re, signal, subprocess, sys
 from pathlib import Path
 
 _import_paths = [str(Path(__file__).resolve().parent)]
 for _parent in Path(__file__).resolve().parents:
-    for _layer, _module in (("py", "aos_flags.py"),):
+    for _layer, _module in (("py", "aos_flags.py"), ("lib", "agent/agent_files.py")):
         _root = _parent / _layer
         if (_root / _module).is_file() and str(_root) not in _import_paths:
             _import_paths.append(str(_root))
 sys.path[:0] = _import_paths
 try:
     import aos_flags  # noqa: E402
-except ModuleNotFoundError as _error:
-    if _error.name not in ("aos_flags", "tool_io"):
+    if (Path(__file__).resolve().parent / "hooks.py").is_file():
+        import hooks  # noqa: E402
+    else:
+        from agent import hooks  # noqa: E402
+except (ModuleNotFoundError, ImportError) as _error:
+    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "hooks", "agent.hooks"):
         raise
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
           file=sys.stderr)
@@ -31,6 +38,9 @@ usage: idle.py [--prompt FILE]   (a cell of templates/agent-fsm; run by its fsm.
 The idle cell: take every letter in $AOS_STACK/queue/ into $AOS_STACK/history.jsonl.
 Exit 0 = took at least one good letter (go think); 10 = no letter.
 --prompt FILE: an opening message put into the queue once while history is empty.
+Hooks (hooks.json declared in interfaces.json): queue_before runs before a good letter goes
+into history (it may change content, or drop the letter: done, not in history, one line in
+mailbox_warning.txt); queue_after runs after it went in. A failing hook = HookFailed, exit 1.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
@@ -135,14 +145,31 @@ def take():
             post(["done", box, sig])
             write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s rejected: %s\n" % (sig, why.replace("\n", " ")))
             continue
+        content = body["content"]
+        r = fire("queue_before", {"letter": sig, "content": content})
+        if r["blocked"]:                         # hook 丟掉這封：收掉、不進 history、不算好信
+            post(["done", box, sig])
+            write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s dropped by hook %s\n" % (sig, r["hook"]))
+            continue
+        content = r["data"]["content"]
         try:
             with open(history_path, "a", encoding="utf-8") as f:     # 一次寫一整行，只附加（P-41）
-                f.write(json.dumps({"role": "user", "content": body["content"]}, ensure_ascii=False) + "\n")
+                f.write(json.dumps({"role": "user", "content": content}, ensure_ascii=False) + "\n")
         except OSError as e:
             die("WriteFailed", "cannot append to history.jsonl: %s" % e)
         post(["done", box, sig])                 # 接進 history 就算收到（使用者 11-04「接進對話紀錄就收」）
         good += 1
+        fire("queue_after", {"letter": sig, "content": content})
     return good
+
+
+def fire(event, data):
+    """跑 hook；hook 停下＝這格的錯（HookFailed／HooksBad）、退 1。"""
+    try:
+        return hooks.fire(event, data, os.environ.get("AOS_CD") or ".", stack,
+                          warn=lambda line: aos_flags.warn("agent-fsm", line))
+    except (hooks.HookFailed, hooks.HooksBad) as e:
+        die(type(e).__name__, str(e))
 
 
 def opening():

@@ -1101,6 +1101,36 @@
    "why": "11-10 晚 self-family：eca 上一輪結束時 history 的 sha256；不帶走＝到別台本來就開新對話、帶紀錄過去（同 .session_home）。",
    "seen": [],
    "ignored_now": "對：ignored（**/.*）"
+  },
+  {
+   "id": "G091",
+   "pattern": "stacks/**/hooks.json",
+   "writer": "proto8/cmd/aos-agent（hook add／rm）、人手寫",
+   "class": "carry",
+   "in_git": "進",
+   "why": "11-10 晚 self-family/hook：這隻自己那份 hook 清單（疊在定義的 hooks.json 上，同名蓋過、null 關掉）；使用者加的設定，要跟著 agent 走。",
+   "seen": [],
+   "ignored_now": "對：tracked（沒有規則擋）"
+  },
+  {
+   "id": "G092",
+   "pattern": "stacks/**/hooks/**",
+   "writer": "proto8/lib/agent/hooks.py（_run：event.json；aos-exec --stack 的小格）",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "11-10 晚 self-family/hook：每個 hook 的小格（最後一次的 event.json 與 hook 自己的執行中狀態），比照 tools/<名>/ 是執行期的東西，每次觸發重寫。",
+   "seen": [],
+   "ignored_now": "對：ignored（cmd/aos-agent/stack.gitignore 的 **/hooks/）"
+  },
+  {
+   "id": "G093",
+   "pattern": "stacks/**/hook_tools_seen.json",
+   "writer": "proto8/lib/agent/hooks.py（tools_added）",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "11-10 晚 self-family/hook：tool_added 上次看到的工具名單；不帶走＝到別台第一次只記不觸發。",
+   "seen": [],
+   "ignored_now": "對：ignored（cmd/aos-agent/stack.gitignore 的 **/hook_tools_seen.json）"
   }
  ]
 }

@@ -19,7 +19,7 @@ def declared_files(folder):
     if not isinstance(decl, dict):
         raise ValueError("aos-agent in %s must be a JSON object" % path)
     result = {}
-    for key in ("tools", "llm"):
+    for key in ("tools", "llm", "hooks"):
         if key not in decl:
             continue
         rel = decl[key]

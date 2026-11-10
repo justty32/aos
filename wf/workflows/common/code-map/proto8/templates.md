@@ -22,6 +22,7 @@
 | [`body.json`](../../../../../proto8/templates/agent-fsm/body.json) | argv：`aos-loop loop.json` |
 | [`brain.py`](../../../../../proto8/templates/agent-fsm/brain.py) | think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。 |
 | [`fsm.json`](../../../../../proto8/templates/agent-fsm/fsm.json) | 入口 `aos-fsm $AOS_CF`；鍵：start、states |
+| [`hooks.json`](../../../../../proto8/templates/agent-fsm/hooks.json) | Hooks of this agent: aos functions run when an event happens (queue_before, queue_after, tool_before, tool_after, brain_failed, tool_added); the stac… |
 | [`idle.py`](../../../../../proto8/templates/agent-fsm/idle.py) | idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。 |
 | [`interfaces.json`](../../../../../proto8/templates/agent-fsm/interfaces.json) | 設定（鍵：aos-agent、aos-observed） |
 | [`llm.json`](../../../../../proto8/templates/agent-fsm/llm.json) | （檔頭沒有一句話） |
@@ -30,6 +31,7 @@
 | [`tests/test_batch3.py`](../../../../../proto8/templates/agent-fsm/tests/test_batch3.py) | Verify daemon-managed fake-brain parent and child observations through public interfaces. |
 | [`tests/test_cells.py`](../../../../../proto8/templates/agent-fsm/tests/test_cells.py) | Verify task context, tool limits, and best-effort observations with local fake commands. |
 | [`tests/test_cooldown.py`](../../../../../proto8/templates/agent-fsm/tests/test_cooldown.py) | Verify the wait cell's cooldown after outside failures (two-machines 06) with a fake aos-llm on PATH. |
+| [`tests/test_hooks.py`](../../../../../proto8/templates/agent-fsm/tests/test_hooks.py) | Test the hooks of agent-fsm (lib/agent/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added. |
 | [`tests/test_integration.py`](../../../../../proto8/templates/agent-fsm/tests/test_integration.py) | Verify agent cells through the real local kernel, llm_fake endpoint, and wall_clock tool. |
 | [`tests/test_own_tools.py`](../../../../../proto8/templates/agent-fsm/tests/test_own_tools.py) | Test that brain and act use the agent's own tools registry in its stack ("$override" of the definition's; 11-10 aos-tools-cli step 4), and fall back … |
 | [`tests/test_selfheal.py`](../../../../../proto8/templates/agent-fsm/tests/test_selfheal.py) | Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools. |

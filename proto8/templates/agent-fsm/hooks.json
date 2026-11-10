@@ -1,0 +1,1 @@
+{"description": "Hooks of this agent: aos functions run when an event happens (queue_before, queue_after, tool_before, tool_after, brain_failed, tool_added); the stack copy of this file overrides it by name, null turns one off.", "hooks": {}}

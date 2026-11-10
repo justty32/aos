@@ -45,6 +45,9 @@
 **/think/sent.json
 # llm kernel 印過的 budget.senders 提醒（含這台的絕對路徑；換台重新判、重新印，11-10 晚 two-machines B09）
 **/budget_warned.txt
+# hook 的小格（最後一次的 event.json 等執行中狀態）與 tool_added 上次看到的名單（11-10 晚 self-family/hook）；hooks.json（這隻自己那份清單）要留
+**/hooks/
+**/hook_tools_seen.json
 # Python 匯入快取可重建
 **/__pycache__/
 

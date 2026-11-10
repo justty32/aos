@@ -13,6 +13,8 @@
 #   （11-10 TS，圖紙 07 K01：知識庫一時讀不到不擋問腦，狀態不壞；原本是 MemoryFailed 退 1）。
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝不給工具）；腦看到的工具名＝登記名。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝改用這隻自己那份（aos-agent tools add／rm 寫的，只存差異、"$override" 指回定義那份，11-10）。
+# hook（lib/agent/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：有 tool_added hook 時，工具清單比上次（$AOS_STACK/hook_tools_seen.json）
+#   多出來的名字一個觸發一次（第一次只記不觸發；沒有這種 hook＝刪那份檔）。hook 停下＝HookFailed／HooksBad 退 1。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1（P-20）。--help 印英文用法；Ctrl-C 退 130。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
 import json, os, signal, subprocess, sys
 from pathlib import Path
@@ -30,8 +32,12 @@ try:
         from agent_files import declared_files  # noqa: E402
     else:
         from agent.agent_files import declared_files  # noqa: E402
-except ModuleNotFoundError as _error:
-    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files"):
+    if (Path(__file__).resolve().parent / "hooks.py").is_file():
+        import hooks  # noqa: E402
+    else:
+        from agent import hooks  # noqa: E402
+except (ModuleNotFoundError, ImportError) as _error:
+    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "hooks", "agent.hooks"):
         raise
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
           file=sys.stderr)
@@ -51,6 +57,8 @@ tools) and write $AOS_STACK/think/request.json. Exit 0 = written (go wait); 10 =
 to the system message (skipped when NAME is not among the tools). If that call fails or
 takes over 30 s, one warning line goes to stderr, the system message says "Knowledge base is
 not available right now: <reason>" instead, and the request is written as usual.
+Hooks: with a tool_added hook, each tool name new since the last run (hook_tools_seen.json;
+the first run only records) fires it once. A failing hook = HookFailed, exit 1.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 USAGE = HELP.splitlines()[0].removeprefix("usage: ")
@@ -146,10 +154,25 @@ if tools_file and os.path.isfile(tools_file):
         die("ToolsBad", "aos-tools cannot start: %s" % e)
     if r.returncode != 0:
         die("ToolsBad", "aos-tools ls exited %d" % r.returncode)
-    for t in json.loads(r.stdout):
+    listed = json.loads(r.stdout)
+    for t in listed:
         function = {"name": t["name"]}
         function.update({k: t["tooldef"][k] for k in ("description", "parameters") if k in t["tooldef"]})
         tools.append({"type": "function", "function": function})
+else:
+    listed = []
+
+try:                                             # tool_added：比上次多出來的名字，一個一次
+    cd = os.environ.get("AOS_CD") or "."
+    for added, where in hooks.tools_added(stack, [(t["name"], os.path.abspath(t["path"]) if t.get("path") else None)
+                                                  for t in listed],
+                                          hooks.has("tool_added", cd, stack)):
+        hooks.fire("tool_added", {"name": added, "path": where}, cd, stack,
+                   warn=lambda line: aos_flags.warn("agent-fsm", line))
+except (hooks.HookFailed, hooks.HooksBad) as e:
+    die(type(e).__name__, str(e))
+except OSError as e:
+    die("WriteFailed", "cannot write %s: %s" % (os.path.join(stack, hooks.SEEN), e))
 
 system_text = ""
 if system_file:

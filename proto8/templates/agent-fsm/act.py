@@ -11,6 +11,10 @@
 #   history 裡沒有 assistant、aos-tools 起不來。
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝改用這隻自己那份（aos-agent tools add／rm 寫的，只存差異、"$override" 指回定義那份，11-10）。
+# hook（lib/agent/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：確認登記過、arguments 是 JSON 之後 tool_before（可改 arguments；
+#   攔下＝不跑，tool 訊息＝hook 的 stdout，空就「(tool NAME blocked by hook HOOK)」，不記 observed、不觸發 tool_after）；
+#   跑完、content 組好（含失敗尾巴）之後、接進 history 之前 tool_after（可改 content）。history 裡 assistant 的 tool_calls 不動。
+#   hook 停下＝HookFailed／HooksBad 退 1（這個 id 還沒有 tool 訊息，重跑會再跑一次）。
 # 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
 import json, os, signal, subprocess, sys, time
 from pathlib import Path
@@ -31,8 +35,13 @@ try:
         from agent_files import declared_files  # noqa: E402
     else:
         from agent.agent_files import declared_files  # noqa: E402
-except ModuleNotFoundError as _error:
-    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "metainfo", "observed", "observed_children"):
+    if (Path(__file__).resolve().parent / "hooks.py").is_file():
+        import hooks  # noqa: E402
+    else:
+        from agent import hooks  # noqa: E402
+except (ModuleNotFoundError, ImportError) as _error:
+    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "metainfo", "observed", "observed_children",
+                           "hooks", "agent.hooks"):
         raise
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
           file=sys.stderr)
@@ -51,6 +60,9 @@ Timeout: tool metainfo timeout_ms (ms), otherwise no limit; TERM the group, KILL
 On tool failure or timeout, append the last 2048 bytes of stderr to the tool message;
 the full stderr is also passed through. Tool failures are returned to the brain; exit 0.
 Append tool name, code, elapsed_ms, in_bytes and out_bytes to observed.jsonl (best effort).
+Hooks: tool_before may change arguments or block the call (the tool message is then the
+hook's stdout, or "(tool NAME blocked by hook HOOK)"); tool_after may change the content.
+A failing hook = HookFailed, exit 1.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
@@ -122,6 +134,15 @@ def append(message):
         die("WriteFailed", "cannot append to history.jsonl: %s" % e)
 
 
+def fire(event, data):
+    """跑 hook；hook 停下＝這格的錯（HookFailed／HooksBad）、退 1。"""
+    try:
+        return hooks.fire(event, data, os.environ.get("AOS_CD") or ".", stack,
+                          warn=lambda line: aos_flags.warn("agent-fsm", line))
+    except (hooks.HookFailed, hooks.HooksBad) as e:
+        die(type(e).__name__, str(e))
+
+
 def stop_group(p):
     """TERM 整群、寬限 2 秒後 KILL；群長先退也不能漏掉忽略 TERM 的孫行程。"""
     try:
@@ -176,10 +197,18 @@ for call in calls:
     try:
         if not isinstance(arguments, str):
             raise ValueError("arguments is not a string")
-        json.loads(arguments)
+        parsed = json.loads(arguments)
     except ValueError as e:
         append({"role": "tool", "tool_call_id": cid, "content": aos_flags.error_line("act", "ArgumentsBad", "%s: %s" % (name, e)) + "\n"})
         continue
+    hooked = fire("tool_before", {"name": name, "id": cid, "arguments": parsed})
+    if hooked["blocked"]:                        # 攔下：不跑、不記 observed、不觸發 tool_after
+        append({"role": "tool", "tool_call_id": cid,
+                "content": hooked["text"] if hooked["text"].strip() else "(tool %s blocked by hook %s)" % (name, hooked["hook"])})
+        continue
+    if "arguments" in hooked["changed"]:          # 改過的只交給工具，history 裡的 tool_calls 不動
+        parsed = hooked["data"]["arguments"]
+        arguments = json.dumps(parsed, ensure_ascii=False)
     tool_stack = Path(stack) / "tools" / name
     tool_stack.mkdir(parents=True, exist_ok=True)
     clear_child(tool_stack)
@@ -228,5 +257,7 @@ for call in calls:
         content += "%s(tool %s exit code %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, p.returncode)
     if (timed_out or p.returncode != 0) and err:
         content += "stderr (last 2048 bytes at most):\n%s\n" % err[-2048:].decode("utf-8", "replace").strip()
+    content = fire("tool_after", {"name": name, "id": cid, "arguments": parsed, "content": content,
+                                  "code": None if timed_out else p.returncode, "timed_out": timed_out})["data"]["content"]
     append({"role": "tool", "tool_call_id": cid, "content": content})
 sys.exit(0)
