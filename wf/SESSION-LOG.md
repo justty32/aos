@@ -8,6 +8,7 @@
 
 ## 最新進度
 
+- **open｜self-family（使用者 11-10 晚 self_history 五題「1.全給，風險自己擔。2.可以。3.可選，默認搬到旁邊(可以選要搬到哪) 4.接受縮水版。5.對」）**：施工中——`aos-agent history` → `self_history` 包裝 → eca 縮水版 → 驗收（假腦、gemma 真腦）→ [self-family](../proto8/thinking/2026-11/10/self-family/README.md)
 - **open｜json-memory（使用者 11-10 晚「記憶庫這東西，我原本以爲會是純json做的」「直接開工」）**：圖紙已出（[02～05](../proto8/thinking/2026-11/10/json-memory/README.md)，代定 15 條在 05）；施工中：S1 工具重寫（memory／memory_write，鎖拿掉）與 S2 `knowledge/aos` 轉檔同時做 → S3 最小可玩驗收（fsm 假腦、gemma 真腦、eca 不燒額度的部分）→ S4 連帶（memory_export、memory_sync、文件、條文加註）
 - **open｜11-10 晚家機施工隊長（使用者授權隨意 push；照 11-10 已裁順序做、不砍範圍）**：① B01 後半做完（絕對路徑原樣存、`--ws-json`／`--stack-json` 純字串照字面送；[16](../proto8/thinking/2026-11/10/two-machines/16-B01後半施工結果.md)，代定四條在裡面）；② templates-cp（施工中）；③ cli-sweep 甲6、Q3、Q6 做完（[10c](../proto8/thinking/2026-11/10/cli-sweep/10c-施工結果-甲6Q3Q6.md)：ctl 寄信前先核 daemon、`aos-agent ctl rm` 預設留 stack／`--purge` 才刪、help 第一屏三對停與起表；Q1 施工前再確認）；接著 ④ aos-tools lv6 連帶 → ⑤ two-machines 其餘
 - **open｜two-machines（使用者 11-10 午後「cp過去，起daemon她就自動繼續了」「aos image...拿掉吧」）**：施工與文件共 16 個 commit（`23511666f`…`cbf0f07fe`，WSL 本地 main、**待 push**，清單 `git log origin/main..main`）；文件已審、已 commit；續行點＝[13 留給明天](../proto8/thinking/2026-11/10/two-machines/13-施工結果/03-不同之處與留給明天.md#留給明天大修)（日常會碰到的只剩 B01：專案外的 stack／定義換了相對位置要 rm 再 add；next_todo open 17 條）；使用者親手驗見 WAIT_USER 的 T7
