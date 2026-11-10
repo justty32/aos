@@ -182,7 +182,7 @@
    "symptom": "cli_session.py 檔頭講 tools 的註解沒提指示詞；wf/workflows/dev-env.md 還寫 copy-out「路徑改絕對」",
    "direction": "順手改",
    "needs": "文件",
-   "status": "open"
+   "status": "cli_session.py 檔頭已補指示詞（11-10 晚家機）；dev-env.md 的 copy-out 那句交 templates-cp（copy-out 整支要刪，跟著改）"
   },
   {
    "id": "B20",
@@ -218,7 +218,7 @@
    "symptom": "add 的說明寫「ctl rm, then ctl add --auto-restart (rm keeps the stack)」；aos-agent ctl rm 其實會刪 stack，而且不在終端機時不問。照說明做會丟 history；aos-daemon-ctl rm 才留 stack",
    "direction": "說明改成 aos-daemon-ctl -d <stack> rm <名> 再 aos-agent ctl add（11-10 TD 實跑：stack 留著、history 接著）",
    "needs": "Python 說明一句",
-   "status": "已改：兩支 add 的 --help 由隊長改成 aos-daemon-ctl rm（留 stack）"
+   "status": "已改：兩支 add 的 --help 由隊長改成 aos-daemon-ctl rm（留 stack）；11-10 晚 cli-sweep Q3 起 aos-agent ctl rm 預設也留 stack（--purge 才刪），add 的 --help 改回 aos-agent ctl rm"
   }
  ]
 }

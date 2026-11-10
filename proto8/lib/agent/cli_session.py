@@ -26,7 +26,8 @@
 #   畫面沒開 → 非互動：claude -p --resume <id>（第一次 --session-id <新 id>）、codex exec resume <id> -（第一次 codex exec -）
 #   畫面開著 → 從 pty 送字：tmux paste-buffer 貼上＋Enter，等 hook 在 turns.jsonl 接一行（有人接著看、或 claude 正在跑一輪＝SessionBad；
 #             on_busy="answer" 時不退讓：照樣貼、busy.txt 等它消失，10-31）
-# 工具（11-03 eca-tools，thinking 2026-11-03-eca-tools）：cli.json 選填 tools＝aos-tools 的登記檔（相對路徑從 cli.json 的資料夾算），
+# 工具（11-03 eca-tools，thinking 2026-11-03-eca-tools）：cli.json 選填 tools＝aos-tools 的登記檔（相對路徑從 cli.json 的資料夾算；
+#   也可寫指示詞，例 {"$env": "AOS_HOME", "$path": "/lib/x/tools.json"}，每次讀才解、不寫回，11-10 two-machines TC），
 #   沒寫＝cli.json 同層有 tools.json 就用它（使用者 11-03「如果cli.json沒有指定，那就去找默認的tools.json」）、沒有＝不接工具；
 #   選填 tools_flags＝字串陣列，原樣插在 aos-mcp 的 args 裡（例 ["--enable-logs"]）。有登記檔時每次起 CLI 前接上
 #   aos-mcp --ws <工作區> --stack <stack> [tools_flags…] <登記檔絕對路徑>：claude＝寫小格 mcp.json、加 --mcp-config 它 --allowedTools mcp__aos；
