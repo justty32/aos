@@ -10,6 +10,8 @@
 #     原本照舊的 request.json 重寄、又是同一個錯，要人手動把 stage.txt 寫成 think）。llm.json 讀不懂＝當 {}（brain 重組時會報 CfgBad）。
 #   寄之前也看 request.json 是不是從現在的 history 組的（11-10 TS，I2 L01：git reset／clone 後，這台舊的 request.json 會擺在新的 history 旁邊）：
 #     messages 最後一則跟 history.jsonl 最後一則（都 JSON 正規化：sort_keys）不一樣＝退 11 回 think 重組、不寄；history 空、request 沒 messages＝不比。
+#     history.jsonl 比 request.json 新（mtime）也算（11-10 晚 self-family：aos-agent history／self_history 改了中間幾行、最後一則沒變）。
+#     已寄出的不追：回信照收、接在改過的 history 後面（那封是照舊的 history 答的；使用者「風險自己擔」）。
 # 信不見了（11-10 TS，I3 C2）：recv 回 10、而 $AOS_LLM_KERNEL（解法同 aos-llm：相對＝從 $AOS_DAEMON 算，沒有＝cwd）解得到資料夾時，
 #   看 <kernel>/requests/{new,cur}/<名>（只讀不寫）；兩處都沒有＝再 recv 一次（kernel 先寄回信才刪 cur，這次不會誤判）；
 #   還是 10＝刪 pending.txt、印一行 warning、退 10（下一拍 request.json 在就重寄，不在就退 11 回 think 重組）。
@@ -33,6 +35,8 @@
 #     kernel 資料夾在、send 還是失敗（例 body 壞）＝照冷卻間隔重試，不每拍刷屏。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1——StackMissing、BrainFailed（kernel 回錯）、
 #   SendFailed（aos-llm 起不來、或 send 退 0 卻沒印信件名稱）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
+# hook（lib/agent/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：BrainFailed、SendFailed（send 退非 0、或退 0 沒印信名）、ReplyBad
+#   照原本行為退出／記冷卻之前觸發 brain_failed（name＝代號、reason＝這格那行的原因）；hook 停下＝HookFailed／HooksBad 退 1（冷卻不記）。
 # --help 印英文用法；Ctrl-C 退 130。
 import json, os, signal, subprocess, sys, time
 from pathlib import Path
@@ -55,9 +59,13 @@ try:
         import cooldown  # noqa: E402
     else:
         from agent import cooldown  # noqa: E402
+    if (Path(__file__).resolve().parent / "hooks.py").is_file():
+        import hooks  # noqa: E402
+    else:
+        from agent import hooks  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
     if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "observed", "observed_children",
-                           "cooldown", "agent.cooldown"):
+                           "cooldown", "agent.cooldown", "hooks", "agent.hooks"):
         raise
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
           file=sys.stderr)
@@ -73,7 +81,7 @@ The wait cell: send $AOS_STACK/think/request.json to the llm kernel (aos-llm sen
 each later run look for the reply (aos-llm recv). Exit 0 = reply appended to history (go act);
 10 = not yet; 11 = no pending request and request.json is missing, brain settings changed,
 or request.json was built from an older history (its last message is not the last line of
-history.jsonl); go back to think to rebuild. A pending request is received even without
+history.jsonl, or history.jsonl is newer than it); go back to think to rebuild. A pending request is received even without
 request.json; a missing think/reply mailbox is created first (aos-post init).
 Waiting never times out here: after every full 10 minutes without a reply (counted from
 think/pending.txt) one warning line goes to stderr, and the cell keeps waiting. Other ticks
@@ -93,6 +101,8 @@ While that cooldown runs, a request about to be sent is held back (exit 10, stay
 once it is due the same request is sent again. A SendFailed cooldown recorded while the
 kernel folder was missing counts as due as soon as $AOS_LLM_KERNEL resolves to a folder.
 A good reply deletes cooldown.json.
+Hooks: brain_failed runs on BrainFailed, SendFailed and ReplyBad before the cell goes on as
+above (name = that code, reason = this cell's reason). A failing hook = HookFailed, exit 1.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
@@ -157,6 +167,15 @@ def forget_warned():
         pass
     except OSError as e:
         aos_flags.warn("agent-fsm", "cannot remove %s: %s" % (warned_path, e))
+
+
+def brain_failed(code, reason):
+    """問腦沒成：先跑 brain_failed hook（match 比代號）；hook 停下＝這格的錯、退 1。之後呼叫的人照原本行為。"""
+    try:
+        hooks.fire("brain_failed", {"name": code, "reason": reason}, os.environ.get("AOS_CD") or ".", stack,
+                   warn=lambda line: aos_flags.warn("agent-fsm", line))
+    except (hooks.HookFailed, hooks.HooksBad) as e:
+        die(type(e).__name__, str(e))
 
 
 def record_failure(code, reason):
@@ -254,7 +273,12 @@ def stale_request(body):
     except ValueError:
         return False                             # history 壞了交給 brain 報 HistoryBad
     norm = lambda m: json.dumps(m, sort_keys=True, ensure_ascii=False)
-    return norm(messages[-1]) != norm(last)
+    if norm(messages[-1]) != norm(last):
+        return True
+    try:                                         # 最後一則一樣、但 history 在請求之後被改過（aos-agent history 改了中間幾行；11-10 晚 self-family）
+        return os.stat(history_path).st_mtime_ns > os.stat(request).st_mtime_ns
+    except OSError:
+        return False
 
 
 def recv(quiet=True):
@@ -308,12 +332,14 @@ if not name:                                     # 還沒寄
     if r.returncode != 0:                        # kernel 不在等：記冷卻、warning、留在 wait（不停下，改了 P-20 這一處）
         gone = kernel_dir() is None
         reason = "aos-llm send exited %d" % r.returncode + (" " + KERNEL_GONE if gone else "")
+        brain_failed("SendFailed", reason)
         record_failure("SendFailed", reason)
         aos_flags.warn("agent-fsm", "aos-llm send exited %d (its reason is above); the request stays and is sent again "
                        "%s" % (r.returncode, "once AOS_LLM_KERNEL is a folder or the cooldown ends" if gone
                                else "when the cooldown ends"))
         sys.exit(NOT_YET)
     if not name:
+        brain_failed("SendFailed", "aos-llm send exited 0 but printed no letter name")
         die("SendFailed", "aos-llm send exited 0 but printed no letter name")
     forget_warned()                              # 新的一封：提醒從頭算
     write_atomic(pending, name + "\n")
@@ -371,14 +397,17 @@ def observe(reply):
 
 if r.returncode != 0:                            # kernel 回錯：aos-llm 已在 stderr 說了，這格只多寫自己一行
     observe({})
+    brain_failed("BrainFailed", "aos-llm recv exited %d (its reason is above)" % r.returncode)
     record_failure("BrainFailed", "aos-llm recv exited %d" % r.returncode)
     die("BrainFailed", "aos-llm recv exited %d (its reason is above)" % r.returncode)
 try:
     reply = json.loads(r.stdout)
     message = reply.get("message") if isinstance(reply, dict) else None
 except ValueError as e:
+    brain_failed("ReplyBad", "aos-llm recv did not print JSON: %s" % e)
     die("ReplyBad", "aos-llm recv did not print JSON: %s" % e)
 if not isinstance(message, dict) or message.get("role") != "assistant":
+    brain_failed("ReplyBad", "message in the reply is not an assistant message: %s" % r.stdout.strip()[:200])
     die("ReplyBad", "message in the reply is not an assistant message: %s" % r.stdout.strip()[:200])
 observe(reply)
 try:

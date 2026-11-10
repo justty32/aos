@@ -264,6 +264,18 @@ class StaleRequest(Base):
         self.wait(11)
         self.assertEqual(self.sends(), 0)
 
+    def test_history_edited_after_request_rebuilds(self):
+        """11-10 晚 self-family：中間幾行被 aos-agent history 改了、最後一則一樣＝history 比 request.json 新＝重組。"""
+        self.history([{'role': 'user', 'content': 'summary'}, USER])
+        self.request([{'role': 'user', 'content': 'old'}, {'role': 'assistant', 'content': 'a'}, USER])
+        req = self.stack / 'think/request.json'
+        os.utime(self.stack / 'history.jsonl', ns=(req.stat().st_mtime_ns + 10**9,) * 2)
+        self.wait(11)
+        self.assertEqual(self.sends(), 0)
+        os.utime(self.stack / 'history.jsonl', ns=(req.stat().st_mtime_ns,) * 2)   # 同一刻（brain 剛組好）＝照寄
+        self.wait(10)
+        self.assertEqual(self.sends(), 1)
+
     def test_same_message_with_other_key_order_sends(self):
         msg = {'role': 'user', 'content': 'hi', 'name': 'bob'}
         (self.stack / 'history.jsonl').write_text('{"name": "bob", "content": "hi", "role": "user"}\n\n')

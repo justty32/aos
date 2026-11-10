@@ -1081,6 +1081,26 @@
     "running"
    ],
    "ignored_now": "對：ignored（cmd/aos-agent/stack.gitignore 的 **/budget_warned.txt）"
+  },
+  {
+   "id": "G089",
+   "pattern": "stacks/**/history_removed.jsonl",
+   "writer": "proto8/cmd/aos-agent/aos_agent/history.py（keep）",
+   "class": "carry",
+   "in_git": "進",
+   "why": "11-10 晚 self-family：aos-agent history／self_history 改掉的原文（預設搬到 history 旁邊）；跟 history 一樣是這隻的紀錄，要帶走。",
+   "seen": [],
+   "ignored_now": "對：tracked（沒有規則擋）"
+  },
+  {
+   "id": "G090",
+   "pattern": "stacks/**/.history_sum",
+   "writer": "proto8/cmd/aos-eca/bin/aos-eca-turn（note_sum）",
+   "class": "local",
+   "in_git": "不進",
+   "why": "11-10 晚 self-family：eca 上一輪結束時 history 的 sha256；不帶走＝到別台本來就開新對話、帶紀錄過去（同 .session_home）。",
+   "seen": [],
+   "ignored_now": "對：ignored（**/.*）"
   }
  ]
 }
