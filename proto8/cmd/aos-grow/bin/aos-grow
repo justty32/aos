@@ -6,7 +6,7 @@
   aos-grow [--dry-run] up --to file|dir [--name NAME] [--take PATH]... CALLER
   aos-grow [--dry-run] down CALLER
 
-命令列形狀照 CONVENTION P-44（11-04）：旗標在位置參數前面（子命令的旗標接在子命令後、CALLER 前）、`--` 結束旗標、`--x V`／`--x=V`。
+命令列形狀照 CONVENTION P-44（11-10 續：旗標寫在它那一層名字之後任何位置，--dry-run 也可寫在 CALLER 後）、`--` 結束旗標、`--x V`／`--x=V`。
 
 up：
   那格是內嵌單子（有 argv 的物件）→ --to file：寫成 設定檔旁的 NAME.json（就是那張單子）；--to dir：寫成 NAME/_entry（同一張單子）。

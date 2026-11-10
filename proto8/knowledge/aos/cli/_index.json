@@ -9,7 +9,7 @@
   "_description": "Read the program name, error code and reason before choosing whether to retry."
  },
  "flags.json": {
-  "_description": "Put each flag at the level that owns it, before that level's positional arguments."
+  "_description": "A flag may go anywhere after the name of the level that owns it; text handed on as it is and -- end flag reading."
  },
  "grow_screen.json": {
   "_description": "Preview function moves with aos-grow; access an ECA screen through aos-agent when possible."
