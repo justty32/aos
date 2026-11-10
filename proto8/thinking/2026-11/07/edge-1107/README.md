@@ -23,6 +23,8 @@
 
 - 舊 state 回音同 seq 會略過，首拍新 seq 照做；**state.json 壞掉＋ctl.json 留著舊 stop＝重起就停**。systemd 自動重起會起停迴圈；已裁維持現狀，先手動清掉 ctl.json 再起。
 
+> 11-10 改讀（prefix-fixes 坑-08）：11-09 起 `ctl_seq` 搬到 `state_flux`；本頁 E1 的「state.json 被刪或壞」讀成「state_flux 被刪或壞」。源碼 `aos-loop/src/engine/window.cpp` 的 `read_old_state` 只從 state_flux 接回去重用的 `ctl_seq`。
+
 ### E2 判官 keep_ordered（是，另有 bug）
 
 - 正常及轉寄後重起能代回原信名；`judge_ordered.json` 壞掉會每輪退 `StateBad`，回信卡住，沒有對照的回信會 warning 後丟掉。對照刪掉而原信還在 cur 的重送問題已修；仍有兩個中斷窗口，見下段代定。

@@ -2,7 +2,7 @@
 
 ← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
 
-改完怎麼確認沒壞。**11-04 起沒有自動測試**：使用者「感覺proto8/test已經成為我們的負擔了，能夠精簡嗎？我希望能大刪特刪」「激進版，不用說，甚至我希望整個刪掉也OK。」「ctest也可以刪掉吧」「這個鐵律刪掉，不用ctest」——`proto8/tests`、`proto8/impls/*/tests`、`core/*/tests` 與 ctest 設定全刪（盤點與清單：[thinking 11-04 tests-trim](../../proto8/thinking/2026-11/04/tests-trim.md)）。驗證只剩「**build 得過**」，行為對不對靠手跑。
+改完怎麼確認沒壞。**11-04 起沒有自動測試**：使用者「感覺proto8/test已經成為我們的負擔了，能夠精簡嗎？我希望能大刪特刪」「激進版，不用說，甚至我希望整個刪掉也OK。」「ctest也可以刪掉吧」「這個鐵律刪掉，不用ctest」——`proto8/tests`、`proto8/impls/*/tests`、`core/*/tests` 與 ctest 設定全刪（盤點與清單：[thinking 11-04 tests-trim](../../proto8/thinking/2026-11/04/tests-trim.md)）。驗證只剩「**build 得過**」，行為對不對靠手跑。（11-10 註：之後各處又長回一些定向 〔proto8 現役約 48 支，如 、、〕；build 仍是唯一統一必跑，改到哪就挑那處既有的定向測試跑，[prefix-fixes 坑-55](../../proto8/thinking/2026-11/04/tests-trim.md)。）
 
 **何時用**：改完程式要確認沒壞、重構前要記基準。
 **何時不用**：環境還沒裝好、不知道指令哪來 → [dev-env](dev-env.md)；build 紅了要查成因 → [investigation](investigation.md)。

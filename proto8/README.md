@@ -27,7 +27,7 @@
 | [cases/](cases/README.md) | measure 的共用考題、固定答案與比對器契約；smoke 用 math 的兩題驗門與自洽 |
 | [kernel/](kernel/README.md) | llm-kernel（問腦的那台）、daemon-judge、procs-kernel（判官的兩種掛法） |
 | [templates/](templates/README.md) | 兩個 agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent，11-04） |
-| [knowledge/](knowledge/README.md) | 知識庫：層級式記憶工具 `lib/agent/memory` 讀的資料夾樹（`AOS_MEMORY` 指它、多隻 agent 共用）；第一本是 `aos/`——給小模型的 aos 體系知識（根＋九節，英文；11-05） |
+| [knowledge/](knowledge/README.md) | 知識庫：層級式記憶工具 `lib/agent/memory` 讀的資料夾樹（`AOS_MEMORY` 指它、多隻 agent 共用）；第一本是 `aos/`——給小模型的 aos 體系知識（根＋八個子節點，英文；11-05） |
 | [extras/](extras/README.md) | langs：Janet／Lua 寫 aos |
 | [archive/](archive/README.md) | 封存（llm-kernel 示範、self-improve、nvim 外掛、Lua／Janet agent_dan、aos-chat；清單在它的 README） |
 | [thinking/](thinking/README.md) | 討論紀錄（使用者原文、決定、結論） |
@@ -60,4 +60,4 @@
 
 - 討論先記下來，再動手；程式等想法穩了才開。
 - proto7-2 的東西不搬過來，要用再去拿。
-- 派 AI 做設計思考前，先讓它**通讀 CONCEPTS、NORMS 與 CONVENTION 全部**再動手（10-15 使用者：「現在的概念和規範應該都不多吧，後續交給fable思考的時候，讓他們通讀一遍再去做」）；交回的稿先對過 C-48（指示詞只剩 $env）、C-68～C-70（資料夾＝程式、aos 只訂環境變數）、KISS、層徹底切割、少用 sh，不合的打回；跟原則相撞的帶著衝突來問使用者（wf user.md「規劃交給 fable、只把衝突帶給他」），不原樣端給使用者。
+- 派 AI 做設計思考前，先讓它**通讀 CONCEPTS、NORMS 與 CONVENTION 全部**再動手（10-15 使用者：「現在的概念和規範應該都不多吧，後續交給fable思考的時候，讓他們通讀一遍再去做」）；交回的稿先對過 C-48（指示詞有 $env、$ref 兩個）、C-68～C-70（資料夾＝程式、aos 只訂環境變數）、KISS、層徹底切割、少用 sh，不合的打回；跟原則相撞的帶著衝突來問使用者（wf user.md「規劃交給 fable、只把衝突帶給他」），不原樣端給使用者。

@@ -40,7 +40,7 @@
 //                   包（11-05 feat-proto 件 3）：那包的 budget 到頂（spent_pack，數那包在飛＋新掛）＝"refuse" 那封回 BudgetMissing、"wait" 那封留在 new/、
 //                   別包照跑（不降級換包）；寄件人（11-05 feat-proto 件 5）：budget.senders 列了信封 sender 而那人到頂（spent_of，數那人在飛＋新掛）＝同包的做法；
 //                   後端 slots 與 max_packs 同時計在飛＋新掛，擋到就跳過；成功首次掛記 backend 與 switched，queue 更新最後掛的包；
-//                   那包在飛＋新掛已到它的 slots＝跳過、看下一封（不是停下）；都沒擋就認領（new → cur 改名；改不成＝寄信的剛撤信）、寫 request.json＝{"endpoint": 那組（指示詞已解、去掉 exec）,
+//                   那包在飛＋新掛已到它的 slots＝跳過、看下一封（不是停下）；都沒擋就認領（new → cur 改名；改不成＝寄信的剛撤信）、寫 request.json＝{"endpoint": 那組（指示詞已解、去掉 exec／slots／budget／speed／backend）,
 //                   "request": body.request, "priority": 宣告級數＋推得期限}、寄掛信（proc.json 記 endpoint＝代號、sender＝信封 sender、seen_at＝首次看到的 epoch 秒） {"procs_added": {"llm_<id>": {"exec": {"argv": ["aos-exec", 函數], "cwd": 信資料夾,
 //                   "stdin": "request.json", "stdout": "reply.json", "timeout_ms"?}, "max": 1, "stack": 信資料夾}}}、寫 proc.json；寄不進＝LaunchFailed
 //                6. 回信（寄信的 sender.flock 已沒人鎖＝馬上撤回）、寄不出去 stderr 印一行；掛過的追加 ledger.jsonl、記進 used.json（含 packs.<代號>、senders.<寄件人>）；整封刪掉；寫 queue.json

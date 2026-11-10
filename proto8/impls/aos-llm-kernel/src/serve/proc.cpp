@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 namespace aos::llm_kernel {
 
 // 問腦 proc（11-05 kernel-daemon 03）：kernel 不自己跑，請 daemon 掛成 max: 1 的 loop 型 proc。
-// 掛上去的信才有 cur/<id>/proc.json＝{"name": daemon 表上的名字, "exec": endpoint 函數, "mount_letter": 掛信的信件名稱, "mounted_at": epoch 秒, "retries": 重掛過幾次}。
+// 掛上去的信才有 cur/<id>/proc.json＝{"name": daemon 表上的名字, "exec": endpoint 函數, "mount_letter": 掛信的信件名稱, "mounted_at": epoch 秒, "retries": 重掛過幾次, "endpoint": 代號, "sender"?: 寄件人, "seen_at": 首次看到的 epoch 秒或 null, "switched": 首次掛載是否換包, "backend"?: 後端名, "remount"?: true＝等舊列拔除再重掛}。
 const char* PROC_JSON = "proc.json";
 
 namespace {

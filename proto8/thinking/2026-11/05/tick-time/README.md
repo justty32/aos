@@ -6,6 +6,8 @@
 
 > **11-06 使用者裁定**（逐字與新設計在 [03](03-11-06-裁定與新設計.md)）：Q3～Q5 照推薦；**Q1 改**——時鐘寫在 daemon 設定裡自帶（選填 key `tick`，可選、不強制、不耦合：daemon 只展開成一個普通 loop 型子項跑 aos-tick、把路徑用 `AOS_TICK` 傳下去）；**Q2 改**——沒 `AOS_TICK` 不是「時間不走」，退牆鐘（`ticks × AOS_TICK_INTERVAL`）當逃生口，記錄裡牆鐘欄一律寫、tick 欄有時鐘才寫。下面「方向題」段是 11-05 原列，留著對照；新題 N1（`_tick` 死了要不要重起）、N2（時鐘檔過舊要不要退牆鐘）在 03，使用者同日「那兩題都按照推薦」已裁。
 
+> 11-10 改讀（prefix-fixes 坑-56）：本頁的 daemon `tick`／後來改名的 `clock` key 與「子樹近的贏」已由 [11-09 clock-decouple](../../09/clock-decouple/README.md) 取代：拿掉該 key，鐘改成普通 proc，範本預設不帶、通常只有根帶；`AOS_CLOCK`／`AOS_CLOCK_INTERVAL` 從 `.env` 給，子 daemon 預設沿用外層（遠的贏），要蓋過才明寫 `--dotenv-override`。本頁保留當時討論原文。
+
 ## 已定（使用者 11-05 夜，照 fs-image）
 
 - 時間就是 tick。推薦大家用 tick 回合數算時間。

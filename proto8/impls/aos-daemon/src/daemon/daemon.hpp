@@ -33,7 +33,7 @@
 // procs_ctl.json 認（N-54）：procs＝整份名單、procs_added、procs_removed、procs_stopped（要停的名字）、procs_started（要起的名字）、seq。
 // 期望表＝（procs_ctl 的 procs，沒寫＝底 want_）＋procs_added－procs_removed；stopped 集合＝底 stopped_＋procs_stopped－procs_started（同名兩邊都寫＝起）。
 // 底（記憶體）：want_＝daemon.json 的 procs（開了信箱再加 adopt 接回、不在上面的，設定記 null）＋信改過的；stopped_＝adopt 接回的 stopped 列＋信改過的。
-// 信（procs_ctl_mailbox）body 認 procs_added、procs_removed、procs_stopped、procs_started，改的是底；ping 必須是 true，只回信、不改底；壞信原因進 state_flux 的 mailbox_warning。
+// 信（procs_ctl_mailbox）body 認 procs_added、procs_removed、procs_stopped、procs_started、procs_slept、procs_woken，改的是底；ping 必須是 true，只回信、不改底；壞信原因進 state_flux 的 mailbox_warning。
 // procs_stopped／procs_started／procs_slept／procs_woken 適用所有 proc；不在期望表的名字＝不管。
 // 四態（procs § 0、§ 2c；ctl-commands § 5）：running（表上、活著）、stopping（收的途中）、stopped（表上、行程不在、stack 留著）、表上沒有；
 //   11-03 多一態 sleeping（procs § 8 sleep／wake）：daemon 收工（ctl 的 stop、SIGTERM／SIGINT）時 running 的 proc＝SIGTERM 收掉、列留成 sleeping

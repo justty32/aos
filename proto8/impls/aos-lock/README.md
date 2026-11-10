@@ -26,7 +26,7 @@ aos-lock show data.json                                                         
 - **目標 → 鎖**：結尾是 `/` 或是現有的資料夾＝`<目標>/.lock/`；其他（檔、還不存在的名字）＝`<目標>.lock/`。相對路徑從 cwd 算。鎖的上一層不在＝`MkdirFailed`（不替人建）。不檢查上下層（鎖了資料夾不等於鎖了裡面的檔）。
 - **名牌 `holder.json`**：`{"holder", "acquired_at", "acquired_at_cycles"?, "lease_cycles"?, "flock"?, "note"?}`。`holder`＝aos-util 的 `aos::identity()`：`$AOS_WS` ＞ `$AOS_STACK` ＞ `$AOS_CF` ＞ cwd，空字串算沒設、轉絕對路徑（同 aos-post 的 `sender`）。`acquired_at`＝ISO 8601 UTC 到毫秒，永遠寫；有 `AOS_CLOCK` 時才寫非負整數 `acquired_at_cycles`；給租約才寫非負整數 `lease_cycles`（0＝立即到期）。透過已開啟的鎖目錄 fd 先寫 `.holder.json.tmp`，確認寫入與關檔成功再 `renameat` 成名牌，縮排 2、無尾端換行；目錄開啟後即使被改名，也不會誤寫別人新建的鎖。
 - **持有者死活**：庫拿鎖時建立 `holder.flock`、取獨佔 flock，fd 保留到 `release` 或行程結束；名牌寫 `"flock": true`。別人只對有此標記的鎖試 `LOCK_EX | LOCK_NB`，拿得到＝庫持有者已經離開，能收；拿不到＝仍持有。行程被 SIGKILL 或重開機，kernel 都會放掉 flock，不必讀 `/proc`。命令列 `acquire` 拿完即退出，名牌不寫 `flock`，不做死亡回收：**命令列拿鎖要記得 `release`，或指定 `--lease-cycles`**。
-- **租約按格算**（[N-65](../../docs/NORMS/02-設計理念-時空.md)）：讀的人自己有時鐘、名牌也有 `acquired_at_cycles`，以 `now_cycle >= acquired_at_cycles + lease_cycles` 判到期；時鐘檔停著，等再久也不到期。其他情況以牆鐘 `acquired_at + lease_cycles × clock_interval_ms()` 判到期。`AOS_CLOCK_INTERVAL` 沒設＝1000 毫秒；例如設 500、租約 2 cycles，沒有時鐘時約 1 秒。租約到期可以收活持有者的鎖。
+- **租約按格算**（[N-65](../../docs/NORMS/02-設計理念-時空.md)）：讀的人自己有時鐘、名牌也有 `acquired_at_cycles`，以 `now_cycle >= acquired_at_cycles + lease_cycles` 判到期；時鐘檔停著，正數格數租約等再久也不到期（0 格仍立即到期）。`AOS_CLOCK` 指向的鐘檔不存在時，印 warning 並當作格數 0，仍算有時鐘；若一直不存在或一直停在 0，從 0 起算的正數格數租約永遠不到期，不會退牆鐘。其他情況以牆鐘 `acquired_at + lease_cycles × clock_interval_ms()` 判到期。`AOS_CLOCK_INTERVAL` 沒設＝1000 毫秒；例如設 500、租約 2 cycles，沒有時鐘時約 1 秒。租約到期可以收活持有者的鎖。
 - **收屍**（mkdir 失敗時）：flock 表示持有者已離開、租約到期、或名牌不在／讀不懂且鎖資料夾 10 秒沒動，任一成立即可收。收之前先在鎖裡 `mkdir .reaping`（收屍牌，只有一個人建得成；牌子 10 秒沒動＝收的人也死了，拔掉再來），再讀一次名牌：跟判的那份不同＝拔掉牌子、不收；也要是同一個資料夾（inode）。建立收屍牌會更新 mtime，因此重新檢查沿用判定時的年齡，避免殘缺名牌永遠收不掉。之後把鎖資料夾改名再刪、重新 mkdir。
 - **牆上時鐘**：名牌不在／讀不懂與收屍牌的 10 秒，一律看檔案 mtime，不數格；mtime 在未來 10 秒以上同樣當過期。有時鐘的租約只看格數；退牆鐘的租約遇到校時，往前跳會提早到期、往回跳會延後。
 - **殘骸**：`<鎖>.releasing.*` 是別人放到一半的，名字不同、不擋人，aos-lock 不碰。
@@ -47,7 +47,7 @@ stderr 一行 **`aos-lock: error: 代號 原因`**、退 1。
 |---|---|
 | `ArgumentsBad`、`FlagUnknown`（共用） | 子命令沒給、目標不是剛好一個、`--lease-cycles`／`--wait-ms` 不是非負整數、不認得的旗標 |
 | `CommandUnknown`（全家共用，aos-util） | 不認得的子命令 |
-| `ClockBad`（aos-util） | `AOS_CLOCK` 鐘檔讀不了或內容壞、牆鐘換算時的 `AOS_CLOCK_INTERVAL` 壞 |
+| `ClockBad`（aos-util） | `AOS_CLOCK` 鐘檔讀不了（不存在時只 warning 並當 0）或內容壞、牆鐘換算時的 `AOS_CLOCK_INTERVAL` 壞 |
 | `LockMissing` | `release`：鎖不在 |
 | `HolderBad` | `show`：鎖在，名牌不在或讀不懂 |
 | `MkdirFailed`、`WriteFailed`、`Internal`（共用） | 鎖資料夾建不了（上一層不在、沒權限）；名牌或 flock 檔開不了／鎖不了、名牌寫不了、改名不了；照理不會發生的 |
