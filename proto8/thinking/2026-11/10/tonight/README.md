@@ -128,6 +128,10 @@ cd ../..
 - `aos-clock register …` 等同 `aos-clock-register …`。
 - `aos-agent history summarize` 寫進去的那則改成 `aos: …` 固定格式。
 
+- 再一批（通用工具包，`proto8/thinking/2026-11/10/tool-packs/`）：`lib/base` 的 `bash`→`shell`、`json_edit`→`json_write`、新 `remove`，拿掉「只能動工作區內」；分四包（看／改／刪／殼）範本預設全開，預設工具從 15 支變 30 支上下；`memory` 改名 `memory_read`、`memory_write` 也預設登記，庫指到 `$AOS_HOME/knowledge`（節點路徑前面多一段 `aos/`）。
+- hook 的選項與事件改名定案（event、handler、condition、intercept〔預設開〕、async、on_error；before_queue、after_queue、before_tool、after_tool）；`memory_write` 的 add 可以不給 value。
+- 各指令的旗標可以寫在所屬那層名字之後的任何位置，`aos-agent ctl stop ann` 這種目標放最後也收。
+
 施工完以前，上面例子照現況寫；施工後以 `proto8/thinking/2026-11/10/tonight-rulings/` 為準。
 
 </details>
