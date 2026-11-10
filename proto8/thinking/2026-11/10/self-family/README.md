@@ -31,3 +31,5 @@ self_tools、self_llm 在 [self-tools](../self-tools/README.md)；這夾記 self
 ## 做了（11-10 晚）
 
 `aos-agent history`（ls／rm／summarize／set，原文搬到 `history_removed.jsonl`）→ `self_history` 包裝（這一步鎖著）→ eca 縮水版（history 被改過＝下一輪開新對話）→ 文件。假腦、gemma 真腦、eca haiku 真對話都驗過。細節見 [01](01-施工結果.md)。
+
+**11-10 深夜改**：`summarize` 寫進去的那則內容固定成 `aos: summary (lines A-B, N messages): 摘要`（角色照舊預設 user；`set` 不套）。使用者「self_history的摘要這塊，身份可以是user，只是內容這塊希望能符合特定格式，比如我們現有的error那樣，就aos:...。」見 [tonight-rulings](../tonight-rulings/README.md) 題 8。
