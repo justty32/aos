@@ -3,7 +3,8 @@
 # 使用者 11-10 晚（thinking 2026-11/10/agents-split）：「掌管agent定義的創造修改」「先做粗的，細的之後慢慢添加」「血統記錄...可以先不做」；
 #   名字「agent_def」（B：只有定義這支叫 agent_def）。粗的＝只複製與檢查；改內容用一般的檔案工具，跑起來用 agents_children／agents_ctl。
 # 介面（lib/docs/01 的契約）：stdin 收 {"op": "new"|"check", …}；別的鍵＝ArgumentsBad：
-#   new {from, path}  from（範本資料夾；字串路徑，或指示詞 {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}）整份複製到 path：
+#   new {template | from, path}  template＝內建範本的名字（$AOS_HOME/templates/<名>，例 agent-fsm；不在＝DefMissing 並列出有哪些）；
+#       from（範本資料夾；字串路徑，或指示詞 {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}）整份複製到 path：
 #       symlinks 照搬、略過 __pycache__；path 哪裡都行（能不能寫交給 Linux 權限）、已經在＝DefExists；from 不是資料夾＝DefMissing。
 #       相對路徑從 $AOS_WS 算。from 用字面路徑、不解開捷徑（同舊 agents 11-10 TC）；path 解開捷徑（同舊 agents 的 write_path）。
 #       指示詞：act／aos-tools call／aos-exec 都把 arguments 原樣交給工具（11-10 實測），所以這裡自己經 lib/directive_value.py（aos-directive）解，
@@ -48,7 +49,7 @@ tool_io.start(NAME, HELP)
 DEFS = os.path.normpath(os.path.join(HERE, "..", "..", "aos", "defs", "_entry"))
 TIMEOUT_S = 60
 ERR_RE = re.compile(r"[A-Za-z0-9_.-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
-OPS = {"new": ("from", "path"), "check": ("path",)}
+OPS = {"new": ("template", "from", "path"), "check": ("path",)}
 die = tool_io.die
 child = None
 
@@ -76,6 +77,15 @@ def from_ws(p):
 
 def source_path():
     """from：字串＝路徑；物件＝指示詞，經 aos-directive 解成路徑字串。"""
+    if ("template" in args) == ("from" in args):
+        die("ArgumentsBad", "new needs template (a stock template name like \"agent-fsm\") or from (a folder), not both")
+    if "template" in args:                      # 內建範本的名字＝$AOS_HOME/templates/<名>（小模型寫不好 {"$env": …} 的鍵，11-10 gemma 實測）
+        name, home = text("template"), os.environ.get("AOS_HOME")
+        if not home:
+            die("DirectiveBad", "template %r: environment variable AOS_HOME is not set" % name)
+        if "/" in name or name.startswith("."):
+            die("ArgumentsBad", "template must be a template name like \"agent-fsm\" (for any other folder use from)")
+        return os.path.join(home, "templates", name), name
     v = args.get("from")
     if isinstance(v, dict):
         written = json.dumps(v, ensure_ascii=False)
@@ -155,6 +165,10 @@ def op_new():
     literal = from_ws(text("path"))
     src, given = source_path()
     if not os.path.isdir(src):
+        if "template" in args:
+            root = os.path.dirname(src)
+            have = sorted(d for d in (os.listdir(root) if os.path.isdir(root) else []) if os.path.isfile(os.path.join(root, d, "interfaces.json")))
+            die("DefMissing", "no template named %s (templates: %s)" % (given, ", ".join(have) or "none"))
         die("DefMissing", "from %s is not a folder" % json.dumps(given, ensure_ascii=False))
     dest = os.path.realpath(literal)          # 捷徑（含斷的）本身就算已經在
     if os.path.lexists(literal) or os.path.lexists(dest):

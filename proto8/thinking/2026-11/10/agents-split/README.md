@@ -37,4 +37,42 @@
 |---|---|
 | [01-拆法與命名](01-拆法與命名.md) | 拆成哪幾支、每支動作一覽、1a 調子 agent 的入口、代定清單（名字已照使用者改成 `agents_*`） |
 | [02-施工單](02-施工單.md) | 三支的介面細節、要刪要換的清單、驗收 |
+| [03-驗收結果](03-驗收結果.md) | 假腦九個情境、gemma-4-e4b、eca（haiku）實跑結果、怪處清單、試驗場刷新要注意的 |
 | [04-知識庫節點](04-知識庫節點.md)＋[04-agents.json](04-agents.json) | 交 json-memory 隊：`knowledge/aos/agents.json` 整份換成的新內容（agents_children、agents_ctl、agent_def、thought）、根表與其他節點要改的句子、tooldef 的 Details 指標建議 |
+
+## 結論（11-10 晚施工完）
+
+- 三支在 `proto8/lib/agent/`：`agents_children`（1a）、`agents_ctl`（1b）、`agent_def`（2a）；舊 `agents` 已刪，範本改登記三支，配額設定檔改名 `children.json`。
+- 1a 調子 agent：`agents_children` 的 `tools`／`llm`／`history`／`hook` 四個動作，`args` 就是 self_* 收的東西；做法是用子的 `$AOS_STACK` 跑旁邊的 self_*，self_* 沒改。
+- 驗收：單元測試全綠、假腦九情境全過、haiku 全過。gemma-4-e4b 寫不出 `$` 開頭的鍵（`{"$env": …}`），所以 `agent_def new` 加了 `template`（內建範本的名字，例 `"agent-fsm"`），加完 gemma 三題都寫對。
+
+## 代定清單（可翻案）
+
+1. 1b 的名字 `agents_ctl`（頂層舉例，使用者沒另指定）。
+2. 2a 另開 `agent_def`、不改原本只讀的 `lib/aos/defs`（check 轉叫它）。
+3. `agents_children` 的 rm 預設留 stack、`purge: true` 才刪（跟 `ctl rm` 一致）。
+4. add 不再順手收 `llm`／`tools`／`tools_rm`，出生後用轉手動作調。
+5. `ask` 留著（say＋listen），另有 `listen`；什麼期限都沒給＝等 600 秒。
+6. `agents_children` 的 ls 只列我生的；要看整張表用 `agents_ctl` ls。
+7. 配額設定檔 `agents.json` → `children.json`，預設 4 不變。
+8. 血統：寫的那半隨舊工具拿掉；`lib/aos/defs` ls 遇到既有的 `lineage` 照印。
+9. 公開子帳（ask／listen／rm 時抄子的觀測帳）留著。
+10. 三支都登記進 `agent-fsm`、`eca-claude` 範本。
+11. `agent_def new` 照 `cp -r`：`tests/` 一起抄（只略過 `__pycache__`）；從 agent-fsm 抄出來 200 KB、其中 tests 76 KB。
+12. `agent_def new` 的 `template`（範本短名）——給寫不出 `$` 鍵的小模型一條路。
+13. 子還在排隊時叫轉手動作＝新代號 `ChildQueued`。
+14. 下層句子裡教 CLI 的寫法（`aos-agent ctl start --target …`、`--purge`、`--replace`、撞名的 `--name`）在給腦的結果裡換成工具參數的寫法。
+15. add 的 `ws` 給了又不在＝先建（舊行為）。
+
+## 留給使用者
+
+- 4096 context 裝不下範本全部工具的說明（現在 15 支約 7600 tokens；三支新工具加 wall_clock 約 2400）。小模型要嘛少登記幾支、要嘛說明再瘦——方向沒定。
+- self_tools、self_hook 的 `path_json` 也是 `$` 鍵，gemma 一樣寫不出（別隊的工具，沒動）。
+- `agents_ctl` 能 rm 別人帳上的子（使用者選 B 時已知的代價）；被 rm 的那隻，原主下次對帳自己忘掉。
+- `eca-claude` 範本 check 不過（缺 `README.md` 與 `_metainfo.json`）；`lib/aos/defs` 對單一定義三個怪處（路徑一律顯示 `.`、資料夾自己的名字不查、空資料夾算過）——沒動。
+- 條文沒改的：C-42 續（第 5、13 行還在講舊 `agents` 的 new／add 與 `ws`）、C-52 例外 ⑧「`agents` 成功時轉印 warning」可能已不適用——改了會動到條文意思。
+
+## 之後可加
+
+「細的」定義動作（設 system prompt、設腦、加減工具寫進定義）；`agents_children` 對 rm 後留下的 stack 直接清掉的動作；血統。
+

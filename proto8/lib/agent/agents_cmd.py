@@ -14,6 +14,18 @@ CTL_DEFAULT_S = 30             # aos-agent ctl 的 --timeout-s 預設（只用�
 LISTEN_DEFAULT_S = 600         # listen／ask 什麼期限都沒給時等幾秒
 MAX_CYCLES = 9223372036854775807 - 30
 TOOL_WORDS = {"InstanceExists": 'give another "name", or remove that agent first with {"op": "rm", "name": ...}'}
+# 下層成功句／錯誤句裡教 CLI 的寫法 → 工具參數的寫法（腦手上沒有 CLI；11-10 驗收怪處 3）
+CLI_WORDS = ((re.compile(r"aos-agent ctl (start|wake|resume) --target (\S+)"), r'{"op": "\1", "name": "\2"}'),
+             (re.compile(r"delete it with aos-agent ctl rm --purge, or by hand"), 'to delete it: add it again under the same name, then rm with "purge": true'),
+             (re.compile(r"add --replace to replace it"), 'add "replace": true to replace it'))
+
+
+def tool_words(text):
+    for pattern, new in CLI_WORDS:
+        text = pattern.sub(new, text)
+    return text
+
+
 ERR_AOS = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
 QUEUED_RE = re.compile(r"queued .+ at position [0-9]+ \(letter ([^;]+); applied when a slot frees\)")
 # ctl add 收的鍵（agents_children 的 add、agents_ctl 的 add 同一排）
@@ -92,6 +104,8 @@ def run(cmd, text=None, timeout_s=STEP_S, timeout_cycles=None, env=None, err_re=
     if err:
         sys.stderr.write(err if err.endswith("\n") else err + "\n")
         sys.stderr.flush()
+    if "listen" not in cmd:                       # 子的回答原樣，不換字
+        out = tool_words(out)
     if p.returncode == 0:
         return out, None
     lines = [x for x in err.splitlines() if x.strip()]
@@ -100,7 +114,7 @@ def run(cmd, text=None, timeout_s=STEP_S, timeout_cycles=None, env=None, err_re=
         code, reason = mine[-1].group(1), mine[-1].group(2)
         if code in TOOL_WORDS:                    # 下層那句在教 CLI 旗標：給腦的換成工具參數的寫法（只留分號前那段事實）
             reason = reason.split(";")[0] + "; " + TOOL_WORDS[code]
-        return out, (code, reason)
+        return out, (code, tool_words(reason))
     return out, ("CommandFailed", "%s exited %d: %s" % (what, p.returncode, lines[-1] if lines else "(no message)"))
 
 

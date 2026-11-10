@@ -154,7 +154,7 @@ class AgentDef(unittest.TestCase):
                            ({"op": "new", "from": "a", "path": "b", "files": {}}, "ArgumentsBad unknown key files"),
                            ({"op": "new", "from": "a", "path": "b", "name": "kid"}, "ArgumentsBad unknown key name"),
                            ({"op": "check", "path": "a", "from": "b"}, "does not take from"),
-                           ({"op": "new", "path": "b"}, "from needs"),
+                           ({"op": "new", "path": "b"}, "needs template"),
                            ({"op": "new", "from": "a"}, "path needs"),
                            ({"op": "new", "from": 3, "path": "b"}, "ArgumentsBad"),
                            ({"op": "check"}, "path needs")):

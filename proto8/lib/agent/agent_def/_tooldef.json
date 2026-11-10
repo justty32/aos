@@ -1,7 +1,49 @@
-{"description": "Make a new agent definition by copying a template folder, or check a definition folder. One op per call:\n- copy: {\"op\": \"new\", \"from\": {\"$env\": \"AOS_HOME\", \"$path\": \"/templates/agent-fsm\"}, \"path\": \"defs/helper\"}  (from can also be a folder path; path must not exist yet; relative paths start at your workspace)\n- check: {\"op\": \"check\", \"path\": \"defs/helper\"}  (prints {\"problems\": [...]}; empty list = OK)\nnew only copies. Then edit the copy with your normal file tools (system.txt, tools.json, llm.json). To run it, use agents_children or agents_ctl.\nErrors: ArgumentsBad, OpUnknown, DefMissing, DefExists (pick another path), DefBad, DirectiveBad.",
- "errors": ["ArgumentsBad", "OpUnknown", "WsMissing", "DirectiveBad", "CommandMissing", "DefMissing", "DefExists", "DefBad", "MkdirFailed", "WriteFailed", "LaunchFailed", "CommandFailed", "RootMissing"],
- "parameters": {"type": "object",
-                "properties": {"op": {"type": "string", "enum": ["new", "check"], "description": "new = copy a template to a new definition folder, check = check a definition folder"},
-                               "from": {"type": ["string", "object"], "description": "new: the template folder to copy, as a directive like {\"$env\": \"AOS_HOME\", \"$path\": \"/templates/agent-fsm\"} or a folder path (relative to your workspace, or absolute)"},
-                               "path": {"type": "string", "description": "new: the new definition folder (must not exist yet). check: the definition folder. Relative to your workspace, or absolute"}},
-                "required": ["op"]}}
+{
+ "description": "Make a new agent definition by copying a template, or check a definition folder. One op per call:\n- copy a stock template: {\"op\": \"new\", \"template\": \"agent-fsm\", \"path\": \"defs/helper\"}  (templates: agent-fsm, eca-claude; path must not exist yet; relative paths start at your workspace)\n- copy any other definition folder: {\"op\": \"new\", \"from\": \"defs/helper\", \"path\": \"defs/helper2\"}\n- check: {\"op\": \"check\", \"path\": \"defs/helper\"}  (prints {\"problems\": [...]}; empty list = OK)\nnew only copies. Then edit the copy with your normal file tools (system.txt, tools.json, llm.json). To run it: agents_children {\"op\": \"add\", \"def\": \"defs/helper\", \"name\": \"kid\"}.\nErrors: ArgumentsBad, OpUnknown, DefMissing, DefExists (pick another path), DefBad, DirectiveBad. Details: memory agents.json#/agent_def.",
+ "errors": [
+  "ArgumentsBad",
+  "OpUnknown",
+  "WsMissing",
+  "DirectiveBad",
+  "CommandMissing",
+  "DefMissing",
+  "DefExists",
+  "DefBad",
+  "MkdirFailed",
+  "WriteFailed",
+  "LaunchFailed",
+  "CommandFailed",
+  "RootMissing"
+ ],
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "op": {
+    "type": "string",
+    "enum": [
+     "new",
+     "check"
+    ],
+    "description": "new = copy a template to a new definition folder, check = check a definition folder"
+   },
+   "template": {
+    "type": "string",
+    "description": "new: the name of a stock template to copy: agent-fsm or eca-claude"
+   },
+   "from": {
+    "type": [
+     "string",
+     "object"
+    ],
+    "description": "new, instead of template: any definition folder to copy (relative to your workspace, or absolute; a directive object also works)"
+   },
+   "path": {
+    "type": "string",
+    "description": "new: the new definition folder (must not exist yet). check: the definition folder. Relative to your workspace, or absolute"
+   }
+  },
+  "required": [
+   "op"
+  ]
+ }
+}
