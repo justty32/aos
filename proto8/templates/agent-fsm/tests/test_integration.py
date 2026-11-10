@@ -24,7 +24,7 @@ class KernelIntegration(unittest.TestCase):
             definition.mkdir()
             (definition / 'interfaces.json').write_text(json.dumps({'aos-agent': {
                 'llm':'llm.json', 'tools':'tools.json'}}))
-            (definition / 'llm.json').write_text('{"endpoint":"fake"}')
+            (definition / 'llm.json').write_text('{"model":"fake"}')
             (definition / 'tools.json').write_text(json.dumps({'tools':{
                 'wall_clock':{'path':str(PROTO / 'lib/base/wall_clock')}}}))
             (agent_stack / 'history.jsonl').write_text('{"role":"user","content":"local test"}\n')

@@ -11,13 +11,14 @@ eca-claude/
                "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；三扇窗落在 $AOS_STACK）
   cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms），抄 lib/agent/claude 的保守旗標（--model 不寫在這，見 llm.json）；
               tools_flags ["--memory", "memory"]＝aos-mcp 在 MCP initialize 的 instructions 給知識庫根（Claude Code 放進它的 system prompt；11-05 晚）
-  llm.json    腦設定：{"model": "sonnet"}（11-04 晚；cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）
+  llm.json    腦設定：{"model": "sonnet"}（11-04 晚；cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）；只認 model（claude CLI 沒有 temperature 等取樣旗標，與快取無關的調整鍵這邊沒有對應，11-10 晚）
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔11-04 起，相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
-  tools.json  aos-tools 的登記檔：wall_clock、self_tools、self_llm、self_history、mailbox_peek／mailbox_read／mailbox_send（信箱，11-10 晚 mailbox）、agents、memory（跟 agent-fsm 同一份：都寫 `{"$env": "AOS_HOME", …}`，memory 直接登記 lib/agent/memory、`env.AOS_MEMORY` 指知識庫；後兩個 11-05 使用者裁「內建」）；
+  tools.json  aos-tools 的登記檔：wall_clock、self_tools、self_llm、self_hook、self_history、mailbox_peek／mailbox_read／mailbox_send（信箱，11-10 晚 mailbox）、agents、memory（跟 agent-fsm 同一份：都寫 `{"$env": "AOS_HOME", …}`，memory 直接登記 lib/agent/memory、`env.AOS_MEMORY` 指知識庫；後兩個 11-05 使用者裁「內建」）；
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__wall_clock…）；不要工具就刪掉它
   agents.json 工具 agents 的設定：{"max_children": 4}（這隻最多同時生幾隻；這隻的 stack 裡放一份 agents.json 只寫改過的鍵＝覆蓋）
-  interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "history": "history.jsonl"}}（11-04；history 鍵 11-10 加，給 aos-agent history 找檔；aos-agent ctl add 只看這個宣告）
+  interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model"], "history": "history.jsonl", "hooks": "hooks.json"}}（11-04；hooks 鍵 11-10 晚加；history 鍵 11-10 加，給 aos-agent history 找檔；llm_keys 11-10 晚加，aos-agent llm set 不在上面的鍵照存＋warning；aos-agent ctl add 只看這個宣告）
+  hooks.json  hook 清單（11-10 晚，空的 {"hooks": {}}；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
   screen/     子介面：_entry＝["aos-eca-screen", "--eca", ".."]（aos-agent open／close／watch 叫它；動作接在最後）
 ```
 
@@ -39,6 +40,18 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 
 **history 被改過＝開新對話**（11-10 [self-family](../../thinking/2026-11/10/self-family/README.md) ⑩，解 10-30 eca 09「停著時改 history 再繼續」縮水版）：每輪 assistant 接進 history 後，把整份 history 的 sha256 寫進小格的 `.history_sum`；下一輪交出去前算出來不一樣（人用 `aos-agent history` 或直接改了）＝`drop_session`、開新的 claude 對話，題目前面照換台那套帶改過的 user／assistant 紀錄（上限 `reseed_bytes`），stderr 一行 `warning: history.jsonl was changed since the last turn; starting a new claude conversation that carries the changed record`。這一輪中間被改（claude 叫 `self_history`）＝`.history_sum` 寫 `edited`、下一輪照樣開新的。畫面開著時不換、只 warning。用法：`aos-agent history -t 名字 ls`、`rm 3-4`、`summarize 1-6 "…"`；原文搬到 stack 裡 `history_removed.jsonl`。
 
+
+**eca 的 hook：有哪些、沒有哪些**（11-10 晚 [hook 圖紙 § 6](../../thinking/2026-11/10/self-family/hook/01-圖紙.md#6-eca-縮水版)，使用者「7.接受」縮水版）：腦在外面的 CLI，aos 只攔得到經過自己手的東西。
+
+| 事件 | eca 有沒有 | 在哪 |
+|---|---|---|
+| `queue_before`（可改 content、可丟信）／`queue_after` | 有 | aos-eca-turn：讀出好信、交給 CLI 之前／信接進 history 之後 |
+| `tool_before`（可改 arguments、可攔）／`tool_after`（可改結果） | 只有經 aos-mcp 叫的 aos 工具 | aos-mcp 的 tools/call（cli_session 起它時帶 `--hooks <定義>`） |
+| `brain_failed` | 有（`name`＝`CliFailed`／`ReplyMissing`，交出去之後才算） | aos-eca-turn |
+| `tool_added` | 有（看這隻生效的 aos 登記檔，交出去之前比一次） | aos-eca-turn |
+| CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos |
+
+hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停的，信留在 `queue/cur/`、history 不動，修好照問；aos-mcp 裡停的＝那次工具呼叫回錯（isError）給 CLI，不整支死。
 
 **長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 預設 600000（10 分鐘），限制 CLI 呼叫；`loop.json.exec.timeout_ms` 預設 900000（15 分鐘），限制整次 aos-eca-turn，要留得比 CLI 那層長，讓它有時間收尾。長任務要同時檢查這兩層，增加額度不會延長逾時。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
 

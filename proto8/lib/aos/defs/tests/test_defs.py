@@ -26,7 +26,7 @@ class DefinitionsTest(unittest.TestCase):
         self.write(path / 'README.md', 'Example worker\n')
         self.write(path / 'system.txt', 'A prompt')
         self.write(path / 'tools.json', {'tools': tool or {}})
-        self.write(path / 'llm.json', {'endpoint': endpoint})
+        self.write(path / 'llm.json', {'model': endpoint})
         if memory is not None:
             self.write(path / 'memory/config.json', {'base': memory})
         return path

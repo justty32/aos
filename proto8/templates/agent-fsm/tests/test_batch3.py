@@ -42,7 +42,7 @@ class Batch3Integration(unittest.TestCase):
             def definition(name, endpoint, tools):
                 target = root / name
                 shutil.copytree(CELLS, target, ignore=shutil.ignore_patterns('tests', '__pycache__'))
-                write(target / 'llm.json', {'endpoint': endpoint})
+                write(target / 'llm.json', {'model': endpoint})
                 write(target / 'tools.json', {'tools': tools})
                 write(target / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10,
                                              'ctl': 'ctl.json', 'state': 'state.json',
@@ -61,7 +61,7 @@ class Batch3Integration(unittest.TestCase):
                         {'tool_calls': [{'name': 'bash', 'arguments': {'command': 'printf parent; exit 7'}}]},
                         {'tool_calls': [{'name': 'thought', 'arguments': {
                             'from': str(child_def), 'goal': 'Run the shell and report completion.',
-                            'endpoint': 'child', 'keep': False, 'timeout_s': 30}}]},
+                            'model': 'child', 'keep': False, 'timeout_s': 30}}]},
                         {'content': 'Parent complete.'}]},
                     'child': {'script': [
                         {'tool_calls': [{'name': 'bash', 'arguments': {'command': 'printf child; exit 3'}}]},

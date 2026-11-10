@@ -398,7 +398,7 @@ class Daily(unittest.TestCase):
         if self.defs_out:
             self.new_project(m, h.outside / "defs", "defs")
         fsm = defs_cwd / adir / "fsm"
-        (fsm / "llm.json").write_text('{"endpoint": "fake-greet"}\n')
+        (fsm / "llm.json").write_text('{"model": "fake-greet"}\n')
         tj = json.loads((fsm / "tools.json").read_text())
         if self.another_ref == "relative":
             tj["tools"]["greet"] = {"path": os.path.relpath(h.another / "tools" / "greet", fsm)}

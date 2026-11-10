@@ -1,9 +1,10 @@
 # brain.py [--system FILE] [--tools FILE] [--memory NAME] [--history full|task] [--max-tool-calls N] - think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。
 # 寄出去、收回信是下一格 wait（wait.py：aos-llm send／recv，經 $AOS_LLM_KERNEL〔llm kernel 的 stack〕的 llm kernel；thinking 2026-11-04 think-as-function 03 § 1）。
 # 結束碼（fsm.json 照碼分岔，N-36）：0＝請求寫好了（→ wait）；10＝history 最後一則不是 user／tool（上一題已答完、或人改了 history）＝沒事做（→ idle）。
-# 請求＝llm kernel 請求信的 body：{"endpoint"?: 代號, "request": {"messages", "tools"?}}（不寫 model：model 綁在 kernel 的 endpoint 包上）。
-#   endpoint 來自 interfaces.json 宣告的 llm（AOS_CD）疊 $AOS_STACK/<宣告相對路徑>（只放改過的鍵，aos-agent llm set 寫的；有的鍵蓋過定義），每格重讀＝下一題生效；
-#   都沒寫＝不放（kernel 用它自己的預設代號）。其他鍵不看（C-48）。
+# 請求＝llm kernel 請求信的 body：{"endpoint"?: 代號, "request": {"messages", "tools"?, 調整鍵…}}（真正的模型名綁在 kernel 的 endpoint 包上）。
+#   腦設定＝interfaces.json 宣告的 llm（AOS_CD）疊 $AOS_STACK/<宣告相對路徑>（只放改過的鍵，aos-agent llm set 寫的；有的鍵蓋過定義），每格重讀＝下一題生效；
+#   鍵 model＝kernel 的包代號，填進 body 的 endpoint 欄（11-10 晚使用者「把fsm認的endpoint這個key，也改名爲model吧」；kernel 不動）；都沒寫＝不放（kernel 用預設）。
+#   temperature、top_p、max_tokens、seed、presence_penalty、frequency_penalty、stop＝與快取無關的調整鍵，轉型後放進 request（llm_settings.py）。其他鍵不看（C-48）。
 # 寫新請求時順手刪 $AOS_STACK/think/pending.txt（上一封的名字）：新請求取代舊的，wait 會重寄。
 # --system FILE：讀成一則 system 放最前面、不存進 history（P-41）；沒給＝沒有 system。
 # --memory NAME（11-05 晚 agent-knowledge K2）：登記名 NAME 的工具（memory）叫一次 {"op": "read"}，它印的知識庫根接在 system 後面、
@@ -238,14 +239,19 @@ def read_cfg(path):
 cfg = read_cfg(here(files["llm"])) if "llm" in files else {}
 if "llm" in files:
     cfg.update(read_cfg(os.path.join(stack, files["llm"])))   # stack 那份有的鍵蓋過定義（aos-agent llm set，每格重讀）
+sys.dont_write_bytecode = True                             # 定義資料夾不留 __pycache__（P-15：定義不被寫）
+import llm_settings  # noqa: E402  （範本資料夾在 sys.path 最前面）
 request = {"messages": system + history}
 if tools and (max_tool_calls is None or tool_call_count < max_tool_calls):
     request["tools"] = tools
 body = {"request": request}
-if "endpoint" in cfg:
-    if not isinstance(cfg["endpoint"], str) or not cfg["endpoint"]:
-        die("CfgBad", "endpoint in llm.json must be a non-empty string")
-    body["endpoint"] = cfg["endpoint"]
+try:
+    model, tuning = llm_settings.body_fields(cfg)
+except ValueError as e:
+    die("CfgBad", str(e))
+request.update(tuning)
+if model:
+    body["endpoint"] = model                                  # agent 這邊叫 model，kernel 請求信照舊叫 endpoint
 
 think = os.path.join(stack, "think")
 path = os.path.join(think, "request.json")

@@ -165,7 +165,7 @@ class Check:
                  "memory": {"path": str(PROTO / "lib/agent/memory"), "env": kb},
                  "memory_write": {"path": str(PROTO / "lib/agent/memory_write"), "env": kb}}
         save(dest / "tools.json", {"tools": tools})
-        save(dest / "llm.json", {"endpoint": "fake"})
+        save(dest / "llm.json", {"model": "fake"})
 
     def daemon(self, folder, config):
         folder.mkdir(parents=True, exist_ok=True)
@@ -245,11 +245,11 @@ class Check:
     def exercise(self):
         self.ask("worker", "first question", "FAKE ANSWER")
         self.ask("eca", "first ECA question", "FAKE:")
-        self.run(["aos-agent", "-t", "worker", "llm", "set", "endpoint=bad"])
+        self.run(["aos-agent", "-t", "worker", "llm", "set", "model=bad"])
         self.run(["aos-agent", "say", "-t", "worker", "retry this question"])
         w = self.root / "procs/worker"
         self.wait("real cooldown.json after failed endpoint", lambda: cooldown.read(str(w)))
-        self.run(["aos-agent", "-t", "worker", "llm", "set", "endpoint=fake"])
+        self.run(["aos-agent", "-t", "worker", "llm", "set", "model=fake"])
         self.note("failed endpoint entered cooldown")
         for command in ("sleep", "wake", "pause", "resume"):
             self.ctl(self.root, command, "eca")
@@ -283,7 +283,7 @@ class Check:
         self.wait("ECA sleeping with pending mail", lambda: self.table(self.root).get("eca", {}).get("phase") == "sleeping")
         self.run(["aos-agent", "say", "-t", "eca", "queued before clone"])
         foreman_env = {**self.env, "AOS_DAEMON": str(self.root / "procs/foreman")}
-        self.run(["aos-agent", "-t", "child-worker", "llm", "set", "endpoint=slow"], env=foreman_env)
+        self.run(["aos-agent", "-t", "child-worker", "llm", "set", "model=slow"], env=foreman_env)
         self.run(["aos-agent", "say", "-t", "child-worker", "in-flight across projects"], env=foreman_env)
         pending = self.root / "procs/foreman/procs/child-worker/think/pending.txt"
         self.wait("kernel and agent in-flight state", lambda: pending.exists() and list(self.kernel.glob("requests/cur/*/proc.json")))

@@ -61,7 +61,7 @@ class Base(unittest.TestCase):
         self.definition = self.root / 'def'
         self.definition.mkdir()
         (self.definition / 'interfaces.json').write_text(json.dumps({'aos-agent': {'llm': 'llm.json'}}))
-        (self.definition / 'llm.json').write_text('{"endpoint":"local"}')
+        (self.definition / 'llm.json').write_text('{"model":"local"}')
         self.calls = self.root / 'calls.jsonl'
         self.bin = self.root / 'bin'
         self.bin.mkdir()

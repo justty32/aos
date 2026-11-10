@@ -46,7 +46,7 @@ class ReviewerIntegration(unittest.TestCase):
             reviewer = templates / 'reviewer'
             shutil.copytree(REVIEWER, reviewer,
                             ignore=shutil.ignore_patterns('tests', '__pycache__'))
-            write(reviewer / 'llm.json', {'endpoint': 'reviewer'})
+            write(reviewer / 'llm.json', {'model': 'reviewer'})
             loop = json.loads((reviewer / 'loop.json').read_text())
             loop['interval_ms'] = 10
             write(reviewer / 'loop.json', loop)
@@ -58,7 +58,7 @@ class ReviewerIntegration(unittest.TestCase):
             worker.mkdir()
             for name in ('body.json', 'loop.json', 'interfaces.json', 'fsm.json'):
                 shutil.copy2(reviewer / name, worker / name)
-            write(worker / 'llm.json', {'endpoint': 'worker'})
+            write(worker / 'llm.json', {'model': 'worker'})
             write(worker / 'tools.json', {'tools': {}})
             (worker / 'system.txt').write_text('Return the fixed answer.\n')
             initial_llm = (worker / 'llm.json').read_bytes()

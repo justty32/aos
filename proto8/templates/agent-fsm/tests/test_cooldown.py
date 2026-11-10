@@ -23,7 +23,7 @@ class Cooldown(unittest.TestCase):
         self.definition = self.root / 'def'
         self.definition.mkdir()
         (self.definition / 'interfaces.json').write_text(json.dumps({'aos-agent': {'llm': 'llm.json'}}))
-        (self.definition / 'llm.json').write_text('{"endpoint":"local"}')
+        (self.definition / 'llm.json').write_text('{"model":"local"}')
         self.calls = self.root / 'calls.txt'
         self.env = dict({k: v for k, v in os.environ.items() if not k.startswith('AOS_')}, AOS_STACK=str(self.stack), AOS_CD=str(self.definition),
                         FAKE_CALLS=str(self.calls), FAKE_SEND='0', FAKE_RECV='0',
@@ -123,7 +123,7 @@ sys.exit(code)
 
     def test_endpoint_mismatch_still_rebuilds_while_cooling(self):
         cooldown.fail(str(self.stack), 'BrainFailed', 'x')
-        (self.definition / 'llm.json').write_text('{"endpoint":"other"}')
+        (self.definition / 'llm.json').write_text('{"model":"other"}')
         self.wait(11)
 
 

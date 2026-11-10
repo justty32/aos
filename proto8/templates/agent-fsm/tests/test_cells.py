@@ -25,7 +25,7 @@ class Cells(unittest.TestCase):
         (self.definition / 'interfaces.json').write_text(json.dumps(
             {'aos-agent': {'tools': 'tools.json', 'llm': 'llm.json'}}))
         (self.definition / 'tools.json').write_text('{}')
-        (self.definition / 'llm.json').write_text('{"endpoint":"local"}')
+        (self.definition / 'llm.json').write_text('{"model":"local"}')
         self.env = dict(os.environ, AOS_STACK=str(self.stack), AOS_CD=str(self.definition),
                         PATH=str(self.root) + os.pathsep + os.environ['PATH'])
         self.command('aos-tools', '''import json, sys
@@ -60,6 +60,23 @@ else:
 
     def request(self):
         return json.loads((self.stack / 'think/request.json').read_text())['request']
+
+    def test_model_and_tuning_keys(self):
+        """11-10 晚使用者「把fsm認的endpoint這個key，也改名爲model吧」「agent能調的，就是一些與快取無關的」。"""
+        self.history([{'role': 'user', 'content': 'hi'}])
+        (self.stack / 'llm.json').write_text(json.dumps({'temperature': '0.2', 'max_tokens': '64', 'stop': 'END', 'top_k': '3'}))
+        self.run_cell('brain')
+        body = json.loads((self.stack / 'think/request.json').read_text())
+        self.assertEqual(body['endpoint'], 'local')
+        self.assertEqual((body['request']['temperature'], body['request']['max_tokens'], body['request']['stop']), (0.2, 64, ['END']))
+        self.assertNotIn('top_k', body['request'])
+        (self.stack / 'llm.json').write_text(json.dumps({'temperature': 'hot'}))
+        self.assertIn('CfgBad temperature in llm.json must be a number', self.run_cell('brain', code=1).stderr)
+        (self.stack / 'llm.json').write_text(json.dumps({'temperature': '0.5'}))
+        self.run_cell("wait", code=11)   # 調整鍵改了＝brain 重組再寄（wait.py REBUILD）
+        (self.stack / 'llm.json').write_text(json.dumps({'temperature': '0.2', 'max_tokens': '64', 'stop': 'END'}))
+        r = subprocess.run([sys.executable, str(CELLS / 'wait.py')], env=self.env, capture_output=True, text=True, timeout=5)
+        self.assertNotEqual(r.returncode, 11, r.stderr)                   # 跟寄出的一樣＝照寄
 
     def test_context_and_tool_limits(self):
         old = [{'role':'user','content':'old'}, {'role':'assistant','tool_calls':[CALL]},

@@ -143,7 +143,7 @@ class Check:
             "exec": "../../lib/base/llm_fake", "endpoints": {
                 "fake": {"exec": "../../lib/base/llm_fake"}}}) + "\n")
         (defs / "agent/tools.json").write_text('{"tools": {}}\n')
-        (defs / "agent/llm.json").write_text('{"endpoint": "fake"}\n')
+        (defs / "agent/llm.json").write_text('{"model": "fake"}\n')
         (defs / "agent/body.json").write_text('["aos-loop", "--enable-counters", "loop.json"]\n')
         self.layout(image)
 

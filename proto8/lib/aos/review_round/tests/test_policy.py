@@ -51,7 +51,7 @@ class ReviewPolicy(unittest.TestCase):
     def definition(self, name, endpoint='high'):
         folder = self.defs / name
         folder.mkdir(parents=True)
-        write(folder / 'llm.json', {'endpoint': endpoint})
+        write(folder / 'llm.json', {'model': endpoint})
         write(folder / 'interfaces.json', {'aos-agent': {}})
 
     def call(self, name, target, args, **kwargs):

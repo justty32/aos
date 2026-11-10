@@ -16,7 +16,7 @@ python3 -m unittest discover -s proto8/templates/reviewer/tests -p 'test_*.py'
 
 <details><summary>配置、呼叫與限制</summary>
 
-掛載方式與 [`agent-fsm`](../agent-fsm/README.md) 相同，向 agent 提供 `case`、`defs`、`ladder` 的絕對路徑，另可給 `ws`、`daemons`。`ladder` 指向本定義的 `ladder.json`；kernel 要先登記其中的 endpoint。預設使用 kernel 的預設腦，`llm.json` 可加 `endpoint` 指定。
+掛載方式與 [`agent-fsm`](../agent-fsm/README.md) 相同，向 agent 提供 `case`、`defs`、`ladder` 的絕對路徑，另可給 `ws`、`daemons`。`ladder` 指向本定義的 `ladder.json`；kernel 要先登記其中的 endpoint。預設使用 kernel 的預設腦，`llm.json` 可加 `model`（kernel 的 endpoint 包代號）指定。
 
 範本 `promote_by` 預設 `self`；使用 GPT 腦的副本要設為 `claude`，腳本會留下 `pending_promote`，交 Claude 審視者或隊長換上。agent 本身不直接叫 `promote`。
 

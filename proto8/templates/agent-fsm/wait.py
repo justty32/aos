@@ -5,7 +5,7 @@
 #   在＝已寄：think/reply 缺 tmp／new／cur 任一＝先 aos-post init（11-10 TS：clone 後空的 reply 夾不在 git，recv 會 MailboxMissing）；
 #     aos-llm recv --quiet think/reply <名>：沒到（10）＝退 10；到了（0）＝那則 assistant 接進 history.jsonl、刪 pending.txt、退 0（→ act）；
 #     kernel 回錯（1）＝刪 pending.txt、aos-llm 的 stderr 原樣、這格再多寫自己一行 BrainFailed、退 1（P-20 停下等人；人重跑＝沒 pending、request.json 還在→重寄＝重試）。
-#   寄之前看 request.json 的 endpoint 跟現在的 llm.json（interfaces.json 宣告的定義檔疊這隻的 stack 同相對路徑檔，疊法同 brain.py）
+#   寄之前看 request.json 的 endpoint 與調整鍵跟現在的 llm.json（model 對 endpoint、調整鍵對 request 同名鍵，llm_settings.py）（interfaces.json 宣告的定義檔疊這隻的 stack 同相對路徑檔，疊法同 brain.py）
 #     對不對得上：對不上＝退 11 回 think 重組（11-05 edge-agent：代號寫錯停下、人 aos-agent llm set／改或刪 llm.json 再起，
 #     原本照舊的 request.json 重寄、又是同一個錯，要人手動把 stage.txt 寫成 think）。llm.json 讀不懂＝當 {}（brain 重組時會報 CfgBad）。
 #   寄之前也看 request.json 是不是從現在的 history 組的（11-10 TS，I2 L01：git reset／clone 後，這台舊的 request.json 會擺在新的 history 旁邊）：
@@ -312,7 +312,14 @@ if not name:                                     # 還沒寄
     if "llm" in files:
         cfg.update(read_obj(os.path.join(stack, files["llm"])))
     body = read_obj(request)
-    if cfg.get("endpoint") != body.get("endpoint"):
+    sys.dont_write_bytecode = True               # 定義資料夾不留 __pycache__（P-15）
+    import llm_settings  # noqa: E402  （範本資料夾在 sys.path 最前面）
+    try:
+        model, tuning = llm_settings.body_fields(cfg)
+    except ValueError:
+        sys.exit(REBUILD)                        # 設定壞了：交給 brain 報 CfgBad
+    sent_req = body.get("request") if isinstance(body.get("request"), dict) else {}
+    if model != body.get("endpoint") or tuning != {k: sent_req[k] for k in llm_settings.TUNING if k in sent_req}:
         sys.exit(REBUILD)                        # 腦設定改過（多半是上次 kernel 回錯、人改了代號再起）：brain 重組再寄
     if stale_request(body):
         sys.exit(REBUILD)                        # 請求比 history 舊（reset／clone 後留下的）：brain 重組再寄

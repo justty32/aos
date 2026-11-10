@@ -20,7 +20,7 @@ class OwnTools(unittest.TestCase):
         for d in (self.defn, self.stack, kernel):
             d.mkdir()
         (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"llm": "llm.json", "tools": "tools.json"}}))
-        (self.defn / "llm.json").write_text('{"endpoint":"fake"}')
+        (self.defn / "llm.json").write_text('{"model":"fake"}')
         (self.defn / "tools.json").write_text(json.dumps({"tools": {"wall_clock": {"path": str(CLOCK)}}}))
         (self.stack / "history.jsonl").write_text('{"role":"user","content":"hi"}\n')
         self.own = self.stack / "tools.json"

@@ -48,7 +48,7 @@ class ReviewRound(unittest.TestCase):
         self.target = self.defs / 'worker'
         shutil.copytree(PROTO / 'templates/agent-fsm', self.target,
                         ignore=shutil.ignore_patterns('tests', '__pycache__'))
-        write(self.target / 'llm.json', {'endpoint': 'high'})
+        write(self.target / 'llm.json', {'model': 'high'})
         write(self.target / 'tools.json', {'tools': {
             'bash': {'path': str(PROTO / 'lib/base/bash')}}})
         write(self.target / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10,
@@ -166,7 +166,7 @@ class ReviewRound(unittest.TestCase):
         self.assertEqual(review['adopted'], {'move': 'downgrade', 'to': 'low'})
         self.assertEqual(review['tried'], [{'move': 'downgrade', 'from': 'high', 'to': 'low',
                                           'scores': [1.0] * 3, 'pass': True}])
-        self.assertEqual(read(self.target / 'llm.json')['endpoint'], 'low')
+        self.assertEqual(read(self.target / 'llm.json')['model'], 'low')
         previous = list((self.defs / '.prev/worker').iterdir())
         self.assertEqual(len(previous), 1)
         self.assertEqual(snapshot(previous[0]), original)
@@ -188,7 +188,7 @@ class ReviewRound(unittest.TestCase):
         self.assertFalse((self.defs / '.prev').exists())
         self.assertEqual(review['pending_promote'], {
             'defs': str(self.defs), 'target': 'worker', 'from': review['proposed']})
-        self.assertEqual(read(Path(review['proposed']) / 'worker/llm.json')['endpoint'], 'low')
+        self.assertEqual(read(Path(review['proposed']) / 'worker/llm.json')['model'], 'low')
         self.assertFalse((self.ws / 'reviews/watch.json').exists())
 
     def test_failed_lowest_level_prescribes_and_overrides_case_threshold(self):
@@ -200,7 +200,7 @@ class ReviewRound(unittest.TestCase):
         self.assertFalse(review['tried'][-1]['pass'])
         self.assertIsNone(review['adopted'])
         self.assertEqual(snapshot(self.defs), original)
-        self.assertEqual(read(Path(review['proposed']) / 'worker/llm.json')['endpoint'], 'high')
+        self.assertEqual(read(Path(review['proposed']) / 'worker/llm.json')['model'], 'high')
         self.assertFalse((self.defs / '.prev').exists())
         self.assertEqual(review['after'], review['before'])
 
@@ -212,8 +212,8 @@ class ReviewRound(unittest.TestCase):
         self.assertEqual([row['pass'] for row in review['tried']], [True, False])
         self.assertEqual([row['from'] for row in review['tried']], ['high', 'middle'])
         self.assertEqual(review['adopted']['to'], 'middle')
-        self.assertEqual(read(self.target / 'llm.json')['endpoint'], 'middle')
-        self.assertEqual(read(Path(review['proposed']) / 'worker/llm.json')['endpoint'], 'middle')
+        self.assertEqual(read(self.target / 'llm.json')['model'], 'middle')
+        self.assertEqual(read(Path(review['proposed']) / 'worker/llm.json')['model'], 'middle')
         self.assertEqual(review['after']['token']['in'], 80)
 
 

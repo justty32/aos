@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-# self_llm - aos-agent llm 的包裝，目標改成叫我的那隻自己：show、set、reset；改的是那隻 stack 裡自己那份 llm 設定，定義不動
+# self_llm - aos-agent llm 的包裝，目標改成叫我的那隻自己：ls、set、rm、reset；改的是那隻 stack 裡自己那份 llm 設定，定義不動
 # 使用者 11-10 晚：頂層提議 self_brain（包裝 aos-agent llm、目標是自己），使用者「self_brain來做吧，但改名self_llm」；原則同 self_tools（純包裝、不多給、不多擋：
 #   腦把自己設成不通的腦而停住屬自行承擔）。**對應關係**：aos-agent llm 加了動作或旗標，這支要跟著加（參數一對一）。
-# 介面（lib/README 的契約）：stdin 收 {"op": "show"|"set"|"reset", …}；別的鍵＝ArgumentsBad：
-#   show {}                      ＝llm show（印 KEY=VALUE 一行一個，定義疊這隻改過的）
-#   set {settings: {KEY: VALUE}} ＝llm set KEY=VALUE…（值是字串；認哪些鍵由身體決定，例 endpoint）
+# 11-10 晚使用者「換」：show 換成 ls（比照 tools，可要長版）、加 rm（只拿掉自己改的某幾鍵）。
+# 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"set"|"rm"|"reset", …}；別的鍵＝ArgumentsBad：
+#   ls {long?}                   ＝llm ls（印 KEY=VALUE 一行一個，定義疊這隻改過的）；long: true＝llm ls -l（多一欄 definition｜agent）
+#   set {settings: {KEY: VALUE}} ＝llm set KEY=VALUE…（值是字串；認哪些鍵由身體決定，例 model；身體不讀的鍵照存、warning 那行也印進 stdout 給腦看）
+#   rm {keys: [KEY…]}            ＝llm rm KEY…（回到定義的值）
 #   reset {}                     ＝llm reset -y（腦叫了就算確認過）
 #   先 aos-agent ctl who（$AOS_STACK＝<agent stack>/tools/self_llm/ 查 daemon 表）認出是哪隻；aos-agent 在 $AOS_WS 跑。
 #   結果：下層 stdout 原樣（set／reset 多一句「下一題起生效」）。錯：同 self_tools（stderr 與 stdout 各一行「self_llm: error: 代號 原因」、退 1；
@@ -13,8 +15,8 @@
 import json, os, re, signal, subprocess, sys
 HELP = """\
 usage: self_llm < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Show or change the brain settings of the agent that calls me (its own copy, not its definition):
-op show | set | reset (aos-agent llm with the target = me). Changes apply from the next turn.
+List or change the brain settings of the agent that calls me (its own copy, not its definition):
+op ls | set | rm | reset (aos-agent llm with the target = me). Changes apply from your next brain call.
 Result on stdout. On error: one line "self_llm: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -41,6 +43,7 @@ tool_io.start(NAME, HELP)
 TIMEOUT_S = 60
 ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
 child = None
+notes = []
 
 
 die = tool_io.die
@@ -76,6 +79,7 @@ def agent(*args):
     if err:                                     # 下層的 stderr 原樣透出（R10）
         sys.stderr.write(err if err.endswith("\n") else err + "\n")
         sys.stderr.flush()
+        notes.extend(l for l in err.splitlines() if l.endswith("stored anyway"))   # 身體不讀的鍵：腦只看 stdout，這句也給它
     if child.returncode != 0:                   # 給腦用的工具把下層錯翻成自己的錯（同 agents）
         mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
         if mine:
@@ -87,7 +91,7 @@ def agent(*args):
 signal.signal(signal.SIGTERM, on_term)
 signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
 args = arguments()
-OPS = {"show": (), "set": ("settings",), "reset": ()}
+OPS = {"ls": ("long",), "set": ("settings",), "rm": ("keys",), "reset": ()}
 op = args.get("op")
 if op is None:
     die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
@@ -101,13 +105,26 @@ cmd = ["llm", "--target", None, op]
 if op == "set":
     s = args.get("settings")
     if not isinstance(s, dict) or not s or not all(isinstance(k, str) and k and "=" not in k and isinstance(v, str) for k, v in s.items()):
-        die("ArgumentsBad", "set needs settings: an object of strings, like {\"endpoint\": \"smart-high\"}")
+        die("ArgumentsBad", "set needs settings: an object of strings, like {\"model\": \"smart-high\"}")
     cmd += ["%s=%s" % (k, s[k]) for k in s]
+elif op == "ls":
+    if args.get("long"):
+        cmd += ["-l"]
+elif op == "rm":
+    keys = args.get("keys")
+    if not isinstance(keys, list) or not keys or not all(isinstance(k, str) and k for k in keys):
+        die("ArgumentsBad", "rm needs keys: a list of key names, like [\"temperature\"]")
+    cmd += keys
 elif op == "reset":
     cmd += ["-y"]
 
 cmd[2] = agent("ctl", "who").strip()
 out = agent(*cmd)
-sys.stdout.write(out if not out or out.endswith("\n") else out + "\n")
-if op in ("set", "reset"):
-    print("(takes effect from your next turn)")
+for line in notes:
+    print(line)
+if out.strip():
+    sys.stdout.write(out if out.endswith("\n") else out + "\n")
+else:
+    print("(no settings: your body uses its defaults)")
+if op in ("set", "rm", "reset"):
+    print("(takes effect from your next brain call)")      # 驗收：brain 每格重讀，同一題的下一拍就換

@@ -161,7 +161,7 @@ class PathsMove(unittest.TestCase):
         llms.mkdir(parents=True)
         m.cp_template("templates/daemon-root", "defs", cwd=proj)
         m.cp_template("templates/agent-fsm", "defs/ann", cwd=proj)
-        (proj / "defs" / "ann" / "llm.json").write_text('{"endpoint": "fake"}\n')
+        (proj / "defs" / "ann" / "llm.json").write_text('{"model": "fake"}\n')
         m.cp_template("kernel/llm-kernel", "def", cwd=llms)
         if mode != "env":                              # 不 export：把範本 .env 那行註解換成自己的值（README 教的寫法）
             value = {"absolute": str(m.proto),

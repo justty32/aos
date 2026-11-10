@@ -79,9 +79,10 @@ def describe(path, root):
     llm_file = agent.get('llm')
     if not isinstance(llm_file, str) or not llm_file:
         raise ValueError('aos-agent.llm must name a file')
-    endpoint = read(path / llm_file).get('endpoint', 'default')
+    # llm.json 的 model＝kernel 的 endpoint 包代號（11-10 晚 fsm 的鍵 endpoint 改名 model）；這裡的分組欄照舊叫 endpoint
+    endpoint = read(path / llm_file).get('model', 'default')
     if not isinstance(endpoint, str):
-        raise ValueError('endpoint must be a string')
+        raise ValueError('model in llm.json must be a string')
     memory = None
     if agent.get('memory') is not None:
         filename = agent['memory']

@@ -63,7 +63,7 @@ def suggestions(defs, reviews, config):
                 if owner and bridge and name in definitions:
                     pairs.add((owner, name))
                 owner, bridge = name, False
-            elif Path(str(node.get('def', ''))).name in ('thought', 'agents'):
+            elif Path(str(node.get('def', ''))).name in ('thought', 'agents_children'):
                 bridge = True
             for child in node.get('children', []):
                 walk(child, owner, bridge)
@@ -156,11 +156,11 @@ def run(args):
         review['action'] = 'prescribe'
         llm_file = candidate / target / 'llm.json'
         llm = read(llm_file) if llm_file.exists() else {}
-        endpoint = llm.get('endpoint')
+        endpoint = llm.get('model')                 # llm.json 的 model＝kernel 的 endpoint 包代號（11-10 晚改名）
         adopted, last = None, before
         if endpoint in config['ladder']:
             for lower in config['ladder'][config['ladder'].index(endpoint) + 1:]:
-                llm['endpoint'] = lower
+                llm['model'] = lower
                 write(llm_file, llm)
                 attempt = measure(candidate)
                 passed = attempt['check']['pass']
@@ -169,7 +169,8 @@ def run(args):
                 if not passed:
                     break
                 endpoint, adopted, last = lower, lower, attempt
-        llm['endpoint'] = endpoint
+        if endpoint is not None:
+            llm['model'] = endpoint
         if llm_file.exists():
             write(llm_file, llm)
         review['steps']['try'] = {'counter_tried': len(review['tried']),

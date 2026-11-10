@@ -69,7 +69,7 @@ class FakeAgentMeasure(unittest.TestCase):
                 target = defs / name
                 shutil.copytree(PROTO / 'templates/agent-fsm', target,
                                 ignore=shutil.ignore_patterns('tests', '__pycache__'))
-                write(target / 'llm.json', {'endpoint': name})
+                write(target / 'llm.json', {'model': name})
                 write(target / 'tools.json', {'tools': tools})
                 write(target / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10,
                                              'ctl': 'ctl.json', 'state': 'state.json'})
@@ -99,7 +99,7 @@ class FakeAgentMeasure(unittest.TestCase):
                     {'tool_calls': [{'name': 'bash', 'arguments': {'command': 'printf parent > result.txt'}}]},
                     {'tool_calls': [{'name': 'thought', 'arguments': {
                         'from': str(child), 'goal': 'Run the planned shell and finish.',
-                        'endpoint': 'child', 'keep': False, 'timeout_s': 30}}]},
+                        'model': 'child', 'keep': False, 'timeout_s': 30}}]},
                     {'content': 'Parent complete.'}]},
                 'child': {'script': [
                     {'tool_calls': [{'name': 'bash', 'arguments': {'command': 'printf child'}}]},

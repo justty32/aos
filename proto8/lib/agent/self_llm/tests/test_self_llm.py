@@ -1,4 +1,4 @@
-"""Test self_llm builds the aos-agent llm command line (show, set, reset) and checks its arguments, with a fake aos-agent."""
+"""Test self_llm builds the aos-agent llm command line (ls, set, rm, reset) and checks its arguments, with a fake aos-agent."""
 import json
 import os
 from pathlib import Path
@@ -22,7 +22,9 @@ elif os.environ.get("FAKE_FAIL"):
     sys.stderr.write("aos-agent: error: LlmBad unknown endpoint x\n")
     sys.exit(1)
 else:
-    print("endpoint=fake")
+    if "temp" in sys.argv[-1]:
+        sys.stderr.write("aos-agent: warning: temp is not a setting the body of bob reads (it reads: model); stored anyway\n")
+    print("model=fake")
 '''
 
 
@@ -50,27 +52,37 @@ class SelfLlm(unittest.TestCase):
         return [json.loads(l) for l in self.log.read_text().splitlines()] if self.log.exists() else []
 
     def test_each_op(self):
-        for args, want in (({"op": "show"}, ["show"]),
-                           ({"op": "set", "settings": {"endpoint": "smart-high", "model": "m"}}, ["set", "endpoint=smart-high", "model=m"]),
+        for args, want in (({"op": "ls"}, ["ls"]),
+                           ({"op": "ls", "long": True}, ["ls", "-l"]),
+                           ({"op": "set", "settings": {"model": "smart-high", "temperature": "0.2"}}, ["set", "model=smart-high", "temperature=0.2"]),
+                           ({"op": "rm", "keys": ["temperature", "top_p"]}, ["rm", "temperature", "top_p"]),
                            ({"op": "reset"}, ["reset", "-y"])):
             r = self.run_tool(args)
             self.assertEqual(r.returncode, 0, (args, r.stdout, r.stderr))
             self.assertEqual(self.calls()[-1][1:], ["llm", "--target", "bob"] + want, args)
-        self.assertIn("next turn", r.stdout)
+        self.assertIn("next brain call", r.stdout)
 
     def test_bad_arguments(self):
         for args, word in (({"op": "set"}, "set needs settings"),
-                           ({"op": "set", "settings": {"endpoint": 3}}, "set needs settings"),
+                           ({"op": "set", "settings": {"model": 3}}, "set needs settings"),
+                           ({"op": "rm"}, "rm needs keys"),
+                           ({"op": "rm", "keys": []}, "rm needs keys"),
+                           ({"op": "show"}, "OpUnknown"),
                            ({"op": "set", "settings": {"a=b": "c"}}, "set needs settings"),
-                           ({"op": "show", "settings": {}}, "does not take settings"),
+                           ({"op": "ls", "settings": {}}, "does not take settings"),
                            ({"op": "nope"}, "OpUnknown")):
             r = self.run_tool(args)
             self.assertEqual(r.returncode, 1, args)
             self.assertIn(word, r.stdout, args)
         self.assertEqual([c for c in self.calls() if c[1:2] == ["llm"]], [])
 
+    def test_unread_key_warning_reaches_the_brain(self):
+        r = self.run_tool({"op": "set", "settings": {"temp": "1"}})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("temp is not a setting the body of bob reads", r.stdout)
+
     def test_lower_error_passed_up(self):
-        r = self.run_tool({"op": "set", "settings": {"endpoint": "x"}}, FAKE_FAIL="1")
+        r = self.run_tool({"op": "set", "settings": {"model": "x"}}, FAKE_FAIL="1")
         self.assertEqual(r.returncode, 1)
         self.assertIn("self_llm: error: LlmBad", r.stdout)
 

@@ -1,5 +1,5 @@
 {
-  "summary": "Show or change the brain settings of the agent calling me (aos-agent ctl who + llm show / set / reset)",
+  "summary": "List or change the brain settings of the agent calling me (aos-agent ctl who + llm ls / set / rm / reset)",
   "resource": "cpu",
   "side_effect": true,
   "idempotent": false,

@@ -33,7 +33,7 @@ class Hooks(unittest.TestCase):
         (self.defn / "interfaces.json").write_text(json.dumps(
             {"aos-agent": {"tools": "tools.json", "llm": "llm.json", "hooks": "hooks.json"}}))
         (self.defn / "tools.json").write_text("{}")
-        (self.defn / "llm.json").write_text('{"endpoint":"local"}')
+        (self.defn / "llm.json").write_text('{"model":"local"}')
         self.log = self.root / "log.jsonl"
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         local = Path.home() / ".local" / "bin"
