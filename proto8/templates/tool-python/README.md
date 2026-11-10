@@ -11,7 +11,7 @@ This folder is one working tool. It adds two numbers. To make your own tool, cha
 | `_tooldef.json` | what the model sees (made from `tool.py`) | no, it is generated |
 | `_metainfo.json` | facts about the tool (made from `tool.py`) | no, it is generated |
 
-After you change `tool.py`, run `tools_def` with `{"op": "check", "path": "<this folder>"}`. It remakes `_tooldef.json` and `_metainfo.json` from `tool.py` and tells you what is wrong. Then add the tool: `self_tools` with `{"op": "add", "path": "<this folder>"}`. You can call it from your next turn. Its name is the folder name.
+After you change `tool.py`, run `tools_def` with `{"op": "check", "path": "<this folder>"}`. It remakes `_tooldef.json` and `_metainfo.json` from `tool.py` and tells you what is wrong. Then add the tool: `self_tools` with `{"op": "add", "path": "<this folder>"}`. It works at once: call it by its name in your next reply. Its name is the folder name.
 
 ## The four things you write in tool.py
 
@@ -52,7 +52,7 @@ def run(args):
 ts.main(run, DESCRIPTION, PARAMS, META)
 ```
 
-Check it, and try it once: `tools_def` with `{"op": "check", "path": "my_tools/mul", "sample": {"a": 6, "b": 7}}`. The last lines say `ok    example: ... -> 42`, `ok    try: ... 42` and `stage 3 of 3`. Then `self_tools` with `{"op": "add", "path": "my_tools/mul"}`, and next turn call `mul` with `{"a": 6, "b": 7}`.
+Check it, and try it once: `tools_def` with `{"op": "check", "path": "my_tools/mul", "sample": {"a": 6, "b": 7}}`. The last lines say `ok    example: ... -> 42`, `ok    try: ... 42` and `stage 3 of 3`. Then `self_tools` with `{"op": "add", "path": "my_tools/mul"}`, and in your next reply call `mul` with `{"a": 6, "b": 7}`.
 
 ## What the tool does for you
 

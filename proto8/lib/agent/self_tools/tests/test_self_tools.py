@@ -55,7 +55,7 @@ class SelfTools(unittest.TestCase):
         r = self.run_tool({"op": "add", "name": "math", "path": "tools/math", "replace": True, "no_cache": True,
                            "envs": {"B": "2", "A": "x y"}, "env_file": "secrets/m.env"})
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("next turn", r.stdout)
+        self.assertIn("works at once: from your next reply in this turn", r.stdout)
         self.assertEqual(self.calls()[-1], [str(self.ws), "tools", "--target", "bob", "add", "--name", "math", "--replace",
                                             "--envs", "A=x y", "--envs", "B=2", "--env-file", "secrets/m.env", "--no-cache",
                                             "tools/math"])

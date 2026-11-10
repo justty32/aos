@@ -15,6 +15,7 @@
 | [`agent-fsm/test_hooks.py`](../../../../../proto8/templates/tests/agent-fsm/test_hooks.py) | Test the hooks of agent-fsm (lib/agent/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added. |
 | [`agent-fsm/test_integration.py`](../../../../../proto8/templates/tests/agent-fsm/test_integration.py) | Verify agent cells through the real local kernel, llm_fake endpoint, and peek_now_time tool. |
 | [`agent-fsm/test_own_tools.py`](../../../../../proto8/templates/tests/agent-fsm/test_own_tools.py) | Test that brain and act use the agent's own tools registry in its stack ("$override" of the definition's; 11-10 aos-tools-cli step 4), and fall back … |
+| [`agent-fsm/test_same_turn_tools.py`](../../../../../proto8/templates/tests/agent-fsm/test_same_turn_tools.py) | Pin when a tool added in the middle of a turn works in agent-fsm (11-10 tools-def, user "3.同一輪就生效"): brain and act re-read the registry on every step… |
 | [`agent-fsm/test_selfheal.py`](../../../../../proto8/templates/tests/agent-fsm/test_selfheal.py) | Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools. |
 | [`judge-llm/endpoint.py`](../../../../../proto8/templates/tests/judge-llm/endpoint.py) | Return deterministic semantic-comparison replies with nonzero fake token usage. |
 | [`judge-llm/test_judge.py`](../../../../../proto8/templates/tests/judge-llm/test_judge.py) | Verify judge reply normalization, truncation, kernel failures, and measured check costs. |

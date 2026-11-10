@@ -78,12 +78,12 @@ class RealDaemon(unittest.TestCase):
         short = self.ok(TOOL, {"op": "ls"}).splitlines()
         self.assertEqual((len(short), short[0].split("\t")[0], short[-1]), (2, "kid", "children 1/4"))
         self.assertLess(len(short[0]), 200)
-        out = self.ok(TOOL, {"op": "tools", "name": "kid", "args": {"op": "add", "path": str(PROTO / "lib" / "base" / "math")}})
-        self.assertIn("kid's next turn", out)
+        out = self.ok(TOOL, {"op": "tools", "name": "kid", "args": {"op": "add", "name": "math2", "path": str(PROTO / "lib" / "base" / "math")}})
+        self.assertIn("kid's next reply", out)
         kid_tools = [t["name"] for t in json.loads(self.agent("tools", "--target", "kid", "ls", "--json").stdout)]
         mom_tools = [t["name"] for t in json.loads(self.agent("tools", "--target", "mom", "ls", "--json").stdout)]
-        self.assertIn("math", kid_tools)
-        self.assertNotIn("math", mom_tools)
+        self.assertIn("math2", kid_tools)                  # math itself is already in the gadgets pack (11-10 tool-packs)
+        self.assertNotIn("math2", mom_tools)
         self.ok(TOOL, {"op": "llm", "name": "kid", "args": {"op": "set", "settings": {"model": "fake"}}})
         self.assertIn("model=fake", self.agent("llm", "--target", "kid", "ls").stdout)
         self.assertNotIn("model=fake", self.agent("llm", "--target", "mom", "ls", check=False).stdout)

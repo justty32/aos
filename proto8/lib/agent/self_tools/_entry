@@ -23,7 +23,7 @@ import json, os, re, signal, subprocess, sys
 HELP = """\
 usage: self_tools < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Change the tool box of the agent that calls me (its overlay, not its definition):
-op ls | get | add | rm | reset (aos-agent tools with the target = me). Changes apply from the next turn.
+op ls | get | add | rm | reset (aos-agent tools with the target = me). Changes work at once: from your next reply in this turn.
 Result on stdout. On error: one line "self_tools: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -154,4 +154,4 @@ cmd[2] = agent("ctl", "who").strip()
 out = agent(*cmd)
 sys.stdout.write(out if not out or out.endswith("\n") else out + "\n")
 if op in ("add", "rm", "reset"):
-    print("(takes effect from your next turn)")
+    print("(works at once: from your next reply in this turn; call a new tool directly by its name, not in the reply that added it)")

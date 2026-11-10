@@ -14,7 +14,11 @@
 #   （11-02 使用者「改成指定檔案」，以前給的是 agent 資料夾、讀它的 tools.json）。一份都沒給＝./tools.json
 #   （11-02 使用者「不接，就是默認aos-tools.json」先改成 ./aos-tools.json；11-02 再改回 ./tools.json、跟 aos-tools 一致：
 #   使用者「兩邊的json格式是一樣的嗎？是同一份嗎？是的話，那就全部改回預設tools.json。」；不存在＝ToolMissing）。好幾份的工具合在一起，撞名＝ToolsBad。
-#   清單每次 tools/list、tools/call 都重讀（登記檔變了，下次列就看得到；不主動通知 listChanged）。
+#   清單每次 tools/list、tools/call 都重讀（登記檔變了，下次列就看得到）。11-10 深夜（tools-def，使用者「3.同一輪就生效」）：
+#   --own FILE＝這隻自己那份登記檔（stack 裡、"$override" 定義那份）：每次讀清單先看它在不在，在＝只用它、不在＝用 REGISTRY
+#   （session 開始時還沒有、self_tools 第一次 add 才建出來的那份，同一輪也看得到）。cli_session 起它時帶上。
+#   initialize 宣告 tools.listChanged；每次 tools/call 回完再讀一次清單，跟上次給出去的不一樣（腦用 self_tools 加減了工具）
+#   就送一則 notifications/tools/list_changed，用戶端（Claude Code）重拿 tools/list，同一輪就叫得到新工具。
 #   工作區＝--ws ＞ $AOS_WS；stack＝--stack ＞ $AOS_STACK ＞ $WS/.stack/。每次叫工具：
 #   AOS_WS=WS AOS_STACK=<stack> aos-tools --file REGISTRY call 名（aos-tools 算 tools/<名>/ 小格；兩支指令由 PATH 找，呼叫者放好），
 #   arguments 進 stdin、stdout 整段回去，退非 0＝isError（失敗時另附工具 stderr 的最後 STDERR_TAIL 位元組，見 tail_of）；逾時＝工具 _metainfo（資料夾的 _metainfo.json 檔／JSON 檔的 _metainfo key）的 timeout_ms，沒寫用 --timeout-s（預設 60），
@@ -44,7 +48,8 @@ from agent import hooks  # noqa: E402  lib/agent/hooks.py：before_tool／after_
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
-USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [--hooks DEF] [REGISTRY...]"
+USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [--hooks DEF] [--own FILE] [REGISTRY...]"
+OWN = None                                      # --own FILE（11-10 深夜 tools-def）：這隻自己那份登記檔；在＝用它代替 REGISTRY（每次重看，self_tools 第一次加就建出來）
 HOOKS = None                                    # --hooks DEF（11-10）：定義資料夾的絕對路徑；None＝沒有 hook
 MEMORY = None                                   # --memory NAME（11-05 晚 K4）：initialize 時給的知識庫根從這個工具來
 DEFAULT_REGISTRY = "tools.json"               # 一份都沒給時讀 ./tools.json（跟 aos-tools 一致；11-02 改回）
@@ -53,12 +58,13 @@ LOGS_PATH = None                               # 記呼叫紀錄的檔（絕對�
 STDERR_TAIL = 2048                             # 失敗時附給外部 agent 的 stderr 最後幾個位元組（11-05，edge-basics 題 1）
 aos_flags.HELP = """aos-mcp - serve the tools of aos-tools registries as MCP tools to an external agent (Claude Code, pi...); stdio JSON-RPC.
 
-    aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [--hooks DEF] [REGISTRY...]
+    aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [--hooks DEF] [--own FILE] [REGISTRY...]
 
 Short flags: -w = --ws, -s = --stack, -h = --help.
 REGISTRY: registry files (relative to the cwd at start; none = ./tools.json); several are merged, a name clash = ToolsBad.
   A registry may "$override" another one (aos-tools merges them); give an agent's own registry in its stack.
-  The list is re-read on every tools/list and tools/call.
+  The list is re-read on every tools/list and tools/call; when a call changed it (self_tools add/rm),
+  a notifications/tools/list_changed follows the reply, so the client lists again at once.
 Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call runs
   AOS_WS=WS AOS_STACK=<stack> aos-tools --file REGISTRY call NAME (aos-tools selects tools/NAME/); arguments go to stdin, stdout goes back as the
   result, exit non-zero = isError (the last 2048 bytes of the tool's stderr are attached). Timeout = the tool's _metainfo timeout_ms,
@@ -69,6 +75,8 @@ Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call
 --hooks DEF: DEF is the agent definition folder (its interfaces.json declares hooks.json; the stack copy goes on top). On tools/call,
   before_tool may change the arguments or block the call (the result text = the hook's stdout, or "[aos] hook: tool NAME blocked by hook HOOK.";
   not an error), after_tool may change the result text. A failing hook = that call returns isError with a HookFailed line. No --hooks = no hooks.
+--own FILE: the agent's own registry (in its stack); whenever it exists it is used instead of REGISTRY
+  (checked on every read, so one made by the first self_tools add counts at once).
 --enable-logs: log one line per call to <stack>/aos-mcp-logs.jsonl (or --logs-path FILE). Off by default.
 Supports initialize, ping, tools/list, tools/call only.
 Errors: one stderr line `aos-mcp: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, WsMissing, ToolMissing, ToolsBad.
@@ -98,11 +106,11 @@ def die(code, reason):
 
 def parse_args(argv):
     """命令列 → (ws, stack, timeout_s, registries)；--enable-logs／--logs-path 設進 LOGS_PATH。"""
-    global LOGS_PATH, MEMORY, HOOKS
+    global LOGS_PATH, MEMORY, HOOKS, OWN
     try:
         opts, files = aos_flags.parse(argv, {"--ws": "ws", "--stack": "stack", "--timeout-s": "timeout_s",
                                              "--logs-path": "log",
-                                             "--memory": "memory", "--hooks": "hooks"}, {"--enable-logs": "enable"}, short=("-w", "-s"))
+                                             "--memory": "memory", "--hooks": "hooks", "--own": "own"}, {"--enable-logs": "enable"}, short=("-w", "-s"))
     except aos_flags.Error as e:
         die(e.code, "%s (usage: %s)" % (e, USAGE))
     ws, stack = opts.get("ws", os.environ.get("AOS_WS")), opts.get("stack", os.environ.get("AOS_STACK"))
@@ -124,6 +132,10 @@ def parse_args(argv):
         if not opts["hooks"] or not os.path.isdir(opts["hooks"]):
             die("ArgumentsBad", "--hooks needs the agent definition folder, got %r" % opts["hooks"])
         HOOKS = os.path.abspath(opts["hooks"])
+    if "own" in opts:
+        if not opts["own"]:
+            die("ArgumentsBad", "--own needs the path of the agent's own registry (it may not exist yet)")
+        OWN = os.path.abspath(opts["own"])
     if not files:
         files = [DEFAULT_REGISTRY]
     if not ws or not os.path.isdir(ws):
@@ -159,7 +171,9 @@ def tools_argv(reg):
 
 
 def load_tools(regs):
-    """問 aos-tools 每份註冊檔登記了什麼 → {名: {reg, spec, max_s}}；失敗丟 ToolsBad。"""
+    """問 aos-tools 每份註冊檔登記了什麼 → {名: {reg, spec, max_s}}；失敗丟 ToolsBad。--own 那份在＝只用它（每次重看）。"""
+    if OWN and os.path.isfile(OWN):
+        regs = [OWN]
     tools = {}
     for reg in regs:
         try:
@@ -317,7 +331,7 @@ def handle(msg, regs, ws, stack, timeout_s):
     try:
         if method == "initialize":
             result = {"protocolVersion": params.get("protocolVersion", PROTOCOL),
-                      "capabilities": {"tools": {}}, "serverInfo": {"name": NAME, "version": "0.2"}}
+                      "capabilities": {"tools": {"listChanged": True}}, "serverInfo": {"name": NAME, "version": "0.2"}}
             root = knowledge_root(regs, ws, stack, timeout_s)
             if root:
                 result["instructions"] = root
@@ -336,15 +350,21 @@ def handle(msg, regs, ws, stack, timeout_s):
     return {"jsonrpc": "2.0", "id": mid, "result": result}
 
 
+def signature(tools):
+    """給出去的清單長怎樣（名字＋給模型的 spec）；變了才通知 list_changed。"""
+    return json.dumps([tools[n]["spec"] for n in sorted(tools)], sort_keys=True)
+
+
 def main():
     ws, stack, timeout_s, regs = parse_args(sys.argv[1:])
     try:
-        load_tools(regs)                        # 啟動時先讀一次：壞了就別開櫃台
+        shown = signature(load_tools(regs))     # 啟動時先讀一次：壞了就別開櫃台
     except ToolsBad as e:
         die("ToolsBad", str(e))
     for line in sys.stdin:                      # 一行一則（MCP stdio 傳輸）
         if not line.strip():
             continue
+        msg = None
         try:
             msg = json.loads(line)
             reply = handle(msg, regs, ws, stack, timeout_s) if isinstance(msg, dict) else \
@@ -354,6 +374,15 @@ def main():
         if reply is not None:
             sys.stdout.write(json.dumps(reply, ensure_ascii=False) + "\n")
             sys.stdout.flush()
+        if isinstance(msg, dict) and msg.get("method") in ("tools/list", "tools/call") and reply is not None:
+            try:
+                now = signature(load_tools(regs))
+            except ToolsBad:
+                continue                        # 登記檔這時壞了：下一則照常回錯，這裡不通知
+            if msg["method"] == "tools/call" and now != shown:   # 腦剛加減了工具：叫用戶端重拿清單（同一輪就生效）
+                sys.stdout.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/tools/list_changed"}) + "\n")
+                sys.stdout.flush()
+            shown = now
 
 
 if __name__ == "__main__":

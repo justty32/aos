@@ -38,3 +38,4 @@
 | [`tests/test_env_file.py`](../../../../../proto8/cmd/aos-tools/tests/test_env_file.py) | Test aos-tools env_file (11-10 aos-tools-cli step 3): add --env-file stores only the location, call reads it every time, a missing file at call is Pa… |
 | [`tests/test_override.py`](../../../../../proto8/cmd/aos-tools/tests/test_override.py) | Test aos-tools "$override" registries (11-10 aos-tools-cli step 4): patch merge with null removal, chains and arrays, loops and diamonds, writes only… |
 | [`tests/test_paths.py`](../../../../../proto8/cmd/aos-tools/tests/test_paths.py) | Test aos-tools path forms: directives in an overriding registry (path and env), add keeping the user's form, --path-json, and the PathMissing line. |
+| [`tests/test_pointer.py`](../../../../../proto8/cmd/aos-tools/tests/test_pointer.py) | Test aos-tools with FILE.json#/POINTER locations: add (stored form, default name), ls -l, get, call through aos-exec, rm by path, and the errors. |

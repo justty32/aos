@@ -142,6 +142,8 @@ def stack_copies(cfg, tool_dir, files):
     if stack:
         rel = files.get("tools")
         copy = os.path.join(stack, rel) if rel else None
+        if "tools" not in cfg and copy and cfg.get("registry"):
+            cfg["own_registry"], cfg["def_registry"] = copy, cfg["registry"]   # 11-10 深夜 tools-def（「3.同一輪就生效」）：aos-mcp --own 每次重看，第一次 self_tools add 才建也看得到
         if "tools" not in cfg and copy and os.path.isfile(copy):
             cfg["registry"] = copy                   # 11-10 aos-tools-cli 步 4：這隻自己那份（"$override" 指回定義那份）在就用它
         if "llm" in files:
@@ -195,11 +197,14 @@ def mcp_argv(cfg, cell, ws, stack):
     reg = cfg.get("registry")
     if not reg:
         return []
+    if cfg.get("own_registry"):                       # aos-mcp 自己挑：--own 那份在就用它，不在（reset 刪了）＝回定義那份
+        reg = cfg["def_registry"]
     if not os.path.isfile(reg):                       # load_cfg 之後才被刪掉
         die("ToolsMissing", "registry file not found: %s" % reg)
     if shutil.which("aos-mcp") is None:
         die("CliMissing", "aos-mcp is not on PATH (tools are attached; add proto8/cmd/aos-mcp/bin to PATH)")
     args = ["--ws", ws, "--stack", stack] + (["--hooks", cfg["hooks_def"]] if cfg.get("hooks_def") else []) \
+        + (["--own", os.path.abspath(cfg["own_registry"])] if cfg.get("own_registry") else []) \
         + cfg.get("tools_flags", []) + [reg]
     if cfg["kind"] == "codex":                           # JSON 字串與字串陣列同時是合法的 TOML（-c 的值照 TOML 解）
         return ["-c", "mcp_servers.aos.command=" + json.dumps("aos-mcp"), "-c", "mcp_servers.aos.args=" + json.dumps(args)]

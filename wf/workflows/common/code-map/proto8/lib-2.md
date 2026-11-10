@@ -63,4 +63,4 @@
 | [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定或工具設定預設定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
 | [`thought/tests/test_observed_children.py`](../../../../../proto8/lib/agent/thought/tests/test_observed_children.py) | Verify child account preservation and thought cleanup ordering. |
 | [`tools_def/`](../../../../../proto8/lib/agent/tools_def/) | 工具定義的創造：new＝把 Python 骨架（templates/tool-python）複製成新工具夾，check＝檢查一個工具位置（資料夾、JSON 檔或 檔#/指標）合不合格、在哪一階段 |
-| [`tools_def/tests/test_tools_def.py`](../../../../../proto8/lib/agent/tools_def/tests/test_tools_def.py) | Test tools_def new (copy the skeleton, description, PathExists, outside the workspace) and check (folder, JSON file, FILE#/POINTER, bad lines, sample… |
+| [`tools_def/tests/test_tools_def.py`](../../../../../proto8/lib/agent/tools_def/tests/test_tools_def.py) | Test tools_def new (copy the skeleton, description, PathExists, outside the workspace, into JSON objects), check (folder, JSON file, FILE#/POINTER, b… |
