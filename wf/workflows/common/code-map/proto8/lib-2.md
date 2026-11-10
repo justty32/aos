@@ -34,6 +34,8 @@
 | [`memory_write/`](../../../../../proto8/lib/agent/memory_write/) | 改記憶庫：add／set／rm 一次寫好內容與它在表（_index.json 或 _index key）裡的那格；只寫庫根底下。 |
 | [`memory_write/tests/test_writing.py`](../../../../../proto8/lib/agent/memory_write/tests/test_writing.py) | memory_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、只寫庫根底下、各錯誤代號；寫完用 memory 讀回來對。 |
 | [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | memory_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫入只准落在庫根底下。 |
+| [`self_history/`](../../../../../proto8/lib/agent/self_history/) | aos-agent history 的包裝，目標改成叫我的那隻自己：ls、rm、summarize、set；正在進行的這一步（叫我的那則訊息與之後）不准動 |
+| [`self_history/tests/test_self_history.py`](../../../../../proto8/lib/agent/self_history/tests/test_self_history.py) | Test self_history builds the aos-agent history command line (ls, rm, summarize, set) and refuses the step in progress, with a fake aos-agent. |
 | [`self_llm/`](../../../../../proto8/lib/agent/self_llm/) | aos-agent llm 的包裝，目標改成叫我的那隻自己：show、set、reset；改的是那隻 stack 裡自己那份 llm 設定，定義不動 |
 | [`self_llm/tests/test_self_llm.py`](../../../../../proto8/lib/agent/self_llm/tests/test_self_llm.py) | Test self_llm builds the aos-agent llm command line (show, set, reset) and checks its arguments, with a fake aos-agent. |
 | [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | aos-agent tools 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份登記檔，定義不動 |

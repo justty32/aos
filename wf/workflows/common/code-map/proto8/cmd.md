@@ -22,6 +22,7 @@
 | [`aos_agent/ctl/who.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/who.py) | 由 stack 路徑查詢所屬 agent。 |
 | [`aos_agent/decl.py`](../../../../../proto8/cmd/aos-agent/aos_agent/decl.py) | 讀取介面宣告並呼叫定義中的子介面入口。 |
 | [`aos_agent/hints.py`](../../../../../proto8/cmd/aos-agent/aos_agent/hints.py) | 讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。 |
+| [`aos_agent/history.py`](../../../../../proto8/cmd/aos-agent/aos_agent/history.py) | 看與改 agent 的對話紀錄（宣告的 history 檔，一行一則訊息）：ls、rm 一段、summarize 一段換成一則、set 任一行；改掉的原文預設搬到旁邊。 |
 | [`aos_agent/listen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/listen.py) | 以秒或 cycle 等待回答，或列出與追蹤歷史對話。 |
 | [`aos_agent/llm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/llm.py) | 分層解析腦設定命令並管理 agent 的覆蓋鍵與重設確認。 |
 | [`aos_agent/say.py`](../../../../../proto8/cmd/aos-agent/aos_agent/say.py) | 寄一則訊息到 agent 的 queue。 |
@@ -31,6 +32,7 @@
 | [`stack.gitattributes`](../../../../../proto8/cmd/aos-agent/stack.gitattributes) | 把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件） |
 | [`stack.gitignore`](../../../../../proto8/cmd/aos-agent/stack.gitignore) | 可選的 stack 排除範本：暫存、鎖、本機資料與可重建紀錄不進 git。 |
 | [`tests/test_daemon_down.py`](../../../../../proto8/cmd/aos-agent/tests/test_daemon_down.py) | Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing. |
+| [`tests/test_history.py`](../../../../../proto8/cmd/aos-agent/tests/test_history.py) | Test aos-agent history on a fake daemon table (11-10 self-family): ls, rm, summarize, set, the kept originals (default, --keep, --no-keep), ranges an… |
 | [`tests/test_ls_health.py`](../../../../../proto8/cmd/aos-agent/tests/test_ls_health.py) | Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table. |
 | [`tests/test_rm_keep.py`](../../../../../proto8/cmd/aos-agent/tests/test_rm_keep.py) | Test aos-agent ctl rm keeps the stack by default and deletes it only with --purge (cli-sweep Q3), on a real aos-daemon. |
 | [`tests/test_tools_override.py`](../../../../../proto8/cmd/aos-agent/tests/test_tools_override.py) | Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with "$override" (N2 poin… |

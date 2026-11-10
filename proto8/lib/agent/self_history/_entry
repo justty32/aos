@@ -1,0 +1,202 @@
+#!/usr/bin/env python3
+# self_history - aos-agent history 的包裝，目標改成叫我的那隻自己：ls、rm、summarize、set；正在進行的這一步（叫我的那則訊息與之後）不准動
+# 使用者 11-10 晚 self_history 五題：「1.全給，風險自己擔。2.可以。3.可選，默認搬到旁邊(可以選要搬到哪) 4.接受縮水版。5.對」（thinking 2026-11/10/self-family）；
+#   原則同 self_tools（「這支工具就是aos-agent tools的包裝，只是目標改自己」：純包裝、參數一對一）。**對應關係**：aos-agent history 加了動作或旗標，這支要跟著加。
+# 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"rm"|"summarize"|"set", …}；別的鍵＝ArgumentsBad：
+#   ls {range?, json?}                         ＝history ls [--json] [RANGE]；最後多一行說哪幾行是這一步、動不了
+#   rm {range, keep?, no_keep?}                ＝history rm [--keep FILE | --no-keep -y] RANGE
+#   summarize {range, text, role?, keep?, no_keep?} ＝history summarize [--role] [--keep | --no-keep -y] -- RANGE TEXT
+#   set {line, message, keep?, no_keep?}       ＝history set [--keep | --no-keep -y] -- LINE JSON（message 是物件）
+#   range 收字串（N、A-B、A-）或整數；line 收整數或字串。no_keep 時帶 -y（腦叫了就算確認過）。
+# 唯一多的規則（使用者第 2 題「可以」）：先 history ls --json，找「這一步」的頭——最後一則 assistant 帶 tool_calls、後面只有 tool＝那則
+#   （fsm：叫我的那則）；不然＝最後一則 assistant 的下一行（eca：這一輪交進來的 user）；沒有 assistant＝第 1 行。改的那段碰到它以後＝RangeBad、不叫下層。
+#   放這層不放 aos-agent history：人用的指令照「寫什麼做什麼」，只有腦改自己時才有「這一步」。
+#   先 aos-agent ctl who（$AOS_STACK＝<agent stack>/tools/self_history/ 查 daemon 表）認出是哪隻；aos-agent 在 $AOS_WS 跑（keep 的相對路徑從工作區算）。
+# 結果：下層 stdout 原樣（rm／summarize／set 多一句「下一題起生效」）。錯：同 self_tools（stderr 與 stdout 各一行「self_history: error: 代號 原因」、退 1；
+#   下層最後一行錯誤行的代號與原因接上，C-52 例外 ⑤；沒那行才是 CommandFailed）。只在 daemon 下跑的 agent 能用。
+# 需要 PATH 上有 aos-agent（proto8/install.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
+import json, os, re, signal, subprocess, sys
+HELP = """\
+usage: self_history < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+See or change the conversation of the agent that calls me: op ls | rm | summarize | set
+(aos-agent history with the target = me). The step in progress (the message that called me and
+after) cannot be changed. Changes apply from the next turn; removed messages are kept next to the history.
+Result on stdout. On error: one line "self_history: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "self_history"
+tool_io.start(NAME, HELP)
+TIMEOUT_S = 60
+ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
+child = None
+
+
+die = tool_io.die
+
+
+def on_term(signum, frame):
+    if child is not None and child.poll() is None:
+        try:
+            os.killpg(child.pid, signal.SIGTERM)
+        except OSError:
+            pass
+    sys.exit(128 + signum)
+
+
+workspace = tool_io.workspace
+arguments = tool_io.arguments
+
+
+def agent(*args):
+    """aos-agent args…：stderr 原樣往上；退非 0＝它最後一行錯誤行的代號與原因當自己的錯（沒有＝CommandFailed）。回 stdout。"""
+    global child
+    try:
+        child = subprocess.Popen(["aos-agent"] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, text=True, start_new_session=True, cwd=workspace())
+    except OSError as e:
+        die("LaunchFailed", "cannot run aos-agent (put it on PATH with proto8/install.sh): %s" % e)
+    try:
+        out, err = child.communicate(timeout=TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        os.killpg(child.pid, signal.SIGKILL)
+        child.communicate()
+        die("CommandFailed", "aos-agent %s took over %d s and was killed" % (" ".join(args[:2]), TIMEOUT_S))
+    if err:                                     # 下層的 stderr 原樣透出（R10）
+        sys.stderr.write(err if err.endswith("\n") else err + "\n")
+        sys.stderr.flush()
+    if child.returncode != 0:                   # 給腦用的工具把下層錯翻成自己的錯（同 agents）
+        mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
+        if mine:
+            die(mine[-1].group(1), mine[-1].group(2))
+        die("CommandFailed", "aos-agent %s exited %d" % (" ".join(args[:2]), child.returncode))
+    return out
+
+
+signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
+args = arguments()
+KEEP = ("keep", "no_keep")
+OPS = {"ls": ("range", "json"), "rm": ("range",) + KEEP, "summarize": ("range", "text", "role") + KEEP,
+       "set": ("line", "message") + KEEP}
+op = args.get("op")
+if op is None:
+    die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
+if op not in OPS:
+    die("OpUnknown", "op must be one of %s (got %r)" % (", ".join(OPS), op))
+extra = sorted(k for k in args if k != "op" and k not in OPS[op])
+if extra:
+    die("ArgumentsBad", "op %s does not take %s (it takes %s)" % (op, ", ".join(extra), ", ".join(OPS[op])))
+
+
+def text(key, need=False):
+    v = args.get(key)
+    if v is None and not need:
+        return None
+    if not isinstance(v, str) or not v.strip():
+        die("ArgumentsBad", "%s %s a non-empty string" % (key, "needs" if v is None else "must be"))
+    return v
+
+
+def flag(key):
+    v = args.get(key, False)
+    if not isinstance(v, bool):
+        die("ArgumentsBad", "%s must be true or false" % key)
+    return v
+
+
+def spot(key, need):
+    """range／line：整數或字串都收，轉成字串交下層（格式由下層查）。"""
+    v = args.get(key)
+    if v is None and not need:
+        return None
+    if isinstance(v, bool) or not isinstance(v, (int, str)) or (isinstance(v, str) and not v.strip()):
+        die("ArgumentsBad", "%s %s a line number like 3 or a range like \"2-5\"" % (key, "needs" if v is None else "must be"))
+    return str(v).strip()
+
+
+def keep_flags():
+    k, nk = text("keep"), flag("no_keep")
+    if k and nk:
+        die("ArgumentsBad", "give keep or no_keep, not both")
+    return ["--keep", k] if k else (["--no-keep", "-y"] if nk else [])
+
+
+def step_start(rows):
+    """「這一步」的第一行（1 起）：最後一則 assistant 帶 tool_calls 且後面只有 tool＝它；不然＝最後一則 assistant 的下一行；沒有＝1。"""
+    roles = [((r.get("message") or {}).get("role"), bool((r.get("message") or {}).get("tool_calls"))) for r in rows]
+    last = max((i for i, (role, _) in enumerate(roles) if role == "assistant"), default=None)
+    if last is None:
+        return 1
+    if roles[last][1] and all(role == "tool" for role, _ in roles[last + 1:]):
+        return last + 1
+    return last + 2
+
+
+def end_of(spec, n):
+    """一段的最後一行；寫壞的交給下層報 RangeBad（回 None）。"""
+    a, dash, b = spec.partition("-")
+    if not a.isdecimal() or (dash and b and not b.isdecimal()):
+        return None
+    return int(b) if b else (n if dash else int(a))
+
+
+me = None
+
+
+def history(*more):
+    return agent("history", "--target", me, *more)
+
+
+rng = spot("range", op in ("rm", "summarize")) if op != "set" else None
+line = spot("line", True) if op == "set" else None
+cmd = [op]
+if op == "ls":
+    cmd += (["--json"] if flag("json") else []) + ([rng] if rng else [])
+else:
+    cmd += keep_flags()
+    if op == "summarize":
+        role = text("role")
+        cmd += (["--role", role] if role else []) + ["--", rng, text("text", True)]
+    elif op == "set":
+        m = args.get("message")
+        if not isinstance(m, dict) or not m:
+            die("ArgumentsBad", "message must be the whole new message as an object, like {\"role\": \"user\", \"content\": \"hi\"}")
+        cmd += ["--", line, json.dumps(m, ensure_ascii=False)]
+    else:
+        cmd += ["--", rng]
+
+me = agent("ctl", "who").strip()
+rows = json.loads(history("ls", "--json"))
+n = len(rows)
+lock = step_start(rows)
+if op != "ls":
+    end = end_of(line if op == "set" else rng, n)
+    if end is not None and end >= lock:
+        die("RangeBad", "lines %d-%d are the step in progress (the message that called self_history and after); "
+            "you can only change lines 1-%d" % (lock, n, lock - 1) if lock > 1 else
+            "lines 1-%d are the step in progress (the message that called self_history and after); there is nothing before it to change" % n)
+out = history(*cmd)
+sys.stdout.write(out if not out or out.endswith("\n") else out + "\n")
+if op == "ls":
+    print("(%d messages; lines %d-%d are the step in progress and cannot be changed)" % (n, lock, n) if lock <= n
+          else "(%d messages)" % n)
+else:
+    print("(takes effect from your next turn)")
