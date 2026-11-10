@@ -45,15 +45,22 @@ def append_strict(stack, record):
         stream.flush()
 
 
-def append(stack, record):
+def program(prog=None):
+    """Name for warning lines: the given one, else the tool that ran tool_io.start, else agent-fsm."""
+    if prog:
+        return prog
+    return tool_io.NAME if tool_io.NAME != 'tool' else 'agent-fsm'
+
+
+def append(stack, record, prog=None):
     """Append best effort without changing the caller's result."""
     try:
         append_strict(stack, record)
     except (OSError, ValueError, TypeError) as error:
-        tool_io.warn('cannot append to observed.jsonl: %s' % error, prog='agent-fsm')
+        tool_io.warn('cannot append to observed.jsonl: %s' % error, prog=program(prog))
 
 
-def call(name, target, stdin, stack=None):
+def call(name, target, stdin, stack=None, prog=None):
     """Run aos-exec with a tool cell, returning code and raw output bytes."""
     from observed_children import clear_child, take_child
 
@@ -77,5 +84,5 @@ def call(name, target, stdin, stack=None):
         child = take_child(child_stack)
         if child:
             record['child'] = relative + '/' + child
-        append(stack, record)
+        append(stack, record, prog)
     return result.returncode, result.stdout, result.stderr

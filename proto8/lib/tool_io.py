@@ -52,7 +52,7 @@ def warn_missing_clock(path, prog=None):
     key = (os.getpid(), path)
     if key not in _CLOCK_WARNED:
         _CLOCK_WARNED.add(key)
-        warn("AOS_CLOCK points to a missing file; treating the clock as 0", prog=prog)
+        warn("AOS_CLOCK points to a missing file; treating the clock as 0 (normal right after start, before the first tick)", prog=prog)
 
 
 def now_cycle():
@@ -424,6 +424,10 @@ def arguments(*required):
     return _ARGUMENTS
 
 
+# 每支工具都可能出的代號（lib/docs/01 規則 3 的 11-06 註）；--help 自動補在 errors 後面。
+COMMON_ERRORS = ("FlagUnknown", "ModuleMissing", "StackMissing")
+
+
 def help_from_tooldef(name, tooldef, extra=""):
     """手寫說明後接同源旗標段；無手寫說明時也能單獨生成用法。"""
     td, schema = _object(tooldef), _parameters(tooldef)
@@ -470,8 +474,15 @@ def help_from_tooldef(name, tooldef, extra=""):
         lines.extend(["Flags override the stdin JSON; a dotted flag (--a.b V) changes only that nested key.", 'Keys the tool does not know are ignored; a key with "." in its name can only be given on stdin.', "An unknown flag is FlagUnknown; a bad value or a missing required key is ArgumentsBad."])
     if not extra:
         lines.append('Result on stdout. On error: one line "%s: error: CODE reason" on stderr and stdout, exit 1.' % name)
-    if _strings(td.get("errors")):
-        lines.append("Error codes: " + ", ".join(td["errors"]))
+    # 共通代號不寫進各支 _tooldef.json，生成時補在自己的代號後面（坑-94）。
+    own = _strings(td.get("errors")) or []
+    common = [c for c in COMMON_ERRORS if c not in own]
+    parts = [", ".join(own)] if own else []
+    if [c for c in common if c != "StackMissing"]:
+        parts.append("common to all tools: " + ", ".join(c for c in common if c != "StackMissing"))
+    if "StackMissing" in common:
+        parts.append("StackMissing if the tool needs AOS_STACK")
+    lines.append("Error codes: " + "; ".join(parts))
     env = td.get("env")
     if isinstance(env, list) and env and all(isinstance(x, str) for x in env):
         lines.append("Environment: " + ", ".join(env) + " (hub variables this tool needs; not set = <Name>Missing)")
