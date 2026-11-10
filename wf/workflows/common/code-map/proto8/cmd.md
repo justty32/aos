@@ -23,6 +23,7 @@
 | [`aos_agent/decl.py`](../../../../../proto8/cmd/aos-agent/aos_agent/decl.py) | 讀取介面宣告並呼叫定義中的子介面入口。 |
 | [`aos_agent/hints.py`](../../../../../proto8/cmd/aos-agent/aos_agent/hints.py) | 讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。 |
 | [`aos_agent/history.py`](../../../../../proto8/cmd/aos-agent/aos_agent/history.py) | 看與改 agent 的對話紀錄（宣告的 history 檔，一行一則訊息）：ls、rm 一段、summarize 一段換成一則、set 任一行；改掉的原文預設搬到旁邊。 |
+| [`aos_agent/hook.py`](../../../../../proto8/cmd/aos-agent/aos_agent/hook.py) | 管 agent 自己那份 hooks 清單（疊在定義那份上，同名蓋過、null 關掉）：ls、get、add、rm、reset。 |
 | [`aos_agent/listen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/listen.py) | 以秒或 cycle 等待回答，或列出與追蹤歷史對話。 |
 | [`aos_agent/llm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/llm.py) | 分層解析腦設定命令（ls／set／rm／reset）並管理 agent 的覆蓋鍵與重設確認。 |
 | [`aos_agent/say.py`](../../../../../proto8/cmd/aos-agent/aos_agent/say.py) | 寄一則訊息到 agent 的 queue。 |
@@ -33,6 +34,8 @@
 | [`stack.gitignore`](../../../../../proto8/cmd/aos-agent/stack.gitignore) | 可選的 stack 排除範本：暫存、鎖、本機資料與可重建紀錄不進 git。 |
 | [`tests/test_daemon_down.py`](../../../../../proto8/cmd/aos-agent/tests/test_daemon_down.py) | Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing. |
 | [`tests/test_history.py`](../../../../../proto8/cmd/aos-agent/tests/test_history.py) | Test aos-agent history on a fake daemon table (11-10 self-family): ls, rm, summarize, set, the kept originals (default, --keep, --no-keep), ranges an… |
+| [`tests/test_hook.py`](../../../../../proto8/cmd/aos-agent/tests/test_hook.py) | Test aos-agent hook on a fake daemon table: add writes only the agent's own hooks list (flags, path forms, --path-json), HookExists / --replace, rm (… |
+| [`tests/test_llm.py`](../../../../../proto8/cmd/aos-agent/tests/test_llm.py) | Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and… |
 | [`tests/test_ls_health.py`](../../../../../proto8/cmd/aos-agent/tests/test_ls_health.py) | Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table. |
 | [`tests/test_rm_keep.py`](../../../../../proto8/cmd/aos-agent/tests/test_rm_keep.py) | Test aos-agent ctl rm keeps the stack by default and deletes it only with --purge (cli-sweep Q3), on a real aos-daemon. |
 | [`tests/test_tools_override.py`](../../../../../proto8/cmd/aos-agent/tests/test_tools_override.py) | Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with "$override" (N2 poin… |
@@ -43,15 +46,3 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-clock`](../../../../../proto8/cmd/aos-clock/bin/aos-clock) | 時鐘往前走一格（CONCEPTS C-44、NORMS N-01；規格 10-12「做吧」，計畫 10-21 第 4 段）。 |
-
-## `proto8/cmd/aos-daemon-ctl/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-daemon-ctl`](../../../../../proto8/cmd/aos-daemon-ctl/bin/aos-daemon-ctl) | 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 py/aos_sweep）；說明在 cmd/docs/03、04。 |
-| [`tests/test_add_rm_checks.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_add_rm_checks.py) | aos-daemon-ctl add 撞名＝InstanceExists、rm 表上沒有＝ProcMissing，都報錯不寄（cli-sweep 甲5，11-10）。 |
-| [`tests/test_already.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_already.py) | 對已在那個狀態的列下 stop／sleep／start／wake＝印「名字: already 狀態」、退 0、不寄信（cli-sweep Q4＝A，使用者 11-10）。 |
-| [`tests/test_auto_restart.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_auto_restart.py) | Verify --auto-restart: add_letter puts "auto_restart": true on the row for loop, exec and envs types, and both add commands take the switch. |
-| [`tests/test_envs_portable.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_envs_portable.py) | Verify add_letter's --envs single: with the daemon stack given, the target is {"$env": "AOS_DAEMON", "$path": relative}, so a moved tree still starts… |
-| [`tests/test_path_json.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_path_json.py) | add 的 --ws-json／--stack-json／--path-json：指示詞原樣進信（表上記原形、每次起再解；11-10 B01）。 |
-| [`tests/test_shutdown_timeout.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_shutdown_timeout.py) | shutdown 等不到 daemon 退出＝StillRunning 錯誤（11-10 two-machines：退 0 會讓人以為可以 commit／push）。 |

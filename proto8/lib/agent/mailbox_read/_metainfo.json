@@ -1,0 +1,14 @@
+{
+  "summary": "Read and remove (or keep) the oldest letter in the mailbox of the agent calling me (aos-mailbox read)",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

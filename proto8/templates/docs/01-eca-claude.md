@@ -14,7 +14,7 @@ eca-claude/
   llm.json    腦設定：{"model": "sonnet"}（11-04 晚；cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔11-04 起，相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
-  tools.json  aos-tools 的登記檔：wall_clock、self_tools、self_llm、self_history、agents、memory（跟 agent-fsm 同一份：都寫 `{"$env": "AOS_HOME", …}`，memory 直接登記 lib/agent/memory、`env.AOS_MEMORY` 指知識庫；後兩個 11-05 使用者裁「內建」）；
+  tools.json  aos-tools 的登記檔：wall_clock、self_tools、self_llm、self_history、mailbox_peek／mailbox_read／mailbox_send（信箱，11-10 晚 mailbox）、agents、memory（跟 agent-fsm 同一份：都寫 `{"$env": "AOS_HOME", …}`，memory 直接登記 lib/agent/memory、`env.AOS_MEMORY` 指知識庫；後兩個 11-05 使用者裁「內建」）；
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__wall_clock…）；不要工具就刪掉它
   agents.json 工具 agents 的設定：{"max_children": 4}（這隻最多同時生幾隻；這隻的 stack 裡放一份 agents.json 只寫改過的鍵＝覆蓋）
   interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "history": "history.jsonl"}}（11-04；history 鍵 11-10 加，給 aos-agent history 找檔；aos-agent ctl add 只看這個宣告）

@@ -5,6 +5,18 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/cmd/aos-daemon-ctl/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`bin/aos-daemon-ctl`](../../../../../proto8/cmd/aos-daemon-ctl/bin/aos-daemon-ctl) | 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 py/aos_sweep）；說明在 cmd/docs/03、04。 |
+| [`tests/test_add_rm_checks.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_add_rm_checks.py) | aos-daemon-ctl add 撞名＝InstanceExists、rm 表上沒有＝ProcMissing，都報錯不寄（cli-sweep 甲5，11-10）。 |
+| [`tests/test_already.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_already.py) | 對已在那個狀態的列下 stop／sleep／start／wake＝印「名字: already 狀態」、退 0、不寄信（cli-sweep Q4＝A，使用者 11-10）。 |
+| [`tests/test_auto_restart.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_auto_restart.py) | Verify --auto-restart: add_letter puts "auto_restart": true on the row for loop, exec and envs types, and both add commands take the switch. |
+| [`tests/test_envs_portable.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_envs_portable.py) | Verify add_letter's --envs single: with the daemon stack given, the target is {"$env": "AOS_DAEMON", "$path": relative}, so a moved tree still starts… |
+| [`tests/test_path_json.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_path_json.py) | add 的 --ws-json／--stack-json／--path-json：指示詞原樣進信（表上記原形、每次起再解；11-10 B01）。 |
+| [`tests/test_shutdown_timeout.py`](../../../../../proto8/cmd/aos-daemon-ctl/tests/test_shutdown_timeout.py) | shutdown 等不到 daemon 退出＝StillRunning 錯誤（11-10 two-machines：退 0 會讓人以為可以 commit／push）。 |
+
 ## `proto8/cmd/aos-eca/`
 
 | 檔 | 負責什麼 |
@@ -14,6 +26,7 @@
 | [`tests/fake_claude`](../../../../../proto8/cmd/aos-eca/tests/fake_claude) | stand-in for the claude CLI in aos-eca tests: -p with --session-id/--resume, keeps conversations as files, never calls a model |
 | [`tests/fake_codex`](../../../../../proto8/cmd/aos-eca/tests/fake_codex) | stand-in for the codex CLI in aos-eca tests: exec / exec resume ID with --json and -o, keeps threads as files, never calls a model |
 | [`tests/test_history_edit.py`](../../../../../proto8/cmd/aos-eca/tests/test_history_edit.py) | Test aos-eca-turn's shrunk history edit (11-10 self-family): history.jsonl changed between turns or during one = the next turn starts a new conversat… |
+| [`tests/test_hooks.py`](../../../../../proto8/cmd/aos-eca/tests/test_hooks.py) | Test the hooks of aos-eca-turn (eca's reduced set: queue_before, queue_after, brain_failed, tool_added) with a fake claude CLI. |
 | [`tests/test_switch.py`](../../../../../proto8/cmd/aos-eca/tests/test_switch.py) | Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs. |
 
 ## `proto8/cmd/aos-feedback/`
@@ -33,33 +46,18 @@
 |---|---|
 | [`bin/aos-grow`](../../../../../proto8/cmd/aos-grow/bin/aos-grow) | 把一個函數往上長一級（或縮回一級），呼叫方跟著改、行為不變。 |
 
+## `proto8/cmd/aos-mailbox/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`aos_mailbox/__init__.py`](../../../../../proto8/cmd/aos-mailbox/aos_mailbox/__init__.py) | aos-mailbox 本體：找我的 stack、四個子命令（where、peek、read、send）、叫 aos-post 命令列。 |
+| [`tests/test_mailbox.py`](../../../../../proto8/cmd/aos-mailbox/tests/test_mailbox.py) | Test aos-mailbox where / peek / read / send against real aos-post boxes and a hand-written daemon table. |
+
 ## `proto8/cmd/aos-mcp/`
 
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-mcp`](../../../../../proto8/cmd/aos-mcp/bin/aos-mcp) | 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。 |
+| [`tests/test_hooks.py`](../../../../../proto8/cmd/aos-mcp/tests/test_hooks.py) | Verify aos-mcp's --hooks DEF: tool_before changes / blocks a call, tool_after changes the result, no --hooks = no hooks, a failing hook = isError. |
 | [`tests/test_own_registry.py`](../../../../../proto8/cmd/aos-mcp/tests/test_own_registry.py) | Verify aos-mcp serves an agent's own registry ("$override" of the definition's) and the definition's, and has no --overlay flag (11-10 aos-tools-cli … |
 | [`tests/test_timeout.py`](../../../../../proto8/cmd/aos-mcp/tests/test_timeout.py) | Verify MCP reads shared timeout metadata and keeps its CLI fallback. |
-
-## `proto8/cmd/aos-sandbox/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-sandbox`](../../../../../proto8/cmd/aos-sandbox/bin/aos-sandbox) | 照一份設定把 prog 關進沙箱再跑：身分（s6-setuidgid）、上限（s6-softlimit）、看得到哪些路徑與能不能連網（bwrap） |
-| [`examples/agent.json`](../../../../../proto8/cmd/aos-sandbox/examples/agent.json) | 設定（鍵：commands、ro、rw、env、net、mem_mb…） |
-| [`examples/bash-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/) | Run one bash command line in your workspace. Returns stdout and stderr merged; the last line is always [exit code N], your command's exit code (non-z… |
-| [`examples/bash-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/inner) | → `../../../../lib/base/bash` |
-| [`examples/cli-tool.json`](../../../../../proto8/cmd/aos-sandbox/examples/cli-tool.json) | 設定（鍵：commands、ro、rw、env、net） |
-| [`examples/thought-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/) | Hand one task to a fresh helper from an agent definition chosen by from or the tool registry entry env.AOS_THOUGHT_FROM default and get back only its… |
-| [`examples/thought-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/inner) | → `../../../../lib/agent/thought` |
-| [`examples/thought-boxed/sandbox-kernel.json`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/sandbox-kernel.json) | Sandbox (mode 2, judge in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm letters must g… |
-| [`examples/thought-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/sandbox.json) | Sandbox (mode 1, no judge) for a tool that talks to the daemon (thought; agents and self_tools the same way): rw the daemon stack AOS_DAEMON (letters… |
-| [`root/setup.sh`](../../../../../proto8/cmd/aos-sandbox/root/setup.sh) | 沙箱的「身分層」要 root 做的事：裝 s6 到 /usr/local、建帳號 aos-run、給它一個工作的地方、讓我（$SUDO_USER）能換成它 |
-
-## `proto8/cmd/aos-sweeper/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-sweeper`](../../../../../proto8/cmd/aos-sweeper/bin/aos-sweeper) | 清道夫跑一輪（掛在 daemon 表上當 loop 列 `_sweeper`，每 interval_ms 一次；使用者 11-10）。 |
-| [`tests/test_releasing.py`](../../../../../proto8/cmd/aos-sweeper/tests/test_releasing.py) | Test the sweeper removes old <lock>.releasing.* leftovers (open-14) and leaves fresh, foreign and child-daemon ones alone. |
-| [`tests/test_sweep.py`](../../../../../proto8/cmd/aos-sweeper/tests/test_sweep.py) | Test aos-sweeper and aos-daemon-ctl sweep (tasks 1–18) with isolated files, real locks, and owned child processes. |

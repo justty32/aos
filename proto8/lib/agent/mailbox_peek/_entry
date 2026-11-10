@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+# mailbox_peek - aos-mailbox peek 的包裝，目標＝叫我的那隻自己：看信箱裡有幾封還沒讀、誰寄的、標題（不拿走）。
+# 使用者 11-10 晚 mailbox 第 1 題：「給一個工具，mailbox-peek，讓agent自己決定是否要看信」（lib 工具名用底線）；純包裝（同 self_tools）。
+# 介面：stdin {}；沒有參數（別的鍵＝ArgumentsBad，tool_io 擋）。結果：第一行說幾封，之後一行一封 LETTER TAB FROM TAB STATUS TAB TITLE。
+import os, signal, sys
+NAME = "mailbox_peek"
+HELP = """\
+usage: mailbox_peek < {}   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+See how many letters wait in my mailbox, who sent them and their titles, without taking them
+(aos-mailbox peek with the stack = me). Read them with mailbox_read.
+Result on stdout. On error: one line "mailbox_peek: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib（含 lib/agent 的 mailbox_call），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib, os.path.join(_lib, "agent")] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+tool_io.start(NAME, HELP)
+signal.signal(signal.SIGINT, lambda s, f: sys.exit(130))
+import mailbox_call  # noqa: E402
+
+tool_io.arguments()
+_, out, _ = mailbox_call.mailbox("peek")
+lines = [l for l in out.splitlines() if l.strip()]
+if not lines:
+    print("no letters waiting")
+else:
+    print("%d letter%s waiting (oldest first; LETTER, FROM, STATUS, TITLE); read with mailbox_read:" % (len(lines), "" if len(lines) == 1 else "s"))
+    print("\n".join(lines))

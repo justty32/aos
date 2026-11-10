@@ -1,0 +1,14 @@
+{
+  "summary": "Send an inbox-protocol letter as the agent calling me (aos-mailbox send)",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

@@ -13,7 +13,7 @@
 | [`fsm.json`](../../../../../proto8/templates/reviewer/fsm.json) | Reuse agent-fsm cells while reading configuration from the reviewer definition. |
 | [`interfaces.json`](../../../../../proto8/templates/reviewer/interfaces.json) | Declare reviewer agent configuration and its public observation ledger. |
 | [`ladder.json`](../../../../../proto8/templates/reviewer/ladder.json) | Configure model downgrade trials, quality gates, and post-promotion watching. |
-| [`llm.json`](../../../../../proto8/templates/reviewer/llm.json) | Use the caller's default kernel endpoint unless an endpoint is explicitly configured. |
+| [`llm.json`](../../../../../proto8/templates/reviewer/llm.json) | Use the caller's default kernel endpoint unless model names one. |
 | [`loop.json`](../../../../../proto8/templates/reviewer/loop.json) | Schedule the reviewer FSM and expose public control and state files. |
 | [`system.txt`](../../../../../proto8/templates/reviewer/system.txt) | （檔頭沒有一句話） |
 | [`tests/endpoint.py`](../../../../../proto8/templates/reviewer/tests/endpoint.py) | Return fake reviewer tool calls using the actual previous review_round result. |

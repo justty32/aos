@@ -3,14 +3,14 @@
 
 # proto8 逐檔 code map 生成冊索引
 
-`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：595 個檔、502 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
+`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：626 個檔、521 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
 
 | 冊 | 夾 | 段 | 列／檔 |
 |---|---|---|---|
 | [cases](cases.md) | `proto8/cases/` | `box-probe/`、`smoke/` | 11／11 |
-| [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/`、`aos-clock/`、`aos-daemon-ctl/` | 71／74 |
-| [cmd-2](cmd-2.md) | `proto8/cmd/` | `aos-eca/`、`aos-feedback/`、`aos-grow/`、`aos-mcp/`、`aos-sandbox/`、`aos-sweeper/` |  |
-| [cmd-3](cmd-3.md) | `proto8/cmd/` | `aos-tools/` |  |
+| [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/`、`aos-clock/` | 78／81 |
+| [cmd-2](cmd-2.md) | `proto8/cmd/` | `aos-daemon-ctl/`、`aos-eca/`、`aos-feedback/`、`aos-grow/`、`aos-mailbox/`、`aos-mcp/` |  |
+| [cmd-3](cmd-3.md) | `proto8/cmd/` | `aos-sandbox/`、`aos-sweeper/`、`aos-tools/` |  |
 | [extras](extras.md) | `proto8/extras/` | `gitignore-check/`、`image-move-check/`、`langs/` | 13／13 |
 | [feedback](feedback.md) | `proto8/feedback/` | 頂層 | 5／5 |
 | [impls](impls.md) | `proto8/impls/` | 依賴圖、頂層、`aos-daemon/` | 191／191 |
@@ -21,8 +21,8 @@
 | [impls-6](impls-6.md) | `proto8/impls/` | `aos-lock/`、`aos-loop/`、`aos-post/` |  |
 | [impls-7](impls-7.md) | `proto8/impls/` | `aos-util/`、`cmake/` |  |
 | [kernel](kernel.md) | `proto8/kernel/` | `daemon-judge/`、`llm-kernel/`、`llm-team/`、`procs-kernel/` | 20／20 |
-| [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層、`aos/` | 21／21 |
-| [lib](lib.md) | `proto8/lib/` | 頂層 | 106／192 |
+| [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層、`aos/` | 22／22 |
+| [lib](lib.md) | `proto8/lib/` | 頂層 | 117／215 |
 | [lib-2](lib-2.md) | `proto8/lib/` | `agent/` |  |
 | [lib-3](lib-3.md) | `proto8/lib/` | `aos/` |  |
 | [lib-4](lib-4.md) | `proto8/lib/` | `base/`、`tests/` |  |

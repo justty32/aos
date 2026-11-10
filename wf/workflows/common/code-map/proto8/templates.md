@@ -18,7 +18,6 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`act.py`](../../../../../proto8/templates/agent-fsm/act.py) | act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。 |
-| [`agents.json`](../../../../../proto8/templates/agent-fsm/agents.json) | 設定（鍵：max_children） |
 | [`body.json`](../../../../../proto8/templates/agent-fsm/body.json) | argv：`aos-loop loop.json` |
 | [`brain.py`](../../../../../proto8/templates/agent-fsm/brain.py) | think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。 |
 | [`fsm.json`](../../../../../proto8/templates/agent-fsm/fsm.json) | 入口 `aos-fsm $AOS_CF`；鍵：start、states |
@@ -26,6 +25,7 @@
 | [`idle.py`](../../../../../proto8/templates/agent-fsm/idle.py) | idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。 |
 | [`interfaces.json`](../../../../../proto8/templates/agent-fsm/interfaces.json) | 設定（鍵：aos-agent、aos-observed） |
 | [`llm.json`](../../../../../proto8/templates/agent-fsm/llm.json) | （檔頭沒有一句話） |
+| [`llm_settings.py`](../../../../../proto8/templates/agent-fsm/llm_settings.py) | agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。 |
 | [`loop.json`](../../../../../proto8/templates/agent-fsm/loop.json) | Schedule the agent FSM and expose public control, stable state, and state flux files. |
 | [`system.txt`](../../../../../proto8/templates/agent-fsm/system.txt) | （檔頭沒有一句話） |
 | [`tests/test_batch3.py`](../../../../../proto8/templates/agent-fsm/tests/test_batch3.py) | Verify daemon-managed fake-brain parent and child observations through public interfaces. |
@@ -51,8 +51,8 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`_entry`](../../../../../proto8/templates/eca-claude/_entry) | 入口：`aos-loop loop.json` |
-| [`agents.json`](../../../../../proto8/templates/eca-claude/agents.json) | 設定（鍵：max_children） |
 | [`cli.json`](../../../../../proto8/templates/eca-claude/cli.json) | 設定（鍵：kind、flags、print_flags、tools_flags、timeout_ms） |
+| [`hooks.json`](../../../../../proto8/templates/eca-claude/hooks.json) | Hooks of this eca: aos functions run when an event happens. eca has queue_before, queue_after, brain_failed (CliFailed / ReplyMissing) and tool_added… |
 | [`interfaces.json`](../../../../../proto8/templates/eca-claude/interfaces.json) | 設定（鍵：aos-agent） |
 | [`llm.json`](../../../../../proto8/templates/eca-claude/llm.json) | 設定（鍵：model） |
 | [`loop.json`](../../../../../proto8/templates/eca-claude/loop.json) | Schedule the Claude agent turn and expose public control, stable state, and state flux files. |

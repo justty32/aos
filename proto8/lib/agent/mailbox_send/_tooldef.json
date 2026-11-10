@@ -1,0 +1,76 @@
+{
+ "description": "Send one letter. Give to (an agent's name; daemon = its daemon folder, default yours) or box (a mailbox folder path, like the reply_to of a letter you read). status is one of REQUEST, DONE, BLOCKED, NEEDS-USER, FAILED, PROGRESS. title is one line that makes sense alone. what is the main text (for REQUEST: what the other agent should do and when it counts as done). outputs, not_done, decide are optional (default \"none\"). The answer comes back to your mailbox. Rules: when you finish a task someone asked for, send DONE, BLOCKED, NEEDS-USER or FAILED; if you are stuck for more than 10 minutes, send BLOCKED. Examples:\n- ask bob: {\"to\": \"bob\", \"status\": \"REQUEST\", \"title\": \"Please count the .csv files in data/\", \"what\": \"Count the .csv files in data/ and answer DONE with the number.\"}\n- answer a letter you read: {\"box\": \"/path/from/its/reply_to\", \"in_reply_to\": \"its letter name\", \"status\": \"DONE\", \"title\": \"data/ has 3 .csv files\", \"what\": \"I counted the .csv files in data/: 3.\", \"outputs\": \"none\"}\nErrors: ArgumentsBad, StatusBad, MailboxMissing, MailboxBad, InstanceMissing, DaemonMissing.",
+ "env": [
+  "AOS_DAEMON"
+ ],
+ "errors": [
+  "ArgumentsBad",
+  "StatusBad",
+  "MailboxMissing",
+  "MailboxBad",
+  "StackMissing",
+  "WsMissing",
+  "LaunchFailed",
+  "CommandFailed",
+  "DaemonMissing",
+  "InstanceMissing"
+ ],
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "to": {
+    "type": "string",
+    "description": "the agent's name (on a daemon table); give to or box"
+   },
+   "daemon": {
+    "type": "string",
+    "description": "with to: that agent's daemon folder (default: your own daemon)"
+   },
+   "box": {
+    "type": "string",
+    "description": "a mailbox folder path, like a letter's reply_to; give to or box"
+   },
+   "status": {
+    "type": "string",
+    "enum": [
+     "REQUEST",
+     "DONE",
+     "BLOCKED",
+     "NEEDS-USER",
+     "FAILED",
+     "PROGRESS"
+    ],
+    "description": "REQUEST = please do something; DONE = finished; BLOCKED = stuck; NEEDS-USER = only the user can decide; FAILED = gave up; PROGRESS = not done yet, a milestone"
+   },
+   "title": {
+    "type": "string",
+    "description": "one line that makes sense on its own"
+   },
+   "what": {
+    "type": "string",
+    "description": "the main text; for REQUEST: what to do and when it counts as done"
+   },
+   "outputs": {
+    "type": "string",
+    "description": "files, results (default none)"
+   },
+   "not_done": {
+    "type": "string",
+    "description": "what is missing or unproven (default none)"
+   },
+   "decide": {
+    "type": "string",
+    "description": "what the other side or the user must decide (default none)"
+   },
+   "in_reply_to": {
+    "type": "string",
+    "description": "the letter name you are answering"
+   }
+  },
+  "required": [
+   "status",
+   "title",
+   "what"
+  ]
+ }
+}

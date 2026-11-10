@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+# mailbox_send - aos-mailbox send 的包裝，寄件人＝叫我的那隻自己：照 inbox 協議寄一封給 agent（to 名字＋daemon）或信箱（box 路徑）。
+# 使用者 11-10 晚 mailbox 第 2 題：「用名字的話，要指定daemon，也可以直接用路徑，該路徑需要符合信箱資料夾佈局」；3「用json」；4 白名單擋、兩條規則寫說明。
+# 介面：stdin {to | box, daemon?, status, title, what, outputs?, not_done?, decide?, in_reply_to?}＝send --to/--box … WHAT；from＝我在 daemon 表上的名字。
+#   daemon 不給＝自己的 daemon（$AOS_DAEMON，下層照 aos-agent 一樣找）。別的鍵＝ArgumentsBad（tool_io 擋）。結果：寄出的信名一行加一句說明。
+import os, signal, sys
+NAME = "mailbox_send"
+HELP = """\
+usage: mailbox_send < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Send one letter to an agent (to = its name, daemon = its daemon, default mine) or to a mailbox folder (box)
+(aos-mailbox send with the sender = me). Replies come back to my mailbox.
+Result on stdout. On error: one line "mailbox_send: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib（含 lib/agent 的 mailbox_call），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib, os.path.join(_lib, "agent")] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+tool_io.start(NAME, HELP)
+signal.signal(signal.SIGINT, lambda s, f: sys.exit(130))
+import mailbox_call  # noqa: E402
+
+args = tool_io.arguments("status", "title", "what")
+if bool(args.get("to")) == bool(args.get("box")):
+    tool_io.die("ArgumentsBad", "give to (an agent's name) or box (a mailbox folder, like a letter's reply_to), one of them")
+who = mailbox_call.me()
+more = ["--from", who["name"], "--status", args["status"], "--title", args["title"]]
+for key, flag in (("to", "--to"), ("box", "--box"), ("daemon", "--daemon"), ("outputs", "--outputs"),
+                  ("not_done", "--not-done"), ("decide", "--decide"), ("in_reply_to", "--in-reply-to")):
+    if args.get(key):
+        more += [flag, args[key]]
+_, out = mailbox_call.call("aos-mailbox", ["--stack", who["stack"], "send"] + more + ["--", args["what"]])
+print("sent letter %s; the answer (if any) comes to your mailbox: check with mailbox_peek" % out.strip())

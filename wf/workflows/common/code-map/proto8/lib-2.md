@@ -10,13 +10,17 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`__init__.py`](../../../../../proto8/lib/agent/__init__.py) | agent - 外部 agent CLI 與 agent 工具共用的 lib 模組。 |
+| [`agent_def/`](../../../../../proto8/lib/agent/agent_def/) | 定義的創造：new＝把範本資料夾整份複製成新定義（tools 檔的相對路徑換算），check＝轉叫 lib/aos/defs 的 check 看一份定義合不合格 |
+| [`agent_def/tests/test_agent_def.py`](../../../../../proto8/lib/agent/agent_def/tests/test_agent_def.py) | Test agent_def new (copy, rebase, directive from, DefExists, outside the workspace) and check (wraps lib/aos/defs) in a temp folder. |
 | [`agent_files.py`](../../../../../proto8/lib/agent/agent_files.py) | 依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。 |
 | [`agent_tool.py`](../../../../../proto8/lib/agent/agent_tool.py) | claude、codex 共用的工具形入口 ask_cli。 |
-| [`agents/`](../../../../../proto8/lib/agent/agents/) | 生、叫、收另一隻 agent，記錄新定義的 lineage 並同步公開子帳。 |
-| [`agents/tests/test_copy_repo.py`](../../../../../proto8/lib/agent/agents/tests/test_copy_repo.py) | Verify op new copies a repo template as written ($env AOS_HOME paths, no symlinks, with or without AOS_HOME) and keeps literal from paths. |
-| [`agents/tests/test_lineage.py`](../../../../../proto8/lib/agent/agents/tests/test_lineage.py) | Verify new agent births preserve metadata and record literal lineage arguments. |
-| [`agents/tests/test_observed.py`](../../../../../proto8/lib/agent/agents/tests/test_observed.py) | Verify agent account synchronization resolves only registered child stacks. |
-| [`agents/tests/test_wait.py`](../../../../../proto8/lib/agent/agents/tests/test_wait.py) | Verify segmented agent waits, argument checks and cleanup. |
+| [`agents_children/`](../../../../../proto8/lib/agent/agents_children/) | 我生的子 agent：生、殺、停起、說話、出生後調它的工具／腦／對話／hook；工具自己記帳（children.json）、算配額，只碰自己生的 |
+| [`agents_children/tests/test_children.py`](../../../../../proto8/lib/agent/agents_children/tests/test_children.py) | Test agents_children against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, child account co… |
+| [`agents_children/tests/test_daemon.py`](../../../../../proto8/lib/agent/agents_children/tests/test_daemon.py) | Test agents_children and agents_ctl on a real aos-daemon: tools/llm changes land on the child (not the parent), and a child removed with agents_ctl i… |
+| [`agents_children/tests/test_wait.py`](../../../../../proto8/lib/agent/agents_children/tests/test_wait.py) | Test the shared runner in agents_cmd waits in bounded segments, cleans up on expiry, polls short on the clock, and that agents_children checks wait a… |
+| [`agents_cmd.py`](../../../../../proto8/lib/agent/agents_cmd.py) | agents_children 與 agents_ctl 共用：查鍵、組 aos-agent ctl 各動作的旗標、跑 aos-agent（或旁邊的 self_*）並把下層錯翻成自己的。 |
+| [`agents_ctl/`](../../../../../proto8/lib/agent/agents_ctl/) | aos-agent ctl 的完整純包裝：對 daemon 表上任何一隻 add／rm／ls／state／where／who／start／stop／sleep／wake／pause／resume；不記帳、不算配額 |
+| [`agents_ctl/tests/test_agents_ctl.py`](../../../../../proto8/lib/agent/agents_ctl/tests/test_agents_ctl.py) | Test agents_ctl turns each op into the matching aos-agent ctl command line (one key = one flag), rejects unknown keys and passes lower errors up, wit… |
 | [`claude/`](../../../../../proto8/lib/agent/claude/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 claude CLI；對話續在工具小格（$AOS_STACK） |
 | [`claude/cli.json`](../../../../../proto8/lib/agent/claude/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
 | [`cli_session.py`](../../../../../proto8/lib/agent/cli_session.py) | 把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 attach 接進互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字 |
@@ -25,6 +29,11 @@
 | [`cooldown.py`](../../../../../proto8/lib/agent/cooldown.py) | 失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。 |
 | [`hooks.py`](../../../../../proto8/lib/agent/hooks.py) | agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、挑出符合事件的 hook、用 aos-exec 跑、解回話。 |
 | [`json_rewrite/`](../../../../../proto8/lib/agent/json_rewrite/) | 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 act 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。 |
+| [`mailbox_call.py`](../../../../../proto8/lib/agent/mailbox_call.py) | mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。 |
+| [`mailbox_peek/`](../../../../../proto8/lib/agent/mailbox_peek/) | aos-mailbox peek 的包裝，目標＝叫我的那隻自己：看信箱裡有幾封還沒讀、誰寄的、標題（不拿走）。 |
+| [`mailbox_read/`](../../../../../proto8/lib/agent/mailbox_read/) | aos-mailbox read 的包裝，目標＝叫我的那隻自己：拿最舊的一封（all＝全部）、印出來，預設讀完就刪（keep＝留在 mailbox/archive/）。 |
+| [`mailbox_send/`](../../../../../proto8/lib/agent/mailbox_send/) | aos-mailbox send 的包裝，寄件人＝叫我的那隻自己：照 inbox 協議寄一封給 agent（to 名字＋daemon）或信箱（box 路徑）。 |
+| [`mailbox_send/tests/test_mailbox_tools.py`](../../../../../proto8/lib/agent/mailbox_send/tests/test_mailbox_tools.py) | Test mailbox_send / mailbox_peek / mailbox_read wrap aos-mailbox for the calling agent (fake aos-agent ctl who, real aos-mailbox and aos-post). |
 | [`memory/`](../../../../../proto8/lib/agent/memory/) | 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）：read 一個位置、ls 列枝幹的表、find 依關鍵字／標籤找路徑。 |
 | [`memory/tests/test_base_directive.py`](../../../../../proto8/lib/agent/memory/tests/test_base_directive.py) | 驗 _memory.json 的 base：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次用到才解、不寫回，解不開時錯誤行指名檔與欄。 |
 | [`memory/tests/test_memory.py`](../../../../../proto8/lib/agent/memory/tests/test_memory.py) | memory（純 JSON 樹）：read／ls／find 在各種位置上的輸出、表與 not in index、$ref／$env、迴圈、錯誤代號。 |
@@ -38,6 +47,8 @@
 | [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | memory_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫入只准落在庫根底下。 |
 | [`self_history/`](../../../../../proto8/lib/agent/self_history/) | aos-agent history 的包裝，目標改成叫我的那隻自己：ls、rm、summarize、set；正在進行的這一步（叫我的那則訊息與之後）不准動 |
 | [`self_history/tests/test_self_history.py`](../../../../../proto8/lib/agent/self_history/tests/test_self_history.py) | Test self_history builds the aos-agent history command line (ls, rm, summarize, set) and refuses the step in progress, with a fake aos-agent. |
+| [`self_hook/`](../../../../../proto8/lib/agent/self_hook/) | aos-agent hook 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份 hooks 清單，定義不動 |
+| [`self_hook/tests/test_self_hook.py`](../../../../../proto8/lib/agent/self_hook/tests/test_self_hook.py) | Test self_hook builds the aos-agent hook command line for each op and checks its arguments, with a fake aos-agent. |
 | [`self_llm/`](../../../../../proto8/lib/agent/self_llm/) | aos-agent llm 的包裝，目標改成叫我的那隻自己：ls、set、rm、reset；改的是那隻 stack 裡自己那份 llm 設定，定義不動 |
 | [`self_llm/tests/test_self_llm.py`](../../../../../proto8/lib/agent/self_llm/tests/test_self_llm.py) | Test self_llm builds the aos-agent llm command line (ls, set, rm, reset) and checks its arguments, with a fake aos-agent. |
 | [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | aos-agent tools 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份登記檔，定義不動 |
