@@ -43,6 +43,8 @@
 **/cooldown.json
 **/think/wait_warned.txt
 **/think/sent.json
+# llm kernel 印過的 budget.senders 提醒（含這台的絕對路徑；換台重新判、重新印，11-10 晚 two-machines B09）
+**/budget_warned.txt
 # Python 匯入快取可重建
 **/__pycache__/
 

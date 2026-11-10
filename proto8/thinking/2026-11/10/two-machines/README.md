@@ -168,9 +168,10 @@ flowchart LR
 | [14-真機驗證](14-真機驗證.md) | 給你親手做的步驟（真 claude、/mnt/c、兩台來回） |
 | [15-回家那台開工](15-回家那台開工.md) | 家機 11-10 晚開工照抄步驟、常見錯誤、驗不了的部分 |
 | [16-B01後半施工結果](16-B01後半施工結果.md) | 絕對路徑原樣存、JSON 純字串照字面送（11-10 晚家機）、代定四條 |
+| [17-B07到B10施工結果](17-B07到B10施工結果.md) | 一列 `$ref` 壞不拖垮整台、EntryMissing 印基準與絕對路徑、budget.senders key 對不上提醒、四句訊息講清楚（11-10 晚家機）、代定與待裁 |
 | [decided.json](decided.json) | 11-10 午後隊員代定的小決定，每列寫怎麼翻案（34 列） |
 | [assumptions.json](assumptions.json) | 未經真機驗證的假設（17 列） |
-| [next_todo.json](next_todo.json) | 留給明天／大修的問題（23 列，open 17） |
+| [next_todo.json](next_todo.json) | 留給明天／大修的問題（23 列，open 9） |
 | [gitignore_classes.json](gitignore_classes.json) | stack 裡每類檔進不進 git（實跑分類，86 列） |
 | [path_fields.json](path_fields.json) | 指到外面的路徑欄位，三種寫法收不收（施工前調查，35 列） |
 | [leftovers.json](leftovers.json) | cp 過去後的執行期殘留誰會自癒（施工前調查，30 列） |

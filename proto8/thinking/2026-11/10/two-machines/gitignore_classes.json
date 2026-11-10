@@ -1069,6 +1069,18 @@
    "why": "可執行檔工具的 --tooldef 快取（11-10 aos-tools-cli 步 2）；key 是這台的絕對路徑、stamp 是這台的修改時間，可重建。",
    "seen": [],
    "ignored_now": "對：ignored; sample=stacks/root/procs/worker/tooldef_cache.json"
+  },
+  {
+   "id": "G088",
+   "pattern": "stacks/**/budget_warned.txt",
+   "writer": "proto8/impls/aos-llm-kernel/src/budget/budget.cpp（warn_budget）",
+   "class": "local",
+   "in_git": "不進",
+   "why": "11-10 晚 B09：kernel 印過的 budget.senders 提醒全文（含這台的絕對路徑），只為了「變了才印」；換台該重新判、重新印。",
+   "seen": [
+    "running"
+   ],
+   "ignored_now": "對：ignored（cmd/aos-agent/stack.gitignore 的 **/budget_warned.txt）"
   }
  ]
 }

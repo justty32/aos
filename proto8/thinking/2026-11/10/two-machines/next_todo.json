@@ -74,7 +74,7 @@
    "symptom": "another/ 少一個檔＝DirectiveBad、_clock、_sweeper 與所有 agent 一起停",
    "direction": "解 procs.<名> 失敗時只把那列記成 stopped、其他照起",
    "needs": "C++（aos-daemon daemon.cpp:86）",
-   "status": "open"
+   "status": "已修（11-10 晚家機，commit 310b30a0b）"
   },
   {
    "id": "B08",
@@ -83,7 +83,7 @@
    "symptom": "相對路徑從引用者算，使用者自然會寫錯；錯誤只印字面值看不出從哪算",
    "direction": "EntryMissing 加「從哪算、解成什麼」；文件寫清楚",
    "needs": "C++（aos-exec）＋文件",
-   "status": "open"
+   "status": "已修（11-10 晚家機，commit a5486753e；測試檔 test_entry_missing.py 被同時段 templates-cp 的 862958edc 一起帶進去）"
   },
   {
    "id": "B09",
@@ -92,7 +92,7 @@
    "symptom": "兩台相對位置不同、或 ws 不是專案根時，額度不擋",
    "direction": "kernel 載入設定時路徑不存在就印 warning",
    "needs": "C++（aos-llm-kernel budget.cpp）",
-   "status": "open"
+   "status": "已修（11-10 晚家機，commit c84aca530）"
   },
   {
    "id": "B10",
@@ -101,7 +101,7 @@
    "symptom": "AOS_LLM_KERNEL 指錯時信寫進別人的 repo，warning 沒說寫到哪；BudgetMissing 印絕對路徑不印 key；10 分鐘提醒沒說原因",
    "direction": "照 I3 的建議句改",
    "needs": "C++＋wait.py",
-   "status": "open"
+   "status": "已修（11-10 晚家機，commit c84aca530、0c3c51571）"
   },
   {
    "id": "B11",
