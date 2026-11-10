@@ -25,6 +25,7 @@
 # 兩條路（每次呼叫自己挑）：
 #   畫面沒開 → 非互動：claude -p --resume <id>（第一次 --session-id <新 id>）、codex exec resume <id> -（第一次 codex exec -）
 #   畫面開著 → 從 pty 送字：tmux paste-buffer 貼上＋Enter，等 hook 在 turns.jsonl 接一行（有人接著看、或 claude 正在跑一輪＝SessionBad；
+#             claude 停在信任資料夾選單＝TrustMissing、不貼，11-10 深夜；
 #             on_busy="answer" 時不退讓：照樣貼、busy.txt 等它消失，10-31）
 # 工具（11-03 eca-tools，thinking 2026-11-03-eca-tools）：cli.json 選填 tools＝aos-tools 的登記檔（相對路徑從 cli.json 的資料夾算；
 #   也可寫指示詞，例 {"$env": "AOS_HOME", "$path": "/lib/x/tools.json"}，每次讀才解、不寫回，11-10 two-machines TC），
@@ -634,6 +635,20 @@ def print_codex(cfg, cell, ws, stack, prompt, handed=None, sid=None):
 
 # ---------------------------------------------------------------- 從畫面送字（畫面開著）
 
+# claude 在沒信任過的資料夾開畫面，會先停在「信不信任這個資料夾」的選單，預設選項是 No, exit：這時貼題目＋Enter＝選了離開、畫面關掉
+# （11-10 深夜使用者選「aos 偵測後報錯」；實拍 2026-11 claude 的選單：「Quick safety check: Is this a project you created or one you trust?」
+#   底下「❯ No, exit」「Yes, I trust this folder」「Enter to confirm · Esc to cancel」）。認法要耐得住小改字：畫面最後 TRUST_TAIL 行裡
+#   有 trust 這個字，而且有一行像選項（前面可有 ❯／›／> 與「1.」）寫著 no, exit 或 yes … trust；認不出＝照舊貼。codex 實拍沒這種選單，不做。
+TRUST_TAIL = 30
+_TRUST_OPTION = re.compile(r"^\s*(?:[❯›>»]\s*)?(?:\d+[.)]\s*)?(?:no\b[^\n]{0,12}\bexit\b|yes\b[^\n]{0,40}\btrust)", re.I | re.M)
+
+
+def trust_prompt(screen):
+    """畫面（capture-pane 的字）是不是停在 claude 的信任資料夾選單。"""
+    tail = "\n".join([l for l in (screen or "").splitlines() if l.strip()][-TRUST_TAIL:])
+    return "trust" in tail.lower() and bool(_TRUST_OPTION.search(tail))
+
+
 def live(cfg, cell, prompt, on_busy="yield", handed=None):
     """on_busy＝yield（預設）：有人接在畫面上、或 busy.txt 在＝SessionBad；answer（10-31 eca --on-busy）：有人接著照樣貼，
     busy.txt 在就等它消失再貼——等它跟等回答共用 timeout_ms 的期限，逾時 ReplyMissing。貼上、按 Enter 之後叫 handed（交出去了，11-03）。"""
@@ -650,6 +665,11 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None):
         time.sleep(0.2)
     if os.path.exists(cell.file("busy.txt")):                # 等到期限還在跑：不貼，免得逾時了還打進畫面
         die("ReplyMissing", "the turn on the screen did not finish within %d s; not sent (attach to look)" % (cfg.get("timeout_ms", 600000) // 1000))
+    if cfg.get("kind") == "claude" and trust_prompt(cell.tmux("capture-pane", "-p", "-t", TMUX_SESSION).stdout):
+        ws = os.path.normpath(os.path.join(cell.path, cell.read("ws.txt") or "."))
+        die("TrustMissing", "claude on the screen is waiting at its trust-this-folder prompt for %s; nothing was typed. "
+            "Choose yourself: attach to the screen (aos-agent open), or run claude there once and pick trust: cd %s && claude"
+            % (ws, shlex.quote(ws)))
     seen = len(cell.turns())
     r = cell.tmux("load-buffer", "-b", "aos", "-", input=prompt)
     if r.returncode != 0:

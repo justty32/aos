@@ -1,5 +1,5 @@
 {"description": "Hand one task to Claude Code, another AI assistant working in your workspace that can only read files (no commands, no edits); returns its answer. It remembers what you told it earlier through this tool.",
- "errors": ["ArgumentsBad", "CfgMissing", "CfgBad", "ToolsMissing", "StackMissing", "WsMissing", "CliMissing", "WriteFailed", "CliFailed", "SessionBad", "ReplyMissing"],
+ "errors": ["ArgumentsBad", "CfgMissing", "CfgBad", "ToolsMissing", "StackMissing", "WsMissing", "CliMissing", "WriteFailed", "CliFailed", "SessionBad", "ReplyMissing", "TrustMissing"],
  "parameters": {"type": "object",
                 "properties": {"prompt": {"type": "string", "description": "what you want from it; one task at a time"}},
                 "required": ["prompt"]}}

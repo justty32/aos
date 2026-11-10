@@ -613,6 +613,53 @@ class Screen(unittest.TestCase):
         self.assertEqual(got, ["R\n\nQ", "Q2"])
         self.assertEqual(limits, [8000])
 
+    TRUST_SCREEN = """ Accessing workspace:
+ /tmp/x/fresh
+ Quick safety check: Is this a project you created or one you trust? (Like your own code, a well-known open source project, or work from your team). If not,
+ take a moment to review what's in this folder first.
+ Claude Code'll be able to read, edit, and execute files here.
+ Security guide
+ \u276f No, exit
+   Yes, I trust this folder
+ Enter to confirm \u00b7 Esc to cancel
+"""
+
+    def screen_tmux(self, screen, seen):
+        def tmux(*args, **kw):
+            seen.append(args[0])
+            return subprocess.CompletedProcess(args, 0, screen if args[0] == "capture-pane" else "", "")
+        return tmux
+
+    def test_trust_prompt_not_typed(self):
+        """11-10 late: claude waiting at its trust-this-folder menu = TrustMissing, nothing pasted (the default is No, exit)."""
+        variants = [self.TRUST_SCREEN,
+                    " Do you trust the files in this folder?\n\n \u276f 1. Yes, proceed\n   2. No, exit\n\n Enter to confirm \u00b7 Esc to exit\n",
+                    " Do you TRUST this directory?\n > 1. Yes, trust it\n   2. No - exit\n"]
+        for screen in variants:
+            seen = []
+            with self.mock.patch.object(self.cs.Cell, "tmux", side_effect=self.screen_tmux(screen, seen)), \
+                    self.mock.patch.object(self.cs.Cell, "clients", return_value=[]):
+                with self.assertRaisesRegex(RuntimeError, "TrustMissing"):
+                    self.cs.live(self.cfg, self.cell, "Q")
+            self.assertNotIn("load-buffer", seen, screen)
+            self.assertNotIn("send-keys", seen)
+
+    def test_ordinary_screen_still_typed(self):
+        for screen in ("> I trust you, do not exit yet\n? for shortcuts\n", "", "\u276f 1. Yes\n  2. No, exit\n"):
+            seen = []
+            with self.mock.patch.object(self.cs.Cell, "tmux", side_effect=self.screen_tmux(screen, seen)), \
+                    self.mock.patch.object(self.cs.Cell, "clients", return_value=[]), \
+                    self.mock.patch.object(self.cs.Cell, "alive", return_value=True):
+                with self.assertRaisesRegex(RuntimeError, "ReplyMissing"):        # pasted, the stub never answers
+                    self.cs.live(dict(self.cfg, timeout_ms=300), self.cell, "Q")
+            self.assertIn("load-buffer", seen, screen)
+        self.assertFalse(self.cs.trust_prompt(self.TRUST_SCREEN.replace("trust", "know")))
+        with self.mock.patch.object(self.cs.Cell, "tmux", side_effect=self.screen_tmux(self.TRUST_SCREEN, [])), \
+                self.mock.patch.object(self.cs.Cell, "clients", return_value=[]), \
+                self.mock.patch.object(self.cs.Cell, "alive", return_value=True):
+            with self.assertRaisesRegex(RuntimeError, "ReplyMissing"):            # codex: not checked
+                self.cs.live(dict(self.cfg, kind="codex", timeout_ms=300), self.cell, "Q")
+
     def test_hook_writes_marker(self):
         self.cell.write("ws.txt", os.path.relpath(self.ws, self.cell.path) + "\n")
         payload = json.dumps({"hook_event_name": "Stop", "session_id": "hook-id", "last_assistant_message": "hi"})

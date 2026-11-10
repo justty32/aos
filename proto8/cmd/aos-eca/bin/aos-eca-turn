@@ -77,7 +77,7 @@ PATH 上要有 aos-post（平級形）。
   代號：ArgumentsBad、FlagUnknown、AgentBad、StackMissing、PromptMissing（11-04：--prompt 給的開場白檔不在）、HistoryBad、PostFailed、WriteFailed，
   HookFailed、HooksBad、ToolsBad（⑪ tool_added 叫 aos-tools ls 失敗），
   加 cli_session 的 CfgMissing、CfgBad、ToolsMissing（11-03 eca-tools：cli.json 的 tools 指的登記檔不在）、CliMissing（含 aos-mcp 不在 PATH 上）、
-  CliFailed、ReplyMissing（yield 時的 SessionBad 不算錯，見上）。
+  CliFailed、ReplyMissing、TrustMissing（11-10 深夜：畫面上的 claude 停在信任資料夾選單＝不貼、報錯，交出去之前，信留著）（yield 時的 SessionBad 不算錯，見上）。
 `--help`＝印 HELP（英文）到 stdout、退 0（R3）；Ctrl-C＝退 130、不吐 traceback（R12）。"""
 import hashlib, json, os, subprocess, sys
 
@@ -145,7 +145,8 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
 Needs aos-post on PATH (loop form) and AOS_STACK.
 Errors: one stderr line `aos-eca-turn: error: CODE reason`, exit 1 (tool form: the line also goes to stdout). aos-post's own stderr
   is passed through as it is. Codes: ArgumentsBad, FlagUnknown, AgentBad, StackMissing, PromptMissing, HistoryBad, PostFailed,
-  WriteFailed, HookFailed, HooksBad, ToolsBad, CfgMissing, CfgBad, ToolsMissing, CliMissing, CliFailed, ReplyMissing."""
+  WriteFailed, HookFailed, HooksBad, ToolsBad, CfgMissing, CfgBad, ToolsMissing, CliMissing, CliFailed, ReplyMissing,
+  TrustMissing (claude on the screen waits at its trust-this-folder prompt; nothing typed: a person attaches and chooses)."""
 
 
 class Fail(Exception):

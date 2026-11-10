@@ -35,11 +35,11 @@
 | 3 | hook 改結果預設開；不能改的事件或不等的 hook 自然不看回話、不報錯 | `60c4ad792` |
 | 3 續 | 選項改名（A＋condition）：on→event、exec→handler、match→condition、change→intercept、wait→async（意思反過來）、on_fail→on_error；事件 before_queue／after_queue／before_tool／after_tool。不留舊名 | `e649ea2cb` |
 | 4 | `AOS_MY_STACK` 改名 `AOS_LINUX_USER_STACK`，預設 `~/.stack` 照舊 | `284a401bb` |
-| 5 | 範本的 tests 搬出範本，`agent_def new` 照舊整夾抄 | 見下 |
+| 5 | 範本的 tests 搬到 `templates/tests/<範本名>/`（agent-fsm、reviewer、judge-llm 三夾；eca-claude、daemon-root 本來就沒有），`cp -r` 與 `agent_def new` 照舊整夾抄；照抄段的 `rm -rf agents/*/tests` 拿掉 | 見 git log |
 | 6 | 細說交給 cli-sweep 那隊（10d） | — |
 | 7 | `aos-clock register …` 等同 `aos-clock-register …`；時鐘檔真叫 register 的寫 `./register` | `b7c8e8e10` |
-| 8 | self_history 摘要：角色照舊預設 user，內容固定 `aos: summary (lines A-B, N messages): 摘要`（`set` 不套） | 見下 |
-| 8 | 條文 C-42 續、C-52 ⑧ 跟上 agents 拆分 | 見下 |
+| 8 | self_history 摘要：角色照舊預設 user，內容固定 `aos: summary (lines A-B, N messages): 摘要`（`set` 不套） | `b88d00129` |
+| 8 | 條文跟上：C-42 續兩處、C-52 ⑤ 前言、⑧ 標已消（11-06 K-4 起就不轉印）、N-63、條號表；同類順手：agent-fsm `llm.json` 鍵 `endpoint`→`model`（C-42 binding 段、P-23～P-26、P-43 續）、`aos-agent llm show`→`ls`＋`rm`（P-43 續、P-15）。都是加 11-10 深夜註、原句原話全留 | `fff78736b` |
 | memory_write | add 不給 value：檔在＝只補指示牌；檔不在＝NodeMissing；帶 `"create": true`＝建空檔再補。代定 D19～D22 在 [json-memory/05](../json-memory/05-步驟與代定.md) | `060605627` |
 
 **代定**（隊長定的，可翻案）：
@@ -68,4 +68,14 @@
 |---|---|---|
 | 1 | `aos-clock` 每 `check_every`（登記表頂層鍵，預設 100）個 cycle 檢查一次，箱子資料夾已不在的格拿掉、各一行 warning；詳見 [clock-letters 02](../clock-letters/02-自我檢查與-d.md) | `173deaf11` |
 | 2 | `aos-clock-register` 收 `-d D`（＝`D/clock`），優先 `-c` > `-d` > `$AOS_CLOCK`，`-c` 和 `-d` 同給報錯；工具 clock_register 多 `daemon`；詳見 [clock-letters 02](../clock-letters/02-自我檢查與-d.md#2--d) | `90a778b5b` |
-| 3 | `agents_ctl` ls 預設＝`ctl ls` 短文字表（NAME STATE WORKSPACE QUEUED REASON），`long`＝`-l`、新鍵 `json`＝`--json`（照「參數一對一」）；`agents_children` ls 預設一行一隻同欄位＋末行 `children N/MAX`，`long`＝舊的 JSON。實量（真 daemon 測試，mom＋kid）：ctl 539→112 字元、children 一隻 305→57。代定：children 排隊中那隻印 `NAME queued - - letter L`；ctl 的 `long`＋`json` 同給照下層（json 為準） | 見 git log |
+| 3 | `agents_ctl` ls 預設＝`ctl ls` 短文字表（NAME STATE WORKSPACE QUEUED REASON），`long`＝`-l`、新鍵 `json`＝`--json`（照「參數一對一」）；`agents_children` ls 預設一行一隻同欄位＋末行 `children N/MAX`，`long`＝舊的 JSON。實量（真 daemon 測試，mom＋kid）：ctl 539→112 字元、children 一隻 305→57。代定：children 排隊中那隻印 `NAME queued - - letter L`；ctl 的 `long`＋`json` 同給照下層（json 為準） | `4f9f8ffa5` |
+| 4 | 畫面那條路（`cli_session.live`，aos-eca-turn 與 claude 工具共用）貼題目前先看畫面：claude 停在信任資料夾選單＝`TrustMissing`、不貼（信留著、不記冷卻），訊息叫人 attach 自己選或照抄 `cd <ws> && claude`；不替人按、不關畫面。認法見下 | 見 git log |
+| 5 | 四題維持現況，不動 | — |
+
+**題 4 細節**
+- 實拍（haiku、scratch 全新資料夾，只開不打字）：claude 的選單是「Quick safety check: Is this a project you created or one you trust? …」，選項「❯ No, exit」「Yes, I trust this folder」、「Enter to confirm · Esc to cancel」——**預設是 No, exit**，所以以前貼題目＋Enter＝選了離開、畫面關掉。
+- 認法（耐小改字）：畫面最後 30 行有 trust 這個字，而且有一行像選項（前面可有 ❯／›／>、「1.」）寫 `no … exit` 或 `yes … trust`；認不出＝照舊貼。舊版「Do you trust the files in this folder? 1. Yes, proceed 2. No, exit」也認得。
+- 真驗：同一資料夾經 `cli_session.start`＋`live` 跑一次＝`cli_session: error: TrustMissing claude on the screen is waiting at its trust-this-folder prompt for <ws>; nothing was typed. …`，畫面還在、沒打字；收掉後 `~/.claude.json` 沒有這個資料夾（沒替人信任）。
+- codex（v0.167.0）實拍：新資料夾直接到輸入框、沒有信任選單——只記錄、不做（檢查只對 kind＝claude）。
+- 代定：代號 `TrustMissing`；不關畫面（人 attach 就能直接選）；非互動路（`claude -p`）不經選單、不檢查；人用 `aos-agent open` 開畫面時自己看得到選單，不另提醒。
+
