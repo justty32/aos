@@ -60,9 +60,9 @@ class DefinitionsTest(unittest.TestCase):
         self.assertEqual(data['groups'][0]['members'], ['a', 'b'])
 
     def test_directive_tool_paths_kept_as_written(self):
-        home = {'$env': 'AOS_HOME', '$path': '/lib/base/wall_clock'}
+        home = {'$env': 'AOS_HOME', '$path': '/lib/base/peek_now_time'}
         self.definition('a', tool={'clock': {'path': home}})
-        self.definition('b', tool={'time': {'path': {'$path': '/lib/base/wall_clock', '$env': 'AOS_HOME'}}})
+        self.definition('b', tool={'time': {'path': {'$path': '/lib/base/peek_now_time', '$env': 'AOS_HOME'}}})
         self.definition('c', tool={'clock': {'path': {'$env': 'AOS_HOME', '$path': '/lib/base/read'}}})
         result, data = self.call('dup')
         self.assertEqual(result.returncode, 0, result.stderr)

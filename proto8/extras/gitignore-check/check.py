@@ -161,7 +161,7 @@ class Check:
         source = PROTO / "templates" / kind
         shutil.copytree(source, dest, symlinks=True, ignore=shutil.ignore_patterns("__pycache__", "tests"))
         kb = {"AOS_MEMORY": str(self.work / "kb")}
-        tools = {"wall_clock": {"path": str(PROTO / "lib/base/wall_clock")},
+        tools = {"peek_now_time": {"path": str(PROTO / "lib/base/peek_now_time")},
                  "memory": {"path": str(PROTO / "lib/agent/memory"), "env": kb},
                  "memory_write": {"path": str(PROTO / "lib/agent/memory_write"), "env": kb}}
         save(dest / "tools.json", {"tools": tools})
@@ -203,7 +203,7 @@ class Check:
         fail.write_text("#!/bin/sh\ncat >/dev/null\necho 'fail-endpoint: error: EndpointFailed intentional failure' >&2\nexit 1\n")
         fail.chmod(0o755)
         save(self.llms / "defs/kernel.json", {"slots": 3, "timeout_ms": 120000, "endpoint": "fake", "exec": str(PROTO / "lib/base/llm_fake"),
-             "endpoints": {"fake": {"exec": str(PROTO / "lib/base/llm_fake"), "tool": "wall_clock"}, "bad": {"exec": str(fail)}, "slow": {"exec": "fake_slow", "delay_s": 12, "tool": "wall_clock"}}})
+             "endpoints": {"fake": {"exec": str(PROTO / "lib/base/llm_fake"), "tool": "peek_now_time"}, "bad": {"exec": str(fail)}, "slow": {"exec": "fake_slow", "delay_s": 12, "tool": "peek_now_time"}}})
         # Cause the real daemon reader to preserve a malformed public table.
         self.root.mkdir(parents=True)
         (self.root / "procs_state.json").write_text("{intentional broken state\n")

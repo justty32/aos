@@ -1,0 +1,5 @@
+{"description": "Pack mailbox: letters - mailbox_peek, mailbox_read, mailbox_send.",
+ "tools": {
+           "mailbox_peek": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/mailbox_peek"}},
+           "mailbox_read": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/mailbox_read"}},
+           "mailbox_send": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/mailbox_send"}}}}

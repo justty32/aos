@@ -1,0 +1,7 @@
+{"description": "Pack self: look at and change yourself - self_tools, self_llm, self_state, self_ctl, self_history.",
+ "tools": {
+           "self_tools": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_tools"}},
+           "self_llm": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_llm"}},
+           "self_state": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_state"}},
+           "self_ctl": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_ctl"}},
+           "self_history": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_history"}}}}

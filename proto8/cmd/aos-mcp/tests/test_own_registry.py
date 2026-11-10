@@ -9,7 +9,7 @@ import unittest
 
 PROTO = Path(__file__).resolve().parents[3]
 MCP = PROTO / 'cmd' / 'aos-mcp' / 'bin' / 'aos-mcp'
-CLOCK = PROTO / 'lib' / 'base' / 'wall_clock'
+CLOCK = PROTO / 'lib' / 'base' / 'peek_now_time'
 
 
 class OwnRegistry(unittest.TestCase):
@@ -18,10 +18,10 @@ class OwnRegistry(unittest.TestCase):
         (self.root / 'def').mkdir()
         (self.root / 'st').mkdir()
         self.defn = self.root / 'def' / 'tools.json'
-        self.defn.write_text(json.dumps({'tools': {'wall_clock': {'path': str(CLOCK)}}}))
+        self.defn.write_text(json.dumps({'tools': {'peek_now_time': {'path': str(CLOCK)}}}))
         self.own = self.root / 'st' / 'tools.json'
         self.own.write_text(json.dumps({'$override': '../def/tools.json',
-                                        'tools': {'wall_clock': None, 'clock2': {'path': str(CLOCK)}}}))
+                                        'tools': {'peek_now_time': None, 'clock2': {'path': str(CLOCK)}}}))
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
         self.env['PATH'] = os.pathsep.join([str(PROTO / 'cmd' / 'aos-tools' / 'bin'), os.path.expanduser('~/.local/bin'),
                                             self.env['PATH']])
@@ -47,7 +47,7 @@ class OwnRegistry(unittest.TestCase):
         self.assertEqual(self.names(self.own), ['clock2'])
 
     def test_definition_registry(self):
-        self.assertEqual(self.names(self.defn), ['wall_clock'])
+        self.assertEqual(self.names(self.defn), ['peek_now_time'])
 
     def test_overlay_flag_is_gone(self):
         r = self.serve('--overlay', self.own, self.defn)

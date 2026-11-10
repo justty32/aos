@@ -23,7 +23,7 @@ llm-kernel/
 | `smart-high` | LiteLLM `localhost:4000` 的 `claude-haiku`（真名以 `curl localhost:4000/v1/models` 為準） | `fixed.temperature` 0.2、`slots` 4、`speed` normal、`cost` high、`context` 200000 |
 | `stupid-fast` | LM Studio `localhost:1234` 的 `qwen3-1.7b`（本機載的是別的就改這包的 `model`，真名看 `curl localhost:1234/v1/models`；家機試驗場指 `google/gemma-4-e4b`） | `fixed.temperature` 0.7、`slots` 1、`speed` fast、`cost` free、`context` 4096 |
 | `luna`、`sol` | LiteLLM 的 gpt-6 luna（low）、sol | `sol` 有 `fixed.temperature` 0.2；`cost` high |
-| `fake`（預設） | `lib/base/llm_fake`：有工具先叫 `tool` 寫的那個（範本 `wall_clock`，沒有就第一個）、再答「FAKE ANSWER to: …」 | `speed` fast、`cost` free |
+| `fake`（預設） | `lib/base/llm_fake`：有工具先叫 `tool` 寫的那個（範本 `peek_now_time`，沒有就第一個）、再答「FAKE ANSWER to: …」 | `speed` fast、`cost` free |
 | `fake-demo-self`、`fake-demo-spawn` | `llm_fake`＋`script` 劇本（[03](03-feat-proto.md) 件 1、件 4） | 劇本裡的路徑寫 `{"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}`：用到那組時解，`cp -r` 抄出去也指得對（11-10 templates-cp） |
 | `fake-demo-fast`、`fake-demo-slow` | `fake_slow`，每封 3 秒 | `slots` 1；`speed` fast／slow（[03](03-feat-proto.md) 件 3）；`fake_slow` 從找到的 `aos_flags.py`（`proto8/py`）旁找 `lib/`，複製出 repo 也對（11-05 夜第二輪邊緣：原本從自己的位置找、出 repo＝`EndpointFailed … can't open file …/lib/base/llm_fake/_entry`） |
 
@@ -43,7 +43,7 @@ export AOS_LLM_KERNEL=~/llm_kernel
 echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | aos-llm ask
 # {"role": "assistant", "content": "FAKE ANSWER to: hi"}
 aos-llm ls                                  # 一行一包、照代號排：代號 speed cost context slots backend summary（缺的印 -）；節錄：
-# fake fast free - - - fake brain: calls wall_clock (or the first tool), then answers FAKE ANSWER to ...
+# fake fast free - - - fake brain: calls peek_now_time (or the first tool), then answers FAKE ANSWER to ...
 # smart-high normal high 200000 4 - LiteLLM claude haiku: careful answers, costs money
 echo '{"endpoint": "smart-high", "request": {"messages": [{"role": "user", "content": "hi"}], "temperature": 1}}' | aos-llm ask
 # aos-llm: error: RequestBad temperature is fixed by endpoint smart-high (remove it from the request; to change it pick another endpoint name)

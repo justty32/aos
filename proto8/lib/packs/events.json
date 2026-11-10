@@ -1,0 +1,4 @@
+{"description": "Pack events: things that wake you later - clock_register (letters from the clock), self_hook (hooks on your own events).",
+ "tools": {
+           "clock_register": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/clock_register"}},
+           "self_hook": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_hook"}}}}

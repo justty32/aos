@@ -1,1 +1,1 @@
-{"allowed": ["wall_clock", "wall_clock2", "fsm1", "kid", "kid1", "kid2", "kid3", "kid4"], "max_running": 5, "queue": true, "keep_ordered": false}
+{"allowed": ["peek_now_time", "peek_now_time2", "fsm1", "kid", "kid1", "kid2", "kid3", "kid4"], "max_running": 5, "queue": true, "keep_ordered": false}

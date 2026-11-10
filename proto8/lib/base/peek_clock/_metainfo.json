@@ -1,0 +1,13 @@
+{
+  "summary": "Print the daemon clock's current cycle",
+  "resource": "disk",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 20
+  },
+  "timeout_ms": 1000
+}

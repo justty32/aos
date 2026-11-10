@@ -1,0 +1,3 @@
+{"description": "Look at the daemon clock: the current cycle number (one cycle is about interval_ms milliseconds). Changes nothing. No arguments. Result: {\"cycle\": N, \"interval_ms\": M}. Errors: ClockMissing (no daemon clock for you), ClockBad.",
+ "parameters": {"type": "object", "properties": {}},
+ "errors": ["ClockMissing", "ClockBad", "ArgumentsBad"]}

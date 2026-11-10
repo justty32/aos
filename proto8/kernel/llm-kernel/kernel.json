@@ -13,8 +13,8 @@
                    "summary": "LiteLLM gpt-6 luna, low effort"},
    "sol":         {"exec": "endpoints/litellm", "url": "http://localhost:4000/v1", "model": "chatgpt-gpt-6-sol", "fixed": {"temperature": 0.2}, "cost": "high",
                    "summary": "LiteLLM gpt-6 sol"},
-   "fake":        {"exec": {"$env": "AOS_HOME", "$path": "/lib/base/llm_fake"}, "speed": "fast", "cost": "free", "tool": "wall_clock",
-                   "summary": "fake brain: calls wall_clock (or the first tool), then answers FAKE ANSWER to ..."},
+   "fake":        {"exec": {"$env": "AOS_HOME", "$path": "/lib/base/llm_fake"}, "speed": "fast", "cost": "free", "tool": "peek_now_time",
+                   "summary": "fake brain: calls peek_now_time (or the first tool), then answers FAKE ANSWER to ..."},
    "fake-demo-self": {"exec": {"$env": "AOS_HOME", "$path": "/lib/base/llm_fake"}, "speed": "fast", "cost": "free",
                    "summary": "scripted fake brain for kernel/docs/03 part 1: adds math to its own tools, then uses it",
                    "script": [
@@ -23,13 +23,13 @@
                      {"tool_calls": [{"name": "math", "arguments": {"expr": "17*23"}}]},
                      {"content": "I added math to my own tools and used it right away: 17*23 = 391."}]},
    "fake-demo-memory": {"exec": {"$env": "AOS_HOME", "$path": "/lib/base/llm_fake"}, "speed": "fast", "cost": "free",
-                   "summary": "scripted fake brain for kernel/docs/03 part 1 with the knowledge base: reads memory me.json#/self_tools, then adds math and uses it",
+                   "summary": "scripted fake brain for kernel/docs/03 part 1 with the knowledge base: reads memory_read aos/me.json#/self_tools, then adds math and uses it",
                    "script": [
-                     {"tool_calls": [{"name": "memory", "arguments": {"op": "read", "path": "me.json#/self_tools"}}]},
+                     {"tool_calls": [{"name": "memory_read", "arguments": {"op": "read", "path": "aos/me.json#/self_tools"}}]},
                      {"tool_calls": [{"name": "self_tools", "arguments": {"op": "add", "name": "math",
                                       "path": {"$env": "AOS_HOME", "$path": "/lib/base/math"}}}]},
                      {"tool_calls": [{"name": "math", "arguments": {"expr": "17*23"}}]},
-                     {"content": "I read memory me.json#/self_tools, added math to my own tools and used it: 17*23 = 391."}]},
+                     {"content": "I read memory_read aos/me.json#/self_tools, added math to my own tools and used it: 17*23 = 391."}]},
    "fake-demo-spawn": {"exec": {"$env": "AOS_HOME", "$path": "/lib/base/llm_fake"}, "speed": "fast", "cost": "free",
                    "summary": "scripted fake brain for kernel/docs/03 part 4: starts kid, sets its brain, asks it, removes it; then copies a template to defs/helper and tries four kids",
                    "script": [

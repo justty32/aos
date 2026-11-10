@@ -12,7 +12,7 @@ import unittest
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[4]
 BIN = REPO / "proto8" / "cmd" / "aos-agent" / "bin" / "aos-agent"
-TOOL = REPO / "proto8" / "lib" / "base" / "wall_clock"
+TOOL = REPO / "proto8" / "lib" / "base" / "peek_now_time"
 
 
 def clean_env(**extra):

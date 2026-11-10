@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-# wall_clock - 在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z）
+# peek_now_time - 在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z）
 # 介面（lib/README 的契約）：stdin 收 {}（沒有參數；空 stdin 也算）；不碰檔案、不用 $AOS_WS。
-# 錯：stdin 不是 JSON 物件＝stderr 與 stdout 各一行「wall_clock: error: ArgumentsBad 原因」、退 1。
+# 錯：stdin 不是 JSON 物件＝stderr 與 stdout 各一行「peek_now_time: error: ArgumentsBad 原因」、退 1。
 # 來源：demo/agent-dan/tools/clock（10-23，原本是一行 sh `date -u`、不讀 stdin；10-24 遷移改 python3 才能照契約檢查 stdin，印的一樣）。
 import os, sys, time
 HELP = """\
-usage: wall_clock < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+usage: peek_now_time < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Print the current UTC time (ISO 8601 to the second, e.g. 2026-10-23T08:00:00Z).
-Result on stdout. On error: one line "wall_clock: error: CODE reason" on stderr and stdout, exit 1.
+Result on stdout. On error: one line "peek_now_time: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
@@ -28,7 +28,7 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.stdout.write(_line)
     sys.exit(1)
 
-NAME = "wall_clock"
+NAME = "peek_now_time"
 tool_io.start(NAME, HELP)
 
 

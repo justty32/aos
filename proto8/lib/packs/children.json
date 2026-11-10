@@ -1,0 +1,4 @@
+{"description": "Pack children: other agents - agents_children (ones you start yourself), agents_ctl (any agent on the daemon).",
+ "tools": {
+           "agents_children": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agents_children"}},
+           "agents_ctl": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agents_ctl"}}}}

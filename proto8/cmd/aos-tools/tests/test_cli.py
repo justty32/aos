@@ -12,7 +12,7 @@ import unittest
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
 BIN = PROTO / "cmd" / "aos-tools" / "bin" / "aos-tools"
-TOOL = PROTO / "lib" / "base" / "wall_clock"
+TOOL = PROTO / "lib" / "base" / "peek_now_time"
 
 ECHO = """#!/usr/bin/env python3
 import json, os, sys
@@ -71,7 +71,7 @@ class Brief(Base):
         self.echo_tool()
         self.ok("--file", self.reg, "add", self.tmp / "bin" / "echo")
         r = self.ok("--file", self.reg, "ls", "-b")
-        self.assertEqual(r.stdout, "echo\techo stdin\nwall_clock\tGet the current UTC time in ISO 8601, e.g. 2026-10-23T08:00:00Z.\n")
+        self.assertEqual(r.stdout, "echo\techo stdin\npeek_now_time\tGet the current UTC time in ISO 8601, e.g. 2026-10-23T08:00:00Z.\n")
         self.assertEqual(self.ok("--file", self.reg, "ls", "--brief").stdout, r.stdout)
 
     def test_brief_with_other_forms_is_bad(self):
@@ -83,11 +83,11 @@ class FileEitherSide(Base):
     def test_file_after_subcommand(self):
         self.ok("add", "--file", self.reg, TOOL)
         r = self.ok("ls", "--file", self.reg, cwd="/")
-        self.assertIn("wall_clock\tdir\t%s" % TOOL, r.stdout)
+        self.assertIn("peek_now_time\tdir\t%s" % TOOL, r.stdout)
 
     def test_file_before_subcommand(self):
         self.ok("--file", self.reg, "add", TOOL)
-        self.assertIn("wall_clock", self.ok("--file", self.reg, "ls", cwd="/").stdout)
+        self.assertIn("peek_now_time", self.ok("--file", self.reg, "ls", cwd="/").stdout)
 
     def test_same_file_both_sides_ok(self):
         self.ok("--file", self.reg, "add", TOOL)
@@ -144,7 +144,7 @@ class DefaultFileWarning(Base):
 class SuccessLines(Base):
     def test_added_absolute(self):
         r = self.ok("--file", self.reg, "add", TOOL)
-        self.assertEqual(r.stdout, "added wall_clock -> %s (%s: %s)\n" % (TOOL, self.reg, json.dumps(str(TOOL))))
+        self.assertEqual(r.stdout, "added peek_now_time -> %s (%s: %s)\n" % (TOOL, self.reg, json.dumps(str(TOOL))))
 
     def test_added_relative(self):
         work = self.tmp / "work"
@@ -152,17 +152,17 @@ class SuccessLines(Base):
         rel = os.path.relpath(TOOL, work)
         r = self.ok("--file", "../tools.json", "add", rel, cwd=work)
         stored = os.path.relpath(TOOL, self.tmp)
-        self.assertEqual(r.stdout, "added wall_clock -> %s (../tools.json: %s)\n" % (TOOL, json.dumps(stored)))
+        self.assertEqual(r.stdout, "added peek_now_time -> %s (../tools.json: %s)\n" % (TOOL, json.dumps(stored)))
 
     def test_added_path_json(self):
-        value = {"$env": "TC_ROOT", "$path": "/lib/base/wall_clock"}
+        value = {"$env": "TC_ROOT", "$path": "/lib/base/peek_now_time"}
         r = self.ok("--file", self.reg, "add", "--path-json", json.dumps(value), TC_ROOT=str(PROTO))
-        self.assertEqual(r.stdout, "added wall_clock -> %s (%s: %s)\n" % (TOOL, self.reg, json.dumps(value)))
+        self.assertEqual(r.stdout, "added peek_now_time -> %s (%s: %s)\n" % (TOOL, self.reg, json.dumps(value)))
 
     def test_removed_names_file(self):
         self.ok("--file", self.reg, "add", TOOL)
-        r = self.ok("--file", self.reg, "rm", "wall_clock")
-        self.assertEqual(r.stdout, "removed wall_clock (%s: key deleted)\n" % self.reg)
+        r = self.ok("--file", self.reg, "rm", "peek_now_time")
+        self.assertEqual(r.stdout, "removed peek_now_time (%s: key deleted)\n" % self.reg)
 
 
 class LongListing(Base):
@@ -170,13 +170,13 @@ class LongListing(Base):
         self.ok("--file", self.reg, "add", "--envs", "SECRET_KEY=hunter2", "--envs", "AOS_MEMORY=/kb", TOOL)
         r = self.ok("--file", self.reg, "ls", "-l")
         cols = r.stdout.rstrip("\n").split("\t")
-        self.assertEqual(cols, ["wall_clock", "dir", str(TOOL), "%s#/tools/wall_clock" % self.reg,
+        self.assertEqual(cols, ["peek_now_time", "dir", str(TOOL), "%s#/tools/peek_now_time" % self.reg,
                                 json.dumps(str(TOOL)), "AOS_MEMORY,SECRET_KEY"])
         self.assertNotIn("hunter2", r.stdout)
         self.assertNotIn("hunter2", self.ok("--file", self.reg, "ls", "--json").stdout)
 
     def test_ls_long_without_env_and_directive_stored(self):
-        value = {"$env": "TC_ROOT", "$path": "/lib/base/wall_clock"}
+        value = {"$env": "TC_ROOT", "$path": "/lib/base/peek_now_time"}
         self.ok("--file", self.reg, "add", "--path-json", json.dumps(value), TC_ROOT=str(PROTO))
         cols = self.ok("--file", self.reg, "ls", "--long", TC_ROOT=str(PROTO)).stdout.rstrip("\n").split("\t")
         self.assertEqual(cols[4], json.dumps(value))
@@ -188,7 +188,7 @@ class LongListing(Base):
         self.ok("--file", over, "override", self.reg)
         self.ok("--file", over, "add", "-n", "wc2", TOOL)
         lines = self.ok("--file", over, "ls", "-l").stdout.splitlines()
-        self.assertEqual(lines[0].split("\t")[3], "%s#/tools/wall_clock" % self.reg)
+        self.assertEqual(lines[0].split("\t")[3], "%s#/tools/peek_now_time" % self.reg)
         self.assertEqual(lines[1].split("\t")[3], "%s#/tools/wc2" % over)
 
     def test_ls_long_and_json_bad(self):

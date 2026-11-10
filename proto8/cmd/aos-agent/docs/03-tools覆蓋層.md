@@ -12,7 +12,7 @@
 
 ```json
 {"$override": "../../defs/bob/tools.json",
- "tools": {"math": {"path": "../../../../agents/lib/math"}, "wall_clock": null}}
+ "tools": {"math": {"path": "../../../../agents/lib/math"}, "peek_now_time": null}}
 ```
 
 - `$override`：底檔（定義那份）。第一次 `tools add／rm` 由 aos-agent 寫（`aos-tools --file 自己那份 override …`），寫法照當初 `ctl add` 給定義的寫法（使用者 N2「跟你加 agent 時的寫法走」）：daemon 表 `as_written.def` 是 `$env` 指示詞＝原樣接上宣告的 tools 路徑（例 `{"$env": "DEFS", "$path": "/bob/tools.json"}`）；其餘（表上只有解好的絕對路徑，分不出原寫法）＝相對自己那份的資料夾。定義那份不存在時不寫 `$override`，`add` 直接建一般登記檔。
@@ -43,4 +43,4 @@
 
 - **自己那份壞掉或它加的工具不見了＝整隻停下**（11-05 [edge-agent](../../../thinking/2026-11/05/edge-agent/README.md) 實測）：brain／act 每格 `aos-tools ls`，自己那份 JSON 壞、`$override` 指不到、或它加的路徑不在，aos-tools 報 `RegistryBad`／`PathMissing`、身體報 `ToolsBad` 退 1，那隻留在表上 `stopped`＋`reason`（11-05 使用者裁「留表標 stopped (Recommended)」）；修好後 `aos-agent tools reset`（或 `tools rm` 那個、手動改 `<stack>/<宣告的 tools 路徑>`）再 `aos-agent ctl start`，同一個 stack 從停的那格接著做；不要了 `aos-agent ctl rm`。照 aos-tools「不猜不跳過」，不改成略過壞的那個。
 - **跟定義同名的**：`tools add --name 名 路徑` 撞到定義裡已有的名字＝aos-tools `ToolExists`；要這隻改用自己的就 `tools add --replace --name 名 路徑`（使用者 11-10 N3「旗標改叫 --replace」；寫進自己那份，定義那格有、這次沒給的 key 寫成 `null`）。
-- 指到 image 外面的工具（例 repo 裡的 `lib/base/wall_clock`）存的也是相對路徑（`../../../../../../home/…`）：整份搬到另一層深度或別台、那邊沒有同樣相對位置的檔＝那個工具找不到（aos-tools 報 `PathMissing`）。照 [portable-flow 03 原則 5](../../../thinking/2026-11/05/portable-flow/03-絕對路徑盤點.md)「指到 daemon 外面自擔」；要帶著走就把工具放進定義旁的 `lib/`，或改用 `--path-json` 的環境變數寫法。
+- 指到 image 外面的工具（例 repo 裡的 `lib/base/peek_now_time`）存的也是相對路徑（`../../../../../../home/…`）：整份搬到另一層深度或別台、那邊沒有同樣相對位置的檔＝那個工具找不到（aos-tools 報 `PathMissing`）。照 [portable-flow 03 原則 5](../../../thinking/2026-11/05/portable-flow/03-絕對路徑盤點.md)「指到 daemon 外面自擔」；要帶著走就把工具放進定義旁的 `lib/`，或改用 `--path-json` 的環境變數寫法。

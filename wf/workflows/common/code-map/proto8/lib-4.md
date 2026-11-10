@@ -19,6 +19,9 @@
 | [`math/`](../../../../../proto8/lib/base/math/) | 算一個算術式子：只認數字、+ - * / // % **、括號、正負號（不用 eval） |
 | [`mkdir/`](../../../../../proto8/lib/base/mkdir/) | 建資料夾（上層一起建；已經有＝沒事） |
 | [`move/`](../../../../../proto8/lib/base/move/) | 搬移或改名一個檔、資料夾或捷徑本身（to 的上層自動建） |
+| [`peek_clock/`](../../../../../proto8/lib/base/peek_clock/) | 看一眼 daemon 的時鐘：讀 $AOS_CLOCK 那個檔，回現在第幾 cycle（11-10 深夜，使用者「peek_clock就是純粹看daemon clock」）。 |
+| [`peek_clock/tests/test_peek_clock.py`](../../../../../proto8/lib/base/peek_clock/tests/test_peek_clock.py) | peek_clock：讀 $AOS_CLOCK 回 cycle 與 interval_ms；沒設或缺檔＝ClockMissing（不當 0）、壞檔＝ClockBad（11-10 深夜 tool-packs）。 |
+| [`peek_now_time/`](../../../../../proto8/lib/base/peek_now_time/) | 在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z） |
 | [`read/`](../../../../../proto8/lib/base/read/) | 讀一個文字檔，太長從頭截、告訴你從第幾行接著讀 |
 | [`remove/`](../../../../../proto8/lib/base/remove/) | 真的刪掉一個檔、捷徑或資料夾（rm 的包裝；對比 trash＝丟進工作區的垃圾桶、可以救回） |
 | [`remove/tests/test_remove.py`](../../../../../proto8/lib/base/remove/tests/test_remove.py) | remove（rm 的包裝）：檔、捷徑本身、資料夾要 recursive、. ／.. ／/ 拒絕、工作區外照刪（11-10 tool-packs）。 |
@@ -29,7 +32,6 @@
 | [`stat/`](../../../../../proto8/lib/base/stat/) | 看單一個檔或資料夾的屬性，回 JSON |
 | [`trash/`](../../../../../proto8/lib/base/trash/) | 刪除一個檔或資料夾：不真的刪，搬進 $AOS_WS/.trash/<時間>/<原路徑>（真的刪用 remove） |
 | [`view/`](../../../../../proto8/lib/base/view/) | 漸進看一個檔：JSON 一次看一層、大的文字檔先給大綱 |
-| [`wall_clock/`](../../../../../proto8/lib/base/wall_clock/) | 在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z） |
 | [`write/`](../../../../../proto8/lib/base/write/) | 把整份內容寫進一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建 |
 
 ## `proto8/lib/packs/`
@@ -37,8 +39,15 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`change.json`](../../../../../proto8/lib/packs/change.json) | Pack 2 (change): tools that create or change files - write, edit, copy, move, mkdir, json_write. |
+| [`children.json`](../../../../../proto8/lib/packs/children.json) | Pack children: other agents - agents_children (ones you start yourself), agents_ctl (any agent on the daemon). |
+| [`def.json`](../../../../../proto8/lib/packs/def.json) | Pack def: agent definitions - agent_def. |
 | [`delete.json`](../../../../../proto8/lib/packs/delete.json) | Pack 3 (delete): tools that delete - trash (into the workspace .trash, can be moved back) and remove (for real). |
+| [`events.json`](../../../../../proto8/lib/packs/events.json) | Pack events: things that wake you later - clock_register (letters from the clock), self_hook (hooks on your own events). |
+| [`gadgets.json`](../../../../../proto8/lib/packs/gadgets.json) | Pack gadgets: small tools that change nothing, for a quick look - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic exp… |
 | [`look.json`](../../../../../proto8/lib/packs/look.json) | Pack 1 (look): read-only file tools - read, ls, view, stat, json_read. |
+| [`mailbox.json`](../../../../../proto8/lib/packs/mailbox.json) | Pack mailbox: letters - mailbox_peek, mailbox_read, mailbox_send. |
+| [`memory.json`](../../../../../proto8/lib/packs/memory.json) | Pack memory: memory_read, memory_write. Which memory they use is set by the tools.json that stacks this pack (env AOS_MEMORY on the same names). |
+| [`self.json`](../../../../../proto8/lib/packs/self.json) | Pack self: look at and change yourself - self_tools, self_llm, self_state, self_ctl, self_history. |
 | [`shell.json`](../../../../../proto8/lib/packs/shell.json) | Pack 4 (shell): tools that run any command or program - shell (bash) and run_python. |
 
 ## `proto8/lib/tests/`

@@ -1,0 +1,3 @@
+{"description": "Pack def: agent definitions - agent_def.",
+ "tools": {
+           "agent_def": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agent_def"}}}}

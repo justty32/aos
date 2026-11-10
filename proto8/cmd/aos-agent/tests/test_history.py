@@ -15,7 +15,7 @@ BIN = REPO / "proto8" / "cmd" / "aos-agent" / "bin" / "aos-agent"
 
 MSGS = [{"role": "user", "content": "what time is it?"},
         {"role": "assistant", "content": "", "tool_calls": [{"id": "c1", "type": "function",
-                                                              "function": {"name": "wall_clock", "arguments": "{}"}}]},
+                                                              "function": {"name": "peek_now_time", "arguments": "{}"}}]},
         {"role": "tool", "tool_call_id": "c1", "content": "10:00"},
         {"role": "assistant", "content": "It is 10:00.\nBye."},
         {"role": "user", "content": "thanks"}]
@@ -67,7 +67,7 @@ class History(unittest.TestCase):
     def test_ls_text_and_json(self):
         out = self.agent().stdout.splitlines()
         self.assertEqual(len(out), 5)
-        self.assertEqual(out[1], "2\tassistant\t-> wall_clock({})")
+        self.assertEqual(out[1], "2\tassistant\t-> peek_now_time({})")
         self.assertEqual(out[2], "3\ttool\t(c1) 10:00")
         self.assertEqual(out[3], "4\tassistant\tIt is 10:00.\\nBye.")
         self.assertEqual(self.agent("ls", "4-").stdout.splitlines(), out[3:])

@@ -15,7 +15,7 @@ flowchart TD
 
 <details><summary>三層佈局與啟動指令</summary>
 
-以下是 image 根內的佈局；`root_image` 是根 stack，`llm_image` 與 `foreman_image` 是子 stack，`ws` 是工作成果。定義的 `_entry` 均為 `["aos-daemon", "daemon.json"]`。此例把 repo 的 `kernel/llm-kernel` 複製成 `llm_def`、`templates/agent-fsm` 複製成 `agent_def`，並帶同層的 `lib/`、`py/`。搬平一層後，先把 kernel.json 的 `exec`／fake 端點路徑改為 `../lib/base/llm_http`／`../lib/base/llm_fake`，agent 的 wall_clock 工具 path 改為 `../lib/base/wall_clock`；其他有用到的工具也照實際相對位置改。外部複本須安裝 repo 的 Python 共用模組，或在起根殼設 `PYTHONPATH="$PWD/py:$PWD/lib${PYTHONPATH:+:$PYTHONPATH}"`。agent 的啟動目標照其定義（例如 `fsm.json`），不要把會自掛的入口再掛一次。
+以下是 image 根內的佈局；`root_image` 是根 stack，`llm_image` 與 `foreman_image` 是子 stack，`ws` 是工作成果。定義的 `_entry` 均為 `["aos-daemon", "daemon.json"]`。此例把 repo 的 `kernel/llm-kernel` 複製成 `llm_def`、`templates/agent-fsm` 複製成 `agent_def`，並帶同層的 `lib/`、`py/`。搬平一層後，先把 kernel.json 的 `exec`／fake 端點路徑改為 `../lib/base/llm_http`／`../lib/base/llm_fake`，agent 的 peek_now_time 工具 path 改為 `../lib/base/peek_now_time`；其他有用到的工具也照實際相對位置改。外部複本須安裝 repo 的 Python 共用模組，或在起根殼設 `PYTHONPATH="$PWD/py:$PWD/lib${PYTHONPATH:+:$PYTHONPATH}"`。agent 的啟動目標照其定義（例如 `fsm.json`），不要把會自掛的入口再掛一次。
 
 ```text
 image/

@@ -1,0 +1,4 @@
+{"description": "Pack memory: memory_read, memory_write. Which memory they use is set by the tools.json that stacks this pack (env AOS_MEMORY on the same names).",
+ "tools": {
+           "memory_read": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/memory_read"}},
+           "memory_write": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/memory_write"}}}}

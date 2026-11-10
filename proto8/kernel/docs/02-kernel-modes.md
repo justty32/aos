@@ -50,13 +50,13 @@ P=<repo>/proto8
 mkdir -p /tmp/judge-try/m1 /tmp/judge-try/me && cd /tmp/judge-try/m1
 aos-exec --stack /tmp/judge-try/m1/st $P/kernel/daemon-judge    # 一台 daemon；身體每 300 ms 跑一次 judge（另開視窗或丟背景）
 aos-post init /tmp/judge-try/me/box                              # 收回信的信箱
-echo "{\"procs_added\": {\"wall_clock\": {\"exec\": \"$P/lib/base/wall_clock\", \"interval_ms\": 1000}}}" \
+echo "{\"procs_added\": {\"peek_now_time\": {\"exec\": \"$P/lib/base/peek_now_time\", \"interval_ms\": 1000}}}" \
   | aos-post send --reply-to /tmp/judge-try/me/box /tmp/judge-try/m1/st/requests
-AOS_DAEMON=/tmp/judge-try/m1/st aos-daemon-ctl ls                # wall_clock  running
+AOS_DAEMON=/tmp/judge-try/m1/st aos-daemon-ctl ls                # peek_now_time  running
 cat /tmp/judge-try/me/box/new/*/letter.json                      # body {"applied": true}（daemon 回的）
 ```
 
-白名單外的（`evil`）回 `{"applied": false, "error": {"code": "NameUnknown", "msg": "evil not in allowed"}}`；範本 `max_running` 是 5（11-05 午從 1 改成 4、11-10 帶清道夫後改 5＝清道夫＋4 格，`allowed` 多了 `fsm1`、`kid`、`kid1`～`kid4`，給 [03](03-feat-proto.md) 件 4 的 agent 生 agent 劇本用），所以 wall_clock 在跑時再寄 `wall_clock2` 也放行；要看 `SlotMissing` 就照 03 件 4 跑，或把 `judge.json` 的 `max_running` 改成 2（判官每圈重讀；清道夫佔一格、wall_clock 一格）再寄 `wall_clock2`——這時 `{"procs_stopped": ["wall_clock"]}` 原樣轉、回 `applied: true`，之後 `wall_clock2` 就放行。收工：在 daemon 的視窗 Ctrl-C。
+白名單外的（`evil`）回 `{"applied": false, "error": {"code": "NameUnknown", "msg": "evil not in allowed"}}`；範本 `max_running` 是 5（11-05 午從 1 改成 4、11-10 帶清道夫後改 5＝清道夫＋4 格，`allowed` 多了 `fsm1`、`kid`、`kid1`～`kid4`，給 [03](03-feat-proto.md) 件 4 的 agent 生 agent 劇本用），所以 peek_now_time 在跑時再寄 `peek_now_time2` 也放行；要看 `SlotMissing` 就照 03 件 4 跑，或把 `judge.json` 的 `max_running` 改成 2（判官每圈重讀；清道夫佔一格、peek_now_time 一格）再寄 `peek_now_time2`——這時 `{"procs_stopped": ["peek_now_time"]}` 原樣轉、回 `applied: true`，之後 `peek_now_time2` 就放行。收工：在 daemon 的視窗 Ctrl-C。
 
 模式 2：一台普通 daemon（這個固定兩格的示例不帶鐘列；若自己加了鐘列，把判官設定 `max_running` 加一，預留那格），把 procs-kernel 掛上去當 0 號，寄信進它的 `requests/`：
 
@@ -67,12 +67,12 @@ AOS_STACK=/tmp/judge-try/m2/st/ aos-daemon daemon.json            # 另開視窗
 export AOS_DAEMON=/tmp/judge-try/m2/st
 aos-daemon-ctl add $P/kernel/procs-kernel                        # 表上多一列 procs-kernel  running
 aos-post init /tmp/judge-try/me/box2
-echo "{\"procs_added\": {\"wall_clock\": {\"exec\": \"$P/lib/base/wall_clock\", \"interval_ms\": 1000}}}" \
+echo "{\"procs_added\": {\"peek_now_time\": {\"exec\": \"$P/lib/base/peek_now_time\", \"interval_ms\": 1000}}}" \
   | aos-post send --reply-to /tmp/judge-try/me/box2 $AOS_DAEMON/procs/procs-kernel/requests
-aos-daemon-ctl ls                                                # procs-kernel、wall_clock 兩列 running；回信 {"applied": true}
+aos-daemon-ctl ls                                                # procs-kernel、peek_now_time 兩列 running；回信 {"applied": true}
 ```
 
-範本 `max_running` 是 2（含 procs-kernel 自己），這時再寄 `wall_clock2` 回 `SlotMissing`；`evil` 回 `NameUnknown`。
+範本 `max_running` 是 2（含 procs-kernel 自己），這時再寄 `peek_now_time2` 回 `SlotMissing`；`evil` 回 `NameUnknown`。
 
 ### 改成自己的
 

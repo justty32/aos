@@ -12,7 +12,7 @@ import unittest
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
 BIN = PROTO / "cmd" / "aos-tools" / "bin" / "aos-tools"
-TOOL = PROTO / "lib" / "base" / "wall_clock"
+TOOL = PROTO / "lib" / "base" / "peek_now_time"
 KEY = "$override"
 
 

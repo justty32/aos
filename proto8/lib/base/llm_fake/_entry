@@ -6,7 +6,7 @@
 #   endpoint.script（陣列，劇本）有就照劇本：已在 messages 裡的 assistant 則數 n，這次回 script[n]；一項是 {"content": "..."} 或
 #   {"tool_calls": [{"name": "...", "arguments": {...}}]}（arguments 給物件，這裡轉成 JSON 字串；補 id／type）；n 超過劇本長度＝照上面原本的行為。
 #   endpoint.tool（字串，11-05 E 線）＝先叫的那個工具名：request 的 tools 裡有它就叫它、沒有＝照舊叫第一個（範本 11-05 起內建 agents、
-#   self_tools，按名字排在 wall_clock 前面；demo 的 fake 包寫 "tool": "wall_clock"）。
+#   self_tools，按名字排在 peek_now_time 前面；demo 的 fake 包寫 "tool": "peek_now_time"）。
 # 錯：stderr 與 stdout 各一行「llm_fake: error: ArgumentsBad 原因」、退 1。
 # 用法：kernel.json 的 endpoints 登記一組 "fake": {"exec": "<到這個資料夾的路徑>"}，信寫 "endpoint": "fake"（或設成預設）。
 # 來源：templates/agent-fsm/brain.py 的 fake()（11-04 晚搬過來；不再用「URL 沒設＝假腦」的暗規則，C-56）。

@@ -2,7 +2,7 @@
 
 ## 索引：base
 
-**分包與路徑**（11-10 tool-packs）：前 15 支通用工具分四包，清單在 [lib/packs](../packs/README.md)——1 看（read、ls、view、stat、json_read）、2 改（write、edit、copy、move、mkdir、json_write）、3 刪（trash、remove）、4 殼（shell、run_python）。檔案工具的路徑相對從 `$AOS_WS` 算、絕對照用，**不擋工作區外**（使用者「這些就是/usr/bin的包裝」「3.對」），能不能動看 Linux 權限；相對路徑又沒有 `$AOS_WS`＝`WsMissing`。
+**分包與路徑**（11-10 tool-packs）：前 15 支通用工具分四包，清單在 [lib/packs](../packs/README.md)——1 看（read、ls、view、stat、json_read）、2 改（write、edit、copy、move、mkdir、json_write）、3 刪（trash、remove）、4 殼（shell、run_python）；另有小工具包 gadgets（peek_clock、peek_now_time、math，不改任何東西、隨手看一下）。agent 工具也分包（事件、自我管理、子 agent、定義、信箱、記憶），一覽見 [lib/packs](../packs/README.md)。檔案工具的路徑相對從 `$AOS_WS` 算、絕對照用，**不擋工作區外**（使用者「這些就是/usr/bin的包裝」「3.對」），能不能動看 Linux 權限；相對路徑又沒有 `$AOS_WS`＝`WsMissing`。
 
 回 JSON 的工具裡，計數（幾個、幾行、幾字）的 key 一律 `counter_<被數的東西>`（10-25 使用者「計數這塊，幫我改成counter_*」，C-54 命名方法 R6）；陣列本身（`items`、`keys` 清單）不加。
 
@@ -23,12 +23,13 @@
 | [trash](../base/trash/) | 丟進工作區的 `.trash/<時間>/`（不真的刪，move 救回；工作區外的東西放它的絕對路徑） | `path` | JSON：`path`、`to` |
 | [remove](../base/remove/) | 真的刪（rm 的包裝，11-10 新做）：資料夾要 `recursive`、捷徑刪本身、`.`／`..`／`/` 拒絕 | `path`、`recursive` | JSON：`path`、`type`、`counter_files` |
 | [math](../base/math/) | 算一個算術式子（不用 eval） | `expr` | 結果 |
-| [wall_clock](../base/wall_clock/) | 現在的 UTC 時間 | （無） | `2026-10-23T08:00:00Z` |
+| [peek_now_time](../base/peek_now_time/) | 現在的 UTC 時間 | （無） | `2026-10-23T08:00:00Z` |
+| [peek_clock](../base/peek_clock/) | 看一眼 daemon 時鐘：讀 `$AOS_CLOCK` 回第幾 cycle（沒設或缺檔＝`ClockMissing`，不當 0；壞檔＝`ClockBad`） | （無） | `{"cycle": 42, "interval_ms": 1000}` |
 | [run_python](../base/run_python/) | 跑一段 Python，回輸出與結束碼 | `code`、`timeout_s`（60／300） | 輸出、最後一行一律 `[exit code N]`（同 shell，11-05 前是第一行） |
 | [llm_http](../base/llm_http/) | endpoint 函數：把一份請求 POST 到 OpenAI 相容端點（11-04 晚，[think-as-function](../../thinking/2026-11/04/think-as-function/README.md)；平常由 aos-llm-kernel 經 aos-exec 跑） | `endpoint{url, model, fixed?}`（request 先、`fixed` 蓋上、model 一律用包的）、`request{messages, …}`；選填 `--key-env NAME` 從小 proc 自己環境讀金鑰，沒給就不帶 Authorization；stdin `endpoint.key`＝`ArgumentsBad`、變數未設＝`EndpointFailed` | 一行 JSON：`message`（只留 role／content／tool_calls）、`usage`、`model` |
 | [llm_fake](../base/llm_fake/) | 假腦：同 llm_http 的形狀、不碰網路（有工具先叫 `endpoint.tool` 那個〔請求裡沒有就第一個，11-05 E 線〕，否則答 FAKE ANSWER；`endpoint.script` 有就照劇本：第 n 則 assistant 回 `script[n]`，項＝`{"content"}` 或 `{"tool_calls":[{"name","arguments"}]}`，超出照原樣） | 同上（`endpoint` 只看 `script`） | 同上，`model`＝`fake` |
 
-不碰工作區的（`math`、`wall_clock`、`run_python`、`llm_http`、`llm_fake`）不收路徑、不看 `$AOS_WS`；`run_python` 把程式寫進自己的小格再跑（規則 8 的例外：拿小格當草稿區，不跨呼叫留東西）。
+不碰工作區的（`math`、`peek_now_time`、`peek_clock`、`run_python`、`llm_http`、`llm_fake`）不收路徑、不看 `$AOS_WS`；`run_python` 把程式寫進自己的小格再跑（規則 8 的例外：拿小格當草稿區，不跨呼叫留東西）。
 每個工具的細節看它 `_entry` 開頭的幾行說明與 `_tooldef.json`。
 
 ## 索引：aos

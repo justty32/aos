@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+# peek_clock - 看一眼 daemon 的時鐘：讀 $AOS_CLOCK 那個檔，回現在第幾 cycle（11-10 深夜，使用者「peek_clock就是純粹看daemon clock」）。
+# 介面（lib/README 的契約）：stdin 收 {}（沒有參數；空 stdin 也算）；不改任何東西、不用 $AOS_WS。
+# 結果：stdout 一行 JSON {"cycle": N, "interval_ms": M}；cycle 的讀法照 tool_io.now_cycle（空檔＝0、壞檔＝ClockBad），
+#   interval_ms＝AOS_CLOCK_INTERVAL（沒設＝1000），是時鐘大約多久走一格。
+# 錯（stderr 與 stdout 各一行「peek_clock: error: CODE 原因」、退 1）：
+#   ClockMissing＝沒設 AOS_CLOCK，或那個檔不在（daemon 沒開時鐘、或還沒走第一格）——不當 0，跟 now_cycle 不同；
+#   ClockBad＝檔裡不是十進位整數、讀不了，或 AOS_CLOCK_INTERVAL 不是正整數；ArgumentsBad＝stdin 不是 JSON 物件。
+import json, os, sys
+HELP = """\
+usage: peek_clock < ARGUMENTS.json   (a tool: run it with aos-exec)
+Look at the daemon clock: read the file named by $AOS_CLOCK and print the current cycle.
+Result on stdout: {"cycle": N, "interval_ms": M} (interval_ms is $AOS_CLOCK_INTERVAL, default 1000).
+Changes nothing. Errors: ClockMissing (no $AOS_CLOCK, or its file is not there), ClockBad, ArgumentsBad.
+On error: one line "peek_clock: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "peek_clock"
+tool_io.start(NAME, HELP)
+die = tool_io.die
+
+args = tool_io.arguments()
+path = os.environ.get("AOS_CLOCK")
+if not path:
+    die("ClockMissing", "AOS_CLOCK is not set (this agent is not under a daemon with a clock)")
+if not os.path.exists(path):
+    die("ClockMissing", "clock file %s is not there (the daemon clock is off, or has not ticked yet)" % path)
+try:
+    cycle = tool_io.now_cycle()
+    interval = tool_io.clock_interval_ms()
+except tool_io.Error as e:
+    die(e.code, str(e))
+print(json.dumps({"cycle": cycle, "interval_ms": interval}))
