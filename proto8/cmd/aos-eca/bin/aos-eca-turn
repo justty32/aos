@@ -471,15 +471,15 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
 
 ONE_MAX, ONE_HEAD, ONE_TAIL = 6000, 4000, 2000              # 單則超過 ONE_MAX bytes：留頭 ONE_HEAD＋尾 ONE_TAIL
 
-NOTE = """[aos: this conversation continues in a new session (it moved to another machine or folder, or was restarted).
+NOTE = aos_flags.aos_note("session", """this conversation continues in a new session (it moved to another machine or folder, or was restarted).
 The earlier session is not available here. Below is the record aos kept of it: what you were asked and your
 final answers (tool calls and their output are not included; long or old messages are shortened or left out).
-The complete record is the JSON-lines file %s. The new message follows the record.]
-"""
-NOTE_ONLY = """[aos: this conversation continues in a new session (it moved to another machine or folder, or was restarted).
+The complete record is the JSON-lines file %s. The new message follows the record.
+""")
+NOTE_ONLY = aos_flags.aos_note("session", """this conversation continues in a new session (it moved to another machine or folder, or was restarted).
 The earlier session is not available here. aos keeps a record of it (what you were asked and your final answers)
-in the JSON-lines file %s; it is not attached here. The new message follows.]
-"""
+in the JSON-lines file %s; it is not attached here. The new message follows.
+""")
 
 
 def nbytes(text):

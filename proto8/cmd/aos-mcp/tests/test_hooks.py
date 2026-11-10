@@ -78,7 +78,7 @@ class McpHooks(unittest.TestCase):
         self.assertFalse(self.calls.exists())
         self.declare({'blk': {'event': 'before_tool', 'intercept': True, 'handler': self.hook('blk', 'sys.exit(10)\n')}})
         (res,), _ = self.serve('--hooks', self.defn)
-        self.assertEqual(self.text(res), '(tool echo blocked by hook blk)')
+        self.assertEqual(self.text(res), '[aos] hook: tool echo blocked by hook blk.')
         self.assertEqual([e['event'] for e in self.events()], ['before_tool', 'before_tool'])   # 攔下的不觸發 after_tool
 
     def test_tool_after_changes_content(self):

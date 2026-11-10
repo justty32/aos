@@ -85,13 +85,13 @@ class History(unittest.TestCase):
     def test_summarize_open_range_from_stdin(self):
         r = self.agent("summarize", "--role", "assistant", "2-", "-", stdin="It was 10:00; the user said thanks.")
         self.assertIn("replaced 4 messages with one assistant message at line 2", r.stdout)
-        self.assertEqual(self.lines(), [MSGS[0], {"role": "assistant", "content": "aos: summary (lines 2-5, 4 messages): It was 10:00; the user said thanks."}])
+        self.assertEqual(self.lines(), [MSGS[0], {"role": "assistant", "content": "[aos] summary: lines 2-5, 4 messages. It was 10:00; the user said thanks."}])
         self.assertEqual(len(self.kept()), 4)
 
     def test_summarize_one_line_default_user(self):
         r = self.agent("summarize", "3", "asked the time")
         self.assertIn("replaced 1 message with one user message at line 3", r.stdout)
-        self.assertEqual(self.lines()[2], {"role": "user", "content": "aos: summary (lines 3-3, 1 message): asked the time"})
+        self.assertEqual(self.lines()[2], {"role": "user", "content": "[aos] summary: line 3, 1 message. asked the time"})
 
     def test_set_any_line_and_keep_elsewhere(self):
         other = self.tmp / "elsewhere" / "old.jsonl"

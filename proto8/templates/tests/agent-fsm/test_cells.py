@@ -160,7 +160,7 @@ else:
         result = self.run_cell('act')
         self.assertLess(time.monotonic() - started, 2.5)
         message = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
-        self.assertIn('timed out (1 s)', message['content'])
+        self.assertIn('[aos] tool: echo timed out after 1 s', message['content'])
         self.assertIn('started', message['content'])
         self.assertIn('timed out', result.stderr)
 

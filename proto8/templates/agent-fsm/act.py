@@ -12,7 +12,7 @@
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝改用這隻自己那份（aos-agent tools add／rm 寫的，只存差異、"$override" 指回定義那份，11-10）。
 # hook（lib/agent/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：確認登記過、arguments 是 JSON 之後 before_tool（可改 arguments；
-#   攔下＝不跑，tool 訊息＝hook 的 stdout，空就「(tool NAME blocked by hook HOOK)」，不記 observed、不觸發 after_tool）；
+#   攔下＝不跑，tool 訊息＝hook 的 stdout，空就「[aos] hook: tool NAME blocked by hook HOOK.」，不記 observed、不觸發 after_tool）；
 #   跑完、content 組好（含失敗尾巴）之後、接進 history 之前 after_tool（可改 content）。history 裡 assistant 的 tool_calls 不動。
 #   hook 停下＝HookFailed／HooksBad 退 1（這個 id 還沒有 tool 訊息，重跑會再跑一次）。
 # 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
@@ -61,7 +61,7 @@ On tool failure or timeout, append the last 2048 bytes of stderr to the tool mes
 the full stderr is also passed through. Tool failures are returned to the brain; exit 0.
 Append tool name, code, elapsed_ms, in_bytes and out_bytes to observed.jsonl (best effort).
 Hooks: before_tool may change arguments or block the call (the tool message is then the
-hook's stdout, or "(tool NAME blocked by hook HOOK)"); after_tool may change the content.
+hook's stdout, or "[aos] hook: tool NAME blocked by hook HOOK."); after_tool may change the content.
 A failing hook = HookFailed, exit 1.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
@@ -204,7 +204,7 @@ for call in calls:
     hooked = fire("before_tool", {"name": name, "id": cid, "arguments": parsed})
     if hooked["blocked"]:                        # 攔下：不跑、不記 observed、不觸發 after_tool
         append({"role": "tool", "tool_call_id": cid,
-                "content": hooked["text"] if hooked["text"].strip() else "(tool %s blocked by hook %s)" % (name, hooked["hook"])})
+                "content": hooked["text"] if hooked["text"].strip() else aos_flags.aos_note("hook", "tool %s blocked by hook %s." % (name, hooked["hook"]))})
         continue
     if "arguments" in hooked["changed"]:          # 改過的只交給工具，history 裡的 tool_calls 不動
         parsed = hooked["data"]["arguments"]
@@ -251,12 +251,12 @@ for call in calls:
     content = out.decode("utf-8", "replace")
     if timed_out:
         aos_flags.warn("agent-fsm", "tool %s timed out (passed back to the brain)" % name)
-        content += "%s(tool %s timed out (%g s); its process group was killed)\n" % ("" if content.endswith("\n") or not content else "\n", name, limit)
+        content += "%s%s\n" % ("" if content.endswith("\n") or not content else "\n", aos_flags.aos_note("tool", "%s timed out after %g s; its process group was killed." % (name, limit)))
     elif p.returncode != 0:                      # 回給腦、不停；人在 stderr 看得到
         aos_flags.warn("agent-fsm", "tool %s exit code %d (passed back to the brain)" % (name, p.returncode))
-        content += "%s(tool %s exit code %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, p.returncode)
+        content += "%s%s\n" % ("" if content.endswith("\n") or not content else "\n", aos_flags.aos_note("tool", "%s exit code %d." % (name, p.returncode)))
     if (timed_out or p.returncode != 0) and err:
-        content += "stderr (last 2048 bytes at most):\n%s\n" % err[-2048:].decode("utf-8", "replace").strip()
+        content += "%s\n%s\n" % (aos_flags.aos_note("tool", "%s stderr (last 2048 bytes at most):" % name), err[-2048:].decode("utf-8", "replace").strip())
     content = fire("after_tool", {"name": name, "id": cid, "arguments": parsed, "content": content,
                                   "code": None if timed_out else p.returncode, "timed_out": timed_out})["data"]["content"]
     append({"role": "tool", "tool_call_id": cid, "content": content})

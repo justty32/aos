@@ -39,7 +39,7 @@ add's TEXT and everything after it is text.
 
 aos-clock reads the register after each cycle: an entry fires when the new cycle number divides by
 its EVERY (cycles 10, 20, 30... for every 10), and sends one letter with aos-post send. The letter body is
-{"role": "user", "content": "TEXT (clock cycle N)", "from": "clock", "status": "PROGRESS", "title", "what", "cycle", "register"}:
+{"role": "user", "content": "[aos] clock: cycle N. TEXT", "from": "clock", "status": "PROGRESS", "title", "what", "cycle", "register"}:
 an agent's queue takes it as a user message, aos-mailbox reads it as a letter.
 Anyone who can write the register can add or remove entries. A letter that cannot be sent is one warning
 line from aos-clock; the clock keeps going. Every CHECK_EVERY cycles (top-level key check_every in the

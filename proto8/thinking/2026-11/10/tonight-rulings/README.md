@@ -79,3 +79,34 @@
 - codex（v0.167.0）實拍：新資料夾直接到輸入框、沒有信任選單——只記錄、不做（檢查只對 kind＝claude）。
 - 代定：代號 `TrustMissing`；不關畫面（人 attach 就能直接選）；非互動路（`claude -p`）不經選單、不檢查；人用 `aos-agent open` 開畫面時自己看得到選單，不另提醒。
 
+
+## 第三批（11-10 深夜）
+
+使用者（逐字）：「self_tools ls，應該默認是給出短板，然後用-l才是給長版。history summary那塊，或許可以稍微美化一下？我記得不是有人用[aos]啥的，後面還會追加，比如[aos] warning: ....，或是[aos] summary: ...，哪個的token消耗比較少，然後人類又比較好讀？」
+
+頂層答：token 只差一兩個、方括號人比較好讀；列出 aos 自己塞進對話的文字四種各寫各的，建議統一成 `[aos] 種類: 內容`，問 1 摘要改 `[aos] summary: …` 可以嗎、2 要不要一起統一。使用者：「1.可以。2.好，統一。對了，其他我記得還有一些地方也是有短版長版之分的，也幫我改成默認都短板吧。然後lmstudio那邊幫我調整context長度。」（LM Studio 那句別隊做。）
+
+### 項 A：aos 塞進對話的文字統一成 `[aos] 種類: 內容`
+
+共用小函式 `py/aos_flags.py` 的 `aos_note(kind, text)`；種類登記在同檔 `NOTE_KINDS`，新種類加在那裡（不在表上＝ValueError）。
+
+| 種類 | 位置 | 以前 | 現在 |
+|---|---|---|---|
+| summary | `cmd/aos-agent/aos_agent/history.py`（summarize） | `aos: summary (lines 2-4, 3 messages): 摘要` | `[aos] summary: lines 2-4, 3 messages. 摘要`；一則＝`line 3, 1 message.` |
+| session | `cmd/aos-eca/bin/aos-eca-turn`（換新對話的開場，兩種） | `[aos: this conversation continues in a new session …]`（整段包在方括號裡） | `[aos] session: this conversation continues in a new session …`（不再有結尾 `]`） |
+| clock | `py/aos_clock_register.py`（信的 content） | `TEXT (clock cycle 30)` | `[aos] clock: cycle 30. TEXT`（信的 `title`／`what` 等信箱欄位不動） |
+| hook | `templates/agent-fsm/act.py`、`cmd/aos-mcp/bin/aos-mcp`（before_tool 攔下、hook 沒印東西時） | `(tool NAME blocked by hook HOOK)` | `[aos] hook: tool NAME blocked by hook HOOK.` |
+| tool | `templates/agent-fsm/act.py`（工具逾時、退非 0 時附在結果後） | `(tool X timed out (5 s); its process group was killed)`、`(tool X exit code 3)`、`stderr (last 2048 bytes at most):` | `[aos] tool: X timed out after 5 s; its process group was killed.`、`[aos] tool: X exit code 3.`、`[aos] tool: X stderr (last 2048 bytes at most):` |
+| tool | `cmd/aos-mcp/bin/aos-mcp`（失敗時的 stderr 尾巴） | `stderr (last N bytes at most):` | `[aos] tool: X stderr (last N bytes at most):` |
+| warning | `templates/agent-fsm/brain.py`（system 裡，知識庫讀不到） | `Knowledge base is not available right now: 原因` | `[aos] warning: knowledge base is not available right now: 原因` |
+| knowledge | `templates/agent-fsm/brain.py`、`cmd/aos-mcp/bin/aos-mcp`（system／instructions 裡的知識庫根開頭） | `Knowledge base root (from tool X; call it for more):` | `[aos] knowledge: root of the knowledge base (from tool X; call it for more):` |
+
+**拿不準、先不動**：
+
+- 錯誤行格式的（`act: error: ToolUnknown …`、`act: error: ArgumentsBad …`、aos-mcp 逾時與空輸出的 `aos-mcp: error: CommandFailed …`）：照交代不動。
+- 工具自己的輸出：shell／run_python 最後一行 `[exit code N]`、shell 的 `[output too long; kept the last …]`：是工具結果的一部分。
+- eca 開場後面附的紀錄本體：每則 `[user] …`／`[assistant] …`、省略行 `[... N earlier messages left out ...]`。那是紀錄的排版，不是 aos 對腦說的話。
+- 時鐘信的 `title`（`clock cycle N: NAME`）：那是信箱欄位（aos-mailbox 讀），不進對話。
+- 信箱壞信、hook 丟信寫的 `mailbox_warning.txt`：寫檔給人看，不進對話。
+
+**代定**：種類名（summary、session、clock、hook、tool、warning、knowledge）；括號資訊改成句子開頭的短語、句點收尾；只有一則的摘要寫 `line 3, 1 message.`；知識庫根多一個種類 `knowledge`（頂層例子沒列，是 aos 放進 system 的話，所以一起改）。

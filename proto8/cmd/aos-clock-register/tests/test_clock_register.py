@@ -62,7 +62,7 @@ class ClockRegister(unittest.TestCase):
         self.assertEqual([l["body"]["cycle"] for l in got], [10, 20])
         b = got[0]["body"]
         self.assertEqual((b["role"], b["content"], b["from"], b["status"], b["what"]),
-                         ("user", "Look around. (clock cycle 10)", "clock", "PROGRESS", "Look around."))
+                         ("user", "[aos] clock: cycle 10. Look around.", "clock", "PROGRESS", "Look around."))
         self.assertEqual(got[0]["sent_at_cycles"], 10)
         self.assertEqual(self.reg("ls").stdout, "wake\t10\tq\tLook around.\n")
         self.assertEqual(self.reg("rm", "wake").returncode, 0)

@@ -23,7 +23,7 @@
 #   只給 --logs-path、沒給 --enable-logs＝ArgumentsBad。
 #   --hooks DEF（11-10 hook，圖紙 thinking/2026-11/10/self-family/hook § 6 eca 縮水版）：DEF＝定義資料夾（interfaces.json 宣告 hooks），stack＝上面那個 stack；
 #   cli_session 起它時帶上。tools/call 跑之前 before_tool（name、id＝請求 id 轉字串、arguments；可改 arguments、攔下＝不跑，結果文字＝hook stdout，
-#   空就「(tool NAME blocked by hook HOOK)」，不算 isError）、跑完 after_tool（加 content、code〔逾時 null〕、timed_out；可改 content）。
+#   空就「[aos] hook: tool NAME blocked by hook HOOK.」，不算 isError）、跑完 after_tool（加 content、code〔逾時 null〕、timed_out；可改 content）。
 #   hook 停下（HookFailed／HooksBad）＝這次 tools/call 回 isError、文字是那行錯，櫃台不死；on_error continue 的 warning 走 stderr。沒給＝沒有 hook。
 # 只做 initialize、ping、tools/list、tools/call；沒有 progress、resources、prompts、HTTP。
 # 錯：自己的錯 stderr 一行「aos-mcp: error: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、WsMissing、ToolMissing、ToolsBad；11-05 stdio-unify R1）。
@@ -67,7 +67,7 @@ Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call
   instructions of the reply; NAME not listed or the call failing = no instructions and a warning line on stderr;
   the tool answering MemoryMissing (no knowledge base was given to it) = no instructions, no warning.
 --hooks DEF: DEF is the agent definition folder (its interfaces.json declares hooks.json; the stack copy goes on top). On tools/call,
-  before_tool may change the arguments or block the call (the result text = the hook's stdout, or "(tool NAME blocked by hook HOOK)";
+  before_tool may change the arguments or block the call (the result text = the hook's stdout, or "[aos] hook: tool NAME blocked by hook HOOK.";
   not an error), after_tool may change the result text. A failing hook = that call returns isError with a HookFailed line. No --hooks = no hooks.
 --enable-logs: log one line per call to <stack>/aos-mcp-logs.jsonl (or --logs-path FILE). Off by default.
 Supports initialize, ping, tools/list, tools/call only.
@@ -256,7 +256,7 @@ def run_tool(params, tools, ws, stack, timeout_s, mid):
     cid = "" if mid is None else str(mid)
     hooked = fire("before_tool", {"name": name, "id": cid, "arguments": args}, stack)
     if hooked["blocked"]:                       # 攔下：不跑、不記、不觸發 after_tool
-        text = hooked["text"] if hooked["text"].strip() else "(tool %s blocked by hook %s)" % (name, hooked["hook"])
+        text = hooked["text"] if hooked["text"].strip() else aos_flags.aos_note("hook", "tool %s blocked by hook %s." % (name, hooked["hook"]))
         return {"content": [{"type": "text", "text": text}], "isError": False}, None
     args = hooked["data"]["arguments"]
     code, out, tail, ms, limit = call(name, tools[name], args, ws, stack, timeout_s)
@@ -270,7 +270,7 @@ def run_tool(params, tools, ws, stack, timeout_s, mid):
         text = out
     content = [{"type": "text", "text": text}]
     if code != 0 and tail:                      # 失敗時附 stderr 尾巴，外部 agent 才看得到原因（11-05，edge-basics 題 1）
-        content.append({"type": "text", "text": "stderr (last %d bytes at most):\n%s" % (STDERR_TAIL, tail)})
+        content.append({"type": "text", "text": "%s\n%s" % (aos_flags.aos_note("tool", "%s stderr (last %d bytes at most):" % (name, STDERR_TAIL)), tail)})
     after = fire("after_tool", {"name": name, "id": cid, "arguments": args, "content": "\n".join(c["text"] for c in content),
                                 "code": code, "timed_out": code is None}, stack)
     if "content" in after["changed"]:           # hook 改了結果：整段換成它給的一段文字
@@ -305,7 +305,7 @@ def knowledge_root(regs, ws, stack, timeout_s):
         aos_flags.warn(NAME, "--memory %s (op read of the root) %s; no instructions sent" %
                        (MEMORY, "timed out" if code is None else "exited %d" % code))
         return None
-    return "Knowledge base root (from tool %s; call it for more):\n\n%s" % (MEMORY, out.strip())
+    return aos_flags.aos_note("knowledge", "root of the knowledge base (from tool %s; call it for more):\n\n%s" % (MEMORY, out.strip()))
 
 
 def handle(msg, regs, ws, stack, timeout_s):

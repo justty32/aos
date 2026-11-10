@@ -26,7 +26,7 @@
 | 結束碼 | 意思 |
 |---|---|
 | 0 | 放行。`intercept` 開著而且 stdout 非空＝stdout 是一個 JSON 物件，認得的鍵（`content`／`arguments`）拿來改；stdout 空＝不改 |
-| 10 | 攔下（`before_queue`＝這封信收掉；`before_tool`＝工具不跑，腦看到的結果＝hook 的 stdout，空就給 `(tool NAME blocked by hook HOOK)`）；別的事件的 10＝當 0 |
+| 10 | 攔下（`before_queue`＝這封信收掉；`before_tool`＝工具不跑，腦看到的結果＝hook 的 stdout，空就給 `[aos] hook: tool NAME blocked by hook HOOK.`）；別的事件的 10＝當 0 |
 | 其他、逾時、起不來、該是 JSON 卻不是 | hook 自己失敗：`on_error` 決定 |
 
 ## 選項

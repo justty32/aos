@@ -327,7 +327,7 @@ class MemoryMissing(Base):
         self.assertEqual(len(warnings), 1, result.stderr)
         self.assertIn('agent-fsm: warning: tool memory_read (op read of the root) exited', warnings[0])
         self.assertTrue(system['content'].startswith('You are a test.'))
-        self.assertIn('Knowledge base is not available right now: tool memory_read', system['content'])
+        self.assertIn('[aos] warning: knowledge base is not available right now: tool memory_read', system['content'])
 
     def test_no_knowledge_base_given_is_quiet(self):
         """工具沒被指定庫（MemoryMissing）＝安靜：沒有 warning、工具那行不轉印、system 只有原文（11-10 深夜 tool-packs）。"""
@@ -345,7 +345,7 @@ class MemoryMissing(Base):
         result, system = self.brain(timeout=60)
         self.assertLess(time.monotonic() - started, 45)
         self.assertIn('agent-fsm: warning: tool memory_read (op read of the root) did not finish in 30 s', result.stderr)
-        self.assertIn('Knowledge base is not available right now:', system['content'])
+        self.assertIn('[aos] warning: knowledge base is not available right now:', system['content'])
 
 
 if __name__ == '__main__':

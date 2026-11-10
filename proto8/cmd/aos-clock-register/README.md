@@ -32,7 +32,7 @@ aos-clock-register rm ann-wake
   - 搬家：登記表跟時鐘檔一起帶走（two-machines 分類 G094）；暫存 `.clock_register.json.PID` 不帶（G095）。
 - **什麼時候寄**：`aos-clock` 寫好新數字 n 之後，`n % every == 0` 的格各寄一封。**對齊整數倍**（every 10＝cycle 10、20、30…），不是從登記那刻起算。
 - **信的 body**（一份形狀兩邊都收）：
-  `{"role": "user", "content": "TEXT (clock cycle N)", "from": "clock", "status": "PROGRESS", "title": "clock cycle N: NAME", "what": "TEXT", "cycle": N, "register": "NAME"}`
+  `{"role": "user", "content": "[aos] clock: cycle N. TEXT", "from": "clock", "status": "PROGRESS", "title": "clock cycle N: NAME", "what": "TEXT", "cycle": N, "register": "NAME"}`
   - fsm 的 idle 格、`aos-eca-turn` 只看 `role`＋`content`，當一則 user 訊息收進 history（其他鍵不管）；
   - `aos-mailbox` 讀 `from`／`status`／`title`／`what`，其餘照印。信封是 aos-post 的（`sender`、`sent_at`、有 `AOS_CLOCK` 時 `sent_at_cycles`）。
 - **時鐘不會被拖垮**：寄不到（箱子不在、不可寫）、表壞、某格形狀不對＝`aos-clock: warning: …` 一行（壞格跳過、其他格照寄），時鐘照樣走、退 0；每封最多等 5 秒。**沒有登記表＝跟以前完全一樣**。

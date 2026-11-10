@@ -199,7 +199,7 @@ sys.exit(code)
         self.declare({"no": {"event": "before_tool", "intercept": True, "handler": self.hook("no", "sys.exit(10)")}})
         self.act_history()
         self.run_cell("act")
-        self.assertEqual(self.history()[-1]["content"], "(tool echo blocked by hook no)")
+        self.assertEqual(self.history()[-1]["content"], "[aos] hook: tool echo blocked by hook no.")
 
     def test_tool_after_changes_content_and_match_filters(self):
         self.declare({"a": {"event": "after_tool", "intercept": True, "condition": ["echo"],

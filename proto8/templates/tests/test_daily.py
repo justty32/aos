@@ -33,7 +33,7 @@ if "--mntc" in sys.argv:
     sys.argv.remove("--mntc")
     os.environ["AOS_TEST_MNTC"] = "1"
 MNTC = os.environ.get("AOS_TEST_MNTC") == "1"
-OPENER = "[aos: this conversation continues in a new session"
+OPENER = "[aos] session: this conversation continues in a new session"
 LOGS = (".log", "/ledger.jsonl", "/observed.jsonl")   # 只給人看的歷史紀錄（記當時路徑，不拿來解路徑）
 GIT_ID = {"GIT_AUTHOR_NAME": "Daily User", "GIT_AUTHOR_EMAIL": "user@example.invalid",
           "GIT_COMMITTER_NAME": "Daily User", "GIT_COMMITTER_EMAIL": "user@example.invalid",

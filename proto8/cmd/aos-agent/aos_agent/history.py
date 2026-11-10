@@ -6,7 +6,7 @@
 # 寫法：整份寫暫存再改名（讀的人不會看到半份）；寫之前再看一次檔有沒有被別人動過（agent 正好接了一行），動過就重讀重做，最多 3 次。
 # 改掉的原文：每則一行 {"removed_at", "op", "line", "message"|"raw"} 接在旁邊那份（預設 history 同資料夾的 <名>_removed.jsonl；
 #   --keep FILE 換位置、相對 cwd；--no-keep 不留＝不可逆，終端上先問、-y 跳過）。先寫旁邊那份、再換 history。
-# summarize 的新訊息：角色預設 user，內容固定「aos: summary (lines A-B, N messages): 摘要」（使用者 11-10 深夜：「self_history的摘要這塊，身份可以是user，
+# summarize 的新訊息：角色預設 user，內容固定「[aos] summary: lines A-B, N messages. 摘要」（第三批統一成 [aos] 種類: 內容）（使用者 11-10 深夜：「self_history的摘要這塊，身份可以是user，
 #   只是內容這塊希望能符合特定格式，比如我們現有的error那樣，就aos:...。」；形狀隊長代定）；set 照原樣寫、不套。
 # 跑著的 agent 怎麼看到：fsm 每次 think 從頭讀 history；wait 寄之前看 history 比請求新就回 think 重組。eca 下一輪發現 history 被改過＝開新對話、帶改過的紀錄過去（縮水版）。
 import datetime
@@ -60,7 +60,7 @@ flags:
 
 RANGE = N, A-B or A- (to the end); TEXT = your summary (- reads it from stdin); flags go before TEXT (from TEXT on
 nothing is read as a flag). The new message goes at line A and reads
-  aos: summary (lines A-B, N messages): TEXT
+  [aos] summary: lines A-B, N messages. TEXT
 so it is not taken for something the user said (set writes a message as given).
 exit codes: 0 replaced; 1 error (HistoryMissing, RangeBad, WriteFailed...); 130 Ctrl-C.
 """ % KEEP_FLAGS,
@@ -178,9 +178,11 @@ def show(n, raw):
 
 
 def summary_text(lo, hi, text):
-    """summarize 寫進去的那則：開頭一句「aos: summary (lines A-B, N messages): 」，比照錯誤行，讀的人分得出這不是使用者講的（使用者 11-10 深夜第 8 題）。"""
+    """summarize 寫進去的那則：「[aos] summary: lines A-B, N messages. 摘要」（一則＝line A, 1 message.），讀的人分得出這不是使用者講的
+    （使用者 11-10 深夜第 8 題；第三批「1.可以。2.好，統一。」改成 [aos] 種類: 內容，aos_flags.aos_note）。"""
     k = hi - lo + 1
-    return "aos: summary (lines %d-%d, %d message%s): %s" % (lo, hi, k, "" if k == 1 else "s", text)
+    where = "line %d, 1 message" % lo if k == 1 else "lines %d-%d, %d messages" % (lo, hi, k)
+    return aos_flags.aos_note("summary", "%s. %s" % (where, text))
 
 
 def from_arg(v):

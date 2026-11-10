@@ -41,7 +41,7 @@
    },
    "text": {
     "type": "string",
-    "description": "summarize: your summary; the one message that replaces the range reads \"aos: summary (lines A-B, N messages): TEXT\""
+    "description": "summarize: your summary; the one message that replaces the range reads \"[aos] summary: lines A-B, N messages. TEXT\""
    },
    "role": {
     "type": "string",

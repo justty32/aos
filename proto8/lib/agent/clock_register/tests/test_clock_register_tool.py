@@ -55,7 +55,7 @@ class ClockRegisterTool(unittest.TestCase):
                            check=True, env=self.env)
         new = self.tmp / "ann" / "queue" / "new"
         letters = [json.loads((new / n / "letter.json").read_text()) for n in os.listdir(new)]
-        self.assertEqual([l["body"]["content"] for l in letters], ["Time to check. (clock cycle 2)"])
+        self.assertEqual([l["body"]["content"] for l in letters], ["[aos] clock: cycle 2. Time to check."])
         self.assertEqual(self.tool({"op": "rm", "name": "wake"}).stdout, "removed wake\n")
 
     def test_daemon(self):

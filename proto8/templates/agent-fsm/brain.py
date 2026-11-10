@@ -10,7 +10,7 @@
 # --memory NAME（11-05 晚 agent-knowledge K2）：登記名 NAME 的工具（範本是 memory_read）叫一次 {"op": "read"}，它印的知識庫根接在 system 後面、
 #   同一則 system 訊息（每格重叫＝知識庫改了下一題就看到；不存進 history）。叫的是腦之後叫的同一個工具＝腦看到的根跟它自己查的一樣。
 #   工具清單（疊覆蓋層後）沒有 NAME＝不給根（這隻把 memory 拿掉了）；叫了起不來、退非 0、或 30 秒沒叫完（整群收掉）＝
-#   warning 一行（工具自己那行照樣在 stderr）、system 裡改放一句「Knowledge base is not available right now: 原因」、照樣寫請求
+#   warning 一行（工具自己那行照樣在 stderr）、system 裡改放一句「[aos] warning: knowledge base is not available right now: 原因」、照樣寫請求
 #   （11-10 TS，圖紙 07 K01：知識庫一時讀不到不擋問腦，狀態不壞；原本是 MemoryFailed 退 1）。
 #   工具最後一行是「名: error: MemoryMissing …」＝沒被指定庫（11-10 深夜 tool-packs：工具沒有預設位置）＝安靜：不印 warning、
 #   工具那行也不轉印、system 裡什麼都不放。
@@ -58,8 +58,8 @@ tools) and write $AOS_STACK/think/request.json. Exit 0 = written (go wait); 10 =
 --max-tool-calls N: omit tools after N calls in the current task (non-negative integer).
 --memory NAME: call tool NAME with {"op": "read"} and append the knowledge base root it prints
 to the system message (skipped when NAME is not among the tools). If that call fails or
-takes over 30 s, one warning line goes to stderr, the system message says "Knowledge base is
-not available right now: <reason>" instead, and the request is written as usual. If the tool
+takes over 30 s, one warning line goes to stderr, the system message says "[aos] warning: knowledge
+base is not available right now: <reason>" instead, and the request is written as usual. If the tool
 answers MemoryMissing (no knowledge base was given to it), nothing is added and nothing printed.
 Hooks: with a tool_added hook, each tool name new since the last run (hook_tools_seen.json;
 the first run only records) fires it once. A failing hook = HookFailed, exit 1.
@@ -222,9 +222,9 @@ if memory and any(t["function"]["name"] == memory for t in tools):   # 這隻把
     root, why = memory_root()
     if why:                                      # 讀不到知識庫：warning 一行、照樣問腦，system 裡說一句（狀態不壞）
         aos_flags.warn("agent-fsm", "%s; asking the brain without the knowledge base" % why)
-        root = "Knowledge base is not available right now: %s" % why
+        root = aos_flags.aos_note("warning", "knowledge base is not available right now: %s" % why)
     elif root:
-        root = "Knowledge base root (from tool %s; call it for more):\n\n%s" % (memory, root)
+        root = aos_flags.aos_note("knowledge", "root of the knowledge base (from tool %s; call it for more):\n\n%s" % (memory, root))
     if root:
         system_text = (system_text.rstrip("\n") + "\n\n" if system_text.strip() else "") + root + "\n"
 system = [{"role": "system", "content": system_text}] if system_text else []

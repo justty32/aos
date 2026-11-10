@@ -11,6 +11,8 @@ import os
 import re
 import subprocess
 
+import aos_flags
+
 SUFFIX = "_register.json"
 KEY = "letters"
 DESCRIPTION = ("Clock register: every EVERY cycles (when the new cycle number divides by EVERY) aos-clock sends TEXT "
@@ -129,7 +131,7 @@ def is_box(path):
 
 def body(name, text, cycle):
     """一封信的 body：fsm／eca 的 queue 收 role＋content，aos-mailbox 讀 from／status／title／what。"""
-    return {"role": "user", "content": "%s (clock cycle %d)" % (text, cycle),
+    return {"role": "user", "content": aos_flags.aos_note("clock", "cycle %d. %s" % (cycle, text)),
             "from": "clock", "status": "PROGRESS", "title": "clock cycle %d: %s" % (cycle, name), "what": text,
             "cycle": cycle, "register": name}
 

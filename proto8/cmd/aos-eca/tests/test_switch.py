@@ -130,7 +130,7 @@ class ClaudeSwitch(Base):
         last = self.calls()[-1]
         self.assertIn("--session-id", last["argv"])
         self.assertNotIn("--resume", last["argv"])
-        self.assertTrue(last["stdin"].startswith("[aos: this conversation continues in a new session"), last["stdin"])
+        self.assertTrue(last["stdin"].startswith("[aos] session: this conversation continues in a new session"), last["stdin"])
         self.assertIn("--- record: 2 messages, 2 shown ---\n[user] hello\n[assistant] FAKE: hello\n--- end of record ---\n\nagain",
                       last["stdin"])
         self.assertEqual(self.queue(), [])
@@ -386,7 +386,7 @@ class CodexSwitch(Base):
         self.assertNotEqual(self.sid(), old)
         last = self.calls()[-1]
         self.assertNotIn("resume", last["argv"])
-        self.assertTrue(last["stdin"].startswith("[aos:"))
+        self.assertTrue(last["stdin"].startswith("[aos] session: "))
         self.assertEqual(self.queue(), [])
 
     def test_11_thread_written_on_failure(self):
@@ -506,10 +506,10 @@ class Reseed(unittest.TestCase):
     def test_zero_is_note_only(self):
         self.rows([{"role": "user", "content": "task"}])
         out = self.reseed(0)
-        self.assertTrue(out.startswith("[aos:"))
+        self.assertTrue(out.startswith("[aos] session: "))
         self.assertNotIn("--- record", out)
         self.assertIn(".stack/history.jsonl", out)
-        self.assertTrue(out.endswith("]\n\n"))
+        self.assertTrue(out.endswith("The new message follows.\n\n"))
 
     def test_note_bigger_than_limit(self):
         self.rows([{"role": "user", "content": "task"}])
@@ -529,9 +529,9 @@ class Reseed(unittest.TestCase):
             b.say("again")
             b.ok_turn()
             stdin = b.calls()[-1]["stdin"]
-            self.assertTrue(stdin.startswith("[aos:"))
+            self.assertTrue(stdin.startswith("[aos] session: "))
             self.assertNotIn("--- record", stdin)
-            self.assertTrue(stdin.endswith("]\n\nagain"))
+            self.assertTrue(stdin.endswith("The new message follows.\n\nagain"))
         finally:
             b.doCleanups()
 

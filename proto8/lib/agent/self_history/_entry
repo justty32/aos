@@ -5,7 +5,7 @@
 # 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"rm"|"summarize"|"set", …}；別的鍵＝ArgumentsBad：
 #   ls {range?, json?}                         ＝history ls [--json] [RANGE]；最後多一行說哪幾行是這一步、動不了
 #   rm {range, keep?, no_keep?}                ＝history rm [--keep FILE | --no-keep -y] RANGE
-#   summarize {range, text, role?, keep?, no_keep?} ＝history summarize [--role] [--keep | --no-keep -y] -- RANGE TEXT（新那則內容＝「aos: summary (lines A-B, N messages): text」，下層套的）
+#   summarize {range, text, role?, keep?, no_keep?} ＝history summarize [--role] [--keep | --no-keep -y] -- RANGE TEXT（新那則內容＝「[aos] summary: lines A-B, N messages. text」，下層套的）
 #   set {line, message, keep?, no_keep?}       ＝history set [--keep | --no-keep -y] -- LINE JSON（message 是物件）
 #   range 收字串（N、A-B、A-）或整數；line 收整數或字串。no_keep 時帶 -y（腦叫了就算確認過）。
 # 唯一多的規則（使用者第 2 題「可以」）：先 history ls --json，找「這一步」的頭——最後一則 assistant 帶 tool_calls、後面只有 tool＝那則
