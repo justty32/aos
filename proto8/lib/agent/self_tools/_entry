@@ -87,7 +87,8 @@ def agent(*args):
     if child.returncode != 0:                   # 給腦用的工具把下層錯翻成自己的錯（同 agents）
         mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
         if mine:
-            die(mine[-1].group(1), mine[-1].group(2))
+            # 下層撞名那句教 CLI 旗標（add --replace）：腦手上只有工具參數，換成 "replace": true（11-10 整合驗收）
+            die(mine[-1].group(1), mine[-1].group(2).replace("add --replace to replace it", 'add "replace": true to replace it'))
         die("CommandFailed", "aos-agent %s exited %d" % (" ".join(args[:2]), child.returncode))
     return out
 

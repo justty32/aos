@@ -17,7 +17,8 @@ TOOL_WORDS = {"InstanceExists": 'give another "name", or remove that agent first
 # 下層成功句／錯誤句裡教 CLI 的寫法 → 工具參數的寫法（腦手上沒有 CLI；11-10 驗收怪處 3）
 CLI_WORDS = ((re.compile(r"aos-agent ctl (start|wake|resume) --target (\S+)"), r'{"op": "\1", "name": "\2"}'),
              (re.compile(r"delete it with aos-agent ctl rm --purge, or by hand"), 'to delete it: add it again under the same name, then rm with "purge": true'),
-             (re.compile(r"add --replace to replace it"), 'add "replace": true to replace it'))
+             (re.compile(r"add --replace to replace it"), 'add "replace": true to replace it'),
+             (re.compile(r"the stack may still be there: aos-agent ctl add with the same name"), 'the stack may still be there: {"op": "add"} with the same name'))
 
 
 def tool_words(text):
