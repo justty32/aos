@@ -1,6 +1,7 @@
 // proc.cpp：【serve】掛問腦 proc、判斷收尾與透明錯誤、沿用換包旗標重掛並收集各後端在飛信件（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
+#include "aos/directive.hpp"
 #include "aos/util/files.hpp"
 
 #include <chrono>
@@ -54,7 +55,52 @@ std::optional<Json> read_error(const std::string& path) {
     return reply_of(reply);
 }
 
+// 11-10 two-machines：單子 argv 裡的 endpoint 函數寫成 {"$env": "AOS_DAEMON", "$path": 相對 daemon 的 stack}（同 aos-daemon 的 daemon_ref：
+// 基準是 daemon 給的 AOS_DAEMON、目標照字面），跑的那一刻由 aos-exec 從當下的 AOS_DAEMON 拼回——整棵樹 cp -a 到別處，在途的信跑的是新位置那份，
+// 不是舊位置的絕對路徑。目標不是絕對、或沒有 daemon＝原樣。
+Json host_ref(const std::string& exec, const std::string& daemon) {
+    aos::Spec sp = aos::split_hash(exec);
+    if (sp.path.empty() || sp.path[0] != '/' || daemon.empty()) {
+        return Json(exec);
+    }
+    std::string rel = fs::path(sp.path).lexically_relative(fs::path(daemon)).string();
+    if (rel.empty()) {
+        return Json(exec);
+    }
+    if (!sp.pointer.empty()) {
+        rel += "#" + sp.pointer;
+    }
+    return Json::object({{"$env", "AOS_DAEMON"}, {"$path", rel}});
+}
+
 }  // namespace
+
+// 重掛用的 endpoint 函數（11-10 two-machines）：照 proc.json 記的代號從現在的 kernel.json 再算一次（同 scan 挑信時的算法），
+// kernel 搬了位置也跑新位置那份；代號不在、解不開＝退回 proc.json 記的 exec（舊行為）。
+std::string Server::exec_for(const Json& proc) const {
+    std::string kept = proc.value("exec", cfg_.exec);
+    Json ep = proc.value("endpoint", Json());
+    if (!ep.is_string() || !cfg_.endpoints.contains(ep.get<std::string>())) {
+        return kept;
+    }
+    std::string name = ep.get<std::string>();
+    Json g;
+    try {
+        g = aos::resolve(cfg_.endpoints[name], cfg_.endpoint_dirs.at(name));
+    } catch (const Error&) {
+        return kept;
+    }
+    if (!g.is_object()) {
+        return kept;
+    }
+    if (!g.contains("exec")) {
+        return cfg_.exec;
+    }
+    if (!g["exec"].is_string() || g["exec"].get<std::string>().empty()) {
+        return kept;
+    }
+    return target_abs(g["exec"].get<std::string>(), cfg_.base);
+}
 
 // 寄一封掛信：{"procs_added": {"llm_<id>": {"exec": 單子, "max": 1, "stack": 信資料夾}}}（03 § 1）。
 // 單子的 cwd＝信資料夾（daemon 存成相對它自己的 stack），stdin／stdout 從 cwd 算＝搬家照樣對；stderr 不寫（daemon 接到 stack 的 stderr.txt）。
@@ -62,7 +108,7 @@ void Server::mount(const std::string& id, const std::string& exec, Json proc) {
     std::string dir = aos::join(mb_.cur(), id);
     std::string name = "llm_" + id;
     Json inst = Json::object();
-    inst["argv"] = Json::array({"aos-exec", exec});
+    inst["argv"] = Json::array({"aos-exec", host_ref(exec, host_.daemon)});
     inst["cwd"] = dir;
     inst["stdin"] = "request.json";
     inst["stdout"] = "reply.json";
@@ -110,7 +156,7 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
         }
         proc.erase("remount");
         try {
-            mount(id, proc.value("exec", cfg_.exec), proc);
+            mount(id, exec_for(proc), proc);
         } catch (const Error& e) {
             return error_reply(code::LaunchFailed, "remount letter could not be sent: " + e.code + " " + e.msg);
         }
@@ -191,7 +237,7 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
         return std::nullopt;
     }
     try {
-        mount(id, proc.value("exec", cfg_.exec), proc);
+        mount(id, exec_for(proc), proc);
     } catch (const Error& e) {
         return error_reply(code::LaunchFailed, "cannot send the re-add letter: " + e.code + " " + e.msg);
     }

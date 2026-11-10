@@ -60,4 +60,5 @@
 | [`tests/test_ctl.py`](../../../../../proto8/impls/aos-daemon/tests/test_ctl.py) | Exercise public controls, prune inspection and age selection, command errors and help. |
 | [`tests/test_lifecycle.py`](../../../../../proto8/impls/aos-daemon/tests/test_lifecycle.py) | Verify proc lifecycle, damaged-state adoption and owned-state recovery against real daemons. |
 | [`tests/test_poke.py`](../../../../../proto8/impls/aos-daemon/tests/test_poke.py) | Verify daemon poke modes, prompt wakeups and pid identity guards with isolated fixtures. |
+| [`tests/test_two_machines.py`](../../../../../proto8/impls/aos-daemon/tests/test_two_machines.py) | Check two-machines daemon fixes: copies never adopt the original tree, and mailbox rows re-resolve directives on start. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-daemon/vcpkg.json) | aos-daemon：照一張名單把幾個 proc 各自起在小格裡、看著它們（C++） |

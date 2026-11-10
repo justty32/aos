@@ -28,8 +28,27 @@ def read_loop(path):
     return cfg
 
 
+def is_program(path):
+    """這個檔要當程式 exec 嗎（同 aos-exec 的 is_program，11-10 two-machines：/mnt/c 每個檔都 0777，不能只看 +x）：
+    要 +x，且開頭 `#!` 或 ELF（\\x7fELF），或整份不是 JSON（沒 #! 的腳本，aos-exec 照舊交 sh）。+x 的 JSON＝不是程式。"""
+    if not os.access(path, os.X_OK):
+        return False
+    try:
+        with open(path, "rb") as fh:
+            data = fh.read()
+    except OSError:
+        return True   # 讀不了：交給 aos-exec 去 exec、去說為什麼
+    if data.startswith(b"#!") or data.startswith(b"\x7fELF"):
+        return True
+    try:
+        json.loads(data.decode("utf-8"))
+    except ValueError:
+        return True
+    return False
+
+
 def read_entry_json(path):
-    """入口找法用：讀一份沒 +x 的檔當 JSON（第一行 #! 跳過）。讀不了、不是 JSON＝EntryBad（aos-exec 也會這樣報）。"""
+    """入口找法用：讀一份不是程式（is_program 為假）的檔當 JSON（第一行 #! 跳過）。讀不了、不是 JSON＝EntryBad（aos-exec 也會這樣報）。"""
     try:
         with open(path, encoding="utf-8") as fh:
             text = fh.read()
@@ -64,7 +83,7 @@ def find_loop(xxx):
     """add 的自動識別（11-04，four-elements 08 步 7；使用者「拿掉，不應該看特定檔案。add這塊，就是看最終指向的json的內部結構。」）：
     照 aos-exec 的找法（N-61／N-62 的子集）走到入口，看最後指到的 JSON 長怎樣。回 (loop 設定物件, 它所在的檔, 它在檔裡的指標, 相對路徑的起點)，
     exec 型回 None。不看檔名（loop.json 這個名字不出現在這裡）；.env 不讀（只判型、不是真的跑），$ref／$env 不解。
-      資料夾＝XXX/$AOS_ENTRY（預設 _entry；沒有再找 .json）；可執行檔（+x）＝exec 型；
+      資料夾＝XXX/$AOS_ENTRY（預設 _entry；沒有再找 .json）；可執行檔（is_program：+x 且 #!／ELF 或不是 JSON）＝exec 型；
       JSON：所有陣列原樣交 aos-exec，不認程式名；字串＝轉向（從這份檔的資料夾算）再來一遍；
       物件有 argv＝單子＝exec 型；物件沒 argv、有 exec＝它就是 loop 設定；沒 argv 沒 exec＝取 js[$AOS_ENTRY] 再來（同一份檔、指標往下）。
     繞圈＝EntryBad；路徑不在＝PathMissing。"""
@@ -88,8 +107,8 @@ def find_loop(xxx):
             continue
         if not os.path.isfile(path):
             raise Fail("PathMissing", "%s not found" % path)
-        if not ptr and os.access(path, os.X_OK):
-            return None   # 可執行檔
+        if not ptr and is_program(path):
+            return None   # 可執行檔（看內容，不只看 +x）
         base = os.path.dirname(path)
         v = pointer(read_entry_json(path), ptr, "%s#%s" % (path, ptr))
         while isinstance(v, dict) and "argv" not in v and "exec" not in v:   # 沒 argv 的物件＝當資料夾，取 js[$AOS_ENTRY] 一路往下

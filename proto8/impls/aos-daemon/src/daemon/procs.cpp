@@ -72,6 +72,36 @@ static void fix_path(Json& c, const std::string& name, const std::string& key, c
     c[k] = aos::abspath(w.get<std::string>());
 }
 
+// 11-10 two-machines（使用者「兩台各自設一次...不要限制只設一次」）：寫成指示詞的值（有 $env 或 $ref 的物件）。
+static bool is_directive(const Json& v) {
+    return v.is_object() && (v.contains("$env") || v.contains("$ref"));
+}
+
+// 解開之前記下路徑欄的指示詞原形（$ref 的檔名照寫它的檔轉絕對）：ws、stack、def，與目標（exec 本身、或 exec 陣列的第一個）。
+// 只記解完是字串目標的 exec（單子、陣列整個是指示詞的不記）。沒有＝空物件。
+static Json written_of(const Json& raw, const Json& resolved, const std::string& base) {
+    Json w = Json::object();
+    if (!raw.is_object()) {
+        if (raw.is_array() && !raw.empty() && is_directive(raw[0])) {
+            w["exec"] = abs_refs(raw[0], base);
+        }
+        return w;
+    }
+    for (const char* k : {"ws", "stack", "def"}) {
+        if (raw.contains(k) && is_directive(raw[k])) {
+            w[k] = abs_refs(raw[k], base);
+        }
+    }
+    Json ex = raw.value("exec", Json());
+    Json got = resolved.is_object() ? resolved.value("exec", Json()) : Json();
+    if (is_directive(ex) && got.is_string()) {
+        w["exec"] = abs_refs(ex, base);
+    } else if (ex.is_array() && !ex.empty() && is_directive(ex[0]) && got.is_array() && !got.empty() && got[0].is_string()) {
+        w["exec"] = abs_refs(ex[0], base);
+    }
+    return w;
+}
+
 static bool is_target(const Json& t) {   // aos-exec 的目標：字串或 [目標, 參數...]（非空字串陣列）
     if (t.is_string()) {
         return true;
@@ -138,7 +168,7 @@ bool is_once(const Json& spec) {
         return false;
     }
     for (auto& [k, v] : spec.items()) {
-        if (k != "exec" && k != "ws" && k != "stack" && k != "def" && k != "limits" && k != "auto_restart" && k != "restart_on_stuck" && k != "stuck_after_cycles" && k != "stuck_after_ms") {
+        if (k != "exec" && k != "ws" && k != "stack" && k != "def" && k != "limits" && k != "auto_restart" && k != "restart_on_stuck" && k != "stuck_after_cycles" && k != "stuck_after_ms" && k != "as_written") {
             return false;   // 多了任何一個 key＝loop 設定（procs § 2 第 3 條）
         }
     }
@@ -162,6 +192,10 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             if (!is_target(t)) {
                 throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
             }
+            Json w = written_of(it.value, t, it.base_dir);
+            if (!w.empty()) {   // 11-10：目標寫成指示詞＝改寫成 {"exec": 目標, "as_written": …}（同一種 exec 型）
+                t = Json::object({{"exec", std::move(t)}, {"as_written", std::move(w)}});
+            }
             vec.emplace_back(name, std::move(t));
         } else if (it.value.is_object()) {
             aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", aos::loop::CtlWindow::config_key, aos::loop::StateWindow::config_key, aos::loop::StateFluxWindow::config_key, "ws", "stack", "def", "limits", "auto_restart", "restart_on_stuck", "stuck_after_cycles", "stuck_after_ms"});
@@ -174,6 +208,11 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             }
             if (!r.value.is_object()) {
                 throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
+            }
+            r.value.erase("as_written");   // daemon 自己記的 key（11-10），寫的人給的不算
+            Json w = written_of(it.value, r.value, it.base_dir);
+            if (!w.empty()) {
+                r.value["as_written"] = std::move(w);
             }
             if (r.value.contains("stuck_after_cycles") && r.value.contains("stuck_after_ms")) {
                 throw Error{code::CfgBad, key + "[" + name + "]: stuck_after_cycles and stuck_after_ms must not both be set"};

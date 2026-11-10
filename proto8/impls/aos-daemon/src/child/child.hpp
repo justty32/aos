@@ -82,6 +82,8 @@ struct Child {
     long long err_off = 0;              // 11-05 第二輪：起它那一刻小格 stderr.txt 的長度——reason 只看這次之後寫的（檔是附加的，前幾輩子的話不算）
     Json def;                           // null 或起它時給的定義資料夾（11-04，aos-agent，使用者「那就b。」）：Daemon 填（def_of）；接回、不變同 exec
     Json limits;                        // null 或起它時生效的份額（11-05 feat-proto 件 5；{}＝不限、存成 null）：起的那一刻的值，接回、不變同 exec
+    Json as_written;                    // null 或 {"ws"?, "stack"?, "def"?, "exec"?}（11-10 two-machines）：設定／信裡寫成指示詞（$env／$ref）的路徑欄原形
+                                        // （$ref 的檔名已轉絕對）；表上照存（列的 as_written），信箱接回只留名的列每次起再解（Daemon::refresh）
 };
 
 // 起一支子 loop。cell＝小格（proc 的 stack，絕對、結尾不帶 /；deep＝mkdir -p，不然只建 cell 與上一層）、spec＝loop 設定物件
@@ -116,6 +118,7 @@ bool alive(Child& c);
 // held（stopped 的列）的 pid、started_at_ticks 是 null。
 // 11-05（portable-flow，使用者「可以用daemon作為相對路徑的一個基準點」）：stack、ws、exec、def 存成相對 dstack（daemon 的 stack）的路徑
 // （字串算、不解捷徑；exec 的 `#` 片段照留）；reason 一律寫（null 或字串）。
+// 11-10（two-machines）：as_written 有才寫（指示詞原形照存；$ref 的檔名同 launch 存相對 dstack）；ws、stack、exec、def 仍是解好的值（給讀表的人）。
 Json row(const Child& c, const std::string& dstack);
 
 // 11-05：path 相對 base 的寫法（兩個都是絕對、已整理過；字串逐段比，不解捷徑；一樣＝"."）。path 不是絕對＝原樣回。

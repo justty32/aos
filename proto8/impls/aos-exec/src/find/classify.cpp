@@ -1,7 +1,9 @@
 // classify.cpp：【find】實際的檔 → 種類（說明見 find.hpp）。
 //
 // 順序（§ 18 ②「有 argv 這個 key＝inst 單子，其餘照 KISS」；10-21 晚 § 6 一路往下）：
-//   有 +x＝可執行檔（不讀內容；帶 #/＝EntryBad）。沒 +x 當 JSON 讀（第一行 #! 跳過；不是 JSON＝EntryBad；#/ 指不到＝EntryMissing）。
+//   有 +x 又像程式（is_program：開頭 #! 或 ELF，或整份不是 JSON）＝可執行檔（帶 #/＝EntryBad）。其餘當 JSON 讀（第一行 #! 跳過；
+//   不是 JSON＝EntryBad；#/ 指不到＝EntryMissing）。11-10 two-machines：/mnt/c（drvfs 沒 metadata）每個檔都是 0777，光看 +x 會把
+//   JSON 入口當程式跑，所以 +x 只是「能 exec」的條件、種類看內容；ext4 上結果不變（+x 的純 JSON 本來就跑不起來）。
 //   沒 argv 的物件＝資料夾：進去那一刻 $AOS_ENTRY 是 `.env`＝照做（`.env` 那格當入口、不當環境設定）；否則先套它的 `.env` key、
 //   旗標蓋回，再照當下的 $AOS_ENTRY 取那格（沒有＝EntryBad），又是沒 argv 的物件就一路往下（挑的時候不解 $ref，走的是那棵樹）。
 //   取到：字串＝轉向（交給下一跳）、物件（有 argv）＝單子、非空陣列＝argv；其他＝EntryBad。
@@ -14,6 +16,7 @@
 #include <cerrno>
 #include <cstring>
 
+#include <fcntl.h>
 #include <unistd.h>
 
 namespace aos::exec {
@@ -31,6 +34,34 @@ static std::string escape(const std::string& key) {
         }
     }
     return out;
+}
+
+bool is_program(const std::string& file) {
+    if (access(file.c_str(), X_OK) != 0) {
+        return false;
+    }
+    char head[4] = {0, 0, 0, 0};
+    ssize_t n = 0;
+    int fd = open(file.c_str(), O_RDONLY | O_CLOEXEC);
+    if (fd >= 0) {
+        n = read(fd, head, sizeof head);
+        close(fd);
+    }
+    if (n < 0 || fd < 0) {
+        return true;   // 讀不了：交給 exec 去說為什麼（照舊）
+    }
+    if (n >= 2 && head[0] == '#' && head[1] == '!') {
+        return true;
+    }
+    if (n == 4 && head[0] == 0x7f && head[1] == 'E' && head[2] == 'L' && head[3] == 'F') {
+        return true;
+    }
+    int err = 0;
+    std::optional<std::string> text = read_file(file, err);
+    if (!text) {
+        return true;
+    }
+    return Json::parse(*text, nullptr, false).is_discarded();   // 是 JSON＝不是程式；不是＝沒 #! 的腳本，照舊交 sh
 }
 
 static Json read_doc(const std::string& file) {
@@ -60,7 +91,7 @@ Classified classify(const std::string& file, const std::string& pointer, Chain& 
         spec += "#" + pointer;
     }
     Classified out;
-    if (access(file.c_str(), X_OK) == 0) {
+    if (is_program(file)) {
         if (!pointer.empty()) {
             throw Error{code::EntryBad, "bad entry: an executable cannot take #/: " + spec};
         }

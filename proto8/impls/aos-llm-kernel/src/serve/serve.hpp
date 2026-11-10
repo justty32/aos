@@ -128,6 +128,7 @@ private:
     std::optional<Json> pick(Waiting& w);
     void finish(const std::string& id, const Json& reply);
     void mount(const std::string& id, const std::string& exec, Json proc);
+    std::string exec_for(const Json& proc) const;   // 11-10：重掛時照 proc.json 的 endpoint 代號從現在的 kernel.json 再算 endpoint 函數
     std::optional<Json> settle(const std::string& id, Json proc);
 };
 

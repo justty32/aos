@@ -26,6 +26,7 @@ import difflib, json, os, re, shutil, sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
 import aos_flags  # noqa: E402  proto8/py/aos_flags.py：P-44 的解析
+from daemon_ctl.entry import is_program  # noqa: E402  看內容判程式（11-10：/mnt/c 每個檔都 +x）
 
 PROG = "aos-grow"
 ENTRY = os.environ.get("AOS_ENTRY") or "_entry"
@@ -387,7 +388,7 @@ def down(caller):
         rest = sorted(x for x in os.listdir(fdir) if x != ENTRY and x != "__pycache__")
         if rest or not os.path.isfile(os.path.join(fdir, ENTRY)):
             raise Fail("TargetBad", "%s/ holds more than %s (%s); cannot shrink it to one file" % (val, ENTRY, ", ".join(rest) or "no entry"))
-        if os.access(os.path.join(fdir, ENTRY), os.X_OK):
+        if is_program(os.path.join(fdir, ENTRY)):
             raise Fail("TargetBad", "%s/%s is an executable, not an instruction" % (val, ENTRY))
         inst = load(os.path.join(fdir, ENTRY))
         if not is_inst(inst):

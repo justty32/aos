@@ -41,6 +41,7 @@
 | [`src/launch/launch.cpp`](../../../../../proto8/impls/aos-exec/src/launch/launch.cpp) | 開跑（說明見 launch.hpp）。 |
 | [`src/launch/launch.hpp`](../../../../../proto8/impls/aos-exec/src/launch/launch.hpp) | 開跑（公開介面 run_inst、argv0 在 aos/exec.hpp）。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-exec/src/main.cpp) | aos-exec 命令列——把參數交給公開 API 的 run_cli（aos/exec.hpp、src/cli/）。 |
+| [`tests/test_classify.py`](../../../../../proto8/impls/aos-exec/tests/test_classify.py) | Check entry kinds are judged by content (#!, ELF, JSON), not by +x alone, in aos-exec and daemon_ctl. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-exec/vcpkg.json) | aos-exec：在工作區執行一個 aos 程式——找入口、備好環境變數、cd 進去、開跑 |
 
 ## `proto8/impls/aos-fsm/`

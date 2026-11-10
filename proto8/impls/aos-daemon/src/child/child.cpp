@@ -160,6 +160,7 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
     cfg.erase("stuck_after_ms");
     cfg.erase("auto_restart");   // 11-06（no-pid P6）：通用重起旗標只歸 daemon 管
     cfg.erase("restart_on_stuck");
+    cfg.erase("as_written");   // 11-10：daemon 記的指示詞原形，不是 loop 的 key
     Json ex = cfg.value("exec", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗；單子見下）
     // 11-05（portable-flow 03 推薦 (b)）：轉絕對之後寫成 {"$env": "AOS_DAEMON", "$path": 相對 daemon 的 stack}，aos-loop 解指示詞拼回（搬家不用改檔）
     auto keep = [&](const std::string& t) {
@@ -306,6 +307,9 @@ Json row(const Child& c, const std::string& dstack) {
     }
     if (c.restart_on_stuck) {
         r["restart_on_stuck"] = true;
+    }
+    if (c.as_written.is_object() && !c.as_written.empty()) {
+        r["as_written"] = rel_refs(c.as_written, dstack);   // 11-10：指示詞原形，有才寫；$ref 的檔名同 launch 存相對 daemon 的 stack
     }
     return r;
 }

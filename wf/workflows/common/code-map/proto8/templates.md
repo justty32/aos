@@ -10,7 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`agent-fsm/`](../../../../../proto8/templates/agent-fsm/) | Run an aos agent with loop and FSM cells. |
-| [`copy-out`](../../../../../proto8/templates/copy-out) | 把範本抄到 repo 外成一隻新 agent，指回 repo 的路徑一律寫成經本機錨點捷徑 .aos-proto8 的相對路徑；--relink 換機後重指錨點（11-10 坑-73）。 |
+| [`copy-out`](../../../../../proto8/templates/copy-out) | 把範本（templates/<名> 或 kernel/<名>）抄到 repo 外，指回 repo 的路徑照 --proto8 寫法改寫（預設 env：{"$env":"AOS_PROTO8",…}）；--relink 重指錨點。 |
 | [`judge-llm/`](../../../../../proto8/templates/judge-llm/) | Compare artifacts with one LLM request and public think accounting. |
 | [`reviewer/`](../../../../../proto8/templates/reviewer/) | Review measured definition costs and prescribe a fix or split when model downgrades fail. |
 

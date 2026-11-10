@@ -6,7 +6,8 @@
 //                 資料夾：照「當下的」$AOS_ENTRY 一段段走、沿路的資料夾都走進去，挑到資料夾就再走進去、一路往下，
 //                 挑到檔（或補 .json）為止（走回走過的資料夾＝EntryBad）→ 交給 classify 判種類 → 重設 AOS_CF／AOS_CD／AOS_CO
 //                 （最後讀的那一份 .env 自己設了就不蓋）。entry_name 也在這
-//   classify.cpp  classify：實際的檔＋指標 → 種類。有 +x＝可執行檔；沒有就當 JSON 讀（跳過第一行 #!、照 #/ 取值）：
+//   classify.cpp  classify：實際的檔＋指標 → 種類。is_program（+x 且開頭 #!／ELF、或 +x 又不是 JSON）＝可執行檔；
+//                 其餘當 JSON 讀（跳過第一行 #!、照 #/ 取值）：
 //                 沒 argv 的物件＝當資料夾（套它的 .env key、旗標蓋回、取 [$AOS_ENTRY]，一路往下）；
 //                 陣列＝argv、有 argv 的物件＝單子、字串＝轉向（交給下一跳）。字串轉向繞圈＝EntryBad（跨跳記在 Chain）
 #pragma once
@@ -48,6 +49,10 @@ struct Classified {
     bool read_env = false;
     std::set<std::string> names;
 };
+
+// 這個檔要當程式 exec 嗎（11-10 two-machines：看內容、不只看 +x）：要 +x，且開頭 `#!` 或 ELF（\x7fELF），
+// 或整份不是 JSON（沒 #! 的腳本，照舊交 execvp 退回 sh）。+x 的 JSON＝不是程式（/mnt/c 每個檔都 0777）。classify 與 argv0 共用。
+bool is_program(const std::string& file);
 
 // file＝實際的檔（realpath）、pointer＝`#` 後面（沒寫＝空；寫了一定是 / 開頭）。
 Classified classify(const std::string& file, const std::string& pointer, Chain& chain, const Layer& layer);

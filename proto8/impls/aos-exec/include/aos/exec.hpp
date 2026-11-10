@@ -3,7 +3,7 @@
 //   run_cli       等同命令列 `aos-exec [旗標...] XXX [args...]`（10-21 起；src/cli/）：可執行檔／argv 陣列＝exec（成功不回來）；
 //                 inst 單子＝行程內跑、回子程式的碼；自己的錯 stderr 一行「aos-exec: error: 代號 原因」、回 1   ← 會動行程全域狀態
 //   run_inst      行程內跑一張 inst 單子（交給 impls/aos-aos-inst；aos-exec 留在行程裡當監工）
-//   argv0         argv[0] 帶 / 又 exec 不了（資料夾、沒 +x 的檔、不在、帶 #/）＝前面插 aos-exec（10-20 ideas D3）
+//   argv0         argv[0] 帶 / 又 exec 不了（資料夾、沒 +x 的檔、+x 的 JSON、不在、帶 #/）＝前面插 aos-exec（10-20 ideas D3）
 //
 // 命令列（src/main.cpp）只叫 run_cli；aos-loop／aos-fsm 的每次、aos-daemon 的子 loop 在 fork 出來的子行程裡叫 run_cli
 // （等同起一支 `aos-exec -- 目標 參數...`）。規則見 aos-exec/README.md。
@@ -63,7 +63,8 @@ struct Result {
 Result run_inst(const Json& doc, const std::string& base_dir, const std::vector<std::string>& args,
                 const std::string& ref_base = "");
 
-// argv[0] 帶 / 又 exec 不了（join(cwd, argv[0]) 不是有 +x 的一般檔：資料夾、沒 +x、不在；或帶 #/）→ 前面插 "aos-exec"；
+// argv[0] 帶 / 又 exec 不了（join(cwd, argv[0]) 不是看內容像程式的一般檔：資料夾、沒 +x、+x 的 JSON〔11-10 /mnt/c〕、不在；或帶 #/）
+// → 前面插 "aos-exec"；
 // 其他原樣（10-20 ideas D3～D5：["tools/stamp", "a"]＝["aos-exec", "tools/stamp", "a"]；10-21 起 a 是 args）。
 std::vector<std::string> argv0(const std::vector<std::string>& argv, const std::string& cwd);
 

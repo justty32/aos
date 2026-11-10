@@ -133,12 +133,21 @@ static void write_holder(int dir_fd, const Json& doc) {
 }
 
 // 改名成 <鎖>.releasing.<獨一無二的名字>：成功回新名字，鎖不在回空字串。
+// EACCES 短暫重試（11-10 two-machines：/mnt/c 上資料夾裡有檔案 fd 開著就改名不了，等鎖的人 look 會短暫開 holder.json／holder.flock）；
+// 約 0.5 秒還不行才算錯（ext4 上 EACCES 是真的沒權限，只是晚一點報）。
 static std::string move_away(const std::string& lock_dir) {
     std::string gone = lock_dir + ".releasing." + aos::unique_id();
-    if (std::rename(lock_dir.c_str(), gone.c_str()) == 0) {
-        return gone;
+    int e = 0;
+    for (int i = 0; i < 100; ++i) {
+        if (std::rename(lock_dir.c_str(), gone.c_str()) == 0) {
+            return gone;
+        }
+        e = errno;
+        if (e != EACCES) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
-    int e = errno;
     if (e == ENOENT) {
         return "";
     }
@@ -265,7 +274,27 @@ bool acquire(const std::string& lock_dir, const Holder& h, long long wait_ms) {
     }
 }
 
+// 放鎖。原本「先改名再關 holder.flock」：改名是原子的，鎖的名字一消失就沒人會把它當死鎖收、也不會搬走別人新建的鎖。
+// /mnt/c 上 holder.flock 開著就改名不了（EACCES），所以 11-10 改成：先在鎖裡 mkdir 收屍牌 .reaping（同 reap 第 1 步，
+// 有牌子別人就不收）、再關 fd、再改名——關 fd 之後鎖看起來像死了，但牌子擋著，並發語意跟原本一樣。
+// 牌子建不成（別人正在收：只有租約過期才會，或鎖不在）＝照原本的順序：先改名、再關。
 bool release(const std::string& lock_dir) {
+    std::string token = aos::join(lock_dir, ".reaping");
+    if (::mkdir(token.c_str(), 0777) == 0) {
+        close_held(aos::abspath(lock_dir));
+        std::string gone;
+        try {
+            gone = move_away(lock_dir);
+        } catch (...) {
+            ::rmdir(token.c_str());
+            throw;
+        }
+        if (gone.empty()) {
+            return false;
+        }
+        aos::remove_tree(gone);
+        return true;
+    }
     std::string gone = move_away(lock_dir);
     close_held(aos::abspath(lock_dir));
     if (gone.empty()) {

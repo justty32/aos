@@ -18,7 +18,7 @@ using aos::Json;
 std::string entry_name();
 
 enum class Kind {
-    Executable,   // 有 +x 的檔：exec（shebang 由 kernel 處理；沒 #! 由 execvp 改用 /bin/sh，ideas § 22）
+    Executable,   // 有 +x、看內容是程式的檔（is_program：#!／ELF 或不是 JSON；11-10）：exec（shebang 由 kernel 處理；沒 #! 由 execvp 改用 /bin/sh，ideas § 22）
     Argv,         // 非空 JSON 陣列：當 argv exec（元素可放 $env／$ref，開跑前才解，10-20 ideas D2、D8；
                   // execvp：照 PATH 找 argv[0]；帶 / 又 exec 不了＝前面插 aos-exec，D3）
     Inst,         // 有 argv 這個 key 的 JSON 物件：inst 單子，行程內跑

@@ -8,6 +8,7 @@
 // inst 單子（run_inst，src/inst/）的 argv[0] 由 aos-inst 的 execvp 跑，同樣會退回 sh。
 #include "launch/launch.hpp"
 
+#include "find/find.hpp"
 #include "aos/directive.hpp"
 #include "aos/util/files.hpp"
 
@@ -47,9 +48,11 @@ std::vector<std::string> argv0(const std::vector<std::string>& argv, const std::
     if (!p.starts_with('/')) {
         p = cwd + "/" + p;
     }
+    // 能直接 exec＝一般檔、看內容是程式（is_program：+x 且 #!／ELF 或不是 JSON；11-10 /mnt/c 每個檔都 +x，+x 的 JSON 交 aos-exec）
     struct stat st;
-    bool runnable = stat(p.c_str(), &st) == 0 && S_ISREG(st.st_mode) && access(p.c_str(), X_OK) == 0;
-    if (argv[0].find("#/") == std::string::npos && runnable) {
+    bool runnable = argv[0].find("#/") == std::string::npos && stat(p.c_str(), &st) == 0 && S_ISREG(st.st_mode)
+                    && is_program(p);
+    if (runnable) {
         return argv;
     }
     std::vector<std::string> out{"aos-exec"};

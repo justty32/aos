@@ -37,7 +37,7 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
         stuck_ms = spec["stuck_after_ms"].get<long long>();
     }
     bool deep = cell != dstack_ + "procs/" + name;   // 不是預設小格＝proc 自己的 stack：不在就 mkdir -p
-    if (auto live = live_in_cell(cell, names_.loop)) {   // 11-05 第二輪：小格裡已有活著的子 loop（上一個 daemon 起了、沒記進表就死）＝接回、不再起一份
+    if (auto live = live_in_cell(cell, names_.loop, dstack_)) {   // 11-05 第二輪：小格裡已有活著的子 loop（上一個 daemon 起了、沒記進表就死）＝接回、不再起一份
         Child c;
         // 起法只在這裡用；接回後保留可重放的入口，不靠小格檔案判身分。
         c.launch = spec.is_null() ? kept_launch : Json::object({{"exec", once ?
@@ -95,6 +95,79 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
     c.stuck_after_cycles = stuck_cycles;
     c.stuck_after_ms = stuck_ms;
     return c;
+}
+
+static Json written_of(const Json& spec) {
+    return spec.is_object() && spec.value("as_written", Json()).is_object() ? spec["as_written"] : Json();
+}
+
+// 解一個指示詞原形 → 非空字串（相對的照信裡的字串，從 daemon 的 cwd 算）；解不開、不是非空字串＝DirectiveBad。
+static std::string fresh(const Json& d, const char* key, const std::string& cwd) {
+    Json v = aos::resolve(d, cwd);
+    if (!v.is_string() || v.get<std::string>().empty()) {
+        throw Error{code::DirectiveBad, std::string(key) + " must resolve to a non-empty path, got " + aos::dumps(v)};
+    }
+    return v.get<std::string>();
+}
+
+bool Daemon::refresh(const std::string& name, Child& c) {
+    if (!c.as_written.is_object() || c.as_written.empty()) {
+        return true;
+    }
+    try {
+        const Json& w = c.as_written;
+        std::string old_cell = c.stack;
+        if (w.contains("ws")) {
+            c.ws = aos::abspath(fresh(w["ws"], "ws", cwd_));
+        }
+        if (w.contains("stack")) {
+            c.stack = aos::abspath(fresh(w["stack"], "stack", cwd_));
+        }
+        if (w.contains("def")) {
+            c.def = aos::abspath(fresh(w["def"], "def", cwd_));
+        }
+        Json target;
+        if (w.contains("exec")) {
+            target = exec_of(Json(fresh(w["exec"], "exec", cwd_)), cwd_);   // 同信裡的字串目標：從 daemon 的 cwd 轉絕對、# 片段照留
+            c.exec = target;
+        }
+        if (!c.launch.is_object() || (target.is_null() && c.stack == old_cell)) {
+            return true;
+        }
+        Json& lt = c.launch["exec"];
+        Json& slot = lt.is_array() && !lt.empty() ? lt[0] : lt;
+        std::string now = slot.is_string() ? slot.get<std::string>() : std::string();
+        std::string lj_old = aos::join(old_cell, names_.loop);
+        if (now.ends_with("#/_entry") && aos::abspath(now.substr(0, now.size() - 8)) == aos::abspath(lj_old)) {
+            // 子 loop、只留名：入口是小格的 loop.json——改它的 exec（同 spawn：寫成相對 daemon 的 $env 指示詞）；小格換了就寫到新的小格
+            std::optional<Json> cfg = aos::read_json(lj_old);
+            if (!cfg || !cfg->is_object()) {
+                throw Error{code::LaunchFailed, "cannot read " + lj_old};
+            }
+            if (!target.is_null()) {
+                Json& ex = (*cfg)["exec"];
+                Json& to = ex.is_array() && !ex.empty() ? ex[0] : ex;
+                to = daemon_ref(target.get<std::string>(), dstack_);
+            }
+            std::error_code ec;
+            std::filesystem::create_directories(c.stack, ec);
+            std::string lj = aos::join(c.stack, names_.loop);
+            aos::loop::write_window(lj, *cfg);
+            slot = lj + "#/_entry";
+        } else if (!target.is_null()) {
+            slot = target;   // exec 型、或 add＋stop 留下的整份 loop 設定：直接換目標
+        }
+        return true;
+    } catch (const Error& e) {
+        c.code = 1;
+        c.reason = "failed to start: " + e.code + " " + e.msg;
+        c.phase = "stopped";
+        c.held = true;
+        c.failed = true;
+        stopped_.insert(name);
+        warn("cannot start " + name + " (" + e.code + " " + e.msg + "); leaving it stopped");
+        return false;
+    }
 }
 
 void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slept) {
@@ -161,7 +234,14 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                 continue;
             }
             if (c.held && stopped.count(n) == 0 && !(c.phase == "sleeping" && slept.count(n) > 0)) {   // 11-05：sleep 叫睡的不自己醒   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（子 loop 比舊 state_flux 的 ctl_seq，已套用過的不重做）
+                // 11-10 two-machines：信箱接回只留名的列，寫成指示詞的路徑欄照 daemon 現在的環境再解（「兩台各自設一次」）
+                if (spec.is_null() && !refresh(n, c)) {
+                    log_child(n, c);
+                    some();
+                    continue;
+                }
                 Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits, c.launch, c.auto_restart, c.restart_on_stuck, c.stuck_after_cycles, c.stuck_after_ms);   // 信箱接回只留名時照列上的值
+                nc.as_written = spec.is_null() ? c.as_written : written_of(spec);
                 nc.revived = true;   // 11-05：REVIVE_MS 內退了＝留成 stopped＋原因（衝突 3）
                 nc.revived_at = Clock::now();
                 if (nc.auto_restart && c.phase == "sleeping") {
@@ -195,9 +275,11 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
             c.exec = exec_of(spec, cwd_);
             c.def = def_of(spec);
             c.limits = limits_of(spec, Json());
+            c.as_written = written_of(spec);
             add(n, c);
         } else {
             Child nc = start(n, spec, cell_of(n, spec));
+            nc.as_written = written_of(spec);
             nc.revived = true;   // 11-05 第二輪：add 剛起的也算（REVIVE_MS 內退＝「起不來」，原本寫成「跑到一半掛了」）
             nc.revived_at = Clock::now();
             add(n, nc);

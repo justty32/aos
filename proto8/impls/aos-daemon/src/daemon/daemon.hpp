@@ -84,8 +84,14 @@ sigset_t poke_signals();
 
 inline constexpr int REVIVE_MS = 3000;   // 起後 3 秒內退出：原因字樣與 auto_restart 連敗計數共用
 
-// 小格裡有活著的子 loop 時回 pid 與 ticks；adopt.cpp 與 reconcile.cpp 共用。
-std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell, const std::string& loop_name);
+// 小格裡有活著的子 loop 時回 pid 與 ticks；adopt.cpp 與 reconcile.cpp 共用。dstack＝這個 daemon 的 stack（給 same_tree）。
+std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell, const std::string& loop_name,
+                                                        const std::string& dstack);
+
+// 11-10 two-machines：pid 這支行程是不是這棵樹的——看 /proc/<pid>/environ 的 AOS_STACK／AOS_DAEMON（解開捷徑）有沒有一個是
+// cell 或 dstack（fork 後還沒 exec 的子項看到的是 daemon 的環境，所以 dstack 也算）。都指到別處（而且那裡在）＝別棵樹的
+// （同一台 cp -a 還在跑的樹，副本別接管原樹）。讀不到 environ（權限）、沒這兩個名字、指到的地方都不在＝照舊當是（回 true）。
+bool same_tree(pid_t pid, const std::string& cell, const std::string& dstack);
 
 // 讀一份 procs（daemon.json 的 procs，procs_ctl 的 procs、procs_added，信的 procs_added 共用）：回 {名字: proc}（照寫的順序）。
 //   寫法：物件 {名字: proc}（拆成好幾份檔＝{"$ref": [檔, …]}，aos-directive 合物件、同名後面的蓋前面的）。
@@ -165,6 +171,9 @@ private:
                 const Json& kept_limits = Json(), const Json& kept_launch = Json(), bool kept_auto_restart = false,
                 bool kept_ros = false, long long kept_stuck_after_cycles = 10,
                 std::optional<long long> kept_stuck_after_ms = std::nullopt);   // 照寫法起（spawn／spawn_exec）；spec null 用列上記的 kept_*（含入口與兩個布林）
+    // 11-10 two-machines：信箱接回只留名的列再起之前，把 as_written（指示詞原形）照現在的環境再解進 ws／stack／def／exec 與入口
+    // （子 loop 的入口是小格 loop.json＝改寫它的 exec）。解不開＝留 stopped＋原因（同 start 起不來）、回 false。沒有 as_written＝不動、回 true。
+    bool refresh(const std::string& name, Child& c);
     Json limits_of(const Json& spec, const Json& kept) const;   // 11-05：生效的份額＝列的 limits，沒寫＝daemon 預設 limits_；spec null＝kept；{}＝null（不限）
     std::string cell_of(const std::string& name, const Json& spec) const;   // proc 的 stack：寫了 stack＝它，沒寫＝$AOS_STACK/procs/<名字>
     void read_procs_ctl();                // 讀 procs_ctl.json：好的進 pctl_good_、清 pctl_warning_；壞的不採用、原因進 pctl_warning_；檔不在＝不動

@@ -41,9 +41,58 @@ static std::optional<Json> cell_state(const std::string& cell, const std::string
     return st;
 }
 
+// 真實路徑（解開捷徑、去掉結尾 /）；那個地方不在＝nullopt。
+static std::optional<std::string> real_of(const std::string& p) {
+    std::error_code ec;
+    std::filesystem::path r = std::filesystem::canonical(p, ec);
+    if (ec) {
+        return std::nullopt;
+    }
+    return r.string();
+}
+
+bool same_tree(pid_t pid, const std::string& cell, const std::string& dstack) {
+    int err = 0;
+    std::optional<std::string> env = aos::read_file("/proc/" + std::to_string(pid) + "/environ", err);
+    if (!env) {
+        return true;   // 讀不到（權限）＝照舊
+    }
+    std::vector<std::string> said;   // 那支行程的 AOS_STACK、AOS_DAEMON
+    size_t at = 0;
+    while (at < env->size()) {
+        size_t end = env->find('\0', at);
+        if (end == std::string::npos) {
+            end = env->size();
+        }
+        std::string kv = env->substr(at, end - at);
+        if (kv.starts_with("AOS_STACK=")) {
+            said.push_back(kv.substr(10));
+        } else if (kv.starts_with("AOS_DAEMON=")) {
+            said.push_back(kv.substr(11));
+        }
+        at = end + 1;
+    }
+    std::optional<std::string> my_cell = real_of(cell);
+    std::optional<std::string> my_daemon = real_of(dstack);
+    bool told = false;
+    for (const std::string& v : said) {
+        std::optional<std::string> r = real_of(v);
+        if (!r) {
+            continue;   // 指到的地方不在（整棵樹搬走了）：這一個不算數
+        }
+        told = true;
+        if ((my_cell && *r == *my_cell) || (my_daemon && *r == *my_daemon)) {
+            return true;
+        }
+    }
+    return !told;
+}
+
 // 11-05 第二輪：小格裡已經有一支活著的子 loop（它自己的 state 窗記的 pid＋started_at_ticks 對得上）＝回 pid、ticks。
 // daemon 在「fork 了、表還沒寫」或「列在 stopping」時被 kill -9，重開後那支不在表上（或沒被接回），原本會在同一格再起一份（兩支 aos-loop 搶一個 stack）。
-std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell, const std::string& loop_name) {
+// 11-10：那支還要是這棵樹的（same_tree；cp -a 帶過來的 state 窗記的是原樹的行程）。
+std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell, const std::string& loop_name,
+                                                        const std::string& dstack) {
     std::optional<Json> st = cell_state(cell, loop_name);
     if (!st) {
         return std::nullopt;
@@ -61,6 +110,9 @@ std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell,
     }
     std::optional<long long> now = aos::proc_started_at_ticks((pid_t)pid.get<long long>());
     if (!now || *now != ticks.get<long long>()) {
+        return std::nullopt;
+    }
+    if (!same_tree((pid_t)pid.get<long long>(), cell, dstack)) {
         return std::nullopt;
     }
     return std::make_pair((pid_t)pid.get<long long>(), ticks.get<long long>());
@@ -118,7 +170,8 @@ void Daemon::adopt() {
     }
     Json table;
     try {   // 切檔（10-23）：是 {"$ref": [分檔, …]}，用 aos-directive 解開就是合好的表；分檔讀不到＝舊的讀不了
-        table = aos::resolve(old["procs"], aos::dirname(pstate_path_));
+        // 11-10：只解這一層（resolve_shallow）——列裡的 as_written、launch 存的是指示詞原形，接回時不解（起的時候才解）
+        table = aos::resolve_shallow(old["procs"], aos::dirname(pstate_path_)).value;
     } catch (const Error& e) {
         adopt_bad("cannot resolve procs: " + e.code + " " + e.msg);
         return;
@@ -167,6 +220,9 @@ void Daemon::adopt() {
             }
             c.launch = abs_refs(c.launch, dstack_);
         }
+        if (r.value("as_written", Json()).is_object()) {
+            c.as_written = abs_refs(r["as_written"], dstack_);   // 11-10：指示詞原形（$ref 的檔名從表所在的 stack 拼回）
+        }
         c.own = false;
         c.auto_restart = auto_restart_of(r);
         c.restart_on_stuck = ros_of(r);
@@ -212,7 +268,10 @@ void Daemon::adopt() {
         Json pid = r.value("pid", Json());
         Json ticks = r.value("started_at_ticks", Json());
         std::optional<long long> now = same_boot && pid.is_number_integer() && ticks.is_number_integer() ? aos::proc_started_at_ticks((pid_t)pid.get<long long>()) : std::nullopt;
-        if (now && *now == ticks.get<long long>()) {
+        // 11-10 two-machines：pid＋ticks＋boot_id 都對上還要是這棵樹的行程（same_tree 看 /proc/<pid>/environ）；
+        // 同一台 cp -a 一棵還在跑的樹再起副本，表上記的是原樹的行程——不是這棵的＝當沒在跑（照下面起），不碰那支。
+        bool foreign = now && *now == ticks.get<long long>() && !same_tree((pid_t)pid.get<long long>(), c.stack, dstack_);
+        if (now && *now == ticks.get<long long>() && !foreign) {
             c.pid = (pid_t)pid.get<long long>();
             c.started_at_ticks = ticks.get<long long>();
             if (phase == "stopping") {
@@ -233,7 +292,8 @@ void Daemon::adopt() {
             continue;
         }
         // 拿不到結束碼的自然結束照舊下表；auto_restart 仍重起，收途中保留原意。
-        if (phase == "running" && !c.auto_restart && !finishing) {
+        // 別棵樹的（foreign）不是自然結束：跟上一個 daemon 收工時一樣睡下、第一圈 wake＝照起。
+        if (phase == "running" && !c.auto_restart && !finishing && !foreign) {
             continue;
         }
         std::string mode = r.value("stop_mode", std::string("stop"));

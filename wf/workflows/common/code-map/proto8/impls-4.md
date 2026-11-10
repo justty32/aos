@@ -33,6 +33,7 @@
 | [`tests/test_ledger.py`](../../../../../proto8/impls/aos-llm-kernel/tests/test_ledger.py) | Verify kernel finish records fake-brain costs and tolerates ledger write failures. |
 | [`tests/test_nesting.py`](../../../../../proto8/impls/aos-llm-kernel/tests/test_nesting.py) | Verify nested-kernel error boundaries, ledger fields, and remount invariants with prepared mailboxes. |
 | [`tests/test_nesting_live.py`](../../../../../proto8/impls/aos-llm-kernel/tests/test_nesting_live.py) | Verify priority stdin, child accounting, and error replies through a real daemon and kernel. |
+| [`tests/test_two_machines.py`](../../../../../proto8/impls/aos-llm-kernel/tests/test_two_machines.py) | Check in-flight brain calls never pin this machine's absolute endpoint path (two-machines): mount letters and remounts. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-llm-kernel/vcpkg.json) | aos-llm-kernel：LLM kernel 跑一次——從信箱挑最該跑的信、跑、回信（信箱、信的格式也給 aos-llm 用） |
 
 ## `proto8/impls/aos-lock/`
@@ -45,4 +46,5 @@
 | [`src/holder/holder.cpp`](../../../../../proto8/impls/aos-lock/src/holder/holder.cpp) | 名牌與 flock 存活快照、兩鐘租約判斷。 |
 | [`src/lock/lock.cpp`](../../../../../proto8/impls/aos-lock/src/lock/lock.cpp) | mkdir 取鎖、目錄 fd 原子刊登名牌、保管 flock fd、收屍與放鎖。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-lock/src/main.cpp) | aos-lock 命令列——無存活標記的持久鎖、時鐘租約、放鎖與查看。 |
+| [`tests/test_release.py`](../../../../../proto8/impls/aos-lock/tests/test_release.py) | Check lock release still frees cleanly and stays exclusive under parallel senders after the close-before-rename change. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-lock/vcpkg.json) | aos-lock：鎖（N-15：mkdir .lock/、名牌 holder.json、收屍）的 lib 與命令列 |
