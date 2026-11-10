@@ -40,7 +40,11 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   路徑指不到＝PathMissing，訊息帶工具名、解出的路徑與它來自哪份檔的哪一格（檔#/tools/名/path 或 檔#/add/名/path）。
 登記格選填 env（11-05 晚 agent-knowledge R1）：{"名": {"path": …, "env": {"AOS_MEMORY": "/x/knowledge/aos"}}}，call 時合進那次呼叫的環境
   （蓋過外面同名的）；值照字面用、不當路徑解（C-56；要相對就靠讀它的工具自己的規則，例 memory 的 AOS_MEMORY 相對 $AOS_DAEMON）。
-  鍵只收 [A-Za-z_][A-Za-z0-9_]*、值只收字串（不含 NUL，11-05 晚邊緣測試：原本 call 時吐 traceback），別的＝RegistryBad。add --env-file FILE 在登記當下讀 dotenv 基礎子集，再用 --envs K=V（可重複）蓋過，合成 env 存檔；檔相對 add 的 cwd、call 不重讀。ls／get 不印 env。
+  鍵只收 [A-Za-z_][A-Za-z0-9_]*、值只收字串（不含 NUL，11-05 晚邊緣測試：原本 call 時吐 traceback），別的＝RegistryBad。--envs K=V（可重複）存進 env。
+  選填 env_file（11-10 aos-tools-cli 步 3，使用者 Q1「只記位置」）：add --env-file FILE 只記位置（寫法同 XXX：絕對存絕對、相對存相對寫進的那份檔），
+  不存內容；add 當下檔在就讀一次只為驗格式與 hub 提醒，不在＝warning 照登記。每次 call 才讀（dotenv 基礎子集，${VAR} 照這次呼叫的環境展開），
+  不在＝PathMissing 不跑（N4「報錯不跑」）、壞＝DotenvBad，訊息帶工具名與 檔#/tools/名/env_file。後面的贏：呼叫者環境 < env_file < env < AOS_STACK 小格。
+  ls／get 不讀 env 檔、不印 env 值；ls -l 的 ENV 欄印 env 的名字與 @"存的 env_file"。
   用途：覆蓋層（aos-agent tools add 寫的）也能替這一隻換知識庫，不必在定義裡做包裝資料夾。
 call 的小格：父 AOS_STACK 非空時，子設成 <父 stack>/tools/<名>/，優先於登記 env；父沒設就不從登記 env 補 stack，交 aos-exec 給預設。
 ls --json 保留完整 tooldef；腦／MCP 對模型只取 description／parameters，不把 env 等工具側欄位送給模型。
@@ -113,12 +117,14 @@ flags:
   -n, --name N      register under this name
       --no-cache    ask the executable for its definition every time (executables only)
       --path-json J store this JSON path value (string or directive) instead of XXX
-      --env-file F  read a dotenv file now, relative to cwd; store its values
-      --envs K=V    override file values (repeatable; value taken literally)
+      --env-file F  remember where dotenv file F is (stored like XXX); it is read on
+                    every call, never copied into the registry. Use it for secrets.
+      --envs K=V    set K to V for every call (repeatable; V is stored as typed)
   -h, --help        show this help
 
-The file is read only at registration; later calls use the stored environment.
-Missing hub variables declared by the tool produce a warning, without failing add.
+On a call, later wins: the tool's own .env (fills gaps only), the caller's
+environment, --env-file, --envs. A missing env file is a warning here and an error
+on call. Missing hub variables declared by the tool produce a warning, without failing add.
 
 exit codes: 0 added; 1 error (ArgumentsBad, DotenvBad, PathMissing, ToolDefBad, ToolExists...).
 """,
@@ -177,7 +183,8 @@ usage: aos-tools [--file F] [--overlay O] call NAME [ARGS_JSON]
 
 The tool gets ARGS_JSON on its stdin as given, unchecked (from the command line,
 else from this command's stdin). Folders, JSON files and executables all run through aos-exec with stdin passed through.
-Registered env entries override the calling environment. With a non-empty parent
+A registered env file is read now (missing = PathMissing, the tool does not run);
+its values and then registered env entries override the calling environment. With a non-empty parent
 AOS_STACK, the tool gets <parent>/tools/NAME/; registered env cannot override this.
 Without a parent AOS_STACK, aos-exec supplies its default. stdout and the exit code
 come from the tool.
@@ -468,11 +475,17 @@ def entries(reg, where, tools, raw_tools=None):
         if not isinstance(env, dict) or not all(isinstance(k, str) and ENV_KEY_RE.match(k) and isinstance(v, str) and "\0" not in v
                                               for k, v in env.items()):
             raise Fail("RegistryBad", "%s: %s/%s/env must be an object of NAME -> string without NUL (NAME like AOS_MEMORY)" % (reg, where, name))
+        ef = e.get("env_file")                       # 11-10 步 3：只記位置，call 才讀（指示詞已跟整格一起解開）
+        if "env_file" in e and (not isinstance(ef, str) or not ef or "\0" in ef):
+            raise Fail("RegistryBad", "%s: %s/%s/env_file must be a non-empty path string (or a directive resolving to one)" % (reg, where, name))
         raw_e = raw_tools.get(name)
-        stored = raw_e.get("path") if isinstance(raw_e, dict) and "path" in raw_e else e["path"]
+        raw_e = raw_e if isinstance(raw_e, dict) else {}
         out[name] = {"path": os.path.normpath(os.path.join(base, e["path"])), "entry": e,
                      "field": "%s#/%s/%s/path" % (reg, where, name), "src": "%s#/%s/%s" % (reg, where, name),
-                     "stored": stored}
+                     "stored": raw_e.get("path", e["path"])}
+        if ef:
+            out[name]["env_file"] = os.path.normpath(os.path.join(base, ef))
+            out[name]["env_file_stored"] = raw_e.get("env_file", ef)
     return out
 
 
@@ -666,13 +679,24 @@ def cmd_add(args):
     elif len(rest) != 1:
         no_late_flags(rest, 1, "XXX")
         raise Fail("ArgumentsBad", "add needs one XXX (or --path-json JSON)")
-    env = read_env_file(opts["env_file"]) if "env_file" in opts else {}
+    env = {}
     for kv in opts.get("envs", []):
         k, eq, v = kv.partition("=")
         if not eq or not ENV_KEY_RE.match(k) or "\0" in v:
             raise Fail("ArgumentsBad", "--envs needs NAME=VALUE with a valid name and no NUL")
         env[k] = v
     folder = os.path.dirname(os.path.abspath(OVERLAY if OVERLAY is not None else reg))   # 存的相對路徑從這裡算（讀的時候也是）
+    env_file, file_names = None, {}                  # 11-10 步 3（使用者 Q1）：--env-file 只記位置，寫法同 XXX；call 才讀
+    if "env_file" in opts:
+        given = opts["env_file"]
+        if not given or "\0" in given:
+            raise Fail("ArgumentsBad", "--env-file needs a non-empty path")
+        absf = os.path.normpath(os.path.abspath(given))
+        env_file = absf if os.path.isabs(given) else os.path.relpath(absf, folder)
+        if os.path.exists(absf):
+            file_names = read_env_file(absf)         # 只為驗格式與下面的 hub 提醒，內容不存
+        else:
+            aos_flags.warn(NAME, "env file %s not found yet; registered anyway (it is read on every call)" % absf)
     if "path_json" in opts:                          # 指示詞（或字串）原樣存；現在解一次只為了驗與取名
         try:
             stored = json.loads(opts["path_json"])
@@ -702,6 +726,8 @@ def cmd_add(args):
     entry = {"path": stored}
     if env:
         entry["env"] = env
+    if env_file is not None:
+        entry["env_file"] = env_file
     if opts.get("no_cache"):                         # 只有 --no-cache 才寫；定義快取在 stack，不進登記檔（步 2）
         entry["cache"] = False
     written = OVERLAY if OVERLAY is not None else reg
@@ -714,7 +740,7 @@ def cmd_add(args):
         aos_json(["set", "--follow", "--parents", "%s#/tools/%s" % (reg, name), json.dumps(entry, ensure_ascii=False)])
     else:
         write_new(reg, {"tools": {name: entry}})
-    missing = [k for k in dict.fromkeys(hubs) if k not in os.environ and k not in env]
+    missing = [k for k in dict.fromkeys(hubs) if k not in os.environ and k not in env and k not in file_names]
     if missing:
         aos_flags.warn(NAME, "tool %s has unset hub variables: %s" % (name, ", ".join(missing)))
     # 甲4：說出寫進哪份檔、存的原樣值（指示詞就印那段 JSON）
@@ -745,6 +771,8 @@ def cmd_rm(args):
 def env_column(t):
     """ls -l 的 ENV 欄：只印變數名（值不印，維持「值不給腦看」）；沒有＝-。"""
     names = sorted(t["entry"].get("env", {}))
+    if "env_file_stored" in t:                       # 步 3：env 檔印存的原樣位置（JSON），不讀它
+        names.append("@" + json.dumps(t["env_file_stored"], ensure_ascii=False))
     return ",".join(names) or "-"
 
 
@@ -809,7 +837,17 @@ def cmd_call(args):
         kind_of(path)                                # 只驗路徑；三種工具走同一條執行路，不擴充登記對象
     except Fail as e:
         raise Fail(e.code, "tool %s (from %s): %s" % (name, tools[name].get("field", "?"), e))
-    env = dict(os.environ, **tools[name]["entry"].get("env", {}))
+    env = dict(os.environ)                           # 後面的贏：呼叫者環境 < env_file < env < AOS_STACK 小格
+    ef = tools[name].get("env_file")
+    if ef is not None:                               # 步 3：每次 call 才讀；不在＝報錯不跑（使用者 11-10 N4「報錯不跑」）
+        where = tools[name]["src"] + "/env_file"
+        if not os.path.isfile(ef):
+            raise Fail("PathMissing", "tool %s: env file %s (from %s) does not exist" % (name, ef, where))
+        try:
+            env.update(read_env_file(ef))
+        except Fail as e:
+            raise Fail(e.code, "tool %s (from %s): %s" % (name, where, e))
+    env.update(tools[name]["entry"].get("env", {}))
     stack = os.environ.get("AOS_STACK")
     if stack:
         env["AOS_STACK"] = os.path.join(os.path.abspath(stack), "tools", name, "")

@@ -57,5 +57,6 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-tools`](../../../../../proto8/cmd/aos-tools/bin/aos-tools) | 管理工具登記、環境與小格，三種工具一律經 aos-exec 從 stdin 呼叫。 |
+| [`tests/test_cache.py`](../../../../../proto8/cmd/aos-tools/tests/test_cache.py) | Test where aos-tools caches executable tool definitions (11-10 aos-tools-cli step 2): $AOS_STACK/tooldef_cache.json, never the registry. |
 | [`tests/test_cli.py`](../../../../../proto8/cmd/aos-tools/tests/test_cli.py) | Test the aos-tools command line (11-10 aos-tools-cli step 1): --file on either side, usage line, late flags, default-file warning, success lines, ls … |
 | [`tests/test_paths.py`](../../../../../proto8/cmd/aos-tools/tests/test_paths.py) | Test aos-tools path forms: overlay directives (path and env), add keeping the user's form, --path-json, and the PathMissing line. |
