@@ -37,3 +37,4 @@
 |---|---|
 | [01-拆法與命名](01-拆法與命名.md) | 拆成哪幾支、每支動作一覽、1a 調子 agent 的入口、代定清單（名字已照使用者改成 `agents_*`） |
 | [02-施工單](02-施工單.md) | 三支的介面細節、要刪要換的清單、驗收 |
+| [04-知識庫節點](04-知識庫節點.md)＋[04-agents.json](04-agents.json) | 交 json-memory 隊：`knowledge/aos/agents.json` 整份換成的新內容（agents_children、agents_ctl、agent_def、thought）、根表與其他節點要改的句子、tooldef 的 Details 指標建議 |

@@ -31,7 +31,7 @@ class Suggestions(unittest.TestCase):
                 'defs_refs': {'refs': ['caller']}}[name]
 
     def test_retire_three_reviews_siblings_callers_and_singleton(self):
-        old = {'tree': node('caller', children=[node('/lib/agent/agents', 'script', [node('group/cold')])])}
+        old = {'tree': node('caller', children=[node('/lib/agent/agents_children', 'script', [node('group/cold')])])}
         recent = [{'tree': node('group/used')} for _ in range(3)]
         rows = rr.retire(self.defs, [old] + recent, refs=lambda name: ['static'])
         self.assertEqual(rows, [{'def': 'group/cold', 'signal': 'unused_3_cases',

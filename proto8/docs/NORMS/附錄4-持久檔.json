@@ -88,21 +88,21 @@
    "path": "<定義資料夾>/interfaces.json",
    "lifetime": "持久",
    "writer": "人手寫；stack 那份由 lib/observed.py 補 aos-observed 宣告",
-   "reader": "aos-agent、lib/agent/agent_files、templates/agent-fsm（brain、wait）、lib/agent/agents、lib/aos/measure",
+   "reader": "aos-agent、lib/agent/agent_files、templates/agent-fsm（brain、wait）、lib/agent/agent_def（new 找 tools 宣告）、lib/aos/measure",
    "image": "看情況：定義那份不算 image；$AOS_STACK/interfaces.json 進",
    "on_bad": "讀不了、不是物件＝報錯（ValueError→各呼叫者的錯誤行）；不在＝沒宣告",
    "note": "01 盤點沒列這份",
-   "evidence": "proto8/lib/agent/agent_files.py:8-17、proto8/lib/observed.py:17-22、proto8/lib/aos/measure/ledger.py:24-29"
+   "evidence": "proto8/lib/agent/agent_files.py:8-17、proto8/lib/observed.py:17-22、proto8/lib/aos/measure/ledger.py:24-29、proto8/lib/agent/agent_def/_entry:104-117"
   },
   {
    "path": "<定義資料夾>/tools.json",
    "lifetime": "持久",
-   "writer": "aos-tools（add／rm）、lib/agent/agents（new）、人手寫",
+   "writer": "aos-tools（add／rm）、lib/agent/agent_def（new 換算相對路徑後重寫）、人手寫",
    "reader": "aos-tools、aos-mcp、templates/agent-fsm（brain）",
    "image": "看情況：定義＝原始碼、不算 image（C-79）；登記檔存絕對 path 是已知代價（N-67 ⑦）",
    "on_bad": "不是物件、tools 形狀錯、頂層有 add／rm＝RegistryBad；不在＝沒登記任何工具；值是 null 的工具格不算工具、null 欄位＝沒設",
    "note": "11-10 aos-tools-cli：登記格不再存 cache 物件（只收 false；快取搬到 $AOS_STACK/tooldef_cache.json）、多選填 env_file（只記位置）、可寫 \"$override\" 疊在別份上；有 cache 物件的舊檔＝RegistryBad，刪那格或重登記",
-   "evidence": "proto8/cmd/aos-tools/bin/aos-tools（read_layer、finish）、proto8/lib/agent/agents/_entry:395"
+   "evidence": "proto8/cmd/aos-tools/bin/aos-tools（read_layer、finish）、proto8/lib/agent/agent_def/_entry:120-151"
   },
   {
    "path": "$AOS_STACK/<宣告的 tools 路徑>（這隻自己那份）",
@@ -117,7 +117,7 @@
   {
    "path": "<定義資料夾>/llm.json",
    "lifetime": "持久",
-   "writer": "人手寫、lib/agent/agents（new 併 llm 鍵）",
+   "writer": "人手寫（agent_def new 整份照抄、不改）",
    "reader": "templates/agent-fsm（brain、wait）、lib/agent/cli_session、aos-agent llm",
    "image": "看情況：定義＝原始碼、不算 image（C-79）",
    "on_bad": "brain、cli_session 讀不了＝CfgBad；wait 讀不懂當 {}；不在＝{}",
@@ -135,24 +135,24 @@
    "evidence": "proto8/templates/agent-fsm/brain.py:201、proto8/cmd/aos-agent/aos_agent/llm.py:106"
   },
   {
-   "path": "<定義資料夾>/agents.json、$AOS_STACK/agents.json",
+   "path": "<定義資料夾>/children.json、$AOS_STACK/children.json（配額設定）",
    "lifetime": "持久",
    "writer": "人手寫",
-   "reader": "lib/agent/agents",
+   "reader": "lib/agent/agents_children",
    "image": "看情況：定義那份不算 image；stack 那份進",
    "on_bad": "讀不了＝ReadFailed、不是物件＝CfgBad；不在＝max_children 4",
-   "note": "",
-   "evidence": "proto8/lib/agent/agents/_entry:215-222、proto8/lib/agent/agents/_entry:282-290"
+   "note": "11-10 晚 agents-split：從 agents.json 改名；$AOS_STACK 是 agent 自己的 stack（ctl who 的 stack），跟工具小格裡的記帳檔同名不同處",
+   "evidence": "proto8/lib/agent/agents_children/_entry:59-67、proto8/lib/agent/agents_children/_entry:111-123"
   },
   {
    "path": "<工具資料夾>/_tooldef.json、_metainfo.json",
    "lifetime": "持久",
-   "writer": "人手寫、lib/agent/agents（new 寫 lineage 進 _metainfo.json）",
+   "writer": "人手寫",
    "reader": "aos-tools、lib/metainfo（aos-mcp、act.py、metainfo_check 用）",
    "image": "看情況：工具資料夾是定義／原始碼，不算 image",
    "on_bad": "_tooldef.json 不在＝ToolDefMissing、壞＝ToolDefBad；_metainfo 壞＝FileBad",
    "note": "",
-   "evidence": "proto8/cmd/aos-tools/bin/aos-tools:286-291、proto8/lib/metainfo.py:18-30、proto8/lib/agent/agents/_entry:422"
+   "evidence": "proto8/cmd/aos-tools/bin/aos-tools:286-291、proto8/lib/metainfo.py:18-30"
   },
   {
    "path": "<工具資料夾>/_memory.json",
@@ -325,14 +325,14 @@
    "evidence": "proto8/lib/aos/judge/_entry:350-364"
   },
   {
-   "path": "$AOS_STACK/children.json",
+   "path": "$AOS_STACK/tools/agents_children/children.json（誰是我生的）",
    "lifetime": "持久",
-   "writer": "lib/agent/agents",
-   "reader": "lib/agent/agents",
+   "writer": "lib/agent/agents_children",
+   "reader": "lib/agent/agents_children",
    "image": "進",
    "on_bad": "讀不了＝ReadFailed 退 1；不在＝[]",
-   "note": "01 盤點沒列",
-   "evidence": "proto8/lib/agent/agents/_entry:499、proto8/lib/agent/agents/_entry:215-222"
+   "note": "01 盤點沒列；11-10 晚 agents-split：舊 agents 的 tools/agents/children.json 新工具不讀",
+   "evidence": "proto8/lib/agent/agents_children/_entry:69-76、proto8/lib/agent/agents_children/_entry:89-108"
   },
   {
    "path": "<eca 小格>/session.txt、tool.txt、ws.txt、stack.txt",
@@ -367,7 +367,7 @@
   {
    "path": "$AOS_STACK/observed.jsonl（＋observed/ 子帳）",
    "lifetime": "持久",
-   "writer": "lib/observed（act.py、wait.py、lib/agent/agents、thought）、lib/observed_children",
+   "writer": "lib/observed（act.py、wait.py、lib/agent/agents_children、thought）、lib/observed_children",
    "reader": "lib/aos/measure、lib/aos/shell_report、aos-feedback",
    "image": "不進",
    "on_bad": "measure：有一行不是物件＝ValueError；寫不了＝warning 照跑",
@@ -447,7 +447,7 @@
   {
    "path": "<同資料夾>/.名字、.名字.pid、.holder.json.tmp（寫到一半的暫存）",
    "lifetime": "暫時",
-   "writer": "aos-loop／aos-daemon（窗）、aos-fsm（.stage.txt）、aos-clock、lib/agent/cli_session、lib/agent/agents、aos-lock、aos-daemon-ctl（ctl）",
+   "writer": "aos-loop／aos-daemon（窗）、aos-fsm（.stage.txt）、aos-clock、lib/agent/cli_session、lib/agent/agents_children、lib/agent/agent_def（.<名>.new-<pid>）、aos-lock、aos-daemon-ctl（ctl）",
    "reader": "沒有（改名蓋過去）",
    "image": "不進",
    "on_bad": "當機留下的沒人清，也沒人讀",

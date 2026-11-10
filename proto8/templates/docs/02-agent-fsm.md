@@ -41,12 +41,12 @@ agent-fsm/
                等回信不設期限，寄出（pending.txt 的 mtime）每滿 10 分鐘印一行 agent-fsm: warning、照樣等（記在 think/wait_warned.txt，11-10 坑-74）
   act.py       跑工具：逐個 aos-tools call，照 metainfo 限時；失敗附 stderr 尾，結果各接一則 tool、退 0；沒有 tool_calls（最後答案）退 10
   system.txt   system 訊息（brain.py 的 --system 指到它；每次從檔讀、不存進 history；11-05 晚改英文）
-  tools.json   aos-tools 登記檔：wall_clock、self_tools（改自己的工具）、self_llm（改自己的腦設定，11-10 晚）、self_history（看、刪、摘要自己的對話紀錄，11-10 self-family）、mailbox_peek／mailbox_read／mailbox_send（看信、讀信、寄信，信箱在 stack 的 `mailbox/`，11-10 晚 mailbox）、self_hook（看、加、拿掉自己的 hook，11-10 晚）、agents（生子 agent）、memory（查知識庫，11-05 晚）（都寫 `{"$env": "AOS_HOME", …}`；memory 直接登記 lib/agent/memory、`env.AOS_MEMORY` 指知識庫；跟 eca-claude 同一份；後兩個 11-05 使用者裁「內建」）；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
+  tools.json   aos-tools 登記檔：wall_clock、self_tools（改自己的工具）、self_llm（改自己的腦設定，11-10 晚）、self_history（看、刪、摘要自己的對話紀錄，11-10 self-family）、mailbox_peek／mailbox_read／mailbox_send（看信、讀信、寄信，信箱在 stack 的 `mailbox/`，11-10 晚 mailbox）、self_hook（看、加、拿掉自己的 hook，11-10 晚）、agents_children（生、叫、調、收自己的子 agent）、agents_ctl（管 daemon 表上任何一隻，不記帳）、agent_def（複製範本成新定義、檢查定義）（這三支 11-10 晚 agents-split 由舊 agents 拆出）、memory（查知識庫，11-05 晚）（都寫 `{"$env": "AOS_HOME", …}`；memory 直接登記 lib/agent/memory、`env.AOS_MEMORY` 指知識庫；跟 eca-claude 同一份；生子 agent 這組與 memory 是 11-05 使用者裁「內建」）；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
   llm.json     腦設定：{}＝用 kernel 的預設代號；model＝kernel 的 endpoint 包代號（例 "smart-high"；寄信時填進 body 的 endpoint 欄，真正的模型名固定在包上）；
                另認與快取無關的調整鍵 temperature、top_p、max_tokens、seed、presence_penalty、frequency_penalty、stop（放進 request；包的 fixed 照舊蓋過）；
                認哪些鍵寫在 interfaces.json 的 llm_keys（aos-agent llm set 對著提醒，11-10 晚）
   interfaces.json  {"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json", "llm_keys": [model 與七個調整鍵], "history": "history.jsonl", "hooks": "hooks.json"}, "aos-observed": {"file": "observed.jsonl"}}（沒有 screen；11-10 templates-cp 拿掉 memory 鍵與 tools/ 包裝夾）
-  agents.json  工具 agents 的設定 {"max_children": 4}（這隻最多同時生幾隻；stack 裡的 agents.json 只放改過的鍵＝這隻的覆蓋）
+  children.json  工具 agents_children 的配額設定 {"max_children": 4}（這隻最多同時生幾隻；stack 裡的 children.json 只放改過的鍵＝這隻的覆蓋；誰是我生的另記在 stack 的 tools/agents_children/children.json）
 ```
 
 **記憶與自稱**（11-07 批 2；11-10 templates-cp 改）：知識庫位置寫在 `tools.json` 的 `memory` 那格：`"env": {"AOS_MEMORY": {"$env": "AOS_HOME", "$path": "/knowledge/aos"}}`；換庫改這個值。`interfaces.json` 不再宣告 `memory`（`lib/aos/defs` 依它分群，沒宣告＝`memory: null`）。範本 `_metainfo.json` 的 `summary` 與 README 首行一致，`cost.time_ms: 30000` 是估時、`resource: ["llm"]` 是資源；範本本身未宣告頂層 `timeout_ms`。
@@ -91,6 +91,6 @@ aos-agent ctl resume         # ctl 下也有 stop／start、sleep／wake（同�
 
 **實際成本觀測**（11-07 P5）：wait 用 `aos-llm recv --full` 收完整回信，只把原有 `message` 接入 history，額外欄位不混進對話。每次收到成功或失敗回覆，往 `$AOS_STACK/observed.jsonl` 追加 `{kind: "think", letter, endpoint, model, usage, elapsed_ms}`；`letter` 是寄出時 `aos-llm send` 回的信件名（保存在 `think/pending.txt`），與接收該請求的 kernel `ledger.jsonl` 的 `id` 為同一個字串，可直接對帳。`think/sent.json` 記寄出前的時間與 endpoint，耗時包含排隊與逐拍收信等待。endpoint 優先用回信欄位、否則用寄出時保存的請求代號；請求未指定且回信沒帶時為 null，不猜 kernel 預設。失敗回覆或未提供的 model／usage 為 null。舊 pending 沒有時間檔時耗時為 null 並提醒。act 每次實際啟動工具追加 `{kind: "tool", name, def, stack, child?, code, elapsed_ms, in_bytes, out_bytes}`，bytes 是原始 UTF-8 stdin 與 stdout，不含 stderr／附加錯誤說明；code 是子程序原始結束碼（訊號為負數）。重跑時已回覆的工具不重記，未啟動的錯誤（未登記／arguments 壞）沒有實際呼叫觀測。這些觀測寫失敗只印英文 warning，不改格的結果。
 
-共用記帳由 `lib/observed.py` 處理：首寫先補 `self` 行，含 `def`（`AOS_CD`）、`ws`（`AOS_WS`）、UTC 毫秒 `started_at`，設了 `AOS_LLM_KERNEL` 才帶 `llm_kernel`；同時合併 stack 的 `aos-observed` 宣告。工具行的 `def` 是登記路徑的絕對值、`stack` 是相對本 stack 的小格；有子帳時 `child` 指向收子前保存的帳本，相對本 stack。thought／agents 只照子 stack 的公開介面抄整棵帳，不猜帳名。
+共用記帳由 `lib/observed.py` 處理：首寫先補 `self` 行，含 `def`（`AOS_CD`）、`ws`（`AOS_WS`）、UTC 毫秒 `started_at`，設了 `AOS_LLM_KERNEL` 才帶 `llm_kernel`；同時合併 stack 的 `aos-observed` 宣告。工具行的 `def` 是登記路徑的絕對值、`stack` 是相對本 stack 的小格；有子帳時 `child` 指向收子前保存的帳本，相對本 stack。thought／agents_children 只照子 stack 的公開介面抄整棵帳，不猜帳名。
 
 **長跑與知識寫入**：長時間接不同任務的 fsm，在 `fsm.json` 的 think 格、`brain.py` 的 argv 加 `"--history", "task"`，每次只把最後一封 user 起的任務帶給腦，避免舊任務一直累積進請求；磁碟 history 仍完整保留。需要跨任務記住的穩定知識另寫入知識庫。範本沒有登記 `memory_write`；要寫入的那隻，先把 `memory` 那格的 `env.AOS_MEMORY` 改成有權寫的庫（相對、絕對或 `{"$env": "MY_KNOWLEDGE"}`），再在定義的 `tools.json` 照同樣寫法加一格 `"memory_write": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/memory_write"}, "env": {"AOS_MEMORY": <跟 memory 那格同一個值>}}`（`aos-agent tools add` 不收 `--envs`，所以手改登記檔）。寫入與讀取看同一個 `AOS_MEMORY`；出廠庫由人維護。agent 的寫入指引在出廠庫的 `memory.json`。

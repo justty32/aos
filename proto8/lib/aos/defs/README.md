@@ -37,12 +37,12 @@ flowchart LR
 
 <details><summary>specialize 四步</summary>
 
-以下使用 shell 變數 `DEFS`（定義根）、`REVIEW`（review.json）、`SOURCE`（來源定義）、`TARGET`（新定義）、`AGENTS_TOOL`（agents 工具絕對路徑）；路徑依自己的工作區填入。
+以下使用 shell 變數 `DEFS`（定義根）、`REVIEW`（review.json）、`SOURCE`（來源定義）、`TARGET`（新定義）、`AGENT_DEF_TOOL`（`lib/agent/agent_def` 的絕對路徑）；路徑依自己的工作區填入。
 
 1. 讀 review 的 `suggest.specialize`，核對 `proposal` 與 `evidence`。`context_too_big` 的 proposal 為 null 時，先由隊長決定要拆的職責或記憶。
 2. 用 `defs --op ls --root "$DEFS"` 對照三軸與 `existing`。有同三軸現成定義就沿用它，不另生一隻。
-3. 無現成定義時，呼叫 agents 工具 `new`，帶 `reason: "specialize"`、`review` 與來源；按 proposal 配工具、端點、記憶：
-   `jq -n --arg from "$SOURCE" --arg path "$TARGET" --arg name "$(basename "$TARGET")" --arg review "$REVIEW" '{op:"new",name:$name,from:$from,path:$path,reason:"specialize",review:$review}' | "$AGENTS_TOOL"`
+3. 無現成定義時，用 `agent_def` 的 `new` 把來源整份複製成新定義（只複製；不帶 `reason`／`review`，血統先不記（使用者 11-10「血統記錄...可以先不做」））；再用一般檔案工具照 proposal 改新定義的 `tools.json`、`llm.json` 與記憶那格；要跑起來用 `agents_children`（記帳、算配額）或 `agents_ctl`（不記帳）掛：
+   `jq -n --arg from "$SOURCE" --arg path "$TARGET" '{op:"new",from:$from,path:$path}' | aos-exec --ws "$PWD" "$AGENT_DEF_TOOL"`
 4. 更新目標類別 README，再以 `defs --op check --root "$DEFS"` 檢查。
 
 上面 `defs` 表示本夾 `_entry`；工具不會代做此處方。

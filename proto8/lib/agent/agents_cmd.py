@@ -13,6 +13,7 @@ STEP_S = 90                    # 一般步驟的子行程保險；等 daemon 的
 CTL_DEFAULT_S = 30             # aos-agent ctl 的 --timeout-s 預設（只用來算保險，不替下層填值）
 LISTEN_DEFAULT_S = 600         # listen／ask 什麼期限都沒給時等幾秒
 MAX_CYCLES = 9223372036854775807 - 30
+TOOL_WORDS = {"InstanceExists": 'give another "name", or remove that agent first with {"op": "rm", "name": ...}'}
 ERR_AOS = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
 QUEUED_RE = re.compile(r"queued .+ at position [0-9]+ \(letter ([^;]+); applied when a slot frees\)")
 # ctl add 收的鍵（agents_children 的 add、agents_ctl 的 add 同一排）
@@ -96,7 +97,10 @@ def run(cmd, text=None, timeout_s=STEP_S, timeout_cycles=None, env=None, err_re=
     lines = [x for x in err.splitlines() if x.strip()]
     mine = [m for m in map(err_re.match, lines) if m]
     if mine:
-        return out, (mine[-1].group(1), mine[-1].group(2))
+        code, reason = mine[-1].group(1), mine[-1].group(2)
+        if code in TOOL_WORDS:                    # 下層那句在教 CLI 旗標：給腦的換成工具參數的寫法（只留分號前那段事實）
+            reason = reason.split(";")[0] + "; " + TOOL_WORDS[code]
+        return out, (code, reason)
     return out, ("CommandFailed", "%s exited %d: %s" % (what, p.returncode, lines[-1] if lines else "(no message)"))
 
 
