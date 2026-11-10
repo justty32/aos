@@ -2,26 +2,29 @@
 
 ## 索引：base
 
+**分包與路徑**（11-10 tool-packs）：前 15 支通用工具分四包，清單在 [lib/packs](../packs/README.md)——1 看（read、ls、view、stat、json_read）、2 改（write、edit、copy、move、mkdir、json_write）、3 刪（trash、remove）、4 殼（shell、run_python）。檔案工具的路徑相對從 `$AOS_WS` 算、絕對照用，**不擋工作區外**（使用者「這些就是/usr/bin的包裝」「3.對」），能不能動看 Linux 權限；相對路徑又沒有 `$AOS_WS`＝`WsMissing`。
+
 回 JSON 的工具裡，計數（幾個、幾行、幾字）的 key 一律 `counter_<被數的東西>`（10-25 使用者「計數這塊，幫我改成counter_*」，C-54 命名方法 R6）；陣列本身（`items`、`keys` 清單）不加。
 
 | 工具 | 一句話 | 參數 | 回什麼 |
 |---|---|---|---|
-| [read](../base/read/) | 讀工作區裡一個文字檔，太長從頭截 | `path`、`offset`、`max_lines` | 內容（不加行號）；被截時尾巴寫從第幾行接著讀 |
+| [read](../base/read/) | 讀一個文字檔，太長從頭截 | `path`、`offset`、`max_lines` | 內容（不加行號）；被截時尾巴寫從第幾行接著讀 |
 | [write](../base/write/) | 整份寫進一個檔（建或蓋）、上層資料夾自動建 | `path`、`content` | 一行：寫了幾 bytes |
 | [edit](../base/edit/) | 幾處照字面替換，一處不合整個不改 | `path`、`edits[{old_text, new_text}]` | 一行：換了幾處 |
-| [bash](../base/bash/) | 在工作區用 bash 跑一行指令 | `command`、`timeout_s`（30／300） | stdout＋stderr 合在一起、最後一行一律 `[exit code N]`；留最後 2000 行／50KB |
+| [shell](../base/shell/) | 用 bash 跑一行指令（cwd＝工作區；11-10 由 bash 改名） | `command`、`timeout_s`（30／300） | stdout＋stderr 合在一起、最後一行一律 `[exit code N]`；留最後 2000 行／50KB |
 | [ls](../base/ls/) | 列一個資料夾的子項，一次一頁 | `path`、`offset`、`max_items`（100／500）、`hidden` | JSON：`counter_items`（一共幾項）、`items[{name, type, size, mtime}]`（資料夾多 `counter_children`、`aos`，檔多 `exec`，`.json` 多 `keys`）、`next_offset`、`counter_hidden` |
 | [stat](../base/stat/) | 單一個檔或資料夾的屬性 | `path` | JSON：`type`、`mtime`、`mode`；檔多 `size`、`exec`、`text`、`counter_lines`、`format`、`top` |
 | [view](../base/view/) | 漸進看一個檔：JSON 照指標一次一層、大文字檔先給大綱 | `path`、`pointer` 或 `start`／`end` | JSON：`value` 或 `children`；文字的 `text` 或 `outline` |
 | [json_read](../base/json_read/) | 看一份 JSON 檔的某個位置，大的摺起來 | `path`、`pointer`、`depth`（1／10） | JSON：`value`，物件摺成 `{type, keys}`、陣列 `{type, counter_items}`、長字串 `{type, counter_chars, head}` |
-| [json_write](../base/json_write/) | 照指標改幾個位置，一處不合整份不寫 | `path`、`set{指標: 值}`、`del[指標]` | JSON：`counter_set`、`counter_del`（改了幾個）、頂層 key |
+| [json_write](../base/json_write/) | 照指標改幾個位置，一處不合整份不寫（11-10 由 json_edit 改名；寫入交給 aos-json） | `path`、`set{指標: 值}`、`del[指標]` | JSON：`counter_set`、`counter_del`（改了幾個）、頂層 key |
 | [mkdir](../base/mkdir/) | 建資料夾（上層一起建；已有＝沒事） | `path` | JSON：`path`、`created` |
-| [move](../base/move/) | 搬移或改名（to 有東西就不搬） | `from`、`to` | JSON：`from`、`to` |
+| [move](../base/move/) | 搬移或改名（to 有東西就不搬；跨檔案系統照 mv 複製再刪） | `from`、`to` | JSON：`from`、`to` |
 | [copy](../base/copy/) | 複製檔或整個資料夾（捷徑照捷徑） | `from`、`to` | JSON：`from`、`to`、`counter_files` |
-| [trash](../base/trash/) | 丟進 `.trash/<時間>/`（不真的刪，move 救回） | `path` | JSON：`path`、`to` |
+| [trash](../base/trash/) | 丟進工作區的 `.trash/<時間>/`（不真的刪，move 救回；工作區外的東西放它的絕對路徑） | `path` | JSON：`path`、`to` |
+| [remove](../base/remove/) | 真的刪（rm 的包裝，11-10 新做）：資料夾要 `recursive`、捷徑刪本身、`.`／`..`／`/` 拒絕 | `path`、`recursive` | JSON：`path`、`type`、`counter_files` |
 | [math](../base/math/) | 算一個算術式子（不用 eval） | `expr` | 結果 |
 | [wall_clock](../base/wall_clock/) | 現在的 UTC 時間 | （無） | `2026-10-23T08:00:00Z` |
-| [run_python](../base/run_python/) | 跑一段 Python，回輸出與結束碼 | `code`、`timeout_s`（60／300） | 輸出、最後一行一律 `[exit code N]`（同 bash，11-05 前是第一行） |
+| [run_python](../base/run_python/) | 跑一段 Python，回輸出與結束碼 | `code`、`timeout_s`（60／300） | 輸出、最後一行一律 `[exit code N]`（同 shell，11-05 前是第一行） |
 | [llm_http](../base/llm_http/) | endpoint 函數：把一份請求 POST 到 OpenAI 相容端點（11-04 晚，[think-as-function](../../thinking/2026-11/04/think-as-function/README.md)；平常由 aos-llm-kernel 經 aos-exec 跑） | `endpoint{url, model, fixed?}`（request 先、`fixed` 蓋上、model 一律用包的）、`request{messages, …}`；選填 `--key-env NAME` 從小 proc 自己環境讀金鑰，沒給就不帶 Authorization；stdin `endpoint.key`＝`ArgumentsBad`、變數未設＝`EndpointFailed` | 一行 JSON：`message`（只留 role／content／tool_calls）、`usage`、`model` |
 | [llm_fake](../base/llm_fake/) | 假腦：同 llm_http 的形狀、不碰網路（有工具先叫 `endpoint.tool` 那個〔請求裡沒有就第一個，11-05 E 線〕，否則答 FAKE ANSWER；`endpoint.script` 有就照劇本：第 n 則 assistant 回 `script[n]`，項＝`{"content"}` 或 `{"tool_calls":[{"name","arguments"}]}`，超出照原樣） | 同上（`endpoint` 只看 `script`） | 同上，`model`＝`fake` |
 
