@@ -21,8 +21,20 @@ std::string Daemon::fail_reason(const Child& c) const {
     int err = 0;
     std::optional<std::string> text = aos::read_file(aos::join(c.stack, names_.err), err);
     if (text) {
-        // 被截短過（copytruncate）＝整份
-        std::string t = c.err_off > 0 && (size_t)c.err_off <= text->size() ? text->substr((size_t)c.err_off) : *text;
+        // 被截短過（copytruncate；檔比 err_off 短）＝整份，從檔頭讀
+        size_t off = c.err_off > 0 && (size_t)c.err_off <= text->size() ? (size_t)c.err_off : 0;
+        // 11-10：起點不在檔頭、前一個位元組也不是換行＝可能切在某行中間（截短後又長回超過 err_off）：從下一個換行之後開始；
+        // 後面沒有非空的內容（半截就是最後一行）＝退回那一行的行首，取整行（不帶半截）
+        if (off > 0 && (*text)[off - 1] != '\n') {
+            size_t nl = text->find('\n', off);
+            if (nl != std::string::npos && text->find_first_not_of(" \t\r\n", nl + 1) != std::string::npos) {
+                off = nl + 1;
+            } else {
+                size_t prev = text->rfind('\n', off - 1);
+                off = prev == std::string::npos ? 0 : prev + 1;
+            }
+        }
+        std::string t = text->substr(off);
         for (char& ch : t) {
             unsigned char u = (unsigned char)ch;
             if ((u < 0x20 && ch != '\n') || u == 0x7f) {

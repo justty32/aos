@@ -12,11 +12,15 @@
 //                  另認 ping：有寫就必須是 true，只回 applied、不改底；跟其他 key 一起寫時其他 key 照常套。
 //                  好的才套：procs_added（已在名單上的換設定、不在的接在尾巴）→procs_removed（名單與 stopped 集合都拿掉）→procs_stopped 加進 stopped 集合→
 //                  procs_started 從 stopped 集合拿掉（同名兩邊都寫＝起）；後面的信蓋前面的
+//                  11-10（設計-46）：好信 procs_removed 的名字若 procs_ctl 還宣告著（它的 procs 或 procs_added 有、procs_removed 沒有），
+//                  下一圈會被疊回來——行為不變，只在套這封信時印一行 warning（一封信一個名字一次；之後每圈不再印，再寄一封 rm 才再印；
+//                  cur/ 殘骸重做也算一封）
 //   done_letters   對完表之後：好信有 reply_to 的回 {"applied": true}（壞信不回，決定 27）；全部 done 收掉（不留 archive/）。
 //                  回信寄不出去、收不掉（信被別人拿走、寫不了）都不管：不另外通知（決定 27），也不讓 daemon 因此結束
 #include "daemon/daemon.hpp"
 
 #include "aos/util/files.hpp"
+#include "aos/util/io.hpp"
 
 namespace aos::daemon {
 
@@ -51,12 +55,35 @@ Daemon::Letters Daemon::take_letters() {
     if (!names.empty()) {
         responded();
     }
+    // 設計-46：信 rm 了、procs_ctl 還宣告著＝下一圈疊回來；照疊，只提醒一次（套這封信時）
+    auto warn_redeclared = [this](const std::string& id, const Json& body) {
+        if (!body.contains("procs_removed")) {
+            return;
+        }
+        const Json& c = pctl_good_;
+        for (const Json& j : body["procs_removed"]) {
+            const std::string n = j.get<std::string>();
+            bool undeclared = false;   // procs_ctl 自己也 procs_removed 它＝不會回來
+            if (c.contains("procs_removed")) {
+                for (const Json& r : c["procs_removed"]) {
+                    undeclared = undeclared || r == n;
+                }
+            }
+            if (from_ctl(n) && !undeclared) {
+                aos::warn("aos-daemon", "letter " + id + " removed " + n + ", but " + pctl_path_ +
+                          " still declares it, so it comes back next round; to really remove it, take it out of that file");
+            }
+        }
+    };
     Letters got;
     for (const std::string& id : names) {
         std::optional<std::string> bad;
         try {
             aos::post::Seen c = aos::post::see(mbox_, id);
             bad = c.ok ? apply_letter(c.letter["body"]) : std::optional<std::string>(c.reason);
+            if (!bad) {
+                warn_redeclared(id, c.letter["body"]);
+            }
         } catch (const Error&) {
             continue;   // 不在 cur/ 了（被人拿走、刪掉）：沒有這封
         }
