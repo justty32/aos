@@ -35,6 +35,10 @@ sweeper (the same code as the _sweeper row, aos-sweeper):
   sweep [--dry-run]           one round now: archive big stderr files, stop orphaned loops, report
   sweep --purge [--dry-run]   delete every stderr archive of this daemon
 
+flag order: -d may go anywhere, also after the subcommand and its NAME (stop ann -d D);
+a subcommand's flags may go before or after its NAME / XXX. After -- (add XXX -- ARGS)
+nothing is read as a flag.
+
 Mutation commands drop letters into the daemon's ctl mailbox (procs_added, procs_removed,
 procs_stopped, ...) or write the proc's own ctl window (pause / resume). A letter only
 asks; the daemon applies it on its next round. See the result with ls.
@@ -716,7 +720,7 @@ def main():
     cmd = None
     try:
         try:
-            opts, rest = aos_flags.parse(sys.argv[1:], {"--daemon": "daemon"}, short=("-d",))
+            opts, rest = aos_flags.parse(sys.argv[1:], {"--daemon": "daemon"}, short=("-d",), sub="root")   # 11-10 Q1：-d 寫在子命令後也算
         except aos_flags.Error as e:
             hint = "" if e.code == "FlagUnknown" else " (see %s --help)" % NAME
             raise Fail(e.code, str(e) + hint)

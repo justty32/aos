@@ -31,6 +31,8 @@ subcommands:
 flags:
   -s, --stack STACK   my stack folder (default: $AOS_MY_STACK, else ~/.stack); the mailbox is STACK/mailbox
   -h, --help          show this help
+Flags may go anywhere after the name they belong to (-s also after the subcommand);
+send's WHAT and everything after it is text.
 
 A letter follows the inbox protocol: from, to, status (REQUEST DONE BLOCKED NEEDS-USER FAILED PROGRESS),
 a one-line title that makes sense alone, and four parts: what, outputs, not_done, decide.
@@ -84,6 +86,7 @@ flags:
   --from NAME           my name (default: $USER, else user)
 
 WHAT is the main part (for REQUEST: what the receiver should do); - reads it from stdin.
+Flags go before WHAT (from WHAT on everything is text).
 Replies go to my mailbox (STACK/mailbox). Prints the sent letter's name.
 Rules: when a task ends send DONE, BLOCKED, NEEDS-USER or FAILED; stuck over 10 minutes = send BLOCKED.""",
 }
@@ -95,12 +98,12 @@ class Fail(Exception):
         self.code = code
 
 
-def parse(argv, sub, flags=None, switches=None, short=()):
+def parse(argv, sub, flags=None, switches=None, short=(), keep=None):
     """子命令的旗標；-s/--stack 寫在子命令前後都收，前後不同＝ArgumentsBad（同 aos-agent 的 -t，坑-68）。"""
     global STACK
     try:
         opts, rest = aos_flags.parse(argv, dict(flags or {}, **{"--stack": "stack"}), switches or {}, help=HELPS[sub],
-                                     short=tuple(short) + ("-s",))
+                                     short=tuple(short) + ("-s",), keep=keep)
     except aos_flags.Error as e:
         raise Fail(e.code, "%s (see aos-mailbox %s --help)" % (e, sub))
     s = opts.get("stack")
@@ -304,7 +307,7 @@ def cmd_send(argv):
     flags = {"--to": "to", "--daemon": "daemon", "--box": "box", "--status": "status", "--title": "title",
              "--outputs": "outputs", "--not-done": "not_done", "--decide": "decide",
              "--in-reply-to": "in_reply_to", "--from": "from"}
-    opts, rest = parse(argv, "send", flags, short=("-d",))
+    opts, rest = parse(argv, "send", flags, short=("-d",), keep=1)   # 11-10 cli-sweep Q3：WHAT 起原樣收
     status = opts.get("status")
     if not status:
         raise Fail("ArgumentsBad", "missing --status (one of %s)" % ", ".join(STATUSES))
@@ -340,7 +343,7 @@ def main():
     global STACK
     aos_flags.HELP = HELP
     try:
-        opts, rest = aos_flags.parse(sys.argv[1:], {"--stack": "stack"}, help=HELP, short=("-s",))
+        opts, rest = aos_flags.parse(sys.argv[1:], {"--stack": "stack"}, help=HELP, short=("-s",), sub="root")   # 11-10 Q1
         STACK = opts.get("stack")
         if not rest:
             raise Fail("ArgumentsBad", "missing subcommand (%s; see aos-mailbox --help)" % ", ".join(SUBS))

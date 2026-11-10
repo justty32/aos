@@ -108,17 +108,16 @@ class UsageAndLateFlags(Base):
         self.assertIn("(XXX | --path-json JSON))", r.stderr)
 
     def test_flag_after_xxx(self):
-        r = self.bad("ArgumentsBad", "add", TOOL, "--name", "n")
-        self.assertIn("flags go before XXX: --name", r.stderr)
-        self.assertFalse(self.reg.exists())
+        """11-10 cli-sweep Q1（使用者「1.收。」）：XXX 後的旗標也收，跟寫在前面一樣。"""
+        self.ok("add", TOOL, "--name", "n")
+        self.assertIn("n", json.loads(self.reg.read_text())["tools"])
 
     def test_flag_after_name_in_call(self):
-        r = self.bad("ArgumentsBad", "call", "x", "--file", self.reg)
-        self.assertIn("flags go before NAME: --file", r.stderr)
+        self.ok("add", TOOL, "--name", "x")
+        self.ok("call", "x", "{}", "--file", str(self.reg))
 
-    def test_flag_after_xxx_in_get_and_rm(self):
-        self.assertIn("flags go before XXX: --file", self.bad("ArgumentsBad", "get", "x", "--file", "f").stderr)
-        self.assertIn("flags go before XXX: --file", self.bad("ArgumentsBad", "rm", "x", "--file", "f").stderr)
+    def test_unknown_flag_after_xxx(self):
+        self.bad("FlagUnknown", "get", "x", "--nope")
 
 
 class DefaultFileWarning(Base):

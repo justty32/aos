@@ -42,6 +42,8 @@ subcommands:
 CALLER is CONFIG#/pointer, the slot where a caller says what to run. Location-dependent
 parts are rewritten to point at the same places. Changes are written to the config and
 nearby files; --dry-run prints the plan instead.
+Flags may go anywhere after the name they belong to: aos-grow up CALLER --to dir
+--dry-run = aos-grow --dry-run up --to dir CALLER.
 
 flags:
       --dry-run   print new files, diffs, moves and deletes; write nothing
@@ -415,7 +417,7 @@ def down(caller):
 
 def main(argv):
     try:
-        top, rest = aos_flags.parse(argv, {}, {"--dry-run": "dry"})
+        top, rest = aos_flags.parse(argv, {}, {"--dry-run": "dry"}, sub="root")   # 11-10 Q1：--dry-run 寫在子命令或 CALLER 後也算
     except aos_flags.Error as e:
         reason = str(e) if e.code == "FlagUnknown" else "%s (see %s --help)" % (e, PROG)
         raise Fail(e.code, reason)

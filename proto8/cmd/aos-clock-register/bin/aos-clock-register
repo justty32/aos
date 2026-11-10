@@ -32,6 +32,8 @@ subcommands:
 flags:
   -c, --clock CLOCK   the clock file (default: $AOS_CLOCK); the register is CLOCK_register.json next to it
   -h, --help          show this help
+Flags may go anywhere after the name they belong to (-c also after the subcommand);
+add's TEXT and everything after it is text.
 
 aos-clock reads the register after each cycle: an entry fires when the new cycle number divides by
 its EVERY (cycles 10, 20, 30... for every 10), and sends one letter with aos-post send. The letter body is
@@ -53,6 +55,7 @@ flags:
   --replace     replace an entry with the same NAME (default: EntryExists)
 
 NAME names the entry; TEXT is the fixed text of every letter (- reads it from stdin).
+Flags may go before or after NAME, not after TEXT starts (from TEXT on everything is text).
 A BOX that is not a mailbox yet is only a warning: the entry is added anyway.
 example: aos-clock-register add --every 10 --box stacks/root/procs/ann/queue ann-wake "Check data/ for new files." """,
     "rm": """aos-clock-register rm - remove an entry from the clock register
@@ -81,12 +84,12 @@ class Fail(Exception):
 CLOCK = None
 
 
-def parse(argv, sub, flags=None, switches=None, short=None):
+def parse(argv, sub, flags=None, switches=None, short=None, keep=None):
     """子命令的旗標；-c/--clock 子命令前後都收，前後不同＝ArgumentsBad。"""
     global CLOCK
     try:
         opts, rest = aos_flags.parse(argv, dict(flags or {}, **{"--clock": "clock"}), switches or {}, help=HELPS[sub],
-                                     short=dict(short or {}, **SHORT))
+                                     short=dict(short or {}, **SHORT), keep=keep)
     except aos_flags.Error as e:
         raise Fail(e.code, "%s (see %s %s --help)" % (e, PROG, sub))
     c = opts.get("clock")
@@ -125,7 +128,8 @@ def identity():
 
 
 def cmd_add(argv):
-    opts, rest = parse(argv, "add", {"--every": "every", "--box": "box", "--by": "by"}, {"--replace": "replace"})
+    opts, rest = parse(argv, "add", {"--every": "every", "--box": "box", "--by": "by"}, {"--replace": "replace"},
+                       keep=2)   # 11-10 cli-sweep Q3：TEXT 起原樣收（信的內容裡的 - 開頭字不是旗標）
     if len(rest) < 2:
         raise Fail("ArgumentsBad", "give NAME and TEXT (usage: %s add --every N --box BOX NAME TEXT...|-)" % PROG)
     name = rest[0]
@@ -194,7 +198,7 @@ def main():
     global CLOCK
     aos_flags.HELP = HELP
     try:
-        opts, rest = aos_flags.parse(sys.argv[1:], {"--clock": "clock"}, help=HELP, short=SHORT)
+        opts, rest = aos_flags.parse(sys.argv[1:], {"--clock": "clock"}, help=HELP, short=SHORT, sub="root")   # 11-10 Q1
         CLOCK = opts.get("clock")
         if not rest:
             raise Fail("ArgumentsBad", "missing subcommand (%s; see %s --help)" % (", ".join(SUBS), PROG))

@@ -106,7 +106,8 @@ examples:
   aos-tools ls -l
   aos-tools call clock '{"tz": "Asia/Taipei"}'
 
-flags (before or after the subcommand):
+flags (anywhere: before or after the subcommand and its XXX / NAME; a subcommand's own
+flags may go before or after its XXX / NAME too; after -- nothing is a flag):
       --file F   the registry to read and write (default: ./tools.json;
                  missing = no tools, with a warning for the default).
                  add / rm write only F, never what it overrides.
@@ -125,9 +126,9 @@ HELPS = {
 usage: aos-tools [--file F] add [--name N] [--replace] [--no-cache]
                  [--env-file FILE] [--envs K=V]... (XXX | --path-json JSON)
 
-XXX is a tool folder, JSON file or executable; flags go before it. It is stored the
-way you give it: absolute stays absolute; relative (to the current directory) is
-stored relative to F. --path-json stores the JSON as given - a path string or a
+XXX is a tool folder, JSON file or executable; flags may go before or after it.
+It is stored the way you give it: absolute stays absolute; relative (to the
+current directory) is stored relative to F. --path-json stores the JSON as given - a path string or a
 directive such as {"$env": "AOS_HOME", "$path": "/lib/base/bash"} - and it is
 resolved on every use.
 
@@ -277,12 +278,6 @@ def parse_sub(sub, args, flags=None, switches=None, multi=None, short=None):
         if sub not in ("add", "override") and not os.path.exists(reg):
             aos_flags.warn(NAME, "./%s not found; no tools (use --file F)" % DEFAULT_FILE)
     return reg, opts, rest
-
-
-def no_late_flags(rest, n, what):
-    """位置參數超過 n 個、多出來的以 - 開頭＝旗標寫在位置參數後面（第一個位置參數起不再解旗標，aos_flags 全家規則；甲2）。"""
-    if len(rest) > n and rest[n].startswith("-") and rest[n] != "-":
-        raise Fail("ArgumentsBad", "flags go before %s: %s" % (what, rest[n]))
 
 
 def has_directive(v):
@@ -823,11 +818,9 @@ def cmd_add(args):
                                 {"--replace": "replace", "--no-cache": "no_cache"},
                                 {"--envs": "envs"}, short=("-n",))
     if "path_json" in opts:
-        no_late_flags(rest, 0, "XXX")
         if rest:
             raise Fail("ArgumentsBad", "add takes either XXX or --path-json, not both")
     elif len(rest) != 1:
-        no_late_flags(rest, 1, "XXX")
         raise Fail("ArgumentsBad", "add needs one XXX (or --path-json JSON)")
     env = {}
     for kv in opts.get("envs", []):
@@ -896,7 +889,6 @@ def cmd_add(args):
 
 def cmd_rm(args):
     reg, opts, rest = parse_sub("rm", args)
-    no_late_flags(rest, 1, "XXX")
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "rm needs one XXX")
     names = match(load_tools(reg), rest[0])
@@ -935,7 +927,6 @@ def cmd_override(args):
     reg, opts, rest = parse_sub("override", args, {"--path-json": "path_json"})
     folder = os.path.dirname(os.path.abspath(reg))
     if "path_json" in opts:
-        no_late_flags(rest, 0, "BASE")
         if rest:
             raise Fail("ArgumentsBad", "override takes either BASE... or --path-json, not both")
         try:
@@ -943,9 +934,6 @@ def cmd_override(args):
         except ValueError as e:
             raise Fail("ArgumentsBad", "--path-json is not JSON: %s" % e)
     else:
-        for i, b in enumerate(rest):
-            if b.startswith("-") and b != "-":
-                no_late_flags(rest, i, "BASE")
         if not rest:
             raise Fail("ArgumentsBad", "override needs at least one BASE (or --path-json JSON)")
         stored = [os.path.normpath(os.path.abspath(b)) if os.path.isabs(b)
@@ -1016,7 +1004,6 @@ def cmd_ls(args):
 
 def cmd_get(args):
     reg, opts, rest = parse_sub("get", args)
-    no_late_flags(rest, 1, "XXX")
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "get needs one XXX")
     tools = load_tools(reg)
@@ -1038,10 +1025,7 @@ def stdin_from(text):
 
 def cmd_call(args):
     reg, opts, rest = parse_sub("call", args)
-    if len(rest) >= 2 and rest[1].startswith("--"):   # JSON 不會以 -- 起頭；-1 之類照 ARGS_JSON 收
-        no_late_flags(rest, 1, "NAME")
     if len(rest) not in (1, 2):
-        no_late_flags(rest, 2, "NAME")
         raise Fail("ArgumentsBad", "call needs NAME and optional ARGS_JSON (else stdin = arguments)")
     tools = load_tools(reg)
     name = rest[0]
@@ -1089,7 +1073,7 @@ def main():
     sub = None
     try:
         try:
-            opts, rest = aos_flags.parse(sys.argv[1:], {"--file": "file"})
+            opts, rest = aos_flags.parse(sys.argv[1:], {"--file": "file"}, sub="root")   # 11-10 Q1：子命令的旗標寫在 XXX／NAME 後也收
         except aos_flags.Error as e:
             reason = str(e) if e.code == "FlagUnknown" else "%s (see %s --help)" % (e, NAME)
             raise Fail(e.code, reason)
