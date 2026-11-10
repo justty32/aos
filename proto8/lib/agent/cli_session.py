@@ -31,8 +31,8 @@
 #   選填 tools_flags＝字串陣列，原樣插在 aos-mcp 的 args 裡（例 ["--enable-logs"]）。有登記檔時每次起 CLI 前接上
 #   aos-mcp --ws <工作區> --stack <stack> [tools_flags…] <登記檔絕對路徑>：claude＝寫小格 mcp.json、加 --mcp-config 它 --allowedTools mcp__aos；
 #   codex＝兩個 -c mcp_servers.aos.command／args。aos-mcp 靠 PATH 找（N-50）；定義資料夾一個字都不寫（P-15）。
-#   $AOS_STACK 裡這隻自己的（aos-agent tools／llm 寫的，stack_copies）：tools.json＝覆蓋層（11-05 起只存差異；cli.json 沒明寫 tools 時
-#   給 aos-mcp --overlay，疊在定義的登記檔上，定義那份不在也行）、llm.json 的 model。
+#   $AOS_STACK 裡這隻自己的（aos-agent tools／llm 寫的，stack_copies）：tools.json＝這隻自己那份（只存差異、"$override" 指回定義那份，
+#   11-10 aos-tools-cli；cli.json 沒明寫 tools 時在就把它給 aos-mcp，疊法歸 aos-tools）、llm.json 的 model。
 #   模型（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本）的 model＝flags 的 --model（換掉或加在尾）；都沒有＝flags 原樣。
 # 換台（11-10 two-machines 05）：要接舊對話前先認「是不是這台的」（session_here：記號檔的 session、home 一樣，claude 再比 ws；
 #   不讀 CLI 的任何檔內容、不靠它的錯誤訊息）。不是＝在交出去之前改開新對話：呼叫者給了 reseed（aos-eca-turn）＝把 reseed(上限)
@@ -130,7 +130,7 @@ def read_llm(path):
 
 def stack_copies(cfg, tool_dir, files):
     """子介面 tools／llm 依 interfaces.json 宣告的相對檔名讀 stack 覆蓋；沒有宣告就不讀 stack。
-    cli.json 明寫 tools 時照它、停用 tools 覆蓋；未宣告時定義的預設登記檔仍是同層 tools.json。
+    cli.json 明寫 tools 時照它、不看 stack 那份；未宣告時定義的預設登記檔仍是同層 tools.json。
     腦設定：定義宣告的 llm（沒宣告時仍可用同層 llm.json）疊 stack 宣告那份；
     有 model＝flags 的 --model 換成它（沒有就加在尾）。每次 load_cfg（每題）重讀＝下一題生效。"""
     stack = os.environ.get("AOS_STACK")
@@ -139,9 +139,7 @@ def stack_copies(cfg, tool_dir, files):
         rel = files.get("tools")
         copy = os.path.join(stack, rel) if rel else None
         if "tools" not in cfg and copy and os.path.isfile(copy):
-            cfg["overlay"] = copy
-            if not cfg.get("registry"):
-                cfg["registry"] = os.path.join(os.path.abspath(tool_dir), rel)
+            cfg["registry"] = copy                   # 11-10 aos-tools-cli 步 4：這隻自己那份（"$override" 指回定義那份）在就用它
         if "llm" in files:
             llm.update(read_llm(os.path.join(stack, files["llm"])))
     model = llm.get("model")
@@ -193,11 +191,11 @@ def mcp_argv(cfg, cell, ws, stack):
     reg = cfg.get("registry")
     if not reg:
         return []
-    if not os.path.isfile(reg) and not cfg.get("overlay"):   # load_cfg 之後才被刪掉（有覆蓋層時定義那份可以不在）
+    if not os.path.isfile(reg):                       # load_cfg 之後才被刪掉
         die("ToolsMissing", "registry file not found: %s" % reg)
     if shutil.which("aos-mcp") is None:
         die("CliMissing", "aos-mcp is not on PATH (tools are attached; add proto8/cmd/aos-mcp/bin to PATH)")
-    args = ["--ws", ws, "--stack", stack] + cfg.get("tools_flags", []) + (["--overlay", cfg["overlay"]] if cfg.get("overlay") else []) + [reg]
+    args = ["--ws", ws, "--stack", stack] + cfg.get("tools_flags", []) + [reg]
     if cfg["kind"] == "codex":                           # JSON 字串與字串陣列同時是合法的 TOML（-c 的值照 TOML 解）
         return ["-c", "mcp_servers.aos.command=" + json.dumps("aos-mcp"), "-c", "mcp_servers.aos.args=" + json.dumps(args)]
     try:

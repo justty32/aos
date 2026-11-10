@@ -10,7 +10,7 @@
 # 只有自己這層的錯才停：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）——沒 stack、history 壞、
 #   history 裡沒有 assistant、aos-tools 起不來。
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
-#   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
+#   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝改用這隻自己那份（aos-agent tools add／rm 寫的，只存差異、"$override" 指回定義那份，11-10）。
 # 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
 import json, os, signal, subprocess, sys, time
 from pathlib import Path
@@ -83,9 +83,10 @@ tools_rel = opts.get("--tools", files.get("tools"))
 tools_file = os.path.join(os.environ.get("AOS_CD") or ".", tools_rel) if tools_rel else None
 if "--tools" in opts and not os.path.isfile(tools_file):
     die("ToolsMissing", "tool registry not found: %s" % tools_file)
-overlay = os.path.join(stack, tools_rel) if tools_rel and "--tools" not in opts else None
-overlay = overlay if overlay and os.path.isfile(overlay) else None
-TOOLS = ["aos-tools"] + (["--file", tools_file] if tools_file else []) + (["--overlay", overlay] if overlay else [])
+own = os.path.join(stack, tools_rel) if tools_rel and "--tools" not in opts else None
+if own and os.path.isfile(own):                   # 這隻自己那份（$override 定義那份，aos-tools 疊；11-10 aos-tools-cli 步 4）在就用它
+    tools_file = own
+TOOLS = ["aos-tools"] + (["--file", tools_file] if tools_file else [])
 history_path = os.path.join(stack, "history.jsonl")
 history = []
 try:
@@ -143,7 +144,7 @@ def stop_group(p):
 
 registered = {}
 registered_paths = {}
-if (tools_file and os.path.isfile(tools_file)) or overlay:        # 能叫的＝登記檔（疊覆蓋層）裡的（aos-tools ls --json）；失敗＝自己這層的錯
+if tools_file and os.path.isfile(tools_file):        # 能叫的＝登記檔（疊完 $override）裡的（aos-tools ls --json）；失敗＝自己這層的錯
     try:
         r = subprocess.run(TOOLS + ["ls", "--json"], stdin=subprocess.DEVNULL,
                            stdout=subprocess.PIPE, text=True)

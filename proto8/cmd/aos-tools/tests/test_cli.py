@@ -169,13 +169,14 @@ class LongListing(Base):
         self.assertEqual(cols[4], json.dumps(value))
         self.assertEqual(cols[5], "-")
 
-    def test_ls_long_from_overlay(self):
+    def test_ls_long_from_override(self):
         over = self.tmp / "stack" / "tools.json"
         self.ok("--file", self.reg, "add", TOOL)
-        self.ok("--file", self.reg, "--overlay", over, "add", "-n", "wc2", TOOL)
-        lines = self.ok("--file", self.reg, "--overlay", over, "ls", "-l").stdout.splitlines()
+        self.ok("--file", over, "override", self.reg)
+        self.ok("--file", over, "add", "-n", "wc2", TOOL)
+        lines = self.ok("--file", over, "ls", "-l").stdout.splitlines()
         self.assertEqual(lines[0].split("\t")[3], "%s#/tools/wall_clock" % self.reg)
-        self.assertEqual(lines[1].split("\t")[3], "%s#/add/wc2" % over)
+        self.assertEqual(lines[1].split("\t")[3], "%s#/tools/wc2" % over)
 
     def test_ls_long_and_json_bad(self):
         self.bad("ArgumentsBad", "--file", self.reg, "ls", "-l", "-j")

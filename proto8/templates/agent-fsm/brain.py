@@ -12,7 +12,7 @@
 #   warning 一行（工具自己那行照樣在 stderr）、system 裡改放一句「Knowledge base is not available right now: 原因」、照樣寫請求
 #   （11-10 TS，圖紙 07 K01：知識庫一時讀不到不擋問腦，狀態不壞；原本是 MemoryFailed 退 1）。
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝不給工具）；腦看到的工具名＝登記名。相對路徑從範本資料夾（AOS_CD）算。
-#   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
+#   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝改用這隻自己那份（aos-agent tools add／rm 寫的，只存差異、"$override" 指回定義那份，11-10）。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1（P-20）。--help 印英文用法；Ctrl-C 退 130。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
 import json, os, signal, subprocess, sys
 from pathlib import Path
@@ -102,8 +102,9 @@ tools_rel = opts.get("--tools", files.get("tools"))
 tools_file = os.path.join(os.environ.get("AOS_CD") or ".", tools_rel) if tools_rel else None
 if "--tools" in opts and not os.path.isfile(tools_file):
     die("ToolsMissing", "tool registry not found: %s" % tools_file)
-overlay = os.path.join(stack, tools_rel) if tools_rel and "--tools" not in opts else None
-overlay = overlay if overlay and os.path.isfile(overlay) else None
+own = os.path.join(stack, tools_rel) if tools_rel and "--tools" not in opts else None
+if own and os.path.isfile(own):                   # 這隻自己那份（$override 定義那份，aos-tools 疊；11-10 aos-tools-cli 步 4）在就用它
+    tools_file = own
 
 # 對話：一行一則 OpenAI message（C-46、P-41），只附加
 history_path = os.path.join(stack, "history.jsonl")
@@ -135,8 +136,8 @@ if history_mode == "task":
 
 # tools：登記檔裡的工具（aos-tools ls --json；登記檔不在＝沒有工具），說明取工具定義的 description／parameters
 tools = []
-TOOLS = ["aos-tools"] + (["--file", tools_file] if tools_file else []) + (["--overlay", overlay] if overlay else [])
-if (tools_file and os.path.isfile(tools_file)) or overlay:
+TOOLS = ["aos-tools"] + (["--file", tools_file] if tools_file else [])
+if tools_file and os.path.isfile(tools_file):
     try:
         r = subprocess.run(TOOLS + ["ls", "--json"],
                            stdin=subprocess.DEVNULL,

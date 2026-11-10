@@ -4,12 +4,11 @@
 # 外面的 agent 只會講 MCP；櫃台把「有哪些工具」交給 `aos-tools ls --json`、「叫一次」交給 `aos-tools call 名`，
 # 自己不懂任何一個工具在做什麼、也不管工具是資料夾、JSON 還是可執行檔（C-52）。設計：proto8/thinking/2026-10/28/aos-tools/README.md。
 #
-# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--overlay O] [--memory NAME] [REGISTRY...]
+# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [REGISTRY...]
 #   --memory NAME（11-05 晚 agent-knowledge K4）：initialize 時叫一次登記名 NAME 的工具（memory）{"op": "read"}，它印的知識庫根放進回應的
 #   instructions（MCP 用戶端把它放進自己的 system prompt；Claude Code 會）。叫的是 tools/list 給出去的同一個工具＝外部 agent 看到的根跟它自己查的一樣。
 #   清單裡沒有 NAME、或叫了失敗＝不給 instructions、stderr 一行 warning（不讓整個 MCP 連線起不來）；沒給 --memory＝照舊不給。
-#   --overlay O（11-05 portable-flow 步 4）：原樣轉給 aos-tools 的 --overlay（REGISTRY 疊這隻的覆蓋層 O；疊法歸 aos-tools）。
-#   只能配一份 REGISTRY（多給＝ArgumentsBad）；有 --overlay 時 REGISTRY 可以不在（＝只有覆蓋層），O 不在＝沒有覆蓋。
+#   這隻自己加減的工具（11-10 aos-tools-cli 步 4）：給 stack 那份登記檔就好——它的 "$override" 指回定義那份，疊法歸 aos-tools。
 #   每個 REGISTRY 是一份登記檔的路徑（相對路徑從啟動時的 cwd 算；不是檔＝ToolMissing）；檔名不限
 #   （11-02 使用者「改成指定檔案」，以前給的是 agent 資料夾、讀它的 tools.json）。一份都沒給＝./tools.json
 #   （11-02 使用者「不接，就是默認aos-tools.json」先改成 ./aos-tools.json；11-02 再改回 ./tools.json、跟 aos-tools 一致：
@@ -39,20 +38,19 @@ import metainfo  # noqa: E402
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
-USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--overlay O] [--memory NAME] [REGISTRY...]"
+USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [REGISTRY...]"
 MEMORY = None                                   # --memory NAME（11-05 晚 K4）：initialize 時給的知識庫根從這個工具來
-OVERLAY = None                                  # --overlay O（11-05）：轉給 aos-tools
 DEFAULT_REGISTRY = "tools.json"               # 一份都沒給時讀 ./tools.json（跟 aos-tools 一致；11-02 改回）
 LOGS_NAME = "aos-mcp-logs.jsonl"         # --enable-logs 沒給 --logs-path 時記在 <stack>/ 底下的這個檔（11-02）
 LOGS_PATH = None                               # 記呼叫紀錄的檔（絕對路徑）；None＝不記（預設）
 STDERR_TAIL = 2048                             # 失敗時附給外部 agent 的 stderr 最後幾個位元組（11-05，edge-basics 題 1）
 aos_flags.HELP = """aos-mcp - serve the tools of aos-tools registries as MCP tools to an external agent (Claude Code, pi...); stdio JSON-RPC.
 
-    aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--overlay O] [--memory NAME] [REGISTRY...]
+    aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [REGISTRY...]
 
 Short flags: -w = --ws, -s = --stack, -h = --help.
 REGISTRY: registry files (relative to the cwd at start; none = ./tools.json); several are merged, a name clash = ToolsBad.
-  --overlay O is passed on to aos-tools --overlay and goes with exactly one REGISTRY (which may then be missing).
+  A registry may "$override" another one (aos-tools merges them); give an agent's own registry in its stack.
   The list is re-read on every tools/list and tools/call.
 Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call runs
   AOS_WS=WS AOS_STACK=<stack> aos-tools --file REGISTRY call NAME (aos-tools selects tools/NAME/); arguments go to stdin, stdout goes back as the
@@ -88,10 +86,10 @@ def die(code, reason):
 
 def parse_args(argv):
     """命令列 → (ws, stack, timeout_s, registries)；--enable-logs／--logs-path 設進 LOGS_PATH。"""
-    global LOGS_PATH, OVERLAY, MEMORY
+    global LOGS_PATH, MEMORY
     try:
         opts, files = aos_flags.parse(argv, {"--ws": "ws", "--stack": "stack", "--timeout-s": "timeout_s",
-                                             "--logs-path": "log", "--overlay": "overlay",
+                                             "--logs-path": "log",
                                              "--memory": "memory"}, {"--enable-logs": "enable"}, short=("-w", "-s"))
     except aos_flags.Error as e:
         die(e.code, "%s (usage: %s)" % (e, USAGE))
@@ -112,17 +110,11 @@ def parse_args(argv):
         MEMORY = opts["memory"]
     if not files:
         files = [DEFAULT_REGISTRY]
-    if "overlay" in opts:
-        if not opts["overlay"]:
-            die("ArgumentsBad", "--overlay needs a file name")
-        if len(files) != 1:
-            die("ArgumentsBad", "--overlay goes with exactly one REGISTRY (got %d)" % len(files))
-        OVERLAY = os.path.abspath(opts["overlay"])
     if not ws or not os.path.isdir(ws):
         die("WsMissing", "no --ws and no AOS_WS, or it is not a folder")
     regs = []
     for f in files:
-        if not os.path.isfile(f) and (OVERLAY is None or os.path.isdir(f)):   # 有覆蓋層時定義那份可以不在
+        if not os.path.isfile(f):
             die("ToolMissing", "%s is not a file (give the path of a registry, e.g. tools.json; register tools with aos-tools --file it add)" % f)
         regs.append(os.path.abspath(f))
     ws = os.path.abspath(ws)
@@ -147,7 +139,7 @@ def annotations(meta):
 
 
 def tools_argv(reg):
-    return ["aos-tools", "--file", reg] + (["--overlay", OVERLAY] if OVERLAY else [])
+    return ["aos-tools", "--file", reg]
 
 
 def load_tools(regs):

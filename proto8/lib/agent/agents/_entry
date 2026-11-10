@@ -15,7 +15,7 @@
 #   add 的 tools：path 相對的轉成相對 cwd 交給 aos-agent tools add，覆蓋層存相對；絕對的存絕對（保留寫法）。
 #       先寫進同層暫存資料夾再改名；掛不上＝把剛寫的資料夾刪掉（全有或全無，規則 6）。
 #   add {name, def, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?, on_queued?}  生法 (b) 用現有定義：def 直接掛（aos-agent ctl add），llm／tools／tools_rm 走
-#       這隻子的覆蓋層（aos-agent llm set／tools add --override／tools rm，stack 只存差異、定義不動、不複製）；後面幾步失敗＝ctl rm 收回。
+#       這隻子的覆蓋層（aos-agent llm set／tools add --replace／tools rm，stack 只存差異、定義不動、不複製）；後面幾步失敗＝ctl rm 收回。
 #   兩種都：ws＝子的工作區，相對＝從我的 $AOS_WS 算、絕對＝照用，沒給＝我的 $AOS_WS（沿用父的；使用者 11-06 已定），不在先建；limits 原樣轉 --limits。
 #       成功印 added <name> (stack …); children N/MAX；on_queued ok 尚在隊裡則印 queued 位置與信名、格空後起；仍記 children。
 #       不把下層提醒行接進給腦的結果；下層 stderr 仍原樣透出。
@@ -607,7 +607,7 @@ if on_queued == "ok":
     report(name, child_stack, alive, n)
 steps = [("llm set %s=%s" % (k, v), ["llm", "--target", name, "set", "%s=%s" % (k, v)]) for k, v in llm.items()] + \
         [("tools rm " + t, ["tools", "--target", name, "rm", t]) for t in tools_rm] + \
-        [("tools add " + t, ["tools", "--target", name, "add", "--override", t, user_form(p, g)]) for (t, p), g in zip(tool_list, tool_given)]
+        [("tools add " + t, ["tools", "--target", name, "add", "--replace", t, user_form(p, g)]) for (t, p), g in zip(tool_list, tool_given)]
 for what, argv in steps:
     _, err = agent(argv)
     if err:                    # 全有或全無：設定沒上，收回這隻

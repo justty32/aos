@@ -16,7 +16,7 @@ flags:
   -t, --target NAME   which agent (default: $AOS_AGENT)
   -h, --help          show this help
 
-Prints its state, paths, queue, latest answer and tool overlay on stdout.
+Prints its state, paths, queue, latest answer and its own tool changes on stdout.
 exit codes: 0 shown; 1 error (TargetMissing, InstanceMissing...).
 more: proto8/cmd/aos-agent/README.md
 """
@@ -56,7 +56,7 @@ def cmd(argv):
 
 
 def overlay_count(a):
-    """ctl state 的一行（11-05 feat-proto 件 1）：這隻宣告的 tools 覆蓋層 加了幾個、拿掉幾個；沒覆蓋層＝None。"""
+    """ctl state 的一行（11-05 feat-proto 件 1）：這隻自己那份 tools（stack 裡、$override 定義那份）加了幾個、拿掉幾個、疊在誰上面；沒有＝None。"""
     try:
         folder, decl = agent_decl(a)
         rel = declared_files(folder).get("tools")
@@ -70,7 +70,13 @@ def overlay_count(a):
     try:
         with open(p, encoding="utf-8") as f:
             o = json.load(f)
-        add, rm = o.get("add") or {}, o.get("rm") or []
-        return "overlay: %d added, %d removed (%s)" % (len(add), len(rm), ", ".join(["+" + n for n in add] + ["-" + n for n in rm]) or "empty")
+        tools = o.get("tools") or {}                 # 11-10 aos-tools-cli 步 4：{"$override": 底檔, "tools": {加的…, "拿掉的": null}}
+        if not isinstance(tools, dict):
+            raise TypeError("tools is not an object")
+        add = sorted(n for n, e in tools.items() if e is not None)
+        rm = sorted(n for n, e in tools.items() if e is None)
+        base = o.get("$override")
+        over = " over %s" % json.dumps(base, ensure_ascii=False) if base is not None else ""
+        return "own: %d added, %d removed (%s)%s" % (len(add), len(rm), ", ".join(["+" + n for n in add] + ["-" + n for n in rm]) or "empty", over)
     except (OSError, ValueError, AttributeError, TypeError) as e:
-        return "overlay unreadable: %s (%s)" % (p, e)
+        return "own tools file unreadable: %s (%s)" % (p, e)

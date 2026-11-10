@@ -1,4 +1,5 @@
-# aos_agent/tools.py - 分層解析工具命令並管理 agent 的工具覆蓋層與重設確認。
+# aos_agent/tools.py - 分層解析工具命令並管理 agent 自己那份工具登記檔（$override 定義那份）與重設確認。
+import json
 import os
 import subprocess
 import sys
@@ -20,7 +21,8 @@ flags:
   -j, --json   print one JSON array
   -h, --help   show this help
 
-Print NAME TAB KIND TAB PATH per tool; the definition is merged with this agent's overlay.
+Print NAME TAB KIND TAB PATH per tool: this agent's own registry when it has one
+(it overrides the definition's), else the definition's.
 exit codes: 0 listed; 1 error (ToolsMissing, RegistryBad, ToolDefBad...).
 """,
     "get": """aos-agent tools get - print a tool definition matching a name or path
@@ -34,17 +36,19 @@ flags:
 Print one JSON object per matching tool, including its tooldef and optional metainfo.
 exit codes: 0 printed; 1 error (ToolMissing, ToolsMissing...).
 """,
-    "add": """aos-agent tools add - add a tool to this agent's overlay
+    "add": """aos-agent tools add - add a tool for this agent only
 
-usage: aos-agent [--daemon D] tools [--target NAME] add [--override] [--no-cache] NAME PATH
+usage: aos-agent [--daemon D] tools [--target NAME] add [--replace] [--no-cache] NAME PATH
        aos-agent tools add --help
 
 flags:
-  --override   replace an existing name
+  --replace    replace a tool already listed under NAME
   --no-cache   inspect executable tool definitions each time
   -h, --help   show this help
 
-Only this agent's overlay changes; PATH is resolved from the current directory.
+Written to this agent's own registry in its stack, which overrides the definition's
+("$override"); the definition stays as it is. The first add or rm creates that file.
+PATH is resolved from the current directory.
 exit codes: 0 added; 1 error (ToolExists, PathMissing, ToolsMissing...).
 """,
     "rm": """aos-agent tools rm - remove a tool from this agent's toolbox
@@ -55,10 +59,10 @@ usage: aos-agent [--daemon D] tools [--target NAME] rm NAME
 flags:
   -h, --help   show this help
 
-Record the removal in this agent's overlay; the definition stays as it is.
+Record the removal ("NAME": null) in this agent's own registry; the definition stays as it is.
 exit codes: 0 removed; 1 error (ToolMissing, ToolsMissing...).
 """,
-    "reset": """aos-agent tools reset - delete this agent's tools overlay
+    "reset": """aos-agent tools reset - delete this agent's own tools registry
 
 usage: aos-agent [--daemon D] tools [--target NAME] reset [-y]
        aos-agent tools reset --help
@@ -83,7 +87,7 @@ flags:
   -t, --target NAME   which agent (default: $AOS_AGENT)
   -h, --help          show this help
 
-No ACTION means ls. Changes belong to this agent's overlay of the definition's toolbox.
+No ACTION means ls. Changes go to this agent's own registry, which overrides the definition's.
 exit codes: 0 ok; 1 error (TargetMissing, ToolsMissing...); 130 Ctrl-C.
 """ % actions(HELPS.values(), "aos-agent [--daemon D] tools [--target NAME] ")
 SUBS = {name: name for name in HELPS}
@@ -92,21 +96,61 @@ def tools_env(a):
     return dict(os.environ, AOS_STACK=a.stack, AOS_WS=a.ws)
 
 
-def aos_tools(a, reg, over, args):
-    """aos-tools --file <定義的宣告檔> --overlay <stack>/<宣告相對路徑> …（疊法、寫法都歸 aos-tools；覆蓋層不在＝就是定義那份）。"""
-    r = subprocess.run([sys.executable, TOOLS, "--file", reg, "--overlay", over] + list(args), stderr=subprocess.PIPE, text=True, env=tools_env(a))
+OVERRIDE_KEY = "$override"   # 跟 aos-tools 同一個 key（使用者 11-10 K1「現在就寫 $override」）
+
+
+def aos_tools(a, f, args):
+    """aos-tools --file F …（11-10 aos-tools-cli 步 4：只傳一份；疊法、寫法都歸 aos-tools，stack 那份用 $override 指回定義那份）。"""
+    r = subprocess.run([sys.executable, TOOLS, "--file", f] + list(args), stderr=subprocess.PIPE, text=True, env=tools_env(a))
     pass_err(r.returncode, r.stderr)
 
 
+def pointer_for(a, orig, over, rel):
+    """第一次建 stack 那份時寫的 $override（使用者 11-10 N2「跟你加 agent 時的寫法走」）：ctl add 給定義時是 $env 指示詞
+    （daemon 表的 as_written.def，只讀）＝原樣接上宣告的相對路徑；其餘（絕對字串在表上分不出原寫法）＝相對 stack 那份的資料夾。"""
+    aw = (a.row.get("as_written") or {}).get("def") if isinstance(a.row.get("as_written"), dict) else None
+    if isinstance(aw, dict) and "$env" in aw and "$ref" not in aw and "$prefix" not in aw:
+        p = dict(aw)
+        p["$path"] = (aw.get("$path") or "").rstrip("/") + "/" + rel.lstrip("/")
+        return p
+    return os.path.relpath(orig, os.path.dirname(os.path.abspath(over)))
+
+
+def check_pointer(over, orig):
+    """stack 那份的 $override 解出來不是這隻定義的那份＝一行 warning（04 N2 後果：stack 被 cp 去配另一個定義時，指標不會跟著變）。
+    只讀、解不開就不說（讀它的 aos-tools 自己會報）。"""
+    try:
+        with open(over, encoding="utf-8") as f:
+            v = json.load(f).get(OVERRIDE_KEY)
+    except (OSError, ValueError, AttributeError):
+        return
+    if v is None:
+        return
+    items, folder, found = (v if isinstance(v, list) else [v]), os.path.dirname(os.path.abspath(over)), []
+    for item in items:
+        if isinstance(item, dict):
+            try:
+                r = subprocess.run(["aos-directive"], input=json.dumps({"v": item}), stdout=subprocess.PIPE,
+                                   stderr=subprocess.DEVNULL, text=True, cwd=folder)
+                item = json.loads(r.stdout).get("v") if r.returncode == 0 else None
+            except (OSError, ValueError):
+                item = None
+        if isinstance(item, str) and item:
+            found.append(os.path.realpath(os.path.join(folder, item)))
+    if found and os.path.realpath(orig) not in found:
+        note("this agent's %s overrides %s, not its definition's %s (was the stack copied from another agent?)"
+             % (over, ", ".join(found), orig))
+
+
 def cmd(argv):
-    """tools（11-05 portable-flow 步 4，使用者「tools只存差異」）：<stack>/<宣告相對路徑> 是這隻的覆蓋層 {"add": {…}, "rm": […]}，
-    不是定義的副本；身體每格讀「定義疊覆蓋層」。說明在 cmd/aos-agent/README.md「tools 覆蓋層」。"""
+    """tools（11-05 portable-flow 步 4，使用者「tools只存差異」；11-10 aos-tools-cli 步 4 改形狀）：<stack>/<宣告相對路徑> 是這隻自己那份，
+    {"$override": 定義那份, "tools": {加的…, "拿掉的": null}}；在就用它，不在就用定義那份。說明在 cmd/aos-agent/README.md「tools 覆蓋層」。"""
     opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",))
     act, args = (rest[0], rest[1:]) if rest else ("ls", [])
     if act not in SUBS:
         raise Fail("CommandUnknown", "tools: unknown subcommand %s (ls, get, add, rm, reset; see aos-agent tools --help)" % act)
     switches = {"ls": {"--json": "json"},
-                "add": {"--override": "override", "--no-cache": "no_cache"},
+                "add": {"--replace": "replace", "--no-cache": "no_cache"},
                 "reset": {"--yes": "yes"}}.get(act, {})
     shorts = {"ls": ("-j",), "reset": ("-y",)}.get(act, ())
     topts, args = parse(args, {}, switches, help=HELPS[act], short=shorts)
@@ -125,30 +169,44 @@ def cmd(argv):
         raise bad_args(HELPS[act], "%s needs %d arguments" % (act, count))
     if act in ("ls", "get"):
         if os.path.isfile(over):
-            note("definition %s with this agent's overlay %s on top" % (orig, over))
+            note("using this agent's %s (it overrides the definition's %s)" % (over, orig))
+            check_pointer(over, orig)
         else:
-            note("using the definition's %s (this agent has no overlay)" % orig)
-        return aos_tools(a, orig, over, [act] + (["--json"] if topts.get("json") else []) + args)
+            note("using the definition's %s (this agent has no file of its own)" % orig)
+        f = over if os.path.isfile(over) else orig
+        return aos_tools(a, f, [act] + (["--json"] if topts.get("json") else []) + args)
     if act == "reset":
         if os.path.isfile(over):
-            question = "delete the tools overlay %s of %s (back to the definition's %s)?" % (over, a.name, orig)
+            question = "delete the tools file %s of %s (back to the definition's %s)?" % (over, a.name, orig)
             if not aos_flags.confirm(PROG, question, yes=topts.get("yes", False)):
                 aos_flags.warn(PROG, "nothing done")
                 return 0
             os.unlink(over)
-            print("deleted overlay %s; back to the definition's %s only" % (over, orig))
+            print("deleted %s; back to the definition's %s only" % (over, orig))
         else:
-            print("there was no overlay (using the definition's %s)" % orig)
+            print("there was no file of this agent's own (using the definition's %s)" % orig)
         return
-    if act == "add":                                  # 11-05 edge-agent：撞名時 aos-tools 說「加 --override」，原本這裡收不了
-        targs = ["add"] + (["--override"] if topts.get("override") else []) + (["--no-cache"] if topts.get("no_cache") else []) \
-            + ["--name", args[0], args[1]]           # 照使用者的寫法轉（同一個 cwd）：絕對存絕對、相對存相對覆蓋層（11-10 TC）
+    if act == "add":                                  # 11-05 edge-agent：撞名時 aos-tools 說「加 --replace」，這裡收得了
+        targs = ["add"] + (["--replace"] if topts.get("replace") else []) + (["--no-cache"] if topts.get("no_cache") else []) \
+            + ["--name", args[0], args[1]]           # 照使用者的寫法轉（同一個 cwd）：絕對存絕對、相對存相對 stack 那份（11-10 TC）
     elif act == "rm":
         targs = ["rm", args[0]]
     else:
-        raise Fail("CommandUnknown", "tools: unknown action %s (ls, get, add [--override] [--no-cache], rm, reset)" % act)
+        raise Fail("CommandUnknown", "tools: unknown action %s (ls, get, add [--replace] [--no-cache], rm, reset)" % act)
     made = not os.path.isfile(over)
-    aos_tools(a, orig, over, targs)                   # 失敗＝aos-tools 不寫（覆蓋層照舊）
+    if made and os.path.isfile(orig):                 # 第一次：先建 {"$override": 定義那份}；定義那份不在＝add 直接新建一般登記檔
+        r = subprocess.run([sys.executable, TOOLS, "--file", over, "override", "--path-json",
+                            json.dumps(pointer_for(a, orig, over, rel))],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, env=tools_env(a))
+        pass_err(r.returncode, r.stderr)
+    elif not made:
+        check_pointer(over, orig)
+    try:
+        aos_tools(a, over, targs)
+    except SystemExit:
+        if made and os.path.isfile(over) and os.path.isfile(orig):
+            os.unlink(over)                           # 剛建的只有指標；add／rm 沒成＝收回，不留一份空的
+        raise
     if made:
-        note("created overlay %s (it records only what this agent added or removed; later changes to the definition still show through; tools reset deletes it)" % over)
+        note("created %s (it records only what this agent added or removed; later changes to the definition still show through; tools reset deletes it)" % over)
     warn_shared(a, folder)

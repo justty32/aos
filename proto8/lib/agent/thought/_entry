@@ -9,7 +9,7 @@
 #   沒給 path＝照抄我自己工具箱裡同名那支〔aos-agent tools ls --json〕，沒有＝ToolMissing），沒給 tools＝保留定義的工具組；[]＝清空；endpoint＝子的腦，沒給＝同父（aos-agent llm show 父的 endpoint；父沒寫或沒宣告 llm＝範本預設；llm show 其他錯〔看不到父的定義等〕＝接它的代號報錯，不默默換腦）；
 #   max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、只要求有限正數；keep 預設 false。
 # 一次叫＝aos-agent --daemon $AOS_DAEMON 的五步：ctl who（我是誰、我的深度）→ ctl add 範本（--name t-<父名前32字>-<UTC毫秒>-<4位hex>、--ws 我的 $AOS_WS）→
-#   子的覆蓋層 llm set endpoint／tools rm／tools add --override → say 開場文（固定英文段＋goal＋context）＋listen --timeout-s／--timeout-cycles →
+#   子的覆蓋層 llm set endpoint／tools rm／tools add --replace → say 開場文（固定英文段＋goal＋context）＋listen --timeout-s／--timeout-cycles →
 #   預設 ctl rm 子（stack 刪掉、不印 details）；keep: true＝留著但 ctl stop（不佔 loop；要追問 ctl start 再 say）、結論後多一行 details: <子的 stack，相對 $AOS_DAEMON>/。
 #   ctl add 之後到 say 之前任一步失敗（tools ls、設定那幾步）＝當下 ctl rm 收回再報錯（不算子的失敗）；收不回＝紀錄留 running 租約，過期後下一次叫的對帳收。
 # 子名每次唯一：mkdir $AOS_STACK/children/<子名>/，撞表或資料夾最多重試五次。
@@ -429,7 +429,7 @@ if tools is not None:                          # 沒給＝保留定義的工具�
     wanted = {t for t, _ in tool_list}
     steps += [("tools rm " + t["name"], ["tools", "--target", kid, "rm", t["name"]])
               for t in listed if isinstance(t, dict) and t.get("name") not in wanted]
-    steps += [("tools add " + t, ["tools", "--target", kid, "add", "--override", t, p]) for t, p in tool_list]
+    steps += [("tools add " + t, ["tools", "--target", kid, "add", "--replace", t, p]) for t, p in tool_list]
 for what, argv in steps:
     _, err = agent(argv)
     if err:

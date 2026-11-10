@@ -66,10 +66,8 @@ def effective_stage(definition, stack):
     relative = declared_files(definition).get('tools')
     if not relative:
         return 'none', []
-    args = ['aos-tools', '--file', str(definition / relative)]
-    overlay = stack / relative
-    if overlay.exists():
-        args += ['--overlay', str(overlay)]
+    own = stack / relative                    # the agent's own registry "$override"s the definition's (aos-tools merges)
+    args = ['aos-tools', '--file', str(own if own.is_file() else definition / relative)]
     result = subprocess.run(args + ['ls', '--json'], capture_output=True, text=True)
     if result.returncode:
         raise ValueError('cannot list effective tools for %s (exit %d)' % (definition, result.returncode))

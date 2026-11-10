@@ -1,4 +1,4 @@
-"""Test aos-tools path forms: overlay directives (path and env), add keeping the user's form, --path-json, and the PathMissing line."""
+"""Test aos-tools path forms: directives in an overriding registry (path and env), add keeping the user's form, --path-json, and the PathMissing line."""
 import json
 import os
 from pathlib import Path
@@ -31,6 +31,11 @@ class PathForms(unittest.TestCase):
         self.reg.parent.mkdir()
         self.over.parent.mkdir()
 
+    def over_with(self, tools):
+        if not self.reg.exists():
+            self.reg.write_text(json.dumps({"tools": {}}))
+        self.over.write_text(json.dumps({"$override": "../def/tools.json", "tools": tools}))
+
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
@@ -49,49 +54,49 @@ class PathForms(unittest.TestCase):
             data = data[k]
         return data
 
-    # ---- 1. overlay directives ----
+    # ---- 1. directives in a file that overrides another ----
 
     def test_overlay_env_path_resolved_each_time_and_not_written_back(self):
-        self.over.write_text(json.dumps({"add": {"wc": {"path": {"$env": "TC_ROOT", "$path": "/lib/base/wall_clock"}}}}))
+        self.over_with({"wc": {"path": {"$env": "TC_ROOT", "$path": "/lib/base/wall_clock"}}})
         before = self.over.read_text()
-        r = self.ok("--file", self.reg, "--overlay", self.over, "ls", TC_ROOT=str(PROTO))
+        r = self.ok("--file", self.over, "ls", TC_ROOT=str(PROTO))
         self.assertIn("wc\tdir\t%s" % TOOL, r.stdout)
         # 換一份「proto8」：值跟著換（每次用到才解）
         other = self.tmp / "other"
         shutil.copytree(TOOL, other / "lib" / "base" / "wall_clock")
-        r = self.ok("--file", self.reg, "--overlay", self.over, "ls", TC_ROOT=str(other))
+        r = self.ok("--file", self.over, "ls", TC_ROOT=str(other))
         self.assertIn(str(other / "lib" / "base" / "wall_clock"), r.stdout)
         self.assertEqual(self.over.read_text(), before)
 
     def test_overlay_env_field_resolved(self):
-        self.over.write_text(json.dumps({"add": {"wc": {"path": str(TOOL), "env": {"AOS_MEMORY": {"$env": "TC_KB"}}}}}))
-        self.ok("--file", self.reg, "--overlay", self.over, "ls", TC_KB="/x/kb")
+        self.over_with({"wc": {"path": str(TOOL), "env": {"AOS_MEMORY": {"$env": "TC_KB"}}}})
+        self.ok("--file", self.over, "ls", TC_KB="/x/kb")
 
     def test_overlay_env_unset_names_file(self):
-        self.over.write_text(json.dumps({"add": {"wc": {"path": {"$env": "TC_ROOT", "$path": "/lib/base/wall_clock"}}}}))
-        r = self.run_tools("--file", self.reg, "--overlay", self.over, "ls")
+        self.over_with({"wc": {"path": {"$env": "TC_ROOT", "$path": "/lib/base/wall_clock"}}})
+        r = self.run_tools("--file", self.over, "ls")
         self.assertEqual(r.returncode, 1)
         self.assertIn("DirectiveBad", r.stderr)
         self.assertIn(str(self.over), r.stderr)
         self.assertIn("TC_ROOT", r.stderr)
 
     def test_missing_target_names_file_field_and_value(self):
-        self.over.write_text(json.dumps({"add": {"wc": {"path": {"$env": "TC_ROOT", "$path": "/nowhere"}}}}))
-        r = self.run_tools("--file", self.reg, "--overlay", self.over, "ls", TC_ROOT="/tmp/none-such")
+        self.over_with({"wc": {"path": {"$env": "TC_ROOT", "$path": "/nowhere"}}})
+        r = self.run_tools("--file", self.over, "ls", TC_ROOT="/tmp/none-such")
         self.assertEqual(r.returncode, 1)
         self.assertIn("PathMissing", r.stderr)
-        self.assertIn("#/add/wc/path", r.stderr)
+        self.assertIn("#/tools/wc/path", r.stderr)
         self.assertIn("/tmp/none-such/nowhere", r.stderr)
 
     def test_overlay_write_keeps_other_directives(self):
-        self.over.write_text(json.dumps({"add": {"a": {"path": {"$env": "TC_ROOT", "$path": "/lib/base/wall_clock"}}}}))
-        self.ok("--file", self.reg, "--overlay", self.over, "add", "-n", "b", TOOL, TC_ROOT=str(PROTO))
-        self.assertEqual(self.stored(self.over, "add", "a", "path"), {"$env": "TC_ROOT", "$path": "/lib/base/wall_clock"})
-        self.assertEqual(self.stored(self.over, "add", "b", "path"), str(TOOL))
+        self.over_with({"a": {"path": {"$env": "TC_ROOT", "$path": "/lib/base/wall_clock"}}})
+        self.ok("--file", self.over, "add", "-n", "b", TOOL, TC_ROOT=str(PROTO))
+        self.assertEqual(self.stored(self.over, "tools", "a", "path"), {"$env": "TC_ROOT", "$path": "/lib/base/wall_clock"})
+        self.assertEqual(self.stored(self.over, "tools", "b", "path"), str(TOOL))
 
     def test_overlay_plain_unchanged(self):
-        self.over.write_text(json.dumps({"add": {"wc": {"path": os.path.relpath(TOOL, self.over.parent)}}, "rm": []}))
-        r = self.ok("--file", self.reg, "--overlay", self.over, "ls")
+        self.over_with({"wc": {"path": os.path.relpath(TOOL, self.over.parent)}})
+        r = self.ok("--file", self.over, "ls")
         self.assertIn(str(TOOL), r.stdout)
 
     # ---- 8. add keeps the user's form ----
@@ -108,8 +113,9 @@ class PathForms(unittest.TestCase):
         self.assertEqual(self.stored(self.reg, "tools", "wall_clock", "path"), os.path.relpath(TOOL, self.reg.parent))
 
     def test_add_relative_overlay_relative_to_overlay(self):
-        self.ok("--file", self.reg, "--overlay", self.over, "add", os.path.relpath(TOOL, self.tmp))
-        self.assertEqual(self.stored(self.over, "add", "wall_clock", "path"), os.path.relpath(TOOL, self.over.parent))
+        self.over_with({})
+        self.ok("--file", self.over, "add", os.path.relpath(TOOL, self.tmp))
+        self.assertEqual(self.stored(self.over, "tools", "wall_clock", "path"), os.path.relpath(TOOL, self.over.parent))
 
     def test_add_path_json_stored_as_given(self):
         value = {"$env": "TC_ROOT", "$path": "/lib/base/wall_clock"}

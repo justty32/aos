@@ -26,7 +26,7 @@
 | [`aos_agent/llm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/llm.py) | 分層解析腦設定命令並管理 agent 的覆蓋鍵與重設確認。 |
 | [`aos_agent/say.py`](../../../../../proto8/cmd/aos-agent/aos_agent/say.py) | 寄一則訊息到 agent 的 queue。 |
 | [`aos_agent/screen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/screen.py) | 開啟、關閉與追蹤 agent 的畫面子介面。 |
-| [`aos_agent/tools.py`](../../../../../proto8/cmd/aos-agent/aos_agent/tools.py) | 分層解析工具命令並管理 agent 的工具覆蓋層與重設確認。 |
+| [`aos_agent/tools.py`](../../../../../proto8/cmd/aos-agent/aos_agent/tools.py) | 分層解析工具命令並管理 agent 自己那份工具登記檔（$override 定義那份）與重設確認。 |
 | [`bin/aos-agent`](../../../../../proto8/cmd/aos-agent/bin/aos-agent) | 統一的 agent 介面：管掛在 aos-daemon 上的一隻 agent（eca、loop／fsm agent 都一樣），每個子命令只管一隻（11-04）。 |
 | [`stack.gitattributes`](../../../../../proto8/cmd/aos-agent/stack.gitattributes) | 把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件） |
 | [`stack.gitignore`](../../../../../proto8/cmd/aos-agent/stack.gitignore) | 可選的 stack 排除範本：暫存、鎖、本機資料與可重建紀錄不進 git。 |
