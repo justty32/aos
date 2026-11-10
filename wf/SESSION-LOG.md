@@ -8,6 +8,7 @@
 
 ## 最新進度
 
+- **open｜mailbox（使用者 11-10 晚「a2a看過了，太繁重了。我們先做純inbox協議。這次就叫mailbox。」）**：設計頁 [01](../proto8/thinking/2026-11/10/mailbox/01-設計.md) 已出（`aos-mailbox` 指令＋`mailbox_peek`／`mailbox_read`／`mailbox_send`，代定 11 條）；施工中：指令 → 三支工具 → 範本登記 → 測試文件 → 驗收（fsm 假腦、gemma、eca haiku）→ [mailbox](../proto8/thinking/2026-11/10/mailbox/README.md)
 - **open｜agents-split（使用者 11-10 晚「我希望拆成幾大塊：掌管子agent的管理與生滅，掌管agent定義的創造修改，掌管與其他agent的交流」「命名好後讓我看看」）**：圖紙第一段已出（[01 拆法與命名](../proto8/thinking/2026-11/10/agents-split/01-拆法與命名.md)：`children`／`agent_add`／`defs` 加 `new`，代定 10 條）；**停在等使用者看名字**，點頭後施工（舊 `agents` 整支拿掉）→ [agents-split](../proto8/thinking/2026-11/10/agents-split/README.md)
 - **done｜self-family（使用者 11-10 晚 self_history 五題「1.全給，風險自己擔。2.可以。3.可選，默認搬到旁邊(可以選要搬到哪) 4.接受縮水版。5.對」）**：做完——`aos-agent history`（ls／rm／summarize／set、原文搬到 history_removed.jsonl）→ `self_history` 包裝（這一步鎖著）→ eca 縮水版（history 被改過＝下一輪開新對話）→ 文件；假腦、gemma 真腦驗過；eca 真對話在 WAIT_USER；self_hook 另一隊 → [self-family 01](../proto8/thinking/2026-11/10/self-family/01-施工結果.md)
 - **open｜json-memory（使用者 11-10 晚「記憶庫這東西，我原本以爲會是純json做的」「直接開工」）**：圖紙已出（[02～05](../proto8/thinking/2026-11/10/json-memory/README.md)，代定 15 條在 05）；施工中：S1 工具重寫（memory／memory_write，鎖拿掉）與 S2 `knowledge/aos` 轉檔同時做 → S3 最小可玩驗收（fsm 假腦、gemma 真腦、eca 不燒額度的部分）→ S4 連帶（memory_export、memory_sync、文件、條文加註）
