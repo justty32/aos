@@ -1,6 +1,6 @@
 # How to make a tool from this folder (tool-python skeleton)
 
-This folder is one working tool. It adds two numbers. To make your own tool, change **only `tool.py`**, and only the part under `# ---- your tool`.
+This folder is one working tool. It adds two numbers. To make your own tool, change **only `tool.py`**, and only the part under `# ---- your tool`. Use `edit` on that part; do not write a new `tool.py` from scratch (the lines at the top load the helper, and the last line `ts.main(...)` runs your tool).
 
 ## Files
 
@@ -15,7 +15,7 @@ After you change `tool.py`, run `tools_def` with `{"op": "check", "path": "<this
 
 ## The four things you write in tool.py
 
-1. `DESCRIPTION`: one string. What the tool does, plus one example call and its result.
+1. `DESCRIPTION`: one string. What the tool does, plus one example written as `Example: {"a": 6, "b": 7} -> 42`. `tools_def` check runs this example and says `bad` if your tool gives something else, so make it true.
 2. `PARAMS`: a list. One `ts.param(name, type, description)` per argument.
    - `type` is one of: `"string"`, `"integer"`, `"number"`, `"boolean"`, `"array"`, `"object"`.
    - Optional argument: add `default=...`, like `ts.param("times", "integer", "how many times", default=1)`.
@@ -52,7 +52,7 @@ def run(args):
 ts.main(run, DESCRIPTION, PARAMS, META)
 ```
 
-Check it, and try it once: `tools_def` with `{"op": "check", "path": "my_tools/mul", "sample": {"a": 6, "b": 7}}`. The last lines say `try: ok ... 42` and `stage: 3 of 3`. Then `self_tools` with `{"op": "add", "path": "my_tools/mul"}`, and next turn call `mul` with `{"a": 6, "b": 7}`.
+Check it, and try it once: `tools_def` with `{"op": "check", "path": "my_tools/mul", "sample": {"a": 6, "b": 7}}`. The last lines say `ok    example: ... -> 42`, `ok    try: ... 42` and `stage 3 of 3`. Then `self_tools` with `{"op": "add", "path": "my_tools/mul"}`, and next turn call `mul` with `{"a": 6, "b": 7}`.
 
 ## What the tool does for you
 

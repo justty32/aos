@@ -64,7 +64,7 @@ class ToolsDef(unittest.TestCase):
                 self.assertEqual(r.returncode, 1)
                 self.assertIn(want, r.stdout)
                 self.assertIn("fix the lines marked bad", r.stdout)
-                self.assertTrue(r.stdout.endswith("tools_def: error: ToolBad 1 problem(s) above; fix the lines marked bad and check again\n"), r.stdout)
+                self.assertRegex(r.stdout, r"tools_def: error: ToolBad \d problem\(s\) above; fix the lines marked bad and check again\n\Z")
 
     def test_check_catches_overwritten_or_unchanged_skeleton(self):
         r = self.run_tool({"op": "new", "path": "t/plain"})
@@ -77,6 +77,15 @@ class ToolsDef(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("bad   defs: tool.py does not use tool_spec any more", r.stdout)
         self.assertIn("skip  try: not tried", r.stdout)
+
+    def test_example_in_description_is_tried(self):
+        script = self.make_mul()
+        r = self.run_tool({"op": "check", "path": "t/mul"})
+        self.assertIn('ok    example: {"a": 6, "b": 7} -> 42 (as the description says)', r.stdout)
+        script.write_text(script.read_text().replace('args["a"] * args["b"]', 'args["a"] + args["b"]'))   # gemma 第 3 輪：只改了說明
+        r = self.run_tool({"op": "check", "path": "t/mul"})
+        self.assertEqual(r.returncode, 1)
+        self.assertIn('bad   example: the description says {"a": 6, "b": 7} -> 42, but the tool gave 13', r.stdout)
 
     def test_check_json_file_and_pointer(self):
         script = self.make_mul()

@@ -258,6 +258,19 @@ def regenerate(script, location, base):
     return True
 
 
+EXAMPLE_RE = re.compile(r"Example:\s*(\{[^\n]*?\})\s*->\s*([^\n]+)")
+
+
+def same(got, want):
+    """結果與說明裡的例子一樣嗎：字面相同，或兩邊都是數字且相等（42 與 42.0）。"""
+    if got == want or got == want.strip("`'\""):
+        return True
+    try:
+        return float(got) == float(want.strip("`'\""))
+    except ValueError:
+        return False
+
+
 def skeleton_description():
     try:
         with open(os.path.join(SKELETON, "_tooldef.json"), encoding="utf-8") as f:
@@ -327,6 +340,20 @@ def op_check():
         has_td = not probs
     elif not has_td:
         line("bad", "tooldef: none (fix: describe the tool in a tool_spec script, or write %s)" % ("_tooldef.json" if obj is None else "a _tooldef key"))
+    example = EXAMPLE_RE.search(td.get("description", "")) if has_td and isinstance(td, dict) and runnable and made else None
+    if example:
+        try:
+            ex_args = json.loads(example.group(1))
+        except ValueError:
+            ex_args = None
+        if isinstance(ex_args, dict):
+            code, out, err = run(["aos-exec", "--ws", tool_io.workspace(), full], tool_io.workspace(), json.dumps(ex_args), RUN_S)
+            want, got = example.group(2).strip().rstrip("."), out.strip()
+            if code == 0 and same(got, want):
+                line("ok", "example: %s -> %s (as the description says)" % (example.group(1), got))
+            else:
+                line("bad", "example: the description says %s -> %s, but the tool gave %s (fix run(args), or the example in DESCRIPTION)"
+                     % (example.group(1), want, got if code == 0 else "exit %s: %s" % (code, last_line(out, err))))
     if sample is not None:
         if not runnable or not made:
             line("skip", "try: not tried (fix the lines marked bad first)")
@@ -345,7 +372,9 @@ def op_check():
     elif runnable and has_td and ptr is not None:
         what = "a tool (self_tools add cannot take FILE#/POINTER yet)"
     elif runnable and has_td:
-        what = "a tool: add it with self_tools {\"op\": \"add\", \"path\": %s}" % json.dumps(location)
+        call = "%s %s" % (os.path.basename(path.rstrip("/")) if obj is None else "<its name>", json.dumps(sample, ensure_ascii=False) if sample is not None else "{...}")
+        what = ("a tool: add it with self_tools {\"op\": \"add\", \"path\": %s}; from your next turn call it directly "
+                "by its name, like any other tool: %s" % (json.dumps(location), call))
     else:
         what = "a runnable function" if runnable else "not runnable yet"
     line("stage", "%d of 3 (entry, _metainfo, _tooldef)%s - %s" % (n, "; missing: " + ", ".join(missing) if missing else "", what))
