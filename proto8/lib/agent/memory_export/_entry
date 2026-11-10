@@ -5,8 +5,8 @@
 # 介面（lib/docs/01 契約）：stdin {"path"?: 統一路徑, "max_bytes"?: N}。庫根與統一路徑的認法跟 memory 一模一樣
 #   （_memory.json 的 base ＞ $AOS_MEMORY；`資料夾/檔.json#/JSON Pointer`，相對從庫根算，"" 或 "/"＝根），共用 lib/agent/memory_fs.py，不 import 隔壁工具。
 # stdout：從 path（沒給＝根）開始深度優先；每個位置先一行「<!-- node: 路徑 -->」（路徑可直接貼回 memory 的 path），接著：
-#   資料夾或有 _index 的物件＝"." 格的簡介，再依序印表裡的格（照表的順序）、再印表沒列的（not in index）；
-#   字串＝原文照接（標題層級不改）；其他 JSON 值（沒 _index 的物件、陣列、數字…）＝包成 ```json 區塊；
+#   資料夾或有 _index 的物件＝自己的簡介（資料夾的 _description.json、物件的 _description key），再依序印表裡的格（照表的順序）、再印表沒列的（not in index）；
+#   只有 _description 沒 _index 的物件＝簡介，其餘 key 包成 ```json 區塊；字串＝原文照接（標題層級不改）；其他 JSON 值（沒 _index 的物件、陣列、數字…）＝包成 ```json 區塊；
 #   非 .json 檔＝UTF-8 原文，不是 UTF-8＝「binary file, N bytes」；指不到／讀不到的格＝一行括號裡的代號與原因、照樣往下。位置之間空一行。
 #   防繞圈：走過的（實體路徑, 指標）再遇到＝只印一行「already exported above; not followed」；$env 格只跳一次、不連跳。
 #   超過 max_bytes（預設 50000）就截，最後一行「[truncated: N more bytes; export a child path]」。
@@ -38,8 +38,9 @@ Print a whole memory (folders and .json files), or the subtree at path, as one
 Markdown document, for people. path looks like folder/file.json#/key (as in tool
 memory); "" or "/" is the root (default).
 Each place starts with a line <!-- node: PATH -->. A folder or an object with
-_index prints its "." description, then its index entries in order, then what
-the index does not list. Strings are printed as they are; other JSON values go
+_index prints its own description (a folder's _description.json, an object's
+_description key), then its index entries in order, then what the index does
+not list. Strings are printed as they are; other JSON values go
 in a ```json block. A place already printed is not followed again. Output over
 max_bytes (default 50000) is cut; then export a child path.
 Needs aos-json on PATH. The root comes from _memory.json next to the tool,
@@ -58,11 +59,14 @@ ToolError = fs.ToolError
 DEFAULT_MAX_BYTES = 50000
 
 
-def body(kind, value, table):
+def body(loc, kind, value, table):
     """這個位置自己要印的那段（不含子孫）。"""
+    intro = fs.intro(kind, loc, value, lambda f: fs.get(fs.Loc(f, None))).rstrip("\n")
     if kind == "folder" or table is not None:
-        intro = fs.self_cell(table).get("_description")
-        return intro.rstrip("\n") if isinstance(intro, str) and intro else ""
+        return intro
+    if intro:
+        rest = fs.without_intro(value)
+        return intro + ("\n\n```json\n%s\n```" % json.dumps(rest, ensure_ascii=False, indent=2) if rest else "")
     if kind == "binary":
         return "binary file, %d bytes" % value
     if kind == "text" or isinstance(value, str):
@@ -80,12 +84,12 @@ def export(root, loc, out, seen, via_env, first=False):
     seen.add(key)
     try:
         kind, value, table, kids = fs.load(root, loc)
+        text = body(loc, kind, value, table)
     except ToolError as error:
         if first:
             raise
         out.append("%s\n(%s %s)" % (head, error.code, error))
         return
-    text = body(kind, value, table)
     out.append(head + ("\n" + text if text else ""))
     if kind != "folder" and table is None:
         return                                   # 沒 _index 的物件、陣列整個在 ```json 裡，不再往下拆

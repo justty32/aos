@@ -10,14 +10,14 @@
 
 | 分檔 | 涵蓋 |
 |---|---|
-| [01-樹長怎樣與多庫](docs/01-樹長怎樣與多庫.md) | 一棵樹長怎樣、統一路徑 `資料夾/檔.json#/指標`、`_index.json` 與 `_index` key 兩種表、`_description`、`"."` 格、`$ref`／`$env`、沒登記的東西；多庫＝根表多一格指到別的庫 |
-| [02-寫入與節點怎麼寫](docs/02-寫入與節點怎麼寫.md) | `memory_write` 的 `add`／`set`／`rm`、寫入只准在庫根底下、沒有鎖（後寫的蓋掉先寫的）、出廠庫由人設唯讀、git 的 ignore 規則、節點怎麼寫 |
+| [01-樹長怎樣與多庫](docs/01-樹長怎樣與多庫.md) | 一棵樹長怎樣、統一路徑 `資料夾/檔.json#/指標`、`_index.json` 與 `_index` key 兩種表、`_description`、自己的簡介（`_description.json`、`_description` key）、`$ref`／`$env`、沒登記的東西；多庫＝根表多一格指到別的庫 |
+| [02-寫入與節點怎麼寫](docs/02-寫入與節點怎麼寫.md) | `memory_write` 的 `add`／`set`／`rm`、寫入不限範圍（看權限）、自己的簡介怎麼改、沒有鎖（後寫的蓋掉先寫的）、出廠庫由人設唯讀、git 的 ignore 規則、節點怎麼寫 |
 
 ## 有哪些知識庫
 
 | 資料夾 | 內容 | 給誰 |
 |---|---|---|
-| [aos/](aos/_index.json) | aos 體系知識。根表 `"."`＝一頁簡介＋八個詞＋五條規則；`world.json`（心智模型與環境變數）、`me.json`（我是誰；`#/self_tools` 改自己的工具、`#/self_llm`）、`agents.json`（生子 agent；`#/thought`）、`brain.json`（問腦、endpoint 包、priority）、`status.json`（daemon 表與 phase）、`errors.json`（錯誤行 `程式: error: 代號 原因`、`warning:`、結束碼 10 與 `[exit code N]` 怎麼讀；`#/codes` 是代號結尾表（C-54 六種結尾＋`Internal`）、`#/common` 是最常碰到的代號）、`memory.json`（何時寫知識、先 find、一段 ≤ 2 KB、`add`／`set`／`rm` 怎麼叫）、`rules.json`（禁忌）、`cli/`（給人與外部 agent 的指令：aos-agent、aos-daemon-ctl、aos-tools、aos-grow、aos-eca-screen；旗標位置、短名、`-y` 與確認、錯誤與重試各一份） | 跑在 aos 裡的 agent（Haiku／luna 級小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
+| [aos/](aos/_index.json) | aos 體系知識。根的 `_description.json`＝一頁簡介＋八個詞＋五條規則；`world.json`（心智模型與環境變數）、`me.json`（我是誰；`#/self_tools` 改自己的工具、`#/self_llm`）、`agents.json`（生子 agent；`#/thought`）、`brain.json`（問腦、endpoint 包、priority）、`status.json`（daemon 表與 phase）、`errors.json`（錯誤行 `程式: error: 代號 原因`、`warning:`、結束碼 10 與 `[exit code N]` 怎麼讀；`#/codes` 是代號結尾表（C-54 六種結尾＋`Internal`）、`#/common` 是最常碰到的代號）、`memory.json`（何時寫知識、先 find、一段 ≤ 2 KB、`add`／`set`／`rm` 怎麼叫）、`rules.json`（禁忌）、`cli/`（給人與外部 agent 的指令：aos-agent、aos-daemon-ctl、aos-tools、aos-grow、aos-eca-screen；旗標位置、短名、`-y` 與確認、錯誤與重試各一份） | 跑在 aos 裡的 agent（Haiku／luna 級小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
 
 試一下（從 `proto8/`）：
 

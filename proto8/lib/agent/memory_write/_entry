@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-# memory_write - 改記憶庫：add／set／rm 一次寫好內容與它在表（_index.json 或 _index key）裡的那格；只寫庫根底下。
+# memory_write - 改記憶庫：add／set／rm 一次寫好內容與它在表（_index.json 或 _index key）裡的那格；寫到哪都行，看檔案權限。
 # 圖紙：proto8/thinking/2026-11/10/json-memory/03-工具.md（使用者 11-10 晚）。介面：stdin {"op": "add"|"set"|"rm", "path": 統一路徑,
 #   "value"?: 任何 JSON（非 .json 檔要字串）, "description"?: 字串, "recursive"?: bool}。path 寫法與庫根的找法同 memory（memory_fs）。
 #   add：path 以 / 結尾＝開資料夾（帶空的 _index.json）；否則新檔或物件裡新 key；description 必給，寫進上一層的表。
 #   set：位置要已在；換 value、換 description，或兩個一起。rm：刪檔、資料夾（不空要 recursive: true）或 key，連表裡那格一起拔。
+#   自己的簡介（資料夾的 _description.json、物件的 _description key）＝普通路徑照 add／set／rm：value 要字串、不給 description、不進表。
+#   寫入不限庫根底下（使用者 11-10「有權限就能動」），作業系統不讓寫＝WriteFailed；rm 庫根＝PathBad。
 #   不加鎖（使用者「不管，自行承擔風險」）；每份檔由 aos-json 暫存後原子 rename。
 # 結果 stdout：node: <路徑>，下一行 added／set／removed。錯：stderr 與 stdout 各一行「memory_write: error: 代號 原因」、退 1。
 import json
@@ -38,8 +40,12 @@ up to date (the folder's _index.json, or the object's _index key):
   set  replace the value, the description, or both; the place must exist.
   rm   delete a file, a key, or a folder (recursive: true if not empty),
        and its index entry.
-Writes must stay inside the memory root (after following symlinks). No locking:
-two writers at once may overwrite each other. Needs aos-json on PATH. The root
+A place's own description is a folder's _description.json (a JSON string) or an
+object's _description key: add, set and rm it like any path, with a string value
+and no description; it has no index entry.
+Writes may go anywhere the file system lets you (otherwise WriteFailed); the
+memory root itself cannot be removed. No locking: two writers at once may
+overwrite each other. Needs aos-json on PATH. The root
 comes from _memory.json next to the tool, otherwise AOS_MEMORY.
 Result on stdout: node: PATH, then added, set or removed.
 On error: one line "memory_write: error: CODE reason" on stderr and stdout, exit 1.
@@ -64,12 +70,15 @@ path = args.get("path")
 description = args.get("description")
 if description is not None and (not isinstance(description, str) or not description.strip()):
     tool_io.die("ArgumentsBad", "description must be a non-empty string")
-if op == "add" and description is None:          # 小模型最常漏這個：直接給它補好的那一次叫法（11-10 S3 實測）
-    again = {"op": "add", "path": args.get("path")}
+intro = isinstance(path, str) and (os.path.basename(path) == "_description.json" if "#" not in path
+                                    else path.endswith("/" + "_description"))   # 自己的簡介：不帶 description
+if intro and description is not None:
+    tool_io.die("ArgumentsBad", "%s is a description itself and has no index entry; leave out description and put the text in value" % path)
+if op == "add" and description is None and not intro:   # 小模型最常漏這個：直接給它補好的那一次叫法（11-10 S3 實測）
+    again = {"op": "add", "path": args.get("path"), "description": "<one line saying what this is>"}   # description 放 value 前面，顯眼
     if "value" in args and not str(args.get("path")).endswith("/"):   # 資料夾不帶 value
         again["value"] = args["value"] if len(json.dumps(args["value"], ensure_ascii=False)) <= 200 else "..."
-    again["description"] = "<one line saying what this is>"
-    tool_io.die("ArgumentsBad", "add needs description (one line saying what this is); call again like %s"
+    tool_io.die("ArgumentsBad", "every add needs description (one line saying what this is, shown in the index); call again like %s"
                 % json.dumps(again, ensure_ascii=False))
 recursive = args.get("recursive", False)
 if not isinstance(recursive, bool):

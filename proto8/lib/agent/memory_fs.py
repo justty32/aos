@@ -1,10 +1,12 @@
-"""記憶庫（純 JSON 樹）共用：找根、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 "." 格／$env 格的認法、列枝幹、find 逛樹的迴圈防護。
+"""記憶庫（純 JSON 樹）共用：找根、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 $env 格的認法、自己的簡介、列枝幹、find 逛樹的迴圈防護。
 
 圖紙 proto8/thinking/2026-11/10/json-memory/02、03（使用者 11-10 晚）。統一路徑＝`資料夾/檔.json#/JSON Pointer`（RFC 6901）。
 位置在程式裡是 Loc(fs, tokens)：fs＝正規化的絕對路徑（不解捷徑，顯示才會照庫根算相對）；tokens＝None 指整個資料夾／整份檔，否則是指標的段。
 表：資料夾的表＝它的 _index.json（整個檔就是表，key 從這個資料夾算）；JSON 物件的表＝它的 _index key（key 從這個物件算，
 key 裡 `/` 分段、`~1`＝`/`、`..` 往上一層、跳出檔的根就回到檔所在的資料夾、`#` 之後是指標、`/` 開頭＝絕對路徑）。
-格是物件且 _description 是字串＝說明；tags 字串陣列＝標籤；格帶 $env（可加 $path）＝實際指到解出來的那條路徑；"." 格＝這個地方自己。
+格是物件且 _description 是字串＝說明；tags 字串陣列＝標籤；格帶 $env（可加 $path）＝實際指到解出來的那條路徑。
+自己的簡介（使用者 11-10「那就是同資料夾下的_description.json啊」）：資料夾＝同資料夾的 _description.json（內容是一個 JSON 字串）；
+JSON 物件＝它的 _description key（字串）。兩者都不是子節點（_ 開頭本來就不列）。
 單點讀交給 PATH 上的 aos-json（get --follow，有指示詞再 --resolve）；表一律讀原文（不 --resolve，$env 格才留得住）。
 aos-json 失敗＝把它最後一行的代號照圖紙 03 的表換成自己的代號、原因照接（lib/docs/01 規則 2 的例外：給腦用的工具轉接下層）。
 find 例外：直接用 Python 讀 JSON 逛樹（逐檔起子行程太慢），記走過的（實體路徑, 指標）防繞圈，$env 格只跳一次。
@@ -326,11 +328,9 @@ def cell_target(base, key, cell, inside):
 
 
 def cells(base, table, inside):
-    """表的每一格（"." 以外）→ Cell；指不出去的格 target＝None、note＝原因。"""
+    """表的每一格 → Cell；指不出去的格 target＝None、note＝原因。"""
     out = []
     for key, cell in table.items():
-        if key == ".":
-            continue
         c = cell if isinstance(cell, dict) else {}
         desc = c.get("_description") if isinstance(c.get("_description"), str) else ""
         tags = c.get("tags") if isinstance(c.get("tags"), list) else []
@@ -342,9 +342,25 @@ def cells(base, table, inside):
     return out
 
 
-def self_cell(table):
-    c = (table or {}).get(".")
-    return c if isinstance(c, dict) else {}
+DESC_FILE = "_description.json"    # 資料夾自己的簡介（內容是 JSON 字串）
+DESC_KEY = "_description"          # JSON 物件自己的簡介
+
+
+def intro(kind, loc, value, reader):
+    """這個地方自己的簡介（字串，沒有＝""）：資料夾讀 _description.json（reader 讀整份檔，讀不到＝沒有）、物件讀 _description key。"""
+    if kind == "folder":
+        f = os.path.join(loc.fs, DESC_FILE)
+        if not os.path.isfile(f):
+            return ""
+        got = reader(f)
+    else:
+        got = value.get(DESC_KEY) if isinstance(value, dict) else None
+    return got if isinstance(got, str) else ""
+
+
+def without_intro(value):
+    """物件拿掉 _description key（read／export 已經把它印在前面）。"""
+    return {k: v for k, v in value.items() if k != DESC_KEY} if isinstance(value, dict) else value
 
 
 def listing(root, loc, kind, table, kids):

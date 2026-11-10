@@ -1,4 +1,4 @@
-"""memory_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、只寫庫根底下、各錯誤代號；寫完用 memory 讀回來對。"""
+"""memory_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、寫到庫外也行、自己的簡介當普通路徑寫、各錯誤代號；寫完用 memory 讀回來對。"""
 import json
 import os
 from pathlib import Path
@@ -20,7 +20,8 @@ class WritingTest(unittest.TestCase):
         self.base = Path(os.path.realpath(self.tmp.name))
         self.root = self.base / "kb"
         (self.root / "notes").mkdir(parents=True)
-        self.put("_index.json", {".": {"_description": "Root."}, "notes/": {"_description": "Notes."}})
+        self.put("_description.json", "Root.")
+        self.put("_index.json", {"notes/": {"_description": "Notes."}})
         self.put("notes/_index.json", {})
         self.env = {k: v for k, v in os.environ.items() if k != "AOS_CD"}
         self.env.update(AOS_MEMORY=str(self.root), AOS_CD=str(ENTRY.parent))
@@ -131,27 +132,59 @@ class WritingTest(unittest.TestCase):
         self.ok(op="rm", path="notes/", recursive=True)
         self.assertEqual(self.load("_index.json"), {})
 
-    def test_writes_outside_root_are_pathbad(self):
-        self.fails("PathBad", op="add", path="../evil.json", value=1, description="x")
-        self.fails("PathBad", op="add", path=str(self.base / "evil.json"), value=1, description="x")
+    def test_writes_outside_root_are_allowed(self):
+        self.ok(op="add", path="../out.json", value=1, description="x")
+        self.assertEqual(json.loads((self.base / "out.json").read_text()), 1)
+        self.assertEqual(json.loads((self.base / "_index.json").read_text()), {"out.json": {"_description": "x"}})
         (self.base / "out").mkdir()
         os.symlink(self.base / "out", self.root / "link")
-        self.fails("PathBad", op="add", path="link/x.json", value=1, description="x")
-        (self.base / "out" / "y.json").write_text("1")
-        self.fails("PathBad", op="set", path="link/y.json", value=2)
-        self.assertEqual((self.base / "out" / "y.json").read_text(), "1")
-        self.assertFalse((self.base / "evil.json").exists())
+        self.ok(op="add", path="link/x.json", value=2, description="through a link")
+        self.assertEqual(json.loads((self.base / "out" / "x.json").read_text()), 2)
+        self.ok(op="set", path=str(self.base / "out" / "x.json"), value=3)
+        self.assertEqual(json.loads((self.base / "out" / "x.json").read_text()), 3)
+        self.ok(op="rm", path="link/x.json")
+        self.assertFalse((self.base / "out" / "x.json").exists())
         self.ok(op="add", path=str(self.root / "notes" / "abs.json"), value=1, description="absolute inside")
+        if os.geteuid() != 0:                    # 作業系統不讓寫＝WriteFailed
+            (self.base / "ro").mkdir()
+            os.chmod(self.base / "ro", 0o555)
+            self.addCleanup(os.chmod, self.base / "ro", 0o755)
+            self.fails("WriteFailed", op="add", path="../ro/x.json", value=1, description="x")
+            self.fails("WriteFailed", op="add", path="../ro/x.md", value="t", description="x")
+            self.fails("WriteFailed", op="add", path="../ro/d/", description="x")
         self.fails("PathBad", op="rm", path="/")
         self.fails("PathBad", op="rm", path="")
         self.fails("PathBad", op="add", path="notes/_x.json", value=1, description="x")
-        self.fails("PathBad", op="set", path="/", description="x")
+        self.assertIn("_description.json", self.fails("PathBad", op="set", path="/", description="x"))
+
+    def test_own_descriptions_are_plain_paths(self):
+        self.ok(op="set", path="_description.json", value="New root.")
+        self.assertEqual(self.load("_description.json"), "New root.")
+        self.ok(op="add", path="notes/_description.json", value="All the notes.")
+        self.assertEqual(self.load("notes/_index.json"), {})       # 不進表
+        self.assertTrue(self.read(op="read", path="notes/").startswith("node: notes/\nAll the notes.\n\nchildren:"))
+        self.put("notes/amy.json", {"_index": {}, "phone": "1"})
+        self.ok(op="add", path="notes/amy.json#/_description", value="About Amy.")
+        self.assertEqual(self.load("notes/amy.json"), {"_index": {}, "phone": "1", "_description": "About Amy."})
+        self.ok(op="set", path="notes/amy.json#/_description", value="Amy.")
+        self.assertTrue(self.read(op="read", path="notes/amy.json").startswith("node: notes/amy.json\nAmy.\n\nchildren:"))
+        self.fails("ValueBad", op="set", path="notes/_description.json", value={"a": 1})
+        self.fails("ValueBad", op="add", path="notes/amy.json#/_description", value=1)
+        self.fails("ArgumentsBad", op="set", path="notes/_description.json", value="x", description="x")
+        self.fails("NodeExists", op="add", path="notes/_description.json", value="again")
+        self.ok(op="rm", path="notes/_description.json")
+        self.ok(op="rm", path="notes/amy.json#/_description")
+        self.assertFalse((self.root / "notes" / "_description.json").exists())
+        self.assertEqual(self.load("notes/amy.json"), {"_index": {}, "phone": "1"})
+        self.assertEqual(self.load("notes/_index.json"), {})
+        self.fails("PathBad", op="add", path="notes/_description.json/", description="x")
 
     def test_errors(self):
         self.put("notes/a.json", {"list": [1, 2], "r": {"$ref": "b.json"}})
         self.put("notes/b.json", {"k": 1})
         self.fails("ArgumentsBad", op="add")
-        self.fails("ArgumentsBad", op="add", path="notes/n.json", value=1)
+        self.assertIn('call again like {"op": "add", "path": "notes/n.json", "description": "<one line saying what this is>", "value": 1}',
+                      self.fails("ArgumentsBad", op="add", path="notes/n.json", value=1))
         self.fails("ArgumentsBad", op="add", path="notes/n.json", value=1, description="")
         self.fails("OpUnknown", op="edit", path="notes/a.json")
         self.fails("NodeExists", op="add", path="notes/a.json", value=1, description="x")

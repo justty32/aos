@@ -1,7 +1,4 @@
 {
- ".": {
-  "_description": "# Commands for humans and external agents\n\nUse these shell commands to manage agents, tools and daemon procs.\n\nInside aos, prefer your registered tools. Use this CLI from a human shell or an external coding agent.\n\nChoose the daemon: `--daemon D` > `$AOS_DAEMON` > `./.stack` in the current directory. Use an absolute `AOS_DAEMON`. There is no upward search. D is the daemon's stack, not its definition.\n\nChoose the agent: `--target NAME` > `$AOS_AGENT`. `ctl add` uses `--name`; `ctl rm` requires a positional name; `ctl ls` lists all; `ctl who` uses a stack.\n\nRead the page you need:\n\n- `cli/flags.json`: help levels, short names and flag placement.\n- `cli/agent.json`: attach, inspect, stop, sleep and find agents.\n- `cli/talk_settings.json`: messages, screens and per-agent settings.\n- `cli/history.json`: list, delete, summarize or replace an agent's conversation messages.\n- `cli/safety.json`: deletion, confirmation and non-terminal input.\n- `cli/errors.json`: error codes, timeouts and retry decisions.\n- `cli/daemon.json`: direct proc control on one daemon (never through the judge); judge routing is aos-agent ctl.\n- `cli/tools.json`: register and call tools; scratch stacks.\n- `cli/tool_env.json`: save hub variables in registrations.\n- `cli/tool_flags.json`: schema-derived flags for lib tools.\n- `cli/grow_screen.json`: grow functions and use ECA screens.\n"
- },
  "agent.json": {
   "_description": "Use aos-agent ctl to attach agents and inspect or change their daemon state."
  },

@@ -11,14 +11,14 @@
 - 資料夾的表＝它的 `_index.json`，整個檔就是表；JSON 物件的表＝它的 `_index` key。
 - 表的 key＝從表的基準走的相對路徑：資料夾表從那個資料夾算（`rules.json`、`cli/`、`../x.json#/k`）；物件表從那個物件算，`/` 分段、key 裡的 `/` 寫 `~1`、`..` 往上一層（跳出檔的根＝回到檔所在的資料夾）、`#` 只能接在檔名後、`/` 開頭＝絕對路徑。
 - 格是物件：`_description`（字串）＝說明、`tags`（字串陣列）＝find 的標籤；帶 `$env`（可加 `$path`）＝這格實際指到解出來的路徑（相對就從表的基準算），變數沒設＝那行後面附 `[DirectiveBad …]`，不算錯。
-- `"."` 格＝這個地方自己：它的 `_description` 是 read 時印在表前面的簡介。
-- 真的在、但表沒列的（`.`、`_` 開頭的不算）列在 `not in index:`。
+- **自己的簡介**（使用者 11-10「那就是同資料夾下的_description.json啊」）：資料夾＝同資料夾的 `_description.json`（內容是一個 JSON 字串）；JSON 物件＝它的 `_description` key（字串）。read 時印在表前面；兩者都不是子節點。表裡的 key `"."` 沒有特別意思。
+- 真的在、但表沒列的（`.`、`_` 開頭的不算，所以 `_index.json`、`_description.json`、`_index`、`_description` 都不列）列在 `not in index:`。
 
 ## 動作
 
-- `read`：資料夾或有 `_index` 的物件＝簡介＋`children:`＋`not in index:`；字串＝原文；其他 JSON（物件沒 `_index`、陣列、數字…）＝縮排 JSON，內容裡的 `$ref`／`$env` 交給 aos-json `--resolve` 解；非 `.json` 檔＝UTF-8 原文，不是 UTF-8＝`binary file, N bytes`。
+- `read`：資料夾或有 `_index` 的物件＝簡介（沒有就不印）＋`children:`＋`not in index:`；只有 `_description` 沒有 `_index` 的物件＝簡介、空一行、其餘 key 的縮排 JSON（沒有其餘 key 就只印簡介）；字串＝原文；其他 JSON（物件沒 `_index`、陣列、數字…）＝縮排 JSON，內容裡的 `$ref`／`$env` 交給 aos-json `--resolve` 解；非 `.json` 檔＝UTF-8 原文，不是 UTF-8＝`binary file, N bytes`。
 - `ls`：只印表（資料夾、物件、陣列；陣列沒有表，元素都在 `not in index:`）；對字串等＝`TargetBad`。
-- `find`：`query`（不分大小寫）比對名字（最後一段）、說明、字串與文字檔內容；`tag` 比對表那格（或 `"."` 格）的 `tags`；兩個都給要同時符合；範圍＝`path` 底下的樹＋表指到外面的格；不解內容裡的 `$ref`；記走過的（實體路徑, 指標）防繞圈，`$env` 格只跳一次；最多 20 筆。命中在內文（不在印出來的名字或說明裡）＝那行後面附 `[match: 命中那一行]`（最多 160 字、以命中為中心切；11-10 S3：小模型照它挑對節點、常常不用再 read）。
+- `find`：`query`（不分大小寫）比對名字（最後一段）、說明（表那格的，與這個地方自己的簡介；簡介命中算在那個資料夾／物件自己身上）、字串與文字檔內容；`tag` 比對表那格的 `tags`；兩個都給要同時符合；範圍＝`path` 底下的樹＋表指到外面的格；不解內容裡的 `$ref`；記走過的（實體路徑, 指標）防繞圈，`$env` 格只跳一次；最多 20 筆。命中在內文（不在印出來的名字或說明裡）＝那行後面附 `[match: 命中那一行]`（最多 160 字、以命中為中心切；11-10 S3：小模型照它挑對節點、常常不用再 read）。
 - 輸出超過 `max_bytes`（預設 8000）截斷、附 `[truncated: N more bytes]`。
 
 ## 實作

@@ -6,10 +6,11 @@
 #   都沒有＝MemoryMissing；設定檔壞＝CfgBad（memory_fs.memory_root）。
 #   path＝`資料夾/檔.json#/JSON Pointer`，相對從庫根算；"" 或 "/"＝根；其他 / 開頭＝檔案系統絕對路徑（讀不限範圍）。
 #   stdout 純文字、第一行 node: <路徑>；印出的每條路徑都能直接貼回 path：
-#     read：資料夾或有 _index 的物件＝"." 格的簡介＋children:（表）＋not in index:；字串＝原文；其他 JSON＝縮排 JSON；
+#     read：資料夾或有 _index 的物件＝自己的簡介（資料夾的 _description.json、物件的 _description key；沒有就不印）＋children:（表）＋not in index:；
+#           只有 _description 沒 _index 的物件＝簡介、空一行、其餘 key 的縮排 JSON；字串＝原文；其他 JSON＝縮排 JSON；
 #           非 .json 檔＝UTF-8 原文、不是 UTF-8＝binary file, N bytes。內容的 $ref／$env 交給 aos-json --resolve 解。
 #     ls：只印表（資料夾、物件、陣列）；對字串等枝葉＝TargetBad。
-#     find：path 底下（含表指到外面的格）名字、說明、字串內容含 query（不分大小寫）、且表那格 tags 含 tag 的位置；最多 20 筆；命中在內文＝附 [match: 那一行]。
+#     find：path 底下（含表指到外面的格）名字、說明（表那格的與自己的簡介）、字串內容含 query（不分大小寫）、且表那格 tags 含 tag 的位置；最多 20 筆；命中在內文＝附 [match: 那一行]。
 #   輸出超過 max_bytes（預設 8000）截斷並附 [truncated: N more bytes]。
 # 錯：stderr 與 stdout 各一行「memory: error: 代號 原因」、退 1；代號見 _tooldef.json 的 errors（aos-json 的照圖紙 03 換）。
 # 不寫任何檔、不碰 $AOS_WS。子行程只有 aos-json（find 不起子行程，除了 $env 格的 aos-directive）；被 TERM 先收掉它、退 128＋N。
@@ -20,9 +21,11 @@ Read a memory: a tree of folders and .json files. A path looks like
 folder/file.json#/key/sub (JSON Pointer after #, ~1 = /, ~0 = ~); relative paths
 start at the memory root; "" or "/" is the root; other paths starting with / are
 absolute file system paths.
-  read  a folder or an object with _index: its "." description, then children:
+  read  a folder or an object with _index: its own description, then children:
         (the index) and not in index:; a string: the text; other JSON: JSON;
-        other files: the text, or "binary file, N bytes".
+        other files: the text, or "binary file, N bytes". A folder's own
+        description is its _description.json (a JSON string); an object's is
+        its _description key. Neither is listed as a child.
   ls    only the index of a folder, object or array.
   find  paths under path whose name, description or text contains query
         (case-insensitive) and whose index entry has tag in its tags; max 20;
@@ -76,11 +79,14 @@ def truncate(text, max_bytes):
 def op_read(root, loc):
     kind, value, table, kids = fs.load(root, loc)
     lines = ["node: " + fs.show(root, loc)]
+    intro = fs.intro(kind, loc, value, lambda f: fs.get(Loc(f, None)))
     if kind == "folder" or table is not None:
-        intro = fs.self_cell(table).get("_description")
-        if isinstance(intro, str) and intro:
+        if intro:
             lines += [intro.rstrip("\n"), ""]
         lines += fs.listing(root, loc, kind, table, kids)
+    elif intro:                                 # 只有 _description 沒 _index：簡介在前、其餘照印 JSON
+        rest = fs.without_intro(value)
+        lines += ["", intro.rstrip("\n")] + (["", json.dumps(rest, ensure_ascii=False, indent=2)] if rest else [])
     elif kind == "binary":
         lines += ["", "binary file, %d bytes" % value]
     elif kind == "text" or isinstance(value, str):
@@ -149,11 +155,12 @@ def walk(loc, descs, tags, via_env, seen, cache):
         kids = fs.value_kids(loc, value)
     elif isinstance(value, str):
         text = value
-    own = fs.self_cell(table)
-    if isinstance(own.get("_description"), str):
-        descs = descs + [own["_description"]]
-    if isinstance(own.get("tags"), list):
-        tags = tags + [t for t in own["tags"] if isinstance(t, str)]
+    def reader(f):
+        got = py_load(Loc(f, None), cache)
+        return got[1] if got else None
+    own = fs.intro(kind, loc, value, reader)
+    if own:
+        descs = descs + [own]
     yield loc, descs, tags, text
     covered = set()
     for c in fs.cells(loc, table or {}, kind != "folder"):

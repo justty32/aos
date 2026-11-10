@@ -1,6 +1,8 @@
-"""memory_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫入只准落在庫根底下。
+"""memory_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫到哪都行，能不能成看檔案權限。
 
-圖紙 proto8/thinking/2026-11/10/json-memory/03（使用者 11-10 晚：新增刪除工具一次做完兩處「A」；同時寫「不管，自行承擔風險」＝不加鎖）。
+圖紙 proto8/thinking/2026-11/10/json-memory/03（使用者 11-10 晚：新增刪除工具一次做完兩處「A」；同時寫「不管，自行承擔風險」＝不加鎖；
+寫入「想怎麽寫就怎麼寫，有權限就能動」＝不限庫根底下，失敗＝WriteFailed）。
+自己的簡介（資料夾的 _description.json、物件的 _description key）當普通路徑寫：值要是字串、不帶 description、不進表。
 JSON 的寫交給 aos-json（set、同檔兩處用 batch --parents、del；每份檔暫存後原子 rename）；非 .json 檔照原文由這裡原子寫。
 寫的路上不穿 $ref（不給 --follow）：路上碰到指示詞＝TargetBad，要改就直接寫它指到的那份檔。
 新增要動兩份檔時先寫內容再寫表：中途死掉＝留下沒登記的東西（ls 的 not in index: 看得到）；刪除也是先刪內容再拔格。
@@ -18,16 +20,22 @@ MAX_BYTES = 8000
 MISSING = object()
 
 
-def require_inside(root, path):
-    """解開捷徑後要在庫根底下（或就是根）。"""
-    real = os.path.realpath(path)
-    if real != root and not real.startswith(root.rstrip("/") + "/"):
-        raise Error("PathBad", "writes must stay inside the memory root %s; %s resolves to %s" % (root, path, real))
+def is_intro(loc, folder=False):
+    """這個位置是不是某個地方自己的簡介：資料夾的 _description.json、物件的 _description key。"""
+    if loc.tokens is None:
+        return not folder and os.path.basename(loc.fs) == fs.DESC_FILE
+    return loc.tokens[-1] == fs.DESC_KEY
+
+
+def check_intro(has_value, value):
+    if has_value and not isinstance(value, str):
+        raise Error("ValueBad", "a description (_description.json or a _description key) must be one string")
 
 
 def check_name(name):
     if not name or name in (".", "..") or name.startswith((".", "_")):
-        raise Error("PathBad", "%r cannot be added: names starting with . or _ are reserved" % name)
+        raise Error("PathBad", "%r cannot be added: names starting with . or _ are reserved "
+                    "(except _description.json and the _description key)" % name)
 
 
 def encode(fs_path, value):
@@ -105,7 +113,6 @@ def cell_key(table, base, inside, loc, default):
 def folder_cell(root, folder, loc, description=None, remove=False):
     """資料夾的 _index.json：加／換說明（description）或拔掉（remove）指到 loc 的那格；檔不在就建。"""
     index = os.path.join(folder, "_index.json")
-    require_inside(root, index)
     exists = os.path.isfile(index)
     table = fs.folder_table(folder, raw_file) if exists else {}
     name = os.path.basename(loc.fs) + ("/" if os.path.isdir(loc.fs) else "")
@@ -151,7 +158,6 @@ def object_parent(root, loc):
     """物件裡一個 key 的上一層：回 (原文整份, 上一層物件)；不在＝NodeMissing、陣列＝TargetBad。"""
     if not os.path.isfile(loc.fs):
         raise fs.missing(root, loc)
-    require_inside(root, loc.fs)
     data = raw_file(loc.fs)
     parent = walk_raw(root, loc, data, loc.tokens[:-1])
     if parent is MISSING:
@@ -179,14 +185,17 @@ def batch(fs_path, changes):
 
 def add(root, loc, folder, has_value, value, description):
     """新增：資料夾（folder＝path 以 / 結尾，帶空的 _index.json）、新檔、或物件裡新 key；都同時在表裡加一格。"""
+    intro = is_intro(loc, folder)
+    if intro:
+        check_intro(has_value, value)
     if loc.tokens is None:
-        check_name(os.path.basename(loc.fs))
+        if not intro:
+            check_name(os.path.basename(loc.fs))
         parent = os.path.dirname(loc.fs)
         if not os.path.isdir(parent):
             raise missing_folder(root, loc)
         if os.path.lexists(loc.fs):
             raise Error("NodeExists", "%s already exists; use set to change it" % fs.show(root, loc))
-        require_inside(root, parent)
         if folder:
             if has_value and value not in (None, ""):   # 小模型常給 "value": null 或 ""，當作沒給
                 raise Error("ValueBad", "a folder takes no value; add files into it afterwards")
@@ -196,9 +205,11 @@ def add(root, loc, folder, has_value, value, description):
             if not has_value:
                 raise Error("ValueBad", "value is required")
             write_file(loc.fs, value)
-        folder_cell(root, parent, loc, description)
+        if not intro:
+            folder_cell(root, parent, loc, description)
         return
-    check_name(loc.tokens[-1])
+    if not intro:
+        check_name(loc.tokens[-1])
     if not has_value:
         raise Error("ValueBad", "value is required")
     check_value(value)
@@ -208,7 +219,8 @@ def add(root, loc, folder, has_value, value, description):
     if loc.tokens[-1] in parent:
         raise Error("NodeExists", "%s already exists; use set to change it" % fs.show(root, loc))
     changes = {fs.pointer(loc.tokens): value}
-    changes.update(object_cell(root, loc, parent, description))
+    if not intro:
+        changes.update(object_cell(root, loc, parent, description))
     batch(loc.fs, changes)
 
 
@@ -216,22 +228,22 @@ def set_(root, loc, has_value, value, description):
     """換內容（value）、換說明（description），或兩個一起；位置要已經在。"""
     if not has_value and description is None:
         raise Error("ValueBad", "set needs value, description or both")
+    if is_intro(loc):
+        check_intro(has_value, value)
     if loc.tokens is None:
         if not os.path.lexists(loc.fs):
             raise fs.missing(root, loc)
         if description is not None and loc.fs == root:
-            raise Error("PathBad", "the root has no index entry; to change its description set _index.json#/./_description")
+            raise Error("PathBad", "the root has no index entry; its own description is _description.json (add or set it with value)")
         if has_value:
             if os.path.isdir(loc.fs):
                 raise Error("TargetBad", "%s is a folder and has no value; set its files instead" % fs.show(root, loc))
-            require_inside(root, loc.fs)
             write_file(loc.fs, value)
         if description is not None:
             folder_cell(root, os.path.dirname(loc.fs), loc, description)
         return
     if not os.path.isfile(loc.fs):
         raise fs.missing(root, loc)
-    require_inside(root, loc.fs)
     data = raw_file(loc.fs)
     if walk_raw(root, loc, data, loc.tokens) is MISSING:
         raise fs.missing(root, loc)
@@ -255,7 +267,6 @@ def remove(root, loc, recursive):
         if not os.path.lexists(loc.fs):
             raise fs.missing(root, loc)
         parent = os.path.dirname(loc.fs)
-        require_inside(root, parent)
         if os.path.islink(loc.fs) or not os.path.isdir(loc.fs):
             os.unlink(loc.fs)
         else:

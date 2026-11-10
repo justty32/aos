@@ -22,16 +22,17 @@ class ExportTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(os.path.realpath(self.tmp.name)) / "kb"
-        write(self.root / "_index.json", {".": {"_description": "# Root\n\nThe root page."},
-                                          "rules.json": {"_description": "Rules."},
+        write(self.root / "_description.json", "# Root\n\nThe root page.")
+        write(self.root / "_index.json", {"rules.json": {"_description": "Rules."},
                                           "errors.json": {"_description": "Errors."}})
         write(self.root / "rules.json", "# Rules\n\nNever.\n")
         write(self.root / "errors.json", {
-            "_index": {".": {"_description": "How to read errors."},
-                       "codes": {"_description": "Codes."},
+            "_description": "How to read errors.",
+            "_index": {"codes": {"_description": "Codes."},
                        "../rules.json": {"_description": "Back to rules."}},
             "codes": "Code text",
-            "plain": {"a": [1, "two"]}})
+            "plain": {"a": [1, "two"]},
+            "about": {"_description": "Only a description.", "x": 1}})
         write(self.root / "cli" / "_index.json", {"flags.json": {"_description": "Flags."}})
         write(self.root / "cli" / "flags.json", "--help")
         os.symlink(self.root, self.root / "cli" / "loop")
@@ -49,12 +50,14 @@ class ExportTest(unittest.TestCase):
         r = self.run_tool()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.nodes(r.stdout), ["/", "rules.json", "errors.json", "errors.json#/codes",
-                                                "rules.json", "errors.json#/plain", "cli/", "cli/flags.json",
+                                                "rules.json", "errors.json#/plain", "errors.json#/about", "cli/", "cli/flags.json",
                                                 "cli/loop/"])
         self.assertTrue(r.stdout.startswith("<!-- node: / -->\n# Root\n\nThe root page.\n\n<!-- node: rules.json -->\n# Rules\n\nNever.\n\n"))
         self.assertIn("<!-- node: errors.json -->\nHow to read errors.\n\n", r.stdout)
         self.assertIn("<!-- node: errors.json#/codes -->\nCode text\n", r.stdout)
         self.assertIn('<!-- node: errors.json#/plain -->\n```json\n{\n  "a": [\n    1,\n    "two"\n  ]\n}\n```', r.stdout)
+        self.assertIn('<!-- node: errors.json#/about -->\nOnly a description.\n\n```json\n{\n  "x": 1\n}\n```', r.stdout)
+        self.assertNotIn("_description", r.stdout)
         self.assertEqual(r.stdout.count("(already exported above; not followed)"), 2)   # ../rules.json 與 cli/loop 捷徑
 
     def test_subpath(self):

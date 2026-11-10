@@ -28,8 +28,8 @@ class MemoryTest(unittest.TestCase):
         self.root = base / "kb"
         self.outside = base / "outside.json"
         write(self.outside, {"inside": "outside value"})
+        write(self.root / "_description.json", "aos in one page.")
         write(self.root / "_index.json", {
-            ".": {"_description": "aos in one page."},
             "rules.json": {"_description": "Things you must never do.", "tags": ["core"]},
             "errors.json": {"_description": "How to read a failed call."},
             "cli/": {"_description": "Commands."},
@@ -39,12 +39,13 @@ class MemoryTest(unittest.TestCase):
         })
         write(self.root / "rules.json", "Never rm -rf /.\nReally.")
         write(self.root / "errors.json", {
-            "_index": {".": {"_description": "How to read a failed call: lines."},
-                       "codes": {"_description": "What each Code ending means.", "tags": ["people"]},
+            "_description": "How to read a failed call: lines.",
+            "_index": {"codes": {"_description": "What each Code ending means.", "tags": ["people"]},
                        "../rules.json": {"_description": "Back to the rules."}},
             "codes": "# Code endings\n\nLockFailed and friends.",
             "common": {"$ref": "far/common.json#/c"},
             "plain": {"a": 1, "b": [1, "two"]},
+            "about": {"_description": "Only an intro, findme.", "k": "v"},
             "a/b": "slash key"})
         write(self.root / "far" / "common.json", {"c": {"x": "common LockFailed"}})
         write(self.root / "far" / "team.json", "Team text")
@@ -110,7 +111,22 @@ class MemoryTest(unittest.TestCase):
         self.assertEqual(self.section(out, "children:"),
                          ["errors.json#/codes  What each Code ending means.", "rules.json  Back to the rules."])
         self.assertEqual(self.section(out, "not in index:"),
-                         ["errors.json#/common", "errors.json#/plain", "errors.json#/a~1b"])
+                         ["errors.json#/common", "errors.json#/plain", "errors.json#/about", "errors.json#/a~1b"])
+
+    def test_intro_only_object_and_folder_without_intro(self):
+        self.assertEqual(self.ok(op="read", path="errors.json#/about"),
+                         'node: errors.json#/about\n\nOnly an intro, findme.\n\n{\n  "k": "v"\n}\n')
+        write(self.root / "far" / "only.json", {"_description": "Just this."})
+        self.assertEqual(self.ok(op="read", path="far/only.json"), "node: far/only.json\n\nJust this.\n")
+        out = self.ok(op="read", path="far/")                    # 沒有 _description.json＝只印表
+        self.assertTrue(out.startswith("node: far/\nchildren: (none)\nnot in index:\n"), out)
+        self.assertNotIn("_description", out)
+        self.assertNotIn("_description", self.ok(op="read"))
+
+    def test_find_hits_own_description(self):
+        self.assertEqual(self.find(query="findme"), ["errors.json#/about  Only an intro, findme."])
+        self.assertEqual(self.find(query="one page"), ["/  aos in one page."])
+        self.assertEqual(self.find(query="failed call: lines"), ["errors.json  How to read a failed call.  [match: How to read a failed call: lines.]"])
 
     def test_string_is_raw_text(self):
         self.assertEqual(self.ok(op="read", path="errors.json#/codes"),
