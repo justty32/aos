@@ -12,6 +12,22 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-10 晚 家機總整合
+
+1. **授權**：家機（Manjaro）、使用者授權今晚隨意 push（只有 main）；子 agent 普通 opus、雜活 sonnet；eca 一律 haiku（「haiku隨便用。我發現額度掉太快會說。」）。不動 `~/code/playground`、`~/code/playground-ak5`（試驗場只產出刷新指令，使用者看過再決定誰跑）；不動 `impl_cpp/`。
+2. **各線狀態**：self-tools、json-memory（含 S5）、self-family（history、self_state、self_ctl）、hook、agents-split、mailbox、clock-letters 都施工完、進 main；總整合補了知識庫節點（`b515395a9`）、附錄 4／索引／install／gitignore 分類／eca-claude 範本 README 與 _metainfo（`bdffed43d`）、整棵實跑與三處 CLI 句修正（`db4505fcf`）、刷新腳本（`fb434b9ea`）。全套 Python 測試綠、C++ build 過。「怎麼玩」→ [tonight](../proto8/thinking/2026-11/10/tonight/README.md)；驗收 → [tonight/02](../proto8/thinking/2026-11/10/tonight/02-整合驗收.md)；刷新 → [tonight/03](../proto8/thinking/2026-11/10/tonight/03-試驗場刷新.md)。
+3. **代定清單位置**：[self-tools README § 代定](../proto8/thinking/2026-11/10/self-tools/README.md#代定)、[self-tools 05](../proto8/thinking/2026-11/10/self-tools/05-llm設定改名與ls.md)；[json-memory 05](../proto8/thinking/2026-11/10/json-memory/05-步驟與代定.md#代定清單可翻案)；[self-family 01](../proto8/thinking/2026-11/10/self-family/01-施工結果.md)、[03](../proto8/thinking/2026-11/10/self-family/03-self_state與self_ctl施工結果.md)；[hook 01 圖紙](../proto8/thinking/2026-11/10/self-family/hook/01-圖紙.md)、[hook 02](../proto8/thinking/2026-11/10/self-family/hook/02-施工結果.md)；[agents-split README](../proto8/thinking/2026-11/10/agents-split/README.md)（15 條）；[mailbox 01](../proto8/thinking/2026-11/10/mailbox/01-設計.md)；[clock-letters README](../proto8/thinking/2026-11/10/clock-letters/README.md)；[templates-cp 05](../proto8/thinking/2026-11/10/templates-cp/05-施工結果.md)；總整合自己的：eca-claude `_metainfo` 的 `cost.time_ms: 60000`、知識庫新開 `mailbox.json`／`clock.json`／`cli/hook.json`／`cli/mailbox.json`、2 KB 一段的上限這次沒拆（self_hook、me 簡介、cli/agent 略超）。
+4. **使用者回來後已裁、另一位隊長施工中**（`proto8/thinking/2026-11/10/tonight-rulings/`）：self_tools ls 預設只列名字＋一句（細項用 get）；hook「改結果」預設開；`AOS_MY_STACK` 改名 `AOS_LINUX_USER_STACK`；範本夾的 `tests/` 搬到範本外（「範本不該有tests」；agent_def new 維持整夾照抄）；`aos-clock register …`＝`aos-clock-register …`；條文 C-42 續、C-52 ⑧ 由它改；history summarize 寫進去那則改 `aos: …` 固定格式。小模型裝不下工具說明：「小模型裝不下說明，那就是去把lm studio那邊調整一下。真的裝不下的，那就代表這個小模型不適合aos體系，或是只能作爲普通的aos函數。」→ 不砍工具、不瘦說明。**總整合的最後一輪全套測試排在它 push 之後。**
+   還待裁的：
+   - 小模型寫不出 `$` 開頭的鍵：`agent_def` 已加 `template` 短名；`self_tools`、`self_hook` 的 `path_json` 要不要也給一條不用 `$` 鍵的路。
+   - act 附給腦的 stderr 尾巴仍帶下層 CLI 句（如 `--name`、`aos-agent ctl rm`；C-52 例外的結構）。
+   - hook：`queue_after` 停下後那封信晾著要不要補；hook 要不要寫進 CONVENTION 條文；要加哪些事件。
+   - mailbox：人的預設 stack 是不是就 `~/.stack`（代定 1）。
+   - clock：`aos-clock-register` 只收 `-c`、不收 `-d`；agent 被刪時它登記的項不會跟著清。
+   - `agents_ctl` 能 rm 別人帳上的子（選 B 時已知）；`agents_children`／`agents_ctl` 的 ls 一列約 400 字元 JSON。
+   - eca 全新工作區第一次開畫面停在「信不信任這個資料夾」選單（history 隊回報；今晚整合驗收沒碰到）。
+5. **WAIT_USER 新加**：試驗場刷新（看 tonight/03 再決定誰跑）、hook 線 eca haiku 真對話（照抄步驟，agent 不代跑）、eca 信任選單。
+
 ## 2026-11-10 下午 公司頂層（compact 前）
 
 1. **授權與狀態**：公司電腦（Windows 桌面 app；施工一律在 WSL `~/repo/aos-tools`，這台 Windows 沒 python）。**今天不 push，下班前統一 push**（使用者早上先說隨便 push、隨即改口）；子 agent 也不准 push。普通工作 opus、雜活 sonnet、規劃可開 fable（使用者 11-10「好，可以開fable agent」）；頂層只交流。使用者：「不要因為太敢就省略東西，時間沒有緊急到那樣。」（不砍範圍、不跳驗收，做不完跨天）；今天的裁定多是選項框快裁（「主要靠直覺…大修的時候再來處理」）。arcagi 停線、等大修完再續。

@@ -13,7 +13,9 @@
 
 ## 待使用者項
 
-- **家機 11-10 晚開工**：照 proto8/thinking/2026-11/10/two-machines/15-回家那台開工.md 拉到最新、重建、刷新試驗場、假腦問一題；真腦 gemma 與 eca_bob 公司驗不了 → [15-回家那台開工](../proto8/thinking/2026-11/10/two-machines/15-回家那台開工.md)
+- **試驗場刷新（11-10 晚總整合）**：一段照抄把 `~/code/playground` 換成最新版（先整份備份成 `~/code/playground.bak-<月日-時分>`；會清掉員工的對話、信箱、llm set 改過的設定、舊子 `kid_fsm_ann`；gemma 的 stupid-fast 與 eca_bob 的 haiku 照留），只在複本上跑過——你看過再決定誰跑；跑完 fsm 要用 gemma 得再 `llm set model=stupid-fast` → [tonight/03](../proto8/thinking/2026-11/10/tonight/03-試驗場刷新.md)
+- **hook 線的 eca haiku 真對話**（11-10 晚；agent 的指令被權限系統擋下，沒跑成）：照抄步驟跑一次，看 self_hook 在 eca 底下掛得上、事件有觸發 → [hook 02 § eca 真對話照抄](../proto8/thinking/2026-11/10/self-family/hook/02-施工結果.md#eca-真對話照抄會花-claude-額度)
+- **eca 全新工作區第一次開畫面時停在「信不信任這個資料夾」**（history 隊回報；整合驗收走 `-p` 沒碰到）：碰到就先在那個工作區手動開一次 `claude` 選信任；要不要讓 aos 自己處理由你定 → [tonight 怎麼玩 § eca](../proto8/thinking/2026-11/10/tonight/README.md)
 - **two-machines T7 真機驗證**（11-10；約 30～40 分鐘，標 💬 的步驟各燒一兩句額度）：真 claude／codex 找不到對話時的反應、eca 換台整條、/mnt/c 起一棵、公司↔家機真的來回一次；結果貼回來 → [14-真機驗證](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md)
 - **`~/code/playground-ak5` 的 image 是 11-09 前凍的，要用前先刪 stack 重建，只改定義不夠**（家機試驗場 `~/code/playground` 11-09 晚已改好、刪掉重建、假腦自動驗過，見 [11-09 日誌](session_logs/2026-11/2026-11-09.md)）：舊 stack 裡曾 stop→start 的列一開門就被重做 stop、默默下表，還有 `_tick` 孤兒列；ak5 的 tag 沒動 → [format-versioning 必修 2](../proto8/thinking/2026-11/09/format-versioning/README.md#必修proto-期就該處理跟要不要做版本無關)
 - **對判官本身下指令改寫法**（11-07 起）：叫醒判官寫 `aos-daemon-ctl wake 名字`——aos-daemon-ctl 一律直寄 daemon、不看 `AOS_KERNEL`，`--queue-wait-s` 拿掉；要判官管控用 `aos-agent ctl`。試驗場若有用到舊寫法或 `aos-daemon-ctl` 經判官，要留意 → [os-impl 08](../proto8/thinking/2026-11/06/os-impl/08-aos-daemon-ctl永遠直寄實作結果.md)
