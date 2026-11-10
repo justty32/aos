@@ -40,7 +40,9 @@ One round:
      whose state window and environment prove it was started there by this daemon and is still alive,
      gets {"cmd": "stop"} in its ctl; if it is still there --stop-grace-s later (in a later round), it
      gets SIGTERM and, 10 s later, SIGKILL. Zombies and anything it cannot prove are only reported.
-  4. report: lines on stdout; with --report FILE also a JSON file (written via a temp file + rename).
+  4. leftover locks: <lock>.releasing.* folders that aos-lock left half-removed (up to 3 levels
+     below D and each row's stack, not into procs/ or archives) older than 10 minutes are deleted.
+  5. report: lines on stdout; with --report FILE also a JSON file (written via a temp file + rename).
 *.bad-* evidence files, history, observed, ledgers and .trash are never touched (bad files are counted).
 To delete all archives at once: aos-daemon-ctl sweep --purge.
 

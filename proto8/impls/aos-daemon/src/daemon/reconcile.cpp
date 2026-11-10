@@ -110,6 +110,21 @@ static std::string fresh(const Json& d, const char* key, const std::string& cwd)
     return v.get<std::string>();
 }
 
+void Daemon::drop_stale_stop(const Child& c) {
+    std::string path = aos::join(c.stack, ctl_name(c.stack, names_));
+    std::optional<Json> doc = aos::read_json(path);
+    if (!doc || !doc->is_object() || doc->value(aos::loop::CtlWindow::cmd, Json()) != Json(aos::loop::CtlWindow::stop)) {
+        return;
+    }
+    Json kept = *doc;
+    kept.erase(aos::loop::CtlWindow::cmd);   // seq 照留：halt 照舊往上數；子 loop 看到的是一道沒有 cmd 的新指令＝什麼都不做
+    try {
+        aos::loop::write_window(path, kept);
+    } catch (const Error& e) {
+        warn("cannot clear the old stop in " + path + " (" + e.code + " " + e.msg + "); the restarted proc may stop at once");
+    }
+}
+
 bool Daemon::refresh(const std::string& name, Child& c) {
     if (!c.as_written.is_object() || c.as_written.empty()) {
         return true;
@@ -240,6 +255,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                     some();
                     continue;
                 }
+                drop_stale_stop(c);   // 11-10：stop→sleep→start 時小格 ctl 還留著沒回應過的 stop，新子 loop 會照做、馬上退
                 Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits, c.launch, c.auto_restart, c.restart_on_stuck, c.stuck_after_cycles, c.stuck_after_ms);   // 信箱接回只留名時照列上的值
                 nc.as_written = spec.is_null() ? c.as_written : written_of(spec);
                 nc.revived = true;   // 11-05：REVIVE_MS 內退了＝留成 stopped＋原因（衝突 3）

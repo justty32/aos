@@ -174,6 +174,9 @@ private:
     // 11-10 two-machines：信箱接回只留名的列再起之前，把 as_written（指示詞原形）照現在的環境再解進 ws／stack／def／exec 與入口
     // （子 loop 的入口是小格 loop.json＝改寫它的 exec）。解不開＝留 stopped＋原因（同 start 起不來）、回 false。沒有 as_written＝不動、回 true。
     bool refresh(const std::string& name, Child& c);
+    // 11-10（prefix-fixes 沒修的那條，使用者裁現在修）：stopped／sleeping 的列再起之前，小格公開 ctl 若是 daemon 寫的 stop
+    // （stop 之後被 sleep 打斷、子 loop 沒回應過），把 cmd 拿掉、seq 照留，新起的子 loop 就不會照做那道舊 stop。別的指令不動。
+    void drop_stale_stop(const Child& c);
     Json limits_of(const Json& spec, const Json& kept) const;   // 11-05：生效的份額＝列的 limits，沒寫＝daemon 預設 limits_；spec null＝kept；{}＝null（不限）
     std::string cell_of(const std::string& name, const Json& spec) const;   // proc 的 stack：寫了 stack＝它，沒寫＝$AOS_STACK/procs/<名字>
     void read_procs_ctl();                // 讀 procs_ctl.json：好的進 pctl_good_、清 pctl_warning_；壞的不採用、原因進 pctl_warning_；檔不在＝不動

@@ -1,14 +1,21 @@
-"""aos_sweep_files 清道夫的檔案那半：stderr 的 copytruncate 封存（gzip）、封存檔名的 UTC 時間戳、保留期刪除、purge、.bad- 計數；aos_sweep 叫它。
+"""aos_sweep_files 清道夫的檔案那半：stderr 的 copytruncate 封存（gzip）、封存檔名的 UTC 時間戳、保留期刪除、purge、.bad- 計數、放鎖殘骸；aos_sweep 叫它。
 只認自己寫的檔名樣式（<UTC 毫秒>[-N]<副檔名>.gz、點開頭的 .…gz.tmp），封存夾裡別人的檔不碰。"""
 import datetime
 import errno
 import gzip
 import os
 import re
+import shutil
 import stat
 import zlib
 
 CHUNK = 1 << 20
+
+# 11-10（open-14，使用者裁現在修）：aos-lock 放鎖、收屍改名走的 <鎖>.releasing.<20 位 UTC 奈秒>.<pid>.<ticks>，刪到一半留下的殘骸
+# （/mnt/c 上約每 200～300 次放鎖留一個）。名字裡的時間超過 RELEASING_AGE_S＝沒人在刪了，清掉；只認這個樣式。
+RELEASING_RE = re.compile(r"^(?:.*\.)?lock\.releasing\.(\d{20})\.\d+\.-?\d+$")
+RELEASING_AGE_S = 600          # 代定 10 分鐘（放鎖本身是毫秒級；可翻案）
+RELEASING_DEPTH = 3            # 每個 stack 往下看幾層（信箱的 queue/order.lock 在第 2 層）
 _STAMP = r"\d{4}-\d\d-\d\dT\d\d-\d\d-\d\d\.\d{3}Z"
 ARCHIVE_RE = re.compile(r"^(%s)(?:-\d+)?(?:\.[^/]*)?\.gz$" % _STAMP)   # 自己寫的封存檔；同一毫秒撞名加 -N
 TMP_RE = re.compile(r"^\.%s.*\.gz\.tmp$" % _STAMP)                     # 自己寫一半的暫存（點開頭＝已被 **/.* 擋）
@@ -224,6 +231,29 @@ def purge_dir(rep, label, adir, dry_run):
         except OSError:
             pass
     rep.data["purged"].append({"name": label, "dir": adir, "files": gone, "bytes": size})
+
+
+def releasing(rep, label, top, dry_run, now):
+    """top 底下（最多 RELEASING_DEPTH 層、不跟捷徑、不進 procs/ 與封存夾——那些是別的列或子 daemon 的）過期的放鎖殘骸：刪掉、記進報告。"""
+    top_depth = top.rstrip("/").count("/")
+    for here, dirs, _files in os.walk(top, followlinks=False):
+        depth = here.rstrip("/").count("/") - top_depth
+        keep = []
+        for n in dirs:
+            m = RELEASING_RE.match(n)
+            p = os.path.join(here, n)
+            if m:
+                if now - int(m.group(1)) / 1e9 > RELEASING_AGE_S and not os.path.islink(p):
+                    if not dry_run:
+                        shutil.rmtree(p, ignore_errors=True)
+                        if os.path.lexists(p):
+                            rep.warn("%s: cannot remove leftover lock folder %s" % (label, p))
+                            continue
+                    rep.data.setdefault("releasing", []).append({"name": label, "dir": p})
+                continue
+            if depth + 1 < RELEASING_DEPTH and n not in ("procs", "stderr_archives", ".git") and not os.path.islink(p):
+                keep.append(n)
+        dirs[:] = keep
 
 
 def count_bad(folder):

@@ -22,6 +22,9 @@
 namespace aos::llm {
 
 Mailbox kernel();
+
+// 那台 llm kernel 不在跑的原因（英文一句；在跑＝空字串）。warn_idle 與 recv 共用（11-10 坑-102）。
+std::string idle_reason(const Mailbox& mb);
 void warn_idle(const Mailbox& mb);   // 那裡沒有在跑的 llm daemon＝stderr 提醒一行（不擋）
 Json read_body(const std::optional<std::string>& priority);
 std::string send(const Mailbox& mb, const Json& body, const std::string& reply_to);

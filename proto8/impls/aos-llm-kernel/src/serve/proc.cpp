@@ -15,6 +15,10 @@ namespace aos::llm_kernel {
 // 掛上去的信才有 cur/<id>/proc.json＝{"name": daemon 表上的名字, "exec": endpoint 函數, "mount_letter": 掛信的信件名稱, "mounted_at": epoch 秒, "retries": 重掛過幾次, "endpoint": 代號, "sender"?: 寄件人, "seen_at": 首次看到的 epoch 秒或 null, "switched": 首次掛載是否換包, "backend"?: 後端名, "remount"?: true＝等舊列拔除再重掛}。
 const char* PROC_JSON = "proc.json";
 
+// 11-10（設計-56，使用者裁現在修）：問腦列被人 stop（stopped、沒 reason、沒跑完）超過這麼久＝不等了：回 EndpointFailed、拔列、放格。
+// 從 kernel 第一次看到它停著起算（proc.json 記 stopped_seen_at）；中間又跑起來就重算。代定 300 秒（可翻案）。
+const double STOPPED_GIVE_UP_S = 300;
+
 namespace {
 
 double now_s() {
@@ -169,8 +173,33 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
     if (held) {
         const Json& row = table_.procs[name];
         bool failed = row.is_object() && row.value("reason", Json()).is_string();   // 11-05：出錯結束 daemon 留的 stopped
-        if (!row.is_object() || row.value("phase", "") != "stopped" || (phase != "done" && !failed)) {   // stopped 沒 reason 沒跑完＝有人下了 stop：等
-            return std::nullopt;
+        bool stopped = row.is_object() && row.value("phase", "") == "stopped";
+        if (!row.is_object() || !stopped || (phase != "done" && !failed)) {   // stopped 沒 reason 沒跑完＝有人下了 stop：等（有上限，見 STOPPED_GIVE_UP_S）
+            if (!stopped || phase == "done" || failed) {
+                if (proc.contains("stopped_seen_at")) {   // 又跑起來了：重算
+                    proc.erase("stopped_seen_at");
+                    aos::write_json(aos::join(dir, PROC_JSON), proc);
+                }
+                return std::nullopt;
+            }
+            double now = now_s();
+            Json seen = proc.value("stopped_seen_at", Json());
+            if (!seen.is_number()) {
+                proc["stopped_seen_at"] = now;
+                aos::write_json(aos::join(dir, PROC_JSON), proc);
+                return std::nullopt;
+            }
+            if (now - seen.get<double>() < STOPPED_GIVE_UP_S) {
+                return std::nullopt;
+            }
+            Json rm = Json::object();
+            rm["procs_removed"] = Json::array({name});
+            try {
+                send_procs(host_, rm);
+            } catch (const Error&) {
+            }
+            return error_reply(code::EndpointFailed, "the brain call " + name + " was stopped on the daemon and not started again within " +
+                               std::to_string((int)STOPPED_GIVE_UP_S) + " s; gave up on it");
         }
         Json rm = Json::object();
         rm["procs_removed"] = Json::array({name});

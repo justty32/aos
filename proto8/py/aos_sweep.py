@@ -14,7 +14,7 @@ import time
 import aos_flags
 import daemon_ctl as dc
 import aos_sweep_proc
-from aos_sweep_files import archive_dir, archive_one, count_bad, expire, own_files, purge_dir
+from aos_sweep_files import archive_dir, archive_one, count_bad, expire, own_files, purge_dir, releasing
 
 LOCK = ".sweeper.lock"
 MIN_BYTES = 1 << 20          # 1 MiB 以上才封（草稿代定 4）：小的留著讓人 cat 看最近的錯
@@ -132,6 +132,8 @@ def sweep(d, prog, min_bytes=MIN_BYTES, retention_days=None, stop_grace_s=aos_sw
                 rep.data["archives"]["files"] += 1
                 rep.data["archives"]["bytes"] += b
         rep.data["bad_files"] = count_bad(d) + sum(count_bad(s) for _, s in places)
+        for label, stack in [("daemon", d)] + places:   # 11-10（open-14）：放鎖殘骸
+            releasing(rep, label, stack, dry_run, now)
         aos_sweep_proc.check(rep, d, st, loop_name, stop_grace_s, dry_run, now)
         return rep.data
     finally:
@@ -169,6 +171,8 @@ def lines(data):
         out.append("%s: %s %s (%d bytes) to %s" % (a["name"], verb("archive", "archived"), a["file"], a["bytes"], a["archive"]))
     for a in data["expired"]:
         out.append("%s: %s %d expired archive(s) (%d bytes) in %s" % (a["name"], verb("delete", "deleted"), a["files"], a["bytes"], a["dir"]))
+    for a in data.get("releasing", []):
+        out.append("%s: %s leftover lock folder %s" % (a["name"], verb("remove", "removed"), a["dir"]))
     for a in data["purged"]:
         out.append("%s: %s %d file(s) (%d bytes) in %s" % (a["name"], verb("purge", "purged"), a["files"], a["bytes"], a["dir"]))
     if not data["purged"]:

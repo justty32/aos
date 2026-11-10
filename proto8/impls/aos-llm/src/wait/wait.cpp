@@ -1,6 +1,8 @@
 // wait.cpp：【wait】收回信、等回信、撤信（說明見 wait.hpp）。
 #include "wait/wait.hpp"
 
+#include "send/send.hpp"
+
 #include "aos/util/files.hpp"
 
 #include <cstdio>
@@ -8,6 +10,7 @@
 #include <optional>
 #include <set>
 #include <signal.h>
+#include <sys/stat.h>
 
 namespace fs = std::filesystem;
 
@@ -75,6 +78,36 @@ static int deliver(const aos::post::Mailbox& rb, const std::string& n, const std
     return 0;
 }
 
+// kernel 寫得進回信信箱嗎（只看權限位；kernel 的身分＝owner 那份檔的 uid／gid，補充群組看不到）。寫得進或看不出＝空字串，
+// 寫不進＝哪一格、為什麼（英文）。root（uid 0）一律當寫得進。
+static std::string unwritable_for(const std::string& owner, const aos::post::Mailbox& rb) {
+    struct stat who{};
+    if (::stat(owner.c_str(), &who) != 0 || who.st_uid == 0) {
+        return "";
+    }
+    for (const std::string& d : {rb.tmp(), rb.fresh()}) {
+        struct stat st{};
+        if (::stat(d.c_str(), &st) != 0) {
+            return "";
+        }
+        mode_t need = 0;
+        if (st.st_uid == who.st_uid) {
+            need = S_IWUSR | S_IXUSR;
+        } else if (st.st_gid == who.st_gid) {
+            need = S_IWGRP | S_IXGRP;
+        } else {
+            need = S_IWOTH | S_IXOTH;
+        }
+        if ((st.st_mode & need) != need) {
+            char mode[8];
+            std::snprintf(mode, sizeof mode, "%03o", (unsigned)(st.st_mode & 0777));
+            return d + " is mode " + mode + ", owner uid " + std::to_string(st.st_uid) + ", kernel uid " +
+                   std::to_string(who.st_uid);
+        }
+    }
+    return "";
+}
+
 int recv(const std::string& box, const std::string& name, bool full) {
     aos::post::check_name(name);   // 不合 ArgumentsBad
     aos::post::Mailbox rb = aos::post::open(box);   // 不是資料夾＝MailboxMissing
@@ -82,6 +115,25 @@ int recv(const std::string& box, const std::string& name, bool full) {
     std::optional<std::string> n = find_reply(rb, name, seen);
     if (n && aos::post::take(rb, *n)) {
         return deliver(rb, *n, name, full);
+    }
+    // 11-10（坑-102）：還沒到時，看得出不對勁就多印一行提醒說是哪一種（照舊退 10）：
+    //   ① 信還在 kernel 的 new/、cur/，而 kernel 沒在跑；② kernel（它 stack 的 state.json 的主人）照權限位寫不進 BOX 的 tmp/、new/。
+    // 「信已不在 kernel、BOX 也沒有」不報：回信已經收過一次（再叫 recv）也長這樣，分不出來。
+    // 沒設 AOS_LLM_KERNEL（或不是資料夾）＝不判斷，照舊安靜退 10。
+    try {
+        Mailbox mb = kernel();
+        bool queued = exists(aos::join(mb.fresh(), name)) || exists(aos::join(mb.cur(), name));
+        std::string why = queued ? idle_reason(mb) : std::string();
+        if (!why.empty()) {
+            aos::warn("aos-llm", "no reply for " + name + " yet: " + aos::dirname(mb.root) + ": " + why +
+                                 "; the reply comes once it runs");
+        }
+        std::string blocked = unwritable_for(aos::join(aos::dirname(mb.root), "state.json"), rb);
+        if (!blocked.empty()) {
+            aos::warn("aos-llm", "no reply for " + name + ": the llm kernel cannot deliver into " + rb.root + " (" + blocked +
+                                 "); give it write access (see cmd/aos-sandbox/root/setup.sh --mailbox)");
+        }
+    } catch (const Error&) {
     }
     return 10;
 }

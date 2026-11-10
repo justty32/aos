@@ -278,7 +278,33 @@ bool acquire(const std::string& lock_dir, const Holder& h, long long wait_ms) {
 // /mnt/c 上 holder.flock 開著就改名不了（EACCES），所以 11-10 改成：先在鎖裡 mkdir 收屍牌 .reaping（同 reap 第 1 步，
 // 有牌子別人就不收）、再關 fd、再改名——關 fd 之後鎖看起來像死了，但牌子擋著，並發語意跟原本一樣。
 // 牌子建不成（別人正在收：只有租約過期才會，或鎖不在）＝照原本的順序：先改名、再關。
+// 11-10（設計-52）：本行程登記著這把鎖的 holder.flock fd，而鎖裡現在的 holder.flock 不是同一個檔（租約過期被收走、別人新拿了）＝不是自己的。
+// 沒登記＝不知道（命令列那種）。
+static bool held_by_other(const std::string& lock_dir) {
+    std::lock_guard<std::mutex> guard(held_mutex);
+    std::string key = aos::abspath(lock_dir);
+    for (const Held& h : held) {
+        if (h.path != key || h.fd < 0) {
+            continue;
+        }
+        struct stat mine{};
+        struct stat now{};
+        if (fstat(h.fd, &mine) != 0) {
+            return false;
+        }
+        if (stat(aos::join(lock_dir, "holder.flock").c_str(), &now) != 0) {
+            return true;   // 鎖裡沒有 holder.flock（別人的命令列鎖，或鎖不在）
+        }
+        return mine.st_ino != now.st_ino || mine.st_dev != now.st_dev;
+    }
+    return false;
+}
+
 bool release(const std::string& lock_dir) {
+    if (held_by_other(lock_dir)) {
+        close_held(aos::abspath(lock_dir));   // 自己那份早就不在了：只關 fd，不碰別人的鎖
+        return false;
+    }
     std::string token = aos::join(lock_dir, ".reaping");
     if (::mkdir(token.c_str(), 0777) == 0) {
         close_held(aos::abspath(lock_dir));

@@ -1,7 +1,7 @@
 // aos/lock.hpp：aos-lock 公開介面——mkdir 取鎖、flock 判存活、兩鐘租約、改名放鎖。
 // library 的 holder.flock 持有到 release 或行程結束；CLI 不建存活標記，只靠放鎖與租約。
 // acquired_at 永遠寫；有樹時鐘才寫 acquired_at_cycles。租約優先比雙方時鐘值，否則換牆鐘。
-// 名牌缺失或無效時，資料夾 mtime 相差正負 10 秒才收；release 不驗身分。
+// 名牌缺失或無效時，資料夾 mtime 相差正負 10 秒才收；release 只比本行程登記的 holder.flock（不是那一個＝不放）；命令列另比名牌的 holder（11-10）。
 #pragma once
 
 #include "aos/util/io.hpp"

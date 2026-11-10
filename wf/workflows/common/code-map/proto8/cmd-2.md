@@ -32,6 +32,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-sweeper`](../../../../../proto8/cmd/aos-sweeper/bin/aos-sweeper) | 清道夫跑一輪（掛在 daemon 表上當 loop 列 `_sweeper`，每 interval_ms 一次；使用者 11-10）。 |
+| [`tests/test_releasing.py`](../../../../../proto8/cmd/aos-sweeper/tests/test_releasing.py) | Test the sweeper removes old <lock>.releasing.* leftovers (open-14) and leaves fresh, foreign and child-daemon ones alone. |
 | [`tests/test_sweep.py`](../../../../../proto8/cmd/aos-sweeper/tests/test_sweep.py) | Test aos-sweeper and aos-daemon-ctl sweep (tasks 1–18) with isolated files, real locks, and owned child processes. |
 
 ## `proto8/cmd/aos-tools/`

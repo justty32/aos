@@ -37,7 +37,7 @@ Mailbox kernel() {
 // 11-05 edge-llm 題 1（使用者「按照推薦」）：$AOS_LLM_KERNEL 那裡沒有在跑的 daemon＝stderr 提醒一行，照樣寄、照樣等。
 // 只看那個 stack 的 state.json（daemon 自己寫的窗）：不在＝不是一台 daemon 的 stack；phase 不是 running／waiting／stopping、或 pid 不在＝停了。
 // 11-10 prefix-fixes：waiting（兩圈之間）也算在跑——原本漏了，daemon 一閒下來每封信都誤報。
-void warn_idle(const Mailbox& mb) {
+std::string idle_reason(const Mailbox& mb) {
     std::string stack = aos::dirname(mb.root);
     std::optional<Json> st = aos::read_window("aos-llm", aos::join(stack, "state.json"));
     std::string why;
@@ -52,8 +52,13 @@ void warn_idle(const Mailbox& mb) {
                   (alive ? "" : ", pid gone") + "; see the daemon output for why)";
         }
     }
+    return why;
+}
+
+void warn_idle(const Mailbox& mb) {
+    std::string why = idle_reason(mb);
     if (!why.empty()) {
-        aos::warn("aos-llm", stack + ": " + why + "; letter sent anyway, the reply comes once it runs");
+        aos::warn("aos-llm", aos::dirname(mb.root) + ": " + why + "; letter sent anyway, the reply comes once it runs");
     }
 }
 

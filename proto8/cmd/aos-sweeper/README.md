@@ -34,7 +34,8 @@ daemon.json 的 `procs` 加一列（範本 daemon 預設都帶，不要就刪掉
    - 其他只報不碰：真 zombie（daemon 與表上各列底下的）、活著但環境對不上的（例如殼裡手起、stack 剛好放在 `D/procs/` 底下的 aos-loop）、別次開機或**別台機器**寫的窗（boot_id 不同；pid 剛好撞到本機活行程時報一句）、太年輕的。
    - 不碰：表上的列、別台 daemon 的小格、不在 `D/procs/` 底下的、tmux server 與其中的 claude／codex（tmux 自己 daemonize、不是子 loop 的後代；11-10 實測收掉起它的 loop 後 tmux 照活）。daemon 不在（kill -9 後沒人重起）＝一個行程都不碰，活著的子項是等下一台接回的。
    - 小格與檔一律不刪、不改表（下表照舊用 `rm`／`prune`）。
-4. **報告**：stdout 一事一行（daemon 底下 stdout 是 /dev/null）；給了 `--report FILE` 另寫一份 JSON（暫存再改名）：時間、封存了什麼、刪了什麼、封存總量、`.bad-*` 份數、行程那半做了什麼、warning。
+4. **放鎖殘骸**（11-10 open-14）：aos-lock 放鎖、收屍改名走、刪到一半留下的 `<鎖>.releasing.<20 位 UTC 奈秒>.<pid>.<ticks>`（/mnt/c 上約每 200～300 次放鎖一個），名字裡的時間超過 10 分鐘（代定）就整夾刪掉。範圍：D 與表上各列、預設小格的 stack 往下 3 層，不進 `procs/`（別的列、子 daemon 的）與封存夾、不跟捷徑；只認這個樣式。報告 `releasing` 欄、stdout `NAME: removed leftover lock folder …`。
+5. **報告**：stdout 一事一行（daemon 底下 stdout 是 /dev/null）；給了 `--report FILE` 另寫一份 JSON（暫存再改名）：時間、封存了什麼、刪了什麼、封存總量、`.bad-*` 份數、行程那半做了什麼、warning。
 
 不碰：`*.bad-*` 留證檔（只數份數）、history、observed、ledger、歸檔信、`.trash`。不跟 symlink：本機捷徑錨點 `.aos-proto8` 這類捷徑不跟進去、不動它（掃的只有表上各列的 stack 頂層與 `D/procs/*/`，一律 lstat）。只長不消、第一版刻意不碰的其他檔（live.jsonl、history、ledger…）與理由：[設計 § 8](../../thinking/2026-11/10/sweeper/01-設計.md#8-只長不消第一版不碰的之後可加給使用者一眼決定)。
 

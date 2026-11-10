@@ -1,6 +1,7 @@
 // main.cpp：aos-lock 命令列——無存活標記的持久鎖、時鐘租約、放鎖與查看。
 #include "aos/util/cli.hpp"
 #include "aos/lock.hpp"
+#include "aos/util/proc.hpp"
 
 #include <exception>
 #include <iostream>
@@ -35,7 +36,7 @@ more: aos-lock/README.md
 
 const std::map<std::string, std::string> SUB_USAGE = {
     {"acquire", "aos-lock acquire [--lease-cycles N] [--note TEXT] [--wait-ms N] TARGET"},
-    {"release", "aos-lock release TARGET"},
+    {"release", "aos-lock release [--force] TARGET"},
     {"show", "aos-lock show TARGET"},
 };
 
@@ -58,15 +59,18 @@ more: aos-lock/README.md
 )"},
     {"release", R"(aos-lock release - Release a lock.
 
-usage: aos-lock release TARGET
+usage: aos-lock release [--force] TARGET
        aos-lock release --help
 
 flags:
+      --force  release even if the holder is someone else
   -h, --help   show this help
 
-Remove the lock folder next to TARGET; print nothing.
+Remove the lock folder next to TARGET; print nothing. Without --force, a lock
+whose holder differs from this caller (AOS_WS, AOS_STACK, AOS_CF or the current
+folder) is left alone with a warning.
 
-exit codes: 0 released; 1 error (including a missing lock).
+exit codes: 0 released; 10 held by someone else (not released); 1 error (including a missing lock).
 more: aos-lock/README.md
 )"},
     {"show", R"(aos-lock show - Read the lock holder.
@@ -90,11 +94,12 @@ int fail(const std::string& code, const std::string& msg) {
     return aos::fail("aos-lock", code, msg);
 }
 
-aos::Cli parse(const Args& args, const std::map<std::string, std::string>& flags) {
+aos::Cli parse(const Args& args, const std::map<std::string, std::string>& flags,
+               const std::map<std::string, std::string>& switches = {}) {
     const std::string& usage = SUB_USAGE.at(sub_cmd);
     aos::Cli cli;
     try {
-        cli = aos::parse_cli(args, flags, {}, SUB_HELP.at(sub_cmd));
+        cli = aos::parse_cli(args, flags, switches, SUB_HELP.at(sub_cmd));
     } catch (const aos::Error& e) {
         if (e.code == l::code::FlagUnknown) {
             throw aos::Error{e.code, e.msg + " (see aos-lock " + sub_cmd + " --help)"};
@@ -133,8 +138,22 @@ int cmd_acquire(const Args& args) {
 }
 
 int cmd_release(const Args& args) {
-    aos::Cli cli = parse(args, {});
+    aos::Cli cli = parse(args, {}, {{"--force", "force"}});
     std::string dir = l::lock_dir_of(cli.rest[0]);
+    // 11-10（設計-52）：先認主——名牌的 holder 跟這次呼叫的身分（aos::identity：AOS_WS／AOS_STACK／AOS_CF 或 cwd）不同＝別人的鎖，
+    // 印提醒、不放、退 10（代定，可翻案）。--force 照舊不看。名牌讀不到、沒 holder＝照舊放（收殘缺鎖）。
+    if (!cli.opts.count("force")) {
+        l::Seen s = l::look(dir);
+        if (s.held && s.holder && s.holder->value("holder", aos::Json()).is_string()) {
+            std::string who = (*s.holder)["holder"].get<std::string>();
+            std::string me = aos::identity();
+            if (who != me) {
+                aos::warn("aos-lock", "not releasing " + dir + ": it is held by " + who + ", not by " + me +
+                                      " (its lease may have expired and someone else took it); use --force to release it anyway");
+                return 10;
+            }
+        }
+    }
     if (!l::release(dir)) {
         return fail(l::code::LockMissing, "lock not held: " + dir);
     }
