@@ -20,6 +20,7 @@
 | [`act.py`](../../../../../proto8/templates/agent-fsm/act.py) | act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。 |
 | [`body.json`](../../../../../proto8/templates/agent-fsm/body.json) | argv：`aos-loop loop.json` |
 | [`brain.py`](../../../../../proto8/templates/agent-fsm/brain.py) | think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。 |
+| [`children.json`](../../../../../proto8/templates/agent-fsm/children.json) | 設定（鍵：max_children） |
 | [`fsm.json`](../../../../../proto8/templates/agent-fsm/fsm.json) | 入口 `aos-fsm $AOS_CF`；鍵：start、states |
 | [`hooks.json`](../../../../../proto8/templates/agent-fsm/hooks.json) | Hooks of this agent: aos functions run when an event happens (queue_before, queue_after, tool_before, tool_after, brain_failed, tool_added); the stac… |
 | [`idle.py`](../../../../../proto8/templates/agent-fsm/idle.py) | idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。 |
@@ -51,6 +52,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`_entry`](../../../../../proto8/templates/eca-claude/_entry) | 入口：`aos-loop loop.json` |
+| [`children.json`](../../../../../proto8/templates/eca-claude/children.json) | 設定（鍵：max_children） |
 | [`cli.json`](../../../../../proto8/templates/eca-claude/cli.json) | 設定（鍵：kind、flags、print_flags、tools_flags、timeout_ms） |
 | [`hooks.json`](../../../../../proto8/templates/eca-claude/hooks.json) | Hooks of this eca: aos functions run when an event happens. eca has queue_before, queue_after, brain_failed (CliFailed / ReplyMissing) and tool_added… |
 | [`interfaces.json`](../../../../../proto8/templates/eca-claude/interfaces.json) | 設定（鍵：aos-agent） |

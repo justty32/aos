@@ -56,7 +56,7 @@ aos-agent hook -t bob                       # = ls：NAME TAB EVENT TAB EXEC
 aos-agent hook -t bob ls -l                 # 多 MATCH WAIT ON_FAIL CHANGE TIMEOUT_MS FROM，也列被設成 null 的
 aos-agent hook -t bob ls --json             # 一個 JSON 陣列（補完預設、帶 name 與 from）
 aos-agent hook -t bob get guard             # 一格的 JSON
-aos-agent hook -t bob add --on tool_before --match agents --change hooks/guard
+aos-agent hook -t bob add --on tool_before --match agents_ctl --change hooks/guard
 aos-agent hook -t bob add --on brain_failed --on-fail continue --no-wait -n ping --path-json '{"$env": "AOS_HOME", "$path": "/lib/x"}'
 aos-agent hook -t bob rm guard              # 定義裡有的＝寫 null；自己加的＝刪掉那格
 aos-agent hook -t bob reset -y              # 刪自己那份，回到定義的
@@ -69,15 +69,15 @@ aos-agent hook -t bob reset -y              # 刪自己那份，回到定義的
 
 ## 最小 hook 範例
 
-擋掉腦叫 `agents` 工具時 `op` 是 `new` 的呼叫（生新 agent）（`add --on tool_before --match agents --change hooks/no_spawn`）：
+擋掉腦叫 `agent_def` 工具時 `op` 是 `new` 的呼叫（造新定義）（`add --on tool_before --match agent_def --change hooks/no_spawn`）：
 
 ```python
 #!/usr/bin/env python3
-# no_spawn - tool_before hook: block agents {"op": "new"}
+# no_spawn - tool_before hook: block agent_def {"op": "new"}
 import json, sys
 ev = json.load(sys.stdin)
 if isinstance(ev["arguments"], dict) and ev["arguments"].get("op") == "new":
-    print("spawning is turned off by hook %s" % ev["hook"])   # what the brain sees as the tool result
+    print("making new agents is turned off by hook %s" % ev["hook"])   # what the brain sees as the tool result
     sys.exit(10)
 sys.exit(0)                                                  # empty stdout = no change
 ```

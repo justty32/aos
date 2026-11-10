@@ -1,6 +1,7 @@
 {"tools": {"wall_clock": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/wall_clock"}},
            "self_tools": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_tools"}},
            "self_llm": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_llm"}},
+           "self_hook": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_hook"}},
            "self_history": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_history"}},
            "mailbox_peek": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/mailbox_peek"}},
            "mailbox_read": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/mailbox_read"}},
