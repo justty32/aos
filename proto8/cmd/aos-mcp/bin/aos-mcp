@@ -20,6 +20,10 @@
 #   到了整群 TERM、2 秒後 KILL。呼叫紀錄預設不記（11-02 使用者「默認不留」）：給 --enable-logs＝每次叫完在
 #   <stack>/aos-mcp-logs.jsonl 記一行（名字、arguments、結束碼、花多久），再加 --logs-path FILE＝記在 FILE（相對路徑從啟動時的 cwd 算）；
 #   只給 --logs-path、沒給 --enable-logs＝ArgumentsBad。
+#   --hooks DEF（11-10 hook，圖紙 thinking/2026-11/10/self-family/hook § 6 eca 縮水版）：DEF＝定義資料夾（interfaces.json 宣告 hooks），stack＝上面那個 stack；
+#   cli_session 起它時帶上。tools/call 跑之前 tool_before（name、id＝請求 id 轉字串、arguments；可改 arguments、攔下＝不跑，結果文字＝hook stdout，
+#   空就「(tool NAME blocked by hook HOOK)」，不算 isError）、跑完 tool_after（加 content、code〔逾時 null〕、timed_out；可改 content）。
+#   hook 停下（HookFailed／HooksBad）＝這次 tools/call 回 isError、文字是那行錯，櫃台不死；on_fail continue 的 warning 走 stderr。沒給＝沒有 hook。
 # 只做 initialize、ping、tools/list、tools/call；沒有 progress、resources、prompts、HTTP。
 # 錯：自己的錯 stderr 一行「aos-mcp: error: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、WsMissing、ToolMissing、ToolsBad；11-05 stdio-unify R1）。
 #   --help＝英文說明到 stdout、退 0（R3）；不給參數照常（讀 ./tools.json）；Ctrl-C＝退 130、不吐 traceback（R12）。
@@ -35,10 +39,12 @@ sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
 import aos_flags  # noqa: E402  proto8/py/aos_flags.py：P-44 的解析
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
 import metainfo  # noqa: E402
+from agent import hooks  # noqa: E402  lib/agent/hooks.py：tool_before／tool_after（--hooks DEF）
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
-USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [REGISTRY...]"
+USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [--hooks DEF] [REGISTRY...]"
+HOOKS = None                                    # --hooks DEF（11-10）：定義資料夾的絕對路徑；None＝沒有 hook
 MEMORY = None                                   # --memory NAME（11-05 晚 K4）：initialize 時給的知識庫根從這個工具來
 DEFAULT_REGISTRY = "tools.json"               # 一份都沒給時讀 ./tools.json（跟 aos-tools 一致；11-02 改回）
 LOGS_NAME = "aos-mcp-logs.jsonl"         # --enable-logs 沒給 --logs-path 時記在 <stack>/ 底下的這個檔（11-02）
@@ -46,7 +52,7 @@ LOGS_PATH = None                               # 記呼叫紀錄的檔（絕對�
 STDERR_TAIL = 2048                             # 失敗時附給外部 agent 的 stderr 最後幾個位元組（11-05，edge-basics 題 1）
 aos_flags.HELP = """aos-mcp - serve the tools of aos-tools registries as MCP tools to an external agent (Claude Code, pi...); stdio JSON-RPC.
 
-    aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [REGISTRY...]
+    aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--memory NAME] [--hooks DEF] [REGISTRY...]
 
 Short flags: -w = --ws, -s = --stack, -h = --help.
 REGISTRY: registry files (relative to the cwd at start; none = ./tools.json); several are merged, a name clash = ToolsBad.
@@ -58,6 +64,9 @@ Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call
   otherwise --timeout-s (default 60); then TERM to the whole group, KILL 2 s later.
 --memory NAME: on initialize, call tool NAME with {"op": "read"} and send what it prints (the knowledge base root) as the
   instructions of the reply; NAME not listed or the call failing = no instructions and a warning line on stderr.
+--hooks DEF: DEF is the agent definition folder (its interfaces.json declares hooks.json; the stack copy goes on top). On tools/call,
+  tool_before may change the arguments or block the call (the result text = the hook's stdout, or "(tool NAME blocked by hook HOOK)";
+  not an error), tool_after may change the result text. A failing hook = that call returns isError with a HookFailed line. No --hooks = no hooks.
 --enable-logs: log one line per call to <stack>/aos-mcp-logs.jsonl (or --logs-path FILE). Off by default.
 Supports initialize, ping, tools/list, tools/call only.
 Errors: one stderr line `aos-mcp: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, WsMissing, ToolMissing, ToolsBad.
@@ -86,11 +95,11 @@ def die(code, reason):
 
 def parse_args(argv):
     """命令列 → (ws, stack, timeout_s, registries)；--enable-logs／--logs-path 設進 LOGS_PATH。"""
-    global LOGS_PATH, MEMORY
+    global LOGS_PATH, MEMORY, HOOKS
     try:
         opts, files = aos_flags.parse(argv, {"--ws": "ws", "--stack": "stack", "--timeout-s": "timeout_s",
                                              "--logs-path": "log",
-                                             "--memory": "memory"}, {"--enable-logs": "enable"}, short=("-w", "-s"))
+                                             "--memory": "memory", "--hooks": "hooks"}, {"--enable-logs": "enable"}, short=("-w", "-s"))
     except aos_flags.Error as e:
         die(e.code, "%s (usage: %s)" % (e, USAGE))
     ws, stack = opts.get("ws", os.environ.get("AOS_WS")), opts.get("stack", os.environ.get("AOS_STACK"))
@@ -108,6 +117,10 @@ def parse_args(argv):
         if not opts["memory"]:
             die("ArgumentsBad", "--memory needs a tool name")
         MEMORY = opts["memory"]
+    if "hooks" in opts:
+        if not opts["hooks"] or not os.path.isdir(opts["hooks"]):
+            die("ArgumentsBad", "--hooks needs the agent definition folder, got %r" % opts["hooks"])
+        HOOKS = os.path.abspath(opts["hooks"])
     if not files:
         files = [DEFAULT_REGISTRY]
     if not ws or not os.path.isdir(ws):
@@ -212,10 +225,37 @@ def record(line):
         f.write(json.dumps(line, ensure_ascii=False) + "\n")
 
 
-def tools_call(params, tools, ws, stack, timeout_s):
+def fire(event, data, stack):
+    """跑 hook（--hooks 沒給＝不跑、原樣回）；hook 停下丟 HookStop 帶那一行錯。"""
+    if HOOKS is None:
+        return {"data": data, "changed": [], "blocked": False, "hook": None, "text": ""}
+    try:
+        return hooks.fire(event, data, HOOKS, stack, warn=lambda line: aos_flags.warn(NAME, line))
+    except (hooks.HookFailed, hooks.HooksBad) as e:
+        raise HookStop(aos_flags.error_line(NAME, type(e).__name__, e))
+
+
+class HookStop(Exception):
+    """hook 停下：這次 tools/call 回 isError（櫃台不死）。"""
+
+
+def tools_call(params, tools, ws, stack, timeout_s, mid=None):
+    try:
+        return run_tool(params, tools, ws, stack, timeout_s, mid)
+    except HookStop as e:
+        return {"content": [{"type": "text", "text": str(e)}], "isError": True}, None
+
+
+def run_tool(params, tools, ws, stack, timeout_s, mid):
     name, args = params.get("name"), params.get("arguments") or {}
     if name not in tools:
         return None, (-32602, "no such tool: %s" % name)
+    cid = "" if mid is None else str(mid)
+    hooked = fire("tool_before", {"name": name, "id": cid, "arguments": args}, stack)
+    if hooked["blocked"]:                       # 攔下：不跑、不記、不觸發 tool_after
+        text = hooked["text"] if hooked["text"].strip() else "(tool %s blocked by hook %s)" % (name, hooked["hook"])
+        return {"content": [{"type": "text", "text": text}], "isError": False}, None
+    args = hooked["data"]["arguments"]
     code, out, tail, ms, limit = call(name, tools[name], args, ws, stack, timeout_s)
     record({"name": name, "arguments": args, "code": code, "elapsed_ms": ms,
                    "called_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
@@ -228,6 +268,10 @@ def tools_call(params, tools, ws, stack, timeout_s):
     content = [{"type": "text", "text": text}]
     if code != 0 and tail:                      # 失敗時附 stderr 尾巴，外部 agent 才看得到原因（11-05，edge-basics 題 1）
         content.append({"type": "text", "text": "stderr (last %d bytes at most):\n%s" % (STDERR_TAIL, tail)})
+    after = fire("tool_after", {"name": name, "id": cid, "arguments": args, "content": "\n".join(c["text"] for c in content),
+                                "code": code, "timed_out": code is None}, stack)
+    if "content" in after["changed"]:           # hook 改了結果：整段換成它給的一段文字
+        content = [{"type": "text", "text": after["data"]["content"]}]
     return {"content": content, "isError": code != 0}, None
 
 
@@ -269,7 +313,7 @@ def handle(msg, regs, ws, stack, timeout_s):
         elif method == "tools/list":
             result = {"tools": [t["spec"] for t in load_tools(regs).values()]}
         elif method == "tools/call":
-            result, err = tools_call(params, load_tools(regs), ws, stack, timeout_s)
+            result, err = tools_call(params, load_tools(regs), ws, stack, timeout_s, mid)
         else:
             err = (-32601, "method not supported: %s" % method)
     except ToolsBad as e:                       # 跑起來之後登記檔壞了：這一則回錯，不退

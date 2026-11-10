@@ -29,7 +29,8 @@
 # 工具（11-03 eca-tools，thinking 2026-11-03-eca-tools）：cli.json 選填 tools＝aos-tools 的登記檔（相對路徑從 cli.json 的資料夾算；
 #   也可寫指示詞，例 {"$env": "AOS_HOME", "$path": "/lib/x/tools.json"}，每次讀才解、不寫回，11-10 two-machines TC），
 #   沒寫＝cli.json 同層有 tools.json 就用它（使用者 11-03「如果cli.json沒有指定，那就去找默認的tools.json」）、沒有＝不接工具；
-#   選填 tools_flags＝字串陣列，原樣插在 aos-mcp 的 args 裡（例 ["--enable-logs"]）。有登記檔時每次起 CLI 前接上
+#   選填 tools_flags＝字串陣列，原樣插在 aos-mcp 的 args 裡（例 ["--enable-logs"]）。定義的 interfaces.json 宣告了 hooks＝再加 --hooks <定義>
+#   （11-10 hook：tool_before／tool_after 在 aos-mcp 跑）。有登記檔時每次起 CLI 前接上
 #   aos-mcp --ws <工作區> --stack <stack> [tools_flags…] <登記檔絕對路徑>：claude＝寫小格 mcp.json、加 --mcp-config 它 --allowedTools mcp__aos；
 #   codex＝兩個 -c mcp_servers.aos.command／args。aos-mcp 靠 PATH 找（N-50）；定義資料夾一個字都不寫（P-15）。
 #   $AOS_STACK 裡這隻自己的（aos-agent tools／llm 寫的，stack_copies）：tools.json＝這隻自己那份（只存差異、"$override" 指回定義那份，
@@ -111,6 +112,7 @@ def load_cfg(tool_dir):
     except ValueError as e:
         die("CfgBad", str(e))
     cfg["registry"] = registry(cfg, tool_dir, path, files)
+    cfg["hooks_def"] = os.path.abspath(tool_dir) if files.get("hooks") else None   # 11-10 hook：宣告了 hooks＝aos-mcp 帶 --hooks
     stack_copies(cfg, tool_dir, files)
     return cfg
 
@@ -196,7 +198,8 @@ def mcp_argv(cfg, cell, ws, stack):
         die("ToolsMissing", "registry file not found: %s" % reg)
     if shutil.which("aos-mcp") is None:
         die("CliMissing", "aos-mcp is not on PATH (tools are attached; add proto8/cmd/aos-mcp/bin to PATH)")
-    args = ["--ws", ws, "--stack", stack] + cfg.get("tools_flags", []) + [reg]
+    args = ["--ws", ws, "--stack", stack] + (["--hooks", cfg["hooks_def"]] if cfg.get("hooks_def") else []) \
+        + cfg.get("tools_flags", []) + [reg]
     if cfg["kind"] == "codex":                           # JSON 字串與字串陣列同時是合法的 TOML（-c 的值照 TOML 解）
         return ["-c", "mcp_servers.aos.command=" + json.dumps("aos-mcp"), "-c", "mcp_servers.aos.args=" + json.dumps(args)]
     try:

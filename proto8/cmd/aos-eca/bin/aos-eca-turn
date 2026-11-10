@@ -55,6 +55,11 @@
      （cur/ 先、照 letter_key；new/ 用 aos-post take 一次認領一封；壞信照舊丟、記 mailbox_warning，再往下找一封好信）；none＝照舊整批。
      交出去之後的失敗（CliFailed、ReplyMissing；看 handed 有沒有被叫過）＝cooldown.fail（dropped＝這批的封數）再照舊報錯退 1；
      交出去之前的錯不寫冷卻、SessionBad 退讓不算失敗；寫冷卻檔失敗只多一行 warning。成功（assistant 接進 history 之後）＝cooldown.clear。
+  ⑪ hook（11-10 晚 self-family/hook，圖紙 § 6 eca 縮水版；lib/agent/hooks.py，定義＝DEF_DIR、stack＝$AOS_STACK）：好信讀出來、交出去之前每封
+     queue_before（可改 content；攔下＝aos-post done 收掉、不交、不進 history、mailbox_warning.txt 寫 `letter SIG dropped by hook HOOK`；整批都被丟＝同整批壞信）；
+     交出去之前 tool_added（這輪生效的登記檔比上次多的名字；有這種 hook 才多叫一次 aos-tools ls --json）；handed 裡信接進 history、收掉之後每封 queue_after；
+     交出去之後的 CliFailed／ReplyMissing＝記冷卻之前 brain_failed（name＝代號、reason＝這支那行的原因）。tool_before／tool_after 在 aos-mcp（cli_session 帶 --hooks DEF_DIR）。
+     hook 停下＝HookFailed／HooksBad 退 1：交出去之前＝信留 cur/、history 不動；queue_after 停下＝回答照樣接進 history 才報；brain_failed 停下＝冷卻不記。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
   人在畫面上自己打的話不進 history（沒經 queue；eca 方向題 2）。
@@ -70,10 +75,11 @@ PATH 上要有 aos-post（平級形）。
   畫面等 busy.txt 逾時的 ReplyMissing…）＝整批信留在 cur/（或還在 new/）、history 不動，修好重跑整批照問；交出去之後的錯＝信已收、user 已接、
   沒有 assistant，不重答（④）。
   代號：ArgumentsBad、FlagUnknown、AgentBad、StackMissing、PromptMissing（11-04：--prompt 給的開場白檔不在）、HistoryBad、PostFailed、WriteFailed，
+  HookFailed、HooksBad、ToolsBad（⑪ tool_added 叫 aos-tools ls 失敗），
   加 cli_session 的 CfgMissing、CfgBad、ToolsMissing（11-03 eca-tools：cli.json 的 tools 指的登記檔不在）、CliMissing（含 aos-mcp 不在 PATH 上）、
   CliFailed、ReplyMissing（yield 時的 SessionBad 不算錯，見上）。
 `--help`＝印 HELP（英文）到 stdout、退 0（R3）；Ctrl-C＝退 130、不吐 traceback（R12）。"""
-import hashlib, json, os, sys
+import hashlib, json, os, subprocess, sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
@@ -96,6 +102,10 @@ try:
         import cooldown  # noqa: E402
     else:
         import agent.cooldown as cooldown  # noqa: E402
+    if os.path.isfile(os.path.join(HERE, "hooks.py")):
+        import hooks  # noqa: E402
+    else:
+        import agent.hooks as hooks  # noqa: E402
 finally:
     for _path in _import_paths:
         sys.path.remove(_path)
@@ -126,12 +136,16 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
     the next turn starts a new conversation the same way, carrying the changed record (not while the screen is open).
   Cooldown: a failure after the prompt was handed over (CliFailed, ReplyMissing) is recorded in $AOS_STACK/cooldown.json; while
     cooling, no letter is taken (exit 0); when the cooldown is over, only the oldest letter is tried; a success removes the file.
+  Hooks (hooks.json declared in DEF_DIR's interfaces.json, the stack copy on top): queue_before before a good letter is handed over
+    (may change content or drop it; a dropped letter is done and noted in mailbox_warning.txt), tool_added before handing over,
+    queue_after after the letters went into history, brain_failed on CliFailed / ReplyMissing after handing over. tool_before /
+    tool_after run in aos-mcp. A failing hook = HookFailed (letters not yet handed over stay in cur/).
 --one (tool form): stdin {"prompt"} -> stdout the answer; the conversation lives in $AOS_STACK itself. --on-empty / --prompt not allowed.
   If the earlier conversation is not on this machine, a warning is printed and a new one is started without a record. No cooldown.
 Needs aos-post on PATH (loop form) and AOS_STACK.
 Errors: one stderr line `aos-eca-turn: error: CODE reason`, exit 1 (tool form: the line also goes to stdout). aos-post's own stderr
   is passed through as it is. Codes: ArgumentsBad, FlagUnknown, AgentBad, StackMissing, PromptMissing, HistoryBad, PostFailed,
-  WriteFailed, CfgMissing, CfgBad, ToolsMissing, CliMissing, CliFailed, ReplyMissing."""
+  WriteFailed, HookFailed, HooksBad, ToolsBad, CfgMissing, CfgBad, ToolsMissing, CliMissing, CliFailed, ReplyMissing."""
 
 
 class Fail(Exception):
@@ -255,6 +269,53 @@ def warn(stack, sig, why):
     write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s rejected: %s\n" % (sig, why.replace("\n", " ")))
 
 
+# ---- hook（lib/agent/hooks.py；圖紙 thinking/2026-11/10/self-family/hook § 6 eca 縮水版）----
+
+def fire(event, data, template, stack):
+    """跑 hook；hook 停下＝這支的錯（HookFailed／HooksBad）。"""
+    try:
+        return hooks.fire(event, data, template, stack, warn=lambda line: aos_flags.warn(NAME, line))
+    except (hooks.HookFailed, hooks.HooksBad) as e:
+        raise Fail(type(e).__name__, e)
+
+
+def queue_before(stack, box, sig, body, template):
+    """好信交出去之前跑 queue_before：回（可能改過 content 的）body；被攔下＝aos-post done 收掉、mailbox_warning 一行、回 None。"""
+    r = fire("queue_before", {"letter": sig, "content": body["content"]}, template, stack)
+    if r["blocked"]:
+        post(["done", box, sig])
+        write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s dropped by hook %s\n" % (sig, r["hook"]))
+        return None
+    return dict(body, content=r["data"]["content"])
+
+
+def tool_added(cfg, template, stack):
+    """tool_added：這隻實際生效的登記檔（cfg["registry"]）的名單比上次多出來的，一個名字一次；沒這種 hook＝不叫 aos-tools、刪 seen 檔。"""
+    try:
+        on = hooks.has("tool_added", template, stack)
+    except hooks.HooksBad as e:
+        raise Fail("HooksBad", e)
+    listed = []
+    if on and cfg.get("registry"):
+        try:
+            r = subprocess.run(["aos-tools", "--file", cfg["registry"], "ls", "--json"], stdin=subprocess.DEVNULL,
+                               stdout=subprocess.PIPE, text=True)          # stderr 不吞：aos-tools 自己說哪裡壞
+        except OSError as e:
+            raise Fail("ToolsBad", "aos-tools cannot start: %s" % e)
+        if r.returncode != 0:
+            raise Fail("ToolsBad", "aos-tools ls exited %d" % r.returncode)
+        try:
+            listed = [(t["name"], os.path.abspath(t["path"]) if t.get("path") else None) for t in json.loads(r.stdout)]
+        except (ValueError, TypeError, KeyError) as e:
+            raise Fail("ToolsBad", "aos-tools ls --json printed something else: %s" % e)
+    try:
+        added = hooks.tools_added(stack, listed, on)
+    except OSError as e:
+        raise Fail("WriteFailed", "cannot write %s: %s" % (os.path.join(stack, hooks.SEEN), e))
+    for name, where in added:
+        fire("tool_added", {"name": name, "path": where}, template, stack)
+
+
 # ---- 一批 ----
 
 def letter_body(box, sig):
@@ -294,7 +355,7 @@ def opening(stack, box, path):
 SEP = "\n\n"                                   # 一批好幾封時，各封 content 照順序用一個空行接起來（11-03 代定）
 
 
-def pick_one(stack, box, prompt):
+def pick_one(stack, box, prompt, template):
     """冷卻到了（06）：只拿最舊的一封好信——cur/ 先、照 letter_key；cur/ 沒有好信才從 new/ 用 aos-post take 一次認領一封。
     壞信照舊丟、記 mailbox_warning，再往下找。回 ([sig], [body], 丟了幾封)；一封好信都沒有＝([], [], 丟了幾封)。"""
     if not names(box, "new") and not names(box, "cur"):
@@ -304,7 +365,11 @@ def pick_one(stack, box, prompt):
         for sig in names(box, "cur"):
             body, why = letter_body(box, sig)
             if body is not None:
-                return [sig], [body], dropped
+                body = queue_before(stack, box, sig, body, template)
+                if body is not None:
+                    return [sig], [body], dropped
+                dropped += 1
+                continue
             post(["done", box, sig])
             warn(stack, sig, why)
             dropped += 1
@@ -332,7 +397,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
     if cool == "cooling":
         return 0                                                    # 一封都不認領：new/、cur/、history 都不動
     if cool == "due":
-        good, bodies, dropped = pick_one(stack, box, prompt)       # 冷卻到了：只試最舊的一封
+        good, bodies, dropped = pick_one(stack, box, prompt, template)       # 冷卻到了：只試最舊的一封
         if not good:
             return 0 if dropped else empty_code
     else:
@@ -347,12 +412,16 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
                 post(["done", box, sig])
                 warn(stack, sig, why)
                 continue
+            body = queue_before(stack, box, sig, body, template)   # hook：可改 content、可丟掉這封（整批都丟＝同整批壞信）
+            if body is None:
+                continue
             bodies.append(body)
             good.append(sig)
         if not good:
             return 0
+    tool_added(cfg, template, stack)                                # hook：登記檔多了誰（交出去之前；hook 停下＝信留 cur/）
     history_changed(stack, cell)                                    # ⑩ history 被改過＝開新對話
-    late, given, mid = [], [], []                                   # 交出去那一刻收信時出的錯：CLI 已經在跑，等它答完再報
+    late, given, mid, after = [], [], [], []                        # 交出去那一刻收信時出的錯：CLI 已經在跑，等它答完再報；after＝queue_after hook 停下
 
     def handed():                                                   # ④ 交出去就算完成（11-03）：user 接進 history、收信
         given.append(True)
@@ -364,6 +433,12 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
             mid.append(history_sum(stack))                          # ⑩ 交出去那刻的 history
         except Fail as e:
             late.append(e)
+            return
+        try:
+            for sig, body in zip(good, bodies):                     # hook：接進 history、收掉之後，每封一次
+                fire("queue_after", {"letter": sig, "content": body["content"]}, template, stack)
+        except Fail as e:
+            after.append(e)                                         # 回答照樣接進 history，最後才報（不掉回答）
     try:
         text = cli_session.ask(cfg, cell, template, ws, stack, SEP.join(b["content"] for b in bodies), on_busy,
                                handed, lambda limit: reseed(stack, ws, limit))   # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
@@ -371,6 +446,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
         if e.code == "SessionBad":                                  # 只有 --on-busy yield 會丟，一定在交出去之前
             return 0                                                # 整批留 cur/，下一次再試
         if given and e.code in ("CliFailed", "ReplyMissing"):      # ⑨ 交出去之後的失敗：記冷卻（這批掉了）
+            fire("brain_failed", {"name": e.code, "reason": str(e)}, template, stack)   # hook 停下＝HookFailed，冷卻不記（同 agent-fsm wait）
             try:
                 cooldown.fail(stack, e.code, e, dropped=len(good))
             except OSError as w:
@@ -385,6 +461,8 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
         cooldown.clear(stack)                                       # ⑨ 成功一次＝歸零
     except OSError as w:
         aos_flags.warn(NAME, "cannot remove %s: %s" % (cooldown.path(stack), w))
+    if after:
+        raise after[0]
     return 0
 
 
