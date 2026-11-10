@@ -1,162 +1,247 @@
-"""Write, promote and remove knowledge nodes atomically under directory locks."""
+"""memory_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫入只准落在庫根底下。
+
+圖紙 proto8/thinking/2026-11/10/json-memory/03（使用者 11-10 晚：新增刪除工具一次做完兩處「A」；同時寫「不管，自行承擔風險」＝不加鎖）。
+JSON 的寫交給 aos-json（set、同檔兩處用 batch --parents、del；每份檔暫存後原子 rename）；非 .json 檔照原文由這裡原子寫。
+寫的路上不穿 $ref（不給 --follow）：路上碰到指示詞＝TargetBad，要改就直接寫它指到的那份檔。
+新增要動兩份檔時先寫內容再寫表：中途死掉＝留下沒登記的東西（ls 的 not in index: 看得到）；刪除也是先刪內容再拔格。
+錯誤 raise tool_io.Error，由 _entry 轉成錯誤行。"""
 import json
 import os
 import shutil
-import signal
 import stat
 import tempfile
-import time
-import uuid
 
 import memory_fs as fs
-import tool_io
-from locking import check_descendants, with_lock
+from tool_io import Error
+
+MAX_BYTES = 8000
+MISSING = object()
 
 
-def discard(path):
-    if os.path.isdir(path) and not os.path.islink(path):
-        shutil.rmtree(path)
-    elif os.path.lexists(path):
-        os.unlink(path)
+def require_inside(root, path):
+    """解開捷徑後要在庫根底下（或就是根）。"""
+    real = os.path.realpath(path)
+    if real != root and not real.startswith(root.rstrip("/") + "/"):
+        raise Error("PathBad", "writes must stay inside the memory root %s; %s resolves to %s" % (root, path, real))
 
 
-def clean_old(folder):
-    for name in os.listdir(folder):
-        if name.startswith((".tmp.", ".new.", ".rm.")):
-            path = os.path.join(folder, name)
-            try:
-                if time.time() - os.lstat(path).st_mtime > 600:
-                    discard(path)
-            except FileNotFoundError:
-                pass
+def check_name(name):
+    if not name or name in (".", "..") or name.startswith((".", "_")):
+        raise Error("PathBad", "%r cannot be added: names starting with . or _ are reserved" % name)
 
 
-def text_bytes(text, target=""):
-    if not isinstance(text, str):
-        tool_io.die("TextBad", "text must be a UTF-8 string")
-    try:
-        raw = text.encode("utf-8")
-    except UnicodeError:
-        tool_io.die("TextBad", "text must be a UTF-8 string")
-    if not text.endswith("\n"):
-        raw += b"\n"
-    if len(raw) > 8000:
-        tool_io.die("TextBad", "text exceeds 8000 bytes; split into child nodes")
-    if target.endswith(".json"):
-        try:
-            json.loads(text)
-        except ValueError:
-            tool_io.die("TextBad", "text for a JSON leaf must be valid JSON")
-    elif not text.splitlines() or not text.splitlines()[0].startswith("# "):
-        tool_io.die("TextBad", "text must start with # Title")
-    return raw
+def encode(fs_path, value):
+    """要寫進檔的文字；.json＝JSON，其他副檔名＝value 要是字串、照原文。超過 8000 bytes＝ValueBad。"""
+    if fs_path.endswith(".json"):
+        text = json.dumps(value, ensure_ascii=False)
+    elif isinstance(value, str):
+        text = value
+    else:
+        raise Error("ValueBad", "%s is not a .json file, so value must be a string" % os.path.basename(fs_path))
+    if len(text.encode("utf-8")) > MAX_BYTES:
+        raise Error("ValueBad", "value is over %d bytes; split it into several keys or files" % MAX_BYTES)
+    return text
 
 
-def write_text(target, raw, exclusive=False, mode=None):
-    target = os.path.realpath(target)
+def check_value(value):
+    if len(json.dumps(value, ensure_ascii=False).encode("utf-8")) > MAX_BYTES:
+        raise Error("ValueBad", "value is over %d bytes; split it into several keys or files" % MAX_BYTES)
+
+
+def write_file(fs_path, value):
+    text = encode(fs_path, value)
+    if fs_path.endswith(".json"):
+        fs.aos_json(["set", fs_path], text, "WriteFailed")
+        return
+    target = os.path.realpath(fs_path)
     fd, temporary = tempfile.mkstemp(prefix=".tmp.", dir=os.path.dirname(target))
     try:
-        with os.fdopen(fd, "wb") as stream:
-            if mode is None and os.path.exists(target):
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            if os.path.exists(target):
                 mode = stat.S_IMODE(os.stat(target).st_mode)
-            if mode is not None:
-                os.fchmod(stream.fileno(), mode)
-            stream.write(raw)
-        if exclusive:
-            try:
-                os.link(temporary, target)
-            except FileExistsError:
-                tool_io.die("NodeExists", "node already exists")
-            except OSError as error:
-                tool_io.die("WriteFailed", "%s (memory_write needs a file system with hard links and atomic rename)" % error)
-        else:
-            os.replace(temporary, target)
+            else:                               # 新檔照 umask（mkstemp 預設 0600）
+                mask = os.umask(0)
+                os.umask(mask)
+                mode = 0o666 & ~mask
+            os.fchmod(stream.fileno(), mode)
+            stream.write(text)
+        os.replace(temporary, target)
     finally:
         if os.path.lexists(temporary):
             os.unlink(temporary)
 
 
-def ensure_absent(root, segs):
-    base = os.path.join(root, *segs)
-    if any(os.path.lexists(base + ext) for ext in ("", ".md", ".json")):
-        tool_io.die("NodeExists", "node %s already exists" % fs.show(segs))
+def raw_file(fs_path):
+    """整份檔的原文 JSON（不解指示詞）；檔不在＝NodeMissing、不是 .json＝TargetBad。"""
+    if not fs_path.endswith(".json"):
+        raise Error("TargetBad", "%s is not a .json file; # only goes inside a .json file" % os.path.basename(fs_path))
+    return fs.get(fs.Loc(fs_path, None))
 
 
-def add(root, segs, text):
-    raw = text_bytes(text)
-    kind, parent = fs.node_or_die(root, segs[:-1])
-    if kind == "leaf" and parent.endswith(".json"):
-        tool_io.die("PathBad", "node %s is a JSON leaf; it cannot have child nodes" % fs.show(segs[:-1]))
-    lock_folder = parent if kind == "dir" else os.path.dirname(parent)
-    with with_lock(lock_folder, "memory_write add " + fs.show(segs)) as locked:
-        clean_old(locked.folder)
-        kind, parent = fs.node_or_die(root, segs[:-1])
-        if kind == "leaf" and parent.endswith(".json"):
-            tool_io.die("PathBad", "node %s is a JSON leaf; it cannot have child nodes" % fs.show(segs[:-1]))
-        ensure_absent(root, segs)
-        if kind == "dir":
-            write_text(os.path.join(parent, segs[-1] + ".md"), raw, exclusive=True)
+def walk_raw(root, loc, data, tokens):
+    """在原文裡照 tokens 走；路上碰到指示詞＝TargetBad，沒有＝MISSING。"""
+    value = data
+    for i, t in enumerate(tokens):
+        if isinstance(value, dict) and ("$ref" in value or "$env" in value):
+            raise Error("TargetBad", "%s is a $ref or $env; write to the file it points to instead"
+                        % fs.show(root, fs.Loc(loc.fs, tokens[:i] or None)))
+        if isinstance(value, dict) and t in value:
+            value = value[t]
+        elif isinstance(value, list) and t.isdigit() and int(t) < len(value):
+            value = value[int(t)]
         else:
-            old_text = fs.read_text(kind, parent).encode("utf-8")
-            destination = os.path.join(root, *segs[:-1])
-            temporary = tempfile.mkdtemp(prefix=".new.", dir=os.path.dirname(destination))
-            try:
-                mode = stat.S_IMODE(os.stat(parent).st_mode)
-                write_text(os.path.join(temporary, "README.md"), old_text, mode=mode)
-                write_text(os.path.join(temporary, segs[-1] + ".md"), raw, exclusive=True)
-                os.rename(temporary, destination)
-                os.unlink(parent)
-            finally:
-                if os.path.lexists(temporary):
-                    discard(temporary)
-    return len(raw)
+            return MISSING
+    return value
 
 
-def edit(root, segs, text):
-    kind, where = fs.node_or_die(root, segs)
-    target = os.path.realpath(os.path.join(where, "README.md") if kind == "dir" else where)
-    if target == os.path.realpath(os.path.join(root, "README.md")):
-        tool_io.die("PathBad", "root is read-only; a human edits it")
-    raw = text_bytes(text, where if kind == "leaf" else "")
-    with with_lock(os.path.dirname(target), "memory_write edit " + fs.show(segs)) as locked:
-        clean_old(locked.folder)
-        kind, where = fs.node_or_die(root, segs)
-        target = os.path.realpath(os.path.join(where, "README.md") if kind == "dir" else where)
-        if target == os.path.realpath(os.path.join(root, "README.md")):
-            tool_io.die("PathBad", "root is read-only; a human edits it")
-        raw = text_bytes(text, where if kind == "leaf" else "")
-        write_text(target, raw)
-    return len(raw)
+def cell_key(table, base, inside, loc, default):
+    """表裡指到 loc 的那格的 key；沒有＝default。"""
+    for c in fs.cells(base, table, inside):
+        if c.target == loc:
+            return c.key
+    return default
 
 
-def remove(root, segs, recursive):
-    kind, where = fs.node_or_die(root, segs)
-    if len(segs) == 1 and os.path.islink(where):
-        tool_io.die("PathBad", "root-level symlinks are read-only; a human manages them")
-    # Unlinking a link changes its containing directory, never its target.
-    folder = os.path.dirname(where)
-    with with_lock(folder, "memory_write rm " + fs.show(segs)) as locked:
-        clean_old(locked.folder)
-        kind, where = fs.node_or_die(root, segs)
-        if len(segs) == 1 and os.path.islink(where):
-            tool_io.die("PathBad", "root-level symlinks are read-only; a human manages them")
-        if os.path.islink(where):
-            os.unlink(where)
-        elif kind == "leaf":
-            os.unlink(where)
+def folder_cell(root, folder, loc, description=None, remove=False):
+    """資料夾的 _index.json：加／換說明（description）或拔掉（remove）指到 loc 的那格；檔不在就建。"""
+    index = os.path.join(folder, "_index.json")
+    require_inside(root, index)
+    exists = os.path.isfile(index)
+    table = fs.folder_table(folder, raw_file) if exists else {}
+    name = os.path.basename(loc.fs) + ("/" if os.path.isdir(loc.fs) else "")
+    key = cell_key(table, fs.Loc(folder, None), False, loc, name)
+    if remove:
+        if key in table:
+            fs.aos_json(["del", index + "#/" + fs.esc(key)], "", "WriteFailed")
+    elif not exists:
+        fs.aos_json(["set", index], json.dumps({key: {"_description": description}}, ensure_ascii=False), "WriteFailed")
+    elif isinstance(table.get(key), dict):
+        fs.aos_json(["set", index + "#/" + fs.esc(key) + "/_description"], json.dumps(description, ensure_ascii=False), "WriteFailed")
+    else:
+        fs.aos_json(["set", index + "#/" + fs.esc(key)], json.dumps({"_description": description}, ensure_ascii=False), "WriteFailed")
+
+
+def object_parent(root, loc):
+    """物件裡一個 key 的上一層：回 (原文整份, 上一層物件)；不在＝NodeMissing、陣列＝TargetBad。"""
+    if not os.path.isfile(loc.fs):
+        raise fs.missing(root, loc)
+    require_inside(root, loc.fs)
+    data = raw_file(loc.fs)
+    parent = walk_raw(root, loc, data, loc.tokens[:-1])
+    if parent is MISSING:
+        raise fs.missing(root, fs.Loc(loc.fs, loc.tokens[:-1] or None))
+    if isinstance(parent, list):
+        raise Error("TargetBad", "arrays have no index; add and rm only work on objects (use set to change an item)")
+    if not isinstance(parent, dict) or "$ref" in parent or "$env" in parent:
+        raise Error("TargetBad", "%s is not an object" % fs.show(root, fs.Loc(loc.fs, loc.tokens[:-1] or None)))
+    return data, parent
+
+
+def object_cell(root, loc, parent, description):
+    """batch 用：上一層 _index 裡指到 loc 的那格換說明的 {指標: 值}。"""
+    up = loc.tokens[:-1]
+    table = parent.get("_index") if isinstance(parent.get("_index"), dict) else {}
+    key = cell_key(table, fs.Loc(loc.fs, up or None), True, loc, fs.esc(loc.tokens[-1]))   # 表的 key 是相對路徑：/ 寫成 ~1
+    if isinstance(table.get(key), dict):
+        return {fs.pointer(up + ("_index", key, "_description")): description}
+    return {fs.pointer(up + ("_index", key)): {"_description": description}}
+
+
+def batch(fs_path, changes):
+    fs.aos_json(["batch", "--parents", fs_path], json.dumps(changes, ensure_ascii=False), "WriteFailed")
+
+
+def add(root, loc, folder, has_value, value, description):
+    """新增：資料夾（folder＝path 以 / 結尾，帶空的 _index.json）、新檔、或物件裡新 key；都同時在表裡加一格。"""
+    if loc.tokens is None:
+        check_name(os.path.basename(loc.fs))
+        parent = os.path.dirname(loc.fs)
+        if not os.path.isdir(parent):
+            raise fs.missing(root, fs.Loc(parent, None))
+        if os.path.lexists(loc.fs):
+            raise Error("NodeExists", "%s already exists; use set to change it" % fs.show(root, loc))
+        require_inside(root, parent)
+        if folder:
+            if has_value:
+                raise Error("ValueBad", "a folder takes no value; add files into it afterwards")
+            os.mkdir(loc.fs)
+            fs.aos_json(["set", os.path.join(loc.fs, "_index.json")], "{}", "WriteFailed")
         else:
-            with with_lock(where, "memory_write rm " + fs.show(segs)) as node_lock:
-                kind, where = fs.node_or_die(root, segs)
-                if fs.children(kind, where) and not recursive:
-                    tool_io.die("ChildrenExist", "node %s has children; use recursive: true" % fs.show(segs))
-                if recursive:
-                    check_descendants(where)
-                renamed = os.path.join(folder, ".rm." + uuid.uuid4().hex)
-                # Register release at the renamed path before handling termination.
-                old = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT})
-                try:
-                    os.rename(where, renamed)
-                    node_lock.release(renamed)
-                finally:
-                    signal.pthread_sigmask(signal.SIG_SETMASK, old)
-            shutil.rmtree(renamed)
+            if not has_value:
+                raise Error("ValueBad", "value is required")
+            write_file(loc.fs, value)
+        folder_cell(root, parent, loc, description)
+        return
+    check_name(loc.tokens[-1])
+    if not has_value:
+        raise Error("ValueBad", "value is required")
+    check_value(value)
+    _, parent = object_parent(root, loc)
+    if loc.tokens[-1] in parent:
+        raise Error("NodeExists", "%s already exists; use set to change it" % fs.show(root, loc))
+    changes = {fs.pointer(loc.tokens): value}
+    changes.update(object_cell(root, loc, parent, description))
+    batch(loc.fs, changes)
+
+
+def set_(root, loc, has_value, value, description):
+    """換內容（value）、換說明（description），或兩個一起；位置要已經在。"""
+    if not has_value and description is None:
+        raise Error("ValueBad", "set needs value, description or both")
+    if loc.tokens is None:
+        if not os.path.lexists(loc.fs):
+            raise fs.missing(root, loc)
+        if description is not None and loc.fs == root:
+            raise Error("PathBad", "the root has no index entry; to change its description set _index.json#/./_description")
+        if has_value:
+            if os.path.isdir(loc.fs):
+                raise Error("TargetBad", "%s is a folder and has no value; set its files instead" % fs.show(root, loc))
+            require_inside(root, loc.fs)
+            write_file(loc.fs, value)
+        if description is not None:
+            folder_cell(root, os.path.dirname(loc.fs), loc, description)
+        return
+    if not os.path.isfile(loc.fs):
+        raise fs.missing(root, loc)
+    require_inside(root, loc.fs)
+    data = raw_file(loc.fs)
+    if walk_raw(root, loc, data, loc.tokens) is MISSING:
+        raise fs.missing(root, loc)
+    changes = {}
+    if has_value:
+        check_value(value)
+        changes[fs.pointer(loc.tokens)] = value
+    if description is not None:
+        parent = walk_raw(root, loc, data, loc.tokens[:-1])
+        if not isinstance(parent, dict):
+            raise Error("TargetBad", "array items have no index entry, so no description")
+        changes.update(object_cell(root, loc, parent, description))
+    batch(loc.fs, changes)
+
+
+def remove(root, loc, recursive):
+    """刪檔／資料夾（不空要 recursive）／物件裡的 key，並拔掉表裡指到它的那格；根＝PathBad。"""
+    if loc.tokens is None:
+        if loc.fs == root:
+            raise Error("PathBad", "the memory root cannot be removed")
+        if not os.path.lexists(loc.fs):
+            raise fs.missing(root, loc)
+        parent = os.path.dirname(loc.fs)
+        require_inside(root, parent)
+        if os.path.islink(loc.fs) or not os.path.isdir(loc.fs):
+            os.unlink(loc.fs)
+        else:
+            if any(n != "_index.json" for n in os.listdir(loc.fs)) and not recursive:
+                raise Error("ChildrenExist", "%s is not empty; use recursive: true" % fs.show(root, loc))
+            shutil.rmtree(loc.fs)
+        if os.path.isfile(os.path.join(parent, "_index.json")):
+            folder_cell(root, parent, loc, remove=True)
+        return
+    _, parent = object_parent(root, loc)
+    if loc.tokens[-1] not in parent:
+        raise fs.missing(root, loc)
+    fs.aos_json(["del", fs.spec(loc)], "", "WriteFailed")
+    table = parent.get("_index") if isinstance(parent.get("_index"), dict) else {}
+    key = cell_key(table, fs.Loc(loc.fs, loc.tokens[:-1] or None), True, loc, fs.esc(loc.tokens[-1]))
+    if key in table:
+        fs.aos_json(["del", loc.fs + "#" + fs.pointer(loc.tokens[:-1] + ("_index", key))], "", "WriteFailed")

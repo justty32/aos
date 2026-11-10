@@ -1,5 +1,5 @@
 {
-  "summary": "Read-only lookup in a hierarchical knowledge base folder ($AOS_MEMORY): read a node, list children, find by keyword",
+  "summary": "Read-only lookup in the shared memory (folders and .json files, $AOS_MEMORY): read a place, list an index, find by keyword or tag",
   "resource": "cpu",
   "side_effect": false,
   "idempotent": true,

@@ -1,0 +1,32 @@
+{
+ ".": {
+  "_description": "# aos in one page\n\nWhat aos is, the eight words you need, and how to look up more.\n\naos runs AI agents as ordinary Linux processes inside folders. You are one of those agents. Everything you touch is a folder or a file; every action is a tool call.\n\nThe eight words:\n\n- **definition**: a folder that says what an agent is (its source code). Read-only for you.\n- **stack**: the folder where one running agent keeps its state (its memory). Yours is `$AOS_STACK`.\n- **workspace (ws)**: the folder you work on (your external memory). Yours is `$AOS_WS`. Paths you give to tools are relative to it.\n- **daemon**: the machine. It runs agents and keeps a table of them (name, phase, reason). Yours is `$AOS_DAEMON`.\n- **proc**: one running thing under a daemon. A running agent is a proc.\n- **kernel**: the gatekeeper that decides whether a proc may run. The daemon itself is the simplest kernel; a \"judge\" can sit in front of it and refuse.\n- **letter / mailbox**: how procs talk. A letter is a folder with a letter.json, dropped into a mailbox folder. Asking the brain is a letter to the llm kernel.\n- **tool**: a folder you can call. You call it with a JSON object; it answers on stdout. On failure it prints one line `toolname: error: Code reason`.\n\nFive rules:\n\n1. Never edit a definition or another agent's stack. Change only your own stack, through tools.\n2. Use tools, not shell tricks. If no tool fits, say so instead of improvising.\n3. When a tool fails, read the error line. The Code tells you what kind of problem it is; fix that, then retry once. Do not retry the same call in a loop.\n4. Paths are relative to your workspace unless a tool says otherwise.\n5. If something is refused (a judge said no, a budget is used up), that is a decision, not a bug. Report it or adapt; do not force it.\n\nTo learn more, call `memory` with `{\"op\": \"read\", \"path\": \"<path>\"}`, copying one of the paths listed below into `path`. Start with `me.json` if the question is about yourself, `errors.json` if a tool failed.\n"
+ },
+ "me.json": {
+  "_description": "Finding your own name, what is in your stack, and what you are allowed to change."
+ },
+ "errors.json": {
+  "_description": "How to read a failed call: the `error:` line, `warning:` lines, and exit codes."
+ },
+ "world.json": {
+  "_description": "The mental model: daemon = hardware, stack = memory, workspace = external memory, definition = source code, kernel = gatekeeper."
+ },
+ "status.json": {
+  "_description": "The daemon table, the phases an agent can be in, and what each phase means for you."
+ },
+ "brain.json": {
+  "_description": "How a brain request travels, what an endpoint pack is, and how priority works."
+ },
+ "agents.json": {
+  "_description": "Tool `agents`: start a child agent, talk to it, remove it, list every agent on your daemon."
+ },
+ "rules.json": {
+  "_description": "What you must not do, and why. Read this before doing anything that changes the system."
+ },
+ "memory.json": {
+  "_description": "Save reusable facts in the knowledge base, not transient task progress."
+ },
+ "cli/": {
+  "_description": "Use these shell commands to manage agents, tools and daemon procs."
+ }
+}

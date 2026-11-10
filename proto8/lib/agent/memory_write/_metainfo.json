@@ -1,5 +1,5 @@
 {
-  "summary": "Write shared knowledge nodes atomically under directory locks",
+  "summary": "Write the shared memory (folders and .json files): add, set or rm a value together with its index entry",
   "resource": "io",
   "side_effect": true,
   "idempotent": false,

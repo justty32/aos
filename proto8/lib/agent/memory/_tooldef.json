@@ -1,20 +1,20 @@
 {
-  "description": "Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the child you need; find searches by keyword and/or a single exact tag (both conditions must match when supplied). Errors: NodeMissing (the line lists what exists), PathBad, MemoryMissing (no knowledge base is set up for you: say so).",
+  "description": "Look things up in the shared memory (read-only). The memory is a tree of folders and .json files. Start with {\"op\":\"read\"} (the root): it shows what exists. A path is folder/file.json#/key/sub; keep the file extension. Every path that read, ls or find prints can be pasted back as path. read a folder or an object with an index = its description and its children; read a string = the text. Examples: {\"op\":\"read\",\"path\":\"errors.json\"} ; {\"op\":\"read\",\"path\":\"errors.json#/codes\"} ; {\"op\":\"ls\",\"path\":\"cli/\"} lists children only ; {\"op\":\"find\",\"query\":\"timeout\"} searches names, descriptions and text. Lines under 'not in index:' exist but have no description. Errors: NodeMissing (the line lists what exists there), PathBad, TargetBad (ls on text: use read; # on a non-.json file), MemoryMissing (no memory is set up for you: say so).",
   "env": [
     "AOS_MEMORY"
   ],
   "errors": [
     "ArgumentsBad",
-    "CfgBad",
-    "MemoryMissing",
-    "PathBad",
-    "ReadFailed",
-    "NodeMissing",
-    "LaunchFailed",
     "OpUnknown",
+    "PathBad",
+    "MemoryMissing",
+    "CfgBad",
+    "NodeMissing",
     "TargetBad",
-    "PointerMissing",
-    "FileBad"
+    "FileBad",
+    "DirectiveBad",
+    "ReadFailed",
+    "LaunchFailed"
   ],
   "parameters": {
     "type": "object",
@@ -26,24 +26,24 @@
           "ls",
           "find"
         ],
-        "description": "read = show a node's text and its children; ls = list its children only; find = search nodes by keyword and/or a single exact tag"
+        "description": "read = show one place; ls = list the children of a folder or object; find = search by keyword and/or tag"
       },
       "path": {
         "type": "string",
-        "description": "node path like agents/spawn (lowercase segments joined by /); empty or / is the root; read also accepts node#/JSON/Pointer (RFC6901 ~0/~1 escapes), only on .json leaves; ls/find reject #; a link value is a string `node/path#/json/pointer`; follow it with read"
+        "description": "Like rules.json, cli/ or errors.json#/codes (# then the key inside the file; ~1 means / inside a key). Empty = the root. Copy paths exactly as read/ls/find print them. Do not start with / (that means an absolute file system path)."
       },
       "query": {
         "type": "string",
-        "description": "Non-empty keyword for find (case-insensitive); query or tag is required, and both must match when supplied."
+        "description": "find: a word to look for (case-insensitive) in names, descriptions and text."
+      },
+      "tag": {
+        "type": "string",
+        "description": "find: an exact tag from the index entry's tags list. Give query, tag or both."
       },
       "max_bytes": {
         "default": 8000,
         "type": "integer",
-        "description": "read: most bytes of node text to show (default 8000)"
-      },
-      "tag": {
-        "type": "string",
-        "description": "Single exact, case-sensitive tag for find. Read from top-level tags string arrays in JSON leaves or directory _tags.json; malformed tags are ignored. Query or tag is required."
+        "description": "Most bytes to print (default 8000); longer output ends with [truncated: N more bytes]."
       }
     },
     "required": [

@@ -1,41 +1,34 @@
 #!/usr/bin/env python3
-# memory - 唯讀查詢共用知識庫：read 節點或 JSON Pointer、ls 列子節點、find 關鍵字與單一標籤搜尋。
-# 規劃：proto8/thinking/2026-11/05/agent-knowledge/01-層級式記憶工具.md（使用者 11-05 下午「層級式記憶工具」）。
-# 介面（lib/README 的契約）：stdin 收 {"op": "read"|"ls"|"find", "path"?: "…", "query"?: "…", "tag"?: "…", "max_bytes"?: N}。
-#   知識庫根目錄（腦不能挑）：① 工具資料夾（$AOS_CD）裡的 _memory.json 的 "base"（定義配的；相對＝從那個資料夾算）＞
-#   ② $AOS_MEMORY（相對路徑從 $AOS_DAEMON 算，沒有＝從 cwd）；都沒有＝MemoryMissing；設定檔壞＝CfgBad。再解開捷徑。
-#   要給某隻 agent 指定知識庫：定義的 tools/memory/ 不用捷徑、改成一個小資料夾——_entry 是一行單子 ["<到 lib>/lib/agent/memory/_entry"]（不能是捷徑：aos-exec 解開捷徑後 $AOS_CD 會變成 lib 那格）、_tooldef.json／_metainfo.json 可以是捷徑，
-#   lib/agent/memory/ 的，再加一個真的 _memory.json（使用者 11-05「隨意複製，隨意修改，隨意給agent指定、隨意拆卸增添」）。
-#   節點路徑 a/b：段用 / 接、段名只能 [a-z0-9_-]+；"" 或 "/"＝根。資料夾節點＝<根>/a/b/（文在 README.md，沒有＝空），
-#   葉節點＝<根>/a/b.md 或 a/b.json（11-05 加；同名兩個都在＝.md 優先）；先找資料夾再找葉。
-#   子節點＝子資料夾＋*.md／*.json（README.md 以外），. 與 _ 開頭的不算，照名字排序。yaml 這版不認（要認時加進 LEAF_EXTS）。
-#   .json 葉：read 未帶指標時印原文不轉換；帶 #/RFC6901 指標時回該位置 JSON 值；標題／摘要＝頂層物件的 title／summary 字串鍵（沒有＝標題用節點名、摘要空）。
-#   節點的文：第 1 行 # 標題、標題後第一個非空行＝一句話摘要、之後本文。
-#   stdout 純文字、第一行 node: <路徑>（根＝/）：
-#     read＝文（預設最多 8000 bytes，超過附 [truncated: N more bytes]）＋children: 目錄（每行「  名  摘要」，資料夾名後加 /）；
-#     ls＝只印 children:（沒有＝children: (none)）；
-#     find＝path 子樹（含自己）內含 query（不分大小寫）且符合單一 tag（逐字）的節點；至少給一個條件，matches 最多 20 個。
-# 錯：stderr 與 stdout 各一行「memory: error: 代號 原因」、退 1：ArgumentsBad（stdin 不是 JSON 物件、op 沒給、max_bytes 不是正整數、
-#   find 沒 query 或 tag）、OpUnknown、PathBad、MemoryMissing（沒設、空、不是資料夾）、NodeMissing（附父節點的子節點名）、
-#   ReadFailed（檔在但讀不了、不是 UTF-8；grep 退 2——grep 自己的 stderr 原樣透出，這裡只多寫自己一行，stdio-unify R10）、LaunchFailed（PATH 上沒有 grep）。
-#   --help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉 grep，退 130）。
-# 不寫任何檔、不碰 $AOS_WS。子行程只有 find 的 grep；被 TERM 時先收掉它再走（lib 契約規則 5）。
-# 設計（使用者 11-05「依託檔案系統、/usr/bin 的 ls/grep 包成工具，不用重複發明」）：
-#   read＝cat/head -c、ls＝ls、find＝grep -ril，全部限定在 AOS_MEMORY 根之下、唯讀、輸出截斷給小模型；不另發明儲存格式。
-#   read 的節點路徑可帶 #/RFC6901 指標；ls/find 不接受 #。僅 JSON 葉接受指標。
-import json, os, re, signal, subprocess, sys
+# memory - 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）：read 一個位置、ls 列枝幹的表、find 依關鍵字／標籤找路徑。
+# 圖紙：proto8/thinking/2026-11/10/json-memory/02-格式規則.md、03-工具.md（使用者 11-10 晚「json本身就是節點樹」）。
+# 介面（lib 契約）：stdin {"op": "read"|"ls"|"find", "path"?: 統一路徑, "query"?: 字串, "tag"?: 字串, "max_bytes"?: N}。
+#   庫根（腦不能挑）：工具資料夾（$AOS_CD）的 _memory.json 的 base ＞ $AOS_MEMORY（相對從 $AOS_DAEMON，沒有＝cwd）；
+#   都沒有＝MemoryMissing；設定檔壞＝CfgBad（memory_fs.memory_root）。
+#   path＝`資料夾/檔.json#/JSON Pointer`，相對從庫根算；"" 或 "/"＝根；其他 / 開頭＝檔案系統絕對路徑（讀不限範圍）。
+#   stdout 純文字、第一行 node: <路徑>；印出的每條路徑都能直接貼回 path：
+#     read：資料夾或有 _index 的物件＝"." 格的簡介＋children:（表）＋not in index:；字串＝原文；其他 JSON＝縮排 JSON；
+#           非 .json 檔＝UTF-8 原文、不是 UTF-8＝binary file, N bytes。內容的 $ref／$env 交給 aos-json --resolve 解。
+#     ls：只印表（資料夾、物件、陣列）；對字串等枝葉＝TargetBad。
+#     find：path 底下（含表指到外面的格）名字、說明、字串內容含 query（不分大小寫）、且表那格 tags 含 tag 的位置；最多 20 筆。
+#   輸出超過 max_bytes（預設 8000）截斷並附 [truncated: N more bytes]。
+# 錯：stderr 與 stdout 各一行「memory: error: 代號 原因」、退 1；代號見 _tooldef.json 的 errors（aos-json 的照圖紙 03 換）。
+# 不寫任何檔、不碰 $AOS_WS。子行程只有 aos-json（find 不起子行程，除了 $env 格的 aos-directive）；被 TERM 先收掉它、退 128＋N。
+import json, os, sys
 HELP = """\
-usage: memory < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Read a shared, hierarchical, read-only knowledge base: op read (a node's text and
-its children), ls (children only), find (nodes containing query and/or an exact tag).
-find needs a non-empty query or a string tag; when both are given, both must match.
-Title matches come first, then paths in alphabetical order (up to 20 results).
-ls/read report names ignored in the listed directory at the end.
-Tags come from JSON leaves or a directory's _tags.json (top-level tags string array).
-read path may append #/JSON/Pointer (RFC6901, ~0 = ~, ~1 = /); only .json
-leaf nodes support pointers. Returns the selected value as JSON, within max_bytes.
-ls/find reject #. Errors: PathBad (invalid path/pointer), TargetBad (not a JSON
-leaf), PointerMissing (value absent), FileBad (invalid JSON).
+usage: memory < ARGUMENTS.json   (a tool: run it with aos-exec)
+Read a memory: a tree of folders and .json files. A path looks like
+folder/file.json#/key/sub (JSON Pointer after #, ~1 = /, ~0 = ~); relative paths
+start at the memory root; "" or "/" is the root; other paths starting with / are
+absolute file system paths.
+  read  a folder or an object with _index: its "." description, then children:
+        (the index) and not in index:; a string: the text; other JSON: JSON;
+        other files: the text, or "binary file, N bytes".
+  ls    only the index of a folder, object or array.
+  find  paths under path whose name, description or text contains query
+        (case-insensitive) and whose index entry has tag in its tags; max 20.
+Every path printed can be passed back as path. Output over max_bytes is cut.
+Needs aos-json on PATH. The root comes from _memory.json next to the tool,
+otherwise AOS_MEMORY.
 Result on stdout. On error: one line "memory: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -46,7 +39,7 @@ while _lib != os.path.dirname(_lib):
     if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
         break
     _lib = os.path.dirname(_lib)
-sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+sys.path[:0] = [HERE] + ([_lib, os.path.join(_lib, "agent")] if os.path.basename(_lib) == "lib" else [])
 try:
     import tool_io  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
@@ -57,54 +50,17 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.stdout.write(_line)
     sys.exit(1)
 
-NAME = "memory"
-tool_io.start(NAME, HELP)
-DEFAULT_MAX_BYTES = 8000
-FIND_LIMIT = 20
-SEGMENT = re.compile(r"^[a-z0-9_-]+$")
-LEAF_EXTS = (".md", ".json")                    # 前面的優先
-child = None
-
-
+tool_io.start("memory", HELP)
 die = tool_io.die
-arguments = tool_io.arguments
-
-
-# 共用節點介面：工具本地優先，再找 lib/agent，最後標準 Python 路徑。
-if os.path.basename(_lib) == "lib":
-    sys.path.insert(1, os.path.join(_lib, "agent"))
 try:
-    try:
-        import memory_fs
-    except ModuleNotFoundError as error:
-        if error.name != "memory_fs":
-            raise
-        import agent.memory_fs as memory_fs
+    import memory_fs as fs
 except ModuleNotFoundError as error:
-    if error.name not in ("memory_fs", "agent", "agent.memory_fs"):
+    if error.name != "memory_fs":
         raise
     die("ModuleMissing", "memory_fs.py not in the tool folder, not in lib/agent/, not on the Python path")
-SEGMENT = memory_fs.SEGMENT
-LEAF_EXTS = memory_fs.LEAF_EXTS
-memory_root = memory_fs.memory_root
-parse_path = memory_fs.parse_path
-show = memory_fs.show
-locate = memory_fs.locate
-leaf_file = memory_fs.leaf_file
-children = memory_fs.children
-title_summary = memory_fs.title_summary
-read_text = memory_fs.read_text
-node_or_die = memory_fs.node_or_die
-
-def child_lines(root, segs, kind, where):
-    out = []
-    for name, is_dir in children(kind, where):
-        ck = ("dir", os.path.join(where, name)) if is_dir else ("leaf", leaf_file(os.path.join(where, name)))
-        _, summary = title_summary(read_text(*ck, strict=False), ck[1] if not is_dir else "")
-        label = name + "/" if is_dir else name
-        out.append(("  %s  %s" % (label, summary)).rstrip())
-    return out
-
+Loc, ToolError = fs.Loc, fs.ToolError
+DEFAULT_MAX_BYTES = 8000
+FIND_LIMIT = 20
 
 
 def truncate(text, max_bytes):
@@ -115,138 +71,122 @@ def truncate(text, max_bytes):
     return "%s\n[truncated: %d more bytes]" % (head, len(raw) - max_bytes)
 
 
-def op_read(root, segs, max_bytes, pointer=None):
-    kind, where = node_or_die(root, segs)
-    if pointer is not None:
-        value = memory_fs.read_pointer(kind, where, pointer)
-        print("node: %s#%s\n\n%s" % (show(segs), pointer,
-              truncate(json.dumps(value, ensure_ascii=False), max_bytes)))
-        return
-    parts = ["node: %s" % show(segs)]
-    text = read_text(kind, where).rstrip("\n")
-    if text:
-        parts += ["", truncate(text, max_bytes)]
-    kids = child_lines(root, segs, kind, where)
-    if kids:
-        parts += ["", "children:"] + kids
-    ignored = memory_fs.ignored_count(kind, where)
-    if ignored:
-        parts.append("%d files ignored (names must be [a-z0-9_-])" % ignored)
-    print("\n".join(parts))
+def op_read(root, loc):
+    kind, value, table, kids = fs.load(root, loc)
+    lines = ["node: " + fs.show(root, loc)]
+    if kind == "folder" or table is not None:
+        intro = fs.self_cell(table).get("_description")
+        if isinstance(intro, str) and intro:
+            lines += [intro.rstrip("\n"), ""]
+        lines += fs.listing(root, loc, kind, table, kids)
+    elif kind == "binary":
+        lines += ["", "binary file, %d bytes" % value]
+    elif kind == "text" or isinstance(value, str):
+        lines += ["", value.rstrip("\n")]
+    else:
+        lines += ["", json.dumps(value, ensure_ascii=False, indent=2)]
+    return lines
 
 
-def op_ls(root, segs):
-    kind, where = node_or_die(root, segs)
-    kids = child_lines(root, segs, kind, where)
-    print("node: %s" % show(segs))
-    print("\n".join(["children:"] + kids) if kids else "children: (none)")
-    ignored = memory_fs.ignored_count(kind, where)
-    if ignored:
-        print("%d files ignored (names must be [a-z0-9_-])" % ignored)
+def op_ls(root, loc):
+    kind, value, table, kids = fs.load(root, loc)
+    if kind in ("text", "binary") or kind == "json" and not isinstance(value, (dict, list)):
+        raise ToolError("TargetBad", "%s is a leaf, not a folder, object or array; use read" % fs.show(root, loc))
+    return ["node: " + fs.show(root, loc)] + fs.listing(root, loc, kind, table, kids)
 
 
-def on_term(signum, frame):
-    if child is not None and child.poll() is None:
+# ---- find：直接用 Python 讀 JSON 逛樹（圖紙 03 的唯一例外），不解內容裡的 $ref ----
+def py_load(loc, cache):
+    """回 (kind, value)；讀不到、壞 JSON、路上碰到指示詞＝None（find 安靜跳過）。"""
+    if os.path.isdir(loc.fs):
+        return ("folder", None) if loc.tokens is None else None
+    if not os.path.isfile(loc.fs):
+        return None
+    real = os.path.realpath(loc.fs)
+    if real not in cache:
         try:
-            os.killpg(child.pid, signal.SIGTERM)
-        except OSError:
-            pass
-    sys.exit(128 + signum)
-
-
-def grep(query, target):
-    """grep -Ril：保留捷徑路徑；退 1＝沒命中，退 2 有命中仍回傳。"""
-    global child
-    try:
-        child = subprocess.Popen(["grep", "-R", "-i", "-l", "-F", "--include=*.md", "--include=*.json", "--exclude=.*", "--exclude-dir=.*", "--", query, target],
-                                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                 start_new_session=True)       # stderr 不攔：grep 自己的話原樣透出（R10）
-    except OSError as e:
-        die("LaunchFailed", "cannot run grep: %s" % e)
-    out, _ = child.communicate()
-    if child.returncode == 1:
-        return []
-    if child.returncode != 0 and not (child.returncode == 2 and out):
-        die("ReadFailed", "grep exited %d" % child.returncode)
-    return [l for l in out.decode("utf-8", "surrogateescape").splitlines() if l]
-
-
-def file_node(root, f):
-    """命中的檔 → 節點的段；定址不到的（. 與 _ 開頭、名字不合、被同名資料夾蓋掉的 .md）＝None。"""
-    rel = os.path.relpath(f, root).split(os.sep)
-    if rel[-1] == "README.md":
-        segs = rel[:-1]
-    elif rel[-1].endswith(LEAF_EXTS):
-        segs = rel[:-1] + [os.path.splitext(rel[-1])[0]]
-        base = os.path.join(root, *segs)
-        if os.path.isdir(base) or leaf_file(base) != f:   # 被同名資料夾或 .md 蓋掉
+            with open(real, "rb") as h:
+                raw = h.read().decode("utf-8")
+            cache[real] = json.loads(raw) if real.endswith(".json") else raw
+        except (OSError, ValueError):
+            cache[real] = None
+    value = cache[real]
+    if not loc.fs.endswith(".json"):
+        return ("text", value) if loc.tokens is None and value is not None else None
+    for t in loc.tokens or ():
+        if isinstance(value, dict) and "$ref" not in value and "$env" not in value and t in value:
+            value = value[t]
+        elif isinstance(value, list) and t.isdigit() and int(t) < len(value):
+            value = value[int(t)]
+        else:
             return None
-    else:
-        return None
-    if any(not SEGMENT.match(s) or s[0] in "._" for s in segs):
-        return None
-    return segs
+    return ("json", value)
 
 
-def node_tags(kind, where):
-    """讀節點自己的字串標籤；壞資料視為沒有標籤。"""
-    source = os.path.join(where, "_tags.json") if kind == "dir" else where
-    if not source.endswith(".json"):
-        return []
-    try:
-        with open(source, encoding="utf-8") as handle:
-            value = json.load(handle)
-    except (OSError, ValueError):
-        return []
-    tags = value.get("tags") if isinstance(value, dict) else None
-    return tags if isinstance(tags, list) and all(isinstance(t, str) for t in tags) else []
+def py_table(folder, cache):
+    got = py_load(Loc(os.path.join(folder, "_index.json"), None), cache)
+    return got[1] if got and isinstance(got[1], dict) else {}
 
 
-def walk_nodes(segs, kind, where, ancestors=frozenset()):
-    """循既有節點優先序列出子樹，包含沒有 README 的資料夾。"""
-    yield segs, kind, where
-    real = os.path.realpath(where)
-    if kind != "dir" or real in ancestors:
+def walk(loc, descs, tags, via_env, seen, cache):
+    """深度優先：先表的格（照表的順序；$env 格只跳一次），再 not in index；走過的（實體路徑, 指標）跳過。"""
+    key = (os.path.realpath(loc.fs), loc.tokens)
+    if key in seen:
         return
-    ancestors = ancestors | {real}
-    for name, is_dir in children(kind, where):
-        ck, cw = ("dir", os.path.join(where, name)) if is_dir else ("leaf", leaf_file(os.path.join(where, name)))
-        yield from walk_nodes(segs + [name], ck, cw, ancestors)
-
-
-def op_find(root, segs, query, tag):
-    kind, where = node_or_die(root, segs)
-    hits = []
-    if query is not None:
-        candidates = []
-        for f in grep(query, where):
-            s = file_node(root, f)
-            if s is not None:
-                ck, cw = locate(root, s)
-                candidates.append((s, ck, cw))
-    else:
-        candidates = walk_nodes(segs, kind, where)
-    for s, ck, cw in candidates:
-        if tag is not None and tag not in node_tags(ck, cw):
+    seen.add(key)
+    got = py_load(loc, cache)
+    if got is None:
+        return
+    kind, value = got
+    table, kids, text = None, [], None
+    if kind == "folder":
+        table, kids = py_table(loc.fs, cache), fs.folder_kids(loc.fs)
+    elif fs.is_branch(value):
+        table, kids = value["_index"], fs.value_kids(loc, value)
+    elif isinstance(value, dict) and "$ref" not in value and "$env" not in value or isinstance(value, list):
+        kids = fs.value_kids(loc, value)
+    elif isinstance(value, str):
+        text = value
+    own = fs.self_cell(table)
+    if isinstance(own.get("_description"), str):
+        descs = descs + [own["_description"]]
+    if isinstance(own.get("tags"), list):
+        tags = tags + [t for t in own["tags"] if isinstance(t, str)]
+    yield loc, descs, tags, text
+    covered = set()
+    for c in fs.cells(loc, table or {}, kind != "folder"):
+        if c.target is None or (c.env and via_env):
             continue
-        title, _ = title_summary(read_text(ck, cw, strict=False), cw if ck == "leaf" else "")
-        hits.append((show(s), title or (s[-1] if s else "/"),
-                     query is not None and query.casefold() in title.casefold()))
-    hits.sort(key=lambda hit: (not hit[2], hit[0]))
-    print("node: %s" % show(segs))
+        covered.add(c.target)
+        yield from walk(c.target, [c.description] if c.description else [], c.tags, via_env or c.env, seen, cache)
+    for k in kids:
+        if k not in covered:
+            yield from walk(k, [], [], via_env, seen, cache)
+
+
+def op_find(root, loc, query, tag):
+    fs.load(root, loc)                          # 起點要在（NodeMissing 附上一層有哪些）
+    q = query.casefold() if query is not None else None
+    hits = []
+    for at, descs, tags, text in walk(loc, [], [], False, set(), {}):
+        name = at.tokens[-1] if at.tokens else os.path.basename(at.fs)
+        if q is not None and not (q in name.casefold() or any(q in d.casefold() for d in descs)
+                                  or (text is not None and q in text.casefold())):
+            continue
+        if tag is not None and tag not in tags:
+            continue
+        hits.append(("  %s  %s" % (fs.show(root, at), descs[0].replace("\n", " ") if descs else "")).rstrip())
+    lines = ["node: " + fs.show(root, loc)]
     if not hits:
-        print("matches: (none)")
-        return
-    print("matches:")
-    for p, t, _ in hits[:FIND_LIMIT]:
-        print("  %s  %s" % (p, t))
+        return lines + ["matches: (none)"]
+    lines += ["matches:"] + hits[:FIND_LIMIT]
     if len(hits) > FIND_LIMIT:
-        print("  … %d more" % (len(hits) - FIND_LIMIT))
+        lines.append("  … %d more (narrow path or query)" % (len(hits) - FIND_LIMIT))
+    return lines
 
 
-signal.signal(signal.SIGTERM, on_term)
-signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
-args = arguments()
+fs.install_signals()
+args = tool_io.arguments()
 op = args.get("op")
 if op is None:
     die("ArgumentsBad", "op is required (read, ls or find)")
@@ -255,8 +195,7 @@ if op not in ("read", "ls", "find"):
 max_bytes = args.get("max_bytes", DEFAULT_MAX_BYTES)
 if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0:
     die("ArgumentsBad", "max_bytes must be a positive integer")
-query = args.get("query")
-tag = args.get("tag")
+query, tag = args.get("query"), args.get("tag")
 if op == "find":
     if "query" in args and (not isinstance(query, str) or not query):
         die("ArgumentsBad", "query must be a non-empty string")
@@ -264,16 +203,15 @@ if op == "find":
         die("ArgumentsBad", "tag must be a string")
     if query is None and tag is None:
         die("ArgumentsBad", "find needs query or tag")
-if op == "read":
-    segs, pointer = memory_fs.parse_read_path(args.get("path"))
-else:
-    segs = parse_path(args.get("path"))
-    pointer = None
-root = memory_root(HERE)
-
-if op == "read":
-    op_read(root, segs, max_bytes, pointer)
-elif op == "ls":
-    op_ls(root, segs)
-else:
-    op_find(root, segs, query, tag)
+root = fs.memory_root(HERE)
+try:
+    loc = fs.parse(root, args.get("path"))
+    if op == "read":
+        out = op_read(root, loc)
+    elif op == "ls":
+        out = op_ls(root, loc)
+    else:
+        out = op_find(root, loc, query, tag)
+except ToolError as error:
+    die(error.code, str(error))
+print(truncate("\n".join(out), max_bytes))

@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
-# memory_write - Add, replace or remove shared knowledge nodes with atomic writes and directory locks.
+# memory_write - 改記憶庫：add／set／rm 一次寫好內容與它在表（_index.json 或 _index key）裡的那格；只寫庫根底下。
+# 圖紙：proto8/thinking/2026-11/10/json-memory/03-工具.md（使用者 11-10 晚）。介面：stdin {"op": "add"|"set"|"rm", "path": 統一路徑,
+#   "value"?: 任何 JSON（非 .json 檔要字串）, "description"?: 字串, "recursive"?: bool}。path 寫法與庫根的找法同 memory（memory_fs）。
+#   add：path 以 / 結尾＝開資料夾（帶空的 _index.json）；否則新檔或物件裡新 key；description 必給，寫進上一層的表。
+#   set：位置要已在；換 value、換 description，或兩個一起。rm：刪檔、資料夾（不空要 recursive: true）或 key，連表裡那格一起拔。
+#   不加鎖（使用者「不管，自行承擔風險」）；每份檔由 aos-json 暫存後原子 rename。
+# 結果 stdout：node: <路徑>，下一行 added／set／removed。錯：stderr 與 stdout 各一行「memory_write: error: 代號 原因」、退 1。
 import os
-import signal
 import sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -24,12 +29,18 @@ except ModuleNotFoundError as error:
 
 HELP = """\
 usage: memory_write [FLAGS] < ARGUMENTS.json   (a tool: run it with aos-exec)
-Add, replace or remove shared knowledge nodes. The root is configured by
-_memory.json next to the tool, otherwise AOS_MEMORY; the root itself is read-only.
-Needs a file system with atomic mkdir, atomic rename and hard links; machines
-writing the same mounted folder at once must keep their clocks in sync.
-rm rejects root-level symlinks with PathBad; deeper symlinks are only unlinked.
-Result on stdout: node: PATH, then written N bytes or removed.
+Change a memory (a tree of folders and .json files; paths as in the memory tool:
+folder/file.json#/key, relative to the memory root). Each op also keeps the index
+up to date (the folder's _index.json, or the object's _index key):
+  add  a new file, a new key in an object, or a folder (path ends with /);
+       description is required and goes into the index.
+  set  replace the value, the description, or both; the place must exist.
+  rm   delete a file, a key, or a folder (recursive: true if not empty),
+       and its index entry.
+Writes must stay inside the memory root (after following symlinks). No locking:
+two writers at once may overwrite each other. Needs aos-json on PATH. The root
+comes from _memory.json next to the tool, otherwise AOS_MEMORY.
+Result on stdout: node: PATH, then added, set or removed.
 On error: one line "memory_write: error: CODE reason" on stderr and stdout, exit 1.
 """
 tool_io.start("memory_write", HELP)
@@ -38,44 +49,40 @@ try:
 except ModuleNotFoundError as error:
     if error.name != "memory_fs":
         raise
-    try:
-        from agent import memory_fs as fs
-        sys.modules["memory_fs"] = fs
-    except ModuleNotFoundError as fallback:
-        if fallback.name not in ("agent", "agent.memory_fs"):
-            raise
-        tool_io.die("ModuleMissing", "memory_fs.py not in the tool folder, not in lib/agent/, not on the Python path")
+    tool_io.die("ModuleMissing", "memory_fs.py not in the tool folder, not in lib/agent/, not on the Python path")
 import writing
 
-
-def terminated(signum, frame):
-    raise SystemExit(128 + signum)
-
-
-signal.signal(signal.SIGTERM, terminated)
-signal.signal(signal.SIGINT, terminated)
+fs.install_signals()
 args = tool_io.arguments()
 op = args.get("op")
 if op is None:
-    tool_io.die("ArgumentsBad", "op is required (add, edit or rm)")
-if op not in ("add", "edit", "rm"):
-    tool_io.die("OpUnknown", "%r is not an op; use add, edit or rm" % (op,))
-segs = fs.parse_path(args.get("path"))
-if not segs:
-    tool_io.die("PathBad", "root is read-only; a human edits it")
-if any(len(segment.encode("utf-8")) > 200 for segment in segs):
-    tool_io.die("PathBad", "node path segments must not exceed 200 bytes")
-root = fs.memory_root(os.environ.get("AOS_CD") or os.path.dirname(os.path.abspath(__file__)))
+    tool_io.die("ArgumentsBad", "op is required (add, set or rm)")
+if op not in ("add", "set", "rm"):
+    tool_io.die("OpUnknown", "%r is not an op; use add, set or rm" % (op,))
+path = args.get("path")
+description = args.get("description")
+if description is not None and (not isinstance(description, str) or not description.strip()):
+    tool_io.die("ArgumentsBad", "description must be a non-empty string")
+if op == "add" and description is None:
+    tool_io.die("ArgumentsBad", "add needs description (one line saying what this is)")
+recursive = args.get("recursive", False)
+if not isinstance(recursive, bool):
+    tool_io.die("ArgumentsBad", "recursive must be true or false")
+root = fs.memory_root(HERE)
 try:
+    loc = fs.parse(root, path)
     if op == "add":
-        count = writing.add(root, segs, args.get("text"))
-    elif op == "edit":
-        count = writing.edit(root, segs, args.get("text"))
+        if loc.fs == root and loc.tokens is None:
+            raise tool_io.Error("NodeExists", "the memory root already exists; add a path under it")
+        writing.add(root, loc, isinstance(path, str) and path.endswith("/") and "#" not in path,
+                    "value" in args, args.get("value"), description)
+    elif op == "set":
+        writing.set_(root, loc, "value" in args, args.get("value"), description)
     else:
-        writing.remove(root, segs, args.get("recursive", False))
+        writing.remove(root, loc, recursive)
 except tool_io.Error as error:
     tool_io.die(error.code, str(error))
 except OSError as error:
     tool_io.die("WriteFailed", str(error))
-print("node: " + fs.show(segs))
-print("removed" if op == "rm" else "written %d bytes" % count)
+print("node: " + fs.show(root, loc))
+print({"add": "added", "set": "set", "rm": "removed"}[op])

@@ -1,14 +1,57 @@
-{"description": "Change the shared knowledge base. add creates a node under an existing parent, promoting Markdown leaves only; JSON leaves cannot have child nodes. edit replaces a node's whole text; rm deletes one (recursive: true for a subtree). Start Markdown text with # Title; keep nodes under 2 KB and split when larger. Errors: NodeExists, NodeMissing, TextBad, LockFailed (retry once later), WriteFailed (read-only for you). Needs a file system with atomic mkdir, atomic rename and hard links; machines writing the same mounted folder at once must keep their clocks in sync. Details: memory node memory.",
+{
+  "description": "Change the shared memory (a tree of folders and .json files; same paths as the memory tool, keep the file extension). Each op also updates the index, so you never edit _index.json yourself. Examples: {\"op\":\"add\",\"path\":\"notes/amy.json\",\"value\":\"Amy likes tea.\",\"description\":\"Who Amy is\"} makes a new file ; {\"op\":\"add\",\"path\":\"notes/people.json#/bob\",\"value\":{\"likes\":\"tea\"},\"description\":\"Who Bob is\"} adds key bob inside notes/people.json (that file must hold an object, for example made with value {}) ; {\"op\":\"add\",\"path\":\"notes/trips/\",\"description\":\"Trips\"} makes a folder (path ends with /) ; {\"op\":\"set\",\"path\":\"notes/amy.json\",\"value\":\"Amy likes coffee.\"} replaces the value (description optional) ; {\"op\":\"rm\",\"path\":\"notes/amy.json\"} deletes it (a folder that is not empty needs \"recursive\":true). Keep one text value under 2 KB; split bigger ones into keys or files. Errors: NodeExists (use set), NodeMissing (the line lists what exists), ValueBad, PathBad (writing outside the memory, or the root), ChildrenExist, TargetBad, WriteFailed (read-only for you).",
+  "env": [
+    "AOS_MEMORY"
+  ],
+  "errors": [
+    "ArgumentsBad",
+    "OpUnknown",
+    "PathBad",
+    "MemoryMissing",
+    "CfgBad",
+    "NodeMissing",
+    "NodeExists",
+    "ChildrenExist",
+    "TargetBad",
+    "FileBad",
+    "ValueBad",
+    "DirectiveBad",
+    "ReadFailed",
+    "WriteFailed",
+    "LaunchFailed"
+  ],
   "parameters": {
     "type": "object",
     "properties": {
-      "op": {"type": "string", "enum": ["add", "edit", "rm"]},
-      "path": {"type": "string", "description": "Node path without extension; root is read-only."},
-      "text": {"type": "string", "description": "Required for add/edit; full UTF-8 text, at most 8000 bytes. JSON leaves require valid JSON."},
-      "recursive": {"type": "boolean", "default": false, "description": "Allow rm to delete a whole subtree; root-level symlinks return PathBad; deeper symlinks are only unlinked."}
+      "op": {
+        "type": "string",
+        "enum": [
+          "add",
+          "set",
+          "rm"
+        ],
+        "description": "add = create something new; set = change something that exists; rm = delete"
+      },
+      "path": {
+        "type": "string",
+        "description": "Like notes/amy.json, notes/amy.json#/phone or notes/trips/ (ends with / = a folder). Relative to the memory root; copy paths as the memory tool prints them."
+      },
+      "value": {
+        "description": "add/set: the content, any JSON (text is a string). For a file that is not .json it must be a string. At most 8000 bytes."
+      },
+      "description": {
+        "type": "string",
+        "description": "One line saying what this is; required for add, optional for set. Shown in the index."
+      },
+      "recursive": {
+        "type": "boolean",
+        "default": false,
+        "description": "rm: also delete a folder that is not empty."
+      }
     },
-    "required": ["op", "path"]
-  },
-  "errors": ["ArgumentsBad", "OpUnknown", "PathBad", "MemoryMissing", "CfgBad", "NodeMissing", "NodeExists", "ChildrenExist", "TextBad", "LockFailed", "WriteFailed", "ReadFailed", "LaunchFailed"],
-  "env": ["AOS_MEMORY"]
+    "required": [
+      "op",
+      "path"
+    ]
+  }
 }

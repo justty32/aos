@@ -15,27 +15,23 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`README.md`](../../../../../proto8/knowledge/aos/README.md) | aos in one page |
-| [`agents/README.md`](../../../../../proto8/knowledge/aos/agents/README.md) | Other agents |
-| [`agents/thought.md`](../../../../../proto8/knowledge/aos/agents/thought.md) | Small thought: one task, just the conclusion |
-| [`brain.md`](../../../../../proto8/knowledge/aos/brain.md) | Asking the brain |
-| [`cli/README.md`](../../../../../proto8/knowledge/aos/cli/README.md) | Commands for humans and external agents |
-| [`cli/agent.md`](../../../../../proto8/knowledge/aos/cli/agent.md) | Agent lifecycle |
-| [`cli/daemon.md`](../../../../../proto8/knowledge/aos/cli/daemon.md) | Daemon procs: direct control, bypassing the judge |
-| [`cli/errors.md`](../../../../../proto8/knowledge/aos/cli/errors.md) | Errors and retries |
-| [`cli/flags.md`](../../../../../proto8/knowledge/aos/cli/flags.md) | Help and flag placement |
-| [`cli/grow_screen.md`](../../../../../proto8/knowledge/aos/cli/grow_screen.md) | Function growth and ECA screens |
-| [`cli/safety.md`](../../../../../proto8/knowledge/aos/cli/safety.md) | Removal and confirmation |
-| [`cli/talk_settings.md`](../../../../../proto8/knowledge/aos/cli/talk_settings.md) | Messages, screens and agent settings |
-| [`cli/tool_env.md`](../../../../../proto8/knowledge/aos/cli/tool_env.md) | Hub variables in tool registrations |
-| [`cli/tool_flags.md`](../../../../../proto8/knowledge/aos/cli/tool_flags.md) | Flags for lib tools |
-| [`cli/tools.md`](../../../../../proto8/knowledge/aos/cli/tools.md) | Registering and calling tools |
-| [`errors/README.md`](../../../../../proto8/knowledge/aos/errors/README.md) | Reading an error |
-| [`errors/codes.md`](../../../../../proto8/knowledge/aos/errors/codes.md) | Error codes |
-| [`errors/common.md`](../../../../../proto8/knowledge/aos/errors/common.md) | Common error codes |
-| [`me/README.md`](../../../../../proto8/knowledge/aos/me/README.md) | Who am I |
-| [`me/self_tools.md`](../../../../../proto8/knowledge/aos/me/self_tools.md) | Changing your own toolbox |
-| [`memory.md`](../../../../../proto8/knowledge/aos/memory.md) | Writing shared knowledge |
-| [`rules.md`](../../../../../proto8/knowledge/aos/rules.md) | Boundaries |
-| [`status.md`](../../../../../proto8/knowledge/aos/status.md) | Reading state |
-| [`world.md`](../../../../../proto8/knowledge/aos/world.md) | How the pieces fit |
+| [`_index.json`](../../../../../proto8/knowledge/aos/_index.json) | 設定（鍵：.、me.json、errors.json、world.json、status.json、brain.json…） |
+| [`agents.json`](../../../../../proto8/knowledge/aos/agents.json) | 設定（鍵：_index、thought） |
+| [`brain.json`](../../../../../proto8/knowledge/aos/brain.json) | （檔頭沒有一句話） |
+| [`cli/_index.json`](../../../../../proto8/knowledge/aos/cli/_index.json) | 設定（鍵：.、agent.json、daemon.json、errors.json、flags.json、grow_screen.json…） |
+| [`cli/agent.json`](../../../../../proto8/knowledge/aos/cli/agent.json) | （檔頭沒有一句話） |
+| [`cli/daemon.json`](../../../../../proto8/knowledge/aos/cli/daemon.json) | （檔頭沒有一句話） |
+| [`cli/errors.json`](../../../../../proto8/knowledge/aos/cli/errors.json) | （檔頭沒有一句話） |
+| [`cli/flags.json`](../../../../../proto8/knowledge/aos/cli/flags.json) | （檔頭沒有一句話） |
+| [`cli/grow_screen.json`](../../../../../proto8/knowledge/aos/cli/grow_screen.json) | （檔頭沒有一句話） |
+| [`cli/safety.json`](../../../../../proto8/knowledge/aos/cli/safety.json) | （檔頭沒有一句話） |
+| [`cli/talk_settings.json`](../../../../../proto8/knowledge/aos/cli/talk_settings.json) | （檔頭沒有一句話） |
+| [`cli/tool_env.json`](../../../../../proto8/knowledge/aos/cli/tool_env.json) | （檔頭沒有一句話） |
+| [`cli/tool_flags.json`](../../../../../proto8/knowledge/aos/cli/tool_flags.json) | （檔頭沒有一句話） |
+| [`cli/tools.json`](../../../../../proto8/knowledge/aos/cli/tools.json) | （檔頭沒有一句話） |
+| [`errors.json`](../../../../../proto8/knowledge/aos/errors.json) | 設定（鍵：_index、codes、common） |
+| [`me.json`](../../../../../proto8/knowledge/aos/me.json) | 設定（鍵：_index、self_tools、self_llm） |
+| [`memory.json`](../../../../../proto8/knowledge/aos/memory.json) | （檔頭沒有一句話） |
+| [`rules.json`](../../../../../proto8/knowledge/aos/rules.json) | （檔頭沒有一句話） |
+| [`status.json`](../../../../../proto8/knowledge/aos/status.json) | （檔頭沒有一句話） |
+| [`world.json`](../../../../../proto8/knowledge/aos/world.json) | （檔頭沒有一句話） |
