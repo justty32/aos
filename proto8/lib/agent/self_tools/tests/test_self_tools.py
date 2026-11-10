@@ -75,7 +75,7 @@ class SelfTools(unittest.TestCase):
             self.assertEqual(self.calls()[-1][0], str(self.ws))
 
     def test_bad_arguments(self):
-        for args, word in (({"op": "add", "path": "tools/math", "override": True}, "does not take override"),
+        for args, word in (({"op": "add", "path": "tools/math", "override": True}, "ArgumentsBad unknown key override"),
                            ({"op": "add", "path": "tools/math", "envs": {"A": 1}}, "envs must be"),
                            ({"op": "rm", "name": "m", "replace": True}, "does not take replace"),
                            ({"op": "add"}, "path"),

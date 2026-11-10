@@ -201,8 +201,10 @@ def run(args):
                     count = config['watch']['baseline_cases']
                     baselines = [unit(row['before'], row['size_bytes'], config['watch']['metric'])
                                  for row in (past + [review])[-count:]]
+                    # baseline_cases 只給這裡算 baseline，不交給 watch（11-10 晚 tool_io 起不認得的鍵＝ArgumentsBad）
+                    watch_args = {k: v for k, v in config['watch'].items() if k != 'baseline_cases'}
                     opened = call('watch_open', HERE.parent / 'watch', dict(
-                        config['watch'], op='open', watch=str(watch_file), target=target, defs=str(defs),
+                        watch_args, op='open', watch=str(watch_file), target=target, defs=str(defs),
                         round=folder.name, promoted_at=promoted['promoted_at'],
                         baseline=sum(baselines) / len(baselines)))
                     review['steps']['watch']['opened'] = opened['changes']

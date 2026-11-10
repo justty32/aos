@@ -9,7 +9,7 @@
 
 旗標映射（thinking/2026-11/05/json-argv 的 03、07 與 J1 任務書）：
 _tooldef.json.env 只生成 hub 環境變數說明；parameters 同源生成旗標、說明與 type／required 檢查；旗標優先於 stdin，點路徑只換一葉。
-start 只掃旗標位置的說明，不讀 stdin；arguments 第一次才解析並快取，stdin 是終端就不讀；額外 JSON 鍵忽略、未知旗標報錯。
+start 只掃旗標位置的說明，不讀 stdin；arguments 第一次才解析並快取，stdin 是終端就不讀；不認得的 JSON 鍵＝ArgumentsBad（11-10 晚使用者「那就報錯」；additionalProperties 寫 true／schema 的物件例外）、未知旗標報錯。
 
 形狀（lib 契約，lib/docs/01 規則 3、5、5a）：
   錯誤行  「<名>: error: <代號> <原因>」：stderr 一行；給腦用的工具（預設）stdout 也印同一行（stdout 是給腦看的結果）；退 1。
@@ -356,6 +356,15 @@ def _matches(value, t):
     return isinstance(value, {"string": str, "boolean": bool, "array": list, "object": dict, "null": type(None)}[t])
 
 
+def _closed(node, top=False):
+    """不認得的鍵要不要報錯（使用者 11-10 晚「那就報錯」）：有宣告 properties 的物件、或最上層的 parameters＝封閉；
+    additionalProperties 寫成 true 或 schema＝刻意收額外鍵；沒宣告 properties 的下層自由物件照舊什麼鍵都收。"""
+    extra = node.get("additionalProperties")
+    if extra is True or isinstance(extra, dict):
+        return False
+    return bool(_properties(node)) or top
+
+
 def _validate(value, node, path=""):
     node = _object(node)
     if value is None:
@@ -367,6 +376,12 @@ def _validate(value, node, path=""):
         raise Error("ArgumentsBad", "%s must be %s" % (path, " or ".join(types)))
     if isinstance(value, dict):
         props = _properties(node)
+        if _closed(node, top=not path):
+            # 最上層的 "description" 是 JSON 檔的檔頭一句（wf conventions 規則 2），案例的 stdin.json 也帶，照舊不算
+            extra = sorted(k for k in value if k not in props and (path or k != "description"))
+            if extra:
+                where = " in %s" % path if path else ""
+                raise Error("ArgumentsBad", "unknown key%s %s%s (known: %s)" % ("s" if len(extra) > 1 else "", ", ".join(extra), where, ", ".join(props) or "none"))
         for key in _strings(node.get("required")):
             if value.get(key) is None:
                 enums = _object(props.get(key)).get("enum")
@@ -471,7 +486,8 @@ def help_from_tooldef(name, tooldef, extra=""):
                 if _properties(child):
                     rows(child, path + ".", indent + 2)
         rows(schema)
-        lines.extend(["Flags override the stdin JSON; a dotted flag (--a.b V) changes only that nested key.", 'Keys the tool does not know are ignored; a key with "." in its name can only be given on stdin.', "An unknown flag is FlagUnknown; a bad value or a missing required key is ArgumentsBad."])
+        unknown = "A key the tool does not know is ArgumentsBad" if _closed(schema, top=True) else "Keys the tool does not know are passed through"
+        lines.extend(["Flags override the stdin JSON; a dotted flag (--a.b V) changes only that nested key.", unknown + '; a key with "." in its name can only be given on stdin.', "An unknown flag is FlagUnknown; a bad value or a missing required key is ArgumentsBad."])
     if not extra:
         lines.append('Result on stdout. On error: one line "%s: error: CODE reason" on stderr and stdout, exit 1.' % name)
     # 共通代號不寫進各支 _tooldef.json，生成時補在自己的代號後面（坑-94）。

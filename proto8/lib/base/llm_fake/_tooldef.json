@@ -1,5 +1,5 @@
 {"description": "A fake brain for tests, same shape as llm_http, no network: if the request has tools it calls the first one, otherwise it answers FAKE ANSWER.",
- "parameters": {"type": "object",
+ "parameters": {"type": "object", "additionalProperties": true,
   "properties": {"endpoint": {"type": "object", "description": "ignored"},
                  "request": {"type": "object", "description": "messages required, tools optional"}},
   "required": ["request"]},
