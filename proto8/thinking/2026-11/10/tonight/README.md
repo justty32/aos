@@ -116,7 +116,7 @@ cd ../..
 <details><summary>小模型（gemma）要注意的</summary>
 
 - **寫不出 `$` 開頭的鍵**：`{"$env": …}` 這種寫法 gemma 會寫壞。生子 agent 用 `agent_def` 的 `template` 短名；`self_tools`、`self_hook` 的 `path_json` 也是 `$` 鍵——題目裡直接給一般路徑（絕對路徑或從工作區算的相對路徑）。
-- **工具說明很大，LM Studio 的 context 長度要開夠**：十五支 tooldef 實送約 7 200 tokens（28 748 字元），加 fsm 的 system 約 850，再加對話；`self_tools ls` 一次約 10 000 tokens（使用者回來後已裁改成只列名字＋一句，施工中）。使用者口徑：「小模型裝不下說明，那就是去把lm studio那邊調整一下。真的裝不下的，那就代表這個小模型不適合aos體系，或是只能作爲普通的aos函數。」——在 LM Studio 載模型時把 context 開到至少 16k（家機 gemma 實際載 71 936，沒問題）。
+- **工具說明很大，LM Studio 的 context 長度要開夠**：分包後 fsm 34 支工具說明實送 47 181 字元（約 11 800 tokens）、eca 19 支約 36 400 字元（約 9 100）；試驗場 fsm_ann 實問時 LM Studio 回的 `prompt_tokens` 是 12 352～13 152（system＋知識庫根＋34 支說明＋短對話）。**context 至少開 32768**（需求約兩倍，留給對話與回答）。11-10 晚量的時候 LM Studio 載入 gemma-4-e4b 的 context 是 71 936（`lms ps` 看得到），夠，沒動；這個值也存成了該模型的預設（`~/.lmstudio/.internal/user-concrete-model-default-config/google/gemma-4-e4b.json` 的 `llm.load.contextLength`＝71814），重開 LM Studio 或閒置一小時被卸載後再自動載入照樣是它。要手動換值時照抄：`lms unload google/gemma-4-e4b && lms load google/gemma-4-e4b --context-length 32768`（`--context-length` 只管這次載入；要留成預設就在 LM Studio 的模型設定裡改）。使用者口徑：「小模型裝不下說明，那就是去把lm studio那邊調整一下。真的裝不下的，那就代表這個小模型不適合aos體系，或是只能作爲普通的aos函數。」
 - gemma 會照抄 tooldef 例子的內容（例如 mailbox_send 的 `what`），叫完工具常答空字串——真腦常態。
 
 </details>
