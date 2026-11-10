@@ -9,7 +9,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`README.md`](../../../../../proto8/knowledge/README.md) | proto8/knowledge — 知識庫（層級式記憶工具 `memory` 讀的資料夾） |
+| [`README.md`](../../../../../proto8/knowledge/README.md) | proto8/knowledge — 記憶庫（`memory` 讀的資料夾＋`.json` 樹） |
 
 ## `proto8/knowledge/aos/`
 

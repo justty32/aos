@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-# memory_export - 把一個知識庫（或其中一棵子樹）整棵印成一份 Markdown，給人看；唯讀
+# memory_export - 把記憶庫（資料夾＋.json 的 JSON 樹）或其中一棵子樹整棵印成一份 Markdown，給人看；唯讀。
 # 規劃：proto8/thinking/2026-11/05/agent-knowledge/03-接進agent與工具說明.md K6（使用者 11-05「人類想看的話，要麼直接問agent，
-#   要麼agent弄一份輕鬆轉為markdown/html的工具，把json轉過去也可以」）。另立工具、memory 保持純查詢（03 代定）。
-# 介面（lib/docs/01 契約）：stdin {"path"?: 節點路徑, "max_bytes"?: N}。知識庫根、節點、子節點的認法跟 memory 一模一樣
-#   （① 工具資料夾 $AOS_CD 的 _memory.json 的 base ＞ ② $AOS_MEMORY，相對 $AOS_DAEMON、沒有＝cwd；. 與 _ 開頭不算；同名資料夾蓋過葉、.md 蓋過 .json）。
-#   節點介面共用 lib/agent/memory_fs.py，不 import 隔壁工具。
-# stdout：從 path（沒給＝根）開始深度優先、子節點照名字排序；每個節點先一行「<!-- node: 路徑 -->」，
-#   .md 的文原樣接上（標題層級不改），.json 的文包成 ```json 區塊（前面加「# 節點名」當標題）；節點之間空一行。
-#   捷徑繞回這次印的上層資料夾＝那個節點只印一行「not followed」、不往下（11-05 晚）。
+#   要麼agent弄一份輕鬆轉為markdown/html的工具，把json轉過去也可以」）；11-10 改逛純 JSON 樹（圖紙 thinking/2026-11/10/json-memory/04）。
+# 介面（lib/docs/01 契約）：stdin {"path"?: 統一路徑, "max_bytes"?: N}。庫根與統一路徑的認法跟 memory 一模一樣
+#   （_memory.json 的 base ＞ $AOS_MEMORY；`資料夾/檔.json#/JSON Pointer`，相對從庫根算，"" 或 "/"＝根），共用 lib/agent/memory_fs.py，不 import 隔壁工具。
+# stdout：從 path（沒給＝根）開始深度優先；每個位置先一行「<!-- node: 路徑 -->」（路徑可直接貼回 memory 的 path），接著：
+#   資料夾或有 _index 的物件＝"." 格的簡介，再依序印表裡的格（照表的順序）、再印表沒列的（not in index）；
+#   字串＝原文照接（標題層級不改）；其他 JSON 值（沒 _index 的物件、陣列、數字…）＝包成 ```json 區塊；
+#   非 .json 檔＝UTF-8 原文，不是 UTF-8＝「binary file, N bytes」；指不到／讀不到的格＝一行括號裡的代號與原因、照樣往下。位置之間空一行。
+#   防繞圈：走過的（實體路徑, 指標）再遇到＝只印一行「already exported above; not followed」；$env 格只跳一次、不連跳。
 #   超過 max_bytes（預設 50000）就截，最後一行「[truncated: N more bytes; export a child path]」。
-# 錯：「memory_export: error: 代號 原因」stderr 與 stdout 各一行、退 1：ArgumentsBad、PathBad、MemoryMissing、NodeMissing、CfgBad、ReadFailed。
-import json, os, re, sys
+# 錯：「memory_export: error: 代號 原因」stderr 與 stdout 各一行、退 1：ArgumentsBad、PathBad、MemoryMissing、CfgBad、NodeMissing、
+#   TargetBad、FileBad、DirectiveBad、ReadFailed、LaunchFailed（起點讀不到才算錯；子孫讀不到印在文件裡）。子行程只有 aos-json（與 $env 格的 aos-directive）。
+import json, os, sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
 # 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
@@ -19,7 +21,7 @@ while _lib != os.path.dirname(_lib):
     if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
         break
     _lib = os.path.dirname(_lib)
-sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+sys.path[:0] = [HERE] + ([_lib, os.path.join(_lib, "agent")] if os.path.basename(_lib) == "lib" else [])
 try:
     import tool_io  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
@@ -32,71 +34,86 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
 
 HELP = """\
 usage: memory_export < ARGUMENTS.json   (a tool: run it with aos-exec)
-Print a whole knowledge base (or the subtree at path) as one Markdown document, for people.
-The knowledge base is found like tool memory finds it (_memory.json next to the tool, else $AOS_MEMORY).
+Print a whole memory (folders and .json files), or the subtree at path, as one
+Markdown document, for people. path looks like folder/file.json#/key (as in tool
+memory); "" or "/" is the root (default).
+Each place starts with a line <!-- node: PATH -->. A folder or an object with
+_index prints its "." description, then its index entries in order, then what
+the index does not list. Strings are printed as they are; other JSON values go
+in a ```json block. A place already printed is not followed again. Output over
+max_bytes (default 50000) is cut; then export a child path.
+Needs aos-json on PATH. The root comes from _memory.json next to the tool,
+otherwise AOS_MEMORY.
 Result on stdout. On error: one line "memory_export: error: CODE reason" on stderr and stdout, exit 1.
 """
 tool_io.start("memory_export", HELP)
 die = tool_io.die
-# 共用節點介面：工具本地優先，再找 lib/agent，最後標準 Python 路徑。
-if os.path.basename(_lib) == "lib":
-    sys.path.insert(1, os.path.join(_lib, "agent"))
 try:
-    try:
-        import memory_fs
-    except ModuleNotFoundError as error:
-        if error.name != "memory_fs":
-            raise
-        import agent.memory_fs as memory_fs
+    import memory_fs as fs
 except ModuleNotFoundError as error:
-    if error.name not in ("memory_fs", "agent", "agent.memory_fs"):
+    if error.name != "memory_fs":
         raise
     die("ModuleMissing", "memory_fs.py not in the tool folder, not in lib/agent/, not on the Python path")
-SEGMENT = memory_fs.SEGMENT
-LEAF_EXTS = memory_fs.LEAF_EXTS
-memory_root = memory_fs.memory_root
-parse_path = memory_fs.parse_path
-show = memory_fs.show
-locate = memory_fs.locate
-leaf_file = memory_fs.leaf_file
-children = memory_fs.children
-title_summary = memory_fs.title_summary
-read_text = memory_fs.read_text
-node_or_die = memory_fs.node_or_die
+ToolError = fs.ToolError
+DEFAULT_MAX_BYTES = 50000
 
 
-def export(root, segs, out, chain=()):
-    d = os.path.join(root, *segs)
-    label = "/".join(segs) or "/"
-    if os.path.isdir(d):
-        real = os.path.realpath(d)
-        if real in chain:                       # 捷徑繞回上層（11-05 晚邊緣測試：原本一路印到路徑太長）
-            out.append("<!-- node: %s -->\n(a link back to an outer folder of this export; not followed)" % label)
-            return
-        chain += (real,)
-        f = os.path.join(d, "README.md")
-        text = read_text("dir", d)
-    else:
-        hit = locate(root, segs)
-        if hit is None:
-            die("NodeMissing", "node %s not found" % label)
-        _, f = hit
-        text = read_text("leaf", f)
-        if f.endswith(".json"):
-            text = "# %s\n\n```json\n%s\n```" % (segs[-1], text.rstrip("\n"))
-    out.append("<!-- node: %s -->\n%s" % (label, text.rstrip("\n")))
-    if os.path.isdir(d):
-        for name, _ in children("dir", d):
-            export(root, segs + [name], out, chain)
+def body(kind, value, table):
+    """這個位置自己要印的那段（不含子孫）。"""
+    if kind == "folder" or table is not None:
+        intro = fs.self_cell(table).get("_description")
+        return intro.rstrip("\n") if isinstance(intro, str) and intro else ""
+    if kind == "binary":
+        return "binary file, %d bytes" % value
+    if kind == "text" or isinstance(value, str):
+        return value.rstrip("\n")
+    return "```json\n%s\n```" % json.dumps(value, ensure_ascii=False, indent=2)
 
 
+def export(root, loc, out, seen, via_env, first=False):
+    """深度優先印 loc：先自己，再表的格（$env 格只跳一次），再表沒列的。"""
+    head = "<!-- node: %s -->" % fs.show(root, loc)
+    key = (os.path.realpath(loc.fs), loc.tokens)
+    if key in seen:
+        out.append(head + "\n(already exported above; not followed)")
+        return
+    seen.add(key)
+    try:
+        kind, value, table, kids = fs.load(root, loc)
+    except ToolError as error:
+        if first:
+            raise
+        out.append("%s\n(%s %s)" % (head, error.code, error))
+        return
+    text = body(kind, value, table)
+    out.append(head + ("\n" + text if text else ""))
+    if kind != "folder" and table is None:
+        return                                   # 沒 _index 的物件、陣列整個在 ```json 裡，不再往下拆
+    covered = set()
+    for c in fs.cells(loc, table or {}, kind != "folder"):
+        if c.target is None:
+            out.append("<!-- node: %s -->\n(%s)" % (c.key, c.note))
+            continue
+        covered.add(c.target)
+        if c.env and via_env:
+            continue
+        export(root, c.target, out, seen, via_env or c.env)
+    for k in kids:
+        if k not in covered:
+            export(root, k, out, seen, via_env)
+
+
+fs.install_signals()
 args = tool_io.arguments()
-segs = parse_path(args.get("path"))
-max_bytes = args.get("max_bytes", 50000)
+max_bytes = args.get("max_bytes", DEFAULT_MAX_BYTES)
 if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0:
     die("ArgumentsBad", "max_bytes must be a positive integer")
+root = fs.memory_root(HERE)
 out = []
-export(memory_root(HERE), segs, out)
+try:
+    export(root, fs.parse(root, args.get("path")), out, set(), False, first=True)
+except ToolError as error:
+    die(error.code, str(error))
 doc = ("\n\n".join(out) + "\n").encode("utf-8")
 if len(doc) > max_bytes:
     sys.stdout.write(doc[:max_bytes].decode("utf-8", "ignore").rstrip("\n") +

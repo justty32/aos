@@ -1,5 +1,5 @@
 {
-  "summary": "Export a knowledge base folder (or a subtree) as one Markdown document for people",
+  "summary": "Export a memory (folders and .json files) or a subtree as one Markdown document for people",
   "resource": "cpu",
   "side_effect": false,
   "idempotent": true,

@@ -176,7 +176,7 @@ class Check:
         (self.work / "bin").mkdir()
         (self.work / "bin/claude").symlink_to(PROTO / "cmd/aos-eca/tests/fake_claude")
         (self.work / "kb").mkdir()
-        (self.work / "kb/README.md").write_text("# Test knowledge\n")
+        (self.work / "kb/_index.json").write_text(json.dumps({".": {"_description": "# Test knowledge"}}) + "\n")
         for project in (self.project, self.llms):
             project.mkdir()
             (project / "README.txt").write_text("A preexisting user project.\n")

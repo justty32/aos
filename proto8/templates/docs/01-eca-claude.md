@@ -40,4 +40,4 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 
 **長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 預設 600000（10 分鐘），限制 CLI 呼叫；`loop.json.exec.timeout_ms` 預設 900000（15 分鐘），限制整次 aos-eca-turn，要留得比 CLI 那層長，讓它有時間收尾。長任務要同時檢查這兩層，增加額度不會延長逾時。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
 
-**知識寫入**：範本不預先登記 `memory_write`；先把 `memory` 那格的 `env.AOS_MEMORY` 指到有權寫的庫（相對、絕對或 `{"$env": "MY_KNOWLEDGE"}`），再在定義的 `tools.json` 照同樣寫法加 `memory_write` 一格（`env` 給同一個 `AOS_MEMORY`，寫法見 [02-agent-fsm](02-agent-fsm.md)「長跑與知識寫入」）。它與 `memory` 看同一個庫，透過 aos-mcp 提供給 Claude，`cli.json` 的內建 `--tools Read,Glob,Grep` 不必改。出廠庫由人維護；agent 寫前先讀知識節點 `memory`。
+**知識寫入**：範本不預先登記 `memory_write`；先把 `memory` 那格的 `env.AOS_MEMORY` 指到有權寫的庫（相對、絕對或 `{"$env": "MY_KNOWLEDGE"}`），再在定義的 `tools.json` 照同樣寫法加 `memory_write` 一格（`env` 給同一個 `AOS_MEMORY`，寫法見 [02-agent-fsm](02-agent-fsm.md)「長跑與知識寫入」）。它與 `memory` 看同一個庫，透過 aos-mcp 提供給 Claude，`cli.json` 的內建 `--tools Read,Glob,Grep` 不必改。出廠庫由人維護；agent 寫前先讀出廠庫的 `memory.json`。

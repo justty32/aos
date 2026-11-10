@@ -27,7 +27,7 @@
 | [`memory/`](../../../../../proto8/lib/agent/memory/) | 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）：read 一個位置、ls 列枝幹的表、find 依關鍵字／標籤找路徑。 |
 | [`memory/tests/test_base_directive.py`](../../../../../proto8/lib/agent/memory/tests/test_base_directive.py) | 驗 _memory.json 的 base：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次用到才解、不寫回，解不開時錯誤行指名檔與欄。 |
 | [`memory/tests/test_memory.py`](../../../../../proto8/lib/agent/memory/tests/test_memory.py) | memory（純 JSON 樹）：read／ls／find 在各種位置上的輸出、表與 not in index、$ref／$env、迴圈、錯誤代號。 |
-| [`memory_export/`](../../../../../proto8/lib/agent/memory_export/) | 把一個知識庫（或其中一棵子樹）整棵印成一份 Markdown，給人看；唯讀 |
+| [`memory_export/`](../../../../../proto8/lib/agent/memory_export/) | 把記憶庫（資料夾＋.json 的 JSON 樹）或其中一棵子樹整棵印成一份 Markdown，給人看；唯讀。 |
 | [`memory_fs.py`](../../../../../proto8/lib/agent/memory_fs.py) | 記憶庫（純 JSON 樹）共用：找根、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 "." 格／$env 格的認法、列枝幹、find 逛樹的迴圈防護。 |
 | [`memory_sync/`](../../../../../proto8/lib/agent/memory_sync/) | Synchronize an optional Git knowledge base with origin. |
 | [`memory_sync/tests/test_sync.py`](../../../../../proto8/lib/agent/memory_sync/tests/test_sync.py) | Exercise memory_sync against temporary local Git repositories and tool errors. |

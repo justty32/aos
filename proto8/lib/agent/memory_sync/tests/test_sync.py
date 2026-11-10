@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 ENTRY = Path(__file__).resolve().parents[1] / '_entry'
-RULES = '.lock/\n.tmp.*\n.new.*\n.rm.*\n.lock.releasing.*\n'
+RULES = '.*.tmp\n.tmp.*\n'
 
 
 class SyncTests(unittest.TestCase):
@@ -90,10 +90,10 @@ class SyncTests(unittest.TestCase):
         self.call(self.a, code='RemoteMissing')
 
     def test_ignore_missing_no_mutation(self):
-        (self.a / '.gitignore').write_text('.lock/\n')
+        (self.a / '.gitignore').write_text('.tmp.*\n')
         before = self.git(self.a, 'status', '--porcelain')
         p = self.call(self.a, code='IgnoreMissing')
-        self.assertEqual(p.stdout.splitlines()[:5], RULES.splitlines())
+        self.assertEqual(p.stdout.splitlines()[:2], RULES.splitlines())
         self.assertEqual(self.git(self.a, 'status', '--porcelain'), before)
 
     def test_status_counts_and_no_network(self):
@@ -103,16 +103,14 @@ class SyncTests(unittest.TestCase):
         self.commit(self.a)
         self.assertEqual(json.loads(self.call(self.a, op='status').stdout)['ahead'], 1)
 
-    def test_ignored_lock_and_temporary_files(self):
-        for name in ('.tmp.x', '.new.x', '.rm.x', '.lock.releasing.x'):
+    def test_ignored_temporary_files(self):
+        for name in ('.tmp.x', '.node.json.123.tmp'):
             (self.a / name).write_text('not knowledge')
-        (self.a / '.lock').mkdir()
-        (self.a / '.lock/lease').write_text('lease')
         self.call(self.a)
         self.assertEqual(self.git(self.a, 'status', '--porcelain'), '')
 
     def test_ignore_overrides_are_rejected(self):
-        for exception in ('!.tmp.*', '!memory_sync_probe/.new.*'):
+        for exception in ('!.tmp.*', '!memory_sync_probe/.*.tmp'):
             (self.a / '.gitignore').write_text(RULES + exception + '\n')
             self.call(self.a, code='IgnoreMissing')
 
