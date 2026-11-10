@@ -13,6 +13,7 @@
 | [`bin/aos-eca-turn`](../../../../../proto8/cmd/aos-eca/bin/aos-eca-turn) | 外部 coding agent（claude／codex，eca）的一輪：把 stack 的 queue 裡的信照順序全部一起交給 CLI——交出去就收信——等它答完、回答接進 history。 |
 | [`tests/fake_claude`](../../../../../proto8/cmd/aos-eca/tests/fake_claude) | stand-in for the claude CLI in aos-eca tests: -p with --session-id/--resume, keeps conversations as files, never calls a model |
 | [`tests/fake_codex`](../../../../../proto8/cmd/aos-eca/tests/fake_codex) | stand-in for the codex CLI in aos-eca tests: exec / exec resume ID with --json and -o, keeps threads as files, never calls a model |
+| [`tests/test_history_edit.py`](../../../../../proto8/cmd/aos-eca/tests/test_history_edit.py) | Test aos-eca-turn's shrunk history edit (11-10 self-family): history.jsonl changed between turns or during one = the next turn starts a new conversat… |
 | [`tests/test_switch.py`](../../../../../proto8/cmd/aos-eca/tests/test_switch.py) | Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs. |
 
 ## `proto8/cmd/aos-feedback/`

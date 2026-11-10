@@ -8,7 +8,8 @@ Conversations live in ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/<realpath of 
 Success: stdin appended to the conversation file; stdout a system line then a result line "FAKE: <last stdin line>".
 FAKE_CLI_FAIL=1: always an error result ("usage limit reached"), exit 1.
 FAKE_CLI_FAIL_SAVED=1 (with FAKE_CLI_FAIL=1): the conversation file is created before failing (the CLI saved it).
-FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": "..."} as one JSON line per call."""
+FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": "..."} as one JSON line per call.
+FAKE_CLI_DROP_FIRST=FILE: before answering, delete the first line of FILE (stands for the model calling self_history)."""
 import re
 import json, os, sys, uuid
 
@@ -53,6 +54,12 @@ if "--resume" in opts and not os.path.isfile(conv):
     sys.stderr.write("No conversation found with session ID: %s\n" % sid)
     out({"type": "result", "is_error": True, "result": "No conversation found with session ID: %s" % sid})
     sys.exit(1)
+drop = os.environ.get("FAKE_CLI_DROP_FIRST")
+if drop:
+    with open(drop, encoding="utf-8") as f:
+        rest = f.readlines()[1:]
+    with open(drop, "w", encoding="utf-8") as f:
+        f.writelines(rest)
 os.makedirs(folder, exist_ok=True)
 with open(conv, "a", encoding="utf-8") as f:
     f.write(json.dumps({"type": "user", "message": {"content": prompt}}, ensure_ascii=False) + "\n")

@@ -44,6 +44,12 @@
      單則超過 6000 bytes 留頭 4000＋尾 2000、中間寫 `[... N bytes left out ...]`（照 UTF-8 bytes 算、不切壞字）。上限＝cli.json 選填
      reseed_bytes（預設 48000；畫面那條路取 min(它, 8000)），整段含說明不超過它；0 或說明本身就超過＝只給說明、不附紀錄。history 空＝不接。
      換台這件事本身不掉信（判斷在交信之前）；人想重開＝停著、手刪小格的 session.txt（可先改 history.jsonl）。
+  ⑩ history 被改過＝開新對話（11-10 晚 self-family，使用者「4.接受縮水版」；10-30 eca 09「停著時改 history 再繼續」第 2 條路）：
+     CLI 的對話在 claude／codex 那邊、aos 改不到，所以 history.jsonl 被別人改了（aos-agent history、self_history、手改），下一輪就
+     不續舊對話、開新的，題目前面照 ⑧ 接改過的紀錄。怎麼認：每輪 assistant 接進 history 之後，把整份的 sha256 寫進小格的 .history_sum；
+     下一輪交出去之前算一次，不一樣＝cli_session.drop_session（刪 session.txt、.session_home）＋一行 warning。這一輪中間被改的
+     （腦叫 self_history；交出去之後 history 跟交出去那刻不一樣）＝.history_sum 寫 edited，下一輪照樣開新的。沒有 .history_sum＝不比。
+     畫面開著＝不換（對話在畫面裡），只印 warning。代價：對方的快取與 session id 換掉、紀錄只帶 user／assistant 文字（上限同 ⑧）。
   ⑨ 失敗後冷卻（11-10 two-machines 06，使用者裁「失敗後冷卻，只拿一封試」；檔＝$AOS_STACK/cooldown.json，讀寫一律走 lib/agent/cooldown.py）：
      一輪開始、認領信之前看 cooldown.state——cooling＝不認領任何信（new/、cur/、history 都不動）、退 0；due＝這輪只交最舊的一封
      （cur/ 先、照 letter_key；new/ 用 aos-post take 一次認領一封；壞信照舊丟、記 mailbox_warning，再往下找一封好信）；none＝照舊整批。
@@ -67,7 +73,7 @@ PATH 上要有 aos-post（平級形）。
   加 cli_session 的 CfgMissing、CfgBad、ToolsMissing（11-03 eca-tools：cli.json 的 tools 指的登記檔不在）、CliMissing（含 aos-mcp 不在 PATH 上）、
   CliFailed、ReplyMissing（yield 時的 SessionBad 不算錯，見上）。
 `--help`＝印 HELP（英文）到 stdout、退 0（R3）；Ctrl-C＝退 130、不吐 traceback（R12）。"""
-import json, os, sys
+import hashlib, json, os, sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
@@ -116,6 +122,8 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
     a record built from history.jsonl goes in front of the prompt: a short note, the first user message, then the newest messages
     that fit. Its size limit is cli.json's optional reseed_bytes (default 48000; at most 8000 when pasting into a screen; 0 = the
     note only). Delete session.txt by hand to restart the conversation on purpose.
+  History changed: when history.jsonl differs from how the last turn left it (aos-agent history, self_history, a hand edit),
+    the next turn starts a new conversation the same way, carrying the changed record (not while the screen is open).
   Cooldown: a failure after the prompt was handed over (CliFailed, ReplyMissing) is recorded in $AOS_STACK/cooldown.json; while
     cooling, no letter is taken (exit 0); when the cooldown is over, only the oldest letter is tried; a success removes the file.
 --one (tool form): stdin {"prompt"} -> stdout the answer; the conversation lives in $AOS_STACK itself. --on-empty / --prompt not allowed.
@@ -193,6 +201,43 @@ def history_rows(stack):
     except OSError as e:
         raise Fail("HistoryBad", "cannot read history.jsonl: %s" % e)
     return rows
+
+
+SUM = ".history_sum"                                           # ⑩ 小格裡：上一輪結束時 history 的 sha256（或 edited）
+
+
+def history_sum(stack):
+    try:
+        with open(os.path.join(stack, "history.jsonl"), "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+    except FileNotFoundError:
+        return hashlib.sha256(b"").hexdigest()
+    except OSError as e:
+        raise Fail("HistoryBad", "cannot read history.jsonl: %s" % e)
+
+
+def history_changed(stack, cell):
+    """⑩ 交出去之前：history 跟上一輪結束時不一樣＝丟掉 CLI 的舊對話（下一步 ask 照 ⑧ 開新的、帶改過的紀錄）。"""
+    seen = cell.read(SUM)
+    if not seen or seen == history_sum(stack):
+        return
+    if cell.alive():
+        aos_flags.warn(NAME, "history.jsonl was changed, but the screen is open, so the conversation there keeps its old record")
+        return
+    cli_session.drop_session(cell)
+    aos_flags.warn(NAME, "history.jsonl was changed since the last turn; starting a new %s conversation that carries the changed record" % cell_kind(cell))
+
+
+def cell_kind(cell):
+    return os.path.basename(cell.path)
+
+
+def note_sum(stack, cell, edited):
+    try:
+        with open(cell.file(SUM), "w", encoding="utf-8") as f:
+            f.write(("edited" if edited else history_sum(stack)) + "\n")
+    except (OSError, Fail) as e:
+        aos_flags.warn(NAME, "cannot write %s: %s" % (cell.file(SUM), e))
 
 
 def append_history(stack, msg):
@@ -306,7 +351,8 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
             good.append(sig)
         if not good:
             return 0
-    late, given = [], []                                            # 交出去那一刻收信時出的錯：CLI 已經在跑，等它答完再報
+    history_changed(stack, cell)                                    # ⑩ history 被改過＝開新對話
+    late, given, mid = [], [], []                                   # 交出去那一刻收信時出的錯：CLI 已經在跑，等它答完再報
 
     def handed():                                                   # ④ 交出去就算完成（11-03）：user 接進 history、收信
         given.append(True)
@@ -315,6 +361,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
                 append_history(stack, body)
             for sig in good:
                 must_post(["done", box, sig])
+            mid.append(history_sum(stack))                          # ⑩ 交出去那刻的 history
         except Fail as e:
             late.append(e)
     try:
@@ -331,7 +378,9 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
         raise
     if late:
         raise late[0]
+    edited = bool(mid) and history_sum(stack) != mid[0]             # ⑩ 這一輪中間被改了（腦叫了 self_history）
     append_history(stack, {"role": "assistant", "content": text[:-1] if text.endswith("\n") else text})
+    note_sum(stack, cell, edited)
     try:
         cooldown.clear(stack)                                       # ⑨ 成功一次＝歸零
     except OSError as w:
