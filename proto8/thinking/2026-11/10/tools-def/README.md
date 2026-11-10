@@ -10,6 +10,7 @@
 4. 頂層複述成「建立 aos 函數是分階段的：①資料夾＋`_entry.json`＋旁邊一支小 Python＝能被 aos-exec 跑的函數 ②補 `_metainfo.json` ③補 `_tooldef.json`＝能被腦當工具叫」，問之後再說還是 tools_def 該改成這樣。使用者：「Hmmm，應該說，這些是我理想中的一個，然後tools_def之後應該要能配合這個流程」
 5. 「可以的話，或許，你知道的，json跟資料夾很像，所以或許，也可以在指定json檔案，或指定json object中(透過路徑#/)。添加_entry,_metainfo,_tooldef這些key」
 6. （寫明天驗收時的口徑）「小模型裝不下說明，那就是去把lm studio那邊調整一下」；「haiku隨便用」。
+7. （看完回報後，頂層列三題：1 eca 範本要不要有改檔案的工具；2 `aos-tools add` 要不要收 `檔.json#/指標`；3 `self_tools add` 說明寫下一輪生效、fsm 實際同一輪就叫得到，哪邊才是要的）「1.算了，把各種東西也一起掛回eca。 2.收 3.同一輪就生效」
 
 ## 決定
 
