@@ -26,7 +26,7 @@
 | commit | 做了 |
 |---|---|
 | `e2c7a7b44` | ctl state 擴充、`--no-wait`、self_state、self_ctl、兩範本登記、測試、README 兩節、code-map |
-| （本檔這次） | lib/docs/03 兩列、templates/docs 01／02 工具清單、02／03 thinking、SESSION-LOG |
+| `56344393f` | lib/docs/03 兩列、02／03 thinking、SESSION-LOG（templates/docs 01／02 工具清單那兩句被別隊的 `b6aabf508` 一起帶進去了） |
 
 ## 驗收
 
