@@ -105,6 +105,15 @@ def ident(pid):
         return None
 
 
+
+def drop_as_written(v):
+    """拿掉每一層的 as_written（daemon 表上原樣存的路徑），其餘照留。"""
+    if isinstance(v, dict):
+        return {k: drop_as_written(x) for k, x in v.items() if k != "as_written"}
+    if isinstance(v, list):
+        return [drop_as_written(x) for x in v]
+    return v
+
 class Tracker:
     """只認自己起的：根 aos-exec 的 pid＋起始時間，往下走 ppid／session 收進來；殺也只殺這些（起始時間對得上才算同一個）。"""
 
@@ -542,6 +551,8 @@ class Daily(unittest.TestCase):
                 if f.endswith(LOGS) or p.is_symlink() or not p.is_file():
                     continue
                 txt = p.read_text(errors="ignore")
+                if f.endswith("procs_state.json"):   # 11-10 晚 B01：as_written＝使用者在命令列打的絕對路徑、照原樣存（設計如此，B06 口徑）；只看其餘
+                    txt = json.dumps(drop_as_written(json.loads(txt)))
                 for old in old_roots:
                     if str(old) in txt:
                         problems.append("%s: %s still names %s" % (n, f, old))

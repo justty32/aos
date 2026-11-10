@@ -143,17 +143,32 @@ bool Daemon::refresh(const std::string& name, Child& c) {
     try {
         const Json& w = c.as_written;
         std::string old_cell = c.stack;
-        if (w.contains("ws")) {
+        // 11-10 晚：原樣存的絕對路徑（純字串，不是指示詞）在這台不在＝退回表上相對 daemon stack 那份（整棵一起搬到別台、HOME 不同時照舊對得上）
+        auto here = [&](const char* k, const std::string& now) {
+            if (!w.contains(k) || !w[k].is_string()) {
+                return true;
+            }
+            std::string p = w[k].get<std::string>();
+            std::string file = p.substr(0, p.find('#'));
+            std::error_code ec;
+            if (std::filesystem::exists(file, ec)) {
+                return true;
+            }
+            warn(name + ": " + k + " kept as written (" + file + ") is not here; using the table's path relative to the daemon stack" +
+                 (now.empty() ? std::string() : " (" + now + ")"));
+            return false;
+        };
+        if (w.contains("ws") && here("ws", c.ws)) {
             c.ws = aos::abspath(fresh(w["ws"], "ws", cwd_));
         }
-        if (w.contains("stack")) {
+        if (w.contains("stack") && here("stack", c.stack)) {
             c.stack = aos::abspath(fresh(w["stack"], "stack", cwd_));
         }
-        if (w.contains("def")) {
+        if (w.contains("def") && here("def", c.def)) {
             c.def = aos::abspath(fresh(w["def"], "def", cwd_));
         }
         Json target;
-        if (w.contains("exec")) {
+        if (w.contains("exec") && here("exec", std::string())) {
             target = exec_of(Json(fresh(w["exec"], "exec", cwd_)), cwd_);   // 同信裡的字串目標：從 daemon 的 cwd 轉絕對、# 片段照留
             c.exec = target;
         }
