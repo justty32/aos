@@ -1,5 +1,5 @@
 {
-  "description": "Change the shared memory (a tree of folders and .json files; same paths as the memory tool, keep the file extension). Each op also updates the index, so never edit _index.json yourself. Every add needs three things: path, description (one line shown in the index) and value; add without description fails. To save a new fact: if its folder is not listed yet, make the folder first: {\"op\":\"add\",\"path\":\"notes/\",\"description\":\"Notes about people\"} ; then {\"op\":\"add\",\"path\":\"notes/amy.json\",\"description\":\"Who Amy is\",\"value\":\"Amy likes tea.\"} . Change it: {\"op\":\"set\",\"path\":\"notes/amy.json\",\"value\":\"Amy likes coffee.\"} (description optional). Delete it: {\"op\":\"rm\",\"path\":\"notes/amy.json\"} (a folder that is not empty needs \"recursive\":true). A key inside a .json object: {\"op\":\"add\",\"path\":\"notes/people.json#/bob\",\"description\":\"Who Bob is\",\"value\":{\"likes\":\"tea\"}} (make notes/people.json first with value {}). A folder's own description is its _description.json and an object's is its _description key: write them like any path with a string value and no description, e.g. {\"op\":\"add\",\"path\":\"notes/_description.json\",\"value\":\"Notes about people.\"} . value is plain text or any JSON; do not put JSON inside a string. Keep one text under 2 KB. Errors: ArgumentsBad (add without description: the line shows the call to make), NodeExists (use set), NodeMissing (the line says what exists and what to add first), ValueBad, PathBad (bad path, or rm the root), ChildrenExist, TargetBad, WriteFailed (the file system does not let you write there).",
+  "description": "Change the shared memory (a tree of folders and .json files; same paths as the memory tool, keep the file extension). Each op also updates the index, so never edit _index.json yourself. Every add needs path and description (one line shown in the index); add without description fails. To save a new fact: if its folder is not listed yet, make the folder first: {\"op\":\"add\",\"path\":\"notes/\",\"description\":\"Notes about people\"} ; then {\"op\":\"add\",\"path\":\"notes/amy.json\",\"description\":\"Who Amy is\",\"value\":\"Amy likes tea.\"} . Without value, add only puts an existing file or key into the index (content untouched), e.g. a file you wrote another way: {\"op\":\"add\",\"path\":\"notes/bob.md\",\"description\":\"Who Bob is\"} ; if it does not exist yet that fails (NodeMissing) unless you add \"create\":true, which makes it empty: {\"op\":\"add\",\"path\":\"notes/bob.md\",\"description\":\"Who Bob is\",\"create\":true} . Change it: {\"op\":\"set\",\"path\":\"notes/amy.json\",\"value\":\"Amy likes coffee.\"} (description optional). Delete it: {\"op\":\"rm\",\"path\":\"notes/amy.json\"} (a folder that is not empty needs \"recursive\":true). A key inside a .json object: {\"op\":\"add\",\"path\":\"notes/people.json#/bob\",\"description\":\"Who Bob is\",\"value\":{\"likes\":\"tea\"}} (make notes/people.json first with value {}). A folder's own description is its _description.json and an object's is its _description key: write them like any path with a string value and no description, e.g. {\"op\":\"add\",\"path\":\"notes/_description.json\",\"value\":\"Notes about people.\"} . value is plain text or any JSON; do not put JSON inside a string. Keep one text under 2 KB. Errors: ArgumentsBad (add without description: the line shows the call to make), NodeExists (use set), NodeMissing (the line says what exists and what to add first, or how to add without value), ValueBad, PathBad (bad path, or rm the root), ChildrenExist, TargetBad, WriteFailed (the file system does not let you write there).",
   "env": [
     "AOS_MEMORY"
   ],
@@ -41,12 +41,17 @@
         "description": "REQUIRED for every add (except _description.json and _description keys): one line saying what this is, shown in the index. Optional for set; not used by rm."
       },
       "value": {
-        "description": "add (not for a folder) and set: the content. Plain text is a string like \"Amy likes tea.\"; any other JSON is stored as JSON. For a file that is not .json it must be a string. At most 8000 bytes."
+        "description": "add (not for a folder) and set: the content. Leave it out in add to only index something that already exists. Plain text is a string like \"Amy likes tea.\"; any other JSON is stored as JSON. For a file that is not .json it must be a string. At most 8000 bytes."
       },
       "recursive": {
         "type": "boolean",
         "default": false,
         "description": "rm: also delete a folder that is not empty."
+      },
+      "create": {
+        "type": "boolean",
+        "default": false,
+        "description": "add without value: if the file or key does not exist, make it empty (an empty file; \"\" in a .json) instead of failing with NodeMissing."
       }
     },
     "required": [

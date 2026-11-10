@@ -3,6 +3,7 @@
 圖紙 proto8/thinking/2026-11/10/json-memory/03（使用者 11-10 晚：新增刪除工具一次做完兩處「A」；同時寫「不管，自行承擔風險」＝不加鎖；
 寫入「想怎麽寫就怎麼寫，有權限就能動」＝不限庫根底下，失敗＝WriteFailed）。
 自己的簡介（資料夾的 _description.json、物件的 _description key）當普通路徑寫：值要是字串、不帶 description、不進表。
+add 不給 value（使用者 11-10 深夜）：目標已在＝只補表裡那格；不在＝NodeMissing、什麼都不寫；create: true＝建空的再補格。
 JSON 的寫交給 aos-json（set、同檔兩處用 batch --parents、del；每份檔暫存後原子 rename）；非 .json 檔照原文由這裡原子寫。
 寫的路上不穿 $ref（不給 --follow）：路上碰到指示詞＝TargetBad，要改就直接寫它指到的那份檔。
 新增要動兩份檔時先寫內容再寫表：中途死掉＝留下沒登記的東西（ls 的 not in index: 看得到）；刪除也是先刪內容再拔格。
@@ -183,8 +184,27 @@ def batch(fs_path, changes):
     fs.aos_json(["batch", "--parents", fs_path], json.dumps(changes, ensure_ascii=False), "WriteFailed")
 
 
-def add(root, loc, folder, has_value, value, description):
-    """新增：資料夾（folder＝path 以 / 結尾，帶空的 _index.json）、新檔、或物件裡新 key；都同時在表裡加一格。"""
+def folder_registered(folder, loc):
+    """資料夾的 _index.json 裡已經有指到 loc 的格嗎。"""
+    if not os.path.isfile(os.path.join(folder, "_index.json")):
+        return False
+    return cell_key(fs.folder_table(folder, raw_file), fs.Loc(folder, None), False, loc, None) is not None
+
+
+def no_value(root, loc, create, description):
+    """add 不給 value、目標又不在：create＝建空的（非 .json 檔＝空檔，.json 檔與 key＝空字串 ""），否則 NodeMissing、什麼都不寫（使用者 11-10 深夜「報錯」）。"""
+    if create:
+        return ""
+    here = fs.show(root, loc)
+    with_value = {"op": "add", "path": here, "description": description, "value": "<the content>"}
+    empty = {"op": "add", "path": here, "description": description, "create": True}
+    raise Error("NodeMissing", "%s does not exist, so there is nothing to put in the index; give value to write it, like %s, "
+                "or make it empty, like %s" % (here, json.dumps(with_value, ensure_ascii=False), json.dumps(empty, ensure_ascii=False)))
+
+
+def add(root, loc, folder, has_value, value, description, create=False):
+    """新增：資料夾（folder＝path 以 / 結尾，帶空的 _index.json）、新檔、或物件裡新 key；都同時在表裡加一格。
+    不給 value：目標已在（沒登記）＝只補表裡那格、內容不動；不在＝NodeMissing，create＝建空的再補格（11-10 深夜）。"""
     intro = is_intro(loc, folder)
     if intro:
         check_intro(has_value, value)
@@ -194,31 +214,49 @@ def add(root, loc, folder, has_value, value, description):
         parent = os.path.dirname(loc.fs)
         if not os.path.isdir(parent):
             raise missing_folder(root, loc)
-        if os.path.lexists(loc.fs):
-            raise Error("NodeExists", "%s already exists; use set to change it" % fs.show(root, loc))
+        exists = os.path.lexists(loc.fs)
+        if exists and (intro or folder or has_value):
+            raise Error("NodeExists", "%s already exists; use set to change it" % fs.show(root, loc)
+                        + ("" if intro or folder else " (set with description also puts it in the index)"))
         if folder:
             if has_value and value not in (None, ""):   # 小模型常給 "value": null 或 ""，當作沒給
                 raise Error("ValueBad", "a folder takes no value; add files into it afterwards")
             os.mkdir(loc.fs)
             fs.aos_json(["set", os.path.join(loc.fs, "_index.json")], "{}", "WriteFailed")
-        else:
+        elif intro:
             if not has_value:
                 raise Error("ValueBad", "value is required")
             write_file(loc.fs, value)
+        elif exists:                            # 不給 value、已經在：只補表裡那格，內容不動（11-10 深夜）
+            if folder_registered(parent, loc):
+                raise Error("NodeExists", "%s already exists and is in the index; use set to change its value or description"
+                            % fs.show(root, loc))
+        else:
+            write_file(loc.fs, value if has_value else no_value(root, loc, create, description))
         if not intro:
             folder_cell(root, parent, loc, description)
         return
     if not intro:
         check_name(loc.tokens[-1])
-    if not has_value:
+    if intro and not has_value:
         raise Error("ValueBad", "value is required")
-    check_value(value)
+    if has_value:
+        check_value(value)
     if not os.path.lexists(loc.fs):
         raise missing_file(root, loc)
     _, parent = object_parent(root, loc)
-    if loc.tokens[-1] in parent:
-        raise Error("NodeExists", "%s already exists; use set to change it" % fs.show(root, loc))
-    changes = {fs.pointer(loc.tokens): value}
+    exists = loc.tokens[-1] in parent
+    if exists and (intro or has_value):
+        raise Error("NodeExists", "%s already exists; use set to change it" % fs.show(root, loc)
+                    + ("" if intro else " (set with description also puts it in the index)"))
+    changes = {}
+    if exists:                                  # 不給 value、已經在：只補表裡那格
+        table = parent.get("_index") if isinstance(parent.get("_index"), dict) else {}
+        if cell_key(table, fs.Loc(loc.fs, loc.tokens[:-1] or None), True, loc, None) is not None:
+            raise Error("NodeExists", "%s already exists and is in the index; use set to change its value or description"
+                        % fs.show(root, loc))
+    else:
+        changes[fs.pointer(loc.tokens)] = value if has_value else no_value(root, loc, create, description)
     if not intro:
         changes.update(object_cell(root, loc, parent, description))
     batch(loc.fs, changes)
