@@ -10,6 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`agent-fsm/`](../../../../../proto8/templates/agent-fsm/) | Run an aos agent with loop and FSM cells. |
+| [`eca-claude/`](../../../../../proto8/templates/eca-claude/) | Run Claude Code as an aos agent: one turn per queue batch, answers appended to history. |
 | [`judge-llm/`](../../../../../proto8/templates/judge-llm/) | Compare artifacts with one LLM request and public think accounting. |
 | [`reviewer/`](../../../../../proto8/templates/reviewer/) | Review measured definition costs and prescribe a fix or split when model downgrades fail. |
 
@@ -51,7 +52,6 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`_entry`](../../../../../proto8/templates/eca-claude/_entry) | 入口：`aos-loop loop.json` |
 | [`children.json`](../../../../../proto8/templates/eca-claude/children.json) | 設定（鍵：max_children） |
 | [`cli.json`](../../../../../proto8/templates/eca-claude/cli.json) | 設定（鍵：kind、flags、print_flags、tools_flags、timeout_ms） |
 | [`hooks.json`](../../../../../proto8/templates/eca-claude/hooks.json) | Hooks of this eca: aos functions run when an event happens. eca has queue_before, queue_after, brain_failed (CliFailed / ReplyMissing) and tool_added… |

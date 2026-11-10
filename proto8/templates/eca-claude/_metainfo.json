@@ -1,0 +1,5 @@
+{
+  "summary": "Run Claude Code as an aos agent: one turn per queue batch, answers appended to history.",
+  "cost": {"time_ms": 60000},
+  "resource": ["llm"]
+}

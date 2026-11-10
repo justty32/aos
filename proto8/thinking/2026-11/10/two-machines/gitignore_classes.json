@@ -21,7 +21,7 @@
   {
    "id": "G001",
    "pattern": "defs/**/.aos-proto8",
-   "writer": "proto8/templates/copy-out:103",
+   "writer": "（沒有；proto8/templates/copy-out 11-10 下午隨 .aos-proto8 捷徑一起拔掉，templates-cp 05）",
    "class": "local",
    "in_git": "不進",
    "why": "本機 repo 絕對位置；定義外的 stack 範本管不到，須由使用者在定義／專案自己的規則擋。",
@@ -177,7 +177,7 @@
   {
    "id": "G013",
    "pattern": "stacks/**/.aos-proto8",
-   "writer": "proto8/templates/copy-out:103",
+   "writer": "（沒有；proto8/templates/copy-out 11-10 下午隨 .aos-proto8 捷徑一起拔掉，templates-cp 05）",
    "class": "local",
    "in_git": "不進",
    "why": "本機 repo 錨點，不是可攜定義。",
@@ -759,20 +759,20 @@
   {
    "id": "G062",
    "pattern": "stacks/**/agents.json",
-   "writer": "proto8/lib/agent/agents/_entry:282",
+   "writer": "（沒有；11-10 晚 agents-split 改名 children.json，見 G063）",
    "class": "carry",
    "in_git": "進",
-   "why": "子 agent 設定覆蓋層。",
+   "why": "子 agent 設定覆蓋層。11-10 晚 agents-split 改名 children.json 後沒程式寫也沒程式讀；留著只是讓舊 stack 的殘留照舊帶走。",
    "seen": [],
    "ignored_now": "對：tracked; sample=stacks/root/procs/worker/agents.json"
   },
   {
    "id": "G063",
    "pattern": "stacks/**/children.json",
-   "writer": "proto8/lib/agent/agents/_entry:499",
+   "writer": "proto8/lib/agent/agents_children/_entry:15-16、:52（記帳在 $AOS_STACK/tools/agents_children/children.json；配額設定在 stack 那份 children.json）",
    "class": "carry",
    "in_git": "進",
-   "why": "已生子項帳。",
+   "why": "已生子項帳（tools/agents_children/children.json）與子 agent 配額覆蓋層（children.json），11-10 晚 agents-split 起同名、不同處，兩份都帶走。",
    "seen": [],
    "ignored_now": "對：tracked; sample=stacks/root/procs/worker/children.json"
   },
