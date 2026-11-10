@@ -99,8 +99,10 @@ Located locate(const std::string& spec, const std::string& base) {
         f = p;
     } else if (!lexists(p) && !has_extension(s.path) && is_file(p + ".json")) {
         f = p + ".json";
-    } else {
+    } else if (s.path.starts_with("/")) {
         throw Error{code::EntryMissing, "entry not found: " + spec};
+    } else {   // 11-10 晚 two-machines B08：相對的多印從哪算、解成什麼（$ref 進來的檔、轉向寫的相對路徑常算錯基準點）
+        throw Error{code::EntryMissing, "entry not found: " + spec + " (relative paths count from " + base + ": " + aos::abspath(p) + ")"};
     }
     out.file = real(f);
     out.pointer = s.pointer;
