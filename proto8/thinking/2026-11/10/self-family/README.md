@@ -2,7 +2,7 @@
 
 ← [11-10](../README.md)
 
-self_tools、self_llm 在 [self-tools](../self-tools/README.md)；這夾記 self_history 這條線（人用的 `aos-agent history`、包它的 `self_history`、eca 縮水版）。self_hook 還在談、不做。
+self_tools、self_llm 在 [self-tools](../self-tools/README.md)；這夾記 self_history 這條線（人用的 `aos-agent history`、包它的 `self_history`、eca 縮水版）。self_hook 這條線在 [hook](hook/README.md)。
 
 ## 使用者原話（逐字）
 
