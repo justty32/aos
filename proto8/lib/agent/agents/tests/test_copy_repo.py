@@ -1,4 +1,4 @@
-# Verify op new from a repo template uses the copy-out rewrite (env when AOS_PROTO8 is set, else absolute) and keeps literal from paths.
+# Verify op new from a repo template uses the copy-out rewrite (env when AOS_HOME is set, else absolute) and keeps literal from paths.
 import json
 import os
 from pathlib import Path
@@ -45,12 +45,12 @@ class CopyRepoTests(unittest.TestCase):
         return json.loads((self.root / 'born' / 'tools.json').read_text())['tools']
 
     def test_repo_template_env_mode(self):
-        r = self.run_new(str(PROTO / 'templates' / 'agent-fsm'), AOS_PROTO8=str(PROTO))
+        r = self.run_new(str(PROTO / 'templates' / 'agent-fsm'), AOS_HOME=str(PROTO))
         self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
-        self.assertEqual(self.tools()['wall_clock']['path'], {'$env': 'AOS_PROTO8', '$path': '/lib/base/wall_clock'})
+        self.assertEqual(self.tools()['wall_clock']['path'], {'$env': 'AOS_HOME', '$path': '/lib/base/wall_clock'})
         self.assertEqual(self.tools()['memory']['path'], 'tools/memory')
         mem = json.loads((self.root / 'born' / 'tools' / 'memory' / '_memory.json').read_text())
-        self.assertEqual(mem['base'], {'$env': 'AOS_PROTO8', '$path': '/knowledge/aos'})
+        self.assertEqual(mem['base'], {'$env': 'AOS_HOME', '$path': '/knowledge/aos'})
         text = (self.root / 'born' / 'tools.json').read_text()
         self.assertNotIn(str(PROTO), text)
 
@@ -58,7 +58,7 @@ class CopyRepoTests(unittest.TestCase):
         r = self.run_new(str(PROTO / 'templates' / 'agent-fsm'))
         self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
         self.assertEqual(self.tools()['wall_clock']['path'], str(PROTO / 'lib' / 'base' / 'wall_clock'))
-        self.assertIn('note: AOS_PROTO8 is not set', r.stdout)
+        self.assertIn('note: AOS_HOME is not set', r.stdout)
 
     def test_outside_template_through_symlink_uses_literal_path(self):
         real = self.root / 'far' / 'deep' / 'tpl'

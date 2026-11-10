@@ -3,7 +3,7 @@
 # 放在 templates/ 底下、不在範本裡：範本資料夾整份會被抄進每隻 agent，腳本放裡面就會跟著被抄走。
 # repo 的位置從自己的 realpath 往上推（不靠環境變數）：範本＝<本檔所在資料夾>/<範本名> 或 proto8/kernel/<名>，proto8＝本檔所在資料夾的上一層。
 # 寫法（11-10 TC，使用者「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」「兩台各自設一次...不要限制只設一次」）：
-#   env（預設）＝{"$env": "AOS_PROTO8", "$path": "/<proto8 底下>"}，每台設一次 AOS_PROTO8；absolute＝這台 proto8 的絕對路徑；
+#   env（預設）＝{"$env": "AOS_HOME", "$path": "/<proto8 底下>"}，每台設一次 AOS_HOME；absolute＝這台 proto8 的絕對路徑；
 #   relative＝從那個檔的資料夾到 proto8 的相對路徑。改哪些地方、捷徑怎麼辦都在共用模組 lib/agent/copy_def.py（agents new 也用它）。抄完多印一行這隻需要本機備好什麼。
 # 不抄 __pycache__。目的已存在（含斷掉的捷徑）＝DestExists、不蓋；半路失敗＝刪掉這次建的目的資料夾再報錯。
 # 錯（stderr 一行 `copy-out: error: 代號 原因`、退 1）：ArgumentsBad、FlagUnknown、TemplateMissing、TemplateBad、DestExists、WriteFailed。
@@ -47,8 +47,8 @@ __pycache__). Paths that point from the template into the repo's proto8/ are rew
 in the form MODE picks; paths that stay inside the template stay as they were.
 
 --proto8 MODE (how files point at proto8; nothing resolved is ever written back):
-  env       {"$env": "AOS_PROTO8", "$path": "/<path in proto8>"} (default). Set
-            AOS_PROTO8 once per machine to that machine's proto8 folder; files are
+  env       {"$env": "AOS_HOME", "$path": "/<path in proto8>"} (default). Set
+            AOS_HOME once per machine to that machine's proto8 folder; files are
             identical on every machine and no link is needed.
   absolute  this machine's proto8 path (every machine keeps proto8 there).
   relative  a path from each file's folder to proto8 (same relative layout everywhere).
@@ -59,7 +59,7 @@ cannot hold an environment variable, so in env mode a symlinked _entry becomes t
 equivalent JSON one-shot, a symlink to a file becomes a copy of that file, and a
 symlink to a folder falls back to an absolute symlink (one warning each).
 Prints: copied NAME -> DEST (N paths written as MODE), then one line saying what
-this copy needs on the machine (e.g. needs AOS_PROTO8 set to this machine's proto8
+this copy needs on the machine (e.g. needs AOS_HOME set to this machine's proto8
 folder).
 
 The repo is found from this script's own real path (no environment variable).

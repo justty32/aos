@@ -43,16 +43,16 @@ class CopyOut(unittest.TestCase):
     def test_default_is_env(self):
         r = self.ok("--template", "agent-fsm", "a")
         self.assertIn("paths written as env", r.stdout)
-        self.assertIn("needs AOS_PROTO8 set to this machine's proto8 folder (now: unset", r.stdout)
+        self.assertIn("needs AOS_HOME set to this machine's proto8 folder (now: unset", r.stdout)
         tools = self.json("a", "tools.json")["tools"]
-        self.assertEqual(tools["agents"]["path"], {"$env": "AOS_PROTO8", "$path": "/lib/agent/agents"})
+        self.assertEqual(tools["agents"]["path"], {"$env": "AOS_HOME", "$path": "/lib/agent/agents"})
         self.assertEqual(tools["memory"]["path"], "tools/memory")
-        self.assertEqual(self.json("a", "tools", "memory", "_entry"), [{"$env": "AOS_PROTO8", "$path": "/lib/agent/memory/_entry"}])
-        self.assertEqual(self.json("a", "tools", "memory", "_memory.json")["base"], {"$env": "AOS_PROTO8", "$path": "/knowledge/aos"})
+        self.assertEqual(self.json("a", "tools", "memory", "_entry"), [{"$env": "AOS_HOME", "$path": "/lib/agent/memory/_entry"}])
+        self.assertEqual(self.json("a", "tools", "memory", "_memory.json")["base"], {"$env": "AOS_HOME", "$path": "/knowledge/aos"})
         self.assertFalse((self.tmp / "a" / ".gitignore").exists())
 
     def test_env_mode_needs_line_shows_current_value(self):
-        r = self.ok("--template", "agent-fsm", "a", AOS_PROTO8="/some/where")
+        r = self.ok("--template", "agent-fsm", "a", AOS_HOME="/some/where")
         self.assertIn("(now: /some/where;", r.stdout)
 
     def test_env_mode_file_symlink_becomes_copy_with_warning(self):
@@ -70,7 +70,7 @@ class CopyOut(unittest.TestCase):
     def test_aos_cd_directive_env(self):
         self.ok("--template", "reviewer", "r")
         argv = self.json("r", "fsm.json")["states"]["think"]["exec"]["argv"]
-        self.assertEqual(argv[1], {"$env": "AOS_PROTO8", "$path": "/templates/agent-fsm/brain.py"})
+        self.assertEqual(argv[1], {"$env": "AOS_HOME", "$path": "/templates/agent-fsm/brain.py"})
 
     def test_aos_cd_directive_relative_keeps_aos_cd(self):
         self.ok("--proto8", "relative", "--template", "reviewer", "r")
@@ -97,8 +97,8 @@ class CopyOut(unittest.TestCase):
         r = self.ok("--template", "kernel/llm-kernel", "llm")
         self.assertIn("copied kernel/llm-kernel", r.stdout)
         k = self.json("llm", "kernel.json")
-        self.assertEqual(k["exec"], {"$env": "AOS_PROTO8", "$path": "/lib/base/llm_http"})
-        self.assertEqual(k["endpoints"]["fake"]["exec"], {"$env": "AOS_PROTO8", "$path": "/lib/base/llm_fake"})
+        self.assertEqual(k["exec"], {"$env": "AOS_HOME", "$path": "/lib/base/llm_http"})
+        self.assertEqual(k["endpoints"]["fake"]["exec"], {"$env": "AOS_HOME", "$path": "/lib/base/llm_fake"})
         self.assertEqual(k["endpoints"]["smart-high"]["exec"], "endpoints/litellm")   # 範本裡的照舊
         self.assertIn("/tmp/aos-demo-sender", k["budget"]["senders"])                  # key 不動
 

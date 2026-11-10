@@ -2,7 +2,7 @@
 # 四輪：env、absolute（兩台同一個絕對位置）、relative（兩台同相對擺法），各跑
 #   A 起 → 問一題 → aos-daemon-ctl -d stacks/root shutdown → git 搬到另一個 HOME、另一個前綴（A 的 proto8 複本與整個 A 刪掉）
 #   → B aos-exec --stack stacks/root defs → 不用其他指令就接著答；
-# 加一輪同一台：env 跑通 → 停 → AOS_PROTO8 改指另一份 proto8 複本（舊的刪掉）→ 再起 → 照樣答、檔裡沒殘留舊值。
+# 加一輪同一台：env 跑通 → 停 → AOS_HOME 改指另一份 proto8 複本（舊的刪掉）→ 再起 → 照樣答、檔裡沒殘留舊值。
 # 跑法：python3 test_paths_move.py [-v]（每輪約 20～40 秒）；KEEP=1 留下試驗資料夾。用 ~/.local/bin 的 aos 指令，不碰 ~/code。
 import json
 import os
@@ -207,7 +207,7 @@ class PathsMove(unittest.TestCase):
         proto_b = {"env": base_b / "elsewhere" / "p8", "absolute": base_b / "repo" / "proto8",
                    "relative": base_b / "repo" / "proto8"}[mode]
         copy_proto(proto_a)
-        a = self.machine("A", proto_a, {"AOS_PROTO8": str(proto_a)} if mode == "env" else None)
+        a = self.machine("A", proto_a, {"AOS_HOME": str(proto_a)} if mode == "env" else None)
         proj_a, llms_a = self.build(a, base_a, mode)
         self.start_both(a, proj_a, llms_a)
         a.run("aos-agent", "-d", "stacks/root", "ctl", "add", "--auto-restart", "-w", ".", "defs/ann", cwd=proj_a)
@@ -226,7 +226,7 @@ class PathsMove(unittest.TestCase):
         if mode == "absolute":                         # 兩台同一個絕對位置：B 在那裡放一個捷徑指到自己的複本
             fixed.parent.mkdir(parents=True)
             os.symlink(proto_b, fixed)
-        b = self.machine("B", proto_b, {"AOS_PROTO8": str(proto_b)} if mode == "env" else None)
+        b = self.machine("B", proto_b, {"AOS_HOME": str(proto_b)} if mode == "env" else None)
         proj_b, llms_b = base_b / "proj", base_b / "llms"
         self.start_both(b, proj_b, llms_b)
         self.wait_ann(b, proj_b)
@@ -253,7 +253,7 @@ class PathsMove(unittest.TestCase):
         log("==== round env-repoint (same machine) ====")
         base = self.work / "S" / "pre"
         p1, p2 = copy_proto(base / "p1" / "proto8"), base / "p2" / "proto8"
-        m = self.machine("S", p1, {"AOS_PROTO8": str(p1)})
+        m = self.machine("S", p1, {"AOS_HOME": str(p1)})
         proj, llms = self.build(m, base, "env")
         self.start_both(m, proj, llms)
         m.run("aos-agent", "-d", "stacks/root", "ctl", "add", "--auto-restart", "-w", ".", "defs/ann", cwd=proj)
@@ -262,9 +262,9 @@ class PathsMove(unittest.TestCase):
         self.stop_both(m, proj, llms)
         copy_proto(p2)
         shutil.rmtree(base / "p1")
-        m.env["AOS_PROTO8"] = str(p2)
+        m.env["AOS_HOME"] = str(p2)
         m.use_proto(p2)
-        log("  AOS_PROTO8 -> %s (old copy deleted)" % p2)
+        log("  AOS_HOME -> %s (old copy deleted)" % p2)
         self.start_both(m, proj, llms)
         self.wait_ann(m, proj)
         self.ask(m, proj, "question two")

@@ -46,18 +46,18 @@ class RewriterTests(unittest.TestCase):
     def test_env(self):
         dest, n = self.copy("env")
         tools = self.read(dest, "tools.json")
-        self.assertEqual(tools["tools"]["t"]["path"], {"$env": "AOS_PROTO8", "$path": "/lib/t"})
+        self.assertEqual(tools["tools"]["t"]["path"], {"$env": "AOS_HOME", "$path": "/lib/t"})
         self.assertEqual(tools["tools"]["in"]["path"], "sub")
         self.assertEqual(tools["note"], "a/b")
         self.assertEqual(tools["abs"], "/etc/x")
         conf = self.read(dest, "sub", "conf.json")
-        self.assertEqual(conf["argv"][0], {"$env": "AOS_PROTO8", "$path": "/lib/t/_entry"})
+        self.assertEqual(conf["argv"][0], {"$env": "AOS_HOME", "$path": "/lib/t/_entry"})
         self.assertEqual(conf["argv"][1], {"$env": "AOS_WS", "$path": "../../lib/t"})       # 別的指示詞不動
-        self.assertEqual(self.read(dest, "sub", "_entry"), {"argv": ["aos-exec", {"$env": "AOS_PROTO8", "$path": "/lib/t/_entry"}]})
+        self.assertEqual(self.read(dest, "sub", "_entry"), {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/t/_entry"}]})
         self.assertFalse((dest / "sub" / "data.json").is_symlink())
         self.assertEqual(self.read(dest, "sub", "data.json"), {"x": 1})
         self.assertEqual(os.readlink(dest / "tdir"), str(self.proto / "lib" / "t"))
-        self.assertEqual(len([w for w in self.warnings if "cannot hold AOS_PROTO8" in w]), 2)
+        self.assertEqual(len([w for w in self.warnings if "cannot hold AOS_HOME" in w]), 2)
 
     def test_absolute(self):
         dest, _ = self.copy("absolute")

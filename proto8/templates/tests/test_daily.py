@@ -170,7 +170,7 @@ class Machine:
     def use_proto(self, proto):
         """換了 HOME 就沒有 user site 的 aos-proto8.pth：照 py/README 的退路改給 PYTHONPATH，指這台那份 proto8。"""
         self.proto = proto
-        self.env["AOS_PROTO8"] = str(proto)
+        self.env["AOS_HOME"] = str(proto)
         self.env["PYTHONPATH"] = os.pathsep.join([str(proto / "py"), str(proto / "lib")])
 
     def run(self, *args, cwd, check=True, timeout=120):
@@ -627,7 +627,7 @@ class Daily(unittest.TestCase):
         old_roots = [prev.m.home, prev.outside, prev.code]
         self.drop_hop(prev)
         self.env_for(h.m, h)
-        log("  %s: AOS_PROTO8=%s AOS_LLM_KERNEL=%s" % (tag, h.m.env["AOS_PROTO8"], h.m.env["AOS_LLM_KERNEL"]))
+        log("  %s: AOS_HOME=%s AOS_LLM_KERNEL=%s" % (tag, h.m.env["AOS_HOME"], h.m.env["AOS_LLM_KERNEL"]))
         self.start_llms(h.m, h)
         self.start_something(h.m, h)
         self.check_resumed(h.m, h, letter_in, prev_qs)
@@ -711,7 +711,7 @@ class T4DefsOutside(Daily):
 
 class T5Repoint(Daily):
     def test_same_machine_repoint_env(self):
-        """④ 同一台：跑通 → 停 → AOS_LLM_KERNEL、AOS_PROTO8 改指另一份（舊的刪掉）→ 再起照樣答、不殘留舊值。"""
+        """④ 同一台：跑通 → 停 → AOS_LLM_KERNEL、AOS_HOME 改指另一份（舊的刪掉）→ 再起照樣答、不殘留舊值。"""
         h = self.make_hop("A")
         m = h.m
         self.build(m, h)
@@ -735,7 +735,7 @@ class T5Repoint(Daily):
         h.llms = llms2                                   # 之後的停與 git 檢查看第二份
         m.use_proto(p2)
         m.env["AOS_LLM_KERNEL"] = str(llms2 / "stacks" / "kernel")
-        log("  AOS_PROTO8 -> %s, AOS_LLM_KERNEL -> %s (old ones deleted)" % (p2, m.env["AOS_LLM_KERNEL"]))
+        log("  AOS_HOME -> %s, AOS_LLM_KERNEL -> %s (old ones deleted)" % (p2, m.env["AOS_LLM_KERNEL"]))
         self.beat("start llms", m.start, "stacks/kernel", "def", llms2, "llms2")
         self.start_something(m, h)
         for n in ("fsm", "eca"):

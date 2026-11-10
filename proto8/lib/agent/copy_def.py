@@ -3,7 +3,7 @@
 使用者 11-10 午：「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」「兩台各自設一次...不要限制只設一次」——
 寫出來的檔只放寫法，不放解出來的值；每次用到才由讀它的程式解（aos-exec／aos-json／aos-directive 的指示詞，N-45）。
 三種寫法（MODE）：
-  env       {"$env": "AOS_PROTO8", "$path": "/<proto8 底下的相對路徑>"}；每台設一次 AOS_PROTO8＝這台 proto8 的絕對路徑（預設）。
+  env       {"$env": "AOS_HOME", "$path": "/<proto8 底下的相對路徑>"}；每台設一次 AOS_HOME＝這台 proto8 的絕對路徑（預設）。
   absolute  這台 proto8 的絕對路徑（兩台要放同一位置）。
   relative  從那個檔的資料夾到 proto8 的相對路徑（兩台要同樣的相對擺法）。
 改的地方（範本裡每個相對路徑照「它在範本原位」解開：落在範本裡＝照舊；落在 proto8 裡＝照 MODE 改；都不是＝照舊、帶 .. 的提醒一行）：
@@ -11,16 +11,16 @@
     _memory.json 的 base、kernel.json 的 exec 與 endpoints 都是這種）。JSON key 不動。
   - {"$env": "AOS_CD", "$path": 相對}（AOS_CD＝定義的根）：env／absolute 換成整格新值，relative 只換 $path。別的指示詞整格不動。
   - 相對捷徑：relative／absolute 照寫法重寫捷徑；env（捷徑放不了環境變數）：_entry 捷徑換成等價的 JSON 單子
-    {"argv": ["aos-exec", {"$env": "AOS_PROTO8", "$path": …}]}；指到檔的換成那份檔的複本（快照，之後 repo 改了不跟著變）；
+    {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": …}]}；指到檔的換成那份檔的複本（快照，之後 repo 改了不跟著變）；
     指到資料夾的退回 absolute——後兩種各提醒一行、列在 notes。
-不讀環境變數、不碰 AOS_PROTO8 的值：寫的是寫法。PROTO＝本檔 realpath 往上兩層（lib/agent → proto8）。
+不讀環境變數、不碰 AOS_HOME 的值：寫的是寫法。PROTO＝本檔 realpath 往上兩層（lib/agent → proto8）。
 """
 import json
 import os
 import shutil
 
 MODES = ("env", "absolute", "relative")
-ENV = "AOS_PROTO8"
+ENV = "AOS_HOME"
 PROTO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 

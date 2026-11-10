@@ -11,7 +11,7 @@
 #       path 原本從範本那份算，換算成從新位置走回同一個目標（指範本裡的工具也指回範本那份，不指複本：複本裡的相對捷徑深度變了會斷）；
 #       複製來的絕對 path 照抄；tools 參數加的也存相對。只做字串換算、不 realpath，對最終位置算（暫存資料夾跟最終位置同層）。
 #       from 是 repo proto8 裡的範本（11-10 TC）：改用 copy-out 同一套（lib/agent/copy_def.py），指進 proto8 的路徑寫成
-#       {"$env": "AOS_PROTO8", …}（AOS_PROTO8 沒設＝寫絕對、結果多一行 note）；from 用字面路徑、不解開捷徑。
+#       {"$env": "AOS_HOME", …}（AOS_HOME 沒設＝寫絕對、結果多一行 note）；from 用字面路徑、不解開捷徑。
 #   add 的 tools：path 相對的轉成相對 cwd 交給 aos-agent tools add，覆蓋層存相對；絕對的存絕對（保留寫法）。
 #       先寫進同層暫存資料夾再改名；掛不上＝把剛寫的資料夾刪掉（全有或全無，規則 6）。
 #   add {name, def, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?, on_queued?}  生法 (b) 用現有定義：def 直接掛（aos-agent ctl add），llm／tools／tools_rm 走
@@ -400,8 +400,8 @@ notes = []                                      # 改寫路徑時的提醒（接
 
 
 def proto8_mode():
-    """repo 範本生子定義時指回 proto8 的寫法：AOS_PROTO8 有設、指得到一份 proto8＝env（跟 copy-out 預設同）；
-    沒設＝absolute（這台照樣跑；換台要設 AOS_PROTO8 或自己改），提醒一行。"""
+    """repo 範本生子定義時指回 proto8 的寫法：AOS_HOME 有設、指得到一份 proto8＝env（跟 copy-out 預設同）；
+    沒設＝absolute（這台照樣跑；換台要設 AOS_HOME 或自己改），提醒一行。"""
     v = os.environ.get(copy_def.ENV)
     if v and copy_def.is_proto8(v):
         return "env"

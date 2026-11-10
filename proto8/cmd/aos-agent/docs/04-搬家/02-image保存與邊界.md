@@ -64,7 +64,7 @@ git reset --hard origin/main
 find ws/.stack/ -type f -path '*/think/request.json' -delete
 ```
 
-**指到 proto8 的路徑**（11-10 午 TC，使用者「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」）：`copy-out` 預設寫 `{"$env": "AOS_PROTO8", …}`（每台設一次 `AOS_PROTO8`），也可選 `absolute`（兩台 proto8 放同位置）或 `relative`（兩台同樣相對擺法）；`aos-tools add` 存的保留使用者的寫法（絕對／相對／`--path-json` 環境變數指示詞）。照擺法準備好，pull 後不用跑任何重建指令；沒備好＝第一題 `PathMissing`，訊息指名哪份檔哪一格、解出什麼（[templates/docs/02](../../../../templates/docs/02-agent-fsm.md)）。每台另要先跑過一次 `proto8/install.sh`（PATH 與 `aos-proto8.pth`）。細節在 [templates/docs/02](../../../../templates/docs/02-agent-fsm.md)。
+**指到 proto8 的路徑**（11-10 午 TC，使用者「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」）：`copy-out` 預設寫 `{"$env": "AOS_HOME", …}`（每台設一次 `AOS_HOME`），也可選 `absolute`（兩台 proto8 放同位置）或 `relative`（兩台同樣相對擺法）；`aos-tools add` 存的保留使用者的寫法（絕對／相對／`--path-json` 環境變數指示詞）。照擺法準備好，pull 後不用跑任何重建指令；沒備好＝第一題 `PathMissing`，訊息指名哪份檔哪一格、解出什麼（[templates/docs/02](../../../../templates/docs/02-agent-fsm.md)）。每台另要先跑過一次 `proto8/install.sh`（PATH 與 `aos-proto8.pth`）。細節在 [templates/docs/02](../../../../templates/docs/02-agent-fsm.md)。
 
 只刪指定 stack 裡各個 `think/request.json`，避免沿用上一份 image 的 request；其他被忽略的 log、快取與暫存都留著，其他 daemon stack 也各做一次（11-07 使用者裁定 sol 審查 #20-3）。歸檔信 `archive/` 跟著 image 走；stderr、live、turns、transcripts、計數器 `counter_*.txt`（11-09）等紀錄仍只留原機（11-07 使用者裁定 sol 審查 #20-1、#20-2）。
 

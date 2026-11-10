@@ -184,7 +184,7 @@
    "id": "D22",
    "line": "路徑",
    "what": "指到 proto8 的預設寫法",
-   "decided": "copy-out 預設 `--proto8 env`；新環境變數 AOS_PROTO8，歸 NORMS「③ 人殼預設」",
+   "decided": "copy-out 預設 `--proto8 env`；新環境變數 AOS_HOME，歸 NORMS「③ 人殼預設」（11-10 傍晚由 AOS_PROTO8 改名）",
    "why": "每台設一次就好、不用跑任何指令；repo 裡原本沒有這種變數",
    "overturn": "templates/copy-out 的預設；NORMS 10-…/07-…/03"
   },
@@ -199,7 +199,7 @@
   {
    "id": "D24",
    "line": "路徑",
-   "what": "agents new 沒設 AOS_PROTO8",
+   "what": "agents new 沒設 AOS_HOME（11-10 傍晚由 AOS_PROTO8 改名）",
    "decided": "寫 absolute、多一行 note",
    "why": "硬寫 env 會讓子 agent 一起來就 DirectiveBad",
    "overturn": "lib/agent/agents/_entry"
