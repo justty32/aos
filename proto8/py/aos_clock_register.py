@@ -2,7 +2,10 @@
 形狀：{"description": …, "letters": {名字: {"every": 正整數, "box": 路徑字串或指示詞物件, "text": 非空字串, "by": 誰登記的（給人看）}}}。
 box 相對路徑從登記表所在資料夾算；物件＝aos-directive 解（$env、$path…，cwd＝登記表所在資料夾），同 hooks／tools 的寫法。
 寄的信 body 一份形狀兩邊都收：{"role": "user", "content": …}（fsm idle、aos-eca-turn 當一則 user 收進 history）＋ inbox 協議的 from／status／title／what（aos-mailbox 讀得出來）＋ cycle、register。
-fire 只回提醒句子、不丟例外、不印東西：時鐘不能被登記表拖垮（壞表、寄不到＝呼叫方印 warning，時鐘照樣成功）。"""
+fire 只回提醒句子、不丟例外、不印東西：時鐘不能被登記表拖垮（壞表、寄不到＝呼叫方印 warning，時鐘照樣成功）。
+自我檢查（11-10 深夜，使用者「時鐘本身會每隔一定的cycle檢查自身。」）：cycle % check_every == 0（頂層鍵 check_every，正整數，
+沒寫或壞＝CHECK_EVERY）時，箱子資料夾已經不在的格拿掉、寫回表，每拿掉一格一句提醒；暫時寄不到但資料夾還在的不算、
+解不開的指示詞不算（判不了就不動）。寫回前重讀一次表，只拿掉那幾格。"""
 import json
 import os
 import re
@@ -13,6 +16,7 @@ KEY = "letters"
 DESCRIPTION = ("Clock register: every EVERY cycles (when the new cycle number divides by EVERY) aos-clock sends TEXT "
                "as one letter to BOX (an aos-post mailbox, e.g. an agent's queue). Edit with aos-clock-register.")
 SEND_TIMEOUT_S = 5
+CHECK_EVERY = 100            # 自我檢查的預設間隔（cycle）；登記表頂層 check_every 可改
 NAME_BAD = re.compile(r"[\x00-\x1f\x7f/]")
 ERR_RE = re.compile(r"aos-[a-z-]+: error: (.*)\Z")
 
@@ -48,8 +52,8 @@ def entry_problem(entry):
     return None
 
 
-def load(path):
-    """讀登記表 → {名字: 格}；不在＝{}。整份壞＝Bad。單格壞不在這裡擋（fire 跳過那格、ls 照列）。"""
+def load_doc(path):
+    """讀整份登記表 → dict（letters 一定是物件）；不在＝{}。整份壞＝Bad。"""
     try:
         with open(path, encoding="utf-8") as f:
             doc = json.load(f)
@@ -59,12 +63,27 @@ def load(path):
         raise Bad("cannot read %s: %s" % (path, getattr(e, "strerror", None) or e))
     if not isinstance(doc, dict) or not isinstance(doc.get(KEY, {}), dict):
         raise Bad("%s must be a JSON object with %s as an object" % (path, KEY))
-    return doc.get(KEY, {})
+    return doc
+
+
+def load(path):
+    """讀登記表 → {名字: 格}；不在＝{}。整份壞＝Bad。單格壞不在這裡擋（fire 跳過那格、ls 照列）。"""
+    return load_doc(path).get(KEY, {})
+
+
+def check_every(doc):
+    v = doc.get("check_every")
+    return v if isinstance(v, int) and not isinstance(v, bool) and v > 0 else CHECK_EVERY
 
 
 def save(path, letters):
-    """整份寫回（同資料夾 .名.pid 暫存再改名，N-05）。OSError 往上丟。"""
-    doc = {"description": DESCRIPTION, KEY: letters}
+    """整份寫回（同資料夾 .名.pid 暫存再改名，N-05）；頂層別的鍵（check_every…）照留。OSError 往上丟。"""
+    try:
+        old = load_doc(path)
+    except Bad:
+        old = {}
+    doc = dict(old, description=old.get("description") or DESCRIPTION)
+    doc[KEY] = letters
     tmp = os.path.join(os.path.dirname(path), ".%s.%d" % (os.path.basename(path), os.getpid()))
     try:
         with open(tmp, "w", encoding="utf-8") as f:
@@ -138,11 +157,15 @@ def fire(clock, cycle):
     if not os.path.lexists(path):
         return []
     try:
-        letters = load(path)
+        doc = load_doc(path)
     except Bad as e:
         return ["clock register skipped: %s" % e]
+    letters = doc.get(KEY, {})
     base = os.path.dirname(path)
     warnings = []
+    if cycle % check_every(doc) == 0:
+        letters = dict(letters)
+        warnings += self_check(path, letters, base)
     for name in sorted(letters):
         entry = letters[name]
         why = name_problem(name) or entry_problem(entry)
@@ -160,3 +183,33 @@ def fire(clock, cycle):
         if why:
             warnings.append("clock register entry %s: cannot send to %s: %s" % (name, box, why))
     return warnings
+
+
+
+def self_check(path, letters, base):
+    """箱子資料夾已經不在的格從 letters 拿掉並寫回表；回提醒句子。寫不回＝提醒、這次照樣不寄給它們。"""
+    gone = {}
+    for name, entry in letters.items():
+        if name_problem(name) or entry_problem(entry):
+            continue
+        try:
+            box = resolve_box(entry["box"], base)
+        except Bad:
+            continue                               # 判不了就不動
+        if not os.path.isdir(box):
+            gone[name] = (box, entry.get("by") or "?")
+    if not gone:
+        return []
+    for name in gone:
+        letters.pop(name, None)
+    out = ["clock register: removed entry %s (added by %s): its box %s no longer exists" % (n, by, b)
+           for n, (b, by) in sorted(gone.items())]
+    try:
+        fresh = load(path)                         # 寫回前重讀，只拿掉那幾格（別人剛加的不蓋掉）
+        for name in gone:
+            fresh.pop(name, None)
+        save(path, fresh)
+    except (Bad, OSError) as e:
+        out.append("clock register: cannot write back the cleaned register %s: %s" % (path, getattr(e, "strerror", None) or e))
+    return out
+

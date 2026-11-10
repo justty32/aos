@@ -5,7 +5,7 @@
 #   add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-   BOX 相對路徑從 cwd 算；存進表時同頂層資料夾＝相對登記表資料夾，否則絕對
 #   rm NAME        沒有那格＝EntryMissing
 #   ls [-j]        一行一格 NAME TAB EVERY TAB BOX TAB TEXT；-j＝{"file", "letters"}；沒登記表＝沒輸出退 0
-# 誰都能登記、拿掉（寫得到登記表就行，不另外擋）；登記的人走了不自動清，寄不到由 aos-clock 印 warning。
+# 誰都能登記、拿掉（寫得到登記表就行，不另外擋）；寄不到由 aos-clock 印 warning；箱子資料夾不在了的格，aos-clock 每 check_every 個 cycle（預設 100）自己拿掉（11-10 深夜）。
 # 同時兩個人改表不管（後寫的整份蓋過先寫的）。錯：stderr 一行「aos-clock-register: error: 代號 原因」、退 1。本體寄信的部分在 py/aos_clock_register.py。
 import json
 import os
@@ -40,7 +40,8 @@ its EVERY (cycles 10, 20, 30... for every 10), and sends one letter with aos-pos
 {"role": "user", "content": "TEXT (clock cycle N)", "from": "clock", "status": "PROGRESS", "title", "what", "cycle", "register"}:
 an agent's queue takes it as a user message, aos-mailbox reads it as a letter.
 Anyone who can write the register can add or remove entries. A letter that cannot be sent is one warning
-line from aos-clock; the clock keeps going. Nothing is cleaned up automatically.
+line from aos-clock; the clock keeps going. Every CHECK_EVERY cycles (top-level key check_every in the
+register, default 100) aos-clock removes the entries whose box folder no longer exists, one warning each.
 exit codes: 0 ok; 1 error ("aos-clock-register: error: CODE reason" on stderr).
 more: proto8/cmd/aos-clock-register/README.md"""
 HELPS = {
@@ -68,7 +69,7 @@ No such entry = EntryMissing.""",
 usage: aos-clock-register [-c CLOCK] ls [-j]
 
 flags:
-  -j, --json   one JSON object {"file": REGISTER, "letters": {NAME: {every, box, text, by}}}
+  -j, --json   one JSON object {"file": REGISTER, "check_every": N, "letters": {NAME: {every, box, text, by}}}
 
 One line per entry: NAME TAB EVERY TAB BOX TAB TEXT (BOX as stored: relative = from the register's folder).
 No register yet = no output, exit 0.""",
@@ -184,7 +185,8 @@ def cmd_ls(argv):
     path = register()
     letters = load(path)
     if opts.get("json"):
-        print(json.dumps({"file": path, "letters": letters}, ensure_ascii=False))
+        print(json.dumps({"file": path, "check_every": reg.check_every(reg.load_doc(path)), "letters": letters},
+                         ensure_ascii=False))
         return
     for name in sorted(letters):
         e = letters[name] if isinstance(letters[name], dict) else {}

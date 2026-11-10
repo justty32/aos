@@ -15,7 +15,8 @@ FILE 裡是回合數（十進位＋換行）：讀出 n、寫回 n＋1 就結束
 `--help`＝印 HELP（英文）到 stdout、退 0（R3）；Ctrl-C＝退 130、不吐 traceback（R12）。
 寄信（11-10 晚 clock-letters，使用者「時鐘這塊幫我改成寄信好了」）：寫好 n＋1 之後，FILE 旁有 `<FILE名>_register.json`（登記表，aos-clock-register 改）
 就讀它，(n＋1) % every == 0 的格各用 aos-post send 寄一封（py/aos_clock_register.py）。寄不到、表壞＝stderr 提醒行，時鐘照樣成功退 0；
-沒有登記表＝跟以前完全一樣（不多做事、不多印）。
+沒有登記表＝跟以前完全一樣（不多做事、不多印）。自我檢查（11-10 深夜「時鐘本身會每隔一定的cycle檢查自身。」）：
+(n＋1) % check_every == 0（表頂層鍵，預設 100）時把箱子資料夾已不在的格拿掉、各印一行 warning。
 `aos-clock register …`＝`aos-clock-register …`（11-10 深夜，使用者「7.不衝突，要用的人要自己分辨，這很容易分辨的。程式實作上也就自然而然。」）：
 第一個參數正好是 `register` 就整個交給 aos-clock-register（exec，參數原樣）；真的有時鐘檔叫 register 的，寫 `./register`。"""
 import os, re, sys
@@ -37,6 +38,8 @@ Errors: one stderr line `aos-clock: error: CODE reason`, exit 1, FILE untouched.
 Letters: if FILE_register.json sits next to FILE (edit it with aos-clock-register), each entry whose EVERY divides the
 new cycle number gets one letter sent with aos-post send. A letter that cannot be sent, or a bad register, is one
 `aos-clock: warning: ...` line; the clock still moved and the exit code stays 0. No register = nothing extra.
+Every check_every cycles (a top-level key of the register, default 100) entries whose box folder no longer
+exists are removed from the register, one warning line each.
 "aos-clock register ARGS..." is "aos-clock-register ARGS..." (a clock file named register: write ./register)."""
 
 

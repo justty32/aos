@@ -53,3 +53,17 @@
 ```
 2	user	aos: summary (lines 2-4, 3 messages): User asked the time again; it was 13:32Z.
 ```
+
+## 第二批（11-10 深夜，頂層用選項框問）
+
+使用者的答（選項＝選了哪一個；自填的逐字）：
+
+1. 時鐘登記殘留（agent 走了、它登記的格寄不到每次 warning；選項：不清自行承擔／清道夫順手清／ctl rm 時一起清）——自填：「時鐘本身會每隔一定的cycle檢查自身。」
+2. `aos-clock-register` 要不要也收 `-d D`（daemon 的 stack，當成 `D/clock`）——選「加 -d」。
+3. `agents_children`／`agents_ctl` 的 `ls` 一列約 400 字元——選「改短版（推薦）」。
+4. eca 第一次在新資料夾開畫面，claude 停在「信不信任這個資料夾」選單、aos 把題目打進去就把畫面關了——選「aos 偵測後報錯」。
+5. 維持現況、不用做的四題：say／summarize／mailbox send／clock-register add 的話後不解析旗標；self_tools／self_hook 的 path_json 不加 `$` 以外的短寫法；工具失敗時附給腦的 stderr 尾巴不處理；after_queue hook 讓 agent 停下後那封信晾著不補。
+
+| 題 | 結論 | commit |
+|---|---|---|
+| 1 | `aos-clock` 每 `check_every`（登記表頂層鍵，預設 100）個 cycle 檢查一次，箱子資料夾已不在的格拿掉、各一行 warning；詳見 [clock-letters 02](../clock-letters/02-自我檢查與-d.md) | 見下 |

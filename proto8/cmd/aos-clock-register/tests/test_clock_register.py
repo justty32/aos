@@ -92,6 +92,25 @@ class ClockRegister(unittest.TestCase):
         self.assertIn("entry 'a' skipped: every must be a positive integer", self.tick())
         self.assertEqual(self.clock.read_text(), "3\n")
 
+    def test_self_check_removes_gone_boxes(self):
+        (self.tmp / "st" / "half").mkdir()             # 資料夾在、不是信箱＝暫時寄不到，不拿掉
+        for name, box in (("gone", "st/none"), ("half", "st/half"), ("ok", "st/q")):
+            self.assertEqual(self.reg("add", "--every", "1000", "--box", box, name, "x").returncode, 0)
+        path = self.tmp / "st" / "clock_register.json"
+        doc = json.loads(path.read_text())
+        doc["check_every"] = 3
+        path.write_text(json.dumps(doc))
+        self.assertEqual(self.tick(2), "")
+        err = self.tick()                              # cycle 3：檢查
+        self.assertIn("aos-clock: warning: clock register: removed entry gone (added by", err)
+        self.assertIn("no longer exists", err)
+        doc = json.loads(path.read_text())
+        self.assertEqual(sorted(doc["letters"]), ["half", "ok"])
+        self.assertEqual(doc["check_every"], 3)        # 頂層鍵照留
+        self.assertEqual(self.reg("rm", "half").returncode, 0)
+        self.assertEqual(json.loads(path.read_text())["check_every"], 3)
+        self.assertEqual(self.tick(3), "")
+
     def test_errors(self):
         self.assertEqual(self.reg("add", "--every", "5", "--box", "st/q", "a", "x").returncode, 0)
         r = self.reg("add", "--every", "5", "--box", "st/q", "a", "y")
