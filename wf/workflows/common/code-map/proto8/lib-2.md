@@ -47,12 +47,16 @@
 | [`memory_write/`](../../../../../proto8/lib/agent/memory_write/) | 改記憶庫：add／set／rm 一次寫好內容與它在表（_index.json 或 _index key）裡的那格；寫到哪都行，看檔案權限。 |
 | [`memory_write/tests/test_writing.py`](../../../../../proto8/lib/agent/memory_write/tests/test_writing.py) | memory_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、寫到庫外也行、自己的簡介當普通路徑寫、各錯誤代號；寫完用 memory 讀回來對。 |
 | [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | memory_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫到哪都行，能不能成看檔案權限。 |
+| [`self_ctl/`](../../../../../proto8/lib/agent/self_ctl/) | aos-agent ctl 的包裝，目標改成叫我的那隻自己；只給對自己有意義的四個：stop、pause、sleep、rm |
+| [`self_ctl/tests/test_self_ctl.py`](../../../../../proto8/lib/agent/self_ctl/tests/test_self_ctl.py) | Test self_ctl builds aos-agent ctl stop / pause / sleep / rm --no-wait for the agent that calls it, with a fake aos-agent. |
 | [`self_history/`](../../../../../proto8/lib/agent/self_history/) | aos-agent history 的包裝，目標改成叫我的那隻自己：ls、rm、summarize、set；正在進行的這一步（叫我的那則訊息與之後）不准動 |
 | [`self_history/tests/test_self_history.py`](../../../../../proto8/lib/agent/self_history/tests/test_self_history.py) | Test self_history builds the aos-agent history command line (ls, rm, summarize, set) and refuses the step in progress, with a fake aos-agent. |
 | [`self_hook/`](../../../../../proto8/lib/agent/self_hook/) | aos-agent hook 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份 hooks 清單，定義不動 |
 | [`self_hook/tests/test_self_hook.py`](../../../../../proto8/lib/agent/self_hook/tests/test_self_hook.py) | Test self_hook builds the aos-agent hook command line for each op and checks its arguments, with a fake aos-agent. |
 | [`self_llm/`](../../../../../proto8/lib/agent/self_llm/) | aos-agent llm 的包裝，目標改成叫我的那隻自己：ls、set、rm、reset；改的是那隻 stack 裡自己那份 llm 設定，定義不動 |
 | [`self_llm/tests/test_self_llm.py`](../../../../../proto8/lib/agent/self_llm/tests/test_self_llm.py) | Test self_llm builds the aos-agent llm command line (ls, set, rm, reset) and checks its arguments, with a fake aos-agent. |
+| [`self_state/`](../../../../../proto8/lib/agent/self_state/) | aos-agent ctl state 的包裝，目標改成叫我的那隻自己：總覽（每類一行）或點菜（某幾類的細節）；只給數字與事實 |
+| [`self_state/tests/test_self_state.py`](../../../../../proto8/lib/agent/self_state/tests/test_self_state.py) | Test self_state builds aos-agent ctl state for the agent that calls it (overview, parts, all, json) with a fake aos-agent. |
 | [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | aos-agent tools 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份登記檔，定義不動 |
 | [`self_tools/tests/test_self_tools.py`](../../../../../proto8/lib/agent/self_tools/tests/test_self_tools.py) | Test self_tools builds the aos-agent tools command line (replace, envs, env_file) and checks its arguments, with a fake aos-agent. |
 | [`tests/test_cli_tools_directive.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_directive.py) | 驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。 |

@@ -179,8 +179,15 @@ def daemon_up(d):
                    "(see aos-daemon-ctl -d %s ls)" % (e, d, d)) from e
 
 
-def ctl_wait(cmd, body, cond, what, refused, secs=WAIT_S, on_queued="fail", name=None):
-    """等自己的回信與公開表；排隊可成功返回，逾時先撤未領取的信。"""
+def send_only(body):
+    """寄給 daemon、不要回信、不等（11-10 self_ctl：sleep／rm 自己＝等的人會被一起收掉）；回信名。"""
+    d = daemon_path()
+    daemon_up(d)
+    return call_dc(dc.send, d, body)
+
+
+def ctl_wait(cmd, body, cond, what, refused, secs=WAIT_S, on_queued="fail", name=None, replied=False):
+    """等自己的回信與公開表；排隊可成功返回，逾時先撤未領取的信。replied＝收到 daemon 的回信（applied）就算數、不看表。"""
     d = daemon_path()
     daemon_up(d)
     box = call_dc(dc.reply_box, d)
@@ -203,6 +210,8 @@ def ctl_wait(cmd, body, cond, what, refused, secs=WAIT_S, on_queued="fail", name
             if expiration:
                 raise Fail(err.get("code", refused), err.get("msg", "request refused"))
             raise Fail(refused, "the %s letter was refused: %s %s" % (cmd, err.get("code", "?"), err.get("msg", "")))
+        if replied:
+            return got
         v = cond(letter)
         if not v:
             return None

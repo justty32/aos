@@ -5,6 +5,8 @@
            "self_history": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_history"}},
            "self_state": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_state"}},
            "self_ctl": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_ctl"}},
+           "self_state": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_state"}},
+           "self_ctl": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/self_ctl"}},
            "mailbox_peek": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/mailbox_peek"}},
            "mailbox_read": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/mailbox_read"}},
            "mailbox_send": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/mailbox_send"}},

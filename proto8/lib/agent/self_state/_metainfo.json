@@ -1,0 +1,14 @@
+{
+  "summary": "Look at the agent calling me (aos-agent ctl who + ctl state: overview or picked parts)",
+  "resource": "cpu",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

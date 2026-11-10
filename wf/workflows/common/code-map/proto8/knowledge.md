@@ -15,9 +15,11 @@
 
 | 檔 | 負責什麼 |
 |---|---|
+| [`_description.json`](../../../../../proto8/knowledge/aos/_description.json) | （檔頭沒有一句話） |
 | [`_index.json`](../../../../../proto8/knowledge/aos/_index.json) | 設定（鍵：me.json、errors.json、world.json、status.json、brain.json、agents.json…） |
 | [`agents.json`](../../../../../proto8/knowledge/aos/agents.json) | 設定（鍵：_description、_index、thought） |
 | [`brain.json`](../../../../../proto8/knowledge/aos/brain.json) | （檔頭沒有一句話） |
+| [`cli/_description.json`](../../../../../proto8/knowledge/aos/cli/_description.json) | （檔頭沒有一句話） |
 | [`cli/_index.json`](../../../../../proto8/knowledge/aos/cli/_index.json) | 設定（鍵：agent.json、daemon.json、errors.json、flags.json、grow_screen.json、safety.json…） |
 | [`cli/agent.json`](../../../../../proto8/knowledge/aos/cli/agent.json) | （檔頭沒有一句話） |
 | [`cli/daemon.json`](../../../../../proto8/knowledge/aos/cli/daemon.json) | （檔頭沒有一句話） |

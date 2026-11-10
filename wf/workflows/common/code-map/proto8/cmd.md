@@ -38,6 +38,7 @@
 | [`tests/test_llm.py`](../../../../../proto8/cmd/aos-agent/tests/test_llm.py) | Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and… |
 | [`tests/test_ls_health.py`](../../../../../proto8/cmd/aos-agent/tests/test_ls_health.py) | Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table. |
 | [`tests/test_rm_keep.py`](../../../../../proto8/cmd/aos-agent/tests/test_rm_keep.py) | Test aos-agent ctl rm keeps the stack by default and deletes it only with --purge (cli-sweep Q3), on a real aos-daemon. |
+| [`tests/test_state_parts.py`](../../../../../proto8/cmd/aos-agent/tests/test_state_parts.py) | Test aos-agent ctl state (11-10 self-family self_state): the overview (one line per part), picked parts, all, --json, and parts that are not availabl… |
 | [`tests/test_tools_override.py`](../../../../../proto8/cmd/aos-agent/tests/test_tools_override.py) | Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with "$override" (N2 poin… |
 | [`using-aos-agent.sh`](../../../../../proto8/cmd/aos-agent/using-aos-agent.sh) | 給人的殼 source 用（不是跑）：之後直接打 say／listen／chat／status，像命名空間（11-04 aos-agent 02）。 |
 

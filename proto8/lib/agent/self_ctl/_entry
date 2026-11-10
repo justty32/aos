@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+# self_ctl - aos-agent ctl 的包裝，目標改成叫我的那隻自己；只給對自己有意義的四個：stop、pause、sleep、rm
+# 使用者 11-10 晚：「啊，需要self_ctl嗎？」→ 三題「1.做。2.只給有意義的。3.可以。」（thinking 2026-11/10/self-family/02）。
+#   用處＝不給管別人的權力、但能管自己（管別人用 agents_ctl）。start／wake／resume 對自己沒意義（停著的叫不了工具）、state 是 self_state。
+# 介面：stdin 收 {"op": "stop"|"pause"|"sleep"|"rm", "purge"?: bool（只有 rm）}；別的鍵＝ArgumentsBad。
+#   stop ＝ctl stop --target 我 --no-wait（等 daemon 收下；這一輪結束才停，所以不等停好）
+#   pause＝ctl pause --target 我 --no-wait（寫了 ctl 就回；步與步之間停住，要別人 resume）
+#   sleep＝ctl sleep --target 我 --no-wait（寄出就回：daemon 會 SIGTERM 我，等回信會跟著被收掉）
+#   rm   ＝ctl rm --no-wait [--purge -y] 我（同上；預設留 stack，purge 另起脫離的小行程等那列不在再刪）
+# 先 aos-agent ctl who 認出是哪隻，aos-agent 在 $AOS_WS 跑。
+# 錯：同 self_tools（stderr 與 stdout 各一行「self_ctl: error: 代號 原因」、退 1；下層最後一行錯誤行的代號與原因接上）。
+import json, os, re, signal, subprocess, sys
+HELP = """\
+usage: self_ctl < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Stop, pause, put to sleep or remove myself (the agent that calls me): op stop | pause | sleep | rm.
+aos-agent ctl with the target = me; it returns once the request is sent.
+Result on stdout. On error: one line "self_ctl: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "self_ctl"
+tool_io.start(NAME, HELP)
+TIMEOUT_S = 60
+ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
+child = None
+
+
+die = tool_io.die
+
+
+def on_term(signum, frame):
+    if child is not None and child.poll() is None:
+        try:
+            os.killpg(child.pid, signal.SIGTERM)
+        except OSError:
+            pass
+    sys.exit(128 + signum)
+
+
+workspace = tool_io.workspace
+arguments = tool_io.arguments
+
+
+def agent(*args):
+    """aos-agent args…：stderr 原樣往上；退非 0＝它最後一行錯誤行的代號與原因當自己的錯（沒有＝CommandFailed）。回 stdout。"""
+    global child
+    try:
+        child = subprocess.Popen(["aos-agent"] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, text=True, start_new_session=True, cwd=workspace())
+    except OSError as e:
+        die("LaunchFailed", "cannot run aos-agent (put it on PATH with proto8/install.sh): %s" % e)
+    try:
+        out, err = child.communicate(timeout=TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        os.killpg(child.pid, signal.SIGKILL)
+        child.communicate()
+        die("CommandFailed", "aos-agent %s took over %d s and was killed" % (" ".join(args[:2]), TIMEOUT_S))
+    if err:                                     # 下層的 stderr 原樣透出（R10）
+        sys.stderr.write(err if err.endswith("\n") else err + "\n")
+        sys.stderr.flush()
+    if child.returncode != 0:                   # 給腦用的工具把下層錯翻成自己的錯（同 agents）
+        mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
+        if mine:
+            die(mine[-1].group(1), mine[-1].group(2))
+        die("CommandFailed", "aos-agent %s exited %d" % (" ".join(args[:2]), child.returncode))
+    return out
+
+
+signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
+signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)
+args = arguments()
+OPS = {"stop": (), "pause": (), "sleep": (), "rm": ("purge",)}
+op = args.get("op")
+if op is None:
+    die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
+if op not in OPS:
+    die("OpUnknown", "op must be one of %s (got %r)" % (", ".join(OPS), op))
+extra = sorted(k for k in args if k != "op" and k not in OPS[op])
+if extra:
+    die("ArgumentsBad", "op %s does not take %s" % (op, ", ".join(extra)) + (" (it takes purge)" if OPS[op] else " (it takes nothing else)"))
+purge = args.get("purge", False)
+if not isinstance(purge, bool):
+    die("ArgumentsBad", "purge must be true or false")
+me = agent("ctl", "who").strip()
+if op == "rm":
+    out = agent("ctl", "rm", "--no-wait", *(["--purge", "-y"] if purge else []), "--", me)
+else:
+    out = agent("ctl", op, "--target", me, "--no-wait")
+sys.stdout.write(out if not out or out.endswith("\n") else out + "\n")
+print({"stop": "(you stop at the end of this step, maybe before you answer; someone runs aos-agent ctl start and you carry on from there)",
+       "pause": "(you pause after this step; someone runs aos-agent ctl resume to bring you back)",
+       "sleep": "(you are put to sleep now; aos-agent ctl wake or a daemon restart brings you back)",
+       "rm": "(you are taken off the daemon table now; only aos-agent ctl add brings you back)"}[op])

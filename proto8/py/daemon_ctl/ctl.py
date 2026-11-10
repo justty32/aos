@@ -60,7 +60,7 @@ def need_phase(cmd, name, row):
 APPLY_S = 5.0   # pause／resume 等子 loop 套用的上限（暫停中的 loop 每秒讀一次 ctl、閒著的每圈讀）
 
 
-def write_ctl(d, name, cmd, timeout_s=APPLY_S):
+def write_ctl(d, name, cmd, timeout_s=APPLY_S, wait=True):
     row = row_of(d, name)
     stack, path = need_ctl(d, name, row)
     # 只收 running（含被標 stuck 的，行程還在）；stopped／sleeping 沒有正在讀 ctl 的行程，應先 start／wake。
@@ -70,7 +70,8 @@ def write_ctl(d, name, cmd, timeout_s=APPLY_S):
     sname = flux_name(os.path.join(stack, names_of(d)["procs_loop"]))
     seq = next_seq(path, os.path.join(stack, sname) if sname else None)
     put_ctl(path, cmd, seq)
-    wait_applied(d, name, stack, cmd, seq, timeout_s)
+    if wait:                                          # 11-10 self_ctl：對自己下 pause＝這一步還沒結束、等不到套用，寫了就回
+        wait_applied(d, name, stack, cmd, seq, timeout_s)
     return seq
 
 

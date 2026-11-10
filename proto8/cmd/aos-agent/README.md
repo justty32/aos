@@ -19,8 +19,9 @@
 aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] [--limits JSON] [--envs K=V ...] [--auto-restart] [--timeout-s 秒] [--on-queued fail|ok] XXX     掛一隻；等上表、印 stack
 aos-agent [--daemon D] ctl rm [--purge [--yes]] [--timeout-s 秒] 名字                       拔掉、stack 留著（11-10 晚 cli-sweep Q3，使用者「兩支都留 stack，要刪另外說」；印 `removed X; stack S kept (…)`，同名同 `--stack` 再 `ctl add` 接著用）。`--purge` 才連 stack 一起刪（名字要明講；先關畫面，正在答＝SessionBad、什麼都不動；stack 是工作區、定義、daemon 資料夾、目前資料夾、家目錄、表上別隻的 stack 或在它們上層的不刪，11-04 夜；終端裡先問 [y/N]）；`-y` 沒配 `--purge`＝`ArgumentsBad`
 aos-agent [--daemon D] ctl ls [--json] [--long]                           列 daemon 表上全部：名字 狀態 工作區 queue 幾封（-l 多印健康欄，見下「ctl ls 看狀況」）
-aos-agent [--daemon D] ctl start|stop|sleep|wake [名字|--target 名字] [--timeout-s 秒]   add／start／wake 另收 --on-queued fail|ok
-aos-agent [--daemon D] ctl state|status|pause|resume [--target 名字]
+aos-agent [--daemon D] ctl start|stop|sleep|wake [名字|--target 名字] [--timeout-s 秒]   stop／sleep 另收 --no-wait；add／start／wake 另收 --on-queued fail|ok
+aos-agent [--daemon D] ctl pause|resume [--target 名字]                    pause 另收 --no-wait
+aos-agent [--daemon D] ctl state|status [--target 名字] [-j] [類別...|all]   總覽（每類一行）或點菜（那幾類的細節），見下「ctl state」
 aos-agent [--daemon D] ctl where [--stack|--ws] [--target 名字]            印 stack（預設）／工作區（--ws）
 aos-agent [--daemon D] ctl who [--stack S] [--json]                        S（預設 $AOS_STACK）是表上哪一隻的 stack（或在它底下）＝印那隻的名字
 ```
@@ -37,6 +38,10 @@ aos-agent [--daemon D] llm [--target 名字] [ls [-l|--json]|set 鍵=值...|rm �
 aos-agent [--daemon D] history [--target 名字] [ls [-j] [RANGE]|rm RANGE|summarize [--role R] RANGE TEXT|set LINE JSON] [--keep F|--no-keep [-y]]
 aos-agent [--daemon D] hook [--target 名字] [ls [-l|--json]|get 名|add --on 事件 [-n 名] [--match M]... [--change] [--no-wait] [--on-fail stop|continue] [--timeout-ms N] [--replace] (XXX|--path-json J)|rm 名|reset [-y]]   事件發生時跑的 hook（11-10 晚）
 ```
+
+**ctl state：看一隻的十類事實**（11-10 [self-family 02](../../thinking/2026-11/10/self-family/02-self_state與self_ctl.md)，使用者「點菜…也可以點總覽」「只給數字」「擴充原有的吧」）：類別＝`who`（名字、定義、工作區、stack）、`state`（phase、reason、queue 幾封、最近回答）、`tools`（轉叫 `tools ls`，加自己那份的增減）、`llm`（轉叫 `llm ls`，哪些鍵是這隻改的）、`hooks`（轉叫 `hook ls`）、`history`（轉叫 `history ls`：幾則、幾 byte、各角色幾則、搬走留底幾則；細節多最後 5 則、一行最多 200 字）、`mailbox`（轉叫 `aos-mailbox -s <stack> peek`）、`children`（agents_children 的帳 `<stack>/tools/agents_children/children.json` 對上表；配額 `max_children` 讀定義與 stack 的 `children.json`、預設 4）、`resources`（表上的 limits；行程樹的記憶體、cpu 秒數、幾個行程，讀 `/proc`）、`time`（現在、活了多久）。不給類別＝每類一行的總覽；給類別＝那幾類的細節（`== 類別` 分段）；`all`＝全部；`-j`＝一個 JSON 物件 `{類別: {...}}`。只給數字與事實、不給建議。某類拿不到（例：沒宣告 hooks）＝那一類印 `not available (原因)`（JSON：`{"available": false, "reason"}`），其他照印、退 0。不認得的類別＝`ArgumentsBad`。agent 自己看用工具 `self_state`。
+
+**`--no-wait`：給對自己下指令用**（11-10 self-family 02，使用者 self_ctl「3.可以」）：`ctl stop --no-wait` 只等 daemon 收下（不等停好、不關畫面）；`ctl pause --no-wait` 寫了 ctl 就回（不等套用）；`ctl sleep --no-wait`、`ctl rm --no-wait` 寄出就回、不等回信（daemon 會連下指令的這支一起收掉）。`rm --no-wait --purge` 另起一個脫離的小行程，等那列不在了再刪 stack（同樣的保護；活不過那隻的話 stack 留著）。agent 自己用工具 `self_ctl`。
 
 **history：看、刪、摘要、改對話紀錄**（11-10 [self-family](../../thinking/2026-11/10/self-family/README.md)）：檔在哪由定義的 `interfaces.json` 裡 `aos-agent.history` 宣告（相對 stack；兩個範本都寫 `history.jsonl`）。RANGE＝`N`、`A-B`、`A-`，行號＝第幾則訊息、從 1 數、空行不算。`ls` 一則一行 `行號 TAB 角色 TAB 內容`（換行印成 `\n`、工具呼叫印成 `-> 名(參數)`、讀不懂的行角色印 `?`），`-j` 印 `[{"line","message"|"raw"}]`。`rm` 刪一段；`summarize` 把一段換成一則（`--role` 預設 `user`，內容照字面寫，TEXT 寫 `-` 讀 stdin）；`set` 把一行整則換掉（JSON 要是物件，`-` 讀 stdin）。**原文不丟**：預設接在旁邊的 `history_removed.jsonl`（一則一行 `{"removed_at","op","line","message"|"raw"}`）；`--keep F` 換位置（相對目前資料夾）；`--no-keep` 不留，終端上先問、`-y` 不問。寫法是整份寫暫存檔再改名，寫前比 size／mtime，被別人動過就重做、最多 3 次。**改正在跑的**：建議先 `ctl pause`；agent-fsm 寄信前看到 history 比 request 新會重組；eca 下一輪認出改過、開新對話帶改過的紀錄過去。錯誤代號：`HistoryMissing`（沒宣告）、`InterfaceBad`（宣告寫壞）、`RangeBad`（超出、倒過來、寫壞、history 是空的）、`MessageBad`（JSON 不是物件）、`WriteFailed`（一直被別人動）、`ArgumentsBad`（`--keep` 配 `--no-keep`、`-y` 沒配 `--no-keep`）。agent 自己改用工具 `self_history`（[lib/agent/self_history](../../lib/agent/self_history/)）。
 

@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+# self_state - aos-agent ctl state 的包裝，目標改成叫我的那隻自己：總覽（每類一行）或點菜（某幾類的細節）；只給數字與事實
+# 使用者 11-10 晚 self_peek 五題：「1.可選。2.點菜，內部可以包裝成偷偷呼叫別的工具，也可以點總覽。3.只給數字。給建議的話後續再做別的工具。
+#   4.這個工具改名爲self_state，擴充原有的吧。5.自己叫。」（thinking 2026-11/10/self-family/02）；原則同 self_tools（純包裝、參數一對一）。
+#   **對應關係**：aos-agent ctl state 加了類別或旗標，這支要跟著加。
+# 介面：stdin 收 {"parts"?: [類別…] 或一個字串, "json"?: bool}；別的鍵＝ArgumentsBad。
+#   {}＝ctl state --target 我（總覽）；parts＝ctl state --target 我 類別…（細節；"all"＝全部）；json＝-j。
+# 先 aos-agent ctl who 認出是哪隻，aos-agent 在 $AOS_WS 跑。不自動帶進 prompt（使用者第 5 題「自己叫」）。
+# 錯：同 self_tools（stderr 與 stdout 各一行「self_state: error: 代號 原因」、退 1；下層最後一行錯誤行的代號與原因接上）。
+import json, os, re, signal, subprocess, sys
+HELP = """\
+usage: self_state < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Look at myself (the agent that calls me): aos-agent ctl state with the target = me.
+{} = one line per part; {"parts": ["tools", "history"]} = those parts in detail; "all" = every part.
+Parts: who state tools llm hooks history mailbox children resources time. Numbers and facts only.
+Result on stdout. On error: one line "self_state: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "self_state"
+tool_io.start(NAME, HELP)
+TIMEOUT_S = 60
+ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
+child = None
+
+
+die = tool_io.die
+
+
+def on_term(signum, frame):
+    if child is not None and child.poll() is None:
+        try:
+            os.killpg(child.pid, signal.SIGTERM)
+        except OSError:
+            pass
+    sys.exit(128 + signum)
+
+
+workspace = tool_io.workspace
+arguments = tool_io.arguments
+
+
+def agent(*args):
+    """aos-agent args…：stderr 原樣往上；退非 0＝它最後一行錯誤行的代號與原因當自己的錯（沒有＝CommandFailed）。回 stdout。"""
+    global child
+    try:
+        child = subprocess.Popen(["aos-agent"] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, text=True, start_new_session=True, cwd=workspace())
+    except OSError as e:
+        die("LaunchFailed", "cannot run aos-agent (put it on PATH with proto8/install.sh): %s" % e)
+    try:
+        out, err = child.communicate(timeout=TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        os.killpg(child.pid, signal.SIGKILL)
+        child.communicate()
+        die("CommandFailed", "aos-agent %s took over %d s and was killed" % (" ".join(args[:2]), TIMEOUT_S))
+    if err:                                     # 下層的 stderr 原樣透出（R10）
+        sys.stderr.write(err if err.endswith("\n") else err + "\n")
+        sys.stderr.flush()
+    if child.returncode != 0:                   # 給腦用的工具把下層錯翻成自己的錯（同 agents）
+        mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
+        if mine:
+            die(mine[-1].group(1), mine[-1].group(2))
+        die("CommandFailed", "aos-agent %s exited %d" % (" ".join(args[:2]), child.returncode))
+    return out
+
+
+signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
+signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)
+args = arguments()
+PARTS = ("who", "state", "tools", "llm", "hooks", "history", "mailbox", "children", "resources", "time", "all")
+extra = sorted(k for k in args if k not in ("parts", "json"))
+if extra:
+    die("ArgumentsBad", "self_state does not take %s (it takes parts, json)" % ", ".join(extra))
+parts = args.get("parts", [])
+if isinstance(parts, str):
+    parts = [parts]
+if not isinstance(parts, list) or not all(isinstance(p, str) for p in parts):
+    die("ArgumentsBad", "parts must be a list of part names like [\"tools\", \"history\"]")
+bad = [p for p in parts if p not in PARTS]
+if bad:
+    die("ArgumentsBad", "unknown part %s (parts: %s)" % (bad[0], ", ".join(PARTS)))
+js = args.get("json", False)
+if not isinstance(js, bool):
+    die("ArgumentsBad", "json must be true or false")
+me = agent("ctl", "who").strip()
+out = agent("ctl", "state", "--target", me, *(["--json"] if js else []), *(["--"] + parts if parts else []))
+sys.stdout.write(out if not out or out.endswith("\n") else out + "\n")

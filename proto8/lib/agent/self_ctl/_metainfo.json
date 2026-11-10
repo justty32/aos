@@ -1,0 +1,14 @@
+{
+  "summary": "Stop, pause, sleep or remove the agent calling me (aos-agent ctl who + ctl stop / pause / sleep / rm --no-wait)",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}
