@@ -32,6 +32,7 @@
 | [`tests/test_cells.py`](../../../../../proto8/templates/agent-fsm/tests/test_cells.py) | Verify task context, tool limits, and best-effort observations with local fake commands. |
 | [`tests/test_cooldown.py`](../../../../../proto8/templates/agent-fsm/tests/test_cooldown.py) | Verify the wait cell's cooldown after outside failures (two-machines 06) with a fake aos-llm on PATH. |
 | [`tests/test_integration.py`](../../../../../proto8/templates/agent-fsm/tests/test_integration.py) | Verify agent cells through the real local kernel, llm_fake endpoint, and wall_clock tool. |
+| [`tests/test_own_tools.py`](../../../../../proto8/templates/agent-fsm/tests/test_own_tools.py) | Test that brain and act use the agent's own tools registry in its stack ("$override" of the definition's; 11-10 aos-tools-cli step 4), and fall back … |
 | [`tests/test_selfheal.py`](../../../../../proto8/templates/agent-fsm/tests/test_selfheal.py) | Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools. |
 | [`tools.json`](../../../../../proto8/templates/agent-fsm/tools.json) | 設定（鍵：tools） |
 | [`tools/memory/`](../../../../../proto8/templates/agent-fsm/tools/memory/) | Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the chil… |

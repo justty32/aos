@@ -27,6 +27,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-mcp`](../../../../../proto8/cmd/aos-mcp/bin/aos-mcp) | 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。 |
+| [`tests/test_own_registry.py`](../../../../../proto8/cmd/aos-mcp/tests/test_own_registry.py) | Verify aos-mcp serves an agent's own registry ("$override" of the definition's) and the definition's, and has no --overlay flag (11-10 aos-tools-cli … |
 | [`tests/test_timeout.py`](../../../../../proto8/cmd/aos-mcp/tests/test_timeout.py) | Verify MCP reads shared timeout metadata and keeps its CLI fallback. |
 
 ## `proto8/cmd/aos-sandbox/`
@@ -60,4 +61,5 @@
 | [`tests/test_cache.py`](../../../../../proto8/cmd/aos-tools/tests/test_cache.py) | Test where aos-tools caches executable tool definitions (11-10 aos-tools-cli step 2): $AOS_STACK/tooldef_cache.json, never the registry. |
 | [`tests/test_cli.py`](../../../../../proto8/cmd/aos-tools/tests/test_cli.py) | Test the aos-tools command line (11-10 aos-tools-cli step 1): --file on either side, usage line, late flags, default-file warning, success lines, ls … |
 | [`tests/test_env_file.py`](../../../../../proto8/cmd/aos-tools/tests/test_env_file.py) | Test aos-tools env_file (11-10 aos-tools-cli step 3): add --env-file stores only the location, call reads it every time, a missing file at call is Pa… |
+| [`tests/test_override.py`](../../../../../proto8/cmd/aos-tools/tests/test_override.py) | Test aos-tools "$override" registries (11-10 aos-tools-cli step 4): patch merge with null removal, chains and arrays, loops and diamonds, writes only… |
 | [`tests/test_paths.py`](../../../../../proto8/cmd/aos-tools/tests/test_paths.py) | Test aos-tools path forms: directives in an overriding registry (path and env), add keeping the user's form, --path-json, and the PathMissing line. |

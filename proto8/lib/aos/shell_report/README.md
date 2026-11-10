@@ -27,7 +27,7 @@ stdout 固定為 `{"reports":[...]}`，按絕對 agent 定義路徑彙整並排�
 
 公開帳沒有 case 名宣告，所以 `cases` 原樣使用傳入的絕對 stack 路徑；不猜目錄名代表哪個 case。多個 repeat stack 會各列一次，呼叫者可用 measure 的 case／run 對照表解讀。重複傳入同一實際 stack 不重複計數。
 
-有效工具表只從定義 `interfaces.json#/aos-agent/tools` 找，交 `aos-tools --file ... [--overlay ...] ls --json` 合併同一宣告路徑的 stack 覆蓋層；未宣告 tools 視為沒有工具。任一 `arbitrary_exec: true` 工具缺 `sandbox`＝`open`，全有＝`boxed`，沒有任意執行工具＝`none`。`arbitrary_exec` 必須是 JSON 的 `true`；`sandbox` 看 key 是否存在。
+有效工具表只從定義 `interfaces.json#/aos-agent/tools` 找，stack 裡同一宣告路徑有這隻自己那份就只把它交 `aos-tools --file ... ls --json`（它 `$override` 定義那份，疊法歸 aos-tools；11-10），否則交定義那份；未宣告 tools 視為沒有工具。任一 `arbitrary_exec: true` 工具缺 `sandbox`＝`open`，全有＝`boxed`，沒有任意執行工具＝`none`。`arbitrary_exec` 必須是 JSON 的 `true`；`sandbox` 看 key 是否存在。
 
 </details>
 

@@ -100,19 +100,19 @@
    "writer": "aos-tools（add／rm）、lib/agent/agents（new）、人手寫",
    "reader": "aos-tools、aos-mcp、templates/agent-fsm（brain）",
    "image": "看情況：定義＝原始碼、不算 image（C-79）；登記檔存絕對 path 是已知代價（N-67 ⑦）",
-   "on_bad": "不是物件、tools 形狀錯＝RegistryBad；不在＝沒登記任何工具",
-   "note": "",
-   "evidence": "proto8/cmd/aos-tools/bin/aos-tools:320-331、proto8/lib/agent/agents/_entry:395"
+   "on_bad": "不是物件、tools 形狀錯、頂層有 add／rm＝RegistryBad；不在＝沒登記任何工具；值是 null 的名字或 key＝當不存在",
+   "note": "11-10 aos-tools-cli：登記格不再存 cache 物件（只收 false；快取搬到 $AOS_STACK/tooldef_cache.json）、多選填 env_file（只記位置）、可寫 \"$override\" 疊在別份上；有 cache 物件的舊檔＝RegistryBad，刪那格或重登記",
+   "evidence": "proto8/cmd/aos-tools/bin/aos-tools（read_layer、finish）、proto8/lib/agent/agents/_entry:395"
   },
   {
-   "path": "$AOS_STACK/tools.json（覆蓋層）",
+   "path": "$AOS_STACK/<宣告的 tools 路徑>（這隻自己那份）",
    "lifetime": "持久",
-   "writer": "aos-tools --overlay（aos-agent tools add／rm）",
-   "reader": "aos-tools --overlay",
+   "writer": "aos-tools（override、add／rm；aos-agent tools add／rm 叫它）",
+   "reader": "aos-tools（aos-agent tools、agent-fsm brain／act、cli_session→aos-mcp 只傳這份）",
    "image": "進",
-   "on_bad": "寫壞＝RegistryBad；不在＝沒覆蓋",
-   "note": "stack.gitignore 明寫要留",
-   "evidence": "proto8/cmd/aos-tools/bin/aos-tools:29-33、proto8/cmd/aos-agent/stack.gitignore:4-5"
+   "on_bad": "寫壞、$override 環狀、底檔不是物件＝RegistryBad；底檔指不到＝PathMissing；不在＝用定義那份",
+   "note": "stack.gitignore 明寫要留。11-10 aos-tools-cli 步 4 改形狀：{\"$override\": 定義那份, \"tools\": {名: 登記, 拿掉的: null}}（同一般登記檔）；舊形狀 {\"add\",\"rm\"}＝RegistryBad，要 aos-agent tools reset 後重加",
+   "evidence": "proto8/cmd/aos-tools/bin/aos-tools（merged_tools）、proto8/cmd/aos-agent/aos_agent/tools.py、proto8/cmd/aos-agent/stack.gitignore:4-5"
   },
   {
    "path": "<定義資料夾>/llm.json",
@@ -523,6 +523,16 @@
    "on_bad": "不在＝沒在冷卻；寫不成＝warning 一行、照舊；殘留的舊檔 until 早過＝下一次照常（eca 是只拿一封試）",
    "note": "11-10 two-machines 06 新增：{failures, until, at, code, reason, dropped}；30 秒起加倍、封頂 30 分鐘，成功一次刪檔。新檔，不用重建",
    "evidence": "proto8/lib/agent/cooldown.py、proto8/templates/agent-fsm/wait.py、proto8/cmd/aos-eca/bin/aos-eca-turn"
+  },
+  {
+   "path": "$AOS_STACK/tooldef_cache.json",
+   "lifetime": "暫時",
+   "writer": "aos-tools（ls／get／add 問可執行檔 --tooldef 時）",
+   "reader": "aos-tools",
+   "image": "不進（stack.gitignore 擋）",
+   "on_bad": "不是 JSON／不是物件＝當沒有、整份重寫；AOS_STACK 沒設＝不讀不寫",
+   "note": "11-10 aos-tools-cli 步 2（使用者 Q2「快取搬到 stack 裡」）：{絕對路徑: {stamp: mtime奈秒-大小, tooldef}}；可重建",
+   "evidence": "proto8/cmd/aos-tools/bin/aos-tools（exe_tooldef）、proto8/cmd/aos-agent/stack.gitignore"
   }
  ]
 }
