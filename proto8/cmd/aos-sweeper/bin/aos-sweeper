@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""aos-sweeper [旗標] — 清道夫跑一輪（掛在 daemon 表上當 loop 列 `_sweeper`，每 interval_ms 一次；使用者 11-10）。
+本體在 py/aos_sweep.py（aos-daemon-ctl sweep 跑同一套）：只管 --daemon ＞ $AOS_DAEMON ＞ ./.stack 那一台，不往子 daemon 底下走。
+一輪：表上各列 ≥ --min-bytes 的 stderr 封存成 gzip 再截 0；刪超過 --retention-days 的封存（none＝永不自動刪）；
+表外但還活著、確定是這台生的子 loop 先寫 ctl stop、過 --stop-grace-s 還在才 TERM／KILL；結果印 stdout、--report 給了就寫成 JSON。
+單一檔出錯＝warning、退 0（退非 0 會讓跑它的 aos-loop 整支結束）；別的清道夫正拿著這台的鎖＝warning、這輪跳過、退 0。
+自己的錯（usage、找不到 daemon、報告寫不了）退 1，stderr 一行 `aos-sweeper: error: 代號 原因`。不會退 10（aos-loop 會當成 done）。"""
+import os
+import sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
+import aos_flags
+import aos_sweep
+import aos_sweep_proc
+import daemon_ctl as dc
+
+PROG = "aos-sweeper"
+USAGE = "aos-sweeper [--daemon D] [--report FILE] [--retention-days N|none] [--min-bytes N] [--stop-grace-s S] [--dry-run]"
+FLAGS = {"--daemon": "daemon", "--report": "report", "--retention-days": "retention",
+         "--min-bytes": "min_bytes", "--stop-grace-s": "grace"}
+SWITCHES = {"--dry-run": "dry_run"}
+aos_flags.HELP = """aos-sweeper - one sweeper round for one aos-daemon (archive stderr, expire archives, stop orphaned loops)
+
+usage: %s
+
+Meant to run as a loop row on the daemon table, for example:
+  "_sweeper": {"exec": {"argv": ["aos-sweeper", "--retention-days", "7", "--report", {"$env": "AOS_STACK", "$path": "sweeper_report.json"}]},
+               "interval_ms": 600000, "auto_restart": true, "stuck_after_ms": 600000}
+It only looks after its own daemon (D): the rows on D's table and D's default cells (D/procs/*/).
+It does not walk into child daemons; a child daemon that wants a sweeper carries its own row.
+
+One round:
+  1. archive: every row's stderr file (procs_stderr, default stderr.txt) of at least --min-bytes is
+     copied into <stack>/stderr_archives/<UTC>.txt.gz and then truncated to 0 (copytruncate; the
+     writers append, so they go on from 0). Lines written in the last instant may be lost.
+     Symlinks, hard-linked and non-regular files are left alone.
+  2. expire: archives older than --retention-days (by the time in their name) are deleted.
+  3. processes (only while D's daemon is running): a loop in D/procs/NAME/ that is not on the table,
+     whose state window and environment prove it was started there by this daemon and is still alive,
+     gets {"cmd": "stop"} in its ctl; if it is still there --stop-grace-s later (in a later round), it
+     gets SIGTERM and, 10 s later, SIGKILL. Zombies and anything it cannot prove are only reported.
+  4. report: lines on stdout; with --report FILE also a JSON file (written via a temp file + rename).
+*.bad-* evidence files, history, observed, ledgers and .trash are never touched (bad files are counted).
+To delete all archives at once: aos-daemon-ctl sweep --purge.
+
+flags:
+  -d, --daemon D           the daemon's stack folder (default: $AOS_DAEMON, else ./.stack)
+      --report FILE        also write the round as JSON to FILE
+      --retention-days N   delete archives older than N days (default: 7); none = never delete
+      --min-bytes N        archive stderr files of at least N bytes (default: 1048576)
+      --stop-grace-s S     seconds between writing stop and signalling (default: 300)
+      --dry-run            only print what would be done; no file or process is touched
+  -h, --help               show this help
+
+exit codes: 0 round done (findings and warnings included; also when another sweeper holds the lock);
+  1 error (ArgumentsBad, FlagUnknown, DaemonMissing, WriteFailed).
+""" % USAGE
+
+
+def die(code, msg):
+    aos_flags.die(PROG, code, msg)
+
+
+def whole(opts, key, default, flag):
+    v = opts.get(key)
+    if v is None:
+        return default
+    if not v.isdigit() or int(v) <= 0:
+        die("ArgumentsBad", "%s takes a positive whole number, got %r (usage: %s)" % (flag, v, USAGE))
+    return int(v)
+
+
+def main():
+    try:
+        opts, rest = aos_flags.parse(sys.argv[1:], FLAGS, SWITCHES, short=("-d",))
+    except aos_flags.Error as e:
+        die(e.code, "%s (usage: %s)" % (e, USAGE))
+    if rest:
+        die("ArgumentsBad", "no positional arguments, got %r (usage: %s)" % (rest[0], USAGE))
+    try:
+        days = aos_sweep.parse_retention(opts.get("retention", str(aos_sweep.RETENTION_DAYS)))
+    except ValueError as e:
+        die("ArgumentsBad", "%s (usage: %s)" % (e, USAGE))
+    min_bytes = whole(opts, "min_bytes", aos_sweep.MIN_BYTES, "--min-bytes")
+    grace = whole(opts, "grace", aos_sweep_proc.STOP_GRACE_S, "--stop-grace-s")
+    try:
+        d = dc.find_daemon(opts.get("daemon"))
+    except dc.Fail as e:
+        die(e.code, str(e))
+    try:
+        data = aos_sweep.sweep(d, PROG, min_bytes=min_bytes, retention_days=days, stop_grace_s=grace,
+                               dry_run=bool(opts.get("dry_run")))
+    except aos_sweep.Busy as e:
+        aos_flags.warn(PROG, "%s; skipped this round" % e)
+        sys.exit(0)
+    for line in aos_sweep.lines(data):
+        print(line)
+    if opts.get("report") and not data["dry_run"]:
+        try:
+            aos_sweep.write_report(opts["report"], data)
+        except OSError as e:
+            die("WriteFailed", "cannot write report %s: %s" % (opts["report"], e.strerror or e))
+    sys.exit(0)
+
+
+aos_flags.run(main)
