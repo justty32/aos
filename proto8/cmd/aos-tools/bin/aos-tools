@@ -24,6 +24,9 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   dir   資料夾裡有 _tooldef.json；_metainfo.json 有就一起給（11-04 起只認帶 .json 的：_ 開頭的資料檔一律帶副檔名，
         不帶的 _tooldef／_metainfo 不認——沒 _tooldef.json＝ToolDefMissing）。叫＝aos-exec 資料夾，arguments 進 stdin。
   json  JSON 檔（aos-exec 跑得動的那種）頂層要有 _tooldef 物件；_metainfo key 有就一起給。叫＝aos-exec 檔，arguments 進 stdin。
+        也收 檔.json#/指標（11-10 深夜 tools-def，使用者「2.收」）：那個物件要有 _tooldef（_metainfo 有就給），叫＝aos-exec 檔#/指標
+        （照 aos-exec：跑那個物件的 _entry，cwd＝JSON 檔的資料夾，所以 _entry 裡的 python3 x.py 從 JSON 檔的資料夾算）。
+        存法同上：只有 #/ 前面那段算相對／絕對，#/ 後面原樣存；預設名字＝指標最後一段（~1、~0 解開）。
   exe   python 或其他可執行檔：`XXX --tooldef` 在 stdout 吐工具定義（JSON 物件，10 秒內、退 0）；結果快取在
         $AOS_STACK/tooldef_cache.json（11-10 aos-tools-cli 步 2：{絕對路徑: {"stamp": "mtime奈秒-大小", "tooldef": …}}；
         stamp 相符就用，不符重跑並寫回（寫的是 stack，不是定義資料夾，P-15）；檔壞＝當沒有、重寫；
@@ -81,8 +84,8 @@ usage: aos-tools [--file F] SUBCOMMAND [FLAGS...] [ARGS...]
        aos-tools SUBCOMMAND --help
 
 The list is one JSON file, the registry (default: ./tools.json). A tool is a folder
-with _tooldef.json, a JSON file with a _tooldef key, or an executable that answers
---tooldef. Agents read the list before each thought and call tools through it.
+with _tooldef.json, a JSON file with a _tooldef key (or FILE.json#/POINTER: the
+object there has the _tooldef key), or an executable that answers --tooldef. Agents read the list before each thought and call tools through it.
 
 A registry may carry one line, "$override": OTHER_FILE (or a list of files). It then
 holds only the differences from OTHER_FILE (which may override another file in turn).
@@ -90,7 +93,8 @@ Files are applied in order, later wins; an entry whose value is null is not a to
 Each agent's own changes to its definition's tools are kept this way.
 
 subcommands:
-  add XXX          put a tool on the list (XXX = folder, JSON file or executable)
+  add XXX          put a tool on the list (XXX = folder, JSON file, FILE.json#/POINTER
+                   or executable)
   rm XXX           take it off the list (XXX = name, else path; tool files are kept)
   ls               show the list
   get XXX          print one tool's definition as JSON (XXX = name, else path)
@@ -127,6 +131,8 @@ usage: aos-tools [--file F] add [--name N] [--replace] [--no-cache]
                  [--env-file FILE] [--envs K=V]... (XXX | --path-json JSON)
 
 XXX is a tool folder, JSON file or executable; flags may go before or after it.
+It may also be FILE.json#/POINTER: the object at that JSON Pointer holds _entry,
+_tooldef and optional _metainfo keys (aos-exec runs it from the JSON file's folder).
 It is stored the way you give it: absolute stays absolute; relative (to the
 current directory) is stored relative to F. --path-json stores the JSON as given - a path string or a
 directive such as {"$env": "AOS_HOME", "$path": "/lib/base/shell"} - and it is
@@ -136,7 +142,8 @@ Prints: added NAME -> ABSOLUTE_PATH (FILE_WRITTEN: STORED_VALUE)
 
 flags:
   -n, --name N        list it under this name (default: the folder name, or the file
-                      name without extension; only A-Z a-z 0-9 _ -, at most 64)
+                      name without extension, or the last part of #/POINTER;
+                      only A-Z a-z 0-9 _ -, at most 64)
       --replace       replace a tool already listed under that name (keys that F
                       overrides and this add does not give are written as null)
       --path-json J   store this JSON path value instead of XXX
@@ -352,7 +359,45 @@ def run_tooldef(path):
         raise Fail("ToolDefBad", "%s --tooldef output is not JSON: %s" % (path, e))
 
 
+def split_ptr(path):
+    """位置 檔.json#/指標（11-10 深夜 tools-def，使用者「2.收」）→ (檔, "/指標")；沒有 #/＝(path, None)。指標原樣（RFC 6901，~1＝/、~0＝~）。"""
+    f, sep, p = path.partition("#/")
+    return (f, "/" + p) if sep else (path, None)
+
+
+def norm_loc(folder, value):
+    """相對從 folder 算、normpath 只動檔那段；#/ 後面原樣接回（跟 aos-exec 一樣：指標指的是檔裡那個物件）。"""
+    f, ptr = split_ptr(value)
+    f = os.path.normpath(os.path.join(folder, f))
+    return f if ptr is None else f + "#" + ptr
+
+
+def ptr_name(ptr):
+    """檔#/指標 的預設工具名＝指標最後一段（解 ~1、~0）。"""
+    return ptr.rsplit("/", 1)[-1].replace("~1", "/").replace("~0", "~")
+
+
+def read_object(path):
+    """檔#/指標 那個物件（解指示詞，aos-json get --follow --resolve）；指不到＝PathMissing、不是物件＝ToolDefMissing。"""
+    try:
+        r = subprocess.run(["aos-json", "get", "--follow", "--resolve", path], stdout=subprocess.PIPE,
+                           stdin=subprocess.DEVNULL, text=True)     # stderr 不吞：aos-json 自己說哪一段不在
+    except OSError as e:
+        raise Fail("CommandMissing", "%s needs aos-json to read the object, which cannot start: %s" % (path, e))
+    if r.returncode != 0:
+        raise Fail("PathMissing", "%s does not exist (aos-json get exited %d)" % (path, r.returncode))
+    obj = json.loads(r.stdout)
+    if not isinstance(obj, dict):
+        raise Fail("ToolDefMissing", "%s is not a JSON object (a tool there needs a _tooldef key)" % path)
+    return obj
+
+
 def kind_of(path):
+    f, ptr = split_ptr(path)
+    if ptr is not None:                              # 檔#/指標：檔裡那個物件，跟 JSON 檔同一類（叫＝aos-exec 檔#/指標，cwd＝檔的資料夾）
+        if os.path.isfile(f):
+            return "json"
+        raise Fail("PathMissing", "%s does not exist (the file before #/ is missing)" % path)
     if os.path.isdir(path):
         return "dir"
     if os.path.isfile(path):
@@ -435,6 +480,12 @@ def inspect(path, cache=None):
         out["tooldef"] = check_tooldef(read_json(p, None, "ToolDefBad")[1], p)
         m = first_file(path, ("_metainfo.json",))
         meta = read_json(m, None, "ToolDefBad")[1] if m else None
+    elif kind == "json" and split_ptr(path)[1] is not None:
+        obj = read_object(path)
+        if "_tooldef" not in obj:
+            raise Fail("ToolDefMissing", "%s is a JSON object and needs a _tooldef key" % path)
+        out["tooldef"] = check_tooldef(obj["_tooldef"], path + "/_tooldef")
+        meta = obj.get("_metainfo")
     elif kind == "json":
         try:
             raw, td = read_json(path, "_tooldef", "ToolDefBad")
@@ -611,7 +662,7 @@ def finish(merged):
         if "env_file" in e and (not isinstance(ef, str) or not ef or "\0" in ef):
             raise Fail("RegistryBad", "%s/env_file must be a non-empty path string (or a directive resolving to one)" % where)
         pfile = origin["path"]
-        out[name] = {"path": os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(pfile)), e["path"])), "entry": e,
+        out[name] = {"path": norm_loc(os.path.dirname(os.path.abspath(pfile)), e["path"]), "entry": e,
                      "field": "%s#/tools/%s/path" % (pfile, name), "src": "%s#/tools/%s" % (pfile, name),
                      "stored": stored_value(pfile, name, "path", e["path"])}
         if ef:
@@ -696,7 +747,7 @@ def match(tools, xxx):
     """名字優先；不是登記過的名字就當路徑（從 cwd 算），找指到那裡的。"""
     if xxx in tools:
         return [xxx]
-    p = os.path.normpath(os.path.abspath(xxx))
+    p = norm_loc(os.getcwd(), xxx)
     names = sorted(n for n, t in tools.items() if t["path"] == p)
     if not names:
         raise Fail("ToolMissing", "%s is not a registered tool name, and no tool points to that path" % xxx)
@@ -810,7 +861,7 @@ def resolve_path_value(value, folder):
         value = json.loads(r.stdout).get("path")
     if not isinstance(value, str) or not value:
         raise Fail("ArgumentsBad", "--path-json must be a non-empty path string or a directive object resolving to one (got %s)" % json.dumps(value))
-    return os.path.normpath(os.path.join(folder, value))
+    return norm_loc(folder, value)
 
 
 def cmd_add(args):
@@ -848,11 +899,12 @@ def cmd_add(args):
         path = resolve_path_value(stored, folder)
     else:
         given = rest[0]
-        path = os.path.normpath(os.path.abspath(given))
+        path = norm_loc(os.getcwd(), given)
         if os.path.isabs(given):
             stored = path                            # 給絕對＝存絕對
-        else:
-            stored = os.path.relpath(path, folder)   # 給相對（從 cwd 算）＝存相對登記檔資料夾的相對
+        else:                                        # 給相對（從 cwd 算）＝存相對登記檔資料夾的相對；#/ 後面原樣
+            f, ptr = split_ptr(path)
+            stored = os.path.relpath(f, folder) + ("" if ptr is None else "#" + ptr)
     if opts.get("no_cache") and kind_of(path) != "exe":
         raise Fail("ArgumentsBad", "--no-cache is only for executables (exe); %s is %s, which has no cache anyway" % (path, kind_of(path)))
     info = inspect(path, False if opts.get("no_cache") else None)
@@ -860,6 +912,7 @@ def cmd_add(args):
     if not isinstance(hubs, list) or not all(isinstance(k, str) and ENV_KEY_RE.match(k) for k in hubs):
         raise Fail("ToolDefBad", "%s: tool definition env must be an array of variable names" % path)
     name = opts.get("name") or (os.path.basename(path) if info["kind"] == "dir"
+                                else ptr_name(split_ptr(path)[1]) if split_ptr(path)[1] is not None
                                 else os.path.splitext(os.path.basename(path))[0])
     if not NAME_RE.fullmatch(name):
         raise Fail("NameBad", "tool name %r is invalid (only [A-Za-z0-9_-], at most 64 chars; pick another with --name)" % name)

@@ -15,10 +15,28 @@ class MetainfoError(Exception):
         self.code = code
 
 
+def _walk(data, pointer, source):
+    """Follow a JSON Pointer (RFC 6901: ~1 is /, ~0 is ~); a missing key is FileBad."""
+    for raw in pointer.split("/")[1:]:
+        key = raw.replace("~1", "/").replace("~0", "~")
+        if isinstance(data, list) and key.isdigit() and int(key) < len(data):
+            data = data[int(key)]
+        elif isinstance(data, dict) and key in data:
+            data = data[key]
+        else:
+            raise MetainfoError("FileBad", f"{source}#{pointer} does not exist")
+    return data
+
+
 def read(def_dir) -> dict | None:
-    """Read directory metadata or a JSON tool's embedded metadata."""
-    path = Path(def_dir)
-    embedded = path.is_file() or (not path.is_dir() and path.suffix == ".json")
+    """Read directory metadata, a JSON tool's embedded metadata, or FILE.json#/POINTER (the object there)."""
+    text = str(def_dir)
+    pointer = None
+    if "#/" in text:                                 # 11-10 深夜 tools-def：位置可以是 檔.json#/指標
+        text, _, rest = text.partition("#")
+        pointer = rest
+    path = Path(text)
+    embedded = pointer is not None or path.is_file() or (not path.is_dir() and path.suffix == ".json")
     source = path if embedded else path / "_metainfo.json"
     try:
         data = json.loads(source.read_text(encoding="utf-8"))
@@ -26,6 +44,9 @@ def read(def_dir) -> dict | None:
         return None
     except (OSError, UnicodeError, ValueError) as exc:
         raise MetainfoError("FileBad", f"Cannot read metadata from {source}: {exc}") from exc
+    if pointer is not None:
+        data = _walk(data, pointer, source)
+        source = f"{source}#{pointer}"
     if not isinstance(data, dict):
         raise MetainfoError("FileBad", f"Metadata in {source} must be an object")
     if embedded:

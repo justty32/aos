@@ -43,6 +43,15 @@ class MetainfoTests(unittest.TestCase):
                 path.write_text(json.dumps(data))
                 self.assert_error("FileBad", metainfo.read, path)
 
+    def test_pointer_location(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "box.json"
+            path.write_text(json.dumps({"tools": {"a/b": {"_metainfo": {"timeout_ms": 7}}, "plain": {}}}))
+            self.assertEqual(metainfo.read(f"{path}#/tools/a~1b"), {"timeout_ms": 7})
+            self.assertIsNone(metainfo.read(f"{path}#/tools/plain"))
+            self.assert_error("FileBad", metainfo.read, f"{path}#/tools/missing")
+            self.assertIsNone(metainfo.read(f"{directory}/none.json#/x"))
+
     def test_bad_files(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "_metainfo.json"

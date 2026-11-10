@@ -250,7 +250,9 @@ def _print_result(result):
 def main(run, description, params=(), meta=None, errors=(), name=None):
     """工具的入口：最後一行寫 tool_spec.main(run, DESCRIPTION, PARAMS, META)。"""
     script = os.path.realpath(run.__code__.co_filename)
-    name = name or os.path.basename(os.path.dirname(script))
+    if not name:                                    # tool.py＝資料夾名；別的腳本（JSON 物件裡的工具，mul.py）＝檔名去 .py
+        base = os.path.basename(script)
+        name = os.path.basename(os.path.dirname(script)) if base == "tool.py" else os.path.splitext(base)[0]
     tool_io.NAME = name
     try:
         td = tooldef(description, params, list(errors) + _errors_in(script))
