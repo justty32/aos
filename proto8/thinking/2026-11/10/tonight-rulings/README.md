@@ -125,3 +125,17 @@
 **代定**：`ctl state tools` 跟著改成印名字加一句說明，要路徑用 `tools ls -l`；history ls 截 200 字（跟 `ctl state history` 同），不預設只印最後幾則。
 
 **拿不準、先不動**：`agents_children` 的 `"long": true` 是 JSON，`agents_ctl` 的 `"long": true` 是多幾欄文字（JSON 另用 `"json": true`），兩支口徑不一，是今晚另一隊照使用者裁定改的；`lib/base/ls` 預設回 JSON、每項帶大小時間，偏長（通用工具包那區）；`lib/aos/defs ls` 每個定義附整張工具表，但那是給程式吃的 JSON（review_round 在用）。
+
+## 第四批（11-10 深夜，最後一輪）
+
+使用者（逐字）：
+
+- 「memory_read/write感覺應該改名爲knowledge_read/write」；頂層列範圍表（七項：工具、包、周邊 export／sync、環境變數、定義裡的 `_memory.json`、錯誤代號、fsm 啟動參數）問有沒有不想改的：「都改，照這個範圍排進最後一輪」。
+- 頂層問列表長短四題（1 `agents_children` 的長版改成跟 `agents_ctl` 一樣；2 基礎工具 `ls` 預設只列名字與類型；3 `defs ls` 不動；4 `aos-agent history ls` 預設只印最後幾則）：「1.好。2.好。3.好。3.好。」（第二個 3 頂層讀成第 4 題，已向使用者說明這個讀法。）
+
+決定：
+
+- memory 整家改名 knowledge：`memory_read`／`memory_write`→`knowledge_read`／`knowledge_write`、包 `memory`→`knowledge`、`memory_export`／`memory_sync`→`knowledge_export`／`knowledge_sync`、`AOS_MEMORY`→`AOS_KNOWLEDGE`、`_memory.json`→`_knowledge.json`、`MemoryMissing`→`KnowledgeMissing`、`--memory`→`--knowledge`；共用模組、測試、假腦劇本、知識節點、文件、code map 一起改；條文只加「11-10 改名」註；不留舊名；repo 外的 `~/.cache/aos-mcp-aos/tools.json` 不動、給使用者照抄指令。
+- 列表：`agents_children` 的 `long`＝多幾欄文字、`json` 才是 JSON；`lib/base/ls` 預設名字＋類型一行一項、細項 `long`、JSON `json`；`defs ls` 不動；`history ls` 預設最後 20 則（N＝20 頂層代定）、省略了幾則講一句、要全部另帶旗標。
+
+施工結果：見本夾 knowledge 改名與列表長短四項兩份結果檔（施工中）。
