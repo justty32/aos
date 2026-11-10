@@ -82,6 +82,7 @@ namespace aos::daemon {
 int poke_signal(int mode);
 sigset_t poke_signals();
 
+inline constexpr const char* BAD_ROW_REASON = "cannot resolve directives in the daemon config";   // 11-10 晚 B07：那列 reason 的開頭（重起時認它、解得開就照常起）
 inline constexpr int REVIVE_MS = 3000;   // 起後 3 秒內退出：原因字樣與 auto_restart 連敗計數共用
 
 // 小格裡有活著的子 loop 時回 pid 與 ticks；adopt.cpp 與 reconcile.cpp 共用。dstack＝這個 daemon 的 stack（給 same_tree）。
@@ -101,7 +102,9 @@ bool same_tree(pid_t pid, const std::string& cell, const std::string& dstack);
 //   名字非空、不含 /、不含 #、不以 . 開頭。物件的 ws、stack、def：要是非空字串（null＝拿掉）、從 daemon 的 cwd 轉絕對（stack 結尾不帶 /）。
 //   exec 型的物件（is_once）的 exec 要是目標或單子。
 // 壞丟 Error{CfgBad, 原因}（key＝訊息裡的名字）；指示詞解不開丟 DirectiveBad。
-Json read_procs(const Json& v, const std::string& base, const std::string& key);
+// 11-10 晚 two-machines B07：給了 bad＝某一列（procs.<名>）的指示詞解不開（例 $ref 的檔不在）不丟，原因記進 (*bad)[名]、那列放 null；
+//   procs 本身那層解不開照丟。daemon.json 的 procs 用（一列壞不拖垮整台）；procs_ctl、信照舊整份不採用。
+Json read_procs(const Json& v, const std::string& base, const std::string& key, std::map<std::string, std::string>* bad = nullptr);
 
 // procs_state 列上的 exec 欄（11-04 晚，aos-agent 方向題 1，使用者「daemon表多一欄記下來」）：proc 設定裡的目標——
 //   字串、陣列（取第一個）、物件的 exec（同前兩種）——相對的接在 cwd 後面（`檔#/…` 只動 # 前面；只有 `#/…` 的不動），其他照原字串；
@@ -165,6 +168,7 @@ private:
     // stuck 是 running 列的公開投影；期限由父首見 ctl 刺激起算，任何回應重設連續重起次數。
     void check_stuck(const std::string& name, Child& c); // P7：只讀公開 ctl/state_flux 窗，paused 只標記
     void run_body(bool force);            // tend 最後跑身體；force 提前跑（max 照算），失敗下一圈再跑
+    std::string bad_reason(const std::string& name) const;   // 11-10 晚 B07：daemon.json 裡解不開的那列的 reason（英文；不在 bad_rows_＝空字串）
     std::string fail_reason(const Child& c) const;   // 11-05：出錯結束留成 stopped 的 reason（英文；起不來／跑到一半掛了＋碼＋小格 stderr 最後一行）
     Child start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws = Json(),
                 const Json& kept_exec = Json(), const Json& kept_def = Json(),
@@ -201,6 +205,7 @@ private:
     void done_letters(const Letters& got);                   // 好信有 reply_to 的回 applied；全部收掉
 
     Json procs_ = Json::object();                        // daemon.json 的 procs
+    std::map<std::string, std::string> bad_rows_;        // 11-10 晚 B07：daemon.json 裡指示詞解不開的列 → 原因（那列留 stopped＋reason，其他照起）
     Json limits_;                                        // daemon.json 頂層的 limits（沒寫 limits 的列用的預設；null＝不限；11-05 feat-proto 件 5）
     std::string cwd_;                                    // 子項的 cwd＝daemon 起來時的 cwd
     std::string dstack_;                                 // 給子項的 AOS_DAEMON＝stack_ 轉絕對、結尾 /；預設小格也從它拼

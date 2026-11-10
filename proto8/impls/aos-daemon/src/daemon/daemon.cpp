@@ -74,7 +74,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     }
     try {   // 指示詞（10-23 晚）：起點＝設定檔的資料夾（cfg_dirs_）。舊名 loops／execs／loops_* 不認（C-48，11-03「當沒看到」）
         if (cfg_.contains("procs")) {
-            procs_ = read_procs(cfg_["procs"], cfg_dirs_.dir_of("procs"), "procs");
+            procs_ = read_procs(cfg_["procs"], cfg_dirs_.dir_of("procs"), "procs", &bad_rows_);
         }
         for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_requests", "procs_loop", "procs_exec", "procs_stderr", "limits"}) {
             if (cfg_.contains(k)) {
@@ -174,6 +174,26 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         adopt();
     }
     want_ = procs_;   // 底：daemon.json 的 procs；信改它、procs_ctl 每圈疊在它上面
+    // 11-10 晚 two-machines B07：daemon.json 裡解不開的列（例 $ref 的檔不在）＝那列留 stopped＋reason、其他照起（原本整台 DirectiveBad 退 1）。
+    // 已接回、還活著的同名列照跑（不去停它）；接回的 stopped 列換上這次的原因。改好檔要重起 daemon 才重讀。
+    // 上次因為這樣留 stopped、這次解得開了（人改好檔、重起 daemon）＝拿出 stopped 集合，照常起（看 reason 裡有沒有 BAD_ROW_REASON 認，不另記欄位）。
+    for (auto& [name, spec] : procs_.items()) {
+        auto at = index_.find(name);
+        if (bad_rows_.count(name) == 0 && at != index_.end() && at->second->second.held && at->second->second.phase == "stopped" &&
+            at->second->second.reason.is_string() && at->second->second.reason.get<std::string>().find(BAD_ROW_REASON) != std::string::npos) {
+            stopped_.erase(name);
+        }
+    }
+    for (const auto& [name, why] : bad_rows_) {
+        warn("procs." + name + " in " + spec + ": cannot resolve directives: " + why +
+             "; leaving it stopped, the other procs start (fix it, then restart this daemon)");
+        auto at = index_.find(name);
+        if (at == index_.end()) {
+            stopped_.insert(name);
+        } else if (at->second->second.held) {
+            at->second->second.reason = bad_reason(name);
+        }
+    }
     if (!mbox_path_.empty()) {
         open_mailbox();   // 開了信箱：adopt 接回、daemon.json 沒有的也放進底（只留名）
     }

@@ -200,7 +200,7 @@ bool is_once(const Json& spec) {
     return true;
 }
 
-Json read_procs(const Json& v, const std::string& base, const std::string& key) {
+Json read_procs(const Json& v, const std::string& base, const std::string& key, std::map<std::string, std::string>* bad) {
     aos::Resolved top = aos::resolve_shallow(v, base);   // 拆成好幾份檔＝{"$ref": [檔, …]}，合好的每個子項記著它來自哪份檔
     if (!top.value.is_object()) {
         throw Error{code::CfgBad, key + " must be {name: proc}"};
@@ -211,80 +211,88 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
     const std::string bad_target = " must be an aos-exec target (string or [target, args...]), {\"exec\": target or inst} or a loop config";
     for (auto& [name, c] : top.value.items()) {
         check_name(name, key);
-        aos::Resolved it = aos::resolve_shallow(c, top.dir_of(name));
-        if (it.value.is_string() || it.value.is_array()) {   // exec 型（procs § 2 第 1 條）
-            Json t = aos::resolve(it.value, it.base_dir);
-            if (!is_target(t)) {
+        try {
+            aos::Resolved it = aos::resolve_shallow(c, top.dir_of(name));
+            if (it.value.is_string() || it.value.is_array()) {   // exec 型（procs § 2 第 1 條）
+                Json t = aos::resolve(it.value, it.base_dir);
+                if (!is_target(t)) {
+                    throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
+                }
+                Json w = written_of(it.value, t, it.base_dir);
+                if (!w.empty()) {   // 11-10：目標寫成指示詞＝改寫成 {"exec": 目標, "as_written": …}（同一種 exec 型）
+                    t = Json::object({{"exec", std::move(t)}, {"as_written", std::move(w)}});
+                }
+                vec.emplace_back(name, std::move(t));
+            } else if (it.value.is_object()) {
+                aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", aos::loop::CtlWindow::config_key, aos::loop::StateWindow::config_key, aos::loop::StateFluxWindow::config_key, "ws", "stack", "def", "limits", "auto_restart", "restart_on_stuck", "stuck_after_cycles", "stuck_after_ms"});
+                if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解、相對 $ref 轉成絕對（10-24）
+                    aos::Resolved ex = aos::loop::resolve_exec(r.value["exec"], r.dir_of("exec"));
+                    if (ex.value.is_object()) {
+                        ex.value = abs_refs(ex.value, ex.base_dir);
+                    }
+                    r.value["exec"] = std::move(ex.value);
+                }
+                if (!r.value.is_object()) {
+                    throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
+                }
+                r.value.erase("as_written");   // daemon 自己記的 key（11-10）；寫的人給的只收「原樣存的絕對路徑」（kept_of，11-10 晚 B01）
+                Json w = written_of(it.value, r.value, it.base_dir);
+                Json kept = kept_of(it.value, name, key);
+                for (auto& [k, x] : kept.items()) {
+                    if (!w.contains(k)) {   // 同一格寫成指示詞的以指示詞為準
+                        w[k] = x;
+                    }
+                }
+                if (!w.empty()) {
+                    r.value["as_written"] = std::move(w);
+                }
+                if (r.value.contains("stuck_after_cycles") && r.value.contains("stuck_after_ms")) {
+                    throw Error{code::CfgBad, key + "[" + name + "]: stuck_after_cycles and stuck_after_ms must not both be set"};
+                }
+                if (r.value.contains("stuck_after_cycles") && (!aos::is_count(r.value["stuck_after_cycles"]) || r.value["stuck_after_cycles"].get<long long>() <= 0)) {
+                    throw Error{code::CfgBad, key + "[" + name + "].stuck_after_cycles must be a positive integer"};
+                }
+                if (r.value.contains("stuck_after_ms")) {
+                    const Json& ms = r.value["stuck_after_ms"];
+                    if (!aos::is_count(ms) || ms == Json(0) ||
+                        (ms.is_number_unsigned() && ms.get<unsigned long long>() >
+                         static_cast<unsigned long long>(std::numeric_limits<long long>::max()))) {
+                        throw Error{code::CfgBad, key + "[" + name + "].stuck_after_ms must be a positive integer within signed 64-bit range"};
+                    }
+                }
+                fix_path(r.value, name, key, "ws", "workspace");
+                fix_path(r.value, name, key, "stack", "stack");
+                fix_path(r.value, name, key, "def", "definition directory");   // 11-04（aos-agent，使用者「那就b。」）：只記、不驗在不在
+                for (const char* k : {"auto_restart", "restart_on_stuck"}) {
+                    if (!r.value.contains(k)) {
+                        continue;
+                    }
+                    if (r.value[k].is_null()) {
+                        r.value.erase(k);
+                    } else if (!r.value[k].is_boolean()) {
+                        throw Error{code::CfgBad, key + "[" + name + "]." + k + " must be a boolean or null"};
+                    }
+                }
+                if (r.value.contains("limits")) {   // 11-05（feat-proto 件 5）：份額；null＝當沒寫（用 daemon 的預設）、{}＝不限，壞＝同 stack
+                    if (r.value["limits"].is_null()) {
+                        r.value.erase("limits");
+                    } else {
+                        check_limits(r.value["limits"], key + "[" + name + "].limits");
+                    }
+                }
+                if (is_once(r.value) && !is_target(r.value["exec"]) && !r.value["exec"].is_object()) {   // exec 型的物件（procs § 2 第 2 條）
+                    throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
+                }
+                vec.emplace_back(name, std::move(r.value));   // loop 設定：daemon 認的格以外不驗，交給子 loop
+            } else {
                 throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
             }
-            Json w = written_of(it.value, t, it.base_dir);
-            if (!w.empty()) {   // 11-10：目標寫成指示詞＝改寫成 {"exec": 目標, "as_written": …}（同一種 exec 型）
-                t = Json::object({{"exec", std::move(t)}, {"as_written", std::move(w)}});
+        } catch (const Error& e) {
+            if (bad == nullptr || e.code != code::DirectiveBad) {
+                throw;
             }
-            vec.emplace_back(name, std::move(t));
-        } else if (it.value.is_object()) {
-            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", aos::loop::CtlWindow::config_key, aos::loop::StateWindow::config_key, aos::loop::StateFluxWindow::config_key, "ws", "stack", "def", "limits", "auto_restart", "restart_on_stuck", "stuck_after_cycles", "stuck_after_ms"});
-            if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解、相對 $ref 轉成絕對（10-24）
-                aos::Resolved ex = aos::loop::resolve_exec(r.value["exec"], r.dir_of("exec"));
-                if (ex.value.is_object()) {
-                    ex.value = abs_refs(ex.value, ex.base_dir);
-                }
-                r.value["exec"] = std::move(ex.value);
-            }
-            if (!r.value.is_object()) {
-                throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
-            }
-            r.value.erase("as_written");   // daemon 自己記的 key（11-10）；寫的人給的只收「原樣存的絕對路徑」（kept_of，11-10 晚 B01）
-            Json w = written_of(it.value, r.value, it.base_dir);
-            Json kept = kept_of(it.value, name, key);
-            for (auto& [k, x] : kept.items()) {
-                if (!w.contains(k)) {   // 同一格寫成指示詞的以指示詞為準
-                    w[k] = x;
-                }
-            }
-            if (!w.empty()) {
-                r.value["as_written"] = std::move(w);
-            }
-            if (r.value.contains("stuck_after_cycles") && r.value.contains("stuck_after_ms")) {
-                throw Error{code::CfgBad, key + "[" + name + "]: stuck_after_cycles and stuck_after_ms must not both be set"};
-            }
-            if (r.value.contains("stuck_after_cycles") && (!aos::is_count(r.value["stuck_after_cycles"]) || r.value["stuck_after_cycles"].get<long long>() <= 0)) {
-                throw Error{code::CfgBad, key + "[" + name + "].stuck_after_cycles must be a positive integer"};
-            }
-            if (r.value.contains("stuck_after_ms")) {
-                const Json& ms = r.value["stuck_after_ms"];
-                if (!aos::is_count(ms) || ms == Json(0) ||
-                    (ms.is_number_unsigned() && ms.get<unsigned long long>() >
-                     static_cast<unsigned long long>(std::numeric_limits<long long>::max()))) {
-                    throw Error{code::CfgBad, key + "[" + name + "].stuck_after_ms must be a positive integer within signed 64-bit range"};
-                }
-            }
-            fix_path(r.value, name, key, "ws", "workspace");
-            fix_path(r.value, name, key, "stack", "stack");
-            fix_path(r.value, name, key, "def", "definition directory");   // 11-04（aos-agent，使用者「那就b。」）：只記、不驗在不在
-            for (const char* k : {"auto_restart", "restart_on_stuck"}) {
-                if (!r.value.contains(k)) {
-                    continue;
-                }
-                if (r.value[k].is_null()) {
-                    r.value.erase(k);
-                } else if (!r.value[k].is_boolean()) {
-                    throw Error{code::CfgBad, key + "[" + name + "]." + k + " must be a boolean or null"};
-                }
-            }
-            if (r.value.contains("limits")) {   // 11-05（feat-proto 件 5）：份額；null＝當沒寫（用 daemon 的預設）、{}＝不限，壞＝同 stack
-                if (r.value["limits"].is_null()) {
-                    r.value.erase("limits");
-                } else {
-                    check_limits(r.value["limits"], key + "[" + name + "].limits");
-                }
-            }
-            if (is_once(r.value) && !is_target(r.value["exec"]) && !r.value["exec"].is_object()) {   // exec 型的物件（procs § 2 第 2 條）
-                throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
-            }
-            vec.emplace_back(name, std::move(r.value));   // loop 設定：daemon 認的格以外不驗，交給子 loop
-        } else {
-            throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
+            (*bad)[name] = e.msg;   // B07：這一列解不開＝只記原因、放 null（daemon 讓它留 stopped），其他列照讀
+            vec.emplace_back(name, Json());
         }
     }
     return out;

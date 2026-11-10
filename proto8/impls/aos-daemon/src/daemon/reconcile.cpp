@@ -21,6 +21,14 @@ Json Daemon::limits_of(const Json& spec, const Json& kept) const {
     return l.is_object() && !l.empty() ? l : Json();   // {}＝不限（蓋過預設）
 }
 
+std::string Daemon::bad_reason(const std::string& name) const {
+    auto b = bad_rows_.find(name);
+    if (b == bad_rows_.end()) {
+        return "";
+    }
+    return std::string(BAD_ROW_REASON) + " (procs." + name + "): " + b->second + "; fix it, then restart this daemon";
+}
+
 Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws, const Json& kept_exec,
                     const Json& kept_def, const Json& kept_limits, const Json& kept_launch, bool kept_auto_restart, bool kept_ros, long long kept_stuck_after_cycles,
                     std::optional<long long> kept_stuck_after_ms) {
@@ -63,6 +71,9 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
     }
     Child c;
     try {
+        if (launch_spec.is_null() && bad_rows_.count(name) > 0) {
+            throw Error{code::DirectiveBad, bad_reason(name)};   // B07：daemon.json 那列壞了，start 也起不來
+        }
         if (launch_spec.is_null()) {
             throw Error{code::LaunchFailed, "no recorded launch entry for " + name};
         }
@@ -292,6 +303,10 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
             c.def = def_of(spec);
             c.limits = limits_of(spec, Json());
             c.as_written = written_of(spec);
+            std::string bad = bad_reason(n);
+            if (!bad.empty()) {
+                c.reason = bad;   // B07：daemon.json 裡這列解不開＝留 stopped、寫原因
+            }
             add(n, c);
         } else {
             Child nc = start(n, spec, cell_of(n, spec));

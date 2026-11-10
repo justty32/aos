@@ -214,6 +214,37 @@ class TwoMachines(unittest.TestCase):
         self.assertIn('as_written.ws must be an absolute path', json.dumps(warn))
         self.assertNotIn('bad', a.rows())
 
+    def test_bad_ref_row_stays_stopped_and_others_start(self):
+        # B07：一列的 $ref 指到不在的檔＝那列 stopped＋reason，其他列照起（原本整台 DirectiveBad 退 1）
+        a = self.tree('a', {'good': {'exec': 'body_a.py'}, 'broken': {'$ref': 'another/missing.json'}})
+        a.start()
+        a.running('good')
+        row = until(lambda: a.rows().get('broken'))
+        self.assertEqual(row['phase'], 'stopped')
+        self.assertIn('procs.broken', row['reason'])
+        self.assertIn('another/missing.json', row['reason'])
+        self.assertIsNone(row.get('pid'))
+        self.assertIsNone(a.proc.poll())
+        a.err.flush()
+        err = (a.root / 'daemon.err').read_text()
+        self.assertIn('aos-daemon: warning: procs.broken in', err)
+        self.assertIn('leaving it stopped, the other procs start', err)
+        a.post({'procs_started': ['broken']})   # start 也起不來：照舊 stopped，原因還是那列壞了
+        until(lambda: (a.rows().get('broken') or {}).get('reason', '').startswith('failed to start: DirectiveBad'), timeout=10)
+        self.assertEqual(a.rows()['broken']['phase'], 'stopped')
+        self.assertEqual(a.rows()['good']['phase'], 'running')
+        a.stop()   # 改好檔、重起 daemon：那列不用再 start，照常起
+        write(a.root / 'another' / 'missing.json', {'exec': 'body_b.py'})   # 相對路徑從 daemon 的 cwd 算，不是這份檔的資料夾（B08）
+        a.start()
+        self.assertEqual(a.running('broken')['phase'], 'running')
+
+    def test_bad_top_level_procs_ref_still_fails(self):
+        a = self.tree('a', {'$ref': 'gone.json'})
+        p = subprocess.run(['aos-daemon', str(a.root / 'daemon.json')], cwd=a.root, env=dict(ENV, AOS_STACK=str(a.stack)),
+                           capture_output=True, text=True, timeout=10)
+        self.assertEqual(p.returncode, 1)
+        self.assertIn('DirectiveBad', p.stderr)
+
 
 if __name__ == '__main__':
     unittest.main()
