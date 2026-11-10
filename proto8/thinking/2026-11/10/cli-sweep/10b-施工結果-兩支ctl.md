@@ -17,6 +17,8 @@
 
 ## 續行（明天）
 
+> 11-10 晚：甲6、Q3、Q6 做完，見 [10c](10c-施工結果-甲6Q3Q6.md)；剩 Q1。
+
 2. 甲6（`aos-agent ctl add` 對停掉的 daemon 先查、不乾等 30 秒）。
 3. （Q5 已裁不修，移出待辦）
 4. Q3（`aos-agent ctl rm` 預設留 stack、`--purge` 才刪）：lv6 `lib/agent/agents/_entry` 收回子 agent 時若要刪 stack，那一行要加 `--purge`（另一隊的檔，交頂層轉）。

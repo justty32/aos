@@ -156,9 +156,33 @@ def wait_for(cond, what, secs=WAIT_S):
     raise Fail("WaitFailed", "waited %g s, %s%s" % (secs, what, kernel_hint()))
 
 
+def nested_pid_ns():
+    """這支行程不在最外層的 pid 命名空間＝True（最外層那個的 inode 是核心固定值 0xEFFFFFFC＝4026531836）；讀不到也當是（不核）。"""
+    try:
+        return os.readlink("/proc/self/ns/pid") != "pid:[4026531836]"
+    except OSError:
+        return True
+
+
+def daemon_up(d):
+    """寄信前先核 daemon 活著沒（11-10 晚 cli-sweep 甲6：沒在跑就不乾等 --timeout-s）：只看它的 state 窗＋/proc（同 aos-daemon-ctl ls
+    的「# daemon:」那行）。確定不在＝DaemonMissing 並指路；state 窗關著、讀壞（StateMissing／StateBad）＝不擋，照舊寄信等回音。
+    自己在子 pid 命名空間裡（aos-sandbox 的 bwrap --unshare-all）看不到 daemon 的 pid＝不核、照舊（不誤報）。"""
+    if nested_pid_ns():
+        return
+    try:
+        dc.check_alive(d, dc.read_state(d))
+    except dc.Fail as e:
+        if e.code != "DaemonMissing":
+            return
+        raise Fail("DaemonMissing", "%s; nothing was sent. Start it first: aos-exec --stack %s <its definition folder> "
+                   "(see aos-daemon-ctl -d %s ls)" % (e, d, d)) from e
+
+
 def ctl_wait(cmd, body, cond, what, refused, secs=WAIT_S, on_queued="fail", name=None):
     """等自己的回信與公開表；排隊可成功返回，逾時先撤未領取的信。"""
     d = daemon_path()
+    daemon_up(d)
     box = call_dc(dc.reply_box, d)
     recipient = call_dc(dc.mailbox_of, d)
     if kernel_box():

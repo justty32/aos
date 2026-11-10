@@ -23,7 +23,7 @@
 #   say {name, text}           寄一句（aos-agent say，話走 stdin）、馬上回，印信件名稱
 #   ask {name, text, timeout_s?}  say＋listen --timeout-s（預設 600、有限正數不設上限；timeout_cycles 正整數最多
 #       ASK_MAX_CYCLES＝9223372036854775777，且目前時鐘／間隔要容得下加 30 cycles 的期限；超過在起子程序前報 ArgumentsBad）印回答
-#   rm {name, ctl_timeout_s?}                  ctl rm（刪子的 stack；aos-agent 的保護規則照舊）
+#   rm {name, ctl_timeout_s?}                  ctl rm --purge（刪子的 stack；aos-agent 的保護規則照舊）
 #   ls                         一行 JSON {"agents": ctl ls --json 的表, "children": [我生的名字], "max_children": N}
 # 配額（工具自己數，不寄信）：我生的記在工具小格 $AOS_STACK/children.json（[{"name", "stack"}]，P-17、規則 8；在父的 stack 底下）；
 #   stack 存相對 $AOS_DAEMON（解開捷徑後，同 daemon 表的基準；N-67 ①，搬家不忘小孩）。
@@ -544,7 +544,7 @@ if op in ("say", "ask"):
 if op == "rm":
     name = my_child(args)
     preserve_child(name)
-    out = must(["ctl", "rm", "--timeout-s", "%g" % ctl_s, name], timeout_s=max(STEP_S, ctl_s + 30))
+    out = must(["ctl", "rm", "--purge", "--timeout-s", "%g" % ctl_s, name], timeout_s=max(STEP_S, ctl_s + 30))
     write_children([k for k in load_json(children_path, []) if k.get("name") != name])
     sys.stdout.write(out)
     sys.exit(0)
@@ -611,7 +611,7 @@ steps = [("llm set %s=%s" % (k, v), ["llm", "--target", name, "set", "%s=%s" % (
 for what, argv in steps:
     _, err = agent(argv)
     if err:                    # 全有或全無：設定沒上，收回這隻
-        _, err2 = agent(["ctl", "rm", "--timeout-s", "%g" % ctl_s, name], timeout_s=max(STEP_S, ctl_s + 30))
+        _, err2 = agent(["ctl", "rm", "--purge", "--timeout-s", "%g" % ctl_s, name], timeout_s=max(STEP_S, ctl_s + 30))
         die(err[0], err[1] + " (during %s; %s)" % (what, "rolled back: removed %s" % name if err2 is None
                                                     else "rollback failed too: %s %s" % err2))
 report(name, child_stack, alive, n)

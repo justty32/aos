@@ -16,7 +16,7 @@
 | [`aos_agent/ctl/add.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/add.py) | 宣告檢查、掛上 agent 並等待 daemon 上表。 |
 | [`aos_agent/ctl/ls.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/ls.py) | 列出 daemon 表上的 proc 與狀態。 |
 | [`aos_agent/ctl/phase.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/phase.py) | 起停、睡醒與暫停恢復 agent。 |
-| [`aos_agent/ctl/rm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/rm.py) | 確認後拔掉 agent 並保護不能刪除的 stack 路徑。 |
+| [`aos_agent/ctl/rm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/rm.py) | 拔掉 agent（預設留 stack；--purge 確認後才刪，並保護不能刪除的 stack 路徑）。 |
 | [`aos_agent/ctl/state.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/state.py) | 顯示單隻 agent 的狀態、回答與工具覆蓋層。 |
 | [`aos_agent/ctl/where.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/where.py) | 顯示 agent 的 stack 或工作區路徑。 |
 | [`aos_agent/ctl/who.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/who.py) | 由 stack 路徑查詢所屬 agent。 |

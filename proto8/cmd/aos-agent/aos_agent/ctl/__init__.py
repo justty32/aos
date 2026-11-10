@@ -17,6 +17,14 @@ HELP = """aos-agent ctl - attach, list and manage agents on the daemon table
 usage: aos-agent [--daemon D] ctl ACTION [FLAGS...] [ARGS...]
        aos-agent ctl ACTION --help
 
+stopping and starting again (three pairs; start / wake / resume only undo their own pair):
+  what you want            command   how it stops                 table after  back with  daemon restart
+  finish this round, stop  stop      writes its ctl, waits        stopped      start      stays stopped
+  stop right now           sleep     SIGTERM (SIGKILL after 10 s) sleeping     wake       wakes it
+  hold in place            pause     writes its ctl; still alive  running      resume     -
+  take it off the table    rm        stop, then remove the row    (no row)     add again  -   (stack kept unless --purge)
+  the whole daemon         aos-daemon-ctl shutdown (every proc sleeps; all wake when it restarts)
+
 actions:
 """ + actions(HELPS, "aos-agent [--daemon D] ctl ") + """
 

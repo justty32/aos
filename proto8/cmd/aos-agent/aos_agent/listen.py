@@ -43,7 +43,7 @@ def print_answer(a, sig):
         return
     if sig is None:
         raise Fail("QuestionUnknown", "no letter in queue/new/ or queue/cur/ and no answer in history")
-    if not os.path.isdir(a.stack):                    # 11-05 edge-agent：等的途中被 ctl rm（stack 刪了），原本說「不在 queue、history 沒回答」
+    if not os.path.isdir(a.stack):                    # 11-05 edge-agent：等的途中被 ctl rm --purge（stack 刪了），原本說「不在 queue、history 沒回答」
         raise Fail("InstanceMissing", "%s was removed (stack %s is gone); %s will never be answered" % (a.name, a.stack, sig))
     raise Fail("AnswerMissing", "%s has left the queue but history has no answer" % sig)
 

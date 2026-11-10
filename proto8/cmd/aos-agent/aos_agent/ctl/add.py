@@ -38,8 +38,8 @@ flags:
       --auto-restart  the daemon restarts it whenever it exits (row gets "auto_restart": true);
                       only for agents that stay up; a fire-and-forget agent (eca with
                       --on-empty stop) would end, restart and end again until the daemon
-                      stops it after 3 quick exits. To turn it on later: aos-daemon-ctl rm N
-                      (keeps the stack; aos-agent ctl rm deletes it), then ctl add --auto-restart
+                      stops it after 3 quick exits. To turn it on later: aos-agent ctl rm N
+                      (keeps the stack unless --purge), then ctl add --auto-restart
       --timeout-s S   seconds to wait for the daemon (default 30)
       --on-queued MODE  fail or ok when still queued (default fail)
   -h, --help          show this help

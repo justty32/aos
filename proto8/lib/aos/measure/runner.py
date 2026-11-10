@@ -58,7 +58,7 @@ def agent_run(target, payload, ws, stack, defs, timeout=60):
         return result.returncode or stopped.returncode, result.stdout, tree, cost
     finally:
         if added:
-            removed = ctl('ctl', 'rm', '--yes', name)
+            removed = ctl('ctl', 'rm', '--purge', '--yes', name)
             if removed.returncode:
                 raise ValueError('cannot remove measured agent (exit code %s)' % removed.returncode)
 

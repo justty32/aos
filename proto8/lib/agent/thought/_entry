@@ -10,7 +10,7 @@
 #   max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、只要求有限正數；keep 預設 false。
 # 一次叫＝aos-agent --daemon $AOS_DAEMON 的五步：ctl who（我是誰、我的深度）→ ctl add 範本（--name t-<父名前32字>-<UTC毫秒>-<4位hex>、--ws 我的 $AOS_WS）→
 #   子的覆蓋層 llm set endpoint／tools rm／tools add --replace → say 開場文（固定英文段＋goal＋context）＋listen --timeout-s／--timeout-cycles →
-#   預設 ctl rm 子（stack 刪掉、不印 details）；keep: true＝留著但 ctl stop（不佔 loop；要追問 ctl start 再 say）、結論後多一行 details: <子的 stack，相對 $AOS_DAEMON>/。
+#   預設 ctl rm --purge 子（stack 刪掉、不印 details）；keep: true＝留著但 ctl stop（不佔 loop；要追問 ctl start 再 say）、結論後多一行 details: <子的 stack，相對 $AOS_DAEMON>/。
 #   ctl add 之後到 say 之前任一步失敗（tools ls、設定那幾步）＝當下 ctl rm 收回再報錯（不算子的失敗）；收不回＝紀錄留 running 租約，過期後下一次叫的對帳收。
 # 子名每次唯一：mkdir $AOS_STACK/children/<子名>/，撞表或資料夾最多重試五次。
 #   state＝running <UTC到秒Z租約>／kept／failed；每步呼叫前續租至逾時＋5秒，TERM 收回租約。
@@ -328,7 +328,7 @@ def reconcile(table):
         child_path = child_stacks.get(n)
         if child_path:
             copy_child(stack, n, os.path.join(daemon, child_path), publish=False)
-        _, err = agent(["ctl", "rm", n])
+        _, err = agent(["ctl", "rm", "--purge", n])
         if err is None:
             forget(n)
         else:
@@ -408,7 +408,7 @@ def undo(err, what):
     """設定沒上：收回子再報錯（不是子的失敗，不留 stack）。"""
     if os.path.isdir(kid_stack):
         copy_child(stack, kid, kid_stack)
-    _, err2 = agent(["ctl", "rm", kid])
+    _, err2 = agent(["ctl", "rm", "--purge", kid])
     if err2 is None:
         forget(kid)
     die(err[0], "%s (during %s; %s)" % (err[1], what, "rolled back: removed %s" % kid if err2 is None
@@ -462,7 +462,7 @@ if keep:                                        # 留著也不佔 loop：答完�
         tool_io.warn("could not stop the kept thought %s: %s %s" % ((kid,) + err))
     sys.stdout.write("%s\ndetails: %s\n" % (answer, rel(kid_stack)))
     sys.exit(0)
-_, err = agent(["ctl", "rm", kid])
+_, err = agent(["ctl", "rm", "--purge", kid])
 if err is None:
     forget(kid)
 else:

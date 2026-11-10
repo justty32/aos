@@ -46,7 +46,7 @@ def cmd(argv):
                 sys.exit(1 if failed else 0)
             if not line.strip():
                 continue
-            a = find(a.name, quiet=True)            # 11-05 edge-agent：聊到一半被 ctl rm＝原本照寄、把刪掉的 stack 建回來、然後一直等
+            a = find(a.name, quiet=True)            # 11-05 edge-agent：聊到一半被 ctl rm --purge＝原本照寄、把刪掉的 stack 建回來、然後一直等
             before = len(aos_ws.answers(a.stack))
             aos_ws.put(a.stack, line)
             sent = True

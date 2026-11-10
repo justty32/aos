@@ -30,7 +30,7 @@ aos-agent ctl add --ws ~/code/myproj --name myproj proto8/templates/eca-claude
 aos-agent say --target myproj 看一下 README 在講什麼 && aos-agent listen --target myproj
 aos-agent ctl pause --target myproj  # 暫停：不餵下一則（新信留 queue/new/），粒度＝一則訊息
 aos-agent open --target myproj       # 接上畫面（Ctrl-] 跳出）
-aos-agent ctl rm myproj              # 拔掉並刪它的 stack
+aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才連 stack 刪）
 ```
 
 不掛 daemon、直接 `aos-exec --ws ~/code/myproj proto8/templates/eca-claude &` 跑的，aos-agent 不管：`aos-post send --ordered ~/code/myproj/.stack/queue` 寫信（stdin＝`{"role": "user", "content": 話}`）、看 `.stack/history.jsonl`、寫 `.stack/ctl.json` 停（`{"cmd": "pause"}`／`{"cmd": "stop"}`）。
