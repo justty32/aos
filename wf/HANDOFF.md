@@ -39,6 +39,8 @@
    - kernel 不在＝印 warning、原地等，不論有沒有 auto-restart，kernel 回錯照舊停；kernel 排隊信樣板與指南不擋、照帶：「都按照推薦」。
    - boot 不做（起根本身就會叫醒睡下的列）。施工九個 commit 到 `875aff2b2`、文件未 commit；續行點與明天清單見 [13](../proto8/thinking/2026-11/10/two-machines/13-施工結果/03-不同之處與留給明天.md#留給明天大修)。
 
+7. **下午後段（16:00 前後，two-machines 隊長補）**：11-10 下午後段：aos-tools 改版已完成並 push（`$override` 覆蓋檔、`--replace`、env_file、快取搬 stack、C-85、C-86）；cli-sweep 掃描（[報告](../proto8/thinking/2026-11/10/cli-sweep/README.md)，未施工）使用者已答：Q2＝A 分工照舊、差別收到最少；Q3＝「兩支都留 stack，要刪另外說」即 `aos-agent ctl rm` 預設留 stack、刪加 `--purge`；Q4＝A 已停再停兩支都算成功；Q5＝A 根範本自己清掉繼承來的 `AOS_DAEMON`；Q6＝A 不動、對照表放 help 第一屏；Q1 使用者自填「我記得早期有說要aos-yyy zzz --flag -f ... XXX，旗標都放中間，最後才是目標。」（規劃員查出處重擬中，[09](../proto8/thinking/2026-11/10/cli-sweep/09-Q1補-旗標放中間目標放最後.md)）；Q7、Q8 未答。two-machines B01 做了一半（`7c1791e6e`：`--ws-json`／`--stack-json`／`--path-json` 的 `$env` 寫法進表、每次起重解）。**明天順序**：B01 剩下（絕對路徑原樣存、`--*-json` 純字串原樣存，要動 aos-daemon 存表）→ cli-sweep 第一批 → aos-tools 的 lv6 連帶 → two-machines 其餘 15 條（[next_todo](../proto8/thinking/2026-11/10/two-machines/next_todo.json)）。以上都只記裁定、還沒施工。
+
 ## 2026-11-09 深夜 23:2x 家機頂層（使用者要接 aos mcp 後重開／resume）
 
 1. **授權與狀態**：同下一條（隨意 push、opus／sonnet 分工、/goal 到 11-10 06:20 當 arcagi 支援、安全邊界見下一條第 5 點）。使用者經 arcagi 轉達：「順便寄信給aos agent，跟他說我要給他接mcp。」→ 重開後 **先重掛 `wf/inbox/` Monitor**（腳本見 SESSION-LOG 續行點那條的寫法：每 5 秒比對頂層 *.md、另查 ~/arcagi-STOP），再讀 SESSION-LOG「今晚當 arcagi 支援」續行點。
