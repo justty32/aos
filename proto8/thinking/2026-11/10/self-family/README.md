@@ -23,9 +23,9 @@ self_tools、self_llm 在 [self-tools](../self-tools/README.md)；這夾記 self
 
 | 檔 | 是什麼 |
 |---|---|
-| [01-施工結果](01-施工結果.md) | 每個 commit 做了什麼、驗收、代定清單、留給使用者的 eca 真對話驗收、給知識庫的節點內容 |
+| [01-施工結果](01-施工結果.md) | 每個 commit 做了什麼、驗收、代定清單、eca 真對話驗收（haiku）、給知識庫的節點內容 |
 | [hook/](hook/README.md) | self_hook 那條線（另一隊） |
 
 ## 做了（11-10 晚）
 
-`aos-agent history`（ls／rm／summarize／set，原文搬到 `history_removed.jsonl`）→ `self_history` 包裝（這一步鎖著）→ eca 縮水版（history 被改過＝下一輪開新對話）→ 文件。假腦與 gemma 真腦都驗過；eca 真對話留給使用者。細節見 [01](01-施工結果.md)。
+`aos-agent history`（ls／rm／summarize／set，原文搬到 `history_removed.jsonl`）→ `self_history` 包裝（這一步鎖著）→ eca 縮水版（history 被改過＝下一輪開新對話）→ 文件。假腦、gemma 真腦、eca haiku 真對話都驗過。細節見 [01](01-施工結果.md)。
