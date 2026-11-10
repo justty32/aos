@@ -107,6 +107,12 @@ agent itself and can fail with a name collision (left stopped with a reason); to
 aos-agent ctl add, or give its body: add -n bob --def bob bob/body.json.
 "applied": true only means the letter was applied to the table, not that the proc still runs.
 
+Paths on the table: one you type as an absolute path (XXX, --ws, --stack, --def) stays that
+absolute path (the letter carries it in "as_written"); a relative one is taken from the current
+directory and stored relative to the daemon's stack, so moving the whole tree keeps working.
+A JSON string given to --ws-json or --stack-json goes into the letter as written (a relative
+one counts from the daemon's cwd); one given to --path-json is read like XXX.
+
 flags:
       --timeout-s S    positive claim timeout (default: 3); excludes --reply-to
       --reply-to BOX   send only; the reply ({"applied": true|false, ...}) goes to BOX
@@ -460,8 +466,9 @@ def cmd_add(opts, args):
                 raise Fail("ArgumentsBad", "--%s and --%s-json exclude each other" % (plain, plain))
             o[plain] = dc.path_json(o[js], "--%s-json" % plain)
     d = dc.find_daemon(opts.get("daemon"))
+    kept = dc.typed_kept(None if written else rest[0], o.get("ws"), o.get("stack"), o.get("def"))   # 11-10 晚 B01：打成絕對路徑的格表上原樣存
     _, body = dc.add_letter(rest[0], extra, o.get("name"), o.get("ws"), o.get("stack"), o.get("def"), limits,
-                            auto_restart=o.get("auto_restart", False), written=written)
+                            auto_restart=o.get("auto_restart", False), written=written, kept=kept)
     name = next(iter(body["procs_added"]))
     try:                                   # 11-10 cli-sweep 甲5：撞名＝報錯不寄（代號同 aos-agent ctl add 的 InstanceExists）
         taken = name in dc.rows(d)

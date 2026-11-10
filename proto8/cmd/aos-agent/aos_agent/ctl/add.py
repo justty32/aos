@@ -18,6 +18,12 @@ XXX is the agent folder; it must declare aos-agent in interfaces.json. The lette
 through $AOS_KERNEL when that is set (a warning line says so). Waits until the agent is on
 the table, then prints its stack; the daemon refusing it = AddRejected.
 
+Paths on the table: one you type as an absolute path stays that absolute path; a relative one
+(from the current directory, also the default workspace) is stored relative to the daemon's
+stack, so moving the whole tree keeps working. A JSON string given to --ws-json or --stack-json
+goes into the letter as written (a relative one counts from the daemon's cwd); one given to
+--path-json is read like XXX.
+
 flags:
   -n, --name N        its name on the table (default: the folder name of XXX)
   -w, --ws WS         its workspace (default: non-empty $AOS_WS, else the current directory)
@@ -100,16 +106,25 @@ def cmd(argv):
     for plain in ("ws", "stack"):                      # 11-10 B01：--ws-json／--stack-json 跟 -w／-s 二選一
         if opts.get(plain + "_json") is not None and opts.get(plain) is not None:
             raise bad_args(HELP, "--%s and --%s-json exclude each other" % (plain, plain))
+    # 11-10 晚 B01（使用者選「絕對路徑原樣存」）：使用者寫成絕對路徑的格表上原樣存（kept）；相對的、沒寫的（$AOS_WS、目前目錄）
+    # 照舊換算成相對 daemon 的 stack；--ws-json／--stack-json 的純字串照字面送（dc.AsIs）
+    kept = set()
+    if not written and os.path.isabs(rest[0]):
+        kept |= {"exec", "def"}
     if opts.get("ws_json") is not None:
-        ws = dc.path_json(opts["ws_json"], "--ws-json")   # 指示詞原樣進表、每次起再解；字串照一般路徑
+        ws = dc.path_json(opts["ws_json"], "--ws-json")   # 指示詞原樣進表、每次起再解；字串照字面
     else:
         ws = opts.get("ws") or os.environ.get("AOS_WS") or "."
-    if isinstance(ws, str):
+    if isinstance(ws, str) and (opts.get("ws") or isinstance(ws, dc.AsIs)) and os.path.isabs(ws):
+        kept.add("ws")
+    if isinstance(ws, str) and not isinstance(ws, dc.AsIs):
         ws = os.path.abspath(ws)
         if not os.path.isdir(ws):
             raise Fail("WsMissing", "workspace does not exist: %s" % ws)
     stack = dc.path_json(opts["stack_json"], "--stack-json") if opts.get("stack_json") is not None else opts.get("stack")
-    if isinstance(stack, str):
+    if isinstance(stack, str) and os.path.isabs(stack):
+        kept.add("stack")
+    if isinstance(stack, str) and not isinstance(stack, dc.AsIs):
         if not stack:
             raise bad_args(HELP, "--stack must not be empty")
         stack = os.path.abspath(stack)
@@ -124,7 +139,7 @@ def cmd(argv):
         _, request = call_dc(dc.add_letter, entry_target, name=name, ws=ws, stack=stack,
                                   def_dir=def_dir, limits=limits, envs=envs,
                                   auto_restart=opts.get("auto_restart", False),
-                                  daemon=daemon_path(), written=written)   # 11-10：--envs 的目標寫成相對 daemon stack 的指示詞，搬家照樣起
+                                  daemon=daemon_path(), written=written, kept=kept)   # 11-10：--envs 的目標寫成相對 daemon stack 的指示詞，搬家照樣起
         row = ctl_wait("add", request,
                        lambda letter: row_named(name) or rejected(letter),
                        "the daemon has not put %s on the table yet (see aos-agent ctl ls and the daemon's log)" % name, "AddRejected", secs=secs, on_queued=on_queued, name=name)

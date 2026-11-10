@@ -102,6 +102,31 @@ static Json written_of(const Json& raw, const Json& resolved, const std::string&
     return w;
 }
 
+// 11-10 晚 two-machines B01（使用者選「絕對路徑原樣存」：「add xxx 會換算(除了絕對路徑)」）：寫的人在 proc 物件裡給的
+// "as_written": {ws?, stack?, def?, exec?}，值只收絕對路徑字串（`檔#/…` 的 # 前面要絕對）＝表上照原樣記、每次起照它（不換算成相對 daemon 的 stack）。
+// 指示詞原形由 written_of 從各格自己認，這裡不收；別的寫法＝CfgBad（不默默丟掉）。沒寫＝空物件。
+static Json kept_of(const Json& raw, const std::string& name, const std::string& key) {
+    Json out = Json::object();
+    if (!raw.is_object() || !raw.contains("as_written") || raw["as_written"].is_null()) {
+        return out;
+    }
+    const Json& h = raw["as_written"];
+    const std::string where = key + "[" + name + "].as_written";
+    if (!h.is_object()) {
+        throw Error{code::CfgBad, where + " must be {ws?, stack?, def?, exec?} of absolute paths"};
+    }
+    for (auto& [k, x] : h.items()) {
+        if (k != "ws" && k != "stack" && k != "def" && k != "exec") {
+            throw Error{code::CfgBad, where + ": unknown key " + aos::dumps(Json(k)) + " (keys: ws, stack, def, exec)"};
+        }
+        if (!x.is_string() || x.get<std::string>().empty() || x.get<std::string>()[0] != '/') {
+            throw Error{code::CfgBad, where + "." + k + " must be an absolute path (kept as written), got " + aos::dumps(x)};
+        }
+        out[k] = x;
+    }
+    return out;
+}
+
 static bool is_target(const Json& t) {   // aos-exec 的目標：字串或 [目標, 參數...]（非空字串陣列）
     if (t.is_string()) {
         return true;
@@ -209,8 +234,14 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             if (!r.value.is_object()) {
                 throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
             }
-            r.value.erase("as_written");   // daemon 自己記的 key（11-10），寫的人給的不算
+            r.value.erase("as_written");   // daemon 自己記的 key（11-10）；寫的人給的只收「原樣存的絕對路徑」（kept_of，11-10 晚 B01）
             Json w = written_of(it.value, r.value, it.base_dir);
+            Json kept = kept_of(it.value, name, key);
+            for (auto& [k, x] : kept.items()) {
+                if (!w.contains(k)) {   // 同一格寫成指示詞的以指示詞為準
+                    w[k] = x;
+                }
+            }
             if (!w.empty()) {
                 r.value["as_written"] = std::move(w);
             }

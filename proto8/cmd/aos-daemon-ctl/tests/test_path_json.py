@@ -58,6 +58,46 @@ class PathJson(unittest.TestCase):
             dc.add_letter(os.path.join(self.agent, "body.json"), written=({"$ref": "x.json"}, self.agent))
         self.assertEqual(cm.exception.code, "ArgumentsBad")
 
+    def test_absolute_paths_kept_as_written(self):
+        # 11-10 晚 B01：寫成絕對路徑的格另記進 as_written（表上原樣存）；相對的照舊轉絕對、不記
+        ws = os.path.join(self.tmp, "proj")
+        body = os.path.join(self.agent, "body.json")
+        st = os.path.join(self.tmp, "st")
+        _, letter = dc.add_letter(body, ws=ws, stack=st, kept=dc.typed_kept(body, ws, st))
+        spec = letter["procs_added"]["body.json"]
+        self.assertEqual(spec["as_written"], {"ws": ws, "stack": os.path.join(self.tmp, "st"),
+                                              "def": body, "exec": os.path.join(self.agent, "run.sh")})
+        old = os.getcwd()
+        os.chdir(self.tmp)
+        try:
+            rel = os.path.relpath(body, self.tmp)
+            _, letter = dc.add_letter(rel, ws="proj", kept=dc.typed_kept(rel, "proj"))
+        finally:
+            os.chdir(old)
+        spec = letter["procs_added"]["body.json"]
+        self.assertNotIn("as_written", spec)
+        self.assertEqual(spec["ws"], ws)
+
+    def test_json_string_sent_as_is(self):
+        # 「add "xxx" 就是原樣送」：--ws-json 的純字串照字面放進信；絕對的另記 as_written
+        body = os.path.join(self.agent, "body.json")
+        _, letter = dc.add_letter(body, ws=dc.path_json('"rel/ws"', "--ws-json"), kept=())
+        spec = letter["procs_added"]["body.json"]
+        self.assertEqual(spec["ws"], "rel/ws")
+        self.assertNotIn("as_written", spec)
+        j = dc.path_json(json.dumps(self.tmp), "--ws-json")
+        _, letter = dc.add_letter(body, ws=j, kept=dc.typed_kept(ws=j))
+        self.assertEqual(letter["procs_added"]["body.json"]["ws"], self.tmp)
+        self.assertEqual(letter["procs_added"]["body.json"]["as_written"], {"ws": self.tmp})
+        _, letter = dc.add_letter(body)                  # 程式自己組的絕對路徑不算（預設 kept 空）
+        self.assertNotIn("as_written", letter["procs_added"]["body.json"])
+
+    def test_directive_path_not_kept(self):
+        d = {"$env": "AOS_TEST_PJ", "$path": "/defs/ann"}
+        folder = dc.resolve_here(d, "--path-json")
+        _, body = dc.add_letter(os.path.join(folder, "body.json"), name="ann", def_dir=folder, written=(d, folder))
+        self.assertNotIn("as_written", body["procs_added"]["ann"])
+
     def test_cli_excludes(self):
         ctl = PROTO / "cmd" / "aos-daemon-ctl" / "bin" / "aos-daemon-ctl"
         r = subprocess.run([sys.executable, str(ctl), "-d", self.tmp, "add", "--ws", ".", "--ws-json", '"x"',

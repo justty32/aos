@@ -179,6 +179,41 @@ class TwoMachines(unittest.TestCase):
         row = until(lambda: (r if (r := a.rows().get('once')) and r['phase'] == 'stopped' else None))
         self.assertIn('DirectiveBad', row['reason'])
 
+    def test_mailbox_row_keeps_absolute_paths_as_written(self):
+        # 11-10 晚 B01（使用者選「絕對路徑原樣存」）：信裡 as_written 給的絕對路徑表上原樣存；整棵樹搬到別的深度再起＝ws 還是那個絕對路徑。
+        # 沒給的照舊相對 daemon 的 stack（搬家時跟著走）。
+        ws = self.base / 'outside_ws'
+        ws.mkdir()
+        a = self.tree('a', {})
+        a.start()
+        a.post({'procs_added': {
+            'kept': {'exec': str(a.root / 'body_a.py'), 'ws': str(ws), 'as_written': {'ws': str(ws)}},
+            'plain': {'exec': str(a.root / 'body_b.py'), 'ws': str(a.root)}}})
+        row = a.running('kept')
+        self.assertEqual(row['as_written'], {'ws': str(ws)})
+        self.assertNotIn('as_written', a.running('plain'))
+        a.stop()
+        (self.base / 'x' / 'y').mkdir(parents=True)
+        shutil.move(str(a.root), str(self.base / 'x' / 'y' / 'a2'))
+        b = self.tree('x/y/a2')
+        for n in ('kept', 'plain'):
+            p = b.stack / 'procs' / n / 'seen.json'
+            if p.exists():
+                p.unlink()
+        b.start()
+        for n, want in (('kept', ws), ('plain', b.root)):
+            b.running(n)
+            self.assertEqual(read(b.stack / 'procs' / n / 'seen.json')['ws'], str(want), n)
+        self.assertEqual(b.rows()['kept']['as_written'], {'ws': str(ws)})
+
+    def test_mailbox_as_written_must_be_absolute_paths(self):
+        a = self.tree('a', {})
+        a.start()
+        a.post({'procs_added': {'bad': {'exec': str(a.root / 'body_a.py'), 'as_written': {'ws': 'rel/ws'}}}})
+        warn = until(lambda: (read(a.stack / 'state_flux.json', {}) or {}).get('mailbox_warning'), timeout=10)
+        self.assertIn('as_written.ws must be an absolute path', json.dumps(warn))
+        self.assertNotIn('bad', a.rows())
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -20,7 +20,7 @@
    "symptom": "表上 ws／def／exec 存成相對根 stack 的路徑，使用者給的絕對路徑沒留下；B 機相對位置不同＝WsMissing／EntryMissing，重起 3 次後 stopped（信不掉、沒人答）",
    "direction": "表上也記使用者給的形（絕對或 $env），或讓 ctl add 收 {\"$env\": …}；現在的解法是 ctl rm 再 add",
    "needs": "改既有對外介面、要使用者點頭",
-   "status": "一半（11-10 傍晚）：--ws-json／--stack-json／--path-json 的 $env 寫法已做；明天第一項：位置參數給絕對路徑原樣存（使用者選 A）、--*-json 純字串原樣存（要動 aos-daemon 存表）"
+   "status": "已修（11-10 晚家機，16-B01後半施工結果）：前半 --*-json 的 $env 寫法（7c1791e6e）；後半命令列打成絕對路徑的 XXX／ws／stack／def 表上原樣存（信裡帶 as_written、daemon 收）、--ws-json／--stack-json 純字串照字面送"
   },
   {
    "id": "B02",

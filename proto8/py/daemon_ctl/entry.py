@@ -181,6 +181,11 @@ def daemon_ref(target, daemon):
     return {"$env": "AOS_DAEMON", "$path": os.path.relpath(f, os.path.realpath(daemon)) + h + p}
 
 
+class AsIs(str):
+    """--ws-json／--stack-json／--path-json 給的純字串（11-10 晚 B01，使用者「add \"xxx\" 就是原樣送」）：照字面放進信、不從呼叫者的 cwd 換算
+    （相對的由 daemon 照它自己的 cwd 算，同 daemon.json 裡寫的）；絕對的另記進 as_written、表上原樣存。"""
+
+
 def path_json(text, flag):
     """--ws-json／--stack-json 的值（11-10 B01，比照 aos-tools --path-json：「給的json字串會直接放入，到使用的時候再解析」）：
     JSON 字串或指示詞物件（$env／$ref，N-45）；別的＝ArgumentsBad。字串照一般路徑處理，物件原樣放進信。"""
@@ -189,7 +194,7 @@ def path_json(text, flag):
     except ValueError as e:
         raise Fail("ArgumentsBad", "%s needs JSON (a string or a directive object such as {\"$env\": \"X\"}): %s" % (flag, e))
     if isinstance(v, str) and v:
-        return v
+        return AsIs(v)
     if isinstance(v, dict) and v and all(isinstance(k, str) and k.startswith("$") for k in v):
         return v
     raise Fail("ArgumentsBad", "%s needs a non-empty JSON string or a directive object such as {\"$env\": \"X\", \"$path\": \"/sub\"}" % flag)
@@ -225,12 +230,34 @@ def written_under(value, folder, d):
     return value
 
 
+def typed_kept(xxx=None, ws=None, stack=None, def_dir=None):
+    """命令列上使用者打的字（原字串，還沒轉絕對）→ add_letter 的 kept：以 / 開頭的 ws、stack、xxx〔＝exec 與 def〕、
+    def_dir〔＝def，給了就蓋過 xxx 的〕。指示詞（dict）不算（由 daemon 從指示詞自己認）。"""
+    kept = set()
+    for k, v in (("ws", ws), ("stack", stack)):
+        if isinstance(v, str) and v.startswith("/"):
+            kept.add(k)
+    if isinstance(xxx, str) and xxx.startswith("/"):
+        kept |= {"exec", "def"}
+    if def_dir is not None:
+        kept.discard("def")
+        if isinstance(def_dir, str) and def_dir.startswith("/"):
+            kept.add("def")
+    return kept
+
+
 def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limits=None, envs=None, auto_restart=False, daemon=None,
-               written=None):
+               written=None, kept=None):
     """判型並組成掛子信；給定的路徑從目前目錄算起。auto_restart＝True：那一列多 "auto_restart": true（daemon 的 key，
     放在列的頂層、跟 exec／ws 同層；loop 型、exec 型、帶 envs 的都一樣，two-machines 06）；False＝不寫這個 key。
     daemon＝收這封信的 daemon 的 stack（選填，11-10）：給了，envs 包的單子裡的目標寫成相對它的 $env 指示詞（daemon_ref）；
-    沒給＝照舊寫絕對路徑。"""
+    沒給＝照舊寫絕對路徑。
+    kept＝使用者在命令列上寫成絕對路徑的格（"ws"、"stack"、"def"、"exec" 的集合；11-10 晚 B01，使用者選「絕對路徑原樣存」）：
+    那幾格另記進列的 "as_written"，daemon 表上原樣存、不換算成相對它的 stack。由命令列那層照使用者打的字認（typed_kept）；
+    程式自己組的絕對路徑不算，預設空＝照舊（表上換算成相對 daemon 的 stack）。AsIs 的 ws／stack 照字面送。"""
+    kept = set(kept or ())
+    if written:                      # 定義寫成指示詞（--path-json）＝exec／def 記指示詞，不記絕對
+        kept -= {"exec", "def"}
     xxx = abs_target(xxx, os.getcwd())
     path = xxx.partition("#")[0]
     if not os.path.exists(path):
@@ -242,6 +269,8 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
         got = resolve_here(ws, "--ws-json")
         if not os.path.isdir(got):
             raise Fail("PathMissing", "--ws-json resolves to %s here, which is not a folder" % got)
+    elif isinstance(ws, AsIs):       # 11-10 晚 B01：純字串照字面送（相對的由 daemon 從它的 cwd 算；在不在由 aos-exec 說）
+        ws = str(ws)
     elif ws is not None:
         if not ws:
             raise Fail("ArgumentsBad", "--ws must not be empty")
@@ -250,6 +279,8 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
             raise Fail("PathMissing", "--ws is not a folder: %s" % ws)
     if isinstance(stack, dict):     # 11-10 B01：--stack-json 同上；在不在不驗（daemon 起它時建）
         resolve_here(stack, "--stack-json")
+    elif isinstance(stack, AsIs):    # 11-10 晚 B01：同 ws
+        stack = str(stack)
     elif stack is not None:
         if not stack:
             raise Fail("ArgumentsBad", "--stack must not be empty")
@@ -268,7 +299,8 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
             # 指示詞／內嵌單子透過原設定位置執行，保留其相對路徑基準。
             target = found[1] + "#" + found[2] + "/exec"
         argv = list(target) if isinstance(target, list) else [target]
-        argv[0] = daemon_ref(argv[0], daemon)   # 參數不動，只換目標
+        if "exec" not in kept:      # 使用者寫絕對路徑＝單子裡也照原樣（11-10 晚 B01）
+            argv[0] = daemon_ref(argv[0], daemon)   # 參數不動，只換目標
         spec["exec"] = {"argv": ["aos-exec", "--"] + argv, "envs": dict(envs)}
     spec["def"] = os.path.abspath(path)   # 11-04（使用者「那就b。」）：定義資料夾，daemon 記進表的 def 欄
     if def_dir is not None:          # 11-05：aos-agent 的定義宣告了 entry（XXX＝定義裡的那個入口）時，def 另給
@@ -293,4 +325,15 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
         for key in ("exec", "def"):
             if key in spec:
                 spec[key] = written_under(spec[key], folder, d)
+    hint = {}                        # 11-10 晚 B01：使用者寫成絕對路徑的格，表上原樣存（daemon 認列的 as_written）
+    for key in ("ws", "stack", "def", "exec"):
+        if key not in kept:
+            continue
+        v = spec.get(key)
+        if isinstance(v, list) and v:
+            v = v[0]
+        if isinstance(v, str) and v.startswith("/"):   # 指示詞、單子、只有 #/… 的不記
+            hint[key] = v
+    if hint:
+        spec["as_written"] = hint
     return name, {"procs_added": {name: spec}}

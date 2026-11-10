@@ -19,7 +19,9 @@ from .entry import (
     LIMIT_INTS,
     check_limits,
     add_letter,
+    typed_kept,
     path_json,
+    AsIs,
     resolve_here,
 )
 from .table import (
