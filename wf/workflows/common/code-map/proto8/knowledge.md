@@ -9,7 +9,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`README.md`](../../../../../proto8/knowledge/README.md) | proto8/knowledge — 記憶庫（`memory` 讀的資料夾＋`.json` 樹） |
+| [`README.md`](../../../../../proto8/knowledge/README.md) | proto8/knowledge — 記憶庫（`memory_read` 讀的資料夾＋`.json` 樹） |
 
 ## `proto8/knowledge/aos/`
 
@@ -41,4 +41,5 @@
 | [`memory.json`](../../../../../proto8/knowledge/aos/memory.json) | （檔頭沒有一句話） |
 | [`rules.json`](../../../../../proto8/knowledge/aos/rules.json) | （檔頭沒有一句話） |
 | [`status.json`](../../../../../proto8/knowledge/aos/status.json) | （檔頭沒有一句話） |
+| [`tools.json`](../../../../../proto8/knowledge/aos/tools.json) | 設定（鍵：_description、_index、tools_def、tool_spec） |
 | [`world.json`](../../../../../proto8/knowledge/aos/world.json) | （檔頭沒有一句話） |

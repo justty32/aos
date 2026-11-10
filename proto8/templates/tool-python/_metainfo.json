@@ -1,0 +1,14 @@
+{
+  "summary": "Add two numbers and return the sum",
+  "resource": "cpu",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": true,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 100
+  },
+  "timeout_ms": 10000
+}

@@ -31,5 +31,8 @@
  },
  "clock.json": {
   "_description": "Wake yourself (or another agent) every N cycles with tool clock_register."
+ },
+ "tools.json": {
+  "_description": "Making your own tools: tool tools_def (new from the Python skeleton, check) and the Python helper tool_spec."
  }
 }

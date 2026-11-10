@@ -1,0 +1,346 @@
+#!/usr/bin/env python3
+# tools_def - 工具定義的創造：new＝把 Python 骨架（templates/tool-python）複製成新工具夾，check＝檢查一個工具位置（資料夾、JSON 檔或 檔#/指標）合不合格、在哪一階段
+# 使用者 11-10 深夜（thinking 2026-11/10/tools-def）：「1.做。2.tools_def 3.對。 4.給python一種，順便弄個好用的lib，方便AI弄json schema, metainfo啥的。」
+#   粗版、照 agent_def：只複製與檢查；改內容用一般的檔案工具，掛上去用 self_tools add。
+# 介面（lib/docs/01 的契約）：stdin 收 {"op": "new"|"check", …}；別的鍵＝ArgumentsBad：
+#   new {path, description?}  骨架整夾複製到 path（先寫同層暫存夾 .<名>.new-<pid> 再改名，略過 __pycache__）；path 哪裡都行、
+#       能不能寫交給 Linux 權限；已經在＝PathExists。description＝先填進 tool.py 的 DESCRIPTION。最後叫 tool.py --write-defs
+#       讓 _tooldef.json／_metainfo.json 跟 tool.py 一致。成功印一行 made tool folder … 與下一步。
+#   check {path, sample?}  path＝資料夾、JSON 檔或 檔.json#/指標（同 aos-exec 的入口位置，N-61、N-62）。一行一項：
+#       entry（資料夾的 _entry／_entry.json，或 JSON 物件的 _entry 鍵；argv 裡的 .py 要在、編得過）→
+#       用 tool_spec 的腳本先跑 `腳本 --write-defs 位置` 重產兩份定義 → metainfo（tool_spec.metainfo_problems）→
+#       tooldef（tool_spec.tooldef_problems；資料夾與 JSON 檔另經 aos-tools 暫存登記檔 add＋get 驗一次）→
+#       給了 sample 就 aos-exec 試叫一次 → 最後一行 stage（只是能跑的函數／有 metainfo／有 tooldef＝可當工具）。
+#       有 bad＝最後再一行錯誤行 ToolBad、退 1（報告留在 stdout）。
+#   相對路徑從 $AOS_WS 算、絕對照用，不設工作區限制。錯：stderr 與 stdout 各一行「tools_def: error: 代號 原因」、退 1；
+#   op 沒給＝ArgumentsBad、不認得＝OpUnknown。--help＝英文說明印 stdout、退 0；Ctrl-C 退 130。
+import json, os, re, shutil, signal, subprocess, sys, tempfile
+HERE = os.path.dirname(os.path.realpath(__file__))
+NAME = os.path.basename(HERE)
+HELP = """\
+usage: %s < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Make tools: op new copies the Python tool skeleton (templates/tool-python) to a new folder;
+op check checks one tool location (folder, JSON file or FILE.json#/POINTER), remakes the
+generated _tooldef/_metainfo from a tool_spec script, can try one call, and says the stage.
+Result on stdout, one line per item. On error: one line "%s: error: CODE reason" on stderr and stdout, exit 1.
+""" % (NAME, NAME)
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+    import tool_spec  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name not in ("tool_io", "tool_spec"):
+        raise
+    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (NAME, error.name)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+tool_io.start(NAME, HELP)
+SKELETON = os.path.normpath(os.path.join(HERE, "..", "..", "..", "templates", "tool-python"))
+OPS = {"new": ("path", "description"), "check": ("path", "sample")}
+RUN_S = 30
+die = tool_io.die
+report = []
+
+
+def line(kind, text):
+    report.append("%-5s %s" % (kind, text))
+
+
+def from_ws(p):
+    return os.path.normpath(p if os.path.isabs(p) else os.path.join(tool_io.workspace(), p))
+
+
+def text(key):
+    v = args.get(key)
+    if not isinstance(v, str) or not v:
+        die("ArgumentsBad", "%s %s a non-empty string" % (key, "needs" if v is None else "must be"))
+    return v
+
+
+def run(argv, cwd, stdin="", timeout=RUN_S):
+    """跑一次、整群逾時收掉；回 (結束碼, stdout, stderr)，起不來＝(None, "", 原因)。"""
+    try:
+        p = subprocess.Popen(argv, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             text=True, start_new_session=True, env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
+    except OSError as e:
+        return None, "", "cannot run %s: %s" % (argv[0], e)
+    try:
+        out, err = p.communicate(stdin, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        os.killpg(p.pid, signal.SIGKILL)
+        p.communicate()
+        return None, "", "%s did not finish within %d s" % (" ".join(argv[:2]), timeout)
+    return p.returncode, out, err
+
+
+def last_line(*texts):
+    """最後一行有字的；Python traceback 另補它在腳本的哪一行。"""
+    for t in texts:
+        if "Traceback (most recent call last)" in (t or ""):
+            spots = re.findall(r'File "([^"]+)", line (\d+)', t)
+            mine = [x for x in spots if "/lib/" not in x[0] and "/python3" not in x[0]] or spots
+            tail = [x for x in t.strip().splitlines() if x.strip()][-1]
+            return "%s (%s line %s)" % (tail, os.path.basename(mine[-1][0]), mine[-1][1]) if mine else tail
+        lines = [x for x in (t or "").strip().splitlines() if x.strip()]
+        if lines:
+            return lines[-1]
+    return "no output"
+
+
+# ---- new ----
+def op_new():
+    literal = from_ws(text("path"))
+    desc = args.get("description")
+    if desc is not None and (not isinstance(desc, str) or not desc.strip()):
+        die("ArgumentsBad", "description must be a non-empty string")
+    if os.path.lexists(literal):
+        die("PathExists", "path %r already exists (pick a new folder)" % args["path"])
+    dest = os.path.realpath(literal)
+    parent = os.path.dirname(dest)
+    try:
+        os.makedirs(parent, exist_ok=True)
+    except OSError as e:
+        die("MkdirFailed", "cannot create %s: %s" % (parent, e))
+    tmp = os.path.join(parent, ".%s.new-%d" % (os.path.basename(dest), os.getpid()))
+    try:
+        try:
+            shutil.copytree(SKELETON, tmp, ignore=shutil.ignore_patterns("__pycache__"))
+            if desc is not None:
+                script = os.path.join(tmp, "tool.py")
+                with open(script, encoding="utf-8") as f:
+                    src = f.read().splitlines(keepends=True)
+                src = ["DESCRIPTION = %r\n" % desc.strip() if x.startswith("DESCRIPTION = ") else x for x in src]
+                with open(script, "w", encoding="utf-8") as f:
+                    f.write("".join(src))
+            os.rename(tmp, dest)
+        except OSError as e:
+            die("WriteFailed", "cannot copy the skeleton to %s: %s" % (dest, e))
+    except BaseException:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
+    code, out, err = run([sys.executable, "tool.py", "--write-defs"], dest)
+    if code != 0:
+        die("WriteFailed", "copied, but tool.py --write-defs failed: %s" % last_line(err, out))
+    shown = args["path"]
+    print("made tool folder %s (copied from the tool-python skeleton). Next: change %s/tool.py (read %s/README.md), "
+          "then tools_def {\"op\": \"check\", \"path\": %s}" % (dest, shown, shown, json.dumps(shown)))
+
+
+# ---- check ----
+def read_location(path, ptr):
+    """位置 → (物件或 None, 基準資料夾)。資料夾＝None；JSON 檔／指標＝那個物件（指標經 aos-json get，不跟 $ref）。"""
+    if ptr is None and os.path.isdir(path):
+        return None, path
+    base = os.path.dirname(path)
+    if not os.path.isfile(path):
+        die("PathMissing", "%s does not exist (give a tool folder, a JSON file or FILE.json#/POINTER)" % args["path"])
+    if ptr is None:
+        try:
+            with open(path, encoding="utf-8") as f:
+                obj = json.load(f)
+        except (OSError, ValueError, UnicodeError) as e:
+            die("FileBad", "cannot read %s as JSON: %s" % (args["path"], e))
+    else:
+        code, out, err = run(["aos-json", "get", "%s#%s" % (path, ptr)], base)
+        if code != 0:
+            die("PointerMissing" if code == 10 else "FileBad", "%s: %s" % (args["path"], last_line(err, out)))
+        obj = json.loads(out)
+    if not isinstance(obj, dict):
+        die("FileBad", "%s is not a JSON object (a tool there is an object with _entry, _tooldef, _metainfo keys)" % args["path"])
+    return obj, base
+
+
+def script_of(argv, base):
+    """argv 裡第一個 .py → 絕對路徑（相對從基準資料夾算＝aos-exec 跑它時的 cwd）。"""
+    for a in argv:
+        if isinstance(a, str) and a.endswith(".py"):
+            return a if os.path.isabs(a) else os.path.join(base, a)
+    return None
+
+
+def check_entry(obj, base):
+    """回 (能跑嗎, 腳本路徑或 None)。"""
+    if obj is None:
+        e1, e2 = os.path.join(base, "_entry"), os.path.join(base, "_entry.json")
+        if os.path.isdir(e1):
+            line("ok", "entry: _entry is a folder (aos-exec walks into it; not checked further)")
+            return True, None
+        if os.path.isfile(e1):
+            with open(e1, "rb") as f:
+                head = f.read(256)
+            if head.startswith(b"#!") and os.access(e1, os.X_OK):
+                line("ok", "entry: _entry is a program (%s)" % head.split(b"\n", 1)[0].decode("utf-8", "replace"))
+                return True, (e1 if b"python" in head.split(b"\n", 1)[0] else None)
+            if head.startswith(b"#!"):
+                line("bad", "entry: _entry starts with #! but is not executable (fix: use _entry.json + tool.py like the skeleton)")
+                return False, None
+            where, f = "_entry", e1
+        elif os.path.isfile(e2):
+            where, f = "_entry.json", e2
+        else:
+            line("bad", "entry: no _entry or _entry.json in the folder (fix: start from tools_def op new)")
+            return False, None
+        try:
+            with open(f, encoding="utf-8") as fh:
+                value = json.load(fh)
+        except (OSError, ValueError, UnicodeError) as e:
+            line("bad", "entry: %s is not JSON: %s" % (where, e))
+            return False, None
+    else:
+        if "_entry" in obj:
+            where, value = "_entry key", obj["_entry"]
+        elif "argv" in obj:
+            where, value = "the object itself (it has argv)", obj
+        else:
+            line("bad", "entry: no _entry key (fix: add \"_entry\": [\"python3\", \"tool.py\"] with tool.py next to the JSON file)")
+            return False, None
+    argv = value.get("argv") if isinstance(value, dict) else value
+    if isinstance(value, str):
+        line("ok", "entry: %s points to %s (not followed)" % (where, value))
+        return True, None
+    if isinstance(value, dict) and "argv" not in value:
+        line("ok", "entry: %s is an object without argv (aos-exec walks into it; not checked further)" % where)
+        return True, None
+    if not isinstance(argv, list) or not argv:
+        line("bad", "entry: %s must be a non-empty argv list like [\"python3\", \"tool.py\"]" % where)
+        return False, None
+    script = script_of(argv, base)
+    if script is None:
+        line("ok", "entry: %s runs %s" % (where, json.dumps(argv)))
+        return True, None
+    if not os.path.isfile(script):
+        line("bad", "entry: %s runs %s, but %s is missing" % (where, json.dumps(argv), script))
+        return False, None
+    try:
+        with open(script, encoding="utf-8") as fh:
+            compile(fh.read(), script, "exec")
+    except SyntaxError as e:
+        line("bad", "entry: %s line %s: %s (fix the Python syntax)" % (os.path.basename(script), e.lineno, e.msg))
+        return False, None
+    except (OSError, UnicodeError, ValueError) as e:
+        line("bad", "entry: cannot read %s: %s" % (script, e))
+        return False, None
+    line("ok", "entry: %s runs %s (Python compiles)" % (where, json.dumps(argv)))
+    return True, script
+
+
+def regenerate(script, location, base):
+    try:
+        with open(script, encoding="utf-8") as fh:
+            uses = "tool_spec" in fh.read()
+    except (OSError, UnicodeError):
+        uses = False
+    if not uses:
+        return True
+    code, out, err = run([sys.executable, script, "--write-defs", location], base)
+    if code != 0:
+        line("bad", "made: %s --write-defs failed: %s" % (os.path.basename(script), last_line(err, out) if code is not None else err))
+        return False
+    line("made", "_tooldef and _metainfo from %s" % os.path.basename(script))
+    return True
+
+
+def load_part(obj, base, key):
+    """資料夾的 key.json 或物件的 key；回 (在不在, 值)；讀不了＝bad 一行、(True, None)。"""
+    if obj is not None:
+        return (key in obj), obj.get(key)
+    f = os.path.join(base, key + ".json")
+    if not os.path.isfile(f):
+        return False, None
+    try:
+        with open(f, encoding="utf-8") as fh:
+            return True, json.load(fh)
+    except (OSError, ValueError, UnicodeError) as e:
+        line("bad", "%s: cannot read %s.json: %s" % (key[1:], key, e))
+        return True, None
+
+
+def aos_tools_check(target):
+    """資料夾或 JSON 檔：在暫存資料夾開一份登記檔，aos-tools add＋get（包現成的檢查）；回 bad 句子或 None。"""
+    with tempfile.TemporaryDirectory(prefix="tools-def-") as tmp:
+        reg = os.path.join(tmp, "tools.json")
+        for argv in (["aos-tools", "--file", reg, "add", "--name", "probe", target], ["aos-tools", "--file", reg, "get", "probe"]):
+            code, out, err = run(argv, tmp)
+            if code != 0:
+                return "aos-tools %s: %s" % (argv[3], last_line(err, out) if code is not None else err)
+    return None
+
+
+def op_check():
+    location = text("path")
+    try:
+        path, ptr = tool_spec.split_location(location)
+    except tool_spec.SpecBad as e:
+        die("ArgumentsBad", str(e))
+    path = from_ws(path)
+    full = path + ("#" + ptr if ptr is not None else "")
+    sample = args.get("sample")
+    obj, base = read_location(path, ptr)
+    runnable, script = check_entry(obj, base)
+    made = True
+    if runnable and script:
+        made = regenerate(script, full, base)
+        if made and obj is not None:
+            obj, base = read_location(path, ptr)          # 重產進物件之後重讀
+    has_mi, mi = load_part(obj, base, "_metainfo")
+    if has_mi and mi is not None:
+        probs = tool_spec.metainfo_problems(mi)
+        line("bad" if probs else "ok", "metainfo: " + ("; ".join(probs) if probs else "valid (%s)" % mi.get("summary", "no summary")))
+        has_mi = not probs
+    elif not has_mi:
+        line("note", "metainfo: none (optional; a tool_spec script makes it)")
+    has_td, td = load_part(obj, base, "_tooldef")
+    if has_td and td is not None:
+        probs = tool_spec.tooldef_problems(td)
+        if not probs and ptr is None:
+            bad = aos_tools_check(path)
+            probs = [bad] if bad else []
+        line("bad" if probs else "ok", "tooldef: " + ("; ".join(probs) if probs else "valid, parameters: %s" % (", ".join(td["parameters"].get("properties", {})) or "none")))
+        has_td = not probs
+    elif not has_td:
+        line("bad", "tooldef: none (fix: describe the tool in a tool_spec script, or write %s)" % ("_tooldef.json" if obj is None else "a _tooldef key"))
+    if sample is not None:
+        if not runnable or not made:
+            line("skip", "try: not tried (fix the lines marked bad first)")
+        else:
+            limit = min(int(mi.get("timeout_ms", RUN_S * 1000)) // 1000 + 1, 120) if isinstance(mi, dict) and isinstance(mi.get("timeout_ms"), int) else RUN_S
+            code, out, err = run(["aos-exec", "--ws", tool_io.workspace(), full], tool_io.workspace(), json.dumps(sample), limit)
+            shown = " | ".join(out.strip().splitlines()[:3])[:300] if out.strip() else last_line(err)
+            line("ok" if code == 0 else "bad", "try: %s -> %s %s" % (json.dumps(sample, ensure_ascii=False), "exit %s:" % code if code is not None else "", shown if code is not None else err))
+    missing = [n for n, ok in (("entry", runnable), ("_metainfo", has_mi), ("_tooldef", has_td)) if not ok]
+    n = 3 - len(missing)
+    bad = sum(1 for r in report if r.startswith("bad"))
+    if bad:
+        what = "fix the lines marked bad, then check again"
+    elif runnable and has_td and ptr is not None:
+        what = "a tool (self_tools add cannot take FILE#/POINTER yet)"
+    elif runnable and has_td:
+        what = "a tool: add it with self_tools {\"op\": \"add\", \"path\": %s}" % json.dumps(location)
+    else:
+        what = "a runnable function" if runnable else "not runnable yet"
+    line("stage", "%d of 3 (entry, _metainfo, _tooldef)%s - %s" % (n, "; missing: " + ", ".join(missing) if missing else "", what))
+    out = "\n".join(report) + "\n"
+    if bad:
+        die("ToolBad", "%d problem(s) above; fix the lines marked bad and check again" % bad, before=out)
+    sys.stdout.write(out)
+
+
+signal.signal(signal.SIGINT, lambda s, f: sys.exit(130))
+args = tool_io.arguments()
+op = args.get("op")
+if op is None:
+    die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
+if op not in OPS:
+    die("OpUnknown", "op must be one of %s (got %r)" % (", ".join(OPS), op))
+extra = sorted(k for k in args if k != "op" and k not in OPS[op])
+if extra:
+    die("ArgumentsBad", "op %s does not take %s (it takes %s)" % (op, ", ".join(extra), ", ".join(OPS[op])))
+op_new() if op == "new" else op_check()

@@ -36,16 +36,16 @@
 | [`mailbox_read/`](../../../../../proto8/lib/agent/mailbox_read/) | aos-mailbox read 的包裝，目標＝叫我的那隻自己：拿最舊的一封（all＝全部）、印出來，預設讀完就刪（keep＝留在 mailbox/archive/）。 |
 | [`mailbox_send/`](../../../../../proto8/lib/agent/mailbox_send/) | aos-mailbox send 的包裝，寄件人＝叫我的那隻自己：照 inbox 協議寄一封給 agent（to 名字＋daemon）或信箱（box 路徑）。 |
 | [`mailbox_send/tests/test_mailbox_tools.py`](../../../../../proto8/lib/agent/mailbox_send/tests/test_mailbox_tools.py) | Test mailbox_send / mailbox_peek / mailbox_read wrap aos-mailbox for the calling agent (fake aos-agent ctl who, real aos-mailbox and aos-post). |
-| [`memory/`](../../../../../proto8/lib/agent/memory/) | 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）：read 一個位置、ls 列枝幹的表、find 依關鍵字／標籤找路徑。 |
-| [`memory/tests/test_base_directive.py`](../../../../../proto8/lib/agent/memory/tests/test_base_directive.py) | 驗 _memory.json 的 base：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次用到才解、不寫回，解不開時錯誤行指名檔與欄。 |
-| [`memory/tests/test_memory.py`](../../../../../proto8/lib/agent/memory/tests/test_memory.py) | memory（純 JSON 樹）：read／ls／find 在各種位置上的輸出、表與 not in index、$ref／$env、迴圈、錯誤代號。 |
 | [`memory_export/`](../../../../../proto8/lib/agent/memory_export/) | 把記憶庫（資料夾＋.json 的 JSON 樹）或其中一棵子樹整棵印成一份 Markdown，給人看；唯讀。 |
 | [`memory_export/tests/test_export.py`](../../../../../proto8/lib/agent/memory_export/tests/test_export.py) | memory_export（純 JSON 樹）：node 行、簡介、字串原樣、其他 JSON 包 ```json、表的順序與 not in index、防繞圈、截斷、錯誤。 |
-| [`memory_fs.py`](../../../../../proto8/lib/agent/memory_fs.py) | 記憶庫（純 JSON 樹）共用：找根、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 $env 格的認法、自己的簡介、列枝幹、find 逛樹的迴圈防護。 |
+| [`memory_fs.py`](../../../../../proto8/lib/agent/memory_fs.py) | 記憶庫（純 JSON 樹）共用：找根（--root 旗標＞_memory.json＞AOS_MEMORY）、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 $env 格的認法、自己的簡介、列枝幹、find 逛樹的迴圈防護。 |
+| [`memory_read/`](../../../../../proto8/lib/agent/memory_read/) | 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）：read 一個位置、ls 列枝幹的表、find 依關鍵字／標籤找路徑。 |
+| [`memory_read/tests/test_base_directive.py`](../../../../../proto8/lib/agent/memory_read/tests/test_base_directive.py) | 驗 _memory.json 的 base：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次用到才解、不寫回，解不開時錯誤行指名檔與欄。 |
+| [`memory_read/tests/test_memory.py`](../../../../../proto8/lib/agent/memory_read/tests/test_memory.py) | memory_read（純 JSON 樹）：read／ls／find 在各種位置上的輸出、表與 not in index、$ref／$env、迴圈、錯誤代號。 |
 | [`memory_sync/`](../../../../../proto8/lib/agent/memory_sync/) | Synchronize an optional Git knowledge base with origin. |
 | [`memory_sync/tests/test_sync.py`](../../../../../proto8/lib/agent/memory_sync/tests/test_sync.py) | Exercise memory_sync against temporary local Git repositories and tool errors. |
 | [`memory_write/`](../../../../../proto8/lib/agent/memory_write/) | 改記憶庫：add／set／rm 一次寫好內容與它在表（_index.json 或 _index key）裡的那格；寫到哪都行，看檔案權限。 |
-| [`memory_write/tests/test_writing.py`](../../../../../proto8/lib/agent/memory_write/tests/test_writing.py) | memory_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、寫到庫外也行、自己的簡介當普通路徑寫、各錯誤代號；寫完用 memory 讀回來對。 |
+| [`memory_write/tests/test_writing.py`](../../../../../proto8/lib/agent/memory_write/tests/test_writing.py) | memory_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、寫到庫外也行、自己的簡介當普通路徑寫、各錯誤代號；寫完用 memory_read 讀回來對。 |
 | [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | memory_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫到哪都行，能不能成看檔案權限。 |
 | [`self_ctl/`](../../../../../proto8/lib/agent/self_ctl/) | aos-agent ctl 的包裝，目標改成叫我的那隻自己；只給對自己有意義的四個：stop、pause、sleep、rm |
 | [`self_ctl/tests/test_self_ctl.py`](../../../../../proto8/lib/agent/self_ctl/tests/test_self_ctl.py) | Test self_ctl builds aos-agent ctl stop / pause / sleep / rm --no-wait for the agent that calls it, with a fake aos-agent. |
@@ -62,3 +62,5 @@
 | [`tests/test_cli_tools_directive.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_directive.py) | 驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。 |
 | [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定或工具設定預設定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
 | [`thought/tests/test_observed_children.py`](../../../../../proto8/lib/agent/thought/tests/test_observed_children.py) | Verify child account preservation and thought cleanup ordering. |
+| [`tools_def/`](../../../../../proto8/lib/agent/tools_def/) | 工具定義的創造：new＝把 Python 骨架（templates/tool-python）複製成新工具夾，check＝檢查一個工具位置（資料夾、JSON 檔或 檔#/指標）合不合格、在哪一階段 |
+| [`tools_def/tests/test_tools_def.py`](../../../../../proto8/lib/agent/tools_def/tests/test_tools_def.py) | Test tools_def new (copy the skeleton, description, PathExists, outside the workspace) and check (folder, JSON file, FILE#/POINTER, bad lines, sample… |

@@ -13,7 +13,7 @@
 | [`agent-fsm/test_cells.py`](../../../../../proto8/templates/tests/agent-fsm/test_cells.py) | Verify task context, tool limits, and best-effort observations with local fake commands. |
 | [`agent-fsm/test_cooldown.py`](../../../../../proto8/templates/tests/agent-fsm/test_cooldown.py) | Verify the wait cell's cooldown after outside failures (two-machines 06) with a fake aos-llm on PATH. |
 | [`agent-fsm/test_hooks.py`](../../../../../proto8/templates/tests/agent-fsm/test_hooks.py) | Test the hooks of agent-fsm (lib/agent/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added. |
-| [`agent-fsm/test_integration.py`](../../../../../proto8/templates/tests/agent-fsm/test_integration.py) | Verify agent cells through the real local kernel, llm_fake endpoint, and wall_clock tool. |
+| [`agent-fsm/test_integration.py`](../../../../../proto8/templates/tests/agent-fsm/test_integration.py) | Verify agent cells through the real local kernel, llm_fake endpoint, and peek_now_time tool. |
 | [`agent-fsm/test_own_tools.py`](../../../../../proto8/templates/tests/agent-fsm/test_own_tools.py) | Test that brain and act use the agent's own tools registry in its stack ("$override" of the definition's; 11-10 aos-tools-cli step 4), and fall back … |
 | [`agent-fsm/test_selfheal.py`](../../../../../proto8/templates/tests/agent-fsm/test_selfheal.py) | Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools. |
 | [`judge-llm/endpoint.py`](../../../../../proto8/templates/tests/judge-llm/endpoint.py) | Return deterministic semantic-comparison replies with nonzero fake token usage. |
@@ -22,3 +22,13 @@
 | [`reviewer/test_reviewer.py`](../../../../../proto8/templates/tests/reviewer/test_reviewer.py) | Verify real reviewer, review scripts and shared FSM cells through local fake endpoints. |
 | [`test_daily.py`](../../../../../proto8/templates/tests/test_daily.py) | Acceptance (/tmp, fake brain, fake claude): the user's daily routine across two machines - git clone/pull, one aos-exec line, work, aos-daemon-ctl sh… |
 | [`test_paths_move.py`](../../../../../proto8/templates/tests/test_paths_move.py) | Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm, copied with cp -r) and an llm kernel project move by git to anothe… |
+| [`tool-python/test_skeleton.py`](../../../../../proto8/templates/tests/tool-python/test_skeleton.py) | Test the tool-python skeleton: its generated _tooldef.json/_metainfo.json match tool.py, and a copy outside the repo runs with only AOS_HOME or with … |
+
+## `proto8/templates/tool-python/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`_entry.json`](../../../../../proto8/templates/tool-python/_entry.json) | Entry of the tool-python skeleton: aos-exec runs tool.py in this folder with python3 (arguments come on stdin). |
+| [`_metainfo.json`](../../../../../proto8/templates/tool-python/_metainfo.json) | Add two numbers and return the sum |
+| [`_tooldef.json`](../../../../../proto8/templates/tool-python/_tooldef.json) | Add two numbers and return the sum. Example: {"a": 2, "b": 3} -> 5 |
+| [`tool.py`](../../../../../proto8/templates/tool-python/tool.py) | 最小、合格、能跑的工具：把兩個數相加。 |

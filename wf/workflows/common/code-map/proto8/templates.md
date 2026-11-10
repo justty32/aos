@@ -30,7 +30,7 @@
 | [`llm_settings.py`](../../../../../proto8/templates/agent-fsm/llm_settings.py) | agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。 |
 | [`loop.json`](../../../../../proto8/templates/agent-fsm/loop.json) | Schedule the agent FSM and expose public control, stable state, and state flux files. |
 | [`system.txt`](../../../../../proto8/templates/agent-fsm/system.txt) | （檔頭沒有一句話） |
-| [`tools.json`](../../../../../proto8/templates/agent-fsm/tools.json) | 設定（鍵：tools） |
+| [`tools.json`](../../../../../proto8/templates/agent-fsm/tools.json) | 設定（鍵：$override、tools） |
 | [`wait.py`](../../../../../proto8/templates/agent-fsm/wait.py) | wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。 |
 
 ## `proto8/templates/daemon-root/`
@@ -53,7 +53,7 @@
 | [`loop.json`](../../../../../proto8/templates/eca-claude/loop.json) | Schedule the Claude agent turn and expose public control, stable state, and state flux files. |
 | [`screen/_entry`](../../../../../proto8/templates/eca-claude/screen/_entry) | 入口：`aos-eca-screen --eca ..` |
 | [`screen/interfaces.json`](../../../../../proto8/templates/eca-claude/screen/interfaces.json) | 設定（鍵：aos-agent/screen） |
-| [`tools.json`](../../../../../proto8/templates/eca-claude/tools.json) | 設定（鍵：tools） |
+| [`tools.json`](../../../../../proto8/templates/eca-claude/tools.json) | 設定（鍵：$override、tools） |
 
 ## `proto8/templates/judge-llm/`
 

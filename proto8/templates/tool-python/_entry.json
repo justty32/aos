@@ -1,0 +1,2 @@
+{"description": "Entry of the tool-python skeleton: aos-exec runs tool.py in this folder with python3 (arguments come on stdin).",
+ "argv": ["python3", "tool.py"]}

@@ -1,3 +1,4 @@
-{"description": "Pack def: agent definitions - agent_def.",
+{"description": "Pack def: definitions - agent_def (agent definitions), tools_def (new tools from the Python skeleton, and checking a tool).",
  "tools": {
-           "agent_def": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agent_def"}}}}
+           "agent_def": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agent_def"}},
+           "tools_def": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/tools_def"}}}}

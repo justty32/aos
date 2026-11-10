@@ -26,7 +26,7 @@
 | [`tests/fake_claude`](../../../../../proto8/cmd/aos-eca/tests/fake_claude) | stand-in for the claude CLI in aos-eca tests: -p with --session-id/--resume, keeps conversations as files, never calls a model |
 | [`tests/fake_codex`](../../../../../proto8/cmd/aos-eca/tests/fake_codex) | stand-in for the codex CLI in aos-eca tests: exec / exec resume ID with --json and -o, keeps threads as files, never calls a model |
 | [`tests/test_history_edit.py`](../../../../../proto8/cmd/aos-eca/tests/test_history_edit.py) | Test aos-eca-turn's shrunk history edit (11-10 self-family): history.jsonl changed between turns or during one = the next turn starts a new conversat… |
-| [`tests/test_hooks.py`](../../../../../proto8/cmd/aos-eca/tests/test_hooks.py) | Test the hooks of aos-eca-turn (eca's reduced set: queue_before, queue_after, brain_failed, tool_added) with a fake claude CLI. |
+| [`tests/test_hooks.py`](../../../../../proto8/cmd/aos-eca/tests/test_hooks.py) | Test the hooks of aos-eca-turn (eca's reduced set: before_queue, after_queue, brain_failed, tool_added) with a fake claude CLI. |
 | [`tests/test_switch.py`](../../../../../proto8/cmd/aos-eca/tests/test_switch.py) | Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs. |
 
 ## `proto8/cmd/aos-feedback/`
@@ -58,6 +58,6 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-mcp`](../../../../../proto8/cmd/aos-mcp/bin/aos-mcp) | 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。 |
-| [`tests/test_hooks.py`](../../../../../proto8/cmd/aos-mcp/tests/test_hooks.py) | Verify aos-mcp's --hooks DEF: tool_before changes / blocks a call, tool_after changes the result, no --hooks = no hooks, a failing hook = isError. |
+| [`tests/test_hooks.py`](../../../../../proto8/cmd/aos-mcp/tests/test_hooks.py) | Verify aos-mcp's --hooks DEF: before_tool changes / blocks a call, after_tool changes the result, no --hooks = no hooks, a failing hook = isError. |
 | [`tests/test_own_registry.py`](../../../../../proto8/cmd/aos-mcp/tests/test_own_registry.py) | Verify aos-mcp serves an agent's own registry ("$override" of the definition's) and the definition's, and has no --overlay flag (11-10 aos-tools-cli … |
 | [`tests/test_timeout.py`](../../../../../proto8/cmd/aos-mcp/tests/test_timeout.py) | Verify MCP reads shared timeout metadata and keeps its CLI fallback. |

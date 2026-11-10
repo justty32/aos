@@ -40,7 +40,7 @@
 |---|---|
 | [`change.json`](../../../../../proto8/lib/packs/change.json) | Pack 2 (change): tools that create or change files - write, edit, copy, move, mkdir, json_write. |
 | [`children.json`](../../../../../proto8/lib/packs/children.json) | Pack children: other agents - agents_children (ones you start yourself), agents_ctl (any agent on the daemon). |
-| [`def.json`](../../../../../proto8/lib/packs/def.json) | Pack def: agent definitions - agent_def. |
+| [`def.json`](../../../../../proto8/lib/packs/def.json) | Pack def: definitions - agent_def (agent definitions), tools_def (new tools from the Python skeleton, and checking a tool). |
 | [`delete.json`](../../../../../proto8/lib/packs/delete.json) | Pack 3 (delete): tools that delete - trash (into the workspace .trash, can be moved back) and remove (for real). |
 | [`events.json`](../../../../../proto8/lib/packs/events.json) | Pack events: things that wake you later - clock_register (letters from the clock), self_hook (hooks on your own events). |
 | [`gadgets.json`](../../../../../proto8/lib/packs/gadgets.json) | Pack gadgets: small tools that change nothing, for a quick look - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic exp… |
@@ -58,3 +58,4 @@
 | [`test_metainfo.py`](../../../../../proto8/lib/tests/test_metainfo.py) | Verify optional metadata reading, timeout declarations, and safe cost formulas. |
 | [`test_observed.py`](../../../../../proto8/lib/tests/test_observed.py) | Verify shared observation initialization, strict failures and measured call cells. |
 | [`test_tool_io_keys.py`](../../../../../proto8/lib/tests/test_tool_io_keys.py) | 不認得的 stdin 鍵＝ArgumentsBad（使用者 11-10 晚「那就報錯」）；additionalProperties 與自由物件照舊收。 |
+| [`test_tool_spec.py`](../../../../../proto8/lib/tests/test_tool_spec.py) | Test lib/tool_spec.py: declaration to _tooldef/_metainfo, SpecBad, write_defs into a folder and a JSON pointer, and main() at run time. |

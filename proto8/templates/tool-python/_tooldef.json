@@ -1,0 +1,24 @@
+{
+  "description": "Add two numbers and return the sum. Example: {\"a\": 2, \"b\": 3} -> 5",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "a": {
+        "type": "number",
+        "description": "the first number"
+      },
+      "b": {
+        "type": "number",
+        "description": "the second number"
+      }
+    },
+    "required": [
+      "a",
+      "b"
+    ]
+  },
+  "errors": [
+    "ArgumentsBad",
+    "RunFailed"
+  ]
+}
