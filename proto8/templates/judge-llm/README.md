@@ -35,7 +35,7 @@ printf '%s' '{"expect":"/abs/expect","got":"/abs/got","input":"/abs/case"}' | ao
 <summary>測試</summary>
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s proto8/templates/judge-llm/tests -v
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s proto8/templates/tests/judge-llm -v
 ```
 
 測試只起暫存 kernel daemon，使用本夾的測試端點與既有 `llm_fake`。測試端點依 expect／got 是否相同給高低分，回非零假 usage；兩題 measure 驗證一題過、一題不過及獨立成本。另驗無 kernel、非 JSON 回覆、分數夾限、壞 diff、缺 score、檔案排序與截斷。不呼叫真 LLM。

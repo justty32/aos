@@ -11,7 +11,7 @@ flowchart LR
 審視者重用相鄰 `agent-fsm/` 的格；算術、試跑、換上與盯梢都交給 [`review_round`](../../lib/aos/review_round/README.md)。agent 只在 `prescribe` 時用 `json_write` 寫一到三條處方。
 
 ```sh
-python3 -m unittest discover -s proto8/templates/reviewer/tests -p 'test_*.py'
+python3 -m unittest discover -s proto8/templates/tests/reviewer -p 'test_*.py'
 ```
 
 <details><summary>配置、呼叫與限制</summary>

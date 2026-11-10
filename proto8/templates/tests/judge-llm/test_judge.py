@@ -10,7 +10,7 @@ import tempfile
 import time
 import unittest
 
-HERE = Path(__file__).resolve().parents[1]
+HERE = Path(__file__).resolve().parents[2] / 'judge-llm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
 PROTO = HERE.parents[1]
 loader = importlib.machinery.SourceFileLoader('judge_entry', str(HERE / '_entry'))
 spec = importlib.util.spec_from_loader(loader.name, loader)
@@ -98,7 +98,7 @@ class Judge(unittest.TestCase):
             judge = root / 'judge'
             shutil.copytree(HERE, judge, ignore=shutil.ignore_patterns('tests', '__pycache__'))
             config = root / 'kernel.json'
-            write(config, {'exec': str(HERE / 'tests/endpoint.py'), 'endpoint': 'judge',
+            write(config, {'exec': str(Path(__file__).resolve().parent / 'endpoint.py'), 'endpoint': 'judge',
                 'endpoints': {'judge': {}, 'bad': {'exec': str(PROTO / 'lib/base/llm_fake'),
                     'script': [{'content': 'not JSON'}]}}})
             daemon_config = root / 'daemon.json'

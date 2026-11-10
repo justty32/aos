@@ -28,5 +28,5 @@
 | [lib-4](lib-4.md) | `proto8/lib/` | `base/`、`packs/`、`tests/` |  |
 | [py](py.md) | `proto8/py/` | 頂層、`daemon_ctl/` | 13／13 |
 | [root](root.md) | `proto8/` 頂層單檔 | 頂層 | 1／1 |
-| [templates](templates.md) | `proto8/templates/` | 頂層、`agent-fsm/`、`daemon-root/`、`eca-claude/`、`judge-llm/` | 53／58 |
-| [templates-2](templates-2.md) | `proto8/templates/` | `reviewer/`、`tests/` |  |
+| [templates](templates.md) | `proto8/templates/` | 頂層、`agent-fsm/`、`daemon-root/`、`eca-claude/`、`judge-llm/`、`reviewer/` | 53／58 |
+| [templates-2](templates-2.md) | `proto8/templates/` | `tests/` |  |

@@ -5,24 +5,20 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
-## `proto8/templates/reviewer/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`body.json`](../../../../../proto8/templates/reviewer/body.json) | Run the reviewer loop with shared agent FSM cells. |
-| [`fsm.json`](../../../../../proto8/templates/reviewer/fsm.json) | Reuse agent-fsm cells while reading configuration from the reviewer definition. |
-| [`interfaces.json`](../../../../../proto8/templates/reviewer/interfaces.json) | Declare reviewer agent configuration and its public observation ledger. |
-| [`ladder.json`](../../../../../proto8/templates/reviewer/ladder.json) | Configure model downgrade trials, quality gates, and post-promotion watching. |
-| [`llm.json`](../../../../../proto8/templates/reviewer/llm.json) | Use the caller's default kernel endpoint unless model names one. |
-| [`loop.json`](../../../../../proto8/templates/reviewer/loop.json) | Schedule the reviewer FSM and expose public control and state files. |
-| [`system.txt`](../../../../../proto8/templates/reviewer/system.txt) | （檔頭沒有一句話） |
-| [`tests/endpoint.py`](../../../../../proto8/templates/reviewer/tests/endpoint.py) | Return fake reviewer tool calls using the actual previous review_round result. |
-| [`tests/test_reviewer.py`](../../../../../proto8/templates/reviewer/tests/test_reviewer.py) | Verify real reviewer, review scripts and shared FSM cells through local fake endpoints. |
-| [`tools.json`](../../../../../proto8/templates/reviewer/tools.json) | Offer review scripts and workspace readers without arbitrary execution tools. |
-
 ## `proto8/templates/tests/`
 
 | 檔 | 負責什麼 |
 |---|---|
+| [`agent-fsm/test_batch3.py`](../../../../../proto8/templates/tests/agent-fsm/test_batch3.py) | Verify daemon-managed fake-brain parent and child observations through public interfaces. |
+| [`agent-fsm/test_cells.py`](../../../../../proto8/templates/tests/agent-fsm/test_cells.py) | Verify task context, tool limits, and best-effort observations with local fake commands. |
+| [`agent-fsm/test_cooldown.py`](../../../../../proto8/templates/tests/agent-fsm/test_cooldown.py) | Verify the wait cell's cooldown after outside failures (two-machines 06) with a fake aos-llm on PATH. |
+| [`agent-fsm/test_hooks.py`](../../../../../proto8/templates/tests/agent-fsm/test_hooks.py) | Test the hooks of agent-fsm (lib/agent/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added. |
+| [`agent-fsm/test_integration.py`](../../../../../proto8/templates/tests/agent-fsm/test_integration.py) | Verify agent cells through the real local kernel, llm_fake endpoint, and wall_clock tool. |
+| [`agent-fsm/test_own_tools.py`](../../../../../proto8/templates/tests/agent-fsm/test_own_tools.py) | Test that brain and act use the agent's own tools registry in its stack ("$override" of the definition's; 11-10 aos-tools-cli step 4), and fall back … |
+| [`agent-fsm/test_selfheal.py`](../../../../../proto8/templates/tests/agent-fsm/test_selfheal.py) | Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools. |
+| [`judge-llm/endpoint.py`](../../../../../proto8/templates/tests/judge-llm/endpoint.py) | Return deterministic semantic-comparison replies with nonzero fake token usage. |
+| [`judge-llm/test_judge.py`](../../../../../proto8/templates/tests/judge-llm/test_judge.py) | Verify judge reply normalization, truncation, kernel failures, and measured check costs. |
+| [`reviewer/endpoint.py`](../../../../../proto8/templates/tests/reviewer/endpoint.py) | Return fake reviewer tool calls using the actual previous review_round result. |
+| [`reviewer/test_reviewer.py`](../../../../../proto8/templates/tests/reviewer/test_reviewer.py) | Verify real reviewer, review scripts and shared FSM cells through local fake endpoints. |
 | [`test_daily.py`](../../../../../proto8/templates/tests/test_daily.py) | Acceptance (/tmp, fake brain, fake claude): the user's daily routine across two machines - git clone/pull, one aos-exec line, work, aos-daemon-ctl sh… |
 | [`test_paths_move.py`](../../../../../proto8/templates/tests/test_paths_move.py) | Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm, copied with cp -r) and an llm kernel project move by git to anothe… |

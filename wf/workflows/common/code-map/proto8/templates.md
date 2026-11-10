@@ -23,20 +23,13 @@
 | [`brain.py`](../../../../../proto8/templates/agent-fsm/brain.py) | think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。 |
 | [`children.json`](../../../../../proto8/templates/agent-fsm/children.json) | 設定（鍵：max_children） |
 | [`fsm.json`](../../../../../proto8/templates/agent-fsm/fsm.json) | 入口 `aos-fsm $AOS_CF`；鍵：start、states |
-| [`hooks.json`](../../../../../proto8/templates/agent-fsm/hooks.json) | Hooks of this agent: aos functions run when an event happens (queue_before, queue_after, tool_before, tool_after, brain_failed, tool_added); the stac… |
+| [`hooks.json`](../../../../../proto8/templates/agent-fsm/hooks.json) | Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added); the stac… |
 | [`idle.py`](../../../../../proto8/templates/agent-fsm/idle.py) | idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。 |
 | [`interfaces.json`](../../../../../proto8/templates/agent-fsm/interfaces.json) | 設定（鍵：aos-agent、aos-observed） |
 | [`llm.json`](../../../../../proto8/templates/agent-fsm/llm.json) | （檔頭沒有一句話） |
 | [`llm_settings.py`](../../../../../proto8/templates/agent-fsm/llm_settings.py) | agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。 |
 | [`loop.json`](../../../../../proto8/templates/agent-fsm/loop.json) | Schedule the agent FSM and expose public control, stable state, and state flux files. |
 | [`system.txt`](../../../../../proto8/templates/agent-fsm/system.txt) | （檔頭沒有一句話） |
-| [`tests/test_batch3.py`](../../../../../proto8/templates/agent-fsm/tests/test_batch3.py) | Verify daemon-managed fake-brain parent and child observations through public interfaces. |
-| [`tests/test_cells.py`](../../../../../proto8/templates/agent-fsm/tests/test_cells.py) | Verify task context, tool limits, and best-effort observations with local fake commands. |
-| [`tests/test_cooldown.py`](../../../../../proto8/templates/agent-fsm/tests/test_cooldown.py) | Verify the wait cell's cooldown after outside failures (two-machines 06) with a fake aos-llm on PATH. |
-| [`tests/test_hooks.py`](../../../../../proto8/templates/agent-fsm/tests/test_hooks.py) | Test the hooks of agent-fsm (lib/agent/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added. |
-| [`tests/test_integration.py`](../../../../../proto8/templates/agent-fsm/tests/test_integration.py) | Verify agent cells through the real local kernel, llm_fake endpoint, and wall_clock tool. |
-| [`tests/test_own_tools.py`](../../../../../proto8/templates/agent-fsm/tests/test_own_tools.py) | Test that brain and act use the agent's own tools registry in its stack ("$override" of the definition's; 11-10 aos-tools-cli step 4), and fall back … |
-| [`tests/test_selfheal.py`](../../../../../proto8/templates/agent-fsm/tests/test_selfheal.py) | Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools. |
 | [`tools.json`](../../../../../proto8/templates/agent-fsm/tools.json) | 設定（鍵：tools） |
 | [`wait.py`](../../../../../proto8/templates/agent-fsm/wait.py) | wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。 |
 
@@ -54,7 +47,7 @@
 |---|---|
 | [`children.json`](../../../../../proto8/templates/eca-claude/children.json) | 設定（鍵：max_children） |
 | [`cli.json`](../../../../../proto8/templates/eca-claude/cli.json) | 設定（鍵：kind、flags、print_flags、tools_flags、timeout_ms） |
-| [`hooks.json`](../../../../../proto8/templates/eca-claude/hooks.json) | Hooks of this eca: aos functions run when an event happens. eca has queue_before, queue_after, brain_failed (CliFailed / ReplyMissing) and tool_added… |
+| [`hooks.json`](../../../../../proto8/templates/eca-claude/hooks.json) | Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added… |
 | [`interfaces.json`](../../../../../proto8/templates/eca-claude/interfaces.json) | 設定（鍵：aos-agent） |
 | [`llm.json`](../../../../../proto8/templates/eca-claude/llm.json) | 設定（鍵：model） |
 | [`loop.json`](../../../../../proto8/templates/eca-claude/loop.json) | Schedule the Claude agent turn and expose public control, stable state, and state flux files. |
@@ -68,5 +61,16 @@
 |---|---|
 | [`judge.json`](../../../../../proto8/templates/judge-llm/judge.json) | Configure the comparator endpoint and per-section byte limit |
 | [`prompt.txt`](../../../../../proto8/templates/judge-llm/prompt.txt) | （檔頭沒有一句話） |
-| [`tests/endpoint.py`](../../../../../proto8/templates/judge-llm/tests/endpoint.py) | Return deterministic semantic-comparison replies with nonzero fake token usage. |
-| [`tests/test_judge.py`](../../../../../proto8/templates/judge-llm/tests/test_judge.py) | Verify judge reply normalization, truncation, kernel failures, and measured check costs. |
+
+## `proto8/templates/reviewer/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`body.json`](../../../../../proto8/templates/reviewer/body.json) | Run the reviewer loop with shared agent FSM cells. |
+| [`fsm.json`](../../../../../proto8/templates/reviewer/fsm.json) | Reuse agent-fsm cells while reading configuration from the reviewer definition. |
+| [`interfaces.json`](../../../../../proto8/templates/reviewer/interfaces.json) | Declare reviewer agent configuration and its public observation ledger. |
+| [`ladder.json`](../../../../../proto8/templates/reviewer/ladder.json) | Configure model downgrade trials, quality gates, and post-promotion watching. |
+| [`llm.json`](../../../../../proto8/templates/reviewer/llm.json) | Use the caller's default kernel endpoint unless model names one. |
+| [`loop.json`](../../../../../proto8/templates/reviewer/loop.json) | Schedule the reviewer FSM and expose public control and state files. |
+| [`system.txt`](../../../../../proto8/templates/reviewer/system.txt) | （檔頭沒有一句話） |
+| [`tools.json`](../../../../../proto8/templates/reviewer/tools.json) | Offer review scripts and workspace readers without arbitrary execution tools. |

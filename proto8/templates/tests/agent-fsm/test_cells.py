@@ -8,7 +8,7 @@ import tempfile
 import time
 import unittest
 
-CELLS = Path(__file__).resolve().parents[1]
+CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
 CALL = {'id': 'one', 'type': 'function',
         'function': {'name': 'echo', 'arguments': '{"text":"雪"}'}}
 

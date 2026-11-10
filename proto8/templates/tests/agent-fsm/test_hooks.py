@@ -10,7 +10,7 @@ import time
 import unittest
 from unittest import mock
 
-CELLS = Path(__file__).resolve().parents[1]
+CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
 PROTO = CELLS.parents[1]
 sys.path.insert(0, str(PROTO / "lib"))
 from agent import hooks  # noqa: E402

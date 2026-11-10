@@ -8,7 +8,7 @@ import tempfile
 import time
 import unittest
 
-REVIEWER = Path(__file__).resolve().parents[1]
+REVIEWER = Path(__file__).resolve().parents[2] / 'reviewer'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
 PROTO = REVIEWER.parents[1]
 
 
@@ -79,7 +79,7 @@ class ReviewerIntegration(unittest.TestCase):
                             'why': 'The ladder has no cheaper endpoint.',
                             'how': 'Move deterministic preparation into a script before the model step.'}
             config = root / 'kernel.json'
-            write(config, {'exec': str(REVIEWER / 'tests/endpoint.py'),
+            write(config, {'exec': str(Path(__file__).resolve().parent / 'endpoint.py'),
                            'endpoint': 'reviewer', 'endpoints': {
                                'reviewer': {'role': 'reviewer', 'ws': str(root),
                                             'round_args': round_args, 'prescription': prescription,
