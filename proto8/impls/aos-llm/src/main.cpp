@@ -1,7 +1,7 @@
 // main.cpp：aos-llm 命令列——寄請求信進 LLM kernel 的信箱、收回信的基礎工具（定位同 aos-post；thinking 11-04 think-as-function 02/01 § 5）。
 //
 //     aos-llm send [--priority P] --reply-to BOX < body.json   寄（非同步、不建 sender.flock）；stdout 印信件名稱、退 0
-//     aos-llm recv [--full] BOX 信件名稱                               收：到了印 body.message 一行、0；--full 印完整 body（含 usage、model、letter）；沒到 10
+//     aos-llm recv [--full] [--quiet] BOX 信件名稱                              收：到了印 body.message 一行、0；--full 印完整 body（含 usage、model、letter）；沒到 10
 //     aos-llm ask [--priority P] [--full] < body.json                  同步：寄、等、印 body.message、0；--full 印完整 body（含 usage、model、letter）
 //     aos-llm regret 信件名稱                                 撤回還在 new/ 的信；已被認領＝RegretFailed
 //     aos-llm ls [--json]                                     列 kernel 的包（讀 $AOS_LLM_KERNEL 的 stack 底下 endpoints.json）：一行一包；沒窗＝EndpointsMissing
@@ -47,7 +47,7 @@ more: aos-llm/README.md
 
 static const std::map<std::string, std::string> SUB_USAGE = {
     {"send", "aos-llm send [--priority P] --reply-to BOX < body.json"},
-    {"recv", "aos-llm recv [--full] BOX LETTER"},
+    {"recv", "aos-llm recv [--full] [--quiet] BOX LETTER"},
     {"ask", "aos-llm ask [--priority P] [--full] < body.json"},
     {"regret", "aos-llm regret LETTER"},
     {"ls", "aos-llm ls [--json]"},
@@ -71,11 +71,13 @@ more: aos-llm/README.md
 )"},
     {"recv", R"(aos-llm recv - Receive a reply.
 
-usage: aos-llm recv [--full] BOX LETTER
+usage: aos-llm recv [--full] [--quiet] BOX LETTER
        aos-llm recv --help
 
 flags:
   --full      print the reply body with its request letter name
+  --quiet     do not print the warning about why there is no reply yet
+              (for callers that poll every tick)
   -h, --help   show this help
 
 Print body.message as one JSON line and finish the reply letter.
@@ -195,8 +197,8 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (cmd == "recv") {
-            aos::Cli cli = parse(args, {}, 2, "recv needs BOX and a letter name", "recv", {{"--full", "full"}});
-            return g::recv(cli.rest[0], cli.rest[1], cli.opts.count("full") > 0);
+            aos::Cli cli = parse(args, {}, 2, "recv needs BOX and a letter name", "recv", {{"--full", "full"}, {"--quiet", "quiet"}});
+            return g::recv(cli.rest[0], cli.rest[1], cli.opts.count("full") > 0, cli.opts.count("quiet") > 0);
         }
         if (cmd == "ask") {
             aos::Cli cli = parse(args, {{"--priority", "priority"}}, 0, "ask takes no positional arguments", "ask", {{"--full", "full"}});

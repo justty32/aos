@@ -18,7 +18,7 @@
 
 namespace aos::llm {
 
-int recv(const std::string& box, const std::string& name, bool full = false);
+int recv(const std::string& box, const std::string& name, bool full = false, bool quiet = false);   // quiet＝退 10 時不印原因提醒（11-10 TX3）
 int ask_wait(const Mailbox& mb, const std::string& id, bool full = false);
 
 }  // namespace aos::llm

@@ -61,6 +61,13 @@ class RecvHint(unittest.TestCase):
         self.running()   # 信已不在 kernel、BOX 也沒有：可能是回信已經收過一次，分不出來，不報
         self.assertEqual(self.recv(), (10, ''))
 
+    def test_quiet_flag_suppresses_the_hint(self):
+        (self.kernel / 'requests/new/L1').mkdir()   # kernel 沒跑：不帶 --quiet 會提醒
+        p = subprocess.run([str(BIN), 'recv', '--quiet', str(self.box), 'L1'], env=self.env,
+                           capture_output=True, text=True, timeout=10)
+        self.assertEqual((p.returncode, p.stdout, p.stderr), (10, '', ''))
+        self.assertIn('no llm daemon here', self.recv()[1])
+
     def test_without_kernel_env_stays_quiet(self):
         env = dict(self.env)
         env.pop('AOS_LLM_KERNEL')

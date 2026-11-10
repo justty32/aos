@@ -108,7 +108,7 @@ static std::string unwritable_for(const std::string& owner, const aos::post::Mai
     return "";
 }
 
-int recv(const std::string& box, const std::string& name, bool full) {
+int recv(const std::string& box, const std::string& name, bool full, bool quiet) {
     aos::post::check_name(name);   // 不合 ArgumentsBad
     aos::post::Mailbox rb = aos::post::open(box);   // 不是資料夾＝MailboxMissing
     std::set<std::string> seen;
@@ -119,7 +119,10 @@ int recv(const std::string& box, const std::string& name, bool full) {
     // 11-10（坑-102）：還沒到時，看得出不對勁就多印一行提醒說是哪一種（照舊退 10）：
     //   ① 信還在 kernel 的 new/、cur/，而 kernel 沒在跑；② kernel（它 stack 的 state.json 的主人）照權限位寫不進 BOX 的 tmp/、new/。
     // 「信已不在 kernel、BOX 也沒有」不報：回信已經收過一次（再叫 recv）也長這樣，分不出來。
-    // 沒設 AOS_LLM_KERNEL（或不是資料夾）＝不判斷，照舊安靜退 10。
+    // 沒設 AOS_LLM_KERNEL（或不是資料夾）＝不判斷，照舊安靜退 10。--quiet＝不判斷不印（每拍輪詢的呼叫者；11-10 TX3：kernel 沒跑時每拍一行會灌爆 stderr.txt）。
+    if (quiet) {
+        return 10;
+    }
     try {
         Mailbox mb = kernel();
         bool queued = exists(aos::join(mb.fresh(), name)) || exists(aos::join(mb.cur(), name));
