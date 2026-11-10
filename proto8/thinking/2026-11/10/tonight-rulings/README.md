@@ -69,7 +69,7 @@
 | 1 | `aos-clock` 每 `check_every`（登記表頂層鍵，預設 100）個 cycle 檢查一次，箱子資料夾已不在的格拿掉、各一行 warning；詳見 [clock-letters 02](../clock-letters/02-自我檢查與-d.md) | `173deaf11` |
 | 2 | `aos-clock-register` 收 `-d D`（＝`D/clock`），優先 `-c` > `-d` > `$AOS_CLOCK`，`-c` 和 `-d` 同給報錯；工具 clock_register 多 `daemon`；詳見 [clock-letters 02](../clock-letters/02-自我檢查與-d.md#2--d) | `90a778b5b` |
 | 3 | `agents_ctl` ls 預設＝`ctl ls` 短文字表（NAME STATE WORKSPACE QUEUED REASON），`long`＝`-l`、新鍵 `json`＝`--json`（照「參數一對一」）；`agents_children` ls 預設一行一隻同欄位＋末行 `children N/MAX`，`long`＝舊的 JSON。實量（真 daemon 測試，mom＋kid）：ctl 539→112 字元、children 一隻 305→57。代定：children 排隊中那隻印 `NAME queued - - letter L`；ctl 的 `long`＋`json` 同給照下層（json 為準） | `4f9f8ffa5` |
-| 4 | 畫面那條路（`cli_session.live`，aos-eca-turn 與 claude 工具共用）貼題目前先看畫面：claude 停在信任資料夾選單＝`TrustMissing`、不貼（信留著、不記冷卻），訊息叫人 attach 自己選或照抄 `cd <ws> && claude`；不替人按、不關畫面。認法見下 | 見 git log |
+| 4 | 畫面那條路（`cli_session.live`，aos-eca-turn 與 claude 工具共用）貼題目前先看畫面：claude 停在信任資料夾選單＝`TrustMissing`、不貼（信留著、不記冷卻），訊息叫人 attach 自己選或照抄 `cd <ws> && claude`；不替人按、不關畫面。認法見下 | `f160f5fb4` |
 | 5 | 四題維持現況，不動 | — |
 
 **題 4 細節**
