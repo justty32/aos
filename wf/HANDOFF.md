@@ -22,7 +22,7 @@
    - **two-machines 圖紙**（fable，`2d5d61905`）：之後被使用者大幅改向，見下。
 3. **還在跑：two-machines 施工隊長（opus，ListAgents 找「two-machines 施工隊長」）**。圖紙原是「專用 image repo＋`aos-image freeze/thaw`」，使用者下午連續改向，**以這些原話為準**（都已轉給它）：
    - 「換台還要特別跑東西...，我原本預期他就是cp過去，起daemon她就自動繼續了。頂多就是各種路徑(ws,知識庫)和環境變數準備好就好。」→ 不可有換台必跑的步驟，零件自己認出殘留並自癒。
-   - 指到外面的路徑：「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」「兩台各自設一次...不要限制只設一次」→ 三種寫法都收、每次用到才解、不固化；`.aos-proto8` 錨點 11-10 下午使用者裁定整個拔掉（「怎麼還是有.aos-proto8 ?」「那就拔掉，可以動程式」）：`copy-out --proto8` 只剩 env（預設）／relative／absolute，`--relink`、`aos-tools add --anchor` 已拔；換台不跑任何指令，env 寫法每台設 `AOS_PROTO8`。
+   - 指到外面的路徑：「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」「兩台各自設一次...不要限制只設一次」→ 三種寫法都收、每次用到才解、不固化；`.aos-proto8` 錨點 11-10 下午使用者裁定整個拔掉（「怎麼還是有.aos-proto8 ?」「那就拔掉，可以動程式」）：`copy-out --proto8` 只剩 env（預設）／relative／absolute，`--relink`、`aos-tools add --anchor` 已拔；換台不跑任何指令，env 寫法每台設 `AOS_HOME（11-10 傍晚由 AOS_PROTO8 改名）`。
    - 目標用法：「我在C:/code/mine/something，建立defs/, stacks/，剩下就是something自身的東西。git clone下來之後直接aos-exec --stack stacks/daemon defs」；下班前對根下 **`shutdown`**（他先說 sleep、更正「喔不是，就shutdown」）再 `git push`。stacks 跟著專案自己的 repo（正常歷史，aos 不可 force push／代 commit）——「stacks 進專案 repo 正常歷史」我先這樣假設，未正式裁。
    - 「gitignore要弄好」（獨立交付項：實跑分類、兩方向都對、自動檢查釘住）。
    - 「要自動繼續的話，有需要的話可以加上boot指令」（只有零件自癒做不到時才加，與 shutdown 成對）。
@@ -40,6 +40,8 @@
    - boot 不做（起根本身就會叫醒睡下的列）。施工九個 commit 到 `875aff2b2`、文件未 commit；續行點與明天清單見 [13](../proto8/thinking/2026-11/10/two-machines/13-施工結果/03-不同之處與留給明天.md#留給明天大修)。
 
 7. **下午後段（16:00 前後，two-machines 隊長補）**：11-10 下午後段：aos-tools 改版已完成並 push（`$override` 覆蓋檔、`--replace`、env_file、快取搬 stack、C-85、C-86）；cli-sweep 掃描（[報告](../proto8/thinking/2026-11/10/cli-sweep/README.md)，未施工）使用者已答：Q2＝A 分工照舊、差別收到最少；Q3＝「兩支都留 stack，要刪另外說」即 `aos-agent ctl rm` 預設留 stack、刪加 `--purge`；Q4＝A 已停再停兩支都算成功；Q5＝A 根範本自己清掉繼承來的 `AOS_DAEMON`；Q6＝A 不動、對照表放 help 第一屏；Q1 自填兩次，重擬版原話「旗標也可以寫在子命令前面，但這樣就等同於aos-yyy zzz [flags] XXX [flags] QQQ。因為zzz有個意義：aos-yyy-zzz和aos-yyy zzz相等。所以其實都可以。」（頂層轉述：每層「節點 [旗標] 下一個位置參數」遞迴、兩種寫法都收＝09 選項 A；明天施工前再確認）；09 三個讀法「No preference」＝照推薦、補進 P-44（含第 6 行過時句）；Q7＝`copy-out --template 名 目的地`、沒給報錯、加 `--list`（help 第一句白話講它是「把範本抄出去開新 agent／新根」）；Q8＝`aos-agent tools add [--name 名] 路徑`、補 `--envs`／`--env-file`、跟 aos-tools add 一致（[README](../proto8/thinking/2026-11/10/cli-sweep/README.md)）。two-machines B01 做了一半（`7c1791e6e`：`--ws-json`／`--stack-json`／`--path-json` 的 `$env` 寫法進表、每次起重解）。**明天順序**：B01 剩下（絕對路徑原樣存、`--*-json` 純字串原樣存，要動 aos-daemon 存表）→ cli-sweep 第一批 → aos-tools 的 lv6 連帶 → two-machines 其餘 15 條（[next_todo](../proto8/thinking/2026-11/10/two-machines/next_todo.json)）。以上都只記裁定、還沒施工。
+
+8. **11-10 最後一小時（16:00～16:55）**：two-machines 隊長——B01 一半已 push（`7c1791e6e`），它把 `aos-daemon-ctl add` 打壞、`c2a6aa976` 修好已 push；cli-sweep Q4＝A（已停再停兩支都算成功，印 `名字: already 狀態`、退 0）`1d3ece5e5`；甲4、甲5 程式寫好未套（`/tmp/tm-team/patch_item2.py`，明天套上補測試），甲3、甲6、Q5（`.env` 外層贏、清不掉 AOS_DAEMON，範本要另想）、Q3、Q1、Q6 沒做（[10b](../proto8/thinking/2026-11/10/cli-sweep/10b-施工結果-兩支ctl.md)）。另一隊——cli-sweep Q7 `copy-out --template`（`7558433b7`）、`AOS_PROTO8` 改名 `AOS_HOME`（`3fe4c3e18`，使用者「AOS_PROTO8改成AOS_HOME，這樣之後大修改版，還可以直接換」）。調查 [templates-cp](../proto8/thinking/2026-11/10/templates-cp/README.md) 已寫完：範本改 AOS_HOME 寫法＋自帶 .env 後 `cp -r` 就能用、只 export `AOS_HOME`、lv1～4 不用改；使用者「copy-out能刪就刪」＝選項 A（範本全改、copy-out 整支刪、文件教 `cp -r`），三題快選都選推薦（範本拿掉 symlink 的 `tools/` 夾、`.env` 帶預設＋`AOS_HOME` 必填檢查、`copy_def.py` 一起拿掉、`agents new` 改單純整夾複製）——只記裁定、明天施工。**明天順序**：B01 剩下（絕對路徑原樣存、`--*-json` 純字串原樣存）→ templates-cp（刪 copy-out、範本改寫）→ cli-sweep 甲4／甲5（套 patch＋補測試）→ 甲3、甲6、Q3、Q5、Q6、Q1 → aos-tools lv6 連帶 → two-machines 其餘 15 條。
 
 ## 2026-11-09 深夜 23:2x 家機頂層（使用者要接 aos mcp 後重開／resume）
 
