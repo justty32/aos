@@ -12,21 +12,35 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-11-10 晚 家機總整合
+## 2026-11-10 深夜 家機總整合（收工）
 
-1. **授權**：家機（Manjaro）、使用者授權今晚隨意 push（只有 main）；子 agent 普通 opus、雜活 sonnet；eca 一律 haiku（「haiku隨便用。我發現額度掉太快會說。」）。不動 `~/code/playground`、`~/code/playground-ak5`（試驗場只產出刷新指令，使用者看過再決定誰跑）；不動 `impl_cpp/`。
-2. **各線狀態**：self-tools、json-memory（含 S5）、self-family（history、self_state、self_ctl）、hook、agents-split、mailbox、clock-letters 都施工完、進 main；總整合補了知識庫節點（`b515395a9`）、附錄 4／索引／install／gitignore 分類／eca-claude 範本 README 與 _metainfo（`bdffed43d`）、整棵實跑與三處 CLI 句修正（`db4505fcf`）、刷新腳本（`fb434b9ea`）。全套 Python 測試綠、C++ build 過。「怎麼玩」→ [tonight](../proto8/thinking/2026-11/10/tonight/README.md)；驗收 → [tonight/02](../proto8/thinking/2026-11/10/tonight/02-整合驗收.md)；刷新 → [tonight/03](../proto8/thinking/2026-11/10/tonight/03-試驗場刷新.md)。
-3. **代定清單位置**：[self-tools README § 代定](../proto8/thinking/2026-11/10/self-tools/README.md#代定)、[self-tools 05](../proto8/thinking/2026-11/10/self-tools/05-llm設定改名與ls.md)；[json-memory 05](../proto8/thinking/2026-11/10/json-memory/05-步驟與代定.md#代定清單可翻案)；[self-family 01](../proto8/thinking/2026-11/10/self-family/01-施工結果.md)、[03](../proto8/thinking/2026-11/10/self-family/03-self_state與self_ctl施工結果.md)；[hook 01 圖紙](../proto8/thinking/2026-11/10/self-family/hook/01-圖紙.md)、[hook 02](../proto8/thinking/2026-11/10/self-family/hook/02-施工結果.md)；[agents-split README](../proto8/thinking/2026-11/10/agents-split/README.md)（15 條）；[mailbox 01](../proto8/thinking/2026-11/10/mailbox/01-設計.md)；[clock-letters README](../proto8/thinking/2026-11/10/clock-letters/README.md)；[templates-cp 05](../proto8/thinking/2026-11/10/templates-cp/05-施工結果.md)；總整合自己的：eca-claude `_metainfo` 的 `cost.time_ms: 60000`、知識庫新開 `mailbox.json`／`clock.json`／`cli/hook.json`／`cli/mailbox.json`、2 KB 一段的上限這次沒拆（self_hook、me 簡介、cli/agent 略超）。
-4. **使用者回來後已裁、另一位隊長施工中**（`proto8/thinking/2026-11/10/tonight-rulings/`）：self_tools ls 預設只列名字＋一句（細項用 get）；hook「改結果」預設開；`AOS_MY_STACK` 改名 `AOS_LINUX_USER_STACK`；範本夾的 `tests/` 搬到範本外（「範本不該有tests」；agent_def new 維持整夾照抄）；`aos-clock register …`＝`aos-clock-register …`；條文 C-42 續、C-52 ⑧ 由它改；history summarize 寫進去那則改 `aos: …` 固定格式。小模型裝不下工具說明：「小模型裝不下說明，那就是去把lm studio那邊調整一下。真的裝不下的，那就代表這個小模型不適合aos體系，或是只能作爲普通的aos函數。」→ 不砍工具、不瘦說明。**總整合的最後一輪全套測試排在它 push 之後。**
-   還待裁的：
-   - 小模型寫不出 `$` 開頭的鍵：`agent_def` 已加 `template` 短名；`self_tools`、`self_hook` 的 `path_json` 要不要也給一條不用 `$` 鍵的路。
-   - act 附給腦的 stderr 尾巴仍帶下層 CLI 句（如 `--name`、`aos-agent ctl rm`；C-52 例外的結構）。
-   - hook：`queue_after` 停下後那封信晾著要不要補；hook 要不要寫進 CONVENTION 條文；要加哪些事件。
-   - mailbox：人的預設 stack 是不是就 `~/.stack`（代定 1）。
-   - clock：`aos-clock-register` 只收 `-c`、不收 `-d`；agent 被刪時它登記的項不會跟著清。
-   - `agents_ctl` 能 rm 別人帳上的子（選 B 時已知）；`agents_children`／`agents_ctl` 的 ls 一列約 400 字元 JSON。
-   - eca 全新工作區第一次開畫面停在「信不信任這個資料夾」選單（history 隊回報；今晚整合驗收沒碰到）。
-5. **WAIT_USER 新加**：試驗場刷新（看 tonight/03 再決定誰跑）、hook 線 eca haiku 真對話（照抄步驟，agent 不代跑）、eca 信任選單。
+1. **授權**：家機（Manjaro）、今晚隨意 push（只有 main）；子 agent 普通 opus、雜活 sonnet；eca 一律 haiku。不動 `~/code/playground`（使用者的樹可能開著）、`~/code/playground-ak5`、repo 外的檔、`impl_cpp/`。使用者最後一句：「弄一弄，按照wf/規矩整理收拾，push上去後，我就要關機睡覺了」。
+2. **各線狀態**：今晚七條線＋使用者回來後的四批裁定（[tonight-rulings](../proto8/thinking/2026-11/10/tonight-rulings/README.md)）、tool-packs、tools-def 全部施工完進 main；兩範本都十一包 34 支；C++ build 過、全套 Python 測試 51 夾 808 支綠；最後一輪整棵實跑見 [tonight/04](../proto8/thinking/2026-11/10/tonight/04-最後一輪整合驗收.md)（假腦 34 支全過、修 `ctl state` hooks 舊鍵 `d4ae3fc37`；gemma 只補驗一半、eca haiku 沒跑，續行點在 04）；怎麼玩 [tonight](../proto8/thinking/2026-11/10/tonight/README.md)。
+3. **代定清單位置**：[self-tools README § 代定](../proto8/thinking/2026-11/10/self-tools/README.md#代定)、[self-tools 05](../proto8/thinking/2026-11/10/self-tools/05-llm設定改名與ls.md)；[json-memory 05](../proto8/thinking/2026-11/10/json-memory/05-步驟與代定.md#代定清單可翻案)；[self-family 01](../proto8/thinking/2026-11/10/self-family/01-施工結果.md)、[03](../proto8/thinking/2026-11/10/self-family/03-self_state與self_ctl施工結果.md)；[hook 01 圖紙](../proto8/thinking/2026-11/10/self-family/hook/01-圖紙.md)、[hook 02](../proto8/thinking/2026-11/10/self-family/hook/02-施工結果.md)；[agents-split README](../proto8/thinking/2026-11/10/agents-split/README.md)（15 條）；[mailbox 01](../proto8/thinking/2026-11/10/mailbox/01-設計.md)；[clock-letters README](../proto8/thinking/2026-11/10/clock-letters/README.md)；[templates-cp 05](../proto8/thinking/2026-11/10/templates-cp/05-施工結果.md)；[tool-packs 01](../proto8/thinking/2026-11/10/tool-packs/01-施工結果.md)、[02](../proto8/thinking/2026-11/10/tool-packs/02-memory-read施工結果.md)；[tools-def](../proto8/thinking/2026-11/10/tools-def/README.md)（01／02）；[tonight-rulings 05](../proto8/thinking/2026-11/10/tonight-rulings/05-knowledge改名.md)、[06](../proto8/thinking/2026-11/10/tonight-rulings/06-列表長短四項.md)；總整合自己的：eca-claude `_metainfo` 的 `cost.time_ms: 60000`、知識庫新開 `mailbox.json`／`clock.json`／`cli/hook.json`／`cli/mailbox.json`、2 KB 一段的上限這次沒拆（self_hook、me 簡介、cli/agent 略超）。
+4. **今晚所有改名對照**（proto8 不留舊名、不做相容；舊定義重抄範本）：
+
+   | 舊 | 新 |
+   |---|---|
+   | `memory`／`memory_read`、`memory_write`、`memory_export`、`memory_sync` | `knowledge_read`、`knowledge_write`、`knowledge_export`、`knowledge_sync` |
+   | `memory_fs.py`、包 `lib/packs/memory.json`、`_memory.json` | `knowledge_fs.py`、`lib/packs/knowledge.json`、`_knowledge.json` |
+   | `AOS_MEMORY`、`--memory`（brain.py／aos-mcp）、`MemoryMissing`／`MemoryBad` | `AOS_KNOWLEDGE`、`--knowledge`、`KnowledgeMissing`／`KnowledgeBad` |
+   | `AOS_MY_STACK` | `AOS_LINUX_USER_STACK` |
+   | `wall_clock`、`bash`、`json_edit` | `peek_now_time`、`shell`、`json_write` |
+   | 舊 `agents` 工具、`agents.json` | `agents_children`／`agents_ctl`／`agent_def`、`children.json` |
+   | `llm.json` 的 `endpoint` | `model` |
+   | hook `on`／`exec`／`match`／`change`／`wait`；事件 `tool_after` 這類 | `event`／`handler`／`condition`／`intercept`（預設開）／`async`；`before_queue`、`after_queue`、`before_tool`、`after_tool` |
+   | `aos-tools ls -b` | 拿掉（`ls` 預設就是短版，`-l` 長版） |
+
+5. **試驗場狀態**：`~/code/playground` 是 22:15 刷的（備份 `.bak-1110-2215`），停在改名與列表短版之前——`self_tools ls` 會 FlagUnknown、litellm 要 `export LITELLM_KEY=sk-none`、定義指舊名 `memory_*`。刷新腳本 [tonight/03](../proto8/thinking/2026-11/10/tonight/03-試驗場刷新.md) 已對上最終狀態、22:51 在新複本上跑過（兩隻 34 支、gemma 叫 knowledge_read 對）；**補刷原件等使用者**（WAIT_USER 第一條）。
+6. **還待裁**：
+   - 小模型寫不出 `$` 開頭的鍵：`self_tools`、`self_hook` 的 `path_json` 要不要給一條不用 `$` 鍵的路。
+   - act 附給腦的 stderr 尾巴仍帶下層 CLI 句（C-52 例外的結構）。
+   - hook：`after_queue` 停下後那封信晾著要不要補；要不要寫進 CONVENTION；要加哪些事件。
+   - mailbox：人的預設 stack 是不是就 `~/.stack`。
+   - clock：agent 被刪時它登記的項不會跟著清（每 100 cycle 自檢只清箱子已不在的）。
+   - `agents_ctl` 能 rm 別人帳上的子。
+   - tools_def「之後可加」的幾項（[tools-def](../proto8/thinking/2026-11/10/tools-def/README.md)）。
+7. **WAIT_USER 新加／改**：試驗場補刷、`~/.cache/aos-mcp-aos/tools.json` 跟上改名（照抄 sed 一行）、eca 信任選單要手動信任一次、hook 線 eca haiku 真對話（agent 不代跑）。
 
 ## 2026-11-10 下午 公司頂層（compact 前）
 
