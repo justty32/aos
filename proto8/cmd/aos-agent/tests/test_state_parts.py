@@ -89,6 +89,16 @@ class State(unittest.TestCase):
         self.assertEqual(list(j), ["tools"])
         self.assertEqual(j["tools"]["names"], ["clock"])
 
+    def test_hooks_with_one_hook(self):   # 11-10 最後一輪：hook 鍵改名 event 後 part_hooks 還讀 "on"，有 hook 就 KeyError
+        iface = json.loads((self.defn / "interfaces.json").read_text())
+        iface["aos-agent"]["hooks"] = "hooks.json"
+        (self.defn / "interfaces.json").write_text(json.dumps(iface))
+        (self.defn / "hooks.json").write_text(json.dumps({"hooks": {"logger": {"event": "after_tool", "handler": "/bin/true"}}}))
+        row = {l.split()[0]: l.split(None, 1)[1] for l in self.state().stdout.splitlines()}
+        self.assertEqual(row["hooks"], "1 hooks (logger on after_tool)")
+        j = json.loads(self.state("-j", "hooks").stdout)
+        self.assertEqual(j["hooks"]["hooks"][0]["event"], "after_tool")
+
     def test_unknown_part(self):
         p = self.state("bogus", ok=False)
         self.assertEqual(p.returncode, 1)
