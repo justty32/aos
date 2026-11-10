@@ -19,6 +19,7 @@
 | [03-驗收結果](03-驗收結果.md) | 11-10 晚 scratchpad 實跑：每段怎麼驗、結果、改了 self_tools tooldef 兩行、怪處 8 條 |
 | [04-不認得的鍵報錯](04-不認得的鍵報錯.md) | 使用者「那就報錯」：tool_io 集中擋不認得的 stdin 鍵、各工具盤點 |
 | [05-llm設定改名與ls](05-llm設定改名與ls.md) | 使用者「改名爲model」「跳warinig就好」「與快取無關的」「換」：鍵改名、set 提醒、調整鍵、ls／set／rm／reset |
+| [06-eca與假腦驗收](06-eca與假腦驗收.md) | eca＋haiku 叫 self_tools／self_llm 四個 op、fsm 假腦看 temperature 有沒有進請求：都過、怪處 5 條 |
 
 ## 做了（commit）
 
