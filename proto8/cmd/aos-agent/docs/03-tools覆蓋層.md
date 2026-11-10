@@ -14,7 +14,7 @@
 {"add": {"math": {"path": "../../../../agents/lib/math"}}, "rm": ["wall_clock"]}
 ```
 
-- `add`：名字 → 登記內容（跟 aos-tools 登記檔裡一項一樣：`path`，可執行檔另有 `cache`）。**11-10 午 TC 改**：`path` 保留使用者的寫法——`tools add 名 路徑` 給絕對＝存絕對、給相對＝存相對覆蓋層所在資料夾；要寫指示詞（`{"$env": "AOS_PROTO8", "$path": "/…"}`）或經錨點，直接用 `aos-tools --overlay … add --path-json …`／`--anchor`；覆蓋層跟定義的登記檔一樣解 `$env`／`$ref`（[aos-tools](../../aos-tools/README.md)）。下面是坑-92 時的存法（自動經錨點），現在只在 `--anchor` 時才這樣：**`path`：目標在覆蓋層這份檔所在的資料夾裡＝存相對它的路徑**（宣告路徑沒有子資料夾時就是這隻的 stack；有則是該子資料夾），字串算、不 realpath——整份 image（`ws/.stack/`）搬家時跟著走；**目標在這台 repo 的 `proto8/` 裡＝存 `.aos-proto8/<proto8 裡的路徑>`**，並在覆蓋層資料夾建本機錨點捷徑 `.aos-proto8` → 這台的 `proto8/`（不進 git：stack.gitignore 的 `**/.*` 擋；換機 pull 後 `copy-out --relink <image 根>` 重指）；其他外面的照舊存相對（11-10 坑-92：原本 repo 的工具會存成一串 `../../../home/…`，換機就斷；使用者裁選項 A「每個資料夾放一條不進 git 的捷徑 .aos-proto8 指向這台的 repo」）。選「相對覆蓋層」而不是「相對 daemon stack」：aos-tools 本來的規則就是「手寫的相對路徑從這份檔的資料夾算」，覆蓋層照同一條，aos-tools 不用知道 daemon；覆蓋層在 stack 裡，兩種基準點一起搬，效果一樣。
+- `add`：名字 → 登記內容（跟 aos-tools 登記檔裡一項一樣：`path`，可執行檔另有 `cache`）。**11-10 午 TC 改**：`path` 保留使用者的寫法——`tools add 名 路徑` 給絕對＝存絕對、給相對＝存相對覆蓋層所在資料夾（宣告路徑沒有子資料夾時就是這隻的 stack；有則是該子資料夾），字串算、不 realpath——目標在 stack 裡的，整份搬家時跟著走；要寫指示詞（例 `{"$env": "AOS_PROTO8", "$path": "/…"}`，每台設一次 `AOS_PROTO8`），直接用 `aos-tools --overlay … add --path-json …`；覆蓋層跟定義的登記檔一樣解 `$env`／`$ref`（[aos-tools](../../aos-tools/README.md)）。選「相對覆蓋層」而不是「相對 daemon stack」：aos-tools 本來的規則就是「手寫的相對路徑從這份檔的資料夾算」，覆蓋層照同一條，aos-tools 不用知道 daemon；覆蓋層在 stack 裡，兩種基準點一起搬，效果一樣。
 - `rm`：拿掉的名字（只記定義裡有的；覆蓋層自己 add 的再 rm＝直接從 `add` 刪）。
 - 沒改過＝沒有這份檔＝就是定義那份。`tools reset`＝刪掉這份。
 - `llm` 也按它自己的宣告相對路徑放覆蓋層，只存改過的鍵（例宣告 `"llm": "cfg/brain.json"` 就寫 `<stack>/cfg/brain.json`）。
@@ -39,4 +39,4 @@
 
 - **覆蓋層壞掉或 `add` 的工具不見了＝整隻停下**（11-05 [edge-agent](../../../thinking/2026-11/05/edge-agent/README.md) 實測）：brain／act 每格 `aos-tools ls`，覆蓋層 JSON 壞、或 `add` 指的路徑不在，aos-tools 報 `RegistryBad`／`PathMissing`、身體報 `ToolsBad` 退 1，那隻留在表上 `stopped`＋`reason`（11-05 使用者裁「留表標 stopped (Recommended)」）；修好後 `aos-agent tools reset`（或 `tools rm` 那個、手動改 `<stack>/<宣告的 tools 路徑>`）再 `aos-agent ctl start`，同一個 stack 從停的那格接著做；不要了 `aos-agent ctl rm`。照 aos-tools「不猜不跳過」，不改成略過壞的那個。
 - **跟定義同名的**：`tools add 名 路徑` 撞到定義裡已有的名字＝aos-tools `ToolExists`；要這隻改用自己的就 `tools add --override 名 路徑`（寫進覆蓋層的 `add`，疊的時候蓋過定義）。
-- 指到 image 外面的工具（例 repo 裡的 `lib/base/wall_clock`）存的也是相對路徑（`../../../../../../home/…`）：整份搬到另一層深度或別台、那邊沒有同樣相對位置的檔＝那個工具找不到（aos-tools 報 `PathMissing`）。照 [portable-flow 03 原則 5](../../../thinking/2026-11/05/portable-flow/03-絕對路徑盤點.md)「指到 daemon 外面自擔」；要帶著走就把工具放進定義旁的 `lib/`。
+- 指到 image 外面的工具（例 repo 裡的 `lib/base/wall_clock`）存的也是相對路徑（`../../../../../../home/…`）：整份搬到另一層深度或別台、那邊沒有同樣相對位置的檔＝那個工具找不到（aos-tools 報 `PathMissing`）。照 [portable-flow 03 原則 5](../../../thinking/2026-11/05/portable-flow/03-絕對路徑盤點.md)「指到 daemon 外面自擔」；要帶著走就把工具放進定義旁的 `lib/`，或改用 `--path-json` 的環境變數寫法。

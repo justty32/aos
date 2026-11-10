@@ -1,4 +1,4 @@
-"""Test aos-tools path forms: overlay directives (path and env), add keeping the user's form, --path-json and --anchor."""
+"""Test aos-tools path forms: overlay directives (path and env), add keeping the user's form, --path-json, and the PathMissing line."""
 import json
 import os
 from pathlib import Path
@@ -110,12 +110,6 @@ class PathForms(unittest.TestCase):
     def test_add_relative_overlay_relative_to_overlay(self):
         self.ok("--file", self.reg, "--overlay", self.over, "add", os.path.relpath(TOOL, self.tmp))
         self.assertEqual(self.stored(self.over, "add", "wall_clock", "path"), os.path.relpath(TOOL, self.over.parent))
-        self.assertFalse(os.path.lexists(self.over.parent / ".aos-proto8"))
-
-    def test_add_no_auto_anchor_even_if_anchor_exists(self):
-        os.symlink(PROTO, self.reg.parent / ".aos-proto8")
-        self.ok("--file", self.reg, "add", TOOL)
-        self.assertEqual(self.stored(self.reg, "tools", "wall_clock", "path"), str(TOOL))
 
     def test_add_path_json_stored_as_given(self):
         value = {"$env": "TC_ROOT", "$path": "/lib/base/wall_clock"}
@@ -141,24 +135,13 @@ class PathForms(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("ArgumentsBad", r.stderr)
 
-    def test_add_anchor_when_asked(self):
-        self.ok("--file", self.reg, "--overlay", self.over, "add", "--anchor", TOOL)
-        self.assertEqual(self.stored(self.over, "add", "wall_clock", "path"), ".aos-proto8/lib/base/wall_clock")
-        self.assertEqual(os.readlink(self.over.parent / ".aos-proto8"), str(PROTO))
-
-    def test_add_anchor_keeps_users_relative_anchor(self):
-        link = self.over.parent / ".aos-proto8"
-        os.symlink(os.path.relpath(PROTO, self.over.parent), link)
-        before = os.readlink(link)
-        self.ok("--file", self.reg, "--overlay", self.over, "add", "--anchor", TOOL)
-        self.assertEqual(os.readlink(link), before)
-
-    def test_add_anchor_outside_repo_is_bad(self):
-        outside = self.tmp / "t"
-        shutil.copytree(TOOL, outside)
-        r = self.run_tools("--file", self.reg, "add", "--anchor", outside)
+    def test_missing_path_names_file_cell_and_resolved_path(self):
+        self.reg.write_text(json.dumps({"tools": {"gone": {"path": "nowhere/gone"}}}), encoding="utf-8")
+        r = self.run_tools("--file", self.reg, "ls")
         self.assertEqual(r.returncode, 1)
-        self.assertIn("ArgumentsBad", r.stderr)
+        self.assertIn("PathMissing", r.stderr)
+        self.assertIn("%s#/tools/gone/path" % self.reg, r.stderr)
+        self.assertIn(str(self.reg.parent / "nowhere" / "gone"), r.stderr)
 
 
 if __name__ == "__main__":

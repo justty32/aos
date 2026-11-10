@@ -515,16 +515,6 @@
    "evidence": "proto8/cmd/aos-agent/stack.gitignore、proto8/cmd/aos-agent/README.md:56"
   },
   {
-   "path": "<定義資料夾>/.aos-proto8、$AOS_STACK/.aos-proto8（捷徑）",
-   "lifetime": "暫時",
-   "writer": "templates/copy-out（抄出時、--relink）、aos-tools add（覆蓋層加 repo 裡的工具時）",
-   "reader": "OS 解捷徑（aos-tools、aos-exec、memory 經過它的相對路徑）",
-   "image": "不進：本機絕對路徑；stack 由 stack.gitignore 的 **/.* 擋，定義由 copy-out 寫的 .gitignore 擋",
-   "on_bad": "缺了或指錯＝經過它的工具 PathMissing（訊息提示 copy-out --relink）、agent-fsm ToolsBad；換機 pull 後、起根前 copy-out --relink <image 根> 重建（冪等）",
-   "note": "11-10 坑-73／坑-92，使用者裁選項 A「每個資料夾放一條不進 git 的捷徑 .aos-proto8 指向這台的 repo」；進 git 的檔只寫經過它的相對路徑",
-   "evidence": "proto8/templates/copy-out（make_anchor、relink）、proto8/cmd/aos-tools/bin/aos-tools（stored_path）"
-  },
-  {
    "path": "$AOS_STACK/cooldown.json",
    "lifetime": "暫時",
    "writer": "lib/agent/cooldown.py（templates/agent-fsm wait.py、aos-eca-turn）",

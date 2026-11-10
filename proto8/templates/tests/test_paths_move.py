@@ -1,5 +1,5 @@
 """Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm) and an llm kernel project move by git to another HOME and prefix under each copy-out --proto8 mode, and keep answering."""
-# 五輪：env、absolute（兩台同一個絕對位置）、relative（兩台同相對擺法）、anchor（搬後手動 copy-out --relink），各跑
+# 四輪：env、absolute（兩台同一個絕對位置）、relative（兩台同相對擺法），各跑
 #   A 起 → 問一題 → aos-daemon-ctl -d stacks/root shutdown → git 搬到另一個 HOME、另一個前綴（A 的 proto8 複本與整個 A 刪掉）
 #   → B aos-exec --stack stacks/root defs → 不用其他指令就接著答；
 # 加一輪同一台：env 跑通 → 停 → AOS_PROTO8 改指另一份 proto8 複本（舊的刪掉）→ 再起 → 照樣答、檔裡沒殘留舊值。
@@ -203,10 +203,9 @@ class PathsMove(unittest.TestCase):
         base_a = self.work / "A" / "pre-a"
         base_b = self.work / "B" / "pre-b" / "deeper"
         fixed = self.work / "fixed" / "proto8"
-        proto_a = {"env": base_a / "repo" / "proto8", "absolute": fixed, "relative": base_a / "repo" / "proto8",
-                   "anchor": base_a / "repo" / "proto8"}[mode]
+        proto_a = {"env": base_a / "repo" / "proto8", "absolute": fixed, "relative": base_a / "repo" / "proto8"}[mode]
         proto_b = {"env": base_b / "elsewhere" / "p8", "absolute": base_b / "repo" / "proto8",
-                   "relative": base_b / "repo" / "proto8", "anchor": base_b / "other" / "proto8"}[mode]
+                   "relative": base_b / "repo" / "proto8"}[mode]
         copy_proto(proto_a)
         a = self.machine("A", proto_a, {"AOS_PROTO8": str(proto_a)} if mode == "env" else None)
         proj_a, llms_a = self.build(a, base_a, mode)
@@ -229,9 +228,6 @@ class PathsMove(unittest.TestCase):
             os.symlink(proto_b, fixed)
         b = self.machine("B", proto_b, {"AOS_PROTO8": str(proto_b)} if mode == "env" else None)
         proj_b, llms_b = base_b / "proj", base_b / "llms"
-        if mode == "anchor":                           # 錨點不進 git：這台自己建（可選的那種準備方式）
-            out = b.copy_out("--relink", proj_b, llms_b, cwd=base_b).stdout
-            log("  relink: %s" % out.strip().replace("\n", " | "))
         self.start_both(b, proj_b, llms_b)
         self.wait_ann(b, proj_b)
         ans = self.ask(b, proj_b, "question two")
@@ -253,10 +249,7 @@ class PathsMove(unittest.TestCase):
     def test_3_relative(self):
         self.move_round("relative")
 
-    def test_4_anchor(self):
-        self.move_round("anchor")
-
-    def test_5_env_repoint_same_machine(self):
+    def test_4_env_repoint_same_machine(self):
         log("==== round env-repoint (same machine) ====")
         base = self.work / "S" / "pre"
         p1, p2 = copy_proto(base / "p1" / "proto8"), base / "p2" / "proto8"

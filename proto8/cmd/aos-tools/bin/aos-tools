@@ -5,7 +5,7 @@
 aos agent 想問腦之前先 `aos-tools ls --json` 拿工具清單，腦要叫工具時 `aos-tools call 名`；
 claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的翻譯櫃台）。
 
-    aos-tools [--file F] add [--override] [--name N] [--no-cache] [--anchor] [--env-file FILE] [--envs K=V]... XXX|--path-json JSON
+    aos-tools [--file F] add [--override] [--name N] [--no-cache] [--env-file FILE] [--envs K=V]... XXX|--path-json JSON
                                                            登記 XXX（檔或資料夾；相對路徑從 cwd 算），印 added NAME -> 絕對路徑
     aos-tools [--file F] rm XXX                            每個拿掉的名字印 removed NAME；拿掉（XXX＝工具名；不是登記過的名字就當路徑，拿掉指到那裡的）
     aos-tools [--file F] ls [--json]                       列：一行一個「名字 TAB 種類 TAB 路徑」；--json＝一行 JSON 陣列
@@ -16,8 +16,8 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   aos 讀的 JSON 都解指示詞（N-45）：檔裡有 $ref／$env 就交給 aos-json 解（`$ref` 陣列＝把註冊檔拆成好幾份），
   改的時候 aos-json set／del --follow 穿過 $ref 改被參照的那份。add 存路徑保留使用者的寫法（11-10 TC，使用者「要用相對位置、絕對位置、環境變數指定都可」）：
   給絕對＝存絕對；給相對（從 cwd 算）＝存成相對「寫進的那份檔（登記檔或覆蓋層）的資料夾」的相對；--path-json JSON＝原樣存（字串或指示詞，例
-  '{"$env":"AOS_PROTO8","$path":"/lib/base/bash"}'；現在解一次只為了驗與取名，解出來的值不寫回）；--anchor（使用者明講才做）＝目標在這份 repo 的
-  proto8 裡存 .aos-proto8/…，那資料夾沒錨點就建（指這台 proto8；已有、指得到一份 proto8 的錨點不改寫）。手寫的相對路徑從這份檔的資料夾算。
+  '{"$env":"AOS_PROTO8","$path":"/lib/base/bash"}'；現在解一次只為了驗與取名，解出來的值不寫回）。
+  手寫的相對路徑從這份檔的資料夾算。
 三種登記對象（種類照 aos-exec 認法，N-61：資料夾；檔有 +x＝可執行檔；檔沒 +x＝JSON）：
   dir   資料夾裡有 _tooldef.json；_metainfo.json 有就一起給（11-04 起只認帶 .json 的：_ 開頭的資料檔一律帶副檔名，
         不帶的 _tooldef／_metainfo 不認——沒 _tooldef.json＝ToolDefMissing）。叫＝aos-exec 資料夾，arguments 進 stdin。
@@ -88,7 +88,7 @@ HELPS = {
     "add": """aos-tools add - register a tool in the registry or overlay
 
 usage: aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-cache]
-               [--anchor] [--env-file FILE] [--envs K=V]... (XXX | --path-json JSON)
+               [--env-file FILE] [--envs K=V]... (XXX | --path-json JSON)
 
 XXX is a folder, JSON file or executable, relative to cwd. Prints added NAME -> PATH
 with an absolute path. The stored path keeps your form: an absolute XXX is stored
@@ -96,9 +96,6 @@ absolute; a relative XXX is stored relative to the directory of the file written
 overlay with --overlay, else the registry). --path-json stores JSON as given: a path
 string or a directive such as {"$env": "AOS_PROTO8", "$path": "/lib/base/bash"},
 resolved on every use (relative results from that same directory), never written back.
---anchor (only when asked) stores a target inside this repo's proto8/ as
-.aos-proto8/<path in proto8> and creates that anchor symlink next to the file if it is
-missing or points at no proto8 folder (keep it out of git).
 Names default to the folder name or file name without extension;
 only [A-Za-z0-9_-] is accepted, at most 64 characters.
 
@@ -109,7 +106,6 @@ flags:
   -n, --name N      register under this name
       --no-cache    disable executable --tooldef caching (executables only)
       --path-json J store this JSON path value (string or directive) instead of XXX
-      --anchor      store a target in this repo's proto8/ through .aos-proto8
       --env-file F  read a dotenv file now, relative to cwd; store its values
       --envs K=V    override file values (repeatable; value taken literally)
   -h, --help        show this help
@@ -279,8 +275,7 @@ def kind_of(path):
         return "dir"
     if os.path.isfile(path):
         return "exe" if is_program(path) else "json"
-    hint = "; its .aos-proto8 anchor is missing or stale here, run templates/copy-out --relink" if "/.aos-proto8/" in path else ""
-    raise Fail("PathMissing", "%s does not exist (or is neither a file nor a dir)%s" % (path, hint))
+    raise Fail("PathMissing", "%s does not exist (or is neither a file nor a dir)" % path)
 
 
 def first_file(d, names):
@@ -522,41 +517,6 @@ def read_env_file(path):
     return result
 
 
-ANCHOR = ".aos-proto8"                               # 本機錨點捷徑 → 一份 proto8/（可選的一種準備方式；add --anchor 才用，11-10 TC）
-PROTO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))   # cmd/aos-tools/bin → proto8
-
-
-def is_proto8(d):
-    """d 是不是一份 proto8 資料夾（認 templates/copy-out 與 py/aos_flags.py）。"""
-    return os.path.isfile(os.path.join(d, "templates", "copy-out")) and os.path.isfile(os.path.join(d, "py", "aos_flags.py"))
-
-
-def anchored_path(path):
-    """--anchor：目標在這份 repo 的 proto8 裡＝.aos-proto8/<proto8 底下的路徑>；不在＝ArgumentsBad。只算字串，錨點由 ensure_anchor 建。"""
-    real = os.path.realpath(path)
-    if os.path.commonpath([real, PROTO]) != PROTO:
-        raise Fail("ArgumentsBad", "--anchor needs a target inside this repo's proto8 (%s); %s is not" % (PROTO, path))
-    rel = os.path.relpath(real, PROTO)
-    return ANCHOR if rel == "." else ANCHOR + "/" + rel
-
-
-def ensure_anchor(folder):
-    """folder 沒錨點就建（指這台 proto8 的絕對捷徑）。已經有、而且指得到一份 proto8 的錨點（使用者自己放的相對錨點也算）
-    不改寫；指不到 proto8 的捷徑換成這台；別的東西佔著＝WriteFailed。"""
-    link = os.path.join(folder, ANCHOR)
-    if os.path.islink(link) and is_proto8(link):
-        return
-    if os.path.lexists(link) and not os.path.islink(link):
-        raise Fail("WriteFailed", "%s exists and is not a symlink; cannot anchor there" % link)
-    tmp = os.path.join(folder, ".%s.%d.tmp" % (ANCHOR, os.getpid()))
-    try:
-        os.makedirs(folder, exist_ok=True)
-        os.symlink(PROTO, tmp)
-        os.replace(tmp, link)
-    except OSError as e:
-        raise Fail("WriteFailed", "cannot link %s -> %s: %s" % (link, PROTO, e))
-
-
 def resolve_path_value(value, folder):
     """登記格的 path 值（字串或指示詞物件）→ 絕對路徑；指示詞交給 aos-directive 解（每次用到才解、不寫回），解完的相對路徑從 folder 算。"""
     if isinstance(value, dict):
@@ -575,13 +535,11 @@ def resolve_path_value(value, folder):
 
 def cmd_add(reg, args):
     opts, rest = aos_flags.parse(args, {"--name": "name", "--env-file": "env_file", "--path-json": "path_json"},
-                                 {"--override": "override", "--no-cache": "no_cache", "--anchor": "anchor"},
+                                 {"--override": "override", "--no-cache": "no_cache"},
                                  {"--envs": "envs"}, help=HELPS["add"], short=("-n",))
     if "path_json" in opts:
         if rest:
             raise Fail("ArgumentsBad", "add takes either XXX or --path-json, not both")
-        if opts.get("anchor"):
-            raise Fail("ArgumentsBad", "--anchor goes with XXX, not with --path-json (the JSON is stored as given)")
     elif len(rest) != 1:
         raise Fail("ArgumentsBad", "add needs one XXX (or --path-json JSON)")
     env = read_env_file(opts["env_file"]) if "env_file" in opts else {}
@@ -600,9 +558,7 @@ def cmd_add(reg, args):
     else:
         given = rest[0]
         path = os.path.normpath(os.path.abspath(given))
-        if opts.get("anchor"):
-            stored = anchored_path(path)             # 使用者明講才經錨點（錨點寫檔前才建）
-        elif os.path.isabs(given):
+        if os.path.isabs(given):
             stored = path                            # 給絕對＝存絕對
         else:
             stored = os.path.relpath(path, folder)   # 給相對（從 cwd 算）＝存相對登記檔資料夾的相對
@@ -624,8 +580,6 @@ def cmd_add(reg, args):
         entry["env"] = env
     if info["kind"] == "exe":
         entry["cache"] = False if opts.get("no_cache") else info["cache"]
-    if opts.get("anchor"):
-        ensure_anchor(folder)
     if OVERLAY is not None:                          # 只寫覆蓋層
         ov = overlay_for_write()
         ov["add"][name] = entry

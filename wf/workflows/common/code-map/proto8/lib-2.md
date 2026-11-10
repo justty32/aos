@@ -23,7 +23,7 @@
 | [`codex/`](../../../../../proto8/lib/agent/codex/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 codex CLI；對話續在工具小格（$AOS_STACK） |
 | [`codex/cli.json`](../../../../../proto8/lib/agent/codex/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
 | [`cooldown.py`](../../../../../proto8/lib/agent/cooldown.py) | 失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。 |
-| [`copy_def.py`](../../../../../proto8/lib/agent/copy_def.py) | 把一份定義（範本、kernel）抄到別處時，改寫「指進 proto8」的路徑：env／anchor／absolute／relative 四種寫法（templates/copy-out 與 agents new 共用）。 |
+| [`copy_def.py`](../../../../../proto8/lib/agent/copy_def.py) | 把一份定義（範本、kernel）抄到別處時，改寫「指進 proto8」的路徑：env／absolute／relative 三種寫法（templates/copy-out 與 agents new 共用）。 |
 | [`json_rewrite/`](../../../../../proto8/lib/agent/json_rewrite/) | 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 act 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。 |
 | [`memory/`](../../../../../proto8/lib/agent/memory/) | 唯讀查詢共用知識庫：read 節點或 JSON Pointer、ls 列子節點、find 關鍵字與單一標籤搜尋。 |
 | [`memory/tests/test_base_directive.py`](../../../../../proto8/lib/agent/memory/tests/test_base_directive.py) | 驗 _memory.json 的 base：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次用到才解、不寫回，解不開時錯誤行指名檔與欄。 |

@@ -11,7 +11,7 @@ flowchart TD
     F --> A[agent ann]
 ```
 
-五步是建帳號（可略）→包 root（可略）→`copy-out --relink .`（只有用 anchor 寫法、換機才要；env 寫法改成每台設一次 `AOS_PROTO8`，11-10）→export→`aos-exec --stack <image> <定義>`。根是普通 daemon；沒有上層替它重起，正常運行由使用者顧。
+五步是建帳號（可略）→包 root（可略）→備好指到 proto8 的路徑（env 寫法每台設一次 `AOS_PROTO8`；absolute／relative 照擺法放好，不用跑任何指令，11-10）→export→`aos-exec --stack <image> <定義>`。根是普通 daemon；沒有上層替它重起，正常運行由使用者顧。
 
 <details><summary>三層佈局與啟動指令</summary>
 
@@ -57,7 +57,7 @@ AOS_CLOCK=${AOS_STACK}/clock
 
 1. 建帳號可略；若用了 `limits.user`，先由人把帳號、stack／信箱寫入權限配好。
 2. 包 root 可略；家機有 systemd 委派時可用下方 scope。
-3. 用 anchor 寫法（`copy-out --proto8 anchor`／`aos-tools add --anchor`）的，換了機器或 repo 位置（git pull、cp 到別台）時，先在 image 根重指本機錨點（預設的 env 寫法不用這步，改在第 4 步 export `AOS_PROTO8`）：`copy-out --relink .`（`proto8/templates/copy-out`；`install.sh` 已連進 PATH；把 `.aos-proto8` 捷徑指到這台的 repo，別的檔不寫、冪等；同機 `cp -a` 可略）。
+3. 備好指到 proto8 的路徑，照抄出時選的寫法（`copy-out --proto8 env|relative|absolute`、`aos-tools add` 給的寫法）：預設的 env 寫法在第 4 步 export `AOS_PROTO8`；`absolute` 把 proto8 放在跟原機同一個位置；`relative` 保持同樣的相對擺法。換了機器或 repo 位置（git pull、cp 到別台）也不用跑任何重建指令；沒備好＝第一題 `PathMissing`，訊息指名哪份檔哪一格、解出什麼。
 4. 在 image 根 export 這台的外接位置：
 
 ```sh

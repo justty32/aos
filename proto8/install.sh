@@ -22,7 +22,7 @@
 #
 # 裝哪些（照資料夾掃，有就裝、執行檔才算）：
 #   impls/*/bin/*            C++ 的（aos-exec、aos-loop、aos-fsm、aos-daemon、aos-post、aos-json、aos-llm、aos-llm-kernel…；要先建，見 wf/workflows/testing.md「proto8」）
-#   cmd/*/bin/*              Python 的指令（aos-daemon-ctl、aos-tools、aos-clock、aos-eca-turn、aos-eca-screen、aos-agent、aos-mcp、aos-sandbox、aos-grow）；另加 templates/copy-out（把範本抄出 repo、指回 repo 的路徑經本機錨點 .aos-proto8 寫相對，11-10 坑-73）
+#   cmd/*/bin/*              Python 的指令（aos-daemon-ctl、aos-tools、aos-clock、aos-eca-turn、aos-eca-screen、aos-agent、aos-mcp、aos-sandbox、aos-grow）；另加 templates/copy-out（把範本抄出 repo、指回 repo 的路徑照 --proto8 env／relative／absolute 改寫，預設 env）
 # 也在 Python 啟用的 user site 寫 aos-proto8.pth，精確兩行為這份 repo 的 py/、lib/ 絕對路徑；不可用只提醒、其餘照裝，相同內容不動，不同內容不蓋。
 # 為什麼 symlink 不 cp：Python 那幾支靠 realpath(__file__) 找旁邊的檔（aos_flags.py、using-aos-agent.sh、py/aos_ws.py…），
 #   單檔 cp 過去會斷；symlink 解得回 repo 裡的原位。所以 repo 搬了位置要重跑一次（舊的連結會被報「指向別處」，自己 rm 再跑）。

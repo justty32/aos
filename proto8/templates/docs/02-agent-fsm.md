@@ -17,20 +17,19 @@ proto8/templates/copy-out bob              # = copy-out --proto8 env agent-fsm b
 
 | MODE | 寫成 | 這台要備好 |
 |---|---|---|
-| `env`（預設） | `{"$env": "AOS_PROTO8", "$path": "/lib/base/wall_clock"}` | 每台設一次 `AOS_PROTO8`；檔兩台一字不差、不用建捷徑、clone 下來不用跑指令 |
-| `anchor` | 經 `bob/.aos-proto8` 的相對路徑（`.aos-proto8/lib/base/wall_clock`） | `bob/.aos-proto8` 捷徑（copy-out 建、`bob/.gitignore` 擋；換機 `copy-out --relink`，或自己 `ln -s`） |
+| `env`（預設） | `{"$env": "AOS_PROTO8", "$path": "/lib/base/wall_clock"}` | 每台設一次 `AOS_PROTO8`；檔兩台一字不差、clone 下來不用跑指令 |
 | `absolute` | 這台 proto8 的絕對路徑 | 每台把 proto8 放同一個位置（或在那裡放捷徑） |
 | `relative` | 從那個檔的資料夾到 proto8 的相對路徑 | 每台同樣的相對擺法 |
 
 改的地方：任一 JSON（與 JSON 形的 `_entry`）裡相對、指得到 repo 東西的字串（`tools.json` 的 `tools.*.path`、`tools/memory/_entry` 單子、`_memory.json` 的 `base`、kernel 範本 `kernel.json` 的 `exec` 與 `endpoints`、daemon.json 的 argv）、`{"$env": "AOS_CD", "$path": "../…"}`（reviewer 的 `fsm.json` 借 `../agent-fsm/` 的格），與相對捷徑。**捷徑放不了環境變數**：`env` 下 `_entry` 捷徑換成等價的 JSON 單子、指到檔的捷徑換成那份檔的複本（agent-fsm 的 `tools/memory/_tooldef.json`、`_metainfo.json`，快照、之後 repo 改了不跟著變）、指到資料夾的退回 absolute，各提醒一行。改寫邏輯在 `lib/agent/copy_def.py`（agents 工具 `new` 從 repo 範本生子定義也用它）。repo 位置從 `copy-out` 自己的 realpath 往上推。
 
-**錨點（`anchor` 寫法才有，可選的一種）**：`copy-out --relink <根…>` 掃整棵（JSON／`_entry` 裡經過 `.aos-proto8` 的字串、經過它的捷徑、已在的錨點），把沒有的建好、**指不到 proto8 的絕對捷徑**重指到這台；已經指得到一份 proto8 的、使用者自己放的相對錨點不改寫。別的檔一個都不寫，冪等。stdout：新建／重指的每個一行 `linked <錨點> -> <proto8>`／`relinked …`，最後一行一律 `done: N anchors (linked A, relinked B, already C), F failed, under R root(s)`；結束碼 0＝沒有失敗，1＝有根不是資料夾（`PathMissing`）或錨點做不成（`AnchorBad`、`WriteFailed`）。`aos-agent tools add` 照使用者給的寫法存（絕對存絕對、相對存相對覆蓋層），要經錨點用 `aos-tools add --anchor`（[aos-tools](../../cmd/aos-tools/README.md)）。11-10 午在 /tmp 用 [`templates/tests/test_paths_move.py`](../tests/test_paths_move.py) 跑四種寫法各一輪「A 起→問一題→shutdown→git 搬到另一個 HOME 與前綴（A 的 proto8 刪掉）→B 直接起→接著答」，加一輪同機改 `AOS_PROTO8`，五輪都過。
+換台不用跑任何重建指令：照選的寫法備好（上表右欄）就直接起。`aos-agent tools add` 照使用者給的寫法存（絕對存絕對、相對存相對覆蓋層），要寫環境變數指示詞用 `aos-tools add --path-json`（[aos-tools](../../cmd/aos-tools/README.md)）。11-10 午在 /tmp 用 [`templates/tests/test_paths_move.py`](../tests/test_paths_move.py) 跑每種寫法各一輪「A 起→問一題→shutdown→git 搬到另一個 HOME 與前綴（A 的 proto8 刪掉）→B 直接起→接著答」，加一輪同機改 `AOS_PROTO8`，都過。
 
-目的已存在＝`copy-out: error: DestExists …`、不蓋；範本名不是 `templates/<名>` 或 `kernel/<名>`（有 `_entry` 的資料夾）＝`TemplateMissing`；其餘錯 `ArgumentsBad`（含 `--proto8` 不認得）、`FlagUnknown`、`TemplateBad`（範本裡的 JSON 讀不懂）、`WriteFailed`（半路失敗會把這次建的目的資料夾刪掉）、`PathMissing`、`AnchorBad`；`--help` 印英文用法。四支格找共用模組依序看自己的資料夾、自己的 realpath 往上找到的 repo `py/`／`lib/`、標準 `sys.path`（11-06 晚 K-5），抄出 repo 後靠第三條：先跑過 `install.sh`，讓 user site 的 `aos-proto8.pth` 帶入這份 repo 的兩個絕對路徑，或明給 `PYTHONPATH`（換了 `HOME` 就沒有 user site，要靠 `PYTHONPATH`）；介面宣告讀法共用 `lib/agent/agent_files.py`。
+目的已存在＝`copy-out: error: DestExists …`、不蓋；範本名不是 `templates/<名>` 或 `kernel/<名>`（有 `_entry` 的資料夾）＝`TemplateMissing`；其餘錯 `ArgumentsBad`（含 `--proto8` 不認得）、`FlagUnknown`、`TemplateBad`（範本裡的 JSON 讀不懂）、`WriteFailed`（半路失敗會把這次建的目的資料夾刪掉）；`--help` 印英文用法。四支格找共用模組依序看自己的資料夾、自己的 realpath 往上找到的 repo `py/`／`lib/`、標準 `sys.path`（11-06 晚 K-5），抄出 repo 後靠第三條：先跑過 `install.sh`，讓 user site 的 `aos-proto8.pth` 帶入這份 repo 的兩個絕對路徑，或明給 `PYTHONPATH`（換了 `HOME` 就沒有 user site，要靠 `PYTHONPATH`）；介面宣告讀法共用 `lib/agent/agent_files.py`。
 
 沒用 `copy-out`、只 `cp -r`＝五處相對路徑出了 repo 就斷（第一題 `aos-tools: error: PathMissing tool agents (…)`〔或 `ToolDefMissing tool memory (…) … needs _tooldef.json inside`〕、`agent-fsm: error: ToolsBad aos-tools ls exited 1`，那隻留 `stopped`；11-05 夜第二輪邊緣，11-10 重驗）。五處：`tools.json` 的 `../../lib/…`、`tools/memory/_entry` 單子裡的 `../../../../lib/agent/memory/_entry`、`tools/memory/_memory.json` 的 `base`、`tools/memory/` 裡的兩個捷徑 `_tooldef.json`、`_metainfo.json`（`cp -r` 照原樣抄相對捷徑）。手動改就照上表任一種寫法改這五處。
 
-改完整包（定義＋工作區＋llm kernel）`cp -a`／git 到別處照樣起得來：daemon 表存相對路徑、上面五處照選的寫法解（`env` 每台設好 `AOS_PROTO8`；`anchor` 換機先 `copy-out --relink`），只要把 `AOS_LLM_KERNEL` 換成新位置。
+改完整包（定義＋工作區＋llm kernel）`cp -a`／git 到別處照樣起得來：daemon 表存相對路徑、上面五處照選的寫法解（`env` 每台設好 `AOS_PROTO8`；`absolute`／`relative` 照擺法），只要把 `AOS_LLM_KERNEL` 換成新位置。
 
 ```
 agent-fsm/

@@ -4,6 +4,8 @@
 
 狀態：**規劃＋施工（11-10 午方向大改）**。上午的圖紙（01～11）照「一棵樹一個 image repo＋`aos-image freeze／thaw`」寫；午後使用者改成「cp 或 git 過去、起根就接著跑」，`aos-image` 整個不要。哪些圖紙還算數看 [12 對照表](12-圖紙對照.md)，做了什麼看 [13 施工結果](13-施工結果.md)。兩台＝公司（Windows＋WSL，`/home/guanyu`）與家機（Manjaro，`/home/lorkhan`，repo 位置不同、LM Studio 本機、模型代號不同）。
 
+**後續**：11-10 下午使用者裁定拔掉 `.aos-proto8` 錨點（原話：「怎麼還是有.aos-proto8 ?」「那就拔掉，可以動程式」）；copy-out 只剩 env／relative／absolute，`--relink`、`aos-tools add --anchor` 已拔。
+
 ## 使用者原文（11-10，逐字）
 
 > 行程有變。我需要提前使用現有的aos體系去做事了。幸好我們以檔案為主，只要環境變數、json格式、資料夾佈局、各種腳本所依賴的aos lib或函數庫腳本，他們沒變的話，我們大修完後也可以大致接入。
@@ -40,7 +42,7 @@
 
 ## 使用者裁定（11-10 上午選項框；快裁，大修時可重看）
 
-1. 路徑寫法＝**本機捷徑錨點**：要指到 repo 的資料夾放一條不進 git 的捷徑 `.aos-proto8`，進 git 的檔寫經過它的相對路徑；換台跑 `copy-out --relink <image 根>`。（**午後改**：三種寫法都收）
+1. 路徑寫法＝**本機捷徑錨點**：要指到 repo 的資料夾放一條不進 git 的捷徑 `.aos-proto8`，進 git 的檔寫經過它的相對路徑；換台跑 `copy-out --relink <image 根>`。（**午後改**：三種寫法都收；11-10 下午錨點整個拔掉）
 2. git 歷史＝stack（image）照舊**只留最新一份**。（**午後改**：image 作廢）
 3. 知識庫**在 image 之外、獨立同步**（原選項「自己一個 repo」「只有知識庫留歷史」照上面三句重讀：它怎麼同步、留不留歷史是它自己的事，aos 不管）。
 4. eca 換台找不到舊對話＝**用 aos 自己記的紀錄整理成開場白、開新對話接著做**。
@@ -128,7 +130,7 @@ flowchart LR
 ### 路徑與這台的值
 
 - **指到外面的路徑三種寫法都收**：相對、絕對、`{"$env": …}`。用到時才解，兩台各設各的、不固化。daemon 表多存一份使用者寫的原形（`as_written`），每次起再解。
-- **指到 proto8 的路徑**：`copy-out` 預設寫 `{"$env": "AOS_PROTO8", …}`，每台設一次 `AOS_PROTO8`；錨點 `.aos-proto8` 只是可選的一種寫法。
+- **指到 proto8 的路徑**：`copy-out` 預設寫 `{"$env": "AOS_PROTO8", …}`，每台設一次 `AOS_PROTO8`；錨點 `.aos-proto8` 只是可選的一種寫法（11-10 下午已拔，copy-out 只剩 env／relative／absolute）。
 - **`aos-image` 作廢**，連同 `image.json`、`image_info.json`、`prev`／`rescue` 標籤、`local/`、`local.example/`、`kb` 掛點、freeze／thaw。這台的值用環境變數或使用者自己放的檔。
 
 ### 放哪、帶什麼

@@ -17,12 +17,12 @@
 1. **授權與狀態**：公司電腦（Windows 桌面 app；施工一律在 WSL `~/repo/aos-tools`，這台 Windows 沒 python）。**今天不 push，下班前統一 push**（使用者早上先說隨便 push、隨即改口）；子 agent 也不准 push。普通工作 opus、雜活 sonnet、規劃可開 fable（使用者 11-10「好，可以開fable agent」）；頂層只交流。使用者：「不要因為太敢就省略東西，時間沒有緊急到那樣。」（不砍範圍、不跳驗收，做不完跨天）；今天的裁定多是選項框快裁（「主要靠直覺…大修的時候再來處理」）。arcagi 停線、等大修完再續。
    - **兩份 clone 的同步**：所有施工 commit 都在 WSL 那份本地 main（領先 origin 20 個以上，含早上 Windows 這份的 `67a0d67d1`、`7963f5d74`）；Windows 這份只多**本檔這段未 commit 的改動**。下班前：整理 WSL 那份 `git log origin/main..main`（各 commit 新檔有無 >1 MB／二進位；prefix-fixes 隊長回報過到 `233514b4a` 為止都沒有）給使用者看→他點頭後從 WSL push→Windows 這份 `git checkout wf/HANDOFF.md` 之前先把這段搬進 WSL 那份 commit，再 pull。
 2. **今天做完的（都在 WSL 本地 main）**：
-   - **prefix-fixes**（桌面問題清單 207 列分桶；直接修 61 列做了 60）：線 1～5、線 6 `procs_ctl_mailbox`→`procs_requests`、坑-52 PDEATHSIG 全套＋eca 的 CLI、坑-74 等腦 10 分鐘提醒、新子命令 `aos-daemon-ctl shutdown`、`copy-out`（坑-73）與 `.aos-proto8` 錨點（坑-92）、收尾修 `caf9a32f7`。試驗場 `~/code/playground` 已刷新（備份 `.bak-1110`），桌面大修材料同步到 `6efb876fe`（220 列）。→ `proto8/thinking/2026-11/10/prefix-fixes/`（04 施工結果）。**沒修、等使用者說要不要**：adopt 接回的列失敗後直接下表看不到原因；stop→sleep→start 後新 loop 照做舊 stop 馬上退出；「ctl 信箱」說法要不要照新命名原則改。
+   - **prefix-fixes**（桌面問題清單 207 列分桶；直接修 61 列做了 60）：線 1～5、線 6 `procs_ctl_mailbox`→`procs_requests`、坑-52 PDEATHSIG 全套＋eca 的 CLI、坑-74 等腦 10 分鐘提醒、新子命令 `aos-daemon-ctl shutdown`、`copy-out`（坑-73）與 `.aos-proto8` 錨點（坑-92；11-10 下午已拔）、收尾修 `caf9a32f7`。試驗場 `~/code/playground` 已刷新（備份 `.bak-1110`），桌面大修材料同步到 `6efb876fe`（220 列）。→ `proto8/thinking/2026-11/10/prefix-fixes/`（04 施工結果）。**沒修、等使用者說要不要**：adopt 接回的列失敗後直接下表看不到原因；stop→sleep→start 後新 loop 照做舊 stop 馬上退出；「ctl 信箱」說法要不要照新命名原則改。
    - **sweeper 清道夫**：`_sweeper` 列（每台 daemon 自己掛、只管自己）、`aos-daemon-ctl sweep [--purge] [--dry-run]`、保留期預設 7 天、判官範本 `max_running` 5。→ `thinking/2026-11/10/sweeper/`。沙箱帳號沒實跑。
    - **two-machines 圖紙**（fable，`2d5d61905`）：之後被使用者大幅改向，見下。
 3. **還在跑：two-machines 施工隊長（opus，ListAgents 找「two-machines 施工隊長」）**。圖紙原是「專用 image repo＋`aos-image freeze/thaw`」，使用者下午連續改向，**以這些原話為準**（都已轉給它）：
    - 「換台還要特別跑東西...，我原本預期他就是cp過去，起daemon她就自動繼續了。頂多就是各種路徑(ws,知識庫)和環境變數準備好就好。」→ 不可有換台必跑的步驟，零件自己認出殘留並自癒。
-   - 指到外面的路徑：「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」「兩台各自設一次...不要限制只設一次」→ 三種寫法都收、每次用到才解、不固化；`.aos-proto8`／`copy-out --relink` 降為可選方式；不做起根自動 relink。
+   - 指到外面的路徑：「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」「兩台各自設一次...不要限制只設一次」→ 三種寫法都收、每次用到才解、不固化；`.aos-proto8` 錨點 11-10 下午使用者裁定整個拔掉（「怎麼還是有.aos-proto8 ?」「那就拔掉，可以動程式」）：`copy-out --proto8` 只剩 env（預設）／relative／absolute，`--relink`、`aos-tools add --anchor` 已拔；換台不跑任何指令，env 寫法每台設 `AOS_PROTO8`。
    - 目標用法：「我在C:/code/mine/something，建立defs/, stacks/，剩下就是something自身的東西。git clone下來之後直接aos-exec --stack stacks/daemon defs」；下班前對根下 **`shutdown`**（他先說 sleep、更正「喔不是，就shutdown」）再 `git push`。stacks 跟著專案自己的 repo（正常歷史，aos 不可 force push／代 commit）——「stacks 進專案 repo 正常歷史」我先這樣假設，未正式裁。
    - 「gitignore要弄好」（獨立交付項：實跑分類、兩方向都對、自動檢查釘住）。
    - 「要自動繼續的話，有需要的話可以加上boot指令」（只有零件自癒做不到時才加，與 shutdown 成對）。

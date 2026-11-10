@@ -23,7 +23,7 @@
 | 做什麼 | 指令 | 備註 |
 |--------|------|------|
 | 建 proto8 的 C++ 實作 | 照 [testing「proto8」](testing.md#proto8)，在 `proto8/impls/` 建 | 10-23 起 proto8 的 aos-exec／loop／fsm／daemon 只有 C++ 版，手跑前要先建；各專案獨立 CMake、也能單獨 `cd <專案> && cmake -B build && cmake --build build`；重運算，派給隊員時 `nice -n 19`（見 [resources](resources.md)）|
-| 把 proto8 的指令放進 PATH | `proto8/install.sh`（WSL clone 裡跑；預設 symlink 進 `~/.local/bin`，給參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉）| 11-06 晚 K-5：也在 Python user site 寫 `aos-proto8.pth`，兩行為本 repo `proto8/py`／`proto8/lib` 絕對路徑；`--dry-run` 不寫、`--uninstall` 只刪內容完全相符的本 repo 那份；user site 不可用只 warning、其餘照裝，可改給 `PYTHONPATH`。impls 先建好；冪等、同名的別的東西不蓋；repo 換位置要重跑。11-10 起也連 `templates/copy-out`（開新 agent：`copy-out [範本] 目的資料夾`，把範本抄出 repo、路徑改絕對，[templates/docs/02](../../proto8/templates/docs/02-agent-fsm.md)）。之後不用每殼 source env.sh 設 PATH |
+| 把 proto8 的指令放進 PATH | `proto8/install.sh`（WSL clone 裡跑；預設 symlink 進 `~/.local/bin`，給參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉）| 11-06 晚 K-5：也在 Python user site 寫 `aos-proto8.pth`，兩行為本 repo `proto8/py`／`proto8/lib` 絕對路徑；`--dry-run` 不寫、`--uninstall` 只刪內容完全相符的本 repo 那份；user site 不可用只 warning、其餘照裝，可改給 `PYTHONPATH`。impls 先建好；冪等、同名的別的東西不蓋；repo 換位置要重跑。11-10 起也連 `templates/copy-out`（開新 agent：`copy-out [範本] 目的資料夾`，把範本抄出 repo、指回 proto8 的路徑照 `--proto8 env|relative|absolute` 改寫（預設 env＝每台設一次 `AOS_PROTO8`），[templates/docs/02](../../proto8/templates/docs/02-agent-fsm.md)）。之後不用每殼 source env.sh 設 PATH |
 | 文檔檢查 | `bash wf/tools/wf-lint.sh --strict wf .claude/commands` | 可選，預設不跑；或 `/wf-lint`；從 repo 根跑 `.` 會被 `.claude/worktrees/` 的副本淹掉 |
 
 驗證與測試指令不列這裡——連同「誰跑」一起在 [testing](testing.md)。

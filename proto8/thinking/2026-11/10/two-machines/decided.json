@@ -208,7 +208,7 @@
    "id": "D25",
    "line": "路徑",
    "what": "aos-tools add 存法",
-   "decided": "給絕對存絕對；給相對存相對「寫進的那份檔的資料夾」；`--path-json` 原樣存；`--anchor` 才經錨點（坑-92 舊行為改成要明講）",
+   "decided": "給絕對存絕對；給相對存相對「寫進的那份檔的資料夾」；`--path-json` 原樣存；`--anchor` 才經錨點（坑-92 舊行為改成要明講）；11-10 下午使用者裁定拔掉錨點，`--anchor` 已拔",
    "why": "使用者「要用相對位置、絕對位置、環境變數指定都可」",
    "overturn": "cmd/aos-tools/bin/aos-tools"
   },

@@ -74,12 +74,6 @@ class RewriterTests(unittest.TestCase):
         self.assertEqual(os.path.realpath(dest / cd["$path"]), str(self.proto / "lib" / "t" / "_entry"))
         self.assertTrue((dest / "sub" / "_entry").exists())
 
-    def test_anchor(self):
-        dest, _ = self.copy("anchor")
-        self.assertEqual(self.read(dest, "tools.json")["tools"]["t"]["path"], ".aos-proto8/lib/t")
-        self.assertEqual(os.readlink(dest / "sub" / "_entry"), "../.aos-proto8/lib/t/_entry")
-        self.assertEqual(self.read(dest, "sub", "conf.json")["argv"][0], {"$env": "AOS_CD", "$path": ".aos-proto8/lib/t/_entry"})
-
     def test_source_untouched_and_bad_mode(self):
         before = (self.src / "tools.json").read_text()
         self.copy("env")

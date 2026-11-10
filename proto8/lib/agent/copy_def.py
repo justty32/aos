@@ -1,17 +1,16 @@
-"""copy_def - 把一份定義（範本、kernel）抄到別處時，改寫「指進 proto8」的路徑：env／anchor／absolute／relative 四種寫法（templates/copy-out 與 agents new 共用）。
+"""copy_def - 把一份定義（範本、kernel）抄到別處時，改寫「指進 proto8」的路徑：env／absolute／relative 三種寫法（templates/copy-out 與 agents new 共用）。
 
 使用者 11-10 午：「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」「兩台各自設一次...不要限制只設一次」——
 寫出來的檔只放寫法，不放解出來的值；每次用到才由讀它的程式解（aos-exec／aos-json／aos-directive 的指示詞，N-45）。
-四種寫法（MODE）：
+三種寫法（MODE）：
   env       {"$env": "AOS_PROTO8", "$path": "/<proto8 底下的相對路徑>"}；每台設一次 AOS_PROTO8＝這台 proto8 的絕對路徑（預設）。
-  anchor    經 DEST/.aos-proto8 的相對路徑（錨點捷徑由呼叫的人建；copy-out 建、--relink 重指）。
   absolute  這台 proto8 的絕對路徑（兩台要放同一位置）。
   relative  從那個檔的資料夾到 proto8 的相對路徑（兩台要同樣的相對擺法）。
 改的地方（範本裡每個相對路徑照「它在範本原位」解開：落在範本裡＝照舊；落在 proto8 裡＝照 MODE 改；都不是＝照舊、帶 .. 的提醒一行）：
   - 任一 JSON 檔（*.json，與 JSON 形的 _entry）裡的字串值：相對、指得到東西的才算（從那個檔的資料夾算；tools.*.path、單子 argv、
     _memory.json 的 base、kernel.json 的 exec 與 endpoints 都是這種）。JSON key 不動。
-  - {"$env": "AOS_CD", "$path": 相對}（AOS_CD＝定義的根）：env／absolute 換成整格新值，anchor／relative 只換 $path。別的指示詞整格不動。
-  - 相對捷徑：anchor／relative／absolute 照寫法重寫捷徑；env（捷徑放不了環境變數）：_entry 捷徑換成等價的 JSON 單子
+  - {"$env": "AOS_CD", "$path": 相對}（AOS_CD＝定義的根）：env／absolute 換成整格新值，relative 只換 $path。別的指示詞整格不動。
+  - 相對捷徑：relative／absolute 照寫法重寫捷徑；env（捷徑放不了環境變數）：_entry 捷徑換成等價的 JSON 單子
     {"argv": ["aos-exec", {"$env": "AOS_PROTO8", "$path": …}]}；指到檔的換成那份檔的複本（快照，之後 repo 改了不跟著變）；
     指到資料夾的退回 absolute——後兩種各提醒一行、列在 notes。
 不讀環境變數、不碰 AOS_PROTO8 的值：寫的是寫法。PROTO＝本檔 realpath 往上兩層（lib/agent → proto8）。
@@ -20,9 +19,8 @@ import json
 import os
 import shutil
 
-MODES = ("env", "anchor", "absolute", "relative")
+MODES = ("env", "absolute", "relative")
 ENV = "AOS_PROTO8"
-ANCHOR = ".aos-proto8"
 PROTO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
 
@@ -101,9 +99,7 @@ class Rewriter:
             return env_value(sub)
         if self.mode == "absolute":
             return os.path.normpath(os.path.join(self.proto, sub))
-        if self.mode == "relative":
-            return os.path.relpath(os.path.join(self.proto, sub), os.path.realpath(here))   # 還不在的部分照字面
-        return os.path.relpath(os.path.join(self.final, ANCHOR, sub), here)
+        return os.path.relpath(os.path.join(self.proto, sub), os.path.realpath(here))   # relative：還不在的部分照字面
 
     def value(self, src_dir, rel):
         sub = self._target(src_dir, rel)
@@ -124,7 +120,7 @@ class Rewriter:
                 sub = self._target(self.src, v["$path"])
                 if sub is not None:
                     new = self._write(sub, self.final)
-                    if isinstance(new, str) and self.mode in ("anchor", "relative"):
+                    if isinstance(new, str) and self.mode == "relative":
                         return dict(v, **{"$path": new}), True
                     return new, True
             return v, False
@@ -193,6 +189,4 @@ def needs(mode, dest, proto=PROTO):
         return "needs %s set to this machine's proto8 folder (now: %s; this repo: %s)" % (ENV, now if now else "unset", proto)
     if mode == "absolute":
         return "needs proto8 at %s on every machine" % proto
-    if mode == "relative":
-        return "needs proto8 at the same place relative to %s (now: %s)" % (dest, os.path.relpath(proto, os.path.realpath(dest)))
-    return "needs %s pointing at this machine's proto8 folder (copy-out --relink after a move)" % os.path.join(dest, ANCHOR)
+    return "needs proto8 at the same place relative to %s (now: %s)" % (dest, os.path.relpath(proto, os.path.realpath(dest)))

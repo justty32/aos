@@ -1,4 +1,4 @@
-"""Test copy-out: the four --proto8 modes, kernel/NAME templates, env-mode symlink fallbacks, the needs line, and --relink leaving good anchors alone."""
+"""Test copy-out: the three --proto8 modes (env, absolute, relative), kernel/NAME templates, env-mode symlink fallbacks and the needs line."""
 import json
 import os
 from pathlib import Path
@@ -49,7 +49,6 @@ class CopyOut(unittest.TestCase):
         self.assertEqual(tools["memory"]["path"], "tools/memory")
         self.assertEqual(self.json("a", "tools", "memory", "_entry"), [{"$env": "AOS_PROTO8", "$path": "/lib/agent/memory/_entry"}])
         self.assertEqual(self.json("a", "tools", "memory", "_memory.json")["base"], {"$env": "AOS_PROTO8", "$path": "/knowledge/aos"})
-        self.assertFalse(os.path.lexists(self.tmp / "a" / ".aos-proto8"))
         self.assertFalse((self.tmp / "a" / ".gitignore").exists())
 
     def test_env_mode_needs_line_shows_current_value(self):
@@ -73,19 +72,11 @@ class CopyOut(unittest.TestCase):
         argv = self.json("r", "fsm.json")["states"]["think"]["exec"]["argv"]
         self.assertEqual(argv[1], {"$env": "AOS_PROTO8", "$path": "/templates/agent-fsm/brain.py"})
 
-    def test_aos_cd_directive_anchor_keeps_aos_cd(self):
-        self.ok("--proto8", "anchor", "reviewer", "r")
+    def test_aos_cd_directive_relative_keeps_aos_cd(self):
+        self.ok("--proto8", "relative", "reviewer", "r")
         argv = self.json("r", "fsm.json")["states"]["think"]["exec"]["argv"]
-        self.assertEqual(argv[1], {"$env": "AOS_CD", "$path": ".aos-proto8/templates/agent-fsm/brain.py"})
-
-    def test_anchor_mode_is_old_behaviour(self):
-        r = self.ok("--proto8", "anchor", "a")
-        self.assertEqual(self.json("a", "tools.json")["tools"]["agents"]["path"], ".aos-proto8/lib/agent/agents")
-        self.assertEqual(os.readlink(self.tmp / "a" / ".aos-proto8"), str(PROTO))
-        self.assertIn("/.aos-proto8", (self.tmp / "a" / ".gitignore").read_text())
-        self.assertEqual(os.readlink(self.tmp / "a" / "tools" / "memory" / "_tooldef.json"),
-                         "../../.aos-proto8/lib/agent/memory/_tooldef.json")
-        self.assertIn("needs", r.stdout)
+        self.assertEqual(argv[1]["$env"], "AOS_CD")
+        self.assertEqual(os.path.realpath(self.tmp / "r" / argv[1]["$path"]), str(PROTO / "templates" / "agent-fsm" / "brain.py"))
 
     def test_absolute_mode(self):
         self.ok("--proto8", "absolute", "a")
@@ -128,40 +119,6 @@ class CopyOut(unittest.TestCase):
     def test_dest_exists(self):
         (self.tmp / "a").mkdir()
         self.assertIn("DestExists", self.run_copy("a").stderr)
-
-    # ---- --relink ----
-
-    def test_relink_keeps_users_relative_anchor(self):
-        self.ok("--proto8", "anchor", "a")
-        link = self.tmp / "a" / ".aos-proto8"
-        os.remove(link)
-        os.symlink(os.path.relpath(PROTO, self.tmp / "a"), link)
-        before = os.readlink(link)
-        r = self.ok("--relink", "a")
-        self.assertEqual(os.readlink(link), before)
-        self.assertIn("already 1", r.stdout)
-
-    def test_relink_keeps_anchor_reaching_another_proto8(self):
-        self.ok("--proto8", "anchor", "a")
-        other = self.tmp / "other"
-        (other / "templates").mkdir(parents=True)
-        (other / "py").mkdir()
-        (other / "templates" / "copy-out").write_text("")
-        (other / "py" / "aos_flags.py").write_text("")
-        link = self.tmp / "a" / ".aos-proto8"
-        os.remove(link)
-        os.symlink(other, link)
-        self.ok("--relink", "a")
-        self.assertEqual(os.readlink(link), str(other))
-
-    def test_relink_repoints_broken_absolute_anchor(self):
-        self.ok("--proto8", "anchor", "a")
-        link = self.tmp / "a" / ".aos-proto8"
-        os.remove(link)
-        os.symlink("/nonexistent/proto8", link)
-        r = self.ok("--relink", "a")
-        self.assertEqual(os.readlink(link), str(PROTO))
-        self.assertIn("relinked", r.stdout)
 
 
 if __name__ == "__main__":

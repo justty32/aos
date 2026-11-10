@@ -14,7 +14,7 @@
 | 帶走 `carry` | 未處理的 `new/`、`cur/`、agent `queue/`、歸檔信、`think/pending.txt`、`think/reply/` | 還沒處理完的工作與問腦回信；不能把所有 `reply/` 一起擋掉 |
 | 帶走 `carry` | `clock`、`ledger.jsonl`、`used.json`、`queue.json` | 時鐘、帳本、額度與隊序接著算；這些本來就可能每輪改動 |
 | 帶走 `carry` | eca 的 `session.txt`、`tool.txt`、`ws.txt`、`stack.txt`、`last.txt` | 保留對話識別與小格狀態；`session.txt` 並不是 CLI 的整段原生對話資料 |
-| 留本機 `local` | `.session_home`、`.aos-proto8` | 前者辨認這台的對話環境，後者指到這台的 repo；換台不應沿用舊值 |
+| 留本機 `local` | `.session_home` | 辨認這台的對話環境；換台不應沿用舊值 |
 | 擋執行期檔 `runtime` | 鎖、socket、`cooldown.json`、`think/wait_warned.txt`、ctl 呼叫者的回信箱 | 舊行程、舊等待者或這台牆上時間才有意義；帶過去無助於接續 |
 | 擋可重建檔與暫存 `runtime`／`temp` | `think/request.json`、`think/sent.json`、stack 的 `endpoints.json` 觀測窗、MCP 設定、`tmp/` 半封信、點開頭的原子寫入暫存、Python 快取 | 由仍保留的進度、設定或下一次操作重建；半封信尚未完成投遞 |
 | 擋觀測與留證 `runtime` | `stderr.txt`、`stderr_archives/`、`sweeper_report.json`、`observed/`、`live.jsonl`、`turns.jsonl`、計數器、`*.bad-*` | 只留原機供人查看，避免每次存進一批無助接續的紀錄 |
@@ -50,7 +50,6 @@ cp "$P/cmd/aos-agent/stack.gitignore" "$STACK/.gitignore"
 不想在各 stack 放檔，也可自行把較窄的規則放到自己的 repo 根。下面這組不依賴定義或 stack 的名字，並保留專案自己的 `.env`、`tmp/`、`state.json`；**它不是完整的 stack 排除樣板**：
 
 ```gitignore
-**/.aos-proto8
 **/.session_home
 **/.flock
 **/.sweeper.lock

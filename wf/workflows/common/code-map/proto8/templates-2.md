@@ -33,6 +33,6 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`test_copy_out.py`](../../../../../proto8/templates/tests/test_copy_out.py) | Test copy-out: the four --proto8 modes, kernel/NAME templates, env-mode symlink fallbacks, the needs line, and --relink leaving good anchors alone. |
+| [`test_copy_out.py`](../../../../../proto8/templates/tests/test_copy_out.py) | Test copy-out: the three --proto8 modes (env, absolute, relative), kernel/NAME templates, env-mode symlink fallbacks and the needs line. |
 | [`test_daily.py`](../../../../../proto8/templates/tests/test_daily.py) | Acceptance (/tmp, fake brain, fake claude): the user's daily routine across two machines - git clone/pull, one aos-exec line, work, aos-daemon-ctl sh… |
 | [`test_paths_move.py`](../../../../../proto8/templates/tests/test_paths_move.py) | Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm) and an llm kernel project move by git to another HOME and prefix u… |
