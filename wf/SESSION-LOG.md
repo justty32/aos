@@ -8,6 +8,7 @@
 
 ## 最新進度
 
+- **done｜clock-letters（使用者 11-10 晚「時鐘這塊幫我改成寄信好了，不要用跑任意aos函數。」「指令是aos-clock-register嗎？」）**：做完——時鐘檔旁 `clock_register.json`，cycle 除得盡就 aos-post 寄一封；`aos-clock-register add／rm／ls`＋給腦的 `clock_register`（box 不給＝叫醒自己）、兩範本登記；fsm 假腦、gemma、eca haiku 都驗過；hook 線續行點 ③（clock 事件）＝不加，定時叫醒改走這條。還開著：`lib/docs/03`、`templates/docs/01、02`、`NORMS 附錄4` 各補一列（施工時別隊有未 commit 改動沒碰）、知識節點 `clock.json` 內容待人加 → [clock-letters 01](../proto8/thinking/2026-11/10/clock-letters/01-施工結果.md)
 - **done｜mailbox（使用者 11-10 晚「a2a看過了，太繁重了。我們先做純inbox協議。這次就叫mailbox。」）**：做完——`aos-mailbox` 指令＋`mailbox_peek`／`mailbox_read`／`mailbox_send`、兩範本登記；fsm 假腦、gemma、eca haiku 都驗過；人的預設 stack `~/.stack` 未定（代定 1）→ [mailbox 02](../proto8/thinking/2026-11/10/mailbox/02-施工結果.md)
 - **open｜agents-split（使用者 11-10 晚「我希望拆成幾大塊：掌管子agent的管理與生滅，掌管agent定義的創造修改，掌管與其他agent的交流」「命名好後讓我看看」）**：圖紙第一段已出（[01 拆法與命名](../proto8/thinking/2026-11/10/agents-split/01-拆法與命名.md)：`children`／`agent_add`／`defs` 加 `new`，代定 10 條）；**停在等使用者看名字**，點頭後施工（舊 `agents` 整支拿掉）→ [agents-split](../proto8/thinking/2026-11/10/agents-split/README.md)
 - **done｜self-family（使用者 11-10 晚 self_history 五題「1.全給，風險自己擔。2.可以。3.可選，默認搬到旁邊(可以選要搬到哪) 4.接受縮水版。5.對」）**：做完——`aos-agent history`（ls／rm／summarize／set、原文搬到 history_removed.jsonl）→ `self_history` 包裝（這一步鎖著）→ eca 縮水版（history 被改過＝下一輪開新對話）→ 文件；假腦、gemma 真腦、eca haiku 真對話都驗過；self_hook 另一隊 → [self-family 01](../proto8/thinking/2026-11/10/self-family/01-施工結果.md)
