@@ -113,4 +113,4 @@ git 不保存空資料夾。本次 clone 實跑，一般 daemon 控制信箱、�
 - **帳本**：`ledger.jsonl`（只記當時路徑、不拿來解路徑）。
 - **信封的 `sender`**（寄件人＝工作區路徑）。
 
-`sk-` 金鑰開頭不在放過之列，哪裡出現都算。其餘照查；命中時結果檔的 `where` 印出是 JSON 裡哪一格與它的值。照這個標準，現在還會命中的是兩種**程式自己算出來**的絕對路徑：子 daemon 公開 state（`procs_state.json`、`state.json`）的 `daemon` 欄（上一層 daemon 的 stack），以及 kernel 在途信小格 `proc.json` 的 `exec`（定義裡寫的相對入口被轉成的絕對路徑）。這兩種不在使用者裁的三類裡，檢查照舊算紅（next_todo B06）。
+`sk-` 金鑰開頭不在放過之列，哪裡出現都算。其餘照查；命中時結果檔的 `where` 印出是 JSON 裡哪一格與它的值。另外兩格**程式自己記的**絕對路徑也不算（使用者 11-11 再裁「放過」）：子 daemon 公開 state（`procs_state.json`、`state.json`）的 `daemon` 欄（上一層 daemon 的 stack），以及 kernel 在途信小格 `proc.json` 的 `exec`（定義裡寫的相對入口被轉成的絕對路徑）。只放過這兩格，同一檔的別格照查。

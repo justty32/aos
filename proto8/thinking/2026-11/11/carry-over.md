@@ -107,3 +107,7 @@
 
 驗證：impls 重建後逐夾跑全套 **60 夾 986 支，只紅既有 4 支**（新 test_parse_cli 8，對舊版紅 5；test_flags_anywhere 8）；gitignore-check 整棵實跑兩次（照新標準剩上面那兩種命中）；knowledge_check 0 錯誤、41 warning；codemap 0 stale。
 
+## 第三批：B06 剩的兩格也放過（11-11，使用者再裁「放過」）
+
+子 daemon 公開 state（`procs_state.json`、`state.json`）頂層的 `daemon` 欄、kernel 在途信小格 `proc.json` 的 `exec`：程式自己記的絕對路徑，不算外洩。gitignore-check 只放過這兩格（同檔別格、`sk-` 金鑰照查）；新測試 `extras/gitignore-check/tests/test_leaks.py` 4 支；整棵實跑 shutdown／kill9 兩個時點命中 0、ALL CHECKS PASSED。next_todo B06 改已修。
+

@@ -69,6 +69,9 @@ def matches(pattern, name):
 # 11-11 B05／B06（使用者選「改檢查的標準」）：追蹤檔裡的本機路徑，下面三種不算外洩（只放路徑類記號，"key prefix" 照查）：
 # 使用者自己寫的絕對路徑（defs/ 底下的定義與設定、表上原樣存的 as_written，以及程式從定義原樣抄到別處的同一個字串）、
 # 帳本（ledger.jsonl）、信封的 sender（寄件人＝工作區路徑）。其餘照查，命中時印出 JSON 裡的位置（where）。
+# 11-11 再裁（使用者「放過」）：程式自己記的兩格絕對路徑也不算——子 daemon 公開 state 的 daemon 欄（上一層 daemon 的 stack）、
+# kernel 在途信小格 proc.json 的 exec（定義裡的相對入口轉成的絕對路徑）。（檔名, JSON 位置）
+ALLOWED_AT = {("procs_state.json", "/daemon"), ("state.json", "/daemon"), ("proc.json", "/exec")}
 PATH_TOKENS = {"temporary root", "original HOME", "fixture HOME", "username", "hostname", "repo location"}
 ALLOWED_KEYS = {"as_written", "sender"}
 
@@ -145,7 +148,8 @@ def leak_places(name, content, tokens, mine=frozenset()):
         if docs is None:
             found[label] = ["(text)"]
             continue
-        where = [w for d in docs for w in hits(d, v, mine)]
+        base = name.rsplit("/", 1)[-1]
+        where = [w for d in docs for w in hits(d, v, mine) if (base, w.split(" = ", 1)[0]) not in ALLOWED_AT]
         if where:
             found[label] = where
     return found

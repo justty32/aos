@@ -10,6 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`check.py`](../../../../../proto8/extras/gitignore-check/check.py) | Exercise optional stack ignore rules against a real, entirely fake-brain daemon tree. |
+| [`tests/test_leaks.py`](../../../../../proto8/extras/gitignore-check/tests/test_leaks.py) | Check gitignore-check's local-path rule: which tracked contents count as a leak (B05/B06, 11-11). |
 
 ## `proto8/extras/image-move-check/`
 
