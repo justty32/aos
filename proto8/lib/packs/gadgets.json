@@ -1,6 +1,6 @@
-{"description": "Pack gadgets: small handy tools - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic expression), thought (hand one small task to a throw-away helper agent and get back its short conclusion).",
+{"description": "Pack gadgets: small handy tools - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic expression), do_task (hand one small task to a throw-away helper agent and get back its short conclusion).",
  "tools": {
            "peek_clock": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/peek_clock"}},
            "peek_now_time": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/peek_now_time"}},
            "math": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/math"}},
-           "thought": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/thought"}}}}
+           "do_task": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/do_task"}}}}

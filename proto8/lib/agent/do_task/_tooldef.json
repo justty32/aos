@@ -1,5 +1,5 @@
 {
-  "description": "Hand one task to a fresh helper from an agent definition chosen by from or the tool registry entry env.AOS_THOUGHT_FROM default and get back only its short conclusion; its tool calls stay out of your history. The helper knows only goal and context, keeps the definition's tools unless tools is given, and uses your brain unless model says otherwise. If your brain settings cannot be read, the call fails: give model to choose one. It is removed when done unless keep is true. Depth travels as the AOS_THOUGHT_DEPTH launch parameter; helpers may start helpers only one level deeper. Example: {\"from\": \"helpers/reviewer\", \"goal\": \"Review the result and return one sentence\"}. Details: knowledge_read aos/agents.json#/thought. Omit from to use the configured default; if neither is given, FromMissing. Both paths resolve relative to your workspace.",
+  "description": "Hand one task to a fresh helper agent and get back only its short conclusion; its tool calls stay out of your history. The helper's definition: from, else the tool registry entry env.AOS_DO_TASK_FROM default, else your own definition (with your hooks and tools, do_task included). The helper knows only goal and context, keeps the definition's tools unless tools is given, and uses your brain unless model says otherwise. If your brain settings cannot be read, the call fails: give model to choose one. It is removed when done unless keep is true. Depth travels as the AOS_DO_TASK_DEPTH launch parameter; helpers may start helpers only one level deeper. Example: {\"goal\": \"Count the .csv files under data/ and return the number\"} or {\"from\": \"helpers/reviewer\", \"goal\": \"Review the result and return one sentence\"}. Details: knowledge_read aos/agents.json#/do_task. Paths resolve relative to your workspace.",
   "env": [
     "AOS_DAEMON"
   ],
@@ -24,7 +24,7 @@
     "properties": {
       "from": {
         "type": "string",
-        "description": "optional agent definition folder; overrides the tool registry entry env.AOS_THOUGHT_FROM default (set with add --envs AOS_THOUGHT_FROM=helpers/basic). Both paths are relative to your workspace or absolute; the definition must declare aos-agent in interfaces.json. Neither given: FromMissing"
+        "description": "optional agent definition folder; overrides the tool registry entry env.AOS_DO_TASK_FROM default (set with add --envs AOS_DO_TASK_FROM=helpers/basic); neither = your own definition. Paths are relative to your workspace or absolute; the definition must declare aos-agent in interfaces.json. None of the three: FromMissing"
       },
       "goal": {
         "type": "string",

@@ -11,11 +11,11 @@
 |---|---|
 | [`_description.json`](../../../../../proto8/knowledge/aos/_description.json) | （檔頭沒有一句話） |
 | [`_index.json`](../../../../../proto8/knowledge/aos/_index.json) | 設定（鍵：me.json、me/、errors.json、errors/、world.json、definition.json…） |
-| [`agents.json`](../../../../../proto8/knowledge/aos/agents.json) | 設定（鍵：_description、_index、subagent、agents_ctl、agent_def、thought） |
+| [`agents.json`](../../../../../proto8/knowledge/aos/agents.json) | 設定（鍵：_description、_index、subagent、agents_ctl、agent_def、do_task） |
 | [`agents/_description.json`](../../../../../proto8/knowledge/aos/agents/_description.json) | （檔頭沒有一句話） |
-| [`agents/_index.json`](../../../../../proto8/knowledge/aos/agents/_index.json) | 設定（鍵：subagent.json、thought.json） |
+| [`agents/_index.json`](../../../../../proto8/knowledge/aos/agents/_index.json) | 設定（鍵：subagent.json、do_task.json） |
+| [`agents/do_task.json`](../../../../../proto8/knowledge/aos/agents/do_task.json) | 設定（鍵：_description、_index、rules、results） |
 | [`agents/subagent.json`](../../../../../proto8/knowledge/aos/agents/subagent.json) | 設定（鍵：_description、_index、errors、add） |
-| [`agents/thought.json`](../../../../../proto8/knowledge/aos/agents/thought.json) | 設定（鍵：_description、_index、rules、results） |
 | [`body.json`](../../../../../proto8/knowledge/aos/body.json) | 設定（鍵：_description、_index、brain_tools、system_history） |
 | [`brain.json`](../../../../../proto8/knowledge/aos/brain.json) | 設定（鍵：_description、_index、priority、codes） |
 | [`cli/_description.json`](../../../../../proto8/knowledge/aos/cli/_description.json) | （檔頭沒有一句話） |

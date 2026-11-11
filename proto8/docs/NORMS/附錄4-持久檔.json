@@ -397,7 +397,7 @@
   {
    "path": "$AOS_STACK/observed.jsonl（＋observed/ 子帳）",
    "lifetime": "持久",
-   "writer": "lib/observed（act.py、wait.py、lib/agent/subagent、thought）、lib/observed_children",
+   "writer": "lib/observed（act.py、wait.py、lib/agent/subagent、do_task）、lib/observed_children",
    "reader": "lib/aos/measure、lib/aos/shell_report、aos-feedback",
    "image": "不進",
    "on_bad": "measure：有一行不是物件＝ValueError；寫不了＝warning 照跑",

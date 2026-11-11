@@ -34,6 +34,6 @@
 <a id="範例demoagent-liv-11-04-刪了"></a>
 <a id="測試"></a>
 
-`thought` 與 `subagent` 的 `ask`／`listen` 支援 `timeout_cycles`（與 `timeout_s` 擇一）；沒設 `AOS_CLOCK` 時，1 cycle＝`AOS_CLOCK_INTERVAL` 毫秒，預設 1000。有時鐘時停鐘不會讓時鐘期限到期；詳見 [agent 工具索引](docs/03-索引-agent等.md)。
+`do_task` 與 `subagent` 的 `ask`／`listen` 支援 `timeout_cycles`（與 `timeout_s` 擇一）；沒設 `AOS_CLOCK` 時，1 cycle＝`AOS_CLOCK_INTERVAL` 毫秒，預設 1000。有時鐘時停鐘不會讓時鐘期限到期；詳見 [agent 工具索引](docs/03-索引-agent等.md)。
 
 `knowledge_read read` 的 `path` 寫統一路徑 `資料夾/檔.json#/JSON/Pointer`（RFC6901，帶副檔名；出廠根是 `knowledge/`，例 `aos/me.json#/self_tools`）；工具 tooldef 指向知識節點一律寫 `Details: knowledge_read aos/路徑.`；一般節點讀取方式見 [knowledge_read 說明](agent/knowledge_read/README.md)。

@@ -63,7 +63,7 @@ def suggestions(defs, reviews, config):
                 if owner and bridge and name in definitions:
                     pairs.add((owner, name))
                 owner, bridge = name, False
-            elif Path(str(node.get('def', ''))).name in ('thought', 'subagent'):
+            elif Path(str(node.get('def', ''))).name in ('do_task', 'subagent'):
                 bridge = True
             for child in node.get('children', []):
                 walk(child, owner, bridge)

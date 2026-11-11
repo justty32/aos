@@ -15,7 +15,7 @@
 
 | 包 | 檔 | 工具 |
 |---|---|---|
-| 小工具 | [gadgets.json](gadgets.json) | peek_clock（daemon 時鐘第幾 cycle）、peek_now_time（UTC 時間）、math（算一個式子）——不改任何東西、隨手看一下；thought（派一件小事給用完即走的子 agent、只拿回短結論；11-11 使用者「放進某一包」→「小工具那包」） |
+| 小工具 | [gadgets.json](gadgets.json) | peek_clock（daemon 時鐘第幾 cycle）、peek_now_time（UTC 時間）、math（算一個式子）——不改任何東西、隨手看一下；do_task（派一件小事給用完即走的子 agent、只拿回短結論；11-11 使用者「放進某一包」→「小工具那包」） |
 | 事件 | [events.json](events.json) | clock_register（時鐘定期寄信）、self_hook（自己身上發生事時叫的勾子） |
 | 自我管理 | [self.json](self.json) | self_tools、self_llm、self_system、self_state、self_ctl、self_history |
 | 子 agent | [subagent.json](subagent.json) | subagent（自己生的）、agents_ctl（daemon 上任何一隻） |

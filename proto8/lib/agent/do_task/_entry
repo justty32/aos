@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-# thought - 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定或工具設定預設定義），只拿回短結論；子的工具來回不進叫我的那隻的 history
+# do_task - 執行一個任務：派一件事給一隻用完即走的小幫手 agent（呼叫方指定、工具設定預設，或呼叫者自己的定義），只拿回短結論；子的工具來回不進叫我的那隻的 history
+# 11-11 由 thought（小念頭）改名（使用者「我在想是不是該改名為do_task，也就是執行一個任務，執行完後history中不會殘留細節(或是可選要殘留哪些)。」，
+#   選項框：名字「do_task」、另帶回什麼「不加，維持現狀」；thinking/2026-11/11/do-task-rename.md）。
 # 使用者 11-05 傍晚：「fork出去，做完之後回報，主線這邊對於這個任務的描述就會只剩短短幾句……我更推薦將其作為工具」「記憶這項，他本身也算是任務」；
 #   三題裁：子的腦「預設同父 (Recommended)」、子 stack「可選。默認刪掉。」、名字「thought (Recommended)」。
 #   規劃：proto8/thinking/2026-11/05/small-thought/（README、02-代定、03-實作步驟草稿；實作結果段在 README）。
 # 介面（lib/docs/01 的契約）：stdin 一份 {"from"?, "goal", "context"?, "tools"?, "model"?, "max_chars"?, "timeout_s"?, "timeout_cycles"?, "keep"?}，沒有 op：
-#   from 沒給＝工具登記格 env.AOS_THOUGHT_FROM；兩邊都沒給＝FromMissing，兩種來源都相對 $AOS_WS 解析。
+#   定義：from ＞ 工具登記格 env.AOS_DO_TASK_FROM ＞ 呼叫者自己的定義（daemon 表上我那列的 def，ctl who --json；11-11 使用者「啊？不是就呼叫者自己的範本嗎？
+#   應該說呼叫者的stack內，本身就會放自身的定義來源吧。」）；三者都拿不到＝FromMissing。from、AOS_DO_TASK_FROM 相對 $AOS_WS 解析，表上的 def 照表（已拼回絕對）。
+#   用自己的定義＝小幫手連 hook、工具（含 do_task 自己）一起帶著；深度上限照擋（AOS_DO_TASK_DEPTH）。
 #   goal 必要（要做什麼、要帶回什麼）；context＝字串或字串陣列（前幾步的結論）；tools＝[{name, path?}]（path 相對從 $AOS_WS、絕對照用；
 #   沒給 path＝照抄我自己工具箱裡同名那支〔aos-agent tools ls --json〕，沒有＝ToolMissing），沒給 tools＝保留定義的工具組；[]＝清空；model＝子的腦（11-10 晚使用者「把fsm認的endpoint這個key，也改名爲model吧」，原本叫 endpoint），沒給＝同父（aos-agent llm ls 父的 model；父沒寫或沒宣告 llm＝範本預設；llm ls 其他錯〔看不到父的定義等〕＝接它的代號報錯，不默默換腦；
 #   父與子的定義宣告的 llm_keys 不一樣〔例父是 eca、子是 fsm，同叫 model 意思不同〕＝不抄、子用自己定義的，代定）；
@@ -16,9 +20,9 @@
 # 子名每次唯一：mkdir $AOS_STACK/children/<子名>/，撞表或資料夾最多重試五次。
 #   state＝running <UTC到秒Z租約>／kept／failed；每步呼叫前續租至逾時＋5秒，TERM 收回租約。
 #   對帳先保護未到期租約與剛建資料夾；表上沒有就忘掉，過期 running 先 stop 再記 failed；kept 不動，failed 照 FAILED_KEEP gc。
-# 深度：讀 AOS_THOUGHT_DEPTH（沒有＝0），ctl add --envs 在啟動時傳父+1，子 stack 不寫深度檔；
+# 深度：讀 AOS_DO_TASK_DEPTH（沒有＝0），ctl add --envs 在啟動時傳父+1，子 stack 不寫深度檔；
 #   深度已是 MAX_DEPTH（2）＝DepthExceeded、不生（子能再開孫、孫不行）。
-# 錯：stderr 與 stdout 各一行「thought: error: 代號 原因」、退 1（規則 3，tool_io.die）——自己的：ArgumentsBad、FromMissing、DepthExceeded、
+# 錯：stderr 與 stdout 各一行「do_task: error: 代號 原因」、退 1（規則 3，tool_io.die）——自己的：ArgumentsBad、FromMissing、DepthExceeded、
 #   DaemonMissing（AOS_DAEMON 沒設或目錄不存在）、DaemonFailed（目錄存在但逾時沒回信：忙、暫停、掛了）、StackMissing、WsMissing、DefMissing（範本不在）、ToolMissing、MkdirFailed、WriteFailed、LaunchFailed（aos-agent 不在 PATH）、
 #   CommandFailed（逾時）；aos-agent 退非 0＝取它 stderr 最後一行錯誤行的代號與原因接成自己的（AddRejected、AnswerMissing…；同 agents）。
 #   子答不出（listen 錯、逾時）＝錯誤行尾附 (details: <子的 stack>/)，子先 ctl stop、stack 一律留（不管 keep）。
@@ -26,12 +30,13 @@
 import json, math, os, re, secrets, signal, subprocess, sys, time
 from datetime import datetime, timedelta, timezone
 HELP = """\
-usage: thought < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+usage: do_task < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Hand one task to a throw-away child agent from your chosen definition on your daemon ($AOS_DAEMON)
 and print only its short conclusion; the child's tool calls stay out of your history.
 The "from" definition and tool paths may be relative to your workspace or absolute.
-Omit "from" to use AOS_THOUGHT_FROM, set in this tool's registry entry env (or add --envs).
-Its relative path also starts at your workspace. Neither given: FromMissing.
+Omit "from" to use AOS_DO_TASK_FROM, set in this tool's registry entry env (or add --envs);
+its relative path also starts at your workspace. Neither given: your own definition (the def
+of your row on the daemon table), with its hooks and tools, do_task included. None of the three: FromMissing.
 Omit tools to keep the definition's tools; tools: [] gives the child no tools.
 timeout_s is any finite positive number of seconds (default 600).
 Use timeout_cycles (a positive integer) instead to count cycles; giving both is ArgumentsBad.
@@ -40,13 +45,13 @@ Without model the child uses your brain (when it is the same kind of agent as yo
 definition is not visible in a sandbox), the call fails with that error instead of guessing.
 To ask a kept child more later, use aos-agent ctl start --target <child>, then say / listen.
 Result on stdout: the conclusion. The child is removed afterwards unless keep is true; if it fails, its stack
-is kept and the error line ends with (details: <stack>/). A child may start one more level of thoughts
+is kept and the error line ends with (details: <stack>/). A child may start one more level of tasks
 (depth 2 at most: DepthExceeded).
 Each child has a unique name; running records use renewable UTC leases. Interrupted leases expire,
-and the next call stops expired children and keeps their stacks as failed thoughts.
+and the next call stops expired children and keeps their stacks as failed tasks.
 DaemonMissing means AOS_DAEMON is unset or its directory does not exist.
 DaemonFailed means its directory exists but no reply arrived within the timeout (busy, paused, or down).
-On error: one line "thought: error: CODE reason" on stderr and stdout, exit 1.
+On error: one line "do_task: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
@@ -68,7 +73,7 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.stdout.write(_line)
     sys.exit(1)
 
-NAME = "thought"
+NAME = "do_task"
 tool_io.start(NAME, HELP)
 die = tool_io.die
 ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
@@ -76,7 +81,7 @@ MAX_CHARS_DEFAULT, TIMEOUT_DEFAULT_S = 600, 600
 MAX_DEPTH = 2                  # 父 0 → 子 1 → 孫 2；孫再叫＝DepthExceeded（代定）
 FAILED_KEEP = 3                # 失敗留下的子 stack 最多留幾隻（gc，代定）
 STEP_S = 90                    # 其他每一步的逾時（ctl add 自己最多等 30 秒）
-OPENING = """You are a small thought: a helper started for this one task only.
+OPENING = """You are a helper started for this one task only.
 Do the task below (use your tools if you need them). When you are done, reply with the conclusion only:
 what the task asks you to bring back, not the steps you took. At most {n} characters.
 
@@ -192,9 +197,9 @@ if "from" in args:
     if not isinstance(source, str) or not source.strip():
         die("ArgumentsBad", "from must be a non-empty agent definition path")
 else:
-    source = os.environ.get("AOS_THOUGHT_FROM")
+    source = os.environ.get("AOS_DO_TASK_FROM")
     if not source or not source.strip():
-        die("FromMissing", "give from or set AOS_THOUGHT_FROM in this tool's registry entry env")
+        source = None                           # 再沒有＝呼叫者自己的定義（ctl who 之後才知道）
 goal = args.get("goal")
 if not isinstance(goal, str) or not goal.strip():
     die("ArgumentsBad", "goal must be a non-empty string: what to do and what to bring back")
@@ -237,9 +242,6 @@ stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
 ws = tool_io.workspace()
-definition = os.path.realpath(source if os.path.isabs(source) else os.path.join(ws, source))
-if not os.path.isdir(definition):
-    die("DefMissing", "the child definition %s is missing" % definition)
 kids_dir = os.path.join(stack, "children")
 
 
@@ -286,7 +288,7 @@ def lease_active(state):
 
 
 def mtime(name):
-    """紀錄資料夾的修改時間；別的 thought 剛刪掉＝0。"""
+    """紀錄資料夾的修改時間；別的 do_task 剛刪掉＝0。"""
     try:
         return os.path.getmtime(os.path.join(kids_dir, name))
     except OSError:
@@ -310,7 +312,7 @@ def reconcile(table):
             st = []
             state_missing = not os.path.exists(os.path.join(kids_dir, n, "state"))
         if lease_active(st):
-            continue                            # 另一個 thought 正在用，可能還沒上表
+            continue                            # 另一個 do_task 正在用，可能還沒上表
         if state_missing and time.time() - age < STEP_S:
             continue                            # 剛 mkdir、state 還沒寫的那一瞬
         if n not in table:
@@ -321,7 +323,7 @@ def reconcile(table):
         if st[:1] in (["running"], ["failed"]) and table.get(n) != "stopped":   # 已停的不再寄 stop
             _, err = agent(["ctl", "stop", "--target", n])
             if err:
-                tool_io.warn("could not stop the abandoned thought %s: %s %s" % ((n,) + err))
+                tool_io.warn("could not stop the abandoned task helper %s: %s %s" % ((n,) + err))
         if st[:1] == ["running"]:                # 租約過了＝主人死在半路
             mark(n, "failed")
         failed.append((age, n))
@@ -333,19 +335,28 @@ def reconcile(table):
         if err is None:
             forget(n)
         else:
-            tool_io.warn("could not remove the old failed thought %s: %s %s" % ((n,) + err))
+            tool_io.warn("could not remove the old failed task helper %s: %s %s" % ((n,) + err))
 
 
 # ---- 我是誰、深度 ----
 me = json.loads(must(["ctl", "who", "--json"]))
 try:
-    depth = int(os.environ.get("AOS_THOUGHT_DEPTH", "0"))
+    depth = int(os.environ.get("AOS_DO_TASK_DEPTH", "0"))
 except ValueError:
-    die("ArgumentsBad", "AOS_THOUGHT_DEPTH must be a non-negative integer")
+    die("ArgumentsBad", "AOS_DO_TASK_DEPTH must be a non-negative integer")
 if depth < 0:
-    die("ArgumentsBad", "AOS_THOUGHT_DEPTH must be a non-negative integer")
+    die("ArgumentsBad", "AOS_DO_TASK_DEPTH must be a non-negative integer")
 if depth >= MAX_DEPTH:
-    die("DepthExceeded", "you are a thought at depth %d; at most %d levels of thoughts (do this step yourself)" % (depth, MAX_DEPTH))
+    die("DepthExceeded", "you are a task helper at depth %d; at most %d levels of do_task (do this step yourself)" % (depth, MAX_DEPTH))
+if source is None:                              # 三者最後一個：daemon 表上我那列的 def（呼叫者自己的定義）
+    own = me.get("def")
+    if not isinstance(own, str) or not own.strip():
+        die("FromMissing", "give from: no AOS_DO_TASK_FROM in this tool's registry entry env, and the daemon table has no definition for you")
+    definition = os.path.realpath(own)
+else:
+    definition = os.path.realpath(source if os.path.isabs(source) else os.path.join(ws, source))
+if not os.path.isdir(definition):
+    die("DefMissing", "the helper's definition %s is missing" % definition)
 def llm_keys(folder):
     """定義 interfaces.json 宣告的 llm_keys（身體認哪些腦設定鍵）；讀不到或沒寫＝None。"""
     try:
@@ -404,7 +415,7 @@ for attempt in range(5):
         die("MkdirFailed", "cannot create %s: %s" % (os.path.join(kids_dir, kid), e))
 else:
     die("MkdirFailed", "could not create a unique child record after 5 attempts")
-out, err = agent(["ctl", "add", "--name", kid, "--ws", ws, "--envs", "AOS_THOUGHT_DEPTH=%d" % (depth + 1), definition])
+out, err = agent(["ctl", "add", "--name", kid, "--ws", ws, "--envs", "AOS_DO_TASK_DEPTH=%d" % (depth + 1), definition])
 if err:
     if err[0] in ("DaemonMissing", "DaemonFailed"):
         mark(kid, "failed")
@@ -470,7 +481,7 @@ if keep:                                        # 留著也不佔 loop：答完�
     _, err = agent(["ctl", "stop", "--target", kid])
     mark(kid, "kept")
     if err:
-        tool_io.warn("could not stop the kept thought %s: %s %s" % ((kid,) + err))
+        tool_io.warn("could not stop the kept task helper %s: %s %s" % ((kid,) + err))
     sys.stdout.write("%s\ndetails: %s\n" % (answer, rel(kid_stack)))
     sys.exit(0)
 _, err = agent(["ctl", "rm", "--purge", kid])
@@ -478,6 +489,6 @@ if err is None:
     forget(kid)
 else:
     mark(kid, "failed")
-    tool_io.warn("could not remove the finished thought %s: %s %s" % ((kid,) + err))
+    tool_io.warn("could not remove the finished task helper %s: %s %s" % ((kid,) + err))
 sys.stdout.write(answer + "\n")
 sys.exit(0)

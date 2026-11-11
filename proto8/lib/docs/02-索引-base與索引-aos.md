@@ -2,7 +2,7 @@
 
 ## 索引：base
 
-**分包與路徑**（11-10 tool-packs）：前 15 支通用工具分四包，清單在 [lib/packs](../packs/README.md)——1 看（read、ls、view、stat、json_read）、2 改（write、edit、copy、move、mkdir、json_write）、3 刪（trash、remove）、4 殼（shell、run_python）；另有小工具包 gadgets（peek_clock、peek_now_time、math，不改任何東西、隨手看一下；11-11 起加 agent 工具 thought）。agent 工具也分包（事件、自我管理、子 agent、定義、信箱、記憶），一覽見 [lib/packs](../packs/README.md)。檔案工具的路徑相對從 `$AOS_WS` 算、絕對照用，**不擋工作區外**（使用者「這些就是/usr/bin的包裝」「3.對」），能不能動看 Linux 權限；相對路徑又沒有 `$AOS_WS`＝`WsMissing`。
+**分包與路徑**（11-10 tool-packs）：前 15 支通用工具分四包，清單在 [lib/packs](../packs/README.md)——1 看（read、ls、view、stat、json_read）、2 改（write、edit、copy、move、mkdir、json_write）、3 刪（trash、remove）、4 殼（shell、run_python）；另有小工具包 gadgets（peek_clock、peek_now_time、math，不改任何東西、隨手看一下；11-11 起加 agent 工具 do_task）。agent 工具也分包（事件、自我管理、子 agent、定義、信箱、記憶），一覽見 [lib/packs](../packs/README.md)。檔案工具的路徑相對從 `$AOS_WS` 算、絕對照用，**不擋工作區外**（使用者「這些就是/usr/bin的包裝」「3.對」），能不能動看 Linux 權限；相對路徑又沒有 `$AOS_WS`＝`WsMissing`。
 
 回 JSON 的工具裡，計數（幾個、幾行、幾字）的 key 一律 `counter_<被數的東西>`（10-25 使用者「計數這塊，幫我改成counter_*」，C-54 命名方法 R6）；陣列本身（`items`、`keys` 清單）不加。
 

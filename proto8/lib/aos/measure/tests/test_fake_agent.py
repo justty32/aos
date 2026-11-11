@@ -78,7 +78,7 @@ class FakeAgentMeasure(unittest.TestCase):
             bash = PROTO / 'lib/base/shell'
             child = definition('child', {'shell': {'path': str(bash)}})
             definition('parent', {'shell': {'path': str(bash)},
-                                 'thought': {'path': str(PROTO / 'lib/agent/thought')}})
+                                 'do_task': {'path': str(PROTO / 'lib/agent/do_task')}})
             definition('single', {})
             # Exercise llm_fake itself, changing only its reported usage at the boundary.
             fake = root / 'fake'
@@ -97,7 +97,7 @@ class FakeAgentMeasure(unittest.TestCase):
             write(config, {'exec': str(fake), 'endpoint': 'parent', 'endpoints': {
                 'parent': {'script': [
                     {'tool_calls': [{'name': 'shell', 'arguments': {'command': 'printf parent > result.txt'}}]},
-                    {'tool_calls': [{'name': 'thought', 'arguments': {
+                    {'tool_calls': [{'name': 'do_task', 'arguments': {
                         'from': str(child), 'goal': 'Run the planned shell and finish.',
                         'model': 'child', 'keep': False, 'timeout_s': 30}}]},
                     {'content': 'Parent complete.'}]},

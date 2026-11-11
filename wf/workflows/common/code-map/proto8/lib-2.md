@@ -25,6 +25,8 @@
 | [`codex/`](../../../../../proto8/lib/agent/codex/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 codex CLI；對話續在工具小格（$AOS_STACK） |
 | [`codex/cli.json`](../../../../../proto8/lib/agent/codex/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
 | [`cooldown.py`](../../../../../proto8/lib/agent/cooldown.py) | 失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。 |
+| [`do_task/`](../../../../../proto8/lib/agent/do_task/) | 執行一個任務：派一件事給一隻用完即走的小幫手 agent（呼叫方指定、工具設定預設，或呼叫者自己的定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
+| [`do_task/tests/test_observed_children.py`](../../../../../proto8/lib/agent/do_task/tests/test_observed_children.py) | Verify child account preservation and do_task cleanup ordering. |
 | [`hook_fire/_entry`](../../../../../proto8/lib/agent/hook_fire/_entry) | 發 after_start／after_stop 事件：agent 範本 loop.json 的 on_start／on_stop 叫它（hook_fire EVENT DEF_DIR，$AOS_STACK＝agent 的 stack）。 |
 | [`hook_noop/_entry`](../../../../../proto8/lib/agent/hook_noop/_entry) | 什麼都不做的 hook handler：讀掉 stdin 的事件 JSON、退 0（範本 hooks.json 預設那格 on_clock 的掛點；使用者「預設就是收到信後啥也不做。 |
 | [`hooks.py`](../../../../../proto8/lib/agent/hooks.py) | agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、挑出符合事件的 hook、用 aos-exec 跑、解回話。 |
@@ -66,7 +68,5 @@
 | [`tests/test_cli_codex_mcp.py`](../../../../../proto8/lib/agent/tests/test_cli_codex_mcp.py) | 驗 cli_session 起 codex 時給 aos MCP server 的設定（11-11）：明寫帶 AOS_* 環境（只帶清單裡有設的，AOS_WS／AOS_STACK 用這次的值），只對 aos 這個 server 免核准；claude 那邊不變。 |
 | [`tests/test_cli_system.py`](../../../../../proto8/lib/agent/tests/test_cli_system.py) | 驗 cli_session 的 system（11-11 self-system）：宣告了才碰；stack 那份在就整份用它、否則定義那份；claude 附加檔＋snapshot off、codex developer_instructions；空＝不附加。 |
 | [`tests/test_cli_tools_directive.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_directive.py) | 驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。 |
-| [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定或工具設定預設定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
-| [`thought/tests/test_observed_children.py`](../../../../../proto8/lib/agent/thought/tests/test_observed_children.py) | Verify child account preservation and thought cleanup ordering. |
 | [`tools_def/`](../../../../../proto8/lib/agent/tools_def/) | 工具定義的創造：new＝把 Python 骨架（templates/tool-python）複製成新工具夾，check＝檢查一個工具位置（資料夾、JSON 檔或 檔#/指標）合不合格、在哪一階段 |
 | [`tools_def/tests/test_tools_def.py`](../../../../../proto8/lib/agent/tools_def/tests/test_tools_def.py) | Test tools_def new (copy the skeleton, description, PathExists, outside the workspace, into JSON objects), check (folder, JSON file, FILE#/POINTER, b… |

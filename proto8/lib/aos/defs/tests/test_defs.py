@@ -107,14 +107,14 @@ class DefinitionsTest(unittest.TestCase):
         _, data = self.call('ls', match='absent')
         self.assertEqual(data, {'defs': []})
 
-    def test_refs_tool_and_thought_from(self):
+    def test_refs_tool_and_do_task_from(self):
         self.definition('target')
         self.definition('direct', tool={'x': {'path': '../target'}})
-        self.definition('thought', tool={'x': {'path': '../thought_tool', 'env': {'AOS_THOUGHT_FROM': str(self.root / 'target')}}})
+        self.definition('do_task', tool={'x': {'path': '../do_task_tool', 'env': {'AOS_DO_TASK_FROM': str(self.root / 'target')}}})
         self.definition('other')
         result, data = self.call('refs', **{'def': 'target'})
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(data, {'refs': ['direct', 'thought']})
+        self.assertEqual(data, {'refs': ['direct', 'do_task']})
 
     def test_nested_tool_table_paths(self):
         self.definition('target')
@@ -126,9 +126,9 @@ class DefinitionsTest(unittest.TestCase):
         _, data = self.call('refs', **{'def': 'target'})
         self.assertEqual(data['refs'], ['caller'])
 
-    def test_relative_thought_source_uses_workspace(self):
+    def test_relative_do_task_source_uses_workspace(self):
         self.definition('target')
-        self.definition('caller', tool={'x': {'path': '../thought_tool', 'env': {'AOS_THOUGHT_FROM': 'target'}}})
+        self.definition('caller', tool={'x': {'path': '../do_task_tool', 'env': {'AOS_DO_TASK_FROM': 'target'}}})
         from unittest.mock import patch
         with patch.dict(os.environ, {'AOS_WS': str(self.root)}):
             _, data = self.call('refs', **{'def': 'target'})

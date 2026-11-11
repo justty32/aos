@@ -43,7 +43,7 @@
 | [`def.json`](../../../../../proto8/lib/packs/def.json) | Pack def: definitions - agent_def (agent definitions), tools_def (new tools from the Python skeleton, and checking a tool). |
 | [`delete.json`](../../../../../proto8/lib/packs/delete.json) | Pack 3 (delete): tools that delete - trash (into the workspace .trash, can be moved back) and remove (for real). |
 | [`events.json`](../../../../../proto8/lib/packs/events.json) | Pack events: things that wake you later - clock_register (letters from the clock), self_hook (hooks on your own events). |
-| [`gadgets.json`](../../../../../proto8/lib/packs/gadgets.json) | Pack gadgets: small handy tools - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic expression), thought (hand one smal… |
+| [`gadgets.json`](../../../../../proto8/lib/packs/gadgets.json) | Pack gadgets: small handy tools - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic expression), do_task (hand one smal… |
 | [`knowledge.json`](../../../../../proto8/lib/packs/knowledge.json) | Pack knowledge: knowledge_read, knowledge_write. No default knowledge base: the tools.json that stacks this pack sets one per name (env AOS_KNOWLEDGE… |
 | [`look.json`](../../../../../proto8/lib/packs/look.json) | Pack 1 (look): read-only file tools - read, ls, view, stat, json_read. |
 | [`mailbox.json`](../../../../../proto8/lib/packs/mailbox.json) | Pack mailbox: letters - mailbox_peek, mailbox_read, mailbox_send. |

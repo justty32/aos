@@ -1,4 +1,4 @@
-# Verify child account preservation and thought cleanup ordering.
+# Verify child account preservation and do_task cleanup ordering.
 import ast
 import json
 from pathlib import Path
@@ -17,7 +17,7 @@ class ChildrenTests(unittest.TestCase):
             root = Path(tmp)
             child, tool = root / 'kid', root / 'tool'
             for relative, filename in [('', 'ledger.jsonl'), ('tools/shell', 'commands.jsonl'),
-                                       ('tools/thought/observed/grandkid', 'observed.jsonl')]:
+                                       ('tools/do_task/observed/grandkid', 'observed.jsonl')]:
                 folder = child / relative
                 folder.mkdir(parents=True, exist_ok=True)
                 (folder / 'interfaces.json').write_text(json.dumps({'other': {}, 'aos-observed': {'file': filename}}))
@@ -33,7 +33,7 @@ class ChildrenTests(unittest.TestCase):
             self.assertFalse((saved / 'secret').exists())
             self.assertFalse((saved / 'undeclared').exists())
             self.assertEqual(copy_child(root / 'parent', 'tool', tool), 'observed/tool')
-            self.assertTrue((root / 'parent/observed/tool/observed/kid/tools/thought/observed/grandkid/observed.jsonl').exists())
+            self.assertTrue((root / 'parent/observed/tool/observed/kid/tools/do_task/observed/grandkid/observed.jsonl').exists())
 
     def test_missing_or_bad_interface_does_not_guess(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -45,7 +45,7 @@ class ChildrenTests(unittest.TestCase):
             clear_child(root)
 
     def test_gc_resolves_daemon_relative_stack(self):
-        source = (LIB / 'agent/thought/_entry').read_text()
+        source = (LIB / 'agent/do_task/_entry').read_text()
         tree = ast.parse(source)
         function = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'reconcile')
         from unittest.mock import Mock
@@ -63,11 +63,11 @@ class ChildrenTests(unittest.TestCase):
             namespace['reconcile']({'old': 'stopped'})
         copied.assert_called_once_with('/tool', 'old', '/daemon/procs/old', publish=False)
 
-    def test_thought_copies_before_keep_and_remove(self):
+    def test_do_task_copies_before_keep_and_remove(self):
         import io
         from types import SimpleNamespace
         from unittest.mock import Mock
-        source = (LIB / 'agent/thought/_entry').read_text()
+        source = (LIB / 'agent/do_task/_entry').read_text()
         ending = source[source.index('# ---- 問、收 ----'):]
         for keep in (False, True):
             with self.subTest(keep=keep):
@@ -84,7 +84,7 @@ class ChildrenTests(unittest.TestCase):
                           mark=Mock(), forget=Mock(), tool_io=Mock(), rel=lambda value: value,
                           sys=SimpleNamespace(stdout=io.StringIO(), exit=exit))
                 with self.assertRaises(SystemExit) as result:
-                    exec(compile(ending, str(LIB / 'agent/thought/_entry'), 'exec'), ns)
+                    exec(compile(ending, str(LIB / 'agent/do_task/_entry'), 'exec'), ns)
                 self.assertEqual(result.exception.code, 0)
                 self.assertEqual(events, ['say', 'listen', 'copy', 'stop' if keep else 'rm'])
                 if keep:

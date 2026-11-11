@@ -39,7 +39,7 @@ class Suggestions(unittest.TestCase):
         self.assertEqual(rr.retire(self.defs, recent[:2]), [])
 
     def test_bridge_signature_history_duplicates_and_context(self):
-        tree = node('group/used', children=[node('/lib/agent/thought', 'script', [node('group/cold')])])
+        tree = node('group/used', children=[node('/lib/agent/do_task', 'script', [node('group/cold')])])
         reviews = [{'case': 'one', 'tree': tree}]
         with patch.object(rr, 'call', side_effect=self.call):
             rr.suggestions(self.defs, reviews, {})

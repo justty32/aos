@@ -164,7 +164,7 @@ for ptr in pointers:
     cur = cur.strip() if rc == 0 else "(This location does not exist yet; it will be added.)"
     parent = ptr.rsplit("/", 1)[0]
     rc, around, _ = aos_json("peek", "--follow", path + ("#" + parent if parent else ""))
-    messages = [{"role": "system", "content": "You are a small thought responsible only for the new value at one JSON location. Call give with the new value as JSON text."},
+    messages = [{"role": "system", "content": "You are a small helper responsible only for the new value at one JSON location. Call give with the new value as JSON text."},
                 {"role": "user", "content": "Task: %s\nLocation: %s#%s\nCurrent value: %s\nParent level:\n%s" %
                                             (want, path, ptr, cur, around if rc == 0 else "(unavailable)")}]
     for _ in range(3):
