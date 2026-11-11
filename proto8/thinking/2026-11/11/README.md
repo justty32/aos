@@ -15,3 +15,5 @@
 | [i18n](i18n.md) | 只記想法（遠期構想，不設計、不排施工）：整個 aos 支援多語，偏好 `AOS_I18N` 這類「能支援的工具自己支援」；重點是給模型看的文字跟使用者同語言 |
 | [mail-notify](mail-notify.md) | 已施工（線 I）：出廠 hook `mail_notify`（on_clock 每 10 秒，範本預設開）看自己的信箱，有沒通知過的新信才往 queue 寄一則 `[aos] new_mail: N new letters from A, B. …`（多封合成一句、不帶內文）；`self_hook rm` 免打擾、同名 `replace` 改間隔；驗證同一隻掛多個 on_clock 各自間隔 |
 | [tool-cells-lazy](tool-cells-lazy.md) | 已施工：工具小格改成真的寫東西才建（使用者「我確實想改成工具真的寫東西時才建資料夾」）——aos-exec 加 `--stack-lazy`（不建）、aos-tools call 傳它，act.py／observed.call 不再先建，aos-sandbox 綁 `$AOS_STACK` 前先建；直接當工具登記的 aos-loop／aos-fsm 入口會寫不進去——11-11 裁「loop／fsm 自己建」＋「stack只能在aos-exec建<-這個規則刪除」：兩支起來時 `$AOS_STACK` 有設但不在就 `mkdir -p`，N-59 等處那條規則刪掉（線 F） |
+| [new-tools](new-tools/README.md) | 設計稿＋裁定、不排施工：grep／glob 兩支純 Python（尊重 .gitignore）、todo 一支四 op 存小格（T1 裁「不帶，腦自己查」）、MCP client 匯入成包（M1～M8 已裁）；同日稍後使用者說 MCP「先到這邊就好」、grep／glob 與 todo「也可以之後再做」 |
+| [goal](goal/README.md) | 停在設計稿、不排施工：agent 自己停下來（信箱空、腦不再叫工具）時自動丟 goal；已裁四題（agent 自己宣告完成、上限預設十次可調、`goal_pause`／`goal_resume`、agent 與外面都能設）；使用者「goal的設計也到這邊就好，不用繼續推進」，岔路列在 01 日後再裁 |
