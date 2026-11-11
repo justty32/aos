@@ -12,7 +12,7 @@ llm-kernel/
   _entry       ["aos-daemon", "--enable-logs", "daemon.json"]
   daemon.json  {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300, "procs": {"_sweeper": {…}}}（身體＝kernel；procs 只帶清道夫一列（11-10，見 cmd/aos-sweeper；不要就刪）、不帶鐘列，聽外層的 `AOS_CLOCK`）
   kernel.json  slots 2、reserved＝{"high": 1}（11-07 使用者裁定 sol 審查 #7）、timeout_ms 120000、exec＝預設 endpoint 函數 ../../lib/base/llm_http、endpoint＝預設代號 fake、
-               budget＝只有一格寄件人額度的例子（/tmp/aos-demo-sender 每天 1 次，03 件 5 演；別的寄件人不限）、
+               不設 budget（11-11 使用者選「從範本拿掉」；要限寄件人就自己加 budget.senders，例子在 03 件 5）、
                endpoints＝能力包表（下表）
   fake_slow/   demo 用的慢假腦 endpoint 函數：睡 endpoint.delay_s 秒，再把同一份 stdin 交給 lib/base/llm_fake（03 件 3）
   endpoints/litellm/_entry  ["aos-exec", "../../../../lib/base/llm_http", "--key-env", "LITELLM_KEY"]（三個 LiteLLM 包共用）
@@ -56,7 +56,7 @@ aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 
 - **金鑰歸端點小 proc**：`smart-high`、`luna`、`sol` 的 `exec` 都指 `endpoints/litellm`，小定義的 `_entry` 用 `--key-env LITELLM_KEY` 指定變數名。手動起 llm daemon 前，在 root 殼 `export LITELLM_KEY=...`；用 systemd 範例則在 `~/.config/aos/root.env` 填 `LITELLM_KEY=...`，unit 以 `EnvironmentFile=%h/.config/aos/root.env` 讀入，daemon 讓子 proc 繼承；小定義的 `.env` 不放金鑰（11-07 使用者裁定 sol 審查 #35）。`llm_http` 那個變數沒設或空＝不帶 Authorization 照打（11-10 夜使用者「改成變數沒設就不帶金鑰照打」）：LiteLLM 沒開金鑰驗證時不用 export；端點真要金鑰時它回 401／403，錯誤行寫 `EndpointFailed HTTP 401 (the endpoint refused the request and may need a key: environment variable LITELLM_KEY (--key-env) is not set): …`。值含非 ASCII、空白、換行等標頭放不下的字＝送出前 `KeyBad`（不印值；例：把說明裡的中文佔位字原樣貼進去）。stdin 的 `endpoint` 帶 `key`＝`ArgumentsBad`。搬家後設好新機器的 root 殼或 systemd 環境檔，再起 daemon；LM Studio／假腦不用金鑰。
 - **排程**（[feat-proto 03](../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：信的 `priority` 級數（每 `aging_cycles` 格升一級，預設 3；有 `AOS_CLOCK` 數 kernel 自己樹的鐘，沒有用 `AOS_CLOCK_INTERVAL` 換牆鐘；凍住時鐘＝不升級）→ deadline → 同後端黏著 → 包的 `speed`（fast 先）→ 等得久 → 先寄；包的 `slots` 滿了＝跳過、讓下一封別包的補位；包的 `budget` 到頂＝那封 `BudgetMissing`，不替人降級換包。跨樹信的 `priority.deadline` 留牆鐘（N-65 ③，ISO 8601 或 epoch 秒），kernel 不讀信裡任何時鐘欄。
 - **留格給 high**：範本已在 `kernel.json` 頂層設 `"reserved": {"high": 1}`（11-07 使用者裁定 sol 審查 #7）；程式仍為選填，只認 `high`，值須為非負整數且小於頂層 `slots`（`slots: 1` 只能填 0），不合＝`CfgBad`。沒寫、`{}` 或 `high: 0`＝不保留；`reserved` 同 `slots` 整格先解指示詞。低於 high 的信只補到總在飛數 `slots-N`，看 `priority_of` 的宣告 level、不算 aging；跳過不能補的信，後面的 high 可繼續補。保留格不搶占已在飛的請求，high 要用保留範圍外的格仍可能等在飛的跑完。
-- **額度**：kernel 總的 `budget`、每包的 `budget`、每個寄件人的 `budget.senders`（寄件人＝信封 `sender`，agent 就是它的工作區；不驗身分）；用量帳在 `$AOS_STACK/used.json`（`packs`、`senders` 各一格；`senders` 的 key 是相對 kernel stack 的路徑，整包搬家相對位置相同就沿用同一格帳）。範本的 `senders` 只列了 `/tmp/aos-demo-sender`，換成你 agent 的工作區就限它。
+- **額度**：kernel 總的 `budget`、每包的 `budget`、每個寄件人的 `budget.senders`（寄件人＝信封 `sender`，agent 就是它的工作區；不驗身分）；用量帳在 `$AOS_STACK/used.json`（`packs`、`senders` 各一格；`senders` 的 key 是相對 kernel stack 的路徑，整包搬家相對位置相同就沿用同一格帳）。範本不設預算（11-11 拿掉原本的 `/tmp/aos-demo-sender` 示範，它每次起來都印一行「不是資料夾」的 warning）；要限某隻 agent 就在自己那份 `kernel.json` 寫 `"budget": {"senders": {"<它的工作區>": {"max_calls": N}}}`（[03 件 5](03-feat-proto.md)）。
 - **起 llm daemon 的殼別設 `AOS_KERNEL`**：問腦會掛到別台；非空路徑的 `new/` 不是資料夾時，每行程每路徑 warning 一次，仍用原路徑、不改退路、不因此報錯，後續掛 proc 失敗照舊（[已知限制](../../impls/aos-llm-kernel/docs/04-已知限制.md)）。
 - agent-fsm 問腦一定經這裡（沒設 `AOS_LLM_KERNEL`＝`LlmKernelMissing`），要先起這個。
 
@@ -66,7 +66,7 @@ aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 
 
 [`llm-team/`](../llm-team/) 與 `llm-kernel/` 各複製成並排 stack 的 `def/`。兩份 `_entry` 都起自己的 daemon；隊 kernel 用 `lib/aos/llm_forward`，預設 fake，另有 sol、luna、local（轉主 kernel 的 stupid-fast）。每包的 `kernel` 用 `{"$env":"AOS_STACK","$path":"../llm-kernel"}`，解完仍保留 `..` 字串，轉交函數照原字串記 child。不用改 daemon 的 AOS_LLM_KERNEL；寄信方只把它指向隊 stack。
 
-相對 lib 路徑和主範本相同：若 stack 放 repo 外，可在兩個 stack 的共同上一層放 `lib` 捷徑指向這份 proto8/lib（保留範本原檔），或在自己的定義副本把 exec 改成絕對路徑。隊 timeout 180000 ms，主 timeout 120000 ms；隊 budget 每天 3000 次，senders 的 `/tmp/aos-demo-sender` 只是一格例子，換成自己的工作區。
+相對 lib 路徑和主範本相同：若 stack 放 repo 外，可在兩個 stack 的共同上一層放 `lib` 捷徑指向這份 proto8/lib（保留範本原檔），或在自己的定義副本把 exec 改成絕對路徑。隊 timeout 180000 ms，主 timeout 120000 ms；隊 budget 每天 3000 次、不帶寄件人那格（11-11 拿掉 `/tmp/aos-demo-sender` 示範），要限寄件人自己加 `budget.senders`。
 
 兩個定義都有 `interfaces.json` 的 `aos-ledger` 宣告（`ledger.jsonl` 相對 stack）。成功的上層 ledger 用 `child.kernel` 與 `child.letter` 指到下層帳，寄信方只拿這一層的 letter；usage 不重複加總，只加一層。下層合格錯誤原樣穿過，上層不再包一層 EndpointFailed；轉交函數自己的錯才走 EndpointFailed。
 

@@ -6,12 +6,7 @@
   "endpoint": "fake",
   "budget": {
     "max_calls": 3000,
-    "window": "day",
-    "senders": {
-      "/tmp/aos-demo-sender": {
-        "max_calls": 3000
-      }
-    }
+    "window": "day"
   },
   "endpoints": {
     "fake": {

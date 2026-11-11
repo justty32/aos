@@ -1,7 +1,6 @@
 {"description": "Main llm kernel with backend limits for local models", "backends": {"lmstudio": {"slots": 1, "max_packs": 1}}, "slots": 2, "reserved": {"high": 1}, "timeout_ms": 120000,
  "exec": {"$env": "AOS_HOME", "$path": "/lib/base/llm_http"},
  "endpoint": "fake",
- "budget": {"senders": {"/tmp/aos-demo-sender": {"max_calls": 1}}},
  "endpoints": {
    "smart-high":  {"exec": "endpoints/litellm", "url": "http://localhost:4000/v1", "model": "claude-haiku", "fixed": {"temperature": 0.2},
                    "slots": 4, "speed": "normal", "cost": "high", "context": 200000,
