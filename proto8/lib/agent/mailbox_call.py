@@ -29,8 +29,8 @@ def _on_term(signum, frame):
 signal.signal(signal.SIGTERM, _on_term)
 
 
-def call(prog, args, ok=(0,)):
-    """prog args…（在工作區跑）：stderr 原樣往上；退出碼不在 ok＝它最後一行錯誤行當自己的錯。回 (退出碼, stdout)。"""
+def call(prog, args, ok=(0,), hint=None):
+    """prog args…（在工作區跑）：stderr 原樣往上；退出碼不在 ok＝它最後一行錯誤行當自己的錯（hint＝{代號: 補在原因後的一句}）。回 (退出碼, stdout)。"""
     global _child
     try:
         _child = subprocess.Popen([prog] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
@@ -49,7 +49,7 @@ def call(prog, args, ok=(0,)):
     if _child.returncode not in ok:
         mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
         if mine:
-            tool_io.die(mine[-1].group(1), mine[-1].group(2))
+            tool_io.die(mine[-1].group(1), mine[-1].group(2) + (hint or {}).get(mine[-1].group(1), ""))
         tool_io.die("CommandFailed", "%s %s exited %d" % (prog, " ".join(args[:3]), _child.returncode))
     return _child.returncode, out
 

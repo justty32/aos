@@ -43,5 +43,7 @@ for key, flag in (("to", "--to"), ("box", "--box"), ("daemon", "--daemon"), ("ou
                   ("not_done", "--not-done"), ("decide", "--decide"), ("in_reply_to", "--in-reply-to")):
     if args.get(key):
         more += [flag, args[key]]
-_, out = mailbox_call.call("aos-mailbox", ["--stack", who["stack"], "send"] + more + ["--", args["what"]])
+# 腦常寫 to: "self"／"me"（11-11 晚 gemma、sonnet 實測）：查不到名字時補一句它自己的名字
+hint = {"InstanceMissing": "; to is an agent's name: to mail yourself use your own name, %s" % who["name"]}
+_, out = mailbox_call.call("aos-mailbox", ["--stack", who["stack"], "send"] + more + ["--", args["what"]], hint=hint)
 print("sent letter %s; the answer (if any) comes to your mailbox: check with mailbox_peek" % out.strip())

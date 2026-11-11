@@ -20,7 +20,7 @@
   "properties": {
    "to": {
     "type": "string",
-    "description": "the agent's name (on a daemon table); give to or box"
+    "description": "the agent's name (on a daemon table; a letter to yourself = your own name, not self or me); give to or box"
    },
    "daemon": {
     "type": "string",

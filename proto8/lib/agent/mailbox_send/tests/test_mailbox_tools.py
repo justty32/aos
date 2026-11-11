@@ -78,6 +78,15 @@ class MailboxTools(unittest.TestCase):
             self.assertEqual(r.returncode, 1, (name, args, r.stdout))
             self.assertTrue(r.stdout.startswith("%s: error: %s " % (name, code)), (name, args, r.stdout))
 
+    def test_to_unknown_names_yourself(self):
+        d = self.tmp / "d"
+        d.mkdir()
+        (d / "procs_state.json").write_text(json.dumps({"procs": {"bob": {"stack": "../bob", "phase": "running"}}}))
+        r = self.tool("mailbox_send", {"to": "self", "daemon": str(d), "status": "REQUEST", "title": "t", "what": "w"})
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertTrue(r.stdout.startswith("mailbox_send: error: InstanceMissing "), r.stdout)
+        self.assertIn("use your own name, alice", r.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
