@@ -73,19 +73,19 @@ class Hook(unittest.TestCase):
         self.agent("add", "--event", "brain_failed", "--condition", "ReplyBad", "-n", "g2", "h/guard")
         self.assertEqual(self.own_hooks()["g2"]["condition"], "ReplyBad")
 
-    def test_add_clock_due_and_start_stop(self):   # 11-11 clock-hook：clock_due 的三個旗標、ls -l 的 CONDITION 欄、起停事件
-        self.agent("add", "--event", "clock_due", "--every-ms", "300000", "--clock", "_clock", "--on-error", "continue", "-n", "timer", "h/guard")
-        self.assertEqual(self.own_hooks()["timer"], {"event": "clock_due", "handler": os.path.relpath(self.tmp / "h" / "guard", self.stack),
+    def test_add_on_clock_and_start_stop(self):   # 11-11 clock-hook：on_clock 的三個旗標、ls -l 的 CONDITION 欄、起停事件
+        self.agent("add", "--event", "on_clock", "--every-ms", "300000", "--clock", "_clock", "--on-error", "continue", "-n", "timer", "h/guard")
+        self.assertEqual(self.own_hooks()["timer"], {"event": "on_clock", "handler": os.path.relpath(self.tmp / "h" / "guard", self.stack),
                                                      "every_ms": 300000, "clock": "_clock", "on_error": "continue"})
-        self.agent("add", "--event", "clock_due", "--every-cycles", "10", "-n", "c10", "h/guard")
+        self.agent("add", "--event", "on_clock", "--every-cycles", "10", "-n", "c10", "h/guard")
         self.assertEqual(self.own_hooks()["c10"]["every_cycles"], 10)
         rows = {l.split("\t")[0]: l.split("\t") for l in self.agent("ls", "-l").stdout.splitlines()}
         self.assertEqual(rows["timer"][3], "clock=_clock,every_ms=300000")
         self.agent("add", "--event", "after_start", "-n", "up", "h/guard")
         self.agent("add", "--event", "after_stop", "-n", "down", "h/guard")
         self.assertEqual(self.own_hooks()["down"]["event"], "after_stop")
-        self.fails("ArgumentsBad", "add", "--event", "clock_due", "-n", "x", "h/guard")                 # 沒給條件
-        self.fails("ArgumentsBad", "add", "--event", "clock_due", "--every-ms", "0", "-n", "x", "h/guard")
+        self.fails("ArgumentsBad", "add", "--event", "on_clock", "-n", "x", "h/guard")                 # 沒給條件
+        self.fails("ArgumentsBad", "add", "--event", "on_clock", "--every-ms", "0", "-n", "x", "h/guard")
         self.fails("ArgumentsBad", "add", "--event", "after_tool", "--every-ms", "5", "-n", "x", "h/guard")
 
     def test_path_json(self):

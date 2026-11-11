@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # hook_fire - 發 after_start／after_stop 事件：agent 範本 loop.json 的 on_start／on_stop 叫它（hook_fire EVENT DEF_DIR，$AOS_STACK＝agent 的 stack）。
 # 使用者 11-11：hook 要加的事件選「起來與停下」、掛哪層選「aos-loop 自己加」——aos-loop 只跑被指定的東西（C-52），這支才認得 hook（lib/agent/hooks.py）。
+# after_start 之前先 hooks.clock_restart（清掉 on_clock 的狀態檔：起來後第一次看時鐘就跑一次，使用者 11-11「起來就先觸發一次」）。
 # after_stop 的事件 JSON 多 code（$AOS_LOOP_CODE，aos-loop 給的要退的碼）、signal（$AOS_LOOP_SIGNAL，沒有＝null）。沒有這個事件的 hook＝什麼都不做、退 0。
 # 錯：stderr 一行「hook_fire: error: 代號 原因」、退 1（HookFailed＝on_error stop 的 hook 失敗、HooksBad、ArgumentsBad、StackMissing）；
 # aos-loop 只把它當一行 warning，不擋 agent 起停。on_error continue 的 hook 失敗＝一行 warning。--help 印英文用法。
@@ -41,6 +42,11 @@ def main():
     stack = os.environ.get("AOS_STACK")
     if not stack:
         die("StackMissing", "AOS_STACK is not set")
+    if args[0] == "after_start":
+        try:
+            hooks.clock_restart(stack)
+        except OSError as e:
+            sys.stderr.write("%s: warning: cannot reset the on_clock state in %s: %s\n" % (NAME, stack, e))
     data = {} if args[0] == "after_start" else {"code": number("AOS_LOOP_CODE"), "signal": number("AOS_LOOP_SIGNAL")}
     try:
         hooks.fire(args[0], data, args[1], stack, warn=lambda line: sys.stderr.write("%s: warning: %s\n" % (NAME, line)))

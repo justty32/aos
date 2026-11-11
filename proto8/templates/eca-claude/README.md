@@ -13,4 +13,4 @@ Run Claude Code as an aos agent: one turn per queue batch, answers appended to h
 - 只改跑著的那隻：`aos-agent --daemon D tools --target NAME add --replace -n knowledge_read --envs AOS_KNOWLEDGE=/home/me/kb "$AOS_HOME/lib/agent/knowledge_read"`（`knowledge_write` 同樣一次）；
 - 拿掉這格的 `env`、改在 daemon 或定義的 `.env` 寫 `AOS_KNOWLEDGE=…`（登記格的 `env` 蓋過 `.env`，所以要先拿掉）。
 
-**hook 預設**（11-11 [clock-hook](../../thinking/2026-11/11/clock-hook/README.md)）：`loop.json` 的 `on_start`／`on_stop` 叫 `lib/agent/hook_fire` 發 `after_start`／`after_stop`；`hooks.json` 帶一格 `timer`（`clock_due`、每 300000 ms、handler `lib/agent/hook_noop` 什麼都不做），history 不多任何一則。要定時叫醒腦＝同名換成往 `queue/` 寄信的 handler；不要＝`aos-agent hook -t 名 rm timer`。用法 [aos-agent docs/06](../../cmd/aos-agent/docs/06-hook.md)。
+**hook 預設**（11-11 [clock-hook](../../thinking/2026-11/11/clock-hook/README.md)）：`loop.json` 的 `on_start`／`on_stop` 叫 `lib/agent/hook_fire` 發 `after_start`／`after_stop`；`hooks.json` 帶一格 `timer`（`on_clock`、每 300000 ms、handler `lib/agent/hook_noop` 什麼都不做；每次起來、睡醒會先跑一次，之後每 5 分鐘），history 不多任何一則。要定時叫醒腦＝同名換成往 `queue/` 寄信的 handler；不要＝`aos-agent hook -t 名 rm timer`。用法 [aos-agent docs/06](../../cmd/aos-agent/docs/06-hook.md)。

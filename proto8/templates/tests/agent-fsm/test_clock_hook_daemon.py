@@ -1,6 +1,6 @@
-"""Acceptance on a real root daemon (no brain needed): after_start / after_stop on start, stop, sleep, wake, kill -9 + auto_restart, rm; clock_due with the root clock; history stays empty."""
+"""Acceptance on a real root daemon (no brain needed): after_start / after_stop on start, stop, sleep, wake, kill -9 + auto_restart, rm; on_clock with the root clock; history stays empty."""
 # 11-11 clock-hook：範本 loop.json 的 on_start／on_stop（aos-loop）→ lib/agent/hook_fire → hooks.json 的 after_start／after_stop；
-# 每格開頭 hooks.clock_tick → clock_due。用這份 clone 的 impls／cmd（PATH 最前）、py／lib（PYTHONPATH），不碰 ~/.local/bin 指的那份。
+# 每格開頭 hooks.clock_tick → on_clock。用這份 clone 的 impls／cmd（PATH 最前）、py／lib（PYTHONPATH），不碰 ~/.local/bin 指的那份。
 # 跑法：python3 test_clock_hook_daemon.py [-v]；KEEP=1 留下試驗資料夾。
 import json
 import os
@@ -41,7 +41,7 @@ class Daemon(unittest.TestCase):
         doc = json.loads((ann / "hooks.json").read_text())
         doc["hooks"].update({"up": {"event": "after_start", "handler": "log_hook", "on_error": "continue", "timeout_ms": 5000},
                              "down": {"event": "after_stop", "handler": "log_hook", "on_error": "continue", "timeout_ms": 5000},
-                             "tick": {"event": "clock_due", "every_cycles": 2, "handler": "log_hook", "on_error": "continue",
+                             "tick": {"event": "on_clock", "every_cycles": 2, "handler": "log_hook", "on_error": "continue",
                                       "timeout_ms": 5000}})
         (ann / "hooks.json").write_text(json.dumps(doc))
         self.err = open(self.root / "root.err", "w")
@@ -81,7 +81,14 @@ class Daemon(unittest.TestCase):
         return r
 
     def starts_stops(self):
-        return [(e["event"], e.get("code"), e.get("signal")) for e in self.events() if e["event"] != "clock_due"]
+        return [(e["event"], e.get("code"), e.get("signal")) for e in self.events() if e["event"] != "on_clock"]
+
+    def first_tick_after_last_start(self):
+        def seen():
+            ev = self.events()
+            i = max(j for j, e in enumerate(ev) if e["event"] == "after_start")
+            return any(e["event"] == "on_clock" and e["first"] for e in ev[i:])
+        self.until(seen)
 
     def row(self):
         return json.loads((self.root / "stacks" / "root" / "procs_state.json").read_text())["procs"]["ann"]
@@ -90,8 +97,10 @@ class Daemon(unittest.TestCase):
         self.ctl("add", "--auto-restart", "-w", ".", "defs/ann")
         stack = self.root / "stacks" / "root" / "procs" / "ann"
         self.until(lambda: self.events("after_start"))
-        ticks = self.until(lambda: len(self.events("clock_due")) >= 2 and self.events("clock_due"))
+        ticks = self.until(lambda: len(self.events("on_clock")) >= 2 and self.events("on_clock"))
         self.assertEqual(ticks[0]["clock"], str((self.root / "stacks" / "root" / "clock").resolve()))
+        self.assertEqual((ticks[0]["first"], ticks[0]["last_cycle"]), (True, None))   # 起來就先跑一次（11-11 使用者裁）
+        self.assertFalse(ticks[1]["first"])
         self.assertGreaterEqual(ticks[1]["cycle"] - ticks[1]["last_cycle"], 2)
         self.assertEqual(ticks[0]["stack"].rstrip("/"), str(stack.resolve()))
         self.assertFalse((stack / "history.jsonl").exists() and (stack / "history.jsonl").read_text().strip())
@@ -102,10 +111,13 @@ class Daemon(unittest.TestCase):
             self.ctl(cmd, "ann")
             self.until(lambda: len(self.starts_stops()) > n)
             self.assertEqual(self.starts_stops()[n], want, cmd)
+            if want[0] == "after_start":                                    # 每次起來、睡醒：那之後第一次看時鐘就跑（first）
+                self.first_tick_after_last_start()
         n = len(self.starts_stops())
         os.kill(self.until(lambda: self.row().get("pid")), signal.SIGKILL)     # kill -9：不跑 after_stop；auto_restart 重起＝after_start
         self.until(lambda: len(self.starts_stops()) > n, 40)
         self.assertEqual(self.starts_stops()[n:], [("after_start", None, None)])
+        self.first_tick_after_last_start()                                  # auto_restart 也算重起
         n = len(self.starts_stops())
         self.ctl("rm", "ann")
         self.until(lambda: len(self.starts_stops()) > n)

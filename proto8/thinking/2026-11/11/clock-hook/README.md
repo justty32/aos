@@ -30,11 +30,18 @@
 19. 選項框：「改成新做法」（專用信箱、有新信事件、latest_only、登記表加鎖、撞名後綴、積太多保底都不做；起來／停下照做，但不再拿來登記時鐘）；「時間到了沒」的判斷＝「hook 格裡寫條件」。
 20. 舊的時鐘登記／時鐘寄信／`clock_register` 工具：先選拿掉，隨即改口「啊，不要拿掉好了，先留著」「搞不好以後會用到」＝整組留著、完全不動（連 14「box 改必填」也不做）。
 
+施工後第二輪（選項框裁施工隊列的四題）：
+
+21. 事件名：選「`on_clock`」（施工時先代定 `clock_due`）。
+22. 第一次看到時鐘：選「起來就先觸發一次」（說明「一起來立刻跑一次，之後照間隔。每次睡醒、重起也都會先跑一次。」）。
+23. 範本預設掛 `timer`：選「預設掛著」。
+24. 純每拍前後事件：選「先不做」。
+
 ## 決定
 
 - **起來／停下**：aos-loop 加通用鍵 `on_start`／`on_stop`（＋`on_timeout_ms`，預設 5000），不認得 hook；範本 loop.json 指到 `lib/agent/hook_fire`，由它發 `after_start`／`after_stop`（after_stop 多 `code`、`signal`）。sleep、rm、daemon 收工都算停下；kill -9 不跑；pause 不算。
-- **照時鐘觸發**：新事件 `clock_due`，hook 格裡寫條件 `every_cycles` 或 `every_ms`（毫秒用 cycle × `AOS_CLOCK_INTERVAL` 換算），`clock`＝proc 名稱或路徑（省略＝`$AOS_CLOCK`）。判斷在行程內做：agent-fsm 每格、aos-eca-turn 每輪的最開頭呼叫 `hooks.clock_tick`，到了才起 handler；狀態在 `hooks/<名>/clock_due.json`。忙完、醒來只跑一次（`missed` 記錯過幾次），不補跑。
-- **範本預設**：agent-fsm、eca-claude 的 hooks.json 帶一格 `timer`（`clock_due`、`every_ms` 300000、handler `lib/agent/hook_noop` 什麼都不做、`on_error: continue`）當掛點（照 4「五分鐘」、6「預設啥也不做」；代定，可翻）。
+- **照時鐘觸發**：新事件 `on_clock`（先代定 `clock_due`，21 改裁），hook 格裡寫條件 `every_cycles` 或 `every_ms`（毫秒用 cycle × `AOS_CLOCK_INTERVAL` 換算），`clock`＝proc 名稱或路徑（省略＝`$AOS_CLOCK`）。判斷在行程內做：agent-fsm 每格、aos-eca-turn 每輪的最開頭呼叫 `hooks.clock_tick`，到了才起 handler；狀態在 `hooks/<名>/on_clock.json`。忙完只跑一次（`missed` 記錯過幾次），不補跑；起來、睡醒、重起後第一次看就先跑一次（22）。
+- **範本預設**（23 已裁）：agent-fsm、eca-claude 的 hooks.json 帶一格 `timer`（`on_clock`、`every_ms` 300000、handler `lib/agent/hook_noop` 什麼都不做、`on_error: continue`）當掛點（照 4「五分鐘」、6「預設啥也不做」）。
 - **記錄、不做**：專用信箱 `<stack>/clock`、`mail_arrived`、`box`、`latest_only`、看信那一步、登記表加鎖、自檢「積太多」、撞名加 `-1`／`-2`、範本 after_start 登記／after_stop 拿掉時鐘、`clock_register` 的 box 改必填。時鐘寄信那組（aos-clock-register、`clock_register` 工具、登記表、自檢「箱子不在就拿掉」）照 20 原樣留著。
 - hook 不寫進 CONVENTION（16）。
 

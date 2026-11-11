@@ -36,9 +36,9 @@
 6. **還待裁**：
    - ~~小模型寫不出 `$` 開頭的鍵~~（11-11 已裁：`$` 鍵不動）。
    - ~~act 附給腦的 stderr 尾巴~~（11-11 已裁：維持）。
-   - ~~hook 三題~~（11-11 已裁）：after_queue 晾著的信「不補」；CONVENTION「先不寫」；事件選「起來與停下」，之後又加了照時鐘觸發的 `clock_due`（「hook就可以添加一個類型，就是loop每次exec前和exec後……」），施工見 [clock-hook](../proto8/thinking/2026-11/11/clock-hook/README.md)。
+   - ~~hook 三題~~（11-11 已裁）：after_queue 晾著的信「不補」；CONVENTION「先不寫」；事件選「起來與停下」，之後又加了照時鐘觸發的 `on_clock`（「hook就可以添加一個類型，就是loop每次exec前和exec後……」），施工見 [clock-hook](../proto8/thinking/2026-11/11/clock-hook/README.md)。
    - ~~mailbox：人的預設 stack 是不是就 `~/.stack`。~~ **11-11 已裁**：`~/.aos/stack`（使用者「改成帶 aos 字樣的位置」→「~/.aos/stack」，`09709c6ac`）。
-   - ~~clock 殘留~~（11-11 已裁：「交給自檢吧。如果要順手清的話，就是aos-agent ctl rm與另一個功能有耦合了。」；之後改向成 hook 的 `clock_due`，時鐘寄信那組「啊，不要拿掉好了，先留著」原樣不動）。
+   - ~~clock 殘留~~（11-11 已裁：「交給自檢吧。如果要順手清的話，就是aos-agent ctl rm與另一個功能有耦合了。」；之後改向成 hook 的 `on_clock`，時鐘寄信那組「啊，不要拿掉好了，先留著」原樣不動）。
    - `agents_ctl` 能 rm 別人帳上的子。
    - tools_def「之後可加」的幾項（[tools-def](../proto8/thinking/2026-11/10/tools-def/README.md)）。
 7. **WAIT_USER 新加／改**：試驗場補刷、`~/.cache/aos-mcp-aos/tools.json` 跟上改名（照抄 sed 一行）、eca 信任選單要手動信任一次、hook 線 eca haiku 真對話（agent 不代跑）。

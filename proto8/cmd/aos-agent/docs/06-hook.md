@@ -18,7 +18,7 @@
 | `tool_added` | think：工具清單多了名字（一個名字一次；第一次只記不觸發） | `name`、`path` | 工具名 | 不能 |
 | `after_start` | loop 起來、第一次之前（loop.json 的 `on_start` → `lib/agent/hook_fire`；11-11） | — | 不收 condition | 不能 |
 | `after_stop` | loop 要退時（`on_stop`：stop、sleep、rm、daemon 收工、出錯停；kill -9 不跑；11-11） | `code`（要退的碼）、`signal`（收到的訊號，沒有＝null） | 不收 condition | 不能 |
-| `clock_due` | 每格開頭（idle、think、wait、act）看一次時鐘，條件到了才跑（11-11，見下面「時鐘」） | `clock`、`cycle`、`interval_ms`、`last_cycle`、`missed` | 不收 condition（條件寫 `every_cycles`／`every_ms`） | 不能 |
+| `on_clock` | 每格開頭（idle、think、wait、act）看一次時鐘，條件到了才跑（11-11，見下面「時鐘」；事件名先代定 `clock_due`，使用者改裁 `on_clock`） | `clock`、`cycle`、`interval_ms`、`first`、`last_cycle`、`missed` | 不收 condition（條件寫 `every_cycles`／`every_ms`） | 不能 |
 
 每份事件 JSON 都有 `event`、`hook`（這個 hook 的名字）、`stack`（agent 的 stack 絕對路徑）。同一事件多個 hook＝照名字排序一個一個跑，前一個改過的後一個看得到，被攔下就不往下。連鎖（hook 寄信給自己又觸發）不檢測，自行承擔。
 
@@ -30,19 +30,19 @@
 - 跑不到：kill -9（之後 auto_restart 重起會有一次 `after_start`、中間沒有 `after_stop`）；daemon 被 kill -9 後 adopt 接回的 loop 沒重起，不會再跑 `after_start`。pause 不算停下（loop 還活著）。
 - 期限：loop 給這兩格 `on_timeout_ms`（預設 5000）——daemon 收工只等子項 10 秒；hook 自己的 `timeout_ms` 要更短，範本例子寫 5000 以內。hook 失敗只讓 hook_fire 印錯誤行、aos-loop 印一行 warning，agent 照起、照停。
 
-## 時鐘（clock_due，11-11）
+## 時鐘（on_clock，11-11）
 
 使用者 11-11：「就是說，因為現在hook本來就綁在loop上，所以hook就可以添加一個類型，就是loop每次exec前和exec後。然後這個exec前觸發的，就可以添加一個aos函數，使其去看指定的clock proc……每隔十個cycle就幹嘛，或是透過cycle換算，若超過十秒就幹嘛」；「時間到了沒」選「hook 格裡寫條件」。
 
 ```json
-{"event": "clock_due", "every_ms": 300000, "handler": {"$env": "AOS_HOME", "$path": "/lib/agent/hook_noop"}, "on_error": "continue", "timeout_ms": 5000}
+{"event": "on_clock", "every_ms": 300000, "handler": {"$env": "AOS_HOME", "$path": "/lib/agent/hook_noop"}, "on_error": "continue", "timeout_ms": 5000}
 ```
 
-- **條件**二擇一：`every_cycles`（正整數）＝時鐘從上次跑到現在走了 N 格；`every_ms`＝同上，毫秒換成格數 `ceil(every_ms ÷ AOS_CLOCK_INTERVAL)`（沒設＝1000 ms 一格；看時鐘的格數、不看牆鐘）。只有 `clock_due` 收這三個鍵（別的事件寫了＝`HooksBad`）。
+- **條件**二擇一：`every_cycles`（正整數）＝時鐘從上次跑到現在走了 N 格；`every_ms`＝同上，毫秒換成格數 `ceil(every_ms ÷ AOS_CLOCK_INTERVAL)`（沒設＝1000 ms 一格；看時鐘的格數、不看牆鐘）。只有 `on_clock` 收這三個鍵（別的事件寫了＝`HooksBad`）。
 - **看哪個時鐘** `clock`：沒寫＝`$AOS_CLOCK`；有 `/` 或 `.` 開頭＝路徑（檔＝它、資料夾＝裡面的 `clock`，daemon 的 stack 就是這種佈局；相對＝從 agent 的 stack 算）；沒有 `/`＝`$AOS_DAEMON` 表上那一列的 stack 裡的 `clock`（那個 proc 要有 clock 檔；根的 `_clock` 列寫的是 daemon 自己 stack 的 `clock`，看根的鐘＝不寫或寫 daemon 的 stack）。
-- **在哪判**：agent-fsm 四格、aos-eca-turn 每輪的最開頭呼叫 `hooks.clock_tick`——讀時鐘檔、比 `$AOS_STACK/hooks/<名>/clock_due.json` 記的 cycle，到了才起 handler；沒有這種 hook＝只讀清單（實測約 20 µs），一個沒到的 hook 約 40 µs。不是 aos-loop 每拍另起一支（那樣每 300 ms 多一支 aos-exec＋程式）。act 跑長工具時 loop 沒有拍，回來下一格才判。
+- **在哪判**：agent-fsm 四格、aos-eca-turn 每輪的最開頭呼叫 `hooks.clock_tick`——讀時鐘檔、比 `$AOS_STACK/hooks/<名>/on_clock.json` 記的 cycle，到了才起 handler；沒有這種 hook＝只讀清單（實測約 20 µs），一個沒到的 hook 約 40 µs。不是 aos-loop 每拍另起一支（那樣每 300 ms 多一支 aos-exec＋程式）。act 跑長工具時 loop 沒有拍，回來下一格才判。
 - **到了怎麼算**：上次之後走了 ≥ N 格＝跑一次，把上次記成現在的 cycle（不補跑，`missed`＝中間錯過幾次）；忙完、pause 結束都只跑一次；睡著時 loop 不在、不判。
-- **第一次**（沒有狀態檔、或時鐘換了）＝只記基準、不跑；cycle 倒退（根重起、換台）＝重記基準、不跑。
+- **第一次立刻跑**（使用者 11-11 選「起來就先觸發一次」：「一起來立刻跑一次，之後照間隔。每次睡醒、重起也都會先跑一次。」）：沒有狀態檔、時鐘換了、cycle 倒退（根重起、換台）＝馬上跑一次並記基準，事件 `first: true`、`last_cycle: null`、`missed: 0`。loop 每次起來（`hook_fire after_start`：ctl add／start、開門 wake、auto_restart，含 kill -9 之後的重起）先把各 hook 的狀態檔清掉，所以起來後第一次看時鐘一定跑一次；沒有 `on_start` 的舊定義只有第一次與倒退會。範本的 `timer` 因此每次起來都跑一次 hook_noop（什麼都不做，無害）。
 - **時鐘不在**（`AOS_CLOCK` 沒設、檔不在、內容壞、proc 不在表上）＝不跑、不讓 agent 停；warning 只在原因變了時印一次（記在狀態檔）。
 - handler 不讓腦看到任何東西（history 不多一則）；要叫腦就自己往事件 `stack` 的 `queue` 寄信（`aos-post send STACK/queue`，body `{"role": "user", "content": "…"}`）。沒有回話可看（`intercept` 不讀）；`async`、`on_error`、`timeout_ms` 照通用語意。先記再跑：handler 失敗也不會每拍重跑。
 - 兩個 hook 看同一個時鐘＝各記各的狀態檔。範本 agent-fsm、eca-claude 預設帶一格 `timer`（每 300000 ms、[hook_noop](../../../lib/agent/hook_noop/_entry) 什麼都不做）當掛點，用同名蓋過去就換成自己的。
@@ -70,8 +70,8 @@
 | `async`（`--async`＝true） | true＝不等它跑完、放出去不管、不看回話 | false |
 | `on_error`（`--on-error`） | `stop`＝那格印 `agent-fsm: error: HookFailed …`、agent 停下等人；`continue`＝一行 warning、當沒這個 hook | stop |
 | `timeout_ms`（`--timeout-ms`） | 等它的上限，到了整群收掉、算失敗 | 60000 |
-| `every_cycles`／`every_ms`（`--every-cycles`／`--every-ms`） | `clock_due` 的條件，二擇一（11-11） | — |
-| `clock`（`--clock`） | `clock_due` 看哪個時鐘：proc 名稱或路徑（11-11） | `$AOS_CLOCK` |
+| `every_cycles`／`every_ms`（`--every-cycles`／`--every-ms`） | `on_clock` 的條件，二擇一（11-11） | — |
+| `clock`（`--clock`） | `on_clock` 看哪個時鐘：proc 名稱或路徑（11-11） | `$AOS_CLOCK` |
 
 queue 事件給 `--condition`＝`add` 直接 `ArgumentsBad`（由 `hooks.validate_entry` 說原因）。不能改的事件（`after_queue`、`brain_failed`、`tool_added`）或 `--async` 的 hook 寫 `intercept: true`＝不報錯、自然不看回話（11-10 深夜改，以前是 `ArgumentsBad`）。
 
@@ -90,7 +90,7 @@ aos-agent hook -t bob ls --json             # 一個 JSON 陣列（補完預設�
 aos-agent hook -t bob get guard             # 一格的 JSON
 aos-agent hook -t bob add --event before_tool --condition agents_ctl hooks/guard
 aos-agent hook -t bob add --event brain_failed --on-error continue --async -n ping --path-json '{"$env": "AOS_HOME", "$path": "/lib/x"}'
-aos-agent hook -t bob add --event clock_due --every-ms 600000 --on-error continue -n check hooks/check
+aos-agent hook -t bob add --event on_clock --every-ms 600000 --on-error continue -n check hooks/check
 aos-agent hook -t bob rm guard              # 定義裡有的＝寫 null；自己加的＝刪掉那格
 aos-agent hook -t bob reset -y              # 刪自己那份，回到定義的
 ```
@@ -134,5 +134,5 @@ eca 的腦是外面的 CLI，aos 只看得到經過自己手的東西（圖紙 �
 | `brain_failed` | 有（`name`＝`CliFailed`／`ReplyMissing`） | aos-eca-turn |
 | `tool_added` | 有（看 aos 登記檔的名單） | aos-eca-turn 每輪開頭 |
 | `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop`（hook_fire） |
-| `clock_due` | 有（冷卻中、退讓的那輪也判） | aos-eca-turn 每輪最開頭 |
+| `on_clock` | 有（冷卻中、退讓的那輪也判） | aos-eca-turn 每輪最開頭 |
 | CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos |

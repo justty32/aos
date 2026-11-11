@@ -1,4 +1,4 @@
-"""Test the 11-11 hook events: clock_due (hooks.clock_tick in the cells), after_start / after_stop (lib/agent/hook_fire)."""
+"""Test the 11-11 hook events: on_clock (hooks.clock_tick in the cells), after_start / after_stop (lib/agent/hook_fire)."""
 import json
 import os
 from pathlib import Path
@@ -40,7 +40,7 @@ class ClockHook(Hooks):
                     os.environ[k] = v
 
     def due(self, name="t", **keys):
-        entry = {"event": "clock_due", "handler": self.hook(name), "on_error": "continue"}
+        entry = {"event": "on_clock", "handler": self.hook(name), "on_error": "continue"}
         if "every_ms" not in keys and "every_cycles" not in keys:
             entry["every_cycles"] = 10
         entry.update(keys)
@@ -48,17 +48,17 @@ class ClockHook(Hooks):
 
     # ---- 驗格
     def test_validate(self):
-        for bad, why in (({"event": "clock_due", "handler": "x"}, "exactly one"),
-                         ({"event": "clock_due", "handler": "x", "every_cycles": 1, "every_ms": 1}, "exactly one"),
-                         ({"event": "clock_due", "handler": "x", "every_ms": 0}, "positive"),
-                         ({"event": "clock_due", "handler": "x", "every_ms": 5, "clock": ""}, "clock"),
-                         ({"event": "after_stop", "handler": "x", "every_ms": 5}, "only for event clock_due"),
+        for bad, why in (({"event": "on_clock", "handler": "x"}, "exactly one"),
+                         ({"event": "on_clock", "handler": "x", "every_cycles": 1, "every_ms": 1}, "exactly one"),
+                         ({"event": "on_clock", "handler": "x", "every_ms": 0}, "positive"),
+                         ({"event": "on_clock", "handler": "x", "every_ms": 5, "clock": ""}, "clock"),
+                         ({"event": "after_stop", "handler": "x", "every_ms": 5}, "only for event on_clock"),
                          ({"event": "after_start", "handler": "x", "condition": "a"}, "takes no condition")):
             with self.subTest(bad=bad):
                 with self.assertRaises(hooks.HooksBad) as cm:
                     hooks.validate_entry(bad)
                 self.assertIn(why, str(cm.exception))
-        hooks.validate_entry({"event": "clock_due", "handler": "x", "every_ms": 300000, "clock": "_clock"})
+        hooks.validate_entry({"event": "on_clock", "handler": "x", "every_ms": 300000, "clock": "_clock"})
 
     # ---- clock_tick
     def test_no_clock_hook_costs_nothing(self):
@@ -69,21 +69,34 @@ class ClockHook(Hooks):
     def test_baseline_then_due_then_missed(self):
         self.declare({"t": self.due()})
         env = {"AOS_CLOCK": str(self.clock)}
-        self.assertEqual(self.tick(**env), [])                    # 第一次＝只記基準
-        self.assertEqual(json.loads((self.stack / "hooks" / "t" / "clock_due.json").read_text())["cycle"], 100)
+        self.assertEqual(self.tick(**env), ["t"])                 # 第一次＝立刻跑一次並記基準（11-11 使用者「起來就先觸發一次」）
+        self.assertEqual(json.loads((self.stack / "hooks" / "t" / "on_clock.json").read_text())["cycle"], 100)
         self.set_cycle(109)
         self.assertEqual(self.tick(**env), [])                    # 沒到：不起行程
-        self.assertEqual(self.events(), [])
+        self.assertEqual(len(self.events()), 1)
         self.set_cycle(110)
         self.assertEqual(self.tick(**env), ["t"])
         self.assertEqual(self.tick(**env), [])                    # 同一格不重跑
         self.set_cycle(165)                                       # 忙了很久：回來只跑一次
         self.assertEqual(self.tick(**env), ["t"])
-        a, b = self.events()
-        self.assertEqual((a["event"], a["cycle"], a["last_cycle"], a["missed"], a["interval_ms"], a["clock"]),
-                         ("clock_due", 110, 100, 0, 1000, str(self.clock)))
+        f, a, b = self.events()
+        self.assertEqual((f["first"], f["cycle"], f["last_cycle"], f["missed"]), (True, 100, None, 0))
+        self.assertEqual((a["event"], a["first"], a["cycle"], a["last_cycle"], a["missed"], a["interval_ms"], a["clock"]),
+                         ("on_clock", False, 110, 100, 0, 1000, str(self.clock)))
         self.assertEqual((b["cycle"], b["last_cycle"], b["missed"]), (165, 110, 4))
         self.assertEqual(b["stack"], str(self.stack))
+
+    def test_restart_fires_again(self):   # 每次睡醒、重起：hook_fire after_start 清掉狀態檔＝下一次檢查又是第一次
+        self.declare({"t": self.due()})
+        env = {"AOS_CLOCK": str(self.clock)}
+        self.tick(**env)
+        self.set_cycle(103)
+        self.assertEqual(self.tick(**env), [])
+        r = subprocess.run([str(FIRE), "after_start", str(self.defn)], env=self.env, capture_output=True, text=True, timeout=20)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse((self.stack / "hooks" / "t" / "on_clock.json").exists())
+        self.assertEqual(self.tick(**env), ["t"])
+        self.assertEqual([(e["first"], e["cycle"]) for e in self.events()], [(True, 100), (True, 103)])
 
     def test_every_ms_counts_cycles(self):
         self.declare({"t": self.due(every_ms=3000)})
@@ -93,19 +106,20 @@ class ClockHook(Hooks):
         self.assertEqual(self.tick(**env), [])
         self.set_cycle(106)
         self.assertEqual(self.tick(**env), ["t"])
-        self.assertEqual(self.events()[0]["interval_ms"], 500)
+        self.assertEqual(self.events()[1]["interval_ms"], 500)
 
-    def test_backwards_resets(self):
+    def test_backwards_counts_as_first(self):
         self.declare({"t": self.due()})
         env = {"AOS_CLOCK": str(self.clock)}
         self.tick(**env)
-        self.set_cycle(3)                                        # 根重起、換台
-        self.assertEqual(self.tick(**env), [])
+        self.set_cycle(3)                                        # 根重起、換台：等同第一次，跑一次並重記基準
+        self.assertEqual(self.tick(**env), ["t"])
         self.set_cycle(12)
         self.assertEqual(self.tick(**env), [])
         self.set_cycle(13)
         self.assertEqual(self.tick(**env), ["t"])
-        self.assertEqual(self.events()[0]["last_cycle"], 3)
+        ev = self.events()
+        self.assertEqual([(e["first"], e["cycle"], e["last_cycle"]) for e in ev], [(True, 100, None), (True, 3, None), (False, 13, 3)])
 
     def test_no_clock_warns_once(self):
         self.declare({"t": self.due()})
@@ -116,7 +130,8 @@ class ClockHook(Hooks):
         self.tick(AOS_CLOCK=str(self.root / "nope"))
         self.assertEqual(len(self.warned), 2)                    # 原因變了才再說一次
         self.assertIn("no clock file", self.warned[1])
-        self.tick(AOS_CLOCK=str(self.clock))                     # 時鐘回來：記基準
+        self.assertEqual(self.tick(AOS_CLOCK=str(self.clock)), ["t"])   # 時鐘回來：第一次，跑一次
+        self.assertTrue(self.events()[0]["first"])
         self.set_cycle(110)
         self.assertEqual(self.tick(AOS_CLOCK=str(self.clock)), ["t"])
 
@@ -128,11 +143,11 @@ class ClockHook(Hooks):
         (daemon / "procs" / "_sub" / "clock").write_text("7\n")
         (daemon / "procs_state.json").write_text(json.dumps({"procs": {"_sub": {"stack": "procs/_sub"}}}))
         env = {"AOS_DAEMON": str(daemon)}
-        self.tick(**env)
+        self.assertEqual(sorted(self.tick(**env)), ["by_dir", "by_proc"])   # 第一次各跑一次
         self.set_cycle(101)
         (daemon / "procs" / "_sub" / "clock").write_text("8\n")
         self.assertEqual(sorted(self.tick(**env)), ["by_dir", "by_proc"])   # 兩個 hook 各記各的
-        clocks = sorted(e["clock"] for e in self.events())
+        clocks = sorted(e["clock"] for e in self.events()[2:])
         self.assertEqual(clocks, sorted([str(self.clock), str(daemon / "procs" / "_sub" / "clock")]))
         self.declare({"x": self.due(clock="_nobody")})
         self.tick(**env)
@@ -141,24 +156,22 @@ class ClockHook(Hooks):
     def test_cells_check_and_history_stays(self):
         self.declare({"t": self.due(every_cycles=1)})
         self.history([{"role": "user", "content": "hi"}])
-        self.run_cell("idle", code=10)                           # 第一次：基準
+        r = self.run_cell("idle", code=10)                       # 第一次：跑一次
+        self.assertEqual([e["event"] for e in self.events()], ["on_clock"], r.stderr)
+        self.run_cell("idle", code=10)                           # 沒走：不跑
         self.set_cycle(101)
-        r = self.run_cell("idle", code=10)
-        self.assertEqual([e["event"] for e in self.events()], ["clock_due"], r.stderr)
+        self.run_cell("idle", code=10)
         self.set_cycle(102)
         self.run_cell("wait", code=11)                           # 沒 pending、沒 request＝回 think；開頭照樣看時鐘
-        self.assertEqual(len(self.events()), 2)
+        self.assertEqual(len(self.events()), 3)
         self.assertEqual(self.history(), [{"role": "user", "content": "hi"}])
 
     def test_failing_handler_stop_stops_cell(self):
         entry = self.due(every_cycles=1)
         entry.update(on_error="stop", handler=self.hook("bad", "sys.exit(3)"))
         self.declare({"t": entry})
-        self.run_cell("idle", code=10)
-        self.set_cycle(101)
-        r = self.run_cell("idle", code=1)
+        r = self.run_cell("idle", code=1)                        # 第一次就跑、失敗＝那格停
         self.assertIn("HookFailed", r.stderr)
-        self.set_cycle(101)
         self.run_cell("idle", code=10)                           # 記過了：不每拍重跑
 
     # ---- after_start／after_stop（hook_fire）

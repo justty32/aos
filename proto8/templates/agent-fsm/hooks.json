@@ -1,8 +1,8 @@
 {
- "description": "Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added, after_start, after_stop, clock_due); the stack copy of this file overrides it by name, null turns one off. The timer hook is a place to hang something every 5 minutes (clock_due, every_ms 300000, AOS_CLOCK); its handler does nothing.",
+ "description": "Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added, after_start, after_stop, on_clock); the stack copy of this file overrides it by name, null turns one off. The timer hook is a place to hang something every 5 minutes (on_clock, every_ms 300000, AOS_CLOCK); its handler does nothing.",
  "hooks": {
   "timer": {
-   "event": "clock_due",
+   "event": "on_clock",
    "every_ms": 300000,
    "handler": {
     "$env": "AOS_HOME",

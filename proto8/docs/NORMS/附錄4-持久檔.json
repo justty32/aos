@@ -625,13 +625,13 @@
    "evidence": "proto8/cmd/aos-agent/aos_agent/system.py、proto8/lib/agent/self_system/_entry"
   },
   {
-   "path": "$AOS_STACK/hooks/<名>/clock_due.json",
+   "path": "$AOS_STACK/hooks/<名>/on_clock.json",
    "lifetime": "暫時",
-   "writer": "lib/agent/hooks.py（clock_tick；agent-fsm 四格、aos-eca-turn）",
+   "writer": "lib/agent/hooks.py（clock_tick 寫；clock_restart 在 loop 起來時刪，lib/agent/hook_fire after_start 叫）",
    "reader": "同左",
    "image": "不進：在 hooks/ 小格裡，stack.gitignore 的 **/hooks/ 擋（G092）",
-   "on_bad": "不在、壞了、時鐘換了＝當第一次：只記基準、不跑；寫不了＝warning、這次不跑",
-   "note": "11-11 clock-hook 新增：{clock: 時鐘檔絕對路徑, cycle: 上次跑（或基準）時的 cycle, warned?: 上次印過的找不到時鐘原因}；換台後不在＝重記基準。新檔，不用重建",
+   "on_bad": "不在、壞了、時鐘換了、cycle 倒退＝當第一次：立刻跑一次並記基準；寫不了＝warning、這次不跑",
+   "note": "11-11 clock-hook 新增：{clock: 時鐘檔絕對路徑, cycle: 上次跑（或基準）時的 cycle, warned?: 上次印過的找不到時鐘原因}；換台後不在、loop 起來時被刪＝下一次檢查跑一次（使用者 11-11「起來就先觸發一次」）。新檔，不用重建",
    "evidence": "proto8/lib/agent/hooks.py（clock_tick、_state、_put_state）"
   }
  ]

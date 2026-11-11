@@ -5,7 +5,7 @@
 # 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"get"|"add"|"rm"|"reset", …}；別的鍵＝ArgumentsBad：
 #   ls {long?}                   ＝hook ls --json（long: true＝ls -l 的文字，含被設成 null 的格）
 #   get {name}                   ＝hook get NAME
-#   add {event, path | path_json, name?, condition?（字串或字串陣列）, every_cycles?, every_ms?, clock?（11-11 clock_due）, intercept?（false＝--no-intercept；預設開）, async?（true＝--async）, on_error?, timeout_ms?, replace?}
+#   add {event, path | path_json, name?, condition?（字串或字串陣列）, every_cycles?, every_ms?, clock?（11-11 on_clock）, intercept?（false＝--no-intercept；預設開）, async?（true＝--async）, on_error?, timeout_ms?, replace?}
 #                                ＝hook add --event E [--name] [--condition M]… [--every-cycles N] [--every-ms N] [--clock C] [--no-intercept] [--async] [--on-error] [--timeout-ms] [--replace] (XXX | --path-json)
 #                                （鍵名 11-10 深夜改，使用者「hook這塊，主要走A, 但filter改condition。」）
 #   rm {name}                    ＝hook rm NAME
@@ -140,7 +140,7 @@ else:
     timeout = args.get("timeout_ms")
     if timeout is not None and (not isinstance(timeout, int) or isinstance(timeout, bool)):
         die("ArgumentsBad", "timeout_ms must be a whole number of milliseconds")
-    every = []                                   # 11-11 clock_due：照給的傳，對不對由 aos-agent hook 說
+    every = []                                   # 11-11 on_clock：照給的傳，對不對由 aos-agent hook 說
     for key in ("every_cycles", "every_ms"):
         v = args.get(key)
         if v is not None:

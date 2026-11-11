@@ -7,7 +7,7 @@
 #   不進 history、不算好信、mailbox_warning.txt 寫一行是哪個 hook 丟的），接進去並 done 之後 after_queue。hook 停下（HookFailed／HooksBad）時
 #   還沒 done 的信留在 cur/、下次重跑再接（P-12）。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）。aos-post 的 stderr 不攔、原樣透出（stdio-unify R10）。--help 印英文用法；Ctrl-C 退 130。設計：proto8/thinking/2026-11/04/loop-fsm-agent/01-設計.md § 3。
-# clock_due（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick——時鐘走到了的 clock_due hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
+# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格建好 queue 之後、收信之前先 hooks.clock_tick——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 import json, os, re, signal, subprocess, sys
 from pathlib import Path
 
@@ -76,10 +76,6 @@ if prompt and not os.path.isfile(prompt):
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
-try:                                             # 11-11 clock_due：每格開頭看一次時鐘，到了才起 handler（hooks.clock_tick）
-    hooks.clock_tick(os.environ.get("AOS_CD") or ".", stack, warn=lambda line: aos_flags.warn("agent-fsm", line))
-except (hooks.HookFailed, hooks.HooksBad) as e:
-    die(type(e).__name__, str(e))
 box = os.path.join(stack, "queue")
 history_path = os.path.join(stack, "history.jsonl")
 
@@ -197,6 +193,10 @@ def opening():
 
 if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
     post(["init", box])                          # 先建好，aos-agent say／listen 認得（同 aos-eca-turn）
+try:                                             # 11-11 on_clock：idle 在建好 queue 之後看時鐘（第一次就跑的 handler 可能往 queue 寄信），到了才起 handler（hooks.clock_tick）
+    hooks.clock_tick(os.environ.get("AOS_CD") or ".", stack, warn=lambda line: aos_flags.warn("agent-fsm", line))
+except (hooks.HookFailed, hooks.HooksBad) as e:
+    die(type(e).__name__, str(e))
 if take() or (opening() and take()):
     sys.exit(0)
 sys.exit(10)

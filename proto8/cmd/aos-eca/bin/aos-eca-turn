@@ -60,8 +60,8 @@
      交出去之前 tool_added（這輪生效的登記檔比上次多的名字；有這種 hook 才多叫一次 aos-tools ls --json）；handed 裡信接進 history、收掉之後每封 after_queue；
      交出去之後的 CliFailed／ReplyMissing＝記冷卻之前 brain_failed（name＝代號、reason＝這支那行的原因）。before_tool／after_tool 在 aos-mcp（cli_session 帶 --hooks DEF_DIR）。
      hook 停下＝HookFailed／HooksBad 退 1：交出去之前＝信留 cur/、history 不動；after_queue 停下＝回答照樣接進 history 才報；brain_failed 停下＝冷卻不記。
-  ⑫ clock_due（11-11 thinking/2026-11/11/clock-hook，使用者「hook就可以添加一個類型……去看指定的clock proc」）：每輪最開頭（冷卻中、退讓的那輪也是）
-     hooks.clock_tick 看時鐘，條件到了的 clock_due hook 才跑；handler 預設什麼都不做、history 不多任何一則；要叫腦＝handler 自己往 <stack>/queue 寄信。
+  ⑫ on_clock（11-11 thinking/2026-11/11/clock-hook，使用者「hook就可以添加一個類型……去看指定的clock proc」）：每輪開頭、queue 建好之後（冷卻中、退讓的那輪也是）
+     hooks.clock_tick 看時鐘，條件到了的 on_clock hook 才跑；handler 預設什麼都不做、history 不多任何一則；要叫腦＝handler 自己往 <stack>/queue 寄信。
      hook 停下＝HookFailed 退 1（還沒碰信）。after_start／after_stop 不在這支：在 loop.json 的 on_start／on_stop（lib/agent/hook_fire）。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
@@ -142,7 +142,7 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
   Hooks (hooks.json declared in DEF_DIR's interfaces.json, the stack copy on top): before_queue before a good letter is handed over
     (may change content or drop it; a dropped letter is done and noted in mailbox_warning.txt), tool_added before handing over,
     after_queue after the letters went into history, brain_failed on CliFailed / ReplyMissing after handing over. before_tool /
-    after_tool run in aos-mcp. clock_due is checked first thing every turn (it runs only when its clock condition is met).
+    after_tool run in aos-mcp. on_clock is checked first thing every turn (it runs only when its clock condition is met).
     A failing hook = HookFailed (letters not yet handed over stay in cur/).
 --one (tool form): stdin {"prompt"} -> stdout the answer; the conversation lives in $AOS_STACK itself. --on-empty / --prompt not allowed.
   If the earlier conversation is not on this machine, a warning is printed and a new one is started without a record. No cooldown.
@@ -393,13 +393,13 @@ def take_all(stack, box, prompt):
 
 
 def one_turn(template, stack, ws, empty_code, on_busy, prompt):
-    try:                                                           # ⑫ clock_due：每輪開頭看一次時鐘（冷卻、退讓的那輪也看）
-        hooks.clock_tick(template, stack, warn=lambda line: aos_flags.warn(NAME, line))
-    except (hooks.HookFailed, hooks.HooksBad) as e:
-        raise Fail(type(e).__name__, e)
     box = os.path.join(stack, "queue")
     if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
         must_post(["init", box])                                   # 先建好，aos-agent say／listen 認得
+    try:                                                           # ⑫ on_clock：每輪開頭（queue 建好之後）看一次時鐘（冷卻、退讓的那輪也看）
+        hooks.clock_tick(template, stack, warn=lambda line: aos_flags.warn(NAME, line))
+    except (hooks.HookFailed, hooks.HooksBad) as e:
+        raise Fail(type(e).__name__, e)
     cfg = cli_session.load_cfg(template)
     cell = cli_session.Cell(os.path.join(stack, cfg["kind"]))
     cool, _ = cooldown.state(stack)                                # ⑨ 認領信之前看冷卻（06）
