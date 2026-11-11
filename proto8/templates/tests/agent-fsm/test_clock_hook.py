@@ -108,6 +108,22 @@ class ClockHook(Hooks):
         self.assertEqual(self.tick(**env), ["t"])
         self.assertEqual(self.events()[1]["interval_ms"], 500)
 
+    def test_two_intervals_on_one_agent(self):
+        """同一隻掛多個 on_clock、各自的間隔（daemon 時鐘＝基礎間隔，每個 hook 各自除頻；11-11 使用者「多個間隔」），狀態檔不互踩。"""
+        self.declare({"fast": self.due("fast", every_cycles=2), "slow": self.due("slow", every_cycles=5),
+                      "ms": self.due("ms", every_ms=3000)})                       # 3000 ms ÷ 1000 ms＝3 格
+        env = {"AOS_CLOCK": str(self.clock)}
+        runs = {"fast": [], "slow": [], "ms": []}
+        for c in range(100, 121):
+            self.set_cycle(c)
+            for name in self.tick(**env):
+                runs[name].append(c)
+        self.assertEqual(runs["fast"], list(range(100, 121, 2)))
+        self.assertEqual(runs["slow"], [100, 105, 110, 115, 120])
+        self.assertEqual(runs["ms"], [100, 103, 106, 109, 112, 115, 118])
+        for name, last in (("fast", 120), ("slow", 120), ("ms", 118)):
+            self.assertEqual(json.loads((self.stack / "hooks" / name / "on_clock.json").read_text())["cycle"], last)
+
     def test_backwards_counts_as_first(self):
         self.declare({"t": self.due()})
         env = {"AOS_CLOCK": str(self.clock)}

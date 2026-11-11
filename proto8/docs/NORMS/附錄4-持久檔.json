@@ -633,6 +633,16 @@
    "on_bad": "不在、壞了、時鐘換了、cycle 倒退＝當第一次：立刻跑一次並記基準；寫不了＝warning、這次不跑",
    "note": "11-11 clock-hook 新增：{clock: 時鐘檔絕對路徑, cycle: 上次跑（或基準）時的 cycle, warned?: 上次印過的找不到時鐘原因}；換台後不在、loop 起來時被刪＝下一次檢查跑一次（使用者 11-11「起來就先觸發一次」）。新檔，不用重建",
    "evidence": "proto8/lib/agent/hooks.py（clock_tick、_state、_put_state）"
+  },
+  {
+   "path": "$AOS_STACK/hooks/mail_notify/notified.json",
+   "lifetime": "暫時",
+   "writer": "lib/agent/mail_notify（範本 hooks.json 的 mail_notify 那格，on_clock 每 10000 ms）",
+   "reader": "同左",
+   "image": "不進：在 hooks/ 小格裡，stack.gitignore 的 **/hooks/ 擋（G092）",
+   "on_bad": "不在、壞了＝當作都沒通知過：信箱裡還沒讀的通知一次；寫不了＝WriteFailed（hook on_error continue＝一行 warning）",
+   "note": "11-11 mail-notify 新增：JSON 陣列，已通知過、還在 mailbox/new/ 的信名（讀掉的下次就拿掉）；事件 first 時不讀它。新檔，不用重建",
+   "evidence": "proto8/lib/agent/mail_notify/_entry"
   }
  ]
 }

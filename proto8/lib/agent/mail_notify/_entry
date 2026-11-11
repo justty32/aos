@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+# mail_notify - on_clock 的 hook handler：看這隻 agent 自己的信箱（<stack>/mailbox，不是 queue）有沒有還沒通知過的新信，有就往自己 queue 寄一則「[aos] new_mail: …」。
+# 使用者 11-11：「我們可以透過hook，當有新信來的時候執行一次aos-say "[aos] new_mail: you got a new mail from xxx"這樣。當然，具體這是可調整的，
+#   agent自身也可以調整hook，類似免打擾」；選項框：怎麼做「用on_clock」、範本「預設開」、多封新信「合成一句」（thinking/2026-11/11/mail-notify.md）。
+# 介面：hook handler（lib/agent/hooks.py 用 aos-exec 起）：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、first…），$AOS_STACK＝這個 hook 自己的小格
+#   （$AGENT_STACK/hooks/<名>/），已通知過的信名記在 $AOS_STACK/notified.json。
+# 做法：aos-mailbox --stack <agent stack> peek -j 列還在 new/ 的信 → 沒通知過的＝新信 → 合成一句（只帶封數與寄件人，不帶內文）
+#   用 aos-post send --ordered <agent stack>/queue 寄一則 {"role": "user", "content": …}（同 aos-agent say；queue 沒有就先 aos-post init）→ 寄成了才記 notified。
+#   沒新信（含沒信箱）＝不寄、不動 history、什麼都不印。notified 只留還在信箱裡的信名（讀掉的自然消失，檔不會一直長）。
+#   事件 first: true（剛起來、睡醒、重起後第一次）＝當作都沒通知過：信箱裡還沒讀的通知一次（代定）。自己寄給自己的信照樣算（代定）。
+# 錯：stderr 一行「mail_notify: error: 代號 原因」、退 1（ArgumentsBad 事件 JSON 壞、StackMissing、LaunchFailed、CommandFailed 下層退非 0 或逾時、WriteFailed）；
+#   範本掛它用 on_error: continue，壞了只是 agent 那邊一行 warning、不停 agent。需要 PATH 上有 aos-mailbox、aos-post。--help 印英文用法。
+import json, os, subprocess, sys
+
+NAME = "mail_notify"
+HELP = """usage: mail_notify < EVENT.json   (an on_clock hook handler; $AOS_STACK = this hook's own cell)
+Look at the agent's own mailbox (the "stack" of the event: STACK/mailbox, not the queue).
+If letters came that it was not told about yet, send one message to STACK/queue:
+  [aos] new_mail: 2 new letters from bob, amy. Look with mailbox_peek, read with mailbox_read.
+Only the number and the senders, never the text. No new letter (or no mailbox) = nothing at all.
+Letters it already told about are kept in $AOS_STACK/notified.json; read letters drop out by themselves.
+first: true in the event (right after start or wake-up) = tell once about every letter still waiting.
+Turn it off or change its interval with self_hook (op rm, or add with replace: true).
+exit codes: 0 done (also when nothing was new); 1 error ("mail_notify: error: CODE reason").
+"""
+STEP_S = 8                                      # 每次叫下層最多等幾秒（範本那格 timeout_ms 10000，留餘裕）
+SEEN = "notified.json"
+MAX_NAMES = 5                                    # 寄件人最多列幾個，其餘「and N more」
+
+
+def die(code, why):
+    sys.stderr.write("%s: error: %s %s\n" % (NAME, code, why))
+    sys.exit(1)
+
+
+def run(argv, text=None):
+    try:
+        p = subprocess.run(argv, input=text, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=STEP_S)
+    except OSError as e:
+        die("LaunchFailed", "cannot run %s (put it on PATH with proto8/install.sh): %s" % (argv[0], e))
+    except subprocess.TimeoutExpired:
+        die("CommandFailed", "%s %s took over %d s" % (argv[0], argv[-1], STEP_S))
+    if p.returncode != 0:
+        last = [x for x in p.stderr.splitlines() if x.strip()]
+        die("CommandFailed", "%s exited %d: %s" % (" ".join(argv[:4]), p.returncode, last[-1] if last else "(no message)"))
+    return p.stdout
+
+
+def sentence(new):
+    senders = []
+    for row in new:
+        who = row.get("from") if isinstance(row.get("from"), str) and row.get("from").strip() else "?"
+        if who not in senders:
+            senders.append(who)
+    names = ", ".join(senders[:MAX_NAMES]) + (" and %d more" % (len(senders) - MAX_NAMES) if len(senders) > MAX_NAMES else "")
+    n = len(new)
+    return ("[aos] new_mail: %d new letter%s from %s. Look with mailbox_peek, read with mailbox_read."
+            % (n, "" if n == 1 else "s", names))
+
+
+def main():
+    if sys.argv[1:2] in (["-h"], ["--help"]):
+        sys.stdout.write(HELP)
+        return 0
+    if sys.argv[1:]:
+        die("ArgumentsBad", "takes no arguments; the event JSON comes on stdin (usage: mail_notify < EVENT.json)")
+    try:
+        event = json.load(sys.stdin)
+    except ValueError as e:
+        die("ArgumentsBad", "the event on stdin is not JSON: %s" % e)
+    stack = event.get("stack") if isinstance(event, dict) else None
+    if not isinstance(stack, str) or not stack:
+        die("ArgumentsBad", "the event has no stack (the agent's stack folder)")
+    cell = os.environ.get("AOS_STACK")
+    if not cell:
+        die("StackMissing", "AOS_STACK is not set (this hook's own cell)")
+    if not os.path.isdir(os.path.join(stack, "mailbox")):
+        return 0                                 # 沒信箱＝沒信：安靜
+    try:
+        rows = json.loads(run(["aos-mailbox", "--stack", stack, "peek", "-j"]) or "[]")
+    except ValueError:
+        die("CommandFailed", "aos-mailbox peek -j did not print JSON")
+    rows = [r for r in rows if isinstance(r, dict) and isinstance(r.get("letter"), str)] if isinstance(rows, list) else []
+    path = os.path.join(cell, SEEN)
+    seen = []
+    if not event.get("first"):
+        try:
+            with open(path, encoding="utf-8") as f:
+                seen = json.load(f)
+        except (OSError, ValueError):
+            seen = []
+    seen = set(x for x in seen if isinstance(x, str)) if isinstance(seen, list) else set()
+    new = [r for r in rows if r["letter"] not in seen]
+    if new:
+        box = os.path.join(stack, "queue")
+        if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
+            run(["aos-post", "init", box])
+        run(["aos-post", "send", "--ordered", box],
+            json.dumps({"role": "user", "content": sentence(new)}, ensure_ascii=False))
+    keep = sorted(r["letter"] for r in rows)    # 只留還在信箱裡的（讀掉的自然掉出去）
+    if new or sorted(seen) != keep:
+        tmp = os.path.join(cell, ".%s.%d.tmp" % (SEEN, os.getpid()))
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(json.dumps(keep) + "\n")
+            os.replace(tmp, path)
+        except OSError as e:
+            die("WriteFailed", "cannot write %s: %s" % (path, e))
+    return 0
+
+
+sys.exit(main())
