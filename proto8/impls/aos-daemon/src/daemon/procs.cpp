@@ -298,6 +298,35 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key, 
     return out;
 }
 
+Json drop_bad_refs(const Json& v, const std::string& base, std::vector<std::string>& dropped) {
+    if (!v.is_object() || !v.contains("$ref") || !v["$ref"].is_array()) {
+        return v;
+    }
+    Json keep = Json::array();
+    for (const Json& r : v["$ref"]) {
+        if (!r.is_string()) {
+            keep.push_back(r);   // 寫錯形狀的交給 resolve_shallow 照舊報
+            continue;
+        }
+        try {
+            aos::resolve_shallow(Json::object({{"$ref", r}}), base);
+            keep.push_back(r);
+        } catch (const Error& e) {
+            if (e.code != code::DirectiveBad) {
+                throw;
+            }
+            dropped.push_back(e.msg);
+        }
+    }
+    Json out = v;
+    if (keep.empty()) {
+        out.erase("$ref");
+        return out;
+    }
+    out["$ref"] = std::move(keep);
+    return out;
+}
+
 const Json& merge_want(const Json& base, const Json& ctl, const char* added_key, const char* removed_key, Json& merged) {
     if (!ctl.contains(added_key) && !ctl.contains(removed_key)) {
         return base;

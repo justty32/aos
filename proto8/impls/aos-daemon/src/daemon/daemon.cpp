@@ -74,7 +74,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     }
     try {   // 指示詞（10-23 晚）：起點＝設定檔的資料夾（cfg_dirs_）。舊名 loops／execs／loops_* 不認（C-48，11-03「當沒看到」）
         if (cfg_.contains("procs")) {
-            procs_ = read_procs(cfg_["procs"], cfg_dirs_.dir_of("procs"), "procs", &bad_rows_);
+            procs_ = read_procs(drop_bad_refs(cfg_["procs"], cfg_dirs_.dir_of("procs"), bad_refs_), cfg_dirs_.dir_of("procs"), "procs", &bad_rows_);
         }
         for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_requests", "procs_loop", "procs_exec", "procs_stderr", "limits"}) {
             if (cfg_.contains(k)) {
@@ -186,6 +186,10 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
             at->second->second.reason.is_string() && at->second->second.reason.get<std::string>().find(BAD_ROW_REASON) != std::string::npos) {
             stopped_.erase(name);
         }
+    }
+    for (const auto& why : bad_refs_) {   // 11-11：procs 頂層 $ref 陣列跳過的那份（drop_bad_refs）
+        warn("procs in " + spec + ": cannot resolve directives: " + why +
+             "; skipping that file (its procs do not start), the other procs start (fix it, then restart this daemon)");
     }
     for (const auto& [name, why] : bad_rows_) {
         warn("procs." + name + " in " + spec + ": cannot resolve directives: " + why +

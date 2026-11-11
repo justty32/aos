@@ -106,6 +106,11 @@ bool same_tree(pid_t pid, const std::string& cell, const std::string& dstack);
 //   procs 本身那層解不開照丟。daemon.json 的 procs 用（一列壞不拖垮整台）；procs_ctl、信照舊整份不採用。
 Json read_procs(const Json& v, const std::string& base, const std::string& key, std::map<std::string, std::string>* bad = nullptr);
 
+// 11-11（two-machines 17 待裁 2，使用者選「跳過那份」）：procs 頂層寫成 {"$ref": [檔, …]} 時，指示詞解不開（DirectiveBad，例那份檔不在）的那份
+//   從陣列拿掉、原因記進 dropped，其他份照合（那份帶的列不起，也不知道它們叫什麼）；全部拿掉＝空名單。不是陣列（單一 $ref、沒寫指示詞）原樣回，
+//   整份讀不到照舊 DirectiveBad 退 1。只給 daemon.json 用（procs_ctl、信照舊整份不採用）。
+Json drop_bad_refs(const Json& v, const std::string& base, std::vector<std::string>& dropped);
+
 // procs_state 列上的 exec 欄（11-04 晚，aos-agent 方向題 1，使用者「daemon表多一欄記下來」）：proc 設定裡的目標——
 //   字串、陣列（取第一個）、物件的 exec（同前兩種）——相對的接在 cwd 後面（`檔#/…` 只動 # 前面；只有 `#/…` 的不動），其他照原字串；
 //   內嵌單子、null（信箱接回只留名的）＝回 null。aos-daemon-ctl add 的 loop 型目標是 `<XXX>/loop.json#/exec`（或 loop.json 的 exec 轉絕對）、
@@ -206,6 +211,7 @@ private:
 
     Json procs_ = Json::object();                        // daemon.json 的 procs
     std::map<std::string, std::string> bad_rows_;        // 11-10 晚 B07：daemon.json 裡指示詞解不開的列 → 原因（那列留 stopped＋reason，其他照起）
+    std::vector<std::string> bad_refs_;                  // 11-11：daemon.json 的 procs 頂層 $ref 陣列裡跳過的那幾份 → 原因（drop_bad_refs）
     Json limits_;                                        // daemon.json 頂層的 limits（沒寫 limits 的列用的預設；null＝不限；11-05 feat-proto 件 5）
     std::string cwd_;                                    // 子項的 cwd＝daemon 起來時的 cwd
     std::string dstack_;                                 // 給子項的 AOS_DAEMON＝stack_ 轉絕對、結尾 /；預設小格也從它拼

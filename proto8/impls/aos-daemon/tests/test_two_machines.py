@@ -238,7 +238,36 @@ class TwoMachines(unittest.TestCase):
         a.start()
         self.assertEqual(a.running('broken')['phase'], 'running')
 
+    def test_missing_file_in_procs_ref_array_is_skipped(self):
+        # 11-11（使用者選「跳過那份」）：procs 頂層 $ref 陣列其中一份不在＝那份的列不起、一行 warning，其他份照起
+        a = self.tree('a', {'$ref': ['one.json', 'gone.json']})
+        write(a.root / 'one.json', {'good': {'exec': 'body_a.py'}})
+        a.start()
+        self.assertEqual(a.running('good')['phase'], 'running')
+        self.assertIsNone(a.proc.poll())
+        a.err.flush()
+        err = (a.root / 'daemon.err').read_text()
+        self.assertIn('aos-daemon: warning: procs in', err)
+        self.assertIn('gone.json', err)
+        self.assertIn('skipping that file (its procs do not start), the other procs start', err)
+        self.assertEqual(sorted(a.rows()), ['good'])
+        a.stop()   # 補上那份、重起 daemon：它的列照常起
+        write(a.root / 'gone.json', {'late': {'exec': 'body_b.py'}})
+        a.start()
+        self.assertEqual(a.running('late')['phase'], 'running')
+        self.assertEqual(a.running('good')['phase'], 'running')
+
+    def test_every_file_in_procs_ref_array_missing_starts_empty(self):
+        a = self.tree('a', {'$ref': ['gone1.json', 'gone2.json']})
+        a.start()
+        self.assertIsNone(a.proc.poll())
+        a.err.flush()
+        err = (a.root / 'daemon.err').read_text()
+        self.assertEqual(err.count('skipping that file'), 2)
+        self.assertEqual(a.rows(), {})
+
     def test_bad_top_level_procs_ref_still_fails(self):
+        # 單一 $ref（不是陣列）讀不到＝整份名單都不知道，照舊 DirectiveBad 退 1
         a = self.tree('a', {'$ref': 'gone.json'})
         p = subprocess.run(['aos-daemon', str(a.root / 'daemon.json')], cwd=a.root, env=dict(ENV, AOS_STACK=str(a.stack)),
                            capture_output=True, text=True, timeout=10)
