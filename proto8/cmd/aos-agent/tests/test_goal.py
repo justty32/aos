@@ -1,4 +1,4 @@
-"""Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0), clear, who is recorded (agent vs outside), and errors."""
+"""Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0), clear, who is recorded (agent vs outside), flags written after the words, and errors."""
 import json
 import os
 from pathlib import Path
@@ -104,6 +104,17 @@ class Goal(unittest.TestCase):
         self.assertEqual((self.rec()["set_by"], self.rec()["updated_by"]), ("agent", "agent"))
         self.agent("pause", "wait")
         self.assertEqual((self.rec()["set_by"], self.rec()["updated_by"]), ("agent", "outside"))
+
+    def test_flags_after_words(self):
+        # 11-11 P-44 續（使用者「全部改」）：旗標寫在位置參數前後都收，外層的 --target、--daemon 也一樣
+        p = subprocess.run([str(BIN), "goal", "set", "Write", "it.", "--limit", "3", "--target", "bob", "--daemon", str(self.d)],
+                           env=clean_env(), capture_output=True, text=True, timeout=60, cwd=self.tmp, stdin=subprocess.DEVNULL)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual((self.rec()["text"], self.rec()["limit"]), ("Write it.", 3))
+        self.agent("done", "gave", "up", "-a")
+        self.assertEqual((self.rec()["status"], self.rec()["reason"]), ("abandoned", "gave up"))
+        self.assertEqual(json.loads(self.agent("get", "-j").stdout)["status"], "abandoned")
+        self.assertIn("FlagUnknown", self.agent("set", "x", "--nope", ok=False).stderr)
 
     def test_help_lists_goal(self):
         p = subprocess.run([str(BIN), "--help"], env=clean_env(), capture_output=True, text=True, timeout=30)
