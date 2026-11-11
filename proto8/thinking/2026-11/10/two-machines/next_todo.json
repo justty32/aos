@@ -56,7 +56,7 @@
    "symptom": "只是歷史紀錄、不拿來解路徑；但讓 gitignore 完整檢查的「追蹤檔不准有本機路徑」永遠紅",
    "direction": "sender 改存相對 kernel stack，或那項檢查排除帳本類",
    "needs": "C++（aos-util proc.cpp、aos-llm-kernel reply.cpp）",
-   "status": "open"
+   "status": "已裁不改 C++（11-11 使用者選「改檢查的標準」）：信封 sender、帳本 ledger.jsonl 照存絕對路徑，gitignore-check 的追蹤檔檢查不再把它們算外洩（線 J，cmd/aos-agent/docs/05-gitignore指南.md 末節）"
   },
   {
    "id": "B06",
@@ -65,7 +65,7 @@
    "symptom": "shutdown、kill -9 兩個時點各 26 個追蹤檔含本機路徑（使用者寫的絕對路徑、外部知識庫設定、sender、子 daemon 公開 state、ledger）",
    "direction": "調整檢查口徑（使用者寫的絕對路徑本來就允許），或等 B05",
    "needs": "隊長或使用者裁口徑",
-   "status": "open"
+   "status": "口徑已改（11-11 使用者選「改檢查的標準」，線 J）：使用者自己寫的絕對路徑（defs/、as_written、程式原樣抄的同一字串）、帳本、信封 sender 不算；命中時印出 JSON 位置。照新口徑還紅兩種程式算出的絕對路徑：子 daemon 公開 state 的 daemon 欄、kernel 在途信 proc.json 的 exec——不在裁定三類內，open"
   },
   {
    "id": "B07",
@@ -137,7 +137,7 @@
    "symptom": "身分一樣就當成自己的",
    "direction": "每次拿鎖給 token，release 帶 token",
    "needs": "C++、對外加法",
-   "status": "open"
+   "status": "已裁留大修（11-11 使用者選「留大修」）：不做"
   },
   {
    "id": "B15",

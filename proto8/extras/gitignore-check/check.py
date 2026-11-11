@@ -66,6 +66,91 @@ def matches(pattern, name):
     return re.fullmatch(out, name) is not None
 
 
+# 11-11 B05／B06（使用者選「改檢查的標準」）：追蹤檔裡的本機路徑，下面三種不算外洩（只放路徑類記號，"key prefix" 照查）：
+# 使用者自己寫的絕對路徑（defs/ 底下的定義與設定、表上原樣存的 as_written，以及程式從定義原樣抄到別處的同一個字串）、
+# 帳本（ledger.jsonl）、信封的 sender（寄件人＝工作區路徑）。其餘照查，命中時印出 JSON 裡的位置（where）。
+PATH_TOKENS = {"temporary root", "original HOME", "fixture HOME", "username", "hostname", "repo location"}
+ALLOWED_KEYS = {"as_written", "sender"}
+
+
+def allowed_file(name):
+    """Whole files whose local paths are fine: user-written definitions under defs/, and ledgers."""
+    return name.startswith("defs/") or name.endswith("ledger.jsonl")
+
+
+def json_values(text):
+    """The parsed JSON documents of a .json or .jsonl file, or None when it is not JSON."""
+    try:
+        return [json.loads(text)]
+    except ValueError:
+        pass
+    docs = []
+    for line in text.splitlines():
+        if line.strip():
+            try:
+                docs.append(json.loads(line))
+            except ValueError:
+                return None
+    return docs or None
+
+
+def strings(value):
+    """Every string (keys too) inside a JSON value."""
+    if isinstance(value, dict):
+        return {str(k) for k in value} | {s for v in value.values() for s in strings(v)}
+    if isinstance(value, list):
+        return {s for v in value for s in strings(v)}
+    return {value} if isinstance(value, str) else set()
+
+
+def user_strings(projects):
+    """Strings written in the projects' definitions (defs/): a program copying one elsewhere still carries the user's own path."""
+    out = set()
+    for project in projects:
+        for p in (project / "defs").rglob("*"):
+            if p.is_file() and not p.is_symlink():
+                for d in json_values(p.read_text(errors="replace")) or []:
+                    out |= strings(d)
+    return out
+
+
+def hits(value, needle, mine, path=""):
+    """Key paths (like /procs/a/ws) whose string value or key holds needle, skipping ALLOWED_KEYS and strings the user wrote (mine)."""
+    out = []
+    if isinstance(value, dict):
+        for k, v in value.items():
+            if k in ALLOWED_KEYS:
+                continue
+            here = path + "/" + str(k)
+            if needle in str(k) and str(k) not in mine:
+                out.append(here + " (key)")
+            out += hits(v, needle, mine, here)
+    elif isinstance(value, list):
+        for i, v in enumerate(value):
+            out += hits(v, needle, mine, path + "/" + str(i))
+    elif isinstance(value, str) and needle in value and value not in mine:
+        out.append((path or "/") + " = " + value)
+    return out
+
+
+def leak_places(name, content, tokens, mine=frozenset()):
+    """{token label: [where]} for the tokens that count as a leak in one tracked file."""
+    found = {}
+    for label, v in tokens.items():
+        if not v or v.encode() not in content:
+            continue
+        if label in PATH_TOKENS and allowed_file(name):
+            continue
+        docs = json_values(content.decode("utf-8", "replace")) if label in PATH_TOKENS else None
+        if docs is None:
+            found[label] = ["(text)"]
+            continue
+        where = [w for d in docs for w in hits(d, v, mine)]
+        if where:
+            found[label] = where
+    return found
+
+
 class Check:
     def __init__(self, opts):
         self.timeout = float(opts.get("timeout", 45))
@@ -328,6 +413,7 @@ class Check:
     def inspect_git(self, label):
         counts = {}
         leaks = []
+        mine = user_strings((self.project, self.llms))
         for project in (self.project, self.llms):
             self.run(["git", "-C", project, "add", "-A"])
             tracked = self.run(["git", "-C", project, "ls-files", "-z"]).stdout.split("\0")[:-1]
@@ -342,9 +428,9 @@ class Check:
                 content = os.readlink(p).encode() if p.is_symlink() else p.read_bytes()
                 tokens = {"temporary root": str(self.work), "original HOME": str(Path.home()), "fixture HOME": self.env["HOME"],
                           "username": getpass.getuser(), "hostname": socket.gethostname(), "repo location": str(PROTO.parent), "key prefix": "sk-"}
-                found = [k for k, v in tokens.items() if v and v.encode() in content]
+                found = leak_places(name, content, tokens, mine)
                 if found:
-                    leaks.append({"project": project.name, "path": name, "tokens": found})
+                    leaks.append({"project": project.name, "path": name, "tokens": sorted(found), "where": found})
             counts[project.name] = len(tracked)
             if unknown:
                 self.fail(label + " unknown tracked files", unknown)

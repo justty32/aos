@@ -104,3 +104,13 @@ git 不保存空資料夾。本次 clone 實跑，一般 daemon 控制信箱、�
 **11-10 已修**（`55bc1205b`）：子 agent 保留 `think/pending.txt`、空的 `think/reply/` 沒被 git 保存時，wait 現在會先補回信箱再續收；以前首次會報 `MailboxMissing`。
 
 任意自行建立的信箱仍須按 `aos-post init` 的契約準備；單獨實跑確認，一般 `aos-post send` 不會替缺少的空信箱補好。新機上的執行檔、路徑、外部知識庫與 CLI 登入，也仍由你準備。
+
+## 追蹤檔裡的本機路徑，什麼算外洩（11-11）
+
+開發用的整棵實跑檢查 [`extras/gitignore-check`](../../../extras/gitignore-check/check.py) 會在 commit 前找追蹤檔裡的本機記號（暫存根、HOME、使用者名、主機名、repo 位置、`sk-` 金鑰開頭）。使用者 11-11 選「改檢查的標準」（two-machines B05／B06），下面三種**不算**外洩、不動 C++：
+
+- **使用者自己寫的絕對路徑**：`defs/` 底下的定義與設定整份；daemon 表上原樣存的 `as_written`；程式從定義原樣抄到別處、跟定義裡一字不差的同一個字串。
+- **帳本**：`ledger.jsonl`（只記當時路徑、不拿來解路徑）。
+- **信封的 `sender`**（寄件人＝工作區路徑）。
+
+`sk-` 金鑰開頭不在放過之列，哪裡出現都算。其餘照查；命中時結果檔的 `where` 印出是 JSON 裡哪一格與它的值。照這個標準，現在還會命中的是兩種**程式自己算出來**的絕對路徑：子 daemon 公開 state（`procs_state.json`、`state.json`）的 `daemon` 欄（上一層 daemon 的 stack），以及 kernel 在途信小格 `proc.json` 的 `exec`（定義裡寫的相對入口被轉成的絕對路徑）。這兩種不在使用者裁的三類裡，檢查照舊算紅（next_todo B06）。
