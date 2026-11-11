@@ -56,7 +56,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 | claude／codex CLI | [examples/cli-tool.json](examples/cli-tool.json) | 要連網、要寫自己的設定資料夾；擋的是「讀寫工作區以外」；環境只帶 `PATH`、`HOME`、`TERM`、語系與 aos 的六個（登入靠 `~/.claude`、`~/.codex` 裡的檔；用環境變數給 key 的話自己加進 `env`） |
 | agent 當工具 | [examples/agent.json](examples/agent.json) | 斷網、信箱綁進來（`rw` 的 `$AOS_LLM_KERNEL/requests`，只綁信箱；腦只能經信箱用 aos-llm 問）；`commands` 帶 aos-post、aos-tools（agent-fsm 的 wait／act 要用，11-04 晚；aos-tools 在 `cmd/aos-tools/bin/`，所以 `proto8/py` 也跟著綁）、環境另帶 `AOS_LLM_KERNEL`（端點、模型、金鑰都在 kernel 那邊的 `kernel.json`，agent 看不到）。沙箱有自己的行程編號也行：kernel 認寄信的人看信裡 `sender.flock` 的檔案鎖、不看 pid（紀錄 S15） |
 
-**要碰 daemon 的工具（thought、agents_children、agents_ctl、self_tools）綁這兩樣**：`AOS_DAEMON`（rw；模式 2 改成 `AOS_KERNEL` 的 `requests/`＋daemon stack 唯讀，再加 rw 它的 `procs/`——子的 stack 要寫得進去）（11-06 [no-pid P5](../../thinking/2026-11/05/no-pid/13-P5實作結果.md)）。另外兩件要注意：
+**要碰 daemon 的工具（thought、subagent、agents_ctl、self_tools）綁這兩樣**：`AOS_DAEMON`（rw；模式 2 改成 `AOS_KERNEL` 的 `requests/`＋daemon stack 唯讀，再加 rw 它的 `procs/`——子的 stack 要寫得進去）（11-06 [no-pid P5](../../thinking/2026-11/05/no-pid/13-P5實作結果.md)）。另外兩件要注意：
 - **叫它的那隻 agent 的定義資料夾也要 ro 綁**：self_tools、thought 會讀父的定義（父的 `interfaces.json`、宣告的 llm 設定檔），看不到時 self_tools 報 `InterfaceMissing`，thought 也報錯（多半是 `InterfaceMissing`；11-06 起，之前不報錯、子的腦默默改用範本預設），除非叫的時候自己給 `endpoint`。定義放哪沒有環境變數可指，範例沒寫，自己在 `ro` 加上。
 - **daemon 的 stack 放在工作區裡（例 `ws/.stack`）時，綁 `AOS_WS` 就已經把整台 daemon 綁進去了**——連 shell-boxed 這種葉工具也寫得到 ctl 信箱。要真的關住，daemon 的 stack 別放在工作區裡。
 

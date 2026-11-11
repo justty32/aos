@@ -14,7 +14,7 @@
 #   who {stack?}                   ＝ctl who --json [--stack S]
 #   aos-agent 在 $AOS_WS 跑（相對路徑從工作區算、daemon 照環境的 $AOS_DAEMON）。結果＝下層 stdout 原樣。
 #   錯：stderr 與 stdout 各一行「agents_ctl: error: 代號 原因」、退 1；下層 stderr 原樣透出；它退非 0＝它最後一行錯誤行的代號與原因接成自己的（C-52 例外 ⑤）。
-# 跟 agents_children 的分界：這支什麼都不記，之後要對那隻說話、調它的工具／腦／對話，得用 agents_children 生它。旗標組裝與跑子行程在 ../agents_cmd.py。
+# 跟 subagent 的分界：這支什麼都不記，之後要對那隻說話、調它的工具／腦／對話，得用 subagent 生它。旗標組裝與跑子行程在 ../agents_cmd.py。
 import os, sys
 HELP = """\
 usage: agents_ctl < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)

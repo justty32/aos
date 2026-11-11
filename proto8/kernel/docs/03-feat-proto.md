@@ -49,7 +49,7 @@ kill $K
 
 kernel 總 `slots` 2、兩包各 `slots` 1、每封 3 秒：同級的信 fast 包排前面；fast 包第二封因為包滿了被**跳過**，讓 slow 包的第一封補上第二格（不是整列卡住）。3 秒後收成品、再掛各包的第二封。`smart-high` 那封沒掛出去：信寫了包釘死的 `temperature`。
 
-### 件 4：agent 生 agent（`agents_children`、`agent_def`；判官 `max_running` 5＝清道夫＋4）
+### 件 4：agent 生 agent（`subagent`、`agent_def`；判官 `max_running` 5＝清道夫＋4）
 
 直接用出廠的 `kernel/daemon-judge`：`judge.json` 的 `max_running` 5＝清道夫 `_sweeper`＋fsm1＋三隻孩子（範本不帶鐘列，不用替時鐘多留一格，11-09 clock-decouple；清道夫那列 11-10 起範本預設帶、也算 running，不掛的調回 4）。實際容量看判官的回信與表，不以假腦文字判斷。
 
@@ -61,7 +61,7 @@ export AOS_LLM_KERNEL=$T/k AOS_DAEMON=$T/st AOS_KERNEL=$T/st/requests   # 掛 pr
 aos-exec --stack $T/st "$JUDGE" > d.log 2>&1 & D=$!         # 帶判官的 daemon：allowed 有 fsm1、kid、kid1～4，max_running 5（含清道夫一格）
 sleep 1
 aos-agent ctl add --name fsm1 --ws $T/ws $P/templates/agent-fsm
-aos-agent llm --target fsm1 set model=fake-demo-spawn                # agents_children、agent_def 範本內建（11-05「內建」）
+aos-agent llm --target fsm1 set model=fake-demo-spawn                # subagent、agent_def 範本內建（11-05「內建」）
 aos-agent say --target fsm1 start a kid and ask it the time && aos-agent listen --target fsm1
 # I started kid, set its brain to fake, asked it the time (its answer is in the tool result above) and removed it again.
 aos-agent say --target fsm1 now start four kids && aos-agent listen --target fsm1
@@ -72,20 +72,20 @@ rg SlotMissing d.log                     # 預期判官因總共五列 running�
 kill $K $D && unset AOS_DAEMON AOS_KERNEL
 ```
 
-第一題劇本：`agents_children {"op": "add", "name": "kid", "def_json": {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}}`（直接用現有定義；`def_json` 是指示詞，原樣交 `ctl add --path-json`）→ `agents_children {"op": "llm", "name": "kid", "args": {"op": "set", "settings": {"model": "fake"}}}`（出生後調子的腦：`args` 就是 self_llm 的參數，工具用 kid 的身分跑旁邊的 self_llm，寫進 kid 自己的覆蓋層 `<kid stack>/llm.json`，定義不動）→ `ask kid "what time is it?"`（kid 的假腦先叫 peek_now_time〔`fake` 包寫 `"tool": "peek_now_time"`〕、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`（`purge: true` 連 stack 一起刪）。第二題一次叫五個：先 `agent_def {"op": "new", "from": {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}, "path": "defs/helper"}`——範本整份抄到 `ws/defs/helper`（只複製，`tools.json` 的 `{"$env": "AOS_HOME", …}` 照抄；要改內容用一般檔案工具），再 `agents_children add {"def": "defs/helper"}` 掛 kid1～kid4（kid3 另給 `"ws": "kid3"`＝`ws/kid3/`，不在先建）；fsm1＋三隻＝4 隻 running，kid4 被判官擋，回給腦一則 `agents_children: error: AddRejected …SlotMissing …`（以實際回信為準）；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的）；`ws` 沒給＝跟 fsm1 同一個；`agents_children` 只碰自己生的（帳記在 `<fsm1 stack>/tools/agents_children/children.json`）。用 `agents_ctl` 掛的不記帳、不算配額，之後 `agents_children` 碰不到它。
+第一題劇本：`subagent {"op": "add", "name": "kid", "def_json": {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}}`（直接用現有定義；`def_json` 是指示詞，原樣交 `ctl add --path-json`）→ `subagent {"op": "llm", "name": "kid", "args": {"op": "set", "settings": {"model": "fake"}}}`（出生後調子的腦：`args` 就是 self_llm 的參數，工具用 kid 的身分跑旁邊的 self_llm，寫進 kid 自己的覆蓋層 `<kid stack>/llm.json`，定義不動）→ `ask kid "what time is it?"`（kid 的假腦先叫 peek_now_time〔`fake` 包寫 `"tool": "peek_now_time"`〕、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`（`purge: true` 連 stack 一起刪）。第二題一次叫五個：先 `agent_def {"op": "new", "from": {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}, "path": "defs/helper"}`——範本整份抄到 `ws/defs/helper`（只複製，`tools.json` 的 `{"$env": "AOS_HOME", …}` 照抄；要改內容用一般檔案工具），再 `subagent add {"def": "defs/helper"}` 掛 kid1～kid4（kid3 另給 `"ws": "kid3"`＝`ws/kid3/`，不在先建）；fsm1＋三隻＝4 隻 running，kid4 被判官擋，回給腦一則 `subagent: error: AddRejected …SlotMissing …`（以實際回信為準）；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的）；`ws` 沒給＝跟 fsm1 同一個；`subagent` 只碰自己生的（帳記在 `<fsm1 stack>/tools/subagent/children.json`）。用 `agents_ctl` 掛的不記帳、不算配額，之後 `subagent` 碰不到它。
 
-**兩道關**：`agents_children` 自己數這隻父生了幾隻（`max_children`，範本 `children.json` 寫 4；帳記在父 stack 裡工具小格的 `children.json`〔`<父 stack>/tools/agents_children/children.json`，跟配額設定同名不同處〕，每次叫先跟 daemon 表對帳），超過＝工具直接回錯、不寄信；判官 `max_running` 數的是整台 daemon 的總量（含父；自己加了鐘列也算它）。上面第二題撞的是判官（父只有三隻，工具放行）。要看工具那道，照 act 格的叫法手叫一次（接在上面 `kill` 之前；`FS` 是 fsm1 的 stack；`aos-tools call` 會把 `AOS_STACK` 換成 `$FS/tools/agents_children/`，所以帳跟 fsm1 的腦叫的是同一份）：
+**兩道關**：`subagent` 自己數這隻父生了幾隻（`max_children`，範本 `children.json` 寫 4；帳記在父 stack 裡工具小格的 `children.json`〔`<父 stack>/tools/subagent/children.json`，跟配額設定同名不同處〕，每次叫先跟 daemon 表對帳），超過＝工具直接回錯、不寄信；判官 `max_running` 數的是整台 daemon 的總量（含父；自己加了鐘列也算它）。上面第二題撞的是判官（父只有三隻，工具放行）。要看工具那道，照 act 格的叫法手叫一次（接在上面 `kill` 之前；`FS` 是 fsm1 的 stack；`aos-tools call` 會把 `AOS_STACK` 換成 `$FS/tools/subagent/`，所以帳跟 fsm1 的腦叫的是同一份）：
 
 ```sh
 FS=$T/st/procs/fsm1 && export AOS_STACK=$FS/ AOS_WS=$T/ws
 echo '{"max_children": 1}' > $FS/children.json      # 這隻父的配額覆蓋：只放改過的鍵（定義的 children.json 不動）
-echo '{"op": "add", "name": "kid1", "def": "defs/helper"}' | aos-tools --file $P/templates/agent-fsm/tools.json call agents_children
+echo '{"op": "add", "name": "kid1", "def": "defs/helper"}' | aos-tools --file $P/templates/agent-fsm/tools.json call subagent
 # added kid1 (stack …/procs/kid1); children 1/1
-echo '{"op": "add", "name": "kid2", "def": "defs/helper"}' | aos-tools --file $P/templates/agent-fsm/tools.json call agents_children; echo $?
-# agents_children: error: ChildSlotMissing you already have 1 of max 1 children (kid1); remove one with op rm first (…)   ← stdout 與 stderr 各一行
+echo '{"op": "add", "name": "kid2", "def": "defs/helper"}' | aos-tools --file $P/templates/agent-fsm/tools.json call subagent; echo $?
+# subagent: error: ChildSlotMissing you already have 1 of max 1 children (kid1); remove one with op rm first (…)   ← stdout 與 stderr 各一行
 # 1                                         （判官信箱沒多信：工具在寄信前就擋了）
 aos-agent ctl rm kid1                     # 別處收掉也行（含別隻用 agents_ctl rm）：下次叫工具時對帳、kid1 被忘掉
-echo '{"op": "ls"}' | aos-tools --file $P/templates/agent-fsm/tools.json call agents_children   # children 0/1
+echo '{"op": "ls"}' | aos-tools --file $P/templates/agent-fsm/tools.json call subagent   # children 0/1
 rm $FS/children.json && unset AOS_STACK AOS_WS
 ```
 
@@ -129,4 +129,4 @@ kill $K
 
 ### 真腦（使用者試）
 
-把件 1、件 4 的 `llm set model=…` 換成真腦就是同一件事、腦自己決定怎麼叫工具：`stupid-fast`（LM Studio 開在 `localhost:1234`、載 `qwen3-1.7b`）或 `smart-high`（LiteLLM `localhost:4000` 的 claude haiku，整輪遠低於 0.5 美金；model 真名以 `curl localhost:4000/v1/models` 為準，對不上改 kernel.json）。真腦不保證照劇本走：工具描述在 `lib/agent/self_tools`、`lib/agent/agents_children`、`lib/agent/agent_def` 的 `_tooldef.json`。
+把件 1、件 4 的 `llm set model=…` 換成真腦就是同一件事、腦自己決定怎麼叫工具：`stupid-fast`（LM Studio 開在 `localhost:1234`、載 `qwen3-1.7b`）或 `smart-high`（LiteLLM `localhost:4000` 的 claude haiku，整輪遠低於 0.5 美金；model 真名以 `curl localhost:4000/v1/models` 為準，對不上改 kernel.json）。真腦不保證照劇本走：工具描述在 `lib/agent/self_tools`、`lib/agent/subagent`、`lib/agent/agent_def` 的 `_tooldef.json`。

@@ -1,4 +1,4 @@
-"""Test the shared runner in agents_cmd waits in bounded segments, cleans up on expiry, polls short on the clock, and that agents_children checks wait arguments before touching the daemon."""
+"""Test the shared runner in agents_cmd waits in bounded segments, cleans up on expiry, polls short on the clock, and that subagent checks wait arguments before touching the daemon."""
 import json
 import os
 from pathlib import Path

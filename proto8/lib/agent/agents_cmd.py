@@ -1,4 +1,4 @@
-"""agents_cmd - agents_children 與 agents_ctl 共用：查鍵、組 aos-agent ctl 各動作的旗標、跑 aos-agent（或旁邊的 self_*）並把下層錯翻成自己的。
+"""agents_cmd - subagent 與 agents_ctl 共用：查鍵、組 aos-agent ctl 各動作的旗標、跑 aos-agent（或旁邊的 self_*）並把下層錯翻成自己的。
 
 不是工具（沒有 _entry）；兩支工具的 _entry 把 lib/agent/ 放上 sys.path 後 import 它。錯誤行一律走 tool_io.die（名字是 tool_io.start 記的那支）。
 來由：thinking 2026-11/10/agents-split 02 施工單「兩支組 ctl add 旗標的程式共用一份」；跑子行程那段（分段等、TERM 先收那一群、下層最後一行錯誤行的
@@ -29,7 +29,7 @@ def tool_words(text):
 
 ERR_AOS = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
 QUEUED_RE = re.compile(r"queued .+ at position [0-9]+ \(letter ([^;]+); applied when a slot frees\)")
-# ctl add 收的鍵（agents_children 的 add、agents_ctl 的 add 同一排）
+# ctl add 收的鍵（subagent 的 add、agents_ctl 的 add 同一排）
 ADD_KEYS = ("def", "def_json", "name", "ws", "ws_json", "stack", "stack_json", "limits", "envs", "auto_restart", "timeout_s", "on_queued")
 # 帶目標的生滅停起：op → 收的鍵（name 一定要）
 LIFE_OPS = {"rm": ("name", "purge", "timeout_s"),

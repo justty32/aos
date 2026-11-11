@@ -27,6 +27,7 @@
    | `AOS_MY_STACK` | `AOS_LINUX_USER_STACK` |
    | `wall_clock`、`bash`、`json_edit` | `peek_now_time`、`shell`、`json_write` |
    | 舊 `agents` 工具、`agents.json` | `agents_children`／`agents_ctl`／`agent_def`、`children.json` |
+   | `agents_children`（11-11 早，[subagent-rename](../proto8/thinking/2026-11/11/subagent-rename.md)） | `subagent`（記帳檔 `tools/subagent/children.json`；包名 `children` 照舊） |
    | `llm.json` 的 `endpoint` | `model` |
    | hook `on`／`exec`／`match`／`change`／`wait`；事件 `tool_after` 這類 | `event`／`handler`／`condition`／`intercept`（預設開）／`async`；`before_queue`、`after_queue`、`before_tool`、`after_tool` |
    | `aos-tools ls -b` | 拿掉（`ls` 預設就是短版，`-l` 長版） |

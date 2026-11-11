@@ -8,6 +8,7 @@
 
 ## 最新進度
 
+- **open｜11-11 subagent 改名（公司）**：`agents_children` → `subagent` 已 commit 本地 main、**待 push**；只跑了假腦測試，真腦沒驗——eca（haiku）可在公司補跑，agent-fsm 接真腦回家測（使用者 11-11「實際的loop fsm agent需要回家測」）；待使用者裁的名字清單在 [subagent-rename](../proto8/thinking/2026-11/11/subagent-rename.md#決定)
 - **open｜11-10 晚～深夜總整合（家機；收工）**：今晚各線與使用者四批裁定全部施工完進 main，改名對照與試驗場狀態在 [HANDOFF](HANDOFF.md) 最上面那條，怎麼玩 [tonight](../proto8/thinking/2026-11/10/tonight/README.md)。**續行點**：① 試驗場原件補刷（腳本已對上最終狀態、複本跑過，等使用者，WAIT_USER 第一條）；② 最後一輪整棵實跑沒做完的（gemma 的 tools_def 同一輪、self_history、self_tools ls、clock_register＋peek_clock、self_hook；eca haiku 整項；MCP tools/list 字元數）見 [tonight/04](../proto8/thinking/2026-11/10/tonight/04-最後一輪整合驗收.md)；③ hook 線 eca haiku 真對話沒跑（權限擋，WAIT_USER）；④ tools_def「之後可加」→ [tools-def](../proto8/thinking/2026-11/10/tools-def/README.md)；⑤ 沒裁的小題與代定清單位置在 HANDOFF 那條第 3、6 點；⑥ 小事沒修：kernel 範本 `budget.senders` 的 `/tmp/aos-demo-sender` 每次印 warning、agent 被刪時 clock 登記不跟著清
 - **open｜json-memory 剩的**：其餘代定等使用者看（[05](../proto8/thinking/2026-11/10/json-memory/05-步驟與代定.md#代定清單可翻案)）；arknights 庫（playground-ak5，暫停中）是舊格式，要用得重轉
 - **open｜11-10 晚家機施工隊長剩的待裁**：templates-cp（defs 分群不看 AOS_KNOWLEDGE、`~/.local/bin/copy-out` 斷捷徑要手動刪）、two-machines B07～B10 待裁三條（[17](../proto8/thinking/2026-11/10/two-machines/17-B07到B10施工結果.md)）

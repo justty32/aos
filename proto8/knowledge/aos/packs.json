@@ -46,7 +46,7 @@
  "gadgets": "Pack gadgets: Small tools that change nothing: peek_clock (the daemon clock: current cycle and interval_ms; ClockMissing when you have no daemon clock), peek_now_time (current UTC time), math (one arithmetic expression).",
  "events": "Pack events: Things that run later: clock_register (a fixed letter every N cycles; leave out box to wake yourself) and self_hook (run a program when something happens to you).",
  "self": "Pack self: Look at and change yourself: self_tools (your tools), self_llm (your brain settings), self_state (facts and numbers about you), self_ctl (stop, pause, sleep or remove yourself), self_history (your conversation).",
- "children": "Pack children: Other agents: agents_children (agents you start yourself; counted against your quota) and agents_ctl (any agent on your daemon table; not counted).",
+ "children": "Pack children: Other agents: subagent (agents you start yourself; counted against your quota) and agents_ctl (any agent on your daemon table; not counted).",
  "def": "Pack def: Definitions: agent_def (copy a template into a new agent definition, or check one) and tools_def (make a new tool from the Python skeleton, or check a tool).",
  "mailbox": "Pack mailbox: Letters: mailbox_peek (what is waiting, without taking it), mailbox_read (read the oldest), mailbox_send (send one).",
  "knowledge": "Pack knowledge: The knowledge base: knowledge_read (read, ls, find) and knowledge_write (add, set, rm). Which base they use is set in your tools.json (env AOS_KNOWLEDGE)."

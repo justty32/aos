@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# agents_children - 我生的子 agent：生、殺、停起、說話、出生後調它的工具／腦／對話／hook；工具自己記帳（children.json）、算配額，只碰自己生的
+# subagent - 我生的子 agent：生、殺、停起、說話、出生後調它的工具／腦／對話／hook；工具自己記帳（children.json）、算配額，只碰自己生的
 # 使用者 11-10 晚（thinking 2026-11/10/agents-split）：「具備生殺大權的才能在出生後調整子agent的東西」；大權＝工具自己記帳（用這支生的記帳、歸我管、算配額）；
 #   say／listen「如果要讓agent使用的話，我會希望只讓他能夠對子agent做」；11-05「工具自己有紀錄，會看到說超過四個，直接回error」。
 # 介面（lib/README 的契約）：stdin 收 {"op": …, …}；別的鍵＝ArgumentsBad。
@@ -17,14 +17,14 @@
 #   每個帶 name 的動作先對帳：不是我生的＝ChildUnknown；記過但不在表上＝ChildMissing（之後就忘掉）。ask／listen／rm 抄公開子帳（observed_children.copy_child）。
 # 記帳：$AOS_STACK/children.json＝[{name, stack（相對 $AOS_DAEMON 的真實路徑）} | {name, queued_letter}]；對帳＝名字與 stack 都對得上 ctl ls --json 那列才算還在。
 # 配額：max_children 從 children.json 讀——我的定義那份疊我的 stack 那份（ctl who --json 的 def 與 stack；只放改過的鍵）；都沒有＝4。
-# 錯：stderr 與 stdout 各一行「agents_children: error: 代號 原因」、退 1；下層 stderr 原樣透出；下層最後一行錯誤行接成自己的（C-52 例外 ⑤）。
+# 錯：stderr 與 stdout 各一行「subagent: error: 代號 原因」、退 1；下層 stderr 原樣透出；下層最後一行錯誤行接成自己的（C-52 例外 ⑤）。
 import json, os, re, sys
 HELP = """\
-usage: agents_children < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+usage: subagent < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Your own child agents: add | rm | ls | state | stop | start | sleep | wake | pause | resume |
 say | listen | ask, and tools | llm | history | hook (the self_* tool's arguments, aimed at the child).
 Only agents started with this tool; counted against max_children (children.json; default 4).
-Result on stdout. On error: one line "agents_children: error: CODE reason" on stderr and stdout, exit 1.
+Result on stdout. On error: one line "subagent: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__

@@ -25,7 +25,7 @@ parts:
   hooks      its hooks (aos-agent hook ls)
   history    how many messages and bytes; the last ones (aos-agent history ls)
   mailbox    letters waiting in its mailbox (aos-mailbox peek)
-  children   agents it started with agents_children, and its quota
+  children   agents it started with subagent, and its quota
   resources  limits on the daemon table; memory, cpu time and processes in use
   time       now, and how long it has been up
 
@@ -166,7 +166,7 @@ def part_mailbox(a):
 
 
 def part_children(a):
-    book = os.path.join(a.stack, "tools", "agents_children", "children.json")   # agents_children 的帳（它自己的小格）
+    book = os.path.join(a.stack, "tools", "subagent", "children.json")   # subagent 的帳（它自己的小格）
     try:
         with open(book, encoding="utf-8") as f:
             kids = json.load(f)

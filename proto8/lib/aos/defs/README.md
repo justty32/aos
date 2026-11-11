@@ -41,7 +41,7 @@ flowchart LR
 
 1. 讀 review 的 `suggest.specialize`，核對 `proposal` 與 `evidence`。`context_too_big` 的 proposal 為 null 時，先由隊長決定要拆的職責或記憶。
 2. 用 `defs --op ls --root "$DEFS"` 對照三軸與 `existing`。有同三軸現成定義就沿用它，不另生一隻。
-3. 無現成定義時，用 `agent_def` 的 `new` 把來源整份複製成新定義（只複製；不帶 `reason`／`review`，血統先不記（使用者 11-10「血統記錄...可以先不做」））；再用一般檔案工具照 proposal 改新定義的 `tools.json`、`llm.json` 與記憶那格；要跑起來用 `agents_children`（記帳、算配額）或 `agents_ctl`（不記帳）掛：
+3. 無現成定義時，用 `agent_def` 的 `new` 把來源整份複製成新定義（只複製；不帶 `reason`／`review`，血統先不記（使用者 11-10「血統記錄...可以先不做」））；再用一般檔案工具照 proposal 改新定義的 `tools.json`、`llm.json` 與記憶那格；要跑起來用 `subagent`（記帳、算配額）或 `agents_ctl`（不記帳）掛：
    `jq -n --arg from "$SOURCE" --arg path "$TARGET" '{op:"new",from:$from,path:$path}' | aos-exec --ws "$PWD" "$AGENT_DEF_TOOL"`
 4. 更新目標類別 README，再以 `defs --op check --root "$DEFS"` 檢查。
 

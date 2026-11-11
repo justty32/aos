@@ -1,4 +1,4 @@
-"""Test agents_children against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, child account copies, and tools/llm/history/hook aimed at the child."""
+"""Test subagent against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, child account copies, and tools/llm/history/hook aimed at the child."""
 import json
 import os
 from pathlib import Path

@@ -15,7 +15,7 @@
   "_description": "How a brain request travels, what an endpoint pack is, and how priority works."
  },
  "agents.json": {
-  "_description": "Tools agents_children, agents_ctl and agent_def: your own child agents, any agent on the daemon table, and new definitions; thought for one-off tasks."
+  "_description": "Tools subagent, agents_ctl and agent_def: your own child agents, any agent on the daemon table, and new definitions; thought for one-off tasks."
  },
  "rules.json": {
   "_description": "What you must not do, and why. Read this before doing anything that changes the system."

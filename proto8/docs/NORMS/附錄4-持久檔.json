@@ -148,11 +148,11 @@
    "path": "<定義資料夾>/children.json、$AOS_STACK/children.json（配額設定）",
    "lifetime": "持久",
    "writer": "人手寫",
-   "reader": "lib/agent/agents_children",
+   "reader": "lib/agent/subagent",
    "image": "看情況：定義那份不算 image；stack 那份進",
    "on_bad": "讀不了＝ReadFailed、不是物件＝CfgBad；不在＝max_children 4",
    "note": "11-10 晚 agents-split：從 agents.json 改名；$AOS_STACK 是 agent 自己的 stack（ctl who 的 stack），跟工具小格裡的記帳檔同名不同處",
-   "evidence": "proto8/lib/agent/agents_children/_entry:59-67、proto8/lib/agent/agents_children/_entry:111-123"
+   "evidence": "proto8/lib/agent/subagent/_entry:59-67、proto8/lib/agent/subagent/_entry:111-123"
   },
   {
    "path": "<工具資料夾>/_tooldef.json、_metainfo.json",
@@ -355,14 +355,14 @@
    "evidence": "proto8/lib/aos/judge/_entry:350-364"
   },
   {
-   "path": "$AOS_STACK/tools/agents_children/children.json（誰是我生的）",
+   "path": "$AOS_STACK/tools/subagent/children.json（誰是我生的）",
    "lifetime": "持久",
-   "writer": "lib/agent/agents_children",
-   "reader": "lib/agent/agents_children",
+   "writer": "lib/agent/subagent",
+   "reader": "lib/agent/subagent",
    "image": "進",
    "on_bad": "讀不了＝ReadFailed 退 1；不在＝[]",
    "note": "01 盤點沒列；11-10 晚 agents-split：舊 agents 的 tools/agents/children.json 新工具不讀",
-   "evidence": "proto8/lib/agent/agents_children/_entry:69-76、proto8/lib/agent/agents_children/_entry:89-108"
+   "evidence": "proto8/lib/agent/subagent/_entry:69-76、proto8/lib/agent/subagent/_entry:89-108"
   },
   {
    "path": "<eca 小格>/session.txt、tool.txt、ws.txt、stack.txt",
@@ -397,7 +397,7 @@
   {
    "path": "$AOS_STACK/observed.jsonl（＋observed/ 子帳）",
    "lifetime": "持久",
-   "writer": "lib/observed（act.py、wait.py、lib/agent/agents_children、thought）、lib/observed_children",
+   "writer": "lib/observed（act.py、wait.py、lib/agent/subagent、thought）、lib/observed_children",
    "reader": "lib/aos/measure、lib/aos/shell_report、aos-feedback",
    "image": "不進",
    "on_bad": "measure：有一行不是物件＝ValueError；寫不了＝warning 照跑",
@@ -477,7 +477,7 @@
   {
    "path": "<同資料夾>/.名字、.名字.pid、.holder.json.tmp（寫到一半的暫存）",
    "lifetime": "暫時",
-   "writer": "aos-loop／aos-daemon（窗）、aos-fsm（.stage.txt）、aos-clock、lib/agent/cli_session、lib/agent/agents_children、lib/agent/agent_def（.<名>.new-<pid>）、aos-lock、aos-daemon-ctl（ctl）、aos-clock-register／clock_register（.clock_register.json.<pid>）",
+   "writer": "aos-loop／aos-daemon（窗）、aos-fsm（.stage.txt）、aos-clock、lib/agent/cli_session、lib/agent/subagent、lib/agent/agent_def（.<名>.new-<pid>）、aos-lock、aos-daemon-ctl（ctl）、aos-clock-register／clock_register（.clock_register.json.<pid>）",
    "reader": "沒有（改名蓋過去）",
    "image": "不進",
    "on_bad": "當機留下的沒人清，也沒人讀",

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # agent_def - 定義的創造：new＝把範本資料夾整份複製成新定義（tools 檔的相對路徑換算），check＝轉叫 lib/aos/defs 的 check 看一份定義合不合格
 # 使用者 11-10 晚（thinking 2026-11/10/agents-split）：「掌管agent定義的創造修改」「先做粗的，細的之後慢慢添加」「血統記錄...可以先不做」；
-#   名字「agent_def」（B：只有定義這支叫 agent_def）。粗的＝只複製與檢查；改內容用一般的檔案工具，跑起來用 agents_children／agents_ctl。
+#   名字「agent_def」（B：只有定義這支叫 agent_def）。粗的＝只複製與檢查；改內容用一般的檔案工具，跑起來用 subagent／agents_ctl。
 # 介面（lib/docs/01 的契約）：stdin 收 {"op": "new"|"check", …}；別的鍵＝ArgumentsBad：
 #   new {template | from, path}  template＝內建範本的名字（$AOS_HOME/templates/<名>，例 agent-fsm；不在＝DefMissing 並列出有哪些）；
 #       from（範本資料夾；字串路徑，或指示詞 {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}）整份複製到 path：

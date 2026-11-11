@@ -1,4 +1,4 @@
-"""Test agents_children and agents_ctl on a real aos-daemon: tools/llm changes land on the child (not the parent), and a child removed with agents_ctl is forgotten and frees the quota."""
+"""Test subagent and agents_ctl on a real aos-daemon: tools/llm changes land on the child (not the parent), and a child removed with agents_ctl is forgotten and frees the quota."""
 import json
 import os
 from pathlib import Path
@@ -93,7 +93,7 @@ class RealDaemon(unittest.TestCase):
         self.ok(TOOL, {"op": "hook", "name": "kid", "args": {"op": "ls"}})
         r = self.tool(TOOL, {"op": "tools", "name": "mom", "args": {"op": "ls"}})
         self.assertIn("error: ChildUnknown mom", r.stdout)
-        # someone removes kid with agents_ctl: agents_children forgets it and the slot is free again
+        # someone removes kid with agents_ctl: subagent forgets it and the slot is free again
         self.ok(CTL_TOOL, {"op": "rm", "name": "kid"})
         self.assertNotIn('"kid"', self.ok(CTL_TOOL, {"op": "ls", "json": True}))
         self.assertNotIn("kid\t", self.ok(CTL_TOOL, {"op": "ls"}))

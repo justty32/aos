@@ -16,7 +16,7 @@ eca-claude/
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
   tools.json  aos-tools 的登記檔：`"$override"` 一串 [lib/packs](../../lib/packs/README.md) 十一包（通用四包 look、change、delete、shell，加 gadgets、events、self、children、def、mailbox、knowledge，共 34 支；11-10 深夜使用者「1.算了，把各種東西也一起掛回eca。」，翻掉稍早「對於eca，其實那些基礎工具就不用了」），自己只寫 knowledge_read、knowledge_write 兩格的 `env.AOS_KNOWLEDGE`（指 `knowledge/`）；
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__peek_now_time…；帶 `--own <stack>/tools.json`，self_tools 加減工具後 aos-mcp 送 list_changed，同一輪就叫得到，11-10 深夜「3.同一輪就生效」）；不要工具就刪掉它
-  children.json 工具 agents_children 的配額設定：{"max_children": 4}（這隻最多同時生幾隻；這隻的 stack 裡放一份 children.json 只寫改過的鍵＝覆蓋；誰是我生的另記在 stack 的 tools/agents_children/children.json）
+  children.json 工具 subagent 的配額設定：{"max_children": 4}（這隻最多同時生幾隻；這隻的 stack 裡放一份 children.json 只寫改過的鍵＝覆蓋；誰是我生的另記在 stack 的 tools/subagent/children.json）
   interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model"], "history": "history.jsonl", "hooks": "hooks.json"}}（11-04；hooks 鍵 11-10 晚加；history 鍵 11-10 加，給 aos-agent history 找檔；llm_keys 11-10 晚加，aos-agent llm set 不在上面的鍵照存＋warning；aos-agent ctl add 只看這個宣告）
   hooks.json  hook 清單（11-10 晚，空的 {"hooks": {}}；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
   screen/     子介面：_entry＝["aos-eca-screen", "--eca", ".."]（aos-agent open／close／watch 叫它；動作接在最後）

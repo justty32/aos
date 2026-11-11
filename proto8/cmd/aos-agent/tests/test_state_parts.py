@@ -40,7 +40,7 @@ class State(unittest.TestCase):
         (self.stack / "llm.json").write_text(json.dumps({"model": "m2"}))
         (self.stack / "history.jsonl").write_text("".join(json.dumps(m) + "\n" for m in (
             {"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"}, {"role": "user", "content": "bye"})))
-        book = self.stack / "tools" / "agents_children"
+        book = self.stack / "tools" / "subagent"
         book.mkdir(parents=True)
         (book / "children.json").write_text(json.dumps([{"name": "kid", "stack": "procs/kid"}]))
 
