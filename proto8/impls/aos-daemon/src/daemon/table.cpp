@@ -57,7 +57,7 @@ void Daemon::flush_table() {
 // 11-05（edge-round2 題 1，使用者「記一行、下一圈再試 (Recommended)」）：state.json／procs_state.json／state_flux.json 寫不了（磁碟滿、stack 被改唯讀）＝不收工，
 // 跟身體失敗一樣 stderr 一行（原因變了才印；好了印一行 written again）、proc 照顧著；下一圈再寫——三扇窗都是「有變才寫」、比的是上一份寫成的，
 // 寫不了的那份沒記成「寫過」，下一次 write_state／flush_table 自然重寫。P-36「寫好狀態再結束」的例外：收工那份寫不了也照常結束（碼照舊）。
-// 起來之後一份都還沒寫成（stack 不在、一起來就寫不了）＝照舊丟 StateError、退 1（設定或環境錯，當場看得到）。
+// 起來之後一份都還沒寫成（stack 不是資料夾、一起來就唯讀；11-11 起 stack 不在會先建）＝照舊丟 StateError、退 1（設定或環境錯，當場看得到）。
 void Daemon::write_state(const std::string& phase, const Json& code) {
     state_phase_ = phase;
     try {

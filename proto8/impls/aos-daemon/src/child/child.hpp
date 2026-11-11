@@ -11,7 +11,7 @@
 //               spawn_exec（exec 型）：小格、stderr.txt、自成 session、stdin／stdout /dev/null、AOS_STACK＝小格/、cd 到 daemon 的 cwd 都同上，
 //               但不包 aos-loop、不寫 loop.json：子行程直接 `aos-exec -- 目標 參數...` 一次（目標是單子＝寫成小格的 exec.json 再跑它）
 //               小格（11-03）：proc 寫了 stack＝它（procs.cpp 已轉絕對；不在就 mkdir -p）；沒寫＝$AOS_STACK/procs/<名字>/（只建 procs/ 與小格兩層，
-//               $AOS_STACK 不在＝MkdirFailed）
+//               $AOS_STACK 不在＝MkdirFailed；11-11 起 daemon 起來時已建過，只剩途中被刪）
 //               alive：自己生的看 waitpid（結束就記 code／signal）；接回來的看 /proc 的 started_at_ticks 還對不對
 //               row：寫進 procs_state 的那一列
 //               ws：設定寫了 ws＝子行程的環境多設 AOS_WS＝它；沒寫＝照舊繼承 daemon 的。AOS_DAEMON 一律設成 daemon 的 stack（dstack：絕對、結尾 /；11-04 晚改名，舊名不認）

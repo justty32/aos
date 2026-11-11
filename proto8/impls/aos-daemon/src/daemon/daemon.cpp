@@ -136,6 +136,9 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     if (!a.is_boolean()) {
         throw Error{code::CfgBad, "adopt must be true or false"};
     }
+    // 11-11（使用者選「也自己建」，跟 aos-loop、aos-fsm 一致）：設定都驗過了才建——$AOS_STACK 有設但不在＝mkdir -p（已在、不是資料夾＝不碰；
+    // 建不了 MkdirFailed）。放在算 dstack_、上鎖（check_running）、adopt、開信箱之前，它們都要 stack 已經在。
+    aos::loop::make_stack();
     cwd_ = std::filesystem::current_path().string();
     // 給子項的 AOS_DAEMON（11-02，resident-bob 衝突 2；11-04 晚改名，舊名不認）：stack_ 轉絕對、結尾 /，跟 aos-exec 給的 AOS_STACK 同形；預設小格也從它拼（列上的 stack 一律絕對）
     dstack_ = aos::abspath(stack_);

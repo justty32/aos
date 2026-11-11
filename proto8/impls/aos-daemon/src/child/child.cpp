@@ -76,7 +76,7 @@ namespace aos::daemon {
     _exit(rc);
 }
 
-// 預設小格（deep＝false）只建 procs/ 與小格這兩層：$AOS_STACK 不在＝建不了（daemon 不建自己的 stack；11-11 使用者刪了「建 stack 只在 aos-exec」那條，這裡行為不變）；procs/ 是 daemon 自己的固定名，有就沿用。
+// 預設小格（deep＝false）只建 procs/ 與小格這兩層：$AOS_STACK 不在＝建不了（11-11 起 daemon 起來時已經 make_stack 建過自己的 stack，走到這裡只剩跑的途中被刪、或在但不是資料夾）；procs/ 是 daemon 自己的固定名，有就沿用。
 // proc 自己寫了 stack（deep＝true，11-03 procs § 2b）＝mkdir -p（不在就建，同 aos-exec --stack）。spawn 與 spawn_exec 共用。
 static void make_cell(const std::string& name, const std::string& cell, bool deep) {
     std::error_code ec;

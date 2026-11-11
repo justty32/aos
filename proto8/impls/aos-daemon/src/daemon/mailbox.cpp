@@ -1,7 +1,7 @@
 // mailbox.cpp：【daemon】信箱 procs_requests（10-29，medium-plan § 二 4、§ 四 3；NORMS N-28 的 10-29 補、N-16；11-03 改名 procs、多 stop／start；說明見 daemon.hpp）。
 // 跟 procs_ctl 可以同時開；信改的是「底」want_／stopped_，procs_ctl 每圈疊在底上（tend）。
 //
-//   open_mailbox   起來時（建構子最後、adopt 之後）：aos::post::init 建 tmp/ new/ cur/（已在就沿用；$AOS_STACK 不在＝不建、MkdirFailed）、
+//   open_mailbox   起來時（建構子最後、adopt 之後）：aos::post::init 建 tmp/ new/ cur/（已在就沿用；$AOS_STACK 不在＝不建、MkdirFailed——11-11 起建構子先 make_stack，只剩 $AOS_STACK 在但不是資料夾）、
 //                  底 want_（建構子已設成 daemon.json 的 procs）再加 adopt 接回、不在上面的（設定記 null：只留名，不會被重起；它結束時 drop 從 want_ 拿掉）、
 //                  cur/ 裡的殘骸（上次認領了、還沒收完就死掉）記進 redo_——片段、重做無害，所以照建議重做
 //   take_letters   每圈（stop／pause 那圈不呼叫）：redo_（照處理順序）＋take_all 認領到的（照處理順序），逐封 see 驗信封、
@@ -25,7 +25,7 @@
 namespace aos::daemon {
 
 void Daemon::open_mailbox() {
-    if (!aos::is_dir(stack_)) {   // daemon 不建自己的 stack（11-11 使用者刪了「建 stack 只在 aos-exec」那條，這裡行為不變）；init 是 mkdir -p，不能讓它順手建出來
+    if (!aos::is_dir(stack_)) {   // 11-11 起建構子先 make_stack 建過了；走到這裡＝$AOS_STACK 在但不是資料夾。init 是 mkdir -p，不能讓它順手建出來
         throw Error{code::MkdirFailed, "cannot create mailbox " + mbox_path_ + " ($AOS_STACK is missing: " + stack_ + ")"};
     }
     aos::post::init(mbox_path_);

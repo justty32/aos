@@ -235,7 +235,7 @@ private:
     Json last_more_;                                     // 上一份寫出去的 procs_state（分檔前的表、不含 proc_fields／updated_at；比有沒有變用）
     bool was_paused_ = false;                            // 11-05 第二輪：上一圈是暫停的（resume 那圈先寫 state 再對表）
     std::string state_phase_ = "waiting";                // flush_table 先更新自身穩定窗，保留最近 phase（含收工 stopping）
-    bool state_wrote_ = false;                           // 11-05：兩扇狀態窗寫成過沒（沒有＝寫不了照舊退 1：stack 不在、一起來就唯讀）
+    bool state_wrote_ = false;                           // 11-05：兩扇狀態窗寫成過沒（沒有＝寫不了照舊退 1：stack 不是資料夾、一起來就唯讀；11-11 起不在會先建）
     std::string state_bad_;                              // 11-05：上一次寫不了的代號（空＝上一次好的；變了才印）
     int lock_fd_ = -1;                                   // check_running 鎖著的 stack 資料夾（不關，行程結束自己放）
     aos::loop::Target body_;                             // 11-05：daemon 自己的身體（設定檔的 exec；Loop 的 exec_ 收過來）

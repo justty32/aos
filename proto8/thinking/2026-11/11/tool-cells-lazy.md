@@ -110,9 +110,52 @@
 
 ### 待裁
 
+（11-11 已裁：選「也自己建」，見下面「[線 H 裁定](#線-h-裁定daemon-也自己建11-11)」。）
+
 - **aos-daemon 要不要也自建自己的 stack**：規則刪了以後，daemon 不建只剩「現狀」這個理由（N-28、daemon docs 02、`mailbox.cpp`）。這次照交代只改 loop／fsm，daemon 沒動。選項：甲 照舊不建（現狀）；乙 daemon 起來時也 `make_stack`（daemon 直接當工具登記、或直接跑時不再 `WriteFailed`／`MkdirFailed`）。
 
 ### 沒驗到的
 
 - 真腦、試驗場（照交代不動 `~/code/playground*`）。
 - 經 `subagent`／daemon 起的 agent：路徑沒變（daemon 先建 proc 的 stack），沒另外實跑。
+
+## 線 H 裁定：daemon 也自己建（11-11）
+
+### 使用者原話
+
+線 F 的待裁「aos-daemon 要不要也自建自己的 stack」，使用者在選項框選了：
+
+> 也自己建
+
+（選項說明：跟 loop／fsm 一致：直接跑或直接當工具登記時，不會再因為 stack 不在而報錯。要動 daemon 和 N-28 的描述。）
+
+### 做法
+
+- **共用線 F 的 `aos::loop::make_stack()`**，不另寫一份：aos-daemon 的 `Daemon` 建構子（`impls/aos-daemon/src/daemon/daemon.cpp`）在設定全部驗過（procs、指示詞、信箱名、小格檔名、兩扇管轄窗、`limits`、`adopt`）之後叫一次；放在算 `AOS_DAEMON`（`dstack_` 的 `canonical`）、上鎖（`check_running` 用 flock 鎖 stack 資料夾）、`adopt`、開信箱之前——這幾步都要 stack 已經在（不在的話鎖不到、`AOS_DAEMON` 解不開捷徑、信箱 `MkdirFailed`）。規則同線 F：`$AOS_STACK` 有設、不是空、路徑不在＝`mkdir -p`（相對照 cwd）；已在（不管是不是資料夾）不碰；建不了＝`MkdirFailed cannot create AOS_STACK: <路徑> (<原因>)`、退 1；沒設照舊 `StackMissing`。
+- `Loop` 類別本身照舊不叫；子 loop（daemon fork 出來跑同一個 `Loop`）不經 `make_stack`，它們的小格由 daemon 先建好。
+- 條文與文件（事實描述＋11-11 再註，附原話）：N-28 小格那段、NORMS 04 開頭 ③ 的 11-11 註、N-59 第 1 件的 11-11 註；aos-daemon docs 01（`$AOS_STACK` 那條）、02（預設小格那句）、05（信箱起來時）、06（狀態窗寫不了）；程式註解 `child.cpp`、`child.hpp`、`mailbox.cpp`（兩處）、`table.cpp`、`daemon.hpp`、aos-loop `loop.hpp`（三處）、`inline.cpp`、aos-exec `env.hpp`。
+- 現在 stack 不在時誰建：aos-exec 預設建（`--stack-lazy` 那一跳不建）；aos-loop、aos-fsm、aos-daemon 起來時不在就建；工具寫小格前自己建。
+
+### 代定
+
+1. 建的時機＝建構子裡設定驗過之後、上鎖之前（比照線 F「設定驗過才建」；不能放 `main` 建構完之後，因為鎖、adopt、信箱都在建構子裡就要 stack）。`check_running` 讀舊 `state.json` 看有沒有活著的 daemon 也在之後，stack 剛建好時當然沒有。
+2. 已存在但不是資料夾＝不碰：之後照舊由後面各步報自己的錯（實測 `AOS_STACK=<一個檔>`：`WriteFailed cannot keep <檔>/procs_state.json as …: Not a directory`，adopt 想收舊表時報的，退 1、檔沒被動）；`mailbox.cpp` 那道 `is_dir` 檢查留著當最後一道。
+3. 窗與信箱全關也照建（同線 F 代定 3）。
+4. 訊息用同一句 `cannot create AOS_STACK: …`，開頭換成 `aos-daemon:`（`aos::fail` 給的）。
+
+### 要重建什麼
+
+不用重建。
+
+### 驗證
+
+- build：`proto8/impls` 全建過（頂層 `build/`）。
+- 新測試 `impls/aos-daemon/tests/test_stack_make.py`（5 支：不在的兩層 stack 會建、`state.json`／`procs_state.json`／信箱 `procs_requests/new` 都在；相對路徑照 cwd；建不了＝`MkdirFailed cannot create AOS_STACK: `；`$AOS_STACK` 是檔＝不碰、退 1；設定壞（`adopt: "yes"`）＝`CfgBad`、不建）。改 daemon 之前先對舊版跑：紅 3（會建、相對路徑、建不了那句訊息；舊版報的是 `MkdirFailed cannot create mailbox … ($AOS_STACK is missing: …)`），改完綠 5。
+- 實跑（`/tmp/lineH-run`）：資料夾工具 `td`（`_entry`＝`exec aos-daemon daemon.json`、`max: 2`）用 `aos-tools add` 登記，`AOS_STACK=/tmp/lineH-run/stack aos-tools call td {}`（`stack/` 本身也不在）：退 0，`stack/tools/td/` 有 `state.json`、`state_flux.json`、`procs_state.json`、`procs_requests/{tmp,new,cur}`。
+- 受影響各夾（改完重建後）：aos-daemon 80（原 75＋新 5）、aos-loop 13、aos-fsm 3、aos-exec 12、aos-daemon-ctl 32、templates/tests/agent-fsm 73 全綠；`templates/tests/test_daily`（兩台機器日常劇本）16 支 OK（skipped 2、expected failures 2）。
+
+### 沒驗到的
+
+- 真腦、試驗場（照交代不動 `~/code/playground*`）。
+- 用 `aos-exec` 起 daemon 的慣用路徑沒變（aos-exec 先建好），只靠上面的 test_daily、agent-fsm 間接跑到。
+- 跑的途中 `$AOS_STACK` 被刪：行為沒改（只在起來時建一次），沒另測。
