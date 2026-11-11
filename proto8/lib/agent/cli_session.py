@@ -33,7 +33,9 @@
 #   選填 tools_flags＝字串陣列，原樣插在 aos-mcp 的 args 裡（例 ["--enable-logs"]）。定義的 interfaces.json 宣告了 hooks＝再加 --hooks <定義>
 #   （11-10 hook：before_tool／after_tool 在 aos-mcp 跑）。有登記檔時每次起 CLI 前接上
 #   aos-mcp --ws <工作區> --stack <stack> [tools_flags…] <登記檔絕對路徑>：claude＝寫小格 mcp.json、加 --mcp-config 它 --allowedTools mcp__aos；
-#   codex＝兩個 -c mcp_servers.aos.command／args。aos-mcp 靠 PATH 找（N-50）；定義資料夾一個字都不寫（P-15）。
+#   codex＝-c mcp_servers.aos.command／args，加 env（MCP_ENV 那幾個 AOS_*，codex 不替 MCP server 帶環境變數，11-11）與
+#   default_tools_approval_mode="approve"（只對 aos 這個 server 免核准、codex 自帶的工具照舊；使用者 11-11 選項框裁「aos 工具免核准」：
+#   「eca 範本起 codex 時，只對 aos 那組工具關掉核准（跟 claude 那邊已經允許 aos 工具是同一個意思）。codex 自帶的工具照舊要核准。」）。aos-mcp 靠 PATH 找（N-50）；定義資料夾一個字都不寫（P-15）。
 #   $AOS_STACK 裡這隻自己的（aos-agent tools／llm 寫的，stack_copies）：tools.json＝這隻自己那份（只存差異、"$override" 指回定義那份，
 #   11-10 aos-tools-cli；cli.json 沒明寫 tools 時在就把它給 aos-mcp，疊法歸 aos-tools）、llm.json 的 model。
 #   system（11-11 self-system，使用者裁「fsm 取代、eca 附加」）：interfaces.json 宣告了 system＝$AOS_STACK 那份在就用它、否則定義那份，非空就附加給 CLI：
@@ -231,6 +233,25 @@ def registry(cfg, tool_dir, path, files):
     return None
 
 
+# codex 起 MCP server 不帶父程序的環境變數（11-11 實測：aos-mcp 少了 AOS_HOME 解不開範本登記檔的指示詞、起不來，腦看不到任何 aos 工具），
+# 所以明寫帶進 mcp_servers.aos.env。帶哪些＝aos-mcp、aos-tools 與 lib 工具實際讀的（_tooldef 的 env、程式裡讀的）；
+# AOS_CD／AOS_ENTRY／AOS_AGENT 是每支程序自己的，不帶。使用者 11-11 選項框裁「修」。
+MCP_ENV = ("AOS_HOME", "AOS_DAEMON", "AOS_CLOCK", "AOS_CLOCK_INTERVAL", "AOS_KNOWLEDGE", "AOS_LLM_KERNEL", "AOS_KERNEL",
+           "AOS_THOUGHT_DEPTH", "AOS_THOUGHT_FROM", "AOS_LINUX_USER_STACK")
+
+
+def mcp_env(ws, stack):
+    """給 codex 的 aos MCP server 的環境：MCP_ENV 裡有設（非空）的，加上這次的 AOS_WS、AOS_STACK（跟 --ws／--stack 同值）。"""
+    env = {k: os.environ[k] for k in MCP_ENV if os.environ.get(k)}
+    env.update(AOS_WS=ws, AOS_STACK=stack)
+    return env
+
+
+def toml_table(d):
+    """一層字串表寫成 TOML inline table（鍵、值都用 JSON 字串，同時是合法的 TOML 字串）。"""
+    return "{" + ", ".join("%s = %s" % (json.dumps(k), json.dumps(v, ensure_ascii=False)) for k, v in d.items()) + "}"
+
+
 def mcp_argv(cfg, cell, ws, stack):
     """有登記檔＝接上 aos-mcp 要加給 CLI 的旗標；沒有＝[]（11-03 eca-tools）。每次起 CLI 前叫（claude 的 mcp.json 每次重寫）。
     ws＝CLI 的 cwd、stack＝給 aos-mcp 的 --stack（工具叫的小格在 <stack>/tools/<名>/）。"""
@@ -247,7 +268,9 @@ def mcp_argv(cfg, cell, ws, stack):
         + (["--own", os.path.abspath(cfg["own_registry"])] if cfg.get("own_registry") else []) \
         + cfg.get("tools_flags", []) + [reg]
     if cfg["kind"] == "codex":                           # JSON 字串與字串陣列同時是合法的 TOML（-c 的值照 TOML 解）
-        return ["-c", "mcp_servers.aos.command=" + json.dumps("aos-mcp"), "-c", "mcp_servers.aos.args=" + json.dumps(args)]
+        return ["-c", "mcp_servers.aos.command=" + json.dumps("aos-mcp"), "-c", "mcp_servers.aos.args=" + json.dumps(args),
+                "-c", "mcp_servers.aos.env=" + toml_table(mcp_env(ws, stack)),
+                "-c", "mcp_servers.aos.default_tools_approval_mode=" + json.dumps("approve")]
     try:
         cell.write("mcp.json", json.dumps({"mcpServers": {"aos": {"command": "aos-mcp", "args": args}}},
                                           ensure_ascii=False) + "\n")

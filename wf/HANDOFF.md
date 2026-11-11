@@ -37,7 +37,7 @@
    - 小模型寫不出 `$` 開頭的鍵：`self_tools`、`self_hook` 的 `path_json` 要不要給一條不用 `$` 鍵的路。
    - act 附給腦的 stderr 尾巴仍帶下層 CLI 句（C-52 例外的結構）。
    - hook：`after_queue` 停下後那封信晾著要不要補；要不要寫進 CONVENTION；要加哪些事件。
-   - mailbox：人的預設 stack 是不是就 `~/.stack`。
+   - ~~mailbox：人的預設 stack 是不是就 `~/.stack`。~~ **11-11 已裁**：`~/.aos/stack`（使用者「改成帶 aos 字樣的位置」→「~/.aos/stack」，`09709c6ac`）。
    - clock：agent 被刪時它登記的項不會跟著清（每 100 cycle 自檢只清箱子已不在的）。
    - `agents_ctl` 能 rm 別人帳上的子。
    - tools_def「之後可加」的幾項（[tools-def](../proto8/thinking/2026-11/10/tools-def/README.md)）。

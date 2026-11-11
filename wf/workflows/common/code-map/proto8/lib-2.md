@@ -61,6 +61,7 @@
 | [`subagent/tests/test_children.py`](../../../../../proto8/lib/agent/subagent/tests/test_children.py) | Test subagent against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, child account copies, a… |
 | [`subagent/tests/test_daemon.py`](../../../../../proto8/lib/agent/subagent/tests/test_daemon.py) | Test subagent and agents_ctl on a real aos-daemon: tools/llm changes land on the child (not the parent), and a child removed with agents_ctl is forgo… |
 | [`subagent/tests/test_wait.py`](../../../../../proto8/lib/agent/subagent/tests/test_wait.py) | Test the shared runner in agents_cmd waits in bounded segments, cleans up on expiry, polls short on the clock, and that subagent checks wait argument… |
+| [`tests/test_cli_codex_mcp.py`](../../../../../proto8/lib/agent/tests/test_cli_codex_mcp.py) | 驗 cli_session 起 codex 時給 aos MCP server 的設定（11-11）：明寫帶 AOS_* 環境（只帶清單裡有設的，AOS_WS／AOS_STACK 用這次的值），只對 aos 這個 server 免核准；claude 那邊不變。 |
 | [`tests/test_cli_system.py`](../../../../../proto8/lib/agent/tests/test_cli_system.py) | 驗 cli_session 的 system（11-11 self-system）：宣告了才碰；stack 那份在就整份用它、否則定義那份；claude 附加檔＋snapshot off、codex developer_instructions；空＝不附加。 |
 | [`tests/test_cli_tools_directive.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_directive.py) | 驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。 |
 | [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定或工具設定預設定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
