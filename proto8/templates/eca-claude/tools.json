@@ -5,7 +5,7 @@
                {"$env": "AOS_HOME", "$path": "/lib/packs/gadgets.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/events.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/self.json"},
-               {"$env": "AOS_HOME", "$path": "/lib/packs/children.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/subagent.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/def.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/mailbox.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/knowledge.json"}],

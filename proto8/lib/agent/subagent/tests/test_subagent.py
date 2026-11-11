@@ -1,4 +1,4 @@
-"""Test subagent against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, child account copies, and tools/llm/history/hook/system aimed at the child."""
+"""Test subagent against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, subagent account copies, and tools/llm/history/hook/system aimed at the subagent."""
 import json
 import os
 from pathlib import Path
@@ -64,9 +64,9 @@ else:
 '''
 
 
-class Children(unittest.TestCase):
+class Subagent(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="agents-children-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="subagent-"))
         self.ws = self.tmp / "ws"
         self.ws.mkdir()
         self.daemon = self.tmp / "d"
@@ -102,24 +102,24 @@ class Children(unittest.TestCase):
         return [c[2:] for c in rows if first is None or c[2] == first]
 
     def record(self):
-        return json.loads((self.cell / "children.json").read_text())
+        return json.loads((self.cell / "subagents.json").read_text())
 
     def test_add_records_and_argv(self):
         out = self.ok({"op": "add", "def": "defs/helper", "name": "kid", "ws": "kid", "limits": {"mem_mb": 64}, "timeout_s": 5})
-        self.assertIn("added kid (stack %s); children 1/4" % (self.daemon / "procs" / "kid"), out)
+        self.assertIn("added kid (stack %s); subagents 1/4" % (self.daemon / "procs" / "kid"), out)
         self.assertEqual(self.calls("ctl")[-1], ["ctl", "add", "--name", "kid", "--ws", "kid", "--limits", '{"mem_mb": 64}',
                                                  "--timeout-s", "5", "defs/helper"])
         self.assertTrue((self.ws / "kid").is_dir())
         self.assertEqual(self.record(), [{"name": "kid", "stack": "procs/kid"}])
         self.ok({"op": "add", "def": "defs/kid2"})           # name defaults to the folder name, like ctl add
         self.assertEqual([k["name"] for k in self.record()], ["kid", "kid2"])
-        self.assertEqual(self.ok({"op": "ls"}), "kid\t-\t-\t-\t-\nkid2\t-\t-\t-\t-\nchildren 2/4\n")   # short lines, not mom
+        self.assertEqual(self.ok({"op": "ls"}), "kid\t-\t-\t-\t-\nkid2\t-\t-\t-\t-\nsubagents 2/4\n")   # short lines, not mom
         listed = json.loads(self.ok({"op": "ls", "json": True}))
-        self.assertEqual([r["name"] for r in listed["children"]], ["kid", "kid2"])   # not mom
-        self.assertEqual(listed["max_children"], 4)
+        self.assertEqual([r["name"] for r in listed["subagents"]], ["kid", "kid2"])   # not mom
+        self.assertEqual(listed["max_subagents"], 4)
         self.assertEqual(self.ok({"op": "ls", "long": True}),        # long = ctl ls -l lines of mine, as text
-                         "kid\trunning\t-\t-\t-\t2\t0\t-\t-\nkid2\trunning\t-\t-\t-\t2\t0\t-\t-\nchildren 2/4\n")
-        self.assertEqual(json.loads(self.ok({"op": "ls", "long": True, "json": True}))["max_children"], 4)   # json wins
+                         "kid\trunning\t-\t-\t-\t2\t0\t-\t-\nkid2\trunning\t-\t-\t-\t2\t0\t-\t-\nsubagents 2/4\n")
+        self.assertEqual(json.loads(self.ok({"op": "ls", "long": True, "json": True}))["max_subagents"], 4)   # json wins
 
     def test_each_targeted_op(self):
         self.ok({"op": "add", "def": "d", "name": "kid"})
@@ -149,13 +149,13 @@ class Children(unittest.TestCase):
         self.ok({"op": "rm", "name": "kid", "purge": True})
         self.assertEqual(self.calls("ctl")[-1], ["ctl", "rm", "--purge", "-y", "kid"])
 
-    def test_only_my_children(self):
+    def test_only_my_subagents(self):
         table = json.loads(self.table.read_text()) + [{"name": "other", "stack": str(self.daemon / "procs" / "other")}]
         self.table.write_text(json.dumps(table))
         for op in ({"op": "state"}, {"op": "rm"}, {"op": "say", "text": "x"}, {"op": "tools", "args": {"op": "ls"}}):
             r = self.run_tool(dict(op, name="other"))
             self.assertEqual(r.returncode, 1, op)
-            self.assertIn(NAME + ": error: ChildUnknown other", r.stdout)
+            self.assertIn(NAME + ": error: SubagentUnknown other", r.stdout)
         self.assertEqual([c for c in self.calls() if c[:2] != ["ctl", "ls"]], [])
 
     def test_removed_elsewhere_is_forgotten(self):
@@ -164,34 +164,34 @@ class Children(unittest.TestCase):
         # someone else (agents_ctl rm, a human) takes both off the table
         self.table.write_text(json.dumps([{"name": "mom", "stack": str(self.mom)}]))
         r = self.run_tool({"op": "state", "name": "kid"})
-        self.assertIn("error: ChildMissing kid", r.stdout)
+        self.assertIn("error: SubagentMissing kid", r.stdout)
         r = self.run_tool({"op": "state", "name": "kid"})
-        self.assertIn("error: ChildUnknown kid", r.stdout)
-        self.assertEqual(self.ok({"op": "ls"}), "children 0/4\n")     # kid2 forgotten by ls
+        self.assertIn("error: SubagentUnknown kid", r.stdout)
+        self.assertEqual(self.ok({"op": "ls"}), "subagents 0/4\n")     # kid2 forgotten by ls
         self.assertEqual(self.record(), [])
-        self.assertIn("children 1/4", self.ok({"op": "add", "def": "d", "name": "kid3"}))   # quota freed
+        self.assertIn("subagents 1/4", self.ok({"op": "add", "def": "d", "name": "kid3"}))   # quota freed
 
     def test_quota_full_sends_nothing(self):
-        (self.defdir / "children.json").write_text('{"max_children": 3}')
-        (self.mom / "children.json").write_text('{"max_children": 1}')          # the stack's copy wins
+        (self.defdir / "subagents.json").write_text('{"max_subagents": 3}')
+        (self.mom / "subagents.json").write_text('{"max_subagents": 1}')          # the stack's copy wins
         self.ok({"op": "add", "def": "d", "name": "kid"})
         r = self.run_tool({"op": "add", "def": "d", "name": "kid2", "ws": "kid2"})
         self.assertEqual(r.returncode, 1)
-        self.assertIn("error: ChildSlotMissing you already have 1 of max 1", r.stdout)
+        self.assertIn("error: SubagentSlotMissing you already have 1 of max 1", r.stdout)
         self.assertEqual(len([c for c in self.calls("ctl") if c[1] == "add"]), 1)
         self.assertFalse((self.ws / "kid2").exists())
-        (self.mom / "children.json").write_text('{"max_children": "two"}')
+        (self.mom / "subagents.json").write_text('{"max_subagents": "two"}')
         self.assertIn("error: CfgBad", self.run_tool({"op": "add", "def": "d", "name": "kid2"}).stdout)
 
-    def test_queued_child(self):
+    def test_queued_subagent(self):
         out = self.ok({"op": "add", "def": "d", "name": "kid", "on_queued": "ok"}, FAKE_QUEUE="1")
         self.assertIn("letter L1", out)
         self.assertEqual(self.record(), [{"name": "kid", "queued_letter": "L1"}])
-        self.assertEqual(json.loads(self.ok({"op": "ls", "json": True}))["children"], [{"name": "kid", "queued_letter": "L1"}])
-        self.assertEqual(self.ok({"op": "ls"}), "kid\tqueued\t-\t-\tletter L1\nchildren 1/4\n")
-        self.assertEqual(self.ok({"op": "ls", "long": True}), "kid\tqueued\t-\t-\tletter L1\t-\t-\t-\t-\nchildren 1/4\n")
+        self.assertEqual(json.loads(self.ok({"op": "ls", "json": True}))["subagents"], [{"name": "kid", "queued_letter": "L1"}])
+        self.assertEqual(self.ok({"op": "ls"}), "kid\tqueued\t-\t-\tletter L1\nsubagents 1/4\n")
+        self.assertEqual(self.ok({"op": "ls", "long": True}), "kid\tqueued\t-\t-\tletter L1\t-\t-\t-\t-\nsubagents 1/4\n")
         r = self.run_tool({"op": "tools", "name": "kid", "args": {"op": "ls"}})
-        self.assertIn("error: ChildQueued kid", r.stdout)
+        self.assertIn("error: SubagentQueued kid", r.stdout)
 
     def test_bad_arguments_send_nothing(self):
         for args, word in (({"op": "add", "def": "d", "name": "k", "llm": {}}, "unknown key llm"),
@@ -227,7 +227,7 @@ class Children(unittest.TestCase):
         self.ok({"op": "rm", "name": "kid"})
         self.assertTrue(copy.exists())
 
-    def test_forward_aims_at_the_child(self):
+    def test_forward_aims_at_the_subagent(self):
         self.ok({"op": "add", "def": "d", "name": "kid"})
         kid_stack = str(self.daemon / "procs" / "kid")
         for op, sub, args, want in (("tools", "self_tools", {"op": "add", "path": "tools/math"}, ["tools", "--target", "kid", "add", "tools/math"]),

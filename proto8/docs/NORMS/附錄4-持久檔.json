@@ -145,13 +145,13 @@
    "evidence": "proto8/templates/agent-fsm/brain.py:240-241、proto8/cmd/aos-agent/aos_agent/llm.py:83-100、proto8/cmd/aos-agent/aos_agent/llm.py:147-155"
   },
   {
-   "path": "<定義資料夾>/children.json、$AOS_STACK/children.json（配額設定）",
+   "path": "<定義資料夾>/subagents.json、$AOS_STACK/subagents.json（配額設定）",
    "lifetime": "持久",
    "writer": "人手寫",
    "reader": "lib/agent/subagent",
    "image": "看情況：定義那份不算 image；stack 那份進",
-   "on_bad": "讀不了＝ReadFailed、不是物件＝CfgBad；不在＝max_children 4",
-   "note": "11-10 晚 agents-split：從 agents.json 改名；$AOS_STACK 是 agent 自己的 stack（ctl who 的 stack），跟工具小格裡的記帳檔同名不同處",
+   "on_bad": "讀不了＝ReadFailed、不是物件＝CfgBad；不在＝max_subagents 4",
+   "note": "11-10 晚 agents-split：從 agents.json 改名 children.json；11-11 再改名 subagents.json、鍵 max_children 改 max_subagents（要重建：舊定義與舊 stack 的 children.json 改名、改鍵，不改＝當沒設、配額退 4）；$AOS_STACK 是 agent 自己的 stack（ctl who 的 stack），跟工具小格裡的記帳檔同名不同處",
    "evidence": "proto8/lib/agent/subagent/_entry:59-67、proto8/lib/agent/subagent/_entry:111-123"
   },
   {
@@ -355,13 +355,13 @@
    "evidence": "proto8/lib/aos/judge/_entry:350-364"
   },
   {
-   "path": "$AOS_STACK/tools/subagent/children.json（誰是我生的）",
+   "path": "$AOS_STACK/tools/subagent/subagents.json（誰是我生的）",
    "lifetime": "持久",
    "writer": "lib/agent/subagent",
    "reader": "lib/agent/subagent",
    "image": "進",
    "on_bad": "讀不了＝ReadFailed 退 1；不在＝[]",
-   "note": "01 盤點沒列；11-10 晚 agents-split：舊 agents 的 tools/agents/children.json 新工具不讀",
+   "note": "01 盤點沒列；11-10 晚 agents-split：舊 agents 的 tools/agents/children.json 新工具不讀；11-11 改名 subagents.json：舊 stack 的 tools/subagent/children.json（與更早的 tools/agents_children/children.json）新工具不讀，舊的子手動 aos-agent ctl rm、或把那份改名成 subagents.json、或整份 stack 重建",
    "evidence": "proto8/lib/agent/subagent/_entry:69-76、proto8/lib/agent/subagent/_entry:89-108"
   },
   {

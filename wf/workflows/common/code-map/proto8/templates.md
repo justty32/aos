@@ -21,7 +21,6 @@
 | [`act.py`](../../../../../proto8/templates/agent-fsm/act.py) | act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。 |
 | [`body.json`](../../../../../proto8/templates/agent-fsm/body.json) | argv：`aos-loop loop.json` |
 | [`brain.py`](../../../../../proto8/templates/agent-fsm/brain.py) | think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。 |
-| [`children.json`](../../../../../proto8/templates/agent-fsm/children.json) | 設定（鍵：max_children） |
 | [`fsm.json`](../../../../../proto8/templates/agent-fsm/fsm.json) | 入口 `aos-fsm $AOS_CF`；鍵：start、states |
 | [`hooks.json`](../../../../../proto8/templates/agent-fsm/hooks.json) | Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added, after_sta… |
 | [`idle.py`](../../../../../proto8/templates/agent-fsm/idle.py) | idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。 |
@@ -29,6 +28,7 @@
 | [`llm.json`](../../../../../proto8/templates/agent-fsm/llm.json) | （檔頭沒有一句話） |
 | [`llm_settings.py`](../../../../../proto8/templates/agent-fsm/llm_settings.py) | agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。 |
 | [`loop.json`](../../../../../proto8/templates/agent-fsm/loop.json) | Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks (lib… |
+| [`subagents.json`](../../../../../proto8/templates/agent-fsm/subagents.json) | 設定（鍵：max_subagents） |
 | [`system.txt`](../../../../../proto8/templates/agent-fsm/system.txt) | （檔頭沒有一句話） |
 | [`tools.json`](../../../../../proto8/templates/agent-fsm/tools.json) | 設定（鍵：$override、tools） |
 | [`wait.py`](../../../../../proto8/templates/agent-fsm/wait.py) | wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。 |
@@ -45,7 +45,6 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`children.json`](../../../../../proto8/templates/eca-claude/children.json) | 設定（鍵：max_children） |
 | [`cli.json`](../../../../../proto8/templates/eca-claude/cli.json) | 設定（鍵：kind、flags、print_flags、tools_flags、timeout_ms） |
 | [`hooks.json`](../../../../../proto8/templates/eca-claude/hooks.json) | Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added… |
 | [`interfaces.json`](../../../../../proto8/templates/eca-claude/interfaces.json) | 設定（鍵：aos-agent） |
@@ -53,6 +52,7 @@
 | [`loop.json`](../../../../../proto8/templates/eca-claude/loop.json) | Schedule the Claude agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop ho… |
 | [`screen/_entry`](../../../../../proto8/templates/eca-claude/screen/_entry) | 入口：`aos-eca-screen --eca ..` |
 | [`screen/interfaces.json`](../../../../../proto8/templates/eca-claude/screen/interfaces.json) | 設定（鍵：aos-agent/screen） |
+| [`subagents.json`](../../../../../proto8/templates/eca-claude/subagents.json) | 設定（鍵：max_subagents） |
 | [`tools.json`](../../../../../proto8/templates/eca-claude/tools.json) | 設定（鍵：$override、tools） |
 
 ## `proto8/templates/judge-llm/`

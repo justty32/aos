@@ -11,7 +11,7 @@ import unittest
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[4]
 BIN = REPO / "proto8" / "cmd" / "aos-agent" / "bin" / "aos-agent"
-PARTS = ["who", "state", "tools", "llm", "system", "hooks", "history", "mailbox", "children", "resources", "time"]
+PARTS = ["who", "state", "tools", "llm", "system", "hooks", "history", "mailbox", "subagents", "resources", "time"]
 
 
 def clean_env(**extra):
@@ -30,7 +30,7 @@ class State(unittest.TestCase):
         (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"tools": "tools.json", "llm": "llm.json", "history": "history.jsonl"}}))
         (self.defn / "tools.json").write_text(json.dumps({"tools": {"clock": {"path": str(REPO / "proto8" / "lib" / "base" / "peek_now_time")}}}))
         (self.defn / "llm.json").write_text(json.dumps({"model": "m1"}))
-        (self.defn / "children.json").write_text(json.dumps({"max_children": 2}))
+        (self.defn / "subagents.json").write_text(json.dumps({"max_subagents": 2}))
         (self.tmp / "ws").mkdir()
         self.stack = self.d / "procs" / "bob"
         self.stack.mkdir(parents=True)
@@ -42,7 +42,7 @@ class State(unittest.TestCase):
             {"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"}, {"role": "user", "content": "bye"})))
         book = self.stack / "tools" / "subagent"
         book.mkdir(parents=True)
-        (book / "children.json").write_text(json.dumps([{"name": "kid", "stack": "procs/kid"}]))
+        (book / "subagents.json").write_text(json.dumps([{"name": "kid", "stack": "procs/kid"}]))
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -65,7 +65,7 @@ class State(unittest.TestCase):
         self.assertIn("3 messages", row["history"])
         self.assertIn("assistant 1, user 2", row["history"])
         self.assertNotIn(" 0 bytes", row["history"])
-        self.assertEqual(row["children"], "1/2 children (kid running)")
+        self.assertEqual(row["subagents"], "1/2 subagents (kid running)")
         self.assertIn("limits memory_max=1G; no running process", row["resources"])
         self.assertIn("not running", row["time"])
         self.assertTrue(row["hooks"].startswith("not available ("), row["hooks"])   # 沒宣告 hooks
@@ -84,7 +84,7 @@ class State(unittest.TestCase):
         self.assertEqual(list(j), PARTS)
         self.assertEqual(j["history"]["messages"], 3)
         self.assertEqual(j["llm"]["settings"], {"model": "m2"})
-        self.assertEqual(j["children"]["max_children"], 2)
+        self.assertEqual(j["subagents"]["max_subagents"], 2)
         self.assertEqual(j["hooks"]["available"], False)
         j = json.loads(self.state("--json", "tools").stdout)
         self.assertEqual(list(j), ["tools"])

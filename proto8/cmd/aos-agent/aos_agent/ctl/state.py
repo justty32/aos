@@ -12,7 +12,7 @@ from .. import declared_files
 from ..hints import label, queued
 
 
-PARTS = ("who", "state", "tools", "llm", "system", "hooks", "history", "mailbox", "children", "resources", "time")
+PARTS = ("who", "state", "tools", "llm", "system", "hooks", "history", "mailbox", "subagents", "resources", "time")
 HELP = """aos-agent ctl state - show one agent's state (status = the same)
 
 usage: aos-agent [--daemon D] ctl state [--target NAME] [-j] [PART... | all]
@@ -26,7 +26,7 @@ parts:
   hooks      its hooks (aos-agent hook ls)
   history    how many messages and bytes; the last ones (aos-agent history ls)
   mailbox    letters waiting in its mailbox (aos-mailbox peek)
-  children   agents it started with subagent, and its quota
+  subagents  agents it started with subagent, and its quota
   resources  limits on the daemon table; memory, cpu time and processes in use
   time       now, and how long it has been up
 
@@ -176,8 +176,8 @@ def part_mailbox(a):
     return one, detail, j
 
 
-def part_children(a):
-    book = os.path.join(a.stack, "tools", "subagent", "children.json")   # subagent 的帳（它自己的小格）
+def part_subagents(a):
+    book = os.path.join(a.stack, "tools", "subagent", "subagents.json")   # subagent 的帳（它自己的小格）
     try:
         with open(book, encoding="utf-8") as f:
             kids = json.load(f)
@@ -188,13 +188,13 @@ def part_children(a):
     cfg = {}
     for d in (a.row.get("def"), a.stack):
         try:
-            with open(os.path.join(d, "children.json"), encoding="utf-8") as f:
+            with open(os.path.join(d, "subagents.json"), encoding="utf-8") as f:
                 v = json.load(f)
             if isinstance(v, dict):
                 cfg.update(v)
         except (OSError, ValueError, TypeError):
             pass
-    most = cfg.get("max_children", 4)
+    most = cfg.get("max_subagents", 4)
     tab = common.table()
     out = []
     for k in kids if isinstance(kids, list) else []:
@@ -203,9 +203,9 @@ def part_children(a):
         n = k.get("name")
         r = tab.get(n)
         out.append({"name": n, "phase": (r or {}).get("phase") or ("queued" if k.get("queued_letter") else "gone")})
-    j = {"count": len(out), "max_children": most, "children": out}
-    one = "%d/%s children" % (len(out), most) + (" (%s)" % ", ".join("%s %s" % (c["name"], c["phase"]) for c in out) if out else "")
-    return one, "\n".join("%s\t%s" % (c["name"], c["phase"]) for c in out) or "(no children)", j
+    j = {"count": len(out), "max_subagents": most, "subagents": out}
+    one = "%d/%s subagents" % (len(out), most) + (" (%s)" % ", ".join("%s %s" % (c["name"], c["phase"]) for c in out) if out else "")
+    return one, "\n".join("%s\t%s" % (c["name"], c["phase"]) for c in out) or "(no subagents)", j
 
 
 def tree(pid):

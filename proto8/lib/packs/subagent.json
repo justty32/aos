@@ -1,4 +1,4 @@
-{"description": "Pack children: other agents - subagent (ones you start yourself), agents_ctl (any agent on the daemon).",
+{"description": "Pack subagent: other agents - subagent (ones you start yourself), agents_ctl (any agent on the daemon).",
  "tools": {
            "subagent": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/subagent"}},
            "agents_ctl": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agents_ctl"}}}}

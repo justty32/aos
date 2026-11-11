@@ -40,7 +40,6 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`change.json`](../../../../../proto8/lib/packs/change.json) | Pack 2 (change): tools that create or change files - write, edit, copy, move, mkdir, json_write. |
-| [`children.json`](../../../../../proto8/lib/packs/children.json) | Pack children: other agents - subagent (ones you start yourself), agents_ctl (any agent on the daemon). |
 | [`def.json`](../../../../../proto8/lib/packs/def.json) | Pack def: definitions - agent_def (agent definitions), tools_def (new tools from the Python skeleton, and checking a tool). |
 | [`delete.json`](../../../../../proto8/lib/packs/delete.json) | Pack 3 (delete): tools that delete - trash (into the workspace .trash, can be moved back) and remove (for real). |
 | [`events.json`](../../../../../proto8/lib/packs/events.json) | Pack events: things that wake you later - clock_register (letters from the clock), self_hook (hooks on your own events). |
@@ -50,3 +49,4 @@
 | [`mailbox.json`](../../../../../proto8/lib/packs/mailbox.json) | Pack mailbox: letters - mailbox_peek, mailbox_read, mailbox_send. |
 | [`self.json`](../../../../../proto8/lib/packs/self.json) | Pack self: look at and change yourself - self_tools, self_llm, self_system, self_state, self_ctl, self_history. |
 | [`shell.json`](../../../../../proto8/lib/packs/shell.json) | Pack 4 (shell): tools that run any command or program - shell (bash) and run_python. |
+| [`subagent.json`](../../../../../proto8/lib/packs/subagent.json) | Pack subagent: other agents - subagent (ones you start yourself), agents_ctl (any agent on the daemon). |

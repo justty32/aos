@@ -72,21 +72,21 @@ rg SlotMissing d.log                     # 預期判官因總共五列 running�
 kill $K $D && unset AOS_DAEMON AOS_KERNEL
 ```
 
-第一題劇本：`subagent {"op": "add", "name": "kid", "def_json": {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}}`（直接用現有定義；`def_json` 是指示詞，原樣交 `ctl add --path-json`）→ `subagent {"op": "llm", "name": "kid", "args": {"op": "set", "settings": {"model": "fake"}}}`（出生後調子的腦：`args` 就是 self_llm 的參數，工具用 kid 的身分跑旁邊的 self_llm，寫進 kid 自己的覆蓋層 `<kid stack>/llm.json`，定義不動）→ `ask kid "what time is it?"`（kid 的假腦先叫 peek_now_time〔`fake` 包寫 `"tool": "peek_now_time"`〕、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`（`purge: true` 連 stack 一起刪）。第二題一次叫五個：先 `agent_def {"op": "new", "from": {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}, "path": "defs/helper"}`——範本整份抄到 `ws/defs/helper`（只複製，`tools.json` 的 `{"$env": "AOS_HOME", …}` 照抄；要改內容用一般檔案工具），再 `subagent add {"def": "defs/helper"}` 掛 kid1～kid4（kid3 另給 `"ws": "kid3"`＝`ws/kid3/`，不在先建）；fsm1＋三隻＝4 隻 running，kid4 被判官擋，回給腦一則 `subagent: error: AddRejected …SlotMissing …`（以實際回信為準）；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的）；`ws` 沒給＝跟 fsm1 同一個；`subagent` 只碰自己生的（帳記在 `<fsm1 stack>/tools/subagent/children.json`）。用 `agents_ctl` 掛的不記帳、不算配額，之後 `subagent` 碰不到它。
+第一題劇本：`subagent {"op": "add", "name": "kid", "def_json": {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}}`（直接用現有定義；`def_json` 是指示詞，原樣交 `ctl add --path-json`）→ `subagent {"op": "llm", "name": "kid", "args": {"op": "set", "settings": {"model": "fake"}}}`（出生後調子的腦：`args` 就是 self_llm 的參數，工具用 kid 的身分跑旁邊的 self_llm，寫進 kid 自己的覆蓋層 `<kid stack>/llm.json`，定義不動）→ `ask kid "what time is it?"`（kid 的假腦先叫 peek_now_time〔`fake` 包寫 `"tool": "peek_now_time"`〕、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`（`purge: true` 連 stack 一起刪）。第二題一次叫五個：先 `agent_def {"op": "new", "from": {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}, "path": "defs/helper"}`——範本整份抄到 `ws/defs/helper`（只複製，`tools.json` 的 `{"$env": "AOS_HOME", …}` 照抄；要改內容用一般檔案工具），再 `subagent add {"def": "defs/helper"}` 掛 kid1～kid4（kid3 另給 `"ws": "kid3"`＝`ws/kid3/`，不在先建）；fsm1＋三隻＝4 隻 running，kid4 被判官擋，回給腦一則 `subagent: error: AddRejected …SlotMissing …`（以實際回信為準）；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的）；`ws` 沒給＝跟 fsm1 同一個；`subagent` 只碰自己生的（帳記在 `<fsm1 stack>/tools/subagent/subagents.json`）。用 `agents_ctl` 掛的不記帳、不算配額，之後 `subagent` 碰不到它。
 
-**兩道關**：`subagent` 自己數這隻父生了幾隻（`max_children`，範本 `children.json` 寫 4；帳記在父 stack 裡工具小格的 `children.json`〔`<父 stack>/tools/subagent/children.json`，跟配額設定同名不同處〕，每次叫先跟 daemon 表對帳），超過＝工具直接回錯、不寄信；判官 `max_running` 數的是整台 daemon 的總量（含父；自己加了鐘列也算它）。上面第二題撞的是判官（父只有三隻，工具放行）。要看工具那道，照 act 格的叫法手叫一次（接在上面 `kill` 之前；`FS` 是 fsm1 的 stack；`aos-tools call` 會把 `AOS_STACK` 換成 `$FS/tools/subagent/`，所以帳跟 fsm1 的腦叫的是同一份）：
+**兩道關**：`subagent` 自己數這隻父生了幾隻（`max_subagents`，範本 `subagents.json` 寫 4；帳記在父 stack 裡工具小格的 `subagents.json`〔`<父 stack>/tools/subagent/subagents.json`，跟配額設定同名不同處〕，每次叫先跟 daemon 表對帳），超過＝工具直接回錯、不寄信；判官 `max_running` 數的是整台 daemon 的總量（含父；自己加了鐘列也算它）。上面第二題撞的是判官（父只有三隻，工具放行）。要看工具那道，照 act 格的叫法手叫一次（接在上面 `kill` 之前；`FS` 是 fsm1 的 stack；`aos-tools call` 會把 `AOS_STACK` 換成 `$FS/tools/subagent/`，所以帳跟 fsm1 的腦叫的是同一份）：
 
 ```sh
 FS=$T/st/procs/fsm1 && export AOS_STACK=$FS/ AOS_WS=$T/ws
-echo '{"max_children": 1}' > $FS/children.json      # 這隻父的配額覆蓋：只放改過的鍵（定義的 children.json 不動）
+echo '{"max_subagents": 1}' > $FS/subagents.json      # 這隻父的配額覆蓋：只放改過的鍵（定義的 subagents.json 不動）
 echo '{"op": "add", "name": "kid1", "def": "defs/helper"}' | aos-tools --file $P/templates/agent-fsm/tools.json call subagent
-# added kid1 (stack …/procs/kid1); children 1/1
+# added kid1 (stack …/procs/kid1); subagents 1/1
 echo '{"op": "add", "name": "kid2", "def": "defs/helper"}' | aos-tools --file $P/templates/agent-fsm/tools.json call subagent; echo $?
-# subagent: error: ChildSlotMissing you already have 1 of max 1 children (kid1); remove one with op rm first (…)   ← stdout 與 stderr 各一行
+# subagent: error: SubagentSlotMissing you already have 1 of max 1 subagents (kid1); remove one with op rm first (…)   ← stdout 與 stderr 各一行
 # 1                                         （判官信箱沒多信：工具在寄信前就擋了）
 aos-agent ctl rm kid1                     # 別處收掉也行（含別隻用 agents_ctl rm）：下次叫工具時對帳、kid1 被忘掉
-echo '{"op": "ls"}' | aos-tools --file $P/templates/agent-fsm/tools.json call subagent   # children 0/1
-rm $FS/children.json && unset AOS_STACK AOS_WS
+echo '{"op": "ls"}' | aos-tools --file $P/templates/agent-fsm/tools.json call subagent   # subagents 0/1
+rm $FS/subagents.json && unset AOS_STACK AOS_WS
 ```
 
 ### 件 5：資源份額（daemon 在子行程 setrlimit）

@@ -1,5 +1,5 @@
 {
-  "summary": "Start, talk to, stop and adjust my own child agents (wraps aos-agent ctl / say / listen and the self_* tools; keeps a record and a quota)",
+  "summary": "Start, talk to, stop and adjust my own subagents (wraps aos-agent ctl / say / listen and the self_* tools; keeps a record and a quota)",
   "resource": [
     "cpu",
     "llm"

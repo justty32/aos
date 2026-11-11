@@ -27,7 +27,8 @@
    | `AOS_MY_STACK` | `AOS_LINUX_USER_STACK` |
    | `wall_clock`、`bash`、`json_edit` | `peek_now_time`、`shell`、`json_write` |
    | 舊 `agents` 工具、`agents.json` | `agents_children`／`agents_ctl`／`agent_def`、`children.json` |
-   | `agents_children`（11-11 早，[subagent-rename](../proto8/thinking/2026-11/11/subagent-rename.md)） | `subagent`（記帳檔 `tools/subagent/children.json`；包名 `children` 照舊） |
+   | `agents_children`（11-11 早，[subagent-rename](../proto8/thinking/2026-11/11/subagent-rename.md)） | `subagent`（記帳檔 `tools/subagent/children.json`；包名 `children` 照舊〔11-11 稍後也改，見下一列〕） |
+   | `subagent` 周邊的 children 系（11-11 稍後，使用者「隊長那串...一起改吧」，[subagent-rename](../proto8/thinking/2026-11/11/subagent-rename.md#11-11-稍後周邊一起改成-subagent-系)）：包 `lib/packs/children.json`、配額檔 `children.json`、`max_children`、記帳檔 `tools/subagent/children.json`、`ChildSlotMissing`／`ChildUnknown`／`ChildMissing`／`ChildQueued`、輸出 `children N/MAX`、ctl state 類別 `children` | `lib/packs/subagent.json`（包名 subagent）、`subagents.json`、`max_subagents`、`tools/subagent/subagents.json`、`SubagentSlotMissing`／`SubagentUnknown`／`SubagentMissing`／`SubagentQueued`、`subagents N/MAX`、類別 `subagents`（`agents_ctl`、`agent_def` 不動） |
    | `llm.json` 的 `endpoint` | `model` |
    | hook `on`／`exec`／`match`／`change`／`wait`；事件 `tool_after` 這類 | `event`／`handler`／`condition`／`intercept`（預設開）／`async`；`before_queue`、`after_queue`、`before_tool`、`after_tool` |
    | `aos-tools ls -b` | 拿掉（`ls` 預設就是短版，`-l` 長版） |
