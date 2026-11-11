@@ -35,13 +35,15 @@
    - codex 沙盒＝多試；對照表在 04，沒改設定。
    - eca 不給 goal、todo＝已改成 35 支（`aos-agent goal` 人下的指令照留，是代定）。
    - box 指到 queue＝不擋；fsm 連錯沒煞車＝不管。
-   - **還沒回的一件**：json_write 剝引號（`eb772bbdf`）跟 KISS 照字面原則衝突，頂層已提、使用者沒回；要退回成只給提示就改。往後修 bug 不替腦偷改值。
+   - json_write 剝引號已退回（使用者「a。」，`1522ca8a4`），錯誤提示 `6799c55ea` 先留著。往後修 bug 不替腦偷改值。
+   - **eca 不給基礎檔案工具**（「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」）：沒施工。eca-claude 的 `--tools` 只開 Read,Glob,Grep，要一起放寬；codex 唯讀沙盒拿掉 aos write 後會完全寫不了。擬拿掉的清單（35→20）在 04，明天先跟使用者對這兩點再做。
 6. **試驗場**（`~/code/playground`）：
    - 樹在背景跑；fsm_ann 用 gemma、eca_bob 用 haiku、eca_cody 用 gpt-6-luna，對話都是空的；fsm 41 支、eca 35 支。
    - 怎麼起：`cd ~/code/playground && source env.sh && cd ws`，`aos-agent chat -t fsm_ann`。停：`aos-daemon-ctl -d ~/code/playground/.stack shutdown`。
    - proxy 已重起，4000 有 6.1 的 sol 和 terra。
 7. **明天要做**：
-   - knowledge 整套改回 memory，順便施工 root 收檔案和 json 物件（設計在 04）。
+   - knowledge 整套改回 memory，順便施工 root 收檔案和 json 物件（設計在 04；path 寫法要照 N-45 重寫）。
+   - eca 拿掉基礎檔案工具（04 有清單與兩個前提）。
    - 接外部 MCP 第一階段。
    - 線 K 剩兩件：gitignore 漏列（fork 的 children state、`subagents.json`）、`history_removed.jsonl` 絕對路徑可能外洩。
    - 公司 proxy 要加 6.1 條目。
