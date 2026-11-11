@@ -51,6 +51,15 @@ class OutsideTest(unittest.TestCase):
         self.assertEqual(json.loads(self.call("json_read", path=str(self.out / "j.json")))["value"], {"a": 1, "b": 2})
         self.assertTrue(self.call("shell", command="cat ../out/a.txt").startswith("two\n"))
 
+    def test_json_write_quoted_pointer_hint(self):
+        (self.ws / "q.json").write_text('{"n": 1}')
+        for key in ("'/n'", '"/n"'):                     # 11-11 晚 gemma 把鍵包上引號
+            r = subprocess.run([str(BASE / "json_write" / "_entry")], input=json.dumps({"path": "q.json", "set": {key: 2}}),
+                               text=True, capture_output=True, env=self.env)
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("PointerBad", r.stdout)
+            self.assertIn("write the key as /n", r.stdout)
+
     def test_relative_needs_workspace(self):
         env = {k: v for k, v in self.env.items() if k != "AOS_WS"}
         r = subprocess.run([str(BASE / "read" / "_entry")], input='{"path": "a.txt"}', text=True, capture_output=True, env=env)
