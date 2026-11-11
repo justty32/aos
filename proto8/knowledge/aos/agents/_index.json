@@ -2,7 +2,7 @@
  "subagent.json": {
   "_description": "Tool subagent in full, with its quota and errors (read it as aos/agents.json#/subagent)."
  },
- "do_task.json": {
-  "_description": "Tool do_task in full (read it as aos/agents.json#/do_task)."
+ "fork.json": {
+  "_description": "Tool fork in full (read it as aos/agents.json#/fork)."
  }
 }

@@ -78,7 +78,7 @@ class FakeAgentMeasure(unittest.TestCase):
             bash = PROTO / 'lib/base/shell'
             child = definition('child', {'shell': {'path': str(bash)}})
             definition('parent', {'shell': {'path': str(bash)},
-                                 'do_task': {'path': str(PROTO / 'lib/agent/do_task')}})
+                                 'subagent': {'path': str(PROTO / 'lib/agent/subagent')}})
             definition('single', {})
             # Exercise llm_fake itself, changing only its reported usage at the boundary.
             fake = root / 'fake'
@@ -97,9 +97,10 @@ class FakeAgentMeasure(unittest.TestCase):
             write(config, {'exec': str(fake), 'endpoint': 'parent', 'endpoints': {
                 'parent': {'script': [
                     {'tool_calls': [{'name': 'shell', 'arguments': {'command': 'printf parent > result.txt'}}]},
-                    {'tool_calls': [{'name': 'do_task', 'arguments': {
-                        'from': str(child), 'goal': 'Run the planned shell and finish.',
-                        'model': 'child', 'keep': False, 'timeout_s': 30}}]},
+                    {'tool_calls': [{'name': 'subagent', 'arguments': {'op': 'add', 'name': 'kid', 'def': str(child)}}]},
+                    {'tool_calls': [{'name': 'subagent', 'arguments': {
+                        'op': 'ask', 'name': 'kid', 'text': 'Run the planned shell and finish.', 'timeout_s': 30}}]},
+                    {'tool_calls': [{'name': 'subagent', 'arguments': {'op': 'rm', 'name': 'kid', 'purge': True}}]},
                     {'content': 'Parent complete.'}]},
                 'child': {'script': [
                     {'tool_calls': [{'name': 'shell', 'arguments': {'command': 'printf child'}}]},
@@ -156,9 +157,9 @@ class FakeAgentMeasure(unittest.TestCase):
                     for sample, stack in zip(output['samples'], run_stacks):
                         rows = list(reachable_records(stack))
                         thinks = [row for row in rows if row.get('kind') == 'think']
-                        self.assertEqual(len(thinks), 5)
+                        self.assertEqual(len(thinks), 7)                 # 父 5（shell、subagent add／ask／rm、答）＋子 2
                         token_total = sum(row['usage']['prompt_tokens'] for row in thinks)
-                        self.assertEqual(token_total, 35)
+                        self.assertEqual(token_total, 49)
                         self.assertEqual(sample['cost']['token']['in'], token_total)
                         self.assertTrue(sample['check']['pass'])
                         self.assertIn('cost', sample['check'])
@@ -168,7 +169,7 @@ class FakeAgentMeasure(unittest.TestCase):
                         self.assertIn('child', [n['def'] for n in tree_nodes])
                         self.assertEqual(sum(n['cost']['token']['in'] for n in tree_nodes), token_total)
                         self.assertTrue(any(row.get('kind') == 'cmd' for row in rows))
-                    self.assertEqual(output['cost']['token']['in'], 35)
+                    self.assertEqual(output["cost"]["token"]["in"], 49)
                     calls = [json.loads(line) for line in control_log.read_text().splitlines()]
                     for operation in ('add', 'stop', 'rm'):
                         measured = [args for args in calls if args[:2] == ['ctl', operation]

@@ -12,7 +12,7 @@
 |---|---|
 | [01-腦-工具-可預測性與agent函數binding](05-agent/01-腦-工具-可預測性與agent函數binding.md) | 腦、工具、可預測性；agent＝函數＋binding |
 | [01-續-C-22](05-agent/01-續-C-22.md) | 腦、工具、可預測性（續）：C-22（11-07 確定性與專精窄領域加註） |
-| [01-續-C-42](05-agent/01-續-C-42.md) | 腦、工具、可預測性（續）：C-42（11-06 從 01 逐字搬來，加知識庫、thought（11-11 改名 `do_task`，[do-task-rename](../../thinking/2026-11/11/do-task-rename.md)）、agents 註） |
+| [01-續-C-42](05-agent/01-續-C-42.md) | 腦、工具、可預測性（續）：C-42（11-06 從 01 逐字搬來，加知識庫、thought（11-11 改名 `do_task`，[do-task-rename](../../thinking/2026-11/11/do-task-rename.md)；**11-11 再註**：這支開小幫手的工具拿掉了，`do_task` 這個名字改給 save／load 版〔在自己的 history 留紀錄點、結束時換成總結〕，複製自己去做另成工具 `fork`，[fork-and-do-task](../../thinking/2026-11/11/fork-and-do-task/README.md)）、agents 註） |
 | [02-agent-的工具與agent-就是一台狀態機](05-agent/02-agent-的工具與agent-就是一台狀態機.md) | agent 的工具（10-16 使用者定，10-19 改）；agent 就是一台狀態機（10-16 使用者定） |
 | [03-C-84](05-agent/03-C-84.md) | 系統自己改進函數（11-07）（C-84） |
 

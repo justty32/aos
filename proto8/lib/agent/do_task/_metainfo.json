@@ -1,16 +1,14 @@
 {
-  "summary": "Hand one task to a throw-away child agent and print only its short conclusion (wraps aos-agent ctl add / say / listen / rm)",
-  "resource": [
-    "cpu",
-    "llm"
-  ],
+  "summary": "Do one task inside your own history: start marks it, end folds everything after the mark into your summary (aos-agent ctl who + history ls / set / summarize)",
+  "resource": "cpu",
   "side_effect": true,
   "idempotent": false,
   "deterministic": false,
   "interrupt": "unsafe",
   "parallel": false,
-  "arbitrary_exec": true,
+  "arbitrary_exec": false,
   "cost": {
-    "time_ms": 30000
-  }
+    "time_ms": 1000
+  },
+  "timeout_ms": 120000
 }

@@ -69,9 +69,11 @@ aos-agent history --target fsm_demo ls                              # 看它叫�
 aos-agent ctl rm --purge -y fsm_demo                                # 玩完拿掉
 ```
 
-## 派一件小事（`do_task`）
+## 派一件小事（`do_task`）——下次重刷後改了
 
-`do_task`（原名 thought）派一件事給用完即刪的小幫手、只拿回短結論，過程不進自己的對話。**不給 `from`＝用自己的定義**生小幫手（工具、hooks 一起帶）；小幫手可以再派一層，再深＝`DepthExceeded`。上面假腦劇本裡就有一步是它，免費。要真腦做：
+> **11-11 稍後（線 K）**：下面這段是 13:06 刷新時的舊 do_task。之後 do_task 改成 save／load、另做 `fork`，並新增 grep、glob、todo、goal（[fork-and-do-task](../fork-and-do-task/README.md)、[new-tools 04](../new-tools/04-施工結果.md)、[goal 02](../goal/02-裁定與施工結果.md)）；試驗場要重刷才有（fsm 41 支、eca 39 支），劇本 `fake-demo-today` 的 do_task 那步要改成 `{"op": "start", "task": "Check the time"}` → peek_now_time → `{"op": "end", "summary": "Checked the time."}`（摺完 assistant 則數會倒退，後面幾步用 llm_fake 的 `when` 接，或把 do_task 放最後）。重刷後：`do_task` 在自己的對話裡做一段任務，`end` 時那段換成一則 `[aos] summary: …`、原文在 `<stack>/history_removed.jsonl`；`fork` 把自己連對話複製一份去做一個 goal、只拿回結論；兩支都只給 fsm，eca 叫到＝`BodyUnsupported`。
+
+舊版（13:06 刷新時）：`do_task`（原名 thought）派一件事給用完即刪的小幫手、只拿回短結論，過程不進自己的對話。**不給 `from`＝用自己的定義**生小幫手（工具、hooks 一起帶）；小幫手可以再派一層，再深＝`DepthExceeded`。上面假腦劇本裡就有一步是它，免費。要真腦做：
 
 ```sh
 aos-agent say --target eca_cody 'Use the aos tool do_task with goal "What time is it? Answer in one line." and tell me what it brought back.' && aos-agent listen --target eca_cody --timeout-s 600

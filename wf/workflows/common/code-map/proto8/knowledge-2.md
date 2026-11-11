@@ -11,10 +11,10 @@
 |---|---|
 | [`_description.json`](../../../../../proto8/knowledge/aos/_description.json) | （檔頭沒有一句話） |
 | [`_index.json`](../../../../../proto8/knowledge/aos/_index.json) | 設定（鍵：me.json、me/、errors.json、errors/、world.json、definition.json…） |
-| [`agents.json`](../../../../../proto8/knowledge/aos/agents.json) | 設定（鍵：_description、_index、subagent、agents_ctl、agent_def、do_task） |
+| [`agents.json`](../../../../../proto8/knowledge/aos/agents.json) | 設定（鍵：_description、_index、subagent、agents_ctl、agent_def、fork） |
 | [`agents/_description.json`](../../../../../proto8/knowledge/aos/agents/_description.json) | （檔頭沒有一句話） |
-| [`agents/_index.json`](../../../../../proto8/knowledge/aos/agents/_index.json) | 設定（鍵：subagent.json、do_task.json） |
-| [`agents/do_task.json`](../../../../../proto8/knowledge/aos/agents/do_task.json) | 設定（鍵：_description、_index、rules、results） |
+| [`agents/_index.json`](../../../../../proto8/knowledge/aos/agents/_index.json) | 設定（鍵：subagent.json、fork.json） |
+| [`agents/fork.json`](../../../../../proto8/knowledge/aos/agents/fork.json) | 設定（鍵：_description、_index、rules、results） |
 | [`agents/subagent.json`](../../../../../proto8/knowledge/aos/agents/subagent.json) | 設定（鍵：_description、_index、errors、add） |
 | [`body.json`](../../../../../proto8/knowledge/aos/body.json) | 設定（鍵：_description、_index、brain_tools、system_history） |
 | [`brain.json`](../../../../../proto8/knowledge/aos/brain.json) | 設定（鍵：_description、_index、priority、codes） |
@@ -62,7 +62,8 @@
 | [`mailbox.json`](../../../../../proto8/knowledge/aos/mailbox.json) | 設定（鍵：_description、_index、tools、rules、check、check_hook） |
 | [`me.json`](../../../../../proto8/knowledge/aos/me.json) | 設定（鍵：_description、_index、stack、self_tools、self_llm、self_system…） |
 | [`me/_description.json`](../../../../../proto8/knowledge/aos/me/_description.json) | （檔頭沒有一句話） |
-| [`me/_index.json`](../../../../../proto8/knowledge/aos/me/_index.json) | 設定（鍵：self_tools.json、self_llm.json、self_system.json、self_history.json、self_hook.json） |
+| [`me/_index.json`](../../../../../proto8/knowledge/aos/me/_index.json) | 設定（鍵：self_tools.json、self_llm.json、self_system.json、self_history.json、do_task.json、self_hook.json） |
+| [`me/do_task.json`](../../../../../proto8/knowledge/aos/me/do_task.json) | 設定（鍵：_description、_index、rules） |
 | [`me/self_history.json`](../../../../../proto8/knowledge/aos/me/self_history.json) | 設定（鍵：_description、_index、rules） |
 | [`me/self_hook.json`](../../../../../proto8/knowledge/aos/me/self_hook.json) | 設定（鍵：_description、_index、events、clock、answer、handler…） |
 | [`me/self_llm.json`](../../../../../proto8/knowledge/aos/me/self_llm.json) | （檔頭沒有一句話） |

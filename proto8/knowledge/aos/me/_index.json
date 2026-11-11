@@ -11,6 +11,9 @@
  "self_history.json": {
   "_description": "Tool self_history in full (read it as aos/me.json#/self_history)."
  },
+ "do_task.json": {
+  "_description": "Tool do_task in full (read it as aos/me.json#/do_task)."
+ },
  "self_hook.json": {
   "_description": "Tool self_hook in full, with how to write the hook program (read it as aos/me.json#/self_hook)."
  }

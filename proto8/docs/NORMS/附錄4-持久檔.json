@@ -397,7 +397,7 @@
   {
    "path": "$AOS_STACK/observed.jsonl（＋observed/ 子帳）",
    "lifetime": "持久",
-   "writer": "lib/observed（act.py、wait.py、lib/agent/subagent、do_task）、lib/observed_children",
+   "writer": "lib/observed（act.py、wait.py、lib/agent/subagent、fork）、lib/observed_children",
    "reader": "lib/aos/measure、lib/aos/shell_report、aos-feedback",
    "image": "不進",
    "on_bad": "measure：有一行不是物件＝ValueError；寫不了＝warning 照跑",
@@ -663,6 +663,16 @@
    "on_bad": "不在＝空清單；不是 JSON 或形狀不對＝ls／add／mark 報 ListBad 退 1、set 照蓋（＝修好）；讀不了＝ReadFailed；寫不了＝WriteFailed",
    "note": "11-11 todo 新增：{items: [{text, status（pending／in_progress／completed）}], updated_at（ISO 8601 UTC 到毫秒，例 2026-11-11T06:06:24.298Z）}；第一次寫才建小格（ls 不建）；登記名不是 todo 時小格跟著改名、是另一份清單。新檔，不用重建",
    "evidence": "proto8/lib/agent/todo/_entry"
+  },
+  {
+   "path": "$AOS_STACK/tools/do_task/tasks.json（開著的 do_task 任務）",
+   "lifetime": "持久",
+   "writer": "lib/agent/do_task",
+   "reader": "lib/agent/do_task",
+   "image": "進：跟 history 一起走（紀錄點的 call id 在 history 裡）",
+   "on_bad": "不在＝沒有任務；不是 {tasks: [{call…}]}＝StateBad 退 1；寫不了＝WriteFailed",
+   "note": "11-11 fork-and-do-task/02：{tasks: [{call, task?, started_at（ISO 8601 UTC 到秒）}], ended?: {call, result}}；第一次 start 才建；暫存檔再改名。新檔，不用重建（舊 do_task 的 tools/do_task/children/、observed/ 新版不讀，留著無害）",
+   "evidence": "proto8/lib/agent/do_task/_entry"
   }
  ]
 }

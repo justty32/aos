@@ -23,12 +23,12 @@
 | [`bin/aos-sandbox`](../../../../../proto8/cmd/aos-sandbox/bin/aos-sandbox) | 照一份設定把 prog 關進沙箱再跑：身分（s6-setuidgid）、上限（s6-softlimit）、看得到哪些路徑與能不能連網（bwrap） |
 | [`examples/agent.json`](../../../../../proto8/cmd/aos-sandbox/examples/agent.json) | 設定（鍵：commands、ro、rw、env、net、mem_mb…） |
 | [`examples/cli-tool.json`](../../../../../proto8/cmd/aos-sandbox/examples/cli-tool.json) | 設定（鍵：commands、ro、rw、env、net） |
-| [`examples/do-task-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/do-task-boxed/) | Hand one task to a fresh helper agent and get back only its short conclusion; its tool calls stay out of your history. The helper's definition: from,… |
-| [`examples/do-task-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/do-task-boxed/inner) | → `../../../../lib/agent/do_task` |
-| [`examples/do-task-boxed/sandbox-kernel.json`](../../../../../proto8/cmd/aos-sandbox/examples/do-task-boxed/sandbox-kernel.json) | Sandbox (mode 2, judge in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm letters must g… |
-| [`examples/do-task-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/do-task-boxed/sandbox.json) | Sandbox (mode 1, no judge) for a tool that talks to the daemon (do_task; agents and self_tools the same way): rw the daemon stack AOS_DAEMON (letters… |
 | [`examples/shell-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/shell-boxed/) | Run one bash command line; the working folder is your workspace. Returns stdout and stderr merged; the last line is always [exit code N], your comman… |
 | [`examples/shell-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/shell-boxed/inner) | → `../../../../lib/base/shell` |
+| [`examples/subagent-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/subagent-boxed/) | Start agents that are yours: you can talk to them, change their tools/brain/history, stop and remove them; counted against your quota (max_subagents,… |
+| [`examples/subagent-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/subagent-boxed/inner) | → `../../../../lib/agent/subagent` |
+| [`examples/subagent-boxed/sandbox-kernel.json`](../../../../../proto8/cmd/aos-sandbox/examples/subagent-boxed/sandbox-kernel.json) | Sandbox (mode 2, judge in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm letters must g… |
+| [`examples/subagent-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/subagent-boxed/sandbox.json) | Sandbox (mode 1, no judge) for a tool that talks to the daemon (subagent; agents_ctl and self_tools the same way): rw the daemon stack AOS_DAEMON (le… |
 | [`root/setup.sh`](../../../../../proto8/cmd/aos-sandbox/root/setup.sh) | 沙箱的「身分層」要 root 做的事：裝 s6 到 /usr/local、建帳號 aos-run、給它一個工作的地方、讓我（$SUDO_USER）能換成它 |
 
 ## `proto8/cmd/aos-sweeper/`

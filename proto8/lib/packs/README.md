@@ -15,11 +15,11 @@
 
 | 包 | 檔 | 工具 |
 |---|---|---|
-| 小工具 | [gadgets.json](gadgets.json) | peek_clock（daemon 時鐘第幾 cycle）、peek_now_time（UTC 時間）、math（算一個式子）——不改任何東西、隨手看一下；do_task（派一件小事給用完即走的子 agent、只拿回短結論；11-11 使用者「放進某一包」→「小工具那包」） |
+| 小工具 | [gadgets.json](gadgets.json) | peek_clock（daemon 時鐘第幾 cycle）、peek_now_time（UTC 時間）、math（算一個式子）——不改任何東西、隨手看一下；do_task（在自己的 history 做一段任務、結束時換成總結；11-11 使用者「放進某一包」→「小工具那包」，同日改成 save／load、「eca 不給 do_task」＝eca 範本 `tools.json` 寫 `"do_task": null`，[fork-and-do-task](../../thinking/2026-11/11/fork-and-do-task/README.md)） |
 | 事件 | [events.json](events.json) | clock_register（時鐘定期寄信）、self_hook（自己身上發生事時叫的勾子） |
 | 待辦 | [todo.json](todo.json) | todo（自己的待辦清單：ls、set、add、mark；存自己的小格 `tools/todo/todo.json`，不自動帶進 prompt、腦自己 ls；11-11 使用者「todo/goal也一起做吧」、T1「不帶，腦自己查」，[new-tools 04](../../thinking/2026-11/11/new-tools/04-施工結果.md)） |
 | 自我管理 | [self.json](self.json) | self_tools、self_llm、self_system、self_state、self_ctl、self_history |
-| 子 agent | [subagent.json](subagent.json) | subagent（自己生的）、agents_ctl（daemon 上任何一隻） |
+| 子 agent | [subagent.json](subagent.json) | subagent（自己生的）、agents_ctl（daemon 上任何一隻）、fork（把當下的自己連對話複製一份給一個 goal、只拿回短結論；11-11 使用者「把fork單獨拉出來做為工具」「eca不給fork。」＝eca 範本寫 `"fork": null`） |
 | 定義 | [def.json](def.json) | agent_def、tools_def（從 Python 骨架做新工具、檢查工具；11-10 深夜使用者「3.對」） |
 | 信箱 | [mailbox.json](mailbox.json) | mailbox_peek、mailbox_read、mailbox_send |
 | 記憶 | [knowledge.json](knowledge.json) | knowledge_read、knowledge_write——只寫路徑；用哪個庫由疊這包的那份 `tools.json` 在同名格補 `env`（`AOS_KNOWLEDGE`）。範本只替 knowledge_read 補（出廠庫）；knowledge_write 11-11 起不給庫（使用者「不給預設，要自己透過旗標指定或環境變數設定，或是工具呼叫內給。如果都沒有，那就報錯。」），腦在呼叫裡給 `root` 或人另配 |

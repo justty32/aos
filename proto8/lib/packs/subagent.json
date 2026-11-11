@@ -1,4 +1,5 @@
-{"description": "Pack subagent: other agents - subagent (ones you start yourself), agents_ctl (any agent on the daemon).",
+{"description": "Pack subagent: other agents - subagent (ones you start yourself), agents_ctl (any agent on the daemon), fork (a copy of yourself for one goal, only its conclusion comes back; agent-fsm only).",
  "tools": {
            "subagent": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/subagent"}},
-           "agents_ctl": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agents_ctl"}}}}
+           "agents_ctl": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/agents_ctl"}},
+           "fork": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/fork"}}}}

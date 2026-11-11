@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # todo - 這隻 agent 自己的待辦清單：ls、set、add、mark；存在自己的小格 $AOS_STACK/todo.json（第一次寫才建），每個 op 都印整張
 # 使用者 11-11：「todo/goal也一起做吧」；選項框 T1「不帶，腦自己查」（不動 brain.py／範本：清單不自動帶進 prompt）、T2「各自獨立」
-#   （子 agent、do_task 的小幫手各有自己的 stack，清單天生分開）；設計稿與代定 D1～D9 在 thinking/2026-11/11/new-tools/02-todo.md。
+#   （子 agent 各有自己的 stack，清單天生分開；do_task 摺 history 不碰這份清單）；設計稿與代定 D1～D9 在 thinking/2026-11/11/new-tools/02-todo.md。
 # 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"set"|"add"|"mark", …}；該 op 不收的鍵＝ArgumentsBad：
 #   ls {json?}                  ＝印清單（json: true＝{"items": [{n, text, status}], "counter_completed", "updated_at"}）
 #   set {items}                 ＝整張換掉；items＝字串或 {text, status?} 的陣列（可混用；沒寫 status＝pending；[]＝清空）

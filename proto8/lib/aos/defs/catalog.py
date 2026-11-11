@@ -187,15 +187,7 @@ def run(args):
                 if is_directive(entry['path']):        # written for each machine's own value: not a path into this root
                     continue
                 source = ((path / agent['tools']).parent / entry['path']).resolve()
-                from_def = entry.get('env', {}).get('AOS_DO_TASK_FROM')
-                from_path = None
-                if isinstance(from_def, str) and from_def:
-                    candidate = Path(from_def)
-                    if candidate.is_absolute():
-                        from_path = candidate.resolve()
-                    elif os.environ.get('AOS_WS'):
-                        from_path = (Path(os.environ['AOS_WS']) / candidate).resolve()
-                if source == target or from_path == target:
+                if source == target:
                     refs.append(relative(path, root))
                     break
         return {'refs': sorted(set(refs))}

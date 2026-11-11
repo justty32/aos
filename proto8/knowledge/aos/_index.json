@@ -27,10 +27,10 @@
   "_description": "How a brain request travels, what an endpoint pack is, and how priority works."
  },
  "agents.json": {
-  "_description": "Tools subagent, agents_ctl and agent_def: your own subagents, any agent on the daemon table, and new definitions; do_task for one-off tasks."
+  "_description": "Tools subagent, agents_ctl and agent_def: your own subagents, any agent on the daemon table, and new definitions."
  },
  "agents/": {
-  "_description": "Long sections of aos/agents.json (subagent, do_task); read them through aos/agents.json."
+  "_description": "Long sections of aos/agents.json (subagent); read them through aos/agents.json."
  },
  "rules.json": {
   "_description": "What you must not do, and why. Read this before doing anything that changes the system."

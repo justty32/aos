@@ -24,7 +24,7 @@ def records(stack):
 
 
 class Batch3Integration(unittest.TestCase):
-    def test_parent_do_task_child_shell_ledgers(self):
+    def test_parent_subagent_child_shell_ledgers(self):   # 11-11 原本經 do_task 開小幫手；do_task 改成 save／load，改用 subagent
         with tempfile.TemporaryDirectory(prefix='aos-batch3-') as tmp:
             root = Path(tmp)
             daemon_stack = root / 'daemon'
@@ -53,15 +53,16 @@ class Batch3Integration(unittest.TestCase):
             child_def = definition('child_def', 'child', {'shell': {'path': str(bash)}})
             parent_def = definition('parent_def', 'parent', {
                 'shell': {'path': str(bash)},
-                'do_task': {'path': str(PROTO / 'lib/agent/do_task')}})
+                'subagent': {'path': str(PROTO / 'lib/agent/subagent')}})
             kernel_config = root / 'kernel.json'
             write(kernel_config, {'exec': str(PROTO / 'lib/base/llm_fake'), 'endpoint': 'parent',
                 'endpoints': {
                     'parent': {'script': [
                         {'tool_calls': [{'name': 'shell', 'arguments': {'command': 'printf parent; exit 7'}}]},
-                        {'tool_calls': [{'name': 'do_task', 'arguments': {
-                            'from': str(child_def), 'goal': 'Run the shell and report completion.',
-                            'model': 'child', 'keep': False, 'timeout_s': 30}}]},
+                        {'tool_calls': [{'name': 'subagent', 'arguments': {'op': 'add', 'name': 'kid', 'def': str(child_def)}}]},
+                        {'tool_calls': [{'name': 'subagent', 'arguments': {
+                            'op': 'ask', 'name': 'kid', 'text': 'Run the shell and report completion.', 'timeout_s': 30}}]},
+                        {'tool_calls': [{'name': 'subagent', 'arguments': {'op': 'rm', 'name': 'kid', 'purge': True}}]},
                         {'content': 'Parent complete.'}]},
                     'child': {'script': [
                         {'tool_calls': [{'name': 'shell', 'arguments': {'command': 'printf child; exit 3'}}]},
@@ -103,8 +104,8 @@ class Batch3Integration(unittest.TestCase):
                     self.assertEqual(rows[0]['ws'], str(root))
                     self.assertRegex(rows[0]['started_at'], r'^\d{4}-.*\.\d{3}Z$')
                     tools = [row for row in rows if row['kind'] == 'tool']
-                    self.assertEqual([row['name'] for row in tools], ['shell', 'do_task'])
-                    shell, do_task = tools
+                    self.assertEqual([row['name'] for row in tools], ['shell', 'subagent', 'subagent', 'subagent'])
+                    shell, ask = tools[0], tools[2]
                     self.assertEqual(shell['def'], str(bash))
                     self.assertEqual(shell['code'], 0)
                     self.assertEqual(shell['stack'], 'tools/shell')
@@ -112,11 +113,11 @@ class Batch3Integration(unittest.TestCase):
                         self.assertTrue(Path(tool['def']).is_absolute())
                         for field in ('elapsed_ms', 'in_bytes', 'out_bytes'):
                             self.assertGreaterEqual(tool[field], 0)
-                    self.assertEqual(do_task['code'], 0)
-                    self.assertTrue(do_task['child'].startswith('tools/do_task/observed/'))
+                    self.assertEqual([t['code'] for t in tools[1:]], [0, 0, 0])
+                    self.assertTrue(ask['child'].startswith('tools/subagent/observed/'))
                     shell_rows = records(stack / shell['stack'])
                     self.assertEqual([row['exit'] for row in shell_rows if row['kind'] == 'cmd'], [7])
-                    child_stack = stack / do_task['child']
+                    child_stack = stack / ask['child']
                     child_rows = records(child_stack)
                     self.assertEqual(child_rows[0]['kind'], 'self')
                     self.assertEqual(child_rows[0]['llm_kernel'], str(kernel_stack))

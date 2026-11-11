@@ -63,7 +63,7 @@ def suggestions(defs, reviews, config):
                 if owner and bridge and name in definitions:
                     pairs.add((owner, name))
                 owner, bridge = name, False
-            elif Path(str(node.get('def', ''))).name in ('do_task', 'subagent'):
+            elif Path(str(node.get('def', ''))).name in ('subagent',):                 # 生子 agent 的工具（11-11 do_task 改成 save／load、不生子了）
                 bridge = True
             for child in node.get('children', []):
                 walk(child, owner, bridge)

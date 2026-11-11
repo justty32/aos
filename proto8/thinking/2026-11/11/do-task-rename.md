@@ -2,6 +2,8 @@
 
 ← [2026-11-11](README.md)｜[thinking](../../README.md)
 
+> **現況已改**（同日稍後）：這裡講的「開一次性小幫手」那支 do_task 已經拿掉，`do_task` 改成 save／load（在自己的 history 留紀錄點、結束時換成總結），複製自己去做另成工具 `fork`——見 [fork-and-do-task](fork-and-do-task/README.md)。下面是當時的記錄，照留。
+
 ## 使用者原話與裁定（11-11）
 
 - 「thought，我記得是"小念頭"這個工具。我在想是不是該改名為do_task，也就是執行一個任務，執行完後history中不會殘留細節(或是可選要殘留哪些)。」選項框：名字選「do_task」；除短結論外另帶回什麼選「不加，維持現狀」。

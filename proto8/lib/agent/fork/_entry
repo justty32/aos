@@ -1,0 +1,441 @@
+#!/usr/bin/env python3
+# fork - 把叫我的那隻「當下的自己」複製一份（同一份定義＋它 stack 裡改過的 tools／llm／hooks／system＋整段對話），給它一個 goal，只拿回短結論；分身的過程不進叫我的那隻的 history
+# 使用者 11-11：「他有兩種實現方式，一種是fork，也就是自身的各種東西複製一份，然後等他跑好後留下結論，這其實有點像subagent的變體。」
+#   選項框：「把fork單獨拉出來做為工具。do_task改成save/load模式。」「一律連對話複製」「拿掉這個能力」（用別的定義；要的話自己用 subagent 組）。
+#   施工記錄與代定：proto8/thinking/2026-11/11/fork-and-do-task/01-fork.md。開小幫手、等結論、抄帳、收掉這套程式照搬 do_task（原 thought）11-11 那版。
+#   之後使用者「eca不給fork。」：只給 agent-fsm 的身體；history 裡找不到叫到一半的 tool call（eca）＝BodyUnsupported、叫它改用 subagent（判法同 do_task）。
+# 介面（lib/docs/01 的契約）：stdin 一份 {"goal", "max_chars"?, "timeout_s"?, "timeout_cycles"?, "keep"?}，沒有 op；別的鍵＝ArgumentsBad（tool_io）。
+#   goal 必要（要做什麼、要帶回什麼）；max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、只要求有限正數；keep 預設 false。
+# 一次叫＝aos-agent --daemon $AOS_DAEMON 的幾步：ctl who（我是誰、我的定義與 stack）→ 抄 stack（fork_copy：定義宣告的 history＋覆蓋檔，
+#   history 尾巴沒回的工具呼叫補 tool 訊息）到 <daemon>/procs/<分身名>/ →
+#   ctl add（--name f-<父名前32字>-<UTC毫秒>-<4位hex>、--ws 我的 $AOS_WS、--stack 那份、--envs AOS_FORK_DEPTH=1、我的定義）→
+#   say 開場文（OPENING：你是分身、任務、只回結論、不能再 fork）＋listen --timeout-s／--timeout-cycles →
+#   預設 ctl rm --purge 分身（stack 刪掉）；keep: true＝留著但 ctl stop、結論後多一行 details: <分身的 stack，相對 $AOS_DAEMON>/。
+#   不寫分身的 goal.json（代定：listen 拿第一則回答就收，goal 提醒只會在結論之後才來、白催）。
+# 分身名每次唯一：mkdir $AOS_STACK/children/<分身名>/，撞表或資料夾最多重試五次；state＝running <UTC到秒Z租約>／kept／failed，
+#   每步呼叫前續租至逾時＋5秒，TERM 收回租約；對帳先保護未到期租約與剛建資料夾；表上沒有就忘掉，過期 running 先 stop 再記 failed；
+#   kept 不動，failed 照 FAILED_KEEP gc（照 do_task）。
+# 深度：讀 AOS_FORK_DEPTH（沒有＝0），ctl add --envs 傳父+1；已是 MAX_DEPTH（1）＝DepthExceeded、不生（分身不能再分身）。
+# 錯：stderr 與 stdout 各一行「fork: error: 代號 原因」、退 1（tool_io.die）——自己的：ArgumentsBad、DepthExceeded、DaemonMissing、DaemonFailed、
+#   StackMissing、WsMissing、DefMissing、InterfaceMissing、InterfaceBad、HistoryMissing、HistoryBad、BodyUnsupported、MkdirFailed、WriteFailed、LaunchFailed、CommandFailed（逾時）；
+#   aos-agent 退非 0＝取它 stderr 最後一行錯誤行的代號與原因接成自己的（C-52 例外 ⑤；AddRejected、AnswerMissing…）。
+#   分身答不出（listen 錯、逾時）＝錯誤行尾附 (details: <分身的 stack>/)，先 ctl stop、stack 一律留（不管 keep）。
+#   aos-agent 的 stderr 原樣透到 stderr（R10）。--help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉那一群，退 130）。
+import json, math, os, re, secrets, shutil, signal, subprocess, sys, time
+from datetime import datetime, timedelta, timezone
+HELP = """\
+usage: fork < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Copy yourself as you are now - your definition, the tools / llm / hooks / system you changed
+in your stack, and your whole conversation - into a fork on your daemon ($AOS_DAEMON), give it
+one goal and print only its short conclusion; the fork's steps stay out of your history.
+The fork does not get your goal, your to-do list or your tool records; it starts with an empty
+queue and mailbox. Its last message says it is a fork, gives the goal and asks for the
+conclusion only. A fork cannot fork again (depth 1 at most: DepthExceeded).
+Only for an agent-fsm body (BodyUnsupported otherwise, e.g. a claude / codex agent: use subagent).
+timeout_s is any finite positive number of seconds (default 600).
+Use timeout_cycles (a positive integer) instead to count cycles; giving both is ArgumentsBad.
+Without AOS_CLOCK, one cycle is AOS_CLOCK_INTERVAL milliseconds (default 1000).
+To ask a kept fork more later, use aos-agent ctl start --target <fork>, then say / listen.
+Result on stdout: the conclusion. The fork is removed afterwards unless keep is true; if it fails,
+its stack is kept and the error line ends with (details: <stack>/).
+Each fork has a unique name; running records use renewable UTC leases. Interrupted leases expire,
+and the next call stops expired forks and keeps their stacks as failed ones.
+DaemonMissing means AOS_DAEMON is unset or its directory does not exist.
+DaemonFailed means its directory exists but no reply arrived within the timeout (busy, paused, or down).
+On error: one line "fork: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、旁邊的 lib/agent（fork_copy）、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE, os.path.dirname(HERE)] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+    from observed_children import copy_child
+    import fork_copy
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name not in ("tool_io", "observed_children", "fork_copy"):
+        raise
+    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), error.name)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "fork"
+tool_io.start(NAME, HELP)
+die = tool_io.die
+ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
+MAX_CHARS_DEFAULT, TIMEOUT_DEFAULT_S = 600, 600
+MAX_DEPTH = 1                  # 父 0 → 分身 1；分身再叫＝DepthExceeded（代定：分身的分身只是同一段對話再抄一次）
+FAILED_KEEP = 3                # 失敗留下的分身 stack 最多留幾隻（gc，照 do_task）
+STEP_S = 90                    # 其他每一步的逾時（ctl add 自己最多等 30 秒）
+DEPTH_ENV = "AOS_FORK_DEPTH"
+OPENING = """[aos] fork: you are a fork: a copy of the agent whose conversation is above, made when it called the fork tool. \
+You have its definition, its settings and its conversation, so you know what it knew. The original is waiting for you \
+and will see only your final reply, not your steps.
+Your task: {goal}
+Do only this task (use your tools if you need them). When it is done, reply with the conclusion only: what the task \
+asks you to bring back, not the steps you took. At most {n} characters. {again}"""
+AGAIN_NO = "You cannot fork again (fork fails with DepthExceeded in a fork); do the work yourself."
+AGAIN_YES = "You may fork once more at most (depth {d} of {m})."
+child = None
+running_kid = None
+
+
+def kill_group(p):
+    for sig, wait_s in ((signal.SIGTERM, 5), (signal.SIGKILL, 5)):
+        try:
+            os.killpg(p.pid, sig)
+        except OSError:
+            return
+        try:
+            p.wait(wait_s)
+            return
+        except subprocess.TimeoutExpired:
+            pass
+
+
+def on_term(signum, frame):
+    if running_kid is not None:
+        try:
+            renew(0)
+        except SystemExit:
+            pass                                # 寫租約失敗也要收自己的子行程、照訊號退碼
+    if child is not None:
+        kill_group(child)
+    sys.exit(128 + signum)
+
+
+signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
+
+
+def agent(argv, text=None, timeout_s=STEP_S, timeout_cycles=None):
+    """叫 aos-agent --daemon <AOS_DAEMON> argv…；退 0 回 (stdout, None)，退非 0 或逾時回 (stdout, (代號, 原因))。"""
+    global child
+    if running_kid is not None:
+        renew(timeout_s + 5)
+    try:
+        deadline = tool_io.deadline_after(timeout_cycles) if timeout_cycles is not None else None
+    except tool_io.Error as e:
+        return "", (e.code, str(e))
+    cmd = ["aos-agent", "--daemon", daemon] + argv
+    try:
+        child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+    except OSError as e:
+        die("LaunchFailed", "cannot start aos-agent (is it on PATH?): %s" % e)
+    end = time.monotonic() + timeout_s
+    payload = None if text is None else text.encode("utf-8")
+    while True:
+        try:
+            out, err = child.communicate(payload, timeout=0.2 if deadline is not None else min(86400, max(0, end - time.monotonic())))
+            break
+        except subprocess.TimeoutExpired:
+            payload = None
+            try:
+                waiting = not tool_io.expired(deadline) if deadline is not None else time.monotonic() < end
+            except tool_io.Error as e:
+                kill_group(child)
+                child = None
+                return "", (e.code, str(e))
+            if waiting:
+                if deadline is not None and running_kid is not None:
+                    try:
+                        renew(STEP_S + 5)
+                    except SystemExit:
+                        kill_group(child)
+                        child = None
+                        raise
+                continue
+            kill_group(child)
+            child = None
+            return "", ("CommandFailed", "aos-agent %s did not finish in %s (killed)" % (" ".join(argv[:2]), "%d cycles" % timeout_cycles if deadline is not None else "%g s" % timeout_s))
+    p, child = child, None
+    out, err = out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
+    if err:                                     # 下層的 stderr 原樣透出（R10）
+        sys.stderr.write(err if err.endswith("\n") else err + "\n")
+        sys.stderr.flush()
+    if p.returncode == 0:
+        return out, None
+    lines = [x for x in err.splitlines() if x.strip()]
+    mine = [m for m in map(ERR_RE.match, lines) if m]
+    if mine:
+        return out, (mine[-1].group(1), mine[-1].group(2))
+    return out, ("CommandFailed", "aos-agent %s exited %d: %s" % (" ".join(argv[:2]), p.returncode, lines[-1] if lines else "(no message)"))
+
+
+def must(argv, text=None, timeout_s=STEP_S):
+    out, err = agent(argv, text, timeout_s)
+    if err:
+        die(*err)
+    return out
+
+
+def write_text(path, text):
+    tmp = os.path.join(os.path.dirname(path), ".%s.%d" % (os.path.basename(path), os.getpid()))
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except OSError as e:
+        die("WriteFailed", "cannot write %s: %s" % (path, e))
+
+
+# ---- 入口檢查（參數先、環境後）----
+args = tool_io.arguments()
+goal = args.get("goal")
+if not isinstance(goal, str) or not goal.strip():
+    die("ArgumentsBad", "goal must be a non-empty string: what the fork should do and bring back")
+max_chars = args.get("max_chars", MAX_CHARS_DEFAULT)
+if isinstance(max_chars, bool) or not isinstance(max_chars, int) or max_chars < 1:
+    die("ArgumentsBad", "max_chars must be a positive integer")
+if "timeout_s" in args and "timeout_cycles" in args:
+    die("ArgumentsBad", "timeout_s and timeout_cycles are mutually exclusive")
+timeout_cycles = args.get("timeout_cycles")
+if "timeout_cycles" in args and (isinstance(timeout_cycles, bool) or not isinstance(timeout_cycles, int) or timeout_cycles <= 0):
+    die("ArgumentsBad", "timeout_cycles must be a positive integer")
+timeout_s = args.get("timeout_s", TIMEOUT_DEFAULT_S)
+try:
+    valid_timeout = not isinstance(timeout_s, bool) and isinstance(timeout_s, (int, float)) and math.isfinite(timeout_s) and timeout_s > 0
+except OverflowError:
+    valid_timeout = False
+if not valid_timeout:
+    die("ArgumentsBad", "timeout_s must be a finite positive number")
+keep = args.get("keep", False)
+if not isinstance(keep, bool):
+    die("ArgumentsBad", "keep must be true or false")
+try:
+    depth = int(os.environ.get(DEPTH_ENV, "0"))
+except ValueError:
+    depth = -1
+if depth < 0:
+    die("ArgumentsBad", "%s must be a non-negative integer" % DEPTH_ENV)
+if depth >= MAX_DEPTH:
+    die("DepthExceeded", "you are a fork at depth %d; at most %d level%s of fork (do this step yourself)"
+        % (depth, MAX_DEPTH, "" if MAX_DEPTH == 1 else "s"))
+daemon = os.environ.get("AOS_DAEMON")
+if not daemon:
+    die("DaemonMissing", "AOS_DAEMON is not set (this tool starts the fork on the daemon that runs you)")
+daemon = os.path.realpath(daemon)
+stack = os.environ.get("AOS_STACK")
+if not stack:
+    die("StackMissing", "AOS_STACK is not set")
+ws = tool_io.workspace()
+kids_dir = os.path.join(stack, "children")
+
+
+def rel(p):
+    """分身的 stack 相對管我的 daemon（portable-flow 的相對路徑規矩）。"""
+    r = os.path.relpath(p, daemon)
+    return (p if r.startswith("..") else r).rstrip("/") + "/"
+
+
+def forget(name):
+    global running_kid
+    try:
+        for f in os.listdir(os.path.join(kids_dir, name)):
+            os.remove(os.path.join(kids_dir, name, f))
+        os.rmdir(os.path.join(kids_dir, name))
+        if name == running_kid:
+            running_kid = None
+    except OSError:
+        pass
+
+
+def mark(name, state):
+    global running_kid
+    write_text(os.path.join(kids_dir, name, "state"), state + "\n")
+    if name == running_kid and state in ("kept", "failed"):
+        running_kid = None
+
+
+def renew(seconds):
+    now = datetime.now(timezone.utc)
+    ceiling = datetime.max.replace(tzinfo=timezone.utc, microsecond=0)
+    until = now + timedelta(seconds=min(seconds, (ceiling - now).total_seconds() - 1))
+    mark(running_kid, "running " + until.strftime("%Y-%m-%dT%H:%M:%SZ"))
+
+
+def lease_active(state):
+    if len(state) != 2 or state[0] != "running":
+        return False
+    try:
+        until = datetime.strptime(state[1], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        return until > datetime.now(timezone.utc)
+    except ValueError:
+        return False
+
+
+def mtime(name):
+    """紀錄資料夾的修改時間；別的 fork 剛刪掉＝0。"""
+    try:
+        return os.path.getmtime(os.path.join(kids_dir, name))
+    except OSError:
+        return 0
+
+
+def reconcile(table):
+    """children/ 對 daemon 表：未到期租約不碰；不在表上的忘掉；過期 running 先停，failed 超過 FAILED_KEEP 隻＝最舊的 ctl rm。"""
+    try:
+        names = sorted(os.listdir(kids_dir))
+    except FileNotFoundError:
+        return
+    failed = []
+    for n in names:
+        state_missing = False
+        age = mtime(n)
+        try:
+            with open(os.path.join(kids_dir, n, "state"), encoding="utf-8") as f:
+                st = f.read().split()
+        except OSError:
+            st = []
+            state_missing = not os.path.exists(os.path.join(kids_dir, n, "state"))
+        if lease_active(st):
+            continue                            # 另一個 fork 正在用，可能還沒上表
+        if state_missing and time.time() - age < STEP_S:
+            continue                            # 剛 mkdir、state 還沒寫的那一瞬
+        if n not in table:
+            forget(n)
+            continue
+        if st[:1] == ["kept"]:
+            continue
+        if st[:1] in (["running"], ["failed"]) and table.get(n) != "stopped":   # 已停的不再寄 stop
+            _, err = agent(["ctl", "stop", "--target", n])
+            if err:
+                tool_io.warn("could not stop the abandoned fork %s: %s %s" % ((n,) + err))
+        if st[:1] == ["running"]:                # 租約過了＝主人死在半路
+            mark(n, "failed")
+        failed.append((age, n))
+    for _, n in sorted(failed)[:max(0, len(failed) - FAILED_KEEP + 1)]:   # 留 FAILED_KEEP-1 隻，加上這次最多 FAILED_KEEP
+        child_path = child_stacks.get(n)
+        if child_path:
+            copy_child(stack, n, os.path.join(daemon, child_path), publish=False)
+        _, err = agent(["ctl", "rm", "--purge", n])
+        if err is None:
+            forget(n)
+        else:
+            tool_io.warn("could not remove the old failed fork %s: %s %s" % ((n,) + err))
+
+
+# ---- 我是誰：定義與 stack ----
+me = json.loads(must(["ctl", "who", "--json"]))
+own_def = me.get("def")
+if not isinstance(own_def, str) or not own_def.strip():
+    die("DefMissing", "the daemon table has no definition for you (%s), so there is nothing to copy" % me.get("name"))
+definition = os.path.realpath(own_def)
+if not os.path.isdir(definition):
+    die("DefMissing", "your definition %s is missing" % definition)
+my_stack = me.get("stack")
+if not isinstance(my_stack, str) or not os.path.isdir(my_stack):
+    die("StackMissing", "your stack %s is missing" % my_stack)
+try:
+    fork_copy.check(definition, my_stack)       # 抄之前先確認宣告讀得懂、身體是 fsm（history 裡有叫到一半的這次呼叫）；不行就不生任何東西
+except fork_copy.ForkCopyBad as e:
+    die(e.code, str(e))
+
+# ---- 唯一分身名、抄 stack、掛上 ----
+rows = json.loads(must(["ctl", "ls", "--json"]) or "[]")
+child_stacks = {r.get("name"): r.get("stack") for r in rows if isinstance(r, dict) and isinstance(r.get("stack"), str)}
+table = {r.get("name"): r.get("phase") for r in rows if isinstance(r, dict)} if isinstance(rows, list) else {}   # 名字 → phase
+reconcile(table)
+try:
+    os.makedirs(kids_dir, exist_ok=True)
+except OSError as e:
+    die("MkdirFailed", "cannot create %s: %s" % (kids_dir, e))
+procs = os.path.join(daemon, "procs")
+for attempt in range(5):
+    now = datetime.now(timezone.utc)
+    stamp = now.strftime("%Y%m%dT%H%M%S") + "%03d" % (now.microsecond // 1000)
+    kid = "f-%s-%s-%s" % (me["name"][:32], stamp, secrets.token_hex(2))
+    kid_stack = os.path.join(procs, kid)
+    if kid in table or os.path.lexists(kid_stack):
+        continue
+    try:
+        os.mkdir(os.path.join(kids_dir, kid))
+        running_kid = kid
+        renew(STEP_S + 5)
+        os.makedirs(kid_stack)
+        break
+    except FileExistsError:
+        continue
+    except OSError as e:
+        die("MkdirFailed", "cannot create %s: %s" % (os.path.join(kids_dir, kid), e))
+else:
+    die("MkdirFailed", "could not create a unique fork record after 5 attempts")
+
+
+def scrap():
+    """還沒上表：刪掉剛抄好的 stack 與紀錄（這次沒生成任何 agent）。"""
+    global running_kid
+    shutil.rmtree(kid_stack, ignore_errors=True)
+    forget(kid)
+    running_kid = None
+
+
+try:
+    copied = fork_copy.copy_stack(definition, my_stack, kid_stack)
+except fork_copy.ForkCopyBad as e:
+    scrap()
+    die(e.code, str(e))
+out, err = agent(["ctl", "add", "--name", kid, "--ws", ws, "--stack", os.path.relpath(kid_stack),
+                  "--envs", "%s=%d" % (DEPTH_ENV, depth + 1), definition])
+if err:
+    if err[0] in ("DaemonMissing", "DaemonFailed"):
+        mark(kid, "failed")                     # 信可能晚到、之後才上表：留 stack，下一次對帳收
+    else:
+        scrap()
+    die(*err)
+printed = out.strip().splitlines()[-1] if out.strip() else ""
+
+
+def undo(err, what):
+    """上表了卻不能用：收回分身再報錯（不是分身的失敗，不留 stack）。"""
+    _, err2 = agent(["ctl", "rm", "--purge", kid])
+    if err2 is None:
+        forget(kid)
+    die(err[0], "%s (during %s; %s)" % (err[1], what, "rolled back: removed %s" % kid if err2 is None
+                                         else "rollback failed too: %s %s" % err2))
+
+
+if not printed or os.path.realpath(printed) != os.path.realpath(kid_stack):
+    undo(("CommandFailed", "aos-agent ctl add printed %r, not the copied stack %s" % (printed, kid_stack)), "ctl add")
+
+# ---- 問、收 ----
+text = OPENING.format(goal=goal.strip(), n=max_chars,
+                      again=AGAIN_NO if depth + 1 >= MAX_DEPTH else AGAIN_YES.format(d=depth + 1, m=MAX_DEPTH))
+_, err = agent(["say", "--target", kid], text=text)
+answer = None
+if err is None:
+    if timeout_cycles is not None:
+        answer, err = agent(["listen", "--target", kid, "--timeout-cycles", str(timeout_cycles)], timeout_cycles=timeout_cycles + 30)
+    else:
+        answer, err = agent(["listen", "--target", kid, "--timeout-s", "%g" % timeout_s], timeout_s=timeout_s + 30)
+if err:                                         # 分身答不出：先停、stack 一律留（不管 keep）
+    agent(["ctl", "stop", "--target", kid])
+    copy_child(stack, kid, kid_stack)
+    mark(kid, "failed")
+    die(err[0], "%s (details: %s)" % (err[1], rel(kid_stack)))
+copy_child(stack, kid, kid_stack)
+answer = answer.strip()
+if len(answer) > max_chars:
+    answer = answer[:max_chars].rstrip() + " [truncated]"
+if keep:                                        # 留著也不佔 loop：答完就 ctl stop（stack 在；要追問＝ctl start＋say）
+    _, err = agent(["ctl", "stop", "--target", kid])
+    mark(kid, "kept")
+    if err:
+        tool_io.warn("could not stop the kept fork %s: %s %s" % ((kid,) + err))
+    sys.stdout.write("%s\ndetails: %s\n" % (answer, rel(kid_stack)))
+    sys.exit(0)
+_, err = agent(["ctl", "rm", "--purge", kid])
+if err is None:
+    forget(kid)
+else:
+    mark(kid, "failed")
+    tool_io.warn("could not remove the finished fork %s: %s %s" % ((kid,) + err))
+sys.stdout.write(answer + "\n")
+sys.exit(0)

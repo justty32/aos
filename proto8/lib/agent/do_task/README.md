@@ -1,5 +1,29 @@
-# do_task — 派一次小任務，收回短結論並保存子帳（11-11 由 thought 改名）。
+# do_task — 在自己的 history 裡做一段任務，做完只留總結（11-11 改成 save／load）
 
-子 agent 回答後，不論 `keep`，都先把公開宣告的帳抄到工具小格的 `observed/<子名>/`，才停止或移除子 agent。失敗與舊失敗子的清理也先保存帳。
+← [lib](../../README.md)｜設計、代定、待裁：[thinking 11-11 fork-and-do-task/02](../../../thinking/2026-11/11/fork-and-do-task/02-do_task.md)
 
-抄帳只認子 stack 下各層 `interfaces.json` 的 `aos-observed.file`，保存帳的相對路徑與觀測介面宣告；沒有宣告的不猜。子再生的孫抄本一併保留。這次抄本的位置交給呼叫端寫入 `tool.child`，不混進結論。
+使用者 11-11：「另一種是save/load，也就是從在呼叫do_task那時候留下一個紀錄點，等做完task後使用self_history修改history，將進行這段task的過程中的history做總結，然後退回load那邊」；選項框裁「do_task有兩個子指令，一個是開始，一個是結束。結束的時候要附上總結」「eca 不給 do_task」。以前「開一隻用完即走的小幫手」的能力拿掉了（要派工用 `subagent` 或 `fork`）。
+
+| op | 參數 | 做什麼 |
+|---|---|---|
+| `start` | `task`（選填，一句話） | 叫我的那則 assistant＝紀錄點，記進工具小格 `tasks.json`；任務裡再 start＝巢狀（最多 5 層） |
+| `end` | `summary`（必給） | 收最裡面那段：紀錄點那則與它的 tool 結果之後、到叫 end 的那則之前，自己的訊息換成一則 `[aos] summary: lines A-B, N messages. Task "…" ended: …`（role user）；別人給的 user 訊息（信、goal 提醒）不摺，照原順序接在總結後面 |
+| `status` | — | 列開著的任務（外到內）、紀錄點現在第幾行 |
+
+改 history 全走 `aos-agent history`（同 self_history：`ctl who`、`ls --json`、有要留的訊息先 `set` 挪到段尾、再 `summarize` 一次），原文照舊進 `history_removed.jsonl`。叫 end 那則與它的結果照常由 act 接在後面。只看 history 的形狀判身體：沒有「叫到一半的 tool call」＝`BodyUnsupported`（eca）。只在 daemon 下跑的 agent 能用。
+
+摺疊前後（真 daemon＋假腦實跑）：
+
+```
+before end                                   after
+1 user       Go.                             1 user       Go.
+2 assistant  -> do_task(start)               2 assistant  -> do_task(start)
+3 tool       Task started (depth 1) ...      3 tool       Task started (depth 1) ...
+4 assistant  -> peek_now_time({})            4 user       [aos] summary: lines 4-7, 4 messages. Task "Find the time" ended: It is today.
+5 tool       2026-11-11T06:55:05Z            5 assistant  -> do_task(end)
+6 assistant  -> peek_now_time({})            6 tool       Task ended (depth 1) "Find the time".
+7 tool       2026-11-11T06:55:06Z                         4 messages of yours (lines 4-7) are now one summary at line 4; the originals are in .../history_removed.jsonl.
+8 assistant  -> do_task(end)                 7 assistant  Done.
+```
+
+測試：`tests/test_do_task.py`（假 aos-agent，history 那半是真的 `aos_agent.history`）；`templates/tests/agent-fsm/test_do_task_fold.py`（真 daemon＋假腦：摺疊、巢狀、任務中等信、停掉再起來）。

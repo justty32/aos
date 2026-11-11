@@ -1,4 +1,4 @@
-{"description": "Pack gadgets: small handy tools - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic expression), do_task (hand one small task to a throw-away helper agent and get back its short conclusion).",
+{"description": "Pack gadgets: small handy tools - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic expression), do_task (do one task inside your own conversation and fold it into a summary when it ends; agent-fsm only).",
  "tools": {
            "peek_clock": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/peek_clock"}},
            "peek_now_time": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/peek_now_time"}},

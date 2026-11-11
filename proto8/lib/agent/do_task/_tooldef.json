@@ -1,95 +1,52 @@
 {
-  "description": "Hand one task to a fresh helper agent and get back only its short conclusion; its tool calls stay out of your history. The helper's definition: from, else the tool registry entry env.AOS_DO_TASK_FROM default, else your own definition (with your hooks and tools, do_task included). The helper knows only goal and context, keeps the definition's tools unless tools is given, and uses your brain unless model says otherwise. If your brain settings cannot be read, the call fails: give model to choose one. It is removed when done unless keep is true. Depth travels as the AOS_DO_TASK_DEPTH launch parameter; helpers may start helpers only one level deeper. Example: {\"goal\": \"Count the .csv files under data/ and return the number\"} or {\"from\": \"helpers/reviewer\", \"goal\": \"Review the result and return one sentence\"}. Details: knowledge_read aos/agents.json#/do_task. Paths resolve relative to your workspace.",
+  "description": "Do one task inside your own conversation and keep only its summary. Call {\"op\": \"start\", \"task\": \"Find where the config is read\"} first: that call is the mark. Work as usual (call tools, think). When done call {\"op\": \"end\", \"summary\": \"The config is read in cfg/load.py; it needs AOS_HOME.\"}: every message of yours after the mark, up to this call, is replaced by one message \"[aos] summary: lines A-B, N messages. Task \\\"...\\\" ended: SUMMARY\". The summary is required. Messages from others that came in during the task (letters, goal reminders) are not folded; they stay, after the summary. Tasks may nest (at most 5 deep); end closes the innermost. {\"op\": \"status\"} lists the open tasks (they survive a restart). The removed messages are kept in a file next to your history. Only for an agent-fsm body: elsewhere BodyUnsupported. Errors: ArgumentsBad, OpUnknown, TaskMissing, MarkerMissing, DepthExceeded, BodyUnsupported, StateBad, WriteFailed, DaemonMissing, DaemonFailed, InstanceMissing.\nDetails: knowledge_read aos/me.json#/do_task.",
   "env": [
     "AOS_DAEMON"
   ],
   "errors": [
     "ArgumentsBad",
-    "FromMissing",
+    "OpUnknown",
+    "TaskMissing",
+    "MarkerMissing",
+    "DepthExceeded",
+    "BodyUnsupported",
+    "StateBad",
+    "RangeBad",
+    "MessageBad",
+    "HistoryMissing",
+    "HistoryBad",
+    "InterfaceBad",
+    "WriteFailed",
+    "WsMissing",
     "LaunchFailed",
     "CommandFailed",
-    "WriteFailed",
     "DaemonMissing",
     "DaemonFailed",
-    "StackMissing",
-    "WsMissing",
-    "DefMissing",
-    "DepthExceeded",
-    "ToolMissing",
-    "MkdirFailed",
-    "ClockBad"
+    "InstanceMissing"
   ],
   "parameters": {
     "type": "object",
     "properties": {
-      "from": {
+      "op": {
         "type": "string",
-        "description": "optional agent definition folder; overrides the tool registry entry env.AOS_DO_TASK_FROM default (set with add --envs AOS_DO_TASK_FROM=helpers/basic); neither = your own definition. Paths are relative to your workspace or absolute; the definition must declare aos-agent in interfaces.json. None of the three: FromMissing"
+        "enum": [
+          "start",
+          "end",
+          "status"
+        ],
+        "description": "start = mark here and begin a task, end = fold the task into your summary, status = list the open tasks"
       },
-      "goal": {
+      "task": {
         "type": "string",
-        "description": "what to do and what to bring back, one to a few sentences"
+        "description": "start: one sentence, what this task is for (optional; it goes into the summary line)"
       },
-      "context": {
-        "default": [],
-        "description": "background the helper needs, e.g. conclusions of earlier steps; a string or an array of strings",
-        "anyOf": [
-          {
-            "type": "string"
-          },
-          {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        ]
-      },
-      "tools": {
-        "type": "array",
-        "description": "tools for the helper; omit to keep the definition's tools, or give [] to remove all tools",
-        "items": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "path": {
-              "type": "string",
-              "description": "tool folder, relative to your workspace or absolute; leave it out to lend the helper your own tool of that name"
-            }
-          },
-          "required": [
-            "name"
-          ]
-        }
-      },
-      "model": {
+      "summary": {
         "type": "string",
-        "description": "the helper's brain pack (e.g. stupid-fast to save money); default: the same as yours"
-      },
-      "max_chars": {
-        "default": 600,
-        "type": "integer",
-        "description": "at most this many characters come back; default 600 (longer ones end with [truncated])"
-      },
-      "timeout_s": {
-        "default": 600,
-        "type": "number",
-        "description": "finite positive seconds to wait for the conclusion; default 600, no fixed upper limit; mutually exclusive with timeout_cycles"
-      },
-      "keep": {
-        "default": false,
-        "type": "boolean",
-        "description": "true keeps the helper (stopped) and adds a last line details: <its stack>/ for later inspection; default false"
-      },
-      "timeout_cycles": {
-        "type": "integer",
-        "description": "positive integer cycles to wait; mutually exclusive with timeout_s; without AOS_CLOCK, one cycle is AOS_CLOCK_INTERVAL milliseconds (default 1000)"
+        "description": "end (required): what the task found or did, the facts you still need later; it replaces the task's messages"
       }
     },
     "required": [
-      "goal"
+      "op"
     ]
   }
 }

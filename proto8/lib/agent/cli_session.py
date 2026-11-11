@@ -237,7 +237,7 @@ def registry(cfg, tool_dir, path, files):
 # 所以明寫帶進 mcp_servers.aos.env。帶哪些＝aos-mcp、aos-tools 與 lib 工具實際讀的（_tooldef 的 env、程式裡讀的）；
 # AOS_CD／AOS_ENTRY／AOS_AGENT 是每支程序自己的，不帶。使用者 11-11 選項框裁「修」。
 MCP_ENV = ("AOS_HOME", "AOS_DAEMON", "AOS_CLOCK", "AOS_CLOCK_INTERVAL", "AOS_KNOWLEDGE", "AOS_LLM_KERNEL", "AOS_KERNEL",
-           "AOS_DO_TASK_DEPTH", "AOS_DO_TASK_FROM", "AOS_LINUX_USER_STACK")
+           "AOS_LINUX_USER_STACK")                # 11-11 舊 do_task 的 AOS_DO_TASK_DEPTH／AOS_DO_TASK_FROM 隨它拿掉
 
 
 def mcp_env(ws, stack):

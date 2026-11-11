@@ -107,14 +107,14 @@ class DefinitionsTest(unittest.TestCase):
         _, data = self.call('ls', match='absent')
         self.assertEqual(data, {'defs': []})
 
-    def test_refs_tool_and_do_task_from(self):
+    def test_refs_tool(self):
         self.definition('target')
         self.definition('direct', tool={'x': {'path': '../target'}})
-        self.definition('do_task', tool={'x': {'path': '../do_task_tool', 'env': {'AOS_DO_TASK_FROM': str(self.root / 'target')}}})
+        self.definition('env_only', tool={'x': {'path': '../other_tool', 'env': {'SOME_FROM': str(self.root / 'target')}}})
         self.definition('other')
         result, data = self.call('refs', **{'def': 'target'})
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(data, {'refs': ['direct', 'do_task']})
+        self.assertEqual(data, {'refs': ['direct']})                 # env 裡寫的路徑不算引用（11-11 舊 do_task 的 AOS_DO_TASK_FROM 拿掉）
 
     def test_nested_tool_table_paths(self):
         self.definition('target')
@@ -124,14 +124,6 @@ class DefinitionsTest(unittest.TestCase):
         _, data = self.call('ls', match='caller')
         self.assertEqual(data['defs'][0]['tools'], ['target'])
         _, data = self.call('refs', **{'def': 'target'})
-        self.assertEqual(data['refs'], ['caller'])
-
-    def test_relative_do_task_source_uses_workspace(self):
-        self.definition('target')
-        self.definition('caller', tool={'x': {'path': '../do_task_tool', 'env': {'AOS_DO_TASK_FROM': 'target'}}})
-        from unittest.mock import patch
-        with patch.dict(os.environ, {'AOS_WS': str(self.root)}):
-            _, data = self.call('refs', **{'def': 'target'})
         self.assertEqual(data['refs'], ['caller'])
 
     def test_check_good_does_not_require_existing_lineage(self):

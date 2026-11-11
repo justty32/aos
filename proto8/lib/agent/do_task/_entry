@@ -1,57 +1,32 @@
 #!/usr/bin/env python3
-# do_task - 執行一個任務：派一件事給一隻用完即走的小幫手 agent（呼叫方指定、工具設定預設，或呼叫者自己的定義），只拿回短結論；子的工具來回不進叫我的那隻的 history
-# 11-11 由 thought（小念頭）改名（使用者「我在想是不是該改名為do_task，也就是執行一個任務，執行完後history中不會殘留細節(或是可選要殘留哪些)。」，
-#   選項框：名字「do_task」、另帶回什麼「不加，維持現狀」；thinking/2026-11/11/do-task-rename.md）。
-# 使用者 11-05 傍晚：「fork出去，做完之後回報，主線這邊對於這個任務的描述就會只剩短短幾句……我更推薦將其作為工具」「記憶這項，他本身也算是任務」；
-#   三題裁：子的腦「預設同父 (Recommended)」、子 stack「可選。默認刪掉。」、名字「thought (Recommended)」。
-#   規劃：proto8/thinking/2026-11/05/small-thought/（README、02-代定、03-實作步驟草稿；實作結果段在 README）。
-# 介面（lib/docs/01 的契約）：stdin 一份 {"from"?, "goal", "context"?, "tools"?, "model"?, "max_chars"?, "timeout_s"?, "timeout_cycles"?, "keep"?}，沒有 op：
-#   定義：from ＞ 工具登記格 env.AOS_DO_TASK_FROM ＞ 呼叫者自己的定義（daemon 表上我那列的 def，ctl who --json；11-11 使用者「啊？不是就呼叫者自己的範本嗎？
-#   應該說呼叫者的stack內，本身就會放自身的定義來源吧。」）；三者都拿不到＝FromMissing。from、AOS_DO_TASK_FROM 相對 $AOS_WS 解析，表上的 def 照表（已拼回絕對）。
-#   用自己的定義＝小幫手連 hook、工具（含 do_task 自己）一起帶著；深度上限照擋（AOS_DO_TASK_DEPTH）。
-#   goal 必要（要做什麼、要帶回什麼）；context＝字串或字串陣列（前幾步的結論）；tools＝[{name, path?}]（path 相對從 $AOS_WS、絕對照用；
-#   沒給 path＝照抄我自己工具箱裡同名那支〔aos-agent tools ls --json〕，沒有＝ToolMissing），沒給 tools＝保留定義的工具組；[]＝清空；model＝子的腦（11-10 晚使用者「把fsm認的endpoint這個key，也改名爲model吧」，原本叫 endpoint），沒給＝同父（aos-agent llm ls 父的 model；父沒寫或沒宣告 llm＝範本預設；llm ls 其他錯〔看不到父的定義等〕＝接它的代號報錯，不默默換腦；
-#   父與子的定義宣告的 llm_keys 不一樣〔例父是 eca、子是 fsm，同叫 model 意思不同〕＝不抄、子用自己定義的，代定）；
-#   max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、只要求有限正數；keep 預設 false。
-# 一次叫＝aos-agent --daemon $AOS_DAEMON 的五步：ctl who（我是誰、我的深度）→ ctl add 範本（--name t-<父名前32字>-<UTC毫秒>-<4位hex>、--ws 我的 $AOS_WS）→
-#   子的覆蓋層 llm set model／tools rm／tools add --replace → say 開場文（固定英文段＋goal＋context）＋listen --timeout-s／--timeout-cycles →
-#   預設 ctl rm --purge 子（stack 刪掉、不印 details）；keep: true＝留著但 ctl stop（不佔 loop；要追問 ctl start 再 say）、結論後多一行 details: <子的 stack，相對 $AOS_DAEMON>/。
-#   ctl add 之後到 say 之前任一步失敗（tools ls、設定那幾步）＝當下 ctl rm 收回再報錯（不算子的失敗）；收不回＝紀錄留 running 租約，過期後下一次叫的對帳收。
-# 子名每次唯一：mkdir $AOS_STACK/children/<子名>/，撞表或資料夾最多重試五次。
-#   state＝running <UTC到秒Z租約>／kept／failed；每步呼叫前續租至逾時＋5秒，TERM 收回租約。
-#   對帳先保護未到期租約與剛建資料夾；表上沒有就忘掉，過期 running 先 stop 再記 failed；kept 不動，failed 照 FAILED_KEEP gc。
-# 深度：讀 AOS_DO_TASK_DEPTH（沒有＝0），ctl add --envs 在啟動時傳父+1，子 stack 不寫深度檔；
-#   深度已是 MAX_DEPTH（2）＝DepthExceeded、不生（子能再開孫、孫不行）。
-# 錯：stderr 與 stdout 各一行「do_task: error: 代號 原因」、退 1（規則 3，tool_io.die）——自己的：ArgumentsBad、FromMissing、DepthExceeded、
-#   DaemonMissing（AOS_DAEMON 沒設或目錄不存在）、DaemonFailed（目錄存在但逾時沒回信：忙、暫停、掛了）、StackMissing、WsMissing、DefMissing（範本不在）、ToolMissing、MkdirFailed、WriteFailed、LaunchFailed（aos-agent 不在 PATH）、
-#   CommandFailed（逾時）；aos-agent 退非 0＝取它 stderr 最後一行錯誤行的代號與原因接成自己的（AddRejected、AnswerMissing…；同 agents）。
-#   子答不出（listen 錯、逾時）＝錯誤行尾附 (details: <子的 stack>/)，子先 ctl stop、stack 一律留（不管 keep）。
-#   aos-agent 的 stderr 原樣透到 stderr（R10）。--help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉那一群，退 130）。
-import json, math, os, re, secrets, signal, subprocess, sys, time
-from datetime import datetime, timedelta, timezone
+# do_task - 在自己的 history 裡做一段任務：start 留紀錄點、end 附總結把紀錄點之後那段換成一則總結（aos-agent history 改、原文照舊留在旁邊）、status 看自己在不在任務裡；只給 agent-fsm 的身體
+# 使用者 11-11：「另一種是save/load，也就是從在呼叫do_task那時候留下一個紀錄點，等做完task後使用self_history修改history，將進行這段task的過程中的history做總結，
+#   然後退回load那邊」；選項框裁「do_task改成save/load模式」「do_task有兩個子指令，一個是開始，一個是結束。結束的時候要附上總結」「eca 不給 do_task」
+#   「拿掉這個能力」（舊的開一次性小幫手；要派工用 fork 或 subagent）。thinking 2026-11/11/fork-and-do-task（README 與 02-do_task）。
+# 介面（lib/docs/01 的契約）：stdin 收 {"op": "start"|"end"|"status", …}；別的鍵＝ArgumentsBad：
+#   start {task?}   在這一則（叫我的那則 assistant＝紀錄點）開一段任務；task＝一句這段要做什麼。任務裡再 start＝巢狀（最多 MAX_DEPTH 層，DepthExceeded）。
+#   end {summary}   收最裡面那段：紀錄點那則與它的 tool 結果之後、到這一步之前的訊息換成一則「[aos] summary: lines A-B, N messages. Task "…" ended: 總結」
+#                   （aos-agent history summarize；別人給的 user 訊息〔信、goal 提醒，不含 [aos] summary:〕不摺，照原順序接在總結後面，先用 history set 挪過去）。
+#                   沒開任務＝TaskMissing；紀錄點那則已經不在 history（被刪、被 summarize 掉）＝MarkerMissing，這段任務就此關掉、不摺。
+#   status {}       列開著的任務（外到內）：task、開始時間、紀錄點現在第幾行、之後幾則。
+# 「這一步」與紀錄點：先 aos-agent ctl who 認出是哪隻、history ls --json 讀全部；最後一則 assistant 帶 tool_calls、後面只有 tool＝這一步，
+#   它的 tool_calls 裡第一個還沒有 tool 結果的＝叫我的這一個（act 一個一個照順序跑）。找不到＝BodyUnsupported（eca 的工具來回在 CLI 裡、history 沒有這種行；
+#   手動 aos-tools call 也一樣）——不看定義、只看 history 的形狀。
+# 狀態：工具小格 $AOS_STACK（＝<agent stack>/tools/do_task/）的 tasks.json {"tasks": [{"call", "task"?, "started_at"}], "ended"?: {"call", "result"}}，
+#   寫才建、暫存檔再改名。agent 掛掉或被停再起來，紀錄點照在（status 看得到）。act 中途斷了重跑同一個 call：start 同 id＝照印、不再開；
+#   end 同 id（ended.call）＝照印上次的結果；摺完還沒記上就斷了（總結那則已在、內容對得上）＝不再摺、只關掉。
+# 錯：stderr 與 stdout 各一行「do_task: error: 代號 原因」、退 1（tool_io.die）；aos-agent 退非 0＝它最後一行錯誤行的代號與原因接成自己的
+#   （C-52 例外 ⑤，同 self_history）、沒那行＝CommandFailed。只在 daemon 下跑的 agent 能用。每次叫 aos-agent 最多 60 秒；被 TERM 先收掉它再走。
+import json, os, re, signal, subprocess, sys
+from datetime import datetime, timezone
 HELP = """\
 usage: do_task < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Hand one task to a throw-away child agent from your chosen definition on your daemon ($AOS_DAEMON)
-and print only its short conclusion; the child's tool calls stay out of your history.
-The "from" definition and tool paths may be relative to your workspace or absolute.
-Omit "from" to use AOS_DO_TASK_FROM, set in this tool's registry entry env (or add --envs);
-its relative path also starts at your workspace. Neither given: your own definition (the def
-of your row on the daemon table), with its hooks and tools, do_task included. None of the three: FromMissing.
-Omit tools to keep the definition's tools; tools: [] gives the child no tools.
-timeout_s is any finite positive number of seconds (default 600).
-Use timeout_cycles (a positive integer) instead to count cycles; giving both is ArgumentsBad.
-Without AOS_CLOCK, one cycle is AOS_CLOCK_INTERVAL milliseconds (default 1000).
-Without model the child uses your brain (when it is the same kind of agent as you); if your brain settings cannot be read (e.g. your
-definition is not visible in a sandbox), the call fails with that error instead of guessing.
-To ask a kept child more later, use aos-agent ctl start --target <child>, then say / listen.
-Result on stdout: the conclusion. The child is removed afterwards unless keep is true; if it fails, its stack
-is kept and the error line ends with (details: <stack>/). A child may start one more level of tasks
-(depth 2 at most: DepthExceeded).
-Each child has a unique name; running records use renewable UTC leases. Interrupted leases expire,
-and the next call stops expired children and keeps their stacks as failed tasks.
-DaemonMissing means AOS_DAEMON is unset or its directory does not exist.
-DaemonFailed means its directory exists but no reply arrived within the timeout (busy, paused, or down).
-On error: one line "do_task: error: CODE reason" on stderr and stdout, exit 1.
+Do one task inside your own conversation and keep only its summary: op start | end | status.
+start marks the message that called it; end (with a summary) replaces every message after that
+mark (up to the call of end) with one summary message. Messages from others that came in the
+meantime (letters, goal reminders) stay, after the summary. Tasks may nest; end closes the innermost.
+Removed messages are kept next to the history. Only for an agent-fsm body (BodyUnsupported otherwise).
+Result on stdout. On error: one line "do_task: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
@@ -64,7 +39,6 @@ while _lib != os.path.dirname(_lib):
 sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
 try:
     import tool_io  # noqa: E402
-    from observed_children import copy_child
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
     if error.name != "tool_io":
         raise
@@ -75,420 +49,218 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
 
 NAME = "do_task"
 tool_io.start(NAME, HELP)
-die = tool_io.die
+TIMEOUT_S = 60
+MAX_DEPTH = 5                                   # 巢狀最多幾層（代定：腦忘了 end 一直 start 時有個清楚的錯）
+SUMMARY = "[aos] summary:"                      # aos-agent history summarize 寫的那則的開頭（aos_flags.aos_note；lib 不 import py）
+STATE = "tasks.json"
 ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
-MAX_CHARS_DEFAULT, TIMEOUT_DEFAULT_S = 600, 600
-MAX_DEPTH = 2                  # 父 0 → 子 1 → 孫 2；孫再叫＝DepthExceeded（代定）
-FAILED_KEEP = 3                # 失敗留下的子 stack 最多留幾隻（gc，代定）
-STEP_S = 90                    # 其他每一步的逾時（ctl add 自己最多等 30 秒）
-OPENING = """You are a helper started for this one task only.
-Do the task below (use your tools if you need them). When you are done, reply with the conclusion only:
-what the task asks you to bring back, not the steps you took. At most {n} characters.
-
-Task: {goal}"""
+die = tool_io.die
 child = None
-running_kid = None
-
-
-def kill_group(p):
-    for sig, wait_s in ((signal.SIGTERM, 5), (signal.SIGKILL, 5)):
-        try:
-            os.killpg(p.pid, sig)
-        except OSError:
-            return
-        try:
-            p.wait(wait_s)
-            return
-        except subprocess.TimeoutExpired:
-            pass
 
 
 def on_term(signum, frame):
-    if running_kid is not None:
+    if child is not None and child.poll() is None:
         try:
-            renew(0)
-        except SystemExit:
-            pass                                # 寫租約失敗也要收自己的子行程、照訊號退碼
-    if child is not None:
-        kill_group(child)
+            os.killpg(child.pid, signal.SIGTERM)
+        except OSError:
+            pass
     sys.exit(128 + signum)
+
+
+def agent(*args):
+    """aos-agent args…：stderr 原樣往上；退非 0＝它最後一行錯誤行的代號與原因當自己的錯（沒有＝CommandFailed）。回 stdout。"""
+    global child
+    try:
+        child = subprocess.Popen(["aos-agent"] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, text=True, start_new_session=True, cwd=tool_io.workspace())
+    except OSError as e:
+        die("LaunchFailed", "cannot run aos-agent (put it on PATH with proto8/install.sh): %s" % e)
+    try:
+        out, err = child.communicate(timeout=TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        os.killpg(child.pid, signal.SIGKILL)
+        child.communicate()
+        die("CommandFailed", "aos-agent %s took over %d s and was killed" % (" ".join(args[:4]), TIMEOUT_S))
+    if err:                                     # 下層的 stderr 原樣透出（R10）
+        sys.stderr.write(err if err.endswith("\n") else err + "\n")
+        sys.stderr.flush()
+    if child.returncode != 0:
+        mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
+        if mine:
+            die(mine[-1].group(1), mine[-1].group(2))
+        die("CommandFailed", "aos-agent %s exited %d" % (" ".join(args[:4]), child.returncode))
+    return out
 
 
 signal.signal(signal.SIGTERM, on_term)
 signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
-
-
-def agent(argv, text=None, timeout_s=STEP_S, timeout_cycles=None):
-    """叫 aos-agent --daemon <AOS_DAEMON> argv…；退 0 回 (stdout, None)，退非 0 或逾時回 (stdout, (代號, 原因))。"""
-    global child
-    if running_kid is not None:
-        renew(timeout_s + 5)
-    try:
-        deadline = tool_io.deadline_after(timeout_cycles) if timeout_cycles is not None else None
-    except tool_io.Error as e:
-        return "", (e.code, str(e))
-    cmd = ["aos-agent", "--daemon", daemon] + argv
-    try:
-        child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL,
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
-    except OSError as e:
-        die("LaunchFailed", "cannot start aos-agent (is it on PATH?): %s" % e)
-    end = time.monotonic() + timeout_s
-    payload = None if text is None else text.encode("utf-8")
-    while True:
-        try:
-            out, err = child.communicate(payload, timeout=0.2 if deadline is not None else min(86400, max(0, end - time.monotonic())))
-            break
-        except subprocess.TimeoutExpired:
-            payload = None
-            try:
-                waiting = not tool_io.expired(deadline) if deadline is not None else time.monotonic() < end
-            except tool_io.Error as e:
-                kill_group(child)
-                child = None
-                return "", (e.code, str(e))
-            if waiting:
-                if deadline is not None and running_kid is not None:
-                    try:
-                        renew(STEP_S + 5)
-                    except SystemExit:
-                        kill_group(child)
-                        child = None
-                        raise
-                continue
-            kill_group(child)
-            child = None
-            return "", ("CommandFailed", "aos-agent %s did not finish in %s (killed)" % (" ".join(argv[:2]), "%d cycles" % timeout_cycles if deadline is not None else "%g s" % timeout_s))
-    p, child = child, None
-    out, err = out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
-    if err:                                     # 下層的 stderr 原樣透出（R10）
-        sys.stderr.write(err if err.endswith("\n") else err + "\n")
-        sys.stderr.flush()
-    if p.returncode == 0:
-        return out, None
-    lines = [x for x in err.splitlines() if x.strip()]
-    mine = [m for m in map(ERR_RE.match, lines) if m]
-    if mine:
-        return out, (mine[-1].group(1), mine[-1].group(2))
-    return out, ("CommandFailed", "aos-agent %s exited %d: %s" % (" ".join(argv[:2]), p.returncode, lines[-1] if lines else "(no message)"))
-
-
-def must(argv, text=None, timeout_s=STEP_S):
-    out, err = agent(argv, text, timeout_s)
-    if err:
-        die(*err)
-    return out
-
-
-def write_text(path, text):
-    tmp = os.path.join(os.path.dirname(path), ".%s.%d" % (os.path.basename(path), os.getpid()))
-    try:
-        with open(tmp, "w", encoding="utf-8") as f:
-            f.write(text)
-        os.replace(tmp, path)
-    except OSError as e:
-        die("WriteFailed", "cannot write %s: %s" % (path, e))
-
-
-# ---- 入口檢查（參數先、環境後）----
 args = tool_io.arguments()
-if "from" in args:
-    source = args["from"]
-    if not isinstance(source, str) or not source.strip():
-        die("ArgumentsBad", "from must be a non-empty agent definition path")
-else:
-    source = os.environ.get("AOS_DO_TASK_FROM")
-    if not source or not source.strip():
-        source = None                           # 再沒有＝呼叫者自己的定義（ctl who 之後才知道）
-goal = args.get("goal")
-if not isinstance(goal, str) or not goal.strip():
-    die("ArgumentsBad", "goal must be a non-empty string: what to do and what to bring back")
-context = args.get("context", [])
-if isinstance(context, str):
-    context = [context]
-if not isinstance(context, list) or not all(isinstance(c, str) for c in context):
-    die("ArgumentsBad", "context must be a string or an array of strings")
-tools = args.get("tools")
-if tools is not None and (not isinstance(tools, list) or not all(
-        isinstance(t, dict) and isinstance(t.get("name"), str) and t["name"]
-        and (t.get("path") is None or isinstance(t["path"], str) and t["path"]) for t in tools)):
-    die("ArgumentsBad", "tools must be an array of {name, path?} (non-empty strings; no path = the same tool as yours)")
-model = args.get("model")
-if model is not None and (not isinstance(model, str) or not model):
-    die("ArgumentsBad", "model must be a non-empty string (a brain pack name of the llm kernel)")
-max_chars = args.get("max_chars", MAX_CHARS_DEFAULT)
-if isinstance(max_chars, bool) or not isinstance(max_chars, int) or max_chars < 1:
-    die("ArgumentsBad", "max_chars must be a positive integer")
-if "timeout_s" in args and "timeout_cycles" in args:
-    die("ArgumentsBad", "timeout_s and timeout_cycles are mutually exclusive")
-timeout_cycles = args.get("timeout_cycles")
-if "timeout_cycles" in args and (isinstance(timeout_cycles, bool) or not isinstance(timeout_cycles, int) or timeout_cycles <= 0):
-    die("ArgumentsBad", "timeout_cycles must be a positive integer")
-timeout_s = args.get("timeout_s", TIMEOUT_DEFAULT_S)
-try:
-    valid_timeout = not isinstance(timeout_s, bool) and isinstance(timeout_s, (int, float)) and math.isfinite(timeout_s) and timeout_s > 0
-except OverflowError:
-    valid_timeout = False
-if not valid_timeout:
-    die("ArgumentsBad", "timeout_s must be a finite positive number")
-keep = args.get("keep", False)
-if not isinstance(keep, bool):
-    die("ArgumentsBad", "keep must be true or false")
-daemon = os.environ.get("AOS_DAEMON")
-if not daemon:
-    die("DaemonMissing", "AOS_DAEMON is not set (this tool starts its child on the daemon that runs you)")
-daemon = os.path.realpath(daemon)
-stack = os.environ.get("AOS_STACK")
-if not stack:
-    die("StackMissing", "AOS_STACK is not set")
-ws = tool_io.workspace()
-kids_dir = os.path.join(stack, "children")
+OPS = {"start": ("task",), "end": ("summary",), "status": ()}
+op = args.get("op")
+if op is None:
+    die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
+if op not in OPS:
+    die("OpUnknown", "op must be one of %s (got %r)" % (", ".join(OPS), op))
+extra = sorted(k for k in args if k != "op" and k not in OPS[op])
+if extra:
+    die("ArgumentsBad", "op %s does not take %s (it takes %s)" % (op, ", ".join(extra), ", ".join(OPS[op]) or "nothing else"))
+for key in OPS[op]:
+    v = args.get(key)
+    if (v is not None or op == "end") and (not isinstance(v, str) or not v.strip()):
+        die("ArgumentsBad", "summary is required: a few sentences on what the task found or did (it replaces the task's messages)"
+            if key == "summary" else "task must be a non-empty string (one sentence: what this task is for)")
+cell = os.environ.get("AOS_STACK")
+if not cell:
+    die("StackMissing", "AOS_STACK is not set (it is this tool's cell, <your stack>/tools/do_task/)")
+state_path = os.path.join(cell, STATE)
 
 
-def rel(p):
-    """子的 stack 相對管我的 daemon（portable-flow 的相對路徑規矩）。"""
-    r = os.path.relpath(p, daemon)
-    return (p if r.startswith("..") else r).rstrip("/") + "/"
-
-
-def forget(name):
-    global running_kid
+def load():
     try:
-        for f in os.listdir(os.path.join(kids_dir, name)):
-            os.remove(os.path.join(kids_dir, name, f))
-        os.rmdir(os.path.join(kids_dir, name))
-        if name == running_kid:
-            running_kid = None
-    except OSError:
-        pass
-
-
-def mark(name, state):
-    global running_kid
-    write_text(os.path.join(kids_dir, name, "state"), state + "\n")
-    if name == running_kid and state in ("kept", "failed"):
-        running_kid = None
-
-
-def renew(seconds):
-    now = datetime.now(timezone.utc)
-    ceiling = datetime.max.replace(tzinfo=timezone.utc, microsecond=0)
-    until = now + timedelta(seconds=min(seconds, (ceiling - now).total_seconds() - 1))
-    mark(running_kid, "running " + until.strftime("%Y-%m-%dT%H:%M:%SZ"))
-
-
-def lease_active(state):
-    if len(state) != 2 or state[0] != "running":
-        return False
-    try:
-        until = datetime.strptime(state[1], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-        return until > datetime.now(timezone.utc)
-    except ValueError:
-        return False
-
-
-def mtime(name):
-    """紀錄資料夾的修改時間；別的 do_task 剛刪掉＝0。"""
-    try:
-        return os.path.getmtime(os.path.join(kids_dir, name))
-    except OSError:
-        return 0
-
-
-def reconcile(table):
-    """children/ 對 daemon 表：未到期租約不碰；不在表上的忘掉；過期 running 先停，failed 超過 FAILED_KEEP 隻＝最舊的 ctl rm。"""
-    try:
-        names = sorted(os.listdir(kids_dir))
+        with open(state_path, encoding="utf-8") as f:
+            s = json.load(f)
     except FileNotFoundError:
-        return
-    failed = []
-    for n in names:
-        state_missing = False
-        age = mtime(n)
-        try:
-            with open(os.path.join(kids_dir, n, "state"), encoding="utf-8") as f:
-                st = f.read().split()
-        except OSError:
-            st = []
-            state_missing = not os.path.exists(os.path.join(kids_dir, n, "state"))
-        if lease_active(st):
-            continue                            # 另一個 do_task 正在用，可能還沒上表
-        if state_missing and time.time() - age < STEP_S:
-            continue                            # 剛 mkdir、state 還沒寫的那一瞬
-        if n not in table:
-            forget(n)
-            continue
-        if st[:1] == ["kept"]:
-            continue
-        if st[:1] in (["running"], ["failed"]) and table.get(n) != "stopped":   # 已停的不再寄 stop
-            _, err = agent(["ctl", "stop", "--target", n])
-            if err:
-                tool_io.warn("could not stop the abandoned task helper %s: %s %s" % ((n,) + err))
-        if st[:1] == ["running"]:                # 租約過了＝主人死在半路
-            mark(n, "failed")
-        failed.append((age, n))
-    for _, n in sorted(failed)[:max(0, len(failed) - FAILED_KEEP + 1)]:   # 留 FAILED_KEEP-1 隻，加上這次最多 FAILED_KEEP
-        child_path = child_stacks.get(n)
-        if child_path:
-            copy_child(stack, n, os.path.join(daemon, child_path), publish=False)
-        _, err = agent(["ctl", "rm", "--purge", n])
-        if err is None:
-            forget(n)
-        else:
-            tool_io.warn("could not remove the old failed task helper %s: %s %s" % ((n,) + err))
+        return {"tasks": []}
+    except (OSError, ValueError) as e:
+        die("StateBad", "cannot read %s: %s" % (state_path, e))
+    ok = isinstance(s, dict) and isinstance(s.get("tasks"), list) and all(
+        isinstance(t, dict) and isinstance(t.get("call"), str) for t in s["tasks"])
+    if not ok:
+        die("StateBad", "%s is not {\"tasks\": [{\"call\": ...}, ...]}" % state_path)
+    return s
 
 
-# ---- 我是誰、深度 ----
-me = json.loads(must(["ctl", "who", "--json"]))
-try:
-    depth = int(os.environ.get("AOS_DO_TASK_DEPTH", "0"))
-except ValueError:
-    die("ArgumentsBad", "AOS_DO_TASK_DEPTH must be a non-negative integer")
-if depth < 0:
-    die("ArgumentsBad", "AOS_DO_TASK_DEPTH must be a non-negative integer")
-if depth >= MAX_DEPTH:
-    die("DepthExceeded", "you are a task helper at depth %d; at most %d levels of do_task (do this step yourself)" % (depth, MAX_DEPTH))
-if source is None:                              # 三者最後一個：daemon 表上我那列的 def（呼叫者自己的定義）
-    own = me.get("def")
-    if not isinstance(own, str) or not own.strip():
-        die("FromMissing", "give from: no AOS_DO_TASK_FROM in this tool's registry entry env, and the daemon table has no definition for you")
-    definition = os.path.realpath(own)
-else:
-    definition = os.path.realpath(source if os.path.isabs(source) else os.path.join(ws, source))
-if not os.path.isdir(definition):
-    die("DefMissing", "the helper's definition %s is missing" % definition)
-def llm_keys(folder):
-    """定義 interfaces.json 宣告的 llm_keys（身體認哪些腦設定鍵）；讀不到或沒寫＝None。"""
+def save(s):
+    tmp = os.path.join(cell, "." + STATE + ".tmp")
     try:
-        with open(os.path.join(folder, "interfaces.json"), encoding="utf-8") as f:
-            keys = json.load(f).get("aos-agent", {}).get("llm_keys")
-    except (OSError, ValueError, AttributeError):
-        return None
-    return keys if isinstance(keys, list) else None
-
-
-if model is None:                               # 預設同父：只抄 model 這一鍵；父沒宣告 llm 或沒寫＝範本自己的預設
-    out, err = agent(["llm", "--target", me["name"], "ls"])
-    if err is not None and err[0] != "LlmMissing":   # 讀不到父的腦（沙箱裡看不到父的定義等）＝報錯，不默默換成範本預設（11-06，no-pid 13 邊緣 2）
-        die(err[0], "%s (cannot read your brain settings, so the helper cannot use the same brain; give model to choose one)" % err[1])
-    if err is None and llm_keys(definition) == llm_keys(me.get("def") or ""):
-        for line in out.splitlines():
-            if line.startswith("model="):
-                model = line[len("model="):].strip() or None
-
-mine = None                                     # tools 沒給 path＝照抄我自己工具箱裡同名那支（aos-agent tools ls --json）
-if any(t.get("path") is None for t in (tools or [])):
-    mine = {t.get("name"): t.get("path") for t in json.loads(must(["tools", "--target", me["name"], "ls", "--json"]) or "[]")
-            if isinstance(t, dict)}
-tool_list = []
-for t in tools or []:
-    if t.get("path") is None:
-        if not mine.get(t["name"]):
-            die("ToolMissing", "tools: %s has no path and you have no tool of that name (yours: %s)" % (t["name"], ", ".join(sorted(mine)) or "-"))
-        tool_list.append((t["name"], mine[t["name"]]))
-    else:
-        tool_list.append((t["name"], os.path.realpath(t["path"] if os.path.isabs(t["path"]) else os.path.join(ws, t["path"]))))
-
-# ---- 唯一子名、掛上 ----
-rows = json.loads(must(["ctl", "ls", "--json"]) or "[]")
-child_stacks = {r.get("name"): r.get("stack") for r in rows if isinstance(r, dict) and isinstance(r.get("stack"), str)}
-table = {r.get("name"): r.get("phase") for r in rows if isinstance(r, dict)} if isinstance(rows, list) else {}   # 名字 → phase
-reconcile(table)
-try:
-    os.makedirs(kids_dir, exist_ok=True)
-except OSError as e:
-    die("MkdirFailed", "cannot create %s: %s" % (kids_dir, e))
-for attempt in range(5):
-    now = datetime.now(timezone.utc)
-    stamp = now.strftime("%Y%m%dT%H%M%S") + "%03d" % (now.microsecond // 1000)
-    kid = "t-%s-%s-%s" % (me["name"][:32], stamp, secrets.token_hex(2))
-    if kid in table:
-        continue
-    try:
-        os.mkdir(os.path.join(kids_dir, kid))
-        running_kid = kid
-        renew(STEP_S + 5)
-        break
-    except FileExistsError:
-        continue
+        os.makedirs(cell, exist_ok=True)        # 小格寫才建（11-11 tool-cells-lazy）
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(s, f, ensure_ascii=False, indent=1)
+            f.write("\n")
+        os.replace(tmp, state_path)
     except OSError as e:
-        die("MkdirFailed", "cannot create %s: %s" % (os.path.join(kids_dir, kid), e))
-else:
-    die("MkdirFailed", "could not create a unique child record after 5 attempts")
-out, err = agent(["ctl", "add", "--name", kid, "--ws", ws, "--envs", "AOS_DO_TASK_DEPTH=%d" % (depth + 1), definition])
-if err:
-    if err[0] in ("DaemonMissing", "DaemonFailed"):
-        mark(kid, "failed")
-    else:
-        forget(kid)
-        running_kid = None
-    die(*err)
-kid_stack = out.strip().splitlines()[-1] if out.strip() else ""
+        die("WriteFailed", "cannot write %s: %s" % (state_path, e))
 
 
-def undo(err, what):
-    """設定沒上：收回子再報錯（不是子的失敗，不留 stack）。"""
-    if os.path.isdir(kid_stack):
-        copy_child(stack, kid, kid_stack)
-    _, err2 = agent(["ctl", "rm", "--purge", kid])
-    if err2 is None:
-        forget(kid)
-    die(err[0], "%s (during %s; %s)" % (err[1], what, "rolled back: removed %s" % kid if err2 is None
-                                         else "rollback failed too: %s %s" % err2))
+def in_progress(msgs):
+    """(這一步那則的行號, 叫我的 call id)。最後一則 assistant 帶 tool_calls、後面只有 tool，第一個沒結果的 call；找不到＝BodyUnsupported。"""
+    last = max((i for i, m in enumerate(msgs) if m and m.get("role") == "assistant"), default=None)
+    calls = msgs[last].get("tool_calls") if last is not None else None
+    if isinstance(calls, list) and calls and all(m and m.get("role") == "tool" for m in msgs[last + 1:]):
+        answered = {m.get("tool_call_id") for m in msgs[last + 1:]}
+        for c in calls:
+            if isinstance(c, dict) and isinstance(c.get("id"), str) and c["id"] not in answered:
+                return last + 1, c["id"]
+    die("BodyUnsupported", "do_task works only in an agent-fsm body, where each tool call is a line of your history; "
+        "yours has no tool call in progress (an eca body such as claude or codex keeps its tool calls inside the CLI). "
+        "For a separate task use subagent or fork")
 
 
-if not os.path.isdir(kid_stack):
-    undo(("CommandFailed", "aos-agent ctl add printed no stack folder: %r" % kid_stack), "ctl add")
-steps = [("llm set model", ["llm", "--target", kid, "set", "model=%s" % model])] if model else []
-if tools is not None:                          # 沒給＝保留定義的工具；明給才改宣告過的覆蓋層
-    out, err = agent(["tools", "--target", kid, "ls", "--json"])
-    if err:
-        undo(err, "tools ls")
-    try:
-        listed = json.loads(out or "[]")
-    except ValueError:
-        undo(("CommandFailed", "aos-agent tools ls --json did not print JSON"), "tools ls")
-    wanted = {t for t, _ in tool_list}
-    steps += [("tools rm " + t["name"], ["tools", "--target", kid, "rm", t["name"]])
-              for t in listed if isinstance(t, dict) and t.get("name") not in wanted]
-    steps += [("tools add " + t, ["tools", "--target", kid, "add", "--replace", "--name", t, p]) for t, p in tool_list]
-for what, argv in steps:
-    _, err = agent(argv)
-    if err:
-        undo(err, what)
+def marker_line(msgs, call, lock):
+    """紀錄點＝tool_calls 裡有這個 id 的那則 assistant（1 起；可以就是這一步那則：同一則裡先 start 後 end）；不在＝None。"""
+    for i in range(lock - 1, -1, -1):
+        m = msgs[i]
+        if m and m.get("role") == "assistant" and any(isinstance(c, dict) and c.get("id") == call for c in m.get("tool_calls") or []):
+            return i + 1
+    return None
 
-# ---- 問、收 ----
-text = OPENING.format(n=max_chars, goal=goal.strip())
-if context:
-    text += "\n\nContext:\n" + "\n".join("- " + c.strip() for c in context)
-_, err = agent(["say", "--target", kid], text=text)
-answer = None
-if err is None:
-    if timeout_cycles is not None:
-        answer, err = agent(["listen", "--target", kid, "--timeout-cycles", str(timeout_cycles)], timeout_cycles=timeout_cycles + 30)
-    else:
-        answer, err = agent(["listen", "--target", kid, "--timeout-s", "%g" % timeout_s], timeout_s=timeout_s + 30)
-if err:                                         # 子答不出：先停、stack 一律留（不管 keep）
-    agent(["ctl", "stop", "--target", kid])
-    copy_child(stack, kid, kid_stack)
-    mark(kid, "failed")
-    die(err[0], "%s (details: %s)" % (err[1], rel(kid_stack)))
-copy_child(stack, kid, kid_stack)
-answer = answer.strip()
-if len(answer) > max_chars:
-    answer = answer[:max_chars].rstrip() + " [truncated]"
-if keep:                                        # 留著也不佔 loop：答完就 ctl stop（stack 在；要追問＝ctl start＋say，11-05 夜第二輪邊緣）
-    _, err = agent(["ctl", "stop", "--target", kid])
-    mark(kid, "kept")
-    if err:
-        tool_io.warn("could not stop the kept task helper %s: %s %s" % ((kid,) + err))
-    sys.stdout.write("%s\ndetails: %s\n" % (answer, rel(kid_stack)))
+
+def kept(m):
+    """摺的時候留下的：別人給的 user 訊息（信、goal 提醒）；[aos] summary: 是自己摺的，照摺。"""
+    c = m.get("content") if m else None
+    return bool(m) and m.get("role") == "user" and not (isinstance(c, str) and c.startswith(SUMMARY))
+
+
+def quoted(t):
+    return " \"%s\"" % t["task"] if t.get("task") else ""
+
+
+def now():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+me = agent("ctl", "who").strip()
+rows = json.loads(agent("history", "--target", me, "ls", "--json"))
+msgs = [r.get("message") if isinstance(r.get("message"), dict) else None for r in rows]
+lock, call = in_progress(msgs)
+state = load()
+tasks = state["tasks"]
+
+if op == "status":
+    if not tasks:
+        print("Not in a task. Start one with {\"op\": \"start\", \"task\": \"...\"}.")
+        sys.exit(0)
+    print("In %d task%s (outermost first):" % (len(tasks), "" if len(tasks) == 1 else "s"))
+    for depth, t in enumerate(tasks, 1):
+        at = marker_line(msgs, t["call"], lock)
+        where = ("its start is line %d, %d messages after it" % (at, max(0, lock - 1 - at)) if at
+                 else "its start is no longer in your history; end closes it without folding")
+        print("%d.%s started %s; %s" % (depth, quoted(t) or " (no task text)", t.get("started_at", "?"), where))
+    print("End the innermost with {\"op\": \"end\", \"summary\": \"...\"}.")
     sys.exit(0)
-_, err = agent(["ctl", "rm", "--purge", kid])
-if err is None:
-    forget(kid)
+
+if op == "start":
+    again = bool(tasks) and tasks[-1]["call"] == call          # act 斷了重跑同一個 call：不再開
+    if not again:
+        if len(tasks) >= MAX_DEPTH:
+            die("DepthExceeded", "already %d tasks deep (at most %d); end one first" % (len(tasks), MAX_DEPTH))
+        tasks.append(dict({"call": call, "started_at": now()}, **({"task": args["task"].strip()} if args.get("task") else {})))
+        state.pop("ended", None)
+        save(state)
+    t = tasks[-1]
+    print("Task started (depth %d)%s%s. From here on, what you do is folded when you end it: call do_task with "
+          "{\"op\": \"end\", \"summary\": \"...\"} and only this start and your summary stay in your history."
+          % (len(tasks), quoted(t), " inside%s" % (quoted(tasks[-2]) or " another task") if len(tasks) > 1 else ""))
+    sys.exit(0)
+
+# ---- end ----
+ended = state.get("ended")
+if isinstance(ended, dict) and ended.get("call") == call:      # 同一個 end 重跑：照印上次的
+    sys.stdout.write(ended.get("result", ""))
+    sys.exit(0)
+if not tasks:
+    die("TaskMissing", "you are not in a task (start one with {\"op\": \"start\", \"task\": \"...\"}); nothing folded")
+t = tasks[-1]
+summary = args["summary"].strip()
+text = "Task%s ended: %s" % (quoted(t), summary)
+at = marker_line(msgs, t["call"], lock)
+if at is None:
+    tasks.pop()
+    save(state)
+    die("MarkerMissing", "the start of task%s is no longer in your history (it was removed or summarized); "
+        "nothing was folded and the task is closed" % quoted(t))
+lo = at + 1
+while lo < lock and msgs[lo - 1] and msgs[lo - 1].get("role") == "tool":   # 紀錄點那則的 tool 結果留著
+    lo += 1
+hi = lock - 1
+keep = [n for n in range(lo, hi + 1) if kept(msgs[n - 1])]
+fold = [n for n in range(lo, hi + 1) if not kept(msgs[n - 1])]
+done_before = (len(fold) == 1 and isinstance((msgs[fold[0] - 1] or {}).get("content"), str)
+               and msgs[fold[0] - 1]["content"].startswith(SUMMARY) and msgs[fold[0] - 1]["content"].endswith(text))
+where = ""
+if fold and not done_before:
+    first = hi - len(keep) + 1                  # 留下的挪到這段最後（照原順序），前面空出來的一整段交給 summarize
+    for j, n in enumerate(keep):
+        if first + j != n:
+            agent("history", "--target", me, "set", "--", str(first + j), json.dumps(msgs[n - 1], ensure_ascii=False))
+    out = agent("history", "--target", me, "summarize", "--", "%d-%d" % (lo, lo + len(fold) - 1), text)
+    where = out.strip().rpartition("; ")[2]
+tasks.pop()
+lines = ["Task ended (depth %d)%s." % (len(tasks) + 1, quoted(t))]
+if not fold:
+    lines.append("Nothing to fold: no messages of yours between the start and this call.")
+elif done_before:
+    lines.append("Already folded into the summary at line %d." % fold[0])
 else:
-    mark(kid, "failed")
-    tool_io.warn("could not remove the finished task helper %s: %s %s" % ((kid,) + err))
-sys.stdout.write(answer + "\n")
-sys.exit(0)
+    lines.append("%d message%s of yours (%s) %s now one summary at line %d; %s." % (
+        len(fold), "" if len(fold) == 1 else "s", "line %d" % lo if lo == hi else "lines %d-%d" % (lo, hi),
+        "is" if len(fold) == 1 else "are", lo, where or "the originals are kept next to your history"))
+if keep:
+    lines.append("%d message%s from others during the task %s kept after the summary." % (
+        len(keep), "" if len(keep) == 1 else "s", "is" if len(keep) == 1 else "are"))
+if tasks:
+    lines.append("You are still in task (depth %d)%s." % (len(tasks), quoted(tasks[-1])))
+result = "\n".join(lines) + "\n"
+state["ended"] = {"call": call, "result": result}
+save(state)
+sys.stdout.write(result)

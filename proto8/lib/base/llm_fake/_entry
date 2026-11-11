@@ -5,6 +5,8 @@
 #   stdout 一行 {"message", "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}, "model": "fake"}、退 0。
 #   endpoint.script（陣列，劇本）有就照劇本：已在 messages 裡的 assistant 則數 n，這次回 script[n]；一項是 {"content": "..."} 或
 #   {"tool_calls": [{"name": "...", "arguments": {...}}]}（arguments 給物件，這裡轉成 JSON 字串；補 id／type）；n 超過劇本長度＝照上面原本的行為。
+#   一項帶 "when": "字"（11-11 do_task 摺疊：history 被摺短了，assistant 則數會倒退）＝不按順序：最後一則的 content 含那個字就回它（照劇本順序第一個對上的），
+#   比按順序的先看；按順序的 n 只數沒帶 when 的那幾項。when 項的 id 是 call_when_<messages 則數>_<i>。
 #   endpoint.tool（字串，11-05 E 線）＝先叫的那個工具名：request 的 tools 裡有它就叫它、沒有＝照舊叫第一個（範本 11-05 起內建 agents、
 #   self_tools，按名字排在 peek_now_time 前面；demo 的 fake 包寫 "tool": "peek_now_time"）。
 # 錯：stderr 與 stdout 各一行「llm_fake: error: ArgumentsBad 原因」、退 1。
@@ -57,18 +59,24 @@ if script is not None and not isinstance(script, list):
     die("ArgumentsBad", "endpoint.script must be an array")
 last = messages[-1] if isinstance(messages[-1], dict) else {}
 n = sum(1 for m in messages if isinstance(m, dict) and m.get("role") == "assistant")
-if script and n < len(script):
-    item = script[n]
-    if not isinstance(item, dict) or not (isinstance(item.get("tool_calls"), list) or "content" in item):
-        die("ArgumentsBad", "endpoint.script[%d] must be {\"content\": ...} or {\"tool_calls\": [...]}" % n)
+for k, item in enumerate(script or []):
+    if not isinstance(item, dict) or not (isinstance(item.get("tool_calls"), list) or "content" in item) or (
+            "when" in item and not isinstance(item["when"], str)):
+        die("ArgumentsBad", "endpoint.script[%d] must be {\"content\": ...} or {\"tool_calls\": [...]} (with an optional string \"when\")" % k)
+said_text = last.get("content") if isinstance(last.get("content"), str) else ""
+hit = next((it for it in script or [] if "when" in it and it["when"] in said_text), None)
+ordered = [it for it in script or [] if "when" not in it]
+if hit is not None or n < len(ordered):
+    item = hit if hit is not None else ordered[n]
+    tag = "when_%d" % len(messages) if hit is not None else "script_%d" % n
     said = {"role": "assistant", "content": item.get("content")}
     if item.get("tool_calls"):
         said["tool_calls"] = []
         for i, c in enumerate(item["tool_calls"]):
             if not isinstance(c, dict) or not isinstance(c.get("name"), str):
-                die("ArgumentsBad", "endpoint.script[%d].tool_calls[%d] needs a string name" % (n, i))
+                die("ArgumentsBad", "endpoint.script[%d].tool_calls[%d] needs a string name" % (next(k for k, it in enumerate(script) if it is item), i))
             a = c.get("arguments", {})
-            said["tool_calls"].append({"id": "call_script_%d_%d" % (n, i), "type": "function",
+            said["tool_calls"].append({"id": "call_%s_%d" % (tag, i), "type": "function",
                                        "function": {"name": c["name"], "arguments": a if isinstance(a, str) else json.dumps(a, ensure_ascii=False)}})
 elif last.get("role") == "user" and tools:
     names = [(t.get("function") or {}).get("name") if isinstance(t, dict) else None for t in tools]
