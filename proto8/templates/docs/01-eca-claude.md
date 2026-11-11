@@ -18,7 +18,7 @@ eca-claude/
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__peek_now_time…；帶 `--own <stack>/tools.json`，self_tools 加減工具後 aos-mcp 送 list_changed，同一輪就叫得到，11-10 深夜「3.同一輪就生效」）；不要工具就刪掉它
   subagents.json 工具 subagent 的配額設定：{"max_subagents": 4}（這隻最多同時生幾隻；這隻的 stack 裡放一份 subagents.json 只寫改過的鍵＝覆蓋；誰是我生的另記在 stack 的 tools/subagent/subagents.json）
   interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model"], "history": "history.jsonl", "hooks": "hooks.json"}}（11-04；hooks 鍵 11-10 晚加；history 鍵 11-10 加，給 aos-agent history 找檔；llm_keys 11-10 晚加，aos-agent llm set 不在上面的鍵照存＋warning；aos-agent ctl add 只看這個宣告）
-  hooks.json  hook 清單（11-10 晚；11-11 起預設一格 timer：on_clock 每 300000 ms、handler lib/agent/hook_noop 什麼都不做；另一格 mail_notify：on_clock 每 10000 ms、handler lib/agent/mail_notify，有新信才往 queue 寄一則 `[aos] new_mail: …`；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
+  hooks.json  hook 清單（11-10 晚；11-11 起預設一格 timer：on_clock 每 300000 ms、handler lib/agent/hook_noop 什麼都不做；另一格 mail_notify：on_clock 每 60000 ms（11-11 翻案「每 1 分鐘」）、handler lib/agent/mail_notify，有新信才往 queue 寄一則 `[aos] new_mail: …`；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
   screen/     子介面：_entry＝["aos-eca-screen", "--eca", ".."]（aos-agent open／close／watch 叫它；動作接在最後）
   README.md、_metainfo.json  首行一句話與 summary 一致；估時 cost.time_ms 60000、resource ["llm"]，沒有頂層 timeout_ms（11-10 晚補，讓 agent_def check 過）
 ```

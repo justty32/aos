@@ -81,11 +81,11 @@ aos-agent say --target eca_cody 'Use the aos tool do_task with goal "What time i
 
 ## 新信通知與免打擾（`mail_notify`）
 
-三隻預設都掛著 `mail_notify`（每 10 秒看一次自己的信箱）：有**沒通知過**的新信，就往自己的對話放一則 `[aos] new_mail: N new letters from A, B. Look with mailbox_peek, read with mailbox_read.`，連來幾封只合成一則、不帶內文。試（假腦、不花錢；在 ws/ 裡打）：
+三隻預設都掛著 `mail_notify`（每 1 分鐘看一次自己的信箱；11-11 使用者翻案前是 10 秒，試驗場那幾份 `hooks.json` 要重抄才會變 1 分鐘，見 [backlog-rulings](../backlog-rulings.md)）：起來、睡醒時信箱裡已經在等的不提醒；之後有**沒通知過**的新信，就往自己的對話放一則 `[aos] new_mail: N new letters from A, B. Look with mailbox_peek, read with mailbox_read.`，連來幾封只合成一則、不帶內文。試（假腦、不花錢；在 ws/ 裡打）：
 
 ```sh
 aos-mailbox send --to fsm_ann --status REQUEST --title hello 'first letter'
-sleep 12; aos-agent history --target fsm_ann ls | grep new_mail       # 多一則 [aos] new_mail（後面跟假腦的回答）
+sleep 65; aos-agent history --target fsm_ann ls | grep new_mail       # 多一則 [aos] new_mail（後面跟假腦的回答）
 ```
 
 免打擾：叫它自己用 `self_hook` 的 `rm`（name `mail_notify`），或人打 `aos-agent hook --target fsm_ann rm mail_notify`；改回預設開：`aos-agent hook --target fsm_ann reset -y`（刪掉這隻自己的 hooks 清單、回到定義那份）。改間隔：同名再 `add`、加 replace。**eca 兩隻每則通知都算一題、會花錢**（codex 那隻收到後會自己 `mailbox_peek`／`mailbox_read`）。

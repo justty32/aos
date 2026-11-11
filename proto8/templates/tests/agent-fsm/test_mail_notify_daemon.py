@@ -1,6 +1,6 @@
 """範本預設的 mail_notify hook 實跑（真 root daemon＋時鐘、假腦）：寄一封＝間隔內收到一則 [aos] new_mail；連寄三封只多一則；self_hook 改間隔照新間隔；self_hook rm＝不再收到。"""
 # 11-11 mail-notify（使用者「用on_clock」「預設開」「合成一句」）。用這份 clone 的 impls／cmd（PATH 最前）、py／lib（PYTHONPATH）。
-# 跑法：python3 test_mail_notify_daemon.py [-v]；KEEP=1 留下試驗資料夾。約一分鐘（範本間隔 10 秒、根的時鐘 1 秒一格）。
+# 跑法：python3 test_mail_notify_daemon.py [-v]；KEEP=1 留下試驗資料夾。約一分鐘（範本間隔 11-11 翻案起是 60 秒，這裡把抄來的 hooks.json 改成 10 秒；根的時鐘 1 秒一格）。
 import json
 import os
 from pathlib import Path
@@ -35,6 +35,10 @@ class MailNotifyDaemon(unittest.TestCase):
         shutil.copytree(PROTO / "templates" / "agent-fsm", bob, ignore=shutil.ignore_patterns("__pycache__"))
         (bob / "llm.json").write_text(json.dumps({"model": "fake"}))
         (bob / "tools.json").write_text(json.dumps({"tools": {}}))   # 假腦看到工具會先叫一支；這裡只看 history 裡的提醒
+        hooks = json.loads((bob / "hooks.json").read_text())
+        self.assertEqual(hooks["hooks"]["mail_notify"]["every_ms"], 60000)   # 範本預設每 1 分鐘（使用者 11-11 選項框「每 1 分鐘」）
+        hooks["hooks"]["mail_notify"]["every_ms"] = 10000                    # 測試等不了一分鐘：抄來的那份改 10 秒，其餘照範本
+        (bob / "hooks.json").write_text(json.dumps(hooks))
         self.err = open(self.root / "root.err", "w")
         self.addCleanup(self.err.close)
         self.kernel = subprocess.Popen(["aos-daemon", str(self.root / "kernel_daemon.json")], cwd=self.root,

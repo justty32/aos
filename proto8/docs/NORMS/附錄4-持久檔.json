@@ -647,11 +647,11 @@
   {
    "path": "$AOS_STACK/hooks/mail_notify/notified.json",
    "lifetime": "暫時",
-   "writer": "lib/agent/mail_notify（範本 hooks.json 的 mail_notify 那格，on_clock 每 10000 ms）",
+   "writer": "lib/agent/mail_notify（範本 hooks.json 的 mail_notify 那格，on_clock 每 60000 ms；11-11 再註：原 10000，使用者翻案「每 1 分鐘」）",
    "reader": "同左",
    "image": "不進：在 hooks/ 小格裡，stack.gitignore 的 **/hooks/ 擋（G092）",
    "on_bad": "不在、壞了＝當作都沒通知過：信箱裡還沒讀的通知一次；寫不了＝WriteFailed（hook on_error continue＝一行 warning）",
-   "note": "11-11 mail-notify 新增：JSON 陣列，已通知過、還在 mailbox/new/ 的信名（讀掉的下次就拿掉）；事件 first 時不讀它。新檔，不用重建",
+   "note": "11-11 mail-notify 新增：JSON 陣列，已通知過、還在 mailbox/new/ 的信名（讀掉的下次就拿掉）；事件 first 時不讀它。新檔，不用重建。11-11 再註：使用者翻案「只提醒新到的」，事件 first 時改成照讀、不提醒，只把信箱裡還在的全寫進來（thinking/2026-11/11/backlog-rulings.md）",
    "evidence": "proto8/lib/agent/mail_notify/_entry"
   },
   {
