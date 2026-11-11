@@ -1,9 +1,14 @@
 // aos/util/cli.hpp：【aos-util】各支可自定短名、只在旗標位置認 help 的命令列（aos-exec、aos-loop、aos-fsm、aos-daemon 共用）。
 //
-//     程式 [旗標...] 位置參數...
+//     程式 [旗標...] 位置參數... [旗標...]
 //
-//   parse_cli   第一個不是旗標的參數（不以 - 開頭，或就是 -）起全部是 rest（之後原樣，不再解析旗標）；
-//               `--` 結束旗標（位置參數可以 - 開頭）。旗標都帶一個值：`--x V` 或 `--x=V`（`--x=` 是空字串），
+//   parse_cli   11-11（P-44 續，使用者「全部改」）：旗標寫在位置參數前後都收，位置參數照順序進 rest。例外：
+//               位置參數之後、不認得又長得像負數（-3、-.5）或名字裡有空白的字＝照舊當位置參數；
+//               `--` 結束旗標：在任何位置參數前＝丟掉它，之後＝連它一起原樣留在 rest（呼叫者看得到 CFG -- ARGS）；
+//               keep＝N（>0）：第 N 個位置參數起原樣進 rest、不再解析（子命令程式的頂層給 1＝解到子命令名為止，
+//               aos-exec 的 XXX ARGS 給 1；aos-json set／append／merge 也給 1：值什麼字都可以，FILE 後再認旗標會吃掉值）。
+//               keep＝1 就是 11-10 以前的舊規則。
+//               旗標都帶一個值：`--x V` 或 `--x=V`（`--x=` 是空字串），
 //               重複給＝最後一個算。不帶值的旗標（開關，10-22 `--dotenv-override`）另給一張表 switches：給了＝opts[值] 是 "1"，
 //               重複給＝一樣，寫 `--x=V`＝Error{ArgumentsBad}。不認得的旗標＝Error{FlagUnknown}、旗標缺值＝Error{ArgumentsBad}；rest 夠不夠由呼叫者自己判斷。
 //               `--help`（11-05 stdio-unify R3，內建開關）：在旗標的位置給了＝把 help（英文說明）印到 stdout、退 0（std::exit，不回來）；
@@ -37,7 +42,7 @@ struct Cli {
 Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
               const std::map<std::string, std::string>& switches = {}, const std::string& help = "",
               const std::vector<std::string>& short_flags = {},
-              const std::map<std::string, std::string>& custom_short = {});
+              const std::map<std::string, std::string>& custom_short = {}, size_t keep = 0);
 
 Error usage_error(const std::string& code, const std::string& reason, const std::string& usage);
 

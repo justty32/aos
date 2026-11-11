@@ -84,36 +84,13 @@ Output is JSON with or without --json. -j is short for --json; -h shows help.
 
 
 def parse_arguments(argv, command):
-    """Reuse aos_flags for each option run while allowing trailing options."""
+    """The action layer of the shared parser: options before or after the arguments (P-44 continued, 11-11)."""
     flags = {('--' + key): key for key in ('kind', 'score', 'by', 'model', 'family', 'tier')} if command == 'add' else {}
     multi = {'--observed': 'observed'} if command == 'score' else {}
-    options, arguments = {}, []
-    remaining = list(argv)
-    while remaining:
-        # Pass each flag run to the shared parser, preserving -- and flag values.
-        end = 0
-        while end < len(remaining):
-            token = remaining[end]
-            if token == '--' or not token.startswith('-') or token == '-':
-                break
-            flag = token.partition('=')[0]
-            end += 1
-            if '=' not in token and (flag in flags or flag in multi) and end < len(remaining):
-                end += 1
-        if end:
-            part, _ = aos_flags.parse(remaining[:end], flags, {'--json': 'json'},
-                                      multi, help=HELPS[command], short=('-j',))
-            for key, value in part.items():
-                if key == 'observed':
-                    options.setdefault(key, []).extend(value)
-                else:
-                    options[key] = value
-            remaining = remaining[end:]
-        if remaining:
-            if remaining[0] == '--':
-                arguments.extend(remaining[1:])
-                break
-            arguments.append(remaining.pop(0))
+    options, arguments = aos_flags.parse(argv, flags, {'--json': 'json'}, multi, help=HELPS[command], short=('-j',))
+    if '--' in arguments:   # -- after an argument comes back with the rest; the old parser dropped it
+        i = arguments.index('--')
+        arguments = arguments[:i] + arguments[i + 1:]
     return options, arguments
 
 
@@ -139,7 +116,7 @@ def main():
     command = None
     try:
         common, rest = aos_flags.parse(sys.argv[1:], {}, {'--json': 'json'},
-                                       help=HELP, short=('-j',))
+                                       help=HELP, short=('-j',), sub='root')
         if not rest:
             storage.fail('ArgumentsBad', 'a subcommand is required')
         command = rest[0]

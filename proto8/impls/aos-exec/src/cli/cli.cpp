@@ -37,7 +37,7 @@ static int run(const std::vector<std::string>& argv) {
         try {
             // 以後加旗標就在這裡加一列；--dotenv-override（10-22）不帶值：.env 蓋掉已有的，只管這一次 aos-exec
             // --stack S（11-03）：stack 放哪，同 --ws（"-"／空＝沿用外面的）
-            cli = parse_cli(argv, {{"--ws", "ws"}, {"--stack", "stack"}}, {{"--dotenv-override", "dotenv_override"}, {"--stack-lazy", "stack_lazy"}}, HELP, {"-w", "-s"});
+            cli = parse_cli(argv, {{"--ws", "ws"}, {"--stack", "stack"}}, {{"--dotenv-override", "dotenv_override"}, {"--stack-lazy", "stack_lazy"}}, HELP, {"-w", "-s"}, {}, 1);   // XXX 起原樣交給它（P-44 續）
         } catch (const Error& e) {
             throw usage_error(e.code, e.msg, USAGE);   // FlagUnknown／ArgumentsBad
         }

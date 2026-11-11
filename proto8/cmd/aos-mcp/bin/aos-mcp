@@ -110,7 +110,7 @@ def parse_args(argv):
     try:
         opts, files = aos_flags.parse(argv, {"--ws": "ws", "--stack": "stack", "--timeout-s": "timeout_s",
                                              "--logs-path": "log",
-                                             "--knowledge": "knowledge", "--hooks": "hooks", "--own": "own"}, {"--enable-logs": "enable"}, short=("-w", "-s"))
+                                             "--knowledge": "knowledge", "--hooks": "hooks", "--own": "own"}, {"--enable-logs": "enable"}, short=("-w", "-s"), anywhere=True)
     except aos_flags.Error as e:
         die(e.code, "%s (usage: %s)" % (e, USAGE))
     ws, stack = opts.get("ws", os.environ.get("AOS_WS")), opts.get("stack", os.environ.get("AOS_STACK"))

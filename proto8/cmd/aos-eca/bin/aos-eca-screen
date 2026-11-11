@@ -76,7 +76,7 @@ Reads AOS_STACK and AOS_WS. Ctrl-] (or Ctrl-\\) detaches; the instance keeps run
 With --detach, prints the screen status and socket path without attaching.
 
 flags:
-      --eca ECA_DIR   definition folder containing cli.json (before open; required)
+      --eca ECA_DIR   definition folder containing cli.json (before or after open; required)
       --detach        only open the screen; do not attach
   -h, --help          show this help
 
@@ -90,7 +90,7 @@ Closes the screen in AOS_STACK; aos-eca-turn can still resume the conversation.
 Prints "closed" or "no screen (already closed)". Refuses while the cell is answering.
 
 flags:
-      --eca ECA_DIR   definition folder containing cli.json (before close; required)
+      --eca ECA_DIR   definition folder containing cli.json (before or after close; required)
   -h, --help          show this help
 
 exit codes: 0 closed / already closed; 1 error; 130 interrupted.
@@ -104,7 +104,7 @@ daemon row stops running or is removed. Keeps waiting if the daemon or its table
 unavailable. Ctrl-C leaves normally.
 
 flags:
-      --eca ECA_DIR   definition folder containing cli.json (before watch; required)
+      --eca ECA_DIR   definition folder containing cli.json (before or after watch; required)
   -h, --help          show this help
 
 exit codes: 0 finished / stopped waiting / Ctrl-C; 1 error.
@@ -260,7 +260,7 @@ SWITCHES = {"open": {"--detach": "detach"}}
 
 def main():
     try:
-        top, rest = aos_flags.parse(sys.argv[1:], {"--eca": "eca"})
+        top, rest = aos_flags.parse(sys.argv[1:], {"--eca": "eca"}, sub="root")   # --eca 寫在子命令前後都收（11-11 P-44 續）
     except aos_flags.Error as e:
         reason = str(e) if e.code == "FlagUnknown" else "%s (see %s --help)" % (e, PROG)
         die(e.code, reason)

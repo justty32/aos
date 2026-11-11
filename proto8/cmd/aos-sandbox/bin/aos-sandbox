@@ -69,7 +69,7 @@ def usage(code, reason):
 
 def parse_args(argv):
     try:
-        opts, rest = aos_flags.parse(argv, {}, {"--dry-run": "dry"})
+        opts, rest = aos_flags.parse(argv, {}, {"--dry-run": "dry"}, anywhere=True, keep=2)   # prog 起原樣交給它（P-44 續 11-11）
     except aos_flags.Error as e:
         usage(e.code, str(e))
     dry = opts.get("dry", False)

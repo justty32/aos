@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
     std::string sub_cmd;
     try {
         aos::block_signals();
-        aos::Cli top = aos::parse_cli(std::vector<std::string>(argv + 1, argv + argc), {}, {}, HELP);
+        aos::Cli top = aos::parse_cli(std::vector<std::string>(argv + 1, argv + argc), {}, {}, HELP, {}, {}, 1);   // 頂層解到子命令名為止（keep＝1，11-11 P-44 續）；子命令那層旗標前後都收
         std::vector<std::string> args = top.rest;
         if (args.empty()) {
             throw aos::usage_error(g::code::ArgumentsBad, "no subcommand given", USAGE);

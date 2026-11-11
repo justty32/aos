@@ -6,7 +6,7 @@ FILE 裡是回合數（十進位＋換行）：讀出 n、寫回 n＋1 就結束
 寫進 n＋1 就代表第 n 回合結束、第 n＋1 回合開始（tock 不另外做）；mtime＝這回合從什麼時候開始。
 先寫同資料夾的 `.名字.pid` 再改名蓋過去，讀的人不會讀到半份（N-05）；不 fsync。stdout 不吐東西。
 命令列：唯一的位置參數就是 FILE（必給、只能一個；相對路徑從 cwd 算；照字面用，`#` 不是指標——它是時鐘檔，不是設定檔）；
-目前沒有旗標（旗標表是空的，規則同 aos-exec，aos_flags；`--` 結束旗標，FILE 可以 `-` 開頭）。
+目前沒有旗標（旗標表是空的；aos_flags anywhere＝FILE 後寫了旗標也當旗標認、不認得＝FlagUnknown，11-11 P-44 續；`--` 結束旗標，FILE 可以 `-` 開頭）。
 節奏、停、只走 N 回合交給跑它的 loop（`max`、`interval_ms`、ctl 的 paused）。
 自己的錯（usage、時鐘檔讀不到、內容不是回合數、寫不了）退 1，stderr 一行 `aos-clock: error: 代號 原因`（11-05 stdio-unify R1），FILE 不動
 （代號照 10-23 命名統合（thinking/2026-10/23/naming），格式同其他四支：usage ArgumentsBad（不認得的旗標 FlagUnknown）、
@@ -55,7 +55,7 @@ def main():
         except OSError as e:
             die("LaunchFailed", "cannot run aos-clock-register (%s): %s" % (reg, e))
     try:
-        opts, rest = aos_flags.parse(sys.argv[1:], FLAGS)
+        opts, rest = aos_flags.parse(sys.argv[1:], FLAGS, anywhere=True)
     except aos_flags.Error as e:
         die(e.code, f"{e} (usage: {USAGE})")
     if len(rest) != 1:

@@ -75,7 +75,7 @@ def whole(opts, key, default, flag):
 
 def main():
     try:
-        opts, rest = aos_flags.parse(sys.argv[1:], FLAGS, SWITCHES, short=("-d",))
+        opts, rest = aos_flags.parse(sys.argv[1:], FLAGS, SWITCHES, short=("-d",), anywhere=True)
     except aos_flags.Error as e:
         die(e.code, "%s (usage: %s)" % (e, USAGE))
     if rest:

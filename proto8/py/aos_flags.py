@@ -21,6 +21,8 @@ Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 10-23 刪了，只有它�
 把自己的表推進去）；之後的 parse（動作那層）位置參數後的旗標也收、外層的旗標也認（值寫回外層那份 opts，近的同名先算）；
 keep=N＝第 N 個位置參數起原樣交出（訊息、內容這類原樣交給別人的）；位置參數後的 --＝連它一起原樣交出；
 hide(旗標…)＝下層不再認外層的這幾個。沒有 sub="root" 的程式照舊規則。
+11-11（P-44 續，使用者「全部改」）：只有一層的程式（沒有子命令：aos-mcp、aos-sandbox、aos-clock、aos-sweeper…）
+parse(..., anywhere=True)＝這一層就是動作那層，位置參數後的旗標也收（keep、-- 照上面）。
 不帶值的旗標（開關，10-22 `--dotenv-override`）另給一張表 switches：給了＝opts[值] 是 True，重複給＝一樣，寫 `--x=V`＝Error。
 可以重複給、每次都收的旗標（11-04，aos-grow 的 `--take`）另給一張表 multi：opts[值]＝照給的順序的字串串列（沒給＝沒這個 key）。不認得的旗標、旗標缺值＝Error；有沒有 XXX 由呼叫者自己判斷（rest 可能是空的）。
 `--help`（11-05 stdio-unify R3，使用者「全都有」「--help要輸出英文」）：旗標的位置（子命令後再 parse 一次也算）看到 `--help`＝把 HELP
@@ -228,18 +230,19 @@ def hide(*names):
         _scopes[i] = (flags, switches, multi, alias, opts)
 
 
-def parse(argv, flags, switches=None, multi=None, help=None, short=None, *, sub=None, keep=None):
+def parse(argv, flags, switches=None, multi=None, help=None, short=None, *, sub=None, keep=None, anywhere=False):
     """sub＝None：外層沒推過表＝舊規則（第一個位置參數起不再解）；推過＝動作那層：位置參數後的旗標也收、外層旗標也認。
     sub＝True／"root"：派發的一層，解到第一個位置參數（下一層的名字）為止，再把自己的表推進去。
     keep＝N（動作那層）：第 N 個位置參數起原樣交出、不再解（後面要原樣交給別人的那類）。
+    anywhere＝True：只有一層的程式（沒有子命令）＝這層就是動作那層（11-11）。
     -- 結束解析：在任何位置參數前＝丟掉它；之後＝連它一起原樣留在 rest（呼叫者看得到 XXX -- ARGS）。"""
     switches, multi = switches or {}, multi or {}
-    if sub == "root":
+    if sub == "root" or anywhere:
         _scopes.clear()
     text = help if help is not None else HELP
     builtin_help = text is not None and "--help" not in flags and "--help" not in switches
     alias = _alias_of(flags, switches, multi, short, builtin_help)
-    anywhere = sub is None and bool(_scopes)
+    anywhere = sub is None and (anywhere or bool(_scopes))
     opts = {}
     own = (flags, switches, multi, alias, opts)
     scopes = [own] + list(reversed(_scopes))          # 近的先認（同名＝這層的）

@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
         {"see", cmd_see},   {"done", cmd_done}, {"regret", cmd_regret},
     };
     try {
-        aos::Cli cli = aos::parse_cli(Args(argv + 1, argv + argc), {}, {}, HELP);
+        aos::Cli cli = aos::parse_cli(Args(argv + 1, argv + argc), {}, {}, HELP, {}, {}, 1);   // 頂層解到子命令名為止（keep＝1，11-11 P-44 續）；子命令那層旗標前後都收
         if (cli.rest.empty()) {
             throw aos::usage_error(p::code::ArgumentsBad, "missing subcommand", USAGE);
         }
