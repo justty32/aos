@@ -11,6 +11,7 @@
 //                   給 timeout_ms＝起停那兩格用的期限（11-11 on_start／on_stop）
 //   loop_cli        命令列 `程式 [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--state-flux 檔] [--enable-logs] [--enable-counters] 設定檔 [-- 參數...]`（aos-loop、aos-daemon 共用）
 //   add_args        `-- 參數...` 接到 exec 後面（11-02 晚）
+//   make_stack      $AOS_STACK 有設但資料夾不在就 mkdir -p（11-11；aos-loop、aos-fsm 起來時叫，aos-daemon 不叫）
 //   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；10-21 傍晚）：
 //                   讀設定（旗標 ＞ 設定檔 ＞ 預設：exec／max／interval_ms／ctl／state／state_flux）、每次讀 ctl 窗（11-03 起一道指令、新的才照做）→ tend() → 跑一次 → 寫 state 窗（＋write_more；11-02 起有變才寫）、
 //                   --enable-logs 時每跑完一次在 stdout 印一行 log（11-02；11-02 晚改預設不印）
@@ -150,6 +151,11 @@ aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog,
 // 內嵌單子＝接在單子 argv 的最後（argv 要直接是陣列；是指示詞、沒寫＝CfgBad）。args 空＝不動。ctl 改不了它們。
 void add_args(Target& t, const std::vector<std::string>& args);
 
+// $AOS_STACK 有設、不是空的、路徑不在＝mkdir -p（相對路徑照 cwd）；沒設或已經在（不管是不是資料夾）＝什麼都不做。建不了丟 MkdirFailed。
+// 11-11 使用者選「loop／fsm 自己建」、「stack只能在aos-exec建<-這個規則刪除」：aos-loop、aos-fsm 的 main 起來時叫一次
+// （直接當工具登記、經 aos-exec --stack-lazy 跑時小格還不在）。Loop 本身不叫，所以 aos-daemon 照舊不建自己的 stack。
+void make_stack();
+
 // write_state／write_flux 寫不了窗時丟的（代號 WriteFailed）。跟別的 Error 分開，是為了 tend 裡寫狀態窗寫不了時不被當成 tend 的錯、
 // 再走一次收尾寫 state（那樣會多印一行）：一路丟到 serve，印一行、收尾、退 1。
 struct StateError : Error {};
@@ -215,7 +221,8 @@ struct Defaults {
 // 結束前呼叫 finish()（不論為什麼結束）。呼叫前要先 block_signals()。
 // 子類別可把已阻擋的喚醒訊號放入 wake_，nap 收到後呼叫 woke；回 true＝提前算一圈到時間。
 // aos-loop 不設喚醒訊號；aos-daemon 用這個掛鉤接 poke（不當成收工訊號、不轉給身體）。
-// $AOS_STACK 不在＝state 寫不了＝WriteFailed、退 1，不自己建（建 stack 只在 aos-exec 做，N-59 第 1 件）。
+// Loop 自己不建 $AOS_STACK：不在＝state 寫不了＝WriteFailed、退 1。aos-loop 的 main 起來時先叫 make_stack（11-11），所以只有
+// 不叫它的（aos-daemon）會走到這條。
 class Loop {
 public:
     // opts＝命令列旗標（loop_cli 解出來的：max、interval_ms、ctl、state、state_flux、enable_logs、enable_counters），spec＝設定檔（`檔` 或 `檔#/指標`），

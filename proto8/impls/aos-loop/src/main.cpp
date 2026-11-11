@@ -11,6 +11,7 @@
 // 身體繼承同一個 stdout，混在一起由使用者自己處理。印不了（管子關了）就不印、照跑。
 // `-- 參數...`（11-02 晚）：設定檔之後的附加參數，每次接在 exec 後面（字串、陣列接在最後；單子接在 argv 最後）。
 // on_start／on_stop（11-11）：起來、要退時各跑一次（寫法同 exec），問題只 warning。
+// $AOS_STACK 有設但不在＝設定讀完後先 mkdir -p（11-11，make_stack；建不了 MkdirFailed）。
 // 自己出錯：stderr 一行「aos-loop: error: 代號 原因」、退 1（11-05 stdio-unify R1）。`--help`＝英文說明印 stdout、退 0（R3）。
 #include "aos/loop.hpp"
 
@@ -47,6 +48,7 @@ int main(int argc, char** argv) {
         aos::Cli cli = aos::loop::loop_cli(std::vector<std::string>(argv + 1, argv + argc), "aos-loop", HELP);
         aos::loop::Loop loop(cli.opts, cli.rest[0], aos::loop::Defaults{},
                              std::vector<std::string>(cli.rest.begin() + 1, cli.rest.end()));
+        aos::loop::make_stack();   // 11-11：設定讀得過才建；$AOS_STACK 有設但不在＝mkdir -p
         return loop.serve();
     } catch (const aos::Error& e) {
         return aos::fail("aos-loop", e);

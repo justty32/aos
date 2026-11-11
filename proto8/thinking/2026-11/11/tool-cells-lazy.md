@@ -55,6 +55,8 @@
 
 ## 待裁
 
+（11-11 已裁：選乙，見下面「[線 F 裁定](#線-f-裁定loopfsm-自己建11-11)」。）
+
 **直接當工具登記的 agent（入口是 `aos-loop`／`aos-fsm`）**：這兩支往 `$AOS_STACK` 寫窗、`stage.txt` 不會先建資料夾（N-28／N-59「建 stack 只在 aos-exec 做」），所以小格不在＝`WriteFailed`。repo 裡現在沒有這樣登記的（範本 agent 都經 `aos-agent ctl add` 掛 daemon，daemon 自己建 proc 的 stack；沙箱包著的 `examples/agent.json` 靠上面 aos-sandbox 那條會先建）。選項：
 
 - 甲（現狀）：不管；要把 agent 直接當工具的，入口自己先 `mkdir -p "$AOS_STACK"`，或走 `subagent`／daemon。
@@ -66,3 +68,51 @@
 - 真腦（照交代不跑）；試驗場沒重刷（照交代不動 `~/code/playground*`）。
 - 沙箱實跑 shell-boxed：這台缺 `s6-softlimit`，`lib/aos/box_check` 兩支照舊紅（改前也紅）。
 - 字串轉向的登記工具：轉向後的那一跳不吃 `--stack-lazy`，照舊會建；沒有實例、沒測。
+
+## 線 F 裁定：loop／fsm 自己建（11-11）
+
+### 使用者原話
+
+上面待裁題，使用者在選項框選了：
+
+> loop／fsm 自己建
+
+（選項說明：aos-loop、aos-fsm 起來時發現 stack 不在就自己建。會改掉「建 stack 只在 aos-exec 做」這條規則。）
+
+接著追加：
+
+> stack只能在aos-exec建<-這個規則刪除
+
+### 做法
+
+- **一個點、兩處叫**：aos-loop 的公開 API 加 `aos::loop::make_stack()`（`impls/aos-loop/src/engine/stack.cpp`）：`$AOS_STACK` 有設、不是空的、路徑不在＝`mkdir -p`（相對路徑照 cwd，同窗的算法）；沒設或已經在（不管是不是資料夾）＝什麼都不做；建不了＝`MkdirFailed`，訊息 `cannot create AOS_STACK: <路徑> (<原因>)`（跟 aos-exec 同一句）。aos-loop 的 `main` 在設定讀過（`Loop` 建好）之後、`serve` 之前叫；aos-fsm 的 `main` 在表查過（`check`）之後、`read_state` 之前叫。設定／表壞的不建資料夾。
+- **`Loop` 類別本身不叫**，所以 aos-daemon（繼承 `Loop`）行為不變：照舊不建自己的 stack。
+- **規則刪掉的地方**（不是獨立一條，都是某條裡的一句；各加 11-11 註記原句與原話）：NORMS N-59 第 1 件（「工作區在不在、建 stack、轉絕對路徑只在這裡做」拿掉「建 stack」）、NORMS 04 開頭 ③（「aos-loop 不自己建——建 stack 只在 aos-exec 做」整句）、N-28 daemon 小格那段的括號。改成事實描述的：aos-daemon docs/02 與 `child.cpp`、`mailbox.cpp` 註解（daemon 照舊不建）、aos-exec `env.hpp` 註解、aos-loop `loop.hpp`／`inline.cpp`／docs 02、03、aos-fsm docs 01、02。knowledge 節點沒有寫這條規則（`aos/me.json`「小格寫東西才建」、`aos/cli/tools.json`「寫的工具自己建」照樣成立），沒動。
+- 現在 stack 不在時誰建：aos-exec 預設建（`--stack-lazy` 那一跳不建）；aos-loop、aos-fsm 起來時不在就建；工具寫小格前自己建；aos-daemon 不建自己的 stack。
+
+### 代定
+
+1. 建的時機放在「設定／表驗過之後」：壞設定不留空資料夾。
+2. `$AOS_STACK` 在但不是資料夾＝不碰，之後照舊 `WriteFailed`（只管「不在」這一種）。
+3. 窗全關（`ctl`／`state`／`state_flux` 都 `null`）也照建：照使用者的說法「起來時發現 stack 不在就自己建」，不看窗開不開。
+4. 內嵌單子行程內跑（`run_inline`）照舊不建；那時 loop／fsm 起來已經建過了。
+
+### 要重建什麼
+
+不用重建。
+
+### 驗證
+
+- build：`proto8/impls` 全建過。
+- 新測試：`impls/aos-loop/tests/test_stack_make.py`（4 支：不在的兩層 stack 會建、state 照寫；相對路徑照 cwd；建不了＝`MkdirFailed`；設定壞不建）、`impls/aos-fsm/tests/test_stack_make.py`（3 支：會建、格寫進去、`stage.txt` 照寫；建不了；表壞不建）。先把兩處 `make_stack()` 註掉重建跑過，loop 紅 2、fsm 紅 1，再還原。
+- 實跑線 D 的情境（暫存資料夾）：資料夾工具 `tl`（`_entry`＝`["aos-loop", "loop.json"]`，窗照預設開）與 `tf`（`_entry`＝`["aos-fsm", "fsm.json"]`）用 `aos-tools add` 登記、`AOS_STACK=<暫存>/stack aos-tools call` 叫：都退 0、沒有 `WriteFailed`；`stack/tools/tl/` 有 `body.txt`、`state.json`、`state_flux.json`，`stack/tools/tf/` 有格寫的檔與 `stage.txt`（叫兩次 s→t→s）。
+- 受影響各夾測試（改完重建後）：aos-loop 13、aos-fsm 3、aos-exec 12、aos-daemon 75、aos-tools 103、aos-daemon-ctl 32、aos-mcp 17、subagent 18、lib/agent/tests 16、templates/tests/agent-fsm 73 全綠；aos-agent 58 支紅 2（`test_daemon_down` 的 `test_add`／`test_stop`，線 D 記過的環境問題、改前也紅）；`templates/tests/test_daily`（兩台機器日常劇本）16 支 OK（skipped 2、expected failures 2）。
+
+### 待裁
+
+- **aos-daemon 要不要也自建自己的 stack**：規則刪了以後，daemon 不建只剩「現狀」這個理由（N-28、daemon docs 02、`mailbox.cpp`）。這次照交代只改 loop／fsm，daemon 沒動。選項：甲 照舊不建（現狀）；乙 daemon 起來時也 `make_stack`（daemon 直接當工具登記、或直接跑時不再 `WriteFailed`／`MkdirFailed`）。
+
+### 沒驗到的
+
+- 真腦、試驗場（照交代不動 `~/code/playground*`）。
+- 經 `subagent`／daemon 起的 agent：路徑沒變（daemon 先建 proc 的 stack），沒另外實跑。

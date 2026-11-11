@@ -14,4 +14,4 @@
 | [do-task-rename](do-task-rename.md) | 已施工（線 I）：工具 thought 改名 `do_task`（夾、登記名、`AOS_DO_TASK_FROM`／`AOS_DO_TASK_DEPTH`、知識節點、沙箱例子，舊名不留）；沒給 `from`、登記格也沒設＝用呼叫者自己的定義（daemon 表那列的 `def`），hooks 與工具一起帶、深度上限照擋；另帶回什麼「不加」 |
 | [i18n](i18n.md) | 只記想法（遠期構想，不設計、不排施工）：整個 aos 支援多語，偏好 `AOS_I18N` 這類「能支援的工具自己支援」；重點是給模型看的文字跟使用者同語言 |
 | [mail-notify](mail-notify.md) | 已施工（線 I）：出廠 hook `mail_notify`（on_clock 每 10 秒，範本預設開）看自己的信箱，有沒通知過的新信才往 queue 寄一則 `[aos] new_mail: N new letters from A, B. …`（多封合成一句、不帶內文）；`self_hook rm` 免打擾、同名 `replace` 改間隔；驗證同一隻掛多個 on_clock 各自間隔 |
-| [tool-cells-lazy](tool-cells-lazy.md) | 已施工：工具小格改成真的寫東西才建（使用者「我確實想改成工具真的寫東西時才建資料夾」）——aos-exec 加 `--stack-lazy`（不建）、aos-tools call 傳它，act.py／observed.call 不再先建，aos-sandbox 綁 `$AOS_STACK` 前先建；直接當工具登記的 aos-loop／aos-fsm 入口會寫不進去，待裁 |
+| [tool-cells-lazy](tool-cells-lazy.md) | 已施工：工具小格改成真的寫東西才建（使用者「我確實想改成工具真的寫東西時才建資料夾」）——aos-exec 加 `--stack-lazy`（不建）、aos-tools call 傳它，act.py／observed.call 不再先建，aos-sandbox 綁 `$AOS_STACK` 前先建；直接當工具登記的 aos-loop／aos-fsm 入口會寫不進去——11-11 裁「loop／fsm 自己建」＋「stack只能在aos-exec建<-這個規則刪除」：兩支起來時 `$AOS_STACK` 有設但不在就 `mkdir -p`，N-59 等處那條規則刪掉（線 F） |

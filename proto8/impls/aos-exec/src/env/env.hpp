@@ -2,7 +2,7 @@
 //
 //   env.cpp      check_ws：WS 規則（旗標 ＞ $AOS_WS ＞ cwd）；setup_stack：stack 規則（旗標 --stack ＞ $AOS_STACK ＞ $AOS_WS/.stack/，
 //                --stack 11-03 加；mkdir -p、轉絕對、結尾 /；--stack-lazy 11-11 加＝不建），
-//                export AOS_WS、AOS_STACK——工作區在不在、建 stack、轉絕對路徑只在這裡做（N-59 第 1 件）；
+//                export AOS_WS、AOS_STACK——工作區在不在、轉絕對路徑只在這裡做（N-59 第 1 件；11-11 使用者刪了「建 stack 只在 aos-exec」，aos-loop／aos-fsm 起來時也會建）；
 //                drop_stack_if_empty：自己新建、到回來時還是空的 stack 收回（11-05 edge-agent 別線）
 //   dotenv.cpp   load_env：讀 資料夾/.env 逐行套進環境（10-22 起 dotenv 基礎子集、預設不蓋）；json_env：沒 argv 的
 //                JSON 物件裡的 `.env` key；env_value：`=` 後面那段（引號、註解、去空白）；set_env：一個 `名字=值`（只展開 ${名字}）

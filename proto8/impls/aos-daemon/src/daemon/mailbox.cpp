@@ -25,7 +25,7 @@
 namespace aos::daemon {
 
 void Daemon::open_mailbox() {
-    if (!aos::is_dir(stack_)) {   // 建 stack 只在 aos-exec 做（N-59 第 1 件）；init 是 mkdir -p，不能讓它順手建出來
+    if (!aos::is_dir(stack_)) {   // daemon 不建自己的 stack（11-11 使用者刪了「建 stack 只在 aos-exec」那條，這裡行為不變）；init 是 mkdir -p，不能讓它順手建出來
         throw Error{code::MkdirFailed, "cannot create mailbox " + mbox_path_ + " ($AOS_STACK is missing: " + stack_ + ")"};
     }
     aos::post::init(mbox_path_);

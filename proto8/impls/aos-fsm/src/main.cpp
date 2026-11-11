@@ -3,7 +3,7 @@
 //     aos-fsm [旗標] 設定檔.json
 //
 //   aos-util block_signals → 命令列（目前沒有旗標；唯一的位置參數＝設定檔，可寫 `檔#/指標`；10-21 傍晚 ideas § 9）→ 要 AOS_STACK →
-//   read_table → check（開跑時查整張表，10-22）→ read_state（在但讀不了＝StateBad，10-22）→ pick → run_once（aos-loop 的公開 API：目標＝子行程 `aos-exec -- 目標 參數...`；單子＝行程內 run_inst，10-24）
+//   read_table → check（開跑時查整張表，10-22）→ make_stack（11-11：$AOS_STACK 有設但不在就 mkdir -p）→ read_state（在但讀不了＝StateBad，10-22）→ pick → run_once（aos-loop 的公開 API：目標＝子行程 `aos-exec -- 目標 參數...`；單子＝行程內 run_inst，10-24）
 //   → next_for（照格的碼查表）→ 查到才 write_state → 查到退 0、沒查到以格的碼結束（11-03 起不寫 trace.jsonl，使用者「整個拿掉」）
 //
 // next 兩種寫法（10-30 N-36 改口）：字串＝格退 0 才換（其他碼 state 不動、以那個碼退）；物件 {結束碼: 狀態名}＝格退 c，表上有 "c"
@@ -68,6 +68,7 @@ int main(int argc, char** argv) {
         std::string stack = s;
         fsm::Table table = fsm::read_table(cli.rest[0]);
         std::map<std::string, fsm::Cell> cells = fsm::check(table);   // 10-22：開跑時查整張表，哪一格壞都不跑
+        aos::loop::make_stack();   // 11-11：表查過才建；$AOS_STACK 有設但不在＝mkdir -p（建不了 MkdirFailed）
         std::string state = fsm::read_state(stack, table.start);
         fsm::Cell cell = fsm::pick(cells, state, aos::join(stack, "stage.txt"));
 

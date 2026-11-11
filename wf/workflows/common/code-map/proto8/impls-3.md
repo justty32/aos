@@ -5,6 +5,20 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/impls/aos-fsm/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`CMakeLists.txt`](../../../../../proto8/impls/aos-fsm/CMakeLists.txt) | `aos-fsm fsm.json`——一次只跑一格。 |
+| [`src/common/common.hpp`](../../../../../proto8/impls/aos-fsm/src/common/common.hpp) | aos-fsm 好幾個元素都用到的：型別別名、自己的錯誤代號。 |
+| [`src/main.cpp`](../../../../../proto8/impls/aos-fsm/src/main.cpp) | aos-fsm 命令列——一次只跑一格（N-36）。 |
+| [`src/state/state.cpp`](../../../../../proto8/impls/aos-fsm/src/state/state.cpp) | 讀取 stage.txt，狀態內容有變才原子寫入（說明見 state.hpp）。 |
+| [`src/state/state.hpp`](../../../../../proto8/impls/aos-fsm/src/state/state.hpp) | $AOS_STACK 裡 fsm 自己的檔：stage.txt（現在狀態）。 |
+| [`src/table/table.cpp`](../../../../../proto8/impls/aos-fsm/src/table/table.cpp) | read_table、check、pick、next_for（說明見 table.hpp；10-22；next 分岔 10-30）。 |
+| [`src/table/table.hpp`](../../../../../proto8/impls/aos-fsm/src/table/table.hpp) | fsm.json——`{"start": 狀態名, "states": {名: {"exec": aos-exec 的目標或 [目標, 參數...], "next": 狀態名或 {結束碼: 狀態名}}}}`。 |
+| [`tests/test_stack_make.py`](../../../../../proto8/impls/aos-fsm/tests/test_stack_make.py) | Check aos-fsm creates a missing $AOS_STACK at start (11-11, make_stack), runs the state and writes stage.txt as usual. |
+| [`vcpkg.json`](../../../../../proto8/impls/aos-fsm/vcpkg.json) | aos-fsm：一次只跑一格（fsm.json 的 start／states；狀態在 $AOS_STACK） |
+
 ## `proto8/impls/aos-inst/`
 
 | 檔 | 負責什麼 |

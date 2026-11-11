@@ -29,6 +29,7 @@
 | [`src/engine/config.cpp`](../../../../../proto8/impls/aos-loop/src/engine/config.cpp) | Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、解指示詞（resolve_keys，10-23 晚）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）； |
 | [`src/engine/engine.hpp`](../../../../../proto8/impls/aos-loop/src/engine/engine.hpp) | 反覆跑的程式的骨架 Loop（公開介面在 aos/loop.hpp）。 |
 | [`src/engine/loop.cpp`](../../../../../proto8/impls/aos-loop/src/engine/loop.cpp) | Loop 每次怎麼走（說明見 aos/loop.hpp）。 |
+| [`src/engine/stack.cpp`](../../../../../proto8/impls/aos-loop/src/engine/stack.cpp) | make_stack——aos-loop、aos-fsm 起來時 $AOS_STACK 有設但資料夾不在就 mkdir -p（11-11，說明見 aos/loop.hpp）。 |
 | [`src/engine/window.cpp`](../../../../../proto8/impls/aos-loop/src/engine/window.cpp) | ctl／state／state_flux 三扇窗與選開的 counter_runs.txt（NORMS N-06～N-09、N-17、N-32、N-33）。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-loop/src/main.cpp) | aos-loop 命令列——block_signals、解命令列、讀設定、Loop::serve（公開 API 見 aos/loop.hpp）。 |
 | [`src/run/folder.cpp`](../../../../../proto8/impls/aos-loop/src/run/folder.cpp) | run_folder——`aos-exec -- 目標 參數...`，在 fork 出來的子行程裡呼叫 aos-exec 的 run_cli。 |
@@ -37,6 +38,7 @@
 | [`src/run/run.hpp`](../../../../../proto8/impls/aos-loop/src/run/run.hpp) | 跑一次（公開介面 block_signals、take_signal、run_once 在 aos/loop.hpp）。 |
 | [`src/run/signals.cpp`](../../../../../proto8/impls/aos-loop/src/run/signals.cpp) | 將訊號操作轉交 aos-util（說明見 aos/loop.hpp）。 |
 | [`tests/test_on_start_stop.py`](../../../../../proto8/impls/aos-loop/tests/test_on_start_stop.py) | Check loop.json on_start / on_stop: run once before the first run and once on every way out (11-11 clock-hook). |
+| [`tests/test_stack_make.py`](../../../../../proto8/impls/aos-loop/tests/test_stack_make.py) | Check aos-loop creates a missing $AOS_STACK at start (11-11, make_stack) and writes there as usual. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-loop/vcpkg.json) | aos-loop：一次次跑 run（aos-exec 的目標），看結束碼決定下一步 |
 
 ## `proto8/impls/aos-post/`
