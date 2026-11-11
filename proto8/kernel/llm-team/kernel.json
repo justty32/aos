@@ -25,6 +25,14 @@
       },
       "summary": "Forward to the main kernel sol"
     },
+    "terra": {
+      "to": "terra",
+      "kernel": {
+        "$env": "AOS_STACK",
+        "$path": "../llm-kernel"
+      },
+      "summary": "Forward to the main kernel terra"
+    },
     "luna": {
       "to": "luna",
       "kernel": {
