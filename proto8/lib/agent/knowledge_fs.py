@@ -1,4 +1,4 @@
-"""記憶庫（純 JSON 樹）共用：找根（--root 旗標＞_knowledge.json＞AOS_KNOWLEDGE）、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 $env 格的認法、自己的簡介、列枝幹、find 逛樹的迴圈防護。
+"""記憶庫（純 JSON 樹）共用：找根（--root 旗標＞寫的工具的呼叫參數 root＞_knowledge.json＞AOS_KNOWLEDGE）、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 $env 格的認法、自己的簡介、列枝幹、find 逛樹的迴圈防護。
 
 圖紙 proto8/thinking/2026-11/10/json-memory/02、03（使用者 11-10 晚）。統一路徑＝`資料夾/檔.json#/JSON Pointer`（RFC 6901）。
 位置在程式裡是 Loc(fs, tokens)：fs＝正規化的絕對路徑（不解捷徑，顯示才會照庫根算相對）；tokens＝None 指整個資料夾／整份檔，否則是指標的段。
@@ -11,7 +11,8 @@ JSON 物件＝它的 _description key（字串）。兩者都不是子節點（_
 aos-json 失敗＝把它最後一行的代號照圖紙 03 的表換成自己的代號、原因照接（lib/docs/01 規則 2 的例外：給腦用的工具轉接下層）。
 find 例外：直接用 Python 讀 JSON 逛樹（逐檔起子行程太慢），記走過的（實體路徑, 指標）防繞圈，$env 格只跳一次。
 錯誤一律 raise tool_io.Error（代號＋英文原因），由工具入口轉成錯誤行；只有 knowledge_root 與 take_root_flag 照舊直接 die。
-庫根：argv 的 --root DIR ＞ 工具夾的 _knowledge.json ＞ $AOS_KNOWLEDGE，都沒給＝KnowledgeMissing（工具沒有內建預設位置，11-10 深夜）。"""
+庫根：argv 的 --root DIR ＞（只有寫的工具傳進來的）呼叫參數 root ＞ 工具夾的 _knowledge.json ＞ $AOS_KNOWLEDGE，都沒給＝KnowledgeMissing
+（工具沒有內建預設位置，11-10 深夜；呼叫參數 11-11 使用者「要自己透過旗標指定或環境變數設定，或是工具呼叫內給。如果都沒有，那就報錯。」）。"""
 import json
 import os
 import re
@@ -61,8 +62,9 @@ def take_root_flag(prog, argv=None):
     return ROOT_GIVEN
 
 
-def knowledge_root(tool_folder=None):
-    """知識庫根：① 工具入口 argv 的 --root DIR（叫的人給的；相對從 $AOS_WS，沒設＝cwd）＞ ② 工具資料夾的 _knowledge.json 的 base（定義配的）
+def knowledge_root(tool_folder=None, given=None, howto=None):
+    """知識庫根：① 工具入口 argv 的 --root DIR（叫的人給的；相對從 $AOS_WS，沒設＝cwd）＞ ①' given＝呼叫參數 root（只有 knowledge_write
+    傳；腦在那次呼叫裡給的，相對同 ①；11-11 使用者「或是工具呼叫內給」；排在 --root 後面＝人釘死的腦改不了）＞ ② 工具資料夾的 _knowledge.json 的 base（定義配的）
     ＞ ③ $AOS_KNOWLEDGE（登記格 env、daemon／人配的）；都沒有＝KnowledgeMissing（叫的人看到它＝沒被指定庫，可以安靜略過）；
     給了但不是資料夾＝KnowledgeBad（指定了卻讀不到，要讓人知道）。工具本身沒有內建預設位置（使用者 11-10 深夜
     「knowledge_read/write，就是吃旗標或目標，或是吃環境變數，啊這些都要自己給。或是在定義中給」）。
@@ -71,6 +73,11 @@ def knowledge_root(tool_folder=None):
         real = os.path.realpath(os.path.join(os.environ.get("AOS_WS") or os.getcwd(), ROOT_GIVEN))
         if not os.path.isdir(real):
             die("KnowledgeBad", "%s %s resolves to %s, which is not a directory" % (ROOT_FLAG, ROOT_GIVEN, real))
+        return real
+    if given is not None:                       # 呼叫參數 root：相對從 $AOS_WS（沒設＝cwd），跟 --root 一樣
+        real = os.path.realpath(os.path.join(os.environ.get("AOS_WS") or os.getcwd(), given))
+        if not os.path.isdir(real):
+            die("KnowledgeBad", "root %s resolves to %s, which is not a directory" % (given, real))
         return real
     here = os.environ.get("AOS_CD") or tool_folder or os.path.dirname(os.path.abspath(__file__))
     cfg = os.path.join(here, CFG_NAME)
@@ -96,7 +103,7 @@ def knowledge_root(tool_folder=None):
         return real
     m = os.environ.get("AOS_KNOWLEDGE", "")
     if not m:
-        die("KnowledgeMissing", "no knowledge base root was given; the tool has no default; " + ROOT_HOWTO)
+        die("KnowledgeMissing", howto or "no knowledge base root was given; the tool has no default; " + ROOT_HOWTO)
     base = os.environ.get("AOS_DAEMON") or os.getcwd()
     real = os.path.realpath(os.path.join(base, m))
     if not os.path.isdir(real):

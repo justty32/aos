@@ -1,5 +1,5 @@
 {
-  "summary": "Write the shared knowledge base (folders and .json files): add, set or rm a value together with its index entry",
+  "summary": "Write a knowledge base of your own (folders and .json files; root in the call or AOS_KNOWLEDGE, no default): add, set or rm a value together with its index entry",
   "resource": "io",
   "side_effect": true,
   "idempotent": false,

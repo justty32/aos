@@ -5,37 +5,37 @@
    "_description": "How packs work and how to turn one off."
   },
   "look": {
-   "_description": "Pack look."
+   "_description": "Pack look: read, ls, view, stat, json_read; look at files, change nothing."
   },
   "change": {
-   "_description": "Pack change."
+   "_description": "Pack change: write, edit, copy, move, mkdir, json_write; make and change files."
   },
   "delete": {
-   "_description": "Pack delete."
+   "_description": "Pack delete: trash (can be undone), remove (cannot)."
   },
   "shell": {
-   "_description": "Pack shell."
+   "_description": "Pack shell: shell, run_python; run a command, read its output and exit code."
   },
   "gadgets": {
-   "_description": "Pack gadgets."
+   "_description": "Pack gadgets: peek_clock, peek_now_time, math, thought (one small task to a throw-away helper)."
   },
   "events": {
-   "_description": "Pack events."
+   "_description": "Pack events: clock_register (clock letters to your queue), self_hook (run a program when something happens to you)."
   },
   "self": {
-   "_description": "Pack self."
+   "_description": "Pack self: self_tools, self_llm, self_system, self_history, self_state, self_ctl; look at and change your own copy."
   },
   "subagent": {
-   "_description": "Pack subagent."
+   "_description": "Pack subagent: subagent (helpers you start yourself), agents_ctl (any agent on your daemon)."
   },
   "def": {
-   "_description": "Pack def."
+   "_description": "Pack def: agent_def (new agent definitions), tools_def (new tools)."
   },
   "mailbox": {
-   "_description": "Pack mailbox."
+   "_description": "Pack mailbox: mailbox_peek, mailbox_read, mailbox_send; letters between agents."
   },
   "knowledge": {
-   "_description": "Pack knowledge."
+   "_description": "Pack knowledge: knowledge_read (the stock knowledge base), knowledge_write (a knowledge base of your own)."
   }
  },
  "about": "# Tool packs\n\nYour tools are registered pack by pack: each pack is one tool list in $AOS_HOME/lib/packs/<pack>.json, and a definition's tools.json stacks the packs it wants with \"$override\". Both templates (agent-fsm and eca-claude) have all eleven packs.\n\n- See where each of your tools comes from: self_tools {\"op\": \"ls\", \"long\": true} (FROM shows lib/packs/<pack>.json).\n- Turn one tool off for yourself: self_tools {\"op\": \"rm\", \"name\": \"shell\"}.\n- A whole pack is turned off by removing it from the \"$override\" list of the definition's tools.json (a person or a definition change, not a tool call).",
@@ -43,11 +43,11 @@
  "change": "Pack change: Editing files: write (whole file), edit (replace exact text), copy, move (also rename), mkdir, json_write (set or delete values by JSON pointer).",
  "delete": "Pack delete: trash (move into your workspace .trash/, can be moved back) and remove (delete for real; a folder needs recursive).",
  "shell": "Pack shell: shell (one bash command; not a sandbox) and run_python (a short Python program).",
- "gadgets": "Pack gadgets: Small tools that change nothing: peek_clock (the daemon clock: current cycle and interval_ms; ClockMissing when you have no daemon clock), peek_now_time (current UTC time), math (one arithmetic expression).",
+ "gadgets": "Pack gadgets: Small handy tools: peek_clock (the daemon clock: current cycle and interval_ms; ClockMissing when you have no daemon clock), peek_now_time (current UTC time), math (one arithmetic expression), thought (hand one small task to a throw-away helper agent; you get back only its short conclusion, not its tool calls; see aos/agents.json#/thought).",
  "events": "Pack events: Things that run later: clock_register (a fixed letter every N cycles; leave out box to wake yourself) and self_hook (run a program when something happens to you).",
  "self": "Pack self: Look at and change yourself: self_tools (your tools), self_llm (your brain settings), self_system (your system text), self_state (facts and numbers about you), self_ctl (stop, pause, sleep or remove yourself), self_history (your conversation).",
  "subagent": "Pack subagent: Other agents: subagent (agents you start yourself; counted against your quota) and agents_ctl (any agent on your daemon table; not counted).",
  "def": "Pack def: Definitions: agent_def (copy a template into a new agent definition, or check one) and tools_def (make a new tool from the Python skeleton, or check a tool).",
  "mailbox": "Pack mailbox: Letters: mailbox_peek (what is waiting, without taking it), mailbox_read (read the oldest), mailbox_send (send one).",
- "knowledge": "Pack knowledge: The knowledge base: knowledge_read (read, ls, find) and knowledge_write (add, set, rm). Which base they use is set in your tools.json (env AOS_KNOWLEDGE)."
+ "knowledge": "Pack knowledge: The knowledge base: knowledge_read (read, ls, find) and knowledge_write (add, set, rm). knowledge_read reads the stock knowledge base. knowledge_write has no default: give root in the call, or have AOS_KNOWLEDGE set up for it (see aos/knowledge.json)."
 }

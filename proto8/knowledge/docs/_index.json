@@ -1,0 +1,8 @@
+{
+  "01-樹長怎樣與多庫.md": {
+    "_description": "For people, in Chinese: what one tree looks like, paths, _index and _description, $ref and $env, several knowledge bases."
+  },
+  "02-寫入與節點怎麼寫.md": {
+    "_description": "For people, in Chinese: knowledge_write, no locks, keeping the stock base read-only, how to write a node."
+  }
+}

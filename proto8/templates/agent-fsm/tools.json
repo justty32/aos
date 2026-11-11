@@ -9,5 +9,4 @@
                {"$env": "AOS_HOME", "$path": "/lib/packs/def.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/mailbox.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/knowledge.json"}],
- "tools": {"knowledge_read": {"env": {"AOS_KNOWLEDGE": {"$env": "AOS_HOME", "$path": "/knowledge"}}},
-           "knowledge_write": {"env": {"AOS_KNOWLEDGE": {"$env": "AOS_HOME", "$path": "/knowledge"}}}}}
+ "tools": {"knowledge_read": {"env": {"AOS_KNOWLEDGE": {"$env": "AOS_HOME", "$path": "/knowledge"}}}}}

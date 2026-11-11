@@ -11,7 +11,7 @@ export AOS_HOME=$HOME/repo/aos-tools/proto8   # 每台設一次＝這台 proto8 
 cp -r $AOS_HOME/templates/agent-fsm bob
 ```
 
-範本裡指到範本外、落在 proto8 的路徑一律寫成 `{"$env": "AOS_HOME", "$path": "/…"}`（`tools.json` 的工具、`knowledge_read`／`knowledge_write` 兩格 `env` 裡的 `AOS_KNOWLEDGE`、reviewer 的 `fsm.json` 借 agent-fsm 的格、kernel 範本的 `handler` 與 `endpoints`、daemon.json／loop.json 的 argv），範本裡沒有捷徑；解出來的值不寫回任何檔，每次用到才由讀它的程式解。所以抄到哪、兩台各放哪，檔都一字不差，只要每台的 `AOS_HOME` 對。`AOS_HOME` 三種給法（使用者 11-10 午「要用相對位置、絕對位置、環境變數指定都可」）：
+範本裡指到範本外、落在 proto8 的路徑一律寫成 `{"$env": "AOS_HOME", "$path": "/…"}`（`tools.json` 的工具、`knowledge_read` 那格 `env` 裡的 `AOS_KNOWLEDGE`、reviewer 的 `fsm.json` 借 agent-fsm 的格、kernel 範本的 `handler` 與 `endpoints`、daemon.json／loop.json 的 argv），範本裡沒有捷徑；解出來的值不寫回任何檔，每次用到才由讀它的程式解。所以抄到哪、兩台各放哪，檔都一字不差，只要每台的 `AOS_HOME` 對。`AOS_HOME` 三種給法（使用者 11-10 午「要用相對位置、絕對位置、環境變數指定都可」）：
 
 | 給法 | 寫在哪 | 這台要備好 |
 |---|---|---|
@@ -41,7 +41,7 @@ agent-fsm/
                等回信不設期限，寄出（pending.txt 的 mtime）每滿 10 分鐘印一行 agent-fsm: warning、照樣等（記在 think/wait_warned.txt，11-10 坑-74）
   act.py       跑工具：逐個 aos-tools call，照 metainfo 限時；失敗附 stderr 尾，結果各接一則 tool、退 0；沒有 tool_calls（最後答案）退 10
   system.txt   system 訊息（interfaces.json 宣告 "system": "system.txt"，11-11 self-system；$AOS_STACK/system.txt 在就整份用那份〔aos-agent system set／self_system〕；每格從檔讀、不存進 history；11-05 晚改英文）
-  tools.json   aos-tools 登記檔：幾乎只剩 `"$override"` 一串 [lib/packs](../../lib/packs/README.md) 十一包——通用四包 look、change、delete、shell（15 支，11-10 tool-packs 預設全開），再加七包 gadgets（peek_clock、peek_now_time、math）、events（clock_register、self_hook）、self（self_tools、self_llm、self_system、self_state、self_ctl、self_history）、subagent（subagent、agents_ctl）、def（agent_def、tools_def）、mailbox（mailbox_peek／read／send）、knowledge（knowledge_read、knowledge_write），共 35 支（11-11 self 包加 self_system）（11-10 深夜使用者「照包砍」「2.都開吧」）；自己只寫 knowledge_read、knowledge_write 兩格的 `env.AOS_KNOWLEDGE`（指 `knowledge/`）；關法見範本 README；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
+  tools.json   aos-tools 登記檔：幾乎只剩 `"$override"` 一串 [lib/packs](../../lib/packs/README.md) 十一包——通用四包 look、change、delete、shell（15 支，11-10 tool-packs 預設全開），再加七包 gadgets（peek_clock、peek_now_time、math、thought）、events（clock_register、self_hook）、self（self_tools、self_llm、self_system、self_state、self_ctl、self_history）、subagent（subagent、agents_ctl）、def（agent_def、tools_def）、mailbox（mailbox_peek／read／send）、knowledge（knowledge_read、knowledge_write），共 36 支（11-11 self 包加 self_system、gadgets 包加 thought）（11-10 深夜使用者「照包砍」「2.都開吧」）；自己只寫 knowledge_read 那格的 `env.AOS_KNOWLEDGE`（指 `knowledge/`；knowledge_write 11-11 起不給庫）；關法見範本 README；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
   llm.json     腦設定：{}＝用 kernel 的預設代號；model＝kernel 的 endpoint 包代號（例 "smart-high"；寄信時填進 body 的 endpoint 欄，真正的模型名固定在包上）；
                另認與快取無關的調整鍵 temperature、top_p、max_tokens、seed、presence_penalty、frequency_penalty、stop（放進 request；包的 fixed 照舊蓋過）；
                認哪些鍵寫在 interfaces.json 的 llm_keys（aos-agent llm set 對著提醒，11-10 晚）
@@ -49,7 +49,7 @@ agent-fsm/
   subagents.json  工具 subagent 的配額設定 {"max_subagents": 4}（這隻最多同時生幾隻；stack 裡的 subagents.json 只放改過的鍵＝這隻的覆蓋；誰是我生的另記在 stack 的 tools/subagent/subagents.json）
 ```
 
-**記憶與自稱**（11-07 批 2；11-10 templates-cp 改）：知識庫位置寫在 `tools.json` 的 `knowledge_read`、`knowledge_write` 兩格：`"env": {"AOS_KNOWLEDGE": {"$env": "AOS_HOME", "$path": "/knowledge"}}`（11-10 深夜起指 `knowledge/` 這一層，根列 `aos/`；工具本身沒有預設位置，沒指定＝`KnowledgeMissing`、brain.py 開場安靜不帶根）；換庫改這個值。`interfaces.json` 不再宣告 `knowledge`（`lib/aos/defs` 依它分群，沒宣告＝`knowledge: null`）。範本 `_metainfo.json` 的 `summary` 與 README 首行一致，`cost.time_ms: 30000` 是估時、`resource: ["llm"]` 是資源；範本本身未宣告頂層 `timeout_ms`。
+**記憶與自稱**（11-07 批 2；11-10 templates-cp 改）：讀的知識庫位置寫在 `tools.json` 的 `knowledge_read` 那格：`"env": {"AOS_KNOWLEDGE": {"$env": "AOS_HOME", "$path": "/knowledge"}}`（`knowledge_write` 那格 11-11 起拿掉、不給庫；11-10 深夜起指 `knowledge/` 這一層，根列 `aos/`；工具本身沒有預設位置，沒指定＝`KnowledgeMissing`、brain.py 開場安靜不帶根）；換庫改這個值。`interfaces.json` 不再宣告 `knowledge`（`lib/aos/defs` 依它分群，沒宣告＝`knowledge: null`）。範本 `_metainfo.json` 的 `summary` 與 README 首行一致，`cost.time_ms: 30000` 是估時、`resource: ["llm"]` 是資源；範本本身未宣告頂層 `timeout_ms`。
 
 **覆蓋層位置**（11-06 K-6）：brain／wait 的腦設定、brain／act 的工具登記檔都讀 `interfaces.json` 的 `aos-agent.llm`／`tools` 宣告；定義與 stack 使用同一相對路徑。改成 `cfg/brain.json`、`cfg/my_tools.json` 時，身體與 `aos-agent llm／tools` 讀寫的是同一份，沒有寫死 `llm.json`／`tools.json`。未宣告 tools／llm 就沒有工具／腦設定，不去猜檔名。brain／act 的 `--tools` 明給檔案時照旗標，不套 tools 介面覆蓋層。
 
@@ -93,4 +93,4 @@ aos-agent ctl resume         # ctl 下也有 stop／start、sleep／wake（同�
 
 共用記帳由 `lib/observed.py` 處理：首寫先補 `self` 行，含 `def`（`AOS_CD`）、`ws`（`AOS_WS`）、UTC 毫秒 `started_at`，設了 `AOS_LLM_KERNEL` 才帶 `llm_kernel`；同時合併 stack 的 `aos-observed` 宣告。工具行的 `def` 是登記路徑的絕對值、`stack` 是相對本 stack 的小格；有子帳時 `child` 指向收子前保存的帳本，相對本 stack。thought／subagent 只照子 stack 的公開介面抄整棵帳，不猜帳名。
 
-**長跑與知識寫入**：長時間接不同任務的 fsm，在 `fsm.json` 的 think 格、`brain.py` 的 argv 加 `"--history", "task"`，每次只把最後一封 user 起的任務帶給腦，避免舊任務一直累積進請求；磁碟 history 仍完整保留。需要跨任務記住的穩定知識另寫入知識庫。範本預設登記 `knowledge_read` 與 `knowledge_write`（11-10 深夜 tool-packs），兩格 `env.AOS_KNOWLEDGE` 都指 `{"$env": "AOS_HOME", "$path": "/knowledge"}`＝repo 的 `knowledge/`（使用者「指knowledge/」）：照範本跑，agent 寫了就改到它。要寫自己的庫：改兩格的 `env.AOS_KNOWLEDGE`（相對、絕對或 `{"$env": "MY_KNOWLEDGE"}`），或對跑著的那隻 `aos-agent tools add --replace -n knowledge_write --envs AOS_KNOWLEDGE=/x/kb "$AOS_HOME/lib/agent/knowledge_write"`（`knowledge_read` 同樣），寫法見範本 README。讀寫看同一個 `AOS_KNOWLEDGE`；agent 的寫入指引在 `aos/knowledge.json`。
+**長跑與知識寫入**：長時間接不同任務的 fsm，在 `fsm.json` 的 think 格、`brain.py` 的 argv 加 `"--history", "task"`，每次只把最後一封 user 起的任務帶給腦，避免舊任務一直累積進請求；磁碟 history 仍完整保留。需要跨任務記住的穩定知識另寫入知識庫。範本預設登記 `knowledge_read` 與 `knowledge_write`（11-10 深夜 tool-packs），`knowledge_read` 那格 `env.AOS_KNOWLEDGE` 指 `{"$env": "AOS_HOME", "$path": "/knowledge"}`＝repo 的 `knowledge/`（使用者「指knowledge/」）。原本 `knowledge_write` 也指這裡（照範本跑，agent 寫了就改到它）；**11-11 拿掉**（使用者「不給預設，要自己透過旗標指定或環境變數設定，或是工具呼叫內給。如果都沒有，那就報錯。」）：要寫自己的庫，腦在呼叫裡給 `root`，或人替那格配 `env.AOS_KNOWLEDGE`（相對、絕對或 `{"$env": "MY_KNOWLEDGE"}`；對跑著的那隻 `aos-agent tools add --replace -n knowledge_write --envs AOS_KNOWLEDGE=/x/kb "$AOS_HOME/lib/agent/knowledge_write"`），都沒有＝`KnowledgeMissing`，寫法見範本 README。讀寫各看各的；agent 的寫入指引在 `aos/knowledge.json`。

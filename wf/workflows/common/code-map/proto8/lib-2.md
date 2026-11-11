@@ -31,7 +31,7 @@
 | [`json_rewrite/`](../../../../../proto8/lib/agent/json_rewrite/) | 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 act 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。 |
 | [`knowledge_export/`](../../../../../proto8/lib/agent/knowledge_export/) | 把記憶庫（資料夾＋.json 的 JSON 樹）或其中一棵子樹整棵印成一份 Markdown，給人看；唯讀。 |
 | [`knowledge_export/tests/test_export.py`](../../../../../proto8/lib/agent/knowledge_export/tests/test_export.py) | knowledge_export（純 JSON 樹）：node 行、簡介、字串原樣、其他 JSON 包 ```json、表的順序與 not in index、防繞圈、截斷、錯誤。 |
-| [`knowledge_fs.py`](../../../../../proto8/lib/agent/knowledge_fs.py) | 記憶庫（純 JSON 樹）共用：找根（--root 旗標＞_knowledge.json＞AOS_KNOWLEDGE）、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 $env 格的認法、自己的簡介、列枝幹、find 逛樹的迴圈防護。 |
+| [`knowledge_fs.py`](../../../../../proto8/lib/agent/knowledge_fs.py) | 記憶庫（純 JSON 樹）共用：找根（--root 旗標＞寫的工具的呼叫參數 root＞_knowledge.json＞AOS_KNOWLEDGE）、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 $env 格的認法、自己的簡介、列枝幹、find 逛樹的迴圈防護。 |
 | [`knowledge_read/`](../../../../../proto8/lib/agent/knowledge_read/) | 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）：read 一個位置、ls 列枝幹的表、find 依關鍵字／標籤找路徑。 |
 | [`knowledge_read/tests/test_base_directive.py`](../../../../../proto8/lib/agent/knowledge_read/tests/test_base_directive.py) | 驗 _knowledge.json 的 base：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次用到才解、不寫回，解不開時錯誤行指名檔與欄。 |
 | [`knowledge_read/tests/test_knowledge.py`](../../../../../proto8/lib/agent/knowledge_read/tests/test_knowledge.py) | knowledge_read（純 JSON 樹）：read／ls／find 在各種位置上的輸出、表與 not in index、$ref／$env、迴圈、錯誤代號。 |

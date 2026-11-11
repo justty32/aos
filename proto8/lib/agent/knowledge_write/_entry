@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # knowledge_write - 改記憶庫：add／set／rm 一次寫好內容與它在表（_index.json 或 _index key）裡的那格；寫到哪都行，看檔案權限。
 # 圖紙：proto8/thinking/2026-11/10/json-memory/03-工具.md（使用者 11-10 晚）。介面：stdin {"op": "add"|"set"|"rm", "path": 統一路徑,
-#   "value"?: 任何 JSON（非 .json 檔要字串）, "description"?: 字串, "recursive"?: bool, "create"?: bool}。path 寫法與庫根的找法同 knowledge_read（knowledge_fs：--root ＞ _knowledge.json ＞ AOS_KNOWLEDGE，都沒有＝KnowledgeMissing）。
+#   "value"?: 任何 JSON（非 .json 檔要字串）, "description"?: 字串, "recursive"?: bool, "create"?: bool, "root"?: 資料夾}。path 寫法同 knowledge_read。
+#   庫根（knowledge_fs）：--root ＞ 呼叫參數 root（相對從 $AOS_WS）＞ _knowledge.json ＞ AOS_KNOWLEDGE，都沒有＝KnowledgeMissing（11-11 使用者
+#   「不給預設，要自己透過旗標指定或環境變數設定，或是工具呼叫內給。如果都沒有，那就報錯。」範本不再替寫的這支指出廠庫；讀的 knowledge_read 照舊）。
 #   add：path 以 / 結尾＝開資料夾（帶空的 _index.json）；否則新檔或物件裡新 key；description 必給，寫進上一層的表。
 #     不給 value（使用者 11-10 深夜）：目標已在＝只補表裡那格、內容不動；不在＝NodeMissing；create: true＝建空的（空檔／""）再補格。
 #   set：位置要已在；換 value、換 description，或兩個一起。rm：刪檔、資料夾（不空要 recursive: true）或 key，連表裡那格一起拔。
@@ -49,9 +51,11 @@ object's _description key: add, set and rm it like any path, with a string value
 and no description; it has no index entry.
 Writes may go anywhere the file system lets you (otherwise WriteFailed); the
 knowledge base root itself cannot be removed. No locking: two writers at once may
-overwrite each other. Needs aos-json on PATH. The knowledge base root: --root DIR (command line only, not a
-JSON argument), else _knowledge.json {"base": DIR} next to the tool, else
-AOS_KNOWLEDGE. No default: none of them = KnowledgeMissing; not a folder = KnowledgeBad.
+overwrite each other. Needs aos-json on PATH. Which knowledge base to write:
+--root DIR on the command line (pinned by whoever runs the tool; the JSON key root
+cannot change it), else the JSON key root (a folder, relative to the workspace),
+else _knowledge.json {"base": DIR} next to the tool, else AOS_KNOWLEDGE.
+No default: none of them = KnowledgeMissing; not a folder = KnowledgeBad.
 Result on stdout: node: PATH, then added, set or removed.
 On error: one line "knowledge_write: error: CODE reason" on stderr and stdout, exit 1.
 """
@@ -65,6 +69,9 @@ fs.take_root_flag("knowledge_write")               # --root DIR 不是 JSON 參�
 tool_io.start("knowledge_write", HELP)
 import writing
 
+MISSING = ("no knowledge base to write to: you have none of your own. Give root (a folder you may write, "
+           "relative to your workspace) in this call, or ask a person to set AOS_KNOWLEDGE. "
+           "Do not write into the knowledge base you read from.")
 fs.install_signals()
 args = tool_io.arguments()
 op = args.get("op")
@@ -94,7 +101,10 @@ if not isinstance(create, bool):
     tool_io.die("ArgumentsBad", "create must be true or false")
 if create and "value" in args:
     tool_io.die("ArgumentsBad", "give value or create: true, not both (create makes it empty)")
-root = fs.knowledge_root(HERE)
+given = args.get("root")
+if given is not None and (not isinstance(given, str) or not given):
+    tool_io.die("ArgumentsBad", "root must be a non-empty string (a folder)")
+root = fs.knowledge_root(HERE, given, MISSING)
 try:
     loc = fs.parse(root, path)
     if op == "add":

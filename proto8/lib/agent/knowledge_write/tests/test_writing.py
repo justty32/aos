@@ -70,6 +70,51 @@ class WritingTest(unittest.TestCase):
         self.assertEqual(json.loads((other / "x.json").read_text()), "x")
         self.assertFalse((self.root / "x.json").exists())
 
+    def test_root_sources_and_order(self):
+        """庫根三處來源各自能用、優先序 --root ＞ 呼叫參數 root ＞ _knowledge.json ＞ AOS_KNOWLEDGE；都沒有＝KnowledgeMissing 教小模型怎麼辦
+        （11-11 使用者「不給預設，要自己透過旗標指定或環境變數設定，或是工具呼叫內給。如果都沒有，那就報錯。」）。"""
+        kbs = {n: self.base / n for n in ("flag", "param", "cfg", "env")}
+        for d in kbs.values():
+            d.mkdir()
+        cfg_dir = self.base / "tooldir"
+        cfg_dir.mkdir()
+        (cfg_dir / "_knowledge.json").write_text(json.dumps({"base": str(kbs["cfg"])}))
+        plain = {"AOS_KNOWLEDGE": "", "AOS_WS": str(self.base)}
+
+        def write(name, argv=(), env=None, **extra):
+            args = dict(op="add", path=name + ".json", description="X", value="x", **extra)
+            r = subprocess.run([sys.executable, str(ENTRY), *argv], text=True, capture_output=True,
+                               env={**self.env, **plain, **(env or {})}, input=json.dumps(args), timeout=30)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            return [n for n, d in kbs.items() if (d / (name + ".json")).exists()]
+
+        # 各自一處
+        self.assertEqual(write("a", env={"AOS_KNOWLEDGE": str(kbs["env"])}), ["env"])
+        self.assertEqual(write("b", root="param"), ["param"])            # 相對從 $AOS_WS
+        self.assertEqual(write("c", env={"AOS_CD": str(cfg_dir)}), ["cfg"])
+        self.assertEqual(write("d", argv=("--root", str(kbs["flag"]))), ["flag"])
+        # 優先序：全給＝--root；拿掉 --root＝root 參數；再拿掉＝_knowledge.json；再拿掉＝AOS_KNOWLEDGE
+        every = {"AOS_KNOWLEDGE": str(kbs["env"]), "AOS_CD": str(cfg_dir)}
+        self.assertEqual(write("e", argv=("--root", str(kbs["flag"])), env=every, root="param"), ["flag"])
+        self.assertEqual(write("f", env=every, root=str(kbs["param"])), ["param"])
+        self.assertEqual(write("g", env=every), ["cfg"])
+        self.assertEqual(write("h", env={"AOS_KNOWLEDGE": str(kbs["env"])}), ["env"])
+        # 參數 root 沒有 AOS_WS＝cwd
+        r = subprocess.run([sys.executable, str(ENTRY)], text=True, capture_output=True, cwd=str(self.base),
+                           env=dict(self.env, AOS_KNOWLEDGE="", AOS_WS=""),
+                           input=json.dumps({"op": "add", "path": "i.json", "description": "X", "value": "x", "root": "param"}), timeout=30)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertTrue((kbs["param"] / "i.json").exists())
+        # 都沒有＝KnowledgeMissing，訊息叫它給 root 或請人設 AOS_KNOWLEDGE、別寫讀的那個庫；什麼都沒寫
+        line = self.fails("KnowledgeMissing", env=plain, op="add", path="z.json", description="X", value="x")
+        for words in ("Give root", "AOS_KNOWLEDGE", "Do not write into the knowledge base you read from"):
+            self.assertIn(words, line)
+        self.assertFalse(any((d / "z.json").exists() for d in kbs.values()))
+        # root 不是資料夾＝KnowledgeBad；不是非空字串＝ArgumentsBad
+        self.assertIn("root nope resolves to", self.fails("KnowledgeBad", env=plain, op="add", path="z.json", description="X", value="x", root="nope"))
+        self.fails("ArgumentsBad", env=plain, op="add", path="z.json", description="X", value="x", root="")
+        self.fails("ArgumentsBad", env=plain, op="add", path="z.json", description="X", value="x", root=3)
+
     def test_add_file_writes_value_and_index(self):
         out = self.ok(op="add", path="notes/amy.json", value="Amy likes tea.", description="Who Amy is")
         self.assertEqual(out, "node: notes/amy.json\nadded\n")

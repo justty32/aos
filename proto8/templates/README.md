@@ -13,7 +13,7 @@
 
 **範本不帶測試**（11-10 深夜使用者「啊？範本不該有tests。有的話就跟着抄。」，[tonight-rulings](../thinking/2026-11/10/tonight-rulings/README.md) 題 5）：範本資料夾裡抄到哪就帶到哪，所以測試一律放 [`tests/`](tests/)——`tests/agent-fsm/`、`tests/reviewer/`、`tests/judge-llm/` 各測一個範本，`tests/` 底下直接放的 `test_daily.py`、`test_paths_move.py` 跨範本。跑法：`python3 -m unittest discover -s proto8/templates/tests/agent-fsm`（資料夾名有 `-`，不能從 `tests/` 一次 discover 下去）。`cp -r` 與 `agent_def new` 照舊整夾抄。
 
-兩份 agent 範本預設登記 `knowledge_read` 與 `knowledge_write`，知識庫位置寫在兩格的 `env`：`"AOS_KNOWLEDGE": {"$env": "AOS_HOME", "$path": "/knowledge"}`（11-10 深夜使用者「指knowledge/」：讀寫都是 repo 的 `knowledge/`，agent 寫了就改到它）。工具本身沒有預設位置，要換庫就改這個值（相對路徑、絕對路徑或 `{"$env": "MY_KNOWLEDGE"}` 都行），改法見兩份範本的 README。用法見 [agent-fsm](docs/02-agent-fsm.md) 與 [eca-claude](docs/01-eca-claude.md)。
+兩份 agent 範本預設登記 `knowledge_read` 與 `knowledge_write`；讀的庫寫在 `knowledge_read` 那格的 `env`：`"AOS_KNOWLEDGE": {"$env": "AOS_HOME", "$path": "/knowledge"}`（11-10 深夜使用者「指knowledge/」）。`knowledge_write` 那格 11-11 起不給庫（使用者「不給預設，要自己透過旗標指定或環境變數設定，或是工具呼叫內給。如果都沒有，那就報錯。」）：腦在呼叫裡給 `root`，或人替那格配 `env.AOS_KNOWLEDGE`，都沒有＝`KnowledgeMissing`。工具本身沒有預設位置，要換庫就改這個值（相對路徑、絕對路徑或 `{"$env": "MY_KNOWLEDGE"}` 都行），改法見兩份範本的 README。用法見 [agent-fsm](docs/02-agent-fsm.md) 與 [eca-claude](docs/01-eca-claude.md)。
 
 **PATH 由呼叫的人放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），定義裡寫的 `aos-loop`、`aos-exec`、`aos-eca-turn` 要呼叫端事先放進 PATH：C++ 的 `proto8/impls/<名>/bin/`（要先建，見 [testing](../../wf/workflows/testing.md#proto8)）與 Python 的 `proto8/cmd/<名>/bin/`（`proto8/install.sh` 一次放好）。
 
