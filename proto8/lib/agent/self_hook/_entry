@@ -5,8 +5,8 @@
 # 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"get"|"add"|"rm"|"reset", …}；別的鍵＝ArgumentsBad：
 #   ls {long?}                   ＝hook ls --json（long: true＝ls -l 的文字，含被設成 null 的格）
 #   get {name}                   ＝hook get NAME
-#   add {event, path | path_json, name?, condition?（字串或字串陣列）, intercept?（false＝--no-intercept；預設開）, async?（true＝--async）, on_error?, timeout_ms?, replace?}
-#                                ＝hook add --event E [--name] [--condition M]… [--no-intercept] [--async] [--on-error] [--timeout-ms] [--replace] (XXX | --path-json)
+#   add {event, path | path_json, name?, condition?（字串或字串陣列）, every_cycles?, every_ms?, clock?（11-11 clock_due）, intercept?（false＝--no-intercept；預設開）, async?（true＝--async）, on_error?, timeout_ms?, replace?}
+#                                ＝hook add --event E [--name] [--condition M]… [--every-cycles N] [--every-ms N] [--clock C] [--no-intercept] [--async] [--on-error] [--timeout-ms] [--replace] (XXX | --path-json)
 #                                （鍵名 11-10 深夜改，使用者「hook這塊，主要走A, 但filter改condition。」）
 #   rm {name}                    ＝hook rm NAME
 #   reset {}                     ＝hook reset -y（腦叫了就算確認過）
@@ -94,7 +94,8 @@ signal.signal(signal.SIGTERM, on_term)
 signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
 args = arguments()
 OPS = {"ls": ("long",), "get": ("name",),
-       "add": ("event", "path", "path_json", "name", "condition", "intercept", "async", "on_error", "timeout_ms", "replace"),
+       "add": ("event", "path", "path_json", "name", "condition", "every_cycles", "every_ms", "clock", "intercept", "async",
+               "on_error", "timeout_ms", "replace"),
        "rm": ("name",), "reset": ()}
 op = args.get("op")
 if op is None:
@@ -139,11 +140,20 @@ else:
     timeout = args.get("timeout_ms")
     if timeout is not None and (not isinstance(timeout, int) or isinstance(timeout, bool)):
         die("ArgumentsBad", "timeout_ms must be a whole number of milliseconds")
+    every = []                                   # 11-11 clock_due：照給的傳，對不對由 aos-agent hook 說
+    for key in ("every_cycles", "every_ms"):
+        v = args.get(key)
+        if v is not None:
+            if not isinstance(v, int) or isinstance(v, bool):
+                die("ArgumentsBad", "%s must be a whole number" % key)
+            every += ["--" + key.replace("_", "-"), str(v)]
+    clock = text("clock")
+    every += ["--clock", clock] if clock else []
     on, name, on_fail = text("event", True), text("name"), text("on_error")
     cmd += ["--event", on] + (["--name", name] if name else []) + [x for m in match for x in ("--condition", m)] \
         + ([] if flag("intercept", True) else ["--no-intercept"]) + (["--async"] if flag("async") else []) \
         + (["--on-error", on_fail] if on_fail else []) + (["--timeout-ms", str(timeout)] if timeout is not None else []) \
-        + (["--replace"] if flag("replace") else [])
+        + (["--replace"] if flag("replace") else []) + every
     if "path_json" in args:
         pj = args["path_json"]
         if not ((isinstance(pj, str) and pj) or (isinstance(pj, dict) and pj)):

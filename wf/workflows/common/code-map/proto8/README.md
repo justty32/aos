@@ -3,7 +3,7 @@
 
 # proto8 逐檔 code map 生成冊索引
 
-`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：701 個檔、581 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
+`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：705 個檔、585 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
 
 | 冊 | 夾 | 段 | 列／檔 |
 |---|---|---|---|
@@ -13,7 +13,7 @@
 | [cmd-3](cmd-3.md) | `proto8/cmd/` | `aos-mcp/`、`aos-sandbox/`、`aos-sweeper/`、`aos-tools/` |  |
 | [extras](extras.md) | `proto8/extras/` | `gitignore-check/`、`image-move-check/`、`langs/` | 13／13 |
 | [feedback](feedback.md) | `proto8/feedback/` | 頂層 | 5／5 |
-| [impls](impls.md) | `proto8/impls/` | 依賴圖、頂層、`aos-daemon/` | 191／191 |
+| [impls](impls.md) | `proto8/impls/` | 依賴圖、頂層、`aos-daemon/` | 192／192 |
 | [impls-2](impls-2.md) | `proto8/impls/` | `aos-directive/`、`aos-exec/`、`aos-fsm/` |  |
 | [impls-3](impls-3.md) | `proto8/impls/` | `aos-inst/`、`aos-json/` |  |
 | [impls-4](impls-4.md) | `proto8/impls/` | `aos-llm/` |  |
@@ -22,12 +22,12 @@
 | [impls-7](impls-7.md) | `proto8/impls/` | `aos-util/`、`cmake/` |  |
 | [kernel](kernel.md) | `proto8/kernel/` | `daemon-judge/`、`llm-kernel/`、`llm-team/`、`procs-kernel/` | 20／20 |
 | [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層、`aos/` | 32／32 |
-| [lib](lib.md) | `proto8/lib/` | 頂層 | 148／260 |
+| [lib](lib.md) | `proto8/lib/` | 頂層 | 150／262 |
 | [lib-2](lib-2.md) | `proto8/lib/` | `agent/` |  |
 | [lib-3](lib-3.md) | `proto8/lib/` | `aos/` |  |
 | [lib-4](lib-4.md) | `proto8/lib/` | `base/`、`packs/` |  |
 | [lib-5](lib-5.md) | `proto8/lib/` | `tests/` |  |
 | [py](py.md) | `proto8/py/` | 頂層、`daemon_ctl/` | 13／13 |
 | [root](root.md) | `proto8/` 頂層單檔 | 頂層 | 1／1 |
-| [templates](templates.md) | `proto8/templates/` | 頂層、`agent-fsm/`、`daemon-root/`、`eca-claude/`、`judge-llm/`、`reviewer/` | 60／65 |
+| [templates](templates.md) | `proto8/templates/` | 頂層、`agent-fsm/`、`daemon-root/`、`eca-claude/`、`judge-llm/`、`reviewer/` | 61／66 |
 | [templates-2](templates-2.md) | `proto8/templates/` | `tests/`、`tool-python/` |  |

@@ -100,6 +100,18 @@ class State(unittest.TestCase):
         j = json.loads(self.state("-j", "hooks").stdout)
         self.assertEqual(j["hooks"]["hooks"][0]["event"], "after_tool")
 
+    def test_hooks_with_new_events(self):   # 11-11 clock-hook：新事件與 clock_due 的鍵，part_hooks 不崩
+        iface = json.loads((self.defn / "interfaces.json").read_text())
+        iface["aos-agent"]["hooks"] = "hooks.json"
+        (self.defn / "interfaces.json").write_text(json.dumps(iface))
+        (self.defn / "hooks.json").write_text(json.dumps({"hooks": {
+            "timer": {"event": "clock_due", "every_ms": 300000, "handler": "/bin/true"},
+            "up": {"event": "after_start", "handler": "/bin/true"}}}))
+        row = {l.split()[0]: l.split(None, 1)[1] for l in self.state().stdout.splitlines()}
+        self.assertEqual(row["hooks"], "2 hooks (timer on clock_due, up on after_start)")
+        j = json.loads(self.state("-j", "hooks").stdout)
+        self.assertEqual([h["event"] for h in j["hooks"]["hooks"]], ["clock_due", "after_start"])
+
     def test_unknown_part(self):
         p = self.state("bogus", ok=False)
         self.assertEqual(p.returncode, 1)

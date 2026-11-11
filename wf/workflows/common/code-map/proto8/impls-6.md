@@ -36,6 +36,7 @@
 | [`src/run/run.cpp`](../../../../../proto8/impls/aos-loop/src/run/run.cpp) | run_once——跑一次（說明見 aos/loop.hpp）。 |
 | [`src/run/run.hpp`](../../../../../proto8/impls/aos-loop/src/run/run.hpp) | 跑一次（公開介面 block_signals、take_signal、run_once 在 aos/loop.hpp）。 |
 | [`src/run/signals.cpp`](../../../../../proto8/impls/aos-loop/src/run/signals.cpp) | 將訊號操作轉交 aos-util（說明見 aos/loop.hpp）。 |
+| [`tests/test_on_start_stop.py`](../../../../../proto8/impls/aos-loop/tests/test_on_start_stop.py) | Check loop.json on_start / on_stop: run once before the first run and once on every way out (11-11 clock-hook). |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-loop/vcpkg.json) | aos-loop：一次次跑 run（aos-exec 的目標），看結束碼決定下一步 |
 
 ## `proto8/impls/aos-post/`

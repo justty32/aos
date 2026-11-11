@@ -57,6 +57,15 @@ class SelfHook(unittest.TestCase):
                                             "--condition", "a", "--condition", "b", "--no-intercept", "--on-error", "continue",
                                             "--timeout-ms", "500", "--replace", "hooks/guard"])
 
+    def test_add_clock_due(self):   # 11-11 clock-hook：every_cycles／every_ms／clock 一對一傳成旗標
+        r = self.run_tool({"op": "add", "event": "clock_due", "path": "hooks/guard", "name": "t", "every_ms": 300000, "clock": "_clock"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.calls()[-1], [str(self.ws), "hook", "--target", "bob", "add", "--event", "clock_due", "--name", "t",
+                                            "--every-ms", "300000", "--clock", "_clock", "hooks/guard"])
+        r = self.run_tool({"op": "add", "event": "clock_due", "path": "hooks/guard", "every_cycles": "10"})
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("self_hook: error: ArgumentsBad every_cycles must be integer", r.stderr)
+
     def test_each_op(self):
         d = {"$env": "AOS_HOME", "$path": "/lib/x"}
         for args, want in (({"op": "ls"}, ["ls", "--json"]),

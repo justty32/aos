@@ -25,6 +25,8 @@
 | [`codex/`](../../../../../proto8/lib/agent/codex/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 codex CLI；對話續在工具小格（$AOS_STACK） |
 | [`codex/cli.json`](../../../../../proto8/lib/agent/codex/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
 | [`cooldown.py`](../../../../../proto8/lib/agent/cooldown.py) | 失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。 |
+| [`hook_fire/_entry`](../../../../../proto8/lib/agent/hook_fire/_entry) | 發 after_start／after_stop 事件：agent 範本 loop.json 的 on_start／on_stop 叫它（hook_fire EVENT DEF_DIR，$AOS_STACK＝agent 的 stack）。 |
+| [`hook_noop/_entry`](../../../../../proto8/lib/agent/hook_noop/_entry) | 什麼都不做的 hook handler：讀掉 stdin 的事件 JSON、退 0（範本 hooks.json 預設那格 clock_due 的掛點；使用者「預設就是收到信後啥也不做。 |
 | [`hooks.py`](../../../../../proto8/lib/agent/hooks.py) | agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、挑出符合事件的 hook、用 aos-exec 跑、解回話。 |
 | [`json_rewrite/`](../../../../../proto8/lib/agent/json_rewrite/) | 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 act 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。 |
 | [`knowledge_export/`](../../../../../proto8/lib/agent/knowledge_export/) | 把記憶庫（資料夾＋.json 的 JSON 樹）或其中一棵子樹整棵印成一份 Markdown，給人看；唯讀。 |

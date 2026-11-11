@@ -1,0 +1,4 @@
+#!/bin/sh
+# hook_noop - 什麼都不做的 hook handler：讀掉 stdin 的事件 JSON、退 0（範本 hooks.json 預設那格 clock_due 的掛點；使用者「預設就是收到信後啥也不做。」）。
+cat > /dev/null
+exit 0

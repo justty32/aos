@@ -18,6 +18,11 @@ agent-fsm 的四格、aos-eca-turn、aos-mcp、aos-agent hook 都用這份，不
     fire(event, data, def_folder, stack, warn=None) -> {"data": 改過的 data（新 dict）, "changed": [改過的鍵],
                     "blocked": bool, "hook": 攔下的 hook 名或 None, "text": 攔下那個 hook 的 stdout（字串）或 ""}
     tools_added(stack, tools, has_hook) -> [(name, path)]：這次比上次多出來的工具（tools＝[(name, path)]）
+    clock_tick(def_folder, stack, warn=None) -> [跑了的 hook 名]：clock_due 的檢查（11-11 clock-hook）；沒有這種 hook＝只讀清單、不起行程
+
+11-11（thinking/2026-11/11/clock-hook）：事件多 after_start、after_stop（aos-loop 的 on_start／on_stop 叫 lib/agent/hook_fire 發，
+使用者「hook 要加的事件：起來與停下」）與 clock_due（使用者「hook就可以添加一個類型……去看指定的clock proc……每隔十個cycle就幹嘛，
+或是透過cycle換算，若超過十秒就幹嘛」；判斷在行程內做，到了才起 handler）。clock_due 才收的鍵＝CLOCK_KEYS。
 """
 import copy
 import json
@@ -38,7 +43,13 @@ EVENTS = {
     "after_tool": {"condition": "name", "intercept": ("content",), "block": False},
     "brain_failed": {"condition": "name", "intercept": (), "block": False},
     "tool_added": {"condition": "name", "intercept": (), "block": False},
+    "after_start": {"condition": None, "intercept": (), "block": False},   # 11-11：loop 起來（on_start）
+    "after_stop": {"condition": None, "intercept": (), "block": False},    # 11-11：loop 要退（on_stop；多 code、signal）
+    "clock_due": {"condition": None, "intercept": (), "block": False},     # 11-11：時鐘走到了（clock_tick）
 }
+CLOCK_EVENT = "clock_due"                        # 事件名集中在這裡（待使用者裁，好改）
+CLOCK_KEYS = ("clock", "every_cycles", "every_ms")   # 只有 clock_due 收
+CLOCK_STATE = "clock_due.json"                   # $AOS_STACK/hooks/<名>/clock_due.json：上次觸發（或基準）的 cycle
 DEFAULTS = {"intercept": True, "async": False, "on_error": "stop", "timeout_ms": 60000}
 BLOCK = 10                                       # 攔下（N-43：10＝「不要」，不是錯）
 CELLS = "hooks"                                  # 小格：$AOS_STACK/hooks/<名>/
@@ -80,6 +91,19 @@ def validate_entry(entry):
             raise HooksBad("condition must be a string or an array of strings")
         if EVENTS[on]["condition"] is None:
             raise HooksBad("event %s takes no condition" % on)
+    if on == CLOCK_EVENT:
+        given = [k for k in ("every_cycles", "every_ms") if k in entry]
+        if len(given) != 1:
+            raise HooksBad("event %s needs exactly one of every_cycles, every_ms" % on)
+        n = entry[given[0]]
+        if not isinstance(n, int) or isinstance(n, bool) or n <= 0:
+            raise HooksBad("%s must be a positive integer" % given[0])
+        if "clock" in entry and not (isinstance(entry["clock"], str) and entry["clock"]):
+            raise HooksBad("clock must be a non-empty string (a proc name, or the path of a clock file or of a folder with one)")
+    else:
+        for key in CLOCK_KEYS:
+            if key in entry:
+                raise HooksBad("%s is only for event %s" % (key, CLOCK_EVENT))
     if "on_error" in entry and entry["on_error"] not in ("stop", "continue"):
         raise HooksBad("on_error must be stop or continue")
     if "timeout_ms" in entry:
@@ -247,14 +271,16 @@ def _changes(event, out):
     return got
 
 
-def fire(event, data, def_folder, stack, warn=None):
+def fire(event, data, def_folder, stack, warn=None, only=None, entries=None):
     """跑 on==event、match 符合的 hook（照名字排序；前一個改過的後一個看得到；被攔下就停）。
-    沒宣告、沒有符合的＝什麼都不做（不起子行程）。warn＝收一行英文的函式（on_error continue 時叫）；None＝不說。"""
+    沒宣告、沒有符合的＝什麼都不做（不起子行程）。warn＝收一行英文的函式（on_error continue 時叫）；None＝不說。
+    only＝只跑這些名字（clock_tick 一個一個發）；entries＝已讀好的清單（不重讀）。"""
     if event not in EVENTS:
         raise ValueError("unknown hook event %s" % event)
     result = {"data": copy.deepcopy(data), "changed": [], "blocked": False, "hook": None, "text": ""}
-    entries = load(def_folder, stack)
-    names = sorted(n for n, e in entries.items() if e["event"] == event and _matches(e, event, data))
+    entries = load(def_folder, stack) if entries is None else entries
+    names = sorted(n for n, e in entries.items() if e["event"] == event and _matches(e, event, data)
+                   and (only is None or n in only))
     for name in names:
         entry = entries[name]
         try:
@@ -312,3 +338,116 @@ def tools_added(stack, tools, has_hook):
     if seen is None:
         return []
     return [(n, p) for n, p in tools if n not in set(seen)]
+
+
+# ---- clock_due（11-11 clock-hook）----
+
+def _clock_file(entry, stack):
+    """clock 鍵 → (時鐘檔絕對路徑, None) 或 (None, 為什麼找不到)。沒寫＝$AOS_CLOCK；路徑（有 / 或 . 開頭）：檔＝它、資料夾＝裡面的 clock
+    （daemon 的 stack 就是這種佈局）；相對＝從 agent 的 stack 算。名字（沒有 /）＝$AOS_DAEMON 表上那一列的 stack 裡的 clock。"""
+    v = entry.get("clock")
+    if v is None:
+        path = os.environ.get("AOS_CLOCK", "")
+        if not path:
+            return None, "AOS_CLOCK is not set (no clock: not under a daemon tree with one)"
+    elif "/" in v or v.startswith("."):
+        path = v if os.path.isabs(v) else os.path.join(stack, v)
+    else:
+        daemon = os.environ.get("AOS_DAEMON", "")
+        if not daemon:
+            return None, "clock %s is a proc name but AOS_DAEMON is not set" % v
+        try:
+            with open(os.path.join(daemon, "procs_state.json"), encoding="utf-8") as f:
+                row = (json.load(f).get("procs") or {}).get(v)
+        except (OSError, ValueError, AttributeError) as e:
+            return None, "cannot read the daemon table %s: %s" % (os.path.join(daemon, "procs_state.json"), e)
+        st = row.get("stack") if isinstance(row, dict) else None
+        if not isinstance(st, str) or not st:
+            return None, "proc %s is not on the daemon table %s" % (v, daemon)
+        path = st if os.path.isabs(st) else os.path.join(daemon, st)
+    path = os.path.abspath(path)
+    if os.path.isdir(path):
+        path = os.path.join(path, "clock")
+    if not os.path.isfile(path):
+        return None, "no clock file %s" % path
+    return path, None
+
+
+def _read_cycle(path):
+    """時鐘檔的數字（同 tool_io.clock_now 的讀法：去前後空白、空＝0、十進位）；壞＝None。"""
+    try:
+        with open(path, "rb") as f:
+            text = f.read().strip()
+    except OSError:
+        return None
+    if not text:
+        return 0
+    return int(text) if text.isdigit() and int(text) < 9223372036854775807 else None
+
+
+def _interval_ms():
+    text = os.environ.get("AOS_CLOCK_INTERVAL", "")
+    return int(text) if text.isdigit() and int(text) > 0 else 1000
+
+
+def _state(stack, name):
+    path = os.path.join(os.path.abspath(stack), CELLS, name, CLOCK_STATE)
+    try:
+        with open(path, encoding="utf-8") as f:
+            doc = json.load(f)
+        return path, doc if isinstance(doc, dict) else {}
+    except (OSError, ValueError):
+        return path, {}
+
+
+def _put_state(path, doc):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = os.path.join(os.path.dirname(path), ".%s.%d.tmp" % (CLOCK_STATE, os.getpid()))   # N-05：先寫暫存再改名
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(json.dumps(doc, ensure_ascii=False) + "\n")
+    os.replace(tmp, path)
+
+
+def clock_tick(def_folder, stack, warn=None):
+    """clock_due 的檢查：每個 clock_due hook 讀它的時鐘、比 hooks/<名>/clock_due.json 記的 cycle，到了才跑那個 hook。
+    到了＝cycle − 上次 ≥ 條件格數（every_cycles；every_ms＝ceil(every_ms ÷ AOS_CLOCK_INTERVAL)）；跑了就把上次記成這次的 cycle（不補跑：
+    錯過的只寫進 missed）。第一次（沒有狀態檔、或時鐘換了）＝只記基準、不跑；cycle 倒退（根重起、換台）＝重記基準、不跑。
+    找不到時鐘＝不跑、warning 只在原因變了時說一次（記在狀態檔）。回跑了的 hook 名。hook 停下＝HookFailed（同 fire）。
+    寫不了狀態檔＝warning、這次不跑（免得每拍都跑）。"""
+    entries = load(def_folder, stack)
+    names = sorted(n for n, e in entries.items() if e["event"] == CLOCK_EVENT)
+    ran = []
+    for name in names:
+        entry = entries[name]
+        spath, st = _state(stack, name)
+        clock, why = _clock_file(entry, stack)
+        cycle = _read_cycle(clock) if clock else None
+        if clock and cycle is None:
+            why = "clock file %s does not hold a cycle number" % clock
+        try:
+            if why:
+                if st.get("warned") != why:
+                    if warn:
+                        warn("hook %s (event %s) is not checked: %s" % (name, CLOCK_EVENT, why))
+                    _put_state(spath, dict(st, warned=why))
+                continue
+            last = st.get("cycle")
+            if st.get("clock") != clock or not isinstance(last, int) or isinstance(last, bool) or cycle < last:
+                _put_state(spath, {"clock": clock, "cycle": cycle})         # 第一次、換了時鐘、倒退：只記基準
+                continue
+            iv = _interval_ms()
+            every = entry["every_cycles"] if "every_cycles" in entry else max(1, -(-entry["every_ms"] // iv))
+            if cycle - last < every:
+                if st.get("warned"):
+                    _put_state(spath, {"clock": clock, "cycle": last})
+                continue
+            _put_state(spath, {"clock": clock, "cycle": cycle})             # 先記再跑：handler 失敗也不每拍重跑
+        except OSError as e:
+            if warn:
+                warn("hook %s (event %s): cannot write %s: %s" % (name, CLOCK_EVENT, spath, e))
+            continue
+        data = {"clock": clock, "cycle": cycle, "interval_ms": iv, "last_cycle": last,
+                "missed": (cycle - last) // every - 1}
+        fire(CLOCK_EVENT, data, def_folder, stack, warn=warn, only=[name], entries=entries)
+        ran.append(name)
+    return ran

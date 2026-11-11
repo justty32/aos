@@ -38,6 +38,7 @@
 # hook（lib/agent/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：BrainFailed、SendFailed（send 退非 0、或退 0 沒印信名）、ReplyBad
 #   照原本行為退出／記冷卻之前觸發 brain_failed（name＝代號、reason＝這格那行的原因）；hook 停下＝HookFailed／HooksBad 退 1（冷卻不記）。
 # --help 印英文用法；Ctrl-C 退 130。
+# clock_due（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick——時鐘走到了的 clock_due hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 import json, os, signal, subprocess, sys, time
 from pathlib import Path
 
@@ -153,6 +154,10 @@ if rest:
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
+try:                                             # 11-11 clock_due：每格開頭看一次時鐘，到了才起 handler（hooks.clock_tick）
+    hooks.clock_tick(os.environ.get("AOS_CD") or ".", stack, warn=lambda line: aos_flags.warn("agent-fsm", line))
+except (hooks.HookFailed, hooks.HooksBad) as e:
+    die(type(e).__name__, str(e))
 think = os.path.join(stack, "think")
 request, pending, box = (os.path.join(think, n) for n in ("request.json", "pending.txt", "reply"))
 history_path = os.path.join(stack, "history.jsonl")

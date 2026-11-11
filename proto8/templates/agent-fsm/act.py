@@ -16,6 +16,7 @@
 #   跑完、content 組好（含失敗尾巴）之後、接進 history 之前 after_tool（可改 content）。history 裡 assistant 的 tool_calls 不動。
 #   hook 停下＝HookFailed／HooksBad 退 1（這個 id 還沒有 tool 訊息，重跑會再跑一次）。
 # 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
+# clock_due（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick——時鐘走到了的 clock_due hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 import json, os, signal, subprocess, sys, time
 from pathlib import Path
 
@@ -87,6 +88,10 @@ opts = {flag: items[-1] for flag, items in values.items()}
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
+try:                                             # 11-11 clock_due：每格開頭看一次時鐘，到了才起 handler（hooks.clock_tick）
+    hooks.clock_tick(os.environ.get("AOS_CD") or ".", stack, warn=lambda line: aos_flags.warn("agent-fsm", line))
+except (hooks.HookFailed, hooks.HooksBad) as e:
+    die(type(e).__name__, str(e))
 try:
     files = declared_files(os.environ.get("AOS_CD") or ".")
 except ValueError as e:

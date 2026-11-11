@@ -39,7 +39,7 @@ exit codes: 0 printed; 1 error (HookMissing, HooksMissing...).
 """,
     "add": """aos-agent hook add - add a hook for this agent only
 
-usage: aos-agent [--daemon D] hook [--target NAME] add --event EVENT [-n N] [--condition M]... [--no-intercept] [--async] [--on-error stop|continue] [--timeout-ms N] [--replace] (XXX | --path-json JSON)
+usage: aos-agent [--daemon D] hook [--target NAME] add --event EVENT [-n N] [--condition M]... [--every-cycles N | --every-ms N] [--clock C] [--no-intercept] [--async] [--on-error stop|continue] [--timeout-ms N] [--replace] (XXX | --path-json JSON)
        aos-agent hook add --help
 
 Run XXX (anything aos-exec runs: a tool folder, a JSON file, an executable) when
@@ -48,13 +48,21 @@ directory and is stored relative to this agent's hooks file (absolute stays
 absolute). Written to this agent's own list in its stack; the definition stays as
 it is. Flags may go before or after XXX.
 
-events: before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added
+events: before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added,
+        after_start, after_stop (the agent's loop starts / is about to exit),
+        clock_due (a clock moved on: needs --every-cycles or --every-ms)
 
 flags:
       --event EVENT       the event (required)
   -n, --name N            the hook's name (default: XXX's file or folder name)
       --condition M       run only when the tool name / error code is M (repeatable;
                           not for before_queue / after_queue)
+      --every-cycles N    clock_due: run when the clock moved N cycles since the last run
+      --every-ms N        clock_due: the same, N ms counted in cycles (N / $AOS_CLOCK_INTERVAL,
+                          default 1000 ms a cycle; not the wall clock)
+      --clock C           clock_due: which clock: a proc name on the daemon table (its stack
+                          has a clock file), or the path of a clock file or of a folder with
+                          one (relative = from the agent's stack); default $AOS_CLOCK
       --no-intercept      do not read its reply (by default it is read: exit 0 + JSON on
                           stdout changes the event, exit 10 blocks it; only for
                           before_queue, before_tool, after_tool; other events and
@@ -159,6 +167,8 @@ def ls(entries, folder, stack, own, long, as_json):
             continue
         m = e.get("condition")
         m = "-" if m is None else m if isinstance(m, str) else ",".join(m)
+        if e["event"] == hooks.CLOCK_EVENT:          # 11-11：clock_due 的條件寫在 CONDITION 欄
+            m = ",".join("%s=%s" % (k, e[k]) for k in hooks.CLOCK_KEYS if k in e)
         print("\t".join((n, e["event"], compact(e["handler"]), m, json.dumps(e["async"]), e["on_error"],
                          json.dumps(e["intercept"]), str(e["timeout_ms"]), e["from"])))
     if long:
@@ -200,6 +210,11 @@ def build(topts, args, own, help):
     entry = {"event": topts["event"], "handler": target_v}
     if "condition" in topts:
         entry["condition"] = topts["condition"][0] if len(topts["condition"]) == 1 else topts["condition"]
+    for key in ("every_cycles", "every_ms"):        # 11-11 clock_due（不是正整數交給 validate_entry 說）
+        if key in topts:
+            entry[key] = int(topts[key]) if topts[key].isdigit() else topts[key]
+    if "clock" in topts:
+        entry["clock"] = topts["clock"]
     if topts.get("no_intercept"):                 # 預設開（11-10 深夜使用者「3.幫我改成預設是開」）；關＝寫 false
         entry["intercept"] = False
     if topts.get("async"):
@@ -222,7 +237,8 @@ def cmd(argv):
     if act not in HELPS:
         raise Fail("CommandUnknown", "hook: unknown subcommand %s (ls, get, add, rm, reset; see aos-agent hook --help)" % act)
     flags = {"add": {"--event": "event", "--name": "name", "--on-error": "on_error", "--timeout-ms": "timeout_ms",
-                     "--path-json": "path_json"}}.get(act, {})
+                     "--path-json": "path_json", "--every-cycles": "every_cycles", "--every-ms": "every_ms",
+                     "--clock": "clock"}}.get(act, {})
     switches = {"ls": {"--json": "json", "--long": "long"},
                 "add": {"--no-intercept": "no_intercept", "--async": "async", "--replace": "replace"},
                 "reset": {"--yes": "yes"}}.get(act, {})

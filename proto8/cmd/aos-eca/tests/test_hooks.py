@@ -132,7 +132,21 @@ class EcaHooks(unittest.TestCase):
         r = self.turn()
         self.assertEqual(r.returncode, 1)
         self.assertIn("aos-eca-turn: error: HooksBad", r.stderr)
-        self.assertEqual(len(self.queue()), 1)
+        self.assertEqual(len(self.queue()) + len(self.queue("new")), 1)   # 11-11 起清單壞在每輪開頭（clock_tick）就報、信還沒認領：留在 new/
+
+    def test_clock_due_each_turn_history_stays(self):   # 11-11 clock-hook：每輪開頭看時鐘，到了才跑；queue 空也看；history 不多東西
+        clock = self.t / "clock"
+        clock.write_text("10\n")
+        self.declare({"t": {"event": "clock_due", "every_cycles": 2, "handler": self.hook("t"), "on_error": "continue"}})
+        self.assertEqual(self.turn(AOS_CLOCK=str(clock)).returncode, 0)          # 第一次：基準
+        clock.write_text("11\n")
+        self.turn(AOS_CLOCK=str(clock))
+        self.assertEqual(self.read_lines(self.log), [])
+        clock.write_text("12\n")
+        self.turn(AOS_CLOCK=str(clock))
+        (ev,) = self.read_lines(self.log)
+        self.assertEqual((ev["event"], ev["cycle"], ev["last_cycle"], ev["missed"]), ("clock_due", 12, 10, 0))
+        self.assertEqual(self.history(), [])
 
     def test_queue_after_failing_keeps_answer(self):
         self.declare({"bad": {"event": "after_queue", "handler": self.hook("bad", "sys.exit(3)\n")}})
