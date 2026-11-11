@@ -21,7 +21,7 @@ flowchart LR
 | `tools` | 錯誤 `ToolNodeMissing`／`ToolDefMissing` | `lib/packs/*.json` 登記的每支工具 |
 | `cmds` | 錯誤 `CmdNodeMissing` | `cmd/*/bin/aos-*` 每支指令 |
 | `impls` | 錯誤 `CmdNodeMissing` | `impls/*/CMakeLists.txt` 的 `add_executable(aos-X_main …)` 每支執行檔（11-11 由提醒升錯誤：每支都有節點了，底層零件在 `aos/cli/parts/`） |
-| `codes` | 提醒 | 登記工具的 `_tooldef.json` 的 `errors`：庫裡全文找不到的代號；結尾不在 C-54 表（`Missing`、`Unknown`、`Bad`、`Failed`、`Exists`、`Rejected`，另加 `Internal`）的代號 |
+| `codes` | 提醒 | 登記工具的 `_tooldef.json` 的 `errors`：庫裡全文找不到的代號（結尾不查：11-11 使用者裁 C-54 的結尾表只是推薦、「其他的也可以自己隨意定」） |
 | `residue` | 錯誤 `DateNoteBad`／`ThinkingRefBad`／`PlaceholderBad` | 庫內字串值裡的 `11-06 note` 這種日期註、`thinking/`、`XXX` |
 | `size` | 提醒 | 一份 `.json` 超過 `--max-file-bytes`（預設 8192）、一個字串值超過 `--max-text-bytes`（預設 1024） |
 

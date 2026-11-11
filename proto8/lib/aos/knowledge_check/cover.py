@@ -1,6 +1,7 @@
-"""knowledge_check 的覆蓋與代號檢查：登記在 lib/packs 的工具、cmd 的 aos-* 指令、impls 的執行檔各有沒有自己的節點，tooldef 宣告的錯誤代號在不在庫裡、結尾合不合 C-54。
+"""knowledge_check 的覆蓋與代號檢查：登記在 lib/packs 的工具、cmd 的 aos-* 指令、impls 的執行檔各有沒有自己的節點，tooldef 宣告的錯誤代號在不在庫裡。
 
 工具、指令清單一律從磁碟動態讀（lib/packs/*.json、cmd/*/bin/aos-*、impls/*/CMakeLists.txt），不寫死名字。
+代號結尾不檢查（11-11 使用者：C-54 的結尾表「偏向於推薦啦」「其他的也可以自己隨意定」）。
 """
 import glob
 import json
@@ -8,7 +9,7 @@ import os
 import re
 
 import knowledge_fs as fs
-from checks import DETAILS_RE, ENDINGS, Problem, branches
+from checks import DETAILS_RE, Problem, branches
 
 EXE_RE = re.compile(r"add_executable\((aos-[A-Za-z0-9-]+?)_main\b")
 
@@ -108,7 +109,7 @@ def check_cmds(tree, kind):
 
 
 def check_codes(tree):
-    """tooldef 宣告的錯誤代號：庫裡全文找不到、結尾不在 C-54 表＝提醒（一個代號一行，附宣告它的工具）。"""
+    """tooldef 宣告的錯誤代號：庫裡全文找不到＝提醒（一個代號一行，附宣告它的工具）。"""
     declared = {}
     for name, _, td, _ in pack_tools(tree.home):
         errors = tooldef(td).get("errors", []) if td else []
@@ -127,6 +128,4 @@ def check_codes(tree):
         tools = ", ".join(sorted(set(declared[code])))
         if not re.search(r"\b%s\b" % re.escape(code), text):
             out.append(Problem("warning", "codes", "", "code %s" % code, "declared by %s; not found in the knowledge base" % tools))
-        if code != "Internal" and not code.endswith(ENDINGS):
-            out.append(Problem("warning", "codes", "", "code %s" % code, "declared by %s; its ending is not one of C-54's (%s, Internal)" % (tools, ", ".join(ENDINGS))))
     return out

@@ -26,8 +26,7 @@ Check the stock knowledge base without changing it. Checks (default: all):
   tools    every tool in lib/packs/*.json has a tooldef with a Details: path that resolves
   cmds     every cmd/*/bin/aos-* is named by some index entry's _description
   impls    the same for impls executables (add_executable in impls/*/CMakeLists.txt)
-  codes    tooldef error codes not found in the knowledge base, or with an ending
-           outside C-54's (warnings)
+  codes    tooldef error codes not found in the knowledge base (warnings)
   residue  dated notes (11-06 note), paths into thinking/, XXX placeholders
   size     files over max_file_bytes, text values over max_text_bytes (warnings)
 One problem per line: "knowledge_check: error: CODE WHERE: reason" or

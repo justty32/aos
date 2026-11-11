@@ -20,7 +20,7 @@
 | [`judge/tests/test_judge.py`](../../../../../proto8/lib/aos/judge/tests/test_judge.py) | Verify broken reply recovery and restart deduplication with real aos-post mailboxes. |
 | [`knowledge_check/`](../../../../../proto8/lib/aos/knowledge_check/) | 檢查出廠知識庫：指標解析得到、_index 與內容一致沒孤兒、工具與指令各有節點、錯誤代號、開發殘留、大小；只讀不寫。 |
 | [`knowledge_check/checks.py`](../../../../../proto8/lib/aos/knowledge_check/checks.py) | knowledge_check 的八項檢查：指標、表與孤兒、工具／指令／impls 覆蓋、錯誤代號、開發殘留、大小；每項回一串 Problem，不寫檔。 |
-| [`knowledge_check/cover.py`](../../../../../proto8/lib/aos/knowledge_check/cover.py) | knowledge_check 的覆蓋與代號檢查：登記在 lib/packs 的工具、cmd 的 aos-* 指令、impls 的執行檔各有沒有自己的節點，tooldef 宣告的錯誤代號在不在庫裡、結尾合不合 C-54。 |
+| [`knowledge_check/cover.py`](../../../../../proto8/lib/aos/knowledge_check/cover.py) | knowledge_check 的覆蓋與代號檢查：登記在 lib/packs 的工具、cmd 的 aos-* 指令、impls 的執行檔各有沒有自己的節點，tooldef 宣告的錯誤代號在不在庫裡。 |
 | [`knowledge_check/tests/test_factory_tree.py`](../../../../../proto8/lib/aos/knowledge_check/tests/test_factory_tree.py) | The stock knowledge base (proto8/knowledge) passes knowledge_check with no errors; warnings are allowed. |
 | [`knowledge_check/tests/test_knowledge_check.py`](../../../../../proto8/lib/aos/knowledge_check/tests/test_knowledge_check.py) | Verify every knowledge_check check turns red on a broken fixture tree and green on a clean one. |
 | [`llm_forward/`](../../../../../proto8/lib/aos/llm_forward/) | Forward one endpoint request to the kernel named by its pack. |

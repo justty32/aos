@@ -12,7 +12,6 @@ import knowledge_fs as fs
 
 Problem = namedtuple("Problem", "level check code where reason")   # level: error／warning；warning 的 code＝""
 CHECKS = ("refs", "index", "tools", "cmds", "impls", "codes", "residue", "size")
-ENDINGS = ("Missing", "Unknown", "Bad", "Failed", "Exists", "Rejected")   # C-54 六種結尾，另加整個字 Internal
 SKIP_DIRS = {"tests", "thinking", "archive", "__pycache__", "build", "node_modules", "fixtures", ".git"}
 CODE_DIRS = ("lib", "cmd", "templates", "kernel")
 # 知識庫路徑字串：前面不能接路徑字元（knowledge/aos/x.json 是 repo 路徑、不算）；要帶 .json 或以 / 結尾才當指標

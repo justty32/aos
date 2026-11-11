@@ -124,14 +124,15 @@ class KnowledgeCheckTests(unittest.TestCase):
         self.assertEqual((report['errors'], report['warnings']), (1, 0))
         self.assertEqual((report['problems'][0]['code'], report['problems'][0]['where']), ('CmdNodeMissing', 'command aos-drill'))
 
-    def test_codes_not_in_knowledge_and_bad_endings(self):
+    def test_codes_not_in_knowledge_any_ending(self):
+        # 結尾不檢查（11-11 C-54 改推薦）：HandleBroke 只因庫裡找不到被提醒，NailMissing 在庫裡＝不提
         write(self.home / 'lib' / 'tools' / 'hammer' / '_tooldef.json', {
             'description': 'Details: knowledge_read aos/tools.json#/hammer', 'parameters': {'type': 'object'},
             'errors': ['ArgumentsBad', 'NailMissing', 'HandleBroke', 'Internal']})
         report = self.run_check('--only', 'codes')
         self.assertEqual(report['errors'], 0)
-        rows = sorted((p['where'], 'ending' in p['reason']) for p in report['problems'])
-        self.assertEqual(rows, [('code HandleBroke', False), ('code HandleBroke', True), ('code Internal', False)])
+        rows = sorted((p['where'], 'not found' in p['reason']) for p in report['problems'])
+        self.assertEqual(rows, [('code HandleBroke', True), ('code Internal', True)])
 
     def test_residue(self):
         write(self.kb / 'aos' / 'cli' / 'saw.json', 'Run aos-saw.\n\n11-06 note: old. See ../../thinking/x.md. Put XXX here.')
