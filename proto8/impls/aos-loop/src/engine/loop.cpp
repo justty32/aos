@@ -5,6 +5,7 @@
 //
 // 訊號：block_signals 擋著的三個訊號排在 kernel 裡；signal_got 兩次之間取出第一個並記住（之後一直回它）；
 // nap 用 sigtimedwait 睡，收到就醒。跑的期間收到的由 run_once 轉給那次、放在 Run::received。
+// 11-11：on_start 在第一次之前跑一次；on_stop 在 end（finish 之後、最後一份 state 之前）或 serve 的錯誤路徑跑一次（run_side、stop_side）。
 // nap 也等子類別 wake_ 的訊號，交 woke 決定是否提前算一圈；aos-loop 不設，daemon 用來接 poke。
 #include "engine/engine.hpp"
 
@@ -14,6 +15,7 @@
 
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <ctime>
 #include <exception>
 
@@ -77,8 +79,54 @@ void Loop::nap(double secs) {
     }
 }
 
+// 11-11 on_start／on_stop：跑一次，問題只一行 warning（不改結束碼）。跑的期間收到的訊號記成這支收到的（之後照常收工）。
+// code≥0＝on_stop：環境多 AOS_LOOP_CODE、AOS_LOOP_SIGNAL（跑完還原）。
+void Loop::run_side(const std::optional<Target>& t, const char* key, int code) {
+    if (!t) {
+        return;
+    }
+    std::vector<std::pair<const char*, std::optional<std::string>>> old;
+    if (code >= 0) {
+        for (const char* k : {"AOS_LOOP_CODE", "AOS_LOOP_SIGNAL"}) {
+            const char* o = std::getenv(k);
+            old.emplace_back(k, o ? std::optional<std::string>(o) : std::nullopt);
+        }
+        setenv("AOS_LOOP_CODE", std::to_string(code).c_str(), 1);
+        setenv("AOS_LOOP_SIGNAL", got_ != 0 ? std::to_string(got_).c_str() : "", 1);
+    }
+    try {
+        Run b = run_once(*t, on_timeout_ms_);
+        if (b.received != 0 && got_ == 0) {
+            got_ = b.received;
+        }
+        if (b.timed_out) {
+            warn(std::string(key) + " " + t->label() + " did not finish in " + std::to_string(on_timeout_ms_) + " ms and was killed");
+        } else if (b.code != 0) {
+            warn(std::string(key) + " " + t->label() + " exited " + std::to_string(b.code));
+        }
+    } catch (const Error& e) {
+        warn(std::string(key) + " " + t->label() + " cannot run: " + e.code + " " + e.msg);
+    }
+    for (auto& [k, v] : old) {
+        if (v) {
+            setenv(k, v->c_str(), 1);
+        } else {
+            unsetenv(k);
+        }
+    }
+}
+
+void Loop::stop_side(int code) {
+    if (!served_ || stop_ran_) {
+        return;
+    }
+    stop_ran_ = true;
+    run_side(on_stop_, "on_stop", code);
+}
+
 int Loop::end(int code, const std::string& phase) {
     finish();
+    stop_side(code);
     write_state(phase, Json(code));
     return code;
 }
@@ -88,6 +136,8 @@ int Loop::main_loop() {
     max_base_ = max_;               // ctl 寫 null 回這兩個（11-03）
     interval_base_ = interval_ms_;
     read_old_state();              // 先接回 paused 與 ctl_seq；第一輪讀 ctl 前不得覆寫舊 state／state_flux
+    served_ = true;
+    run_side(on_start_, "on_start", -1);   // 11-11：起來跑一次（期間收到訊號＝下面頂端照常收工，on_stop 照跑）
     while (true) {
         if (signal_got() != 0) {
             return end(128 + signal_got(), "stopped");
@@ -153,6 +203,9 @@ int Loop::main_loop() {
             line["elapsed_ms"] = b.elapsed_ms;
             log_line(line);
             if (b.received != 0) {
+                if (got_ == 0) {
+                    got_ = b.received;   // 11-11：on_stop 的 AOS_LOOP_SIGNAL 看它
+                }
                 return end(128 + b.received, "stopped");
             }
             if (b.code == 10) {
@@ -177,6 +230,10 @@ int Loop::serve() {
     }
     try {
         finish();
+    } catch (...) {
+    }
+    try {
+        stop_side(1);   // 11-11：自己的錯退出也跑 on_stop
     } catch (...) {
     }
     return 1;

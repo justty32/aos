@@ -32,6 +32,8 @@ aos-loop --max 2 loop.json # 每次 `aos-exec -- idle`，旗標蓋過 loop.json 
 
 **引擎的喚醒掛鉤 `wake_`／`woke`**（11-09，給 aos-daemon 的 poke 用，[thinking daemon-interrupt](../../thinking/2026-11/09/daemon-interrupt/README.md)）：子類別把已擋住的訊號放進 `wake_`，`nap` 睡覺時連它們一起等，收到就呼叫 `woke(sig)`，回 true＝這一圈當作到時間了（提前跑）；不當收工訊號、不轉給身體。aos-loop 自己不設、不接 poke，行為不變。**子行程的訊號遮罩改成還原**：`run_folder` fork 出來的子行程用 aos-util `restore_signals` 把遮罩還原成 `block_signals` 之前的樣子（原本寫死只解三個收工訊號），所以起 aos-loop 的人（例 aos-daemon）多擋的訊號，身體照常收得到。
 
+**起來、要退時各跑一次（11-11，`on_start`／`on_stop`）**：使用者要 agent 的 hook 有「起來與停下」兩個事件，掛哪層選「aos-loop 自己加」（[thinking clock-hook](../../thinking/2026-11/11/clock-hook/README.md)）。loop.json 選填 `on_start`、`on_stop`，寫法同 `exec`（字串、陣列、單子）；`on_start` 在第一次之前跑一次，`on_stop` 在 loop 要退時跑一次——stop、跑滿、身體退 10、身體失敗、收到訊號（daemon 的 sleep／rm／收工都是 SIGTERM）、自己的錯都跑得到，SIGKILL 跑不到。`on_stop` 的環境多 `AOS_LOOP_CODE`（要退的碼）與 `AOS_LOOP_SIGNAL`（收到的訊號號碼，沒有＝空字串）。兩格的期限＝`on_timeout_ms`（正整數，預設 5000；daemon 收工只等子項 10 秒），到了 SIGTERM、1 秒後 SIGKILL 整群（這兩格的子行程自成一群）；退非 0、逾時、起不來＝一行 `aos-loop: warning:`，不改結束碼、不擋起跑。loop 不知道它們是什麼（C-52）；agent 範本把它們指到 `lib/agent/hook_fire`。細節 [01 用法](docs/01-用法.md)。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。

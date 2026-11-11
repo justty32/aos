@@ -20,7 +20,8 @@ namespace aos::loop {
 sigset_t the_signals();
 
 // argv＝交給 aos-exec 的參數（不含程式名）。見 aos/loop.hpp 的 run_once。
-Run run_folder(const std::vector<std::string>& argv);
+// timeout_ms＞0（11-11 on_start／on_stop）：到時間 SIGTERM 給子行程、再 1 秒還在就 SIGKILL，timed_out＝true。
+Run run_folder(const std::vector<std::string>& argv, long long timeout_ms = 0);
 
 // t.inst 是單子（10-24）。見 aos/loop.hpp 的 run_once。
 Run run_inline(const Target& t);

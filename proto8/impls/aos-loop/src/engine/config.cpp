@@ -1,7 +1,7 @@
 // config.cpp：【engine】Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、解指示詞（resolve_keys，10-23 晚）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）；
 // 還有 parse_target（exec 的寫法）、resolve_exec、place_inline（內嵌單子在哪，10-24）、loop_cli（命令列；--enable-logs、--enable-counters 開關、
 // 設定檔後面的 `-- 參數...`）、add_args（附加參數接到 exec 後面）
-// （10-21 傍晚 ideas § 9）；錯誤分代號。
+// （10-21 傍晚 ideas § 9）；錯誤分代號。11-11：on_start／on_stop（寫法同 exec）與 on_timeout_ms。
 #include "engine/engine.hpp"
 
 #include "aos/util/files.hpp"
@@ -178,14 +178,18 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
     counters_ = opts.count("enable_counters") > 0;
     cfg_ = aos::load_cfg(spec);
     std::string exec_base;   // exec 那格裡相對 $ref 的起點（內嵌單子用）
+    std::map<std::string, std::string> side_base;   // 11-11 on_start／on_stop 同 exec
     try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45；捷徑解開，10-24 審後，config_file）
         aos::Resolved r = resolve_keys(cfg_, aos::dirname(config_file(spec)),
-                                       {"max", "interval_ms", CtlWindow::config_key, StateWindow::config_key, StateFluxWindow::config_key});
-        if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解（10-24，resolve_exec）
-            aos::Resolved ex = resolve_exec(r.value["exec"], r.dir_of("exec"));
-            r.value["exec"] = std::move(ex.value);
-            exec_base = ex.base_dir;
+                                       {"max", "interval_ms", "on_timeout_ms", CtlWindow::config_key, StateWindow::config_key, StateFluxWindow::config_key});
+        for (const char* k : {"exec", "on_start", "on_stop"}) {   // 是單子時裡面不解（10-24，resolve_exec；11-11 起停兩格同 exec）
+            if (r.value.is_object() && r.value.contains(k) && !r.value[k].is_null()) {
+                aos::Resolved ex = resolve_exec(r.value[k], r.dir_of(k));
+                r.value[k] = std::move(ex.value);
+                side_base[k] = ex.base_dir;
+            }
         }
+        exec_base = side_base["exec"];
         cfg_ = std::move(r.value);
         cfg_dirs_ = std::move(r);
         cfg_dirs_.value = nullptr;
@@ -228,6 +232,24 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
         throw Error{code::CfgBad, "nothing to run (config has no exec)"};
     } else if (!args.empty()) {
         throw Error{code::ArgumentsBad, "no exec (body), so the extra args after -- have nowhere to go"};   // daemon 純監工（11-02 晚代定）
+    }
+    // 11-11（使用者選「aos-loop 自己加」）：起來、要退時各跑一次；寫法同 exec，null＝沒有
+    std::optional<Target>* sides[2] = {&on_start_, &on_stop_};
+    const char* side_keys[2] = {"on_start", "on_stop"};
+    for (int i = 0; i < 2; ++i) {
+        Json v = cfg_.value(side_keys[i], Json());
+        if (v.is_null()) {
+            continue;
+        }
+        Target t = parse_target(v, side_keys[i]);
+        place_inline(t, spec, std::string("/") + side_keys[i], side_base[side_keys[i]]);
+        *sides[i] = std::move(t);
+    }
+    if (cfg_.contains("on_timeout_ms")) {
+        if (!aos::is_count(cfg_["on_timeout_ms"]) || as_ll(cfg_["on_timeout_ms"]) <= 0) {
+            throw Error{code::CfgBad, "on_timeout_ms must be a positive integer"};
+        }
+        on_timeout_ms_ = as_ll(cfg_["on_timeout_ms"]);
     }
     max_ = d_.max;
     if (cfg_.contains("max")) {

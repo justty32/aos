@@ -7,7 +7,8 @@
 //   resolve_exec    exec 那格的指示詞：先換一層；換完是物件（單子）就不往裡面解（留到跑的時候、AOS_CF／AOS_CO 設好才解），不然整個解
 //   place_inline    內嵌單子在哪：設定檔（AOS_CF）、在檔裡的指標（AOS_CO）、單子裡相對 $ref 的起點
 //   config_file     設定檔的實際路徑（解開捷徑；同 aos-exec 的 AOS_CF）——設定檔裡相對 $ref 的起點與內嵌單子的 AOS_CF／AOS_CD 都從它算
-//   run_once        跑一次：目標＝子行程裡 `aos-exec -- 目標 參數...`（aos-exec 的 run_cli）；單子＝行程內 aos-exec 的 run_inst
+//   run_once        跑一次：目標＝子行程裡 `aos-exec -- 目標 參數...`（aos-exec 的 run_cli）；單子＝行程內 aos-exec 的 run_inst；
+//                   給 timeout_ms＝起停那兩格用的期限（11-11 on_start／on_stop）
 //   loop_cli        命令列 `程式 [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--state-flux 檔] [--enable-logs] [--enable-counters] 設定檔 [-- 參數...]`（aos-loop、aos-daemon 共用）
 //   add_args        `-- 參數...` 接到 exec 後面（11-02 晚）
 //   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；10-21 傍晚）：
@@ -79,6 +80,7 @@ struct Run {
     int signal = 0;            // 停掉它的訊號（0＝不是被訊號停掉；log 裡寫 null）
     unsigned long long elapsed_ms = 0; // 花了幾毫秒（log 的 elapsed_ms）
     int received = 0;          // 跑的期間自己收到、轉給那次的第一個訊號（0＝沒有）；呼叫者收完這次要以 128＋它結束
+    bool timed_out = false;    // 只有給了 timeout_ms 的目標（on_start／on_stop）：到時間被收掉
 };
 
 // 擋住三個訊號。之後它們不會打死這支程式，而是排著，由 run_once 轉給那次、或由 take_signal 取出。
@@ -131,7 +133,9 @@ std::string pointer_escape(const std::string& key);
 // 10-24 審後補：原本原樣給，單子從設定檔的資料夾算，跟 loop 自己照 cwd 算的窗對不上）；其他環境照呼叫者現有的、不讀 .env。單子壞 EntryBad、指示詞壞 DirectiveBad、起不來 LaunchFailed
 // （訊息開頭「inst cannot run: 」）；被逾時收掉＝code 128＋N、signal N。
 // 呼叫前要先 block_signals()。
-Run run_once(const Target& t);
+// timeout_ms（11-11，只給 on_start／on_stop 用；0＝不限，同身體）：目標＝到時間 SIGTERM 給那個子行程、再 1 秒還在就 SIGKILL，
+// Run::timed_out＝true；單子＝單子自己沒寫 timeout_ms／timeout_cycles 時補上 timeout_ms（逾時照 run_inst 收整群）。
+Run run_once(const Target& t, long long timeout_ms = 0);
 
 // 命令列（10-21 傍晚 ideas § 9；規則同 aos-exec，aos-util 的 parse_cli）：唯一的位置參數＝設定檔（必給、只能一個；
 // 可寫 `檔#/指標`）。旗標 --max、--interval-ms、--ctl、--state、--state-flux 帶值；--enable-logs、--enable-counters 是不帶值的開關，
@@ -178,6 +182,11 @@ struct Defaults {
 //                 need_exec 時必填（沒寫＝CfgBad「沒有東西可跑」）
 //   max           最多幾次（非負整數；沒寫＝Defaults::max；寫 null 不行）
 //   interval_ms   一次結束到下一次開始至少隔幾毫秒（非負整數；沒寫＝Defaults::interval_ms）
+//   on_start, on_stop  起來、要退時各跑一次的東西（11-11，使用者選「aos-loop 自己加」；寫法同 exec；沒寫＝不跑）：
+//                 on_start＝第一次之前（讀完舊 state、ctl 之前）；on_stop＝要退時（stop、跑滿、身體 10、身體失敗、訊號、自己的錯，
+//                 finish() 之後、最後一份 state 之前；SIGKILL 跑不到）。on_stop 的環境多 AOS_LOOP_CODE（要退的碼）、AOS_LOOP_SIGNAL（收到的訊號號碼，
+//                 沒有＝空字串）。退非 0、逾時、起不來＝一行 warning，不改 loop 的結束碼、不擋起跑。loop 不知道它們是什麼（C-52）
+//   on_timeout_ms 上面兩格的期限（正整數，沒寫＝5000；aos-daemon 收工只給子項 10 秒）
 //   ctl, state, state_flux 三扇窗的檔名，在 $AOS_STACK 底下（11-04 起沒寫＝ctl.json／state.json／state_flux.json、寫 null＝不開；要開卻沒設 AOS_STACK＝StackMissing）
 // log 不是 key（11-02 使用者「把log輸出到stdout」；11-02 晚「應該要改成默認不印」）：預設不印，命令列 --enable-logs 才印到 stdout；不寫任何 log 檔。
 // --enable-counters 也是命令列開關：開了 state 窗才每輪寫同資料夾的 counter_runs.txt（本行程起來後跑過幾次）；預設不碰檔。
@@ -271,6 +280,9 @@ protected:
     bool log_ = false;            // 印 log（--enable-logs＝true；印不了變回 false）
     bool paused_ = false;         // 暫停中（ctl 的 pause／resume 改它；起來時可能從舊 state 接，11-03）
     bool stopping_ = false;       // 收到過 stop（這次跑完以 0 結束，11-03）
+    std::optional<Target> on_start_;   // 11-11：起來時跑一次（沒寫＝nullopt）
+    std::optional<Target> on_stop_;    // 11-11：要退時跑一次
+    long long on_timeout_ms_ = 5000;   // 11-11：on_start／on_stop 的期限
     Json responded_at_;           // 最近一次有反應的時間（null＝起來後還沒有）
 
 private:
@@ -282,6 +294,10 @@ private:
     void write_counter();         // 開旗標與 state 窗才寫 counter_runs.txt；失敗丟 StateError
     int signal_got();             // 第一個收到的訊號（記住；0＝沒有）
     void nap(double secs);        // 睡 secs 秒（最多 1 秒），收到訊號就提早醒
+    void run_side(const std::optional<Target>& t, const char* key, int code);   // 跑 on_start（code<0）／on_stop；問題只 warning
+    void stop_side(int code);     // on_stop 只跑一次（end、serve 的錯誤路徑都叫）
+    bool served_ = false;         // main_loop 開始了沒（沒開始＝不跑 on_stop）
+    bool stop_ran_ = false;
 
     long long runs_ = 0;
     bool counters_ = false;       // --enable-counters 才寫 counter_runs.txt

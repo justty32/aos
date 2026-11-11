@@ -10,6 +10,7 @@
 // log（11-02；11-02 晚改預設不印）：--enable-logs 時每跑完一次在 stdout 印一行 JSON {"started_at", "counter_runs", "code", "signal", "elapsed_ms"}；
 // 身體繼承同一個 stdout，混在一起由使用者自己處理。印不了（管子關了）就不印、照跑。
 // `-- 參數...`（11-02 晚）：設定檔之後的附加參數，每次接在 exec 後面（字串、陣列接在最後；單子接在 argv 最後）。
+// on_start／on_stop（11-11）：起來、要退時各跑一次（寫法同 exec），問題只 warning。
 // 自己出錯：stderr 一行「aos-loop: error: 代號 原因」、退 1（11-05 stdio-unify R1）。`--help`＝英文說明印 stdout、退 0（R3）。
 #include "aos/loop.hpp"
 
@@ -21,6 +22,10 @@ static const char* HELP = R"(usage: aos-loop [FLAGS] CONFIG.json [-- ARGS...]
 Run the body (CONFIG.json "exec", via aos-exec) again and again.
 Each run's exit code: 0 = next run, 10 = stop (exit 0), other = stop with that code.
 ARGS after -- are appended to every run's exec.
+Optional CONFIG.json keys on_start / on_stop (written like exec): run once before the first run /
+once when aos-loop is about to exit (stop, done, failure, signal; not SIGKILL). on_stop gets
+AOS_LOOP_CODE (the exit code) and AOS_LOOP_SIGNAL (signal number or empty). Each gets on_timeout_ms
+(default 5000); a failure there is one warning line and changes nothing else.
 
 flags:
   --max N               stop after N runs (exit 0)

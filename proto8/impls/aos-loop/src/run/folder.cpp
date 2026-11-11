@@ -12,6 +12,7 @@
 // fork 之後在子行程裡做 C++ 配置、setenv：呼叫者是單執行緒（run_inst 的工人執行緒在它回來前就 join 了），
 // fork 出來的子行程只有這一條執行緒，不會撞到別條執行緒握著的鎖，所以安全。
 // 子行程跟呼叫者同一個行程群組（不另開）：終端機的 Ctrl-C 兩個都收得到（CONVENTION P-36）。
+// 11-11 例外：有期限的（on_start／on_stop）自成一群，轉訊號、逾時 SIGTERM／1 秒後 SIGKILL 都給整群。
 #include "run/run.hpp"
 #include "aos/util/signals.hpp"
 
@@ -72,8 +73,11 @@ unsigned long long ms_since(Clock::time_point t0) {
 }
 
 // 子行程：一支 aos-exec。不回來。
-[[noreturn]] void child(const std::vector<std::string>& argv, int sig_fd) {
+[[noreturn]] void child(const std::vector<std::string>& argv, int sig_fd, bool own_group) {
     close(sig_fd);
+    if (own_group) {
+        setpgid(0, 0);   // 11-11 on_start／on_stop：自成一群，逾時整群收（孫子行程不留著）
+    }
     aos::restore_signals();
     int rc = aos::exec::run_cli(argv);   // exec 成功就不回來；inst 單子回子程式的碼；自己的錯已印好、回 1
     std::fflush(nullptr);
@@ -81,12 +85,35 @@ unsigned long long ms_since(Clock::time_point t0) {
 }
 
 // 等子行程結束；期間收到的三個訊號 kill 給它。回 waitpid 的 status，received 記第一個。
-int wait_forwarding(pid_t pid, int sig_fd, int& received) {
+// timeout_ms＞0（11-11 on_start／on_stop）：到時間 SIGTERM、再 1 秒 SIGKILL，timed_out＝true。
+int wait_forwarding(pid_t pid, int sig_fd, int& received, long long timeout_ms, bool& timed_out) {
+    pid_t to = timeout_ms > 0 ? -pid : pid;   // 有期限＝子行程自成一群，訊號給整群
+    Clock::time_point deadline = Clock::now() + std::chrono::milliseconds(timeout_ms);
+    bool termed = false, killed = false;
     while (true) {
+        int wait_ms = -1;
+        if (timeout_ms > 0 && !killed) {
+            long long left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - Clock::now()).count();
+            if (left <= 0) {
+                if (!termed) {
+                    termed = timed_out = true;
+                    kill(to, SIGTERM);
+                    deadline = Clock::now() + std::chrono::milliseconds(1000);
+                } else {
+                    killed = true;
+                    kill(to, SIGKILL);
+                }
+                continue;
+            }
+            wait_ms = (int)left;
+        }
         pollfd p{sig_fd, POLLIN, 0};
-        int r = poll(&p, 1, -1);
+        int r = poll(&p, 1, wait_ms);
         if (r < 0 && errno == EINTR) {
             continue;
+        }
+        if (r == 0) {
+            continue;   // 到時間：回頂端收它
         }
         signalfd_siginfo info;
         if (read(sig_fd, &info, sizeof info) != (ssize_t)sizeof info) {
@@ -97,7 +124,7 @@ int wait_forwarding(pid_t pid, int sig_fd, int& received) {
             if (received == 0) {
                 received = sig;
             }
-            kill(pid, sig);   // 它已經結束（ESRCH）就算了
+            kill(to, sig);   // 它已經結束（ESRCH）就算了
             continue;
         }
         int status = 0;
@@ -110,7 +137,7 @@ int wait_forwarding(pid_t pid, int sig_fd, int& received) {
 
 }  // namespace
 
-Run run_folder(const std::vector<std::string>& argv) {
+Run run_folder(const std::vector<std::string>& argv, long long timeout_ms) {
     Clock::time_point t0 = Clock::now();
     Run b;
 
@@ -128,12 +155,15 @@ Run run_folder(const std::vector<std::string>& argv) {
     if (pid < 0) {
         throw Error{code::LaunchFailed, std::string("fork failed: ") + std::strerror(errno)};
     }
+    if (pid > 0 && timeout_ms > 0) {
+        setpgid(pid, pid);   // 父子兩邊都設，避免競賽（子行程 exec 之後再設會 EACCES，忽略）
+    }
     if (pid == 0) {
-        child(argv, sig_fd.fd);
+        child(argv, sig_fd.fd, timeout_ms > 0);
     }
 
     // 3. 等
-    int status = wait_forwarding(pid, sig_fd.fd, b.received);
+    int status = wait_forwarding(pid, sig_fd.fd, b.received, timeout_ms, b.timed_out);
     if (WIFSIGNALED(status)) {
         b.signal = WTERMSIG(status);
         b.code = 128 + b.signal;
