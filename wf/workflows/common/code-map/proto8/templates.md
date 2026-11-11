@@ -52,7 +52,6 @@
 | [`loop.json`](../../../../../proto8/templates/eca-claude/loop.json) | Schedule the Claude agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop ho… |
 | [`screen/_entry`](../../../../../proto8/templates/eca-claude/screen/_entry) | 入口：`aos-eca-screen --eca ..` |
 | [`screen/interfaces.json`](../../../../../proto8/templates/eca-claude/screen/interfaces.json) | 設定（鍵：aos-agent/screen） |
-| [`subagents.json`](../../../../../proto8/templates/eca-claude/subagents.json) | 設定（鍵：max_subagents） |
 | [`tools.json`](../../../../../proto8/templates/eca-claude/tools.json) | 設定（鍵：$override、tools） |
 
 ## `proto8/templates/judge-llm/`

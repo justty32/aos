@@ -6,11 +6,9 @@
                {"$env": "AOS_HOME", "$path": "/lib/packs/events.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/todo.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/self.json"},
-               {"$env": "AOS_HOME", "$path": "/lib/packs/subagent.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/def.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/mailbox.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/knowledge.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/goal.json"}],
  "tools": {"do_task": null,
-           "fork": null,
            "knowledge_read": {"env": {"AOS_KNOWLEDGE": {"$env": "AOS_HOME", "$path": "/knowledge"}}}}}
