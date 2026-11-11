@@ -26,6 +26,7 @@
 | [`src/proc.cpp`](../../../../../proto8/impls/aos-util/src/proc.cpp) | 整群送訊號、/proc 身分資訊、UTC 時間與唯一名稱（說明見 include/aos/util/proc.hpp）。 |
 | [`src/signals.cpp`](../../../../../proto8/impls/aos-util/src/signals.cpp) | 阻擋與取出收工訊號、保存舊遮罩並供子行程還原（說明見 include/aos/util/signals.hpp）。 |
 | [`src/text.cpp`](../../../../../proto8/impls/aos-util/src/text.cpp) | UTF-8 字串的小工具（說明見 include/aos/util/text.hpp）。 |
+| [`tests/test_parse_cli.py`](../../../../../proto8/impls/aos-util/tests/test_parse_cli.py) | Check aos::parse_cli takes flags before or after positionals (P-44 continued, 11-11) through the C++ parts that use it. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-util/vcpkg.json) | aos-util：aos 這一家命令列工具共用的小函式庫（錯誤、stdin 讀一份 JSON、印結果與錯誤） |
 
 ## `proto8/impls/cmake/`

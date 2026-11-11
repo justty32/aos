@@ -36,13 +36,13 @@
 
 ## 待裁
 
-可直接貼選項框；推薦放第一個。**3～5 使用者 11-11 已裁**（見下「追加」），還開著的是 1、2、6、7。
+可直接貼選項框；推薦放第一個。**七題使用者 11-11 都裁了**：3～5 見「追加」，1、2、6、7 見「第二批」。
 
-1. **旗標「寫在那層名字之後任何位置」要不要推到其餘指令？**（aos-mcp、aos-sandbox、aos-clock、aos-sweeper、aos-feedback、aos-eca-turn／screen，以及 C++ 零件共用的 `aos::parse_cli`）
+1. ~~（已裁：全部改）~~ **旗標「寫在那層名字之後任何位置」要不要推到其餘指令？**（aos-mcp、aos-sandbox、aos-clock、aos-sweeper、aos-feedback、aos-eca-turn／screen，以及 C++ 零件共用的 `aos::parse_cli`）
    - A 全部改：Python 那幾支換成 `aos_flags.parse(sub="root")`，C++ 只改 `parse_cli` 一處、零件全家跟著（推薦：規則一致，改的都是共用介面）
    - B 只改人會打的 Python 幾支，C++ 零件留舊規則
    - C 都不改，留大修
-2. **追蹤檔裡的本機路徑（B05／B06，gitignore 完整檢查第 ③ 項一直紅）怎麼處理？**
+2. ~~（已裁：改檢查口徑）~~ **追蹤檔裡的本機路徑（B05／B06，gitignore 完整檢查第 ③ 項一直紅）怎麼處理？**
    - A 改檢查口徑：使用者自己寫的絕對路徑、帳本與信封 sender 不算違規（推薦：不動 C++，這些本來就不拿來解路徑）
    - B sender／ledger 改存相對 kernel stack（動 aos-util、aos-llm-kernel），使用者寫的照 A 放過
    - C 先不動，留大修
@@ -55,10 +55,10 @@
 5. ~~（已裁：跳過那份，推薦被翻）~~ **`procs` 頂層 `$ref` 陣列其中一份讀不到時？**
    - A 照舊整台退 1（推薦：讀不到就不知道裡面有哪些名字）
    - B 那份帶的列都不起、其他份照起，加一行 warning
-6. **aos-lock 認主分不出同一工作區的兩方（B14）？**
+6. ~~（已裁：留大修）~~ **aos-lock 認主分不出同一工作區的兩方（B14）？**
    - A 留大修（推薦）
    - B 現在做：拿鎖回一個 token，放鎖要帶
-7. **`defs dup` 分群要不要也看知識庫那格的 `env.AOS_KNOWLEDGE`？**（現在只看工具路徑，兩隻只差知識庫的 agent 會被分成同一群；不影響跑）
+7. ~~（已裁：不算，維持現狀）~~ **`defs dup` 分群要不要也看知識庫那格的 `env.AOS_KNOWLEDGE`？**（現在只看工具路徑，兩隻只差知識庫的 agent 會被分成同一群；不影響跑）
    - A 不看，維持現狀（推薦：dup 是比工具的）
    - B 看，只差知識庫也分兩群
 
@@ -79,3 +79,31 @@
 - 題 1（待裁 4）維持現狀、不改程式，原話與 docs/05 補的那句見 [17 § 11-11 續記](../10/two-machines/17-B07到B10施工結果.md)。
 
 改完再跑全套：在 `2d7984a24` 上 impls 重建（`nice -n 19`）後逐夾跑：**58 夾 970 支（多的 2 支是 test_two_machines 新的），只紅既有 4 支**；knowledge_check 0 錯誤、41 warning；codemap 0 stale；wf-lint broken 56 不變。
+
+## 第二批：剩下四題也裁了（11-11，頂層轉達選項框結果）
+
+| 題 | 使用者選 | 結果 |
+|---|---|---|
+| 1 旗標位置推到其餘指令 | 「全部改」 | ``c8e157fc6``：Python 只有一層的程式 `aos_flags.parse(..., anywhere=True)`（aos-mcp、aos-sandbox〔`keep=2`：PROG 起原樣〕、aos-clock、aos-sweeper、aos-eca-turn），子命令程式照 `sub="root"`（aos-eca-screen 的 `--eca` 寫在子命令前後都收；aos-feedback 自己拼的解析換成共用那套）；C++ 只改 aos-util `parse_cli` 一處（新參數 `keep`），零件全家跟著。P-44 續、knowledge（cli/flags、eca、mcp、sandbox、parts）、impls／cmd 文件跟著 |
+| 2 追蹤檔本機路徑（B05／B06） | 「改檢查的標準」 | `545af5c54`：gitignore-check 放過使用者寫的絕對路徑（defs/、as_written、程式原樣抄的同一字串）、ledger、sender；不動 C++ |
+| 6 aos-lock token（B14） | 「留大修」 | 不做，next_todo 標已裁 |
+| 7 defs dup 看不看知識庫 | 「不算，維持現狀」 | 不做，templates-cp README 記已裁 |
+
+**題 1 沒套用、照舊規則的**（語意衝突，不硬套）：
+- 子命令程式的頂層（aos-post、aos-lock、aos-json、aos-llm）：解到子命令名為止，子命令那層才收（`aos-post --x send` 照舊 `FlagUnknown`）。頂層本來就沒有旗標，只是位置。
+- `aos-exec XXX ARGS`：XXX 起原樣交給它（P-44 續題 3 原本就這樣）。
+- `aos-json set`／`append`／`merge`：值什麼字都可以（`--str` 時 `-x`、`--check` 都是合法值），`檔#/指標` 後再認旗標會把值吃掉，所以旗標照舊寫在 `檔#/指標` 前（試過 keep＝2：`set --str F -x` 變成 `FlagUnknown`，舊寫法壞掉，退回）。
+- 訊息與內容那類（say、history summarize／set、aos-mailbox send、aos-clock-register add）：使用者先前裁維持，沒動。
+- agent-fsm 範本四格（idle、brain、act、wait）：loop 叫的、argv 固定、不是人打的；線 K 在動範本，避開。
+- lib 給腦用的工具（tool_io 的 `--a.b` 旗標形）：不是 P-44 的命令列，沒動。
+
+**題 1 代定**：
+1. C++ `parse_cli` 加 `keep` 參數（`0`＝旗標前後都收，新的預設；`N`＝第 N 個位置參數起原樣），規則照 Python 的 `tool_io.tokenize_flags`：位置參數後、不認得又像負數（`-3`、`-.5`）或含空白的字照舊當位置參數；`--` 在位置參數前＝丟掉、之後＝連它原樣交出。
+2. aos-loop／aos-daemon：設定檔後面的旗標現在收（以前報「flag must come before the config file」），那句錯誤拿掉；`CFG -- ARGS` 照舊。
+3. aos-feedback：`--` 之後的字照舊原樣、`--` 本身拿掉（跟舊的自拼解析一樣）；改用共用那套後，PAIN 以 `-` 開頭又含空白也當位置參數。
+4. aos-sweeper、gitignore-check 沒有位置參數，改不改都一樣；aos-sweeper 照改（一致），gitignore-check 沒動。
+
+**題 2 代定與剩的**：判準見 [05-gitignore指南](../../../cmd/aos-agent/docs/05-gitignore指南.md) 末節。照新標準整棵實跑還命中兩種**程式自己算出的**絕對路徑——子 daemon 公開 state（`procs_state.json`、`state.json`）的 `daemon` 欄、kernel 在途信小格 `proc.json` 的 `exec`——不在使用者裁的三類裡，照舊算紅（B06 open）。
+
+驗證：impls 重建後逐夾跑全套 **60 夾 986 支，只紅既有 4 支**（新 test_parse_cli 8，對舊版紅 5；test_flags_anywhere 8）；gitignore-check 整棵實跑兩次（照新標準剩上面那兩種命中）；knowledge_check 0 錯誤、41 warning；codemap 0 stale。
+
