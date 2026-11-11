@@ -2,7 +2,7 @@
 
 ← [2026-11-11](../README.md)｜刷新腳本與驗收紀錄 [01](01-公司刷新與驗收.md)
 
-**結論**：`~/code/playground`（公司 WSL）已照今天的 main 刷新，三隻都掛好、停著、對話是空的。**不用先手動做任何事**（claude 用的工作區 `~/code/playground/ws` 之前就信任過，這次沒換）。開兩個視窗照抄就能玩：
+**結論**：`~/code/playground`（公司 WSL）已照今天的 main 刷新（11-11 13:06 第二次：線 I 的 do_task、新信通知，和工具小格寫入才建都進來了），三隻都掛好、停著、對話是空的。**不用先手動做任何事**（claude 用的工作區 `~/code/playground/ws` 之前就信任過，這次沒換）。開兩個視窗照抄就能玩：
 
 ```sh
 # 視窗一：起整棵樹（Ctrl-C＝整棵下班；再打同一行＝上班，三隻自己醒）
@@ -23,7 +23,7 @@ aos-agent ctl ls                       # 三隻都 running 就可以玩
 | `eca_bob` | eca，Claude Code | `haiku`，每題上限 0.3 美金 | 花 claude 額度 |
 | `eca_cody` | eca，Codex CLI（沒有畫面） | `gpt-6-luna` | 花 codex 額度 |
 
-三隻都是 35 支工具（11-11 線 C 之後 repo 是 36 支：gadgets 包多 thought〔同日線 I 改名 do_task〕；重刷後才是 36；範本 hooks.json 線 I 起多一格 mail_notify）（`aos-agent tools --target fsm_ann ls`）。跟一隻說一句話：
+三隻都是 36 支工具（十一包；gadgets 包有 `do_task`），hooks 都是 `timer`＋`mail_notify` 兩格（`aos-agent tools --target fsm_ann ls`）。跟一隻說一句話：
 
 ```sh
 aos-agent say --target eca_bob 'Call the aos tool peek_now_time, then tell me the time in one line.' && aos-agent listen --target eca_bob --timeout-s 300
@@ -60,14 +60,39 @@ aos-agent system --target fsm_ann reset -y                         # 回到定�
 
 ## 免費看今天的新工具（假腦劇本）
 
-試驗場的總機多一個劇本假腦 `fake-demo-today`：改自己的 system → 讀回來 → 用 `subagent` 生一隻子 `kid`、問它時間、刪掉 → 把 system 改回去。劇本照對話裡的回合數走，所以掛一隻**新的**來跑：
+試驗場的總機多一個劇本假腦 `fake-demo-today`：改自己的 system → 讀回來 → 用 `subagent` 生一隻子 `kid`、問它時間、`subagent ls` 列出來、刪掉 → 叫 `do_task` 派一個小幫手問時間（不給 `from`＝用自己的定義） → 把 system 改回去。劇本照對話裡的回合數走，所以掛一隻**新的**來跑：
 
 ```sh
 aos-agent ctl add --name fsm_demo ../agents/fsm_ann && aos-agent llm --target fsm_demo set model=fake-demo-today
 aos-agent say --target fsm_demo 'show me' && aos-agent listen --target fsm_demo --timeout-s 120
-aos-agent history --target fsm_demo ls                              # 看它叫了 self_system、subagent 哪幾次、結果是什麼
+aos-agent history --target fsm_demo ls                              # 看它叫了 self_system、subagent、do_task 哪幾次、結果是什麼
 aos-agent ctl rm --purge -y fsm_demo                                # 玩完拿掉
 ```
+
+## 派一件小事（`do_task`）
+
+`do_task`（原名 thought）派一件事給用完即刪的小幫手、只拿回短結論，過程不進自己的對話。**不給 `from`＝用自己的定義**生小幫手（工具、hooks 一起帶）；小幫手可以再派一層，再深＝`DepthExceeded`。上面假腦劇本裡就有一步是它，免費。要真腦做：
+
+```sh
+aos-agent say --target eca_cody 'Use the aos tool do_task with goal "What time is it? Answer in one line." and tell me what it brought back.' && aos-agent listen --target eca_cody --timeout-s 600
+```
+
+小幫手的帳留在 `<叫它那隻的 stack>/tools/do_task/observed/<小幫手名>/`（這行這次沒用真腦跑；luna 在線 I 跑過 do_task）。
+
+## 新信通知與免打擾（`mail_notify`）
+
+三隻預設都掛著 `mail_notify`（每 10 秒看一次自己的信箱）：有**沒通知過**的新信，就往自己的對話放一則 `[aos] new_mail: N new letters from A, B. Look with mailbox_peek, read with mailbox_read.`，連來幾封只合成一則、不帶內文。試（假腦、不花錢；在 ws/ 裡打）：
+
+```sh
+aos-mailbox send --to fsm_ann --status REQUEST --title hello 'first letter'
+sleep 12; aos-agent history --target fsm_ann ls | grep new_mail       # 多一則 [aos] new_mail（後面跟假腦的回答）
+```
+
+免打擾：叫它自己用 `self_hook` 的 `rm`（name `mail_notify`），或人打 `aos-agent hook --target fsm_ann rm mail_notify`；改回預設開：`aos-agent hook --target fsm_ann reset -y`（刪掉這隻自己的 hooks 清單、回到定義那份）。改間隔：同名再 `add`、加 replace。**eca 兩隻每則通知都算一題、會花錢**（codex 那隻收到後會自己 `mailbox_peek`／`mailbox_read`）。
+
+## 工具小格寫入才建
+
+以前每支被叫過的工具都在 `<stack>/tools/<名>/` 留一個資料夾（很多是空的）；現在**只有真的寫東西的工具**才有（`subagent`、`do_task`、`shell`、`run_python`…）。叫完 `peek_now_time` 看 `ls .stack/procs/fsm_ann/` 沒有 `tools/`；跑過上面假腦劇本的 fsm_demo 只有 `tools/do_task`、`tools/subagent`。
 
 ## 叫子 agent（`subagent`）
 
@@ -105,6 +130,7 @@ aos-agent hook --target fsm_ann rm up; aos-agent hook --target fsm_ann rm down
 ## 已知限制
 
 - **fsm 真腦回家測**：公司 LM Studio 只有小模型，fsm_ann 這次只接假腦；`stupid-fast`（LM Studio 的 `qwen/qwen3-1.7b`）沒驗。
+- **eca_bob（haiku）沒驗新信通知**：這次只驗到它叫 `peek_now_time`（額度已回）；收 `[aos] new_mail` 只在 fsm_ann、eca_cody 驗過。
 - **codex 的畫面沒驗**：eca_cody 拿掉了畫面，`aos-agent open --target eca_cody` 不能用；eca_bob 照舊有畫面。
 - **claude 全新工作區第一次要手動按信任**：這次沒碰到。哪天把 eca 掛到別的工作區、`ctl ls` 出現 `TrustMissing`，就在那個資料夾開一次 claude 按信任再退出（`cd <那個資料夾> && claude`），aos 不替你按。
 - **刷新會清東西**：下次刷新會清掉三隻的對話、信箱、`llm set`／`hook add`／`system set` 改過的設定，和試驗場 `knowledge/` 裡 agent 寫的東西（整份會先備份）。
@@ -112,7 +138,7 @@ aos-agent hook --target fsm_ann rm up; aos-agent hook --target fsm_ann rm down
 
 <details><summary>刷新做了什麼、備份在哪、怎麼退回</summary>
 
-- 備份：`~/code/playground.bak-1111-1024`（刷新前整份）。退回：停樹 → `rm -rf ~/code/playground && mv ~/code/playground.bak-1111-1024 ~/code/playground`。
+- 備份：`~/code/playground.bak-1111-1306`（第二次刷新前整份；上午那次刷新前的是 `.bak-1111-1024`）。退回：停樹 → `rm -rf ~/code/playground && mv ~/code/playground.bak-1111-1306 ~/code/playground`。
 - 換掉的：`lib/ py/ templates/ knowledge/` 換成 repo 版（`py/`、`templates/` 是新加的）；總機定義 `llm_kernel/def` 換 repo 的 `kernel/llm-kernel`，`stupid-fast` 改回這台的 `qwen/qwen3-1.7b`，多 `fake-demo-today`；三隻從範本重抄。
 - `env.sh`：加 `export AOS_HOME=$PG`；舊的 `AOS_MEMORY` 那行改成 `AOS_KNOWLEDGE=$PG/knowledge`。其他行沒動。
 - 根、總機、領班的定義（`root/`、`daemon/`，表上的名字 `switchboard`、`foreman`）沒動。
