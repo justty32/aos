@@ -58,5 +58,8 @@
  },
  "math.json": {
   "_description": "Tool math: compute one arithmetic expression; what is allowed, examples, ExprBad."
+ },
+ "goal.json": {
+  "_description": "Tool goal: your goal, reminded when you stop by yourself; set, done, pause, resume."
  }
 }

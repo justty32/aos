@@ -20,6 +20,9 @@
  "hook.json": {
   "_description": "Use aos-agent hook to list, add or remove the hooks of one agent (including on_clock timers)."
  },
+ "goal.json": {
+  "_description": "Use aos-agent goal to give one agent a goal it is reminded of when it stops by itself; get, set, done, pause, resume, clear."
+ },
  "mailbox.json": {
   "_description": "Use aos-mailbox to see your mailbox folder, peek, read and send mailbox letters from a shell."
  },

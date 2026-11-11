@@ -21,6 +21,7 @@
 | [`aos_agent/ctl/where.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/where.py) | 顯示 agent 的 stack 或工作區路徑。 |
 | [`aos_agent/ctl/who.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/who.py) | 由 stack 路徑查詢所屬 agent。 |
 | [`aos_agent/decl.py`](../../../../../proto8/cmd/aos-agent/aos_agent/decl.py) | 讀取介面宣告並呼叫定義中的子介面入口。 |
+| [`aos_agent/goal.py`](../../../../../proto8/cmd/aos-agent/aos_agent/goal.py) | 管 agent 的 goal（<stack>/goal.json）：get、set、done、pause、resume、clear；腦自己停下來時由身體（agent-fsm idle、aos-eca-turn）丟提醒。 |
 | [`aos_agent/hints.py`](../../../../../proto8/cmd/aos-agent/aos_agent/hints.py) | 讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。 |
 | [`aos_agent/history.py`](../../../../../proto8/cmd/aos-agent/aos_agent/history.py) | 看與改 agent 的對話紀錄（宣告的 history 檔，一行一則訊息）：ls、rm 一段、summarize 一段換成一則、set 任一行；改掉的原文預設搬到旁邊。 |
 | [`aos_agent/hook.py`](../../../../../proto8/cmd/aos-agent/aos_agent/hook.py) | 管 agent 自己那份 hooks 清單（疊在定義那份上，同名蓋過、null 關掉）：ls、get、add、rm、reset。 |
@@ -34,6 +35,7 @@
 | [`stack.gitattributes`](../../../../../proto8/cmd/aos-agent/stack.gitattributes) | 把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件） |
 | [`stack.gitignore`](../../../../../proto8/cmd/aos-agent/stack.gitignore) | 可選的 stack 排除範本：暫存、鎖、本機資料與可重建紀錄不進 git。 |
 | [`tests/test_daemon_down.py`](../../../../../proto8/cmd/aos-agent/tests/test_daemon_down.py) | Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing. |
+| [`tests/test_goal.py`](../../../../../proto8/cmd/aos-agent/tests/test_goal.py) | Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0… |
 | [`tests/test_history.py`](../../../../../proto8/cmd/aos-agent/tests/test_history.py) | Test aos-agent history on a fake daemon table (11-10 self-family): ls, rm, summarize, set, the kept originals (default, --keep, --no-keep), ranges an… |
 | [`tests/test_hook.py`](../../../../../proto8/cmd/aos-agent/tests/test_hook.py) | Test aos-agent hook on a fake daemon table: add writes only the agent's own hooks list (flags, path forms, --path-json), HookExists / --replace, rm (… |
 | [`tests/test_llm.py`](../../../../../proto8/cmd/aos-agent/tests/test_llm.py) | Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and… |
@@ -43,9 +45,3 @@
 | [`tests/test_system.py`](../../../../../proto8/cmd/aos-agent/tests/test_system.py) | Test aos-agent system on a fake daemon table (11-11 self-system): get / get -l / get --json, set from stdin and from a file, empty text, reset, missi… |
 | [`tests/test_tools_override.py`](../../../../../proto8/cmd/aos-agent/tests/test_tools_override.py) | Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with "$override" (N2 poin… |
 | [`using-aos-agent.sh`](../../../../../proto8/cmd/aos-agent/using-aos-agent.sh) | 給人的殼 source 用（不是跑）：之後直接打 say／listen／chat／status，像命名空間（11-04 aos-agent 02）。 |
-
-## `proto8/cmd/aos-clock/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-clock`](../../../../../proto8/cmd/aos-clock/bin/aos-clock) | 時鐘往前走一格（CONCEPTS C-44、NORMS N-01；規格 10-12「做吧」，計畫 10-21 第 4 段）。 |

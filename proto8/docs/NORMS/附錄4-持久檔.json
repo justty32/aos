@@ -555,6 +555,16 @@
    "evidence": "proto8/lib/agent/cooldown.py、proto8/templates/agent-fsm/wait.py、proto8/cmd/aos-eca/bin/aos-eca-turn"
   },
   {
+   "path": "$AOS_STACK/goal.json",
+   "lifetime": "持久",
+   "writer": "lib/agent/goal_state.py（aos-agent goal、工具 lib/agent/goal 經它、templates/agent-fsm idle.py、aos-eca-turn）",
+   "reader": "同左",
+   "image": "進：agent 正在做的目標，跟 history 一起走（stack.gitignore 沒擋）",
+   "on_bad": "不在＝沒有 goal；壞了（不是 JSON 物件、欄位不對）＝aos-agent goal get／done／pause／resume 報 GoalBad 退 1、set 與 clear 照蓋；idle 格與 aos-eca-turn 安靜當沒有（不丟提醒）",
+   "note": "11-11 goal 新增：{text, status（active／paused／done／abandoned）, reason, reminded（連續沒進展的提醒次數）, limit（預設 10）, set_by, updated_by, updated_at}；新檔，不用重建",
+   "evidence": "proto8/lib/agent/goal_state.py、proto8/cmd/aos-agent/aos_agent/goal.py、proto8/templates/agent-fsm/idle.py、proto8/cmd/aos-eca/bin/aos-eca-turn"
+  },
+  {
    "path": "$AOS_STACK/tooldef_cache.json",
    "lifetime": "暫時",
    "writer": "aos-tools（ls／get／add 問可執行檔 --tooldef 時）",

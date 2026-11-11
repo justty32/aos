@@ -27,6 +27,9 @@
 | [`cooldown.py`](../../../../../proto8/lib/agent/cooldown.py) | 失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。 |
 | [`do_task/`](../../../../../proto8/lib/agent/do_task/) | 執行一個任務：派一件事給一隻用完即走的小幫手 agent（呼叫方指定、工具設定預設，或呼叫者自己的定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
 | [`do_task/tests/test_observed_children.py`](../../../../../proto8/lib/agent/do_task/tests/test_observed_children.py) | Verify child account preservation and do_task cleanup ordering. |
+| [`goal/`](../../../../../proto8/lib/agent/goal/) | aos-agent goal 的包裝，目標改成叫我的那隻自己：get、set、done、pause、resume；狀態在那隻 stack 的 goal.json，身體在它自己停下來時丟提醒 |
+| [`goal/tests/test_goal.py`](../../../../../proto8/lib/agent/goal/tests/test_goal.py) | Test the goal tool builds the aos-agent goal command line for each op (get, set, done, pause, resume), checks its arguments and passes errors on, wit… |
+| [`goal_state.py`](../../../../../proto8/lib/agent/goal_state.py) | agent 的 goal 共用讀寫與判斷：<agent stack>/goal.json；aos-agent goal 寫、agent-fsm idle.py 與 aos-eca-turn 讀寫（丟提醒、記數）。 |
 | [`hook_fire/_entry`](../../../../../proto8/lib/agent/hook_fire/_entry) | 發 after_start／after_stop 事件：agent 範本 loop.json 的 on_start／on_stop 叫它（hook_fire EVENT DEF_DIR，$AOS_STACK＝agent 的 stack）。 |
 | [`hook_noop/_entry`](../../../../../proto8/lib/agent/hook_noop/_entry) | 什麼都不做的 hook handler：讀掉 stdin 的事件 JSON、退 0（範本 hooks.json 預設那格 on_clock 的掛點；使用者「預設就是收到信後啥也不做。 |
 | [`hooks.py`](../../../../../proto8/lib/agent/hooks.py) | agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、挑出符合事件的 hook、用 aos-exec 跑、解回話。 |

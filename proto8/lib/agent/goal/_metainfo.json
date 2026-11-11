@@ -1,0 +1,14 @@
+{
+  "summary": "See or change the goal of the agent calling me (aos-agent ctl who + goal get / set / done / pause / resume)",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

@@ -27,6 +27,7 @@
 | [`cli/errors.json`](../../../../../proto8/knowledge/aos/cli/errors.json) | 設定（鍵：_description、_index、codes、timeouts） |
 | [`cli/feedback.json`](../../../../../proto8/knowledge/aos/cli/feedback.json) | （檔頭沒有一句話） |
 | [`cli/flags.json`](../../../../../proto8/knowledge/aos/cli/flags.json) | 設定（鍵：_description、_index、placement、target、text、help…） |
+| [`cli/goal.json`](../../../../../proto8/knowledge/aos/cli/goal.json) | （檔頭沒有一句話） |
 | [`cli/grow.json`](../../../../../proto8/knowledge/aos/cli/grow.json) | （檔頭沒有一句話） |
 | [`cli/history.json`](../../../../../proto8/knowledge/aos/cli/history.json) | （檔頭沒有一句話） |
 | [`cli/hook.json`](../../../../../proto8/knowledge/aos/cli/hook.json) | （檔頭沒有一句話） |
@@ -75,6 +76,7 @@
 | [`tools/copy.json`](../../../../../proto8/knowledge/aos/tools/copy.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/edit.json`](../../../../../proto8/knowledge/aos/tools/edit.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/glob.json`](../../../../../proto8/knowledge/aos/tools/glob.json) | 設定（鍵：_description、_index、rules、errors） |
+| [`tools/goal.json`](../../../../../proto8/knowledge/aos/tools/goal.json) | 設定（鍵：_description、_index、rules、errors） |
 | [`tools/grep.json`](../../../../../proto8/knowledge/aos/tools/grep.json) | 設定（鍵：_description、_index、output、rules、errors） |
 | [`tools/json_read.json`](../../../../../proto8/knowledge/aos/tools/json_read.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/json_write.json`](../../../../../proto8/knowledge/aos/tools/json_write.json) | 設定（鍵：_description、_index、errors） |

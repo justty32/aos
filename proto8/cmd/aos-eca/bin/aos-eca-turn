@@ -63,6 +63,12 @@
   ⑫ on_clock（11-11 thinking/2026-11/11/clock-hook，使用者「hook就可以添加一個類型……去看指定的clock proc」）：每輪開頭、queue 建好之後（冷卻中、退讓的那輪也是）
      hooks.clock_tick 看時鐘，條件到了的 on_clock hook 才跑；handler 預設什麼都不做、history 不多任何一則；要叫腦＝handler 自己往 <stack>/queue 寄信。
      hook 停下＝HookFailed 退 1（還沒碰信）。after_start／after_stop 不在這支：在 loop.json 的 on_start／on_stop（lib/agent/hook_fire）。
+  ⑬ goal（11-11 thinking/2026-11/11/goal/02，使用者「當agent自己停下來時(在沒有新user prompt的情況下，自己不再呼叫工具)，自動丟goal給他」，裁「fsm 和 eca 都做」）：
+     認領之後一封好信都沒有（queue 空；信優先）、history 最後一則是 assistant（上一輪 CLI 答完了）、$AOS_STACK/goal.json 是 active＝這輪的題目換成一則
+     「[aos] goal: …」（lib/agent/goal_state.py 拼，同 agent-fsm idle），交出去那刻（handed）先寫 goal.json（計數加一；到上限那次＝limit 那則、改 paused）
+     再接進 history；不走 queue、不觸發 before_queue／after_queue。退讓（SessionBad）＝什麼都沒寫。冷卻中照 ⑨ 不做。
+     進展：每輪成功答完後看 CLI 自己的對話檔（transcripts，交出去前記下大小、同一段對話就只看新長出來的）有沒有叫 goal 以外的工具
+     （claude tool_use、codex function_call 等；goal_state.transcript_calls）——有＝goal 計數歸零。對話檔找不到＝不歸零（未經真 CLI 驗證）。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
   人在畫面上自己打的話不進 history（沒經 queue；eca 方向題 2）。
@@ -109,6 +115,10 @@ try:
         import hooks  # noqa: E402
     else:
         import agent.hooks as hooks  # noqa: E402
+    if os.path.isfile(os.path.join(HERE, "goal_state.py")):
+        import goal_state  # noqa: E402
+    else:
+        import agent.goal_state as goal_state  # noqa: E402
 finally:
     for _path in _import_paths:
         sys.path.remove(_path)
@@ -144,6 +154,9 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
     after_queue after the letters went into history, brain_failed on CliFailed / ReplyMissing after handing over. before_tool /
     after_tool run in aos-mcp. on_clock is checked first thing every turn (it runs only when its clock condition is met).
     A failing hook = HookFailed (letters not yet handed over stay in cur/).
+  Goal: with no letter, when the CLI answered the last turn and $AOS_STACK/goal.json is active, the prompt of this turn is one
+    message "[aos] goal: TEXT (reminder N of LIMIT...)" (it goes into history like a letter). A turn in which the CLI called tools
+    (seen in its own transcript) sets the count back to 0; LIMIT reminders in a row without progress pause the goal.
 --one (tool form): stdin {"prompt"} -> stdout the answer; the conversation lives in $AOS_STACK itself. --on-empty / --prompt not allowed.
   If the earlier conversation is not on this machine, a warning is printed and a new one is started without a record. No cooldown.
 Needs aos-post on PATH (loop form) and AOS_STACK.
@@ -392,6 +405,35 @@ def take_all(stack, box, prompt):
         must_post(["take-all", box], ok=(0, NOT_FOUND))            # new/ → cur/
 
 
+def goal_prompt(stack):
+    """⑬ queue 空時：goal active、上一輪 CLI 答完了＝(題目, 交出去那刻要寫的 goal)；否則 None。goal.json 壞了＝當沒有。"""
+    try:
+        rec = goal_state.read(stack)
+    except goal_state.GoalBad:
+        return None
+    if rec is None or rec["status"] != "active" or not goal_state.stopped(history_rows(stack)):
+        return None
+    return goal_state.plan(rec, False)
+
+
+def transcript_now(cfg, cell):
+    """(session id, 對話檔, 大小)：交出去之前記下，答完再比（⑬ 進展）。"""
+    sid = cell.read("session.txt")
+    found = cli_session.transcripts(cfg["kind"], sid)
+    return sid, (found[0] if found else None), goal_state.size(found[0] if found else None)
+
+
+def note_progress(cfg, cell, stack, before):
+    """⑬ 這輪 CLI 叫了 goal 以外的工具＝goal 計數歸零。同一段對話只看新長出來的那段。"""
+    sid, file, size = before
+    now = cell.read("session.txt")
+    found = cli_session.transcripts(cfg["kind"], now)
+    if not found:
+        return
+    if goal_state.transcript_calls(found[0], size if now == sid and found[0] == file else 0):
+        goal_state.progress(stack)
+
+
 def one_turn(template, stack, ws, empty_code, on_busy, prompt):
     box = os.path.join(stack, "queue")
     if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
@@ -405,16 +447,24 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
     cool, _ = cooldown.state(stack)                                # ⑨ 認領信之前看冷卻（06）
     if cool == "cooling":
         return 0                                                    # 一封都不認領：new/、cur/、history 都不動
+    goal = None                                                     # ⑬ 這輪是 goal 提醒＝(題目, 交出去那刻寫的 goal)
     if cool == "due":
         good, bodies, dropped = pick_one(stack, box, prompt, template)       # 冷卻到了：只試最舊的一封
         if not good:
-            return 0 if dropped else empty_code
+            if dropped:
+                return 0
+            goal = goal_prompt(stack)
+            if goal is None:
+                return empty_code
+            bodies = [{"role": "user", "content": goal[0]}]
     else:
         take_all(stack, box, prompt)                               # 這輪要答的＝cur/ 全部（上次沒交出去的＋剛認領的）
         batch = names(box, "cur")
         if not batch:
-            return empty_code
-        bodies, good = [], []
+            goal = goal_prompt(stack)
+            if goal is None:
+                return empty_code
+        bodies, good = ([{"role": "user", "content": goal[0]}] if goal else []), []
         for sig in batch:                                           # ② 照順序讀信
             body, why = letter_body(box, sig)
             if body is None:                                        # 壞信一律丟（N-16、決定 27 不通知寄信人）
@@ -426,7 +476,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
                 continue
             bodies.append(body)
             good.append(sig)
-        if not good:
+        if not good and not goal:
             return 0
     tool_added(cfg, template, stack)                                # hook：登記檔多了誰（交出去之前；hook 停下＝信留 cur/）
     history_changed(stack, cell)                                    # ⑩ history 被改過＝開新對話
@@ -435,6 +485,11 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
     def handed():                                                   # ④ 交出去就算完成（11-03）：user 接進 history、收信
         given.append(True)
         try:
+            if goal:                                                # ⑬ 交出去才算丟了一次：先記數再接進 history
+                try:
+                    goal_state.write(stack, goal[1])
+                except OSError as w:
+                    aos_flags.warn(NAME, "cannot write %s: %s" % (goal_state.path(stack), w))
             for body in bodies:
                 append_history(stack, body)
             for sig in good:
@@ -448,6 +503,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
                 fire("after_queue", {"letter": sig, "content": body["content"]}, template, stack)
         except Fail as e:
             after.append(e)                                         # 回答照樣接進 history，最後才報（不掉回答）
+    before = transcript_now(cfg, cell)                              # ⑬ 進展：交出去之前對話檔多大
     try:
         text = cli_session.ask(cfg, cell, template, ws, stack, SEP.join(b["content"] for b in bodies), on_busy,
                                handed, lambda limit: reseed(stack, ws, limit))   # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
@@ -466,6 +522,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
     edited = bool(mid) and history_sum(stack) != mid[0]             # ⑩ 這一輪中間被改了（腦叫了 self_history）
     append_history(stack, {"role": "assistant", "content": text[:-1] if text.endswith("\n") else text})
     note_sum(stack, cell, edited)
+    note_progress(cfg, cell, stack, before)                         # ⑬ 這輪叫了工具＝goal 計數歸零
     try:
         cooldown.clear(stack)                                       # ⑨ 成功一次＝歸零
     except OSError as w:

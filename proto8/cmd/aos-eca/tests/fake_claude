@@ -9,7 +9,8 @@ Success: stdin appended to the conversation file; stdout a system line then a re
 FAKE_CLI_FAIL=1: always an error result ("usage limit reached"), exit 1.
 FAKE_CLI_FAIL_SAVED=1 (with FAKE_CLI_FAIL=1): the conversation file is created before failing (the CLI saved it).
 FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": "..."} as one JSON line per call.
-FAKE_CLI_DROP_FIRST=FILE: before answering, delete the first line of FILE (stands for the model calling self_history)."""
+FAKE_CLI_DROP_FIRST=FILE: before answering, delete the first line of FILE (stands for the model calling self_history).
+FAKE_CLI_TOOL=NAME: the conversation file also gets one assistant line with a tool_use of NAME (stands for the model calling a tool)."""
 import re
 import json, os, sys, uuid
 
@@ -63,6 +64,9 @@ if drop:
 os.makedirs(folder, exist_ok=True)
 with open(conv, "a", encoding="utf-8") as f:
     f.write(json.dumps({"type": "user", "message": {"content": prompt}}, ensure_ascii=False) + "\n")
+    if os.environ.get("FAKE_CLI_TOOL"):
+        f.write(json.dumps({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "id": "toolu_1", "name": os.environ["FAKE_CLI_TOOL"], "input": {}}]}}) + "\n")
 lines = prompt.rstrip("\n").split("\n")
 out({"type": "system", "session_id": sid})
 out({"type": "result", "is_error": False, "session_id": sid, "result": "FAKE: " + lines[-1]})

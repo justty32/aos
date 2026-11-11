@@ -5,6 +5,12 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/cmd/aos-clock/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`bin/aos-clock`](../../../../../proto8/cmd/aos-clock/bin/aos-clock) | 時鐘往前走一格（CONCEPTS C-44、NORMS N-01；規格 10-12「做吧」，計畫 10-21 第 4 段）。 |
+
 ## `proto8/cmd/aos-clock-register/`
 
 | 檔 | 負責什麼 |
@@ -32,6 +38,7 @@
 | [`bin/aos-eca-turn`](../../../../../proto8/cmd/aos-eca/bin/aos-eca-turn) | 外部 coding agent（claude／codex，eca）的一輪：把 stack 的 queue 裡的信照順序全部一起交給 CLI——交出去就收信——等它答完、回答接進 history。 |
 | [`tests/fake_claude`](../../../../../proto8/cmd/aos-eca/tests/fake_claude) | stand-in for the claude CLI in aos-eca tests: -p with --session-id/--resume, keeps conversations as files, never calls a model |
 | [`tests/fake_codex`](../../../../../proto8/cmd/aos-eca/tests/fake_codex) | stand-in for the codex CLI in aos-eca tests: exec / exec resume ID with --json and -o, keeps threads as files, never calls a model |
+| [`tests/test_goal.py`](../../../../../proto8/cmd/aos-eca/tests/test_goal.py) | Test the goal in aos-eca-turn (11-11 goal/02) with fake claude / codex CLIs: queue empty + last turn answered + goal active = the reminder is the pro… |
 | [`tests/test_history_edit.py`](../../../../../proto8/cmd/aos-eca/tests/test_history_edit.py) | Test aos-eca-turn's shrunk history edit (11-10 self-family): history.jsonl changed between turns or during one = the next turn starts a new conversat… |
 | [`tests/test_hooks.py`](../../../../../proto8/cmd/aos-eca/tests/test_hooks.py) | Test the hooks of aos-eca-turn (eca's reduced set: before_queue, after_queue, brain_failed, tool_added) with a fake claude CLI. |
 | [`tests/test_switch.py`](../../../../../proto8/cmd/aos-eca/tests/test_switch.py) | Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs. |

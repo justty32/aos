@@ -1,5 +1,5 @@
 # idle.py [--prompt FILE] - idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。
-# 結束碼（fsm.json 照碼分岔，N-36）：0＝收到至少一封好信（→ think）；10＝沒信（表上接住＝停著等，改成字串 next＝收工）。
+# 結束碼（fsm.json 照碼分岔，N-36）：0＝收到至少一封好信、或丟了 goal 提醒（→ think）；10＝沒信（表上接住＝停著等，改成字串 next＝收工）。
 # 一次收全部、照處理順序（有序在前照名字＝寄的順序、無序在後照名字；同 aos_ws.letter_key）；cur/ 有上次認領了還沒接完的先接（P-12）。
 # 壞信（body 不是 {"role": "user", "content": 非空字串}）：aos-post done 丟掉、$AOS_STACK/mailbox_warning.txt 覆寫一行（N-16；同 aos-eca-turn）。
 # --prompt FILE＝開場白（相對路徑從範本資料夾＝AOS_CD 算）：history 空、queue 也沒好信時投一次進 queue 再收；沒給＝沒有開場白。
@@ -8,6 +8,11 @@
 #   還沒 done 的信留在 cur/、下次重跑再接（P-12）。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）。aos-post 的 stderr 不攔、原樣透出（stdio-unify R10）。--help 印英文用法；Ctrl-C 退 130。設計：proto8/thinking/2026-11/04/loop-fsm-agent/01-設計.md § 3。
 # on_clock（11-11 thinking/2026-11/11/clock-hook）：這格建好 queue 之後、收信之前先 hooks.clock_tick——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
+# goal（11-11 thinking/2026-11/11/goal/02，使用者「當agent自己停下來時(在沒有新user prompt的情況下，自己不再呼叫工具)，自動丟goal給他」）：
+#   收不到信（信優先）、history 最後一則是沒有 tool_calls 的 assistant、$AOS_STACK/goal.json 是 active＝把一則 user「[aos] goal: …」直接接進 history、
+#   退 0 去 think（不走 queue、不觸發 before_queue／after_queue）。上次提醒之後腦叫過 goal 以外的工具＝計數先歸零；連續到上限那次丟
+#   「[aos] goal: reminder limit N reached; goal paused …」、goal 改 paused（之後不丟）。先寫 goal.json 再接 history（寫不成＝warning、不丟）。
+#   goal.json 壞了＝安靜當沒有（每 300 ms 一拍，不洗 log；aos-agent goal get 報 GoalBad）。讀寫走 lib/agent/goal_state.py。
 import json, os, re, signal, subprocess, sys
 from pathlib import Path
 
@@ -24,8 +29,13 @@ try:
         import hooks  # noqa: E402
     else:
         from agent import hooks  # noqa: E402
+    if (Path(__file__).resolve().parent / "goal_state.py").is_file():
+        import goal_state  # noqa: E402
+    else:
+        from agent import goal_state  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
-    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "hooks", "agent.hooks"):
+    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "hooks", "agent.hooks",
+                           "goal_state", "agent.goal_state"):
         raise
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
           file=sys.stderr)
@@ -38,6 +48,8 @@ HELP = """\
 usage: idle.py [--prompt FILE]   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
 The idle cell: take every letter in $AOS_STACK/queue/ into $AOS_STACK/history.jsonl.
 Exit 0 = took at least one good letter (go think); 10 = no letter.
+Goal: with no letter, when the last message is an answer without tool_calls and
+$AOS_STACK/goal.json is active, one user message "[aos] goal: ..." goes into history (exit 0).
 --prompt FILE: an opening message put into the queue once while history is empty.
 Hooks (hooks.json declared in interfaces.json): before_queue runs before a good letter goes
 into history (it may change content, or drop the letter: done, not in history, one line in
@@ -197,6 +209,45 @@ try:                                             # 11-11 on_clock：idle 在建�
     hooks.clock_tick(os.environ.get("AOS_CD") or ".", stack, warn=lambda line: aos_flags.warn("agent-fsm", line))
 except (hooks.HookFailed, hooks.HooksBad) as e:
     die(type(e).__name__, str(e))
-if take() or (opening() and take()):
+def goal_turn():
+    """沒信時：腦停下來了、goal active＝接一則 [aos] goal: 進 history，回 True（去 think）。"""
+    if not os.path.isfile(goal_state.path(stack)):  # 先只看檔在不在：沒 goal 的 agent 每拍不讀 history
+        return False
+    try:
+        rec = goal_state.read(stack)
+    except goal_state.GoalBad:
+        return False
+    if rec is None or rec["status"] != "active":
+        return False
+    history = []
+    try:
+        with open(history_path, encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    try:
+                        history.append(json.loads(line))
+                    except ValueError:
+                        return False             # history 壞了不是這裡的事（think／act 會報 HistoryBad）
+    except FileNotFoundError:
+        return False
+    except OSError as e:
+        die("HistoryBad", "cannot read history.jsonl: %s" % e)
+    if not goal_state.stopped(history):
+        return False
+    text, rec = goal_state.plan(rec, goal_state.progressed_fsm(history))
+    try:
+        goal_state.write(stack, rec)
+    except OSError as e:
+        aos_flags.warn("agent-fsm", "cannot write %s: %s; no goal reminder this time" % (goal_state.path(stack), e))
+        return False
+    try:
+        with open(history_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"role": "user", "content": text}, ensure_ascii=False) + "\n")
+    except OSError as e:
+        die("WriteFailed", "cannot append to history.jsonl: %s" % e)
+    return True
+
+
+if take() or (opening() and take()) or goal_turn():
     sys.exit(0)
 sys.exit(10)

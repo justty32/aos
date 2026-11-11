@@ -26,6 +26,7 @@ subcommands:
   history  its conversation: ls, rm, summarize, set
   hook     its hooks: ls, get, add, rm, reset
   system   its system text: get, set, reset
+  goal     its goal: get, set, done, pause, resume, clear
 
 flags:
   -d, --daemon D       the daemon's stack folder (default: $AOS_DAEMON, else ./.stack)
@@ -52,13 +53,13 @@ if os.path.isfile(os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(
 else:
     from agent.agent_files import declared_files
 
-from . import common, ctl, say, listen, chat, screen, tools, llm, history, hook, system
+from . import common, ctl, say, listen, chat, screen, tools, llm, history, hook, system, goal
 from .common import Fail, parse
 
 SUBS = {"ctl": ctl.cmd,
         "say": say.cmd, "listen": listen.cmd, "chat": chat.cmd,
         "open": screen.cmd("open"), "close": screen.cmd("close"), "watch": screen.cmd("watch"),
-        "tools": tools.cmd, "llm": llm.cmd, "history": history.cmd, "hook": hook.cmd, "system": system.cmd}
+        "tools": tools.cmd, "llm": llm.cmd, "history": history.cmd, "hook": hook.cmd, "system": system.cmd, "goal": goal.cmd}
 
 
 def on_signal(sig, frame):

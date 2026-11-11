@@ -11,7 +11,7 @@
 | 3 刪 | [delete.json](delete.json) | trash（丟進工作區 `.trash/`，可搬回）、remove（真的刪） |
 | 4 殼 | [shell.json](shell.json) | shell（bash 一行指令）、run_python |
 
-## 其他七包（兩個範本都預設開）
+## 其他八包（兩個範本都預設開）
 
 | 包 | 檔 | 工具 |
 |---|---|---|
@@ -22,6 +22,7 @@
 | 定義 | [def.json](def.json) | agent_def、tools_def（從 Python 骨架做新工具、檢查工具；11-10 深夜使用者「3.對」） |
 | 信箱 | [mailbox.json](mailbox.json) | mailbox_peek、mailbox_read、mailbox_send |
 | 記憶 | [knowledge.json](knowledge.json) | knowledge_read、knowledge_write——只寫路徑；用哪個庫由疊這包的那份 `tools.json` 在同名格補 `env`（`AOS_KNOWLEDGE`）。範本只替 knowledge_read 補（出廠庫）；knowledge_write 11-11 起不給庫（使用者「不給預設，要自己透過旗標指定或環境變數設定，或是工具呼叫內給。如果都沒有，那就報錯。」），腦在呼叫裡給 `root` 或人另配 |
+| 目標 | [goal.json](goal.json) | goal（一支分動作 get、set、done、pause、resume；自己停下來〔答話不叫工具〕又沒信時，身體丟一則 `[aos] goal: …` 提醒，連續十次沒進展就暫停；11-11 使用者「todo/goal也一起做吧」、裁「一支 goal 分動作」，[goal 02](../../thinking/2026-11/11/goal/02-裁定與施工結果.md)） |
 
 ## 怎麼用、怎麼關
 
