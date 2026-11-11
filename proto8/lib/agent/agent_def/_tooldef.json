@@ -12,8 +12,7 @@
   "MkdirFailed",
   "WriteFailed",
   "LaunchFailed",
-  "CommandFailed",
-  "RootMissing"
+  "CommandFailed"
  ],
  "parameters": {
   "type": "object",
