@@ -24,14 +24,14 @@
 
 `proto8/lib`、`proto8/py` 沒有共用的「往 stack 寫檔」helper，各自已經 mkdir，所以沒有新增 helper：
 
-- `subagent`：`write_children` 寫 `children.json` 前 `makedirs`（原本就有）；讀帳不在＝`[]`。
+- `subagent`：`write_book` 寫 `subagents.json` 前 `makedirs`（原本就有）；讀帳不在＝`[]`。
 - `shell`、`run_python`：`shell_observed.prepare` → `observed.prepare_strict` 先 `mkdir(parents=True)` 再寫 `interfaces.json`／`observed.jsonl`。
 - `thought`：`makedirs(children/)`。claude／codex：`Cell` 建構時建。`copy_child` 寫前 `mkdir(parents=True)`。
 - `aos-sandbox`（沙箱包著的工具）：`rw` 綁 `$AOS_STACK` 而它不在原本會 `PathMissing`——改成 rw 裡**正好是 `$AOS_STACK`** 而它不在就先建，其他路徑不在照舊 `PathMissing`（`--dry-run` 不建）。
 - tooldef 快取（`aos-tools` 的 `$AOS_STACK/tooldef_cache.json`）：規則本來就是「`AOS_STACK` 沒設或不是資料夾＝不快取、不寫任何檔」，沒改。它平常寫在 agent 的 stack（`aos-agent tools` 給的是 agent stack），不是工具小格。
 - hook 小格 `$AOS_STACK/hooks/<名>/`：使用者這次講的是工具，hook 照舊（`hooks.py` 跑 hook 前建）。
 
-讀自己小格的地方都容許不在：`ctl state` 的 children（`FileNotFoundError`＝`[]`）、`ctl ls` 看 `busy.txt`（`exists`）、`shell_report`／`measure` 的 `records`（沒 `interfaces.json`＝`[]`）、`observed_children`、`ctl who`（`realpath` 對不存在的路徑照算）。
+讀自己小格的地方都容許不在：`ctl state` 的 subagents（`FileNotFoundError`＝`[]`）、`ctl ls` 看 `busy.txt`（`exists`）、`shell_report`／`measure` 的 `records`（沒 `interfaces.json`＝`[]`）、`observed_children`、`ctl who`（`realpath` 對不存在的路徑照算）。
 
 ## 代定（線 D 自己定的小事）
 
@@ -49,7 +49,7 @@
 
 - build：`proto8/impls` 全建過。
 - 新測試：`impls/aos-exec/tests/test_stack_lazy.py`（4 支：lazy 不建、配 `--stack` 也不建、沒給照建、`--stack-lazy=1`＝ArgumentsBad）；`cmd/aos-tools/tests/test_cell_lazy.py`（2 支：只讀工具不留資料夾、會寫的工具自己建）——先對舊版 aos-tools 跑確認會紅。`templates/tests/agent-fsm/test_integration.py`（真 kernel＋`llm_fake` 假腦叫 `peek_now_time`）加一句：跑完 agent stack 沒有 `tools/`。
-- 實跑（暫存資料夾、真 aos-daemon、範本 agent-fsm 生一隻 mom、暫停它，把假腦會給的 tool_calls 一輪一輪寫進 history 交範本的 `act.py`）：`peek_now_time`、`math`、`knowledge_read ls`、`self_state`、`shell`、`subagent ls／add kid／ls／rm --purge` 全部退 0、結果對；跑完 `tools/` 底下只有 `shell`（`interfaces.json`、`observed.jsonl`）與 `subagent`（`children.json`、`daemon_reply`）。
+- 實跑（暫存資料夾、真 aos-daemon、範本 agent-fsm 生一隻 mom、暫停它，把假腦會給的 tool_calls 一輪一輪寫進 history 交範本的 `act.py`）：`peek_now_time`、`math`、`knowledge_read ls`、`self_state`、`shell`、`subagent ls／add kid／ls／rm --purge` 全部退 0、結果對；跑完 `tools/` 底下只有 `shell`（`interfaces.json`、`observed.jsonl`）與 `subagent`（`subagents.json`、`daemon_reply`）。
 - 受影響各夾的 Python 測試（改完後重跑）：aos-tools 103、aos-exec 12、aos-eca 58、aos-mcp 17、lib/tests 32、lib/agent/tests 16、subagent 18、thought 4、self_state 3、measure 26、review_round 12、watch 11、shell_report 5、shell 5、run_python 5、templates/tests/agent-fsm 73、judge-llm 4、reviewer 1、tool-python 4 全綠；第一輪全量（act.py 那處還沒改前）另有 50 夾全綠；全部改完後 test_daily（假腦假 claude 的兩台機器日常劇本）20 支再跑一次 OK（skipped 2、expected failures 2）。紅的只有兩處、都跟這次無關、改前也紅：`cmd/aos-agent` 的 `test_daemon_down` 2 支（這台 WSL 的 pid 命名空間不是最外層，`daemon_up` 照設計不核）、`lib/aos/box_check` 2 支（缺 `s6-softlimit`）。
 - aos-sandbox：手跑 `rw` 綁一個不在的 `$AOS_STACK`，裡面寫得進去；`--dry-run` 不建。
 

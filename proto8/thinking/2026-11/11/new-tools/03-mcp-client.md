@@ -10,7 +10,7 @@
 
 - 只有反方向：`cmd/aos-mcp` 把 aos-tools 登記的工具當 MCP 伺服器給 eca（claude／codex）用。aos 這邊沒有 MCP client。
 - 工具登記只有三種（資料夾、JSON 檔或 `檔.json#/指標`、可執行檔），**一格＝一支**。`aos-tools ls --json` 是 brain（每格）、aos-mcp（每次 tools/list 與每次 call 後）共同的工具來源。
-- 兩範本 35 支、tooldef 約 12.5k tokens——外部伺服器一掛幾十支（GitHub 官方伺服器 20 幾支以上），**工具表的 token 是最直接的「配額」**（aos 沒有「最多幾支工具」的配額；`max_children` 管的是子 agent）。
+- 兩範本 35 支、tooldef 約 12.5k tokens——外部伺服器一掛幾十支（GitHub 官方伺服器 20 幾支以上），**工具表的 token 是最直接的「配額」**（aos 沒有「最多幾支工具」的配額；`max_subagents` 管的是子 agent）。
 
 ## 參考市面
 
