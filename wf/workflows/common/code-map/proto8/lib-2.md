@@ -53,12 +53,15 @@
 | [`self_llm/tests/test_self_llm.py`](../../../../../proto8/lib/agent/self_llm/tests/test_self_llm.py) | Test self_llm builds the aos-agent llm command line (ls, set, rm, reset) and checks its arguments, with a fake aos-agent. |
 | [`self_state/`](../../../../../proto8/lib/agent/self_state/) | aos-agent ctl state 的包裝，目標改成叫我的那隻自己：總覽（每類一行）或點菜（某幾類的細節）；只給數字與事實 |
 | [`self_state/tests/test_self_state.py`](../../../../../proto8/lib/agent/self_state/tests/test_self_state.py) | Test self_state builds aos-agent ctl state for the agent that calls it (overview, parts, all, json) with a fake aos-agent. |
+| [`self_system/`](../../../../../proto8/lib/agent/self_system/) | aos-agent system 的包裝，目標改成叫我的那隻自己：get、set、reset；改的是那隻 stack 裡自己那份 system 文字，定義不動 |
+| [`self_system/tests/test_self_system.py`](../../../../../proto8/lib/agent/self_system/tests/test_self_system.py) | Test self_system builds the aos-agent system command line (get, set, reset), hands set's text on stdin and checks its arguments, with a fake aos-agen… |
 | [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | aos-agent tools 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份登記檔，定義不動 |
 | [`self_tools/tests/test_self_tools.py`](../../../../../proto8/lib/agent/self_tools/tests/test_self_tools.py) | Test self_tools builds the aos-agent tools command line (replace, envs, env_file) and checks its arguments, with a fake aos-agent. |
 | [`subagent/`](../../../../../proto8/lib/agent/subagent/) | 我生的子 agent：生、殺、停起、說話、出生後調它的工具／腦／對話／hook；工具自己記帳（children.json）、算配額，只碰自己生的 |
 | [`subagent/tests/test_children.py`](../../../../../proto8/lib/agent/subagent/tests/test_children.py) | Test subagent against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, child account copies, a… |
 | [`subagent/tests/test_daemon.py`](../../../../../proto8/lib/agent/subagent/tests/test_daemon.py) | Test subagent and agents_ctl on a real aos-daemon: tools/llm changes land on the child (not the parent), and a child removed with agents_ctl is forgo… |
 | [`subagent/tests/test_wait.py`](../../../../../proto8/lib/agent/subagent/tests/test_wait.py) | Test the shared runner in agents_cmd waits in bounded segments, cleans up on expiry, polls short on the clock, and that subagent checks wait argument… |
+| [`tests/test_cli_system.py`](../../../../../proto8/lib/agent/tests/test_cli_system.py) | 驗 cli_session 的 system（11-11 self-system）：宣告了才碰；stack 那份在就整份用它、否則定義那份；claude 附加檔＋snapshot off、codex developer_instructions；空＝不附加。 |
 | [`tests/test_cli_tools_directive.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_directive.py) | 驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。 |
 | [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定或工具設定預設定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
 | [`thought/tests/test_observed_children.py`](../../../../../proto8/lib/agent/thought/tests/test_observed_children.py) | Verify child account preservation and thought cleanup ordering. |

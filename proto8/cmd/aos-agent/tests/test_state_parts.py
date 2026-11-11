@@ -11,7 +11,7 @@ import unittest
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[4]
 BIN = REPO / "proto8" / "cmd" / "aos-agent" / "bin" / "aos-agent"
-PARTS = ["who", "state", "tools", "llm", "hooks", "history", "mailbox", "children", "resources", "time"]
+PARTS = ["who", "state", "tools", "llm", "system", "hooks", "history", "mailbox", "children", "resources", "time"]
 
 
 def clean_env(**extra):
@@ -69,6 +69,7 @@ class State(unittest.TestCase):
         self.assertIn("limits memory_max=1G; no running process", row["resources"])
         self.assertIn("not running", row["time"])
         self.assertTrue(row["hooks"].startswith("not available ("), row["hooks"])   # 沒宣告 hooks
+        self.assertTrue(row["system"].startswith("not available ("), row["system"])   # 沒宣告 system
         self.assertIn("0 letters waiting", row["mailbox"])
 
     def test_picked_parts_and_all(self):

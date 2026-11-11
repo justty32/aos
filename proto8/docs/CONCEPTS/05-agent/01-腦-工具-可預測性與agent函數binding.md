@@ -2,7 +2,7 @@
 
 ## 腦、工具、可預測性
 
-- **C-19** agent 的簽名＝腦（模型）＋記憶（核心人格、近期記憶）＋手腳（工具）。（2.17）
+- **C-19** agent 的簽名＝腦（模型）＋記憶（核心人格、近期記憶）＋手腳（工具）。（2.17）（**11-11 註**：核心人格〔system 文字〕這隻自己也能換——`self_system`／`aos-agent system` 寫 stack 那份、定義不動，[thinking self-system](../../../thinking/2026-11/11/self-system/README.md)）
 - **C-20** agent 是複合型任務（外迴圈便宜、叫的模型與工具貴），所以要被排程；最核心的一題是「很多 agent 時誰先用腦」。（2.18、2.19）
   **11-07 註**：使用者 11-07「agent可以成千上萬個，反正可以sleep」，原話與嵌套的部分見 [C-47](../04-kernel.md) 的 11-07 加註。（出處 [proto8/thinking/2026-11/07/arknights-kb/README.md](../../../thinking/2026-11/07/arknights-kb/README.md)）
 - **C-21** 可預測性有主體性，不是任務的屬性，是觀察者的認識。（2.14、2.15）

@@ -6,7 +6,9 @@
 #   鍵 model＝kernel 的包代號，填進 body 的 endpoint 欄（11-10 晚使用者「把fsm認的endpoint這個key，也改名爲model吧」；kernel 不動）；都沒寫＝不放（kernel 用預設）。
 #   temperature、top_p、max_tokens、seed、presence_penalty、frequency_penalty、stop＝與快取無關的調整鍵，轉型後放進 request（llm_settings.py）。其他鍵不看（C-48）。
 # 寫新請求時順手刪 $AOS_STACK/think/pending.txt（上一封的名字）：新請求取代舊的，wait 會重寄。
-# --system FILE：讀成一則 system 放最前面、不存進 history（P-41）；沒給＝沒有 system。
+# --system FILE：讀成一則 system 放最前面、不存進 history（P-41）。沒給＝interfaces.json 宣告的 system（11-11 self-system，使用者裁「fsm 取代、eca 附加」）：
+#   $AOS_STACK/<宣告相對路徑> 在＝整份用這隻自己那份（aos-agent system set／self_system 寫的，取代定義那份），否則定義那份；每格重讀＝下一格生效。
+#   都不在、或沒宣告＝沒有 system；給了 --system＝照它、不看 stack（同 --tools）。文字空＝不送 system 訊息（知識庫根照接）。
 # --knowledge NAME（11-05 晚 agent-knowledge K2）：登記名 NAME 的工具（範本是 knowledge_read）叫一次 {"op": "read"}，它印的知識庫根接在 system 後面、
 #   同一則 system 訊息（每格重叫＝知識庫改了下一題就看到；不存進 history）。叫的是腦之後叫的同一個工具＝腦看到的根跟它自己查的一樣。
 #   工具清單（疊覆蓋層後）沒有 NAME＝不給根（這隻把 knowledge 拿掉了）；叫了起不來、退非 0、或 30 秒沒叫完（整群收掉）＝
@@ -53,7 +55,8 @@ HELP = """\
 usage: brain.py [--system FILE] [--tools FILE] [--knowledge NAME] [--history full|task] [--max-tool-calls N]   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
 The think cell: build the request to the brain from $AOS_STACK/history.jsonl (plus system and
 tools) and write $AOS_STACK/think/request.json. Exit 0 = written (go wait); 10 = nothing to answer.
---system FILE: a system message in front; --tools FILE: the aos-tools registry;
+--system FILE: a system message in front (default: the system file declared in interfaces.json,
+this agent's own copy in $AOS_STACK when it has one); --tools FILE: the aos-tools registry;
 --history full|task: include all history (default), or only messages from the last user.
 --max-tool-calls N: omit tools after N calls in the current task (non-negative integer).
 --knowledge NAME: call tool NAME with {"op": "read"} and append the knowledge base root it prints
@@ -110,6 +113,11 @@ try:
     files = declared_files(os.environ.get("AOS_CD") or ".")
 except ValueError as e:
     die("InterfaceBad", str(e))
+if "--system" not in opts and "system" in files:   # 11-11：這隻自己那份在＝整份用它（取代），否則定義那份；都不在＝沒有 system
+    own_system = os.path.join(stack, files["system"])
+    system_file = own_system if os.path.isfile(own_system) else here(files["system"])
+    if not os.path.isfile(system_file):
+        system_file = None
 tools_rel = opts.get("--tools", files.get("tools"))
 tools_file = os.path.join(os.environ.get("AOS_CD") or ".", tools_rel) if tools_rel else None
 if "--tools" in opts and not os.path.isfile(tools_file):

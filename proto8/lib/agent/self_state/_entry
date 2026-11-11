@@ -87,7 +87,7 @@ signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、�
 signal.signal(signal.SIGTERM, on_term)
 signal.signal(signal.SIGINT, on_term)
 args = arguments()
-PARTS = ("who", "state", "tools", "llm", "hooks", "history", "mailbox", "children", "resources", "time", "all")
+PARTS = ("who", "state", "tools", "llm", "system", "hooks", "history", "mailbox", "children", "resources", "time", "all")
 extra = sorted(k for k in args if k not in ("parts", "json"))
 if extra:
     die("ArgumentsBad", "self_state does not take %s (it takes parts, json)" % ", ".join(extra))

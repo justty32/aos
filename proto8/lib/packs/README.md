@@ -17,7 +17,7 @@
 |---|---|---|
 | 小工具 | [gadgets.json](gadgets.json) | peek_clock（daemon 時鐘第幾 cycle）、peek_now_time（UTC 時間）、math（算一個式子）——不改任何東西、隨手看一下 |
 | 事件 | [events.json](events.json) | clock_register（時鐘定期寄信）、self_hook（自己身上發生事時叫的勾子） |
-| 自我管理 | [self.json](self.json) | self_tools、self_llm、self_state、self_ctl、self_history |
+| 自我管理 | [self.json](self.json) | self_tools、self_llm、self_system、self_state、self_ctl、self_history |
 | 子 agent | [children.json](children.json) | subagent（自己生的）、agents_ctl（daemon 上任何一隻） |
 | 定義 | [def.json](def.json) | agent_def、tools_def（從 Python 骨架做新工具、檢查工具；11-10 深夜使用者「3.對」） |
 | 信箱 | [mailbox.json](mailbox.json) | mailbox_peek、mailbox_read、mailbox_send |

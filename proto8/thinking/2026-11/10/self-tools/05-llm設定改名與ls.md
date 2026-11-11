@@ -40,6 +40,8 @@
 
 不開：system、tools、reasoning 類（reasoning_effort、thinking 等）、response_format、logit_bias。前三類會改前綴或讓快取失效；後兩個不是調答案品質的，先不放。
 
+**11-11 註**：system 翻案——使用者 11-11「然後我們現在的工具沒辦法讓agent修改自身的system prompt……」，選項框裁走單獨一支工具（人用 `aos-agent system`、腦用 `self_system`，「fsm 取代、eca 附加」「只給 reset、不擋」），不進 llm 的鍵；見 [11-11 self-system](../../11/self-system/README.md)。
+
 - 包的 `fixed` 照舊蓋過 agent 設的值。例如 kernel 範本的 `gemma` 包寫死 `temperature: 0.7`，agent 再怎麼設 temperature 都不會生效。
 - **eca**：claude CLI 沒有 temperature 這類取樣旗標，所以只認 `model`，`llm_keys` 寫 `["model"]`。
 

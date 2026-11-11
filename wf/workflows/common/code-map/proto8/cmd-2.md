@@ -5,6 +5,13 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/cmd/aos-clock-register/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`bin/aos-clock-register`](../../../../../proto8/cmd/aos-clock-register/bin/aos-clock-register) | 時鐘登記表的人用指令：add／rm／ls 時鐘檔旁 <時鐘檔名>_register.json 的格（每 every 個 cycle 往一個 aos-post 箱子寄一句；11-10 晚 clock-letters）。 |
+| [`tests/test_clock_register.py`](../../../../../proto8/cmd/aos-clock-register/tests/test_clock_register.py) | Test aos-clock-register add/rm/ls, aos-clock register (the same thing), and aos-clock sending the registered letters (real aos-post; no daemon). |
+
 ## `proto8/cmd/aos-daemon-ctl/`
 
 | 檔 | 負責什麼 |
@@ -52,14 +59,3 @@
 |---|---|
 | [`aos_mailbox/__init__.py`](../../../../../proto8/cmd/aos-mailbox/aos_mailbox/__init__.py) | aos-mailbox 本體：找我的 stack、四個子命令（where、peek、read、send）、叫 aos-post 命令列。 |
 | [`tests/test_mailbox.py`](../../../../../proto8/cmd/aos-mailbox/tests/test_mailbox.py) | Test aos-mailbox where / peek / read / send against real aos-post boxes and a hand-written daemon table. |
-
-## `proto8/cmd/aos-mcp/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-mcp`](../../../../../proto8/cmd/aos-mcp/bin/aos-mcp) | 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。 |
-| [`tests/test_hooks.py`](../../../../../proto8/cmd/aos-mcp/tests/test_hooks.py) | Verify aos-mcp's --hooks DEF: before_tool changes / blocks a call, after_tool changes the result, no --hooks = no hooks, a failing hook = isError. |
-| [`tests/test_knowledge_root.py`](../../../../../proto8/cmd/aos-mcp/tests/test_knowledge_root.py) | Verify aos-mcp --knowledge NAME: a knowledge base given = its root in the initialize instructions; none given (KnowledgeMissing) = quiet; given but n… |
-| [`tests/test_list_changed.py`](../../../../../proto8/cmd/aos-mcp/tests/test_list_changed.py) | Verify aos-mcp sends notifications/tools/list_changed right after a tools/call that changed the list (11-10 tools-def, "3.同一輪就生效"), not after one tha… |
-| [`tests/test_own_registry.py`](../../../../../proto8/cmd/aos-mcp/tests/test_own_registry.py) | Verify aos-mcp serves an agent's own registry ("$override" of the definition's) and the definition's, and has no --overlay flag (11-10 aos-tools-cli … |
-| [`tests/test_timeout.py`](../../../../../proto8/cmd/aos-mcp/tests/test_timeout.py) | Verify MCP reads shared timeout metadata and keeps its CLI fallback. |

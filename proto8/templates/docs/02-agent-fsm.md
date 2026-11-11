@@ -32,7 +32,7 @@ agent-fsm/
   _entry       {"argv": ["aos-agent", "ctl", "add", {"$env": "AOS_CD"}], "cwd": {"$env": "AOS_WS"}}（單子，沒 +x；11-05：aos-exec 這個資料夾＝掛上 daemon）
   body.json    ["aos-loop", "loop.json"]（身體的入口；interfaces.json 的 entry 指它，aos-agent ctl add 掛的是它）
   loop.json    {"exec": "fsm.json", "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}（沒有 max：常駐，靠 ctl 的 stop 收工）
-  fsm.json     四格：idle {"0": "think", "10": "idle"}、think（brain.py --system system.txt --knowledge knowledge_read）{"0": "wait", "10": "idle"}、
+  fsm.json     四格：idle {"0": "think", "10": "idle"}、think（brain.py --knowledge knowledge_read；system 照 interfaces.json 宣告的 system.txt，11-11）{"0": "wait", "10": "idle"}、
                wait {"0": "act", "10": "wait", "11": "think"}、act（timeout_ms: 1800000）{"0": "think", "10": "idle"}；start: idle
   idle.py      收信：$AOS_STACK/queue/ 全部收進 history.jsonl（接進去就 aos-post done）；有好信退 0、沒有退 10；[--prompt FILE] 開場白
   brain.py     組請求、不碰網路：history（＋system、tools）→ $AOS_STACK/think/request.json（llm kernel 請求信的 body）；退 0；沒事做退 10
@@ -40,8 +40,8 @@ agent-fsm/
                已寄＝aos-llm recv：沒到退 10（loop 照跑）、到了那則 assistant 接進 history 退 0、kernel 回錯退 1（send 失敗＝冷卻、warning、退 10 等）；沒 pending 且請求不在、或寄之前腦設定與請求對不上、請求比 history 舊（最後一則對不上，或 history.jsonl 比 request.json 新＝寄之前被人改過，11-10 self-family）＝退 11 回 think 重組；
                等回信不設期限，寄出（pending.txt 的 mtime）每滿 10 分鐘印一行 agent-fsm: warning、照樣等（記在 think/wait_warned.txt，11-10 坑-74）
   act.py       跑工具：逐個 aos-tools call，照 metainfo 限時；失敗附 stderr 尾，結果各接一則 tool、退 0；沒有 tool_calls（最後答案）退 10
-  system.txt   system 訊息（brain.py 的 --system 指到它；每次從檔讀、不存進 history；11-05 晚改英文）
-  tools.json   aos-tools 登記檔：幾乎只剩 `"$override"` 一串 [lib/packs](../../lib/packs/README.md) 十一包——通用四包 look、change、delete、shell（15 支，11-10 tool-packs 預設全開），再加七包 gadgets（peek_clock、peek_now_time、math）、events（clock_register、self_hook）、self（self_tools、self_llm、self_state、self_ctl、self_history）、children（subagent、agents_ctl）、def（agent_def、tools_def）、mailbox（mailbox_peek／read／send）、knowledge（knowledge_read、knowledge_write），共 34 支（11-10 深夜使用者「照包砍」「2.都開吧」）；自己只寫 knowledge_read、knowledge_write 兩格的 `env.AOS_KNOWLEDGE`（指 `knowledge/`）；關法見範本 README；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
+  system.txt   system 訊息（interfaces.json 宣告 "system": "system.txt"，11-11 self-system；$AOS_STACK/system.txt 在就整份用那份〔aos-agent system set／self_system〕；每格從檔讀、不存進 history；11-05 晚改英文）
+  tools.json   aos-tools 登記檔：幾乎只剩 `"$override"` 一串 [lib/packs](../../lib/packs/README.md) 十一包——通用四包 look、change、delete、shell（15 支，11-10 tool-packs 預設全開），再加七包 gadgets（peek_clock、peek_now_time、math）、events（clock_register、self_hook）、self（self_tools、self_llm、self_system、self_state、self_ctl、self_history）、children（subagent、agents_ctl）、def（agent_def、tools_def）、mailbox（mailbox_peek／read／send）、knowledge（knowledge_read、knowledge_write），共 35 支（11-11 self 包加 self_system）（11-10 深夜使用者「照包砍」「2.都開吧」）；自己只寫 knowledge_read、knowledge_write 兩格的 `env.AOS_KNOWLEDGE`（指 `knowledge/`）；關法見範本 README；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
   llm.json     腦設定：{}＝用 kernel 的預設代號；model＝kernel 的 endpoint 包代號（例 "smart-high"；寄信時填進 body 的 endpoint 欄，真正的模型名固定在包上）；
                另認與快取無關的調整鍵 temperature、top_p、max_tokens、seed、presence_penalty、frequency_penalty、stop（放進 request；包的 fixed 照舊蓋過）；
                認哪些鍵寫在 interfaces.json 的 llm_keys（aos-agent llm set 對著提醒，11-10 晚）

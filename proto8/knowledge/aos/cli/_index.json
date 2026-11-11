@@ -18,7 +18,7 @@
   "_description": "Check the chosen daemon, agent and stack before destructive commands; scripts do not get a confirmation prompt."
  },
  "talk_settings.json": {
-  "_description": "Send messages and change one agent's overlays without modifying its definition."
+  "_description": "Send messages and change one agent's overlays (tools, brain settings, system text) without modifying its definition."
  },
  "tool_env.json": {
   "_description": "Save hub locations at registration time so each tool call uses the intended services."

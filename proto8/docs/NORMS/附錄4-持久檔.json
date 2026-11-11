@@ -603,6 +603,26 @@
    "on_bad": "不在或壞了（不是字串陣列）＝當第一次：只記不觸發 tool_added；沒有 tool_added hook＝刪掉",
    "note": "11-10 晚 self-family/hook 新增：工具名的 JSON 陣列（排好）。新檔，不用重建",
    "evidence": "proto8/lib/agent/hooks.py（tools_added）、proto8/templates/agent-fsm/brain.py"
+  },
+  {
+   "path": "<定義資料夾>/system.txt（interfaces.json 宣告的 system）",
+   "lifetime": "持久",
+   "writer": "人手寫（agent_def new 整份照抄）",
+   "reader": "templates/agent-fsm brain（自己那份不在時）、lib/agent/cli_session（同）、aos-agent system get",
+   "image": "看情況：定義＝原始碼、不算 image（C-79）",
+   "on_bad": "不在＝空文字（fsm 不送 system、eca 不附加）；宣告的不是定義內相對檔名＝SystemBad（aos-agent）／InterfaceBad（brain）／CfgBad（cli_session）",
+   "note": "11-11 self-system：原本是 fsm.json 寫死 brain.py --system system.txt，改成 interfaces.json 宣告；eca-claude 宣告了但不帶檔。新宣告，不用重建（舊 fsm.json 還帶 --system 的照舊能跑，只是看不到 stack 那份）",
+   "evidence": "proto8/templates/agent-fsm/brain.py（system_file）、proto8/lib/agent/cli_session.py（system_file）、proto8/cmd/aos-agent/aos_agent/system.py"
+  },
+  {
+   "path": "$AOS_STACK/system.txt（自己那份）",
+   "lifetime": "持久",
+   "writer": "aos-agent system set／reset（self_system 再包它）",
+   "reader": "templates/agent-fsm brain、lib/agent/cli_session（claude --append-system-prompt-file、codex developer_instructions）、aos-agent system get、ctl state",
+   "image": "進",
+   "on_bad": "讀不了＝SystemBad（aos-agent）；空檔＝空文字（不是回到定義那份）",
+   "note": "11-11 self-system 新增：整份文字、不是差異，在就蓋過定義那份；reset＝刪檔。新檔，不用重建",
+   "evidence": "proto8/cmd/aos-agent/aos_agent/system.py、proto8/lib/agent/self_system/_entry"
   }
  ]
 }

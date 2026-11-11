@@ -104,6 +104,10 @@ def describe(path, root):
     if agent is None:
         return row
     entries = tools(path, agent)
+    system_file = agent.get('system')            # 11-11 self-system：定義裡的相對檔名；檔可以不在（＝空文字）
+    if system_file is not None and (not isinstance(system_file, str) or not system_file or os.path.isabs(system_file)
+                                    or '..' in system_file.split('/') or (path / system_file).is_dir()):
+        raise ValueError('aos-agent.system must name a text file by a relative path inside the definition')
     llm_file = agent.get('llm')
     if not isinstance(llm_file, str) or not llm_file:
         raise ValueError('aos-agent.llm must name a file')

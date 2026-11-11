@@ -12,7 +12,7 @@ from .. import declared_files
 from ..hints import label, queued
 
 
-PARTS = ("who", "state", "tools", "llm", "hooks", "history", "mailbox", "children", "resources", "time")
+PARTS = ("who", "state", "tools", "llm", "system", "hooks", "history", "mailbox", "children", "resources", "time")
 HELP = """aos-agent ctl state - show one agent's state (status = the same)
 
 usage: aos-agent [--daemon D] ctl state [--target NAME] [-j] [PART... | all]
@@ -22,6 +22,7 @@ parts:
   state      daemon phase, reason, queued letters, latest answer
   tools      its tools (aos-agent tools ls), with its own changes
   llm        its brain settings (aos-agent llm ls)
+  system     where its system text comes from, its size and first line (aos-agent system get)
   hooks      its hooks (aos-agent hook ls)
   history    how many messages and bytes; the last ones (aos-agent history ls)
   mailbox    letters waiting in its mailbox (aos-mailbox peek)
@@ -118,6 +119,16 @@ def part_llm(a):
     j = {"settings": kv, "changed": changed}
     one = (" ".join("%s=%s" % (k, v) for k, v in kv.items()) or "no settings") + ("; changed by it: %s" % ", ".join(changed) if changed else "")
     return one, agent_cmd(a, ["llm", "ls", "-l"]).rstrip("\n"), j
+
+
+def part_system(a):
+    j = json.loads(agent_cmd(a, ["system", "get", "--json"]) or "{}")   # 11-11 self-system：同 llm／hooks，轉叫自己的子命令
+    text = j.pop("text", "") or ""
+    first = next((l.strip() for l in text.splitlines() if l.strip()), "")
+    j["first_line"] = first[:80] + ("…" if len(first) > 80 else "")
+    one = "%d bytes from %s" % (j.get("bytes", 0), j.get("from")) + ("; first line %s" % json.dumps(j["first_line"], ensure_ascii=False) if first else "")
+    shown = text if len(text) <= 2000 else text[:2000] + "…"            # 全文用 aos-agent system get
+    return one, "from   %s (%s)\nbytes  %d\n%s" % (j.get("from"), j.get("file"), j.get("bytes", 0), shown.rstrip("\n") or "(empty)"), j
 
 
 def part_hooks(a):

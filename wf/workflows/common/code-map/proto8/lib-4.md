@@ -48,5 +48,5 @@
 | [`knowledge.json`](../../../../../proto8/lib/packs/knowledge.json) | Pack knowledge: knowledge_read, knowledge_write. Which knowledge base they use is set by the tools.json that stacks this pack (env AOS_KNOWLEDGE on t… |
 | [`look.json`](../../../../../proto8/lib/packs/look.json) | Pack 1 (look): read-only file tools - read, ls, view, stat, json_read. |
 | [`mailbox.json`](../../../../../proto8/lib/packs/mailbox.json) | Pack mailbox: letters - mailbox_peek, mailbox_read, mailbox_send. |
-| [`self.json`](../../../../../proto8/lib/packs/self.json) | Pack self: look at and change yourself - self_tools, self_llm, self_state, self_ctl, self_history. |
+| [`self.json`](../../../../../proto8/lib/packs/self.json) | Pack self: look at and change yourself - self_tools, self_llm, self_system, self_state, self_ctl, self_history. |
 | [`shell.json`](../../../../../proto8/lib/packs/shell.json) | Pack 4 (shell): tools that run any command or program - shell (bash) and run_python. |

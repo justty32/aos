@@ -35,7 +35,8 @@ flags:
 
 Store only changed keys in this agent's stack, then print effective settings.
 Values are strings. A key the body does not read (llm_keys in the definition's
-interfaces.json) is stored anyway, with a warning.
+interfaces.json) is stored anyway, with a warning. The system text is not a key here:
+use aos-agent system.
 exit codes: 0 changed; 1 error (ArgumentsBad, LlmBad, CommandMissing...).
 """,
     "rm": """aos-agent llm rm - drop keys changed for this agent
@@ -195,9 +196,12 @@ def cmd(argv):
             pairs.append((k, v))
         if not pairs:
             raise bad_args(HELPS[act], "set needs at least one KEY=VALUE")
+        for k, _ in pairs:
+            if k == "system":                    # 11-11 self-system 代定：system 不是腦設定，指到 aos-agent system（照存、不擋）
+                note("system is not a brain setting: change the system text with aos-agent system set (self_system for the brain); stored anyway")
         if known is not None:
             for k, _ in pairs:
-                if k not in known:
+                if k not in known and k != "system":
                     note("%s is not a setting the body of %s reads (it reads: %s); stored anyway" % (k, a.name, ", ".join(known) or "none"))
         if not os.path.isfile(copy):
             os.makedirs(os.path.dirname(copy), exist_ok=True)

@@ -1,4 +1,4 @@
-"""Test subagent against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, child account copies, and tools/llm/history/hook aimed at the child."""
+"""Test subagent against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, child account copies, and tools/llm/history/hook/system aimed at the child."""
 import json
 import os
 from pathlib import Path
@@ -232,7 +232,8 @@ class Children(unittest.TestCase):
         kid_stack = str(self.daemon / "procs" / "kid")
         for op, sub, args, want in (("tools", "self_tools", {"op": "add", "path": "tools/math"}, ["tools", "--target", "kid", "add", "tools/math"]),
                                     ("llm", "self_llm", {"op": "set", "settings": {"model": "fake"}}, ["llm", "--target", "kid", "set", "model=fake"]),
-                                    ("hook", "self_hook", {"op": "ls"}, ["hook", "--target", "kid", "ls"])):
+                                    ("hook", "self_hook", {"op": "ls"}, ["hook", "--target", "kid", "ls"]),
+                                    ("system", "self_system", {"op": "get"}, ["system", "--target", "kid", "get"])):
             if not (TOOL.parents[1] / sub / "_entry").exists():
                 continue
             out = self.ok({"op": op, "name": "kid", "args": args})

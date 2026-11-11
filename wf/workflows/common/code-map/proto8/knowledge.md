@@ -40,7 +40,7 @@
 | [`errors.json`](../../../../../proto8/knowledge/aos/errors.json) | 設定（鍵：_description、_index、codes、common） |
 | [`knowledge.json`](../../../../../proto8/knowledge/aos/knowledge.json) | （檔頭沒有一句話） |
 | [`mailbox.json`](../../../../../proto8/knowledge/aos/mailbox.json) | 設定（鍵：_description、_index、tools、rules） |
-| [`me.json`](../../../../../proto8/knowledge/aos/me.json) | 設定（鍵：_description、_index、self_tools、self_llm、self_history、self_hook…） |
+| [`me.json`](../../../../../proto8/knowledge/aos/me.json) | （檔頭沒有一句話） |
 | [`packs.json`](../../../../../proto8/knowledge/aos/packs.json) | 設定（鍵：_description、_index、about、look、change、delete…） |
 | [`rules.json`](../../../../../proto8/knowledge/aos/rules.json) | （檔頭沒有一句話） |
 | [`status.json`](../../../../../proto8/knowledge/aos/status.json) | （檔頭沒有一句話） |

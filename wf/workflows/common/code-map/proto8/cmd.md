@@ -28,6 +28,7 @@
 | [`aos_agent/llm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/llm.py) | 分層解析腦設定命令（ls／set／rm／reset）並管理 agent 的覆蓋鍵與重設確認。 |
 | [`aos_agent/say.py`](../../../../../proto8/cmd/aos-agent/aos_agent/say.py) | 寄一則訊息到 agent 的 queue。 |
 | [`aos_agent/screen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/screen.py) | 開啟、關閉與追蹤 agent 的畫面子介面。 |
+| [`aos_agent/system.py`](../../../../../proto8/cmd/aos-agent/aos_agent/system.py) | 管 agent 自己那份 system 文字（stack 那份在就整份蓋過定義那份）：get、set、reset。 |
 | [`aos_agent/tools.py`](../../../../../proto8/cmd/aos-agent/aos_agent/tools.py) | 分層解析工具命令並管理 agent 自己那份工具登記檔（$override 定義那份）與重設確認。 |
 | [`bin/aos-agent`](../../../../../proto8/cmd/aos-agent/bin/aos-agent) | 統一的 agent 介面：管掛在 aos-daemon 上的一隻 agent（eca、loop／fsm agent 都一樣），每個子命令只管一隻（11-04）。 |
 | [`stack.gitattributes`](../../../../../proto8/cmd/aos-agent/stack.gitattributes) | 把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件） |
@@ -39,6 +40,7 @@
 | [`tests/test_ls_health.py`](../../../../../proto8/cmd/aos-agent/tests/test_ls_health.py) | Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table. |
 | [`tests/test_rm_keep.py`](../../../../../proto8/cmd/aos-agent/tests/test_rm_keep.py) | Test aos-agent ctl rm keeps the stack by default and deletes it only with --purge (cli-sweep Q3), on a real aos-daemon. |
 | [`tests/test_state_parts.py`](../../../../../proto8/cmd/aos-agent/tests/test_state_parts.py) | Test aos-agent ctl state (11-10 self-family self_state): the overview (one line per part), picked parts, all, --json, and parts that are not availabl… |
+| [`tests/test_system.py`](../../../../../proto8/cmd/aos-agent/tests/test_system.py) | Test aos-agent system on a fake daemon table (11-11 self-system): get / get -l / get --json, set from stdin and from a file, empty text, reset, missi… |
 | [`tests/test_tools_override.py`](../../../../../proto8/cmd/aos-agent/tests/test_tools_override.py) | Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with "$override" (N2 poin… |
 | [`using-aos-agent.sh`](../../../../../proto8/cmd/aos-agent/using-aos-agent.sh) | 給人的殼 source 用（不是跑）：之後直接打 say／listen／chat／status，像命名空間（11-04 aos-agent 02）。 |
 
@@ -47,10 +49,3 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-clock`](../../../../../proto8/cmd/aos-clock/bin/aos-clock) | 時鐘往前走一格（CONCEPTS C-44、NORMS N-01；規格 10-12「做吧」，計畫 10-21 第 4 段）。 |
-
-## `proto8/cmd/aos-clock-register/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-clock-register`](../../../../../proto8/cmd/aos-clock-register/bin/aos-clock-register) | 時鐘登記表的人用指令：add／rm／ls 時鐘檔旁 <時鐘檔名>_register.json 的格（每 every 個 cycle 往一個 aos-post 箱子寄一句；11-10 晚 clock-letters）。 |
-| [`tests/test_clock_register.py`](../../../../../proto8/cmd/aos-clock-register/tests/test_clock_register.py) | Test aos-clock-register add/rm/ls, aos-clock register (the same thing), and aos-clock sending the registered letters (real aos-post; no daemon). |

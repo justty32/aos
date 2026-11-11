@@ -36,6 +36,9 @@
 #   codex＝兩個 -c mcp_servers.aos.command／args。aos-mcp 靠 PATH 找（N-50）；定義資料夾一個字都不寫（P-15）。
 #   $AOS_STACK 裡這隻自己的（aos-agent tools／llm 寫的，stack_copies）：tools.json＝這隻自己那份（只存差異、"$override" 指回定義那份，
 #   11-10 aos-tools-cli；cli.json 沒明寫 tools 時在就把它給 aos-mcp，疊法歸 aos-tools）、llm.json 的 model。
+#   system（11-11 self-system，使用者裁「fsm 取代、eca 附加」）：interfaces.json 宣告了 system＝$AOS_STACK 那份在就用它、否則定義那份，非空就附加給 CLI：
+#   claude＝--append-system-prompt-file＋--system-prompt-snapshot off（宣告了就一律 off，--resume 才換得到新的）、codex＝-c developer_instructions；
+#   沒宣告＝不碰。畫面開著的 CLI 帶的是開畫面那時的（重開才換）。
 #   模型（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本）的 model＝flags 的 --model（換掉或加在尾）；都沒有＝flags 原樣。
 # 換台（11-10 two-machines 05）：要接舊對話前先認「是不是這台的」（session_here：記號檔的 session、home 一樣，claude 再比 ws；
 #   不讀 CLI 的任何檔內容、不靠它的錯誤訊息）。不是＝在交出去之前改開新對話：呼叫者給了 reseed（aos-eca-turn）＝把 reseed(上限)
@@ -158,6 +161,43 @@ def stack_copies(cfg, tool_dir, files):
         else:
             flags += ["--model", model]
         cfg["flags"] = flags
+    cfg["system"] = system_file(tool_dir, files, stack)
+
+
+def system_file(tool_dir, files, stack):
+    """宣告了 system（11-11 self-system，使用者裁「fsm 取代、eca 附加」）＝{"file": 生效那份的絕對路徑或 None（都不在或空）}：
+    stack 那份在就整份用它（aos-agent system set 寫的），否則定義那份；沒宣告＝None（不碰 CLI 的 system）。每題重讀＝下一輪生效。"""
+    rel = files.get("system")
+    if not rel:
+        return None
+    own = os.path.join(stack, rel) if stack else None
+    path = own if own and os.path.isfile(own) else os.path.join(tool_dir, rel)
+    try:
+        empty = os.path.getsize(path) == 0
+    except OSError:
+        return {"file": None}
+    return {"file": None if empty else os.path.abspath(path)}
+
+
+def system_argv(cfg):
+    """把生效的 system 文字附加給 CLI（不用整份取代的 --system-prompt）：
+    claude＝--append-system-prompt-file 檔；宣告了就一律加 --system-prompt-snapshot off（claude 預設把第一輪的 system 記下來、--resume 時照舊送，
+    off 才會每輪重讀，改了、reset 了下一輪都跟著變；代價是 claude 自己的動態段落〔日期等〕變了也會讓快取失效）。
+    codex＝-c developer_instructions=文字（附加成 developer 訊息；值照 TOML 寫，JSON 字串是合法的 TOML 字串）。沒宣告＝[]。"""
+    sysd = cfg.get("system")
+    if sysd is None:
+        return []
+    path = sysd.get("file")
+    if cfg["kind"] == "claude":
+        return ["--system-prompt-snapshot", "off"] + (["--append-system-prompt-file", path] if path else [])
+    if not path:
+        return []
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except (OSError, UnicodeError) as e:
+        die("CfgBad", "cannot read the system text %s: %s" % (path, e))
+    return ["-c", "developer_instructions=" + json.dumps(text, ensure_ascii=False)]
 
 
 def registry(cfg, tool_dir, path, files):
@@ -568,7 +608,7 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
     # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-agent watch 看得到它正在做什麼；
     # 回答取最後一個帶 result 的那行（type: result）
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
-    argv += mcp_argv(cfg, cell, ws, stack)
+    argv += mcp_argv(cfg, cell, ws, stack) + system_argv(cfg)
     argv += ["--resume", sid] if sid else ["--session-id", new]
 
     def given():
@@ -608,7 +648,7 @@ def print_codex(cfg, cell, ws, stack, prompt, handed=None, sid=None):
     sid = cell.read("session.txt") if sid is None else sid
     last = cell.file("last.txt")
     argv = ["codex", "exec"] + (["resume", sid] if sid else []) + cfg.get("flags", []) + cfg.get("print_flags", [])
-    argv += mcp_argv(cfg, cell, ws, stack)
+    argv += mcp_argv(cfg, cell, ws, stack) + system_argv(cfg)
     argv += ["--skip-git-repo-check", "--json", "-o", last, "-"]     # 題目從 stdin 進（"-"）
     if os.path.exists(last):
         os.remove(last)
@@ -872,10 +912,10 @@ def start(cfg, cell, ws, stack):
         cmd = " ".join(shlex.quote(a) for a in hook_cmd("claude", cell))
         hooks = {"hooks": {e: [{"hooks": [{"type": "command", "command": cmd}]}]
                            for e in ("UserPromptSubmit", "Stop")}}
-        argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack) + ["--settings", json.dumps(hooks)]
+        argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack) + system_argv(cfg) + ["--settings", json.dumps(hooks)]
         argv += ["--resume", sid] if sid else []
     else:
-        argv = ["codex"] + (["resume", sid] if sid else []) + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack)
+        argv = ["codex"] + (["resume", sid] if sid else []) + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack) + system_argv(cfg)
         argv += ["-c", "notify=" + json.dumps(hook_cmd("codex", cell))]
     with open(cell.file("tmux.conf"), "w", encoding="utf-8") as f:
         f.write(TMUX_CONF)

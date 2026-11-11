@@ -167,6 +167,16 @@ class DefinitionsTest(unittest.TestCase):
                 self.assertTrue(data['problems'])
                 self.root = old
 
+    def test_check_system_declaration(self):
+        path = self.definition('good')
+        for value, ok in (('system.txt', True), ('missing.txt', True), ('/etc/x', False), ('../x', False), ('', False), (3, False), ('.', False)):
+            with self.subTest(value=value):
+                self.write(path / 'interfaces.json', {'aos-agent': {'tools': 'tools.json', 'llm': 'llm.json', 'system': value}})
+                result, data = self.call('check')
+                self.assertEqual(result.returncode, 0 if ok else 1, result.stderr)
+                if not ok:
+                    self.assertIn('aos-agent.system', data['problems'][0]['reason'])
+
     def test_metadata_only_definition_is_listed_without_brain(self):
         self.write(self.root / 'script/_metainfo.json', {'summary': 'Script'})
         result, data = self.call('ls')

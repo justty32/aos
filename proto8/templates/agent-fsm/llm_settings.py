@@ -3,6 +3,7 @@
 使用者 11-10 晚：「3.把fsm認的endpoint這個key，也改名爲model吧」——agent 這邊叫 model，請求信 body 照舊是 endpoint（kernel 不動，「不用管kernel」）；不留舊名。
 「4.基本上，model所指向的東西，他就是可以得到快取優勢的東西，然後agent能調的，就是一些與快取無關的。」——model 指的那包（腦與它固定的前綴）吃快取；
 TUNING 只收不動到前綴（不讓快取失效）的取樣參數；system、tools、reasoning 類設定不開（代定，清單見 thinking/2026-11/10/self-tools/05）。
+11-11 註：system 改由 aos-agent system／self_system 開放（使用者 11-11 選項框裁單獨一支工具，thinking/2026-11/11/self-system），仍不是這裡的鍵。
 值可以是字串（aos-agent llm set 一律存字串）或 JSON 數字；轉不了＝ValueError（呼叫端報 CfgBad）。其他鍵不看（C-48）。
 kernel 端 endpoint 包的 fixed 欄位照舊蓋過這裡（llm_http：request 先、fixed 蓋上）。"""
 import json
