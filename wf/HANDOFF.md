@@ -12,17 +12,20 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-11-11 上午 公司頂層（compact 前斷點）
+## 2026-11-11 收工 公司頂層
 
-1. **授權（這個 session）**：公司機（Windows＋WSL Ubuntu）。push：使用者「下班前再推」＝今天各線只本地 commit，他開口才 `git push origin main`。模型：普通工作 opus、簡單與雜活 sonnet，頂層只跟使用者交流；非雜活的 agent 開工前先通讀 wf/。真腦驗收：「公司有lmstudio，但只有破爛小模型。所以建議都使用eca，實際的loop fsm agent需要回家測。」「eca這塊，除了claude haiku之外，也試試看code gpt luna」（codex `gpt-6-luna`）。codex 只對 aos 那組 MCP 工具免核准（使用者選項框親裁；不加任何整體繞過核准／沙箱的旗標、不改 `~/.codex`）。要他裁的小題用選項框問（「需要我裁的小題，跳選項給我」）。
-2. **三份 clone 現況**：
-   - WSL `~/repo/aos-tools`＝這台 `~/.local/bin` 與 pth 指的那份，也是試驗場用的程式；HEAD 是本條 handoff 的 commit（底下是 `39f35f913`），本地領先 origin，沒 push。
-   - WSL `~/repo/simple_tools/aos`＝**線 C 施工中**（opus 隊長，背景 agent）：階段一 children 系改名（包名 `subagent`、`subagents.json`、`max_subagents`、`Subagent*` 代號、輸出 `subagents N/MAX`；`agents_ctl`／`agent_def` 不動），階段二知識庫修整與補全（檢查腳本、必修七處、`knowledge_write` 不給預設庫、`thought` 進 gadgets 包、每支工具與指令都有節點、大小只是推薦值一檔約 8 KB 一段約 1 KB）。它從 `39f35f913` 起、不 push、不碰另一份。
-   - Windows `C:\code\mine\simple_tools\aos`＝還停在 `0edfee455`，工作樹裡的 `wf/HANDOFF.md` 是手抄的本條（沒 commit）；下班 push 後先 `git checkout wf/HANDOFF.md` 再 `git pull`。
-3. **線 C 回來後頂層要做**（使用者說他先不玩，所以不用等他）：核對回報 → 在 `~/repo/aos-tools` 執行 `git pull --rebase ~/repo/simple_tools/aos main`（HANDOFF 衝突兩邊都留）→ 派人照 [playground/01](../proto8/thinking/2026-11/11/playground/01-公司刷新與驗收.md) 重刷 `~/code/playground`（包名、配額檔改了，舊定義對不上；先備份）並驗一輪 → 告訴使用者可以玩 → 把線 C 的待裁題用選項框攤給他 → 另一份 clone 快轉同步。
-4. **今天已進本地 main**：`b94f845bd` agents_children→subagent；`494d8312e` `aos-agent system`＋`self_system`（fsm 取代、eca 附加、只給 reset）；`09709c6ac` 人的信箱預設 `~/.aos/stack`＋`aos-mailbox` 啟動檔進 git；`849147f7a` codex 接得上 aos 工具；`2c8476fbd` aos-loop `on_start`／`on_stop`；`d0cb69b69`、`af6ea3035` hook 事件 `after_start`／`after_stop`／`on_clock`（每 N 格或 N 毫秒、起來先觸發一次、帶 `first`）；範本預設一格 `timer` 每 5 分鐘什麼都不做；`39f35f913` 公司試驗場刷新（`fsm_ann` 假腦、`eca_bob` haiku、`eca_cody` luna，停著，備份 `~/code/playground.bak-1111-1024`）。原話與裁定在 [thinking 11-11](../proto8/thinking/2026-11/11/)（`subagent-rename.md`、`self-system/`、`clock-hook/`、`playground/`）。
-5. **今天裁掉、不用再問的**：`$` 開頭的鍵不動（「寫不出$的小模型本來就不適合aos體系。」）；stderr 尾巴維持；after_queue 晾著的信不補；hook 先不寫進 CONVENTION；時鐘登記／時鐘寄信／`clock_register` 整組先留著不動（「啊，不要拿掉好了，先留著」）；純每拍前後事件先不做；開場只帶知識庫目錄；codex 改 system 只提醒不自動開新對話。專用信箱＋`mail_arrived` 那套設計已被 on_clock 取代，記錄不做。
-6. **還開著的**：代定清單在 [self-system/02](../proto8/thinking/2026-11/11/self-system/)（剩 9 條）、[clock-hook/02](../proto8/thinking/2026-11/11/clock-hook/)；有幾個錯誤代號不落在 C-54 的結尾表（條文題，待裁，線 C 會列）；使用者問「fsm_ann 的 stack 底下 tools 為何一堆空資料夾」已答（每支被叫過的工具各有一個小格 `<stack>/tools/<名>/`，`aos-tools call` 建的，不存東西的工具就是空的），要不要改成「工具真的寫東西才建」沒裁；`aos-tools call` 錯誤行開頭印 `ls: error:` 重現不出來；fsm 真腦各項、codex 畫面模式、每 5 分鐘跑一晚＝回家測；使用者回家 pull 前要先移走家機沒進 git 的 `proto8/cmd/aos-mailbox/bin/aos-mailbox`（WAIT_USER 有寫）；`/tmp/aos-clockhook-*`、`/tmp/lineB-*` 殘留要使用者自己刪。
+1. **授權照舊**：公司機（Windows＋WSL Ubuntu）；頂層只交流與派工（普通 opus、簡單與雜活 sonnet，非雜活先通讀 wf/）；小題用選項框問；真腦在公司只用 eca（claude haiku、codex `gpt-6-luna`；codex 只對 aos 那組 MCP 工具免核准），fsm 真腦回家測。**push 每次都要使用者開口**：今天推了兩次——下午他說「推吧」推到 `23c9544d3`，收工他說「整理完就推」，推到本條所在的 commit。
+2. **三份 clone**：WSL `~/repo/aos-tools`（捷徑與 pth 指它、試驗場用它）與 `~/repo/simple_tools/aos` 都在收工推上去的 HEAD，跟 origin/main 一樣。Windows `C:\code\mine\simple_tools\aos` 停在 `23c9544d3`，使用者說明天自己 `git pull`（頂層收工時會把那邊手寫的 `wf/HANDOFF.md` 還原，pull 才不會被擋）。Windows 本地另有舊分支 `wip/hub-step6` 和幾個過期的遠端記錄（GitHub 上實際只有 main），使用者說不動。
+3. **今天進 main 的**（原話與裁定都在 [thinking 11-11](../proto8/thinking/2026-11/11/README.md)）：上午 `agents_children`→`subagent`、`aos-agent system`＋`self_system`、人的信箱預設 `~/.aos/stack`、codex 接得上 aos 工具、aos-loop `on_start`／`on_stop`、hook 事件 `after_start`／`after_stop`／`on_clock`＋範本 `timer`；下午工具小格寫入才建、loop／fsm／daemon 自建 stack、`do_task`（start／end／status，只給 fsm）、`fork`（只給 fsm；「eca不給fork。」）、`grep`、`glob`、`todo`、`goal`、新信提醒 `mail_notify`、線 C 六題與積壓代定、旗標前後都收推到全部指令、gitignore-check 改標準。
+4. **線 K 工作六已完成**（`2ac75177f`、`d0943e5d8`、`c44dac27c`、`882dc7fe5`、`9457e059f`）：do_task end 預設把期間別人的訊息一起摺掉（`keep_others: true` 才留；使用者「可選。預設清掉。」）；`goal.json`、`tools/todo/todo.json`、`tools/do_task/tasks.json` 進 git 分類表；睡著時新到的信醒來提醒一次；history 空也丟 goal、當開場題目；do_task 算 goal 進展但不耦合（「兩者不要耦合太深，就goal那邊稍微檢查一下history就好。」）；`aos-agent goal set` 文字比照 say 原樣收。全套 66 夾 1092 支，只紅既有 4 支（aos-agent `test_daemon_down` 2、box_check 2）。→ [goal 02](../proto8/thinking/2026-11/11/goal/02-裁定與施工結果.md)、[fork-and-do-task 02](../proto8/thinking/2026-11/11/fork-and-do-task/02-do_task.md)
+5. **線 K 留下、明天要處理的三件**（使用者已知，還沒裁）：
+   - (a) 五條代定：全新起來時信箱裡既有的信只記成已知、不提醒；`notified.json` 每次跑都寫；do_task 的選項放在 end、名叫 `keep_others`、巢狀時外層沒給就連裡層留下的一起摺；goal 找不到上次提醒、也找不到 summary 時不歸零；history 空時丟的那則也算一次提醒。
+   - (b) gitignore 分類兩處漏列：fork 的 `tools/fork/children/<分身>/state` 沒列；分類表只有改名前的 `children.json`、沒有 `subagents.json`。
+   - (c) 可能外洩（推的、沒實跑）：do_task end 與 self_history 的結果行會把 `history_removed.jsonl` 的絕對路徑寫進 history，而 history 是進 git 的。先查證，確認了要修。
+6. **kernel 討論**（`97a06eb5a`，記錄在 [kernel/](../proto8/thinking/2026-11/11/kernel/README.md)）：只釐清概念，**沒有排任何施工**、沒改程式與條文。kernel 是寄件人眼中的身分（請求寄到哪、哪裡就是 kernel），定義回到「資源管理＋排程」；一般 proc 與人都寄 `AOS_KERNEL`（沒設走 `AOS_DAEMON`，都沒設報錯），問腦走 `AOS_LLM_KERNEL`；鏈自然形成，信封共通、body 不設限。使用者最後說：「判官這東西...我覺得應該將其吸納進我們之後的kernel框架中。不過沒關係，今天釐清了概念，後續架構規劃上就很輕鬆了。」會過時的條文清單與日後清單在該夾 [03](../proto8/thinking/2026-11/11/kernel/03-過時清單與日後清單.md)。記錄核對時發現：`fork`、`subagent` 在 `AOS_DAEMON` 沒設時會報 `DaemonMissing`，即使設了 `AOS_KERNEL`。
+7. **只到設計、沒施工**：接外部 MCP（設計與裁定在 [new-tools](../proto8/thinking/2026-11/11/new-tools/) 03，使用者說「明天」做第一階段）；i18n（遠期構想，[i18n](../proto8/thinking/2026-11/11/i18n.md)）；two-machines 剩 8 項（「之後吧」）；大修材料不用同步；kernel 框架。
+8. **試驗場** `~/code/playground`：停著，還是 13:06 那版（36 支，沒有 grep／glob／todo／goal／fork／新 do_task），備份 `~/code/playground.bak-1111-1306`；今天沒重刷。下次重刷時劇本假腦的 do_task 那步要改成 start → 做事 → end。
+9. **回家要測／要做**（都在 [WAIT_USER](WAIT_USER.md)）：fsm 真腦跑 goal／fork／do_task／mail_notify／self_system／timer 跑一晚；家機 pull 前先移走沒進 git 的 `proto8/cmd/aos-mailbox/bin/aos-mailbox`；家機試驗場重刷；`/tmp/lineI`、`/tmp/lineJ`、`/tmp/lineK-*`、`/tmp/aos-*` 殘留要使用者自己刪；WSL `~/repo/aos-tools` 兩個未追蹤的舊建置產物 `proto8/impls/aos-kernel-llm/`、`proto8/impls/aos-gate/` 可刪、待使用者點頭。已知問題：do_task 在摺疊中途被砍，留下的訊息會重複一次。
 
 ## 2026-11-10 深夜 家機總整合（收工）
 
@@ -88,38 +91,3 @@
 7. **下午後段（16:00 前後，two-machines 隊長補）**：11-10 下午後段：aos-tools 改版已完成並 push（`$override` 覆蓋檔、`--replace`、env_file、快取搬 stack、C-85、C-86）；cli-sweep 掃描（[報告](../proto8/thinking/2026-11/10/cli-sweep/README.md)，未施工）使用者已答：Q2＝A 分工照舊、差別收到最少；Q3＝「兩支都留 stack，要刪另外說」即 `aos-agent ctl rm` 預設留 stack、刪加 `--purge`；Q4＝A 已停再停兩支都算成功；Q5＝A 根範本自己清掉繼承來的 `AOS_DAEMON`；Q6＝A 不動、對照表放 help 第一屏；Q1 自填兩次，重擬版原話「旗標也可以寫在子命令前面，但這樣就等同於aos-yyy zzz [flags] XXX [flags] QQQ。因為zzz有個意義：aos-yyy-zzz和aos-yyy zzz相等。所以其實都可以。」（頂層轉述：每層「節點 [旗標] 下一個位置參數」遞迴、兩種寫法都收＝09 選項 A；明天施工前再確認）；09 三個讀法「No preference」＝照推薦、補進 P-44（含第 6 行過時句）；Q7＝`copy-out --template 名 目的地`、沒給報錯、加 `--list`（help 第一句白話講它是「把範本抄出去開新 agent／新根」）；Q8＝`aos-agent tools add [--name 名] 路徑`、補 `--envs`／`--env-file`、跟 aos-tools add 一致（[README](../proto8/thinking/2026-11/10/cli-sweep/README.md)）。two-machines B01 做了一半（`7c1791e6e`：`--ws-json`／`--stack-json`／`--path-json` 的 `$env` 寫法進表、每次起重解）。**明天順序**：B01 剩下（絕對路徑原樣存、`--*-json` 純字串原樣存，要動 aos-daemon 存表）→ cli-sweep 第一批 → aos-tools 的 lv6 連帶 → two-machines 其餘 15 條（[next_todo](../proto8/thinking/2026-11/10/two-machines/next_todo.json)）。以上都只記裁定、還沒施工。
 
 8. **11-10 最後一小時（16:00～16:55）**：two-machines 隊長——B01 一半已 push（`7c1791e6e`），它把 `aos-daemon-ctl add` 打壞、`c2a6aa976` 修好已 push；cli-sweep Q4＝A（已停再停兩支都算成功，印 `名字: already 狀態`、退 0）`1d3ece5e5`；甲4、甲5 也做了（`624355ee5`：add 撞名＝InstanceExists、rm 不在表上＝ProcMissing、shutdown 印一句話），甲3 也做了（`afab03ad5`：ls 說 daemon 活著沒）；甲6、Q3、Q1、Q6 沒做；Q5 已裁不修（使用者「喔沒關係，root這東西本來使用者就要多注意一點。」，只在文件提醒起根前 `unset AOS_DAEMON`）（[10b](../proto8/thinking/2026-11/10/cli-sweep/10b-施工結果-兩支ctl.md)）。另一隊——cli-sweep Q7 `copy-out --template`（`7558433b7`）、`AOS_PROTO8` 改名 `AOS_HOME`（`3fe4c3e18`，使用者「AOS_PROTO8改成AOS_HOME，這樣之後大修改版，還可以直接換」）。調查 [templates-cp](../proto8/thinking/2026-11/10/templates-cp/README.md) 已寫完：範本改 AOS_HOME 寫法＋自帶 .env 後 `cp -r` 就能用、只 export `AOS_HOME`、lv1～4 不用改；使用者「copy-out能刪就刪」＝選項 A（範本全改、copy-out 整支刪、文件教 `cp -r`），三題快選都選推薦（範本拿掉 symlink 的 `tools/` 夾、`.env` 帶預設＋`AOS_HOME` 必填檢查、`copy_def.py` 一起拿掉、`agents new` 改單純整夾複製）——只記裁定、明天施工。**明天順序**：B01 剩下（絕對路徑原樣存、`--*-json` 純字串原樣存）→ templates-cp（刪 copy-out、範本改寫）→ cli-sweep 甲6、Q3、Q6、Q1 → aos-tools lv6 連帶 → two-machines 其餘 15 條。
-
-## 2026-11-09 深夜 23:2x 家機頂層（使用者要接 aos mcp 後重開／resume）
-
-1. **授權與狀態**：同下一條（隨意 push、opus／sonnet 分工、/goal 到 11-10 06:20 當 arcagi 支援、安全邊界見下一條第 5 點）。使用者經 arcagi 轉達：「順便寄信給aos agent，跟他說我要給他接mcp。」→ 重開後 **先重掛 `wf/inbox/` Monitor**（腳本見 SESSION-LOG 續行點那條的寫法：每 5 秒比對頂層 *.md、另查 ~/arcagi-STOP），再讀 SESSION-LOG「今晚當 arcagi 支援」續行點。
-2. **在辦**：arcagi 第四封（23:21 接 aos mcp／wf 轉知識庫）由 opus 回 DONE 中，信裡含 arcagi 與 aos 兩邊各自的 mcp 接法；回完原信與 23:23 PROGRESS 都歸 done。若重開時還沒看到 DONE（`ls ~/repo/arcagi/wf/inbox/ | grep aos-DONE`），就重派。
-3. 無新條號。`proto8/thinking/2026-11/09/local-model-bench/` 是停掉評比的殘留未追蹤夾，等使用者說刪不刪。
-4. **push 規矩改了（使用者 23:3x）**：「今晚都不要push，就在我睡醒前十分鐘準備好要push的東西(注意檔案大小)，我醒來後再push。」→ 今晚只 commit 到本地 main、不 push；06:10 前整理待 push 清單（`git log origin/main..main`、各 commit 新增檔大小、有無大檔／二進位），寫進 SESSION-LOG 續行點，等使用者醒來 push。
-
-## 2026-11-09 深夜 23:xx 家機頂層（使用者開新 session）
-
-1. **授權與狀態**：同下一條（隨意 push、opus／sonnet 分工、只用 e4b、不 load/unload、顯卡跑到 07:30）。使用者要開新 session。
-2. **舊 session 留下的背景工作（新 session 先查還活著沒）**：
-   - soak 長跑：腳本 `/tmp/claude-1000/-home-lorkhan-repo-simple-tools-aos/74d55541-5004-44aa-b8d6-5fec53a393a2/scratchpad/soak/soak.py`（23:0x 剛啟動）；派它的 opus 隊長跟舊 session 一起結束，**沒人收報告**。查 `pgrep -af soak.py`；活著就由新 session 等到早上收、寫 `proto8/thinking/2026-11/09/soak-1109/`；死了就看使用者要不要重派。試驗場備份 `~/code/playground.bak-1109soak`。
-   - 本地模型評比：隊長在修 report.py 重跑，同樣隨舊 session 結束，產物看 `proto8/thinking/2026-11/09/local-model-bench/`（可能未 commit）。
-   - arcagi：22:30 回 PROGRESS（`wf/inbox/20261109T2230-arcagi-PROGRESS.md`，未處理），N1 蠟模、N2 CUDA 跑到 06:45，07:30 前回 DONE；看板 `~/repo/arcagi/notes/rounds/gpu-night-1109/`。它是使用者自己的 session，不受影響。
-   - 23:0x 實測：LM Studio 只載 e4b、閒置，GPU 7%／6 W——整夜負載還沒起來。
-3. **已裁（新 session）**：使用者「amber_sword不用跑。差異也不用補。」新 session 曾派兩個 opus 接手 soak 與本地模型評比，22:4x 使用者改口「arcagi 那個 agent 才是主要的暖爐提供者，你這邊配合他，這兩件可以不用做了」→ 兩個 agent 停掉、soak driver 與試驗場 stack 收掉（Ctrl-C 根），已寄 PROGRESS 給 arcagi 說 e4b／GPU 全讓出；soak、評比都沒產報告、沒 commit
-4. **新 session 的角色（使用者 22:5x）**：「你的用途主要是在arcagi agent那邊，如果他對aos體系有問題，或是想要參考過去thinking或一些東西，你就負責解答。除此之外，如果他有相關需求，你這邊也可以對aos相關資產進行修改與改進。」→ 頂層掛 Monitor 盯 `wf/inbox/` 新信（30 分到期要重掛），已寄 PROGRESS 告知 arcagi 怎麼找我；impl_cpp 核心仍是使用者親手寫、不代寫。使用者 22:5x：「你這邊，今晚就先仍用proto8的東西，大修這塊不急。」——今晚支援 arcagi 一律以 proto8 為準，impl_cpp 不動。
-5. **使用者 22:58 下 /goal（到 06:20）安全邊界**：寫入只限 aos repo（impl_cpp 除外）與自己 scratchpad；不寫 ~/repo/arcagi（只寄信到它 wf/inbox/）、不寫 ~/code/playground-arc1；不 sudo、不裝套件、不改系統與 LM Studio／litellm 設定；不讀 ~/.ssh、keyring、瀏覽器資料、別專案金鑰；codex 明帶 -m 與 -s、不用 astra；~/arcagi-STOP 存在就停止派新工作；子 agent 交接書帶安全邊界段並原樣傳給孫 agent；一線一里程碑；同一分鐘同 STATUS 只寄一封；每次 commit 更新 SESSION-LOG 續行點並 push。無新條號。
-
-## 2026-11-09 深夜 22:3x 家機頂層（compact 前）
-
-1. **授權與狀態**：使用者在家、本 session 隨意 push；子 agent 普通 opus、雜活 sonnet，派前讀 wf 規矩（雜活除外）。使用者要睡了，要**顯卡跑整夜到明早 07:30**（天冷當暖爐，「不用降低負載」）。**LM Studio 一次只載一個模型照舊**（使用者 22:2x 選「照規矩，大家共用 e4b」）：只用 `google/gemma-4-e4b`；使用者自己開了 LM Studio 與 litellm proxy；他說要下載 qwen3.8 27B，今晚不評（16GB 塞不下、也違反一次一個）。
-2. **今晚在跑的（背景子 agent，完成會通知頂層）**：
-   - **soak 長跑**（opus 隊長）：家機試驗場 `~/code/playground` 真腦 e4b 三層整夜，注入 kill／sleep／poke／pause／SIGINT，取樣 RSS／fd／檔案大小；開跑前備份 `~/code/playground.bak-1109soak`；報告 `proto8/thinking/2026-11/09/soak-1109/`。
-   - **本地模型評比**（opus 隊長）：今晚只評 e4b，題庫＋判準＋一鍵重跑腳本做紮實，其他模型待白天單獨測；報告 `proto8/thinking/2026-11/09/local-model-bench/`。
-   - **arcagi**：已寄信 `~/repo/arcagi/wf/inbox/20261109T2228-aos-REQUEST.md`（使用者「兩個都試試看。cuda神經網路也是可以拿來符號邏輯，暴力搜索。」）：(1) 本地 e4b 大量鑄蠟模、比提示法擬合率；(2) CUDA 暴力搜尋雛形；S1 forbid 相依就一起。arcagi 的 agent 是使用者自己開的 session（可能要使用者叫它看信）。
-   - **amber_sword**（`~/repo/narratives/amber_sword`，非 git repo、只能讀）：使用者提議「用 aos 知識庫去搞」，頂層誤當決定派了隊長、隨即停掉（沒寫任何檔）；**使用者還沒決定要不要今晚跑**。教訓：使用者說「不如…？」「幫我想想」是要討論，不是派工。
-3. **白天的設計線**：使用者手寫大修，起點 repo 根 `impl_cpp/`（C++23、骨架取自 archive/aos-v1、`core/inst` 原封搬 v1，差異在 `impl_cpp/core/inst/差異.md` 待他決定補不補）。無新條號。使用者 22:3x 問「蠟模」是什麼（頂層已白話解釋）。
-
-## 2026-11-09 晚 收工（家機 Manjaro）
-
-1. **授權與狀態**：使用者在家、本 session 隨意 push；子 agent 普通派 opus、雜活派 sonnet，派前讀 wf 規矩。使用者累了、已收工。家機已跟上 11-09（impls 重建、install、試驗場改成只有根帶鐘，假腦自動驗過，`3670feaaa`）。
-2. **設計**：使用者開始**親手大修**，起點 repo 根 [`impl_cpp/`](../impl_cpp/README.md)：骨架取自 `archive/aos-v1`、C++23（使用者先說 20、看到 v1 後改 23）、vcpkg（nlohmann-json、catch2）、Ninja preset debug／release／asan、`.vscode`；第一個零件 `core/inst` 照使用者「aos-inst 也從 aos-v1 拿」原封搬 v1 的 exec＋wire Inst 解析，跟現行 proto8 aos-inst 的差異攤在 `impl_cpp/core/inst/差異.md`，**補不補等使用者**。主角是使用者：agent 只搭環境、照吩咐搬，不替他寫核心。大修材料在家機桌面 `~/Desktop/aos-大修材料/`，第四批後 `proto8/` 沒改、免同步。
-3. **新定條號與在跑的 agent**：無新條號；子 agent 都收了。
