@@ -1,0 +1,8 @@
+{
+ "subagent.json": {
+  "_description": "Tool subagent in full, with its quota and errors (read it as aos/agents.json#/subagent)."
+ },
+ "thought.json": {
+  "_description": "Tool thought in full (read it as aos/agents.json#/thought)."
+ }
+}

@@ -2,8 +2,14 @@
  "me.json": {
   "_description": "Finding your own name, what is in your stack, and what you are allowed to change."
  },
+ "me/": {
+  "_description": "Long sections of aos/me.json (self_tools, self_llm, self_history, self_hook); read them through aos/me.json."
+ },
  "errors.json": {
   "_description": "How to read a failed call: the `error:` line, `warning:` lines, and exit codes."
+ },
+ "errors/": {
+  "_description": "Long sections of aos/errors.json (common); read them through aos/errors.json."
  },
  "world.json": {
   "_description": "The mental model: daemon = hardware, stack = memory, workspace = external memory, definition = source code, kernel = gatekeeper."
@@ -16,6 +22,9 @@
  },
  "agents.json": {
   "_description": "Tools subagent, agents_ctl and agent_def: your own subagents, any agent on the daemon table, and new definitions; thought for one-off tasks."
+ },
+ "agents/": {
+  "_description": "Long sections of aos/agents.json (subagent, thought); read them through aos/agents.json."
  },
  "rules.json": {
   "_description": "What you must not do, and why. Read this before doing anything that changes the system."

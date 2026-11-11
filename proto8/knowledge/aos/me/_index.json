@@ -1,0 +1,14 @@
+{
+ "self_tools.json": {
+  "_description": "Tool self_tools in full (read it as aos/me.json#/self_tools)."
+ },
+ "self_llm.json": {
+  "_description": "Tool self_llm in full (read it as aos/me.json#/self_llm)."
+ },
+ "self_history.json": {
+  "_description": "Tool self_history in full (read it as aos/me.json#/self_history)."
+ },
+ "self_hook.json": {
+  "_description": "Tool self_hook in full (read it as aos/me.json#/self_hook)."
+ }
+}
