@@ -3,4 +3,4 @@
                 "properties": {"code": {"type": "string", "description": "the whole Python program"},
                                "timeout_s": {"type": "number", "default": 60, "description": "most seconds to run (default 60, at most 300); past it the process group is stopped and the call fails"}},
                 "required": ["code"]},
- "errors": ["ArgumentsBad", "LaunchFailed", "CommandFailed", "LogFailed"]}
+ "errors": ["ArgumentsBad", "WsMissing", "LaunchFailed", "CommandFailed", "LogFailed"]}

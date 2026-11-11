@@ -29,7 +29,7 @@
 | [llm_http](../base/llm_http/) | endpoint 函數：把一份請求 POST 到 OpenAI 相容端點（11-04 晚，[think-as-function](../../thinking/2026-11/04/think-as-function/README.md)；平常由 aos-llm-kernel 經 aos-exec 跑） | `endpoint{url, model, fixed?}`（request 先、`fixed` 蓋上、model 一律用包的）、`request{messages, …}`；選填 `--key-env NAME` 從小 proc 自己環境讀金鑰，沒給、變數沒設或空就不帶 Authorization 照打（401／403 的 `EndpointFailed` 才提變數沒設）；值含非 ASCII／空白／控制字＝`KeyBad`；stdin `endpoint.key`＝`ArgumentsBad` | 一行 JSON：`message`（只留 role／content／tool_calls）、`usage`、`model` |
 | [llm_fake](../base/llm_fake/) | 假腦：同 llm_http 的形狀、不碰網路（有工具先叫 `endpoint.tool` 那個〔請求裡沒有就第一個，11-05 E 線〕，否則答 FAKE ANSWER；`endpoint.script` 有就照劇本：第 n 則 assistant 回 `script[n]`，項＝`{"content"}` 或 `{"tool_calls":[{"name","arguments"}]}`，超出照原樣） | 同上（`endpoint` 只看 `script`） | 同上，`model`＝`fake` |
 
-不碰工作區的（`math`、`peek_now_time`、`peek_clock`、`run_python`、`llm_http`、`llm_fake`）不收路徑、不看 `$AOS_WS`；`run_python` 把程式寫進自己的小格再跑（規則 8 的例外：拿小格當草稿區，不跨呼叫留東西）。
+不碰工作區的（`math`、`peek_now_time`、`peek_clock`、`llm_http`、`llm_fake`）不收路徑、不看 `$AOS_WS`。`run_python` 跟 `shell` 一樣在工作區跑（cwd＝`$AOS_WS`，沒有＝`WsMissing`；11-11 使用者裁「改程式，在工作區跑」），程式本身照舊寫進自己的小格 `main.py`（規則 8 的例外：拿小格當草稿區，不跨呼叫留東西）。
 每個工具的細節看它 `_entry` 開頭的幾行說明與 `_tooldef.json`。
 
 ## 索引：aos

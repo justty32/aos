@@ -51,6 +51,20 @@ class ObservedTests(unittest.TestCase):
         self.assertEqual(cmd["exit"], 143)
         self.assertEqual(cmd["out_bytes"], 3)
 
+    @unittest.skipUnless(PYTHON, "run_python only")
+    def test_runs_in_the_workspace(self):
+        """cwd＝工作區（11-11 使用者「改程式，在工作區跑」）：相對路徑寫在 $AOS_WS，main.py 照舊在小格；沒 AOS_WS＝WsMissing、不跑。"""
+        result = self.run_tool("", "import os; open('made.txt', 'w').write('x'); print(os.getcwd())")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.splitlines()[0], os.path.realpath(self.root))
+        self.assertTrue((self.root / "made.txt").exists())
+        self.assertFalse((self.stack / "made.txt").exists())
+        self.assertTrue((self.stack / "main.py").exists())
+        env = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_STACK")}
+        r = subprocess.run([str(ENTRY)], input=json.dumps({"code": "print(1)"}), text=True, capture_output=True, env=env, timeout=10)
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stderr.startswith("run_python: error: WsMissing "), r.stderr)
+
     def test_readonly_does_not_execute(self):
         self.stack.mkdir()
         self.stack.chmod(0o555)

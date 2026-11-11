@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # run_python - 用 python3 跑一段程式，回結束碼與輸出（stdout＋stderr 合在一起）
 # 介面（lib/README 的契約）：stdin 收 {"code", "timeout_s"?}；stdout 是輸出、最後一行 [exit code N]（太長留頭 3000 字＋尾 3000 字）。
-# 程式寫進這個工具的小格（$AOS_STACK/main.py，P-17）再跑；沒 stack 時用暫存小格、不記帳。cwd 也是那裡（-I：不看使用者的 site、PYTHON* 環境變數）。
+# 程式寫進這個工具的小格（$AOS_STACK/main.py，P-17）再跑；沒 stack 時用暫存小格、不記帳。cwd＝工作區 $AOS_WS（同 shell；沒設或不是資料夾＝WsMissing；
+#   11-11 使用者裁「改程式，在工作區跑」，原本 cwd 是那個小格）；-I：不看使用者的 site、PYTHON* 環境變數、不把 main.py 所在夾放進 sys.path。
 # 不是沙盒：能碰到的跟這台機器的使用者一樣多。程式本身退非 0 是結果、不是錯（最後一行寫結束碼）。
 # 逾時（預設 60 秒、上限 300）＝整群先 TERM、2 秒後 KILL、算 CommandFailed（已經印出來的照樣給）；這個工具被外面 TERM 時也先停掉那一群。
 # 錯：stderr 與 stdout 各一行「run_python: error: 代號 原因」、退 1。來源：demo/agent-gus/tools/run_python（10-24；遷移時錯誤照 lib 契約：
@@ -9,8 +10,8 @@
 import json, os, signal, subprocess, sys, tempfile, time
 HELP = """\
 usage: run_python < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Run a piece of Python with python3 -I in this tool's stack cell; print its
-stdout+stderr combined. The last line is always [exit code N]; the program exiting
+Run a piece of Python with python3 -I in the workspace ($AOS_WS; the program itself is saved
+as main.py in this tool's stack cell); print its stdout+stderr combined. The last line is always [exit code N]; the program exiting
 non-zero is a result, not an error of this tool. Over timeout_s: CommandFailed.
 Result on stdout. On error: one line "run_python: error: CODE reason" on stderr and stdout, exit 1.
 """
@@ -59,6 +60,7 @@ if not isinstance(code, str) or not code.strip():
     die("ArgumentsBad", "missing code (a string of Python code)")
 if type(limit) not in (int, float) or not 0 < limit <= TIMEOUT_MAX:
     die("ArgumentsBad", "timeout_s must be seconds between 0 and %d" % TIMEOUT_MAX)
+root = tool_io.workspace()                    # 先看工作區（WsMissing），沒工作區就不寫 main.py、不記帳
 ledger = shell_observed.prepare()
 _temp_stack = tempfile.TemporaryDirectory() if not stack else None
 stack = stack or _temp_stack.name
@@ -67,7 +69,7 @@ with open(os.path.join(stack, "main.py"), "w", encoding="utf-8") as f:
     f.write(code)
 started = time.monotonic()
 try:
-    p = subprocess.Popen(["python3", "-I", "main.py"], cwd=stack, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+    p = subprocess.Popen(["python3", "-I", os.path.join(os.path.abspath(stack), "main.py")], cwd=root, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, start_new_session=True)
 except OSError as e:
     die("LaunchFailed", "python3 failed to start: %s" % e.strerror)
