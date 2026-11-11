@@ -96,3 +96,27 @@
 - tooldef 快取（例 `~/.cache/aos-mcp-aos/tools.json`）要重刷才看得到新參數。
 - 試驗場的劇本假腦 `fake-demo-today` 叫 `do_task {"goal", "model"}`＝現在會 `ArgumentsBad op is required`，劇本要改（句子寫在回報）。
 - 新檔 `tools/do_task/tasks.json`：新的，不用重建。
+
+## 11-11 稍後使用者裁定（do-2：任務期間別人送進來的訊息）
+
+使用者自己寫的：「可選。預設清掉。」——翻掉上面待裁 2 的推薦 ①（挪到總結後面）與代定 4、5 的「別人的照留」。另一句：goal 那邊改成只看 history 判進展，「兩者不要耦合太深」——do_task 不通知 goal，這邊沒為 goal 加任何東西（代定 14 的「算進展」由 goal 那邊自己看 history 決定）。
+
+- **預設**：end 時紀錄點之後、叫 end 之前的訊息**全部**摺進那則總結，連別人的 user 訊息（信、`[aos] goal:` 提醒、`[aos] new_mail` 通知）一起；原文照舊進 `history_removed.jsonl`（只有 `summarize` 一筆、沒有 `set`）。總結那則的「N messages」＝連別人的一起算。end 的結果多一行 `K of them came from others during the task (letters, reminders) and were folded too; end with "keep_others": true to keep such messages after the summary.`。
+- **選項**：end 的 `keep_others`（boolean，預設 false）。true＝照舊：別人的不摺，先 `history set` 挪到總結後面、照原順序（就是上面施工結果那套），結果那行 `K messages from others during the task are kept after the summary.`。不是 boolean＝`ArgumentsBad keep_others must be boolean`（tool_io 照 tooldef 驗）；start 給它＝`ArgumentsBad op start does not take keep_others`。
+- **結果行改字**：`N messages of yours (lines A-B) …` 改成 `N messages (lines A-B) …`（預設摺的不只自己的）。
+
+代定（可翻案）：
+
+1. **放 end、不放 start**：要不要留，看的是任務期間實際進來了什麼，只有 end 那一刻知道；總結也是 end 才寫，預設摺掉時腦該把信裡要的事實寫進總結（tooldef 與知識節點都這樣叮嚀）。放 start 等於事先猜會不會有信。
+2. **名字 `keep_others`**：說的是「別人的訊息留下」；不叫 `keep`，因為 self_history 的 `keep`／`no_keep` 是「原文留不留檔」，同名會混。
+3. **型別 boolean**，不給＝false；沒有「只留信、不留 goal 提醒」這種細分（KISS，要再說）。
+4. 自己摺過的 `[aos] summary:` 照舊一律摺（不算別人的）；巢狀時裡面那段 `keep_others` 留下的信，外面那段的 end 沒給 `keep_others` 就一起摺。
+5. 重跑同一個 end（act 斷了）：預設那條摺完只剩一則總結、`done_before` 照認；`keep_others` 那條同原本。
+
+改的檔：`lib/agent/do_task/_entry`（參數、摺的範圍、結果行、HELP）、`_tooldef.json`（description、`keep_others` 參數）、`README.md`、`knowledge/aos/me/do_task.json`（_description、rules）、`tests/test_do_task.py`、`templates/tests/agent-fsm/test_do_task_fold.py`。
+
+測試：`lib/agent/do_task/tests` 16 格全綠（原「期間的信留下」拆成「預設一起摺」與「keep_others 留下」兩格，`test_summary_required` 加 `keep_others` 型別與 start 不收）；`test_do_task_fold` 5 格全綠（任務中等信拆成兩格：預設信一起摺、原文在 removed 檔；`mail_keep` 劇本 `keep_others: true` 信留著；停掉再起來那格的「Go on.」現在也一起摺）；`templates/tests/agent-fsm` 整夾 94 格全綠；`knowledge_check` tests 17 格、出廠庫 0 錯誤（44 提醒，`do_task.json` 兩格超 1024 位元組是原本就有的）。
+
+要重建什麼：持久格式沒變（`tasks.json` 不動）；tooldef 快取要重刷才看得到 `keep_others`。
+
+沒驗到：真腦會不會把信裡的事實寫進總結（預設摺掉後只剩總結那句）。

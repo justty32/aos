@@ -114,7 +114,7 @@ class DoTask(unittest.TestCase):
         self.assertEqual(h[4]["tool_calls"][0]["id"], "c4")
         self.assertEqual(h[5]["tool_call_id"], "c4")
         self.assertEqual(len(h), 6)
-        self.assertIn("5 messages of yours (lines 4-8) are now one summary at line 4; the originals are in ", out)
+        self.assertIn("5 messages (lines 4-8) are now one summary at line 4; the originals are in ", out)
         self.assertEqual([r["message"] for r in self.removed()], before[3:8])   # 原文照舊留檔
         self.assertEqual(json.loads((self.cell / "tasks.json").read_text())["tasks"], [])
 
@@ -145,6 +145,10 @@ class DoTask(unittest.TestCase):
         self.assertIn("ArgumentsBad op start does not take summary", out)
         code, out = self.step("c10", {"op": "fold"})
         self.assertIn("do_task: error: ", out)
+        code, out = self.step("c11", {"op": "end", "summary": "s", "keep_others": "yes"})
+        self.assertIn("do_task: error: ArgumentsBad keep_others must be boolean", out)
+        code, out = self.step("c12", {"op": "start", "keep_others": True})
+        self.assertIn("ArgumentsBad op start does not take keep_others", out)
 
     def test_same_call_again_is_not_a_second_start(self):
         self.write(self.read() + [asks("c1", {"op": "start", "task": "t"})])
@@ -208,18 +212,36 @@ class DoTask(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("do_task: error: DepthExceeded", out)
 
-    def test_letters_during_the_task_stay(self):
+    LETTER = {"role": "user", "content": "From bob: the answer is 42."}
+    GOAL = {"role": "user", "content": "[aos] goal: Write the report. (reminder 1 of 10. ...)"}
+
+    def task_with_letters(self, **end):
         self.step("c1", {"op": "start", "task": "t"})
         self.other("c2")
-        letter = {"role": "user", "content": "From bob: the answer is 42."}
-        goal = {"role": "user", "content": "[aos] goal: Write the report. (reminder 1 of 10. ...)"}
-        self.write(self.read() + [{"role": "assistant", "content": "Waiting for bob."}, letter])
+        self.write(self.read() + [{"role": "assistant", "content": "Waiting for bob."}, self.LETTER])
         self.other("c3")
-        self.write(self.read() + [{"role": "assistant", "content": "Hm."}, goal,
+        self.write(self.read() + [{"role": "assistant", "content": "Hm."}, self.GOAL,
                                   {"role": "user", "content": "[aos] summary: lines 9-9, 1 message. old"}])   # 自己摺過的照摺
         self.other("c4")
-        code, out = self.step("c5", {"op": "end", "summary": "bob said 42"})
+        before = self.read()
+        code, out = self.step("c5", dict({"op": "end", "summary": "bob said 42"}, **end))
         self.assertEqual(code, 0, out)
+        return before, out
+
+    def test_letters_during_the_task_are_folded_by_default(self):
+        before, out = self.task_with_letters()                      # 使用者 11-11「可選。預設清掉。」
+        h = self.read()
+        self.assertEqual(h[3]["content"], "[aos] summary: lines 4-14, 11 messages. Task \"t\" ended: bob said 42")
+        self.assertEqual([m["role"] for m in h[4:]], ["assistant", "tool"])
+        self.assertNotIn(self.LETTER, h)
+        self.assertIn("11 messages (lines 4-14) are now one summary at line 4", out)
+        self.assertIn("2 of them came from others during the task (letters, reminders) and were folded too", out)
+        self.assertEqual([r["message"] for r in self.removed()], before[3:14])   # 信的原文也留檔
+        self.assertEqual({r["op"] for r in self.removed()}, {"summarize"})      # 沒有挪（set）
+
+    def test_letters_during_the_task_stay_with_keep_others(self):
+        letter, goal = self.LETTER, self.GOAL
+        before, out = self.task_with_letters(keep_others=True)
         h = self.read()
         self.assertEqual(h[3]["content"], "[aos] summary: lines 4-12, 9 messages. Task \"t\" ended: bob said 42")
         self.assertEqual(h[4:6], [letter, goal])                    # 別人說的照原順序、接在總結後面

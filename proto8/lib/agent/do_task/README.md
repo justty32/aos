@@ -7,10 +7,10 @@
 | op | 參數 | 做什麼 |
 |---|---|---|
 | `start` | `task`（選填，一句話） | 叫我的那則 assistant＝紀錄點，記進工具小格 `tasks.json`；任務裡再 start＝巢狀（最多 5 層） |
-| `end` | `summary`（必給） | 收最裡面那段：紀錄點那則與它的 tool 結果之後、到叫 end 的那則之前，自己的訊息換成一則 `[aos] summary: lines A-B, N messages. Task "…" ended: …`（role user）；別人給的 user 訊息（信、goal 提醒）不摺，照原順序接在總結後面 |
+| `end` | `summary`（必給）、`keep_others`（選填，預設 false） | 收最裡面那段：紀錄點那則與它的 tool 結果之後、到叫 end 的那則之前的訊息換成一則 `[aos] summary: lines A-B, N messages. Task "…" ended: …`（role user）。別人給的 user 訊息（信、goal 提醒、new_mail 通知）預設一起摺（使用者 11-11「可選。預設清掉。」；原文照舊留檔，end 的結果說摺了幾則別人的）；`keep_others: true`＝這些不摺，照原順序接在總結後面 |
 | `status` | — | 列開著的任務（外到內）、紀錄點現在第幾行 |
 
-改 history 全走 `aos-agent history`（同 self_history：`ctl who`、`ls --json`、有要留的訊息先 `set` 挪到段尾、再 `summarize` 一次），原文照舊進 `history_removed.jsonl`。叫 end 那則與它的結果照常由 act 接在後面。只看 history 的形狀判身體：沒有「叫到一半的 tool call」＝`BodyUnsupported`（eca）。只在 daemon 下跑的 agent 能用。
+改 history 全走 `aos-agent history`（同 self_history：`ctl who`、`ls --json`、`keep_others` 有要留的訊息時先 `set` 挪到段尾、再 `summarize` 一次），原文照舊進 `history_removed.jsonl`。叫 end 那則與它的結果照常由 act 接在後面。只看 history 的形狀判身體：沒有「叫到一半的 tool call」＝`BodyUnsupported`（eca）。只在 daemon 下跑的 agent 能用。
 
 摺疊前後（真 daemon＋假腦實跑）：
 
@@ -22,8 +22,8 @@ before end                                   after
 4 assistant  -> peek_now_time({})            4 user       [aos] summary: lines 4-7, 4 messages. Task "Find the time" ended: It is today.
 5 tool       2026-11-11T06:55:05Z            5 assistant  -> do_task(end)
 6 assistant  -> peek_now_time({})            6 tool       Task ended (depth 1) "Find the time".
-7 tool       2026-11-11T06:55:06Z                         4 messages of yours (lines 4-7) are now one summary at line 4; the originals are in .../history_removed.jsonl.
+7 tool       2026-11-11T06:55:06Z                         4 messages (lines 4-7) are now one summary at line 4; the originals are in .../history_removed.jsonl.
 8 assistant  -> do_task(end)                 7 assistant  Done.
 ```
 
-測試：`tests/test_do_task.py`（假 aos-agent，history 那半是真的 `aos_agent.history`）；`templates/tests/agent-fsm/test_do_task_fold.py`（真 daemon＋假腦：摺疊、巢狀、任務中等信、停掉再起來）。
+測試：`tests/test_do_task.py`（假 aos-agent，history 那半是真的 `aos_agent.history`）；`templates/tests/agent-fsm/test_do_task_fold.py`（真 daemon＋假腦：摺疊、巢狀、任務中等信〔預設信一起摺、`keep_others` 信留著〕、停掉再起來）。

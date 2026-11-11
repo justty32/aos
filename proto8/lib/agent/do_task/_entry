@@ -5,8 +5,9 @@
 #   「拿掉這個能力」（舊的開一次性小幫手；要派工用 fork 或 subagent）。thinking 2026-11/11/fork-and-do-task（README 與 02-do_task）。
 # 介面（lib/docs/01 的契約）：stdin 收 {"op": "start"|"end"|"status", …}；別的鍵＝ArgumentsBad：
 #   start {task?}   在這一則（叫我的那則 assistant＝紀錄點）開一段任務；task＝一句這段要做什麼。任務裡再 start＝巢狀（最多 MAX_DEPTH 層，DepthExceeded）。
-#   end {summary}   收最裡面那段：紀錄點那則與它的 tool 結果之後、到這一步之前的訊息換成一則「[aos] summary: lines A-B, N messages. Task "…" ended: 總結」
-#                   （aos-agent history summarize；別人給的 user 訊息〔信、goal 提醒，不含 [aos] summary:〕不摺，照原順序接在總結後面，先用 history set 挪過去）。
+#   end {summary, keep_others?}   收最裡面那段：紀錄點那則與它的 tool 結果之後、到這一步之前的訊息換成一則「[aos] summary: lines A-B, N messages. Task "…" ended: 總結」
+#                   （aos-agent history summarize）。別人給的 user 訊息（信、goal 提醒、new_mail 通知；不含 [aos] summary:）預設一起摺、原文照舊留檔
+#                   （使用者 11-11「可選。預設清掉。」）；keep_others: true＝不摺，照原順序接在總結後面（先用 history set 挪過去）。
 #                   沒開任務＝TaskMissing；紀錄點那則已經不在 history（被刪、被 summarize 掉）＝MarkerMissing，這段任務就此關掉、不摺。
 #   status {}       列開著的任務（外到內）：task、開始時間、紀錄點現在第幾行、之後幾則。
 # 「這一步」與紀錄點：先 aos-agent ctl who 認出是哪隻、history ls --json 讀全部；最後一則 assistant 帶 tool_calls、後面只有 tool＝這一步，
@@ -24,7 +25,8 @@ usage: do_task < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the 
 Do one task inside your own conversation and keep only its summary: op start | end | status.
 start marks the message that called it; end (with a summary) replaces every message after that
 mark (up to the call of end) with one summary message. Messages from others that came in the
-meantime (letters, goal reminders) stay, after the summary. Tasks may nest; end closes the innermost.
+meantime (letters, goal reminders) are folded too, unless end has "keep_others": true (then they
+stay, in order, after the summary). Tasks may nest; end closes the innermost.
 Removed messages are kept next to the history. Only for an agent-fsm body (BodyUnsupported otherwise).
 Result on stdout. On error: one line "do_task: error: CODE reason" on stderr and stdout, exit 1.
 """
@@ -95,7 +97,7 @@ def agent(*args):
 signal.signal(signal.SIGTERM, on_term)
 signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
 args = tool_io.arguments()
-OPS = {"start": ("task",), "end": ("summary",), "status": ()}
+OPS = {"start": ("task",), "end": ("summary", "keep_others"), "status": ()}
 op = args.get("op")
 if op is None:
     die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
@@ -104,7 +106,8 @@ if op not in OPS:
 extra = sorted(k for k in args if k != "op" and k not in OPS[op])
 if extra:
     die("ArgumentsBad", "op %s does not take %s (it takes %s)" % (op, ", ".join(extra), ", ".join(OPS[op]) or "nothing else"))
-for key in OPS[op]:
+keep_others = args.get("keep_others") is True            # 型別 tool_io 照 tooldef 驗過（不是 boolean＝ArgumentsBad）
+for key in (k for k in OPS[op] if k != "keep_others"):
     v = args.get(key)
     if (v is not None or op == "end") and (not isinstance(v, str) or not v.strip()):
         die("ArgumentsBad", "summary is required: a few sentences on what the task found or did (it replaces the task's messages)"
@@ -166,7 +169,7 @@ def marker_line(msgs, call, lock):
 
 
 def kept(m):
-    """摺的時候留下的：別人給的 user 訊息（信、goal 提醒）；[aos] summary: 是自己摺的，照摺。"""
+    """別人給的 user 訊息（信、goal 提醒、new_mail 通知）；keep_others 時留下、預設一起摺。[aos] summary: 是自己摺的，一律照摺。"""
     c = m.get("content") if m else None
     return bool(m) and m.get("role") == "user" and not (isinstance(c, str) and c.startswith(SUMMARY))
 
@@ -233,8 +236,9 @@ lo = at + 1
 while lo < lock and msgs[lo - 1] and msgs[lo - 1].get("role") == "tool":   # 紀錄點那則的 tool 結果留著
     lo += 1
 hi = lock - 1
-keep = [n for n in range(lo, hi + 1) if kept(msgs[n - 1])]
-fold = [n for n in range(lo, hi + 1) if not kept(msgs[n - 1])]
+others = [n for n in range(lo, hi + 1) if kept(msgs[n - 1])]
+keep = others if keep_others else []
+fold = [n for n in range(lo, hi + 1) if n not in keep]
 done_before = (len(fold) == 1 and isinstance((msgs[fold[0] - 1] or {}).get("content"), str)
                and msgs[fold[0] - 1]["content"].startswith(SUMMARY) and msgs[fold[0] - 1]["content"].endswith(text))
 where = ""
@@ -252,9 +256,13 @@ if not fold:
 elif done_before:
     lines.append("Already folded into the summary at line %d." % fold[0])
 else:
-    lines.append("%d message%s of yours (%s) %s now one summary at line %d; %s." % (
+    lines.append("%d message%s (%s) %s now one summary at line %d; %s." % (
         len(fold), "" if len(fold) == 1 else "s", "line %d" % lo if lo == hi else "lines %d-%d" % (lo, hi),
         "is" if len(fold) == 1 else "are", lo, where or "the originals are kept next to your history"))
+    if others and not keep:
+        lines.append("%d of them came from others during the task (letters, reminders) and %s folded too; "
+                     "end with \"keep_others\": true to keep such messages after the summary." % (
+                         len(others), "was" if len(others) == 1 else "were"))
 if keep:
     lines.append("%d message%s from others during the task %s kept after the summary." % (
         len(keep), "" if len(keep) == 1 else "s", "is" if len(keep) == 1 else "are"))
