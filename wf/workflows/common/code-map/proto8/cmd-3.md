@@ -45,6 +45,7 @@
 |---|---|
 | [`bin/aos-tools`](../../../../../proto8/cmd/aos-tools/bin/aos-tools) | 管理工具登記（可 $override 另一份只記差異）、環境與小格，三種工具一律經 aos-exec 從 stdin 呼叫。 |
 | [`tests/test_cache.py`](../../../../../proto8/cmd/aos-tools/tests/test_cache.py) | Test where aos-tools caches executable tool definitions (11-10 aos-tools-cli step 2): $AOS_STACK/tooldef_cache.json, never the registry. |
+| [`tests/test_cell_lazy.py`](../../../../../proto8/cmd/aos-tools/tests/test_cell_lazy.py) | Test that aos-tools call does not create the tool cell beforehand (11-11 tool-cells-lazy): a read-only tool leaves no folder, a writing tool makes it… |
 | [`tests/test_cli.py`](../../../../../proto8/cmd/aos-tools/tests/test_cli.py) | Test the aos-tools command line (11-10 aos-tools-cli step 1): --file on either side, usage line, late flags, default-file warning, success lines, ls … |
 | [`tests/test_env_file.py`](../../../../../proto8/cmd/aos-tools/tests/test_env_file.py) | Test aos-tools env_file (11-10 aos-tools-cli step 3): add --env-file stores only the location, call reads it every time, a missing file at call is Pa… |
 | [`tests/test_override.py`](../../../../../proto8/cmd/aos-tools/tests/test_override.py) | Test aos-tools "$override" registries (11-10 aos-tools-cli step 4): patch merge with null removal, chains and arrays, loops and diamonds, writes only… |

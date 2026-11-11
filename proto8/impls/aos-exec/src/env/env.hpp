@@ -1,7 +1,7 @@
 // env.hpp：【env】環境變數——工作區與 stack、`.env`（ideas 10-19 § 17、§ 19；10-21 ideas § 4～§ 7；分類照 P-39）。內部標頭。
 //
 //   env.cpp      check_ws：WS 規則（旗標 ＞ $AOS_WS ＞ cwd）；setup_stack：stack 規則（旗標 --stack ＞ $AOS_STACK ＞ $AOS_WS/.stack/，
-//                --stack 11-03 加；mkdir -p、轉絕對、結尾 /），
+//                --stack 11-03 加；mkdir -p、轉絕對、結尾 /；--stack-lazy 11-11 加＝不建），
 //                export AOS_WS、AOS_STACK——工作區在不在、建 stack、轉絕對路徑只在這裡做（N-59 第 1 件）；
 //                drop_stack_if_empty：自己新建、到回來時還是空的 stack 收回（11-05 edge-agent 別線）
 //   dotenv.cpp   load_env：讀 資料夾/.env 逐行套進環境（10-22 起 dotenv 基礎子集、預設不蓋）；json_env：沒 argv 的
@@ -22,7 +22,8 @@ namespace aos::exec {
 std::string check_ws(const std::string& ws_flag);
 // stack_flag＝旗標 --stack 的值（沒給＝"-"）。"-"／空＝沿用 $AOS_STACK，沒設用 ws/.stack（同 --ws）。相對路徑從呼叫當下的 cwd 算。
 // mkdir -p、轉絕對、結尾 /，export AOS_WS、AOS_STACK；建不了 MkdirFailed。回 AOS_STACK 的值（旗標給的才要蓋回去，呼叫者自己記）。
-std::string setup_stack(const std::string& ws, const std::string& stack_flag);
+// lazy＝--stack-lazy（11-11）：只轉絕對、結尾 /、export，不建資料夾（不在也不報錯）。
+std::string setup_stack(const std::string& ws, const std::string& stack_flag, bool lazy = false);
 // 11-05：這次 setup_stack 新建的 stack 到最後還是空的＝收回（rmdir，連同一起新建的上層；不空就停）。
 // run_cli 回來之前叫（inst 單子跑完、或報錯）；可執行檔／argv 陣列 exec 成功就不回來、收不到。
 void drop_stack_if_empty();

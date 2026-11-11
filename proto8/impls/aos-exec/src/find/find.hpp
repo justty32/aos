@@ -38,8 +38,9 @@ struct Layer {
 
 // 一跳。spec 的相對路徑從 base 算；ws_flag／stack_flag＝這一跳的 --ws／--stack（沒給＝"-"）、dotenv_override＝這一跳的
 // --dotenv-override（轉向後的跳一律 "-"、"-"、false）。
+// stack_lazy＝這一跳的 --stack-lazy（11-11）：stack 不建；轉向後的跳一律 false（旗標只管這一跳）。
 Found hop(const std::string& spec, const std::string& base, const std::string& ws_flag, const std::string& stack_flag,
-          bool dotenv_override, Chain& chain);
+          bool dotenv_override, Chain& chain, bool stack_lazy = false);
 
 // classify 的結果：種類＋值、入口在檔裡的指標（AOS_CO）、最後讀的那份 JSON .env key 設過的名字（一份都沒讀＝沒有）。
 struct Classified {

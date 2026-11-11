@@ -70,12 +70,11 @@ def call(name, target, stdin, stack=None, prog=None):
     env = os.environ.copy()
     relative = 'tools/' + name
     if stack:
-        child_stack = Path(os.path.abspath(stack)) / relative
-        child_stack.mkdir(parents=True, exist_ok=True)
+        child_stack = Path(os.path.abspath(stack)) / relative   # 11-11 tool-cells-lazy: the cell is not made beforehand
         clear_child(child_stack)
         env['AOS_STACK'] = str(child_stack)
     started = time.monotonic_ns()
-    result = subprocess.run(['aos-exec', target], input=payload, stdout=subprocess.PIPE,
+    result = subprocess.run(['aos-exec'] + (['--stack-lazy'] if stack else []) + [target], input=payload, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, env=env)
     if stack:
         record = {'kind': 'tool', 'name': name, 'def': target, 'stack': relative,

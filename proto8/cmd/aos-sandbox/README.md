@@ -27,7 +27,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 | `base` | 路徑陣列 | 系統唯讀底 | `/usr /bin /sbin /lib /lib64 /etc` 裡存在的 |
 | `commands` | 指令名陣列 | 照 PATH 找到，所在資料夾唯讀看得到（例 `aos-exec`）；真位置在 `…/cmd/<名>/bin/<名>` 的，連同它們共用的 `…/py` 一起唯讀綁 | 沒有 |
 | `ro` | 路徑陣列 | 唯讀看得到 | 沒有 |
-| `rw` | 路徑陣列 | 可寫看得到（最後綁，可以蓋在 `ro` 裡面） | 沒有 |
+| `rw` | 路徑陣列 | 可寫看得到（最後綁，可以蓋在 `ro` 裡面）；列了 `$AOS_STACK` 而它不在＝先建（11-11 [tool-cells-lazy](../../thinking/2026-11/11/tool-cells-lazy.md)：`aos-tools call` 不先建工具小格），其他路徑不在照舊 `PathMissing` | 沒有 |
 | `net` | 布林 | 能不能連網 | `false`（只有沙箱自己的 loopback） |
 | `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files` | 正整數 | `s6-softlimit` 的 `-a`＋`-d`（`mem_mb`；不用 `-m`：它連堆疊上限一起設，aos-exec 一開執行緒就失敗）、`-t`、`-p`、`-f`、`-o` | 不限 |
 | `env` | 環境變數名陣列 | 只帶這幾個進去（外面有設的才帶；bwrap `--clearenv`＋`--setenv`）；**明列 `env` 就是整份取代預設清單，不是往預設上加**——要預設那幾個就自己一起列 | `PATH`、`LANG`、`LC_ALL`、`LC_CTYPE`、`TZ`、`PYTHONDONTWRITEBYTECODE`、`PYTHONIOENCODING` 與 aos 的六個（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`）、hub 型的 `AOS_DAEMON`、`AOS_LLM_KERNEL`（11-04 加，N-63 ③ 子 process 預設繼承）、`AOS_KERNEL`、`AOS_KNOWLEDGE`、`AOS_CLOCK`（11-06 加，同一條；使用者 11-06 選項框「預設補上」）；外面沒設的照樣不帶；只帶變數、不綁它指的路徑（要看得到就自己列進 `ro`／`rw`）；API key 一律不帶，要就明寫 |

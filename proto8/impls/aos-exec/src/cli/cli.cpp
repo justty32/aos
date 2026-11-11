@@ -13,7 +13,7 @@
 
 namespace aos::exec {
 
-static const char* USAGE = "aos-exec [--ws WS] [--stack S] [--dotenv-override] XXX [ARGS...]";
+static const char* USAGE = "aos-exec [--ws WS] [--stack S] [--stack-lazy] [--dotenv-override] XXX [ARGS...]";
 
 static const char* HELP = R"(usage: aos-exec [FLAGS] XXX [ARGS...]
 
@@ -24,6 +24,7 @@ The exit code is the entry's own code once it runs.
 flags:
   -w, --ws WS              workspace to use ("-" or empty = keep the outer one)
   -s, --stack S            stack to use ("-" or empty = keep the outer one)
+  --stack-lazy             do not create the stack folder (whoever writes there creates it)
   --dotenv-override        let .env override variables already set
   -h, --help               show this help
 
@@ -36,7 +37,7 @@ static int run(const std::vector<std::string>& argv) {
         try {
             // 以後加旗標就在這裡加一列；--dotenv-override（10-22）不帶值：.env 蓋掉已有的，只管這一次 aos-exec
             // --stack S（11-03）：stack 放哪，同 --ws（"-"／空＝沿用外面的）
-            cli = parse_cli(argv, {{"--ws", "ws"}, {"--stack", "stack"}}, {{"--dotenv-override", "dotenv_override"}}, HELP, {"-w", "-s"});
+            cli = parse_cli(argv, {{"--ws", "ws"}, {"--stack", "stack"}}, {{"--dotenv-override", "dotenv_override"}, {"--stack-lazy", "stack_lazy"}}, HELP, {"-w", "-s"});
         } catch (const Error& e) {
             throw usage_error(e.code, e.msg, USAGE);   // FlagUnknown／ArgumentsBad
         }
@@ -57,10 +58,12 @@ static int run(const std::vector<std::string>& argv) {
             stack = cli.opts["stack"];
         }
         bool dotenv_override = cli.opts.count("dotenv_override") > 0;
+        // --stack-lazy（11-11 thinking tool-cells-lazy）：stack 只轉絕對、export，不建；aos-tools call 給工具的小格用。只管這一跳
+        bool stack_lazy = cli.opts.count("stack_lazy") > 0;
         std::string base = std::filesystem::current_path().string();
         Chain chain;
         while (true) {
-            Found found = hop(spec, base, ws, stack, dotenv_override, chain);
+            Found found = hop(spec, base, ws, stack, dotenv_override, chain, stack_lazy);
             if (found.kind != Kind::Redirect) {
                 return launch(found, args);
             }
@@ -72,6 +75,7 @@ static int run(const std::vector<std::string>& argv) {
             ws = "-";
             stack = "-";   // --stack 也不帶過去（同 --ws）；這一層 export 的 AOS_STACK（已是絕對路徑）留在環境裡
             dotenv_override = false;
+            stack_lazy = false;
         }
     } catch (const Error& e) {
         return aos::fail("aos-exec", e);

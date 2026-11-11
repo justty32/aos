@@ -356,9 +356,10 @@ def tty_socket(cell_path, make=False):
 
 
 class Cell:
-    def __init__(self, path):
+    def __init__(self, path, make=True):
         self.path = os.path.abspath(path)
-        os.makedirs(self.path, exist_ok=True)
+        if make:                                     # make=False：只看不寫（attach 列表），小格不在就不建（11-11 tool-cells-lazy）
+            os.makedirs(self.path, exist_ok=True)
 
     def file(self, name):
         return os.path.join(self.path, name)
@@ -1000,7 +1001,7 @@ def attach_main(argv, agent_dir):
     known = sorted(t for t in os.listdir(tools_dir) if os.path.isfile(os.path.join(tools_dir, t, "cli.json")))
     if not names:
         for t in known:
-            cell = Cell(os.path.join(stack, "tools", t))
+            cell = Cell(os.path.join(stack, "tools", t), make=False)
             state = "screen open" if cell.alive() else "screen closed"
             if cell.alive() and cell.clients():
                 state += ", attached"

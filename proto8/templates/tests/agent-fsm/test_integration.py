@@ -1,4 +1,4 @@
-# Verify agent cells through the real local kernel, llm_fake endpoint, and peek_now_time tool.
+# Verify agent cells through the real local kernel, llm_fake endpoint, and peek_now_time tool (which leaves no tool cell, 11-11).
 import json
 import os
 from pathlib import Path

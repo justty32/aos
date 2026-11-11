@@ -1,7 +1,7 @@
 # act.py [--tools FILE] - act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。
 # 結束碼（fsm.json 照碼分岔，N-36）：全部跑完退 0（→ think：帶工具結果再問腦）；最後一則 assistant 沒有 tool_calls＝腦給了最後答案、沒事做，退 10（→ idle）。
 #   「要不要叫工具」11-04 晚從 think 搬到這裡判（think 只組請求，thinking 2026-11-04 think-as-function 03 § 1）。
-# 工具的介面（P-41）：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的小格由 aos-tools call 算成 $AOS_STACK/tools/<名>/（P-17）、工作區＝$AOS_WS。
+# 工具的介面（P-41）：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的小格由 aos-tools call 算成 $AOS_STACK/tools/<名>/（P-17；11-11 起不先建，工具真的寫才建）、工作區＝$AOS_WS。
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。
 # 叫工具出的問題回給腦、不停（P-41）：工具退非 0（stdout 照收、尾巴加結束碼）、逾時、叫了沒登記的工具、arguments 不是 JSON。
 # 比照 aos-mcp 的 C-52／C-53 例外：工具退非 0 或逾時，接住 stderr、原樣轉印，最後 2 KB 另附給腦；成功時不附（J4 授權，條文 J7 再補）。
@@ -214,8 +214,7 @@ for call in calls:
     if "arguments" in hooked["changed"]:          # 改過的只交給工具，history 裡的 tool_calls 不動
         parsed = hooked["data"]["arguments"]
         arguments = json.dumps(parsed, ensure_ascii=False)
-    tool_stack = Path(stack) / "tools" / name
-    tool_stack.mkdir(parents=True, exist_ok=True)
+    tool_stack = Path(stack) / "tools" / name    # 只用來看子帳記號；小格不先建（11-11 tool-cells-lazy，工具要寫自己建）
     clear_child(tool_stack)
     started_ns = time.monotonic_ns()
     try:

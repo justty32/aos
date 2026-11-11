@@ -34,7 +34,7 @@ std::string check_ws(const std::string& ws_flag) {
     return abspath(ws);
 }
 
-std::string setup_stack(const std::string& ws, const std::string& stack_flag) {
+std::string setup_stack(const std::string& ws, const std::string& stack_flag, bool lazy) {
     std::string stack = stack_flag;
     if (stack.empty() || stack == "-") {
         stack = join(ws, ".stack");
@@ -44,6 +44,14 @@ std::string setup_stack(const std::string& ws, const std::string& stack_flag) {
         }
     }
     std::string abs = abspath(stack);
+    if (lazy) {   // --stack-lazy（11-11 tool-cells-lazy）：不建，誰要寫誰自己建；沒建就沒有要收的
+        if (abs != "/") {
+            abs += "/";
+        }
+        setenv("AOS_WS", ws.c_str(), 1);
+        setenv("AOS_STACK", abs.c_str(), 1);
+        return abs;
+    }
     std::string top;   // 還不在的最外一層（stack 已在＝空）
     for (std::string d = abs; d != "/" && !fs::exists(d); d = dirname(d)) {
         top = d;

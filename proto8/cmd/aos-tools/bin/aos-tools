@@ -56,6 +56,7 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   ls／get 不讀 env 檔、不印 env 值；ls -l 的 ENV 欄印 env 的名字與 @"存的 env_file"。
   用途：這隻自己那份（aos-agent tools add 寫的，$override 定義那份）也能替這一隻換知識庫，不必在定義裡做包裝資料夾。
 call 的小格：父 AOS_STACK 非空時，子設成 <父 stack>/tools/<名>/，優先於登記 env；父沒設就不從登記 env 補 stack，交 aos-exec 給預設。
+  小格只給路徑、不建（11-11 tool-cells-lazy，使用者「我確實想改成工具真的寫東西時才建資料夾」）：交 aos-exec --stack-lazy，工具要寫自己 mkdir -p。
 ls --json 保留完整 tooldef；腦／MCP 對模型只取 description／parameters，不把 env 等工具側欄位送給模型。
 add 時工具定義 env 陣列列的 hub 若不在當下環境與這次 env-file／envs，印一行 warning，照樣登記退 0。
 工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收，只有 add 另驗選填 env 是合法變數名陣列。
@@ -219,8 +220,9 @@ The tool gets ARGS_JSON on its stdin (given on the command line as is, or read f
 stdin when omitted); its stdout is the result. The variables registered with add
 are set for the call; a registered env file is read now, and a missing one is an
 error (the tool does not run). The tool runs through aos-exec in its own scratch
-folder: $AOS_STACK/tools/NAME/ when AOS_STACK is set, otherwise aos-exec's default
-(.stack/ in the current directory).
+folder: $AOS_STACK/tools/NAME/ when AOS_STACK is set (not created beforehand: a
+tool that writes there creates it), otherwise aos-exec's default (.stack/ in the
+current directory).
 
 flags:
   -h, --help   show this help
@@ -1100,8 +1102,10 @@ def cmd_call(args):
             raise Fail(e.code, "tool %s (from %s): %s" % (name, where, e))
     env.update(tools[name]["entry"].get("env", {}))
     stack = os.environ.get("AOS_STACK")
+    lazy = []
     if stack:
         env["AOS_STACK"] = os.path.join(os.path.abspath(stack), "tools", name, "")
+        lazy = ["--stack-lazy"]                       # 11-11 tool-cells-lazy：小格只給路徑、不先建，工具真的要寫才自己建
     else:
         env.pop("AOS_STACK", None)                    # 登記格不能代替父 stack；沒設交 aos-exec 給預設
     exe = shutil.which("aos-exec")                    # 自己找：避免 execvp 只報 PATH 最後一格
@@ -1110,7 +1114,7 @@ def cmd_call(args):
     if len(rest) == 2:
         stdin_from(rest[1])
     try:
-        os.execve(exe, ["aos-exec", path], env)         # 三種工具都原樣保留 stdin、stdout 與結束碼
+        os.execve(exe, ["aos-exec"] + lazy + [path], env)         # 三種工具都原樣保留 stdin、stdout 與結束碼
     except OSError as e:
         raise Fail("CommandMissing", "%s cannot start: %s" % (exe, e.strerror or e))
 
