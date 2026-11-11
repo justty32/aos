@@ -44,6 +44,7 @@
 7. **明天要做**：
    - knowledge 整套改回 memory，順便施工 root 收檔案和 json 物件（設計在 04；path 寫法要照 N-45 重寫）。
    - eca 拿掉基礎檔案工具（04 有清單與兩個前提）。
+   - json 工具改成路徑一整串、給值直接換（使用者原話與待裁四題在 [json-tools](../proto8/thinking/2026-11/11/json-tools.md)），跟 memory 改名、root 三種形狀一起排。
    - 接外部 MCP 第一階段。
    - 線 K 剩兩件：gitignore 漏列（fork 的 children state、`subagents.json`）、`history_removed.jsonl` 絕對路徑可能外洩。
    - 公司 proxy 要加 6.1 條目。
