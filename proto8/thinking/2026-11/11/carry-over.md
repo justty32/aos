@@ -23,7 +23,7 @@
 | cli-sweep Q4、Q7、Q8、甲3～5；Q5 改裁不修 | 已做 | 10a、10b；Q5 `00288480e` |
 | aos-tools lv6 連帶 | 已做 | 11-10 晚 → [aos-tools-cli 08](../10/aos-tools-cli/08-施工結果.md) |
 | two-machines B02～B04、B13 | 已做 | `55bc1205b` |
-| B07～B10 | 已做 | → [17](../10/two-machines/17-B07到B10施工結果.md)；17 留三題待裁 → 待裁 3～5 |
+| B07～B10 | 已做 | → [17](../10/two-machines/17-B07到B10施工結果.md)；17 留的三題使用者 11-11 已裁（待裁 3～5），施工見下「追加」 |
 | B11 | 已裁（照帶、不擋） | — |
 | B17、B18、B23 | 已做 | — |
 | B19 | 已做（這次確認 dev-env 那句已改成 `cp -r`，next_todo 改狀態） | templates-cp |
@@ -36,7 +36,7 @@
 
 ## 待裁
 
-可直接貼選項框；推薦放第一個。
+可直接貼選項框；推薦放第一個。**3～5 使用者 11-11 已裁**（見下「追加」），還開著的是 1、2、6、7。
 
 1. **旗標「寫在那層名字之後任何位置」要不要推到其餘指令？**（aos-mcp、aos-sandbox、aos-clock、aos-sweeper、aos-feedback、aos-eca-turn／screen，以及 C++ 零件共用的 `aos::parse_cli`）
    - A 全部改：Python 那幾支換成 `aos_flags.parse(sub="root")`，C++ 只改 `parse_cli` 一處、零件全家跟著（推薦：規則一致，改的都是共用介面）
@@ -46,13 +46,13 @@
    - A 改檢查口徑：使用者自己寫的絕對路徑、帳本與信封 sender 不算違規（推薦：不動 C++，這些本來就不拿來解路徑）
    - B sender／ledger 改存相對 kernel stack（動 aos-util、aos-llm-kernel），使用者寫的照 A 放過
    - C 先不動，留大修
-3. **kernel 範本 `budget.senders` 的示範 `/tmp/aos-demo-sender` 每次起來印一行 warning，要不要拿掉？**
+3. ~~（已裁：從範本拿掉）~~ **kernel 範本 `budget.senders` 的示範 `/tmp/aos-demo-sender` 每次起來印一行 warning，要不要拿掉？**
    - A 從範本拿掉，示範改寫在 kernel/docs/03（推薦）
    - B 留著
-4. **`$ref` 進來那份檔裡的相對路徑（exec、ws…）從哪算？**
+4. ~~（已裁：維持現狀）~~ **`$ref` 進來那份檔裡的相對路徑（exec、ws…）從哪算？**
    - A 不改：照舊從 daemon 的 cwd 算，訊息與文件已講清楚（推薦：已寫好的 daemon.json 不會壞）
    - B 改成從那份檔所在的資料夾算（對外語意變）
-5. **`procs` 頂層 `$ref` 陣列其中一份讀不到時？**
+5. ~~（已裁：跳過那份，推薦被翻）~~ **`procs` 頂層 `$ref` 陣列其中一份讀不到時？**
    - A 照舊整台退 1（推薦：讀不到就不知道裡面有哪些名字）
    - B 那份帶的列都不起、其他份照起，加一行 warning
 6. **aos-lock 認主分不出同一工作區的兩方（B14）？**
@@ -71,3 +71,11 @@
 ## 驗證
 
 在 `23c9544d3`（這次只改記錄，程式沒動；impls 先增量 build 過，aos-daemon 重連結一次）逐夾跑全套：**58 夾 968 支，只紅既有 4 支**（aos-agent `test_daemon_down` 2、box_check 2），`templates/tests` 20 支 OK（2 skipped、2 expected failures）。knowledge_check 出廠庫 0 錯誤、41 warning；codemap 0 stale；wf-lint broken 56 與改之前一樣。
+
+## 追加：17 的三題使用者裁了（11-11，頂層轉達選項框結果）
+
+- 題 0（待裁 3）「從範本拿掉」→ `3f4bc4511`：kernel 兩份範本不帶示範預算、示範改寫進 kernel/docs/03 件 5（照抄實跑過）。
+- 題 2（待裁 5）「跳過那份」→ `2d7984a24`：aos-daemon 讀 daemon.json 的程序清單時，`$ref` 陣列讀不到的那份跳過、一行 warning、其他照起；`$ref` 機制別處照舊。
+- 題 1（待裁 4）維持現狀、不改程式，原話與 docs/05 補的那句見 [17 § 11-11 續記](../10/two-machines/17-B07到B10施工結果.md)。
+
+改完再跑全套：在 `2d7984a24` 上 impls 重建（`nice -n 19`）後逐夾跑：**58 夾 970 支（多的 2 支是 test_two_machines 新的），只紅既有 4 支**；knowledge_check 0 錯誤、41 warning；codemap 0 stale；wf-lint broken 56 不變。
