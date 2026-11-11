@@ -1,4 +1,4 @@
-"""mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；first（剛起來）不提醒、只把等著的記成已知；讀掉的自然掉出記錄。"""
+"""mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json）只把等著的記成已知；睡醒（first、有記錄）睡前提醒過的不重複、睡著時新到的提醒一次；讀掉的自然掉出記錄。"""
 import json
 import os
 from pathlib import Path
@@ -82,6 +82,31 @@ class MailNotify(unittest.TestCase):
         self.fire(first=True)
         self.assertEqual(len(self.notices()), 1)
         self.assertEqual(len(json.loads((self.cell / "notified.json").read_text())), 4)
+
+    def test_wake_tells_letters_that_came_while_asleep(self):
+        # 使用者 11-11 選項框「睡著時新到的要提」：睡醒（first、有記錄）照 notified.json 比——睡前提醒過的不再提，睡著時到的提醒一次
+        subprocess.run(["aos-mailbox", "-s", str(self.stack), "where"], capture_output=True, check=True)
+        self.send("A")
+        self.fire()
+        self.assertEqual(len(self.notices()), 1)               # 睡前：A 提醒過
+        self.send("B")                                         # 睡著時到的
+        self.send("C")
+        self.fire(first=True)                                  # 睡醒
+        got = self.notices()
+        self.assertEqual(got[1:], ["[aos] new_mail: 2 new letters from B, C. Look with mailbox_peek, read with mailbox_read."])
+        self.fire(first=True)                                  # 再睡再醒、沒有新的：不重複
+        self.fire()
+        self.assertEqual(len(self.notices()), 2)
+
+    def test_first_letter_while_asleep_without_mailbox_before(self):
+        # 起來時連信箱都沒有、也沒有信：照樣留一份空記錄，睡著時才到的第一封醒來提得到
+        self.fire(first=True)
+        self.assertEqual(json.loads((self.cell / "notified.json").read_text()), [])
+        self.assertFalse((self.stack / "mailbox").exists())
+        subprocess.run(["aos-mailbox", "-s", str(self.stack), "where"], capture_output=True, check=True)   # 睡著時信箱才建好、寄來第一封
+        self.send("A")
+        self.fire(first=True)
+        self.assertEqual(self.notices(), ["[aos] new_mail: 1 new letter from A. Look with mailbox_peek, read with mailbox_read."])
 
     def test_many_senders_are_cut(self):
         subprocess.run(["aos-mailbox", "-s", str(self.stack), "where"], capture_output=True, check=True)

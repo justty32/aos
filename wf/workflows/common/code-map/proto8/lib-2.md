@@ -75,7 +75,7 @@
 | [`tests/test_cli_codex_mcp.py`](../../../../../proto8/lib/agent/tests/test_cli_codex_mcp.py) | 驗 cli_session 起 codex 時給 aos MCP server 的設定（11-11）：明寫帶 AOS_* 環境（只帶清單裡有設的，AOS_WS／AOS_STACK 用這次的值），只對 aos 這個 server 免核准；claude 那邊不變。 |
 | [`tests/test_cli_system.py`](../../../../../proto8/lib/agent/tests/test_cli_system.py) | 驗 cli_session 的 system（11-11 self-system）：宣告了才碰；stack 那份在就整份用它、否則定義那份；claude 附加檔＋snapshot off、codex developer_instructions；空＝不附加。 |
 | [`tests/test_cli_tools_directive.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_directive.py) | 驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。 |
-| [`tests/test_mail_notify.py`](../../../../../proto8/lib/agent/tests/test_mail_notify.py) | mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；first（剛起來）不提醒、只把等著的記成已知；讀掉的自然掉出記錄。 |
+| [`tests/test_mail_notify.py`](../../../../../proto8/lib/agent/tests/test_mail_notify.py) | mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json）只把等著的記成已知；睡醒（first、有記錄）睡前提醒過的不重複、睡著時新到的提醒一… |
 | [`todo/`](../../../../../proto8/lib/agent/todo/) | 這隻 agent 自己的待辦清單：ls、set、add、mark；存在自己的小格 $AOS_STACK/todo.json（第一次寫才建），每個 op 都印整張 |
 | [`todo/tests/test_todo.py`](../../../../../proto8/lib/agent/todo/tests/test_todo.py) | Test the todo tool: the four ops, its errors and limits, where it keeps the list, and that ls never makes the cell (also through aos-tools call). |
 | [`tools_def/`](../../../../../proto8/lib/agent/tools_def/) | 工具定義的創造：new＝把 Python 骨架（templates/tool-python）複製成新工具夾，check＝檢查一個工具位置（資料夾、JSON 檔或 檔#/指標）合不合格、在哪一階段 |

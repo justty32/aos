@@ -7,8 +7,10 @@
 # 做法：aos-mailbox --stack <agent stack> peek -j 列還在 new/ 的信 → 沒通知過的＝新信 → 合成一句（只帶封數與寄件人，不帶內文）
 #   用 aos-post send --ordered <agent stack>/queue 寄一則 {"role": "user", "content": …}（同 aos-agent say；queue 沒有就先 aos-post init）→ 寄成了才記 notified。
 #   沒新信（含沒信箱）＝不寄、不動 history、什麼都不印。notified 只留還在信箱裡的信名（讀掉的自然消失，檔不會一直長）。
-#   事件 first: true（剛起來、睡醒、重起後第一次）＝不通知：信箱裡還沒讀的全記成已知，之後只提醒新到的（使用者 11-11 選項框「只提醒新到的」，
-#   thinking/2026-11/11/backlog-rulings.md）。自己寄給自己的信照樣算（代定）。
+#   事件 first: true（剛起來、睡醒、重起後第一次）＝照 notified.json 比：睡前提醒過的不再提，睡著期間新到（還沒提醒過）的提醒一次
+#   （使用者 11-11 選項框先「只提醒新到的」、再「睡著時新到的要提」，thinking/2026-11/11/backlog-rulings.md）。notified.json 不在（或壞了）＝
+#   沒有記錄、分不出睡前睡後：first 那次只把信箱裡在等的全記成已知、不提醒（代定，照「只提醒新到的」）；不是 first 時沒記錄＝全算新的。
+#   所以每次跑都留記錄（沒信箱、沒信也寫 []）：檔在＝「一直在看」，睡著時才到的第一封信醒來也提得到。自己寄給自己的信照樣算（代定）。
 # 錯：stderr 一行「mail_notify: error: 代號 原因」、退 1（ArgumentsBad 事件 JSON 壞、StackMissing、LaunchFailed、CommandFailed 下層退非 0 或逾時、WriteFailed）；
 #   範本掛它用 on_error: continue，壞了只是 agent 那邊一行 warning、不停 agent。需要 PATH 上有 aos-mailbox、aos-post。--help 印英文用法。
 import json, os, subprocess, sys
@@ -20,8 +22,9 @@ If letters came that it was not told about yet, send one message to STACK/queue:
   [aos] new_mail: 2 new letters from bob, amy. Look with mailbox_peek, read with mailbox_read.
 Only the number and the senders, never the text. No new letter (or no mailbox) = nothing at all.
 Letters it already told about are kept in $AOS_STACK/notified.json; read letters drop out by themselves.
-first: true in the event (right after start or wake-up) = say nothing; the letters already waiting
-  are only marked as known, so later runs tell about letters that arrive after that.
+first: true in the event (right after start or wake-up) works the same way: letters told about before
+  the sleep are not told again, letters that came while asleep are told once. Without notified.json
+  (a fresh start) the letters already waiting are only marked as known, nothing is told.
 Turn it off or change its interval with self_hook (op rm, or add with replace: true).
 exit codes: 0 done (also when nothing was new); 1 error ("mail_notify: error: CODE reason").
 """
@@ -76,22 +79,25 @@ def main():
     cell = os.environ.get("AOS_STACK")
     if not cell:
         die("StackMissing", "AOS_STACK is not set (this hook's own cell)")
-    if not os.path.isdir(os.path.join(stack, "mailbox")):
-        return 0                                 # 沒信箱＝沒信：安靜
-    try:
-        rows = json.loads(run(["aos-mailbox", "--stack", stack, "peek", "-j"]) or "[]")
-    except ValueError:
-        die("CommandFailed", "aos-mailbox peek -j did not print JSON")
-    rows = [r for r in rows if isinstance(r, dict) and isinstance(r.get("letter"), str)] if isinstance(rows, list) else []
     path = os.path.join(cell, SEEN)
-    seen = []
     try:
         with open(path, encoding="utf-8") as f:
             seen = json.load(f)
     except (OSError, ValueError):
-        seen = []
-    seen = set(x for x in seen if isinstance(x, str)) if isinstance(seen, list) else set()
-    new = [] if event.get("first") else [r for r in rows if r["letter"] not in seen]   # 剛起來：只記不提醒
+        seen = None
+    recorded = isinstance(seen, list)            # 檔在且是清單＝之前一直在看（睡前提醒過哪些都在裡面）
+    seen = set(x for x in seen if isinstance(x, str)) if recorded else set()
+    rows = []
+    if os.path.isdir(os.path.join(stack, "mailbox")):   # 沒信箱＝沒信：安靜，但照樣留記錄（下面寫 []）
+        try:
+            rows = json.loads(run(["aos-mailbox", "--stack", stack, "peek", "-j"]) or "[]")
+        except ValueError:
+            die("CommandFailed", "aos-mailbox peek -j did not print JSON")
+        rows = [r for r in rows if isinstance(r, dict) and isinstance(r.get("letter"), str)] if isinstance(rows, list) else []
+    if event.get("first") and not recorded:
+        new = []                                 # 全新起來、沒有記錄：分不出睡前睡後，在等的只記不提醒（代定）
+    else:
+        new = [r for r in rows if r["letter"] not in seen]   # 睡醒（first）也一樣：睡前提醒過的在 seen 裡，睡著時到的提醒一次
     if new:
         box = os.path.join(stack, "queue")
         if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
@@ -99,7 +105,7 @@ def main():
         run(["aos-post", "send", "--ordered", box],
             json.dumps({"role": "user", "content": sentence(new)}, ensure_ascii=False))
     keep = sorted(r["letter"] for r in rows)    # 只留還在信箱裡的（讀掉的自然掉出去）
-    if new or sorted(seen) != keep:
+    if new or not recorded or sorted(seen) != keep:
         tmp = os.path.join(cell, ".%s.%d.tmp" % (SEEN, os.getpid()))
         try:
             with open(tmp, "w", encoding="utf-8") as f:

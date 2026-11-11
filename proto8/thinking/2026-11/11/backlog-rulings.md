@@ -54,9 +54,18 @@
 | hook 預設 | 壞掉就停（`on_error` 預設 stop）、逾時 60 秒 |
 | `on_clock` 不對齊整數倍 | 「上次」記成這次的 cycle、間隔是「至少 N 格」（[clock-hook 02](clock-hook/02-施工結果.md) 代定 3） |
 
-## 待裁
+## 已裁（原「待裁」，11-11 稍後）
 
 1. **睡著時到的信**：照「只提醒新到的」，起來那次把信箱裡在等的全記成已知——所以**睡著（或停著）時寄來的信，醒來後永遠不提醒**（只能自己 peek）。選項：「維持：起來時在等的都不提」／「睡前記過的不提，睡著時新到的醒來提醒一次 (推薦)」（做法＝起來那次照 notified.json 比，不再特別處理 `first`）。
+   **使用者選「睡著時新到的要提」**（線 K 施工）：
+
+   - `lib/agent/mail_notify/_entry`：事件 `first` 也照 `notified.json` 比——睡前提醒過的（還在 `new/`、記在裡面）不再提，睡著期間新到、還沒提醒過的提醒一次（合成一句，同平常）。
+   - **代定 1（全新起來）**：`notified.json` 不在（或壞了，不是清單）＝沒有記錄、分不出睡前睡後；`first` 那次照原裁「只提醒新到的」，信箱裡在等的只記成已知、不提醒。不是 `first` 時沒記錄＝照舊全算新的（例：小格被人清掉，下一次就提醒一次）。
+   - **代定 2（記錄形狀）**：`notified.json` 照舊只存「已通知、還在 `new/` 的信名」——判「這封提醒過沒」夠用（讀掉的離開 `new/`，不會再被當新信）；但原本沒新信、信箱是空的時候不寫檔，於是「起來時信箱空、睡著時寄來第一封」醒來會被當成全新起來而吞掉。改成**每次跑都寫**（沒信箱、沒信也寫 `[]`）：檔在＝「一直在看」，檔不在才是全新。格式沒變。
+   - 睡前最後一次檢查之後、睡著之前到的信：沒提醒過，醒來那次照樣提（「還沒提醒過」本來就包含它們）。
+   - 測試：`lib/agent/tests/test_mail_notify.py` 加 `test_wake_tells_letters_that_came_while_asleep`（睡前 A 提醒過；睡著時 B、C 到；醒來只提一則「2 new letters from B, C」；再睡再醒不重複）、`test_first_letter_while_asleep_without_mailbox_before`（起來時沒信箱也寫 `[]`；睡著時信箱建好、寄來第一封，醒來提得到）；原 `test_first_only_marks_waiting_letters`（全新起來只記不提醒、notified.json 被刪了再 `first` 也一樣）照留。整夾數字見 [goal 02 的稍後一節](goal/02-裁定與施工結果.md#11-11-稍後使用者裁定與修改)。
+   - 知識節點 `aos/mailbox.json#/check_hook`、`aos/me/self_hook.json#/clock`；範本兩份 `hooks.json` 的 description 與 README；templates/docs/02、aos-agent docs/06、lib/docs/03；NORMS 附錄 4 `hooks/mail_notify/notified.json` 那列加「11-11 再註」。
+   - 要重建什麼：不用。已建的定義抄出去的 `hooks.json` description 是舊句子（只是說明，不影響行為；行為在 handler 裡，`$AOS_HOME` 下的那支一換就生效）。
 
 ## 要重建什麼
 

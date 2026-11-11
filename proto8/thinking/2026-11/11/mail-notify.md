@@ -27,7 +27,7 @@
 
 | 情況 | 怎麼樣 |
 |---|---|
-| 剛起來、睡醒、重起的第一次（事件 `first`） | 代定「通知一次」：不看 notified，信箱裡還沒讀的全算新的、提醒一則。**11-11 使用者翻案，見 [backlog-rulings](backlog-rulings.md)**：選「只提醒新到的」——`first` 不提醒，只把還沒讀的記進 notified |
+| 剛起來、睡醒、重起的第一次（事件 `first`） | 代定「通知一次」：不看 notified，信箱裡還沒讀的全算新的、提醒一則。**11-11 使用者翻案，見 [backlog-rulings](backlog-rulings.md)**：選「只提醒新到的」——`first` 不提醒，只把還沒讀的記進 notified。**同日稍後再裁「睡著時新到的要提」**（[backlog-rulings 已裁 1](backlog-rulings.md#已裁原待裁11-11-稍後)）：`first` 也照 notified 比，睡前提醒過的不提、睡著時新到的提一次；只有沒有 `notified.json`（全新起來）時才只記不提醒，所以每次跑都寫一份（空也寫） |
 | agent 正在忙 | 確認：提醒只是 queue 裡的一則信，fsm 下一次輪到收信那格、eca 下一輪才看到，不打斷（daemon 實跑：提醒、腦答、下一則提醒依序進 history） |
 | 自己寄給自己 | 代定照算（可能是寫給未來自己的備忘） |
 | 信箱不存在 | 安靜，也不替人建信箱、不碰 queue（單元測試） |
