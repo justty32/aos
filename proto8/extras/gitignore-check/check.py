@@ -21,13 +21,19 @@ import aos_flags
 from agent import cooldown
 
 PROG = "gitignore-check"
+# 假腦劇本（when＝最後一則含那個字就回它；worker 已有對話，按順序的劇本對不上）：do_task start → todo add → 答一句
+TASKS = {"exec": str(PROTO / "lib/base/llm_fake"), "script": [
+    {"when": "make a task", "tool_calls": [{"name": "do_task", "arguments": {"op": "start", "task": "Check the classes"}}]},
+    {"when": "Task started", "tool_calls": [{"name": "todo", "arguments": {"op": "add", "text": "classify the new files"}}]},
+    {"when": "of 1 completed", "content": "FAKE ANSWER tasks"}]}
 HELP = """gitignore-check - optional developer regression check, never part of daemon startup
 
 usage: python3 check.py [--evidence DIR] [--timeout-s SECONDS] [--inject-unknown] [--mntc]
 
 Starts two isolated projects with a fake kernel, FSM agents, a fake Claude ECA,
 a judge, and a child daemon. Exercises control, cooldown, stderr sweeping, bad
-state preservation, graceful shutdown, local git cloning, and SIGKILL.
+state preservation, a goal, a to-do list and an open do_task, graceful shutdown,
+local git cloning, and SIGKILL.
 Checks tracked files against gitignore_classes.json, sensitive content, and hot
 changes. --inject-unknown writes stacks/root/zzz_unknown.txt: this MUST exit 1.
 Only local disposable fixture repositories are staged or committed. Temporary
@@ -253,6 +259,8 @@ class Check:
         tools = {"peek_now_time": {"path": str(PROTO / "lib/base/peek_now_time")},
                  "knowledge_read": {"path": str(PROTO / "lib/agent/knowledge_read"), "env": kb},
                  "knowledge_write": {"path": str(PROTO / "lib/agent/knowledge_write"), "env": kb}}
+        if kind == "agent-fsm":                  # 11-11：tools/todo/todo.json、tools/do_task/tasks.json 要長出來（使用者「三個都進 git」）
+            tools.update(todo={"path": str(PROTO / "lib/agent/todo")}, do_task={"path": str(PROTO / "lib/agent/do_task")})
         save(dest / "tools.json", {"tools": tools})
         save(dest / "llm.json", {"model": "fake"})
 
@@ -292,7 +300,7 @@ class Check:
         fail.write_text("#!/bin/sh\ncat >/dev/null\necho 'fail-endpoint: error: EndpointFailed intentional failure' >&2\nexit 1\n")
         fail.chmod(0o755)
         save(self.llms / "defs/kernel.json", {"slots": 3, "timeout_ms": 120000, "endpoint": "fake", "exec": str(PROTO / "lib/base/llm_fake"),
-             "endpoints": {"fake": {"exec": str(PROTO / "lib/base/llm_fake"), "tool": "peek_now_time"}, "bad": {"exec": str(fail)}, "slow": {"exec": "fake_slow", "delay_s": 12, "tool": "peek_now_time"}}})
+             "endpoints": {"fake": {"exec": str(PROTO / "lib/base/llm_fake"), "tool": "peek_now_time"}, "bad": {"exec": str(fail)}, "slow": {"exec": "fake_slow", "delay_s": 12, "tool": "peek_now_time"}, "tasks": TASKS}})
         # Cause the real daemon reader to preserve a malformed public table.
         self.root.mkdir(parents=True)
         (self.root / "procs_state.json").write_text("{intentional broken state\n")
@@ -333,10 +341,21 @@ class Check:
 
     def exercise(self):
         self.ask("worker", "first question", "FAKE ANSWER")
+        # 11-11：goal.json、tools/todo/todo.json、tools/do_task/tasks.json（分類 G096-G098，「三個都進 git」）。do_task 只 start、不 end，
+        # 任務開著、tasks.json 留著；goal 設完就 pause，假腦不會被提醒一直叫。
+        self.run(["aos-agent", "-t", "worker", "llm", "set", "model=tasks"])
+        self.ask("worker", "make a task", "FAKE ANSWER")
+        self.run(["aos-agent", "-t", "worker", "llm", "set", "model=fake"])
+        self.run(["aos-agent", "goal", "-t", "worker", "set", "Check the gitignore classes"])
+        self.run(["aos-agent", "goal", "-t", "worker", "pause", "fixture: no reminders"])
+        w = self.root / "procs/worker"
+        grown = [n for n in ("goal.json", "tools/todo/todo.json", "tools/do_task/tasks.json") if not (w / n).is_file()]
+        if grown:
+            raise RuntimeError("goal / todo / do_task files did not appear: " + ", ".join(grown))
+        self.note("goal.json, tools/todo/todo.json, tools/do_task/tasks.json written by the real tools")
         self.ask("eca", "first ECA question", "FAKE:")
         self.run(["aos-agent", "-t", "worker", "llm", "set", "model=bad"])
         self.run(["aos-agent", "say", "-t", "worker", "retry this question"])
-        w = self.root / "procs/worker"
         self.wait("real cooldown.json after failed endpoint", lambda: cooldown.read(str(w)))
         self.run(["aos-agent", "-t", "worker", "llm", "set", "model=fake"])
         self.note("failed endpoint entered cooldown")

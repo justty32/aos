@@ -12,6 +12,7 @@
 |---|---|---|
 | 帶走 `carry` | 定義、agent 記憶 `history.jsonl`、工具與腦設定、hook 清單 `hooks.json`、`state.json`、`state_flux.json`、`procs_state.json`、`stage.txt` | 下次從同一份設定與進度繼續；暫停狀態也要保留 |
 | 帶走 `carry` | 未處理的 `new/`、`cur/`、agent `queue/`、歸檔信、`think/pending.txt`、`think/reply/` | 還沒處理完的工作與問腦回信；不能把所有 `reply/` 一起擋掉 |
+| 帶走 `carry` | agent 自己記的進度：`goal.json`、待辦 `tools/todo/todo.json`、開著的任務 `tools/do_task/tasks.json` | 使用者 11-11「三個都進 git」：跟 history 一起走，換台後 goal 照常提醒、待辦接著做、do_task 的 end 照摺 |
 | 帶走 `carry` | `clock`、`ledger.jsonl`、`used.json`、`queue.json` | 時鐘、帳本、額度與隊序接著算；這些本來就可能每輪改動 |
 | 帶走 `carry` | eca 的 `session.txt`、`tool.txt`、`ws.txt`、`stack.txt`、`last.txt` | 保留對話識別與小格狀態；`session.txt` 並不是 CLI 的整段原生對話資料 |
 | 留本機 `local` | `.session_home` | 辨認這台的對話環境；換台不應沿用舊值 |

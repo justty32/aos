@@ -1151,6 +1151,36 @@
    "why": "登記表先寫 .clock_register.json.PID 再改名（N-05）。",
    "seen": [],
    "ignored_now": "對：ignored（stack.gitignore 的 **/.*）"
+  },
+  {
+   "id": "G096",
+   "pattern": "stacks/**/goal.json",
+   "writer": "proto8/lib/agent/goal_state.py（aos-agent goal、工具 goal、agent-fsm idle、aos-eca-turn）",
+   "class": "carry",
+   "in_git": "進",
+   "why": "11-11 使用者「三個都進 git」（thinking 2026-11/11/fork-and-do-task README § 新持久檔分類）：agent 正在做的目標與提醒次數，跟 history 一起走；換台後 goal 照常提醒。",
+   "seen": [],
+   "ignored_now": "對：tracked（stack.gitignore 沒有規則擋它）"
+  },
+  {
+   "id": "G097",
+   "pattern": "stacks/**/tools/todo/todo.json",
+   "writer": "proto8/lib/agent/todo（工具小格，第一次寫才建）",
+   "class": "carry",
+   "in_git": "進",
+   "why": "11-11 使用者「三個都進 git」（thinking 2026-11/11/fork-and-do-task README § 新持久檔分類）：agent 自己的待辦清單，跟 history 一起走（登記成別的名字＝別的小格，要自己補一列）。",
+   "seen": [],
+   "ignored_now": "對：tracked（stack.gitignore 沒擋 tools/）"
+  },
+  {
+   "id": "G098",
+   "pattern": "stacks/**/tools/do_task/tasks.json",
+   "writer": "proto8/lib/agent/do_task（工具小格，第一次 start 才建）",
+   "class": "carry",
+   "in_git": "進",
+   "why": "11-11 使用者「三個都進 git」（thinking 2026-11/11/fork-and-do-task README § 新持久檔分類）：開著的 do_task 任務（紀錄點的 call id 在 history 裡），跟 history 一起走；換台後 end 照摺。",
+   "seen": [],
+   "ignored_now": "對：tracked（stack.gitignore 沒擋 tools/）"
   }
  ]
 }
