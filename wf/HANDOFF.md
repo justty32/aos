@@ -30,18 +30,18 @@
    - 線 K 五條代定認可（「沒啥好翻的，我覺得都OK」）。
    - knowledge 改回 memory：「目標是整套改回。」
 4. **代定**：eca 留 def 包（agent_def、tools_def），見 04 § 修了什麼。
-5. **要使用者裁的**（04 § 第二點裡沒做的、§ 第二輪發現、§ 第三輪）：
-   - root 要不要也收檔案和 json 物件（`a.json#/x`）。
-   - eca_cody 的唯讀沙盒讓 codex luna／terra 不敢用 aos 寫入工具：要改 `workspace-write`，還是在 system 裡加一句？
-   - codex 自帶 goal 工具，跟 aos goal 撞名。
-   - mailbox_send 的 `box` 能指到 agent 的 queue 資料夾。
-   - fsm 沒有「同一個錯連發」的煞車：gemma 連撞二十幾次。
+5. **五件待裁已裁**（原話在 04「五件待裁的裁定」）：
+   - root 收三種形狀＝要，設計寫好了，**明天跟 memory 改名一起施工**。
+   - codex 沙盒＝多試；對照表在 04，沒改設定。
+   - eca 不給 goal、todo＝已改成 35 支（`aos-agent goal` 人下的指令照留，是代定）。
+   - box 指到 queue＝不擋；fsm 連錯沒煞車＝不管。
+   - **還沒回的一件**：json_write 剝引號（`eb772bbdf`）跟 KISS 照字面原則衝突，頂層已提、使用者沒回；要退回成只給提示就改。往後修 bug 不替腦偷改值。
 6. **試驗場**（`~/code/playground`）：
-   - 樹在背景跑；fsm_ann 用 gemma、eca_bob 用 haiku、eca_cody 用 gpt-6-luna，對話都是空的；fsm 41 支、eca 37 支。
+   - 樹在背景跑；fsm_ann 用 gemma、eca_bob 用 haiku、eca_cody 用 gpt-6-luna，對話都是空的；fsm 41 支、eca 35 支。
    - 怎麼起：`cd ~/code/playground && source env.sh && cd ws`，`aos-agent chat -t fsm_ann`。停：`aos-daemon-ctl -d ~/code/playground/.stack shutdown`。
    - proxy 已重起，4000 有 6.1 的 sol 和 terra。
 7. **明天要做**：
-   - knowledge 整套改回 memory。
+   - knowledge 整套改回 memory，順便施工 root 收檔案和 json 物件（設計在 04）。
    - 接外部 MCP 第一階段。
    - 線 K 剩兩件：gitignore 漏列（fork 的 children state、`subagents.json`）、`history_removed.jsonl` 絕對路徑可能外洩。
    - 公司 proxy 要加 6.1 條目。
