@@ -70,6 +70,7 @@ class SelfLlm(unittest.TestCase):
                            ({"op": "show"}, "OpUnknown"),
                            ({"op": "set", "settings": {"a=b": "c"}}, "set needs settings"),
                            ({"op": "ls", "settings": {}}, "does not take settings"),
+                           ({"op": "set", "settings": {"system": "be nice"}}, "change your system text with self_system"),
                            ({"op": "nope"}, "OpUnknown")):
             r = self.run_tool(args)
             self.assertEqual(r.returncode, 1, args)

@@ -1,4 +1,4 @@
-"""Test aos-agent system on a fake daemon table (11-11 self-system): get / get -l / get --json, set from stdin and from a file, empty text, reset, missing and bad declarations, and llm set system warning."""
+"""Test aos-agent system on a fake daemon table (11-11 self-system): get / get -l / get --json, set from stdin and from a file, empty text, reset, missing and bad declarations, and llm set system refused (11-11 ruling: error and point here)."""
 import json
 import os
 from pathlib import Path
@@ -107,9 +107,14 @@ class System(unittest.TestCase):
         self.assertNotIn("codex keeps", self.agent("set", stdin="x").stderr)
 
     def test_llm_set_system_points_here(self):
-        r = self.agent("set", "system=be nice", sub="llm")
-        self.assertIn("system is not a brain setting: change the system text with aos-agent system set", r.stderr)
-        self.assertEqual(r.stderr.count("warning:"), 2)                # that one and "created ..."; not the llm_keys one
+        # 11-11 使用者翻案「報錯並指路」：不存、錯誤行指到 aos-agent system
+        r = self.agent("set", "model=m", "system=be nice", sub="llm", ok=False)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("aos-agent: error: ArgumentsBad system is not a brain setting: change the system text with aos-agent system set", r.stderr)
+        self.assertTrue(r.stderr.rstrip().endswith("set [FILE | -])"), r.stderr)
+        self.assertNotIn("warning:", r.stderr)
+        self.assertFalse((self.stack / "llm.json").exists())          # 一鍵都沒存（連同一次給的 model）
+        self.assertEqual(self.agent("set", "model=m", sub="llm").returncode, 0)   # 其他鍵照舊
 
 
 if __name__ == "__main__":

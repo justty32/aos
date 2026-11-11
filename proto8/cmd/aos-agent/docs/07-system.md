@@ -33,4 +33,4 @@ aos-agent system reset [-y]             # 刪自己那份；終端會問、-y �
 
 沒給動作＝`get`。`set` 不給檔而 stdin 是終端＝`ArgumentsBad`（不卡住等你打字）。畫面開著時 `set`／`reset` 照做，stderr 一行提醒「要重開畫面才生效」。同一份定義掛了別的名字時提醒「只改了這隻的」（同 `llm`）。
 
-`llm set system=…` 不是改 system：照存（`llm` 不擋），但 stderr 一行提醒改用 `aos-agent system`（`self_llm` 把這句也給腦看）。
+`llm set system=…` 不是改 system：`ArgumentsBad`、什麼都不存（同一次給的別的鍵也不存），錯誤行指到 `aos-agent system set`；`self_llm` 給 `settings.system` 同樣 `ArgumentsBad`、指到 `self_system`（11-11 使用者翻案「報錯並指路」，原代定照存＋提醒，[backlog-rulings](../../../thinking/2026-11/11/backlog-rulings.md)）。

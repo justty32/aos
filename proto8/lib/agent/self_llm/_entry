@@ -5,7 +5,8 @@
 # 11-10 晚使用者「換」：show 換成 ls（比照 tools，可要長版）、加 rm（只拿掉自己改的某幾鍵）。
 # 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"set"|"rm"|"reset", …}；別的鍵＝ArgumentsBad：
 #   ls {long?}                   ＝llm ls（印 KEY=VALUE 一行一個，定義疊這隻改過的）；long: true＝llm ls -l（多一欄 definition｜agent）
-#   set {settings: {KEY: VALUE}} ＝llm set KEY=VALUE…（值是字串；認哪些鍵由身體決定，例 model；身體不讀的鍵照存、warning 那行也印進 stdout 給腦看）
+#   set {settings: {KEY: VALUE}} ＝llm set KEY=VALUE…（值是字串；認哪些鍵由身體決定，例 model；身體不讀的鍵照存、warning 那行也印進 stdout 給腦看；
+#     鍵 system＝ArgumentsBad、指到 self_system、不叫下層，11-11 使用者翻案「報錯並指路」）
 #   rm {keys: [KEY…]}            ＝llm rm KEY…（回到定義的值）
 #   reset {}                     ＝llm reset -y（腦叫了就算確認過）
 #   先 aos-agent ctl who（$AOS_STACK＝<agent stack>/tools/self_llm/ 查 daemon 表）認出是哪隻；aos-agent 在 $AOS_WS 跑。
@@ -106,6 +107,9 @@ if op == "set":
     s = args.get("settings")
     if not isinstance(s, dict) or not s or not all(isinstance(k, str) and k and "=" not in k and isinstance(v, str) for k, v in s.items()):
         die("ArgumentsBad", "set needs settings: an object of strings, like {\"model\": \"smart-high\"}")
+    if "system" in s:                           # 11-11 使用者翻案「報錯並指路」：不叫下層、不存（thinking/2026-11/11/backlog-rulings.md）
+        die("ArgumentsBad", "system is not a brain setting: change your system text with self_system "
+            "({\"op\": \"set\", \"text\": \"...\"}); nothing stored")
     cmd += ["%s=%s" % (k, s[k]) for k in s]
 elif op == "ls":
     if args.get("long"):
