@@ -1,0 +1,1 @@
+{"summary":"Check the stock knowledge base for broken paths, orphans, missing nodes, unknown error codes, leftovers and sizes without modifying files.","resource":["cpu","disk"],"side_effect":false,"idempotent":true,"deterministic":true,"interrupt":"restartable","parallel":true}

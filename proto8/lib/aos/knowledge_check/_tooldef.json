@@ -1,0 +1,15 @@
+{
+  "description": "Check the stock knowledge base without changing it: paths resolve, indexes match contents, every packed tool and aos command has its own node, declared error codes, development leftovers and sizes. One problem per line, then the total.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "root": {"type": "string", "description": "Knowledge base root. Default: HOME/knowledge. Relative paths start at AOS_WS, else the current directory."},
+      "home": {"type": "string", "description": "The proto8 folder whose lib/packs, cmd, impls, templates and kernel are checked. Default: AOS_HOME, else the proto8 this tool is in."},
+      "only": {"type": "array", "items": {"type": "string", "enum": ["refs", "index", "tools", "cmds", "impls", "codes", "residue", "size"]}, "description": "Run only these checks. Default: all."},
+      "json": {"type": "boolean", "description": "Print one JSON object (problems, errors, warnings) instead of lines."},
+      "max_file_bytes": {"type": "integer", "description": "Size warning above this many bytes per .json file. Default: 8192."},
+      "max_text_bytes": {"type": "integer", "description": "Size warning above this many bytes per text value. Default: 1024."}
+    }
+  },
+  "errors": ["ArgumentsBad", "HomeBad", "KnowledgeBad", "CheckFailed"]
+}
