@@ -18,7 +18,7 @@ eca-claude/
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__peek_now_time…；帶 `--own <stack>/tools.json`，self_tools 加減工具後 aos-mcp 送 list_changed，同一輪就叫得到，11-10 深夜「3.同一輪就生效」）；不要工具就刪掉它
   children.json 工具 subagent 的配額設定：{"max_children": 4}（這隻最多同時生幾隻；這隻的 stack 裡放一份 children.json 只寫改過的鍵＝覆蓋；誰是我生的另記在 stack 的 tools/subagent/children.json）
   interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model"], "history": "history.jsonl", "hooks": "hooks.json"}}（11-04；hooks 鍵 11-10 晚加；history 鍵 11-10 加，給 aos-agent history 找檔；llm_keys 11-10 晚加，aos-agent llm set 不在上面的鍵照存＋warning；aos-agent ctl add 只看這個宣告）
-  hooks.json  hook 清單（11-10 晚，空的 {"hooks": {}}；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
+  hooks.json  hook 清單（11-10 晚；11-11 起預設一格 timer：clock_due 每 300000 ms、handler lib/agent/hook_noop 什麼都不做；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
   screen/     子介面：_entry＝["aos-eca-screen", "--eca", ".."]（aos-agent open／close／watch 叫它；動作接在最後）
   README.md、_metainfo.json  首行一句話與 summary 一致；估時 cost.time_ms 60000、resource ["llm"]，沒有頂層 timeout_ms（11-10 晚補，讓 agent_def check 過）
 ```
@@ -50,6 +50,8 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 | `before_tool`（可改 arguments、可攔）／`after_tool`（可改結果） | 只有經 aos-mcp 叫的 aos 工具 | aos-mcp 的 tools/call（cli_session 起它時帶 `--hooks <定義>`） |
 | `brain_failed` | 有（`name`＝`CliFailed`／`ReplyMissing`，交出去之後才算） | aos-eca-turn |
 | `tool_added` | 有（看這隻生效的 aos 登記檔，交出去之前比一次） | aos-eca-turn |
+| `after_start`／`after_stop`（11-11） | 有 | loop.json 的 `on_start`／`on_stop` → `lib/agent/hook_fire` |
+| `clock_due`（11-11，[clock-hook](../../thinking/2026-11/11/clock-hook/README.md)） | 有（每輪最開頭判，冷卻中、退讓的那輪也判；到了才起 handler） | aos-eca-turn |
 | CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos |
 
 hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停的，信留在 `queue/cur/`、history 不動，修好照問；aos-mcp 裡停的＝那次工具呼叫回錯（isError）給 CLI，不整支死。

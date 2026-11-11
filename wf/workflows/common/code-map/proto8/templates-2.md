@@ -12,6 +12,7 @@
 | [`agent-fsm/test_batch3.py`](../../../../../proto8/templates/tests/agent-fsm/test_batch3.py) | Verify daemon-managed fake-brain parent and child observations through public interfaces. |
 | [`agent-fsm/test_cells.py`](../../../../../proto8/templates/tests/agent-fsm/test_cells.py) | Verify task context, tool limits, and best-effort observations with local fake commands. |
 | [`agent-fsm/test_clock_hook.py`](../../../../../proto8/templates/tests/agent-fsm/test_clock_hook.py) | Test the 11-11 hook events: clock_due (hooks.clock_tick in the cells), after_start / after_stop (lib/agent/hook_fire). |
+| [`agent-fsm/test_clock_hook_daemon.py`](../../../../../proto8/templates/tests/agent-fsm/test_clock_hook_daemon.py) | Acceptance on a real root daemon (no brain needed): after_start / after_stop on start, stop, sleep, wake, kill -9 + auto_restart, rm; clock_due with … |
 | [`agent-fsm/test_cooldown.py`](../../../../../proto8/templates/tests/agent-fsm/test_cooldown.py) | Verify the wait cell's cooldown after outside failures (two-machines 06) with a fake aos-llm on PATH. |
 | [`agent-fsm/test_hooks.py`](../../../../../proto8/templates/tests/agent-fsm/test_hooks.py) | Test the hooks of agent-fsm (lib/agent/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added. |
 | [`agent-fsm/test_integration.py`](../../../../../proto8/templates/tests/agent-fsm/test_integration.py) | Verify agent cells through the real local kernel, llm_fake endpoint, and peek_now_time tool. |

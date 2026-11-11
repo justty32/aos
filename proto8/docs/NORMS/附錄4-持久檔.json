@@ -31,7 +31,7 @@
    "reader": "aos-loop",
    "image": "看情況：定義＝原始碼、不算 image（C-79）；定義放在 ws 裡就跟 ws 走",
    "on_bad": "不是物件、exec 形狀錯＝CfgBad 退 1；不認得的 key 忽略（stuck_after_ticks 這種舊名＝用預設）",
-   "note": "",
+   "note": "11-11 clock-hook 加選填 on_start、on_stop（寫法同 exec，起來、要退時各跑一次）與 on_timeout_ms（正整數，預設 5000；壞＝CfgBad）；agent 範本兩格指到 lib/agent/hook_fire。加法、不用重建",
    "evidence": "proto8/impls/aos-loop/src/engine/config.cpp:49、proto8/impls/aos-loop/src/engine/config.cpp:196"
   },
   {
@@ -623,6 +623,16 @@
    "on_bad": "讀不了＝SystemBad（aos-agent）；空檔＝空文字（不是回到定義那份）",
    "note": "11-11 self-system 新增：整份文字、不是差異，在就蓋過定義那份；reset＝刪檔。新檔，不用重建",
    "evidence": "proto8/cmd/aos-agent/aos_agent/system.py、proto8/lib/agent/self_system/_entry"
+  },
+  {
+   "path": "$AOS_STACK/hooks/<名>/clock_due.json",
+   "lifetime": "暫時",
+   "writer": "lib/agent/hooks.py（clock_tick；agent-fsm 四格、aos-eca-turn）",
+   "reader": "同左",
+   "image": "不進：在 hooks/ 小格裡，stack.gitignore 的 **/hooks/ 擋（G092）",
+   "on_bad": "不在、壞了、時鐘換了＝當第一次：只記基準、不跑；寫不了＝warning、這次不跑",
+   "note": "11-11 clock-hook 新增：{clock: 時鐘檔絕對路徑, cycle: 上次跑（或基準）時的 cycle, warned?: 上次印過的找不到時鐘原因}；換台後不在＝重記基準。新檔，不用重建",
+   "evidence": "proto8/lib/agent/hooks.py（clock_tick、_state、_put_state）"
   }
  ]
 }

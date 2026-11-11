@@ -7,7 +7,7 @@
 <!-- wf-nav -->
 | 日期 | 這天定下了什麼 | 全文 |
 |------|------|------|
-| 2026-11-11 | 定：工具 `agents_children` 改名 `subagent`、舊名不留；公司機真腦一律走 eca、agent-fsm 真腦回家測；agent 能改自己的 system 文字（aos-agent system＋self_system：fsm 取代、eca 附加、只給 reset）；人的信箱預設 ~/.aos/stack | [2026-11-11](2026-11/2026-11-11.md) |
+| 2026-11-11 | 定：工具 `agents_children` 改名 `subagent`、舊名不留；公司機真腦一律走 eca、agent-fsm 真腦回家測；agent 能改自己的 system 文字（aos-agent system＋self_system：fsm 取代、eca 附加、只給 reset）；人的信箱預設 ~/.aos/stack；hook 加起來／停下與照時鐘觸發的 `clock_due`（格裡寫條件、到了才跑、不進 history），時鐘登記＋專用信箱那套不做 | [2026-11-11](2026-11/2026-11-11.md) |
 | 2026-11-10 | 定：arcagi 停線、等 aos 大修完再續；今天公司以討論為主、不 push、下班前統一 push；兩台輪流＝git 過去一行起根接著跑、路徑三種寫法、`aos-image` 不做、/mnt/c 可放、kernel 不在不停；晚上（家機）七條線收攏進 main：agent 能看改自己（self_*）、互寄信（mailbox）、被時鐘寄信叫醒、生子並調它（agents_children）、讀寫純 JSON 記憶庫；小模型裝不下工具說明＝調 LM Studio 的 context | [2026-11-10](2026-11/2026-11-10.md#2026-11-10) |
 | 2026-11-09 | 定：時鐘一律改名 clock、單位 cycle（`_clock`、`AOS_CLOCK`、`aos-clock`、`*_cycles`）；熱寫檔有變才寫、state 的回音欄拆到 `state_flux.json`；daemon 中斷只做訊號門鈴 `aos-daemon-ctl poke`（預設 `--ctl`、SIGUSR1／2 一律擋，socket／搶占不做）；daemon 不認鐘、鐘＝根的一列普通 proc（子 daemon 預設聽外層）；格式版本機制等使用者主持的大修之後才轉正，現在只埋種子（狀態檔讀不了改名留證＋warning、`.bad-*` 進 gitignore 不自動清）；大修材料放桌面不進 repo、不凍結核心、跟著 main；公司 WSL 試驗場改三層、程式改用 `~/repo/aos-tools` | [2026-11-09](2026-11/2026-11-09.md#2026-11-09) |
 | 2026-11-07 | 定：aos-daemon-ctl 一律直寄 daemon、aos-agent 經判官，判官睡著由設計系統的人管理、手動叫醒；sol 審查 32 題依使用者裁定（判官範本開排隊、保有序可選且預設關、短旗標各支自定、給 LLM 看的也英文）；gpt 系不做設計決策與架構規劃，施工／文件／網頁／雜活優先派 gpt；知識庫節點英文、內文照語料原文，給人看走附屬白話庫或問答 agent，evidence 不搬、格式過檢查即 commit、一致率只記；os-impl 09 先選 A，後以 daemon 裁定 B 翻「失敗下表」：任意 proc stop 寫公開 ctl、已知非 0 留 stopped、收工 sleeping；edge-1107 四題已裁（超大秒數直接報錯、狀態檔壞了只補文件、判官先標完成、aos-tick 暫存檔加 pid） | [2026-11-07](2026-11/2026-11-07.md#2026-11-07) |

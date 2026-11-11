@@ -36,7 +36,7 @@
 | [`cli/tool_env.json`](../../../../../proto8/knowledge/aos/cli/tool_env.json) | （檔頭沒有一句話） |
 | [`cli/tool_flags.json`](../../../../../proto8/knowledge/aos/cli/tool_flags.json) | （檔頭沒有一句話） |
 | [`cli/tools.json`](../../../../../proto8/knowledge/aos/cli/tools.json) | （檔頭沒有一句話） |
-| [`clock.json`](../../../../../proto8/knowledge/aos/clock.json) | 設定（鍵：_description、_index、wake_me、rules） |
+| [`clock.json`](../../../../../proto8/knowledge/aos/clock.json) | 設定（鍵：_description、_index、wake_me、rules、quiet_timer） |
 | [`errors.json`](../../../../../proto8/knowledge/aos/errors.json) | 設定（鍵：_description、_index、codes、common） |
 | [`knowledge.json`](../../../../../proto8/knowledge/aos/knowledge.json) | （檔頭沒有一句話） |
 | [`mailbox.json`](../../../../../proto8/knowledge/aos/mailbox.json) | 設定（鍵：_description、_index、tools、rules） |

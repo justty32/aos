@@ -34,11 +34,11 @@
 
 5. **試驗場狀態**：`~/code/playground` 是 22:15 刷的（備份 `.bak-1110-2215`），停在改名與列表短版之前——`self_tools ls` 會 FlagUnknown、litellm 要 `export LITELLM_KEY=sk-none`、定義指舊名 `memory_*`。刷新腳本 [tonight/03](../proto8/thinking/2026-11/10/tonight/03-試驗場刷新.md) 已對上最終狀態、22:51 在新複本上跑過（兩隻 34 支、gemma 叫 knowledge_read 對）；**補刷原件等使用者**（WAIT_USER 第一條）。
 6. **還待裁**：
-   - 小模型寫不出 `$` 開頭的鍵：`self_tools`、`self_hook` 的 `path_json` 要不要給一條不用 `$` 鍵的路。
-   - act 附給腦的 stderr 尾巴仍帶下層 CLI 句（C-52 例外的結構）。
-   - hook：`after_queue` 停下後那封信晾著要不要補；要不要寫進 CONVENTION；要加哪些事件。
+   - ~~小模型寫不出 `$` 開頭的鍵~~（11-11 已裁：`$` 鍵不動）。
+   - ~~act 附給腦的 stderr 尾巴~~（11-11 已裁：維持）。
+   - ~~hook 三題~~（11-11 已裁）：after_queue 晾著的信「不補」；CONVENTION「先不寫」；事件選「起來與停下」，之後又加了照時鐘觸發的 `clock_due`（「hook就可以添加一個類型，就是loop每次exec前和exec後……」），施工見 [clock-hook](../proto8/thinking/2026-11/11/clock-hook/README.md)。
    - ~~mailbox：人的預設 stack 是不是就 `~/.stack`。~~ **11-11 已裁**：`~/.aos/stack`（使用者「改成帶 aos 字樣的位置」→「~/.aos/stack」，`09709c6ac`）。
-   - clock：agent 被刪時它登記的項不會跟著清（每 100 cycle 自檢只清箱子已不在的）。
+   - ~~clock 殘留~~（11-11 已裁：「交給自檢吧。如果要順手清的話，就是aos-agent ctl rm與另一個功能有耦合了。」；之後改向成 hook 的 `clock_due`，時鐘寄信那組「啊，不要拿掉好了，先留著」原樣不動）。
    - `agents_ctl` 能 rm 別人帳上的子。
    - tools_def「之後可加」的幾項（[tools-def](../proto8/thinking/2026-11/10/tools-def/README.md)）。
 7. **WAIT_USER 新加／改**：試驗場補刷、`~/.cache/aos-mcp-aos/tools.json` 跟上改名（照抄 sed 一行）、eca 信任選單要手動信任一次、hook 線 eca haiku 真對話（agent 不代跑）。
