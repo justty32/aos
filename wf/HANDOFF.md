@@ -12,6 +12,18 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-11 上午 公司頂層（compact 前斷點）
+
+1. **授權（這個 session）**：公司機（Windows＋WSL Ubuntu）。push：使用者「下班前再推」＝今天各線只本地 commit，他開口才 `git push origin main`。模型：普通工作 opus、簡單與雜活 sonnet，頂層只跟使用者交流；非雜活的 agent 開工前先通讀 wf/。真腦驗收：「公司有lmstudio，但只有破爛小模型。所以建議都使用eca，實際的loop fsm agent需要回家測。」「eca這塊，除了claude haiku之外，也試試看code gpt luna」（codex `gpt-6-luna`）。codex 只對 aos 那組 MCP 工具免核准（使用者選項框親裁；不加任何整體繞過核准／沙箱的旗標、不改 `~/.codex`）。要他裁的小題用選項框問（「需要我裁的小題，跳選項給我」）。
+2. **三份 clone 現況**：
+   - WSL `~/repo/aos-tools`＝這台 `~/.local/bin` 與 pth 指的那份，也是試驗場用的程式；HEAD 是本條 handoff 的 commit（底下是 `39f35f913`），本地領先 origin，沒 push。
+   - WSL `~/repo/simple_tools/aos`＝**線 C 施工中**（opus 隊長，背景 agent）：階段一 children 系改名（包名 `subagent`、`subagents.json`、`max_subagents`、`Subagent*` 代號、輸出 `subagents N/MAX`；`agents_ctl`／`agent_def` 不動），階段二知識庫修整與補全（檢查腳本、必修七處、`knowledge_write` 不給預設庫、`thought` 進 gadgets 包、每支工具與指令都有節點、大小只是推薦值一檔約 8 KB 一段約 1 KB）。它從 `39f35f913` 起、不 push、不碰另一份。
+   - Windows `C:\code\mine\simple_tools\aos`＝還停在 `0edfee455`，工作樹裡的 `wf/HANDOFF.md` 是手抄的本條（沒 commit）；下班 push 後先 `git checkout wf/HANDOFF.md` 再 `git pull`。
+3. **線 C 回來後頂層要做**（使用者說他先不玩，所以不用等他）：核對回報 → 在 `~/repo/aos-tools` 執行 `git pull --rebase ~/repo/simple_tools/aos main`（HANDOFF 衝突兩邊都留）→ 派人照 [playground/01](../proto8/thinking/2026-11/11/playground/01-公司刷新與驗收.md) 重刷 `~/code/playground`（包名、配額檔改了，舊定義對不上；先備份）並驗一輪 → 告訴使用者可以玩 → 把線 C 的待裁題用選項框攤給他 → 另一份 clone 快轉同步。
+4. **今天已進本地 main**：`b94f845bd` agents_children→subagent；`494d8312e` `aos-agent system`＋`self_system`（fsm 取代、eca 附加、只給 reset）；`09709c6ac` 人的信箱預設 `~/.aos/stack`＋`aos-mailbox` 啟動檔進 git；`849147f7a` codex 接得上 aos 工具；`2c8476fbd` aos-loop `on_start`／`on_stop`；`d0cb69b69`、`af6ea3035` hook 事件 `after_start`／`after_stop`／`on_clock`（每 N 格或 N 毫秒、起來先觸發一次、帶 `first`）；範本預設一格 `timer` 每 5 分鐘什麼都不做；`39f35f913` 公司試驗場刷新（`fsm_ann` 假腦、`eca_bob` haiku、`eca_cody` luna，停著，備份 `~/code/playground.bak-1111-1024`）。原話與裁定在 [thinking 11-11](../proto8/thinking/2026-11/11/)（`subagent-rename.md`、`self-system/`、`clock-hook/`、`playground/`）。
+5. **今天裁掉、不用再問的**：`$` 開頭的鍵不動（「寫不出$的小模型本來就不適合aos體系。」）；stderr 尾巴維持；after_queue 晾著的信不補；hook 先不寫進 CONVENTION；時鐘登記／時鐘寄信／`clock_register` 整組先留著不動（「啊，不要拿掉好了，先留著」）；純每拍前後事件先不做；開場只帶知識庫目錄；codex 改 system 只提醒不自動開新對話。專用信箱＋`mail_arrived` 那套設計已被 on_clock 取代，記錄不做。
+6. **還開著的**：代定清單在 [self-system/02](../proto8/thinking/2026-11/11/self-system/)（剩 9 條）、[clock-hook/02](../proto8/thinking/2026-11/11/clock-hook/)；有幾個錯誤代號不落在 C-54 的結尾表（條文題，待裁，線 C 會列）；使用者問「fsm_ann 的 stack 底下 tools 為何一堆空資料夾」已答（每支被叫過的工具各有一個小格 `<stack>/tools/<名>/`，`aos-tools call` 建的，不存東西的工具就是空的），要不要改成「工具真的寫東西才建」沒裁；`aos-tools call` 錯誤行開頭印 `ls: error:` 重現不出來；fsm 真腦各項、codex 畫面模式、每 5 分鐘跑一晚＝回家測；使用者回家 pull 前要先移走家機沒進 git 的 `proto8/cmd/aos-mailbox/bin/aos-mailbox`（WAIT_USER 有寫）；`/tmp/aos-clockhook-*`、`/tmp/lineB-*` 殘留要使用者自己刪。
+
 ## 2026-11-10 深夜 家機總整合（收工）
 
 1. **授權**：家機（Manjaro）、今晚隨意 push（只有 main）；子 agent 普通 opus、雜活 sonnet；eca 一律 haiku。不動 `~/code/playground`（使用者的樹可能開著）、`~/code/playground-ak5`、repo 外的檔、`impl_cpp/`。使用者最後一句：「弄一弄，按照wf/規矩整理收拾，push上去後，我就要關機睡覺了」。
