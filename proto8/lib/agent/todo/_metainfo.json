@@ -1,0 +1,14 @@
+{
+  "summary": "My own to-do list (ls, set, add, mark), kept in my tool cell todo.json; every op prints the whole list",
+  "resource": "disk",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 30
+  },
+  "timeout_ms": 2000
+}

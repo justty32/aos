@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+# todo - 這隻 agent 自己的待辦清單：ls、set、add、mark；存在自己的小格 $AOS_STACK/todo.json（第一次寫才建），每個 op 都印整張
+# 使用者 11-11：「todo/goal也一起做吧」；選項框 T1「不帶，腦自己查」（不動 brain.py／範本：清單不自動帶進 prompt）、T2「各自獨立」
+#   （子 agent、do_task 的小幫手各有自己的 stack，清單天生分開）；設計稿與代定 D1～D9 在 thinking/2026-11/11/new-tools/02-todo.md。
+# 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"set"|"add"|"mark", …}；該 op 不收的鍵＝ArgumentsBad：
+#   ls {json?}                  ＝印清單（json: true＝{"items": [{n, text, status}], "counter_completed", "updated_at"}）
+#   set {items}                 ＝整張換掉；items＝字串或 {text, status?} 的陣列（可混用；沒寫 status＝pending；[]＝清空）
+#   add {text, after?}          ＝加一項；after＝接在第幾項後面（0＝最前面；沒給＝最後）
+#   mark {n, status}            ＝改第 n 項（從 1）的狀態
+#   狀態：pending、in_progress、completed。上限 50 項、每項 300 字元、一行（超過＝ArgumentsBad，不偷偷截）。
+# 存檔：$AOS_STACK/todo.json＝{"items": [{text, status}], "updated_at": "ISO 8601 UTC 到毫秒"}（經 aos-tools call＝<agent stack>/tools/todo/）；
+#   不在＝空清單；寫＝mkdir -p $AOS_STACK、暫存檔＋改名（規則 6）。ls 從不寫、不建小格（tool-cells-lazy）。
+# 錯：stderr 與 stdout 各一行「todo: error: 代號 原因」、退 1：ArgumentsBad、OpUnknown、ItemMissing（n／after 不在清單上，訊息帶現有幾項）、
+#   StatusUnknown、ListBad（存檔壞了：ls／add／mark 報，set 照寫＝修好）、ReadFailed、WriteFailed、StackMissing。
+import datetime, json, os, sys
+HELP = """\
+usage: todo < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_STACK is its own cell)
+Your to-do list: op ls | set | add | mark. Every op prints the whole list:
+  1 [x] read the config format
+  2 [>] write the parser
+  3 [ ] add tests
+  ... 1 of 3 completed
+[x] completed, [>] in_progress, [ ] pending. Kept in $AOS_STACK/todo.json (made on the first write;
+ls never writes). At most 50 items of at most 300 characters, one line each.
+Result on stdout. On error: one line "todo: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "todo"
+tool_io.start(NAME, HELP)
+die = tool_io.die
+FILE = "todo.json"
+STATUSES = ("pending", "in_progress", "completed")
+MARKS = {"pending": "[ ]", "in_progress": "[>]", "completed": "[x]"}
+MAX_ITEMS, MAX_TEXT = 50, 300                    # 代定 D9
+OPS = {"ls": ("json",), "set": ("items",), "add": ("text", "after"), "mark": ("n", "status")}
+
+
+def whole(v):
+    return isinstance(v, int) and not isinstance(v, bool)
+
+
+def status_of(v, where):
+    if v not in STATUSES:
+        die("StatusUnknown", "%s must be one of %s (got %s)" % (where, ", ".join(STATUSES), json.dumps(v)))
+    return v
+
+
+def text_of(v, where):
+    if not isinstance(v, str) or not v.strip():
+        die("ArgumentsBad", "%s must be a non-empty string" % where)
+    v = v.strip()
+    if "\n" in v or "\r" in v:
+        die("ArgumentsBad", "%s must be one line (no line breaks)" % where)
+    if len(v) > MAX_TEXT:
+        die("ArgumentsBad", "%s has %d characters; at most %d (write it shorter, nothing is cut)" % (where, len(v), MAX_TEXT))
+    return v
+
+
+def load(path):
+    """存檔 → (items, updated_at)；不在＝([], None)；壞了＝ListBad（set 不叫這個）。"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        return [], None
+    except ValueError as e:
+        die("ListBad", "the saved list %s is not JSON (%s); set writes a new whole list" % (path, e))
+    except OSError as e:
+        die("ReadFailed", "cannot read %s: %s" % (path, e))
+    items = data.get("items") if isinstance(data, dict) else None
+    ok = isinstance(items, list) and all(isinstance(x, dict) and isinstance(x.get("text"), str) and x.get("status") in STATUSES
+                                         for x in items)
+    if not ok:
+        die("ListBad", "the saved list %s is broken (need {\"items\": [{\"text\", \"status\"}]}); set writes a new whole list" % path)
+    return [{"text": x["text"], "status": x["status"]} for x in items], data.get("updated_at")
+
+
+def save(cell, path, items):
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    tmp = os.path.join(cell, ".%s.%d.tmp" % (FILE, os.getpid()))
+    try:
+        os.makedirs(cell, exist_ok=True)         # 小格第一次寫才建（tool-cells-lazy）
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps({"items": items, "updated_at": stamp}, ensure_ascii=False) + "\n")
+        try:
+            os.chmod(tmp, os.stat(path).st_mode & 0o7777)   # 留住原檔權限（規則 6）
+        except FileNotFoundError:
+            pass
+        os.replace(tmp, path)
+    except OSError as e:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        die("WriteFailed", "cannot write %s: %s" % (path, e))
+    return stamp
+
+
+def show(items, updated_at, as_json):
+    done = sum(1 for x in items if x["status"] == "completed")
+    if as_json:
+        print(json.dumps({"items": [{"n": i, "text": x["text"], "status": x["status"]} for i, x in enumerate(items, 1)],
+                          "counter_completed": done, "updated_at": updated_at}, ensure_ascii=False))
+        return
+    if not items:
+        print("... empty (use set or add)")
+        return
+    for i, x in enumerate(items, 1):
+        print("%d %s %s" % (i, MARKS[x["status"]], x["text"]))
+    print("... %d of %d completed" % (done, len(items)))
+    busy = sum(1 for x in items if x["status"] == "in_progress")
+    if busy > 1:
+        print("... note: %d items are in_progress (keep at most one)" % busy)
+
+
+def item_number(v, key, count, low):
+    if not whole(v):
+        die("ArgumentsBad", "%s must be a whole number" % key)
+    if not low <= v <= count:
+        have = "the list is empty" if not count else "the list has %d item%s (1 to %d)" % (count, "" if count == 1 else "s", count)
+        die("ItemMissing", "%s %d is not on the list: %s; call ls to see it" % (key, v, have))
+    return v
+
+
+args = tool_io.arguments()
+op = args.get("op")
+if op is None:
+    die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
+if op not in OPS:
+    die("OpUnknown", "op must be one of %s (got %s)" % (", ".join(OPS), json.dumps(op)))
+extra = sorted(k for k in args if k != "op" and k not in OPS[op])
+if extra:
+    die("ArgumentsBad", "op %s does not take %s (it takes %s)" % (op, ", ".join(extra), ", ".join(OPS[op]) or "nothing else"))
+cell = os.environ.get("AOS_STACK")
+if not cell:
+    die("StackMissing", "AOS_STACK is not set (this tool's own cell; aos-tools call sets it)")
+path = os.path.join(cell, FILE)
+
+if op == "ls":
+    if "json" in args and not isinstance(args["json"], bool):
+        die("ArgumentsBad", "json must be true or false")
+    items, stamp = load(path)
+    show(items, stamp, args.get("json") is True)
+    sys.exit(0)
+
+if op == "set":
+    given = args.get("items")
+    if not isinstance(given, list):
+        die("ArgumentsBad", "set needs items: a list of strings or {\"text\", \"status\"} objects ([] clears the list)")
+    if len(given) > MAX_ITEMS:
+        die("ArgumentsBad", "items has %d entries; at most %d" % (len(given), MAX_ITEMS))
+    items = []
+    for i, x in enumerate(given):
+        where = "items[%d]" % i
+        if isinstance(x, dict):
+            bad = sorted(k for k in x if k not in ("text", "status"))
+            if bad:
+                die("ArgumentsBad", "%s does not take %s (it takes text, status)" % (where, ", ".join(bad)))
+            items.append({"text": text_of(x.get("text"), where + ".text"),
+                          "status": status_of(x["status"], where + ".status") if x.get("status") is not None else "pending"})
+        else:
+            items.append({"text": text_of(x, where), "status": "pending"})
+else:
+    items, _ = load(path)
+    if op == "add":
+        text = text_of(args.get("text"), "text")
+        if len(items) >= MAX_ITEMS:
+            die("ArgumentsBad", "the list already has %d items, the most it can hold; set a shorter list" % MAX_ITEMS)
+        at = item_number(args["after"], "after", len(items), 0) if "after" in args else len(items)
+        items.insert(at, {"text": text, "status": "pending"})
+    else:
+        if "n" not in args:
+            die("ArgumentsBad", "mark needs n (the item number, from 1)")
+        if args.get("status") is None:
+            die("ArgumentsBad", "mark needs status (%s)" % ", ".join(STATUSES))
+        n = item_number(args["n"], "n", len(items), 1)
+        items[n - 1]["status"] = status_of(args["status"], "status")
+
+show(items, save(cell, path, items), False)

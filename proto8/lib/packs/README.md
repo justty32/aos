@@ -11,12 +11,13 @@
 | 3 刪 | [delete.json](delete.json) | trash（丟進工作區 `.trash/`，可搬回）、remove（真的刪） |
 | 4 殼 | [shell.json](shell.json) | shell（bash 一行指令）、run_python |
 
-## 其他八包（兩個範本都預設開）
+## 其他九包（兩個範本都預設開）
 
 | 包 | 檔 | 工具 |
 |---|---|---|
 | 小工具 | [gadgets.json](gadgets.json) | peek_clock（daemon 時鐘第幾 cycle）、peek_now_time（UTC 時間）、math（算一個式子）——不改任何東西、隨手看一下；do_task（派一件小事給用完即走的子 agent、只拿回短結論；11-11 使用者「放進某一包」→「小工具那包」） |
 | 事件 | [events.json](events.json) | clock_register（時鐘定期寄信）、self_hook（自己身上發生事時叫的勾子） |
+| 待辦 | [todo.json](todo.json) | todo（自己的待辦清單：ls、set、add、mark；存自己的小格 `tools/todo/todo.json`，不自動帶進 prompt、腦自己 ls；11-11 使用者「todo/goal也一起做吧」、T1「不帶，腦自己查」，[new-tools 04](../../thinking/2026-11/11/new-tools/04-施工結果.md)） |
 | 自我管理 | [self.json](self.json) | self_tools、self_llm、self_system、self_state、self_ctl、self_history |
 | 子 agent | [subagent.json](subagent.json) | subagent（自己生的）、agents_ctl（daemon 上任何一隻） |
 | 定義 | [def.json](def.json) | agent_def、tools_def（從 Python 骨架做新工具、檢查工具；11-10 深夜使用者「3.對」） |

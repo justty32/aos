@@ -653,6 +653,16 @@
    "on_bad": "不在、壞了＝當作都沒通知過：信箱裡還沒讀的通知一次；寫不了＝WriteFailed（hook on_error continue＝一行 warning）",
    "note": "11-11 mail-notify 新增：JSON 陣列，已通知過、還在 mailbox/new/ 的信名（讀掉的下次就拿掉）；事件 first 時不讀它。新檔，不用重建",
    "evidence": "proto8/lib/agent/mail_notify/_entry"
+  },
+  {
+   "path": "$AOS_STACK/tools/todo/todo.json（自己的待辦清單）",
+   "lifetime": "持久",
+   "writer": "lib/agent/todo",
+   "reader": "lib/agent/todo",
+   "image": "進：agent 正在做的步驟，跟 history 一起走（stack.gitignore 沒擋 tools/）",
+   "on_bad": "不在＝空清單；不是 JSON 或形狀不對＝ls／add／mark 報 ListBad 退 1、set 照蓋（＝修好）；讀不了＝ReadFailed；寫不了＝WriteFailed",
+   "note": "11-11 todo 新增：{items: [{text, status（pending／in_progress／completed）}], updated_at（ISO 8601 UTC 到毫秒，例 2026-11-11T06:06:24.298Z）}；第一次寫才建小格（ls 不建）；登記名不是 todo 時小格跟著改名、是另一份清單。新檔，不用重建",
+   "evidence": "proto8/lib/agent/todo/_entry"
   }
  ]
 }

@@ -91,6 +91,7 @@
 | [`tools/run_python.json`](../../../../../proto8/knowledge/aos/tools/run_python.json) | 設定（鍵：_description、_index、rules、errors） |
 | [`tools/shell.json`](../../../../../proto8/knowledge/aos/tools/shell.json) | 設定（鍵：_description、_index、rules、errors） |
 | [`tools/stat.json`](../../../../../proto8/knowledge/aos/tools/stat.json) | 設定（鍵：_description、_index、errors） |
+| [`tools/todo.json`](../../../../../proto8/knowledge/aos/tools/todo.json) | 設定（鍵：_description、_index、ops、where、errors） |
 | [`tools/trash.json`](../../../../../proto8/knowledge/aos/tools/trash.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/view.json`](../../../../../proto8/knowledge/aos/tools/view.json) | 設定（鍵：_description、_index、examples、errors） |
 | [`tools/write.json`](../../../../../proto8/knowledge/aos/tools/write.json) | 設定（鍵：_description、_index、errors） |

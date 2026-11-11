@@ -21,6 +21,7 @@
 | [`self.json`](../../../../../proto8/lib/packs/self.json) | Pack self: look at and change yourself - self_tools, self_llm, self_system, self_state, self_ctl, self_history. |
 | [`shell.json`](../../../../../proto8/lib/packs/shell.json) | Pack 4 (shell): tools that run any command or program - shell (bash) and run_python. |
 | [`subagent.json`](../../../../../proto8/lib/packs/subagent.json) | Pack subagent: other agents - subagent (ones you start yourself), agents_ctl (any agent on the daemon). |
+| [`todo.json`](../../../../../proto8/lib/packs/todo.json) | Pack todo: your own to-do list for a long task - todo (ls, set, add, mark); kept outside your history, call ls to see it again. |
 
 ## `proto8/lib/tests/`
 

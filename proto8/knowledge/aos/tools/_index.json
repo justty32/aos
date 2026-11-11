@@ -59,6 +59,9 @@
  "math.json": {
   "_description": "Tool math: compute one arithmetic expression; what is allowed, examples, ExprBad."
  },
+ "todo.json": {
+  "_description": "Tool todo: your own to-do list for a long task (ls, set, add, mark); kept outside your history."
+ },
  "goal.json": {
   "_description": "Tool goal: your goal, reminded when you stop by yourself; set, done, pause, resume."
  }
