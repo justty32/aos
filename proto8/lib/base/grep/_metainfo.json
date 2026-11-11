@@ -1,0 +1,13 @@
+{
+  "summary": "Search file contents with a regular expression, like grep -rn, one page of matches at a time",
+  "resource": "disk",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 300
+  },
+  "timeout_ms": 30000
+}

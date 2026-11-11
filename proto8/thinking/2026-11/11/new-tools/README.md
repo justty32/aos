@@ -1,4 +1,4 @@
-# new-tools：要補的三樣工具（grep／glob、todo、MCP client）——設計稿，未施工
+# new-tools：要補的三樣工具（grep／glob、todo、MCP client）——grep／glob 已施工（11-11 線 K），MCP client 停在設計稿
 
 ← [2026-11-11](../README.md)｜[thinking](../../../README.md)
 
@@ -18,6 +18,7 @@
 |---|---|
 | [01 grep／glob](01-grep-glob.md) | 兩支 base 工具，純 Python 標準庫（這台沒有 ripgrep），進第 1 包「看」。輸出照 `ls`：一行一筆 `路徑:行號:那一行`、每次最多 100 筆、`offset` 翻頁、尾巴 `... ` 行說還有多少與跳過了什麼；跳過二進位、超過 8MB 的檔、隱藏檔、`.gitignore` 擋掉的；資料夾捷徑不跟進；20 秒或 2 萬個檔先到先停。約 1 天。 |
 | [02 todo](02-todo.md) | 一支 `todo`（`ls`／`set`／`add`／`mark`），存自己的小格 `tools/todo/todo.json`，每次都印整張。要「摘要後一定看得到」得讓 fsm 的 brain.py 每輪把清單（非空才）帶進 system，這要動範本，待裁。子 agent、do_task 各有 stack，清單天生分開。工具半天，自動帶再半天。 |
+| [04 施工結果](04-施工結果.md) | 11-11 線 K：使用者改口「啊，grep/glob得做」——grep、glob 兩支進 look 包（兩範本 38 支），共用 `lib/base/file_walk.py`；代定 E1～E10、待裁 2 題 |
 | [03 MCP client](03-mcp-client.md) | 一台伺服器匯入成一個包檔、每支外部工具＝一支 aos 工具；人用新指令 `aos-mcp-import` 連一次、凍結工具清單；每次叫才起伺服器、叫完收掉（stdio）。aos-tools／brain／act／aos-mcp 都不用改，eca 經 aos-mcp 自動有。外部說明加前綴、限長、凍結；JSON Schema 的 `$ref` 匯入時展開（不然會被當成 aos 指示詞）；金鑰走 env 檔。第一步 2～3 天；HTTP、sync、常駐排後面。 |
 
 ## 待裁總表
@@ -63,6 +64,8 @@
 同日稍後使用者：「mcp這塊先到這邊就好，不急著做。」——MCP client 停在設計稿，不排施工。
 
 同日稍後使用者：「grep/glob、todo也可以之後再做」——三樣新工具都停在設計稿與裁定，不排施工。
+
+再稍後使用者改口：「啊，grep/glob得做」——grep／glob 施工，結果見 [04](04-施工結果.md)。
 
 ## 建議施工順序
 

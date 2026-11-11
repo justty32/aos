@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+# glob - 照檔名樣式在一個資料夾底下找路徑（* ? [..] **，不含 / 的樣式＝任何深度的名字）：一行一個路徑、資料夾結尾加 /
+# 設計與裁定：thinking 2026-11-11 new-tools 01（G1 兩支、G2 純 Python、G3「預設跳過，問 git」；代定 D1～D8，D4 樣式明寫的 . 段算明指）。
+# 介面（lib/docs/01 契約）：stdin {"pattern", "path"?: ".", "type"?: file|dir|any, "sort"?: name|mtime, "hidden"?, "gitignore"?: true, "offset"?, "max_items"?: 100（1～500）}；
+#   stdout 一行一個路徑（照 tool_io.shown_path，可直接貼回 read／view／ls）；sort name＝照路徑（每層照名字）、mtime＝新的在前（同時照路徑）。
+#   尾巴行一律「... 」開頭：next_offset N (M paths in all)／(at least M paths)、skipped N unreadable、stopped（掃描預算）、no matches。
+# 走樹共用 lib/base/file_walk.py（隱藏、.gitignore、資料夾捷徑不跟進＝列出但不進、預算 20 秒或 2 萬項）。
+# 錯：stderr 與 stdout 各一行「glob: error: 代號 原因」、退 1：ArgumentsBad、PatternBad、FileMissing、FileBad、ReadFailed、WsMissing。
+import os, sys
+HELP = """\
+usage: glob < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Find paths by name pattern under a folder (relative paths start at $AOS_WS): * within one level,
+** any number of levels, ? one character; a pattern without / matches names at any depth.
+One path per line, folders end with /. Skips names starting with . and, in a git work tree, ignored paths.
+Result on stdout. On error: one line "glob: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib（與 lib/base 的共用模組），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib, os.path.join(_lib, "base")] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "glob"
+tool_io.start(NAME, HELP)
+die = tool_io.die
+try:
+    import file_walk  # noqa: E402
+except ModuleNotFoundError as error:
+    if error.name != "file_walk":
+        raise
+    die("ModuleMissing", "file_walk.py not in the tool folder, not in lib/base/, not on the Python path")
+
+LIMIT_DEFAULT, LIMIT_MAX = 100, 500
+TYPES, SORTS = ("file", "dir", "any"), ("name", "mtime")
+
+args = tool_io.arguments("pattern")
+rel = args.get("path", ".")
+offset, max_items = args.get("offset", 0), args.get("max_items", LIMIT_DEFAULT)
+want, order = args.get("type", "file"), args.get("sort", "name")
+if not isinstance(rel, str) or not rel:
+    die("ArgumentsBad", "path must be a non-empty string")
+if type(offset) is not int or offset < 0:
+    die("ArgumentsBad", "offset must be an integer >= 0")
+if type(max_items) is not int or not 0 < max_items <= LIMIT_MAX:
+    die("ArgumentsBad", "max_items must be an integer from 1 to %d" % LIMIT_MAX)
+if want not in TYPES:
+    die("ArgumentsBad", "type must be one of: %s" % ", ".join(TYPES))
+if order not in SORTS:
+    die("ArgumentsBad", "sort must be one of: %s" % ", ".join(SORTS))
+hidden, gitignore = args.get("hidden", False), args.get("gitignore", True)
+for k, v in (("hidden", hidden), ("gitignore", gitignore)):
+    if not isinstance(v, bool):
+        die("ArgumentsBad", "%s must be a boolean" % k)
+try:
+    pattern = file_walk.Pattern(args["pattern"])
+except file_walk.PatternError as e:
+    die("PatternBad", str(e))
+
+root = tool_io.ws_path(rel)
+if not os.path.lexists(root):
+    die("FileMissing", rel)
+if not os.path.isdir(root):
+    die("FileBad", "%s is not a folder; glob searches under a folder (put the folder in path)" % rel)
+try:
+    os.scandir(root).close()
+except OSError as e:
+    die("ReadFailed", "%s: %s" % (rel, e.strerror))
+
+walk = file_walk.Walk(root, hidden=hidden, gitignore=gitignore, pattern=pattern, warn=tool_io.warn)
+found = [(full, kind) for r, full, kind in walk
+         if (want == "any" or kind == want) and pattern.match(r)]
+
+
+def mtime(full):
+    try:
+        return os.stat(full).st_mtime
+    except OSError:
+        return os.lstat(full).st_mtime
+
+
+if order == "mtime":
+    found = [x for _, x in sorted(((-mtime(f), i), (f, k)) for i, (f, k) in enumerate(found))]   # 同時間＝照走的順序（路徑）
+end = offset + max_items
+for full, kind in found[offset:end]:
+    print(tool_io.shown_path(full) + ("/" if kind == "dir" else ""))
+count = len(found)
+what = "%d path%s" % (count, "" if count == 1 else "s")
+in_all = "at least " + what if walk.stopped else what + " in all"
+if count == 0:
+    print("... no matches")
+elif offset >= count:
+    print("... no matches from offset %d (%s)" % (offset, in_all))
+elif end < count:
+    print("... next_offset %d (%s)" % (end, in_all))
+if walk.unreadable:
+    print("... skipped %d unreadable" % walk.unreadable)
+if walk.stopped:
+    print("... stopped after %s (scan budget); narrow path or pattern" % walk.stopped)

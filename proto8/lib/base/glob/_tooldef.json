@@ -1,0 +1,12 @@
+{"description": "Find files by name pattern under a folder. * matches within one folder level, ** matches any number of levels, ? one character; a pattern without / matches the file name at any depth (\"*.py\" finds every .py file). Prints one path per line (folders end with /), sorted by path (\"sort\": \"mtime\" = newest first); paste a path into read, view or ls. Skips names starting with . unless \"hidden\": true and, inside a git work tree, paths ignored by .gitignore unless \"gitignore\": false. At most max_items per call; a last line \"... next_offset N\" means more. To search inside files, use grep. Errors: PatternBad, FileMissing, FileBad. Details: knowledge_read aos/tools/glob.json.",
+ "parameters": {"type": "object",
+                "properties": {"pattern": {"type": "string", "description": "the name pattern, relative to path (e.g. *.py, src/**/*.json, docs/*)"},
+                               "path": {"type": "string", "default": ".", "description": "the folder to search under, relative to your workspace or absolute (default .)"},
+                               "type": {"type": "string", "enum": ["file", "dir", "any"], "default": "file", "description": "what to list: file, dir or any (default file)"},
+                               "sort": {"type": "string", "enum": ["name", "mtime"], "default": "name", "description": "name = by path (default); mtime = newest first"},
+                               "hidden": {"type": "boolean", "default": false, "description": "true = also look into names starting with ."},
+                               "gitignore": {"type": "boolean", "default": true, "description": "false = also list paths that .gitignore ignores"},
+                               "offset": {"type": "integer", "default": 0, "description": "first path to show (default 0)"},
+                               "max_items": {"type": "integer", "default": 100, "description": "most paths to show (default 100, at most 500)"}},
+                "required": ["pattern"]},
+ "errors": ["ArgumentsBad", "PatternBad", "FileMissing", "FileBad", "ReadFailed", "WsMissing"]}

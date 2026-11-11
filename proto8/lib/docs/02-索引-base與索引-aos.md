@@ -2,7 +2,7 @@
 
 ## 索引：base
 
-**分包與路徑**（11-10 tool-packs）：前 15 支通用工具分四包，清單在 [lib/packs](../packs/README.md)——1 看（read、ls、view、stat、json_read）、2 改（write、edit、copy、move、mkdir、json_write）、3 刪（trash、remove）、4 殼（shell、run_python）；另有小工具包 gadgets（peek_clock、peek_now_time、math，不改任何東西、隨手看一下；11-11 起加 agent 工具 do_task）。agent 工具也分包（事件、自我管理、子 agent、定義、信箱、記憶），一覽見 [lib/packs](../packs/README.md)。檔案工具的路徑相對從 `$AOS_WS` 算、絕對照用，**不擋工作區外**（使用者「這些就是/usr/bin的包裝」「3.對」），能不能動看 Linux 權限；相對路徑又沒有 `$AOS_WS`＝`WsMissing`。
+**分包與路徑**（11-10 tool-packs）：前 17 支通用工具分四包，清單在 [lib/packs](../packs/README.md)——1 看（read、ls、view、stat、json_read、grep、glob）、2 改（write、edit、copy、move、mkdir、json_write）、3 刪（trash、remove）、4 殼（shell、run_python）；另有小工具包 gadgets（peek_clock、peek_now_time、math，不改任何東西、隨手看一下；11-11 起加 agent 工具 do_task）。agent 工具也分包（事件、自我管理、子 agent、定義、信箱、記憶），一覽見 [lib/packs](../packs/README.md)。檔案工具的路徑相對從 `$AOS_WS` 算、絕對照用，**不擋工作區外**（使用者「這些就是/usr/bin的包裝」「3.對」），能不能動看 Linux 權限；相對路徑又沒有 `$AOS_WS`＝`WsMissing`。
 
 回 JSON 的工具裡，計數（幾個、幾行、幾字）的 key 一律 `counter_<被數的東西>`（10-25 使用者「計數這塊，幫我改成counter_*」，C-54 命名方法 R6）；陣列本身（`items`、`keys` 清單）不加。
 
@@ -16,6 +16,8 @@
 | [stat](../base/stat/) | 單一個檔或資料夾的屬性 | `path` | JSON：`type`、`mtime`、`mode`；檔多 `size`、`exec`、`text`、`counter_lines`、`format`、`top` |
 | [view](../base/view/) | 漸進看一個檔：JSON 照指標一次一層、大文字檔先給大綱 | `path`、`pointer` 或 `start`／`end` | JSON：`value` 或 `children`；文字的 `text` 或 `outline` |
 | [json_read](../base/json_read/) | 看一份 JSON 檔的某個位置，大的摺起來 | `path`、`pointer`、`depth`（1／10） | JSON：`value`，物件摺成 `{type, keys}`、陣列 `{type, counter_items}`、長字串 `{type, counter_chars, head}` |
+| [grep](../base/grep/) | 照內容搜（Python `re`，像 `grep -rn`）：整棵樹或一個檔裡哪幾行有這個樣式（11-11 使用者「啊，grep/glob得做」；裁「grep 和 glob 兩支」「純 Python」「預設跳過，問 git」，[new-tools 01](../../thinking/2026-11/11/new-tools/01-grep-glob.md)）。跳過二進位（前 8KB 有 NUL）、超過 8MB 的檔、`.` 開頭的（`hidden`）、git 工作樹裡 `.gitignore` 擋掉的（`gitignore: false` 關；問 `git ls-files`，git 不在＝warning 照搜）；資料夾捷徑不跟進；20 秒或 2 萬項先到先停；走樹共用 [file_walk.py](../base/file_walk.py) | `pattern`、`path`、`glob`、`fixed`、`ignore_case`、`context`（0～5）、`files`、`hidden`、`gitignore`、`offset`、`max_matches`（100／500） | 一行一筆 `PATH:LINE:TEXT`（PATH 可貼回 read、LINE 當 offset；一行最多 300 字元）；`context`＝前後文 `PATH-LINE-TEXT`、組間 `--`；`files`＝`PATH TAB 中幾行`；尾巴 `... next_offset N (M matches in K files in all)`／`(at least …)`、`... skipped …`、`... stopped after …`、`... no matches`；錯 `PatternBad`、`FileMissing`、`ReadFailed` |
+| [glob](../base/glob/) | 照檔名樣式找檔：`*` 一層、`**` 任意層、`?`、`[abc]`；不含 `/` 的樣式＝任何深度比檔名（同上出處）。隱藏、gitignore、捷徑、預算同 grep | `pattern`、`path`、`type`（file／dir／any）、`sort`（name／mtime）、`hidden`、`gitignore`、`offset`、`max_items`（100／500） | 一行一個路徑（資料夾結尾 `/`）；尾巴 `... next_offset N (M paths in all)`、`... stopped after …`、`... no matches`；錯 `PatternBad`、`FileMissing`、`FileBad`（path 是檔） |
 | [json_write](../base/json_write/) | 照指標改幾個位置，一處不合整份不寫（11-10 由 json_edit 改名；寫入交給 aos-json） | `path`、`set{指標: 值}`、`del[指標]` | JSON：`counter_set`、`counter_del`（改了幾個）、頂層 key |
 | [mkdir](../base/mkdir/) | 建資料夾（上層一起建；已有＝沒事） | `path` | JSON：`path`、`created` |
 | [move](../base/move/) | 搬移或改名（to 有東西就不搬；跨檔案系統照 mv 複製再刪） | `from`、`to` | JSON：`from`、`to` |

@@ -6,7 +6,7 @@
 
 | 包 | 檔 | 工具 |
 |---|---|---|
-| 1 看 | [look.json](look.json) | read、ls、view、stat、json_read |
+| 1 看 | [look.json](look.json) | read、ls、view、stat、json_read、grep（照內容搜，像 `grep -rn`）、glob（照檔名樣式找檔）——11-11 使用者「啊，grep/glob得做」 |
 | 2 改 | [change.json](change.json) | write、edit、copy、move、mkdir、json_write |
 | 3 刪 | [delete.json](delete.json) | trash（丟進工作區 `.trash/`，可搬回）、remove（真的刪） |
 | 4 殼 | [shell.json](shell.json) | shell（bash 一行指令）、run_python |

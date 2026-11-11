@@ -71,9 +71,11 @@
 | [`rules.json`](../../../../../proto8/knowledge/aos/rules.json) | （檔頭沒有一句話） |
 | [`status.json`](../../../../../proto8/knowledge/aos/status.json) | （檔頭沒有一句話） |
 | [`tools/_description.json`](../../../../../proto8/knowledge/aos/tools/_description.json) | （檔頭沒有一句話） |
-| [`tools/_index.json`](../../../../../proto8/knowledge/aos/tools/_index.json) | 設定（鍵：read.json、ls.json、view.json、stat.json、json_read.json、write.json…） |
+| [`tools/_index.json`](../../../../../proto8/knowledge/aos/tools/_index.json) | 設定（鍵：read.json、ls.json、view.json、stat.json、json_read.json、grep.json…） |
 | [`tools/copy.json`](../../../../../proto8/knowledge/aos/tools/copy.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/edit.json`](../../../../../proto8/knowledge/aos/tools/edit.json) | 設定（鍵：_description、_index、errors） |
+| [`tools/glob.json`](../../../../../proto8/knowledge/aos/tools/glob.json) | 設定（鍵：_description、_index、rules、errors） |
+| [`tools/grep.json`](../../../../../proto8/knowledge/aos/tools/grep.json) | 設定（鍵：_description、_index、output、rules、errors） |
 | [`tools/json_read.json`](../../../../../proto8/knowledge/aos/tools/json_read.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/json_write.json`](../../../../../proto8/knowledge/aos/tools/json_write.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/ls.json`](../../../../../proto8/knowledge/aos/tools/ls.json) | 設定（鍵：_description、_index、long、errors） |

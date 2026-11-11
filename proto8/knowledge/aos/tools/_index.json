@@ -14,6 +14,12 @@
  "json_read.json": {
   "_description": "Tool json_read: one place in a JSON file, a few levels deep; deeper parts folded."
  },
+ "grep.json": {
+  "_description": "Tool grep: search inside files with a regular expression, like grep -rn; one line PATH:LINE:TEXT per match."
+ },
+ "glob.json": {
+  "_description": "Tool glob: find files by name pattern (*, **, ?) under a folder; one path per line."
+ },
  "write.json": {
   "_description": "Tool write: write a whole file (new, or fully replaced)."
  },

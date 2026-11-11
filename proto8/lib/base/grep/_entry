@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+# grep - 照內容搜整棵樹（或一個檔）：一行一筆「路徑:行號:那一行」，像 grep -rn；純 Python re，不靠系統的 grep／rg
+# 設計與裁定：thinking 2026-11-11 new-tools 01（G1 兩支、G2 純 Python、G3「預設跳過，問 git」；代定 D1～D8）。
+# 介面（lib/docs/01 契約）：stdin {"pattern", "path"?: ".", "glob"?, "fixed"?, "ignore_case"?, "context"?: 0～5, "files"?, "hidden"?, "gitignore"?: true, "offset"?, "max_matches"?: 100（1～500）}；
+#   預設一行一筆 PATH:LINE:TEXT（PATH 照 tool_io.shown_path，可直接貼回 read；LINE 從 1 算＝read 的 offset）；context＞0 前後文行 PATH-LINE-TEXT、組間 --；
+#   files＝一行一個檔「PATH TAB 中幾行」，翻頁以檔計；一行超過 300 字元截斷加 …[cut]。照路徑、再照行號排；總數要掃完才知道。
+#   尾巴行一律「... 」開頭：next_offset N (M matches in K files)／(at least …)、skipped（二進位、超過 8MB、讀不了）、stopped（掃描預算）、no matches。
+# 走樹共用 lib/base/file_walk.py（隱藏、.gitignore、資料夾捷徑不跟進、只讀一般檔、預算 20 秒或 2 萬項）；path 是單一檔＝只搜它（明指，不看隱藏與 gitignore）。
+# 錯：stderr 與 stdout 各一行「grep: error: 代號 原因」、退 1：ArgumentsBad、PatternBad、FileMissing、ReadFailed、WsMissing。git 不在或失敗＝stderr 一行 warning、照常搜。
+import os, re, stat, sys
+HELP = """\
+usage: grep < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Search file contents with a Python regular expression, like grep -rn: one line PATH:LINE:TEXT
+per match (relative paths start at $AOS_WS). "files": true lists only the matching files.
+Skips binary files, files over 8MB, names starting with . and, in a git work tree, ignored files.
+Result on stdout. On error: one line "grep: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib（與 lib/base 的共用模組），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib, os.path.join(_lib, "base")] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "grep"
+tool_io.start(NAME, HELP)
+die = tool_io.die
+try:
+    import file_walk  # noqa: E402
+except ModuleNotFoundError as error:
+    if error.name != "file_walk":
+        raise
+    die("ModuleMissing", "file_walk.py not in the tool folder, not in lib/base/, not on the Python path")
+
+LIMIT_DEFAULT, LIMIT_MAX, CONTEXT_MAX = 100, 500, 5
+LINE_MAX = 300                      # 印出的一行最多幾個字元
+FILE_MAX = 8 * 1024 * 1024          # 超過就跳過（要整檔掃）
+BINARY_PEEK = 8192                  # 前這麼多位元組有 NUL＝二進位（同 read）
+
+args = tool_io.arguments("pattern")
+rel = args.get("path", ".")
+offset, max_matches, context = args.get("offset", 0), args.get("max_matches", LIMIT_DEFAULT), args.get("context", 0)
+if not isinstance(rel, str) or not rel:
+    die("ArgumentsBad", "path must be a non-empty string")
+if type(offset) is not int or offset < 0:
+    die("ArgumentsBad", "offset must be an integer >= 0")
+if type(max_matches) is not int or not 0 < max_matches <= LIMIT_MAX:
+    die("ArgumentsBad", "max_matches must be an integer from 1 to %d" % LIMIT_MAX)
+if type(context) is not int or not 0 <= context <= CONTEXT_MAX:
+    die("ArgumentsBad", "context must be an integer from 0 to %d" % CONTEXT_MAX)
+flags = {k: args.get(k, k == "gitignore") for k in ("fixed", "ignore_case", "files", "hidden", "gitignore")}
+for k, v in flags.items():
+    if not isinstance(v, bool):
+        die("ArgumentsBad", "%s must be a boolean" % k)
+glob_text = args.get("glob")
+if glob_text is not None and (not isinstance(glob_text, str) or not glob_text):
+    die("ArgumentsBad", "glob must be a non-empty string")
+
+try:
+    rx = re.compile(re.escape(args["pattern"]) if flags["fixed"] else args["pattern"], re.IGNORECASE if flags["ignore_case"] else 0)
+except re.error as e:
+    die("PatternBad", "%s in the regular expression %r; fix it, or use \"fixed\": true for plain text" % (e, args["pattern"]))
+try:
+    pattern = file_walk.Pattern(glob_text) if glob_text else None
+except file_walk.PatternError as e:
+    die("PatternBad", "glob: %s" % e)
+
+root = tool_io.ws_path(rel)
+if not os.path.lexists(root):
+    die("FileMissing", rel)
+try:
+    st = os.stat(root)
+except OSError as e:
+    die("ReadFailed", "%s: %s" % (rel, e.strerror))
+skipped = {"binary": 0, "big": 0, "unreadable": 0}
+
+
+def lines_of(full):
+    """一般檔 → 行的串列（去掉行尾 \\r）；二進位、太大、讀不了＝計數、回 None。"""
+    try:
+        if os.stat(full).st_size > FILE_MAX:
+            skipped["big"] += 1
+            return None
+        with open(full, "rb") as f:
+            data = f.read()
+    except OSError:
+        skipped["unreadable"] += 1
+        return None
+    if b"\0" in data[:BINARY_PEEK]:
+        skipped["binary"] += 1
+        return None
+    lines = data.decode("utf-8", "replace").split("\n")
+    if lines[-1] == "":
+        lines.pop()                                 # 檔尾換行不算一行
+    return [l[:-1] if l.endswith("\r") else l for l in lines]
+
+
+def cut(text):
+    return text if len(text) <= LINE_MAX else text[:LINE_MAX] + "…[cut]"
+
+
+if stat.S_ISDIR(st.st_mode):
+    try:
+        os.scandir(root).close()
+    except OSError as e:
+        die("ReadFailed", "%s: %s" % (rel, e.strerror))
+    walk = file_walk.Walk(root, hidden=flags["hidden"], gitignore=flags["gitignore"], pattern=pattern, warn=tool_io.warn)
+    targets = ((full, kind) for r, full, kind in walk if kind == "file" and (pattern is None or pattern.match(r)))
+elif stat.S_ISREG(st.st_mode):
+    walk, targets = None, iter([(root, "file")])  # 單一檔＝明指：不看隱藏、gitignore、glob
+else:
+    die("ReadFailed", "%s is not a regular file or a folder" % rel)
+
+total, nfiles, out, end = 0, 0, [], offset + max_matches
+for full, _ in targets:
+    lines = lines_of(full)
+    if lines is None:
+        continue
+    hits = [i for i, l in enumerate(lines) if rx.search(l)]
+    if not hits:
+        continue
+    shown = tool_io.shown_path(full)
+    if flags["files"]:
+        if offset <= nfiles < end:
+            out.append("%s\t%d" % (shown, len(hits)))
+    else:
+        window = [i for n, i in enumerate(hits, total) if offset <= n < end]
+        if window:
+            mine, group = set(window), []
+            for i in window:
+                lo, hi = max(0, i - context), min(len(lines), i + context + 1)
+                if group and lo <= group[-1][1]:
+                    group[-1][1] = max(group[-1][1], hi)
+                else:
+                    group.append([lo, hi])
+            for lo, hi in group:
+                if context and out:
+                    out.append("--")
+                out += ["%s%s%d%s%s" % (shown, ":" if j in mine else "-", j + 1, ":" if j in mine else "-", cut(lines[j]))
+                        for j in range(lo, hi)]
+    total += len(hits)
+    nfiles += 1
+
+for line in out:
+    print(line)
+count = nfiles if flags["files"] else total
+stopped = walk.stopped if walk is not None else None
+files_text = "%d file%s" % (nfiles, "" if nfiles == 1 else "s")
+what = files_text if flags["files"] else "%d match%s in %s" % (total, "" if total == 1 else "es", files_text)
+in_all = "at least " + what if stopped else what + " in all"
+if count == 0:
+    print("... no matches")
+elif not out:
+    print("... no matches from offset %d (%s)" % (offset, in_all))
+elif end < count:
+    print("... next_offset %d (%s)" % (end, in_all))
+if walk is not None:
+    skipped["unreadable"] += walk.unreadable
+bits = []
+if skipped["binary"]:
+    bits.append("%d binary file%s" % (skipped["binary"], "" if skipped["binary"] == 1 else "s"))
+if skipped["big"]:
+    bits.append("%d file%s over %dMB" % (skipped["big"], "" if skipped["big"] == 1 else "s", FILE_MAX // (1024 * 1024)))
+if skipped["unreadable"]:
+    bits.append("%d unreadable" % skipped["unreadable"])
+if bits:
+    print("... skipped " + ", ".join(bits))
+if stopped:
+    print("... stopped after %s (scan budget); narrow path or glob" % stopped)

@@ -1,0 +1,13 @@
+{
+  "summary": "Find files by name pattern under a folder, one page of paths at a time",
+  "resource": "disk",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 300
+  },
+  "timeout_ms": 30000
+}

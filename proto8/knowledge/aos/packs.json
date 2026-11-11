@@ -5,7 +5,7 @@
    "_description": "How packs work and how to turn one off."
   },
   "look": {
-   "_description": "Pack look: read, ls, view, stat, json_read; look at files, change nothing."
+   "_description": "Pack look: read, ls, view, stat, json_read, grep, glob; look at and search files, change nothing."
   },
   "change": {
    "_description": "Pack change: write, edit, copy, move, mkdir, json_write; make and change files."
@@ -39,7 +39,7 @@
   }
  },
  "about": "# Tool packs\n\nYour tools are registered pack by pack: each pack is one tool list in $AOS_HOME/lib/packs/<pack>.json, and a definition's tools.json stacks the packs it wants with \"$override\". Both templates (agent-fsm and eca-claude) have all eleven packs.\n\n- See where each of your tools comes from: self_tools {\"op\": \"ls\", \"long\": true} (FROM shows lib/packs/<pack>.json).\n- Turn one tool off for yourself: self_tools {\"op\": \"rm\", \"name\": \"shell\"}.\n- A whole pack is turned off by removing it from the \"$override\" list of the definition's tools.json (a person or a definition change, not a tool call).",
- "look": "Pack look: Read-only file tools: read (a text file), ls (a folder), view (a file with its type), stat (facts about one path), json_read (a JSON file or one value in it). One node per tool: aos/tools/read.json, aos/tools/ls.json, aos/tools/view.json, aos/tools/stat.json, aos/tools/json_read.json.",
+ "look": "Pack look: Read-only file tools: read (a text file), ls (a folder), view (a file with its type), stat (facts about one path), json_read (a JSON file or one value in it), grep (search inside files, like grep -rn), glob (find files by name pattern). One node per tool: aos/tools/read.json, aos/tools/ls.json, aos/tools/view.json, aos/tools/stat.json, aos/tools/json_read.json, aos/tools/grep.json, aos/tools/glob.json.",
  "change": "Pack change: Editing files: write (whole file), edit (replace exact text), copy, move (also rename), mkdir, json_write (set or delete values by JSON pointer). One node per tool: aos/tools/write.json, aos/tools/edit.json, aos/tools/copy.json, aos/tools/move.json, aos/tools/mkdir.json, aos/tools/json_write.json.",
  "delete": "Pack delete: trash (move into your workspace .trash/, can be moved back) and remove (delete for real; a folder needs recursive). One node per tool: aos/tools/trash.json, aos/tools/remove.json.",
  "shell": "Pack shell: shell (one bash command; not a sandbox) and run_python (a short Python program). One node per tool: aos/tools/shell.json, aos/tools/run_python.json.",

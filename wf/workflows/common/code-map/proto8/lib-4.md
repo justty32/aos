@@ -11,6 +11,11 @@
 |---|---|
 | [`copy/`](../../../../../proto8/lib/base/copy/) | 複製一個檔或整個資料夾（捷徑照捷徑複製、不跟進去；to 的上層自動建） |
 | [`edit/`](../../../../../proto8/lib/base/edit/) | 在一個檔做一處或幾處「整段原文照字面換掉」，一處不合就整個不改 |
+| [`file_walk.py`](../../../../../proto8/lib/base/file_walk.py) | grep 與 glob 共用的走樹：隱藏名、.gitignore（問 git）、資料夾捷徑不跟進、只把一般檔當檔、掃描預算與計數；另含兩支共用的檔名樣式（* ? [..] **）。 |
+| [`glob/`](../../../../../proto8/lib/base/glob/) | 照檔名樣式在一個資料夾底下找路徑（* ? [..] **，不含 / 的樣式＝任何深度的名字）：一行一個路徑、資料夾結尾加 / |
+| [`glob/tests/test_glob.py`](../../../../../proto8/lib/base/glob/tests/test_glob.py) | glob 工具：** 零層與多層、不含 / 的樣式任何深度、type、sort mtime、翻頁、隱藏與明寫 . 段、資料夾捷徑列出不進、gitignore、PatternBad、FileBad、工作區外。 |
+| [`grep/`](../../../../../proto8/lib/base/grep/) | 照內容搜整棵樹（或一個檔）：一行一筆「路徑:行號:那一行」，像 grep -rn；純 Python re，不靠系統的 grep／rg |
+| [`grep/tests/test_grep.py`](../../../../../proto8/lib/base/grep/tests/test_grep.py) | grep 工具：正規式與 fixed、大小寫、context 與 --、files、翻頁、二進位／超大／非 UTF-8、隱藏、資料夾捷徑不跟進、gitignore（有 git、不在 git、git 不在 PATH）、單一檔、工作區外、預算、長行截斷。 |
 | [`json_read/`](../../../../../proto8/lib/base/json_read/) | 看一份 JSON 檔的某個位置，一次只展開幾層、大的摺起來，讓腦一層層往下找 |
 | [`json_write/`](../../../../../proto8/lib/base/json_write/) | 照 JSON 指標改一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫 |
 | [`llm_fake/`](../../../../../proto8/lib/base/llm_fake/) | 假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4） |
@@ -34,19 +39,3 @@
 | [`trash/`](../../../../../proto8/lib/base/trash/) | 刪除一個檔或資料夾：不真的刪，搬進 $AOS_WS/.trash/<時間>/<原路徑>（真的刪用 remove） |
 | [`view/`](../../../../../proto8/lib/base/view/) | 漸進看一個檔：JSON 一次看一層、大的文字檔先給大綱 |
 | [`write/`](../../../../../proto8/lib/base/write/) | 把整份內容寫進一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建 |
-
-## `proto8/lib/packs/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`change.json`](../../../../../proto8/lib/packs/change.json) | Pack 2 (change): tools that create or change files - write, edit, copy, move, mkdir, json_write. |
-| [`def.json`](../../../../../proto8/lib/packs/def.json) | Pack def: definitions - agent_def (agent definitions), tools_def (new tools from the Python skeleton, and checking a tool). |
-| [`delete.json`](../../../../../proto8/lib/packs/delete.json) | Pack 3 (delete): tools that delete - trash (into the workspace .trash, can be moved back) and remove (for real). |
-| [`events.json`](../../../../../proto8/lib/packs/events.json) | Pack events: things that wake you later - clock_register (letters from the clock), self_hook (hooks on your own events). |
-| [`gadgets.json`](../../../../../proto8/lib/packs/gadgets.json) | Pack gadgets: small handy tools - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic expression), do_task (hand one smal… |
-| [`knowledge.json`](../../../../../proto8/lib/packs/knowledge.json) | Pack knowledge: knowledge_read, knowledge_write. No default knowledge base: the tools.json that stacks this pack sets one per name (env AOS_KNOWLEDGE… |
-| [`look.json`](../../../../../proto8/lib/packs/look.json) | Pack 1 (look): read-only file tools - read, ls, view, stat, json_read. |
-| [`mailbox.json`](../../../../../proto8/lib/packs/mailbox.json) | Pack mailbox: letters - mailbox_peek, mailbox_read, mailbox_send. |
-| [`self.json`](../../../../../proto8/lib/packs/self.json) | Pack self: look at and change yourself - self_tools, self_llm, self_system, self_state, self_ctl, self_history. |
-| [`shell.json`](../../../../../proto8/lib/packs/shell.json) | Pack 4 (shell): tools that run any command or program - shell (bash) and run_python. |
-| [`subagent.json`](../../../../../proto8/lib/packs/subagent.json) | Pack subagent: other agents - subagent (ones you start yourself), agents_ctl (any agent on the daemon). |

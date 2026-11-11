@@ -1,0 +1,13 @@
+{
+ "_description": "# Tool glob\n\nFind paths by name pattern under a folder: one path per line, folders end with `/`. Paste a path into `read` or `ls`.\n\nUse it to find files by name anywhere in a tree. Not for: searching inside files (`grep`), one folder with types (`ls`), facts about one file (`stat`).\n\nPattern: `*` within one level, `?` one character, `[abc]` (`[!abc]`), `**` any number of levels (also zero). Without `/` it matches the name at any depth (`*.py` = every .py file); with `/` the whole path under `path` (`src/*.py` directly in src, `src/**/*.py` at any depth).\n\nArguments: `pattern` (required); `path` (folder, default `.`); `type` (`file` default, `dir`, `any`); `sort` (`name` default, `mtime` newest first); `hidden`; `gitignore`; `offset`; `max_items` (default 100, at most 500).\n\n```json\n{\"pattern\": \"src/**/*.py\", \"max_items\": 1}\n```\nprints\n```text\nsrc/deep/util.py\n... next_offset 1 (2 paths in all)\n```\n\n`... ` lines are notes. Rules: `aos/tools/glob.json#/rules`. Errors: `aos/tools/glob.json#/errors`.\n",
+ "_index": {
+  "rules": {
+   "_description": "glob: order, hidden names, .gitignore, links, scan budget."
+  },
+  "errors": {
+   "_description": "glob errors (PatternBad, FileBad and more) and what to do."
+  }
+ },
+ "rules": "# glob: what it looks at\n\n- `\"sort\": \"name\"`: by path, each level by name (`src/deep/util.py` before `src/main.py`). `\"mtime\"`: newest first.\n- Names starting with `.` only with `\"hidden\": true`, or when the pattern names them (`.github/**`, `**/.env`).\n- In a git work tree, `.gitignore`d paths (`build/`, `node_modules/`) and `.git` are left out; `\"gitignore\": false` keeps them. No git = a warning, nothing left out.\n- A link to a folder is listed (with `/`) but not looked into: no loops. A `path` that is a link is followed.\n- `... next_offset N`: call again with `\"offset\": N`. `... no matches`. `... skipped N unreadable`: folders it could not open.\n- Scan budget: 20 s or 20000 names, then `... stopped after ...`; totals say `at least`. Narrow `path`.\n",
+ "errors": "# glob: errors\n\n- `PatternBad`: a broken pattern, like `[` without `]` (`unclosed [ in '[a'`), or one starting with `/` (put the folder in `path`).\n- `FileMissing`: no such folder. `ls` the folder above.\n- `FileBad`: `path` is a file, not a folder. Give its folder, or `stat` the file.\n- `ReadFailed`: the `path` folder cannot be read. Unreadable folders deeper are only counted.\n- `ArgumentsBad`: also `type` not file, dir or any; `sort` not name or mtime; `max_items` outside 1 to 500; a negative `offset`.\n- `WsMissing`: `aos/errors.json#/common/files`. Wrong or unknown keys (`ArgumentsBad`): `aos/errors.json#/common/input`.\n"
+}
