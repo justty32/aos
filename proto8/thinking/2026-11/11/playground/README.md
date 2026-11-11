@@ -23,7 +23,7 @@ aos-agent ctl ls                       # 三隻都 running 就可以玩
 | `eca_bob` | eca，Claude Code | `haiku`，每題上限 0.3 美金 | 花 claude 額度 |
 | `eca_cody` | eca，Codex CLI（沒有畫面） | `gpt-6-luna` | 花 codex 額度 |
 
-三隻都是 35 支工具（`aos-agent tools --target fsm_ann ls`）。跟一隻說一句話：
+三隻都是 35 支工具（11-11 線 C 之後 repo 是 36 支：gadgets 包多 thought；重刷後才是 36）（`aos-agent tools --target fsm_ann ls`）。跟一隻說一句話：
 
 ```sh
 aos-agent say --target eca_bob 'Call the aos tool peek_now_time, then tell me the time in one line.' && aos-agent listen --target eca_bob --timeout-s 300

@@ -13,6 +13,7 @@
 
 ## 待使用者項
 
+- **線 C 六題待裁＋試驗場重刷**（11-11）：代號結尾、knowledge_write 8000 bytes 硬上限、thought 預設定義、agent_def 的 RootMissing、run_python 的 cwd、`aos/tools.json` 改名——每題附選項與推薦 → [knowledge-fix 02 § 待裁](../proto8/thinking/2026-11/11/knowledge-fix/02-施工結果與待裁.md#待使用者裁可直接貼進選項框)；公司與家機試驗場要照刷新腳本重刷（包名 subagent、`subagents.json`、36 支），`~/.cache/aos-mcp-aos/tools.json` 的 knowledge_write 若帶 `AOS_KNOWLEDGE` 指出廠庫要手改（repo 外）
 - **家機 pull 前先移走 `proto8/cmd/aos-mailbox/bin/aos-mailbox`**（11-11）：家機那支是沒進 git 的原件，公司這邊重寫了一支並進了 git（`09709c6ac`），不先移走（`mv` 到別處或刪掉）git 會因為未追蹤檔擋住 pull；pull 後 `diff` 一下兩支有沒有差異，有差告訴我
 - **兩台都重跑一次 `proto8/install.sh`**（11-11；寫 `~/.local/bin`，repo 外、agent 不動）：補上 `aos-mailbox` 的捷徑（公司這台原本沒有，`aos-agent ctl state` 的 mailbox 那行因此 not available）
 - **公司試驗場 11-11 已刷新、可以玩**（`~/code/playground`，公司 WSL；備份 `~/code/playground.bak-1111-1024`）：三隻掛好停著——`fsm_ann` 假腦、`eca_bob` claude haiku（0.3 美金）、`eca_cody` codex gpt-6-luna（沒畫面）；自動驗過起停、35 支、兩隻真腦各叫 `peek_now_time`、system set（claude 下一句、codex 開新對話後生效）、假腦叫 `self_system`／`subagent`、`on_clock`、`after_start`／`after_stop`。**剩你親手玩**：照試驗場 `README.md`（＝[playground](../proto8/thinking/2026-11/11/playground/README.md)）；沒驗的：腦自己叫 `self_system` 在試驗場上、eca 叫 `subagent`、`aos-mailbox send`、eca_bob 畫面、`stupid-fast`；fsm 真腦回家測
