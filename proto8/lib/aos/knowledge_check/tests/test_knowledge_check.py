@@ -118,11 +118,11 @@ class KnowledgeCheckTests(unittest.TestCase):
         write(self.kb / 'aos' / 'cli' / '_index.json', {'saw.json': {'_description': 'Use aos-sawmill. aos-drill.'}})
         self.assertEqual(self.codes('--only', 'cmds'), {('cmds', 'CmdNodeMissing')})
 
-    def test_impls_are_warnings(self):
+    def test_impls_are_errors(self):
         write(self.kb / 'aos' / 'cli' / '_index.json', {'saw.json': {'_description': 'Use aos-saw.'}})
         report = self.run_check('--only', 'impls')
-        self.assertEqual((report['errors'], report['warnings']), (0, 1))
-        self.assertEqual(report['problems'][0]['where'], 'command aos-drill')
+        self.assertEqual((report['errors'], report['warnings']), (1, 0))
+        self.assertEqual((report['problems'][0]['code'], report['problems'][0]['where']), ('CmdNodeMissing', 'command aos-drill'))
 
     def test_codes_not_in_knowledge_and_bad_endings(self):
         write(self.home / 'lib' / 'tools' / 'hammer' / '_tooldef.json', {

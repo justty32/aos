@@ -94,7 +94,7 @@ def mentioned(names, texts):
 
 
 def check_cmds(tree, kind):
-    """kind＝cmds（cmd/*/bin/aos-*，錯誤）或 impls（impls 的執行檔，提醒）；有節點＝某張表某一格的 _description 寫出完整指令名。"""
+    """kind＝cmds（cmd/*/bin/aos-*）或 impls（impls 的執行檔）；兩種缺節點都是錯誤 CmdNodeMissing；有節點＝某張表某一格的 _description 寫出完整指令名。"""
     if kind == "cmds":
         names = sorted({os.path.basename(p) for p in glob.glob(os.path.join(tree.home, "cmd", "*", "bin", "aos-*")) if os.path.isfile(p)})
     else:
@@ -104,8 +104,7 @@ def check_cmds(tree, kind):
                 names |= set(EXE_RE.findall(h.read()))
         names = sorted(names)
     found = mentioned(names, index_descriptions(tree))
-    level, code = ("error", "CmdNodeMissing") if kind == "cmds" else ("warning", "")
-    return [Problem(level, kind, code, "command %s" % n, "no index entry's _description names it") for n in names if n not in found]
+    return [Problem("error", kind, "CmdNodeMissing", "command %s" % n, "no index entry's _description names it") for n in names if n not in found]
 
 
 def check_codes(tree):

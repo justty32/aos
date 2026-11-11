@@ -1,0 +1,32 @@
+{
+ "exec.json": {
+  "_description": "aos-exec: run one entry (a file, a folder with _entry, FILE#/POINTER) with its workspace and stack set up."
+ },
+ "loop.json": {
+  "_description": "aos-loop: run a body again and again until it exits 10; ctl and state windows, on_start, on_stop."
+ },
+ "fsm.json": {
+  "_description": "aos-fsm: run one step of a state table and move to the next state by exit code."
+ },
+ "daemon.json": {
+  "_description": "aos-daemon: the daemon itself, looking after a table of procs; start it through a definition's _entry."
+ },
+ "post.json": {
+  "_description": "aos-post: mailboxes and letters: init, send, take, see, done, regret."
+ },
+ "lock.json": {
+  "_description": "aos-lock: take, release and show a lock next to a file or folder."
+ },
+ "json.json": {
+  "_description": "aos-json: read and edit aos JSON files by FILE#/POINTER, follow $ref, check directives."
+ },
+ "directive.json": {
+  "_description": "aos-directive: resolve $ref, $env and $path in a JSON document read from stdin."
+ },
+ "llm.json": {
+  "_description": "aos-llm: send requests to the llm kernel, read the replies, list endpoint packs."
+ },
+ "llm_kernel.json": {
+  "_description": "aos-llm-kernel: one round of the llm kernel (the body of its daemon); how to start the kernel."
+ }
+}

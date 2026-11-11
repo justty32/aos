@@ -1,0 +1,9 @@
+{
+ "_description": "# Tool write\n\nWrite a whole file: `content` becomes the entire file. A missing file is created, with its parent folders. An existing file is replaced completely (its permissions, like exec, are kept).\n\nUse it for a new file, or when you mean to rewrite all of a file. Not for: a change in part of a file (`edit`; in a JSON file `json_write`), copying a file (`copy`). write does not ask: the old content is gone. If you may need it, `copy` it first.\n\n```json\n{\"path\": \"out/hello.txt\", \"content\": \"hello\\nworld\\n\"}\n```\nprints `Wrote out/hello.txt (12 bytes)`.\n\n- Nothing is added: end `content` with `\\n` if the file should end with a newline.\n- A path that is a link writes the file it points to.\n- The file is first written as `.NAME.tmp` next to it and then renamed, so no half-written file is left.\n\nErrors: `aos/tools/write.json#/errors`.\n",
+ "_index": {
+  "errors": {
+   "_description": "write errors and what to do."
+  }
+ },
+ "errors": "# write: errors\n\n- `FileBad`: the path is a folder.\n- `MkdirFailed`: a parent folder could not be made: a file is in the way (`cfg.json/x` when `cfg.json` is a file), or no permission. Check the path with `stat`.\n- `WriteFailed`: the system refused the write (permissions, disk full). The old file, if any, is unchanged.\n- `ArgumentsBad`: also `content` missing or not a string.\n- `ReadFailed`, `WriteFailed`, `WsMissing`: `aos/errors.json#/common/files`. Wrong or unknown keys (`ArgumentsBad`): `aos/errors.json#/common/input`.\n"
+}

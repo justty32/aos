@@ -1,0 +1,9 @@
+{
+ "_description": "# Tool move\n\nMove or rename a file, folder or link. Prints `{\"from\", \"to\"}`.\n\n- `to` is the full new path, not the folder to move into: `{\"from\": \"a.txt\", \"to\": \"old/a.txt\"}`. Parent folders are created.\n- `to` must not exist, else `FileBad` and nothing moves. To replace a file: `trash` the old one, then move.\n- A link is moved itself, not what it points to. Across disks it copies and then deletes, like `mv`.\n\nUse it to rename, to relocate, and to undo a `trash`: trash prints where the thing went (`\"to\": \".trash/20261111-111744/out/hello.txt\"`); move it back:\n\n```json\n{\"from\": \".trash/20261111-111744/out/hello.txt\", \"to\": \"out/hello.txt\"}\n```\nprints `{\"from\":\".trash/20261111-111744/out/hello.txt\",\"to\":\"out/hello.txt\"}`.\n\nTo keep the original too, use `copy`.\n\nErrors: `aos/tools/move.json#/errors`.\n",
+ "_index": {
+  "errors": {
+   "_description": "move errors and what to do."
+  }
+ },
+ "errors": "# move: errors\n\n- `FileMissing`: `from` is not there.\n- `FileBad`: `to` already exists. Pick another path, or `trash` what is at `to` first.\n- `PathBad`: `to` is inside `from` (a folder cannot move into itself).\n- `MoveFailed`: the system refused (permissions, something in the way). Look at both paths with `stat` before you retry. See `aos/errors.json#/common/files`.\n- `WsMissing`: `aos/errors.json#/common/files`. Wrong or unknown keys (`ArgumentsBad`): `aos/errors.json#/common/input`.\n"
+}

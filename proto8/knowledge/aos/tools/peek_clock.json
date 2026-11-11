@@ -1,0 +1,9 @@
+{
+ "_description": "# Tool peek_clock\n\nLook at the daemon clock: the current cycle number and how long one cycle is. No arguments. Changes nothing.\n\nUse it to know how far the clock is, for example before you give `timeout_cycles` or `every` to another tool. For the time of day use `peek_now_time`.\n\n```json\n{}\n```\n-> `{\"cycle\": 42, \"interval_ms\": 1000}`\n\n- `cycle`: the number in the clock file `$AOS_CLOCK`. The root daemon adds 1 per tick. It does not move while the clock is paused or the tree sleeps.\n- `interval_ms`: about how many ms one cycle is (`$AOS_CLOCK_INTERVAL`, default 1000).\n- Cycle numbers compare only inside one tree. More about time: `aos/world.json` (section Time).\n\nErrors: `aos/tools/peek_clock.json#/errors`.\n",
+ "_index": {
+  "errors": {
+   "_description": "peek_clock errors and what to do."
+  }
+ },
+ "errors": "# peek_clock: errors\n\n- `ClockMissing`: you have no clock. `AOS_CLOCK` is not set (you are not under a daemon tree with a clock), or its file is not there yet (the clock is off or has not ticked). Do not guess a cycle: use `peek_now_time` for the time of day, or say so.\n- `ClockBad`: the clock file does not hold a number, or `AOS_CLOCK_INTERVAL` is not a positive integer. A human must fix it; report.\n- `ArgumentsBad`: give `{}` (no keys). See `aos/errors.json#/common/input`.\n"
+}

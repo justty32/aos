@@ -1,0 +1,56 @@
+{
+ "read.json": {
+  "_description": "Tool read: read a text file as plain lines, in parts if it is big."
+ },
+ "ls.json": {
+  "_description": "Tool ls: list one folder, one line per item; long and json for details."
+ },
+ "view.json": {
+  "_description": "Tool view: look into a file step by step: JSON level by level, big text as an outline first."
+ },
+ "stat.json": {
+  "_description": "Tool stat: facts about one file, folder or link as JSON (type, size, lines, format)."
+ },
+ "json_read.json": {
+  "_description": "Tool json_read: one place in a JSON file, a few levels deep; deeper parts folded."
+ },
+ "write.json": {
+  "_description": "Tool write: write a whole file (new, or fully replaced)."
+ },
+ "edit.json": {
+  "_description": "Tool edit: change part of a text file by exact text replacement."
+ },
+ "copy.json": {
+  "_description": "Tool copy: copy a file or a whole folder to a new path."
+ },
+ "move.json": {
+  "_description": "Tool move: move or rename a file, folder or link; also brings things back from the trash."
+ },
+ "mkdir.json": {
+  "_description": "Tool mkdir: create a folder with its parents; an existing folder is fine."
+ },
+ "json_write.json": {
+  "_description": "Tool json_write: set or delete values in a JSON file by JSON Pointer."
+ },
+ "trash.json": {
+  "_description": "Tool trash: delete so it can be undone (moved into .trash/ in your workspace)."
+ },
+ "remove.json": {
+  "_description": "Tool remove: delete for real, like rm; no undo (a folder needs recursive)."
+ },
+ "shell.json": {
+  "_description": "Tool shell: run one bash command line in your workspace; output ends with [exit code N]."
+ },
+ "run_python.json": {
+  "_description": "Tool run_python: run a short Python 3 program; output ends with [exit code N]."
+ },
+ "peek_clock.json": {
+  "_description": "Tool peek_clock: the daemon clock's current cycle and how many ms one cycle is."
+ },
+ "peek_now_time.json": {
+  "_description": "Tool peek_now_time: the current time of day in UTC."
+ },
+ "math.json": {
+  "_description": "Tool math: compute one arithmetic expression; what is allowed, examples, ExprBad."
+ }
+}

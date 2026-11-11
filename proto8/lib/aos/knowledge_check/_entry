@@ -25,7 +25,7 @@ Check the stock knowledge base without changing it. Checks (default: all):
   index    every _index entry exists; every file, folder and key is listed (orphans)
   tools    every tool in lib/packs/*.json has a tooldef with a Details: path that resolves
   cmds     every cmd/*/bin/aos-* is named by some index entry's _description
-  impls    the same for impls executables (warnings only)
+  impls    the same for impls executables (add_executable in impls/*/CMakeLists.txt)
   codes    tooldef error codes not found in the knowledge base, or with an ending
            outside C-54's (warnings)
   residue  dated notes (11-06 note), paths into thinking/, XXX placeholders

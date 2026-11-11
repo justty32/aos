@@ -1,4 +1,4 @@
-{"description": "Copy a file or a whole folder. Parent folders of to are created; links are copied as links. Nothing is copied if to already exists (FileBad). Returns JSON {from, to, counter_files}. Errors: PathBad (to is inside from), FileMissing, FileBad, CopyFailed.",
+{"description": "Copy a file or a whole folder. Parent folders of to are created; links are copied as links. Nothing is copied if to already exists (FileBad). Returns JSON {from, to, counter_files}. Errors: PathBad (to is inside from), FileMissing, FileBad, CopyFailed. Details: knowledge_read aos/tools/copy.json.",
  "parameters": {"type": "object",
                 "properties": {"from": {"type": "string", "description": "source path, relative to your workspace, or absolute"},
                                "to": {"type": "string", "description": "full destination path (not the folder to copy into)"}},

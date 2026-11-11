@@ -1,4 +1,4 @@
-{"description": "Look into a file step by step; returns JSON. JSON file: pointer (e.g. /states/think; empty = whole file) shows one level: small values directly, big ones as children with type and size; append a key to the pointer and call again. Text file: small = whole; big = an outline first (Python class/def, Markdown headings, with line numbers), then start and end show a range. Errors: FileMissing, PointerMissing.",
+{"description": "Look into a file step by step; returns JSON. JSON file: pointer (e.g. /states/think; empty = whole file) shows one level: small values directly, big ones as children with type and size; append a key to the pointer and call again. Text file: small = whole; big = an outline first (Python class/def, Markdown headings, with line numbers), then start and end show a range. Errors: FileMissing, PointerMissing. Details: knowledge_read aos/tools/view.json.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "path relative to your workspace, or absolute"},
                                "pointer": {"type": "string", "description": "JSON pointer; JSON files only"},

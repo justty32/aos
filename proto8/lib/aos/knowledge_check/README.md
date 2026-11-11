@@ -20,7 +20,7 @@ flowchart LR
 | `index` | 錯誤 `NodeMissing`／`IndexEntryMissing`／`IndexBad`／`FileBad` | 每個資料夾的 `_index.json`、每個帶 `_index` key 的物件：表裡列的都在；資料夾裡的檔與資料夾、物件裡的 key 沒列＝孤兒（`.`、`_` 開頭的不算，所以 `_description`、`_index` 例外）。`$env` 格看環境，不判 |
 | `tools` | 錯誤 `ToolNodeMissing`／`ToolDefMissing` | `lib/packs/*.json` 登記的每支工具 |
 | `cmds` | 錯誤 `CmdNodeMissing` | `cmd/*/bin/aos-*` 每支指令 |
-| `impls` | 提醒 | `impls/*/CMakeLists.txt` 的 `add_executable(aos-X_main …)` 每支執行檔 |
+| `impls` | 錯誤 `CmdNodeMissing` | `impls/*/CMakeLists.txt` 的 `add_executable(aos-X_main …)` 每支執行檔（11-11 由提醒升錯誤：每支都有節點了，底層零件在 `aos/cli/parts/`） |
 | `codes` | 提醒 | 登記工具的 `_tooldef.json` 的 `errors`：庫裡全文找不到的代號；結尾不在 C-54 表（`Missing`、`Unknown`、`Bad`、`Failed`、`Exists`、`Rejected`，另加 `Internal`）的代號 |
 | `residue` | 錯誤 `DateNoteBad`／`ThinkingRefBad`／`PlaceholderBad` | 庫內字串值裡的 `11-06 note` 這種日期註、`thinking/`、`XXX` |
 | `size` | 提醒 | 一份 `.json` 超過 `--max-file-bytes`（預設 8192）、一個字串值超過 `--max-text-bytes`（預設 1024） |
@@ -30,7 +30,7 @@ flowchart LR
 <details><summary>節點怎麼認（覆蓋的規則）</summary>
 
 - **工具有節點**＝它的 `_tooldef.json` 的 `description` 裡有 `Details: knowledge_read 路徑`，而且那條路徑從庫根解得到（句尾的 `.`、`)` 不算路徑）。沒有這行、或解不到＝`ToolNodeMissing`；工具資料夾沒有 `_tooldef.json`＝`ToolDefMissing`。路徑解不到時 `refs` 也會報一次（兩個問題：指標壞了、工具沒節點）。
-- **指令有節點**＝樹裡某張表（`_index.json` 或 `_index` key）某一格的 `_description` 寫出完整指令名（整個字，`aos-agent` 不算 `aos-agent-x`）。現有 `aos/cli/` 的格就是這樣寫的（「Use aos-daemon-ctl …」）；檔名不必等於指令名（`daemon.json` 寫 `aos-daemon-ctl`、`grow_screen.json` 一格管兩支）。
+- **指令有節點**＝樹裡某張表（`_index.json` 或 `_index` key）某一格的 `_description` 寫出完整指令名（整個字，`aos-agent` 不算 `aos-agent-x`）。現有 `aos/cli/` 的格就是這樣寫的（「Use aos-daemon-ctl …」）；檔名不必等於指令名（`daemon.json` 寫 `aos-daemon-ctl`、`eca.json` 一格管 `aos-eca-turn` 與 `aos-eca-screen` 兩支）；impls 的執行檔照同一條認。
 - 工具清單、指令清單都從磁碟讀，新包、新指令不用改這支。
 
 </details>

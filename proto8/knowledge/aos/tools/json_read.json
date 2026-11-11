@@ -1,0 +1,9 @@
+{
+ "_description": "# Tool json_read\n\nShow one place in a JSON file, `depth` levels deep (default 1, at most 10). Deeper parts are folded: an object into `{\"type\": \"object\", \"keys\": [...]}` (at most 20 keys, then `counter_keys_more`), an array into `{\"type\": \"array\", \"counter_items\": N}`, a string over 500 characters into `{\"type\": \"string\", \"counter_chars\": N, \"head\": \"...\"}`.\n\nUse it to find your way in a JSON file, and before every `json_write`. Raw text: `read`. Not sure it is JSON: `view`.\n\n```json\n{\"path\": \"cfg.json\"}\n```\n-> `{\"path\": \"cfg.json\", \"pointer\": \"\", \"value\": {\"name\": \"demo\", \"states\": {\"type\": \"object\", \"keys\": [\"think\", \"act\"]}, \"max\": 20}}`\n\nThen `{\"path\": \"cfg.json\", \"pointer\": \"/states\", \"depth\": 2}` -> `{..., \"value\": {\"think\": {\"next\": \"act\"}, \"act\": {\"next\": \"think\"}}}`.\n\n`pointer` is a JSON Pointer: `\"\"` = the whole file; else it starts with `/`, keys joined by `/`, array items by number (`/items/0`); inside a key `~1` = `/` and `~0` = `~`.\n\nErrors: `aos/tools/json_read.json#/errors`.\n",
+ "_index": {
+  "errors": {
+   "_description": "json_read errors and what to do."
+  }
+ },
+ "errors": "# json_read: errors\n\n- `PointerBad`: `pointer` does not start with `/` (use `\"\"` for the whole file).\n- `PointerMissing`: no such key or array item; the reason names it. Look one level up.\n- `FileMissing`: no such file. `FileBad`: a folder, a file over 4MB, or not valid JSON (the reason gives the parse error and its place).\n- `ArgumentsBad`: also `depth` outside 1 to 10.\n- `ReadFailed`, `WriteFailed`, `WsMissing`: `aos/errors.json#/common/files`. Wrong or unknown keys (`ArgumentsBad`): `aos/errors.json#/common/input`.\n"
+}

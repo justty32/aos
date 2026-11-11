@@ -3,7 +3,7 @@
   "_description": "Finding your own name, what is in your stack, and what you are allowed to change."
  },
  "me/": {
-  "_description": "Long sections of aos/me.json (self_tools, self_llm, self_history, self_hook); read them through aos/me.json."
+  "_description": "Long sections of aos/me.json (self_tools, self_llm, self_system, self_history, self_hook); read them through aos/me.json."
  },
  "errors.json": {
   "_description": "How to read a failed call: the `error:` line, `warning:` lines, and exit codes."
@@ -13,6 +13,12 @@
  },
  "world.json": {
   "_description": "The mental model: daemon = hardware, stack = memory, workspace = external memory, definition = source code, kernel = gatekeeper."
+ },
+ "definition.json": {
+  "_description": "What each file in a definition folder does (interfaces.json, loop.json, tools.json, hooks.json, cli.json ...), and which ones you have your own copy of."
+ },
+ "body.json": {
+  "_description": "Two kinds of body, agent-fsm and eca (claude, codex): brain, tools, hooks, system text, history; how to tell which you are."
  },
  "status.json": {
   "_description": "The daemon table, the phases an agent can be in, and what each phase means for you."
@@ -30,19 +36,22 @@
   "_description": "What you must not do, and why. Read this before doing anything that changes the system."
  },
  "knowledge.json": {
-  "_description": "Save reusable facts in the knowledge base, not transient task progress."
+  "_description": "The knowledge base: how to look things up (knowledge_read), which one you may write, when and how to write (knowledge_write)."
  },
  "cli/": {
   "_description": "Use these shell commands to manage agents, tools and daemon procs."
  },
  "mailbox.json": {
-  "_description": "Letters between agents: tools mailbox_peek, mailbox_read, mailbox_send; when you must answer."
+  "_description": "Letters between agents: tools mailbox_peek, mailbox_read, mailbox_send; when you must answer; checking regularly without filling your history."
  },
  "clock.json": {
-  "_description": "Wake yourself (or another agent) every N cycles with tool clock_register."
+  "_description": "Timers: clock letters to your queue (clock_register), or an on_clock hook that adds nothing to your history; which one to choose."
  },
  "tools.json": {
   "_description": "Making your own tools: tool tools_def (new from the Python skeleton, check) and the Python helper tool_spec."
+ },
+ "tools/": {
+  "_description": "One node per stock tool (read, ls, write, edit, trash, shell ...): when to use it and which tool instead, examples with real output, errors."
  },
  "packs.json": {
   "_description": "Your tools come in packs (look, change, delete, shell, gadgets, events, self, subagent, def, mailbox, knowledge): one sentence per tool, and how a pack is turned off."

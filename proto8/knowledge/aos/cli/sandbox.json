@@ -1,0 +1,13 @@
+{
+ "_description": "# Running a program in a sandbox\n\nUse aos-sandbox to run one program with only the paths, network and limits a config allows.\n",
+ "_index": {
+  "run": {
+   "_description": "Run, preview with --dry-run, exit codes and errors."
+  },
+  "config": {
+   "_description": "The config keys: ro, rw, base, commands, net, limits, user, env."
+  }
+ },
+ "run": "# aos-sandbox: run a program in a sandbox\n\n```sh\naos-sandbox --dry-run cfg.json cat /work/a.txt     # prints the argv it would exec, one JSON line\naos-sandbox rw.json sh -c 'echo y > /work/b'       # works: /work is in rw\naos-sandbox meta.json#/x/sandbox cat /work/a.txt   # a config inside a bigger file\n```\n\nIt builds `[s6-softlimit ...] [s6-setuidgid USER] bwrap ... -- prog args` and execs it, so the exit code, stdin and stdout are prog's (signal N = 128+N, e.g. 143). Nonzero with an `aos-sandbox: error:` line = aos-sandbox failed; without it, prog's own code. Paths not listed are invisible; a read-only path refuses writes (`Read-only file system`). Flags go before CONFIG. Errors: `CfgMissing`, `CfgBad` (`ro must be an array of non-empty strings`), `PathMissing` (a listed path does not exist), `CommandMissing` (bwrap, or s6-softlimit when limits are set, is not on PATH), `UserBad`.\n",
+ "config": "# Config keys\n\nOne JSON object; all keys optional; unknown keys ignored. Example: `{\"rw\": [\"/work\"], \"commands\": [\"aos-exec\"], \"net\": false}`.\n\n- `ro`, `rw`: visible paths (read-only / writable). `base`: the read-only system base (default /usr /bin /sbin /lib /lib64 /etc). `commands`: command names found on PATH; their folders become visible read-only.\n- `net`: network (default false: only the sandbox's own loopback).\n- `mem_mb`, `cpu_s`, `procs`, `file_mb`, `files`: limits through s6-softlimit (it must be on PATH). `cpu_s` is CPU time, not wall time.\n- `user`: account or uid:gid (needs root).\n- `env`: variable names to pass in. The default is PATH, locale, TZ, PYTHON*, the six AOS_ run variables and AOS_DAEMON, AOS_LLM_KERNEL, AOS_KERNEL, AOS_KNOWLEDGE, AOS_CLOCK; a list replaces it whole. API keys are never passed by default.\n- Values may be `{\"$env\": NAME, \"$path\": ..., \"$prefix\": ...}`.\n\n`aos-agent ctl add --limits` and `aos-daemon-ctl add --limits` take the same keys.\n"
+}

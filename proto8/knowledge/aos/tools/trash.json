@@ -1,0 +1,9 @@
+{
+ "_description": "# Tool trash\n\nDelete a file, folder or link so that you can undo it: it is moved to `.trash/<time>/<its path>` in your workspace. Prints `{\"path\", \"to\"}`; `to` is where it is now.\n\nUse trash by default when you delete. Use `remove` only when it must really be gone (a big temporary folder, emptying the trash).\n\n```json\n{\"path\": \"out/hello.txt\"}\n```\nprints `{\"path\":\"out/hello.txt\",\"to\":\".trash/20261111-111744/out/hello.txt\"}`.\n\n- Undo: `move` with `\"from\"` = that `to` and `\"to\"` = the old path (`aos/tools/move.json`).\n- `<time>` is the local time `YYYYMMDD-HHMMSS`. A path outside the workspace keeps its whole absolute path: `/tmp/b1out/f.txt` goes to `.trash/<time>/tmp/b1out/f.txt`.\n- The trash is never emptied by itself. To empty it: `remove` with `{\"path\": \".trash\", \"recursive\": true}` (no undo). `ls` hides `.trash` unless `\"hidden\": true`.\n\nErrors: `aos/tools/trash.json#/errors`.\n",
+ "_index": {
+  "errors": {
+   "_description": "trash errors and what to do."
+  }
+ },
+ "errors": "# trash: errors\n\n- `FileMissing`: nothing at that path.\n- `PathBad`: the workspace itself, something already in `.trash`, or a folder that contains `.trash`.\n- `MoveFailed`: the system refused the move (`aos/errors.json#/common/files`).\n- `WsMissing`: the trash is always in your workspace, so trash needs one even for an absolute path. Wrong or unknown keys (`ArgumentsBad`): `aos/errors.json#/common/input`.\n"
+}
