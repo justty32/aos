@@ -2,6 +2,8 @@
 
 ← [2026-11-10](../README.md)｜[thinking](../../../README.md)｜範本：[aos-tools-cli](../aos-tools-cli/README.md)｜原則：[C-85](../../../../docs/CONCEPTS/01-設計理念/10-C-85.md)
 
+> **現況（11-11 線 J 盤點）**：本報告當時未施工；之後已裁的都做完了——10a（tools add、copy-out --template）、10b（兩支 ctl：Q4、甲3～5）、10c（甲6、Q3、Q6）、10d（Q1～Q3 旗標位置，六支）；Q5 改裁不修。剩一題沒裁：旗標位置要不要推到其餘指令（P-44 續「之後要不要一起改，沒裁」），選項在 [11-11 carry-over § 待裁](../../11/carry-over.md#待裁) 第 1 題。
+
 只讀、實跑、寫報告；沒改任何程式、沒做任何 git 寫入。實跑在 WSL `/tmp/cli-sweep/`（假腦的 llm kernel＋兩台小根＋一隻 agent-fsm＋一隻配假 claude 的 eca；做完都 `shutdown` 了、沒有殘留行程），讀的是 `ad8541e92` 的工作樹。**做到哪**：任務單 1～5 組全部掃完；1～3 組做深，4～5 組較淺（各支都實跑過基本用法）。
 
 ## 使用者原話

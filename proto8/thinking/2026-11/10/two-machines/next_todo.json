@@ -119,7 +119,7 @@
    "symptom": "repo 改了 lib/agent/memory/_tooldef.json，抄出去的那份不會跟著變",
    "direction": "aos-directive 讓 $ref 的值也能是 $env，就能改回指過去",
    "needs": "C++（aos-directive）",
-   "status": "open"
+   "status": "自然消失（11-11 線 J 盤點）：11-10 templates-cp 刪掉 copy-out 與它的 env 模式，範本也拿掉 tools/ 夾、工具直接登記 lib 那格（{\"$env\": \"AOS_HOME\"} 寫法），repo 裡不再有抄出去的 tooldef／metainfo 快照，lib 改了就是改了；aos-directive 不用動"
   },
   {
    "id": "B13",
@@ -182,7 +182,7 @@
    "symptom": "cli_session.py 檔頭講 tools 的註解沒提指示詞；wf/workflows/dev-env.md 還寫 copy-out「路徑改絕對」",
    "direction": "順手改",
    "needs": "文件",
-   "status": "cli_session.py 檔頭已補指示詞（11-10 晚家機）；dev-env.md 的 copy-out 那句交 templates-cp（copy-out 整支要刪，跟著改）"
+   "status": "已修：cli_session.py 檔頭已補指示詞（11-10 晚家機）；dev-env.md 的 copy-out 那句 templates-cp 已改成 cp -r＋斷捷徑刪掉就好（11-11 線 J 盤點確認）"
   },
   {
    "id": "B20",
@@ -209,7 +209,7 @@
    "symptom": "cli_session.py 945 行、aos-eca-turn 470 行、test_daily.py 933 行（慣例 300 行要考慮拆）",
    "direction": "開場白那段拆模組；test 的 helper 拆 _daily_lib.py",
    "needs": "重構",
-   "status": "open"
+   "status": "open，排在成果整理階段（11-11 線 J：使用者 10-09 定「開發階段不設行數上限」，拆檔等整理階段再做；11-11 量到 lib/agent/cli_session.py 1052 行、aos-eca-turn 606 行、test_daily.py 960 行）"
   },
   {
    "id": "B23",

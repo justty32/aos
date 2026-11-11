@@ -171,7 +171,7 @@ flowchart LR
 | [17-B07到B10施工結果](17-B07到B10施工結果.md) | 一列 `$ref` 壞不拖垮整台、EntryMissing 印基準與絕對路徑、budget.senders key 對不上提醒、四句訊息講清楚（11-10 晚家機）、代定與待裁 |
 | [decided.json](decided.json) | 11-10 午後隊員代定的小決定，每列寫怎麼翻案（34 列） |
 | [assumptions.json](assumptions.json) | 未經真機驗證的假設（17 列） |
-| [next_todo.json](next_todo.json) | 留給明天／大修的問題（23 列，open 9） |
+| [next_todo.json](next_todo.json) | 留給明天／大修的問題（23 列，open 8：B05、B06、B14 待裁，B15、B16、B20、B21 大修，B22 整理階段；11-11 線 J 盤點把 B12 標自然消失、B19 標已修，見 [11-11 carry-over](../../11/carry-over.md)） |
 | [gitignore_classes.json](gitignore_classes.json) | stack 裡每類檔進不進 git（實跑分類，86 列） |
 | [path_fields.json](path_fields.json) | 指到外面的路徑欄位，三種寫法收不收（施工前調查，35 列） |
 | [leftovers.json](leftovers.json) | cp 過去後的執行期殘留誰會自癒（施工前調查，30 列） |
