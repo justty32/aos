@@ -26,7 +26,7 @@
 
 - `subagent`：`write_book` 寫 `subagents.json` 前 `makedirs`（原本就有）；讀帳不在＝`[]`。
 - `shell`、`run_python`：`shell_observed.prepare` → `observed.prepare_strict` 先 `mkdir(parents=True)` 再寫 `interfaces.json`／`observed.jsonl`。
-- `thought`：`makedirs(children/)`。claude／codex：`Cell` 建構時建。`copy_child` 寫前 `mkdir(parents=True)`。
+- `do_task`（施工當時叫 thought）：`makedirs(children/)`。claude／codex：`Cell` 建構時建。`copy_child` 寫前 `mkdir(parents=True)`。
 - `aos-sandbox`（沙箱包著的工具）：`rw` 綁 `$AOS_STACK` 而它不在原本會 `PathMissing`——改成 rw 裡**正好是 `$AOS_STACK`** 而它不在就先建，其他路徑不在照舊 `PathMissing`（`--dry-run` 不建）。
 - tooldef 快取（`aos-tools` 的 `$AOS_STACK/tooldef_cache.json`）：規則本來就是「`AOS_STACK` 沒設或不是資料夾＝不快取、不寫任何檔」，沒改。它平常寫在 agent 的 stack（`aos-agent tools` 給的是 agent stack），不是工具小格。
 - hook 小格 `$AOS_STACK/hooks/<名>/`：使用者這次講的是工具，hook 照舊（`hooks.py` 跑 hook 前建）。

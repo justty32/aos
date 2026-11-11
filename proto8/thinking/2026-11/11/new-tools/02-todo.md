@@ -80,7 +80,7 @@ _metainfo：`resource: disk`、`side_effect: true`（寫自己的 stack）、`id
 
 - `subagent` 生的子、`thought`（之後 `do_task`）的一次性小幫手，都是 daemon 上另一隻 agent、有自己的 stack，叫 `todo` 時小格在**它自己的** `tools/todo/`——清單天生各自獨立，什麼都不用做。
 - 父要看子的清單：子的清單在子的 stack 裡，父可以叫子的 `todo ls`？目前 `subagent` 能轉的只有 self_* 那幾類（`tools`、`llm`、`history`、`hook`、`system`），不含任意工具；要的話是 subagent 那邊加一個 op，**這次不做**（代定 D4）。
-- `thought` 用完即刪（預設 `--purge`），它的清單跟著消失，正是要的。
+- `do_task` 用完即刪（預設 `--purge`），它的清單跟著消失，正是要的。
 
 ## eca 那邊
 
@@ -120,5 +120,5 @@ _metainfo：`resource: disk`、`side_effect: true`（寫自己的 stack）、`id
 
 **T2 子 agent／do_task 的清單**
 - 甲 各自獨立（各自的 stack，推薦）：什麼都不用做；父看不到子的清單。
-- 乙 do_task 的小幫手開場帶父的清單（唯讀）：小幫手知道整體計畫；要動 thought 的開場文，父子耦合。
+- 乙 do_task 的小幫手開場帶父的清單（唯讀）：小幫手知道整體計畫；要動 do_task 的開場文，父子耦合。
 - 丙 父子共用一份：要另外傳路徑、會互相蓋寫，不推。
