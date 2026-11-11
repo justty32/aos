@@ -15,9 +15,9 @@ import stat
 import tempfile
 
 import knowledge_fs as fs
-from tool_io import Error
+from tool_io import Error, warn
 
-MAX_BYTES = 8000
+MAX_BYTES = 8000                                # 推薦上限：超過只提醒、照寫（11-11 使用者選「超過只提醒、照寫」）
 MISSING = object()
 
 
@@ -40,21 +40,24 @@ def check_name(name):
 
 
 def encode(fs_path, value):
-    """要寫進檔的文字；.json＝JSON，其他副檔名＝value 要是字串、照原文。超過 8000 bytes＝ValueBad。"""
+    """要寫進檔的文字；.json＝JSON，其他副檔名＝value 要是字串、照原文。超過 8000 bytes＝stderr 一行 warning、照寫。"""
     if fs_path.endswith(".json"):
         text = json.dumps(value, ensure_ascii=False)
     elif isinstance(value, str):
         text = value
     else:
         raise Error("ValueBad", "%s is not a .json file, so value must be a string" % os.path.basename(fs_path))
-    if len(text.encode("utf-8")) > MAX_BYTES:
-        raise Error("ValueBad", "value is over %d bytes; split it into several keys or files" % MAX_BYTES)
+    too_big(len(text.encode("utf-8")))
     return text
 
 
+def too_big(n):
+    if n > MAX_BYTES:
+        warn("value is %d bytes, over the recommended %d; written anyway (smaller keys or files are easier to read back)" % (n, MAX_BYTES))
+
+
 def check_value(value):
-    if len(json.dumps(value, ensure_ascii=False).encode("utf-8")) > MAX_BYTES:
-        raise Error("ValueBad", "value is over %d bytes; split it into several keys or files" % MAX_BYTES)
+    too_big(len(json.dumps(value, ensure_ascii=False).encode("utf-8")))
 
 
 def write_file(fs_path, value):

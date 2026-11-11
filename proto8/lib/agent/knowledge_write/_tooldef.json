@@ -42,7 +42,7 @@
         "description": "REQUIRED for every add (except _description.json and _description keys): one line saying what this is, shown in the index. Optional for set; not used by rm."
       },
       "value": {
-        "description": "add (not for a folder) and set: the content. Leave it out in add to only index something that already exists. Plain text is a string like \"Amy likes tea.\"; any other JSON is stored as JSON. For a file that is not .json it must be a string. At most 8000 bytes."
+        "description": "add (not for a folder) and set: the content. Leave it out in add to only index something that already exists. Plain text is a string like \"Amy likes tea.\"; any other JSON is stored as JSON. For a file that is not .json it must be a string. Keep it under about 8000 bytes: more is still written, with a warning."
       },
       "recursive": {
         "type": "boolean",

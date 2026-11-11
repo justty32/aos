@@ -57,6 +57,19 @@ class WritingTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         return r.stdout
 
+    def test_over_8000_bytes_warns_and_writes(self):
+        """超過 8000 bytes＝stderr 一行 warning、照寫、退 0（11-11 使用者選「超過只提醒、照寫」）；add 與 set、JSON 與非 JSON 都一樣。"""
+        for args in ({"op": "add", "path": "notes/big.json", "value": "x" * 8001, "description": "big"},
+                     {"op": "add", "path": "notes/big.md", "value": "y" * 9000, "description": "big text"},
+                     {"op": "set", "path": "notes/big.json", "value": "z" * 8100}):
+            r = self.run_tool(**args)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.assertRegex(r.stderr, r"^knowledge_write: warning: value is \d+ bytes, over the recommended 8000; written anyway")
+        self.assertEqual(self.load("notes/big.json"), "z" * 8100)
+        self.assertEqual((self.root / "notes/big.md").read_text(), "y" * 9000)
+        r = self.run_tool(op="set", path="notes/big.json", value="small")
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+
     def test_root_flag_and_no_default(self):
         """--root DIR 蓋過 AOS_KNOWLEDGE；都沒給＝KnowledgeMissing、不寫任何檔（11-10 深夜：工具沒有內建預設）。"""
         r = self.run_tool(env={"AOS_KNOWLEDGE": ""}, op="add", path="x.json", description="X", value="x")
@@ -285,7 +298,6 @@ class WritingTest(unittest.TestCase):
         self.fails("NodeMissing", op="set", path="notes/a.json#/zz", value=1)
         self.fails("NodeMissing", op="rm", path="notes/a.json#/zz")
         self.fails("ValueBad", op="add", path="notes/n.md", value=5, description="x")
-        self.fails("ValueBad", op="add", path="notes/n.json", value="x" * 8001, description="x")
         self.fails("ValueBad", op="set", path="notes/a.json")
         self.fails("ValueBad", op="add", path="notes/dir/", value=1, description="x")
         self.ok(op="add", path="notes/dir0/", value=None, description="null value = no value")   # 小模型常帶 "value": null
