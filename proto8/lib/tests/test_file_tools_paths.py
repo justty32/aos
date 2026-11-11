@@ -51,14 +51,14 @@ class OutsideTest(unittest.TestCase):
         self.assertEqual(json.loads(self.call("json_read", path=str(self.out / "j.json")))["value"], {"a": 1, "b": 2})
         self.assertTrue(self.call("shell", command="cat ../out/a.txt").startswith("two\n"))
 
-    def test_json_write_quoted_pointer_hint(self):
-        (self.ws / "q.json").write_text('{"n": 1}')
-        for key in ("'/n'", '"/n"'):                     # 11-11 晚 gemma 把鍵包上引號
-            r = subprocess.run([str(BASE / "json_write" / "_entry")], input=json.dumps({"path": "q.json", "set": {key: 2}}),
-                               text=True, capture_output=True, env=self.env)
-            self.assertEqual(r.returncode, 1)
-            self.assertIn("PointerBad", r.stdout)
-            self.assertIn("write the key as /n", r.stdout)
+    def test_json_write_quoted_pointer_is_unwrapped(self):
+        for key in ("'/n'", '"/n"'):                     # 11-11 晚 gemma 把鍵包上引號：剝掉引號照用
+            (self.ws / "q.json").write_text('{"n": 1}')
+            self.call("json_write", path="q.json", set={key: 2})
+            self.assertEqual(json.loads((self.ws / "q.json").read_text()), {"n": 2})
+        r = subprocess.run([str(BASE / "json_write" / "_entry")], input=json.dumps({"path": "q.json", "set": {"'n'": 2}}),
+                           text=True, capture_output=True, env=self.env)
+        self.assertIn("PointerBad pointer must start with /", r.stdout)
 
     def test_relative_needs_workspace(self):
         env = {k: v for k, v in self.env.items() if k != "AOS_WS"}
