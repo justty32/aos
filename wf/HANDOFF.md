@@ -12,6 +12,40 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-11 晚 家機
+
+1. **授權**：家機（Manjaro）。頂層只跟使用者交流，派 opus 隊長做事。**睡前 push**：頂層 23:10 前推，隊長不推。使用者今晚原話：「繼續跑，有問題就修」「隨便玩吧」。eca_bob 今晚花費上限合計 10 美金，是頂層代定。
+2. **今晚做了什麼**（都在 [thinking 11-11 playground](../proto8/thinking/2026-11/11/playground/README.md) 02～04）：
+   - 家機試驗場照線 K 版整份重建。
+   - 三隻都能一行換模型。
+   - 出廠 llm-kernel 補 terra，sol 換成 6.1（`c21947183`）。
+   - 11 個模型配工具實測兩輪：[03](../proto8/thinking/2026-11/11/playground/03-模型配工具實測.md)、[04](../proto8/thinking/2026-11/11/playground/04-修與第二輪實測.md)。
+   - 修了四件：knowledge_read 能指定 `root`（`55a1bce83`）、eca 範本拿掉 subagent 包（39→37 支，`10539f4ff`）、mailbox_send 寄給自己時錯誤訊息補自己的名字（`bb24ebba6`）、json_write 鍵包引號就剝掉照用（`6799c55ea` 先只給提示，`eb772bbdf` 改成照用）。
+3. **使用者今晚的裁定**（原話在 04 開頭）：
+   - 知識庫不給預設。
+   - read 跟 write 一樣能指定 root。
+   - do_task 摺掉後模型重做＝「自己承擔。本來就是這樣。」
+   - eca 不給 subagent 相關工具。
+   - codex 不念系統文字＝「喔」，不處理。
+   - 線 K 五條代定認可（「沒啥好翻的，我覺得都OK」）。
+   - knowledge 改回 memory：「目標是整套改回。」
+4. **代定**：eca 留 def 包（agent_def、tools_def），見 04 § 修了什麼。
+5. **要使用者裁的**（04 § 第二點裡沒做的、§ 第二輪發現、§ 第三輪）：
+   - root 要不要也收檔案和 json 物件（`a.json#/x`）。
+   - eca_cody 的唯讀沙盒讓 codex luna／terra 不敢用 aos 寫入工具：要改 `workspace-write`，還是在 system 裡加一句？
+   - codex 自帶 goal 工具，跟 aos goal 撞名。
+   - mailbox_send 的 `box` 能指到 agent 的 queue 資料夾。
+   - fsm 沒有「同一個錯連發」的煞車：gemma 連撞二十幾次。
+6. **試驗場**（`~/code/playground`）：
+   - 樹在背景跑；fsm_ann 用 gemma、eca_bob 用 haiku、eca_cody 用 gpt-6-luna，對話都是空的；fsm 41 支、eca 37 支。
+   - 怎麼起：`cd ~/code/playground && source env.sh && cd ws`，`aos-agent chat -t fsm_ann`。停：`aos-daemon-ctl -d ~/code/playground/.stack shutdown`。
+   - proxy 已重起，4000 有 6.1 的 sol 和 terra。
+7. **明天要做**：
+   - knowledge 整套改回 memory。
+   - 接外部 MCP 第一階段。
+   - 線 K 剩兩件：gitignore 漏列（fork 的 children state、`subagents.json`）、`history_removed.jsonl` 絕對路徑可能外洩。
+   - 公司 proxy 要加 6.1 條目。
+
 ## 2026-11-11 收工 公司頂層
 
 1. **授權照舊**：公司機（Windows＋WSL Ubuntu）；頂層只交流與派工（普通 opus、簡單與雜活 sonnet，非雜活先通讀 wf/）；小題用選項框問；真腦在公司只用 eca（claude haiku、codex `gpt-6-luna`；codex 只對 aos 那組 MCP 工具免核准），fsm 真腦回家測。**push 每次都要使用者開口**：今天推了兩次——下午他說「推吧」推到 `23c9544d3`，收工他說「整理完就推」，推到本條所在的 commit。
@@ -60,34 +94,3 @@
    - `agents_ctl` 能 rm 別人帳上的子。
    - tools_def「之後可加」的幾項（[tools-def](../proto8/thinking/2026-11/10/tools-def/README.md)）。
 7. **WAIT_USER 新加／改**：試驗場補刷、`~/.cache/aos-mcp-aos/tools.json` 跟上改名（照抄 sed 一行）、eca 信任選單要手動信任一次、hook 線 eca haiku 真對話（agent 不代跑）。
-
-## 2026-11-10 下午 公司頂層（compact 前）
-
-1. **授權與狀態**：公司電腦（Windows 桌面 app；施工一律在 WSL `~/repo/aos-tools`，這台 Windows 沒 python）。**今天不 push，下班前統一 push**（使用者早上先說隨便 push、隨即改口）；子 agent 也不准 push。普通工作 opus、雜活 sonnet、規劃可開 fable（使用者 11-10「好，可以開fable agent」）；頂層只交流。使用者：「不要因為太敢就省略東西，時間沒有緊急到那樣。」（不砍範圍、不跳驗收，做不完跨天）；今天的裁定多是選項框快裁（「主要靠直覺…大修的時候再來處理」）。arcagi 停線、等大修完再續。
-   - **兩份 clone 的同步**：所有施工 commit 都在 WSL 那份本地 main（領先 origin 20 個以上，含早上 Windows 這份的 `67a0d67d1`、`7963f5d74`）；Windows 這份只多**本檔這段未 commit 的改動**。下班前：整理 WSL 那份 `git log origin/main..main`（各 commit 新檔有無 >1 MB／二進位；prefix-fixes 隊長回報過到 `233514b4a` 為止都沒有）給使用者看→他點頭後從 WSL push→Windows 這份 `git checkout wf/HANDOFF.md` 之前先把這段搬進 WSL 那份 commit，再 pull。
-2. **今天做完的（都在 WSL 本地 main）**：
-   - **prefix-fixes**（桌面問題清單 207 列分桶；直接修 61 列做了 60）：線 1～5、線 6 `procs_ctl_mailbox`→`procs_requests`、坑-52 PDEATHSIG 全套＋eca 的 CLI、坑-74 等腦 10 分鐘提醒、新子命令 `aos-daemon-ctl shutdown`、`copy-out`（坑-73）與 `.aos-proto8` 錨點（坑-92；11-10 下午已拔）、收尾修 `caf9a32f7`。試驗場 `~/code/playground` 已刷新（備份 `.bak-1110`），桌面大修材料同步到 `6efb876fe`（220 列）。→ `proto8/thinking/2026-11/10/prefix-fixes/`（04 施工結果）。**沒修、等使用者說要不要**：adopt 接回的列失敗後直接下表看不到原因；stop→sleep→start 後新 loop 照做舊 stop 馬上退出；「ctl 信箱」說法要不要照新命名原則改。
-   - **sweeper 清道夫**：`_sweeper` 列（每台 daemon 自己掛、只管自己）、`aos-daemon-ctl sweep [--purge] [--dry-run]`、保留期預設 7 天、判官範本 `max_running` 5。→ `thinking/2026-11/10/sweeper/`。沙箱帳號沒實跑。
-   - **two-machines 圖紙**（fable，`2d5d61905`）：之後被使用者大幅改向，見下。
-3. **還在跑：two-machines 施工隊長（opus，ListAgents 找「two-machines 施工隊長」）**。圖紙原是「專用 image repo＋`aos-image freeze/thaw`」，使用者下午連續改向，**以這些原話為準**（都已轉給它）：
-   - 「換台還要特別跑東西...，我原本預期他就是cp過去，起daemon她就自動繼續了。頂多就是各種路徑(ws,知識庫)和環境變數準備好就好。」→ 不可有換台必跑的步驟，零件自己認出殘留並自癒。
-   - 指到外面的路徑：「使用者自己準備。要用相對位置、絕對位置、環境變數指定都可」「兩台各自設一次...不要限制只設一次」→ 三種寫法都收、每次用到才解、不固化；`.aos-proto8` 錨點 11-10 下午使用者裁定整個拔掉（「怎麼還是有.aos-proto8 ?」「那就拔掉，可以動程式」）：`copy-out --proto8` 只剩 env（預設）／relative／absolute，`--relink`、`aos-tools add --anchor` 已拔；換台不跑任何指令，env 寫法每台設 `AOS_HOME（11-10 傍晚由 AOS_PROTO8 改名）`。
-   - 目標用法：「我在C:/code/mine/something，建立defs/, stacks/，剩下就是something自身的東西。git clone下來之後直接aos-exec --stack stacks/daemon defs」；下班前對根下 **`shutdown`**（他先說 sleep、更正「喔不是，就shutdown」）再 `git push`。stacks 跟著專案自己的 repo（正常歷史，aos 不可 force push／代 commit）——「stacks 進專案 repo 正常歷史」我先這樣假設，未正式裁。
-   - 「gitignore要弄好」（獨立交付項：實跑分類、兩方向都對、自動檢查釘住）。
-   - 「要自動繼續的話，有需要的話可以加上boot指令」（只有零件自癒做不到時才加，與 shutdown 成對）。
-   - 「aos image...拿掉吧。」；跨專案：`another/` 放可被引用的 def、`llms/` 是最終的 llm kernel（獨立起停）；「llms我可能會用環境變數指定。然後如果llms那邊我沒開aos daemon，那就是我自己的問題，但我也希望他不要搞壞」。
-   - 位置：「喔喔，其實是/mnt/c」「或者說，WSL能訪問到的都可能是目標」→ /mnt/c 實測最優先（結果要先短訊回頂層、有硬傷立刻告訴使用者），寫成「依賴哪些檔案系統特性」的通則，能不依賴就改、做不到就啟動時探測並清楚拒絕。
-   - 早上選項框已裁、仍有效的：eca 換台用 aos 紀錄重開對話；失敗的信掉那封＋自動重起；加 `--auto-restart`；eca 失敗後冷卻只拿一封試；金鑰只給問腦那支行程；知識庫編輯不加版本檢查；不做金鑰掃描；知識庫＝「就是一個資料夾…不要與其耦合」，工具層可假設 git 與鎖。
-   - **等它回的**：圖紙對照表（照舊／要改／作廢）、/mnt/c 實測短訊、要不要 `boot`（清單＋指令長相）、gitignore 分類結果、T7 給使用者親手做的真機驗證步驟（真 claude，約 15 分鐘）。
-4. **新條號**：無新編號；條文加註在各線結果檔（N-17 例外二、N-28、N-67、C-54 R14 的 11-10 註等）。使用者今天的命名原則：「mailbox，他是底層的aos post機制…應該是用承載的機制作命名」；隨想「有序無序感覺也沒差」未處理（agent 的 `queue/` 不動）。
-5. **還沒問／沒回的小事**：未追蹤殘留夾（Windows 這份 `proto8/impls/aos-schema/`、`inst/`；WSL 另有 `aos-gate/`、`aos-kernel-llm/`）刪不刪；上面第 2 點三件沒修的要不要修。
-6. **之後的裁定（午後到傍晚，逐字見 [two-machines README 午後方向改變](../proto8/thinking/2026-11/10/two-machines/README.md#午後方向改變逐字)）**：
-   - 隊長兩題：「1.可以。2.可以，這個就隨意，不要去假設或限制，然後defs/, stacks/都只是舉例，搞不好他會是其他名字，乃至於分散於defs_1, defs_2, stacks/root，或其中一些放在其他外部資料夾。」（1＝准動 C++；2＝stacks 進不進專案 repo 隨使用者——上面第 3 點「先這樣假設」已由這句定掉）
-   - 「他有需要的話可以派fable」；六項快修照勾（stop→sleep→start、設計-56、設計-52、open-14、坑-76、坑-102，已做），留大修：設計-44、adopt 接回失敗看不到原因。
-   - 「總之我五點下班，下班前全部弄好。剩下的明天再做」
-   - kernel 不在＝印 warning、原地等，不論有沒有 auto-restart，kernel 回錯照舊停；kernel 排隊信樣板與指南不擋、照帶：「都按照推薦」。
-   - boot 不做（起根本身就會叫醒睡下的列）。施工九個 commit 到 `875aff2b2`、文件未 commit；續行點與明天清單見 [13](../proto8/thinking/2026-11/10/two-machines/13-施工結果/03-不同之處與留給明天.md#留給明天大修)。
-
-7. **下午後段（16:00 前後，two-machines 隊長補）**：11-10 下午後段：aos-tools 改版已完成並 push（`$override` 覆蓋檔、`--replace`、env_file、快取搬 stack、C-85、C-86）；cli-sweep 掃描（[報告](../proto8/thinking/2026-11/10/cli-sweep/README.md)，未施工）使用者已答：Q2＝A 分工照舊、差別收到最少；Q3＝「兩支都留 stack，要刪另外說」即 `aos-agent ctl rm` 預設留 stack、刪加 `--purge`；Q4＝A 已停再停兩支都算成功；Q5＝A 根範本自己清掉繼承來的 `AOS_DAEMON`；Q6＝A 不動、對照表放 help 第一屏；Q1 自填兩次，重擬版原話「旗標也可以寫在子命令前面，但這樣就等同於aos-yyy zzz [flags] XXX [flags] QQQ。因為zzz有個意義：aos-yyy-zzz和aos-yyy zzz相等。所以其實都可以。」（頂層轉述：每層「節點 [旗標] 下一個位置參數」遞迴、兩種寫法都收＝09 選項 A；明天施工前再確認）；09 三個讀法「No preference」＝照推薦、補進 P-44（含第 6 行過時句）；Q7＝`copy-out --template 名 目的地`、沒給報錯、加 `--list`（help 第一句白話講它是「把範本抄出去開新 agent／新根」）；Q8＝`aos-agent tools add [--name 名] 路徑`、補 `--envs`／`--env-file`、跟 aos-tools add 一致（[README](../proto8/thinking/2026-11/10/cli-sweep/README.md)）。two-machines B01 做了一半（`7c1791e6e`：`--ws-json`／`--stack-json`／`--path-json` 的 `$env` 寫法進表、每次起重解）。**明天順序**：B01 剩下（絕對路徑原樣存、`--*-json` 純字串原樣存，要動 aos-daemon 存表）→ cli-sweep 第一批 → aos-tools 的 lv6 連帶 → two-machines 其餘 15 條（[next_todo](../proto8/thinking/2026-11/10/two-machines/next_todo.json)）。以上都只記裁定、還沒施工。
-
-8. **11-10 最後一小時（16:00～16:55）**：two-machines 隊長——B01 一半已 push（`7c1791e6e`），它把 `aos-daemon-ctl add` 打壞、`c2a6aa976` 修好已 push；cli-sweep Q4＝A（已停再停兩支都算成功，印 `名字: already 狀態`、退 0）`1d3ece5e5`；甲4、甲5 也做了（`624355ee5`：add 撞名＝InstanceExists、rm 不在表上＝ProcMissing、shutdown 印一句話），甲3 也做了（`afab03ad5`：ls 說 daemon 活著沒）；甲6、Q3、Q1、Q6 沒做；Q5 已裁不修（使用者「喔沒關係，root這東西本來使用者就要多注意一點。」，只在文件提醒起根前 `unset AOS_DAEMON`）（[10b](../proto8/thinking/2026-11/10/cli-sweep/10b-施工結果-兩支ctl.md)）。另一隊——cli-sweep Q7 `copy-out --template`（`7558433b7`）、`AOS_PROTO8` 改名 `AOS_HOME`（`3fe4c3e18`，使用者「AOS_PROTO8改成AOS_HOME，這樣之後大修改版，還可以直接換」）。調查 [templates-cp](../proto8/thinking/2026-11/10/templates-cp/README.md) 已寫完：範本改 AOS_HOME 寫法＋自帶 .env 後 `cp -r` 就能用、只 export `AOS_HOME`、lv1～4 不用改；使用者「copy-out能刪就刪」＝選項 A（範本全改、copy-out 整支刪、文件教 `cp -r`），三題快選都選推薦（範本拿掉 symlink 的 `tools/` 夾、`.env` 帶預設＋`AOS_HOME` 必填檢查、`copy_def.py` 一起拿掉、`agents new` 改單純整夾複製）——只記裁定、明天施工。**明天順序**：B01 剩下（絕對路徑原樣存、`--*-json` 純字串原樣存）→ templates-cp（刪 copy-out、範本改寫）→ cli-sweep 甲6、Q3、Q6、Q1 → aos-tools lv6 連帶 → two-machines 其餘 15 條。
