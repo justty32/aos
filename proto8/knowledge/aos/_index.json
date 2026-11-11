@@ -47,7 +47,7 @@
  "clock.json": {
   "_description": "Timers: clock letters to your queue (clock_register), or an on_clock hook that adds nothing to your history; which one to choose."
  },
- "tools.json": {
+ "tools_def.json": {
   "_description": "Making your own tools: tool tools_def (new from the Python skeleton, check) and the Python helper tool_spec."
  },
  "tools/": {

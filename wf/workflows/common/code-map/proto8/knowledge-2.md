@@ -70,7 +70,6 @@
 | [`packs.json`](../../../../../proto8/knowledge/aos/packs.json) | 設定（鍵：_description、_index、about、look、change、delete…） |
 | [`rules.json`](../../../../../proto8/knowledge/aos/rules.json) | （檔頭沒有一句話） |
 | [`status.json`](../../../../../proto8/knowledge/aos/status.json) | （檔頭沒有一句話） |
-| [`tools.json`](../../../../../proto8/knowledge/aos/tools.json) | 設定（鍵：_description、_index、tools_def、tool_spec） |
 | [`tools/_description.json`](../../../../../proto8/knowledge/aos/tools/_description.json) | （檔頭沒有一句話） |
 | [`tools/_index.json`](../../../../../proto8/knowledge/aos/tools/_index.json) | 設定（鍵：read.json、ls.json、view.json、stat.json、json_read.json、write.json…） |
 | [`tools/copy.json`](../../../../../proto8/knowledge/aos/tools/copy.json) | 設定（鍵：_description、_index、errors） |
@@ -91,4 +90,5 @@
 | [`tools/trash.json`](../../../../../proto8/knowledge/aos/tools/trash.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/view.json`](../../../../../proto8/knowledge/aos/tools/view.json) | 設定（鍵：_description、_index、examples、errors） |
 | [`tools/write.json`](../../../../../proto8/knowledge/aos/tools/write.json) | 設定（鍵：_description、_index、errors） |
+| [`tools_def.json`](../../../../../proto8/knowledge/aos/tools_def.json) | 設定（鍵：_description、_index、tools_def、tool_spec） |
 | [`world.json`](../../../../../proto8/knowledge/aos/world.json) | （檔頭沒有一句話） |
