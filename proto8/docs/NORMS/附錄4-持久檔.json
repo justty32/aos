@@ -301,7 +301,7 @@
    "reader": "aos-post take／see（aos-daemon、templates/agent-fsm idle、aos-llm-kernel、aos-llm recv、lib/aos/judge、aos-mailbox read／mailbox_read）；aos-mailbox peek／mailbox_peek 直接讀 new/*/letter.json",
    "image": "進",
    "on_bad": "壞信＝收掉不回：daemon 記 mailbox_warning、idle 寫 mailbox_warning.txt、kernel 回 LetterBad",
-   "note": "cur/ 殘骸 daemon 起來會重做。11-10 晚 mailbox：每個 stack（agent 的，或人的 ~/.stack、$AOS_LINUX_USER_STACK）多一個 mailbox/ 箱子，跟 queue/ 分開、信不進 history；用名字寄時替收件人建、用路徑寄時不建。新檔，不用重建",
+   "note": "cur/ 殘骸 daemon 起來會重做。11-10 晚 mailbox：每個 stack（agent 的，或人的 ~/.aos/stack〔11-11 前是 ~/.stack〕、$AOS_LINUX_USER_STACK）多一個 mailbox/ 箱子，跟 queue/ 分開、信不進 history；用名字寄時替收件人建、用路徑寄時不建。新檔，不用重建",
    "evidence": "proto8/impls/aos-post/src/send/send.cpp:187、proto8/impls/aos-post/src/take/take.cpp:96-106、proto8/templates/agent-fsm/idle.py:131-135、proto8/impls/aos-llm-kernel/src/serve/scan.cpp:76-82、proto8/cmd/aos-mailbox/aos_mailbox/__init__.py:118-130、proto8/cmd/aos-mailbox/aos_mailbox/__init__.py:196-213、proto8/cmd/aos-mailbox/aos_mailbox/__init__.py:276-299"
   },
   {

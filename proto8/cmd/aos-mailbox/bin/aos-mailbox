@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+# aos-mailbox - my mailbox: send letters to agents, see and read the letters sent to me (thin launcher; the body is aos_mailbox/).
+from pathlib import Path
+import sys
+
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))
+for parent in HERE.parents:
+    if (parent / 'py' / 'aos_flags.py').is_file():
+        sys.path.insert(0, str(parent / 'py'))
+        break
+import aos_flags  # noqa: E402
+from aos_mailbox import main  # noqa: E402
+
+aos_flags.run(main)

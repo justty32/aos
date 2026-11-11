@@ -58,4 +58,5 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`aos_mailbox/__init__.py`](../../../../../proto8/cmd/aos-mailbox/aos_mailbox/__init__.py) | aos-mailbox 本體：找我的 stack、四個子命令（where、peek、read、send）、叫 aos-post 命令列。 |
+| [`bin/aos-mailbox`](../../../../../proto8/cmd/aos-mailbox/bin/aos-mailbox) | my mailbox: send letters to agents, see and read the letters sent to me (thin launcher; the body is aos_mailbox/). |
 | [`tests/test_mailbox.py`](../../../../../proto8/cmd/aos-mailbox/tests/test_mailbox.py) | Test aos-mailbox where / peek / read / send against real aos-post boxes and a hand-written daemon table. |

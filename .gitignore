@@ -6,6 +6,8 @@ bin/
 !proto8/bin/
 # proto8/extras 各工具的 bin/ 是手寫的命令列、不是建置產物（10-28：10-27 的 aos-hub 被上一行 bin/ 擋掉、從沒進版控）
 !proto8/extras/*/bin/
+# proto8/cmd 各指令的 bin/ 也是手寫的啟動檔（11-11：aos-mailbox 的 bin/ 被上面的 bin/ 擋掉、從沒進版控；其他指令的是當初 add -f 進來的）
+!proto8/cmd/*/bin/
 .cache/
 compile_commands.json
 CMakeUserPresets.json

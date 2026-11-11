@@ -21,7 +21,7 @@ aos-mailbox read                       # 印 from/status/title/what/…/reply_to
 aos-mailbox send --box <reply_to> --in-reply-to <信名> --status DONE --title "thanks" "Got it."
 ```
 
-- **我的 stack**：`-s/--stack`（子命令前後都收，前後不同＝`ArgumentsBad`）＞ `$AOS_LINUX_USER_STACK` ＞ `~/.stack`。預設值是使用者「推薦默認是~/.stack。...這個可以再想想」，未定。
+- **我的 stack**：`-s/--stack`（子命令前後都收，前後不同＝`ArgumentsBad`）＞ `$AOS_LINUX_USER_STACK` ＞ `~/.aos/stack`（11-11 定：使用者 11-11 裁「改成帶 aos 字樣的位置」→「~/.aos/stack」；原本是「推薦默認是~/.stack。...這個可以再想想」的 `~/.stack`）。
 - **寄給名字**：daemon 照 aos-agent 同一條（`-d` ＞ `$AOS_DAEMON` ＞ `./.stack`），表上那隻的 stack 底下 `mailbox/`，還沒有就替它建。查不到＝`InstanceMissing`。
 - **寄給路徑**：路徑要已經是信箱（`tmp/`、`new/`、`cur/` 都是資料夾），不替人建；不在＝`MailboxMissing`、不是信箱＝`MailboxBad`。
 - **信**：`letter.json` 的信封照 aos-post（`sender`＝寄件人 stack 的絕對路徑、`sent_at`、`reply_to`＝寄件人信箱、`in_reply_to`），`body`＝`{"from", "to", "status", "title", "what", "outputs", "not_done", "decide"}`。`status` 只收 REQUEST、DONE、BLOCKED、NEEDS-USER、FAILED、PROGRESS（別的＝`StatusBad`、不寄）；`title` 一行不空；`what`（REQUEST＝要對方做什麼）必給，`-` 讀 stdin；其他三段沒給寫 `none`。`from` 沒給＝`$USER`，再沒有＝`user`。

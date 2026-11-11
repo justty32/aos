@@ -37,8 +37,8 @@ class Mailbox(unittest.TestCase):
         self.assertEqual(r.returncode, 0, (args, r.stdout, r.stderr))
         return r.stdout
 
-    def test_default_stack_is_home_dot_stack(self):
-        self.assertEqual(self.ok("where").strip(), str(self.home / ".stack" / "mailbox"))
+    def test_default_stack_is_home_dot_aos_stack(self):
+        self.assertEqual(self.ok("where").strip(), str(self.home / ".aos" / "stack" / "mailbox"))
         self.env["AOS_LINUX_USER_STACK"] = str(self.tmp / "me")
         self.assertEqual(self.ok("where").strip(), str(self.tmp / "me" / "mailbox"))
         self.assertEqual(self.ok("-s", "other", "where").strip(), str(self.tmp / "other" / "mailbox"))
@@ -49,7 +49,7 @@ class Mailbox(unittest.TestCase):
         self.assertEqual(peek, "%s\talice\tREQUEST\tPlease count files\n" % name)
         r = json.loads(self.ok("-s", "bob", "read", "-j"))
         self.assertEqual((r["letter"], r["what"], r["outputs"], r["to"]), (name, "count them", "none", "bob"))
-        self.assertEqual(r["reply_to"], str(self.home / ".stack" / "mailbox"))
+        self.assertEqual(r["reply_to"], str(self.home / ".aos" / "stack" / "mailbox"))
         self.assertEqual(self.ok("-s", "bob", "peek"), "")
         self.assertEqual(self.run_mb("-s", "bob", "read").returncode, 10)              # 讀完就沒了
         self.ok("-s", "bob", "send", "--box", r["reply_to"], "--in-reply-to", name, "--from", "bob", "--status", "DONE",
@@ -58,7 +58,7 @@ class Mailbox(unittest.TestCase):
         self.assertIn("from: bob\n", out)
         self.assertIn("in_reply_to: %s\n" % name, out)
         self.assertIn("what: I counted 3.\n", out)
-        self.assertEqual(len(os.listdir(self.home / ".stack" / "mailbox" / "archive")), 1)   # --keep 留著
+        self.assertEqual(len(os.listdir(self.home / ".aos" / "stack" / "mailbox" / "archive")), 1)   # --keep 留著
 
     def test_read_all_and_order(self):
         for t in ("first", "second"):
