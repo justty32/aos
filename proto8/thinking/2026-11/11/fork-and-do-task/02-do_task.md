@@ -105,7 +105,7 @@
 - **選項**：end 的 `keep_others`（boolean，預設 false）。true＝照舊：別人的不摺，先 `history set` 挪到總結後面、照原順序（就是上面施工結果那套），結果那行 `K messages from others during the task are kept after the summary.`。不是 boolean＝`ArgumentsBad keep_others must be boolean`（tool_io 照 tooldef 驗）；start 給它＝`ArgumentsBad op start does not take keep_others`。
 - **結果行改字**：`N messages of yours (lines A-B) …` 改成 `N messages (lines A-B) …`（預設摺的不只自己的）。
 
-代定（可翻案）：
+代定（使用者 11-11 晚已裁：認可，原話「沒啥好翻的，我覺得都OK」）：
 
 1. **放 end、不放 start**：要不要留，看的是任務期間實際進來了什麼，只有 end 那一刻知道；總結也是 end 才寫，預設摺掉時腦該把信裡要的事實寫進總結（tooldef 與知識節點都這樣叮嚀）。放 start 等於事先猜會不會有信。
 2. **名字 `keep_others`**：說的是「別人的訊息留下」；不叫 `keep`，因為 self_history 的 `keep`／`no_keep` 是「原文留不留檔」，同名會混。
