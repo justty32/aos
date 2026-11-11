@@ -64,11 +64,14 @@
      hooks.clock_tick 看時鐘，條件到了的 on_clock hook 才跑；handler 預設什麼都不做、history 不多任何一則；要叫腦＝handler 自己往 <stack>/queue 寄信。
      hook 停下＝HookFailed 退 1（還沒碰信）。after_start／after_stop 不在這支：在 loop.json 的 on_start／on_stop（lib/agent/hook_fire）。
   ⑬ goal（11-11 thinking/2026-11/11/goal/02，使用者「當agent自己停下來時(在沒有新user prompt的情況下，自己不再呼叫工具)，自動丟goal給他」，裁「fsm 和 eca 都做」）：
-     認領之後一封好信都沒有（queue 空；信優先）、history 最後一則是 assistant（上一輪 CLI 答完了）、$AOS_STACK/goal.json 是 active＝這輪的題目換成一則
+     認領之後一封好信都沒有（queue 空；信優先）、history 最後一則是 assistant（上一輪 CLI 答完了）或 history 還空（還沒答過；外面先 set 的 goal
+     當開場題目，11-11 稍後使用者「也丟，當開場題目」；開場白 --prompt 先投、先答）、$AOS_STACK/goal.json 是 active＝這輪的題目換成一則
      「[aos] goal: …」（lib/agent/goal_state.py 拼，同 agent-fsm idle），交出去那刻（handed）先寫 goal.json（計數加一；到上限那次＝limit 那則、改 paused）
      再接進 history；不走 queue、不觸發 before_queue／after_queue。退讓（SessionBad）＝什麼都沒寫。冷卻中照 ⑨ 不做。
      進展：每輪成功答完後看 CLI 自己的對話檔（transcripts，交出去前記下大小、同一段對話就只看新長出來的）有沒有叫 goal 以外的工具
      （claude tool_use、codex function_call 等；goal_state.transcript_calls）——有＝goal 計數歸零。對話檔找不到＝不歸零（未經真 CLI 驗證）。
+     不像 agent-fsm 只看 history（goal_state.progressed）：eca 的 history 只有題目與最後答案，工具來回在 CLI 自己的對話裡，aos 的 history 看不到
+     （11-11 稍後使用者「就goal那邊稍微檢查一下history就好」；eca 做不到，照現況）。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
   人在畫面上自己打的話不進 history（沒經 queue；eca 方向題 2）。
@@ -154,7 +157,7 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
     after_queue after the letters went into history, brain_failed on CliFailed / ReplyMissing after handing over. before_tool /
     after_tool run in aos-mcp. on_clock is checked first thing every turn (it runs only when its clock condition is met).
     A failing hook = HookFailed (letters not yet handed over stay in cur/).
-  Goal: with no letter, when the CLI answered the last turn and $AOS_STACK/goal.json is active, the prompt of this turn is one
+  Goal: with no letter, when the CLI answered the last turn (or history is still empty) and $AOS_STACK/goal.json is active, the prompt of this turn is one
     message "[aos] goal: TEXT (reminder N of LIMIT...)" (it goes into history like a letter). A turn in which the CLI called tools
     (seen in its own transcript) sets the count back to 0; LIMIT reminders in a row without progress pause the goal.
 --one (tool form): stdin {"prompt"} -> stdout the answer; the conversation lives in $AOS_STACK itself. --on-empty / --prompt not allowed.
@@ -406,12 +409,12 @@ def take_all(stack, box, prompt):
 
 
 def goal_prompt(stack):
-    """⑬ queue 空時：goal active、上一輪 CLI 答完了＝(題目, 交出去那刻要寫的 goal)；否則 None。goal.json 壞了＝當沒有。"""
+    """⑬ queue 空時：goal active、上一輪 CLI 答完了（或 history 還空）＝(題目, 交出去那刻要寫的 goal)；否則 None。goal.json 壞了＝當沒有。"""
     try:
         rec = goal_state.read(stack)
     except goal_state.GoalBad:
         return None
-    if rec is None or rec["status"] != "active" or not goal_state.stopped(history_rows(stack)):
+    if rec is None or rec["status"] != "active" or not goal_state.due(history_rows(stack)):   # history 還空＝開場題目
         return None
     return goal_state.plan(rec, False)
 

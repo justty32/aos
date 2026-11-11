@@ -9,8 +9,9 @@
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）。aos-post 的 stderr 不攔、原樣透出（stdio-unify R10）。--help 印英文用法；Ctrl-C 退 130。設計：proto8/thinking/2026-11/04/loop-fsm-agent/01-設計.md § 3。
 # on_clock（11-11 thinking/2026-11/11/clock-hook）：這格建好 queue 之後、收信之前先 hooks.clock_tick——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 # goal（11-11 thinking/2026-11/11/goal/02，使用者「當agent自己停下來時(在沒有新user prompt的情況下，自己不再呼叫工具)，自動丟goal給他」）：
-#   收不到信（信優先）、history 最後一則是沒有 tool_calls 的 assistant、$AOS_STACK/goal.json 是 active＝把一則 user「[aos] goal: …」直接接進 history、
-#   退 0 去 think（不走 queue、不觸發 before_queue／after_queue）。上次提醒之後腦叫過 goal 以外的工具＝計數先歸零；連續到上限那次丟
+#   收不到信（信優先）、history 最後一則是沒有 tool_calls 的 assistant（或 history 還空：外面先 set 的 goal 當開場題目，11-11 稍後使用者「也丟，當開場題目」）、
+#   $AOS_STACK/goal.json 是 active＝把一則 user「[aos] goal: …」直接接進 history、退 0 去 think（不走 queue、不觸發 before_queue／after_queue）。
+#   上次提醒之後腦叫過 goal 以外的工具（只看 history：goal_state.progressed；do_task 摺過也算得到）＝計數先歸零；連續到上限那次丟
 #   「[aos] goal: reminder limit N reached; goal paused …」、goal 改 paused（之後不丟）。先寫 goal.json 再接 history（寫不成＝warning、不丟）。
 #   goal.json 壞了＝安靜當沒有（每 300 ms 一拍，不洗 log；aos-agent goal get 報 GoalBad）。讀寫走 lib/agent/goal_state.py。
 import json, os, re, signal, subprocess, sys
@@ -48,8 +49,9 @@ HELP = """\
 usage: idle.py [--prompt FILE]   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
 The idle cell: take every letter in $AOS_STACK/queue/ into $AOS_STACK/history.jsonl.
 Exit 0 = took at least one good letter (go think); 10 = no letter.
-Goal: with no letter, when the last message is an answer without tool_calls and
-$AOS_STACK/goal.json is active, one user message "[aos] goal: ..." goes into history (exit 0).
+Goal: with no letter, when the last message is an answer without tool_calls (or history is
+still empty) and $AOS_STACK/goal.json is active, one user message "[aos] goal: ..." goes into
+history (exit 0).
 --prompt FILE: an opening message put into the queue once while history is empty.
 Hooks (hooks.json declared in interfaces.json): before_queue runs before a good letter goes
 into history (it may change content, or drop the letter: done, not in history, one line in
@@ -229,12 +231,12 @@ def goal_turn():
                     except ValueError:
                         return False             # history 壞了不是這裡的事（think／act 會報 HistoryBad）
     except FileNotFoundError:
-        return False
+        pass                                     # 還沒有 history＝空（開場）
     except OSError as e:
         die("HistoryBad", "cannot read history.jsonl: %s" % e)
-    if not goal_state.stopped(history):
+    if not goal_state.due(history):              # 腦停下來了，或 history 還空（外面先 set 的 goal 當開場題目）
         return False
-    text, rec = goal_state.plan(rec, goal_state.progressed_fsm(history))
+    text, rec = goal_state.plan(rec, goal_state.progressed(history))
     try:
         goal_state.write(stack, rec)
     except OSError as e:

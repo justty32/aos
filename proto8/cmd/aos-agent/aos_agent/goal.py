@@ -3,6 +3,7 @@
 #   裁定「agent 自己和外面都行」：agent 用工具 goal（lib/agent/goal，包這支、目標＝自己）；人和父 agent 用這支（照 aos-agent system 的寫法）。
 #   讀寫一律走 lib/agent/goal_state.py（格式、提醒文字、上限都在那裡）。thinking 2026-11/11/goal/02。
 # 誰改的（set_by／updated_by）：叫這支的 $AOS_STACK 在目標的 stack 裡面＝agent（它自己的工具）；否則 outside（人、父 agent）。
+# set 的 TEXT 起原樣收、不解旗標（旗標寫在文字前面；11-11 稍後使用者「比照 say 原樣收」，做法同 say、history set 的 keep）。
 # **對應關係**：工具 goal 的 op 與這裡的動作一對一（clear 除外：工具不給，agent 用 done）；這裡加了動作或旗標，工具要跟著加。
 import json
 import os
@@ -42,8 +43,10 @@ flags:
   -h, --help      show this help
 
 TEXT is one short sentence (words are joined with spaces; - = read it from stdin).
+Flags go before TEXT: from the first word on everything is the goal text, -n included.
 The goal is active at once: when the agent stops by itself (its last answer calls no tool)
-and its queue is empty, it gets one message "[aos] goal: TEXT (reminder N of LIMIT...)".
+and its queue is empty, it gets one message "[aos] goal: TEXT (reminder N of LIMIT...)";
+an agent that has not answered anything yet (empty history) gets it as its first message.
 Calling a tool after a reminder counts as progress and starts the count again.
 exit codes: 0 set; 1 error (ArgumentsBad, WriteFailed...).
 """,
@@ -171,7 +174,8 @@ def cmd(argv):
     flags = {"set": {"--limit": "limit"}}.get(act, {})
     switches = {"get": {"--json": "json"}, "done": {"--abandoned": "abandoned"}, "clear": {"--yes": "yes"}}.get(act, {})
     shorts = {"get": {"-j": "--json"}, "set": {"-n": "--limit"}, "done": {"-a": "--abandoned"}, "clear": ("-y",)}.get(act, ())
-    aopts, args = parse(args, flags, switches, help=HELPS[act], short=shorts)
+    aopts, args = parse(args, flags, switches, help=HELPS[act], short=shorts,
+                        keep=1 if act == "set" else None)   # 11-11 稍後使用者「比照 say 原樣收」：set 的 TEXT 起原樣收（文字裡的 -n 不是旗標）
     if act in ("get", "resume", "clear") and args:
         raise bad_args(HELPS[act], "%s takes no arguments" % act)
     a = target(opts)

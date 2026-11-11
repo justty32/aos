@@ -22,6 +22,7 @@ TOOL = "goal"                                       # 叫這支工具本身不�
 STATUSES = ("active", "paused", "done", "abandoned")
 BYS = ("agent", "outside", "aos")
 PREFIX = "[aos] goal: "
+SUMMARY = "[aos] summary:"                          # aos-agent history summarize 寫的那則的開頭（progressed 找不到提醒時的界線）
 ECA_CALL_TYPES = ("tool_use", "function_call", "custom_tool_call", "local_shell_call", "mcp_tool_call")
 
 
@@ -130,15 +131,33 @@ def is_reminder(m):
     return isinstance(m, dict) and m.get("role") == "user" and isinstance(m.get("content"), str) and m["content"].startswith(PREFIX)
 
 
+def is_summary(m):
+    """aos-agent history summarize（self_history、do_task end 都經它）寫的那則：content 開頭 [aos] summary:（角色不管）。"""
+    return isinstance(m, dict) and isinstance(m.get("content"), str) and m["content"].startswith(SUMMARY)
+
+
 def stopped(history):
     """history 最後一則是沒有 tool_calls 的 assistant＝腦自己停下來了（給了最後答案）。"""
     return bool(history) and isinstance(history[-1], dict) and history[-1].get("role") == "assistant" and not history[-1].get("tool_calls")
 
 
-def progressed_fsm(history):
-    """agent-fsm：最近一則 [aos] goal: 之後有沒有 assistant 叫了 goal 以外的工具。找不到那則（還沒丟過、被 summarize 掉）＝False（不歸零）。"""
+def due(history):
+    """該不該丟（goal 是不是 active 另外看）：腦停下來了，或 history 還是空的（還沒答過任何一輪：外面先 set 了 goal，
+    它就是開場題目；11-11 稍後使用者「也丟，當開場題目」）。"""
+    return not history or stopped(history)
+
+
+def progressed(history):
+    """上次提醒之後有沒有新的動靜：只看 history（11-11 稍後使用者「兩者不要耦合太深，就goal那邊稍微檢查一下history就好」）。
+    從最後一則往回找，碰到 assistant 叫了 goal 以外的工具（do_task 的 start／end 也是）＝True。停在哪：最近一則 [aos] goal: 提醒；
+    history 裡一則提醒都找不到（被 do_task end 摺掉、被 summarize 掉、被改掉）＝停在最近一則 [aos] summary:（history 在那裡被改寫過，
+    提醒多半在被摺掉的那段裡；摺完留下的 do_task end 那則在它後面，照樣算到）；提醒和 summary 都沒有＝False（不歸零，保守：寧可早停不要無限丟）。
+    agent-fsm 用（eca 的工具來回在 CLI 裡、history 沒有，見 transcript_calls）。"""
+    has_reminder = any(is_reminder(m) for m in history)
+    if not has_reminder and not any(is_summary(m) for m in history):
+        return False
     for m in reversed(history):
-        if is_reminder(m):
+        if is_reminder(m) or (not has_reminder and is_summary(m)):
             return False
         if isinstance(m, dict) and m.get("role") == "assistant" and isinstance(m.get("tool_calls"), list):
             for c in m["tool_calls"]:

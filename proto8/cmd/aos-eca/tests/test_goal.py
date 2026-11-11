@@ -1,4 +1,4 @@
-"""Test the goal in aos-eca-turn (11-11 goal/02) with fake claude / codex CLIs: queue empty + last turn answered + goal active = the reminder is the prompt; done stops it; the limit pauses it; letters come first; a tool call in the CLI's transcript resets the count."""
+"""Test the goal in aos-eca-turn (11-11 goal/02) with fake claude / codex CLIs: queue empty + last turn answered + goal active = the reminder is the prompt; done stops it; the limit pauses it; letters come first; a tool call in the CLI's transcript resets the count; with an empty history the goal is the opening prompt (after --prompt's opening)."""
 import json
 import os
 from pathlib import Path
@@ -72,10 +72,9 @@ class EcaGoal(unittest.TestCase):
         self.assertEqual(len(self.asked()), 1)
 
     def test_remind_then_done(self):
-        self.set_goal("Write the report.")
-        self.turn(10, empty="stop")                                        # history empty: the CLI has not answered anything yet
         self.say("hi")
         self.turn()
+        self.set_goal("Write the report.")
         self.turn()
         self.assertEqual(len(self.notes()), 1)
         self.assertTrue(self.asked()[-1].endswith("[aos] goal: Write the report. (reminder 1 of 10. Keep working on it; when it is "
@@ -89,6 +88,27 @@ class EcaGoal(unittest.TestCase):
         (self.stack / "goal.json").write_text(json.dumps(r))
         self.turn(10, empty="stop")
         self.assertEqual((len(self.notes()), len(self.asked())), (2, 3))
+
+    def test_empty_history_gets_the_goal_as_opening(self):
+        # 11-11 稍後使用者「也丟，當開場題目」：queue 空、還沒有上一輪答案、外面先 set 了 goal＝第一輪的題目就是它（--on-empty stop 也一樣）
+        self.set_goal("Write the report.")
+        self.turn(empty="stop")
+        self.assertEqual(len(self.asked()), 1)
+        self.assertTrue(self.asked()[0].startswith("[aos] goal: Write the report. (reminder 1 of 10."), self.asked())
+        h = self.history()
+        self.assertEqual([m["role"] for m in h], ["user", "assistant"])
+        self.assertTrue(h[0]["content"].startswith(NOTE))
+        self.assertEqual(self.rec()["reminded"], 1)
+
+    def test_opening_prompt_comes_before_the_goal(self):
+        (self.defn / "prompt.txt").write_text("Start here.\n")
+        self.set_goal("Write the report.")
+        for _ in range(2):
+            r = subprocess.run([str(TURN), "--on-empty", "stop", "--prompt", "prompt.txt", str(self.defn)], env=self.env(),
+                               capture_output=True, text=True, timeout=60)
+            self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.asked()[0], "Start here.")
+        self.assertIn("(reminder 1 of 10.", self.asked()[1])
 
     def test_limit_pauses(self):
         self.say("hi")

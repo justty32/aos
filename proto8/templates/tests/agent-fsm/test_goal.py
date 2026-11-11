@@ -1,4 +1,5 @@
-"""agent-fsm 的 goal（11-11 goal/02）：idle 格單跑（停下被丟、done 後不丟、上限停、pause／resume、信優先、外面設／清、有叫工具歸零）＋真 aos-fsm 一步一步走、真 llm kernel＋假腦劇本實跑兩條。"""
+"""agent-fsm 的 goal（11-11 goal/02）：idle 格單跑（停下被丟、done 後不丟、上限停、pause／resume、信優先、外面設／清、有叫工具歸零、
+history 空時當開場題目、do_task 摺過也算進展、提醒找不到時以 summary 為界）＋真 aos-fsm 一步一步走、真 llm kernel＋假腦劇本實跑兩條。"""
 import json
 import os
 from pathlib import Path
@@ -63,8 +64,9 @@ class Base(unittest.TestCase):
     def notes(self):
         return [m["content"] for m in self.history() if m.get("role") == "user" and str(m.get("content")).startswith(NOTE)]
 
-    def idle(self, code):
-        r = subprocess.run([sys.executable, str(self.defn / "idle.py")], env=self.env, capture_output=True, text=True, timeout=30)
+    def idle(self, code, *args):
+        r = subprocess.run([sys.executable, str(self.defn / "idle.py"), *args], env=self.env, capture_output=True, text=True,
+                           timeout=30)
         self.assertEqual(r.returncode, code, r.stderr)
         return r
 
@@ -181,6 +183,55 @@ class IdleCell(Base):
                  answer("still here"))
         self.idle(0)
         self.assertIn("(reminder 2 of 3.", self.notes()[-1])          # calling goal itself is no progress
+
+    def test_empty_history_gets_the_goal_as_opening(self):
+        # 11-11 稍後使用者「也丟，當開場題目」：還沒答過任何一輪、外面先 set 了 goal＝它就是第一則
+        self.goal("set", "Write the report.")
+        self.assertFalse(self.hist.exists())
+        self.idle(0)
+        self.assertEqual(len(self.history()), 1)
+        self.assertTrue(self.history()[0]["content"].startswith("[aos] goal: Write the report. (reminder 1 of 10."))
+        self.assertEqual(self.rec()["reminded"], 1)
+        self.idle(10)                                                  # the reminder waits for the brain: not again
+
+    def test_opening_prompt_comes_before_the_goal(self):
+        (self.defn / "prompt.txt").write_text("Start here.\n")
+        self.goal("set", "Write the report.")
+        self.idle(0, "--prompt", "prompt.txt")
+        self.assertEqual(self.history(), [{"role": "user", "content": "Start here."}])
+        self.assertEqual(self.rec()["reminded"], 0)
+
+    def set_reminded(self, n):
+        r = self.rec()
+        r["reminded"] = n
+        (self.stack / "goal.json").write_text(json.dumps(r))
+
+    def test_do_task_fold_counts_as_progress(self):
+        # 11-11 稍後使用者「算。兩者不要耦合太深，就goal那邊稍微檢查一下history就好。」：do_task end 把提醒一起摺掉，
+        # 留下的 [aos] summary: 與 end 那則照樣算到（goal 不認識 do_task：end 只是 goal 以外的一支工具）
+        self.goal("set", "--limit", "3", "Do work.")
+        self.set_reminded(2)
+        self.write_history({"role": "user", "content": "hi"}, answer("Hello."),
+                           called("do_task", {"op": "start", "task": "the work"}, "c1"), {"role": "tool", "tool_call_id": "c1", "content": "started"},
+                           {"role": "user", "content": "[aos] summary: lines 5-9, 5 messages. Task \"the work\" ended: done"},
+                           called("do_task", {"op": "end", "summary": "done"}, "c9"), {"role": "tool", "tool_call_id": "c9", "content": "ended"},
+                           answer("The work is done."))
+        self.idle(0)
+        self.assertIn("(reminder 1 of 3.", self.notes()[-1])
+
+    def test_lost_reminder_without_progress(self):
+        # 提醒找不到：以最近一則 [aos] summary: 為界，界線後沒叫工具＝不歸零；連 summary 都沒有＝不歸零（代定）
+        self.goal("set", "--limit", "5", "Do work.")
+        self.set_reminded(2)
+        self.write_history({"role": "user", "content": "hi"}, called("peek_now_time"), {"role": "tool", "tool_call_id": "c1", "content": "12:00"},
+                           {"role": "user", "content": "[aos] summary: lines 4-7, 4 messages. talked"}, answer("ok"))
+        self.idle(0)
+        self.assertIn("(reminder 3 of 5.", self.notes()[-1])
+        self.set_reminded(2)
+        self.write_history({"role": "user", "content": "hi"}, called("peek_now_time"), {"role": "tool", "tool_call_id": "c1", "content": "12:00"},
+                           answer("ok"))
+        self.idle(0)
+        self.assertIn("(reminder 3 of 5.", self.notes()[-1])
 
     def test_bad_goal_file_is_quiet(self):
         self.write_history({"role": "user", "content": "hi"}, answer("Hello."))
