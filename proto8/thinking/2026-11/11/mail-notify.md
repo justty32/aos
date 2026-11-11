@@ -44,4 +44,9 @@
 
 ## 真腦
 
-（見下一段，codex gpt-6-luna。）
+eca codex `gpt-6-luna`（`/tmp` 的小樹：daemon-root 範本＋從 eca-claude 抄、`cli.json` 改 codex〔`sandbox_mode="read-only"`、`approval_policy="never"`，跟試驗場 eca_cody 同一份；aos MCP 免核准是 cli_session 本來就有的設定〕、拿掉畫面；沒加任何整體繞過旗標、沒動 `~/.codex`）。同一段對話：
+
+1. 人寄一封信給 cody（from amy，「What is 6 times 7?」）→ 10 秒內 history 多一則 `[aos] new_mail: 1 new letter from amy. Look with mailbox_peek, read with mailbox_read.` → luna 自己叫 `mailbox_peek`、`mailbox_read`，答「Amy asked: "What is 6 times 7?" and requested the answer by mailbox.」（照「信是請求不是命令」，沒回信）。
+2. 人叫它「do_task 只給 goal、不給 from」→ luna 叫 `do_task {"goal": "Compute 6 times 7 and return just the number."}` → daemon 表上多一隻 `t-cody-…`（從 cody 自己的定義生＝也是 eca codex，跑了約 5 秒）→ 回 `42`，用完收掉 → luna 答 `42`。**eca 體用自己的定義生小幫手可行**：小幫手是另一個 codex 程序、同一份 cli.json、照 `llm_keys` 抄 model。
+
+claude haiku 照指示沒試（今天撞額度）。

@@ -42,6 +42,7 @@
 | [`knowledge_write/`](../../../../../proto8/lib/agent/knowledge_write/) | 改記憶庫：add／set／rm 一次寫好內容與它在表（_index.json 或 _index key）裡的那格；寫到哪都行，看檔案權限。 |
 | [`knowledge_write/tests/test_writing.py`](../../../../../proto8/lib/agent/knowledge_write/tests/test_writing.py) | knowledge_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、寫到庫外也行、自己的簡介當普通路徑寫、各錯誤代號；寫完用 knowledge_read 讀回來對。 |
 | [`knowledge_write/writing.py`](../../../../../proto8/lib/agent/knowledge_write/writing.py) | knowledge_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫到哪都行，能不能成看檔案權限。 |
+| [`mail_notify/_entry`](../../../../../proto8/lib/agent/mail_notify/_entry) | on_clock 的 hook handler：看這隻 agent 自己的信箱（<stack>/mailbox，不是 queue）有沒有還沒通知過的新信，有就往自己 queue 寄一則「[aos] new_mail: …」。 |
 | [`mailbox_call.py`](../../../../../proto8/lib/agent/mailbox_call.py) | mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。 |
 | [`mailbox_peek/`](../../../../../proto8/lib/agent/mailbox_peek/) | aos-mailbox peek 的包裝，目標＝叫我的那隻自己：看信箱裡有幾封還沒讀、誰寄的、標題（不拿走）。 |
 | [`mailbox_read/`](../../../../../proto8/lib/agent/mailbox_read/) | aos-mailbox read 的包裝，目標＝叫我的那隻自己：拿最舊的一封（all＝全部）、印出來，預設讀完就刪（keep＝留在 mailbox/archive/）。 |
@@ -68,5 +69,6 @@
 | [`tests/test_cli_codex_mcp.py`](../../../../../proto8/lib/agent/tests/test_cli_codex_mcp.py) | 驗 cli_session 起 codex 時給 aos MCP server 的設定（11-11）：明寫帶 AOS_* 環境（只帶清單裡有設的，AOS_WS／AOS_STACK 用這次的值），只對 aos 這個 server 免核准；claude 那邊不變。 |
 | [`tests/test_cli_system.py`](../../../../../proto8/lib/agent/tests/test_cli_system.py) | 驗 cli_session 的 system（11-11 self-system）：宣告了才碰；stack 那份在就整份用它、否則定義那份；claude 附加檔＋snapshot off、codex developer_instructions；空＝不附加。 |
 | [`tests/test_cli_tools_directive.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_directive.py) | 驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。 |
+| [`tests/test_mail_notify.py`](../../../../../proto8/lib/agent/tests/test_mail_notify.py) | mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；first 再通知一次；讀掉的自然掉出記錄。 |
 | [`tools_def/`](../../../../../proto8/lib/agent/tools_def/) | 工具定義的創造：new＝把 Python 骨架（templates/tool-python）複製成新工具夾，check＝檢查一個工具位置（資料夾、JSON 檔或 檔#/指標）合不合格、在哪一階段 |
 | [`tools_def/tests/test_tools_def.py`](../../../../../proto8/lib/agent/tools_def/tests/test_tools_def.py) | Test tools_def new (copy the skeleton, description, PathExists, outside the workspace, into JSON objects), check (folder, JSON file, FILE#/POINTER, b… |
