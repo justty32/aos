@@ -56,7 +56,7 @@
       },
       "root": {
         "type": "string",
-        "description": "The knowledge base folder to write, relative to your workspace or absolute. Leave it out to use the one set up for you; if none is set up, KnowledgeMissing. Not the knowledge base you read from."
+        "description": "The knowledge base folder to write, relative to your workspace or absolute. Leave it out to use the one set up for you; if none is set up, KnowledgeMissing. Not the knowledge base you read from. To read back what you wrote, give knowledge_read the same root."
       }
     },
     "required": [

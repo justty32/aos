@@ -229,8 +229,26 @@ class KnowledgeTest(unittest.TestCase):
         empty.mkdir()
         self.fails("LaunchFailed", env={"PATH": str(empty)}, op="read")
 
+    def test_root_param_reads_another_base(self):
+        other = self.root.parent / "notes"
+        write(other / "a.json", "note text")
+        write(other / "_index.json", {"a.json": {"description": "A note"}})
+        env = dict(os.environ, AOS_WS=str(self.root.parent))
+        env.pop("AOS_KNOWLEDGE", None)
+        got = subprocess.run([sys.executable, str(ENTRY)], capture_output=True, text=True, env=env, timeout=30,
+                             input=json.dumps({"op": "read", "path": "a.json", "root": "notes"}))
+        self.assertEqual(got.returncode, 0, got.stdout + got.stderr)
+        self.assertIn("note text", got.stdout)
+        got = subprocess.run([sys.executable, str(ENTRY), "--root", "kb"], capture_output=True, text=True, env=env, timeout=30,
+                             input=json.dumps({"op": "read", "path": "a.json", "root": "notes"}))
+        self.assertIn("NodeMissing", got.stdout)          # --root 釘死時 JSON 的 root 改不了
+        for bad, code in (("", "ArgumentsBad"), ("nowhere", "KnowledgeBad")):
+            got = subprocess.run([sys.executable, str(ENTRY)], capture_output=True, text=True, env=env, timeout=30,
+                                 input=json.dumps({"op": "read", "root": bad}))
+            self.assertIn(code, got.stdout)
+
     def test_root_flag_and_no_default(self):
-        """庫根：--root DIR ＞ _knowledge.json ＞ AOS_KNOWLEDGE；都沒給＝KnowledgeMissing 教三種給法（11-10 深夜：工具沒有內建預設）。"""
+        """庫根：--root DIR ＞ 呼叫參數 root ＞ _knowledge.json ＞ AOS_KNOWLEDGE；都沒給＝KnowledgeMissing 教三種給法（11-10 深夜：工具沒有內建預設）。"""
         line = self.fails("KnowledgeMissing", env={"AOS_KNOWLEDGE": ""}, op="read")
         for how in ("--root DIR", "_knowledge.json", "AOS_KNOWLEDGE"):
             self.assertIn(how, line)
@@ -258,7 +276,7 @@ class KnowledgeTest(unittest.TestCase):
         self.assertIn("usage: knowledge_read [--root DIR]", r.stdout)
         r = subprocess.run([sys.executable, str(ENTRY)], input=json.dumps({"op": "read", "root": str(other)}), text=True,
                            capture_output=True, env=self.env, timeout=30)
-        self.assertIn("ArgumentsBad", r.stdout)             # 腦給的 JSON 改不了庫根
+        self.assertIn("other kb.", r.stdout)                # 11-11 晚起腦能在呼叫裡給 root（跟 knowledge_write 一樣），排在 AOS_KNOWLEDGE 前
 
     def test_help_is_english(self):
         r = subprocess.run([sys.executable, str(ENTRY), "--help"], capture_output=True, text=True)

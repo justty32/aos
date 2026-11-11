@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # knowledge_read - 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）：read 一個位置、ls 列枝幹的表、find 依關鍵字／標籤找路徑。
 # 圖紙：proto8/thinking/2026-11/10/json-memory/02-格式規則.md、03-工具.md（使用者 11-10 晚「json本身就是節點樹」）。
-# 介面（lib 契約）：stdin {"op": "read"|"ls"|"find", "path"?: 統一路徑, "query"?: 字串, "tag"?: 字串, "max_bytes"?: N}。
-#   庫根（腦不能挑）：argv 的 --root DIR（不是 JSON 參數；相對從 $AOS_WS，沒設＝cwd）＞ 工具資料夾（$AOS_CD）的 _knowledge.json 的 base
+# 介面（lib 契約）：stdin {"op": "read"|"ls"|"find", "path"?: 統一路徑, "query"?: 字串, "tag"?: 字串, "max_bytes"?: N, "root"?: 資料夾}。
+#   庫根：argv 的 --root DIR（不是 JSON 參數；相對從 $AOS_WS，沒設＝cwd）＞ 呼叫參數 root（資料夾，相對同上；11-11 晚使用者「啊就指定跟write一樣啊」）＞ 工具資料夾（$AOS_CD）的 _knowledge.json 的 base
 #   ＞ $AOS_KNOWLEDGE（相對從 $AOS_DAEMON，沒有＝cwd）；都沒有＝KnowledgeMissing（工具沒有內建預設位置，11-10 深夜）；設定檔壞＝CfgBad（knowledge_fs）。
 #   path＝`資料夾/檔.json#/JSON Pointer`，相對從庫根算；"" 或 "/"＝根；其他 / 開頭＝檔案系統絕對路徑（讀不限範圍）。
 #   stdout 純文字、第一行 node: <路徑>；印出的每條路徑都能直接貼回 path：
@@ -31,9 +31,10 @@ absolute file system paths.
         (case-insensitive) and whose index entry has tag in its tags; max 20;
         a hit inside the text ends with [match: that line].
 Every path printed can be passed back as path. Output over max_bytes is cut.
-Needs aos-json on PATH. The knowledge base root: --root DIR (command line only, not a
-JSON argument), else _knowledge.json {"base": DIR} next to the tool, else
-AOS_KNOWLEDGE. No default: none of them = KnowledgeMissing; not a folder = KnowledgeBad.
+Needs aos-json on PATH. The knowledge base root: --root DIR on the command line (pinned
+by whoever runs the tool; the JSON key root cannot change it), else the JSON key
+root (a folder, relative to the workspace), else _knowledge.json {"base": DIR}
+next to the tool, else AOS_KNOWLEDGE. No default: none of them = KnowledgeMissing; not a folder = KnowledgeBad.
 Result on stdout. On error: one line "knowledge_read: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -233,7 +234,10 @@ if op == "find":
         die("ArgumentsBad", "tag must be a string")
     if query is None and tag is None:
         die("ArgumentsBad", "find needs query or tag")
-root = fs.knowledge_root(HERE)
+given = args.get("root")
+if given is not None and (not isinstance(given, str) or not given):
+    die("ArgumentsBad", "root must be a non-empty string (a folder)")
+root = fs.knowledge_root(HERE, given)
 try:
     loc = fs.parse(root, args.get("path"))
     if op == "read":

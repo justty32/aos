@@ -6,7 +6,8 @@
 
 使用者 11-10 深夜：「knowledge_read/write，就是吃旗標或目標，或是吃環境變數，啊這些都要自己給。或是在定義中給」。工具本身不指任何地方，照這個順序找，第一個有給的算：
 
-1. 命令列 `--root DIR`（相對從 `$AOS_WS` 算，沒設＝cwd；`aos-exec` 會 cd 進工具夾，但 WS 預設是叫的人所在的資料夾）：人手動跑時用，例 `aos-exec lib/agent/knowledge_read --root knowledge/ < args.json`。它**不是 JSON 參數**，腦叫工具只給 JSON、改不了庫根；登記格（`tools.json`）也帶不了 argv。
+1. 命令列 `--root DIR`（相對從 `$AOS_WS` 算，沒設＝cwd；`aos-exec` 會 cd 進工具夾，但 WS 預設是叫的人所在的資料夾）：人手動跑時用，例 `aos-exec lib/agent/knowledge_read --root knowledge/ < args.json`。它不是 JSON 參數；登記格（`tools.json`）也帶不了 argv。
+1'. 呼叫參數 `root`（資料夾，相對從 `$AOS_WS`）：腦在那次呼叫裡給，跟 `knowledge_write` 的 `root` 同一套，寫了能照同一個 root 讀回（11-11 晚使用者「啊就指定跟write一樣啊」）；排在 `--root` 後面＝人釘死的腦改不了。
 2. 工具資料夾的 `_knowledge.json`＝`{"base": DIR}`（相對從那個資料夾算；`base` 可寫指示詞）。
 3. 環境變數 `AOS_KNOWLEDGE`（相對從 `$AOS_DAEMON`，沒有＝cwd）：範本寫在登記格的 `env`（`{"$env": "AOS_HOME", "$path": "/knowledge"}`），或 `aos-agent tools add --envs AOS_KNOWLEDGE=…`。
 
