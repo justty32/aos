@@ -18,7 +18,7 @@
 
 職責四件：接收指令、開 agent 團隊、傳達指令、**協調使用者自己也會用到的資源**（CPU、硬碟、網路）。**資源授權的源頭是使用者**——頂層只是代為分配，**不能自己創造授權**。
 
-模型：**通常 Opus 就夠了**——頂層只是轉達與調度，某些情況下 Sonnet 也可以；skyrim 那邊 2026-08-30 已由 Fable 降回 Opus。aos 頂層 10-09 起多為 Opus（頭腦風暴時換 Fable），都**只派隊、不親做內容**（鐵律 5：方向性的留給使用者）。頂層**比領導笨是正常的**：計畫不在頂層做。
+模型：**通常 Opus 就夠了**——頂層只是轉達與調度，某些情況下 Sonnet 也可以；skyrim 那邊頂層是 Opus，aos 頂層多為 Opus（頭腦風暴時換 Fable），都**只派隊、不親做內容**（鐵律 5：方向性的留給使用者）。頂層**比領導笨是正常的**：計畫不在頂層做。
 
 對使用者說話要**適合使用者理解**：初次出現的東西先用白話講一句。**預設不必翻譯**；只有使用者說今天不想動腦才逐項翻，翻譯本身吃太多 context 時，改成直接指出**該先看哪些檔**（[digest](digest/README.md) 工作流就是做這件事）。
 
@@ -28,7 +28,7 @@
 
 ### 團隊領導（＝計畫制定者）
 
-職責：把目標拆成計畫、寫交接書、派工、監看、核驗、收線。本專案的隊長是 **Opus**（11-06 起明定為 Claude Code 自家 subagent，帶兩名隊員，見下方「工人」）：寫任務書、審 diff、跑 build、commit、push。
+職責：把目標拆成計畫、寫交接書、派工、監看、核驗、收線。本專案的隊長是 **Opus**（Claude Code 自家 subagent，帶兩名隊員，見下方「工人」）：寫任務書、審 diff、跑 build、commit、push。
 
 模型：**依任務難度是 Fable 或 Opus**。負擔重（計畫＋指揮＋匯報），所以 **Opus 是最低標準**；**若「制定計畫」被分出去給某個成員，領導只剩指揮與匯報，Sonnet 也可以。**
 
@@ -40,13 +40,13 @@
 
 依任務難度／內容，加上**使用者給的 headcount**，開不同聰明程度的 agent。gpt-sol、gpt-terra、gpt-luna 這類便宜 AI **通常在這層大量使用**；工人**不 commit**。
 
-**本專案 11-06 起**：每隊的工人＝**兩名隊員**，一個 codex（`gpt-6.1-sol`）、一個 claude CLI（opus），各自可**無上限**往下派子 agent——codex 那邊普通 sol、簡單 terra，claude 那邊普通 opus、簡單 sonnet；**盡量派 codex**，claude 補位。隊員與其子 agent 一樣先通讀 wf/ 規矩（雜活例外）。細節與使用者原話見 [dispatch/aos-teams](dispatch/aos-teams.md)。
+**本專案**：每隊的工人＝**兩名隊員**，一個 codex（`gpt-6.1-sol`）、一個 claude CLI（opus），各自可**無上限**往下派子 agent——codex 那邊普通 sol、簡單 terra，claude 那邊普通 opus、簡單 sonnet；**盡量派 codex**，claude 補位。隊員與其子 agent 一樣先通讀 wf/ 規矩（雜活例外）。細節與使用者原話見 [dispatch/aos-teams](dispatch/aos-teams.md)。
 
 gpt-sol 自己再開 terra／luna 是**它那層的事**——它在那層就是領導，不算「領導不建議 gpt-sol」的例外；我們只在任務書寫明分工與資源（上一段），不替它逐條派。
 
 ## 二、聰明度分級（總分）
 
-使用者定的總分表（S Fable；A Opus〔軟工〕、gpt-sol 系、`gpt-6.1-sol`、`gpt-6-astra`；C gpt-terra、Sonnet；D gpt-luna、Haiku…）在 [grades](team-model/grades.md)。**級別是使用者定的**，新增用途欄只加欄、不改級。11-06 起 codex 一般工作一律 `gpt-6.1-sol`，astra 只派圖像、創意類（同級但價格約 sol 的 3 倍，原話見 grades）。
+使用者定的總分表（S Fable；A Opus〔軟工〕、gpt-sol 系、`gpt-6.1-sol`、`gpt-6-astra`；C gpt-terra、Sonnet；D gpt-luna、Haiku…）在 [grades](team-model/grades.md)。**級別是使用者定的**，新增用途欄只加欄、不改級。codex 一般工作一律 `gpt-6.1-sol`，astra 只派圖像、創意類（同級但價格約 sol 的 3 倍，原話見 grades）。
 
 ## 三、token 消耗速度
 
@@ -60,11 +60,11 @@ Claude 系列消耗與聰明度成正比、GPT 系列整體往下移兩級，所
 4. **溝通方便與否**——跨體系（GPT ↔ Claude）即使有 inbox 仍有成本，所以**領導層不建議 gpt-sol**。另外（使用者 11-07，長期）**gpt 系不參與軟體設計決策與架構規劃**，只照圖紙寫碼、寫文件、做雜活，見 [aos-teams](dispatch/aos-teams.md)「gpt 系不參與設計決策與架構規劃」。
 5. **管理上限**——**開太多領導不好管**；寧可少開領導、把量壓在工人層。
 6. **時程**——用「產出速度 × 繞圈數 × 模型癖好」反推每段派誰、排多久，算法見 [speed](team-model/speed.md)。
-7. **機器負擔**（2026-11-06）——codex、claude 這類 CLI agent 都是 nodejs 做的，跑在使用者自己也在用的機器上，**同時開的 CLI 程序數是外生上限**（本專案每隊兩個）。量往隊員的子 agent 壓、不往程序數壓；頂層稍微監看負載，超門檻才叫各隊收斂（做法見 [aos-teams](dispatch/aos-teams.md)）。
+7. **機器負擔**——codex、claude 這類 CLI agent 都是 nodejs 做的，跑在使用者自己也在用的機器上，**同時開的 CLI 程序數是外生上限**（本專案每隊兩個）。量往隊員的子 agent 壓、不往程序數壓；頂層稍微監看負載，超門檻才叫各隊收斂（做法見 [aos-teams](dispatch/aos-teams.md)）。
 
 ## 五、方案與時間軸
 
-隨帳單與錢包變動，替代表與連帶效果拆到 [plans](team-model/plans.md)。2026-08-30 原計畫 9 月初退 GPT；實際沒退，10-09 實測 codex 9 個 slug 可用，工人層恢復 codex。
+隨帳單與錢包變動，替代表與連帶效果拆到 [plans](team-model/plans.md)。現況 Claude、GPT 兩套都在用，工人層用 codex。
 
 ## 六、context 管理
 
