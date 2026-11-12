@@ -22,7 +22,7 @@ before end                                   after
 4 assistant  -> peek_now_time({})            4 user       [aos] summary: lines 4-7, 4 messages. Task "Find the time" ended: It is today.
 5 tool       2026-11-11T06:55:05Z            5 assistant  -> do_task(end)
 6 assistant  -> peek_now_time({})            6 tool       Task ended (depth 1) "Find the time".
-7 tool       2026-11-11T06:55:06Z                         4 messages (lines 4-7) are now one summary at line 4; the originals are in .../history_removed.jsonl.
+7 tool       2026-11-11T06:55:06Z                         4 messages (lines 4-7) are now one summary at line 4; the originals are in history_removed.jsonl in the stack of bob.
 8 assistant  -> do_task(end)                 7 assistant  Done.
 ```
 

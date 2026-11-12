@@ -95,7 +95,8 @@ class History(unittest.TestCase):
 
     def test_rm_keeps_originals_next_to_it(self):
         r = self.agent("rm", "2-3")
-        self.assertIn("removed 2 messages from line 2", r.stdout)
+        self.assertIn("removed 2 messages from line 2; the originals are in history_removed.jsonl in the stack of bob", r.stdout)
+        self.assertNotIn(str(self.tmp), r.stdout)      # 11-12：結果行會被工具接進 history（進 git），不印絕對路徑
         self.assertEqual(self.lines(), [MSGS[0], MSGS[3], MSGS[4]])
         kept = self.kept()
         self.assertEqual([(k["op"], k["line"], k["message"]) for k in kept], [("rm", 2, MSGS[1]), ("rm", 3, MSGS[2])])
@@ -114,7 +115,8 @@ class History(unittest.TestCase):
 
     def test_set_any_line_and_keep_elsewhere(self):
         other = self.tmp / "elsewhere" / "old.jsonl"
-        self.agent("set", "--keep", "elsewhere/old.jsonl", "5", '{"role": "user", "content": "thank you", "x": 1}')
+        r = self.agent("set", "--keep", "elsewhere/old.jsonl", "5", '{"role": "user", "content": "thank you", "x": 1}')
+        self.assertIn("replaced line 5; the originals are in elsewhere/old.jsonl\n", r.stdout)   # --keep 照字面印
         self.assertEqual(self.lines()[4], {"role": "user", "content": "thank you", "x": 1})
         self.assertEqual(self.kept(other)[0]["message"], MSGS[4])
         self.assertFalse(self.removed.exists())

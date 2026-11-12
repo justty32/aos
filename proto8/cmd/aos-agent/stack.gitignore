@@ -4,7 +4,7 @@
 # 儲存前先 shutdown 整棵 daemon；git add／commit／push 由使用者自己決定。
 # 擋的是「只在這台、這一刻有意義」的東西；state.json、state_flux.json、procs_state.json、queue.json、history.jsonl、queue/、stage.txt、think/、used.json、
 #   history_removed.jsonl（aos-agent history 改掉的原文）、llm.json、tools.json（覆蓋層）、session.txt、
-#   goal.json、tools/todo/todo.json、tools/do_task/tasks.json（11-11 使用者「三個都進 git」）都要留（醒來要接著用；paused 也要帶著醒；state_flux.json 的 ctl_seq 讓 stop→start 不被同一道 stop 再停）。
+#   goal.json、tools/todo/todo.json、tools/do_task/tasks.json（11-11 使用者「三個都進 git」）、subagents.json、tools/fork/children/<分身>/state 都要留（醒來要接著用；paused 也要帶著醒；state_flux.json 的 ctl_seq 讓 stop→start 不被同一道 stop 再停）。
 
 # 信箱的半封信（maildir 的 tmp/；git 不收空資料夾，第一圈 daemon／aos-post 會自己建回）
 **/tmp/

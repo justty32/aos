@@ -673,6 +673,16 @@
    "on_bad": "不在＝沒有任務；不是 {tasks: [{call…}]}＝StateBad 退 1；寫不了＝WriteFailed",
    "note": "11-11 fork-and-do-task/02：{tasks: [{call, task?, started_at（ISO 8601 UTC 到秒）}], ended?: {call, result}}；第一次 start 才建；暫存檔再改名。新檔，不用重建（舊 do_task 的 tools/do_task/children/、observed/ 新版不讀，留著無害）",
    "evidence": "proto8/lib/agent/do_task/_entry"
+  },
+  {
+   "path": "$AOS_STACK/tools/fork/children/<分身名>/state（哪些分身是我的）",
+   "lifetime": "持久",
+   "writer": "lib/agent/fork",
+   "reader": "lib/agent/fork（對帳 reconcile）",
+   "image": "進：跟分身自己的 stack（<daemon>/procs/<分身名>/）配對（stack.gitignore 沒擋 tools/）",
+   "on_bad": "下次 fork 時對帳：未到期的 running 不碰；不在 daemon 表上＝刪掉紀錄；kept 不碰；過期 running 與 failed 先 ctl stop、running 改記 failed，failed 超過上限的最舊的 ctl rm --purge；剛 mkdir、state 還沒寫的那一瞬不碰；讀不了＝當成沒有租約",
+   "note": "11-11 fork 新增（fork-and-do-task/01）：一行 running <租約到期 UTC 到秒 Z>／kept／failed；分身收掉時整個資料夾刪掉。11-12 線 K 補列（之前漏列），分類代定進 git。新檔，不用重建",
+   "evidence": "proto8/lib/agent/fork/_entry"
   }
  ]
 }

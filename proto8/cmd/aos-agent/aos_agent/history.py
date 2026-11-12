@@ -252,8 +252,14 @@ def rewrite(path, change, where, op):
     raise Fail("WriteFailed", "%s kept changing while writing (tried %d times); pause the agent first (aos-agent ctl pause)" % (path, TRIES))
 
 
-def where_said(where):
-    return "the originals are in %s" % where if where else "not kept"
+def where_said(where, topts, a):
+    """結果行說原文在哪。不印絕對路徑（11-12 線 K：這行會被 self_history／do_task 原樣接進 history，history 進 git）：
+    --keep 照使用者給的字面印；預設那份印相對 stack 的位置。"""
+    if not where:
+        return "not kept"
+    if "keep" in topts:
+        return "the originals are in %s" % topts["keep"]
+    return "the originals are in %s in the stack of %s" % (os.path.relpath(where, a.stack), a.name)
 
 
 def cmd(argv):
@@ -307,7 +313,7 @@ def cmd(argv):
             return rows[:lo - 1] + rows[hi:], rows[lo - 1:hi], lo
         k = rewrite(path, change, where, "rm")
         lo = int(args[0].partition("-")[0])
-        print("removed %d message%s from line %d; %s" % (k, "" if k == 1 else "s", lo, where_said(where)))
+        print("removed %d message%s from line %d; %s" % (k, "" if k == 1 else "s", lo, where_said(where, topts, a)))
     elif act == "summarize":
         text = from_arg(args[1])
         role = topts.get("role", "user")
@@ -320,7 +326,7 @@ def cmd(argv):
             return rows[:lo - 1] + [new] + rows[hi:], rows[lo - 1:hi], lo
         k = rewrite(path, change, where, "summarize")
         lo = int(args[0].partition("-")[0])
-        print("replaced %d message%s with one %s message at line %d; %s" % (k, "" if k == 1 else "s", role, lo, where_said(where)))
+        print("replaced %d message%s with one %s message at line %d; %s" % (k, "" if k == 1 else "s", role, lo, where_said(where, topts, a)))
     else:
         try:
             m = json.loads(from_arg(args[1]))
@@ -334,4 +340,4 @@ def cmd(argv):
             n, _ = span(args[0], len(rows), one=True)
             return rows[:n - 1] + [new] + rows[n:], rows[n - 1:n], n
         rewrite(path, change, where, "set")
-        print("replaced line %s; %s" % (args[0], where_said(where)))
+        print("replaced line %s; %s" % (args[0], where_said(where, topts, a)))

@@ -114,7 +114,8 @@ class DoTask(unittest.TestCase):
         self.assertEqual(h[4]["tool_calls"][0]["id"], "c4")
         self.assertEqual(h[5]["tool_call_id"], "c4")
         self.assertEqual(len(h), 6)
-        self.assertIn("5 messages (lines 4-8) are now one summary at line 4; the originals are in ", out)
+        self.assertIn("5 messages (lines 4-8) are now one summary at line 4; the originals are in history_removed.jsonl in the stack of bob.", out)
+        self.assertNotIn(str(self.tmp), json.dumps(self.read()))   # 11-12：結果行進 history（進 git），不帶絕對路徑
         self.assertEqual([r["message"] for r in self.removed()], before[3:8])   # 原文照舊留檔
         self.assertEqual(json.loads((self.cell / "tasks.json").read_text())["tasks"], [])
 

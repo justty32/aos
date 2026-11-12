@@ -382,8 +382,9 @@ try:
 except fork_copy.ForkCopyBad as e:
     scrap()
     die(e.code, str(e))
-out, err = agent(["ctl", "add", "--name", kid, "--ws", ws, "--stack", os.path.relpath(kid_stack),
-                  "--envs", "%s=%d" % (DEPTH_ENV, depth + 1), definition])
+# 定義、工作區、stack 都給相對路徑（11-12 線 K）：給絕對的，ctl add 當成使用者寫的原樣存，分身的 exec.json 就帶著這台的絕對路徑進 git
+out, err = agent(["ctl", "add", "--name", kid, "--ws", os.path.relpath(ws), "--stack", os.path.relpath(kid_stack),
+                  "--envs", "%s=%d" % (DEPTH_ENV, depth + 1), os.path.relpath(definition)])
 if err:
     if err[0] in ("DaemonMissing", "DaemonFailed"):
         mark(kid, "failed")                     # 信可能晚到、之後才上表：留 stack，下一次對帳收

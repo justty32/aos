@@ -768,13 +768,13 @@
   },
   {
    "id": "G063",
-   "pattern": "stacks/**/children.json",
-   "writer": "proto8/lib/agent/agents_children/_entry:15-16、:52（記帳在 $AOS_STACK/tools/agents_children/children.json；配額設定在 stack 那份 children.json）",
+   "pattern": "stacks/**/subagents.json",
+   "writer": "proto8/lib/agent/subagent/_entry（CFG＝subagents.json：記帳在 $AOS_STACK/tools/subagent/subagents.json；配額設定在 agent stack 根的 subagents.json，人手寫）",
    "class": "carry",
    "in_git": "進",
-   "why": "已生子項帳（tools/agents_children/children.json）與子 agent 配額覆蓋層（children.json），11-10 晚 agents-split 起同名、不同處，兩份都帶走。",
+   "why": "已生子項帳（tools/subagent/subagents.json）與子 agent 配額覆蓋層（stack 根的 subagents.json），同名、不同處，兩份都帶走。11-11 改名前叫 children.json（11-12 線 K 照 NORMS 附錄 4 補上新名）。",
    "seen": [],
-   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/children.json"
+   "ignored_now": "對：tracked; sample=stacks/root/procs/worker/subagents.json"
   },
   {
    "id": "G064",
@@ -1179,6 +1179,16 @@
    "class": "carry",
    "in_git": "進",
    "why": "11-11 使用者「三個都進 git」（thinking 2026-11/11/fork-and-do-task README § 新持久檔分類）：開著的 do_task 任務（紀錄點的 call id 在 history 裡），跟 history 一起走；換台後 end 照摺。",
+   "seen": [],
+   "ignored_now": "對：tracked（stack.gitignore 沒擋 tools/）"
+  },
+  {
+   "id": "G099",
+   "pattern": "stacks/**/tools/fork/children/*/state",
+   "writer": "proto8/lib/agent/fork/_entry（mark：running <租約到期 UTC>／kept／failed；收掉的分身 forget 刪掉這份）",
+   "class": "carry",
+   "in_git": "進",
+   "why": "11-12 線 K 代定：叫 fork 那隻記「哪些分身是我的」（留著的 kept、失敗留下的 failed），跟分身自己的 stack（procs/<分身>/，照既有各列帶走）配對；同 G063 子項帳帶走。running 的租約是這台的牆鐘，換台後過期、下次 fork 對帳時照既有規則收。",
    "seen": [],
    "ignored_now": "對：tracked（stack.gitignore 沒擋 tools/）"
   }

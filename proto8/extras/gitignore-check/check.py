@@ -21,11 +21,17 @@ import aos_flags
 from agent import cooldown
 
 PROG = "gitignore-check"
-# 假腦劇本（when＝最後一則含那個字就回它；worker 已有對話，按順序的劇本對不上）：do_task start → todo add → 答一句
+# 假腦劇本（when＝最後一則含那個字就回它；worker 已有對話，按順序的劇本對不上）：do_task start → todo add →
+# 裡層 do_task start → todo add → end（摺疊的結果行寫進 history，11-12 線 K 查外洩）→ fork keep（分身答一句，留下 tools/fork/children/<分身>/state）→ 答一句
 TASKS = {"exec": str(PROTO / "lib/base/llm_fake"), "script": [
+    {"when": "you are a fork", "content": "FAKE FORK ANSWER"},
     {"when": "make a task", "tool_calls": [{"name": "do_task", "arguments": {"op": "start", "task": "Check the classes"}}]},
-    {"when": "Task started", "tool_calls": [{"name": "todo", "arguments": {"op": "add", "text": "classify the new files"}}]},
-    {"when": "of 1 completed", "content": "FAKE ANSWER tasks"}]}
+    {"when": "Task started (depth 1)", "tool_calls": [{"name": "todo", "arguments": {"op": "add", "text": "classify the new files"}}]},
+    {"when": "of 1 completed", "tool_calls": [{"name": "do_task", "arguments": {"op": "start", "task": "Inner"}}]},
+    {"when": "Task started (depth 2)", "tool_calls": [{"name": "todo", "arguments": {"op": "add", "text": "one inner step"}}]},
+    {"when": "of 2 completed", "tool_calls": [{"name": "do_task", "arguments": {"op": "end", "summary": "Inner done."}}]},
+    {"when": "now one summary", "tool_calls": [{"name": "fork", "arguments": {"goal": "Say hi.", "keep": True, "timeout_s": 30}}]},
+    {"when": "FAKE FORK ANSWER", "content": "FAKE ANSWER tasks"}]}
 HELP = """gitignore-check - optional developer regression check, never part of daemon startup
 
 usage: python3 check.py [--evidence DIR] [--timeout-s SECONDS] [--inject-unknown] [--mntc]
@@ -259,8 +265,9 @@ class Check:
         tools = {"peek_now_time": {"path": str(PROTO / "lib/base/peek_now_time")},
                  "knowledge_read": {"path": str(PROTO / "lib/agent/knowledge_read"), "env": kb},
                  "knowledge_write": {"path": str(PROTO / "lib/agent/knowledge_write"), "env": kb}}
-        if kind == "agent-fsm":                  # 11-11：tools/todo/todo.json、tools/do_task/tasks.json 要長出來（使用者「三個都進 git」）
-            tools.update(todo={"path": str(PROTO / "lib/agent/todo")}, do_task={"path": str(PROTO / "lib/agent/do_task")})
+        if kind == "agent-fsm":                  # 11-11：tools/todo/todo.json、tools/do_task/tasks.json 要長出來（使用者「三個都進 git」）；11-12 加 fork
+            tools.update(todo={"path": str(PROTO / "lib/agent/todo")}, do_task={"path": str(PROTO / "lib/agent/do_task")},
+                         fork={"path": str(PROTO / "lib/agent/fork")})
         save(dest / "tools.json", {"tools": tools})
         save(dest / "llm.json", {"model": "fake"})
 
@@ -341,18 +348,21 @@ class Check:
 
     def exercise(self):
         self.ask("worker", "first question", "FAKE ANSWER")
-        # 11-11：goal.json、tools/todo/todo.json、tools/do_task/tasks.json（分類 G096-G098，「三個都進 git」）。do_task 只 start、不 end，
-        # 任務開著、tasks.json 留著；goal 設完就 pause，假腦不會被提醒一直叫。
+        # 11-11：goal.json、tools/todo/todo.json、tools/do_task/tasks.json（分類 G096-G098，「三個都進 git」）。外層 do_task 只 start、不 end，
+        # 任務開著、tasks.json 留著；裡層 start 再 end，摺疊的結果行進 history（敏感內容檢查看它）；fork keep 留下分身與
+        # tools/fork/children/<分身>/state（G099）。goal 設完就 pause，假腦不會被提醒一直叫。
         self.run(["aos-agent", "-t", "worker", "llm", "set", "model=tasks"])
         self.ask("worker", "make a task", "FAKE ANSWER")
         self.run(["aos-agent", "-t", "worker", "llm", "set", "model=fake"])
         self.run(["aos-agent", "goal", "-t", "worker", "set", "Check the gitignore classes"])
         self.run(["aos-agent", "goal", "-t", "worker", "pause", "fixture: no reminders"])
         w = self.root / "procs/worker"
-        grown = [n for n in ("goal.json", "tools/todo/todo.json", "tools/do_task/tasks.json") if not (w / n).is_file()]
+        grown = [n for n in ("goal.json", "tools/todo/todo.json", "tools/do_task/tasks.json", "history_removed.jsonl") if not (w / n).is_file()]
+        if not list(w.glob("tools/fork/children/*/state")):
+            grown.append("tools/fork/children/*/state")
         if grown:
-            raise RuntimeError("goal / todo / do_task files did not appear: " + ", ".join(grown))
-        self.note("goal.json, tools/todo/todo.json, tools/do_task/tasks.json written by the real tools")
+            raise RuntimeError("goal / todo / do_task / fork files did not appear: " + ", ".join(grown))
+        self.note("goal.json, tools/todo/todo.json, tools/do_task/tasks.json, history_removed.jsonl, tools/fork/children/*/state written by the real tools")
         self.ask("eca", "first ECA question", "FAKE:")
         self.run(["aos-agent", "-t", "worker", "llm", "set", "model=bad"])
         self.run(["aos-agent", "say", "-t", "worker", "retry this question"])
