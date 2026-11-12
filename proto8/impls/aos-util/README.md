@@ -2,7 +2,7 @@
 
 `libaos-util - aos 這一家命令列工具共用的小函式庫`（NAME，C-54 R1）
 
-**一句話：aos 這一家命令列工具共用的小函式庫——錯誤型別與通用的錯誤代號、三扇門（stdin／stdout／stderr）、旗標（`aos/util/cli.hpp`；較早一代沒人叫的 `aos/flags.hpp` 11-04 刪了）、設定檔、路徑與原子寫入、行程身分、時間與訊號。** 沒有執行檔，只出 `lib/libaos-util.a`。全家慣例見 [impls/README.md](../README.md)。
+**一句話：aos 這一家命令列工具共用的小函式庫——錯誤型別與通用的錯誤代號、三扇門（stdin／stdout／stderr）、旗標（`aos/util/cli.hpp`）、設定檔、路徑與原子寫入、行程身分、時間與訊號。** 沒有執行檔，只出 `lib/libaos-util.a`。全家慣例見 [impls/README.md](../README.md)。
 
 像一家店的共用倉庫：每支工具自己只放自己獨有的東西，「好幾支都要」的一律放這裡，一份就好。
 
@@ -54,7 +54,7 @@ std::optional<TextWriteError> write_text(const std::string& path, const std::str
 `aos/util/files.hpp` 另提供 `keep_bad` 與 `read_window`：前者把壞檔改名（或複製）留成 `<檔名>.bad-<UTC 毫秒時間>`，冒號換連字號、撞名加尾碼，失敗丟 WriteFailed；後者旁觀別人的 JSON 物件窗，缺檔安靜、讀不了／JSON 壞／根非物件則當沒有，每個行程對同一路徑只提醒一次，不改動對方檔案。
 
 `aos/util/signals.hpp` 另提供 `sigset_t the_signals()`、`void block_signals()`、`int take_signal()`：同一組 SIGINT／SIGTERM／SIGHUP；開執行緒前阻擋，之後非阻塞取出一個訊號，沒有就回 0。`block_signals` 第一次呼叫時順手記下擋之前的遮罩。
-11-09 加兩個（給 aos-daemon 的 poke）：`void block_more(const sigset_t&)` 額外擋一組訊號（例 daemon 的 poke 三訊號與 SIGUSR1／SIGUSR2），不改已記下的舊遮罩；`void restore_signals()` 給 fork 之後、exec 之前的子行程用，把遮罩還原成 `block_signals` 之前的樣子（含 `block_more` 多擋的一併解開；沒呼叫過 `block_signals` 就只解三個收工訊號），只用 async-signal-safe 呼叫、不配置記憶體。aos-loop 的 `run_folder` 與 aos-daemon 起子項都用它，取代原本各自寫死只解三個訊號。
+給 aos-daemon 的 poke 用的兩個：`void block_more(const sigset_t&)` 額外擋一組訊號（例 daemon 的 poke 三訊號與 SIGUSR1／SIGUSR2），不改已記下的舊遮罩；`void restore_signals()` 給 fork 之後、exec 之前的子行程用，把遮罩還原成 `block_signals` 之前的樣子（含 `block_more` 多擋的一併解開；沒呼叫過 `block_signals` 就只解三個收工訊號），只用 async-signal-safe 呼叫、不配置記憶體。aos-loop 的 `run_folder` 與 aos-daemon 起子項都用它。
 
 `aos/util/proc.hpp` 提供 `signal_group`、`proc_started_at_ticks`、`boot_id`、`utc_now_ms`、`utc_now_ns`、`utc_ms_at`、`unique_id`（無參數或指定奈秒）與 `identity`，供行程辨識、送訊號及產生時間與名稱。
 
@@ -62,7 +62,7 @@ std::optional<TextWriteError> write_text(const std::string& path, const std::str
 
 `aos/util/clock.hpp` 提供 `now_cycle()`、`clock_interval_ms()`、`utc_now_epoch_ms()`、`Deadline`、`deadline_after(cycles)` 與 `expired(d)`。
 
-- `AOS_CLOCK` 沒設或空＝沒有時鐘（`nullopt`）；有設而檔案不存在＝印一行英文 warning（每行程每路徑一次），仍當 0、不建檔；空白檔照舊當 0、不提醒。有時鐘的期限只數格，凍住不過期。
+- `AOS_CLOCK` 沒設或空＝沒有時鐘（`nullopt`）；有設而檔案不存在＝印一行英文 warning（每行程每路徑一次），仍當 0、不建檔；空白檔當 0、不提醒。有時鐘的期限只數格，凍住不過期。
 - 沒時鐘時，用 `AOS_CLOCK_INTERVAL`（正整數毫秒，沒設或空＝1000）換成 UTC epoch 毫秒期限；能寫檔供跨行程比較。
 - 時鐘內容不是非負 ASCII 十進位整數、讀不了、間隔非正整數或期限超出 signed 64-bit，丟通用 `ClockBad`，照一般錯誤退 1。
 - Python 的工具版 `proto8/lib/tool_io.py` 與命令列版 `proto8/py/aos_ws.py` 提供同名函數，期限回 `(on_clock, at)`。
