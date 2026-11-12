@@ -1,0 +1,18 @@
+← [回入口 05-agent.md](../05-agent.md)｜段落：記憶與 index：C-88｜上一份：[03-C-84](03-C-84.md)｜下一份：[05-C-89-不同質與族譜](05-C-89-不同質與族譜.md)
+
+## 記憶與 index
+
+<a id="c-88"></a>
+- **C-88** **整個檔案系統＋json 就是 agent 的記憶，缺的只是 index**（使用者 11-12：「就是說，整個檔案系統+json，本來就可以作為agent的memory了，有需要啥就去讀啥，天然的分層。缺的是啥？」自答「description, index」，[thinking index](../../../thinking/2026-11/12/index.md)）。記憶不另做工具或機制：讀寫用一般的檔案工具、json 工具與 shell。沒有 knowledge 工具（「knowledge沒用了，可以拿掉。」）；出廠的 `proto8/knowledge/` 是一般的資料夾＋json，agent 怎麼知道它在哪不管（「4.不管。」，[knowledge-removal](../../../thinking/2026-11/12/knowledge-removal.md)）。
+  - **一條路徑尋址**：檔案系統與 json 用同一條路徑，`aaa.json#/xxx/yyy`＝aaa.json 節點下 xxx 底下的 yyy；檔案系統的根是 `/`，json 檔的根是 `#/`（使用者原話四：「我們用一條路徑來統一檔案系統與json的尋址，如aaa.json#/xxx/yyy，檔案系統的根目錄是/，.json檔案的根(也就是整份檔案)則是#/。」）。寫法照 RFC 6901（[N-45](../../NORMS/06-基礎設施-命令列與指示詞.md)；使用者「原來$ref用的是標準寫法。那我們還是按照標準寫法好了。」）：整份檔寫 `aaa.json`，`aaa.json#/` 是名字為空字串的 key；`aaa.json#` 不收（`#` 後一定接 `/`，[N-62](../../NORMS/10-基礎設施-定義與工作區/05-N-61～N-62.md)）。
+  - **description 與 index 合一，叫 index**：json 物件裡是 `_index` 鍵，資料夾裡是 `_index.json`；格式 `{名: {"description": …}}`，值用物件，以後不只放 description（使用者「description和index是可以合起來的，或者說，本來就該合起來，統一叫_index.json/_index，也就是agent自己對這個節點的理解。格式就是{xxx:{description:...}, yyy:{...}}。」）。
+  - **index 是視角，不是事實**：「index的用途，我用白話說，就是一個透鏡，agent可以透過他看到自己想看到的東西」；要真正客觀就用 `ls`／`json_ls`（使用者「如果想要真正客觀，那就乖乖用shell ls或是aos json ls。」）。
+  - **天然位置＝被描述節點的上一層**：沒指定位置時，想了解某節點就看它上一層的 index。天然那份是各 agent 共用的通用視角；agent 自己存的是主觀視角，放哪不規定；cache 不做（使用者「agent的cache這個機制先不用做，反正我們就是訂下index是這樣，客觀index是這樣，agent自己要記錄自己的主觀的東西，就自己想想要放哪，我們不規定。」）。最頂層沒有上一層的 index；index 沒列到的節點不管（「最頂層本來就沒有...。沒列到的就不管」）。陣列與別人的 json 檔塞不進 `_index` 鍵：寫在外面、鍵寫路徑（「2,3的確如此」）。
+  - **只給太大的補**：「如果有些東西太大，那就補index.json/_index。如果夠小，那其實也不用做看法了，直接讀就是了。」「太大」的門檻（現在是資料夾超過 15 個東西、json 檔超過 8000 bytes 或頂層鍵超過 10 個）是代定、可翻案（[knowledge-removal](../../../thinking/2026-11/12/knowledge-removal.md)）。
+  - **看與改**：看用 `index_view`，只做「透過視角看節點」——沒指定＝天然那份；指定一份就疊在天然那份上，同名項以指定那份為準（使用者「path和index可以同時給，指定的那一份有的，會覆蓋掉天然那份。」，[index-tools](../../../thinking/2026-11/12/index-tools/README.md)）。改 index 直接用 json 工具（「index工具那塊，主要做視角就好，修改這塊應該不用做，因為他就是json，直接用json工具就好」）；改通用視角有權限就能改、不用明講（「改通用視角這塊就是有權限就能改，不用明講，風險自己承擔。」）。index 也可以寫進 `_metainfo`（[N-69](../../NORMS/10-基礎設施-定義與工作區/11-N-69.md)）。
+  - **index 可以指到下一份 index**（使用者 11-12 晚，[index-link](../../../thinking/2026-11/12/index-link.md)）：每項除了 description 還可以放 `index`，json 物件裡的 `_index` 鍵也可以是字串；兩者都必須是路徑、指向另一份 `_index`／`_index.json`，工具只顯示、不跟著往下走（「json object內的_index這個key，現在他的值是只能json obj，我希望能支援字串，同樣也是路徑，必須指向另一個_index, _index.json。　　不跟着往下走。路徑相對...以_index, _index.json的位置爲準。」）。
+    - **相對路徑照 json 與檔案系統同像去算**：從裝著那份 index 的容器算——`_index.json` 從它所在的資料夾算；json 物件裡的 `_index` 從那個物件算（物件當資料夾），根物件就是這個檔，它的 `..` 是檔案所在的資料夾（「這個要用json與檔案系統的同像性去想。如果是在json物件內的，某key的_index，那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。」）。物件裡不能直接寫 `w.json#/…`，要先 `..` 走出檔再寫（使用者「1. 甲。」）。
+    - **`#/` 開頭**＝從這份 index 所在的那個 json 檔的根算，跟寫得多深無關（「也跟進吧」）；資料夾的 `_index.json` 裡寫 `#/x`，本檔就是那份 `_index.json`（「算數。」）。
+    - 物件裡的名字一律當 key，檔案系統那邊要明寫 `#` 才進 json；物件裡的段照 JSON Pointer 寫（`~1`、`~0`）；`_metainfo` 裡的 index 與腦明講的主觀 index 照同一條「從裝著它的容器算」，本檔＝那份 index 所在位置 `#` 前面那段；`#/`（空指標）也收（代定、可翻案，[index-link](../../../thinking/2026-11/12/index-link.md) L7、L8、L10～L12）。
+    - 這條同像只管 index 的路徑；`$ref` 的相對檔名仍從寫著它的檔所在的資料夾算（使用者「3.甲」，N-45）。
+  - 格式細節（資料夾與檔內兩種寫法、正文 `_description` 與 index 的分別）見 [knowledge/docs/01](../../../knowledge/docs/01-樹長怎樣與多庫.md)。

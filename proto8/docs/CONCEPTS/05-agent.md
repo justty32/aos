@@ -12,9 +12,12 @@
 |---|---|
 | [01-腦-工具-可預測性與agent函數binding](05-agent/01-腦-工具-可預測性與agent函數binding.md) | 腦、工具、可預測性；agent＝函數＋binding |
 | [01-續-C-22](05-agent/01-續-C-22.md) | 腦、工具、可預測性（續）：C-22（確定性與專精窄領域） |
-| [01-續-C-42](05-agent/01-續-C-42.md) | 腦、工具、可預測性（續）：C-42（知識庫、`do_task`（save／load）與 `fork`、生子 agent） |
+| [01-續-C-42](05-agent/01-續-C-42.md) | 腦、工具、可預測性（續）：C-42（知識庫、`do_task`（save／load）與 `fork`、生子 agent、帳往上收） |
 | [02-agent-的工具與agent-就是一台狀態機](05-agent/02-agent-的工具與agent-就是一台狀態機.md) | agent 的工具（C-61：工具收成函式庫）；agent 就是一台狀態機 |
 | [03-C-84](05-agent/03-C-84.md) | 系統自己改進函數（C-84） |
+| [04-C-88-記憶與index](05-agent/04-C-88-記憶與index.md) | 記憶與 index（C-88） |
+| [05-C-89-不同質與族譜](05-agent/05-C-89-不同質與族譜.md) | 不同質 agent 與族譜（C-89） |
+| [06-C-90～C-92-self一家與goal](05-agent/06-C-90～C-92-self一家與goal.md) | self 一家與 hook（C-90）、goal 與 todo（C-91）、小模型裝不下工具說明（C-92） |
 
 <a id="腦工具可預測性"></a>
 <a id="agent函數binding"></a>
