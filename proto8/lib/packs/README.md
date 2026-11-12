@@ -2,7 +2,7 @@
 
 使用者 11-10 深夜：「最基礎的就是read/ls/view/stat要有。然後是普通的編輯如write/edit/copy/move/mkdir，再來是trash/remove，最後是shell。就是說，這是一包一包的」；「1.預設開到第四包，想要安全就自行限制」。agent 工具的分法：「clock_register,self_hook兩個分一組，self_tools/llm/state/ctl/history一組。agents一組。mailbox_*一組，memory_*一組。peek_clock一組。」「agent_def另外放」「2.都開吧」；「這種peek_clock,peek_now_time放一起，就是小工具的感覺。」（math 也收進來：「好」）。
 
-## 通用四包（兩個範本都預設開；eca-claude 11-10 深夜「1.算了，把各種東西也一起掛回eca。」掛回）
+## 通用四包（agent-fsm 預設開；eca-claude 11-12 起四包都不掛，只單獨登記 json_read、json_write——使用者 11-11 晚「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「可以先定這樣，然後trash也拿掉。」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）
 
 | 包 | 檔 | 工具 |
 |---|---|---|

@@ -2,19 +2,28 @@
 
 ## 外部 coding agent 範本（eca-claude）
 
-claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../../cmd/README.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。CLI 對話共用 [lib/agent/cli_session.py](../../lib/agent/cli_session.py)，介面宣告共用 [lib/agent/agent_files.py](../../lib/agent/agent_files.py)（11-06 晚 K-5）；兩者都在 `lib`，不 import 上層 `py`。設計：[thinking 2026-10-30 eca](../../thinking/2026-10/30/eca/README.md)；條文草稿 P-43。（codex 版 eca-codex 11-04 刪了：只差 `cli.json`，要就複製一份、`cli.json` 照 lib/agent/codex 改。）
+claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../../cmd/README.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。CLI 對話共用 [lib/agent/cli_session.py](../../lib/agent/cli_session.py)，介面宣告共用 [lib/agent/agent_files.py](../../lib/agent/agent_files.py)（11-06 晚 K-5）；兩者都在 `lib`，不 import 上層 `py`。設計：[thinking 2026-10-30 eca](../../thinking/2026-10/30/eca/README.md)；條文草稿 P-43。（codex 版 eca-codex 11-04 刪了：只差 `cli.json`，要就複製一份、`cli.json` 換成下面這份；**沙盒是 `workspace-write`**，codex 用自己的指令在工作區讀寫（11-12 使用者「codex拿掉唯讀沙盒」；不是 `danger-full-access`，隊長代定、使用者「可以先定這樣」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）。不要照抄 lib/agent/codex 那支工具的 `cli.json`：那是給腦叫的 codex 工具，沙盒照舊唯讀。）
+
+```json
+{"kind": "codex",
+ "flags": ["-c", "sandbox_mode=\"workspace-write\"", "-c", "approval_policy=\"never\""],
+ "print_flags": [],
+ "tools_flags": ["--knowledge", "knowledge_read"],
+ "timeout_ms": 600000}
+```
 
 ```
 eca-claude/
   _entry      ["aos-loop", "loop.json"]（JSON 入口）
   loop.json   {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000},
                "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；三扇窗落在 $AOS_STACK）
-  cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms），抄 lib/agent/claude 的保守旗標（--model 不寫在這，見 llm.json）；
+  cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms）：--tools Read,Write,Edit,Glob,Grep,Bash、--permission-mode dontAsk、--allowedTools Write,Edit,Bash、--strict-mcp-config
+              （11-12 起 claude 內建的寫檔、改檔、指令都開，aos 不再給檔案與 shell 工具；--model 不寫在這，見 llm.json；不加全繞過權限的旗標）；
               tools_flags ["--knowledge", "knowledge_read"]＝aos-mcp 在 MCP initialize 的 instructions 給知識庫根（Claude Code 放進它的 system prompt；11-05 晚）
   llm.json    腦設定：{"model": "sonnet"}（11-04 晚；cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）；只認 model（claude CLI 沒有 temperature 等取樣旗標，與快取無關的調整鍵這邊沒有對應，11-10 晚）
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔11-04 起，相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
-  tools.json  aos-tools 的登記檔：`"$override"` 一串 [lib/packs](../../lib/packs/README.md) 十包（通用四包 look、change、delete、shell，加 gadgets、events、self、def、mailbox、knowledge，共 35 支（11-11 晚使用者「eca基本都有goal，所以goal不用給eca。todo也不用。」＝再拿掉 goal、todo 兩包；人下的 `aos-agent goal --target <eca>` 與 aos-eca-turn 丟提醒那段照留（隊長代定：最小改動，見 playground 04）；11-11 晚使用者「subagent相關的工具都還是別給eca吧，eca本身就有他自己的了，甚至更順手。」＝拿掉 subagent 整包〔subagent、agents_ctl、fork〕與 subagents.json；def 包〔agent_def、tools_def〕留著：只寫定義與工具資料夾、不生 agent，頂層隊長代定）（11-11 self 包加 self_system、look 包加 grep、glob，新包 todo、goal；gadgets 的 do_task 只給 agent-fsm，`tools.json` 寫 `"do_task": null`——使用者「eca 不給 do_task」）；11-10 深夜使用者「1.算了，把各種東西也一起掛回eca。」，翻掉稍早「對於eca，其實那些基礎工具就不用了」），自己只寫 knowledge_read 那格的 `env.AOS_KNOWLEDGE`（指 `knowledge/`；knowledge_write 11-11 起不給庫）；
+  tools.json  aos-tools 的登記檔：`"$override"` 一串 [lib/packs](../../lib/packs/README.md) 六包（gadgets、events、self、def、mailbox、knowledge），`tools` 另外單獨登記 json_read、json_write，共 20 支；不掛通用四包 look、change、delete（含 trash）、shell（11-11 晚使用者「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「可以先定這樣，然後trash也拿掉。」）與 subagent、goal、todo（11-11 晚，原話與代定見範本 README）；do_task 只給 agent-fsm，寫 `"do_task": null`；knowledge_read 那格的 `env.AOS_KNOWLEDGE` 指 `knowledge/`（knowledge_write 11-11 起不給庫）；
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__peek_now_time…；帶 `--own <stack>/tools.json`，self_tools 加減工具後 aos-mcp 送 list_changed，同一輪就叫得到，11-10 深夜「3.同一輪就生效」）；不要工具就刪掉它
   interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model"], "history": "history.jsonl", "hooks": "hooks.json"}}（11-04；hooks 鍵 11-10 晚加；history 鍵 11-10 加，給 aos-agent history 找檔；llm_keys 11-10 晚加，aos-agent llm set 不在上面的鍵照存＋warning；aos-agent ctl add 只看這個宣告）
   hooks.json  hook 清單（11-10 晚；11-11 起預設一格 timer：on_clock 每 300000 ms、handler lib/agent/hook_noop 什麼都不做；另一格 mail_notify：on_clock 每 60000 ms（11-11 翻案「每 1 分鐘」）、handler lib/agent/mail_notify，有新信才往 queue 寄一則 `[aos] new_mail: …`；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
@@ -57,4 +66,4 @@ hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停�
 
 **長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 預設 600000（10 分鐘），限制 CLI 呼叫；`loop.json.exec.timeout_ms` 預設 900000（15 分鐘），限制整次 aos-eca-turn，要留得比 CLI 那層長，讓它有時間收尾。長任務要同時檢查這兩層，增加額度不會延長逾時。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
 
-**知識寫入**：範本預設登記 `knowledge_read` 與 `knowledge_write`（11-10 深夜 tool-packs），`knowledge_read` 那格 `env.AOS_KNOWLEDGE` 指 `{"$env": "AOS_HOME", "$path": "/knowledge"}`＝repo 的 `knowledge/`（使用者「指knowledge/」）。原本 `knowledge_write` 也指這裡（claude 經 aos-mcp 寫了就改到它）；**11-11 拿掉**（使用者「不給預設，要自己透過旗標指定或環境變數設定，或是工具呼叫內給。如果都沒有，那就報錯。」）：寫的庫由 claude 在呼叫裡給 `root`，或人替 `knowledge_write` 那格配 `env.AOS_KNOWLEDGE`（`aos-agent tools add --replace -n knowledge_write --envs AOS_KNOWLEDGE=…`），都沒有＝`KnowledgeMissing`，寫法見範本 README。兩支透過 aos-mcp 提供給 Claude，`cli.json` 的內建 `--tools Read,Glob,Grep` 不必改；工具沒被指定庫（`KnowledgeMissing`）時 aos-mcp 安靜不給 instructions。agent 寫前先讀 `aos/knowledge.json`。
+**知識寫入**：範本預設登記 `knowledge_read` 與 `knowledge_write`（11-10 深夜 tool-packs），`knowledge_read` 那格 `env.AOS_KNOWLEDGE` 指 `{"$env": "AOS_HOME", "$path": "/knowledge"}`＝repo 的 `knowledge/`（使用者「指knowledge/」）。原本 `knowledge_write` 也指這裡（claude 經 aos-mcp 寫了就改到它）；**11-11 拿掉**（使用者「不給預設，要自己透過旗標指定或環境變數設定，或是工具呼叫內給。如果都沒有，那就報錯。」）：寫的庫由 claude 在呼叫裡給 `root`，或人替 `knowledge_write` 那格配 `env.AOS_KNOWLEDGE`（`aos-agent tools add --replace -n knowledge_write --envs AOS_KNOWLEDGE=…`），都沒有＝`KnowledgeMissing`，寫法見範本 README。兩支透過 aos-mcp 提供給 Claude，跟 `cli.json` 的內建工具無關；工具沒被指定庫（`KnowledgeMissing`）時 aos-mcp 安靜不給 instructions。agent 寫前先讀 `aos/knowledge.json`。
