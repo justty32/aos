@@ -13,7 +13,7 @@ daemon.json 的 `procs` 加一列（範本 daemon 預設都帶，不要就刪掉
              "interval_ms": 600000, "auto_restart": true, "stuck_after_ms": 600000}
 ```
 
-- 不用給 `--daemon`：daemon 給子項的環境本來就有 `AOS_DAEMON`（11-10 實測）。`aos-sweeper` 靠 PATH 找（install.sh 放好），列上沒有任何機器位置，搬家、經 git 換機照用。
+- 不用給 `--daemon`：daemon 給子項的環境本來就有 `AOS_DAEMON`。`aos-sweeper` 靠 PATH 找（install.sh 放好），列上沒有任何機器位置，搬家、經 git 換機照用。
 - `interval_ms: 600000`＝牆鐘 10 分鐘；`pause _clock` 停時間時清道夫照跑（磁碟照樣在長）。改頻率改這個數。daemon 起來第一圈立刻跑一輪。
 - `stuck_after_ms: 600000`：一輪可能要壓縮幾百 MB（實測 293 MB 約 2.5 秒）或等殭屍 10 秒，用預設會在中途被標 stuck。不加 `restart_on_stuck`。
 - **每台 daemon 自己掛、只管自己**（使用者 11-10）：清道夫只碰它那台表上的列與那台的預設小格 `D/procs/*/`，**不往子 daemon 底下走**。子 daemon 那一列本身的 stderr（它在父表上是一列）歸父的清道夫；子 daemon 自己表上的零件歸子 daemon 自己的清道夫。**沒掛清道夫的 daemon 就沒人清**。
@@ -32,9 +32,9 @@ daemon.json 的 `procs` 加一列（範本 daemon 預設都帶，不要就刪掉
    - 第一次看到：往它的 ctl 寫 `{"cmd": "stop", "seq": N}`，記進 `D/.sweeper_pending.json`；它是 aos-loop，跑完這次身體自己收。
    - 之後的某一輪、離寫 stop 已過 `--stop-grace-s`（預設 300 秒）還是同一支：SIGTERM 它的行程群＋底下自成一群的，10 秒後還在就 SIGKILL。
    - 其他只報不碰：真 zombie（daemon 與表上各列底下的）、活著但環境對不上的（例如殼裡手起、stack 剛好放在 `D/procs/` 底下的 aos-loop）、別次開機或**別台機器**寫的窗（boot_id 不同；pid 剛好撞到本機活行程時報一句）、太年輕的。
-   - 不碰：表上的列、別台 daemon 的小格、不在 `D/procs/` 底下的、tmux server 與其中的 claude／codex（tmux 自己 daemonize、不是子 loop 的後代；11-10 實測收掉起它的 loop 後 tmux 照活）。daemon 不在（kill -9 後沒人重起）＝一個行程都不碰，活著的子項是等下一台接回的。
-   - 小格與檔一律不刪、不改表（下表照舊用 `rm`／`prune`）。
-4. **放鎖殘骸**（11-10 open-14）：aos-lock 放鎖、收屍改名走、刪到一半留下的 `<鎖>.releasing.<20 位 UTC 奈秒>.<pid>.<ticks>`（/mnt/c 上約每 200～300 次放鎖一個），名字裡的時間超過 10 分鐘（代定）就整夾刪掉。範圍：D 與表上各列、預設小格的 stack 往下 3 層，不進 `procs/`（別的列、子 daemon 的）與封存夾、不跟捷徑；只認這個樣式。報告 `releasing` 欄、stdout `NAME: removed leftover lock folder …`。
+   - 不碰：表上的列、別台 daemon 的小格、不在 `D/procs/` 底下的、tmux server 與其中的 claude／codex（tmux 自己 daemonize、不是子 loop 的後代；收掉起它的 loop 後 tmux 照活）。daemon 不在（kill -9 後沒人重起）＝一個行程都不碰，活著的子項是等下一台接回的。
+   - 小格與檔一律不刪、不改表（下表用 `rm`／`prune`）。
+4. **放鎖殘骸**（open-14）：aos-lock 放鎖、收屍改名走、刪到一半留下的 `<鎖>.releasing.<20 位 UTC 奈秒>.<pid>.<ticks>`（/mnt/c 上約每 200～300 次放鎖一個），名字裡的時間超過 10 分鐘（代定）就整夾刪掉。範圍：D 與表上各列、預設小格的 stack 往下 3 層，不進 `procs/`（別的列、子 daemon 的）與封存夾、不跟捷徑；只認這個樣式。報告 `releasing` 欄、stdout `NAME: removed leftover lock folder …`。
 5. **報告**：stdout 一事一行（daemon 底下 stdout 是 /dev/null）；給了 `--report FILE` 另寫一份 JSON（暫存再改名）：時間、封存了什麼、刪了什麼、封存總量、`.bad-*` 份數、行程那半做了什麼、warning。
 
 不碰：`*.bad-*` 留證檔（只數份數）、history、observed、ledger、歸檔信、`.trash`。不跟 symlink：捷徑不跟進去、不動它（掃的只有表上各列的 stack 頂層與 `D/procs/*/`，一律 lstat）。只長不消、第一版刻意不碰的其他檔（live.jsonl、history、ledger…）與理由：[設計 § 8](../../thinking/2026-11/10/sweeper/01-設計.md#8-只長不消第一版不碰的之後可加給使用者一眼決定)。
@@ -64,4 +64,4 @@ aos-sweeper [--daemon D] [--report FILE] [--retention-days N|none] [--min-bytes 
 | `.sweeper.lock` | daemon stack | flock |
 | `.sweeper_pending.json` | daemon stack | 寫過 stop 的表外子 loop |
 
-`cmd/aos-agent/stack.gitignore` 擋 `**/stderr_archives/`、`**/sweeper_report.json`、`**/.sweeper.lock`（`.sweeper_pending.json` 被 `**/.*` 擋）；報告裡有 pid 與絕對路徑，更不能進 git。**已經 cp 過舊版 stack.gitignore 的 image 要重 cp 一次。**
+`cmd/aos-agent/stack.gitignore` 擋 `**/stderr_archives/`、`**/sweeper_report.json`、`**/.sweeper.lock`（`.sweeper_pending.json` 被 `**/.*` 擋）；報告裡有 pid 與絕對路徑，更不能進 git。

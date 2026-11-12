@@ -8,7 +8,7 @@
 aos-clock-register [-c CLOCK | -d D] add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-
 aos-clock-register [-c CLOCK | -d D] rm NAME
 aos-clock-register [-c CLOCK | -d D] ls [-j]
-# aos-clock register … 跟 aos-clock-register … 完全一樣（11-10 深夜；時鐘檔真叫 register 的寫 ./register）
+# aos-clock register … 跟 aos-clock-register … 完全一樣（時鐘檔真叫 register 的寫 ./register）
 ```
 
 例：
@@ -23,7 +23,7 @@ aos-clock-register rm ann-wake
 
 <details><summary>細節</summary>
 
-- **時鐘檔**：`-c/--clock CLOCK` ＞ `-d/--daemon D`（那台 daemon 的鐘＝`D/clock`；11-10 深夜使用者選「加 -d」）＞ `$AOS_CLOCK`（根 `.env` 給的，agent 都繼承）；`-c`、`-d` 同時給＝`ArgumentsBad`；都沒有＝`ClockMissing`。兩個旗標寫在子命令前後都收（前後不同＝`ArgumentsBad`）。工具 `clock_register` 對應 `daemon` 參數（不收 `clock`）。
+- **時鐘檔**：`-c/--clock CLOCK` ＞ `-d/--daemon D`（那台 daemon 的鐘＝`D/clock`；使用者選「加 -d」）＞ `$AOS_CLOCK`（根 `.env` 給的，agent 都繼承）；`-c`、`-d` 同時給＝`ArgumentsBad`；都沒有＝`ClockMissing`。兩個旗標寫在子命令前後都收（前後不同＝`ArgumentsBad`）。工具 `clock_register` 對應 `daemon` 參數（不收 `clock`）。
 - **登記表**＝時鐘檔同資料夾的 `<時鐘檔名>_register.json`（根 daemon 的鐘是 `<根 stack>/clock` → `<根 stack>/clock_register.json`）。形狀：
   `{"description": …, "check_every": 100（可省）, "letters": {NAME: {"every": 10, "box": "procs/ann/queue", "text": "…", "by": "…"}}}`。
   - `box` 是字串＝路徑：相對路徑**從登記表所在資料夾**算；也可以手寫指示詞物件（`{"$env": "X", "$path": "/queue"}`，用 `aos-directive` 解，cwd＝登記表資料夾），同 tools／hooks 的寫法。
@@ -35,9 +35,9 @@ aos-clock-register rm ann-wake
   `{"role": "user", "content": "[aos] clock: cycle N. TEXT", "from": "clock", "status": "PROGRESS", "title": "clock cycle N: NAME", "what": "TEXT", "cycle": N, "register": "NAME"}`
   - fsm 的 idle 格、`aos-eca-turn` 只看 `role`＋`content`，當一則 user 訊息收進 history（其他鍵不管）；
   - `aos-mailbox` 讀 `from`／`status`／`title`／`what`，其餘照印。信封是 aos-post 的（`sender`、`sent_at`、有 `AOS_CLOCK` 時 `sent_at_cycles`）。
-- **時鐘不會被拖垮**：寄不到（箱子不在、不可寫）、表壞、某格形狀不對＝`aos-clock: warning: …` 一行（壞格跳過、其他格照寄），時鐘照樣走、退 0；每封最多等 5 秒。**沒有登記表＝跟以前完全一樣**。
+- **時鐘不會被拖垮**：寄不到（箱子不在、不可寫）、表壞、某格形狀不對＝`aos-clock: warning: …` 一行（壞格跳過、其他格照寄），時鐘照樣走、退 0；每封最多等 5 秒。**沒有登記表＝不寄任何信、時鐘照走**。
 - **誰能改**：寫得到登記表就能 add／rm（不另外擋）。寄不到的格每到那格就 warning 一次，`ls` 看得到、誰都能 `rm`。
-- **時鐘自己清**（11-10 深夜，使用者「時鐘本身會每隔一定的cycle檢查自身。」）：新數字 % `check_every`（登記表頂層鍵，正整數，沒寫或壞＝100）== 0 時，箱子資料夾**已經不在**的格從表裡拿掉，各印一行 `aos-clock: warning: clock register: removed entry NAME (added by BY): its box BOX no longer exists`。資料夾還在、只是暫時寄不到（不是信箱、不可寫）的不算；指示詞解不開的判不了、不動。寫回前重讀一次表、只拿掉那幾格；寫不回只 warning。`check_every` 手改登記表設；`add`／`rm` 會照留。
+- **時鐘自己清**（使用者「時鐘本身會每隔一定的cycle檢查自身。」）：新數字 % `check_every`（登記表頂層鍵，正整數，沒寫或壞＝100）== 0 時，箱子資料夾**已經不在**的格從表裡拿掉，各印一行 `aos-clock: warning: clock register: removed entry NAME (added by BY): its box BOX no longer exists`。資料夾還在、只是暫時寄不到（不是信箱、不可寫）的不算；指示詞解不開的判不了、不動。寫回前重讀一次表、只拿掉那幾格；寫不回只 warning。`check_every` 手改登記表設；`add`／`rm` 會照留。
 - `add` 時箱子還不是信箱（沒有 `tmp/ new/ cur/`）＝warning、照加。同名＝`EntryExists`（`--replace` 換掉）；`rm` 沒有那格＝`EntryMissing`；表讀不懂＝`RegisterBad`；寫不了＝`WriteFailed`。錯一律 `aos-clock-register: error: 代號 原因`、退 1。
 - 同時兩個人改表不管（後寫的整份蓋過先寫的）。
 - 測試：`python3 cmd/aos-clock-register/tests/test_clock_register.py`、`python3 lib/agent/clock_register/tests/test_clock_register_tool.py`。
