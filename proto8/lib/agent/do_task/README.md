@@ -1,8 +1,8 @@
-# do_task — 在自己的 history 裡做一段任務，做完只留總結（11-11 改成 save／load）
+# do_task — 在自己的 history 裡做一段任務，做完只留總結（save／load）
 
 ← [lib](../../README.md)｜設計、代定、待裁：[thinking 11-11 fork-and-do-task/02](../../../thinking/2026-11/11/fork-and-do-task/02-do_task.md)
 
-使用者 11-11：「另一種是save/load，也就是從在呼叫do_task那時候留下一個紀錄點，等做完task後使用self_history修改history，將進行這段task的過程中的history做總結，然後退回load那邊」；選項框裁「do_task有兩個子指令，一個是開始，一個是結束。結束的時候要附上總結」「eca 不給 do_task」。以前「開一隻用完即走的小幫手」的能力拿掉了（要派工用 `subagent` 或 `fork`）。
+使用者 11-11：「另一種是save/load，也就是從在呼叫do_task那時候留下一個紀錄點，等做完task後使用self_history修改history，將進行這段task的過程中的history做總結，然後退回load那邊」；選項框裁「do_task有兩個子指令，一個是開始，一個是結束。結束的時候要附上總結」「eca 不給 do_task」。派工用 `subagent` 或 `fork`。
 
 | op | 參數 | 做什麼 |
 |---|---|---|

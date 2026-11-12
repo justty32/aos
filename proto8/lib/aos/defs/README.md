@@ -17,12 +17,12 @@ flowchart LR
 stdin：`{"op":"ls|dup|refs|check","root":"/absolute/defs","match":"optional substring","def":"optional target"}`。旗標與英文說明見 `_entry --help`。
 
 - `ls` 回 `{"defs":[...]}`，列含 `path`、`summary`、`brain`；有腦再帶 `tools`、`endpoint`，有出身則帶 `lineage`。`match` 只比路徑與 summary，不分大小寫。
-- 遞迴遇 `interfaces.json` 或 `_metainfo.json` 就當作定義並停止往下（11-12 起例外：沒有 `_entry`／`_entry.json`、`_metainfo.json` 非空而且只有 `index`／`tooldef` 這兩格的，是放了註記的普通夾，不算定義、繼續往下找；`{}` 或有其他鍵的照舊算定義，使用者「只有{}的_metainfo.json也算agent定義。」，[N-69](../../../docs/NORMS/10-基礎設施-定義與工作區/11-N-69.md)、[thinking 11-12 metainfo](../../../thinking/2026-11/12/metainfo/README.md) M11）；不走隱藏夾或目錄捷徑；退休樹應放 defs 根旁同層。
+- 遞迴遇 `interfaces.json` 或 `_metainfo.json` 就當作定義並停止往下（例外：沒有 `_entry`／`_entry.json`、`_metainfo.json` 非空而且只有 `index`／`tooldef` 這兩格的，是放了註記的普通夾，不算定義、繼續往下找；`{}` 或有其他鍵的仍算定義，使用者「只有{}的_metainfo.json也算agent定義。」，[N-69](../../../docs/NORMS/10-基礎設施-定義與工作區/11-N-69.md)、[thinking 11-12 metainfo](../../../thinking/2026-11/12/metainfo/README.md) M11）；不走隱藏夾或目錄捷徑；退休樹應放 defs 根旁同層。
 - `dup` 回 `{"groups":[{"key":"canonical JSON signature","members":["category/a","category/b"]}]}`。只算 `aos-agent`；工具解析真實路徑、去重排序，不比登記名與 env；端點未提供時為 `default`，明給空字串照空字串。輸出路徑相對 root。
-- `refs` 必須給 `def`，回 `{"refs":["category/caller"]}`；讀各 agent 公開工具宣告的 `path`，相對工具表所在夾（11-11 起不再讀 env 的 `AOS_DO_TASK_FROM`：do_task 改成 save／load、不開小幫手了）。回引用者路徑，排序去重，不包含自己。
-- `check` 回 `{"problems":[{"path":"category/a","reason":"English reason"}]}`。README 第一行非空、meta 有非空 summary、interfaces 是物件；agent 宣告的 tools／llm 必須存在且可讀。tools.json 有 `"$override"`（範本疊 `lib/packs`）時交給 `aos-tools ls -l` 合併再看，只帶 `env` 的格沿用底檔的 `path`；沒設 `AOS_HOME` 用這份 proto8（11-10 tool-packs）。定義路徑各段符合 `[a-z0-9_-]+`。不要求 lineage 親代還在。
+- `refs` 必須給 `def`，回 `{"refs":["category/caller"]}`；讀各 agent 公開工具宣告的 `path`，相對工具表所在夾；env 裡寫的路徑不算引用。回引用者路徑，排序去重，不包含自己。
+- `check` 回 `{"problems":[{"path":"category/a","reason":"English reason"}]}`。README 第一行非空、meta 有非空 summary、interfaces 是物件；agent 宣告的 tools／llm 必須存在且可讀。tools.json 有 `"$override"`（範本疊 `lib/packs`）時交給 `aos-tools ls -l` 合併再看，只帶 `env` 的格沿用底檔的 `path`；沒設 `AOS_HOME` 用這份 proto8（tool-packs）。定義路徑各段符合 `[a-z0-9_-]+`。不要求 lineage 親代還在。
 - `check` 發現問題仍保留 JSON stdout，stderr 一行 `defs: error: DefBad ...`，退 1；正常退 0。根不在為 `RootMissing`，其他壞宣告為 `DefBad`。所有 op 只讀；根指向空目錄時回空清單。
-- **root 本身就是一份定義**（`agent_def` 的 check 就這樣叫，11-12 Q10）：路徑照「相對 root」印成 `.`；名字檢查改查這個資料夾自己的名字（樹的根不是定義時，根自己的名字不查）；root 底下找不到任何定義（空夾、只有 README）＝空清單，`check` 也算過——「它是不是一份定義」不歸這支判。
+- **root 本身就是一份定義**（`agent_def` 的 check 就這樣叫，[defs-check-align](../../../thinking/2026-11/12/defs-check-align.md) Q10）：路徑照「相對 root」印成 `.`；名字檢查改查這個資料夾自己的名字（樹的根不是定義時，根自己的名字不查）；root 底下找不到任何定義（空夾、只有 README）＝空清單，`check` 也算過——「它是不是一份定義」不歸這支判。
 
 </details>
 
