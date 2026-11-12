@@ -109,6 +109,8 @@ token 檔一行 `TEAMSITE_TOKEN=<值>`、權限 600，放定義與工作區以�
                 "env": {"<明文變數>": "<值>"}, "env_file": "<金鑰檔的絕對路徑（選填）>", "only": ["<工具名>"]}}
 ```
 
+`command` 與 `args` 的相對路徑都從 server 檔所在的資料夾算（server 就在那裡起；要工作區的路徑寫 `{"$env": "AOS_WS", "$path": "…"}`），經 aos 那條同一條規則。server 拿到起它那個行程的全部環境變數（claude 身與經 aos＝起樹那個殼的整份，殼裡的 API key 也在；codex 只帶 aos 給的幾個），使用者 11-12 裁不做白名單、風險自負。
+
 腦看到的工具名＝`mcp__<名字>__<工具名>`。**秘密不要用 `aos-agent ctl add --envs` 給**（值明文寫進 `procs/<名>/exec.json`）。`aos-mcp-launch` 要在 PATH（`proto8/install.sh` 重跑一次）。
 
 **經 aos（凍結成一包工具）**：同一份 server 檔也可以先跑一次 `aos-mcp-import mcp/teamsite.json`（[README](../../cmd/aos-mcp-import/README.md)），把工具凍結進檔裡，再疊進定義的 `tools.json`：`{"$override": [<原本的包…>, "mcp/teamsite.json"], "tools": {}}`。腦看到的是 aos 的工具 `teamsite_<工具名>`（eca 經 aos-mcp＝`mcp__aos__teamsite_<工具名>`；agent-fsm 也用得到，這條路不限 eca）。**先放好 server 檔、匯入過再疊**：`$override` 指到不在的檔＝整份登記讀不了（`PathMissing`）；還沒匯入的檔疊上去＝那一層沒有工具、不報錯。

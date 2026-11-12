@@ -2,7 +2,7 @@
 """一台外部 MCP server＝一份 server 檔（external-mcp 02）：{"description": …, "mcp_server": {"name", "transport", …}}。
 
 http：url、bearer_token_env（變數名）、env_file（金鑰檔位置，起 CLI 那一刻才讀、只拿那一個變數）、ca_file（選填，設 SSL_CERT_FILE／CODEX_CA_CERTIFICATE）。
-stdio：command、args、env、env_file（步 4 才接；這版只驗形狀）。兩種共用 only／except（兩個都寫＝壞）。
+stdio：command、args、env、env_file；server 在 server 檔的資料夾起（cwd），command 與 args 的相對路徑都從那裡算（stdio_launch）。兩種共用 only／except（兩個都寫＝壞）。
 鍵寫錯種類、不認的鍵＝壞。env_file／ca_file 可寫指示詞（directive_value），相對路徑從 server 檔的資料夾算。
 壞＝tool_io.Error（PackMissing／PackBad／PathMissing／DotenvBad），由 cli_session 印 warning、跳過那台（X8）。
 金鑰的值只回給呼叫者放進 CLI 行程的環境，不寫檔、不上命令列、不進任何錯誤句（句子只講變數名與檔的位置）。
@@ -226,15 +226,16 @@ def claude_plan(servers, warn):
 
 
 def stdio_launch(server_file):
-    """aos-mcp-launch 用：讀 stdio 的 server 檔，回 (argv, 環境)。command／args 的指示詞這一刻才解；
-    command 含 / 的相對路徑從 server 檔的資料夾算；環境＝目前的＋env（明文）＋env_file 整份（金鑰，只進 server 行程）。http 的檔＝PackBad。"""
+    """aos-mcp-launch 與 mcp_client 用：讀 stdio 的 server 檔，回 (argv, 環境, cwd)。command／args（整個或其中一個元素）的指示詞這一刻才解；
+    cwd＝server 檔的資料夾（Q2 代定 G13：command 與 args 的相對路徑都從這裡算——command 含 / 的由這裡接成絕對、args 由 server 自己照 cwd 解）；
+    環境＝目前的＋env（明文）＋env_file 整份（金鑰，只進 server 行程；目前的整份照給，Q1 使用者裁不做白名單）。http 的檔＝PackBad。"""
     s = load(server_file)
     if s["transport"] != "stdio":
         raise Error("PackBad", "%s: transport is %s; aos-mcp-launch only starts stdio servers" % (server_file, s["transport"]))
     from directive_value import resolve
     base = os.path.dirname(s["file"])
     cmd = resolve(s["command"], base)
-    args = resolve(s["args"], base)
+    args = resolve(s["args"], base) if isinstance(s["args"], dict) else [resolve(a, base) for a in s["args"]]
     if not isinstance(cmd, str) or not cmd:
         raise Error("PackBad", "%s: command must resolve to a non-empty string" % server_file)
     if not isinstance(args, list) or not all(isinstance(a, str) for a in args):
@@ -248,7 +249,7 @@ def stdio_launch(server_file):
         env[k] = v
     if "env_file" in s:
         env.update(read_env_file(s["env_file"]))
-    return [cmd] + args, env
+    return [cmd] + args, env, base
 
 
 def exec_main(argv):

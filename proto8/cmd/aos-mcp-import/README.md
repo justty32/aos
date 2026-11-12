@@ -13,6 +13,7 @@ aos-mcp-import --help
   - `mcp_tools`：鍵是外部原名，每格 `_entry`（叫 `lib/base/mcp_tool/_entry --pack <檔名> --tool <原名>`）、`_tooldef`、`_metainfo`
   - `tools`：登記名 `<server 名>_<工具名>` → `"<檔名>#/mcp_tools/<原名>"`（原名的 `~`、`/` 跳脫成 `~0`、`~1`；只寫檔名，整夾 `cp -r` 帶走仍通）
 - `description` 與 `mcp_server` 的值不動（整份重新排版成縮排 2 格）；`--only`／`--except` 給了才補寫進 `mcp_server.only`／`except`。之後 `mcp_server_file.load` 照樣讀得過，eca 那條仍能用同一份檔。
+- stdio server 不管誰叫（匯入、`sync`、腦叫工具）都在 server 檔的資料夾起，`command` 與 `args` 的相對路徑都從那裡算（規則同 [aos-mcp-launch](../aos-mcp-launch/README.md)）；它拿到叫它那個行程的全部環境變數（使用者裁不做白名單）。
 - 挑工具：`--only`／`--except` ＞ 檔裡的 `only`／`except` ＞ 全收（超過 20 支印 warning）。檔裡已有另一組＝`ArgumentsBad`（先改檔）。`--only` 有 server 沒有的名字＝`ToolUnknown`；`--except` 的只印 warning。兩支轉成同一個登記名＝`NameBad`（用 `--except` 排掉一支）。
 - `--timeout-s N`：initialize 與每頁 `tools/list` 各自的上限（不是總時限），到了＝`ServerFailed`；沒給＝30 秒。
 - 疊法：定義的 `tools.json` 寫 `{"$override": [<原本的包…>, "mcp/time.json"], "tools": {}}`。匯入不替人改 `tools.json`，只印要加哪一個。

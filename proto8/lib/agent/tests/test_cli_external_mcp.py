@@ -169,6 +169,20 @@ class ExternalMcp(unittest.TestCase):
         r = subprocess.run([launcher], capture_output=True, text=True)
         self.assertIn("ArgumentsBad", r.stderr)
 
+    def test_launcher_relative_paths_from_server_folder(self):
+        """aos-mcp-launch 先 cd 到 server 檔的資料夾：command（含 /）與 args 的相對路徑都從那裡算，跟呼叫者的 cwd 無關（Q2 代定 G13）。"""
+        (self.tmp / "mcp" / "bin").mkdir()
+        (self.tmp / "mcp" / "bin" / "hello.txt").write_text("from the server folder\n")
+        run = self.tmp / "mcp" / "bin" / "run"
+        run.write_text("#!/bin/sh\nexec cat \"$@\"\n")
+        run.chmod(0o755)
+        (self.tmp / "mcp" / "r.json").write_text(json.dumps({"description": "fake", "mcp_server": {
+            "name": "rel", "transport": "stdio", "command": "bin/run", "args": ["bin/hello.txt"]}}))
+        (self.tmp / "elsewhere").mkdir()
+        launcher = str(LIB.parent / "cmd" / "aos-mcp-launch" / "bin" / "aos-mcp-launch")
+        r = subprocess.run([launcher, "../mcp/r.json"], capture_output=True, text=True, cwd=self.tmp / "elsewhere")
+        self.assertEqual((r.returncode, r.stdout), (0, "from the server folder\n"), r.stderr)
+
     def test_stdio_launcher_missing(self):
         self.stdio()
         c, _ = self.cfg(["mcp/s.json"])

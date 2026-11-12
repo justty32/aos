@@ -447,5 +447,5 @@ def open_session(server_file, init_timeout_s=30):
             raise Error("PackBad", "HTTP bearer_token_env requires env_file; add env_file to the server file")
         return open_http(server["url"], bearer=mcp_server_file.bearer_value(server),
                          ca_file=server.get("ca_file"), init_timeout_s=init_timeout_s)
-    argv, env = mcp_server_file.stdio_launch(server_file)
-    return open_stdio(argv, env, cwd=os.environ.get("AOS_WS") or os.getcwd(), init_timeout_s=init_timeout_s)
+    argv, env, cwd = mcp_server_file.stdio_launch(server_file)
+    return open_stdio(argv, env, cwd=cwd, init_timeout_s=init_timeout_s)

@@ -22,6 +22,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import mcp_client
+import mcp_server_file
 from tool_io import Error
 
 
@@ -169,12 +170,13 @@ class McpClientTests(unittest.TestCase):
         with self.assertRaises(ProcessLookupError):
             os.killpg(pgid, 0)
 
-    def test_open_session_server_file_env_file_and_workspace(self):
+    def test_open_session_server_file_env_file_and_folder(self):
+        """相對 args 從 server 檔的資料夾算（Q2 代定 G13），不是 $AOS_WS。"""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             workspace = root / "workspace"
             workspace.mkdir()
-            shutil.copyfile(FAKE, workspace / FAKE.name)
+            shutil.copyfile(FAKE, root / FAKE.name)
             (root / "server.env").write_text(
                 "# test environment\nexport FAKE_MODE=changed_desc\nMCP_FILE_ONLY='private-file-value'\n",
                 encoding="utf-8")
@@ -196,26 +198,46 @@ class McpClientTests(unittest.TestCase):
             finally:
                 session.close()
 
-    def test_open_session_defaults_to_current_directory(self):
+    def test_open_session_relative_command_and_args_from_server_folder(self):
+        """command（含 /）與 args 的相對路徑都從 server 檔的資料夾算，不管呼叫者的 cwd 與 $AOS_WS（Q2 代定 G13）。"""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            shutil.copyfile(FAKE, root / FAKE.name)
-            path = root / "server.json"
+            pack, elsewhere = root / "pack", root / "elsewhere"
+            (pack / "bin").mkdir(parents=True)
+            elsewhere.mkdir()
+            shutil.copyfile(FAKE, pack / "bin" / FAKE.name)
+            run = pack / "bin" / "run"
+            run.write_text("#!/bin/sh\nexec %s \"$@\"\n" % sys.executable, encoding="utf-8")
+            run.chmod(0o755)
+            path = pack / "server.json"
             path.write_text(json.dumps({"mcp_server": {
-                "name": "demo", "transport": "stdio", "command": sys.executable,
-                "args": [FAKE.name], "env": {"FAKE_MODE": ""}}}), encoding="utf-8")
+                "name": "demo", "transport": "stdio", "command": "bin/run",
+                "args": ["bin/" + FAKE.name], "env": {"FAKE_MODE": ""}}}), encoding="utf-8")
             previous = os.getcwd()
             try:
-                os.chdir(root)
-                with patch.dict(os.environ, {}, clear=False):
-                    os.environ.pop("AOS_WS", None)
-                    session = mcp_client.open_session(path)
+                os.chdir(elsewhere)
+                with patch.dict(os.environ, {"AOS_WS": str(elsewhere)}):
+                    argv, _, cwd = mcp_server_file.stdio_launch("../pack/server.json")
+                    session = mcp_client.open_session("../pack/server.json")
                 try:
                     self.assertEqual(session.protocol_version, "2025-06-18")
                 finally:
                     session.close()
             finally:
                 os.chdir(previous)
+            self.assertEqual(cwd, str(pack))
+            self.assertEqual(argv, [str(run), "bin/" + FAKE.name])
+
+    def test_stdio_args_element_directive(self):
+        """args 裡單一元素可寫指示詞（$env），每次起才解。"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "server.json"
+            path.write_text(json.dumps({"mcp_server": {
+                "name": "demo", "transport": "stdio", "command": "python3",
+                "args": ["-u", {"$env": "AOS_WS", "$path": "data"}]}}), encoding="utf-8")
+            with patch.dict(os.environ, {"AOS_WS": "/ws"}):
+                argv, _, _ = mcp_server_file.stdio_launch(path)
+            self.assertEqual(argv, ["python3", "-u", "/ws/data"])
 
     def test_invalid_arguments_rpc_error(self):
         session = self.open_fake()

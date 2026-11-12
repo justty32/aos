@@ -1,4 +1,4 @@
-# 08 fsm 施工結果（11-12 晚，家機）：07 的九步全做完（步 8 真腦驗收也在家機暫存樹跑過）——`aos-mcp-import` 把外部 server 的工具凍結進 server 檔，疊進 `tools.json` 後 `aos-tools call` 叫得到外部 stdio 與 http（Bearer＋自簽 CA）工具；代定 G1～G12 可翻案
+# 08 fsm 施工結果（11-12 晚，家機）：07 的九步全做完（步 8 真腦驗收也在家機暫存樹跑過）——`aos-mcp-import` 把外部 server 的工具凍結進 server 檔，疊進 `tools.json` 後 `aos-tools call` 叫得到外部 stdio 與 http（Bearer＋自簽 CA）工具；代定 G1～G13 可翻案；Q1、Q2 已裁（Q2 施工見文末前一節）
 
 ← [external-mcp](README.md)｜[07 fsm 施工單](07-fsm施工單.md)｜[06 施工結果](06-施工結果.md)
 
@@ -6,6 +6,7 @@
 
 - 「fsm來得及做嗎？」「派」（11-12 傍晚，公司）。
 - 題一與代定：「那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決」（只收 Bearer；F1～F12 照圖）。
+- Q1、Q2（11-12 晚）：「1.不用，風險自己承擔。2.這個我不是很清楚，如果你覺得要統一那就統一吧，我直覺上感覺OK，反正之後出事再說」
 
 ## 做完的（各自一個 commit，照 07 的步號）
 
@@ -50,13 +51,21 @@
 - **G9** 媒體（image／audio）存 `$AOS_STACK`，沒有＝`StackMissing`；檔名唯一、副檔名照 MIME。
 - **G10** `openWorldHint` 沒寫＝不算 `net`（MCP 規格的預設是 true，這裡照「有寫才算」）；transport 是 http 一律 `net`。
 - **G11** 登記名先接成 `<server>_<tool>` 再整串轉，工具名開頭的 `_` 會併掉；server 名叫 `aos` 也算 `NameBad`。
+- **G13**（Q2 的做法，翻掉 07 F12）**stdio server 一律在 server 檔所在的資料夾起，`command` 與 `args` 的相對路徑都從那裡算**；兩條路同一條規則（`mcp_server_file.stdio_launch` 回 cwd：`mcp_client` 照它開、`aos-mcp-launch` 先 `cd` 再 exec）。例：`mcp/demo.json` 寫 `"command": "bin/run", "args": ["bin/server.py"]`＝在 `mcp/` 跑 `mcp/bin/run bin/server.py`。理由：aos 的登記檔與包檔裡的相對路徑一向從寫著它的那份檔的資料夾算（N-45 `$ref`、`tools.json` 的 `path`、server 檔自己的 `env_file`／`ca_file`），aos-exec 跑包檔裡一格的 `_entry` 時 cwd 也是包檔的資料夾——外部 server 就是包檔裡的一格；`args` 裡哪個是路徑 aos 看不出來，只能靠 cwd 讓它跟 `command` 對齊，而起點不跟工作區走，整夾 `cp -r` 帶走仍通。要工作區的路徑寫指示詞：`args` 的單一元素現在也能寫（`{"$env": "AOS_WS", "$path": "data"}`），server 也拿得到 `$AOS_WS`。代價：會拿 cwd 當工作目錄的 server（例：預設操作 `.` 的檔案類 server）看到的是包檔的資料夾，要寫明工作區。
 - **G12** `mcp_tool --help` 的旗標段是 `tool_io` 生成的固定句「each sets the same key of the JSON object on stdin」，對 `--pack`／`--tool` 不準（它們只是旗標，stdin 原樣轉交）；屬性說明裡補了「flag only」，`tool_io` 沒動。
 
 ## 要使用者看的（不擋）
 
-- **Q1（方向題）fsm 經 aos 起的外部 stdio server 拿到整棵樹的全部環境變數**：`mcp_server_file.stdio_launch` 是 `dict(os.environ)`＋`env`＋`env_file`，步 8 實測 server 環境裡有起樹那個殼留下的 `DEEPSEEK_API_KEY`、`NEXUS_API_KEY`。codex 原生掛那條只帶白名單十幾個。同一份 server 檔，經 aos 給第三方 server 的反而多得多。F3 照 `aos-mcp-launch` 寫、不算寫錯；要不要給 stdio server 改成白名單（例：`PATH`、`HOME`、`LANG`、`AOS_*` ＋ `env`／`env_file`），兩條路一起改，請使用者裁。沒改。
-- **Q2** server 檔 `args` 裡的相對路徑從 server 的 cwd（`$AOS_WS`）算，`command` 含 `/` 時卻從包檔資料夾算（`stdio_launch` 現況，06 那半就這樣）；`args` 陣列裡單一元素不能寫指示詞。寫包檔的人容易踩，要不要統一，請裁。
+- **Q1 已裁（11-12 晚，不做白名單、風險使用者自己承擔）**：程式不改；aos-mcp-launch README、templates/docs/01、aos-mcp-import README、knowledge `cli/eca`、`cli/mcp_import` 各補一句「server 拿到起它那個行程的全部環境變數」。原題：fsm 經 aos 起的外部 stdio server 拿到整棵樹的全部環境變數**：`mcp_server_file.stdio_launch` 是 `dict(os.environ)`＋`env`＋`env_file`，步 8 實測 server 環境裡有起樹那個殼留下的 `DEEPSEEK_API_KEY`、`NEXUS_API_KEY`。codex 原生掛那條只帶白名單十幾個。同一份 server 檔，經 aos 給第三方 server 的反而多得多。F3 照 `aos-mcp-launch` 寫、不算寫錯；要不要給 stdio server 改成白名單（例：`PATH`、`HOME`、`LANG`、`AOS_*` ＋ `env`／`env_file`），兩條路一起改，請使用者裁。沒改。
+- **Q2 已裁（11-12 晚，統一）**：照 G13 做，見下「Q2 施工」。原題：server 檔 `args` 裡的相對路徑從 server 的 cwd（`$AOS_WS`）算，`command` 含 `/` 時卻從包檔資料夾算（`stdio_launch` 現況，06 那半就這樣）；`args` 陣列裡單一元素不能寫指示詞。寫包檔的人容易踩，要不要統一，請裁。
 - **Q3** 代定 G3（工具不見了＝`ArgumentsBad`）、G4（sync 不比 annotations）可翻案。
+
+## Q2 施工（11-12 晚，家機）
+
+- 程式：`lib/mcp_server_file.py`（`stdio_launch` 回 `(argv, env, cwd)`；`args` 單一元素可寫指示詞）、`lib/mcp_client.py`（`open_session` 照 cwd 開）、`cmd/aos-mcp-launch`（先 `cd` 再 exec；進不了＝`PathMissing`）、`lib/base/mcp_tool/_entry` 檔頭與 `--help`。
+- 測試：`lib/tests/test_mcp_client.py`（相對 `command`＋`args` 從 server 檔資料夾算、不管 cwd 與 `$AOS_WS`；`args` 元素的 `$env`）、`lib/agent/tests/test_cli_external_mcp.py`（`aos-mcp-launch` 從別的 cwd 起仍從 server 檔資料夾算）。lib 135、lib/agent 64、`lib/base/mcp_tool` 21、`cmd/aos-mcp-import` 22 全過。
+- 實跑（scratchpad 暫存樹，假 server＝`lib/tests/fake_mcp_stdio.py`；`extras/` 只有 http 的假 server，沒有 command／args 可驗）：`def/mcp/demo.json` 寫 `"command": "bin/run", "args": ["bin/fake.py"]`，cwd 與 `$AOS_WS` 都放在別的資料夾 → `aos-mcp-import --only echo ../def/mcp/demo.json` 印 `imported 1 of 7 tools from demo`、`aos-tools --file ../def/tools.json call demo_echo` 印 `hello from relative paths`、退 0；`aos-mcp-launch ../def/mcp/demo.json` 收 initialize 與 `tools/call echo` 都回、退 0。舊規則（cwd＝`$AOS_WS`）下 `bin/fake.py` 在工作區找不到。
+- 不用重建：舊 server 檔照讀；只有原本靠「cwd＝工作區」寫相對 `args` 的檔要改成指示詞（目前沒有這種檔）。
 
 ## 沒做／沒驗
 

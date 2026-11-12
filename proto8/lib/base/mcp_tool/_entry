@@ -2,7 +2,7 @@
 # mcp_tool - 叫外部 MCP server 的一支工具：讀包檔（server 檔）裡的 mcp_server，起 server、tools/call 一次、顯示限量文字並保存媒體、收掉 server
 # 介面（external-mcp 07 步 2）：mcp_tool --pack FILE --tool NAME；stdin＝那支外部工具的 arguments 原樣（一個 JSON 物件，空＝{}；不照 _tooldef 驗）。
 #   包檔是 aos-mcp-import 寫的（或手寫）：mcp_server（怎麼連，mcp_server_file.load 驗）、mcp_tools（鍵＝外部原名，每格 _entry／_tooldef／_metainfo）、tools（登記）。
-#   aos-exec 跑包檔裡那格的 _entry 時 cwd＝包檔的資料夾，所以 --pack 只寫檔名；server 的 cwd＝$AOS_WS（沒有＝當下的 cwd，mcp_client 決定）。
+#   aos-exec 跑包檔裡那格的 _entry 時 cwd＝包檔的資料夾，所以 --pack 只寫檔名；server 的 cwd＝server 檔（包檔）的資料夾，command 與 args 的相對路徑都從那裡算（11-12 Q2 代定 G13，mcp_server_file.stdio_launch 決定）。
 #   逾時＝那格 _metainfo.timeout_ms（沒寫＝60 秒）。
 # 輸出：文字／資源依序印，image／audio 解碼存 $AOS_STACK；最多前 2000 行或 50KB，未知種類保留 placeholder。
 # 錯：stderr 與 stdout 各一行「mcp_tool: error: 代號 原因」、退 1：ArgumentsBad、FlagUnknown、PackMissing、PackBad、PathMissing、DotenvBad、
@@ -14,6 +14,7 @@ usage: mcp_tool --pack FILE --tool NAME < ARGUMENTS.json   (a tool: run it with 
 Call one tool on an external MCP server once. FILE is the pack (server file) with
 mcp_server (how to start the server) and mcp_tools (the frozen tools; NAME is a key there).
 A relative FILE is from the current folder (aos-exec runs a pack entry from the pack's folder).
+A stdio server starts in FILE's folder: relative paths in its command and args are from there.
 stdin is the external tool's arguments as one JSON object, passed as is (empty = {});
 --pack and --tool are flags only, not keys on stdin. Timeout: the tool's _metainfo.timeout_ms (default 60000).
 Result on stdout: text/resources in order; image/audio saved in $AOS_STACK (created only on write).

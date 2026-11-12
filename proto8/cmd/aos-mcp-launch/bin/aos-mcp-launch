@@ -3,9 +3,10 @@
 #
 # 用法：aos-mcp-launch SERVER_FILE（11-12 external-mcp 02／03 步 4）。cli_session 替 cli.json 的 mcp_servers 裡每台 stdio server
 #   寫成 command＝這支、args＝[server 檔絕對路徑]，所以 CLI 的設定、命令列、環境都只有路徑。server 檔形狀見 lib/mcp_server_file.py。
-#   command／args 的指示詞這一刻才解（要 aos-directive 在 PATH、AOS_HOME 之類照指示詞要的設）；command 含 / 的相對路徑從 server 檔的資料夾算。
+#   command／args 的指示詞這一刻才解（要 aos-directive 在 PATH、AOS_HOME 之類照指示詞要的設）；先 cd 到 server 檔的資料夾再 exec，
+#   所以 command 與 args 的相對路徑都從 server 檔的資料夾算（11-12 Q2 代定 G13，跟 mcp_tool 那條同一條規則）。
 # 錯：stderr 一行「aos-mcp-launch: error: 代號 原因」、退 1——ArgumentsBad（沒給或多給）、PackMissing／PackBad（檔不在、形狀不對、是 http 的檔）、
-#   PathMissing（env_file 不在）、DotenvBad（env_file 認不得）、CommandMissing（command 找不到）。--help 印英文說明、退 0。
+#   PathMissing（env_file 不在、進不了 server 檔的資料夾）、DotenvBad（env_file 認不得）、CommandMissing（command 找不到）。--help 印英文說明、退 0。
 import os
 import sys
 
@@ -16,7 +17,8 @@ import mcp_server_file  # noqa: E402
 
 HELP = """usage: aos-mcp-launch SERVER_FILE
   Start the stdio MCP server described by SERVER_FILE: read its env_file into the environment,
-  then exec its command. The keys live only in the server process."""
+  then exec its command from the server file's folder (relative paths in command and args are from there).
+  The keys live only in the server process; the server also gets the rest of this environment."""
 
 
 def main(argv):
@@ -26,9 +28,13 @@ def main(argv):
     if len(argv) != 1:
         tool_io.die("ArgumentsBad", "give exactly one server file (see --help)", prog="aos-mcp-launch")
     try:
-        cmd, env = mcp_server_file.stdio_launch(argv[0])
+        cmd, env, cwd = mcp_server_file.stdio_launch(argv[0])
     except tool_io.Error as e:
         tool_io.die(e.code, str(e), prog="aos-mcp-launch")
+    try:
+        os.chdir(cwd)
+    except OSError as e:
+        tool_io.die("PathMissing", "cannot enter the server file's folder %s: %s" % (cwd, tool_io.os_reason(e)), prog="aos-mcp-launch")
     try:
         os.execvpe(cmd[0], cmd, env)
     except OSError as e:
