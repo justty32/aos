@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-# agent_def - 定義的創造：new＝把範本資料夾整份複製成新定義（tools 檔的相對路徑換算），check＝轉叫 lib/aos/defs 的 check 看一份定義合不合格
+# agent_def - 定義的創造修改：new＝把範本資料夾整份複製成新定義（tools 檔相對路徑換算、_metainfo.json 記 lineage），check＝轉叫 lib/aos/defs 的 check，tools／llm／system＝直接改某份定義的工具／腦／system
 # 使用者 11-10 晚（thinking 2026-11/10/agents-split）：「掌管agent定義的創造修改」「先做粗的，細的之後慢慢添加」「血統記錄...可以先不做」；
-#   名字「agent_def」（B：只有定義這支叫 agent_def）。粗的＝只複製與檢查；改內容用一般的檔案工具，跑起來用 subagent／agents_ctl。
-# 介面（lib/docs/01 的契約）：stdin 收 {"op": "new"|"check", …}；別的鍵＝ArgumentsBad：
+#   名字「agent_def」（B：只有定義這支叫 agent_def）。粗的＝只複製與檢查；跑起來用 subagent／agents_ctl。
+#   11-12 使用者「Q09:b-都做，除了移除子(兩者不要耦合)」：加細的（tools／llm／system 寫進定義，def_edit.py）與血統（new 記 lineage），
+#   thinking 2026-11/12/agent-def-fine-lineage.md。
+# 介面（lib/docs/01 的契約）：stdin 收 {"op": "new"|"check"|"tools"|"llm"|"system", …}；別的鍵＝ArgumentsBad：
 #   new {template | from, path}  template＝內建範本的名字（$AOS_HOME/templates/<名>，例 agent-fsm；不在＝DefMissing 並列出有哪些）；
 #       from（範本資料夾；字串路徑，或指示詞 {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}）整份複製到 path：
 #       symlinks 照搬、略過 __pycache__；path 哪裡都行（能不能寫交給 Linux 權限）、已經在＝DefExists；from 不是資料夾＝DefMissing。
@@ -11,10 +13,17 @@
 #       相對 $ref 從工作區算；解出相對路徑也從工作區算；$env 指的變數沒設＝DirectiveBad（先看、不叫 aos-directive）。
 #       先寫同層暫存夾 .<名>.new-<pid> 再改名；失敗（含被 TERM）把暫存夾清掉。定義 interfaces.json 的 aos-agent 宣告了 tools 檔：
 #       裡面相對的 path／env_file／$override 原本從範本那份算，換算成從新位置走回同一個目標（舊 agents 的 rebase_tools）；絕對的、指示詞照抄；
-#       沒有可換的就不重寫（保留原排版）。沒有 interfaces.json 或沒宣告 aos-agent／tools＝只複製。不寫血統、不掛、不改其他內容。
+#       沒有可換的就不重寫（保留原排版）。沒有 interfaces.json 或沒宣告 aos-agent／tools＝只複製。
+#       血統：新定義的 _metainfo.json 寫 lineage＝{"template": 名} 或 {"from": 照參數原樣（字串或指示詞物件）}——蓋掉複製來的舊 lineage、
+#       其他鍵照留；沒有 _metainfo.json＝新建只含 lineage；不是物件＝DefBad。只在出生時寫一次（tools／llm／system 不碰它）。不掛、不改其他內容。
 #       成功印一行 wrote definition <path> (copied from <from>)。
 #   check {path}  轉叫 ../../aos/defs/_entry（相對本資料夾）{"op": "check", "root": <path 的絕對路徑>}；它的 JSON stdout 原樣印、stderr 原樣透出；
 #       它退非 0＝把它 stderr 最後一行錯誤行的代號與原因接成自己的（有問題＝DefBad，stdout 的 JSON 仍在）；path 不是資料夾＝DefMissing。
+#   tools／llm／system {path, args}  直接改 path 那份定義（不是正在跑的 stack）：args＝self_tools／self_llm／self_system 收的那份
+#       （tools: ls {long?}｜get {name}｜add {path|path_json, name?, replace?, envs?, env_file?, no_cache?}｜rm {name}＝aos-tools --file <宣告的 tools 檔>；
+#        llm: ls｜set {settings}｜rm {keys}＝讀檔／aos-json set --str／del；system: get｜set {text}＝整份寫宣告的 system 檔）；
+#       沒有 reset（定義沒有疊在上面的那份）。沒宣告＝ToolsMissing／LlmMissing／SystemMissing；path 不是資料夾＝DefMissing。
+#       下層（aos-tools、aos-json）在 $AOS_WS 跑、stderr 原樣透出、最後一行錯誤行接成自己的。細節在 def_edit.py。
 #   錯：stderr 與 stdout 各一行「agent_def: error: 代號 原因」、退 1；op 沒給＝ArgumentsBad、不認得＝OpUnknown（R11）。
 #   工具名從資料夾名取。--help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉子行程，退 130）。
 import json, os, re, shutil, signal, subprocess, sys
@@ -22,9 +31,11 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 NAME = os.path.basename(HERE)
 HELP = """\
 usage: %s < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Make agent definitions: op new copies a template folder to a new folder (relative tool paths in
-its tools file are rewritten so they still point at the same place); op check checks one definition
-(wraps lib/aos/defs check). New only copies: edit the copy with file tools.
+Make and change agent definitions: op new copies a template folder to a new folder (relative tool
+paths in its tools file are rewritten so they still point at the same place; _metainfo.json gets
+lineage = where it was copied from); op check checks one definition (wraps lib/aos/defs check);
+op tools | llm | system change one definition's tools, brain settings or system text, with args
+shaped like self_tools / self_llm / self_system (no reset: the definition is the base).
 Result on stdout. On error: one line "%s: error: CODE reason" on stderr and stdout, exit 1.
 """ % (NAME, NAME)
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
@@ -49,7 +60,8 @@ tool_io.start(NAME, HELP)
 DEFS = os.path.normpath(os.path.join(HERE, "..", "..", "aos", "defs", "_entry"))
 TIMEOUT_S = 60
 ERR_RE = re.compile(r"[A-Za-z0-9_.-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
-OPS = {"new": ("template", "from", "path"), "check": ("path",)}
+OPS = {"new": ("template", "from", "path"), "check": ("path",),
+       "tools": ("path", "args"), "llm": ("path", "args"), "system": ("path", "args")}
 die = tool_io.die
 child = None
 
@@ -161,6 +173,24 @@ def rebase_tools(tf, src, dest, tmp):
     os.replace(part, tf)
 
 
+def write_lineage(tmp):
+    """血統（出生時寫一次）：_metainfo.json 的 lineage＝{"template": 名} 或 {"from": 參數原樣}；其他鍵照留、舊 lineage 蓋掉。"""
+    meta_path = os.path.join(tmp, "_metainfo.json")
+    meta = load_json(meta_path) if os.path.lexists(meta_path) else {}
+    if not isinstance(meta, dict):
+        die("DefBad", "_metainfo.json of the copy is not a JSON object, so lineage cannot be written")
+    meta["lineage"] = {"template": args["template"]} if "template" in args else {"from": args["from"]}
+    part = meta_path + ".lineage"
+    try:
+        with open(part, "w", encoding="utf-8") as f:
+            f.write(json.dumps(meta, ensure_ascii=False, indent=2) + "\n")
+        if os.path.isfile(meta_path):
+            shutil.copymode(meta_path, part)
+        os.replace(part, meta_path)
+    except OSError as e:
+        die("WriteFailed", "cannot write lineage to _metainfo.json: %s" % e)
+
+
 def op_new():
     literal = from_ws(text("path"))
     src, given = source_path()
@@ -190,6 +220,7 @@ def op_new():
                 rebase_tools(tf, src, dest, tmp)
             except OSError as e:
                 die("WriteFailed", "cannot rewrite %s: %s" % (os.path.relpath(tf, tmp), e))
+        write_lineage(tmp)
         try:
             os.rename(tmp, dest)
         except OSError as e:
@@ -229,6 +260,41 @@ def op_check():
         die("CommandFailed", "%s exited %d" % (DEFS, child.returncode))
 
 
+def call(argv):
+    """細的動作的下層（aos-tools、aos-json，PATH 上）：在工作區跑；stderr 原樣透出；退非 0＝它最後一行錯誤行的代號與原因當自己的錯。回 stdout。"""
+    global child
+    try:
+        child = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 text=True, start_new_session=True, cwd=tool_io.workspace())
+    except OSError as e:
+        die("LaunchFailed", "cannot run %s (put it on PATH with proto8/install.sh): %s" % (argv[0], e))
+    try:
+        out, err = child.communicate(timeout=TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        os.killpg(child.pid, signal.SIGKILL)
+        child.communicate()
+        die("CommandFailed", "%s took over %d s and was killed" % (argv[0], TIMEOUT_S))
+    if err:                                     # 下層的 stderr 原樣透出（R10）
+        sys.stderr.write(err if err.endswith("\n") else err + "\n")
+        sys.stderr.flush()
+    if child.returncode != 0:
+        mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
+        if mine:                                # 下層撞名那句教 CLI 旗標：腦手上只有工具參數（同 self_tools）
+            die(mine[-1].group(1), mine[-1].group(2).replace("add --replace to replace it", 'add "replace": true to replace it'))
+        die("CommandFailed", "%s exited %d" % (argv[0], child.returncode))
+    return out
+
+
+def op_edit():
+    root = os.path.realpath(from_ws(text("path")))
+    if not os.path.isdir(root):
+        die("DefMissing", "path %r is not a folder" % args["path"])
+    if "args" not in args:
+        die("ArgumentsBad", "%s needs args (the same object self_%s takes, like {\"op\": \"ls\"})" % (op, op))
+    import def_edit                             # 用到才載
+    def_edit.do(call, root, op, args["args"])
+
+
 signal.signal(signal.SIGTERM, on_term)
 signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
 args = tool_io.arguments()
@@ -240,4 +306,4 @@ if op not in OPS:
 extra = sorted(k for k in args if k != "op" and k not in OPS[op])
 if extra:
     die("ArgumentsBad", "op %s does not take %s (it takes %s)" % (op, ", ".join(extra), ", ".join(OPS[op])))
-op_new() if op == "new" else op_check()
+{"new": op_new, "check": op_check}.get(op, op_edit)()

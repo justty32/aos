@@ -20,7 +20,7 @@
 |---|---|
 | [01-分層等](docs/01-分層等.md) | 分層（每層只依賴下層）；一個工具長什麼樣（契約）；怎麼引用（不複製） |
 | [02-索引-base與索引-aos](docs/02-索引-base與索引-aos.md) | 索引：base；索引：aos（量測、換版、審視、shell 帳與關箱比對、定義樹） |
-| [03-索引-agent等](docs/03-索引-agent等.md) | 索引：agent（11-05 加 self_tools：agent 改自己的工具；11-10 晚 agents 拆成三支（11-11 第一支改名 subagent）：subagent 生、叫、調、收自己的子 agent，agents_ctl 管表上任何一隻，agent_def 造新定義與檢查）；agent 自己的格（11-03 刪了）；外部 agent 的一輪（eca）；範例（demo/agent-liv 11-04 刪了） |
+| [03-索引-agent等](docs/03-索引-agent等.md) | 索引：agent（11-05 加 self_tools：agent 改自己的工具；11-10 晚 agents 拆成三支（11-11 第一支改名 subagent）：subagent 生、叫、調、收自己的子 agent，agents_ctl 管表上任何一隻，agent_def 造新定義與檢查、11-12 起也直接改定義的工具／腦／system 並在新定義記血統）；agent 自己的格（11-03 刪了）；外部 agent 的一輪（eca）；範例（demo/agent-liv 11-04 刪了） |
 
 <a id="分層每層只依賴下層"></a>
 <a id="一個工具長什麼樣契約"></a>

@@ -55,7 +55,9 @@ class AgentDef(unittest.TestCase):
                 self.assertEqual(r.stdout, "wrote definition %s (copied from %s)\n" % (born, tpl))
                 self.assertEqual((born / "tools.json").read_text(), (tpl / "tools.json").read_text())   # 全是指示詞：一字不改
                 self.assertFalse(any(p.name == "__pycache__" for p in born.rglob("*")))
-                self.assertNotIn("lineage", json.loads((born / "_metainfo.json").read_text()))
+                meta, tmeta = json.loads((born / "_metainfo.json").read_text()), json.loads((tpl / "_metainfo.json").read_text())
+                self.assertEqual(meta.pop("lineage"), {"from": str(tpl)})                  # 血統：from 照參數原樣
+                self.assertEqual(meta, tmeta)                                              # 其他鍵照留
                 self.assertEqual([p.name for p in self.ws.iterdir()], ["born"])          # 沒留暫存夾
                 shutil.rmtree(born)
 
@@ -109,6 +111,8 @@ class AgentDef(unittest.TestCase):
             self.skipTest("aos-directive not on PATH")
         self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
         self.assertIn("copied from %s" % (self.root / "home" / "templates" / "t1"), r.stdout)
+        self.assertEqual(json.loads((self.ws / "born" / "_metainfo.json").read_text())["lineage"],
+                         {"from": {"$env": "AOS_HOME", "$path": "/templates/t1"}})          # 指示詞照寫法存
         r = self.new({"$env": "AOS_HOME", "$path": "/templates/t1"}, "b2")
         self.assertEqual(r.returncode, 1)
         self.assertIn("%s: error: DirectiveBad" % NAME, r.stdout)
@@ -145,6 +149,42 @@ class AgentDef(unittest.TestCase):
         (self.ws / "plain" / "a.txt").write_text("a")
         self.assertEqual(self.new("plain").returncode, 0)
         self.assertEqual((self.ws / "born" / "a.txt").read_text(), "a")
+        # 沒有 _metainfo.json＝新建只含 lineage；範本那邊不多檔
+        self.assertEqual(json.loads((self.ws / "born" / "_metainfo.json").read_text()), {"lineage": {"from": "plain"}})
+        self.assertFalse((self.ws / "plain" / "_metainfo.json").exists())
+
+    # ---- 血統（11-12 Q09）----
+    def test_lineage_overwrites_copied_one_and_keeps_other_keys(self):
+        tpl = good_def(self.ws / "tpl")
+        (tpl / "_metainfo.json").write_text('{"summary": "test", "lineage": {"from": "grandpa"}, "cost": {"time_ms": 1}}')
+        self.assertEqual(self.new("tpl").returncode, 0)
+        meta = json.loads((self.ws / "born" / "_metainfo.json").read_text())
+        self.assertEqual(meta, {"summary": "test", "lineage": {"from": "tpl"}, "cost": {"time_ms": 1}})
+        self.assertEqual(json.loads((tpl / "_metainfo.json").read_text())["lineage"], {"from": "grandpa"})   # 範本不動
+        # 再從 born 生一代：只記上一代（往上追＝順著 from 找）
+        self.assertEqual(self.new("born", "born2").returncode, 0)
+        self.assertEqual(json.loads((self.ws / "born2" / "_metainfo.json").read_text())["lineage"], {"from": "born"})
+
+    def test_lineage_template_name_and_symlinked_metainfo(self):
+        home = self.root / "home"
+        tpl = good_def(home / "templates" / "t1")
+        (tpl / "real_meta.json").write_text('{"summary": "linked"}')
+        (tpl / "_metainfo.json").unlink()
+        (tpl / "_metainfo.json").symlink_to("real_meta.json")
+        r = self.run_tool({"op": "new", "template": "t1", "path": "born"}, AOS_HOME=str(home))
+        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+        meta = self.ws / "born" / "_metainfo.json"
+        self.assertFalse(meta.is_symlink())                                         # 換成一般檔，捷徑指的那份不動
+        self.assertEqual(json.loads(meta.read_text()), {"summary": "linked", "lineage": {"template": "t1"}})
+        self.assertEqual(json.loads((tpl / "real_meta.json").read_text()), {"summary": "linked"})
+
+    def test_lineage_bad_metainfo(self):
+        tpl = good_def(self.ws / "tpl")
+        (tpl / "_metainfo.json").write_text("[1]")
+        r = self.new("tpl")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("%s: error: DefBad" % NAME, r.stdout)
+        self.assertEqual(sorted(p.name for p in self.ws.iterdir()), ["tpl"])
 
     # ---- 參數 ----
     def test_bad_arguments(self):

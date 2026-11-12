@@ -1,5 +1,5 @@
 {
- "description": "Make a new agent definition by copying a template, or check a definition folder. One op per call:\n- copy a stock template: {\"op\": \"new\", \"template\": \"agent-fsm\", \"path\": \"defs/helper\"}  (templates: agent-fsm, eca-claude; path must not exist yet; relative paths start at your workspace)\n- copy any other definition folder: {\"op\": \"new\", \"from\": \"defs/helper\", \"path\": \"defs/helper2\"}\n- check: {\"op\": \"check\", \"path\": \"defs/helper\"}  (prints {\"problems\": [...]}; empty list = OK)\nnew only copies. Then edit the copy with your normal file tools (system.txt, tools.json, llm.json). To run it: subagent {\"op\": \"add\", \"def\": \"defs/helper\", \"name\": \"kid\"}.\nErrors: ArgumentsBad, OpUnknown, DefMissing, DefExists (pick another path), DefBad, DirectiveBad.",
+ "description": "Make a new agent definition by copying a template, check a definition folder, or change a definition's tools, brain settings or system text. One op per call:\n- copy a stock template: {\"op\": \"new\", \"template\": \"agent-fsm\", \"path\": \"defs/helper\"}  (templates: agent-fsm, eca-claude; path must not exist yet; relative paths start at your workspace; the copy's _metainfo.json records lineage = where it came from)\n- copy any other definition folder: {\"op\": \"new\", \"from\": \"defs/helper\", \"path\": \"defs/helper2\"}\n- check: {\"op\": \"check\", \"path\": \"defs/helper\"}  (prints {\"problems\": [...]}; empty list = OK)\n- tools: {\"op\": \"tools\", \"path\": \"defs/helper\", \"args\": {\"op\": \"add\", \"path\": \"tools/math\"}}  (args = what self_tools takes: ls, get, add, rm)\n- brain: {\"op\": \"llm\", \"path\": \"defs/helper\", \"args\": {\"op\": \"set\", \"settings\": {\"model\": \"fake\"}}}  (args = what self_llm takes: ls, set, rm)\n- system text: {\"op\": \"system\", \"path\": \"defs/helper\", \"args\": {\"op\": \"set\", \"text\": \"You are ...\"}}  (args = what self_system takes: get, set)\ntools, llm and system change the definition itself: every agent that uses it sees the change from its next brain call, unless that agent changed the same thing for itself. There is no reset. To change only yourself use self_*; only one subagent, subagent. To run a definition: subagent {\"op\": \"add\", \"def\": \"defs/helper\", \"name\": \"kid\"}.\nErrors: ArgumentsBad, OpUnknown, DefMissing, DefExists (pick another path), DefBad, DirectiveBad, ToolsMissing, LlmMissing, SystemMissing, KeyMissing, ToolExists, ToolMissing.",
  "errors": [
   "ArgumentsBad",
   "OpUnknown",
@@ -9,6 +9,12 @@
   "DefMissing",
   "DefExists",
   "DefBad",
+  "ToolsMissing",
+  "LlmMissing",
+  "SystemMissing",
+  "KeyMissing",
+  "ToolExists",
+  "ToolMissing",
   "MkdirFailed",
   "WriteFailed",
   "LaunchFailed",
@@ -21,9 +27,12 @@
     "type": "string",
     "enum": [
      "new",
-     "check"
+     "check",
+     "tools",
+     "llm",
+     "system"
     ],
-    "description": "new = copy a template to a new definition folder, check = check a definition folder"
+    "description": "new = copy a template to a new definition folder, check = check a definition folder, tools / llm / system = change that part of a definition"
    },
    "template": {
     "type": "string",
@@ -38,7 +47,11 @@
    },
    "path": {
     "type": "string",
-    "description": "new: the new definition folder (must not exist yet). check: the definition folder. Relative to your workspace, or absolute"
+    "description": "new: the new definition folder (must not exist yet). Other ops: the definition folder. Relative to your workspace, or absolute"
+   },
+   "args": {
+    "type": "object",
+    "description": "tools, llm, system: the arguments of self_tools, self_llm or self_system, aimed at the definition (no reset)"
    }
   },
   "required": [

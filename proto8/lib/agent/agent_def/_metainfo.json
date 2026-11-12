@@ -1,5 +1,5 @@
 {
-  "summary": "Copy a template folder into a new agent definition (rebasing relative tool paths), or check one definition (wraps lib/aos/defs check)",
+  "summary": "Copy a template folder into a new agent definition (rebasing relative tool paths, recording lineage), check one definition (wraps lib/aos/defs check), or change a definition's tools, brain settings or system text",
   "resource": "cpu",
   "side_effect": true,
   "idempotent": false,

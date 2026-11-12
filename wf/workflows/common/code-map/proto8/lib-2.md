@@ -10,7 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`__init__.py`](../../../../../proto8/lib/agent/__init__.py) | agent - 外部 agent CLI 與 agent 工具共用的 lib 模組。 |
-| [`agent_def/`](../../../../../proto8/lib/agent/agent_def/) | 定義的創造：new＝把範本資料夾整份複製成新定義（tools 檔的相對路徑換算），check＝轉叫 lib/aos/defs 的 check 看一份定義合不合格 |
+| [`agent_def/`](../../../../../proto8/lib/agent/agent_def/) | 定義的創造修改：new＝把範本資料夾整份複製成新定義（tools 檔相對路徑換算、_metainfo.json 記 lineage），check＝轉叫 lib/aos/defs 的 check，tools／llm／system＝直接改某份定義的工具／腦／system |
 | [`agent_def/tests/test_agent_def.py`](../../../../../proto8/lib/agent/agent_def/tests/test_agent_def.py) | Test agent_def new (copy, rebase, directive from, DefExists, outside the workspace) and check (wraps lib/aos/defs) in a temp folder. |
 | [`agent_files.py`](../../../../../proto8/lib/agent/agent_files.py) | 依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。 |
 | [`agent_tool.py`](../../../../../proto8/lib/agent/agent_tool.py) | claude、codex 共用的工具形入口 ask_cli。 |
