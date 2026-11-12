@@ -32,6 +32,7 @@
 | [`test_file_tools_paths.py`](../../../../../proto8/lib/tests/test_file_tools_paths.py) | 檔案工具拿掉工作區限制（11-10 tool-packs，使用者「3.對」）：相對從 $AOS_WS、絕對照用，工作區外也能讀寫改搬。 |
 | [`test_index_view.py`](../../../../../proto8/lib/tests/test_index_view.py) | index_view（lib/aos_index.py，thinking 2026-11/12/index-tools）的定向測試：實跑 _entry，驗三種給法（只 path、只 index、兩個疊著）、key、分頁、沒有 index、壞掉的 index。 |
 | [`test_json_tools.py`](../../../../../proto8/lib/tests/test_json_tools.py) | json 工具一族（lib/aos_json.py；簡單組 json_*、複雜組 jsonx_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。 |
+| [`test_mcp_freeze.py`](../../../../../proto8/lib/tests/test_mcp_freeze.py) | Test lib/mcp_freeze.py: registry names, $ref expansion and $-key removal, description truncation, _metainfo hints, and diff lines. |
 | [`test_metainfo.py`](../../../../../proto8/lib/tests/test_metainfo.py) | Verify optional metadata reading, timeout declarations, and safe cost formulas. |
 | [`test_observed.py`](../../../../../proto8/lib/tests/test_observed.py) | Verify shared observation initialization, strict failures and measured call cells. |
 | [`test_observed_children.py`](../../../../../proto8/lib/tests/test_observed_children.py) | Verify observed_children: a child's declared accounts are copied (and only those), take_child hands the mark over once. |
