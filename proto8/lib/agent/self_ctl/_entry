@@ -29,7 +29,7 @@ try:
     import tool_io  # noqa: E402
     import cmd_call  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
-    if error.name not in ("tool_io", "cmd_call"):
+    if error.name not in ("tool_io", "cmd_call", "process_group"):
         raise
     _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), error.name)
     sys.stderr.write(_line)

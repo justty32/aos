@@ -38,6 +38,7 @@
 | [`tests/test_ctl.py`](../../../../../proto8/impls/aos-daemon/tests/test_ctl.py) | Exercise public controls, prune inspection and age selection, command errors and help. |
 | [`tests/test_lifecycle.py`](../../../../../proto8/impls/aos-daemon/tests/test_lifecycle.py) | Verify proc lifecycle, damaged-state adoption and owned-state recovery against real daemons. |
 | [`tests/test_poke.py`](../../../../../proto8/impls/aos-daemon/tests/test_poke.py) | Verify daemon poke modes, prompt wakeups and pid identity guards with isolated fixtures. |
+| [`tests/test_ref_hash.py`](../../../../../proto8/impls/aos-daemon/tests/test_ref_hash.py) | Check {"$ref": "#/..."} in daemon.json means daemon.json itself, also inside an inline inst moved into its cell (11-12). |
 | [`tests/test_stack_make.py`](../../../../../proto8/impls/aos-daemon/tests/test_stack_make.py) | Check aos-daemon creates a missing $AOS_STACK at start (11-11, make_stack) after the config checks pass. |
 | [`tests/test_stale_stop.py`](../../../../../proto8/impls/aos-daemon/tests/test_stale_stop.py) | Check stop → sleep → start keeps the restarted loop running instead of replaying the old stop. |
 | [`tests/test_two_machines.py`](../../../../../proto8/impls/aos-daemon/tests/test_two_machines.py) | Check two-machines daemon fixes: copies never adopt the original tree, and mailbox rows re-resolve directives on start. |

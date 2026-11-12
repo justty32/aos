@@ -14,7 +14,8 @@ from unittest.mock import patch
 
 from support import ENV, PROTO, dc, read, write
 sys.path.insert(0, str(PROTO / 'cmd' / 'aos-agent'))
-from aos_agent import common, hints
+from aos_agent import hints
+from aos_agent.ctl import shared
 
 
 class Control(unittest.TestCase):
@@ -71,9 +72,9 @@ class Control(unittest.TestCase):
     def test_agent_phase_body_accepts_exec_rows(self):
         for cmd, phase, key in (('stop', 'running', 'stopped'), ('sleep', 'running', 'slept'),
                                 ('start', 'stopped', 'started'), ('wake', 'sleeping', 'woken')):
-            with patch.object(common, 'daemon_path', return_value=str(self.root)), \
+            with patch.object(shared, 'daemon_path', return_value=str(self.root)), \
                  patch.object(dc, 'row_of', return_value={'phase': phase}):
-                self.assertEqual(common.phase_body(cmd, 'job'), {'procs_' + key: ['job']})
+                self.assertEqual(shared.phase_body(cmd, 'job'), {'procs_' + key: ['job']})
 
     def test_agent_sleep_waits_for_stopped_when_escalating(self):
         from aos_agent.ctl import phase

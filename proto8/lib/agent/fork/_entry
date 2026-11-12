@@ -60,7 +60,7 @@ try:
     import fork_copy
     from cmd_call import ERR_RE, kill_group   # 先 TERM 整群、5 秒後 KILL（agents_cmd 同一份）
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
-    if error.name not in ("tool_io", "observed_children", "fork_copy", "cmd_call"):
+    if error.name not in ("tool_io", "observed_children", "fork_copy", "cmd_call", "process_group"):
         raise
     _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), error.name)
     sys.stderr.write(_line)

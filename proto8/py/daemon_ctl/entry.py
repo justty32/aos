@@ -203,10 +203,7 @@ def path_json(text, flag):
 def resolve_here(value, flag):
     """指示詞物件在這台、現在的環境解一次（只為了檢查、不存）；解不開＝ArgumentsBad 指名旗標與寫法。"""
     try:
-        try:
-            import directive_value
-        except ModuleNotFoundError:
-            from agent import directive_value  # noqa: F401  （舊佈局；正常在 lib/ 頂層）
+        import directive_value
         got = directive_value.resolve(value, os.getcwd())
     except Exception as e:   # tool_io.Error 等：轉成這層的錯
         raise Fail("ArgumentsBad", "%s %s does not resolve here: %s" % (flag, json.dumps(value), e))

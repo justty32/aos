@@ -16,6 +16,7 @@
 | [`src/main.cpp`](../../../../../proto8/impls/aos-directive/src/main.cpp) | aos-directive 命令列——讀一份 JSON、解開所有指示詞、印出來。 |
 | [`src/ref.cpp`](../../../../../proto8/impls/aos-directive/src/ref.cpp) | {"$ref": "檔[#/指標]"}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。 |
 | [`src/resolve.cpp`](../../../../../proto8/impls/aos-directive/src/resolve.cpp) | 解析整份、單層或指定欄位的指示詞，保留相對路徑起點，並套用字串修飾詞。 |
+| [`tests/test_ref_hash.py`](../../../../../proto8/impls/aos-directive/tests/test_ref_hash.py) | Check {"$ref": "#/..."} takes the file that holds the $ref (11-12), and that ./ and ../ work in the file part of $ref. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-directive/vcpkg.json) | aos-directive：解 JSON 裡的指示詞（$ref、$env）的 lib 與命令列 |
 
 ## `proto8/impls/aos-exec/`
@@ -43,5 +44,6 @@
 | [`src/main.cpp`](../../../../../proto8/impls/aos-exec/src/main.cpp) | aos-exec 命令列——把參數交給公開 API 的 run_cli（aos/exec.hpp、src/cli/）。 |
 | [`tests/test_classify.py`](../../../../../proto8/impls/aos-exec/tests/test_classify.py) | Check entry kinds are judged by content (#!, ELF, JSON), not by +x alone, in aos-exec and daemon_ctl. |
 | [`tests/test_entry_missing.py`](../../../../../proto8/impls/aos-exec/tests/test_entry_missing.py) | Check EntryMissing says where a relative entry was counted from and what absolute path it became (two-machines B08). |
+| [`tests/test_ref_hash.py`](../../../../../proto8/impls/aos-exec/tests/test_ref_hash.py) | Check {"$ref": "#/..."} in an entry (inst, argv array, JSON .env) takes the entry file itself (11-12). |
 | [`tests/test_stack_lazy.py`](../../../../../proto8/impls/aos-exec/tests/test_stack_lazy.py) | Check --stack-lazy (11-11 tool-cells-lazy): the stack is made absolute and exported but not created; without it the stack is created as before. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-exec/vcpkg.json) | aos-exec：在工作區執行一個 aos 程式——找入口、備好環境變數、cd 進去、開跑 |

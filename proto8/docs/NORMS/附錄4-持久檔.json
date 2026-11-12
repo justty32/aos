@@ -52,7 +52,7 @@
    "image": "看情況：定義＝原始碼、不算 image（C-79）；定義放在 ws 裡就跟 ws 走",
    "on_bad": "讀不了、不是 JSON、不是單子／argv／路徑＝EntryBad 退 1；單子裡不認得的 key 忽略（01 #4：timeout_ticks 被忽略＝沒逾時）",
    "note": "程式只認 _entry（不帶 .json）；_entry.json 只出現在 lib/base/ls、stat 的標記清單",
-   "evidence": "proto8/impls/aos-exec/src/find/find.cpp（entry_name）、proto8/impls/aos-exec/src/find/classify.cpp（read_doc）、proto8/lib/base/ls/_entry（AOS_MARKS）"
+   "evidence": "proto8/impls/aos-exec/src/find/find.cpp（entry_name）、proto8/impls/aos-exec/src/find/classify.cpp（read_doc）、proto8/lib/file_summary.py（AOS_MARKS）"
   },
   {
    "path": "<定義資料夾>/.env",
