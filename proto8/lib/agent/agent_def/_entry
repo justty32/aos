@@ -120,7 +120,7 @@ def load_json(path):
         with open(path, encoding="utf-8") as f:
             return json.load(f)
     except (OSError, ValueError, UnicodeError) as e:
-        die("DefBad", "cannot read %s: %s" % (path, e))
+        die("DefBad", "cannot read %s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
 
 
 def tools_file(defdir):
@@ -207,24 +207,24 @@ def op_new():
     try:
         os.makedirs(parent, exist_ok=True)
     except OSError as e:
-        die("MkdirFailed", "cannot create %s: %s" % (parent, e))
+        die("MkdirFailed", "cannot create %s: %s" % (tool_io.place(parent), tool_io.os_reason(e)))
     tmp = os.path.join(parent, ".%s.new-%d" % (os.path.basename(dest), os.getpid()))
     try:
         try:
             shutil.copytree(src, tmp, symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
         except (OSError, shutil.Error) as e:
-            die("WriteFailed", "cannot copy %s to %s: %s" % (src, tmp, e))
+            die("WriteFailed", "cannot copy %s to %s: %s" % (tool_io.place(src), tool_io.place(tmp), tool_io.os_reason(e)))
         tf = tools_file(tmp)
         if tf:
             try:
                 rebase_tools(tf, src, dest, tmp)
             except OSError as e:
-                die("WriteFailed", "cannot rewrite %s: %s" % (os.path.relpath(tf, tmp), e))
+                die("WriteFailed", "cannot rewrite %s: %s" % (os.path.relpath(tf, tmp), tool_io.os_reason(e)))
         write_lineage(tmp)
         try:
             os.rename(tmp, dest)
         except OSError as e:
-            die("WriteFailed", "cannot move the new definition into %s: %s" % (dest, e))
+            die("WriteFailed", "cannot move the new definition into %s: %s" % (tool_io.place(dest), tool_io.os_reason(e)))
     except BaseException:
         shutil.rmtree(tmp, ignore_errors=True)
         raise

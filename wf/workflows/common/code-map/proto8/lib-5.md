@@ -36,4 +36,5 @@
 | [`test_observed.py`](../../../../../proto8/lib/tests/test_observed.py) | Verify shared observation initialization, strict failures and measured call cells. |
 | [`test_observed_children.py`](../../../../../proto8/lib/tests/test_observed_children.py) | Verify observed_children: a child's declared accounts are copied (and only those), take_child hands the mark over once. |
 | [`test_tool_io_keys.py`](../../../../../proto8/lib/tests/test_tool_io_keys.py) | 不認得的 stdin 鍵＝ArgumentsBad（使用者 11-10 晚「那就報錯」）；additionalProperties 與自由物件照舊收。 |
+| [`test_tool_io_place.py`](../../../../../proto8/lib/tests/test_tool_io_place.py) | Test tool_io.place and tool_io.os_reason: error lines name program-made paths relative to $AOS_STACK / $AOS_DAEMON / $AOS_WS, and no OSError file nam… |
 | [`test_tool_spec.py`](../../../../../proto8/lib/tests/test_tool_spec.py) | Test lib/tool_spec.py: declaration to _tooldef/_metainfo, SpecBad, write_defs into a folder and a JSON pointer, and main() at run time. |

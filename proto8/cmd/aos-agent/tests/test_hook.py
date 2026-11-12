@@ -144,7 +144,9 @@ class Hook(unittest.TestCase):
             p = self.fails("ArgumentsBad", *args)
             self.assertIn("(usage: ", p.stderr, args)
         self.assertFalse(self.own.exists())
-        self.fails("PathMissing", "add", "--event", "after_tool", "h/nothing")
+        p = self.fails("PathMissing", "add", "--event", "after_tool", "h/nothing")
+        self.assertIn("h/nothing does not exist (relative to the current directory)", p.stderr)   # 11-12 線 errpath：不印 cwd 的絕對路徑
+        self.assertNotIn(str(self.tmp), p.stderr)
         self.fails("NameBad", "add", "--event", "after_tool", "-n", ".x", "h/guard")
         self.fails("FlagUnknown", "add", "--wait", "h/guard")
         self.fails("CommandUnknown", "nope")

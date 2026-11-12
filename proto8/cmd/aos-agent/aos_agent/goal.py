@@ -11,7 +11,7 @@ import sys
 import aos_flags
 import daemon_ctl as dc
 from . import PROG
-from .common import Fail, actions, bad_args, parse, target, under
+from .common import Fail, actions, bad_args, in_stack, parse, target, under
 
 try:
     from agent import goal_state
@@ -135,7 +135,7 @@ def save(a, rec):
     try:
         goal_state.write(a.stack, rec)
     except OSError as e:
-        raise Fail("WriteFailed", "cannot write %s: %s" % (goal_state.path(a.stack), e))
+        raise Fail("WriteFailed", "cannot write %s: %s" % (in_stack(goal_state.path(a.stack), a), aos_flags.os_reason(e)))
 
 
 def words(args):

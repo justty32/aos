@@ -10,6 +10,15 @@ history 裡找不到叫到一半的 tool call（eca：工具來回在 CLI 裡、
 import json
 import os
 
+
+def _place(p):
+    """錯誤訊息裡程式自己算的路徑走 tool_io.place（11-12 線 errpath；fork 工具跑時已載入）；單獨 import 這支（測試）沒有 tool_io＝照原樣。"""
+    try:
+        import tool_io
+    except ImportError:
+        return p
+    return tool_io.place(p)
+
 UNSUPPORTED = ("fork works only in an agent-fsm body, where each tool call is a line of your history "
                "(no unanswered tool call found in it); to hand work to another agent, use subagent")
 OWN_CALL = ("[aos] fork: you are the copy made by this call; the original agent is waiting for your conclusion. "
@@ -34,7 +43,7 @@ def declaration(def_folder):
     except FileNotFoundError:
         raise ForkCopyBad("InterfaceMissing", "%s is missing" % path)
     except (OSError, ValueError) as e:
-        raise ForkCopyBad("InterfaceBad", "cannot read %s: %s" % (path, e))
+        raise ForkCopyBad("InterfaceBad", "cannot read %s: %s" % (_place(path), getattr(e, "strerror", None) or e))
     decl = value.get("aos-agent") if isinstance(value, dict) else None
     if not isinstance(decl, dict):
         raise ForkCopyBad("InterfaceMissing", "%s does not declare aos-agent" % path)
@@ -58,7 +67,7 @@ def read_lines(path):
     except FileNotFoundError:
         return []
     except (OSError, UnicodeError) as e:
-        raise ForkCopyBad("HistoryBad", "cannot read %s: %s" % (path, e))
+        raise ForkCopyBad("HistoryBad", "cannot read %s: %s" % (_place(path), getattr(e, "strerror", None) or e))
 
 
 def pending_tools(lines):
@@ -157,5 +166,5 @@ def copy_stack(def_folder, src, dst):
             _write(os.path.join(dst, rel), text)
             out["files"].append(rel)
     except (OSError, UnicodeError) as e:
-        raise ForkCopyBad("WriteFailed", "cannot copy into %s: %s" % (dst, e))
+        raise ForkCopyBad("WriteFailed", "cannot copy into %s: %s" % (_place(dst), getattr(e, "strerror", None) or e))
     return out

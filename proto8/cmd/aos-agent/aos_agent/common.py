@@ -31,6 +31,17 @@ class Fail(Exception):
         self.code = code
 
 
+def in_stack(path, a):
+    """訊息裡寫 agent stack 裡的檔：「<相對 stack> in the stack of <名>」，不在它的 stack 裡＝照原樣（11-12 線 errpath：
+    self_* 工具把錯誤行接進 history，history 進 git；N-67 ⑦、同 history 結果行的 where_said）。呼叫者給的路徑照字面印，不經這裡。"""
+    if a is None:
+        return path
+    rel = os.path.relpath(os.path.abspath(path), os.path.abspath(a.stack))
+    if rel == ".." or rel.startswith(".." + os.sep):
+        return path
+    return "the stack of %s" % a.name if rel == "." else "%s in the stack of %s" % (rel, a.name)
+
+
 def note(msg):
     """提醒（不是錯）：stderr 一行 `aos-agent: warning: 句子`（11-05 R1；原本是括號一行）。"""
     aos_flags.warn(PROG, msg)

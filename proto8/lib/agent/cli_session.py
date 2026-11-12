@@ -104,7 +104,7 @@ def load_cfg(tool_dir):
     except FileNotFoundError:
         die("CfgMissing", path)
     except (OSError, ValueError) as e:
-        die("CfgBad", "%s: %s" % (path, e))
+        die("CfgBad", "%s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
     if not isinstance(cfg, dict) or cfg.get("kind") not in ("claude", "codex"):
         die("CfgBad", "%s: kind must be claude or codex" % path)
     for k in ("flags", "print_flags", "tools_flags"):
@@ -131,7 +131,7 @@ def read_llm(path):
     except FileNotFoundError:
         return {}
     except (OSError, ValueError) as e:
-        die("CfgBad", "%s: %s" % (path, e))
+        die("CfgBad", "%s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
     if not isinstance(llm, dict):
         die("CfgBad", "%s: must be a flat object" % path)
     return llm
@@ -198,7 +198,7 @@ def system_argv(cfg):
         with open(path, encoding="utf-8") as f:
             text = f.read()
     except (OSError, UnicodeError) as e:
-        die("CfgBad", "cannot read the system text %s: %s" % (path, e))
+        die("CfgBad", "cannot read the system text %s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
     return ["-c", "developer_instructions=" + json.dumps(text, ensure_ascii=False)]
 
 
@@ -275,7 +275,7 @@ def mcp_argv(cfg, cell, ws, stack):
         cell.write("mcp.json", json.dumps({"mcpServers": {"aos": {"command": "aos-mcp", "args": args}}},
                                           ensure_ascii=False) + "\n")
     except OSError as e:
-        die("WriteFailed", "cannot write %s: %s" % (cell.file("mcp.json"), e))
+        die("WriteFailed", "cannot write %s: %s" % (tool_io.place(cell.file("mcp.json")), tool_io.os_reason(e)))
     return ["--mcp-config", cell.file("mcp.json"), "--allowedTools", "mcp__aos"]
 
 
@@ -480,7 +480,7 @@ def drop_session(cell):
         except FileNotFoundError:
             pass
         except OSError as e:
-            warn("cannot remove %s: %s" % (cell.file(name), e))
+            warn("cannot remove %s: %s" % (tool_io.place(cell.file(name)), tool_io.os_reason(e)))
 
 
 def session_here(cfg, cell, ws, sid):

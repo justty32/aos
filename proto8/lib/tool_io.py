@@ -1,4 +1,4 @@
-"""tool_io - lib 工具共用的開頭：schema 生成旗標位置的 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區與檔案工具的路徑、兩鐘期限。
+"""tool_io - lib 工具共用的開頭：schema 生成旗標位置的 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區與檔案工具的路徑、訊息裡怎麼寫路徑（place、os_reason）、兩鐘期限。
 
 使用者 11-05 裁「收成共用模組」（thinking 2026-11-05 stdio-unify § 剩下的；原則「統一成單一介面，這樣只需要改介面」）：
 錯誤行與提醒行的格式只寫在這裡，各工具不自己拼字串。不是工具（沒有 _entry），是 lib 最底下的共用模組；純標準庫。
@@ -222,12 +222,45 @@ def ws_path(rel):
 
 def shown_path(p):
     """給腦看的路徑：在工作區裡＝相對 $AOS_WS（根＝"."），否則＝絕對路徑。"""
-    ws, p = os.environ.get("AOS_WS"), os.path.abspath(p)     # 只為了給人看：照字面收掉 . 與 ..
-    if ws and os.path.isdir(ws):
-        for root in dict.fromkeys((os.path.abspath(ws), os.path.realpath(ws))):
-            if p == root or p.startswith(root.rstrip(os.sep) + os.sep):
-                return os.path.relpath(p, root)
-    return p
+    p = os.path.abspath(p)                       # 只為了給人看：照字面收掉 . 與 ..
+    rel = _under(p, "AOS_WS")
+    return p if rel is None else rel
+
+
+def _root_of(p, env, need_dir=False):
+    """(根的長度, 相對路徑)：p 在環境變數 env 指的資料夾裡（照字面與真實路徑各比一次；根＝"."），否則 None。
+    need_dir＝那個資料夾要已經在（shown_path 原本的規矩）；place 不要求（工具小格第一次寫才建）。"""
+    top = os.environ.get(env)
+    if not top or (need_dir and not os.path.isdir(top)):
+        return None
+    for root in dict.fromkeys((os.path.abspath(top), os.path.realpath(top))):
+        if p == root or p.startswith(root.rstrip(os.sep) + os.sep):
+            return len(root), os.path.relpath(p, root)
+    return None
+
+
+def _under(p, env):
+    hit = _root_of(p, env, need_dir=True)
+    return None if hit is None else hit[1]
+
+
+def place(p):
+    """訊息裡寫「程式自己算出的路徑」用這個（11-12 線 errpath：錯誤行會被 act 接進 history，history 進 git；N-67 ⑦ 要記就記相對的）：
+    在 $AOS_STACK／$AOS_DAEMON 裡＝"$AOS_STACK/相對"／"$AOS_DAEMON/相對"，在工作區裡＝相對 $AOS_WS（同 shown_path），
+    同時在幾個裡面取最近的那個（根最長）；都不在＝照原樣。呼叫者自己給的路徑照字面印，不經這裡。"""
+    p = os.path.abspath(p)
+    hits = [(hit[0], env, hit[1]) for env in ("AOS_STACK", "AOS_DAEMON", "AOS_WS") if (hit := _root_of(p, env))]
+    if not hits:
+        return p
+    _, env, rel = max(hits, key=lambda h: h[0])
+    if env == "AOS_WS":
+        return rel
+    return "$" + env if rel == "." else "$%s/%s" % (env, rel)
+
+
+def os_reason(e):
+    """OSError 的原因不帶檔名（str(e) 會把程式開的那個絕對路徑再印一次）：有 strerror 用它，否則 str(e)。"""
+    return getattr(e, "strerror", None) or str(e)
 
 
 def tokenize_flags(argv, kind, anywhere=False, keep=None):

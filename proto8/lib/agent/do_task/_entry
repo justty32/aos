@@ -125,11 +125,11 @@ def load():
     except FileNotFoundError:
         return {"tasks": []}
     except (OSError, ValueError) as e:
-        die("StateBad", "cannot read %s: %s" % (state_path, e))
+        die("StateBad", "cannot read %s: %s" % (tool_io.place(state_path), tool_io.os_reason(e)))
     ok = isinstance(s, dict) and isinstance(s.get("tasks"), list) and all(
         isinstance(t, dict) and isinstance(t.get("call"), str) for t in s["tasks"])
     if not ok:
-        die("StateBad", "%s is not {\"tasks\": [{\"call\": ...}, ...]}" % state_path)
+        die("StateBad", "%s is not {\"tasks\": [{\"call\": ...}, ...]}" % tool_io.place(state_path))
     return s
 
 
@@ -142,7 +142,7 @@ def save(s):
             f.write("\n")
         os.replace(tmp, state_path)
     except OSError as e:
-        die("WriteFailed", "cannot write %s: %s" % (state_path, e))
+        die("WriteFailed", "cannot write %s: %s" % (tool_io.place(state_path), tool_io.os_reason(e)))
 
 
 def in_progress(msgs):

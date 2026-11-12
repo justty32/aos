@@ -105,7 +105,7 @@ def read_llm(path):
     except FileNotFoundError:
         return {}
     except (OSError, ValueError) as e:
-        raise Fail("LlmBad", "cannot read %s: %s" % (path, e))
+        raise Fail("LlmBad", "cannot read %s: %s" % (path, aos_flags.os_reason(e) if isinstance(e, OSError) else e))
     if not isinstance(d, dict):
         raise Fail("LlmBad", "%s must be a flat JSON object" % path)
     return d

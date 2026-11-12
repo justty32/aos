@@ -15,7 +15,7 @@ import os
 import sys
 import aos_flags
 from . import PROG
-from .common import Fail, actions, bad_args, parse, target
+from .common import Fail, actions, bad_args, in_stack, parse, target
 from .decl import agent_decl
 
 LAST = 20                                       # ls 預設只印最後幾則（使用者「4.好」；-a 全部、給 RANGE 照 RANGE；-j 照舊全部）
@@ -117,8 +117,8 @@ def history_file(a):
     return os.path.join(a.stack, rel)
 
 
-def read_rows(path):
-    """非空行的原文（不含換行）；檔不在＝[]。回 (rows, 指紋)。"""
+def read_rows(path, a=None):
+    """非空行的原文（不含換行）；檔不在＝[]。回 (rows, 指紋)。錯誤行裡的檔名相對 a 的 stack（11-12 線 errpath）。"""
     try:
         with open(path, "rb") as f:
             data = f.read()
@@ -126,11 +126,11 @@ def read_rows(path):
     except FileNotFoundError:
         return [], None
     except OSError as e:
-        raise Fail("HistoryBad", "cannot read %s: %s" % (path, e))
+        raise Fail("HistoryBad", "cannot read %s: %s" % (in_stack(path, a), aos_flags.os_reason(e)))
     try:
         text = data.decode("utf-8")
     except UnicodeError as e:
-        raise Fail("HistoryBad", "%s is not UTF-8: %s" % (path, e))
+        raise Fail("HistoryBad", "%s is not UTF-8: %s" % (in_stack(path, a), e))
     return [l for l in text.split("\n") if l.strip()], (st.st_size, st.st_mtime_ns)
 
 
@@ -212,7 +212,7 @@ def keep_target(path, topts):
     return os.path.join(os.path.dirname(path), stem + "_removed.jsonl")
 
 
-def keep(where, op, first, rows):
+def keep(where, op, first, rows, said):
     at = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
     out = []
     for i, raw in enumerate(rows):
@@ -225,41 +225,47 @@ def keep(where, op, first, rows):
         with open(where, "a", encoding="utf-8") as f:
             f.write("".join(out))
     except OSError as e:
-        raise Fail("WriteFailed", "cannot keep the removed messages in %s (nothing changed): %s" % (where, e))
+        raise Fail("WriteFailed", "cannot keep the removed messages in %s (nothing changed): %s" % (said, aos_flags.os_reason(e)))
 
 
-def rewrite(path, change, where, op):
-    """change(rows) -> (新 rows, 被換掉的那段 rows, 那段第一行)。寫之前檔被動過＝重來（最多 TRIES 次）。"""
+def rewrite(path, change, where, op, a, said):
+    """change(rows) -> (新 rows, 被換掉的那段 rows, 那段第一行)。寫之前檔被動過＝重來（最多 TRIES 次）。
+    said＝錯誤行裡旁檔怎麼寫（keep_said）；history 本身與暫存檔寫相對 a 的 stack（11-12 線 errpath）。"""
     for _ in range(TRIES):
-        rows, before = read_rows(path)
+        rows, before = read_rows(path, a)
         new, gone, first = change(rows)
         tmp = os.path.join(os.path.dirname(path), ".%s.tmp" % os.path.basename(path))
         try:
             with open(tmp, "w", encoding="utf-8") as f:
                 f.write("".join(r + "\n" for r in new))
         except OSError as e:
-            raise Fail("WriteFailed", "cannot write %s: %s" % (tmp, e))
+            raise Fail("WriteFailed", "cannot write %s: %s" % (in_stack(tmp, a), aos_flags.os_reason(e)))
         if stamp(path) != before:                   # 這段時間 agent 接了一行：重讀重做
             os.unlink(tmp)
             continue
         if where:
-            keep(where, op, first, gone)
+            try:
+                keep(where, op, first, gone, said)
+            except Fail:                            # 沒換成：暫存檔也收掉（11-12 線 errpath 實測撞到它留著）
+                os.unlink(tmp)
+                raise
         try:
             os.replace(tmp, path)
         except OSError as e:
-            raise Fail("WriteFailed", "cannot replace %s: %s%s" % (path, e, "; the removed messages were already copied to %s" % where if where else ""))
+            raise Fail("WriteFailed", "cannot replace %s: %s%s" % (in_stack(path, a), aos_flags.os_reason(e), "; the removed messages were already copied to %s" % said if where else ""))
         return len(gone)
-    raise Fail("WriteFailed", "%s kept changing while writing (tried %d times); pause the agent first (aos-agent ctl pause)" % (path, TRIES))
+    raise Fail("WriteFailed", "%s kept changing while writing (tried %d times); pause the agent first (aos-agent ctl pause)" % (in_stack(path, a), TRIES))
+
+
+def keep_said(where, topts, a):
+    """旁檔在訊息裡怎麼寫：--keep 照使用者給的字面；預設那份相對 stack（common.in_stack）。"""
+    return topts["keep"] if "keep" in topts else in_stack(where, a)
 
 
 def where_said(where, topts, a):
     """結果行說原文在哪。不印絕對路徑（11-12 線 K：這行會被 self_history／do_task 原樣接進 history，history 進 git）：
-    --keep 照使用者給的字面印；預設那份印相對 stack 的位置。"""
-    if not where:
-        return "not kept"
-    if "keep" in topts:
-        return "the originals are in %s" % topts["keep"]
-    return "the originals are in %s in the stack of %s" % (os.path.relpath(where, a.stack), a.name)
+    --keep 照使用者給的字面印；預設那份印相對 stack 的位置。錯誤行同一套（keep_said，11-12 線 errpath）。"""
+    return "the originals are in %s" % keep_said(where, topts, a) if where else "not kept"
 
 
 def cmd(argv):
@@ -289,7 +295,7 @@ def cmd(argv):
     a = target(opts)
     path = history_file(a)
     if act == "ls":
-        rows, _ = read_rows(path)
+        rows, _ = read_rows(path, a)
         lo, hi = span(args[0], len(rows)) if args else (1, len(rows))
         picked = list(range(lo, hi + 1)) if rows else []
         if topts.get("json"):
@@ -311,7 +317,7 @@ def cmd(argv):
         def change(rows):
             lo, hi = span(args[0], len(rows))
             return rows[:lo - 1] + rows[hi:], rows[lo - 1:hi], lo
-        k = rewrite(path, change, where, "rm")
+        k = rewrite(path, change, where, "rm", a, where and keep_said(where, topts, a))
         lo = int(args[0].partition("-")[0])
         print("removed %d message%s from line %d; %s" % (k, "" if k == 1 else "s", lo, where_said(where, topts, a)))
     elif act == "summarize":
@@ -324,7 +330,7 @@ def cmd(argv):
             lo, hi = span(args[0], len(rows))
             new = json.dumps({"role": role, "content": summary_text(lo, hi, text)}, ensure_ascii=False)
             return rows[:lo - 1] + [new] + rows[hi:], rows[lo - 1:hi], lo
-        k = rewrite(path, change, where, "summarize")
+        k = rewrite(path, change, where, "summarize", a, where and keep_said(where, topts, a))
         lo = int(args[0].partition("-")[0])
         print("replaced %d message%s with one %s message at line %d; %s" % (k, "" if k == 1 else "s", role, lo, where_said(where, topts, a)))
     else:
@@ -339,5 +345,5 @@ def cmd(argv):
         def change(rows):
             n, _ = span(args[0], len(rows), one=True)
             return rows[:n - 1] + [new] + rows[n:], rows[n - 1:n], n
-        rewrite(path, change, where, "set")
+        rewrite(path, change, where, "set", a, where and keep_said(where, topts, a))
         print("replaced line %s; %s" % (args[0], where_said(where, topts, a)))

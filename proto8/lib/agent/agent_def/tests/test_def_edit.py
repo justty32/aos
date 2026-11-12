@@ -113,6 +113,21 @@ class DefEdit(unittest.TestCase):
         self.ok("llm", {"op": "rm", "keys": ["a/b~c"]})
         self.assertEqual(json.loads((self.d / "llm.json").read_text()), {})
 
+    def test_error_lines_name_the_definition_relative_to_the_workspace(self):
+        """11-12 線 errpath：錯誤行會接進 history（進 git），定義裡的檔寫相對 $AOS_WS、不帶 OSError 的絕對檔名。"""
+        (self.d / "llm.json").write_text("[1]")
+        r = self.fails("llm", {"op": "ls"}, "DefBad")
+        self.assertIn("defs/helper/llm.json must be a flat JSON object", r.stdout)
+        self.assertNotIn(str(self.root), r.stdout + r.stderr)
+        if os.geteuid() == 0:
+            return
+        os.chmod(self.d, 0o555)
+        try:
+            r = self.fails("system", {"op": "set", "text": "x"}, "WriteFailed")
+        finally:
+            os.chmod(self.d, 0o755)
+        self.assertEqual(r.stdout.strip(), "%s: error: WriteFailed cannot write defs/helper/system.txt: Permission denied" % NAME)
+
     def test_llm_system_key_points_to_system(self):
         r = self.fails("llm", {"op": "set", "settings": {"system": "x"}}, "ArgumentsBad")
         self.assertIn('"op": "system"', r.stdout)

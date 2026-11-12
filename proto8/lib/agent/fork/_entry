@@ -183,7 +183,7 @@ def write_text(path, text):
             f.write(text)
         os.replace(tmp, path)
     except OSError as e:
-        die("WriteFailed", "cannot write %s: %s" % (path, e))
+        die("WriteFailed", "cannot write %s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
 
 
 # ---- 入口檢查（參數先、環境後）----
@@ -346,7 +346,7 @@ reconcile(table)
 try:
     os.makedirs(kids_dir, exist_ok=True)
 except OSError as e:
-    die("MkdirFailed", "cannot create %s: %s" % (kids_dir, e))
+    die("MkdirFailed", "cannot create %s: %s" % (tool_io.place(kids_dir), tool_io.os_reason(e)))
 procs = os.path.join(daemon, "procs")
 for attempt in range(5):
     now = datetime.now(timezone.utc)
@@ -364,7 +364,7 @@ for attempt in range(5):
     except FileExistsError:
         continue
     except OSError as e:
-        die("MkdirFailed", "cannot create %s: %s" % (os.path.join(kids_dir, kid), e))
+        die("MkdirFailed", "cannot create %s: %s" % (tool_io.place(os.path.join(kids_dir, kid)), tool_io.os_reason(e)))
 else:
     die("MkdirFailed", "could not create a unique fork record after 5 attempts")
 

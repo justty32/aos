@@ -32,13 +32,25 @@ TASKS = {"exec": str(PROTO / "lib/base/llm_fake"), "script": [
     {"when": "of 2 completed", "tool_calls": [{"name": "do_task", "arguments": {"op": "end", "summary": "Inner done."}}]},
     {"when": "now one summary", "tool_calls": [{"name": "fork", "arguments": {"goal": "Say hi.", "keep": True, "timeout_s": 30}}]},
     {"when": "FAKE FORK ANSWER", "content": "FAKE ANSWER tasks"}]}
+# 故意出錯的劇本（11-12 線 errpath：出錯時的錯誤行不帶絕對路徑進 history）：小格寫不進（todo、do_task）、history 的旁檔寫不進
+# （self_history）、檔不在（read）、子 agent 不在。json_get 的檔不在這次查到 aos-json 的 stderr 帶絕對路徑
+# （lib/aos_json.py 交給 aos-json 的是絕對路徑），歸 json 工具那條線，沒放進劇本，見 thinking 2026-11/12/line-k-leftovers。
+# 每支的錯誤行（stdout）與 act 附的 stderr 尾巴都接進 history。
+ERRORS = {"exec": str(PROTO / "lib/base/llm_fake"), "script": [
+    {"when": "probe errors", "tool_calls": [{"name": "todo", "arguments": {"op": "add", "text": "cannot be saved"}}]},
+    {"when": "todo: error:", "tool_calls": [{"name": "do_task", "arguments": {"op": "start", "task": "Cannot be saved"}}]},
+    {"when": "do_task: error:", "tool_calls": [{"name": "self_history", "arguments": {"op": "rm", "range": "1"}}]},
+    {"when": "self_history: error:", "tool_calls": [{"name": "read", "arguments": {"path": "missing.txt"}}]},
+    {"when": "FileMissing missing.txt", "tool_calls": [{"name": "subagent", "arguments": {"op": "state", "name": "ghost"}}]},
+    {"when": "subagent: error:", "content": "FAKE ANSWER errors"}]}
 HELP = """gitignore-check - optional developer regression check, never part of daemon startup
 
 usage: python3 check.py [--evidence DIR] [--timeout-s SECONDS] [--inject-unknown] [--mntc]
 
 Starts two isolated projects with a fake kernel, FSM agents, a fake Claude ECA,
 a judge, and a child daemon. Exercises control, cooldown, stderr sweeping, bad
-state preservation, a goal, a to-do list and an open do_task, graceful shutdown,
+state preservation, a goal, a to-do list and an open do_task, deliberate tool
+errors (their error lines go into the history), graceful shutdown,
 local git cloning, and SIGKILL.
 Checks tracked files against gitignore_classes.json, sensitive content, and hot
 changes. --inject-unknown writes stacks/root/zzz_unknown.txt: this MUST exit 1.
@@ -265,6 +277,9 @@ class Check:
         if kind == "agent-fsm":                  # 11-11：tools/todo/todo.json、tools/do_task/tasks.json 要長出來（使用者「三個都進 git」）；11-12 加 fork
             tools.update(todo={"path": str(PROTO / "lib/agent/todo")}, do_task={"path": str(PROTO / "lib/agent/do_task")},
                          fork={"path": str(PROTO / "lib/agent/fork")})
+            for name in ("self_history", "subagent"):  # 11-12 故意出錯的劇本（ERRORS）
+                tools[name] = {"path": str(PROTO / "lib/agent" / name)}
+            tools["read"] = {"path": str(PROTO / "lib/base/read")}
         save(dest / "tools.json", {"tools": tools})
         save(dest / "llm.json", {"model": "fake"})
 
@@ -302,7 +317,7 @@ class Check:
         fail.write_text("#!/bin/sh\ncat >/dev/null\necho 'fail-endpoint: error: EndpointFailed intentional failure' >&2\nexit 1\n")
         fail.chmod(0o755)
         save(self.llms / "defs/kernel.json", {"slots": 3, "timeout_ms": 120000, "endpoint": "fake", "exec": str(PROTO / "lib/base/llm_fake"),
-             "endpoints": {"fake": {"exec": str(PROTO / "lib/base/llm_fake"), "tool": "peek_now_time"}, "bad": {"exec": str(fail)}, "slow": {"exec": "fake_slow", "delay_s": 12, "tool": "peek_now_time"}, "tasks": TASKS}})
+             "endpoints": {"fake": {"exec": str(PROTO / "lib/base/llm_fake"), "tool": "peek_now_time"}, "bad": {"exec": str(fail)}, "slow": {"exec": "fake_slow", "delay_s": 12, "tool": "peek_now_time"}, "tasks": TASKS, "errors": ERRORS}})
         # Cause the real daemon reader to preserve a malformed public table.
         self.root.mkdir(parents=True)
         (self.root / "procs_state.json").write_text("{intentional broken state\n")
@@ -358,6 +373,7 @@ class Check:
         if grown:
             raise RuntimeError("goal / todo / do_task / fork files did not appear: " + ", ".join(grown))
         self.note("goal.json, tools/todo/todo.json, tools/do_task/tasks.json, history_removed.jsonl, tools/fork/children/*/state written by the real tools")
+        self.errors(w)
         self.ask("eca", "first ECA question", "FAKE:")
         self.run(["aos-agent", "-t", "worker", "llm", "set", "model=bad"])
         self.run(["aos-agent", "say", "-t", "worker", "retry this question"])
@@ -405,6 +421,30 @@ class Check:
         self.wait("real wait warning after artificial pending mtime age", lambda: pending.with_name("wait_warned.txt").exists())
         self.results["wait_warning_stimulus"] = "Set the real pending.txt mtime 700 seconds in the past; wait.py produced wait_warned.txt itself."
         self.note("real in-flight kernel request retained; real wait warning generated with aged mtime")
+
+    def errors(self, w):
+        """11-12：故意讓工具出錯（ERRORS 劇本），錯誤行與 stderr 尾巴接進 history，交給後面的敏感內容檢查。
+        寫不進＝把小格與 history 旁檔改成唯讀（不動 history 本身，fsm 還要接）；跑完改回來，git add 讀得到。"""
+        locked = [(w / "tools/todo", 0o555), (w / "tools/do_task", 0o555), (w / "history_removed.jsonl", 0o444)]
+        modes = {p: p.stat().st_mode & 0o7777 for p, _ in locked}
+        try:
+            for p, mode in locked:
+                p.chmod(mode)
+            self.run(["aos-agent", "-t", "worker", "llm", "set", "model=errors"])
+            self.ask("worker", "probe errors", "FAKE ANSWER errors")
+        finally:
+            for p, mode in modes.items():
+                p.chmod(mode)
+            self.run(["aos-agent", "-t", "worker", "llm", "set", "model=fake"])
+            self.results["error_history_tail"] = (w / "history.jsonl").read_text()[-6000:]
+            self.results["error_stderr_tail"] = (w / "stderr.txt").read_text()[-4000:] if (w / "stderr.txt").exists() else ""
+        said = [m.get("content", "") for m in map(json.loads, (w / "history.jsonl").read_text().splitlines()) if m.get("role") == "tool"]
+        said = [c for c in said if ": error: " in c]
+        self.results["error_lines"] = said
+        missing = [n for n in ("todo", "do_task", "self_history", "read", "subagent") if not any(c.startswith(n + ": error: ") for c in said)]
+        if missing:
+            raise RuntimeError("the error script did not reach every tool: " + ", ".join(missing))
+        self.note("error lines of todo, do_task, self_history, read, subagent went into the history")
 
     def scan(self, label):
         text = ""

@@ -200,7 +200,7 @@ def build(topts, args, own, help):
     else:
         xxx = args[0]
         if not os.path.exists(xxx):
-            raise Fail("PathMissing", "%s does not exist (relative to the current directory %s)" % (xxx, os.getcwd()))
+            raise Fail("PathMissing", "%s does not exist (relative to the current directory)" % xxx)
         full = os.path.abspath(xxx)
         target_v = full if os.path.isabs(xxx) else os.path.relpath(full, os.path.dirname(os.path.abspath(own)))
         name = topts.get("name", os.path.basename(full))

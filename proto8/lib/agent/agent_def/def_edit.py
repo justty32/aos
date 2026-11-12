@@ -121,9 +121,9 @@ def read_llm(path):
     except FileNotFoundError:
         return {}
     except (OSError, ValueError, UnicodeError) as e:
-        die("DefBad", "cannot read %s: %s" % (path, e))
+        die("DefBad", "cannot read %s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
     if not isinstance(d, dict):
-        die("DefBad", "%s must be a flat JSON object" % path)
+        die("DefBad", "%s must be a flat JSON object" % tool_io.place(path))
     return d
 
 
@@ -157,7 +157,7 @@ def llm(run, defdir, a, op):
                 with open(path, "w", encoding="utf-8") as f:
                     f.write("{}\n")
             except OSError as e:
-                die("WriteFailed", "cannot create %s: %s" % (path, e))
+                die("WriteFailed", "cannot create %s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
         for k in s:
             run(["aos-json", "set", "--str", path + "#" + pointer(k), s[k]])
     elif op == "rm":
@@ -167,7 +167,7 @@ def llm(run, defdir, a, op):
         have = read_llm(path)
         missing = [k for k in keys if k not in have]
         if missing:
-            die("KeyMissing", "%s not in %s (it has: %s); nothing removed" % (", ".join(missing), path, ", ".join(have) or "none"))
+            die("KeyMissing", "%s not in %s (it has: %s); nothing removed" % (", ".join(missing), tool_io.place(path), ", ".join(have) or "none"))
         for k in keys:
             run(["aos-json", "del", path + "#" + pointer(k)])
     vals = read_llm(path)
@@ -189,7 +189,7 @@ def system(defdir, a, op):
         except FileNotFoundError:
             body = None
         except (OSError, UnicodeError) as e:
-            die("DefBad", "cannot read %s: %s" % (path, e))
+            die("DefBad", "cannot read %s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
         if body:
             emit(body)
         else:
@@ -210,7 +210,7 @@ def system(defdir, a, op):
             os.unlink(tmp)
         except OSError:
             pass
-        die("WriteFailed", "cannot write %s: %s" % (path, e))
+        die("WriteFailed", "cannot write %s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
     print("set the system text of the definition: %s (%d bytes)" % (path, len(body.encode("utf-8"))))
     after("system")
 

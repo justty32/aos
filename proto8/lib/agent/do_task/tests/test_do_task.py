@@ -293,6 +293,28 @@ class DoTask(unittest.TestCase):
         self.assertIn("do_task: error: WriteFailed cannot write the history (test)", r.stdout)
         self.assertEqual(len(json.loads((self.cell / "tasks.json").read_text())["tasks"]), 1)   # 沒摺成＝任務照開
 
+    def test_state_errors_name_the_cell_not_the_machine(self):
+        """11-12 線 errpath：錯誤行會接進 history（進 git），狀態檔寫相對 $AOS_STACK、不帶 OSError 的絕對檔名。"""
+        self.cell.mkdir(parents=True)
+        (self.cell / "tasks.json").write_text("{broken")
+        self.write(self.read() + [asks("c0", {"op": "status"})])
+        r = self.run_tool({"op": "status"})
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stdout.startswith("do_task: error: StateBad cannot read $AOS_STACK/tasks.json: "), r.stdout)
+        self.assertNotIn(str(self.tmp), r.stdout + r.stderr)
+        if os.geteuid() == 0:
+            return
+        (self.cell / "tasks.json").unlink()
+        self.cell.chmod(0o500)
+        try:
+            self.write(self.read() + [asks("c1", {"op": "start"})])
+            r = self.run_tool({"op": "start"})
+        finally:
+            self.cell.chmod(0o700)
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(r.stdout.strip(), "do_task: error: WriteFailed cannot write $AOS_STACK/tasks.json: Permission denied")
+        self.assertNotIn(str(self.tmp), r.stdout + r.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

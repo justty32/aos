@@ -82,14 +82,14 @@ def load(path):
     except FileNotFoundError:
         return [], None
     except ValueError as e:
-        die("ListBad", "the saved list %s is not JSON (%s); set writes a new whole list" % (path, e))
+        die("ListBad", "the saved list %s is not JSON (%s); set writes a new whole list" % (tool_io.place(path), e))
     except OSError as e:
-        die("ReadFailed", "cannot read %s: %s" % (path, e))
+        die("ReadFailed", "cannot read %s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
     items = data.get("items") if isinstance(data, dict) else None
     ok = isinstance(items, list) and all(isinstance(x, dict) and isinstance(x.get("text"), str) and x.get("status") in STATUSES
                                          for x in items)
     if not ok:
-        die("ListBad", "the saved list %s is broken (need {\"items\": [{\"text\", \"status\"}]}); set writes a new whole list" % path)
+        die("ListBad", "the saved list %s is broken (need {\"items\": [{\"text\", \"status\"}]}); set writes a new whole list" % tool_io.place(path))
     return [{"text": x["text"], "status": x["status"]} for x in items], data.get("updated_at")
 
 
@@ -110,7 +110,7 @@ def save(cell, path, items):
             os.unlink(tmp)
         except OSError:
             pass
-        die("WriteFailed", "cannot write %s: %s" % (path, e))
+        die("WriteFailed", "cannot write %s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
     return stamp
 
 

@@ -151,7 +151,7 @@ def ensure_json_file(loc):
         with open(loc["path"], "w", encoding="utf-8") as f:
             f.write("{}\n")
     except OSError as e:
-        die("MkdirFailed", "cannot create %s: %s" % (loc["path"], e))
+        die("MkdirFailed", "cannot create %s: %s" % (tool_io.place(loc["path"]), tool_io.os_reason(e)))
 
 
 def copy_script(dest, desc=None):
@@ -164,7 +164,7 @@ def copy_script(dest, desc=None):
         with open(dest, "w", encoding="utf-8") as f:
             f.write("".join(src))
     except OSError as e:
-        die("WriteFailed", "cannot write %s: %s" % (dest, e))
+        die("WriteFailed", "cannot write %s: %s" % (tool_io.place(dest), tool_io.os_reason(e)))
 
 
 def part_to_change(script):
@@ -214,7 +214,7 @@ def op_new():
     try:
         os.makedirs(parent, exist_ok=True)
     except OSError as e:
-        die("MkdirFailed", "cannot create %s: %s" % (parent, e))
+        die("MkdirFailed", "cannot create %s: %s" % (tool_io.place(parent), tool_io.os_reason(e)))
     tmp = os.path.join(parent, ".%s.new-%d" % (os.path.basename(dest), os.getpid()))
     try:
         try:
@@ -228,7 +228,7 @@ def op_new():
                     f.write("".join(src))
             os.rename(tmp, dest)
         except OSError as e:
-            die("WriteFailed", "cannot copy the skeleton to %s: %s" % (dest, e))
+            die("WriteFailed", "cannot copy the skeleton to %s: %s" % (tool_io.place(dest), tool_io.os_reason(e)))
     except BaseException:
         shutil.rmtree(tmp, ignore_errors=True)
         raise
@@ -336,7 +336,7 @@ def check_entry(obj, base):
         line("bad", "entry: %s line %s: %s (fix the Python syntax)" % (os.path.basename(script), e.lineno, e.msg))
         return False, None
     except (OSError, UnicodeError, ValueError) as e:
-        line("bad", "entry: cannot read %s: %s" % (script, e))
+        line("bad", "entry: cannot read %s: %s" % (tool_io.place(script), tool_io.os_reason(e)))
         return False, None
     line("ok", "entry: %s runs %s (Python compiles)" % (where, json.dumps(argv)))
     return True, script
@@ -525,7 +525,7 @@ def op_add_entry():
         try:
             os.makedirs(loc["path"], exist_ok=True)
         except OSError as e:
-            die("MkdirFailed", "cannot create %s: %s" % (loc["path"], e))
+            die("MkdirFailed", "cannot create %s: %s" % (tool_io.place(loc["path"]), tool_io.os_reason(e)))
         if any(os.path.lexists(os.path.join(loc["path"], x)) for x in ("_entry", "_entry.json")):
             die("PathExists", "%s already has an entry (_entry or _entry.json); change it with edit" % args["path"])
         script_name = script_name or "tool.py"

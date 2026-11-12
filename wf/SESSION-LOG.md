@@ -8,6 +8,7 @@
 
 ## 最新進度
 
+- **open｜11-12 線 errpath：出錯時的錯誤行帶絕對路徑（公司 WSL `/tmp/line-errpath` 獨立 clone，已施工、未 push、等頂層合併）**：使用者「出錯時的錯誤行仍待絕對路徑...修」；實跑故意出錯確認 todo、do_task、self_history 會漏，修在共用的 `tool_io.place`／`os_reason`、aos-agent 的 `in_stack`，gitignore-check 加出錯劇本、整套過；代定 E1～E6。**還開著**：json 工具（aos-json 那行，給 json 線）、aos-agent 其他帶路徑的行與幾句成功行（`system` 的 deleted／file）→ [thinking 11-12 line-k-leftovers § 錯誤行](../proto8/thinking/2026-11/12/line-k-leftovers.md#出錯時的錯誤行不帶絕對路徑11-12-稍後線-errpath)
 - **open｜11-12 knowledge 拿掉的剩餘事項（施工已完、未 push、等頂層合併）**：只剩兩題待使用者裁——加了 11-12 註的條文（P-46 最該裁，另 C-42、C-71、C-52、N-15、N-17）、出廠內容裡講已拆工具的段落要刪／改寫／留 → [thinking 11-12 knowledge-removal](../proto8/thinking/2026-11/12/knowledge-removal.md#要使用者裁)
 - **open｜11-12 index（description＋index 合一）**：統一叫 `_index`／`_index.json`、天然位置在上一層；cache 不做、主觀 index 不規定（使用者原話八）；出廠內容檔已照「只給太大的補」做完（3 夾 `_index.json`＋`packs.json` 檔內 `_index`，門檻代定）。**未定**：路徑相對誰、過時、專屬工具 → [thinking 11-12 index](../proto8/thinking/2026-11/12/index.md)
 - **open｜11-12 index 工具已施工，剩 `_metainfo` 整合**：一支 `index_view`（包 index；`path`、`index` 可同時給、指定那份覆蓋天然那份——使用者「path和index可以同時給，指定的那一份有的，會覆蓋掉天然那份。開工吧」），json 小修 J2～J4 一起做，haiku、gpt-6-luna 真腦各驗過；剩下的只有 `_metainfo` 整合（一兩週後，只改 `lib/aos_index.py` 的 `spot()`、說明裡的例子、搬出廠那四份 index） → [thinking 11-12 index-tools](../proto8/thinking/2026-11/12/index-tools/README.md)、[02 施工結果](../proto8/thinking/2026-11/12/index-tools/02-施工結果.md)

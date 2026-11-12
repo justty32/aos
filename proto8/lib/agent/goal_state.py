@@ -63,7 +63,7 @@ def read(stack):
     except FileNotFoundError:
         return None
     except (OSError, ValueError, UnicodeError) as e:
-        raise GoalBad("cannot read %s: %s" % (path(stack), e))
+        raise GoalBad("cannot read %s: %s" % (NAME, getattr(e, "strerror", None) or e))   # 不印 stack 的絕對路徑（11-12 線 errpath），同上面幾句
     return check(rec)
 
 

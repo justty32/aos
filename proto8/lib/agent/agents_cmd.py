@@ -259,7 +259,7 @@ def make_ws(args):
         try:
             os.makedirs(path)
         except OSError as e:
-            die("MkdirFailed", "cannot create ws %s: %s" % (path, e))
+            die("MkdirFailed", "cannot create ws %s: %s" % (ws, tool_io.os_reason(e)))
 
 
 def parse_added(out):

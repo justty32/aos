@@ -143,6 +143,43 @@ class History(unittest.TestCase):
         self.decl({"aos-agent": {}})
         self.assertIn("HistoryMissing", self.agent(ok=False).stderr)
 
+    def test_write_errors_name_files_in_the_stack(self):
+        """11-12 線 errpath：錯誤行會被 self_history／do_task 接進 history（進 git）：stack 裡的檔寫相對 stack，--keep 照字面，不帶 OSError 的絕對檔名。"""
+        if os.geteuid() == 0:
+            self.skipTest("root can write anywhere")
+        before = self.hist.read_bytes()
+        self.removed.write_text("")
+        self.removed.chmod(0o444)
+        try:
+            r = self.agent("rm", "2", ok=False)
+        finally:
+            self.removed.chmod(0o644)
+        self.assertEqual(r.stderr.strip(), "aos-agent: error: WriteFailed cannot keep the removed messages in "
+                         "history_removed.jsonl in the stack of bob (nothing changed): Permission denied")
+        self.assertFalse((self.stack / ".history.jsonl.tmp").exists())      # 沒換成，暫存檔不留
+        ro = self.tmp / "ro"
+        ro.mkdir()
+        ro.chmod(0o555)
+        try:
+            r = self.agent("rm", "--keep", "ro/old.jsonl", "2", ok=False)
+        finally:
+            ro.chmod(0o755)
+        self.assertEqual(r.stderr.strip(), "aos-agent: error: WriteFailed cannot keep the removed messages in "
+                         "ro/old.jsonl (nothing changed): Permission denied")
+        self.stack.chmod(0o555)
+        try:
+            r = self.agent("rm", "2", ok=False)
+        finally:
+            self.stack.chmod(0o755)
+        self.assertEqual(r.stderr.strip(), "aos-agent: error: WriteFailed cannot write .history.jsonl.tmp in the stack of bob: Permission denied")
+        self.assertEqual(self.hist.read_bytes(), before)
+        self.hist.chmod(0o000)
+        try:
+            r = self.agent(ok=False)
+        finally:
+            self.hist.chmod(0o644)
+        self.assertEqual(r.stderr.strip(), "aos-agent: error: HistoryBad cannot read history.jsonl in the stack of bob: Permission denied")
+
     def test_empty_history(self):
         self.hist.unlink()
         self.assertEqual(self.agent().stdout, "")

@@ -70,7 +70,8 @@ class System(unittest.TestCase):
         self.assertEqual(self.agent().stdout, "Be short.\n")             # get adds the missing newline
         self.assertEqual(self.own.read_text(), "Be short.")
         self.assertEqual((self.defn / "system.txt").read_text(), "You are bob.\n")   # the definition is never written
-        self.assertIn("PathMissing", self.agent("set", "nope.txt", ok=False).stderr)
+        err = self.agent("set", "nope.txt", ok=False).stderr
+        self.assertIn("aos-agent: error: PathMissing nope.txt is not a file (relative to the current directory)", err)   # 11-12 線 errpath
         self.agent("reset", "-y")
         self.assertFalse(self.own.exists())
         self.assertEqual(self.agent().stdout, "You are bob.\n")

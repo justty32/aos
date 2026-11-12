@@ -9,7 +9,7 @@ import os
 import sys
 import aos_flags
 from . import PROG
-from .common import Fail, actions, bad_args, note, parse, target
+from .common import Fail, actions, bad_args, in_stack, note, parse, target
 from .decl import agent_decl, warn_shared
 
 
@@ -88,23 +88,23 @@ def system_paths(a):
     return folder, os.path.join(folder, rel), os.path.join(a.stack, rel)
 
 
-def read_text(path):
-    """檔不在＝None。"""
+def read_text(path, a=None):
+    """檔不在＝None。錯誤行裡 stack 裡的檔寫相對 a 的 stack（11-12 線 errpath）。"""
     try:
         with open(path, encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
         return None
     except (OSError, UnicodeError) as e:
-        raise Fail("SystemBad", "cannot read %s: %s" % (path, e))
+        raise Fail("SystemBad", "cannot read %s: %s" % (in_stack(path, a), aos_flags.os_reason(e)))
 
 
-def effective(orig, copy):
+def effective(orig, copy, a=None):
     """(文字, 來源, 檔)：stack 那份在＝它；否則定義那份；都不在＝("", none, 定義那份)。"""
-    mine = read_text(copy)
+    mine = read_text(copy, a)
     if mine is not None:
         return mine, "agent", copy
-    base = read_text(orig)
+    base = read_text(orig, a)
     if base is not None:
         return base, "definition", orig
     return "", "none", orig
@@ -147,7 +147,7 @@ def notes_after(a, folder):
              "(its session.txt removed, or its history changed)" % a.name)
 
 
-def write_text(path, text):
+def write_text(path, text, a=None):
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".tmp")   # N-05
@@ -155,7 +155,7 @@ def write_text(path, text):
             f.write(text)
         os.replace(tmp, path)
     except OSError as e:
-        raise Fail("WriteFailed", "cannot write %s: %s" % (path, e))
+        raise Fail("WriteFailed", "cannot write %s: %s" % (in_stack(path, a), aos_flags.os_reason(e)))
 
 
 def cmd(argv):
@@ -175,7 +175,7 @@ def cmd(argv):
     a = target(opts)
     folder, orig, copy = system_paths(a)
     if act == "get":
-        text, src, path = effective(orig, copy)
+        text, src, path = effective(orig, copy, a)
         if aopts.get("json"):
             print(json.dumps({"text": text, "from": src, "file": path, "bytes": len(text.encode("utf-8"))}, ensure_ascii=False))
             return
@@ -208,14 +208,14 @@ def cmd(argv):
         text = sys.stdin.read()
     else:
         if not os.path.isfile(src):
-            raise Fail("PathMissing", "%s is not a file (relative to the current directory %s)" % (src, os.getcwd()))
+            raise Fail("PathMissing", "%s is not a file (relative to the current directory)" % src)
         try:
             with open(src, encoding="utf-8") as f:
                 text = f.read()
         except (OSError, UnicodeError) as e:
-            raise Fail("SystemBad", "cannot read %s: %s" % (src, e))
+            raise Fail("SystemBad", "cannot read %s: %s" % (src, aos_flags.os_reason(e)))
     made = not os.path.isfile(copy)
-    write_text(copy, text)
+    write_text(copy, text, a)
     print("set the system text of %s: %s (%d bytes); takes effect from its next brain call" % (a.name, copy, len(text.encode("utf-8"))))
     if made:
         note("created %s (its own copy replaces the definition's %s whole; system reset deletes it)" % (copy, orig))

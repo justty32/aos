@@ -128,7 +128,10 @@ class TodoTool(unittest.TestCase):
         self.cell.mkdir(parents=True)
         for broken in ("{not json", '{"items": [{"text": "a", "status": "done"}]}', "[]"):
             self.file.write_text(broken)
-            self.assertIn("set writes a new whole list", self.fails({"op": "ls"}, "ListBad"))
+            line = self.fails({"op": "ls"}, "ListBad")
+            self.assertIn("the saved list $AOS_STACK/todo.json ", line)
+            self.assertIn("set writes a new whole list", line)
+            self.assertNotIn(str(self.tmp), line)
             self.fails({"op": "add", "text": "b"}, "ListBad")
             self.fails({"op": "mark", "n": 1, "status": "completed"}, "ListBad")
             self.assertEqual(self.file.read_text(), broken)
@@ -146,9 +149,11 @@ class TodoTool(unittest.TestCase):
         (self.tmp / "agent").mkdir()
         (self.tmp / "agent").chmod(0o500)
         try:
-            self.fails({"op": "add", "text": "a"}, "WriteFailed")
+            line = self.fails({"op": "add", "text": "a"}, "WriteFailed")
         finally:
             (self.tmp / "agent").chmod(0o700)
+        # 11-12 線 errpath：錯誤行會接進 history（進 git），檔名相對 $AOS_STACK、不帶 OSError 的絕對檔名
+        self.assertEqual(line, "todo: error: WriteFailed cannot write $AOS_STACK/todo.json: Permission denied")
 
     def test_stack_missing(self):
         env = dict(self.env)
