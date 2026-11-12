@@ -20,6 +20,7 @@
 4. **同時段 main 上還有別的 session**（家機試驗場重建 `3ca019a32`、eca Agent／Skill 與 aos MCP 切兩台 `2ab15e1c7`、codex 調查 `dc303e087`）：各自 commit，本線只 `git add` 自己的檔、codemap 只收自己的列。
 5. **測試**（`b9ca076fc`，家機）：lib 132、lib/agent 63、lib/base/mcp_tool 21、cmd/aos-mcp-import 22、aos-tools 120、aos-mcp 15、aos-eca 89、templates 20、aos-agent 72 全過（家機 `test_daemon_down` 也過）。
 6. **踩到的坑**：Python 3.13 起 `ssl` 預設嚴格驗證，自簽 CA 要有 `keyUsage`、leaf 要有 key identifier（fake-mcp-http README 已補）；codex 沙盒裡開不了 socket，http 測試要在沙盒外跑；`pkill -f <字串>` 會連自己那個含同字串的殼一起殺（結束碼 144），改用 `ps … | grep '[x]'`。
+7. **同晚其他線**：試驗場整個重建（`3ca019a32`，之後照最新 main 重抄第二次）、eca claude 身 Agent／Skill 與 aos MCP 切兩台（`2ab15e1c7`、`dc303e087`）、index-link（`827ca2825`）、外部 MCP 路徑統一（`8c4d73d15`）；使用者接著要的：重構拆檔＋tidy → fable 領隊整理整個程式碼庫（原話「東西都弄好後，可以來做重構拆檔+tidy。」「重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。」）；授權：頂層只調度、普通 opus／雜活 sonnet、睡前（23:15 關機）push 一次。
 
 ## 2026-11-12 收工 公司頂層
 
