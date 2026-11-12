@@ -5,7 +5,7 @@
   "properties": {
    "path": {
     "type": "string",
-    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone (or FILE#) = the whole document; FILE#/ is the key named \"\" (RFC 6901). Relative files start at your workspace."
+    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone = the whole document; FILE#/ is the key named \"\" (RFC 6901). Relative files start at your workspace."
    },
    "long": {
     "type": "boolean",

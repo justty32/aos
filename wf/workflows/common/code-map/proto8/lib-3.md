@@ -9,15 +9,15 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`aos_json_add/`](../../../../../proto8/lib/aos/aos_json_add/) | json_add 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關） |
-| [`aos_json_get/`](../../../../../proto8/lib/aos/aos_json_get/) | json_get 加料版：follow 穿過 $ref、resolve 把值裡的 $ref／$env 解開（都預設關） |
-| [`aos_json_set/`](../../../../../proto8/lib/aos/aos_json_set/) | json_set 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關） |
 | [`box_check/`](../../../../../proto8/lib/aos/box_check/) | Verify probe markers, executable visibility and host probe paths. |
 | [`box_check/tests/test_acceptance.py`](../../../../../proto8/lib/aos/box_check/tests/test_acceptance.py) | Verify boxed and open definitions through actual sandbox and measure boundaries. |
 | [`defs/`](../../../../../proto8/lib/aos/defs/) | List, group, trace references and check public definition declarations. |
 | [`defs/catalog.py`](../../../../../proto8/lib/aos/defs/catalog.py) | Inspect public definition declarations and group agents by tools, endpoint and knowledge. |
 | [`defs/tests/test_defs.py`](../../../../../proto8/lib/aos/defs/tests/test_defs.py) | Verify public definition discovery, three-axis identity, references and check failures. |
 | [`feedback/`](../../../../../proto8/lib/aos/feedback/) | Submit command usability feedback through aos-feedback without guessing the caller. |
+| [`jsonx_add/`](../../../../../proto8/lib/aos/jsonx_add/) | json_add 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關） |
+| [`jsonx_get/`](../../../../../proto8/lib/aos/jsonx_get/) | json_get 加料版：follow 穿過 $ref、resolve 把值裡的 $ref／$env 解開（都預設關） |
+| [`jsonx_set/`](../../../../../proto8/lib/aos/jsonx_set/) | json_set 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關） |
 | [`judge/`](../../../../../proto8/lib/aos/judge/) | 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false；選填排隊窗 queue.json 先來先掛、keep_ordered 對照代回有序信 |
 | [`judge/tests/test_judge.py`](../../../../../proto8/lib/aos/judge/tests/test_judge.py) | Verify broken reply recovery and restart deduplication with real aos-post mailboxes. |
 | [`knowledge_check/`](../../../../../proto8/lib/aos/knowledge_check/) | 檢查出廠知識庫：指標解析得到、_index 與內容一致沒孤兒、工具與指令各有節點、錯誤代號、開發殘留、大小；只讀不寫。 |

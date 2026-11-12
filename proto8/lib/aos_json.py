@@ -1,8 +1,8 @@
-"""aos_json - 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／set／add／del、複雜組 aos_json_get／set／add 的殼都叫這裡的 main(op)。
+"""aos_json - 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／set／add／del、複雜組 jsonx_get／set／add 的殼都叫這裡的 main(op)。
 
 使用者 11-12（thinking 2026-11/12/json-tools）：「建議做成一個aos_json工具……做兩套」、兩套選 A——簡單組只收路徑＋值、值照字面、
 不碰 $ref／$env／解析文字；複雜組另名，才有指示詞解開與否、穿過 $ref、值從文字或另一格來（圖紙 01-規劃 D1～D24）。
-路徑一律一整串 `檔#/指標`（N-45／N-62：第一個 # 切；指標照 RFC 6901、跟 aos-json／$ref 同一套——`x.json` 與 `x.json#` 是整份，`x.json#/` 是名字為空字串的那個 key，使用者 11-12「按照標準寫法」），檔相對 $AOS_WS、絕對照用。
+路徑一律一整串 `檔#/指標`（N-45／N-62：第一個 # 切；指標照 RFC 6901、跟 aos-json／$ref 同一套——`x.json` 是整份，`x.json#/` 是名字為空字串的那個 key，使用者 11-12「按照標準寫法」；`x.json#` 不收、照 aos-json 報錯，11-12 代定），檔相對 $AOS_WS、絕對照用。
 自己不開檔：讀＝`aos-json get`、寫＝`aos-json set／append／del`（原子寫入、只重寫變的那一塊）；簡單組寫入帶 `--raw`（指示詞物件當普通物件）。
 aos-json 的 stderr 原樣透出，它退 1 時接它錯誤行的代號與原因（C-52 例外：給腦用的工具轉接下層最後一行），沒那行＝CommandFailed。
 上限（json_get 的 max_bytes、ls／search 的 limit）：呼叫參數 › 環境變數 AOS_JSON_MAX_BYTES／AOS_JSON_MAX_ITEMS（tools.json 工具格 env 蓋過行程環境）› 預設 8000／200。
@@ -21,7 +21,7 @@ SIMPLE = {"get": "json_get", "ls": "json_ls", "search": "json_search", "set": "j
 
 
 class Target:
-    """一整串路徑切成：給腦看的檔名、真的檔、指標（"" ＝整份，`x.json#` 也是）。指標原樣交給 aos-json 解（RFC 6901），這裡只切檔名、拆層給走訪用。"""
+    """一整串路徑切成：給腦看的檔名、真的檔、指標（"" ＝整份，只有不帶 # 的 `x.json`）。指標原樣交給 aos-json 解（RFC 6901），這裡只切檔名、拆層給走訪用。"""
     def __init__(self, path):
         cut = path.find("#")
         self.file, ptr = (path, "") if cut < 0 else (path[:cut], path[cut + 1:])
@@ -34,6 +34,10 @@ class Target:
         self.ptr = ptr
         self.real = tool_io.ws_path(self.file)
         self.toks = [t.replace("~1", "/").replace("~0", "~") for t in ptr[1:].split("/")] if ptr else []
+        self.bare_hash = cut >= 0 and not ptr
+        if self.bare_hash:                              # `x.json#` 不剝 #，原樣交給 aos-json、照它的規則報錯（11-12 代定）
+            aos_json(["get", self.real + "#"], t=self)
+            die("PointerBad", "%s: # must be followed by /" % path)
 
     def spec(self, ptr=None):
         ptr = self.ptr if ptr is None else ptr
@@ -67,10 +71,12 @@ def aos_json(argv, value=NO, t=None):
             if t is not None:
                 reason = reason.replace(t.real, t.file)
             reason = (reason.replace("add --parents", 'give "parents": true')
-                      .replace("add --follow", 'use aos_json_get/aos_json_set with "follow": true')
+                      .replace("add --follow", 'use jsonx_get/jsonx_set with "follow": true')
                       .replace("(use append to add at the end)", "(write /- at the end of the path to append)"))
             if code == "FileMissing" and t is not None and t.ptr:
                 reason += " (create it first, e.g. json_set %s with value {})" % t.file
+            if t is not None and t.bare_hash:
+                reason += "; use FILE alone for the whole document: %s" % t.file
             die(code, reason)
     die("CommandFailed", "aos-json %s exited %d (reason on stderr)" % (argv[0], r.returncode))
 
@@ -309,8 +315,8 @@ def do_del(args, t):
 
 
 def main(op, directives=False):
-    """殼的入口：op＝get／ls／search／set／add／del；directives＝複雜組（aos_json_*）。"""
-    name = ("aos_json_" + op) if directives else SIMPLE[op]
+    """殼的入口：op＝get／ls／search／set／add／del；directives＝複雜組（jsonx_*）。"""
+    name = ("jsonx_" + op) if directives else SIMPLE[op]
     tool_io.start(name, "usage: %s < ARGUMENTS.json   (a tool: run it with aos-exec; relative paths start at $AOS_WS)\n"
                         "Result on stdout. On error: one line \"%s: error: CODE reason\" on stderr and stdout, exit 1.\n" % (name, name))
     args = tool_io.arguments("path")

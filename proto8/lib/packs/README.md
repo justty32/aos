@@ -16,7 +16,7 @@
 | 包 | 檔 | 工具 |
 |---|---|---|
 | json（簡單組） | [json.json](json.json) | json_get、json_ls、json_search、json_set、json_add、json_del——路徑一整串 `檔#/指標`、值照字面、`$ref`／`$env` 當普通物件；agent-fsm、eca-claude 兩個範本都掛 |
-| aos_json（複雜組） | [aos_json.json](aos_json.json) | aos_json_get、aos_json_set、aos_json_add——多 `follow`、`resolve`、`text`、`from`、`check`；**範本都不掛**，要的定義在自己 `tools.json` 的 `$override` 多一行 |
+| jsonx（複雜組） | [jsonx.json](jsonx.json) | jsonx_get、jsonx_set、jsonx_add——多 `follow`、`resolve`、`text`、`from`、`check`；**範本都不掛**，要的定義在自己 `tools.json` 的 `$override` 多一行 |
 
 九支的程式都在 [`lib/aos_json.py`](../aos_json.py)，各夾只是殼；圖紙 [01-規劃](../../thinking/2026-11/12/json-tools/01-規劃.md)。
 

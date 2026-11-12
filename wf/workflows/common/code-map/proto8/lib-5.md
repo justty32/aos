@@ -9,7 +9,6 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`aos_json.json`](../../../../../proto8/lib/packs/aos_json.json) | Pack aos_json: JSON tools for aos configuration files that use $ref/$env - aos_json_get, aos_json_set, aos_json_add (follow, resolve, text, from, che… |
 | [`change.json`](../../../../../proto8/lib/packs/change.json) | Pack 2 (change): tools that create or change files - write, edit, copy, move, mkdir. |
 | [`def.json`](../../../../../proto8/lib/packs/def.json) | Pack def: definitions - agent_def (agent definitions), tools_def (new tools from the Python skeleton, and checking a tool). |
 | [`delete.json`](../../../../../proto8/lib/packs/delete.json) | Pack 3 (delete): tools that delete - trash (into the workspace .trash, can be moved back) and remove (for real). |
@@ -17,6 +16,7 @@
 | [`gadgets.json`](../../../../../proto8/lib/packs/gadgets.json) | Pack gadgets: small handy tools - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic expression), do_task (do one task i… |
 | [`goal.json`](../../../../../proto8/lib/packs/goal.json) | Pack goal: one sentence you keep working on - goal (get, set, done, pause, resume); aos reminds you of it when you stop by yourself. |
 | [`json.json`](../../../../../proto8/lib/packs/json.json) | Pack json: plain JSON access, one place at a time by FILE#/POINTER - json_get, json_ls, json_search, json_set, json_add, json_del (values stored exac… |
+| [`jsonx.json`](../../../../../proto8/lib/packs/jsonx.json) | Pack jsonx: JSON tools for aos configuration files that use $ref/$env - jsonx_get, jsonx_set, jsonx_add (follow, resolve, text, from, check options).… |
 | [`knowledge.json`](../../../../../proto8/lib/packs/knowledge.json) | Pack knowledge: knowledge_read, knowledge_write. No default knowledge base: the tools.json that stacks this pack sets one per name (env AOS_KNOWLEDGE… |
 | [`look.json`](../../../../../proto8/lib/packs/look.json) | Pack 1 (look): read-only file tools - read, ls, view, stat, grep, glob. |
 | [`mailbox.json`](../../../../../proto8/lib/packs/mailbox.json) | Pack mailbox: letters - mailbox_peek, mailbox_read, mailbox_send. |
@@ -30,7 +30,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`test_file_tools_paths.py`](../../../../../proto8/lib/tests/test_file_tools_paths.py) | 檔案工具拿掉工作區限制（11-10 tool-packs，使用者「3.對」）：相對從 $AOS_WS、絕對照用，工作區外也能讀寫改搬。 |
-| [`test_json_tools.py`](../../../../../proto8/lib/tests/test_json_tools.py) | json 工具一族（lib/aos_json.py；簡單組 json_*、複雜組 aos_json_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。 |
+| [`test_json_tools.py`](../../../../../proto8/lib/tests/test_json_tools.py) | json 工具一族（lib/aos_json.py；簡單組 json_*、複雜組 jsonx_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。 |
 | [`test_metainfo.py`](../../../../../proto8/lib/tests/test_metainfo.py) | Verify optional metadata reading, timeout declarations, and safe cost formulas. |
 | [`test_observed.py`](../../../../../proto8/lib/tests/test_observed.py) | Verify shared observation initialization, strict failures and measured call cells. |
 | [`test_observed_children.py`](../../../../../proto8/lib/tests/test_observed_children.py) | Verify observed_children: a child's declared accounts are copied (and only those), take_child hands the mark over once. |

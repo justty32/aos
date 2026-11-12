@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# aos_json_set - json_set 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關）
+# jsonx_set - json_set 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關）
 # 殼：邏輯全在 lib/aos_json.py（json 工具一族，thinking 2026-11/12/json-tools）；介面看 _tooldef.json。
 import os, sys
 HERE = os.path.dirname(os.path.realpath(__file__))

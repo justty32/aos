@@ -1,4 +1,4 @@
-"""json 工具一族（lib/aos_json.py；簡單組 json_*、複雜組 aos_json_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。"""
+"""json 工具一族（lib/aos_json.py；簡單組 json_*、複雜組 jsonx_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。"""
 
 import json
 import os
@@ -34,7 +34,7 @@ class JsonToolsTest(unittest.TestCase):
         return json.loads((self.ws / name).read_text())
 
     def run_tool(self, tool, env=None, **args):
-        layer = "aos" if tool.startswith("aos_json_") else "base"
+        layer = "aos" if tool.startswith("jsonx_") else "base"
         return subprocess.run([str(LIB / layer / tool / "_entry")], input=json.dumps(args), text=True,
                               capture_output=True, env=dict(self.env, **(env or {})))
 
@@ -53,7 +53,7 @@ class JsonToolsTest(unittest.TestCase):
     def test_get(self):
         self.assertEqual(json.loads(self.ok("json_get", path="cfg.json#/states/think")), {"exec": "think.py", "next": "act"})
         self.assertEqual(self.ok("json_get", path="cfg.json#/max"), "20")
-        self.assertEqual(json.loads(self.ok("json_get", path="cfg.json#")), self.doc())      # # 後空＝整份
+        self.assertEqual(json.loads(self.ok("json_get", path="cfg.json")), self.doc())       # 只寫檔＝整份
         self.assertEqual(json.loads(self.ok("json_get", path="cfg.json#/r")), {"$ref": "o.json#/x"})   # 指示詞照原文
         self.err("json_get", "PointerMissing", path="cfg.json#/nope")
         self.err("json_get", "PointerBad", path="cfg.json#nope")
@@ -127,14 +127,18 @@ class JsonToolsTest(unittest.TestCase):
         self.ok("json_del", path="cfg.json#/name")
         self.assertEqual((self.doc()["tags"], "name" in self.doc()), (["b"], False))
         self.err("json_del", "PointerMissing", path="cfg.json#/name")
-        self.err("json_del", "TargetBad", path="cfg.json#")
+        self.err("json_del", "TargetBad", path="cfg.json")
 
     def test_root_is_standard(self):
-        """照 RFC 6901（同 aos-json／$ref，使用者 11-12「按照標準寫法」）：x.json 與 x.json# 是整份，x.json#/ 是空字串 key。"""
+        """照 RFC 6901（同 aos-json／$ref，使用者 11-12「按照標準寫法」）：x.json 是整份，x.json#/ 是空字串 key；x.json# 不收（照 aos-json 報 SpecBad，11-12 代定）。"""
         self.write("e.json", {"": {"in": 1}, "a": 2})
         whole = {"": {"in": 1}, "a": 2}
         self.assertEqual(json.loads(self.ok("json_get", path="e.json")), whole)
-        self.assertEqual(json.loads(self.ok("json_get", path="e.json#")), whole)
+        for tool in ("json_get", "json_ls", "json_search", "json_set", "json_add", "json_del", "jsonx_get", "jsonx_set", "jsonx_add"):
+            extra = {"key": "a"} if tool == "json_search" else {"value": 1} if tool[-3:] in ("set", "add") else {}
+            out = self.err(tool, "SpecBad", path="e.json#", **extra)
+            self.assertIn("e.json#: # must be followed by /; use FILE alone for the whole document: e.json", out)
+        self.assertEqual(self.doc("e.json"), whole)
         self.assertEqual(json.loads(self.ok("json_get", path="e.json#/")), {"in": 1})
         self.assertEqual(json.loads(self.ok("json_get", path="e.json#//in")), 1)
         self.assertEqual(self.ok("json_ls", path="e.json#/").split("\n"), ["object, 1 keys", "in"])
@@ -146,36 +150,36 @@ class JsonToolsTest(unittest.TestCase):
         self.err("json_get", "PointerMissing", path="e.json#/")
         self.assertEqual(self.ok("json_add", path="e.json#/", value=[]), "ok e.json#/")
         self.assertEqual(self.doc("e.json"), {"a": 2, "": []})
-        self.assertEqual(self.ok("json_set", path="e.json#", value={"b": 3}), "ok e.json")
+        self.assertEqual(self.ok("json_set", path="e.json", value={"b": 3}), "ok e.json")
         self.assertEqual(self.doc("e.json"), {"b": 3})
-        self.assertEqual(json.loads(self.ok("aos_json_get", path="e.json#")), {"b": 3})
+        self.assertEqual(json.loads(self.ok("jsonx_get", path="e.json")), {"b": 3})
 
     # 複雜組
     def test_aos_get(self):
-        self.assertEqual(json.loads(self.ok("aos_json_get", path="cfg.json#/r/y", follow=True)), 1)
-        self.assertEqual(json.loads(self.ok("aos_json_get", path="cfg.json#/r", resolve=True)), {"y": 1})
-        self.assertEqual(json.loads(self.ok("aos_json_get", path="cfg.json#/r")), {"$ref": "o.json#/x"})
+        self.assertEqual(json.loads(self.ok("jsonx_get", path="cfg.json#/r/y", follow=True)), 1)
+        self.assertEqual(json.loads(self.ok("jsonx_get", path="cfg.json#/r", resolve=True)), {"y": 1})
+        self.assertEqual(json.loads(self.ok("jsonx_get", path="cfg.json#/r")), {"$ref": "o.json#/x"})
 
     def test_aos_set_add(self):
-        self.err("aos_json_set", "FollowMissing", path="cfg.json#/r/y", value=5)
-        self.ok("aos_json_set", path="cfg.json#/r/y", value=5, follow=True)
+        self.err("jsonx_set", "FollowMissing", path="cfg.json#/r/y", value=5)
+        self.ok("jsonx_set", path="cfg.json#/r/y", value=5, follow=True)
         self.assertEqual(self.doc("o.json"), {"x": {"y": 5}})
-        self.ok("aos_json_set", path="cfg.json#/t", text='{"aaa": true}')
-        self.err("aos_json_set", "TextBad", path="cfg.json#/t", text="nope")
-        self.ok("aos_json_set", path="cfg.json#/f", **{"from": "o.json#/x"})
-        self.ok("aos_json_set", path="cfg.json#/kept", value={"$ref": "o.json#/x"})
-        self.ok("aos_json_set", path="cfg.json#/solved", value={"$ref": "o.json#/x"}, resolve=True)
-        self.err("aos_json_set", "ArgumentsBad", path="cfg.json#/t", value=1, text="1")
+        self.ok("jsonx_set", path="cfg.json#/t", text='{"aaa": true}')
+        self.err("jsonx_set", "TextBad", path="cfg.json#/t", text="nope")
+        self.ok("jsonx_set", path="cfg.json#/f", **{"from": "o.json#/x"})
+        self.ok("jsonx_set", path="cfg.json#/kept", value={"$ref": "o.json#/x"})
+        self.ok("jsonx_set", path="cfg.json#/solved", value={"$ref": "o.json#/x"}, resolve=True)
+        self.err("jsonx_set", "ArgumentsBad", path="cfg.json#/t", value=1, text="1")
         d = self.doc()
         self.assertEqual((d["t"], d["f"], d["kept"], d["solved"]), ({"aaa": True}, {"y": 5}, {"$ref": "o.json#/x"}, {"y": 5}))
-        self.ok("aos_json_add", path="cfg.json#/tags/0", text='"z"')
+        self.ok("jsonx_add", path="cfg.json#/tags/0", text='"z"')
         self.assertEqual(self.doc()["tags"], ["z", "a", "b"])
-        self.err("aos_json_add", "KeyExists", path="cfg.json#/t", value=1)
+        self.err("jsonx_add", "KeyExists", path="cfg.json#/t", value=1)
 
     def test_aos_set_check(self):
         self.write("fsm.json", {"start": "a", "states": {"a": {"exec": ["true"], "next": "a"}}})
-        self.err("aos_json_set", "CheckFailed", path="fsm.json#/states/a/exec", value=[], check=True)
-        self.ok("aos_json_set", path="fsm.json#/states/a/exec", value=["false"], check=True)
+        self.err("jsonx_set", "CheckFailed", path="fsm.json#/states/a/exec", value=[], check=True)
+        self.ok("jsonx_set", path="fsm.json#/states/a/exec", value=["false"], check=True)
 
 
 if __name__ == "__main__":

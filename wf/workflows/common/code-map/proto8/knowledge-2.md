@@ -74,9 +74,6 @@
 | [`status.json`](../../../../../proto8/knowledge/aos/status.json) | （檔頭沒有一句話） |
 | [`tools/_description.json`](../../../../../proto8/knowledge/aos/tools/_description.json) | （檔頭沒有一句話） |
 | [`tools/_index.json`](../../../../../proto8/knowledge/aos/tools/_index.json) | 設定（鍵：read.json、ls.json、view.json、stat.json、grep.json、glob.json…） |
-| [`tools/aos_json_add.json`](../../../../../proto8/knowledge/aos/tools/aos_json_add.json) | 設定（鍵：_description） |
-| [`tools/aos_json_get.json`](../../../../../proto8/knowledge/aos/tools/aos_json_get.json) | 設定（鍵：_description） |
-| [`tools/aos_json_set.json`](../../../../../proto8/knowledge/aos/tools/aos_json_set.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/copy.json`](../../../../../proto8/knowledge/aos/tools/copy.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/edit.json`](../../../../../proto8/knowledge/aos/tools/edit.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/glob.json`](../../../../../proto8/knowledge/aos/tools/glob.json) | 設定（鍵：_description、_index、rules、errors） |
@@ -88,6 +85,9 @@
 | [`tools/json_ls.json`](../../../../../proto8/knowledge/aos/tools/json_ls.json) | 設定（鍵：_description） |
 | [`tools/json_search.json`](../../../../../proto8/knowledge/aos/tools/json_search.json) | 設定（鍵：_description） |
 | [`tools/json_set.json`](../../../../../proto8/knowledge/aos/tools/json_set.json) | 設定（鍵：_description、_index、errors） |
+| [`tools/jsonx_add.json`](../../../../../proto8/knowledge/aos/tools/jsonx_add.json) | 設定（鍵：_description） |
+| [`tools/jsonx_get.json`](../../../../../proto8/knowledge/aos/tools/jsonx_get.json) | 設定（鍵：_description） |
+| [`tools/jsonx_set.json`](../../../../../proto8/knowledge/aos/tools/jsonx_set.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/ls.json`](../../../../../proto8/knowledge/aos/tools/ls.json) | 設定（鍵：_description、_index、long、errors） |
 | [`tools/math.json`](../../../../../proto8/knowledge/aos/tools/math.json) | 設定（鍵：_description、_index、errors） |
 | [`tools/mkdir.json`](../../../../../proto8/knowledge/aos/tools/mkdir.json) | 設定（鍵：_description） |

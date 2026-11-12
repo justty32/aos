@@ -1,3 +1,0 @@
-{
- "_description": "# Tool aos_json_add\n\nLike `json_add` (adds, never overwrites), for aos configuration files, with the options of `aos_json_set`: the value from exactly one of `value`, `text`, `from`; `resolve`, `follow`, `check`, `parents`. For plain data use `json_add`.\n\n```json\n{\"path\": \"fsm.json#/states/act/x\", \"text\": \"{\\\"a\\\": true}\"}\n```\nprints `ok fsm.json#/states/act/x`. Already there = `KeyExists`.\n\nPath: `aos/tools/json_get.json#/path`. Errors: `aos/tools/aos_json_set.json#/errors`.\n"
-}

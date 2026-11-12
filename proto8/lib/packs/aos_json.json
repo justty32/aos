@@ -1,5 +1,0 @@
-{"description": "Pack aos_json: JSON tools for aos configuration files that use $ref/$env - aos_json_get, aos_json_set, aos_json_add (follow, resolve, text, from, check options). Not in the templates by default.",
- "tools": {
-           "aos_json_get": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/aos_json_get"}},
-           "aos_json_set": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/aos_json_set"}},
-           "aos_json_add": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/aos_json_add"}}}}

@@ -44,7 +44,7 @@
 
 - [agent_files.py](../agent/agent_files.py)：按 `interfaces.json` 的 `aos-agent.tools`／`llm` 公開宣告取定義與 stack 覆蓋檔的相對位置；cmd、範本與 cli_session 共用 `declared_files`，未宣告＝沒有該介面（11-06 晚 K-5）。
 
-沒收進來的：agent-gus（11-04 隨 demo 刪了）的「小念頭」（11-05 晚另做成工具 thought，11-11 改名 do_task，見上表；11-11 再改成 save／load、不再生子，派工改由 fork）（`thought.json`／`thought.py`）——它是 agent-gus 自己的入口、遞迴起 agent-gus 本身（`shared.launch`），要收就得把整隻 agent-gus 搬進庫；也沒有給模型的 `_tooldef.json`。另外，aos-json 原本自帶的 `tools/json`、`tools/json_edit` 11-06 已收進來：`tools/json_edit` 就是這裡的 `json_rewrite`；`tools/json` 那支 11-12 由 json 工具一族（base 的 `json_*`、aos 的 `aos_json_*`）取代。
+沒收進來的：agent-gus（11-04 隨 demo 刪了）的「小念頭」（11-05 晚另做成工具 thought，11-11 改名 do_task，見上表；11-11 再改成 save／load、不再生子，派工改由 fork）（`thought.json`／`thought.py`）——它是 agent-gus 自己的入口、遞迴起 agent-gus 本身（`shared.launch`），要收就得把整隻 agent-gus 搬進庫；也沒有給模型的 `_tooldef.json`。另外，aos-json 原本自帶的 `tools/json`、`tools/json_edit` 11-06 已收進來：`tools/json_edit` 就是這裡的 `json_rewrite`；`tools/json` 那支 11-12 由 json 工具一族（base 的 `json_*`、aos 的 `jsonx_*`）取代。
 
 ## agent 自己的格（11-03 刪了）
 

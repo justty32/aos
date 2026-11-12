@@ -1,11 +1,11 @@
 {
- "description": "For aos configuration files that use $ref/$env (for plain data use json_get). Same as json_get plus: follow: true goes through $ref on the way; resolve: true returns the value with $ref/$env resolved (default: as written). Example: {\"path\": \"fsm.json#/states/think\", \"follow\": true}. Details: knowledge_read aos/tools/aos_json_get.json.",
+ "description": "For aos configuration files that use $ref/$env (for plain data use json_get). Same as json_get plus: follow: true goes through $ref on the way; resolve: true returns the value with $ref/$env resolved (default: as written). Example: {\"path\": \"fsm.json#/states/think\", \"follow\": true}. Details: knowledge_read aos/tools/jsonx_get.json.",
  "parameters": {
   "type": "object",
   "properties": {
    "path": {
     "type": "string",
-    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone (or FILE#) = the whole document; FILE#/ is the key named \"\" (RFC 6901). Relative files start at your workspace."
+    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone = the whole document; FILE#/ is the key named \"\" (RFC 6901). Relative files start at your workspace."
    },
    "follow": {
     "type": "boolean",

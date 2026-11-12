@@ -1,5 +1,5 @@
 {
- "_description": "# aos-json: read and edit aos JSON files\n\nAddress any value with `FILE#/POINTER`; `$ref` is followed only when you ask. Agents use the json tools (`json_get`, `json_ls`, `json_search`, `json_set`, `json_add`, `json_del`; for $ref/$env files `aos_json_get`, `aos_json_set`, `aos_json_add`); aos-json is for shells and scripts.\n",
+ "_description": "# aos-json: read and edit aos JSON files\n\nAddress any value with `FILE#/POINTER`; `$ref` is followed only when you ask. Agents use the json tools (`json_get`, `json_ls`, `json_search`, `json_set`, `json_add`, `json_del`; for $ref/$env files `jsonx_get`, `jsonx_set`, `jsonx_add`); aos-json is for shells and scripts.\n",
  "_index": {
   "read": {
    "_description": "get, peek and where."
