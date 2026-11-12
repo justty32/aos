@@ -6,7 +6,7 @@
 
 | 層 | 是什麼 | 在哪 |
 |---|---|---|
-| 概念 | aos 怎麼看世界（例：時空＝tick-tock＋資料夾；資料夾＝程式） | [CONCEPTS.md](CONCEPTS.md) |
+| 概念 | aos 怎麼看世界（例：時空＝時鐘＋資料夾；資料夾＝程式） | [CONCEPTS.md](CONCEPTS.md) |
 | 規範 | 從概念推出來、大家都要守的 | 本檔（條文按主題放在 NORMS/ 分檔） |
 | 慣例 | 我們自己人寫 aos agent 時照抄的標準形狀（P-05～P-45），**不要求別人守** | [CONVENTION.md](CONVENTION.md) |
 | 程式 | 符合規範的實作與範例，**不要求一定用** | [proto8/impls](../impls/README.md)（C++，唯一實作：[aos-exec](../impls/aos-exec/README.md)、[aos-loop](../impls/aos-loop/README.md)、[aos-fsm](../impls/aos-fsm/README.md)、[aos-daemon](../impls/aos-daemon/README.md) 等命令列（全表見 impls README），inst 是 C lib [inst](../impls/aos-inst/README.md)、指示詞是 [aos-directive](../impls/aos-directive/README.md) 庫；刻意沒有 aos-inst 命令列）；例外 [proto8/cmd](../cmd/README.md) 是 Python（aos-clock、aos-tools、aos-daemon-ctl、aos-eca-turn 等）；[proto8/templates](../templates/README.md)（agent 範本 eca-claude、agent-fsm 等）。aos-exec／loop／daemon／fsm 只有 C++ 版（使用者 10-23「python版本可以刪掉了。aos-exec/loop/daemon都用C++」） |
