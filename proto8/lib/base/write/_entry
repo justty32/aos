@@ -3,7 +3,7 @@
 # 介面（lib/README 的契約）：stdin 收 {"path", "content"}；stdout 一行說寫了幾 bytes；
 # 路徑：相對從 $AOS_WS 算、絕對照用，不限在工作區裡（11-10 tool-packs）；先寫 . 開頭的暫存檔再改名（N-05）、蓋舊檔時留住它的權限；
 # 錯：stderr 與 stdout 各一行「write: error: 代號 原因」、退 1。來源：demo/pi-tools/write（10-24）。
-import json, os, sys
+import os, sys
 HELP = """\
 usage: write < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Write the whole content into a file (created or replaced; parent folders are

@@ -4,7 +4,7 @@
 # 指令退非 0 不算這個工具的錯（最後一行一律寫 [exit code N]，退 0 也寫、被訊號殺＝128＋N；腦自己看）；逾時（預設 30 秒、上限 300）＝整群先 TERM、2 秒後 KILL、算錯。
 # 這個工具被外面 TERM 時也先停掉指令那一群再走。cwd 是工作區；指令碰得到這台機器上這個使用者碰得到的一切（不是沙盒）。
 # 錯：stderr 與 stdout 各一行「shell: error: 代號 原因」、退 1。來源：demo/pi-tools/bash（10-24；參數 timeout 改名 timeout_s，C-54 單位放字尾；11-10 tool-packs 由 bash 改名 shell）。
-import json, os, signal, subprocess, sys, tempfile, time
+import os, signal, subprocess, sys, tempfile, time
 HELP = """\
 usage: shell < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Run one bash command in the workspace ($AOS_WS); print its stdout+stderr combined

@@ -4,7 +4,7 @@
 # 規則同 pi：每個 old_text 都拿改之前的原檔比、要剛好出現一次、彼此不重疊、不能空；改完跟原本一樣也算錯；
 # 全有或全無；CRLF 的檔照 LF 比、寫回時還原；不做模糊比對。路徑：相對從 $AOS_WS 算、絕對照用（11-10 tool-packs 不限工作區）；
 # 錯：stderr 與 stdout 各一行「edit: error: 代號 原因」、退 1。來源：demo/pi-tools/edit（10-24）。
-import json, os, sys
+import os, sys
 HELP = """\
 usage: edit < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Replace exact text in one file (relative paths start at $AOS_WS), at one or more places; every

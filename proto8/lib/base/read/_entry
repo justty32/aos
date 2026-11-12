@@ -3,7 +3,7 @@
 # 介面（lib/README 的契約）：stdin 收 {"path", "offset"?, "max_lines"?}；stdout 印內容（不加行號）；
 # 路徑：相對從 $AOS_WS 算、絕對照用，不限在工作區裡（11-10 tool-packs，能不能讀看 Linux 權限）；錯：stderr 與 stdout 各一行「read: error: 代號 原因」、退 1。
 # 來源：demo/pi-tools/read（10-24，照 pi 的 read：2000 行或 50KB 先到先算）。
-import json, os, sys
+import os, sys
 HELP = """\
 usage: read < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Read a text file (relative paths start at $AOS_WS; at most 2000 lines or 50KB per call; the end
