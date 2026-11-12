@@ -179,6 +179,8 @@ for a in fsm_ann eca_bob eca_opus eca_cody; do aos-agent ctl add ../agents/$a; d
 - **撞到 build**：21:32 另一條線重 build impls，`aos-fsm` 正在換檔時 fsm_ann 起它＝`LaunchFailed … (Permission denied)`，fsm_ann 停在 `stopped`。停樹、用新的 bin（21:32）重起、`ctl start fsm_ann`，假腦與 eca_tidy 再各驗一次都過。
 - **樹留著跑**（五隻都 running），停樹那行在試驗場 README 最上面一節。
 - **產出已抽查**（可用，命中約九成；十條發現還沒修）：見 [eca-tidy-review](eca-tidy-review.md)。
+- **補掛讀信兩支（11-12 晚 23:0x）**：使用者「他說他沒有看信的工具」「現在就幫我把工具掛上」。原因：eca_tidy 的 `mail_notify` hook 開著，會提醒「Look with mailbox_peek, read with mailbox_read」，但主 agent 只有唯讀 9 支、沒有這兩支（信箱 `new/` 裡有一封 claude-top 的信，它讀不到）。做法：`aos-agent tools --target eca_tidy add -n mailbox_peek --path-json '{"$env": "AOS_HOME", "$path": "/lib/agent/mailbox_peek"}'`（mailbox_read 同），寫進它自己的覆蓋層 `ws/.stack/procs/eca_tidy/tools.json`，定義沒改；`mailbox_send` 不加（維持唯讀整理工），子 agent 那台 `aos_sub` 不動。現在主 agent 11 支。沒停樹、沒重掛 eca_tidy、對話與 `tidy/out/` 沒動；那封信沒替它讀（還在 `new/`）。生效：每輪 `claude -p` 照 `claude/mcp.json` 起新的 aos-mcp（帶 `--own` 這份）＝下一題就看得到；畫面若開著，要在畫面裡 `/mcp` 重連 aos（或關掉畫面再開）才拿到新清單。
+- **搭法通病**：唯讀版 eca 開著 `mail_notify` 卻沒讀信工具＝提醒它去看信、它又看不了。以後搭唯讀 eca：要嘛掛 mailbox_peek／mailbox_read，要嘛關 mail_notify（範本不改）。
 
 **代定**
 
