@@ -47,15 +47,18 @@ class Target:
             die("PointerBad", "%s: after # the pointer must start with /%s" % (path, hint))
         self.ptr = ptr
         self.real = tool_io.ws_path(self.file)
+        # 交給 aos-json 的寫法：照腦給的字面、aos-json 在工作區跑（RUN_CWD），它的錯誤行才不帶本機絕對路徑（11-12 線 errpath，
+        # 使用者「json那個可以修」）；開頭是 - 的補 ./，免得被當旗標。
+        self.arg = "./" + self.file if self.file.startswith("-") else self.file
         self.toks = [t.replace("~1", "/").replace("~0", "~") for t in ptr[1:].split("/")] if ptr else []
         self.bare_hash = cut >= 0 and not ptr
         if self.bare_hash:                              # `x.json#` 不剝 #，原樣交給 aos-json、照它的規則報錯（11-12 代定）
-            aos_json(["get", self.real + "#"], t=self)
+            aos_json(["get", self.arg + "#"], t=self)
             die("PointerBad", "%s: # must be followed by /" % path)
 
     def spec(self, ptr=None):
         ptr = self.ptr if ptr is None else ptr
-        return self.real + ("#" + ptr if ptr else "")
+        return self.arg + ("#" + ptr if ptr else "")
 
     def shown(self, ptr=None):
         ptr = self.ptr if ptr is None else ptr
@@ -69,11 +72,17 @@ def esc(key):
     return str(key).replace("~", "~0").replace("/", "~1")
 
 
+def run_cwd():
+    """aos-json 在哪跑：$AOS_WS（相對路徑就從這裡算，同 tool_io.ws_path）；沒設＝照目前目錄（這時只會有絕對路徑走到這）。"""
+    ws = os.environ.get("AOS_WS")
+    return ws if ws and os.path.isdir(ws) else None
+
+
 def aos_json(argv, value=NO, t=None):
-    """叫 aos-json；退 0 回 stdout。退 1 轉它最後一行的代號與原因（真檔路徑換回腦給的寫法、旗標換成參數名）。"""
+    """叫 aos-json；退 0 回 stdout。退 1 轉它最後一行的代號與原因（腦給的寫法、./ 補的換回去、旗標換成參數名）。"""
     stdin = None if value is NO else json.dumps(value, ensure_ascii=False)
     try:
-        r = subprocess.run(["aos-json"] + argv, input=stdin, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        r = subprocess.run(["aos-json"] + argv, input=stdin, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=run_cwd())
     except OSError as e:
         die("LaunchFailed", "aos-json failed to start (aos-json must be on PATH): %s" % e.strerror)
     if r.returncode == 0:
@@ -83,7 +92,7 @@ def aos_json(argv, value=NO, t=None):
         if line.startswith("aos-json: error: "):
             code, _, reason = line[len("aos-json: error: "):].partition(" ")
             if t is not None:
-                reason = reason.replace(t.real, t.file)
+                reason = reason.replace(t.arg, t.file)
             reason = (reason.replace("add --parents", 'give "parents": true')
                       .replace("add --follow", 'use jsonx_get/jsonx_set with "follow": true')
                       .replace("(use append to add at the end)", "(write /- at the end of the path to append)"))
@@ -302,7 +311,7 @@ def do_add(args, t, directives):
         return append(t, v, wf, rf)
     parent = Target(t.shown(t.parent_ptr()))
     try:
-        r = subprocess.run(["aos-json", "get"] + rf + [parent.spec()], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        r = subprocess.run(["aos-json", "get"] + rf + [parent.spec()], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=run_cwd())
     except OSError as e:
         die("LaunchFailed", "aos-json failed to start (aos-json must be on PATH): %s" % e.strerror)
     if r.returncode != 0:

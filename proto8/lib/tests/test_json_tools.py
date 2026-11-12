@@ -233,6 +233,23 @@ class JsonToolsTest(unittest.TestCase):
         self.ok("json_multi_set", items=[{"path": "cfg.json#/q/z", "value": 1}], parents=True)
         self.assertEqual(self.doc()["q"], {"z": 1})
 
+    def test_errors_carry_no_workspace_path(self):
+        """11-12 線 errpath（使用者「json那個可以修」）：aos-json 在工作區跑、路徑照腦給的字面交下去，
+        它那行錯誤（經 act 的 stderr 尾巴進 history）也不帶本機絕對路徑；給絕對路徑照字面。"""
+        for tool, args in (("json_get", {"path": "none.json"}), ("json_get", {"path": "cfg.json#/nope"}),
+                           ("json_set", {"path": "new.json#/a", "value": 1}), ("json_del", {"path": "cfg.json#/nope"}),
+                           ("jsonx_get", {"path": "cfg.json#/nope"}), ("json_multi_get", {"paths": ["none.json"]})):
+            r = self.run_tool(tool, **args)
+            self.assertEqual(r.returncode, 1, (tool, r.stdout))
+            self.assertNotIn(str(self.ws), r.stdout + r.stderr, tool)
+        r = self.run_tool("json_get", path="none.json")
+        self.assertIn("aos-json: error: FileMissing file not found: none.json", r.stderr)
+        self.write("-dash.json", {"a": 1})
+        self.assertEqual(self.ok("json_get", path="-dash.json#/a"), "1")             # 開頭是 - 也照常
+        self.err("json_get", "PointerMissing", path="-dash.json#/b")
+        absolute = str(self.ws / "none.json")
+        self.assertIn(absolute, self.run_tool("json_get", path=absolute).stdout)  # 呼叫者給的絕對路徑照字面
+
 
 if __name__ == "__main__":
     unittest.main()

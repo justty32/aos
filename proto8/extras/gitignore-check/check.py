@@ -33,15 +33,15 @@ TASKS = {"exec": str(PROTO / "lib/base/llm_fake"), "script": [
     {"when": "now one summary", "tool_calls": [{"name": "fork", "arguments": {"goal": "Say hi.", "keep": True, "timeout_s": 30}}]},
     {"when": "FAKE FORK ANSWER", "content": "FAKE ANSWER tasks"}]}
 # 故意出錯的劇本（11-12 線 errpath：出錯時的錯誤行不帶絕對路徑進 history）：小格寫不進（todo、do_task）、history 的旁檔寫不進
-# （self_history）、檔不在（read）、子 agent 不在。json_get 的檔不在這次查到 aos-json 的 stderr 帶絕對路徑
-# （lib/aos_json.py 交給 aos-json 的是絕對路徑），歸 json 工具那條線，沒放進劇本，見 thinking 2026-11/12/line-k-leftovers。
+# （self_history）、檔不在（read、json_get；json_get 底下 aos-json 那行原本帶絕對路徑，11-12 使用者「json那個可以修」已修）、子 agent 不在。
 # 每支的錯誤行（stdout）與 act 附的 stderr 尾巴都接進 history。
 ERRORS = {"exec": str(PROTO / "lib/base/llm_fake"), "script": [
     {"when": "probe errors", "tool_calls": [{"name": "todo", "arguments": {"op": "add", "text": "cannot be saved"}}]},
     {"when": "todo: error:", "tool_calls": [{"name": "do_task", "arguments": {"op": "start", "task": "Cannot be saved"}}]},
     {"when": "do_task: error:", "tool_calls": [{"name": "self_history", "arguments": {"op": "rm", "range": "1"}}]},
     {"when": "self_history: error:", "tool_calls": [{"name": "read", "arguments": {"path": "missing.txt"}}]},
-    {"when": "FileMissing missing.txt", "tool_calls": [{"name": "subagent", "arguments": {"op": "state", "name": "ghost"}}]},
+    {"when": "FileMissing missing.txt", "tool_calls": [{"name": "json_get", "arguments": {"path": "missing.json#/a"}}]},
+    {"when": "json_get: error:", "tool_calls": [{"name": "subagent", "arguments": {"op": "state", "name": "ghost"}}]},
     {"when": "subagent: error:", "content": "FAKE ANSWER errors"}]}
 HELP = """gitignore-check - optional developer regression check, never part of daemon startup
 
@@ -279,7 +279,8 @@ class Check:
                          fork={"path": str(PROTO / "lib/agent/fork")})
             for name in ("self_history", "subagent"):  # 11-12 故意出錯的劇本（ERRORS）
                 tools[name] = {"path": str(PROTO / "lib/agent" / name)}
-            tools["read"] = {"path": str(PROTO / "lib/base/read")}
+            for name in ("read", "json_get"):
+                tools[name] = {"path": str(PROTO / "lib/base" / name)}
         save(dest / "tools.json", {"tools": tools})
         save(dest / "llm.json", {"model": "fake"})
 
@@ -441,10 +442,10 @@ class Check:
         said = [m.get("content", "") for m in map(json.loads, (w / "history.jsonl").read_text().splitlines()) if m.get("role") == "tool"]
         said = [c for c in said if ": error: " in c]
         self.results["error_lines"] = said
-        missing = [n for n in ("todo", "do_task", "self_history", "read", "subagent") if not any(c.startswith(n + ": error: ") for c in said)]
+        missing = [n for n in ("todo", "do_task", "self_history", "read", "json_get", "subagent") if not any(c.startswith(n + ": error: ") for c in said)]
         if missing:
             raise RuntimeError("the error script did not reach every tool: " + ", ".join(missing))
-        self.note("error lines of todo, do_task, self_history, read, subagent went into the history")
+        self.note("error lines of todo, do_task, self_history, read, json_get, subagent went into the history")
 
     def scan(self, label):
         text = ""

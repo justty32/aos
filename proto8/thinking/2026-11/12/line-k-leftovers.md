@@ -73,7 +73,9 @@
 
 ### 沒修、列給之後
 
-- **json 工具一族**（json 線在改，這條線不碰）：`lib/aos_json.py` 把絕對路徑交給 aos-json，aos-json 的錯誤行經 act 的 stderr 尾巴進 history（實跑確認）。改法建議：在 `$AOS_WS` 跑 aos-json、路徑照呼叫者給的字面交下去。劇本沒放 json_get，免得這條線紅。
+**11-12 使用者：遇到問題再慢慢修**（原話見 [small-rulings § 下午再裁](small-rulings.md#11-12-下午再裁三條agent_def-兩題沙箱與-c-04)：「錯誤路徑那個是細節，後續之後遇到問題再慢慢修，現在先這樣就好，啊json那個可以修。」）——下面除了 json 一項（已修，見下）都照這句不修。
+
+- ~~json 工具一族~~ **11-12 已修**（使用者「json那個可以修」）：`lib/aos_json.py` 原本把 `ws_path` 算好的絕對路徑交給 aos-json，aos-json 的錯誤行經 act 的 stderr 尾巴進 history。改成 aos-json 在 `$AOS_WS` 跑、路徑照腦給的字面交下去（開頭是 `-` 的補 `./`）；對外行為與錯誤代號不變，只動 Python 這層、不動 aos-json 本體。json_get 加回 gitignore-check 的出錯劇本，`test_json_tools` 加斷言（json／jsonx／multi 的錯誤都不帶工作區路徑；給絕對路徑照字面）。
 - knowledge 一族（`knowledge_fs.py` 同型）：同天 knowledge 線整套拿掉，不用修。
 - aos-agent 其他會帶絕對路徑的行：`DaemonMissing`／`DaemonFailed`（`at <daemon 路徑>`）、`StateMissing`、`HistoryMissing`／`InterfaceBad`（定義資料夾）、llm 的 `LlmBad`；**成功行**也有：`aos-agent system` 的 `deleted <檔>; back to the definition's <檔>`、`get --json` 的 `file`、`using the definition's <檔>`（self_system 會原樣轉進 history）。
 - `py/daemon_ctl` 的幾句（`cannot write`、`cannot access reply mailbox`、`cannot inspect stack`）；`lib/agent/hooks.py`、`mail_notify`（hook，進 fsm 的 stderr，不進 history）；`agent_files.py`。
