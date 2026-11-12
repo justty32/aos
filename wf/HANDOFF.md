@@ -12,25 +12,20 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-11-12 22:10 家機頂層 compact 前
+## 2026-11-12 23:00 家機頂層關機前
 
-（短版，給 compact 後的頂層；全貌看下一條「晚 家機頂層收工」；那條在收工前最後一輪只改了測試句、公司機那點與下一步 9。）
+（今晚最終現況；全貌看下一條「晚 家機頂層收工」，該條的 push 與試驗場句以本條為準。）
 
-1. **授權與工作方式**：在家機。頂層只跟使用者說話和調度，事情都交給 agent：普通 opus、雜活 sonnet、使用者的「想法」一律派 fable 隊長、可以找 Argon；agent 可以再派子 agent；非雜活先通讀 wf 規矩。
-   - **push**：使用者開場說「睡前再push」（頂層轉述），23:15 關機；頂層答應過推之前先跟他說一聲。**到現在還沒推，他也還沒回要不要推**。收工文書做完再問一次，他說推才 `git push origin main`（origin 沒有新東西，main 領先約兩百個 commit）。
-   - **額度**：他說已重置、可以盡情用；先前交代過額度到上限就停在原地等他。
-   - **說話**：他說「一下子太多了，我們一個一個來」（頂層轉述）——一次只講一件、一次只問一題；白話、先結論、短。
-2. **兩個 agent 都已收**：fable 沙箱設定壞也略過 → `280a0e303`（環境做不到維持報錯，使用者「既然環境做不到，那這個程式就該報錯」）；sonnet 全套重跑全綠（數字見下一條第 9 點）。
-3. **接下來**：① 問使用者要不要 push（**還沒推、他還沒回**；他說推才 `git push origin main`）；② 推完提醒他停試驗場的樹（`aos-daemon-ctl -d ~/code/playground/.stack shutdown`）——樹開著給他玩 `eca_tidy`（快照是 21:30 左右的舊版；C++ 之後重 build 過，怪怪的就重起）。
-4. **22:00 前後跟他一題一題定下來的**（都已進 thinking）：
-   - metainfo 全是觀點、壞了略過（含沙箱）；`_index` 一筆可多塞任何東西；`_metainfo` 不算 index → [metainfo-views § 使用者裁定](../proto8/thinking/2026-11/12/metainfo-views.md#使用者裁定11-12-晚)
-   - `$ref`／`$at` 定案：不帶 `#` 的照舊、`#/key`、`#/../other.json`、`$at` 接在 `$ref` 後面往下走且不收 `#`（六句原話依序）→ [ref-index-unify § 使用者裁定](../proto8/thinking/2026-11/12/ref-index-unify.md#使用者裁定-11-12-晚)
-   - `$at` 的 `..` 可以走出檔：頂層問要不要擋在根，他答「就這樣」（維持現狀；頂層轉述）→ [ref-index-unify § 使用者裁定](../proto8/thinking/2026-11/12/ref-index-unify.md#使用者裁定-11-12-晚) 第 7 句
-   - kernel 細聊：手（daemon）／門（kernel）、kernel 是主觀的概念、daemon 也是概念；「資源排程別叫 kernel」收回、名字都不改；daemon 心智模型他認可（「我覺得這樣就OK了」）→ [kernel-as-bridge 06](../proto8/thinking/2026-11/12/kernel-as-bridge/06-細聊-手與門.md)
-   - linux user：user＝aos 眼中能收信的對象、一個帳號一整棵樹（C-64 照今晚改：「以今晚爲準。」）、root 小 daemon 先不做（「可以，root小daemon先不做」）、人開的 Claude Code 算樹外樹內不是問題（若是 claude code eca，其他 proc 面對的就是那隻 eca proc）；wait-user 01 那條已移除 → [linux-user](../proto8/thinking/2026-11/12/linux-user.md)
-   - 遊樂場 `eca_tidy` 已備好 → [playground-home](../proto8/thinking/2026-11/12/playground-home.md)（eca_tidy 那節）
-5. **待補文書已做完**（11-12 晚收工前最後一輪）：ref-index-unify「就這樣」、linux-user 與 metainfo-views 新原話、C-64、wait-user 01／03、SESSION-LOG、下一條的測試句與公司機那點、日誌 21:25 之後。
-6. **踩過的坑**：多條線共用工作樹——`git add` 指名路徑後馬上 commit、不 `-A`、不 `git stash`；重 build impls 時試驗場的樹會被影響；全套測試要從空目錄起跑；使用者的話會邊想邊改口，沒定形前叫施工的先停、只備料，定了再動。
+1. **授權與工作方式**：在家機。頂層只跟使用者說話和調度，事情交給 agent（普通 opus、雜活 sonnet、想法派 fable 隊長、可找 Argon；非雜活先通讀 wf 規矩）。說話一次一件、一次一題、白話先結論；要他判斷的題可以直接跳選項框（「有需要我判斷的可以跳選項給我」，已記進 [user/01 說話方式](workflows/common/user/01-說話授權與記憶.md#說話方式)）。23:15 關機。
+2. **push**：第一次已推——使用者「可以push」，`main` 推到 `b03968062`（208 個 commit）。之後又多了未推的 commit（`34cc846a9` 起，含本條文書）；**頂層關機前會再問一次 push，以 `git log origin/main..main` 為準**。
+3. **今晚 22:10 之後做的**（細節在 [日誌](session_logs/2026-11/2026-11-12.md)）：
+   - eca_tidy 產出抽查落檔 → [eca-tidy-review](../proto8/thinking/2026-11/12/eca-tidy-review.md)；使用者「距離睡覺還有四十五分鐘。能修嗎」→ 十條修了九條（1～7、9、10）；第 3 條照選項框「kernel.json 加一個 judge」「同 smart-high（haiku）」（`cc03081e2`）；廢檔 `alt-fable/out2/v4.md` 照「廢檔可以刪。」刪了（`93bd79289`）。
+   - 寄信給 eca_tidy（from claude-top，副本 `~/code/playground/tidy/inbox/2026-11-12-claude-top.md`）；它有 mail_notify（on_clock 每 1 分鐘）卻沒讀信工具，照「現在就幫我把工具掛上」掛了 `mailbox_peek`、`mailbox_read`（`7e5e621f9`）；使用者開著它的 session，要在畫面裡 `/mcp` 重連 aos 才看得到新工具。
+   - 22:00 前後裁定（metainfo 全是觀點、`$ref`／`$at` 定案、kernel 手／門、linux user 一個帳號一整棵樹）都已進 thinking 與 HANDOFF 下一條，不重講。
+4. **測試**：對 `2f51b3d29`～`52b3fa9d2` 之間的樹全套 62 夾 1252 例全綠、measure 連跑三次全過（這台沒裝 pytest，用 `python3 -m unittest discover`）；對最新的樹另有一輪在跑——**最後一輪結果待頂層補**。
+5. **明天接什麼**：① 主 session 接 aos（使用者先重連 aos MCP）→ [wf-to-aos 02](../proto8/thinking/2026-11/12/wf-to-aos/02-寄信給人與主session.md)；② eca-tidy 第 8 條 `feedback/*.jsonl` 帶家目錄路徑（使用者「明天再說」）；③ 範本要不要掛 `jsonx`（甲乙丙，[WAIT_USER 01](wait-user/01-要你裁的.md)）；④ eca_tidy 產出剩 SUMMARY 沒做；⑤ 公司機 pull 後重 build 全部 impls、重跑 `proto8/install.sh`、試驗場重抄（細目見下一條第 7 點）。
+6. **試驗場的樹**：關機前使用者自己停（`aos-daemon-ctl -d ~/code/playground/.stack shutdown`）。
+7. **踩過的坑**：多條線共用工作樹——`git add` 指名路徑後馬上 commit、不 `-A`、不 `git stash`；全套測試從空目錄起跑；唯讀 eca 開 mail_notify 就要掛讀信兩支或關 mail_notify。
 
 ## 2026-11-12 晚 家機頂層收工
 

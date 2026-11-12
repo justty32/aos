@@ -46,13 +46,13 @@
 
 ## 未定
 
-- 十條修哪些、誰修，等使用者說；都沒代定。
+- 十條修了九條（下節）；第 8 條使用者選項框選「明天再說」；第 1 條留下「範本要不要掛 `jsonx`」甲乙丙一題待裁（見下節第 1 條末）。
 
 ## 修了哪些（11-12 晚）
 
 - 第 9 條：已修。[2026-11 月表](../README.md) 11-04 移到 11-05 前；份數照日 README 列數改成 04＝9、05＝16、06＝12、07＝12、08＝6、09＝5、10＝16、11＝16、12＝34（11-12 仍在寫，以修時為準）；[thinking/README](../../README.md) 2026-11 那列改成 142 份、11-01～11-12；11-04 日 README 補列 aos-agent、four-elements、eca-claude-dir，11-10 補列 self-tools、sweeper；其他日 README 逐夾掃過，沒有別的漏列。2026-10 月表份數本來就對。月表 11-06～11-11 那幾列的一句話只講到一兩個題目，沒改。
 - 第 10 條：已修。2026-10 月表與 10-15 日 README 的「沒有指示詞可用（N-45）」改成以現行 N-45 為準（`$env`、`$ref`，`$ref` 可帶 `$at`）；os-concepts README 與其 10 號檔的「C-76／N-65 暫稱」標上已落成 C-83／N-67（草稿本文不動）；C-86、C-89～C-92 在來源夾（10 tonight-rulings、10 aos-tools-cli、07 agent-diversity、10 self-family、11 goal）的 README 導覽列補「條文：」連結。
-- 另：`2026-11/08/alt-fable/out2/v4.md` 全文只有一行用量上限錯誤，沒刪（刪檔要使用者同意）。
+- 另：`2026-11/08/alt-fable/out2/v4.md` 全文只有一行用量上限錯誤，使用者「廢檔可以刪。」已刪（`93bd79289`）。
 - 第 2 條：已修。`knowledge/aos/me.json` 的 `self_state` 段「The ten parts」改成 eleven、列舉補上 `system`（以 `cli/agent.json` 與 `aos-agent ctl state` 的 11 個為準）。
 - 第 3 條：已修。使用者 11-12 晚選項框答覆：問「預設值要怎麼辦」選「kernel.json 加一個 judge」，問「judge 指到哪個模型」選「同 smart-high（haiku）」。`kernel/llm-kernel/kernel.json` 的 `endpoints` 加 `judge`（設定照抄 `smart-high`，summary 註明給 judge-llm 範本用）；`templates/judge-llm/README.md` 改成出廠已有 `judge`、直接搭就能跑、換模型改 kernel.json 那格；`kernel/docs/01` 能力包表補 `judge` 一列、LiteLLM 包共用數改五個；`impls/aos-llm-kernel/docs/01` 的「範本三個 LiteLLM 包」改成不寫數。judge.json 預設不變。
 - 第 4 條：已修。`cmd/aos-mcp-launch` 四處 `tool_io.die` 加 `echo=False`，錯誤行只走 stderr；`lib/agent/tests/test_cli_external_mcp.py` 原有的 PackBad／ArgumentsBad 兩處補 stdout 為空的斷言，另加一例 CommandMissing。
