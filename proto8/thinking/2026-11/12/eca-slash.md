@@ -74,6 +74,34 @@
 - **代定**：S12 只留 user／assistant 的文字；developer／system、工具定義、工具呼叫與結果、`compaction` 項略過。S13 codex 自己塞進 user 的區塊（`<environment_context>` 這種以 `<小寫標籤>` 開頭的）略過。S14 撈不到（沒有 `replacement_history`、裡面沒有對話）＝history 不動、回一句講明。S15 `.compact_seen` 沒有基準時不回頭補以前的壓縮。
 - **實跑**（gpt-6-luna、畫面開著）：先講暗號 MANGO-6 再一句 pong（history 6 則）→ say 送 `/compact`：回「history replaced by the conversation codex kept (6 messages moved…)」，history 變 summary＋codex 留下的 user 話；再問暗號＝MANGO-6。接著在畫面上手打 `/compact`、再經 aos 問暗號：notify 時補做（history 9 則→7 則、`.compact_seen` 1→2），答 MANGO-6；關畫面再問照接同一段 thread、答 MANGO-6。
 
+## /goal（11-12 晚）
+
+使用者原話（逐字）：「啊，eca還有一個slash command我很常用：/goal」「包括/goal clear」「反方向？aos goal工具本來就不會給eca用」
+
+**實測**（claude 2.1.322、codex 0.167.2）：
+
+| | claude | codex |
+|---|---|---|
+| 形式 | `/goal <condition>` 設、`/goal clear` 清（沒有目標時回「No goal set」）、只打 `/goal` 查看（沒有＝「No goal set. Usage: /goal <condition>」）；`clear` 是保留字，照 CLI 自己的判法 | 畫面：`/goal [<objective>\|clear\|edit\|pause\|resume]`，`/goal clear`＝「Goal cleared」，只打 `/goal` 顯示目標、狀態、用時 |
+| 存哪 | 對話檔（transcript）裡的 attachment `goal_status`（condition、met、reason） | rollout 的 `thread_goal_updated`（objective、status）＋ `~/.codex/goals_1.sqlite` |
+| 換 session／thread | 不換 | 不換 |
+| 非互動 | `claude -p` 認：設了就照跑一輪直到判定 met（num_turns 1），但**目標只活在那一次 `claude -p`**，下一次 `-p` 查看＝No goal set | `codex exec` 不認（當題目，模型回「What goal should I track?」） |
+| 畫面裡打 | `/goal 條件` 會跑一輪：UserPromptSubmit／Stop 都叫、turns 多一行；只打 `/goal`、`/goal clear` 不觸發 hook | `/goal 目標` 跑一輪、notify 一次；`/goal`、`/goal clear` 沒有 notify |
+
+**做法**：aos 的 goal（`goal.json`，aos-eca-turn ⑬，`aos-agent goal -t <eca>` 設的那種「queue 空時丟 `[aos] goal:` 提醒」）跟 CLI 的 `/goal` 是兩回事，**不做同步**（使用者「aos goal工具本來就不會給eca用」：eca 的工具裡沒有 self goal；人用 `aos-agent goal` 設的照舊走 ⑬）。只做到「CLI 自己的 goal 經 aos 也用得起來、不被 aos 弄壞」：
+
+- say／chat 送的信以 `/goal` 開頭（`/goal`、`/goal …`；`/goals …` 不算）＝slash 指令（只有它放寬，其他五個照舊要剛好）。畫面開著＝原樣打進畫面（busy 時下一輪再試），回 `[aos] slash: /goal: typed into the open screen…`；沒開＝claude 照一般 `--resume` 原樣交給它、回它的原話；codex＝回一句「codex 只有畫面上有 /goal，請開畫面」。
+- `/status` 多一行「last goal the CLI recorded: 目標 (狀態)」。
+- 畫面裡人自己打：session id、history、turns 都沒被弄亂（實測 claude 畫面 `/goal 條件` 跑一輪、turns 照記、busy 清掉、id 不變）。
+
+**實跑**：haiku 不開畫面 `/goal reply with the single word ok`＝回「Goal acknowledged. ok」，`/status` 顯示「reply with the single word ok (met)」，`/goal clear`＝「No goal set」，`/goal`＝Usage。luna 畫面開著 `/goal reply with the single word ok` 打進去、codex 跑一輪（turns 多一行 ok、thread 不變），`/status` 顯示「(active)」，`/goal clear` 打進去＝「Goal cleared」，之後 `Reply only: pong` 照常進 history。
+
+**代定**：S16 `/goal` 以開頭判（`/goal` 或 `/goal ` 後接任何字），其餘五個照舊要剛好。S17 codex 不開畫面時不代做 goal（exec 沒有），回一句。S18 `/status` 的 goal 只說「CLI 最後記下的」：清掉時兩邊都不另記一筆，所以清了之後還會顯示上一個（codex 也不更新成 complete）。
+
+**題**（使用者回家可接著看）：
+- G1 畫面上 goal 讓 CLI 自己連跑好幾輪時，只有第一輪的回答回到 aos 的 history（經 say 送的那則），之後幾輪只在 turns.jsonl；busy.txt 在第一個 Stop 就清掉，接著經 aos 送的話可能在 CLI 還在跑時就貼進去（CLI 會排隊）。這次的 goal 一輪就達成，沒實測到連跑。要不要把畫面上非 aos 送出的那幾輪也接進 history？
+- G2 `/status` 想正確顯示「現在有沒有 goal」：claude 要另外讀不到清掉的紀錄；codex 可讀 `goals_1.sqlite`（沒試）。
+
 ## 沒試到
 
 - 人真的 `aos-agent open` 接進畫面（要終端機）：改用 `--detach`＋`tmux send-keys`，同一個 tmux。
@@ -86,4 +114,5 @@
 - `cc945235c` say／listen／chat 支援（②）
 - `f9ca77a15` codex 畫面說明與本篇（③）
 - `95db04e50` 第二輪（Q1～Q3）
-- Q5 見 SESSION-LOG 那行
+- `b06c17c1b` Q5
+- `/goal` 見 SESSION-LOG 那行

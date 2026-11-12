@@ -85,6 +85,10 @@
      compacted 再 cli_session.codex_sync_compact（history 換成從 replacement_history 撈出的對話，使用者 Q5；撈不到＝不動、回一句）；
      畫面 hook 在一輪中間跟上 CLI 改了 history（刪掉 .history_sum）＝不算 ⑩ 的「這一輪中間被改」，下一輪不丟對話；
      畫面正在跑一輪（busy.txt）＝這次不動、信留 cur/、下一輪再試。
+     /goal（11-12 晚，使用者「eca還有一個slash command我很常用：/goal」「包括/goal clear」）：只有它放寬成「以 /goal 開頭」（`/goal 目標`、`/goal clear`、
+     只打 `/goal` 查看，照 CLI 自己的判法）。這是 CLI 自己的 goal，跟 aos 的 goal.json（⑬）各管各的、不互相同步：畫面開著＝打進畫面
+     （busy 時下一輪再試）；沒開＝claude 照一般 --resume 原樣交給它（claude -p 認得）；codex exec 不認＝回一句請開畫面。/status 多一行
+     「CLI 最後記下的 goal」（claude transcript 的 goal_status、codex rollout 的 thread_goal_updated；清掉時兩邊都不另記，所以只說最後記下的）。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
   人在畫面上自己打的話不進 history（沒經 queue；eca 方向題 2）。
@@ -180,6 +184,8 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
     and the next message starts a new conversation; /exit = closes the screen. After claude's /compact, history.jsonl is
     replaced by claude's summary (one "[aos] summary: ..." message; the old ones move to history_removed.jsonl). With the
     screen open, /clear and /compact are typed into it (not while it is answering) and the screen hooks keep aos in step.
+    A letter starting with /goal ("/goal TEXT", "/goal clear", "/goal") is the CLI's own goal: typed into an open screen,
+    otherwise handed to claude as it is (codex exec has no /goal: aos says so). /status also shows the last goal the CLI recorded.
 --one (tool form): stdin {"prompt"} -> stdout the answer; the conversation lives in $AOS_STACK itself. --on-empty / --prompt not allowed.
   If the earlier conversation is not on this machine, a warning is printed and a new one is started without a record. No cooldown.
 Needs aos-post on PATH (loop form) and AOS_STACK.
@@ -462,15 +468,50 @@ def note_progress(cfg, cell, stack, before):
 # /usage（印額度）；/status、/exit 回「isn't available in this environment」。codex exec 一個都不認（當成一般題目給模型）。
 # 所以：一批只有一封、內容（去頭尾空白）剛好是下面其中一個＝aos 這層做（CLI 原生認得的才交給它），回答一則 [aos] slash: …；
 # 其他（多封一批、後面還帶字）照一般題目交出去。
+# /goal（11-12 晚，使用者「eca還有一個slash command我很常用：/goal」「包括/goal clear」）只有它放寬成「以 /goal 開頭」（後面帶目標或 clear 等）；
+# 實測 claude -p 認 /goal（`/goal 條件`＝設了就照跑一輪、`/goal clear`、`/goal` 查看；目標只活在那一次 claude -p 裡，下一次查看＝No goal set），
+# codex exec 不認（當成題目），codex 畫面認 `/goal [<objective>|clear|edit|pause|resume]`。
 
 SLASH = ("/clear", "/compact", "/status", "/usage", "/exit")
+GOAL = "/goal"
 
 
 def slash_of(bodies, goal):
     if goal or len(bodies) != 1:
         return None
     text = bodies[0]["content"].strip()
+    if text == GOAL or text.startswith(GOAL + " "):
+        return GOAL
     return text if text in SLASH else None
+
+
+def cli_goal(kind, transcript):
+    """CLI 自己的對話檔裡最後記下的 goal（/status 用）："目標 (狀態)"；沒有＝None。claude＝attachment goal_status（condition、met）；
+    codex＝event thread_goal_updated（objective、status）。11-12 實測：清掉（/goal clear）兩邊都沒另記一筆，所以只說「最後記下的」。"""
+    last = None
+    try:
+        with open(transcript, encoding="utf-8") as f:
+            for line in f:
+                if "goal" not in line:
+                    continue
+                try:
+                    m = json.loads(line)
+                except ValueError:
+                    continue
+                if not isinstance(m, dict):
+                    continue
+                if kind == "claude":
+                    a = m.get("attachment")
+                    if isinstance(a, dict) and a.get("type") == "goal_status" and a.get("condition"):
+                        last = "%s (%s)" % (a["condition"], "met" if a.get("met") else "not met yet")
+                else:
+                    p = m.get("payload") if isinstance(m.get("payload"), dict) else m
+                    g = p.get("goal") if isinstance(p, dict) and p.get("type") == "thread_goal_updated" else None
+                    if isinstance(g, dict) and g.get("objective"):
+                        last = "%s (%s)" % (g["objective"], g.get("status") or "?")
+    except (OSError, TypeError):
+        return None
+    return last
 
 
 def note(text):
@@ -485,9 +526,11 @@ def model_of(cfg):
 def slash_status(cfg, cell, stack):
     sid = cell.read("session.txt")
     found = cli_session.transcripts(cfg["kind"], sid)
-    return note("/status: %s, model %s; conversation %s; screen %s; history %d messages; transcript %s" % (
+    goal = cli_goal(cfg["kind"], found[0]) if found else None
+    return note("/status: %s, model %s; conversation %s; screen %s; history %d messages; transcript %s%s" % (
         cfg["kind"], model_of(cfg), sid or "(none yet: the next message starts one)",
-        "open" if cell.alive() else "closed", len(history_rows(stack)), found[0] if found else "(none)"))
+        "open" if cell.alive() else "closed", len(history_rows(stack)), found[0] if found else "(none)",
+        "; last goal the CLI recorded: %s" % goal if goal else ""))
 
 
 def slash_usage(cfg, ws):
@@ -567,7 +610,25 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
     畫面開著時 /clear、/compact 打進畫面（on_screen；畫面正在跑一輪＝busy.txt 在＝這次不動、信留 cur/、下一輪再試），/exit＝關畫面。"""
     kind, alive = cfg["kind"], cell.alive()
     cleared = None
-    if command == "/status":
+    if command == GOAL:                                             # /goal …：CLI 自己的 goal，aos 只負責交到它手上
+        full = bodies[0]["content"].strip()
+        if alive:
+            if os.path.exists(cell.file("busy.txt")):
+                return 0                                            # 不打斷正在跑的那輪
+            cli_session.type_line(cell, full)
+            text = note("/goal: typed into the open screen; the CLI's own answer shows there (a goal it runs on is also kept in turns.jsonl)")
+        elif kind == "claude":
+            try:
+                got = cli_session.ask(cfg, cell, template, ws, stack, full, on_busy)   # claude -p 認得：設了就照跑一輪
+            except Fail as e:
+                if e.code == "SessionBad":
+                    return 0
+                raise
+            text = got.strip() or note("/goal: claude printed nothing")
+        else:
+            text = note("/goal: codex has /goal only on its screen (codex exec would read it as a plain question); "
+                        "open the screen (aos-agent open) and send it again")
+    elif command == "/status":
         text = slash_status(cfg, cell, stack)
     elif command == "/usage":
         text = slash_usage(cfg, ws)

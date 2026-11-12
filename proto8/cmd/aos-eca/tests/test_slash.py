@@ -98,6 +98,28 @@ class ClaudeSlash(Base):
         self.assertEqual(self.calls()[-1]["stdin"], "/clear\n\nhello")
         self.assertFalse((self.stack / "history_removed.jsonl").exists())
 
+    def test_goal_goes_to_claude_as_typed(self):
+        old = self.first_turn()
+        for text in ("/goal say ok at the end", "/goal clear", "/goal"):
+            self.say(text)
+            self.ok_turn()
+            last = self.calls()[-1]
+            self.assertEqual(last["stdin"], text)
+            self.assertEqual(last["argv"][last["argv"].index("--resume") + 1], old)
+            self.assertEqual(self.answer(), "FAKE: " + text)
+        self.say("/goals are nice")                                 # only "/goal" or "/goal ..." counts; this is plain text
+        self.ok_turn()
+        self.assertEqual(self.calls()[-1]["stdin"], "/goals are nice")
+
+    def test_status_shows_the_last_goal_claude_recorded(self):
+        old = self.first_turn()
+        conv = glob.glob(os.path.join(str(self.home), ".claude", "projects", "*", old + ".jsonl"))[0]
+        with open(conv, "a") as f:
+            f.write(json.dumps({"type": "attachment", "attachment": {"type": "goal_status", "met": False, "condition": "say BANANA"}}) + "\n")
+        self.say("/status")
+        self.ok_turn()
+        self.assertIn("last goal the CLI recorded: say BANANA (not met yet)", self.answer())
+
 
 class CodexSlash(Base):
     kind = "codex"
@@ -127,6 +149,14 @@ class CodexSlash(Base):
         self.assertEqual(len(self.calls()), 1)
         self.assertEqual(self.sid(), "")
         self.assertEqual(len(self.history()), 2)
+
+    def test_goal_without_screen_is_explained(self):
+        self.say("hello")
+        self.ok_turn()
+        self.say("/goal clear")
+        self.ok_turn()
+        self.assertEqual(len(self.calls()), 1)                      # codex exec is not asked
+        self.assertIn("codex has /goal only on its screen", self.history()[-1]["content"])
 
 
 if __name__ == "__main__":
