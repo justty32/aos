@@ -252,7 +252,8 @@ class Subagent(unittest.TestCase):
         (lib / "agent").mkdir(parents=True)
         for f in ("tool_io.py", "observed_children.py", "observed.py"):
             shutil.copy(LIB / f, lib / f)
-        shutil.copy(TOOL.parents[1] / "agents_cmd.py", lib / "agent")
+        for f in ("agents_cmd.py", "cmd_call.py"):
+            shutil.copy(TOOL.parents[1] / f, lib / "agent")
         shutil.copytree(TOOL.parent, lib / "agent" / NAME, ignore=shutil.ignore_patterns("tests", "__pycache__"))
         self.ok({"op": "add", "def": "d", "name": "kid"})
         r = self.run_tool({"op": "hook", "name": "kid", "args": {"op": "ls"}}, tool=lib / "agent" / NAME / "_entry")

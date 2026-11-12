@@ -24,7 +24,7 @@ Result on stdout. On error: one line "agents_ctl: error: CODE reason" on stderr 
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-# 只找自己的工具夾、旁邊的 lib/agent（agents_cmd）、realpath 祖先的 lib，再交給標準 Python 路徑。
+# 只找自己的工具夾、旁邊的 lib/agent（agents_cmd、cmd_call）、realpath 祖先的 lib，再交給標準 Python 路徑。
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
     if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
@@ -35,7 +35,7 @@ try:
     import tool_io  # noqa: E402
     import agents_cmd as cmd  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
-    if error.name not in ("tool_io", "agents_cmd"):
+    if error.name not in ("tool_io", "agents_cmd", "cmd_call"):
         raise
     _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), error.name)
     sys.stderr.write(_line)

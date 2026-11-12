@@ -21,7 +21,7 @@
 #   aos-agent 退非 0＝取它 stderr 最後一行錯誤行的代號與原因接成自己的（C-52 例外 ⑤；AddRejected、AnswerMissing…）。
 #   分身答不出（listen 錯、逾時）＝錯誤行尾附 (details: <分身的 stack>/)，先 ctl stop、stack 一律留（不管 keep）。
 #   aos-agent 的 stderr 原樣透到 stderr（R10）。--help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉那一群，退 130）。
-import json, math, os, re, secrets, shutil, signal, subprocess, sys, time
+import json, math, os, secrets, shutil, signal, subprocess, sys, time
 from datetime import datetime, timedelta, timezone
 HELP = """\
 usage: fork < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
@@ -47,7 +47,7 @@ On error: one line "fork: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-# 只找自己的工具夾、旁邊的 lib/agent（fork_copy）、realpath 祖先的 lib，再交給標準 Python 路徑。
+# 只找自己的工具夾、旁邊的 lib/agent（fork_copy、cmd_call）、realpath 祖先的 lib，再交給標準 Python 路徑。
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
     if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
@@ -58,8 +58,9 @@ try:
     import tool_io  # noqa: E402
     from observed_children import copy_child
     import fork_copy
+    from cmd_call import ERR_RE, kill_group   # 先 TERM 整群、5 秒後 KILL（agents_cmd 同一份）
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
-    if error.name not in ("tool_io", "observed_children", "fork_copy"):
+    if error.name not in ("tool_io", "observed_children", "fork_copy", "cmd_call"):
         raise
     _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), error.name)
     sys.stderr.write(_line)
@@ -69,7 +70,6 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
 NAME = "fork"
 tool_io.start(NAME, HELP)
 die = tool_io.die
-ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
 MAX_CHARS_DEFAULT, TIMEOUT_DEFAULT_S = 600, 600
 MAX_DEPTH = 1                  # 父 0 → 分身 1；分身再叫＝DepthExceeded（代定：分身的分身只是同一段對話再抄一次）
 FAILED_KEEP = 3                # 失敗留下的分身 stack 最多留幾隻（gc，照 do_task）
@@ -85,19 +85,6 @@ AGAIN_NO = "You cannot fork again (fork fails with DepthExceeded in a fork); do 
 AGAIN_YES = "You may fork once more at most (depth {d} of {m})."
 child = None
 running_kid = None
-
-
-def kill_group(p):
-    for sig, wait_s in ((signal.SIGTERM, 5), (signal.SIGKILL, 5)):
-        try:
-            os.killpg(p.pid, sig)
-        except OSError:
-            return
-        try:
-            p.wait(wait_s)
-            return
-        except subprocess.TimeoutExpired:
-            pass
 
 
 def on_term(signum, frame):

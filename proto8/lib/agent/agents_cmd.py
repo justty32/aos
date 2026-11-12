@@ -1,6 +1,7 @@
 """agents_cmd - subagent 與 agents_ctl 共用：查鍵、組 aos-agent ctl 各動作的旗標、跑 aos-agent（或旁邊的 self_*）並把下層錯翻成自己的。
 
 不是工具（沒有 _entry）；兩支工具的 _entry 把 lib/agent/ 放上 sys.path 後 import 它。錯誤行一律走 tool_io.die（名字是 tool_io.start 記的那支）。
+子行程整群收掉的 kill_group 與下層錯誤行的 ERR_RE 在 cmd_call.py。
 來由：thinking 2026-11/10/agents-split 02 施工單「兩支組 ctl add 旗標的程式共用一份」；跑子行程那段（分段等、TERM 先收那一群、下層最後一行錯誤行的
 代號與原因接成自己的，C-52 例外 ⑤）從舊 agents/_entry 搬來。參數跟 aos-agent ctl 一對一：不多給、不多擋；給了才轉（沒給＝下層的預設）。
 相對路徑一律交給下層、cwd＝$AOS_WS（aos-agent 從目前目錄算），這層不換算。
@@ -8,6 +9,7 @@
 import json, math, os, re, signal, subprocess, sys, time
 
 import tool_io
+from cmd_call import ERR_RE, kill_group   # 先 TERM 整群、5 秒後 KILL（fork 同一份）
 
 STEP_S = 90                    # 一般步驟的子行程保險；等 daemon 的動作另取 max(STEP_S, timeout_s + 30)
 CTL_DEFAULT_S = 30             # aos-agent ctl 的 --timeout-s 預設（只用來算保險，不替下層填值）
@@ -27,7 +29,6 @@ def tool_words(text):
     return text
 
 
-ERR_AOS = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
 QUEUED_RE = re.compile(r"queued .+ at position [0-9]+ \(letter ([^;]+); applied when a slot frees\)")
 # ctl add 收的鍵（subagent 的 add、agents_ctl 的 add 同一排）
 ADD_KEYS = ("def", "def_json", "name", "ws", "ws_json", "stack", "stack_json", "limits", "envs", "auto_restart", "timeout_s", "on_queued")
@@ -41,19 +42,6 @@ child = None
 
 
 # ---- 子行程 ----
-def kill_group(p):
-    for sig, wait_s in ((signal.SIGTERM, 5), (signal.SIGKILL, 5)):
-        try:
-            os.killpg(p.pid, sig)
-        except OSError:
-            return
-        try:
-            p.wait(wait_s)
-            return
-        except subprocess.TimeoutExpired:
-            pass
-
-
 def _on_term(signum, frame):
     if child is not None:
         kill_group(child)
@@ -66,7 +54,7 @@ def install_signals():
     signal.signal(signal.SIGINT, _on_term)
 
 
-def run(cmd, text=None, timeout_s=STEP_S, timeout_cycles=None, env=None, err_re=ERR_AOS):
+def run(cmd, text=None, timeout_s=STEP_S, timeout_cycles=None, env=None, err_re=ERR_RE):
     """跑 cmd（cwd＝$AOS_WS）；退 0 回 (stdout, None)，退非 0 回 (stdout, (代號, 原因))：取它 stderr 裡最後一行符合 err_re 的，沒有＝CommandFailed。
     stderr 原樣透到自己的 stderr（R10）。timeout_cycles 給了＝照兩鐘期限短輪詢；不然 timeout_s 秒（分段等，每段最多一天）。"""
     global child
