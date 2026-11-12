@@ -11,7 +11,7 @@ kernel 的 planning 管線（idea → roadmap → 詳規 → 執行）在本專�
 | **詳規** | 怎麼做？ | 規範 [proto8/docs/NORMS](../../proto8/docs/NORMS.md)、agent 慣例 [proto8/docs/CONVENTION](../../proto8/docs/CONVENTION.md)；各程式的行為在它自己的 README（C／C++ 見 [proto8/impls](../../proto8/impls/README.md)）。甲代的 PROTOCOL 與子命令規格 11-05 隨甲代封存 |
 | **執行** | — | [feature-dev](feature-dev/README.md) |
 
-**何時用**：「記個想法」→ proto8/thinking；「接下來做什麼」→ SESSION-LOG；「討論方案／寫動工計畫」→ 先查 thinking 的決定與 CONCEPTS／[NORMS](../../proto8/docs/NORMS.md)，別重想已定的。舊的 ideas 13 章與 roadmap 已封存（10-13）。
+**何時用**：「記個想法」→ proto8/thinking；「接下來做什麼」→ SESSION-LOG；「討論方案／寫動工計畫」→ 先查 thinking 的決定與 CONCEPTS／[NORMS](../../proto8/docs/NORMS.md)，別重想已定的。
 **何時不用**：只是要查清楚 → [investigation](investigation.md)；拿一個明確假設去驗 → [experiments](experiments/README.md)；多個 agent 各自試做 → [hackathon](hackathon/README.md)。
 
 ## 交接
