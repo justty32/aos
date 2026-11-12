@@ -56,11 +56,11 @@ hi
 
 ## 其他自己解 `$ref` 的地方
 
-- **aos-json（`src/follow/`，自己照 aos-directive 的規則走一遍）**：`#/…` 仍當寫法不合（`get --follow` 不穿過，`--resolve` 沒給檔、原封不動），跟庫不一致。這是 json 線的領地，沒改。它的 `Cursor` 有 `file`，要補不難。`./`、`../` 經 `--follow` 實跑可以用。
+- **aos-json（`src/follow/`，自己照 aos-directive 的規則走一遍）**：11-12 晚 json 線跟上（`6b74fec4c`）。
 - **經 aos-directive stdin 的 Python**（`lib/directive_value.py`、`lib/aos_json.py` 的 `value_of`、`cmd/aos-agent/aos_agent/tools.py`）：同一個庫，自然跟上。最外層沒給 `--file`，`#/` 原封不動；`./`、`../` 可以用。`directive_value` 解的是 cli.json 的格，要讓 `#/` 指 cli.json，得改成給 `--file`，牽動 `lib/agent`（別線正在改），沒做。
 - **不用跟的**：`py/daemon_ctl/table.py`（讀 daemon 自己切檔的 `$ref` 陣列，只會是檔名，`os.path.join` 本來就認 `./`、`../`）；`lib/mcp_freeze.py`（JSON Schema 的 `$ref`，是另一種東西，本來就只收 `#/`）。
 
 ## 未定
 
-- aos-json 要不要跟上 `#/`（json 線）。
+- ~~aos-json 要不要跟上 `#/`（json 線）~~：已做（`6b74fec4c`），見 [json-tools 04](json-tools/04-aos-json下沉與len與jsonx-multi.md#追加aos-json-的-ref-收-11-12-晚頂層轉來)。
 - `directive_value` 要不要給 `--file`。

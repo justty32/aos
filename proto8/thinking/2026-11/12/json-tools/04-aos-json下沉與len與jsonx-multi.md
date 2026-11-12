@@ -26,6 +26,21 @@ json_len {"path":"cfg.json#/name"}                 → 3
 jsonx_multi_get {"paths":["cfg.json#/r/y"],"follow":true} → cfg.json#/r/y<TAB>1
 ```
 
+## 追加：aos-json 的 `$ref` 收 `#/…`（11-12 晚，頂層轉來）
+
+使用者：「話說ref應該支援#/開頭吧」（語意、代定 R1～R7 在 [ref-hash](../ref-hash.md)，aos-directive 已做）。aos-json 自己走 `$ref` 的那份（`src/follow/`）跟上（`6b74fec4c`）：
+
+- `{"$ref": "#/a"}`＝寫著它的那份檔的 `/a`；被換進來的檔裡的 `#/x` 指那份被換進來的檔；繞圈、指不到＝`DirectiveBad`；只有 `#`、`#` 後不是 `/` 照舊不算 `$ref`。
+- `get`／`ls`／`search`／`peek` 的 `--follow` 穿過去、`--resolve` 解開（把那份檔交給 aos-directive）；`set`／`add`／`del --follow` 改在同一份檔。jsonx_* 經這些子命令自然跟上。`./`、`../` 本來就通，測試釘住。
+
+```text
+m.json: {"defs":{"cmd":["echo","hi"]},"use":{"$ref":"#/defs/cmd"},"a":{"$ref":"#/b"},"b":{"$ref":"#/a"}}
+aos-json get --follow 'm.json#/use/1'  → "hi"
+aos-json get --resolve 'm.json#/a'     → aos-json: error: DirectiveBad $ref loop: …/m.json#/b → …/m.json#/a → …/m.json#/b
+```
+
+- 順手修的舊 bug：`del --follow` 刪陣列元素會一直刪到陣列空（「刪到指不到為止」那圈原本是給 `$ref` 陣列合起來的 key），改成陣列元素刪一個就停。
+
 ## 代定（接 D39，可翻案）
 
 - **D40 json_len 做出來，D11 作廢**：使用者 11-11 原話列了它。形狀照 json_ls 第一行的「長度」：物件 key 數、陣列項數、字串字元數；純值沒有長度＝`TargetBad`（不回 0、不回型別，免得腦以為是空的）。只有簡單組一支，不做 jsonx_len（`jsonx_ls` 第一行就有）。
@@ -35,11 +50,13 @@ jsonx_multi_get {"paths":["cfg.json#/r/y"],"follow":true} → cfg.json#/r/y<TAB>
 - **D44 aos-json ls／search 不給 `--limit`＝全列**：上限是工具（給腦）那層的事，Python 一律明給。
 - **D45 下沉後幾句錯誤句變了**（都只在錯的時候）：add 中間層不在改帶 `"parents": true` 提示；add 帶指標而檔不在帶 `json_set FILE {}` 提示（同 json_set）；簡單組 add 碰到 `$ref` 物件照原文說「沒有這個 key」，不再叫腦改用 jsonx；json_ls 的 `offset`／`limit` 給錯型別一律先報 `ArgumentsBad`；json_search 的 `key` 不是字串報 `ArgumentsBad`（以前當成沒中）。
 - **D47 depth 的形狀**：子孫一行一個、寫成相對路徑（同 search 命中行一樣能直接接在 path 後面），不做縮排樹；不設上限（`limit` 擋著、`[more]` 給下一頁）；`depth` < 1＝`ArgumentsBad`。
+- **D48 `ref --move` 搬到別檔時，裡面的 `#/…` 改寫成指回原檔**（搬家不改它指的東西）；搬進同一份檔照原樣。它指的若正好是被搬走那塊裡面，搬完會指回原檔已換成 `$ref` 的那格——邊緣狀況，沒處理。
+- **D49 `--resolve` 用的「那份檔」＝值實際所在的檔**（有 `--follow` 就是穿過去那份，跟相對起點同一份，同 ref-hash R1）。
 - **D46 數字比對照 Python**：search 的 `value` 比對 `1` 等於 `1.0`（同原本 Python），`1` 不等於 `"1"`、`true` 不等於 `1`。
 
 ## 驗證
 
-- `impls/aos-json/tests/test_add_ls_search.py` 22 支（對舊 binary 全紅、新的全綠）；`lib/tests` 139、`lib/agent` 64、`templates` 20＋agent-fsm 91、`cmd/aos-tools` 120、`cmd/aos-mcp` 15 全過。aos-json 已重 build（家機）。
+- `impls/aos-json/tests` 31 支（`test_add_ls_search.py` 22、`test_ref_hash.py` 9）（對舊 binary 全紅、新的全綠）；`lib/tests` 139、`lib/agent` 64、`templates` 20＋agent-fsm 91、`cmd/aos-tools` 120、`cmd/aos-mcp` 15 全過。aos-json 已重 build（家機）。
 - 新舊 Python 逐案比對：ls／search 各種路徑與參數（含 `-` 開頭檔名、follow、resolve、up、中文、emoji、`~`／`/` key）輸出一樣；add 寫出的檔一樣。
 - 沒跑真腦（工具說明句型照前兩輪，新工具只有 json_len 一支是腦會常看到的）。
 
