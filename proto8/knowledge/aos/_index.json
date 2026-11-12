@@ -36,7 +36,8 @@
   "description": "What you must not do, and why. Read this before doing anything that changes the system."
  },
  "cli": {
-  "description": "Use these shell commands to manage agents, tools and daemon procs."
+  "description": "Use these shell commands to manage agents, tools and daemon procs.",
+  "index": "cli/_index.json"
  },
  "mailbox.json": {
   "description": "Letters between agents: tools mailbox_peek, mailbox_read, mailbox_send; when you must answer; checking regularly without filling your history."
@@ -48,10 +49,12 @@
   "description": "Making your own tools: tool tools_def (new from the Python skeleton, check) and the Python helper tool_spec."
  },
  "tools": {
-  "description": "One node per stock tool (read, ls, write, edit, trash, shell ...): when to use it and which tool instead, examples with real output, errors."
+  "description": "One node per stock tool (read, ls, write, edit, trash, shell ...): when to use it and which tool instead, examples with real output, errors.",
+  "index": "tools/_index.json"
  },
  "packs.json": {
-  "description": "Your tools come in packs (look, change, delete, shell, gadgets, events, todo, self, subagent, def, mailbox, goal, json, jsonx, index): one sentence per tool, and how a pack is turned off."
+  "description": "Your tools come in packs (look, change, delete, shell, gadgets, events, todo, self, subagent, def, mailbox, goal, json, jsonx, index): one sentence per tool, and how a pack is turned off.",
+  "index": "packs.json#/_index"
  },
  "_description.json": {
   "description": "aos in one page: what aos is, the eight words, five rules, and where to read more."

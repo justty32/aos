@@ -1,5 +1,5 @@
 {
- "description": "Show a node through its index: the notes agents keep about what is under it (KEY<TAB>description). It is a view, not the facts: entries can be missing or stale; for the real contents use ls or json_ls. What an index says about one node X is in the index of X's parent: {\"path\": \"kb\", \"key\": \"app.json\"} (not path kb/app.json). First line \"[index] WHERE, N entries\" names the index read. A key joins back to a path as DIR/KEY (folder) or FILE#/KEY, FILE#/POINTER/KEY (json). An entry is KEY: {\"description\": \"...\"}; to change one, edit the place on the [index] line with json_set / json_add / json_del, e.g. json_set {\"path\": \"kb/_index.json#/app.json\", \"value\": {\"description\": \"App settings\"}}.",
+ "description": "Show a node through its index: the notes agents keep about what is under it (KEY<TAB>description). It is a view, not the facts: entries can be missing or stale; for the real contents use ls or json_ls. What an index says about one node X is in the index of X's parent: {\"path\": \"kb\", \"key\": \"app.json\"} (not path kb/app.json). First line \"[index] WHERE, N entries\" names the index read. An entry may also carry \"index\": a path to another index, shown as a third column \"index: PATH\"; an _index inside a JSON file may itself be such a path string, shown as \"[index link] ...\". These are not followed: to read one, call again with {\"index\": PATH}. A relative path there counts from the folder of the file the index is in; the PATH shown is already joined. A key joins back to a path as DIR/KEY (folder) or FILE#/KEY, FILE#/POINTER/KEY (json). An entry is KEY: {\"description\": \"...\"}; to change one, edit the place on the [index] line with json_set / json_add / json_del, e.g. json_set {\"path\": \"kb/_index.json#/app.json\", \"value\": {\"description\": \"App settings\"}}.",
  "parameters": {
   "type": "object",
   "properties": {
@@ -9,7 +9,7 @@
    },
    "index": {
     "type": "string",
-    "description": "one index table to read (FILE or FILE#/POINTER, pointing at the table itself), e.g. your own view. Alone: only this one. With path: laid over the natural index, its entries win on the same key."
+    "description": "one index table to read (FILE or FILE#/POINTER, pointing at the table itself, or at an _index that is a path string: then only that path is shown), e.g. your own view. Alone: only this one. With path: laid over the natural index, its entries win on the same key."
    },
    "key": {
     "type": "string",

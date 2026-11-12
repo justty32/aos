@@ -6,7 +6,10 @@
 三種給法：只 path＝看節點天然位置那份；只 index＝只看指定的那份；兩個都給＝天然那份為底、疊上指定那份，同名的鍵整項以指定那份為準。
 天然那份有兩處（11-12 metainfo，使用者「index_view也要認_metainfo。」，N-69 推薦讀法、M15）：_metainfo 裡的 index 為底、
 疊上獨立的 _index；再給 index 就是三層，後面蓋前面，都是逐項整項覆蓋。只有獨立那份時輸出跟以前逐字一樣。
-讀檔經 aos_json（aos-json get），錯照轉它最後一行（C-52 例外 ⑤）；`[no index]`、`[no entry]`、`[more]` 退 0。"""
+讀檔經 aos_json（aos-json get），錯照轉它最後一行（C-52 例外 ⑤）；`[no index]`、`[no entry]`、`[more]`、`[index link]` 退 0。
+指到另一份 index 的路徑（11-12 晚，使用者「除了description之外，還可以放index，值必須是字串，必須是路徑，指向另一個_index或_index.json。」
+「json object內的_index這個key……我希望能支援字串，同樣也是路徑」「不跟着往下走。路徑相對...以_index, _index.json的位置爲準。」）：
+每項的 index 欄、檔內 _index 是字串，都只顯示路徑、不往下讀；相對路徑怎麼接只寫在 link() 一處（thinking 2026-11/12/index-link）。"""
 import json
 import os
 
@@ -36,11 +39,34 @@ def read(t):
         aos_json.MULTI = False
 
 
+SHAPE = "an index must be a JSON object {KEY: {\"description\": ...}}, or (as _index inside a JSON file) a path string to another index"
+
+
+def link(where, value):
+    """index 裡寫的路徑 → 腦的寫法（可直接給 index_view 的 index）；不是合法路徑＝None。
+    相對路徑從寫著它的那份 index 所在的資料夾算（使用者 11-12 晚「以_index, _index.json的位置爲準」；檔內 _index 讀成該檔所在的資料夾）；
+    絕對路徑照用；只接檔名那段，# 後的指標照字面。翻案只改這裡。"""
+    if not isinstance(value, str):
+        return None
+    cut = value.find("#")
+    file, ptr = (value, "") if cut < 0 else (value[:cut], value[cut:])
+    if not file or (cut >= 0 and not ptr.startswith("#/")):
+        return None                                     # 空字串、沒檔名、# 後不是 /（`x.json#` 也不收，同 json 工具）
+    if not os.path.isabs(file):
+        file = os.path.normpath(os.path.join(os.path.dirname(where.split("#", 1)[0]), file))
+    return file + ptr
+
+
 def table(t, shown):
+    """明講的那一份：物件＝表；合法路徑字串＝一條連結（不往下讀）；其他＝IndexBad。"""
     v = read(t)
-    if not isinstance(v, dict):
-        tool_io.die("IndexBad", "%s is %s; an index must be a JSON object {KEY: {\"description\": ...}}" % (shown, aos_json.kind(v)))
-    return v
+    return checked(v, shown)
+
+
+def checked(v, where):
+    if isinstance(v, dict) or (isinstance(v, str) and link(where, v) is not None):
+        return v
+    tool_io.die("IndexBad", "%s is %s; %s" % (where, "a string that is not a path" if isinstance(v, str) else aos_json.kind(v), SHAPE))
 
 
 def whole(where):
@@ -49,12 +75,15 @@ def whole(where):
     return read(it) if os.path.exists(it.real) else None
 
 
-def dig(v, keys, where):
-    """順著 keys 往下取；中途不是物件或沒有那個鍵＝None（這一處沒有）；取到的不是物件＝IndexBad（指明哪一處）。"""
+def dig(v, keys, where, text=False):
+    """順著 keys 往下取；中途不是物件或沒有那個鍵＝None（這一處沒有）；取到的不是物件＝IndexBad（指明哪一處）。
+    text：檔內的 _index 也可以是指到另一份 index 的路徑字串（11-12 晚）；資料夾的 _index.json 整份不收字串。"""
     for k in keys:
         if not isinstance(v, dict) or k not in v:
             return None
         v = v[k]
+    if text:
+        return checked(v, where)
     if not isinstance(v, dict):
         tool_io.die("IndexBad", "%s is %s; an index must be a JSON object {KEY: {\"description\": ...}}" % (where, aos_json.kind(v)))
     return v
@@ -114,7 +143,7 @@ def natural(path):
             return [], ("%s is %s, it cannot hold _index. Entries about its items may sit in a parent's index (keys like %s/0): try index_view %s"
                         % (t.shown(), aos_json.kind(node), item, up)), None, None
         mine, skipped = soft(node.get("_metainfo"), "_metainfo")
-        found = [(inside, mine), (outside, dig(node, ["_index"], outside))]
+        found = [(inside, mine), (outside, dig(node, ["_index"], outside, text=True))]
     layers = [(w, v) for w, v in found if v is not None]
     if not layers:
         return [], "%s does not exist" % outside, about, skipped
@@ -125,11 +154,17 @@ def entries(n):
     return "%d entr%s" % (n, "y" if n == 1 else "ies")
 
 
-def line(key, entry):
+def line(key, entry, where):
+    """一項一行：鍵 TAB description，有 index 欄再接 TAB index: 路徑（只顯示、不往下讀）；index 欄壞了只在這一行標出來，其他項照常。"""
     desc = entry.get("description") if isinstance(entry, dict) else None
-    if not isinstance(desc, str):
-        return key                                      # 項目壞掉或沒有 description：只印鍵（C-48，I14）
-    return "%s\t%s" % (key, desc.replace("\r", " ").replace("\n", " ").replace("\t", " "))
+    out = key if not isinstance(desc, str) else "%s\t%s" % (key, desc.replace("\r", " ").replace("\n", " ").replace("\t", " "))
+    if not isinstance(entry, dict) or "index" not in entry:
+        return out                                      # 項目壞掉或沒有 description：只印鍵（C-48，I14）
+    to = link(where, entry["index"])
+    if to is None:
+        to = "bad (%s; must be a path string to another index, e.g. sub/_index.json or a.json#/_index)" % (
+            "not a path" if isinstance(entry["index"], str) else aos_json.kind(entry["index"]))
+    return "%s%s\tindex: %s" % (out, "" if isinstance(desc, str) else "\t", to)
 
 
 def main():
@@ -153,22 +188,29 @@ def main():
     if not layers:
         print("[no index] %s. %s%s" % (missing, about + ". " if about else "", VIEW_NOT_FACTS))
         return
+    links = [(w, link(w, v)) for w, v in layers if isinstance(v, str)]
+    layers = [(w, v) for w, v in layers if isinstance(v, dict)]
+    if not layers:                                      # 只有連結：印路徑、不往下讀（使用者「不跟着往下走」）
+        print("\n".join('[index link] %s points to %s (not followed; to read it: {"index": "%s"})' % (w, to, to) for w, to in links))
+        return
     rows = {}
-    for _, v in layers:
-        rows.update(v)                                  # 同名的鍵整項以後面那層為準；前面那層的順序在前、只在後面那層的接在後面
+    for w, v in layers:
+        rows.update((k, (e, w)) for k, e in v.items())  # 同名的鍵整項以後面那層為準；前面那層的順序在前、只在後面那層的接在後面
     names = [w for w, _ in layers]
     head = names[0] if len(names) == 1 else "%s (on the same key %s wins)" % (
         " + ".join(names), names[-1] if len(names) == 2 else "the later one")
     head = "[index] %s, %s" % (head, entries(len(rows)))
     if missing and "index" in args:
         head += " (natural index: %s)" % missing
+    for w, to in links:
+        head += " (%s points to %s, not followed)" % (w, to)
     if skipped:
         head += " (%s)" % skipped                       # 壞掉的 _metainfo 只略過，標頭說一句（不帶絕對路徑）
     out = [head]
     if "key" in args:
         k = args["key"]
-        out.append(line(k, rows[k]) if k in rows else "[no entry] %s" % k)
+        out.append(line(k, *rows[k]) if k in rows else "[no entry] %s" % k)
     else:
-        lines = [line(k, v) for k, v in rows.items()]
+        lines = [line(k, e, w) for k, (e, w) in rows.items()]
         out += aos_json.page(lines, len(lines), offset, cap)
     print("\n".join(out))

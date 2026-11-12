@@ -175,6 +175,57 @@ class IndexViewTest(unittest.TestCase):
         self.assertEqual(self.ok(path="mj.json#/bad", index="me.json#/views")[0],
                          "[index] me.json#/views, 2 entries (natural index: mj.json#/bad/_index does not exist) (_metainfo index is not an object, skipped)")
 
+    # 11-12 晚 index-link（使用者「還可以放index，值必須是字串，必須是路徑，指向另一個_index或_index.json。」
+    # 「json object內的_index這個key……我希望能支援字串」「不跟着往下走。路徑相對...以_index, _index.json的位置爲準。」）
+    def test_entry_index_field(self):
+        (self.ws / "lk" / "sub").mkdir(parents=True)
+        self.write("lk/_index.json", {"sub": {"description": "Sub folder", "index": "sub/_index.json"},
+                                      "data.json": {"description": "Data", "index": "data.json#/_index"},
+                                      "up": {"index": "../me.json#/views"},                      # 沒有 description：空欄
+                                      "abs": {"description": "A", "index": "/srv/kb/_index.json"},  # 絕對路徑照用
+                                      "num": {"description": "N", "index": 3},                    # 壞的只標這一行
+                                      "hash": {"description": "H", "index": "x.json#a"},
+                                      "empty": {"description": "E", "index": ""},
+                                      "plain": {"description": "P"}})
+        self.assertEqual(self.ok(path="lk"), [
+            "[index] lk/_index.json, 8 entries",
+            "sub\tSub folder\tindex: lk/sub/_index.json",                                     # 從 _index.json 所在的資料夾算
+            "data.json\tData\tindex: lk/data.json#/_index",
+            "up\t\tindex: me.json#/views",
+            "abs\tA\tindex: /srv/kb/_index.json",
+            "num\tN\tindex: bad (number; must be a path string to another index, e.g. sub/_index.json or a.json#/_index)",
+            "hash\tH\tindex: bad (not a path; must be a path string to another index, e.g. sub/_index.json or a.json#/_index)",
+            "empty\tE\tindex: bad (not a path; must be a path string to another index, e.g. sub/_index.json or a.json#/_index)",
+            "plain\tP"])
+        self.assertEqual(self.ok(path="lk", key="sub")[1], "sub\tSub folder\tindex: lk/sub/_index.json")
+        # 不跟著往下走：指到的那份不在也不查
+        self.assertEqual(len(self.ok(path="lk")), 9)
+        # 指定那份裡的 index 欄從指定那份所在的資料夾算；檔內 _index 從該檔所在的資料夾算
+        self.write("lk/sub/v.json", {"_index": {"a": {"description": "A", "index": "a/_index.json"}},
+                                     "views": {"b": {"index": "b.json#/_index"}}})
+        self.assertEqual(self.ok(path="lk/sub/v.json")[1], "a\tA\tindex: lk/sub/a/_index.json")
+        self.assertEqual(self.ok(index="lk/sub/v.json#/views")[1], "b\t\tindex: lk/sub/b.json#/_index")
+
+    def test_index_key_as_link(self):
+        (self.ws / "ln").mkdir()
+        self.write("ln/doc.json", {"_index": "../kb/_index.json", "a": {"_index": "doc.json#/_index"},
+                                   "n": {"_index": 5}, "s": {"_index": "x.json#a"},
+                                   "m": {"_metainfo": {"index": {"q": {"description": "Q"}}}, "_index": "q/_index.json"}})
+        line = '[index link] ln/doc.json#/_index points to kb/_index.json (not followed; to read it: {"index": "kb/_index.json"})'
+        self.assertEqual(self.ok(path="ln/doc.json"), [line])                              # 只印路徑，不往下讀
+        self.assertEqual(self.ok(path="ln/doc.json#/a")[0],
+                         '[index link] ln/doc.json#/a/_index points to ln/doc.json#/_index (not followed; to read it: {"index": "ln/doc.json#/_index"})')
+        self.assertEqual(self.ok(index="ln/doc.json#/_index"),                              # 明講的那份是字串：同樣只印路徑
+                         ['[index link] ln/doc.json#/_index points to kb/_index.json (not followed; to read it: {"index": "kb/_index.json"})'])
+        self.assertEqual(self.ok(path="ln/doc.json#/m"), [                                  # 有別層的表：照列，標頭說一句連結
+            "[index] ln/doc.json#/m/_metainfo/index, 1 entry (ln/doc.json#/m/_index points to ln/q/_index.json, not followed)", "q\tQ"])
+        self.assertEqual(self.ok(path="ln/doc.json", index="me.json#/views")[0],
+                         "[index] me.json#/views, 2 entries (ln/doc.json#/_index points to kb/_index.json, not followed)")
+        self.assertIn("is number", self.err("IndexBad", path="ln/doc.json#/n"))           # 不是物件也不是字串：照舊 IndexBad
+        self.assertIn("a string that is not a path", self.err("IndexBad", path="ln/doc.json#/s"))
+        self.write("ln/_index.json", "kb/_index.json")                                    # 資料夾的 _index.json 整份不收字串
+        self.err("IndexBad", path="ln")
+
 
 if __name__ == "__main__":
     unittest.main()
