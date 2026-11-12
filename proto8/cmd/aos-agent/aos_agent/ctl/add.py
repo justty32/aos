@@ -34,6 +34,9 @@ flags:
       --path-json J   the agent folder as JSON instead of XXX: a string, or {"$env": "X", "$path": "/sub"};
                       the table keeps the directive and resolves it again on every start
       --envs K=V      child environment variable (repeatable; set through an exec single)
+                      the value is stored in plain text in procs/<name>/exec.json and shows on
+                      the command line: never pass secrets here (an MCP token goes in the
+                      server file's env_file, see external-mcp)
       --limits JSON   resource limits, the aos-sandbox keys ('{}' = none)
       --auto-restart  the daemon restarts it whenever it exits (row gets "auto_restart": true);
                       only for agents that stay up; a fire-and-forget agent (eca with
