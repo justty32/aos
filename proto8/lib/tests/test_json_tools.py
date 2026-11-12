@@ -181,6 +181,54 @@ class JsonToolsTest(unittest.TestCase):
         self.err("jsonx_set", "CheckFailed", path="fsm.json#/states/a/exec", value=[], check=True)
         self.ok("jsonx_set", path="fsm.json#/states/a/exec", value=["false"], check=True)
 
+    def test_aos_ls_search_del(self):
+        self.write("o.json", {"x": {"y": 1, "k": {"next": 2}}})
+        self.err("jsonx_ls", "PointerMissing", path="cfg.json#/r/k")             # 不給 follow＝照原文，$ref 物件裡沒有 k
+        self.assertEqual(self.ok("jsonx_ls", path="cfg.json#/r/k", follow=True).split("\n"), ["object, 1 keys", "next"])
+        self.assertEqual(self.ok("jsonx_ls", path="cfg.json#/r", resolve=True).split("\n"), ["object, 2 keys", "y", "k"])
+        self.assertEqual(self.ok("json_search", path="cfg.json", key="next").count("\n"), 1)       # 簡單組看不到 o.json 裡的
+        hits = self.ok("jsonx_search", path="cfg.json", key="next", resolve=True).split("\n")
+        self.assertIn("cfg.json#/r/k/next\tnumber\t2", hits)
+        self.assertEqual(self.ok("jsonx_search", path="cfg.json#/r/k", key="next", follow=True), "cfg.json#/r/k/next\tnumber\t2")
+        self.err("jsonx_search", "ArgumentsBad", path="cfg.json#/r/k", key="next", follow=True, up=True)
+        self.err("jsonx_del", "FollowMissing", path="cfg.json#/r/y")
+        self.assertEqual(self.ok("jsonx_del", path="cfg.json#/r/y", follow=True), "ok cfg.json#/r/y")
+        self.assertEqual(self.doc("o.json"), {"x": {"k": {"next": 2}}})
+        self.assertEqual(self.ok("json_del", path="cfg.json#/r/$ref"), "ok cfg.json#/r/$ref")       # 簡單組＝普通物件
+        self.assertEqual(self.doc()["r"], {})
+
+    # 一次多格
+    def test_multi_get(self):
+        self.assertEqual(self.ok("json_multi_get", paths=["cfg.json#/name", "o.json#/x/y"]), 'cfg.json#/name\t"bob"\no.json#/x/y\t1')
+        r = self.run_tool("json_multi_get", paths=["cfg.json#/max", "cfg.json#/nope", "cfg.json#"], max_bytes=5)
+        lines = r.stdout.rstrip("\n").split("\n")
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(lines[0], "cfg.json#/max\t20")
+        self.assertTrue(lines[1].startswith("cfg.json#/nope\t[error] PointerMissing "), lines[1])
+        self.assertTrue(lines[2].startswith("cfg.json#\t[error] SpecBad "), lines[2])
+        self.assertTrue(lines[3].startswith("json_multi_get: error: PlacesFailed 2 of 3 places failed"), lines[3])
+        self.assertTrue(self.ok("json_multi_get", paths=["cfg.json"], max_bytes=5).startswith("cfg.json\t[too big] object"))
+        self.err("json_multi_get", "ArgumentsBad", paths=[])
+        self.err("json_multi_get", "ArgumentsBad", paths=["cfg.json"], max_bytes=0)
+
+    def test_multi_set(self):
+        out = self.ok("json_multi_set", items=[{"path": "cfg.json#/max", "value": 30}, {"path": "cfg.json#/tags/-", "value": None},
+                                               {"path": "new.json", "value": {"a": "1"}}])
+        self.assertEqual(out, "cfg.json#/max\tok cfg.json#/max\ncfg.json#/tags/-\tok cfg.json#/tags/2\nnew.json\tok new.json")
+        self.assertEqual((self.doc()["max"], self.doc()["tags"], self.doc("new.json")), (30, ["a", "b", None], {"a": "1"}))
+        r = self.run_tool("json_multi_set", items=[{"path": "cfg.json#/q/z", "value": 1}, {"path": "cfg.json#/name", "value": "amy"},
+                                                    {"path": "cfg.json#/x"}, {"path": "cfg.json#/y", "value": 1, "parents": True}])
+        lines = r.stdout.rstrip("\n").split("\n")
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(lines[0].startswith("cfg.json#/q/z\t[error] PointerMissing "), lines[0])
+        self.assertEqual(lines[1], "cfg.json#/name\tok cfg.json#/name")              # 前一格錯不擋後一格、不回滾
+        self.assertEqual(lines[2], "cfg.json#/x\t[error] ArgumentsBad missing value (any JSON)")
+        self.assertTrue(lines[3].startswith("cfg.json#/y\t[error] ArgumentsBad unknown key in item: parents"), lines[3])
+        self.assertTrue(lines[4].startswith("json_multi_set: error: PlacesFailed 3 of 4 places failed"), lines[4])
+        self.assertEqual(self.doc()["name"], "amy")
+        self.ok("json_multi_set", items=[{"path": "cfg.json#/q/z", "value": 1}], parents=True)
+        self.assertEqual(self.doc()["q"], {"z": 1})
+
 
 if __name__ == "__main__":
     unittest.main()

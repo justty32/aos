@@ -1,0 +1,13 @@
+{
+ "summary": "Like json_ls, with $ref/$env options for aos configuration files",
+ "resource": "disk",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true,
+ "cost": {
+  "time_ms": 30
+ },
+ "timeout_ms": 3000
+}

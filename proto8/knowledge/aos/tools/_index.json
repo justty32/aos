@@ -50,14 +50,29 @@
  "json_del.json": {
   "_description": "Tool json_del: delete one key or array item from a JSON file."
  },
+ "json_multi_get.json": {
+  "_description": "Tool json_multi_get: several FILE#/POINTER at once, one line per place; failures per place, PlacesFailed at the end."
+ },
+ "json_multi_set.json": {
+  "_description": "Tool json_multi_set: set several places in order, one line per place; nothing undone if one fails."
+ },
  "jsonx_get.json": {
   "_description": "Tool jsonx_get: json_get for aos configuration files: follow $ref, resolve $ref/$env."
+ },
+ "jsonx_ls.json": {
+  "_description": "Tool jsonx_ls: json_ls for aos configuration files: follow $ref, list the resolved value."
+ },
+ "jsonx_search.json": {
+  "_description": "Tool jsonx_search: json_search for aos configuration files: follow $ref, search the resolved value."
  },
  "jsonx_set.json": {
   "_description": "Tool jsonx_set: json_set for aos configuration files: value, text or from; follow, resolve, check."
  },
  "jsonx_add.json": {
   "_description": "Tool jsonx_add: json_add for aos configuration files, with the options of jsonx_set."
+ },
+ "jsonx_del.json": {
+  "_description": "Tool jsonx_del: json_del for aos configuration files: $ref on the way protected unless follow."
  },
  "trash.json": {
   "_description": "Tool trash: delete so it can be undone (moved into .trash/ in your workspace)."

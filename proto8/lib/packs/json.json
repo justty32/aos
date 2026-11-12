@@ -1,8 +1,10 @@
-{"description": "Pack json: plain JSON access, one place at a time by FILE#/POINTER - json_get, json_ls, json_search, json_set, json_add, json_del (values stored exactly as given; $ref/$env not touched).",
+{"description": "Pack json: plain JSON access, one place at a time by FILE#/POINTER - json_get, json_ls, json_search, json_set, json_add, json_del, json_multi_get, json_multi_set (values stored exactly as given; $ref/$env not touched).",
  "tools": {
            "json_get": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_get"}},
            "json_ls": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_ls"}},
            "json_search": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_search"}},
            "json_set": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_set"}},
            "json_add": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_add"}},
-           "json_del": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_del"}}}}
+           "json_del": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_del"}},
+           "json_multi_get": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_multi_get"}},
+           "json_multi_set": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_multi_set"}}}}

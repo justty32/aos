@@ -1,0 +1,59 @@
+{
+ "description": "For aos configuration files that use $ref/$env (for plain data use json_search). Same as json_search plus: follow: true goes through $ref on the way to the place, resolve: true searches the value with $ref/$env resolved. Hits are paths you can read with jsonx_get and follow: true. up does not work with follow or resolve. Example: {\"path\": \"tools.json\", \"key\": \"env\", \"resolve\": true}. Details: knowledge_read aos/tools/jsonx_search.json.",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone = the whole document; FILE#/ is the key named \"\" (RFC 6901). Relative files start at your workspace."
+   },
+   "follow": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = go through $ref on the way to the place"
+   },
+   "resolve": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = look at the value with $ref/$env resolved (default: as written)"
+   },
+   "key": {
+    "type": "string",
+    "description": "key name to find"
+   },
+   "value": {
+    "description": "value to find (any JSON)"
+   },
+   "contains": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = substring match for key and string values (case-sensitive)"
+   },
+   "up": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = search the ancestors' own keys, nearest level first, instead of everything below"
+   },
+   "limit": {
+    "type": "integer",
+    "default": 200,
+    "description": "at most this many hits (default: env AOS_JSON_MAX_ITEMS, else 200)"
+   }
+  },
+  "required": [
+   "path"
+  ]
+ },
+ "errors": [
+  "ArgumentsBad",
+  "PointerBad",
+  "SpecBad",
+  "FileMissing",
+  "FileBad",
+  "PointerMissing",
+  "DirectiveBad",
+  "LaunchFailed",
+  "CommandFailed",
+  "WsMissing"
+ ]
+}

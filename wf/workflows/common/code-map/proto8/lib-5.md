@@ -15,8 +15,8 @@
 | [`events.json`](../../../../../proto8/lib/packs/events.json) | Pack events: things that wake you later - clock_register (letters from the clock), self_hook (hooks on your own events). |
 | [`gadgets.json`](../../../../../proto8/lib/packs/gadgets.json) | Pack gadgets: small handy tools - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic expression), do_task (do one task i… |
 | [`goal.json`](../../../../../proto8/lib/packs/goal.json) | Pack goal: one sentence you keep working on - goal (get, set, done, pause, resume); aos reminds you of it when you stop by yourself. |
-| [`json.json`](../../../../../proto8/lib/packs/json.json) | Pack json: plain JSON access, one place at a time by FILE#/POINTER - json_get, json_ls, json_search, json_set, json_add, json_del (values stored exac… |
-| [`jsonx.json`](../../../../../proto8/lib/packs/jsonx.json) | Pack jsonx: JSON tools for aos configuration files that use $ref/$env - jsonx_get, jsonx_set, jsonx_add (follow, resolve, text, from, check options).… |
+| [`json.json`](../../../../../proto8/lib/packs/json.json) | Pack json: plain JSON access, one place at a time by FILE#/POINTER - json_get, json_ls, json_search, json_set, json_add, json_del, json_multi_get, js… |
+| [`jsonx.json`](../../../../../proto8/lib/packs/jsonx.json) | Pack jsonx: JSON tools for aos configuration files that use $ref/$env - jsonx_get, jsonx_ls, jsonx_search, jsonx_set, jsonx_add, jsonx_del (follow, r… |
 | [`knowledge.json`](../../../../../proto8/lib/packs/knowledge.json) | Pack knowledge: knowledge_read, knowledge_write. No default knowledge base: the tools.json that stacks this pack sets one per name (env AOS_KNOWLEDGE… |
 | [`look.json`](../../../../../proto8/lib/packs/look.json) | Pack 1 (look): read-only file tools - read, ls, view, stat, grep, glob. |
 | [`mailbox.json`](../../../../../proto8/lib/packs/mailbox.json) | Pack mailbox: letters - mailbox_peek, mailbox_read, mailbox_send. |

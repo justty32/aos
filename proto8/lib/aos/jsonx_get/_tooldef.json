@@ -10,7 +10,7 @@
    "follow": {
     "type": "boolean",
     "default": false,
-    "description": "true = go through $ref on the way and at the value"
+    "description": "true = go through $ref on the way to the value"
    },
    "resolve": {
     "type": "boolean",

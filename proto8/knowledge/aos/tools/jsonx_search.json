@@ -1,0 +1,3 @@
+{
+ "_description": "# Tool jsonx_search\n\nLike `json_search`, for aos configuration files that use `$ref`/`$env`. For plain data use `json_search`.\n\n- `\"follow\": true`: go through `$ref` objects on the way to `path`, then search below it as written.\n- `\"resolve\": true`: search the value with `$ref`/`$env` resolved (hits inside files a `$ref` points to are found too).\n- A hit is the path in the file you gave; read it with `jsonx_get` and `\"follow\": true`.\n- `\"up\": true` does not work with `follow` or `resolve` (`ArgumentsBad`): the levels above a `$ref` are in another file. `key`, `value`, `contains`, `limit`: as in json_search.\n\nPath: `aos/tools/json_get.json#/path`. Errors: `aos/tools/jsonx_set.json#/errors`.\n"
+}

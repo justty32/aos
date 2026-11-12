@@ -1,0 +1,52 @@
+{
+ "description": "For aos configuration files that use $ref/$env (for plain data use json_ls). Same as json_ls plus: follow: true goes through $ref on the way to the place; resolve: true lists the value with $ref/$env resolved (e.g. the merged tool list of a tools.json). Example: {\"path\": \"tools.json#/tools\", \"resolve\": true}. Details: knowledge_read aos/tools/jsonx_ls.json.",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone = the whole document; FILE#/ is the key named \"\" (RFC 6901). Relative files start at your workspace."
+   },
+   "follow": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = go through $ref on the way to the place"
+   },
+   "resolve": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = look at the value with $ref/$env resolved (default: as written)"
+   },
+   "long": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = also print each child's type and size"
+   },
+   "offset": {
+    "type": "integer",
+    "default": 0,
+    "description": "start at this child (for the next page)"
+   },
+   "limit": {
+    "type": "integer",
+    "default": 200,
+    "description": "at most this many children (default: env AOS_JSON_MAX_ITEMS, else 200)"
+   }
+  },
+  "required": [
+   "path"
+  ]
+ },
+ "errors": [
+  "ArgumentsBad",
+  "PointerBad",
+  "SpecBad",
+  "FileMissing",
+  "FileBad",
+  "PointerMissing",
+  "DirectiveBad",
+  "LaunchFailed",
+  "CommandFailed",
+  "WsMissing"
+ ]
+}

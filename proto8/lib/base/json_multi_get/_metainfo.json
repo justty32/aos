@@ -1,0 +1,13 @@
+{
+ "summary": "Get the values at several places of JSON files at once, one line per place",
+ "resource": "disk",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true,
+ "cost": {
+  "time_ms": 100
+ },
+ "timeout_ms": 10000
+}

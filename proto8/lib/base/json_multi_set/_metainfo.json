@@ -1,0 +1,13 @@
+{
+ "summary": "Set several places of JSON files at once, in order, one line per place",
+ "resource": "disk",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "cost": {
+  "time_ms": 100
+ },
+ "timeout_ms": 10000
+}

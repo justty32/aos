@@ -1,0 +1,35 @@
+{
+ "description": "For aos configuration files that use $ref/$env (for plain data use json_del). Same as json_del, but $ref/$env objects on the path are protected: the call fails with FollowMissing unless follow: true, which goes through $ref and deletes in the referenced file (and the matching keys of merged parts). Prints \"ok FILE#/POINTER\". Example: {\"path\": \"tools.json#/tools/shell\", \"follow\": true}. Details: knowledge_read aos/tools/jsonx_del.json.",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone = the whole document; FILE#/ is the key named \"\" (RFC 6901). Relative files start at your workspace."
+   },
+   "follow": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = go through $ref on the way and delete in the referenced file"
+   }
+  },
+  "required": [
+   "path"
+  ]
+ },
+ "errors": [
+  "ArgumentsBad",
+  "PointerBad",
+  "SpecBad",
+  "FileMissing",
+  "FileBad",
+  "PointerMissing",
+  "FollowMissing",
+  "TargetBad",
+  "ValueBad",
+  "WriteFailed",
+  "LaunchFailed",
+  "CommandFailed",
+  "WsMissing"
+ ]
+}

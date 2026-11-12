@@ -15,10 +15,10 @@
 
 | 包 | 檔 | 工具 |
 |---|---|---|
-| json（簡單組） | [json.json](json.json) | json_get、json_ls、json_search、json_set、json_add、json_del——路徑一整串 `檔#/指標`、值照字面、`$ref`／`$env` 當普通物件；agent-fsm、eca-claude 兩個範本都掛 |
-| jsonx（複雜組） | [jsonx.json](jsonx.json) | jsonx_get、jsonx_set、jsonx_add——多 `follow`、`resolve`、`text`、`from`、`check`；**範本都不掛**，要的定義在自己 `tools.json` 的 `$override` 多一行 |
+| json（簡單組） | [json.json](json.json) | json_get、json_ls、json_search、json_set、json_add、json_del，一次多格的 json_multi_get、json_multi_set（11-12）——路徑一整串 `檔#/指標`、值照字面、`$ref`／`$env` 當普通物件；agent-fsm、eca-claude 兩個範本都掛 |
+| jsonx（複雜組） | [jsonx.json](jsonx.json) | jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del——多 `follow`、`resolve`、`text`、`from`、`check`；**範本都不掛**，要的定義在自己 `tools.json` 的 `$override` 多一行 |
 
-九支的程式都在 [`lib/aos_json.py`](../aos_json.py)，各夾只是殼；圖紙 [01-規劃](../../thinking/2026-11/12/json-tools/01-規劃.md)。
+十四支的程式都在 [`lib/aos_json.py`](../aos_json.py)（multi 兩支在 [`lib/aos_json_multi.py`](../aos_json_multi.py)），各夾只是殼；圖紙 [01-規劃](../../thinking/2026-11/12/json-tools/01-規劃.md)。
 
 ## 其他九包（兩個範本都預設開）
 

@@ -36,7 +36,6 @@
 | [`hook_fire/_entry`](../../../../../proto8/lib/agent/hook_fire/_entry) | 發 after_start／after_stop 事件：agent 範本 loop.json 的 on_start／on_stop 叫它（hook_fire EVENT DEF_DIR，$AOS_STACK＝agent 的 stack）。 |
 | [`hook_noop/_entry`](../../../../../proto8/lib/agent/hook_noop/_entry) | 什麼都不做的 hook handler：讀掉 stdin 的事件 JSON、退 0（範本 hooks.json 預設那格 on_clock 的掛點；使用者「預設就是收到信後啥也不做。 |
 | [`hooks.py`](../../../../../proto8/lib/agent/hooks.py) | agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、挑出符合事件的 hook、用 aos-exec 跑、解回話。 |
-| [`json_rewrite/`](../../../../../proto8/lib/agent/json_rewrite/) | 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 act 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。 |
 | [`knowledge_export/`](../../../../../proto8/lib/agent/knowledge_export/) | 把記憶庫（資料夾＋.json 的 JSON 樹）或其中一棵子樹整棵印成一份 Markdown，給人看；唯讀。 |
 | [`knowledge_export/tests/test_export.py`](../../../../../proto8/lib/agent/knowledge_export/tests/test_export.py) | knowledge_export（純 JSON 樹）：node 行、簡介、字串原樣、其他 JSON 包 ```json、表的順序與 not in index、防繞圈、截斷、錯誤。 |
 | [`knowledge_fs.py`](../../../../../proto8/lib/agent/knowledge_fs.py) | 記憶庫（純 JSON 樹）共用：找根（--root 旗標＞寫的工具的呼叫參數 root＞_knowledge.json＞AOS_KNOWLEDGE）、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 $env 格的認法、自己的簡介、列枝幹、find 逛樹的迴圈防護。 |

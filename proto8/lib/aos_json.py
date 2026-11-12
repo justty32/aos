@@ -1,4 +1,4 @@
-"""aos_json - 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／set／add／del、複雜組 jsonx_get／set／add 的殼都叫這裡的 main(op)。
+"""aos_json - 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set 轉 aos_json_multi）。
 
 使用者 11-12（thinking 2026-11/12/json-tools）：「建議做成一個aos_json工具……做兩套」、兩套選 A——簡單組只收路徑＋值、值照字面、
 不碰 $ref／$env／解析文字；複雜組另名，才有指示詞解開與否、穿過 $ref、值從文字或另一格來（圖紙 01-規劃 D1～D24）。
@@ -15,8 +15,22 @@ import sys
 import tool_io
 
 MAX_BYTES, MAX_ITEMS = 8000, 200
-die = tool_io.die
 NO = object()                                   # 沒有值（null 也是值）
+MULTI = False                                   # json_multi_* 逐格做時為 True：錯改成丟 Failed，由 aos_json_multi 記成那一格的結果
+
+
+class Failed(Exception):
+    def __init__(self, code, reason):
+        super().__init__(code, reason)
+        self.code, self.reason = code, reason
+
+
+def die(code, reason):
+    if MULTI:
+        raise Failed(code, reason)
+    tool_io.die(code, reason)
+
+
 SIMPLE = {"get": "json_get", "ls": "json_ls", "search": "json_search", "set": "json_set", "add": "json_add", "del": "json_del"}
 
 
@@ -155,8 +169,8 @@ def page(lines, total, offset, cap, hint=None):
     return shown
 
 
-def do_ls(args, t):
-    v = read(t)
+def do_ls(args, t, flags=()):
+    v = read(t, flags=flags)
     out = [head(v) + (" (index 0..%d)" % (len(v) - 1) if isinstance(v, list) and v else "")]
     if isinstance(v, (dict, list)):
         items = list(v.items()) if isinstance(v, dict) else list(enumerate(v))
@@ -168,7 +182,7 @@ def do_ls(args, t):
     return "\n".join(out)
 
 
-def do_search(args, t):
+def do_search(args, t, flags=()):
     if "key" not in args and "value" not in args:
         die("ArgumentsBad", "give key, value, or both")
     key, has_value, want, contains = args.get("key"), "value" in args, args.get("value"), bool(args.get("contains"))
@@ -187,12 +201,17 @@ def do_search(args, t):
         items = node.items() if isinstance(node, dict) else enumerate(node) if isinstance(node, list) else ()
         return [(k, x, "%s/%s" % (ptr, esc(k))) for k, x in items]
 
-    read(t)                                             # 指不到照轉 aos-json 的錯
-    doc = read(t, ptr="")
-    node, chain = doc, [(doc, "")]
-    for tok in t.toks:                                  # 原文照走（同 aos-json get 不加 --follow）
-        node = node[int(tok)] if isinstance(node, list) else node[tok]
-        chain.append((node, chain[-1][1] + "/" + esc(tok)))
+    if flags:                                           # jsonx_search：從穿過／解開後的那格往下找；祖先跨檔說不清，不配 up
+        if args.get("up"):
+            die("ArgumentsBad", "up does not work with follow or resolve")
+        node, chain = read(t, flags=flags), []
+    else:
+        read(t)                                         # 指不到照轉 aos-json 的錯
+        doc = read(t, ptr="")
+        node, chain = doc, [(doc, "")]
+        for tok in t.toks:                              # 原文照走（同 aos-json get 不加 --follow）
+            node = node[int(tok)] if isinstance(node, list) else node[tok]
+            chain.append((node, chain[-1][1] + "/" + esc(tok)))
     found = []
     if args.get("up"):
         for anc, ptr in reversed(chain[:-1]):
@@ -307,31 +326,41 @@ def do_add(args, t, directives):
     die("TargetBad", "%s is %s; it cannot hold a key or item" % (parent.shown(), kind(par)))
 
 
-def do_del(args, t):
+def do_del(args, t, directives=False):
     if not t.toks:
         die("TargetBad", "will not delete a whole file (use remove or trash)")
-    aos_json(["del", "--raw", t.spec()], t=t)
+    flags = (["--follow"] if args.get("follow") else []) if directives else ["--raw"]
+    aos_json(["del"] + flags + [t.spec()], t=t)
     return "ok " + t.shown()
 
 
+def read_flags(args, directives):
+    """複雜組讀的旗標：follow 穿過 $ref、resolve 解開指示詞（都要腦明講）；簡單組不帶。"""
+    if not directives:
+        return []
+    return (["--follow"] if args.get("follow") else []) + (["--resolve"] if args.get("resolve") else [])
+
+
 def main(op, directives=False):
-    """殼的入口：op＝get／ls／search／set／add／del；directives＝複雜組（jsonx_*）。"""
+    """殼的入口：op＝get／ls／search／set／add／del（directives＝複雜組 jsonx_*）或 multi_get／multi_set（交給 aos_json_multi）。"""
+    if op.startswith("multi_"):
+        import aos_json_multi
+        return aos_json_multi.main(op[len("multi_"):])
     name = ("jsonx_" + op) if directives else SIMPLE[op]
-    tool_io.start(name, "usage: %s < ARGUMENTS.json   (a tool: run it with aos-exec; relative paths start at $AOS_WS)\n"
-                        "Result on stdout. On error: one line \"%s: error: CODE reason\" on stderr and stdout, exit 1.\n" % (name, name))
+    start(name)
     args = tool_io.arguments("path")
     t = Target(args["path"])
-    if op == "get":
-        flags = (["--follow"] if args.get("follow") else []) + (["--resolve"] if args.get("resolve") else []) if directives else []
-        out = do_get(args, t, flags)
-    elif op == "ls":
-        out = do_ls(args, t)
-    elif op == "search":
-        out = do_search(args, t)
+    if op in ("get", "ls", "search"):
+        out = {"get": do_get, "ls": do_ls, "search": do_search}[op](args, t, read_flags(args, directives))
     elif op == "set":
         out = do_set(args, t, directives)
     elif op == "add":
         out = do_add(args, t, directives)
     else:
-        out = do_del(args, t)
+        out = do_del(args, t, directives)
     print(out)
+
+
+def start(name):
+    tool_io.start(name, "usage: %s < ARGUMENTS.json   (a tool: run it with aos-exec; relative paths start at $AOS_WS)\n"
+                        "Result on stdout. On error: one line \"%s: error: CODE reason\" on stderr and stdout, exit 1.\n" % (name, name))

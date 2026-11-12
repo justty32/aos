@@ -1,5 +1,8 @@
-{"description": "Pack jsonx: JSON tools for aos configuration files that use $ref/$env - jsonx_get, jsonx_set, jsonx_add (follow, resolve, text, from, check options). Not in the templates by default.",
+{"description": "Pack jsonx: JSON tools for aos configuration files that use $ref/$env - jsonx_get, jsonx_ls, jsonx_search, jsonx_set, jsonx_add, jsonx_del (follow, resolve, text, from, check options). Not in the templates by default.",
  "tools": {
            "jsonx_get": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/jsonx_get"}},
+           "jsonx_ls": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/jsonx_ls"}},
+           "jsonx_search": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/jsonx_search"}},
            "jsonx_set": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/jsonx_set"}},
-           "jsonx_add": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/jsonx_add"}}}}
+           "jsonx_add": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/jsonx_add"}},
+           "jsonx_del": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/jsonx_del"}}}}
