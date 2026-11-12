@@ -12,7 +12,7 @@
 - **open｜使用者自己從零搭小樹（一個 daemon＋一隻 opus eca）**：照抄步驟已寫好，等他自己做 → [ops-notes-to-aos](../proto8/thinking/2026-11/12/ops-notes-to-aos.md#從零搭一棵小樹一個-daemon一隻懂-aos-的-opus-eca使用者自己做)
 - **open｜搬兩隻 Codex agent 進 aos**：盤點完，等使用者拿真 token 起第一隻（WAIT_USER） → [ops-notes-to-aos](../proto8/thinking/2026-11/12/ops-notes-to-aos.md)
 - **open｜eca 子 agent 與 skill**：claude 身已施工、codex 身只調查；畫面那條路沒驗、U1／U2 待裁 → [eca-task-subagent](../proto8/thinking/2026-11/12/eca-task-subagent.md)
-- **open｜index**：未定三題（鍵的路徑相對誰、過時、專屬工具）；index-link 代定待看 → [index](../proto8/thinking/2026-11/12/index.md)、[index-link](../proto8/thinking/2026-11/12/index-link.md)
+- **open｜index**：index 裡的路徑已照 json／檔案系統同像從裝著它的資料夾或物件算（`c7cf43613`）；仍未定：同一節點多處有 index 聽誰的、過時、鍵能不能跨層、專屬工具；index-link 代定 L7～L10 待看 → [index](../proto8/thinking/2026-11/12/index.md)、[index-link](../proto8/thinking/2026-11/12/index-link.md)
 - **open｜外部 MCP**：兩半都做完；待裁與代定在 WAIT_USER；沒驗的、留題（`--envs` 明文、server 壞了 aos 看不到、常駐 proc）、沒經 Argon 審見 08 → [external-mcp 08](../proto8/thinking/2026-11/12/external-mcp/08-fsm施工結果.md)、[06](../proto8/thinking/2026-11/12/external-mcp/06-施工結果.md)
 - **open｜json 工具續行**：aos-json 的 add／ls／search、json_len、複雜組 multi → [json-tools 03](../proto8/thinking/2026-11/12/json-tools/03-multi與複雜組補齊.md)
 - **open｜通用 kernel 框架**：圖紙出了、開工等假日（兩處待使用者，WAIT_USER）；只設 `AOS_KERNEL` 仍 `DaemonMissing`、N-28「壞信不回信」那句過時沒改 → [kernel-framework](../proto8/thinking/2026-11/12/kernel-framework/README.md)、[kernel-small-fixes](../proto8/thinking/2026-11/12/kernel-small-fixes.md)
