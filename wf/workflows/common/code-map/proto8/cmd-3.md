@@ -68,3 +68,4 @@
 | [`examples/subagent-boxed/sandbox-kernel.json`](../../../../../proto8/cmd/aos-sandbox/examples/subagent-boxed/sandbox-kernel.json) | Sandbox (mode 2, judge in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm letters must g… |
 | [`examples/subagent-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/subagent-boxed/sandbox.json) | Sandbox (mode 1, no judge) for a tool that talks to the daemon (subagent; agents_ctl and self_tools the same way): rw the daemon stack AOS_DAEMON (le… |
 | [`root/setup.sh`](../../../../../proto8/cmd/aos-sandbox/root/setup.sh) | 沙箱的「身分層」要 root 做的事：裝 s6 到 /usr/local、建帳號 aos-run、給它一個工作的地方、讓我（$SUDO_USER）能換成它 |
+| [`tests/test_sandbox.py`](../../../../../proto8/cmd/aos-sandbox/tests/test_sandbox.py) | Verify aos-sandbox treats a broken config as not written (runs prog unsandboxed with a warning) and keeps real errors. |
