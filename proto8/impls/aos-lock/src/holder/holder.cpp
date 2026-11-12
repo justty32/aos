@@ -9,7 +9,6 @@
 #include <limits>
 
 #include <cerrno>
-#include <chrono>
 #include <cstdio>
 #include <ctime>
 
@@ -17,11 +16,6 @@
 #include <unistd.h>
 
 namespace aos::lock {
-
-long long now_ms() {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(
-               std::chrono::system_clock::now().time_since_epoch()).count();
-}
 
 std::optional<long long> parse_at(const std::string& at) {
     int y = 0, mo = 0, d = 0, h = 0, mi = 0, s = 0, ms = 0, used = 0;
@@ -77,7 +71,7 @@ Seen look(const std::string& lock_dir) {
     s.held = true;
     s.ino = (unsigned long long)st.st_ino;
     long long mtime_ms = (long long)st.st_mtim.tv_sec * 1000LL + st.st_mtim.tv_nsec / 1000000L;
-    s.age_ms = now_ms() - mtime_ms;
+    s.age_ms = aos::utc_now_epoch_ms() - mtime_ms;
     int err = 0;
     s.raw = aos::read_file(aos::join(lock_dir, "holder.json"), err);
     if (s.raw) {
@@ -149,7 +143,7 @@ bool reapable(const Seen& s) {
         return *cycle >= *at_cycle && *cycle - *at_cycle >= *lease;
     }
     // 用寬整數比較，乘法與期限加法都不溢位。
-    return static_cast<__int128>(now_ms()) >= static_cast<__int128>(*at) +
+    return static_cast<__int128>(aos::utc_now_epoch_ms()) >= static_cast<__int128>(*at) +
         static_cast<__int128>(*lease) * aos::clock_interval_ms();
 }
 
