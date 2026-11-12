@@ -1,16 +1,16 @@
-← [回入口 README.md](../README.md)｜段落：新功能原型的假腦劇本（11-05 午 feat-proto）｜上一份：[02-kernel-modes](02-kernel-modes.md)｜下一份：—
+← [回入口 README.md](../README.md)｜段落：新功能原型的假腦劇本（feat-proto）｜上一份：[02-kernel-modes](02-kernel-modes.md)｜下一份：—
 
-## 新功能原型的假腦劇本：agent 自改工具、能力包與排程、agent 生 agent、資源份額（11-05 午）
+## 新功能原型的假腦劇本：agent 自改工具、能力包與排程、agent 生 agent、資源份額
 
 使用者 11-05 午：「讓agent給自己改tool，把endpoint打包成smart-high, stupid-fast, ...這類，並且附上各種屬性(各種temperature也固定)，讓kernel能根據信件中額外附送的priority之類資訊做排程，讓agent利用aos指令產出另一個agent」「啊，還有，會想要限制特定aos proc所占用的資源。以及daemon/kernel自己本身被限制占用資源，並且會分配份額給proc」。設計：[thinking feat-proto](../../thinking/2026-11/05/feat-proto/README.md)。
 
-下面四段都是假腦（[01](01-llm-kernel.md) 的 `fake-demo-*` 包照劇本回答），零成本、可重跑；每段從空的 `/tmp/feat-s9-*` 起、各起自己的 llm daemon（背景，`K=$!`／`D=$!` 記 pid），跑完 `kill` 收工。PATH 放 `proto8/impls/*/bin`、`proto8/cmd/*/bin`（或跑過 `proto8/install.sh`）；`P` 換成你的 repo。11-05 在 WSL 照抄跑過。
+下面四段都是假腦（[01](01-llm-kernel.md) 的 `fake-demo-*` 包照劇本回答），零成本、可重跑；每段從空的 `/tmp/feat-s9-*` 起、各起自己的 llm daemon（背景，`K=$!`／`D=$!` 記 pid），跑完 `kill` 收工。PATH 放 `proto8/impls/*/bin`、`proto8/cmd/*/bin`（或跑過 `proto8/install.sh`）；`P` 換成你的 repo。
 
 ### 件 1：agent 給自己加工具（`self_tools`）
 
 ```sh
 P=~/repo/simple_tools/aos/proto8
-export AOS_HOME=$P                                                # 範本與 kernel 的路徑都寫 {"$env": "AOS_HOME", …}（11-10 templates-cp）
+export AOS_HOME=$P                                                # 範本與 kernel 的路徑都寫 {"$env": "AOS_HOME", …}
 T=/tmp/feat-s9-self && rm -rf $T && mkdir -p $T/ws/.stack && cd $T
 aos-exec --stack $T/k $P/kernel/llm-kernel > k.log 2>&1 & K=$!     # llm daemon（假腦包都在它的 kernel.json）；K 記它的 pid 好收工
 export AOS_LLM_KERNEL=$T/k
@@ -18,7 +18,7 @@ echo '{"interval_ms": 300}' > daemon.json
 AOS_STACK=$T/ws/.stack/ aos-daemon daemon.json > d.log 2>&1 & D=$!   # 跑 agent 的 daemon（環境帶著 AOS_LLM_KERNEL）
 sleep 1 && cd ws                                                   # cwd 有 .stack＝aos-agent 找得到 daemon
 aos-agent ctl add --name fsm1 $P/templates/agent-fsm
-aos-agent llm --target fsm1 set endpoint=fake-demo-self                # 換成劇本腦（self_tools 範本內建，11-05 使用者裁「內建」）
+aos-agent llm --target fsm1 set model=fake-demo-self                   # 換成劇本腦（self_tools 範本內建，使用者裁「內建」）
 aos-agent say --target fsm1 give yourself a math tool && aos-agent listen --target fsm1
 # I added math to my own tools and used it right away: 17*23 = 391.
 aos-agent tools --target fsm1 ls          # 多一行 math（定義疊這隻的覆蓋層）
@@ -49,7 +49,7 @@ kernel 總 `slots` 2、兩包各 `slots` 1、每封 3 秒：同級的信 fast �
 
 ### 件 4：agent 生 agent（`subagent`、`agent_def`；判官 `max_running` 5＝清道夫＋4）
 
-直接用出廠的 `kernel/daemon-judge`：`judge.json` 的 `max_running` 5＝清道夫 `_sweeper`＋fsm1＋三隻孩子（範本不帶鐘列，不用替時鐘多留一格，11-09 clock-decouple；清道夫那列 11-10 起範本預設帶、也算 running，不掛的調回 4）。實際容量看判官的回信與表，不以假腦文字判斷。
+直接用出廠的 `kernel/daemon-judge`：`judge.json` 的 `max_running` 5＝清道夫 `_sweeper`＋fsm1＋三隻孩子（範本不帶鐘列，不用替時鐘多留一格；清道夫那列範本預設帶、也算 running，不掛的調回 4）。實際容量看判官的回信與表，不以假腦文字判斷。
 
 ```sh
 T=/tmp/feat-s9-spawn && rm -rf $T && mkdir -p $T/ws && cd $T
@@ -59,7 +59,7 @@ export AOS_LLM_KERNEL=$T/k AOS_DAEMON=$T/st AOS_KERNEL=$T/st/requests   # 掛 pr
 aos-exec --stack $T/st "$JUDGE" > d.log 2>&1 & D=$!         # 帶判官的 daemon：allowed 有 fsm1、kid、kid1～4，max_running 5（含清道夫一格）
 sleep 1
 aos-agent ctl add --name fsm1 --ws $T/ws $P/templates/agent-fsm
-aos-agent llm --target fsm1 set model=fake-demo-spawn                # subagent、agent_def 範本內建（11-05「內建」）
+aos-agent llm --target fsm1 set model=fake-demo-spawn                # subagent、agent_def 範本內建（使用者「內建」）
 aos-agent say --target fsm1 start a kid and ask it the time && aos-agent listen --target fsm1
 # I started kid, set its brain to fake, asked it the time (its answer is in the tool result above) and removed it again.
 aos-agent say --target fsm1 now start four kids && aos-agent listen --target fsm1
@@ -112,7 +112,7 @@ kill $D
 - **daemon 包子項**（使用者「讓daemon偷偷給底下的proc包s6」）：表那列的 `limits`（定義宣告的，或 `ctl add --limits` 蓋過的）由 daemon 在子行程裡 `setrlimit`（等同 s6-softlimit；proc 自己不知道）——hog 宣告 `mem_mb: 256`、要 300 MB＝Python `MemoryError`、退 1、表上留 `stopped`＋`reason`；`--limits '{"mem_mb": 1024}'` 的 hog2 照常吃完、下表。規則見 [aos-daemon docs/09](../../impls/aos-daemon/docs/09-份額.md)。
 - **daemon 自己被限**：起它的人包（這裡 `prlimit --as`），rlimit 繼承——big 寫 `mem_mb: 4096` 比 daemon 的 2 GB 寬＝不自動夾，那隻起不來（`LimitBad`）；big2 自己不限（`{}`），要 3 GB 照樣撞 daemon 的 2 GB＝`MemoryError`。
 - **天然差異**：份額是每個行程各自的上限、不從 daemon 總額扣（三隻各 1024 加起來可以超過 daemon 的 2 GB）。
-- **llm kernel 的份額**＝包的 `budget`＋每個寄件人的 `budget.senders`。範本不設預算（11-11 使用者選「從範本拿掉」：以前範本帶一格 `/tmp/aos-demo-sender` 的示範，那個資料夾平常不在，每台照範本起的 kernel 都印一行 warning），要限就在自己那份 `kernel.json` 加。下面抄一份範本、加一格寄件人每天 1 次（帳記在 kernel 的 `used.json`，`senders` key 相對 kernel stack；新 stack 沒帳才從 0 算，整包搬家且相對位置相同就沿用）：
+- **llm kernel 的份額**＝包的 `budget`＋每個寄件人的 `budget.senders`。範本不設預算（使用者選「從範本拿掉」），要限就在自己那份 `kernel.json` 加。下面抄一份範本、加一格寄件人每天 1 次（先建 `/tmp/aos-demo-sender`：key 解出來不是資料夾會印一行 warning；帳記在 kernel 的 `used.json`，`senders` key 相對 kernel stack；新 stack 沒帳才從 0 算，整包搬家且相對位置相同就沿用）：
 
 ```sh
 T=/tmp/feat-s9-quota && rm -rf $T && mkdir -p $T /tmp/aos-demo-sender && cd $T
