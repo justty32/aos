@@ -9,7 +9,7 @@
 
 ## 一分鐘看懂
 
-現役程式全在 `proto8/`（repo 根的 `core/`、`app/` 那代 C++ 是 08～09 月的甲代，不再維護，逐檔表已封存）。proto8 裡：
+現役程式全在 `proto8/`。proto8 裡：
 
 - `impls/`：C／C++ 的 CMake 專案家族（`aos-inst` 是 C 函式庫，其餘 C++）。由下往上：`aos-inst` → `aos-exec` → `aos-loop` → `aos-fsm`／`aos-daemon`；`aos-llm` 連 `aos-llm-kernel`；`aos-util` 全家共用；`aos-post`（連 `aos-lock`）是信箱。誰連誰的表在生成冊 `impls` 冊開頭。
 - `cmd/`：人打的 Python 指令，執行檔在 `cmd/<名>/bin/<名>`；命令列共用模組在 `py/`，CLI 對話與介面宣告共用模組在 `lib/agent/`（`cli_session.py`、`agent_files.py`；`lib` 不 import `py`）。`lib/`：腦叫的工具（`_entry`＋`_tooldef.json`＋`_metainfo.json`）。
