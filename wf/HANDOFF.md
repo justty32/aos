@@ -12,88 +12,27 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-11-11 晚 家機
+## 2026-11-12 收工 公司頂層
 
-1. **授權**：家機（Manjaro）。頂層只跟使用者交流，派 opus 隊長做事。**睡前 push**：頂層 23:10 前推，隊長不推。使用者今晚原話：「繼續跑，有問題就修」「隨便玩吧」。eca_bob 今晚花費上限合計 10 美金，是頂層代定。
-2. **今晚做了什麼**（都在 [thinking 11-11 playground](../proto8/thinking/2026-11/11/playground/README.md) 02～04）：
-   - 家機試驗場照線 K 版整份重建。
-   - 三隻都能一行換模型。
-   - 出廠 llm-kernel 補 terra，sol 換成 6.1（`c21947183`）。
-   - 11 個模型配工具實測兩輪：[03](../proto8/thinking/2026-11/11/playground/03-模型配工具實測.md)、[04](../proto8/thinking/2026-11/11/playground/04-修與第二輪實測.md)。
-   - 修了四件：knowledge_read 能指定 `root`（`55a1bce83`）、eca 範本拿掉 subagent 包（39→37 支，`10539f4ff`）、mailbox_send 寄給自己時錯誤訊息補自己的名字（`bb24ebba6`）、json_write 鍵包引號就剝掉照用（`6799c55ea` 先只給提示，`eb772bbdf` 改成照用）。
-3. **使用者今晚的裁定**（原話在 04 開頭）：
-   - 知識庫不給預設。
-   - read 跟 write 一樣能指定 root。
-   - do_task 摺掉後模型重做＝「自己承擔。本來就是這樣。」
-   - eca 不給 subagent 相關工具。
-   - codex 不念系統文字＝「喔」，不處理。
-   - 線 K 五條代定認可（「沒啥好翻的，我覺得都OK」）。
-   - knowledge 改回 memory：「目標是整套改回。」
-4. **代定**：eca 留 def 包（agent_def、tools_def），見 04 § 修了什麼。
-5. **五件待裁已裁**（原話在 04「五件待裁的裁定」）：
-   - root 收三種形狀＝要，設計寫好了，**明天跟 memory 改名一起施工**。
-   - codex 沙盒＝多試；對照表在 04，沒改設定。
-   - eca 不給 goal、todo＝已改成 35 支（`aos-agent goal` 人下的指令照留，是代定）。
-   - box 指到 queue＝不擋；fsm 連錯沒煞車＝不管。
-   - json_write 剝引號已退回（使用者「a。」，`1522ca8a4`），錯誤提示 `6799c55ea` 先留著。往後修 bug 不替腦偷改值。
-   - **eca 不給基礎檔案工具**（「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」）：沒施工。eca-claude 的 `--tools` 只開 Read,Glob,Grep，要一起放寬；codex 唯讀沙盒拿掉 aos write 後會完全寫不了。擬拿掉的清單（35→20）在 04，明天先跟使用者對這兩點再做。
-6. **試驗場**（`~/code/playground`）：
-   - 樹在背景跑；fsm_ann 用 gemma、eca_bob 用 haiku、eca_cody 用 gpt-6-luna，對話都是空的；fsm 41 支、eca 35 支。
-   - 怎麼起：`cd ~/code/playground && source env.sh && cd ws`，`aos-agent chat -t fsm_ann`。停：`aos-daemon-ctl -d ~/code/playground/.stack shutdown`。
-   - proxy 已重起，4000 有 6.1 的 sol 和 terra。
-7. **明天要做**：
-   - knowledge 整套改回 memory，順便施工 root 收檔案和 json 物件（設計在 04；path 寫法要照 N-45 重寫）。（11-12 撤：knowledge 不改回 memory、整套拿掉，root 三種形狀一起撤，已施工，[knowledge-removal](../proto8/thinking/2026-11/12/knowledge-removal.md)。）
-   - eca 拿掉基礎檔案工具（04 有清單與兩個前提）。
-   - json 工具改成路徑一整串、給值直接換（使用者原話與待裁四題在 [json-tools](../proto8/thinking/2026-11/11/json-tools.md)），跟 memory 改名、root 三種形狀一起排。
-   - 接外部 MCP 第一階段。（11-12 使用者：「不用。eca本身就能接mcp，等假日在家再來稿」——今天不做，假日在家再做。）
-   - 線 K 剩兩件：gitignore 漏列（fork 的 children state、`subagents.json`）、`history_removed.jsonl` 絕對路徑可能外洩。
-   - ~~公司 proxy 要加 6.1 條目。~~ 已撤：使用者 11-12「公司不建proxy，只用eca。」
-
-## 2026-11-11 收工 公司頂層
-
-1. **授權照舊**：公司機（Windows＋WSL Ubuntu）；頂層只交流與派工（普通 opus、簡單與雜活 sonnet，非雜活先通讀 wf/）；小題用選項框問；真腦在公司只用 eca（claude haiku、codex `gpt-6-luna`；codex 只對 aos 那組 MCP 工具免核准），fsm 真腦回家測。**push 每次都要使用者開口**：今天推了兩次——下午他說「推吧」推到 `23c9544d3`，收工他說「整理完就推」，推到本條所在的 commit。
-2. **三份 clone**：WSL `~/repo/aos-tools`（捷徑與 pth 指它、試驗場用它）與 `~/repo/simple_tools/aos` 都在收工推上去的 HEAD，跟 origin/main 一樣。Windows `C:\code\mine\simple_tools\aos` 停在 `23c9544d3`，使用者說明天自己 `git pull`（頂層收工時會把那邊手寫的 `wf/HANDOFF.md` 還原，pull 才不會被擋）。Windows 本地另有舊分支 `wip/hub-step6` 和幾個過期的遠端記錄（GitHub 上實際只有 main），使用者說不動。
-3. **今天進 main 的**（原話與裁定都在 [thinking 11-11](../proto8/thinking/2026-11/11/README.md)）：上午 `agents_children`→`subagent`、`aos-agent system`＋`self_system`、人的信箱預設 `~/.aos/stack`、codex 接得上 aos 工具、aos-loop `on_start`／`on_stop`、hook 事件 `after_start`／`after_stop`／`on_clock`＋範本 `timer`；下午工具小格寫入才建、loop／fsm／daemon 自建 stack、`do_task`（start／end／status，只給 fsm）、`fork`（只給 fsm；「eca不給fork。」）、`grep`、`glob`、`todo`、`goal`、新信提醒 `mail_notify`、線 C 六題與積壓代定、旗標前後都收推到全部指令、gitignore-check 改標準。
-4. **線 K 工作六已完成**（`2ac75177f`、`d0943e5d8`、`c44dac27c`、`882dc7fe5`、`9457e059f`）：do_task end 預設把期間別人的訊息一起摺掉（`keep_others: true` 才留；使用者「可選。預設清掉。」）；`goal.json`、`tools/todo/todo.json`、`tools/do_task/tasks.json` 進 git 分類表；睡著時新到的信醒來提醒一次；history 空也丟 goal、當開場題目；do_task 算 goal 進展但不耦合（「兩者不要耦合太深，就goal那邊稍微檢查一下history就好。」）；`aos-agent goal set` 文字比照 say 原樣收。全套 66 夾 1092 支，只紅既有 4 支（aos-agent `test_daemon_down` 2、box_check 2）。→ [goal 02](../proto8/thinking/2026-11/11/goal/02-裁定與施工結果.md)、[fork-and-do-task 02](../proto8/thinking/2026-11/11/fork-and-do-task/02-do_task.md)
-5. **線 K 留下、明天要處理的三件**（使用者已知，還沒裁）：
-   - (a) ~~五條代定~~：11-11 晚使用者已認可（「沒啥好翻的，我覺得都OK」）。
-   - (b) gitignore 分類兩處漏列：fork 的 `tools/fork/children/<分身>/state` 沒列；分類表只有改名前的 `children.json`、沒有 `subagents.json`。
-   - (c) 可能外洩（推的、沒實跑）：do_task end 與 self_history 的結果行會把 `history_removed.jsonl` 的絕對路徑寫進 history，而 history 是進 git 的。先查證，確認了要修。
-6. **kernel 討論**（`97a06eb5a`，記錄在 [kernel/](../proto8/thinking/2026-11/11/kernel/README.md)）：只釐清概念，**沒有排任何施工**、沒改程式與條文。kernel 是寄件人眼中的身分（請求寄到哪、哪裡就是 kernel），定義回到「資源管理＋排程」；一般 proc 與人都寄 `AOS_KERNEL`（沒設走 `AOS_DAEMON`，都沒設報錯），問腦走 `AOS_LLM_KERNEL`；鏈自然形成，信封共通、body 不設限。使用者最後說：「判官這東西...我覺得應該將其吸納進我們之後的kernel框架中。不過沒關係，今天釐清了概念，後續架構規劃上就很輕鬆了。」會過時的條文清單與日後清單在該夾 [03](../proto8/thinking/2026-11/11/kernel/03-過時清單與日後清單.md)。記錄核對時發現：`fork`、`subagent` 在 `AOS_DAEMON` 沒設時會報 `DaemonMissing`，即使設了 `AOS_KERNEL`。
-7. **只到設計、沒施工**：接外部 MCP（設計與裁定在 [new-tools](../proto8/thinking/2026-11/11/new-tools/) 03，使用者說「明天」做第一階段）；i18n（遠期構想，[i18n](../proto8/thinking/2026-11/11/i18n.md)）；two-machines 剩 8 項（「之後吧」）；大修材料不用同步；kernel 框架。
-8. **試驗場**（家機那台 11-11 晚已照線 K 版重建、樹在跑，見 [playground 02](../proto8/thinking/2026-11/11/playground/02-家機刷新與驗收.md)；以下是公司那台）`~/code/playground`：停著，還是 13:06 那版（36 支，沒有 grep／glob／todo／goal／fork／新 do_task），備份 `~/code/playground.bak-1111-1306`；今天沒重刷。下次重刷時劇本假腦的 do_task 那步要改成 start → 做事 → end。
-9. **回家要測／要做**（都在 [WAIT_USER](WAIT_USER.md)）：fsm 真腦跑 goal／fork／do_task／mail_notify／self_system／timer 跑一晚；（家機 aos-mailbox 原件、試驗場重刷 11-11 晚都已處理）；`/tmp/lineI`、`/tmp/lineJ`、`/tmp/lineK-*`、`/tmp/aos-*` 殘留要使用者自己刪；WSL `~/repo/aos-tools` 兩個未追蹤的舊建置產物 `proto8/impls/aos-kernel-llm/`、`proto8/impls/aos-gate/` 可刪、待使用者點頭。已知問題：do_task 在摺疊中途被砍，留下的訊息會重複一次。
-
-## 2026-11-10 深夜 家機總整合（收工）
-
-1. **授權**：家機（Manjaro）、今晚隨意 push（只有 main）；子 agent 普通 opus、雜活 sonnet；eca 一律 haiku。不動 `~/code/playground`（使用者的樹可能開著）、`~/code/playground-ak5`、repo 外的檔、`impl_cpp/`。使用者最後一句：「弄一弄，按照wf/規矩整理收拾，push上去後，我就要關機睡覺了」。
-2. **各線狀態**：今晚七條線＋使用者回來後的四批裁定（[tonight-rulings](../proto8/thinking/2026-11/10/tonight-rulings/README.md)）、tool-packs、tools-def 全部施工完進 main；兩範本都十一包 34 支；C++ build 過、全套 Python 測試 51 夾 808 支綠；最後一輪整棵實跑見 [tonight/04](../proto8/thinking/2026-11/10/tonight/04-最後一輪整合驗收.md)（假腦 34 支全過、修 `ctl state` hooks 舊鍵 `d4ae3fc37`；gemma 只補驗一半、eca haiku 沒跑，續行點在 04）；怎麼玩 [tonight](../proto8/thinking/2026-11/10/tonight/README.md)。
-3. **代定清單位置**：[self-tools README § 代定](../proto8/thinking/2026-11/10/self-tools/README.md#代定)、[self-tools 05](../proto8/thinking/2026-11/10/self-tools/05-llm設定改名與ls.md)；[json-memory 05](../proto8/thinking/2026-11/10/json-memory/05-步驟與代定.md#代定清單可翻案)；[self-family 01](../proto8/thinking/2026-11/10/self-family/01-施工結果.md)、[03](../proto8/thinking/2026-11/10/self-family/03-self_state與self_ctl施工結果.md)；[hook 01 圖紙](../proto8/thinking/2026-11/10/self-family/hook/01-圖紙.md)、[hook 02](../proto8/thinking/2026-11/10/self-family/hook/02-施工結果.md)；[agents-split README](../proto8/thinking/2026-11/10/agents-split/README.md)（15 條）；[mailbox 01](../proto8/thinking/2026-11/10/mailbox/01-設計.md)；[clock-letters README](../proto8/thinking/2026-11/10/clock-letters/README.md)；[templates-cp 05](../proto8/thinking/2026-11/10/templates-cp/05-施工結果.md)；[tool-packs 01](../proto8/thinking/2026-11/10/tool-packs/01-施工結果.md)、[02](../proto8/thinking/2026-11/10/tool-packs/02-memory-read施工結果.md)；[tools-def](../proto8/thinking/2026-11/10/tools-def/README.md)（01／02）；[tonight-rulings 05](../proto8/thinking/2026-11/10/tonight-rulings/05-knowledge改名.md)、[06](../proto8/thinking/2026-11/10/tonight-rulings/06-列表長短四項.md)；總整合自己的：eca-claude `_metainfo` 的 `cost.time_ms: 60000`、知識庫新開 `mailbox.json`／`clock.json`／`cli/hook.json`／`cli/mailbox.json`、2 KB 一段的上限這次沒拆（self_hook、me 簡介、cli/agent 略超）。
-4. **今晚所有改名對照**（proto8 不留舊名、不做相容；舊定義重抄範本）：
-
-   | 舊 | 新 |
-   |---|---|
-   | `memory`／`memory_read`、`memory_write`、`memory_export`、`memory_sync` | `knowledge_read`、`knowledge_write`、`knowledge_export`、`knowledge_sync` |
-   | `memory_fs.py`、包 `lib/packs/memory.json`、`_memory.json` | `knowledge_fs.py`、`lib/packs/knowledge.json`、`_knowledge.json` |
-   | `AOS_MEMORY`、`--memory`（brain.py／aos-mcp）、`MemoryMissing`／`MemoryBad` | `AOS_KNOWLEDGE`、`--knowledge`、`KnowledgeMissing`／`KnowledgeBad` |
-   | `AOS_MY_STACK` | `AOS_LINUX_USER_STACK` |
-   | `wall_clock`、`bash`、`json_edit` | `peek_now_time`、`shell`、`json_write` |
-   | 舊 `agents` 工具、`agents.json` | `agents_children`／`agents_ctl`／`agent_def`、`children.json` |
-   | `agents_children`（11-11 早，[subagent-rename](../proto8/thinking/2026-11/11/subagent-rename.md)） | `subagent`（記帳檔 `tools/subagent/children.json`；包名 `children` 照舊〔11-11 稍後也改，見下一列〕） |
-   | `subagent` 周邊的 children 系（11-11 稍後，使用者「隊長那串...一起改吧」，[subagent-rename](../proto8/thinking/2026-11/11/subagent-rename.md#11-11-稍後周邊一起改成-subagent-系)）：包 `lib/packs/children.json`、配額檔 `children.json`、`max_children`、記帳檔 `tools/subagent/children.json`、`ChildSlotMissing`／`ChildUnknown`／`ChildMissing`／`ChildQueued`、輸出 `children N/MAX`、ctl state 類別 `children` | `lib/packs/subagent.json`（包名 subagent）、`subagents.json`、`max_subagents`、`tools/subagent/subagents.json`、`SubagentSlotMissing`／`SubagentUnknown`／`SubagentMissing`／`SubagentQueued`、`subagents N/MAX`、類別 `subagents`（`agents_ctl`、`agent_def` 不動） |
-   | 知識庫節點 `aos/cli/grow_screen.json`；knowledge_write 範本預設指出廠庫（11-11 線 C，[knowledge-fix](../proto8/thinking/2026-11/11/knowledge-fix/README.md)） | `aos/cli/grow.json`（ECA 畫面併進 `cli/eca.json`）；knowledge_write 不給預設、呼叫給 `root` 或 `AOS_KNOWLEDGE`，都沒有＝`KnowledgeMissing`；thought 進 gadgets，兩範本 36 支 |
-   | 工具 `thought`（`lib/agent/thought`、`AOS_THOUGHT_FROM`／`AOS_THOUGHT_DEPTH`、`aos/agents/thought.json`、沙箱例子 `thought-boxed`）；知識庫 `aos/tools.json`（11-11 線 I，[do-task-rename](../proto8/thinking/2026-11/11/do-task-rename.md)、[knowledge-fix 03](../proto8/thinking/2026-11/11/knowledge-fix/03-六題裁定與施工.md)） | `do_task`（`lib/agent/do_task`、`AOS_DO_TASK_FROM`／`AOS_DO_TASK_DEPTH`、`aos/agents/do_task.json`、`do-task-boxed`；沒給 from＝呼叫者自己的定義）；`aos/tools_def.json` |
-   | `llm.json` 的 `endpoint` | `model` |
-   | hook `on`／`exec`／`match`／`change`／`wait`；事件 `tool_after` 這類 | `event`／`handler`／`condition`／`intercept`（預設開）／`async`；`before_queue`、`after_queue`、`before_tool`、`after_tool` |
-   | `aos-tools ls -b` | 拿掉（`ls` 預設就是短版，`-l` 長版） |
-
-5. **試驗場狀態**：`~/code/playground` 是 22:15 刷的（備份 `.bak-1110-2215`），停在改名與列表短版之前——`self_tools ls` 會 FlagUnknown、litellm 要 `export LITELLM_KEY=sk-none`、定義指舊名 `memory_*`。刷新腳本 [tonight/03](../proto8/thinking/2026-11/10/tonight/03-試驗場刷新.md) 已對上最終狀態、22:51 在新複本上跑過（兩隻 34 支、gemma 叫 knowledge_read 對）；**補刷原件等使用者**（WAIT_USER 第一條）。
-6. **還待裁**：
-   - ~~小模型寫不出 `$` 開頭的鍵~~（11-11 已裁：`$` 鍵不動）。
-   - ~~act 附給腦的 stderr 尾巴~~（11-11 已裁：維持）。
-   - ~~hook 三題~~（11-11 已裁）：after_queue 晾著的信「不補」；CONVENTION「先不寫」；事件選「起來與停下」，之後又加了照時鐘觸發的 `on_clock`（「hook就可以添加一個類型，就是loop每次exec前和exec後……」），施工見 [clock-hook](../proto8/thinking/2026-11/11/clock-hook/README.md)。
-   - ~~mailbox：人的預設 stack 是不是就 `~/.stack`。~~ **11-11 已裁**：`~/.aos/stack`（使用者「改成帶 aos 字樣的位置」→「~/.aos/stack」，`09709c6ac`）。
-   - ~~clock 殘留~~（11-11 已裁：「交給自檢吧。如果要順手清的話，就是aos-agent ctl rm與另一個功能有耦合了。」；之後改向成 hook 的 `on_clock`，時鐘寄信那組「啊，不要拿掉好了，先留著」原樣不動）。
-   - `agents_ctl` 能 rm 別人帳上的子。
-   - tools_def「之後可加」的幾項（[tools-def](../proto8/thinking/2026-11/10/tools-def/README.md)）。
-7. **WAIT_USER 新加／改**：試驗場補刷、`~/.cache/aos-mcp-aos/tools.json` 跟上改名（照抄 sed 一行）、eca 信任選單要手動信任一次、hook 線 eca haiku 真對話（agent 不代跑）。
+1. **授權與工作方式**：公司機（Windows＋WSL Ubuntu）。頂層只交流與調度，事情盡量交給 agent（普通 opus、雜活 sonnet、規劃 fable；非雜活先通讀 wf/）。**push：下班前統一推一次**，推之前仍要使用者開口。公司真腦只用 eca（claude haiku、codex `gpt-6-luna`），公司不建 proxy。`/tmp` 殘留與空殼夾准刪（頂層收工處理）。eca「以 CLI 為主、aos 盡量跟上」；「一處壞掉不該擋住其他好的」（工具登記、`_metainfo` 都照這條做）。
+2. **main 位置**：WSL `~/repo/aos-tools` 從 origin 的 `8979e1a66` 前進到 `d547d4cf1`（71 個 commit）＋本條收工文書。**push：〔頂層補：已推／未推〕**。推了之後家機 `git pull` 就是今天全部；Windows `C:\code\mine\simple_tools\aos` 頂層還原手寫的 HANDOFF 後再 pull。合併做法：各線在自己的 `/tmp/line-*` clone 做、rebase 到 `~/repo/aos-tools` main 再 ff。
+3. **今天進 main 的**（原話與裁定都在 [thinking 11-12](../proto8/thinking/2026-11/12/README.md)、[日誌](session_logs/2026-11/2026-11-12.md)）：
+   - **工具面**：eca 拿掉 aos 基礎檔案工具，claude 開內建 Read／Write／Edit／Glob／Grep／Bash（dontAsk＋白名單）、codex `workspace-write`（[eca-file-tools](../proto8/thinking/2026-11/12/eca-file-tools.md)）；json 工具全套 `json_*`／`jsonx_*`／`json_multi_*`，`#/` 回標準寫法（[json-tools](../proto8/thinking/2026-11/12/json-tools/README.md)）；knowledge 工具拆除、出廠內容留作普通 json＋index，講已拆機制的內容與條文刪掉（P-46 刪）（[knowledge-removal](../proto8/thinking/2026-11/12/knowledge-removal.md)）；`_index`／`_index.json` 與 `index_view`（[index](../proto8/thinking/2026-11/12/index.md)、[index-tools](../proto8/thinking/2026-11/12/index-tools/README.md)）；`_metainfo`：只活在概念與規範、裡外都認外面贏、壞掉不報錯、`{}` 也算定義（[metainfo](../proto8/thinking/2026-11/12/metainfo/README.md)）。
+   - **清帳與小修**：Q01～Q16 一次裁完、agent_def 細改＋lineage、defs 與條文對齊（[small-rulings](../proto8/thinking/2026-11/12/small-rulings.md)、[agent-def-fine-lineage](../proto8/thinking/2026-11/12/agent-def-fine-lineage.md)、[defs-check-align](../proto8/thinking/2026-11/12/defs-check-align.md)）；線 K 收尾與錯誤行不帶絕對路徑（[line-k-leftovers](../proto8/thinking/2026-11/12/line-k-leftovers.md)）；一條工具登記壞掉不拖垮全部＋P-41 改寫（[tool-path-broken](../proto8/thinking/2026-11/12/tool-path-broken.md)）；`aos-agent chat` 打中文不再被丟（[chat-utf8](../proto8/thinking/2026-11/12/chat-utf8.md)）。
+   - **kernel**：壞信回 `BodyBad`、fork／subagent 走 `AOS_KERNEL`（[kernel-small-fixes](../proto8/thinking/2026-11/12/kernel-small-fixes.md)）；C-47、N-42、N-63 改寫，猜 `./.stack` 留（[kernel-norms](../proto8/thinking/2026-11/12/kernel-norms.md)）；**通用 kernel 框架圖紙**（fable→Argon 審→fable 改；使用者裁「問腦總機要收進框架」；沒施工）（[kernel-framework](../proto8/thinking/2026-11/12/kernel-framework/README.md)）。
+   - **eca**：slash 指令 `/clear`／`/compact`／`/status`／`/usage`／`/exit`／`/goal`——畫面同步、say／listen／chat 支援、codex 有畫面、codex `/compact` 撈對話、codex `/goal` 的 Replace 自動選 yes；題 G1、G2 使用者收工前裁「codex目標這塊不用管，就是這樣」＝不做（[eca-slash](../proto8/thinking/2026-11/12/eca-slash.md)）。
+   - **外部 MCP**：圖紙、三題照推薦、http＋bearer 試接、施工五步（codex／claude 兩身的 http 與 stdio、新指令 `aos-mcp-launch`、假 server 收進 `proto8/extras/fake-mcp-http`）（[external-mcp 06](../proto8/thinking/2026-11/12/external-mcp/06-施工結果.md)）。
+   - **只實測／只記錄**：auto save（`/tmp` 不是記憶體也不快、放 `~/`；頂層轉述使用者決定不做 auto save，停樹＋`cp -a` 就好）（[autosave](../proto8/thinking/2026-11/12/autosave.md)）；wf/ 往 aos 體系走（只記原話，他要先玩）（[wf-to-aos](../proto8/thinking/2026-11/12/wf-to-aos.md)）。
+4. **試驗場**（公司 `~/code/playground`）：12:45 照 main `a85603894` 乾淨重刷＋`eca_opus`、花費無上限（[playground](../proto8/thinking/2026-11/12/playground.md)）。**之後 main 的變更還沒刷進去**：eca slash、codex 畫面、外部 MCP、tool-path-broken 以外的（指令類是 symlink、即時生效）。
+5. **下一步**（依優先）：
+   1. 外部 MCP 續行（照 06 與 07）：fsm 經 aos 匯入成包（`aos-mcp-import`、aos-mcp 當 client）；沒驗的 codex 沙盒對 stdio、`disabled_tools`、真的別人寫的 stdio server（要下載、先問）→ [06](../proto8/thinking/2026-11/12/external-mcp/06-施工結果.md)。使用者「做不完就push上去，我回家繼續做」。
+   2. 使用者拿真 token 照 06「搬一隻現有 Codex agent 進 aos 的照抄步驟」起第一隻；頂層盤點：只需要一台 http MCP、建議先搬兩隻 gpt-*、ops-notes 主 session 暫不搬（權限：動機器先問 vs eca Bash 不問）。
+   3. 試驗場重刷（兩台；家機要整個重抄）。
+   4. kernel 框架：開工等假日、使用者自己也要想；待他看兩處——問腦怎麼收（K-F47 推薦 Python 重寫、刪 C++）、N-63 衝突（K-F50）→ [kernel-framework](../proto8/thinking/2026-11/12/kernel-framework/README.md)。
+   5. 外部 MCP 留題：`--envs` 明文落地（05 的 P1，只做了文件警告）、外部 server 壞了 aos 看不到（P3）；代定 E1～E7 待使用者看；外部 MCP 沒經 Argon 審。
+   6. json 工具續行點（aos-json 的 add／ls／search、json_len、複雜組 multi）→ [json-tools 03](../proto8/thinking/2026-11/12/json-tools/03-multi與複雜組補齊.md)；index 未定三題（路徑相對誰、過時、專屬工具）→ [index](../proto8/thinking/2026-11/12/index.md)。
+   7. wf→aos：等使用者玩完再說。
+6. **等使用者的**（都在 [WAIT_USER](WAIT_USER.md)）：要不要 push；真 token 起第一隻 Codex agent；kernel 框架兩處；外部 MCP 代定 E1～E7；試驗場親手玩；fsm 真腦回家測。
+7. **家機要注意**：重跑 `proto8/install.sh`（新指令 `aos-mcp-launch`）；C++ 有改要重 build（aos-daemon、aos-json）；試驗場整個重抄；家機兩項殘留准刪、家機 session 動手；`~/.cache/aos-mcp-aos/tools.json` 刪 knowledge／memory 兩格（WAIT_USER 有照抄一行）。
+8. **踩過的坑**：scratchpad 多 session 共用、暫存腳本檔名要加前綴（今天撞過一次）；從 Windows 改 WSL 檔會掉執行位元；`wsl … bash -lc '…'` 裡的 `$變數` 會被外層吃掉，複雜指令寫成腳本檔再 `tr -d '\r' < 檔 | bash`。
+9. **已知紅**：aos-agent `test_daemon_down` 2 支、box_check 2 支（15:07 在 `3befa7edf` 全套 72 夾 1019 支只紅這 4 支）。最終全套：〔頂層補〕。

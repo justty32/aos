@@ -102,7 +102,9 @@
 
 **題**（使用者回家可接著看）：
 - G1 畫面上 goal 讓 CLI 自己連跑好幾輪時，只有第一輪的回答回到 aos 的 history（經 say 送的那則），之後幾輪只在 turns.jsonl；busy.txt 在第一個 Stop 就清掉，接著經 aos 送的話可能在 CLI 還在跑時就貼進去（CLI 會排隊）。Replace 實測時 codex 確實連跑（Pursuing goal、每輪回 one／two），後幾輪只在 turns.jsonl。要不要把畫面上非 aos 送出的那幾輪也接進 history？
+  - **11-12 裁定**：使用者「codex目標這塊不用管，就是這樣」——維持現況、不做。
 - G2 `/status` 想正確顯示「現在有沒有 goal」：claude 要另外讀不到清掉的紀錄；codex 可讀 `goals_1.sqlite`（沒試）。
+  - **11-12 裁定（頂層比照 G1 解讀）**：同屬 goal 這塊，跟著使用者「codex目標這塊不用管，就是這樣」一併不做。
 
 ## 沒試到
 
