@@ -12,7 +12,7 @@
   "description": "Long sections of aos/errors.json kept as their own files (common); aos/errors.json points to it with $ref."
  },
  "world.json": {
-  "description": "The mental model: daemon = hardware, stack = memory, workspace = external memory, definition = source code, kernel = gatekeeper."
+  "description": "The mental model: daemon = hardware, stack = memory, workspace = external memory, definition = source code, kernel = where you send requests."
  },
  "definition.json": {
   "description": "What each file in a definition folder does (interfaces.json, loop.json, tools.json, hooks.json, cli.json ...), and which ones you have your own copy of."
@@ -58,5 +58,8 @@
  },
  "_description.json": {
   "description": "aos in one page: what aos is, the eight words, five rules, and how to look up more (that last part still names knowledge_read / knowledge_write)."
+ },
+ "kernel.json": {
+  "description": "What a kernel is (resource management and scheduling, seen from the sender), where to send requests, the example kernels, and how to write your own."
  }
 }

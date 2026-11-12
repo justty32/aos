@@ -2,7 +2,7 @@
 
 ## kernel 的三個範例擺法：daemon 本身、daemon-judge、procs-kernel（11-05）
 
-使用者 11-05：「能包盡量包啦」。11-11 定義改寫：「我覺得kernel定義要改一下，回歸初始，變成"資源管理+排程"。」（[CONCEPTS C-47](../../docs/CONCEPTS/04-kernel.md)、[thinking 11-11 kernel](../../thinking/2026-11/11/kernel/README.md)）。擺法的設計：[thinking 11-05 kernel-daemon 02 兩種模式](../../thinking/2026-11/05/kernel-daemon/02-兩種模式.md)、[02/01「唯一」與 AOS_KERNEL](../../thinking/2026-11/05/kernel-daemon/02-兩種模式/01-唯一-AOS_KERNEL-命名.md)。
+使用者 11-05：「daemon是硬體……kernel和daemon，兩者其實可以合一，就是說，daemon他收請求，按照請求去掛proc到自己身上」「能包盡量包啦」。11-11 定義改寫：「我覺得kernel定義要改一下，回歸初始，變成"資源管理+排程"。」（[CONCEPTS C-47](../../docs/CONCEPTS/04-kernel.md)、[thinking 11-11 kernel](../../thinking/2026-11/11/kernel/README.md)）。擺法的設計：[thinking 11-05 kernel-daemon 02 兩種模式](../../thinking/2026-11/05/kernel-daemon/02-兩種模式.md)、[02/01「唯一」與 AOS_KERNEL](../../thinking/2026-11/05/kernel-daemon/02-兩種模式/01-唯一-AOS_KERNEL-命名.md)。
 
 **一句話：請求寄到哪，那裡對寄件人就是 kernel**（資源管理＋排程；要不要處理、什麼時候執行由收件那邊說了算，啥都不管也是一種管理）。一般 proc 只寄 `$AOS_KERNEL`、不管背後信會去哪；收件的 proc 不必知道自己是 kernel。下面三個是現有的**範例擺法**，不是只有這三種——自己寫一個收請求、決定要不要轉的 proc 也算 kernel（怎麼寫見下面「改成自己的」）。三個擺法裡，掛 proc 最後都是一封 `procs_added` 信進 daemon 的 ctl 信箱（`procs_requests/`），差別只在「寄進 ctl 信箱之前有沒有人先看一眼」。看一眼的那支程式是同一支：[`lib/aos/judge`](../../lib/aos/judge/_entry)（判官），用法與代號寫在它 `_entry` 開頭；判官以後收進通用 kernel 框架（方向已定、未實作，[N-42 (2)](../../docs/NORMS/09-kernel.md)）。
 

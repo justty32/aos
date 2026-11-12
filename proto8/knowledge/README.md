@@ -23,7 +23,7 @@
 
 | 資料夾 | 內容 | 給誰 |
 |---|---|---|
-| [aos/](aos/_index.json) | aos 體系知識（路徑寫 `aos/…`）：`_description.json` 一頁簡介＋八個詞＋五條規則；`world.json` 心智模型、`definition.json` 定義資料夾各檔、`body.json` agent-fsm 與 eca 兩種身體、`me.json` 我是誰與 `self_*` 工具、`agents.json` 子 agent 與定義、`mailbox.json` 信、`clock.json` 定時、`brain.json` 問腦、`status.json` daemon 表與 phase、`errors.json` 錯誤行與結束碼、`rules.json` 禁忌、`packs.json` 工具包、`tools/` 每支出廠工具一份、`cli/` 給人與外部 agent 的指令（底層零件在 `cli/parts/`）；`knowledge.json` 描述的是 11-12 拿掉的 knowledge 工具，原樣留著 | 跑在 aos 裡的 agent（小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
+| [aos/](aos/_index.json) | aos 體系知識（路徑寫 `aos/…`）：`_description.json` 一頁簡介＋八個詞＋五條規則；`world.json` 心智模型、`definition.json` 定義資料夾各檔、`body.json` agent-fsm 與 eca 兩種身體、`me.json` 我是誰與 `self_*` 工具、`agents.json` 子 agent 與定義、`mailbox.json` 信、`clock.json` 定時、`brain.json` 問腦、`status.json` daemon 表與 phase、`errors.json` 錯誤行與結束碼、`rules.json` 禁忌、`kernel.json` kernel 是什麼、範本在哪、怎麼自己寫一個、`packs.json` 工具包、`tools/` 每支出廠工具一份、`cli/` 給人與外部 agent 的指令（底層零件在 `cli/parts/`）；`knowledge.json` 描述的是 11-12 拿掉的 knowledge 工具，原樣留著 | 跑在 aos 裡的 agent（小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
 
 試一下（從 `proto8/`）：
 
