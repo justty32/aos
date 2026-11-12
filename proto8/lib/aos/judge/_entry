@@ -185,15 +185,20 @@ def verdict(body, allowed, cap, running, admitted):
     return None, fresh
 
 
-def write_ordered(path, rows):
-    """原子寫入有序轉寄對照表。"""
+def write_json(path, value, label):
+    """原子寫入一份 JSON（同夾 path.tmp 寫完再換名）；寫不了＝StateBad「cannot write label: 原因」。"""
     try:
         with open(path + ".tmp", "w", encoding="utf-8") as f:
-            json.dump(rows, f, ensure_ascii=False)
+            json.dump(value, f, ensure_ascii=False)
             f.write("\n")
         os.replace(path + ".tmp", path)
     except OSError as e:
-        die("StateBad", "cannot write judge_ordered.json: %s" % e)
+        die("StateBad", "cannot write %s: %s" % (label, e))
+
+
+def write_ordered(path, rows):
+    """原子寫入有序轉寄對照表。"""
+    write_json(path, rows, "judge_ordered.json")
 
 
 def relay_replies(box, path, rows, requests):
@@ -314,14 +319,7 @@ def queue_view(path):
 
 def write_queue(path, rows):
     """原子換窗；空隊也寫出，移掉已撤信或已放行的舊列。"""
-    try:
-        temporary = path + ".tmp"
-        with open(temporary, "w", encoding="utf-8") as f:
-            json.dump({"queued": rows}, f, ensure_ascii=False)
-            f.write("\n")
-        os.replace(temporary, path)
-    except OSError as e:
-        die("StateBad", "cannot write queue.json: %s" % e)
+    write_json(path, {"queued": rows}, "queue.json")
 
 
 def expiry_message(letter, was_queued):
