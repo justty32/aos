@@ -2,6 +2,8 @@
 
 ← [2026-11-11](../README.md)｜刷新腳本與驗收紀錄 [01](01-公司刷新與驗收.md)
 
+> **公司這台 11-12 上午已照 main 再重刷**（eca 25 支、沒有 knowledge 工具、codex `workspace-write`；本頁講的 do_task、knowledge 等已過時）：腳本、驗證與現在的玩法見 [11-12 playground](../../12/playground.md)。
+
 > **家機 11-11 晚已照線 K 版重刷**（fsm 41 支、eca 39 支、`fake-demo-today` 的 do_task 已改 start → peek_now_time → end）：腳本與驗收在 [02](02-家機刷新與驗收.md)，11 個模型配工具實測在 [03](03-模型配工具實測.md)，裁定、修補與第二輪在 [04](04-修與第二輪實測.md)；家機怎麼玩看家機試驗場自己的 `README.md`。本頁以下是公司那台 13:06 的版本。
 
 **結論**：`~/code/playground`（公司 WSL）已照今天的 main 刷新（11-11 13:06 第二次：線 I 的 do_task、新信通知，和工具小格寫入才建都進來了），三隻都掛好、停著、對話是空的。**不用先手動做任何事**（claude 用的工作區 `~/code/playground/ws` 之前就信任過，這次沒換）。開兩個視窗照抄就能玩：
