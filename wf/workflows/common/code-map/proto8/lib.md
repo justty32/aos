@@ -10,6 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`aos_json.py`](../../../../../proto8/lib/aos_json.py) | 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set 轉 aos_json_multi）。 |
+| [`aos_json_multi.py`](../../../../../proto8/lib/aos_json_multi.py) | json_multi_get／json_multi_set：一次多格，逐格照 json_get／json_set 做、照順序、一格一行「路徑 TAB 結果」，不回滾。 |
 | [`directive_value.py`](../../../../../proto8/lib/directive_value.py) | 把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。 |
 | [`metainfo.py`](../../../../../proto8/lib/metainfo.py) | Read optional definition metadata and evaluate numeric cost declarations safely. |
 | [`observed.py`](../../../../../proto8/lib/observed.py) | Record public stack observations and measured downstream calls. |

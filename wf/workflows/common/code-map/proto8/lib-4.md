@@ -20,6 +20,8 @@
 | [`json_del/`](../../../../../proto8/lib/base/json_del/) | 刪一格（key 或陣列元素，後面的往前移）；不刪整份檔 |
 | [`json_get/`](../../../../../proto8/lib/base/json_get/) | 拿一格的值（一行緊湊 JSON）；太大只回型別與大小、請改用 json_ls |
 | [`json_ls/`](../../../../../proto8/lib/base/json_ls/) | 列一格底下的 key／索引，像 ls；long 才附型別與大小，第一行是這一格自己的型別與長度 |
+| [`json_multi_get/`](../../../../../proto8/lib/base/json_multi_get/) | 一次拿多格的值：逐格照 json_get 做，一格一行「路徑 TAB 結果」；有格失敗＝最後一行 PlacesFailed、退 1 |
+| [`json_multi_set/`](../../../../../proto8/lib/base/json_multi_set/) | 一次改多格：逐格照 json_set 做（照順序、不回滾），一格一行「路徑 TAB 結果」；有格失敗＝最後一行 PlacesFailed、退 1 |
 | [`json_search/`](../../../../../proto8/lib/base/json_search/) | 在一格底下（或往上各層祖先）找 key／value，整個相等或 contains；不做 regex |
 | [`json_set/`](../../../../../proto8/lib/base/json_set/) | 把一格換成給的值（照字面；缺 key 就新增、/- 接陣列尾、parents 建中間層、整份可建新檔） |
 | [`llm_fake/`](../../../../../proto8/lib/base/llm_fake/) | 假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4） |
