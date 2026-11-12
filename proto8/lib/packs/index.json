@@ -1,0 +1,3 @@
+{"description": "Pack index: see a node through its index (the notes agents keep about what is under it) - index_view; to change an index use the json tools.",
+ "tools": {
+           "index_view": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/index_view"}}}}

@@ -20,6 +20,14 @@
 
 十四支的程式都在 [`lib/aos_json.py`](../aos_json.py)（multi 兩支在 [`lib/aos_json_multi.py`](../aos_json_multi.py)），各夾只是殼；圖紙 [01-規劃](../../thinking/2026-11/12/json-tools/01-規劃.md)。
 
+## index 包（使用者 11-12「index工具那塊，主要做視角就好，修改這塊應該不用做，因為他就是json，直接用json工具就好」，[thinking 11-12 index-tools](../../thinking/2026-11/12/index-tools/README.md)）
+
+| 包 | 檔 | 工具 |
+|---|---|---|
+| index | [index.json](index.json) | index_view（透過 index 看節點：`path` 看天然那份、`index` 看指定的那份、兩個都給＝疊著看、同名鍵以指定那份為準；只看不改，改 index 用 json 包）——agent-fsm、eca-claude 兩個範本都掛，reviewer 不掛 |
+
+程式在 [`lib/aos_index.py`](../aos_index.py)，「index 放哪」只寫在它的 `spot()`。
+
 ## 其他八包（兩個範本都預設開）
 
 | 包 | 檔 | 工具 |

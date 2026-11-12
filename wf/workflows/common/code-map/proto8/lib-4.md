@@ -16,6 +16,7 @@
 | [`glob/tests/test_glob.py`](../../../../../proto8/lib/base/glob/tests/test_glob.py) | glob 工具：** 零層與多層、不含 / 的樣式任何深度、type、sort mtime、翻頁、隱藏與明寫 . 段、資料夾捷徑列出不進、gitignore、PatternBad、FileBad、工作區外。 |
 | [`grep/`](../../../../../proto8/lib/base/grep/) | 照內容搜整棵樹（或一個檔）：一行一筆「路徑:行號:那一行」，像 grep -rn；純 Python re，不靠系統的 grep／rg |
 | [`grep/tests/test_grep.py`](../../../../../proto8/lib/base/grep/tests/test_grep.py) | grep 工具：正規式與 fixed、大小寫、context 與 --、files、翻頁、二進位／超大／非 UTF-8、隱藏、資料夾捷徑不跟進、gitignore（有 git、不在 git、git 不在 PATH）、單一檔、工作區外、預算、長行截斷。 |
+| [`index_view/`](../../../../../proto8/lib/base/index_view/) | 透過 index（視角）看節點：一行一項「鍵 TAB description」；只看、不改（改 index 用 json 工具） |
 | [`json_add/`](../../../../../proto8/lib/base/json_add/) | 加一項新的：物件已有這個 key＝KeyExists；陣列可插在某個索引前或 /- 接尾巴 |
 | [`json_del/`](../../../../../proto8/lib/base/json_del/) | 刪一格（key 或陣列元素，後面的往前移）；不刪整份檔 |
 | [`json_get/`](../../../../../proto8/lib/base/json_get/) | 拿一格的值（一行緊湊 JSON）；太大只回型別與大小、請改用 json_ls |

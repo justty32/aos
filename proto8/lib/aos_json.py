@@ -89,6 +89,8 @@ def aos_json(argv, value=NO, t=None):
                       .replace("(use append to add at the end)", "(write /- at the end of the path to append)"))
             if code == "FileMissing" and t is not None and t.ptr:
                 reason += " (create it first, e.g. json_set %s with value {})" % t.file
+            if code == "WriteFailed" and t is not None and not os.path.isdir(os.path.dirname(t.real) or "."):
+                reason += "; folder %s does not exist, create it first" % (os.path.dirname(t.file) or ".")   # 照腦給的字面印
             if t is not None and t.bare_hash:
                 reason += "; use FILE alone for the whole document: %s" % t.file
             die(code, reason)
@@ -110,8 +112,8 @@ def kind(v):
 
 def size(v):
     """型別＋自然長度（物件 keys、陣列 items、字串 chars）；純值直接是值。"""
-    n = {"object": "keys", "array": "items", "string": "chars"}.get(kind(v))
-    return "%d %s" % (len(v), n) if n else compact(v)
+    n = {"object": "key", "array": "item", "string": "char"}.get(kind(v))
+    return "%d %s%s" % (len(v), n, "" if len(v) == 1 else "s") if n else compact(v)
 
 
 def columns(v):

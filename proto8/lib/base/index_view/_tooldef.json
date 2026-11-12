@@ -1,0 +1,41 @@
+{
+ "description": "Show a node through its index: the notes agents keep about what is under it (KEY<TAB>description). It is a view, not the facts: entries can be missing or stale; for the real contents use ls or json_ls. First line \"[index] WHERE, N entries\" names the index file read; to change an index, edit that place with json_set / json_add / json_del. A key joins back to a path as DIR/KEY (folder) or FILE#/KEY, FILE#/POINTER/KEY (json). Example: {\"path\": \"knowledge/aos\", \"key\": \"tools\"}.",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "the node to look at: a folder, FILE, or FILE#/POINTER (written like the json tools); shows the index at its natural place. Relative paths start at your workspace."
+   },
+   "index": {
+    "type": "string",
+    "description": "one index table to read (FILE or FILE#/POINTER, pointing at the table itself), e.g. your own view. Alone: only this one. With path: laid over the natural index, its entries win on the same key."
+   },
+   "key": {
+    "type": "string",
+    "description": "show only this entry (the key exactly as written in the index, no patterns)"
+   },
+   "offset": {
+    "type": "integer",
+    "default": 0,
+    "description": "start at this entry (for the next page)"
+   },
+   "limit": {
+    "type": "integer",
+    "default": 200,
+    "description": "at most this many entries (default: env AOS_JSON_MAX_ITEMS, else 200)"
+   }
+  }
+ },
+ "errors": [
+  "ArgumentsBad",
+  "PointerBad",
+  "IndexBad",
+  "FileMissing",
+  "FileBad",
+  "PointerMissing",
+  "LaunchFailed",
+  "CommandFailed",
+  "WsMissing"
+ ]
+}

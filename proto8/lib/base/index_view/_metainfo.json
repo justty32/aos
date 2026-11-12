@@ -1,0 +1,13 @@
+{
+ "summary": "Show a node through its index (KEY<TAB>description); a view, not the facts",
+ "resource": "disk",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true,
+ "cost": {
+  "time_ms": 30
+ },
+ "timeout_ms": 3000
+}

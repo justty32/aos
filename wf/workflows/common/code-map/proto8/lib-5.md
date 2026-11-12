@@ -15,6 +15,7 @@
 | [`events.json`](../../../../../proto8/lib/packs/events.json) | Pack events: things that wake you later - clock_register (letters from the clock), self_hook (hooks on your own events). |
 | [`gadgets.json`](../../../../../proto8/lib/packs/gadgets.json) | Pack gadgets: small handy tools - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic expression), do_task (do one task i… |
 | [`goal.json`](../../../../../proto8/lib/packs/goal.json) | Pack goal: one sentence you keep working on - goal (get, set, done, pause, resume); aos reminds you of it when you stop by yourself. |
+| [`index.json`](../../../../../proto8/lib/packs/index.json) | Pack index: see a node through its index (the notes agents keep about what is under it) - index_view; to change an index use the json tools. |
 | [`json.json`](../../../../../proto8/lib/packs/json.json) | Pack json: plain JSON access, one place at a time by FILE#/POINTER - json_get, json_ls, json_search, json_set, json_add, json_del, json_multi_get, js… |
 | [`jsonx.json`](../../../../../proto8/lib/packs/jsonx.json) | Pack jsonx: JSON tools for aos configuration files that use $ref/$env - jsonx_get, jsonx_ls, jsonx_search, jsonx_set, jsonx_add, jsonx_del (follow, r… |
 | [`look.json`](../../../../../proto8/lib/packs/look.json) | Pack 1 (look): read-only file tools - read, ls, view, stat, grep, glob. |
@@ -29,6 +30,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`test_file_tools_paths.py`](../../../../../proto8/lib/tests/test_file_tools_paths.py) | 檔案工具拿掉工作區限制（11-10 tool-packs，使用者「3.對」）：相對從 $AOS_WS、絕對照用，工作區外也能讀寫改搬。 |
+| [`test_index_view.py`](../../../../../proto8/lib/tests/test_index_view.py) | index_view（lib/aos_index.py，thinking 2026-11/12/index-tools）的定向測試：實跑 _entry，驗三種給法（只 path、只 index、兩個疊著）、key、分頁、沒有 index、壞掉的 index。 |
 | [`test_json_tools.py`](../../../../../proto8/lib/tests/test_json_tools.py) | json 工具一族（lib/aos_json.py；簡單組 json_*、複雜組 jsonx_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。 |
 | [`test_metainfo.py`](../../../../../proto8/lib/tests/test_metainfo.py) | Verify optional metadata reading, timeout declarations, and safe cost formulas. |
 | [`test_observed.py`](../../../../../proto8/lib/tests/test_observed.py) | Verify shared observation initialization, strict failures and measured call cells. |

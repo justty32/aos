@@ -85,7 +85,7 @@ class JsonToolsTest(unittest.TestCase):
         self.assertEqual(self.ok("json_search", path="cfg.json", key="next").split("\n"),
                          ["cfg.json#/states/think/next\tstring\t3 chars\t5 bytes", "cfg.json#/states/act/next\tstring\t4 chars\t6 bytes"])
         self.assertEqual(self.ok("json_search", path="cfg.json#/states/act/exec", key="max", up=True), "cfg.json#/max\tnumber\t20")
-        self.assertEqual(self.ok("json_search", path="cfg.json", value="b"), "cfg.json#/tags/1\tstring\t1 chars\t3 bytes")
+        self.assertEqual(self.ok("json_search", path="cfg.json", value="b"), "cfg.json#/tags/1\tstring\t1 char\t3 bytes")
         self.assertEqual(self.ok("json_search", path="cfg.json", value="20"), "[no match]")      # 型別要一樣
         self.assertEqual(self.ok("json_search", path="cfg.json", value=".py", contains=True).count("\n"), 1)
         self.assertEqual(self.ok("json_search", path="cfg.json", key="next", value="act"), "cfg.json#/states/think/next\tstring\t3 chars\t5 bytes")
@@ -107,6 +107,10 @@ class JsonToolsTest(unittest.TestCase):
         self.assertIn("create it first", self.err("json_set", "FileMissing", path="new.json#/a", value=1))
         self.assertEqual(self.ok("json_set", path="new.json", value={"k": 1}), "ok new.json")
         self.assertEqual(self.doc("new.json"), {"k": 1})
+        out = self.err("json_set", "WriteFailed", path="nodir/_index.json", value={})   # 資料夾不在：照腦給的字面說是哪個夾（J2）
+        self.assertIn("folder nodir does not exist, create it first", out)
+        self.assertEqual(self.ok("json_set", path="cfg.json#/sub~1b.json", value=1), "ok cfg.json#/sub~1b.json")
+        self.assertEqual(self.doc()["sub/b.json"], 1)                                     # 鍵裡的 / 寫 ~1（J3）
 
     def test_add(self):
         self.assertEqual(self.ok("json_add", path="cfg.json#/tags/1", value="ins"), "ok cfg.json#/tags/1")
@@ -141,7 +145,7 @@ class JsonToolsTest(unittest.TestCase):
         self.assertEqual(self.doc("e.json"), whole)
         self.assertEqual(json.loads(self.ok("json_get", path="e.json#/")), {"in": 1})
         self.assertEqual(json.loads(self.ok("json_get", path="e.json#//in")), 1)
-        self.assertEqual(self.ok("json_ls", path="e.json#/").split("\n"), ["object, 1 keys", "in"])
+        self.assertEqual(self.ok("json_ls", path="e.json#/").split("\n"), ["object, 1 key", "in"])
         self.assertEqual(self.ok("json_search", path="e.json#/", key="in"), "e.json#//in\tnumber\t1")
         self.assertEqual(self.ok("json_set", path="e.json#/", value=5), "ok e.json#/")
         self.assertEqual(self.doc("e.json"), {"": 5, "a": 2})
@@ -184,7 +188,7 @@ class JsonToolsTest(unittest.TestCase):
     def test_aos_ls_search_del(self):
         self.write("o.json", {"x": {"y": 1, "k": {"next": 2}}})
         self.err("jsonx_ls", "PointerMissing", path="cfg.json#/r/k")             # 不給 follow＝照原文，$ref 物件裡沒有 k
-        self.assertEqual(self.ok("jsonx_ls", path="cfg.json#/r/k", follow=True).split("\n"), ["object, 1 keys", "next"])
+        self.assertEqual(self.ok("jsonx_ls", path="cfg.json#/r/k", follow=True).split("\n"), ["object, 1 key", "next"])
         self.assertEqual(self.ok("jsonx_ls", path="cfg.json#/r", resolve=True).split("\n"), ["object, 2 keys", "y", "k"])
         self.assertEqual(self.ok("json_search", path="cfg.json", key="next").count("\n"), 1)       # 簡單組看不到 o.json 裡的
         hits = self.ok("jsonx_search", path="cfg.json", key="next", resolve=True).split("\n")
