@@ -66,3 +66,28 @@ hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停�
 
 **長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 預設 600000（10 分鐘），限制 CLI 呼叫；`loop.json.exec.timeout_ms` 預設 900000（15 分鐘），限制整次 aos-eca-turn，要留得比 CLI 那層長，讓它有時間收尾。長任務要同時檢查這兩層，增加額度不會延長逾時。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
 
+## 接外部 MCP server（11-12 external-mcp）
+
+定義資料夾放一份 **server 檔**（一台一份，例 `mcp/teamsite.json`），`cli.json` 加 `"mcp_servers": ["mcp/teamsite.json"]`（相對從 `cli.json` 的資料夾算，也可寫指示詞；可列好幾份）。claude、codex 兩身都吃；CLI 自己連、自己列工具（不凍結說明），列了的那台整台免核准，`only`／`except` 挑工具。某一份壞了＝`cli_session: warning: external MCP server … skipped: …`，其他照接。設計：[external-mcp 02](../../thinking/2026-11/12/external-mcp/02-設計.md)；程式：`lib/mcp_server_file.py`、`cmd/aos-mcp-launch`。
+
+**http（Bearer＋自簽 CA）**：
+
+```json
+{"description": "<一句話：這台是什麼>",
+ "mcp_server": {"name": "<名字，小寫英數底線>", "transport": "http", "url": "https://<主機>:<埠>/mcp",
+                "bearer_token_env": "<放 token 的變數名，例 TEAMSITE_TOKEN>",
+                "env_file": "<token 檔的絕對路徑，例 /home/<你>/.config/<agent>/teamsite.env>",
+                "ca_file": "<CA bundle 的絕對路徑（選填）>"}}
+```
+
+token 檔一行 `TEAMSITE_TOKEN=<值>`、權限 600，放定義與工作區以外。起 CLI 那一刻才讀：codex＝值只放進 codex 行程的環境、自動補 `shell_environment_policy.exclude`（腦的 shell 看不到）；claude＝走 `headersHelper`（值不進 claude 的環境）。`ca_file`＝codex 的 `SSL_CERT_FILE`／`CODEX_CA_CERTIFICATE`、claude 的 `NODE_EXTRA_CA_CERTS`。
+
+**stdio**（經 `aos-mcp-launch` 起，`env_file` 整份只進 server 行程）：
+
+```json
+{"description": "<一句話>",
+ "mcp_server": {"name": "<名字>", "transport": "stdio", "command": "<指令>", "args": ["<參數>"],
+                "env": {"<明文變數>": "<值>"}, "env_file": "<金鑰檔的絕對路徑（選填）>", "only": ["<工具名>"]}}
+```
+
+腦看到的工具名＝`mcp__<名字>__<工具名>`。**秘密不要用 `aos-agent ctl add --envs` 給**（值明文寫進 `procs/<名>/exec.json`）。`aos-mcp-launch` 要在 PATH（`proto8/install.sh` 重跑一次）。
