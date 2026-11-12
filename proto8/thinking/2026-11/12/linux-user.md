@@ -33,7 +33,7 @@ linux 裡「使用者」只是一個號碼（uid），貼在每個行程身上�
 | a. user 是可以互動的對象 | 對人已經成立：人的信箱 `~/.aos/stack/mailbox` 在家目錄，天然一個 user 一個；環境變數就叫 `AOS_LINUX_USER_STACK`；信的 `from` 預設是 `$USER`。對 agent 不成立：agent 不是 linux 帳號 | 地址用家目錄固定路徑（現在；家目錄 700，別的帳號寄不進來）／公共位置按帳號名（像傳統 unix 信）／查表 |
 | b. root daemon 掛在一個 user 底下 | 成立：誰起它它就是誰；它能做的事上限就是這個 user 能做的事 | 維持；或登記成 `systemd --user` 的服務，讓它真的掛在「代表這個 user 的行程」底下（不需要 root） |
 | c. user 是一個 proc、跟 root daemon 平級 | 跟 linux 事實有出入（見上） | **定**：user＝aos 眼中一個能收信的對象；aos-post 聯絡得上的就是 proc（[§ 使用者細聊](#使用者細聊11-12-晚稍後)） |
-| d. root user 的 root daemon | 沒有；但 daemon 替底下的 proc 換帳號的機制已寫好（`limits.user`，daemon 不是 root 就報錯） | 不放 root（帳號由使用者親手建）／root 只放一支小程式（11-05 說過的、沙箱線現成的形）／一台很小的 root daemon 只管換帳號起下一層／整棵樹的根就是 root |
+| d. root user 的 root daemon | 沒有；但 daemon 替底下的 proc 換帳號的機制已寫好（`limits.user`，daemon 不是 root 就報錯） | **有方向**：早期那支用 root 跑、把 proc 用指定 uid 起來的小輔助程式，可以做成一台用 root 跑的很小的 daemon（他問句提出、頂層答主要是 daemon、他沒反對）；一個帳號一整棵樹；它本身也可以當 agent。什麼時候做、帳號誰建、門怎麼守未定（[§ 續：念頭 d](#續念頭-droot-user-的-root-daemon)） |
 | e. 某個 root daemon 代表這個 user | 沒有；一個 user 現在可以有很多棵樹，寄給 user 的信跟任何 daemon 無關 | **不需要**（使用者定，[§ 使用者細聊](#使用者細聊11-12-晚稍後)） |
 
 ## 初步結論
@@ -52,7 +52,7 @@ linux 裡「使用者」只是一個號碼（uid），貼在每個行程身上�
 
 **要動到身分與權限這層才成立的**（要 root，至少一次）：
 
-- agent 也是 linux user（一個 agent 一個帳號）——這之後「不管背後是人還是 agent」才是 linux 也認的事實。
+- agent 也是 linux user（使用者定一個帳號一整棵樹）——這之後「不管背後是人還是 agent」才是 linux 也認的事實。
 - 跨帳號寄信（現成的只有問腦信箱那一套，agent 之間的信箱沒有）。
 - 冒用身分擋得住（現在同一個 uid，任何 agent 都能往人的信箱放信、替人回信）。
 - root user 的 root daemon。
@@ -78,12 +78,11 @@ linux 裡「使用者」只是一個號碼（uid），貼在每個行程身上�
 
 ## 可以先想的問題（只列問題）
 
-（「本體是資料夾還是行程」「代表要哪幾樣」兩題已由 [§ 使用者細聊](#使用者細聊11-12-晚稍後) 收掉。）
+（「本體是資料夾還是行程」「代表要哪幾樣」「一個帳號對一隻 agent 還是一整棵樹」三題已由 [§ 使用者細聊](#使用者細聊11-12-晚稍後) 收掉：最後一題是一整棵樹。）
 
 1. 人開著 Claude Code 做事時，人的行程算在樹外（跟 root daemon 當鄰居、只靠信箱往來）還是樹內（某台 daemon 表上的一列）？
-2. 給 agent 一個 linux 帳號時，那個帳號對應一隻 agent，還是一整棵樹（帳號裡有自己的 root daemon、底下還有子 agent）？
 
-**方向題**（原則推不出、只有他能定）：root 權限放哪一格——完全不放／只放一支小程式／一台 root 身分的 daemon。這題同時決定「一個 agent 一個帳號」什麼時候能成立，也跟現在「root 的事由使用者親手做」的做法有衝突，衝突在 [03 § d](linux-user/03-各念頭的讀法與後果.md)。
+**root 權限放哪一格**：有方向——一台用 root 跑的很小的 daemon（root 帳號的那台），起各帳號的 root daemon、一個帳號一整棵樹（[§ 續：念頭 d](#續念頭-droot-user-的-root-daemon)）。什麼時候做、帳號誰建、門怎麼守、跨帳號寄信的資料夾權限未定。
 
 ## 想親手玩的話（不需要 root）
 
@@ -113,7 +112,7 @@ systemd-run --user --scope -q -p MemoryMax=64M -p MemorySwapMax=0 \
 - `limits.user` 有沒有在真 root 下跑過（這次沒找到紀錄）。
 - aos-mailbox 的 `read`／`send` 在跨帳號的資料夾權限下能不能用。
 - 家機有沒有在送傳統 unix 信的程式。
-- 念頭 c、e 已定（[§ 使用者細聊](#使用者細聊11-12-晚稍後)）；a、b、d 沒有決定，本檔沒有代定。
+- 念頭 c、e 已定、d 有方向（[§ 使用者細聊](#使用者細聊11-12-晚稍後)）；a、b 沒有決定，本檔沒有代定。
 
 使用者：「linux user要等等。」（11-12 晚）——同晚稍後回來細聊，見下節。
 
@@ -139,7 +138,29 @@ systemd-run --user --scope -q -p MemoryMax=64M -p MemorySwapMax=0 \
 - 「不管背後是人還是 agent」因此現在就成立，agent 不必先變成 linux 帳號。
 - 跟 root daemon「平級」＝兩邊都是可以寄過去的對象。
 
-**仍未定**：念頭 d「root user 的 root daemon」；root 權限放哪一格；agent 要不要 linux 帳號。
+### 續：念頭 d（root user 的 root daemon）
+
+頂層問念頭 d 現在聊還是等等。使用者（逐字）：
+
+> 「emmm，我這邊簡單說一下，我記得在早期，那時候有想過，讓某個proc可以切換uid，這樣可以最大程度利用linux權限體系。那時候的方案是弄一支小的輔助程式，必須使用root權限跑他，他就持續跑着，接收請求，把某個proc用指定的uid跑起來。一些細節我忘了。現在看來，或許可以作爲daemon?kernel？」
+
+頂層回（頂層的話）：照同晚「手／門」（[kernel-as-bridge 06](kernel-as-bridge/06-細聊-手與門.md)），兩個都是、主要是 daemon——起 proc 是 daemon 的活，daemon 表上已有換帳號那格（`limits.user`，daemon 不是 root 會報錯），所以那支小輔助程式就是一台用 root 跑的很小的 daemon；「接收請求時判斷誰可以要哪個 uid」是門。層次：linux → root 帳號的小 daemon → 各帳號的 root daemon → agent。由使用者親手用 sudo 起，agent 只能寄信請它起東西。接著問：它底下起的是一個帳號一整棵樹，還是一個帳號一隻 agent？使用者（逐字）：
+
+> 「一個帳號一整棵樹。然後這個root daemon本身也可以作爲agent，畢竟他有body」
+
+頂層問「作為 agent」是只照表做事、還是有腦（LLM）自己決定（後者＝一顆有 root 的腦，被信騙到就等於交出整台機器）。使用者（逐字）：
+
+> 「不，這個不用細究，反正就是root daemon也可以有不同版本，可能某個版本他就是合並了loop fsm agent。」
+
+**決定**：
+
+- 早期那支「用 root 跑、持續跑著、接請求、把某個 proc 用指定 uid 跑起來」的小輔助程式，現在可以做成 daemon：使用者以問句「或許可以作爲daemon?kernel？」提出，頂層答「手是 daemon、門是 kernel，主要是 daemon」，使用者沒反對、接著往下答（不是他明確裁定）。
+- 一個帳號一整棵樹。
+- 這台 root daemon 本身也可以當 agent（它有 body）；root daemon 可以有不同版本，某個版本可以是合併了 loop fsm agent 的；有沒有腦、腦能做到哪「不用細究」。
+
+**頂層講過、使用者沒逐條確認的**：誰寄得進它的信箱就等於拿到整台機器，所以門要嚴、表要小；它不是熱路徑（只起各帳號的 root daemon）。
+
+**仍未定**（不代定、只列）：什麼時候做；帳號誰建；門怎麼守；跨帳號寄信的資料夾權限。
 
 ### 跟現況的出入
 
@@ -153,6 +174,7 @@ systemd-run --user --scope -q -p MemoryMax=64M -p MemorySwapMax=0 \
 
 - **直接衝突：C-80**（[03-基礎設施/02](../../../docs/CONCEPTS/03-基礎設施/02-資料夾程式-工作區與-stack.md)）「在這套系統下，我們不管不在daemon下的proc，所以所有proc都有daemon管」，白話「每個 proc 都有一台管它的 daemon」。人的信箱不在任何 daemon 表上、也沒有 daemon 管它，照新句它是 proc，照 C-80 就不該有這種 proc。
 - **字面出入：C-75**（[03-基礎設施/01-續-C-75](../../../docs/CONCEPTS/03-基礎設施/01-續-C-75.md)）與[名詞表](../../../docs/CONCEPTS/附錄1-名詞.md) proc 列：「proc＝會跑、會交流的東西，跟 Linux 同字同義」。新句只看「聯絡得上」；人不在線時信箱照收、沒有東西在跑；linux 那邊 proc 是一個行程，linux user 不是行程（本檔 § 最該知道的一個出入）。名詞表「daemon 底下的子項……都是 proc」是列舉、不排他，不衝突。
+- **念頭 d 那段帶出的出入**：C-64（[01-設計理念/05](../../../docs/CONCEPTS/01-設計理念/05-布局成長與檔案權限.md)）遠期「一個agent一個賬號」，跟「一個帳號一整棵樹」字面不同；[名詞表](../../../docs/CONCEPTS/附錄1-名詞.md) daemon 列「根 daemon……由使用者顧……aos 不做根的根」，root 帳號的小 daemon 正是各帳號根 daemon 的上一層；同列「最基礎的 kernel（來者不拒）」跟頂層說的「門要嚴」——照手／門分開看可以不衝突，列著。
 - **方向相反、不算衝突：N-16**（[05-N-16](../../../docs/NORMS/05-基礎設施-窗/05-N-16.md)）「aos-post＝IPC 的語法糖、基底工具，跟 aos proc 的關聯不深」、C-75 的「不要去與aos-post耦合太深」：這兩句講 aos-post 不依賴 proc、不管 body；新句是反過來拿 aos-post 認 proc。
 - **對得上的**：P-48「agent 跟 agent（含把自己當一隻 agent 的人）互相寄信」；N-16「位置由擁有者定、不強制在 `$AOS_STACK`」；N-28「沒掛 daemon＝Linux 管」（講的是直接 `aos-exec` 跑的東西，沒說它不是 proc）。
 - 沒找到把 proc 定成「daemon 表上的一列」或「一個 linux 行程」的排他條文；最接近的就是上面的 C-80 與 C-75。
