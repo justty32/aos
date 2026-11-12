@@ -10,7 +10,7 @@
   "parallel": true,
   "timeout_ms": 60000,
   "tooldef": {
-    "description": "Call one tool on an external MCP server once and print its text result. Not registered for brains: each pack entry's _entry runs it with --pack and --tool; stdin is the external tool's arguments, passed as is.",
+    "description": "Call one tool on an external MCP server once and print its limited text/resources result and save image/audio in AOS_STACK. Not registered for brains: each pack entry's _entry runs it with --pack and --tool; stdin is the external tool's arguments, passed as is.",
     "parameters": {
       "type": "object",
       "additionalProperties": true,
@@ -19,6 +19,6 @@
         "tool": {"type": "string", "description": "flag only (--tool NAME): the external tool's original name, a key of mcp_tools"}
       }
     },
-    "errors": ["ArgumentsBad", "PackMissing", "PackBad", "PathMissing", "DotenvBad", "ToolUnknown", "CommandMissing", "ServerFailed", "ServerBad", "CommandFailed", "CallFailed"]
+    "errors": ["ArgumentsBad", "PackMissing", "PackBad", "PathMissing", "DotenvBad", "ToolUnknown", "CommandMissing", "ServerFailed", "ServerBad", "CommandFailed", "CallFailed", "StackMissing", "WriteFailed"]
   }
 }

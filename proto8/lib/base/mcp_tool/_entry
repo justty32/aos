@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-# mcp_tool - 叫外部 MCP server 的一支工具：讀包檔（server 檔）裡的 mcp_server，起 server、tools/call 一次、印文字結果、收掉 server
+# mcp_tool - 叫外部 MCP server 的一支工具：讀包檔（server 檔）裡的 mcp_server，起 server、tools/call 一次、顯示限量文字並保存媒體、收掉 server
 # 介面（external-mcp 07 步 2）：mcp_tool --pack FILE --tool NAME；stdin＝那支外部工具的 arguments 原樣（一個 JSON 物件，空＝{}；不照 _tooldef 驗）。
 #   包檔是 aos-mcp-import 寫的（或手寫）：mcp_server（怎麼連，mcp_server_file.load 驗）、mcp_tools（鍵＝外部原名，每格 _entry／_tooldef／_metainfo）、tools（登記）。
 #   aos-exec 跑包檔裡那格的 _entry 時 cwd＝包檔的資料夾，所以 --pack 只寫檔名；server 的 cwd＝$AOS_WS（沒有＝當下的 cwd，mcp_client 決定）。
 #   逾時＝那格 _metainfo.timeout_ms（沒寫＝60 秒）。
-# 輸出：content 裡 type text 的依序印（各段之間換行）；其他種類先印一行 [<type> content not shown]（步 3 補）。
+# 輸出：文字／資源依序印，image／audio 解碼存 $AOS_STACK；最多前 2000 行或 50KB，未知種類保留 placeholder。
 # 錯：stderr 與 stdout 各一行「mcp_tool: error: 代號 原因」、退 1：ArgumentsBad、FlagUnknown、PackMissing、PackBad、PathMissing、DotenvBad、
 #   ToolUnknown（包檔的 mcp_tools 沒有 NAME）、CommandMissing（server 起不來）、ServerFailed、ServerBad、CommandFailed（逾時）、
 #   CallFailed（server 回 isError：內容照印，最後一行是錯誤行）；mcp_server_file／mcp_client 丟的代號照轉。
-import json, os, sys
+import base64, binascii, json, mimetypes, os, signal, sys, tempfile
 HELP = """\
 usage: mcp_tool --pack FILE --tool NAME < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Call one tool on an external MCP server once. FILE is the pack (server file) with
@@ -16,7 +16,9 @@ mcp_server (how to start the server) and mcp_tools (the frozen tools; NAME is a 
 A relative FILE is from the current folder (aos-exec runs a pack entry from the pack's folder).
 stdin is the external tool's arguments as one JSON object, passed as is (empty = {});
 --pack and --tool are flags only, not keys on stdin. Timeout: the tool's _metainfo.timeout_ms (default 60000).
-Result on stdout: the text content in order; other content types print [TYPE content not shown].
+Result on stdout: text/resources in order; image/audio saved in $AOS_STACK (created only on write).
+Only the first 2000 lines or 50KB are shown, followed by a truncation note.
+Unknown content types print [TYPE content not shown]. TERM/INT close the server before exit (128 + signal).
 If the server reports isError, the content is printed and then the error line (CallFailed), exit 1.
 On error: one line "mcp_tool: error: CODE reason" on stderr and stdout, exit 1.
 """
@@ -95,36 +97,133 @@ def frozen_cell(pack, tool):
     return tools[tool], ms / 1000.0
 
 
+def saved_media(content):
+    """驗媒體後寫自己的小格；唯一檔名讓平行呼叫互不覆蓋。"""
+    kind, mime, encoded = content["type"], content.get("mimeType"), content.get("data")
+    if not isinstance(mime, str) or not mime or not isinstance(encoded, str):
+        raise tool_io.Error("ServerBad", "MCP %s content has invalid data or mimeType" % kind)
+    try:
+        data = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error):
+        raise tool_io.Error("ServerBad", "MCP %s content data is not valid base64" % kind) from None
+    stack = os.environ.get("AOS_STACK")
+    if not stack:
+        raise tool_io.Error("StackMissing", "AOS_STACK is not set")
+    try:
+        os.makedirs(stack, exist_ok=True)
+        fd, path = tempfile.mkstemp(prefix=kind + "-", suffix=mimetypes.guess_extension(mime) or ".bin", dir=stack)
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+    except OSError as e:
+        raise tool_io.Error("WriteFailed", "cannot save MCP %s in %s: %s" %
+                            (kind, tool_io.place(stack), tool_io.os_reason(e))) from None
+    return "[%s saved: %s (%s, %d bytes)]" % (kind, tool_io.place(path), mime, len(data))
+
+
+def limited_text(text):
+    """從頭取完整行；首行太長時保留 UTF-8 完整前綴，尾句明列省略 bytes。"""
+    max_lines, max_bytes = 2000, 50 * 1024
+    split = text.split("\n")
+    lines = [line + "\n" for line in split[:-1]]
+    if split[-1]:
+        lines.append(split[-1])
+    picked, size = [], 0
+    for line in lines[:max_lines]:
+        width = len(line.encode("utf-8"))
+        if size + width > max_bytes:
+            if not picked:
+                picked.append(line.encode("utf-8")[:max_bytes].decode("utf-8", "ignore"))
+            break
+        picked.append(line)
+        size += width
+    shown = "".join(picked)
+    omitted = len(text.encode("utf-8")) - len(shown.encode("utf-8"))
+    if omitted:
+        shown += ("\n" if shown.endswith("\n") else "\n\n") + "[lines 1-%d of %d; omitted %d bytes (limit 2000 lines or 50KB).]\n" % (
+            len(picked), len(lines), omitted)
+    return shown
+
+
 def show(result):
-    """content 依序：text 印原文，其他種類印一行說沒顯示。回 isError。"""
+    """依序顯示 content；沒有 content 才退回單行 structuredContent JSON。"""
     content = result.get("content", [])
     if not isinstance(content, list) or not all(isinstance(c, dict) for c in content):
         raise tool_io.Error("ServerBad", "MCP tools/call result content must be an array of objects")
     parts = []
     for c in content:
-        if c.get("type") == "text" and isinstance(c.get("text"), str):
+        kind = c.get("type")
+        if kind == "text" and isinstance(c.get("text"), str):
             parts.append(c["text"])
+        elif kind in ("image", "audio"):
+            parts.append(saved_media(c))
+        elif kind == "resource_link" and isinstance(c.get("uri"), str):
+            parts.append(c["uri"])
+        elif (kind == "resource" and isinstance(c.get("resource"), dict) and
+              isinstance(c["resource"].get("text"), str)):
+            parts.append(c["resource"]["text"])
         else:
             parts.append("[%s content not shown]" % c.get("type", "unknown"))
+    if not content and "structuredContent" in result:
+        parts.append(json.dumps(result["structuredContent"], ensure_ascii=False, separators=(",", ":")))
     if parts:
         text = "\n".join(parts)
-        sys.stdout.write(text if text.endswith("\n") else text + "\n")
+        shown = limited_text(text)
+        sys.stdout.write(shown if shown.endswith("\n") else shown + "\n")
         sys.stdout.flush()
     return result.get("isError") is True
 
 
-pack, tool = flags()
-arguments = stdin_arguments()
+class Interrupted(BaseException):
+    pass
+
+
+_pending_signal = None
+
+
+def interrupted(signum, frame):
+    """第一次打斷工作；清理中只記訊號，避免 close 已標 closed 後被打斷。"""
+    global _pending_signal
+    if _pending_signal is not None:
+        return
+    _pending_signal = signum
+    # 已在處理例外時讓那條路徑完成清理；open_session 自己也會收初始化失敗的 session。
+    if sys.exc_info()[0] is None:
+        raise Interrupted()
+
+
+def record_signal(signum, frame):
+    global _pending_signal
+    if _pending_signal is None:
+        _pending_signal = signum
+
+
+signal.signal(signal.SIGTERM, interrupted)
+signal.signal(signal.SIGINT, interrupted)
 try:
+    pack, tool = flags()
+    arguments = stdin_arguments()
     mcp_server_file.load(pack)
     _cell, timeout_s = frozen_cell(pack, tool)
-    session = mcp_client.open_session(pack)
+    session = None
     try:
+        session = mcp_client.open_session(pack)
+        if _pending_signal is not None:
+            raise Interrupted()
         result = session.call_tool(tool, arguments, timeout_s)
     finally:
-        session.close()
-    failed = show(result)
+        signal.signal(signal.SIGTERM, record_signal)
+        signal.signal(signal.SIGINT, record_signal)
+        if session is not None:
+            session.close()
+    if _pending_signal is None:
+        failed = show(result)
+        if failed:
+            die("CallFailed", "the server reported an error")
+except Interrupted:
+    pass
 except tool_io.Error as e:
-    die(e.code, str(e))
-if failed:
-    die("CallFailed", "the server reported an error")
+    if _pending_signal is None:
+        die(e.code, str(e))
+finally:
+    if _pending_signal is not None:
+        sys.exit(128 + _pending_signal)
