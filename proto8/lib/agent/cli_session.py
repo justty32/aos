@@ -55,6 +55,12 @@
 #   claude 身（步 3）：小格 mcp.json 跟 aos 那格並排 {"type": "http", "url", "headersHelper"}（helper＝mcp_server_file.py --headers，token 只經管線、
 #   不進 claude 環境＝Bash 看不到）、--allowedTools 加 mcp__<名>（only＝逐支）、except＝--disallowedTools；ca_file＝NODE_EXTRA_CA_CERTS。
 #   stdio（步 4）：兩身都經 aos-mcp-launch <server 檔>（PATH 找；它讀 env_file、exec 成 server＝金鑰只進 server 行程）；codex 另帶 env＝MCP_ENV 那幾個。
+# 子 agent 那台（11-12 eca-task-subagent，thinking 2026-11/12/eca-task-subagent.md）：cli.json 選填 tools_sub＝第二份 aos-tools 登記檔（寫法同 tools；
+#   只有 claude 身認，codex 身寫了＝CfgBad）。claude 用 Agent 工具叫出的子 agent 預設繼承主對話所有 MCP 工具；寫了 tools_sub＝
+#   --agents 蓋掉內建的 general-purpose：disallowedTools mcp__aos（看不到主 agent 那台）、mcpServers 內嵌 aos_sub（另一隻 aos-mcp 接這份登記檔，
+#   只有子 agent 連得到、主對話看不到），--allowedTools 加 mcp__aos_sub。其他類型的子 agent（Explore、Plan、外掛或使用者自己定義的）還是看得到
+#   mcp__aos__*，由 PreToolUse hook（--settings，matcher mcp__aos__.*，本檔 guard）擋：hook 的輸入有 agent_id＝子 agent 叫的＝deny。
+#   沒寫 tools_sub＝什麼都不加（子 agent 照 CLI 預設繼承全部）。flags 裡自己寫了 --agents 又寫 tools_sub＝CfgBad（兩個 --agents 只會留一個）。
 #   模型（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本）的 model＝flags 的 --model（換掉或加在尾）；都沒有＝flags 原樣。
 # 換台（11-10 two-machines 05）：要接舊對話前先認「是不是這台的」（session_here：記號檔的 session、home 一樣，claude 再比 ws；
 #   不讀 CLI 的任何檔內容、不靠它的錯誤訊息）。不是＝在交出去之前改開新對話：呼叫者給了 reseed（aos-eca-turn）＝把 reseed(上限)
@@ -132,6 +138,7 @@ def load_cfg(tool_dir):
     except ValueError as e:
         die("CfgBad", str(e))
     cfg["registry"] = registry(cfg, tool_dir, path, files)
+    cfg["sub_registry"] = sub_registry(cfg, tool_dir, path)        # 11-12 eca-task-subagent：cli.json 的 tools_sub
     cfg["hooks_def"] = os.path.abspath(tool_dir) if files.get("hooks") else None   # 11-10 hook：宣告了 hooks＝aos-mcp 帶 --hooks
     cfg["external"] = external_servers(cfg, tool_dir, path)        # 11-12 external-mcp 步 1：cli.json 的 mcp_servers
     stack_copies(cfg, tool_dir, files)
@@ -217,29 +224,47 @@ def system_argv(cfg):
     return ["-c", "developer_instructions=" + json.dumps(text, ensure_ascii=False)]
 
 
+def _named_registry(cfg, key, base, path):
+    """cli.json 的 key（tools／tools_sub）指的登記檔（絕對路徑）：字串＝相對從 cli.json 的資料夾算；物件＝指示詞，每次讀才解、不寫回
+    （例 {"$env": "X", "$path": "tools.json"}，11-10 two-machines TC），解完照字串的規則。不是檔＝ToolsMissing。"""
+    tools = cfg[key]
+    if isinstance(tools, dict):
+        sys.path.insert(0, _lib)      # directive_value 跟 tool_io 同在 lib/（直接執行此檔時 lib 不在 sys.path）
+        try:
+            from directive_value import resolve_path
+        finally:
+            sys.path.pop(0)
+        try:
+            tools = resolve_path(tools, path, key)
+        except tool_io.Error as e:
+            die(e.code, str(e))
+    if not isinstance(tools, str) or not tools:
+        die("CfgBad", "%s: %s must be the path of a registry file (a non-empty string)" % (path, key))
+    reg = os.path.normpath(os.path.join(base, tools))
+    if not os.path.isfile(reg):
+        die("ToolsMissing", "%s: registry file named by %s not found: %s" % (path, key, reg))
+    return reg
+
+
+def sub_registry(cfg, tool_dir, path):
+    """子 agent 那台的登記檔（絕對路徑）；cli.json 沒寫 tools_sub＝None（11-12 eca-task-subagent）。只有 claude 身認：
+    codex 身寫了、或 flags 裡自己又寫了 --agents＝CfgBad（寫什麼就做什麼，不靜靜吞掉）。"""
+    if "tools_sub" not in cfg:
+        return None
+    if cfg["kind"] != "claude":
+        die("CfgBad", "%s: tools_sub is only for kind claude" % path)
+    if "--agents" in cfg.get("flags", []) + cfg.get("print_flags", []):
+        die("CfgBad", "%s: tools_sub and --agents in flags cannot be used together (tools_sub adds its own --agents)" % path)
+    return _named_registry(cfg, "tools_sub", os.path.abspath(tool_dir), path)
+
+
 def registry(cfg, tool_dir, path, files):
     """這份定義的 aos-tools 登記檔（絕對路徑）；沒有＝None（11-03 eca-tools）。
     tools 有寫＝它（相對路徑從 cli.json 的資料夾算），不是檔＝ToolsMissing；沒寫＝interfaces.json 宣告的 tools，未宣告才取同層 tools.json。
     給了 tools_flags 卻沒有登記檔＝CfgBad（寫什麼就做什麼，不靜靜吞掉）。"""
     base = os.path.abspath(tool_dir)
     if "tools" in cfg:
-        tools = cfg["tools"]
-        if isinstance(tools, dict):   # 11-10 two-machines TC：寫指示詞（例 {"$env": "X", "$path": "tools.json"}）＝每次讀才解、不寫回；解完照字串的規則
-            sys.path.insert(0, _lib)  # directive_value 跟 tool_io 同在 lib/（直接執行此檔時 lib 不在 sys.path）
-            try:
-                from directive_value import resolve_path
-            finally:
-                sys.path.pop(0)
-            try:
-                tools = resolve_path(tools, path, "tools")
-            except tool_io.Error as e:
-                die(e.code, str(e))
-        if not isinstance(tools, str) or not tools:
-            die("CfgBad", "%s: tools must be the path of a registry file (a non-empty string)" % path)
-        reg = os.path.normpath(os.path.join(base, tools))
-        if not os.path.isfile(reg):
-            die("ToolsMissing", "%s: registry file named by tools not found: %s" % (path, reg))
-        return reg
+        return _named_registry(cfg, "tools", base, path)
     reg = os.path.join(base, files.get("tools", "tools.json"))
     if os.path.isfile(reg):
         return reg
@@ -346,8 +371,8 @@ def mcp_argv(cfg, cell, ws, stack, external=()):
     """有登記檔＝接上 aos-mcp 要加給 CLI 的旗標；沒有＝[]（11-03 eca-tools）。每次起 CLI 前叫（claude 的 mcp.json 每次重寫）。
     ws＝CLI 的 cwd、stack＝給 aos-mcp 的 --stack（工具叫的小格在 <stack>/tools/<名>/）。
     external＝claude 身要並排接的外部 http server（external_claude 留下的；11-12 external-mcp 步 3）；codex 的外部 server 走 external_codex。"""
-    reg = cfg.get("registry")
-    if not reg and not external:
+    reg, sub = cfg.get("registry"), cfg.get("sub_registry")
+    if not reg and not external and not sub:
         return []
     servers = {}
     if reg:
@@ -361,9 +386,53 @@ def mcp_argv(cfg, cell, ws, stack, external=()):
         cell.write("mcp.json", json.dumps({"mcpServers": servers}, ensure_ascii=False) + "\n")
     except OSError as e:
         die("WriteFailed", "cannot write %s: %s" % (tool_io.place(cell.file("mcp.json")), tool_io.os_reason(e)))
-    allow = (["mcp__aos"] if reg else []) + allowed
+    allow = (["mcp__aos"] if reg else []) + (["mcp__" + SUB_SERVER] if sub else []) + allowed
     return ["--mcp-config", cell.file("mcp.json"), "--allowedTools", ",".join(allow)] \
-        + (["--disallowedTools", ",".join(denied)] if denied else [])
+        + (["--disallowedTools", ",".join(denied)] if denied else []) \
+        + (["--agents", json.dumps(sub_agents(cfg, ws, stack), ensure_ascii=False)] if sub else [])
+
+
+# 子 agent 那台（11-12 eca-task-subagent）。蓋掉的是 claude 內建的 general-purpose（Agent 工具沒指定類型時用的那個）。
+SUB_SERVER, SUB_AGENT = "aos_sub", "general-purpose"
+SUB_DESCRIPTION = ("General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks. "
+                   "It has the built-in tools and the reduced aos tool set (mcp__aos_sub__*), not the main agent's aos tools (mcp__aos__*).")
+SUB_PROMPT = ("You are a general-purpose subagent working for the main agent. Do the task you were given with the tools you have. "
+              "Your aos tools are the reduced set named mcp__aos_sub__*; the main agent's own aos tools are not available to you. "
+              "When you are done, reply with a concise report of what you did and what you found: that report is all the main agent sees.")
+GUARD_REASON = ("aos tools on the server aos belong to the main agent and are not available to subagents. "
+                "Subagents of type general-purpose have the reduced set mcp__aos_sub__*; ask the main agent to make this call itself.")
+
+
+def sub_agents(cfg, ws, stack):
+    """--agents 的 JSON：蓋掉 general-purpose——拿掉主 agent 那台（mcp__aos）、內嵌只有它連得到的 aos_sub（aos-mcp 接 tools_sub 那份登記檔；
+    同一個工作區與 stack、有宣告 hooks 照帶 --hooks、tools_flags 照插；不帶 --own：這隻自己加減的工具不進子 agent 那台）。"""
+    if shutil.which("aos-mcp") is None:
+        die("CliMissing", "aos-mcp is not on PATH (tools_sub is set; add proto8/cmd/aos-mcp/bin to PATH)")
+    args = ["--ws", ws, "--stack", stack] + (["--hooks", cfg["hooks_def"]] if cfg.get("hooks_def") else []) \
+        + cfg.get("tools_flags", []) + [cfg["sub_registry"]]
+    return {SUB_AGENT: {"description": SUB_DESCRIPTION, "prompt": SUB_PROMPT, "disallowedTools": ["mcp__aos"],
+                        "mcpServers": [{SUB_SERVER: {"command": "aos-mcp", "args": args}}]}}
+
+
+def guard_hooks(cfg):
+    """有 tools_sub 又有主 agent 那台＝claude 的 PreToolUse hook 表（給 --settings 的 hooks 併進去）；否則 {}。
+    general-purpose 以外的子 agent 類型還看得到 mcp__aos__*，叫的時候由 guard_main 擋。"""
+    if not (cfg.get("sub_registry") and cfg.get("registry")):
+        return {}
+    cmd = " ".join(shlex.quote(a) for a in (sys.executable, os.path.abspath(__file__), "guard"))
+    return {"PreToolUse": [{"matcher": "mcp__aos__.*", "hooks": [{"type": "command", "command": cmd}]}]}
+
+
+def guard_main():
+    """claude 的 PreToolUse hook：stdin 一份 hook JSON。有 agent_id＝子 agent 叫的＝印 deny；主對話叫的＝什麼都不印（照原本的權限走）。
+    讀不懂輸入＝也 deny（擋錯只少一次工具呼叫，放錯就是子 agent 用到主 agent 那台）。一律退 0。"""
+    try:
+        sub = bool(json.loads(sys.stdin.read()).get("agent_id"))
+    except (ValueError, AttributeError, OSError):
+        sub = True
+    if sub:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                                 "permissionDecisionReason": GUARD_REASON}}))
 
 
 def _aos_server(cfg, ws, stack, reg):
@@ -742,6 +811,8 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
     ext, env, _ = external_claude(cfg)
     argv += mcp_argv(cfg, cell, ws, stack, ext) + system_argv(cfg)
+    guard = guard_hooks(cfg)
+    argv += ["--settings", json.dumps({"hooks": guard})] if guard else []
     argv += ["--resume", sid] if sid else ["--session-id", new]
 
     def given():
@@ -1266,6 +1337,7 @@ def start(cfg, cell, ws, stack):
         cmd = " ".join(shlex.quote(a) for a in hook_cmd("claude", cell))
         hooks = {"hooks": {e: [{"hooks": [{"type": "command", "command": cmd}]}]
                            for e in ("SessionStart", "UserPromptSubmit", "Stop")}}
+        hooks["hooks"].update(guard_hooks(cfg))            # 11-12 eca-task-subagent：子 agent 叫主 agent 那台 aos 的工具＝擋
         ext, _, spec = external_claude(cfg)
         argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack, ext) + system_argv(cfg) + ["--settings", json.dumps(hooks)]
         argv += ["--resume", sid] if sid else []
@@ -1367,7 +1439,7 @@ def open_cell(cell):
     ws = os.path.normpath(os.path.join(cell.path, ws))
     stack = os.path.normpath(os.path.join(cell.path, stack)) if stack else ""
     cfg = load_cfg(tool_dir)
-    if cfg.get("registry") and not stack:
+    if (cfg.get("registry") or cfg.get("sub_registry")) and not stack:
         die("CellBad", "%s has no stack.txt (tools are attached; need the stack for aos-mcp)" % cell.path)
     f, ok = cell.lock()
     if not ok:
@@ -1380,8 +1452,12 @@ def open_cell(cell):
 if __name__ == "__main__":
     if "--help" in sys.argv[1:2]:
         print("usage: cli_session.py hook claude|codex CELL [PAYLOAD]\n"
+              "       cli_session.py guard\n"
               "The hook the CLI's interactive screen calls after each turn (appends to CELL/turns.jsonl; never fails).\n"
+              "guard: claude PreToolUse hook (hook JSON on stdin); denies a subagent's call to the main agent's aos tools.\n"
               "Tool entries (lib/agent/claude, codex), aos-eca-turn and aos-eca-screen import this file.")
+    elif sys.argv[1:] == ["guard"]:
+        guard_main()
     elif len(sys.argv) >= 4 and sys.argv[1] == "hook":
         hook_main(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else None)
     else:

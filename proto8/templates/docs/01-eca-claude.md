@@ -16,13 +16,15 @@ eca-claude/
   _entry      ["aos-loop", "loop.json"]（JSON 入口）
   loop.json   {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000},
                "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；三扇窗落在 $AOS_STACK）
-  cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms）：--tools Read,Write,Edit,Glob,Grep,Bash、--permission-mode dontAsk、--allowedTools Write,Edit,Bash、--strict-mcp-config
+  cli.json    怎麼叫 CLI（kind、flags、print_flags、tools_sub、timeout_ms）：--tools Read,Write,Edit,Glob,Grep,Bash,Agent,Skill、--permission-mode dontAsk、--allowedTools Write,Edit,Bash、--strict-mcp-config；
+              tools_sub＝子 agent 那台的登記檔（11-12 晚，見下「子 agent 與 skill」）
               （11-12 起 claude 內建的寫檔、改檔、指令都開，aos 不再給檔案與 shell 工具；--model 不寫在這，見 llm.json；不加全繞過權限的旗標）
   llm.json    腦設定：{"model": "sonnet"}（11-04 晚；cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）；只認 model（claude CLI 沒有 temperature 等取樣旗標，與快取無關的調整鍵這邊沒有對應，11-10 晚）
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔11-04 起，相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
   tools.json  aos-tools 的登記檔：`"$override"` 一串 [lib/packs](../../lib/packs/README.md) 七包（gadgets、events、self、def、mailbox、json〔json_get、json_ls、json_search、json_set、json_add、json_del、json_multi_get、json_multi_set，11-12 json-tools〕、index〔index_view，11-12 index-tools〕），共 25 支；不掛通用四包 look、change、delete（含 trash）、shell（11-11 晚使用者「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「可以先定這樣，然後trash也拿掉。」）與 subagent、goal、todo（11-11 晚，原話與代定見範本 README）；do_task 只給 agent-fsm，寫 `"do_task": null`；
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__peek_now_time…；帶 `--own <stack>/tools.json`，self_tools 加減工具後 aos-mcp 送 list_changed，同一輪就叫得到，11-10 深夜「3.同一輪就生效」）；不要工具就刪掉它
+  tools_sub.json  子 agent 那台的登記檔（11-12 晚）：gadgets、json、index 三包裡不改東西的八支（peek_clock、peek_now_time、math、json_get、json_ls、json_search、json_multi_get、index_view）
   interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model"], "history": "history.jsonl", "hooks": "hooks.json"}}（11-04；hooks 鍵 11-10 晚加；history 鍵 11-10 加，給 aos-agent history 找檔；llm_keys 11-10 晚加，aos-agent llm set 不在上面的鍵照存＋warning；aos-agent ctl add 只看這個宣告）
   hooks.json  hook 清單（11-10 晚；11-11 起預設一格 timer：on_clock 每 300000 ms、handler lib/agent/hook_noop 什麼都不做；另一格 mail_notify：on_clock 每 60000 ms（11-11 翻案「每 1 分鐘」）、handler lib/agent/mail_notify，有新信才往 queue 寄一則 `[aos] new_mail: …`；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
   screen/     子介面：_entry＝["aos-eca-screen", "--eca", ".."]（aos-agent open／close／watch 叫它；動作接在最後）
@@ -65,6 +67,21 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停的，信留在 `queue/cur/`、history 不動，修好照問；aos-mcp 裡停的＝那次工具呼叫回錯（isError）給 CLI，不整支死。
 
 **長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 預設 600000（10 分鐘），限制 CLI 呼叫；`loop.json.exec.timeout_ms` 預設 900000（15 分鐘），限制整次 aos-eca-turn，要留得比 CLI 那層長，讓它有時間收尾。長任務要同時檢查這兩層，增加額度不會延長逾時。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
+
+## 子 agent 與 skill（11-12 晚 eca-task-subagent）
+
+使用者 11-12 晚：「claude code cli自己本身有Task工具，可以的話幫我加入claude eca範本和定義中(Skill也加上)」「將aos mcp切成幾個，一個是給主agent用的，另一個是比較少功能的，給子agent用的」。調查、實測與代定在 [thinking 11-12 eca-task-subagent](../../thinking/2026-11/12/eca-task-subagent.md)。
+
+- **開法**：`cli.json` 的 `--tools` 列 `Agent`（子 agent 工具；2.1.63 前叫 `Task`，舊名還認）與 `Skill`。dontAsk 下這兩支不必進 `--allowedTools`；子 agent 的權限照主對話的（Write、Edit、Bash、`mcp__aos…` 照白名單，其他照拒）。
+- **不切的話**：claude 的子 agent 繼承主對話全部 MCP 工具，`mcp__aos__*` 整台都叫得到（含 self_ctl、mailbox_send 這類）。
+- **切（`tools_sub`）**：`cli.json` 寫 `"tools_sub": "<登記檔>"`（寫法同 `tools`：相對從 `cli.json` 的資料夾算，也可寫指示詞；不是檔＝`ToolsMissing`）。cli_session 起 claude 時多帶三樣：
+  1. `--agents`：蓋掉內建的 `general-purpose`——`disallowedTools: ["mcp__aos"]`（看不到主 agent 那台）、`mcpServers` 內嵌 `aos_sub`（`aos-mcp --ws <工作區> --stack <stack> [--hooks <定義>] [tools_flags…] <tools_sub 那份>`；只有這個子 agent 連得到，主對話的清單沒有它）。內建工具照繼承。
+  2. `--allowedTools` 多 `mcp__aos_sub`（整台免問）。
+  3. `--settings` 的 PreToolUse hook（matcher `mcp__aos__.*`，`cli_session.py guard`）：別的類型的子 agent（Explore、Plan、外掛帶的、使用者自己定義的）還看得到 `mcp__aos__*`，但 hook 輸入帶 `agent_id`＝子 agent 叫的＝擋下、回一句說明；主對話叫的不受影響。
+- **子 agent 那台放什麼**（代定、可翻案）：只放 `_metainfo.side_effect` 是 false 而且講的不是「這隻 agent 自己」的——peek_clock、peek_now_time、math、json_get、json_ls、json_search、json_multi_get、index_view 八支。不放：會改東西的 json_set／add／del／multi_set、self 一族、events、def、mailbox 三支（信箱是主 agent 的）。要加減＝改定義的 `tools_sub.json`。
+- **不跟著變的**：這隻自己用 `self_tools` 加減的工具只進主 agent 那台（`aos_sub` 不帶 `--own`）；`aos-agent tools` 也只管主 agent 那份。外部 MCP server（`mcp_servers`）照 CLI 預設，子 agent 一樣繼承。
+- **限制**：只有 claude 身（codex 寫了＝`CfgBad`）；`flags` 裡自己寫了 `--agents` 又寫 `tools_sub`＝`CfgBad`。子 agent 是 CLI 的黑盒子：它叫 `mcp__aos_sub__*` 照樣過 aos-mcp 的 `before_tool`／`after_tool` hook，其餘 aos 看不到。
+- **skill**：claude 自己從工作區 `.claude/skills/`、帳號的 `~/.claude/skills/` 與外掛找；主對話與子 agent 都能用 `Skill` 叫（haiku 實測）。aos 不管 skill 放哪。
 
 ## 接外部 MCP server（11-12 external-mcp）
 

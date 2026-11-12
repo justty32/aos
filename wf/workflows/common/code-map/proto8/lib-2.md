@@ -68,6 +68,7 @@
 | [`tests/test_cli_hook_follow.py`](../../../../../proto8/lib/agent/tests/test_cli_hook_follow.py) | 驗畫面 hook 跟上 CLI 的對話（11-12 eca-slash）：id 換了就改記 session.txt；claude 的 /clear（SessionStart source clear）連 aos 的 history 一起清、原文搬到旁邊；codex 取標題的旁支 thread 不記。 |
 | [`tests/test_cli_system.py`](../../../../../proto8/lib/agent/tests/test_cli_system.py) | 驗 cli_session 的 system（11-11 self-system）：宣告了才碰；stack 那份在就整份用它、否則定義那份；claude 附加檔＋snapshot off、codex developer_instructions；空＝不附加。 |
 | [`tests/test_cli_tools_directive.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_directive.py) | 驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。 |
+| [`tests/test_cli_tools_sub.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_sub.py) | 驗 cli.json 的 tools_sub（11-12 eca-task-subagent）：只有 claude 身認、--agents 蓋掉 general-purpose 並內嵌 aos_sub、--allowedTools 多 mcp__aos_sub、guard hook 擋子 agen… |
 | [`tests/test_mail_notify.py`](../../../../../proto8/lib/agent/tests/test_mail_notify.py) | mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json）只把等著的記成已知；睡醒（first、有記錄）睡前提醒過的不重複、睡著時新到的提醒一… |
 | [`todo/`](../../../../../proto8/lib/agent/todo/) | 這隻 agent 自己的待辦清單：ls、set、add、mark；存在自己的小格 $AOS_STACK/todo.json（第一次寫才建），每個 op 都印整張 |
 | [`todo/tests/test_todo.py`](../../../../../proto8/lib/agent/todo/tests/test_todo.py) | Test the todo tool: the four ops, its errors and limits, where it keeps the list, and that ls never makes the cell (also through aos-tools call). |

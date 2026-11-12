@@ -45,7 +45,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`cli.json`](../../../../../proto8/templates/eca-claude/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
+| [`cli.json`](../../../../../proto8/templates/eca-claude/cli.json) | 設定（鍵：kind、flags、print_flags、tools_sub、timeout_ms） |
 | [`hooks.json`](../../../../../proto8/templates/eca-claude/hooks.json) | Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added… |
 | [`interfaces.json`](../../../../../proto8/templates/eca-claude/interfaces.json) | 設定（鍵：aos-agent） |
 | [`llm.json`](../../../../../proto8/templates/eca-claude/llm.json) | 設定（鍵：model） |
@@ -53,6 +53,7 @@
 | [`screen/_entry`](../../../../../proto8/templates/eca-claude/screen/_entry) | 入口：`aos-eca-screen --eca ..` |
 | [`screen/interfaces.json`](../../../../../proto8/templates/eca-claude/screen/interfaces.json) | 設定（鍵：aos-agent/screen） |
 | [`tools.json`](../../../../../proto8/templates/eca-claude/tools.json) | 設定（鍵：$override、tools） |
+| [`tools_sub.json`](../../../../../proto8/templates/eca-claude/tools_sub.json) | Registry of the reduced aos tool set for subagents the claude CLI spawns with its Agent tool (cli.json tools_sub): read-only tools only - peek_clock,… |
 
 ## `proto8/templates/judge-llm/`
 

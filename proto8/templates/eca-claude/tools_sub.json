@@ -1,0 +1,5 @@
+{"description": "Registry of the reduced aos tool set for subagents the claude CLI spawns with its Agent tool (cli.json tools_sub): read-only tools only - peek_clock, peek_now_time, math, json_get, json_ls, json_search, json_multi_get, index_view.",
+ "$override": [{"$env": "AOS_HOME", "$path": "/lib/packs/gadgets.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/json.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/index.json"}],
+ "tools": {"do_task": null, "json_set": null, "json_add": null, "json_del": null, "json_multi_set": null}}
