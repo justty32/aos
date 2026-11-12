@@ -10,8 +10,13 @@ import json
 import os
 import re
 import subprocess
+import sys
 
 import aos_flags
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "lib"))
+import directive_value  # noqa: E402  指示詞交給 aos-directive 解的共用版（tool_io 已由 aos_flags 載入）
+sys.path.pop(0)
 
 SUFFIX = "_register.json"
 KEY = "letters"
@@ -110,16 +115,12 @@ def resolve_box(box, base, table=None):
     """表裡的 box → 絕對路徑；解不開丟 Bad。table＝登記表的路徑（給了＝指示詞裡的 #/… 取表自己，11-12 ref-hash）。"""
     if isinstance(box, dict):
         try:
-            r = subprocess.run(["aos-directive"] + (["--file", os.path.abspath(table)] if table else []),
-                               input=json.dumps({"v": box}), capture_output=True, text=True,
-                               cwd=base, timeout=SEND_TIMEOUT_S)
-        except (OSError, subprocess.TimeoutExpired) as e:
-            raise Bad("cannot resolve the box directive: %s" % e)
-        if r.returncode != 0:
-            raise Bad("cannot resolve the box directive: %s" % last_error(r.stderr, "aos-directive exited %d" % r.returncode))
-        try:
-            box = json.loads(r.stdout).get("v")
-        except (ValueError, AttributeError):
+            box = directive_value.resolve({"v": box}, base, table, stderr=subprocess.PIPE, timeout=SEND_TIMEOUT_S).get("v")
+        except directive_value.Error as e:
+            if e.returncode is not None:
+                raise Bad("cannot resolve the box directive: %s" % last_error(e.stderr, "aos-directive exited %d" % e.returncode))
+            if not isinstance(e.cause, ValueError):        # 起不來、逾時；印的不是 JSON＝當沒解出路徑
+                raise Bad("cannot resolve the box directive: %s" % e.cause)
             box = None
         if not isinstance(box, str) or not box:
             raise Bad("the box directive did not resolve to a non-empty path")

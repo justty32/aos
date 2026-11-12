@@ -1,7 +1,7 @@
 """directive_value - 把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。
 
 11-10 two-machines TC（使用者：指到外面的路徑「相對、絕對、環境變數指定都可」、每次用到才解、不把解出來的值寫回任何檔）：
-cli.json 的 tools 用。做法照判官（lib/aos/judge/_entry）：stdin 一份 JSON、aos-directive 印解完的一行；
+cli.json 的 tools、aos-tools 的 $override 與 --path-json、aos-agent tools 的指標檢查、時鐘登記表的 box 用。做法照判官（lib/aos/judge/_entry）：stdin 一份 JSON、aos-directive 印解完的一行；
 相對 $ref 從 cwd 算，所以 cwd 給那份設定檔的資料夾（同 N-45「相對 $ref 從寫著它的那份檔所在的資料夾算」）。
 aos-directive 自己的錯誤行照轉在 stderr（不偷讀，C-52）；這裡只說哪個檔、哪個欄、寫的是什麼、解出什麼。
 錯誤用 tool_io.Error（代號＋英文原因），由呼叫者轉成自己的錯誤行。lib 最底下的共用模組，不 import py。"""
@@ -12,23 +12,37 @@ import subprocess
 from tool_io import Error
 
 
-def resolve(value, cwd, file=None):
+def resolve(value, cwd, file=None, stderr=None, timeout=None):
     """value 是物件＝送 aos-directive 解（cwd 是相對 $ref 的起點），回解完的值；不是物件＝原樣回。
     file＝這格是從哪份檔讀來的（知道才給，11-12 ref-hash）：{"$ref": "#/a/b"} 取那份檔自己的 /a/b；沒給＝這種 $ref 原封不動（R1）。
-    aos-directive 起不來（不在 PATH）＝CommandMissing；退非 0 或印的不是 JSON＝DirectiveBad。"""
+    stderr＝aos-directive 的 stderr 往哪去：None（預設）＝照轉；subprocess.DEVNULL＝吞掉；subprocess.PIPE＝收起來放進丟出的 Error.stderr。
+    timeout＝秒，None（預設）＝不設。
+    aos-directive 起不來（不在 PATH）＝CommandMissing；逾時、退非 0 或印的不是 JSON＝DirectiveBad。
+    丟出的 Error 另帶給要自己措辭的呼叫者：cause（起不來／逾時／不是 JSON 的原例外，其餘 None）、returncode（退非 0 時，其餘 None）、
+    stderr（stderr=PIPE 且退非 0 時收到的字串，其餘 None）。"""
     if not isinstance(value, dict):
         return value
     try:
         r = subprocess.run(["aos-directive"] + (["--file", os.path.abspath(file)] if file else []),
-                           input=json.dumps(value, ensure_ascii=False), stdout=subprocess.PIPE, text=True, cwd=cwd)
+                           input=json.dumps(value, ensure_ascii=False), stdout=subprocess.PIPE, stderr=stderr, text=True,
+                           cwd=cwd, timeout=timeout)
     except OSError as e:
-        raise Error("CommandMissing", "aos-directive failed to start (must be on PATH): %s" % e) from None
+        raise _error("CommandMissing", "aos-directive failed to start (must be on PATH): %s" % e, cause=e) from None
+    except subprocess.TimeoutExpired as e:
+        raise _error("DirectiveBad", "aos-directive did not finish within %s s" % timeout, cause=e) from None
     if r.returncode != 0:
-        raise Error("DirectiveBad", "aos-directive exited %d (its error line is above)" % r.returncode)
+        raise _error("DirectiveBad", "aos-directive exited %d (its error line is above)" % r.returncode,
+                     returncode=r.returncode, stderr=r.stderr)
     try:
         return json.loads(r.stdout)
-    except ValueError:
-        raise Error("DirectiveBad", "aos-directive printed no JSON") from None
+    except ValueError as e:
+        raise _error("DirectiveBad", "aos-directive printed no JSON", cause=e) from None
+
+
+def _error(code, reason, cause=None, returncode=None, stderr=None):
+    e = Error(code, reason)
+    e.cause, e.returncode, e.stderr = cause, returncode, stderr
+    return e
 
 
 def resolve_path(value, cfg_file, key):

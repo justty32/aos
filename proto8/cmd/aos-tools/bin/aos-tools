@@ -75,6 +75,9 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
 import aos_flags
 from daemon_ctl.entry import is_program   # 11-10 two-machines：看內容判型（/mnt/c 每檔 0777），同 aos-exec
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
+import directive_value   # 指示詞交給 aos-directive 解的共用版（tool_io 已由 aos_flags 載入）
+sys.path.pop(0)
 
 NAME = "aos-tools"
 ENV_KEY_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")              # \Z 不是 $：$ 會放過結尾的換行
@@ -614,13 +617,12 @@ def read_bases(reg, pointer):
         at = where + ("/%d" % i if isinstance(pointer, list) else "")
         if isinstance(item, dict):
             try:
-                r = subprocess.run(["aos-directive", "--file", os.path.abspath(reg)], input=json.dumps({"v": item}),
-                                   stdout=subprocess.PIPE, text=True, cwd=folder)     # #/… ＝ reg 自己；stderr 不吞：aos-directive 自己說哪裡解不開
-            except OSError as e:
-                raise Fail("CommandMissing", "%s has directives that need aos-directive, which cannot start: %s" % (at, e))
-            if r.returncode != 0:
-                raise Fail("DirectiveBad", "%s: directives cannot be resolved (aos-directive exited %d)" % (at, r.returncode))
-            item = json.loads(r.stdout).get("v")
+                item = directive_value.resolve({"v": item}, folder, reg).get("v")   # #/… ＝ reg 自己；stderr 不吞：aos-directive 自己說哪裡解不開
+            except directive_value.Error as e:
+                if e.code == "CommandMissing":
+                    raise Fail(e.code, "%s has directives that need aos-directive, which cannot start: %s" % (at, e.cause))
+                raise Fail("DirectiveBad", "%s: directives cannot be resolved (aos-directive exited %d)" % (at, e.returncode)
+                           if e.returncode is not None else "%s: directives cannot be resolved (%s)" % (at, e))
         if not isinstance(item, str) or not item or "\0" in item:
             raise Fail("RegistryBad", "%s must be a path string, a directive resolving to one, or an array of those" % at)
         base = os.path.normpath(os.path.join(folder, item))
@@ -897,13 +899,12 @@ def resolve_path_value(value, folder):
     """登記格的 path 值（字串或指示詞物件）→ 絕對路徑；指示詞交給 aos-directive 解（每次用到才解、不寫回），解完的相對路徑從 folder 算。"""
     if isinstance(value, dict):
         try:
-            r = subprocess.run(["aos-directive"], input=json.dumps({"path": value}), stdout=subprocess.PIPE,
-                               text=True, cwd=folder)     # stderr 不吞：aos-directive 自己說哪裡解不開
-        except OSError as e:
-            raise Fail("CommandMissing", "--path-json has directives that need aos-directive, which cannot start: %s" % e)
-        if r.returncode != 0:
-            raise Fail("DirectiveBad", "--path-json %s cannot be resolved (aos-directive exited %d)" % (json.dumps(value), r.returncode))
-        value = json.loads(r.stdout).get("path")
+            value = directive_value.resolve({"path": value}, folder).get("path")   # stderr 不吞：aos-directive 自己說哪裡解不開
+        except directive_value.Error as e:
+            if e.code == "CommandMissing":
+                raise Fail(e.code, "--path-json has directives that need aos-directive, which cannot start: %s" % e.cause)
+            raise Fail("DirectiveBad", "--path-json %s cannot be resolved (aos-directive exited %d)" % (json.dumps(value), e.returncode)
+                       if e.returncode is not None else "--path-json %s cannot be resolved (%s)" % (json.dumps(value), e))
     if not isinstance(value, str) or not value:
         raise Fail("ArgumentsBad", "--path-json must be a non-empty path string or a directive object resolving to one (got %s)" % json.dumps(value))
     return norm_loc(folder, value)

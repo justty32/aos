@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import aos_flags
+import directive_value
 from . import declared_files
 from . import PROG
 from .common import Fail, TOOLS, actions, bad_args, note, parse, target
@@ -142,10 +143,8 @@ def check_pointer(over, orig):
     for item in items:
         if isinstance(item, dict):
             try:
-                r = subprocess.run(["aos-directive", "--file", os.path.abspath(over)], input=json.dumps({"v": item}),
-                                   stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, cwd=folder)   # #/… ＝ over 自己
-                item = json.loads(r.stdout).get("v") if r.returncode == 0 else None
-            except (OSError, ValueError):
+                item = directive_value.resolve({"v": item}, folder, over, stderr=subprocess.DEVNULL).get("v")   # #/… ＝ over 自己
+            except directive_value.Error:
                 item = None
         if isinstance(item, str) and item:
             found.append(os.path.realpath(os.path.join(folder, item)))
