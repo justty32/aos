@@ -79,7 +79,10 @@
      問 /usage 原樣回（不碰這隻的對話），codex 沒有對應的、回一句；/compact＝claude 照一般 --resume 交 "/compact"（claude -p 認得、同一個 id 壓縮），
      codex exec 不認＝刪 session.txt、下一輪開新 thread 帶 aos 的紀錄（同 ⑧）；/clear＝history 原文搬到 history_removed.jsonl（cli_session.clear_history，
      同 aos-agent history rm 的規矩、op clear）、刪 session.txt，history 只剩這一問一答，下一輪開新對話；/exit＝畫面開著（沒人接著）就關掉，沒開回一句。
-     畫面開著時 /clear、/compact 不代打（對話在畫面裡）：回一句請人在畫面上打或先關畫面（畫面上打的，hook 會跟上，見 cli_session）。
+     /compact（claude）之後 history 換成 claude 的摘要一則（cli_session.compact_history：transcript 裡的 isCompactSummary，原文搬走、op compact；
+     找不到摘要＝不動）。畫面開著時 /clear、/compact 打進畫面（使用者 Q2「幫我貼進去」，cli_session.type_line），aos 這邊靠畫面 hook 跟上：
+     claude 等 hook 改完 history（上限 SCREEN_WAIT 秒）才記這一問一答；codex 不等（/clear 下一輪 notify 才清，/compact 拿不到摘要、history 不動）；
+     畫面正在跑一輪（busy.txt）＝這次不動、信留 cur/、下一輪再試。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
   人在畫面上自己打的話不進 history（沒經 queue；eca 方向題 2）。
@@ -99,7 +102,7 @@ PATH 上要有 aos-post（平級形）。
   加 cli_session 的 CfgMissing、CfgBad、ToolsMissing（11-03 eca-tools：cli.json 的 tools 指的登記檔不在）、CliMissing（含 aos-mcp 不在 PATH 上）、
   CliFailed、ReplyMissing、TrustMissing（11-10 深夜：畫面上的 claude 停在信任資料夾選單＝不貼、報錯，交出去之前，信留著）（yield 時的 SessionBad 不算錯，見上）。
 `--help`＝印 HELP（英文）到 stdout、退 0（R3）；Ctrl-C＝退 130、不吐 traceback（R12）。"""
-import fcntl, hashlib, json, os, subprocess, sys
+import fcntl, hashlib, json, os, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
@@ -172,8 +175,9 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
     done by aos and answered with one "[aos] slash: ..." message (or claude's own words): /status = aos's own report;
     /usage = a separate claude -p /usage (codex: not available); /compact = handed to claude on the same conversation
     (codex: the next message starts a new thread carrying aos's record); /clear = history.jsonl moves to history_removed.jsonl
-    and the next message starts a new conversation; /exit = closes the screen. With the screen open, /clear and /compact
-    are not typed for you: type them on the screen.
+    and the next message starts a new conversation; /exit = closes the screen. After claude's /compact, history.jsonl is
+    replaced by claude's summary (one "[aos] summary: ..." message; the old ones move to history_removed.jsonl). With the
+    screen open, /clear and /compact are typed into it (not while it is answering) and the screen hooks keep aos in step.
 --one (tool form): stdin {"prompt"} -> stdout the answer; the conversation lives in $AOS_STACK itself. --on-empty / --prompt not allowed.
   If the earlier conversation is not on this machine, a warning is printed and a new one is started without a record. No cooldown.
 Needs aos-post on PATH (loop form) and AOS_STACK.
@@ -508,19 +512,50 @@ def slash_usage(cfg, ws):
     return out["result"]
 
 
+SCREEN_WAIT = 120                                  # 秒：貼進 claude 畫面的 /clear、/compact 等 hook 改完 history 的上限（compact 實測 4～25 秒）
+
+
+def history_bytes(stack):
+    try:
+        with open(os.path.join(stack, "history.jsonl"), "rb") as f:
+            return f.read()
+    except FileNotFoundError:
+        return b""
+
+
+def on_screen(command, cfg, cell, stack):
+    """畫面開著：/clear、/compact 照人打的一樣打進畫面（使用者 Q2「幫我貼進去」）；aos 這邊靠畫面 hook 跟上（id、history）。
+    claude＝等 hook 把 history 改掉（SessionStart clear／compact）再回，免得這輪接的 user／回答被 hook 一起搬走；等不到（上限 SCREEN_WAIT）照回、多說一句。
+    codex＝這時沒有事件：/clear 等下一輪 notify 看到新 thread 才清，/compact 拿不到摘要、history 不動。"""
+    before = history_bytes(stack)
+    cli_session.type_line(cell, command)
+    if cfg["kind"] != "claude":
+        later = ("aos clears its history when the next answer comes from the new thread" if command == "/clear" else
+                 "codex gives no summary text, so aos's history is left as it is")
+        return note("%s: typed into the open screen; %s" % (command, later))
+    deadline = time.time() + SCREEN_WAIT
+    while time.time() < deadline and history_bytes(stack) == before and cell.alive():
+        time.sleep(0.5)
+    if history_bytes(stack) == before:
+        return note("%s: typed into the open screen; aos's history did not change within %d s (check the screen: aos-agent open)"
+                    % (command, SCREEN_WAIT))
+    done = "history moved to history_removed.jsonl" if command == "/clear" else "history replaced by claude's summary (the old messages are in history_removed.jsonl)"
+    return note("%s: typed into the open screen; %s; conversation %s" % (command, done, cell.read("session.txt")))
+
+
 def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_busy):
-    """⑭ 做這個指令、照一般一輪記 history（user 那封＋一則回答；/clear 先清再記），信收掉、after_queue 照跑。
-    畫面開著時 /clear、/compact 不代打（對話在畫面裡，請人在畫面上打；hook 會跟上），/exit＝關畫面。"""
+    """⑭ 做這個指令、照一般一輪記 history（user 那封＋一則回答；/clear、/compact 先改 history 再記），信收掉、after_queue 照跑。
+    畫面開著時 /clear、/compact 打進畫面（on_screen；畫面正在跑一輪＝busy.txt 在＝這次不動、信留 cur/、下一輪再試），/exit＝關畫面。"""
     kind, alive = cfg["kind"], cell.alive()
-    on_screen = note("%s: the screen is open, so the conversation lives there; type %s on the screen (aos-agent open), "
-                     "or close it (aos-agent close) and send %s again" % (command, command, command))
     cleared = None
     if command == "/status":
         text = slash_status(cfg, cell, stack)
     elif command == "/usage":
         text = slash_usage(cfg, ws)
     elif command in ("/clear", "/compact") and alive:
-        text = on_screen
+        if os.path.exists(cell.file("busy.txt")):
+            return 0                                                # 不打斷正在跑的那輪
+        text = on_screen(command, cfg, cell, stack)
     elif command == "/compact" and kind == "claude":
         if not cell.read("session.txt"):
             text = note("/compact: no conversation yet, nothing to compact")
@@ -531,7 +566,15 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
                 if e.code == "SessionBad":
                     return 0                                        # 同一般一輪：整批留 cur/，下一次再試
                 raise
-            text = got.strip() or note("/compact: claude compacted conversation %s (same id)" % cell.read("session.txt"))
+            sid = cell.read("session.txt")
+            found = cli_session.transcripts("claude", sid)
+            try:
+                moved = cli_session.compact_history(cell, found[0] if found else None, stack)   # Q3：history 換成 claude 的摘要
+            except OSError as e:
+                raise Fail("WriteFailed", "cannot rewrite history.jsonl: %s" % e)
+            text = got.strip() or note("/compact: claude compacted conversation %s (same id); %s" % (sid,
+                "history replaced by its summary (%d messages moved to history_removed.jsonl)" % moved if moved is not None
+                else "no summary found in its transcript, history left as it is"))
     else:                                                           # /clear、codex 的 /compact、/exit：動小格，拿 lock
         f, ok = cell.lock()
         if not ok:

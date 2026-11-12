@@ -85,6 +85,52 @@ class HookFollow(unittest.TestCase):
         self.assertEqual(self.read("session.txt"), "new")
         self.assertIn("PLUM-7", self.hist.read_text())
 
+    def test_compact_replaces_history_with_the_summary(self):
+        t = self.tmp / "t.jsonl"
+        t.write_text(json.dumps({"type": "system", "subtype": "compact_boundary"}) + "\n"
+                     + json.dumps({"type": "user", "isCompactSummary": True, "message": {"role": "user", "content": "SUM: PLUM-7"}}) + "\n")
+        self.claude({"hook_event_name": "SessionStart", "source": "compact", "session_id": "old", "transcript_path": str(t)})
+        rows = [json.loads(l) for l in self.hist.read_text().splitlines()]
+        self.assertEqual(rows, [{"role": "user", "content": "[aos] summary: lines 1-3, 3 messages. SUM: PLUM-7"}])
+        removed = [json.loads(l) for l in (self.stack / "history_removed.jsonl").read_text().splitlines()]
+        self.assertEqual({r["op"] for r in removed}, {"compact"})
+        self.assertIsNone(self.read(".history_sum"))
+        self.assertEqual(self.read("session.txt"), "old")
+
+    def test_compact_without_summary_leaves_history(self):
+        t = self.tmp / "t.jsonl"
+        t.write_text("{}\n")
+        self.claude({"hook_event_name": "SessionStart", "source": "compact", "session_id": "old", "transcript_path": str(t)})
+        self.assertIn("PLUM-7", self.hist.read_text())
+
+    def codex_cell(self, threads):
+        cell = self.stack / "codex"
+        cell.mkdir()
+        (cell / "ws.txt").write_text("../../ws\n")
+        (cell / "stack.txt").write_text("..\n")
+        (cell / "session.txt").write_text("old\n")
+        d = self.tmp / "codex-home" / "sessions" / "2026" / "11" / "12"
+        d.mkdir(parents=True)
+        for tid, turns in threads.items():
+            (d / ("rollout-x-%s.jsonl" % tid)).write_text('{"type": "event_msg", "payload": {"type": "task_complete"}}\n' * turns)
+        return cell
+
+    def test_codex_new_thread_clears_history_but_keeps_the_question(self):
+        cell = self.codex_cell({"fresh": 1})
+        with open(self.hist, "a") as f:
+            f.write(json.dumps({"role": "user", "content": "just asked"}) + "\n")
+        cli_session.hook_main("codex", str(cell), json.dumps({"type": "agent-turn-complete", "thread-id": "fresh", "last-assistant-message": "NONE"}))
+        self.assertEqual((cell / "session.txt").read_text().strip(), "fresh")
+        self.assertEqual([json.loads(l) for l in self.hist.read_text().splitlines()], [{"role": "user", "content": "just asked"}])
+        self.assertEqual(len((self.stack / "history_removed.jsonl").read_text().splitlines()), 3)
+
+    def test_codex_resume_to_an_older_thread_keeps_history(self):
+        cell = self.codex_cell({"older": 4})
+        cli_session.hook_main("codex", str(cell), json.dumps({"type": "agent-turn-complete", "thread-id": "older", "last-assistant-message": "hi"}))
+        self.assertEqual((cell / "session.txt").read_text().strip(), "older")
+        self.assertIn("PLUM-7", self.hist.read_text())
+        self.assertFalse((self.stack / "history_removed.jsonl").exists())
+
     def test_codex_side_thread_is_ignored(self):
         cell = self.stack / "codex"
         cell.mkdir()

@@ -1,5 +1,7 @@
 """Test aos-eca-turn's slash commands (11-12 eca-slash): one letter that is exactly /clear, /compact, /status, /usage or /exit is done by aos (or handed to claude when claude -p knows it), with fake CLIs."""
+import glob
 import json
+import os
 import unittest
 
 from test_switch import Base
@@ -51,6 +53,22 @@ class ClaudeSlash(Base):
         self.assertEqual(last["argv"][last["argv"].index("--resume") + 1], old)
         self.assertEqual(self.sid(), old)
         self.assertEqual(self.answer(), "FAKE: /compact")
+
+    def test_compact_replaces_history_with_claude_summary(self):
+        old = self.first_turn()
+        conv = glob.glob(os.path.join(str(self.home), ".claude", "projects", "*", old + ".jsonl"))[0]
+        with open(conv, "a") as f:                                  # stands for what the real claude writes on /compact
+            f.write(json.dumps({"type": "user", "isCompactSummary": True, "message": {"content": "SUM of hello"}}) + "\n")
+        self.say("/compact")
+        self.ok_turn()
+        self.assertEqual([m["content"] for m in self.history()],
+                         ["[aos] summary: lines 1-2, 2 messages. SUM of hello", "/compact", "FAKE: /compact"])
+        removed = [json.loads(l) for l in (self.stack / "history_removed.jsonl").read_text().splitlines()]
+        self.assertEqual([r["op"] for r in removed], ["compact", "compact"])
+        self.say("again")
+        r = self.ok_turn()
+        self.assertNotIn("history.jsonl was changed", r.stderr)    # its own rewrite does not drop the conversation
+        self.assertEqual(self.sid(), old)
 
     def test_compact_without_conversation(self):
         self.say("/compact")
