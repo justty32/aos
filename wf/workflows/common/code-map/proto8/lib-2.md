@@ -39,8 +39,8 @@
 | [`do_task/`](../../../../../proto8/lib/agent/do_task/) | 在自己的 history 裡做一段任務：start 留紀錄點、end 附總結把紀錄點之後那段換成一則總結（aos-agent history 改、原文照舊留在旁邊）、status 看自己在不在任務裡；只給 agent-fsm 的身體 |
 | [`do_task/tests/test_do_task.py`](../../../../../proto8/lib/agent/do_task/tests/test_do_task.py) | Test do_task start / end / status on a real history file: a fake aos-agent answers ctl who, its history half is the real aos_agent.history. |
 | [`fork/`](../../../../../proto8/lib/agent/fork/) | 把叫我的那隻「當下的自己」複製一份（同一份定義＋它 stack 裡改過的 tools／llm／hooks／system＋整段對話），給它一個 goal，只拿回短結論；分身的過程不進叫我的那隻的 history |
+| [`fork/fork_copy.py`](../../../../../proto8/lib/agent/fork/fork_copy.py) | 工具 fork 用：把一隻 agent-fsm 的 stack 裡定義宣告的東西（history、tools／llm／hooks／system 覆蓋檔）抄進新 stack，history 尾巴補上沒回的工具呼叫。 |
 | [`fork/tests/test_fork.py`](../../../../../proto8/lib/agent/fork/tests/test_fork.py) | fork 工具本身（不起 daemon）：參數錯、深度上限、環境錯、收尾次序；fork_copy 的抄法（補 tool 訊息、相對路徑換算、只抄宣告的檔、記號檔）。 |
-| [`fork_copy.py`](../../../../../proto8/lib/agent/fork_copy.py) | 工具 fork 用：把一隻 agent-fsm 的 stack 裡定義宣告的東西（history、tools／llm／hooks／system 覆蓋檔）抄進新 stack，history 尾巴補上沒回的工具呼叫。 |
 | [`goal/`](../../../../../proto8/lib/agent/goal/) | aos-agent goal 的包裝，目標改成叫我的那隻自己：get、set、done、pause、resume；狀態在那隻 stack 的 goal.json，身體在它自己停下來時丟提醒 |
 | [`goal/tests/test_goal.py`](../../../../../proto8/lib/agent/goal/tests/test_goal.py) | Test the goal tool builds the aos-agent goal command line for each op (get, set, done, pause, resume), checks its arguments and passes errors on, wit… |
 | [`goal_state.py`](../../../../../proto8/lib/agent/goal_state.py) | agent 的 goal 共用讀寫與判斷：<agent stack>/goal.json；aos-agent goal 寫、agent-fsm idle.py 與 aos-eca-turn 讀寫（丟提醒、記數）。 |

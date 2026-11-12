@@ -14,7 +14,7 @@ from unittest.mock import Mock
 HERE = Path(__file__).resolve().parents[1]
 LIB = HERE.parents[1]
 ENTRY = HERE / '_entry'
-sys.path.insert(0, str(LIB / 'agent'))
+sys.path.insert(0, str(HERE))
 import fork_copy  # noqa: E402
 
 

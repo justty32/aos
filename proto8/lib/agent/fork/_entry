@@ -47,7 +47,7 @@ On error: one line "fork: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-# 只找自己的工具夾、旁邊的 lib/agent（fork_copy、cmd_call）、realpath 祖先的 lib，再交給標準 Python 路徑。
+# 只找自己的工具夾（fork_copy）、旁邊的 lib/agent（cmd_call）、realpath 祖先的 lib，再交給標準 Python 路徑。
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
     if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
