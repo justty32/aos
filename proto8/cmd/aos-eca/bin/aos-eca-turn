@@ -89,6 +89,8 @@
      只打 `/goal` 查看，照 CLI 自己的判法）。這是 CLI 自己的 goal，跟 aos 的 goal.json（⑬）各管各的、不互相同步：畫面開著＝打進畫面
      （busy 時下一輪再試）；沒開＝claude 照一般 --resume 原樣交給它（claude -p 認得）；codex exec 不認＝回一句請開畫面。/status 多一行
      「CLI 最後記下的 goal」（claude transcript 的 goal_status、codex rollout 的 thread_goal_updated；清掉時兩邊都不另記，所以只說最後記下的）。
+     codex 已有 goal 時再打 `/goal 新目標` 會跳「Replace goal?」選單（使用者「要自動說選yes」）：打進去後最多等 5 秒，認得那個選單、游標在
+     「1. Replace current goal」＝按 Enter；選單長得不一樣＝不按、回一句請人到畫面上處理（goal_replace_prompt、confirm_goal_replace）。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
   人在畫面上自己打的話不進 history（沒經 queue；eca 方向題 2）。
@@ -108,7 +110,7 @@ PATH 上要有 aos-post（平級形）。
   加 cli_session 的 CfgMissing、CfgBad、ToolsMissing（11-03 eca-tools：cli.json 的 tools 指的登記檔不在）、CliMissing（含 aos-mcp 不在 PATH 上）、
   CliFailed、ReplyMissing、TrustMissing（11-10 深夜：畫面上的 claude 停在信任資料夾選單＝不貼、報錯，交出去之前，信留著）（yield 時的 SessionBad 不算錯，見上）。
 `--help`＝印 HELP（英文）到 stdout、退 0（R3）；Ctrl-C＝退 130、不吐 traceback（R12）。"""
-import fcntl, hashlib, json, os, subprocess, sys, time
+import fcntl, hashlib, json, os, re, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
@@ -186,6 +188,7 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
     screen open, /clear and /compact are typed into it (not while it is answering) and the screen hooks keep aos in step.
     A letter starting with /goal ("/goal TEXT", "/goal clear", "/goal") is the CLI's own goal: typed into an open screen,
     otherwise handed to claude as it is (codex exec has no /goal: aos says so). /status also shows the last goal the CLI recorded.
+    When codex's screen asks "Replace goal?" (a goal is already set), aos picks "1. Replace current goal"; any other question is left alone.
 --one (tool form): stdin {"prompt"} -> stdout the answer; the conversation lives in $AOS_STACK itself. --on-empty / --prompt not allowed.
   If the earlier conversation is not on this machine, a warning is printed and a new one is started without a record. No cooldown.
 Needs aos-post on PATH (loop form) and AOS_STACK.
@@ -475,6 +478,44 @@ def note_progress(cfg, cell, stack, before):
 SLASH = ("/clear", "/compact", "/status", "/usage", "/exit")
 GOAL = "/goal"
 
+# codex 畫面已有 goal 時再 /goal 新目標，會跳「Replace goal?」選單（11-12 實拍 0.167.2：標題「Replace goal?」、「New objective: …」、
+# 「› 1. Replace current goal  Set the new objective and start it now」「2. Cancel  Keep the current goal」「enter select · esc back」，
+# 預設停在 1，Enter＝選它）。使用者「幫我處理，要自動說選yes」：只認這一個選單，而且游標停在 1. Replace current goal 才按 Enter。
+REPLACE_WAIT = 5                                          # 秒：打進 /goal 之後等這個選單出現多久
+
+
+def goal_replace_prompt(screen):
+    """畫面字（capture-pane）最後 30 行是不是 codex 的「Replace goal?」選單：'yes'＝是、游標在 1. Replace current goal、也有 2. Cancel；
+    'other'＝有那個標題、但選單長得不一樣（不亂按）；None＝沒有。選單畫在畫面中間，同一行左邊可能還有別的字，所以不錨行首。"""
+    tail = "\n".join((screen or "").splitlines()[-30:])
+    if "Replace goal?" not in tail:
+        return None
+    if re.search(r"›\s*1\.\s*Replace current goal\b", tail) and re.search(r"\b2\.\s*Cancel\b", tail):
+        return "yes"
+    return "other"
+
+
+def confirm_goal_replace(cell):
+    """打進 codex 畫面的 /goal 之後：最多等 REPLACE_WAIT 秒看有沒有「Replace goal?」選單；認得＝按 Enter（選 1. Replace current goal）。
+    回接在 [aos] slash 那則後面的一句（沒有選單＝空字串）。"""
+    def screen():
+        return cell.tmux("capture-pane", "-p", "-t", cli_session.TMUX_SESSION).stdout
+    deadline, seen = time.time() + REPLACE_WAIT, None
+    while time.time() < deadline:
+        seen = goal_replace_prompt(screen())
+        if seen:
+            break
+        time.sleep(0.3)
+    if seen is None:
+        return ""
+    if seen == "other":
+        return "; codex asked something about replacing the goal that aos does not recognise, so nothing was pressed: answer it on the screen (aos-agent open)"
+    cell.tmux("send-keys", "-t", cli_session.TMUX_SESSION, "Enter")
+    time.sleep(1)
+    if goal_replace_prompt(screen()):
+        return "; codex asked \"Replace goal?\" and aos pressed Enter for \"1. Replace current goal\", but the question is still there: check the screen"
+    return "; codex asked \"Replace goal?\" and aos chose \"1. Replace current goal\" (yes) for you"
+
 
 def slash_of(bodies, goal):
     if goal or len(bodies) != 1:
@@ -616,7 +657,8 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
             if os.path.exists(cell.file("busy.txt")):
                 return 0                                            # 不打斷正在跑的那輪
             cli_session.type_line(cell, full)
-            text = note("/goal: typed into the open screen; the CLI's own answer shows there (a goal it runs on is also kept in turns.jsonl)")
+            text = note("/goal: typed into the open screen; the CLI's own answer shows there (a goal it runs on is also kept in turns.jsonl)%s"
+                        % (confirm_goal_replace(cell) if kind == "codex" and full != GOAL else ""))
         elif kind == "claude":
             try:
                 got = cli_session.ask(cfg, cell, template, ws, stack, full, on_busy)   # claude -p 認得：設了就照跑一輪

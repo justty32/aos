@@ -98,8 +98,10 @@
 
 **代定**：S16 `/goal` 以開頭判（`/goal` 或 `/goal ` 後接任何字），其餘五個照舊要剛好。S17 codex 不開畫面時不代做 goal（exec 沒有），回一句。S18 `/status` 的 goal 只說「CLI 最後記下的」：清掉時兩邊都不另記一筆，所以清了之後還會顯示上一個（codex 也不更新成 complete）。
 
+**codex 的「Replace goal?」**（使用者原話：「codex的/goal，如果連續跑兩次，第二次他會問你說是否要replace。幫我處理，要自動說選yes」）：實拍 codex 0.167.2，已有 goal（還在 Pursuing）時再 `/goal 新目標`，畫面中間跳選單——標題「Replace goal?」、「New objective: …」、「› 1. Replace current goal  Set the new objective and start it now」「2. Cancel  Keep the current goal」「enter select · esc back」，預設停在 1、Enter 選它（實按過）。aos 經 say／chat 打 `/goal 文字` 進 codex 畫面後最多等 5 秒，畫面最後 30 行有「Replace goal?」而且有「› 1. Replace current goal」與「2. Cancel」＝按 Enter，回的那則加一句「codex asked "Replace goal?" and aos chose "1. Replace current goal" (yes) for you」；有標題但長得不一樣（例如游標在 Cancel）＝不按、回一句請人到畫面上處理；沒跳＝照舊。人自己在畫面上打的不代按。claude 的 `/goal` 沒實測到類似確認（`claude -p` 的目標不跨次、畫面上沒試連設兩次），沒動。實跑 luna：連送兩次（one、two），第二次自動 replace，`/status` 顯示「keep answering with the single word two… (active)」，再送 `/goal clear` 清掉。測試 `cmd/aos-eca/tests/test_goal_replace.py` 4 支（用實拍畫面當樣本）。代定 S19：只認這一個選單、游標要在 1 才按；等 5 秒。
+
 **題**（使用者回家可接著看）：
-- G1 畫面上 goal 讓 CLI 自己連跑好幾輪時，只有第一輪的回答回到 aos 的 history（經 say 送的那則），之後幾輪只在 turns.jsonl；busy.txt 在第一個 Stop 就清掉，接著經 aos 送的話可能在 CLI 還在跑時就貼進去（CLI 會排隊）。這次的 goal 一輪就達成，沒實測到連跑。要不要把畫面上非 aos 送出的那幾輪也接進 history？
+- G1 畫面上 goal 讓 CLI 自己連跑好幾輪時，只有第一輪的回答回到 aos 的 history（經 say 送的那則），之後幾輪只在 turns.jsonl；busy.txt 在第一個 Stop 就清掉，接著經 aos 送的話可能在 CLI 還在跑時就貼進去（CLI 會排隊）。Replace 實測時 codex 確實連跑（Pursuing goal、每輪回 one／two），後幾輪只在 turns.jsonl。要不要把畫面上非 aos 送出的那幾輪也接進 history？
 - G2 `/status` 想正確顯示「現在有沒有 goal」：claude 要另外讀不到清掉的紀錄；codex 可讀 `goals_1.sqlite`（沒試）。
 
 ## 沒試到
@@ -115,4 +117,5 @@
 - `f9ca77a15` codex 畫面說明與本篇（③）
 - `95db04e50` 第二輪（Q1～Q3）
 - `b06c17c1b` Q5
-- `/goal` 見 SESSION-LOG 那行
+- `e49929811` /goal
+- Replace goal 自動選 yes 見 SESSION-LOG 那行
