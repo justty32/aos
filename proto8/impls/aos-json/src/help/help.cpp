@@ -18,7 +18,7 @@ const std::map<std::string, std::string> SUB_USAGE = {
     {"ref", "aos-json ref [--move] [--parents] FILE#/POINTER TARGET"},
     {"check", "aos-json check [--env] FILE[#/POINTER]..."},
     {"add", "aos-json add [--check] [--follow|--raw] [--parents] [--str] FILE[#/POINTER] [VALUE]"},
-    {"ls", "aos-json ls [--follow] [--resolve] [--long] [--offset N] [--limit N] FILE[#/POINTER]"},
+    {"ls", "aos-json ls [--follow] [--resolve] [--long] [--depth N] [--offset N] [--limit N] FILE[#/POINTER]"},
     {"search", "aos-json search [--follow] [--resolve] [--key K] [--value JSON] [--contains] [--up] [--limit N] FILE[#/POINTER]"},
 };
 
@@ -219,13 +219,14 @@ more: aos-json/README.md
 )"},
     {"ls", R"(aos-json ls - List the children of a JSON value.
 
-usage: aos-json ls [--follow] [--resolve] [--long] [--offset N] [--limit N] FILE[#/POINTER]
+usage: aos-json ls [--follow] [--resolve] [--long] [--depth N] [--offset N] [--limit N] FILE[#/POINTER]
        aos-json ls --help
 
 flags:
   --follow     follow $ref on the path to the value
   --resolve    resolve directives inside the value
   --long       add type and size columns (TAB separated)
+  --depth N    list descendants up to N levels down as a/b/c (default: 1)
   --offset N   start at child N (default: 0)
   --limit N    list at most N children (default: all)
   -h, --help   show this help

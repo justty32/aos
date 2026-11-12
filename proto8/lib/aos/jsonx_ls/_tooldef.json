@@ -22,6 +22,11 @@
     "default": false,
     "description": "true = also print each child's type and size"
    },
+   "depth": {
+    "type": "integer",
+    "default": 1,
+    "description": "how many levels to list: 1 = children only; 2 or more also lists deeper keys as a path, e.g. states/think/next (offset and limit count these lines)"
+   },
    "offset": {
     "type": "integer",
     "default": 0,

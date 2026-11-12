@@ -1,4 +1,4 @@
-// list.cpp：【cmd】ls（列一格底下的孩子，--long 附型別與大小）、search（找 key／value，往下或往上）——json 工具 json_ls／json_search 搬下來（11-12）。
+// list.cpp：【cmd】ls（列一格底下的孩子，--long 附型別與大小、--depth 往下幾層）、search（找 key／value，往下或往上）——json 工具 json_ls／json_search 搬下來（11-12）。
 //
 // 輸出照 lib/aos_json.py 的 do_ls／do_search（給腦看的文字，一行一項、欄位 TAB）：
 //   型別名同 JSON（object、array、string、number、boolean、null）；大小＝物件 N keys、陣列 N items、字串 N chars（code point 數），
@@ -161,13 +161,25 @@ void down(const Query& q, const Json& node, const std::string& ptr, std::vector<
     });
 }
 
+// ls 的行：前序、depth 層內的子孫，每行是相對那一格的指標段（`states/think/next`，每段照 RFC 6901 跳脫）。
+void walk(const Json& node, const std::string& ptr, size_t depth, bool lng, std::vector<std::string>& rows) {
+    members(node, ptr, [&](const std::string*, const Json& x, const std::string& p) {
+        rows.push_back(p.substr(1) + (lng ? "\t" + columns(x) : ""));
+        if (depth > 1) {
+            walk(x, p, depth - 1, lng, rows);
+        }
+    });
+}
+
 }  // namespace
 
-// ls [--follow] [--resolve] [--long] [--offset N] [--limit N] 檔#/指標：第一行這一格的型別與長度，之後一行一個孩子（可直接接在指標後面的寫法）。
+// ls [--follow] [--resolve] [--long] [--depth N] [--offset N] [--limit N] 檔#/指標：第一行這一格的型別與長度，之後一行一個孩子（可直接接在指標後面的寫法）；
+//   --depth N（預設 1）＝N 層內的子孫都列（前序、`a/b/c`），--offset／--limit 算在攤平後的行上。
 int cmd_ls(const Args& args) {
-    Cli cli = parse_args(args, {{"--offset", "offset"}, {"--limit", "limit"}},
+    Cli cli = parse_args(args, {{"--offset", "offset"}, {"--limit", "limit"}, {"--depth", "depth"}},
                          {{"--follow", "follow"}, {"--resolve", "resolve"}, {"--long", "long"}}, "ls");
     std::string s = one_spec(cli, "ls");
+    size_t depth = count_opt(cli, "depth", 1, true);
     Json v = get_value(s, cli.opts.count("follow") > 0, cli.opts.count("resolve") > 0);
     std::string head = std::string(v.type_name()) + (sized(v) ? ", " : " ") + size_of(v);
     if (v.is_array() && !v.empty()) {
@@ -182,10 +194,7 @@ int cmd_ls(const Args& args) {
     std::cout << head << "\n";
     std::vector<std::string> rows;
     bool lng = cli.opts.count("long") > 0;
-    members(v, "", [&](const std::string* k, const Json& x, const std::string& p) {
-        rows.push_back(p.substr(1) + (lng ? "\t" + columns(x) : ""));
-        (void)k;
-    });
+    walk(v, "", depth, lng, rows);
     page(rows, offset, cap, "");
     return 0;
 }

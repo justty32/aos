@@ -167,11 +167,13 @@ def ours(text, t):
 
 def do_ls(args, t, flags=()):
     """json_ls：交給 `aos-json ls`（11-12 搬下去，輸出同原本的 Python）；這裡只管參數與上限、把 --offset 說成參數名。"""
-    offset = args.get("offset", 0)
+    offset, depth = args.get("offset", 0), args.get("depth", 1)
     if type(offset) is not int:
         die("ArgumentsBad", "offset must be a non-negative integer")
+    if type(depth) is not int or depth < 1:
+        die("ArgumentsBad", "depth must be a positive integer")
     cap = args["limit"] if type(args.get("limit")) is int else limit(args, "limit", "AOS_JSON_MAX_ITEMS", MAX_ITEMS)   # 範圍由 aos-json 驗（只在有孩子時）
-    argv = ["ls"] + list(flags) + (["--long"] if args.get("long") else []) + ["--offset", str(offset), "--limit", str(cap), t.spec()]
+    argv = ["ls"] + list(flags) + (["--long"] if args.get("long") else []) + ["--depth", str(depth), "--offset", str(offset), "--limit", str(cap), t.spec()]
     return re.sub(r"next: --offset (\d+)$", r'next: "offset": \1', ours(aos_json(argv, t=t).removesuffix("\n"), t))
 
 

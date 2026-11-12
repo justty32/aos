@@ -39,7 +39,7 @@
 | [`src/cmd/cmd.hpp`](../../../../../proto8/impls/aos-json/src/cmd/cmd.hpp) | 每個子命令一個函數：拿到子命令後面的參數（不含 `aos-json 子命令`），回退出碼；錯丟 aos::Error。 |
 | [`src/cmd/edit.cpp`](../../../../../proto8/impls/aos-json/src/cmd/edit.cpp) | 寫入共用 helper：讀取值、找位置、找父節點與放入值。 |
 | [`src/cmd/edit.hpp`](../../../../../proto8/impls/aos-json/src/cmd/edit.hpp) | 寫入共用的編輯狀態、位置與 helper 宣告，供 write.cpp、ref.cpp 使用。 |
-| [`src/cmd/list.cpp`](../../../../../proto8/impls/aos-json/src/cmd/list.cpp) | ls（列一格底下的孩子，--long 附型別與大小）、search（找 key／value，往下或往上）——json 工具 json_ls／json_search 搬下來（11-12）。 |
+| [`src/cmd/list.cpp`](../../../../../proto8/impls/aos-json/src/cmd/list.cpp) | ls（列一格底下的孩子，--long 附型別與大小、--depth 往下幾層）、search（找 key／value，往下或往上）——json 工具 json_ls／json_search 搬下來（11-12）。 |
 | [`src/cmd/peek.cpp`](../../../../../proto8/impls/aos-json/src/cmd/peek.cpp) | peek [--follow] [--depth N] 檔#/指標——漸進展開：一次只看一層，大的值摺成一句摘要（省 token）。 |
 | [`src/cmd/read.cpp`](../../../../../proto8/impls/aos-json/src/cmd/read.cpp) | 讀——get（取值）、where（這個值實際寫在哪份檔的哪個位置）。 |
 | [`src/cmd/ref.cpp`](../../../../../proto8/impls/aos-json/src/cmd/ref.cpp) | 寫入 env、ref 指示詞，ref --move 搬值並重算相對 $ref。 |

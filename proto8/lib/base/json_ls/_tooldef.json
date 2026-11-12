@@ -1,5 +1,5 @@
 {
- "description": "List what is inside one place of a JSON file, like ls. First line: the type and length of that place (e.g. \"object, 4 keys\", \"array, 12 items\"). Then one line per key or index, ready to append to the path. long: true adds TYPE and SIZE columns (like ls -l). Long lists end with \"[more] ... next: offset N\". Example: {\"path\": \"cfg.json#/states\", \"long\": true}.",
+ "description": "List what is inside one place of a JSON file, like ls. First line: the type and length of that place (e.g. \"object, 4 keys\", \"array, 12 items\"). Then one line per key or index, ready to append to the path. long: true adds TYPE and SIZE columns (like ls -l). depth: 2 also lists grandchildren as states/think. Long lists end with \"[more] ... next: offset N\". Example: {\"path\": \"cfg.json#/states\", \"long\": true}.",
  "parameters": {
   "type": "object",
   "properties": {
@@ -11,6 +11,11 @@
     "type": "boolean",
     "default": false,
     "description": "true = also print each child's type and size"
+   },
+   "depth": {
+    "type": "integer",
+    "default": 1,
+    "description": "how many levels to list: 1 = children only; 2 or more also lists deeper keys as a path, e.g. states/think/next (offset and limit count these lines)"
    },
    "offset": {
     "type": "integer",

@@ -137,6 +137,16 @@ class Ls(Base):
     def test_missing(self):
         self.err('PointerMissing', 'ls', 'c.json#/nope')
 
+    def test_depth(self):
+        self.assertEqual(self.ok('ls', '--depth', '2', 'c.json'),
+                         'object, 6 keys\nname\nmax\na~1b~0c\ntags\ntags/0\ntags/1\ntags/2\nzh\no\no/k\n')
+        self.assertEqual(self.ok('ls', '--depth', '3', '--long', '--offset', '9', '--limit', '1', 'c.json'),
+                         'object, 6 keys\no/k\tnull\tnull\n')
+        self.assertEqual(self.ok('ls', '--depth', '3', '--offset', '8', '--limit', '1', 'c.json'),
+                         'object, 6 keys\no\n[more] 8 to 8 of 10 shown; next: --offset 9\n')
+        self.assertEqual(self.ok('ls', '--depth', '1', 'c.json#/o'), 'object, 1 key\nk\n')
+        self.err('ArgumentsBad', 'ls', '--depth', '0', 'c.json')
+
 
 class Search(Base):
     def setUp(self):
