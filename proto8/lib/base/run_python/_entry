@@ -100,4 +100,4 @@ if timed_out:
     die("CommandFailed", "ran over %g s; stopped the whole process group" % limit, clip(out) + ("\n" if out and not out.endswith("\n") else ""))
 code = 128 - p.returncode if p.returncode < 0 else p.returncode   # 被訊號殺＝128＋N（R12）
 text = clip(out)
-print(text + ("" if not text or text.endswith("\n") else "\n") + "[exit code %d]" % code)   # 結束碼一律最後一行（stdio-unify R2，同 bash）
+print(text + ("" if not text or text.endswith("\n") else "\n") + "[exit code %d]" % code)   # 結束碼一律最後一行（stdio-unify R2，同 shell）
