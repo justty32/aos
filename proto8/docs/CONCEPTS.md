@@ -15,7 +15,7 @@
 | [02-設計理念-時空.md](CONCEPTS/02-設計理念-時空.md) | 設計理念／時空 | C-05、C-06、C-16、C-17、C-26、C-27、C-30～C-33、C-35、C-37、C-44、C-79（image 模型） |
 | [03-基礎設施.md](CONCEPTS/03-基礎設施.md) | 基礎設施：inst、loop 與 daemon、proc 之間的交流（投遞、窗、父子交代）、組合子（tasks、fsm）、資料夾程式、工作區與 stack | C-08、C-18、C-25、C-34、C-36、C-39、C-41、C-42b、C-49、C-65～C-67、C-75、C-80、C-81、C-87（C-80 不在 daemon 下的不管；C-81 stack 是 proc 的地盤、對外介面（原話三類、列四樣）；C-87 往下變成另一套＝共用 stack、像繼承） |
 | [04-kernel.md](CONCEPTS/04-kernel.md) | kernel | C-09～C-15、C-28、C-29、C-38、C-47 |
-| [05-agent.md](CONCEPTS/05-agent.md) | agent：腦、工具、可預測性、函數＋binding、工具（狀態機那幾條隨 fsm 在基礎設施） | C-19～C-23（含 C-22b）、C-40、C-42、C-46、C-50、C-61、C-62、C-82（aos 函數↔tool 呼叫無痛互轉、argv 兩面） |
+| [05-agent.md](CONCEPTS/05-agent.md) | agent：腦、工具、可預測性、函數＋binding、工具（狀態機那幾條隨 fsm 在基礎設施） | C-19～C-23（含 C-22b）、C-40、C-42、C-46、C-50、C-61、C-62、C-82、C-88～C-92（C-82 aos 函數↔tool 呼叫無痛互轉、argv 兩面；C-88 記憶＝fs＋json、`_index`；C-89 不同質與族譜；C-90 self 一家；C-91 goal 與 todo；C-92 小模型裝不下工具說明） |
 | [附錄1-名詞.md](CONCEPTS/附錄1-名詞.md) | 附錄 | 1. 名詞（daemon 兩義各一列；含資料夾程式、入口、`aos-exec`、stack、小格，工作區、指標） |
 | [附錄1-續-板子比喻.md](CONCEPTS/附錄1-續-板子比喻.md) | 附錄 | 1. 名詞（續）：板子比喻（root daemon＝板子、stack＝RAM……一詞一行） |
 | [附錄2-例子與待接.md](CONCEPTS/附錄2-例子與待接.md) | 附錄 | 3. 兩個例子、4. 還沒接起來的 16 條、5. AI 對自己的提醒 |
