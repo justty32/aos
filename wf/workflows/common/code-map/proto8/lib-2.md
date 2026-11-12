@@ -11,7 +11,9 @@
 |---|---|
 | [`__init__.py`](../../../../../proto8/lib/agent/__init__.py) | agent - 外部 agent CLI 與 agent 工具共用的 lib 模組。 |
 | [`agent_def/`](../../../../../proto8/lib/agent/agent_def/) | 定義的創造修改：new＝把範本資料夾整份複製成新定義（tools 檔相對路徑換算、_metainfo.json 記 lineage），check＝轉叫 lib/aos/defs 的 check，tools／llm／system＝直接改某份定義的工具／腦／system |
+| [`agent_def/def_edit.py`](../../../../../proto8/lib/agent/agent_def/def_edit.py) | agent_def 的細的定義動作：tools（ls／get／add／rm，轉 aos-tools --file 定義那份）、llm（ls／set／rm，轉 aos-json）、system（get／set）；改的是定義本身，不碰任何 stack。 |
 | [`agent_def/tests/test_agent_def.py`](../../../../../proto8/lib/agent/agent_def/tests/test_agent_def.py) | Test agent_def new (copy, rebase, directive from, DefExists, outside the workspace) and check (wraps lib/aos/defs) in a temp folder. |
+| [`agent_def/tests/test_def_edit.py`](../../../../../proto8/lib/agent/agent_def/tests/test_def_edit.py) | Test agent_def tools / llm / system (change a definition directly; args shaped like self_*) in a temp folder, with this repo's aos-tools and aos-json. |
 | [`agent_files.py`](../../../../../proto8/lib/agent/agent_files.py) | 依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。 |
 | [`agent_tool.py`](../../../../../proto8/lib/agent/agent_tool.py) | claude、codex 共用的工具形入口 ask_cli。 |
 | [`agents_cmd.py`](../../../../../proto8/lib/agent/agents_cmd.py) | subagent 與 agents_ctl 共用：查鍵、組 aos-agent ctl 各動作的旗標、跑 aos-agent（或旁邊的 self_*）並把下層錯翻成自己的。 |

@@ -22,6 +22,7 @@ stdin：`{"op":"ls|dup|refs|check","root":"/absolute/defs","match":"optional sub
 - `refs` 必須給 `def`，回 `{"refs":["category/caller"]}`；讀各 agent 公開工具宣告的 `path`，相對工具表所在夾（11-11 起不再讀 env 的 `AOS_DO_TASK_FROM`：do_task 改成 save／load、不開小幫手了）。回引用者路徑，排序去重，不包含自己。
 - `check` 回 `{"problems":[{"path":"category/a","reason":"English reason"}]}`。README 第一行非空、meta 有非空 summary、interfaces 是物件；agent 宣告的 tools／llm 必須存在且可讀。tools.json 有 `"$override"`（範本疊 `lib/packs`）時交給 `aos-tools ls -l` 合併再看，只帶 `env` 的格沿用底檔的 `path`；沒設 `AOS_HOME` 用這份 proto8（11-10 tool-packs）。定義路徑各段符合 `[a-z0-9_-]+`。不要求 lineage 親代還在。
 - `check` 發現問題仍保留 JSON stdout，stderr 一行 `defs: error: DefBad ...`，退 1；正常退 0。根不在為 `RootMissing`，其他壞宣告為 `DefBad`。所有 op 只讀；根指向空目錄時回空清單。
+- **root 本身就是一份定義**（`agent_def` 的 check 就這樣叫，11-12 Q10）：路徑照「相對 root」印成 `.`；名字檢查改查這個資料夾自己的名字（樹的根不是定義時，根自己的名字不查）；root 底下找不到任何定義（空夾、只有 README）＝空清單，`check` 也算過——「它是不是一份定義」不歸這支判。
 
 </details>
 

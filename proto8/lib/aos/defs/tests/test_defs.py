@@ -164,6 +164,24 @@ class DefinitionsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(data['defs'], [{'path': 'script', 'summary': 'Script', 'brain': False}])
 
+    def test_root_is_one_definition(self):
+        """11-12 Q10（使用者裁 a）：root 本身就是定義時 path 照「相對 root」印 "."、它自己的名字照查；沒有定義的夾＝空清單、check 算過。"""
+        for name, ok in (('good_one', True), ('Bad!', False)):
+            with self.subTest(name=name):
+                path = self.definition(name)
+                old, self.root = self.root, path
+                result, data = self.call('check')
+                self.root = old
+                self.assertEqual(result.returncode, 0 if ok else 1, result.stdout + result.stderr)
+                if not ok:
+                    self.assertEqual(data['problems'], [{'path': '.', 'reason': "definition folder name 'Bad!' must match [a-z0-9_-]+"}])
+        empty = self.root / 'empty'
+        empty.mkdir()
+        old, self.root = self.root, empty
+        result, data = self.call('check')
+        self.root = old
+        self.assertEqual((result.returncode, data), (0, {'problems': []}))
+
     def test_errors_and_empty_tree(self):
         _, data = self.call('dup')
         self.assertEqual(data, {'groups': []})

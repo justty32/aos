@@ -2,7 +2,7 @@
 
 ← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜程式 [proto8/lib](../../../../lib/README.md)（契約、索引）、範例 [demo/agent-liv](../../../../templates/README.md)、測試 `proto8/tests/test_lib.py`｜前情：[腦的工具呼叫](../../23/tool-calls/README.md)（P-41）｜待定：[NORMS 待定【agent／標準庫】工具＝函式庫](../../../../docs/NORMS/08-待定.md)
 
-規矩見 [thinking/README](../../../README.md)：只留使用者原文、決定、結論。**CONCEPTS／NORMS／CONVENTION 正文沒改**（之後由頂層統一落條文）。相關條文：[C-40、C-42、C-46、C-61](../../../../docs/CONCEPTS/05-agent.md)、[C-43、C-52、C-53、C-54、C-55、C-56、C-68、C-74](../../../../docs/CONCEPTS/01-設計理念.md)、[N-50、N-57、N-59、N-61](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[P-17、P-21、P-25、P-41](../../../../docs/CONVENTION/02-題目stack停錯腦.md)、[P-33](../../../../docs/CONVENTION/06-巢狀.md)、[`_metainfo` M1～M10](../metainfo/README.md)、[函數成長六級](../fn-grow/README.md)。
+規矩見 [thinking/README](../../../README.md)：只留使用者原文、決定、結論。**CONCEPTS／NORMS／CONVENTION 正文沒改**（之後由頂層統一落條文）（11-12 已落 C-61 的 10-24 補、P-25、P-33、P-41）。相關條文：[C-40、C-42、C-46、C-61](../../../../docs/CONCEPTS/05-agent.md)、[C-43、C-52、C-53、C-54、C-55、C-56、C-68、C-74](../../../../docs/CONCEPTS/01-設計理念.md)、[N-50、N-57、N-59、N-61](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[P-17、P-21、P-25、P-41](../../../../docs/CONVENTION/02-題目stack停錯腦.md)、[P-33](../../../../docs/CONVENTION/06-巢狀.md)、[`_metainfo` M1～M10](../metainfo/README.md)、[函數成長六級](../fn-grow/README.md)。
 
 ## 分檔目錄
 

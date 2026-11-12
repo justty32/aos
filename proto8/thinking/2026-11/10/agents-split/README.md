@@ -64,15 +64,17 @@
 14. 下層句子裡教 CLI 的寫法（`aos-agent ctl start --target …`、`--purge`、`--replace`、撞名的 `--name`）在給腦的結果裡換成工具參數的寫法。
 15. add 的 `ws` 給了又不在＝先建（舊行為）。
 
+**11-12 使用者裁：15 條都認可（Q06 a）**（[small-rulings](../../12/small-rulings.md)）
+
 ## 留給使用者
 
-- 4096 context 裝不下範本全部工具的說明（現在 15 支約 7600 tokens；三支新工具加 wall_clock 約 2400）。小模型要嘛少登記幾支、要嘛說明再瘦——方向沒定。
-- self_tools、self_hook 的 `path_json` 也是 `$` 鍵，gemma 一樣寫不出（別隊的工具，沒動）。
-- `agents_ctl` 能 rm 別人帳上的子（使用者選 B 時已知的代價）；被 rm 的那隻，原主下次對帳自己忘掉。
-- `eca-claude` 範本 check 不過（缺 `README.md` 與 `_metainfo.json`）；`lib/aos/defs` 對單一定義三個怪處（路徑一律顯示 `.`、資料夾自己的名字不查、空資料夾算過）——沒動。
-- 條文沒改的：C-42 續（第 5、13 行還在講舊 `agents` 的 new／add 與 `ws`）、C-52 例外 ⑧「`agents` 成功時轉印 warning」可能已不適用——改了會動到條文意思。
+- 4096 context 裝不下範本全部工具的說明（現在 15 支約 7600 tokens；三支新工具加 wall_clock 約 2400）。小模型要嘛少登記幾支、要嘛說明再瘦——方向沒定。 **11-12 使用者裁：結案**（[small-rulings](../../12/small-rulings.md)）
+- self_tools、self_hook 的 `path_json` 也是 `$` 鍵，gemma 一樣寫不出（別隊的工具，沒動）。 **11-12 使用者裁：結案**（[small-rulings](../../12/small-rulings.md)）
+- `agents_ctl` 能 rm 別人帳上的子（使用者選 B 時已知的代價）；被 rm 的那隻，原主下次對帳自己忘掉。 **11-12 使用者裁：維持現狀（Q08 a）**（[small-rulings](../../12/small-rulings.md)）
+- `eca-claude` 範本 check 不過（缺 `README.md` 與 `_metainfo.json`）；`lib/aos/defs` 對單一定義三個怪處（路徑一律顯示 `.`、資料夾自己的名字不查、空資料夾算過）——沒動。（11-12 使用者裁 a：eca-claude 現在 check 已經過、不用改；自己的名字照查已修，`.` 與空資料夾照現行寫進 defs README，見 [12/defs-check-align](../../12/defs-check-align.md)）
+- 條文沒改的：C-42 續（第 5、13 行還在講舊 `agents` 的 new／add 與 `ws`）、C-52 例外 ⑧「`agents` 成功時轉印 warning」可能已不適用——改了會動到條文意思。（11-12 使用者裁 a：C-42 續照現行三支改寫、C-52 ⑧ 拿掉（三支成功時不附 warning），見 [12/defs-check-align](../../12/defs-check-align.md)）
 
 ## 之後可加
 
-「細的」定義動作（設 system prompt、設腦、加減工具寫進定義）；`agents_children` 對 rm 後留下的 stack 直接清掉的動作；血統。
+「細的」定義動作（設 system prompt、設腦、加減工具寫進定義）；`agents_children` 對 rm 後留下的 stack 直接清掉的動作；血統。 **11-12 使用者裁：做細的定義動作與血統，不做 rm 後清 stack、兩者不耦合（Q09 b），見 [agent-def-fine-lineage](../../12/agent-def-fine-lineage.md)**（[small-rulings](../../12/small-rulings.md)）
 

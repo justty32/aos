@@ -130,7 +130,11 @@ def check(path, root):
     problems = []
     def problem(reason):
         problems.append({'path': relative(path, root), 'reason': reason})
-    if any(not re.fullmatch('[a-z0-9_-]+', part) for part in path.relative_to(root).parts):
+    parts = path.relative_to(root).parts
+    if not parts:                                # root 本身就是定義（agent_def check 一份）：它自己的名字照查（11-12 Q10）
+        if not re.fullmatch('[a-z0-9_-]+', path.name):
+            problem('definition folder name %r must match [a-z0-9_-]+' % path.name)
+    elif any(not re.fullmatch('[a-z0-9_-]+', part) for part in parts):
         problem('definition path segments must match [a-z0-9_-]+')
     try:
         first = (path / 'README.md').read_text(encoding='utf-8').splitlines()
