@@ -108,8 +108,9 @@ def warn(prog, sentence):
 #   tool（工具逾時／退非 0／stderr 尾巴的附註）、warning（出了狀況但照樣問腦，例：hook 小格起不來）、
 #   new_mail（信箱有新信，lib/agent/mail_notify 寄進 queue；lib 不 import py，那支自己拼同一個格式，11-11 使用者原例「[aos] new_mail: …」）、
 #   goal（agent 自己停下來時丟的目標提醒，agent-fsm idle.py 與 aos-eca-turn 經 lib/agent/goal_state.py 拼，11-11 thinking goal/02）、
-#   fork（工具 fork 給分身的開場與補上的工具結果，lib/agent/fork 與 lib/agent/fork_copy.py 自己拼，11-11 thinking fork-and-do-task/01）。新種類加在這裡。
-NOTE_KINDS = ("summary", "session", "clock", "hook", "tool", "warning", "new_mail", "goal", "fork")
+#   fork（工具 fork 給分身的開場與補上的工具結果，lib/agent/fork 與 lib/agent/fork_copy.py 自己拼，11-11 thinking fork-and-do-task/01）、
+#   slash（eca 收到 /clear、/status 這類 slash 指令時 aos 這層的回答，aos-eca-turn ⑭，11-12 thinking eca-slash）。新種類加在這裡。
+NOTE_KINDS = ("summary", "session", "clock", "hook", "tool", "warning", "new_mail", "goal", "fork", "slash")
 
 
 def aos_note(kind, text):

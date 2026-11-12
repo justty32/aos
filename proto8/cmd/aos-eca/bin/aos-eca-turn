@@ -72,6 +72,14 @@
      （claude tool_use、codex function_call 等；goal_state.transcript_calls）——有＝goal 計數歸零。對話檔找不到＝不歸零（未經真 CLI 驗證）。
      不像 agent-fsm 只看 history（goal_state.progressed）：eca 的 history 只有題目與最後答案，工具來回在 CLI 自己的對話裡，aos 的 history 看不到
      （11-11 稍後使用者「就goal那邊稍微檢查一下history就好」；eca 做不到，照現況）。
+  ⑭ slash 指令（11-12 thinking eca-slash，使用者「aos-say/listen我希望也能支援這些」「chat也要」；CLI 為主、aos 跟上）：這一批只有一封好信、
+     內容去頭尾空白後剛好是 /clear、/compact、/status、/usage、/exit 其中一個（多封一批、後面還帶字＝照一般題目）＝不照一般交給 CLI，
+     aos 這層做，照一般一輪記 history（那封 user＋一則 `[aos] slash: …` 或 CLI 的原話）、收信、after_queue 照跑：
+     /status＝aos 自己答（kind、model、對話 id、畫面開關、history 幾則、transcript 在哪）；/usage＝claude 另起一次 `claude -p --no-session-persistence`
+     問 /usage 原樣回（不碰這隻的對話），codex 沒有對應的、回一句；/compact＝claude 照一般 --resume 交 "/compact"（claude -p 認得、同一個 id 壓縮），
+     codex exec 不認＝刪 session.txt、下一輪開新 thread 帶 aos 的紀錄（同 ⑧）；/clear＝history 原文搬到 history_removed.jsonl（cli_session.clear_history，
+     同 aos-agent history rm 的規矩、op clear）、刪 session.txt，history 只剩這一問一答，下一輪開新對話；/exit＝畫面開著（沒人接著）就關掉，沒開回一句。
+     畫面開著時 /clear、/compact 不代打（對話在畫面裡）：回一句請人在畫面上打或先關畫面（畫面上打的，hook 會跟上，見 cli_session）。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
   人在畫面上自己打的話不進 history（沒經 queue；eca 方向題 2）。
@@ -91,7 +99,7 @@ PATH 上要有 aos-post（平級形）。
   加 cli_session 的 CfgMissing、CfgBad、ToolsMissing（11-03 eca-tools：cli.json 的 tools 指的登記檔不在）、CliMissing（含 aos-mcp 不在 PATH 上）、
   CliFailed、ReplyMissing、TrustMissing（11-10 深夜：畫面上的 claude 停在信任資料夾選單＝不貼、報錯，交出去之前，信留著）（yield 時的 SessionBad 不算錯，見上）。
 `--help`＝印 HELP（英文）到 stdout、退 0（R3）；Ctrl-C＝退 130、不吐 traceback（R12）。"""
-import hashlib, json, os, subprocess, sys
+import fcntl, hashlib, json, os, subprocess, sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
@@ -160,6 +168,12 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
   Goal: with no letter, when the CLI answered the last turn (or history is still empty) and $AOS_STACK/goal.json is active, the prompt of this turn is one
     message "[aos] goal: TEXT (reminder N of LIMIT...)" (it goes into history like a letter). A turn in which the CLI called tools
     (seen in its own transcript) sets the count back to 0; LIMIT reminders in a row without progress pause the goal.
+  Slash commands: a batch of one letter that is exactly /clear, /compact, /status, /usage or /exit (spaces around allowed) is
+    done by aos and answered with one "[aos] slash: ..." message (or claude's own words): /status = aos's own report;
+    /usage = a separate claude -p /usage (codex: not available); /compact = handed to claude on the same conversation
+    (codex: the next message starts a new thread carrying aos's record); /clear = history.jsonl moves to history_removed.jsonl
+    and the next message starts a new conversation; /exit = closes the screen. With the screen open, /clear and /compact
+    are not typed for you: type them on the screen.
 --one (tool form): stdin {"prompt"} -> stdout the answer; the conversation lives in $AOS_STACK itself. --on-empty / --prompt not allowed.
   If the earlier conversation is not on this machine, a warning is printed and a new one is started without a record. No cooldown.
 Needs aos-post on PATH (loop form) and AOS_STACK.
@@ -437,6 +451,126 @@ def note_progress(cfg, cell, stack, before):
         goal_state.progress(stack)
 
 
+# ---- ⑭ slash 指令（11-12 thinking eca-slash；使用者「aos-say/listen我希望也能支援這些」「chat也要」）----
+# 實測（claude 2.1.322、codex 0.167.1）：claude -p 認 /compact（同一個 id 壓縮、result 空）、/clear（回新 id，但 --resume 的 aos 不記）、
+# /usage（印額度）；/status、/exit 回「isn't available in this environment」。codex exec 一個都不認（當成一般題目給模型）。
+# 所以：一批只有一封、內容（去頭尾空白）剛好是下面其中一個＝aos 這層做（CLI 原生認得的才交給它），回答一則 [aos] slash: …；
+# 其他（多封一批、後面還帶字）照一般題目交出去。
+
+SLASH = ("/clear", "/compact", "/status", "/usage", "/exit")
+
+
+def slash_of(bodies, goal):
+    if goal or len(bodies) != 1:
+        return None
+    text = bodies[0]["content"].strip()
+    return text if text in SLASH else None
+
+
+def note(text):
+    return aos_flags.aos_note("slash", text)
+
+
+def model_of(cfg):
+    flags = cfg.get("flags", [])
+    return flags[flags.index("--model") + 1] if "--model" in flags[:-1] else "(the CLI's default)"
+
+
+def slash_status(cfg, cell, stack):
+    sid = cell.read("session.txt")
+    found = cli_session.transcripts(cfg["kind"], sid)
+    return note("/status: %s, model %s; conversation %s; screen %s; history %d messages; transcript %s" % (
+        cfg["kind"], model_of(cfg), sid or "(none yet: the next message starts one)",
+        "open" if cell.alive() else "closed", len(history_rows(stack)), found[0] if found else "(none)"))
+
+
+def slash_usage(cfg, ws):
+    """claude：另起一次 claude -p（不存對話、不碰這隻的 session）問 /usage，原樣回它的字；codex exec 沒有對應的。"""
+    if cfg["kind"] != "claude":
+        return note("/usage: codex has no usage report outside its own screen; open the screen (aos-agent open) and type /usage there")
+    try:
+        r = subprocess.run(["claude", "-p", "--output-format", "json", "--no-session-persistence"], input="/usage",
+                           stdout=subprocess.PIPE, text=True, cwd=ws, timeout=cfg.get("timeout_ms", 600000) / 1000)
+    except FileNotFoundError:
+        raise Fail("CliMissing", "claude is not on PATH")
+    except subprocess.TimeoutExpired:
+        raise Fail("CliFailed", "claude -p /usage did not finish in time")
+    out = None
+    for line in (r.stdout or "").splitlines():                     # json 是一個物件；保險起見取最後一個帶 result 的那行
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(ev, dict) and "result" in ev:
+            out = ev
+    if r.returncode != 0 or not isinstance(out, dict) or out.get("is_error") or not isinstance(out.get("result"), str):
+        raise Fail("CliFailed", "claude -p /usage exited %d: %s" % (r.returncode, (r.stdout or "").strip()[-300:]))
+    return out["result"]
+
+
+def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_busy):
+    """⑭ 做這個指令、照一般一輪記 history（user 那封＋一則回答；/clear 先清再記），信收掉、after_queue 照跑。
+    畫面開著時 /clear、/compact 不代打（對話在畫面裡，請人在畫面上打；hook 會跟上），/exit＝關畫面。"""
+    kind, alive = cfg["kind"], cell.alive()
+    on_screen = note("%s: the screen is open, so the conversation lives there; type %s on the screen (aos-agent open), "
+                     "or close it (aos-agent close) and send %s again" % (command, command, command))
+    cleared = None
+    if command == "/status":
+        text = slash_status(cfg, cell, stack)
+    elif command == "/usage":
+        text = slash_usage(cfg, ws)
+    elif command in ("/clear", "/compact") and alive:
+        text = on_screen
+    elif command == "/compact" and kind == "claude":
+        if not cell.read("session.txt"):
+            text = note("/compact: no conversation yet, nothing to compact")
+        else:
+            try:
+                got = cli_session.ask(cfg, cell, template, ws, stack, "/compact", on_busy)   # claude -p --resume 認得：同一個 id 壓縮
+            except Fail as e:
+                if e.code == "SessionBad":
+                    return 0                                        # 同一般一輪：整批留 cur/，下一次再試
+                raise
+            text = got.strip() or note("/compact: claude compacted conversation %s (same id)" % cell.read("session.txt"))
+    else:                                                           # /clear、codex 的 /compact、/exit：動小格，拿 lock
+        f, ok = cell.lock()
+        if not ok:
+            if on_busy == "yield":
+                return 0
+            fcntl.flock(f, fcntl.LOCK_EX)
+        with f:
+            if command == "/exit":
+                if not alive:
+                    text = note("/exit: no screen is open, nothing to end (the agent stays; aos-agent ctl stop stops it)")
+                elif cell.clients():
+                    text = note("/exit: someone is attached to the screen; not closed (they can type /exit there)")
+                else:
+                    cli_session.close(cell)
+                    text = note("/exit: closed the screen; the conversation stays and the next message goes on without a screen")
+            elif command == "/compact":                             # codex exec 不認 /compact：換新 thread、帶 aos 的紀錄過去（同 ⑧）
+                cli_session.drop_session(cell)
+                text = note("/compact: codex cannot compact outside its screen; the next message starts a new codex thread "
+                            "that carries aos's record of this conversation (up to reseed_bytes)")
+            else:
+                try:
+                    cleared = cli_session.clear_history(cell, stack)
+                except OSError as e:
+                    raise Fail("WriteFailed", "cannot clear history.jsonl: %s" % e)
+                cli_session.drop_session(cell)
+                text = note("/clear: %d messages moved to history_removed.jsonl; the next message starts a new %s conversation" % (cleared, kind))
+    for body in bodies:
+        append_history(stack, body)
+    for sig in good:
+        must_post(["done", box, sig])
+    try:
+        for sig, body in zip(good, bodies):
+            fire("after_queue", {"letter": sig, "content": body["content"]}, template, stack)
+    finally:
+        append_history(stack, {"role": "assistant", "content": text})
+        note_sum(stack, cell, False)
+    return 0
+
+
 def one_turn(template, stack, ws, empty_code, on_busy, prompt):
     box = os.path.join(stack, "queue")
     if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
@@ -483,6 +617,9 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
             return 0
     tool_added(cfg, template, stack)                                # hook：登記檔多了誰（交出去之前；hook 停下＝信留 cur/）
     history_changed(stack, cell)                                    # ⑩ history 被改過＝開新對話
+    command = slash_of(bodies, goal)
+    if command:                                                     # ⑭ 一封信就是一個 slash 指令：aos 這層照 CLI 的意思做
+        return slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_busy)
     late, given, mid, after = [], [], [], []                        # 交出去那一刻收信時出的錯：CLI 已經在跑，等它答完再報；after＝after_queue hook 停下
 
     def handed():                                                   # ④ 交出去就算完成（11-03）：user 接進 history、收信

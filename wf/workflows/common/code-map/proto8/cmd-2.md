@@ -41,6 +41,7 @@
 | [`tests/test_goal.py`](../../../../../proto8/cmd/aos-eca/tests/test_goal.py) | Test the goal in aos-eca-turn (11-11 goal/02) with fake claude / codex CLIs: queue empty + last turn answered + goal active = the reminder is the pro… |
 | [`tests/test_history_edit.py`](../../../../../proto8/cmd/aos-eca/tests/test_history_edit.py) | Test aos-eca-turn's shrunk history edit (11-10 self-family): history.jsonl changed between turns or during one = the next turn starts a new conversat… |
 | [`tests/test_hooks.py`](../../../../../proto8/cmd/aos-eca/tests/test_hooks.py) | Test the hooks of aos-eca-turn (eca's reduced set: before_queue, after_queue, brain_failed, tool_added) with a fake claude CLI. |
+| [`tests/test_slash.py`](../../../../../proto8/cmd/aos-eca/tests/test_slash.py) | Test aos-eca-turn's slash commands (11-12 eca-slash): one letter that is exactly /clear, /compact, /status, /usage or /exit is done by aos (or handed… |
 | [`tests/test_switch.py`](../../../../../proto8/cmd/aos-eca/tests/test_switch.py) | Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs. |
 
 ## `proto8/cmd/aos-feedback/`

@@ -884,13 +884,16 @@ def follow_session(kind, cell, sid):
 HISTORY, REMOVED = "history.jsonl", "history_removed.jsonl"
 
 
-def clear_history(cell):
+def clear_history(cell, stack=None):
     """清掉這隻 eca 的 history（11-12 eca-slash，使用者「連 aos 那邊的歷史也要一起清」）：history＝小格 stack.txt 指的 stack 裡的
     history.jsonl（工具形 stack＝小格本身、沒有 history＝不動）。原文照 aos-agent history rm 的規矩搬到旁邊的 history_removed.jsonl
     （每則一行 {"removed_at", "op": "clear", "line", "message"|"raw"}），先寫那份再把 history 換成空檔；刪小格的 .history_sum
-    （aos-eca-turn ⑩ 的記號，沒有＝不比，免得下一輪當成「history 被改過」又丟掉新對話）。回搬走幾則。"""
-    rel = cell.read("stack.txt")
-    stack = os.path.normpath(os.path.join(cell.path, rel)) if rel else cell.path
+    （aos-eca-turn ⑩ 的記號，沒有＝不比，免得下一輪當成「history 被改過」又丟掉新對話）。回搬走幾則。
+    stack＝呼叫者直接給（aos-eca-turn 的 /clear）；沒給＝照 stack.txt（hook）。"""
+    if stack is None:
+        rel = cell.read("stack.txt")
+        stack = os.path.normpath(os.path.join(cell.path, rel)) if rel else cell.path
+    stack = os.path.abspath(stack)
     if stack == cell.path:
         return 0
     path = os.path.join(stack, HISTORY)
