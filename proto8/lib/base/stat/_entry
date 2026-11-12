@@ -5,7 +5,7 @@
 # 資料夾：counter_children、aos（_entry、.env、_tooldef.json… 有哪些）。路徑：相對從 $AOS_WS 算、絕對照用（11-10 tool-packs 不限工作區）。
 # 計數的 key 一律 counter_*（10-25，原 lines、children，top 摘要裡的 keys、items、chars）。
 # 錯：stderr 與 stdout 各一行「stat: error: 代號 原因」、退 1。來源：demo/file-tools/stat（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
-import json, os, sys, time
+import json, os, sys
 HELP = """\
 usage: stat < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Show the attributes of one file or folder (relative paths start at $AOS_WS), as JSON.
@@ -35,6 +35,12 @@ tool_io.start(NAME, HELP)
 
 
 die = tool_io.die
+try:
+    from file_summary import aos_marks, iso, json_summary  # noqa: E402
+except ModuleNotFoundError as error:
+    if error.name != "file_summary":
+        raise
+    die("ModuleMissing", "file_summary.py not in the tool folder, not in lib/, not on the Python path")
 
 
 def out(obj):
@@ -42,34 +48,6 @@ def out(obj):
 
 
 arguments = tool_io.arguments
-
-
-def json_summary(v):
-    """一個 JSON 值的一句摘要：型別＋大小（物件幾個 key、陣列幾項、字串幾字），純值短的直接給。"""
-    if isinstance(v, dict):
-        return {"type": "object", "counter_keys": len(v)}
-    if isinstance(v, list):
-        return {"type": "array", "counter_items": len(v)}
-    if isinstance(v, str) and len(v) > 80:
-        return {"type": "string", "counter_chars": len(v), "head": v[:60]}
-    names = {type(None): "null", bool: "boolean", int: "number", float: "number", str: "string"}
-    return {"type": names[type(v)], "value": v}
-
-
-AOS_MARKS = ("_entry", "_entry.json", "_metainfo.json", ".env", "_tooldef.json", "tools.json", "loop.json", "fsm.json")
-
-
-def aos_marks(d):
-    try:
-        names = set(os.listdir(d))
-    except OSError:
-        return []
-    return [m for m in AOS_MARKS if m in names]
-
-
-
-def iso(t):
-    return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(t)) + ".%03d+00:00" % int((t % 1) * 1000)
 
 
 a = arguments("path")

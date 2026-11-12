@@ -39,6 +39,12 @@ tool_io.start(NAME, HELP)
 
 
 die = tool_io.die
+try:
+    from file_summary import json_summary  # noqa: E402
+except ModuleNotFoundError as error:
+    if error.name != "file_summary":
+        raise
+    die("ModuleMissing", "file_summary.py not in the tool folder, not in lib/, not on the Python path")
 
 
 def out(obj):
@@ -46,18 +52,6 @@ def out(obj):
 
 
 arguments = tool_io.arguments
-
-
-def json_summary(v):
-    """一個 JSON 值的一句摘要：型別＋大小（物件幾個 key、陣列幾項、字串幾字），純值短的直接給。"""
-    if isinstance(v, dict):
-        return {"type": "object", "counter_keys": len(v)}
-    if isinstance(v, list):
-        return {"type": "array", "counter_items": len(v)}
-    if isinstance(v, str) and len(v) > 80:
-        return {"type": "string", "counter_chars": len(v), "head": v[:60]}
-    names = {type(None): "null", bool: "boolean", int: "number", float: "number", str: "string"}
-    return {"type": names[type(v)], "value": v}
 
 
 SMALL_JSON = 1000                       # 序列化後幾個字以內直接給 value
