@@ -106,6 +106,8 @@ systemd-run --user --scope -q -p MemoryMax=64M -p MemorySwapMax=0 \
 
 已照 [aos-teams/05](../../../../wf/workflows/dispatch/aos-teams/05-同機session與Argon.md) 的指令送出原話＋初步整理，有回。它的看法與隊長同不同意，逐條在 [03 § Argon 補的](linux-user/03-各念頭的讀法與後果.md)；併進來的有：c 的讀法四、d 的「root 帳號那台是各帳號 daemon 的上一層」、人會多開、問題 1、3、4。它有一處事實說錯（說信讀完會留在 `cur/`；現在預設是讀完就刪）。提示與回覆全文只在當晚 session 的 scratchpad，沒進 repo。
 
+（11-12 收工補）提示與回覆原文已存進 repo：[linux-user/Argon回覆](linux-user/Argon回覆.md)。
+
 ## 沒查的、未定的
 
 - 公司 WSL 有沒有 `systemd --user`、linger、能不能建帳號與用 root。

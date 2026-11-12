@@ -104,6 +104,8 @@
 
 照 [aos-teams/05](../../../../wf/workflows/dispatch/aos-teams/05-同機session與Argon.md) 用 `agy`（Gemini 4 Argon High、plan 模式）送了原話＋上面的初步整理，當場有回。
 
+送去的提示與回覆原文：[ref-index-unify/Argon回覆](ref-index-unify/Argon回覆.md)。
+
 Argon 的看法與我同不同意：
 
 - **index 跟 `$ref` 的容器差一層**：`_index` 是物件 `p` 的屬性、描述 `p`，起點是 `p`；`{"$ref": …}` 是要換掉 `p` 的值，起點是 `p` 的上一層。實作時把「當前那一格的位置」直接當起點會全面多算一層。——同意，就是未定 2；也是介面要把值與位置綁在一起的理由。

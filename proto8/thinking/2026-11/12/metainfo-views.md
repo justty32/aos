@@ -110,6 +110,8 @@
 
 已送（`agy`、Gemini 4 Argon High、plan 模式，照 [aos-teams/05](../../../../wf/workflows/dispatch/aos-teams/05-同機session與Argon.md)），有回。它拿到的是原話與本檔初稿的摘要，沒有讀 repo。
 
+送去的提示與回覆原文：[metainfo-views/Argon回覆](metainfo-views/Argon回覆.md)。
+
 Argon 的審查，同意、已併進上文的：
 
 - 檔案權限不是「准主觀蓋過」時的防線（結論三第 2 點）。
