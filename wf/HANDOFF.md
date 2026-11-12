@@ -12,6 +12,34 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-12 22:10 家機頂層 compact 前
+
+（短版，給 compact 後的頂層；全貌看下一條「晚 家機頂層收工」，那條沒改。）
+
+1. **授權與工作方式**：在家機。頂層只跟使用者說話和調度，事情都交給 agent：普通 opus、雜活 sonnet、使用者的「想法」一律派 fable 隊長、可以找 Argon；agent 可以再派子 agent；非雜活先通讀 wf 規矩。
+   - **push**：使用者開場說「睡前再push」（頂層轉述），23:15 關機；頂層答應過推之前先跟他說一聲。**到現在還沒推，他也還沒回要不要推**。收工文書做完再問一次，他說推才 `git push origin main`（origin 沒有新東西，main 領先約兩百個 commit）。
+   - **額度**：他說已重置、可以盡情用；先前交代過額度到上限就停在原地等他。
+   - **說話**：他說「一下子太多了，我們一個一個來」（頂層轉述）——一次只講一件、一次只問一題；白話、先結論、短。
+2. **還在跑的 agent**（compact 後會收到完成通知，**別重派**）：
+   - fable：沙箱設定壞了也改成略過（使用者「甲，出事自己負責」，fable 正寫進 [metainfo-views](../proto8/thinking/2026-11/12/metainfo-views.md)、未提交）。回來後看它怎麼分「設定是好的但沙箱起不來」、有沒有要問使用者的。
+   - sonnet：唯讀再跑一次全套測試（從空目錄起跑；`lib/aos/measure` 連跑五次——`$ref` 那條線跑時紅過一例又自己好了，成因未確認）。上次確定全綠：`6602f453c` 起 65 夾 1325 例。
+3. **兩件回來後，依序**：① 派人補最後一輪文書（第 5 點）；② 測試有紅先查；③ 工作樹乾淨後問使用者要不要 push；④ 推完提醒他停試驗場的樹（`aos-daemon-ctl -d ~/code/playground/.stack shutdown`）——樹現在開著給他玩 `eca_tidy`（快照是 21:30 左右的舊版；C++ 之後重 build 過，怪怪的就重起）。
+4. **22:00 前後跟他一題一題定下來的**（都已進 thinking，除了標「待補」的）：
+   - metainfo 全是觀點、壞了略過（含沙箱）；`_index` 一筆可多塞任何東西；`_metainfo` 不算 index → [metainfo-views § 使用者裁定](../proto8/thinking/2026-11/12/metainfo-views.md#使用者裁定11-12-晚)
+   - `$ref`／`$at` 定案：不帶 `#` 的照舊、`#/key`、`#/../other.json`、`$at` 接在 `$ref` 後面往下走且不收 `#`（六句原話依序）→ [ref-index-unify § 使用者裁定](../proto8/thinking/2026-11/12/ref-index-unify.md#使用者裁定-11-12-晚)
+   - `$at` 的 `..` 可以走出檔：頂層問要不要擋在根，他答「就這樣」（維持現狀；頂層轉述，**還沒進 thinking，待補**）。
+   - kernel 細聊：手（daemon）／門（kernel）、kernel 是主觀的概念、daemon 也是概念；「資源排程別叫 kernel」收回、名字都不改；daemon 心智模型他認可（「我覺得這樣就OK了」）→ [kernel-as-bridge 06](../proto8/thinking/2026-11/12/kernel-as-bridge/06-細聊-手與門.md)
+   - linux user：「linux user要等等。」→ [linux-user](../proto8/thinking/2026-11/12/linux-user.md)
+   - 遊樂場 `eca_tidy` 已備好 → [playground-home](../proto8/thinking/2026-11/12/playground-home.md)（eca_tidy 那節）
+5. **待補文書清單**（最後一輪做，現在不做）：
+   - `ref-index-unify.md` 補「就這樣」那句。
+   - `wf/wait-user/01`：metainfo-views 那條改「已裁已落實，剩代定與疑義」；提取 U7 與程式碼庫整理第 1 題結案（題數跟著改）；ref-index-unify 那條改「已定案已施工，剩五個小細節代定」（陣列＋`$at` 逐份套、單獨 `$at` 不算指示詞、`$at` 寫壞整個不換、捷徑的 `檔#/..` 從哪算、key 叫 `..` 指不到）。
+   - `wf/wait-user/03` 或合適處加「試 eca_tidy」一條。
+   - SESSION-LOG 對應行。
+   - 下一條「晚 家機頂層收工」的最終測試句照第二次全套結果更新；它的第 7 點（給公司機）補「impls 又重 build 過（`$at`）」。
+   - 日誌補今晚 21:25 之後的幾行（`9c1ffb147`、`484ab9a57`、`4c5f8b4c3`、`23dd06544`、`2561494a3`、`5aacbbede`、`9da8be804`、`bbdb676a9` 等）。
+6. **踩過的坑**：多條線共用工作樹——`git add` 指名路徑後馬上 commit、不 `-A`、不 `git stash`；重 build impls 時試驗場的樹會被影響；全套測試要從空目錄起跑；使用者的話會邊想邊改口，沒定形前叫施工的先停、只備料，定了再動。
+
 ## 2026-11-12 晚 家機頂層收工
 
 1. **授權與工作方式**：在家（家機 Manjaro，`~/repo/simple_tools/aos` main）。頂層只調度，事情交給 agent：普通 opus、雜活 sonnet、規劃 fable；agent 可以再派子 agent；非雜活先讀 wf/ 規矩。**push：睡前（23:15 關機）一次，推之前頂層先跟使用者說一聲**。使用者：「等一下token額度到上限後別動，我有一個免費的額度重置」（頂層轉述）——額度到上限就停在原地等他，不要自己接著做。之後（頂層轉述）：他說把額度重置了、後天是每週額度重置；接下來的想法都派 fable 隊長、可以找 Argon。
