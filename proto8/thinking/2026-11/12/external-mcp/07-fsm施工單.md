@@ -14,6 +14,8 @@
 
 ## 要你裁的（一題，不擋開工——推薦的 a 就是步 6 先做的）
 
+**11-12 已裁 a（只收 Bearer）**：使用者「那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決」。
+
 **題一：經 aos 那條的 http，金鑰只收 Bearer，還是也收任意標頭**（02 寫過「開工前另出題」的那題）
 
 - **a 只收 Bearer（推薦）**：沿用今天的 `bearer_token_env`＋`env_file`，`mcp_tool` 送 `Authorization: Bearer <值>`。server 檔格式一個字不改，同一份檔 eca、fsm 兩條路都能用。後果：要 `X-API-Key` 這類自訂標頭的 server 這條路接不了（eca 原生掛那條今天也一樣接不了）。
@@ -160,6 +162,8 @@ gpt 系只照這份圖寫碼、不參與設計；圖上沒寫到的地方先問�
 - **修改** `cmd/README.md`、`cmd/docs/01`、`lib/docs/02` 索引、knowledge（外部工具怎麼來的、錯誤代號怎麼讀、`cli/` 加 `mcp_import` 節點）、templates/docs/01「接外部 MCP server」補「經 aos」一段（寫明兩條路差別：凍結、hook 攔得到 vs. CLI 自己接）、`cmd/aos-eca` README 一句。codemap、wf-lint。
 
 ## 跟 11-11 原設計對不上的地方（都解得開，編成代定；每條可翻案）
+
+**F1～F12：11-12 使用者：先這樣，出問題再解決**（「那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決」；頂層另轉述給他的 F4、F9 也在這句裡）。
 
 - **F1 匯入的對象是「人先寫好的 server 檔」**，不是 `NAME -- COMMAND`。11-11 的 usage 是 `aos-mcp-import NAME -- COMMAND…`（匯入當場生一份檔）；今天 server 檔已經是手寫的、eca 也讀同一份（X2），所以匯入只收 `SERVER_FILE`。`NAME -- COMMAND` 那個「順手生檔」的寫法不做（要的話之後加一支小子命令）。
 - **F2 匯入時間等資訊放新的頂層鍵 `mcp_import`**，不放 `mcp_server` 裡。11-11 把 `imported_at`、`protocol_version` 寫在 `mcp_server` 底下；今天的 `mcp_server_file.load` 對 `mcp_server` 裡不認的鍵一律 `PackBad`（eca 那條就會把這台跳過）。放頂層＝`load` 不看、不用改今天的程式。

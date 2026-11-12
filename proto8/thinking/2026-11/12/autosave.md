@@ -196,3 +196,10 @@ T=~/aos-run; [ -e $T ] && echo "already there: move it away first" || { mkdir $T
 ## 殘留（都停著、沒刪）
 
 `/tmp/aos-run-trial/`（主樹，五列 sleeping）、`~/aos-run-trial-save/`（13 份存檔）、`/tmp/aos-run-trial-race/`＋`/tmp/aos-run-trial-race.err`（邊跑邊抄那批）、`/tmp/aos-run-trial-r2/`＋`/tmp/aos-run-trial-r2-save/`（換路徑還原那棵與它的存檔）、`~/aos-run-trial-bench/`、`/tmp/aos-run-trial-bench/`、`/dev/shm/aos-run-trial-bench/`（測速三棵）、`/tmp/aos-trust-probe/`（空）、`/tmp/line-cdrive/`（這條線的 clone）；`~/.claude/projects/-tmp-aos-run-trial-ws/`、`-tmp-aos-run-trial-r2-ws/`（eca 的對話本體）。
+
+## 使用者裁定（11-12 下午）
+
+- 「/tmp我以為他是記憶體」
+- 「既然都是放~/，那就不用autosave了。給我一個小腳本，或是我直接停掉daemon，cp -r過去就好。」
+
+決定：樹放 `~/`、不做 auto save；存檔＝停樹後整份複製。頂層建議用 `cp -a`（保留連結與權限），並給了一支沒實跑過的小腳本（腳本不收進 repo）。
