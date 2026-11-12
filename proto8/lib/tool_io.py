@@ -55,8 +55,8 @@ def warn_missing_clock(path, prog=None):
         warn("AOS_CLOCK points to a missing file; treating the clock as 0 (normal right after start, before the first tick)", prog=prog)
 
 
-def now_cycle():
-    """沒設 AOS_CLOCK＝None；缺檔 warning 每行程每路徑一次且當 0；空檔＝0；壞檔＝ClockBad。"""
+def now_cycle(prog=None):
+    """沒設 AOS_CLOCK＝None；缺檔 warning 每行程每路徑一次且當 0；空檔＝0；壞檔＝ClockBad。prog＝提醒行開頭（None＝NAME；py/aos_ws 傳 argv[0] 檔名）。"""
     path = os.environ.get("AOS_CLOCK")
     if not path:
         return None
@@ -64,7 +64,7 @@ def now_cycle():
         with open(path, "rb") as f:
             text = f.read().strip(b" \t\n\r\f\v").decode("ascii")
     except FileNotFoundError:
-        warn_missing_clock(path)
+        warn_missing_clock(path, prog=prog)
         return 0
     except (OSError, UnicodeError, ValueError) as e:
         raise Error("ClockBad", "cannot read AOS_CLOCK file %s: %s" % (path, e)) from None
@@ -82,11 +82,11 @@ def utc_now_epoch_ms():
     return time.time_ns() // 1000000
 
 
-def deadline_after(cycles):
-    """回 (on_clock, at)；有時鐘數 cycle，否則換成 UTC epoch 毫秒。"""
+def deadline_after(cycles, prog=None):
+    """回 (on_clock, at)；有時鐘數 cycle，否則換成 UTC epoch 毫秒。prog 同 now_cycle。"""
     if not isinstance(cycles, int) or isinstance(cycles, bool) or not -9223372036854775808 <= cycles <= 9223372036854775807:
         raise Error("ClockBad", "deadline cycles must be an integer within signed 64-bit range")
-    now = now_cycle()
+    now = now_cycle(prog)
     on_clock = now is not None
     if on_clock:
         at = now + cycles
@@ -100,11 +100,11 @@ def deadline_after(cycles):
     return on_clock, at
 
 
-def expired(deadline):
-    """依期限種類判到期；同一行程不應失去時鐘，若失去就回 False。"""
+def expired(deadline, prog=None):
+    """依期限種類判到期；同一行程不應失去時鐘，若失去就回 False。prog 同 now_cycle。"""
     on_clock, at = deadline
     if on_clock:
-        now = now_cycle()
+        now = now_cycle(prog)
         return now is not None and now >= at
     return utc_now_epoch_ms() >= at
 

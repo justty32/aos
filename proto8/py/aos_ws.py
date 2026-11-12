@@ -9,7 +9,7 @@
   ③ ctl／state＝aos-loop 開在 <stack>/ctl.json、state.json 的窗（state 的 phase 看得出 paused）。
 舊協議（工作區的 new/ cur/ out/ done/，P-11：agent-bob／ann／dan、topdown 這些 fsm 範本；11-04 demo 刪了）這裡不再認。
 11-03 起不讀 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）：fsm、aos-eca-turn 都不寫了，last_jsonl／unit_of／failed 跟著拿掉。"""
-import json, os, re, subprocess, sys, time
+import json, os, re, subprocess, sys
 
 import aos_flags
 
@@ -23,78 +23,36 @@ class Error(Exception):
         self.code = code
 
 
-def _clock_decimal(text, source, positive=False):
-    """只收 ASCII 十進位整數，範圍與 C++ 的 long long 相同。"""
-    if not text or any(ch < "0" or ch > "9" for ch in text):
-        value = -1
-    else:
-        try:
-            value = int(text.lstrip("0") or "0")
-        except ValueError:
-            value = -1
-    if value < (1 if positive else 0) or value > 9223372036854775807:
-        kind = "positive" if positive else "non-negative"
-        raise Error("ClockBad", "%s must be a %s decimal integer within signed 64-bit range" % (source, kind))
-    return value
+# 兩鐘期限只有 lib/tool_io.py 一份（11-12 收重複）；這裡只把缺檔提醒的開頭換成 argv[0] 檔名、tool_io.Error 換成本模組的 Error。
+_clock = aos_flags.tool_io
+utc_now_epoch_ms = _clock.utc_now_epoch_ms
+
+
+def _clocked(fn, *args):
+    try:
+        return fn(*args)
+    except _clock.Error as e:
+        raise Error(e.code, str(e)) from None
 
 
 def now_cycle():
     """沒設 AOS_CLOCK＝None；缺檔 warning 每行程每路徑一次且當 0；空檔＝0；壞檔＝ClockBad。"""
-    path = os.environ.get("AOS_CLOCK")
-    if not path:
-        return None
-    try:
-        with open(path, "rb") as f:
-            text = f.read().strip(b" \t\n\r\f\v").decode("ascii")
-    except FileNotFoundError:
-        aos_flags.warn_missing_clock(path, prog=os.path.basename(sys.argv[0]))
-        return 0
-    except (OSError, UnicodeError, ValueError) as e:
-        raise Error("ClockBad", "cannot read AOS_CLOCK file %s: %s" % (path, e)) from None
-    return _clock_decimal(text, "AOS_CLOCK file") if text else 0
+    return _clocked(_clock.now_cycle, os.path.basename(sys.argv[0]))
 
 
 def clock_interval_ms():
     """AOS_CLOCK_INTERVAL 的正整數毫秒，沒設或空＝1000。"""
-    text = os.environ.get("AOS_CLOCK_INTERVAL")
-    return _clock_decimal(text, "AOS_CLOCK_INTERVAL", positive=True) if text else 1000
-
-
-def utc_now_epoch_ms():
-    """現在的 UTC epoch 毫秒，可寫檔跨行程比較。"""
-    return time.time_ns() // 1000000
+    return _clocked(_clock.clock_interval_ms)
 
 
 def deadline_after(cycles):
     """回 (on_clock, at)；有時鐘數 cycle，否則換成 UTC epoch 毫秒。"""
-    if not isinstance(cycles, int) or isinstance(cycles, bool) or not -9223372036854775808 <= cycles <= 9223372036854775807:
-        raise Error("ClockBad", "deadline cycles must be an integer within signed 64-bit range")
-    now = now_cycle()
-    on_clock = now is not None
-    if on_clock:
-        at = now + cycles
-    else:
-        duration = cycles * clock_interval_ms()
-        if not -9223372036854775808 <= duration <= 9223372036854775807:
-            raise Error("ClockBad", "deadline duration is outside signed 64-bit range")
-        at = utc_now_epoch_ms() + duration
-    if not -9223372036854775808 <= at <= 9223372036854775807:
-        raise Error("ClockBad", "deadline is outside signed 64-bit range")
-    return on_clock, at
+    return _clocked(_clock.deadline_after, cycles, os.path.basename(sys.argv[0]))
 
 
 def expired(deadline):
     """依期限種類判到期；同一行程不應失去時鐘，若失去就回 False。"""
-    on_clock, at = deadline
-    if on_clock:
-        now = now_cycle()
-        return now is not None and now >= at
-    return utc_now_epoch_ms() >= at
-
-
-def stack_of(ws, stack=None):
-    """stack＝給的 ＞ $AOS_STACK ＞ <ws>/.stack/（N-57 預設，同 aos-exec）；轉絕對路徑。"""
-    return os.path.abspath(stack or os.environ.get("AOS_STACK") or os.path.join(ws, ".stack"))
+    return _clocked(_clock.expired, deadline, os.path.basename(sys.argv[0]))
 
 
 def box_of(stack):

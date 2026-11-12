@@ -60,6 +60,8 @@ finally:
 
 # 缺鐘檔提醒與 lib 共用同一份去重狀態，呼叫者不用知道底層模組。
 warn_missing_clock = tool_io.warn_missing_clock
+# OSError 的原因不帶檔名（11-12 線 errpath）只有 tool_io.os_reason 一份。
+os_reason = tool_io.os_reason
 
 HELP = None
 
@@ -90,11 +92,6 @@ def die(prog, code, reason, also_stdout=False):
         print(line, flush=True)
     print(line, file=sys.stderr, flush=True)
     sys.exit(1)
-
-
-def os_reason(e):
-    """OSError 的原因不帶檔名（str(e) 會把程式開的那個絕對路徑再印一次；11-12 線 errpath，同 lib/tool_io.os_reason）：有 strerror 用它，否則 str(e)。"""
-    return getattr(e, "strerror", None) or str(e)
 
 
 def warn(prog, sentence):
