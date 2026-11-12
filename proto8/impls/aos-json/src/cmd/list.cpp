@@ -168,13 +168,17 @@ int cmd_ls(const Args& args) {
     Cli cli = parse_args(args, {{"--offset", "offset"}, {"--limit", "limit"}},
                          {{"--follow", "follow"}, {"--resolve", "resolve"}, {"--long", "long"}}, "ls");
     std::string s = one_spec(cli, "ls");
-    size_t offset = count_opt(cli, "offset", 0, false);
-    size_t cap = count_opt(cli, "limit", std::numeric_limits<size_t>::max() / 2, true);
     Json v = get_value(s, cli.opts.count("follow") > 0, cli.opts.count("resolve") > 0);
     std::string head = std::string(v.type_name()) + (sized(v) ? ", " : " ") + size_of(v);
     if (v.is_array() && !v.empty()) {
         head += " (index 0.." + std::to_string(v.size() - 1) + ")";
     }
+    if (!v.is_object() && !v.is_array()) {   // 純值與字串沒有孩子：只印第一行，--offset／--limit 不看（同原本的 Python）
+        std::cout << head << "\n" << std::flush;
+        return 0;
+    }
+    size_t offset = count_opt(cli, "offset", 0, false);
+    size_t cap = count_opt(cli, "limit", std::numeric_limits<size_t>::max() / 2, true);
     std::cout << head << "\n";
     std::vector<std::string> rows;
     bool lng = cli.opts.count("long") > 0;

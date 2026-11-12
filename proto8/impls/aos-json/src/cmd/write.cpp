@@ -176,7 +176,10 @@ int cmd_add(const Args& args) {
         ptr = ptr.substr(0, ptr.rfind('/'));
         std::string parent = spec.file + (ptr.empty() ? "" : "#" + ptr);
         Place p = place(ed, parent, follow, follow, false, raw);
-        Json& t = existing(p, parent);
+        if (!p.at.rest.empty()) {
+            throw Error{code::PointerMissing, "no such pointer: " + parent + " (" + shown(p.at.at.file, p.at.at.toks) + " has no " + p.at.rest[0] + ")"};
+        }
+        Json& t = *p.at.at.node;
         if (!t.is_array()) {
             throw Error{code::TargetBad, parent + " is " + std::string(t.type_name()) + ", not an array; - only works at the end of an array path"};
         }

@@ -132,6 +132,7 @@ class Ls(Base):
         self.assertEqual(self.ok('ls', 'c.json', '--offset', '5'), 'object, 6 keys\no\n')
         for bad in (('--offset', '-1'), ('--offset', 'x'), ('--limit', '0'), ('--limit', '1.5')):
             self.err('ArgumentsBad', 'ls', 'c.json', *bad)
+        self.assertEqual(self.ok('ls', 'c.json#/max', '--offset', '-1'), 'number 20\n')   # no children: not checked
 
     def test_missing(self):
         self.err('PointerMissing', 'ls', 'c.json#/nope')

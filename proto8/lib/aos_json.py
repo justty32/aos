@@ -3,12 +3,13 @@
 使用者 11-12（thinking 2026-11/12/json-tools）：「建議做成一個aos_json工具……做兩套」、兩套選 A——簡單組只收路徑＋值、值照字面、
 不碰 $ref／$env／解析文字；複雜組另名，才有指示詞解開與否、穿過 $ref、值從文字或另一格來（圖紙 01-規劃 D1～D24）。
 路徑一律一整串 `檔#/指標`（N-45／N-62：第一個 # 切；指標照 RFC 6901、跟 aos-json／$ref 同一套——`x.json` 是整份，`x.json#/` 是名字為空字串的那個 key，使用者 11-12「按照標準寫法」；`x.json#` 不收、照 aos-json 報錯，11-12 代定），檔相對 $AOS_WS、絕對照用。
-自己不開檔：讀＝`aos-json get`、寫＝`aos-json set／append／del`（原子寫入、只重寫變的那一塊）；簡單組寫入帶 `--raw`（指示詞物件當普通物件）。
+自己不開檔：讀＝`aos-json get／ls／search`、寫＝`aos-json set／append／add／del`（原子寫入、只重寫變的那一塊；ls／search／add 的邏輯 11-12 搬進 aos-json，這裡只管參數、上限與訊息換成參數名）；簡單組寫入帶 `--raw`（指示詞物件當普通物件）。
 aos-json 的 stderr 原樣透出，它退 1 時接它錯誤行的代號與原因（C-52 例外：給腦用的工具轉接下層最後一行），沒那行＝CommandFailed。
 上限（json_get 的 max_bytes、ls／search 的 limit）：呼叫參數 › 環境變數 AOS_JSON_MAX_BYTES／AOS_JSON_MAX_ITEMS（tools.json 工具格 env 蓋過行程環境）› 預設 8000／200。
 輸出給腦：值一行緊湊 JSON；寫入 `ok 路徑`；不是值的結果用方括號行（`[too big]`、`[more]`、`[no match]`）退 0；錯照 lib 契約兩邊一行、退 1。"""
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -68,10 +69,6 @@ class Target:
         return self.ptr[:self.ptr.rfind("/")]
 
 
-def esc(key):
-    return str(key).replace("~", "~0").replace("/", "~1")
-
-
 def run_cwd():
     """aos-json 在哪跑：$AOS_WS（相對路徑就從這裡算，同 tool_io.ws_path）；沒設＝照目前目錄（這時只會有絕對路徑走到這）。"""
     ws = os.environ.get("AOS_WS")
@@ -93,9 +90,12 @@ def aos_json(argv, value=NO, t=None):
             code, _, reason = line[len("aos-json: error: "):].partition(" ")
             if t is not None:
                 reason = reason.replace(t.arg, t.file)
+            reason = re.sub(r" \(usage: aos-json .*\)$", "", reason)        # 腦叫的是工具，不是 aos-json 的命令列
             reason = (reason.replace("add --parents", 'give "parents": true')
                       .replace("add --follow", 'use jsonx_get/jsonx_set with "follow": true')
-                      .replace("(use append to add at the end)", "(write /- at the end of the path to append)"))
+                      .replace("(use append to add at the end)", "(write /- at the end of the path to append)")
+                      .replace("; use set to", "; use json_set to")
+                      .replace("--offset must", "offset must").replace("--limit must", "limit must"))
             if code == "FileMissing" and t is not None and t.ptr:
                 reason += " (create it first, e.g. json_set %s with value {})" % t.file
             if code == "WriteFailed" and t is not None and not os.path.isdir(os.path.dirname(t.real) or "."):
@@ -125,14 +125,6 @@ def size(v):
     return "%d %s%s" % (len(v), n, "" if len(v) == 1 else "s") if n else compact(v)
 
 
-def columns(v):
-    """long 欄：型別 TAB 大小（容器與字串再多 bytes）。"""
-    cols = [kind(v), size(v)]
-    if isinstance(v, (dict, list, str)):
-        cols.append("%d bytes" % len(compact(v).encode()))
-    return "\t".join(cols)
-
-
 def limit(args, key, env, default):
     if key in args:
         if type(args[key]) is not int or args[key] < 1:
@@ -147,17 +139,6 @@ def limit(args, key, env, default):
     return default
 
 
-def same(a, b):
-    """JSON 相等、型別要一樣（1 不等於 "1"、true 不等於 1）。"""
-    if kind(a) != kind(b):
-        return False
-    if isinstance(a, list):
-        return len(a) == len(b) and all(same(x, y) for x, y in zip(a, b))
-    if isinstance(a, dict):
-        return a.keys() == b.keys() and all(same(a[k], b[k]) for k in a)
-    return a == b
-
-
 def do_get(args, t, flags):
     v = read(t, flags=flags)
     text = compact(v)
@@ -168,11 +149,8 @@ def do_get(args, t, flags):
             % (kind(v), size(v), len(text.encode()), cap, t.shown()))
 
 
-def head(v):
-    return "%s, %s" % (kind(v), size(v)) if isinstance(v, (dict, list, str)) else "%s %s" % (kind(v), compact(v))
-
-
 def page(lines, total, offset, cap, hint=None):
+    """分頁＋`[more]` 行（index_view 用；json_ls／json_search 的在 aos-json 裡）。"""
     shown = lines[offset:offset + cap]
     if offset + cap < total:
         shown.append("[more] %d to %d of %d shown; %s" % (offset, offset + len(shown) - 1, total,
@@ -180,65 +158,36 @@ def page(lines, total, offset, cap, hint=None):
     return shown
 
 
+def ours(text, t):
+    """aos-json 印的路徑換回腦給的寫法（開頭是 - 的檔交給 aos-json 時補了 ./）。"""
+    if t.arg == t.file:
+        return text
+    return "\n".join(t.file + line[len(t.arg):] if line.startswith(t.arg) else line for line in text.split("\n"))
+
+
 def do_ls(args, t, flags=()):
-    v = read(t, flags=flags)
-    out = [head(v) + (" (index 0..%d)" % (len(v) - 1) if isinstance(v, list) and v else "")]
-    if isinstance(v, (dict, list)):
-        items = list(v.items()) if isinstance(v, dict) else list(enumerate(v))
-        offset = args.get("offset", 0)
-        if type(offset) is not int or offset < 0:
-            die("ArgumentsBad", "offset must be a non-negative integer")
-        rows = [esc(k) + ("\t" + columns(x) if args.get("long") else "") for k, x in items]
-        out += page(rows, len(rows), offset, limit(args, "limit", "AOS_JSON_MAX_ITEMS", MAX_ITEMS))
-    return "\n".join(out)
+    """json_ls：交給 `aos-json ls`（11-12 搬下去，輸出同原本的 Python）；這裡只管參數與上限、把 --offset 說成參數名。"""
+    offset = args.get("offset", 0)
+    if type(offset) is not int:
+        die("ArgumentsBad", "offset must be a non-negative integer")
+    cap = args["limit"] if type(args.get("limit")) is int else limit(args, "limit", "AOS_JSON_MAX_ITEMS", MAX_ITEMS)   # 範圍由 aos-json 驗（只在有孩子時）
+    argv = ["ls"] + list(flags) + (["--long"] if args.get("long") else []) + ["--offset", str(offset), "--limit", str(cap), t.spec()]
+    return re.sub(r"next: --offset (\d+)$", r'next: "offset": \1', ours(aos_json(argv, t=t).removesuffix("\n"), t))
 
 
 def do_search(args, t, flags=()):
+    """json_search：交給 `aos-json search`（往下前序、--up 逐層祖先、--follow／--resolve 從穿過／解開後那格找）。"""
     if "key" not in args and "value" not in args:
         die("ArgumentsBad", "give key, value, or both")
-    key, has_value, want, contains = args.get("key"), "value" in args, args.get("value"), bool(args.get("contains"))
-
-    def hit(k, x):
-        if key is not None:
-            if not isinstance(k, str) or not (key in k if contains else key == k):
-                return False
-        if has_value:
-            if contains and isinstance(want, str):
-                return isinstance(x, str) and want in x
-            return same(want, x)
-        return True
-
-    def members(node, ptr):
-        items = node.items() if isinstance(node, dict) else enumerate(node) if isinstance(node, list) else ()
-        return [(k, x, "%s/%s" % (ptr, esc(k))) for k, x in items]
-
-    if flags:                                           # jsonx_search：從穿過／解開後的那格往下找；祖先跨檔說不清，不配 up
-        if args.get("up"):
-            die("ArgumentsBad", "up does not work with follow or resolve")
-        node, chain = read(t, flags=flags), []
-    else:
-        read(t)                                         # 指不到照轉 aos-json 的錯
-        doc = read(t, ptr="")
-        node, chain = doc, [(doc, "")]
-        for tok in t.toks:                              # 原文照走（同 aos-json get 不加 --follow）
-            node = node[int(tok)] if isinstance(node, list) else node[tok]
-            chain.append((node, chain[-1][1] + "/" + esc(tok)))
-    found = []
-    if args.get("up"):
-        for anc, ptr in reversed(chain[:-1]):
-            found += [(p, x) for k, x, p in members(anc, ptr) if hit(k, x)]
-    else:
-        def down(here, ptr):                            # 照檔裡的順序（前序）
-            for k, x, p in members(here, ptr):
-                if hit(k, x):
-                    found.append((p, x))
-                down(x, p)
-        down(node, t.ptr)
-    if not found:
-        return "[no match]"
-    rows = ["%s\t%s" % (t.shown(p), columns(x)) for p, x in found]
-    return "\n".join(page(rows, len(rows), 0, limit(args, "limit", "AOS_JSON_MAX_ITEMS", MAX_ITEMS),
-                          'narrow the path or give a bigger "limit"'))
+    if flags and args.get("up"):                        # 祖先跨檔說不清，不配 up
+        die("ArgumentsBad", "up does not work with follow or resolve")
+    if not isinstance(args.get("key", ""), str):
+        die("ArgumentsBad", "key must be a string")
+    argv = (["search"] + list(flags) + (["--key", args["key"]] if "key" in args else [])
+            + (["--value", compact(args["value"])] if "value" in args else [])
+            + (["--contains"] if args.get("contains") else []) + (["--up"] if args.get("up") else [])
+            + ["--limit", str(limit(args, "limit", "AOS_JSON_MAX_ITEMS", MAX_ITEMS)), t.spec()])
+    return ours(aos_json(argv, t=t).removesuffix("\n"), t).replace('give a bigger --limit', 'give a bigger "limit"')
 
 
 def do_len(args, t, flags=()):
@@ -306,43 +255,10 @@ def do_set(args, t, directives):
 
 
 def do_add(args, t, directives):
+    """json_add：交給 `aos-json add`（物件加新 key、已有＝KeyExists；陣列 /N 插中間、/- 接尾；整份檔已在＝KeyExists）。它印實際寫到的位置。"""
     v = value_of(args, t, directives)
-    wf = write_flags(args, directives)
-    rf = ["--follow"] if "--follow" in wf else []
-    if not t.toks:
-        if os.path.exists(t.real):
-            die("KeyExists", "%s already exists; use json_set to replace the whole file" % t.file)
-        aos_json(["set"] + wf + [t.spec()], v, t)
-        return "ok " + t.file
-    last = t.toks[-1]
-    if last == "-":
-        return append(t, v, wf, rf)
-    parent = Target(t.shown(t.parent_ptr()))
-    try:
-        r = subprocess.run(["aos-json", "get"] + rf + [parent.spec()], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=run_cwd())
-    except OSError as e:
-        die("LaunchFailed", "aos-json failed to start (aos-json must be on PATH): %s" % e.strerror)
-    if r.returncode != 0:
-        if not args.get("parents"):
-            read(parent, flags=rf)                     # 照轉 aos-json 的錯（PointerMissing、FileMissing…）
-        aos_json(["set"] + wf + ["--parents", t.spec()], v, t)
-        return "ok " + t.shown()
-    par = json.loads(r.stdout)
-    if isinstance(par, dict):
-        if last in par:
-            hint = "; to add an item to that array write %s/-" % t.shown() if isinstance(par[last], list) else "; use json_set to change it"
-            die("KeyExists", "%s already exists%s" % (t.shown(), hint))
-        aos_json(["set"] + wf + [t.spec()], v, t)
-        return "ok " + t.shown()
-    if isinstance(par, list):
-        if not last.isdigit() or (len(last) > 1 and last[0] == "0") or int(last) > len(par):
-            die("PointerMissing", "%s: array has %d items; insert at 0..%d or write /- to append" % (t.shown(), len(par), len(par)))
-        i = int(last)
-        if i == len(par):
-            return append(t, v, wf, rf)
-        aos_json(["set"] + wf + [parent.spec()], par[:i] + [v] + par[i:], t)
-        return "ok " + t.shown()
-    die("TargetBad", "%s is %s; it cannot hold a key or item" % (parent.shown(), kind(par)))
+    out = aos_json(["add"] + write_flags(args, directives) + (["--parents"] if args.get("parents") else []) + [t.spec()], v, t)
+    return "ok " + ours(out.removesuffix("\n"), t)
 
 
 def do_del(args, t, directives=False):
