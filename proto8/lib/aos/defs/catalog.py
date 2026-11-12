@@ -15,13 +15,14 @@ def read(path):
     return value
 
 
-VIEW_KEYS = {'index', 'description', 'tooldef'}   # N-69 11-12: notes about a node that may sit in _metainfo
+VIEW_KEYS = {'index', 'tooldef'}   # N-69 11-12: the only notes about a node that may sit in _metainfo
 
 
 def marks_definition(base, files):
-    """interfaces.json, or _metainfo.json - unless that _metainfo.json only holds index/description/tooldef and nothing
-    beside it runs (no _entry): such a folder is a plain folder with notes, not a definition (thinking 11-12 metainfo M11).
-    An unreadable _metainfo.json still marks one, so check reports it."""
+    """interfaces.json, or _metainfo.json - unless nothing beside it runs (no _entry) and that _metainfo.json is a
+    non-empty object holding only index/tooldef: such a folder is a plain folder with notes, not a definition (thinking
+    11-12 metainfo M11). {} still marks one (user 11-12: "只有{}的_metainfo.json也算agent定義"), so does any other key;
+    an unreadable or non-object _metainfo.json still marks one, so check reports it."""
     if 'interfaces.json' in files:
         return True
     if '_metainfo.json' not in files:
@@ -32,7 +33,7 @@ def marks_definition(base, files):
         meta = json.loads(Path(base, '_metainfo.json').read_text(encoding='utf-8'))
     except (OSError, ValueError):
         return True
-    return not (isinstance(meta, dict) and set(meta) <= VIEW_KEYS)
+    return not (isinstance(meta, dict) and meta and set(meta) <= VIEW_KEYS)
 
 
 def definitions(root):

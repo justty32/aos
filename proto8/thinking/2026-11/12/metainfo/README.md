@@ -34,6 +34,10 @@
 
 > 「index_view也要認_metainfo。」
 
+收線後再裁兩條（頂層轉來）：
+
+> 「description 寫進 _metainfo <- 先不寫入。只有{}的_metainfo.json也算agent定義。」
+
 ## 決定
 
 使用者講的：
@@ -44,6 +48,7 @@
 - 不強制；其他程式想怎麼做都可以，我們只是推薦。
 - `_metainfo` **只活在概念與規範裡**，目前不做單一程式去處理；定下來，其他工具要不要支援看它們自己。
 - `index_view` 也要認 `_metainfo`（題二的 index 部分因此已裁）。
+- `description` 先不寫進 `_metainfo`（題二的 description 部分已裁，M16 作廢）；只有 `{}` 的 `_metainfo.json` 也算 agent 定義。
 
 頂層解讀（不是使用者原話）：
 
@@ -63,6 +68,5 @@
 
 ## 未決
 
-- 題二只剩 `description` 那一格的頂層代定等使用者確認（目前沒有程式讀它，只寫在條文）。
 - 第二段 B1～B5 都做了（[05](05-施工結果.md)）。
 - [index](../index.md) 原本的未定（鍵裡的路徑相對誰、index 過時、cache）這份不碰。

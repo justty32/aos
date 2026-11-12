@@ -175,6 +175,18 @@ class DefinitionsTest(unittest.TestCase):
         self.assertEqual((result.returncode, data), (0, {'problems': []}), result.stderr)
         self.assertNotIn('summary', result.stdout + result.stderr)
 
+    def test_empty_or_other_key_metainfo_is_a_definition(self):
+        """使用者 11-12「只有{}的_metainfo.json也算agent定義。」；description 不是 _metainfo 的通用格，帶它的也算定義。"""
+        for value in ({}, {'description': 'x'}, {'index': {}, 'summary': 'S'}):
+            with self.subTest(value=value):
+                root = self.root / str(len(list(self.root.iterdir())))
+                self.write(root / 'd/_metainfo.json', value)
+                self.write(root / 'd/inner/_metainfo.json', {'summary': 'Inner'})
+                old, self.root = self.root, root
+                _, data = self.call('ls')
+                self.root = old
+                self.assertEqual([x['path'] for x in data['defs']], ['d'])      # 停在 d、不往下找
+
     def test_root_is_one_definition(self):
         """11-12 Q10（使用者裁 a）：root 本身就是定義時 path 照「相對 root」印 "."、它自己的名字照查；沒有定義的夾＝空清單、check 算過。"""
         for name, ok in (('good_one', True), ('Bad!', False)):
