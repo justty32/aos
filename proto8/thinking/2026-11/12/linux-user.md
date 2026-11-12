@@ -115,3 +115,5 @@ systemd-run --user --scope -q -p MemoryMax=64M -p MemorySwapMax=0 \
 - aos-mailbox 的 `read`／`send` 在跨帳號的資料夾權限下能不能用。
 - 家機有沒有在送傳統 unix 信的程式。
 - 念頭 a～e 都還沒有決定；本檔沒有代定。
+
+使用者：「linux user要等等。」（11-12 晚）——先擱著。

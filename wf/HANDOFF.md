@@ -42,6 +42,8 @@
      - 「然後是metainfo這東西，就是說，還是今天thinking中所說的，客觀，通用觀點，主觀那套index/description，metainfo其實也是一樣，去想想。」
      - 「然後是kernel這塊我也有新的想法，就是說，我一直說kernel負責排程和資源分配，後來發現linux kernel這個最通用的kernel，他的核心功能其實是作業系統與硬體的橋梁，套用到我們這邊，首先是root daemon本身就是一個kernel，他的所謂硬體對象就是linux，那，如果root daemon底下掛了另一個daemon，那對這個子daemon來說，root daemon就是他的硬體，去幫我想想。」
      - 「再派一個：關於linux使用者，不管背後是人還是agent，他都是一個可以互動的對象。這個很特別，我第一次跨足這塊。首先是root daemon本身掛在一個使用者底下。然後是一個linux user，他對於linux這個硬體來說，他就是一個proc(不管這個proc背後是誰，反正從linux這邊看過去，他就是一個proc)，他其實跟root daemon是平級的。Hmmm，假如是root user的root daemon呢？或者說，一個linux user他搞不好會說某個root daemon那個proc，就代表他？總之先做初步調查。」
+   - 四個新想法的回覆（11-12 晚，一則訊息，逐字）：「當然，全都是觀點，全都是參考用，出事了自行負責。_index的obj內要不要再多塞東西...可以，想塞啥塞啥，出事了自己負責。主觀的metainfo的位置也不規定。客觀那個你不管怎麼描述無法描述全，所以能被我們記錄下來的，非私有的，全都是通用視角(公用視角)(自己公開給別人的聲稱)。_metainfo不算index，_metainfo他是描述自身節點的一個子節點，可以塞任何東西來描述自身，因爲index也是一種描述自身的東西，所以也可以塞入其中。$ref這塊，可以用#/指代根obj，同時也算指代自身所在檔案，所以可以用#/key, #/../other.json。kernel這塊，我的請求寄給誰...這個確實有點寬泛，他背後的那個概念(資源排程)和我們的現在的概念有點衝突(硬體橋梁)，linux kernel當然同時包含這兩種概念，但我覺得硬體橋梁比較重要，資源排程這塊linux kernel更像是對硬體的資源進行排程與管理。所以資源排程這塊我覺得還是別叫kernel好了。kernel這塊等等細聊。linux user要等等。然後等等幫我準備好遊樂場。我想試試看用claude eca來初步整理proto8，唯讀的，整理結果放外面。」
+     各題去向：`_metainfo`／index 那幾句、`$ref` 那句各有一位 fable 落實中（各自記錄，見 [metainfo-views](../proto8/thinking/2026-11/12/metainfo-views.md)、[ref-index-unify](../proto8/thinking/2026-11/12/ref-index-unify.md)）；kernel 方向已說（硬體橋樑比較重要、資源排程那塊別叫 kernel），細節等細聊、新名字未定，題 1、3 未答 → [kernel-as-bridge § 使用者回覆](../proto8/thinking/2026-11/12/kernel-as-bridge/README.md#使用者回覆11-12-晚)；linux user 等等；遊樂場另有人在準備。
 5. **下一步**（依優先）：
    1. 主 session 接 aos（明天）：使用者先重連 aos MCP；接著 Skill 放哪、主 session 身分、always-on 規矩、`todo` 歸誰 → [wf-to-aos 02](../proto8/thinking/2026-11/12/wf-to-aos/02-寄信給人與主session.md#明天主-session-開始現在卡在三點)
    2. 外部 MCP 接真的別人寫的 stdio server（明天；要下載先問）＋codex 沙盒對 stdio、`disabled_tools` → [external-mcp 08](../proto8/thinking/2026-11/12/external-mcp/08-fsm施工結果.md)
@@ -50,6 +52,8 @@
    5. 待裁各題（WAIT_USER 01）裁了就照做。
    6. kernel 框架施工與 fsm 真腦跑一晚：假日。
    7. 四個新想法（ref-index-unify、metainfo-views、kernel-as-bridge、linux-user）等他看，各題要他定的在 WAIT_USER 01；都不擋別的。
+   8. kernel 細聊（使用者「kernel這塊等等細聊。」；排程那塊的新名字、題 1、3）→ [kernel-as-bridge § 使用者回覆](../proto8/thinking/2026-11/12/kernel-as-bridge/README.md#使用者回覆11-12-晚)
+   9. 遊樂場：使用者要用 claude eca 唯讀初步整理 proto8、整理結果放外面（準備中）。
 6. **等使用者的**：都在 [WAIT_USER](WAIT_USER.md)（要你裁的、真機驗證、試驗場、雜事四類）；最急的是 push 與重連 aos MCP。
 7. **另一台機器（公司）要注意**：pull 之後①重 build 全部 impls（aos-directive 介面變了；aos-json 沒重 build 的話 `json_ls`／`json_search`／`json_add` 會報 `CommandUnknown`）②重跑 `proto8/install.sh`（新指令 `aos-mcp-import`）③試驗場 `lib／py／cmd／templates/agent-fsm` 整份重抄④`~/.cache/aos-mcp-*/tools.json` 的壞格照 [wait-user/04](wait-user/04-雜事.md) 那行指令清。
 8. **踩過的坑**：多條線共用一個工作樹時，`git add` 指名路徑後要馬上 commit，不然別人 staged 的會被一起帶走——今晚發生兩次（json 線帶走 tidy 的刪檔、提取 W2 帶走 W5），另有一次誤 amend、已還原；同時開的 agent 數有上限（約 20）；wf-lint 的數字要先看掃描範圍再比；全套測試要注意起跑目錄——repo 裡若留著空的 `.stack` 夾會被 `ctl who` 猜到（今晚紅一支就是這個）；多條線共用工作樹時不要 `git stash`（會把別人沒提交的改動一起收走）。
