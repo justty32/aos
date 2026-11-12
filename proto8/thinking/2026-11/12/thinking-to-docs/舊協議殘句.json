@@ -1,0 +1,102 @@
+{
+ "contract": "wf-table/1",
+ "source": "README.md",
+ "extracted": "2026-11-12",
+ "columns": [
+  "位置",
+  "內容",
+  "建議"
+ ],
+ "rows": [
+  {
+   "位置": "CONVENTION/02-題目stack停錯腦/01-P-11～P-14.md P-11 子項「舊協議：題目資料夾」整段",
+   "內容": "題目 `$AOS_WS/new/<題名>`…不算 N-16 標準投遞",
+   "建議": "刪整段。**注意**：P-11 本文有「下面『結果＝工作區內容』那句只管檔案」指向這段裡的「結果＝工作區內容，沒有別的結果通道」→ 把那句搬進 P-11 本文（例：「檔案成品落在工作區；結果＝工作區內容＋history，沒有別的通道」），改掉「下面那句」的指法"
+  },
+  {
+   "位置": "同檔 P-12",
+   "內容": "前半「取 new/ 最前面…題名寫 current.txt…」是舊協議",
+   "建議": "覆蓋：P-12 只留 queue 版（agent-fsm 一次收一批、照處理順序、`cur/` 有的先接、不寫 current.txt＝這句也可刪，信接進 history 就收；eca 例外）；拍板點 1 舊出處可只留 queue 出處"
+  },
+  {
+   "位置": "同檔 P-13",
+   "內容": "前半 `new/<題名>/prompt.txt`、`out/<題名>/answer.txt`",
+   "建議": "覆蓋：只留「附檔＝信資料夾裡的其他檔（N-16），題文在 `body`、答案在 history」"
+  },
+  {
+   "位置": "同檔 P-14",
+   "內容": "「走舊協議的就是只動 new/、cur/、out/、done/…；done/ 只進不出，清理是人的事」",
+   "建議": "刪舊協議那半句；`done/` 那句也是舊協議（queue 用 `archive/`）→ 改成「`archive/` 只進不出、清理是人的事」或刪"
+  },
+  {
+   "位置": "CONVENTION/02-…/04-五-stack與六-停與錯.md P-19",
+   "內容": "「（idle 看 queue 空了；舊協議看 `new/`，P-11）」",
+   "建議": "刪「；舊協議看 `new/`」"
+  },
+  {
+   "位置": "CONVENTION.md:16",
+   "內容": "「demo 的 `current.txt`／`plan.txt`、P-13 的 `prompt.txt`／`answer.txt`」「題目資料夾 `new/`（認領搬 cur/…答案 out/）」",
+   "建議": "刪這兩處例子，換現存的（`stage.txt`、`mailbox_warning.txt`）"
+  },
+  {
+   "位置": "CONVENTION.md:27 分檔表",
+   "內容": "「P-11 輸入是 queue〔舊協議是題目資料夾〕」",
+   "建議": "刪〔〕"
+  },
+  {
+   "位置": "CONVENTION/01-保證佈局入口/01-一-aos-保證的與二-佈局.md:19-20、30-31",
+   "內容": "佈局圖：think「從 new/ 搬到 cur/、寫 current.txt」、act「交給 tools/cathy、寫 $AOS_WS/out/、搬 done/」、stack 裡 current.txt／plan.txt",
+   "建議": "覆蓋：佈局圖換成 `templates/agent-fsm` 現況（idle／think／wait／act、queue、history.jsonl、stage.txt）。bob／cathy 例子連帶失效（agent-bob 已拆），整張圖要重畫——**超出單純刪句，見 A-2**"
+  },
+  {
+   "位置": "CONVENTION/04-範例三種寫法.md:23-30、60",
+   "內容": "shell 範例 act 用 current.txt、`$AOS_WS/out`、`done`",
+   "建議": "同上，範例要換或拿掉（A-2）"
+  },
+  {
+   "位置": "CONVENTION/03-shell版與inst版.md P-27",
+   "內容": "「標準範本＝第二節 agent-bob 的樣子」",
+   "建議": "同上（A-2）"
+  },
+  {
+   "位置": "CONVENTION/06-巢狀/01-P-33～P-34.md P-34",
+   "內容": "例「cathy 小格裡還有上一題的 current.txt、plan.txt、ws/done/」",
+   "建議": "換例子（agent-fsm 的 history.jsonl／stage.txt 還在）或拿掉"
+  },
+  {
+   "位置": "CONCEPTS/01-設計理念/04-C-54.md:19",
+   "內容": "`.txt` 例子含 current.txt 等",
+   "建議": "換現存例子"
+  },
+  {
+   "位置": "CONCEPTS.md:29",
+   "內容": "命名統合沿革「題目資料夾 new/＋照 Maildir 認領…」",
+   "建議": "刪該半句（沿革）"
+  },
+  {
+   "位置": "NORMS/08-待定/01-待定之一.md:7",
+   "內容": "「agent 當工具時，題目怎麼交給它」：cathy 認 `$AOS_WS/new/`（舊協議）",
+   "建議": "例子換 queue 版或整條重寫（commit 427b199de 已點名「拿不準沒動」，同題）"
+  },
+  {
+   "位置": "NORMS/附錄3-舊名對照.md:43、45",
+   "內容": "`current`／`plan` → `current.txt`；題目資料夾 `inbox/`→`new/`",
+   "建議": "舊名對照的「新名」本身已不存在 → 刪這兩列"
+  },
+  {
+   "位置": "NORMS/附錄1-條號表.md:46",
+   "內容": "N-49 作廢「由 P-11 取代：…題目在 `$AOS_WS/new/`」",
+   "建議": "條號表作廢列可留，括號內「題目在 $AOS_WS/new/」改「輸入是 queue」或刪"
+  },
+  {
+   "位置": "cmd/docs/02-aos-clock與已定值.md:14",
+   "內容": "「執行中狀態（stage.txt、plan.txt、current.txt）…工作區只放交辦的東西（題目 new/→cur/→done/，答案 out/）」",
+   "建議": "覆蓋：刪 plan.txt、current.txt 與題目資料夾那段（不在 docs 但同性質）"
+  },
+  {
+   "位置": "templates/agent-fsm/brain.py:16、act.py:18 註解",
+   "內容": "「照舊的 agent-eve 改…拿掉 current.txt」",
+   "建議": "程式註解，非 docs；可順手刪沿革（歸 C 表）"
+  }
+ ]
+}

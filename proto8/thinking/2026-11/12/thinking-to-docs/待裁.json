@@ -1,0 +1,52 @@
+{
+ "contract": "wf-table/1",
+ "source": "README.md",
+ "extracted": "2026-11-12",
+ "columns": [
+  "id",
+  "題目",
+  "建議"
+ ],
+ "rows": [
+  {
+   "id": "U1",
+   "題目": "CONVENTION 前言「agent-bob 現在的樣子就是標準」（你拍板）＋P-27、bob／cathy 佈局圖、04 範例、P-34 例子，但 agent-bob 11-04 已刪，現行範本是 `templates/agent-fsm`",
+   "建議": "標準換成 agent-fsm，整段佈局圖與範例重寫（＝W8，含舊協議殘句）；因為是「標準是誰」，要你點頭"
+  },
+  {
+   "id": "U2",
+   "題目": "C-54「資料夾、檔名、JSON key 全小寫加底線」vs `agent-fsm`、`eca-claude`、`templates/` 等夾名用連字號（定義夾名規則 `[a-z0-9_-]+`）",
+   "建議": "夾名不改，C-54 補「定義夾名照指令名可用連字號」"
+  },
+  {
+   "id": "U3",
+   "題目": "C-54 R14「資料夾不直接拿 mailbox 命名」vs 新信箱夾就叫 `<stack>/mailbox/`（兩句都是你的原話）",
+   "建議": "R14 加例外「agent 之間的信箱就叫 mailbox」；請確認 R14 是指功能名還是也含夾名"
+  },
+  {
+   "id": "U4",
+   "題目": "N-03／C-44「打包由 kernel 做」＋軟凍例子 vs C-16「現在只有硬凍、沒有軟凍」",
+   "建議": "改現在式「打包＝收工硬凍；軟凍沒做」，原話留引號；問 kernel 打包是作廢還是遠期"
+  },
+  {
+   "id": "U5",
+   "題目": "不同質三軸「工具、腦、記憶」vs memory 工具已拆、`defs dup` 只比工具＋endpoint",
+   "建議": "寫「工具、腦；有宣告記憶根的再加記憶」（C-89 現在寫「比哪幾軸待使用者裁」）"
+  },
+  {
+   "id": "U6",
+   "題目": "token 指標公式（bytes×2）＋「模型不低於 10B」是 aos 通則還是只屬 arknights 文字線",
+   "建議": "寫進 C-22 續但限定「文字處理任務」"
+  },
+  {
+   "id": "U7",
+   "題目": "N-69「`_metainfo` 壞了略過那處」vs 同條「讀到壞的 `timeout_ms`／`cost` 報 `FileBad`、act 停」",
+   "建議": "維持擋下（條文已是現況，只差點頭）；與程式碼庫整理待裁 1 同題"
+  },
+  {
+   "id": "U8",
+   "題目": "codex 身沒有「只給子 agent 的 MCP」：關掉子 agent／aos-mcp 看 `thread_source` 擋／不管",
+   "建議": "待裁；P-43 先寫「`tools_sub` 只有 claude 身」。與 eca-task-subagent 的 U1 同題"
+  }
+ ]
+}
