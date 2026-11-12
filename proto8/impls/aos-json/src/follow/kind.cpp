@@ -1,6 +1,6 @@
 // kind.cpp：【follow】認指示詞（N-45 寬容規則，同 aos-directive 的 ref.cpp／env.cpp）。
 //
-// 有 $ref 就只看 $ref（寫法不合也不改看 $env）：字串＝「檔[#/指標]」，檔名不能空、# 後一定要 /；
+// 有 $ref 就只看 $ref（寫法不合也不改看 $env）：字串＝「檔[#/指標]」或「#/指標」（檔名空＝寫著它的那份檔，11-12 晚 ref-hash），# 後一定要 /；
 // 或是這種字串的非空陣列（有一個不合＝整個不合）。$env：非空字串。寫法不合＝FormBad（aos 會原封不動留著）。
 #include "follow/follow.hpp"
 
@@ -20,7 +20,7 @@ static std::optional<std::pair<std::string, std::string>> one_part(const Json& r
             return std::nullopt;
         }
     }
-    if (path.empty()) {
+    if (path.empty() && hash == std::string::npos) {   // 空字串；`#/…` 沒檔名＝這份檔（只有 # 已在上面擋掉）
         return std::nullopt;
     }
     return std::make_pair(path, ptr);

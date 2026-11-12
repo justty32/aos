@@ -84,13 +84,14 @@ int cmd_del(const Args& args) {
             throw Error{code::TargetBad, "will not delete a whole file (use rm)"};
         }
         Json& par = parent_of(p.file->doc, p.toks, false, cli.rest[0]);
-        if (par.is_object()) {
-            par.erase(p.toks.back());
-        } else {
+        bool item = !par.is_object();
+        if (item) {
             par.erase(std::stoull(p.toks.back()));
+        } else {
+            par.erase(p.toks.back());
         }
         ed.step();
-        if (!follow) {
+        if (!follow || item) {   // 陣列元素刪一個就停（後面的往前移，同一個索引又指得到，不能再刪）
             break;
         }
     }

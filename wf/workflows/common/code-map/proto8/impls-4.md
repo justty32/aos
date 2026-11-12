@@ -16,6 +16,7 @@
 | [`src/state/state.hpp`](../../../../../proto8/impls/aos-fsm/src/state/state.hpp) | $AOS_STACK 裡 fsm 自己的檔：stage.txt（現在狀態）。 |
 | [`src/table/table.cpp`](../../../../../proto8/impls/aos-fsm/src/table/table.cpp) | read_table、check、pick、next_for（說明見 table.hpp；10-22；next 分岔 10-30）。 |
 | [`src/table/table.hpp`](../../../../../proto8/impls/aos-fsm/src/table/table.hpp) | fsm.json——`{"start": 狀態名, "states": {名: {"exec": aos-exec 的目標或 [目標, 參數...], "next": 狀態名或 {結束碼: 狀態名}}}}`。 |
+| [`tests/test_ref_hash.py`](../../../../../proto8/impls/aos-fsm/tests/test_ref_hash.py) | Check {"$ref": "#/..."} in fsm.json (a whole state, an inline exec inst) takes fsm.json itself (11-12). |
 | [`tests/test_stack_make.py`](../../../../../proto8/impls/aos-fsm/tests/test_stack_make.py) | Check aos-fsm creates a missing $AOS_STACK at start (11-11, make_stack), runs the state and writes stage.txt as usual. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-fsm/vcpkg.json) | aos-fsm：一次只跑一格（fsm.json 的 start／states；狀態在 $AOS_STACK） |
 
@@ -56,4 +57,5 @@
 | [`src/help/help.hpp`](../../../../../proto8/impls/aos-json/src/help/help.hpp) | aos-json 子命令的 usage、旗標說明與共同旗標解析入口。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-json/src/main.cpp) | aos-json 命令列——第一個參數挑子命令，其餘交給它（src/cmd/）。 |
 | [`tests/test_add_ls_search.py`](../../../../../proto8/impls/aos-json/tests/test_add_ls_search.py) | Check aos-json add / ls / search (the json tools' Python logic moved into C++, 11-12): output formats and error codes. |
+| [`tests/test_ref_hash.py`](../../../../../proto8/impls/aos-json/tests/test_ref_hash.py) | Check aos-json's own $ref walk takes "#/..." (no file name) = the file that holds the $ref (ref-hash, 11-12 night), same as aos-directive. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-json/vcpkg.json) | aos-json：讀、改 aos 的 JSON 設定（檔#/指標、指示詞）的 lib 與命令列 |

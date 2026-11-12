@@ -12,11 +12,11 @@
 
 namespace aos::json {
 
-Cursor fetch(Docs& docs, const std::string& base, const std::string& path, const std::string& ptr, Chain& chain) {
+Cursor fetch(Docs& docs, const Cursor& at, const std::string& path, const std::string& ptr, Chain& chain) {
     std::string where = path + (ptr.empty() ? "" : "#" + ptr);
     File* f = nullptr;
     try {
-        f = &docs.open(aos::join(base, path), false);
+        f = &docs.open(path.empty() ? at.file : aos::join(at.base, path), false);
     } catch (const Error& e) {
         throw Error{code::DirectiveBad, "$ref " + where + " cannot be read (" + e.msg + ")"};
     }
@@ -44,7 +44,7 @@ Cursor settle(Docs& docs, Cursor c, Chain& chain) {
         if (parts.size() != 1) {
             throw Error{code::TargetBad, shown(c.file, c.toks) + ": $ref array inside a $ref array, not supported by --follow yet"};
         }
-        c = fetch(docs, c.base, parts[0].first, parts[0].second, chain);
+        c = fetch(docs, c, parts[0].first, parts[0].second, chain);
     }
     return c;
 }
@@ -54,14 +54,14 @@ static Cursor jump(Docs& docs, const Cursor& c, std::string* want, Chain& chain,
     auto parts = ref_parts(*c.node);
     if (parts.size() == 1) {
         merged = false;
-        return fetch(docs, c.base, parts[0].first, parts[0].second, chain);
+        return fetch(docs, c, parts[0].first, parts[0].second, chain);
     }
     std::vector<Cursor> cs;
     bool objects = true;
     bool arrays = true;
     for (const auto& [path, ptr] : parts) {
         Chain mine = chain;
-        cs.push_back(settle(docs, fetch(docs, c.base, path, ptr, mine), mine));
+        cs.push_back(settle(docs, fetch(docs, c, path, ptr, mine), mine));
         objects = objects && cs.back().node->is_object();
         arrays = arrays && cs.back().node->is_array();
     }

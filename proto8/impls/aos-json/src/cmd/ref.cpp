@@ -31,8 +31,9 @@ int cmd_env(const Args& args) {
     return 0;
 }
 
-// 搬走的值裡的相對 $ref，從 from 改成從 to 算（同一個資料夾就不用動）。
-static void rebase(Json& v, const std::string& from, const std::string& to) {
+// 搬走的值裡的相對 $ref，從 from 改成從 to 算（同一個資料夾就不用動）。`#/…`（＝原本那份檔 self）搬到別的檔時改寫成
+// 「到 self 的相對路徑#/…」，仍指原本那份檔（搬進同一份檔＝不動）。
+static void rebase(Json& v, const std::string& from, const std::string& to, const std::string& self, bool same_file) {
     if (kind_of(v) == Kind::Ref) {
         Json& r = v["$ref"];
         std::vector<Json*> items;
@@ -47,10 +48,10 @@ static void rebase(Json& v, const std::string& from, const std::string& to) {
             std::string s = x->get<std::string>();
             size_t hash = s.find('#');
             std::string path = s.substr(0, hash);
-            if (path.starts_with("/")) {
+            if (path.starts_with("/") || (path.empty() && same_file)) {
                 continue;
             }
-            std::string abs = aos::abspath(aos::join(from, path));
+            std::string abs = path.empty() ? self : aos::abspath(aos::join(from, path));
             std::string rel = std::filesystem::path(abs).lexically_relative(to).string();
             *x = rel + (hash == std::string::npos ? "" : s.substr(hash));
         }
@@ -58,7 +59,7 @@ static void rebase(Json& v, const std::string& from, const std::string& to) {
     if (v.is_object() || v.is_array()) {
         for (auto& [k, x] : v.items()) {
             (void)k;
-            rebase(x, from, to);
+            rebase(x, from, to, self, same_file);
         }
     }
 }
@@ -82,14 +83,14 @@ int cmd_ref(const Args& args) {
     if (cli.opts.count("move")) {
         Json moved = existing(src, spec);
         auto [path, ptr] = ref_parts(ref)[0];
-        std::string dest = aos::join(src.at.at.base, path);
+        std::string dest = path.empty() ? src.file->real : aos::join(src.at.at.base, path);   // `#/…`＝搬進同一份檔
         std::string dir = aos::dirname(aos::abspath(dest));
         std::error_code ec;
         std::string real_dir = std::filesystem::canonical(dir, ec).string();
         if (ec) {
             throw Error{code::FileMissing, "target directory not found: " + dir};
         }
-        rebase(moved, src.at.at.base, real_dir);
+        rebase(moved, src.at.at.base, real_dir, src.file->real, path.empty() || std::filesystem::weakly_canonical(aos::abspath(dest)).string() == src.file->real);
         if (ptr.empty()) {
             File& f = ed.docs.open(dest, true);
             if (f.exists) {

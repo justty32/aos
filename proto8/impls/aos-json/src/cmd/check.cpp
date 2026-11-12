@@ -102,7 +102,7 @@ struct Checker {
             for (const auto& [path, ptr] : parts) {
                 Chain mine = chain;
                 try {
-                    Cursor x = fetch(docs, c.base, path, ptr, mine);
+                    Cursor x = fetch(docs, c, path, ptr, mine);
                     std::pair<std::string, std::string> here{x.file, ptr};
                     if (!seen.count(here)) {
                         seen.insert(here);
