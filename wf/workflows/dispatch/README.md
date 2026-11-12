@@ -72,7 +72,7 @@
 
 | 線 | 可寫目錄 | 唯讀 / 禁區 | 上線時間 |
 |----|---------|------------|---------|
-| L3 試用第二輪（worktree）| `trial/{findings-L3.csv,repro/L3-*.sh,sandbox/}`、`trial/README.md` 追加 | `core/`、L1／L2 檔 | 2026-08-30 22:45 |
+| （目前沒有） | | | |
 
 ### 保留給調度者，任何線都不得寫
 
@@ -86,7 +86,7 @@
 
 | 線 | 完成證據 | 收線時間 |
 |----|---------|---------|
-| M 維護 | `4c9988f`／`c941e2c`／`cfda539`；repro 28/28、ctest 8/8；proto-M | 2026-08-30 23:02 |
+| （目前沒有） | | |
 
 > 上面三張表是**活狀態**，會隨每輪派線增減。膨脹到難讀就照 [STRUCTURE](../../STRUCTURE.md) 拆成 `CLAIMS.md`，本檔只留流程與連結。hackathon 各場的隊伍紀錄在 [hackathon/](../hackathon/README.md) 自己的紀錄裡，不重抄到這裡。
 
@@ -94,7 +94,7 @@
 
 | 檔案 | 內容 |
 |------|------|
-| [aos-teams.md](aos-teams.md) | 本專案的隊形：頂層只調度、opus 隊長＋codex／claude 兩名隊員（11-06 起，盡量派 codex、一般工作 sol）；開隊指令、codex 沙箱、每段試玩（分檔在 `aos-teams/`）|
+| [aos-teams.md](aos-teams.md) | 本專案的隊形：頂層只調度、opus 隊長＋codex／claude 兩名隊員（盡量派 codex、一般工作 sol）；開隊指令、codex 沙箱、每段試玩（分檔在 `aos-teams/`）|
 | [driving-cli-agents.md](driving-cli-agents.md) | 怎麼啟動、驅動、監看一條外部 CLI agent 線，以及收線七步 |
 | [lessons.md](lessons.md) | 派線踩過的坑：預掃範圍、線推翻交接書、交接書自相矛盾、整檔改寫、合併後才刪分支、worktree 起點舊、任務書 checklist、舊東西怎麼用 |
 

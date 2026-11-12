@@ -33,7 +33,7 @@
   | 某個 impls 專案的內部行為 | 該專案的 `README.md`（如 `proto8/impls/aos-loop/README.md`）＋ [code map](../common/code-map.md) |
   | 建置、CMake、相依管理、新增一個 impls 專案 | [proto8/impls/docs/04 新專案清單](../../../proto8/impls/docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md)、[impls/docs/01 依賴](../../../proto8/impls/docs/01-現況與地圖與依賴.md)、[testing「proto8」](../testing.md#proto8) |
   | 命令列、旗標、錯誤代號、退出碼 | 該程式的 README 與 `--help`；全家共通的在 [impls/docs/03 錯誤](../../../proto8/impls/docs/03-錯誤.md)、[04](../../../proto8/impls/docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md) |
-  | 資料夾版面、回合模型、交接協定 | proto8 的 [CONCEPTS](../../../proto8/docs/CONCEPTS.md)／[NORMS](../../../proto8/docs/NORMS.md)／[CONVENTION](../../../proto8/docs/CONVENTION.md)（甲代的 PROTOCOL 11-05 封存）|
+  | 資料夾版面、回合模型、交接協定 | proto8 的 [CONCEPTS](../../../proto8/docs/CONCEPTS.md)／[NORMS](../../../proto8/docs/NORMS.md)／[CONVENTION](../../../proto8/docs/CONVENTION.md)|
   | 頂層結構（多／少了目錄）| [INDEX](../../INDEX.md)、根 `README.md` |
 
   **文件裡寫的每一條指令與輸出都要真的跑過再寫上去**，不要照推論寫。
