@@ -555,7 +555,6 @@ def inspect(path, cache=None):
 
 
 OVERRIDE_KEY = "$override"     # 覆蓋檔指向底檔的 key（使用者 11-10 K1「現在就寫 $override」；收成一個常數，只改這裡與 help）
-PATH_KEYS = ("path", "env_file")  # 存的是路徑的格：相對從「寫它的那份檔」的資料夾算，所以合併時各自記來源
 
 
 def blame(path, where, err):

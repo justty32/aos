@@ -1,6 +1,5 @@
 # aos_agent/read_line.py - chat 讀一行輸入：終端機上用 readline 行編輯（中文 Backspace、方向鍵），管線照舊按行讀。
 import atexit
-import os
 import sys
 import termios
 

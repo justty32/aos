@@ -3,7 +3,7 @@ import os
 import aos_flags
 from .. import PROG
 import shutil
-from ..common import bad_args, Fail, ctl_wait, daemon_path, find, need_table, parse, row_named, table, timeout_opt
+from ..common import bad_args, ctl_wait, daemon_path, find, need_table, parse, row_named, table, timeout_opt
 from ..decl import close_screen_if_any
 
 

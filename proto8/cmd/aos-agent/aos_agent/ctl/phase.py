@@ -1,7 +1,7 @@
 # aos_agent/ctl/phase.py - 起停、睡醒與暫停恢復 agent。
 import aos_ws
 import daemon_ctl as dc
-from ..common import bad_args, Fail, call_dc, name_last, send_only, ctl_wait, daemon_path, find, need_table, note, parse, phase_body, row_named, target, wait_for, timeout_opt, queued_opt
+from ..common import call_dc, name_last, send_only, ctl_wait, daemon_path, find, need_table, note, parse, phase_body, row_named, target, wait_for, timeout_opt, queued_opt
 from ..decl import close_screen_if_any
 from ..hints import comes_back_paused, label, queued
 

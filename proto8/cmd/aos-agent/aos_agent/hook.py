@@ -117,7 +117,6 @@ No ACTION means ls. Changes go to this agent's own list, which sits on top of th
 Changes apply from the next event. More: proto8/cmd/aos-agent/docs/06-hook.md
 exit codes: 0 ok; 1 error (TargetMissing, HooksMissing, HooksBad...); 130 Ctrl-C.
 """ % actions(HELPS.values(), "aos-agent [--daemon D] hook [--target NAME] ")
-COLS = ("event", "handler", "condition", "async", "on_error", "intercept", "timeout_ms", "from")
 
 
 def compact(v):

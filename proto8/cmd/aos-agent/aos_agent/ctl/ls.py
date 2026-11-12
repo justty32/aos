@@ -4,7 +4,7 @@ import os
 import time
 import aos_ws
 from agent import cooldown
-from ..common import bad_args, Agent, Fail, parse, table
+from ..common import bad_args, Agent, parse, table
 from ..hints import label, queued
 
 
