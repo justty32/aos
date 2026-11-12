@@ -3,7 +3,7 @@
 #
 # What gets linked (scanned by folder; only executables):
 #   impls/*/bin/*            the C++ ones (aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-json, aos-llm, aos-llm-kernel...; build them first)
-#   cmd/*/bin/*              the Python commands (aos-daemon-ctl, aos-tools, aos-clock, aos-clock-register, aos-mailbox, aos-sweeper, aos-feedback, aos-eca-turn, aos-eca-screen, aos-agent, aos-mcp, aos-sandbox, aos-grow)
+#   cmd/*/bin/*              the Python commands (aos-daemon-ctl, aos-tools, aos-clock, aos-clock-register, aos-mailbox, aos-sweeper, aos-feedback, aos-eca-turn, aos-eca-screen, aos-agent, aos-mcp, aos-mcp-launch, aos-mcp-import, aos-sandbox, aos-grow)
 # Also write aos-proto8.pth in the enabled Python user site with absolute py/ and lib/ paths; warn and continue if unavailable.
 # Symlinks, not copies: the Python commands find their neighbour files through realpath(__file__). If the repo moves, run this again
 #   (old links are reported as pointing elsewhere; rm them and rerun).
@@ -22,7 +22,7 @@
 #
 # 裝哪些（照資料夾掃，有就裝、執行檔才算）：
 #   impls/*/bin/*            C++ 的（aos-exec、aos-loop、aos-fsm、aos-daemon、aos-post、aos-json、aos-llm、aos-llm-kernel…；要先建，見 wf/workflows/testing.md「proto8」）
-#   cmd/*/bin/*              Python 的指令（aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca-turn、aos-eca-screen、aos-agent、aos-mcp、aos-sandbox、aos-grow）
+#   cmd/*/bin/*              Python 的指令（aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca-turn、aos-eca-screen、aos-agent、aos-mcp、aos-mcp-launch、aos-mcp-import、aos-sandbox、aos-grow）
 # 也在 Python 啟用的 user site 寫 aos-proto8.pth，精確兩行為這份 repo 的 py/、lib/ 絕對路徑；不可用只提醒、其餘照裝，相同內容不動，不同內容不蓋。
 # 為什麼 symlink 不 cp：Python 那幾支靠 realpath(__file__) 找旁邊的檔（aos_flags.py、using-aos-agent.sh、py/aos_ws.py…），
 #   單檔 cp 過去會斷；symlink 解得回 repo 裡的原位。所以 repo 搬了位置要重跑一次（舊的連結會被報「指向別處」，自己 rm 再跑）。

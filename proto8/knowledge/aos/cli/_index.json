@@ -50,6 +50,9 @@
  "mcp.json": {
   "description": "Use aos-mcp to serve the tools of an aos-tools registry to an external agent (Claude Code, codex) over MCP stdio."
  },
+ "mcp_import.json": {
+  "description": "Use aos-mcp-import to freeze the tools of an external MCP server into its server file, stack it in tools.json, and refresh it with sync; what its error codes mean."
+ },
  "sandbox.json": {
   "description": "Use aos-sandbox to run a program in a sandbox: which paths it sees, network, limits, user."
  },

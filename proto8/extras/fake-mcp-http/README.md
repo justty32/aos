@@ -9,9 +9,10 @@
 ```sh
 mkdir -p /tmp/fake-mcp && cd /tmp/fake-mcp
 # 1. 自簽 CA＋CA 簽的 leaf（不能拿自簽憑證直接當 server 憑證：curl 吃、codex 不吃，05 的坑）
-openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 3 -subj "/CN=fake-mcp-ca"
+openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 3 -subj "/CN=fake-mcp-ca" \
+  -addext keyUsage=critical,keyCertSign,cRLSign
 openssl req -newkey rsa:2048 -nodes -keyout key.pem -out leaf.csr -subj "/CN=127.0.0.1"
-printf 'subjectAltName=IP:127.0.0.1,DNS:localhost\nbasicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\n' > leaf.ext
+printf 'subjectAltName=IP:127.0.0.1,DNS:localhost\nbasicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\nsubjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid,issuer\n' > leaf.ext
 openssl x509 -req -in leaf.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out cert.pem -days 3 -extfile leaf.ext
 cat /etc/ssl/certs/ca-certificates.crt ca.pem > ca-bundle.pem     # 系統 CA＋這張 CA（跟真主機的 bundle 同一種合法）
 # 2. 假 token：當場產、檔案 600、不要印出來
@@ -19,6 +20,8 @@ mkdir -m 700 cfg && (umask 077; echo "TEAMSITE_TOKEN=FAKE-$(openssl rand -hex 12
 # 3. 起（埠 港號 憑證 金鑰 token檔 log）
 setsid -f python3 /path/to/proto8/extras/fake-mcp-http/server.py 18444 cert.pem key.pem cfg/teamsite.env server.log < /dev/null > server.out 2>&1
 ```
+
+CA 的 `keyUsage` 與 leaf 的兩個 `KeyIdentifier` 不能省：Python 3.13 起 `ssl` 預設嚴格驗證（`VERIFY_X509_STRICT`），少了這些，aos 自己的 http client（`lib/mcp_client.py`，經 aos 那條與 `aos-mcp-import` 用的）會驗不過；codex／claude 不受影響。
 
 token 檔只認第一行 `名字=值` 的值（`TEAMSITE_TOKEN=` 以外的名字也行）。停＝`pkill -f fake-mcp-http/server.py`。
 

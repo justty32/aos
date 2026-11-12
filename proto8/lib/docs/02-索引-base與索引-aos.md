@@ -41,6 +41,8 @@
 不碰工作區的（`math`、`peek_now_time`、`peek_clock`、`llm_http`、`llm_fake`）不收路徑、不看 `$AOS_WS`。`run_python` 跟 `shell` 一樣在工作區跑（cwd＝`$AOS_WS`，沒有＝`WsMissing`；11-11 使用者裁「改程式，在工作區跑」），程式本身照舊寫進自己的小格 `main.py`（規則 8 的例外：拿小格當草稿區，不跨呼叫留東西）。
 每個工具的細節看它 `_entry` 開頭的幾行說明與 `_tooldef.json`。
 
+**[mcp_tool](../base/mcp_tool/)（11-12 [external-mcp 07](../../thinking/2026-11/12/external-mcp/07-fsm施工單.md)）不登記給腦、不在任何包**：外部 MCP server 的每支工具經 `aos-mcp-import` 凍結進 server 檔（包檔）的 `mcp_tools` 一格，那格的 `_entry` 是 `python3 $AOS_HOME/lib/base/mcp_tool/_entry --pack <包檔名> --tool <原名>`；腦叫的是登記名（`<server 名>_<工具名>`），aos-exec 在包檔的資料夾跑那格、stdin 原樣當外部工具的 arguments。每叫一次起一台 server（stdio）或開一個 session（http）、`tools/call` 一次、收掉；印文字與資源、image／audio 存進自己的小格（`$AOS_STACK`），最多 2000 行或 50KB；逾時＝那格 `_metainfo.timeout_ms`（60 秒）。server 回 `isError`＝內容照印、最後一行 `CallFailed`。共用的 client 在 `lib/mcp_client.py`（stdio＋Streamable HTTP、Bearer、`ca_file`），凍結的純函式在 `lib/mcp_freeze.py`，server 檔讀法在 `lib/mcp_server_file.py`。`--help` 給人看用法與錯誤代號。
+
 ## 索引：aos
 
 | 工具 | 一句話 | 參數 | 回什麼 |

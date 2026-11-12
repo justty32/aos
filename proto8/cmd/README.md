@@ -16,6 +16,8 @@
 | [aos-sweeper](aos-sweeper/README.md) | 清道夫：一台 daemon 的 stderr 封存、封存保留期、收表外子 loop（掛成 `_sweeper` 列；手動 `aos-daemon-ctl sweep`） |
 | [aos-eca](aos-eca/README.md) | 外部 coding agent（claude／codex）：`aos-eca-turn` 答一輪、`aos-eca-screen` 開畫面 |
 | [aos-mcp](aos-mcp/README.md) | 把 aos-tools 登記的工具當 MCP tools 給外部 agent 叫 |
+| [aos-mcp-launch](aos-mcp-launch/README.md) | 起一台外部 stdio MCP server：讀 server 檔與它的 `env_file`，exec 成那支 server（eca 原生掛那條用） |
+| [aos-mcp-import](aos-mcp-import/README.md) | 連一次外部 MCP server，把它的工具凍結進同一份 server 檔，疊進 tools.json 就是一包工具；`sync` 重問、印差異、`--yes` 才寫 |
 | [aos-sandbox](aos-sandbox/README.md) | 照一份設定把 prog 關進沙箱再跑 |
 | [aos-grow](aos-grow/README.md) | 把一個函數往上長一級或縮回一級（原型） |
 
@@ -34,7 +36,7 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
 
 | 分檔 | 涵蓋的段 |
 |---|---|
-| [01-逐支說明](docs/01-逐支說明.md) | 逐支說明：開頭、aos-tools - 一個 agent 資料夾一份工具註冊、aos-round 不在了、aos-eca-turn - 外部 coding agent |
+| [01-逐支說明](docs/01-逐支說明.md) | 逐支說明：開頭、aos-tools - 一個 agent 資料夾一份工具註冊、aos-round 不在了、aos-eca-turn - 外部 coding agent、aos-mcp-import - 外部 MCP 工具凍結成包 |
 | [02-aos-clock與已定值](docs/02-aos-clock與已定值.md) | 逐支說明（續）：aos-clock - 把時鐘檔的回合數往前走一格、aos-sweeper - 清道夫（11-10）、aos_flags.py：命令列旗標解析 parse(；已定值 |
 | [03-aos-daemon-ctl](docs/03-aos-daemon-ctl.md) | aos-daemon-ctl：開頭、哪個 daemon（11-05 起沒設找 ./.stack）、add／rm＝投信、做完的同名再 add＝重新起、自動識別、-- 參數...、--ws WS、--stack S、不碰 /.stack、stop／start、sleep／wake（11-05）、用錯 phase＝PhaseBad、pause／resume、表上的路徑存相對印絕對（11-05）、任何 proc 共用起停睡醒（11-07 B）、寄信子命令的 --reply-to（11-05）、沒給 --reply-to 看 3 秒、ping、poke 門鈴（11-09）、共用回信信箱（11-06） |
 | [04-aos-daemon-ctl續](docs/04-aos-daemon-ctl續.md) | aos-daemon-ctl（續）：where --stack 名字、ls、上一層的看法、錯、prune 自檢與清理舊列 |

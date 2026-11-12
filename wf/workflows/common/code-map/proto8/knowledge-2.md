@@ -32,6 +32,7 @@
 | [`cli/hook.json`](../../../../../proto8/knowledge/aos/cli/hook.json) | （檔頭沒有一句話） |
 | [`cli/mailbox.json`](../../../../../proto8/knowledge/aos/cli/mailbox.json) | （檔頭沒有一句話） |
 | [`cli/mcp.json`](../../../../../proto8/knowledge/aos/cli/mcp.json) | 設定（鍵：_description、serve、calls） |
+| [`cli/mcp_import.json`](../../../../../proto8/knowledge/aos/cli/mcp_import.json) | 設定（鍵：_description、where_from、import、sync、routes、errors） |
 | [`cli/parts/_description.json`](../../../../../proto8/knowledge/aos/cli/parts/_description.json) | （檔頭沒有一句話） |
 | [`cli/parts/daemon.json`](../../../../../proto8/knowledge/aos/cli/parts/daemon.json) | （檔頭沒有一句話） |
 | [`cli/parts/directive.json`](../../../../../proto8/knowledge/aos/cli/parts/directive.json) | （檔頭沒有一句話） |
@@ -54,7 +55,7 @@
 | [`definition.json`](../../../../../proto8/knowledge/aos/definition.json) | 設定（鍵：_description、files、only、overlay） |
 | [`errors.json`](../../../../../proto8/knowledge/aos/errors.json) | 設定（鍵：_description、codes、common、exits） |
 | [`errors/_description.json`](../../../../../proto8/knowledge/aos/errors/_description.json) | （檔頭沒有一句話） |
-| [`errors/common.json`](../../../../../proto8/knowledge/aos/errors/common.json) | 設定（鍵：_description、input、files、mail） |
+| [`errors/common.json`](../../../../../proto8/knowledge/aos/errors/common.json) | 設定（鍵：_description、input、files、mail、mcp） |
 | [`kernel.json`](../../../../../proto8/knowledge/aos/kernel.json) | 設定（鍵：_description、what、where_to_send、templates、write_your_own） |
 | [`mailbox.json`](../../../../../proto8/knowledge/aos/mailbox.json) | 設定（鍵：_description、tools、rules、check、check_hook） |
 | [`me.json`](../../../../../proto8/knowledge/aos/me.json) | 設定（鍵：_description、stack、self_tools、self_llm、self_system、self_history…） |

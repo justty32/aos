@@ -85,6 +85,8 @@ hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停�
 
 ## 接外部 MCP server（11-12 external-mcp）
 
+兩條路：**CLI 自己接**（本節前半）與**經 aos**（本節最後一段，凍結成一包 aos 工具）。一台選一條。
+
 定義資料夾放一份 **server 檔**（一台一份，例 `mcp/teamsite.json`），`cli.json` 加 `"mcp_servers": ["mcp/teamsite.json"]`（相對從 `cli.json` 的資料夾算，也可寫指示詞；可列好幾份）。claude、codex 兩身都吃；CLI 自己連、自己列工具（不凍結說明），列了的那台整台免核准，`only`／`except` 挑工具。某一份壞了＝`cli_session: warning: external MCP server … skipped: …`，其他照接。設計：[external-mcp 02](../../thinking/2026-11/12/external-mcp/02-設計.md)；程式：`lib/mcp_server_file.py`、`cmd/aos-mcp-launch`。
 
 **http（Bearer＋自簽 CA）**：
@@ -108,3 +110,20 @@ token 檔一行 `TEAMSITE_TOKEN=<值>`、權限 600，放定義與工作區以�
 ```
 
 腦看到的工具名＝`mcp__<名字>__<工具名>`。**秘密不要用 `aos-agent ctl add --envs` 給**（值明文寫進 `procs/<名>/exec.json`）。`aos-mcp-launch` 要在 PATH（`proto8/install.sh` 重跑一次）。
+
+**經 aos（凍結成一包工具）**：同一份 server 檔也可以先跑一次 `aos-mcp-import mcp/teamsite.json`（[README](../../cmd/aos-mcp-import/README.md)），把工具凍結進檔裡，再疊進定義的 `tools.json`：`{"$override": [<原本的包…>, "mcp/teamsite.json"], "tools": {}}`。腦看到的是 aos 的工具 `teamsite_<工具名>`（eca 經 aos-mcp＝`mcp__aos__teamsite_<工具名>`；agent-fsm 也用得到，這條路不限 eca）。**先放好 server 檔、匯入過再疊**：`$override` 指到不在的檔＝整份登記讀不了（`PathMissing`）；還沒匯入的檔疊上去＝那一層沒有工具、不報錯。
+
+| | 經 aos（`aos-mcp-import`＋`tools.json`） | CLI 自己接（`cli.json` 的 `mcp_servers`） |
+|---|---|---|
+| 工具說明 | 匯入那刻凍結；server 改了要 `aos-mcp-import sync`（`--yes` 才寫） | 每次起 CLI 照 server 當下的 |
+| hook | `before_tool`／`after_tool` 攔得到（走 aos-mcp 或 agent-fsm 的 act） | 攔不到（CLI 自己叫） |
+| 關掉單支 | `self_tools rm`、`aos-agent tools` 照一般工具 | 改 server 檔的 `only`／`except` |
+| server 行程 | 每次叫起一台新的（http＝開一個新 session），叫完就收 | CLI 開著的期間一直連著 |
+| 誰能用 | agent-fsm 與 eca 兩種身體 | 只有 eca（claude、codex） |
+| http 金鑰 | 只收 Bearer，**一定要寫 `env_file`**（沒寫＝`PackBad`）；值只放進請求標頭 | 沒寫 `env_file` 時 codex 用行程本來繼承的變數 |
+
+- **一台選一條**：兩條同時掛，腦會同時看到 `mcp__teamsite__x` 與 `mcp__aos__teamsite_x`，等於同一支工具兩個名字。
+- **有狀態的 server**（瀏覽器、要先登入的）走 CLI 自己接：經 aos 每次都是新的一台，上一次的狀態不在。
+- `env_file` 建議 `chmod 600`、放定義與工作區以外（兩條路都不檢查權限）。
+- 家機有 proxy：http server 在區網或本機卻連不上，先設 `NO_PROXY=<主機>`（經 aos 那條用 Python `urllib`，照環境變數走 proxy）。
+- 經 aos 的錯誤代號（`ServerFailed`、`ServerRejected`、`CallFailed`…）怎麼讀：knowledge `aos/cli/mcp_import.json#/errors`。
