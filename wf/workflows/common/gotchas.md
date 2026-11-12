@@ -20,13 +20,9 @@
 | 分檔 | 涵蓋的段 |
 |---|---|
 | [01-建置與相依](gotchas/01-建置與相依.md) | 建置與相依 |
-| [02-core-loop投遞](gotchas/02-core-loop投遞.md) | core/loop 的投遞與回合 |
-| [03-inst交接協定](gotchas/03-inst交接協定.md) | core/inst 的交接協定（handoff）——**已作廢，留作歷史** |
 | [04-使用aos與改文件與公司Windows](gotchas/04-使用aos與改文件與公司Windows.md) | 使用 aos、改文件、公司 Windows 這台 |
 
 <a id="建置與相依"></a>
-<a id="coreloop-的投遞與回合"></a>
-<a id="coreinst-的交接協定handoff已作廢留作歷史"></a>
 <a id="使用-aos"></a>
 <a id="改文件"></a>
 <a id="公司-windows-這台"></a>

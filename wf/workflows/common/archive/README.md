@@ -15,3 +15,4 @@
 | `wf-tick.md` | 2026-11-05 | 原 `.claude/commands/wf-tick.md`（`/wf-tick` slash 指令，tick 的薄殼）；同上一列一起封存，放這裡不放 `.claude/commands/` 底下以免仍被當指令載入 |
 | `use-aos.md`、`add-subproject.md` | 2026-11-05 | 原 `wf/workflows/` 單檔工作流：教用甲代單一執行檔 `aos` 的子命令、在根 CMake 底下加 `core/`／`modules/` 小專案；甲代 11-05 整組封存到 repo 根 `archive/aos-v1/`（arch-refactor 方向題 1） |
 | `code-map/build.md`、`code-map/tool.md`、`code-map/llm.md`、`code-map/agent.md`、`code-map/agent-lookup.md` | 2026-11-05 | 甲代（repo 根 `common/`／`app/`／`cmake/`、`core/tool`、`core/llm`、`core/agent`）逐檔 code map；11-05 夜架構大重構甲代整組封存（arch-refactor S4），code map 只留 proto8、逐檔表改由 `wf/tools/codemap_gen.py` 從檔頭生成 |
+| `gotchas/02-core-loop投遞.md`、`gotchas/03-inst交接協定.md` | 2026-11-12 | 原 `common/gotchas/` 分檔，講甲代 `core/loop`、`core/inst`（`aos deliver`、`.runi`）；程式隨 `archive/aos-v1/` 封存、已不存在（03 自述「已作廢，留作歷史」），tidy 內容精簡「不存在的東西就刪掉」 |
