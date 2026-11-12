@@ -4,7 +4,8 @@ import daemon_ctl as dc
 import json
 import os
 import re
-from ..common import bad_args, Agent, Fail, IFACE, call_dc, ctl_wait, daemon_path, need_table, note, row_named, timeout_opt, queued_opt
+from ..common import bad_args, Agent, Fail, IFACE, call_dc, daemon_path, note, row_named
+from .shared import ctl_wait, need_table, queued_opt, timeout_opt
 from ..decl import read_decl
 
 

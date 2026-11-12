@@ -11,12 +11,13 @@
 |---|---|
 | [`aos_agent/__init__.py`](../../../../../proto8/cmd/aos-agent/aos_agent/__init__.py) | 保留頂層說明、命令派發與主入口。 |
 | [`aos_agent/chat.py`](../../../../../proto8/cmd/aos-agent/aos_agent/chat.py) | 逐行寄訊息並等候回答的互動迴圈。 |
-| [`aos_agent/common.py`](../../../../../proto8/cmd/aos-agent/aos_agent/common.py) | 共用分層 help、錯誤指路、旗標、daemon 協定與活列查找及等待。 |
+| [`aos_agent/common.py`](../../../../../proto8/cmd/aos-agent/aos_agent/common.py) | 共用分層 help、錯誤指路、旗標、找 daemon 與表上的一隻（ctl 動作才用的寄信等回信在 ctl/shared.py）。 |
 | [`aos_agent/ctl/__init__.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/__init__.py) | 顯式派發 agent 的掛上與管理命令。 |
 | [`aos_agent/ctl/add.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/add.py) | 宣告檢查、掛上 agent 並等待 daemon 上表。 |
 | [`aos_agent/ctl/ls.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/ls.py) | 列出 daemon 表上的 proc 與狀態。 |
 | [`aos_agent/ctl/phase.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/phase.py) | 起停、睡醒與暫停恢復 agent。 |
 | [`aos_agent/ctl/rm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/rm.py) | 拔掉 agent（預設留 stack；--purge 確認後才刪，並保護不能刪除的 stack 路徑）。 |
+| [`aos_agent/ctl/shared.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/shared.py) | ctl 動作才用的共用零件：--timeout-s／--on-queued／名字放最後、寄控制信給 daemon 並等回信與公開表。 |
 | [`aos_agent/ctl/state.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/state.py) | 顯示單隻 agent 的狀態：總覽（每類一行）或點菜（某幾類的細節）；只給數字與事實、不給建議（11-10 self-family self_state）。 |
 | [`aos_agent/ctl/where.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/where.py) | 顯示 agent 的 stack 或工作區路徑。 |
 | [`aos_agent/ctl/who.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/who.py) | 由 stack 路徑查詢所屬 agent。 |

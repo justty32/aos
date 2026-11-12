@@ -44,13 +44,6 @@ def queued(a):
 
 # ---------------------------------------------------------------- 誰在跑（搬自 extras/human/bin/aos_human.py）
 
-def _same(a, b):
-    try:
-        return os.path.samefile(a, b)
-    except OSError:
-        return False
-
-
 def on_table(a):
     """重讀這隻在 daemon 表上的狀態。"""
     row = row_named(a.name)

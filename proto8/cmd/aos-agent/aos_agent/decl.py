@@ -4,7 +4,6 @@ import os
 import subprocess
 import sys
 from .common import Agent, DECL, Fail, IFACE, daemon_path, note, table
-from .hints import _same
 
 
 # ---------------------------------------------------------------- 定義與宣告（03）
@@ -47,6 +46,13 @@ def agent_decl(a):
     if decl is None:
         raise Fail("InterfaceMissing", "%s: the definition does not declare the aos-agent interface (%s)" % (a.name, why))
     return folder, decl
+
+
+def _same(a, b):
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
 
 
 def same_def(a, folder):

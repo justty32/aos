@@ -3,7 +3,8 @@ import os
 import aos_flags
 from .. import PROG
 import shutil
-from ..common import bad_args, ctl_wait, daemon_path, find, need_table, parse, row_named, table, timeout_opt
+from ..common import bad_args, daemon_path, find, parse, row_named, table
+from .shared import ctl_wait, need_table, timeout_opt
 from ..decl import close_screen_if_any
 
 
@@ -91,7 +92,7 @@ def no_wait(a, opts, secs):
     """11-10 self_ctl：rm 的是自己＝daemon 會連這支一起收掉；寄出就回。--purge＝另起一個脫離的小行程，等那列不在了再刪 stack。"""
     import subprocess
     import sys
-    from ..common import send_only
+    from .shared import send_only
     keep = None
     if opts.get("purge"):
         others = [r.get("stack") for n, r in table().items() if n != a.name]

@@ -1,6 +1,7 @@
 # aos_agent/ctl/where.py - 顯示 agent 的 stack 或工作區路徑。
 import daemon_ctl as dc
-from ..common import bad_args, Fail, name_last, call_dc, daemon_path, find, parse, target, target_name
+from ..common import bad_args, Fail, call_dc, daemon_path, find, parse, target, target_name
+from .shared import name_last
 
 
 HELP = """aos-agent ctl where - print its stack or workspace path
