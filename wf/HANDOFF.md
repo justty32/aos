@@ -52,7 +52,7 @@
    5. 待裁各題（WAIT_USER 01）裁了就照做。
    6. kernel 框架施工與 fsm 真腦跑一晚：假日。
    7. 四個新想法（ref-index-unify、metainfo-views、kernel-as-bridge、linux-user）等他看，各題要他定的在 WAIT_USER 01；都不擋別的。
-   8. kernel 細聊（使用者「kernel這塊等等細聊。」；排程那塊的新名字、題 1、3）→ [kernel-as-bridge § 使用者回覆](../proto8/thinking/2026-11/12/kernel-as-bridge/README.md#使用者回覆11-12-晚)
+   8. kernel 細聊：已聊出「手／門」（daemon 是手、kernel 是門）、kernel 是主觀的概念、daemon 也是概念（使用者「好，就是這樣。」）；剩：排程那塊還叫不叫 kernel（頂層接著問，有答案前不改名）、題 1 嚴到哪、題 3 圖紙；`aos-daemon-ctl` 不經判官的出入待給他看 → [kernel-as-bridge 06](../proto8/thinking/2026-11/12/kernel-as-bridge/06-細聊-手與門.md)
    9. 遊樂場：使用者要用 claude eca 唯讀初步整理 proto8、整理結果放外面（準備中）。
 6. **等使用者的**：都在 [WAIT_USER](WAIT_USER.md)（要你裁的、真機驗證、試驗場、雜事四類）；最急的是 push 與重連 aos MCP。
 7. **另一台機器（公司）要注意**：pull 之後①重 build 全部 impls（aos-directive 介面變了；aos-json 沒重 build 的話 `json_ls`／`json_search`／`json_add` 會報 `CommandUnknown`）②重跑 `proto8/install.sh`（新指令 `aos-mcp-import`）③試驗場 `lib／py／cmd／templates/agent-fsm` 整份重抄④`~/.cache/aos-mcp-*/tools.json` 的壞格照 [wait-user/04](wait-user/04-雜事.md) 那行指令清。
