@@ -26,4 +26,4 @@
 | [staff/researcher.md](staff/researcher.md) | **資料員**的任務書模板（下一輪的資料包） | 每輪第 ④ 棒 |
 | [staff/secretary.md](staff/secretary.md) | **祕書**的任務書模板（讓使用者讀得動） | 每輪第 ⑤ 棒 |
 
-8～9 月的場次紀錄（`records/`）已封存（2026-11-03）。新場次的紀錄照 README 寫到 `records/<題目-kebab>.md`。
+新場次的紀錄照 README 寫到 `records/<題目-kebab>.md`。
