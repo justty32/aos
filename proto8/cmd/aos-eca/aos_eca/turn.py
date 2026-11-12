@@ -9,6 +9,7 @@ from .hook import before_queue, fire, tool_added
 from .batch import SEP, goal_prompt, letter_body, note_progress, pick_one, take_all, transcript_now
 from .slash import slash_of, slash_turn
 from .reseed import reseed
+from .handoff import Handoff
 
 
 def one_turn(template, stack, ws, empty_code, on_busy, prompt):
@@ -60,55 +61,23 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
     command = slash_of(bodies, goal)
     if command:                                                     # ⑭ 一封信就是一個 slash 指令：aos 這層照 CLI 的意思做
         return slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_busy)
-    late, given, mid, after = [], [], [], []                        # 交出去那一刻收信時出的錯：CLI 已經在跑，等它答完再報；after＝after_queue hook 停下
 
-    def handed():                                                   # ④ 交出去就算完成（11-03）：user 接進 history、收信
-        given.append(True)
+    def count_goal():                                               # ⑬ 交出去才算丟了一次：先記數再接進 history
         try:
-            if goal:                                                # ⑬ 交出去才算丟了一次：先記數再接進 history
-                try:
-                    goal_state.write(stack, goal[1])
-                except OSError as w:
-                    aos_flags.warn(NAME, "cannot write %s: %s" % (goal_state.path(stack), w))
-            for body in bodies:
-                append_history(stack, body)
-            for sig in good:
-                must_post(["done", box, sig])
-            mid.append(history_sum(stack))                          # ⑩ 交出去那刻的 history
-        except Fail as e:
-            late.append(e)
-            return
-        try:
-            for sig, body in zip(good, bodies):                     # hook：接進 history、收掉之後，每封一次
-                fire("after_queue", {"letter": sig, "content": body["content"]}, template, stack)
-        except Fail as e:
-            after.append(e)                                         # 回答照樣接進 history，最後才報（不掉回答）
+            goal_state.write(stack, goal[1])
+        except OSError as w:
+            aos_flags.warn(NAME, "cannot write %s: %s" % (goal_state.path(stack), w))
+    hand = Handoff(template, stack, box, good, bodies, count_goal if goal else None)
     before = transcript_now(cfg, cell)                              # ⑬ 進展：交出去之前對話檔多大
     had_sum = os.path.exists(cell.file(SUM))                        # ⑭ 畫面 hook 跟上 CLI 改 history 時會刪掉它（cli_session.replace_history）
-    try:
-        text = cli_session.ask(cfg, cell, template, ws, stack, SEP.join(b["content"] for b in bodies), on_busy,
-                               handed, lambda limit: reseed(stack, ws, limit))   # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
-    except Fail as e:
-        if e.code == "SessionBad":                                  # 只有 --on-busy yield 會丟，一定在交出去之前
-            return 0                                                # 整批留 cur/，下一次再試
-        if given and e.code in ("CliFailed", "ReplyMissing"):      # ⑨ 交出去之後的失敗：記冷卻（這批掉了）
-            fire("brain_failed", {"name": e.code, "reason": str(e)}, template, stack)   # hook 停下＝HookFailed，冷卻不記（同 agent-fsm wait）
-            try:
-                cooldown.fail(stack, e.code, e, dropped=len(good))
-            except OSError as w:
-                aos_flags.warn(NAME, "cannot write %s: %s" % (cooldown.path(stack), w))
-        raise
-    if late:
-        raise late[0]
+    text = hand.ask(cfg, cell, ws, SEP.join(b["content"] for b in bodies), on_busy,
+                    lambda limit: reseed(stack, ws, limit))         # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
+    if text is None:
+        return 0                                                    # SessionBad：整批留 cur/，下一次再試
     synced = had_sum and not os.path.exists(cell.file(SUM))         # 這一輪中間是畫面 hook 跟著 CLI 改的（codex 的 /clear、/compact 在 notify 時才跟上）
-    edited = bool(mid) and history_sum(stack) != mid[0] and not synced   # ⑩ 這一輪中間被改了（腦叫了 self_history）；跟上 CLI 的不算
+    edited = hand.mid is not None and history_sum(stack) != hand.mid and not synced   # ⑩ 這一輪中間被改了（腦叫了 self_history）；跟上 CLI 的不算
     append_history(stack, {"role": "assistant", "content": text[:-1] if text.endswith("\n") else text})
     note_sum(stack, cell, edited)
     note_progress(cfg, cell, stack, before)                         # ⑬ 這輪叫了工具＝goal 計數歸零
-    try:
-        cooldown.clear(stack)                                       # ⑨ 成功一次＝歸零
-    except OSError as w:
-        aos_flags.warn(NAME, "cannot remove %s: %s" % (cooldown.path(stack), w))
-    if after:
-        raise after[0]
+    hand.done()                                                     # ⑨ 成功一次＝冷卻歸零；after_queue 停下的最後才報
     return 0

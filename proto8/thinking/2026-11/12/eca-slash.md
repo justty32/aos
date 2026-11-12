@@ -121,3 +121,9 @@
 - `b06c17c1b` Q5
 - `e49929811` /goal
 - Replace goal 自動選 yes 見 SESSION-LOG 那行
+
+## 11-12 晚：/goal、/compact 交給 claude 失敗時照一般一輪（收信、brain_failed、冷卻）
+
+- 決定（使用者點頭修、會改行為）：沒畫面時交給 `claude -p` 的 `/goal …`、`/compact` 整段照一般一輪——交出去那刻 user 接進 history、信收掉、`after_queue` 照跑；交出去後 `CliFailed`／`ReplyMissing`＝這封掉了、fire `brain_failed`、記冷卻；成功＝冷卻歸零。
+- 原因：之前沒傳 `handed`，claude 失敗時信留 `cur/` 每輪重試、不記冷卻也不 fire `brain_failed`，跟一般一輪不一致。
+- 做法：`aos_eca/handoff.py` 的 `Handoff`（一般一輪與這兩條共用）。`/compact` 成功後換摘要用 `replace_history(…, keep_tail=True)`，交出去那刻接進的 `/compact` 留在摘要後面，結果跟之前一樣（摘要＋/compact＋回答，搬走的還是舊那幾則）。

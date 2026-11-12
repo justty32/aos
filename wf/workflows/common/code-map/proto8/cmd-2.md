@@ -37,6 +37,7 @@
 | [`aos_eca/__init__.py`](../../../../../proto8/cmd/aos-eca/aos_eca/__init__.py) | aos-eca-turn 的英文說明、旗標檢查與主入口（main）。 |
 | [`aos_eca/batch.py`](../../../../../proto8/cmd/aos-eca/aos_eca/batch.py) | 一批信的認領與讀信（開場白、冷卻時只拿一封、take-all）與 goal 提醒的題目與進展。 |
 | [`aos_eca/common.py`](../../../../../proto8/cmd/aos-eca/aos_eca/common.py) | 共用的名字、錯誤（Fail）、lib 模組的載入、aos-post 介面與 mailbox_warning。 |
+| [`aos_eca/handoff.py`](../../../../../proto8/cmd/aos-eca/aos_eca/handoff.py) | 一批信交給 CLI 的前後（一般一輪與 slash 交給 claude 的那幾條共用）：交出去那刻收信、交出去後失敗記冷卻、成功收尾。 |
 | [`aos_eca/history.py`](../../../../../proto8/cmd/aos-eca/aos_eca/history.py) | $AOS_STACK/history.jsonl 的讀、附加，與 .history_sum（⑩ history 被改過＝開新對話）。 |
 | [`aos_eca/hook.py`](../../../../../proto8/cmd/aos-eca/aos_eca/hook.py) | 這支跑的 hook（before_queue、tool_added；fire 把 hook 停下換成 Fail）。 |
 | [`aos_eca/reseed.py`](../../../../../proto8/cmd/aos-eca/aos_eca/reseed.py) | ⑧ 換台開新對話時接在題目前面的開場白（從 history 組「整理過的紀錄」）。 |

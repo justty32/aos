@@ -169,6 +169,15 @@ class EcaHooks(unittest.TestCase):
         self.assertIn(ev["reason"], r.stderr)
         self.assertTrue((self.stack / "cooldown.json").exists())
 
+    def test_brain_failed_on_slash_goal(self):
+        self.declare({"bf": {"event": "brain_failed", "handler": self.hook("bf")}})
+        self.say("/goal say ok")
+        r = self.turn(FAKE_CLI_FAIL="1")
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual([ev["event"] for ev in self.read_lines(self.log)], ["brain_failed"])
+        self.assertEqual(self.queue(), [])
+        self.assertTrue((self.stack / "cooldown.json").exists())
+
     def test_brain_failed_hook_stops(self):
         self.declare({"bf": {"event": "brain_failed", "handler": self.hook("bf", "sys.exit(3)\n")}})
         self.say("hello")

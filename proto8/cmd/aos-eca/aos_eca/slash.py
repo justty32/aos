@@ -11,6 +11,7 @@ import aos_flags
 from .common import Fail, cli_session, must_post
 from .history import append_history, history_rows, note_sum
 from .hook import fire
+from .handoff import Handoff
 
 
 # ---- ⑭ slash 指令（11-12 thinking eca-slash；使用者「aos-say/listen我希望也能支援這些」「chat也要」）----
@@ -195,9 +196,10 @@ def on_screen(command, cfg, cell, stack):
 
 def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_busy):
     """⑭ 做這個指令、照一般一輪記 history（user 那封＋一則回答；/clear、/compact 先改 history 再記），信收掉、after_queue 照跑。
+    沒畫面、交給 claude -p 的 /goal、/compact 整段照一般一輪（Handoff：交出去那刻收信、失敗記冷卻與 brain_failed、成功冷卻歸零；11-12 晚）。
     畫面開著時 /clear、/compact 打進畫面（on_screen；畫面正在跑一輪＝busy.txt 在＝這次不動、信留 cur/、下一輪再試），/exit＝關畫面。"""
     kind, alive = cfg["kind"], cell.alive()
-    cleared = None
+    cleared, hand = None, None
     if command == GOAL:                                             # /goal …：CLI 自己的 goal，aos 只負責交到它手上
         full = bodies[0]["content"].strip()
         if alive:
@@ -207,12 +209,10 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
             text = note("/goal: typed into the open screen; the CLI's own answer shows there (a goal it runs on is also kept in turns.jsonl)%s"
                         % (confirm_goal_replace(cell) if kind == "codex" and full != GOAL else ""))
         elif kind == "claude":
-            try:
-                got = cli_session.ask(cfg, cell, template, ws, stack, full, on_busy)   # claude -p 認得：設了就照跑一輪
-            except Fail as e:
-                if e.code == "SessionBad":
-                    return 0
-                raise
+            hand = Handoff(template, stack, box, good, bodies)
+            got = hand.ask(cfg, cell, ws, full, on_busy)              # claude -p 認得：設了就照跑一輪
+            if got is None:
+                return 0                                            # SessionBad：同一般一輪，信留 cur/
             text = got.strip() or note("/goal: claude printed nothing")
         else:
             text = note("/goal: codex has /goal only on its screen (codex exec would read it as a plain question); "
@@ -229,16 +229,15 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
         if not cell.read("session.txt"):
             text = note("/compact: no conversation yet, nothing to compact")
         else:
-            try:
-                got = cli_session.ask(cfg, cell, template, ws, stack, "/compact", on_busy)   # claude -p --resume 認得：同一個 id 壓縮
-            except Fail as e:
-                if e.code == "SessionBad":
-                    return 0                                        # 同一般一輪：整批留 cur/，下一次再試
-                raise
+            hand = Handoff(template, stack, box, good, bodies)
+            got = hand.ask(cfg, cell, ws, "/compact", on_busy)         # claude -p --resume 認得：同一個 id 壓縮
+            if got is None:
+                return 0                                            # SessionBad：同一般一輪，整批留 cur/，下一次再試
             sid = cell.read("session.txt")
             found = cli_session.transcripts("claude", sid)
-            try:
-                moved = cli_session.compact_history(cell, found[0] if found else None, stack)   # Q3：history 換成 claude 的摘要
+            summary = cli_session.compact_summary(found[0]) if found else None
+            try:                                                    # Q3：history 換成 claude 的摘要；交出去那刻接進的 /compact 留在摘要後面（keep_tail）
+                moved = None if summary is None else cli_session.replace_history(cell, "compact", summary, stack, keep_tail=True)
             except OSError as e:
                 raise Fail("WriteFailed", "cannot rewrite history.jsonl: %s" % e)
             text = got.strip() or note("/compact: claude compacted conversation %s (same id); %s" % (sid,
@@ -270,6 +269,11 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
                     raise Fail("WriteFailed", "cannot clear history.jsonl: %s" % e)
                 cli_session.drop_session(cell)
                 text = note("/clear: %d messages moved to history_removed.jsonl; the next message starts a new %s conversation" % (cleared, kind))
+    if hand:                                                        # 交出去那刻已接進 history、收信、after_queue 跑過
+        append_history(stack, {"role": "assistant", "content": text})
+        note_sum(stack, cell, False)
+        hand.done()
+        return 0
     for body in bodies:
         append_history(stack, body)
     for sig in good:

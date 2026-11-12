@@ -4,7 +4,7 @@ import json
 import os
 import unittest
 
-from test_switch import Base
+from test_switch import Base, cooldown
 
 
 class ClaudeSlash(Base):
@@ -110,6 +110,31 @@ class ClaudeSlash(Base):
         self.say("/goals are nice")                                 # only "/goal" or "/goal ..." counts; this is plain text
         self.ok_turn()
         self.assertEqual(self.calls()[-1]["stdin"], "/goals are nice")
+
+    def test_goal_and_compact_failing_drop_the_letter(self):
+        """Handed to claude and failed = same as a plain turn: letter done, user kept in history, cooldown recorded."""
+        self.first_turn()
+        for i, text in enumerate(("/compact", "/goal say ok"), 1):     # /compact first: a failed turn starts a new conversation next time
+            self.say(text)
+            r = self.turn(FAKE_CLI_FAIL="1")
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("aos-eca-turn: error: CliFailed", r.stderr)
+            self.assertEqual(self.queue(), [])                          # not retried every turn
+            self.assertEqual(self.history()[-1], {"role": "user", "content": text})
+            rec = cooldown.read(str(self.stack))
+            self.assertEqual((rec["failures"], rec["dropped"], rec["code"]), (i, i, "CliFailed"))
+            self.make_due()
+
+    def test_goal_and_compact_clear_the_cooldown(self):
+        self.first_turn()
+        for text in ("/goal say ok", "/compact"):
+            cooldown.fail(str(self.stack), "CliFailed", "earlier failure", dropped=1)
+            self.make_due()
+            self.say(text)
+            self.ok_turn()                                              # a second done of the same letter would fail the turn
+            self.assertFalse(os.path.exists(cooldown.path(str(self.stack))))
+            self.assertEqual(self.queue(), [])
+            self.assertEqual([m["content"] for m in self.history()[-2:]], [text, "FAKE: " + text])
 
     def test_status_shows_the_last_goal_claude_recorded(self):
         old = self.first_turn()
