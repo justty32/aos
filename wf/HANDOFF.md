@@ -22,11 +22,12 @@
    - **kernel**：壞信回 `BodyBad`、fork／subagent 走 `AOS_KERNEL`（[kernel-small-fixes](../proto8/thinking/2026-11/12/kernel-small-fixes.md)）；C-47、N-42、N-63 改寫，猜 `./.stack` 留（[kernel-norms](../proto8/thinking/2026-11/12/kernel-norms.md)）；**通用 kernel 框架圖紙**（fable→Argon 審→fable 改；使用者裁「問腦總機要收進框架」；沒施工）（[kernel-framework](../proto8/thinking/2026-11/12/kernel-framework/README.md)）。
    - **eca**：slash 指令 `/clear`／`/compact`／`/status`／`/usage`／`/exit`／`/goal`——畫面同步、say／listen／chat 支援、codex 有畫面、codex `/compact` 撈對話、codex `/goal` 的 Replace 自動選 yes；題 G1、G2 使用者收工前裁「codex目標這塊不用管，就是這樣」＝不做（[eca-slash](../proto8/thinking/2026-11/12/eca-slash.md)）。
    - **外部 MCP**：圖紙、三題照推薦、http＋bearer 試接、施工五步（codex／claude 兩身的 http 與 stdio、新指令 `aos-mcp-launch`、假 server 收進 `proto8/extras/fake-mcp-http`）（[external-mcp 06](../proto8/thinking/2026-11/12/external-mcp/06-施工結果.md)）。
+   - **ops-notes 與 Codex agent 進 aos**：盤點完，使用者改成不整套移植、在 WSL 開一塊空間從一個 daemon＋一隻懂 aos 的 eca 慢慢建（原話與照抄步驟在 [ops-notes-to-aos](../proto8/thinking/2026-11/12/ops-notes-to-aos.md)）。
    - **只實測／只記錄**：auto save（`/tmp` 不是記憶體也不快、放 `~/`；使用者裁不做 auto save，停樹後整份複製、頂層建議 `cp -a`）（[autosave § 使用者裁定](../proto8/thinking/2026-11/12/autosave.md#使用者裁定11-12-下午)）；wf/ 往 aos 體系走（只記原話，他要先玩）（[wf-to-aos](../proto8/thinking/2026-11/12/wf-to-aos.md)）。
 4. **試驗場**（公司 `~/code/playground`）：12:45 照 main `a85603894` 乾淨重刷＋`eca_opus`、花費無上限（[playground](../proto8/thinking/2026-11/12/playground.md)）。**之後 main 的變更還沒刷進去**：eca slash、codex 畫面、外部 MCP、tool-path-broken 以外的（指令類是 symlink、即時生效）。
 5. **下一步**（依優先）：
    1. 外部 MCP 續行（照 06 與 07；07 題一已裁 a 只收 Bearer、F1～F12 使用者「先這樣」）：fsm 經 aos 匯入成包（`aos-mcp-import`、aos-mcp 當 client）；沒驗的 codex 沙盒對 stdio、`disabled_tools`、真的別人寫的 stdio server（要下載、先問）→ [06](../proto8/thinking/2026-11/12/external-mcp/06-施工結果.md)。使用者「做不完就push上去，我回家繼續做」。
-   2. 使用者拿真 token 照 06「搬一隻現有 Codex agent 進 aos 的照抄步驟」起第一隻；原話、盤點、準備步驟、未定在 [ops-notes-to-aos](../proto8/thinking/2026-11/12/ops-notes-to-aos.md)；盤點結論：只需要一台 http MCP、建議先搬兩隻 gpt-*、ops-notes 主 session 暫不搬（權限：動機器先問 vs eca Bash 不問）。
+   2. 在 WSL 開一塊空間、從一個 daemon＋一隻懂 aos 的 eca（opus）開始慢慢建，使用者自己照步驟做 → [ops-notes-to-aos § 從零搭一棵小樹](../proto8/thinking/2026-11/12/ops-notes-to-aos.md#從零搭一棵小樹一個-daemon一隻懂-aos-的-opus-eca使用者自己做)；搬兩隻 Codex agent（照 06 的照抄步驟、真 token）變成之後的事，盤點與準備步驟也在同一份。
    3. 試驗場重刷（兩台；家機要整個重抄）。
    4. kernel 框架：使用者「kernel先這樣就好，開工等假日。我自己也要思考一下」（[kernel-framework § 已裁](../proto8/thinking/2026-11/12/kernel-framework/README.md#已裁問腦總機收進框架)）；待他看兩處——問腦怎麼收（K-F47 推薦 Python 重寫、刪 C++）、N-63 衝突（K-F50）→ [kernel-framework](../proto8/thinking/2026-11/12/kernel-framework/README.md)。
    5. 外部 MCP 留題：`--envs` 明文落地（05 的 P1，只做了文件警告）、外部 server 壞了 aos 看不到（P3）；代定 E1～E7 待使用者看；外部 MCP 沒經 Argon 審。
@@ -35,4 +36,4 @@
 6. **等使用者的**（都在 [WAIT_USER](WAIT_USER.md)）：要不要 push；真 token 起第一隻 Codex agent；kernel 框架兩處；外部 MCP 代定 E1～E7；試驗場親手玩；fsm 真腦回家測。
 7. **家機要注意**：重跑 `proto8/install.sh`（新指令 `aos-mcp-launch`）；C++ 有改要重 build（aos-daemon、aos-json）；試驗場整個重抄；家機兩項殘留准刪、家機 session 動手；`~/.cache/aos-mcp-aos/tools.json` 刪 knowledge／memory 兩格（WAIT_USER 有照抄一行）。
 8. **踩過的坑**：scratchpad 多 session 共用、暫存腳本檔名要加前綴（今天撞過一次）；從 Windows 改 WSL 檔會掉執行位元；`wsl … bash -lc '…'` 裡的 `$變數` 會被外層吃掉，複雜指令寫成腳本檔再 `tr -d '\r' < 檔 | bash`。
-9. **已知紅**：aos-agent `test_daemon_down` 2 支、box_check 2 支（15:07 在 `3befa7edf` 全套 72 夾 1019 支只紅這 4 支）。最終全套：15:07 在 `3befa7edf`：72 夾 1019 支只紅既有 4 支；最終 HEAD 的重跑結果見日誌末行〔頂層補〕。
+9. **已知紅**：aos-agent `test_daemon_down` 2 支、box_check 2 支（15:07 在 `3befa7edf` 全套 72 夾 1019 支只紅這 4 支）。最終全套：16:05～16:27 在 `~/repo/aos-tools` 重跑全套（起跑時 HEAD d547d4cf1；期間只合入文件類 commit 至 416fc47d4）：72 夾、1040 支，只紅既有 4 支（aos-agent `test_daemon_down` 的 test_add、test_stop；box_check 2 支），無逾時、無偶發。輸出在公司 WSL `/tmp/fulltest_1112b/`（收工會清）。
