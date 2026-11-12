@@ -3,13 +3,13 @@ import fcntl, json, os, re, shlex, signal, sys, time
 
 if __package__:
     from . import cli_base
-    from .cli_base import RESEED_BYTES, SCREEN_RESEED_BYTES, TMUX_SESSION, die, warn
+    from .cli_base import RESEED_BYTES, SCREEN_RESEED_BYTES, TMUX_SESSION
     from .cli_cell import Cell, link_transcript, note_cell, session_here
     from .cli_cfg import load_cfg
     from .cli_print import print_claude, print_codex
 else:
     import cli_base
-    from cli_base import RESEED_BYTES, SCREEN_RESEED_BYTES, TMUX_SESSION, die, warn
+    from cli_base import RESEED_BYTES, SCREEN_RESEED_BYTES, TMUX_SESSION
     from cli_cell import Cell, link_transcript, note_cell, session_here
     from cli_cfg import load_cfg
     from cli_print import print_claude, print_codex
@@ -38,25 +38,25 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None):
     if on_busy == "yield":
         who = cell.clients()
         if who:
-            die("SessionBad", "someone is attached to the screen (%s); call again after they detach" % ", ".join(who))
+            cli_base.die("SessionBad", "someone is attached to the screen (%s); call again after they detach" % ", ".join(who))
         if os.path.exists(cell.file("busy.txt")):
-            die("SessionBad", "a turn is running on the screen (sent, not finished yet); call again after it finishes")
+            cli_base.die("SessionBad", "a turn is running on the screen (sent, not finished yet); call again after it finishes")
     while os.path.exists(cell.file("busy.txt")) and time.time() < deadline:
         if not cell.alive():
-            die("CliFailed", "the screen closed before the turn finished")
+            cli_base.die("CliFailed", "the screen closed before the turn finished")
         time.sleep(0.2)
     if os.path.exists(cell.file("busy.txt")):                # 等到期限還在跑：不貼，免得逾時了還打進畫面
-        die("ReplyMissing", "the turn on the screen did not finish within %d s; not sent (attach to look)" % (cfg.get("timeout_ms", 600000) // 1000))
+        cli_base.die("ReplyMissing", "the turn on the screen did not finish within %d s; not sent (attach to look)" % (cfg.get("timeout_ms", 600000) // 1000))
     if cfg.get("kind") == "claude" and trust_prompt(cell.tmux("capture-pane", "-p", "-t", TMUX_SESSION).stdout):
         ws = os.path.normpath(os.path.join(cell.path, cell.read("ws.txt") or "."))
-        die("TrustMissing", "claude on the screen is waiting at its trust-this-folder prompt for %s; nothing was typed. "
+        cli_base.die("TrustMissing", "claude on the screen is waiting at its trust-this-folder prompt for %s; nothing was typed. "
             "Choose yourself: attach to the screen (aos-agent open), or run claude there once and pick trust: cd %s && claude"
             % (ws, shlex.quote(ws)))
     seen = len(cell.turns())
     r = cell.tmux("load-buffer", "-b", "aos", "-", input=prompt)
     if r.returncode != 0:
         sys.stderr.write(r.stderr)                         # tmux 自己的話原樣透出（R10）
-        die("CliFailed", "tmux load-buffer exited %d" % r.returncode)
+        cli_base.die("CliFailed", "tmux load-buffer exited %d" % r.returncode)
     cell.tmux("paste-buffer", "-p", "-d", "-b", "aos", "-t", TMUX_SESSION)   # -p：程式要的話包成 bracketed paste，多行不會半路送出
     time.sleep(0.3)
     cell.tmux("send-keys", "-t", TMUX_SESSION, "Enter")
@@ -67,9 +67,9 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None):
         if len(turns) > seen:
             return turns[-1].get("text") or ""
         if not cell.alive():
-            die("CliFailed", "the screen closed before the turn finished")
+            cli_base.die("CliFailed", "the screen closed before the turn finished")
         time.sleep(0.2)
-    die("ReplyMissing", "no answer %d s after sending (may be stuck on a permission or trust prompt; attach to look)"
+    cli_base.die("ReplyMissing", "no answer %d s after sending (may be stuck on a permission or trust prompt; attach to look)"
         % (cfg.get("timeout_ms", 600000) // 1000))
 
 
@@ -95,7 +95,7 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, re
     f, ok = cell.lock()
     if not ok:
         if on_busy == "yield":
-            die("SessionBad", "this conversation is in use (another call, or attach is opening the screen)")
+            cli_base.die("SessionBad", "this conversation is in use (another call, or attach is opening the screen)")
         fcntl.flock(f, fcntl.LOCK_EX)
     with f:
         limit = cfg.get("reseed_bytes", RESEED_BYTES)
@@ -107,7 +107,7 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, re
         else:
             if sid and not session_here(cfg, cell, ws, sid):
                 if not reseed:
-                    warn("the earlier conversation is not on this machine; starting a new one without its record")
+                    cli_base.warn("the earlier conversation is not on this machine; starting a new one without its record")
                 sid = ""
             if not sid and reseed:
                 prompt = reseed(limit) + prompt
@@ -145,16 +145,16 @@ def call_main(tool_dir, on_busy="yield"):
     cfg = load_cfg(tool_dir)
     stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS")
     if not stack:
-        die("StackMissing", "AOS_STACK is not set")
+        cli_base.die("StackMissing", "AOS_STACK is not set")
     if not ws or not os.path.isdir(ws):
-        die("WsMissing", "AOS_WS is not set or not a directory")
+        cli_base.die("WsMissing", "AOS_WS is not set or not a directory")
     ws = os.path.realpath(ws)
     try:
         args = json.loads(sys.stdin.read() or "{}")
     except ValueError:
-        die("ArgumentsBad", "stdin is not JSON")
+        cli_base.die("ArgumentsBad", "stdin is not JSON")
     if not isinstance(args, dict) or not isinstance(args.get("prompt"), str) or not args["prompt"].strip():
-        die("ArgumentsBad", "missing prompt (a non-empty string)")
+        cli_base.die("ArgumentsBad", "missing prompt (a non-empty string)")
     cell = Cell(stack)                                   # 工具形：對話在這格本身，aos-mcp 的 stack 也是它（它叫的工具再疊 tools/<名>/）
     text = ask(cfg, cell, os.path.abspath(tool_dir), ws, cell.path, args["prompt"], on_busy)
     sys.stdout.write(text if text.endswith("\n") else text + "\n")

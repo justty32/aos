@@ -79,15 +79,17 @@
 #   被 kill -9／OOM，CLI 收 SIGTERM 收掉，不留孤兒拿著同一段對話跟下一輪的 --resume 撞；非 Linux 或載不到 libc 就不設。畫面（tmux）不在此列。
 #
 # 放哪：proto8/lib/agent/cli_session.py；claude、codex 經 agent_tool.py 的 ask_cli 共用 ask，call_main 只給 aos-eca-turn --one；
-# 掛它的 agent 根目錄可以放一份 cli_session.py（或捷徑）給 attach 用（原本的例子 demo/agent-fay 11-03 晚刪了）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
+# 掛它的 agent 根目錄可以放一份 cli_session.py（或捷徑）給 attach 用（原本的例子 demo/agent-fay 11-03 晚刪了）；工具資料夾自帶一份覆寫時，
+# 要連同全部 cli_*.py（與 agent_files.py）一起帶（分檔彼此同層 import）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
 #
 # 分檔（11-12 晚 R3 重構拆檔，行為不變）：本檔只留上面的說明、對外的名字與 hook／guard 的執行入口（hook 指令一直指著本檔），
 #   本體在同層：cli_base（錯誤行、PROG／ECHO、共用常數）、cli_cfg（cli.json、llm、system）、cli_mcp（aos 與外部 MCP、tools_sub、guard）、
 #   cli_cell（小格、畫面 socket、session 記號）、cli_print（非互動）、cli_ask（畫面送字、ask、call_main）、cli_hook（hook、history 同步）、
-#   cli_screen（開畫面、attach）。呼叫者照舊 import cli_session、照舊改它的屬性（aos-eca-turn 換 die、agent_tool 設 PROG／ECHO、
-#   測試 patch die、live、open）：_Facade 把對本模組的設定與刪除轉給定義或 import 了同名的那幾份，效果跟拆檔前同一個命名空間一樣。
-import shutil, sys, types   # shutil：測試 patch cli_session.shutil.which
+#   cli_screen（開畫面、attach）。呼叫者直接 import 要用的分檔（例 cli_ask.ask、cli_cell.Cell）；執行期會被換掉或設定的只有
+#   cli_base 的 die、warn、PROG、ECHO——各分檔一律寫 cli_base.die(…)，所以設 cli_base.X 一處就全部生效（agent_tool 設 PROG／ECHO）。
+#   過渡（aos-eca 還沒改）：下面仍把八份的名字倒進本模組、用 _Facade 把對本模組的設定與刪除轉給有同名的那幾份；aos-eca 改完就拿掉。
+import sys, types
 
 if __package__:
     from . import cli_base, cli_cfg, cli_mcp, cli_cell, cli_print, cli_ask, cli_hook, cli_screen
@@ -131,7 +133,8 @@ if __name__ == "__main__":
               "       cli_session.py guard\n"
               "The hook the CLI's interactive screen calls after each turn (appends to CELL/turns.jsonl; never fails).\n"
               "guard: claude PreToolUse hook (hook JSON on stdin); denies a subagent's call to the main agent's aos tools.\n"
-              "Tool entries (lib/agent/claude, codex), aos-eca-turn and aos-eca-screen import this file.")
+              "The code is in the cli_*.py files next to this one; tool entries (lib/agent/claude, codex) import those,\n"
+              "aos-eca-turn and aos-eca-screen import this file.")
     elif sys.argv[1:] == ["guard"]:
         guard_main()
     elif len(sys.argv) >= 4 and sys.argv[1] == "hook":

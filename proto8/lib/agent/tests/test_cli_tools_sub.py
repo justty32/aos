@@ -14,7 +14,7 @@ from unittest.mock import patch
 sys.dont_write_bytecode = True
 LIB = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(LIB))
-from agent import cli_session  # noqa: E402
+from agent import cli_cell, cli_cfg, cli_mcp  # noqa: E402
 
 TEMPLATE = LIB.parent / "templates" / "eca-claude"
 SUB_TOOLS = ["index_view", "json_get", "json_len", "json_ls", "json_multi_get", "json_search", "math", "peek_clock", "peek_now_time"]
@@ -34,7 +34,7 @@ class ToolsSub(unittest.TestCase):
 
     def load(self):
         with patch.dict(os.environ, self.env, clear=True):
-            return cli_session.load_cfg(str(self.d))
+            return cli_cfg.load_cfg(str(self.d))
 
     def fails(self):
         err = io.StringIO()
@@ -44,9 +44,9 @@ class ToolsSub(unittest.TestCase):
         return err.getvalue().strip().splitlines()[-1]
 
     def argv(self, cfg):
-        cell = cli_session.Cell(str(self.d / "cell"))
-        with patch.object(cli_session.shutil, "which", lambda n: "/bin/" + n):
-            return cli_session.mcp_argv(cfg, cell, "/w", "/st"), cell
+        cell = cli_cell.Cell(str(self.d / "cell"))
+        with patch.object(cli_mcp.shutil, "which", lambda n: "/bin/" + n):
+            return cli_mcp.mcp_argv(cfg, cell, "/w", "/st"), cell
 
     def test_absent_means_nothing_added(self):
         self.write()
@@ -54,7 +54,7 @@ class ToolsSub(unittest.TestCase):
         self.assertIsNone(cfg["sub_registry"])
         argv, cell = self.argv(cfg)
         self.assertEqual(argv, ["--mcp-config", cell.file("mcp.json"), "--allowedTools", "mcp__aos"])
-        self.assertEqual(cli_session.guard_hooks(cfg), {})
+        self.assertEqual(cli_mcp.guard_hooks(cfg), {})
 
     def test_claude_gets_agents_and_allow(self):
         self.write(tools_sub="tools_sub.json", tools_flags=["--enable-logs"])
@@ -76,8 +76,8 @@ class ToolsSub(unittest.TestCase):
     def test_hooks_def_goes_to_sub_server(self):
         self.write(tools_sub="tools_sub.json")
         cfg = dict(self.load(), hooks_def="/defs/x")
-        with patch.object(cli_session.shutil, "which", lambda n: "/bin/" + n):
-            agents = cli_session.sub_agents(cfg, "/w", "/st")
+        with patch.object(cli_mcp.shutil, "which", lambda n: "/bin/" + n):
+            agents = cli_mcp.sub_agents(cfg, "/w", "/st")
         self.assertEqual(agents["general-purpose"]["mcpServers"][0]["aos_sub"]["args"][4:6], ["--hooks", "/defs/x"])
 
     def test_codex_refused(self):
@@ -100,7 +100,7 @@ class ToolsSub(unittest.TestCase):
 
     def test_guard_hook_table(self):
         self.write(tools_sub="tools_sub.json")
-        hooks = cli_session.guard_hooks(self.load())
+        hooks = cli_mcp.guard_hooks(self.load())
         self.assertEqual(list(hooks), ["PreToolUse"])
         self.assertEqual(hooks["PreToolUse"][0]["matcher"], "mcp__aos__.*")
         self.assertTrue(hooks["PreToolUse"][0]["hooks"][0]["command"].endswith(" guard"))

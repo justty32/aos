@@ -2,9 +2,11 @@
 import fcntl, glob, hashlib, json, os, re, socket, stat, subprocess
 
 if __package__:
-    from .cli_base import TMUX_SESSION, die, tool_io, warn
+    from . import cli_base
+    from .cli_base import TMUX_SESSION, tool_io
 else:
-    from cli_base import TMUX_SESSION, die, tool_io, warn
+    import cli_base
+    from cli_base import TMUX_SESSION, tool_io
 
 
 def machine_id():
@@ -71,7 +73,7 @@ def tty_socket(cell_path, make=False):
     first = os.path.join(tty_base(), h)
     if make:
         if not tty_dir_ok(os.path.dirname(first), make=True):
-            die("CellBad", "%s is not a private folder of this user (cannot put the screen socket there)" % os.path.dirname(first))
+            cli_base.die("CellBad", "%s is not a private folder of this user (cannot put the screen socket there)" % os.path.dirname(first))
         return first
     for cand in (first, os.path.join("/tmp", "aos-tty-%d" % os.getuid(), h), os.path.join(cell_path, "tty.sock")):
         try:
@@ -196,7 +198,7 @@ def mark_session(kind, cell, ws, sid):
                                                 "machine": machine_id()}, ensure_ascii=False) + "\n")
         return True
     except OSError as e:
-        warn("cannot write %s or .session_home: %s" % (cell.file("session.txt"), e))
+        cli_base.warn("cannot write %s or .session_home: %s" % (cell.file("session.txt"), e))
         return False
 
 
@@ -208,7 +210,7 @@ def drop_session(cell):
         except FileNotFoundError:
             pass
         except OSError as e:
-            warn("cannot remove %s: %s" % (tool_io.place(cell.file(name)), tool_io.os_reason(e)))
+            cli_base.warn("cannot remove %s: %s" % (tool_io.place(cell.file(name)), tool_io.os_reason(e)))
 
 
 def session_here(cfg, cell, ws, sid):

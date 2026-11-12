@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from agent import cli_session  # noqa: E402
+from agent import cli_cfg  # noqa: E402
 
 
 class CliSystem(unittest.TestCase):
@@ -28,29 +28,29 @@ class CliSystem(unittest.TestCase):
         (self.defn / "cli.json").write_text(json.dumps({"kind": kind, "flags": ["--tools", ""]}))
         (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": decl}))
         with patch.dict(os.environ, {"AOS_STACK": str(self.stack)}):
-            return cli_session.load_cfg(str(self.defn))
+            return cli_cfg.load_cfg(str(self.defn))
 
     def test_not_declared_leaves_cli_alone(self):
         (self.stack / "system.txt").write_text("ignored")
-        self.assertEqual(cli_session.system_argv(self.cfg("claude", {})), [])
-        self.assertEqual(cli_session.system_argv(self.cfg("codex", {})), [])
+        self.assertEqual(cli_cfg.system_argv(self.cfg("claude", {})), [])
+        self.assertEqual(cli_cfg.system_argv(self.cfg("codex", {})), [])
 
     def test_claude_definition_then_own_copy(self):
         decl = {"system": "system.txt"}
-        self.assertEqual(cli_session.system_argv(self.cfg("claude", decl)), ["--system-prompt-snapshot", "off"])   # no file anywhere
+        self.assertEqual(cli_cfg.system_argv(self.cfg("claude", decl)), ["--system-prompt-snapshot", "off"])   # no file anywhere
         (self.defn / "system.txt").write_text("from def")
-        self.assertEqual(cli_session.system_argv(self.cfg("claude", decl)),
+        self.assertEqual(cli_cfg.system_argv(self.cfg("claude", decl)),
                          ["--system-prompt-snapshot", "off", "--append-system-prompt-file", str(self.defn / "system.txt")])
         (self.stack / "system.txt").write_text("mine")
-        self.assertEqual(cli_session.system_argv(self.cfg("claude", decl))[-1], str(self.stack / "system.txt"))
+        self.assertEqual(cli_cfg.system_argv(self.cfg("claude", decl))[-1], str(self.stack / "system.txt"))
         (self.stack / "system.txt").write_text("")                      # empty own copy = nothing appended (not the definition's)
-        self.assertEqual(cli_session.system_argv(self.cfg("claude", decl)), ["--system-prompt-snapshot", "off"])
+        self.assertEqual(cli_cfg.system_argv(self.cfg("claude", decl)), ["--system-prompt-snapshot", "off"])
 
     def test_codex_developer_instructions(self):
         decl = {"system": "system.txt"}
-        self.assertEqual(cli_session.system_argv(self.cfg("codex", decl)), [])
+        self.assertEqual(cli_cfg.system_argv(self.cfg("codex", decl)), [])
         (self.stack / "system.txt").write_text('Say "hi" ~\nline 2')
-        argv = cli_session.system_argv(self.cfg("codex", decl))
+        argv = cli_cfg.system_argv(self.cfg("codex", decl))
         self.assertEqual(argv[0], "-c")
         key, _, value = argv[1].partition("=")
         self.assertEqual((key, json.loads(value)), ("developer_instructions", 'Say "hi" ~\nline 2'))

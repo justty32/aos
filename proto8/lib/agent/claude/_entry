@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # claude - 透過 tool_io 收 JSON／旗標，再把 prompt 交給 claude CLI；對話續在工具小格（$AOS_STACK）
 # 介面（lib/README 的契約）：stdin 收 {"prompt"}；錯：stderr 與 stdout 各一行「claude: error: 代號 原因」、退 1（ArgumentsBad、CliMissing、CliFailed、SessionBad…）。
-# 怎麼叫 CLI（旗標、逾時 timeout_ms）在同資料夾的 cli.json；做法在 proto8/lib/agent/cli_session.py（claude、codex 共用）。
-# 工具形開頭走 agent_tool.ask_cli 的 tool_io；aos-eca-turn --one 照舊用 cli_session.call_main，兩者共用 cli_session.ask。
+# 怎麼叫 CLI（旗標、逾時 timeout_ms）在同資料夾的 cli.json；做法在 proto8/lib/agent/cli_session.py 與同層 cli_*.py（claude、codex 共用）。
+# 工具形開頭走 agent_tool.ask_cli 的 tool_io；aos-eca-turn --one 照舊用 cli_ask.call_main，兩者共用 cli_ask.ask。
 # 共用模組先找工具自己，再找 lib/agent（標準 Python 路徑也可提供 lib）。
 import os, sys
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -23,8 +23,8 @@ try:
             raise
         import agent.agent_tool as agent_tool
 except ModuleNotFoundError as error:   # 共用模組找不到：照此工具的錯誤通道退 1
-    if error.name not in {"tool_io", "agent", "agent_tool", "cli_session", "agent_files",
-                          "agent.agent_tool", "agent.cli_session", "agent.agent_files"}:
+    _shared = ("agent_tool", "agent_files", "cli_base", "cli_cfg", "cli_mcp", "cli_cell", "cli_print", "cli_ask", "cli_hook", "cli_screen")
+    if error.name not in {"tool_io", "agent", *_shared, *("agent." + n for n in _shared)}:
         raise
     _module = "agent_tool" if error.name == "agent" else (error.name or "shared module").rsplit(".", 1)[-1]
     _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), _module)

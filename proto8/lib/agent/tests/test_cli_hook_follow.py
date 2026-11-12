@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from agent import cli_session  # noqa: E402
+from agent import cli_hook  # noqa: E402
 
 
 class HookFollow(unittest.TestCase):
@@ -38,7 +38,7 @@ class HookFollow(unittest.TestCase):
 
     def claude(self, payload, cell=None):
         with patch.object(sys, "stdin", io.StringIO(json.dumps(payload))):
-            cli_session.hook_main("claude", str(cell or self.cell))
+            cli_hook.hook_main("claude", str(cell or self.cell))
 
     def read(self, name):
         return (self.cell / name).read_text().strip() if (self.cell / name).exists() else None
@@ -119,7 +119,7 @@ class HookFollow(unittest.TestCase):
         cell = self.codex_cell({"fresh": 1})
         with open(self.hist, "a") as f:
             f.write(json.dumps({"role": "user", "content": "just asked"}) + "\n")
-        cli_session.hook_main("codex", str(cell), json.dumps({"type": "agent-turn-complete", "thread-id": "fresh", "last-assistant-message": "NONE"}))
+        cli_hook.hook_main("codex", str(cell), json.dumps({"type": "agent-turn-complete", "thread-id": "fresh", "last-assistant-message": "NONE"}))
         self.assertEqual((cell / "session.txt").read_text().strip(), "fresh")
         self.assertEqual([json.loads(l) for l in self.hist.read_text().splitlines()], [{"role": "user", "content": "just asked"}])
         self.assertEqual(len((self.stack / "history_removed.jsonl").read_text().splitlines()), 3)
@@ -137,13 +137,13 @@ class HookFollow(unittest.TestCase):
         return self.tmp / "codex-home" / "sessions" / "2026" / "11" / "12" / ("rollout-x-%s.jsonl" % tid)
 
     def notify(self, cell, tid, text="hi"):
-        cli_session.hook_main("codex", str(cell), json.dumps({"type": "agent-turn-complete", "thread-id": tid, "last-assistant-message": text}))
+        cli_hook.hook_main("codex", str(cell), json.dumps({"type": "agent-turn-complete", "thread-id": tid, "last-assistant-message": text}))
 
     def test_codex_compact_rows_keep_only_the_talk(self):
-        self.assertEqual(cli_session.codex_compact_rows(self.COMPACTED["payload"]),
+        self.assertEqual(cli_hook.codex_compact_rows(self.COMPACTED["payload"]),
                          [{"role": "user", "content": "Remember LIME-4"}, {"role": "assistant", "content": "ok"}])
-        self.assertIsNone(cli_session.codex_compact_rows({"message": ""}))
-        self.assertIsNone(cli_session.codex_compact_rows({"replacement_history": [{"type": "compaction"}]}))
+        self.assertIsNone(cli_hook.codex_compact_rows({"message": ""}))
+        self.assertIsNone(cli_hook.codex_compact_rows({"replacement_history": [{"type": "compaction"}]}))
 
     def test_codex_compaction_on_the_same_thread_replaces_history(self):
         cell = self.codex_cell({"old": 3})
@@ -177,7 +177,7 @@ class HookFollow(unittest.TestCase):
 
     def test_codex_resume_to_an_older_thread_keeps_history(self):
         cell = self.codex_cell({"older": 4})
-        cli_session.hook_main("codex", str(cell), json.dumps({"type": "agent-turn-complete", "thread-id": "older", "last-assistant-message": "hi"}))
+        cli_hook.hook_main("codex", str(cell), json.dumps({"type": "agent-turn-complete", "thread-id": "older", "last-assistant-message": "hi"}))
         self.assertEqual((cell / "session.txt").read_text().strip(), "older")
         self.assertIn("PLUM-7", self.hist.read_text())
         self.assertFalse((self.stack / "history_removed.jsonl").exists())
@@ -190,10 +190,10 @@ class HookFollow(unittest.TestCase):
         rollout.mkdir(parents=True)
         (rollout / "rollout-2026-11-12T13-37-19-real.jsonl").write_text("{}\n")
         note = lambda tid, text: json.dumps({"type": "agent-turn-complete", "thread-id": tid, "last-assistant-message": text})
-        cli_session.hook_main("codex", str(cell), note("title", '{"title": "x"}'))   # 旁支：沒存檔
+        cli_hook.hook_main("codex", str(cell), note("title", '{"title": "x"}'))   # 旁支：沒存檔
         self.assertFalse((cell / "turns.jsonl").exists())
         self.assertFalse((cell / "session.txt").exists())
-        cli_session.hook_main("codex", str(cell), note("real", "ok"))
+        cli_hook.hook_main("codex", str(cell), note("real", "ok"))
         self.assertEqual((cell / "session.txt").read_text().strip(), "real")
         self.assertEqual(json.loads((cell / "turns.jsonl").read_text())["text"], "ok")
         self.assertTrue((cell / "transcripts" / "codex-real.jsonl").is_symlink())

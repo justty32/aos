@@ -2,12 +2,12 @@
 import json, os, signal, subprocess, sys, threading, time, uuid
 
 if __package__:
-    from .cli_base import die
+    from . import cli_base
     from .cli_cell import drop_session, mark_session, transcripts
     from .cli_cfg import system_argv
     from .cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv
 else:
-    from cli_base import die
+    import cli_base
     from cli_cell import drop_session, mark_session, transcripts
     from cli_cfg import system_argv
     from cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv
@@ -46,7 +46,7 @@ def run_cli(argv, prompt, ws, timeout_ms, handed=None, env=None):
                              text=True, cwd=ws, preexec_fn=parent_death_term(),
                              env=dict(os.environ, **env) if env else None)
     except FileNotFoundError:
-        die("CliMissing", "%s is not on PATH" % argv[0])
+        cli_base.die("CliMissing", "%s is not on PATH" % argv[0])
     if handed:
         handed()
     try:
@@ -54,7 +54,7 @@ def run_cli(argv, prompt, ws, timeout_ms, handed=None, env=None):
     except subprocess.TimeoutExpired:
         p.kill()
         p.communicate()
-        die("CliFailed", "%s did not finish within %d s" % (argv[0], timeout_ms // 1000))
+        cli_base.die("CliFailed", "%s did not finish within %d s" % (argv[0], timeout_ms // 1000))
     return subprocess.CompletedProcess(argv, p.returncode, out, None)
 
 
@@ -70,7 +70,7 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None, env=
                              text=True, cwd=ws, preexec_fn=parent_death_term(),
                              env=dict(os.environ, **env) if env else None)
     except FileNotFoundError:
-        die("CliMissing", "%s is not on PATH" % argv[0])
+        cli_base.die("CliMissing", "%s is not on PATH" % argv[0])
     p.stdin.write(prompt)
     p.stdin.close()
     if handed:
@@ -88,7 +88,7 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None, env=
     finally:
         timer.cancel()
     if time.time() > deadline:
-        die("CliFailed", "%s did not finish within %d s" % (argv[0], timeout_ms // 1000))
+        cli_base.die("CliFailed", "%s did not finish within %d s" % (argv[0], timeout_ms // 1000))
     return p.returncode, lines
 
 
@@ -127,10 +127,10 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
         elif new and not transcripts("claude", new):        # 新對話第一輪就失敗、CLI 沒建出來：清掉，下一輪直接開新的（TS 9）
             drop_session(cell)
     if out is None:
-        die("CliFailed", "claude exited %d with no result in its output: %s" % (code, tail(stdout)))
+        cli_base.die("CliFailed", "claude exited %d with no result in its output: %s" % (code, tail(stdout)))
     if code != 0 or out.get("is_error"):   # result 行自己帶原因（例 模型不存在）就印它；stdout 尾巴會切在 JSON 中間
         why = out.get("result") if isinstance(out.get("result"), str) and out.get("result") else tail(stdout)
-        die("CliFailed", "claude exited %d: %s" % (code, tail(why)))
+        cli_base.die("CliFailed", "claude exited %d: %s" % (code, tail(why)))
     got = out.get("session_id")
     if new and isinstance(got, str) and got and (got != new or cell.read("session.txt") != new):
         mark_session("claude", cell, ws, got)              # result 帶了不同的 id（或交出去時沒寫成）：以它為準
@@ -169,6 +169,6 @@ def print_codex(cfg, cell, ws, stack, prompt, handed=None, sid=None):
             drop_session(cell)
         elif not sid and thread and not transcripts("codex", thread):   # 新 thread 第一輪就失敗、CLI 沒存檔：清掉（TS 9）
             drop_session(cell)
-        die("CliFailed", "codex exited %d (its reason is on stderr)" % r.returncode)
+        cli_base.die("CliFailed", "codex exited %d (its reason is on stderr)" % r.returncode)
     with open(last, encoding="utf-8") as f:
         return f.read()

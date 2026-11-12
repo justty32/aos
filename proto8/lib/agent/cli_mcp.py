@@ -2,9 +2,11 @@
 import json, os, shlex, shutil, sys
 
 if __package__:
-    from .cli_base import SELF, _lib, die, tool_io, warn
+    from . import cli_base
+    from .cli_base import SELF, _lib, tool_io
 else:
-    from cli_base import SELF, _lib, die, tool_io, warn
+    import cli_base
+    from cli_base import SELF, _lib, tool_io
 
 
 def _server_mod():
@@ -24,7 +26,7 @@ def external_servers(cfg, tool_dir, path):
         return []
     entries = cfg["mcp_servers"]
     if not isinstance(entries, list) or not all(isinstance(e, (str, dict)) and e for e in entries):
-        die("CfgBad", "%s: mcp_servers must be an array of server file paths (strings or directives)" % path)
+        cli_base.die("CfgBad", "%s: mcp_servers must be an array of server file paths (strings or directives)" % path)
     msf, base, out, seen = _server_mod(), os.path.abspath(tool_dir), [], set()
     for e in entries:
         try:
@@ -37,10 +39,10 @@ def external_servers(cfg, tool_dir, path):
                 e = resolve_path(e, path, "mcp_servers")
             s = msf.load(os.path.normpath(os.path.join(base, e)))
         except tool_io.Error as err:
-            warn("external MCP server skipped: %s %s" % (err.code, err))
+            cli_base.warn("external MCP server skipped: %s %s" % (err.code, err))
             continue
         if s["name"] in seen:
-            warn("external MCP server %s skipped: the name is already used by an earlier server file (%s)" % (s["name"], s["file"]))
+            cli_base.warn("external MCP server %s skipped: the name is already used by an earlier server file (%s)" % (s["name"], s["file"]))
             continue
         seen.add(s["name"])
         out.append(s)
@@ -52,7 +54,7 @@ def external_codex(cfg):
     if not cfg.get("external"):
         return [], {}, None
     msf = _server_mod()
-    kept, env, spec = msf.http_plan(cfg["external"], warn)
+    kept, env, spec = msf.http_plan(cfg["external"], cli_base.warn)
     launcher = _launcher(kept)
     stdio_env = {k: os.environ[k] for k in MCP_ENV if os.environ.get(k)}
     return msf.codex_argv(kept, launcher, stdio_env), env, (spec if spec["set"] or spec["from"] else None)
@@ -64,7 +66,7 @@ def _launcher(servers):
         return None
     path = shutil.which("aos-mcp-launch")
     if path is None:
-        die("CliMissing", "aos-mcp-launch is not on PATH (an stdio MCP server is listed in mcp_servers; add proto8/cmd/aos-mcp-launch/bin to PATH)")
+        cli_base.die("CliMissing", "aos-mcp-launch is not on PATH (an stdio MCP server is listed in mcp_servers; add proto8/cmd/aos-mcp-launch/bin to PATH)")
     return os.path.abspath(path)
 
 
@@ -72,7 +74,7 @@ def external_claude(cfg):
     """claude 這一次的 (留下的 http server, 只給 claude 行程的環境, 畫面啟動器的 spec)：token 走 headersHelper、不進環境；ca_file＝NODE_EXTRA_CA_CERTS。"""
     if not cfg.get("external"):
         return [], {}, None
-    return _server_mod().claude_plan(cfg["external"], warn)
+    return _server_mod().claude_plan(cfg["external"], cli_base.warn)
 
 
 def exec_wrap(argv, spec):
@@ -114,7 +116,7 @@ def mcp_argv(cfg, cell, ws, stack, external=()):
     try:
         cell.write("mcp.json", json.dumps({"mcpServers": servers}, ensure_ascii=False) + "\n")
     except OSError as e:
-        die("WriteFailed", "cannot write %s: %s" % (tool_io.place(cell.file("mcp.json")), tool_io.os_reason(e)))
+        cli_base.die("WriteFailed", "cannot write %s: %s" % (tool_io.place(cell.file("mcp.json")), tool_io.os_reason(e)))
     allow = (["mcp__aos"] if reg else []) + (["mcp__" + SUB_SERVER] if sub else []) + allowed
     return ["--mcp-config", cell.file("mcp.json"), "--allowedTools", ",".join(allow)] \
         + (["--disallowedTools", ",".join(denied)] if denied else []) \
@@ -136,7 +138,7 @@ def sub_agents(cfg, ws, stack):
     """--agents 的 JSON：蓋掉 general-purpose——拿掉主 agent 那台（mcp__aos）、內嵌只有它連得到的 aos_sub（aos-mcp 接 tools_sub 那份登記檔；
     同一個工作區與 stack、有宣告 hooks 照帶 --hooks、tools_flags 照插；不帶 --own：這隻自己加減的工具不進子 agent 那台）。"""
     if shutil.which("aos-mcp") is None:
-        die("CliMissing", "aos-mcp is not on PATH (tools_sub is set; add proto8/cmd/aos-mcp/bin to PATH)")
+        cli_base.die("CliMissing", "aos-mcp is not on PATH (tools_sub is set; add proto8/cmd/aos-mcp/bin to PATH)")
     args = ["--ws", ws, "--stack", stack] + (["--hooks", cfg["hooks_def"]] if cfg.get("hooks_def") else []) \
         + cfg.get("tools_flags", []) + [cfg["sub_registry"]]
     return {SUB_AGENT: {"description": SUB_DESCRIPTION, "prompt": SUB_PROMPT, "disallowedTools": ["mcp__aos"],
@@ -169,9 +171,9 @@ def _aos_server(cfg, ws, stack, reg):
     if cfg.get("own_registry"):                       # aos-mcp 自己挑：--own 那份在就用它，不在（reset 刪了）＝回定義那份
         reg = cfg["def_registry"]
     if not os.path.isfile(reg):                       # load_cfg 之後才被刪掉
-        die("ToolsMissing", "registry file not found: %s" % reg)
+        cli_base.die("ToolsMissing", "registry file not found: %s" % reg)
     if shutil.which("aos-mcp") is None:
-        die("CliMissing", "aos-mcp is not on PATH (tools are attached; add proto8/cmd/aos-mcp/bin to PATH)")
+        cli_base.die("CliMissing", "aos-mcp is not on PATH (tools are attached; add proto8/cmd/aos-mcp/bin to PATH)")
     args = ["--ws", ws, "--stack", stack] + (["--hooks", cfg["hooks_def"]] if cfg.get("hooks_def") else []) \
         + (["--own", os.path.abspath(cfg["own_registry"])] if cfg.get("own_registry") else []) \
         + cfg.get("tools_flags", []) + [reg]

@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from agent import cli_session  # noqa: E402
+from agent import cli_cell, cli_mcp  # noqa: E402
 
 
 class CodexMcp(unittest.TestCase):
@@ -24,8 +24,8 @@ class CodexMcp(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def settings(self, env):
-        with patch.dict(os.environ, env, clear=True), patch.object(cli_session.shutil, "which", lambda n: "/bin/" + n):
-            argv = cli_session.mcp_argv(self.cfg, None, "/w s", "/st")
+        with patch.dict(os.environ, env, clear=True), patch.object(cli_mcp.shutil, "which", lambda n: "/bin/" + n):
+            argv = cli_mcp.mcp_argv(self.cfg, None, "/w s", "/st")
         self.assertEqual(argv[::2], ["-c"] * (len(argv) // 2))
         return tomllib.loads("\n".join(argv[1::2]))["mcp_servers"]["aos"]   # every -c value parses as TOML
 
@@ -42,9 +42,9 @@ class CodexMcp(unittest.TestCase):
         self.assertEqual(aos["env"]["AOS_HOME"], 'a "b" \\ c ü')
 
     def test_claude_unchanged(self):
-        cell = cli_session.Cell(str(self.tmp / "cell"))
-        with patch.object(cli_session.shutil, "which", lambda n: "/bin/" + n):
-            argv = cli_session.mcp_argv(dict(self.cfg, kind="claude"), cell, "/w", "/st")
+        cell = cli_cell.Cell(str(self.tmp / "cell"))
+        with patch.object(cli_mcp.shutil, "which", lambda n: "/bin/" + n):
+            argv = cli_mcp.mcp_argv(dict(self.cfg, kind="claude"), cell, "/w", "/st")
         self.assertEqual(argv, ["--mcp-config", cell.file("mcp.json"), "--allowedTools", "mcp__aos"])
         self.assertNotIn("env", json.loads(Path(cell.file("mcp.json")).read_text())["mcpServers"]["aos"])
 

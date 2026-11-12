@@ -3,11 +3,13 @@ import json, os, sys
 
 if __package__:
     from .agent_files import declared_files
-    from .cli_base import RESEED_BYTES, _lib, die, tool_io
+    from . import cli_base
+    from .cli_base import RESEED_BYTES, _lib, tool_io
     from .cli_mcp import external_servers
 else:
     from agent_files import declared_files
-    from cli_base import RESEED_BYTES, _lib, die, tool_io
+    import cli_base
+    from cli_base import RESEED_BYTES, _lib, tool_io
     from cli_mcp import external_servers
 
 
@@ -17,21 +19,21 @@ def load_cfg(tool_dir):
         with open(path, encoding="utf-8") as f:
             cfg = json.load(f)
     except FileNotFoundError:
-        die("CfgMissing", path)
+        cli_base.die("CfgMissing", path)
     except (OSError, ValueError) as e:
-        die("CfgBad", "%s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
+        cli_base.die("CfgBad", "%s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
     if not isinstance(cfg, dict) or cfg.get("kind") not in ("claude", "codex"):
-        die("CfgBad", "%s: kind must be claude or codex" % path)
+        cli_base.die("CfgBad", "%s: kind must be claude or codex" % path)
     for k in ("flags", "print_flags", "tools_flags"):
         if not isinstance(cfg.get(k, []), list) or not all(isinstance(a, str) for a in cfg.get(k, [])):
-            die("CfgBad", "%s: %s must be an array of strings" % (path, k))
+            cli_base.die("CfgBad", "%s: %s must be an array of strings" % (path, k))
     rb = cfg.get("reseed_bytes", RESEED_BYTES)                     # 11-10 two-machines 05：開新對話時接在題目前的紀錄上限
     if not isinstance(rb, int) or isinstance(rb, bool) or rb < 0:
-        die("CfgBad", "%s: reseed_bytes must be a non-negative integer" % path)
+        cli_base.die("CfgBad", "%s: reseed_bytes must be a non-negative integer" % path)
     try:
         files = declared_files(tool_dir)
     except ValueError as e:
-        die("CfgBad", str(e))
+        cli_base.die("CfgBad", str(e))
     cfg["registry"] = registry(cfg, tool_dir, path, files)
     cfg["sub_registry"] = sub_registry(cfg, tool_dir, path)        # 11-12 eca-task-subagent：cli.json 的 tools_sub
     cfg["hooks_def"] = os.path.abspath(tool_dir) if files.get("hooks") else None   # 11-10 hook：宣告了 hooks＝aos-mcp 帶 --hooks
@@ -48,9 +50,9 @@ def read_llm(path):
     except FileNotFoundError:
         return {}
     except (OSError, ValueError) as e:
-        die("CfgBad", "%s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
+        cli_base.die("CfgBad", "%s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
     if not isinstance(llm, dict):
-        die("CfgBad", "%s: must be a flat object" % path)
+        cli_base.die("CfgBad", "%s: must be a flat object" % path)
     return llm
 
 
@@ -72,7 +74,7 @@ def stack_copies(cfg, tool_dir, files):
             llm.update(read_llm(os.path.join(stack, files["llm"])))
     model = llm.get("model")
     if "model" in llm and (not isinstance(model, str) or not model):
-        die("CfgBad", "model in llm.json must be a non-empty string (same as agent-fsm's brain.py), not %s" % json.dumps(model))
+        cli_base.die("CfgBad", "model in llm.json must be a non-empty string (same as agent-fsm's brain.py), not %s" % json.dumps(model))
     if model:
         flags = list(cfg.get("flags", []))
         if "--model" in flags[:-1]:
@@ -115,7 +117,7 @@ def system_argv(cfg):
         with open(path, encoding="utf-8") as f:
             text = f.read()
     except (OSError, UnicodeError) as e:
-        die("CfgBad", "cannot read the system text %s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
+        cli_base.die("CfgBad", "cannot read the system text %s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
     return ["-c", "developer_instructions=" + json.dumps(text, ensure_ascii=False)]
 
 
@@ -132,12 +134,12 @@ def _named_registry(cfg, key, base, path):
         try:
             tools = resolve_path(tools, path, key)
         except tool_io.Error as e:
-            die(e.code, str(e))
+            cli_base.die(e.code, str(e))
     if not isinstance(tools, str) or not tools:
-        die("CfgBad", "%s: %s must be the path of a registry file (a non-empty string)" % (path, key))
+        cli_base.die("CfgBad", "%s: %s must be the path of a registry file (a non-empty string)" % (path, key))
     reg = os.path.normpath(os.path.join(base, tools))
     if not os.path.isfile(reg):
-        die("ToolsMissing", "%s: registry file named by %s not found: %s" % (path, key, reg))
+        cli_base.die("ToolsMissing", "%s: registry file named by %s not found: %s" % (path, key, reg))
     return reg
 
 
@@ -147,9 +149,9 @@ def sub_registry(cfg, tool_dir, path):
     if "tools_sub" not in cfg:
         return None
     if cfg["kind"] != "claude":
-        die("CfgBad", "%s: tools_sub is only for kind claude" % path)
+        cli_base.die("CfgBad", "%s: tools_sub is only for kind claude" % path)
     if "--agents" in cfg.get("flags", []) + cfg.get("print_flags", []):
-        die("CfgBad", "%s: tools_sub and --agents in flags cannot be used together (tools_sub adds its own --agents)" % path)
+        cli_base.die("CfgBad", "%s: tools_sub and --agents in flags cannot be used together (tools_sub adds its own --agents)" % path)
     return _named_registry(cfg, "tools_sub", os.path.abspath(tool_dir), path)
 
 
@@ -164,5 +166,5 @@ def registry(cfg, tool_dir, path, files):
     if os.path.isfile(reg):
         return reg
     if "tools_flags" in cfg:
-        die("CfgBad", "%s: tools_flags given but no registry file (no tools, and no default registry alongside)" % path)
+        cli_base.die("CfgBad", "%s: tools_flags given but no registry file (no tools, and no default registry alongside)" % path)
     return None

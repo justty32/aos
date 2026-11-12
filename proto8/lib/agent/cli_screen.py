@@ -2,13 +2,15 @@
 import fcntl, json, os, shlex, sys, time
 
 if __package__:
-    from .cli_base import SELF, TMUX_SESSION, die, warn
+    from . import cli_base
+    from .cli_base import SELF, TMUX_SESSION
     from .cli_cell import Cell, drop_session, link_transcript, note_cell, session_here
     from .cli_cfg import load_cfg, system_argv
     from .cli_hook import codex_note_compacts
     from .cli_mcp import exec_wrap, external_claude, external_codex, guard_hooks, mcp_argv
 else:
-    from cli_base import SELF, TMUX_SESSION, die, warn
+    import cli_base
+    from cli_base import SELF, TMUX_SESSION
     from cli_cell import Cell, drop_session, link_transcript, note_cell, session_here
     from cli_cfg import load_cfg, system_argv
     from cli_hook import codex_note_compacts
@@ -68,10 +70,10 @@ def start(cfg, cell, ws, stack):
         r = cell.tmux("-f", cell.file("tmux.conf"), "new-session", "-d", "-s", TMUX_SESSION,
                       "-x", "160", "-y", "45", "-c", ws, "--", *argv, new=True)
     except FileNotFoundError:
-        die("TmuxMissing", "tmux is not on PATH")
+        cli_base.die("TmuxMissing", "tmux is not on PATH")
     if r.returncode != 0:
         sys.stderr.write(r.stderr)                         # tmux 自己的話原樣透出（R10）
-        die("CliFailed", "tmux new-session exited %d" % r.returncode)
+        cli_base.die("CliFailed", "tmux new-session exited %d" % r.returncode)
     # 等畫面穩下來（CLI 開機要幾秒；太早貼字會被吃掉）：畫面有字、連續 3 秒沒變、不是停在「Resuming session…」
     # （10-24 實跑：codex 的「Resuming session…」會停 2 秒以上不動，1.5 秒的門檻會太早放行）
     last, stable_since, deadline = None, time.time(), time.time() + 30
@@ -83,7 +85,7 @@ def start(cfg, cell, ws, stack):
             break
         time.sleep(0.25)
     if not cell.alive():
-        die("CliFailed", "%s exited right after starting (wrong session id?)" % argv[0])
+        cli_base.die("CliFailed", "%s exited right after starting (wrong session id?)" % argv[0])
     return True
 
 
@@ -99,7 +101,7 @@ def attach_main(argv, agent_dir):
     it = iter(argv)
     for a in it:
         if a == "--ws":
-            ws = next(it, None) or die("ArgumentsBad", "--ws needs a path")
+            ws = next(it, None) or cli_base.die("ArgumentsBad", "--ws needs a path")
         elif a.startswith("--ws="):
             ws = a[5:]
         elif a == "-d":
@@ -108,12 +110,12 @@ def attach_main(argv, agent_dir):
             print(ATTACH_USAGE)
             return
         elif a.startswith("-"):
-            die("FlagUnknown", a)
+            cli_base.die("FlagUnknown", a)
         else:
             names.append(a)
     ws = os.path.abspath(ws)
     if not os.path.isdir(ws):
-        die("WsMissing", ws)
+        cli_base.die("WsMissing", ws)
     stack = os.environ.get("AOS_STACK") or os.path.join(ws, ".stack")
     tools_dir = os.path.join(agent_dir, "tools")
     known = sorted(t for t in os.listdir(tools_dir) if os.path.isfile(os.path.join(tools_dir, t, "cli.json")))
@@ -126,16 +128,16 @@ def attach_main(argv, agent_dir):
             print("%-8s %s | session %s | %s" % (t, state, cell.read("session.txt") or "(none yet)", cell.path))
         return
     if len(names) > 1:
-        die("ArgumentsBad", "attach one tool at a time")
+        cli_base.die("ArgumentsBad", "attach one tool at a time")
     if names[0] not in known:
-        die("ToolUnknown", "%s (known: %s)" % (names[0], ", ".join(known)))
+        cli_base.die("ToolUnknown", "%s (known: %s)" % (names[0], ", ".join(known)))
     cell = Cell(os.path.join(stack, "tools", names[0]))
     note_cell(cell, os.path.realpath(os.path.join(tools_dir, names[0])), ws, cell.path)   # 工具形：stack＝這格（同 call_main）
     opened = open_cell(cell)
     if detached:
         print("%s screen %s: %s" % (names[0], "opened" if opened else "already open", cell.sock()))
         return
-    warn("attaching to %s (Ctrl-\\ detaches, the screen stays; /exit inside to end)" % names[0])
+    cli_base.warn("attaching to %s (Ctrl-\\ detaches, the screen stays; /exit inside to end)" % names[0])
     os.execvp("tmux", ["tmux", "-S", cell.sock(), "attach", "-t", TMUX_SESSION])
 
 
@@ -144,16 +146,16 @@ def open_cell(cell):
     stack.txt 只在接了工具時要（沒有＝CellBad；11-03 eca-tools）。"""
     tool_dir, ws, stack = cell.read("tool.txt"), cell.read("ws.txt"), cell.read("stack.txt")
     if not tool_dir or not ws:
-        die("CellBad", "%s has no tool.txt/ws.txt (not a cell cli_session has used)" % cell.path)
+        cli_base.die("CellBad", "%s has no tool.txt/ws.txt (not a cell cli_session has used)" % cell.path)
     tool_dir = os.path.normpath(os.path.join(cell.path, tool_dir))
     ws = os.path.normpath(os.path.join(cell.path, ws))
     stack = os.path.normpath(os.path.join(cell.path, stack)) if stack else ""
     cfg = load_cfg(tool_dir)
     if (cfg.get("registry") or cfg.get("sub_registry")) and not stack:
-        die("CellBad", "%s has no stack.txt (tools are attached; need the stack for aos-mcp)" % cell.path)
+        cli_base.die("CellBad", "%s has no stack.txt (tools are attached; need the stack for aos-mcp)" % cell.path)
     f, ok = cell.lock()
     if not ok:
-        warn("the agent is using this conversation; waiting for its turn to finish...")
+        cli_base.warn("the agent is using this conversation; waiting for its turn to finish...")
         fcntl.flock(f, fcntl.LOCK_EX)
     with f:
         return start(cfg, cell, ws, stack)

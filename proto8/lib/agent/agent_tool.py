@@ -5,22 +5,22 @@
 import os, sys
 
 import tool_io
-try:
-    import cli_session
+try:                                    # 工具夾自帶一份（cli_session.py 與全部 cli_*.py）就用它，否則用 lib/agent 的
+    import cli_ask, cli_base, cli_cell, cli_cfg
 except ModuleNotFoundError as error:
-    if error.name != "cli_session":
+    if error.name not in {"cli_ask", "cli_base", "cli_cell", "cli_cfg"}:
         raise
-    import agent.cli_session as cli_session
+    from agent import cli_ask, cli_base, cli_cell, cli_cfg
 
 
 die = tool_io.die
 
 
 def ask_cli(tool_dir, name, help_text):
-    """claude、codex 工具形：tool_io 收參數與工作區，cli_session 問一輪並續存對話。"""
+    """claude、codex 工具形：tool_io 收參數與工作區，cli_ask.ask 問一輪並續存對話。"""
     tool_io.start(name, help_text)
-    cli_session.PROG, cli_session.ECHO = name, True
-    cfg = cli_session.load_cfg(tool_dir)
+    cli_base.PROG, cli_base.ECHO = name, True             # 各分檔的錯誤行都經 cli_base.die
+    cfg = cli_cfg.load_cfg(tool_dir)
     stack = os.environ.get("AOS_STACK")
     if not stack:
         die("StackMissing", "AOS_STACK is not set")
@@ -28,6 +28,6 @@ def ask_cli(tool_dir, name, help_text):
     args = tool_io.arguments()
     if not isinstance(args.get("prompt"), str) or not args["prompt"].strip():
         die("ArgumentsBad", "missing prompt (a non-empty string)")
-    cell = cli_session.Cell(stack)
-    text = cli_session.ask(cfg, cell, os.path.abspath(tool_dir), ws, cell.path, args["prompt"], "yield")
+    cell = cli_cell.Cell(stack)
+    text = cli_ask.ask(cfg, cell, os.path.abspath(tool_dir), ws, cell.path, args["prompt"], "yield")
     sys.stdout.write(text if text.endswith("\n") else text + "\n")

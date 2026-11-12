@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from agent import cli_session  # noqa: E402
+from agent import cli_cfg  # noqa: E402
 
 
 @unittest.skipUnless(shutil.which("aos-directive"), "aos-directive not on PATH")
@@ -37,13 +37,13 @@ class ToolsDirective(unittest.TestCase):
 
     def registry(self, **env):
         with patch.dict(os.environ, dict(self.env, **env), clear=True):
-            return cli_session.load_cfg(str(self.tool))["registry"]
+            return cli_cfg.load_cfg(str(self.tool))["registry"]
 
     def fails(self, **env):
         err = io.StringIO()
         with patch.dict(os.environ, dict(self.env, **env), clear=True), contextlib.redirect_stderr(err):
             with self.assertRaises(SystemExit) as cm:
-                cli_session.load_cfg(str(self.tool))
+                cli_cfg.load_cfg(str(self.tool))
         self.assertEqual(cm.exception.code, 1)
         return err.getvalue().strip().splitlines()[-1]
 

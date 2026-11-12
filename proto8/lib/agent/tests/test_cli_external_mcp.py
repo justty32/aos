@@ -16,7 +16,7 @@ from unittest.mock import patch
 sys.dont_write_bytecode = True
 LIB = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(LIB))
-from agent import cli_session  # noqa: E402
+from agent import cli_mcp, cli_print  # noqa: E402
 import mcp_server_file as msf  # noqa: E402
 from tool_io import Error  # noqa: E402
 
@@ -56,7 +56,7 @@ class ExternalMcp(unittest.TestCase):
         c = {"kind": kind, "mcp_servers": entries}
         err = io.StringIO()
         with redirect_stderr(err):
-            c["external"] = cli_session.external_servers(c, str(self.tmp), str(self.tmp / "cli.json"))
+            c["external"] = cli_mcp.external_servers(c, str(self.tmp), str(self.tmp / "cli.json"))
         return c, err.getvalue()
 
     def test_load_http(self):
@@ -86,7 +86,7 @@ class ExternalMcp(unittest.TestCase):
         self.server("a.json", only=["echo"])
         c, err = self.cfg(["mcp/a.json"])
         self.assertEqual(err, "")
-        argv, env, spec = cli_session.external_codex(c)
+        argv, env, spec = cli_mcp.external_codex(c)
         self.assertEqual(argv[::2], ["-c"] * (len(argv) // 2))
         conf = tomllib.loads("\n".join(argv[1::2]))
         site = conf["mcp_servers"]["site"]
@@ -111,7 +111,7 @@ class ExternalMcp(unittest.TestCase):
         self.assertIn("already used", err)
         err2 = io.StringIO()
         with redirect_stderr(err2):
-            argv, env, _ = cli_session.external_codex(c)
+            argv, env, _ = cli_mcp.external_codex(c)
         self.assertIn("other skipped", err2.getvalue())
         self.assertNotIn(self.token, err + err2.getvalue())
         self.assertNotIn("mcp_servers.other.", " ".join(argv))
@@ -124,7 +124,7 @@ class ExternalMcp(unittest.TestCase):
         c, _ = self.cfg(["mcp/a.json", "mcp/b.json"])
         err = io.StringIO()
         with redirect_stderr(err):
-            argv, _, _ = cli_session.external_codex(c)
+            argv, _, _ = cli_mcp.external_codex(c)
         self.assertIn("two skipped", err.getvalue())
         self.assertNotIn("mcp_servers.two.", " ".join(argv))
 
@@ -139,19 +139,19 @@ class ExternalMcp(unittest.TestCase):
     def test_stdio_both_bodies(self):
         f = self.stdio(only=["peek_now_time"])
         launcher = str(LIB.parent / "cmd" / "aos-mcp-launch" / "bin" / "aos-mcp-launch")
-        with patch.object(cli_session.shutil, "which", lambda n: launcher if n == "aos-mcp-launch" else None), \
+        with patch.object(cli_mcp.shutil, "which", lambda n: launcher if n == "aos-mcp-launch" else None), \
                 patch.dict(os.environ, {"AOS_HOME": "/p8"}):
             c, err = self.cfg(["mcp/s.json"], kind="claude")
             self.assertEqual(err, "")
-            ext, env, spec = cli_session.external_claude(c)
+            ext, env, spec = cli_mcp.external_claude(c)
             cell = FakeCell(self.tmp)
-            argv = cli_session.mcp_argv(c, cell, "/w", "/st", ext)
+            argv = cli_mcp.mcp_argv(c, cell, "/w", "/st", ext)
             self.assertEqual(json.loads(Path(cell.file("mcp.json")).read_text())["mcpServers"],
                              {"demo": {"command": launcher, "args": [f]}})
             self.assertEqual(argv[2:], ["--allowedTools", "mcp__demo__peek_now_time"])
             self.assertEqual((env, spec), ({}, None))
             c, _ = self.cfg(["mcp/s.json"])
-            argv, env, spec = cli_session.external_codex(c)
+            argv, env, spec = cli_mcp.external_codex(c)
         demo = tomllib.loads("\n".join(argv[1::2]))["mcp_servers"]["demo"]
         self.assertEqual(demo, {"command": launcher, "args": [f], "env": {"AOS_HOME": "/p8"},
                                 "default_tools_approval_mode": "approve", "enabled_tools": ["peek_now_time"]})
@@ -186,9 +186,9 @@ class ExternalMcp(unittest.TestCase):
     def test_stdio_launcher_missing(self):
         self.stdio()
         c, _ = self.cfg(["mcp/s.json"])
-        with patch.object(cli_session.shutil, "which", lambda n: None), redirect_stderr(io.StringIO()), \
+        with patch.object(cli_mcp.shutil, "which", lambda n: None), redirect_stderr(io.StringIO()), \
                 self.assertRaises(SystemExit):
-            cli_session.external_codex(c)
+            cli_mcp.external_codex(c)
 
     def test_claude_side(self):
         self.server("a.json", except_=None)
@@ -197,8 +197,8 @@ class ExternalMcp(unittest.TestCase):
         c, err = self.cfg(["mcp/a.json", "mcp/b.json", "mcp/c.json"], kind="claude")
         self.assertEqual(err, "")
         cell = FakeCell(self.tmp)
-        ext, env, spec = cli_session.external_claude(c)
-        argv = cli_session.mcp_argv(c, cell, "/w", "/st", ext)
+        ext, env, spec = cli_mcp.external_claude(c)
+        argv = cli_mcp.mcp_argv(c, cell, "/w", "/st", ext)
         self.assertEqual(env, {"NODE_EXTRA_CA_CERTS": str(self.tmp / "keys" / "ca.pem")})
         self.assertEqual(spec, {"set": env, "from": []})
         self.assertEqual(argv[:2], ["--mcp-config", cell.file("mcp.json")])
@@ -218,11 +218,11 @@ class ExternalMcp(unittest.TestCase):
 
     def test_no_key_no_change(self):
         c = {"kind": "codex"}
-        self.assertEqual(cli_session.external_servers(c, str(self.tmp), "cli.json"), [])
-        self.assertEqual(cli_session.external_codex({"kind": "codex", "external": []}), ([], {}, None))
+        self.assertEqual(cli_mcp.external_servers(c, str(self.tmp), "cli.json"), [])
+        self.assertEqual(cli_mcp.external_codex({"kind": "codex", "external": []}), ([], {}, None))
 
     def test_run_cli_env_only_child(self):
-        r = cli_session.run_cli(["sh", "-c", 'cat >/dev/null; test "$SITE_TOKEN" = "$1" && echo same', "sh", self.token],
+        r = cli_print.run_cli(["sh", "-c", 'cat >/dev/null; test "$SITE_TOKEN" = "$1" && echo same', "sh", self.token],
                                 "", str(self.tmp), 10000, env={"SITE_TOKEN": self.token})
         self.assertEqual(r.stdout.strip(), "same")
         self.assertNotIn("SITE_TOKEN", os.environ)
@@ -230,13 +230,13 @@ class ExternalMcp(unittest.TestCase):
     def test_exec_launcher(self):
         self.server("a.json")
         c, _ = self.cfg(["mcp/a.json"])
-        _, _, spec = cli_session.external_codex(c)
-        argv = cli_session.exec_wrap(["sh", "-c", 'test -n "$SITE_TOKEN" && echo "$SSL_CERT_FILE"'], spec)
+        _, _, spec = cli_mcp.external_codex(c)
+        argv = cli_mcp.exec_wrap(["sh", "-c", 'test -n "$SITE_TOKEN" && echo "$SSL_CERT_FILE"'], spec)
         self.assertNotIn(self.token, " ".join(argv))
         r = subprocess.run(argv, capture_output=True, text=True, env={k: v for k, v in os.environ.items() if k != "SITE_TOKEN"})
         self.assertEqual(r.stdout.strip(), str(self.tmp / "keys" / "ca.pem"))
         self.assertNotIn(self.token, r.stdout + r.stderr)
-        self.assertEqual(cli_session.exec_wrap(["x"], None), ["x"])
+        self.assertEqual(cli_mcp.exec_wrap(["x"], None), ["x"])
 
 
 if __name__ == "__main__":

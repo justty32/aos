@@ -126,13 +126,13 @@ def screen_open(folder, stack):
     if kind is None:
         return False
     try:
-        from agent import cli_session
+        from agent import cli_base, cli_cell
         cell = os.path.join(stack, kind)
-        sock = cli_session.tty_socket(cell)
+        sock = cli_cell.tty_socket(cell)
         if not os.path.exists(sock):
             return False
         import subprocess
-        return subprocess.run(["tmux", "-S", sock, "has-session", "-t", cli_session.TMUX_SESSION],
+        return subprocess.run(["tmux", "-S", sock, "has-session", "-t", cli_base.TMUX_SESSION],
                               capture_output=True).returncode == 0
     except Exception:                           # 看不出來＝不提醒（只是提醒，不擋）
         return False
