@@ -21,10 +21,11 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   '{"$env":"AOS_HOME","$path":"/lib/base/shell"}'；現在解一次只為了驗與取名，解出來的值不寫回）。
   手寫的相對路徑從這份檔的資料夾算。
 三種登記對象（種類照 aos-exec 認法，N-61：資料夾；檔有 +x＝可執行檔；檔沒 +x＝JSON）：
-  dir   資料夾裡有 _tooldef.json；_metainfo.json 有就一起給（11-04 起只認帶 .json 的：_ 開頭的資料檔一律帶副檔名，
-        不帶的 _tooldef／_metainfo 不認——沒 _tooldef.json＝ToolDefMissing）。叫＝aos-exec 資料夾，arguments 進 stdin。
-  json  JSON 檔（aos-exec 跑得動的那種）頂層要有 _tooldef 物件；_metainfo key 有就一起給。叫＝aos-exec 檔，arguments 進 stdin。
-        也收 檔.json#/指標（11-10 深夜 tools-def，使用者「2.收」）：那個物件要有 _tooldef（_metainfo 有就給），叫＝aos-exec 檔#/指標
+  dir   資料夾裡有 _tooldef.json，或 _metainfo.json 裡有 tooldef 鍵；_metainfo.json 有就一起給（11-04 起只認帶 .json 的：
+        _ 開頭的資料檔一律帶副檔名，不帶的 _tooldef／_metainfo 不認——兩處都沒有＝ToolDefMissing）。叫＝aos-exec 資料夾，arguments 進 stdin。
+        兩處都有（11-12 metainfo，N-69 推薦讀法）＝先讀 _metainfo 裡的 tooldef、再讀獨立的 _tooldef，頂層鍵淺合併、同名整鍵外面贏。
+  json  JSON 檔（aos-exec 跑得動的那種）頂層要有 _tooldef 物件或 _metainfo.tooldef（合併同上）；_metainfo key 有就一起給。叫＝aos-exec 檔，arguments 進 stdin。
+        也收 檔.json#/指標（11-10 深夜 tools-def，使用者「2.收」）：那個物件要有 _tooldef 或 _metainfo.tooldef（_metainfo 有就給），叫＝aos-exec 檔#/指標
         （照 aos-exec：跑那個物件的 _entry，cwd＝JSON 檔的資料夾，所以 _entry 裡的 python3 x.py 從 JSON 檔的資料夾算）。
         存法同上：只有 #/ 前面那段算相對／絕對，#/ 後面原樣存；預設名字＝指標最後一段（~1、~0 解開）。
   exe   python 或其他可執行檔：`XXX --tooldef` 在 stdout 吐工具定義（JSON 物件，10 秒內、退 0）；結果快取在
@@ -87,6 +88,9 @@ usage: aos-tools [--file F] SUBCOMMAND [FLAGS...] [ARGS...]
 The list is one JSON file, the registry (default: ./tools.json). A tool is a folder
 with _tooldef.json, a JSON file with a _tooldef key (or FILE.json#/POINTER: the
 object there has the _tooldef key), or an executable that answers --tooldef. Agents read the list before each thought and call tools through it.
+Folders and JSON objects may also carry the definition as "tooldef" inside
+_metainfo(.json); when both exist they are merged one level deep and the
+separate _tooldef wins on the same key.
 
 A registry may carry one line, "$override": OTHER_FILE (or a list of files). It then
 holds only the differences from OTHER_FILE (which may override another file in turn).
@@ -133,7 +137,7 @@ usage: aos-tools [--file F] add [--name N] [--replace] [--no-cache]
 
 XXX is a tool folder, JSON file or executable; flags may go before or after it.
 It may also be FILE.json#/POINTER: the object at that JSON Pointer holds _entry,
-_tooldef and optional _metainfo keys (aos-exec runs it from the JSON file's folder).
+_tooldef (or _metainfo.tooldef) and optional _metainfo keys (aos-exec runs it from the JSON file's folder).
 It is stored the way you give it: absolute stays absolute; relative (to the
 current directory) is stored relative to F. --path-json stores the JSON as given - a path string or a
 directive such as {"$env": "AOS_HOME", "$path": "/lib/base/shell"} - and it is
@@ -332,6 +336,19 @@ def check_tooldef(td, where):
     return td
 
 
+def merge_tooldef(meta, mwhere, outside, owhere):
+    """11-12 metainfo（N-69 推薦讀法）：_metainfo 裡的 tooldef 為底、獨立的 _tooldef 蓋上去——頂層鍵淺合併，同名整鍵外面贏
+    （parameters 整鍵換、不往下合 schema）。兩處各自先驗形狀（錯的句子指明哪一處）；兩處都沒有＝None。"""
+    inside = None
+    if isinstance(meta, dict) and "tooldef" in meta:
+        inside = check_tooldef(meta["tooldef"], mwhere)
+    if outside is not None:
+        outside = check_tooldef(outside, owhere)
+    if inside is None:
+        return outside
+    return inside if outside is None else {**inside, **outside}
+
+
 def stamp(path):
     st = os.stat(path)
     return "%d-%d" % (st.st_mtime_ns, st.st_size)
@@ -476,18 +493,20 @@ def inspect(path, cache=None):
         raise Fail("RegistryBad", "%s is %s; \"cache\": false is only for executables (exe)" % (path, kind))
     out = {"kind": kind}
     if kind == "dir":
-        p = first_file(path, ("_tooldef.json",))   # 11-04 起只認帶 .json 的（資料檔帶副檔名；_entry 是程式才不帶）
-        if p is None:
-            raise Fail("ToolDefMissing", "%s is a dir and needs _tooldef.json inside (_tooldef without .json is not accepted)" % path)
-        out["tooldef"] = check_tooldef(read_json(p, None, "ToolDefBad")[1], p)
         m = first_file(path, ("_metainfo.json",))
         meta = read_json(m, None, "ToolDefBad")[1] if m else None
+        p = first_file(path, ("_tooldef.json",))   # 11-04 起只認帶 .json 的（資料檔帶副檔名；_entry 是程式才不帶）
+        td = merge_tooldef(meta, "%s#/tooldef" % m, read_json(p, None, "ToolDefBad")[1] if p else None, p)
+        if td is None:
+            raise Fail("ToolDefMissing", "%s is a dir and needs _tooldef.json inside, or a tooldef key in _metainfo.json (_tooldef without .json is not accepted)" % path)
+        out["tooldef"] = td
     elif kind == "json" and split_ptr(path)[1] is not None:
         obj = read_object(path)
-        if "_tooldef" not in obj:
-            raise Fail("ToolDefMissing", "%s is a JSON object and needs a _tooldef key" % path)
-        out["tooldef"] = check_tooldef(obj["_tooldef"], path + "/_tooldef")
         meta = obj.get("_metainfo")
+        td = merge_tooldef(meta, path + "/_metainfo/tooldef", obj.get("_tooldef"), path + "/_tooldef")
+        if td is None:
+            raise Fail("ToolDefMissing", "%s is a JSON object and needs a _tooldef key (or _metainfo.tooldef)" % path)
+        out["tooldef"] = td
     elif kind == "json":
         try:
             raw, td = read_json(path, "_tooldef", "ToolDefBad")
@@ -495,10 +514,11 @@ def inspect(path, cache=None):
             if e.code != "ToolDefBad":
                 raise
             raise Fail(e.code, "%s; a file without exec permission is read as JSON (python/executables need chmod +x and a #! line)" % e)
+        meta = read_json(path, "_metainfo", "ToolDefBad")[1] if isinstance(raw, dict) and "_metainfo" in raw else None
+        td = merge_tooldef(meta, path + "#/_metainfo/tooldef", td, path + "#/_tooldef")
         if not isinstance(raw, dict) or td is None:
-            raise Fail("ToolDefMissing", "%s is a JSON file (no exec permission) and needs a top-level _tooldef (python/executables need chmod +x)" % path)
-        out["tooldef"] = check_tooldef(td, path + "#/_tooldef")
-        meta = read_json(path, "_metainfo", "ToolDefBad")[1] if "_metainfo" in raw else None
+            raise Fail("ToolDefMissing", "%s is a JSON file (no exec permission) and needs a top-level _tooldef or _metainfo.tooldef (python/executables need chmod +x)" % path)
+        out["tooldef"] = td
     else:
         td = run_tooldef(path) if cache is False else exe_tooldef(path)
         out["tooldef"] = check_tooldef(td, path + " --tooldef")

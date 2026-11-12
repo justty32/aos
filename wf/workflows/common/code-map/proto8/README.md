@@ -8,7 +8,7 @@
 | 冊 | 夾 | 段 | 列／檔 |
 |---|---|---|---|
 | [cases](cases.md) | `proto8/cases/` | `box-probe/`、`smoke/` | 11／11 |
-| [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/` | 90／93 |
+| [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/` | 91／94 |
 | [cmd-2](cmd-2.md) | `proto8/cmd/` | `aos-clock/`、`aos-clock-register/`、`aos-daemon-ctl/`、`aos-eca/`、`aos-feedback/`、`aos-grow/`、`aos-mailbox/` |  |
 | [cmd-3](cmd-3.md) | `proto8/cmd/` | `aos-mcp/`、`aos-sandbox/`、`aos-sweeper/`、`aos-tools/` |  |
 | [extras](extras.md) | `proto8/extras/` | `gitignore-check/`、`image-move-check/`、`langs/` | 15／15 |
