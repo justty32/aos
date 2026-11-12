@@ -1,4 +1,4 @@
-← [回入口 README.md](../README.md)｜段落：system（11-11）｜上一份：[06-hook](06-hook.md)
+← [回入口 README.md](../README.md)｜段落：system｜上一份：[06-hook](06-hook.md)
 
 # system：改這隻自己的 system 文字
 
@@ -15,8 +15,8 @@
 | 身體 | 怎麼用 | 空文字 | 何時生效 |
 |---|---|---|---|
 | agent-fsm（含 reviewer） | `brain.py` 當最前面那則 system 訊息（**取代**定義那份） | 不送 system 訊息 | 每格 think 重讀＝同一題的下一格 |
-| eca claude | 起 claude 時加 `--append-system-prompt-file <檔>`（**附加**在 claude 自己的 system prompt 後面）；宣告了就一律加 `--system-prompt-snapshot off`（claude 預設把對話第一輪的 system 記下來、`--resume` 照舊送；off 才每輪重讀） | 只加 snapshot off | 下一輪（11-11 haiku 實測：同一段 `--resume` 對話裡換檔、reset，下一輪都跟著變）；畫面開著＝要關掉再開 |
-| eca codex | 起 codex 時加 `-c developer_instructions=<文字>`（附加成 developer 訊息） | 不加 | **下一段新對話**：codex 只在對話開頭讀一次，`exec resume` 帶新的不生效（11-11 gpt-6-luna 實測）；`set`／`reset` 會提醒、不自動開新對話（使用者裁「只提醒、不自動」） |
+| eca claude | 起 claude 時加 `--append-system-prompt-file <檔>`（**附加**在 claude 自己的 system prompt 後面）；宣告了就一律加 `--system-prompt-snapshot off`（claude 預設把對話第一輪的 system 記下來、`--resume` 照舊送；off 才每輪重讀） | 只加 snapshot off | 下一輪（haiku 實測：同一段 `--resume` 對話裡換檔、reset，下一輪都跟著變）；畫面開著＝要關掉再開 |
+| eca codex | 起 codex 時加 `-c developer_instructions=<文字>`（附加成 developer 訊息） | 不加 | **下一段新對話**：codex 只在對話開頭讀一次，`exec resume` 帶新的不生效（gpt-6-luna 實測）；`set`／`reset` 會提醒、不自動開新對話（使用者裁「只提醒、不自動」） |
 
 改了會讓腦的 prompt cache 失效一次（system 在最前面）。
 
@@ -33,4 +33,4 @@ aos-agent system reset [-y]             # 刪自己那份；終端會問、-y �
 
 沒給動作＝`get`。`set` 不給檔而 stdin 是終端＝`ArgumentsBad`（不卡住等你打字）。畫面開著時 `set`／`reset` 照做，stderr 一行提醒「要重開畫面才生效」。同一份定義掛了別的名字時提醒「只改了這隻的」（同 `llm`）。
 
-`llm set system=…` 不是改 system：`ArgumentsBad`、什麼都不存（同一次給的別的鍵也不存），錯誤行指到 `aos-agent system set`；`self_llm` 給 `settings.system` 同樣 `ArgumentsBad`、指到 `self_system`（11-11 使用者翻案「報錯並指路」，原代定照存＋提醒，[backlog-rulings](../../../thinking/2026-11/11/backlog-rulings.md)）。
+`llm set system=…` 不是改 system：`ArgumentsBad`、什麼都不存（同一次給的別的鍵也不存），錯誤行指到 `aos-agent system set`；`self_llm` 給 `settings.system` 同樣 `ArgumentsBad`、指到 `self_system`（使用者 11-11「報錯並指路」，[backlog-rulings](../../../thinking/2026-11/11/backlog-rulings.md)）。
