@@ -2,7 +2,9 @@
 #
 # 一個工具的小格（$AOS_STACK，act 給的是 $AOS_STACK/tools/<工具名>/，11-02 起）裡放：
 #   session.txt   這段對話的 id（claude 的 session id／codex 的 thread id）：claude 新對話在交出去那一刻就寫（id 是我們產的）；
-#                 codex 新對話讀到輸出的 thread.started 就寫（成敗都寫）；畫面那條路是 hook 收到第一輪時寫（11-10 two-machines 05）
+#                 codex 新對話讀到輸出的 thread.started 就寫（成敗都寫）；畫面那條路是 hook 收到第一輪時寫（11-10 two-machines 05），
+#                 之後畫面上的 CLI 換了對話（/clear、/resume、codex /new）hook 就改記新的（11-12 eca-slash：CLI 為主、aos 跟上）；
+#                 claude 畫面的 /clear 另外把 aos 這隻的 history 清掉（clear_history，原文搬到 history_removed.jsonl）
 #   .session_home 記號檔（不進 git）：{"session", "ws", "home", "machine"}——這段對話是在哪台機器（machine_id()）、哪個工作區（realpath）、
 #                 哪個帳號資料夾（claude：CLAUDE_CONFIG_DIR 或 ~/.claude；codex：CODEX_HOME 或 ~/.codex）開的；跟 session.txt 一起寫、一起刪
 #                 （machine 是 11-10 TS 8 加的：cp -a 時記號檔會跟過去；舊記號檔沒有這個 key＝不比機器）
@@ -867,34 +869,88 @@ def last_text_from_transcript(path):
     return text
 
 
+def follow_session(kind, cell, sid):
+    """畫面上的 CLI 現在用的對話 id 跟 session.txt 不同（第一輪、/clear、codex 的 /new 之後、/resume 到別段）＝改記它（11-12 eca-slash：
+    CLI 那邊為主，aos 跟上；原本只在 session.txt 空著時寫，/clear 後 aos 還記舊 id，畫面一關就接回清之前的對話）。"""
+    if not sid or sid == cell.read("session.txt"):
+        return
+    ws = cell.read("ws.txt")                       # 記號檔要工作區：從小格的 ws.txt 解相對路徑（不知道就只寫 session.txt，
+    if ws:                                         # 下一次 session_here 走過渡補丁補寫）
+        mark_session(kind, cell, os.path.normpath(os.path.join(cell.path, ws)), sid)
+    else:
+        cell.write("session.txt", sid + "\n")
+
+
+HISTORY, REMOVED = "history.jsonl", "history_removed.jsonl"
+
+
+def clear_history(cell):
+    """清掉這隻 eca 的 history（11-12 eca-slash，使用者「連 aos 那邊的歷史也要一起清」）：history＝小格 stack.txt 指的 stack 裡的
+    history.jsonl（工具形 stack＝小格本身、沒有 history＝不動）。原文照 aos-agent history rm 的規矩搬到旁邊的 history_removed.jsonl
+    （每則一行 {"removed_at", "op": "clear", "line", "message"|"raw"}），先寫那份再把 history 換成空檔；刪小格的 .history_sum
+    （aos-eca-turn ⑩ 的記號，沒有＝不比，免得下一輪當成「history 被改過」又丟掉新對話）。回搬走幾則。"""
+    rel = cell.read("stack.txt")
+    stack = os.path.normpath(os.path.join(cell.path, rel)) if rel else cell.path
+    if stack == cell.path:
+        return 0
+    path = os.path.join(stack, HISTORY)
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = [l.rstrip("\n") for l in f if l.strip()]
+    except FileNotFoundError:
+        lines = []
+    if lines:
+        at = now()
+        with open(os.path.join(stack, REMOVED), "a", encoding="utf-8") as f:
+            for i, l in enumerate(lines, 1):
+                try:
+                    row = {"removed_at": at, "op": "clear", "line": i, "message": json.loads(l)}
+                except ValueError:
+                    row = {"removed_at": at, "op": "clear", "line": i, "raw": l}
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        tmp = os.path.join(stack, "." + HISTORY)       # N-05：先寫暫存再改名
+        open(tmp, "w").close()
+        os.replace(tmp, path)
+    try:
+        os.remove(cell.file(".history_sum"))
+    except FileNotFoundError:
+        pass
+    return len(lines)
+
+
 def hook_main(kind, cell_path, payload_arg=None):
-    """claude：stdin 一份 hook JSON（UserPromptSubmit／Stop）；codex：notify 把 JSON 放在最後一個參數。
+    """claude：stdin 一份 hook JSON（SessionStart／UserPromptSubmit／Stop）；codex：notify 把 JSON 放在最後一個參數。
+    對話 id 跟 session.txt 不同就改記（follow_session）；claude 的 SessionStart source clear＝clear_history（11-12 eca-slash）。
     hook 不准讓 CLI 出錯：任何問題都吞掉、退 0。"""
     try:
         cell = Cell(cell_path)
         raw = payload_arg if kind == "codex" else sys.stdin.read()
         p = json.loads(raw)
         if kind == "claude":
-            if p.get("hook_event_name") == "UserPromptSubmit":
+            event, sid = p.get("hook_event_name"), p.get("session_id")
+            if event == "SessionStart":                    # 11-12 eca-slash：開畫面、/clear、/compact、/resume 都會叫；/clear＝aos 的 history 跟著清
+                if p.get("source") != "startup":           # 畫面開新對話（startup）照舊等第一輪才記：ask 看 session.txt 空著才接 reseed
+                    follow_session(kind, cell, sid)
+                if p.get("source") == "clear":
+                    clear_history(cell)
+                return
+            if event == "UserPromptSubmit":
+                follow_session(kind, cell, sid)
                 cell.write("busy.txt", now() + "\n")
                 return
-            if p.get("hook_event_name") != "Stop":
+            if event != "Stop":
                 return
             text = p.get("last_assistant_message")
             if not isinstance(text, str):
                 text = last_text_from_transcript(p.get("transcript_path") or "")
-            sid = p.get("session_id")
         else:
             if p.get("type") != "agent-turn-complete":
                 return
             text = p.get("last-assistant-message") or ""
             sid = p.get("thread-id") or p.get("thread_id")
-        if sid and not cell.read("session.txt"):
-            ws = cell.read("ws.txt")                       # 記號檔要工作區：從小格的 ws.txt 解相對路徑（不知道就只寫 session.txt，
-            if ws:                                         # 下一次 session_here 走過渡補丁補寫）
-                mark_session(kind, cell, os.path.normpath(os.path.join(cell.path, ws)), sid)
-            else:
-                cell.write("session.txt", sid + "\n")
+            if sid and not transcripts(kind, sid):         # 11-12 實測：codex 替畫面取標題的旁支 thread 也叫 notify，它沒存檔：不是這段對話，不記
+                return
+        follow_session(kind, cell, sid)
         link_transcript(cell, kind)
         with open(cell.file("turns.jsonl"), "a", encoding="utf-8") as f:
             f.write(json.dumps({"answered_at": now(), "text": text}, ensure_ascii=False) + "\n")
@@ -935,7 +991,7 @@ def start(cfg, cell, ws, stack):
     if cfg["kind"] == "claude":
         cmd = " ".join(shlex.quote(a) for a in hook_cmd("claude", cell))
         hooks = {"hooks": {e: [{"hooks": [{"type": "command", "command": cmd}]}]
-                           for e in ("UserPromptSubmit", "Stop")}}
+                           for e in ("SessionStart", "UserPromptSubmit", "Stop")}}
         argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack) + system_argv(cfg) + ["--settings", json.dumps(hooks)]
         argv += ["--resume", sid] if sid else []
     else:
