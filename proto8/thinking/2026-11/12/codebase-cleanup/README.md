@@ -70,6 +70,8 @@
 
 要重建什麼：impls 只有 `aos-exec`、`aos-lock` 兩支執行檔變了（行為相同）；持久檔格式沒動；`install.sh` 不用重跑。抄出去的複本（試驗場）要整份重抄 `lib/`、`py/`、`cmd/`、`templates/agent-fsm`——新檔 `lib/process_group.py`、`lib/file_summary.py`、`lib/file_walk.py`（搬家）、`lib/agent/cmd_call.py`、`lib/agent/fork/fork_copy.py`（搬家）、`templates/agent-fsm/atomic_file.py`、`cmd/aos-eca/aos_eca/handoff.py`、`cmd/aos-agent/aos_agent/ctl/shared.py`，只抄部分會缺模組。
 
+**收工全套一紅（11-12 晚追查）**：全套（在 `415cf6a2c`）只紅 `lib/agent/fork/tests` 的 `test_kernel_alone_is_not_a_daemon`（預期 `DaemonMissing`，實得 `StateMissing …/proto8/.stack/procs_state.json`）。**不是本輪整理的回歸，是測試沒隔離 cwd**：`fork` 叫 `aos-agent ctl who`，它找 daemon 照設計「`--daemon`＞`$AOS_DAEMON`＞猜 `./.stack`」（`py/daemon_ctl/table.py` 的 `find_daemon`，今晚沒動）；全套腳本在 `proto8/` 下跑，而 `proto8/.stack` 剛好有個空夾（11-02 21:18 建，裡面什麼都沒有、git 不追蹤，不是今晚留的），於是猜到它、往下讀表才報 `StateMissing`。在測試夾內或空的 cwd 跑就過（整理線報全過大概是這樣跑的）。修法：`test_fork.py` 的 `run()` 每次給子程序一個空的臨時 cwd（同 `subagent/tests/test_wait.py` 那支同類測試本來就給 `cwd=tmp`）。驗證：在 `proto8/` 下 `lib/agent` 全部子夾、`lib/agent/tests`、`cmd/aos-agent`、`cmd/aos-eca`、`cmd/aos-daemon-ctl`、`lib/tests` 全過；另把全套從空 cwd 再跑一遍（65 夾 1325 例），各夾例數與原來相同、全過——沒有「靠 `./.stack` 才綠」的假綠。`proto8/.stack` 空夾沒刪（不是今晚的東西），等使用者決定。
+
 ## 待使用者裁
 
 1. **`lib/metainfo.read`（管 timeout、cost）遇到壞掉的 `_metainfo`**：現在報 `FileBad` 擋下；其他五處讀法都是略過。(a) 維持——壞檔擋下來，不會悄悄用預設 timeout 跑；(b) 改成略過——跟「`_metainfo` 壞掉不報錯」一致，但壞掉的 timeout／cost 會被安靜忽略。建議 (a)：使用者那句原話講的是 index_view，這支管的是上限。

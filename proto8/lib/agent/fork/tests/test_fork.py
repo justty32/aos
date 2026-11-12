@@ -21,8 +21,9 @@ import fork_copy  # noqa: E402
 def run(arguments, **env):
     base = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
     base.update(env)
-    r = subprocess.run([str(ENTRY)], input=arguments if isinstance(arguments, str) else json.dumps(arguments),
-                       capture_output=True, text=True, env=base, timeout=30)
+    with tempfile.TemporaryDirectory() as cwd:   # 空的 cwd：下層 ctl who 會猜 ./.stack，跑測試處剛好有 .stack 夾就走別條（11-12）
+        r = subprocess.run([str(ENTRY)], input=arguments if isinstance(arguments, str) else json.dumps(arguments),
+                           capture_output=True, text=True, env=base, cwd=cwd, timeout=30)
     return r.returncode, r.stdout.strip(), r.stderr.strip()
 
 
