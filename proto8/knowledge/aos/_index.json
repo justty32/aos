@@ -35,9 +35,6 @@
  "rules.json": {
   "description": "What you must not do, and why. Read this before doing anything that changes the system."
  },
- "knowledge.json": {
-  "description": "Describes the former knowledge_read / knowledge_write tools (removed 11-12); kept as is."
- },
  "cli": {
   "description": "Use these shell commands to manage agents, tools and daemon procs."
  },
@@ -54,10 +51,10 @@
   "description": "One node per stock tool (read, ls, write, edit, trash, shell ...): when to use it and which tool instead, examples with real output, errors."
  },
  "packs.json": {
-  "description": "Your tools come in packs (look, change, delete, shell, gadgets, events, todo, self, subagent, def, mailbox, knowledge, goal): one sentence per tool, and how a pack is turned off."
+  "description": "Your tools come in packs (look, change, delete, shell, gadgets, events, todo, self, subagent, def, mailbox, goal, json, jsonx, index): one sentence per tool, and how a pack is turned off."
  },
  "_description.json": {
-  "description": "aos in one page: what aos is, the eight words, five rules, and how to look up more (that last part still names knowledge_read / knowledge_write)."
+  "description": "aos in one page: what aos is, the eight words, five rules, and where to read more."
  },
  "kernel.json": {
   "description": "What a kernel is (resource management and scheduling, seen from the sender), where to send requests, the example kernels, and how to write your own."

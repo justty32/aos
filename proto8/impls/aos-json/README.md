@@ -3,7 +3,7 @@
 `aos-json - 讀、改 aos 的 JSON 設定（檔#/指標、指示詞）`（NAME，C-54 R1）
 
 **一句話：用 `檔#/指標` 讀或改一份 JSON 的某個位置；認得 `$ref`／`$env`：可以穿過 `$ref` 改被參照的檔、追一個值實際寫在哪、一層層看（漸進展開）、寫之前先驗形狀。**
-一個 lib（`lib/libaos-json.a`，沒有公開標頭）加一支命令列（`bin/aos-json`）。給腦掛的工具在 lib：json 工具一族（[`lib/aos_json.py`](../../lib/aos_json.py)：簡單組 `lib/base/json_*` 六支、複雜組 `lib/aos/jsonx_*` 六支、一次多格 `json_multi_get`／`json_multi_set`，11-12）。11-06 從這裡的 `tools/` 搬過去的 `json_rewrite` 11-12 刪了（使用者「json_rewrite也不用留」）。
+一個 lib（`lib/libaos-json.a`，沒有公開標頭）加一支命令列（`bin/aos-json`）。給腦掛的工具在 lib：json 工具一族（[`lib/aos_json.py`](../../lib/aos_json.py)：簡單組 `lib/base/json_*` 六支、複雜組 `lib/aos/jsonx_*` 六支、一次多格 `json_multi_get`／`json_multi_set`，11-12）。
 嘗試性原型（使用者「做一套方便修改json的工具集，配合指示詞」），討論與代定見 [thinking 2026-10-24 aos-json](../../thinking/2026-10/24/aos-json.md)。
 
 ```sh

@@ -11,7 +11,7 @@
 | N-03 | [11-06 apply-ideas 03](../../../thinking/2026-11/06/apply-ideas/03-方向題.md)：D1 先只有硬凍，現況 daemon sleep。 |
 | N-65 | [11-05 tick-time 03（11-06 裁定）](../../../thinking/2026-11/05/tick-time/03-11-06-裁定與新設計.md)、[11-06 daemon-board](../../../thinking/2026-11/06/daemon-board/README.md)：兩鐘規則、N2 照推薦、跨樹信毫秒、標稱只慢先不補。草稿 N-04 本次定號 N-65。 |
 | N-06 | [11-03 procs 10 §8](../../../thinking/2026-11/03/procs/10-實作時代定-11-03-實作者照原則定的.md#8-收工時改寫成休息中sleepwake11-03-晚)：sleep／wake 名詞與後來開放的指令。 |
-| N-15 | [11-05 no-pid](../../../thinking/2026-11/05/no-pid/README.md)：aos-lock 改檔案鎖；[11-05 agent-knowledge](../../../thinking/2026-11/05/agent-knowledge/README.md)：每次寫入鎖。 |
+| N-15 | [11-05 no-pid](../../../thinking/2026-11/05/no-pid/README.md)：aos-lock 改檔案鎖。 |
 | N-16 | [11-04 aos-post-one-dir](../../../thinking/2026-11/04/aos-post-one-dir.md)：不換；[11-05 fs-image](../../../thinking/2026-11/05/fs-image/README.md)：信封／呼叫／body 三層；[11-06 body-protocol](../../../thinking/2026-11/06/body-protocol/README.md)：與 aos-post 解耦、信封壞與 body 壞分開。 |
 | N-66 | [11-06 body-protocol 04](../../../thinking/2026-11/06/body-protocol/04-方向題與aos-post可改.md)、[02 續](../../../thinking/2026-11/06/body-protocol/02-三個口子-續.md)、[README](../../../thinking/2026-11/06/body-protocol/README.md)：四題照推薦、不與 aos-post 耦合太深；[11-05 no-pid](../../../thinking/2026-11/05/no-pid/README.md)：寄信不回等同呼叫失敗。 |
 | N-17 | [11-05 no-pid 05](../../../thinking/2026-11/05/no-pid/05-監管樹.md)、[12-P5b（11-06 裁定）](../../../thinking/2026-11/05/no-pid/12-P5b條文結果.md)：讀 responded_at 比刺激時間判 stuck；預設只標不殺，選填 restart_on_stuck，只有上一層動 pid。 |

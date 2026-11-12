@@ -37,10 +37,36 @@
 7. 條文：描述現況的事實句照改（N-63 hub 表、P-41 例子、附錄 3 對照兩列改寫成「11-12 拆掉」、附錄 4 刪 `_knowledge.json` 與 `<knowledge 根>/…` 兩列〔65 列：持久 45、暫時 20〕）；規範性內容加「11-12 註」待裁，不改寫（見下）。
 8. 例子原本拿 `AOS_KNOWLEDGE` 示範的改成 `LANG=C.UTF-8`／`MY_DIR`（self_tools 錯誤訊息與說明、aos-tools 說明與測試、cmd/docs 01）；aos-feedback 的例子改 `lib/base/read`。
 
-## 要使用者裁
+## 要使用者裁（已裁：兩件都刪，見下一節）
 
 1. **條文加了 11-12 註、待裁要不要改**：CONCEPTS C-42（四處：落實 memory 工具與根進 system、知識庫便攜多隻共享、多庫假裝一庫、知識庫存什麼）、C-71（11-06 註：層級式記憶工具照這個做）、C-52（「其他一律」例子列了 knowledge_read）、CONVENTION **P-46「知識庫根進 system prompt」整條機制已拆，最該裁**（標題還在 CONVENTION 索引三處）、NORMS N-15（memory_write 寫入自動鎖的規劃）、N-17（knowledge_write 鎖用牆鐘的例外）。
 2. 內容裡講已拆工具的段落（代定 4）要刪、改寫成普通 json 的讀法、還是留著當歷史。
+
+## 使用者裁定與清理（11-12 下午）
+
+使用者原文：
+
+> 「知識庫有整理好了嗎？已經沒了的工具的相關段落也都刪掉了嗎？已經沒了的機制的條文(P-46)刪掉了嗎」
+
+頂層解讀：上面兩件都刪。
+
+### 決定
+
+- 出廠內容裡講已拆工具（knowledge_*、`AOS_KNOWLEDGE`、`--knowledge`、知識庫根進 system）的節點、段落、檔都刪，對應的 index 項一起拿掉；現存工具的說明照現況改。代定 4 作廢。
+- 條文：P-46 整條刪、編號留空不重排；其他條文裡講已拆 knowledge 機制的句子刪掉或改成現況，加的「11-12 註」一併拿掉。代定 7 的「規範性內容加註待裁」作廢。不留「原本是…」「已移除」之類的墓碑註記。
+- 順手：已拆的 json_rewrite、json_read／json_write 在現行文件裡的「11-12 刪」註記也拿掉。
+
+### 刪了哪些
+
+- **內容檔**：整份刪 `aos/knowledge.json`；刪節點 `aos/packs.json#/knowledge`（含 `_index` 那格）、`aos/errors/common.json#/knowledge`（其碼 KnowledgeMissing／NodeMissing 等已沒有工具會報）、`aos/body.json#/system_history` 的開場知識庫根那段；刪段落 `aos/rules.json` 的 Knowledge 那條、`aos/world.json` 的 knowledge base 那列與環境變數裡的 `AOS_KNOWLEDGE`、`aos/cli/mcp.json` 的 `--knowledge`、`aos/cli/sandbox.json` 預設環境裡的 `AOS_KNOWLEDGE`。改成現況：`aos/_description.json` 最後一段（改成看同夾 `_index.json`）、`aos/packs.json#/about`（eca 七包是 gadgets、events、self、def、mailbox、json、index，25 支）、`aos/_index.json` 三格、`aos/me/self_tools.json#/add` 與 `aos/cli/tool_env.json` 的例子（`AOS_KNOWLEDGE` → `LANG=C.UTF-8`）、`aos/me/self_system.json`、`knowledge/README.md`、`docs/02`（「陣列只讀」是舊寫入工具的限制，拿掉）。index 對照：3 夾 `_index.json`＋`packs.json#/_index` 跟實際內容一致、沒有孤兒項、`$ref` 都接得到、沒有該補沒補的（`aos/` 剩 19 個東西、`packs.json` 16 個內容鍵，仍在門檻上）。
+- **條文**：CONVENTION P-46 整份刪（`09-P-46.md`），CONVENTION 入口與 02 分檔表各刪一列、P-45 的「下一份」改「—」、05 刪「11-06 升為 P-46」那句、CONVENTION／NORMS 入口的範圍「P-05～P-46」改「P-05～P-45」；CONCEPTS C-42 刪「11-05 晚落實」memory 工具與根進 system 那句、刪「多庫假裝一庫」整項、「知識庫便攜」與 11-10 註刪 `AOS_MEMORY` 指法、「依託檔案系統」的「記憶工具」改「記憶」、「知識庫存什麼」刪 memory 讀 `#/` 的排程句，四個 11-12 註拿掉；C-71 刪「層級式記憶工具照這個做」與 11-12 註；C-52 與續（例外 ⑤）刪 memory／knowledge_read 例子與 json_rewrite 刪除註；CONCEPTS 附錄3 條號表 C-42 列刪「多庫與 memory_write」；NORMS N-15 刪「11-06 註／規劃中」整項（memory_write 寫入自動鎖）、N-17 刪 knowledge_write 鎖用牆鐘的例外句、N-63 刪 `AOS_MEMORY`／`AOS_KNOWLEDGE` 那半、待定之一刪 `json_rewrite`、附錄2 N-15 列刪 agent-knowledge 出處、附錄3 舊名對照刪 memory 工具與 `AOS_MEMORY` 兩列（現名都是「拆掉」）、附錄4 說明刪 knowledge 兩段改動紀錄；CONVENTION P-41 例子 `memory/add` 改 `notes/add`。
+- **其他現行文件**：wf conventions、lib/docs/03、impls/aos-json README 與 docs/02 的 json_rewrite 刪除註；templates agent-fsm README、templates/docs/02 的「拿掉 knowledge 包」。
+
+### 拿不準、沒動的
+
+- CONCEPTS 附錄3 `02-各批出處.md`「11-06 lift-to-norms」那段還寫「P-45、P-46 見 CONVENTION」——是各批出處的歷史紀錄，沒改。
+- `proto8/feedback/memory_write.jsonl`（agent 對舊工具的回饋紀錄）、`wf/tools/progress_board/designs.json`、`wf/HANDOFF.md`、`wf/inbox/done/` 裡的舊名：紀錄類，沒改。
+- `knowledge/docs/02` 檔名「寫入與節點怎麼寫」的「寫入」是舊寫入工具留下的，改檔名會動到連結，沒改。
 
 ## 要重建什麼
 

@@ -54,9 +54,8 @@
 | [`definition.json`](../../../../../proto8/knowledge/aos/definition.json) | 設定（鍵：_description、files、only、overlay） |
 | [`errors.json`](../../../../../proto8/knowledge/aos/errors.json) | 設定（鍵：_description、codes、common、exits） |
 | [`errors/_description.json`](../../../../../proto8/knowledge/aos/errors/_description.json) | （檔頭沒有一句話） |
-| [`errors/common.json`](../../../../../proto8/knowledge/aos/errors/common.json) | 設定（鍵：_description、input、files、knowledge、mail） |
+| [`errors/common.json`](../../../../../proto8/knowledge/aos/errors/common.json) | 設定（鍵：_description、input、files、mail） |
 | [`kernel.json`](../../../../../proto8/knowledge/aos/kernel.json) | 設定（鍵：_description、what、where_to_send、templates、write_your_own） |
-| [`knowledge.json`](../../../../../proto8/knowledge/aos/knowledge.json) | 設定（鍵：_description、read、where、write、rules） |
 | [`mailbox.json`](../../../../../proto8/knowledge/aos/mailbox.json) | 設定（鍵：_description、tools、rules、check、check_hook） |
 | [`me.json`](../../../../../proto8/knowledge/aos/me.json) | 設定（鍵：_description、stack、self_tools、self_llm、self_system、self_history…） |
 | [`me/_description.json`](../../../../../proto8/knowledge/aos/me/_description.json) | （檔頭沒有一句話） |
