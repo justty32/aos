@@ -4,7 +4,7 @@
 
 **一句話：`aos-llm send|recv|ask|regret|ls`——問腦的基礎工具：把一份請求（OpenAI 形狀的 messages／tools＋代號）寫成一封信丟進 llm kernel 的信箱 `$AOS_LLM_KERNEL/requests/`（`AOS_LLM_KERNEL`＝llm kernel 的 stack），由 kernel（[aos-llm-kernel](../aos-llm-kernel/README.md)）排隊、請 daemon 掛去跑它自己的 endpoint 函數、照信封的 `reply_to` 寄回信；這支預設把回信的 `message` 印出來，`ask`／`recv` 加 `--full` 則印整個回覆物件（含原有的 `usage`、`model`，並加 `letter`＝原請求信名）；錯誤回信也印一行完整 body，stderr 與退出碼維持原樣。**
 定位同 [aos-post](../aos-post/README.md)：基礎工具、IPC 的語法糖，跟 aos proc 關聯不深，proc 自己拿它組（使用者 11-04 晚「aos llm,tool這兩個，我希望他們的定位是跟aos post一樣，作為基礎工具」）。aos-post 管「一封信怎麼寄、怎麼認領」，aos-llm 只多知道「請求信的 body 長怎樣、回信怎麼認、錯怎麼印」。
-11-04 由 `aos-llm-send`（寄一張單子、等回信、原樣交回）改名改寫。一個 lib（`lib/libaos-llm.a`，沒有公開標頭）加一支薄命令列（`bin/aos-llm`）。連 aos-util（共用工具與訊號）、aos-post（信箱型別、寄送與認領 API）及 aos-llm-kernel（`parse_priority`／`hold_sender`／`reply_of` 三個 LLM 信件協定函式）的庫；kernel 連 aos-util、aos-post 與 aos-directive。全家慣例見 [impls/README.md](../README.md)。
+一個 lib（`lib/libaos-llm.a`，沒有公開標頭）加一支薄命令列（`bin/aos-llm`）。連 aos-util（共用工具與訊號）、aos-post（信箱型別、寄送與認領 API）及 aos-llm-kernel（`parse_priority`／`hold_sender`／`reply_of` 三個 LLM 信件協定函式）的庫；kernel 連 aos-util、aos-post 與 aos-directive。全家慣例見 [impls/README.md](../README.md)。
 
 像寄信問醫生：`send` 是把問題寫好丟進郵筒、留個回郵地址就走（之後再來看信箱）；`recv` 是去信箱看回信到了沒；`ask` 是站在郵筒旁邊等回條；`regret` 是信還在郵筒裡就抽回來。找哪位醫生只寫代號，醫生的地址、電話只有櫃台（kernel）知道。
 
@@ -18,7 +18,7 @@ echo "$B" | aos-llm ask --priority high                   # 同步：寄、等�
 aos-llm ls                                                # 列 kernel 的能力包：代號 speed cost context slots backend summary
 ```
 
-**stdin 是整份 body**（隊長 11-04 定案：設計稿寫「stdin＝request.json」，[03 § 1](../../thinking/2026-11/04/think-as-function/03-呼叫端.md) think 寫的 `request.json` 就是 body 的形狀）：`{"endpoint"?: 代號, "request": {"messages": [...], "tools"?, ...}, "priority"?}`——代號、請求、優先度都由呼叫端自己組，aos-llm 原樣當信的 `body` 寄出（只有 `--priority` 有給時蓋掉 `priority`）。
+**stdin 是整份 body**（隊長定案：設計稿寫「stdin＝request.json」，[03 § 1](../../thinking/2026-11/04/think-as-function/03-呼叫端.md) think 寫的 `request.json` 就是 body 的形狀）：`{"endpoint"?: 代號, "request": {"messages": [...], "tools"?, ...}, "priority"?}`——代號、請求、優先度都由呼叫端自己組，aos-llm 原樣當信的 `body` 寄出（只有 `--priority` 有給時蓋掉 `priority`）。
 
 設計與決定見 [thinking 2026-11-04 think-as-function](../../thinking/2026-11/04/think-as-function/README.md)（§ 5 在 [02/01](../../thinking/2026-11/04/think-as-function/02-設計-信與kernel/01-endpoint函數-aos-llm-kernel形態.md)）。
 

@@ -19,20 +19,20 @@ aos-loop --max 2 loop.json # 每次 `aos-exec -- idle`，旗標蓋過 loop.json 
 
 規範：窗 N-06～N-09、N-17、N-32、N-33 在 [NORMS/05 窗](../../docs/NORMS/05-基礎設施-窗.md)，結束碼 N-43 在 [NORMS/01 總則](../../docs/NORMS/01-總則.md)，loop 的定位在 [NORMS/04 loop 與 daemon](../../docs/NORMS/04-基礎設施-loop與daemon.md)；慣例 CONVENTION P-06、P-19～P-22、P-36。本頁只寫用法與實作細節。
 骨架是公開的 `aos::loop::Loop`（aos-daemon 繼承它）。
-`aos/loop.hpp` 同時公開 `CtlWindow`／`StateWindow`：`ctl`／`state` 的預設檔名與跨程式讀寫的欄位、指令值只在這裡定義，loop 本身與 daemon 引用同一份（11-06 K-2；[窗](docs/02-窗.md)）。
+`aos/loop.hpp` 同時公開 `CtlWindow`／`StateWindow`：`ctl`／`state` 的預設檔名與跨程式讀寫的欄位、指令值只在這裡定義，loop 本身與 daemon 引用同一份（K-2；[窗](docs/02-窗.md)）。
 `exec` 可以直接放單子物件（使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」，[thinking 10-24](../../thinking/2026-10/24/exec-relative/README.md#10-24-exec-直接放單子)）：物件＝每次行程內 `run_inst`（`src/run/inline.cpp`），見下面「用法」的 `exec`。
 
-**轉交的碼**（11-05 stdio-unify R8、D4）：退非 0 時 stderr 有 `aos-loop: error:` 這行＝我錯（退 1）——只有 `aos-loop: error: RunFailed …` 例外：那是身體那次的碼原樣帶回（碼不是 1）；沒有錯誤行（128＋N）＝收到訊號。`aos-loop --help`＝英文說明印 stdout、退 0。
+**轉交的碼**（stdio-unify R8、D4）：退非 0 時 stderr 有 `aos-loop: error:` 這行＝我錯（退 1）——只有 `aos-loop: error: RunFailed …` 例外：那是身體那次的碼原樣帶回（碼不是 1）；沒有錯誤行（128＋N）＝收到訊號。`aos-loop --help`＝英文說明印 stdout、退 0。
 
-**state_flux 窗承接 `responded_at`、`ctl_seq`、`ctl_warning`**（11-06 no-pid P2，[thinking no-pid](../../thinking/2026-11/05/no-pid/README.md)）：最近一次有反應的時間——讀到新的一道 ctl（好壞都算，第一道已套用過的不算）才更新；身體跑完一次不更新（11-09），閒著、睡著時都不動，不是心跳。之後給上一層 daemon 判 `stuck` 用。細節在 [docs/02 窗](docs/02-窗.md)。
+**state_flux 窗承接 `responded_at`、`ctl_seq`、`ctl_warning`**（no-pid P2，[thinking no-pid](../../thinking/2026-11/05/no-pid/README.md)）：最近一次有反應的時間——讀到新的一道 ctl（好壞都算，第一道已套用過的不算）才更新；身體跑完一次不更新，閒著、睡著時都不動，不是心跳。之後給上一層 daemon 判 `stuck` 用。細節在 [docs/02 窗](docs/02-窗.md)。
 
 **讀回自己的狀態**：state／state_flux 不在就安靜重建；在卻讀不了、JSON 壞或根不是物件，先改名成 `<檔名>.bad-<UTC 毫秒時間>` 留證、印一行 warning，再從新狀態開始。好檔仍照常接回有效的 paused／ctl_seq；aos-daemon 等 Loop 子類別也用同一條路。
 
-**跑過幾次要開旗標才寫**（11-09，[N-09「計數器」](../../docs/NORMS/05-基礎設施-窗/02-N-09～N-11.md)）：state 沒有 `counter_runs`；給 `--enable-counters` 而且有 state 窗時，每跑一次寫 state 窗同資料夾的 `counter_runs.txt`（十進位整數＋換行），預設不寫。
+**跑過幾次要開旗標才寫**（[N-09「計數器」](../../docs/NORMS/05-基礎設施-窗/02-N-09～N-11.md)）：state 沒有 `counter_runs`；給 `--enable-counters` 而且有 state 窗時，每跑一次寫 state 窗同資料夾的 `counter_runs.txt`（十進位整數＋換行），預設不寫。
 
-**引擎的喚醒掛鉤 `wake_`／`woke`**（11-09，給 aos-daemon 的 poke 用，[thinking daemon-interrupt](../../thinking/2026-11/09/daemon-interrupt/README.md)）：子類別把已擋住的訊號放進 `wake_`，`nap` 睡覺時連它們一起等，收到就呼叫 `woke(sig)`，回 true＝這一圈當作到時間了（提前跑）；不當收工訊號、不轉給身體。aos-loop 自己不設、不接 poke，行為不變。**子行程的訊號遮罩改成還原**：`run_folder` fork 出來的子行程用 aos-util `restore_signals` 把遮罩還原成 `block_signals` 之前的樣子（原本寫死只解三個收工訊號），所以起 aos-loop 的人（例 aos-daemon）多擋的訊號，身體照常收得到。
+**引擎的喚醒掛鉤 `wake_`／`woke`**（給 aos-daemon 的 poke 用，[thinking daemon-interrupt](../../thinking/2026-11/09/daemon-interrupt/README.md)）：子類別把已擋住的訊號放進 `wake_`，`nap` 睡覺時連它們一起等，收到就呼叫 `woke(sig)`，回 true＝這一圈當作到時間了（提前跑）；不當收工訊號、不轉給身體。aos-loop 自己不設、不接 poke，行為不變。**子行程的訊號遮罩還原**：`run_folder` fork 出來的子行程用 aos-util `restore_signals` 把遮罩還原成 `block_signals` 之前的樣子，所以起 aos-loop 的人（例 aos-daemon）多擋的訊號，身體照常收得到。
 
-**起來、要退時各跑一次（11-11，`on_start`／`on_stop`）**：使用者要 agent 的 hook 有「起來與停下」兩個事件，掛哪層選「aos-loop 自己加」（[thinking clock-hook](../../thinking/2026-11/11/clock-hook/README.md)）。loop.json 選填 `on_start`、`on_stop`，寫法同 `exec`（字串、陣列、單子）；`on_start` 在第一次之前跑一次，`on_stop` 在 loop 要退時跑一次——stop、跑滿、身體退 10、身體失敗、收到訊號（daemon 的 sleep／rm／收工都是 SIGTERM）、自己的錯都跑得到，SIGKILL 跑不到。`on_stop` 的環境多 `AOS_LOOP_CODE`（要退的碼）與 `AOS_LOOP_SIGNAL`（收到的訊號號碼，沒有＝空字串）。兩格的期限＝`on_timeout_ms`（正整數，預設 5000；daemon 收工只等子項 10 秒），到了 SIGTERM、1 秒後 SIGKILL 整群（這兩格的子行程自成一群）；退非 0、逾時、起不來＝一行 `aos-loop: warning:`，不改結束碼、不擋起跑。loop 不知道它們是什麼（C-52）；agent 範本把它們指到 `lib/agent/hook_fire`。細節 [01 用法](docs/01-用法.md)。
+**起來、要退時各跑一次（`on_start`／`on_stop`）**：使用者要 agent 的 hook 有「起來與停下」兩個事件，掛哪層選「aos-loop 自己加」（[thinking clock-hook](../../thinking/2026-11/11/clock-hook/README.md)）。loop.json 選填 `on_start`、`on_stop`，寫法同 `exec`（字串、陣列、單子）；`on_start` 在第一次之前跑一次，`on_stop` 在 loop 要退時跑一次——stop、跑滿、身體退 10、身體失敗、收到訊號（daemon 的 sleep／rm／收工都是 SIGTERM）、自己的錯都跑得到，SIGKILL 跑不到。`on_stop` 的環境多 `AOS_LOOP_CODE`（要退的碼）與 `AOS_LOOP_SIGNAL`（收到的訊號號碼，沒有＝空字串）。兩格的期限＝`on_timeout_ms`（正整數，預設 5000；daemon 收工只等子項 10 秒），到了 SIGTERM、1 秒後 SIGKILL 整群（這兩格的子行程自成一群）；退非 0、逾時、起不來＝一行 `aos-loop: warning:`，不改結束碼、不擋起跑。loop 不知道它們是什麼（C-52）；agent 範本把它們指到 `lib/agent/hook_fire`。細節 [01 用法](docs/01-用法.md)。
 
 ## 分檔目錄
 
