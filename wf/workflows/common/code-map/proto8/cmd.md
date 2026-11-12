@@ -27,6 +27,7 @@
 | [`aos_agent/hook.py`](../../../../../proto8/cmd/aos-agent/aos_agent/hook.py) | 管 agent 自己那份 hooks 清單（疊在定義那份上，同名蓋過、null 關掉）：ls、get、add、rm、reset。 |
 | [`aos_agent/listen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/listen.py) | 以秒或 cycle 等待回答，或列出與追蹤歷史對話。 |
 | [`aos_agent/llm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/llm.py) | 分層解析腦設定命令（ls／set／rm／reset）並管理 agent 的覆蓋鍵與重設確認。 |
+| [`aos_agent/read_line.py`](../../../../../proto8/cmd/aos-agent/aos_agent/read_line.py) | chat 讀一行輸入：終端機上用 readline 行編輯（中文 Backspace、方向鍵），管線照舊按行讀。 |
 | [`aos_agent/say.py`](../../../../../proto8/cmd/aos-agent/aos_agent/say.py) | 寄一則訊息到 agent 的 queue。 |
 | [`aos_agent/screen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/screen.py) | 開啟、關閉與追蹤 agent 的畫面子介面。 |
 | [`aos_agent/system.py`](../../../../../proto8/cmd/aos-agent/aos_agent/system.py) | 管 agent 自己那份 system 文字（stack 那份在就整份蓋過定義那份）：get、set、reset。 |
@@ -34,6 +35,7 @@
 | [`bin/aos-agent`](../../../../../proto8/cmd/aos-agent/bin/aos-agent) | 統一的 agent 介面：管掛在 aos-daemon 上的一隻 agent（eca、loop／fsm agent 都一樣），每個子命令只管一隻（11-04）。 |
 | [`stack.gitattributes`](../../../../../proto8/cmd/aos-agent/stack.gitattributes) | 把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件） |
 | [`stack.gitignore`](../../../../../proto8/cmd/aos-agent/stack.gitignore) | 可選的 stack 排除範本：暫存、鎖、本機資料與可重建紀錄不進 git。 |
+| [`tests/test_chat_read_line.py`](../../../../../proto8/cmd/aos-agent/tests/test_chat_read_line.py) | Test chat's line input in a real pty: Chinese + Backspace, arrow keys, long lines, pastes and EOF are read whole (11-12 chat-utf8). |
 | [`tests/test_daemon_down.py`](../../../../../proto8/cmd/aos-agent/tests/test_daemon_down.py) | Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing. |
 | [`tests/test_goal.py`](../../../../../proto8/cmd/aos-agent/tests/test_goal.py) | Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0… |
 | [`tests/test_history.py`](../../../../../proto8/cmd/aos-agent/tests/test_history.py) | Test aos-agent history on a fake daemon table (11-10 self-family): ls, rm, summarize, set, the kept originals (default, --keep, --no-keep), ranges an… |

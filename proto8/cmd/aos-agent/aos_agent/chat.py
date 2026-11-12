@@ -8,6 +8,8 @@ flags:
   -h, --help          show this help
 
 Reads messages from stdin; the prompt goes to stderr and answers go to stdout.
+On a terminal the line is edited with readline (Backspace erases whole characters,
+arrow keys move, Up recalls earlier lines; a multi-line paste is one message).
 Empty lines are ignored. An error about one message returns to the prompt.
 End of stdin exits 0, or 1 if a message failed; Ctrl-C exits 130.
 
@@ -19,6 +21,10 @@ import aos_ws
 import sys
 from .common import Fail, bad_args, find, note, parse, target
 from .listen import wait_latest
+from .read_line import read_line
+
+NOT_UTF8 = ("this line is not UTF-8, not sent; type it again "
+            "(a half-erased character usually means the terminal lacks iutf8: stty iutf8)")
 
 
 def cmd(argv):
@@ -33,12 +39,10 @@ def cmd(argv):
     try:
         while True:
             sent = False
-            sys.stderr.write("> ")
-            sys.stderr.flush()
             try:
-                line = sys.stdin.buffer.readline().decode("utf-8")   # 一行一行解碼：壞一行不連累前後
-            except UnicodeDecodeError:                  # 11-04 夜：這行不是 UTF-8＝印一行、不寄、回提示符
-                print(aos_flags.error_line(PROG, "ArgumentsBad", bad_args(HELP, "this line is not UTF-8, not sent")), file=sys.stderr, flush=True)
+                line = read_line()                      # 一行一行解碼：壞一行不連累前後；終端機上走 readline（11-12 chat-utf8）
+            except UnicodeError:                        # 11-04 夜：這行不是 UTF-8＝印一行、不寄、回提示符
+                print(aos_flags.error_line(PROG, "ArgumentsBad", bad_args(HELP, NOT_UTF8)), file=sys.stderr, flush=True)
                 failed = True
                 continue
             if not line:
