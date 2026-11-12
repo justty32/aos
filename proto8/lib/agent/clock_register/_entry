@@ -17,7 +17,7 @@ Result on stdout. On error: one line "clock_register: error: CODE reason" on std
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-# 只找自己的工具夾、realpath 祖先的 lib（含 lib/agent 的 mailbox_call），再交給標準 Python 路徑。
+# 只找自己的工具夾、realpath 祖先的 lib（含 lib/agent 的 mailbox_call、cmd_call），再交給標準 Python 路徑。
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
     if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
@@ -36,7 +36,8 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
 
 tool_io.start(NAME, HELP)
 signal.signal(signal.SIGINT, lambda s, f: sys.exit(130))
-import mailbox_call  # noqa: E402   叫下層與認出我的共用小函式（call、me）
+import mailbox_call  # noqa: E402   認出我（me）
+import cmd_call  # noqa: E402   叫下層（call）
 
 args = tool_io.arguments("op")
 op = args["op"]
@@ -49,14 +50,14 @@ if op == "add":
     who = mailbox_call.me()
     box = args.get("box") or os.path.join(who["stack"], "queue")
     more = ["add", "--every", str(every), "--box", box, "--by", who["name"]] + (["--replace"] if args.get("replace") else [])
-    _, out = mailbox_call.call("aos-clock-register", where + more + ["--", args["name"], args["text"]])
+    _, out, _ = cmd_call.call("aos-clock-register", where + more + ["--", args["name"], args["text"]])
     print(out.strip() + ("; it comes to your own queue as a user message" if not args.get("box") else ""))
 elif op == "rm":
     tool_io.arguments("name")
-    _, out = mailbox_call.call("aos-clock-register", where + ["rm", "--", args["name"]])
+    _, out, _ = cmd_call.call("aos-clock-register", where + ["rm", "--", args["name"]])
     print(out.strip())
 elif op == "ls":
-    _, out = mailbox_call.call("aos-clock-register", where + ["ls"])
+    _, out, _ = cmd_call.call("aos-clock-register", where + ["ls"])
     print("NAME\tEVERY\tBOX\tTEXT\n" + out.strip() if out.strip() else "no entries")
 else:
     tool_io.die("OpUnknown", "op must be add, rm or ls (got %r)" % op)

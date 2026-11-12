@@ -13,7 +13,7 @@ Result on stdout. On error: one line "mailbox_send: error: CODE reason" on stder
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-# 只找自己的工具夾、realpath 祖先的 lib（含 lib/agent 的 mailbox_call），再交給標準 Python 路徑。
+# 只找自己的工具夾、realpath 祖先的 lib（含 lib/agent 的 mailbox_call、cmd_call），再交給標準 Python 路徑。
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
     if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
@@ -33,6 +33,7 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
 tool_io.start(NAME, HELP)
 signal.signal(signal.SIGINT, lambda s, f: sys.exit(130))
 import mailbox_call  # noqa: E402
+import cmd_call  # noqa: E402
 
 args = tool_io.arguments("status", "title", "what")
 if bool(args.get("to")) == bool(args.get("box")):
@@ -45,5 +46,6 @@ for key, flag in (("to", "--to"), ("box", "--box"), ("daemon", "--daemon"), ("ou
         more += [flag, args[key]]
 # 腦常寫 to: "self"／"me"（11-11 晚 gemma、sonnet 實測）：查不到名字時補一句它自己的名字
 hint = {"InstanceMissing": "; to is an agent's name: to mail yourself use your own name, %s" % who["name"]}
-_, out = mailbox_call.call("aos-mailbox", ["--stack", who["stack"], "send"] + more + ["--", args["what"]], hint=hint)
+_, out, _ = cmd_call.call("aos-mailbox", ["--stack", who["stack"], "send"] + more + ["--", args["what"]],
+                          fix=lambda code, reason: reason + hint.get(code, ""))
 print("sent letter %s; the answer (if any) comes to your mailbox: check with mailbox_peek" % out.strip())

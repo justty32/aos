@@ -18,7 +18,7 @@
 #   end 同 id（ended.call）＝照印上次的結果；摺完還沒記上就斷了（總結那則已在、內容對得上）＝不再摺、只關掉。
 # 錯：stderr 與 stdout 各一行「do_task: error: 代號 原因」、退 1（tool_io.die）；aos-agent 退非 0＝它最後一行錯誤行的代號與原因接成自己的
 #   （C-52 例外 ⑤，同 self_history）、沒那行＝CommandFailed。只在 daemon 下跑的 agent 能用。每次叫 aos-agent 最多 60 秒；被 TERM 先收掉它再走。
-import json, os, re, signal, subprocess, sys
+import json, os, sys
 from datetime import datetime, timezone
 HELP = """\
 usage: do_task < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
@@ -32,70 +32,39 @@ Result on stdout. On error: one line "do_task: error: CODE reason" on stderr and
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+# 只找自己的工具夾、旁邊的 lib/agent（cmd_call）、realpath 祖先的 lib，再交給標準 Python 路徑。
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
     if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
         break
     _lib = os.path.dirname(_lib)
-sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+sys.path[:0] = [HERE, os.path.dirname(HERE)] + ([_lib] if os.path.basename(_lib) == "lib" else [])
 try:
     import tool_io  # noqa: E402
+    import cmd_call  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
-    if error.name != "tool_io":
+    if error.name not in ("tool_io", "cmd_call"):
         raise
-    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), error.name)
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)
 
 NAME = "do_task"
 tool_io.start(NAME, HELP)
-TIMEOUT_S = 60
 MAX_DEPTH = 5                                   # 巢狀最多幾層（代定：腦忘了 end 一直 start 時有個清楚的錯）
 SUMMARY = "[aos] summary:"                      # aos-agent history summarize 寫的那則的開頭（aos_flags.aos_note；lib 不 import py）
 STATE = "tasks.json"
-ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
 die = tool_io.die
-child = None
-
-
-def on_term(signum, frame):
-    if child is not None and child.poll() is None:
-        try:
-            os.killpg(child.pid, signal.SIGTERM)
-        except OSError:
-            pass
-    sys.exit(128 + signum)
 
 
 def agent(*args):
     """aos-agent args…：stderr 原樣往上；退非 0＝它最後一行錯誤行的代號與原因當自己的錯（沒有＝CommandFailed）。回 stdout。"""
-    global child
-    try:
-        child = subprocess.Popen(["aos-agent"] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE, text=True, start_new_session=True, cwd=tool_io.workspace())
-    except OSError as e:
-        die("LaunchFailed", "cannot run aos-agent (put it on PATH with proto8/install.sh): %s" % e)
-    try:
-        out, err = child.communicate(timeout=TIMEOUT_S)
-    except subprocess.TimeoutExpired:
-        os.killpg(child.pid, signal.SIGKILL)
-        child.communicate()
-        die("CommandFailed", "aos-agent %s took over %d s and was killed" % (" ".join(args[:4]), TIMEOUT_S))
-    if err:                                     # 下層的 stderr 原樣透出（R10）
-        sys.stderr.write(err if err.endswith("\n") else err + "\n")
-        sys.stderr.flush()
-    if child.returncode != 0:
-        mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
-        if mine:
-            die(mine[-1].group(1), mine[-1].group(2))
-        die("CommandFailed", "aos-agent %s exited %d" % (" ".join(args[:4]), child.returncode))
+    _, out, _ = cmd_call.call("aos-agent", args, shown=4)
     return out
 
 
-signal.signal(signal.SIGTERM, on_term)
-signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
+cmd_call.catch_signals()                       # TERM 與 Ctrl-C：先收掉正在跑的那一群，退 128＋N（Ctrl-C 130、不吐 traceback，R12）
 args = tool_io.arguments()
 OPS = {"start": ("task",), "end": ("summary", "keep_others"), "status": ()}
 op = args.get("op")

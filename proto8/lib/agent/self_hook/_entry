@@ -15,7 +15,7 @@
 #   下層 stderr 原樣透出，它退非 0＝把最後一行錯誤行的代號與原因接上，沒那行＝CommandFailed）。op 沒給＝ArgumentsBad、不認得＝OpUnknown。
 #   --help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉 aos-agent，退 130）。
 # 需要 PATH 上有 aos-agent（proto8/install.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
-import json, os, re, signal, subprocess, sys
+import json, os, sys
 HELP = """\
 usage: self_hook < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Change the hooks of the agent that calls me (its own list, not its definition):
@@ -24,74 +24,41 @@ Result on stdout. On error: one line "self_hook: error: CODE reason" on stderr a
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+# 只找自己的工具夾、旁邊的 lib/agent（cmd_call）、realpath 祖先的 lib，再交給標準 Python 路徑。
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
     if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
         break
     _lib = os.path.dirname(_lib)
-sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+sys.path[:0] = [HERE, os.path.dirname(HERE)] + ([_lib] if os.path.basename(_lib) == "lib" else [])
 try:
     import tool_io  # noqa: E402
+    import cmd_call  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
-    if error.name != "tool_io":
+    if error.name not in ("tool_io", "cmd_call"):
         raise
-    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), error.name)
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)
 
 NAME = "self_hook"
 tool_io.start(NAME, HELP)
-TIMEOUT_S = 60
-ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
-child = None
-
-
 die = tool_io.die
 
 
-def on_term(signum, frame):
-    if child is not None and child.poll() is None:
-        try:
-            os.killpg(child.pid, signal.SIGTERM)
-        except OSError:
-            pass
-    sys.exit(128 + signum)
-
-
-workspace = tool_io.workspace
 arguments = tool_io.arguments
 
 
 def agent(*args):
     """aos-agent args…：stderr 原樣往上；退非 0＝它最後一行錯誤行的代號與原因當自己的錯（沒有＝CommandFailed）。回 stdout。"""
-    global child
-    try:
-        child = subprocess.Popen(["aos-agent"] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE, text=True, start_new_session=True, cwd=workspace())
-    except OSError as e:
-        die("LaunchFailed", "cannot run aos-agent (put it on PATH with proto8/install.sh): %s" % e)
-    try:
-        out, err = child.communicate(timeout=TIMEOUT_S)
-    except subprocess.TimeoutExpired:
-        os.killpg(child.pid, signal.SIGKILL)
-        child.communicate()
-        die("CommandFailed", "aos-agent %s took over %d s and was killed" % (" ".join(args[:2]), TIMEOUT_S))
-    if err:                                     # 下層的 stderr 原樣透出（R10）
-        sys.stderr.write(err if err.endswith("\n") else err + "\n")
-        sys.stderr.flush()
-    if child.returncode != 0:                   # 給腦用的工具把下層錯翻成自己的錯（同 agents）
-        mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
-        if mine:
-            # 下層撞名那句教 CLI 旗標（add --replace）：腦手上只有工具參數，換成 "replace": true（11-10 整合驗收）
-            die(mine[-1].group(1), mine[-1].group(2).replace("add --replace to replace it", 'add "replace": true to replace it'))
-        die("CommandFailed", "aos-agent %s exited %d" % (" ".join(args[:2]), child.returncode))
+    # 下層撞名那句教 CLI 旗標（add --replace）：腦手上只有工具參數，換成 "replace": true（11-10 整合驗收）
+    _, out, _ = cmd_call.call("aos-agent", args, shown=2,
+                               fix=lambda code, reason: reason.replace("add --replace to replace it", 'add "replace": true to replace it'))
     return out
 
 
-signal.signal(signal.SIGTERM, on_term)
-signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
+cmd_call.catch_signals()                       # TERM 與 Ctrl-C：先收掉正在跑的那一群，退 128＋N（Ctrl-C 130、不吐 traceback，R12）
 args = arguments()
 OPS = {"ls": ("long",), "get": ("name",),
        "add": ("event", "path", "path_json", "name", "condition", "every_cycles", "every_ms", "clock", "intercept", "async",
