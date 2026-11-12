@@ -16,7 +16,6 @@
 | `letter_warning`（aos agent 的 `letter_warning.txt`） | `mailbox_warning`（`mailbox_warning.txt`） | 11-02 晚，使用者「letter_warning改成mailbox_warning」（N-16、N-28） |
 | loop／daemon `state.json` 的 `responded_at`、`ctl_seq`、`ctl_warning`；daemon `procs_state.json` 的 `responded_at`、`mailbox_warning` | 搬到同資料夾 `state_flux.json` 的 `responded_at`、`ctl_seq`、`ctl_warning`、`mailbox_warning`（名字不變；`responded_at` 只放這一處） | 11-09，使用者裁 state_flux，[clock-and-hot-writes 05](../../../thinking/2026-11/09/clock-and-hot-writes/05-state拆分規劃.md)（N-09、N-32、N-33） |
 | daemon `procs_state.json` 的 `ctl_seq`（`procs_ctl.json` 的回音）、`ctl_warning`（壞 `procs_ctl`） | `state_flux.json` 的 `procs_ctl_seq`、`procs_ctl_warning` | 11-09，同上（N-28、N-54） |
-| 指示詞位置的修飾詞 `$at` | 拿掉，位置只認 `檔#/指標` | 10-23（N-45） |
 | trace 的 `ms`、`at` | `elapsed_ms`、`started_at`；trace.jsonl 11-03 整個拿掉（[trace](../../../thinking/2026-11/03/trace.md)） | 10-23、10-25 |
 | `interfaces.json` 的 `"llm": "llm"`（指子介面入口資料夾 `llm/`） | `"llm": "llm.json"`（定義裡的腦設定檔，跟 `"tools": "tools.json"` 同形；值不是檔＝`LlmBad`） | 11-04 晚，[think-as-function](../../../thinking/2026-11/04/think-as-function/README.md)（P-43（續）） |
 | aos-llm-kernel：kernel.json `accept`；信頂層的 `inst`／`env`／`priority`；排序依據 `_metainfo.time_ms`／`llm_tokens` | 拿掉（信裡沒單子）；信 body `{"endpoint"?, "request", "priority"?}`（舊信＝`LetterBad`）；kernel.json 新鍵 `exec`、`endpoints`、`endpoint`、`timeout_ms` | 11-04 晚，[think-as-function](../../../thinking/2026-11/04/think-as-function/README.md)（N-42 (1)、N-16） |

@@ -1,4 +1,4 @@
-# `$ref` 要不要跟 index 路徑統一：範圍調查與幾種統一法（11-12 晚，家機；只調查、沒施工）
+# `$ref` 要不要跟 index 路徑統一：範圍調查與幾種統一法（11-12 晚，家機；先調查，使用者裁定後已施工，見最後一節）
 
 ← [11-12 日索引](README.md) ・ 前情：[index-link](index-link.md)（index 路徑照同像算、當時 `$ref` 裁不動）、[ref-hash](ref-hash.md)（`$ref` 收 `#/`）、N-45（[06-基礎設施-命令列與指示詞](../../../docs/NORMS/06-基礎設施-命令列與指示詞.md)）
 
@@ -114,3 +114,123 @@ Argon 的看法與我同不同意：
 - **長期維護稅**：同檔內把一段設定包深一層，就得重數裡面每個 `$ref` 的 `../`。——同意（邊緣 1）。
 - **「最後產出當整份」與邊走邊換**：7 支程式是一層一層換、不是先整份換完；工具把換到一半的子樹抽出來放到別層，綁深度的 `../` 就斷。——同意是 (a) 放大的風險（邊緣 9）；庫自己記來源位置的部分不受影響。
 - **提案**：首推 (b)（它叫 g）或 (d)（它叫 f：不帶 `#`＝檔案系統、`#/`＝本檔根、`#../`＝所在容器，`#` 後不准走出檔根）；次推把 (d) 同時用在 index 與 `$ref`；使用者仍要 (a) 的話先定死四條（起點＝上一層容器、`$ref` 陣列不計深度、不穿過未換的 `$ref` 且繞圈看正規化後的位置、只改 `$ref` 與 index 其餘路徑欄不跟），再庫與搬動工具先行、最後資料測試文件一次切。——(b) 與分步我同意；「把 (d) 套回 index」等於改使用者今晚的裁示，只能由他提。
+
+## 使用者裁定 11-12 晚
+
+看完上面五種之後，使用者沒有從 (a)～(e) 裡選，直接給寫法，之後邊想邊改了幾次。原話依序照錄，**以最後幾句為準**。
+
+1. 本題第一句，出自一口氣回好幾題的一段話（整段照錄當出處；「kernel 這塊」之後是別的線，頂層轉來時已略）：
+
+   > 「當然，全都是觀點，全都是參考用，出事了自行負責。_index的obj內要不要再多塞東西...可以，想塞啥塞啥，出事了自己負責。主觀的metainfo的位置也不規定。客觀那個你不管怎麼描述無法描述全，所以能被我們記錄下來的，非私有的，全都是通用視角(公用視角)(自己公開給別人的聲稱)。_metainfo不算index，_metainfo他是描述自身節點的一個子節點，可以塞任何東西來描述自身，因爲index也是一種描述自身的東西，所以也可以塞入其中。$ref這塊，可以用#/指代根obj，同時也算指代自身所在檔案，所以可以用#/key, #/../other.json。kernel這塊，…」
+
+2. 頂層問「不帶 `#` 的舊寫法（`me/self_tools.json`）維持不變、從檔所在資料夾找，對嗎？」：
+
+   > 「要變...。然後把$at拉回來，$at就是完全只有檔案路徑了。」
+
+3. 頂層給兩種讀法（一：`$at` 獨立拿檔、`$ref` 走 json；二：兩個搭配，`$at` 說哪個檔、`$ref` 說位置）：
+
+   > 「用讀法二吧，然後讓$ref給檔，$at給位置。然後兩者都不支援#」
+
+4. 馬上補：
+
+   > 「等等，$ref還是支援#/吧。」
+
+5. 再來：
+
+   > 「$at就變成$ref後面接着。$at仍不支援#」
+
+   頂層整理成五個例子（下表前五列）問他對不對，他答「對」。
+
+6. 頂層問第 2 句的「要變」是變成什麼（甲 照同像從寫著它的物件算／乙 不帶 `#` 的不再收、一律 `#/` 開頭／丙 不帶 `#` 的維持從資料夾找、要變的是別處）：
+
+   > 「丙。」
+
+第 2、3 句裡「`$at` 只有檔案路徑」「兩者都不支援 `#`」被第 3～5 句改掉：角色對調成 `$ref` 給檔、`$at` 給位置，`$ref` 仍收 `#/`，只有 `$at` 不收 `#`。第 2 句的「要變」以第 6 句收束：不帶 `#` 的相對檔名不動，變的是 `$at` 回來這一套。10-23「把$at刪掉，就都只認#/。」被這次推翻。
+
+### 定案
+
+| 寫法（寫在 `kb/me.json`） | 換成 |
+|---|---|
+| `{"$ref": "x.json"}` | `kb/x.json` 整份（不帶 `#` 的相對檔名照舊從檔所在資料夾算；現有 9 個資料檔不用改） |
+| `{"$ref": "x.json", "$at": "a/b"}` | `kb/x.json` 的 `/a/b` |
+| `{"$ref": "x.json#/a", "$at": "b/c"}` | `kb/x.json` 的 `/a/b/c`（兩邊都給位置＝接起來） |
+| `{"$ref": "#/defs", "$at": "argv"}` | 本檔 `/defs/argv` |
+| `{"$ref": "#/../other.json", "$at": "k"}` | `kb/other.json` 的 `/k` |
+| `{"$ref": "#/key"}`、`{"$ref": "x.json#/a/b"}` | 本檔 `/key`、`kb/x.json` 的 `/a/b`（照舊） |
+| `{"$ref": "#/a/../b"}` | 本檔 `/b` |
+| `{"$ref": "#/../other.json"}`、`{"$ref": "#/../other.json#/k"}` | `kb/other.json` 整份、它的 `/k` |
+| `{"$ref": "#/../../up/y.json"}` | `up/y.json` 整份 |
+| 被換進來的 `kb/sub/inc.json` 裡寫 `#/../side.json` | `kb/sub/side.json`（「這份檔」＝被換進來的那份） |
+| 不知道是哪份檔（stdin 沒給 `--file`、信、行程內 JSON）寫 `#/…`（帶不帶 `$at`） | 原封不動；`{"$ref": "x.json", "$at": "a"}` 不需要知道，照換 |
+| `{"$ref": "x.json", "$at": "#/k"}`、`$at` 不是字串 | 原封不動（寫法不合） |
+| `{"$at": "k"}`（沒有 `$ref`） | 不是指示詞，不管 |
+| 算出來是資料夾（`#/..`、`$at: ".."`）、指不到、繞圈 | `DirectiveBad` |
+
+五種方案的下場：(a) 全同像——沒採，第 6 句「丙。」明講不帶 `#` 的不動；(b) 共用解析器——做了；(c) index 改回照 `$ref`——沒採；(d) 記號分開——採了它的精神，記號是 `#/` 加 `..`（不是 `#../`），檔內相對再加一欄 `$at`；(e) 放寬——沒提。
+
+### 做了什麼
+
+- **C++ 一份**（`impls/aos-directive/src/ref.cpp`，公開在 `aos/directive.hpp`）：`aos::ref_spot(字串, RefBase) → {檔, 指標}`（只看字面、不讀檔）、`aos::ref_step({檔, 指標}, $at)`、`aos::ref_at_of(物件)`。aos-directive 自己解 `$ref` 用它；aos-json 的 `--follow`、`check`、`ref --move` 改叫它（`src/follow/kind.cpp`、`locate.cpp`、`cmd/ref.cpp`、`cmd/check.cpp`），原本自己切 `#` 的那份拿掉。公開介面只多不改，其他 impls 重新連結即可。
+- **Python 一份**：`lib/aos_index.py` 的 `link()`，`#` 之後改成同一套算法（`home()` 沒動）。index 路徑因此也收 `#/../x.json`、`#/../x.json#/_index`、`../w.json#/a/../_index`；「物件裡直接寫 `w.json#/…` 不收」（第 1 題甲）不變。index 沒有 `$at`。
+- **兩邊是不是同一套**：`#` 之後「字串→位置」是同一套算法、各一份實作，跑同一張對照表 `impls/aos-directive/tests/ref_spot_cases.json`（25 列）。不帶 `#` 的起點兩邊本來就不同（`$ref` 從檔所在資料夾、index 從容器），沒有統一。`$at` 的走法（一段一個 key、空段與 `.` 略過、`..` 往外、走出根到資料夾）跟 index 在物件裡不帶 `#` 的走法同一條規則，但碼是 C++ 另一支（`ref_step`），沒有共用對照表。
+- **經 aos-directive 的 Python**（`lib/directive_value.py` 等）：同一個庫，自然跟上，沒改。
+- **搬動工具不用改**：daemon 的 `abs_refs`／`rel_refs`、`aos-json ref --move`、`aos-grow` 都只改 `$ref` 第一個 `#` 前面的檔名，`#/../x` 補上檔名後是 `檔#/../x`，照同一套仍指原來那份；`$at` 是另一個 key、不受搬動影響。
+- **測試**：`impls/aos-directive/tests/test_ref_spot.py`（9 支：對照表、沒檔時原封不動、被換進來的檔、陣列／argv／`$path`、繞圈、資料夾與指不到、`$at` 三支）；`impls/aos-json/tests/test_ref_at.py`（4 支）；`lib/tests/test_index_link.py`（2 支：對照表、從物件裡起算）。
+- **條文與說明**：N-45（`$ref` 段、新增 `$at` 一項、陣列細則、寬容那句、標題句）、N-62 半句、附錄 3 舊名對照刪「`$at` 拿掉」那列；`impls/aos-directive` 的 README、docs/01、標頭註解、`--help`；`knowledge/aos/cli/parts/directive.json`、`knowledge/docs/01`（`$ref` 條與 index 條）、`knowledge/aos/tools/index_view.json` 與 `lib/base/index_view/_tooldef.json` 各一句；附錄 1 條號表 N-45 那列。
+
+```
+$ aos-directive --file kb/me.json < kb/me.json
+   # me.json: {"defs":{"argv":["echo","hi"]},"r1":{"$ref":"other.json","$at":"a/b"},"r2":{"$ref":"other.json#/a","$at":"b/c"},"r3":{"$ref":"#/defs","$at":"argv"},
+   #           "r4":{"$ref":"#/../other.json","$at":"k"},"r5":{"$ref":"other.json","$at":"#/k"},"r6":{"$at":"k"}}     other.json: {"a":{"b":{"c":"abc"}},"k":"other-k"}
+{"defs": {"argv": ["echo", "hi"]}, "r1": {"c": "abc"}, "r2": "abc", "r3": ["echo", "hi"], "r4": "other-k", "r5": {"$ref": "other.json", "$at": "#/k"}, "r6": {"$at": "k"}}
+$ cd kb && aos-directive < me.json            # 沒給 --file：r3、r4（`#/` 開頭）原封不動，r1、r2 照換
+{"defs": {...}, "r1": {"c": "abc"}, "r2": "abc", "r3": {"$ref": "#/defs", "$at": "argv"}, "r4": {"$ref": "#/../other.json", "$at": "k"}, "r5": {...}, "r6": {"$at": "k"}}
+$ aos-json get --follow kb/me.json#/r1/c
+"abc"
+$ aos-json check kb/me.json
+kb/me.json#/r5: DirectiveFormBad has $ref/$env but is malformed, aos will leave it as is: {"$ref": "other.json", "$at": "#/k"}
+$ aos-directive --file kb/dir.json < kb/dir.json      # {"r": {"$ref": "#/.."}}
+aos-directive: error: DirectiveBad $ref cannot read …/kb
+$ aos-directive --file kb/loop.json < kb/loop.json    # {"r": {"$ref": "#/../loop.json#/r"}}
+aos-directive: error: DirectiveBad $ref loop: …/kb/loop.json#/r → …/kb/loop.json#/r
+$ aos-json ref --move --parents kb/me.json#/key '#/../moved.json#/was' && cat kb/moved.json
+{"was": "root-key"}
+```
+
+### 細節代定（可翻）
+
+`#/` 裡的 `..`：
+
+- **U1 `..` 只照字面整理**：`#/a/../b`＝`#/b`，不看 `a` 在不在。
+- **U2 `#` 後面只有 `..` 另算**，其他段照字面當 JSON pointer 的 token：空段、`.` 都是 key 名（保住 ref-hash R5「`#/`＝空字串 key」與 index L12）；`~1`＝`/`、`~0`＝`~`。
+- **U3 名字就叫 `..` 的 key 在 `$ref`／index 路徑裡指不到**（原本 `x.json#/..` 指得到，現在不行）。入口路徑與 json 工具的 `檔#/指標`（N-62）不受影響，照字面。
+- **U4 走出檔之後才再認一次 `#`**：在檔裡，`#` 是 key 名的一部分（`#/a#b`＝key `a#b`）；走出根物件後，到下一個 `#` 之前是檔案系統路徑，那個 `#` 後面一定要 `/`，不是＝寫法不合。N-62「第一個 `#` 就切」對其他讀者不變。
+- **U5 帶檔名的也收**：`x.json#/../y.json` 同一套。走出檔時「所在資料夾」照字面取，**`x.json` 是捷徑時不解開**——所以 `link.json#/../y.json`（從外面寫）落在捷徑所在的資料夾，而被換進來的 `link.json` 裡面寫的 `#/../y.json` 落在它實際指向的檔的資料夾（對讀的 opus 實跑抓到）。要兩邊一致就在走出檔時先解捷徑；先照字面，列給使用者。
+- **U6 沒有「那份檔」時整個原封不動**（同 R1、R4；陣列有一個元素這樣＝整個不換）。daemon 的信同 R7。
+- **U7 算出來是資料夾＝讀不到**（`DirectiveBad`）；繞圈看算好之後的（實際檔, 整理過的指標）。
+
+`$at`：
+
+- **A1 寫法**：一段一個 key，`/` 隔開；開頭帶不帶 `/` 都收（空段與 `.` 略過，同 index L8）；key 裡的 `/` 寫 `~1`、`~` 寫 `~0`；陣列索引照 JSON pointer。
+- **A2 `..`＝往外一層**（同像）：`{"$ref": "x.json#/a/b", "$at": "../c"}`＝`x.json#/a/c`；走出根物件＝那份檔所在的資料夾，之後的段是資料夾／檔名（`{"$ref": "x.json", "$at": "../y.json"}`＝隔壁 `y.json` 整份）。走出去之後進不了別的檔的內部（`$at` 不收 `#`）。
+- **A3 名字是 `..`、`.`、空字串的 key 用 `$at` 走不到**；後兩種可以寫在 `$ref` 的 `#/` 後面。
+- **A4 沒寫、`null`、空字串＝不走**。
+- **A5 `$at` 不是字串、或裡面有 `#`＝寫法不合，整個物件原封不動**。沒有選「只忽略 `$at`」：那樣會悄悄換成比想要的大的一塊（整份檔）。
+- **A6 只有 `$at` 沒有 `$ref`＝不是指示詞、不管**。沒有推成「＝本檔」：本檔已有 `{"$ref": "#/…"}`；要不要讓單獨的 `$at` 表示「從這個物件所在處走」是另一題，列給使用者。
+- **A7 `$ref` 是陣列時，`$at` 套在每一份上**（各自接著走、再合），不是對合好的結果取位置。這正是 10-23 他刪 `$at` 時頂層問的那題（「接在每一份的指標後面，還是對合好的結果再取位置」），當時沒答；這次照「`$ref` 指到哪、`$at` 從那接著走」逐份套，列給使用者。
+- **A8 先 `$at` 後 `$path`／`$prefix`**：`$at` 是取值之前的位置，後兩個是取到之後的字串拼接。
+- **A9 `$ref` 指到資料夾再用 `$at` 補檔名不收**（`{"$ref": "#/..", "$at": "x.json"}`＝讀不到）：`$ref` 自己要先指到檔。
+
+### 要使用者看的
+
+1. A7（陣列＋`$at`）逐份套，對不對。
+2. A6 單獨的 `$at` 不是指示詞，對不對。
+3. A5 `$at` 寫壞時整個不換，對不對。
+4. U5 捷徑：`link.json#/../y` 從捷徑所在處算還是從它指向的檔算。
+5. U3／A3：名字叫 `..` 的 key 指不到，接不接受。
+6. A2：`$at` 的 `..` 可以走出檔到檔案系統，要不要擋在根。
+
+### 沒做
+
+- `lib/aos_index.py` 項目的 `index` 寫壞時那句提示沒加 `#/../x.json` 的例子（只准動 `link()`／`home()`）；`lib/docs/02` 的 index_view 那格沒補。
+- 沒找 Argon 審這輪的細節代定。

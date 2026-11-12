@@ -30,6 +30,9 @@ flags:
                out one level: {"$ref": "#/../other.json"} is the file next to FILE
   -h, --help   show this help
 
+A $ref object may carry "$at": "a/b" to walk on from where $ref points
+({"$ref": "x.json", "$at": "a/b"} = /a/b of x.json); "$at" takes no "#".
+
 exit codes: 0 ok; 1 error ("aos-directive: error: CODE ..." on stderr).
 )";
 

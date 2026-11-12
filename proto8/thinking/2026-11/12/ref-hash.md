@@ -64,3 +64,5 @@ hi
 
 - ~~aos-json 要不要跟上 `#/`（json 線）~~：已做（`6b74fec4c`），見 [json-tools 04](json-tools/04-aos-json下沉與len與jsonx-multi.md#追加aos-json-的-ref-收-11-12-晚頂層轉來)。
 - ~~`directive_value` 要不要給 `--file`。~~ **已做（11-12 晚，codebase-cleanup 線）**：知道「那份檔」的 Python 呼叫處都給了 `--file`——`lib/directive_value.py`（`resolve` 多一個選填 `file`；`resolve_path` 一律給設定檔＝`cli.json` 的 `tools`／`tools_sub`／`mcp_servers`、server 檔的 `env_file`／`ca_file`）、`lib/mcp_server_file.py` 的 `stdio_launch`（`command`／`args`＝server 檔）、`cmd/aos-tools` 的 `read_bases` 與 `cmd/aos-agent` 的 `check_pointer`（`$override`＝那份登記檔）、`lib/agent/hooks.py` 的 `_target`（`handler`＝那格所在的 hooks.json）、`py/aos_clock_register.py` 的 `resolve_box`（`box`＝登記表）。照 R1 維持原封不動的：`agent_def` 的 `from`（腦給的參數）、`aos-daemon-ctl` 的 `resolve_here`（旗標給的值）、`aos-tools --path-json`（旗標）、`lib/aos_json.py` 的 `value_of`（腦給的 `text`／`value`，不是從檔讀來的；代定、可翻：要它指「要寫進去的那份檔」就給 `t.real`）。
+
+後續（11-12 晚）：`#` 後面可以寫 `..`、走出根物件就到檔案系統（`#/../other.json`），`$at` 回來當「接在 `$ref` 後面往下走」的欄；「字串→位置」收成 `aos::ref_spot` 一支，R5 不變 → [ref-index-unify § 使用者裁定](ref-index-unify.md#使用者裁定-11-12-晚)。
