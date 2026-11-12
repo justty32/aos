@@ -60,9 +60,13 @@ def link(where, value):
     使用者 11-12 晚「路徑相對...以_index, _index.json的位置爲準。」「這個要用json與檔案系統的同像性去想。如果是在json物件內的，某key的_index，
     那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。」：
     從裝著那份 index 的容器（資料夾或 json 物件）一段一段走：在物件裡，名字＝往下一個 key、`..`＝外層物件，根物件的 `..`＝檔案所在的資料夾；
-    在檔案系統裡照資料夾走。`#/指標` 只能接在檔案系統那邊（進檔要明寫 #，寫法上 / 與 #/ 仍分得出來）。絕對路徑照用。"""
+    在檔案系統裡照資料夾走。`#/指標` 只能接在檔案系統那邊（進檔要明寫 #，寫法上 / 與 #/ 仍分得出來）。絕對路徑照用。
+    `#/指標` 開頭（11-12 晚，使用者「也跟進吧」，同 N-45 `{"$ref": "#/a/b"}`）＝本檔根算起的絕對位置、跟容器無關：
+    本檔＝這份 index 實際所在的那個 json 檔（where 的 # 前面；DIR/_index.json、DIR/_metainfo.json 也是），指標照字面。"""
     if not isinstance(value, str):
         return None
+    if value.startswith("#/"):
+        return where.split("#", 1)[0] + value
     cut = value.find("#")
     walk, ptr = (value, None) if cut < 0 else (value[:cut], value[cut:])
     if not walk or (ptr is not None and not ptr.startswith("#/")):
@@ -191,7 +195,7 @@ def line(key, entry, where):
         return out                                      # 項目壞掉或沒有 description：只印鍵（C-48，I14）
     to = link(where, entry["index"])
     if to is None:
-        to = "bad (%s; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index)" % (
+        to = "bad (%s; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index; #/a/_index counts from the root of this file)" % (
             "not a path" if isinstance(entry["index"], str) else aos_json.kind(entry["index"]))
     return "%s%s\tindex: %s" % (out, "" if isinstance(desc, str) else "\t", to)
 

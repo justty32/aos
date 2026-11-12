@@ -193,9 +193,9 @@ class IndexViewTest(unittest.TestCase):
             "data.json\tData\tindex: lk/data.json#/_index",
             "up\t\tindex: me.json#/views",
             "abs\tA\tindex: /srv/kb/_index.json",
-            "num\tN\tindex: bad (number; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index)",
-            "hash\tH\tindex: bad (not a path; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index)",
-            "empty\tE\tindex: bad (not a path; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index)",
+            "num\tN\tindex: bad (number; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index; #/a/_index counts from the root of this file)",
+            "hash\tH\tindex: bad (not a path; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index; #/a/_index counts from the root of this file)",
+            "empty\tE\tindex: bad (not a path; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index; #/a/_index counts from the root of this file)",
             "plain\tP"])
         self.assertEqual(self.ok(path="lk", key="sub")[1], "sub\tSub folder\tindex: lk/sub/_index.json")
         # 不跟著往下走：指到的那份不在也不查
@@ -212,7 +212,7 @@ class IndexViewTest(unittest.TestCase):
                                                             "self": {"index": ".."}}}},
                                      "views": {"b": {"index": "b/_index"}},
                                      "_metainfo": {"index": {"m": {"index": "m/_index"}}}})
-        bad = "bad (not a path; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index)"
+        bad = "bad (not a path; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index; #/a/_index counts from the root of this file)"
         self.assertEqual(self.ok(path="lk/sub/v.json")[1:], [
             "m\t\tindex: lk/sub/v.json#/m/_index",                                         # _metainfo 裡的 index：容器同 _index（描述的那個物件）
             "a\tA\tindex: lk/sub/v.json#/a/_index", "up\t\tindex: lk/sub/w.json#/_index",
@@ -244,6 +244,34 @@ class IndexViewTest(unittest.TestCase):
         self.assertIn("a string that is not a path", self.err("IndexBad", path="ln/doc.json#/w"))   # 物件裡直接寫檔名#：要先 .. 出檔
         self.write("ln/_index.json", "kb/_index.json")                                    # 資料夾的 _index.json 整份不收字串
         self.err("IndexBad", path="ln")
+
+    def test_hash_root(self):
+        # 使用者 11-12 晚「也跟進吧」：#/ 開頭＝這份 index 實際所在那個 json 檔的根算起（同 N-45 {"$ref": "#/a/b"}），跟容器無關
+        (self.ws / "hr").mkdir()
+        self.write("hr/_index.json", {"x": {"index": "#/x"},                                  # 本檔＝這份 _index.json 自己（使用者裁「算數。」）
+                                      "lone": {"index": "#"}, "word": {"index": "#a"},          # # 後不是 /：照舊不收
+                                      "file": {"index": "v.json#/_index"}})                      # 檔案系統那邊寫檔名#：照舊收
+        bad = "bad (not a path; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index; #/a/_index counts from the root of this file)"
+        self.assertEqual(self.ok(path="hr")[1:], ["x\t\tindex: hr/_index.json#/x", "lone\t\tindex: " + bad,
+                                                  "word\t\tindex: " + bad, "file\t\tindex: hr/v.json#/_index"])
+        self.write("hr/_metainfo.json", {"index": {"mi": {"index": "#/m/_index"}}})              # 本檔＝DIR/_metainfo.json
+        self.assertEqual(self.ok(path="hr", key="mi")[1], "mi\t\tindex: hr/_metainfo.json#/m/_index")
+        self.write("hr/v.json", {"_index": {"r": {"index": "#/a/_index"}, "w": {"index": "w.json#/a"}},
+                                 "o": {"p": {"_index": "#/a/_index",                              # 檔內深處 _index 是字串
+                                             "_metainfo": {"index": {"d": {"index": "#/d/_index"}}}},
+                                       "q": {"_index": {"e": {"index": "#/o/~1e"}}},               # 指標照字面（~1 照舊）
+                                       "s": {"_index": "#"}, "t": {"_index": "#a"}, "u": {"_index": "w.json#/_index"}},
+                                 "views": {"f": {"index": "#/"}}})
+        self.assertEqual(self.ok(path="hr/v.json")[1:], ["r\t\tindex: hr/v.json#/a/_index", "w\t\tindex: " + bad])
+        self.assertEqual(self.ok(path="hr/v.json#/o/p"), [                                       # 深處也從本檔的根算，不從 /o/p 算
+            "[index] hr/v.json#/o/p/_metainfo/index, 1 entry (hr/v.json#/o/p/_index points to hr/v.json#/a/_index, not followed)",
+            "d\t\tindex: hr/v.json#/d/_index"])
+        self.assertEqual(self.ok(index="hr/v.json#/o/p/_index"),
+                         ['[index link] hr/v.json#/o/p/_index points to hr/v.json#/a/_index (not followed; to read it: {"index": "hr/v.json#/a/_index"})'])
+        self.assertEqual(self.ok(path="hr/v.json#/o/q")[1], "e\t\tindex: hr/v.json#/o/~1e")
+        self.assertEqual(self.ok(index="hr/v.json#/views")[1], "f\t\tindex: hr/v.json#/")         # 主觀 index：本檔＝表所在的檔
+        for k in "stu":                                                                           # #／#a／物件裡寫檔名#：照舊 IndexBad
+            self.assertIn("a string that is not a path", self.err("IndexBad", path="hr/v.json#/o/" + k))
 
 
 if __name__ == "__main__":
