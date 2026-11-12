@@ -15,12 +15,13 @@ llm-kernel/
                不設 budget（使用者選「從範本拿掉」；要限寄件人就自己加 budget.senders，例子在 03 件 5）、
                endpoints＝能力包表（下表）
   fake_slow/   demo 用的慢假腦 endpoint 函數：睡 endpoint.delay_s 秒，再把同一份 stdin 交給 lib/base/llm_fake（03 件 3）
-  endpoints/litellm/_entry  {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/base/llm_http"}, "--key-env", "LITELLM_KEY"]}（四個 LiteLLM 包共用）
+  endpoints/litellm/_entry  {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/base/llm_http"}, "--key-env", "LITELLM_KEY"]}（五個 LiteLLM 包共用）
 ```
 
 | 代號 | 是什麼 | 屬性（kernel.json 裡寫的） |
 |---|---|---|
 | `smart-high` | LiteLLM `localhost:4000` 的 `claude-haiku`（真名以 `curl localhost:4000/v1/models` 為準） | `fixed.temperature` 0.2、`slots` 4、`speed` normal、`cost` high、`context` 200000 |
+| `judge` | 跟 `smart-high` 同一組（`claude-haiku`），給 [judge-llm 範本](../../templates/judge-llm/README.md) 用；裁判要換模型就改這包 | 同 `smart-high` |
 | `stupid-fast` | LM Studio `localhost:1234` 的 `qwen3-1.7b`（本機載的是別的就改這包的 `model`，真名看 `curl localhost:1234/v1/models`；家機試驗場指 `google/gemma-4-e4b`） | `fixed.temperature` 0.7、`slots` 1、`speed` fast、`cost` free、`context` 4096 |
 | `luna`、`terra`、`sol` | LiteLLM 的 `chatgpt-gpt-6-luna-low`、`chatgpt-gpt-6.1-terra`、`chatgpt-gpt-6.1-sol`（luna 沒有 6.1 版——ChatGPT 帳號的 codex 回 not supported；proxy 要有這幾個名字，`curl localhost:4000/v1/models` 看） | `sol` 有 `fixed.temperature` 0.2；`cost` high |
 | `fake`（預設） | `lib/base/llm_fake`：有工具先叫 `tool` 寫的那個（範本 `peek_now_time`，沒有就第一個）、再答「FAKE ANSWER to: …」 | `speed` fast、`cost` free |

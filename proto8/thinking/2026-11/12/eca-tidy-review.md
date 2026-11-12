@@ -54,7 +54,7 @@
 - 第 10 條：已修。2026-10 月表與 10-15 日 README 的「沒有指示詞可用（N-45）」改成以現行 N-45 為準（`$env`、`$ref`，`$ref` 可帶 `$at`）；os-concepts README 與其 10 號檔的「C-76／N-65 暫稱」標上已落成 C-83／N-67（草稿本文不動）；C-86、C-89～C-92 在來源夾（10 tonight-rulings、10 aos-tools-cli、07 agent-diversity、10 self-family、11 goal）的 README 導覽列補「條文：」連結。
 - 另：`2026-11/08/alt-fable/out2/v4.md` 全文只有一行用量上限錯誤，沒刪（刪檔要使用者同意）。
 - 第 2 條：已修。`knowledge/aos/me.json` 的 `self_state` 段「The ten parts」改成 eleven、列舉補上 `system`（以 `cli/agent.json` 與 `aos-agent ctl state` 的 11 個為準）。
-- 第 3 條：只改說明。`templates/judge-llm/README.md` 寫明預設 `"endpoint": "judge"` 在出廠 `kernel/llm-kernel/kernel.json` 沒有、直接搭會 `EndpointMissing`，用前二選一：kernel.json 登記 `judge`，或把 judge.json 改成已有代號（例 `smart-high`）。沒改 judge.json 預設，因為測試靠 `judge` 這個名字、範本的意圖像是「角色名」；要不要改預設或在 kernel.json 加一包 `judge`，給頂層／使用者定。
+- 第 3 條：已修。使用者 11-12 晚選項框答覆：問「預設值要怎麼辦」選「kernel.json 加一個 judge」，問「judge 指到哪個模型」選「同 smart-high（haiku）」。`kernel/llm-kernel/kernel.json` 的 `endpoints` 加 `judge`（設定照抄 `smart-high`，summary 註明給 judge-llm 範本用）；`templates/judge-llm/README.md` 改成出廠已有 `judge`、直接搭就能跑、換模型改 kernel.json 那格；`kernel/docs/01` 能力包表補 `judge` 一列、LiteLLM 包共用數改五個；`impls/aos-llm-kernel/docs/01` 的「範本三個 LiteLLM 包」改成不寫數。judge.json 預設不變。
 - 第 4 條：已修。`cmd/aos-mcp-launch` 四處 `tool_io.die` 加 `echo=False`，錯誤行只走 stderr；`lib/agent/tests/test_cli_external_mcp.py` 原有的 PackBad／ArgumentsBad 兩處補 stdout 為空的斷言，另加一例 CommandMissing。
 - 第 5 條：已修。`kernel/docs/01` 的檔案樹與起來步驟改成 `$AOS_HOME` 指示詞（拿掉兩行 `sed`，改成先 `export AOS_HOME=<repo>/proto8`；LiteLLM 包共用數改成四個）；`02` 的「改成自己的」改說判官路徑是 `AOS_HOME` 指示詞、搬出 repo 不用改，跑法開頭補 `export AOS_HOME`。
 - 第 6 條：已修。`impls/aos-daemon/README.md` 改成旗標放設定檔後面也收（11-11 起，見 aos-loop `config.cpp` loop_cli），多給位置參數才 `ArgumentsBad`。只改 README。
