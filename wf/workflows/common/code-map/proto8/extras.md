@@ -5,6 +5,12 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/extras/fake-mcp-http/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`server.py`](../../../../../proto8/extras/fake-mcp-http/server.py) | Fake streamable-HTTP MCP server for testing external MCP (external-mcp 05/06): 127.0.0.1 only, TLS, checks Authorization: Bearer, two harmless tools … |
+
 ## `proto8/extras/gitignore-check/`
 
 | 檔 | 負責什麼 |

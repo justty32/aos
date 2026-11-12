@@ -47,6 +47,12 @@
 #   system（11-11 self-system，使用者裁「fsm 取代、eca 附加」）：interfaces.json 宣告了 system＝$AOS_STACK 那份在就用它、否則定義那份，非空就附加給 CLI：
 #   claude＝--append-system-prompt-file＋--system-prompt-snapshot off（宣告了就一律 off，--resume 才換得到新的）、codex＝-c developer_instructions；
 #   沒宣告＝不碰。畫面開著的 CLI 帶的是開畫面那時的（重開才換）。
+# 外部 MCP（11-12 external-mcp 步 1，thinking 2026-11/12/external-mcp）：cli.json 選填 mcp_servers＝server 檔路徑的陣列（相對從 cli.json 的資料夾算、
+#   可寫指示詞），一份一台，讀與驗在 lib/mcp_server_file.py。CLI 自己接（不凍結工具說明）、列了＝整台免核准。這版只接 codex 身的 http：
+#   -c mcp_servers.<名>.url／bearer_token_env_var／default_tools_approval_mode="approve"／enabled_tools（only）／disabled_tools（except），
+#   有 bearer＝自動補 shell_environment_policy.exclude；env_file 在起 codex 那一刻才讀，token 與 ca_file（SSL_CERT_FILE、CODEX_CA_CERTIFICATE）
+#   只放進 codex 行程的環境（run_cli 的 env=；畫面那條路前面接 mcp_server_file.py --exec 啟動器，tmux 的環境沒有）。某一台壞＝warning 跳過、其他照接（X8）；
+#   stdio 與 claude 身目前 warning 跳過（步 3、步 4）。
 #   模型（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本）的 model＝flags 的 --model（換掉或加在尾）；都沒有＝flags 原樣。
 # 換台（11-10 two-machines 05）：要接舊對話前先認「是不是這台的」（session_here：記號檔的 session、home 一樣，claude 再比 ws；
 #   不讀 CLI 的任何檔內容、不靠它的錯誤訊息）。不是＝在交出去之前改開新對話：呼叫者給了 reseed（aos-eca-turn）＝把 reseed(上限)
@@ -125,6 +131,7 @@ def load_cfg(tool_dir):
         die("CfgBad", str(e))
     cfg["registry"] = registry(cfg, tool_dir, path, files)
     cfg["hooks_def"] = os.path.abspath(tool_dir) if files.get("hooks") else None   # 11-10 hook：宣告了 hooks＝aos-mcp 帶 --hooks
+    cfg["external"] = external_servers(cfg, tool_dir, path)        # 11-12 external-mcp 步 1：cli.json 的 mcp_servers
     stack_copies(cfg, tool_dir, files)
     return cfg
 
@@ -237,6 +244,66 @@ def registry(cfg, tool_dir, path, files):
     if "tools_flags" in cfg:
         die("CfgBad", "%s: tools_flags given but no registry file (no tools, and no default registry alongside)" % path)
     return None
+
+
+def _server_mod():
+    sys.path.insert(0, _lib)   # mcp_server_file 跟 tool_io 同在 lib/（直接執行此檔時 lib 不在 sys.path）
+    try:
+        import mcp_server_file
+    finally:
+        sys.path.pop(0)
+    return mcp_server_file
+
+
+def external_servers(cfg, tool_dir, path):
+    """cli.json 選填 mcp_servers（11-12 external-mcp，使用者裁「都按照推薦。」）：server 檔路徑的陣列，相對從 cli.json 的資料夾算、
+    也可寫指示詞（同 tools）。陣列本身形狀不對＝CfgBad；某一份壞（檔不在、形狀不對、重名、名字 aos、指示詞解不開）＝warning 跳過那台、其他照接（X8）。
+    這版只接 codex 身的 http server：stdio 與 claude 身＝warning 跳過（03 步 3、步 4）。回讀好的 server 列表（mcp_server_file.load 的形狀）。"""
+    if "mcp_servers" not in cfg:
+        return []
+    entries = cfg["mcp_servers"]
+    if not isinstance(entries, list) or not all(isinstance(e, (str, dict)) and e for e in entries):
+        die("CfgBad", "%s: mcp_servers must be an array of server file paths (strings or directives)" % path)
+    msf, base, out, seen = _server_mod(), os.path.abspath(tool_dir), [], set()
+    for e in entries:
+        try:
+            if isinstance(e, dict):
+                sys.path.insert(0, _lib)
+                try:
+                    from directive_value import resolve_path
+                finally:
+                    sys.path.pop(0)
+                e = resolve_path(e, path, "mcp_servers")
+            s = msf.load(os.path.normpath(os.path.join(base, e)))
+        except tool_io.Error as err:
+            warn("external MCP server skipped: %s %s" % (err.code, err))
+            continue
+        if s["name"] in seen:
+            warn("external MCP server %s skipped: the name is already used by an earlier server file (%s)" % (s["name"], s["file"]))
+            continue
+        seen.add(s["name"])
+        if s["transport"] != "http" or cfg["kind"] != "codex":
+            warn("external MCP server %s skipped: %s servers under %s are not attached yet (external-mcp 03)"
+                 % (s["name"], s["transport"], cfg["kind"]))
+            continue
+        out.append(s)
+    return out
+
+
+def external_codex(cfg):
+    """codex 這一次要加的 (-c 旗標, 只給 codex 行程的環境, 畫面啟動器的 spec)：每次起 codex 前叫，env 檔在這一刻才讀。"""
+    if not cfg.get("external"):
+        return [], {}, None
+    msf = _server_mod()
+    kept, env, spec = msf.http_plan(cfg["external"], warn)
+    return msf.codex_argv(kept), env, (spec if spec["set"] or spec["from"] else None)
+
+
+def exec_wrap(argv, spec):
+    """畫面那條路：有金鑰或憑證要給＝前面接 mcp_server_file 的啟動器（命令列只有路徑與變數名），值只進 CLI 行程（tmux 的環境沒有）。"""
+    if not spec:
+        return argv
+    return [sys.executable, os.path.join(_lib, "mcp_server_file.py"), "--exec", json.dumps(spec), "--"] + argv
 
 
 # codex 起 MCP server 不帶父程序的環境變數（11-11 實測：aos-mcp 少了 AOS_HOME 解不開範本登記檔的指示詞、起不來，腦看不到任何 aos 工具），
@@ -578,12 +645,14 @@ def parent_death_term():
     return preexec
 
 
-def run_cli(argv, prompt, ws, timeout_ms, handed=None):
+def run_cli(argv, prompt, ws, timeout_ms, handed=None, env=None):
     """起 CLI、題目從 stdin 給、等它做完；起來了就叫 handed（交出去了，11-03 aos-eca-turn 在這一刻收信）。
+    env＝只加給這個 CLI 行程的環境（11-12 external-mcp：外部 server 的 bearer、憑證路徑；不動自己的 os.environ）。
     CLI 的 stderr 不攔、原樣透出（R10）。"""
     try:
         p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             text=True, cwd=ws, preexec_fn=parent_death_term())
+                             text=True, cwd=ws, preexec_fn=parent_death_term(),
+                             env=dict(os.environ, **env) if env else None)
     except FileNotFoundError:
         die("CliMissing", "%s is not on PATH" % argv[0])
     if handed:
@@ -678,11 +747,12 @@ def print_codex(cfg, cell, ws, stack, prompt, handed=None, sid=None):
     sid = cell.read("session.txt") if sid is None else sid
     last = cell.file("last.txt")
     argv = ["codex", "exec"] + (["resume", sid] if sid else []) + cfg.get("flags", []) + cfg.get("print_flags", [])
-    argv += mcp_argv(cfg, cell, ws, stack) + system_argv(cfg)
+    ext, env, _ = external_codex(cfg)
+    argv += mcp_argv(cfg, cell, ws, stack) + ext + system_argv(cfg)
     argv += ["--skip-git-repo-check", "--json", "-o", last, "-"]     # 題目從 stdin 進（"-"）
     if os.path.exists(last):
         os.remove(last)
-    r = run_cli(argv, prompt, ws, cfg.get("timeout_ms", 600000), handed)
+    r = run_cli(argv, prompt, ws, cfg.get("timeout_ms", 600000), handed, env)
     try:                                         # 10-28：--json 的事件（中間訊息、跑過的指令）也接進 live.jsonl 留著
         with open(cell.file("live.jsonl"), "a", encoding="utf-8") as live:
             live.write(r.stdout if not r.stdout or r.stdout.endswith("\n") else r.stdout + "\n")
@@ -1167,8 +1237,10 @@ def start(cfg, cell, ws, stack):
     else:
         if sid:
             codex_note_compacts(cell, sid)                   # Q5：畫面開起來那刻壓過幾次＝基準，之後多出來的才跟上
-        argv = ["codex"] + (["resume", sid] if sid else []) + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack) + system_argv(cfg)
+        ext, _, spec = external_codex(cfg)
+        argv = ["codex"] + (["resume", sid] if sid else []) + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack) + ext + system_argv(cfg)
         argv += ["-c", "notify=" + json.dumps(hook_cmd("codex", cell))]
+        argv = exec_wrap(argv, spec)
     with open(cell.file("tmux.conf"), "w", encoding="utf-8") as f:
         f.write(TMUX_CONF)
     for name in ("busy.txt",):
