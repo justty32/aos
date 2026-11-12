@@ -4,7 +4,7 @@
 # 介面（lib/docs/01 契約）：stdin {"pattern", "path"?: ".", "type"?: file|dir|any, "sort"?: name|mtime, "hidden"?, "gitignore"?: true, "offset"?, "max_items"?: 100（1～500）}；
 #   stdout 一行一個路徑（照 tool_io.shown_path，可直接貼回 read／view／ls）；sort name＝照路徑（每層照名字）、mtime＝新的在前（同時照路徑）。
 #   尾巴行一律「... 」開頭：next_offset N (M paths in all)／(at least M paths)、skipped N unreadable、stopped（掃描預算）、no matches。
-# 走樹共用 lib/base/file_walk.py（隱藏、.gitignore、資料夾捷徑不跟進＝列出但不進、預算 20 秒或 2 萬項）。
+# 走樹共用 lib/file_walk.py（隱藏、.gitignore、資料夾捷徑不跟進＝列出但不進、預算 20 秒或 2 萬項）。
 # 錯：stderr 與 stdout 各一行「glob: error: 代號 原因」、退 1：ArgumentsBad、PatternBad、FileMissing、FileBad、ReadFailed、WsMissing。
 import os, sys
 HELP = """\
@@ -16,13 +16,13 @@ Result on stdout. On error: one line "glob: error: CODE reason" on stderr and st
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-# 只找自己的工具夾、realpath 祖先的 lib（與 lib/base 的共用模組），再交給標準 Python 路徑。
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
     if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
         break
     _lib = os.path.dirname(_lib)
-sys.path[:0] = [HERE] + ([_lib, os.path.join(_lib, "base")] if os.path.basename(_lib) == "lib" else [])
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
 try:
     import tool_io  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
@@ -41,7 +41,7 @@ try:
 except ModuleNotFoundError as error:
     if error.name != "file_walk":
         raise
-    die("ModuleMissing", "file_walk.py not in the tool folder, not in lib/base/, not on the Python path")
+    die("ModuleMissing", "file_walk.py not in the tool folder, not in lib/, not on the Python path")
 
 LIMIT_DEFAULT, LIMIT_MAX = 100, 500
 TYPES, SORTS = ("file", "dir", "any"), ("name", "mtime")

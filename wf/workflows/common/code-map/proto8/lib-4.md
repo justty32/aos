@@ -11,7 +11,6 @@
 |---|---|
 | [`copy/`](../../../../../proto8/lib/base/copy/) | 複製一個檔或整個資料夾（捷徑照捷徑複製、不跟進去；to 的上層自動建） |
 | [`edit/`](../../../../../proto8/lib/base/edit/) | 在一個檔做一處或幾處「整段原文照字面換掉」，一處不合就整個不改 |
-| [`file_walk.py`](../../../../../proto8/lib/base/file_walk.py) | grep 與 glob 共用的走樹：隱藏名、.gitignore（問 git）、資料夾捷徑不跟進、只把一般檔當檔、掃描預算與計數；另含兩支共用的檔名樣式（* ? [..] **）。 |
 | [`glob/`](../../../../../proto8/lib/base/glob/) | 照檔名樣式在一個資料夾底下找路徑（* ? [..] **，不含 / 的樣式＝任何深度的名字）：一行一個路徑、資料夾結尾加 / |
 | [`glob/tests/test_glob.py`](../../../../../proto8/lib/base/glob/tests/test_glob.py) | glob 工具：** 零層與多層、不含 / 的樣式任何深度、type、sort mtime、翻頁、隱藏與明寫 . 段、資料夾捷徑列出不進、gitignore、PatternBad、FileBad、工作區外。 |
 | [`grep/`](../../../../../proto8/lib/base/grep/) | 照內容搜整棵樹（或一個檔）：一行一筆「路徑:行號:那一行」，像 grep -rn；純 Python re，不靠系統的 grep／rg |

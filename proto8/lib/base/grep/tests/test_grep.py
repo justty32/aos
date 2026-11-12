@@ -13,10 +13,9 @@ import tempfile
 import unittest
 from unittest import mock
 
-sys.dont_write_bytecode = True                        # 不在 lib/base 留 __pycache__
+sys.dont_write_bytecode = True                        # 不在 lib 留 __pycache__
 ENTRY = Path(__file__).resolve().parents[1] / "_entry"
-sys.path.insert(0, str(ENTRY.parents[1]))           # lib/base：file_walk
-sys.path.insert(1, str(ENTRY.parents[2]))           # lib：tool_io
+sys.path.insert(0, str(ENTRY.parents[2]))           # lib：file_walk、tool_io
 import file_walk  # noqa: E402
 
 
