@@ -134,7 +134,8 @@ def _parameters(tooldef):
 
 def load_tooldef(folder):
     """讀定義：先 _metainfo.json 的 tooldef、再 _tooldef.json，頂層鍵淺合併、同名外面贏（11-12 metainfo，N-69 推薦讀法）；
-    兩處都沒有安靜退回無 schema，其餘壞檔只提醒一次（句子指明哪一處）。"""
+    兩處都沒有安靜退回無 schema，其餘壞檔只提醒一次（句子指明哪一處）。_metainfo.json 那處壞了＝提醒、只略過那處，
+    照用 _tooldef.json（比照使用者 11-12 對 index_view 的裁定「_metainfo.json 壞掉時…不該直接報錯。」）；_tooldef.json 壞了照舊整份當沒有。"""
     td, where, used = None, "_tooldef.json", []
     try:
         for name, key in (("_metainfo.json", "tooldef"), ("_tooldef.json", None)):
@@ -142,14 +143,19 @@ def load_tooldef(folder):
             try:
                 with open(os.path.join(folder, name)) as f:
                     v = json.load(f)
+                if key is not None:
+                    if not isinstance(v, dict) or key not in v:
+                        continue
+                    v = v[key]
+                if not isinstance(v, dict):
+                    raise ValueError("top level must be an object")
             except FileNotFoundError:
                 continue
-            if key is not None:
-                if not isinstance(v, dict) or key not in v:
-                    continue
-                v = v[key]
-            if not isinstance(v, dict):
-                raise ValueError("top level must be an object")
+            except (OSError, ValueError) as e:
+                if key is None:
+                    raise
+                warn("cannot use %s (%s); skipped" % (where, e))
+                continue
             td, used = (v if td is None else {**td, **v}), used + [where]
         where = " + ".join(used)
         if td is not None and _parameters(td) is None:

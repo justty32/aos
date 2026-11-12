@@ -410,7 +410,11 @@ def load_tooldef(obj, base, mi):
         return True, inside, False
     if isinstance(inside, dict) and isinstance(out, dict):
         return True, {**inside, **out}, True
-    return True, (inside if out is not None and not isinstance(inside, dict) else out), True
+    if not isinstance(inside, dict) and isinstance(out, dict):    # 壞的裡面不擋好的外面（比照使用者 11-12 對 index_view 的裁定）
+        line("note", "tooldef: %s is not an object, skipped; using %s" % (
+            ("_metainfo.json#/tooldef", "_tooldef.json") if obj is None else ("_metainfo.tooldef", "_tooldef")))
+        return True, out, False
+    return True, out, True                                        # 外面壞了：照舊交給後面的檢查報
 
 
 def aos_tools_check(target):
@@ -514,8 +518,11 @@ def staged(loc):
     del report[n:]
     has_entry = runnable or (obj is not None and "_entry" in obj) or \
         (obj is None and any(os.path.exists(os.path.join(base, x)) for x in ("_entry", "_entry.json")))
+    n = len(report)
     has_mi, mi = load_part(obj, base, "_metainfo")
-    return obj, has_entry, script, has_mi, load_tooldef(obj, base, mi)[0]
+    has_td = load_tooldef(obj, base, mi)[0]
+    del report[n:]
+    return obj, has_entry, script, has_mi, has_td
 
 
 def stage_line(loc):

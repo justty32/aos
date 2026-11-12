@@ -55,11 +55,27 @@ class LoadTooldef(unittest.TestCase):
         self.write(meta_raw=json.dumps({"summary": "x"}))
         self.assertEqual(self.load(), (None, ""))
 
-    def test_bad_inside_warns_naming_the_place(self):
+    def test_bad_inside_is_skipped_good_outside_used(self):
+        # 比照使用者 11-12 對 index_view 的裁定：壞的 _metainfo 只略過那處、提醒一次，好的 _tooldef.json 照用
         self.write(inside="nope", outside={"parameters": P_OUT})
         td, err = self.load()
-        self.assertIsNone(td)
+        self.assertEqual(td, {"parameters": P_OUT})
         self.assertIn("_metainfo.json#/tooldef", err)
+        self.assertIn("skipped", err)
+        (self.d / "_metainfo.json").write_text("not json")
+        td, err = self.load()
+        self.assertEqual(td, {"parameters": P_OUT})
+        self.assertIn("cannot use _metainfo.json#/tooldef", err)
+        (self.d / "_tooldef.json").unlink()
+        td, err = self.load()
+        self.assertIsNone(td)
+
+    def test_bad_outside_still_drops_all(self):
+        self.write(inside={"parameters": P_IN})
+        (self.d / "_tooldef.json").write_text("not json")
+        td, err = self.load()
+        self.assertIsNone(td)
+        self.assertIn("cannot use _tooldef.json", err)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@
 天然那份有兩處（11-12 metainfo，使用者「index_view也要認_metainfo。」，N-69 推薦讀法、M15）：_metainfo 裡的 index 為底、
 疊上獨立的 _index；再給 index 就是三層，後面蓋前面，都是逐項整項覆蓋。只有獨立那份時輸出跟以前逐字一樣。
 讀檔經 aos_json（aos-json get），錯照轉它最後一行（C-52 例外 ⑤）；`[no index]`、`[no entry]`、`[more]` 退 0。"""
+import json
 import os
 
 import aos_json
@@ -59,9 +60,39 @@ def dig(v, keys, where):
     return v
 
 
+def soft(meta, name):
+    """_metainfo 裡的 index（使用者 11-12「_metainfo.json 壞掉時，index_view 對那個資料夾不該直接報錯。」）：
+    回 (表或 None, 略過時的一句或 None)。_metainfo 不在或沒有 index＝(None, None)；不是物件、index 不是物件＝略過、不報錯。"""
+    if meta is None:
+        return None, None
+    if not isinstance(meta, dict):
+        return None, "%s is not an object, skipped" % name
+    if "index" not in meta:
+        return None, None
+    if not isinstance(meta["index"], dict):
+        return None, "%s index is not an object, skipped" % name
+    return meta["index"], None
+
+
+def meta_file(where):
+    """資料夾的 _metainfo.json 整份；不在＝None，讀不了＝NO（交給 soft 前先換成略過的句子）。不經 aos-json，讀壞了不報錯。"""
+    it = aos_json.Target(where)
+    try:
+        with open(it.real, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError):
+        return NO
+
+
+NO = object()
+
+
 def natural(path):
-    """天然那份：回 ([(位置, 表)…] 有的那幾層、裡面在前, 沒有時的句子, 上一層提示或 None)。節點本身不在或不是 JSON＝照轉 aos-json 的錯。
-    沒有時的句子帶一句「上一層的 index 怎麼看這個節點」（只是提示，工具不自己往上找，I10）；只講獨立那份（11-12 M21）。"""
+    """天然那份：回 ([(位置, 表)…] 有的那幾層、裡面在前, 沒有時的句子, 上一層提示或 None, 略過的句子或 None)。節點本身不在或不是 JSON＝照轉 aos-json 的錯。
+    沒有時的句子帶一句「上一層的 index 怎麼看這個節點」（只是提示，工具不自己往上找，I10）；只講獨立那份（11-12 M21）。
+    裡面那份（_metainfo）壞了只略過、在標頭說一句；獨立那份壞了照舊報錯。"""
     t = aos_json.Target(path)
     inside, outside = spot(t)
     if t.ptr:
@@ -71,20 +102,23 @@ def natural(path):
         up, item = os.path.dirname(bare) or ".", os.path.basename(bare)
     about = 'What the index of %s says about it: {"path": "%s", "key": "%s"}' % (up, up, item)
     if not t.ptr and os.path.isdir(t.real):             # 資料夾：兩份都是檔（裡面那份再取 index 鍵）
+        m = meta_file(inside.rsplit("#", 1)[0])
+        mine, skipped = (None, "_metainfo.json could not be read, skipped") if m is NO else soft(m, "_metainfo.json")
         o = whole(outside)
-        found = [(inside, dig(whole(inside.rsplit("#", 1)[0]), ["index"], inside)), (outside, None if o is None else dig(o, [], outside))]
+        found = [(inside, mine), (outside, None if o is None else dig(o, [], outside))]
     else:
         node = read(aos_json.Target(t.shown()))
         if not isinstance(node, dict):
             if not t.ptr:
                 item += "#"
             return [], ("%s is %s, it cannot hold _index. Entries about its items may sit in a parent's index (keys like %s/0): try index_view %s"
-                        % (t.shown(), aos_json.kind(node), item, up)), None
-        found = [(inside, dig(node, ["_metainfo", "index"], inside)), (outside, dig(node, ["_index"], outside))]
+                        % (t.shown(), aos_json.kind(node), item, up)), None, None
+        mine, skipped = soft(node.get("_metainfo"), "_metainfo")
+        found = [(inside, mine), (outside, dig(node, ["_index"], outside))]
     layers = [(w, v) for w, v in found if v is not None]
     if not layers:
-        return [], "%s does not exist" % outside, about
-    return layers, None, None
+        return [], "%s does not exist" % outside, about, skipped
+    return layers, None, None, skipped
 
 
 def entries(n):
@@ -111,9 +145,9 @@ def main():
     if type(offset) is not int or offset < 0:
         tool_io.die("ArgumentsBad", "offset must be a non-negative integer")
     cap = aos_json.limit(args, "limit", "AOS_JSON_MAX_ITEMS", aos_json.MAX_ITEMS)
-    layers, missing, about = [], None, None
+    layers, missing, about, skipped = [], None, None, None
     if "path" in args:
-        layers, missing, about = natural(args["path"])
+        layers, missing, about, skipped = natural(args["path"])
     if "index" in args:
         layers = layers + [(args["index"], table(aos_json.Target(args["index"]), args["index"]))]
     if not layers:
@@ -128,6 +162,8 @@ def main():
     head = "[index] %s, %s" % (head, entries(len(rows)))
     if missing and "index" in args:
         head += " (natural index: %s)" % missing
+    if skipped:
+        head += " (%s)" % skipped                       # 壞掉的 _metainfo 只略過，標頭說一句（不帶絕對路徑）
     out = [head]
     if "key" in args:
         k = args["key"]

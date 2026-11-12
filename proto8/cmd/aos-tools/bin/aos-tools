@@ -336,14 +336,30 @@ def check_tooldef(td, where):
     return td
 
 
-def merge_tooldef(meta, mwhere, outside, owhere):
+def read_meta(read):
+    """讀 _metainfo（read() 照 read_json 丟 Fail）→ (值, None) 或讀不了時 (None, 那個 Fail)：壞掉的 _metainfo 先不報，交給 merge_tooldef 決定。"""
+    try:
+        return read(), None
+    except Fail as e:
+        return None, e
+
+
+def merge_tooldef(meta, mwhere, outside, owhere, meta_err=None):
     """11-12 metainfo（N-69 推薦讀法）：_metainfo 裡的 tooldef 為底、獨立的 _tooldef 蓋上去——頂層鍵淺合併，同名整鍵外面贏
-    （parameters 整鍵換、不往下合 schema）。兩處各自先驗形狀（錯的句子指明哪一處）；兩處都沒有＝None。"""
-    inside = None
-    if isinstance(meta, dict) and "tooldef" in meta:
-        inside = check_tooldef(meta["tooldef"], mwhere)
+    （parameters 整鍵換、不往下合 schema）。兩處各自先驗形狀（錯的句子指明哪一處）；兩處都沒有＝None。
+    _metainfo 壞了（讀不了、tooldef 不是物件；meta_err＝讀的時候的錯）而外面那份可用＝提醒一行、略過裡面（比照使用者 11-12
+    對 index_view 的裁定「_metainfo.json 壞掉時，index_view 對那個資料夾不該直接報錯。」）；外面沒有＝照舊丟那個錯。"""
     if outside is not None:
         outside = check_tooldef(outside, owhere)
+    try:
+        if meta_err is not None:
+            raise meta_err
+        inside = check_tooldef(meta["tooldef"], mwhere) if isinstance(meta, dict) and "tooldef" in meta else None
+    except Fail as e:
+        if outside is None:
+            raise
+        aos_flags.warn(NAME, "%s; skipped, using %s" % (e, owhere))
+        return outside
     if inside is None:
         return outside
     return inside if outside is None else {**inside, **outside}
@@ -494,9 +510,9 @@ def inspect(path, cache=None):
     out = {"kind": kind}
     if kind == "dir":
         m = first_file(path, ("_metainfo.json",))
-        meta = read_json(m, None, "ToolDefBad")[1] if m else None
+        meta, err = read_meta(lambda: read_json(m, None, "ToolDefBad")[1]) if m else (None, None)
         p = first_file(path, ("_tooldef.json",))   # 11-04 起只認帶 .json 的（資料檔帶副檔名；_entry 是程式才不帶）
-        td = merge_tooldef(meta, "%s#/tooldef" % m, read_json(p, None, "ToolDefBad")[1] if p else None, p)
+        td = merge_tooldef(meta, "%s#/tooldef" % m, read_json(p, None, "ToolDefBad")[1] if p else None, p, err)
         if td is None:
             raise Fail("ToolDefMissing", "%s is a dir and needs _tooldef.json inside, or a tooldef key in _metainfo.json (_tooldef without .json is not accepted)" % path)
         out["tooldef"] = td
@@ -514,8 +530,8 @@ def inspect(path, cache=None):
             if e.code != "ToolDefBad":
                 raise
             raise Fail(e.code, "%s; a file without exec permission is read as JSON (python/executables need chmod +x and a #! line)" % e)
-        meta = read_json(path, "_metainfo", "ToolDefBad")[1] if isinstance(raw, dict) and "_metainfo" in raw else None
-        td = merge_tooldef(meta, path + "#/_metainfo/tooldef", td, path + "#/_tooldef")
+        meta, err = read_meta(lambda: read_json(path, "_metainfo", "ToolDefBad")[1]) if isinstance(raw, dict) and "_metainfo" in raw else (None, None)
+        td = merge_tooldef(meta, path + "#/_metainfo/tooldef", td, path + "#/_tooldef", err)
         if not isinstance(raw, dict) or td is None:
             raise Fail("ToolDefMissing", "%s is a JSON file (no exec permission) and needs a top-level _tooldef or _metainfo.tooldef (python/executables need chmod +x)" % path)
         out["tooldef"] = td

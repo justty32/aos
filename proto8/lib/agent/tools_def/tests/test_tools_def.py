@@ -193,6 +193,13 @@ class ToolsDef(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("note  tooldef: both _metainfo.json#/tooldef and _tooldef.json; _tooldef.json wins on the same key", r.stdout)
         self.assertIn("valid, parameters: a, b", r.stdout)
+        # 壞的裡面不擋好的外面（比照使用者 11-12 對 index_view 的裁定）
+        (d / "_metainfo.json").write_text(json.dumps({"summary": "Multiply", "tooldef": "nope"}))
+        (d / "_tooldef.json").write_text(json.dumps(td))
+        r = self.run_tool({"op": "check", "path": "m"})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("note  tooldef: _metainfo.json#/tooldef is not an object, skipped; using _tooldef.json", r.stdout)
+        self.assertIn("stage 3 of 3", r.stdout)
 
     def test_arguments(self):
         for args, want in (({}, "ArgumentsBad"), ({"op": "x"}, "OpUnknown"), ({"op": "check", "path": "a", "sample": {}, "zz": 1}, "ArgumentsBad"),

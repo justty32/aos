@@ -148,8 +148,17 @@ class IndexViewTest(unittest.TestCase):
             "a\tA inside", "b\tB outside", "c\tC outside", "tools\tThe only part I use", "mine\tOnly in my view"])
         self.write("empty/_metainfo.json", {"summary": "no index here"})                    # 有 _metainfo.json 但沒有 index＝照舊沒有
         self.assertTrue(self.ok(path="empty")[0].startswith("[no index] empty/_index.json does not exist."))
+        # 使用者 11-12「_metainfo.json 壞掉時，index_view 對那個資料夾不該直接報錯。」：只略過裡面、照用外面，標頭說一句
         self.write("mi/_metainfo.json", {"index": [1]})
-        self.assertIn("mi/_metainfo.json#/index is array", self.err("IndexBad", path="mi"))
+        self.assertEqual(self.ok(path="mi")[0], "[index] mi/_index.json, 2 entries (_metainfo.json index is not an object, skipped)")
+        (self.ws / "mi" / "_metainfo.json").write_text("not json")
+        self.assertEqual(self.ok(path="mi")[0], "[index] mi/_index.json, 2 entries (_metainfo.json could not be read, skipped)")
+        self.write("mi/_metainfo.json", [1])
+        self.assertEqual(self.ok(path="mi")[0], "[index] mi/_index.json, 2 entries (_metainfo.json is not an object, skipped)")
+        (self.ws / "empty" / "_metainfo.json").write_text("not json")                         # 全都沒有＝照舊 [no index]、退 0
+        self.assertTrue(self.ok(path="empty")[0].startswith("[no index] empty/_index.json does not exist."))
+        self.write("mi/_index.json", [1])                                                    # 獨立那份壞了照舊報錯
+        self.err("IndexBad", path="mi")
 
     def test_metainfo_json_nodes(self):
         self.write("mj.json", {"_metainfo": {"index": {"x": {"description": "X inside"}, "states": {"description": "S inside"}}},
@@ -161,8 +170,10 @@ class IndexViewTest(unittest.TestCase):
             "[index] mj.json#/_metainfo/index + mj.json#/_index (on the same key mj.json#/_index wins), 2 entries",
             "x\tX inside", "states\tS outside"])
         self.assertEqual(self.ok(path="mj.json#/sub"), ["[index] mj.json#/sub/_metainfo/index, 1 entry", "y\tY"])
-        self.assertEqual(self.ok(path="mj.json#/odd"), ["[index] mj.json#/odd/_index, 1 entry", "z"])      # _metainfo 不是物件＝裡面沒有
-        self.assertIn("mj.json#/bad/_metainfo/index is string", self.err("IndexBad", path="mj.json#/bad"))
+        self.assertEqual(self.ok(path="mj.json#/odd"), ["[index] mj.json#/odd/_index, 1 entry (_metainfo is not an object, skipped)", "z"])
+        self.assertTrue(self.ok(path="mj.json#/bad")[0].startswith("[no index] mj.json#/bad/_index does not exist."))   # 壞的裡面略過、外面沒有
+        self.assertEqual(self.ok(path="mj.json#/bad", index="me.json#/views")[0],
+                         "[index] me.json#/views, 2 entries (natural index: mj.json#/bad/_index does not exist) (_metainfo index is not an object, skipped)")
 
 
 if __name__ == "__main__":

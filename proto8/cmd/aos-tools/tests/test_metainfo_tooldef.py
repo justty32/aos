@@ -84,8 +84,22 @@ class DirTool(Base):
         self.assertIn("tooldef key in _metainfo.json", self.fails(self.make(), "ToolDefMissing"))
 
     def test_inside_not_object_is_bad(self):
-        err = self.fails(self.make(inside="nope", outside=OUTSIDE), "ToolDefBad")
+        err = self.fails(self.make(inside="nope"), "ToolDefBad")                # 外面沒有：照舊 ToolDefBad
         self.assertIn("_metainfo.json#/tooldef", err)
+
+    def test_broken_inside_does_not_block_good_outside(self):
+        # 比照使用者 11-12 對 index_view 的裁定（「_metainfo.json 壞掉時…不該直接報錯。」）：只略過壞的那處、提醒一行
+        self.make(inside="nope", outside=OUTSIDE)
+        r = self.run_tools("add", "--name", "t", "mul")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("aos-tools: warning:", r.stderr)
+        self.assertIn("_metainfo.json#/tooldef", r.stderr)
+        self.assertEqual(json.loads(self.run_tools("get", "t").stdout)["tooldef"], OUTSIDE)
+        (self.tmp / "mul" / "_metainfo.json").write_text("not json")
+        r = self.run_tools("get", "t")
+        self.assertEqual((r.returncode, json.loads(r.stdout)["tooldef"]), (0, OUTSIDE), r.stderr)
+        (self.tmp / "mul" / "_tooldef.json").unlink()
+        self.assertIn("ToolDefBad", self.run_tools("get", "t").stderr)          # 兩處都拿不到：照舊 ToolDefBad
 
 
 class PointerTool(Base):
