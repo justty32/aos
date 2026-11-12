@@ -11,27 +11,27 @@
 
 | 分檔 | 主題 | 條號 |
 |---|---|---|
-| [01-設計理念.md](CONCEPTS/01-設計理念.md) | 設計理念 | C-01～C-04、C-07、C-24、C-43、C-45、C-48、C-51～C-56、C-64、C-68～C-74、C-76～C-78、C-83（**C-56 KISS＝最高原則，也是最後原則**；C-52／C-53 兩條總原則；C-54 命名；旁邊的 [abbr.json](CONCEPTS/abbr.json)＝aos 認可縮寫表；C-55 布局成長〔10-24 補：函數也照這套長、分六級〕；C-64 用檔案為了借 Linux 權限〔10-24 補：沙箱 aos-sandbox、Linux 托底〕；C-68～C-70 資料夾＝程式、aos 只訂環境變數、巢狀由程式自己訂子 stack；C-71 資料夾的比喻用 table；C-72 JSON＝埋在檔案裡的 table、入口尋址方式同樣適用；C-73 entry 的定義＝可執行檔或 aos-exec 完整實作跑得動的檔〔四種〕；C-74 分層＝基礎層〔核心 aos-exec＋loop、daemon〕→ 標準庫〔fsm、tasks〕→ agent／kernel；parts 是 agent 慣例層的約定〔11-01〕；C-76 JSON 是預設介質但不定死、C-77 開銷不算啥能包盡量包、C-78 啟動四步〔11-06 加〕；C-83 可遷移性是上位原則、經 daemon 是建議手段、root daemon 例外使用者保底〔11-06 加〕） |
-| [02-設計理念-時空.md](CONCEPTS/02-設計理念-時空.md) | 設計理念／時空 | C-05、C-06、C-16、C-17、C-26、C-27、C-30～C-33、C-35、C-37、C-44、C-79（image 模型，11-06 加） |
-| [03-基礎設施.md](CONCEPTS/03-基礎設施.md) | 基礎設施：inst、loop 與 daemon、proc 之間的交流（投遞、窗、父子交代，10-29）、組合子（tasks、fsm）、資料夾程式、工作區與 stack（10-19） | C-08、C-18、C-25、C-34、C-36、C-39、C-41、C-42b、C-49、C-65～C-67、C-75、C-80、C-81（11-06 加：不在 daemon 下的不管；stack 是 proc 的地盤、對外介面（原話三類、列四樣）） |
+| [01-設計理念.md](CONCEPTS/01-設計理念.md) | 設計理念 | C-01～C-04、C-07、C-24、C-43、C-45、C-48、C-51～C-56、C-64、C-68～C-74、C-76～C-78、C-83（**C-56 KISS＝最高原則，也是最後原則**；C-52／C-53 兩條總原則；C-54 命名；旁邊的 [abbr.json](CONCEPTS/abbr.json)＝aos 認可縮寫表；C-55 布局成長（函數也照這套長、分六級）；C-64 用檔案為了借 Linux 權限（沙箱 aos-sandbox、Linux 托底）；C-68～C-70 資料夾＝程式、aos 只訂環境變數、巢狀由程式自己訂子 stack；C-71 資料夾的比喻用 table；C-72 JSON＝埋在檔案裡的 table、入口尋址方式同樣適用；C-73 entry 的定義＝可執行檔或 aos-exec 完整實作跑得動的檔〔四種〕；C-74 分層＝基礎層〔核心 aos-exec＋loop、daemon〕→ 標準庫〔fsm、tasks〕→ agent／kernel；C-76 JSON 是預設介質但不定死、C-77 開銷不算啥能包盡量包、C-78 啟動四步；C-83 可遷移性是上位原則、經 daemon 是建議手段、root daemon 例外使用者保底） |
+| [02-設計理念-時空.md](CONCEPTS/02-設計理念-時空.md) | 設計理念／時空 | C-05、C-06、C-16、C-17、C-26、C-27、C-30～C-33、C-35、C-37、C-44、C-79（image 模型） |
+| [03-基礎設施.md](CONCEPTS/03-基礎設施.md) | 基礎設施：inst、loop 與 daemon、proc 之間的交流（投遞、窗、父子交代）、組合子（tasks、fsm）、資料夾程式、工作區與 stack | C-08、C-18、C-25、C-34、C-36、C-39、C-41、C-42b、C-49、C-65～C-67、C-75、C-80、C-81（C-80 不在 daemon 下的不管；C-81 stack 是 proc 的地盤、對外介面（原話三類、列四樣）） |
 | [04-kernel.md](CONCEPTS/04-kernel.md) | kernel | C-09～C-15、C-28、C-29、C-38、C-47 |
-| [05-agent.md](CONCEPTS/05-agent.md) | agent：腦、工具、可預測性、函數＋binding、工具（狀態機那幾條隨 fsm 在基礎設施） | C-19～C-23（含 C-22b）、C-40、C-42、C-46、C-50、C-61、C-62、C-82（11-06 加：aos 函數↔tool 呼叫無痛互轉、argv 兩面） |
+| [05-agent.md](CONCEPTS/05-agent.md) | agent：腦、工具、可預測性、函數＋binding、工具（狀態機那幾條隨 fsm 在基礎設施） | C-19～C-23（含 C-22b）、C-40、C-42、C-46、C-50、C-61、C-62、C-82（aos 函數↔tool 呼叫無痛互轉、argv 兩面） |
 | [附錄1-名詞.md](CONCEPTS/附錄1-名詞.md) | 附錄 | 1. 名詞（daemon 兩義各一列；含資料夾程式、入口、`aos-exec`、stack、小格，工作區、指標） |
-| [附錄1-續-板子比喻.md](CONCEPTS/附錄1-續-板子比喻.md) | 附錄 | 1. 名詞（續）：板子比喻（root daemon＝板子、stack＝RAM……一詞一行，11-06 加） |
+| [附錄1-續-板子比喻.md](CONCEPTS/附錄1-續-板子比喻.md) | 附錄 | 1. 名詞（續）：板子比喻（root daemon＝板子、stack＝RAM……一詞一行） |
 | [附錄2-例子與待接.md](CONCEPTS/附錄2-例子與待接.md) | 附錄 | 3. 兩個例子、4. 還沒接起來的 16 條、5. AI 對自己的提醒 |
 
 總則（跨主題的規範）沒有專屬的概念條，見 [NORMS 總則](NORMS/01-總則.md)；總則與設計理念維持分開（10-15 使用者「隨你」）。主題總表在 [NORMS.md](NORMS.md)。
 
-## 命名統合的使用者原話（10-23～10-25）
+## 命名統合的使用者原話
 
 細則都在 [C-54](CONCEPTS/01-設計理念/04-C-54.md#命名10-15-使用者說原文) 與 [C-54 命名方法](CONCEPTS/01-設計理念/C-54-命名方法.md)；這裡只留原話與出處。不留舊名。
 
-- **10-23 命名統合**（[thinking 2026-10-23-naming](../thinking/2026-10/23/naming.md)）：使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」；逐條看過頂層的統合，其餘認可，三條改選：純文字也帶 `.txt`、stack 預設位置 `.stack/`（C-65）、題目資料夾 `new/`＋照 Maildir 認領 `cur/`（C-65）。C-54 錯誤代號結尾（現行是推薦的六種結尾＋`Internal`，見 [C-54](CONCEPTS/01-設計理念/04-C-54.md#命名10-15-使用者說原文)）；[縮寫表](CONCEPTS/abbr.json)有 `co`、`dotenv`。
-- **10-23 晚「要跑什麼」**：使用者「改，beats改runs，然後val寫要跑啥，通常不會用val，應該用run。」，衝突時選「只有 loop、daemon 用 run」；深夜使用者「fsm.json，現在是用val，幫我改成exec」，再選「exec，loop／daemon 的 run 也一起改 exec」——「要跑什麼」全體系一律叫 `exec`（loop／daemon、fsm 的每一格），C-55 的 `val` 只留給值的展開形；條文與訊息裡說「次」，不說「拍」。
-- **10-23 晚入口與 `_` 開頭的 key**（[thinking 2026-10-23-naming](../thinking/2026-10/23/naming.md)）：使用者問「換_entry，有好處嗎」，聽完利弊後「改。然後_開頭=附註這個概念刪掉。」，又補「不認得的key就是忽略」——入口預設名 `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者原話裡的 `_exec` 照留）；C-48 是通則「不認得的 key 一律忽略、不報錯」，沒有 `_notes` 慣例。
-- **10-23 晚命名方法**（[thinking 2026-10-23-naming-method](../thinking/2026-10/23/naming-method/README.md)）：使用者「先試試看，不要急着寫進去」，查過 Unix／Linux 老慣例、八題選完後「寫進去吧」——C-54 的「命名方法」一點，R1～R12 細則在 [C-54 命名方法](CONCEPTS/01-設計理念/C-54-命名方法.md)。
-- **10-25 state.json、計數、時間點、上限**：使用者「state.json中，runs改counter，at改成recorded_at」、「計數這塊，幫我改成counter_*」；頂層問兩題（時間點規則要不要跟著改、上限要不要照 R6 改 `max_*`），使用者回「都好」（頂層代定、可翻案）——計數一律 `counter_<被數的東西>`（當時 state.json 是 `counter_runs`；11-09 起搬出 state、開旗標才寫 `counter_runs.txt`，[N-09 的 11-09 補](NORMS/05-基礎設施-窗/02-N-09～N-11.md)）、時間點一律 `<發生了什麼>_at`（state.json 是 `recorded_at`）、上限一律 `max` 或 `max_*`（[C-54 命名方法 R3、R6](CONCEPTS/01-設計理念/C-54-命名方法.md)）。
-- **10-30 程式名**（[thinking 2026-10-30-eca](../thinking/2026-10/30/eca/09-方向題.md#決定10-30) F-21、[10-30 map-review](../thinking/2026-10/30/map-review/01-使用者原文.md#決定10-30) 第 9、11 點）：使用者「我其實更prefer前者，因為以後會有一大堆領域，而kernel作為基底，他就是算...lib？」（aos-kernel-llm 改名 aos-llm-kernel），再要 aos-gate 換名字；頂層推成「程式名＝`aos-<領域>-<功能>`」寫進條文草稿，使用者 10-30「都照建議」——[C-54 命名方法](CONCEPTS/01-設計理念/C-54-命名方法.md) R13（頂層推論、可翻案）。
+- **命名統合**（[thinking 2026-10-23-naming](../thinking/2026-10/23/naming.md)）：使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」；逐條看過頂層的統合，其餘認可，三條改選：純文字也帶 `.txt`、stack 預設位置 `.stack/`（C-65）、題目資料夾 `new/`＋照 Maildir 認領 `cur/`（C-65）。錯誤代號結尾是推薦的六種結尾＋`Internal`（[C-54](CONCEPTS/01-設計理念/04-C-54.md#命名10-15-使用者說原文)）；[縮寫表](CONCEPTS/abbr.json)有 `co`、`dotenv`。
+- **「要跑什麼」＝`exec`**：使用者「fsm.json，現在是用val，幫我改成exec」，再選「exec，loop／daemon 的 run 也一起改 exec」——「要跑什麼」全體系一律叫 `exec`（loop／daemon、fsm 的每一格），C-55 的 `val` 只留給值的展開形；條文與訊息裡說「次」，不說「拍」。
+- **入口與 `_` 開頭的 key**（[thinking 2026-10-23-naming](../thinking/2026-10/23/naming.md)）：使用者問「換_entry，有好處嗎」，聽完利弊後「改。然後_開頭=附註這個概念刪掉。」，又補「不認得的key就是忽略」——入口預設名 `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者原話裡的 `_exec` 照留）；C-48 是通則「不認得的 key 一律忽略、不報錯」，沒有 `_notes` 慣例。
+- **命名方法**（[thinking 2026-10-23-naming-method](../thinking/2026-10/23/naming-method/README.md)）：使用者「先試試看，不要急着寫進去」，查過 Unix／Linux 老慣例、八題選完後「寫進去吧」——C-54 的「命名方法」一點，R1～R12 細則在 [C-54 命名方法](CONCEPTS/01-設計理念/C-54-命名方法.md)。
+- **計數、時間點、上限**：使用者「state.json中，runs改counter，at改成recorded_at」、「計數這塊，幫我改成counter_*」；頂層問兩題（時間點規則要不要跟著改、上限要不要照 R6 改 `max_*`），使用者回「都好」（頂層代定、可翻案）——計數一律 `counter_<被數的東西>`（例 aos-loop 開旗標才寫的 `counter_runs.txt`，[N-09](NORMS/05-基礎設施-窗/02-N-09～N-11.md)）、時間點一律 `<發生了什麼>_at`（例 `started_at`）、上限一律 `max` 或 `max_*`（[C-54 命名方法 R3、R6](CONCEPTS/01-設計理念/C-54-命名方法.md)）。
+- **程式名**（[thinking 2026-10-30-eca](../thinking/2026-10/30/eca/09-方向題.md#決定10-30) F-21、[10-30 map-review](../thinking/2026-10/30/map-review/01-使用者原文.md#決定10-30) 第 9、11 點）：使用者「我其實更prefer前者，因為以後會有一大堆領域，而kernel作為基底，他就是算...lib？」（程式名是 aos-llm-kernel），再要 aos-gate 換名字；頂層推成「程式名＝`aos-<領域>-<功能>`」寫進條文草稿，使用者「都照建議」——[C-54 命名方法](CONCEPTS/01-設計理念/C-54-命名方法.md) R13（頂層推論、可翻案）。
 
 ## 條號表
 

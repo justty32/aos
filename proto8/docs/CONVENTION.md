@@ -1,12 +1,12 @@
 # aos agent 慣例
 
-← [proto8](../README.md)｜原話與拍板：[thinking/ideas](../thinking/2026-10/19/ideas/README.md)｜跟 proto8 原則相撞的七條，使用者已全部裁定：[ideas § 9](../thinking/2026-10/19/ideas/README.md)｜proto8 原則：[CONCEPTS](CONCEPTS.md)、[NORMS](NORMS.md)｜程式：[impls](../impls/README.md)（C++ 是唯一實作；aos-clock 例外，在 [cmd](../cmd/README.md)）、[templates](../templates/README.md)
+← [proto8](../README.md)｜原話與拍板：[thinking/ideas](../thinking/2026-10/19/ideas/README.md)｜跟 proto8 原則相撞的七條，使用者已全部裁定：[ideas § 9](../thinking/2026-10/19/ideas/README.md)｜proto8 原則：[CONCEPTS](CONCEPTS.md)、[NORMS](NORMS.md)｜程式：[impls](../impls/README.md)（C++ 是唯一實作；aos-clock 等 Python 工具在 [cmd](../cmd/README.md)）、[templates](../templates/README.md)
 
-**aos 本身只保證六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`；§ 19）和一支 `aos-exec`**（使用者 § 4；已升成規範 [N-57～N-62](NORMS/10-基礎設施-定義與工作區.md)）。其餘全是慣例（P-05～P-45）：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**agent-bob 現在的樣子就是標準，stack 裡面自由**（拍板點 1）。〔11-04 加註：agent-bob 11-04 隨 proto8/tests 刪了；現行標準範本是走 queue 的 [templates/agent-fsm](../templates/README.md#agent-fsm)（P-27），條文改不改由使用者定〕
+**aos 本身只保證六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`；§ 19）和一支 `aos-exec`**（使用者 § 4；已升成規範 [N-57～N-62](NORMS/10-基礎設施-定義與工作區.md)）。其餘全是慣例（P-05～P-45）：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**標準範本的樣子就是標準，stack 裡面自由**（拍板點 1）。現行標準範本是走 queue 的 [templates/agent-fsm](../templates/README.md#agent-fsm)（P-27）；拍板點 1 當時指的範本已刪，條文改不改由使用者定。
 
 每條後面括號是依據：§ 幾＝[ideas](../thinking/2026-10/19/ideas/README.md) 裡使用者原話的段號；拍板點 1～3＝ideas § 8；C-xx／N-xx＝proto8 的概念與規範；引不到的、這份自己定的，標「本稿定」。
 
-> **實作**：只有 C++ 的 [impls](../impls/README.md)（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；fsm 也是 C++、時鐘先留 Python，Python 版只剩 `proto8/cmd/aos-clock`）。impls 提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（loop／fsm 照 [ideas § 23](../thinking/2026-10/19/ideas/README.md)）；inst 是 C lib、沒有 `aos-inst` 命令列（§ 20；使用者 10-22「對於python版，aos-inst指令可以刪掉了，跟C++版一樣做成lib就好。」），單子交給 aos-exec 公開 API 的 `run_inst`。aos-exec 收旗標、讀入口資料夾的 `.env`（[N-58、N-59](NORMS/10-基礎設施-定義與工作區.md)，[ideas 10-21](../thinking/2026-10/21/ideas/02-4-aos-exec-支援-env.md#4-aos-exec-支援-env10-21)）。
+> **實作**：只有 C++ 的 [impls](../impls/README.md)（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」）；fsm 也是 C++，時鐘 aos-clock 是 Python、在 [cmd](../cmd/README.md)。impls 提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 等命令列（loop／fsm 照 [ideas § 23](../thinking/2026-10/19/ideas/README.md)；全表見 impls README）；inst 是 C lib、沒有 `aos-inst` 命令列（§ 20；使用者 10-22「對於python版，aos-inst指令可以刪掉了，跟C++版一樣做成lib就好。」），單子交給 aos-exec 公開 API 的 `run_inst`。aos-exec 收旗標、讀入口資料夾的 `.env`（[N-58、N-59](NORMS/10-基礎設施-定義與工作區.md)，[ideas 10-21](../thinking/2026-10/21/ideas/02-4-aos-exec-支援-env.md#4-aos-exec-支援-env10-21)）。
 
 **命名**（[thinking 2026-10-23-naming](../thinking/2026-10/23/naming.md)，使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」；條文裡的使用者原話不動）：
 
@@ -16,7 +16,7 @@
 - 純文字檔帶 `.txt`（fsm 的 `stage.txt`、daemon 小格的 `stderr.txt`、demo 的 `current.txt`／`plan.txt`、P-13 的 `prompt.txt`／`answer.txt`）；`AOS_STACK` 預設 `$AOS_WS/.stack/`；題目資料夾 `new/`（認領搬 `cur/`、做完 `done/`，答案 `out/`）；新 agent 的輸入是 `$AOS_STACK/queue/`，題目資料夾是舊協議（P-11、P-42）。
 - 入口預設名 `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者「改。然後_開頭=附註這個概念刪掉。」，原話裡的 `_exec` 照留）；不認得的 key 一律忽略（「不認得的key就是忽略」，C-48），`_` 開頭沒有特別意思。
 
-**腦的工具呼叫**＝**P-41**（第七節；[thinking 2026-10-23-tool-calls](../thinking/2026-10/23/tool-calls/README.md)，使用者「litellm我開了，去做吧。」「盡量都用gpt的」）：工具資料夾裡的 `_tooldef.json`（清單由 agent 資料夾的 `tools.json` 登記，[aos-tools](../cmd/README.md)）給模型看、`arguments` 從 stdin 進、stdout 出、對話落在 `$AOS_STACK/history.jsonl`、三態不變、五種錯。範本 agent-eve 已隨 proto8/tests 刪除。10-28 起照 [agent-round](../thinking/2026-10/28/agent-round/README.md) 拆成格的 agent：格經 `parts.json` 登記（P-25）、每格拿 agent 資料夾當第一個參數（P-33），各條的 10-28 加註；round 那套 11-03 已刪，這兩條各有 11-04 加註，腦拆成 endpoint 格（P-23）、history 只有 compact 可改寫（P-41）、`on_error` 預設停（P-20）三條 10-28 加註 11-04 已刪（使用者 11-04「照建議」，[收斂報告](../../wf/workflows/tidy/reports/2026-11-03-收斂/03-round刪掉後的條文之一.md#round-刪掉後沒實作撐的條文11-04給使用者裁)）。
+**腦的工具呼叫**＝**P-41**（第七節；[thinking 2026-10-23-tool-calls](../thinking/2026-10/23/tool-calls/README.md)，使用者「litellm我開了，去做吧。」「盡量都用gpt的」）：工具資料夾裡的 `_tooldef.json`（清單由 agent 資料夾的 `tools.json` 登記，[aos-tools](../cmd/README.md)）給模型看、`arguments` 從 stdin 進、stdout 出、對話落在 `$AOS_STACK/history.jsonl`、四格 idle → think → wait → act、錯怎麼報都寫在 P-41。
 
 ## 分檔
 
@@ -24,8 +24,8 @@
 | 分檔 | 涵蓋的段 |
 |---|---|
 | [01-保證佈局入口.md](CONVENTION/01-保證佈局入口.md) | 一、aos 保證的（不是慣例，是底）；二、佈局（每檔一句）；三、入口、loop、fsm |
-| [02-題目stack停錯腦.md](CONVENTION/02-題目stack停錯腦.md) | 四、題目與答案（含 P-11 輸入是 queue〔舊協議是題目資料夾〕、P-42 agent 對話協議〔外部 coding agent 也只碰這三樣〕、P-43 外部 coding agent〔eca〕的定義）；五、stack；六、停與錯（P-20：用物件 `next` 的表，表上沒接住那個碼時才是預設停）；七、腦與工具（含 P-41 腦的工具呼叫）；十三、命令列（11-04 P-44 aos 自己程式的命令列形狀） |
-| [08-P-45.md](CONVENTION/02-題目stack停錯腦/08-P-45.md) | 十三、命令列：P-45 純 aos 函數的旗標映射（11-06） |
+| [02-題目stack停錯腦.md](CONVENTION/02-題目stack停錯腦.md) | 四、題目與答案（含 P-11 輸入是 queue〔舊協議是題目資料夾〕、P-42 agent 對話協議〔外部 coding agent 也只碰這三樣〕、P-43 外部 coding agent〔eca〕的定義）；五、stack；六、停與錯（P-20：用物件 `next` 的表，表上沒接住那個碼時才是預設停）；七、腦與工具（含 P-41 腦的工具呼叫）；十三、命令列（P-44 aos 自己程式的命令列形狀） |
+| [08-P-45.md](CONVENTION/02-題目stack停錯腦/08-P-45.md) | 十三、命令列：P-45 純 aos 函數的旗標映射 |
 | [03-shell版與inst版.md](CONVENTION/03-shell版與inst版.md) | 八、shell 版與 inst 版 |
 | [04-範例三種寫法.md](CONVENTION/04-範例三種寫法.md) | 八之「範例：同一隻 agent 的三種寫法」 |
 | [05-不管落實待決.md](CONVENTION/05-不管落實待決.md) | 九、慣例不管的；十、程式對這份的落實（只有 impls 的 C++ 版，aos-clock 例外）；十一、要使用者決定的 |
