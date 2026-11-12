@@ -190,7 +190,7 @@
    "writer": "aos-loop、aos-daemon（同一套窗）",
    "reader": "aos-loop（醒來讀 paused）、aos-daemon（判小格活不活、自己的 phase）、aos-daemon-ctl poke、aos-llm（send 提醒）",
    "image": "進",
-   "on_bad": "aos-loop 起來讀不了＝改名 .bad-*＋warning、從頭開始（11-09 S3，N-09 的 11-09 註）；其他讀者 read_window 提醒一次當沒有；poke＝StateBad",
+   "on_bad": "aos-loop 起來讀不了＝改名 .bad-*＋warning、從頭開始（11-09 S3，N-09「state／state_flux 讀不了要說話」）；其他讀者 read_window 提醒一次當沒有；poke＝StateBad",
    "note": "讀回的寫法在 window.cpp read_old_window（11-09 S3）",
    "evidence": "proto8/impls/aos-loop/src/engine/window.cpp（read_old_window、Loop::read_old_state）、proto8/impls/aos-daemon/src/daemon/adopt.cpp（cell_state）、proto8/py/daemon_ctl/poke.py（read_state）、proto8/impls/aos-llm/src/send/send.cpp（idle_reason）"
   },
@@ -200,7 +200,7 @@
    "writer": "aos-loop、aos-daemon",
    "reader": "aos-loop（醒來讀 ctl_seq）、aos-daemon（判子卡住）、aos-daemon-ctl（等回音、mailbox_warning）、aos-llm-kernel",
    "image": "進",
-   "on_bad": "aos-loop 起來讀不了＝改名 .bad-*＋warning（11-09 S3，N-09 的 11-09 註）；daemon 判卡住讀不到＝不判；其他讀者提醒一次當沒有",
+   "on_bad": "aos-loop 起來讀不了＝改名 .bad-*＋warning（11-09 S3，N-09「state／state_flux 讀不了要說話」）；daemon 判卡住讀不到＝不判；其他讀者提醒一次當沒有",
    "note": "11-09 拆分前的 stack 沒有這份＝01 #6b 舊 stop 重做",
    "evidence": "proto8/impls/aos-loop/src/engine/window.cpp（Loop::read_old_state）、proto8/impls/aos-daemon/src/daemon/stuck.cpp（Daemon::check_stuck）、proto8/py/daemon_ctl/ctl.py（wait_applied）、proto8/impls/aos-llm-kernel/src/daemon/daemon.cpp（read_table）"
   },
