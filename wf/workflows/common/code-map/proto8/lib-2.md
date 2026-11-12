@@ -21,6 +21,14 @@
 | [`agents_ctl/tests/test_agents_ctl.py`](../../../../../proto8/lib/agent/agents_ctl/tests/test_agents_ctl.py) | Test agents_ctl turns each op into the matching aos-agent ctl command line (one key = one flag), rejects unknown keys and passes lower errors up, wit… |
 | [`claude/`](../../../../../proto8/lib/agent/claude/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 claude CLI；對話續在工具小格（$AOS_STACK） |
 | [`claude/cli.json`](../../../../../proto8/lib/agent/claude/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
+| [`cli_ask.py`](../../../../../proto8/lib/agent/cli_ask.py) | cli_session 問一輪：畫面開著從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main |
+| [`cli_base.py`](../../../../../proto8/lib/agent/cli_base.py) | cli_session 各分檔共用的底：錯誤行與提醒行（PROG／ECHO 決定開頭與要不要也印 stdout）、時間、共用常數、找 lib 的 tool_io |
+| [`cli_cell.py`](../../../../../proto8/lib/agent/cli_cell.py) | cli_session 的小格：Cell（檔、鎖、畫面 tmux）、畫面 socket 位置、session.txt 與記號檔、認是不是這台的對話、transcripts symlink |
+| [`cli_cfg.py`](../../../../../proto8/lib/agent/cli_cfg.py) | cli_session 的設定：讀與驗工具資料夾的 cli.json、llm.json 疊 model、system 附加旗標、tools／tools_sub 登記檔 |
+| [`cli_hook.py`](../../../../../proto8/lib/agent/cli_hook.py) | cli_session 的畫面 hook（CLI 講完一輪時叫）：跟上對話 id、/clear／/compact 時同步 aos 的 history、codex 壓縮跟上 |
+| [`cli_mcp.py`](../../../../../proto8/lib/agent/cli_mcp.py) | cli_session 接 MCP：aos-mcp 那台的旗標（claude 的 mcp.json／codex 的 -c）、外部 MCP server、tools_sub 子 agent 那台與 guard hook |
+| [`cli_print.py`](../../../../../proto8/lib/agent/cli_print.py) | cli_session 的非互動那條路（畫面沒開）：claude -p／codex exec 起 CLI、等回答、記 session |
+| [`cli_screen.py`](../../../../../proto8/lib/agent/cli_screen.py) | cli_session 開畫面：tmux 裡起互動的 claude／codex（start）、attach 與叫回畫面（open_cell） |
 | [`cli_session.py`](../../../../../proto8/lib/agent/cli_session.py) | 把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 attach 接進互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字 |
 | [`clock_register/`](../../../../../proto8/lib/agent/clock_register/) | aos-clock-register 的包裝（給腦）：add／rm／ls 時鐘登記表的格，每 every 個 cycle 往一個箱子寄一句；box 不給＝叫我的那隻自己的 queue（定時叫醒自己）。 |
 | [`clock_register/tests/test_clock_register_tool.py`](../../../../../proto8/lib/agent/clock_register/tests/test_clock_register_tool.py) | Test clock_register wraps aos-clock-register for the calling agent: box left out = my own queue (fake aos-agent ctl who, real aos-clock and aos-post). |

@@ -160,6 +160,7 @@ def http_plan(servers, warn):
 
 
 def toml_table(d):
+    """一層字串表寫成 TOML inline table（鍵、值都用 JSON 字串，同時是合法的 TOML 字串）；cli_session 的 aos 那台也用這份。"""
     return "{" + ", ".join("%s = %s" % (json.dumps(k), json.dumps(v, ensure_ascii=False)) for k, v in d.items()) + "}"
 
 
