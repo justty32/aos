@@ -12,6 +12,15 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-12 晚 家機（外部 MCP fsm 那條）
+
+1. **做到哪**：07 施工單九步全做完、各一個 commit 進 main（`15e7f8225`～`b9ca076fc`，沒 push）：`lib/mcp_client.py`（stdio＋http Bearer）、`lib/mcp_freeze.py`、`lib/base/mcp_tool`、新指令 `aos-mcp-import`（含 `sync`）、說明與 knowledge `cli/mcp_import`。步 8 真腦在 scratchpad 暫存樹（不碰試驗場）五項都過：fsm gemma 叫到外部 stdio 與 http 工具、eca claude／codex 經 `mcp__aos__` 叫到、hook 攔得到、`self_tools` 關得掉單支、假 token 不落地；codex 底下不用補 `MCP_ENV`。結果、代定 G1～G12、待裁 Q1～Q3 → [external-mcp 08](../proto8/thinking/2026-11/12/external-mcp/08-fsm施工結果.md)。
+2. **下一步**：使用者裁 Q1（經 aos 起的外部 stdio server 拿到整棵樹的環境變數，實測含起樹殼的 API key；要不要白名單）、Q2（server 檔相對路徑起點不一）；看代定 G1～G12、E1～E7；真的別人寫的 stdio server（`uvx mcp-server-time`，要下載）等點頭；其餘照上一條第 5 點。
+3. **家機雜活結果**：`install.sh` 重跑（新裝 `aos-mcp-launch`，`aos-mcp-import` 也已在 PATH）；impls 重 build（aos-daemon、aos-json 18:49 新檔）；`~/.local/bin/copy-out` 是斷的（指向已刪的 `templates/copy-out`）→ 已刪；`thinking/2026-11/09/local-model-bench/` 本來就不在。沒動：`~/code/playground`、`~/.cache/aos-mcp-*/tools.json`（刪 knowledge／memory 兩格仍留給使用者，WAIT_USER）。
+4. **同時段 main 上還有別的 session**（家機試驗場重建 `3ca019a32`、eca Agent／Skill 與 aos MCP 切兩台 `2ab15e1c7`、codex 調查 `dc303e087`）：各自 commit，本線只 `git add` 自己的檔、codemap 只收自己的列。
+5. **測試**（`b9ca076fc`，家機）：lib 132、lib/agent 63、lib/base/mcp_tool 21、cmd/aos-mcp-import 22、aos-tools 120、aos-mcp 15、aos-eca 89、templates 20、aos-agent 72 全過（家機 `test_daemon_down` 也過）。
+6. **踩到的坑**：Python 3.13 起 `ssl` 預設嚴格驗證，自簽 CA 要有 `keyUsage`、leaf 要有 key identifier（fake-mcp-http README 已補）；codex 沙盒裡開不了 socket，http 測試要在沙盒外跑；`pkill -f <字串>` 會連自己那個含同字串的殼一起殺（結束碼 144），改用 `ps … | grep '[x]'`。
+
 ## 2026-11-12 收工 公司頂層
 
 1. **授權與工作方式**：公司機（Windows＋WSL Ubuntu）。頂層只交流與調度，事情盡量交給 agent（普通 opus、雜活 sonnet、規劃 fable；非雜活先通讀 wf/）。**push：下班前統一推一次**，推之前仍要使用者開口。公司真腦只用 eca（claude haiku、codex `gpt-6-luna`），公司不建 proxy。`/tmp` 殘留與空殼夾准刪（頂層收工處理）。eca「以 CLI 為主、aos 盡量跟上」；「一處壞掉不該擋住其他好的」（工具登記、`_metainfo` 都照這條做）。

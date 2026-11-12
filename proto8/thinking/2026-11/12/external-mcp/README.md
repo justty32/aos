@@ -1,8 +1,10 @@
 # external-mcp：接外部 MCP server（11-12）——eca 由 CLI 自己接，11-12 下午施工做完五步（codex／claude 兩身、http 與 stdio、範本與說明）；fsm 經 aos 匯入成包延後
 
-← [2026-11-12](../README.md)｜[thinking](../../../README.md)｜前一版：[11-11 new-tools 03](../../11/new-tools/03-mcp-client.md)（M1～M8 已裁，照用）｜[01 盤點](01-盤點.md)｜[02 設計](02-設計.md)｜[03 施工切法](03-施工切法.md)｜[04 邊緣狀況](04-邊緣狀況.md)｜[05 http＋bearer 試接](05-http-bearer試接.md)｜[06 施工結果](06-施工結果.md)
+← [2026-11-12](../README.md)｜[thinking](../../../README.md)｜前一版：[11-11 new-tools 03](../../11/new-tools/03-mcp-client.md)（M1～M8 已裁，照用）｜[01 盤點](01-盤點.md)｜[02 設計](02-設計.md)｜[03 施工切法](03-施工切法.md)｜[04 邊緣狀況](04-邊緣狀況.md)｜[05 http＋bearer 試接](05-http-bearer試接.md)｜[06 施工結果](06-施工結果.md)｜[07 fsm 施工單](07-fsm施工單.md)｜[08 fsm 施工結果](08-fsm施工結果.md)
 
 > **11-12 下午施工**（使用者「外部 MCP 開工吧，做不完就push上去，我回家繼續做」）：03 的五步都做完、各一個 commit，見 [06 施工結果](06-施工結果.md)（續行點、代定 E1～E7、搬一隻現有 Codex agent 的照抄步驟）。沒做：fsm 那條。
+>
+> **11-12 晚家機施工 fsm 那條**：07 九步全做完、各一個 commit（步 8 真腦驗收在暫存樹五項都過），見 [08 fsm 施工結果](08-fsm施工結果.md)（代定 G1～G12、要裁 Q1～Q3）。
 >
 > 狀態（施工前）：圖紙**第二版**（11-12 下午照 [05](05-http-bearer試接.md#對圖紙的調整建議) 的實測改過 02、03、04），**三題已裁（使用者 11-12「都按照推薦。」）**。沒改程式、條文、範本；沒下載、沒安裝。**還沒施工，等使用者說開工**（他 11-12 上午說的是「等假日在家再來稿」；五步都只碰 eca、公司可做）。
 >
@@ -21,6 +23,7 @@
 | [05 http＋bearer 試接](05-http-bearer試接.md) | 11-12 下午實測：接得上；token 怎麼給才不漏；對圖紙的調整建議（第二版的依據） |
 | [06 施工結果](06-施工結果.md) | 11-12 下午施工：五步各一個 commit、怎麼驗的、代定 E1～E7、沒做的、家機注意、搬一隻現有 Codex agent 的照抄步驟 |
 | [07 fsm 施工單](07-fsm施工單.md) | fsm 經 aos 那條切成九步（每步半天內、各一個 commit、各有驗法；步 2 做完就看得到 `aos-tools call` 叫到外部工具，步 8 才要真腦）；題一 11-12 已裁 a（只收 Bearer）、代定 F1～F12 使用者「先這樣」（「那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決」）；家機照它派工 |
+| [08 fsm 施工結果](08-fsm施工結果.md) | 11-12 晚家機：九步做完（`lib/mcp_client.py` stdio＋http、`lib/mcp_freeze.py`、`lib/base/mcp_tool`、新指令 `aos-mcp-import`＋`sync`、說明與 knowledge），步 8 真腦（gemma、haiku、luna）五項都過；代定 G1～G12；要裁 Q1（經 aos 的 stdio server 拿到整棵樹的環境變數）、Q2、Q3 |
 
 ## 已裁的三題（使用者 11-12：「都按照推薦。」）
 
@@ -87,7 +90,7 @@ fsm 的 tools.json {"$override": [{"$env": "AOS_HOME", "$path": "/lib/packs/look
 | 3 | claude 身：`mcp.json` 跟 aos 那台並排、`--strict-mcp-config` 照留、`--allowedTools mcp__<名>` | 半天 |
 | 4 | stdio server＋`aos-mcp-launch`（兩身）；驗證用再起一台 aos-mcp 當外部 server（不用下載、不用金鑰） | 半天～1 天 |
 | 5 | 範本與說明、定義檢查 | 半天 |
-| 延後 | fsm 那條：匯入成包、client、`mcp_tool`、`sync`、經 aos 的 http、常駐 proc（細切見 [07](07-fsm施工單.md)） | 照 11-11 的 03 |
+| 做完 | fsm 那條：匯入成包、client、`mcp_tool`、`sync`、經 aos 的 http（[08](08-fsm施工結果.md)）；常駐 proc 仍延後 | 照 11-11 的 03 與 07 |
 
 ## 代定（照原則與既有裁定定的，每條可翻案）
 
