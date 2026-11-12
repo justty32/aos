@@ -14,20 +14,20 @@
 
 > **daemon 兩義**：①[C-04](../01-設計理念/01-C-01～C-48.md) 說的 daemon＝aos 與 Linux 之間的借階層（Linux 那邊的事全在這層）；②這裡的 daemon＝管一群 loop 的程式（`aos-daemon`，C-36）。[名詞表](../附錄1-名詞.md)兩列都留。
 
-- **C-36** 層層遞進：inst（求值一次）→ loop（持續求值）→ node（loop 服務的資料夾）→ daemon（統管 loop）；daemon 跑的 inst 可以是另一個 daemon。（3f.2）落實：inst＝單子＝入口的一種、由 aos-exec 行程內跑（沒有 aos-inst 命令列，C-73、N-59）；loop＝`aos-loop [FLAGS...] loop.json`（`{"exec", "max"}`；設定檔是唯一的位置參數，[ideas 10-21 § 9](../../../thinking/2026-10/21/ideas/05-7-審後的五個細縫與修正.md#9-設定檔是唯一的位置參數path-改字串拼接10-21-傍晚)；`exec` 收 aos-exec 的目標（字串或陣列，每次 `aos-exec` 它；`loop.json#/body` 也是目標），也可以直接放單子物件、行程內跑〔[thinking 10-24](../../../thinking/2026-10/24/exec-relative/01-使用者原文.md#10-24-exec-直接放單子)〕，[ideas 10-21 § 8](../../../thinking/2026-10/21/ideas/05-7-審後的五個細縫與修正.md#8-aos-loop10-21-下午)；子程式退 10 就停，P-06、P-19）；一次一格的 fsm＝`aos-fsm fsm.json`（P-07；設定檔是唯一的位置參數；格的 `exec` 收 aos-exec 的目標（每次 `aos-exec` 它；`fsm.json#/states/<名>/body` 也是目標），也可以直接放單子物件、行程內跑，[計畫 10-21](../../../thinking/2026-10/21/plan/README.md) F1、F2）；node＝被 loop 反覆跑的那個資料夾程式；daemon＝管一群 loop 的 `aos-daemon`（[N-28、N-54](../../NORMS/04-基礎設施-loop與daemon.md)）。只有 impls 的 C++ 版（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」）。「要跑什麼」叫 `exec`：使用者先選「只有 loop、daemon 用 run」，再「fsm.json，現在是用val，幫我改成exec」、選「exec，loop／daemon 的 run 也一起改 exec」（[thinking](../../../thinking/2026-10/23/naming.md)）。
+- **C-36** 層層遞進：inst（求值一次）→ loop（持續求值）→ node（loop 服務的資料夾）→ daemon（統管 loop）；daemon 跑的 inst 可以是另一個 daemon。（3f.2）落實：inst＝單子＝入口的一種、由 aos-exec 行程內跑（沒有 aos-inst 命令列，C-73、N-59）；loop＝`aos-loop [FLAGS...] loop.json`（`{"exec", "max"}`；設定檔是唯一的位置參數，[ideas 10-21 § 9](../../../thinking/2026-10/21/ideas/05-7-審後的五個細縫與修正.md#9-設定檔是唯一的位置參數path-改字串拼接10-21-傍晚)；`exec` 收 aos-exec 的目標（字串或陣列，每次 `aos-exec` 它；`loop.json#/body` 也是目標），也可以直接放單子物件、行程內跑〔[thinking 10-24](../../../thinking/2026-10/24/exec-relative/01-使用者原文.md#10-24-exec-直接放單子)〕，[ideas 10-21 § 8](../../../thinking/2026-10/21/ideas/05-7-審後的五個細縫與修正.md#8-aos-loop10-21-下午)；子程式退 10 就停，P-06、P-19）；一次一格的 fsm＝`aos-fsm fsm.json`（P-07；設定檔是唯一的位置參數；格的 `exec` 收 aos-exec 的目標（每次 `aos-exec` 它；`fsm.json#/states/<名>/body` 也是目標），也可以直接放單子物件、行程內跑，[計畫 10-21](../../../thinking/2026-10/21/plan/README.md) F1、F2）；node＝被 loop 反覆跑的那個資料夾程式；daemon＝管一群 loop 的 `aos-daemon`（[N-28、N-54](../../NORMS/04-基礎設施-loop與daemon.md)）。只有 impls 的 C++ 版（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」）。「要跑什麼」一律叫 `exec`（使用者「fsm.json，現在是用val，幫我改成exec」，選「exec，loop／daemon 的 run 也一起改 exec」，[thinking](../../../thinking/2026-10/23/naming.md)）。
 
 ## proc 之間的交流（10-29）
 
 出處：[thinking 10-28 medium](../../../thinking/2026-10/28/medium/README.md)（使用者原文第三、四、十、十四段，決定 5、12～15、19、28）、[10-29 medium-plan](../../../thinking/2026-10/29/medium-plan/README.md)（使用者 10-29「都照建議」）。規範在 [窗 N-14～N-16](../../NORMS/05-基礎設施-窗.md)、[父子交代 N-64](../../NORMS/10-基礎設施-定義與工作區.md)。
 
 <a id="c-75"></a>
-- **C-75**（三種基本概念：投遞、窗、父子交代）11-06 起逐字搬到 [01-續-C-75](01-續-C-75.md)。
+- **C-75**（三種基本概念：投遞、窗、父子交代）見 [01-續-C-75](01-續-C-75.md)。
 
 ## tasks 組合子
 
 實作：現無實作，待做成資料夾程式。使用者 10-15：tasks 組合子「**地位等同於 C 語言的 stdlib**」。
 
-- **C-41** 巢狀：list 的元素也是 list，求值時先對元素求值（畫家裡的畫筆 agent 先算）。（3g.11）比喻用 table（C-71）：table 的元素也是 table。**元素要不要先求值，由 entry 決定**（10-19 晚使用者裁）——原話「算元素？由entry指定，你看，lisp的quote就是那個功能。」像 lisp 的 quote：元素預設只是資料、不求值，entry 要算才算、要叫誰自己叫。所以「求值時先對元素求值」不是規則，是 entry 可以選的一種做法；跟 C-70（aos 不管巢狀、入口自己決定）、C-52（只管自己這一層）一致。（[ideas § 12](../../../thinking/2026-10/19/ideas/README.md)）
+- **C-41** 巢狀：list 的元素也是 list（3g.11）；比喻用 table（C-71）：table 的元素也是 table。**元素要不要先求值，由 entry 決定**（使用者 10-19 晚：「算元素？由entry指定，你看，lisp的quote就是那個功能。」，[ideas § 12](../../../thinking/2026-10/19/ideas/README.md)）：像 lisp 的 quote，元素預設只是資料、不求值，entry 要算才算、要叫誰自己叫；「先對元素求值」（畫家裡的畫筆 agent 先算）是 entry 可以選的一種做法，不是規則。跟 C-70（aos 不管巢狀、入口自己決定）、C-52（只管自己這一層）一致。
 
 ## fsm
 
