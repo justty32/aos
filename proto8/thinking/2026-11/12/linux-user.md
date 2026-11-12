@@ -32,7 +32,7 @@ linux 裡「使用者」只是一個號碼（uid），貼在每個行程身上�
 |---|---|---|
 | a. user 是可以互動的對象 | 對人已經成立：人的信箱 `~/.aos/stack/mailbox` 在家目錄，天然一個 user 一個；環境變數就叫 `AOS_LINUX_USER_STACK`；信的 `from` 預設是 `$USER`。對 agent 不成立：agent 不是 linux 帳號 | 地址用家目錄固定路徑（現在；家目錄 700，別的帳號寄不進來）／公共位置按帳號名（像傳統 unix 信）／查表 |
 | b. root daemon 掛在一個 user 底下 | 成立：誰起它它就是誰；它能做的事上限就是這個 user 能做的事 | 維持；或登記成 `systemd --user` 的服務，讓它真的掛在「代表這個 user 的行程」底下（不需要 root） |
-| c. user 是一個 proc、跟 root daemon 平級 | 跟 linux 事實有出入（見上） | **定**：user＝aos 眼中一個能收信的對象；aos-post 聯絡得上的就是 proc（[§ 使用者細聊](#使用者細聊11-12-晚稍後)） |
+| c. user 是一個 proc、跟 root daemon 平級 | 跟 linux 事實有出入（見上） | **定**：user＝aos 眼中一個能收信的對象（[§ 使用者細聊](#使用者細聊11-12-晚稍後)） |
 | d. root user 的 root daemon | 沒有；但 daemon 替底下的 proc 換帳號的機制已寫好（`limits.user`，daemon 不是 root 就報錯） | **有方向**：早期那支用 root 跑、把 proc 用指定 uid 起來的小輔助程式，可以做成一台用 root 跑的很小的 daemon（他問句提出、頂層答主要是 daemon、他沒反對）；一個帳號一整棵樹；它本身也可以當 agent。什麼時候做、帳號誰建、門怎麼守未定（[§ 續：念頭 d](#續念頭-droot-user-的-root-daemon)） |
 | e. 某個 root daemon 代表這個 user | 沒有；一個 user 現在可以有很多棵樹，寄給 user 的信跟任何 daemon 無關 | **不需要**（使用者定，[§ 使用者細聊](#使用者細聊11-12-晚稍後)） |
 
@@ -126,10 +126,11 @@ systemd-run --user --scope -q -p MemoryMax=64M -p MemorySwapMax=0 \
 
 > 「就是說，aos-post是一種IPC手段，而只要這個手段能聯絡上的，那自然是proc。　然後那個讀法不需要了」
 
+（前半「aos-post……能聯絡上的，那自然是proc」同晚收回，見 [§ 續：aos-post 那句收回](#續aos-post-那句收回)；後半「那個讀法不需要了」照留。）
+
 **決定**：
 
 - linux user＝aos 眼中一個能收信的對象（讀法三）。
-- aos-post 是一種 IPC 手段；這個手段聯絡得上的，自然就是 proc。
 - 「某個 root daemon 代表這個 user」不需要了（念頭 e 結案）。
 
 **頂層當場講的推論**（使用者沒逐條確認）：
@@ -162,6 +163,18 @@ systemd-run --user --scope -q -p MemoryMax=64M -p MemorySwapMax=0 \
 
 **仍未定**（不代定、只列）：什麼時候做；帳號誰建；門怎麼守；跨帳號寄信的資料夾權限。
 
+### 續：aos-post 那句收回
+
+頂層問：「aos-post 聯絡得上的就是 proc」跟 C-80（所有 proc 都有 daemon 管）衝突，聽誰的？擺了甲（C-80 補人是例外）、乙（以新句為準）、丙（以 C-80 為準、人不叫 proc）。使用者（逐字）：
+
+> 「今晚的說法拿掉。這是aos-post的特性，就這樣」
+
+**決定**：
+
+- 「aos-post 聯絡得上的自然是 proc」這個說法拿掉；aos-post 寄得到有箱子的東西，是 aos-post 自己的特性，不拿來定義 proc。
+- C-80 照舊，沒有衝突了。
+- 「linux user＝aos 眼中一個能收信的對象」「某個 root daemon 代表他不需要」沒被收回，照留。
+
 ### 跟現況的出入
 
 **事實（讀程式＋暫存目錄實跑確認）**：
@@ -172,9 +185,6 @@ systemd-run --user --scope -q -p MemoryMax=64M -p MemorySwapMax=0 \
 
 **條文（只列、沒改）**：
 
-- **直接衝突：C-80**（[03-基礎設施/02](../../../docs/CONCEPTS/03-基礎設施/02-資料夾程式-工作區與-stack.md)）「在這套系統下，我們不管不在daemon下的proc，所以所有proc都有daemon管」，白話「每個 proc 都有一台管它的 daemon」。人的信箱不在任何 daemon 表上、也沒有 daemon 管它，照新句它是 proc，照 C-80 就不該有這種 proc。
-- **字面出入：C-75**（[03-基礎設施/01-續-C-75](../../../docs/CONCEPTS/03-基礎設施/01-續-C-75.md)）與[名詞表](../../../docs/CONCEPTS/附錄1-名詞.md) proc 列：「proc＝會跑、會交流的東西，跟 Linux 同字同義」。新句只看「聯絡得上」；人不在線時信箱照收、沒有東西在跑；linux 那邊 proc 是一個行程，linux user 不是行程（本檔 § 最該知道的一個出入）。名詞表「daemon 底下的子項……都是 proc」是列舉、不排他，不衝突。
+- **C-80、C-75：說法收回後已無衝突**。C-80（[03-基礎設施/02](../../../docs/CONCEPTS/03-基礎設施/02-資料夾程式-工作區與-stack.md)）「所有proc都有daemon管」、C-75（[03-基礎設施/01-續-C-75](../../../docs/CONCEPTS/03-基礎設施/01-續-C-75.md)）與[名詞表](../../../docs/CONCEPTS/附錄1-名詞.md) proc 列「會跑、跟 Linux 同字同義」照舊；aos-post 寄得到人的信箱只是 aos-post 的特性，不讓人的信箱變成 proc（[§ 續：aos-post 那句收回](#續aos-post-那句收回)）。
 - **念頭 d 那段帶出的出入**：C-64（[01-設計理念/05](../../../docs/CONCEPTS/01-設計理念/05-布局成長與檔案權限.md)）遠期「一個agent一個賬號」，跟「一個帳號一整棵樹」字面不同；[名詞表](../../../docs/CONCEPTS/附錄1-名詞.md) daemon 列「根 daemon……由使用者顧……aos 不做根的根」，root 帳號的小 daemon 正是各帳號根 daemon 的上一層；同列「最基礎的 kernel（來者不拒）」跟頂層說的「門要嚴」——照手／門分開看可以不衝突，列著。
-- **方向相反、不算衝突：N-16**（[05-N-16](../../../docs/NORMS/05-基礎設施-窗/05-N-16.md)）「aos-post＝IPC 的語法糖、基底工具，跟 aos proc 的關聯不深」、C-75 的「不要去與aos-post耦合太深」：這兩句講 aos-post 不依賴 proc、不管 body；新句是反過來拿 aos-post 認 proc。
-- **對得上的**：P-48「agent 跟 agent（含把自己當一隻 agent 的人）互相寄信」；N-16「位置由擁有者定、不強制在 `$AOS_STACK`」；N-28「沒掛 daemon＝Linux 管」（講的是直接 `aos-exec` 跑的東西，沒說它不是 proc）。
-- 沒找到把 proc 定成「daemon 表上的一列」或「一個 linux 行程」的排他條文；最接近的就是上面的 C-80 與 C-75。
+- **對得上的**：N-16（[05-N-16](../../../docs/NORMS/05-基礎設施-窗/05-N-16.md)）「aos-post＝IPC 的語法糖、基底工具，跟 aos proc 的關聯不深」、C-75 的「不要去與aos-post耦合太深」（跟「這是aos-post的特性」同向）；P-48「agent 跟 agent（含把自己當一隻 agent 的人）互相寄信」；N-16「位置由擁有者定、不強制在 `$AOS_STACK`」；N-28「沒掛 daemon＝Linux 管」（講的是直接 `aos-exec` 跑的東西，沒說它不是 proc）。
