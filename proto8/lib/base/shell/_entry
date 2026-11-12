@@ -32,6 +32,7 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.stdout.write(_line)
     sys.exit(1)
 
+import process_group
 import shell_observed
 
 NAME = "shell"
@@ -74,19 +75,6 @@ def tail(f):
     return "\n".join(lines), note
 
 
-def stop(p):
-    for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, None)):
-        try:
-            os.killpg(p.pid, sig)
-        except ProcessLookupError:
-            return
-        try:
-            p.wait(wait)
-            return
-        except subprocess.TimeoutExpired:
-            pass
-
-
 ledger = shell_observed.prepare()
 with tempfile.TemporaryFile() as out:
     started = time.monotonic()
@@ -96,25 +84,18 @@ with tempfile.TemporaryFile() as out:
     except OSError as e:
         die("LaunchFailed", "bash failed to start: %s" % e.strerror)
 
-    class Interrupted(BaseException):
-        def __init__(self, signum):
-            self.signum = signum
-
-    def on_term(signum, frame):
-        raise Interrupted(signum)
-
-    signal.signal(signal.SIGTERM, on_term)
-    signal.signal(signal.SIGINT, on_term)
+    signal.signal(signal.SIGTERM, process_group.raise_interrupted)
+    signal.signal(signal.SIGINT, process_group.raise_interrupted)
     interrupted = None
     timed_out = False
     try:
         code = p.wait(timeout)
-    except (subprocess.TimeoutExpired, Interrupted) as error:
+    except (subprocess.TimeoutExpired, process_group.Interrupted) as error:
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
-        interrupted = error.signum if isinstance(error, Interrupted) else None
+        interrupted = error.signum if isinstance(error, process_group.Interrupted) else None
         timed_out = interrupted is None
-        stop(p)
+        process_group.stop(p, GRACE)
     shell_observed.finish(ledger, args["command"], timeout, p.returncode,
                           started, out.seek(0, os.SEEK_END))
     if interrupted is not None:

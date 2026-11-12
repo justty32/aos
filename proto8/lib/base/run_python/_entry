@@ -34,6 +34,7 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.stdout.write(_line)
     sys.exit(1)
 
+import process_group
 import shell_observed
 
 NAME = "run_python"
@@ -75,40 +76,18 @@ except OSError as e:
     die("LaunchFailed", "python3 failed to start: %s" % e.strerror)
 
 
-def stop():
-    for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, None)):
-        try:
-            os.killpg(p.pid, sig)
-        except ProcessLookupError:
-            return
-        try:
-            p.wait(wait)
-            return
-        except subprocess.TimeoutExpired:
-            pass
-
-
-class Interrupted(BaseException):
-    def __init__(self, signum):
-        self.signum = signum
-
-
-def on_term(signum, frame):
-    raise Interrupted(signum)
-
-
-signal.signal(signal.SIGTERM, on_term)
-signal.signal(signal.SIGINT, on_term)
+signal.signal(signal.SIGTERM, process_group.raise_interrupted)
+signal.signal(signal.SIGINT, process_group.raise_interrupted)
 timed_out = False
 interrupted = None
 try:
     out, _ = p.communicate(timeout=limit)
-except (subprocess.TimeoutExpired, Interrupted) as error:
+except (subprocess.TimeoutExpired, process_group.Interrupted) as error:
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-    interrupted = error.signum if isinstance(error, Interrupted) else None
+    interrupted = error.signum if isinstance(error, process_group.Interrupted) else None
     timed_out = interrupted is None
-    stop()
+    process_group.stop(p, GRACE)
     # The interrupted communicate has unwound; resume its buffered pipe read here.
     out, _ = p.communicate()
 shell_observed.finish(ledger, args["code"], limit, p.returncode, started, len(out))
