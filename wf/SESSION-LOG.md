@@ -8,6 +8,7 @@
 
 ## 最新進度
 
+- **open｜11-12 樹在 /tmp 跑＋每五分鐘 auto save 到 ~/（已實測、沒施工，等使用者決定要不要照這樣搭）**：/tmp 不比 ~/ 快（同一顆 ext4）、每次開機清空；建議整棵放 `~/aos-run`、根 daemon 掛 `_autosave`；起樹／存檔／還原指令與可接受的缺陷在檔裡 → [autosave](../proto8/thinking/2026-11/12/autosave.md)
 - **open｜11-12 eca slash 指令（公司 WSL `/tmp/line-slash`，已施工、未 push、等頂層合併）**：畫面 hook 跟上 id＋claude `/clear` 清 history、say／listen／chat 認五個指令、codex 有畫面；待裁 Q1～Q4（codex 畫面 `/clear` 清不清 history、畫面開著時 say 要不要代打、`/compact` 在 history 留不留標記、fsm 要不要一致）；試驗場 `~/code/playground` 沒動，eca_cody 要畫面得重刷或手補 → [eca-slash](../proto8/thinking/2026-11/12/eca-slash.md)
 
 - **open｜11-12 knowledge 拿掉的收尾（兩題已裁「都刪」、已做，未 push、等頂層合併）**：出廠內容刪講已拆工具的節點與段落、P-46 整條刪、C-42／C-71／C-52／N-15／N-17 等刪掉講已拆機制的句子；合併後這行可刪 → [thinking 11-12 knowledge-removal](../proto8/thinking/2026-11/12/knowledge-removal.md#使用者裁定與清理11-12-下午)
