@@ -1,19 +1,15 @@
-# `_metainfo` 整合的圖紙（11-12 下午，只規劃、沒施工）：節點底下 aos 自己的東西只剩 `_entry` 與 `_metainfo`，`_index`／`_tooldef`／`_description` 搬進去、去掉底線；待裁兩題
+# `_metainfo` 整合的圖紙（11-12 下午，已裁、沒施工）：`_metainfo` 是一條約定、不做專門程式；`tooldef`／`index`／`description` 可以寫在裡面，推薦讀法是裡外都讀、外面獨立那份蓋過裡面；現有檔不搬
 
-← [11-12 日索引](../README.md) ・ 前情：[index](../index.md)（原話一～十）、[index-tools](../index-tools/README.md)（`index_view`、`spot()`）、[10-24 `_metainfo`](../../../2026-10/24/metainfo/README.md)（函數特性，M1～M10）、條文 [N-68](../../../../docs/NORMS/10-基礎設施-定義與工作區/10-N-68.md)、[待定 `_metainfo`](../../../../docs/NORMS/08-待定/01-續-metainfo.md)、[P-41](../../../../docs/CONVENTION/02-題目stack停錯腦/06-P-41.md)
+← [11-12 日索引](../README.md) ・ 前情：[index](../index.md)（原話一～十）、[index-tools](../index-tools/README.md)（`index_view`、`spot()`）、[10-24 `_metainfo`](../../../2026-10/24/metainfo/README.md)（函數特性，M1～M10）、條文 [N-69](../../../../docs/NORMS/10-基礎設施-定義與工作區/11-N-69.md)、[N-68](../../../../docs/NORMS/10-基礎設施-定義與工作區/10-N-68.md)、[P-41](../../../../docs/CONVENTION/02-題目stack停錯腦/06-P-41.md)
 
 | 分檔 | 涵蓋 |
 |---|---|
-| [01-盤點](01-盤點.md) | 現在有哪些底線開頭的名字、誰讀誰寫、哪條條文、搬不搬 |
-| [02-設計](02-設計.md) | `_metainfo` 長怎樣、搬進去後的名字、留外面的、裝不下時、工具怎麼跟上、邊緣狀況 |
-| [03-施工切法](03-施工切法.md) | 四步、每步動哪些檔、怎麼驗、多大、要重建什麼 |
-| [04-題與代定](04-題與代定.md) | 要使用者裁的兩題（a/b＋推薦）、代定 M1～M13 |
+| [01-盤點](01-盤點.md) | 現在有哪些底線開頭的名字、誰讀誰寫、哪條條文（「搬不搬」欄是裁定前寫的，以本檔決定為準：都不搬） |
+| [02-設計](02-設計.md) | 位置、形狀、推薦讀法與合併粒度、留外面的、裝不下時、各工具若要支援怎麼改、邊緣狀況 |
+| [03-施工切法](03-施工切法.md) | 兩段：① 條文（必做）② 我們自己的工具各自支援（選做 B1～B5，使用者挑） |
+| [04-題與代定](04-題與代定.md) | 題一已裁、題二頂層代定待確認；代定 M1～M23（M6、M7、M9 作廢） |
 
 ## 使用者原文
-
-11-12 下午（開這條線的話）：
-
-> 「啊，metainfo感覺也可以開始先弄了，派fable幫忙想想吧」
 
 11-12 稍早（全文在 [index](../index.md) 原話九與其後的答覆）：
 
@@ -21,38 +17,46 @@
 
 > 「…metainfo這塊就是搬進去，_index進去後就是index，去掉_。現在先不用做，這是後續想法。_entry確實不能搬進去，所以就是有些能搬有些不能搬，我們就是開了metainfo這個口子，要用不用都可以。json檔案也一樣。_metainfo整合應該會是一兩個禮拜後的事情了。」
 
-## 決定（使用者已講的）
+11-12 下午（開這條線的話）：
 
-- `_metainfo` 蒐集同節點下散落的、aos 體系的各種 `_*`。
-- 搬進去就去掉 `_`：`_index` → `index`。
-- `_entry` 不搬；有些能搬有些不能搬。
+> 「啊，metainfo感覺也可以開始先弄了，派fable幫忙想想吧」
+
+11-12 下午，看完圖紙的兩題之後：
+
+> 「_tooldef要不要搬進去，我覺得是可選的，就是說，我希望我們吃_tooldef的工具，都能支援_metainfo(不強制啦)，支援的方式就是他可以指定一個節點，然後他先看看有沒有_metainfo，有的話就先讀，然後再看看有沒有獨立出來的_tooldef，有的話就再讀。如果_metainfo內有tooldef，外面也有獨立出來的_tooldef，那就兩者合併，外面獨立出來的會覆蓋掉_metainfo內的。當然，這是不強制的啦，後續其他程式自己想怎麼做都可以，反正我們就是推薦這樣。」
+
+接著補一句：
+
+> 「_metainfo這東西，他就是只活在概念與規範中，我們目前是不做單一程式去處理的，我們就是定下來，啊其他工具要不要支援，就看他們自己」
+
+## 決定
+
+使用者講的：
+
+- `_metainfo` 蒐集同節點下散落的、aos 體系的各種 `_*`；進去後去掉 `_`（`_index` → `index`）；`_entry` 不進。
 - 是個口子，要用不用都可以；json 檔也一樣。
-- 11-12 下午起可以開始弄（原本說一兩週後）。
+- `_tooldef` 搬不搬是**可選的**。吃 `_tooldef` 的工具推薦這樣支援：給一個節點，先看有沒有 `_metainfo`、有就先讀，再看有沒有獨立的 `_tooldef`、有就再讀；兩處都有就合併，**外面獨立那份蓋過 `_metainfo` 裡的**。
+- 不強制；其他程式想怎麼做都可以，我們只是推薦。
+- `_metainfo` **只活在概念與規範裡**，目前不做單一程式去處理；定下來，其他工具要不要支援看它們自己。
+
+頂層解讀（不是使用者原話）：
+
+- 題一＝裡外都認、不搬家；現有 72 個 `_tooldef.json` 不動、不刪。
+- `_metainfo` 是一條約定，不設計中央讀取層或共用模組；主要產出是條文（在 N-69 上補，語氣是推薦）。
+- 施工分兩段：條文必做；我們自己的工具各自小改支援是選做清單，使用者挑。
+- **題二（使用者沒直接答）頂層代定、待使用者確認**：`index`、`description` 比照題一，裡外都認、獨立的蓋過裡面的，現有出廠內容不搬。
 
 ## 結論（圖紙，細節在分檔）
 
-- **`_metainfo` 本來就在**：10-24 起它是「函數的特性」（`summary`、`cost`、`timeout_ms`、九軸、`sandbox`…，N-68），資料夾裡是 `_metainfo.json`（現有 74 份）、json 物件與單子裡是 `_metainfo` 鍵。這次不是新做一個東西，是把它的意思從「給 kernel 參考的函數特性」放寬成「這個節點的附屬資訊」，再把別的 `_*` 收進來。
-- **位置與檔名不變**：資料夾 `DIR/_metainfo.json`、json 物件（含整份 json 檔）`_metainfo` 鍵。
-- **形狀：一個物件、平鋪**。原有特性 key 原地不動，並排加三格：`index`（原 `_index`／`_index.json`）、`tooldef`（原 `_tooldef`／`_tooldef.json`，待裁）、`description`（原 `_description`／`_description.json`）。
-
-  ```json
-  {
-    "summary": "List a folder one page at a time",
-    "timeout_ms": 2000,
-    "cost": {"time_ms": 30},
-    "tooldef": {"description": "List a folder. ...", "parameters": {"type": "object"}},
-    "index": {"docs": {"description": "how it works"}, "tests": {"description": "unit tests"}},
-    "description": "# ls\n\nLonger text about this folder itself."
-  }
-  ```
-
-- **留外面的只有「跑起來要用的」**：`_entry`（與 `_entry.json`）、`.env`。判準一句：aos-exec 跑它用不用得到；用得到的留外面，其餘進 `_metainfo`。C++ 基礎層（aos-exec、inst、loop、fsm、daemon）照舊永遠不開 `_metainfo`。
-- **裝不下的節點**（陣列、別人的 json、可執行檔）：只有 index 照既有規則延伸——放最近一個裝得下的上層節點的 `_metainfo` 的 `index`，鍵寫相對路徑；其他項目不延伸，沒寫就是沒說。
-- **工具**：`index_view` 改 `spot()` 與 `natural()` 的資料夾分支；`ls`／`json_ls` 不藏 `_metainfo`（index 才是視角，ls 是客觀；`_` 開頭照 C-48 沒有特別意思）；tooldef 那步動 `aos-tools`、`tool_io`、`tool_spec`、`tools_def`。
-- **施工四步**：① index 搬（小）② description 搬（小，純內容）③ tooldef 搬（中到大，等裁）④ 條文落成正式一條（中）。
-- **跟既有條文打架、要使用者裁的兩題**：`_tooldef` 搬不搬（P-41 與 11-04「留 _、加 .json」、10-24 M10）；「要用不用都可以」是只認裡面一處、還是裡外都認 → [04](04-題與代定.md)。
+- **`_metainfo` 本來就在**：10-24 起是「函數的特性」（N-68、N-69），資料夾裡是 `_metainfo.json`（現有 74 份）、json 物件裡是 `_metainfo` 鍵。這次只是在同一個物件裡多約定三格：`tooldef`、`index`、`description`，跟特性平鋪並排。
+- **合併只有一條規則：一層、同名整個換、外面贏。** tooldef 是頂層鍵淺合併（`parameters` 整鍵換，不往下合 schema）；index 是逐項整項覆蓋（跟 `index_view` 既有 K1 一樣）；description 是字串、外面有就用外面的。
+- **留外面、不進的**：`_entry`、`.env`（aos-exec 跑的時候要用）。C++ 基礎層照舊不讀 `_metainfo`。
+- **裝不下的節點**（陣列、別人的 json、可執行檔）：只有 index 照既有規則延伸到上層、鍵寫相對路徑。
+- **工具不藏 `_metainfo`**（`ls`／`json_ls` 照實列；C-48 `_` 開頭沒有特別意思）。
+- **施工**：① 條文（N-69 補一段、P-41 加註、knowledge 說明兩處），小；② 選做 B1 `aos-tools`、B2 `tool_io`、B3 `tools_def`、B4 `index_view`、B5 `defs/catalog`（建議一定做），各自幾行到二十幾行，全做約半天。沒有搬內容、沒有刪檔、不用重建。
 
 ## 未決
 
-- 上面兩題。
+- 題二的頂層代定等使用者確認。
+- 第二段選做清單做哪幾項，等使用者挑。
 - [index](../index.md) 原本的未定（鍵裡的路徑相對誰、index 過時、cache）這份不碰。
