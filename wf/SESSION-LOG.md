@@ -8,6 +8,7 @@
 
 ## 最新進度
 
+- **open｜11-12 使用者自己從零搭小樹（一個 daemon＋一隻 opus eca）**：使用者「不用幫我，告訴我怎麼一步一步做。我自己來」；照抄步驟已寫好（乾跑驗過到掛上、25 支、停樹、存檔），等他自己做 → [ops-notes-to-aos](../proto8/thinking/2026-11/12/ops-notes-to-aos.md#從零搭一棵小樹一個-daemon一隻懂-aos-的-opus-eca使用者自己做)
 
 - **open｜11-12 index（description＋index 合一）**：統一叫 `_index`／`_index.json`、天然位置在上一層；cache 不做、主觀 index 不規定（使用者原話八）；出廠內容檔已照「只給太大的補」做完（3 夾 `_index.json`＋`packs.json` 檔內 `_index`，門檻代定）。**未定**：路徑相對誰、過時、專屬工具 → [thinking 11-12 index](../proto8/thinking/2026-11/12/index.md)
 - **open｜11-11 晚家機模型配工具實測（五件已裁，11-12 大多施工完）**：剩 ② codex 唯讀沙盒對照表沒下結論（11-12 eca 範本已改 codex `workspace-write`，[eca-file-tools](../proto8/thinking/2026-11/12/eca-file-tools.md)）；家機試驗場照新範本重抄併進「試驗場重刷」那行 → [playground 04](../proto8/thinking/2026-11/11/playground/04-修與第二輪實測.md)
