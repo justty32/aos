@@ -145,6 +145,18 @@ for a in fsm_ann eca_bob eca_opus eca_cody; do aos-agent ctl add ../agents/$a; d
 
 </details>
 
+## 第二次重抄（11-12 19:36～19:40，照 main `8c4d73d15`）
+
+- 同一支腳本再跑一次（成員與代定不變，eca 兩隻 claude 仍不設花費上限），之後多兩步：刪掉 `agents/eca_cody/tools_sub.json`（codex 用不到，`cli.json` 整份蓋掉、沒有 `tools_sub` 鍵）；做外部 MCP 示範（下面）。複製的四夾跟 main 一致（工作樹乾淨），沒跑 install.sh、沒 build。
+- **工具支數**：fsm_ann 47（46＋`fake_echo`），eca 三隻各 25；eca_bob、eca_opus 的 `cli.json` 帶 `tools_sub: tools_sub.json`、`--tools …,Agent,Skill`，子 agent 那台 8 支（index_view、json_get、json_ls、json_multi_get、json_search、math、peek_clock、peek_now_time）。
+- **子 agent（haiku）**：叫它用 Agent 開一個子 agent 叫 peek_now_time、自己也叫一次——transcript 主 agent `Agent`＋`mcp__aos__peek_now_time`（沒有 parent），子 agent `mcp__aos_sub__peek_now_time`（帶 parent_tool_use_id）；0.010 美金、權限拒絕空。
+- **外部 MCP 經 aos（留在試驗場）**：`agents/fsm_ann/mcp/fake.json`＝stdio、`command python3`、`args [{"$env": "AOS_HOME", "$path": "/lib/tests/fake_mcp_stdio.py"}]`（試驗場複製的那份假 server）；`aos-mcp-import --only echo agents/fsm_ann/mcp/fake.json` 匯入 1 of 7；`agents/fsm_ann/tools.json` 的 `$override` 末尾加 `"mcp/fake.json"`（從定義資料夾算）。`aos-tools call fake_echo` 原樣回字；**gemma 叫到 `fake_echo`**、答回傳的字。
+- **index 帶 index**：`index_view` `path ../knowledge/aos`、`key cli` 回 `cli … index: ../knowledge/aos/cli/_index.json`。
+- **照舊各一句**：假腦 `FAKE ANSWER …`；`fake-demo-json` 劇本走完；codex luna 叫 aos `peek_now_time` 答時間（紀錄 `gpt-6-luna`、`workspace-write`）。
+- **樹已停**：臨時兩隻與四隻 purge、shutdown、清兩層 stack／總機帳本／`ws/` → 起根掛四隻（沒有 history）→ shutdown；沒有殘留行程（含假 MCP server）。
+- 沒驗：opus 實問、chat 與畫面、litellm 三個、codex 的子 agent（範本沒改、待裁 U1／U2，見 [eca-task-subagent](eca-task-subagent.md)）、`aos-mcp-import sync`。
+- 代定：示範的 server 檔放在 `fsm_ann` 定義裡（`mcp/fake.json`）、只匯 `echo` 一支、疊在定義的 `tools.json`（四隻裡只有 fsm_ann 有）；server 路徑用 `$env AOS_HOME` 指試驗場複製的那份假 server。
+
 ## 要重建什麼
 
 repo 的 `lib／py／templates／knowledge／kernel/llm-kernel` 有改，重跑上面那格就跟上（整個清掉，對話與自己改的設定都會沒）。
