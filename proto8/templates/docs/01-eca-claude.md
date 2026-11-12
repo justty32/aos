@@ -47,6 +47,8 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 
 **history 被改過＝開新對話**（11-10 [self-family](../../thinking/2026-11/10/self-family/README.md) ⑩，解 10-30 eca 09「停著時改 history 再繼續」縮水版）：每輪 assistant 接進 history 後，把整份 history 的 sha256 寫進小格的 `.history_sum`；下一輪交出去前算出來不一樣（人用 `aos-agent history` 或直接改了）＝`drop_session`、開新的 claude 對話，題目前面照換台那套帶改過的 user／assistant 紀錄（上限 `reseed_bytes`），stderr 一行 `warning: history.jsonl was changed since the last turn; starting a new claude conversation that carries the changed record`。這一輪中間被改（claude 叫 `self_history`）＝`.history_sum` 寫 `edited`、下一輪照樣開新的。畫面開著時不換、只 warning。用法：`aos-agent history -t 名字 ls`、`rm 3-4`、`summarize 1-6 "…"`；原文搬到 stack 裡 `history_removed.jsonl`。
 
+**slash 指令**（11-12 [eca-slash](../../thinking/2026-11/12/eca-slash.md)，使用者「eca就是會變成以他為主，aos體系要盡量跟上」）：畫面上打的照 CLI 自己的做，aos 跟上——對話 id 換了（`/clear`、`/resume`、codex 的 `/new`）畫面 hook 就改記 `session.txt`，claude 的 `/clear` 連 history 一起清（原文搬到 `history_removed.jsonl`）；`/compact` 同一個 id、history 不動；`/exit` 畫面關掉，下一句照常（非互動）答。`aos-agent say`／`chat` 送一封剛好是 `/clear`、`/compact`、`/status`、`/usage`、`/exit` 的信＝aos-eca-turn ⑭ 做出同樣的效果、回一則 `[aos] slash: …`。codex 身也有畫面（同一個 `screen/`，11-12 實測 `aos-agent open` 開得起來、answer 照進 turns／history）；codex 畫面的 `/clear` 只跟上 id、history 不清（codex 沒有對應的事件，見 eca-slash）。
+
 
 **eca 的 hook：有哪些、沒有哪些**（11-10 晚 [hook 圖紙 § 6](../../thinking/2026-11/10/self-family/hook/01-圖紙.md#6-eca-縮水版)，使用者「7.接受」縮水版）：腦在外面的 CLI，aos 只攔得到經過自己手的東西。
 

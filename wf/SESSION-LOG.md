@@ -8,6 +8,8 @@
 
 ## 最新進度
 
+- **open｜11-12 eca slash 指令（公司 WSL `/tmp/line-slash`，已施工、未 push、等頂層合併）**：畫面 hook 跟上 id＋claude `/clear` 清 history、say／listen／chat 認五個指令、codex 有畫面；待裁 Q1～Q4（codex 畫面 `/clear` 清不清 history、畫面開著時 say 要不要代打、`/compact` 在 history 留不留標記、fsm 要不要一致）；試驗場 `~/code/playground` 沒動，eca_cody 要畫面得重刷或手補 → [eca-slash](../proto8/thinking/2026-11/12/eca-slash.md)
+
 - **open｜11-12 knowledge 拿掉的收尾（兩題已裁「都刪」、已做，未 push、等頂層合併）**：出廠內容刪講已拆工具的節點與段落、P-46 整條刪、C-42／C-71／C-52／N-15／N-17 等刪掉講已拆機制的句子；合併後這行可刪 → [thinking 11-12 knowledge-removal](../proto8/thinking/2026-11/12/knowledge-removal.md#使用者裁定與清理11-12-下午)
 - **open｜11-12 index（description＋index 合一）**：統一叫 `_index`／`_index.json`、天然位置在上一層；cache 不做、主觀 index 不規定（使用者原話八）；出廠內容檔已照「只給太大的補」做完（3 夾 `_index.json`＋`packs.json` 檔內 `_index`，門檻代定）。**未定**：路徑相對誰、過時、專屬工具 → [thinking 11-12 index](../proto8/thinking/2026-11/12/index.md)
 - **open｜11-11 晚家機模型配工具實測（五件已裁，剩施工與觀察）**：使用者裁「1.要。2.多試試看，掌握狀況。3.eca基本都有goal，所以goal不用給eca。todo也不用。4.不擋。5.不管。」。**續行點**：① ~~root 收檔案與 json 物件~~（11-12 跟著 knowledge 一起撤，使用者「對，也可以順便給他們加上index。可以先做了吧」）；② codex 唯讀沙盒對照表已給使用者看，沒下結論、沒改設定；③ eca 已拿掉 goal、todo（35 支），代定是人下的 `aos-agent goal` 與 aos-eca-turn 的提醒照留；④ json_write 剝引號已裁退回（使用者「a。」＝工具不管引號，腦寫錯就讓它錯），錯誤提示 `6799c55ea` 先留著；⑤ ~~eca 不給基礎檔案工具~~（11-12 公司已施工、未 push：eca 20 支、trash 也拿掉；claude 開內建 Read／Write／Edit／Glob／Grep／Bash、dontAsk＋白名單、不全繞過；codex 改 `workspace-write`；使用者「可以先定這樣，然後trash也拿掉。」；haiku、luna 真腦驗過，[11-12 eca-file-tools](../proto8/thinking/2026-11/12/eca-file-tools.md)）；**剩**家機試驗場的 eca 定義照新範本重抄（eca_cody 的 cli.json 改 workspace-write；公司那台 11-12 已重刷，[11-12 playground](../proto8/thinking/2026-11/12/playground.md)） → [playground 04](../proto8/thinking/2026-11/11/playground/04-修與第二輪實測.md)

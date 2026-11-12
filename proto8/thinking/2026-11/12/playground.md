@@ -97,9 +97,7 @@ command cat > agents/eca_cody/cli.json <<'EOF'
  "print_flags": [],
  "timeout_ms": 600000}
 EOF
-rm -rf agents/eca_cody/screen
-aos-json del 'agents/eca_cody/interfaces.json#/aos-agent/screen'
-aos-json set agents/eca_cody/_metainfo.json#/summary '"Run Codex CLI (gpt-6-luna) as an aos agent: one turn per queue batch, answers appended to history; no screen."'
+aos-json set agents/eca_cody/_metainfo.json#/summary '"Run Codex CLI (gpt-6-luna) as an aos agent: one turn per queue batch, answers appended to history; aos-agent open shows its screen."'   # 11-12 eca-slash: codex keeps its screen (was removed here before)
 rm -rf .stack && find llm_kernel -mindepth 1 -maxdepth 1 ! -name def -exec rm -rf {} +
 find ws -mindepth 1 -maxdepth 1 -exec rm -rf {} +          # everything inside ws/ (the folder stays: claude trusts that path)
 echo "refreshed: $PG (agents: $(command ls agents | tr '\n' ' '))"
@@ -129,6 +127,10 @@ echo "refreshed: $PG (agents: $(command ls agents | tr '\n' ' '))"
 - **從 Windows 打 `wsl -d Ubuntu -- bash -lc '…'` 時，迴圈變數 `$a` 之類會被吃掉**（`for a in …; do … $a …` 變成空字串，`ctl add ../agents/` 少了名字）。改成把指令寫進檔、`tr -d '\r' < 檔 | bash` 跑就正常。
 - `index_view` 給檔名當 `path`＝看那個檔**裡面**的 `_index`；要看「上一層的 index 怎麼說這個檔」，`path` 給上一層、`key` 給檔名。這是設計（[index-tools](index-tools/README.md)），不是 bug。
 - repo 工作樹 `~/repo/aos-tools/proto8/lib/agent/` 底下還有已拆工具（knowledge_*、memory*、thought、agents）的空夾，只剩 `__pycache__`（沒進 git）；腳本多一步刪空夾，免得抄進試驗場。repo 那份沒動。
+
+## 11-12 下午：eca_cody 改成有畫面
+
+使用者「codex要做畫面」（[eca-slash](eca-slash.md)）：上面那格原本刪掉 eca_cody 的 `screen/` 與 interfaces 的 screen，已拿掉那兩行；臨時樹實測 codex 畫面開得起來、經 aos 送的話照進 turns／history。**試驗場 `~/code/playground` 本身沒動**（使用者正在用）：下次重刷才有，或手補 `cp -r templates/eca-claude/screen agents/eca_cody/ && aos-json set 'agents/eca_cody/interfaces.json#/aos-agent/screen' '"screen"'`。
 
 ## 要重建什麼
 
