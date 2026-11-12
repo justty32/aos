@@ -17,7 +17,6 @@
 | [`goal.json`](../../../../../proto8/lib/packs/goal.json) | Pack goal: one sentence you keep working on - goal (get, set, done, pause, resume); aos reminds you of it when you stop by yourself. |
 | [`json.json`](../../../../../proto8/lib/packs/json.json) | Pack json: plain JSON access, one place at a time by FILE#/POINTER - json_get, json_ls, json_search, json_set, json_add, json_del, json_multi_get, js… |
 | [`jsonx.json`](../../../../../proto8/lib/packs/jsonx.json) | Pack jsonx: JSON tools for aos configuration files that use $ref/$env - jsonx_get, jsonx_ls, jsonx_search, jsonx_set, jsonx_add, jsonx_del (follow, r… |
-| [`knowledge.json`](../../../../../proto8/lib/packs/knowledge.json) | Pack knowledge: knowledge_read, knowledge_write. No default knowledge base: the tools.json that stacks this pack sets one per name (env AOS_KNOWLEDGE… |
 | [`look.json`](../../../../../proto8/lib/packs/look.json) | Pack 1 (look): read-only file tools - read, ls, view, stat, grep, glob. |
 | [`mailbox.json`](../../../../../proto8/lib/packs/mailbox.json) | Pack mailbox: letters - mailbox_peek, mailbox_read, mailbox_send. |
 | [`self.json`](../../../../../proto8/lib/packs/self.json) | Pack self: look at and change yourself - self_tools, self_llm, self_system, self_state, self_ctl, self_history. |

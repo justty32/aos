@@ -12,7 +12,7 @@
 
 - 資料夾的 index＝該夾的 `_index.json`：`{"body.json": {"description": "…"}, "cli": {"description": "…"}}`，鍵是夾裡的檔名或子資料夾名（不帶尾斜線），列出夾裡每一個東西（`_index.json` 自己除外）。這棵樹只有東西多的三夾有：`aos/`、`aos/cli/`、`aos/tools/`（門檻：夾裡超過 15 個東西）。
 - JSON 物件的 index＝它的 `_index` 鍵：`{"xxx": {"yyy": true, "_index": {"yyy": {"description": "present the state of switch A"}}}}`，鍵是同一個物件的其他鍵。這棵樹只有 `aos/packs.json` 有（門檻：檔超過 8000 bytes＝`json_get` 預設上限，或頂層內容鍵超過 10 個）。
-- 想知道某個節點是什麼，就看它上一層的 index；沒有 index 的夾或檔就是夠小，直接讀。最頂層沒有上一層＝本來就沒有；沒列到的節點＝不管。這裡放的都是客觀 index；description 用英文、一句話。agent 自己的看法（主觀 index、cache）放哪不規定。
+- 想知道某個節點是什麼，就看它上一層的 index；沒有 index 的夾或檔就是夠小，直接讀。最頂層沒有上一層＝本來就沒有；沒列到的節點＝不管。這裡放的都是天然位置的 index（使用者稍後改說法：index 是視角，天然位置那份＝各 agent 的通用視角；要真正客觀用 `ls`／`json_ls`，[thinking 11-12 index](../thinking/2026-11/12/index.md)）；description 用英文、一句話。agent 自己的看法（主觀 index、cache）放哪不規定。
 
 分檔與內容：
 

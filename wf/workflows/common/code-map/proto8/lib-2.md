@@ -36,17 +36,6 @@
 | [`hook_fire/_entry`](../../../../../proto8/lib/agent/hook_fire/_entry) | 發 after_start／after_stop 事件：agent 範本 loop.json 的 on_start／on_stop 叫它（hook_fire EVENT DEF_DIR，$AOS_STACK＝agent 的 stack）。 |
 | [`hook_noop/_entry`](../../../../../proto8/lib/agent/hook_noop/_entry) | 什麼都不做的 hook handler：讀掉 stdin 的事件 JSON、退 0（範本 hooks.json 預設那格 on_clock 的掛點；使用者「預設就是收到信後啥也不做。 |
 | [`hooks.py`](../../../../../proto8/lib/agent/hooks.py) | agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、挑出符合事件的 hook、用 aos-exec 跑、解回話。 |
-| [`knowledge_export/`](../../../../../proto8/lib/agent/knowledge_export/) | 把記憶庫（資料夾＋.json 的 JSON 樹）或其中一棵子樹整棵印成一份 Markdown，給人看；唯讀。 |
-| [`knowledge_export/tests/test_export.py`](../../../../../proto8/lib/agent/knowledge_export/tests/test_export.py) | knowledge_export（純 JSON 樹）：node 行、簡介、字串原樣、其他 JSON 包 ```json、表的順序與 not in index、防繞圈、截斷、錯誤。 |
-| [`knowledge_fs.py`](../../../../../proto8/lib/agent/knowledge_fs.py) | 記憶庫（純 JSON 樹）共用：找根（--root 旗標＞寫的工具的呼叫參數 root＞_knowledge.json＞AOS_KNOWLEDGE）、統一路徑解析與顯示、經 aos-json 讀一個位置、_index 表與 $env 格的認法、自己的簡介、列枝幹、find 逛樹的迴圈防護。 |
-| [`knowledge_read/`](../../../../../proto8/lib/agent/knowledge_read/) | 唯讀查記憶庫（資料夾＋.json 的一棵 JSON 樹）：read 一個位置、ls 列枝幹的表、find 依關鍵字／標籤找路徑。 |
-| [`knowledge_read/tests/test_base_directive.py`](../../../../../proto8/lib/agent/knowledge_read/tests/test_base_directive.py) | 驗 _knowledge.json 的 base：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次用到才解、不寫回，解不開時錯誤行指名檔與欄。 |
-| [`knowledge_read/tests/test_knowledge.py`](../../../../../proto8/lib/agent/knowledge_read/tests/test_knowledge.py) | knowledge_read（純 JSON 樹）：read／ls／find 在各種位置上的輸出、表與 not in index、$ref／$env、迴圈、錯誤代號。 |
-| [`knowledge_sync/`](../../../../../proto8/lib/agent/knowledge_sync/) | Synchronize an optional Git knowledge base with origin. |
-| [`knowledge_sync/tests/test_sync.py`](../../../../../proto8/lib/agent/knowledge_sync/tests/test_sync.py) | Exercise knowledge_sync against temporary local Git repositories and tool errors. |
-| [`knowledge_write/`](../../../../../proto8/lib/agent/knowledge_write/) | 改記憶庫：add／set／rm 一次寫好內容與它在表（_index.json 或 _index key）裡的那格；寫到哪都行，看檔案權限。 |
-| [`knowledge_write/tests/test_writing.py`](../../../../../proto8/lib/agent/knowledge_write/tests/test_writing.py) | knowledge_write（純 JSON 樹）：add／set／rm 同時維護內容與表裡那格、寫到庫外也行、自己的簡介當普通路徑寫、各錯誤代號；寫完用 knowledge_read 讀回來對。 |
-| [`knowledge_write/writing.py`](../../../../../proto8/lib/agent/knowledge_write/writing.py) | knowledge_write 的三個動作：add／set／rm 一次把內容與它在表（_index.json 或 _index key）裡的那格一起維護；寫到哪都行，能不能成看檔案權限。 |
 | [`mail_notify/_entry`](../../../../../proto8/lib/agent/mail_notify/_entry) | on_clock 的 hook handler：看這隻 agent 自己的信箱（<stack>/mailbox，不是 queue）有沒有還沒通知過的新信，有就往自己 queue 寄一則「[aos] new_mail: …」。 |
 | [`mailbox_call.py`](../../../../../proto8/lib/agent/mailbox_call.py) | mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。 |
 | [`mailbox_peek/`](../../../../../proto8/lib/agent/mailbox_peek/) | aos-mailbox peek 的包裝，目標＝叫我的那隻自己：看信箱裡有幾封還沒讀、誰寄的、標題（不拿走）。 |

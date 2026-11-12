@@ -17,12 +17,12 @@
 - **拿掉**：工具 `knowledge_read`／`knowledge_write`／`knowledge_export`／`knowledge_sync`、共用模組 `lib/agent/knowledge_fs.py`、檢查工具 `lib/aos/knowledge_check`、包 `lib/packs/knowledge.json`；工具夾設定檔 `_knowledge.json`、環境變數 `AOS_KNOWLEDGE`（aos-sandbox 的 ENV_BASE、cli_session 給 codex MCP 的環境清單）、代號 `KnowledgeMissing`／`KnowledgeBad`；brain.py 與 aos-mcp 的 `--knowledge`（開場叫工具把庫根塞進 system／MCP instructions 的整套）、eca 範本 `cli.json` 的 `tools_flags`、agent-fsm `fsm.json` think 格的旗標；`[aos] knowledge:` 這種 note；`aos/defs` 的分群欄 `knowledge`（review_round 一起）；假腦 `fake-demo-knowledge`。不留舊名、不做相容。
 - **root 收三種形狀**（11-11 規劃、未施工）跟著 knowledge 一起撤。
 - **agent 怎麼知道這批內容在哪：不管**（「4.不管。」）：指示詞、工具說明都不寫路徑；原本工具說明結尾的 `Details: knowledge_read aos/tools/….json.` 全刪。
-- **範本工具數**：agent-fsm 43 支（十三包，含 json 包）、eca-claude 22 支（六包：gadgets、events、self、def、mailbox、json）、reviewer 11 支不變；`aos-tools --file templates/<名>/tools.json ls` 實數。
+- **範本工具數**：agent-fsm 45 支（十三包，含 json 包；json 包 11-12 加了 multi 兩支）、eca-claude 24 支（六包：gadgets、events、self、def、mailbox、json）、reviewer 11 支不變；`aos-tools --file templates/<名>/tools.json ls` 實數。
 - **出廠內容檔**留在 `proto8/knowledge/`（夾名不改），當普通資料夾＋json 樹，內容沒刪。
 - **cache、主觀 index 不做、不規定**。
 - **客觀 index 只給太大的補**，格式 `{名: {"description": "英文一句"}}`，放天然位置（上一層）：
-  - 資料夾 `_index.json` 留 3 份：`aos/`（20 個東西）、`aos/cli/`（22）、`aos/tools/`（30）；列出夾裡每個檔與子夾（自己除外），鍵不帶尾斜線。刪 6 份：`knowledge/`（4）、`docs/`（2）、`aos/agents/`（3）、`aos/errors/`（2）、`aos/me/`（7）、`aos/cli/parts/`（11）。
-  - 檔內 `_index` 只留 `aos/packs.json`（16 個內容鍵）；其餘 49 份檔刪掉 `_index` 鍵（最大的 `aos/me.json` 拿掉後約 6.4 KB、9 個內容鍵）。沒有檔超過 8000 bytes。
+  - 資料夾 `_index.json` 留 3 份：`aos/`（20 個東西）、`aos/cli/`（22）、`aos/tools/`（35）；列出夾裡每個檔與子夾（自己除外），鍵不帶尾斜線。刪 6 份：`knowledge/`（4）、`docs/`（2）、`aos/agents/`（3）、`aos/errors/`（2）、`aos/me/`（7）、`aos/cli/parts/`（11）。
+  - 檔內 `_index` 只留 `aos/packs.json`（16 個內容鍵）；其餘 51 份檔（含 main 同日新加的 json 節點）刪掉 `_index` 鍵（最大的 `aos/me.json` 拿掉後約 6.4 KB、9 個內容鍵）。沒有檔超過 8000 bytes。
   - 留著的都是 knowledge 時代那份表改成使用者格式（`_description`→`description`、去尾斜線），description 照現有內容。
   - agent 用一般讀檔／json 工具讀（沒有 index 專屬工具）；沒有 index 的夾或檔就是夠小，直接讀。
 
@@ -50,5 +50,6 @@
 
 ## 驗證
 
-- 測試：見本線 commit 訊息與日誌（`python3 -m unittest discover`）。
-- 真腦：見日誌 11-12「knowledge 拿掉」那段。
+- 測試（最後 rebase 到 `d7b08e809`〔json 第二輪、index-tools 圖紙〕之後；先前在 `47199075b`、`c79887c1b` 上各跑過一次，746 支、結果相同）：proto8 底下 49 個 `tests/` 夾各跑 `python3 -m unittest discover tests`，共 749 支，只紅既有 4 支（aos-agent `test_daemon_down` 2、box_check 2）；wf-lint broken 56（＝基準）；codemap 0 stale；`knowledge/README.md`、`docs/01` 的例子指令實跑過。
+- 範本實數（`aos-tools --file templates/<名>/tools.json ls`，要 `AOS_HOME`）：agent-fsm 45、eca-claude 24、reviewer 11，都沒有 knowledge。
+- 真腦（rebase 到 `47199075b` 之後、jsonx 改名之前跑的；eca 範本不掛 jsonx，工具清單不受改名影響；公司 WSL `/tmp/lk-1112b` 臨時樹＝範本 eca-claude 照抄、claude haiku、`aos-eca-turn` 直接跑一輪）：列 `mcp__aos__` 工具＝22 支（當時 json 包還沒有 multi 兩支）、沒有 knowledge；叫 `mcp__aos__json_get` 讀 `…/knowledge/aos/tools/_index.json#/read.json`，照實答出那格的 description。
