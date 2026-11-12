@@ -1,4 +1,4 @@
-# 檔案系統＋json 當 memory、index（description 與 index 合一）（11-12 公司，只記錄、沒施工）
+# 檔案系統＋json 當 memory、index（description 與 index 合一）（11-12 公司；knowledge 拆除與出廠檔 index 已施工，[knowledge-removal](knowledge-removal.md)）
 
 ← [11-12 日索引](README.md) ・ 前情：[11-11 json-tools](../11/json-tools.md)、[11-11 playground 04](../11/playground/04-修與第二輪實測.md)（knowledge 改回 memory、root 三種形狀）、指示詞條文 [NORMS N-45](../../../docs/NORMS/06-基礎設施-命令列與指示詞.md)
 
@@ -42,6 +42,14 @@
 
 > 「2,3的確如此。然後我會覺得，放在天然位置的index，其實會是所謂的客觀index，而agent自己存的則是主觀。cache這塊之後再說。最頂層本來就沒有...。沒列到的就不管」
 
+頂層擬 knowledge 拆除範圍：「拿掉工具本身和開場『先查知識庫』的指示詞，出廠那批內容檔先留著當普通 json 檔」「root 收三種形狀不做了，跟著 knowledge 一起撤」。使用者答：
+
+> 「對，也可以順便給他們加上index。可以先做了吧」
+
+拿掉後 agent 怎麼知道內容檔在哪，使用者答：
+
+> 「4.不管。」
+
 原話八：
 
 > 「對了，剛剛那套index，我這邊有些想法：agent的cache這個機制先不用做，反正我們就是訂下index是這樣，客觀index是這樣，agent自己要記錄自己的主觀的東西，就自己想想要放哪，我們不規定。cache這東西以後可能會做工具吧，但現在我們就不管。json檔案要不要加上_index，就是說，index我覺得有幾個主要用途，一個是agent可能會有自己的看法(cache)(或是agent們的通用看法，天然位置)，另一個是當節點下的某些東西太龐大了，所以用index給他做一個簡介。所以現有aos知識庫中，如果有些東西太大，那就補index.json/_index。如果夠小，那其實也不用做看法了，直接讀就是了。」
@@ -61,8 +69,12 @@
 ## 決定
 
 - **knowledge 不改回 memory**：撤回 11-11 晚「整套改回」。
-- **knowledge 工具拿掉**（「knowledge沒用了，可以拿掉。」）：施工排在 json 工具線之後，還沒做。
-  - 範圍是頂層擬的、已告知使用者、**使用者尚未回應（頂層擬、未確認）**：拿掉工具、`AOS_KNOWLEDGE`、旗標、錯誤代號、包，以及開場查知識庫的指示詞；出廠內容檔 `aos/*.json` 先留著當普通 json。
+- **knowledge 工具拿掉**（「knowledge沒用了，可以拿掉。」）：json 工具線之後施工，已做，[knowledge-removal](knowledge-removal.md)。
+  - 範圍（頂層擬，**使用者已確認**「對，也可以順便給他們加上index。可以先做了吧」）：拿掉工具、`AOS_KNOWLEDGE`、旗標、錯誤代號、包，以及開場查知識庫的指示詞；出廠內容檔 `aos/*.json` 留著當普通 json，順便加上 index。
+  - **root 收三種形狀**（11-11 規劃、未施工）跟著 knowledge 一起撤（同一句確認）。
+  - **agent 怎麼知道內容檔在哪：不管**（「4.不管。」）：指示詞、工具說明都不提路徑。
+- **cache 不做、主觀 index 不規定**（原話八）：agent 自己的看法自己想放哪；cache 以後可能做工具，現在不管。
+- **index 只給太大的補**（原話八「如果有些東西太大，那就補index.json/_index。如果夠小……直接讀就是了」）：出廠內容檔照這條補，門檻與結果在 [knowledge-removal](knowledge-removal.md)。
 - **json_read／json_write 之後被我們的 json 工具替代**。
 - **公司不建 proxy，只用 eca**。
 - **尋址一條路徑**：如 `aaa.json#/xxx/yyy`；檔案系統的根是 `/`，json 檔的根（整份檔）是 `#/`。（**11-12 稍後註**：使用者看到 `$ref` 照 RFC 6901 後改口「原來$ref用的是標準寫法。那我們還是按照標準寫法好了。」——整份檔只寫 `aaa.json`（`aaa.json#` 不收，11-12 代定、可翻），`aaa.json#/` 是名字為空字串的 key；json 工具已照改，見 [json-tools 01 Q3](json-tools/01-規劃.md#10-待使用者裁)。）
@@ -79,11 +91,10 @@
 - **改通用視角**：有權限就能改、不用明講，風險自己承擔。
 - **看的時候**可以自己指定用哪份 index，沒指定＝用通用視角（天然位置）。
 - **`_metainfo` 整合**（index 搬進去、去掉 `_` 叫 `index`；`_entry` 搬不進去；開口子、用不用都可以，json 檔也一樣）：後續想法、一兩週後，現在不做。
-- **cache 不做、主觀 index 放哪不規定**（原話八）；**太大才補 index、夠小直接讀**（原話八）。
 
 ## 未定／之後再說
 
-- cache（「cache這塊之後再說」）。
+- cache（「cache這塊之後再說」；原話八：現在不做、以後可能做工具）。
 - 「放哪都可」時，鍵裡的路徑相對誰；同一節點多處有 index 時聽誰的。
 - index 過時（節點已不在）怎麼辦。
 - 鍵能不能跨層。

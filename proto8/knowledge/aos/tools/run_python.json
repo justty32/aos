@@ -1,13 +1,5 @@
 {
  "_description": "# Tool run_python\n\nRun a short Python 3 program and get what it prints (stdout and stderr merged). The last line is always `[exit code N]`.\n\nUse it for calculations, parsing or reshaping data, and checks that are awkward in bash. Not for: one arithmetic expression (`math`), a change you can make with `edit` or `json_set`, shell commands (`shell`).\n\n```json\n{\"code\": \"import json\\nprint(json.dumps({\\\"n\\\": 6 * 7}))\"}\n```\nprints\n```text\n{\"n\": 42}\n[exit code 0]\n```\n\nAn exception prints its traceback and `[exit code 1]`. That is your program's result, not a tool error: fix the code and run again.\n\nHow it runs: `aos/tools/run_python.json#/rules`. Errors: `aos/tools/run_python.json#/errors`.\n",
- "_index": {
-  "rules": {
-   "description": "run_python: current folder, standard library, output limit, timeout."
-  },
-  "errors": {
-   "description": "run_python errors (CommandFailed and more) and what to do."
-  }
- },
  "rules": "# run_python: how it runs\n\n- The current folder is your workspace, the same as `shell`: relative paths like `open(\"data/a.csv\")` read and write there. The program itself is saved as `main.py` in your stack (or a temporary folder), not in the workspace.\n- Count on the standard library only. It runs as `python3 -I`: no user site packages, `PYTHON*` variables are ignored.\n- Output over 8000 characters keeps the first 3000 and the last 3000.\n- `timeout_s`: default 60, at most 300. Past it the whole process group is stopped.\n- Killed by signal N: `[exit code 128+N]`. Exit codes: `aos/errors.json#/exits`.\n- It is not a sandbox: the program can touch anything your Linux user can.\n",
  "errors": "# run_python: errors\n\n- `CommandFailed`: the program ran over `timeout_s` and was stopped. What it printed so far comes before the error line. Give a bigger `timeout_s` (at most 300), or do less in one run.\n- `WsMissing`: you have no workspace (`AOS_WS` is not set or not a folder). A setup problem: report it.\n- `LaunchFailed`: python3 could not start. A setup problem: report it.\n- `LogFailed`: the command log in your stack could not be written (`aos/errors.json#/common/files`).\n- `ArgumentsBad`: also an empty `code`, or `timeout_s` not between 0 and 300. Wrong or unknown keys (`ArgumentsBad`): `aos/errors.json#/common/input`.\n"
 }

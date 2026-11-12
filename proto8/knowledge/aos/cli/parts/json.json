@@ -1,16 +1,5 @@
 {
  "_description": "# aos-json: read and edit aos JSON files\n\nAddress any value with `FILE#/POINTER`; `$ref` is followed only when you ask. Agents use the json tools (`json_get`, `json_ls`, `json_search`, `json_set`, `json_add`, `json_del`; for $ref/$env files `jsonx_get`, `jsonx_set`, `jsonx_add`); aos-json is for shells and scripts.\n",
- "_index": {
-  "read": {
-   "description": "get, peek and where."
-  },
-  "write": {
-   "description": "set, append, merge, del, batch, env and ref; every write is atomic."
-  },
-  "check": {
-   "description": "check reports broken references and directives; exit 10 = problems found."
-  }
- },
  "read": "# Reading\n\n```sh\naos-json get c.json#/a/b                  # 1\naos-json get --follow --str c.json#/r/y   # hi      (r is {\"$ref\": \"other.json#/x\"})\naos-json get --resolve c.json#/e          # \"/home/me\"   (e is {\"$env\": \"HOME\"})\naos-json peek c.json                      # one level; big children folded\naos-json where c.json#/r/y                # c.json#/r, then other.json#/x/y\n```\n\nWithout `--follow`, a pointer through a `$ref` = `PointerMissing ... add --follow to go through it`. A pointer that is not there = `PointerMissing`. `peek --depth N` expands more levels.\n",
  "write": "# Writing\n\n```sh\naos-json set c.json#/a/c '[1,2]'\naos-json set --str c.json#/a/s 'plain text'\naos-json set --parents c.json#/n/m 1      # without --parents: PointerMissing\naos-json append c.json#/a/c 3\naos-json merge c.json#/a '{\"b\": 9}'\naos-json del c.json#/n\necho '{\"/a/b\": 5, \"/z\": true}' | aos-json batch c.json\naos-json env --path /x c.json#/h HOME     # writes {\"$env\": \"HOME\", \"$path\": \"/x\"}\naos-json ref --move c.json#/a parts.json  # moves the value to parts.json, leaves {\"$ref\": \"parts.json\"}\n```\n\nWrites print nothing. VALUE comes from argv, or stdin when omitted. Each changed file is written atomically (a temp file, then rename). `--check` refuses a change that adds problems. Without `--follow`, a write through a `$ref`/`$env` = `FollowMissing`. `--raw` (set, append, del) treats `$ref`/`$env` objects on the way as plain objects (`aos-json set --raw c.json#/r/k 1` adds k next to the `$ref`); not with `--follow` (`ArgumentsBad`).\n",
  "check": "# Checking\n\n```sh\naos-json check c.json        # exit 0: no problems\naos-json check bad.json      # exit 10, one line per problem:\n# bad.json#/k: DirectiveBad $ref gone.json cannot be read (file not found: /.../gone.json)\n```\n\nIt checks references, directive forms and exec forms. `--env` also reports unset environment variables.\n"

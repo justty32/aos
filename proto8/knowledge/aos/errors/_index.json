@@ -1,8 +1,0 @@
-{
- "common.json": {
-  "description": "The common error codes in full (aos/errors.json#/common points here with $ref)."
- },
- "_description.json": {
-  "description": "This folder's own note: long sections of aos/errors.json, kept here so that file stays small."
- }
-}

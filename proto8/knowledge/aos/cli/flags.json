@@ -1,22 +1,5 @@
 {
  "_description": "# Help and flag placement\n\nWhere flags may go, which commands differ, help levels and short names.\n",
- "_index": {
-  "placement": {
-   "description": "A flag may go anywhere after the name of the level that owns it; a few hand the words after a point on unread."
-  },
-  "target": {
-   "description": "Which aos-agent subcommands take the agent as -t NAME or as the last argument."
-  },
-  "text": {
-   "description": "Text handed on as it is ends flag reading; after -- nothing is a flag."
-  },
-  "help": {
-   "description": "Each level has its own --help; FlagUnknown, ArgumentsBad and CommandUnknown."
-  },
-  "short": {
-   "description": "Short names are per command; use separate tokens."
-  }
- },
  "placement": "# A flag goes after its level\n\nA command has levels: the program, its subcommand, the action (`aos-agent`, `ctl`, `stop`). A flag belongs to one level and may go anywhere after that level's name, also after later names and arguments. These are the same:\n\n```sh\naos-agent -d /srv/d ctl stop bob\naos-agent ctl stop bob -d /srv/d\naos-agent ctl stop -t bob\naos-tools add tools/clock --name now\n```\n\nThis holds for every aos command, the parts in `aos/cli/parts/` too (`aos-json get FILE#/a --str`, `aos-eca-turn /abs/def --one`). Exceptions, where words are handed on as they are: everything after the folder in `aos-exec FOLDER ARGS` goes to that folder's program; `aos-sandbox CONFIG PROG ...` hands PROG and its args on; `aos-json set`, `append` and `merge` take their flags before FILE, because the value may be any word (`aos-json set --str FILE#/a -x`). A word after an argument that looks like a negative number (`-3`) or holds a space stays an argument.\n",
  "target": "# Naming the agent in aos-agent\n\n`aos-agent ctl` start / stop / sleep / wake / pause / resume / where take the agent as `-t NAME` or as the last argument. say, listen, chat, open, close, watch, tools, llm, system, history and hook take only `-t`. `ctl add / rm / ls / who` take no `-t`. Two different names = `ArgumentsBad`.\n",
  "text": "# Text ends flag reading\n\nText that is handed on as it is ends flag reading: everything from the first word of `aos-agent say WORDS`, `history summarize RANGE TEXT`, `history set LINE JSON`, `goal set TEXT`, `aos-mailbox send WHAT`, `aos-clock-register add NAME TEXT` is text, so put flags before it. After `--` nothing is a flag: `aos-daemon-ctl add tools/job -- --verbose`, `aos-agent say -t bob -- -hello`.\n",

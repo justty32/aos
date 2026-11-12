@@ -1,9 +1,4 @@
 {
  "_description": "# Tool stat\n\nShow facts about one file, folder or link, as one JSON object (not the content).\n\nUse it to check a path: is it there, file or folder, text or binary, how big, JSON or not. Use `ls` for a whole folder, `read` or `view` for the content.\n\n```json\n{\"path\": \"cfg.json\"}\n```\n-> `{\"path\":\"cfg.json\",\"type\":\"file\",\"mtime\":\"2026-11-11T03:17:02.222+00:00\",\"mode\":\"0644\",\"size\":82,\"exec\":false,\"text\":true,\"counter_lines\":1,\"top\":{\"type\":\"object\",\"counter_keys\":3},\"format\":\"json\"}`\n\n- Every path: `type` (file, dir, link), `mtime` (UTC), `mode`.\n- Files: `size` (bytes), `exec`, `text` (UTF-8 without zero bytes); text files add `counter_lines` and `format` (json, python, markdown, shell, text); JSON files add `top` (a summary of the top level).\n- Folders: `counter_children`, `aos` (aos files inside, like `[\"_entry\", \"_tooldef.json\"]`).\n- Links: `link_to`, then the facts of the target; a link to nothing: `{\"path\":\"dead\",\"type\":\"link\",\"link_to\":\"nowhere\",\"broken\":true}`.\n\nErrors: `aos/tools/stat.json#/errors`.\n",
- "_index": {
-  "errors": {
-   "description": "stat errors and what to do."
-  }
- },
  "errors": "# stat: errors\n\n- `FileMissing`: nothing at that path. `ls` the folder above it.\n- `ReadFailed`: the file is there but could not be read; its facts so far are not printed. `ReadFailed`, `WriteFailed`, `WsMissing`: `aos/errors.json#/common/files`. Wrong or unknown keys (`ArgumentsBad`): `aos/errors.json#/common/input`.\n"
 }

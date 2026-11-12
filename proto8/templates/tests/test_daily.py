@@ -400,6 +400,7 @@ class Daily(unittest.TestCase):
         fsm = defs_cwd / adir / "fsm"
         (fsm / "llm.json").write_text('{"model": "fake-greet"}\n')
         tj = json.loads((fsm / "tools.json").read_text())
+        tj.setdefault("tools", {})                 # 11-12 範本 tools.json 只剩 $override（knowledge 那格拿掉）
         if self.another_ref == "relative":
             tj["tools"]["greet"] = {"path": os.path.relpath(h.another / "tools" / "greet", fsm)}
         else:

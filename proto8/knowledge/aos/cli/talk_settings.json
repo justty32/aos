@@ -1,22 +1,5 @@
 {
  "_description": "# Messages, screens and agent settings\n\nSend messages and change one agent's overlays without modifying its definition. Changes are saved in the agent's stack; the definition is not changed.\n",
- "_index": {
-  "say_listen": {
-   "description": "aos-agent say queues a message; listen prints the answer."
-  },
-  "chat_screen": {
-   "description": "aos-agent chat for line-by-line talk; open, close, watch for a screen."
-  },
-  "tools": {
-   "description": "aos-agent tools: ls, get, add, rm, reset this agent's toolbox."
-  },
-  "llm": {
-   "description": "aos-agent llm: list, set, rm, reset changed brain keys; aos-llm for the brain service."
-  },
-  "system": {
-   "description": "aos-agent system: get, set, reset this agent's system text."
-  }
- },
  "say_listen": "# say and listen\n\n```sh\naos-agent say -t bob \"what time is it\"     # prints the letter name\naos-agent listen -t bob --timeout-s 60     # waits for the answer, prints its text\naos-agent listen -t bob --last 3           # blocks: == #N, > question, answer\naos-agent listen -t bob --follow           # new exchanges as they come\n```\n\nsay: words are joined with spaces; no words or `-` reads stdin; terminal stdin with no words = `ArgumentsBad`. Paused or sleeping agents still queue messages. listen without a timeout can wait forever; `--timeout-s S` or `--timeout-cycles N` gives up with `AnswerMissing`. `--follow` (`-f`) works with or without `--last`. Do not combine a timeout with `--last` or `--follow`. Ctrl-C in follow exits 0; while waiting it exits 130.\n",
  "chat_screen": "# chat and screens\n\n`printf 'hello\\n' | aos-agent chat -t bob` sends one line at a time and waits for each answer (the `> ` prompt goes to stderr). Empty lines are ignored; Ctrl-C leaves.\n\n`aos-agent open -t bob` attaches to its screen (`--detach`: open only); `close` closes it and keeps the conversation; `watch` follows the screen until one answer ends. They require a declared screen interface (`ScreenMissing`); without a screen, use listen. The lower-level command: `aos/cli/eca.json#/screen`.\n",
  "tools": "# One agent's tools\n\n```sh\naos-agent tools -t bob                 # = ls\naos-agent tools -t bob add --name now2 $AOS_HOME/lib/base/peek_now_time\naos-agent tools -t bob rm shell\naos-agent tools -t bob reset -y\n```\n\nChoose one action: `ls [-l | --json]`, `get NAME`, `add [--name N] [--replace] [--envs K=V]... [--env-file FILE] PATH`, `rm NAME`, `reset`. Changes go to this agent's own `tools.json` in its stack, which holds only the differences from the definition's (`\"$override\"`; a removed tool is `null`). The first change prints a warning that the file was created. add/rm print the same result lines as aos-tools (`removed shell (...: set to null over ...)`). Hub variables: `aos/cli/tool_env.json`.\n",

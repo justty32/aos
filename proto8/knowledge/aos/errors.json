@@ -1,16 +1,5 @@
 {
  "_description": "# Reading an error\n\nHow to read a failed call: the `error:` line, `warning:` lines, and exit codes.\n\nA failed aos program prints one error line: `program: error: Code reason`.\n\n`self_tools: error: ToolExists math is already listed in your tools (add replace: true to replace it)`\n\n- First word = who failed (a program, a tool, or an agent name).\n- The word right after `error: ` = the Code. Its ending tells the kind of problem: see `aos/errors.json#/codes`; the most common Codes: `aos/errors.json#/common`.\n- The rest = the reason, for humans. A usage hint comes last: `(usage: ...)`.\n\nA tool you call prints the error line on stdout too, and exits 1. A failed or timed-out tool result also shows the last 2048 bytes of its stderr. A tool that runs past its time limit (`timeout_ms` in its `_metainfo.json`) is stopped. A flag that cannot be parsed adds `(see NAME --help)` to the reason; `NAME --help` lists the tool's parameters and the error codes it declares.\n\n`program: warning: sentence` is not an error. The call worked; the line only tells you something. Never retry because of a warning.\n\nExit codes, and the `[exit code N]` line of `shell` / `run_python`: `aos/errors.json#/exits`.\n\nA tool that answers with text but no error line succeeded, even if the text says \"no\", \"none\" or \"(none)\".\n",
- "_index": {
-  "codes": {
-   "description": "What each Code ending means and what to do."
-  },
-  "common": {
-   "description": "The Codes you will meet most, and what each one means for you."
-  },
-  "exits": {
-   "description": "Exit codes 0, 10, 130, 141, 128+N, and the [exit code N] line of shell and run_python."
-  }
- },
  "codes": "# Error codes\n\nWhat each Code ending means and what to do.\n\nThe Code is the word right after `error: `. Its ending:\n\n| ending | meaning | what to do |\n|---|---|---|\n| `...Bad` | something you gave is malformed or not allowed (`ArgumentsBad`, `PathBad`, `RequestBad`, `NameBad`) | fix the argument and retry once |\n| `...Missing` | something that should exist does not (`PathMissing`, `FileMissing`, `WsMissing`, `DaemonMissing`, `AnswerMissing`, `BudgetMissing`) | create it, wait for it, or report that it is not there. Do not retry blindly |\n| `...Unknown` | a name was not found in a list (`OpUnknown`, `FlagUnknown`, `CommandUnknown`, `SubagentUnknown`, `EndpointUnknown`, `ToolUnknown`) | list what exists, then use a name from the list |\n| `...Failed` | an action was attempted and failed (`WriteFailed`, `LaunchFailed`, `EndpointFailed`, `CommandFailed`) | usually environmental; retry once, then report |\n| `...Exists` | something with that name is already there (`ToolExists`, `InstanceExists`, `AgentExists`, `LetterExists`) | do not overwrite. Pick another name; use `replace` (`--replace`) only if you mean to replace |\n| `...Rejected` | a gatekeeper said no (`AddRejected`, `CtlRejected`) | this is a decision. Adapt (remove something, ask for less) or report. Never loop |\n| `...Internal` | a bug in the program | report it with the full line |\n\nThese are the common endings, not all of them: some Codes end otherwise (`DepthExceeded`, `SubagentQueued`, `ChildrenExist`). Read the reason after the Code; the tool's own node says what to do.\n\nThe Codes you will meet most: `aos/errors.json#/common`.\n",
  "common": {
   "$ref": "errors/common.json"

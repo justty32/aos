@@ -1,8 +1,0 @@
-{
-  "01-樹長怎樣與多庫.md": {
-    "description": "For people, in Chinese: what the tree looks like, paths FILE.json#/POINTER, _index.json and _index as the objective index, _description, $ref."
-  },
-  "02-寫入與節點怎麼寫.md": {
-    "description": "For people, in Chinese: how to write a node (one string per passage, sizes, names, index cells, $ref when splitting, language)."
-  }
-}

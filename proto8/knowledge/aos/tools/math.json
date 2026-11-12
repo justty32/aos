@@ -1,9 +1,4 @@
 {
  "_description": "# Tool math\n\nCompute one arithmetic expression exactly, instead of in your head. Changes nothing.\n\nAllowed: numbers (integers and decimals), `+ - * /`, `//` (floor division), `%` (remainder), `**` (power; exponent at most 1000), parentheses, signs. Not allowed: functions (`sqrt`, `abs`), letters or variables, `x` for times, units.\n\n```json\n{\"expr\": \"17*23\"}\n```\n-> `391`\n\n- `{\"expr\": \"(2+3)**2 // 4\"}` -> `6`\n- `{\"expr\": \"7/2\"}` -> `3.5` (`/` gives a decimal; `7//2` -> `3`)\n- `{\"expr\": \"2 ** 0.5\"}` -> `1.4142135623730951` (a square root)\n- `{\"expr\": \"0.1+0.2\"}` -> `0.30000000000000004` (decimals are floating point; round in your answer)\n\nErrors: `aos/tools/math.json#/errors`.\n",
- "_index": {
-  "errors": {
-   "description": "math errors (ExprBad, ArgumentsBad) and what to do."
-  }
- },
  "errors": "# math: errors\n\n- `ExprBad`: it cannot compute the expression. The reason says why: `division by zero`; `unsupported syntax: Call` (a function like `sqrt(2)`); `unsupported syntax: Name` (a letter or variable); `cannot parse expression: invalid syntax` (like `17 x 23`); `exponent too large (limit 1000)`. Rewrite it with only numbers and the allowed operators, then call once more. Do not retry the same expression.\n- `ArgumentsBad`: `expr` is missing or not a string, or you gave another key. Call `{\"expr\": \"17*23\"}`.\n"
 }

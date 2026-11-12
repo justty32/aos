@@ -1,4 +1,4 @@
-# proto8/knowledge — 出廠內容樹（普通資料夾＋`.json`，`_index.json` 當客觀 index）
+# proto8/knowledge — 出廠內容樹（普通資料夾＋`.json`，太大的節點補 `_index.json`／`_index` 當客觀 index）
 
 ← [proto8](../README.md)｜由來：[thinking 11-05 agent-knowledge](../thinking/2026-11/05/agent-knowledge/README.md)、[11-10 json-memory](../thinking/2026-11/10/json-memory/README.md)
 
@@ -8,9 +8,11 @@
 
 **index**（使用者 11-12）：「description和index是可以合起來的，或者說，本來就該合起來，統一叫_index.json/_index，也就是agent自己對這個節點的理解。格式就是{xxx:{description:...}, yyy:{...}}。當然，這個_index.json/_index有其天然位置，這個天然的意思是，在沒有指定位置的時候，agent如果想要了解某個節點的狀況，就會去看其上方節點的index。」「放在天然位置的index，其實會是所謂的客觀index，而agent自己存的則是主觀。」「反正最基礎的就是這樣。後續什麼agent自己存、更新啥的，或是除了description外還要加啥，就後續再說」
 
-- 資料夾的 index＝該夾的 `_index.json`：`{"body.json": {"description": "…"}, "cli": {"description": "…"}}`，鍵是夾裡的檔名或子資料夾名（不帶尾斜線），列出夾裡每一個東西（`_index.json` 自己除外）。
-- JSON 物件的 index＝它的 `_index` 鍵：`{"xxx": {"yyy": true, "_index": {"yyy": {"description": "present the state of switch A"}}}}`，鍵是同一個物件的其他鍵。
-- 想知道某個節點是什麼，就看它上一層的 index。最頂層沒有上一層＝本來就沒有；沒列到的節點＝不管。這裡放的都是客觀 index；description 用英文、一句話。
+**只給太大的補**（使用者 11-12）：「當節點下的某些東西太龐大了，所以用index給他做一個簡介。所以現有aos知識庫中，如果有些東西太大，那就補index.json/_index。如果夠小，那其實也不用做看法了，直接讀就是了。」
+
+- 資料夾的 index＝該夾的 `_index.json`：`{"body.json": {"description": "…"}, "cli": {"description": "…"}}`，鍵是夾裡的檔名或子資料夾名（不帶尾斜線），列出夾裡每一個東西（`_index.json` 自己除外）。這棵樹只有東西多的三夾有：`aos/`、`aos/cli/`、`aos/tools/`（門檻：夾裡超過 15 個東西）。
+- JSON 物件的 index＝它的 `_index` 鍵：`{"xxx": {"yyy": true, "_index": {"yyy": {"description": "present the state of switch A"}}}}`，鍵是同一個物件的其他鍵。這棵樹只有 `aos/packs.json` 有（門檻：檔超過 8000 bytes＝`json_get` 預設上限，或頂層內容鍵超過 10 個）。
+- 想知道某個節點是什麼，就看它上一層的 index；沒有 index 的夾或檔就是夠小，直接讀。最頂層沒有上一層＝本來就沒有；沒列到的節點＝不管。這裡放的都是客觀 index；description 用英文、一句話。agent 自己的看法（主觀 index、cache）放哪不規定。
 
 分檔與內容：
 
@@ -26,8 +28,8 @@
 試一下（從 `proto8/`）：
 
 ```sh
-aos-json get --str knowledge/_index.json#/aos/description      # 根的 index 說 aos 是什麼
+aos-json get --str knowledge/aos/_index.json#/rules.json/description   # aos/ 的 index 說 rules.json 是什麼
 aos-json get knowledge/aos/me.json#/self_tools                 # {"$ref": "me/self_tools.json"}
-aos-json get --follow knowledge/aos/me.json#/self_tools/_index/add
-echo '{"path":"knowledge/aos/errors.json#/_index"}' | AOS_WS=$PWD python3 lib/base/json_get/_entry   # 腦用的 json_get 也行
+aos-json get --follow --str knowledge/aos/me.json#/self_tools/add
+echo '{"path":"knowledge/aos/packs.json#/_index"}' | AOS_WS=$PWD python3 lib/base/json_get/_entry   # 腦用的 json_get 也行
 ```
