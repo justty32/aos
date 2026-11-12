@@ -2,7 +2,7 @@
 
 ← [proto8](../README.md)｜原話與拍板：[thinking/ideas](../thinking/2026-10/19/ideas/README.md)｜跟 proto8 原則相撞的七條，使用者已全部裁定：[ideas § 9](../thinking/2026-10/19/ideas/README.md)｜proto8 原則：[CONCEPTS](CONCEPTS.md)、[NORMS](NORMS.md)｜程式：[impls](../impls/README.md)（C++ 是唯一實作；aos-clock 等 Python 工具在 [cmd](../cmd/README.md)）、[templates](../templates/README.md)
 
-**aos 本身只保證六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`；§ 19）和一支 `aos-exec`**（使用者 § 4；已升成規範 [N-57～N-62](NORMS/10-基礎設施-定義與工作區.md)）。其餘全是慣例（P-05～P-45）：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**agent-bob 現在的樣子就是標準，stack 裡面自由**（拍板點 1）。拍板點 1 指的 agent-bob 已刪，現行範本是走 queue 的 [templates/agent-fsm](../templates/README.md#agent-fsm)（P-27）；條文換不換成 agent-fsm 由使用者定。
+**aos 本身只保證六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`；§ 19）和一支 `aos-exec`**（使用者 § 4；已升成規範 [N-57～N-62](NORMS/10-基礎設施-定義與工作區.md)）。其餘全是慣例（P-05～P-48，P-46 空號）：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**agent-bob 現在的樣子就是標準，stack 裡面自由**（拍板點 1）。拍板點 1 指的 agent-bob 已刪，現行範本是走 queue 的 [templates/agent-fsm](../templates/README.md#agent-fsm)（P-27）；條文換不換成 agent-fsm 由使用者定。
 
 每條後面括號是依據：§ 幾＝[ideas](../thinking/2026-10/19/ideas/README.md) 裡使用者原話的段號；拍板點 1～3＝ideas § 8；C-xx／N-xx＝proto8 的概念與規範；引不到的、這份自己定的，標「本稿定」。
 
@@ -26,6 +26,8 @@
 | [01-保證佈局入口.md](CONVENTION/01-保證佈局入口.md) | 一、aos 保證的（不是慣例，是底）；二、佈局（每檔一句）；三、入口、loop、fsm |
 | [02-題目stack停錯腦.md](CONVENTION/02-題目stack停錯腦.md) | 四、題目與答案（含 P-11 輸入是 queue〔舊協議是題目資料夾〕、P-42 agent 對話協議〔外部 coding agent 也只碰這三樣〕、P-43 外部 coding agent〔eca〕的定義）；五、stack；六、停與錯（P-20：用物件 `next` 的表，表上沒接住那個碼時才是預設停）；七、腦與工具（含 P-41 腦的工具呼叫）；十三、命令列（P-44 aos 自己程式的命令列形狀） |
 | [08-P-45.md](CONVENTION/02-題目stack停錯腦/08-P-45.md) | 十三、命令列：P-45 純 aos 函數的旗標映射 |
+| [09-P-47.md](CONVENTION/02-題目stack停錯腦/09-P-47.md) | 七、腦與工具（續）：P-47 外部 MCP server |
+| [10-P-48.md](CONVENTION/02-題目stack停錯腦/10-P-48.md) | 四、題目與答案（續）：P-48 agent 之間的信箱（mailbox） |
 | [03-shell版與inst版.md](CONVENTION/03-shell版與inst版.md) | 八、shell 版與 inst 版 |
 | [04-範例三種寫法.md](CONVENTION/04-範例三種寫法.md) | 八之「範例：同一隻 agent 的三種寫法」 |
 | [05-不管落實待決.md](CONVENTION/05-不管落實待決.md) | 九、慣例不管的；十、程式對這份的落實（只有 impls 的 C++ 版，aos-clock 例外）；十一、要使用者決定的 |
