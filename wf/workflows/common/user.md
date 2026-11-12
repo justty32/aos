@@ -16,7 +16,7 @@ agent 不用重猜的事。always-on 鐵律在 [AGENTS.md](../../../AGENTS.md)�
 | 工作模式 | 我當調度者、不親做內容；先講打算怎麼做再派；隊形見 [dispatch/aos-teams](../dispatch/aos-teams.md) |
 | artifact／說明頁風格 | 使用者 2026-11-05：「拜託這幾個artifact都遵循"圖多、只講結論、細節摺疊、白話"」——每節先一張圖（inline SVG 或 mermaid），圖下一兩句白話結論＋最常用一行指令，完整用法、表格、錯誤代號、範例一律收進 `<details>`；不寫大段文字。**手機遠端頁（11-08）**：ELI5、圖少（必要時一張小圖）、只講結論、過程除非很重要不附、細節摺疊——原話「我人在外面耍，沒辦法把全部精力用在思考這塊。所以可以的話，細節折疊，然後盡量ELI5風格講述。圖不用多，因爲artifact承載力有限。盡量只講結論就好，中間過程除非很重要否則不用附。」 |
 | 舊版遷移 | 使用者 2026-11-05：「其實不用管舊版本遷移這件事，我們在proto8內，就是一律當成沒有舊版。畢竟是prototype-8」——proto8 改格式／改名／改結構時**不寫遷移、不做舊格式相容、不留舊名提示**；舊資料壞了就重建 |
-| 子 agent 模型 | 使用者 2026-10-20：「事情都盡量交給agent，普通工作交給opus，簡單工作交給sonnet，需要高難度思考&規劃的交給fable(盡量少用)。你就負責和我交流。派agent時要讓他們通讀wf/規矩，除了幹雜活的」——普通工作派 opus、簡單工作與雜活派 sonnet、高難度思考與規劃才派 fable；頂層只負責跟使用者交流；派出去的 agent（雜活除外）提示裡要它先通讀 wf/ 規矩（AGENTS.md、WORKFLOWS.md、common/user.md、common/conventions.md 等）。**改寫使用者的概念／規範條文不算簡單工作**，不派 sonnet（使用者 2026-10-19：「竟然是開sonnet做事...不怕錯嗎」）。**11-06 起**隊形定為 opus 隊長＋codex／claude 兩名隊員、盡量派 codex，原話與細節見 [aos-teams](../dispatch/aos-teams.md)。 |
+| 子 agent 模型 | 使用者 2026-10-20：「事情都盡量交給agent，普通工作交給opus，簡單工作交給sonnet，需要高難度思考&規劃的交給fable(盡量少用)。你就負責和我交流。派agent時要讓他們通讀wf/規矩，除了幹雜活的」——普通工作派 opus、簡單工作與雜活派 sonnet、高難度思考與規劃才派 fable；頂層只負責跟使用者交流；派出去的 agent（雜活除外）提示裡要它先通讀 wf/ 規矩（AGENTS.md、WORKFLOWS.md、common/user.md、common/conventions.md 等）。**改寫使用者的概念／規範條文不算簡單工作**，不派 sonnet（使用者 2026-10-19：「竟然是開sonnet做事...不怕錯嗎」）。隊形是 opus 隊長＋codex／claude 兩名隊員、盡量派 codex，原話與細節見 [aos-teams](../dispatch/aos-teams.md)。 |
 
 > **他沒回答的邊緣狀況怎麼處理**（2026-09-01 他自己說的通則）：我挖出來的邊緣狀況他沒回應，
 > 就代表**要麼只是比喻上的天然差異**（拿現成概念比喻 aos 時，比喻本來就不會處處貼合），
