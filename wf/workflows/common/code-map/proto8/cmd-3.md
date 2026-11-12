@@ -16,6 +16,12 @@
 | [`tests/test_own_registry.py`](../../../../../proto8/cmd/aos-mcp/tests/test_own_registry.py) | Verify aos-mcp serves an agent's own registry ("$override" of the definition's) and the definition's, and has no --overlay flag (11-10 aos-tools-cli … |
 | [`tests/test_timeout.py`](../../../../../proto8/cmd/aos-mcp/tests/test_timeout.py) | Verify MCP reads shared timeout metadata and keeps its CLI fallback. |
 
+## `proto8/cmd/aos-mcp-launch/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`bin/aos-mcp-launch`](../../../../../proto8/cmd/aos-mcp-launch/bin/aos-mcp-launch) | 起一台外部 stdio MCP server：讀它的 server 檔、讀 env_file（金鑰）放進環境，再 exec 成那支 server（金鑰只活在 server 行程） |
+
 ## `proto8/cmd/aos-sandbox/`
 
 | 檔 | 負責什麼 |

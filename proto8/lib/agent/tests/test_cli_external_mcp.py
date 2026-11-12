@@ -128,11 +128,53 @@ class ExternalMcp(unittest.TestCase):
         self.assertIn("two skipped", err.getvalue())
         self.assertNotIn("mcp_servers.two.", " ".join(argv))
 
-    def test_stdio_not_yet(self):
-        self.server("s.json", transport="stdio", url=None, bearer_token_env=None, ca_file=None, command="aos-mcp")
-        c, err = self.cfg(["mcp/s.json"], kind="claude")
-        self.assertEqual(c["external"], [])
-        self.assertIn("not attached yet", err)
+    def stdio(self, fname="s.json", **kw):
+        (self.tmp / "keys" / "demo.env").write_text("DEMO_KEY=%s\n" % self.token)
+        base = dict(name="demo", transport="stdio", url=None, bearer_token_env=None, ca_file=None,
+                    env_file="../keys/demo.env", command="sh", args=["-c", 'test "$DEMO_KEY" = "$1" && echo "ok $TZ"', "sh", self.token],
+                    env={"TZ": "UTC"})
+        base.update(kw)
+        return self.server(fname, **base)
+
+    def test_stdio_both_bodies(self):
+        f = self.stdio(only=["peek_now_time"])
+        launcher = str(LIB.parent / "cmd" / "aos-mcp-launch" / "bin" / "aos-mcp-launch")
+        with patch.object(cli_session.shutil, "which", lambda n: launcher if n == "aos-mcp-launch" else None), \
+                patch.dict(os.environ, {"AOS_HOME": "/p8"}):
+            c, err = self.cfg(["mcp/s.json"], kind="claude")
+            self.assertEqual(err, "")
+            ext, env, spec = cli_session.external_claude(c)
+            cell = FakeCell(self.tmp)
+            argv = cli_session.mcp_argv(c, cell, "/w", "/st", ext)
+            self.assertEqual(json.loads(Path(cell.file("mcp.json")).read_text())["mcpServers"],
+                             {"demo": {"command": launcher, "args": [f]}})
+            self.assertEqual(argv[2:], ["--allowedTools", "mcp__demo__peek_now_time"])
+            self.assertEqual((env, spec), ({}, None))
+            c, _ = self.cfg(["mcp/s.json"])
+            argv, env, spec = cli_session.external_codex(c)
+        demo = tomllib.loads("\n".join(argv[1::2]))["mcp_servers"]["demo"]
+        self.assertEqual(demo, {"command": launcher, "args": [f], "env": {"AOS_HOME": "/p8"},
+                                "default_tools_approval_mode": "approve", "enabled_tools": ["peek_now_time"]})
+        self.assertNotIn(self.token, json.dumps(argv))
+        self.assertEqual((env, spec), ({}, None))
+
+    def test_launcher_runs_server_with_key(self):
+        f = self.stdio()
+        launcher = str(LIB.parent / "cmd" / "aos-mcp-launch" / "bin" / "aos-mcp-launch")
+        r = subprocess.run([launcher, f], capture_output=True, text=True)
+        self.assertEqual(r.stdout.strip(), "ok UTC", r.stderr)
+        self.server("h.json")
+        r = subprocess.run([launcher, str(self.tmp / "mcp" / "h.json")], capture_output=True, text=True)
+        self.assertIn("aos-mcp-launch: error: PackBad", r.stderr)
+        r = subprocess.run([launcher], capture_output=True, text=True)
+        self.assertIn("ArgumentsBad", r.stderr)
+
+    def test_stdio_launcher_missing(self):
+        self.stdio()
+        c, _ = self.cfg(["mcp/s.json"])
+        with patch.object(cli_session.shutil, "which", lambda n: None), redirect_stderr(io.StringIO()), \
+                self.assertRaises(SystemExit):
+            cli_session.external_codex(c)
 
     def test_claude_side(self):
         self.server("a.json", except_=None)

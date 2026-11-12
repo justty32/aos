@@ -53,7 +53,8 @@
 #   有 bearer＝自動補 shell_environment_policy.exclude；env_file 在起 codex 那一刻才讀，token 與 ca_file（SSL_CERT_FILE、CODEX_CA_CERTIFICATE）
 #   只放進 codex 行程的環境（run_cli 的 env=；畫面那條路前面接 mcp_server_file.py --exec 啟動器，tmux 的環境沒有）。某一台壞＝warning 跳過、其他照接（X8）；
 #   claude 身（步 3）：小格 mcp.json 跟 aos 那格並排 {"type": "http", "url", "headersHelper"}（helper＝mcp_server_file.py --headers，token 只經管線、
-#   不進 claude 環境＝Bash 看不到）、--allowedTools 加 mcp__<名>（only＝逐支）、except＝--disallowedTools；ca_file＝NODE_EXTRA_CA_CERTS。stdio 目前 warning 跳過（步 4）。
+#   不進 claude 環境＝Bash 看不到）、--allowedTools 加 mcp__<名>（only＝逐支）、except＝--disallowedTools；ca_file＝NODE_EXTRA_CA_CERTS。
+#   stdio（步 4）：兩身都經 aos-mcp-launch <server 檔>（PATH 找；它讀 env_file、exec 成 server＝金鑰只進 server 行程）；codex 另帶 env＝MCP_ENV 那幾個。
 #   模型（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本）的 model＝flags 的 --model（換掉或加在尾）；都沒有＝flags 原樣。
 # 換台（11-10 two-machines 05）：要接舊對話前先認「是不是這台的」（session_here：記號檔的 session、home 一樣，claude 再比 ws；
 #   不讀 CLI 的任何檔內容、不靠它的錯誤訊息）。不是＝在交出去之前改開新對話：呼叫者給了 reseed（aos-eca-turn）＝把 reseed(上限)
@@ -259,7 +260,7 @@ def _server_mod():
 def external_servers(cfg, tool_dir, path):
     """cli.json 選填 mcp_servers（11-12 external-mcp，使用者裁「都按照推薦。」）：server 檔路徑的陣列，相對從 cli.json 的資料夾算、
     也可寫指示詞（同 tools）。陣列本身形狀不對＝CfgBad；某一份壞（檔不在、形狀不對、重名、名字 aos、指示詞解不開）＝warning 跳過那台、其他照接（X8）。
-    這版只接 http server（codex、claude 兩身）：stdio＝warning 跳過（03 步 4）。回讀好的 server 列表（mcp_server_file.load 的形狀）。"""
+    http 與 stdio 兩身都接（stdio 經 aos-mcp-launch，03 步 4）。回讀好的 server 列表（mcp_server_file.load 的形狀）。"""
     if "mcp_servers" not in cfg:
         return []
     entries = cfg["mcp_servers"]
@@ -283,10 +284,6 @@ def external_servers(cfg, tool_dir, path):
             warn("external MCP server %s skipped: the name is already used by an earlier server file (%s)" % (s["name"], s["file"]))
             continue
         seen.add(s["name"])
-        if s["transport"] != "http":
-            warn("external MCP server %s skipped: %s servers under %s are not attached yet (external-mcp 03)"
-                 % (s["name"], s["transport"], cfg["kind"]))
-            continue
         out.append(s)
     return out
 
@@ -297,7 +294,19 @@ def external_codex(cfg):
         return [], {}, None
     msf = _server_mod()
     kept, env, spec = msf.http_plan(cfg["external"], warn)
-    return msf.codex_argv(kept), env, (spec if spec["set"] or spec["from"] else None)
+    launcher = _launcher(kept)
+    stdio_env = {k: os.environ[k] for k in MCP_ENV if os.environ.get(k)}
+    return msf.codex_argv(kept, launcher, stdio_env), env, (spec if spec["set"] or spec["from"] else None)
+
+
+def _launcher(servers):
+    """有 stdio server＝aos-mcp-launch 的絕對路徑（從 PATH 找，N-50）；不在 PATH＝CliMissing。沒有 stdio＝None。"""
+    if not any(s["transport"] == "stdio" for s in servers):
+        return None
+    path = shutil.which("aos-mcp-launch")
+    if path is None:
+        die("CliMissing", "aos-mcp-launch is not on PATH (an stdio MCP server is listed in mcp_servers; add proto8/cmd/aos-mcp-launch/bin to PATH)")
+    return os.path.abspath(path)
 
 
 def external_claude(cfg):
@@ -346,7 +355,7 @@ def mcp_argv(cfg, cell, ws, stack, external=()):
         if cfg["kind"] == "codex":
             return servers
     msf = _server_mod() if external else None
-    entries, allowed, denied = msf.claude_entries(external) if external else ({}, [], [])
+    entries, allowed, denied = msf.claude_entries(external, _launcher(external)) if external else ({}, [], [])
     servers.update(entries)
     try:
         cell.write("mcp.json", json.dumps({"mcpServers": servers}, ensure_ascii=False) + "\n")

@@ -159,13 +159,23 @@ def http_plan(servers, warn):
     return kept, env, spec
 
 
-def codex_argv(servers):
-    """http server 翻成 codex 的 -c（值照 TOML：JSON 字串與字串陣列同時是合法的 TOML）。
+def toml_table(d):
+    return "{" + ", ".join("%s = %s" % (json.dumps(k), json.dumps(v, ensure_ascii=False)) for k, v in d.items()) + "}"
+
+
+def codex_argv(servers, launcher=None, stdio_env=None):
+    """server 翻成 codex 的 -c（值照 TOML：JSON 字串與字串陣列同時是合法的 TOML）。http＝url（＋bearer_token_env_var）；
+    stdio＝command＝launcher（aos-mcp-launch）、args＝[server 檔]、env＝stdio_env（codex 不替 MCP server 帶父行程環境，11-11；給 AOS_HOME 之類讓指示詞解得開）。
     列了＝整台免核准（題三）；only＝enabled_tools、except＝disabled_tools（沒實測，代定）；有 bearer＝自動補 shell_environment_policy.exclude。"""
     argv, hidden = [], []
     for s in servers:
         p = "mcp_servers.%s." % s["name"]
-        argv += ["-c", p + "url=" + json.dumps(s["url"])]
+        if s["transport"] == "stdio":
+            argv += ["-c", p + "command=" + json.dumps(launcher), "-c", p + "args=" + json.dumps([s["file"]])]
+            if stdio_env:
+                argv += ["-c", p + "env=" + toml_table(stdio_env)]
+        else:
+            argv += ["-c", p + "url=" + json.dumps(s["url"])]
         if s.get("bearer_token_env"):
             argv += ["-c", p + "bearer_token_env_var=" + json.dumps(s["bearer_token_env"])]
             hidden.append(s["bearer_token_env"])
@@ -179,7 +189,7 @@ def codex_argv(servers):
     return argv
 
 
-def claude_entries(servers):
+def claude_entries(servers, launcher=None):
     """http server 翻成 claude --mcp-config 的 mcpServers 格（跟 aos 那格並排）與放行旗標（11-12 步 3，實測 claude 2.1.x）。
     bearer＋env_file＝headersHelper 叫本檔 --headers（token 只經管線給 claude，不進 claude 的環境＝它的 Bash 看不到，實測）；
     bearer 沒寫 env_file＝headers 寫 "Bearer ${變數}"（claude 會展開，實測；值得在 claude 的環境裡，它的 Bash 看得到）。
@@ -188,7 +198,10 @@ def claude_entries(servers):
     entries, allowed, denied = {}, [], []
     me = os.path.abspath(__file__)
     for s in servers:
-        e = {"type": "http", "url": s["url"]}
+        if s["transport"] == "stdio":
+            e = {"command": launcher, "args": [s["file"]]}
+        else:
+            e = {"type": "http", "url": s["url"]}
         var = s.get("bearer_token_env")
         if var and "env_file" in s:
             e["headersHelper"] = " ".join(shlex.quote(a) for a in (sys.executable, me, "--headers", s["env_file"], var))
@@ -210,6 +223,32 @@ def claude_plan(servers, warn):
     ca = env.get("SSL_CERT_FILE")
     cenv = {"NODE_EXTRA_CA_CERTS": ca} if ca else {}
     return kept, cenv, ({"set": dict(cenv), "from": []} if cenv else None)
+
+
+def stdio_launch(server_file):
+    """aos-mcp-launch 用：讀 stdio 的 server 檔，回 (argv, 環境)。command／args 的指示詞這一刻才解；
+    command 含 / 的相對路徑從 server 檔的資料夾算；環境＝目前的＋env（明文）＋env_file 整份（金鑰，只進 server 行程）。http 的檔＝PackBad。"""
+    s = load(server_file)
+    if s["transport"] != "stdio":
+        raise Error("PackBad", "%s: transport is %s; aos-mcp-launch only starts stdio servers" % (server_file, s["transport"]))
+    from directive_value import resolve
+    base = os.path.dirname(s["file"])
+    cmd = resolve(s["command"], base)
+    args = resolve(s["args"], base)
+    if not isinstance(cmd, str) or not cmd:
+        raise Error("PackBad", "%s: command must resolve to a non-empty string" % server_file)
+    if not isinstance(args, list) or not all(isinstance(a, str) for a in args):
+        raise Error("PackBad", "%s: args must resolve to an array of strings" % server_file)
+    if "/" in cmd:
+        cmd = os.path.normpath(os.path.join(base, cmd))
+    env = dict(os.environ)
+    for k, v in s["env"].items():
+        if not ENV_NAME_RE.match(k) or not isinstance(v, str):
+            raise Error("PackBad", "%s: env must map variable names to strings" % server_file)
+        env[k] = v
+    if "env_file" in s:
+        env.update(read_env_file(s["env_file"]))
+    return [cmd] + args, env
 
 
 def exec_main(argv):

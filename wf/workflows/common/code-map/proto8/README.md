@@ -10,7 +10,7 @@
 | [cases](cases.md) | `proto8/cases/` | `box-probe/`、`smoke/` | 11／11 |
 | [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/` | 97／100 |
 | [cmd-2](cmd-2.md) | `proto8/cmd/` | `aos-clock/`、`aos-clock-register/`、`aos-daemon-ctl/`、`aos-eca/`、`aos-feedback/`、`aos-grow/`、`aos-mailbox/` |  |
-| [cmd-3](cmd-3.md) | `proto8/cmd/` | `aos-mcp/`、`aos-sandbox/`、`aos-sweeper/`、`aos-tools/` |  |
+| [cmd-3](cmd-3.md) | `proto8/cmd/` | `aos-mcp/`、`aos-mcp-launch/`、`aos-sandbox/`、`aos-sweeper/`、`aos-tools/` |  |
 | [extras](extras.md) | `proto8/extras/` | `fake-mcp-http/`、`gitignore-check/`、`image-move-check/`、`langs/` | 16／16 |
 | [feedback](feedback.md) | `proto8/feedback/` | 頂層 | 5／5 |
 | [impls](impls.md) | `proto8/impls/` | 依賴圖、頂層 | 199／199 |
