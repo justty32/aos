@@ -25,8 +25,9 @@
 | [WORKFLOWS.md](WORKFLOWS.md) | 派發器：意圖 → 工作流入口 |
 | [STRUCTURE.md](STRUCTURE.md) | 結構整理參考（被動）|
 | [SESSION-LOG.md](SESSION-LOG.md) | 我的 open 進度（hub）|
-| [session_logs/](session_logs/README.md) | 日誌：當月每日檔 `<月>/<日期>.md`、已結束月份的月摘要 `<月>.md`、總目錄（README）|
+| [session_logs/](session_logs/README.md) | 日誌：當月每日檔 `<月>/<日期>.md`、已結束月份的月摘要 `<月>.md`、總目錄（README，分月導航，每天一列在 `<月>/README.md`）|
 | [WAIT_USER.md](WAIT_USER.md) | 等使用者親自做 / 驗證 / 拍板的事（只列 open）|
+| [wait-user/](wait-user/) | WAIT_USER 的分類檔（要你裁的／真機驗證／試驗場／雜事；WAIT_USER.md 只留導航表）|
 | [HANDOFF.md](HANDOFF.md) | compact 交接：compact 前頂層寫、compact 後 hook 自動讀回最新一條 |
 
 ## 通用（跨工作流共享）
