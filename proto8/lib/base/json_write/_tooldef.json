@@ -1,7 +1,0 @@
-{"description": "Change a JSON file by JSON pointer (prefer this over rewriting the file). set = {pointer: new value} (any JSON value; missing object levels are created; - appends to an array); del = array of pointers to delete. Find the place with json_read first. Everything is checked first; if one pointer fails, nothing is written. Errors: FileMissing, FileBad, PointerBad, PointerMissing. Details: knowledge_read aos/tools/json_write.json.",
- "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "the JSON file, relative to your workspace, or absolute"},
-                               "set": {"type": "object", "default": {}, "description": "pointer -> new value, e.g. {\"/states/act/next\": \"idle\", \"/max\": 20}"},
-                               "del": {"type": "array", "default": [], "items": {"type": "string"}, "description": "pointers to delete, e.g. [\"/old_key\"]"}},
-                "required": ["path"]},
- "errors": ["ArgumentsBad", "PointerBad", "PointerMissing", "FileMissing", "FileBad", "ReadFailed", "LaunchFailed", "WriteFailed", "WsMissing"]}

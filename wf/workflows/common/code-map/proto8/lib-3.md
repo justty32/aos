@@ -9,7 +9,6 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`aos_json/`](../../../../../proto8/lib/aos/aos_json/) | 腦用的 JSON 工具：stdin 收 {"cmd", "target", "value"?, "depth"?}，在 $AOS_WS 底下叫 aos-json，stdout 是結果。 |
 | [`box_check/`](../../../../../proto8/lib/aos/box_check/) | Verify probe markers, executable visibility and host probe paths. |
 | [`box_check/tests/test_acceptance.py`](../../../../../proto8/lib/aos/box_check/tests/test_acceptance.py) | Verify boxed and open definitions through actual sandbox and measure boundaries. |
 | [`defs/`](../../../../../proto8/lib/aos/defs/) | List, group, trace references and check public definition declarations. |

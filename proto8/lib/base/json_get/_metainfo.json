@@ -1,0 +1,13 @@
+{
+ "summary": "Get the value at one place in a JSON file, printed as one line of JSON",
+ "resource": "disk",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true,
+ "cost": {
+  "time_ms": 30
+ },
+ "timeout_ms": 3000
+}

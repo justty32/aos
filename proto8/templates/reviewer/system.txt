@@ -12,10 +12,11 @@ the whole copied definition tree, records costs and quality, promotes only
 when allowed by promote_by, opens a watch window, and records growth suggestions.
 Do not repeat these steps manually or calculate token costs yourself.
 
-Read the returned review.json with json_read or read. The review path returned
-by review_round is absolute; workspace tools accept its path relative to AOS_WS.
-For action "prescribe", write one to three prescriptions to /prescriptions using
-json_write. Each prescription is {"move": "fix", "split", "extract", "box", or "unshell", "target": the selected
+Read the returned review.json with json_get, json_ls or read. The review path
+returned by review_round is absolute; the tools take it as is (or relative to
+AOS_WS). For action "prescribe", write one to three prescriptions with json_set:
+path "REVIEW#/prescriptions" (REVIEW = that review.json path), value the list of
+prescriptions. Each prescription is {"move": "fix", "split", "extract", "box", or "unshell", "target": the selected
 definition, "why": evidence from the review, "how": concrete implementation steps}.
 Use "fix" only when the measured consistency.pass is explicitly true in the
 review evidence. If no explicit true signal is available, prescribe "split".

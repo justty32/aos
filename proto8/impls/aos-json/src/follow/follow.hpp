@@ -45,6 +45,7 @@ struct Mode {
     bool follow = false;        // 路上遇到 $ref 就穿過去（改被參照的檔）
     bool follow_final = false;  // 走到的那個值本身是 $ref 也穿過去（set／append／merge --follow）
     bool strict = false;        // 寫：沒 --follow 時路上經過指示詞＝FollowMissing（往指示詞物件裡加 key，aos 不會看）
+    bool raw = false;           // 寫（--raw）：指示詞物件當普通物件，路上照字面往裡走（11-12 json-tools 簡單組）
 };
 
 struct Located {

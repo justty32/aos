@@ -1,0 +1,13 @@
+{
+ "summary": "Find keys and/or values in a JSON file, below a place (default) or in each ancestor level above it (up: true, nearest first)",
+ "resource": "disk",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true,
+ "cost": {
+  "time_ms": 30
+ },
+ "timeout_ms": 3000
+}

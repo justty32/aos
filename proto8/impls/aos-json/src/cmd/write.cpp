@@ -7,9 +7,9 @@
 
 namespace aos::json {
 
-// set [--follow] [--parents] [--str] 檔#/指標 [值]
+// set [--follow|--raw] [--parents] [--str] 檔#/指標 [值]（--raw＝路上的指示詞物件當普通物件）
 int cmd_set(const Args& args) {
-    Cli cli = parse_args(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}, {"--str", "str"}}, "set");
+    Cli cli = parse_args(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}, {"--raw", "raw"}, {"--str", "str"}}, "set");
     if (cli.rest.empty()) {
         throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("set"));
     }
@@ -19,7 +19,7 @@ int cmd_set(const Args& args) {
     if (cli.opts.count("check")) {
         ed.check_file = parse_spec(cli.rest[0]).file;
     }
-    Place p = place(ed, cli.rest[0], follow, follow, true);
+    Place p = place(ed, cli.rest[0], follow, follow, true, raw_flag(cli, follow));
     if (follow && p.at.merged && p.at.rest.empty()) {
         throw Error{code::TargetBad, cli.rest[0] + " is merged from several $ref parts; --follow cannot replace it whole (without --follow the $ref itself is replaced)"};
     }
@@ -60,16 +60,17 @@ int cmd_batch(const Args& args) {
     return 0;
 }
 
-// del [--follow] 檔#/指標：刪掉那個 key／元素。--follow＝路上穿過 $ref；$ref 陣列合起來的 key 每一份有的都刪（刪到指不到為止）。
+// del [--follow|--raw] 檔#/指標：刪掉那個 key／元素。--follow＝路上穿過 $ref；$ref 陣列合起來的 key 每一份有的都刪（刪到指不到為止）。
 int cmd_del(const Args& args) {
-    Cli cli = parse_args(args, {}, {{"--follow", "follow"}}, "del");
+    Cli cli = parse_args(args, {}, {{"--follow", "follow"}, {"--raw", "raw"}}, "del");
     if (cli.rest.size() != 1) {
         throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("del"));
     }
     bool follow = cli.opts.count("follow") > 0;
     Edit ed;
+    bool raw = raw_flag(cli, follow);
     for (int round = 0; round < 1000; ++round) {
-        Place p = place(ed, cli.rest[0], follow, false);
+        Place p = place(ed, cli.rest[0], follow, false, false, raw);
         if (!p.at.rest.empty()) {
             if (round == 0) {
                 throw Error{code::PointerMissing, "no such pointer: " + cli.rest[0]};
@@ -94,9 +95,9 @@ int cmd_del(const Args& args) {
     return 0;
 }
 
-// append [--follow] [--str] 檔#/指標 [值]：那個位置要是陣列，接在尾巴。
+// append [--follow|--raw] [--str] 檔#/指標 [值]：那個位置要是陣列，接在尾巴。
 int cmd_append(const Args& args) {
-    Cli cli = parse_args(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--str", "str"}}, "append");
+    Cli cli = parse_args(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--raw", "raw"}, {"--str", "str"}}, "append");
     if (cli.rest.empty()) {
         throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("append"));
     }
@@ -106,7 +107,7 @@ int cmd_append(const Args& args) {
     if (cli.opts.count("check")) {
         ed.check_file = parse_spec(cli.rest[0]).file;
     }
-    Place p = place(ed, cli.rest[0], follow, follow);
+    Place p = place(ed, cli.rest[0], follow, follow, false, raw_flag(cli, follow));
     Json& t = existing(p, cli.rest[0]);
     if (!t.is_array()) {
         throw Error{code::TargetBad, cli.rest[0] + " is not an array (it is " + std::string(t.type_name()) + ")"};

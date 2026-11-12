@@ -1,0 +1,36 @@
+{
+ "description": "Set one place in a JSON file to a value (replace it, or add the key if missing). The value is stored exactly as given. path ending in /- appends to an array; FILE alone replaces (or creates) the whole file. Missing middle levels need parents: true. Prints \"ok FILE#/POINTER\". Example: {\"path\": \"cfg.json#/states/act/next\", \"value\": \"idle\"}. Details: knowledge_read aos/tools/json_set.json.",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone (or FILE#/) = the whole document. Relative files start at your workspace."
+   },
+   "value": {
+    "description": "required: the new value, any JSON (string, number, boolean, null, object, array); stored exactly as given: a string stays a string"
+   },
+   "parents": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = create missing objects along the way (like mkdir -p)"
+   }
+  },
+  "required": [
+   "path"
+  ]
+ },
+ "errors": [
+  "ArgumentsBad",
+  "PointerBad",
+  "FileMissing",
+  "FileBad",
+  "PointerMissing",
+  "TargetBad",
+  "ValueBad",
+  "WriteFailed",
+  "LaunchFailed",
+  "CommandFailed",
+  "WsMissing"
+ ]
+}

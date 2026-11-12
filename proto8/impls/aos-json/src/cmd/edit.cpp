@@ -38,7 +38,7 @@ Json read_value(const std::vector<std::string>& rest, size_t idx, bool str) {
 }
 
 // allow_new＝整份（沒有 #/）時檔可以還不在（set 建新檔）。
-Place place(Edit& ed, const std::string& spec, bool follow, bool follow_final, bool allow_new) {
+Place place(Edit& ed, const std::string& spec, bool follow, bool follow_final, bool allow_new, bool raw) {
     if (allow_new && parse_spec(spec).toks.empty()) {
         ed.docs.open(parse_spec(spec).file, true);
     }
@@ -46,10 +46,20 @@ Place place(Edit& ed, const std::string& spec, bool follow, bool follow_final, b
     mode.follow = follow;
     mode.follow_final = follow_final;
     mode.strict = true;
+    mode.raw = raw;
     Located at = locate(ed.docs, parse_spec(spec), mode);
     Place p{&ed.touch(at.at.file), at.at.toks, at};
     p.toks.insert(p.toks.end(), at.rest.begin(), at.rest.end());
     return p;
+}
+
+// --raw：指示詞物件當普通物件（set／append／del）；跟 --follow 互斥。
+bool raw_flag(const aos::Cli& cli, bool follow) {
+    bool raw = cli.opts.count("raw") > 0;
+    if (raw && follow) {
+        throw Error{code::ArgumentsBad, "--raw and --follow cannot be used together"};
+    }
+    return raw;
 }
 
 // toks 的上一層（parents＝路上沒有的物件 key 就建空物件，像 mkdir -p）。

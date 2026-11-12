@@ -1,9 +1,8 @@
-{"description": "Pack 1 (look): read-only file tools - read, ls, view, stat, json_read, grep, glob.",
+{"description": "Pack 1 (look): read-only file tools - read, ls, view, stat, grep, glob.",
  "tools": {
            "read": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/read"}},
            "ls": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/ls"}},
            "view": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/view"}},
            "stat": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/stat"}},
-           "json_read": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_read"}},
            "grep": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/grep"}},
            "glob": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/glob"}}}}

@@ -1,0 +1,3 @@
+{
+ "_description": "# Tool json_del\n\nDelete one key, or one array item (later items move down). It must be there. Prints `ok FILE#/POINTER`.\n\n```json\n{\"path\": \"cfg.json#/note\"}\n```\nprints `ok cfg.json#/note`.\n\nNot a whole file (`TargetBad`: use `trash` or `remove`). A `$ref`/`$env` object is a plain object here: deleting inside it changes that object. Path: `aos/tools/json_get.json#/path`. Errors: `aos/tools/json_set.json#/errors`.\n"
+}

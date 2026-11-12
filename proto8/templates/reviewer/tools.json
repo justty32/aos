@@ -5,7 +5,9 @@
    "promote": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/promote"}},
    "rollback": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/rollback"}},
    "measure": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/measure"}},
-   "json_read": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_read"}},
-   "json_write": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_write"}},
+   "json_get": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_get"}},
+   "json_ls": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_ls"}},
+   "json_set": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_set"}},
+   "json_del": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/json_del"}},
    "read": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/read"}},
    "ls": {"path": {"$env": "AOS_HOME", "$path": "/lib/base/ls"}}}}

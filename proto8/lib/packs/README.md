@@ -2,14 +2,23 @@
 
 使用者 11-10 深夜：「最基礎的就是read/ls/view/stat要有。然後是普通的編輯如write/edit/copy/move/mkdir，再來是trash/remove，最後是shell。就是說，這是一包一包的」；「1.預設開到第四包，想要安全就自行限制」。agent 工具的分法：「clock_register,self_hook兩個分一組，self_tools/llm/state/ctl/history一組。agents一組。mailbox_*一組，memory_*一組。peek_clock一組。」「agent_def另外放」「2.都開吧」；「這種peek_clock,peek_now_time放一起，就是小工具的感覺。」（math 也收進來：「好」）。
 
-## 通用四包（agent-fsm 預設開；eca-claude 11-12 起四包都不掛，只單獨登記 json_read、json_write——使用者 11-11 晚「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「可以先定這樣，然後trash也拿掉。」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）
+## 通用四包（agent-fsm 預設開；eca-claude 11-12 起四包都不掛——使用者 11-11 晚「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「可以先定這樣，然後trash也拿掉。」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）
 
 | 包 | 檔 | 工具 |
 |---|---|---|
-| 1 看 | [look.json](look.json) | read、ls、view、stat、json_read、grep（照內容搜，像 `grep -rn`）、glob（照檔名樣式找檔）——11-11 使用者「啊，grep/glob得做」 |
-| 2 改 | [change.json](change.json) | write、edit、copy、move、mkdir、json_write |
+| 1 看 | [look.json](look.json) | read、ls、view、stat、grep（照內容搜，像 `grep -rn`）、glob（照檔名樣式找檔）——11-11 使用者「啊，grep/glob得做」 |
+| 2 改 | [change.json](change.json) | write、edit、copy、move、mkdir |
 | 3 刪 | [delete.json](delete.json) | trash（丟進工作區 `.trash/`，可搬回）、remove（真的刪） |
 | 4 殼 | [shell.json](shell.json) | shell（bash 一行指令）、run_python |
+
+## json 兩包（使用者 11-12「建議做成一個aos_json工具……做兩套」、兩套選「A」，[thinking 11-12 json-tools](../../thinking/2026-11/12/json-tools/README.md)）
+
+| 包 | 檔 | 工具 |
+|---|---|---|
+| json（簡單組） | [json.json](json.json) | json_get、json_ls、json_search、json_set、json_add、json_del——路徑一整串 `檔#/指標`、值照字面、`$ref`／`$env` 當普通物件；agent-fsm、eca-claude 兩個範本都掛 |
+| aos_json（複雜組） | [aos_json.json](aos_json.json) | aos_json_get、aos_json_set、aos_json_add——多 `follow`、`resolve`、`text`、`from`、`check`；**範本都不掛**，要的定義在自己 `tools.json` 的 `$override` 多一行 |
+
+九支的程式都在 [`lib/aos_json.py`](../aos_json.py)，各夾只是殼；圖紙 [01-規劃](../../thinking/2026-11/12/json-tools/01-規劃.md)。
 
 ## 其他九包（兩個範本都預設開）
 

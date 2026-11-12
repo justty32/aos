@@ -16,8 +16,6 @@
 | [`glob/tests/test_glob.py`](../../../../../proto8/lib/base/glob/tests/test_glob.py) | glob 工具：** 零層與多層、不含 / 的樣式任何深度、type、sort mtime、翻頁、隱藏與明寫 . 段、資料夾捷徑列出不進、gitignore、PatternBad、FileBad、工作區外。 |
 | [`grep/`](../../../../../proto8/lib/base/grep/) | 照內容搜整棵樹（或一個檔）：一行一筆「路徑:行號:那一行」，像 grep -rn；純 Python re，不靠系統的 grep／rg |
 | [`grep/tests/test_grep.py`](../../../../../proto8/lib/base/grep/tests/test_grep.py) | grep 工具：正規式與 fixed、大小寫、context 與 --、files、翻頁、二進位／超大／非 UTF-8、隱藏、資料夾捷徑不跟進、gitignore（有 git、不在 git、git 不在 PATH）、單一檔、工作區外、預算、長行截斷。 |
-| [`json_read/`](../../../../../proto8/lib/base/json_read/) | 看一份 JSON 檔的某個位置，一次只展開幾層、大的摺起來，讓腦一層層往下找 |
-| [`json_write/`](../../../../../proto8/lib/base/json_write/) | 照 JSON 指標改一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫 |
 | [`llm_fake/`](../../../../../proto8/lib/base/llm_fake/) | 假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4） |
 | [`llm_http/`](../../../../../proto8/lib/base/llm_http/) | endpoint 函數：從自己的環境讀金鑰，把請求 POST 到 OpenAI 相容端點，印剪過的回覆 |
 | [`llm_http/tests/test_llm_http.py`](../../../../../proto8/lib/base/llm_http/tests/test_llm_http.py) | llm_http 金鑰：--key-env 變數沒設或空＝不帶 Authorization 照打、401 才提沒設；設了照帶；壞字＝KeyBad 送出前擋（11-10 夜）。 |

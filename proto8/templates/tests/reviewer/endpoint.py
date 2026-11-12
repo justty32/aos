@@ -13,17 +13,17 @@ if endpoint.get('role') == 'reviewer':
     previous = next((message for message in reversed(messages)
                      if message.get('role') == 'tool'), None)
     prescription = endpoint['prescription']
-    edit = {'path': 'unused.json', 'set': {'/prescriptions': [prescription]}}
+    edit = {'path': 'unused.json#/prescriptions', 'value': [prescription]}
     if previous:
         try:
             result = json.loads(previous['content'])
         except ValueError:
             result = {}
         if 'review' in result:
-            edit['path'] = str(Path(result['review']).relative_to(endpoint['ws']))
+            edit['path'] = str(Path(result['review']).relative_to(endpoint['ws'])) + '#/prescriptions'
     endpoint['script'] = [
         {'tool_calls': [{'name': 'review_round', 'arguments': endpoint['round_args']}]},
-        {'tool_calls': [{'name': 'json_write', 'arguments': edit}]},
+        {'tool_calls': [{'name': 'json_set', 'arguments': edit}]},
         {'content': 'Review complete; one split prescription is ready.'}]
 result = subprocess.run([sys.executable, str(PROTO / 'lib/base/llm_fake/_entry')],
                         input=json.dumps(payload), capture_output=True, text=True)

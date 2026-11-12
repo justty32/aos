@@ -1,0 +1,35 @@
+{
+ "description": "Get the value at one place in a JSON file, printed as one line of JSON. If it is bigger than max_bytes you get a line \"[too big] TYPE, SIZE ...\" instead: look inside with json_ls, get a deeper path, or give full: true. Example: {\"path\": \"cfg.json#/states/think\"}. $ref/$env objects are returned as written. Details: knowledge_read aos/tools/json_get.json.",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone (or FILE#/) = the whole document. Relative files start at your workspace."
+   },
+   "max_bytes": {
+    "type": "integer",
+    "default": 8000,
+    "description": "print the value only if its one-line JSON is at most this many bytes (default: env AOS_JSON_MAX_BYTES, else 8000)"
+   },
+   "full": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = print the whole value however big"
+   }
+  },
+  "required": [
+   "path"
+  ]
+ },
+ "errors": [
+  "ArgumentsBad",
+  "PointerBad",
+  "FileMissing",
+  "FileBad",
+  "PointerMissing",
+  "LaunchFailed",
+  "CommandFailed",
+  "WsMissing"
+ ]
+}

@@ -8,6 +8,8 @@
 #include "cmd/cmd.hpp"
 #include "follow/follow.hpp"
 
+#include "aos/util/cli.hpp"
+
 #include <algorithm>
 #include <set>
 
@@ -71,7 +73,8 @@ struct Place {
 };
 
 Json read_value(const std::vector<std::string>& rest, size_t idx, bool str);
-Place place(Edit& ed, const std::string& spec, bool follow, bool follow_final, bool allow_new = false);
+Place place(Edit& ed, const std::string& spec, bool follow, bool follow_final, bool allow_new = false, bool raw = false);
+bool raw_flag(const aos::Cli& cli, bool follow);
 Json& parent_of(Json& doc, const std::vector<std::string>& toks, bool parents, const std::string& spec);
 void put(Json& doc, const std::vector<std::string>& toks, const Json& v, bool parents, const std::string& spec);
 Json& existing(Place& p, const std::string& spec);

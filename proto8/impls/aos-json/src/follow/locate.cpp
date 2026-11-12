@@ -101,7 +101,7 @@ Located locate(Docs& docs, const Spec& spec, Mode mode) {
     size_t i = 0;
     while (i < toks.size()) {
         Kind k = kind_of(*c.node);
-        if (k == Kind::Ref || k == Kind::Env) {
+        if ((k == Kind::Ref || k == Kind::Env) && !mode.raw) {
             if (!mode.follow) {
                 if (mode.strict) {
                     throw Error{code::FollowMissing, shown(c.file, c.toks) + " is a directive; add --follow to change what it points to, "

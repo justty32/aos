@@ -1,0 +1,13 @@
+{
+ "summary": "Set one place in a JSON file to a value (replace it, or add the key if missing)",
+ "resource": "disk",
+ "side_effect": true,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "cost": {
+  "time_ms": 30
+ },
+ "timeout_ms": 3000
+}

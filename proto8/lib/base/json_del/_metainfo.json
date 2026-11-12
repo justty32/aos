@@ -1,0 +1,13 @@
+{
+ "summary": "Delete one key or array item from a JSON file (later items move down)",
+ "resource": "disk",
+ "side_effect": true,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "cost": {
+  "time_ms": 30
+ },
+ "timeout_ms": 3000
+}

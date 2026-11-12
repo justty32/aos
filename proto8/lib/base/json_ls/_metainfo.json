@@ -1,0 +1,13 @@
+{
+ "summary": "List what is inside one place of a JSON file, like ls",
+ "resource": "disk",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true,
+ "cost": {
+  "time_ms": 30
+ },
+ "timeout_ms": 3000
+}

@@ -52,6 +52,22 @@ json 這塊：
 - **json_search**：找 key／value，可以往上也可以往下；值不做 regular expression（「最好不要，不如直接用mongoDB」）。
 - **11-11 已定仍有效**：路徑照 N-45 一整串 `檔#/位置`；一次一格、需要時 multi；不存在時自動建可選；認 `#/list/-`；整份檔 `xxx.json` 與 `xxx.json#/` 都收；值照字面；工具不替腦偷改值（剝引號已退回）。
 
+## 同日稍後（頂層轉來）
+
+> 「json_read/write之後會被我們的json替代。」
+
+> 「knowledge沒用了，可以拿掉。」（knowledge_* 的拆除由別的線做，這條線不動 knowledge 工具。）
+
+談 description／index 時（那兩支是之後的專屬工具，不在這條線）：
+
+> 「我們用一條路徑來統一檔案系統與json的尋址，如aaa.json#/xxx/yyy，檔案系統的根目錄是/，.json檔案的根(也就是整份檔案)則是#/。」
+
+之後會有慣例鍵 `_description`（json 物件裡）與慣例檔 `_description.json`（資料夾裡）。
+
+- **決定**：eca 範本單獨登記的 json_read／json_write 換成新的簡單組（整包 json）。json 工具對 `_` 開頭的鍵**不做任何特別處理**（照字面）；json_ls 的欄位留得下之後加一欄 description 的位置。
+
+施工圖紙在 [01-規劃](01-規劃.md)，施工結果在 [02-施工結果](02-施工結果.md)。
+
 ## 頂層讀法與留給規劃的題（代定、可翻案）
 
 - 「做成一個 aos_json 工具」讀成：這一族收在同一個程式／包（名字 aos_json），底下 get／set／ls／del／add／search；腦看到一支帶子指令的工具還是多支 `json_*`，由規劃照既有慣例定，另一種選項與後果列給使用者。

@@ -1,0 +1,28 @@
+{
+ "description": "Delete one key or array item from a JSON file (later items move down). It must exist. A whole file is not deleted (use remove or trash). Prints \"ok FILE#/POINTER\". Example: {\"path\": \"cfg.json#/old_key\"}. Details: knowledge_read aos/tools/json_del.json.",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone (or FILE#/) = the whole document. Relative files start at your workspace."
+   }
+  },
+  "required": [
+   "path"
+  ]
+ },
+ "errors": [
+  "ArgumentsBad",
+  "PointerBad",
+  "FileMissing",
+  "FileBad",
+  "PointerMissing",
+  "TargetBad",
+  "ValueBad",
+  "WriteFailed",
+  "LaunchFailed",
+  "CommandFailed",
+  "WsMissing"
+ ]
+}

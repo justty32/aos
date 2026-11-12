@@ -133,7 +133,7 @@ class ReviewerIntegration(unittest.TestCase):
                     self.assertEqual([row['endpoint'] for row in thinks], ['reviewer'] * 3)
                     self.assertEqual([row['usage']['prompt_tokens'] for row in thinks], [13] * 3)
                     tools = [row for row in rows if row['kind'] == 'tool']
-                    self.assertEqual([row['name'] for row in tools], ['review_round', 'json_write'])
+                    self.assertEqual([row['name'] for row in tools], ['review_round', 'json_set'])
                     self.assertTrue(all(row['code'] == 0 for row in tools))
                     round_rows = records(stack / tools[0]['stack'])
                     self.assertTrue(any(row.get('name', '').startswith('measure_') and row['code'] == 0

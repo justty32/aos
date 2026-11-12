@@ -11,9 +11,6 @@
  "stat.json": {
   "_description": "Tool stat: facts about one file, folder or link as JSON (type, size, lines, format)."
  },
- "json_read.json": {
-  "_description": "Tool json_read: one place in a JSON file, a few levels deep; deeper parts folded."
- },
  "grep.json": {
   "_description": "Tool grep: search inside files with a regular expression, like grep -rn; one line PATH:LINE:TEXT per match."
  },
@@ -35,8 +32,32 @@
  "mkdir.json": {
   "_description": "Tool mkdir: create a folder with its parents; an existing folder is fine."
  },
- "json_write.json": {
-  "_description": "Tool json_write: set or delete values in a JSON file by JSON Pointer."
+ "json_get.json": {
+  "_description": "Tool json_get: the value at one FILE#/POINTER as one line of JSON; [too big] when over max_bytes."
+ },
+ "json_ls.json": {
+  "_description": "Tool json_ls: what is inside one place of a JSON file, one key or index per line; long for type and size."
+ },
+ "json_search.json": {
+  "_description": "Tool json_search: find a key and/or value below a place (or in the levels above it); one FILE#/POINTER per hit."
+ },
+ "json_set.json": {
+  "_description": "Tool json_set: set one place in a JSON file to a value, exactly as given; /- appends."
+ },
+ "json_add.json": {
+  "_description": "Tool json_add: add a new key or array item (inserts); never overwrites (KeyExists)."
+ },
+ "json_del.json": {
+  "_description": "Tool json_del: delete one key or array item from a JSON file."
+ },
+ "aos_json_get.json": {
+  "_description": "Tool aos_json_get: json_get for aos configuration files: follow $ref, resolve $ref/$env."
+ },
+ "aos_json_set.json": {
+  "_description": "Tool aos_json_set: json_set for aos configuration files: value, text or from; follow, resolve, check."
+ },
+ "aos_json_add.json": {
+  "_description": "Tool aos_json_add: json_add for aos configuration files, with the options of aos_json_set."
  },
  "trash.json": {
   "_description": "Tool trash: delete so it can be undone (moved into .trash/ in your workspace)."

@@ -11,7 +11,7 @@
 # stdout：走過的位置（看過）、找到的位置、改了什麼。
 # 錯照 lib 契約（stdio-unify R2，11-05 起；之前寫不進去印「not changed」退 0）：stderr 與 stdout 各一行「json_rewrite: error: 代號 原因」、退 1——
 #   stdin 不對（ArgumentsBad）、file 不在工作區（PathBad）、腦連不上（BrainFailed）、回覆不對（ReplyBad）、找了 MAX_ROUNDS 輪還沒交（PointerMissing）、
-#   aos-json 起不來（LaunchFailed）；aos-json 讀寫失敗＝接它錯誤行 `aos-json: error: 代號 原因` 的代號與原因（同 aos_json），沒那行＝CommandFailed。
+#   aos-json 起不來（LaunchFailed）；aos-json 讀寫失敗＝接它錯誤行 `aos-json: error: 代號 原因` 的代號與原因（同 json 工具一族 lib/aos_json.py），沒那行＝CommandFailed。
 #   寫不進去時 seen／found 兩行照印在錯誤行前面。aos-json、aos-llm 的 stderr 原樣透到 stderr。
 # --help＝英文說明印 stdout、退 0；Ctrl-C＝退 130、不吐 traceback。
 import json, os, re, subprocess, sys, tempfile

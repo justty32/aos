@@ -1,0 +1,63 @@
+{
+ "description": "For aos configuration files that use $ref/$env (for plain data use json_set). Same as json_set, but the value comes from exactly one of value / text (parsed as JSON) / from (copied from FILE#/POINTER); resolve: true resolves $ref/$env in it before storing; follow: true changes the file a $ref on the way points to; check: true refuses changes that break the aos configuration. Example: {\"path\": \"fsm.json#/states/act/exec\", \"from\": \"lib.json#/exec\"}. Details: knowledge_read aos/tools/aos_json_set.json.",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone (or FILE#/) = the whole document. Relative files start at your workspace."
+   },
+   "value": {
+    "description": "required: the new value, any JSON (string, number, boolean, null, object, array); stored exactly as given: a string stays a string"
+   },
+   "text": {
+    "type": "string",
+    "description": "a JSON text to parse and store (instead of value), e.g. \"{\\\"a\\\": true}\""
+   },
+   "from": {
+    "type": "string",
+    "description": "FILE#/POINTER to copy the value from (instead of value)"
+   },
+   "parents": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = create missing objects along the way (like mkdir -p)"
+   },
+   "resolve": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = resolve $ref/$env inside the value before storing; false = store them as written"
+   },
+   "follow": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = go through $ref on the way and change the file it points to; false = a $ref/$env on the way is an error (FollowMissing)"
+   },
+   "check": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = refuse the change if it adds problems to the aos configuration"
+   }
+  },
+  "required": [
+   "path"
+  ]
+ },
+ "errors": [
+  "ArgumentsBad",
+  "PointerBad",
+  "TextBad",
+  "FileMissing",
+  "FileBad",
+  "PointerMissing",
+  "TargetBad",
+  "ValueBad",
+  "WriteFailed",
+  "FollowMissing",
+  "DirectiveBad",
+  "CheckFailed",
+  "LaunchFailed",
+  "CommandFailed",
+  "WsMissing"
+ ]
+}

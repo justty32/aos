@@ -5,10 +5,10 @@
    "_description": "How packs work and how to turn one off."
   },
   "look": {
-   "_description": "Pack look: read, ls, view, stat, json_read, grep, glob; look at and search files, change nothing."
+   "_description": "Pack look: read, ls, view, stat, grep, glob; look at and search files, change nothing."
   },
   "change": {
-   "_description": "Pack change: write, edit, copy, move, mkdir, json_write; make and change files."
+   "_description": "Pack change: write, edit, copy, move, mkdir; make and change files."
   },
   "delete": {
    "_description": "Pack delete: trash (can be undone), remove (cannot)."
@@ -42,11 +42,17 @@
   },
   "goal": {
    "_description": "Pack goal: goal (one sentence you keep working on; reminded when you stop by yourself)."
+  },
+  "json": {
+   "_description": "Pack json: json_get, json_ls, json_search, json_set, json_add, json_del; one place of a JSON file at a time by FILE#/POINTER."
+  },
+  "aos_json": {
+   "_description": "Pack aos_json: aos_json_get, aos_json_set, aos_json_add; JSON tools that follow or resolve $ref/$env (not in the templates)."
   }
  },
- "about": "# Tool packs\n\nYour tools are registered pack by pack: each pack is one tool list in $AOS_HOME/lib/packs/<pack>.json, and a definition's tools.json stacks the packs it wants with \"$override\". agent-fsm has all thirteen packs; eca-claude has six (gadgets, events, self, def, mailbox, knowledge; no look, change, delete, shell, subagent, goal or todo pack: its CLI has its own file tools, shell, helpers, goals and todo lists), adds json_read and json_write by themselves, and turns off do_task (agent-fsm only): 20 tools.\n\n- See where each of your tools comes from: self_tools {\"op\": \"ls\", \"long\": true} (FROM shows lib/packs/<pack>.json).\n- Turn one tool off for yourself: self_tools {\"op\": \"rm\", \"name\": \"shell\"}.\n- A whole pack is turned off by removing it from the \"$override\" list of the definition's tools.json (a person or a definition change, not a tool call).",
- "look": "Pack look: Read-only file tools: read (a text file), ls (a folder), view (a file with its type), stat (facts about one path), json_read (a JSON file or one value in it), grep (search inside files, like grep -rn), glob (find files by name pattern). One node per tool: aos/tools/read.json, aos/tools/ls.json, aos/tools/view.json, aos/tools/stat.json, aos/tools/json_read.json, aos/tools/grep.json, aos/tools/glob.json.",
- "change": "Pack change: Editing files: write (whole file), edit (replace exact text), copy, move (also rename), mkdir, json_write (set or delete values by JSON pointer). One node per tool: aos/tools/write.json, aos/tools/edit.json, aos/tools/copy.json, aos/tools/move.json, aos/tools/mkdir.json, aos/tools/json_write.json.",
+ "about": "# Tool packs\n\nYour tools are registered pack by pack: each pack is one tool list in $AOS_HOME/lib/packs/<pack>.json, and a definition's tools.json stacks the packs it wants with \"$override\". agent-fsm has fourteen packs (all but aos_json); eca-claude has seven (gadgets, events, self, def, mailbox, knowledge, json; no look, change, delete, shell, subagent, goal or todo pack: its CLI has its own file tools, shell, helpers, goals and todo lists) and turns off do_task (agent-fsm only): 24 tools. The aos_json pack is in no template; add it to a definition that edits aos configuration files.\n\n- See where each of your tools comes from: self_tools {\"op\": \"ls\", \"long\": true} (FROM shows lib/packs/<pack>.json).\n- Turn one tool off for yourself: self_tools {\"op\": \"rm\", \"name\": \"shell\"}.\n- A whole pack is turned off by removing it from the \"$override\" list of the definition's tools.json (a person or a definition change, not a tool call).",
+ "look": "Pack look: Read-only file tools: read (a text file), ls (a folder), view (a file with its type), stat (facts about one path), grep (search inside files, like grep -rn), glob (find files by name pattern). One node per tool: aos/tools/read.json, aos/tools/ls.json, aos/tools/view.json, aos/tools/stat.json, aos/tools/grep.json, aos/tools/glob.json.",
+ "change": "Pack change: Editing files: write (whole file), edit (replace exact text), copy, move (also rename), mkdir. One node per tool: aos/tools/write.json, aos/tools/edit.json, aos/tools/copy.json, aos/tools/move.json, aos/tools/mkdir.json.",
  "delete": "Pack delete: trash (move into your workspace .trash/, can be moved back) and remove (delete for real; a folder needs recursive). One node per tool: aos/tools/trash.json, aos/tools/remove.json.",
  "shell": "Pack shell: shell (one bash command; not a sandbox) and run_python (a short Python program). One node per tool: aos/tools/shell.json, aos/tools/run_python.json.",
  "gadgets": "Pack gadgets: Small handy tools: peek_clock (the daemon clock: current cycle and interval_ms; ClockMissing when you have no daemon clock), peek_now_time (current UTC time), math (one arithmetic expression), do_task (agent-fsm only: start a task in your own conversation and end it with a summary that replaces its messages; see aos/me.json#/do_task).",
@@ -57,5 +63,7 @@
  "mailbox": "Pack mailbox: Letters: mailbox_peek (what is waiting, without taking it), mailbox_read (read the oldest), mailbox_send (send one).",
  "knowledge": "Pack knowledge: The knowledge base: knowledge_read (read, ls, find) and knowledge_write (add, set, rm). knowledge_read reads the stock knowledge base. knowledge_write has no default: give root in the call, or have AOS_KNOWLEDGE set up for it (see aos/knowledge.json).",
  "goal": "Pack goal: goal keeps one sentence you are working on (get, set, done, pause, resume) in your stack. When you stop by yourself (your answer calls no tool) and no letter waits, aos gives you a short \"[aos] goal: ...\" reminder; done or pause stops the reminders. One node: aos/tools/goal.json.",
- "todo": "Pack todo: todo keeps your own to-do list for a long task (ls, set, add, mark) in your stack, outside your history; it is not shown to you by itself, so call ls to see it again. One node: aos/tools/todo.json."
+ "todo": "Pack todo: todo keeps your own to-do list for a long task (ls, set, add, mark) in your stack, outside your history; it is not shown to you by itself, so call ls to see it again. One node: aos/tools/todo.json.",
+ "json": "Pack json: Plain JSON, one place at a time, the path always `FILE#/POINTER`: json_get (one value), json_ls (what is inside, like ls), json_search (find a key or value), json_set (set a value), json_add (add a key or array item, never overwrite), json_del (delete one). Values are stored exactly as given; `$ref`/`$env` objects are plain objects. One node per tool: aos/tools/json_get.json, aos/tools/json_ls.json, aos/tools/json_search.json, aos/tools/json_set.json, aos/tools/json_add.json, aos/tools/json_del.json.",
+ "aos_json": "Pack aos_json: For aos configuration files that use `$ref`/`$env`: aos_json_get (follow, resolve), aos_json_set and aos_json_add (value, text or from; follow, resolve, check). No template has it. One node per tool: aos/tools/aos_json_get.json, aos/tools/aos_json_set.json, aos/tools/aos_json_add.json."
 }

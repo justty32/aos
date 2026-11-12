@@ -1,0 +1,40 @@
+{
+ "description": "List what is inside one place of a JSON file, like ls. First line: the type and length of that place (e.g. \"object, 4 keys\", \"array, 12 items\"). Then one line per key or index, ready to append to the path. long: true adds TYPE and SIZE columns (like ls -l). Long lists end with \"[more] ... next: offset N\". Example: {\"path\": \"cfg.json#/states\", \"long\": true}. Details: knowledge_read aos/tools/json_ls.json.",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone (or FILE#/) = the whole document. Relative files start at your workspace."
+   },
+   "long": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = also print each child's type and size"
+   },
+   "offset": {
+    "type": "integer",
+    "default": 0,
+    "description": "start at this child (for the next page)"
+   },
+   "limit": {
+    "type": "integer",
+    "default": 200,
+    "description": "at most this many children (default: env AOS_JSON_MAX_ITEMS, else 200)"
+   }
+  },
+  "required": [
+   "path"
+  ]
+ },
+ "errors": [
+  "ArgumentsBad",
+  "PointerBad",
+  "FileMissing",
+  "FileBad",
+  "PointerMissing",
+  "LaunchFailed",
+  "CommandFailed",
+  "WsMissing"
+ ]
+}

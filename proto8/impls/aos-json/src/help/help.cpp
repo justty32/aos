@@ -9,10 +9,10 @@ const std::map<std::string, std::string> SUB_USAGE = {
     {"get", "aos-json get [--follow] [--resolve] [--str] FILE#/POINTER"},
     {"peek", "aos-json peek [--follow] [--depth N] FILE#/POINTER"},
     {"where", "aos-json where FILE#/POINTER"},
-    {"set", "aos-json set [--check] [--follow] [--parents] [--str] FILE#/POINTER [VALUE]"},
+    {"set", "aos-json set [--check] [--follow|--raw] [--parents] [--str] FILE#/POINTER [VALUE]"},
     {"batch", "aos-json batch [--check] [--follow] [--parents] FILE"},
-    {"del", "aos-json del [--follow] FILE#/POINTER"},
-    {"append", "aos-json append [--check] [--follow] [--str] FILE#/POINTER [VALUE]"},
+    {"del", "aos-json del [--follow|--raw] FILE#/POINTER"},
+    {"append", "aos-json append [--check] [--follow|--raw] [--str] FILE#/POINTER [VALUE]"},
     {"merge", "aos-json merge [--check] [--follow] FILE#/POINTER [OBJECT]"},
     {"env", "aos-json env [--path SUBPATH] [--prefix PREFIX] [--parents] FILE#/POINTER NAME"},
     {"ref", "aos-json ref [--move] [--parents] FILE#/POINTER TARGET"},
@@ -67,12 +67,13 @@ more: aos-json/README.md
 )"},
     {"set", R"(aos-json set - Set a JSON value.
 
-usage: aos-json set [--check] [--follow] [--parents] [--str] FILE#/POINTER [VALUE]
+usage: aos-json set [--check] [--follow|--raw] [--parents] [--str] FILE#/POINTER [VALUE]
        aos-json set --help
 
 flags:
   --check      validate before writing; reject changes that add problems
   --follow     follow $ref to the value being replaced
+  --raw        treat $ref/$env objects on the path as plain objects
   --parents    create missing parent objects
   --str        treat VALUE or stdin as a literal string
   -h, --help   show this help
@@ -101,11 +102,12 @@ more: aos-json/README.md
 )"},
     {"del", R"(aos-json del - Delete a JSON key or array element.
 
-usage: aos-json del [--follow] FILE#/POINTER
+usage: aos-json del [--follow|--raw] FILE#/POINTER
        aos-json del --help
 
 flags:
   --follow     follow $ref; remove matching keys from merged parts
+  --raw        treat $ref/$env objects on the path as plain objects
   -h, --help   show this help
 
 Write changed files atomically; deleting a whole file is not supported.
@@ -115,12 +117,13 @@ more: aos-json/README.md
 )"},
     {"append", R"(aos-json append - Append a value to a JSON array.
 
-usage: aos-json append [--check] [--follow] [--str] FILE#/POINTER [VALUE]
+usage: aos-json append [--check] [--follow|--raw] [--str] FILE#/POINTER [VALUE]
        aos-json append --help
 
 flags:
   --check      validate before writing; reject changes that add problems
   --follow     follow $ref to the target array
+  --raw        treat $ref/$env objects on the path as plain objects
   --str        treat VALUE or stdin as a literal string
   -h, --help   show this help
 

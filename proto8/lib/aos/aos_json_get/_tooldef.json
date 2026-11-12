@@ -1,0 +1,46 @@
+{
+ "description": "For aos configuration files that use $ref/$env (for plain data use json_get). Same as json_get plus: follow: true goes through $ref on the way; resolve: true returns the value with $ref/$env resolved (default: as written). Example: {\"path\": \"fsm.json#/states/think\", \"follow\": true}. Details: knowledge_read aos/tools/aos_json_get.json.",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone (or FILE#/) = the whole document. Relative files start at your workspace."
+   },
+   "follow": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = go through $ref on the way and at the value"
+   },
+   "resolve": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = resolve $ref/$env inside the value"
+   },
+   "max_bytes": {
+    "type": "integer",
+    "default": 8000,
+    "description": "print the value only if its one-line JSON is at most this many bytes (default: env AOS_JSON_MAX_BYTES, else 8000)"
+   },
+   "full": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = print the whole value however big"
+   }
+  },
+  "required": [
+   "path"
+  ]
+ },
+ "errors": [
+  "ArgumentsBad",
+  "PointerBad",
+  "FileMissing",
+  "FileBad",
+  "PointerMissing",
+  "DirectiveBad",
+  "LaunchFailed",
+  "CommandFailed",
+  "WsMissing"
+ ]
+}

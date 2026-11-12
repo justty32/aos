@@ -534,7 +534,7 @@ def op_add_entry():
         if object_exists(loc):
             obj = read_location(loc["path"], loc["ptr"])[0]
             if "_entry" in obj:
-                die("PathExists", "%s already has an _entry key; change it with edit or json_write" % args["path"])
+                die("PathExists", "%s already has an _entry key; change it with edit or json_set" % args["path"])
         script_name = script_name or loc["name"] + ".py"
     script = os.path.join(loc["base"], script_name)
     if os.path.exists(script):

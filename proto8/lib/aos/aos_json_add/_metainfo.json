@@ -1,0 +1,13 @@
+{
+ "summary": "Like json_add, with $ref/$env options for aos configuration files",
+ "resource": "disk",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "cost": {
+  "time_ms": 30
+ },
+ "timeout_ms": 3000
+}
