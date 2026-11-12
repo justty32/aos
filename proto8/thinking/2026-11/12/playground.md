@@ -5,13 +5,22 @@
 ## 使用者原文
 
 - 「等index,json工具都好了之後，感覺我就可以來玩eca了，還是說有啥需要處理的？沒有的話就幫我把WSL試驗場弄好吧。」
+- 中午：「試驗場我正在玩。proto8/knowledge已經弄好了嗎？然後可以的話幫我準備一個eca opus的。我說說接下來我的打算：用這個eca opus，搭配knowledge，讓他可以開始做各種事情。haiku的智能還是不太夠啦老實說」
+- 接著：「都先幫我設置無上限吧」（花費上限）
 
 ## 結論
 
-- `~/code/playground`（公司 WSL）照 main `eb43dfeaa` 重刷完，三隻掛好、停著、對話是空的；**可以直接玩 eca**。使用說明在試驗場的 `README.md`（起：`cd ~/code/playground && source env.sh && aos-exec root`；講話：`cd ~/code/playground && source env.sh && cd ws && aos-agent chat -t eca_bob`；停：`aos-daemon-ctl -d ~/code/playground/.stack shutdown`）。
+- `~/code/playground`（公司 WSL）照 main `eb43dfeaa` 重刷完，三隻掛好、停著、對話是空的（中午加第四隻 `eca_opus`，見下）；**可以直接玩 eca**。使用說明在試驗場的 `README.md`（起：`cd ~/code/playground && source env.sh && aos-exec root`；講話：`cd ~/code/playground && source env.sh && cd ws && aos-agent chat -t eca_bob`；停：`aos-daemon-ctl -d ~/code/playground/.stack shutdown`）。
 - 刷新前樹是停的（`state.json` stopped、沒有試驗場底下的行程），不用先停。備份 `~/code/playground.bak-1112-1046`。
-- 三隻：`fsm_ann`（假腦，46 支）、`eca_bob`（haiku、每題上限 0.3 美金，25 支）、`eca_cody`（codex `gpt-6-luna`、`workspace-write`、沒有畫面，25 支）；hooks 都是 `mail_notify`、`timer`。工作區沿用 `~/code/playground/ws`，claude 沒跳信任提示。
+- 三隻：`fsm_ann`（假腦，46 支）、`eca_bob`（haiku，25 支；中午起不設花費上限）、`eca_cody`（codex `gpt-6-luna`、`workspace-write`、沒有畫面，25 支）；hooks 都是 `mail_notify`、`timer`。工作區沿用 `~/code/playground/ws`，claude 沒跳信任提示。
 - **哪些是複製、哪些指回 repo**：`lib/ py/ templates/ knowledge/`、總機定義 `llm_kernel/def/`、三隻的定義是**複製**（repo 改了要重刷）；指令（`~/.local/bin/aos-*` symlink）與 Python 共用模組（`aos-proto8.pth` 指 `~/repo/aos-tools/proto8/py`、`lib`）**指回 `~/repo/aos-tools`**——別條線合併進那份 clone 後，指令與 cmd 那邊的 Python 自動跟上（C++ 要重 build），腦叫的工具（`$AOS_HOME/lib`）要重刷才跟上。
+
+## 中午加 eca_opus、拿掉花費上限
+
+- **`eca_opus`**：抄 eca-claude 範本，`llm.json` `{"model": "opus"}`（claude CLI 2.1.322 的 `--model` 認 `opus` 別名，實跑是 `claude-opus-5-5`），`cli.json` 的 flags 跟 eca_bob 一字不差（沒有任何全繞過權限的旗標），工作區同樣 `ws/`。使用者那時已停樹、說可以清，起根後 `aos-agent ctl add ../agents/eca_opus` 掛上：25 支，一題「Reply with the single word: hi」答 `hi`、5 秒、0.18 美金（新對話開場寫快取）、權限拒絕空。
+- **不設花費上限**：eca_bob、eca_opus 的 `cli.json` `print_flags` 改 `[]`（不帶 `--max-budget-usd`）；eca_cody（codex）本來就沒有、fsm_ann 是假腦。範本預設 0.5 不動。
+- **花費上限是什麼**（程式與實測）：`cli.json` 的 `print_flags` 原樣接在每次 `claude -p` 後面（`lib/agent/cli_session.py` 的 claude 那段），所以 `--max-budget-usd N` 管的是「claude CLI 跑一次」＝aos-eca-turn 的一輪（queue 裡等著的那批訊息，通常是使用者的一句）。實測 `--max-budget-usd 0.000001` 問 haiku 一句：claude 回 `subtype error_max_budget_usd`、`is_error true`、`result null`，已花 0.001 美金照算（花完才檢查）；cli_session 看到 `is_error` 就報 `CliFailed`，那輪沒有回答。
+- **knowledge**：試驗場的 `knowledge/` 是 10:46 重刷時抄的，跟 repo `e200fffe2` 的 `proto8/knowledge` 一模一樣（最後一次改是 `c09713572`）。只重抄那一塊、不停樹：`cd ~/code/playground && rm -rf knowledge && cp -r ~/repo/aos-tools/proto8/knowledge . && find knowledge -name __pycache__ -prune -exec rm -rf {} +`。
 
 ## 跟 11-11 的腳本差在哪
 
@@ -24,7 +33,7 @@
 | 複製後 | 只刪 `__pycache__` | 再刪空資料夾（repo 工作樹裡已拆工具的夾只剩快取，抄過來會變空殼） |
 | 劇本假腦 | `fake-demo-today`（self_system＋subagent＋舊 do_task） | 換 `fake-demo-json`：`json_set` 寫 `demo.json` → `json_get` 讀一格 → `json_set` 寫 `_index.json` 一項 → `index_view`（`path` `.`、`key` `demo.json`）；舊 do_task 的 `goal` 參數已不存在，劇本拿掉 |
 | eca_cody `cli.json` | `read-only`、`tools_flags --knowledge` | `workspace-write`、沒有 `tools_flags` |
-| eca_bob `cli.json` | 範本舊版（`--tools Read,Glob,Grep`） | 範本新版（`Read,Write,Edit,Glob,Grep,Bash`、`dontAsk`＋`--allowedTools Write,Edit,Bash`），額度從備份讀回 0.3 |
+| eca_bob `cli.json` | 範本舊版（`--tools Read,Glob,Grep`） | 範本新版（`Read,Write,Edit,Glob,Grep,Bash`、`dontAsk`＋`--allowedTools Write,Edit,Bash`）；額度原本從備份讀回 0.3，中午改成不設限（`print_flags` 空） |
 
 <details><summary>照抄（刷新）：整段貼進終端機</summary>
 
@@ -61,14 +70,16 @@ aos-json set 'llm_kernel/def/kernel.json#/endpoints/fake-demo-json' '{"exec": {"
             {"tool_calls": [{"name": "json_set", "arguments": {"path": "_index.json", "value": {"demo.json": {"description": "a file the fake brain wrote"}}}}]},
             {"tool_calls": [{"name": "index_view", "arguments": {"path": ".", "key": "demo.json"}}]},
             {"content": "I wrote demo.json, read hello back, wrote its index entry into _index.json and looked at it with index_view."}]}'
-budget=$(aos-json get "$BAK/agents/eca_bob/cli.json#/print_flags/1" 2>/dev/null || echo '"0.3"')
-rm -rf agents/fsm_ann agents/eca_bob agents/eca_cody
+rm -rf agents/fsm_ann agents/eca_bob agents/eca_cody agents/eca_opus
 cp -r "$R/templates/agent-fsm" agents/fsm_ann
 cp -r "$R/templates/eca-claude" agents/eca_bob
 cp -r "$R/templates/eca-claude" agents/eca_cody
+cp -r "$R/templates/eca-claude" agents/eca_opus
 find agents -mindepth 2 -maxdepth 2 \( -name tests -o -name __pycache__ \) -exec rm -rf {} +
 echo '{"model": "haiku"}' > agents/eca_bob/llm.json
-aos-json set agents/eca_bob/cli.json#/print_flags/1 "$budget"
+aos-json set agents/eca_bob/cli.json#/print_flags '[]'     # no spending cap (11-12 noon)
+echo '{"model": "opus"}' > agents/eca_opus/llm.json
+aos-json set agents/eca_opus/cli.json#/print_flags '[]'
 echo '{"model": "gpt-6-luna"}' > agents/eca_cody/llm.json
 command cat > agents/eca_cody/cli.json <<'EOF'
 {"kind": "codex",
@@ -84,7 +95,7 @@ echo "refreshed: $PG (agents: $(command ls agents | tr '\n' ' '))"
 )
 ```
 
-刷新後三隻沒掛在領班上：起根，在 `ws/` 裡 `aos-agent ctl add ../agents/<名>`。
+刷新後四隻沒掛在領班上：起根，在 `ws/` 裡 `aos-agent ctl add ../agents/<名>`。
 
 </details>
 
