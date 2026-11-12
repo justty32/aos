@@ -12,15 +12,40 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-11-12 晚 家機（外部 MCP fsm 那條）
+## 2026-11-12 晚 家機頂層收工
 
-1. **做到哪**：07 施工單九步全做完、各一個 commit 進 main（`15e7f8225`～`b9ca076fc`，沒 push）：`lib/mcp_client.py`（stdio＋http Bearer）、`lib/mcp_freeze.py`、`lib/base/mcp_tool`、新指令 `aos-mcp-import`（含 `sync`）、說明與 knowledge `cli/mcp_import`。步 8 真腦在 scratchpad 暫存樹（不碰試驗場）五項都過：fsm gemma 叫到外部 stdio 與 http 工具、eca claude／codex 經 `mcp__aos__` 叫到、hook 攔得到、`self_tools` 關得掉單支、假 token 不落地；codex 底下不用補 `MCP_ENV`。結果、代定 G1～G12、待裁 Q1～Q3 → [external-mcp 08](../proto8/thinking/2026-11/12/external-mcp/08-fsm施工結果.md)。
-2. **下一步**：使用者裁 Q1（經 aos 起的外部 stdio server 拿到整棵樹的環境變數，實測含起樹殼的 API key；要不要白名單）、Q2（server 檔相對路徑起點不一）；看代定 G1～G12、E1～E7；真的別人寫的 stdio server（`uvx mcp-server-time`，要下載）等點頭；其餘照上一條第 5 點。
-3. **家機雜活結果**：`install.sh` 重跑（新裝 `aos-mcp-launch`，`aos-mcp-import` 也已在 PATH）；impls 重 build（aos-daemon、aos-json 18:49 新檔）；`~/.local/bin/copy-out` 是斷的（指向已刪的 `templates/copy-out`）→ 已刪；`thinking/2026-11/09/local-model-bench/` 本來就不在。沒動：`~/code/playground`、`~/.cache/aos-mcp-*/tools.json`（刪 knowledge／memory 兩格仍留給使用者，WAIT_USER）。
-4. **同時段 main 上還有別的 session**（家機試驗場重建 `3ca019a32`、eca Agent／Skill 與 aos MCP 切兩台 `2ab15e1c7`、codex 調查 `dc303e087`）：各自 commit，本線只 `git add` 自己的檔、codemap 只收自己的列。
-5. **測試**（`b9ca076fc`，家機）：lib 132、lib/agent 63、lib/base/mcp_tool 21、cmd/aos-mcp-import 22、aos-tools 120、aos-mcp 15、aos-eca 89、templates 20、aos-agent 72 全過（家機 `test_daemon_down` 也過）。
-6. **踩到的坑**：Python 3.13 起 `ssl` 預設嚴格驗證，自簽 CA 要有 `keyUsage`、leaf 要有 key identifier（fake-mcp-http README 已補）；codex 沙盒裡開不了 socket，http 測試要在沙盒外跑；`pkill -f <字串>` 會連自己那個含同字串的殼一起殺（結束碼 144），改用 `ps … | grep '[x]'`。
-7. **同晚其他線**：試驗場整個重建（`3ca019a32`，第二次重抄到 8c4d73d15（`180464a3c`））、eca claude 身 Agent／Skill 與 aos MCP 切兩台（`2ab15e1c7`、`dc303e087`）、index-link（`827ca2825`）、外部 MCP 路徑統一（`8c4d73d15`）；使用者接著要的：重構拆檔＋tidy → fable 領隊整理整個程式碼庫（原話「東西都弄好後，可以來做重構拆檔+tidy。」「重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。」）；授權：頂層只調度、普通 opus／雜活 sonnet、睡前（23:15 關機）push 一次。
+1. **授權與工作方式**：在家（家機 Manjaro，`~/repo/simple_tools/aos` main）。頂層只調度，事情交給 agent：普通 opus、雜活 sonnet、規劃 fable；agent 可以再派子 agent；非雜活先讀 wf/ 規矩。**push：睡前（23:15 關機）一次，推之前頂層先跟使用者說一聲**。使用者：「等一下token額度到上限後別動，我有一個免費的額度重置」（頂層轉述）——額度到上限就停在原地等他，不要自己接著做。
+2. **今晚新定的規矩**（都在 [tidy content-trim](workflows/tidy/content-trim.md#清舊不必逐項先問2026-11-12-定) 開頭）：「本來就該按照tidy規矩，把舊的東西清掉」＝tidy 判準涵蓋的清舊直接做、事後列清單；「不存在的東西就刪掉。」＝條文講到已不存在的 key／指令／檔／機制直接刪；「還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論」＝**條文與說明只寫現在式結論**，之後寫條文的人也照這條（按日紀錄不適用）。
+3. **今晚進 main 的**（約 180 個 commit，都沒 push；細節在 [日誌](session_logs/2026-11/2026-11-12.md)）：
+   - **外部 MCP**：fsm 經 aos 匯入九步（`15e7f8225`～`b9ca076fc`；新指令 `aos-mcp-import`＋`sync`、`lib/mcp_client.py` 等）；Q1 不做白名單、Q2 stdio server 一律在 server 檔資料夾起（`8c4d73d15`）→ [external-mcp 08](../proto8/thinking/2026-11/12/external-mcp/08-fsm施工結果.md)
+   - **eca**：claude 身開 `Agent`／`Skill`、aos MCP 切主／子兩台（`tools_sub`）`2ab15e1c7`；codex 身只調查 `dc303e087` → [eca-task-subagent](../proto8/thinking/2026-11/12/eca-task-subagent.md)；沒畫面時 `/goal`、`/compact` 失敗不再卡信 `db2018b72`
+   - **index 與 `$ref`**：index 每筆可帶 `index`、檔內 `_index` 可為路徑、路徑照 json／檔案系統同像從容器算、收 `#/` 開頭 → [index-link](../proto8/thinking/2026-11/12/index-link.md)；`$ref` 收 `#/`＝寫著它的那份檔 → [ref-hash](../proto8/thinking/2026-11/12/ref-hash.md)
+   - **json 工具續行**：aos-json 加 add／ls／search、新工具 `json_len`、`jsonx_multi_get／set`、`json_ls` 的 `depth` → [json-tools 04](../proto8/thinking/2026-11/12/json-tools/04-aos-json下沉與len與jsonx-multi.md)
+   - **拆檔與程式碼庫整理**：`aos-eca-turn` 拆成 `aos_eca/`、`cli_session` 拆成八份 `cli_*.py`；fable 領隊整個 proto8 程式整理（行為不變、各批各自 commit，收尾 `ae2fd4e8a`）→ [codebase-cleanup](../proto8/thinking/2026-11/12/codebase-cleanup/README.md)
+   - **tidy 三輪**：wf 交接檔瘦身（SESSION-LOG、WAIT_USER 分 `wait-user/`、日誌分月）、conventions 拆檔、C-54／N-28 摺疊、全 docs 沿革只留結論 → [tidy 報告](workflows/tidy/reports/2026-11-12-收尾.md)
+   - **thinking→docs 提取**（10-29～11-12）：W1～W7、W9 做完，新條 C-87～C-92、P-47、P-48；W8 等 U1 → [thinking-to-docs](../proto8/thinking/2026-11/12/thinking-to-docs/README.md)
+   - **wf→aos**：對標調查（必須的都有、缺的是小輔助）；主 session 的 aos MCP 登記檔修好（repo 外，10 支）→ [wf-to-aos](../proto8/thinking/2026-11/12/wf-to-aos.md)、[wf-to-aos 02](../proto8/thinking/2026-11/12/wf-to-aos/02-寄信給人與主session.md)
+   - **試驗場**：家機 11-12 21:04 照 main `415cf6a2c` 第三次整個重建（fsm 48 含 fake_echo、eca 各 26、子 agent 那台 9；假腦／gemma／haiku 子 agent／codex luna／index_view／`$ref #/` 都實跑過；樹停著，`edcb5fc70`）→ [playground-home](../proto8/thinking/2026-11/12/playground-home.md)
+4. **使用者今晚的裁定**（原話短引）：
+   - 試驗場：「我沒在跑，試驗場那邊也可以全清空。」
+   - 全域 MCP：「全域mcp這個我們管不着，只要確定不要干擾到我們的aos就好。」
+   - 外部 MCP Q1／Q2：「1.不用，風險自己承擔。2.這個我不是很清楚，如果你覺得要統一那就統一吧，我直覺上感覺OK，反正之後出事再說」；之後「外部MCP，明天再說」（頂層轉述）。
+   - index 三題：「1. 甲。2.甲。3.甲，話說ref應該支援#/開頭吧」（都維持現狀；`$ref` 收 `#/` 另做）；index 路徑收 `#/`：「也跟進吧」；資料夾的 `_index.json` 裡寫 `#/` 算不算：「算數。」
+   - 拆檔與整理：「東西都弄好後，可以來做重構拆檔+tidy。」「重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。」「盡量做」；tidy 的三句見第 2 點。
+   - fsm 真腦跑一晚：「fsm真腦跑一整晚...假日再說。」（頂層轉述）
+   - wf→aos 五點：「…4.把人類這個linux user作爲agent，寄信過去就是了。5.對，這個明天開始。」（全句在 [wf-to-aos](../proto8/thinking/2026-11/12/wf-to-aos.md)）；「就是說，沒有硬性缺的了，現在wf/的東西，我們拼拼湊湊就能有了。」「以後一定會比wf/好用，放心。寄信這個以後自然就能夠搞定，反正必須的都有了。」
+   - 主 session 接 MCP：「好，這些都不是問題。只是主session接mcp這個要處理。邊緣狀況這邊就先這樣，之後踩坑再說。」
+5. **下一步**（依優先）：
+   1. 主 session 接 aos（明天）：使用者先重連 aos MCP；接著 Skill 放哪、主 session 身分、always-on 規矩、`todo` 歸誰 → [wf-to-aos 02](../proto8/thinking/2026-11/12/wf-to-aos/02-寄信給人與主session.md#明天主-session-開始現在卡在三點)
+   2. 外部 MCP 接真的別人寫的 stdio server（明天；要下載先問）＋codex 沙盒對 stdio、`disabled_tools` → [external-mcp 08](../proto8/thinking/2026-11/12/external-mcp/08-fsm施工結果.md)
+   3. thinking→docs W8：等使用者裁 U1 → [thinking-to-docs](../proto8/thinking/2026-11/12/thinking-to-docs/README.md)
+   4. 程式碼庫整理剩的（agent-fsm 兩段逐字相同與 `clock_tick`、找 lib 五種寫法、兩處文件舊出處）→ [codebase-cleanup](../proto8/thinking/2026-11/12/codebase-cleanup/README.md#做到哪11-12-晚收線)
+   5. 待裁各題（WAIT_USER 01）裁了就照做。
+   6. kernel 框架施工與 fsm 真腦跑一晚：假日。
+6. **等使用者的**：都在 [WAIT_USER](WAIT_USER.md)（要你裁的、真機驗證、試驗場、雜事四類）；最急的是 push 與重連 aos MCP。
+7. **另一台機器（公司）要注意**：pull 之後①重 build 全部 impls（aos-directive 介面變了；aos-json 沒重 build 的話 `json_ls`／`json_search`／`json_add` 會報 `CommandUnknown`）②重跑 `proto8/install.sh`（新指令 `aos-mcp-import`）③試驗場 `lib／py／cmd／templates/agent-fsm` 整份重抄④`~/.cache/aos-mcp-*/tools.json` 的壞格照 [wait-user/04](wait-user/04-雜事.md) 那行指令清。
+8. **踩過的坑**：多條線共用一個工作樹時，`git add` 指名路徑後要馬上 commit，不然別人 staged 的會被一起帶走——今晚發生兩次（json 線帶走 tidy 的刪檔、提取 W2 帶走 W5），另有一次誤 amend、已還原；同時開的 agent 數有上限（約 20）；wf-lint 的數字要先看掃描範圍再比。
+9. **測試與 HEAD**：已知最近一次全套：`ae2fd4e8a` 時 61 夾 1224 例＋templates 四子夾全綠（出處：程式碼庫整理收尾 commit `ae2fd4e8a` 的訊息）。最終全套與 HEAD：見本條末行（頂層收工時補）。
 
 ## 2026-11-12 收工 公司頂層
 
