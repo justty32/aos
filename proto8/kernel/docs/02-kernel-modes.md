@@ -45,6 +45,7 @@ aos 不驗寄件人是誰，安全的保底是 Linux 本身（使用者、權限
 
 ```sh
 P=<repo>/proto8
+export AOS_HOME=$P                                              # 範本裡判官的路徑寫 {"$env": "AOS_HOME", …}，要先設
 mkdir -p /tmp/judge-try/m1 /tmp/judge-try/me && cd /tmp/judge-try/m1
 aos-exec --stack /tmp/judge-try/m1/st $P/kernel/daemon-judge    # 一台 daemon；身體每 300 ms 跑一次 judge（另開視窗或丟背景）
 aos-post init /tmp/judge-try/me/box                              # 收回信的信箱
@@ -74,7 +75,7 @@ aos-daemon-ctl ls                                                # procs-kernel�
 
 ### 改成自己的
 
-複製範本資料夾、改 `judge.json`。範本裡判官的路徑寫相對的 `../../lib/aos/judge`，搬到 repo 外要改成絕對路徑；`judge.json` 用 `{"$env": "AOS_CD", "$path": "judge.json"}` 指定義資料夾裡那份（aos-exec 會 cd 進判官自己的資料夾，相對路徑會算錯）。
+複製範本資料夾、改 `judge.json`。範本裡判官的路徑寫成 `{"$env": "AOS_HOME", "$path": "/lib/aos/judge"}`（`AOS_HOME`＝這台 proto8 資料夾的絕對路徑），搬到 repo 外不用改；`judge.json` 用 `{"$env": "AOS_CD", "$path": "judge.json"}` 指定義資料夾裡那份（aos-exec 會 cd 進判官自己的資料夾，相對路徑會算錯）。
 
 ### 已知限制
 

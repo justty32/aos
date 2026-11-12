@@ -11,11 +11,11 @@
 llm-kernel/
   _entry       ["aos-daemon", "--enable-logs", "daemon.json"]
   daemon.json  {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300, "procs": {"_sweeper": {…}}}（身體＝kernel；procs 只帶清道夫一列（見 cmd/aos-sweeper；不要就刪）、不帶鐘列，聽外層的 `AOS_CLOCK`）
-  kernel.json  slots 2、reserved＝{"high": 1}（使用者裁定 sol 審查 #7）、timeout_ms 120000、exec＝預設 endpoint 函數 ../../lib/base/llm_http、endpoint＝預設代號 fake、
+  kernel.json  slots 2、reserved＝{"high": 1}（使用者裁定 sol 審查 #7）、timeout_ms 120000、exec＝預設 endpoint 函數 `{"$env": "AOS_HOME", "$path": "/lib/base/llm_http"}`、endpoint＝預設代號 fake、
                不設 budget（使用者選「從範本拿掉」；要限寄件人就自己加 budget.senders，例子在 03 件 5）、
                endpoints＝能力包表（下表）
   fake_slow/   demo 用的慢假腦 endpoint 函數：睡 endpoint.delay_s 秒，再把同一份 stdin 交給 lib/base/llm_fake（03 件 3）
-  endpoints/litellm/_entry  ["aos-exec", "../../../../lib/base/llm_http", "--key-env", "LITELLM_KEY"]（三個 LiteLLM 包共用）
+  endpoints/litellm/_entry  {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/base/llm_http"}, "--key-env", "LITELLM_KEY"]}（四個 LiteLLM 包共用）
 ```
 
 | 代號 | 是什麼 | 屬性（kernel.json 裡寫的） |
@@ -33,9 +33,8 @@ llm-kernel/
 
 ```sh
 mkdir ~/llm_kernel && cd ~/llm_kernel
-cp -r <repo>/proto8/kernel/llm-kernel def   # 複製到 repo 外後，兩處指向 lib 的路徑都要改：
-sed -i 's#"\.\./\.\./lib/#"<repo>/proto8/lib/#g' def/kernel.json   # 沒改＝問腦回 aos-llm: error: EndpointFailed … EntryMissing entry not found: …/lib/base/llm_fake
-sed -i 's#"\.\./\.\./\.\./\.\./lib/#"<repo>/proto8/lib/#g' def/endpoints/litellm/_entry
+export AOS_HOME=<repo>/proto8              # 指 lib 的路徑都寫成 {"$env": "AOS_HOME", "$path": "/lib/…"}，複製到哪都不用改檔；沒設＝指示詞解不開、問腦失敗
+cp -r <repo>/proto8/kernel/llm-kernel def
                                             # 格（fake_slow 等）找 aos_flags.py：先 ../../../py、再 PATH 上 aos-tools 的真位置
 aos-exec --stack . def                      # 起 llm daemon；信箱在 ~/llm_kernel/requests/，Ctrl-C 收工
 # 另一個殼：

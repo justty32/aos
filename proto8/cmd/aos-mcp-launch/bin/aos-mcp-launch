@@ -26,19 +26,19 @@ def main(argv):
         print(HELP)
         return 0
     if len(argv) != 1:
-        tool_io.die("ArgumentsBad", "give exactly one server file (see --help)", prog="aos-mcp-launch")
+        tool_io.die("ArgumentsBad", "give exactly one server file (see --help)", prog="aos-mcp-launch", echo=False)
     try:
         cmd, env, cwd = mcp_server_file.stdio_launch(argv[0])
     except tool_io.Error as e:
-        tool_io.die(e.code, str(e), prog="aos-mcp-launch")
+        tool_io.die(e.code, str(e), prog="aos-mcp-launch", echo=False)
     try:
         os.chdir(cwd)
     except OSError as e:
-        tool_io.die("PathMissing", "cannot enter the server file's folder %s: %s" % (cwd, tool_io.os_reason(e)), prog="aos-mcp-launch")
+        tool_io.die("PathMissing", "cannot enter the server file's folder %s: %s" % (cwd, tool_io.os_reason(e)), prog="aos-mcp-launch", echo=False)
     try:
         os.execvpe(cmd[0], cmd, env)
     except OSError as e:
-        tool_io.die("CommandMissing", "cannot start %s: %s" % (cmd[0], tool_io.os_reason(e)), prog="aos-mcp-launch")
+        tool_io.die("CommandMissing", "cannot start %s: %s" % (cmd[0], tool_io.os_reason(e)), prog="aos-mcp-launch", echo=False)
 
 
 if __name__ == "__main__":

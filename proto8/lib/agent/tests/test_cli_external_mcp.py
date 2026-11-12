@@ -166,8 +166,19 @@ class ExternalMcp(unittest.TestCase):
         self.server("h.json")
         r = subprocess.run([launcher, str(self.tmp / "mcp" / "h.json")], capture_output=True, text=True)
         self.assertIn("aos-mcp-launch: error: PackBad", r.stderr)
+        self.assertEqual((r.returncode, r.stdout), (1, ""))   # stdout 是 MCP 協定通道：錯誤行只走 stderr
         r = subprocess.run([launcher], capture_output=True, text=True)
         self.assertIn("ArgumentsBad", r.stderr)
+        self.assertEqual((r.returncode, r.stdout), (1, ""))
+
+    def test_launcher_error_not_on_stdout(self):
+        """啟動失敗（command 找不到）：錯誤行只進 stderr，stdout 留空（11-12 eca_tidy 第 4 條）。"""
+        (self.tmp / "mcp" / "x.json").write_text(json.dumps({"description": "fake", "mcp_server": {
+            "name": "nope", "transport": "stdio", "command": "bin/does-not-exist"}}))
+        launcher = str(LIB.parent / "cmd" / "aos-mcp-launch" / "bin" / "aos-mcp-launch")
+        r = subprocess.run([launcher, str(self.tmp / "mcp" / "x.json")], capture_output=True, text=True)
+        self.assertEqual((r.returncode, r.stdout), (1, ""), r.stderr)
+        self.assertIn("aos-mcp-launch: error: CommandMissing", r.stderr)
 
     def test_launcher_relative_paths_from_server_folder(self):
         """aos-mcp-launch 先 cd 到 server 檔的資料夾：command（含 /）與 args 的相對路徑都從那裡算，跟呼叫者的 cwd 無關（Q2 代定 G13）。"""

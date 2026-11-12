@@ -10,6 +10,8 @@ flowchart LR
 
 這是同步比對函數；`measure` 的 `check.json` 指向它，裁判成本進 `check.cost`。複製本夾、改 `judge.json` 的 `endpoint` 即可換模型。
 
+**預設的 `"endpoint": "judge"` 只是個名字**：出廠的 [`kernel/llm-kernel/kernel.json`](../../kernel/llm-kernel/kernel.json) 沒有叫 `judge` 的 endpoint，兩個直接搭會得到下層的 `EndpointMissing`。用之前二選一：在 kernel.json 的 `endpoints` 登記一個 `judge`，或把 `judge.json` 的 `endpoint` 改成 kernel.json 裡已有的代號（例如 `smart-high`）。
+
 ```sh
 printf '%s' '{"expect":"/abs/expect","got":"/abs/got","input":"/abs/case"}' | aos-exec /abs/judge-llm
 ```

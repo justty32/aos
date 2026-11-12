@@ -53,3 +53,9 @@
 - 第 9 條：已修。[2026-11 月表](../README.md) 11-04 移到 11-05 前；份數照日 README 列數改成 04＝9、05＝16、06＝12、07＝12、08＝6、09＝5、10＝16、11＝16、12＝34（11-12 仍在寫，以修時為準）；[thinking/README](../../README.md) 2026-11 那列改成 142 份、11-01～11-12；11-04 日 README 補列 aos-agent、four-elements、eca-claude-dir，11-10 補列 self-tools、sweeper；其他日 README 逐夾掃過，沒有別的漏列。2026-10 月表份數本來就對。月表 11-06～11-11 那幾列的一句話只講到一兩個題目，沒改。
 - 第 10 條：已修。2026-10 月表與 10-15 日 README 的「沒有指示詞可用（N-45）」改成以現行 N-45 為準（`$env`、`$ref`，`$ref` 可帶 `$at`）；os-concepts README 與其 10 號檔的「C-76／N-65 暫稱」標上已落成 C-83／N-67（草稿本文不動）；C-86、C-89～C-92 在來源夾（10 tonight-rulings、10 aos-tools-cli、07 agent-diversity、10 self-family、11 goal）的 README 導覽列補「條文：」連結。
 - 另：`2026-11/08/alt-fable/out2/v4.md` 全文只有一行用量上限錯誤，沒刪（刪檔要使用者同意）。
+- 第 2 條：已修。`knowledge/aos/me.json` 的 `self_state` 段「The ten parts」改成 eleven、列舉補上 `system`（以 `cli/agent.json` 與 `aos-agent ctl state` 的 11 個為準）。
+- 第 3 條：只改說明。`templates/judge-llm/README.md` 寫明預設 `"endpoint": "judge"` 在出廠 `kernel/llm-kernel/kernel.json` 沒有、直接搭會 `EndpointMissing`，用前二選一：kernel.json 登記 `judge`，或把 judge.json 改成已有代號（例 `smart-high`）。沒改 judge.json 預設，因為測試靠 `judge` 這個名字、範本的意圖像是「角色名」；要不要改預設或在 kernel.json 加一包 `judge`，給頂層／使用者定。
+- 第 4 條：已修。`cmd/aos-mcp-launch` 四處 `tool_io.die` 加 `echo=False`，錯誤行只走 stderr；`lib/agent/tests/test_cli_external_mcp.py` 原有的 PackBad／ArgumentsBad 兩處補 stdout 為空的斷言，另加一例 CommandMissing。
+- 第 5 條：已修。`kernel/docs/01` 的檔案樹與起來步驟改成 `$AOS_HOME` 指示詞（拿掉兩行 `sed`，改成先 `export AOS_HOME=<repo>/proto8`；LiteLLM 包共用數改成四個）；`02` 的「改成自己的」改說判官路徑是 `AOS_HOME` 指示詞、搬出 repo 不用改，跑法開頭補 `export AOS_HOME`。
+- 第 6 條：已修。`impls/aos-daemon/README.md` 改成旗標放設定檔後面也收（11-11 起，見 aos-loop `config.cpp` loop_cli），多給位置參數才 `ArgumentsBad`。只改 README。
+- 第 7 條：已修。`proto8/README.md` 條號改 C-01～C-92、P-05～P-48（兩處 C、一處 P），cmd 清單補 aos-mcp-launch、aos-mcp-import，資料夾表加 `feedback/`。

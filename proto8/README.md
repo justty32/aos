@@ -20,7 +20,7 @@
 |---|---|
 | [docs/](docs/README.md) | 使用者條文：[CONCEPTS](docs/CONCEPTS.md)（概念）、[NORMS](docs/NORMS.md)（規範）、[CONVENTION](docs/CONVENTION.md)（agent 慣例） |
 | [impls/](impls/README.md) | aos-exec、aos-loop、aos-fsm、aos-daemon 等 C++ 專案（各自 CMake；`build/`、`bin/`、`lib/` 是建置產物、不進 git） |
-| [cmd/](cmd/README.md) | Python 指令：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca（turn、screen）、aos-mcp、aos-sandbox、aos-grow |
+| [cmd/](cmd/README.md) | Python 指令：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca（turn、screen）、aos-mcp、aos-mcp-launch（起外部 stdio MCP server）、aos-mcp-import（把外部 MCP 的工具凍結成一包）、aos-sandbox、aos-grow |
 | [py/](py/README.md) | cmd 共用模組：`aos_flags.py`、`aos_ws.py`、`daemon_ctl/`（CLI 對話與介面宣告共用模組在 `lib/agent/`） |
 | [install.sh](install.sh) | 把 `impls/*/bin/*` 與 `cmd/*/bin/*` symlink 進 `~/.local/bin`，並在 Python user site 寫兩行 repo `py`／`lib` 絕對路徑的 `aos-proto8.pth`（參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉；用法在 [cmd/README](cmd/README.md)） |
 | [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），templates 用相對捷徑引用 |
@@ -30,11 +30,12 @@
 | [knowledge/](knowledge/README.md) | 出廠內容樹：普通資料夾＋`.json`，用一般檔案／json 工具讀；第一本是 `aos/`——給小模型的 aos 體系說明（英文） |
 | [extras/](extras/README.md) | langs：Janet／Lua 寫 aos |
 | [archive/](archive/README.md) | 封存（llm-kernel 示範、self-improve、nvim 外掛、Lua／Janet agent_dan、aos-chat；清單在它的 README） |
+| [feedback/](feedback/README.md) | aos 指令與函數的使用意見（每個 key 一份只追加的 `.jsonl`，進 git）與評分者辨識規則 `raters.json` |
 | [thinking/](thinking/README.md) | 討論紀錄（使用者原文、決定、結論） |
 | [notes/](notes/README.md) | AI 寫的參考筆記（不算數） |
 | `user-advice/` | 使用者自己的意見稿 |
 
-**以 [CONCEPTS.md](docs/CONCEPTS.md) 為準**（概念層：名詞、規則 C-01～C-73，作廢的號只留在表上；只收使用者說過的）。圖解兩頁（10-20 的狀態）：概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm （HTML 源在 scratchpad/pages/proto8-concepts.html、proto8-impl.html）。實作上的想法在 [restart §3g](thinking/2026-10/11/restart/README.md)（10-11 晚口述：inst→loop→daemon→tick-tock→kernel→agent→閉環）。
+**以 [CONCEPTS.md](docs/CONCEPTS.md) 為準**（概念層：名詞、規則 C-01～C-92，作廢的號只留在表上；只收使用者說過的）。圖解兩頁（10-20 的狀態）：概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm （HTML 源在 scratchpad/pages/proto8-concepts.html、proto8-impl.html）。實作上的想法在 [restart §3g](thinking/2026-10/11/restart/README.md)（10-11 晚口述：inst→loop→daemon→tick-tock→kernel→agent→閉環）。
 
 ## 現況
 
@@ -44,9 +45,9 @@
 
 ## 入口
 
-- **[CONCEPTS.md](docs/CONCEPTS.md)**：概念——aos 怎麼看世界（C-01～C-73）。
+- **[CONCEPTS.md](docs/CONCEPTS.md)**：概念——aos 怎麼看世界（C-01～C-92）。
 - **[NORMS.md](docs/NORMS.md)**：規範——從概念推出來、大家都要守的（比實作重要，C-45）；程式符合規範但不強制。底在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62：六個環境變數、`aos-exec XXX`、找入口、`#/` 尋址）。
-- **[CONVENTION.md](docs/CONVENTION.md)**：aos agent 慣例（P-05～P-41）——我們自己人寫 agent 時照抄的標準形狀，不要求別人守。
+- **[CONVENTION.md](docs/CONVENTION.md)**：aos agent 慣例（P-05～P-48）——我們自己人寫 agent 時照抄的標準形狀，不要求別人守。
 - **[templates/](templates/README.md)**：`eca-claude`（外部 coding agent 範本）與 `agent-fsm`（aos 自己的 loop／fsm agent 範本，idle／think／wait／act 四格），都用 `aos-agent ctl add` 掛（宣告在 `interfaces.json`）；`agent-fsm` 的 think 組請求、wait 經 [kernel/](kernel/README.md) 的 llm-kernel 寄信與收回信。
 - **[kernel/](kernel/README.md)**：llm-kernel 的啟動與問腦用法、daemon-judge／procs-kernel 的判官接法。
 - **10-24 一天的嘗試**（使用者「我隨便說，你隨便做，反正只是嘗試」；代定都可翻案，一覽在 [session log 10-24](../wf/session_logs/2026-10-parts/12-10-24.md#2026-10-24)）：[lib/](lib/README.md)（工具＝函式庫）、給人用的 say／listen（在 [aos-agent](cmd/aos-agent/README.md) 裡）、[aos-mcp](cmd/aos-mcp/README.md)、[aos-grow](cmd/aos-grow/README.md)（函數成長）、[langs/](extras/langs/README.md)（Janet、Lua 寫 aos）、[aos-sandbox](cmd/aos-sandbox/README.md)（Linux 權限與沙箱）。
