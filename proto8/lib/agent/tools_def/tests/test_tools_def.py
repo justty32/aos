@@ -173,6 +173,27 @@ class ToolsDef(unittest.TestCase):
         self.assertNotIn("made", r.stdout)                                               # 手寫的工具不重產
         self.assertIn("exit 0: 42", r.stdout)
 
+    def test_tooldef_inside_metainfo_counts(self):
+        # 11-12 metainfo（N-69、M20、M22）：只有 _metainfo.json 的 tooldef 也算「有」；兩處都有多一行 note
+        d = self.ws / "m"
+        d.mkdir()
+        (d / "_entry.json").write_text('["python3", "-c", "import json,sys; a=json.load(sys.stdin); print(a[\\"a\\"]*a[\\"b\\"])"]')
+        td = {"description": "Multiply a by b.", "parameters": {"type": "object", "properties": {
+            "a": {"type": "number", "description": "a"}, "b": {"type": "number", "description": "b"}}}}
+        (d / "_metainfo.json").write_text(json.dumps({"summary": "Multiply", "tooldef": td}))
+        r = self.run_tool({"op": "check", "path": "m", "sample": {"a": 6, "b": 7}})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("stage 3 of 3", r.stdout)
+        self.assertIn("exit 0: 42", r.stdout)
+        self.assertNotIn("both", r.stdout)
+        r = self.run_tool({"op": "add_tooldef", "path": "m", "description": "x"})
+        self.assertTrue(r.stdout.startswith("tools_def: error: PathExists"), r.stdout)
+        (d / "_tooldef.json").write_text(json.dumps({"description": "Multiply two numbers."}))
+        r = self.run_tool({"op": "check", "path": "m"})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("note  tooldef: both _metainfo.json#/tooldef and _tooldef.json; _tooldef.json wins on the same key", r.stdout)
+        self.assertIn("valid, parameters: a, b", r.stdout)
+
     def test_arguments(self):
         for args, want in (({}, "ArgumentsBad"), ({"op": "x"}, "OpUnknown"), ({"op": "check", "path": "a", "sample": {}, "zz": 1}, "ArgumentsBad"),
                            ({"op": "new", "path": "a", "sample": {}}, "ArgumentsBad op new does not take sample"),

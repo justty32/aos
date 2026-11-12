@@ -399,6 +399,20 @@ def load_part(obj, base, key):
         return True, None
 
 
+def load_tooldef(obj, base, mi):
+    """tooldef 兩處（11-12 metainfo，N-69 推薦讀法、11-12 M20）：_metainfo 裡的 tooldef 或獨立的 _tooldef 任一處有＝有；
+    值＝頂層鍵淺合併（外面贏）。回 (在不在, 值, 兩處都有)。"""
+    has_out, out = load_part(obj, base, "_tooldef")
+    if not (isinstance(mi, dict) and "tooldef" in mi):
+        return has_out, out, False
+    inside = mi["tooldef"]
+    if not has_out:
+        return True, inside, False
+    if isinstance(inside, dict) and isinstance(out, dict):
+        return True, {**inside, **out}, True
+    return True, (inside if out is not None and not isinstance(inside, dict) else out), True
+
+
 def aos_tools_check(target):
     """資料夾或 JSON 檔：在暫存資料夾開一份登記檔，aos-tools add＋get（包現成的檢查）；回 bad 句子或 None。"""
     with tempfile.TemporaryDirectory(prefix="tools-def-") as tmp:
@@ -433,7 +447,10 @@ def op_check():
         has_mi = not probs
     elif not has_mi:
         line("note", "metainfo: none (optional; a tool_spec script makes it, or tools_def add_metainfo)")
-    has_td, td = load_part(obj, base, "_tooldef")
+    has_td, td, both = load_tooldef(obj, base, mi)
+    if both:
+        line("note", "tooldef: both %s; %s wins on the same key" % (
+            ("_metainfo.json#/tooldef and _tooldef.json", "_tooldef.json") if obj is None else ("_metainfo.tooldef and _tooldef keys", "_tooldef")))
     if has_td and td is not None:
         probs = tool_spec.tooldef_problems(td)
         if isinstance(td, dict) and td.get("description") == skeleton_description() and not os.path.samefile(base, SKELETON):
@@ -497,7 +514,8 @@ def staged(loc):
     del report[n:]
     has_entry = runnable or (obj is not None and "_entry" in obj) or \
         (obj is None and any(os.path.exists(os.path.join(base, x)) for x in ("_entry", "_entry.json")))
-    return obj, has_entry, script, load_part(obj, base, "_metainfo")[0], load_part(obj, base, "_tooldef")[0]
+    has_mi, mi = load_part(obj, base, "_metainfo")
+    return obj, has_entry, script, has_mi, load_tooldef(obj, base, mi)[0]
 
 
 def stage_line(loc):
