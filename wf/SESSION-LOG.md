@@ -16,7 +16,7 @@
 - **open｜外部 MCP**：兩半都做完；待裁與代定在 WAIT_USER；沒驗的、留題（`--envs` 明文、server 壞了 aos 看不到、常駐 proc）、沒經 Argon 審見 08 → [external-mcp 08](../proto8/thinking/2026-11/12/external-mcp/08-fsm施工結果.md)、[06](../proto8/thinking/2026-11/12/external-mcp/06-施工結果.md)
 - **open｜json 工具續行**：aos-json 的 add／ls／search、json_len、複雜組 multi → [json-tools 03](../proto8/thinking/2026-11/12/json-tools/03-multi與複雜組補齊.md)
 - **open｜通用 kernel 框架**：圖紙出了、開工等假日（兩處待使用者，WAIT_USER）；只設 `AOS_KERNEL` 仍 `DaemonMissing` → [kernel-framework](../proto8/thinking/2026-11/12/kernel-framework/README.md)、[kernel-small-fixes](../proto8/thinking/2026-11/12/kernel-small-fixes.md)
-- **open｜wf/ 往 aos 體系走**：使用者先玩；11-12 晚裁了五點（內容走 json、人當成一個 agent 收信、檢查與 always-on 之後自然做），主 session 接 aos「明天開始」；對標調查在跑 → [wf-to-aos](../proto8/thinking/2026-11/12/wf-to-aos.md#現有東西夠不夠對標-wf-規矩11-12-晚家機)
+- **open｜wf/ 往 aos 體系走**：使用者先玩；11-12 晚裁了五點（內容走 json、人當成一個 agent 收信、檢查與 always-on 之後自然做），主 session 接 aos「明天開始」；對標調查已回：必須的都有、沒有硬性缺的，缺的是小輔助，明天主 session 先卡在 aos MCP 登記檔兩格壞、0 支工具 → [wf-to-aos 調查結論](../proto8/thinking/2026-11/12/wf-to-aos.md#調查結論)
 - **open｜試驗場**：家機 11-12 晚已照 main `8c4d73d15` 整個重建兩次（第二次含 eca tools_sub、外部 MCP 示範、index 帶 index，實跑過；樹停著），之後 main 的拆檔沒刷進去 → [playground-home](../proto8/thinking/2026-11/12/playground-home.md)；公司那份仍 open（12:45 之後的變更沒刷） → [playground](../proto8/thinking/2026-11/12/playground.md)
 - **open｜線 K 已知問題**：do_task 在摺疊中途被砍、留下的訊息會重複一次 → [fork-and-do-task 02](../proto8/thinking/2026-11/11/fork-and-do-task/02-do_task.md)
 - **open｜11-11 線 I／線 C 補驗**：claude haiku 補一輪（new_mail；線 C 撞額度沒問成那輪）；i18n 只記想法 → [mail-notify](../proto8/thinking/2026-11/11/mail-notify.md)、[knowledge-fix 02](../proto8/thinking/2026-11/11/knowledge-fix/02-施工結果與待裁.md)、[i18n](../proto8/thinking/2026-11/11/i18n.md)
