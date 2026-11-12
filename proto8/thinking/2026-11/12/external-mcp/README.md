@@ -20,6 +20,7 @@
 | [04 邊緣狀況](04-邊緣狀況.md) | 原生掛這條的 26 項（第 5 項作廢） |
 | [05 http＋bearer 試接](05-http-bearer試接.md) | 11-12 下午實測：接得上；token 怎麼給才不漏；對圖紙的調整建議（第二版的依據） |
 | [06 施工結果](06-施工結果.md) | 11-12 下午施工：五步各一個 commit、怎麼驗的、代定 E1～E7、沒做的、家機注意、搬一隻現有 Codex agent 的照抄步驟 |
+| [07 fsm 施工單](07-fsm施工單.md) | fsm 經 aos 那條切成九步（每步半天內、各一個 commit、各有驗法；步 2 做完就看得到 `aos-tools call` 叫到外部工具，步 8 才要真腦）、一題待裁、代定 F1～F12；家機照它派工 |
 
 ## 已裁的三題（使用者 11-12：「都按照推薦。」）
 
@@ -86,7 +87,7 @@ fsm 的 tools.json {"$override": [{"$env": "AOS_HOME", "$path": "/lib/packs/look
 | 3 | claude 身：`mcp.json` 跟 aos 那台並排、`--strict-mcp-config` 照留、`--allowedTools mcp__<名>` | 半天 |
 | 4 | stdio server＋`aos-mcp-launch`（兩身）；驗證用再起一台 aos-mcp 當外部 server（不用下載、不用金鑰） | 半天～1 天 |
 | 5 | 範本與說明、定義檢查 | 半天 |
-| 延後 | fsm 那條：匯入成包、client、`mcp_tool`、`sync`、經 aos 的 http、常駐 proc | 照 11-11 的 03 |
+| 延後 | fsm 那條：匯入成包、client、`mcp_tool`、`sync`、經 aos 的 http、常駐 proc（細切見 [07](07-fsm施工單.md)） | 照 11-11 的 03 |
 
 ## 代定（照原則與既有裁定定的，每條可翻案）
 
