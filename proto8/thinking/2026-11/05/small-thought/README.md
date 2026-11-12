@@ -43,7 +43,7 @@
 
 **現況（11-06 K-6）**：`thought` 的 `from` 必填、由呼叫方指定定義，不認固定範本；沒給 `tools` 保留定義原工具組，`[]` 才清空。`timeout_s` 預設 600，只要求有限正數、不照範本算上限。深度由 `AOS_THOUGHT_DEPTH` 經 `aos-agent ctl add --envs` 傳入；tools／llm 覆蓋層都按 `interfaces.json` 的宣告路徑讀寫。以下保留當時紀錄；現行用法見 [lib/docs/03](../../../../lib/docs/03-索引-agent等.md#索引agent)。
 
-**做了**：[lib/agent/thought](../../../../lib/agent/thought/_entry)（`_entry`、`_tooldef.json`、`_metainfo.json`），照 02、03 做，不改 agents、memory、agent-fsm 範本、extras/agent。說明：[lib/docs/03](../../../../lib/docs/03-索引-agent等.md#索引agent)、知識庫節點 [agents/thought](../../../../knowledge/aos/agents/thought.md)（給 agent：何時用 thought、何時用 agents）。
+**做了**：lib/agent/thought（`../../../../lib/agent/thought/_entry`）（`_entry`、`_tooldef.json`、`_metainfo.json`），照 02、03 做，不改 agents、memory、agent-fsm 範本、extras/agent。說明：[lib/docs/03](../../../../lib/docs/03-索引-agent等.md#索引agent)、知識庫節點 agents/thought（`../../../../knowledge/aos/agents/thought.md`）（給 agent：何時用 thought、何時用 agents）。
 
 **手跑（家機）**：T1 `echo '{}' | _entry`＝`thought: error: GoalMissing …` 退 1；假腦劇本父叫三次 thought（A 截 120 字帶 `[truncated]`、B `keep` 帶 `details:`、C 子配 math 答 `6*7 is 42.`），父 history 只有三則結論、預設的兩隻子已不在表上；深度：父→子→孫，孫再叫＝`DepthExceeded`；`fake-slow`（20 秒）＋`timeout_s: 5`＝`AnswerMissing … (details: procs/t-…/)` 退 1、子 stopped、stack 在；被 TERM＝退 143、`listen` 沒留孤兒。真腦（LM Studio gemma-4-e4b）：叫父「用 thought 從知識庫凝聚 endpoint pack 是什麼」，父自己叫 `thought {"goal": …, "tools": [{"name": "memory"}], "max_chars": 200}`，父 history 只有 user／一則 tool_call／結論一句／答案，子的 memory 來回全不在。
 

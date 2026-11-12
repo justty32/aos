@@ -2,7 +2,7 @@
 
 # aos 體系知識庫（層級式記憶工具的第一個知識庫）
 
-位置 [`proto8/knowledge/aos/`](../../../../knowledge/aos/README.md)（說明在 [knowledge/README](../../../../knowledge/README.md)）。英文、給 Haiku／luna 級小模型讀；一節 ≤ 2 KB、十節共 18 KB，但 agent 一次只拿根（2 KB）＋它需要的一兩節。
+位置 `proto8/knowledge/aos/`（`../../../../knowledge/aos/README.md`）（說明在 [knowledge/README](../../../../knowledge/README.md)）。英文、給 Haiku／luna 級小模型讀；一節 ≤ 2 KB、十節共 18 KB，但 agent 一次只拿根（2 KB）＋它需要的一兩節。
 
 ## 節點樹（根＋九節）
 

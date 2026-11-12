@@ -1,6 +1,6 @@
 # 01 fork：把當下的自己複製一份、給一個 goal、只收回結論（11-11 線 K 施工）
 
-← [fork-and-do-task](README.md)｜程式 [lib/agent/fork](../../../../lib/agent/fork/)、[lib/agent/fork_copy.py](../../../../lib/agent/fork_copy.py)
+← [fork-and-do-task](README.md)｜程式 [lib/agent/fork](../../../../lib/agent/fork/)、lib/agent/fork_copy.py（`../../../../lib/agent/fork_copy.py`）
 
 使用者原話與五題裁定見 [README](README.md)（「把fork單獨拉出來做為工具」「一律連對話複製」「拿掉這個能力」）。施工後又一句（頂層傳話）：
 

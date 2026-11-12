@@ -47,7 +47,7 @@
   2. `--allowedTools` 多 `mcp__aos_sub`；
   3. `--settings` 的 PreToolUse hook（matcher `mcp__aos__.*` → `cli_session.py guard`）：輸入有 `agent_id`＝deny＋一句說明；讀不懂輸入也 deny。畫面那條路併進原本那份 hook 設定。
 - `templates/eca-claude/`：`cli.json`（`--tools` 加 `Agent,Skill`、`"tools_sub": "tools_sub.json"`）、新檔 `tools_sub.json`。
-- 測試 `lib/agent/tests/test_cli_tools_sub.py`（14 支）；說明在 [templates/docs/01 § 子 agent 與 skill](../../templates/docs/01-eca-claude.md#子-agent-與-skill11-12-晚-eca-task-subagent)。
+- 測試 `lib/agent/tests/test_cli_tools_sub.py`（14 支）；說明在 [templates/docs/01 § 子 agent 與 skill](../../../templates/docs/01-eca-claude.md#子-agent-與-skill11-12-晚-eca-task-subagent)。
 
 **真腦實測（haiku，暫存定義＝範本原樣、不掛 daemon 直接跑 `aos-eca-turn`）**：一封信要它做四件事——
 1. 主 agent 自己叫 `mcp__aos__peek_now_time` → `2026-11-12T11:06:38Z`（guard 沒擋主對話）。
