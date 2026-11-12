@@ -7,6 +7,7 @@
 - 「等index,json工具都好了之後，感覺我就可以來玩eca了，還是說有啥需要處理的？沒有的話就幫我把WSL試驗場弄好吧。」
 - 中午：「試驗場我正在玩。proto8/knowledge已經弄好了嗎？然後可以的話幫我準備一個eca opus的。我說說接下來我的打算：用這個eca opus，搭配knowledge，讓他可以開始做各種事情。haiku的智能還是不太夠啦老實說」
 - 接著：「都先幫我設置無上限吧」（花費上限）
+- 12:40 前後：「刷」，接著改口「清掉現有的全部」
 
 ## 結論
 
@@ -21,6 +22,14 @@
 - **不設花費上限**：eca_bob、eca_opus 的 `cli.json` `print_flags` 改 `[]`（不帶 `--max-budget-usd`）；eca_cody（codex）本來就沒有、fsm_ann 是假腦。範本預設 0.5 不動。
 - **花費上限是什麼**（程式與實測）：`cli.json` 的 `print_flags` 原樣接在每次 `claude -p` 後面（`lib/agent/cli_session.py` 的 claude 那段），所以 `--max-budget-usd N` 管的是「claude CLI 跑一次」＝aos-eca-turn 的一輪（queue 裡等著的那批訊息，通常是使用者的一句）。實測 `--max-budget-usd 0.000001` 問 haiku 一句：claude 回 `subtype error_max_budget_usd`、`is_error true`、`result null`，已花 0.001 美金照算（花完才檢查）；cli_session 看到 `is_error` 就報 `CliFailed`，那輪沒有回答。
 - **knowledge**：試驗場的 `knowledge/` 是 10:46 重刷時抄的，跟 repo `e200fffe2` 的 `proto8/knowledge` 一模一樣（最後一次改是 `c09713572`）。只重抄那一塊、不停樹：`cd ~/code/playground && rm -rf knowledge && cp -r ~/repo/aos-tools/proto8/knowledge . && find knowledge -name __pycache__ -prune -exec rm -rf {} +`。
+
+## 12:45 乾淨重刷（照 main `a85603894`）
+
+- **清了什麼**：備份整份到 `~/code/playground.bak-1112-1245` 後，四隻的對話、兩層 stack、總機帳本全清，`ws/` 裡的東西（`notes/`、`knowledge/`、`defs/`、`hooks/`）也清掉，`ws/` 資料夾本身留著（claude 的信任跟著路徑）。knowledge 照舊只放在 `~/code/playground/knowledge`，ws 裡不放。
+- **留了什麼**：四隻（eca_bob haiku、eca_cody gpt-6-luna workspace-write、eca_opus opus、fsm_ann 假腦）照範本重抄，eca_bob、eca_opus 照舊不設花費上限；`fake-demo-json`、`stupid-fast` 照留。
+- **C++ 重 build**：中午後 aos-daemon 有改（壞信回 BodyBad），在 `~/repo/aos-tools/proto8/impls` 照 testing.md 的建法 `cmake -B build && cmake --build build`（`flock`＋`nice -n 19`、`-j2`）重建，`aos-daemon` binary 時間 11-11 15:36 → 11-12 12:43，被 git 追蹤的檔沒變。BodyBad 沒有另外寄壞信實測，只看 binary 時間。
+- **腳本兩處改**：① 認「試驗場底下還有行程」時跳過 `~/.vscode-server/` 的行程——使用者用 VS Code 開著試驗場，它的 markdown／json 語言伺服器 cwd 在試驗場底下，第一次跑被當成樹沒停而中止（沒動到任何東西）；② 最後一步改成清整個 `ws/` 的內容。已拆工具的空殼夾（knowledge_*、memory*、thought、agents、aos/knowledge_check、base/bash）照舊被「刪空資料夾」那步擋掉，沒抄進來。
+- **驗證**：工具支數 fsm 46、eca 三隻各 25；fsm_ann 假腦答 `FAKE ANSWER …`；eca_bob（haiku）一題 4 秒 0.0053 美金：`json_get nothere/missing.json#/x` 回 `FileMissing file not found: nothere/missing.json (create it first, …)`，整段工具結果（含下層 aos-json 那行）沒有 `/home/`；`index_view ../knowledge/aos` 回 `[index] ../knowledge/aos/_index.json, 20 entries` 加每項說明。驗完 eca_bob、fsm_ann 重掛清掉對話，四隻 history 都 0 行，樹停著。opus、cody 這次沒實測。
 
 ## 跟 11-11 的腳本差在哪
 
@@ -48,6 +57,7 @@ cd "$HOME"
 mine() { for p in /proc/[0-9]*; do n=${p#/proc/}; [ "$n" != "$$" ] || continue
   case "$(command cat "$p/comm" 2>/dev/null)" in bash|zsh|sh|dash|fish) continue;; esac
   c=$(readlink "$p/cwd" 2>/dev/null || true); a=$(command cat "$p/cmdline" 2>/dev/null | tr '\0' ' ')
+  case "$a" in *"/.vscode-server/"*) continue;; esac       # the user's editor open on the playground is not ours
   case "$c/ $a" in "$PG"/*|*" $PG"/*|*"=$PG"/*) echo "$n $a";; esac; done; }
 rp=$(sed -n 's/.*"pid": *\([0-9][0-9]*\).*/\1/p' "$PG/.stack/state.json" 2>/dev/null | head -n 1)
 if [ -n "$rp" ] && [ "$(readlink "/proc/$rp/cwd" 2>/dev/null || true)" = "$PG/root" ]; then
@@ -90,7 +100,8 @@ EOF
 rm -rf agents/eca_cody/screen
 aos-json del 'agents/eca_cody/interfaces.json#/aos-agent/screen'
 aos-json set agents/eca_cody/_metainfo.json#/summary '"Run Codex CLI (gpt-6-luna) as an aos agent: one turn per queue batch, answers appended to history; no screen."'
-rm -rf .stack ws/.stack && find llm_kernel -mindepth 1 -maxdepth 1 ! -name def -exec rm -rf {} +
+rm -rf .stack && find llm_kernel -mindepth 1 -maxdepth 1 ! -name def -exec rm -rf {} +
+find ws -mindepth 1 -maxdepth 1 -exec rm -rf {} +          # everything inside ws/ (the folder stays: claude trusts that path)
 echo "refreshed: $PG (agents: $(command ls agents | tr '\n' ' '))"
 )
 ```
