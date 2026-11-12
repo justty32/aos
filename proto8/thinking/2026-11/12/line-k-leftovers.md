@@ -30,6 +30,8 @@
 | K3 | 修在 `aos-agent history`（源頭），不在 self_history／do_task 改字串；人在終端看到的也跟著變成相對的，要絕對位置用 `aos-agent ctl where` | 同上 |
 | K4 | fork 給 `ctl add` 的定義與工作區改相對（跟 stack 一樣） | `proto8/lib/agent/fork/_entry` 的 `ctl add` 那行 |
 
+**11-12 使用者裁：K1～K4 都認可（Q06 a；同日更早使用者「代定都OK。」）**（[small-rulings](small-rulings.md)）
+
 ## 沒處理、只記下
 
 - 錯誤行裡的路徑：`aos-agent history` 寫不進去時的 `WriteFailed`（還有其他指令的錯誤行）會帶絕對路徑，工具會把錯誤行接上去，也就進了 history。只在出錯時才有，這次沒動。

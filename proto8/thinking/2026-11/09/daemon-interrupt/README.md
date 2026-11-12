@@ -27,7 +27,7 @@
 - **三種模式**：`--ctl`＝立刻跑一圈讀 ctl.json、procs_ctl、對表、寫窗，這圈不認領信箱、不跑身體；`--mail`＝再加信箱；`--all`＝提前一整圈（含身體，不管 interval 到了沒；`max` 照算）。平常的 super loop 圈完全不變，poke 只是提早叫醒。身體跑到一半（含內嵌單子 `run_inline`）不打斷，跑完才補看。
 - **SIGUSR1／SIGUSR2 一律擋住**（不再把 daemon 打死）；子行程起來前遮罩還原成 daemon 擋之前的樣子（aos-util `restore_signals`），身體、子項照常收得到這些訊號。
 - **只有 aos-daemon 與這支指令懂訊號**：proc 與其他 aos 程式照舊只寫檔；aos-loop 不接 poke（引擎只多一個通用掛鉤 `wake_`／`woke`，aos-loop 不設）；其他子命令不動。條文：[N-17 的 11-09 例外](../../../../docs/NORMS/05-基礎設施-窗/06-N-17.md)。
-- **跟 04 推薦的差別**：使用者選了**訊號**而非 socket（04 題 1 推薦 socket 當預設鈴）；指令叫 **poke**（使用者原提 ring）；**不做 daemon.json 的 `interrupt` 開關**（04 細節 2、3：開了才在 state 宣告），改成 daemon 一律宣告 `poke` 欄；寄件人從各口加 `--urgent`（04 題 3、細節 4）改成**獨立的 `poke` 子命令**，`aos-post send`、`py/daemon_ctl` 的寄信函式不加旗標；04 題 4（擋 SIGUSR1／2）照推薦，但改成不論有沒有人用 poke 都擋；04 的搶占（細節 7）、daemon 叫子項（細節 8）、socket 與 plan9 都沒做。
+- **跟 04 推薦的差別**：使用者選了**訊號**而非 socket（04 題 1 推薦 socket 當預設鈴）；指令叫 **poke**（使用者原提 ring）；**不做 daemon.json 的 `interrupt` 開關**（04 細節 2、3：開了才在 state 宣告），改成 daemon 一律宣告 `poke` 欄；寄件人從各口加 `--urgent`（04 題 3、細節 4）改成**獨立的 `poke` 子命令**，`aos-post send`、`py/daemon_ctl` 的寄信函式不加旗標；04 題 4（擋 SIGUSR1／2）照推薦，但改成不論有沒有人用 poke 都擋；04 的搶占（細節 7）、daemon 叫子項（細節 8）、socket 與 plan9 都沒做。 **11-12 使用者裁：poke 就夠；socket、plan 9、搶占以後再說（Q11 a）**（[small-rulings](../../12/small-rulings.md)）
 
 ## 結論（白話；裁定前的規劃）
 
