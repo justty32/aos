@@ -2,11 +2,11 @@
 
 ## 一、aos 保證的（不是慣例，是底）
 
-aos 保證的底——六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`；§ 19）、`aos-exec [FLAGS...] XXX [args...]`（§ 15；旗標有 `--ws`、`--stack`（11-03）與 `--dotenv-override`）、aos-exec 只做那幾件事、WS 不存在或入口缺／壞時退 1、找入口的規則與 `#/` 尋址——已升成規範，見 NORMS：**P-01＝[N-57](../../NORMS/10-基礎設施-定義與工作區/01-N-57.md)、P-02＝N-58、P-03＝N-59、P-04＝N-60**；N-61（找入口與種類判斷）、N-62（`#/`）沒有對應的 P 號。這裡不重複正文，條號 P-01～P-04 只留給別處的引用。慣例（P-05 起）建立在這個底上。
+aos 保證的底——六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`；§ 19）、`aos-exec [FLAGS...] XXX [args...]`（§ 15；旗標有 `--ws`、`--stack` 與 `--dotenv-override`）、aos-exec 只做那幾件事、WS 不存在或入口缺／壞時退 1、找入口的規則與 `#/` 尋址——已升成規範，見 NORMS：**P-01＝[N-57](../../NORMS/10-基礎設施-定義與工作區/01-N-57.md)、P-02＝N-58、P-03＝N-59、P-04＝N-60**；N-61（找入口與種類判斷）、N-62（`#/`）沒有對應的 P 號。這裡不重複正文，條號 P-01～P-04 只留給別處的引用。慣例（P-05 起）建立在這個底上。
 
 ## 二、佈局（每檔一句）
 
-混合寫法（§ 10 使用者「好主意」）：狀態表一律寫在 `fsm.json`；一行講完的格內嵌單子；有真邏輯的格 `exec` 寫子資料夾名。fsm 停在哪格記在 stack 的 `stage.txt`（使用者 11-04 題 10「fsm改名，嘗試用同義詞」，[four-elements 07](../../../thinking/2026-11/04/four-elements/07-實作步驟.md) 步 3；fsm.json 的 `start`／`states` 不改），不寫 trace（N-39）。程式已照這張做完（見第十節）。〔11-04 加註：下面這棵樹是 agent-bob（舊協議：工作區題目資料夾，P-11），11-04 隨 proto8/tests 刪了，「已照這張做完」說的是當時；現行標準範本是走 queue 的 [templates/agent-fsm](../../../templates/README.md#agent-fsm)（`_entry`＝JSON `["aos-loop", "loop.json"]`、四格 idle／think／wait／act 都是單子叫範本裡的 python，P-27、P-08 的 11-04 晚加註）；樹照留，條文改不改由使用者定〕
+混合寫法（§ 10 使用者「好主意」）：狀態表一律寫在 `fsm.json`；一行講完的格內嵌單子；有真邏輯的格 `exec` 寫子資料夾名。fsm 停在哪格記在 stack 的 `stage.txt`（使用者 11-04 題 10「fsm改名，嘗試用同義詞」，[four-elements 07](../../../thinking/2026-11/04/four-elements/07-實作步驟.md) 步 3；fsm.json 的 `start`／`states` 不改），不寫 trace（N-39）。現行標準範本是走 queue 的 [templates/agent-fsm](../../../templates/README.md#agent-fsm)（`_entry` 是沒 `+x` 的 JSON、四格 idle／think／wait／act 都是單子叫範本裡的 python，P-27、P-08）。下面這棵樹是舊協議（工作區題目資料夾，P-11）的 agent-bob 示意，那個範本已不在；樹留不留、換不換成 agent-fsm 由使用者定。
 
 ```
 agent-bob/                 一個 agent＝一個資料夾程式（§ 1）
@@ -16,7 +16,7 @@ agent-bob/                 一個 agent＝一個資料夾程式（§ 1）
                            idle→"idle"（資料夾）、think→單子（直接寫在那格的 exec）、act→"act"（資料夾）
   idle/_entry               格：new/ 有題→0 往下走；沒題→10 請 loop 停（P-19）
   brain.py                 think 格的身體（單子 python3 brain.py，stdout 導到 $AOS_STACK/plan.txt、逾時 120 秒）：
-                           取一題、從 new/ 搬到 cur/ 認領（P-12）、題名寫 stack 的 current.txt、問腦（假腦或 OpenAI 相容端點，P-23；11-04 晚起問腦＝寄信給 llm kernel），答案印 stdout
+                           取一題、從 new/ 搬到 cur/ 認領（P-12）、題名寫 stack 的 current.txt、問腦（P-23），答案印 stdout
   act/_entry                格：把 plan.txt 當題目交給 tools/cathy，拿她的答案寫 $AOS_WS/out/、題目從 cur/ 搬 done/（P-24）
   act/tools/cathy/         act 的工具＝另一隻完整 agent，同一套範本（_entry、loop.json、fsm.json、idle/、brain.py、act/）；
                            act 裡寫 aos-exec tools/cathy（P-33）
@@ -29,12 +29,12 @@ workspace/                 ＝$AOS_WS，使用者的（§ 2）
   done/<題名>              做完的題目從 cur/ 搬來這
   .stack/                  預設 $AOS_STACK（§ 2）＝bob 的 stack：stage.txt、current.txt、plan.txt（P-16）
   .stack/tools/cathy/      cathy 的小格＝她的 stack（P-17）：stage.txt、current.txt、plan.txt
-  .stack/tools/cathy/ws/   cathy 的工作區（bob 備好題目、拿答案的地方）：new/ cur/ out/ done/
+  .stack/tools/cathy/ws/   cathy 的工作區（bob 明給 --ws 的擺法）：new/ cur/ out/ done/
   .stack/tools/cathy/tools/stamp/runs.txt  stamp 的小格（P-17）
 ```
 
 stack 樹就是呼叫樹：`.stack/tools/cathy/tools/stamp/` 一眼看出「bob 叫了 cathy、cathy 叫了 stamp」（P-38、P-17）。
 
-**11-06 註**：樹裡 `.stack/tools/cathy/ws/` 是當時照 P-32 的擺法（bob 明給 `--ws`）；P-32 已移除（使用者 11-06「移除P-32」），現行沒給工作區就沿用呼叫方的 `AOS_WS`，要另放才明給 `--ws`。
+樹裡 cathy 的 `ws/` 是 bob 明給 `--ws` 的擺法；沒給工作區就沿用呼叫方的 `AOS_WS`，要另放才明給 `--ws`（使用者「移除P-32」）。
 
-**11-06 註（11-09 改讀）**：時鐘只放在**根** daemon——根的 daemon.json `procs` 帶一列跑 `aos-clock` 的普通 proc（範本名 `_clock`）＋根定義資料夾 `.env` 一行 `AOS_CLOCK=${AOS_STACK}/clock`；`kernel/*` 等子 daemon 範本預設不帶，照繼承聽外層的鐘，有特殊需求的由人手動加。aos-daemon 程式不認時鐘、沒有 `clock` key。使用者 11-09「預設聽外層。然後開clock這個選項，daemon設定檔預設是不開。大家也通常只在root daemon才開，除非有特殊需求。」（[thinking clock-decouple](../../../thinking/2026-11/09/clock-decouple/README.md)；寫法見 [aos-daemon docs/02](../../../impls/aos-daemon/docs/02-看寫法決定怎麼起.md#時鐘普通一列)）。
+**時鐘**只放在**根** daemon——根的 daemon.json `procs` 帶一列跑 `aos-clock` 的普通 proc（範本名 `_clock`）＋根定義資料夾 `.env` 一行 `AOS_CLOCK=${AOS_STACK}/clock`；`kernel/*` 等子 daemon 範本預設不帶，照繼承聽外層的鐘，有特殊需求的由人手動加。aos-daemon 程式不認時鐘、沒有 `clock` key。使用者 11-09「預設聽外層。然後開clock這個選項，daemon設定檔預設是不開。大家也通常只在root daemon才開，除非有特殊需求。」（[thinking clock-decouple](../../../thinking/2026-11/09/clock-decouple/README.md)；寫法見 [aos-daemon docs/02](../../../impls/aos-daemon/docs/02-看寫法決定怎麼起.md#時鐘普通一列)）。
