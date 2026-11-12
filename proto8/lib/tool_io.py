@@ -133,19 +133,30 @@ def _parameters(tooldef):
 
 
 def load_tooldef(folder):
-    """讀定義；缺檔安靜退回無 schema，其餘壞檔只提醒一次。"""
+    """讀定義：先 _metainfo.json 的 tooldef、再 _tooldef.json，頂層鍵淺合併、同名外面贏（11-12 metainfo，N-69 推薦讀法）；
+    兩處都沒有安靜退回無 schema，其餘壞檔只提醒一次（句子指明哪一處）。"""
+    td, where, used = None, "_tooldef.json", []
     try:
-        with open(os.path.join(folder, "_tooldef.json")) as f:
-            td = json.load(f)
-        if not isinstance(td, dict):
-            raise ValueError("top level must be an object")
-        if _parameters(td) is None:
+        for name, key in (("_metainfo.json", "tooldef"), ("_tooldef.json", None)):
+            where = name if key is None else name + "#/" + key
+            try:
+                with open(os.path.join(folder, name)) as f:
+                    v = json.load(f)
+            except FileNotFoundError:
+                continue
+            if key is not None:
+                if not isinstance(v, dict) or key not in v:
+                    continue
+                v = v[key]
+            if not isinstance(v, dict):
+                raise ValueError("top level must be an object")
+            td, used = (v if td is None else {**td, **v}), used + [where]
+        where = " + ".join(used)
+        if td is not None and _parameters(td) is None:
             raise ValueError("parameters must be an object")
         return td
-    except FileNotFoundError:
-        return None
     except (OSError, ValueError) as e:
-        warn("cannot use _tooldef.json (%s); flags are passed as strings" % e)
+        warn("cannot use %s (%s); flags are passed as strings" % (where, e))
         return None
 
 
