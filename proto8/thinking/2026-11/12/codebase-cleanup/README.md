@@ -75,6 +75,7 @@
 ## 待使用者裁
 
 1. **`lib/metainfo.read`（管 timeout、cost）遇到壞掉的 `_metainfo`**：現在報 `FileBad` 擋下；其他五處讀法都是略過。(a) 維持——壞檔擋下來，不會悄悄用預設 timeout 跑；(b) 改成略過——跟「`_metainfo` 壞掉不報錯」一致，但壞掉的 timeout／cost 會被安靜忽略。建議 (a)：使用者那句原話講的是 index_view，這支管的是上限。
+   - **已裁（11-12 晚）＝(b) 略過**：使用者「當然，全都是觀點，全都是參考用，出事了自行負責。」、確認時「對，略過，出事自己負責」；已施工，各執行點略過後用什麼見 [metainfo-views § 使用者裁定](../metainfo-views.md#使用者裁定11-12-晚)。
 2. **兩份 `read_env_file` 統一成哪種**：(a) 用 aos-tools 的完整 dotenv（`${X}` 展開、行內註解、嚴格引號）——MCP server 檔的 `env_file` 裡值含 `#`、`$`、`\` 的讀法會變；(b) 用 MCP 那份簡單規則——aos-tools 失去插值與嚴格檢查；(c) 維持兩份、文件寫明差異。例：`A=x # note` 現在 aos-tools 讀成 `x`、MCP 讀成 `x # note`。建議 (a)（跟 C++ 的 dotenv 同一套想法），外部 MCP 那條線穩了再做。
 3. **`cli_screen.attach_main`（死碼）**：(a) 刪掉，`cli_session.py` 檔頭講 attach 的幾段一起改（aos-agent 自己有 attach）；(b) 接回 `cli_session.py attach`。建議 (a)。
 4. **範本要不要「抄出去一行都不依賴」**：現在 `templates/agent-fsm` 本來就 import `py` 與 `lib`。若照舊，範本裡的小函式之後可以再往 lib 收；若要完全自帶，就維持各帶一份。這次只在夾內收，不受這題影響。

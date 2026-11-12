@@ -9,5 +9,5 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`README.md`](../../../../../proto8/knowledge/README.md) | proto8/knowledge — 出廠內容樹（普通資料夾＋`.json`，太大的節點補 `_index.json`／`_index` 當客觀 index） |
+| [`README.md`](../../../../../proto8/knowledge/README.md) | proto8/knowledge — 出廠內容樹（普通資料夾＋`.json`，太大的節點補 `_index.json`／`_index`，是通用視角（公用視角）的 index） |
 | [`_description.json`](../../../../../proto8/knowledge/_description.json) | （檔頭沒有一句話） |

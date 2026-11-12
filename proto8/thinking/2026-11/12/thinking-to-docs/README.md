@@ -68,3 +68,5 @@
 ## 待使用者裁 U1～U8
 
 已抽到 [待裁.json](待裁.json)（8 列；欄位：`id`、`題目`＝打架的兩句、`建議`）。一句話：U1 標準範本 agent-bob→agent-fsm（＝W8）；U2 C-54 小寫底線 vs 夾名連字號；U3 「不拿 mailbox 命名」vs 信箱夾叫 mailbox；U4 kernel 打包與軟凍；U5 不同質比幾軸；U6 token 指標與 10B 是不是通則；U7 `_metainfo` 壞了略過 vs `FileBad`（同程式碼庫整理待裁 1）；U8 codex 身沒有只給子 agent 的 MCP（同 eca-task-subagent U1）。
+
+U7 已裁（11-12 晚）＝略過：使用者「對，略過，出事自己負責」，N-69 已改、已施工，見 [metainfo-views § 使用者裁定](../metainfo-views.md#使用者裁定11-12-晚)。
