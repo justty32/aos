@@ -1,6 +1,7 @@
 """process_group - 收掉自己起的那一群子行程：先 TERM 整群、等一下、還在就 KILL；外面來的 TERM／Ctrl-C 變成例外，讓呼叫處先收拾再走。
 
-不是工具（沒有 _entry）；shell、run_python 用 stop、Interrupted、raise_interrupted，lib/agent/cmd_call 的 kill_group 借 stop（等幾秒、吞哪種錯由參數帶）。
+不是工具（沒有 _entry）；run_python 用 stop、Interrupted、raise_interrupted，lib/agent/cmd_call 的 kill_group 借 stop（等幾秒、吞哪種錯由參數帶）。
+shell 自帶同一份、先不改用：cmd/aos-sandbox/examples/shell-boxed 只唯讀掛 tool_io、shell_observed、observed 三支，多 import 一支在沙盒裡就找不到。
 來由：thinking 2026-11/12/codebase-cleanup 線 F——原本 shell、run_python 各一份 stop 與 Interrupted，cmd_call 一份 kill_group。
 """
 import os
