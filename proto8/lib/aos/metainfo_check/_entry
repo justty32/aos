@@ -103,11 +103,17 @@ def check(args):
     samples = observations(records, target)
     if not samples or not any(cost for cost, _ in samples):
         raise tool_io.Error('ArgumentsBad', 'No matching measured costs')
-    meta = metainfo.read(target) or {}
+    notes = []                                   # metainfo 只是參考：壞的宣稱＝沒宣稱（unclaimed），略過的寫進 notes
+    meta = metainfo.read(target, notes) or {}
     cost = meta.get('cost', {})
-    if not isinstance(cost, dict) or not isinstance(cost.get('token', {}), dict):
-        raise metainfo.MetainfoError('FileBad', 'cost and cost.token must be objects')
-    claims = {'/time_ms': cost.get('time_ms'), '/token/in': cost.get('token', {}).get('in')}
+    if not isinstance(cost, dict):
+        notes.append('cost is not an object, skipped')
+        cost = {}
+    token = cost.get('token', {})
+    if not isinstance(token, dict):
+        notes.append('cost.token is not an object, skipped')
+        token = {}
+    claims = {'/time_ms': cost.get('time_ms'), '/token/in': token.get('in')}
     rows = []
     for key, claim in claims.items():
         measured, estimates, ratios = [], [], []
@@ -115,11 +121,16 @@ def check(args):
             if key not in values:
                 continue
             value = values[key]
-            estimate = metainfo.eval_cost(claim, variables)
+            estimate = None
+            if claim is not None:
+                estimate = metainfo.eval_cost(claim, variables, notes)
+                if estimate is not None and estimate < 0:
+                    notes.append('cost %s estimate %s is negative, skipped' % (key, estimate))
+                    estimate = None
+                if estimate is None:             # 不認得的求值器或壞了：整格當沒宣稱（含前面已算的），提醒只記一次
+                    claim, estimates, ratios = None, [], []
             measured.append(value)
             if estimate is not None:
-                if estimate < 0:
-                    raise metainfo.MetainfoError('FileBad', 'Cost estimates must be non-negative')
                 estimates.append(estimate)
                 ratios.append(value / estimate if estimate else (1 if value == 0 else math.inf))
         if not measured:
@@ -133,14 +144,17 @@ def check(args):
         else:
             row['verdict'] = 'unclaimed'
         rows.append(row)
-    return {'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z'), 'defs': rows}
+    result = {'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z'), 'defs': rows}
+    if notes:
+        result['notes'] = notes
+    return result
 
 
 def main():
     tool_io.start('metainfo-check')
     try:
         print(json.dumps(check(tool_io.arguments()), allow_nan=False))
-    except (tool_io.Error, metainfo.MetainfoError) as error:
+    except tool_io.Error as error:
         tool_io.die(error.code, str(error))
     except (OSError, ValueError, TypeError, KeyError, OverflowError) as error:
         tool_io.die('ArgumentsBad', str(error))

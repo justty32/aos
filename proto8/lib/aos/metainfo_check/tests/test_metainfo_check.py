@@ -121,10 +121,38 @@ class CheckTests(unittest.TestCase):
             self.assertIn('error: ArgumentsBad', result.stderr)
             self.assertEqual(result.stdout, result.stderr)
 
-    def test_invalid_formula_reports_calbad(self):
-        with self.assertRaises(module.metainfo.MetainfoError) as error:
-            self.run_check({'time_ms': {'cal': 'in_bytes'}}, [{'cost': {'time_ms': 1}}])
-        self.assertEqual(error.exception.code, 'CalBad')
+    def test_bad_claims_are_skipped_with_notes(self):
+        """壞的宣稱＝當沒宣稱（unclaimed），頂層 notes 說略過了什麼；沒略過就沒有 notes。"""
+        observed = [{'cost': {'time_ms': 1, 'token': {'in': 2}}}]
+        for claims in ({'time_ms': {'cal': 'in_bytes'}}, {'time_ms': 'soon'}, {'time_ms': -5},
+                       {'time_ms': {'cal': '1 -'}}):
+            with self.subTest(claims=claims):
+                (self.target / '_metainfo.json').write_text(json.dumps({'cost': claims}))
+                result = module.check({'def': str(self.target), 'observed': observed})
+                rows = {r['key']: r for r in result['defs']}
+                self.assertEqual(rows['/time_ms']['verdict'], 'unclaimed')
+                self.assertIsNone(rows['/time_ms']['claimed'])
+                self.assertEqual(len(result['notes']), 1, result['notes'])
+        for meta in ('{', json.dumps({'cost': 5}), json.dumps({'cost': {'token': 3}}), '[]'):
+            with self.subTest(meta=meta):
+                (self.target / '_metainfo.json').write_text(meta)
+                result = module.check({'def': str(self.target), 'observed': observed})
+                self.assertEqual({r['verdict'] for r in result['defs']}, {'unclaimed'})
+                self.assertTrue(result['notes'])
+        rows = self.run_check({'time_ms': {'cal': 'in_bytes'}},     # 一個樣本算不出＝整格不算，不混著前面算出的
+                              [{'in_bytes': 5, 'cost': {'time_ms': 5}}, {'cost': {'time_ms': 5}}])
+        self.assertEqual(rows['/time_ms']['verdict'], 'unclaimed')
+        (self.target / '_metainfo.json').write_text(json.dumps({'cost': {'time_ms': 1}}))
+        self.assertNotIn('notes', module.check({'def': str(self.target), 'observed': observed}))
+
+    def test_bad_metadata_runs_through_the_tool(self):
+        (self.target / '_metainfo.json').write_text('{')
+        result = subprocess.run([sys.executable, str(ENTRY)], text=True, capture_output=True,
+                                input=json.dumps({'def': str(self.target), 'observed': [{'cost': {'time_ms': 1}}]}))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        out = json.loads(result.stdout)
+        self.assertEqual(out['defs'][0]['verdict'], 'unclaimed')
+        self.assertIn('skipped', out['notes'][0])
 
 
 if __name__ == '__main__':

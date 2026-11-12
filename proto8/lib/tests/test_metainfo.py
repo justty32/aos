@@ -1,4 +1,4 @@
-"""Verify optional metadata reading, timeout declarations, and safe cost formulas."""
+"""Verify optional metadata reading, timeout declarations, and safe cost formulas; bad metadata is skipped with a note."""
 
 import contextlib
 import io
@@ -14,11 +14,13 @@ import metainfo
 
 
 class MetainfoTests(unittest.TestCase):
-    def assert_error(self, code, function, *args):
-        with self.assertRaises(metainfo.MetainfoError) as caught:
-            function(*args)
-        self.assertEqual(caught.exception.code, code)
-        self.assertTrue(str(caught.exception))
+    def assert_skipped(self, function, *args):
+        """壞的＝當沒寫：回 None、不丟例外，notes 多一句英文說明。"""
+        self.assertIsNone(function(*args))
+        notes = []
+        self.assertIsNone(function(*args, notes))
+        self.assertEqual(len(notes), 1, notes)
+        self.assertTrue(notes[0].endswith("skipped"), notes)
 
     def test_read_directory_and_optional_metadata(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -41,7 +43,7 @@ class MetainfoTests(unittest.TestCase):
                 self.assertEqual(metainfo.read(path), expected)
             for data in ([], {"_metainfo": None}, {"_metainfo": 5}):
                 path.write_text(json.dumps(data))
-                self.assert_error("FileBad", metainfo.read, path)
+                self.assert_skipped(metainfo.read, path)
 
     def test_pointer_location(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -49,25 +51,30 @@ class MetainfoTests(unittest.TestCase):
             path.write_text(json.dumps({"tools": {"a/b": {"_metainfo": {"timeout_ms": 7}}, "plain": {}}}))
             self.assertEqual(metainfo.read(f"{path}#/tools/a~1b"), {"timeout_ms": 7})
             self.assertIsNone(metainfo.read(f"{path}#/tools/plain"))
-            self.assert_error("FileBad", metainfo.read, f"{path}#/tools/missing")
-            self.assertIsNone(metainfo.read(f"{directory}/none.json#/x"))
+            self.assert_skipped(metainfo.read, f"{path}#/tools/missing")
+            notes = []
+            self.assertIsNone(metainfo.read(f"{directory}/none.json#/x", notes))
+            self.assertEqual(notes, [])
 
     def test_bad_files(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "_metainfo.json"
             for contents in (b"{", b"[]", b"null", b"1", b"\xff"):
                 path.write_bytes(contents)
-                self.assert_error("FileBad", metainfo.read, directory)
+                self.assert_skipped(metainfo.read, directory)
             with patch.object(Path, "read_text", side_effect=PermissionError("Access denied")):
-                self.assert_error("FileBad", metainfo.read, directory)
+                self.assert_skipped(metainfo.read, directory)
 
     def test_timeout(self):
         for metadata in (None, {}, {"cost": {"time_ms": 42}}):
-            self.assertIsNone(metainfo.timeout_ms(metadata))
+            notes = []
+            self.assertIsNone(metainfo.timeout_ms(metadata, notes))
+            self.assertEqual(notes, [])
+        self.assertIsNone(metainfo.timeout_ms([1]))
         for value, expected in ((0, 0), (1000, 1000), ({"val": 12, "max": 20}, 12), (3.0, 3)):
             self.assertEqual(metainfo.timeout_ms({"timeout_ms": value}), expected)
-        for value in (True, "12", None, {}, 1.2, float("inf")):
-            self.assert_error("FileBad", metainfo.timeout_ms, {"timeout_ms": value})
+        for value in (True, "12", None, {}, 1.2, float("inf"), float("nan"), {"val": "x"}, [5]):
+            self.assert_skipped(metainfo.timeout_ms, {"timeout_ms": value})
 
     def test_values_and_unknown_evaluators(self):
         self.assertIsNone(metainfo.eval_cost(None, {}))
@@ -76,9 +83,11 @@ class MetainfoTests(unittest.TestCase):
             self.assertEqual(result, expected)
             self.assertIsInstance(result, float)
         for evaluator in ("py", "lua", "aos", "future"):
-            self.assertIsNone(metainfo.eval_cost({evaluator: "anything"}, {}))
+            notes = []
+            self.assertIsNone(metainfo.eval_cost({evaluator: "anything"}, {}, notes))
+            self.assertEqual(notes, [])
         for value in (True, "3", [], {}, {"val": "3"}, float("nan"), float("inf")):
-            self.assert_error("FileBad", metainfo.eval_cost, value, {})
+            self.assert_skipped(metainfo.eval_cost, value, {})
 
     def test_calculation(self):
         for expression, variables, expected in (
@@ -97,14 +106,18 @@ class MetainfoTests(unittest.TestCase):
             "(1 +", "a()", "a.__class__", "1 < 2")
         for expression in expressions:
             with self.subTest(expression=expression):
-                self.assert_error("CalBad", metainfo.eval_cost, {"cal": expression}, {"a": 2, "__secret": 3})
+                self.assert_skipped(metainfo.eval_cost, {"cal": expression}, {"a": 2, "__secret": 3})
         for expression, variables in ((None, {}), ("a", {"a": "1"}), ("a", {"a": True})):
-            self.assert_error("CalBad", metainfo.eval_cost, {"cal": expression}, variables)
+            self.assert_skipped(metainfo.eval_cost, {"cal": expression}, variables)
+        notes = []
+        self.assertIsNone(metainfo.eval_cost({"cal": "missing + 1"}, {}, notes))
+        self.assertIn("missing", notes[0])
 
     def test_errors_do_not_print(self):
         output, errors = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
-            self.assert_error("CalBad", metainfo.eval_cost, {"cal": "__import__('os')"}, {})
+            self.assertIsNone(metainfo.eval_cost({"cal": "__import__('os')"}, {}, []))
+            self.assertIsNone(metainfo.read("/nonexistent/x.json#/a", []))
         self.assertEqual(output.getvalue(), "")
         self.assertEqual(errors.getvalue(), "")
 

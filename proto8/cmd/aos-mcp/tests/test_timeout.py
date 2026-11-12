@@ -29,6 +29,19 @@ class TimeoutTests(unittest.TestCase):
             MCP['call']('demo', {'reg': 'tools.json', 'max_s': None}, {}, '/tmp', '/tmp', 17)
             self.assertEqual(popen.return_value.communicate.call_args.kwargs['timeout'], 17)
 
+    def test_bad_timeout_uses_fallback_with_warning(self):
+        """壞的 timeout_ms＝當沒寫：max_s 是 None（用 --timeout-s），stderr 一行帶工具名的提醒，不是 ToolsBad。"""
+        import contextlib
+        import io
+        for value in ('soon', 1.5, True, {'val': None}):
+            data = [{'name': 'demo', 'tooldef': {}, 'metainfo': {'timeout_ms': value}}]
+            result = subprocess.CompletedProcess([], 0, json.dumps(data).encode(), b'')
+            errors = io.StringIO()
+            with patch.object(MCP['subprocess'], 'run', return_value=result), contextlib.redirect_stderr(errors):
+                self.assertIsNone(MCP['load_tools'](['tools.json'])['demo']['max_s'])
+            self.assertIn('aos-mcp: warning: tool demo: ', errors.getvalue())
+            self.assertIn('skipped', errors.getvalue())
+
 
 if __name__ == '__main__':
     unittest.main()

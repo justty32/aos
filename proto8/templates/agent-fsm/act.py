@@ -5,7 +5,7 @@
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。
 # 叫工具出的問題回給腦、不停（P-41）：工具退非 0（stdout 照收、尾巴加結束碼）、逾時、叫了沒登記的工具、arguments 不是 JSON。
 # 比照 aos-mcp 的 C-52／C-53 例外：工具退非 0 或逾時，接住 stderr、原樣轉印，最後 2 KB 另附給腦；成功時不附（J4 授權，條文 J7 再補）。
-# 逾時取 _metainfo.timeout_ms（毫秒），沒寫＝不設；自成一群，逾時或本格中斷時 TERM 整群，2 秒後 KILL。
+# 逾時取 _metainfo.timeout_ms（毫秒），沒寫或壞了＝不設（壞了另印一行提醒）；自成一群，逾時或本格中斷時 TERM 整群，2 秒後 KILL。
 # 工具退非 0 時 stderr 多一行提醒「agent-fsm: warning: tool <名> exit code N (passed back to the brain)」（stdio-unify R1：不是這格的錯，照樣退 0）。
 # 只有自己這層的錯才停：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）——沒 stack、history 壞、
 #   history 裡沒有 assistant、aos-tools 起不來。
@@ -56,7 +56,8 @@ usage: act.py [--tools FILE]   (a cell of templates/agent-fsm; run by its fsm.js
 The act cell: run the tool_calls of the last assistant message in $AOS_STACK/history.jsonl
 (aos-tools call NAME), one tool message each. Exit 0 = done (go think); 10 = no tool_calls.
 --tools FILE: the aos-tools registry (default: tools declared in interfaces.json).
-Timeout: tool metainfo timeout_ms (ms), otherwise no limit; TERM the group, KILL 2 s later.
+Timeout: tool metainfo timeout_ms (ms), otherwise no limit (a bad value = a warning, no limit);
+TERM the group, KILL 2 s later.
 On tool failure or timeout, append the last 2048 bytes of stderr to the tool message;
 the full stderr is also passed through. Tool failures are returned to the brain; exit 0.
 Append tool name, code, elapsed_ms, in_bytes and out_bytes to observed.jsonl (best effort).
@@ -178,11 +179,10 @@ if tools_file and os.path.isfile(tools_file):        # 能叫的＝登記檔（�
     if r.returncode != 0:
         die("ToolsBad", "aos-tools ls exited %d" % r.returncode)
     for t in json.loads(r.stdout):
-        meta = t.get("metainfo") or {}
-        try:
-            milliseconds = metainfo.timeout_ms(meta)
-        except metainfo.MetainfoError as e:
-            die(e.code, str(e))
+        notes = []                               # metainfo 只是參考：壞的 timeout_ms＝沒寫＝不設上限，提醒一行
+        milliseconds = metainfo.timeout_ms(t.get("metainfo") or {}, notes)
+        for note in notes:
+            aos_flags.warn("agent-fsm", "tool %s: %s; no time limit" % (t["name"], note))
         limit = milliseconds / 1000.0 if milliseconds is not None else None
         registered[t["name"]] = limit
         registered_paths[t["name"]] = os.path.abspath(t["path"])
