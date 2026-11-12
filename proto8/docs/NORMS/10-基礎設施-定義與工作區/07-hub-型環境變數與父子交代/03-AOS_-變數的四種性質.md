@@ -20,6 +20,6 @@
 <a id="退路"></a>
 
 **退路**（使用者 11-06 選項框「統一成 K3 (Recommended)」，[special-cases](../../../../thinking/2026-11/06/special-cases/README.md#使用者裁定11-06選項框)）：② hub 的「沒設＝`<名字>Missing`」讀成「沒設＝`<名字>Missing`，或在本表那一列寫明唯一一條退路」；退路只管「沒設」。現有三條：`AOS_CLOCK` 沒設退牆鐘、`AOS_KERNEL` 沒設＝`$AOS_DAEMON` 的 ctl 信箱、`AOS_DAEMON` 沒設找 `./.stack`（[02](02-N-63-實例-AOS_DAEMON與沒有AOS_HUB.md)）；第四個要退路的在表上那一列寫就好。
-設了但指不到時**不走退路、不改原本行為**，只多印一行 `warning:`（[env-portability](../../../../thinking/2026-11/06/env-portability/README.md) Q5 已裁，選項原文「不報錯、不改退路」）：
+設了但指不到時**不走退路、不改原本行為**，只多印一行 `warning:`；例外是 aos-agent 的 `mailbox_of`（見下）報 `MailboxMissing`（[env-portability](../../../../thinking/2026-11/06/env-portability/README.md) Q5 已裁，選項原文「不報錯、不改退路」）：
 - `AOS_CLOCK` 設了但缺檔＝當第 0 格、不建檔；C++ 與 Python 共用入口印英文 `warning:`（每行程每路徑一次）；空白檔＝0、不提醒。
 - `AOS_KERNEL` 指不到：aos-llm-kernel 照用那個信箱、印 `warning:`（`proto8/impls/aos-llm-kernel/src/daemon/daemon.cpp`）；aos-agent 走的 Python `mailbox_of` 報 `MailboxMissing`，不退到 daemon 信箱繞過判官（11-07 使用者裁定 sol 審查 #8）。
