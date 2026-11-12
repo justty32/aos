@@ -66,7 +66,7 @@ json 這塊：
 
 - **決定**：eca 範本單獨登記的 json_read／json_write 換成新的簡單組（整包 json）。json 工具對 `_` 開頭的鍵**不做任何特別處理**（照字面）；json_ls 的欄位留得下之後加一欄 description 的位置。
 
-施工圖紙在 [01-規劃](01-規劃.md)，施工結果在 [02-施工結果](02-施工結果.md)；第二輪（一次多格、複雜組補 ls／search／del、刪 json_rewrite，使用者「json_read/write都不用留了。一次讀寫多格、複雜組的json工具可以做。」「json_rewrite也不用留」）在 [03](03-multi與複雜組補齊.md)；第三輪（aos-json 加 add／ls／search 把 Python 搬下去、json_len、jsonx_multi_get／set）在 [04](04-aos-json下沉與len與jsonx-multi.md)。
+施工圖紙在 [01-規劃](01-規劃.md)，施工結果在 [02-施工結果](02-施工結果.md)；第二輪（一次多格、複雜組補 ls／search／del、刪 json_rewrite，使用者「json_read/write都不用留了。一次讀寫多格、複雜組的json工具可以做。」「json_rewrite也不用留」）在 [03](03-multi與複雜組補齊.md)；第三輪（aos-json 加 add／ls／search 把 Python 搬下去、json_len、jsonx_multi_get／set、json_ls 的 depth）在 [04](04-aos-json下沉與len與jsonx-multi.md)。
 
 ## 頂層讀法與留給規劃的題（代定、可翻案）
 

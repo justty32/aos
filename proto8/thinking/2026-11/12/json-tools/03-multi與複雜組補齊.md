@@ -53,4 +53,4 @@
 
 ## 以後
 
-- 複雜組的 multi、aos-json 本身的 add／ls／search、`json_len`：做了，見 [04](04-aos-json下沉與len與jsonx-multi.md)。剩 json_ls 的遞迴層數。
+- 複雜組的 multi、aos-json 本身的 add／ls／search、`json_len`：做了，見 [04](04-aos-json下沉與len與jsonx-multi.md)。json_ls 的遞迴層數也在 04。
