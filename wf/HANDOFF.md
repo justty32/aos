@@ -22,7 +22,7 @@
    - eca_tidy 產出抽查落檔 → [eca-tidy-review](../proto8/thinking/2026-11/12/eca-tidy-review.md)；使用者「距離睡覺還有四十五分鐘。能修嗎」→ 十條修了九條（1～7、9、10）；第 3 條照選項框「kernel.json 加一個 judge」「同 smart-high（haiku）」（`cc03081e2`）；廢檔 `alt-fable/out2/v4.md` 照「廢檔可以刪。」刪了（`93bd79289`）。
    - 寄信給 eca_tidy（from claude-top，副本 `~/code/playground/tidy/inbox/2026-11-12-claude-top.md`）；它有 mail_notify（on_clock 每 1 分鐘）卻沒讀信工具，照「現在就幫我把工具掛上」掛了 `mailbox_peek`、`mailbox_read`（`7e5e621f9`）；使用者開著它的 session，要在畫面裡 `/mcp` 重連 aos 才看得到新工具。
    - 22:00 前後裁定（metainfo 全是觀點、`$ref`／`$at` 定案、kernel 手／門、linux user 一個帳號一整棵樹）都已進 thinking 與 HANDOFF 下一條，不重講。
-4. **測試**：對 `2f51b3d29`～`52b3fa9d2` 之間的樹全套 62 夾 1252 例全綠、measure 連跑三次全過（這台沒裝 pytest，用 `python3 -m unittest discover`）；對最新的樹另有一輪在跑——**最後一輪結果待頂層補**。
+4. **測試**：對 `2f51b3d29`～`52b3fa9d2` 之間的樹全套 62 夾 1252 例全綠、measure 連跑三次全過（這台沒裝 pytest，用 `python3 -m unittest discover`）；對最新的樹（`91d9ffd00`）再跑一輪：62 夾 1253 例，61 夾全綠；`proto8/cmd/aos-eca/tests` 的 `test_switch.TtySocket` 4 例紅是暫存路徑太長（AF_UNIX 108 字元上限）造成，換短路徑單獨重跑該夾 92 例全綠——坑：全套測試的暫存目錄別疊太深。
 5. **明天接什麼**：① 主 session 接 aos（使用者先重連 aos MCP）→ [wf-to-aos 02](../proto8/thinking/2026-11/12/wf-to-aos/02-寄信給人與主session.md)；② eca-tidy 第 8 條 `feedback/*.jsonl` 帶家目錄路徑（使用者「明天再說」）；③ 範本要不要掛 `jsonx`（甲乙丙，[WAIT_USER 01](wait-user/01-要你裁的.md)）；④ eca_tidy 產出剩 SUMMARY 沒做；⑤ 公司機 pull 後重 build 全部 impls、重跑 `proto8/install.sh`、試驗場重抄（細目見下一條第 7 點）。
 6. **試驗場的樹**：關機前使用者自己停（`aos-daemon-ctl -d ~/code/playground/.stack shutdown`）。
 7. **踩過的坑**：多條線共用工作樹——`git add` 指名路徑後馬上 commit、不 `-A`、不 `git stash`；全套測試從空目錄起跑；唯讀 eca 開 mail_notify 就要掛讀信兩支或關 mail_notify。
