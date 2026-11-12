@@ -1,6 +1,6 @@
 # linux 使用者是一個可以互動的對象：初步調查——linux 的事實、對到 aos 現況、五個念頭各自的讀法與後果（11-12 晚家機，只調查、沒施工、沒出設計）
 
-← [2026-11-12](README.md)｜前情 [wf-to-aos](wf-to-aos.md)（D4：把人這個 linux user 當 agent、寄信給他）、[no-pid](../05/no-pid/README.md)（遠期一個 agent 一個帳號）｜鄰居題 `kernel-as-bridge/`（同晚另一位隊長；kernel 是上面與硬體之間的橋）
+← [2026-11-12](README.md)｜前情 [wf-to-aos](wf-to-aos.md)（D4：把人這個 linux user 當 agent、寄信給他）、[no-pid](../05/no-pid/README.md)（11-05 的遠期「一個 agent 一個帳號」，本檔已改成一個帳號一整棵樹）｜鄰居題 `kernel-as-bridge/`（同晚另一位隊長；kernel 是上面與硬體之間的橋）
 
 ## 使用者原話（11-12 晚，逐字）
 
@@ -33,7 +33,7 @@ linux 裡「使用者」只是一個號碼（uid），貼在每個行程身上�
 | a. user 是可以互動的對象 | 對人已經成立：人的信箱 `~/.aos/stack/mailbox` 在家目錄，天然一個 user 一個；環境變數就叫 `AOS_LINUX_USER_STACK`；信的 `from` 預設是 `$USER`。對 agent 不成立：agent 不是 linux 帳號 | 地址用家目錄固定路徑（現在；家目錄 700，別的帳號寄不進來）／公共位置按帳號名（像傳統 unix 信）／查表 |
 | b. root daemon 掛在一個 user 底下 | 成立：誰起它它就是誰；它能做的事上限就是這個 user 能做的事 | 維持；或登記成 `systemd --user` 的服務，讓它真的掛在「代表這個 user 的行程」底下（不需要 root） |
 | c. user 是一個 proc、跟 root daemon 平級 | 跟 linux 事實有出入（見上） | **定**：user＝aos 眼中一個能收信的對象（[§ 使用者細聊](#使用者細聊11-12-晚稍後)） |
-| d. root user 的 root daemon | 沒有；但 daemon 替底下的 proc 換帳號的機制已寫好（`limits.user`，daemon 不是 root 就報錯） | **有方向**：早期那支用 root 跑、把 proc 用指定 uid 起來的小輔助程式，可以做成一台用 root 跑的很小的 daemon（他問句提出、頂層答主要是 daemon、他沒反對）；一個帳號一整棵樹；它本身也可以當 agent。什麼時候做、帳號誰建、門怎麼守未定（[§ 續：念頭 d](#續念頭-droot-user-的-root-daemon)） |
+| d. root user 的 root daemon | 沒有；但 daemon 替底下的 proc 換帳號的機制已寫好（`limits.user`，daemon 不是 root 就報錯） | **有方向、先不做**：一個帳號一整棵樹；root 的事仍由使用者親手做（自己 `sudo -u 帳號 …` 起那個帳號的 root daemon）。常駐拿著 root 的小 daemon（早期那支小輔助程式、它本身也可以當 agent）先不做，等哪天要讓 agent 自己開別的帳號的樹再說（[§ 續：念頭 d](#續念頭-droot-user-的-root-daemon)、[§ 續：root 小 daemon 先不做](#續root-小-daemon-先不做)） |
 | e. 某個 root daemon 代表這個 user | 沒有；一個 user 現在可以有很多棵樹，寄給 user 的信跟任何 daemon 無關 | **不需要**（使用者定，[§ 使用者細聊](#使用者細聊11-12-晚稍後)） |
 
 ## 初步結論
@@ -80,9 +80,9 @@ linux 裡「使用者」只是一個號碼（uid），貼在每個行程身上�
 
 （「本體是資料夾還是行程」「代表要哪幾樣」「一個帳號對一隻 agent 還是一整棵樹」三題已由 [§ 使用者細聊](#使用者細聊11-12-晚稍後) 收掉：最後一題是一整棵樹。）
 
-1. 人開著 Claude Code 做事時，人的行程算在樹外（跟 root daemon 當鄰居、只靠信箱往來）還是樹內（某台 daemon 表上的一列）？
+（「人開著 Claude Code 做事時算樹外還是樹內」也已收掉：不是問題，見 [§ 續：C-64 以今晚為準](#續c-64-以今晚為準)。目前沒有待想的問題。）
 
-**root 權限放哪一格**：有方向——一台用 root 跑的很小的 daemon（root 帳號的那台），起各帳號的 root daemon、一個帳號一整棵樹（[§ 續：念頭 d](#續念頭-droot-user-的-root-daemon)）。什麼時候做、帳號誰建、門怎麼守、跨帳號寄信的資料夾權限未定。
+**root 權限放哪一格**：目前由使用者親手拿著——一個帳號一整棵樹，要起某帳號的樹就自己 `sudo -u 帳號 …` 起那個帳號的 root daemon；常駐拿著 root 的小 daemon 先不做（[§ 續：root 小 daemon 先不做](#續root-小-daemon-先不做)）。帳號誰建、跨帳號寄信的資料夾權限未定。
 
 ## 想親手玩的話（不需要 root）
 
@@ -112,7 +112,7 @@ systemd-run --user --scope -q -p MemoryMax=64M -p MemorySwapMax=0 \
 - `limits.user` 有沒有在真 root 下跑過（這次沒找到紀錄）。
 - aos-mailbox 的 `read`／`send` 在跨帳號的資料夾權限下能不能用。
 - 家機有沒有在送傳統 unix 信的程式。
-- 念頭 c、e 已定、d 有方向（[§ 使用者細聊](#使用者細聊11-12-晚稍後)）；a、b 沒有決定，本檔沒有代定。
+- 念頭 c、e 已定、d 有方向（root 小 daemon 先不做）（[§ 使用者細聊](#使用者細聊11-12-晚稍後)）；a、b 沒有決定，本檔沒有代定。
 
 使用者：「linux user要等等。」（11-12 晚）——同晚稍後回來細聊，見下節。
 
@@ -155,13 +155,13 @@ systemd-run --user --scope -q -p MemoryMax=64M -p MemorySwapMax=0 \
 
 **決定**：
 
-- 早期那支「用 root 跑、持續跑著、接請求、把某個 proc 用指定 uid 跑起來」的小輔助程式，現在可以做成 daemon：使用者以問句「或許可以作爲daemon?kernel？」提出，頂層答「手是 daemon、門是 kernel，主要是 daemon」，使用者沒反對、接著往下答（不是他明確裁定）。
+- 早期那支「用 root 跑、持續跑著、接請求、把某個 proc 用指定 uid 跑起來」的小輔助程式，要做的話可以做成 daemon：使用者以問句「或許可以作爲daemon?kernel？」提出，頂層答「手是 daemon、門是 kernel，主要是 daemon」，使用者沒反對、接著往下答（不是他明確裁定）。同晚定先不做，見 [§ 續：root 小 daemon 先不做](#續root-小-daemon-先不做)。
 - 一個帳號一整棵樹。
 - 這台 root daemon 本身也可以當 agent（它有 body）；root daemon 可以有不同版本，某個版本可以是合併了 loop fsm agent 的；有沒有腦、腦能做到哪「不用細究」。
 
 **頂層講過、使用者沒逐條確認的**：誰寄得進它的信箱就等於拿到整台機器，所以門要嚴、表要小；它不是熱路徑（只起各帳號的 root daemon）。
 
-**仍未定**（不代定、只列）：什麼時候做；帳號誰建；門怎麼守；跨帳號寄信的資料夾權限。
+**仍未定**（不代定、只列）：帳號誰建；跨帳號寄信的資料夾權限。root 小 daemon 先不做（下面「續」），門怎麼守等要做時再說。
 
 ### 續：aos-post 那句收回
 
@@ -175,6 +175,35 @@ systemd-run --user --scope -q -p MemoryMax=64M -p MemorySwapMax=0 \
 - C-80 照舊，沒有衝突了。
 - 「linux user＝aos 眼中一個能收信的對象」「某個 root daemon 代表他不需要」沒被收回，照留。
 
+### 續：root 小 daemon 先不做
+
+頂層解釋：aos-sandbox 本來就會換 uid（設定的 `user` 那格，叫它的人要是 root），所以「root 權限由誰拿著」分兩種——使用者親手起（一個帳號一整棵樹、很少起，自己 `sudo -u 帳號 …` 起那個帳號的 root daemon 即可，不需要常駐的 root 小 daemon；這條路頂層沒實測、照 linux 常理講的）；agent 自己要求起（才需要常駐拿著 root 的小 daemon）。頂層建議先不做。使用者（逐字；「這個程式」＝aos-sandbox）：
+
+> 「我對這個程式沒有印象。既然有了這個程式，那還需要我們先前提的換uid那個嗎？既然環境做不到，那這個程式就該報錯」
+
+> 「可以，root小daemon先不做」
+
+（前一句後半「既然環境做不到，那這個程式就該報錯」是在答沙箱那題，見 [metainfo-views § 使用者裁定](metainfo-views.md#使用者裁定11-12-晚)。）
+
+**決定**：
+
+- root 小 daemon 先不做；等哪天要讓 agent 自己開別的帳號的樹再說。
+- root 的事仍由使用者親手做（一個帳號一整棵樹，使用者自己用 sudo 起那個帳號的 root daemon）。
+
+### 續：C-64 以今晚為準
+
+頂層問：C-64 以前寫遠期「一個 agent 一個帳號」，今晚定的是「一個帳號一整棵樹」，以今晚為準還是兩個都留？使用者（逐字）：
+
+> 「以今晚爲準。」
+
+**決定**：C-64 的遠期改成「一個帳號一整棵樹」（已改：[C-64](../../../docs/CONCEPTS/01-設計理念/05-布局成長與檔案權限.md)、[條號表](../../../docs/CONCEPTS/附錄3-條號表/01-條號-檔.md)）。
+
+頂層說剩一小題「你開著 Claude Code 做事時，你的行程算樹外還是樹內」，建議留到明天跟主 session 接 aos 一起談。使用者（逐字）：
+
+> 「這個問題...不是問題，我開claude code做事，如果這個是claude code eca，那一切都被收在claude code eca中，對於其他proc來說，他們面對的就是這個eca proc。」
+
+**決定**：「人的行程算樹外還是樹內」不是問題、結案——人開的 Claude Code 若是 claude code eca，一切都收在那隻 eca 裡，其他 proc 面對的就是這隻 eca proc。
+
 ### 跟現況的出入
 
 **事實（讀程式＋暫存目錄實跑確認）**：
@@ -186,5 +215,5 @@ systemd-run --user --scope -q -p MemoryMax=64M -p MemorySwapMax=0 \
 **條文（只列、沒改）**：
 
 - **C-80、C-75：說法收回後已無衝突**。C-80（[03-基礎設施/02](../../../docs/CONCEPTS/03-基礎設施/02-資料夾程式-工作區與-stack.md)）「所有proc都有daemon管」、C-75（[03-基礎設施/01-續-C-75](../../../docs/CONCEPTS/03-基礎設施/01-續-C-75.md)）與[名詞表](../../../docs/CONCEPTS/附錄1-名詞.md) proc 列「會跑、跟 Linux 同字同義」照舊；aos-post 寄得到人的信箱只是 aos-post 的特性，不讓人的信箱變成 proc（[§ 續：aos-post 那句收回](#續aos-post-那句收回)）。
-- **念頭 d 那段帶出的出入**：C-64（[01-設計理念/05](../../../docs/CONCEPTS/01-設計理念/05-布局成長與檔案權限.md)）遠期「一個agent一個賬號」，跟「一個帳號一整棵樹」字面不同；[名詞表](../../../docs/CONCEPTS/附錄1-名詞.md) daemon 列「根 daemon……由使用者顧……aos 不做根的根」，root 帳號的小 daemon 正是各帳號根 daemon 的上一層；同列「最基礎的 kernel（來者不拒）」跟頂層說的「門要嚴」——照手／門分開看可以不衝突，列著。
+- **念頭 d 那段帶出的出入**：C-64（[01-設計理念/05](../../../docs/CONCEPTS/01-設計理念/05-布局成長與檔案權限.md)）遠期的說法已照今晚改成「一個帳號一整棵樹」（[§ 續：C-64 以今晚為準](#續c-64-以今晚為準)），無出入；[名詞表](../../../docs/CONCEPTS/附錄1-名詞.md) daemon 列「根 daemon……由使用者顧……aos 不做根的根」，root 帳號的小 daemon 正是各帳號根 daemon 的上一層——既然先不做（[§ 續：root 小 daemon 先不做](#續root-小-daemon-先不做)），目前無出入；同列「最基礎的 kernel（來者不拒）」跟頂層說的「門要嚴」——照手／門分開看可以不衝突，列著。
 - **對得上的**：N-16（[05-N-16](../../../docs/NORMS/05-基礎設施-窗/05-N-16.md)）「aos-post＝IPC 的語法糖、基底工具，跟 aos proc 的關聯不深」、C-75 的「不要去與aos-post耦合太深」（跟「這是aos-post的特性」同向）；P-48「agent 跟 agent（含把自己當一隻 agent 的人）互相寄信」；N-16「位置由擁有者定、不強制在 `$AOS_STACK`」；N-28「沒掛 daemon＝Linux 管」（講的是直接 `aos-exec` 跑的東西，沒說它不是 proc）。
