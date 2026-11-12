@@ -98,7 +98,7 @@
    "abbr": "ms",
    "full": "millisecond",
    "meaning": "毫秒（單位後綴）",
-   "example": "timeout_ms、interval_ms、grace_ms、elapsed_ms（10-23 統合；當時在 trace.jsonl，11-03 拿掉）"
+   "example": "timeout_ms、interval_ms、grace_ms、elapsed_ms"
   },
   {
    "abbr": "seq",
