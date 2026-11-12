@@ -73,7 +73,7 @@ AOS_CLOCK=${AOS_STACK}/clock
 
 整樹總額可選用 [09 的 systemd scope](09-份額.md#整棵樹的總額外面包)；未具備 systemd 的公司 WSL 不適用，家機要先確認 user slice 控制器。
 
-遠期是「一個 agent 一個 Linux 帳號」、根掛沙箱、用有 root 權限的小程式切帳號；這次不做、不預留 key。
+遠期是「一個帳號一整棵樹」、根掛沙箱、用有 root 權限的小程式切帳號；這次不做、不預留 key。
 
 </details>
 

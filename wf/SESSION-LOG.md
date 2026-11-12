@@ -8,7 +8,7 @@
 
 ## 最新進度
 
-- **open｜主 session 接 aos（明天開始）**：登記檔 11-12 晚已修好（10 支，等使用者重連）；明天接著四件：Skill 放哪、主 session 的身分（連帶 mailbox 能不能掛；使用者已說人開的 Claude Code 若是 claude code eca，其他 proc 面對的就是那隻 eca proc，見 [linux-user § 續：C-64 以今晚為準](../proto8/thinking/2026-11/12/linux-user.md#續c-64-以今晚為準)）、always-on 規矩怎麼進主 session、`todo` 歸誰 → [wf-to-aos 02](../proto8/thinking/2026-11/12/wf-to-aos/02-寄信給人與主session.md#明天主-session-開始現在卡在三點)
+- **open｜主 session 接 aos（明天開始）**：登記檔 11-12 晚已修好（10 支，等使用者重連）；明天接著四件：Skill 放哪、主 session 的身分（連帶 mailbox 能不能掛；使用者已說人開的 Claude Code 若是 claude code eca，其他 proc 面對的就是那隻 eca proc，見 [linux-user § 續：C-64 以今晚為準；人的行程算樹外還是樹內（不是問題）](../proto8/thinking/2026-11/12/linux-user.md#續c-64-以今晚為準人的行程算樹外還是樹內不是問題)）、always-on 規矩怎麼進主 session、`todo` 歸誰 → [wf-to-aos 02](../proto8/thinking/2026-11/12/wf-to-aos/02-寄信給人與主session.md#明天主-session-開始現在卡在三點)
 - **open｜thinking→docs 提取（10-29～11-12）**：W1～W7、W9 做完進 main；W8 等使用者裁 U1，U1～U6、U8 待裁（U7 已結案；WAIT_USER） → [thinking-to-docs](../proto8/thinking/2026-11/12/thinking-to-docs/README.md)
 - **open｜程式碼庫整理（fable 領隊，11-12 晚）**：批次表各批做完（行為不變）；下次可接：agent-fsm brain／act 逐字相同兩段與四份 `clock_tick` 收成一支、`lib/aos` 找 lib 五種寫法（待裁 9）、兩處文件指舊出處；待裁十題（原第 1 題已結案；WAIT_USER） → [codebase-cleanup](../proto8/thinking/2026-11/12/codebase-cleanup/README.md#做到哪11-12-晚收線)
 - **open｜tidy（11-12 晚三輪做完）**：沒掃到的 proto8 說明（`impls/aos-json`、`impls/aos-directive` 整夾、`py/README`、`cmd/docs/03` 各一處舊指向）與 wf 檔之後照同一條規矩（content-trim「清舊不必逐項先問」三段）再過；留給使用者裁的在 WAIT_USER → [tidy 報告](workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚)
