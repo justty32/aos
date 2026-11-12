@@ -10,6 +10,7 @@ import signal
 import subprocess
 import sys
 
+import process_group
 import tool_io
 
 TIMEOUT_S = 60
@@ -18,17 +19,8 @@ child = None
 
 
 def kill_group(p):
-    """先 TERM 整群、等 5 秒，還在再 KILL、再等 5 秒（agents_cmd、fork 用）。"""
-    for sig, wait_s in ((signal.SIGTERM, 5), (signal.SIGKILL, 5)):
-        try:
-            os.killpg(p.pid, sig)
-        except OSError:
-            return
-        try:
-            p.wait(wait_s)
-            return
-        except subprocess.TimeoutExpired:
-            pass
+    """先 TERM 整群、等 5 秒，還在再 KILL、再等 5 秒；送訊號出任何 OSError 就不再等（agents_cmd、fork 用；做法在 lib/process_group.py）。"""
+    process_group.stop(p, 5, 5, OSError)
 
 
 def on_term(signum, frame):
