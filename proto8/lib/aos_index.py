@@ -9,7 +9,7 @@
 讀檔經 aos_json（aos-json get），錯照轉它最後一行（C-52 例外 ⑤）；`[no index]`、`[no entry]`、`[more]`、`[index link]` 退 0。
 指到另一份 index 的路徑（11-12 晚，使用者「除了description之外，還可以放index，值必須是字串，必須是路徑，指向另一個_index或_index.json。」
 「json object內的_index這個key……我希望能支援字串，同樣也是路徑」「不跟着往下走。路徑相對...以_index, _index.json的位置爲準。」）：
-每項的 index 欄、檔內 _index 是字串，都只顯示路徑、不往下讀；相對路徑怎麼接只寫在 link() 一處（thinking 2026-11/12/index-link）。"""
+每項的 index 欄、檔內 _index 是字串，都只顯示路徑、不往下讀；相對路徑從裝著那份 index 的容器（資料夾或 json 物件）算，只寫在 home()／link()（thinking 2026-11/12/index-link）。"""
 import json
 import os
 
@@ -42,19 +42,48 @@ def read(t):
 SHAPE = "an index must be a JSON object {KEY: {\"description\": ...}}, or (as _index inside a JSON file) a path string to another index"
 
 
+def home(where):
+    """一份 index 表的位置 → 裝著它的容器（它描述的那個節點）：(檔或資料夾, 指標 token 串或 None＝在檔案系統那邊)。
+    DIR/_index.json、DIR/_metainfo.json#/index → 資料夾 DIR；FILE#/P/_index、FILE#/P/_metainfo/index → 物件 FILE#/P（P 空＝根物件＝這個檔）；
+    其他位置（腦明講的主觀 index）照同一條：表所在的上一層（FILE#/P/q → FILE#/P；整份 FILE → FILE 所在的資料夾）。token 保持跳脫後的樣子。"""
+    cut = where.find("#")
+    if cut < 0:
+        return os.path.dirname(where) or ".", None
+    f, toks = where[:cut], where[cut + 2:].split("/")
+    if os.path.basename(f) == "_metainfo.json" and toks == ["index"]:
+        return os.path.dirname(f) or ".", None
+    return f, toks[:-2] if toks[-2:] == ["_metainfo", "index"] else toks[:-1]
+
+
 def link(where, value):
-    """index 裡寫的路徑 → 腦的寫法（可直接給 index_view 的 index）；不是合法路徑＝None。
-    相對路徑從寫著它的那份 index 所在的資料夾算（使用者 11-12 晚「以_index, _index.json的位置爲準」；檔內 _index 讀成該檔所在的資料夾）；
-    絕對路徑照用；只接檔名那段，# 後的指標照字面。翻案只改這裡。"""
+    """index 裡寫的路徑 → N-45 完整寫法（可直接給 index_view 的 index）；不是合法路徑＝None。翻案只改這裡（與 home()）。
+    使用者 11-12 晚「路徑相對...以_index, _index.json的位置爲準。」「這個要用json與檔案系統的同像性去想。如果是在json物件內的，某key的_index，
+    那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。」：
+    從裝著那份 index 的容器（資料夾或 json 物件）一段一段走：在物件裡，名字＝往下一個 key、`..`＝外層物件，根物件的 `..`＝檔案所在的資料夾；
+    在檔案系統裡照資料夾走。`#/指標` 只能接在檔案系統那邊（進檔要明寫 #，寫法上 / 與 #/ 仍分得出來）。絕對路徑照用。"""
     if not isinstance(value, str):
         return None
     cut = value.find("#")
-    file, ptr = (value, "") if cut < 0 else (value[:cut], value[cut:])
-    if not file or (cut >= 0 and not ptr.startswith("#/")):
-        return None                                     # 空字串、沒檔名、# 後不是 /（`x.json#` 也不收，同 json 工具）
-    if not os.path.isabs(file):
-        file = os.path.normpath(os.path.join(os.path.dirname(where.split("#", 1)[0]), file))
-    return file + ptr
+    walk, ptr = (value, None) if cut < 0 else (value[:cut], value[cut:])
+    if not walk or (ptr is not None and not ptr.startswith("#/")):
+        return None                                     # 空字串、# 前沒東西、# 後不是 /（`x.json#` 也不收，同 json 工具）
+    if os.path.isabs(walk):
+        return value
+    f, toks = home(where)
+    for seg in walk.split("/"):
+        if seg in ("", "."):
+            continue
+        if toks is None:                                # 在檔案系統那邊：照資料夾走
+            f = os.path.normpath(os.path.join(f, seg))
+        elif seg != "..":
+            toks = toks + [seg]                         # 在物件裡：往下一個 key（照字面，已是跳脫後的 token）
+        elif toks:
+            toks = toks[:-1]                            # 外層物件
+        else:
+            f, toks = os.path.normpath(os.path.join(f, "..")), None   # 根物件＝這個檔，它的上一層＝檔案所在的資料夾
+    if ptr is not None:
+        return f + ptr if toks is None else None        # 已在物件裡又寫 #：不是路徑
+    return f if toks is None or not toks else "%s#/%s" % (f, "/".join(toks))
 
 
 def table(t, shown):
@@ -162,7 +191,7 @@ def line(key, entry, where):
         return out                                      # 項目壞掉或沒有 description：只印鍵（C-48，I14）
     to = link(where, entry["index"])
     if to is None:
-        to = "bad (%s; must be a path string to another index, e.g. sub/_index.json or a.json#/_index)" % (
+        to = "bad (%s; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index)" % (
             "not a path" if isinstance(entry["index"], str) else aos_json.kind(entry["index"]))
     return "%s%s\tindex: %s" % (out, "" if isinstance(desc, str) else "\t", to)
 
