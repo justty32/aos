@@ -1,6 +1,6 @@
 知識庫到全庫規模的頂層設計：節點的身份是原文檔的路徑，英文名由程式從拼音算出來後凍結，一個節點對同一個目標只連一條，白話另開一個庫並記住依據哪一版原文，版本、歷史與撤銷全交給 git。
 
-← [2026-11-07](../README.md)｜fable 原始輸出 [02-fable規劃](02-fable規劃.md)
+← [2026-11-07](../README.md)
 
 以 fable 的 02 為底稿、opus 隊長補全；跟同批 [evolve-design](../evolve-design/README.md)、[tool-evolve](../tool-evolve/README.md) 對齊，也回應 [arknights-kb-audit](../arknights-kb-audit/README.md) 挖到的命名與連結問題。五題方向題使用者 11-07 傍晚都選推薦（見「使用者裁定」）；「代定」是隊長替他做的小決定，每條可翻案。
 

@@ -226,7 +226,7 @@
   {
    "id": "evolve-02",
    "order": 72,
-   "doc": "proto8/thinking/2026-11/07/evolve-design/02-fable規劃.md",
+   "doc": "proto8/thinking/2026-11/07/evolve-design/README.md",
    "title": "讓系統自己改進自己",
    "topic": "aos 自我改進五份設計",
    "date": "2026-11-07",
@@ -240,7 +240,7 @@
   {
    "id": "tool-evolve-02",
    "order": 73,
-   "doc": "proto8/thinking/2026-11/07/tool-evolve/02-fable規劃.md",
+   "doc": "proto8/thinking/2026-11/07/tool-evolve/README.md",
    "title": "shell 權限一步步收緊",
    "topic": "aos 自我改進五份設計",
    "date": "2026-11-07",
@@ -254,7 +254,7 @@
   {
    "id": "kb-scale-02",
    "order": 74,
-   "doc": "proto8/thinking/2026-11/07/kb-scale/02-fable規劃.md",
+   "doc": "proto8/thinking/2026-11/07/kb-scale/README.md",
    "title": "知識庫放大到五千個節點",
    "topic": "aos 自我改進五份設計",
    "date": "2026-11-07",
@@ -268,7 +268,7 @@
   {
    "id": "kernel-nest-02",
    "order": 75,
-   "doc": "proto8/thinking/2026-11/07/kernel-nest/02-fable規劃.md",
+   "doc": "proto8/thinking/2026-11/07/kernel-nest/README.md",
    "title": "問腦總機可以一層套一層",
    "topic": "aos 自我改進五份設計",
    "date": "2026-11-07",
@@ -282,7 +282,7 @@
   {
    "id": "agent-diversity-02",
    "order": 76,
-   "doc": "proto8/thinking/2026-11/07/agent-diversity/02-fable規劃.md",
+   "doc": "proto8/thinking/2026-11/07/agent-diversity/README.md",
    "title": "怎樣算不同的 agent",
    "topic": "aos 自我改進五份設計",
    "date": "2026-11-07",
