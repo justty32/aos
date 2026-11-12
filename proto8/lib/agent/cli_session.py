@@ -52,7 +52,8 @@
 #   -c mcp_servers.<名>.url／bearer_token_env_var／default_tools_approval_mode="approve"／enabled_tools（only）／disabled_tools（except），
 #   有 bearer＝自動補 shell_environment_policy.exclude；env_file 在起 codex 那一刻才讀，token 與 ca_file（SSL_CERT_FILE、CODEX_CA_CERTIFICATE）
 #   只放進 codex 行程的環境（run_cli 的 env=；畫面那條路前面接 mcp_server_file.py --exec 啟動器，tmux 的環境沒有）。某一台壞＝warning 跳過、其他照接（X8）；
-#   stdio 與 claude 身目前 warning 跳過（步 3、步 4）。
+#   claude 身（步 3）：小格 mcp.json 跟 aos 那格並排 {"type": "http", "url", "headersHelper"}（helper＝mcp_server_file.py --headers，token 只經管線、
+#   不進 claude 環境＝Bash 看不到）、--allowedTools 加 mcp__<名>（only＝逐支）、except＝--disallowedTools；ca_file＝NODE_EXTRA_CA_CERTS。stdio 目前 warning 跳過（步 4）。
 #   模型（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本）的 model＝flags 的 --model（換掉或加在尾）；都沒有＝flags 原樣。
 # 換台（11-10 two-machines 05）：要接舊對話前先認「是不是這台的」（session_here：記號檔的 session、home 一樣，claude 再比 ws；
 #   不讀 CLI 的任何檔內容、不靠它的錯誤訊息）。不是＝在交出去之前改開新對話：呼叫者給了 reseed（aos-eca-turn）＝把 reseed(上限)
@@ -258,7 +259,7 @@ def _server_mod():
 def external_servers(cfg, tool_dir, path):
     """cli.json 選填 mcp_servers（11-12 external-mcp，使用者裁「都按照推薦。」）：server 檔路徑的陣列，相對從 cli.json 的資料夾算、
     也可寫指示詞（同 tools）。陣列本身形狀不對＝CfgBad；某一份壞（檔不在、形狀不對、重名、名字 aos、指示詞解不開）＝warning 跳過那台、其他照接（X8）。
-    這版只接 codex 身的 http server：stdio 與 claude 身＝warning 跳過（03 步 3、步 4）。回讀好的 server 列表（mcp_server_file.load 的形狀）。"""
+    這版只接 http server（codex、claude 兩身）：stdio＝warning 跳過（03 步 4）。回讀好的 server 列表（mcp_server_file.load 的形狀）。"""
     if "mcp_servers" not in cfg:
         return []
     entries = cfg["mcp_servers"]
@@ -282,7 +283,7 @@ def external_servers(cfg, tool_dir, path):
             warn("external MCP server %s skipped: the name is already used by an earlier server file (%s)" % (s["name"], s["file"]))
             continue
         seen.add(s["name"])
-        if s["transport"] != "http" or cfg["kind"] != "codex":
+        if s["transport"] != "http":
             warn("external MCP server %s skipped: %s servers under %s are not attached yet (external-mcp 03)"
                  % (s["name"], s["transport"], cfg["kind"]))
             continue
@@ -297,6 +298,13 @@ def external_codex(cfg):
     msf = _server_mod()
     kept, env, spec = msf.http_plan(cfg["external"], warn)
     return msf.codex_argv(kept), env, (spec if spec["set"] or spec["from"] else None)
+
+
+def external_claude(cfg):
+    """claude 這一次的 (留下的 http server, 只給 claude 行程的環境, 畫面啟動器的 spec)：token 走 headersHelper、不進環境；ca_file＝NODE_EXTRA_CA_CERTS。"""
+    if not cfg.get("external"):
+        return [], {}, None
+    return _server_mod().claude_plan(cfg["external"], warn)
 
 
 def exec_wrap(argv, spec):
@@ -325,12 +333,32 @@ def toml_table(d):
     return "{" + ", ".join("%s = %s" % (json.dumps(k), json.dumps(v, ensure_ascii=False)) for k, v in d.items()) + "}"
 
 
-def mcp_argv(cfg, cell, ws, stack):
+def mcp_argv(cfg, cell, ws, stack, external=()):
     """有登記檔＝接上 aos-mcp 要加給 CLI 的旗標；沒有＝[]（11-03 eca-tools）。每次起 CLI 前叫（claude 的 mcp.json 每次重寫）。
-    ws＝CLI 的 cwd、stack＝給 aos-mcp 的 --stack（工具叫的小格在 <stack>/tools/<名>/）。"""
+    ws＝CLI 的 cwd、stack＝給 aos-mcp 的 --stack（工具叫的小格在 <stack>/tools/<名>/）。
+    external＝claude 身要並排接的外部 http server（external_claude 留下的；11-12 external-mcp 步 3）；codex 的外部 server 走 external_codex。"""
     reg = cfg.get("registry")
-    if not reg:
+    if not reg and not external:
         return []
+    servers = {}
+    if reg:
+        servers = _aos_server(cfg, ws, stack, reg)
+        if cfg["kind"] == "codex":
+            return servers
+    msf = _server_mod() if external else None
+    entries, allowed, denied = msf.claude_entries(external) if external else ({}, [], [])
+    servers.update(entries)
+    try:
+        cell.write("mcp.json", json.dumps({"mcpServers": servers}, ensure_ascii=False) + "\n")
+    except OSError as e:
+        die("WriteFailed", "cannot write %s: %s" % (tool_io.place(cell.file("mcp.json")), tool_io.os_reason(e)))
+    allow = (["mcp__aos"] if reg else []) + allowed
+    return ["--mcp-config", cell.file("mcp.json"), "--allowedTools", ",".join(allow)] \
+        + (["--disallowedTools", ",".join(denied)] if denied else [])
+
+
+def _aos_server(cfg, ws, stack, reg):
+    """aos 自己那台：codex＝-c 旗標的串列；claude＝mcp.json 裡 aos 那格（{"aos": …}）。"""
     if cfg.get("own_registry"):                       # aos-mcp 自己挑：--own 那份在就用它，不在（reset 刪了）＝回定義那份
         reg = cfg["def_registry"]
     if not os.path.isfile(reg):                       # load_cfg 之後才被刪掉
@@ -344,12 +372,7 @@ def mcp_argv(cfg, cell, ws, stack):
         return ["-c", "mcp_servers.aos.command=" + json.dumps("aos-mcp"), "-c", "mcp_servers.aos.args=" + json.dumps(args),
                 "-c", "mcp_servers.aos.env=" + toml_table(mcp_env(ws, stack)),
                 "-c", "mcp_servers.aos.default_tools_approval_mode=" + json.dumps("approve")]
-    try:
-        cell.write("mcp.json", json.dumps({"mcpServers": {"aos": {"command": "aos-mcp", "args": args}}},
-                                          ensure_ascii=False) + "\n")
-    except OSError as e:
-        die("WriteFailed", "cannot write %s: %s" % (tool_io.place(cell.file("mcp.json")), tool_io.os_reason(e)))
-    return ["--mcp-config", cell.file("mcp.json"), "--allowedTools", "mcp__aos"]
+    return {"aos": {"command": "aos-mcp", "args": args}}
 
 
 def machine_id():
@@ -670,12 +693,13 @@ def tail(text, n=300):
     return (text or "").strip()[-n:]
 
 
-def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None):
+def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None, env=None):
     """claude -p --output-format stream-json：每行一邊寫進 live.jsonl（人可以 tail 著看），一邊收起來；回 (結束碼, 全部行)。
     題目寫進 stdin、關掉之後叫 handed（交出去了，11-03）。claude 的 stderr 不攔、原樣透出（R10）。"""
     try:
         p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             text=True, cwd=ws, preexec_fn=parent_death_term())
+                             text=True, cwd=ws, preexec_fn=parent_death_term(),
+                             env=dict(os.environ, **env) if env else None)
     except FileNotFoundError:
         die("CliMissing", "%s is not on PATH" % argv[0])
     p.stdin.write(prompt)
@@ -707,7 +731,8 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
     # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-agent watch 看得到它正在做什麼；
     # 回答取最後一個帶 result 的那行（type: result）
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
-    argv += mcp_argv(cfg, cell, ws, stack) + system_argv(cfg)
+    ext, env, _ = external_claude(cfg)
+    argv += mcp_argv(cfg, cell, ws, stack, ext) + system_argv(cfg)
     argv += ["--resume", sid] if sid else ["--session-id", new]
 
     def given():
@@ -715,7 +740,7 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
             mark_session("claude", cell, ws, new)
         if handed:
             handed()
-    code, lines = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"), given)
+    code, lines = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"), given, env)
     out = None
     for line in lines:
         try:
@@ -1232,8 +1257,10 @@ def start(cfg, cell, ws, stack):
         cmd = " ".join(shlex.quote(a) for a in hook_cmd("claude", cell))
         hooks = {"hooks": {e: [{"hooks": [{"type": "command", "command": cmd}]}]
                            for e in ("SessionStart", "UserPromptSubmit", "Stop")}}
-        argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack) + system_argv(cfg) + ["--settings", json.dumps(hooks)]
+        ext, _, spec = external_claude(cfg)
+        argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack, ext) + system_argv(cfg) + ["--settings", json.dumps(hooks)]
         argv += ["--resume", sid] if sid else []
+        argv = exec_wrap(argv, spec)
     else:
         if sid:
             codex_note_compacts(cell, sid)                   # Q5：畫面開起來那刻壓過幾次＝基準，之後多出來的才跟上

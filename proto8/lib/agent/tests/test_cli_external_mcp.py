@@ -21,6 +21,17 @@ import mcp_server_file as msf  # noqa: E402
 from tool_io import Error  # noqa: E402
 
 
+class FakeCell:
+    def __init__(self, d):
+        self.d = d
+
+    def file(self, name):
+        return str(self.d / name)
+
+    def write(self, name, text):
+        Path(self.file(name)).write_text(text)
+
+
 class ExternalMcp(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="cli-ext-mcp-"))
@@ -117,11 +128,33 @@ class ExternalMcp(unittest.TestCase):
         self.assertIn("two skipped", err.getvalue())
         self.assertNotIn("mcp_servers.two.", " ".join(argv))
 
-    def test_claude_and_stdio_not_yet(self):
-        self.server("a.json")
-        c, err = self.cfg(["mcp/a.json"], kind="claude")
+    def test_stdio_not_yet(self):
+        self.server("s.json", transport="stdio", url=None, bearer_token_env=None, ca_file=None, command="aos-mcp")
+        c, err = self.cfg(["mcp/s.json"], kind="claude")
         self.assertEqual(c["external"], [])
         self.assertIn("not attached yet", err)
+
+    def test_claude_side(self):
+        self.server("a.json", except_=None)
+        self.server("b.json", name="two", bearer_token_env=None, env_file=None, ca_file=None, only=["echo"])
+        self.server("c.json", name="three", ca_file=None, **{"except": ["echo"]})
+        c, err = self.cfg(["mcp/a.json", "mcp/b.json", "mcp/c.json"], kind="claude")
+        self.assertEqual(err, "")
+        cell = FakeCell(self.tmp)
+        ext, env, spec = cli_session.external_claude(c)
+        argv = cli_session.mcp_argv(c, cell, "/w", "/st", ext)
+        self.assertEqual(env, {"NODE_EXTRA_CA_CERTS": str(self.tmp / "keys" / "ca.pem")})
+        self.assertEqual(spec, {"set": env, "from": []})
+        self.assertEqual(argv[:2], ["--mcp-config", cell.file("mcp.json")])
+        self.assertEqual(argv[2:4], ["--allowedTools", "mcp__site,mcp__two__echo,mcp__three"])
+        self.assertEqual(argv[4:], ["--disallowedTools", "mcp__three__echo"])
+        written = Path(cell.file("mcp.json")).read_text()
+        self.assertNotIn(self.token, written + json.dumps(argv))
+        conf = json.loads(written)["mcpServers"]
+        self.assertEqual(sorted(conf), ["site", "three", "two"])
+        self.assertEqual(conf["two"], {"type": "http", "url": "https://127.0.0.1:18443/mcp"})
+        r = subprocess.run(conf["site"]["headersHelper"], shell=True, capture_output=True, text=True)
+        self.assertEqual(json.loads(r.stdout), {"Authorization": "Bearer " + self.token})
 
     def test_bad_array_is_cfgbad(self):
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):

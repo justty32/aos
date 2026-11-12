@@ -179,6 +179,39 @@ def codex_argv(servers):
     return argv
 
 
+def claude_entries(servers):
+    """http server 翻成 claude --mcp-config 的 mcpServers 格（跟 aos 那格並排）與放行旗標（11-12 步 3，實測 claude 2.1.x）。
+    bearer＋env_file＝headersHelper 叫本檔 --headers（token 只經管線給 claude，不進 claude 的環境＝它的 Bash 看不到，實測）；
+    bearer 沒寫 env_file＝headers 寫 "Bearer ${變數}"（claude 會展開，實測；值得在 claude 的環境裡，它的 Bash 看得到）。
+    回 (mcpServers 的 dict, --allowedTools 要加的, --disallowedTools 要加的)。"""
+    import shlex
+    entries, allowed, denied = {}, [], []
+    me = os.path.abspath(__file__)
+    for s in servers:
+        e = {"type": "http", "url": s["url"]}
+        var = s.get("bearer_token_env")
+        if var and "env_file" in s:
+            e["headersHelper"] = " ".join(shlex.quote(a) for a in (sys.executable, me, "--headers", s["env_file"], var))
+        elif var:
+            e["headers"] = {"Authorization": "Bearer ${%s}" % var}
+        entries[s["name"]] = e
+        if "only" in s:
+            allowed += ["mcp__%s__%s" % (s["name"], t) for t in s["only"]]
+        else:
+            allowed.append("mcp__%s" % s["name"])
+        denied += ["mcp__%s__%s" % (s["name"], t) for t in s.get("except", [])]
+    return entries, allowed, denied
+
+
+def claude_plan(servers, warn):
+    """claude 用：跟 http_plan 同樣逐台檢查（金鑰檔、ca_file），但 token 不放環境（走 headersHelper）；
+    ca_file＝NODE_EXTRA_CA_CERTS（claude 是 node，實測吃）。回 (留下的 servers, 給 claude 行程的環境, 畫面啟動器的 spec)。"""
+    kept, env, _ = http_plan(servers, warn)
+    ca = env.get("SSL_CERT_FILE")
+    cenv = {"NODE_EXTRA_CA_CERTS": ca} if ca else {}
+    return kept, cenv, ({"set": dict(cenv), "from": []} if cenv else None)
+
+
 def exec_main(argv):
     """--exec SPEC -- 指令…：照 SPEC 讀 env 檔、放進環境，exec 成指令。讀不到＝stderr 一行、退 1。"""
     if len(argv) < 4 or argv[0] != "--exec" or argv[2] != "--":
@@ -199,5 +232,21 @@ def exec_main(argv):
     os.execvpe(argv[3], argv[3:], env)
 
 
+def headers_main(argv):
+    """--headers ENV_FILE VAR：claude 的 headersHelper 用——印 {"Authorization": "Bearer <值>"} 一行給 claude 讀（值只經管線進 claude，不進任何環境）。"""
+    if len(argv) != 3:
+        sys.stderr.write("usage: mcp_server_file.py --headers ENV_FILE VAR\n")
+        return 2
+    try:
+        val = read_env_file(argv[1]).get(argv[2])
+        if not val:
+            raise Error("PackBad", "env file %s has no %s" % (argv[1], argv[2]))
+    except Error as e:
+        sys.stderr.write("mcp_server_file: error: %s %s\n" % (e.code, e))
+        return 1
+    sys.stdout.write(json.dumps({"Authorization": "Bearer " + val}) + "\n")
+    return 0
+
+
 if __name__ == "__main__":
-    sys.exit(exec_main(sys.argv[1:]))
+    sys.exit(headers_main(sys.argv[1:]) if sys.argv[1:2] == ["--headers"] else exec_main(sys.argv[1:]))
