@@ -21,7 +21,7 @@ enum class Kind { Plain, Ref, Env, FormBad };   // FormBad＝帶 $ref／$env 但
 
 Kind kind_of(const Json& v);
 
-// $ref 的每一份（檔, 指標原文；檔空＝寫著它的那份檔）；kind_of(v) 要是 Ref。
+// $ref 的每一份（$ref 那個字串, 物件的 $at；沒寫 $at＝空字串）；寫法不合＝空的。kind_of(v) 要是 Ref。
 std::vector<std::pair<std::string, std::string>> ref_parts(const Json& v);
 
 // 走到哪了：哪份檔（real）、檔裡的哪個位置、那個值；base＝這一層相對 $ref 的起點
@@ -36,8 +36,8 @@ struct Cursor {
 // 正在走的 $ref 鏈（檔 real, 指標）：同一個又出現＝繞圈。
 using Chain = std::vector<std::pair<std::string, std::string>>;
 
-// 讀 $ref 的一份：從 at.base 算路徑（path 空＝at.file 那份檔自己）、讀、照指標取原文。讀不到、不是 JSON、指不到、繞圈＝DirectiveBad（同 aos-directive）。
-Cursor fetch(Docs& docs, const Cursor& at, const std::string& path, const std::string& ptr, Chain& chain);
+// 讀 $ref 的一份：spec（$ref 那個字串）從 at.base／at.file 算出位置（aos::ref_spot），再照 step（$at）接著走（aos::ref_step），讀、取原文。讀不到、不是 JSON、指不到、繞圈＝DirectiveBad（同 aos-directive）。
+Cursor fetch(Docs& docs, const Cursor& at, const std::string& spec, const std::string& step, Chain& chain);
 
 // 一路穿過單份的 $ref，直到不是 $ref（$ref 陣列＝TargetBad）。
 Cursor settle(Docs& docs, Cursor c, Chain& chain);

@@ -103,7 +103,7 @@ struct Checker {
                 Chain mine = chain;
                 try {
                     Cursor x = fetch(docs, c, path, ptr, mine);
-                    std::pair<std::string, std::string> here{x.file, ptr};
+                    std::pair<std::string, std::string> here{x.file, pointer_of(x.toks)};
                     if (!seen.count(here)) {
                         seen.insert(here);
                         visit(x, at, mine);

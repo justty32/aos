@@ -61,33 +61,57 @@ def link(where, value):
     那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。」：
     從裝著那份 index 的容器（資料夾或 json 物件）一段一段走：在物件裡，名字＝往下一個 key、`..`＝外層物件，根物件的 `..`＝檔案所在的資料夾；
     在檔案系統裡照資料夾走。`#/指標` 只能接在檔案系統那邊（進檔要明寫 #，寫法上 / 與 #/ 仍分得出來）。絕對路徑照用。
-    `#/指標` 開頭（11-12 晚，使用者「也跟進吧」，同 N-45 `{"$ref": "#/a/b"}`）＝本檔根算起的絕對位置、跟容器無關：
-    本檔＝這份 index 實際所在的那個 json 檔（where 的 # 前面；DIR/_index.json、DIR/_metainfo.json 也是），指標照字面。"""
-    if not isinstance(value, str):
+    `#/指標` 開頭（使用者「也跟進吧」，同 N-45 `{"$ref": "#/a/b"}`）＝本檔根算起的絕對位置、跟容器無關：
+    本檔＝這份 index 實際所在的那個 json 檔（where 的 # 前面；DIR/_index.json、DIR/_metainfo.json 也是）。
+    # 後面跟 `$ref` 同一套（使用者 11-12 晚「$ref這塊，可以用#/指代根obj，同時也算指代自身所在檔案，所以可以用#/key, #/../other.json。」；
+    C++ 那份＝aos-directive 的 aos::ref_spot，兩邊跑同一張對照表 impls/aos-directive/tests/ref_spot_cases.json）：
+    段照字面當 JSON Pointer 的 token，只有 `..` 另算＝往外一層；根物件＝這個檔，再 `..`＝檔案所在的資料夾，之後照資料夾走、再寫 # 又進那份檔。"""
+    if not isinstance(value, str) or not value:
         return None
-    if value.startswith("#/"):
-        return where.split("#", 1)[0] + value
     cut = value.find("#")
-    walk, ptr = (value, None) if cut < 0 else (value[:cut], value[cut:])
-    if not walk or (ptr is not None and not ptr.startswith("#/")):
-        return None                                     # 空字串、# 前沒東西、# 後不是 /（`x.json#` 也不收，同 json 工具）
-    if os.path.isabs(walk):
-        return value
-    f, toks = home(where)
-    for seg in walk.split("/"):
-        if seg in ("", "."):
-            continue
-        if toks is None:                                # 在檔案系統那邊：照資料夾走
-            f = os.path.normpath(os.path.join(f, seg))
-        elif seg != "..":
-            toks = toks + [seg]                         # 在物件裡：往下一個 key（照字面，已是跳脫後的 token）
-        elif toks:
-            toks = toks[:-1]                            # 外層物件
+    if cut == 0:
+        f, toks = where.split("#", 1)[0], None
+    else:
+        walk = value if cut < 0 else value[:cut]
+        if os.path.isabs(walk):
+            f, toks = walk, None
         else:
-            f, toks = os.path.normpath(os.path.join(f, "..")), None   # 根物件＝這個檔，它的上一層＝檔案所在的資料夾
-    if ptr is not None:
-        return f + ptr if toks is None else None        # 已在物件裡又寫 #：不是路徑
-    return f if toks is None or not toks else "%s#/%s" % (f, "/".join(toks))
+            f, toks = home(where)
+            for seg in walk.split("/"):
+                if seg in ("", "."):
+                    continue
+                if toks is None:                            # 在檔案系統那邊：照資料夾走
+                    f = os.path.normpath(os.path.join(f, seg))
+                elif seg != "..":
+                    toks = toks + [seg]                     # 在物件裡：往下一個 key（照字面，已是跳脫後的 token）
+                elif toks:
+                    toks = toks[:-1]                        # 外層物件
+                else:
+                    f, toks = os.path.normpath(os.path.join(f, "..")), None   # 根物件＝這個檔，它的上一層＝檔案所在的資料夾
+        if cut < 0:
+            return f if toks is None or not toks else "%s#/%s" % (f, "/".join(toks))
+        if toks is not None:
+            return None                                     # 已在物件裡又寫 #：不是路徑
+    rest = value[cut + 1:]
+    while True:                                             # 在 f 這份檔裡：rest 是 /tok/tok…
+        if not rest.startswith("/"):
+            return None                                     # # 後不是 /（`x.json#` 也不收，同 json 工具）
+        toks, segs, out = [], rest[1:].split("/"), None
+        for i, seg in enumerate(segs):
+            if seg != "..":
+                toks.append(seg)
+            elif toks:
+                toks.pop()
+            else:
+                out = "/".join(segs[i + 1:])                # 走出這份檔：剩下的到下一個 # 之前是資料夾／檔名
+                break
+        if out is None:
+            return f + "".join("/" + t for t in toks).replace("/", "#/", 1)
+        h = out.find("#")
+        f = os.path.normpath(os.path.join(os.path.dirname(f), "./" + (out if h < 0 else out[:h])))
+        if h < 0:
+            return f
+        rest = out[h + 1:]
 
 
 def table(t, shown):

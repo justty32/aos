@@ -12,25 +12,27 @@
 
 namespace aos::json {
 
-Cursor fetch(Docs& docs, const Cursor& at, const std::string& path, const std::string& ptr, Chain& chain) {
-    std::string where = path + (ptr.empty() ? "" : "#" + ptr);
+Cursor fetch(Docs& docs, const Cursor& at, const std::string& spec, const std::string& step, Chain& chain) {
+    std::string where = spec + (step.empty() ? "" : " $at " + step);
+    // 字串→位置：跟 aos-directive 同一支（# 後的 `..`、走出檔再進別的檔都在裡面）
+    RefSpot spot = aos::ref_step(aos::ref_spot(spec, RefBase{at.base, at.file}).value(), step).value();
     File* f = nullptr;
     try {
-        f = &docs.open(path.empty() ? at.file : aos::join(at.base, path), false);
+        f = &docs.open(spot.file, false);
     } catch (const Error& e) {
         throw Error{code::DirectiveBad, "$ref " + where + " cannot be read (" + e.msg + ")"};
     }
-    std::pair<std::string, std::string> here{f->real, ptr};
+    std::pair<std::string, std::string> here{f->real, spot.pointer};
     for (const auto& seen : chain) {
         if (seen == here) {
-            throw Error{code::DirectiveBad, "$ref cycle: " + shown(f->real, split_pointer(ptr))};
+            throw Error{code::DirectiveBad, "$ref cycle: " + shown(f->real, split_pointer(spot.pointer))};
         }
     }
-    Cursor c{f->real, aos::dirname(f->real), split_pointer(ptr), &f->doc};
+    Cursor c{f->real, aos::dirname(f->real), split_pointer(spot.pointer), &f->doc};
     for (const std::string& t : c.toks) {
         c.node = child(*c.node, t);
         if (c.node == nullptr) {
-            throw Error{code::DirectiveBad, "$ref points nowhere: " + shown(f->real, split_pointer(ptr))};
+            throw Error{code::DirectiveBad, "$ref points nowhere: " + shown(f->real, split_pointer(spot.pointer))};
         }
     }
     chain.push_back(here);

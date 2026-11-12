@@ -26,7 +26,8 @@ result as one line.
 flags:
   --file FILE  the JSON on stdin was read from FILE: relative $ref paths count from
                FILE's directory, and {"$ref": "#/a/b"} takes /a/b of FILE itself
-               (without --file such a $ref is left as it is)
+               (without --file such a $ref is left as it is); after # a ".." steps
+               out one level: {"$ref": "#/../other.json"} is the file next to FILE
   -h, --help   show this help
 
 exit codes: 0 ok; 1 error ("aos-directive: error: CODE ..." on stderr).

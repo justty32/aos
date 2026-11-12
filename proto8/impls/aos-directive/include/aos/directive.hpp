@@ -6,21 +6,30 @@
 //   {"$ref": "檔#/a/b"}             檔內那個位置（JSON pointer，RFC 6901）；位置只認 #/（10-23 使用者「把$at刪掉，就都只認#/。」）
 //   {"$ref": "#/a/b"}               寫著這個 $ref 的那份檔自己裡的 /a/b（11-12 使用者「ref應該支援#/開頭吧」）；
 //                                   那份檔＝RefBase::file（被 $ref 進來的檔裡＝那份檔自己）；不知道是哪份檔（file 空）＝原封不動留著
+//   {"$ref": "#/../other.json"}     # 後面可以寫 ..（11-12 使用者「可以用#/指代根obj，同時也算指代自身所在檔案，所以可以用#/key, #/../other.json。」）：
+//                                   往外一層；根物件＝這份檔，再 .. ＝它所在的資料夾，之後是資料夾／檔名，再寫 # 又進那份檔
+//                                   （#/a/../b＝#/b、#/../x.json#/k、#/../../up/y.json；帶檔名的 x.json#/../y.json 同一套）
+//   {"$ref": "x.json", "$at": "a/b"}  $at＝從 $ref 指到的地方接著往下走（11-12 使用者「$at就變成$ref後面接着。$at仍不支援#」）：
+//                                   x.json 的 /a/b；{"$ref": "x.json#/a", "$at": "b/c"}＝x.json#/a/b/c；{"$ref": "#/defs", "$at": "argv"}＝本檔 /defs/argv；
+//                                   {"$ref": "#/../other.json", "$at": "k"}＝隔壁 other.json 的 /k。一段一個 key（key 裡的 / 寫 ~1、~ 寫 ~0），
+//                                   空段與 . 略過（開頭帶不帶 / 都一樣）、..＝往外一層（走出根物件＝檔所在的資料夾，之後是資料夾／檔名）；
+//                                   沒寫、null、空字串＝不走；不是字串、裡面有 #＝寫法不合（整個物件原封不動）；只有 $at 沒有 $ref＝不是指示詞
 //   {"$ref": ["a.json", "b.json#/c"]}  陣列（10-23 使用者）：幾份照順序合成一份——都是物件＝合 key（同名後面的蓋前面的，淺層）、
 //                                   都是陣列＝接起來、種類混在一起＝DirectiveBad；每個元素寫法同上；
 //                                   只有一份＝它本身；空陣列、有一個元素不是合格的字串＝寫法不合（整個物件原封不動）
 //   {"$env": "NAME"}                環境變數的值
 // 同一物件兩個都寫只看 $ref。換出來的值是字串時：有 "$path" 就照字串接上去（10-21 傍晚起，原 os.path.join），再在前面加 "$prefix"（D9、D10）；
-// 不是字串就靜默不作用（D11）。修飾詞都帶 $：舊的 "path" 已改名 $path，沒帶 $ 的寫了是普通 key、不作用；$at（10-23 刪）寫了是不認得的 $xxx、不管。
+// 不是字串就靜默不作用（D11）。修飾詞都帶 $：沒帶 $ 的 "path" 寫了是普通 key、不作用。$at 管的是取值之前的位置，$path／$prefix 管的是取到之後的字串；
+// $ref 是陣列時 $at 套在每一份上（各自接著走、再合）。
 //
 // 錯分兩類（D13～D15）：
 //   真的解不開＝丟 aos::Error{DirectiveBad}：環境變數沒設、$ref 的檔讀不到（含不是 JSON）、指標指不到、繞圈（同一個檔＋指標）。
 //   寫法（格式）寬容、不報錯：不認得的 $xxx（含 $fmt）與其餘 key 不管；$path、$prefix 不是字串＝當沒寫；
 //   $ref／$env 的值不是非空字串（$ref 也可以是非空的字串陣列）、
-//   $ref 的 # 後面不是 /、只有 #/… 卻不知道寫著它的是哪份檔＝換不了，整個物件原封不動留著。
+//   $ref 的 # 後面不是 /、只有 #/… 卻不知道寫著它的是哪份檔、$at 不是字串或裡面有 #＝換不了，整個物件原封不動留著。
 //
 // 相對檔名：doc 本身裡的 $ref 從 base 的 dir 算；被 $ref 進來的檔裡的 $ref，從那個檔（解開捷徑後）所在的資料夾算。
-// 檔名部分可以寫 ./、../（接到起點後整理，11-12 確認）；# 後面是 JSON pointer、沒有 ..。
+// 檔名部分可以寫 ./、../（接到起點後整理）；# 後面是 JSON pointer（~1＝/、~0＝~；空段、`.` 照字面當 key），只有 `..` 另算（往外一層，見上）。
 // 指標取的是檔的原文（不穿過裡面的 $ref），取到的值再接著解。
 #pragma once
 
@@ -28,6 +37,7 @@
 #include "aos/util/io.hpp"
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -50,6 +60,20 @@ struct RefBase {
     RefBase(const std::filesystem::path& d) : dir(d.string()) {}
     operator const std::string&() const { return dir; }
 };
+
+// 「字串→位置」：$ref 裡寫的一個字串（"檔"、"檔#/指標"、"#/指標"，# 後可以有 ..）→ 哪份檔（接上起點；# 前的檔名只接不整理，走出檔之後那段整理過；還沒解開捷徑）的哪個指標
+// （RFC 6901，空＝整份）。只看字面、不讀檔。寫法不合（空字串、# 後不是 /、`#/…` 開頭卻不知道是哪份檔）＝nullopt。
+// aos-directive 自己與 aos-json 的 --follow 都用這一支；Python 的 index 路徑（lib/aos_index.py 的 link()）照同一套算法、
+// 跑同一張對照表（tests/ref_spot_cases.json）。
+struct RefSpot {
+    std::string file;
+    std::string pointer;
+};
+std::optional<RefSpot> ref_spot(const std::string& spec, const RefBase& base);
+// $at：從 from 接著往下走（at 的寫法見上）；at 裡有 #＝nullopt。走出根物件之後回的 pointer 是空的（整份檔／資料夾）。
+std::optional<RefSpot> ref_step(const RefSpot& from, const std::string& at);
+// 指示詞物件 d 的 $at：沒寫、null＝""；不是字串、裡面有 #＝nullopt（寫法不合）。
+std::optional<std::string> ref_at_of(const Json& d);
 
 // 解掉 doc 裡所有指示詞，回新的值（原本那份不動）。base＝doc 裡相對 $ref 的起點（與寫著它的那份檔）。
 Json resolve(const Json& doc, const RefBase& base);

@@ -82,15 +82,16 @@ int cmd_ref(const Args& args) {
     Place src = place(ed, spec, false, false);
     if (cli.opts.count("move")) {
         Json moved = existing(src, spec);
-        auto [path, ptr] = ref_parts(ref)[0];
-        std::string dest = path.empty() ? src.file->real : aos::join(src.at.at.base, path);   // `#/…`＝搬進同一份檔
+        RefSpot spot = aos::ref_spot(target, RefBase{src.at.at.base, src.file->real}).value();   // `#/…`＝搬進同一份檔；`#/../x.json`＝隔壁那份
+        const std::string& dest = spot.file;
+        const std::string& ptr = spot.pointer;
         std::string dir = aos::dirname(aos::abspath(dest));
         std::error_code ec;
         std::string real_dir = std::filesystem::canonical(dir, ec).string();
         if (ec) {
             throw Error{code::FileMissing, "target directory not found: " + dir};
         }
-        rebase(moved, src.at.at.base, real_dir, src.file->real, path.empty() || std::filesystem::weakly_canonical(aos::abspath(dest)).string() == src.file->real);
+        rebase(moved, src.at.at.base, real_dir, src.file->real, std::filesystem::weakly_canonical(aos::abspath(dest)).string() == src.file->real);
         if (ptr.empty()) {
             File& f = ed.docs.open(dest, true);
             if (f.exists) {

@@ -1,9 +1,11 @@
 // ref.cpp：{"$ref": "檔[#/指標]"}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。
-// $ref 也可以是這種字串的陣列（10-23 使用者）：每個元素各取一份、各自接著解，再照順序合成一份（merge）。
+// 可帶 "$at": "a/b"＝從 $ref 指到的地方接著往下走。$ref 也可以是這種字串的陣列（10-23 使用者）：每個元素各取一份、各自接著解，再照順序合成一份（merge）。
 //
-// 1. 寫法：$ref 不是字串、空字串、# 後面不是 /＝回 nullopt（原封不動，D15）；陣列＝空的、或有一個元素這樣＝回 nullopt；
-//    位置只認 #/（10-23 使用者「把$at刪掉，就都只認#/。」）：寫了 $at 是不認得的 $xxx、不管。
-//    只有 #/…（沒檔名）＝寫著它的那份檔自己（11-12 使用者「ref應該支援#/開頭吧」）：那份檔＝base.file；不知道（空）＝回 nullopt。
+// 1. 寫法（ref_spot，「字串→位置」，只看字面）：$ref 不是字串、空字串、# 後面不是 /＝回 nullopt（原封不動，D15）；
+//    陣列＝空的、或有一個元素這樣＝回 nullopt；$at（使用者 11-12「$at就變成$ref後面接着。$at仍不支援#」）＝從 $ref 指到的地方接著往下走（ref_step）；不是字串、裡面有 #＝回 nullopt。
+//    #/…（沒檔名）＝寫著它的那份檔自己（使用者「ref應該支援#/開頭吧」）：那份檔＝base.file；不知道（空）＝回 nullopt。
+//    # 後面的 `..`＝往外一層；根物件＝這份檔，再 `..`＝它所在的資料夾，之後照資料夾走、再遇到 # 又進那份檔
+//    （使用者 11-12「可以用#/指代根obj，同時也算指代自身所在檔案，所以可以用#/key, #/../other.json。」）。
 // 2. 相對檔名從這一層的 base 算（最外層＝呼叫者給的 base；被 $ref 進來的檔＝它解開捷徑後所在的資料夾）；./、../ 接上後整理
 // 3. 同一個（檔＋指標）已經在鏈上＝繞圈
 // 4. 讀檔（第一行 #! 跳過）、解 JSON（讀不到、不是 JSON＝錯）、照指標取值（指不到＝錯），推上鏈、接著往下解
@@ -101,27 +103,124 @@ static Json pointer(const Json& doc, const std::string& ptr, const std::string& 
     return *cur;
 }
 
-// 一個元素（"檔[#/指標]"）的寫法：不是字串、空字串、# 後面不是 /＝nullopt；回（檔, 指標），只有 #/…＝檔是空字串（寫著它的那份檔）。
-static std::optional<std::pair<std::string, std::string>> parse_spec(const Json& ref) {
-    if (!ref.is_string()) {
-        return std::nullopt;
-    }
-    std::string spec = ref.get<std::string>();
-    std::string path = spec;
-    std::string ptr;
-    size_t hash = spec.find('#');
-    if (hash != std::string::npos) {
-        path = spec.substr(0, hash);
-        ptr = spec.substr(hash + 1);
-        if (!ptr.starts_with("/")) {
-            return std::nullopt;
-        }
-    }
+}  // namespace aos::directive
+
+namespace aos {
+
+// 「字串→位置」（說明見 aos/directive.hpp）。只看字面，不讀檔。
+std::optional<RefSpot> ref_spot(const std::string& spec, const RefBase& base) {
     if (spec.empty()) {
         return std::nullopt;
     }
-    return std::make_pair(path, ptr);
+    size_t hash = spec.find('#');
+    if (hash == std::string::npos) {
+        return RefSpot{aos::join(base.dir, spec), ""};
+    }
+    if (hash == 0 && base.file.empty()) {
+        return std::nullopt;   // `#/…`＝寫著它的那份檔，但不知道是哪份
+    }
+    std::string file = hash == 0 ? base.file : aos::join(base.dir, spec.substr(0, hash));
+    std::string rest = spec.substr(hash + 1);
+    while (true) {
+        // 在檔裡：rest 是 /tok/tok…；`..`＝往外一層，根物件（＝這份檔）再 `..`＝走出檔、到它所在的資料夾
+        if (!rest.starts_with("/")) {
+            return std::nullopt;
+        }
+        std::vector<std::string> toks;
+        size_t pos = 1;
+        bool left = false;
+        while (true) {
+            size_t next = rest.find('/', pos);
+            std::string tok = rest.substr(pos, next == std::string::npos ? next : next - pos);
+            if (tok != "..") {
+                toks.push_back(tok);
+            } else if (!toks.empty()) {
+                toks.pop_back();
+            } else {
+                rest = next == std::string::npos ? "" : rest.substr(next + 1);
+                left = true;
+                break;
+            }
+            if (next == std::string::npos) {
+                break;
+            }
+            pos = next + 1;
+        }
+        if (!left) {
+            std::string ptr;
+            for (const std::string& t : toks) {
+                ptr += "/" + t;
+            }
+            return RefSpot{file, ptr};
+        }
+        // 在檔案系統：到下一個 # 之前是資料夾／檔名（./、../ 照資料夾走）；# 之後又進那份檔
+        size_t h = rest.find('#');
+        std::string walked = (std::filesystem::path(aos::dirname(file)) / ("./" + rest.substr(0, h))).lexically_normal().string();
+        while (walked.size() > 1 && walked.ends_with("/")) {
+            walked.pop_back();
+        }
+        file = walked;
+        if (h == std::string::npos) {
+            return RefSpot{file, ""};
+        }
+        rest = rest.substr(h + 1);
+    }
 }
+
+// $at：從 $ref 指到的地方接著往下走（說明見 aos/directive.hpp）。
+std::optional<RefSpot> ref_step(const RefSpot& from, const std::string& at) {
+    if (at.find('#') != std::string::npos) {
+        return std::nullopt;
+    }
+    std::vector<std::string> toks;   // from.pointer 的 token（跳脫後的樣子，照字面）
+    for (size_t pos = 0; pos < from.pointer.size();) {
+        size_t next = from.pointer.find('/', pos + 1);
+        toks.push_back(from.pointer.substr(pos + 1, next == std::string::npos ? next : next - pos - 1));
+        pos = next;
+    }
+    std::string file = from.file;
+    bool inside = true;   // 還在檔裡；走出根物件之後是檔案系統
+    for (size_t pos = 0; pos <= at.size();) {
+        size_t next = at.find('/', pos);
+        std::string seg = at.substr(pos, next == std::string::npos ? next : next - pos);
+        pos = next == std::string::npos ? at.size() + 1 : next + 1;
+        if (seg.empty() || seg == ".") {
+            continue;
+        }
+        if (!inside) {
+            file = (std::filesystem::path(file) / seg).lexically_normal().string();
+        } else if (seg != "..") {
+            toks.push_back(seg);
+        } else if (!toks.empty()) {
+            toks.pop_back();
+        } else {
+            file = std::filesystem::path(aos::dirname(file) + "/.").lexically_normal().string();
+            inside = false;
+        }
+    }
+    while (file.size() > 1 && file.ends_with("/")) {
+        file.pop_back();
+    }
+    std::string ptr;
+    for (const std::string& t : toks) {
+        ptr += "/" + t;
+    }
+    return RefSpot{file, inside ? ptr : ""};
+}
+
+std::optional<std::string> ref_at_of(const Json& d) {
+    if (!d.contains("$at") || d["$at"].is_null()) {
+        return "";
+    }
+    if (!d["$at"].is_string() || d["$at"].get<std::string>().find('#') != std::string::npos) {
+        return std::nullopt;
+    }
+    return d["$at"].get<std::string>();
+}
+
+}  // namespace aos
+
+namespace aos::directive {
 
 RefBase base_of(const std::string& file) {
     return RefBase{aos::dirname(file), file};
@@ -130,30 +229,39 @@ RefBase base_of(const std::string& file) {
 std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const RefBase& base, const Chain& chain) {
     // 1. 寫法：字串＝一份；陣列（10-23 使用者）＝每個元素一份，空陣列或有一個不合＝整個不合
     const Json& ref = d["$ref"];
-    std::vector<std::pair<std::string, std::string>> specs;
+    std::vector<RefSpot> specs;
+    std::optional<std::string> at = ref_at_of(d);   // $at 寫法不合（不是字串、有 #）＝整個物件不換
+    if (!at) {
+        return std::nullopt;
+    }
+    auto add = [&](const Json& r) {
+        std::optional<RefSpot> one = r.is_string() ? ref_spot(r.get<std::string>(), base) : std::nullopt;
+        if (one) {
+            one = ref_step(*one, *at);   // 陣列＝每一份各自接著走
+        }
+        if (one) {
+            specs.push_back(*one);
+        }
+        return one.has_value();
+    };
     if (ref.is_array()) {
         if (ref.empty()) {
             return std::nullopt;
         }
         for (const Json& r : ref) {
-            auto one = parse_spec(r);
-            if (!one || (one->first.empty() && base.file.empty())) {
+            if (!add(r)) {
                 return std::nullopt;
             }
-            specs.push_back(*one);
         }
-    } else {
-        auto one = parse_spec(ref);
-        if (!one || (one->first.empty() && base.file.empty())) {
-            return std::nullopt;
-        }
-        specs.push_back(*one);
+    } else if (!add(ref)) {
+        return std::nullopt;
     }
 
     std::vector<Fetched> out;
-    for (const auto& [path, ptr] : specs) {
+    for (const RefSpot& spot : specs) {
         // 2～3. 從這一層算、看繞圈（鏈＝往上那幾層；同一個陣列裡寫兩次同一份不算繞圈）
-        std::string file = real_path(path.empty() ? base.file : aos::join(base.dir, path));
+        std::string file = real_path(spot.file);
+        const std::string& ptr = spot.pointer;
         std::pair<std::string, std::string> here{file, ptr};
         for (const auto& seen : chain) {
             if (seen == here) {
