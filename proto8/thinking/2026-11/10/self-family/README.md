@@ -1,6 +1,6 @@
 # self-family（11-10 晚）：給腦改自己的一家子——self_history 與 `aos-agent history`
 
-← [11-10](../README.md)
+← [11-10](../README.md)｜條文：[C-90](../../../../docs/CONCEPTS/05-agent/06-C-90～C-92-self一家與goal.md)
 
 self_tools、self_llm 在 [self-tools](../self-tools/README.md)；這夾記 self_history 這條線（人用的 `aos-agent history`、包它的 `self_history`、eca 縮水版）。self_hook 這條線在 [hook](hook/README.md)。
 

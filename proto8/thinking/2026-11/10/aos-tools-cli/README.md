@@ -1,6 +1,6 @@
 # 2026-11-10 aos-tools 命令列用法檢討：為什麼「整個怪怪的」、怎麼改（規劃報告，未施工）
 
-← [2026-11-10](../README.md)｜[thinking](../../../README.md)｜對象：[cmd/aos-tools](../../../../cmd/aos-tools/README.md)｜前情：[10-28 aos-tools 原設計](../../../2026-10/28/aos-tools/README.md)、[11-10 two-machines](../two-machines/README.md)
+← [2026-11-10](../README.md)｜[thinking](../../../README.md)｜對象：[cmd/aos-tools](../../../../cmd/aos-tools/README.md)｜前情：[10-28 aos-tools 原設計](../../../2026-10/28/aos-tools/README.md)、[11-10 two-machines](../two-machines/README.md)｜條文：[C-86](../../../../docs/CONCEPTS/01-設計理念/11-C-86.md)
 
 只讀、實跑、寫報告；沒改任何程式。實跑在 WSL `/tmp/aos-tools-cli-review/`，讀的是 `2fe4245ee` 的工作樹（`--anchor` 已拔，本報告當它不存在）。行號指 `proto8/cmd/aos-tools/bin/aos-tools`。
 

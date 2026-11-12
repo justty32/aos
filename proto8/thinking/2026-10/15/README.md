@@ -22,7 +22,7 @@
 | [2026-10-15 命名](naming/README.md) | 使用者的命名習慣成 C-54；指令名底線換連字號、認可縮寫表（abbr.json）；未決：md 檔名與日期、「點」的用法 |
 | [2026-10-15 inst 只吃 stdin／aos-exec](inst-exec.md) | 第二版：呼叫機制不靠指示詞（C-48）、`$ref` 從所在檔算、aos-exec TARGET 當語法糖；呼叫機制以第四版為準 |
 | [2026-10-15 inst／aos-exec 第三版](inst-exec-v3.md) | 兩條前提（KISS 最高原則、層徹底切割）、aos-exec＝最小語法糖；B、E、I～L 照推薦定，其餘見第四版 |
-| [2026-10-15 inst／aos-exec 第四版](inst-exec-v4/README.md) | 後續默認沒有指示詞可用（N-45）、agent 的定義＝一張 inst、工具一律走 frame、零 sh；C-50 選 a、其餘照推薦定 |
+| [2026-10-15 inst／aos-exec 第四版](inst-exec-v4/README.md) | 當時默認沒有指示詞可用（已推翻，現行 [N-45](../../../docs/NORMS/06-基礎設施-命令列與指示詞.md)：`$env`、`$ref`，`$ref` 可帶 `$at`）、agent 的定義＝一張 inst、工具一律走 frame、零 sh；C-50 選 a、其餘照推薦定 |
 | [2026-10-15 布局成長](layout-growth.md) | 資料夾／檔案與 JSON 物件長大規則同一套（C-55）；原值一律 `val` |
 | [2026-10-15 畫家 demo 真腦實跑](paint-live.md) | 畫家三層巢狀真腦實跑跟 README 一致，demo 不用修 |
 | [2026-10-15 KISS 審視](kiss/README.md) | KISS 審視總表：批次 1 已做；10-16 使用者撤回「都照推薦」，批次 2～6 暫停（見 10-16 重審） |

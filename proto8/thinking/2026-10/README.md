@@ -10,7 +10,7 @@
 | [2026-10-12](12/README.md) | 4 | tasks 只做 seq／par／if／not、tick-tock 只是時鐘、loop 包 inst、daemon 管 loop 表；未決：監工參數、限時算不算出錯等 |
 | [2026-10-13](13/README.md) | 2 | TARGET 吃 `檔#/位置`、`_metainfo` 給 kernel 參考、kernel 基於 daemon、agent＝狀態機；未決：agent 資料夾怎麼放 |
 | [2026-10-14](14/README.md) | 1 | 統一入口 stdin／stdout JSON、窗一族、aos-fsm 抽成通用 |
-| [2026-10-15](15/README.md) | 20 | 條文按主題分、kernel 截流與 LLM／通用 kernel、JSON 格式族與同像性、兩條總原則與 KISS、命名 C-54、inst／aos-exec 第四版（沒有指示詞可用，N-45） |
+| [2026-10-15](15/README.md) | 20 | 條文按主題分、kernel 截流與 LLM／通用 kernel、JSON 格式族與同像性、兩條總原則與 KISS、命名 C-54、inst／aos-exec 第四版（指示詞以現行 N-45 為準：`$env`、`$ref`，`$ref` 可帶 `$at`） |
 | [2026-10-16](16/README.md) | 4 | KISS 也是最後原則、重審五件拍板（批次 2～6 暫停）、agent 當函數是概念上的、結束碼只是參考 |
 | [2026-10-19](19/README.md) | 2 | 資料夾＝程式、aos 只訂環境變數、proto8-2 併進 proto8；重寫順序（tasks、通用 kernel 未決） |
 | [2026-10-20](20/README.md) | 1 | argv 可放指示詞、argv[0] 帶 `/` 就插 aos-exec、`$path`／`$prefix`；未決：`$fmt`、D15 |

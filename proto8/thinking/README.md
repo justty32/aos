@@ -11,7 +11,7 @@
 
 | 月份 | 份數 | 範圍 |
 |---|---|---|
-| [2026-11](2026-11/README.md) | 24 | 11-01～11-06：試驗場 bob／cathy／daemon／常駐 bob、`AOS_DAEMON_STACK`、窗名與有變動才寫、procs 合一、ctl 改下指令、trace 拿掉、eca 接 aos 工具、aos-post 重新定位、aos-agent 介面起頭；eca 開場白檔、loop／fsm agent、aos-post 信箱；無痛遷移旅程（image 相對管我的 daemon）、kernel 與 daemon（daemon＝最基礎 kernel、問腦改掛 daemon）；11-06 信件 body 協議（body-protocol）、昨晚想法怎麼用到現況（apply-ideas）（每天一列見月份表） |
+| [2026-11](2026-11/README.md) | 142 | 11-01～11-12：試驗場、procs 合一、aos-post、aos-agent 與 loop／fsm agent、無痛遷移與 kernel／daemon、大重構、知識庫與 json 工具、self 一家與 goal、eca 與外部 MCP、kernel 條文（每天一列見月份表） |
 | [2026-10](2026-10/README.md) | 82 | 10-11 重來～10-31：inst／loop／daemon／fsm／agent 的概念與規範、JSON 入口與指示詞、命名、aos-exec 與 `.env`、10-24 的嘗試、介質、aos-tools、eca、parts 收斂（每天一列見月份表） |
 
 按月份分層（使用者「都按照推薦」）：本檔只留月份索引，各月一份表放在該月資料夾的 `README.md`（`2026-10/README.md`），一天一列、連到該日資料夾的 `README.md`，那天的每份一列放在日 README（11-04 使用者「proto8/thinking/2026-10/README.md也太大了，類似的也都拆一拆」）。新增一份討論＝在那天的 README 加一列；那天的第一份順便在月份表加一列。

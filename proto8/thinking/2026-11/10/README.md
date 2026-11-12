@@ -20,3 +20,5 @@
 | [tonight-rulings](tonight-rulings/README.md) | 總整合攤的八題，使用者深夜一次答完：self_tools ls 變短、hook 預設改結果＋選項改名（event／handler／condition／intercept／async／on_error）、`AOS_LINUX_USER_STACK`、範本 tests 搬到 templates/tests、`aos-clock register`、history 摘要 `aos: summary …`、條文跟上 agents 拆分；memory_write add 只補指示牌 |
 | [tool-packs](tool-packs/README.md) | 通用工具分四包（看／改／刪／殼，lib/packs），bash→shell、json_edit→json_write、新做 remove，檔案工具拿掉工作區限制；agent-fsm 四包全開、eca 不掛；memory_write 預設登記、memory 改名 memory_read、範本庫指 knowledge/；agent 工具也分七包（小工具 gadgets、事件、自我管理、子 agent、定義、信箱、記憶），wall_clock→peek_now_time、新做 peek_clock；fsm 34 支、eca 19 支 |
 | [tools-def](tools-def/README.md) | 已施工：腦造新工具＝`tools_def new` 抄 Python 骨架（`templates/tool-python`：`_entry.json`＋`tool.py`）→ `edit` 只改說明、參數、`run` → `tools_def check`（重產 `_tooldef`／`_metainfo`、照跑說明裡的 Example、試叫、說第幾階段）→ `self_tools add`；輔助 lib `lib/tool_spec.py`；gemma 第 4 輪做出來、eca 缺檔案工具（[01](tools-def/01-設計與驗收.md)）；`檔#/指標` 位置 aos-tools 還不收 |
+| [self-tools](self-tools/README.md) | 給腦改自己的工具——self_tools、self_llm，與試驗場驗收 |
+| [sweeper](sweeper/README.md) | 清道夫 proc：stderr 封存＋保留期＋收表外子 loop |

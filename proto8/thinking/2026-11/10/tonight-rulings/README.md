@@ -1,6 +1,6 @@
 # tonight-rulings（11-10 深夜）：總整合後的八題與一個代定，使用者答了
 
-← [11-10](../README.md)
+← [11-10](../README.md)｜條文：[C-86](../../../../docs/CONCEPTS/01-設計理念/11-C-86.md)、[C-90](../../../../docs/CONCEPTS/05-agent/06-C-90～C-92-self一家與goal.md)、[C-92](../../../../docs/CONCEPTS/05-agent/06-C-90～C-92-self一家與goal.md)
 
 [總整合](../tonight/README.md)跑完攤出八題＋一個代定，使用者回來一次答完。這份只留原話、決定、結論。
 
