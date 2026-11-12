@@ -1,4 +1,4 @@
-"""Test aos-mcp-import (external-mcp 07 step 5) against the fake stdio MCP server: all, --only, --except, name clash, PackExists, bytes unchanged on errors, load still passes, the 20-tool warning, aos-tools ls."""
+"""Test aos-mcp-import (external-mcp 07 steps 5 and 7) against the fake stdio MCP server: all, --only, --except, name clash, PackExists, bytes unchanged on errors, load still passes, the 20-tool warning, aos-tools ls; sync: diff without --yes leaves bytes, --yes writes, a tool gone, hand-edited timeout_ms kept, not imported = PackBad."""
 import json
 import os
 from pathlib import Path
@@ -38,7 +38,7 @@ def tool(name):
     return {"name": name, "description": "Tool %s." % name, "inputSchema": {"type": "object", "properties": {}}}
 
 
-class Import(unittest.TestCase):
+class Base(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="aos-mcp-import-"))
         self.mcp = self.tmp / "mcp"
@@ -87,6 +87,8 @@ class Import(unittest.TestCase):
         self.assertFalse([p for p in os.listdir(path.parent) if p.endswith(".tmp")])
         return r, doc
 
+
+class Import(Base):
     # 全收
     def test_all(self):
         p = self.server_file()
@@ -211,7 +213,14 @@ class Import(unittest.TestCase):
         r = self.run_import("--bogus", "x.json")
         self.assertIn("aos-mcp-import: error: FlagUnknown ", r.stderr)
         r = self.run_import("sync", "x.json")
-        self.assertIn("aos-mcp-import: error: CommandUnknown ", r.stderr)
+        self.assertIn("aos-mcp-import: error: PackMissing ", r.stderr)
+        r = self.run_import("sync")
+        self.assertIn("(usage: aos-mcp-import sync", r.stderr)
+        r = self.run_import("sync", "--only", "a", "x.json")
+        self.assertIn("aos-mcp-import: error: FlagUnknown ", r.stderr)
+        r = self.run_import("sync", "--help")
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertIn("aos-mcp-import sync [--yes]", r.stdout)
         r = self.run_import("--only", "a", "--except", "b", "x.json")
         self.assertIn("aos-mcp-import: error: ArgumentsBad ", r.stderr)
         r = self.run_import("a.json", "b.json")
@@ -230,6 +239,115 @@ class Import(unittest.TestCase):
         got = {t["name"]: t for t in json.loads(r.stdout)}
         self.assertEqual(sorted(got), ["fake_echo", "fake_fail"])
         self.assertEqual(got["fake_echo"]["path"], "%s#/mcp_tools/echo" % (moved / "mcp" / "fake.json"))
+
+
+class Sync(Base):
+    """sync：先用一般模式匯入，再改 server 的行為（FAKE_MODE、FAKE_TOOLS）後 sync。"""
+
+    def set_server_env(self, path, **env):
+        doc = json.loads(path.read_text())
+        doc["mcp_server"].setdefault("env", {}).update(env)
+        path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n")
+
+    def sync(self, path, *args):
+        r = self.run_import("sync", *args, path)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r
+
+    def test_no_changes(self):
+        p = self.server_file()
+        self.imported(p)
+        before = p.read_bytes()
+        r = self.sync(p)
+        self.assertEqual((r.stdout, r.stderr), ("no changes\n", ""))
+        r = self.sync(p, "--yes")
+        self.assertEqual(r.stdout, "no changes\n")
+        self.assertEqual(p.read_bytes(), before)
+
+    def test_changed_desc(self):
+        p = self.server_file()
+        self.imported(p)
+        self.set_server_env(p, FAKE_MODE="changed_desc")
+        before = p.read_bytes()
+        r = self.sync(p)
+        self.assertEqual(r.stdout.splitlines(), [
+            "~ echo: description changed",
+            "    before: [MCP server fake] Return the supplied text.",
+            "    after:  [MCP server fake] Echo text with a changed description.",
+            "run again with --yes to write"])
+        self.assertEqual(p.read_bytes(), before)
+        self.assertFalse([n for n in os.listdir(p.parent) if n.endswith(".tmp")])
+        old = json.loads(before)
+        r = self.sync(p, "--yes")
+        lines = r.stdout.splitlines()
+        self.assertEqual(lines[0], "~ echo: description changed")
+        self.assertEqual(lines[-1], "synced 7 of 7 tools from fake -> %s" % p)
+        doc = json.loads(p.read_text())
+        self.assertEqual(doc["mcp_tools"]["echo"]["_tooldef"]["description"],
+                         "[MCP server fake] Echo text with a changed description.")
+        self.assertEqual(list(doc), list(old))
+        self.assertEqual(doc["tools"], old["tools"])
+        self.assertEqual(doc["mcp_server"], old["mcp_server"])
+        self.assertNotEqual(doc["mcp_import"]["imported_at"], old["mcp_import"]["imported_at"])
+        mcp_server_file.load(str(p))
+        self.assertEqual(self.sync(p).stdout, "no changes\n")
+
+    def test_tool_gone_and_added(self):
+        p = self.server_file(tools=[tool("a"), tool("b"), tool("c")])
+        self.imported(p)
+        self.set_server_env(p, FAKE_TOOLS=json.dumps([tool("a"), tool("c"), tool("d")]))
+        before = p.read_bytes()
+        r = self.sync(p)
+        self.assertEqual(r.stdout.splitlines(), ["- b", "+ d", "run again with --yes to write"])
+        self.assertEqual(p.read_bytes(), before)
+        r = self.sync(p, "--yes")
+        self.assertEqual(r.stdout.splitlines()[-1], "synced 3 of 3 tools from fake -> %s" % p)
+        doc = json.loads(p.read_text())
+        self.assertEqual(list(doc["mcp_tools"]), ["a", "c", "d"])
+        self.assertEqual(sorted(doc["tools"]), ["fake_a", "fake_c", "fake_d"])
+        self.assertEqual(doc["mcp_import"]["server_tools"], 3)
+
+    def test_only_from_file(self):
+        p = self.server_file(tools=[tool("a"), tool("b"), tool("c")], only=["a", "b"])
+        self.imported(p)
+        self.set_server_env(p, FAKE_TOOLS=json.dumps([tool("a"), tool("c")]))
+        r = self.sync(p, "--yes")
+        self.assertIn("aos-mcp-import: warning: only names tools the server fake no longer has: b", r.stderr)
+        self.assertEqual(r.stdout.splitlines()[0], "- b")
+        doc = json.loads(p.read_text())
+        self.assertEqual(list(doc["mcp_tools"]), ["a"])
+        self.assertEqual(doc["mcp_server"]["only"], ["a", "b"])     # 檔裡的 only 不替人改
+
+    def test_timeout_ms_kept(self):
+        p = self.server_file()
+        self.imported(p)
+        doc = json.loads(p.read_text())
+        doc["mcp_tools"]["sleep"]["_metainfo"]["timeout_ms"] = 5000
+        doc["mcp_tools"]["echo"]["_metainfo"]["side_effect"] = False      # 人改的其他欄位不保留
+        p.write_text(json.dumps(doc, indent=2) + "\n")
+        self.set_server_env(p, FAKE_MODE="changed_desc")
+        self.sync(p, "--yes")
+        doc = json.loads(p.read_text())
+        self.assertEqual(doc["mcp_tools"]["sleep"]["_metainfo"]["timeout_ms"], 5000)
+        self.assertEqual(doc["mcp_tools"]["echo"]["_metainfo"]["timeout_ms"], 60000)
+        self.assertTrue(doc["mcp_tools"]["echo"]["_metainfo"]["side_effect"])
+
+    def test_not_imported(self):
+        p = self.server_file()
+        r = self.fails("PackBad", p, "sync", p)
+        self.assertIn("import it first", r.stderr)
+        self.fails("PackBad", p, "sync", "--yes", p)
+
+    def test_errors_leave_file(self):
+        p = self.server_file()
+        self.imported(p)
+        self.set_server_env(p, FAKE_MODE="init_fail")
+        self.fails("ServerFailed", p, "sync", "--yes", p)
+        self.set_server_env(p, FAKE_MODE="", FAKE_TOOLS=json.dumps([tool("Get.Time"), tool("get_time")]))
+        doc = json.loads(p.read_text())
+        doc["mcp_server"]["args"] = [str(self.tmp / "wrapper.py")]
+        p.write_text(json.dumps(doc, indent=2) + "\n")
+        self.fails("NameBad", p, "sync", "--yes", p)
 
 
 if __name__ == "__main__":

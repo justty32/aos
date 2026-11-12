@@ -20,8 +20,8 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`bin/aos-mcp-import`](../../../../../proto8/cmd/aos-mcp-import/bin/aos-mcp-import) | 連一次外部 MCP server、把它的工具凍結進同一份 server 檔（加 mcp_import、mcp_tools、tools），之後疊進 tools.json 就是一包工具（external-mcp 07 步 5） |
-| [`tests/test_import.py`](../../../../../proto8/cmd/aos-mcp-import/tests/test_import.py) | Test aos-mcp-import (external-mcp 07 step 5) against the fake stdio MCP server: all, --only, --except, name clash, PackExists, bytes unchanged on err… |
+| [`bin/aos-mcp-import`](../../../../../proto8/cmd/aos-mcp-import/bin/aos-mcp-import) | 連一次外部 MCP server、把它的工具凍結進同一份 server 檔（加 mcp_import、mcp_tools、tools），之後疊進 tools.json 就是一包工具；sync 重問 server、印差異、--yes 才寫（external-mcp 07 步 5、步 7） |
+| [`tests/test_import.py`](../../../../../proto8/cmd/aos-mcp-import/tests/test_import.py) | Test aos-mcp-import (external-mcp 07 steps 5 and 7) against the fake stdio MCP server: all, --only, --except, name clash, PackExists, bytes unchanged… |
 
 ## `proto8/cmd/aos-mcp-launch/`
 
