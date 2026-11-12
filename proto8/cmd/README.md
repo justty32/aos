@@ -2,7 +2,7 @@
 
 ← [proto8](../README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)｜共用模組：[py](../py/README.md)｜C++ 實作：[impls](../impls/README.md)
 
-一支指令一夾，夾名＝指令名，執行檔在 `<名>/bin/<名>`（跟 impls 同形；aos-eca 兩支同夾）。命令列共用模組（`aos_flags`、`aos_ws`、`daemon_ctl`）在 [proto8/py](../py/README.md)；CLI 對話與介面宣告的共用模組（`cli_session`、`agent_files`）在 [lib/agent](../lib/docs/03-索引-agent等.md)。共用模組依序從自己的資料夾、自己 `realpath(__file__)` 往上找到的 repo `py/`／`lib/`、標準 `sys.path` 找；不再從 PATH 上 `aos-tools` 的真位置推。
+一支指令一夾，夾名＝指令名，執行檔在 `<名>/bin/<名>`（跟 impls 同形；aos-eca 兩支同夾）。命令列共用模組（`aos_flags`、`aos_ws`、`daemon_ctl`）在 [proto8/py](../py/README.md)；CLI 對話與介面宣告的共用模組（`cli_*.py`〔說明在 `cli_session.py`〕、`agent_files`）在 [lib/agent](../lib/docs/03-索引-agent等.md)。共用模組依序從自己的資料夾、自己 `realpath(__file__)` 往上找到的 repo `py/`／`lib/`、標準 `sys.path` 找；不再從 PATH 上 `aos-tools` 的真位置推。
 
 | 指令夾 | 是什麼 |
 |---|---|

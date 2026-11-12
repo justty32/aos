@@ -45,7 +45,7 @@ def entry(row):
 
 
 def reseed(stack, ws, limit):
-    """開新對話時接在題目前面的開場白（cli_session.ask 的 reseed；在交出去之前叫，history 還沒接這輪的 user）。
+    """開新對話時接在題目前面的開場白（cli_ask.ask 的 reseed；在交出去之前叫，history 還沒接這輪的 user）。
     history 空＝""。結尾一個空行。整段 ≤ limit bytes；limit 0、或說明加第一則 user 就超過＝只給說明（NOTE_ONLY）。"""
     rows = history_rows(stack)
     if not rows:

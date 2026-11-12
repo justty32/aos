@@ -1,7 +1,7 @@
 # aos_eca/handoff.py - 一批信交給 CLI 的前後（一般一輪與 slash 交給 claude 的那幾條共用）：交出去那刻收信、交出去後失敗記冷卻、成功收尾。
 import aos_flags
 
-from .common import NAME, Fail, cli_session, cooldown, must_post
+from .common import NAME, Fail, cli_ask, cooldown, must_post
 from .history import append_history, history_sum
 from .hook import fire
 
@@ -34,9 +34,9 @@ class Handoff:
             self.after = e                                          # 回答照樣接進 history，最後才報（不掉回答）
 
     def ask(self, cfg, cell, ws, prompt, on_busy, reseed=None):
-        """cli_session.ask → 回答文字；None＝SessionBad（只有 --on-busy yield 會丟，一定在交出去之前：整批留 cur/，下一次再試）。"""
+        """cli_ask.ask → 回答文字；None＝SessionBad（只有 --on-busy yield 會丟，一定在交出去之前：整批留 cur/，下一次再試）。"""
         try:
-            text = cli_session.ask(cfg, cell, self.template, ws, self.stack, prompt, on_busy, self.handed, reseed)
+            text = cli_ask.ask(cfg, cell, self.template, ws, self.stack, prompt, on_busy, self.handed, reseed)
         except Fail as e:
             if e.code == "SessionBad":
                 return None

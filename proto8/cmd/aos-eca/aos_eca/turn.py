@@ -3,7 +3,7 @@ import os
 
 import aos_flags
 
-from .common import NAME, Fail, cli_session, cooldown, hooks, goal_state, must_post, names, post, warn
+from .common import NAME, Fail, cli_cell, cli_cfg, cli_hook, cooldown, hooks, goal_state, mailbox_warning, must_post, names, post
 from .history import SUM, append_history, history_changed, history_sum, note_sum
 from .hook import before_queue, fire, tool_added
 from .batch import SEP, goal_prompt, letter_body, note_progress, pick_one, take_all, transcript_now
@@ -20,8 +20,8 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
         hooks.clock_tick(template, stack, warn=lambda line: aos_flags.warn(NAME, line))
     except (hooks.HookFailed, hooks.HooksBad) as e:
         raise Fail(type(e).__name__, e)
-    cfg = cli_session.load_cfg(template)
-    cell = cli_session.Cell(os.path.join(stack, cfg["kind"]))
+    cfg = cli_cfg.load_cfg(template)
+    cell = cli_cell.Cell(os.path.join(stack, cfg["kind"]))
     cool, _ = cooldown.state(stack)                                # ⑨ 認領信之前看冷卻（06）
     if cool == "cooling":
         return 0                                                    # 一封都不認領：new/、cur/、history 都不動
@@ -47,7 +47,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
             body, why = letter_body(box, sig)
             if body is None:                                        # 壞信一律丟（N-16、決定 27 不通知寄信人）
                 post(["done", box, sig])
-                warn(stack, sig, why)
+                mailbox_warning(stack, sig, why)
                 continue
             body = before_queue(stack, box, sig, body, template)   # hook：可改 content、可丟掉這封（整批都丟＝同整批壞信）
             if body is None:
@@ -69,7 +69,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
             aos_flags.warn(NAME, "cannot write %s: %s" % (goal_state.path(stack), w))
     hand = Handoff(template, stack, box, good, bodies, count_goal if goal else None)
     before = transcript_now(cfg, cell)                              # ⑬ 進展：交出去之前對話檔多大
-    had_sum = os.path.exists(cell.file(SUM))                        # ⑭ 畫面 hook 跟上 CLI 改 history 時會刪掉它（cli_session.replace_history）
+    had_sum = os.path.exists(cell.file(SUM))                        # ⑭ 畫面 hook 跟上 CLI 改 history 時會刪掉它（cli_hook.replace_history）
     text = hand.ask(cfg, cell, ws, SEP.join(b["content"] for b in bodies), on_busy,
                     lambda limit: reseed(stack, ws, limit))         # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
     if text is None:

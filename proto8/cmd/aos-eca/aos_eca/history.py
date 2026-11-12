@@ -5,7 +5,7 @@ import os
 
 import aos_flags
 
-from .common import NAME, Fail, cli_session
+from .common import NAME, Fail, cli_cell
 
 
 # ---- history（$AOS_STACK/history.jsonl，一行一則 OpenAI message，只附加；P-41）----
@@ -52,7 +52,7 @@ def history_changed(stack, cell):
     if cell.alive():
         aos_flags.warn(NAME, "history.jsonl was changed, but the screen is open, so the conversation there keeps its old record")
         return
-    cli_session.drop_session(cell)
+    cli_cell.drop_session(cell)
     aos_flags.warn(NAME, "history.jsonl was changed since the last turn; starting a new %s conversation that carries the changed record" % cell_kind(cell))
 
 

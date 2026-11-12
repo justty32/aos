@@ -4,7 +4,7 @@
 
 ← [proto8](../README.md)｜設計、盤點、代定與遷移清單：[thinking 2026-10-24 工具＝函式庫](../thinking/2026-10/24/tool-lib/README.md)｜慣例：[P-41、P-25](../docs/CONVENTION/02-題目stack停錯腦.md)、[P-33](../docs/CONVENTION/06-巢狀/01-P-33～P-34.md)｜特性：[`_metainfo`](../thinking/2026-10/24/metainfo/README.md)｜範例 agent：agent-eve（11-04 隨 proto8/tests 刪了）
 
-使用者 10-24：「我們在做工具集，這其實挺像是在做函式庫。因爲agent是函數，我們給他的工具就是他在內部自己跑的時候會呼叫的外部函數。既然是這樣，那我們就要把抽象做好，把函數庫做好」——agent 是函數（一個資料夾，C-46、C-68），它 `tools/<名>/` 裡的東西是它內部呼叫的外部函數（C-42、C-61）。這裡把那些外部函數收成一份。`lib` 不 import 上層 `py`；工具輸出共用 `tool_io.py`，CLI 對話與介面宣告的共用模組在 `agent/`（`cli_session.py`、`agent_files.py`；11-06 晚 K-5）。
+使用者 10-24：「我們在做工具集，這其實挺像是在做函式庫。因爲agent是函數，我們給他的工具就是他在內部自己跑的時候會呼叫的外部函數。既然是這樣，那我們就要把抽象做好，把函數庫做好」——agent 是函數（一個資料夾，C-46、C-68），它 `tools/<名>/` 裡的東西是它內部呼叫的外部函數（C-42、C-61）。這裡把那些外部函數收成一份。`lib` 不 import 上層 `py`；工具輸出共用 `tool_io.py`，CLI 對話與介面宣告的共用模組在 `agent/`（`cli_session.py` 與 `cli_*.py`、`agent_files.py`；11-06 晚 K-5）。
 
 共用記帳 [`observed.py`](observed.py) 提供 `append(stack, record)`（失敗提醒）、`append_strict(stack, record)`（失敗拋出）與 `prepare_strict(stack)`（先初始化並開啟帳本，供執行前預檢）；首次寫入會補 `self` 行與 stack 的 `aos-observed` 介面。`call(name, target, stdin, stack=None)` 用工具小格呼叫 `aos-exec`、記時間與位元組，回傳 `(code, stdout_bytes, stderr_bytes)`；沒設 `AOS_STACK` 就照跑不記。提醒行的程式名（11-10 坑-88）：`append`／`call` 可給選填 `prog`；沒給＝叫過 `tool_io.start(名)` 的工具用那個名（measure、watch、review_round、judge-llm…），都沒有＝`agent-fsm`（四格）。[`observed_children.py`](observed_children.py) 的 `copy_child` 跳過讀不了、宣告壞或指到子 stack 外的子帳時，用同一個名字印一行 `名: warning: skipped child observations declared in …`（11-10 open-16；原本安靜跳過）。
 

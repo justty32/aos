@@ -1,7 +1,7 @@
 # aos_eca/batch.py - 一批信的認領與讀信（開場白、冷卻時只拿一封、take-all）與 goal 提醒的題目與進展。
 import json
 
-from .common import NOT_FOUND, Fail, cli_session, goal_state, must_post, names, post, warn
+from .common import NOT_FOUND, Fail, cli_cell, goal_state, mailbox_warning, must_post, names, post
 from .history import history_rows
 from .hook import before_queue
 
@@ -61,7 +61,7 @@ def pick_one(stack, box, prompt, template):
                 dropped += 1
                 continue
             post(["done", box, sig])
-            warn(stack, sig, why)
+            mailbox_warning(stack, sig, why)
             dropped += 1
         code, _ = must_post(["take", box], ok=(0, NOT_FOUND))    # new/ 最前面一封 → cur/
         if code == NOT_FOUND:
@@ -91,7 +91,7 @@ def goal_prompt(stack):
 def transcript_now(cfg, cell):
     """(session id, 對話檔, 大小)：交出去之前記下，答完再比（⑬ 進展）。"""
     sid = cell.read("session.txt")
-    found = cli_session.transcripts(cfg["kind"], sid)
+    found = cli_cell.transcripts(cfg["kind"], sid)
     return sid, (found[0] if found else None), goal_state.size(found[0] if found else None)
 
 
@@ -99,7 +99,7 @@ def note_progress(cfg, cell, stack, before):
     """⑬ 這輪 CLI 叫了 goal 以外的工具＝goal 計數歸零。同一段對話只看新長出來的那段。"""
     sid, file, size = before
     now = cell.read("session.txt")
-    found = cli_session.transcripts(cfg["kind"], now)
+    found = cli_cell.transcripts(cfg["kind"], now)
     if not found:
         return
     if goal_state.transcript_calls(found[0], size if now == sid and found[0] == file else 0):

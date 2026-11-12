@@ -8,7 +8,7 @@ import time
 
 import aos_flags
 
-from .common import Fail, cli_session, must_post
+from .common import Fail, cli_ask, cli_base, cli_cell, cli_hook, must_post
 from .history import append_history, history_rows, note_sum
 from .hook import fire
 from .handoff import Handoff
@@ -47,7 +47,7 @@ def confirm_goal_replace(cell):
     """打進 codex 畫面的 /goal 之後：最多等 REPLACE_WAIT 秒看有沒有「Replace goal?」選單；認得＝按 Enter（選 1. Replace current goal）。
     回接在 [aos] slash 那則後面的一句（沒有選單＝空字串）。"""
     def screen():
-        return cell.tmux("capture-pane", "-p", "-t", cli_session.TMUX_SESSION).stdout
+        return cell.tmux("capture-pane", "-p", "-t", cli_base.TMUX_SESSION).stdout
     deadline, seen = time.time() + REPLACE_WAIT, None
     while time.time() < deadline:
         seen = goal_replace_prompt(screen())
@@ -58,7 +58,7 @@ def confirm_goal_replace(cell):
         return ""
     if seen == "other":
         return "; codex asked something about replacing the goal that aos does not recognise, so nothing was pressed: answer it on the screen (aos-agent open)"
-    cell.tmux("send-keys", "-t", cli_session.TMUX_SESSION, "Enter")
+    cell.tmux("send-keys", "-t", cli_base.TMUX_SESSION, "Enter")
     time.sleep(1)
     if goal_replace_prompt(screen()):
         return "; codex asked \"Replace goal?\" and aos pressed Enter for \"1. Replace current goal\", but the question is still there: check the screen"
@@ -114,7 +114,7 @@ def model_of(cfg):
 
 def slash_status(cfg, cell, stack):
     sid = cell.read("session.txt")
-    found = cli_session.transcripts(cfg["kind"], sid)
+    found = cli_cell.transcripts(cfg["kind"], sid)
     goal = cli_goal(cfg["kind"], found[0]) if found else None
     return note("/status: %s, model %s; conversation %s; screen %s; history %d messages; transcript %s%s" % (
         cfg["kind"], model_of(cfg), sid or "(none yet: the next message starts one)",
@@ -161,17 +161,17 @@ def on_screen(command, cfg, cell, stack):
     """畫面開著：/clear、/compact 照人打的一樣打進畫面（使用者 Q2「幫我貼進去」）；aos 這邊靠畫面 hook 跟上（id、history）。
     claude＝等 hook 把 history 改掉（SessionStart clear／compact）再回，免得這輪接的 user／回答被 hook 一起搬走；等不到（上限 SCREEN_WAIT）照回、多說一句。
     codex＝這時沒有事件：/clear 等下一輪 notify 看到新 thread 才清；/compact 等它的 rollout 多一個 compacted（上限 SCREEN_WAIT），
-    再 cli_session.codex_sync_compact（history 換成從 replacement_history 撈出的對話；撈不到＝不動、回一句，Q5）。"""
+    再 cli_hook.codex_sync_compact（history 換成從 replacement_history 撈出的對話；撈不到＝不動、回一句，Q5）。"""
     before = history_bytes(stack)
     sid = cell.read("session.txt")
     if cfg["kind"] != "claude" and command == "/compact" and sid:
-        n0 = cli_session.codex_note_compacts(cell, sid)            # Q5：打之前壓過幾次＝基準
-        cli_session.type_line(cell, command)
+        n0 = cli_hook.codex_note_compacts(cell, sid)            # Q5：打之前壓過幾次＝基準
+        cli_ask.type_line(cell, command)
         deadline = time.time() + SCREEN_WAIT
-        while time.time() < deadline and cli_session.codex_compacted(sid)[0] <= n0 and cell.alive():
+        while time.time() < deadline and cli_hook.codex_compacted(sid)[0] <= n0 and cell.alive():
             time.sleep(0.5)
         try:
-            got = cli_session.codex_sync_compact(cell, sid, stack)
+            got = cli_hook.codex_sync_compact(cell, sid, stack)
         except OSError as e:
             raise Fail("WriteFailed", "cannot rewrite history.jsonl: %s" % e)
         if got is None:
@@ -179,7 +179,7 @@ def on_screen(command, cfg, cell, stack):
         if got[0] == "unrecognized":
             return note("/compact: typed into the open screen; codex compacted, but aos could not read the conversation out of it, so aos's history is left as it is")
         return note("/compact: typed into the open screen; history replaced by the conversation codex kept (%d messages moved to history_removed.jsonl)" % got[1])
-    cli_session.type_line(cell, command)
+    cli_ask.type_line(cell, command)
     if cfg["kind"] != "claude":
         later = ("aos clears its history when the next answer comes from the new thread" if command == "/clear" else
                  "there is no conversation yet, so there is nothing for aos to follow")
@@ -205,7 +205,7 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
         if alive:
             if os.path.exists(cell.file("busy.txt")):
                 return 0                                            # 不打斷正在跑的那輪
-            cli_session.type_line(cell, full)
+            cli_ask.type_line(cell, full)
             text = note("/goal: typed into the open screen; the CLI's own answer shows there (a goal it runs on is also kept in turns.jsonl)%s"
                         % (confirm_goal_replace(cell) if kind == "codex" and full != GOAL else ""))
         elif kind == "claude":
@@ -234,10 +234,10 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
             if got is None:
                 return 0                                            # SessionBad：同一般一輪，整批留 cur/，下一次再試
             sid = cell.read("session.txt")
-            found = cli_session.transcripts("claude", sid)
-            summary = cli_session.compact_summary(found[0]) if found else None
+            found = cli_cell.transcripts("claude", sid)
+            summary = cli_hook.compact_summary(found[0]) if found else None
             try:                                                    # Q3：history 換成 claude 的摘要；交出去那刻接進的 /compact 留在摘要後面（keep_tail）
-                moved = None if summary is None else cli_session.replace_history(cell, "compact", summary, stack, keep_tail=True)
+                moved = None if summary is None else cli_hook.replace_history(cell, "compact", summary, stack, keep_tail=True)
             except OSError as e:
                 raise Fail("WriteFailed", "cannot rewrite history.jsonl: %s" % e)
             text = got.strip() or note("/compact: claude compacted conversation %s (same id); %s" % (sid,
@@ -256,18 +256,18 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
                 elif cell.clients():
                     text = note("/exit: someone is attached to the screen; not closed (they can type /exit there)")
                 else:
-                    cli_session.close(cell)
+                    cli_cell.close(cell)
                     text = note("/exit: closed the screen; the conversation stays and the next message goes on without a screen")
             elif command == "/compact":                             # codex exec 不認 /compact：換新 thread、帶 aos 的紀錄過去（同 ⑧）
-                cli_session.drop_session(cell)
+                cli_cell.drop_session(cell)
                 text = note("/compact: codex cannot compact outside its screen; the next message starts a new codex thread "
                             "that carries aos's record of this conversation (up to reseed_bytes)")
             else:
                 try:
-                    cleared = cli_session.clear_history(cell, stack)
+                    cleared = cli_hook.clear_history(cell, stack)
                 except OSError as e:
                     raise Fail("WriteFailed", "cannot clear history.jsonl: %s" % e)
-                cli_session.drop_session(cell)
+                cli_cell.drop_session(cell)
                 text = note("/clear: %d messages moved to history_removed.jsonl; the next message starts a new %s conversation" % (cleared, kind))
     if hand:                                                        # 交出去那刻已接進 history、收信、after_queue 跑過
         append_history(stack, {"role": "assistant", "content": text})

@@ -16,7 +16,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[3]
 TURN = REPO / "proto8" / "cmd" / "aos-eca" / "bin" / "aos-eca-turn"
 sys.path.insert(0, str(REPO / "proto8" / "lib"))
-from agent import cli_session, cooldown  # noqa: E402
+from agent import cli_ask, cli_base, cli_cell, cli_screen, cooldown  # noqa: E402
 
 LOCAL_BIN = os.path.expanduser("~/.local/bin")
 
@@ -121,7 +121,7 @@ class ClaudeSwitch(Base):
         self.assertEqual(c2["stdin"], "again")
         self.assertEqual(self.mark(), {"session": first, "ws": os.path.realpath(self.ws),
                                        "home": os.path.realpath(self.home / ".claude"),
-                                       "machine": cli_session.machine_id()})
+                                       "machine": cli_cell.machine_id()})
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant", "user", "assistant"])
 
     def check_new_with_record(self, old):
@@ -323,7 +323,7 @@ class ClaudeSwitch(Base):
         self.say("again")
         self.ok_turn()
         self.check_new_with_record(old)
-        self.assertEqual(self.mark()["machine"], cli_session.machine_id())
+        self.assertEqual(self.mark()["machine"], cli_cell.machine_id())
 
     def test_ts8_marker_without_machine_still_resumes(self):
         """TS 8: an older marker without the machine key is not compared on machine (gentle on running ecas)."""
@@ -541,17 +541,15 @@ class Screen(unittest.TestCase):
 
     def setUp(self):
         from unittest import mock
-        from agent import cli_session
-        self.cs = cli_session
         self.tmp = tempfile.TemporaryDirectory(prefix="t3-screen-")
         self.addCleanup(self.tmp.cleanup)
         t = Path(self.tmp.name)
         self.ws, self.home = t / "ws", t / "home"
         self.ws.mkdir()
         self.home.mkdir()
-        self.cell = cli_session.Cell(str(t / "cell"))
+        self.cell = cli_cell.Cell(str(t / "cell"))
         for patcher in (mock.patch.dict(os.environ, {"HOME": str(self.home)}),
-                        mock.patch.object(cli_session, "die", self.raise_die)):
+                        mock.patch.object(cli_base, "die", self.raise_die)):
             patcher.start()
             self.addCleanup(patcher.stop)
         os.environ.pop("CLAUDE_CONFIG_DIR", None)
@@ -570,18 +568,18 @@ class Screen(unittest.TestCase):
         def tmux(*args, **kw):
             seen.append(args)
             raise FileNotFoundError("tmux")
-        with self.mock.patch.object(self.cs.Cell, "alive", return_value=False), \
-                self.mock.patch.object(self.cs.Cell, "tmux", side_effect=tmux):
+        with self.mock.patch.object(cli_cell.Cell, "alive", return_value=False), \
+                self.mock.patch.object(cli_cell.Cell, "tmux", side_effect=tmux):
             with self.assertRaises(RuntimeError):                # TmuxMissing after the decision
-                self.cs.start(self.cfg, self.cell, str(self.ws), "")
+                cli_screen.start(self.cfg, self.cell, str(self.ws), "")
         self.assertFalse(os.path.exists(self.cell.file("session.txt")))
         self.assertFalse(os.path.exists(self.cell.file(".session_home")))
         self.assertNotIn("--resume", seen[-1])
 
     def test_start_keeps_own_session(self):
-        self.cs.mark_session("claude", self.cell, str(self.ws), "mine")
+        cli_cell.mark_session("claude", self.cell, str(self.ws), "mine")
         import re as _re
-        saved = os.path.join(self.cs.account_dir("claude"), "projects",
+        saved = os.path.join(cli_cell.account_dir("claude"), "projects",
                              _re.sub(r"[^A-Za-z0-9]", "-", os.path.realpath(str(self.ws))))
         os.makedirs(saved, exist_ok=True)
         open(os.path.join(saved, "mine.jsonl"), "w").close()            # the CLI saved this conversation here
@@ -590,10 +588,10 @@ class Screen(unittest.TestCase):
         def tmux(*args, **kw):
             seen.append(args)
             raise FileNotFoundError("tmux")
-        with self.mock.patch.object(self.cs.Cell, "alive", return_value=False), \
-                self.mock.patch.object(self.cs.Cell, "tmux", side_effect=tmux):
+        with self.mock.patch.object(cli_cell.Cell, "alive", return_value=False), \
+                self.mock.patch.object(cli_cell.Cell, "tmux", side_effect=tmux):
             with self.assertRaises(RuntimeError):
-                self.cs.start(self.cfg, self.cell, str(self.ws), "")
+                cli_screen.start(self.cfg, self.cell, str(self.ws), "")
         self.assertEqual(seen[-1][seen[-1].index("--resume") + 1], "mine")
 
     def test_live_new_conversation_gets_capped_reseed(self):
@@ -603,12 +601,12 @@ class Screen(unittest.TestCase):
             got.append(prompt)
             return "ok"
         self.cfg["reseed_bytes"] = 48000
-        with self.mock.patch.object(self.cs.Cell, "alive", return_value=True), \
-                self.mock.patch.object(self.cs, "live", side_effect=live):
-            self.cs.ask(self.cfg, self.cell, str(self.ws), str(self.ws), str(self.ws), "Q",
+        with self.mock.patch.object(cli_cell.Cell, "alive", return_value=True), \
+                self.mock.patch.object(cli_ask, "live", side_effect=live):
+            cli_ask.ask(self.cfg, self.cell, str(self.ws), str(self.ws), str(self.ws), "Q",
                         reseed=lambda n: limits.append(n) or "R\n\n")
             self.cell.write("session.txt", "s1\n")               # the hook wrote it after the first turn
-            self.cs.ask(self.cfg, self.cell, str(self.ws), str(self.ws), str(self.ws), "Q2",
+            cli_ask.ask(self.cfg, self.cell, str(self.ws), str(self.ws), str(self.ws), "Q2",
                         reseed=lambda n: limits.append(n) or "R\n\n")
         self.assertEqual(got, ["R\n\nQ", "Q2"])
         self.assertEqual(limits, [8000])
@@ -637,28 +635,28 @@ class Screen(unittest.TestCase):
                     " Do you TRUST this directory?\n > 1. Yes, trust it\n   2. No - exit\n"]
         for screen in variants:
             seen = []
-            with self.mock.patch.object(self.cs.Cell, "tmux", side_effect=self.screen_tmux(screen, seen)), \
-                    self.mock.patch.object(self.cs.Cell, "clients", return_value=[]):
+            with self.mock.patch.object(cli_cell.Cell, "tmux", side_effect=self.screen_tmux(screen, seen)), \
+                    self.mock.patch.object(cli_cell.Cell, "clients", return_value=[]):
                 with self.assertRaisesRegex(RuntimeError, "TrustMissing"):
-                    self.cs.live(self.cfg, self.cell, "Q")
+                    cli_ask.live(self.cfg, self.cell, "Q")
             self.assertNotIn("load-buffer", seen, screen)
             self.assertNotIn("send-keys", seen)
 
     def test_ordinary_screen_still_typed(self):
         for screen in ("> I trust you, do not exit yet\n? for shortcuts\n", "", "\u276f 1. Yes\n  2. No, exit\n"):
             seen = []
-            with self.mock.patch.object(self.cs.Cell, "tmux", side_effect=self.screen_tmux(screen, seen)), \
-                    self.mock.patch.object(self.cs.Cell, "clients", return_value=[]), \
-                    self.mock.patch.object(self.cs.Cell, "alive", return_value=True):
+            with self.mock.patch.object(cli_cell.Cell, "tmux", side_effect=self.screen_tmux(screen, seen)), \
+                    self.mock.patch.object(cli_cell.Cell, "clients", return_value=[]), \
+                    self.mock.patch.object(cli_cell.Cell, "alive", return_value=True):
                 with self.assertRaisesRegex(RuntimeError, "ReplyMissing"):        # pasted, the stub never answers
-                    self.cs.live(dict(self.cfg, timeout_ms=300), self.cell, "Q")
+                    cli_ask.live(dict(self.cfg, timeout_ms=300), self.cell, "Q")
             self.assertIn("load-buffer", seen, screen)
-        self.assertFalse(self.cs.trust_prompt(self.TRUST_SCREEN.replace("trust", "know")))
-        with self.mock.patch.object(self.cs.Cell, "tmux", side_effect=self.screen_tmux(self.TRUST_SCREEN, [])), \
-                self.mock.patch.object(self.cs.Cell, "clients", return_value=[]), \
-                self.mock.patch.object(self.cs.Cell, "alive", return_value=True):
+        self.assertFalse(cli_ask.trust_prompt(self.TRUST_SCREEN.replace("trust", "know")))
+        with self.mock.patch.object(cli_cell.Cell, "tmux", side_effect=self.screen_tmux(self.TRUST_SCREEN, [])), \
+                self.mock.patch.object(cli_cell.Cell, "clients", return_value=[]), \
+                self.mock.patch.object(cli_cell.Cell, "alive", return_value=True):
             with self.assertRaisesRegex(RuntimeError, "ReplyMissing"):            # codex: not checked
-                self.cs.live(dict(self.cfg, kind="codex", timeout_ms=300), self.cell, "Q")
+                cli_ask.live(dict(self.cfg, kind="codex", timeout_ms=300), self.cell, "Q")
 
     def test_hook_writes_marker(self):
         self.cell.write("ws.txt", os.path.relpath(self.ws, self.cell.path) + "\n")
@@ -670,13 +668,13 @@ class Screen(unittest.TestCase):
         self.assertEqual(self.cell.read("session.txt"), "hook-id")
         self.assertEqual(json.loads(self.cell.read(".session_home")),
                          {"session": "hook-id", "ws": os.path.realpath(self.ws), "home": os.path.realpath(self.home / ".claude"),
-                          "machine": cli_session.machine_id()})
+                          "machine": cli_cell.machine_id()})
 
     def test_ts8_machine_id_falls_back_to_hostname(self):
         import socket
-        with self.mock.patch.object(self.cs, "open", create=True, side_effect=OSError("no machine-id")):
-            self.assertEqual(self.cs.machine_id(), socket.gethostname())
-        self.assertTrue(self.cs.machine_id())
+        with self.mock.patch.object(cli_cell, "open", create=True, side_effect=OSError("no machine-id")):
+            self.assertEqual(cli_cell.machine_id(), socket.gethostname())
+        self.assertTrue(cli_cell.machine_id())
 
 
 class TtySocket(unittest.TestCase):
@@ -685,22 +683,22 @@ class TtySocket(unittest.TestCase):
     def setUp(self):
         from unittest import mock
         import hashlib
-        self.mock, self.cs = mock, cli_session
+        self.mock = mock
         self.tmp = tempfile.TemporaryDirectory(prefix="ts-tty-")
         self.addCleanup(self.tmp.cleanup)
         self.t = Path(self.tmp.name)
         self.xdg = self.t / "xdg"
         self.xdg.mkdir(mode=0o700)
-        self.cell = cli_session.Cell(str(self.t / "stack" / "claude"))
+        self.cell = cli_cell.Cell(str(self.t / "stack" / "claude"))
         self.hash = hashlib.sha256(os.path.realpath(self.cell.path).encode()).hexdigest()[:16]
         for patcher in (mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": str(self.xdg)}),
-                        mock.patch.object(cli_session, "die", Screen.raise_die)):
+                        mock.patch.object(cli_base, "die", Screen.raise_die)):
             patcher.start()
             self.addCleanup(patcher.stop)
         self.dir = self.xdg / ("aos-tty-%d" % os.getuid())
 
     def test_path_and_length(self):
-        sock = self.cs.tty_socket(self.cell.path)
+        sock = cli_cell.tty_socket(self.cell.path)
         self.assertEqual(sock, str(self.dir / (self.hash + ".sock")))
         self.assertLess(len(sock.encode()), 108)
         self.assertFalse(self.dir.exists())                      # looking does not create anything
@@ -711,17 +709,17 @@ class TtySocket(unittest.TestCase):
         for bad in (str(self.t / "nope"), "", "relative/dir", str(self.t / "file")):
             (self.t / "file").write_text("")
             with self.mock.patch.dict(os.environ, {"XDG_RUNTIME_DIR": bad}):
-                self.assertEqual(self.cs.tty_socket(self.cell.path), os.path.join(tmp_dir, self.hash + ".sock"))
+                self.assertEqual(cli_cell.tty_socket(self.cell.path), os.path.join(tmp_dir, self.hash + ".sock"))
         with self.mock.patch.dict(os.environ):
             os.environ.pop("XDG_RUNTIME_DIR")
-            self.assertEqual(self.cs.tty_socket(self.cell.path), os.path.join(tmp_dir, self.hash + ".sock"))
+            self.assertEqual(cli_cell.tty_socket(self.cell.path), os.path.join(tmp_dir, self.hash + ".sock"))
 
     def test_make_creates_0700_and_fixes_mode(self):
-        sock = self.cs.tty_socket(self.cell.path, make=True)
+        sock = cli_cell.tty_socket(self.cell.path, make=True)
         self.assertEqual(os.stat(self.dir).st_mode & 0o777, 0o700)
         self.assertEqual(os.path.dirname(sock), str(self.dir))
         os.chmod(self.dir, 0o755)
-        self.cs.tty_socket(self.cell.path, make=True)
+        cli_cell.tty_socket(self.cell.path, make=True)
         self.assertEqual(os.stat(self.dir).st_mode & 0o777, 0o700)
 
     def test_make_refuses_symlinked_folder(self):
@@ -729,14 +727,14 @@ class TtySocket(unittest.TestCase):
         other.mkdir()
         os.symlink(other, self.dir)
         with self.assertRaises(RuntimeError) as e:
-            self.cs.tty_socket(self.cell.path, make=True)
+            cli_cell.tty_socket(self.cell.path, make=True)
         self.assertEqual(str(e.exception), "CellBad")
 
     def test_moved_cell_other_hash(self):
-        a = self.cs.tty_socket(self.cell.path)
+        a = cli_cell.tty_socket(self.cell.path)
         moved = self.t / "stack2"
         os.rename(self.t / "stack", moved)
-        b = self.cs.tty_socket(str(moved / "claude"))
+        b = cli_cell.tty_socket(str(moved / "claude"))
         self.assertNotEqual(a, b)
 
     def test_old_socket_in_cell_still_found(self):
@@ -745,20 +743,20 @@ class TtySocket(unittest.TestCase):
         old = socket.socket(socket.AF_UNIX)
         self.addCleanup(old.close)
         old.bind(self.cell.file("tty.sock"))
-        self.assertEqual(self.cs.tty_socket(self.cell.path), self.cell.file("tty.sock"))
-        self.assertEqual(self.cs.tty_socket(self.cell.path, make=True), str(self.dir / (self.hash + ".sock")))
+        self.assertEqual(cli_cell.tty_socket(self.cell.path), self.cell.file("tty.sock"))
+        self.assertEqual(cli_cell.tty_socket(self.cell.path, make=True), str(self.dir / (self.hash + ".sock")))
 
     @unittest.skipUnless(shutil.which("tmux"), "tmux not installed")
     def test_real_tmux_screen_outside_the_cell(self):
-        sock = self.cs.tty_socket(self.cell.path, make=True)
+        sock = cli_cell.tty_socket(self.cell.path, make=True)
         self.addCleanup(subprocess.run, ["tmux", "-S", sock, "kill-server"], capture_output=True)
         self.assertFalse(self.cell.alive())
-        r = self.cell.tmux("new-session", "-d", "-s", self.cs.TMUX_SESSION, "sleep 60", new=True)
+        r = self.cell.tmux("new-session", "-d", "-s", cli_base.TMUX_SESSION, "sleep 60", new=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(self.cell.alive())
         self.assertTrue(os.path.exists(sock))
         self.assertEqual(sorted(os.listdir(self.cell.path)), [])   # nothing made in the cell (no tty.sock)
-        self.assertTrue(self.cs.close(self.cell))
+        self.assertTrue(cli_cell.close(self.cell))
         self.assertFalse(self.cell.alive())
         self.assertFalse(os.path.exists(sock))                   # close removes the socket file too
         self.assertEqual(subprocess.run(["tmux", "-S", sock, "has-session"], capture_output=True).returncode, 1)

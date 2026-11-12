@@ -83,48 +83,22 @@
 # 要連同全部 cli_*.py（與 agent_files.py）一起帶（分檔彼此同層 import）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
 #
-# 分檔（11-12 晚 R3 重構拆檔，行為不變）：本檔只留上面的說明、對外的名字與 hook／guard 的執行入口（hook 指令一直指著本檔），
+# 分檔（11-12 晚 R3 重構拆檔，行為不變）：本檔只留上面的說明與 hook／guard 的執行入口（hook 指令一直指著本檔，不能搬不能改名），
 #   本體在同層：cli_base（錯誤行、PROG／ECHO、共用常數）、cli_cfg（cli.json、llm、system）、cli_mcp（aos 與外部 MCP、tools_sub、guard）、
 #   cli_cell（小格、畫面 socket、session 記號）、cli_print（非互動）、cli_ask（畫面送字、ask、call_main）、cli_hook（hook、history 同步）、
 #   cli_screen（開畫面、attach）。呼叫者直接 import 要用的分檔（例 cli_ask.ask、cli_cell.Cell）；執行期會被換掉或設定的只有
-#   cli_base 的 die、warn、PROG、ECHO——各分檔一律寫 cli_base.die(…)，所以設 cli_base.X 一處就全部生效（agent_tool 設 PROG／ECHO）。
-#   過渡（aos-eca 還沒改）：下面仍把八份的名字倒進本模組、用 _Facade 把對本模組的設定與刪除轉給有同名的那幾份；aos-eca 改完就拿掉。
-import sys, types
+#   cli_base 的 die、warn、PROG、ECHO——各分檔一律寫 cli_base.die(…)，所以設 cli_base.X 一處就全部生效（agent_tool 設 PROG／ECHO、
+#   aos-eca 換 die；測試 patch 定義那份，例 cli_ask.live、cli_cell.open）。
+import sys
 
 if __package__:
-    from . import cli_base, cli_cfg, cli_mcp, cli_cell, cli_print, cli_ask, cli_hook, cli_screen
+    from .cli_base import die
+    from .cli_hook import hook_main
+    from .cli_mcp import guard_main
 else:
-    import cli_base, cli_cfg, cli_mcp, cli_cell, cli_print, cli_ask, cli_hook, cli_screen
-
-_PARTS = (cli_base, cli_cfg, cli_mcp, cli_cell, cli_print, cli_ask, cli_hook, cli_screen)
-for _part in _PARTS:                                   # 拆檔前的名字照舊從本模組拿得到
-    for _name, _value in vars(_part).items():
-        if not _name.startswith("__"):
-            globals().setdefault(_name, _value)
-del _part, _name, _value
-
-
-class _Facade(types.ModuleType):
-    """cli_session.X = v（含 mock.patch）＝也設進有 X 的那幾份分檔；都沒有（例 patch open, create=True）＝每份都設。"""
-
-    def __setattr__(self, name, value):
-        for part in [p for p in _PARTS if name in vars(p)] or _PARTS:
-            setattr(part, name, value)
-        super().__setattr__(name, value)
-
-    def __delattr__(self, name):
-        found = name in vars(self)
-        for part in _PARTS:
-            if name in vars(part):
-                delattr(part, name)
-                found = True
-        if not found:
-            raise AttributeError(name)
-        if name in vars(self):
-            super().__delattr__(name)
-
-
-sys.modules[__name__].__class__ = _Facade
+    from cli_base import die
+    from cli_hook import hook_main
+    from cli_mcp import guard_main
 
 
 if __name__ == "__main__":
@@ -133,8 +107,7 @@ if __name__ == "__main__":
               "       cli_session.py guard\n"
               "The hook the CLI's interactive screen calls after each turn (appends to CELL/turns.jsonl; never fails).\n"
               "guard: claude PreToolUse hook (hook JSON on stdin); denies a subagent's call to the main agent's aos tools.\n"
-              "The code is in the cli_*.py files next to this one; tool entries (lib/agent/claude, codex) import those,\n"
-              "aos-eca-turn and aos-eca-screen import this file.")
+              "The code is in the cli_*.py files next to this one; callers (tool entries, aos-eca) import those.")
     elif sys.argv[1:] == ["guard"]:
         guard_main()
     elif len(sys.argv) >= 4 and sys.argv[1] == "hook":

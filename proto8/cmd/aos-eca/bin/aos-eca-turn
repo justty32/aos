@@ -27,18 +27,18 @@
      名字不是有序的不再算壞信（11-03 aos-post 改版：有序、無序同箱，無序的排在最後、照樣答）。
      整批都是壞信＝不問 CLI、退 0。
   ③ 好信的 content 照順序用一個空行（"\n\n"）接成一段，交給 cli_session 問一次（小格＝$AOS_STACK/<kind>/）：畫面開著＝貼進畫面等 hook；
-     沒開＝claude -p --resume／codex exec resume（第一次開新的）——兩條路照 10-24，跟工具形是同一段（cli_session.ask）。
+     沒開＝claude -p --resume／codex exec resume（第一次開新的）——兩條路照 10-24，跟工具形是同一段（cli_ask.ask）。
   ④ 交出去就算完成（11-03，使用者「對於eca來說，他收到信後，丟給claude之類的，然後這封信就算是完成了」，thinking 2026-10-30-eca/20-11-03-交出去就收.md）：
-     題目交給 CLI 的那一刻（非互動＝CLI 起來、題目寫進 stdin；畫面＝貼上按 Enter；cli_session.ask 的 handed）、等回答之前，
+     題目交給 CLI 的那一刻（非互動＝CLI 起來、題目寫進 stdin；畫面＝貼上按 Enter；cli_ask.ask 的 handed）、等回答之前，
      好信 body 照順序各接一則 user 進 history，再 aos-post done 這批每一封（刪掉）。之後 CLI 的輸出就是結果（沒有「回信」，
      使用者 11-03「沒有回信。claude的輸出結果就是這樣」）：接成一則 {"role": "assistant", "content": 輸出} 進 history。
      CLI 中途掛掉（CliFailed、ReplyMissing、這支被殺）＝邊緣狀況：信已經收了、不自動重答，要重答由人再 say
      （使用者 11-03「中途掛掉就是邊緣狀況，不要讓邊緣狀況影響他的原本意思」；P-12 在 eca 的例外，見 P-43）。
   ⑤ queue 空（cur/、new/ 都沒信）：照 --on-empty——stop 退 10、idle 退 0（Q-9）。
   ⑥ 11-03 起不寫 $AOS_STACK/trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）；要看狀態用 aos-agent ctl status。
-  ⑦ 拿到 session id 就在小格建 transcripts/<kind>-<id>.jsonl symlink（cli_session.link_transcript，C-15～17）。
+  ⑦ 拿到 session id 就在小格建 transcripts/<kind>-<id>.jsonl symlink（cli_cell.link_transcript，C-15～17）。
   ⑧ 換台開新對話（11-10 two-machines 05）：session.txt 沒有、或 cli_session 認出它不是這台的（記號檔 .session_home 的 session／home、
-     claude 再加 ws 不同；記號檔有 machine 的再比機器，11-10 TS 8）＝在交出去之前改開新對話，題目前面接一段開場白＝這支組的「整理過的紀錄」（reseed；cli_session.ask 叫它）：
+     claude 再加 ws 不同；記號檔有 machine 的再比機器，11-10 TS 8）＝在交出去之前改開新對話，題目前面接一段開場白＝這支組的「整理過的紀錄」（reseed；cli_ask.ask 叫它）：
      來源＝這輪交出去之前的 $AOS_STACK/history.jsonl；英文說明一段＋`--- record: N messages, M shown ---`＋`[user]`／`[assistant]` 一則一段
      ＋`--- end of record ---`＋一個空行。第一則 user 一定帶、其餘從最新往回裝到上限，中間省掉的寫一行 `[... K earlier messages left out ...]`；
      單則超過 6000 bytes 留頭 4000＋尾 2000、中間寫 `[... N bytes left out ...]`（照 UTF-8 bytes 算、不切壞字）。上限＝cli.json 選填
@@ -47,7 +47,7 @@
   ⑩ history 被改過＝開新對話（11-10 晚 self-family，使用者「4.接受縮水版」；10-30 eca 09「停著時改 history 再繼續」第 2 條路）：
      CLI 的對話在 claude／codex 那邊、aos 改不到，所以 history.jsonl 被別人改了（aos-agent history、self_history、手改），下一輪就
      不續舊對話、開新的，題目前面照 ⑧ 接改過的紀錄。怎麼認：每輪 assistant 接進 history 之後，把整份的 sha256 寫進小格的 .history_sum；
-     下一輪交出去之前算一次，不一樣＝cli_session.drop_session（刪 session.txt、.session_home）＋一行 warning。這一輪中間被改的
+     下一輪交出去之前算一次，不一樣＝cli_cell.drop_session（刪 session.txt、.session_home）＋一行 warning。這一輪中間被改的
      （腦叫 self_history；交出去之後 history 跟交出去那刻不一樣）＝.history_sum 寫 edited，下一輪照樣開新的。沒有 .history_sum＝不比。
      畫面開著＝不換（對話在畫面裡），只印 warning。代價：對方的快取與 session id 換掉、紀錄只帶 user／assistant 文字（上限同 ⑧）。
   ⑨ 失敗後冷卻（11-10 two-machines 06，使用者裁「失敗後冷卻，只拿一封試」；檔＝$AOS_STACK/cooldown.json，讀寫一律走 lib/agent/cooldown.py）：
@@ -77,12 +77,12 @@
      aos 這層做，照一般一輪記 history（那封 user＋一則 `[aos] slash: …` 或 CLI 的原話）、收信、after_queue 照跑：
      /status＝aos 自己答（kind、model、對話 id、畫面開關、history 幾則、transcript 在哪）；/usage＝claude 另起一次 `claude -p --no-session-persistence`
      問 /usage 原樣回（不碰這隻的對話），codex 沒有對應的、回一句；/compact＝claude 照一般 --resume 交 "/compact"（claude -p 認得、同一個 id 壓縮），
-     codex exec 不認＝刪 session.txt、下一輪開新 thread 帶 aos 的紀錄（同 ⑧）；/clear＝history 原文搬到 history_removed.jsonl（cli_session.clear_history，
+     codex exec 不認＝刪 session.txt、下一輪開新 thread 帶 aos 的紀錄（同 ⑧）；/clear＝history 原文搬到 history_removed.jsonl（cli_hook.clear_history，
      同 aos-agent history rm 的規矩、op clear）、刪 session.txt，history 只剩這一問一答，下一輪開新對話；/exit＝畫面開著（沒人接著）就關掉，沒開回一句。
-     /compact（claude）之後 history 換成 claude 的摘要一則（cli_session.compact_history：transcript 裡的 isCompactSummary，原文搬走、op compact；
-     找不到摘要＝不動）。畫面開著時 /clear、/compact 打進畫面（使用者 Q2「幫我貼進去」，cli_session.type_line），aos 這邊靠畫面 hook 跟上：
+     /compact（claude）之後 history 換成 claude 的摘要一則（cli_hook.compact_history：transcript 裡的 isCompactSummary，原文搬走、op compact；
+     找不到摘要＝不動）。畫面開著時 /clear、/compact 打進畫面（使用者 Q2「幫我貼進去」，cli_ask.type_line），aos 這邊靠畫面 hook 跟上：
      claude 等 hook 改完 history（上限 SCREEN_WAIT 秒）才記這一問一答；codex 的 /clear 不等（下一輪 notify 才清），/compact 等它的 rollout 多一個
-     compacted 再 cli_session.codex_sync_compact（history 換成從 replacement_history 撈出的對話，使用者 Q5；撈不到＝不動、回一句）；
+     compacted 再 cli_hook.codex_sync_compact（history 換成從 replacement_history 撈出的對話，使用者 Q5；撈不到＝不動、回一句）；
      畫面 hook 在一輪中間跟上 CLI 改了 history（刪掉 .history_sum）＝不算 ⑩ 的「這一輪中間被改」，下一輪不丟對話；
      畫面正在跑一輪（busy.txt）＝這次不動、信留 cur/、下一輪再試。
      /goal（11-12 晚，使用者「eca還有一個slash command我很常用：/goal」「包括/goal clear」）：只有它放寬成「以 /goal 開頭」（`/goal 目標`、`/goal clear`、
@@ -95,8 +95,8 @@
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
   人在畫面上自己打的話不進 history（沒經 queue；eca 方向題 2）。
   11-04 起不寫 $AOS_STACK/eca.json（名片沒人讀了：aos-eca 刪了，aos-agent 從 daemon 表的 def 欄找定義；thinking 2026-11-04 aos-agent 05）。
---one（工具形，P-41 工具契約）：stdin {"prompt"} → stdout 回答，對話在 $AOS_STACK 這格本身（cli_session.call_main，需有效的 $AOS_WS）；
-  lib 的 claude／codex 走 lib/agent/agent_tool.py 的 ask_cli，與這裡共用 cli_session.ask。
+--one（工具形，P-41 工具契約）：stdin {"prompt"} → stdout 回答，對話在 $AOS_STACK 這格本身（cli_ask.call_main，需有效的 $AOS_WS）；
+  lib 的 claude／codex 走 lib/agent/agent_tool.py 的 ask_cli，與這裡共用 cli_ask.ask。
   --on-busy 照認（yield 時 SessionBad 照錯退 1）；跟 --on-empty 一起給＝ArgumentsBad（工具形沒有 queue）。
   工具形沒有 history：舊對話不在這台＝stderr 一行 warning、開新對話不附紀錄（05）；不做冷卻（06）。
   錯照 lib 契約 stderr 與 stdout 各一行「<定義資料夾名>: 代號 原因」、退 1。
@@ -118,7 +118,7 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
 from pathlib import Path
 
-_import_paths = [HERE, os.path.normpath(os.path.join(HERE, ".."))]
+_import_paths = [os.path.normpath(os.path.join(HERE, ".."))]
 for _parent in Path(__file__).resolve().parents:
     for _layer, _module in (("py", "aos_flags.py"), ("lib", "agent/__init__.py")):
         _root = _parent / _layer

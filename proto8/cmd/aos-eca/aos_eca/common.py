@@ -3,31 +3,15 @@ import os
 
 import aos_ws
 
-# bin 入口把自己的資料夾放在最前；bin 旁邊有跟著帶的模組就用那份，否則用 lib/agent 的。
-_BIN = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "bin")
-if os.path.isfile(os.path.join(_BIN, "cli_session.py")):
-    import cli_session  # noqa: E402
-else:
-    import agent.cli_session as cli_session  # noqa: E402
-if os.path.isfile(os.path.join(_BIN, "cooldown.py")):
-    import cooldown  # noqa: E402
-else:
-    import agent.cooldown as cooldown  # noqa: E402
-if os.path.isfile(os.path.join(_BIN, "hooks.py")):
-    import hooks  # noqa: E402
-else:
-    import agent.hooks as hooks  # noqa: E402
-if os.path.isfile(os.path.join(_BIN, "goal_state.py")):
-    import goal_state  # noqa: E402
-else:
-    import agent.goal_state as goal_state  # noqa: E402
+# lib/agent 的共用模組（bin 入口已把 lib 放進 sys.path）；問 CLI 那段在 cli_*.py 分檔。
+from agent import cli_ask, cli_base, cli_cell, cli_cfg, cli_hook, cooldown, goal_state, hooks  # noqa: E402,F401
 
 NAME = "aos-eca-turn"
 NOT_FOUND = 10
 
 
 class Fail(Exception):
-    """自己這層或 cli_session 的錯：code＝代號。"""
+    """自己這層或 cli_*.py 分檔（cli_base.die 換成丟這個）的錯：code＝代號。"""
 
     def __init__(self, code, reason):
         super().__init__(str(reason).replace("\n", " "))
@@ -69,6 +53,6 @@ def must_post(args, stdin_text="", ok=(0,)):
 
 # ---- mailbox_warning.txt ----
 
-def warn(stack, sig, why):
+def mailbox_warning(stack, sig, why):
     """N-16 壞信記 mailbox_warning：$AOS_STACK/mailbox_warning.txt 一行、只留最後一封（11-03 前記在 trace）。"""
     write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s rejected: %s\n" % (sig, why.replace("\n", " ")))

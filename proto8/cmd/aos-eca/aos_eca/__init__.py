@@ -5,7 +5,7 @@ import sys
 import aos_flags
 
 from .common import NAME, NOT_FOUND, Fail
-from .common import cli_session
+from .common import cli_ask, cli_base
 from .turn import one_turn
 
 USAGE = "aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] [--prompt FILE] DEF_DIR"
@@ -95,14 +95,14 @@ def main():
         if not os.path.isfile(prompt):
             die("PromptMissing", "--prompt file not found: %s" % prompt)
     if opts.get("one"):
-        cli_session.call_main(template, busy)                      # --one 專用入口；lib 的 ask_cli 與它共用 cli_session.ask
+        cli_ask.call_main(template, busy)                      # --one 專用入口；lib 的 ask_cli 與它共用 cli_ask.ask
         return
     stack = os.environ.get("AOS_STACK")
     if not stack:
         die("StackMissing", "AOS_STACK is not set")
     stack = os.path.abspath(stack)
     ws = os.path.abspath(os.environ.get("AOS_WS") or ".")
-    cli_session.die = _cli_die
+    cli_base.die = _cli_die
     try:
         code = one_turn(template, stack, ws, NOT_FOUND if empty == "stop" else 0, busy, prompt)
     except Fail as e:

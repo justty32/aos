@@ -21,11 +21,10 @@ aos_flags.parse（P-44：長旗標與共用短名 -h；子命令前不認得的�
 `--help`＝英文說明到 stdout、退 0；Ctrl-C＝退 130、不吐 traceback（watch 用 Ctrl-C 離開是正常離開，照舊退 0）。"""
 import json, os, sys, time
 
-HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
 from pathlib import Path
 
-_import_paths = [HERE]
+_import_paths = []
 for _parent in Path(__file__).resolve().parents:
     for _layer, _module in (("py", "aos_flags.py"), ("lib", "agent/__init__.py")):
         _root = _parent / _layer
@@ -34,10 +33,7 @@ for _parent in Path(__file__).resolve().parents:
 sys.path[:0] = _import_paths
 try:
     import aos_flags  # noqa: E402
-    if os.path.isfile(os.path.join(HERE, "cli_session.py")):
-        import cli_session  # noqa: E402
-    else:
-        import agent.cli_session as cli_session  # noqa: E402
+    from agent import cli_base, cli_cell, cli_cfg, cli_screen  # noqa: E402
     import daemon_ctl as dc  # noqa: E402
 finally:
     for _path in _import_paths:
@@ -139,21 +135,21 @@ def cell_of(eca):
     stack = os.environ.get("AOS_STACK")
     if not stack:
         die("StackMissing", "AOS_STACK is not set (the eca's stack)")
-    cfg = cli_session.load_cfg(eca)
-    return cli_session.Cell(os.path.join(stack, cfg["kind"])), stack
+    cfg = cli_cfg.load_cfg(eca)
+    return cli_cell.Cell(os.path.join(stack, cfg["kind"])), stack
 
 
 def cmd_open(eca, opts):
     cell, stack = cell_of(eca)
     ws = os.path.abspath(os.environ.get("AOS_WS") or ".")
-    cli_session.note_cell(cell, eca, ws, stack)          # open_cell 照 tool.txt（定義）、ws.txt、stack.txt（給 aos-mcp）開
-    opened = cli_session.open_cell(cell)                 # 正在答題就等它答完（格的 lock）、等畫面穩
+    cli_cell.note_cell(cell, eca, ws, stack)          # open_cell 照 tool.txt（定義）、ws.txt、stack.txt（給 aos-mcp）開
+    opened = cli_screen.open_cell(cell)                 # 正在答題就等它答完（格的 lock）、等畫面穩
     if opts.get("detach"):
         print("screen %s: %s" % ("opened (resumed with --resume if a conversation exists)" if opened else "already open", cell.sock()))
         return
     env = {k: v for k, v in os.environ.items() if k != "TMUX"}
     aos_flags.warn(PROG, "attaching to %s (Ctrl-] detaches; the instance keeps running)" % ws)
-    os.execvpe("tmux", ["tmux", "-S", cell.sock(), "attach", "-t", cli_session.TMUX_SESSION], env)
+    os.execvpe("tmux", ["tmux", "-S", cell.sock(), "attach", "-t", cli_base.TMUX_SESSION], env)
 
 
 def cmd_close(eca, opts):
@@ -165,7 +161,7 @@ def cmd_close(eca, opts):
     with f:
         if not ok:
             die("SessionBad", "busy answering; close it after the answer finishes")
-        closed = cli_session.close(cell)
+        closed = cli_cell.close(cell)
     print("closed" if closed else "no screen (already closed)")
 
 

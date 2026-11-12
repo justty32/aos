@@ -4,7 +4,7 @@
 
 不是指令、不進 PATH。共用模組依序從自己的資料夾、自己的 `realpath(__file__)` 往上找到的 repo `py/`／`lib/`、標準 `sys.path` 找；最後可由 `install.sh` 寫的 user site `aos-proto8.pth` 或 `PYTHONPATH` 提供，不再從 PATH 上 `aos-tools` 的真位置推。
 
-依賴單向：`py` 可以 import `lib`，`lib` 不 import `py`。CLI 對話與介面宣告的共用模組在 [lib/agent](../lib/docs/03-索引-agent等.md)：`cli_session.py`、`agent_files.py`（11-06 晚 K-5）。
+依賴單向：`py` 可以 import `lib`，`lib` 不 import `py`。CLI 對話與介面宣告的共用模組在 [lib/agent](../lib/docs/03-索引-agent等.md)：`cli_session.py` 與 `cli_*.py`、`agent_files.py`（11-06 晚 K-5）。
 
 兩鐘函式只有 `lib/tool_io.py` 一份（`aos_ws` 的同名函式包它：缺檔提醒開頭用 `argv[0]` 檔名、錯丟 `aos_ws.Error`；11-12 收重複），跟 `aos-util` 同義：`AOS_CLOCK` 沒設或空就沒有時鐘；指到缺檔時，每行程每路徑印一次英文 warning，仍當 0、不建檔；空檔照舊當 0。
 
