@@ -50,7 +50,7 @@
 2. kernel（表上的 0 號）不是 running 時，`ctl add` 等等的寄出後立刻 `WaitFailed`（信照樣排著、它回來會判），不等 30 秒。代號沿用 `WaitFailed`，不新開。
 3. 判官對 start／wake 只判 `max_running`、不判 `allowed`（add 時判過了）；`procs_slept`／`procs_stopped`／`procs_removed` 照原樣轉。
 4. wait.py 比「內容」不比 mtime：人**刪掉** stack 的 llm.json（教學的救法）時 mtime 不會變新，比內容才抓得到。比的只有 endpoint、model（brain 會放進請求的就這兩個）；疊法跟 brain.py 抄同一套（兩處）。
-5. 壞覆蓋層／工具不見＝整隻停：不改成略過壞的工具（aos-tools「不符合要求一律報錯、不猜不跳過」），只在 docs/03 寫清楚與救法。
+5. 壞覆蓋層／工具不見＝整隻停：不改成略過壞的工具（aos-tools「不符合要求一律報錯、不猜不跳過」），只在 docs/03 寫清楚與救法。（**11-12 裁定註**：使用者 11-12「可以改條文」——`aos-tools ls` 碰到其中一支壞掉（路徑不在、定義缺或壞）改成略過那支、提醒一行、清單少那一支、照跑；`add`／`get`／`call` 壞的那支照舊報錯，登記檔本身壞照舊整份報錯、整隻停。見 [tool-path-broken](../../../2026-11/12/tool-path-broken.md)、[P-41](../../../../docs/CONVENTION/02-題目stack停錯腦/06-P-41.md)。）
 6. `ctl sleep` 時最後那句還沒答完＝提醒一聲（eca 會丟那批），不擋；fsm 會從那格接著答。
 7. 暫停中 say／listen＝提醒一次、照等（不退）。
 8. 模式 1 `judge.json` 壞＝整台 daemon 停：照現況（demo/docs/04 已知限制本來就寫了）。

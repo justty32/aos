@@ -41,11 +41,19 @@ aos-tools: warning: tool aos_cache skipped: PathMissing (its path does not exist
 3. **warning 不帶絕對路徑**：只有登記名、代號、白話原因（`BROKEN_WHY` 對照表，認不得的代號＝`it cannot be read`）、怎麼修；完整原因（含路徑、來自哪份檔哪一格）用 `get 名` 看。訊息講 `rm 名`，不講 self_tools（aos-tools 不知道上層是誰）。
 4. **`--json` 不列壞的**：叫不到的不給；所以經 MCP 或 fsm 硬叫壞的那支，回的是 `no such tool`／act 的 `ToolUnknown`，不是 `PathMissing`——原錯只在 `aos-tools get／call 名`、self_tools `get` 看得到。
 5. **`CommandMissing`（aos-json 起不來）照舊整份報錯**：那是環境壞、不是那一支的問題。
-6. **範圍外、照舊整份報錯**：登記檔不是 JSON、形狀不對、`$override` 指不到；還有**某一支 path 的指示詞解不開**（例如 `{"$env": "X"}` 而 X 沒設）——那是整格 `tools` 一起交 aos-json 解時就失敗（`DirectiveBad`，`blame()` 已說出是哪支），要逐支解才拆得開，這次不做；它也會擋 `rm`，self_tools 救不回（要人改檔或 `aos-agent tools reset`）。登記格自己形狀不對（沒 `path`、`env` 不是物件）也一樣整份 `RegistryBad`、擋 `rm`。
+6. **範圍外、照舊整份報錯**：登記檔不是 JSON、形狀不對、`$override` 指不到；還有**某一支 path 的指示詞解不開**（例如 `{"$env": "X"}` 而 X 沒設）——那是整格 `tools` 一起交 aos-json 解時就失敗（`DirectiveBad`，`blame()` 已說出是哪支），要逐支解才拆得開，這次不做；它也會擋 `rm`，self_tools 救不回（要人改檔或 `aos-agent tools reset`）。登記格自己形狀不對（沒 `path`、`env` 不是物件）也一樣整份 `RegistryBad`、擋 `rm`。這兩種頂層問過、使用者未回，照現況：條文歸「登記檔本身壞＝整隻停」那一類，不做。
 
 **要重建什麼**：沒有（不改任何持久檔格式）。
 
-## 跟條文的衝突（沒改條文，待裁）
+## 決定（11-12，使用者裁）
+
+頂層把下面的衝突與建議寫法拿去問，使用者原話：「可以改條文」。於是：
+
+- [P-41](../../../docs/CONVENTION/02-題目stack停錯腦/06-P-41.md) 末句照建議改成兩種情況：登記檔本身壞（不是 JSON、形狀不對、`$override` 指不到、指示詞解不開、登記格形狀不對）＝`ToolsBad`、整隻停；其中一支壞掉（路徑不在、定義缺或壞）＝`aos-tools ls` 略過那支、提醒一行、清單少那一支、照跑。
+- 歷史出處只加 11-12 裁定註、不改原文：10-28 aos-tools [決定 4](../../2026-10/28/aos-tools/01-使用者原文.md)、[03-結論 #7](../../2026-10/28/aos-tools/03-結論.md)，11-10 [aos-tools-cli 丙6](../10/aos-tools-cli/02-改法.md)，11-05 [edge-agent #5](../05/edge-agent/README.md)。
+- 代定 6 的兩種救不回的情況：使用者未回，不做、照現況（見上）。
+
+## 跟條文的衝突（裁前的盤點；已照上面的決定改）
 
 - [CONVENTION P-41](../../../docs/CONVENTION/02-題目stack停錯腦/06-P-41.md) 末句「登記了但壞掉的工具＝brain／act 自己這層的錯 `ToolsBad`（停、人修好再跑）」——現在只有登記檔本身壞才 `ToolsBad`；一支壞＝清單少那支、照跑。建議改成：「登記檔本身壞（不是 JSON、形狀不對、`$override` 指不到、指示詞解不開）＝brain／act 自己這層的錯 `ToolsBad`（停、人修好再跑）；登記了但那一支壞掉（路徑不在、定義缺或壞）＝aos-tools ls 略過、提醒一行，清單少那一支、照跑（11-12 tool-path-broken）。」
 - 10-28 [aos-tools 決定 4「不猜、不跳過」](../../2026-10/28/aos-tools/01-使用者原文.md) 與 [03-結論 #7](../../2026-10/28/aos-tools/03-結論.md)「`ls`／`get` 碰到登記了但壞掉的工具也整個報錯」：決定 4 原本講的是 `add XXX`（照舊報錯），#7 把它延伸到 `ls`；11-10 [aos-tools-cli 丙6](../10/aos-tools-cli/02-改法.md)「一個工具壞掉整份清單不能用…要不要鬆」當時留著沒裁。這次照頂層指示鬆了 `ls`，`add`／`get`／`call` 照舊不猜。要使用者確認這算對「不跳過」的修正。
