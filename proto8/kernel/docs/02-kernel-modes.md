@@ -27,7 +27,7 @@
 ### `AOS_KERNEL`＝一般 proc 寄請求的地方
 
 - 值＝一般 proc 送 syscall 請求的信箱資料夾（C-47「一律寄 `AOS_KERNEL`」）；現在收的是 `procs_*` 信，形狀跟 daemon 的 ctl 信箱一模一樣，所以 daemon 的 ctl 信箱本身就是最基礎的那個（模式 0）。
-- **沒設＝kernel 就是 daemon**：寄到 `$AOS_DAEMON` 的 ctl 信箱（不報錯）。`AOS_DAEMON` 也沒設時，現行再找 cwd 的 `./.stack`，也不是資料夾才 `DaemonMissing`（[N-63 的 11-05 例外](../../docs/NORMS/10-基礎設施-定義與工作區/07-hub-型環境變數與父子交代/02-N-63-實例-AOS_DAEMON與沒有AOS_HUB.md)）。11-11 曾議改成兩個都沒設就報錯；11-12 使用者：「只是猜.stack感覺可以留著?」，未定案。
+- **沒設＝kernel 就是 daemon**：寄到 `$AOS_DAEMON` 的 ctl 信箱（不報錯）。`AOS_DAEMON` 也沒設時，現行再找 cwd 的 `./.stack`，也不是資料夾才 `DaemonMissing`（[N-63 的 11-05 例外](../../docs/NORMS/10-基礎設施-定義與工作區/07-hub-型環境變數與父子交代/02-N-63-實例-AOS_DAEMON與沒有AOS_HUB.md)）。
 - **有設**：`aos-agent ctl` 的 `procs_*` 信改寄到 `$AOS_KERNEL`（**`aos-daemon-ctl` 不看它、一律直寄 daemon**：使用者 11-07 選項框「aos-daemon-ctl 永遠直寄」，[os-impl 08](../../thinking/2026-11/06/os-impl/08-aos-daemon-ctl永遠直寄實作結果.md)；11-11 定位成「指名 daemon」的工具，直寄＝繞過判官，有 Linux 權限就能用）。模式 1 設成 `<daemon 的 stack>/requests`、模式 2 設成 `<0 號的 stack>/requests`；可以由人設，或寫進 daemon 的 `.env` 帶給子項。
 - 問腦的 llm kernel 用另一個變數 `AOS_LLM_KERNEL`（[01](01-llm-kernel.md)），跟這個各管一事。
 
