@@ -5,6 +5,31 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/cmd/aos-feedback/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`aos_feedback/__init__.py`](../../../../../proto8/cmd/aos-feedback/aos_feedback/__init__.py) | Parse feedback commands through aos_flags and present records and comfort reports. |
+| [`aos_feedback/comfort.py`](../../../../../proto8/cmd/aos-feedback/aos_feedback/comfort.py) | Calculate AI comfort from scored feedback and consecutive observed tool calls. |
+| [`aos_feedback/storage.py`](../../../../../proto8/cmd/aos-feedback/aos_feedback/storage.py) | Append command feedback and read its local model classification rules. |
+| [`bin/aos-feedback`](../../../../../proto8/cmd/aos-feedback/bin/aos-feedback) | Collect command feedback and report observed AI comfort scores. |
+| [`tests/test_boundaries.py`](../../../../../proto8/cmd/aos-feedback/tests/test_boundaries.py) | Verify concurrent feedback writes, CLI argument boundaries and damaged input handling. |
+| [`tests/test_feedback.py`](../../../../../proto8/cmd/aos-feedback/tests/test_feedback.py) | Verify feedback CLI storage, comfort calculations and the real aos-exec tool boundary. |
+
+## `proto8/cmd/aos-grow/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`bin/aos-grow`](../../../../../proto8/cmd/aos-grow/bin/aos-grow) | 把一個函數往上長一級（或縮回一級），呼叫方跟著改、行為不變。 |
+
+## `proto8/cmd/aos-mailbox/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`aos_mailbox/__init__.py`](../../../../../proto8/cmd/aos-mailbox/aos_mailbox/__init__.py) | aos-mailbox 本體：找我的 stack、四個子命令（where、peek、read、send）、叫 aos-post 命令列。 |
+| [`bin/aos-mailbox`](../../../../../proto8/cmd/aos-mailbox/bin/aos-mailbox) | my mailbox: send letters to agents, see and read the letters sent to me (thin launcher; the body is aos_mailbox/). |
+| [`tests/test_mailbox.py`](../../../../../proto8/cmd/aos-mailbox/tests/test_mailbox.py) | Test aos-mailbox where / peek / read / send against real aos-post boxes and a hand-written daemon table. |
+
 ## `proto8/cmd/aos-mcp/`
 
 | 檔 | 負責什麼 |
@@ -43,11 +68,3 @@
 | [`examples/subagent-boxed/sandbox-kernel.json`](../../../../../proto8/cmd/aos-sandbox/examples/subagent-boxed/sandbox-kernel.json) | Sandbox (mode 2, judge in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm letters must g… |
 | [`examples/subagent-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/subagent-boxed/sandbox.json) | Sandbox (mode 1, no judge) for a tool that talks to the daemon (subagent; agents_ctl and self_tools the same way): rw the daemon stack AOS_DAEMON (le… |
 | [`root/setup.sh`](../../../../../proto8/cmd/aos-sandbox/root/setup.sh) | 沙箱的「身分層」要 root 做的事：裝 s6 到 /usr/local、建帳號 aos-run、給它一個工作的地方、讓我（$SUDO_USER）能換成它 |
-
-## `proto8/cmd/aos-sweeper/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-sweeper`](../../../../../proto8/cmd/aos-sweeper/bin/aos-sweeper) | 清道夫跑一輪（掛在 daemon 表上當 loop 列 `_sweeper`，每 interval_ms 一次；使用者 11-10）。 |
-| [`tests/test_releasing.py`](../../../../../proto8/cmd/aos-sweeper/tests/test_releasing.py) | Test the sweeper removes old <lock>.releasing.* leftovers (open-14) and leaves fresh, foreign and child-daemon ones alone. |
-| [`tests/test_sweep.py`](../../../../../proto8/cmd/aos-sweeper/tests/test_sweep.py) | Test aos-sweeper and aos-daemon-ctl sweep (tasks 1–18) with isolated files, real locks, and owned child processes. |
