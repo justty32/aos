@@ -9,6 +9,9 @@
 
 | 檔 | 負責什麼 |
 |---|---|
+| [`aos_json_add/`](../../../../../proto8/lib/aos/aos_json_add/) | json_add 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關） |
+| [`aos_json_get/`](../../../../../proto8/lib/aos/aos_json_get/) | json_get 加料版：follow 穿過 $ref、resolve 把值裡的 $ref／$env 解開（都預設關） |
+| [`aos_json_set/`](../../../../../proto8/lib/aos/aos_json_set/) | json_set 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關） |
 | [`box_check/`](../../../../../proto8/lib/aos/box_check/) | Verify probe markers, executable visibility and host probe paths. |
 | [`box_check/tests/test_acceptance.py`](../../../../../proto8/lib/aos/box_check/tests/test_acceptance.py) | Verify boxed and open definitions through actual sandbox and measure boundaries. |
 | [`defs/`](../../../../../proto8/lib/aos/defs/) | List, group, trace references and check public definition declarations. |
