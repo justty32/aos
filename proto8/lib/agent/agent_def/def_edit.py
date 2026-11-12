@@ -90,7 +90,7 @@ def tools(run, defdir, a, op):
     else:
         envs = a.get("envs", {})
         if not isinstance(envs, dict) or not all(isinstance(k, str) and k and "=" not in k and isinstance(v, str) for k, v in envs.items()):
-            die("ArgumentsBad", "envs must be an object of strings, like {\"AOS_KNOWLEDGE\": \"/data/knowledge\"}")
+            die("ArgumentsBad", "envs must be an object of strings, like {\"AOS_DATA\": \"/data\"}")
         if ("path" in a) == ("path_json" in a):
             die("ArgumentsBad", "add needs path (a tool folder, JSON file or executable) or path_json, not both")
         name, env_file = text(a, "name"), text(a, "env_file")
