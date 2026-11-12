@@ -1,3 +1,5 @@
+> 封存 2026-11-12，S5／S7 分支已作廢刪除（11-06 家機重裝收尾 9241be909；S7 改在公司重做併進 main），審查對象不存在
+
 # 2026-11-05 夜：S5／S7 分支唯讀審查
 
 ← [refactor](../../README.md)｜規劃：[arch-refactor](../../../../../proto8/thinking/2026-11/05/arch-refactor/README.md)
