@@ -14,30 +14,22 @@
 
 ## 2026-11-12 22:10 家機頂層 compact 前
 
-（短版，給 compact 後的頂層；全貌看下一條「晚 家機頂層收工」，那條沒改。）
+（短版，給 compact 後的頂層；全貌看下一條「晚 家機頂層收工」；那條在收工前最後一輪只改了測試句、公司機那點與下一步 9。）
 
 1. **授權與工作方式**：在家機。頂層只跟使用者說話和調度，事情都交給 agent：普通 opus、雜活 sonnet、使用者的「想法」一律派 fable 隊長、可以找 Argon；agent 可以再派子 agent；非雜活先通讀 wf 規矩。
    - **push**：使用者開場說「睡前再push」（頂層轉述），23:15 關機；頂層答應過推之前先跟他說一聲。**到現在還沒推，他也還沒回要不要推**。收工文書做完再問一次，他說推才 `git push origin main`（origin 沒有新東西，main 領先約兩百個 commit）。
    - **額度**：他說已重置、可以盡情用；先前交代過額度到上限就停在原地等他。
    - **說話**：他說「一下子太多了，我們一個一個來」（頂層轉述）——一次只講一件、一次只問一題；白話、先結論、短。
-2. **還在跑的 agent**（compact 後會收到完成通知，**別重派**）：
-   - fable：沙箱設定壞了也改成略過（使用者「甲，出事自己負責」，fable 正寫進 [metainfo-views](../proto8/thinking/2026-11/12/metainfo-views.md)、未提交）。回來後看它怎麼分「設定是好的但沙箱起不來」、有沒有要問使用者的。
-   - sonnet：唯讀再跑一次全套測試（從空目錄起跑；`lib/aos/measure` 連跑五次——`$ref` 那條線跑時紅過一例又自己好了，成因未確認）。上次確定全綠：`6602f453c` 起 65 夾 1325 例。
-3. **兩件回來後，依序**：① 派人補最後一輪文書（第 5 點）；② 測試有紅先查；③ 工作樹乾淨後問使用者要不要 push；④ 推完提醒他停試驗場的樹（`aos-daemon-ctl -d ~/code/playground/.stack shutdown`）——樹現在開著給他玩 `eca_tidy`（快照是 21:30 左右的舊版；C++ 之後重 build 過，怪怪的就重起）。
-4. **22:00 前後跟他一題一題定下來的**（都已進 thinking，除了標「待補」的）：
+2. **兩個 agent 都已收**：fable 沙箱設定壞也略過 → `280a0e303`（環境做不到維持報錯，使用者「既然環境做不到，那這個程式就該報錯」）；sonnet 全套重跑全綠（數字見下一條第 9 點）。
+3. **接下來**：① 問使用者要不要 push（**還沒推、他還沒回**；他說推才 `git push origin main`）；② 推完提醒他停試驗場的樹（`aos-daemon-ctl -d ~/code/playground/.stack shutdown`）——樹開著給他玩 `eca_tidy`（快照是 21:30 左右的舊版；C++ 之後重 build 過，怪怪的就重起）。
+4. **22:00 前後跟他一題一題定下來的**（都已進 thinking）：
    - metainfo 全是觀點、壞了略過（含沙箱）；`_index` 一筆可多塞任何東西；`_metainfo` 不算 index → [metainfo-views § 使用者裁定](../proto8/thinking/2026-11/12/metainfo-views.md#使用者裁定11-12-晚)
    - `$ref`／`$at` 定案：不帶 `#` 的照舊、`#/key`、`#/../other.json`、`$at` 接在 `$ref` 後面往下走且不收 `#`（六句原話依序）→ [ref-index-unify § 使用者裁定](../proto8/thinking/2026-11/12/ref-index-unify.md#使用者裁定-11-12-晚)
-   - `$at` 的 `..` 可以走出檔：頂層問要不要擋在根，他答「就這樣」（維持現狀；頂層轉述，**還沒進 thinking，待補**）。
+   - `$at` 的 `..` 可以走出檔：頂層問要不要擋在根，他答「就這樣」（維持現狀；頂層轉述）→ [ref-index-unify § 使用者裁定](../proto8/thinking/2026-11/12/ref-index-unify.md#使用者裁定-11-12-晚) 第 7 句
    - kernel 細聊：手（daemon）／門（kernel）、kernel 是主觀的概念、daemon 也是概念；「資源排程別叫 kernel」收回、名字都不改；daemon 心智模型他認可（「我覺得這樣就OK了」）→ [kernel-as-bridge 06](../proto8/thinking/2026-11/12/kernel-as-bridge/06-細聊-手與門.md)
-   - linux user：「linux user要等等。」→ [linux-user](../proto8/thinking/2026-11/12/linux-user.md)
+   - linux user：user＝aos 眼中能收信的對象、一個帳號一整棵樹（C-64 照今晚改：「以今晚爲準。」）、root 小 daemon 先不做（「可以，root小daemon先不做」）、人開的 Claude Code 算樹外樹內不是問題（若是 claude code eca，其他 proc 面對的就是那隻 eca proc）；wait-user 01 那條已移除 → [linux-user](../proto8/thinking/2026-11/12/linux-user.md)
    - 遊樂場 `eca_tidy` 已備好 → [playground-home](../proto8/thinking/2026-11/12/playground-home.md)（eca_tidy 那節）
-5. **待補文書清單**（最後一輪做，現在不做）：
-   - `ref-index-unify.md` 補「就這樣」那句。
-   - `wf/wait-user/01`：metainfo-views 那條改「已裁已落實，剩代定與疑義」；提取 U7 與程式碼庫整理第 1 題結案（題數跟著改）；ref-index-unify 那條改「已定案已施工，剩五個小細節代定」（陣列＋`$at` 逐份套、單獨 `$at` 不算指示詞、`$at` 寫壞整個不換、捷徑的 `檔#/..` 從哪算、key 叫 `..` 指不到）。
-   - `wf/wait-user/03` 或合適處加「試 eca_tidy」一條。
-   - SESSION-LOG 對應行。
-   - 下一條「晚 家機頂層收工」的最終測試句照第二次全套結果更新；它的第 7 點（給公司機）補「impls 又重 build 過（`$at`）」。
-   - 日誌補今晚 21:25 之後的幾行（`9c1ffb147`、`484ab9a57`、`4c5f8b4c3`、`23dd06544`、`2561494a3`、`5aacbbede`、`9da8be804`、`bbdb676a9` 等）。
+5. **待補文書已做完**（11-12 晚收工前最後一輪）：ref-index-unify「就這樣」、linux-user 與 metainfo-views 新原話、C-64、wait-user 01／03、SESSION-LOG、下一條的測試句與公司機那點、日誌 21:25 之後。
 6. **踩過的坑**：多條線共用工作樹——`git add` 指名路徑後馬上 commit、不 `-A`、不 `git stash`；重 build impls 時試驗場的樹會被影響；全套測試要從空目錄起跑；使用者的話會邊想邊改口，沒定形前叫施工的先停、只備料，定了再動。
 
 ## 2026-11-12 晚 家機頂層收工
@@ -81,11 +73,11 @@
    6. kernel 框架施工與 fsm 真腦跑一晚：假日。
    7. 四個新想法（ref-index-unify、metainfo-views、kernel-as-bridge、linux-user）等他看，各題要他定的在 WAIT_USER 01；都不擋別的。
    8. kernel 細聊：已聊出「手／門」（daemon 是手、kernel 是門）、kernel 是主觀的概念、daemon 也是概念（使用者「好，就是這樣。」）；「資源排程別叫 kernel」收回、名字都不改（「對，收回，名字都不用改。」）；他要頂層多講 daemon、建立自己的心智模型——已講完、他認可（「我覺得這樣就OK了」）；剩：題 1 嚴到哪、題 3 圖紙；`aos-daemon-ctl` 不經判官的出入待給他看 → [kernel-as-bridge 06](../proto8/thinking/2026-11/12/kernel-as-bridge/06-細聊-手與門.md)
-   9. 遊樂場：使用者要用 claude eca 唯讀初步整理 proto8、整理結果放外面（準備中）。
+   9. 遊樂場：使用者要用 claude eca 唯讀初步整理 proto8、整理結果放外面——`eca_tidy` 已備好、樹開著，等他試（[wait-user/03](wait-user/03-試驗場.md)）。
 6. **等使用者的**：都在 [WAIT_USER](WAIT_USER.md)（要你裁的、真機驗證、試驗場、雜事四類）；最急的是 push 與重連 aos MCP。
-7. **另一台機器（公司）要注意**：pull 之後①重 build 全部 impls（aos-directive 介面變了；aos-json 沒重 build 的話 `json_ls`／`json_search`／`json_add` 會報 `CommandUnknown`）②重跑 `proto8/install.sh`（新指令 `aos-mcp-import`）③試驗場 `lib／py／cmd／templates/agent-fsm` 整份重抄④`~/.cache/aos-mcp-*/tools.json` 的壞格照 [wait-user/04](wait-user/04-雜事.md) 那行指令清。
+7. **另一台機器（公司）要注意**：pull 之後①重 build 全部 impls（aos-directive 介面變了；aos-json 沒重 build 的話 `json_ls`／`json_search`／`json_add` 會報 `CommandUnknown`）②重跑 `proto8/install.sh`（新指令 `aos-mcp-import`）③試驗場 `lib／py／cmd／templates/agent-fsm` 整份重抄④`~/.cache/aos-mcp-*/tools.json` 的壞格照 [wait-user/04](wait-user/04-雜事.md) 那行指令清。impls 又重 build 過（`$at`），pull 後要重 build 全部 impls。
 8. **踩過的坑**：多條線共用一個工作樹時，`git add` 指名路徑後要馬上 commit，不然別人 staged 的會被一起帶走——今晚發生兩次（json 線帶走 tidy 的刪檔、提取 W2 帶走 W5），另有一次誤 amend、已還原；同時開的 agent 數有上限（約 20）；wf-lint 的數字要先看掃描範圍再比；全套測試要注意起跑目錄——repo 裡若留著空的 `.stack` 夾會被 `ctl who` 猜到（今晚紅一支就是這個）；多條線共用工作樹時不要 `git stash`（會把別人沒提交的改動一起收走）。
-9. **測試與 HEAD**：最終全套：`6602f453c` 起從 `proto8/` 與從空目錄各跑一次，65 夾 1325 例全過（之後只進文件 commit）；codemap 0 stale；wf-lint 掃 `wf` 為 0。HEAD 與 push：以 origin/main 是否含本條為準（頂層收工時問過使用者後推）。
+9. **測試與 HEAD**：全套最後一次全綠是 61 夾 1244 例（對應 `9da8be804` 的樹；跟先前記的 65 夾 1325 例算法／範圍不同、原因沒查），`lib/aos/measure` 連跑五次全過、先前偶發的紅未重現；之後 aos-sandbox 那輪另跑相關夾 716 例全過、新增 `cmd/aos-sandbox/tests` 8 例；codemap 0 stale；wf-lint 掃 `wf` 為 0。HEAD 與 push：以 origin/main 是否含本條為準（頂層收工時問過使用者後推）。
 
 ## 2026-11-12 收工 公司頂層
 
