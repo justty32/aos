@@ -151,7 +151,7 @@ void Loop::read_ctl() {
         bad = "cannot read or not JSON: " + ctl_path_;
     } else {
         try {   // 指示詞（10-23 晚）：相對 $ref 從 ctl 所在的資料夾算；解不開＝整份不採用（N-08）
-            aos::Resolved r = resolve_keys(doc, aos::dirname(ctl_path_), {CtlWindow::cmd, "max", "interval_ms", CtlWindow::seq});
+            aos::Resolved r = aos::loop::resolve_keys(doc, aos::RefBase{aos::dirname(ctl_path_), ctl_path_}, {CtlWindow::cmd, "max", "interval_ms", CtlWindow::seq});
             doc = std::move(r.value);
             bad = check_base(doc);
             if (!bad) {

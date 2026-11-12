@@ -61,7 +61,7 @@ std::vector<std::string> argv0(const std::vector<std::string>& argv, const std::
 }
 
 // argv 陣列解指示詞、驗全是字串。錯＝EntryBad（入口壞）。指示詞在六個 AOS_* 設好、.env 讀完之後解；$ref 從入口檔所在的資料夾算。
-static std::vector<std::string> argv_of(const Json& doc, const std::string& dir) {
+static std::vector<std::string> argv_of(const Json& doc, const aos::RefBase& dir) {
     Json v;
     try {
         v = aos::resolve(doc, dir);
@@ -82,7 +82,7 @@ int launch(const Found& found, const std::vector<std::string>& args) {
     std::string dir = aos::dirname(found.file);   // hop 已經 cd 到這裡
     if (found.kind == Kind::Inst) {
         try {
-            return run_inst(found.doc, dir, args).code;
+            return run_inst(found.doc, dir, args, aos::RefBase{dir, found.file}).code;   // `#/…`＝入口檔自己（11-12）
         } catch (const Error& e) {
             throw Error{e.code, "inst cannot run: " + e.msg};   // 代號照舊分種類
         }
@@ -94,7 +94,7 @@ int launch(const Found& found, const std::vector<std::string>& args) {
         std::vector<char*> cargv = c_argv(argv);
         exec_vp(found.file, cargv);
     }
-    argv = argv_of(found.doc, dir);
+    argv = argv_of(found.doc, aos::RefBase{dir, found.file});
     argv.insert(argv.end(), args.begin(), args.end());
     argv = argv0(argv, dir);
     std::vector<char*> cargv = c_argv(argv);

@@ -1,9 +1,10 @@
 // ref.cpp：{"$ref": "檔[#/指標]"}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。
 // $ref 也可以是這種字串的陣列（10-23 使用者）：每個元素各取一份、各自接著解，再照順序合成一份（merge）。
 //
-// 1. 寫法：$ref 不是字串、空字串、只有 #/…（沒檔名）、# 後面不是 /＝回 nullopt（原封不動，D15）；陣列＝空的、或有一個元素這樣＝回 nullopt；
+// 1. 寫法：$ref 不是字串、空字串、# 後面不是 /＝回 nullopt（原封不動，D15）；陣列＝空的、或有一個元素這樣＝回 nullopt；
 //    位置只認 #/（10-23 使用者「把$at刪掉，就都只認#/。」）：寫了 $at 是不認得的 $xxx、不管。
-// 2. 相對檔名從這一層的 base 算（最外層＝呼叫者給的 base_dir；被 $ref 進來的檔＝它解開捷徑後所在的資料夾）
+//    只有 #/…（沒檔名）＝寫著它的那份檔自己（11-12 使用者「ref應該支援#/開頭吧」）：那份檔＝base.file；不知道（空）＝回 nullopt。
+// 2. 相對檔名從這一層的 base 算（最外層＝呼叫者給的 base；被 $ref 進來的檔＝它解開捷徑後所在的資料夾）；./、../ 接上後整理
 // 3. 同一個（檔＋指標）已經在鏈上＝繞圈
 // 4. 讀檔（第一行 #! 跳過）、解 JSON（讀不到、不是 JSON＝錯）、照指標取值（指不到＝錯），推上鏈、接著往下解
 // 錯一律 DirectiveBad。
@@ -100,7 +101,7 @@ static Json pointer(const Json& doc, const std::string& ptr, const std::string& 
     return *cur;
 }
 
-// 一個元素（"檔[#/指標]"）的寫法：不是字串、空字串、只有 #/…（沒檔名）、# 後面不是 /＝nullopt；回（檔, 指標）。
+// 一個元素（"檔[#/指標]"）的寫法：不是字串、空字串、# 後面不是 /＝nullopt；回（檔, 指標），只有 #/…＝檔是空字串（寫著它的那份檔）。
 static std::optional<std::pair<std::string, std::string>> parse_spec(const Json& ref) {
     if (!ref.is_string()) {
         return std::nullopt;
@@ -116,13 +117,17 @@ static std::optional<std::pair<std::string, std::string>> parse_spec(const Json&
             return std::nullopt;
         }
     }
-    if (path.empty()) {
+    if (spec.empty()) {
         return std::nullopt;
     }
     return std::make_pair(path, ptr);
 }
 
-std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const std::string& base, const Chain& chain) {
+RefBase base_of(const std::string& file) {
+    return RefBase{aos::dirname(file), file};
+}
+
+std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const RefBase& base, const Chain& chain) {
     // 1. 寫法：字串＝一份；陣列（10-23 使用者）＝每個元素一份，空陣列或有一個不合＝整個不合
     const Json& ref = d["$ref"];
     std::vector<std::pair<std::string, std::string>> specs;
@@ -132,14 +137,14 @@ std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const std::string& 
         }
         for (const Json& r : ref) {
             auto one = parse_spec(r);
-            if (!one) {
+            if (!one || (one->first.empty() && base.file.empty())) {
                 return std::nullopt;
             }
             specs.push_back(*one);
         }
     } else {
         auto one = parse_spec(ref);
-        if (!one) {
+        if (!one || (one->first.empty() && base.file.empty())) {
             return std::nullopt;
         }
         specs.push_back(*one);
@@ -148,7 +153,7 @@ std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const std::string& 
     std::vector<Fetched> out;
     for (const auto& [path, ptr] : specs) {
         // 2～3. 從這一層算、看繞圈（鏈＝往上那幾層；同一個陣列裡寫兩次同一份不算繞圈）
-        std::string file = real_path(aos::join(base, path));
+        std::string file = real_path(path.empty() ? base.file : aos::join(base.dir, path));
         std::pair<std::string, std::string> here{file, ptr};
         for (const auto& seen : chain) {
             if (seen == here) {
@@ -168,7 +173,7 @@ std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const std::string& 
     return out;
 }
 
-std::optional<Json> resolve_ref(const Json& d, const std::string& base, Chain& chain) {
+std::optional<Json> resolve_ref(const Json& d, const RefBase& base, Chain& chain) {
     std::optional<std::vector<Fetched>> fs = fetch_ref(d, base, chain);
     if (!fs) {
         return std::nullopt;
@@ -177,7 +182,7 @@ std::optional<Json> resolve_ref(const Json& d, const std::string& base, Chain& c
     std::vector<Resolved> parts;
     for (Fetched& f : *fs) {
         chain.push_back(f.here);
-        parts.push_back({walk(f.value, aos::dirname(f.here.first), chain), aos::dirname(f.here.first), {}, {}});
+        parts.push_back({walk(f.value, base_of(f.here.first), chain), base_of(f.here.first), {}, {}});
         chain.pop_back();
     }
     return merge(parts, aos::dumps(d["$ref"])).value;

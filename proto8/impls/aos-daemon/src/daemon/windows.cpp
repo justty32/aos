@@ -47,7 +47,7 @@ void Daemon::read_procs_ctl() {
     }
     std::optional<std::string> bad;
     try {   // 指示詞：相對 $ref 從 procs_ctl 所在的資料夾算；解不開＝整份不採用（N-08）
-        aos::Resolved r = aos::loop::resolve_keys(doc, aos::dirname(pctl_path_), {"seq"});
+        aos::Resolved r = aos::loop::resolve_keys(doc, aos::RefBase{aos::dirname(pctl_path_), pctl_path_}, {"seq"});
         doc = std::move(r.value);
         if (!doc.is_object()) {
             bad = "must be a JSON object";

@@ -35,6 +35,6 @@ std::set<std::string> load_env(const std::string& dir, bool override);
 // JSON 物件的 `.env` key：{"名字": 值}，照順序套；值可放指示詞（$ref 從 ref_base 算），解完不是字串的那一項靜默跳過；
 // 解完不是物件＝整個跳過。指示詞解不開、名字不合、${名字} 沒設＝DotenvBad（只印位置 where）。回設過的名字。
 // 格式不變（引號、註解那些 JSON 自己有，不套），只套蓋不蓋（同 load_env，10-22）。
-std::set<std::string> json_env(const Json& env, const std::string& where, const std::string& ref_base, bool override);
+std::set<std::string> json_env(const Json& env, const std::string& where, const aos::RefBase& ref_base, bool override);
 
 }  // namespace aos::exec

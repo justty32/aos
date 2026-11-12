@@ -100,7 +100,7 @@ struct Target {
     std::optional<Json> inst;         // 內嵌單子（指示詞還沒解）
     std::string cf;                   // 物件：AOS_CF＝寫著它的設定檔（實際路徑）；AOS_CD＝它的資料夾＝單子相對路徑的基準
     std::string co;                   // 物件：AOS_CO＝它在那份檔裡的位置（JSON 指標，例 /exec、/states/think/exec）
-    std::string ref_base;             // 物件：單子裡相對 $ref 的起點（exec 那格來自的那份檔的資料夾）
+    aos::RefBase ref_base;            // 物件：單子裡相對 $ref 的起點（exec 那格來自的那份檔的資料夾＋那份檔，`#/…` 取它）
     std::string label() const;        // 訊息裡的「誰」：目標；物件＝「檔名#指標」（例 loop.json#/exec）
 };
 Target parse_target(const Json& v, const std::string& what);
@@ -108,11 +108,11 @@ Target parse_target(const Json& v, const std::string& what);
 // exec 那格的指示詞（10-24）：v 本身是指示詞就先換掉（resolve_shallow）；換完是物件＝單子，裡面不解（跑的時候 run_inst 才解，
 // 那時 AOS_CF／AOS_CD／AOS_CO 已設成單子的位置，跟 aos-exec 跑 `檔#/指標` 的單子一樣）；字串、陣列整個解（同 10-23 晚）。
 // 回解好的值與「它裡面相對 $ref 的起點」（base_dir）。錯同 resolve（DirectiveBad）。
-aos::Resolved resolve_exec(const Json& v, const std::string& base_dir);
+aos::Resolved resolve_exec(const Json& v, const aos::RefBase& base_dir);
 
 // 物件的 Target 填好位置：spec＝設定檔（`檔` 或 `檔#/指標`），sub＝exec 那格在 spec 指到的值裡的 JSON 指標（例 "/exec"），
 // ref_base＝resolve_exec 回的 base_dir。cf＝config_file(spec)、co＝spec 的指標＋sub。不是物件不動。
-void place_inline(Target& t, const std::string& spec, const std::string& sub, const std::string& ref_base);
+void place_inline(Target& t, const std::string& spec, const std::string& sub, const aos::RefBase& ref_base);
 
 // 設定檔（`檔` 或 `檔#/指標`，只看 # 前面）的實際路徑：解開捷徑的絕對路徑（解不開＝abspath，從 cwd 算）。
 // 10-24 審後統一：設定檔裡相對 $ref 的起點（Loop、fsm 的 read_table）＝它的資料夾，內嵌單子的 AOS_CF＝它——
@@ -166,9 +166,9 @@ void write_window(const std::string& path, const Json& doc);
 
 // aos-directive 的 aos::resolve_keys 轉接：doc 本身是指示詞就先換掉（aos::resolve_shallow，不往裡面走），
 // 換完是物件就把 keys 裡有寫的那幾格整個解（aos::resolve）；其他 key（body、_entry…）原封不動，留給讀它的人（C-52）。
-// base_dir＝doc 裡相對 $ref 的起點（設定檔、ctl＝那份檔所在的資料夾）。回解好的 doc 與它裡面各 key 的起點（dir_of(key)；
+// base_dir＝doc 裡相對 $ref 的起點（設定檔、ctl＝那份檔所在的資料夾＋那份檔，`{"$ref": "#/…"}` 取它，11-12）。回解好的 doc 與它裡面各 key 的起點（dir_of(key)；
 // doc 本身換過 $ref＝那份檔的資料夾，換的是 $ref 陣列＝每個 key 來自的那份檔的）。真的解不開丟 DirectiveBad（呼叫者決定算誰的錯：設定檔＝自己的錯退 1；ctl＝整份不採用）。
-aos::Resolved resolve_keys(const Json& doc, const std::string& base_dir, const std::vector<std::string>& keys);
+aos::Resolved resolve_keys(const Json& doc, const aos::RefBase& base_dir, const std::vector<std::string>& keys);
 
 // 這支程式是誰：{"pid", "started_at_ticks"（/proc/<pid>/stat 第 22 欄）, "boot_id"}（N-17：判活著看這三個）。
 // 11-02 原 heartbeat：心跳拿掉（使用者「心跳這塊就直接看pid就好」）、recorded_at 收掉；窗的時間欄改成真的寫那一刻才加的 updated_at。

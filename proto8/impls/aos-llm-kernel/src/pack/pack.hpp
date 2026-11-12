@@ -15,6 +15,7 @@
 //   window_of    窗 $AOS_STACK/endpoints.json 的內容：{代號: {speed, cost?, context?, slots?, backend?, summary?}}（不含 url／key／fixed／exec；壞的那組＝{"error": "代號 原因"}）
 #pragma once
 
+#include "aos/directive.hpp"
 #include "common/common.hpp"
 
 #include <map>
@@ -43,7 +44,7 @@ struct Pack {
 Pack parse_pack(const Json& group, const std::string& name, const Backends& backends);
 Json strip_pack(Json group);
 std::optional<std::string> fixed_clash(const Json& group, const Json& request, const std::string& name);
-std::map<std::string, Pack> read_packs(const Json& endpoints, const std::map<std::string, std::string>& dirs, const Backends& backends);
+std::map<std::string, Pack> read_packs(const Json& endpoints, const std::map<std::string, aos::RefBase>& dirs, const Backends& backends);
 Json window_of(const std::map<std::string, Pack>& packs);
 
 }  // namespace aos::llm_kernel

@@ -33,7 +33,7 @@ static std::string join_path(const std::string& v, const std::string& sub) {
     return head + "/" + tail;
 }
 
-Json walk(const Json& v, const std::string& base, Chain& chain) {
+Json walk(const Json& v, const RefBase& base, Chain& chain) {
     if (v.is_array()) {
         Json out = Json::array();
         for (const Json& x : v) {
@@ -79,7 +79,7 @@ Json decorate(const Json& d, const Json& got) {
 // 只換這一格（10-23 晚，aos 讀的 JSON 都解指示詞）：v 是指示詞就換成它指到的原文；原文本身又是指示詞就再換，
 // 一直到不是指示詞（或寫法不合、原封不動）為止；不往物件、陣列裡面走。回換好的值與它裡面相對 $ref 的起點。
 // $ref 陣列：每一份各自這樣換（鏈各自往下接），再合成一份；合出來的每個 key／元素記著它來自哪份檔（merge）。
-static Resolved shallow(const Json& v, const std::string& base, const Chain& chain) {
+static Resolved shallow(const Json& v, const RefBase& base, const Chain& chain) {
     if (!v.is_object()) {
         return {v, base, {}, {}};
     }
@@ -92,7 +92,7 @@ static Resolved shallow(const Json& v, const std::string& base, const Chain& cha
         for (const Fetched& f : *fs) {
             Chain c = chain;
             c.push_back(f.here);
-            parts.push_back(shallow(f.value, aos::dirname(f.here.first), c));
+            parts.push_back(shallow(f.value, base_of(f.here.first), c));
         }
         Resolved in = merge(parts, aos::dumps(v["$ref"]));
         in.value = decorate(v, in.value);
@@ -112,19 +112,23 @@ static Resolved shallow(const Json& v, const std::string& base, const Chain& cha
 
 namespace aos {
 
-Json resolve(const Json& doc, const std::filesystem::path& base_dir, const std::string& where) {
-    (void)where;
-    directive::Chain chain;
-    return directive::walk(doc, aos::abspath(base_dir.string()), chain);
+// 起點整理成絕對路徑（file 空照舊空）。
+static RefBase absolute(const RefBase& b) {
+    return RefBase{aos::abspath(b.dir), b.file.empty() ? "" : aos::abspath(b.file)};
 }
 
-Resolved resolve_shallow(const Json& v, const std::filesystem::path& base_dir) {
+Json resolve(const Json& doc, const RefBase& base) {
     directive::Chain chain;
-    return directive::shallow(v, aos::abspath(base_dir.string()), chain);
+    return directive::walk(doc, absolute(base), chain);
 }
 
-Resolved resolve_keys(const Json& doc, const std::string& base_dir, const std::vector<std::string>& keys) {
-    aos::Resolved r = aos::resolve_shallow(doc, base_dir);
+Resolved resolve_shallow(const Json& v, const RefBase& base) {
+    directive::Chain chain;
+    return directive::shallow(v, absolute(base), chain);
+}
+
+Resolved resolve_keys(const Json& doc, const RefBase& base, const std::vector<std::string>& keys) {
+    aos::Resolved r = aos::resolve_shallow(doc, base);
     if (!r.value.is_object()) {
         return r;
     }
@@ -136,12 +140,12 @@ Resolved resolve_keys(const Json& doc, const std::string& base_dir, const std::v
     return r;
 }
 
-const std::string& Resolved::dir_of(const std::string& key) const {
+const RefBase& Resolved::dir_of(const std::string& key) const {
     auto it = key_dirs.find(key);
     return it == key_dirs.end() ? base_dir : it->second;
 }
 
-const std::string& Resolved::dir_of(size_t i) const {
+const RefBase& Resolved::dir_of(size_t i) const {
     return i < item_dirs.size() ? item_dirs[i] : base_dir;
 }
 

@@ -14,7 +14,7 @@ static void check_name(const std::string& name, const std::string& key) {
     }
 }
 
-Json abs_refs(const Json& v, const std::string& base) {
+Json abs_refs(const Json& v, const aos::RefBase& base) {
     if (v.is_array()) {
         Json out = Json::array();
         for (const Json& x : v) {
@@ -35,7 +35,9 @@ Json abs_refs(const Json& v, const std::string& base) {
             size_t hash = r.find('#');
             std::string file = r.substr(0, hash);
             if (!file.empty() && file[0] != '/') {
-                s = aos::join(base, file) + (hash == std::string::npos ? "" : r.substr(hash));
+                s = aos::join(base.dir, file) + (hash == std::string::npos ? "" : r.substr(hash));
+            } else if (file.empty() && r.starts_with("#/") && !base.file.empty()) {   // `#/…`＝寫著它的那份檔（11-12）
+                s = aos::abspath(base.file) + r;
             }
         };
         Json& ref = out["$ref"];
@@ -79,7 +81,7 @@ static bool is_directive(const Json& v) {
 
 // 解開之前記下路徑欄的指示詞原形（$ref 的檔名照寫它的檔轉絕對）：ws、stack、def，與目標（exec 本身、或 exec 陣列的第一個）。
 // 只記解完是字串目標的 exec（單子、陣列整個是指示詞的不記）。沒有＝空物件。
-static Json written_of(const Json& raw, const Json& resolved, const std::string& base) {
+static Json written_of(const Json& raw, const Json& resolved, const aos::RefBase& base) {
     Json w = Json::object();
     if (!raw.is_object()) {
         if (raw.is_array() && !raw.empty() && is_directive(raw[0])) {
@@ -200,7 +202,7 @@ bool is_once(const Json& spec) {
     return true;
 }
 
-Json read_procs(const Json& v, const std::string& base, const std::string& key, std::map<std::string, std::string>* bad) {
+Json read_procs(const Json& v, const aos::RefBase& base, const std::string& key, std::map<std::string, std::string>* bad) {
     aos::Resolved top = aos::resolve_shallow(v, base);   // 拆成好幾份檔＝{"$ref": [檔, …]}，合好的每個子項記著它來自哪份檔
     if (!top.value.is_object()) {
         throw Error{code::CfgBad, key + " must be {name: proc}"};
@@ -298,7 +300,7 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key, 
     return out;
 }
 
-Json drop_bad_refs(const Json& v, const std::string& base, std::vector<std::string>& dropped) {
+Json drop_bad_refs(const Json& v, const aos::RefBase& base, std::vector<std::string>& dropped) {
     if (!v.is_object() || !v.contains("$ref") || !v["$ref"].is_array()) {
         return v;
     }

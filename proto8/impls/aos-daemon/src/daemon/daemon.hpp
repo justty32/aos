@@ -104,12 +104,12 @@ bool same_tree(pid_t pid, const std::string& cell, const std::string& dstack);
 // 壞丟 Error{CfgBad, 原因}（key＝訊息裡的名字）；指示詞解不開丟 DirectiveBad。
 // 11-10 晚 two-machines B07：給了 bad＝某一列（procs.<名>）的指示詞解不開（例 $ref 的檔不在）不丟，原因記進 (*bad)[名]、那列放 null；
 //   procs 本身那層解不開照丟。daemon.json 的 procs 用（一列壞不拖垮整台）；procs_ctl、信照舊整份不採用。
-Json read_procs(const Json& v, const std::string& base, const std::string& key, std::map<std::string, std::string>* bad = nullptr);
+Json read_procs(const Json& v, const aos::RefBase& base, const std::string& key, std::map<std::string, std::string>* bad = nullptr);
 
 // 11-11（two-machines 17 待裁 2，使用者選「跳過那份」）：procs 頂層寫成 {"$ref": [檔, …]} 時，指示詞解不開（DirectiveBad，例那份檔不在）的那份
 //   從陣列拿掉、原因記進 dropped，其他份照合（那份帶的列不起，也不知道它們叫什麼）；全部拿掉＝空名單。不是陣列（單一 $ref、沒寫指示詞）原樣回，
 //   整份讀不到照舊 DirectiveBad 退 1。只給 daemon.json 用（procs_ctl、信照舊整份不採用）。
-Json drop_bad_refs(const Json& v, const std::string& base, std::vector<std::string>& dropped);
+Json drop_bad_refs(const Json& v, const aos::RefBase& base, std::vector<std::string>& dropped);
 
 // procs_state 列上的 exec 欄（11-04 晚，aos-agent 方向題 1，使用者「daemon表多一欄記下來」）：proc 設定裡的目標——
 //   字串、陣列（取第一個）、物件的 exec（同前兩種）——相對的接在 cwd 後面（`檔#/…` 只動 # 前面；只有 `#/…` 的不動），其他照原字串；
@@ -129,9 +129,10 @@ bool ros_of(const Json& spec);
 bool is_once(const Json& spec);
 Json launch_of(const Json& spec, const std::string& cwd);   // 可重放設定：固定入口路徑、保留完整參數
 
-// 把 v 裡每個 $ref 指示詞的相對檔名接在 base 後面（`檔#/…` 只動 `#` 前面；$ref 陣列每個元素都轉；絕對的、只有 `#/…` 的不動）。
+// 把 v 裡每個 $ref 指示詞的相對檔名接在 base 後面（`檔#/…` 只動 `#` 前面；$ref 陣列每個元素都轉；絕對的不動）；
+// 只有 `#/…` 的＝寫著它的那份檔自己（11-12）：知道是哪份檔（base.file）就補成 `那份檔#/…`，不知道（信、行程內）不動。
 // 不解任何指示詞。給 read_procs 處理內嵌單子用（10-24）。
-Json abs_refs(const Json& v, const std::string& base);
+Json abs_refs(const Json& v, const aos::RefBase& base);
 
 // 期望表（10-23 晚）：base＋ctl[added]－ctl[removed]，先加後減（同一個名字兩邊都寫＝不要；
 // 已在 base 上的換成 added 的設定、不在的接在尾巴）。ctl 兩個 key 都沒寫＝回 base 本身（不複製）；不然結果寫進 merged、回 merged。

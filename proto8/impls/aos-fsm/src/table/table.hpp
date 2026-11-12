@@ -22,7 +22,7 @@ struct Table {
     std::string spec;                              // 設定檔（`檔` 或 `檔#/指標`；內嵌單子的 AOS_CF／AOS_CO 由它算）
     std::string start;
     Json states;   // 物件
-    std::map<std::string, std::string> exec_bases; // 狀態名 → 那格 exec 裡相對 $ref 的起點（內嵌單子用）
+    std::map<std::string, aos::RefBase> exec_bases; // 狀態名 → 那格 exec 裡相對 $ref 的起點與那份檔（內嵌單子用）
 };
 
 // 字串＝一個狀態名；map＝結束碼字串（"0"、"10"、"*"…）→ 狀態名。

@@ -77,7 +77,7 @@ std::string pointer_escape(const std::string& key) {
     return out;
 }
 
-aos::Resolved resolve_exec(const Json& v, const std::string& base_dir) {
+aos::Resolved resolve_exec(const Json& v, const aos::RefBase& base_dir) {
     aos::Resolved r = aos::resolve_shallow(v, base_dir);
     if (!r.value.is_object()) {
         r.value = aos::resolve(r.value, r.base_dir);
@@ -85,7 +85,7 @@ aos::Resolved resolve_exec(const Json& v, const std::string& base_dir) {
     return r;
 }
 
-void place_inline(Target& t, const std::string& spec, const std::string& sub, const std::string& ref_base) {
+void place_inline(Target& t, const std::string& spec, const std::string& sub, const aos::RefBase& ref_base) {
     if (!t.inst) {
         return;
     }
@@ -146,7 +146,7 @@ static bool flag_nat(const std::string& s, long long& out) {
     return true;
 }
 
-aos::Resolved resolve_keys(const Json& doc, const std::string& base_dir, const std::vector<std::string>& keys) {
+aos::Resolved resolve_keys(const Json& doc, const aos::RefBase& base_dir, const std::vector<std::string>& keys) {
     return aos::resolve_keys(doc, base_dir, keys);
 }
 
@@ -173,10 +173,11 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
     log_ = opts.count("enable_logs") > 0;   // 11-02 晚：log 預設不印（使用者「應該要改成默認不印」），--enable-logs 才印到 stdout
     counters_ = opts.count("enable_counters") > 0;
     cfg_ = aos::load_cfg(spec);
-    std::string exec_base;   // exec 那格裡相對 $ref 的起點（內嵌單子用）
-    std::map<std::string, std::string> side_base;   // 11-11 on_start／on_stop 同 exec
+    aos::RefBase exec_base;   // exec 那格裡相對 $ref 的起點（內嵌單子用）
+    std::map<std::string, aos::RefBase> side_base;   // 11-11 on_start／on_stop 同 exec
     try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45；捷徑解開，10-24 審後，config_file）
-        aos::Resolved r = resolve_keys(cfg_, aos::dirname(config_file(spec)),
+        std::string cf = config_file(spec);   // `{"$ref": "#/…"}`＝這份設定檔自己（11-12）
+        aos::Resolved r = aos::loop::resolve_keys(cfg_, aos::RefBase{aos::dirname(cf), cf},
                                        {"max", "interval_ms", "on_timeout_ms", CtlWindow::config_key, StateWindow::config_key, StateFluxWindow::config_key});
         for (const char* k : {"exec", "on_start", "on_stop"}) {   // 是單子時裡面不解（10-24，resolve_exec；11-11 起停兩格同 exec）
             if (r.value.is_object() && r.value.contains(k) && !r.value[k].is_null()) {

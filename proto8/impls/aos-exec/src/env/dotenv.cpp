@@ -229,7 +229,7 @@ std::set<std::string> load_env(const std::string& dir, bool override) {
     return names;
 }
 
-std::set<std::string> json_env(const Json& env, const std::string& where, const std::string& ref_base,
+std::set<std::string> json_env(const Json& env, const std::string& where, const aos::RefBase& ref_base,
                                bool override) {
     std::string bad = "bad .env: .env in " + where;
     Json v;

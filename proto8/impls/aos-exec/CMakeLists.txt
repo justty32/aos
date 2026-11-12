@@ -31,7 +31,7 @@ add_library(aos-exec STATIC ${SOURCES})
 target_include_directories(aos-exec PUBLIC include PRIVATE src)
 target_compile_features(aos-exec PUBLIC cxx_std_20)
 target_compile_options(aos-exec PRIVATE -Wall -Wextra)
-target_link_libraries(aos-exec PUBLIC aos-util PRIVATE aos-inst-static aos-directive Threads::Threads)
+target_link_libraries(aos-exec PUBLIC aos-util aos-directive PRIVATE aos-inst-static Threads::Threads)
 set_target_properties(aos-exec PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 

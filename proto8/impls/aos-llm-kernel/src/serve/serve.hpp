@@ -71,7 +71,7 @@ struct Cfg {
     Backends backends;
     std::string exec;                                   // 預設的 endpoint 函數（絕對路徑，可帶 #/指標）
     Json endpoints = Json::object();                    // 代號 → 一組（只換過表這一層，每組裡的指示詞還沒解）
-    std::map<std::string, std::string> endpoint_dirs;   // 代號 → 那組裡相對 $ref 的起點
+    std::map<std::string, aos::RefBase> endpoint_dirs;  // 代號 → 那組裡相對 $ref 的起點（與那份檔，`#/…` 取它）
     std::map<std::string, Pack> packs;                  // 代號 → 包的 slots／budget／speed／backend（只解這幾格；pack.hpp 的 read_packs）
     std::optional<std::string> endpoint;                // 預設代號
     std::optional<long long> timeout_ms;

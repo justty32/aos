@@ -12,7 +12,7 @@ namespace aos::fsm {
 // 格裡其他 key（body…）原封不動，留給跑那格的 aos-exec。相對 $ref 從 fsm.json 所在的資料夾算（換過 $ref 的從那份檔的；
 // fsm.json 是捷徑＝實際的資料夾，同 aos-exec，10-24 審後 aos::loop::config_file）。
 // exec 是單子（物件）時裡面不解、記下它的起點（10-24，aos::loop::resolve_exec）。
-static Json resolve_table(const Json& raw, const std::string& base, std::map<std::string, std::string>& exec_bases) {
+static Json resolve_table(const Json& raw, const aos::RefBase& base, std::map<std::string, aos::RefBase>& exec_bases) {
     aos::Resolved top = aos::loop::resolve_keys(raw, base, {"start"});
     Json doc = top.value;
     if (!doc.is_object() || !doc.contains("states")) {
@@ -38,7 +38,8 @@ Table read_table(const std::string& spec) {
     Json doc = aos::load_cfg(spec);   // `檔` 或 `檔#/指標`（10-21 傍晚 ideas § 9）
     Table t;
     try {
-        doc = resolve_table(doc, aos::dirname(aos::loop::config_file(spec)), t.exec_bases);   // 捷徑解開（10-24 審後）
+        std::string cf = aos::loop::config_file(spec);   // 捷徑解開（10-24 審後）；`{"$ref": "#/…"}`＝這份 fsm.json 自己（11-12）
+        doc = resolve_table(doc, aos::RefBase{aos::dirname(cf), cf}, t.exec_bases);
     } catch (const Error& e) {
         throw Error{e.code, "config " + spec + ": cannot resolve directives: " + e.msg};
     }
@@ -116,7 +117,7 @@ std::map<std::string, Cell> check(const Table& t) {
         cell.exec = aos::loop::parse_target(c["exec"], "state " + name + " exec");
         auto base = t.exec_bases.find(name);
         aos::loop::place_inline(cell.exec, t.spec, "/states/" + aos::loop::pointer_escape(name) + "/exec",
-                                base == t.exec_bases.end() ? std::string() : base->second);
+                                base == t.exec_bases.end() ? aos::RefBase{} : base->second);
         cells[name] = cell;
     }
     return cells;

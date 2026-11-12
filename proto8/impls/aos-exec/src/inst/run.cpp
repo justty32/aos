@@ -118,11 +118,11 @@ Error start_error(int rc, const LibInput& lib) {
 }  // namespace
 
 Result run_inst(const Json& doc, const std::string& base_dir, const std::vector<std::string>& args,
-                const std::string& ref_base) {
-    // 1～2. 單子
-    std::string refs = ref_base;
-    if (refs.empty()) {
-        refs = base_dir;
+                const aos::RefBase& ref_base) {
+    // 1～2. 單子（ref_base 的 file＝寫著單子的那份檔，`{"$ref": "#/…"}` 取它；沒給＝從 base_dir 算、`#/…` 原封不動）
+    aos::RefBase refs = ref_base;
+    if (refs.dir.empty()) {
+        refs = aos::RefBase{base_dir};
     }
     Json resolved = aos::resolve(doc, refs);
     Inst inst = parse_inst(resolved, args);

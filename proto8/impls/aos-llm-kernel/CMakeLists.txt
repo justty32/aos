@@ -30,7 +30,7 @@ add_library(aos-llm-kernel STATIC ${SOURCES})
 target_include_directories(aos-llm-kernel PUBLIC include PRIVATE src)
 target_compile_features(aos-llm-kernel PUBLIC cxx_std_20)
 target_compile_options(aos-llm-kernel PRIVATE -Wall -Wextra)
-target_link_libraries(aos-llm-kernel PUBLIC aos-util aos-post PRIVATE aos-directive)
+target_link_libraries(aos-llm-kernel PUBLIC aos-util aos-post aos-directive)
 set_target_properties(aos-llm-kernel PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 

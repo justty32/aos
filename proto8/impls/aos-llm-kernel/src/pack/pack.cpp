@@ -100,7 +100,7 @@ std::optional<std::string> fixed_clash(const Json& g, const Json& request, const
            " from the request; to change " + (n == 1 ? "it" : "them") + " pick another endpoint name)";
 }
 
-std::map<std::string, Pack> read_packs(const Json& endpoints, const std::map<std::string, std::string>& dirs, const Backends& backends) {
+std::map<std::string, Pack> read_packs(const Json& endpoints, const std::map<std::string, aos::RefBase>& dirs, const Backends& backends) {
     std::map<std::string, Pack> out;
     for (auto& [name, raw] : endpoints.items()) {
         try {

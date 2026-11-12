@@ -11,10 +11,10 @@
 |---|---|---|
 | `aos-daemon` | aos-loop、aos-post | — |
 | `aos-directive` | aos-util | — |
-| `aos-exec` | aos-util | aos-inst-static、aos-directive、Threads::Threads |
+| `aos-exec` | aos-util、aos-directive | aos-inst-static、Threads::Threads |
 | `aos-fsm` | aos-loop | — |
 | `aos-json` | aos-util、aos-directive | — |
-| `aos-llm-kernel` | aos-util、aos-post | aos-directive |
+| `aos-llm-kernel` | aos-util、aos-post、aos-directive | — |
 | `aos-llm` | aos-util、aos-post、aos-llm-kernel | — |
 | `aos-lock` | aos-util | — |
 | `aos-loop` | aos-exec、aos-directive | — |

@@ -15,6 +15,7 @@
 // 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/util/error.hpp）；run_cli 自己接住印出來。
 #pragma once
 
+#include "aos/directive.hpp"
 #include "aos/util/error.hpp"
 #include "aos/util/io.hpp"
 
@@ -61,7 +62,7 @@ struct Result {
 // 訊號遮罩：進來時擋住三個訊號、出去時還原（單執行緒的呼叫者什麼都不用做；多執行緒的呼叫者要在開執行緒前
 // 自己把三個訊號擋在每條執行緒上，不然訊號可能送到別條執行緒去）。會讀 environ（環境變數要先設好）。
 Result run_inst(const Json& doc, const std::string& base_dir, const std::vector<std::string>& args,
-                const std::string& ref_base = "");
+                const aos::RefBase& ref_base = {});
 
 // argv[0] 帶 / 又 exec 不了（join(cwd, argv[0]) 不是看內容像程式的一般檔：資料夾、沒 +x、+x 的 JSON〔11-10 /mnt/c〕、不在；或帶 #/）
 // → 前面插 "aos-exec"；

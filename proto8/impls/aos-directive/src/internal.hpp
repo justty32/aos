@@ -16,8 +16,11 @@ namespace aos::directive {
 // 正在解的 $ref 鏈：每一層是「實際的檔（realpath）＋指標」。指回鏈上同一個位置＝繞圈。
 using Chain = std::vector<std::pair<std::string, std::string>>;
 
-// 走一個值（遇到指示詞就換掉）。base＝這一層相對 $ref 的起點。
-Json walk(const Json& v, const std::string& base, Chain& chain);
+// 走一個值（遇到指示詞就換掉）。base＝這一層相對 $ref 的起點與寫著它的那份檔。
+Json walk(const Json& v, const RefBase& base, Chain& chain);
+
+// 被 $ref 進來的那份檔（realpath）往下解時的起點：它的資料夾＋它自己（`#/…` 指它）。
+RefBase base_of(const std::string& file);
 
 // {"$ref": …}（整個物件 d）→ 每一份的原文（還沒往下解）＋位置（檔＋指標，推上鏈用）：$ref 是字串＝一份；
 // 是陣列（10-23 使用者）＝照順序每個元素一份。寫法不合（含空陣列、有一個元素不合）回 nullopt。
@@ -26,10 +29,10 @@ struct Fetched {
     Json value;
     std::pair<std::string, std::string> here;
 };
-std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const std::string& base, const Chain& chain);
+std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const RefBase& base, const Chain& chain);
 
 // {"$ref": …}（整個物件 d）→ 那個位置的值（每一份接著解完、再合成一份）；寫法不合回 nullopt（物件原封不動留著）。
-std::optional<Json> resolve_ref(const Json& d, const std::string& base, Chain& chain);
+std::optional<Json> resolve_ref(const Json& d, const RefBase& base, Chain& chain);
 
 // $ref 陣列的幾份合成一份（10-23 使用者）：只有一份＝它本身；都是物件＝合 key（同名後面的蓋前面的，淺層、位置留在第一次出現的地方）；
 // 都是陣列＝照順序接起來；其他（種類混在一起、兩份以上卻不是物件也不是陣列）＝DirectiveBad。

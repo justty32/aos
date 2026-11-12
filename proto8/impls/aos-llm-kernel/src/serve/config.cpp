@@ -19,8 +19,9 @@ std::string target_abs(const std::string& t, const std::string& base) {
 
 Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json doc = aos::load_cfg(spec);
-    std::string base = aos::dirname(aos::abspath(aos::split_hash(spec).path));
-    aos::Resolved r = aos::resolve_keys(doc, base, {"slots", "reserved", "aging_cycles", "budget", "exec", "endpoint", "timeout_ms", "backends"});
+    std::string file = aos::abspath(aos::split_hash(spec).path);
+    std::string base = aos::dirname(file);
+    aos::Resolved r = aos::resolve_keys(doc, aos::RefBase{base, file}, {"slots", "reserved", "aging_cycles", "budget", "exec", "endpoint", "timeout_ms", "backends"});
     doc = r.value;
     if (!doc.is_object()) {
         throw Error{code::CfgBad, spec + " must be a JSON object"};
