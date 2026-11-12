@@ -2,7 +2,7 @@
 
 使用者 11-12（thinking 2026-11/12/json-tools）：「建議做成一個aos_json工具……做兩套」、兩套選 A——簡單組只收路徑＋值、值照字面、
 不碰 $ref／$env／解析文字；複雜組另名，才有指示詞解開與否、穿過 $ref、值從文字或另一格來（圖紙 01-規劃 D1～D24）。
-路徑一律一整串 `檔#/指標`（N-45／N-62：第一個 # 切、# 後一定 /；`x.json` 與 `x.json#/` 都是整份），檔相對 $AOS_WS、絕對照用。
+路徑一律一整串 `檔#/指標`（N-45／N-62：第一個 # 切；指標照 RFC 6901、跟 aos-json／$ref 同一套——`x.json` 與 `x.json#` 是整份，`x.json#/` 是名字為空字串的那個 key，使用者 11-12「按照標準寫法」），檔相對 $AOS_WS、絕對照用。
 自己不開檔：讀＝`aos-json get`、寫＝`aos-json set／append／del`（原子寫入、只重寫變的那一塊）；簡單組寫入帶 `--raw`（指示詞物件當普通物件）。
 aos-json 的 stderr 原樣透出，它退 1 時接它錯誤行的代號與原因（C-52 例外：給腦用的工具轉接下層最後一行），沒那行＝CommandFailed。
 上限（json_get 的 max_bytes、ls／search 的 limit）：呼叫參數 › 環境變數 AOS_JSON_MAX_BYTES／AOS_JSON_MAX_ITEMS（tools.json 工具格 env 蓋過行程環境）› 預設 8000／200。
@@ -21,14 +21,12 @@ SIMPLE = {"get": "json_get", "ls": "json_ls", "search": "json_search", "set": "j
 
 
 class Target:
-    """一整串路徑切成：給腦看的檔名、真的檔、指標（"" ＝整份）。"""
+    """一整串路徑切成：給腦看的檔名、真的檔、指標（"" ＝整份，`x.json#` 也是）。指標原樣交給 aos-json 解（RFC 6901），這裡只切檔名、拆層給走訪用。"""
     def __init__(self, path):
         cut = path.find("#")
         self.file, ptr = (path, "") if cut < 0 else (path[:cut], path[cut + 1:])
         if not self.file:
             die("PointerBad", "%s: no file name before # (write FILE#/POINTER, e.g. cfg.json#/a)" % path)
-        if ptr == "/":
-            ptr = ""                                   # x.json#/ ＝整份（11-11 使用者「兩者都可」）
         if ptr and not ptr.startswith("/"):
             bare = ptr.strip("'\"\\ ")
             hint = "; it has quotes around it, write %s#%s" % (self.file, bare) if bare.startswith("/") else ""

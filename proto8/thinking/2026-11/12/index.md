@@ -49,7 +49,7 @@
   - 範圍是頂層擬的、已告知使用者、**使用者尚未回應（頂層擬、未確認）**：拿掉工具、`AOS_KNOWLEDGE`、旗標、錯誤代號、包，以及開場查知識庫的指示詞；出廠內容檔 `aos/*.json` 先留著當普通 json。
 - **json_read／json_write 之後被我們的 json 工具替代**。
 - **公司不建 proxy，只用 eca**。
-- **尋址一條路徑**：如 `aaa.json#/xxx/yyy`；檔案系統的根是 `/`，json 檔的根（整份檔）是 `#/`。
+- **尋址一條路徑**：如 `aaa.json#/xxx/yyy`；檔案系統的根是 `/`，json 檔的根（整份檔）是 `#/`。（**11-12 稍後註**：使用者看到 `$ref` 照 RFC 6901 後改口「原來$ref用的是標準寫法。那我們還是按照標準寫法好了。」——整份檔寫 `aaa.json` 或 `aaa.json#`，`aaa.json#/` 是名字為空字串的 key；json 工具已照改，見 [json-tools 01 Q3](json-tools/01-規劃.md#10-待使用者裁)。）
 - **description 與 index 合一**，統一叫 `_index`（json 內）／`_index.json`（資料夾裡），＝agent 自己對這個節點的理解。
 - **格式**：`{名: {description: …}, …}`，值用物件，因為以後不只純文字 description。
 - **天然位置＝上一層的 index**：沒指定位置時，agent 想了解某節點就去看它上方節點的 index。

@@ -53,7 +53,7 @@ class JsonToolsTest(unittest.TestCase):
     def test_get(self):
         self.assertEqual(json.loads(self.ok("json_get", path="cfg.json#/states/think")), {"exec": "think.py", "next": "act"})
         self.assertEqual(self.ok("json_get", path="cfg.json#/max"), "20")
-        self.assertEqual(json.loads(self.ok("json_get", path="cfg.json#/")), self.doc())     # #/ ＝整份
+        self.assertEqual(json.loads(self.ok("json_get", path="cfg.json#")), self.doc())      # # 後空＝整份
         self.assertEqual(json.loads(self.ok("json_get", path="cfg.json#/r")), {"$ref": "o.json#/x"})   # 指示詞照原文
         self.err("json_get", "PointerMissing", path="cfg.json#/nope")
         self.err("json_get", "PointerBad", path="cfg.json#nope")
@@ -127,7 +127,28 @@ class JsonToolsTest(unittest.TestCase):
         self.ok("json_del", path="cfg.json#/name")
         self.assertEqual((self.doc()["tags"], "name" in self.doc()), (["b"], False))
         self.err("json_del", "PointerMissing", path="cfg.json#/name")
-        self.err("json_del", "TargetBad", path="cfg.json#/")
+        self.err("json_del", "TargetBad", path="cfg.json#")
+
+    def test_root_is_standard(self):
+        """照 RFC 6901（同 aos-json／$ref，使用者 11-12「按照標準寫法」）：x.json 與 x.json# 是整份，x.json#/ 是空字串 key。"""
+        self.write("e.json", {"": {"in": 1}, "a": 2})
+        whole = {"": {"in": 1}, "a": 2}
+        self.assertEqual(json.loads(self.ok("json_get", path="e.json")), whole)
+        self.assertEqual(json.loads(self.ok("json_get", path="e.json#")), whole)
+        self.assertEqual(json.loads(self.ok("json_get", path="e.json#/")), {"in": 1})
+        self.assertEqual(json.loads(self.ok("json_get", path="e.json#//in")), 1)
+        self.assertEqual(self.ok("json_ls", path="e.json#/").split("\n"), ["object, 1 keys", "in"])
+        self.assertEqual(self.ok("json_search", path="e.json#/", key="in"), "e.json#//in\tnumber\t1")
+        self.assertEqual(self.ok("json_set", path="e.json#/", value=5), "ok e.json#/")
+        self.assertEqual(self.doc("e.json"), {"": 5, "a": 2})
+        self.assertEqual(self.ok("json_del", path="e.json#/"), "ok e.json#/")
+        self.assertEqual(self.doc("e.json"), {"a": 2})
+        self.err("json_get", "PointerMissing", path="e.json#/")
+        self.assertEqual(self.ok("json_add", path="e.json#/", value=[]), "ok e.json#/")
+        self.assertEqual(self.doc("e.json"), {"a": 2, "": []})
+        self.assertEqual(self.ok("json_set", path="e.json#", value={"b": 3}), "ok e.json")
+        self.assertEqual(self.doc("e.json"), {"b": 3})
+        self.assertEqual(json.loads(self.ok("aos_json_get", path="e.json#")), {"b": 3})
 
     # 複雜組
     def test_aos_get(self):
