@@ -29,7 +29,16 @@ aos-mailbox send --box <上面印的 reply_to> --in-reply-to <信名> --status D
 
 ## 明天主 session 開始：現在卡在三點
 
-1. **MCP 起得來但 0 支工具**：`~/.cache/aos-mcp-aos/tools.json` 只有 `aos_kb`、`wf_kb` 兩格，都指 11-12 已刪的 `lib/agent/memory_read`；實跑每次 warning `tool aos_kb skipped: PathMissing`，本 session 報 `aos: CONNECTION_CLOSED`。修法在 [wait-user/04 雜事](../../../../../wf/wait-user/04-雜事.md)（repo 外的檔、要人動）——但那行照抄指令按**鍵名**開頭 `memory`／`knowledge` 刪，家機兩格叫 `aos_kb`／`wf_kb`，照跑刪不掉，最後的 grep 也不會印 0。換成 json＋index（＋todo）三包後實跑：`index_view`、`json_*` 九支、`todo` 都通。
+1. **MCP 起得來但 0 支工具**（11-12 晚已修，見下）：`~/.cache/aos-mcp-aos/tools.json` 原本只有 `aos_kb`、`wf_kb` 兩格，都指 11-12 已刪的 `lib/agent/memory_read`；實跑每次 warning `tool aos_kb skipped: PathMissing`，本 session 報 `aos: CONNECTION_CLOSED`。
+
+   **已修（11-12 晚，家機）**。使用者原話：「好，這些都不是問題。只是主session接mcp這個要處理。邊緣狀況這邊就先這樣，之後踩坑再說。」
+   - 做了什麼：只動 `~/.cache/aos-mcp-aos/tools.json`（舊檔備份成同夾 `tools.json.bak-1112`）；`~/.claude.json` 沒動（它那行 `aos-mcp --ws ~/.cache/aos-mcp-aos/ws ~/.cache/aos-mcp-aos/tools.json` 照用）。新登記檔照範本 `templates/eca-claude/tools.json` 用 `$override` 疊 `lib/packs/json.json`、`lib/packs/index.json` 兩包，每支只補一格 `env` 把 `AOS_WS` 設成 repo 根。
+   - 掛了 10 支：`index_view`、`json_get`／`json_ls`／`json_search`／`json_len`／`json_set`／`json_add`／`json_del`／`json_multi_get`／`json_multi_set`。路徑參數的相對路徑一律從 repo 根 `/home/lorkhan/repo/simple_tools/aos` 算，跟主 session 的 cwd 無關（從 `/tmp` 起也一樣）。
+   - 實跑（照 `~/.claude.json` 那行手動起 stdio）：`initialize`＋`tools/list` 得 10 支；`index_view proto8/knowledge/aos` 印 `[index] proto8/knowledge/aos/_index.json, 20 entries`；`json_get`、`json_ls`、`json_len` 都正常；stderr 只有故意叫錯檔那次的 `FileMissing`；關 stdin 退 0。`aos-tools --file … ls` 列 10 支、退 0、沒有 warning。
+   - 沒掛：mailbox 三支（主 session 不在 daemon 表上＝`DaemonMissing`）；aos 的基礎檔案工具（主 session 自己有讀寫檔與 shell）；`todo`（見代定）。
+   - 代定：(1) 不掛 `todo`——主 session 經 aos-mcp 用，清單會存在 `~/.cache/aos-mcp-aos/ws/.stack/tools/todo/todo.json`，是這台機器上這個 repo **所有同時開著的主 session 共用一張**、不進 git，幾個 session 會互蓋；Claude Code 自己也有待辦工具。要掛時再決定清單歸誰。(2) 包的路徑照範本寫 `{"$env": "AOS_HOME", …}`、`AOS_WS` 寫絕對路徑：包裡每支工具本來就用 `$env AOS_HOME`，外層改寫絕對路徑也躲不掉這個依賴（實跑：拿掉 `AOS_HOME` 照樣 `DirectiveBad`），所以只留 `AOS_HOME` 一個要顧的點；`~/.claude.json` 那台的 `env` 是空的，靠 Claude Code 從 `.zshrc` 繼承 `AOS_HOME`（家機現在跑的主 session 有）。不從有 `AOS_HOME` 的 shell 起 Claude Code，aos MCP 會起不來（`ToolsBad`）；要更穩可在 `~/.claude.json` 那台的 `env` 加 `AOS_HOME`，沒動、留給使用者。(3) `json_set` 等寫入工具照「json 整包」一起掛。
+   - 使用者要做的：重開 Claude Code 或 `/mcp` 重連 aos，看到 10 支就對（記在 [wait-user/04](../../../../../wf/wait-user/04-雜事.md)）。
+   - 明天接著的事（使用者說明天開始／之後踩坑再說，這次沒做）：Skill 放哪（`.claude/skills/`）；主 session 的身分（算不算一隻 agent、別的 agent 回信 `reply_to` 指哪個信箱，連帶 mailbox 三支能不能掛）；always-on 規矩怎麼進主 session；`todo` 歸誰。
 2. **信箱與 self 類工具不通**：`mailbox_peek／read／send`、`self_*`、`goal`、`subagent`、`fork` 先 `aos-agent ctl who` 認人，主 session 不在任何 daemon 表上→`DaemonMissing`。主 session 收信只能走 Bash `aos-mailbox`；把主 session 登記成表上的一隻，現在沒有這種做法；它給別的 agent 的 `reply_to` 指哪個信箱也沒定。
 3. **Skill 與規矩兩套**：repo 沒有 `.claude/skills/`（只有 `.claude/commands/wf-lint.md`）；同一份 skill 主 session 與 eca 共用的前提是 eca 的工作區就是 repo，那時 eca 推測也會讀 CLAUDE.md 與 `.claude/settings.json` 的 compact hook（未實跑驗證），兩套規矩同時進 eca。
 
