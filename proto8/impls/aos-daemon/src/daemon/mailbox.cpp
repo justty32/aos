@@ -15,7 +15,9 @@
 //                  11-10（設計-46）：好信 procs_removed 的名字若 procs_ctl 還宣告著（它的 procs 或 procs_added 有、procs_removed 沒有），
 //                  下一圈會被疊回來——行為不變，只在套這封信時印一行 warning（一封信一個名字一次；之後每圈不再印，再寄一封 rm 才再印；
 //                  cur/ 殘骸重做也算一封）
-//   done_letters   對完表之後：好信有 reply_to 的回 {"applied": true}（壞信不回，決定 27）；全部 done 收掉（不留 archive/）。
+//   done_letters   對完表之後：有 reply_to 的回信——好信 {"applied": true}；body 壞的（不是物件、ping 不是 true、check_lists 不過、指示詞解不開）
+//                  回 {"applied": false, "error": {"code": "BodyBad", "msg": 原因}}（11-12，kernel 討論 11-11 裁定「改成會回」；形狀同判官拒信）。
+//                  信封壞的（see 不過）讀不到 reply_to、回不了：照舊只記 mailbox_warning_。沒寫 reply_to＝不回。全部 done 收掉（不留 archive/）。
 //                  回信寄不出去、收不掉（信被別人拿走、寫不了）都不管：不另外通知（決定 27），也不讓 daemon 因此結束
 #include "daemon/daemon.hpp"
 
@@ -90,7 +92,7 @@ Daemon::Letters Daemon::take_letters() {
         if (bad) {
             mailbox_warning_ = "letter " + id + " rejected: " + *bad;
         }
-        got.push_back({id, !bad});
+        got.push_back({id, bad});
     }
     return got;
 }
@@ -163,11 +165,11 @@ std::optional<std::string> Daemon::apply_letter(const Json& body) {
 }
 
 void Daemon::done_letters(const Letters& got) {
-    for (const auto& [id, ok] : got) {
+    for (const auto& [id, bad] : got) {
         try {
-            if (ok) {
-                aos::post::reply(mbox_, id, Json::object({{"applied", true}}));   // 沒寫 reply_to＝不回
-            }
+            // 沒寫 reply_to、信封壞＝reply 不回（aos::post::reply 自己判）
+            Json answer = bad ? Json{{"applied", false}, {"error", {{"code", "BodyBad"}, {"msg", *bad}}}} : Json{{"applied", true}};
+            aos::post::reply(mbox_, id, answer);
         } catch (const Error&) {
         }
         try {

@@ -102,6 +102,22 @@ class RealDaemon(unittest.TestCase):
         self.assertIn("subagents 1/4", self.ok(TOOL, {"op": "add", "def": str(TEMPLATE), "name": "kid2"}))
         self.ok(TOOL, {"op": "rm", "name": "kid2", "purge": True})
 
+    def test_requests_go_to_aos_kernel(self):
+        """11-12：AOS_DAEMON 與 AOS_KERNEL 都設＝表照讀那台 daemon、掛子信寄 AOS_KERNEL（這裡沒人收，所以逾時、信被撤回）。"""
+        kernel = self.tmp / "kernel"
+        subprocess.run(["aos-post", "init", str(kernel)], env=self.env, check=True)
+        self.env["AOS_KERNEL"] = str(kernel)
+        log = self.tmp / "sent.log"
+        watcher = subprocess.Popen(["sh", "-c", 'while :; do for d in "$0"/new/*/; do [ -d "$d" ] && cat "$d/letter.json" >> "$1" && exit 0; done; sleep 0.05; done',
+                                    str(kernel), str(log)])
+        self.addCleanup(watcher.kill)
+        r = self.tool(TOOL, {"op": "add", "def": str(TEMPLATE), "name": "kid", "ws": "kid", "timeout_s": 1})
+        watcher.wait(10)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("DaemonFailed", r.stdout)
+        self.assertIn('"kid"', log.read_text())            # 信到過 AOS_KERNEL（逾時後被撤回）
+        self.assertEqual(self.ok(TOOL, {"op": "ls"}), "subagents 0/4\n")
+
 
 if __name__ == "__main__":
     unittest.main()

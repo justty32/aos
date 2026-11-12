@@ -6,11 +6,11 @@
 #   之後使用者「eca不給fork。」：只給 agent-fsm 的身體；history 裡找不到叫到一半的 tool call（eca）＝BodyUnsupported、叫它改用 subagent（判法同 do_task）。
 # 介面（lib/docs/01 的契約）：stdin 一份 {"goal", "max_chars"?, "timeout_s"?, "timeout_cycles"?, "keep"?}，沒有 op；別的鍵＝ArgumentsBad（tool_io）。
 #   goal 必要（要做什麼、要帶回什麼）；max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、只要求有限正數；keep 預設 false。
-# 一次叫＝aos-agent --daemon $AOS_DAEMON 的幾步：ctl who（我是誰、我的定義與 stack）→ 抄 stack（fork_copy：定義宣告的 history＋覆蓋檔，
+# 一次叫＝aos-agent 的幾步（daemon 由 ctl who 回的 daemon 欄定、之後都帶 --daemon 那台；信經 aos-agent 寄，有 $AOS_KERNEL 就寄那裡，11-12）：ctl who（我是誰、我的定義與 stack）→ 抄 stack（fork_copy：定義宣告的 history＋覆蓋檔，
 #   history 尾巴沒回的工具呼叫補 tool 訊息）到 <daemon>/procs/<分身名>/ →
 #   ctl add（--name f-<父名前32字>-<UTC毫秒>-<4位hex>、--ws 我的 $AOS_WS、--stack 那份、--envs AOS_FORK_DEPTH=1、我的定義）→
 #   say 開場文（OPENING：你是分身、任務、只回結論、不能再 fork）＋listen --timeout-s／--timeout-cycles →
-#   預設 ctl rm --purge 分身（stack 刪掉）；keep: true＝留著但 ctl stop、結論後多一行 details: <分身的 stack，相對 $AOS_DAEMON>/。
+#   預設 ctl rm --purge 分身（stack 刪掉）；keep: true＝留著但 ctl stop、結論後多一行 details: <分身的 stack，相對那台 daemon 的 stack>/。
 #   不寫分身的 goal.json（代定：listen 拿第一則回答就收，goal 提醒只會在結論之後才來、白催）。
 # 分身名每次唯一：mkdir $AOS_STACK/children/<分身名>/，撞表或資料夾最多重試五次；state＝running <UTC到秒Z租約>／kept／failed，
 #   每步呼叫前續租至逾時＋5秒，TERM 收回租約；對帳先保護未到期租約與剛建資料夾；表上沒有就忘掉，過期 running 先 stop 再記 failed；
@@ -26,7 +26,7 @@ from datetime import datetime, timedelta, timezone
 HELP = """\
 usage: fork < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Copy yourself as you are now - your definition, the tools / llm / hooks / system you changed
-in your stack, and your whole conversation - into a fork on your daemon ($AOS_DAEMON), give it
+in your stack, and your whole conversation - into a fork on your daemon (the table aos-agent finds), give it
 one goal and print only its short conclusion; the fork's steps stay out of your history.
 The fork does not get your goal, your to-do list or your tool records; it starts with an empty
 queue and mailbox. Its last message says it is a fork, gives the goal and asks for the
@@ -40,7 +40,8 @@ Result on stdout: the conclusion. The fork is removed afterwards unless keep is 
 its stack is kept and the error line ends with (details: <stack>/).
 Each fork has a unique name; running records use renewable UTC leases. Interrupted leases expire,
 and the next call stops expired forks and keeps their stacks as failed ones.
-DaemonMissing means AOS_DAEMON is unset or its directory does not exist.
+DaemonMissing means aos-agent found no daemon table (AOS_DAEMON unset and no ./.stack, or not a folder).
+AOS_KERNEL alone is not enough: the fork's stack is placed on that daemon. Requests go via AOS_KERNEL when set.
 DaemonFailed means its directory exists but no reply arrived within the timeout (busy, paused, or down).
 On error: one line "fork: error: CODE reason" on stderr and stdout, exit 1.
 """
@@ -115,7 +116,7 @@ signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、�
 
 
 def agent(argv, text=None, timeout_s=STEP_S, timeout_cycles=None):
-    """叫 aos-agent --daemon <AOS_DAEMON> argv…；退 0 回 (stdout, None)，退非 0 或逾時回 (stdout, (代號, 原因))。"""
+    """叫 aos-agent [--daemon <ctl who 回的 daemon>] argv…（ctl who 之前不給，daemon 由 aos-agent 照它的找法找）；退 0 回 (stdout, None)，退非 0 或逾時回 (stdout, (代號, 原因))。"""
     global child
     if running_kid is not None:
         renew(timeout_s + 5)
@@ -123,7 +124,7 @@ def agent(argv, text=None, timeout_s=STEP_S, timeout_cycles=None):
         deadline = tool_io.deadline_after(timeout_cycles) if timeout_cycles is not None else None
     except tool_io.Error as e:
         return "", (e.code, str(e))
-    cmd = ["aos-agent", "--daemon", daemon] + argv
+    cmd = ["aos-agent"] + (["--daemon", daemon] if daemon else []) + argv
     try:
         child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL,
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
@@ -218,10 +219,9 @@ if depth < 0:
 if depth >= MAX_DEPTH:
     die("DepthExceeded", "you are a fork at depth %d; at most %d level%s of fork (do this step yourself)"
         % (depth, MAX_DEPTH, "" if MAX_DEPTH == 1 else "s"))
-daemon = os.environ.get("AOS_DAEMON")
-if not daemon:
-    die("DaemonMissing", "AOS_DAEMON is not set (this tool starts the fork on the daemon that runs you)")
-daemon = os.path.realpath(daemon)
+# daemon 不自己讀 $AOS_DAEMON（11-12 kernel 小修）：ctl who 由 aos-agent 照共用找法（--daemon ＞ $AOS_DAEMON ＞ ./.stack）找、回 daemon；
+# 信由 aos-agent 寄（有 $AOS_KERNEL 就寄那裡）。表與分身 stack 的位置仍要知道那台 daemon——kernel 給狀態位址那套還沒做。
+daemon = None
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
@@ -324,6 +324,9 @@ def reconcile(table):
 
 # ---- 我是誰：定義與 stack ----
 me = json.loads(must(["ctl", "who", "--json"]))
+if not isinstance(me.get("daemon"), str) or not me["daemon"]:
+    die("DaemonMissing", "aos-agent ctl who did not say which daemon table it read")
+daemon = os.path.realpath(me["daemon"])
 own_def = me.get("def")
 if not isinstance(own_def, str) or not own_def.strip():
     die("DefMissing", "the daemon table has no definition for you (%s), so there is nothing to copy" % me.get("name"))

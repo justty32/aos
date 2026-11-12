@@ -39,7 +39,8 @@ elif argv[:2] == ["ctl", "who"]:
         sys.stderr.write("aos-agent: error: InstanceMissing no listed agent owns %s\n" % s)
         sys.exit(1)
     r = rows[0]
-    print(json.dumps({"name": r["name"], "stack": r["stack"], "ws": None, "def": os.environ.get("FAKE_DEF")}) if "--json" in argv else r["name"])
+    print(json.dumps({"name": r["name"], "stack": r["stack"], "ws": None, "def": os.environ.get("FAKE_DEF"),
+                      "daemon": os.environ["AOS_DAEMON"]}) if "--json" in argv else r["name"])
 elif argv[:2] == ["ctl", "add"]:
     name = argv[argv.index("--name") + 1] if "--name" in argv else os.path.basename(argv[-1])
     if os.environ.get("FAKE_QUEUE"):
@@ -156,7 +157,7 @@ class Subagent(unittest.TestCase):
             r = self.run_tool(dict(op, name="other"))
             self.assertEqual(r.returncode, 1, op)
             self.assertIn(NAME + ": error: SubagentUnknown other", r.stdout)
-        self.assertEqual([c for c in self.calls() if c[:2] != ["ctl", "ls"]], [])
+        self.assertEqual([c for c in self.calls() if c[:2] not in (["ctl", "ls"], ["ctl", "who"])], [])   # who＝問 daemon 在哪（11-12）
 
     def test_removed_elsewhere_is_forgotten(self):
         self.ok({"op": "add", "def": "d", "name": "kid"})

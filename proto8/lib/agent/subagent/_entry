@@ -15,7 +15,7 @@
 #   tools／llm／history／hook／system {name, args}：跑旁邊 self_tools／self_llm／self_history／self_hook／self_system（11-11）的 _entry，stdin＝args、AOS_STACK＝<子的 stack>/tools/<那支>/
 #        （那支靠 ctl who 認自己＝變成改子的）；stdout 原樣（「your」改成子的名字）；它的錯誤代號與原因接成自己的；旁邊沒那支＝ToolMissing；子還在排隊＝SubagentQueued。
 #   每個帶 name 的動作先對帳：不是我生的＝SubagentUnknown；記過但不在表上＝SubagentMissing（之後就忘掉）。ask／listen／rm 抄公開子帳（observed_children.copy_child）。
-# 記帳：$AOS_STACK/subagents.json（$AOS_STACK＝我 stack 裡這支的小格 tools/subagent/）＝[{name, stack（相對 $AOS_DAEMON 的真實路徑）} | {name, queued_letter}]；對帳＝名字與 stack 都對得上 ctl ls --json 那列才算還在。
+# 記帳：$AOS_STACK/subagents.json（$AOS_STACK＝我 stack 裡這支的小格 tools/subagent/）＝[{name, stack（相對那台 daemon stack 的真實路徑；哪台＝ctl who --json 的 daemon，11-12）} | {name, queued_letter}]；對帳＝名字與 stack 都對得上 ctl ls --json 那列才算還在。
 # 配額：max_subagents 從 subagents.json 讀——我的定義那份疊我的 stack 那份（ctl who --json 的 def 與 stack；只放改過的鍵）；都沒有＝4。
 # 錯：stderr 與 stdout 各一行「subagent: error: 代號 原因」、退 1；下層 stderr 原樣透出；下層最後一行錯誤行接成自己的（C-52 例外 ⑤）。
 import json, os, re, sys
@@ -81,7 +81,7 @@ def write_book(kids):
 
 
 def stack_rel(p):
-    """表上的（絕對）stack → 存進帳的：相對 $AOS_DAEMON 的真實路徑（daemon 拼表也從那裡）。"""
+    """表上的（絕對）stack → 存進帳的：相對那台 daemon stack（ctl who 回的 daemon）的真實路徑（daemon 拼表也從那裡）。"""
     return os.path.relpath(os.path.normpath(p), daemon_base)
 
 
@@ -112,7 +112,7 @@ def reconcile():
 
 
 def max_subagents():
-    me = json.loads(cmd.agent(["ctl", "who", "--json"]))
+    me = ME
     cfg = {}
     for d in (me.get("def"), me.get("stack")):
         if d:
@@ -171,14 +171,16 @@ elif op in FORWARD:
         die("ToolMissing", "op %s needs the tool %s next to this one (%s), and it is not there" % (op, sub, entry))
     if not isinstance(args.get("args"), dict):
         die("ArgumentsBad", "args must be an object: what %s takes, like {\"op\": \"ls\"}" % sub)
-daemon = os.environ.get("AOS_DAEMON")
-if not daemon:
-    die("DaemonMissing", "AOS_DAEMON is not set (this tool manages subagents on the daemon that runs you)")
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
 book_path = os.path.join(stack, CFG)
-daemon_base = os.path.realpath(daemon)
+# 11-12 kernel 小修：不自己讀 $AOS_DAEMON；哪台 daemon 由 aos-agent 照共用找法（--daemon ＞ $AOS_DAEMON ＞ ./.stack）找，
+# ctl who --json 回的 daemon 當帳上 stack 的相對基準；找不到＝aos-agent 的 DaemonMissing 接成自己的。信由 aos-agent 寄（有 $AOS_KERNEL 就寄那裡）。
+ME = json.loads(cmd.agent(["ctl", "who", "--json"]))
+if not isinstance(ME.get("daemon"), str) or not ME["daemon"]:
+    die("DaemonMissing", "aos-agent ctl who did not say which daemon table it read")
+daemon_base = os.path.realpath(ME["daemon"])
 
 if op == "add":
     alive, gone, _ = reconcile()

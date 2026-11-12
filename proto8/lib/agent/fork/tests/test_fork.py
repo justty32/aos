@@ -53,13 +53,28 @@ class Arguments(unittest.TestCase):
         self.assertCode({'goal': 'x'}, 'ArgumentsBad', AOS_FORK_DEPTH='-1')
         self.assertCode({'goal': 'x'}, 'ArgumentsBad', AOS_FORK_DEPTH='two')
         rc, out, _ = run({'goal': 'x'}, AOS_DO_TASK_DEPTH='5')   # 舊 do_task 的變數不算
-        self.assertIn('DaemonMissing', out)
+        self.assertIn('StackMissing', out)
 
     def test_environment(self):
-        self.assertCode({'goal': 'x'}, 'DaemonMissing')
+        self.assertCode({'goal': 'x'}, 'StackMissing')
         with tempfile.TemporaryDirectory() as tmp:
             self.assertCode({'goal': 'x'}, 'StackMissing', AOS_DAEMON=tmp)
             self.assertCode({'goal': 'x'}, 'WsMissing', AOS_DAEMON=tmp, AOS_STACK=tmp, AOS_WS=os.path.join(tmp, 'nope'))
+
+    def test_kernel_alone_is_not_a_daemon(self):
+        """11-12：daemon 由 aos-agent ctl who 找（不自己讀 AOS_DAEMON）；只設 AOS_KERNEL＝找不到表＝它的 DaemonMissing 接成自己的，什麼信都沒寄。"""
+        proto = LIB.parent
+        bins = [str(p) for p in sorted((proto / 'impls').glob('*/bin'))] + [str(p) for p in sorted((proto / 'cmd').glob('*/bin'))]
+        with tempfile.TemporaryDirectory() as tmp:
+            kernel = os.path.join(tmp, 'kernel')
+            for stage in ('tmp', 'new', 'cur'):
+                os.makedirs(os.path.join(kernel, stage))
+            path = os.pathsep.join(bins + [os.environ['PATH']])
+            rc, out, err = run({'goal': 'x'}, PATH=path, AOS_KERNEL=kernel, AOS_STACK=tmp, AOS_WS=tmp)
+            self.assertEqual(rc, 1)
+            self.assertTrue(out.startswith('fork: error: DaemonMissing '), out)
+            self.assertTrue(err.startswith('aos-agent: error: DaemonMissing '), err)   # 下層那行原樣透出（R10）
+            self.assertEqual(os.listdir(os.path.join(kernel, 'new')), [])
 
     def test_help(self):
         r = subprocess.run([str(ENTRY), '--help'], capture_output=True, text=True, timeout=30)

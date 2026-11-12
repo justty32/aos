@@ -58,7 +58,7 @@ class Runner(unittest.TestCase):
 class EntryChecks(unittest.TestCase):
     def test_seconds_checked_before_the_daemon(self):
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-        for value, code in [(1e9, "DaemonMissing"), (0, "ArgumentsBad"), (-1, "ArgumentsBad"), (float("inf"), "ArgumentsBad"),
+        for value, code in [(1e9, "StackMissing"), (0, "ArgumentsBad"), (-1, "ArgumentsBad"), (float("inf"), "ArgumentsBad"),
                             (float("-inf"), "ArgumentsBad"), (float("nan"), "ArgumentsBad")]:
             with self.subTest(timeout_s=value):
                 r = subprocess.run([str(TOOL)], input=json.dumps(dict(op="ask", name="kid", text="hello", timeout_s=value)),
@@ -73,6 +73,23 @@ class EntryChecks(unittest.TestCase):
             r = subprocess.run([str(TOOL)], input=json.dumps(dict(op="listen", name="kid", timeout_cycles=value)),
                                text=True, capture_output=True, env=env, timeout=10)
             self.assertIn("error: ArgumentsBad", r.stdout, value)
+
+    def test_kernel_alone_is_not_a_daemon(self):
+        """11-12：只設 AOS_KERNEL＝aos-agent 找不到 daemon 表（ctl who）＝它的 DaemonMissing 接成自己的；什麼信都沒寄到 kernel。"""
+        import tempfile
+        proto = TOOL.parents[3]
+        bins = [str(p) for p in sorted((proto / "impls").glob("*/bin"))] + [str(p) for p in sorted((proto / "cmd").glob("*/bin"))]
+        with tempfile.TemporaryDirectory() as tmp:
+            kernel, ws = os.path.join(tmp, "kernel"), os.path.join(tmp, "ws")
+            os.makedirs(ws)
+            for stage in ("tmp", "new", "cur"):
+                os.makedirs(os.path.join(kernel, stage))
+            env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+            env.update(PATH=os.pathsep.join(bins + [env["PATH"]]), AOS_KERNEL=kernel, AOS_STACK=tmp, AOS_WS=ws)
+            r = subprocess.run([str(TOOL)], input=json.dumps(dict(op="ls")), text=True, capture_output=True, env=env, cwd=tmp, timeout=30)
+            self.assertEqual(r.returncode, 1)
+            self.assertTrue(r.stdout.startswith("subagent: error: DaemonMissing "), r.stdout)
+            self.assertEqual(os.listdir(os.path.join(kernel, "new")), [])
 
 
 if __name__ == "__main__":

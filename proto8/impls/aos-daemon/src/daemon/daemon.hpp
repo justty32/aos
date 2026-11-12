@@ -203,11 +203,11 @@ private:
     void reconcile(const Json& want, const Names& stopped, const Names& slept);   // 對表：收多的、停要停的、看誰結束、起少的與要 start 的
 
     // 信箱（mailbox.cpp）
-    using Letters = std::vector<std::pair<std::string, bool>>;   // 這圈的信（照處理順序）：{信件名稱, 好信}
+    using Letters = std::vector<std::pair<std::string, std::optional<std::string>>>;   // 這圈的信（照處理順序）：{信件名稱, 壞信的原因（好信＝nullopt）}
     void open_mailbox();                                     // 建 tmp/ new/ cur/（已在就沿用）、cur/ 的殘骸記進 redo_
     Letters take_letters();                                  // 認領、逐封驗；好信依序套進底
     std::optional<std::string> apply_letter(const Json& body);   // 驗 body、套進 want_／stopped_；壞＝回原因、底不動
-    void done_letters(const Letters& got);                   // 好信有 reply_to 的回 applied；全部收掉
+    void done_letters(const Letters& got);                   // 有 reply_to 的回信：好信 applied true、壞 body applied false＋BodyBad（11-12）；全部收掉
 
     Json procs_ = Json::object();                        // daemon.json 的 procs
     std::map<std::string, std::string> bad_rows_;        // 11-10 晚 B07：daemon.json 裡指示詞解不開的列 → 原因（那列留 stopped＋reason，其他照起）

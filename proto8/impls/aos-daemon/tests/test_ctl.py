@@ -252,6 +252,8 @@ class Prune(unittest.TestCase):
         opts = {'daemon': str(self.root)}
         with patch.object(dc, 'send', return_value='letter') as send, \
              patch.object(dc, 'mailbox_of', return_value='box'), \
+             patch.object(dc, 'reply_box', return_value='rbox'), \
+             patch.object(dc, 'take_reply', return_value={'applied': True}), \
              patch.object(dc, 'wait_taken', return_value=True) as wait:
             with contextlib.redirect_stdout(io.StringIO()) as out:
                 cli['cmd_rm'](opts, ['--timeout-s', '2', 'job'])
@@ -268,7 +270,8 @@ class Prune(unittest.TestCase):
                 cli['cmd_prune'](opts, ['--older-than', '1d', '--apply', '--reply-to', 'replies'])
             self.assertEqual(send.call_args.args[2], os.path.abspath('replies'))
             self.assertEqual(wait.call_count, 2)  # reply-to follows rm's send-only path.
-        with patch.object(dc, 'send', side_effect=dc.Fail('SendFailed', 'send failed')):
+        with patch.object(dc, 'send', side_effect=dc.Fail('SendFailed', 'send failed')), \
+             patch.object(dc, 'reply_box', return_value='rbox'):
             for cmd, args in [('cmd_rm', ['job']),
                               ('cmd_prune', ['--older-than', '1d', '--apply'])]:
                 with contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(dc.Fail) as got:

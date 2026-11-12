@@ -45,6 +45,8 @@ asks; the daemon applies it on its next round. See the result with ls.
 Letters always go straight to this daemon's ctl mailbox; AOS_KERNEL is not read.
 To go through the judge (AOS_KERNEL), use aos-agent ctl instead.
 add / rm / stop / start / sleep / wake also take --reply-to BOX (send only, do not wait).
+Without --reply-to they read the daemon's reply: a refused letter (bad body) is an error
+with the daemon's code and reason (BodyBad).
 
 flags:
   -d, --daemon D   the daemon's stack folder (default: $AOS_DAEMON, else ./.stack)
@@ -98,7 +100,7 @@ flags:
   -h, --help             show this help
 
 Removal keeps every stack / workspace file. Like rm, it asks the daemon to detach;
-without --reply-to it waits for the letter to leave new/, not for an applied reply.
+without --reply-to it waits for the letter to leave new/, then briefly for a refusal reply.
 Letters go straight to this daemon; AOS_KERNEL is not read.
 exit codes: 0 checked / previewed / sent; 1 error (ArgumentsBad, StateBad, rm errors...).
 """,
@@ -112,7 +114,7 @@ XXX follows the aos-exec entry chain: an object with exec and no argv supplies a
 config (no ARGS allowed); arrays and argv objects stay unchanged as aos-exec targets.
 Launch syntax only selects how to start a proc; all procs share lifecycle rules. Prints the
 letter name, then waits up to --timeout-s seconds for the letter to leave new/ (still there = a
-warning line, exit 0; it is applied when taken).
+warning line, exit 0; it is applied when taken). A refused letter (bad body) = error BodyBad.
 
 A definition folder runs its _entry, as aos-exec would. An agent folder's _entry attaches the
 agent itself and can fail with a name collision (left stopped with a reason); to attach an agent, use
@@ -440,14 +442,29 @@ def limits_arg(v):
 
 
 def deliver(d, body, reply_to=None, timeout_s=3, *, print_letter=True):
-    """人直接敲板子：一律寄這個 daemon 自己的 ctl 信箱，不看 AOS_KERNEL（使用者 11-07 選項框「aos-daemon-ctl 永遠直寄」）。"""
-    letter = dc.send(d, body, reply_to, direct=True)
+    """人直接敲板子：一律寄這個 daemon 自己的 ctl 信箱，不看 AOS_KERNEL（使用者 11-07 選項框「aos-daemon-ctl 永遠直寄」）。
+    沒給 --reply-to（11-12 kernel 小修）：帶共用回信信箱寄，被領走後在期限內（至少再 1 秒）看回信；daemon 回 applied false（壞信）＝報它的代號與原因。"""
+    own = reply_to is None
+    box = dc.reply_box(d) if own else reply_to
+    letter = dc.send(d, body, box, direct=True)
     if print_letter:
         print(letter, flush=True)
-    if reply_to is None:
-        box = dc.mailbox_of(d, direct=True)
-        if not dc.wait_taken(box, letter, timeout_s):
-            aos_flags.warn(NAME, "the letter %s is still in %s after %g s (the daemon is busy, paused or not running); it is applied when taken" % (letter, box, timeout_s))
+    if not own:
+        return
+    end = time.monotonic() + timeout_s
+    mailbox = dc.mailbox_of(d, direct=True)
+    if not dc.wait_taken(mailbox, letter, timeout_s):
+        aos_flags.warn(NAME, "the letter %s is still in %s after %g s (the daemon is busy, paused or not running); it is applied when taken" % (letter, mailbox, timeout_s))
+        return
+    end = max(end, time.monotonic() + 1)
+    while True:
+        got = dc.take_reply(box, letter)
+        if got is not None or time.monotonic() >= end:
+            break
+        time.sleep(0.05)
+    if isinstance(got, dict) and got.get("applied") is False:
+        err = got.get("error") if isinstance(got.get("error"), dict) else {}
+        raise Fail(err.get("code") or "CtlRejected", "the daemon refused letter %s: %s" % (letter, err.get("msg", "no reason given")))
 
 
 def cmd_add(opts, args):

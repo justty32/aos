@@ -10,7 +10,7 @@ usage: aos-agent [--daemon D] ctl who [-j] [--stack S]
 
 flags:
   --stack S    stack path to look up (default: $AOS_STACK)
-  -j, --json   print name, stack, workspace and definition as one JSON object
+  -j, --json   print name, stack, workspace, definition and daemon (the table's daemon stack) as one JSON object
   -h, --help   show this help
 
 Prints its name; nested tool stacks match their owning agent.
@@ -38,6 +38,7 @@ def cmd(argv):
         raise Fail("InstanceMissing", "%s is not inside the stack of any proc on the daemon table %s" % (os.path.abspath(s), daemon_path()))
     n, r = hit
     if opts.get("json"):
-        print(json.dumps({"name": n, "stack": r.get("stack"), "ws": r.get("ws"), "def": r.get("def")}, ensure_ascii=False))
+        # daemon＝查的是哪一台的表（--daemon ＞ $AOS_DAEMON ＞ ./.stack，同 daemon_path）；fork、subagent 拿它當放 stack 與相對路徑的基準（11-12 kernel 小修）
+        print(json.dumps({"name": n, "stack": r.get("stack"), "ws": r.get("ws"), "def": r.get("def"), "daemon": daemon_path()}, ensure_ascii=False))
     else:
         print(n)
