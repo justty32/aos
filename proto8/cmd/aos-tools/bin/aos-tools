@@ -614,8 +614,8 @@ def read_bases(reg, pointer):
         at = where + ("/%d" % i if isinstance(pointer, list) else "")
         if isinstance(item, dict):
             try:
-                r = subprocess.run(["aos-directive"], input=json.dumps({"v": item}), stdout=subprocess.PIPE,
-                                   text=True, cwd=folder)     # stderr 不吞：aos-directive 自己說哪裡解不開
+                r = subprocess.run(["aos-directive", "--file", os.path.abspath(reg)], input=json.dumps({"v": item}),
+                                   stdout=subprocess.PIPE, text=True, cwd=folder)     # #/… ＝ reg 自己；stderr 不吞：aos-directive 自己說哪裡解不開
             except OSError as e:
                 raise Fail("CommandMissing", "%s has directives that need aos-directive, which cannot start: %s" % (at, e))
             if r.returncode != 0:

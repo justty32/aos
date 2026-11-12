@@ -68,6 +68,13 @@ class PathForms(unittest.TestCase):
         self.assertIn(str(other / "lib" / "base" / "peek_now_time"), r.stdout)
         self.assertEqual(self.over.read_text(), before)
 
+    def test_override_ref_hash_takes_the_file_itself(self):
+        """11-12 ref-hash：$override 的指示詞寫 {"$ref": "#/…"}＝這份登記檔自己。"""
+        self.reg.write_text(json.dumps({"tools": {"wc": {"path": str(TOOL)}}}))
+        self.over.write_text(json.dumps({"bases": {"def": "../def/tools.json"}, "$override": {"$ref": "#/bases/def"}, "tools": {}}))
+        r = self.ok("--file", self.over, "ls", "-l")
+        self.assertIn("wc\tdir\t%s" % TOOL, r.stdout)
+
     def test_overlay_env_field_resolved(self):
         self.over_with({"wc": {"path": str(TOOL), "env": {"MY_DIR": {"$env": "TC_KB"}}}})
         self.ok("--file", self.over, "ls", TC_KB="/x/kb")

@@ -106,11 +106,12 @@ def stored_box(box, base):
     return os.path.relpath(box, base) if top(box) == top(base) else box
 
 
-def resolve_box(box, base):
-    """表裡的 box → 絕對路徑；解不開丟 Bad。"""
+def resolve_box(box, base, table=None):
+    """表裡的 box → 絕對路徑；解不開丟 Bad。table＝登記表的路徑（給了＝指示詞裡的 #/… 取表自己，11-12 ref-hash）。"""
     if isinstance(box, dict):
         try:
-            r = subprocess.run(["aos-directive"], input=json.dumps({"v": box}), capture_output=True, text=True,
+            r = subprocess.run(["aos-directive"] + (["--file", os.path.abspath(table)] if table else []),
+                               input=json.dumps({"v": box}), capture_output=True, text=True,
                                cwd=base, timeout=SEND_TIMEOUT_S)
         except (OSError, subprocess.TimeoutExpired) as e:
             raise Bad("cannot resolve the box directive: %s" % e)
@@ -177,7 +178,7 @@ def fire(clock, cycle):
         if cycle % entry["every"]:
             continue
         try:
-            box = resolve_box(entry["box"], base)
+            box = resolve_box(entry["box"], base, path)
         except Bad as e:
             warnings.append("clock register entry %s: %s" % (name, e))
             continue
@@ -195,7 +196,7 @@ def self_check(path, letters, base):
         if name_problem(name) or entry_problem(entry):
             continue
         try:
-            box = resolve_box(entry["box"], base)
+            box = resolve_box(entry["box"], base, path)
         except Bad:
             continue                               # 判不了就不動
         if not os.path.isdir(box):

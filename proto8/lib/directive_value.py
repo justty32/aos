@@ -12,14 +12,15 @@ import subprocess
 from tool_io import Error
 
 
-def resolve(value, cwd):
+def resolve(value, cwd, file=None):
     """value 是物件＝送 aos-directive 解（cwd 是相對 $ref 的起點），回解完的值；不是物件＝原樣回。
+    file＝這格是從哪份檔讀來的（知道才給，11-12 ref-hash）：{"$ref": "#/a/b"} 取那份檔自己的 /a/b；沒給＝這種 $ref 原封不動（R1）。
     aos-directive 起不來（不在 PATH）＝CommandMissing；退非 0 或印的不是 JSON＝DirectiveBad。"""
     if not isinstance(value, dict):
         return value
     try:
-        r = subprocess.run(["aos-directive"], input=json.dumps(value, ensure_ascii=False), stdout=subprocess.PIPE,
-                           text=True, cwd=cwd)
+        r = subprocess.run(["aos-directive"] + (["--file", os.path.abspath(file)] if file else []),
+                           input=json.dumps(value, ensure_ascii=False), stdout=subprocess.PIPE, text=True, cwd=cwd)
     except OSError as e:
         raise Error("CommandMissing", "aos-directive failed to start (must be on PATH): %s" % e) from None
     if r.returncode != 0:
@@ -32,10 +33,11 @@ def resolve(value, cwd):
 
 def resolve_path(value, cfg_file, key):
     """設定檔 cfg_file 裡 key 那格的指示詞物件 → 解完的非空字串（相對的原樣回，呼叫者照自己的基準接）。
+    {"$ref": "#/a/b"}＝cfg_file 自己的 /a/b。
     解不開、解完不是非空字串＝CfgBad（指名檔、欄、寫的與解出的）；aos-directive 不在 PATH＝CommandMissing。"""
     written = json.dumps(value, ensure_ascii=False)
     try:
-        got = resolve(value, os.path.dirname(os.path.abspath(cfg_file)))
+        got = resolve(value, os.path.dirname(os.path.abspath(cfg_file)), cfg_file)
     except Error as e:
         raise Error("CommandMissing" if e.code == "CommandMissing" else "CfgBad",
                     "%s: %s %s cannot be resolved: %s" % (cfg_file, key, written, e)) from None

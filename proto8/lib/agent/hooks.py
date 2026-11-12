@@ -204,8 +204,8 @@ def _target(entry):
     t = entry["handler"]
     if isinstance(t, dict):
         try:
-            r = subprocess.run(["aos-directive"], input=json.dumps({"v": t}), stdout=subprocess.PIPE,
-                               stderr=subprocess.DEVNULL, text=True, cwd=entry["base"])
+            r = subprocess.run(["aos-directive", "--file", entry["from"]], input=json.dumps({"v": t}), stdout=subprocess.PIPE,
+                               stderr=subprocess.DEVNULL, text=True, cwd=entry["base"])   # #/… ＝ 這格所在的 hooks.json
             t = json.loads(r.stdout).get("v") if r.returncode == 0 else None
         except (OSError, ValueError, AttributeError) as e:
             raise OSError("cannot resolve handler directive: %s" % e) from e

@@ -71,6 +71,12 @@ class ToolsDirective(unittest.TestCase):
         self.write({"$ref": "where.json#/reg"})
         self.assertEqual(self.registry(), str(self.reg1))
 
+    def test_ref_hash_takes_cli_json_itself(self):
+        """11-12 ref-hash：{"$ref": "#/…"}（沒檔名）＝cli.json 自己。"""
+        cfg = self.tool / "cli.json"
+        cfg.write_text(json.dumps({"kind": "claude", "paths": {"reg": str(self.reg2)}, "tools": {"$ref": "#/paths/reg"}}))
+        self.assertEqual(self.registry(), str(self.reg2))
+
     def test_env_unset_names_file_and_field(self):
         cfg = self.write({"$env": "REG_UNSET", "$path": "tools.json"})
         line = self.fails()

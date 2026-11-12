@@ -34,7 +34,7 @@
 #             claude 停在信任資料夾選單＝TrustMissing、不貼，11-10 深夜；
 #             on_busy="answer" 時不退讓：照樣貼、busy.txt 等它消失，10-31）
 # 工具（11-03 eca-tools，thinking 2026-11-03-eca-tools）：cli.json 選填 tools＝aos-tools 的登記檔（相對路徑從 cli.json 的資料夾算；
-#   也可寫指示詞，例 {"$env": "AOS_HOME", "$path": "/lib/x/tools.json"}，每次讀才解、不寫回，11-10 two-machines TC），
+#   也可寫指示詞，例 {"$env": "AOS_HOME", "$path": "/lib/x/tools.json"}，每次讀才解、不寫回，11-10 two-machines TC；{"$ref": "#/…"} 沒檔名＝cli.json 自己，11-12 ref-hash），
 #   沒寫＝cli.json 同層有 tools.json 就用它（使用者 11-03「如果cli.json沒有指定，那就去找默認的tools.json」）、沒有＝不接工具；
 #   選填 tools_flags＝字串陣列，原樣插在 aos-mcp 的 args 裡（例 ["--enable-logs"]）。定義的 interfaces.json 宣告了 hooks＝再加 --hooks <定義>
 #   （11-10 hook：before_tool／after_tool 在 aos-mcp 跑）。有登記檔時每次起 CLI 前接上

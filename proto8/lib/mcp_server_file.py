@@ -235,8 +235,8 @@ def stdio_launch(server_file):
         raise Error("PackBad", "%s: transport is %s; aos-mcp-launch only starts stdio servers" % (server_file, s["transport"]))
     from directive_value import resolve
     base = os.path.dirname(s["file"])
-    cmd = resolve(s["command"], base)
-    args = resolve(s["args"], base) if isinstance(s["args"], dict) else [resolve(a, base) for a in s["args"]]
+    cmd = resolve(s["command"], base, s["file"])            # #/… ＝ server 檔自己
+    args = resolve(s["args"], base, s["file"]) if isinstance(s["args"], dict) else [resolve(a, base, s["file"]) for a in s["args"]]
     if not isinstance(cmd, str) or not cmd:
         raise Error("PackBad", "%s: command must resolve to a non-empty string" % server_file)
     if not isinstance(args, list) or not all(isinstance(a, str) for a in args):

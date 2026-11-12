@@ -142,8 +142,8 @@ def check_pointer(over, orig):
     for item in items:
         if isinstance(item, dict):
             try:
-                r = subprocess.run(["aos-directive"], input=json.dumps({"v": item}), stdout=subprocess.PIPE,
-                                   stderr=subprocess.DEVNULL, text=True, cwd=folder)
+                r = subprocess.run(["aos-directive", "--file", os.path.abspath(over)], input=json.dumps({"v": item}),
+                                   stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, cwd=folder)   # #/… ＝ over 自己
                 item = json.loads(r.stdout).get("v") if r.returncode == 0 else None
             except (OSError, ValueError):
                 item = None
