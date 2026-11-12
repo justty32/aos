@@ -15,11 +15,31 @@ def read(path):
     return value
 
 
+VIEW_KEYS = {'index', 'description', 'tooldef'}   # N-69 11-12: notes about a node that may sit in _metainfo
+
+
+def marks_definition(base, files):
+    """interfaces.json, or _metainfo.json - unless that _metainfo.json only holds index/description/tooldef and nothing
+    beside it runs (no _entry): such a folder is a plain folder with notes, not a definition (thinking 11-12 metainfo M11).
+    An unreadable _metainfo.json still marks one, so check reports it."""
+    if 'interfaces.json' in files:
+        return True
+    if '_metainfo.json' not in files:
+        return False
+    if '_entry' in files or '_entry.json' in files:
+        return True
+    try:
+        meta = json.loads(Path(base, '_metainfo.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return True
+    return not (isinstance(meta, dict) and set(meta) <= VIEW_KEYS)
+
+
 def definitions(root):
     """Stop at definition boundaries and never enter hidden trees."""
     for base, dirs, files in os.walk(root, followlinks=False):
         dirs[:] = sorted(d for d in dirs if not d.startswith('.'))
-        if 'interfaces.json' in files or '_metainfo.json' in files:
+        if marks_definition(base, files):
             yield Path(base)
             dirs[:] = []
 

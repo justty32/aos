@@ -164,6 +164,17 @@ class DefinitionsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(data['defs'], [{'path': 'script', 'summary': 'Script', 'brain': False}])
 
+    def test_metainfo_with_only_an_index_is_not_a_definition(self):
+        """11-12 metainfo M11：只放了 index（N-69 的口子）、沒有入口的 _metainfo.json 不算定義，而且繼續往下找。"""
+        self.write(self.root / 'notes/_metainfo.json', {'index': {'a': {'description': 'A folder'}}})
+        self.definition('notes/a')
+        result, data = self.call('ls')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual([x['path'] for x in data['defs']], ['notes/a'])
+        result, data = self.call('check')
+        self.assertEqual((result.returncode, data), (0, {'problems': []}), result.stderr)
+        self.assertNotIn('summary', result.stdout + result.stderr)
+
     def test_root_is_one_definition(self):
         """11-12 Q10（使用者裁 a）：root 本身就是定義時 path 照「相對 root」印 "."、它自己的名字照查；沒有定義的夾＝空清單、check 算過。"""
         for name, ok in (('good_one', True), ('Bad!', False)):
