@@ -15,7 +15,6 @@
 #   攔下＝不跑，tool 訊息＝hook 的 stdout，空就「[aos] hook: tool NAME blocked by hook HOOK.」，不記 observed、不觸發 after_tool）；
 #   跑完、content 組好（含失敗尾巴）之後、接進 history 之前 after_tool（可改 content）。history 裡 assistant 的 tool_calls 不動。
 #   hook 停下＝HookFailed／HooksBad 退 1（這個 id 還沒有 tool 訊息，重跑會再跑一次）。
-# 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
 # on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 import json, os, signal, subprocess, sys, time
 from pathlib import Path
@@ -243,8 +242,8 @@ for call in calls:
         raise
     record = {"kind": "tool", "name": name, "def": registered_paths[name],
               "stack": "tools/" + name, "code": p.returncode,
-                            "elapsed_ms": (time.monotonic_ns() - started_ns) / 1_000_000,
-                            "in_bytes": len(arguments.encode("utf-8")), "out_bytes": len(out)}
+              "elapsed_ms": (time.monotonic_ns() - started_ns) / 1_000_000,
+              "in_bytes": len(arguments.encode("utf-8")), "out_bytes": len(out)}
     child = take_child(tool_stack)
     if child:
         record["child"] = "tools/" + name + "/" + child
