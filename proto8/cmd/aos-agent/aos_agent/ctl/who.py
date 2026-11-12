@@ -29,7 +29,7 @@ def cmd(argv):
     if not s:
         raise Fail("StackMissing", "no --stack and no AOS_STACK; give the stack path to look up")
     hit = None
-    for n, r in table(quiet=True).items():
+    for n, r in table().items():
         st = r.get("stack")
         if isinstance(st, str) and st and under(s, st):
             if hit is None or len(os.path.realpath(st)) > len(os.path.realpath(hit[1]["stack"])):

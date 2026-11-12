@@ -52,7 +52,7 @@ def agent_decl(a):
 def same_def(a, folder):
     """同一份定義掛出來的其他名字（表上 def 欄跟 folder 是同一個）。"""
     out = []
-    for n, r in table(quiet=True).items():
+    for n, r in table().items():
         if n == a.name:
             continue
         try:

@@ -115,8 +115,8 @@ def need_table():
     return d
 
 
-def table(quiet=False):
-    """直接讀 daemon 的表；quiet 留給既有呼叫者。"""
+def table():
+    """直接讀 daemon 的表。"""
     return {n: r for n, r in call_dc(dc.rows, daemon_path()).items() if isinstance(r, dict)}
 
 
@@ -281,11 +281,11 @@ class Agent:
 
 
 def row_named(name):
-    return table(quiet=True).get(name)
+    return table().get(name)
 
 
-def find(name, quiet=False):
-    r = table(quiet=quiet).get(name)
+def find(name):
+    r = table().get(name)
     if r is None or not isinstance(r.get("stack"), str) or not r.get("stack"):
         raise Fail("InstanceMissing", "%s is not on the daemon table (removed with rm, exited 0, or an adopted body ended with unknown status; known nonzero exits stay stopped with a reason; the stack may still be there: aos-agent ctl add with the same name to pick it up again)" % name)
     return Agent(name, r)
@@ -311,9 +311,9 @@ def name_last(opts, rest, help):
     opts["target"] = rest[0]
 
 
-def target(opts, quiet=False):
+def target(opts):
     """target_name；都沒有＝TargetMissing。"""
     name = target_name(opts)
     if not name:
         raise Fail("TargetMissing", "no target: add --target NAME, or export AOS_AGENT=NAME (or source using-aos-agent.sh NAME)")
-    return find(name, quiet)
+    return find(name)

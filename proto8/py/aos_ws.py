@@ -25,7 +25,6 @@ class Error(Exception):
 
 # 兩鐘期限只有 lib/tool_io.py 一份（11-12 收重複）；這裡只把缺檔提醒的開頭換成 argv[0] 檔名、tool_io.Error 換成本模組的 Error。
 _clock = aos_flags.tool_io
-utc_now_epoch_ms = _clock.utc_now_epoch_ms
 
 
 def _clocked(fn, *args):
@@ -33,16 +32,6 @@ def _clocked(fn, *args):
         return fn(*args)
     except _clock.Error as e:
         raise Error(e.code, str(e)) from None
-
-
-def now_cycle():
-    """沒設 AOS_CLOCK＝None；缺檔 warning 每行程每路徑一次且當 0；空檔＝0；壞檔＝ClockBad。"""
-    return _clocked(_clock.now_cycle, os.path.basename(sys.argv[0]))
-
-
-def clock_interval_ms():
-    """AOS_CLOCK_INTERVAL 的正整數毫秒，沒設或空＝1000。"""
-    return _clocked(_clock.clock_interval_ms)
 
 
 def deadline_after(cycles):

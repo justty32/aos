@@ -28,7 +28,7 @@
 
 - `aos-agent tools ls／get／add／rm`（stderr 一行說用的是自己那份還是定義那份；自己那份的 `$override` 解出來不是這隻定義的那份時多印一行 warning——stack 被 cp 去配另一個定義時指標不會跟著變）。
 - agent-fsm 的身體 `brain.py`（給腦看的工具清單）、`act.py`（叫工具）：沒給 `--tools` 時照上面的共同規則選一份；每格重讀＝下一題生效。
-- eca agent：`proto8/lib/agent/cli_session.py` 的 `stack_copies`（cli.json 沒明寫 `tools` 時）同樣依宣告，自己那份在就把它當登記檔交給 `aos-mcp`；每次起 CLI 重接。
+- eca agent：`proto8/lib/agent/cli_cfg.py` 的 `stack_copies`（cli.json 沒明寫 `tools` 時）同樣依宣告，自己那份在就把它當登記檔交給 `aos-mcp`；每次起 CLI 重接。
 - `aos-agent ctl state` 的 tools 那行：`own: N listed, M set to null (+名, null:名…) over <$override 原樣值>`。
 
 ### 定義後來改了怎麼辦

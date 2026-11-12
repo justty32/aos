@@ -54,7 +54,7 @@ def cmd(argv):
         ctl_wait("rm", {"procs_removed": [a.name]}, lambda _: row_named(a.name) is None, "the daemon has not removed %s yet" % a.name, "CtlRejected", secs=secs)
         print("removed %s; stack %s kept (delete it with aos-agent ctl rm --purge, or by hand)" % (a.name, a.stack))
         return
-    others = [r.get("stack") for n, r in table(quiet=True).items() if n != a.name]
+    others = [r.get("stack") for n, r in table().items() if n != a.name]
     keep = covers(a.stack, [a.row.get("ws"), a.row.get("def"), daemon_path(), os.getcwd(), os.path.expanduser("~")] + others)
     question = ("remove %s (its stack %s is kept)?" if keep else
                 "remove %s and delete its stack %s?") % (a.name, a.stack)
@@ -94,7 +94,7 @@ def no_wait(a, opts, secs):
     from ..common import send_only
     keep = None
     if opts.get("purge"):
-        others = [r.get("stack") for n, r in table(quiet=True).items() if n != a.name]
+        others = [r.get("stack") for n, r in table().items() if n != a.name]
         keep = covers(a.stack, [a.row.get("ws"), a.row.get("def"), daemon_path(), os.getcwd(), os.path.expanduser("~")] + others)
         if not keep and not aos_flags.confirm(PROG, "remove %s and delete its stack %s?" % (a.name, a.stack), yes=opts.get("yes")):
             aos_flags.warn(PROG, "nothing done")
