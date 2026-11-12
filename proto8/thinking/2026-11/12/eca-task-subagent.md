@@ -72,15 +72,36 @@
 ## 全域設定帶進來的東西
 
 - **claude**：`--strict-mcp-config` 讓使用者帳號設定與外掛的 MCP server 都不接（實測 init 的 MCP 只有我們給的）。但帳號層的 **skill、外掛、外掛帶的子 agent 類型**照樣載入（實測 init 列得出 feature-dev、code-simplifier 等類型與三十幾個 skill）：這是使用者自己帳號的東西，跟 aos 的工具不撞名（aos 的都是 `mcp__aos…`）；外掛帶的子 agent 類型叫 `mcp__aos__*` 一樣被 guard 擋。
-- **codex**：見下節。
+- **codex**：不隔離（使用者裁），實測不干擾，見下節。
 
 ## codex 身
 
-調查另派一位在做，結果隨下一個 commit 補在這一節。
+調查員（opus）在 codex-cli 0.167.0 實測，模型 gpt-6-luna、沙箱 read-only、`approval_policy="never"`，暫存 `CODEX_HOME`（設定與登入的複本，測完刪），兩三台假 stdio MCP。**範本沒改**（使用者只說「研究看看」，而且限制做不到對稱）。
+
+| 題 | 文件寫的 | 實測到的 |
+|---|---|---|
+| 有沒有子 agent | 有（multi-agent）；總開關 `agents.enabled`，預設開 | `codex features list` 顯示 `multi_agent stable true`；`codex exec` 下模型有 `spawn_agent`、`wait_agent`、`send_message`、`followup_task`、`interrupt_agent`、`list_agents`；`-c agents.enabled=false` 後沒有 |
+| 自訂角色 | `$CODEX_HOME/agents/<名>.toml`、專案 `.codex/agents/`；必填 name、description、developer_instructions | 三種寫法都生效：角色檔、config 的 `[agents.<名>]`、純命令列 `-c agents.<名>.description=… -c agents.<名>.config_file=…` |
+| 有沒有 skill | 有；掃 repo 的 `.agents/skills`、`~/.agents/skills`、`/etc/codex/skills`、內建 | 預設開；沒有專門的 Skill 工具，是把 skill 目錄放進提示、模型自己用 shell 讀 `SKILL.md`；工作區 `.agents/skills/` 與 `$CODEX_HOME/skills/` 的都找得到 |
+| 子 agent 繼承哪些 MCP | 「inherit the parent's permissions, provider, and MCP servers; a custom agent file can't override those settings」 | 跟主 agent 完全一樣（含 `-c` 給的那台、篩過的結果）；角色檔裡寫 `mcp_servers.alpha.enabled=false`、多加一台 gamma 都**不算數** |
+| 能不能只限子 agent | 不能 | `spawn_agent` 的參數沒有限制工具的；三種角色寫法、開 `multi_agent_v2` 都一樣 |
+| 主 agent 的 `enabled_tools`／`disabled_tools` | 逐台篩工具 | 有效（[external-mcp 06](external-mcp/06-施工結果.md) 沒驗的那項驗到了），但主、子一起被篩 |
+| server 分得出是誰叫的嗎 | 沒寫 | 子 agent 會另起一份 MCP server 行程；`tools/list` 兩邊一樣，但 `tools/call` 的 `params._meta["x-codex-turn-metadata"]` 主對話是 `"thread_source":"user"`、子 agent 是 `"subagent"`（codex 內部欄位，沒有文件保證） |
+
+**結論**：codex 的子 agent 與 skill **本來就開著**，eca 的 codex 身現在就能用，不必加旗標；但 codex **沒有**「子 agent 只能用哪幾台 MCP」的設定，claude 那套切法搬不過去。要讓 codex 的子 agent 少拿 aos 工具只有三條路，見「未定題」。
+
+**全域 MCP 不干擾 aos（實測）**：用跟使用者 `~/.codex/config.toml` 同一套設定的複本（含 context7、githubcopilot、housecarl），再用 `-c mcp_servers.aos.*` 掛一台假的 aos：每次 stderr 四行 `AuthRequired`，aos 那台照常掛上、工具每次都叫得到、三輪都退 0；有／沒有全域設定的總時間 11.6／6.9、7.1／6.6、7.4／7.6 秒（一次離群，其餘差不到半秒）。工具名一律 `mcp__<server 名>__<工具>`，故意讓假 aos 有一支跟 context7 同名的工具，叫到的還是 aos 那支。唯一會撞的情況：全域設定裡也有一台叫 `aos` 的（`-c` 會跟它合併），現在沒有。
+
+**順帶看到**：codex 預設還會掛一台 `codex_apps`（實測 97 支工具裡 95 支是它），`--disable apps` 可關；這也是使用者帳號層的東西，沒動。
 
 ## 未定題（要使用者裁）
 
-claude 身的見回報；codex 的調查回來後一併補在這一節。
+- **U1 codex 的子 agent 要不要也少拿 aos 工具**（原則推不出）。現況＝丙。
+  - 甲：關掉 codex 原生子 agent（範本說明的 codex 版 flags 加 `-c agents.enabled=false`）。後果：codex 身沒有子 agent 可用。
+  - 乙：子 agent 開著，由 aos-mcp 在 `tools/call` 看 `thread_source`，子 agent 叫不在少功能清單裡的工具就拒絕（工具照列、叫了才擋）。後果：靠 codex 沒寫進文件的內部欄位，哪天改了就失效；aos-mcp 要多認一個 CLI 的私有欄位。
+  - 丙：不管，codex 的子 agent 跟主 agent 拿一樣的 aos 工具（含 self_ctl、mailbox_send）。後果：兩身行為不一樣——claude 切了、codex 沒切。
+- **U2 claude 身其他類型的子 agent 要不要也給少功能那台**（T3 代定「不給、叫了被擋」）。要給的話得替每個類型各寫一份定義（蓋掉內建的 Explore、Plan 會換掉它們原本的 prompt），外掛與使用者自己定義的類型還是蓋不到。
+- 跟既有 CONCEPTS／NORMS 條文沒有發現衝突。P-43「工具」那段只寫了 `cli.json` 的 `tools`，沒提 `tools_sub`；條文沒改，要不要補一句由使用者定。
 
 ## 沒驗的
 
