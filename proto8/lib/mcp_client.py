@@ -1,11 +1,16 @@
-"""MCP client 的 stdio 傳輸：握手、列工具、呼叫工具與收回 server 行程群。"""
+"""MCP client 的 stdio／HTTP 傳輸：握手、列工具、呼叫工具與關閉 session。"""
 
 import json
 import os
+import queue
 import selectors
 import signal
 import subprocess
+import ssl
+import threading
 import time
+import urllib.error
+import urllib.request
 
 import mcp_server_file
 from tool_io import Error
@@ -142,11 +147,11 @@ class Session:
                 raise Error("ServerBad", "MCP server result must be an object")
             return message["result"]
 
-    def list_tools(self):
+    def list_tools(self, timeout_s=30):
         """照 nextCursor 拿完工具；每頁最多等 30 秒。"""
         tools, params, cursors = [], {}, set()
         while True:
-            result = self._request("tools/list", params, 30)
+            result = self._request("tools/list", params, timeout_s)
             page = result.get("tools")
             if not isinstance(page, list) or not all(
                     isinstance(tool, dict) and isinstance(tool.get("name"), str) and
@@ -230,10 +235,217 @@ def open_stdio(argv, env, cwd, init_timeout_s=30):
         raise
 
 
-def open_session(server_file):
-    """沿用 server 檔與 env 檔的讀法；這一步只接受 stdio。"""
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Bearer 不跟著重新導向送到另一個位置。
+        return None
+
+
+class HttpSession(Session):
+    """同步 Streamable HTTP；SSE 中非本次回應的訊息直接略過。"""
+
+    def __init__(self, url, bearer, context):
+        self._url = url
+        self._bearer = bearer
+        self._session_id = None
+        self._closed = False
+        self._next_id = 0
+        self.protocol_version = None
+        self._opener = urllib.request.build_opener(
+            _NoRedirect(), urllib.request.HTTPSHandler(context=context))
+
+    def _result(self, raw, request_id):
+        try:
+            message = json.loads(raw.decode("utf-8"), parse_constant=_reject_constant)
+        except (ValueError, UnicodeError, RecursionError):
+            raise Error("ServerBad", "MCP server response is not JSON") from None
+        if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
+            raise Error("ServerBad", "MCP server message is not JSON-RPC 2.0")
+        if "method" in message:
+            if (not isinstance(message["method"], str) or not message["method"] or
+                    "result" in message or "error" in message or
+                    ("params" in message and not isinstance(message["params"], dict)) or
+                    ("id" in message and type(message["id"]) not in (str, int)) or
+                    ("id" not in message and not message["method"].startswith("notifications/"))):
+                raise Error("ServerBad", "MCP server request has invalid fields")
+            return None
+        if (type(message.get("id")) not in (str, int) or
+                ("result" in message) == ("error" in message)):
+            raise Error("ServerBad", "MCP server response has invalid or missing fields")
+        if "error" in message:
+            error = message["error"]
+            if (not isinstance(error, dict) or type(error.get("code")) is not int or
+                    not isinstance(error.get("message"), str)):
+                raise Error("ServerBad", "MCP server error has invalid or missing fields")
+        elif not isinstance(message["result"], dict):
+            raise Error("ServerBad", "MCP server result must be an object")
+        if message["id"] != request_id:
+            return None
+        if "error" in message:
+            reason = error["message"]
+            if self._bearer:
+                reason = reason.replace(self._bearer, "[redacted]")
+            raise Error("ArgumentsBad" if error["code"] == -32602 else "ServerFailed", reason)
+        return message["result"]
+
+    def _exchange(self, message, deadline, timeout_code, verb="POST"):
+        try:
+            body = None if message is None else json.dumps(
+                message, ensure_ascii=False, allow_nan=False).encode("utf-8")
+        except (TypeError, ValueError, UnicodeError):
+            raise Error("ArgumentsBad", "MCP request must contain valid JSON") from None
+        headers = {"Content-Type": "application/json",
+                   "Accept": "application/json, text/event-stream"}
+        if self._bearer is not None:
+            headers["Authorization"] = "Bearer " + self._bearer
+        if self._session_id is not None:
+            headers["Mcp-Session-Id"] = self._session_id
+        if self.protocol_version is not None:
+            headers["MCP-Protocol-Version"] = self.protocol_version
+        request_id = message.get("id") if message else None
+        outcomes = queue.Queue(maxsize=1)
+
+        def transfer():
+            try:
+                request = urllib.request.Request(self._url, data=body, headers=headers, method=verb)
+                with self._opener.open(request, timeout=self._remaining(deadline, timeout_code)) as response:
+                    session_id = response.headers.get("Mcp-Session-Id")
+                    if verb == "DELETE" or request_id is None:
+                        outcomes.put((None, session_id))
+                        return
+                    kind = response.headers.get_content_type()
+                    if kind not in ("application/json", "text/event-stream"):
+                        raise Error("ServerBad", "MCP server returned an unsupported content type")
+                    buffer, event, total = bytearray(), [], 0
+                    skip_lf = False
+                    while True:
+                        self._remaining(deadline, timeout_code)
+                        chunk = response.read1(65536)
+                        total += len(chunk)
+                        if total > _MAX_RESPONSE_BYTES:
+                            raise Error("ServerBad", "MCP server response exceeds 16 MB")
+                        buffer.extend(chunk)
+                        if skip_lf and buffer:
+                            if buffer.startswith(b"\n"):
+                                del buffer[:1]
+                            skip_lf = False
+                        if kind == "application/json":
+                            if chunk:
+                                continue
+                            result = self._result(bytes(buffer), request_id)
+                            if result is None:
+                                raise Error("ServerBad", "MCP server response has no matching id")
+                            outcomes.put((result, session_id))
+                            return
+                        while buffer:
+                            ends = [i for i in (buffer.find(b"\n"), buffer.find(b"\r")) if i >= 0]
+                            if ends:
+                                end = min(ends)
+                                skip_lf = buffer[end:] == b"\r"
+                                width = 2 if buffer[end:end + 2] == b"\r\n" else 1
+                                line = bytes(buffer[:end])
+                                del buffer[:end + width]
+                            elif not chunk:
+                                line, buffer = bytes(buffer), bytearray()
+                            else:
+                                break
+                            if not line:
+                                if event:
+                                    result = self._result(b"\n".join(event), request_id)
+                                    event = []
+                                    if result is not None:
+                                        outcomes.put((result, session_id))
+                                        return
+                            elif line.startswith(b"data:"):
+                                data = line[5:]
+                                event.append(data[1:] if data.startswith(b" ") else data)
+                        if not chunk:
+                            raise Error("ServerBad", "MCP server stream ended without a matching response")
+            except urllib.error.HTTPError as exc:
+                code = "ServerRejected" if exc.code in (401, 403) else "ServerFailed"
+                exc.close()
+                outcomes.put(Error(code, "MCP HTTP request failed (status %s)" % exc.code))
+            except Error as exc:
+                outcomes.put(exc)
+            except (TimeoutError, urllib.error.URLError) as exc:
+                reason = exc.reason if isinstance(exc, urllib.error.URLError) else exc
+                code = timeout_code if isinstance(reason, TimeoutError) else "ServerFailed"
+                detail = type(reason).__name__
+                if isinstance(reason, OSError) and type(reason.errno) is int:
+                    detail += " errno=%s" % reason.errno
+                outcomes.put(Error(code, "MCP HTTP request timed out" if isinstance(reason, TimeoutError)
+                                   else "MCP HTTP connection failed (%s)" % detail))
+            except Exception as exc:
+                # urllib 的例外可能帶 URL 或 Authorization；只轉印例外種類。
+                outcomes.put(Error("ServerFailed", "MCP HTTP request failed (%s)" % type(exc).__name__))
+
+        # urlopen 與 HTTP header/body 讀取都受同一截止時間約束，滴流不能延長呼叫。
+        threading.Thread(target=transfer, daemon=True).start()
+        try:
+            outcome = outcomes.get(timeout=self._remaining(deadline, timeout_code))
+        except queue.Empty:
+            raise Error(timeout_code, "MCP server request timed out") from None
+        if isinstance(outcome, Error):
+            raise outcome from None
+        result, session_id = outcome
+        if message and message.get("method") == "initialize":
+            self._session_id = session_id
+        return result
+
+    def _request(self, method, params, timeout_s, timeout_code="ServerFailed", initializing=False):
+        if self._closed:
+            raise Error("ServerFailed", "MCP session is closed")
+        self._next_id += 1
+        return self._exchange({"jsonrpc": "2.0", "id": self._next_id,
+                               "method": method, "params": params},
+                              time.monotonic() + timeout_s, timeout_code)
+
+    def close(self):
+        """DELETE 失敗不阻擋收尾；重複呼叫不再送請求。"""
+        if self._closed:
+            return
+        self._closed = True
+        try:
+            self._exchange(None, time.monotonic() + 2, "ServerFailed", "DELETE")
+        except Error:
+            pass
+
+
+def open_http(url, bearer=None, ca_file=None, init_timeout_s=30):
+    """以系統 CA 或指定 CA 開啟 HTTP session，再送 initialized 通知。"""
+    try:
+        context = ssl.create_default_context(cafile=ca_file)
+    except (OSError, ValueError):
+        raise Error("ServerFailed", "cannot load MCP HTTP TLS certificates") from None
+    session = HttpSession(url, bearer, context)
+    try:
+        result = session._request("initialize", {
+            "protocolVersion": _PROTOCOL_VERSION, "capabilities": {},
+            "clientInfo": {"name": "aos", "version": "0.1"}}, init_timeout_s)
+        info = result.get("serverInfo")
+        if (not isinstance(result.get("protocolVersion"), str) or not result["protocolVersion"] or
+                not isinstance(result.get("capabilities"), dict) or not isinstance(info, dict) or
+                not isinstance(info.get("name"), str) or not isinstance(info.get("version"), str)):
+            raise Error("ServerBad", "MCP initialize result has invalid or missing fields")
+        session.protocol_version = result["protocolVersion"]
+        session._exchange({"jsonrpc": "2.0", "method": "notifications/initialized"},
+                          time.monotonic() + init_timeout_s, "ServerFailed")
+        return session
+    except BaseException:
+        if session._session_id is not None:
+            session.close()
+        else:
+            session._closed = True
+        raise
+
+
+def open_session(server_file, init_timeout_s=30):
+    """沿用 server 檔與 env 檔讀法，依 transport 開 stdio 或 HTTP。"""
     server = mcp_server_file.load(server_file)
     if server["transport"] == "http":
-        raise Error("PackBad", "http is not supported yet")
+        if "bearer_token_env" in server and "env_file" not in server:
+            raise Error("PackBad", "HTTP bearer_token_env requires env_file; add env_file to the server file")
+        return open_http(server["url"], bearer=mcp_server_file.bearer_value(server),
+                         ca_file=server.get("ca_file"), init_timeout_s=init_timeout_s)
     argv, env = mcp_server_file.stdio_launch(server_file)
-    return open_stdio(argv, env, cwd=os.environ.get("AOS_WS") or os.getcwd())
+    return open_stdio(argv, env, cwd=os.environ.get("AOS_WS") or os.getcwd(), init_timeout_s=init_timeout_s)

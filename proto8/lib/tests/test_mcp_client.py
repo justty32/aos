@@ -1,13 +1,21 @@
-"""Verify MCP stdio sessions, fake tools, protocol failures, deadlines, and process cleanup."""
+"""Verify MCP stdio and HTTP sessions, authentication, wire failures, deadlines, and cleanup."""
 
 import base64
 import json
+import io
+from email.message import Message
+import secrets
+import socket
+import subprocess
+import urllib.error
+import urllib.request
 import os
 from pathlib import Path
 import shutil
 import sys
 import tempfile
 import textwrap
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -209,14 +217,6 @@ class McpClientTests(unittest.TestCase):
             finally:
                 os.chdir(previous)
 
-    def test_open_session_http_is_not_supported(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "server.json"
-            path.write_text(json.dumps({"mcp_server": {
-                "name": "demo", "transport": "http", "url": "http://127.0.0.1:1/mcp"}}), encoding="utf-8")
-            error = self.assert_error("PackBad", mcp_client.open_session, path)
-            self.assertIn("http is not supported yet", str(error))
-
     def test_invalid_arguments_rpc_error(self):
         session = self.open_fake()
         self.assert_error("ArgumentsBad", session.call_tool, "not_a_tool", {}, 1)
@@ -295,6 +295,317 @@ class McpClientTests(unittest.TestCase):
         session = self.open_script(
             "send({'jsonrpc': '2.0', 'id': request['id'], 'result': {'padding': 'x' * (16 * 1024 * 1024)}})")
         self.assert_error("ServerBad", session.call_tool, "big", {}, 3)
+
+
+class HttpWireTests(unittest.TestCase):
+    """Exercise public sessions with an in-memory HTTP peer, without binding sockets."""
+
+    def setUp(self):
+        self.requests = []
+        self.reply = None
+        self.token = "FAKE-" + secrets.token_hex(16)
+        self.env = patch.dict(os.environ, {
+            "NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost"})
+        self.env.start()
+        self.addCleanup(self.env.stop)
+        opened = patch.object(urllib.request.OpenerDirector, "open", autospec=True,
+                              side_effect=self.respond)
+        opened.start()
+        self.addCleanup(opened.stop)
+
+    def response(self, body, content_type="application/json", headers=None):
+        response = io.BytesIO(body)
+        response.headers = Message()
+        response.headers["Content-Type"] = content_type
+        for name, value in (headers or {}).items():
+            response.headers[name] = value
+        response.status = 200
+        response.getcode = lambda: 200
+        return response
+
+    def respond(self, opener, request, *args, **kwargs):
+        self.requests.append(request)
+        message = json.loads(request.data) if request.data else None
+        if self.reply is not None:
+            replacement = self.reply(request, message)
+            if replacement is not None:
+                return replacement
+        if request.get_method() == "DELETE" or "id" not in message:
+            response = self.response(b"")
+            response.status = 202
+            return response
+        if message["method"] == "initialize":
+            result = INITIALIZED
+        elif message["method"] == "tools/list":
+            result = {"tools": []}
+        else:
+            result = {"content": [{"type": "text", "text": "echo"}]}
+        return self.response(json.dumps({"jsonrpc": "2.0", "id": message["id"],
+                                         "result": result}).encode(),
+                             headers={"Mcp-Session-Id": "test-session"})
+
+    def open(self, **kwargs):
+        session = mcp_client.open_http("http://127.0.0.1/mcp", **kwargs)
+        self.addCleanup(session.close)
+        return session
+
+    def error(self, code, function, *args, **kwargs):
+        with self.assertRaises(Error) as caught:
+            function(*args, **kwargs)
+        self.assertEqual(caught.exception.code, code)
+        self.assertTrue(self.token not in str(caught.exception), "Error disclosed the bearer")
+        return caught.exception
+
+    def test_headers_session_notification_and_delete(self):
+        session = self.open(bearer=self.token)
+        self.assertEqual(session.protocol_version, "2025-06-18")
+        self.assertEqual(session.list_tools(), [])
+        self.assertEqual(session.call_tool("echo", {}, 1)["content"][0]["text"], "echo")
+        session.close()
+        count = len(self.requests)
+        session.close()
+        self.assertEqual(len(self.requests), count)
+        self.assertEqual(self.requests[-1].get_method(), "DELETE")
+        for index, request in enumerate(self.requests):
+            headers = {name.lower(): value for name, value in request.header_items()}
+            self.assertTrue(headers.get("authorization") == "Bearer " + self.token,
+                            "Authorization header did not match the supplied bearer")
+            if index:
+                self.assertEqual(headers["mcp-session-id"], "test-session")
+            if request.get_method() == "POST":
+                self.assertEqual(headers["content-type"], "application/json")
+                self.assertIn("application/json", headers["accept"])
+                self.assertIn("text/event-stream", headers["accept"])
+        initialize = json.loads(self.requests[0].data)
+        self.assertEqual(initialize["params"]["protocolVersion"], "2025-06-18")
+        self.assertFalse(set(initialize["params"]["capabilities"]) &
+                         {"sampling", "elicitation", "roots"})
+        notification = json.loads(self.requests[1].data)
+        self.assertEqual(notification["method"], "notifications/initialized")
+        self.assertNotIn("id", notification)
+
+    def test_sse_ignores_notifications_and_other_ids(self):
+        session = self.open()
+        def reply(request, message):
+            if message and message.get("method") == "tools/call":
+                messages = [{"jsonrpc": "2.0", "method": "notifications/progress"},
+                            {"jsonrpc": "2.0", "id": -123, "result": {}},
+                            {"jsonrpc": "2.0", "id": "reverse-request",
+                             "method": "sampling/createMessage", "params": {}},
+                            {"jsonrpc": "2.0", "id": message["id"],
+                             "result": {"content": [], "structuredContent": {"ok": True}}}]
+                # Multiline data and CRLF delimiters cross tiny reads.
+                body = ": heartbeat\r\n\r\n" + "".join(
+                    "event: message\r\n" + "".join("data: " + line + "\r\n"
+                        for line in json.dumps(item, indent=2).splitlines()) + "\r\n"
+                    for item in messages)
+                response = self.response(body.encode(), "text/event-stream")
+                response.read1 = lambda size=-1: response.read(min(size, 3))
+                return response
+        self.reply = reply
+        self.assertEqual(session.call_tool("echo", {}, 1),
+                         {"content": [], "structuredContent": {"ok": True}})
+
+    def test_http_statuses_do_not_echo_headers_or_body(self):
+        for status in (401, 403, 400, 404, 500, 503):
+            with self.subTest(status=status):
+                def reply(request, message):
+                    raise urllib.error.HTTPError(request.full_url, status, self.token,
+                                                 {"Authorization": self.token},
+                                                 io.BytesIO(self.token.encode()))
+                self.reply = reply
+                self.error("ServerRejected" if status in (401, 403) else "ServerFailed",
+                           self.open, bearer=self.token)
+
+    def test_network_failures_and_timeout_mapping(self):
+        def unavailable(request, message):
+            raise urllib.error.URLError("connection refused")
+        self.reply = unavailable
+        self.error("ServerFailed", self.open)
+        self.reply = None
+        session = self.open()
+        def timeout(request, message):
+            raise TimeoutError("timed out")
+        self.reply = timeout
+        self.error("ServerFailed", session.list_tools)
+        self.error("CommandFailed", session.call_tool, "echo", {}, 0.01)
+        self.error("ServerFailed", self.open, init_timeout_s=0.01)
+
+    def test_close_ignores_delete_failure_and_rejects_later_calls(self):
+        session = self.open()
+        def unavailable(request, message):
+            if request.get_method() == "DELETE":
+                raise urllib.error.URLError("connection closed")
+        self.reply = unavailable
+        session.close()
+        count = len(self.requests)
+        session.close()
+        self.error("ServerFailed", session.list_tools)
+        self.error("ServerFailed", session.call_tool, "echo", {}, 1)
+        self.assertEqual(len(self.requests), count)
+        self.assertEqual(self.requests[-1].get_method(), "DELETE")
+
+    def test_call_deadline_applies_to_entire_dripping_body(self):
+        session = self.open()
+        release, entered = threading.Event(), threading.Event()
+        readers = []
+        reads = []
+        response = self.response(b" " * 1000)
+        def drip(size=-1):
+            if not readers:
+                readers.append(threading.current_thread())
+            entered.set()
+            release.wait(0.015)
+            reads.append(1)
+            return response.read(1)
+        response.read1 = drip
+        self.reply = lambda request, message: response
+        try:
+            start = time.monotonic()
+            self.error("CommandFailed", session.call_tool, "echo", {}, 0.08)
+            self.assertLess(time.monotonic() - start, 0.6)
+            self.assertTrue(entered.is_set(), "HTTP body was not read")
+            self.assertGreaterEqual(len(reads), 2)
+        finally:
+            release.set()
+            for reader in readers:
+                reader.join(timeout=1)
+                self.assertFalse(reader.is_alive(), "HTTP response reader did not finish")
+            # Cleanup's DELETE must not reuse a closed response.
+            self.reply = None
+
+    def test_malformed_json_rpc_and_initialize_fields(self):
+        messages = [[], {}, {"jsonrpc": "1.0", "id": 1, "result": {}},
+                    {"jsonrpc": "2.0", "result": {}},
+                    {"jsonrpc": "2.0", "id": 1},
+                    {"jsonrpc": "2.0", "id": 1, "result": {},
+                     "error": {"code": -1, "message": "bad"}}]
+        for missing in INITIALIZED:
+            result = dict(INITIALIZED)
+            del result[missing]
+            messages.append({"jsonrpc": "2.0", "id": 1, "result": result})
+        for item in messages:
+            with self.subTest(item=item):
+                self.reply = lambda request, message: self.response(json.dumps(item).encode())
+                self.error("ServerBad", self.open)
+        self.reply = lambda request, message: self.response(b"not JSON")
+        self.error("ServerBad", self.open)
+
+    def test_response_limit_and_rpc_error_mapping(self):
+        session = self.open(bearer=self.token)
+        for rpc_code, expected in ((-32602, "ArgumentsBad"), (-32603, "ServerFailed")):
+            def reply(request, message):
+                return self.response(json.dumps({"jsonrpc": "2.0", "id": message["id"],
+                    "error": {"code": rpc_code, "message": "refused " + self.token}}).encode())
+            self.reply = reply
+            self.error(expected, session.call_tool, "echo", {}, 1)
+        self.reply = lambda request, message: self.response(b"x" * (16 * 1024 * 1024 + 1))
+        self.error("ServerBad", session.call_tool, "echo", {}, 3)
+
+    def test_open_session_http_file_requires_explicit_env_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "server.json"
+            path.write_text(json.dumps({"mcp_server": {"name": "demo", "transport": "http",
+                "url": "http://127.0.0.1/mcp", "bearer_token_env": "MCP_HTTP_TEST_TOKEN"}}))
+            with patch.dict(os.environ, {"MCP_HTTP_TEST_TOKEN": self.token}):
+                error = self.error("PackBad", mcp_client.open_session, path)
+                self.assertIn("env_file", str(error))
+
+
+@unittest.skipUnless(shutil.which("openssl"), "requires openssl")
+class HttpTlsTests(unittest.TestCase):
+    """Use the repository's real HTTPS fixture and a freshly signed leaf certificate."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.temporary = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(cls.temporary.cleanup)
+        cls.root = Path(cls.temporary.name)
+        commands = [
+            ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", "ca.key",
+             "-out", "ca.pem", "-days", "1", "-subj", "/CN=mcp-test-ca",
+             "-addext", "keyUsage=critical,keyCertSign,cRLSign"],   # Python 3.13+ verifies strictly
+            ["req", "-newkey", "rsa:2048", "-nodes", "-keyout", "key.pem",
+             "-out", "leaf.csr", "-subj", "/CN=127.0.0.1"],
+            ["x509", "-req", "-in", "leaf.csr", "-CA", "ca.pem", "-CAkey", "ca.key",
+             "-CAcreateserial", "-out", "cert.pem", "-days", "1", "-extfile", "leaf.ext"]]
+        (cls.root / "leaf.ext").write_text("subjectAltName=IP:127.0.0.1,DNS:localhost\n"
+            "basicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\n"
+            "subjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid,issuer\n")
+        for command in commands:
+            subprocess.run(["openssl", *command], cwd=cls.root, check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        cls.token = "FAKE-" + secrets.token_hex(24)
+        (cls.root / "server.env").write_text("MCP_HTTP_TEST_TOKEN=" + cls.token + "\n")
+        (cls.root / "server.env").chmod(0o600)
+        with socket.socket() as listener:
+            listener.bind(("127.0.0.1", 0))
+            port = listener.getsockname()[1]
+        server = Path(__file__).resolve().parents[2] / "extras/fake-mcp-http/server.py"
+        cls.process = subprocess.Popen([sys.executable, str(server), str(port),
+            str(cls.root / "cert.pem"), str(cls.root / "key.pem"),
+            str(cls.root / "server.env"), str(cls.root / "server.log")],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        cls.addClassCleanup(cls.stop_server)
+        cls.url = "https://127.0.0.1:%s/mcp" % port
+        deadline = time.monotonic() + 5
+        while not (cls.root / "server.log").exists():
+            if cls.process.poll() is not None or time.monotonic() >= deadline:
+                raise RuntimeError("HTTPS fixture failed to start")
+            time.sleep(0.01)
+
+    @classmethod
+    def stop_server(cls):
+        cls.process.terminate()
+        try:
+            cls.process.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            cls.process.kill()
+            cls.process.wait(timeout=3)
+
+    def setUp(self):
+        environment = patch.dict(os.environ, {
+            "NO_PROXY": "127.0.0.1,localhost", "no_proxy": "127.0.0.1,localhost"})
+        environment.start()
+        self.addCleanup(environment.stop)
+
+    def test_tls_handshake_list_echo_and_auth_log(self):
+        session = mcp_client.open_http(self.url, bearer=self.token, ca_file=self.root / "ca.pem")
+        try:
+            self.assertEqual(session.protocol_version, "2025-06-18")
+            self.assertEqual([tool["name"] for tool in session.list_tools()], ["echo", "list_threads"])
+            self.assertEqual(session.call_tool("echo", {"text": "hello"}, 1)["content"][0]["text"],
+                             "echo: hello")
+        finally:
+            session.close()
+        log = (self.root / "server.log").read_text()
+        self.assertIn('"auth": "ok"', log)
+        self.assertTrue(self.token not in log, "Server log disclosed the bearer")
+
+    def test_wrong_token_and_untrusted_ca(self):
+        for bearer, ca_file, expected in (("wrong-token", self.root / "ca.pem", "ServerRejected"),
+                                           (self.token, None, "ServerFailed")):
+            with self.subTest(expected=expected):
+                with self.assertRaises(Error) as caught:
+                    mcp_client.open_http(self.url, bearer=bearer, ca_file=ca_file)
+                self.assertEqual(caught.exception.code, expected)
+                self.assertTrue(self.token not in str(caught.exception), "Error disclosed the bearer")
+                self.assertNotIn("wrong-token", str(caught.exception))
+
+    def test_open_session_http_file_and_env_file(self):
+        path = self.root / "server.json"
+        path.write_text(json.dumps({"mcp_server": {"name": "demo", "transport": "http",
+            "url": self.url, "bearer_token_env": "MCP_HTTP_TEST_TOKEN",
+            "env_file": "server.env", "ca_file": "ca.pem"}}))
+        with patch.dict(os.environ, {"MCP_HTTP_TEST_TOKEN": "wrong-inherited-value"}):
+            before = dict(os.environ)
+            session = mcp_client.open_session(path)
+            try:
+                self.assertEqual(session.call_tool("echo", {"text": "file"}, 1)
+                                 ["content"][0]["text"], "echo: file")
+                self.assertEqual(dict(os.environ), before)
+            finally:
+                session.close()
 
 
 if __name__ == "__main__":
