@@ -1,0 +1,23 @@
+{"description": "Hand-written MCP pack for mcp_tool tests: the fake stdio server from lib/tests, three tools frozen by hand.",
+ "mcp_server": {"name": "demo", "transport": "stdio", "command": "python3",
+                "args": ["FAKE_MCP_STDIO (the test puts the absolute path of lib/tests/fake_mcp_stdio.py here)"]},
+ "mcp_import": {"imported_at": "2026-11-12T00:00:00.000Z", "protocol_version": "2025-06-18", "server_tools": 7},
+ "mcp_tools": {
+   "echo": {
+     "_entry": ["python3", {"$env": "AOS_HOME", "$path": "/lib/base/mcp_tool/_entry"}, "--pack", "demo.json", "--tool", "echo"],
+     "_tooldef": {"description": "[MCP server demo] Return the supplied text.",
+                  "parameters": {"type": "object", "properties": {"text": {"type": "string"}}}},
+     "_metainfo": {"summary": "echo on the MCP server demo", "resource": [], "side_effect": true, "timeout_ms": 60000}},
+   "fail": {
+     "_entry": ["python3", {"$env": "AOS_HOME", "$path": "/lib/base/mcp_tool/_entry"}, "--pack", "demo.json", "--tool", "fail"],
+     "_tooldef": {"description": "[MCP server demo] Return a tool error result.",
+                  "parameters": {"type": "object", "properties": {}}},
+     "_metainfo": {"summary": "fail on the MCP server demo", "resource": [], "side_effect": true, "timeout_ms": 60000}},
+   "image": {
+     "_entry": ["python3", {"$env": "AOS_HOME", "$path": "/lib/base/mcp_tool/_entry"}, "--pack", "demo.json", "--tool", "image"],
+     "_tooldef": {"description": "[MCP server demo] Return a one-pixel PNG image.",
+                  "parameters": {"type": "object", "properties": {}}},
+     "_metainfo": {"summary": "image on the MCP server demo", "resource": [], "side_effect": true, "timeout_ms": 60000}}},
+ "tools": {"demo_echo": {"path": "demo.json#/mcp_tools/echo"},
+           "demo_fail": {"path": "demo.json#/mcp_tools/fail"},
+           "demo_image": {"path": "demo.json#/mcp_tools/image"}}}

@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+# mcp_tool - 叫外部 MCP server 的一支工具：讀包檔（server 檔）裡的 mcp_server，起 server、tools/call 一次、印文字結果、收掉 server
+# 介面（external-mcp 07 步 2）：mcp_tool --pack FILE --tool NAME；stdin＝那支外部工具的 arguments 原樣（一個 JSON 物件，空＝{}；不照 _tooldef 驗）。
+#   包檔是 aos-mcp-import 寫的（或手寫）：mcp_server（怎麼連，mcp_server_file.load 驗）、mcp_tools（鍵＝外部原名，每格 _entry／_tooldef／_metainfo）、tools（登記）。
+#   aos-exec 跑包檔裡那格的 _entry 時 cwd＝包檔的資料夾，所以 --pack 只寫檔名；server 的 cwd＝$AOS_WS（沒有＝當下的 cwd，mcp_client 決定）。
+#   逾時＝那格 _metainfo.timeout_ms（沒寫＝60 秒）。
+# 輸出：content 裡 type text 的依序印（各段之間換行）；其他種類先印一行 [<type> content not shown]（步 3 補）。
+# 錯：stderr 與 stdout 各一行「mcp_tool: error: 代號 原因」、退 1：ArgumentsBad、FlagUnknown、PackMissing、PackBad、PathMissing、DotenvBad、
+#   ToolUnknown（包檔的 mcp_tools 沒有 NAME）、CommandMissing（server 起不來）、ServerFailed、ServerBad、CommandFailed（逾時）、
+#   CallFailed（server 回 isError：內容照印，最後一行是錯誤行）；mcp_server_file／mcp_client 丟的代號照轉。
+import json, os, sys
+HELP = """\
+usage: mcp_tool --pack FILE --tool NAME < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Call one tool on an external MCP server once. FILE is the pack (server file) with
+mcp_server (how to start the server) and mcp_tools (the frozen tools; NAME is a key there).
+A relative FILE is from the current folder (aos-exec runs a pack entry from the pack's folder).
+stdin is the external tool's arguments as one JSON object, passed as is (empty = {});
+--pack and --tool are flags only, not keys on stdin. Timeout: the tool's _metainfo.timeout_ms (default 60000).
+Result on stdout: the text content in order; other content types print [TYPE content not shown].
+If the server reports isError, the content is printed and then the error line (CallFailed), exit 1.
+On error: one line "mcp_tool: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "mcp_tool"
+tool_io.start(NAME, HELP)
+import mcp_client, mcp_server_file  # noqa: E402
+
+die = tool_io.die
+DEFAULT_TIMEOUT_MS = 60000
+
+
+def flags():
+    """--pack FILE --tool NAME，兩個都要；其他旗標＝FlagUnknown、位置參數＝ArgumentsBad。"""
+    def kind(flag):
+        return "value" if flag in ("--pack", "--tool") else None
+    try:
+        pairs, rest = tool_io.tokenize_flags(sys.argv[1:], kind)
+    except tool_io.Error as e:
+        die(e.code, "%s (see %s --help)" % (e, NAME))
+    if rest:
+        die("ArgumentsBad", "unexpected argument %r (see %s --help)" % (rest[0], NAME))
+    got = dict(pairs)
+    for flag in ("--pack", "--tool"):
+        if not got.get(flag):
+            die("ArgumentsBad", "missing %s (see %s --help)" % (flag, NAME))
+    return got["--pack"], got["--tool"]
+
+
+def stdin_arguments():
+    """stdin 原樣當 arguments：空或終端＝{}；不是 JSON 物件＝ArgumentsBad。"""
+    raw = "" if sys.stdin is None or sys.stdin.isatty() else sys.stdin.read()
+    if not raw.strip():
+        return {}
+    try:
+        a = json.loads(raw)
+    except ValueError:
+        die("ArgumentsBad", "stdin is not JSON")
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments must be an object")
+    return a
+
+
+def frozen_cell(pack, tool):
+    """包檔裡 mcp_tools 的那一格；沒有＝ToolUnknown。timeout_ms 寫了但不是正數＝PackBad。回 (格, 逾時秒)。"""
+    try:
+        with open(pack, encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, ValueError) as e:                 # load 剛讀過；這裡壞＝檔在兩次讀之間變了
+        raise tool_io.Error("PackBad", "%s: %s" % (pack, tool_io.os_reason(e))) from None
+    tools = doc.get("mcp_tools")
+    if not isinstance(tools, dict) or not isinstance(tools.get(tool), dict):
+        raise tool_io.Error("ToolUnknown", "%s has no mcp_tools entry %s" % (pack, json.dumps(tool, ensure_ascii=False)))
+    meta = tools[tool].get("_metainfo")
+    ms = meta.get("timeout_ms", DEFAULT_TIMEOUT_MS) if isinstance(meta, dict) else DEFAULT_TIMEOUT_MS
+    if isinstance(ms, bool) or not isinstance(ms, (int, float)) or not ms > 0:
+        raise tool_io.Error("PackBad", "%s: mcp_tools/%s/_metainfo/timeout_ms must be a positive number" % (pack, tool))
+    return tools[tool], ms / 1000.0
+
+
+def show(result):
+    """content 依序：text 印原文，其他種類印一行說沒顯示。回 isError。"""
+    content = result.get("content", [])
+    if not isinstance(content, list) or not all(isinstance(c, dict) for c in content):
+        raise tool_io.Error("ServerBad", "MCP tools/call result content must be an array of objects")
+    parts = []
+    for c in content:
+        if c.get("type") == "text" and isinstance(c.get("text"), str):
+            parts.append(c["text"])
+        else:
+            parts.append("[%s content not shown]" % c.get("type", "unknown"))
+    if parts:
+        text = "\n".join(parts)
+        sys.stdout.write(text if text.endswith("\n") else text + "\n")
+        sys.stdout.flush()
+    return result.get("isError") is True
+
+
+pack, tool = flags()
+arguments = stdin_arguments()
+try:
+    mcp_server_file.load(pack)
+    _cell, timeout_s = frozen_cell(pack, tool)
+    session = mcp_client.open_session(pack)
+    try:
+        result = session.call_tool(tool, arguments, timeout_s)
+    finally:
+        session.close()
+    failed = show(result)
+except tool_io.Error as e:
+    die(e.code, str(e))
+if failed:
+    die("CallFailed", "the server reported an error")

@@ -1,0 +1,24 @@
+{
+  "summary": "Call one tool on an external MCP server through its pack file",
+  "resource": [
+    "net"
+  ],
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": true,
+  "timeout_ms": 60000,
+  "tooldef": {
+    "description": "Call one tool on an external MCP server once and print its text result. Not registered for brains: each pack entry's _entry runs it with --pack and --tool; stdin is the external tool's arguments, passed as is.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "pack": {"type": "string", "description": "flag only (--pack FILE): the pack (server file) with mcp_server and mcp_tools; relative to the current folder"},
+        "tool": {"type": "string", "description": "flag only (--tool NAME): the external tool's original name, a key of mcp_tools"}
+      }
+    },
+    "errors": ["ArgumentsBad", "PackMissing", "PackBad", "PathMissing", "DotenvBad", "ToolUnknown", "CommandMissing", "ServerFailed", "ServerBad", "CommandFailed", "CallFailed"]
+  }
+}

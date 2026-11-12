@@ -30,6 +30,9 @@
 | [`llm_http/tests/test_llm_http.py`](../../../../../proto8/lib/base/llm_http/tests/test_llm_http.py) | llm_http 金鑰：--key-env 變數沒設或空＝不帶 Authorization 照打、401 才提沒設；設了照帶；壞字＝KeyBad 送出前擋（11-10 夜）。 |
 | [`ls/`](../../../../../proto8/lib/base/ls/) | 列一個資料夾的子項，一次一頁；預設一行一項「名字 TAB 類型」，long 多細項欄，json 回整份 JSON |
 | [`math/`](../../../../../proto8/lib/base/math/) | 算一個算術式子：只認數字、+ - * / // % **、括號、正負號（不用 eval） |
+| [`mcp_tool/`](../../../../../proto8/lib/base/mcp_tool/) | 叫外部 MCP server 的一支工具：讀包檔（server 檔）裡的 mcp_server，起 server、tools/call 一次、印文字結果、收掉 server |
+| [`mcp_tool/tests/fixtures/demo.json`](../../../../../proto8/lib/base/mcp_tool/tests/fixtures/demo.json) | Hand-written MCP pack for mcp_tool tests: the fake stdio server from lib/tests, three tools frozen by hand. |
+| [`mcp_tool/tests/test_mcp_tool.py`](../../../../../proto8/lib/base/mcp_tool/tests/test_mcp_tool.py) | mcp_tool 步 2（external-mcp 07）：包檔疊進 tools.json 後 aos-tools 看得到、叫得到外部 stdio server 的工具；isError＝CallFailed、沒有的原名＝ToolUnknown。 |
 | [`mkdir/`](../../../../../proto8/lib/base/mkdir/) | 建資料夾（上層一起建；已經有＝沒事） |
 | [`move/`](../../../../../proto8/lib/base/move/) | 搬移或改名一個檔、資料夾或捷徑本身（to 的上層自動建） |
 | [`peek_clock/`](../../../../../proto8/lib/base/peek_clock/) | 看一眼 daemon 的時鐘：讀 $AOS_CLOCK 那個檔，回現在第幾 cycle（11-10 深夜，使用者「peek_clock就是純粹看daemon clock」）。 |
