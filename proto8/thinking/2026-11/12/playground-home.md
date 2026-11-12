@@ -166,6 +166,27 @@ for a in fsm_ann eca_bob eca_opus eca_cody; do aos-agent ctl add ../agents/$a; d
 - **樹已停**：清乾淨、四隻重掛（沒有 history）、shutdown，沒有殘留行程（含假 MCP server）。
 - 沒驗：opus 實問、chat 與畫面、litellm 三個、`jsonx_multi_*`、`json_ls` 的 `depth`、fsm 定義裡用 `#/` 的 `$ref`、`/goal`／`/compact` 卡信的修正。
 
+## 用 eca 唯讀整理 proto8：`eca_tidy`（11-12 21:30～21:34）
+
+使用者原話（11-12 晚）：「然後等等幫我準備好遊樂場。我想試試看用claude eca來初步整理proto8，唯讀的，整理結果放外面。」
+
+**結論**
+
+- 新掛一隻 `eca_tidy`（claude 身，預設 opus、不設花費上限），工作區 `~/code/playground/tidy`：裡面 `proto8/`＝repo `proto8/` 的快照（`git archive HEAD proto8 | tar -x`，`026210d4a`，`chmod -R a-w`，出處寫在 `tidy/SNAPSHOT.txt`），`out/`＝結果夾（試驗場內、repo 外）。試驗場其餘部分沿用 21:04 那份。
+- **唯讀有兩層擋**：① 讀的是快照，真 repo 不在工作區；快照檔案系統層唯讀。② claude 工具收成 `--tools Read,Glob,Grep,Write,Edit,Agent,Skill`（沒有 Bash），`--permission-mode dontAsk`，寫入只允許 `--allowedTools "Edit(out/**),Write(out/**)"`（相對工作區）；沒有任何繞過權限的旗標。aos 那台 MCP 給跟子 agent 一樣的唯讀 9 支（定義裡 `tools.json`＝範本 `tools_sub.json` 那份），會寫入的 aos 工具不掛。定義裡加 `system.txt` 說明快照與結果夾。
+- **實測（haiku）**：讀 `SNAPSHOT.txt`、`proto8/README.md` 標題、`index_view proto8/knowledge/aos`（20 項）都通；寫 `out/hello.md` 成功；故意寫 `proto8/TEST_FROM_AGENT.md`、寫真 repo `/home/lorkhan/repo/simple_tools/aos/proto8/TEST_FROM_AGENT.md`、Edit `proto8/README.md` 三個都被擋（claude 的 `permission_denials` 三筆：Write、Write、Edit，訊息 "Permission to use Write has been denied because Claude Code is running in don't ask mode"），兩個路徑事後都不存在。子 agent（Agent 工具開 general-purpose）：工具 Agent、Edit、Glob、Grep、Read、Skill、Write＋`mcp__aos_sub__*` 9 支（沒有 Bash、沒有 json_set），寫快照與真 repo 一樣被擋、寫 `out/sub.md` 成功——沒有比主 agent 多。
+- **opus 一句**：「列出 proto8 頂層各夾各一句話存成 out/proto8-top-level.md」19 秒、6 輪、opus 0.314 美金（新對話第一題寫快取），結果檔留在 `tidy/out/` 當例子（還順帶指出 `feedback/` 不在 README 的夾表裡）。測試用的檔已刪，`eca_tidy` 重掛成空對話、模型回預設 opus。
+- **撞到 build**：21:32 另一條線重 build impls，`aos-fsm` 正在換檔時 fsm_ann 起它＝`LaunchFailed … (Permission denied)`，fsm_ann 停在 `stopped`。停樹、用新的 bin（21:32）重起、`ctl start fsm_ann`，假腦與 eca_tidy 再各驗一次都過。
+- **樹留著跑**（五隻都 running），停樹那行在試驗場 README 最上面一節。
+
+**代定**
+
+- 工作區放試驗場內的新資料夾 `tidy/`（不放使用者已信任的 `~/repo` 底下，免得在他的 repo 夾多一個資料夾）：`say`／`chat` 不受影響，開畫面前要手動信任一次，寫在 README。
+- 寫入規則寫相對路徑 `out/**`（整個試驗場搬走照樣對）。
+- 主 agent 的 aos 工具與子 agent 同一套唯讀 9 支；Agent、Skill 照範本開著。
+- `timeout_ms` 拉到 30 分鐘（範本 10 分鐘；整理整份 proto8 一輪可能很久）。
+- opus 那句的結果檔留著當例子。
+
 ## 要重建什麼
 
 repo 的 `lib／py／templates／knowledge／kernel/llm-kernel` 有改，重跑上面那格就跟上（整個清掉，對話與自己改的設定都會沒）。
