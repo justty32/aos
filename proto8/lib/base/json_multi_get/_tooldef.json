@@ -1,5 +1,5 @@
 {
- "description": "Get several places at once (like json_get for each, in order). One line per place: PATH, a TAB, then the value as one line of JSON (or the \"[too big] ...\" line, or \"[error] CODE reason\" for that place). The places are independent: one failing does not stop the others; if any failed the last line is \"json_multi_get: error: PlacesFailed ...\". Example: {\"paths\": [\"cfg.json#/name\", \"cfg.json#/states/think/next\"]}. Details: knowledge_read aos/tools/json_multi_get.json.",
+ "description": "Get several places at once (like json_get for each, in order). One line per place: PATH, a TAB, then the value as one line of JSON (or the \"[too big] ...\" line, or \"[error] CODE reason\" for that place). The places are independent: one failing does not stop the others; if any failed the last line is \"json_multi_get: error: PlacesFailed ...\". Example: {\"paths\": [\"cfg.json#/name\", \"cfg.json#/states/think/next\"]}.",
  "parameters": {
   "type": "object",
   "properties": {

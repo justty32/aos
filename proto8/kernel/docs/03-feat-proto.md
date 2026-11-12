@@ -28,8 +28,6 @@ kill $K $D                                # 收工（daemon 把它掛的收掉�
 
 劇本三步：叫 `self_tools {"op": "add", "name": "math", "path": "<repo>/proto8/lib/base/math"}`（工具裡 `aos-agent ctl who` 查 daemon 表認出「我是 fsm1」，再 `aos-agent tools --target fsm1 add`）→ 下一格 brain 重讀就看到 math、叫 `math {"expr": "17*23"}` 得 `391` → 答一句。history 裡看得到兩則 tool 結果（`added math (…) to your tools; available from your next turn`、`391`）。定義資料夾沒動；`aos-agent tools --target fsm1 reset` 一刀回定義。
 
-**接知識庫的版本**（11-05 晚 K5）：同上，`endpoint=fake-demo-knowledge`，劇本多一步——腦先叫 `knowledge_read {"op": "read", "path": "aos/me.json#/self_tools"}` 讀怎麼改自己的工具，再 `self_tools add`、`math`，答 `I read knowledge_read aos/me.json#/self_tools, added math to my own tools and used it: 17*23 = 391.`。根每次都在 system 訊息裡（brain.py `--knowledge knowledge_read`；範本的庫根是 `knowledge/`，11-10 深夜起路徑多一層 `aos/`），所以腦知道有 `aos/me.json#/self_tools` 這節。11-05 晚家機照抄跑過。
-
 ### 件 2、3：能力包與排程（包的 `slots` 補位、`speed` 先後）
 
 ```sh

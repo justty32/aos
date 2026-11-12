@@ -1,104 +1,107 @@
 {
  "read.json": {
-  "_description": "Tool read: read a text file as plain lines, in parts if it is big."
+  "description": "Tool read: read a text file as plain lines, in parts if it is big."
  },
  "ls.json": {
-  "_description": "Tool ls: list one folder, one line per item; long and json for details."
+  "description": "Tool ls: list one folder, one line per item; long and json for details."
  },
  "view.json": {
-  "_description": "Tool view: look into a file step by step: JSON level by level, big text as an outline first."
+  "description": "Tool view: look into a file step by step: JSON level by level, big text as an outline first."
  },
  "stat.json": {
-  "_description": "Tool stat: facts about one file, folder or link as JSON (type, size, lines, format)."
+  "description": "Tool stat: facts about one file, folder or link as JSON (type, size, lines, format)."
  },
  "grep.json": {
-  "_description": "Tool grep: search inside files with a regular expression, like grep -rn; one line PATH:LINE:TEXT per match."
+  "description": "Tool grep: search inside files with a regular expression, like grep -rn; one line PATH:LINE:TEXT per match."
  },
  "glob.json": {
-  "_description": "Tool glob: find files by name pattern (*, **, ?) under a folder; one path per line."
+  "description": "Tool glob: find files by name pattern (*, **, ?) under a folder; one path per line."
  },
  "write.json": {
-  "_description": "Tool write: write a whole file (new, or fully replaced)."
+  "description": "Tool write: write a whole file (new, or fully replaced)."
  },
  "edit.json": {
-  "_description": "Tool edit: change part of a text file by exact text replacement."
+  "description": "Tool edit: change part of a text file by exact text replacement."
  },
  "copy.json": {
-  "_description": "Tool copy: copy a file or a whole folder to a new path."
+  "description": "Tool copy: copy a file or a whole folder to a new path."
  },
  "move.json": {
-  "_description": "Tool move: move or rename a file, folder or link; also brings things back from the trash."
+  "description": "Tool move: move or rename a file, folder or link; also brings things back from the trash."
  },
  "mkdir.json": {
-  "_description": "Tool mkdir: create a folder with its parents; an existing folder is fine."
+  "description": "Tool mkdir: create a folder with its parents; an existing folder is fine."
  },
  "json_get.json": {
-  "_description": "Tool json_get: the value at one FILE#/POINTER as one line of JSON; [too big] when over max_bytes."
+  "description": "Tool json_get: the value at one FILE#/POINTER as one line of JSON; [too big] when over max_bytes."
  },
  "json_ls.json": {
-  "_description": "Tool json_ls: what is inside one place of a JSON file, one key or index per line; long for type and size."
+  "description": "Tool json_ls: what is inside one place of a JSON file, one key or index per line; long for type and size."
  },
  "json_search.json": {
-  "_description": "Tool json_search: find a key and/or value below a place (or in the levels above it); one FILE#/POINTER per hit."
+  "description": "Tool json_search: find a key and/or value below a place (or in the levels above it); one FILE#/POINTER per hit."
  },
  "json_set.json": {
-  "_description": "Tool json_set: set one place in a JSON file to a value, exactly as given; /- appends."
+  "description": "Tool json_set: set one place in a JSON file to a value, exactly as given; /- appends."
  },
  "json_add.json": {
-  "_description": "Tool json_add: add a new key or array item (inserts); never overwrites (KeyExists)."
+  "description": "Tool json_add: add a new key or array item (inserts); never overwrites (KeyExists)."
  },
  "json_del.json": {
-  "_description": "Tool json_del: delete one key or array item from a JSON file."
+  "description": "Tool json_del: delete one key or array item from a JSON file."
  },
  "json_multi_get.json": {
-  "_description": "Tool json_multi_get: several FILE#/POINTER at once, one line per place; failures per place, PlacesFailed at the end."
+  "description": "Tool json_multi_get: several FILE#/POINTER at once, one line per place; failures per place, PlacesFailed at the end."
  },
  "json_multi_set.json": {
-  "_description": "Tool json_multi_set: set several places in order, one line per place; nothing undone if one fails."
+  "description": "Tool json_multi_set: set several places in order, one line per place; nothing undone if one fails."
  },
  "jsonx_get.json": {
-  "_description": "Tool jsonx_get: json_get for aos configuration files: follow $ref, resolve $ref/$env."
+  "description": "Tool jsonx_get: json_get for aos configuration files: follow $ref, resolve $ref/$env."
  },
  "jsonx_ls.json": {
-  "_description": "Tool jsonx_ls: json_ls for aos configuration files: follow $ref, list the resolved value."
+  "description": "Tool jsonx_ls: json_ls for aos configuration files: follow $ref, list the resolved value."
  },
  "jsonx_search.json": {
-  "_description": "Tool jsonx_search: json_search for aos configuration files: follow $ref, search the resolved value."
+  "description": "Tool jsonx_search: json_search for aos configuration files: follow $ref, search the resolved value."
  },
  "jsonx_set.json": {
-  "_description": "Tool jsonx_set: json_set for aos configuration files: value, text or from; follow, resolve, check."
+  "description": "Tool jsonx_set: json_set for aos configuration files: value, text or from; follow, resolve, check."
  },
  "jsonx_add.json": {
-  "_description": "Tool jsonx_add: json_add for aos configuration files, with the options of jsonx_set."
+  "description": "Tool jsonx_add: json_add for aos configuration files, with the options of jsonx_set."
  },
  "jsonx_del.json": {
-  "_description": "Tool jsonx_del: json_del for aos configuration files: $ref on the way protected unless follow."
+  "description": "Tool jsonx_del: json_del for aos configuration files: $ref on the way protected unless follow."
  },
  "trash.json": {
-  "_description": "Tool trash: delete so it can be undone (moved into .trash/ in your workspace)."
+  "description": "Tool trash: delete so it can be undone (moved into .trash/ in your workspace)."
  },
  "remove.json": {
-  "_description": "Tool remove: delete for real, like rm; no undo (a folder needs recursive)."
+  "description": "Tool remove: delete for real, like rm; no undo (a folder needs recursive)."
  },
  "shell.json": {
-  "_description": "Tool shell: run one bash command line in your workspace; output ends with [exit code N]."
+  "description": "Tool shell: run one bash command line in your workspace; output ends with [exit code N]."
  },
  "run_python.json": {
-  "_description": "Tool run_python: run a short Python 3 program; output ends with [exit code N]."
+  "description": "Tool run_python: run a short Python 3 program; output ends with [exit code N]."
  },
  "peek_clock.json": {
-  "_description": "Tool peek_clock: the daemon clock's current cycle and how many ms one cycle is."
+  "description": "Tool peek_clock: the daemon clock's current cycle and how many ms one cycle is."
  },
  "peek_now_time.json": {
-  "_description": "Tool peek_now_time: the current time of day in UTC."
+  "description": "Tool peek_now_time: the current time of day in UTC."
  },
  "math.json": {
-  "_description": "Tool math: compute one arithmetic expression; what is allowed, examples, ExprBad."
+  "description": "Tool math: compute one arithmetic expression; what is allowed, examples, ExprBad."
  },
  "todo.json": {
-  "_description": "Tool todo: your own to-do list for a long task (ls, set, add, mark); kept outside your history."
+  "description": "Tool todo: your own to-do list for a long task (ls, set, add, mark); kept outside your history."
  },
  "goal.json": {
-  "_description": "Tool goal: your goal, reminded when you stop by yourself; set, done, pause, resume."
+  "description": "Tool goal: your goal, reminded when you stop by yourself; set, done, pause, resume."
+ },
+ "_description.json": {
+  "description": "One node per stock tool: what it does, when to use it, its arguments, examples with real output and errors; packs are in aos/packs.json."
  }
 }

@@ -1,5 +1,5 @@
 {
- "description": "For aos configuration files that use $ref/$env (for plain data use json_ls). Same as json_ls plus: follow: true goes through $ref on the way to the place; resolve: true lists the value with $ref/$env resolved (e.g. the merged tool list of a tools.json). Example: {\"path\": \"tools.json#/tools\", \"resolve\": true}. Details: knowledge_read aos/tools/jsonx_ls.json.",
+ "description": "For aos configuration files that use $ref/$env (for plain data use json_ls). Same as json_ls plus: follow: true goes through $ref on the way to the place; resolve: true lists the value with $ref/$env resolved (e.g. the merged tool list of a tools.json). Example: {\"path\": \"tools.json#/tools\", \"resolve\": true}.",
  "parameters": {
   "type": "object",
   "properties": {

@@ -1,4 +1,4 @@
-{"description": "Edit one file by exact text replacement; several places at once. Each edits[].old_text is matched against the original file: exactly (spaces and newlines too), exactly once, not overlapping another. Merge two nearby places into one item. Keep old_text short but unique. If one item does not match, nothing is changed (TextMissing, TextBad). Errors: FileMissing. Details: knowledge_read aos/tools/edit.json.",
+{"description": "Edit one file by exact text replacement; several places at once. Each edits[].old_text is matched against the original file: exactly (spaces and newlines too), exactly once, not overlapping another. Merge two nearby places into one item. Keep old_text short but unique. If one item does not match, nothing is changed (TextMissing, TextBad). Errors: FileMissing.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "the file, relative to your workspace, or absolute"},
                                "edits": {"type": "array",

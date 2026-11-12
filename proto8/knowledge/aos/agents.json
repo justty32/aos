@@ -2,16 +2,16 @@
  "_description": "# Other agents: which tool\n\n- A helper you can talk to, change and remove later: `subagent` (see `aos/agents.json#/subagent`).\n- Start, stop or list any agent on the daemon, without making it yours: `agents_ctl` (see `aos/agents.json#/agents_ctl`).\n- A side task that needs what you already know, only the conclusion back: `fork` (agent-fsm only; see `aos/agents.json#/fork`). An eca body (claude, codex) has none of subagent, agents_ctl or fork: use the helpers built into your own CLI.\n- A new kind of agent: copy a template with `agent_def`, edit the copy with your file tools, then start it with `subagent` (see `aos/agents.json#/agent_def`).\n\nA subagent runs on the same daemon as you. It does not inherit your brain or your tools: they come from its own definition.\n",
  "_index": {
   "subagent": {
-   "_description": "Tool `subagent`: start your own subagents, talk to them, change their tools or brain, stop and remove them; counted against your quota."
+   "description": "Tool `subagent`: start your own subagents, talk to them, change their tools or brain, stop and remove them; counted against your quota."
   },
   "agents_ctl": {
-   "_description": "Tool `agents_ctl`: aos-agent ctl for any agent on your daemon table (add, rm, ls, state, stop, start ...); no record, no quota."
+   "description": "Tool `agents_ctl`: aos-agent ctl for any agent on your daemon table (add, rm, ls, state, stop, start ...); no record, no quota."
   },
   "agent_def": {
-   "_description": "Tool `agent_def`: copy a template folder into a new agent definition, or check a definition."
+   "description": "Tool `agent_def`: copy a template folder into a new agent definition, or check a definition."
   },
   "fork": {
-   "_description": "Tool `fork` (subagent pack, agent-fsm only): copy yourself (settings and whole conversation) into a fork, give it one goal and get back only its short conclusion."
+   "description": "Tool `fork` (subagent pack, agent-fsm only): copy yourself (settings and whole conversation) into a fork, give it one goal and get back only its short conclusion."
   }
  },
  "subagent": {

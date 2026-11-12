@@ -2,16 +2,16 @@
  "_description": "# Agent lifecycle\n\nUse aos-agent ctl to attach agents and inspect or change their daemon state. `aos-agent ctl --help` prints a table of the three stop pairs (stop/start, sleep/wake, pause/resume) and rm.\n",
  "_index": {
   "add": {
-   "_description": "ctl add: attach one agent; workspace, stack, directives, auto-restart, limits."
+   "description": "ctl add: attach one agent; workspace, stack, directives, auto-restart, limits."
   },
   "ls_state": {
-   "_description": "ctl ls lists the table (-l adds health columns); ctl state shows one agent part by part."
+   "description": "ctl ls lists the table (-l adds health columns); ctl state shows one agent part by part."
   },
   "phases": {
-   "_description": "stop/start, sleep/wake, pause/resume, and what PhaseBad means."
+   "description": "stop/start, sleep/wake, pause/resume, and what PhaseBad means."
   },
   "where_who": {
-   "_description": "ctl where prints an agent's stack or workspace; ctl who finds the agent that owns a stack."
+   "description": "ctl where prints an agent's stack or workspace; ctl who finds the agent that owns a stack."
   }
  },
  "add": "# ctl add: attach one agent\n\n```sh\naos-agent -d stacks/root ctl add --auto-restart -w . defs/ann\n# /.../stacks/root/procs/ann        (it prints the stack)\naos-agent ctl add --name bob --ws /work ../agents/bob\n```\n\nThe definition must declare `aos-agent` in `interfaces.json` (`InterfaceMissing`). The same name = `InstanceExists`; a refusing daemon or judge = `AddRejected`.\n\n- Workspace: `--ws DIR`, nonempty `$AOS_WS`, then the current directory; not a directory = `WsMissing`, nothing is sent.\n- `--stack DIR` chooses its stack (default `<daemon stack>/procs/<name>/`).\n- `--ws-json`, `--stack-json`, `--path-json` store a directive such as `'{\"$env\": \"PROJ\"}'`; it is resolved again on every start.\n- `--auto-restart`: the daemon restarts it whenever it exits; only for agents that stay up.\n- `--limits '{\"mem_mb\":512}'` replaces the definition's limits (the aos-sandbox keys); `'{}'` = none. Repeatable `--envs NAME=VALUE`.\n- `--on-queued ok`: exit 0 when the letter is still queued after `--timeout-s`.\n",

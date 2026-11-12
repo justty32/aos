@@ -1,4 +1,4 @@
-{"description": "Delete a file, link or folder for real, like rm: there is no way back (use trash if you may want it back). A folder needs recursive: true (like rm -r), else FileBad. A link is deleted itself, not what it points to. Returns JSON {path, type, counter_files}. Errors: FileMissing, FileBad, PathBad (. or .. or /), RemoveFailed (for example no permission). Details: knowledge_read aos/tools/remove.json.",
+{"description": "Delete a file, link or folder for real, like rm: there is no way back (use trash if you may want it back). A folder needs recursive: true (like rm -r), else FileBad. A link is deleted itself, not what it points to. Returns JSON {path, type, counter_files}. Errors: FileMissing, FileBad, PathBad (. or .. or /), RemoveFailed (for example no permission).",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "what to delete, relative to your workspace, or absolute"},
                                "recursive": {"type": "boolean", "default": false, "description": "true = a folder is deleted with everything inside (like rm -r)"}},

@@ -14,7 +14,7 @@
 
 | 身體 | 怎麼用 | 空文字 | 何時生效 |
 |---|---|---|---|
-| agent-fsm（含 reviewer） | `brain.py` 當最前面那則 system 訊息（**取代**定義那份）；知識庫根照樣接在後面 | 不送 system 訊息（有知識庫根就只放根） | 每格 think 重讀＝同一題的下一格 |
+| agent-fsm（含 reviewer） | `brain.py` 當最前面那則 system 訊息（**取代**定義那份） | 不送 system 訊息 | 每格 think 重讀＝同一題的下一格 |
 | eca claude | 起 claude 時加 `--append-system-prompt-file <檔>`（**附加**在 claude 自己的 system prompt 後面）；宣告了就一律加 `--system-prompt-snapshot off`（claude 預設把對話第一輪的 system 記下來、`--resume` 照舊送；off 才每輪重讀） | 只加 snapshot off | 下一輪（11-11 haiku 實測：同一段 `--resume` 對話裡換檔、reset，下一輪都跟著變）；畫面開著＝要關掉再開 |
 | eca codex | 起 codex 時加 `-c developer_instructions=<文字>`（附加成 developer 訊息） | 不加 | **下一段新對話**：codex 只在對話開頭讀一次，`exec resume` 帶新的不生效（11-11 gpt-6-luna 實測）；`set`／`reset` 會提醒、不自動開新對話（使用者裁「只提醒、不自動」） |
 

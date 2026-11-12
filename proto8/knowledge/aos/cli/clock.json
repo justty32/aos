@@ -2,10 +2,10 @@
  "_description": "# The clock and its letters\n\nThe root daemon's `_clock` row moves a clock file every second; a register next to it sends letters every N cycles. Agents use tools `peek_clock` and `clock_register` instead (`aos/clock.json`).\n",
  "_index": {
   "clock": {
-   "_description": "aos-clock: read the cycle number in FILE, write n+1, send the register's letters."
+   "description": "aos-clock: read the cycle number in FILE, write n+1, send the register's letters."
   },
   "register": {
-   "_description": "aos-clock-register: add, ls, rm entries that send a text to a mailbox every N cycles."
+   "description": "aos-clock-register: add, ls, rm entries that send a text to a mailbox every N cycles."
   }
  },
  "clock": "# aos-clock: one cycle forward\n\n```sh\naos-clock clock && cat clock    # 1   (a missing FILE counts as 0)\naos-clock clock && cat clock    # 2\n```\n\nIt prints nothing. You rarely run it by hand: the root daemon runs `aos-clock $AOS_DAEMON/clock` as its `_clock` row. After each cycle it sends the letters of `FILE_register.json` (see `register`). A letter that cannot be sent is one warning line (`aos-clock: warning: clock register entry w2: cannot send to .../nobox: MailboxMissing ...`); the clock still moves and exits 0. A FILE that is not a number = `ClockBad`, FILE untouched. No FILE = `ArgumentsBad`. `aos-clock register ARGS...` is `aos-clock-register ARGS...` (a clock file really named register: write `./register`).\n",

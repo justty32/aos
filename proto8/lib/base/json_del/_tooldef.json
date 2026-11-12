@@ -1,5 +1,5 @@
 {
- "description": "Delete one key or array item from a JSON file (later items move down). It must exist. A whole file is not deleted (use remove or trash). Prints \"ok FILE#/POINTER\". Example: {\"path\": \"cfg.json#/old_key\"}. Details: knowledge_read aos/tools/json_del.json.",
+ "description": "Delete one key or array item from a JSON file (later items move down). It must exist. A whole file is not deleted (use remove or trash). Prints \"ok FILE#/POINTER\". Example: {\"path\": \"cfg.json#/old_key\"}.",
  "parameters": {
   "type": "object",
   "properties": {

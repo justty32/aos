@@ -1,59 +1,62 @@
 {
  "me.json": {
-  "_description": "Finding your own name, what is in your stack, and what you are allowed to change."
+  "description": "Finding your own name, what is in your stack, and what you are allowed to change."
  },
- "me/": {
-  "_description": "Long sections of aos/me.json (self_tools, self_llm, self_system, self_history, self_hook); read them through aos/me.json."
+ "me": {
+  "description": "Long sections of aos/me.json kept as their own files (self_tools, self_llm, self_system, self_history, do_task, self_hook); aos/me.json points to each with $ref."
  },
  "errors.json": {
-  "_description": "How to read a failed call: the `error:` line, `warning:` lines, and exit codes."
+  "description": "How to read a failed call: the `error:` line, `warning:` lines, and exit codes."
  },
- "errors/": {
-  "_description": "Long sections of aos/errors.json (common); read them through aos/errors.json."
+ "errors": {
+  "description": "Long sections of aos/errors.json kept as their own files (common); aos/errors.json points to it with $ref."
  },
  "world.json": {
-  "_description": "The mental model: daemon = hardware, stack = memory, workspace = external memory, definition = source code, kernel = gatekeeper."
+  "description": "The mental model: daemon = hardware, stack = memory, workspace = external memory, definition = source code, kernel = gatekeeper."
  },
  "definition.json": {
-  "_description": "What each file in a definition folder does (interfaces.json, loop.json, tools.json, hooks.json, cli.json ...), and which ones you have your own copy of."
+  "description": "What each file in a definition folder does (interfaces.json, loop.json, tools.json, hooks.json, cli.json ...), and which ones you have your own copy of."
  },
  "body.json": {
-  "_description": "Two kinds of body, agent-fsm and eca (claude, codex): brain, tools, hooks, system text, history; how to tell which you are."
+  "description": "Two kinds of body, agent-fsm and eca (claude, codex): brain, tools, hooks, system text, history; how to tell which you are."
  },
  "status.json": {
-  "_description": "The daemon table, the phases an agent can be in, and what each phase means for you."
+  "description": "The daemon table, the phases an agent can be in, and what each phase means for you."
  },
  "brain.json": {
-  "_description": "How a brain request travels, what an endpoint pack is, and how priority works."
+  "description": "How a brain request travels, what an endpoint pack is, and how priority works."
  },
  "agents.json": {
-  "_description": "Tools subagent, agents_ctl and agent_def: your own subagents, any agent on the daemon table, and new definitions."
+  "description": "Tools subagent, agents_ctl, agent_def and fork: your own subagents, any agent on the daemon table, new definitions, and a copy of yourself for one goal."
  },
- "agents/": {
-  "_description": "Long sections of aos/agents.json (subagent); read them through aos/agents.json."
+ "agents": {
+  "description": "Long sections of aos/agents.json kept as their own files (subagent, fork); aos/agents.json points to each with $ref."
  },
  "rules.json": {
-  "_description": "What you must not do, and why. Read this before doing anything that changes the system."
+  "description": "What you must not do, and why. Read this before doing anything that changes the system."
  },
  "knowledge.json": {
-  "_description": "The knowledge base: how to look things up (knowledge_read), which one you may write, when and how to write (knowledge_write)."
+  "description": "Describes the former knowledge_read / knowledge_write tools (removed 11-12); kept as is."
  },
- "cli/": {
-  "_description": "Use these shell commands to manage agents, tools and daemon procs."
+ "cli": {
+  "description": "Use these shell commands to manage agents, tools and daemon procs."
  },
  "mailbox.json": {
-  "_description": "Letters between agents: tools mailbox_peek, mailbox_read, mailbox_send; when you must answer; checking regularly without filling your history."
+  "description": "Letters between agents: tools mailbox_peek, mailbox_read, mailbox_send; when you must answer; checking regularly without filling your history."
  },
  "clock.json": {
-  "_description": "Timers: clock letters to your queue (clock_register), or an on_clock hook that adds nothing to your history; which one to choose."
+  "description": "Timers: clock letters to your queue (clock_register), or an on_clock hook that adds nothing to your history; which one to choose."
  },
  "tools_def.json": {
-  "_description": "Making your own tools: tool tools_def (new from the Python skeleton, check) and the Python helper tool_spec."
+  "description": "Making your own tools: tool tools_def (new from the Python skeleton, check) and the Python helper tool_spec."
  },
- "tools/": {
-  "_description": "One node per stock tool (read, ls, write, edit, trash, shell ...): when to use it and which tool instead, examples with real output, errors."
+ "tools": {
+  "description": "One node per stock tool (read, ls, write, edit, trash, shell ...): when to use it and which tool instead, examples with real output, errors."
  },
  "packs.json": {
-  "_description": "Your tools come in packs (look, change, delete, shell, gadgets, events, self, subagent, def, mailbox, knowledge): one sentence per tool, and how a pack is turned off."
+  "description": "Your tools come in packs (look, change, delete, shell, gadgets, events, todo, self, subagent, def, mailbox, knowledge, goal): one sentence per tool, and how a pack is turned off."
+ },
+ "_description.json": {
+  "description": "aos in one page: what aos is, the eight words, five rules, and how to look up more (that last part still names knowledge_read / knowledge_write)."
  }
 }

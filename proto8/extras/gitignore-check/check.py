@@ -183,7 +183,7 @@ class Check:
         self.env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         self.env.update(HOME=str(self.work / "home-a"),
                         PYTHONPATH=os.pathsep.join([str(PROTO / "py"), str(PROTO / "lib")]),
-                        AOS_LLM_KERNEL=str(self.kernel), AOS_DAEMON=str(self.root), AOS_KNOWLEDGE=str(self.work / "kb"), AOS_HOME=str(PROTO),
+                        AOS_LLM_KERNEL=str(self.kernel), AOS_DAEMON=str(self.root), AOS_HOME=str(PROTO),
                         FAKE_CLI_LOG=str(self.work / "fake-cli.jsonl"))
         self.env["PATH"] = os.pathsep.join([str(self.work / "bin"), str(Path.home() / ".local/bin"), os.environ["PATH"]])
         self.processes = []
@@ -261,10 +261,7 @@ class Check:
     def copy_agent(self, kind, dest):
         source = PROTO / "templates" / kind
         shutil.copytree(source, dest, symlinks=True, ignore=shutil.ignore_patterns("__pycache__", "tests"))
-        kb = {"AOS_KNOWLEDGE": str(self.work / "kb")}
-        tools = {"peek_now_time": {"path": str(PROTO / "lib/base/peek_now_time")},
-                 "knowledge_read": {"path": str(PROTO / "lib/agent/knowledge_read"), "env": kb},
-                 "knowledge_write": {"path": str(PROTO / "lib/agent/knowledge_write"), "env": kb}}
+        tools = {"peek_now_time": {"path": str(PROTO / "lib/base/peek_now_time")}}
         if kind == "agent-fsm":                  # 11-11：tools/todo/todo.json、tools/do_task/tasks.json 要長出來（使用者「三個都進 git」）；11-12 加 fork
             tools.update(todo={"path": str(PROTO / "lib/agent/todo")}, do_task={"path": str(PROTO / "lib/agent/do_task")},
                          fork={"path": str(PROTO / "lib/agent/fork")})
@@ -279,8 +276,6 @@ class Check:
     def make(self):
         (self.work / "bin").mkdir()
         (self.work / "bin/claude").symlink_to(PROTO / "cmd/aos-eca/tests/fake_claude")
-        (self.work / "kb").mkdir()
-        (self.work / "kb/_index.json").write_text(json.dumps({".": {"_description": "# Test knowledge"}}) + "\n")
         for project in (self.project, self.llms):
             project.mkdir()
             (project / "README.txt").write_text("A preexisting user project.\n")

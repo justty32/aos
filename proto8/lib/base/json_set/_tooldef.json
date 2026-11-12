@@ -1,5 +1,5 @@
 {
- "description": "Set one place in a JSON file to a value (replace it, or add the key if missing). The value is stored exactly as given. path ending in /- appends to an array; FILE alone replaces (or creates) the whole file. Missing middle levels need parents: true. Prints \"ok FILE#/POINTER\". Example: {\"path\": \"cfg.json#/states/act/next\", \"value\": \"idle\"}. Details: knowledge_read aos/tools/json_set.json.",
+ "description": "Set one place in a JSON file to a value (replace it, or add the key if missing). The value is stored exactly as given. path ending in /- appends to an array; FILE alone replaces (or creates) the whole file. Missing middle levels need parents: true. Prints \"ok FILE#/POINTER\". Example: {\"path\": \"cfg.json#/states/act/next\", \"value\": \"idle\"}.",
  "parameters": {
   "type": "object",
   "properties": {

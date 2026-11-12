@@ -2,10 +2,10 @@
  "_description": "# aos tools for an external agent\n\nUse aos-mcp to serve the tools of aos-tools registries as MCP tools over stdio (JSON-RPC: initialize, ping, tools/list, tools/call). An eca agent gets it automatically; set it up by hand only for your own MCP client.\n",
  "_index": {
   "serve": {
-   "_description": "Start aos-mcp with a workspace and registries; where its stack is."
+   "description": "Start aos-mcp with a workspace and registries; where its stack is."
   },
   "calls": {
-   "_description": "What one tools/call does: stdout is the result, a failure attaches the stderr tail, timeouts, logs."
+   "description": "What one tools/call does: stdout is the result, a failure attaches the stderr tail, timeouts, logs."
   }
  },
  "serve": "# Serving a registry\n\n```sh\naos-tools --file tools.json add $AOS_HOME/lib/base/read\naos-mcp --ws /abs/ws --knowledge knowledge_read tools.json\n```\n\nRegister that command line in your MCP client as a stdio server; aos-tools and aos-exec must be on its PATH. Workspace = `--ws` > `$AOS_WS` (none or not a folder = `WsMissing`); stack = `--stack` > `$AOS_STACK` > `WS/.stack/`. Flags may go before or after the registries. No registry = `./tools.json`; not a file = `ToolMissing`; two registries with the same tool name = `ToolsBad`. `--knowledge NAME` sends what tool NAME prints for `{\"op\": \"read\"}` as the server's instructions. `--own FILE` uses the agent's own registry whenever it exists. `--hooks DEF` runs the definition's before_tool / after_tool hooks.\n",

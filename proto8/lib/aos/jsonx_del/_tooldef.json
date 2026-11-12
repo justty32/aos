@@ -1,5 +1,5 @@
 {
- "description": "For aos configuration files that use $ref/$env (for plain data use json_del). Same as json_del, but $ref/$env objects on the path are protected: the call fails with FollowMissing unless follow: true, which goes through $ref and deletes in the referenced file (and the matching keys of merged parts). Prints \"ok FILE#/POINTER\". Example: {\"path\": \"tools.json#/tools/shell\", \"follow\": true}. Details: knowledge_read aos/tools/jsonx_del.json.",
+ "description": "For aos configuration files that use $ref/$env (for plain data use json_del). Same as json_del, but $ref/$env objects on the path are protected: the call fails with FollowMissing unless follow: true, which goes through $ref and deletes in the referenced file (and the matching keys of merged parts). Prints \"ok FILE#/POINTER\". Example: {\"path\": \"tools.json#/tools/shell\", \"follow\": true}.",
  "parameters": {
   "type": "object",
   "properties": {

@@ -1,4 +1,0 @@
-{"description": "Pack knowledge: knowledge_read, knowledge_write. No default knowledge base: the tools.json that stacks this pack sets one per name (env AOS_KNOWLEDGE); the templates set it only for knowledge_read (the stock one), so knowledge_write needs root in the call or its own AOS_KNOWLEDGE.",
- "tools": {
-           "knowledge_read": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/knowledge_read"}},
-           "knowledge_write": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/knowledge_write"}}}}

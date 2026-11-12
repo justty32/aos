@@ -2,10 +2,10 @@
  "_description": "# fork: a copy of you, one goal, just the conclusion\n\nTool `fork` copies you as you are now into a fork on your daemon: your definition, the settings you changed in your stack (tools, llm, hooks, system) and your whole conversation. The fork gets one goal; you get back only its short conclusion, as the result of the call. The fork's steps do not enter your history. Only for agent-fsm bodies (a Claude or Codex agent gets `BodyUnsupported`: use `subagent`).\n\n`fork` or `subagent`?\n\n- `fork`: a side task that needs what you already know. One answer back; the fork is then removed.\n- `subagent`: a helper from another definition that you keep talking to; it knows only what you tell it.\n\nCall: `{\"goal\": \"Check the three config files we discussed for the port setting and return the values\"}`. Say in `goal` what to bring back (at most `max_chars`, default 600).\n\nMore: `aos/agents.json#/fork/rules` (what is copied, what the fork sees), `aos/agents.json#/fork/results` (waiting, depth, keep, errors).\n",
  "_index": {
   "rules": {
-   "_description": "fork: what is copied and what is not, and the message the fork sees first."
+   "description": "fork: what is copied and what is not, and the message the fork sees first."
   },
   "results": {
-   "_description": "fork: how long it waits (timeout_s, timeout_cycles), the depth limit, keep, and what each error means."
+   "description": "fork: how long it waits (timeout_s, timeout_cycles), the depth limit, keep, and what each error means."
   }
  },
  "rules": "# fork: what is copied\n\n- Copied: your definition (the same folder), your conversation, and your own copies of tools, llm, hooks and system (what `self_tools`, `self_llm`, `self_hook`, `self_system` changed). Your definition must declare `history` in its `interfaces.json` (else `HistoryMissing`).\n- Not copied: your goal, your to-do list, the records of your tools (subagents, kept helpers), your queue and mailbox. The fork's hooks start fresh.\n- The fork's conversation ends with your fork call. Its result there says it is the copy; any later calls of that same turn say they were not run. Then one message: you are a fork, your task (the goal), reply with the conclusion only, you cannot fork again.\n- Only for agents with an agent-fsm body. A Claude or Codex agent calling `fork` gets `BodyUnsupported`: to hand work to another agent, use `subagent`.\n- What the fork changes (files in the workspace aside) stays in the fork.\n",

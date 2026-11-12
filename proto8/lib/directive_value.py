@@ -1,7 +1,7 @@
 """directive_value - 把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。
 
 11-10 two-machines TC（使用者：指到外面的路徑「相對、絕對、環境變數指定都可」、每次用到才解、不把解出來的值寫回任何檔）：
-_knowledge.json 的 base、cli.json 的 tools 共用。做法照判官（lib/aos/judge/_entry）：stdin 一份 JSON、aos-directive 印解完的一行；
+cli.json 的 tools 用。做法照判官（lib/aos/judge/_entry）：stdin 一份 JSON、aos-directive 印解完的一行；
 相對 $ref 從 cwd 算，所以 cwd 給那份設定檔的資料夾（同 N-45「相對 $ref 從寫著它的那份檔所在的資料夾算」）。
 aos-directive 自己的錯誤行照轉在 stderr（不偷讀，C-52）；這裡只說哪個檔、哪個欄、寫的是什麼、解出什麼。
 錯誤用 tool_io.Error（代號＋英文原因），由呼叫者轉成自己的錯誤行。lib 最底下的共用模組，不 import py。"""

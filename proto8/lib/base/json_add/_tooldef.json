@@ -1,5 +1,5 @@
 {
- "description": "Add something new to a JSON file. In an object: adds the key; if it is already there you get KeyExists (use json_set to change it). In an array: path .../2 inserts before item 2 (later items move up), .../- appends. Prints \"ok FILE#/POINTER\". Example: {\"path\": \"cfg.json#/tags/-\", \"value\": \"new\"}. Details: knowledge_read aos/tools/json_add.json.",
+ "description": "Add something new to a JSON file. In an object: adds the key; if it is already there you get KeyExists (use json_set to change it). In an array: path .../2 inserts before item 2 (later items move up), .../- appends. Prints \"ok FILE#/POINTER\". Example: {\"path\": \"cfg.json#/tags/-\", \"value\": \"new\"}.",
  "parameters": {
   "type": "object",
   "properties": {

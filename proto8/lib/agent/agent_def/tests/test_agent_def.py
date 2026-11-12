@@ -54,7 +54,6 @@ class AgentDef(unittest.TestCase):
                 born = self.ws / "born"
                 self.assertEqual(r.stdout, "wrote definition %s (copied from %s)\n" % (born, tpl))
                 self.assertEqual((born / "tools.json").read_text(), (tpl / "tools.json").read_text())   # 全是指示詞：一字不改
-                self.assertEqual(self.tools()["tools"]["knowledge_read"]["env"]["AOS_KNOWLEDGE"], {"$env": "AOS_HOME", "$path": "/knowledge"})
                 self.assertFalse(any(p.name == "__pycache__" for p in born.rglob("*")))
                 self.assertNotIn("lineage", json.loads((born / "_metainfo.json").read_text()))
                 self.assertEqual([p.name for p in self.ws.iterdir()], ["born"])          # 沒留暫存夾

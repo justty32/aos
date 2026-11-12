@@ -2,16 +2,16 @@
  "_description": "# Registering and calling tools\n\nUse aos-tools to edit a registry and call a registered tool with JSON on stdin.\n\n```sh\naos-tools --file tools.json add --name read ../lib/base/read\naos-tools --file tools.json ls --json\nprintf '%s' '{\"path\":\"a.txt\"}' | aos-tools --file tools.json call read\naos-tools --file tools.json rm read\n```\n",
  "_index": {
   "registry": {
-   "_description": "The registry file, $override layers and null entries."
+   "description": "The registry file, $override layers and null entries."
   },
   "add": {
-   "_description": "add a folder, JSON file or executable; how paths are stored; --path-json."
+   "description": "add a folder, JSON file or executable; how paths are stored; --path-json."
   },
   "ls_rm_get": {
-   "_description": "ls, get and rm."
+   "description": "ls, get and rm."
   },
   "call": {
-   "_description": "call runs one tool with JSON on stdin in a scratch stack and returns its exit code."
+   "description": "call runs one tool with JSON on stdin in a scratch stack and returns its exit code."
   }
  },
  "registry": "# The registry\n\nThe default registry is `./tools.json`; a missing registry means no tools. `--file` goes before or after the subcommand. A registry may carry `\"$override\": OTHER_FILE` (or a list of files): it then holds only the differences from that file, later wins, and an entry whose value is `null` is not a tool. add/rm write only the `--file` registry, never the file it overrides. `aos-tools --file F override BASE` turns F into such a list of differences.\n",

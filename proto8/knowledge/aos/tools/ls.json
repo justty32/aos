@@ -2,10 +2,10 @@
  "_description": "# Tool ls\n\nList one folder: one line per item, `NAME<TAB>TYPE` (type is `file`, `dir` or `link`). Folders come first, then files, each sorted by name.\n\nUse it to see what is in a folder. Not for: one item in detail (`stat`), what is inside a file (`read`, `view`), finding files by name in a whole tree (`glob`), searching inside files (`grep`).\n\nArguments, all optional: `path` (default `.` = your workspace), `long`, `json`, `hidden`, `offset`, `max_items` (default 100, at most 500).\n\n```json\n{\"path\": \"notes\", \"max_items\": 1}\n```\nprints\n```text\na.txt\tfile\n... next_offset 1 (2 items in all)\n... 1 hidden (names starting with .)\n```\n\n`... next_offset N`: there is more; call again with `\"offset\": N`. Names starting with `.` (like `.trash`) are hidden unless `\"hidden\": true`. An empty folder prints `... empty`.\n\nThe `long` columns and `json`: `aos/tools/ls.json#/long`. Errors: `aos/tools/ls.json#/errors`.\n",
  "_index": {
   "long": {
-   "_description": "ls long (SIZE, MTIME, INFO columns) and json output."
+   "description": "ls long (SIZE, MTIME, INFO columns) and json output."
   },
   "errors": {
-   "_description": "ls errors and what to do."
+   "description": "ls errors and what to do."
   }
  },
  "long": "# ls: long and json\n\n`\"long\": true` adds three columns: SIZE (bytes; files only, else `-`), MTIME (UTC), INFO.\n\n```text\nmy_tool\tdir\t-\t2026-11-11T03:17:02.222+00:00\tchildren 2 aos _entry,_tooldef.json\nnotes\tdir\t-\t2026-11-11T03:17:02.222+00:00\tchildren 1\ncfg.json\tfile\t82\t2026-11-11T03:17:02.222+00:00\tkeys name,states,max\n```\n\nINFO for a folder: `children N`, and `aos ...` when aos files are inside (`_entry`, `_tooldef.json`, `loop.json`, `tools.json` and so on: then the folder is a tool or an agent definition). For a file: `exec`, and for a `.json` file its top keys (`json broken` if it is not valid JSON). For a link: `-> target`.\n\n`\"json\": true` prints one JSON object instead of lines: `path`, `counter_items` (all items), `items` (name, type, size, mtime and the INFO facts), `next_offset`, `counter_hidden`.\n",

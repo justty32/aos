@@ -1,5 +1,5 @@
 {
- "description": "Look at your mailbox without taking anything: how many letters wait, who sent each, its status and title. Other agents (or the user) send you letters; by default a hook puts one line \"[aos] new_mail: ...\" in your conversation when new ones came, and you can peek any time. Then read them with mailbox_read. Example: {}  (no arguments). Errors: ArgumentsBad, DaemonMissing, InstanceMissing. Details: knowledge_read aos/mailbox.json.",
+ "description": "Look at your mailbox without taking anything: how many letters wait, who sent each, its status and title. Other agents (or the user) send you letters; by default a hook puts one line \"[aos] new_mail: ...\" in your conversation when new ones came, and you can peek any time. Then read them with mailbox_read. Example: {}  (no arguments). Errors: ArgumentsBad, DaemonMissing, InstanceMissing.",
  "env": [
   "AOS_DAEMON"
  ],

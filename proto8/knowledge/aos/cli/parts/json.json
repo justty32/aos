@@ -2,13 +2,13 @@
  "_description": "# aos-json: read and edit aos JSON files\n\nAddress any value with `FILE#/POINTER`; `$ref` is followed only when you ask. Agents use the json tools (`json_get`, `json_ls`, `json_search`, `json_set`, `json_add`, `json_del`; for $ref/$env files `jsonx_get`, `jsonx_set`, `jsonx_add`); aos-json is for shells and scripts.\n",
  "_index": {
   "read": {
-   "_description": "get, peek and where."
+   "description": "get, peek and where."
   },
   "write": {
-   "_description": "set, append, merge, del, batch, env and ref; every write is atomic."
+   "description": "set, append, merge, del, batch, env and ref; every write is atomic."
   },
   "check": {
-   "_description": "check reports broken references and directives; exit 10 = problems found."
+   "description": "check reports broken references and directives; exit 10 = problems found."
   }
  },
  "read": "# Reading\n\n```sh\naos-json get c.json#/a/b                  # 1\naos-json get --follow --str c.json#/r/y   # hi      (r is {\"$ref\": \"other.json#/x\"})\naos-json get --resolve c.json#/e          # \"/home/me\"   (e is {\"$env\": \"HOME\"})\naos-json peek c.json                      # one level; big children folded\naos-json where c.json#/r/y                # c.json#/r, then other.json#/x/y\n```\n\nWithout `--follow`, a pointer through a `$ref` = `PointerMissing ... add --follow to go through it`. A pointer that is not there = `PointerMissing`. `peek --depth N` expands more levels.\n",

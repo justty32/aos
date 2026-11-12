@@ -12,7 +12,7 @@
 | [`box_check/`](../../../../../proto8/lib/aos/box_check/) | Verify probe markers, executable visibility and host probe paths. |
 | [`box_check/tests/test_acceptance.py`](../../../../../proto8/lib/aos/box_check/tests/test_acceptance.py) | Verify boxed and open definitions through actual sandbox and measure boundaries. |
 | [`defs/`](../../../../../proto8/lib/aos/defs/) | List, group, trace references and check public definition declarations. |
-| [`defs/catalog.py`](../../../../../proto8/lib/aos/defs/catalog.py) | Inspect public definition declarations and group agents by tools, endpoint and knowledge. |
+| [`defs/catalog.py`](../../../../../proto8/lib/aos/defs/catalog.py) | Inspect public definition declarations and group agents by tools and endpoint. |
 | [`defs/tests/test_defs.py`](../../../../../proto8/lib/aos/defs/tests/test_defs.py) | Verify public definition discovery, three-axis identity, references and check failures. |
 | [`feedback/`](../../../../../proto8/lib/aos/feedback/) | Submit command usability feedback through aos-feedback without guessing the caller. |
 | [`jsonx_add/`](../../../../../proto8/lib/aos/jsonx_add/) | json_add 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關） |
@@ -23,11 +23,6 @@
 | [`jsonx_set/`](../../../../../proto8/lib/aos/jsonx_set/) | json_set 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關） |
 | [`judge/`](../../../../../proto8/lib/aos/judge/) | 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false；選填排隊窗 queue.json 先來先掛、keep_ordered 對照代回有序信 |
 | [`judge/tests/test_judge.py`](../../../../../proto8/lib/aos/judge/tests/test_judge.py) | Verify broken reply recovery and restart deduplication with real aos-post mailboxes. |
-| [`knowledge_check/`](../../../../../proto8/lib/aos/knowledge_check/) | 檢查出廠知識庫：指標解析得到、_index 與內容一致沒孤兒、工具與指令各有節點、錯誤代號、開發殘留、大小；只讀不寫。 |
-| [`knowledge_check/checks.py`](../../../../../proto8/lib/aos/knowledge_check/checks.py) | knowledge_check 的八項檢查：指標、表與孤兒、工具／指令／impls 覆蓋、錯誤代號、開發殘留、大小；每項回一串 Problem，不寫檔。 |
-| [`knowledge_check/cover.py`](../../../../../proto8/lib/aos/knowledge_check/cover.py) | knowledge_check 的覆蓋與代號檢查：登記在 lib/packs 的工具、cmd 的 aos-* 指令、impls 的執行檔各有沒有自己的節點，tooldef 宣告的錯誤代號在不在庫裡。 |
-| [`knowledge_check/tests/test_factory_tree.py`](../../../../../proto8/lib/aos/knowledge_check/tests/test_factory_tree.py) | The stock knowledge base (proto8/knowledge) passes knowledge_check with no errors; warnings are allowed. |
-| [`knowledge_check/tests/test_knowledge_check.py`](../../../../../proto8/lib/aos/knowledge_check/tests/test_knowledge_check.py) | Verify every knowledge_check check turns red on a broken fixture tree and green on a clean one. |
 | [`llm_forward/`](../../../../../proto8/lib/aos/llm_forward/) | Forward one endpoint request to the kernel named by its pack. |
 | [`llm_forward/tests/test_forward.py`](../../../../../proto8/lib/aos/llm_forward/tests/test_forward.py) | Verify exact forwarding of subprocess streams and status, pack errors, and child accounting. |
 | [`measure/`](../../../../../proto8/lib/aos/measure/) | Measure isolated cases, costs and repeat consistency as JSON. |

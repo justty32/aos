@@ -2,16 +2,16 @@
   "_description": "Timers: clock letters to your queue (tool clock_register), or a program on a clock that adds nothing to your conversation (an on_clock hook). Which to choose: aos/clock.json#/choose.",
   "_index": {
     "wake_me": {
-      "_description": "Get a message every N cycles in your own queue."
+      "description": "Get a message every N cycles in your own queue."
     },
     "rules": {
-      "_description": "When it fires, who can change it, what happens when it cannot send, and the errors."
+      "description": "When it fires, who can change it, what happens when it cannot send, and the errors."
     },
     "quiet_timer": {
-      "_description": "Run a program every N cycles or ms without anything entering your conversation (hook on_clock)."
+      "description": "Run a program every N cycles or ms without anything entering your conversation (hook on_clock)."
     },
     "choose": {
-      "_description": "Clock letter, quiet hook, or a hook that tells you only when there is news: what each adds to your history."
+      "description": "Clock letter, quiet hook, or a hook that tells you only when there is news: what each adds to your history."
     }
   },
   "wake_me": "# Wake me every N cycles\n\nCall clock_register with op add, a name, every and text; leave out box:\n{\"op\": \"add\", \"name\": \"check-inbox\", \"every\": 10, \"text\": \"Check data/ for new files.\"}\nEvery 10 cycles you get a user message \"[aos] clock: cycle 30. Check data/ for new files.\". Remove it with {\"op\": \"rm\", \"name\": \"check-inbox\"}; list with {\"op\": \"ls\"}.\nTo wake another agent, give box = its STACK/queue. Shell: aos-clock-register add --every N --box BOX NAME TEXT.\nThe register belongs to the clock in $AOS_CLOCK; give daemon D (shell -d D) to use the clock D/clock instead.",

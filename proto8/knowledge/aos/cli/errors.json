@@ -2,10 +2,10 @@
  "_description": "# Errors and retries\n\nRead the program name, error code and reason before choosing whether to retry.\n\nErrors use stderr: `PROGRAM: error: Code reason`, usually exit 1. `PROGRAM: warning: text` is a reminder and may exit 0. stdout contains results. Exit 10 means \"nothing there\" (no letter, no lock, no reply yet). A child program can report its own error; do not treat it as a parsing error in aos-agent. See also general errors (`aos/errors.json`).\n",
  "_index": {
   "codes": {
-   "_description": "What the common command error codes mean and what to fix."
+   "description": "What the common command error codes mean and what to fix."
   },
   "timeouts": {
-   "_description": "DaemonMissing, DaemonFailed, WaitFailed, AnswerMissing: check before sending again."
+   "description": "DaemonMissing, DaemonFailed, WaitFailed, AnswerMissing: check before sending again."
   }
  },
  "codes": "# Codes you will meet\n\n- `ArgumentsBad`, `FlagUnknown`, `CommandUnknown`: fix the call. Follow its usage or the suggested level of `--help`.\n- `CommandMissing`: put the named dependency (such as aos-exec, aos-json, aos-post, bwrap) on PATH.\n- `TargetMissing`: give `--target` or set `$AOS_AGENT`.\n- `InstanceMissing` (daemon-ctl: `ProcMissing`): the name is not on the table. Check `ctl ls`.\n- `InterfaceMissing`, `ToolsMissing`, `LlmMissing`, `HooksMissing`, `SystemMissing`: the definition lacks the required interface or file. Fix the definition or choose a supported action.\n- `PhaseBad`: use start for stopped, wake for sleeping; follow the reason.\n- `SessionBad`: the screen is answering; wait before close, stop or rm.\n- `TrustMissing`: claude on the eca screen waits at its trust-this-folder prompt; nothing was typed. A person must choose: attach (`aos-agent open`) or run `claude` in that folder once. Do not answer the prompt for them.\n- `AddRejected`/`CtlRejected`: read the daemon or judge's code and reason. Fix that cause before sending again.\n- `StackMissing`: `AOS_STACK` is not set; the parts (aos-loop, aos-fsm, aos-daemon) need it.\n",

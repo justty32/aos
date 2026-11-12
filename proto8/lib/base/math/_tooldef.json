@@ -1,4 +1,4 @@
-{"description": "Compute one arithmetic expression and return the result. Only numbers, + - * / // % **, parentheses and signs; no functions (abs, sqrt), no variables. Changes nothing. Examples:\n- {\"expr\": \"17*23\"} -> 391\n- {\"expr\": \"(2+3)**2 // 4\"} -> 6\nErrors: ExprBad (anything it cannot compute, e.g. 1/0 or sqrt(2)), ArgumentsBad. Details: knowledge_read aos/tools/math.json.",
+{"description": "Compute one arithmetic expression and return the result. Only numbers, + - * / // % **, parentheses and signs; no functions (abs, sqrt), no variables. Changes nothing. Examples:\n- {\"expr\": \"17*23\"} -> 391\n- {\"expr\": \"(2+3)**2 // 4\"} -> 6\nErrors: ExprBad (anything it cannot compute, e.g. 1/0 or sqrt(2)), ArgumentsBad.",
  "parameters": {"type": "object",
                 "properties": {"expr": {"type": "string", "description": "the expression, e.g. 17*23"}},
                 "required": ["expr"]},

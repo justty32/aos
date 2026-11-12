@@ -2,13 +2,13 @@
  "_description": "# What is in a definition folder\n\nA definition is a folder that says what an agent is (its source code). Its `interfaces.json` names where the other files are, so another definition may name them differently. Below are the names in the two stock templates, `agent-fsm` and `eca-claude` (copy one with `agent_def`).\n\n- Files both templates have: `aos/definition.json#/files`.\n- Files only one of them has: `aos/definition.json#/only`.\n- Which files you have your own copy of in your stack: `aos/definition.json#/overlay`.\n- How the two kinds of body differ: `aos/body.json`.\n",
  "_index": {
   "files": {
-   "_description": "The files both templates have: interfaces.json, _entry, loop.json, tools.json, llm.json, system.txt, hooks.json, subagents.json, .env ..."
+   "description": "The files both templates have: interfaces.json, _entry, loop.json, tools.json, llm.json, system.txt, hooks.json, subagents.json, .env ..."
   },
   "only": {
-   "_description": "Files only agent-fsm has (body.json, fsm.json, the cell programs) or only eca-claude has (cli.json, screen/)."
+   "description": "Files only agent-fsm has (body.json, fsm.json, the cell programs) or only eca-claude has (cli.json, screen/)."
   },
   "overlay": {
-   "_description": "Which definition files have your own copy in your stack, what the copy holds, and which tool changes it."
+   "description": "Which definition files have your own copy in your stack, what the copy holds, and which tool changes it."
   }
  },
  "files": "# Files in both templates\n\n- `interfaces.json`: where the other files are (keys `tools`, `llm`, `llm_keys`, `history`, `hooks`, `system`, and `entry` or `screen`). aos-agent reads only this to find them.\n- `_entry`: what runs when the folder itself is run.\n- `loop.json`: the loop: what runs each beat, the pause between beats (`interval_ms`), and `on_start` / `on_stop` (they fire the `after_start` / `after_stop` hooks).\n- `tools.json`: the tools: the packs listed in `\"$override\"` plus a few cells (`aos/packs.json`).\n- `llm.json`: brain settings, like `{\"model\": \"sonnet\"}`; `llm_keys` in interfaces.json says which keys count.\n- `system.txt`: the system text. eca-claude declares it but has no file (= empty).\n- `hooks.json`: hooks. Both have `timer` (on_clock every 5 minutes, does nothing) and `mail_notify` (on_clock every minute: one message when new letters came; `aos/mailbox.json#/check`).\n- `subagents.json`: `max_subagents`, how many subagents you may have at once (tool `subagent`).\n- `_metainfo.json` (summary, cost) and `README.md`: for people and checks.\n- `.env` (optional; not in the templates): environment variables set when the folder runs.\n",

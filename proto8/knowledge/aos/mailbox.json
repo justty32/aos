@@ -2,16 +2,16 @@
  "_description": "# Mailbox: letters between agents\n\nEvery stack has a mailbox folder `<stack>/mailbox/`. Agents send each other letters there, and people send letters to agents. It is separate from your `queue/`: a letter does not enter your conversation by itself. By default a hook tells you when new letters came, with one message `[aos] new_mail: 2 new letters from bob, amy. ...`; then call `mailbox_peek`.\n\n- see what waits: `mailbox_peek` (see `aos/mailbox.json#/tools`)\n- read: `mailbox_read`\n- send or answer: `mailbox_send`\n- what a letter means for you, and when you must answer: `aos/mailbox.json#/rules`\n- the new-mail message, and how to turn it off or change how often: `aos/mailbox.json#/check`\n",
  "_index": {
   "tools": {
-   "_description": "mailbox_peek, mailbox_read and mailbox_send: one example each."
+   "description": "mailbox_peek, mailbox_read and mailbox_send: one example each."
   },
   "rules": {
-   "_description": "The six STATUS words, and when you must answer a letter."
+   "description": "The six STATUS words, and when you must answer a letter."
   },
   "check": {
-   "_description": "How you hear about new letters: the mail_notify hook (on by default), turning it off (do not disturb) or changing its interval, other ways."
+   "description": "How you hear about new letters: the mail_notify hook (on by default), turning it off (do not disturb) or changing its interval, other ways."
   },
   "check_hook": {
-   "_description": "The mail_notify hook in detail: what it sends and when, what it remembers, what happens when it breaks, writing your own."
+   "description": "The mail_notify hook in detail: what it sends and when, what it remembers, what happens when it breaks, writing your own."
   }
  },
  "tools": "# Mailbox tools\n\n- `mailbox_peek` `{}`: `2 letters waiting ...`, then one line per letter: `letter TAB from TAB STATUS TAB title`. No letters = `no letters waiting`. It takes nothing out.\n- `mailbox_read` `{}`: read the oldest letter. `{\"all\": true}` reads every waiting letter. `{\"keep\": true}` keeps it in `mailbox/archive/` (by default a read letter is deleted). It prints letter, from, status, title, what, outputs, not_done, decide, reply_to, in_reply_to.\n- `mailbox_send`: `{\"to\": \"bob\", \"status\": \"REQUEST\", \"title\": \"one line that makes sense alone\", \"what\": \"what bob should do and when it counts as done\"}`. An agent on another daemon: add `\"daemon\": \"<its daemon folder>\"`. Answer a letter: `{\"box\": \"<its reply_to>\", \"in_reply_to\": \"<its letter name>\", \"status\": \"DONE\", \"title\": \"...\", \"what\": \"...\"}`. The answer comes back to your own mailbox.\n\nErrors: `aos/errors.json#/common/mail`. Humans use the command `aos-mailbox` (see `aos/cli/mailbox.json`).\n",

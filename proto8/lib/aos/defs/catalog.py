@@ -1,4 +1,4 @@
-"""Inspect public definition declarations and group agents by tools, endpoint and knowledge."""
+"""Inspect public definition declarations and group agents by tools and endpoint."""
 import json
 import os
 from pathlib import Path
@@ -115,25 +115,14 @@ def describe(path, root):
     endpoint = read(path / llm_file).get('model', 'default')
     if not isinstance(endpoint, str):
         raise ValueError('model in llm.json must be a string')
-    knowledge = None
-    if agent.get('knowledge') is not None:
-        filename = agent['knowledge']
-        if not isinstance(filename, str) or not filename:
-            raise ValueError('aos-agent.knowledge must name a file')
-        knowledge_file = path / filename
-        knowledge = read(knowledge_file).get('base')
-        if isinstance(knowledge, str):
-            knowledge = relative(knowledge_file.parent / knowledge, root)
-        elif knowledge is not None and not isinstance(knowledge, dict):
-            raise ValueError('knowledge base must be a path or environment object')
     table_dir = (path / agent['tools']).parent
     row.update(tools=sorted({tool_key(table_dir, t['path'], root) for t in entries.values()}),
-               endpoint=endpoint, knowledge=knowledge)
+               endpoint=endpoint)
     return row
 
 
 def signature(row):
-    return json.dumps({k: row[k] for k in ('tools', 'endpoint', 'knowledge')},
+    return json.dumps({k: row[k] for k in ('tools', 'endpoint')},
                       sort_keys=True, separators=(',', ':'))
 
 

@@ -2,7 +2,7 @@
  "_description": "# Tool json_multi_set\n\nSet several places at once: like `json_set` for each item, in the order given. Each item is `{\"path\": \"FILE#/POINTER\", \"value\": any JSON}`; values are stored exactly as given, `.../-` appends. One line per item: the path, a TAB, then `ok ...` or `[error] CODE reason`.\n\n```json\n{\"items\": [{\"path\": \"cfg.json#/max\", \"value\": 30}, {\"path\": \"cfg.json#/tags/-\", \"value\": \"c\"}]}\n```\nprints\n```text\ncfg.json#/max\tok cfg.json#/max\ncfg.json#/tags/-\tok cfg.json#/tags/2\n```\n\n- Items are done one by one and nothing is undone: if item 2 fails, item 1 stays written and item 3 is still done. Any failed = a last line `json_multi_set: error: PlacesFailed N of M ...`, exit code 1; fix only the `[error]` lines and send those again.\n- Later items see what earlier ones wrote (same file is fine).\n- `\"parents\": true` applies to every item. One place only: `json_set`. Path: `aos/tools/json_get.json#/path`.\n",
  "_index": {
   "errors": {
-   "_description": "json_multi_get, json_multi_set errors and what to do."
+   "description": "json_multi_get, json_multi_set errors and what to do."
   }
  },
  "errors": "# json_multi_get, json_multi_set: errors\n\n- `[error] CODE reason` on one line: that place failed with the code json_get or json_set would give (`aos/tools/json_get.json#/errors`, `aos/tools/json_set.json#/errors`); the other places are not affected.\n- `PlacesFailed` (last line, exit code 1): how many places failed. The rest were done; nothing is undone. Send again only the failed ones.\n- `ArgumentsBad` (only line): `paths` / `items` is not a non-empty array; nothing was done. Inside an item (not a `{\"path\", \"value\"}` object, unknown key, no `value`): that item's `[error]` line.\n"

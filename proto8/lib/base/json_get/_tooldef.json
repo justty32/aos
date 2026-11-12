@@ -1,5 +1,5 @@
 {
- "description": "Get the value at one place in a JSON file, printed as one line of JSON. If it is bigger than max_bytes you get a line \"[too big] TYPE, SIZE ...\" instead: look inside with json_ls, get a deeper path, or give full: true. Example: {\"path\": \"cfg.json#/states/think\"}. $ref/$env objects are returned as written. Details: knowledge_read aos/tools/json_get.json.",
+ "description": "Get the value at one place in a JSON file, printed as one line of JSON. If it is bigger than max_bytes you get a line \"[too big] TYPE, SIZE ...\" instead: look inside with json_ls, get a deeper path, or give full: true. Example: {\"path\": \"cfg.json#/states/think\"}. $ref/$env objects are returned as written.",
  "parameters": {
   "type": "object",
   "properties": {

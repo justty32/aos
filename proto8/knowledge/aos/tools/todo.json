@@ -2,13 +2,13 @@
  "_description": "# Tool todo\n\nYour own to-do list for a long task. It is kept in your stack, not in your history: after a summary it is still there. It is not put into your prompt by itself: call `ls` to see it again.\n\nUse it when a task has 3 or more steps: write the steps first, mark one `in_progress` when you start it, `completed` when it is done; keep at most one `in_progress`. One op per call; every op prints the whole list:\n\n```json\n{\"op\": \"set\", \"items\": [\"read the config\", \"write the parser\", \"add tests\"]}\n{\"op\": \"mark\", \"n\": 1, \"status\": \"completed\"}\n{\"op\": \"mark\", \"n\": 2, \"status\": \"in_progress\"}\n```\nprints\n```text\n1 [x] read the config\n2 [>] write the parser\n3 [ ] add tests\n... 1 of 3 completed\n```\n\nAn empty list prints `... empty (use set or add)`.\n\nThe ops (ls, set, add, mark) and limits: `aos/tools/todo.json#/ops`. Where it is saved, other agents' lists: `aos/tools/todo.json#/where`. Errors: `aos/tools/todo.json#/errors`.\n",
  "_index": {
   "ops": {
-   "_description": "todo ops (ls, set, add, mark), the json output and the limits."
+   "description": "todo ops (ls, set, add, mark), the json output and the limits."
   },
   "where": {
-   "_description": "Where todo keeps the list; each agent has its own; one call at a time."
+   "description": "Where todo keeps the list; each agent has its own; one call at a time."
   },
   "errors": {
-   "_description": "todo errors and what to do."
+   "description": "todo errors and what to do."
   }
  },
  "ops": "# todo: ops\n\n- `ls`: print the list; it never writes anything. `\"json\": true` prints one JSON object: `items` (each `n`, `text`, `status`), `counter_completed`, `updated_at` (UTC; null before the first write).\n- `set`: replace the whole list with `items`. An item is a string (status `pending`) or `{\"text\", \"status\"}`; both may be mixed. `[]` clears it. There is no remove op: `set` the list without that item, then read the new numbers.\n- `add`: add `text` as `pending` at the end; `\"after\": N` puts it after item N, `0` at the top.\n- `mark`: set item `n` (from 1) to `status`: `pending`, `in_progress` or `completed`.\n\nMarks: `[x]` completed, `[>]` in_progress, `[ ]` pending. Two or more in_progress add a line `... note: 2 items are in_progress (keep at most one)`.\n\nLimits: at most 50 items; each text one line, at most 300 characters (spaces at both ends dropped). More is `ArgumentsBad`; nothing is cut.\n",

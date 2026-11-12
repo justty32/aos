@@ -2,25 +2,25 @@
  "_description": "# Daemon procs: direct control, bypassing the judge\n\nUse aos-daemon-ctl for arbitrary procs on one daemon; a sent letter is not proof that the requested change finished. To go through the judge, use `aos-agent ctl` (`aos/cli/agent.json`).\n",
  "_index": {
   "add": {
-   "_description": "add a loop config or a run-once program; where prints its stack."
+   "description": "add a loop config or a run-once program; where prints its stack."
   },
   "lifecycle": {
-   "_description": "stop/start, sleep/wake, pause/resume and rm for any proc."
+   "description": "stop/start, sleep/wake, pause/resume and rm for any proc."
   },
   "letters": {
-   "_description": "Letters are claimed, not proven applied; --reply-to; aos-daemon-ctl never goes through the judge."
+   "description": "Letters are claimed, not proven applied; --reply-to; aos-daemon-ctl never goes through the judge."
   },
   "ls": {
-   "_description": "ls reads the table; ping asks the daemon; poke wakes it now."
+   "description": "ls reads the table; ping asks the daemon; poke wakes it now."
   },
   "shutdown": {
-   "_description": "shutdown stops the whole daemon; every proc sleeps and wakes at the next start."
+   "description": "shutdown stops the whole daemon; every proc sleeps and wakes at the next start."
   },
   "prune": {
-   "_description": "prune checks rows; --older-than previews old stopped or sleeping rows; --apply detaches them."
+   "description": "prune checks rows; --older-than previews old stopped or sleeping rows; --apply detaches them."
   },
   "sweep": {
-   "_description": "sweep runs one aos-sweeper round now; sweep --purge deletes all stderr archives."
+   "description": "sweep runs one aos-sweeper round now; sweep --purge deletes all stderr archives."
   }
  },
  "add": "# add: attach a proc\n\n```sh\naos-daemon-ctl -d /srv/d add --name tick tick.json      # a loop config: runs again and again\naos-daemon-ctl -d /srv/d add --name job job.sh -- 3     # runs once; ARGS after --\naos-daemon-ctl -d /srv/d where --stack tick             # /srv/d/procs/tick\n```\n\nadd prints a letter name. It detects a loop config (an object with `exec` and no `argv`) by its structure; other targets run once as exec procs, and only those take ARGS after `--`. A definition folder runs its `_entry`; to attach an agent use `aos-agent ctl add`. Exit 0 of a run-once proc removes its row; a known nonzero exit stays `stopped` with a reason (`failed to start: exited within 3s of wake/start (code 3)`). `--auto-restart` restarts it whenever it exits. `--ws`, `--stack`, `--ws-json`, `--stack-json`, `--path-json`, `--limits` work as for `aos-agent ctl add`. where on a name not on the table = `ProcMissing`.\n",

@@ -1,5 +1,5 @@
 {
- "description": "Letters from the clock. An entry sends a fixed text to a mailbox every N cycles (at cycles N, 2N, 3N...). Leave out box to send to your own queue: the text then wakes you up as a user message every N cycles. op is add, rm or ls. Examples:\n- wake me every 10 cycles: {\"op\": \"add\", \"name\": \"check-inbox\", \"every\": 10, \"text\": \"Check data/ for new files.\"}\n- remove it: {\"op\": \"rm\", \"name\": \"check-inbox\"}\n- list all entries: {\"op\": \"ls\"}\nErrors: ArgumentsBad, OpUnknown, EntryExists, EntryMissing, ClockMissing, RegisterBad, WriteFailed.\nDetails: knowledge_read aos/clock.json.",
+ "description": "Letters from the clock. An entry sends a fixed text to a mailbox every N cycles (at cycles N, 2N, 3N...). Leave out box to send to your own queue: the text then wakes you up as a user message every N cycles. op is add, rm or ls. Examples:\n- wake me every 10 cycles: {\"op\": \"add\", \"name\": \"check-inbox\", \"every\": 10, \"text\": \"Check data/ for new files.\"}\n- remove it: {\"op\": \"rm\", \"name\": \"check-inbox\"}\n- list all entries: {\"op\": \"ls\"}\nErrors: ArgumentsBad, OpUnknown, EntryExists, EntryMissing, ClockMissing, RegisterBad, WriteFailed.",
  "env": [
   "AOS_CLOCK"
  ],

@@ -1,6 +1,6 @@
 """file_walk - grep 與 glob 共用的走樹：隱藏名、.gitignore（問 git）、資料夾捷徑不跟進、只把一般檔當檔、掃描預算與計數；另含兩支共用的檔名樣式（* ? [..] **）。
 
-設計與裁定：thinking 2026-11-11 new-tools 01（G1 兩支、G2 純 Python、G3「預設跳過，問 git」）。不是工具（沒有 _entry），是 lib/base 兩支工具的同層共用模組（同 lib/agent/knowledge_fs.py 的做法：不 import 隔壁工具）。
+設計與裁定：thinking 2026-11-11 new-tools 01（G1 兩支、G2 純 Python、G3「預設跳過，問 git」）。不是工具（沒有 _entry），是 lib/base 兩支工具的同層共用模組（不 import 隔壁工具）。
 走法：深度優先、每層照名字排；資料夾先吐自己再進去。. 開頭的名字預設不進不吐（hidden=True 或樣式明寫那段才算）；在 git 工作樹裡時 .git 與 git 說擋掉的都跳過。
 捷徑：連到資料夾的吐成 dir 但不進（免得繞圈、免得拉進整個 /）；連到檔的照吐、路徑是捷徑自己的；壞掉的不吐不計。fifo、socket、裝置吐成 other（呼叫者不讀，免得卡住）。
 預算：MAX_SECONDS 秒或 MAX_ENTRIES 個名字先到先停（stopped 記停在哪）；測試直接改這兩個模組常數或傳參數，不靠環境變數。

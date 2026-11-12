@@ -30,7 +30,7 @@
 | [`loop.json`](../../../../../proto8/templates/agent-fsm/loop.json) | Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks (lib… |
 | [`subagents.json`](../../../../../proto8/templates/agent-fsm/subagents.json) | 設定（鍵：max_subagents） |
 | [`system.txt`](../../../../../proto8/templates/agent-fsm/system.txt) | （檔頭沒有一句話） |
-| [`tools.json`](../../../../../proto8/templates/agent-fsm/tools.json) | 設定（鍵：$override、tools） |
+| [`tools.json`](../../../../../proto8/templates/agent-fsm/tools.json) | 設定（鍵：$override） |
 | [`wait.py`](../../../../../proto8/templates/agent-fsm/wait.py) | wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。 |
 
 ## `proto8/templates/daemon-root/`
@@ -45,7 +45,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`cli.json`](../../../../../proto8/templates/eca-claude/cli.json) | 設定（鍵：kind、flags、print_flags、tools_flags、timeout_ms） |
+| [`cli.json`](../../../../../proto8/templates/eca-claude/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
 | [`hooks.json`](../../../../../proto8/templates/eca-claude/hooks.json) | Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added… |
 | [`interfaces.json`](../../../../../proto8/templates/eca-claude/interfaces.json) | 設定（鍵：aos-agent） |
 | [`llm.json`](../../../../../proto8/templates/eca-claude/llm.json) | 設定（鍵：model） |

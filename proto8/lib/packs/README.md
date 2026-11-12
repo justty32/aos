@@ -20,7 +20,7 @@
 
 十四支的程式都在 [`lib/aos_json.py`](../aos_json.py)（multi 兩支在 [`lib/aos_json_multi.py`](../aos_json_multi.py)），各夾只是殼；圖紙 [01-規劃](../../thinking/2026-11/12/json-tools/01-規劃.md)。
 
-## 其他九包（兩個範本都預設開）
+## 其他八包（兩個範本都預設開）
 
 | 包 | 檔 | 工具 |
 |---|---|---|
@@ -31,12 +31,11 @@
 | 子 agent | [subagent.json](subagent.json) | subagent（自己生的）、agents_ctl（daemon 上任何一隻）、fork（把當下的自己連對話複製一份給一個 goal、只拿回短結論；11-11 使用者「把fork單獨拉出來做為工具」「eca不給fork。」；11-11 晚「subagent相關的工具都還是別給eca吧」＝eca 範本整包不掛） |
 | 定義 | [def.json](def.json) | agent_def、tools_def（從 Python 骨架做新工具、檢查工具；11-10 深夜使用者「3.對」） |
 | 信箱 | [mailbox.json](mailbox.json) | mailbox_peek、mailbox_read、mailbox_send |
-| 記憶 | [knowledge.json](knowledge.json) | knowledge_read、knowledge_write——只寫路徑；用哪個庫由疊這包的那份 `tools.json` 在同名格補 `env`（`AOS_KNOWLEDGE`）。範本只替 knowledge_read 補（出廠庫）；knowledge_write 11-11 起不給庫（使用者「不給預設，要自己透過旗標指定或環境變數設定，或是工具呼叫內給。如果都沒有，那就報錯。」），腦在呼叫裡給 `root` 或人另配 |
 | 目標 | [goal.json](goal.json) | goal（eca 不掛：11-11 晚「eca基本都有goal，所以goal不用給eca」；一支分動作 get、set、done、pause、resume；自己停下來〔答話不叫工具〕又沒信時，身體丟一則 `[aos] goal: …` 提醒，連續十次沒進展就暫停；11-11 使用者「todo/goal也一起做吧」、裁「一支 goal 分動作」，[goal 02](../../thinking/2026-11/11/goal/02-裁定與施工結果.md)） |
 
 ## 怎麼用、怎麼關
 
-每份就是一般的工具清單（`{"tools": {名: {"path": …}}}`，路徑寫 `{"$env": "AOS_HOME", "$path": "/lib/…"}`，整夾 `cp -r` 出去仍通）。範本的 `tools.json` 用 `"$override": [包, 包, …]` 疊起來，自己只剩必要的 `env` 格（現在只有 knowledge_read 那格）。
+每份就是一般的工具清單（`{"tools": {名: {"path": …}}}`，路徑寫 `{"$env": "AOS_HOME", "$path": "/lib/…"}`，整夾 `cp -r` 出去仍通）。範本的 `tools.json` 用 `"$override": [包, 包, …]` 疊起來，自己只剩必要的格（例 eca 範本的 `"do_task": null`）。
 
 - **關掉一包**：從範本（或 agent 自己覆蓋層）的 `$override` 串拿掉那一項；其他包不受影響。
 - **關掉一支**：`aos-agent tools rm 名`（在覆蓋層寫 `"名": null`）。

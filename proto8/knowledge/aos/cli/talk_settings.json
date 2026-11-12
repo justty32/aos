@@ -2,19 +2,19 @@
  "_description": "# Messages, screens and agent settings\n\nSend messages and change one agent's overlays without modifying its definition. Changes are saved in the agent's stack; the definition is not changed.\n",
  "_index": {
   "say_listen": {
-   "_description": "aos-agent say queues a message; listen prints the answer."
+   "description": "aos-agent say queues a message; listen prints the answer."
   },
   "chat_screen": {
-   "_description": "aos-agent chat for line-by-line talk; open, close, watch for a screen."
+   "description": "aos-agent chat for line-by-line talk; open, close, watch for a screen."
   },
   "tools": {
-   "_description": "aos-agent tools: ls, get, add, rm, reset this agent's toolbox."
+   "description": "aos-agent tools: ls, get, add, rm, reset this agent's toolbox."
   },
   "llm": {
-   "_description": "aos-agent llm: list, set, rm, reset changed brain keys; aos-llm for the brain service."
+   "description": "aos-agent llm: list, set, rm, reset changed brain keys; aos-llm for the brain service."
   },
   "system": {
-   "_description": "aos-agent system: get, set, reset this agent's system text."
+   "description": "aos-agent system: get, set, reset this agent's system text."
   }
  },
  "say_listen": "# say and listen\n\n```sh\naos-agent say -t bob \"what time is it\"     # prints the letter name\naos-agent listen -t bob --timeout-s 60     # waits for the answer, prints its text\naos-agent listen -t bob --last 3           # blocks: == #N, > question, answer\naos-agent listen -t bob --follow           # new exchanges as they come\n```\n\nsay: words are joined with spaces; no words or `-` reads stdin; terminal stdin with no words = `ArgumentsBad`. Paused or sleeping agents still queue messages. listen without a timeout can wait forever; `--timeout-s S` or `--timeout-cycles N` gives up with `AnswerMissing`. `--follow` (`-f`) works with or without `--last`. Do not combine a timeout with `--last` or `--follow`. Ctrl-C in follow exits 0; while waiting it exits 130.\n",

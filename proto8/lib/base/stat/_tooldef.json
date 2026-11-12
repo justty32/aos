@@ -1,4 +1,4 @@
-{"description": "Show the attributes of one file or folder as JSON: type, mtime, mode; files add size, exec, text, counter_lines, format (json, python, markdown, shell, text), JSON files add top (a summary of the top level); folders add counter_children and aos; links add link_to. Errors: FileMissing. Details: knowledge_read aos/tools/stat.json.",
+{"description": "Show the attributes of one file or folder as JSON: type, mtime, mode; files add size, exec, text, counter_lines, format (json, python, markdown, shell, text), JSON files add top (a summary of the top level); folders add counter_children and aos; links add link_to. Errors: FileMissing.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "path relative to your workspace, or absolute"}},
                 "required": ["path"]},

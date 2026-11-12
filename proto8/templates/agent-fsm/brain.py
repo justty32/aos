@@ -1,4 +1,4 @@
-# brain.py [--system FILE] [--tools FILE] [--knowledge NAME] [--history full|task] [--max-tool-calls N] - think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。
+# brain.py [--system FILE] [--tools FILE] [--history full|task] [--max-tool-calls N] - think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。
 # 寄出去、收回信是下一格 wait（wait.py：aos-llm send／recv，經 $AOS_LLM_KERNEL〔llm kernel 的 stack〕的 llm kernel；thinking 2026-11-04 think-as-function 03 § 1）。
 # 結束碼（fsm.json 照碼分岔，N-36）：0＝請求寫好了（→ wait）；10＝history 最後一則不是 user／tool（上一題已答完、或人改了 history）＝沒事做（→ idle）。
 # 請求＝llm kernel 請求信的 body：{"endpoint"?: 代號, "request": {"messages", "tools"?, 調整鍵…}}（真正的模型名綁在 kernel 的 endpoint 包上）。
@@ -8,21 +8,14 @@
 # 寫新請求時順手刪 $AOS_STACK/think/pending.txt（上一封的名字）：新請求取代舊的，wait 會重寄。
 # --system FILE：讀成一則 system 放最前面、不存進 history（P-41）。沒給＝interfaces.json 宣告的 system（11-11 self-system，使用者裁「fsm 取代、eca 附加」）：
 #   $AOS_STACK/<宣告相對路徑> 在＝整份用這隻自己那份（aos-agent system set／self_system 寫的，取代定義那份），否則定義那份；每格重讀＝下一格生效。
-#   都不在、或沒宣告＝沒有 system；給了 --system＝照它、不看 stack（同 --tools）。文字空＝不送 system 訊息（知識庫根照接）。
-# --knowledge NAME（11-05 晚 agent-knowledge K2）：登記名 NAME 的工具（範本是 knowledge_read）叫一次 {"op": "read"}，它印的知識庫根接在 system 後面、
-#   同一則 system 訊息（每格重叫＝知識庫改了下一題就看到；不存進 history）。叫的是腦之後叫的同一個工具＝腦看到的根跟它自己查的一樣。
-#   工具清單（疊覆蓋層後）沒有 NAME＝不給根（這隻把 knowledge 拿掉了）；叫了起不來、退非 0、或 30 秒沒叫完（整群收掉）＝
-#   warning 一行（工具自己那行照樣在 stderr）、system 裡改放一句「[aos] warning: knowledge base is not available right now: 原因」、照樣寫請求
-#   （11-10 TS，圖紙 07 K01：知識庫一時讀不到不擋問腦，狀態不壞；原本是 MemoryFailed 退 1）。
-#   工具最後一行是「名: error: KnowledgeMissing …」＝沒被指定庫（11-10 深夜 tool-packs：工具沒有預設位置）＝安靜：不印 warning、
-#   工具那行也不轉印、system 裡什麼都不放。
+#   都不在、或沒宣告＝沒有 system；給了 --system＝照它、不看 stack（同 --tools）。文字空＝不送 system 訊息。
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝不給工具）；腦看到的工具名＝登記名。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝改用這隻自己那份（aos-agent tools add／rm 寫的，只存差異、"$override" 指回定義那份，11-10）。
 # hook（lib/agent/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：有 tool_added hook 時，工具清單比上次（$AOS_STACK/hook_tools_seen.json）
 #   多出來的名字一個觸發一次（第一次只記不觸發；沒有這種 hook＝刪那份檔）。hook 停下＝HookFailed／HooksBad 退 1。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1（P-20）。--help 印英文用法；Ctrl-C 退 130。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
 # on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
-import json, os, re, signal, subprocess, sys
+import json, os, signal, subprocess, sys
 from pathlib import Path
 
 _import_paths = [str(Path(__file__).resolve().parent)]
@@ -53,25 +46,19 @@ finally:
         sys.path.remove(_path)
 
 HELP = """\
-usage: brain.py [--system FILE] [--tools FILE] [--knowledge NAME] [--history full|task] [--max-tool-calls N]   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
+usage: brain.py [--system FILE] [--tools FILE] [--history full|task] [--max-tool-calls N]   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
 The think cell: build the request to the brain from $AOS_STACK/history.jsonl (plus system and
 tools) and write $AOS_STACK/think/request.json. Exit 0 = written (go wait); 10 = nothing to answer.
 --system FILE: a system message in front (default: the system file declared in interfaces.json,
 this agent's own copy in $AOS_STACK when it has one); --tools FILE: the aos-tools registry;
 --history full|task: include all history (default), or only messages from the last user.
 --max-tool-calls N: omit tools after N calls in the current task (non-negative integer).
---knowledge NAME: call tool NAME with {"op": "read"} and append the knowledge base root it prints
-to the system message (skipped when NAME is not among the tools). If that call fails or
-takes over 30 s, one warning line goes to stderr, the system message says "[aos] warning: knowledge
-base is not available right now: <reason>" instead, and the request is written as usual. If the tool
-answers KnowledgeMissing (no knowledge base was given to it), nothing is added and nothing printed.
 Hooks: with a tool_added hook, each tool name new since the last run (hook_tools_seen.json;
 the first run only records) fires it once. A failing hook = HookFailed, exit 1.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 USAGE = HELP.splitlines()[0].removeprefix("usage: ")
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
-KNOWLEDGE_TIMEOUT_S = 30                           # --knowledge 叫根的逾時（11-05 夜第二輪邊緣：原本沒逾時，knowledge 卡住＝think 格卡住）
 
 
 def die(code, reason):
@@ -86,7 +73,7 @@ def here(path):
 
 
 try:
-    values, rest = aos_flags.parse(sys.argv[1:], {}, multi={'--system': '--system', '--tools': '--tools', '--knowledge': '--knowledge', '--history': '--history', '--max-tool-calls': '--max-tool-calls'}, help=HELP)
+    values, rest = aos_flags.parse(sys.argv[1:], {}, multi={'--system': '--system', '--tools': '--tools', '--history': '--history', '--max-tool-calls': '--max-tool-calls'}, help=HELP)
 except aos_flags.Error as e:
     die(e.code, e)
 if rest:
@@ -198,48 +185,6 @@ if system_file:
             system_text = f.read()                                       # 每次從檔讀，不存進 history
     except OSError as e:
         die("SystemMissing", "cannot read %s: %s" % (system_file, e))
-knowledge = opts.get("--knowledge")
-
-
-def knowledge_root():
-    """叫 knowledge_read 拿知識庫根：(根, None)；叫不成＝(None, 原因)（11-10 TS，圖紙 07 K01：知識庫一時讀不到不擋問腦）；
-    工具回 KnowledgeMissing（沒被指定庫）＝(None, None)：安靜不帶根。"""
-    try:
-        p = subprocess.Popen(TOOLS + ["call", knowledge], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                             text=True, start_new_session=True)   # 繼承自己的 stack；aos-tools call 算小格。stderr 先收著：KnowledgeMissing 要安靜
-    except OSError as e:
-        return None, "aos-tools cannot start: %s" % e
-    try:
-        out, err = p.communicate('{"op": "read"}', timeout=KNOWLEDGE_TIMEOUT_S)
-    except subprocess.TimeoutExpired:            # 卡住的 knowledge 不讓 think 格一直卡（11-05 夜第二輪邊緣）：整群收掉
-        for sig in (signal.SIGTERM, signal.SIGKILL):
-            try:
-                os.killpg(p.pid, sig)
-                p.wait(2)
-                break
-            except subprocess.TimeoutExpired:
-                continue
-            except OSError:
-                break
-        return None, "tool %s (op read of the root) did not finish in %d s (killed)" % (knowledge, KNOWLEDGE_TIMEOUT_S)
-    lines = [l for l in out.splitlines() if l.strip()]
-    if p.returncode == 1 and lines and re.match(r"\S+: error: KnowledgeMissing( |$)", lines[-1]):
-        return None, None                        # 工具沒被指定庫（11-10 深夜 tool-packs「沒有預設，你得自己指定」）＝安靜不帶根
-    sys.stderr.write(err)                        # 其他情況工具自己那行照樣在 stderr（工具自己說哪裡壞）
-    if p.returncode != 0:
-        return None, "tool %s (op read of the root) exited %d" % (knowledge, p.returncode)
-    return out.strip(), None
-
-
-if knowledge and any(t["function"]["name"] == knowledge for t in tools):   # 這隻把 knowledge 拿掉了＝不給根
-    root, why = knowledge_root()
-    if why:                                      # 讀不到知識庫：warning 一行、照樣問腦，system 裡說一句（狀態不壞）
-        aos_flags.warn("agent-fsm", "%s; asking the brain without the knowledge base" % why)
-        root = aos_flags.aos_note("warning", "knowledge base is not available right now: %s" % why)
-    elif root:
-        root = aos_flags.aos_note("knowledge", "root of the knowledge base (from tool %s; call it for more):\n\n%s" % (knowledge, root))
-    if root:
-        system_text = (system_text.rstrip("\n") + "\n\n" if system_text.strip() else "") + root + "\n"
 system = [{"role": "system", "content": system_text}] if system_text else []
 
 

@@ -168,11 +168,11 @@ class SuccessLines(Base):
 
 class LongListing(Base):
     def test_ls_long_columns_and_no_values(self):
-        self.ok("--file", self.reg, "add", "--envs", "SECRET_KEY=hunter2", "--envs", "AOS_KNOWLEDGE=/kb", TOOL)
+        self.ok("--file", self.reg, "add", "--envs", "SECRET_KEY=hunter2", "--envs", "MY_DIR=/kb", TOOL)
         r = self.ok("--file", self.reg, "ls", "-l")
         cols = r.stdout.rstrip("\n").split("\t")
         self.assertEqual(cols, ["peek_now_time", "dir", str(TOOL), "%s#/tools/peek_now_time" % self.reg,
-                                json.dumps(str(TOOL)), "AOS_KNOWLEDGE,SECRET_KEY"])
+                                json.dumps(str(TOOL)), "MY_DIR,SECRET_KEY"])
         self.assertNotIn("hunter2", r.stdout)
         self.assertNotIn("hunter2", self.ok("--file", self.reg, "ls", "--json").stdout)
 

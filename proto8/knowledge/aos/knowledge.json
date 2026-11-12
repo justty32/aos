@@ -2,16 +2,16 @@
  "_description": "# The knowledge base\n\nA tree of folders and .json files with facts for agents. Two tools: `knowledge_read` looks things up (read, ls, find); `knowledge_write` changes a knowledge base of your own (add, set, rm).\n\n- How to look things up: `aos/knowledge.json#/read`.\n- Which knowledge base you may write: `aos/knowledge.json#/where`.\n- When to write, and the calls: `aos/knowledge.json#/write`.\n- Size, the index, no lock: `aos/knowledge.json#/rules`.\n",
  "_index": {
   "read": {
-   "_description": "Tool knowledge_read: read, ls and find; the root you got at the start or one you give; paths; errors."
+   "description": "Tool knowledge_read: read, ls and find; the root you got at the start or one you give; paths; errors."
   },
   "where": {
-   "_description": "Which knowledge base you may write: root in the call or AOS_KNOWLEDGE; never the stock one."
+   "description": "Which knowledge base you may write: root in the call or AOS_KNOWLEDGE; never the stock one."
   },
   "write": {
-   "_description": "Tool knowledge_write: when to write, and the add, set and rm calls."
+   "description": "Tool knowledge_write: when to write, and the add, set and rm calls."
   },
   "rules": {
-   "_description": "add without value, suggested sizes, the index, no lock, and the write errors."
+   "description": "add without value, suggested sizes, the index, no lock, and the write errors."
   }
  },
  "read": "# Looking things up: knowledge_read\n\nThe knowledge base is a tree: folders, .json files, and keys inside them. At the start you got its root (its index, one line per child); that root is what `knowledge_read` reads. You do not need to know where it is on disk.\n\n- The root again: `{\"op\": \"read\"}`.\n- One place: `{\"op\": \"read\", \"path\": \"aos/errors.json#/codes\"}`. A path is folder/file.json#/key/subkey; keep `.json`. Copy paths exactly as read, ls and find print them. Do not start a path with `/` (that is a file system path).\n- Another knowledge base (for example one you wrote with `knowledge_write`): add the same `\"root\": \"my-notes\"` you gave there, e.g. `{\"op\": \"read\", \"path\": \"notes/amy.json\", \"root\": \"my-notes\"}`.\n- Only the children: `{\"op\": \"ls\", \"path\": \"aos/cli/\"}`.\n- Search: `{\"op\": \"find\", \"query\": \"timeout\"}` (names, descriptions and text, any case; `tag` = an exact tag). A hit inside a text shows its line as `[match: ...]`: read the hit whose line answers you.\n- Long output stops at `max_bytes` (default 8000) with `[truncated: N more bytes]`: read a deeper path.\n\nErrors: `NodeMissing` (the line lists what is there), `PathBad`, `TargetBad` (ls on a text: use read), `KnowledgeMissing` / `KnowledgeBad` (no usable knowledge base is set up for you and no usable root given: say so).\n",

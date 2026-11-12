@@ -1,5 +1,5 @@
 {
- "description": "For aos configuration files that use $ref/$env (for plain data use json_search). Same as json_search plus: follow: true goes through $ref on the way to the place, resolve: true searches the value with $ref/$env resolved. Hits are paths you can read with jsonx_get and follow: true. up does not work with follow or resolve. Example: {\"path\": \"tools.json\", \"key\": \"env\", \"resolve\": true}. Details: knowledge_read aos/tools/jsonx_search.json.",
+ "description": "For aos configuration files that use $ref/$env (for plain data use json_search). Same as json_search plus: follow: true goes through $ref on the way to the place, resolve: true searches the value with $ref/$env resolved. Hits are paths you can read with jsonx_get and follow: true. up does not work with follow or resolve. Example: {\"path\": \"tools.json\", \"key\": \"env\", \"resolve\": true}.",
  "parameters": {
   "type": "object",
   "properties": {

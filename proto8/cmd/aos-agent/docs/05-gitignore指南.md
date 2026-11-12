@@ -105,7 +105,7 @@ git 不保存空資料夾。本次 clone 實跑，一般 daemon 控制信箱、�
 
 **11-10 已修**（`55bc1205b`）：子 agent 保留 `think/pending.txt`、空的 `think/reply/` 沒被 git 保存時，wait 現在會先補回信箱再續收；以前首次會報 `MailboxMissing`。
 
-任意自行建立的信箱仍須按 `aos-post init` 的契約準備；單獨實跑確認，一般 `aos-post send` 不會替缺少的空信箱補好。新機上的執行檔、路徑、外部知識庫與 CLI 登入，也仍由你準備。
+任意自行建立的信箱仍須按 `aos-post init` 的契約準備；單獨實跑確認，一般 `aos-post send` 不會替缺少的空信箱補好。新機上的執行檔、路徑與 CLI 登入，也仍由你準備。
 
 ## 追蹤檔裡的本機路徑，什麼算外洩（11-11）
 

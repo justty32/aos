@@ -1,5 +1,5 @@
 {
- "description": "For aos configuration files that use $ref/$env (for plain data use json_get). Same as json_get plus: follow: true goes through $ref on the way; resolve: true returns the value with $ref/$env resolved (default: as written). Example: {\"path\": \"fsm.json#/states/think\", \"follow\": true}. Details: knowledge_read aos/tools/jsonx_get.json.",
+ "description": "For aos configuration files that use $ref/$env (for plain data use json_get). Same as json_get plus: follow: true goes through $ref on the way; resolve: true returns the value with $ref/$env resolved (default: as written). Example: {\"path\": \"fsm.json#/states/think\", \"follow\": true}.",
  "parameters": {
   "type": "object",
   "properties": {

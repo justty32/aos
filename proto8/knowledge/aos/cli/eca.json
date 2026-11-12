@@ -2,10 +2,10 @@
  "_description": "# External coding agents (eca)\n\nThe two commands behind an eca agent (claude or codex run by aos, as in `templates/eca-claude`). People use `aos-agent` for both; run them by hand only to test.\n",
  "_index": {
   "turn": {
-   "_description": "aos-eca-turn: hand the queued letters to claude or codex as one prompt and record the answer."
+   "description": "aos-eca-turn: hand the queued letters to claude or codex as one prompt and record the answer."
   },
   "screen": {
-   "_description": "aos-eca-screen: open, close or watch the eca's screen (usually through aos-agent open/close/watch)."
+   "description": "aos-eca-screen: open, close or watch the eca's screen (usually through aos-agent open/close/watch)."
   }
  },
  "turn": "# aos-eca-turn: one turn\n\n```sh\nAOS_STACK=/abs/st AOS_WS=/abs/ws aos-eca-turn /abs/def      # loop form; empty queue = exit 10\necho '{\"prompt\": \"hello there\"}' | AOS_STACK=/abs/st aos-eca-turn --one /abs/def\n# FAKE: hello there        (tool form: prints the answer)\n```\n\nIt is the body of an eca agent's loop. It hands every letter in `$AOS_STACK/queue` to the CLI as one prompt, waits for the answer and appends both to `history.jsonl`. DEF_DIR must be an absolute folder with `cli.json` (`AgentBad`); flags may go before or after it. `--on-empty idle` exits 0 on an empty queue. `--on-busy answer` waits instead of leaving the batch while someone is attached. A failure after the prompt was handed over (`CliFailed`, `ReplyMissing`) starts a cooldown (`cooldown.json`; `aos-agent ctl ls -l` shows it). A changed history starts a new conversation that carries the record over. `TrustMissing`: see `aos/cli/errors.json#/codes`.\n",

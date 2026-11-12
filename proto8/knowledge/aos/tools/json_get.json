@@ -2,10 +2,10 @@
  "_description": "# Tool json_get\n\nGet the value at one place in a JSON file, printed as one line of compact JSON.\n\nUse it to read one value. Not sure what is inside: `json_ls` first. Find a key or a value: `json_search`. Raw text: `read`.\n\n```json\n{\"path\": \"cfg.json#/states/think\"}\n```\nprints `{\"next\":\"act\"}`.\n\nBigger than `max_bytes` (default 8000, or env `AOS_JSON_MAX_BYTES`): one line instead\n```text\n[too big] object, 5 keys, 113 bytes (max_bytes 20). List it: json_ls cfg.json. Or get a deeper path, or give \"full\": true.\n```\n`\"full\": true` prints it however big. `$ref`/`$env` objects come back as written, and are not gone through (that is `jsonx_get`).\n\nPath (`FILE#/POINTER`): `aos/tools/json_get.json#/path`. Errors: `aos/tools/json_get.json#/errors`.\n",
  "_index": {
   "path": {
-   "_description": "The path of every json_* tool: FILE#/POINTER in one string."
+   "description": "The path of every json_* tool: FILE#/POINTER in one string."
   },
   "errors": {
-   "_description": "json_get, json_ls, json_search errors and what to do."
+   "description": "json_get, json_ls, json_search errors and what to do."
   }
  },
  "path": "# JSON tools: the path\n\nEvery json_* and jsonx_* tool takes `path`: one string `FILE#/POINTER`, e.g. `cfg.json#/states/think/next`.\n\n- FILE alone is the whole document (`FILE#` with nothing after it is an error). `FILE#/` is the top-level key whose name is empty (RFC 6901, the same as `$ref` and aos-json). A relative FILE starts at your workspace.\n- After `#` the pointer starts with `/`: keys joined by `/`, array items by number (`/tags/0`, no leading zero). Inside a key `~1` = `/` and `~0` = `~` (json_ls prints keys this way).\n- Ending in `/-` (json_set, json_add): after the last array item.\n- Written exactly as given: quotes are not taken off (`cfg.json#\"/max\"` is `PointerBad`).\n",

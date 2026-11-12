@@ -15,7 +15,7 @@ flowchart LR
 <details>
 <summary>送意見、看意見與 JSON 輸出</summary>
 
-`add COMMAND PAIN [SUGGEST]` 的旗標可放在位置參數前後；任意文字若以 `-` 開頭，用 `--` 結束旗標解析。文字原樣保存，`key` 取 command 第一詞的 basename、小寫、非 `[a-z0-9_-]` 換 `_`。`aos-agent ctl add` 歸 `aos-agent.jsonl`；`lib/agent/knowledge_read` 歸 `knowledge_read.jsonl`。同 key 可收不同 command，不做裁決或自動修改。
+`add COMMAND PAIN [SUGGEST]` 的旗標可放在位置參數前後；任意文字若以 `-` 開頭，用 `--` 結束旗標解析。文字原樣保存，`key` 取 command 第一詞的 basename、小寫、非 `[a-z0-9_-]` 換 `_`。`aos-agent ctl add` 歸 `aos-agent.jsonl`；`lib/base/read` 歸 `read.jsonl`。同 key 可收不同 command，不做裁決或自動修改。
 
 | 旗標 | 內容 |
 |---|---|

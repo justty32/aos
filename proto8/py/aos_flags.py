@@ -100,11 +100,11 @@ def warn(prog, sentence):
 # aos 自己塞進對話、會被腦當內容讀到的話（不是 stderr 的錯誤行／提醒行）一律 `[aos] 種類: 內容`
 # （使用者 11-10 深夜：「history summary那塊，或許可以稍微美化一下？…[aos] warning: ....，或是[aos] summary: ...」「2.好，統一。」）。
 # 種類一個小寫詞，現有：summary（history 摘要）、session（eca 換新對話的開場）、clock（時鐘信）、hook（hook 攔下工具）、
-#   tool（工具逾時／退非 0／stderr 尾巴的附註）、warning（出了狀況但照樣問腦，例：知識庫讀不到）、knowledge（system 裡的知識庫根）、
+#   tool（工具逾時／退非 0／stderr 尾巴的附註）、warning（出了狀況但照樣問腦，例：hook 小格起不來）、
 #   new_mail（信箱有新信，lib/agent/mail_notify 寄進 queue；lib 不 import py，那支自己拼同一個格式，11-11 使用者原例「[aos] new_mail: …」）、
 #   goal（agent 自己停下來時丟的目標提醒，agent-fsm idle.py 與 aos-eca-turn 經 lib/agent/goal_state.py 拼，11-11 thinking goal/02）、
 #   fork（工具 fork 給分身的開場與補上的工具結果，lib/agent/fork 與 lib/agent/fork_copy.py 自己拼，11-11 thinking fork-and-do-task/01）。新種類加在這裡。
-NOTE_KINDS = ("summary", "session", "clock", "hook", "tool", "warning", "knowledge", "new_mail", "goal", "fork")
+NOTE_KINDS = ("summary", "session", "clock", "hook", "tool", "warning", "new_mail", "goal", "fork")
 
 
 def aos_note(kind, text):

@@ -2,10 +2,10 @@
  "_description": "# Two kinds of body\n\nYour body is the program that runs your turns. There are two kinds:\n\n- agent-fsm: aos's own loop with four cells (idle, think, wait, act). Your brain is asked with a letter to the llm kernel; aos runs each tool call.\n- eca (an outside coding agent): Claude Code or Codex CLI runs your turns. aos hands it your queue letters and your aos tools, and writes its answer to your history.\n\nWhich one you are: `self_state` `{\"parts\": [\"who\"]}` prints your definition folder; `ls` it. `cli.json` there = eca (its `kind` says claude or codex); `fsm.json` = agent-fsm.\n\n- Brain, tools, hooks, screen: `aos/body.json#/brain_tools`.\n- System text, knowledge root, history: `aos/body.json#/system_history`.\n- The files of each: `aos/definition.json`.\n",
  "_index": {
   "brain_tools": {
-   "_description": "agent-fsm vs eca: who the brain is, which tools you have, which hooks run, the screen."
+   "description": "agent-fsm vs eca: who the brain is, which tools you have, which hooks run, the screen."
   },
   "system_history": {
-   "_description": "agent-fsm vs eca: when a system text change works (claude next turn, codex next new conversation), the knowledge root, what history holds."
+   "description": "agent-fsm vs eca: when a system text change works (claude next turn, codex next new conversation), the knowledge root, what history holds."
   }
  },
  "brain_tools": "# Brain, tools, hooks, screen\n\n- Brain. agent-fsm: each think step is a letter to the llm kernel; `model` names a brain pack, and keys like `temperature` tune it. eca: the CLI is the brain; only `model` counts. Every eca turn costs the CLI's money.\n- Tools. agent-fsm: only your registered aos tools. eca: the CLI's own tools for files and commands (claude template: Read, Write, Edit, Glob, Grep, Bash; codex: its own shell in a workspace-write sandbox) plus your aos tools through aos-mcp, named like `mcp__aos__peek_now_time`; no aos file or shell tools except the json pack (json_get, json_set, ...). On both, a tool added with `self_tools` can be called from your next reply.\n- Hooks. agent-fsm: every event. eca: `before_tool` / `after_tool` only for aos tools; the CLI's own tools and what a person types on the screen are not seen. `on_clock` is checked at the start of each cell (agent-fsm) or of each turn (eca).\n- Screen. eca can have a terminal screen a person opens (`aos-agent open`); agent-fsm has none.\n",

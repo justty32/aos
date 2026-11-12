@@ -2,19 +2,19 @@
  "_description": "# Hooks: run a program of yours when something happens to you\n\nTool `self_hook` is `aos-agent hook` aimed at you. A hook is a tool folder or an executable that runs when an event happens. It gets the event as one JSON object on stdin. Only your own hook list changes, from the next event.\n\nOne op per call:\n\n- list: `{\"op\": \"ls\"}` (add `\"long\": true` to see every option and hooks you turned off)\n- show one: `{\"op\": \"get\", \"name\": \"guard\"}`\n- add: `{\"op\": \"add\", \"event\": \"before_tool\", \"path\": \"hooks/guard\", \"condition\": \"peek_now_time\"}`\n- remove: `{\"op\": \"rm\", \"name\": \"guard\"}`\n- back to your original hooks: `{\"op\": \"reset\"}`\n\nThe events and their fields: `aos/me.json#/self_hook/events` (on_clock: `aos/me.json#/self_hook/clock`). Options of add and how a hook answers: `aos/me.json#/self_hook/answer`. Writing the program: `aos/me.json#/self_hook/handler`; examples: `aos/me.json#/self_hook/examples`.\nHooks are not checked for loops: a hook that sends you a message triggers your queue hooks again.\n\nErrors: ArgumentsBad, OpUnknown, PathMissing, HookExists (add `\"replace\": true`), HookMissing, HooksMissing, HooksBad, NameBad, DaemonMissing, DaemonFailed, InstanceMissing.\n",
  "_index": {
   "events": {
-   "_description": "The hook events and the fields each one gets."
+   "description": "The hook events and the fields each one gets."
   },
   "clock": {
-   "_description": "The on_clock hook: every_cycles / every_ms, when it runs, and how to hear about it."
+   "description": "The on_clock hook: every_cycles / every_ms, when it runs, and how to hear about it."
   },
   "answer": {
-   "_description": "Options of add (condition, intercept, async, on_error, timeout_ms), and what a hook's exit code and stdout do."
+   "description": "Options of add (condition, intercept, async, on_error, timeout_ms), and what a hook's exit code and stdout do."
   },
   "handler": {
-   "_description": "Writing the hook program: executable, JSON entry or tool folder; its stdin, $AOS_STACK, $AOS_WS and current folder."
+   "description": "Writing the hook program: executable, JSON entry or tool folder; its stdin, $AOS_STACK, $AOS_WS and current folder."
   },
   "examples": {
-   "_description": "Short hook examples: log start and stop, block a tool, a program every 10 minutes."
+   "description": "Short hook examples: log start and stop, block a tool, a program every 10 minutes."
   }
  },
  "events": "# Hook events\n\nEvents and their fields (every event also has `event`, `hook`, `stack`):\n\n- `before_queue`: a message is about to enter your conversation (`letter`, `content`). Can change `content`, can drop the message.\n- `after_queue`: a message entered your conversation (`letter`, `content`).\n- `before_tool`: one of your tools is about to run (`name`, `id`, `arguments`). Can change `arguments`, can block the call.\n- `after_tool`: a tool finished, before you see the result (`name`, `id`, `arguments`, `content`, `code`, `timed_out`). Can change `content`.\n- `brain_failed`: your brain call failed (`name` = the error code, `reason`).\n- `tool_added`: a new tool name appeared in your tool box (`name`, `path`).\n- `after_start`: your loop started (also after a restart or a wake). `after_stop`: your loop is about to exit (`code`, `signal`; stop, sleep, removal, a failure). Not after a hard kill.\n- `on_clock`: a clock moved on; see `aos/me.json#/self_hook/clock`.\n",

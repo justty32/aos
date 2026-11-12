@@ -2,13 +2,13 @@
  "_description": "# Removal and confirmation\n\nCheck the chosen daemon, agent and stack before destructive commands; scripts do not get a confirmation prompt.\n",
  "_index": {
   "rm": {
-   "_description": "ctl rm keeps the stack; ctl rm --purge deletes it."
+   "description": "ctl rm keeps the stack; ctl rm --purge deletes it."
   },
   "reset": {
-   "_description": "tools reset, llm reset, system reset and hook reset delete one overlay."
+   "description": "tools reset, llm reset, system reset and hook reset delete one overlay."
   },
   "confirm": {
-   "_description": "When [y/N] is asked, what -y does, and why exit 0 can mean no."
+   "description": "When [y/N] is asked, what -y does, and why exit 0 can mean no."
   }
  },
  "rm": "# Removing an agent\n\n`aos-agent ctl rm bob` requires the name explicitly. It never takes the name from `$AOS_AGENT`. It closes the screen and detaches bob; the stack stays (history, queue, overlays), and `ctl add` with the same name and `--stack` picks it up again. `aos-agent ctl rm --purge bob` also deletes the stack, which destroys history and overlays:\n\n```sh\naos-agent ctl rm --purge -y ann\n# removed ann (deleted stack /.../stacks/root/procs/ann)\n```\n\nEven with `--purge`, a stack covering the workspace, definition, daemon, cwd, home or another listed stack is kept. `aos-daemon-ctl rm bob` and plain `aos-agent ctl rm bob` only detach and keep the stack; they do not ask. `-y` without `--purge` is `ArgumentsBad`; `aos-daemon-ctl rm` does not accept `-y` at all.\n",

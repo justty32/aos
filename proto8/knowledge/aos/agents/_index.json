@@ -1,8 +1,11 @@
 {
  "subagent.json": {
-  "_description": "Tool subagent in full, with its quota and errors (read it as aos/agents.json#/subagent)."
+  "description": "Tool subagent in full, with its quota and errors (aos/agents.json#/subagent points here with $ref)."
  },
  "fork.json": {
-  "_description": "Tool fork in full (read it as aos/agents.json#/fork)."
+  "description": "Tool fork in full (aos/agents.json#/fork points here with $ref)."
+ },
+ "_description.json": {
+  "description": "This folder's own note: long sections of aos/agents.json, kept here so that file stays small."
  }
 }

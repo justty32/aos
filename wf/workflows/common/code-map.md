@@ -13,7 +13,7 @@
 
 - `impls/`：C／C++ 的 CMake 專案家族（`aos-inst` 是 C 函式庫，其餘 C++）。由下往上：`aos-inst` → `aos-exec` → `aos-loop` → `aos-fsm`／`aos-daemon`；`aos-llm` 連 `aos-llm-kernel`；`aos-util` 全家共用；`aos-post`（連 `aos-lock`）是信箱。誰連誰的表在生成冊 `impls` 冊開頭。
 - `cmd/`：人打的 Python 指令，執行檔在 `cmd/<名>/bin/<名>`；命令列共用模組在 `py/`，CLI 對話與介面宣告共用模組在 `lib/agent/`（`cli_session.py`、`agent_files.py`；`lib` 不 import `py`）。`lib/`：腦叫的工具（`_entry`＋`_tooldef.json`＋`_metainfo.json`）。
-- `kernel/`：掛在 daemon 上的管理元件；`templates/`：agent 範本；`knowledge/`：知識庫；`extras/`：還沒定位的嘗試。判準看 [proto8/README](../../../proto8/README.md)「頂層一覽」。
+- `kernel/`：掛在 daemon 上的管理元件；`templates/`：agent 範本；`knowledge/`：出廠內容樹（普通資料夾＋json）；`extras/`：還沒定位的嘗試。判準看 [proto8/README](../../../proto8/README.md)「頂層一覽」。
 - `docs/`（條文）、`thinking/`、`notes/`、`archive/` 不是程式，不進 code map。
 
 ## 逐檔表：生成冊

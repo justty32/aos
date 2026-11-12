@@ -9,6 +9,6 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`README.md`](../../../../../proto8/knowledge/README.md) | proto8/knowledge — 記憶庫（`knowledge_read` 讀的資料夾＋`.json` 樹） |
+| [`README.md`](../../../../../proto8/knowledge/README.md) | proto8/knowledge — 出廠內容樹（普通資料夾＋`.json`，`_index.json` 當客觀 index） |
 | [`_description.json`](../../../../../proto8/knowledge/_description.json) | （檔頭沒有一句話） |
-| [`_index.json`](../../../../../proto8/knowledge/_index.json) | 設定（鍵：aos/、README.md、docs/） |
+| [`_index.json`](../../../../../proto8/knowledge/_index.json) | 設定（鍵：aos、README.md、docs、_description.json） |

@@ -1,5 +1,5 @@
 {
- "description": "For aos configuration files that use $ref/$env (for plain data use json_add). Same as json_add, but the value comes from exactly one of value / text (parsed as JSON) / from (copied from FILE#/POINTER); resolve: true resolves $ref/$env in it before storing; follow: true changes the file a $ref on the way points to; check: true refuses changes that break the aos configuration. Example: {\"path\": \"fsm.json#/states/act/exec\", \"from\": \"lib.json#/exec\"}. Details: knowledge_read aos/tools/jsonx_add.json.",
+ "description": "For aos configuration files that use $ref/$env (for plain data use json_add). Same as json_add, but the value comes from exactly one of value / text (parsed as JSON) / from (copied from FILE#/POINTER); resolve: true resolves $ref/$env in it before storing; follow: true changes the file a $ref on the way points to; check: true refuses changes that break the aos configuration. Example: {\"path\": \"fsm.json#/states/act/exec\", \"from\": \"lib.json#/exec\"}.",
  "parameters": {
   "type": "object",
   "properties": {

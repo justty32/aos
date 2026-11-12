@@ -1,65 +1,68 @@
 {
  "flags.json": {
-  "_description": "Where flags go for every aos-* command (anywhere after their level, or before the first argument), help levels and short names."
+  "description": "Where flags go for every aos-* command (anywhere after their level, or before the first argument), help levels and short names."
  },
  "errors.json": {
-  "_description": "Read the program name, error code and reason before choosing whether to retry."
+  "description": "Read the program name, error code and reason before choosing whether to retry."
  },
  "safety.json": {
-  "_description": "Check the chosen daemon, agent and stack before destructive commands; scripts do not get a confirmation prompt."
+  "description": "Check the chosen daemon, agent and stack before destructive commands; scripts do not get a confirmation prompt."
  },
  "agent.json": {
-  "_description": "Use aos-agent ctl to attach (add), list, inspect, stop, sleep, pause, find and remove agents."
+  "description": "Use aos-agent ctl to attach (add), list, inspect, stop, sleep, pause, find and remove agents."
  },
  "talk_settings.json": {
-  "_description": "Use aos-agent say, listen, chat, open, close, watch, tools, llm and system to talk to one agent and change its overlays without modifying its definition."
+  "description": "Use aos-agent say, listen, chat, open, close, watch, tools, llm and system to talk to one agent and change its overlays without modifying its definition."
  },
  "history.json": {
-  "_description": "Use aos-agent history to list, delete, summarize or replace messages in one agent's conversation."
+  "description": "Use aos-agent history to list, delete, summarize or replace messages in one agent's conversation."
  },
  "hook.json": {
-  "_description": "Use aos-agent hook to list, add or remove the hooks of one agent (including on_clock timers)."
+  "description": "Use aos-agent hook to list, add or remove the hooks of one agent (including on_clock timers)."
  },
  "goal.json": {
-  "_description": "Use aos-agent goal to give one agent a goal it is reminded of when it stops by itself; get, set, done, pause, resume, clear."
+  "description": "Use aos-agent goal to give one agent a goal it is reminded of when it stops by itself; get, set, done, pause, resume, clear."
  },
  "mailbox.json": {
-  "_description": "Use aos-mailbox to see your mailbox folder, peek, read and send mailbox letters from a shell."
+  "description": "Use aos-mailbox to see your mailbox folder, peek, read and send mailbox letters from a shell."
  },
  "daemon.json": {
-  "_description": "Use aos-daemon-ctl for any proc on one daemon (add, stop, sleep, pause, ls, ping, shutdown, prune, sweep); it bypasses the judge."
+  "description": "Use aos-daemon-ctl for any proc on one daemon (add, stop, sleep, pause, ls, ping, shutdown, prune, sweep); it bypasses the judge."
  },
  "tools.json": {
-  "_description": "Use aos-tools to edit a registry and call a registered tool with JSON on stdin."
+  "description": "Use aos-tools to edit a registry and call a registered tool with JSON on stdin."
  },
  "tool_env.json": {
-  "_description": "Save hub locations at registration time so each tool call uses the intended services."
+  "description": "Save hub locations at registration time so each tool call uses the intended services."
  },
  "tool_flags.json": {
-  "_description": "Lib tools accept schema-derived flags as another way to supply their JSON input keys."
+  "description": "Lib tools accept schema-derived flags as another way to supply their JSON input keys."
  },
  "grow.json": {
-  "_description": "Use aos-grow to move a function one level up (inline to file to folder) or down; preview with --dry-run."
+  "description": "Use aos-grow to move a function one level up (inline to file to folder) or down; preview with --dry-run."
  },
  "eca.json": {
-  "_description": "aos-eca-turn answers one turn of an external coding agent (claude, codex); aos-eca-screen opens, closes or watches its screen."
+  "description": "aos-eca-turn answers one turn of an external coding agent (claude, codex); aos-eca-screen opens, closes or watches its screen."
  },
  "clock.json": {
-  "_description": "aos-clock moves a clock file one cycle forward; aos-clock-register adds letters the clock sends every N cycles."
+  "description": "aos-clock moves a clock file one cycle forward; aos-clock-register adds letters the clock sends every N cycles."
  },
  "mcp.json": {
-  "_description": "Use aos-mcp to serve the tools of an aos-tools registry to an external agent (Claude Code, codex) over MCP stdio."
+  "description": "Use aos-mcp to serve the tools of an aos-tools registry to an external agent (Claude Code, codex) over MCP stdio."
  },
  "sandbox.json": {
-  "_description": "Use aos-sandbox to run a program in a sandbox: which paths it sees, network, limits, user."
+  "description": "Use aos-sandbox to run a program in a sandbox: which paths it sees, network, limits, user."
  },
  "sweeper.json": {
-  "_description": "aos-sweeper runs one cleanup round for a daemon: archive big stderr files, expire archives, stop orphaned loops."
+  "description": "aos-sweeper runs one cleanup round for a daemon: archive big stderr files, expire archives, stop orphaned loops."
  },
  "feedback.json": {
-  "_description": "Use aos-feedback to record what was hard about a command or tool and to score how comfortable it is for AIs."
+  "description": "Use aos-feedback to record what was hard about a command or tool and to score how comfortable it is for AIs."
  },
- "parts/": {
-  "_description": "Low-level programs the other commands are built from: aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-lock, aos-json, aos-directive, aos-llm, aos-llm-kernel."
+ "parts": {
+  "description": "Low-level programs the other commands are built from: aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-lock, aos-json, aos-directive, aos-llm, aos-llm-kernel."
+ },
+ "_description.json": {
+  "description": "Commands for humans and external agents: prefer registered tools inside aos, how the daemon and the agent are chosen, and which page to read first."
  }
 }

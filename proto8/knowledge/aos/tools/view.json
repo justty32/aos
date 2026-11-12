@@ -2,10 +2,10 @@
  "_description": "# Tool view\n\nLook into one file step by step. The answer is one JSON object.\n\n- JSON file: one level at `pointer` (empty = the whole file). A small value comes whole in `value`. A big one comes as `children` (key, type and size of each) plus a `hint`: add a child key to `pointer` and call again.\n- Text file: a small one (up to 200 lines and 8KB) comes whole in `text`. A big one first gives an `outline` (Python class and def, Markdown headings, with line numbers; other files: the first 40 lines as `head`). Then ask for the lines you need with `start` and `end`.\n\nUse it for a file you do not know yet, or a big one. Use `read` to read text in order, `json_ls` to list the keys at one JSON place, `json_get` for one value, `stat` for size and type only.\n\nExamples with real output: `aos/tools/view.json#/examples`. Errors: `aos/tools/view.json#/errors`.\n",
  "_index": {
   "examples": {
-   "_description": "view calls on a Markdown file, a line range and a JSON file, with their output."
+   "description": "view calls on a Markdown file, a line range and a JSON file, with their output."
   },
   "errors": {
-   "_description": "view errors and what to do."
+   "description": "view errors and what to do."
   }
  },
  "examples": "# view: examples\n\nA big Markdown file gives an outline:\n```json\n{\"path\": \"doc.md\"}\n```\n-> `{\"path\":\"doc.md\",\"format\":\"markdown\",\"counter_lines\":303,\"outline\":[{\"line\":1,\"level\":1,\"name\":\"Title\"},{\"line\":3,\"level\":2,\"name\":\"Part\"}],\"hint\":\"use start/end (line numbers) to view the part you need\"}`\n\nThen a range of lines:\n```json\n{\"path\": \"doc.md\", \"start\": 1, \"end\": 2}\n```\n-> `{\"path\":\"doc.md\",\"format\":\"text\",\"counter_lines\":303,\"start\":1,\"end\":2,\"text\":\"# Title\\ntext\\n\"}`\n\nOne level of a JSON file:\n```json\n{\"path\": \"cfg.json\", \"pointer\": \"/states\"}\n```\n-> `{\"path\":\"cfg.json\",\"format\":\"json\",\"pointer\":\"/states\",\"type\":\"object\",\"counter_keys\":2,\"value\":{\"think\":{\"next\":\"act\"},\"act\":{\"next\":\"think\"}}}`\n\nWith `start` or `end`, any file (JSON too) is shown as lines. One range is at most 2000 lines or 50KB; if cut, `hint` says `use start=N to continue`.\n",

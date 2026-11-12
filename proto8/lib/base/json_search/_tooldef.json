@@ -1,5 +1,5 @@
 {
- "description": "Find keys and/or values in a JSON file, below a place (default) or in each ancestor level above it (up: true, nearest first). key = exact key name; value = exact JSON value (same type: 1 is not \"1\"); give both to match key and value together; contains: true = key and string values match by substring. One line per hit: FILE#/POINTER TYPE SIZE; \"[no match]\" if none. No regular expressions. Example: {\"path\": \"cfg.json\", \"key\": \"next\"}. Details: knowledge_read aos/tools/json_search.json.",
+ "description": "Find keys and/or values in a JSON file, below a place (default) or in each ancestor level above it (up: true, nearest first). key = exact key name; value = exact JSON value (same type: 1 is not \"1\"); give both to match key and value together; contains: true = key and string values match by substring. One line per hit: FILE#/POINTER TYPE SIZE; \"[no match]\" if none. No regular expressions. Example: {\"path\": \"cfg.json\", \"key\": \"next\"}.",
  "parameters": {
   "type": "object",
   "properties": {

@@ -3,7 +3,7 @@
  "states": {
    "idle":  {"exec": {"argv": ["python3", "idle.py"]},
              "next": {"0": "think", "10": "idle"}},
-   "think": {"exec": {"argv": ["python3", "brain.py", "--knowledge", "knowledge_read"]},
+   "think": {"exec": {"argv": ["python3", "brain.py"]},
              "next": {"0": "wait", "10": "idle"}},
    "wait":  {"exec": {"argv": ["python3", "wait.py"]},
              "next": {"0": "act", "10": "wait", "11": "think"}},

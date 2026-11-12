@@ -2,52 +2,52 @@
  "_description": "Your tools come in packs. Which packs you have, what each tool does in one sentence, and how a pack is turned off.",
  "_index": {
   "about": {
-   "_description": "How packs work and how to turn one off."
+   "description": "How packs work and how to turn one off."
   },
   "look": {
-   "_description": "Pack look: read, ls, view, stat, grep, glob; look at and search files, change nothing."
+   "description": "Pack look: read, ls, view, stat, grep, glob; look at and search files, change nothing."
   },
   "change": {
-   "_description": "Pack change: write, edit, copy, move, mkdir; make and change files."
+   "description": "Pack change: write, edit, copy, move, mkdir; make and change files."
   },
   "delete": {
-   "_description": "Pack delete: trash (can be undone), remove (cannot)."
+   "description": "Pack delete: trash (can be undone), remove (cannot)."
   },
   "shell": {
-   "_description": "Pack shell: shell, run_python; run a command, read its output and exit code."
+   "description": "Pack shell: shell, run_python; run a command, read its output and exit code."
   },
   "gadgets": {
-   "_description": "Pack gadgets: peek_clock, peek_now_time, math, do_task (fold one task of your own history into a summary; agent-fsm only)."
+   "description": "Pack gadgets: peek_clock, peek_now_time, math, do_task (fold one task of your own history into a summary; agent-fsm only)."
   },
   "events": {
-   "_description": "Pack events: clock_register (clock letters to your queue), self_hook (run a program when something happens to you)."
+   "description": "Pack events: clock_register (clock letters to your queue), self_hook (run a program when something happens to you)."
   },
   "todo": {
-   "_description": "Pack todo: todo (your own to-do list for a long task: ls, set, add, mark)."
+   "description": "Pack todo: todo (your own to-do list for a long task: ls, set, add, mark)."
   },
   "self": {
-   "_description": "Pack self: self_tools, self_llm, self_system, self_history, self_state, self_ctl; look at and change your own copy."
+   "description": "Pack self: self_tools, self_llm, self_system, self_history, self_state, self_ctl; look at and change your own copy."
   },
   "subagent": {
-   "_description": "Pack subagent: subagent (helpers you start yourself), agents_ctl (any agent on your daemon), fork (a copy of yourself for one goal; agent-fsm only)."
+   "description": "Pack subagent: subagent (helpers you start yourself), agents_ctl (any agent on your daemon), fork (a copy of yourself for one goal; agent-fsm only)."
   },
   "def": {
-   "_description": "Pack def: agent_def (new agent definitions), tools_def (new tools)."
+   "description": "Pack def: agent_def (new agent definitions), tools_def (new tools)."
   },
   "mailbox": {
-   "_description": "Pack mailbox: mailbox_peek, mailbox_read, mailbox_send; letters between agents."
+   "description": "Pack mailbox: mailbox_peek, mailbox_read, mailbox_send; letters between agents."
   },
   "knowledge": {
-   "_description": "Pack knowledge: knowledge_read (the stock knowledge base), knowledge_write (a knowledge base of your own)."
+   "description": "Pack knowledge: knowledge_read (the stock knowledge base), knowledge_write (a knowledge base of your own)."
   },
   "goal": {
-   "_description": "Pack goal: goal (one sentence you keep working on; reminded when you stop by yourself)."
+   "description": "Pack goal: goal (one sentence you keep working on; reminded when you stop by yourself)."
   },
   "json": {
-   "_description": "Pack json: json_get, json_ls, json_search, json_set, json_add, json_del, json_multi_get, json_multi_set; one place of a JSON file at a time by FILE#/POINTER."
+   "description": "Pack json: json_get, json_ls, json_search, json_set, json_add, json_del, json_multi_get, json_multi_set; one place of a JSON file at a time by FILE#/POINTER."
   },
   "jsonx": {
-   "_description": "Pack jsonx: jsonx_get, jsonx_ls, jsonx_search, jsonx_set, jsonx_add, jsonx_del; JSON tools that follow or resolve $ref/$env (not in the templates)."
+   "description": "Pack jsonx: jsonx_get, jsonx_ls, jsonx_search, jsonx_set, jsonx_add, jsonx_del; JSON tools that follow or resolve $ref/$env (not in the templates)."
   }
  },
  "about": "# Tool packs\n\nYour tools are registered pack by pack: each pack is one tool list in $AOS_HOME/lib/packs/<pack>.json, and a definition's tools.json stacks the packs it wants with \"$override\". agent-fsm has fourteen packs (all but jsonx); eca-claude has seven (gadgets, events, self, def, mailbox, knowledge, json; no look, change, delete, shell, subagent, goal or todo pack: its CLI has its own file tools, shell, helpers, goals and todo lists) and turns off do_task (agent-fsm only): 26 tools. The jsonx pack is in no template; add it to a definition that edits aos configuration files.\n\n- See where each of your tools comes from: self_tools {\"op\": \"ls\", \"long\": true} (FROM shows lib/packs/<pack>.json).\n- Turn one tool off for yourself: self_tools {\"op\": \"rm\", \"name\": \"shell\"}.\n- A whole pack is turned off by removing it from the \"$override\" list of the definition's tools.json (a person or a definition change, not a tool call).",

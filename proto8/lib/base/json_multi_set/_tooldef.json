@@ -1,5 +1,5 @@
 {
- "description": "Set several places at once (like json_set for each, in the order given). Each item: {\"path\": FILE#/POINTER, \"value\": any JSON}, stored exactly as given; a path ending in /- appends. One line per item: PATH, a TAB, then \"ok ...\" or \"[error] CODE reason\". Items are independent and nothing is undone: one failing does not stop or roll back the others; if any failed the last line is \"json_multi_set: error: PlacesFailed ...\". Example: {\"items\": [{\"path\": \"cfg.json#/max\", \"value\": 30}, {\"path\": \"cfg.json#/tags/-\", \"value\": \"c\"}]}. Details: knowledge_read aos/tools/json_multi_set.json.",
+ "description": "Set several places at once (like json_set for each, in the order given). Each item: {\"path\": FILE#/POINTER, \"value\": any JSON}, stored exactly as given; a path ending in /- appends. One line per item: PATH, a TAB, then \"ok ...\" or \"[error] CODE reason\". Items are independent and nothing is undone: one failing does not stop or roll back the others; if any failed the last line is \"json_multi_set: error: PlacesFailed ...\". Example: {\"items\": [{\"path\": \"cfg.json#/max\", \"value\": 30}, {\"path\": \"cfg.json#/tags/-\", \"value\": \"c\"}]}.",
  "parameters": {
   "type": "object",
   "properties": {

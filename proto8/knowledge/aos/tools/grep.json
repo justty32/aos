@@ -2,13 +2,13 @@
  "_description": "# Tool grep\n\nSearch inside files with a regular expression, like `grep -rn`: one line per match, `PATH:LINE:TEXT`. Paste PATH into `read` as `path`; LINE is its `offset`.\n\nUse it to find where a word or pattern appears in a folder tree or one file. Not for: files by name (`glob`), reading a file (`read`); pipes, counting: `shell`.\n\nArguments: `pattern` (required, Python `re`, per line); `path` (folder or file, default `.`); `glob` (only these files, e.g. `*.py`); `fixed`; `ignore_case`; `context` (0 to 5); `files`; `hidden`; `gitignore`; `offset`; `max_matches` (default 100, at most 500).\n\n```json\n{\"pattern\": \"two\", \"path\": \"notes\", \"max_matches\": 2}\n```\nprints\n```text\nnotes/a.txt:2:line two\nnotes/b.txt:1:two words\n... next_offset 2 (3 matches in 3 files in all)\n... skipped 1 binary file\n```\n\n`... ` lines are notes: `next_offset N` = call again with `\"offset\": N`. `files`, `context`: `aos/tools/grep.json#/output`. Skips, `... stopped`: `aos/tools/grep.json#/rules`. Errors: `aos/tools/grep.json#/errors`.\n",
  "_index": {
   "output": {
-   "_description": "grep files and context output, with examples."
+   "description": "grep files and context output, with examples."
   },
   "rules": {
-   "_description": "grep: what it skips (binary, over 8MB, hidden, .gitignore), links, order, long lines, scan budget."
+   "description": "grep: what it skips (binary, over 8MB, hidden, .gitignore), links, order, long lines, scan budget."
   },
   "errors": {
-   "_description": "grep errors (PatternBad and more) and what to do."
+   "description": "grep errors (PatternBad and more) and what to do."
   }
  },
  "output": "# grep: files and context\n\n`\"files\": true`: one line per matching file, `PATH<TAB>matching lines`; `offset` and `max_matches` count files.\n```json\n{\"pattern\": \"two\", \"path\": \"notes\", \"ignore_case\": true, \"files\": true}\n```\nprints\n```text\nnotes/a.txt\t1\nnotes/b.txt\t2\nnotes/old/c.md\t1\n... skipped 1 binary file\n```\n\n`\"context\": N`: N lines before and after each match, written `PATH-LINE-TEXT` (`-` instead of `:`); groups are separated by a line `--`.\n```json\n{\"pattern\": \"more\", \"context\": 1}\n```\nprints\n```text\nnotes/b.txt-1-two words\nnotes/b.txt:2:more\nnotes/b.txt-3-Two again\n... skipped 1 binary file\n```\n",
