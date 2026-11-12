@@ -41,6 +41,7 @@
 
 ### 已知的邊
 
-- **自己那份壞掉或它加的工具不見了＝整隻停下**（11-05 [edge-agent](../../../thinking/2026-11/05/edge-agent/README.md) 實測）：brain／act 每格 `aos-tools ls`，自己那份 JSON 壞、`$override` 指不到、或它加的路徑不在，aos-tools 報 `RegistryBad`／`PathMissing`、身體報 `ToolsBad` 退 1，那隻留在表上 `stopped`＋`reason`（11-05 使用者裁「留表標 stopped (Recommended)」）；修好後 `aos-agent tools reset`（或 `tools rm` 那個、手動改 `<stack>/<宣告的 tools 路徑>`）再 `aos-agent ctl start`，同一個 stack 從停的那格接著做；不要了 `aos-agent ctl rm`。照 aos-tools「不猜不跳過」，不改成略過壞的那個。
+- **它加的工具不見了＝只少那一支**（11-12 [tool-path-broken](../../../thinking/2026-11/12/tool-path-broken.md) 改；以前跟下一條一樣整隻停）：`aos-tools ls` 略過路徑不在、定義缺或壞的那支（stderr 一行 warning），brain／act／aos-mcp 的清單少那一支、其他照常；`tools ls`（self_tools `ls`）把它標 `broken`，`tools rm 名` 拿掉、搬到哪就從哪 `add` 回來。
+- **自己那份壞掉＝整隻停下**（11-05 [edge-agent](../../../thinking/2026-11/05/edge-agent/README.md) 實測）：brain／act 每格 `aos-tools ls`，自己那份 JSON 壞、`$override` 指不到，aos-tools 報 `RegistryBad`／`PathMissing`、身體報 `ToolsBad` 退 1，那隻留在表上 `stopped`＋`reason`（11-05 使用者裁「留表標 stopped (Recommended)」）；修好後 `aos-agent tools reset`（或 `tools rm` 那個、手動改 `<stack>/<宣告的 tools 路徑>`）再 `aos-agent ctl start`，同一個 stack 從停的那格接著做；不要了 `aos-agent ctl rm`。登記檔本身壞照 aos-tools「不猜」整份報錯，不改成略過。
 - **跟定義同名的**：`tools add --name 名 路徑` 撞到定義裡已有的名字＝aos-tools `ToolExists`；要這隻改用自己的就 `tools add --replace --name 名 路徑`（使用者 11-10 N3「旗標改叫 --replace」；寫進自己那份，定義那格有、這次沒給的 key 寫成 `null`）。
 - 指到 image 外面的工具（例 repo 裡的 `lib/base/peek_now_time`）存的也是相對路徑（`../../../../../../home/…`）：整份搬到另一層深度或別台、那邊沒有同樣相對位置的檔＝那個工具找不到（aos-tools 報 `PathMissing`）。照 [portable-flow 03 原則 5](../../../thinking/2026-11/05/portable-flow/03-絕對路徑盤點.md)「指到 daemon 外面自擔」；要帶著走就把工具放進定義旁的 `lib/`，或改用 `--path-json` 的環境變數寫法。

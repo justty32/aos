@@ -83,6 +83,9 @@ class PathForms(unittest.TestCase):
     def test_missing_target_names_file_field_and_value(self):
         self.over_with({"wc": {"path": {"$env": "TC_ROOT", "$path": "/nowhere"}}})
         r = self.run_tools("--file", self.over, "ls", TC_ROOT="/tmp/none-such")
+        self.assertEqual(r.returncode, 0, r.stderr)    # 11-12 tool-path-broken：ls 略過壞的那支、提醒一行；完整原因看 get
+        self.assertIn("warning: tool wc skipped: PathMissing", r.stderr)
+        r = self.run_tools("--file", self.over, "get", "wc", TC_ROOT="/tmp/none-such")
         self.assertEqual(r.returncode, 1)
         self.assertIn("PathMissing", r.stderr)
         self.assertIn("#/tools/wc/path", r.stderr)
@@ -144,6 +147,9 @@ class PathForms(unittest.TestCase):
     def test_missing_path_names_file_cell_and_resolved_path(self):
         self.reg.write_text(json.dumps({"tools": {"gone": {"path": "nowhere/gone"}}}), encoding="utf-8")
         r = self.run_tools("--file", self.reg, "ls")
+        self.assertEqual(r.returncode, 0, r.stderr)    # 11-12 tool-path-broken：ls 略過壞的那支；get 照舊報原錯
+        self.assertIn("gone\tbroken: PathMissing", r.stdout)
+        r = self.run_tools("--file", self.reg, "get", "gone")
         self.assertEqual(r.returncode, 1)
         self.assertIn("PathMissing", r.stderr)
         self.assertIn("%s#/tools/gone/path" % self.reg, r.stderr)

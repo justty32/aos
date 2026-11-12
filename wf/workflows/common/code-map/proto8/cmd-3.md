@@ -10,6 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-mcp`](../../../../../proto8/cmd/aos-mcp/bin/aos-mcp) | 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。 |
+| [`tests/test_broken_entry.py`](../../../../../proto8/cmd/aos-mcp/tests/test_broken_entry.py) | Verify aos-mcp keeps serving when one registry entry is broken (path gone): tools/list leaves it out, tools/call of the others works (11-12 tool-path… |
 | [`tests/test_hooks.py`](../../../../../proto8/cmd/aos-mcp/tests/test_hooks.py) | Verify aos-mcp's --hooks DEF: before_tool changes / blocks a call, after_tool changes the result, no --hooks = no hooks, a failing hook = isError. |
 | [`tests/test_list_changed.py`](../../../../../proto8/cmd/aos-mcp/tests/test_list_changed.py) | Verify aos-mcp sends notifications/tools/list_changed right after a tools/call that changed the list (11-10 tools-def, "3.同一輪就生效"), not after one tha… |
 | [`tests/test_own_registry.py`](../../../../../proto8/cmd/aos-mcp/tests/test_own_registry.py) | Verify aos-mcp serves an agent's own registry ("$override" of the definition's) and the definition's, and has no --overlay flag (11-10 aos-tools-cli … |
@@ -43,6 +44,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-tools`](../../../../../proto8/cmd/aos-tools/bin/aos-tools) | 管理工具登記（可 $override 另一份只記差異）、環境與小格，三種工具一律經 aos-exec 從 stdin 呼叫。 |
+| [`tests/test_broken_entry.py`](../../../../../proto8/cmd/aos-tools/tests/test_broken_entry.py) | Test one broken registry entry (path gone, definition missing or bad) is skipped by ls with a warning while the others list and call as usual, and ge… |
 | [`tests/test_cache.py`](../../../../../proto8/cmd/aos-tools/tests/test_cache.py) | Test where aos-tools caches executable tool definitions (11-10 aos-tools-cli step 2): $AOS_STACK/tooldef_cache.json, never the registry. |
 | [`tests/test_cell_lazy.py`](../../../../../proto8/cmd/aos-tools/tests/test_cell_lazy.py) | Test that aos-tools call does not create the tool cell beforehand (11-11 tool-cells-lazy): a read-only tool leaves no folder, a writing tool makes it… |
 | [`tests/test_cli.py`](../../../../../proto8/cmd/aos-tools/tests/test_cli.py) | Test the aos-tools command line (11-10 aos-tools-cli step 1): --file on either side, usage line, late flags, default-file warning, success lines, ls … |

@@ -62,7 +62,9 @@ ls --json 保留完整 tooldef；腦／MCP 對模型只取 description／paramet
 add 時工具定義 env 陣列列的 hub 若不在當下環境與這次 env-file／envs，印一行 warning，照樣登記退 0。
 工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收，只有 add 另驗選填 env 是合法變數名陣列。
 工具名：--name ＞ 檔名去掉副檔名（資料夾＝資料夾名），只收 [A-Za-z0-9_-]、最多 64 字（OpenAI／MCP 的限制）。撞名＝ToolExists，--replace 蓋掉（使用者 11-10 N3「旗標改叫 --replace」）。
-不符合要求一律報錯、不猜不跳過（ls／get 碰到登記了但壞掉的工具也報錯，訊息帶工具名）。
+不符合要求一律報錯、不猜（add／get／call 碰到登記了但壞掉的工具報錯，訊息帶工具名）；ls 例外（11-12 tool-path-broken）：
+  一支自己壞（路徑不在、定義缺或壞）＝略過那支、stderr 一行 warning（登記名、代號、怎麼修，不帶絕對路徑），其他照列、退 0；
+  文字輸出把它標成 broken（短版「名 TAB broken: …」、-l 的 KIND＝broken），--json 不列。登記檔本身壞照舊整份報錯。
 錯：stderr 一行「aos-tools: error: 代號 原因」、退 1（11-05 stdio-unify R1；錯誤行的括號只指那一層，11-06 human-cli H10：缺子命令列子命令名、子命令層接那個子命令的 usage）。代號：ArgumentsBad、FlagUnknown、CommandUnknown、RegistryBad、PathMissing、
   ToolDefMissing、ToolDefBad、NameBad、ToolExists、ToolMissing、DotenvBad、DirectiveBad、CommandMissing、WriteFailed。call 自己沒錯時結束碼是工具的
   （R8：退非 0 時 stderr 有 `aos-tools: error:` 這行＝這支錯；沒有＝工具的碼；工具被訊號殺＝128＋N）。
@@ -186,21 +188,26 @@ exit codes: 0 removed; 1 error (ToolMissing, RegistryBad, WriteFailed...).
 usage: aos-tools [--file F] ls [-l | --json]
 
 One line per tool, sorted by name: NAME TAB the first sentence of its description
-(see one tool in full with get NAME). Every tool is checked; one broken tool is an
-error that names it. Executables are asked with --tooldef (answers are cached in
+(see one tool in full with get NAME). Every tool is checked. A broken tool (its
+path is gone, its definition is missing or bad) is skipped with a warning naming it,
+and the others are listed as usual: shown as "NAME TAB broken: CODE (...)", with
+KIND broken in -l, and left out of --json. get NAME or call NAME on it still fails
+with its own error. Executables are asked with --tooldef (answers are cached in
 $AOS_STACK/tooldef_cache.json when AOS_STACK is a folder).
 
 flags:
   -l, --long     NAME TAB KIND TAB PATH (absolute) TAB FROM (the file and key its
                  path comes from) TAB STORED (the path as written there, as JSON)
                  TAB ENV (variable names and @ the env file; never values).
-                 KIND is dir (folder), json (JSON file) or exe (executable).
+                 KIND is dir (folder), json (JSON file), exe (executable) or
+                 broken (skipped, see above).
                  Also lists names turned off with null:
                  NAME null PATH-IT-HIDES FILE-THAT-SAYS-NULL#/tools/NAME null -
   -j, --json     one JSON array with name, kind, path, tooldef and optional metainfo
   -h, --help     show this help
 
-exit codes: 0 listed; 1 error (RegistryBad, PathMissing, ToolDefMissing, ToolDefBad...).
+exit codes: 0 listed (also when some tools were skipped as broken);
+            1 error (RegistryBad, DirectiveBad, CommandMissing...: the registry itself).
 """,
     "get": """aos-tools get - print one tool's definition as JSON
 
@@ -1063,6 +1070,33 @@ def first_sentence(tooldef):
     return line[:m.start() + 1] if m else line
 
 
+BROKEN_WHY = {"PathMissing": "its path does not exist", "ToolDefMissing": "no tool definition there",
+              "ToolDefBad": "its tool definition is broken", "DirectiveBad": "its path directive cannot be resolved",
+              "RegistryBad": "its entry is invalid"}
+
+
+def broken_text(name, code):
+    """壞掉那支的一句（11-12 tool-path-broken）：登記名、代號、白話原因、怎麼修；不帶絕對路徑（完整原因看 get NAME）。"""
+    return "%s (%s); correct its path or take it off the list with rm %s (get %s shows the full error)" % (
+        code, BROKEN_WHY.get(code, "it cannot be read"), name, name)
+
+
+def listed(tools):
+    """ls 用：逐支 describe；一支自己的問題（路徑不在、定義缺或壞…）＝略過那支、stderr 一行 warning，其他照常
+    （11-12 tool-path-broken，比照使用者 11-12 對 index_view 的裁定「_metainfo.json 壞掉時，index_view 對那個資料夾不該直接報錯。」）。
+    CommandMissing（aos-json 起不來）不是那支自己的問題，照舊整份報錯。回 (好的 [describe…], {壞的名: 代號})。"""
+    good, broken = [], {}
+    for n in sorted(tools):
+        try:
+            good.append(describe(n, tools[n]))
+        except Fail as e:
+            if e.code == "CommandMissing":
+                raise
+            broken[n] = e.code
+            aos_flags.warn(NAME, "tool %s skipped: %s" % (n, broken_text(n, e.code)))
+    return good, broken
+
+
 def cmd_ls(args):
     reg, opts, rest = parse_sub("ls", args, None, {"--json": "json", "--long": "long"},
                                 short={"-j": "--json", "-l": "--long"})
@@ -1071,23 +1105,25 @@ def cmd_ls(args):
     if opts.get("json") and opts.get("long"):
         raise Fail("ArgumentsBad", "ls takes one of -l, --json")
     tools = load_tools(reg)
-    found = [describe(n, tools[n]) for n in sorted(tools)]
+    found, broken = listed(tools)                    # 壞的那支：--json 不列（叫得到的才列），文字兩種標 broken
     if opts.get("json"):
         print(json.dumps(found, ensure_ascii=False))
     elif opts.get("long"):                           # 甲5：FROM（檔#/格/名）、STORED（存的原樣值）、ENV（只印名）
         off = nulled(reg)
-        rows = [(t["name"], t) for t in found] + [(n, None) for n in off]
+        rows = [(t["name"], t) for t in found] + [(n, None) for n in off] + [(n, "broken") for n in broken]
         for name, t in sorted(rows, key=lambda r: r[0]):
             if t is None:                            # 被 null 關掉的格：KIND null、PATH＝它蓋掉的那支（不知道＝-）、FROM＝寫 null 的那份
                 f, hid = off[name]
                 print("\t".join((name, "null", hid or "-", "%s#/tools/%s" % (f, name), "null", "-")))
                 continue
-            src = tools[t["name"]]
-            print("\t".join((t["name"], t["kind"], t["path"], src["src"],
+            src = tools[name]                        # 壞的那支：KIND＝broken，其餘欄照登記格（路徑是解出來、指不到的那個）
+            print("\t".join((name, "broken" if t == "broken" else t["kind"], src["path"], src["src"],
                              json.dumps(src["stored"], ensure_ascii=False), env_column(src))))
     else:
-        for t in found:
-            print("%s\t%s" % (t["name"], first_sentence(t["tooldef"])))
+        rows = [(t["name"], first_sentence(t["tooldef"])) for t in found] + \
+               [(n, "broken: " + broken_text(n, c)) for n, c in broken.items()]
+        for name, line in sorted(rows):
+            print("%s\t%s" % (name, line))
 
 
 def cmd_get(args):
