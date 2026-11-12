@@ -50,6 +50,9 @@
  "json_del.json": {
   "description": "Tool json_del: delete one key or array item from a JSON file."
  },
+ "json_len.json": {
+  "description": "Tool json_len: the length of one place: keys of an object, items of an array, characters of a string."
+ },
  "json_multi_get.json": {
   "description": "Tool json_multi_get: several FILE#/POINTER at once, one line per place; failures per place, PlacesFailed at the end."
  },
@@ -76,6 +79,12 @@
  },
  "jsonx_del.json": {
   "description": "Tool jsonx_del: json_del for aos configuration files: $ref on the way protected unless follow."
+ },
+ "jsonx_multi_get.json": {
+  "description": "Tool jsonx_multi_get: json_multi_get read like jsonx_get (follow, resolve for every place)."
+ },
+ "jsonx_multi_set.json": {
+  "description": "Tool jsonx_multi_set: json_multi_set done like jsonx_set: value, text or from per item; follow, resolve, check for all."
  },
  "trash.json": {
   "description": "Tool trash: delete so it can be undone (moved into .trash/ in your workspace)."

@@ -10,8 +10,8 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`aos_index.py`](../../../../../proto8/lib/aos_index.py) | index_view：透過 index（視角）看節點，一行一項「鍵 TAB description」；index 放哪只寫在 spot() 一處。 |
-| [`aos_json.py`](../../../../../proto8/lib/aos_json.py) | 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set 轉 aos_json_multi）。 |
-| [`aos_json_multi.py`](../../../../../proto8/lib/aos_json_multi.py) | json_multi_get／json_multi_set：一次多格，逐格照 json_get／json_set 做、照順序、一格一行「路徑 TAB 結果」，不回滾。 |
+| [`aos_json.py`](../../../../../proto8/lib/aos_json.py) | 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／len／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set、jsonx_multi_get／set… |
+| [`aos_json_multi.py`](../../../../../proto8/lib/aos_json_multi.py) | json_multi_get／set、jsonx_multi_get／set：一次多格，逐格照 json_get／json_set（jsonx 那兩支照 jsonx_get／jsonx_set）做、照順序、一格一行「路徑 TAB 結果」，不回滾。 |
 | [`directive_value.py`](../../../../../proto8/lib/directive_value.py) | 把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。 |
 | [`mcp_client.py`](../../../../../proto8/lib/mcp_client.py) | MCP client 的 stdio／HTTP 傳輸：握手、列工具、呼叫工具與關閉 session。 |
 | [`mcp_freeze.py`](../../../../../proto8/lib/mcp_freeze.py) | 把一支外部 MCP 工具凍結成包檔 mcp_tools 的一格（登記名、$ref 展開、說明前綴與截斷、_metainfo）與兩份 mcp_tools 的差異；純函式（external-mcp 07 步 4） |

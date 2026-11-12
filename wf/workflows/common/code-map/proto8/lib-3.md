@@ -19,6 +19,8 @@
 | [`jsonx_del/`](../../../../../proto8/lib/aos/jsonx_del/) | json_del 加料版：路上有 $ref／$env 要 follow 才穿過去、刪在被參照的那份檔（預設關＝FollowMissing） |
 | [`jsonx_get/`](../../../../../proto8/lib/aos/jsonx_get/) | json_get 加料版：follow 穿過 $ref、resolve 把值裡的 $ref／$env 解開（都預設關） |
 | [`jsonx_ls/`](../../../../../proto8/lib/aos/jsonx_ls/) | json_ls 加料版：follow 穿過 $ref、resolve 列解開 $ref／$env 後的值（都預設關） |
+| [`jsonx_multi_get/`](../../../../../proto8/lib/aos/jsonx_multi_get/) | jsonx_get 的一次多格：逐格照 jsonx_get 做（follow、resolve 等選項整批一個），一格一行「路徑 TAB 結果」；有格失敗＝最後一行 PlacesFailed、退 1 |
+| [`jsonx_multi_set/`](../../../../../proto8/lib/aos/jsonx_multi_set/) | jsonx_set 的一次多格：逐格照 jsonx_set 做（照順序、不回滾；值來源每格各自、其他選項整批一個），一格一行「路徑 TAB 結果」；有格失敗＝最後一行 PlacesFailed、退 1 |
 | [`jsonx_search/`](../../../../../proto8/lib/aos/jsonx_search/) | json_search 加料版：follow 穿過 $ref、resolve 在解開 $ref／$env 後的值裡找（都預設關；這兩個不能配 up） |
 | [`jsonx_set/`](../../../../../proto8/lib/aos/jsonx_set/) | json_set 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關） |
 | [`judge/`](../../../../../proto8/lib/aos/judge/) | 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false；選填排隊窗 queue.json 先來先掛、keep_ordered 對照代回有序信 |

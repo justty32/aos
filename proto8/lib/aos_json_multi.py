@@ -1,14 +1,15 @@
-"""aos_json_multi - json_multi_get／json_multi_set：一次多格，逐格照 json_get／json_set 做、照順序、一格一行「路徑 TAB 結果」，不回滾。
+"""aos_json_multi - json_multi_get／set、jsonx_multi_get／set：一次多格，逐格照 json_get／json_set（jsonx 那兩支照 jsonx_get／jsonx_set）做、照順序、一格一行「路徑 TAB 結果」，不回滾。
 
 使用者 11-11「有需要的話，可以提供工具json_multi_get/set」、11-12「一次讀寫多格、複雜組的json工具可以做。」（thinking 2026-11/12/json-tools/03）。
 每格各自叫 aos-json（同一份檔多格就是多次原子寫入，前面的成功不因後面失敗而撤回）；某格錯＝那一行寫 `[error] 代號 原因`、其他格照做；
-有任何一格錯，最後印 `json_multi_*: error: PlacesFailed N of M ...`、退 1（lib 契約：有錯誤行不退 0）。整批的參數錯（paths／items 不是非空陣列）不做任何一格。"""
+有任何一格錯，最後印 `json_multi_*: error: PlacesFailed N of M ...`、退 1（lib 契約：有錯誤行不退 0）。整批的參數錯（paths／items 不是非空陣列）不做任何一格。
+jsonx_multi_*（11-12 續行點排回 03 D35 的「以後」）：選項（follow、resolve、check、parents、max_bytes、full）整批一個；值來源 value／text／from 每格各自剛好一個。"""
 import aos_json
 import tool_io
 
 
-def main(op):
-    name = "json_multi_" + op
+def main(op, directives=False):
+    name = ("jsonx_multi_" if directives else "json_multi_") + op
     aos_json.start(name)
     key = "paths" if op == "get" else "items"
     args = tool_io.arguments()                  # arguments(key) 只收字串，這裡的 key 是陣列，自己查
@@ -23,7 +24,7 @@ def main(op):
         for entry in entries:
             path = entry.get("path") if isinstance(entry, dict) else entry
             try:
-                out = one(op, entry, args)
+                out = one(op, entry, args, directives)
             except aos_json.Failed as e:
                 out, failed = "[error] %s %s" % (e.code, e.reason), failed + 1
             lines.append("%s\t%s" % (path if isinstance(path, str) else aos_json.compact(path), out))
@@ -36,16 +37,19 @@ def main(op):
     print(text)
 
 
-def one(op, entry, args):
+def one(op, entry, args, directives):
     if op == "get":
         if not isinstance(entry, str) or not entry:
             aos_json.die("ArgumentsBad", "each path must be a non-empty string FILE#/POINTER")
-        return aos_json.do_get(args, aos_json.Target(entry), [])
+        return aos_json.do_get(args, aos_json.Target(entry), aos_json.read_flags(args, directives))
+    sources = ("value", "text", "from") if directives else ("value",)
+    shape = '{"path": "FILE#/POINTER", "value": ...}' + (' (or "text" / "from" instead of "value")' if directives else "")
     if not isinstance(entry, dict) or not isinstance(entry.get("path"), str) or not entry["path"]:
-        aos_json.die("ArgumentsBad", 'each item must be {"path": "FILE#/POINTER", "value": ...}')
-    if "value" not in entry:
-        aos_json.die("ArgumentsBad", "missing value (any JSON)")
-    extra = set(entry) - {"path", "value"}
+        aos_json.die("ArgumentsBad", "each item must be " + shape)
+    extra = set(entry) - {"path"} - set(sources)
     if extra:
-        aos_json.die("ArgumentsBad", "unknown key in item: %s (only path and value)" % ", ".join(sorted(extra)))
-    return aos_json.do_set({"value": entry["value"], "parents": args.get("parents")}, aos_json.Target(entry["path"]), False)
+        aos_json.die("ArgumentsBad", "unknown key in item: %s (only path and %s)" % (", ".join(sorted(extra)), ", ".join(sources)))
+    item = {k: entry[k] for k in sources if k in entry}           # 來源每格各自；其他選項整批一個（D34）
+    opts = ("parents", "follow", "resolve", "check") if directives else ("parents",)   # 簡單組不帶指示詞選項
+    item.update((k, args[k]) for k in opts if k in args)
+    return aos_json.do_set(item, aos_json.Target(entry["path"]), directives)   # 來源不是剛好一個＝value_of 報 ArgumentsBad

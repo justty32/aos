@@ -1,4 +1,4 @@
-"""驗 cli.json 的 tools_sub（11-12 eca-task-subagent）：只有 claude 身認、--agents 蓋掉 general-purpose 並內嵌 aos_sub、--allowedTools 多 mcp__aos_sub、guard hook 擋子 agent 叫主 agent 那台；範本 eca-claude 開 Agent、Skill 且子 agent 那台只有唯讀八支。"""
+"""驗 cli.json 的 tools_sub（11-12 eca-task-subagent）：只有 claude 身認、--agents 蓋掉 general-purpose 並內嵌 aos_sub、--allowedTools 多 mcp__aos_sub、guard hook 擋子 agent 叫主 agent 那台；範本 eca-claude 開 Agent、Skill 且子 agent 那台只有唯讀九支。"""
 import contextlib
 import io
 import json
@@ -17,7 +17,7 @@ sys.path.insert(0, str(LIB))
 from agent import cli_session  # noqa: E402
 
 TEMPLATE = LIB.parent / "templates" / "eca-claude"
-SUB_TOOLS = ["index_view", "json_get", "json_ls", "json_multi_get", "json_search", "math", "peek_clock", "peek_now_time"]
+SUB_TOOLS = ["index_view", "json_get", "json_len", "json_ls", "json_multi_get", "json_search", "math", "peek_clock", "peek_now_time"]
 
 
 class ToolsSub(unittest.TestCase):

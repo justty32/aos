@@ -20,6 +20,7 @@
 | [`json_add/`](../../../../../proto8/lib/base/json_add/) | 加一項新的：物件已有這個 key＝KeyExists；陣列可插在某個索引前或 /- 接尾巴 |
 | [`json_del/`](../../../../../proto8/lib/base/json_del/) | 刪一格（key 或陣列元素，後面的往前移）；不刪整份檔 |
 | [`json_get/`](../../../../../proto8/lib/base/json_get/) | 拿一格的值（一行緊湊 JSON）；太大只回型別與大小、請改用 json_ls |
+| [`json_len/`](../../../../../proto8/lib/base/json_len/) | 一格的長度：物件＝key 數、陣列＝項數、字串＝字元數；數字、布林、null＝TargetBad |
 | [`json_ls/`](../../../../../proto8/lib/base/json_ls/) | 列一格底下的 key／索引，像 ls；long 才附型別與大小，第一行是這一格自己的型別與長度 |
 | [`json_multi_get/`](../../../../../proto8/lib/base/json_multi_get/) | 一次拿多格的值：逐格照 json_get 做，一格一行「路徑 TAB 結果」；有格失敗＝最後一行 PlacesFailed、退 1 |
 | [`json_multi_set/`](../../../../../proto8/lib/base/json_multi_set/) | 一次改多格：逐格照 json_set 做（照順序、不回滾），一格一行「路徑 TAB 結果」；有格失敗＝最後一行 PlacesFailed、退 1 |

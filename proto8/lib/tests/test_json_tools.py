@@ -233,6 +233,58 @@ class JsonToolsTest(unittest.TestCase):
         self.ok("json_multi_set", items=[{"path": "cfg.json#/q/z", "value": 1}], parents=True)
         self.assertEqual(self.doc()["q"], {"z": 1})
 
+    def test_len(self):
+        self.write("s.json", {"s": "小明ab", "e": {}, "n": 1.5, "b": True, "z": None})
+        self.assertEqual(self.ok("json_len", path="cfg.json"), "5")                   # 物件＝key 數
+        self.assertEqual(self.ok("json_len", path="cfg.json#/tags"), "2")             # 陣列＝項數
+        self.assertEqual(self.ok("json_len", path="s.json#/s"), "4")                  # 字串＝字元數（code point，不是 bytes）
+        self.assertEqual(self.ok("json_len", path="s.json#/e"), "0")
+        out = self.err("json_len", "TargetBad", path="s.json#/n")
+        self.assertIn("s.json#/n is a number; only objects, arrays and strings have a length", out)
+        self.err("json_len", "TargetBad", path="s.json#/b")
+        self.err("json_len", "TargetBad", path="s.json#/z")
+        self.err("json_len", "PointerMissing", path="cfg.json#/nope")
+        self.err("json_len", "FileMissing", path="none.json")
+        self.err("json_len", "PointerMissing", path="cfg.json#/r/y")                  # 簡單組不穿 $ref
+
+    def test_aos_multi_get(self):
+        self.assertEqual(self.ok("jsonx_multi_get", paths=["cfg.json#/r/y", "cfg.json#/name"], follow=True),
+                         'cfg.json#/r/y\t1\ncfg.json#/name\t"bob"')
+        self.assertEqual(self.ok("jsonx_multi_get", paths=["cfg.json#/r"], resolve=True), 'cfg.json#/r\t{"y":1}')
+        self.assertEqual(self.ok("jsonx_multi_get", paths=["cfg.json#/r"]), 'cfg.json#/r\t{"$ref":"o.json#/x"}')   # 預設照原文
+        r = self.run_tool("jsonx_multi_get", paths=["cfg.json#/r/y", "cfg.json#/max"])
+        lines = r.stdout.rstrip("\n").split("\n")
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(lines[0].startswith("cfg.json#/r/y\t[error] PointerMissing "), lines[0])   # 不給 follow 不穿
+        self.assertEqual(lines[1], "cfg.json#/max\t20")
+        self.assertTrue(lines[2].startswith("jsonx_multi_get: error: PlacesFailed 1 of 2 places failed"), lines[2])
+        self.err("jsonx_multi_get", "ArgumentsBad", paths="cfg.json")
+
+    def test_aos_multi_set(self):
+        out = self.ok("jsonx_multi_set", items=[{"path": "cfg.json#/r/y", "value": 5}, {"path": "cfg.json#/t", "text": '{"a": true}'},
+                                                {"path": "cfg.json#/f", "from": "o.json#/x"}], follow=True)
+        self.assertEqual(out, "cfg.json#/r/y\tok cfg.json#/r/y\ncfg.json#/t\tok cfg.json#/t\ncfg.json#/f\tok cfg.json#/f")
+        self.assertEqual(self.doc("o.json"), {"x": {"y": 5}})                       # follow：改在被參照的檔
+        self.assertEqual((self.doc()["t"], self.doc()["f"]), ({"a": True}, {"y": 5}))
+        self.ok("jsonx_multi_set", items=[{"path": "cfg.json#/s", "value": {"$ref": "o.json#/x"}}], resolve=True)
+        self.assertEqual(self.doc()["s"], {"y": 5})
+        r = self.run_tool("jsonx_multi_set", items=[{"path": "cfg.json#/r/y", "value": 6}, {"path": "cfg.json#/max", "value": 1, "text": "2"},
+                                                     {"path": "cfg.json#/name", "text": '"amy"'}, {"path": "cfg.json#/u", "value": 1, "follow": True},
+                                                     {"path": "cfg.json#/v", "text": "nope"}])
+        lines = r.stdout.rstrip("\n").split("\n")
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(lines[0].startswith("cfg.json#/r/y\t[error] FollowMissing "), lines[0])    # 不給 follow 擋
+        self.assertEqual(lines[1], "cfg.json#/max\t[error] ArgumentsBad give exactly one of value, text, from")
+        self.assertEqual(lines[2], "cfg.json#/name\tok cfg.json#/name")              # 前面格錯不擋、不回滾
+        self.assertTrue(lines[3].startswith("cfg.json#/u\t[error] ArgumentsBad unknown key in item: follow"), lines[3])
+        self.assertTrue(lines[4].startswith("cfg.json#/v\t[error] TextBad "), lines[4])
+        self.assertTrue(lines[5].startswith("jsonx_multi_set: error: PlacesFailed 4 of 5 places failed"), lines[5])
+        self.assertEqual((self.doc()["name"], self.doc()["max"], self.doc("o.json")), ("amy", 20, {"x": {"y": 5}}))
+        before = self.doc()
+        self.err("jsonx_multi_set", "ArgumentsBad", items=[])                       # 整批參數錯：一格都不做
+        self.err("jsonx_multi_set", "ArgumentsBad", items={"path": "cfg.json#/max", "value": 1})
+        self.assertEqual(self.doc(), before)
+
     def test_errors_carry_no_workspace_path(self):
         """11-12 線 errpath（使用者「json那個可以修」）：aos-json 在工作區跑、路徑照腦給的字面交下去，
         它那行錯誤（經 act 的 stderr 尾巴進 history）也不帶本機絕對路徑；給絕對路徑照字面。"""

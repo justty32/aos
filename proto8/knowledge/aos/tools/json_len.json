@@ -1,0 +1,3 @@
+{
+ "_description": "# Tool json_len\n\nThe length of one place of a JSON file, as one integer: an object = how many keys, an array = how many items, a string = how many characters (not bytes; `\"小明ab\"` is 4).\n\n```json\n{\"path\": \"cfg.json#/tags\"}\n```\nprints `2`.\n\n- A number, boolean or null has no length: `TargetBad` (`cfg.json#/max is a number; only objects, arrays and strings have a length`).\n- Want the keys or items too: `json_ls` (its first line is the type and length).\n\nPath: `aos/tools/json_get.json#/path`. Errors: `aos/tools/json_get.json#/errors`, plus `TargetBad`.\n"
+}

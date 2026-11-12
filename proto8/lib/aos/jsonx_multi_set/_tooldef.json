@@ -1,0 +1,57 @@
+{
+ "description": "Set several places at once, like jsonx_set for each item, in the order given (for plain data use json_multi_set). Each item: {\"path\": FILE#/POINTER} plus exactly one of \"value\" (any JSON, stored as given) / \"text\" (parsed as JSON) / \"from\" (copied from FILE#/POINTER). The options apply to every item: resolve, follow, check, parents (as in jsonx_set). One line per item: PATH, a TAB, then \"ok ...\" or \"[error] CODE reason\". Items are independent and nothing is undone; if any failed the last line is \"jsonx_multi_set: error: PlacesFailed ...\". Example: {\"items\": [{\"path\": \"fsm.json#/states/act/exec\", \"from\": \"lib.json#/exec\"}, {\"path\": \"fsm.json#/max\", \"value\": 30}], \"follow\": true}.",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "items": {
+    "type": "array",
+    "items": {
+     "type": "object"
+    },
+    "description": "the changes, each {\"path\": \"FILE#/POINTER\"} plus exactly one of \"value\", \"text\", \"from\"; at least one; done in this order"
+   },
+   "parents": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = create missing objects along the way for every item (like mkdir -p)"
+   },
+   "resolve": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = for every item, resolve $ref/$env inside the value before storing; false = store them as written"
+   },
+   "follow": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = for every item, go through $ref on the way and change the file it points to; false = a $ref/$env on the way is an error (FollowMissing)"
+   },
+   "check": {
+    "type": "boolean",
+    "default": false,
+    "description": "true = refuse each change that adds problems to the aos configuration"
+   }
+  },
+  "required": [
+   "items"
+  ]
+ },
+ "errors": [
+  "ArgumentsBad",
+  "PlacesFailed",
+  "PointerBad",
+  "SpecBad",
+  "TextBad",
+  "FileMissing",
+  "FileBad",
+  "PointerMissing",
+  "TargetBad",
+  "ValueBad",
+  "WriteFailed",
+  "FollowMissing",
+  "DirectiveBad",
+  "CheckFailed",
+  "LaunchFailed",
+  "CommandFailed",
+  "WsMissing"
+ ]
+}

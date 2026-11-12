@@ -80,6 +80,7 @@
 | [`tools/json_add.json`](../../../../../proto8/knowledge/aos/tools/json_add.json) | 設定（鍵：_description） |
 | [`tools/json_del.json`](../../../../../proto8/knowledge/aos/tools/json_del.json) | 設定（鍵：_description） |
 | [`tools/json_get.json`](../../../../../proto8/knowledge/aos/tools/json_get.json) | 設定（鍵：_description、path、errors） |
+| [`tools/json_len.json`](../../../../../proto8/knowledge/aos/tools/json_len.json) | 設定（鍵：_description） |
 | [`tools/json_ls.json`](../../../../../proto8/knowledge/aos/tools/json_ls.json) | 設定（鍵：_description） |
 | [`tools/json_multi_get.json`](../../../../../proto8/knowledge/aos/tools/json_multi_get.json) | 設定（鍵：_description） |
 | [`tools/json_multi_set.json`](../../../../../proto8/knowledge/aos/tools/json_multi_set.json) | 設定（鍵：_description、errors） |
@@ -89,6 +90,8 @@
 | [`tools/jsonx_del.json`](../../../../../proto8/knowledge/aos/tools/jsonx_del.json) | 設定（鍵：_description） |
 | [`tools/jsonx_get.json`](../../../../../proto8/knowledge/aos/tools/jsonx_get.json) | 設定（鍵：_description） |
 | [`tools/jsonx_ls.json`](../../../../../proto8/knowledge/aos/tools/jsonx_ls.json) | 設定（鍵：_description） |
+| [`tools/jsonx_multi_get.json`](../../../../../proto8/knowledge/aos/tools/jsonx_multi_get.json) | 設定（鍵：_description） |
+| [`tools/jsonx_multi_set.json`](../../../../../proto8/knowledge/aos/tools/jsonx_multi_set.json) | 設定（鍵：_description） |
 | [`tools/jsonx_search.json`](../../../../../proto8/knowledge/aos/tools/jsonx_search.json) | 設定（鍵：_description） |
 | [`tools/jsonx_set.json`](../../../../../proto8/knowledge/aos/tools/jsonx_set.json) | 設定（鍵：_description、errors） |
 | [`tools/ls.json`](../../../../../proto8/knowledge/aos/tools/ls.json) | 設定（鍵：_description、long、errors） |

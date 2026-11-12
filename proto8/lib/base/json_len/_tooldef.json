@@ -1,0 +1,26 @@
+{
+ "description": "Get the length of one place of a JSON file as one integer: an object = number of keys, an array = number of items, a string = number of characters. A number, boolean or null has no length (TargetBad). Example: {\"path\": \"cfg.json#/tags\"} prints 2.",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "FILE#/POINTER in one string, e.g. cfg.json#/states/think/next; FILE alone = the whole document; FILE#/ is the key named \"\" (RFC 6901). Relative files start at your workspace."
+   }
+  },
+  "required": [
+   "path"
+  ]
+ },
+ "errors": [
+  "ArgumentsBad",
+  "PointerBad",
+  "FileMissing",
+  "FileBad",
+  "PointerMissing",
+  "TargetBad",
+  "LaunchFailed",
+  "CommandFailed",
+  "WsMissing"
+ ]
+}

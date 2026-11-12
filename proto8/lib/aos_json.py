@@ -1,4 +1,4 @@
-"""aos_json - 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set 轉 aos_json_multi）。
+"""aos_json - 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／len／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set、jsonx_multi_get／set 轉 aos_json_multi）。
 
 使用者 11-12（thinking 2026-11/12/json-tools）：「建議做成一個aos_json工具……做兩套」、兩套選 A——簡單組只收路徑＋值、值照字面、
 不碰 $ref／$env／解析文字；複雜組另名，才有指示詞解開與否、穿過 $ref、值從文字或另一格來（圖紙 01-規劃 D1～D24）。
@@ -31,7 +31,7 @@ def die(code, reason):
     tool_io.die(code, reason)
 
 
-SIMPLE = {"get": "json_get", "ls": "json_ls", "search": "json_search", "set": "json_set", "add": "json_add", "del": "json_del"}
+SIMPLE = {"get": "json_get", "ls": "json_ls", "search": "json_search", "len": "json_len", "set": "json_set", "add": "json_add", "del": "json_del"}
 
 
 class Target:
@@ -241,6 +241,14 @@ def do_search(args, t, flags=()):
                           'narrow the path or give a bigger "limit"'))
 
 
+def do_len(args, t, flags=()):
+    """json_len（使用者 11-11「json_len」）：物件＝key 數、陣列＝項數、字串＝字元數（code point，同 json_ls 的 chars）；純值沒有長度。"""
+    v = read(t, flags=flags)
+    if not isinstance(v, (dict, list, str)):
+        die("TargetBad", "%s is %s; only objects, arrays and strings have a length" % (t.shown(), "a " + kind(v) if kind(v) != "null" else "null"))
+    return str(len(v))
+
+
 def value_of(args, t, directives):
     """寫入的值：簡單組只收 value（照字面）；複雜組 value／text／from 剛好一個，resolve 時先解指示詞。"""
     given = [k for k in ("value", "text", "from") if k in args]
@@ -353,16 +361,16 @@ def read_flags(args, directives):
 
 
 def main(op, directives=False):
-    """殼的入口：op＝get／ls／search／set／add／del（directives＝複雜組 jsonx_*）或 multi_get／multi_set（交給 aos_json_multi）。"""
+    """殼的入口：op＝get／ls／search／len／set／add／del（directives＝複雜組 jsonx_*）或 multi_get／multi_set（交給 aos_json_multi）。"""
     if op.startswith("multi_"):
         import aos_json_multi
-        return aos_json_multi.main(op[len("multi_"):])
+        return aos_json_multi.main(op[len("multi_"):], directives)
     name = ("jsonx_" + op) if directives else SIMPLE[op]
     start(name)
     args = tool_io.arguments("path")
     t = Target(args["path"])
-    if op in ("get", "ls", "search"):
-        out = {"get": do_get, "ls": do_ls, "search": do_search}[op](args, t, read_flags(args, directives))
+    if op in ("get", "ls", "search", "len"):
+        out = {"get": do_get, "ls": do_ls, "search": do_search, "len": do_len}[op](args, t, read_flags(args, directives))
     elif op == "set":
         out = do_set(args, t, directives)
     elif op == "add":
