@@ -178,6 +178,7 @@ for a in fsm_ann eca_bob eca_opus eca_cody; do aos-agent ctl add ../agents/$a; d
 - **opus 一句**：「列出 proto8 頂層各夾各一句話存成 out/proto8-top-level.md」19 秒、6 輪、opus 0.314 美金（新對話第一題寫快取），結果檔留在 `tidy/out/` 當例子（還順帶指出 `feedback/` 不在 README 的夾表裡）。測試用的檔已刪，`eca_tidy` 重掛成空對話、模型回預設 opus。
 - **撞到 build**：21:32 另一條線重 build impls，`aos-fsm` 正在換檔時 fsm_ann 起它＝`LaunchFailed … (Permission denied)`，fsm_ann 停在 `stopped`。停樹、用新的 bin（21:32）重起、`ctl start fsm_ann`，假腦與 eca_tidy 再各驗一次都過。
 - **樹留著跑**（五隻都 running），停樹那行在試驗場 README 最上面一節。
+- **產出已抽查**（可用，命中約九成；十條發現還沒修）：見 [eca-tidy-review](eca-tidy-review.md)。
 
 **代定**
 

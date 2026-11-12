@@ -1,0 +1,49 @@
+# eca_tidy 產出抽查結果（11-12 晚）：產出可以用、命中約九成；十條值得處理的發現還沒修，等使用者說修哪些
+
+← [11-12 日索引](README.md)｜[2026-11](../README.md)｜來源 [playground-home § eca_tidy](playground-home.md#用-eca-唯讀整理-proto8eca_tidy11-12-21302134)
+
+## 使用者原文
+
+- 「喔他那個已經跑好了，有out」（11-12 晚，逐字）
+
+## 結論
+
+**這批產出可以用。** 頂層派 opus 唯讀抽查（11-12 晚），抽查約 22 條具體敘述，對照快照 `026210d4a`：完全對 20 條、半對 1 條、數字小偏差 1 條。最有價值的是幾條指出文件跟程式對不上的發現，wf 裡都沒記過；thinking 那部分大半在核對 README 份數與狀態標記，用處較小。它守住了唯讀。
+
+產出在 `~/code/playground/tidy/out/`（不在 repo 裡）：`proto8-top-level.md`（英文，2 KB）、`survey/A～E`、`thinking/`（README、index 三份、findings 三份）、`index/README.md`，共 14 份約 186 KB，除頂層那份外都是繁體中文。
+
+錯得最明顯的一條：C-impls H1 說 `impls/build/` 沒被 .gitignore 蓋到；其實 repo 根 `.gitignore` 第 1 行 `build/` 就蓋到了，只有 `build-asan/` 真的沒蓋（它看不到根目錄、自己有註明，但仍列成「高」）。數字小偏差：11-04 它說 9 個題目，合併同名檔與夾是 8。
+
+## 表現
+
+- `tidy/` 下除 `out/` 外沒有檔比 `SNAPSHOT.txt` 新。
+- 開了 8 個子 agent 分區做；使用者中途說「先做 thinking、別做今天的」它就改範圍。
+- 子 agent 存 findings 被 Claude Code 內建規則擋下、由主 agent 代存並在檔頭標明。
+- 沒有 shell，所以沒全量查連結、沒 build、沒跑測試。
+- 預告的 `out/SUMMARY.md` 沒產出。
+
+## 最值得看的十條
+
+出處路徑在 `~/code/playground/tidy/out/` 底下；抽查的幾條在 11-12 晚的 main 上仍沒修。
+
+| # | 白話 | 出處 |
+|---|---|---|
+| 1 | 知識樹正文大約 66 處指標穿過 `$ref`，agent 用 `json_get` 讀會撞 `PointerMissing`，而會跟 `$ref` 走的 `jsonx` 工具範本都沒掛 | `survey/B-knowledge.md:24` |
+| 2 | 知識樹說 `self_state` 有 10 個 parts，程式有 11 個（多了 `system`），同一棵樹裡的 `cli/agent.json` 也寫 11 個 | `survey/B-knowledge.md:65` |
+| 3 | 範本 judge-llm 預設的 endpoint `judge` 在 llm-kernel 的 `kernel.json` 裡沒有，兩個範本直接搭配會失敗 | `survey/E-kernel-templates-misc.md:79` |
+| 4 | `aos-mcp-launch` 不走 `aos_flags`，啟動失敗時錯誤行會進 stdout，而 stdout 是 MCP 協定通道（只影響啟動那一刻，抽查者推測實害不大） | `survey/D-cmd-py-lib.md:23` |
+| 5 | `kernel/docs/01`、`02` 還教人用相對 lib 路徑和 `sed` 改，實際早已改成 `$AOS_HOME` | `survey/E-kernel-templates-misc.md:27` |
+| 6 | `aos-daemon/README.md:36` 說旗標放在設定檔後面會報錯，程式從 11-11 起已經收了 | `survey/C-impls.md:42` |
+| 7 | 頂層 README 的條號範圍還停在 C-73、P-41，cmd 清單少 `aos-mcp-launch`、`aos-mcp-import`，資料夾表沒有 `feedback/` | `survey/A-docs-thinking-notes.md:22`、`survey/D-cmd-py-lib.md:17`、`survey/E-kernel-templates-misc.md:16` |
+| 8 | `feedback/*.jsonl` 每筆都帶家目錄絕對路徑並進了 git，跟「家目錄、帳號名算外洩」的政策矛盾；`gitignore-check/check.py:187`、`templates/tests/test_daily.py:31` 寫死含帳號名的 `/mnt/c` 路徑 | `survey/E-kernel-templates-misc.md:36` |
+| 9 | thinking 月表份數與排序錯（11-04 排在 11-05 後；份數寫 6／15／2 與 11／1／1／1／2，實際 9／16／12 與 12／6／5／16／16），11-04、11-10 日 README 漏列五個題目（aos-agent、four-elements、eca-claude-dir；self-tools、sweeper） | `thinking/findings-2026-11b.md:28`、`thinking/findings-2026-11a.md:32` |
+| 10 | 已被推翻的決定原處沒標作廢：月 README 的 N-45 說法跟現行條文相反；`os-concepts` 還寫「C-76／N-65 暫稱」（實際落成 C-83／N-67）；C-86、C-89～C-92 在來源夾沒回標條號 | `thinking/findings-2026-10.md:15`、`thinking/findings-2026-11a.md:41`、`thinking/findings-2026-11b.md:48` |
+
+## 已知或半已知
+
+- 「agent 不知道知識樹在哪」：[ops-notes-to-aos](ops-notes-to-aos.md) 已寫。
+- 「指標不穿過 `$ref`」原則在 [ref-index-unify](ref-index-unify.md) 講過，但上面第 1 條的實際後果沒記。
+
+## 未定
+
+- 十條修哪些、誰修，等使用者說；都沒代定。
