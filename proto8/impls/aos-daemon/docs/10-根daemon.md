@@ -46,7 +46,7 @@ AOS_CLOCK=${AOS_STACK}/clock
 
 鐘檔在根的 stack（image）裡，搬家接著數。凍住整棵樹＝根 sleep，或 `aos-daemon-ctl --daemon /absolute/image pause _clock`（子樹都聽根的鐘）。寫法的坑與子 daemon 要用自己的鐘怎麼辦見 [02](02-看寫法決定怎麼起.md#時鐘普通一列)。
 
-清道夫那列（`_sweeper`，11-10）跟鐘不同：**每台 daemon 自己帶**、只管自己表上的列，子 daemon 的 daemon.json 也各寫一列（見 [02](02-看寫法決定怎麼起.md#清道夫普通一列)）。
+清道夫那列（`_sweeper`）跟鐘不同：**每台 daemon 自己帶**、只管自己表上的列，子 daemon 的 daemon.json 也各寫一列（見 [02](02-看寫法決定怎麼起.md#清道夫普通一列)）。
 
 </details>
 
@@ -77,10 +77,8 @@ AOS_CLOCK=${AOS_STACK}/clock
 
 </details>
 
-<details><summary>本次驗證範圍（11-06 家機）</summary>
+<details><summary>驗證範圍</summary>
 
-正式試驗場已確認根兩扇窗 `daemon: null`、`ctl ls` 尾行 `# root daemon (no supervisor)`；領班被殺後由根約 0.060 秒重起。獨立 `/tmp` fixture 用原子改名依序切 `$ref` demo（a）→full（a、b）→demo（a），約 0.021／0.061／0.162 秒取得快照；三次 `ctl_warning` 都是 `null`，a 的 pid 不變，b 收掉後消失。最後只向本次子程序送 SIGINT 並收回。
-
-家機 user slice 的 `cgroup.controllers` 實查有 `cpu memory pids`；本次沙箱連 user bus 被 `Operation not permitted` 擋住，**scope 未實跑**。systemd unit 已對照本機 systemd 手冊；最後一版 `systemd-analyze verify` 初始化驗證器時被沙箱 socket 權限擋住（退1），未取得語法通過結果。s6 run 的 `sh -n` 通過；兩種監管器均未做端到端驗證。
+根兩扇窗 `daemon: null`、`ctl ls` 尾行 `# root daemon (no supervisor)`；領班被殺後由根重起；切 `$ref` 名單（demo→full→demo）時 `ctl_warning` 都是 `null`、活列 pid 不變、多的收掉後消失。**scope 未實跑**；systemd unit 已對照 systemd 手冊、未取得 `systemd-analyze verify` 通過結果，s6 run 只過 `sh -n`；兩種監管器均未做端到端驗證。
 
 </details>
