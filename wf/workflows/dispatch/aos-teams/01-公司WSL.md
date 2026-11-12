@@ -1,4 +1,4 @@
-# 公司那台（WSL）的 codex、claude 隊員與監看門檻（2026-11-06）
+# 公司那台（WSL）的 codex、claude 隊員與監看門檻
 
 ← [入口](../aos-teams.md)｜下一份 [02-指令沙箱與試玩](02-指令沙箱與試玩.md)
 
@@ -6,8 +6,8 @@
 
 ## codex：直接叫 `codex` 就是新版
 
-- 原本有兩支：舊的 `~/.codex/packages/standalone`（0.153.4，非互動 `bash -lc` 會抓到它，不認得 `gpt-6.1-sol` 等新模型，上午因此誤判「不支援」），**11-06 08:15 經使用者同意刪除**。使用者原話：「gpt-6.1-sol用不了？我直接開wsl ubuntu，跑codex，模型預設就是gpt-6.1-sol」。
-- 現在 `~/.local/bin/codex` 是捷徑，指向 nvm 那份 codex（0.166.0）裡**不需要 node 的原生執行檔** `~/.nvm/versions/node/v24.19.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex`——nvm 的 `bin/codex` 是 node 腳本，非互動 shell 沒有 node 會失敗。所以 agent **直接叫 `codex`** 即可。
+- 使用者原話：「gpt-6.1-sol用不了？我直接開wsl ubuntu，跑codex，模型預設就是gpt-6.1-sol」。
+- `~/.local/bin/codex` 是捷徑，指向 nvm 那份 codex（0.166.0）裡**不需要 node 的原生執行檔** `~/.nvm/versions/node/v24.19.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex`——nvm 的 `bin/codex` 是 node 腳本，非互動 shell 沒有 node 會失敗。所以 agent **直接叫 `codex`** 即可。
 - **nvm 升級 node 或 codex 後這條捷徑要重指**（`ln -sf <新的原生執行檔> ~/.local/bin/codex`），否則會指到不存在的路徑。
 - 新版實測可用：`gpt-6.1-sol`、`gpt-6-sol`、`gpt-6-luna`、`gpt-6-astra`、`gpt-5.6-sol`／`-terra`／`-luna`（`gpt-5.5` 只在舊版測過、未重測）。`~/.codex/config.toml` 預設 `gpt-6.1-sol`，但照通則一律明帶 `-m`。
 
@@ -17,13 +17,13 @@
 
 ## fable 走 WSL claude：使用者說了才走
 
-使用者 11-06 先說：「這次fable好了之後，下次開fable，請走wsl claude。額度消耗的有一點快，我稍微有點憂心...不過重點在於只要不開fable，只靠opus那其實還是很充裕」「這只是在公司這邊才這樣做。」接著改口：「喔不，呃，不要"一律"，就，依據實際情況吧，我說走wsl claude 才走。因為wsl claude是公司帳號的。」
+使用者 11-06：「喔不，呃，不要"一律"，就，依據實際情況吧，我說走wsl claude 才走。因為wsl claude是公司帳號的。」同場談額度：「額度消耗的有一點快，我稍微有點憂心...不過重點在於只要不開fable，只靠opus那其實還是很充裕」
 
-所以：**預設照舊開 Claude Code 自家的 fable subagent**（盡量少開，fable 吃額度快、opus 很充裕）；**使用者明說「走 wsl claude」那次才改走 WSL**——WSL 的 claude 是公司帳號。走法：`claude -p '<提示>' --model claude-fable-5-1 --permission-mode acceptEdits --allowedTools '<工具,逗號連>' </dev/null`（11-06 實測可用），提示裡照樣要它先通讀 wf/ 規矩、可再用自己的 Agent 工具派 fable 子 agent；超過 10 分鐘的在 WSL 內 `setsid nohup … > log 2>&1 &` 脫離、等 log。
+所以：**預設開 Claude Code 自家的 fable subagent**（盡量少開，fable 吃額度快、opus 很充裕）；**使用者明說「走 wsl claude」那次才改走 WSL**——WSL 的 claude 是公司帳號。走法：`claude -p '<提示>' --model claude-fable-5-1 --permission-mode acceptEdits --allowedTools '<工具,逗號連>' </dev/null`（實測可用），提示裡照樣要它先通讀 wf/ 規矩、可再用自己的 Agent 工具派 fable 子 agent；超過 10 分鐘的在 WSL 內 `setsid nohup … > log 2>&1 &` 脫離、等 log。
 
 ## 沙箱
 
-`~/.codex/config.toml` 沒設 `danger-full-access`，codex 隊員寫檔用 `-s workspace-write`（它自己的沙箱）。09-22 那條「公司那台用 `--dangerously-bypass-approvals-and-sandbox`」11-06 作廢。
+`~/.codex/config.toml` 沒設 `danger-full-access`，codex 隊員寫檔用 `-s workspace-write`（它自己的沙箱）。
 
 ## 監看門檻
 
@@ -37,7 +37,7 @@ cat /proc/loadavg; grep MemAvailable /proc/meminfo; pgrep -fc '(^|/)codex exec';
 
 ## 效能上限（11-06 實測）
 
-**授權**（使用者 11-06 早；11-07 sol 審查 #32 補回，`5ddf03d81` 誤刪）：「效能監看這塊我們今天測一整天看看狀況，然後訂下一個標準，設定在公司這邊能最多開幾個。」閒著上限已裁，其餘代定。
+**授權**（使用者 11-06 早）：「效能監看這塊我們今天測一整天看看狀況，然後訂下一個標準，設定在公司這邊能最多開幾個。」閒著上限已裁，其餘代定。
 
 使用者原話（11-06；上午一句一併保留，提醒公司工作優先）：
 
@@ -60,12 +60,12 @@ cat /proc/loadavg; grep MemAvailable /proc/meminfo; pgrep -fc '(^|/)codex exec';
 
 - **load：做事／狀態未知時＞6.5，閒著時＞8，就停止加開、延後 agent 重操作。**前者沿用留餘裕門檻；後者沿用 14:30 放寬值（這台 WSL 8 核），今天 7～8 個輕工作最高僅 3.02。高 load 可能是公司工作，**不動使用者程序**。
 - **記憶體：WSL 或 Windows 任一可用＜3 GiB 就警報、停止加開。**Windows 換算為＜3072 MiB；今天 WSL 最低仍有 11.60 GiB，Windows 卻到 1.24 GiB（10:33:56），不能只看 WSL。Windows 3 GiB 是保守餘裕；WSL 3 GiB 今天沒碰到，資料不足，沿用暫定。
-- **Windows CPU＞95% 連續 3 筆也停止加開；CLI 超過當時 3／8（建置時 2）的上限就收斂。**回到門檻內再逐個開；不自動砍程序（11-07 sol 審查 #32：刪掉沒驗證過的恢復遲滯條件）。
+- **Windows CPU＞95% 連續 3 筆也停止加開；CLI 超過當時 3／8（建置時 2）的上限就收斂。**回到門檻內再逐個開；不自動砍程序。
 
 資料：`/mnt/c/Users/WG-Guanyu/aos-perf/{wsl,win}-2026-11-06.csv`；排除早期計數異常，取 08:39:16～16:25（WSL 918 筆、Windows 933 筆）。09:48～14:30 是混合窗，午間狀態未知；閒著依 14:30／15:55 原話判定。CPU 用 Windows 整機值，WSL 的 CLI CPU 是生命週期平均加總，不能當瞬時 CPU。完整分析：本機 `/tmp/teamPerf/analysis.md`。
 
 **保險絲：之後跑高佔用工作時再做。**使用者 11-06 原話「除此之外你看看要不要設立一個保險絲，在佔用達到95%的時候砍掉東西。現在先不用，因為老實說單跑agent做文字處理，不太可能達到這種狀況。等之後我們有要跑高占用的東西的時候再來做」。
 
-**兩個坑（11-06 實測）**：
+**兩個坑**：
 - `claude -p` 的 `--allowedTools` 會吃掉後面所有參數：提示要放在 `-p` 後第一個，工具清單用逗號串成一個參數。
-- codex 的 `-s workspace-write` 沙箱寫不了 `~/dev/vcpkg` 的鎖，`cmake -B build` 會失敗：讓 codex 只改檔，configure／build 由隊長在沙箱外跑（P2 時 codex 自己帶了 `-DVCPKG_MANIFEST_INSTALL=OFF`，隊長之後已改回 `=ON` 重新 configure）。
+- codex 的 `-s workspace-write` 沙箱寫不了 `~/dev/vcpkg` 的鎖，`cmake -B build` 會失敗：讓 codex 只改檔，configure／build 由隊長在沙箱外跑（codex 不要自己帶 `-DVCPKG_MANIFEST_INSTALL=OFF`）。
