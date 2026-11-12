@@ -39,10 +39,11 @@
 | [`src/cmd/cmd.hpp`](../../../../../proto8/impls/aos-json/src/cmd/cmd.hpp) | 每個子命令一個函數：拿到子命令後面的參數（不含 `aos-json 子命令`），回退出碼；錯丟 aos::Error。 |
 | [`src/cmd/edit.cpp`](../../../../../proto8/impls/aos-json/src/cmd/edit.cpp) | 寫入共用 helper：讀取值、找位置、找父節點與放入值。 |
 | [`src/cmd/edit.hpp`](../../../../../proto8/impls/aos-json/src/cmd/edit.hpp) | 寫入共用的編輯狀態、位置與 helper 宣告，供 write.cpp、ref.cpp 使用。 |
+| [`src/cmd/list.cpp`](../../../../../proto8/impls/aos-json/src/cmd/list.cpp) | ls（列一格底下的孩子，--long 附型別與大小）、search（找 key／value，往下或往上）——json 工具 json_ls／json_search 搬下來（11-12）。 |
 | [`src/cmd/peek.cpp`](../../../../../proto8/impls/aos-json/src/cmd/peek.cpp) | peek [--follow] [--depth N] 檔#/指標——漸進展開：一次只看一層，大的值摺成一句摘要（省 token）。 |
 | [`src/cmd/read.cpp`](../../../../../proto8/impls/aos-json/src/cmd/read.cpp) | 讀——get（取值）、where（這個值實際寫在哪份檔的哪個位置）。 |
 | [`src/cmd/ref.cpp`](../../../../../proto8/impls/aos-json/src/cmd/ref.cpp) | 寫入 env、ref 指示詞，ref --move 搬值並重算相對 $ref。 |
-| [`src/cmd/write.cpp`](../../../../../proto8/impls/aos-json/src/cmd/write.cpp) | 寫入值——set、batch、del、append、merge。 |
+| [`src/cmd/write.cpp`](../../../../../proto8/impls/aos-json/src/cmd/write.cpp) | 寫入值——set、batch、del、append、merge、add。 |
 | [`src/common/common.hpp`](../../../../../proto8/impls/aos-json/src/common/common.hpp) | aos-json 跨元素共用——自己的錯誤代號。 |
 | [`src/doc/doc.hpp`](../../../../../proto8/impls/aos-json/src/doc/doc.hpp) | 一份 JSON 檔怎麼讀、怎麼照原樣寫回去，與 `檔#/指標` 的尋址。 |
 | [`src/doc/file.cpp`](../../../../../proto8/impls/aos-json/src/doc/file.cpp) | 讀一份 JSON 檔、照原樣寫回去。 |
@@ -54,4 +55,5 @@
 | [`src/help/help.cpp`](../../../../../proto8/impls/aos-json/src/help/help.cpp) | aos-json 各子命令的英文說明與旗標解析。 |
 | [`src/help/help.hpp`](../../../../../proto8/impls/aos-json/src/help/help.hpp) | aos-json 子命令的 usage、旗標說明與共同旗標解析入口。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-json/src/main.cpp) | aos-json 命令列——第一個參數挑子命令，其餘交給它（src/cmd/）。 |
+| [`tests/test_add_ls_search.py`](../../../../../proto8/impls/aos-json/tests/test_add_ls_search.py) | Check aos-json add / ls / search (the json tools' Python logic moved into C++, 11-12): output formats and error codes. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-json/vcpkg.json) | aos-json：讀、改 aos 的 JSON 設定（檔#/指標、指示詞）的 lib 與命令列 |

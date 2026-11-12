@@ -158,7 +158,7 @@ std::string render(const File& f, const Json& v, bool flat, const std::string& p
     return text;
 }
 
-// 同一種容器、只多一個（接在最後）或只少一個成員：只插入或拿掉那一個，其他成員的原文不動。sc 停在容器開頭。
+// 同一種容器、只多一個（接在最後或插在中間）或只少一個成員：只插入或拿掉那一個，其他成員的原文不動。sc 停在容器開頭。
 std::optional<std::string> add_or_remove(const File& f, Scan& sc, const Json& a, const Json& b) {
     bool obj = a.is_object() && b.is_object();
     if (!obj && !(a.is_array() && b.is_array())) {
@@ -174,10 +174,20 @@ std::optional<std::string> add_or_remove(const File& f, Scan& sc, const Json& a,
     auto key_at = [](const Json& j, size_t k) { return j.is_object() ? std::next(j.begin(), (long)k).key() : std::string(); };
     auto val_at = [](const Json& j, size_t k) { return *std::next(j.begin(), (long)k); };
     if (b.size() == a.size() + 1) {
-        for (size_t k = 0; k < a.size(); ++k) {
-            if (key_at(a, k) != key_at(b, k) || val_at(a, k) != val_at(b, k)) {
+        size_t r = 0;
+        while (r < a.size() && key_at(a, r) == key_at(b, r) && val_at(a, r) == val_at(b, r)) {
+            r += 1;
+        }
+        for (size_t k = r; k < a.size(); ++k) {
+            if (key_at(a, k) != key_at(b, k + 1) || val_at(a, k) != val_at(b, k + 1)) {
                 return std::nullopt;
             }
+        }
+        if (r < a.size()) {   // 插在中間（add 插陣列）：新成員放在第 r 個成員的原文前面，其他不動
+            bool flat = t.substr(start, close - start).find('\n') == std::string::npos;
+            std::string pad = pad_of(t, ms[r].start);
+            std::string m = (obj ? aos::dumps(key_at(b, r)) + ": " : std::string()) + render(f, val_at(b, r), flat, pad);
+            return t.substr(0, ms[r].start) + m + (flat ? ", " : ",\n" + pad) + t.substr(ms[r].start);
         }
         size_t n = a.size();
         bool flat = t.substr(start, close - start).find('\n') == std::string::npos;

@@ -22,21 +22,26 @@ static std::string one_spec(const Args& args, const Cli& cli, const std::string&
 // get [--follow] [--resolve] [--str] 檔#/指標
 //   沒旗標＝原文（指示詞原樣印出來）；--follow＝路上遇到 $ref 穿過去（aos 自己的程式不會這樣讀，給人看拆檔後的值）；
 //   --resolve＝把拿到的值裡的指示詞解開（交給 aos-directive，跟 aos-loop、aos-fsm 讀設定檔同一套）；--str＝值是字串就印字面（不帶引號）。
-int cmd_get(const Args& args) {
-    Cli cli = parse_args(args, {}, {{"--follow", "follow"}, {"--resolve", "resolve"}, {"--str", "str"}}, "get");
-    std::string s = one_spec(args, cli, cli_usage("get"));
+Json get_value(const std::string& spec, bool follow, bool resolve) {
     Docs docs;
     Mode mode;
-    mode.follow = cli.opts.count("follow") > 0;
-    Located at = locate(docs, parse_spec(s), mode);
+    mode.follow = follow;
+    Located at = locate(docs, parse_spec(spec), mode);
     if (!at.rest.empty()) {
-        throw Error{code::PointerMissing, "no such pointer: " + s + " (" + shown(at.at.file, at.at.toks) + " has no " +
+        throw Error{code::PointerMissing, "no such pointer: " + spec + " (" + shown(at.at.file, at.at.toks) + " has no " +
                                               at.rest[0] + ")"};
     }
     Json v = *at.at.node;
-    if (cli.opts.count("resolve")) {
+    if (resolve) {
         v = aos::resolve(v, at.at.base);
     }
+    return v;
+}
+
+int cmd_get(const Args& args) {
+    Cli cli = parse_args(args, {}, {{"--follow", "follow"}, {"--resolve", "resolve"}, {"--str", "str"}}, "get");
+    std::string s = one_spec(args, cli, cli_usage("get"));
+    Json v = get_value(s, cli.opts.count("follow") > 0, cli.opts.count("resolve") > 0);
     if (cli.opts.count("str")) {
         if (!v.is_string()) {
             throw Error{code::TargetBad, s + " is not a string (it is " + std::string(v.type_name()) + ")"};

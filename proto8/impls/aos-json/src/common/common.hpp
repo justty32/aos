@@ -19,6 +19,7 @@ inline constexpr const char* PointerMissing = "PointerMissing"; // 指標指不�
 inline constexpr const char* ValueMissing = "ValueMissing";     // 要寫的值沒給（參數沒有、stdin 空的）
 inline constexpr const char* ValueBad = "ValueBad";             // 要寫的值不是一份 JSON；$ref 目標寫法不合
 inline constexpr const char* TargetBad = "TargetBad";           // 那個位置不能這樣改（append 不是陣列、merge 不是物件…）
+inline constexpr const char* KeyExists = "KeyExists";           // add：物件裡已有這個 key、或整份檔已在（要換值用 set）
 inline constexpr const char* CheckFailed = "CheckFailed";       // --check：改完會多出 check 的問題，沒寫
 inline constexpr const char* FollowMissing = "FollowMissing";   // 路上經過指示詞：要穿過去改被參照的檔，得加 --follow
 // check 報的問題（印在 stdout，不是 aos-json 自己的錯）

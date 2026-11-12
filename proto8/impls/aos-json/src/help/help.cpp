@@ -17,6 +17,9 @@ const std::map<std::string, std::string> SUB_USAGE = {
     {"env", "aos-json env [--path SUBPATH] [--prefix PREFIX] [--parents] FILE#/POINTER NAME"},
     {"ref", "aos-json ref [--move] [--parents] FILE#/POINTER TARGET"},
     {"check", "aos-json check [--env] FILE[#/POINTER]..."},
+    {"add", "aos-json add [--check] [--follow|--raw] [--parents] [--str] FILE[#/POINTER] [VALUE]"},
+    {"ls", "aos-json ls [--follow] [--resolve] [--long] [--offset N] [--limit N] FILE[#/POINTER]"},
+    {"search", "aos-json search [--follow] [--resolve] [--key K] [--value JSON] [--contains] [--up] [--limit N] FILE[#/POINTER]"},
 };
 
 const std::map<std::string, std::string> SUB_HELP = {
@@ -192,6 +195,71 @@ Check references, directive forms and exec forms; print one problem per line.
 exit codes: 0 no problems; 10 problems found; 1 error.
 more: aos-json/README.md
 )"},
+    {"add", R"(aos-json add - Add a new key or array item; fail if the key exists.
+
+usage: aos-json add [--check] [--follow|--raw] [--parents] [--str] FILE[#/POINTER] [VALUE]
+       aos-json add --help
+
+flags:
+  --check      validate before writing; reject changes that add problems
+  --follow     follow $ref on the path to the parent
+  --raw        treat $ref/$env objects on the path as plain objects
+  --parents    create missing parent objects
+  --str        treat VALUE or stdin as a literal string
+  -h, --help   show this help
+
+In an object, add a new key (KeyExists if it is there; use set to change it).
+In an array, /N inserts before item N (0..length) and /- appends.
+Without #/POINTER, create the file (KeyExists if it exists).
+Read VALUE from argv, or stdin when omitted; write changed files atomically.
+Print the location written, with - replaced by the real index.
+
+exit codes: 0 added; 1 error.
+more: aos-json/README.md
+)"},
+    {"ls", R"(aos-json ls - List the children of a JSON value.
+
+usage: aos-json ls [--follow] [--resolve] [--long] [--offset N] [--limit N] FILE[#/POINTER]
+       aos-json ls --help
+
+flags:
+  --follow     follow $ref on the path to the value
+  --resolve    resolve directives inside the value
+  --long       add type and size columns (TAB separated)
+  --offset N   start at child N (default: 0)
+  --limit N    list at most N children (default: all)
+  -h, --help   show this help
+
+The first line is the value's type and length; then one child per line,
+escaped so it can be appended to the pointer. A partial list ends with
+a [more] line giving the next --offset.
+
+exit codes: 0 listed; 1 error.
+more: aos-json/README.md
+)"},
+    {"search", R"(aos-json search - Find keys or values below or above a JSON value.
+
+usage: aos-json search [--follow] [--resolve] [--key K] [--value JSON] [--contains] [--up] [--limit N] FILE[#/POINTER]
+       aos-json search --help
+
+flags:
+  --follow     follow $ref on the path, then search below that value
+  --resolve    resolve directives, then search below that value
+  --key K      match members named K
+  --value JSON match values equal to JSON (same type: 1 is not "1")
+  --contains   match keys and string values that contain the text
+  --up         search the parent and each ancestor's own members, nearest first
+  --limit N    print at most N matches (default: all)
+  -h, --help   show this help
+
+Give --key, --value, or both. Without --up, search every member below
+in file order. One match per line: FILE#/POINTER, type, size (TAB
+separated); [no match] when nothing matches. --up cannot be combined
+with --follow or --resolve.
+
+exit codes: 0 searched (also on no match); 1 error.
+more: aos-json/README.md
+)"},
 };
 
 }  // namespace
@@ -208,9 +276,9 @@ Cli parse_args(const std::vector<std::string>& args,
                const std::map<std::string, std::string>& flags,
                const std::map<std::string, std::string>& switches,
                const std::string& command) {
-    // 11-11 P-44 續：旗標寫在位置參數前後都收。set／append／merge 照舊規則（keep＝1，旗標只在 FILE 前）：
+    // 11-11 P-44 續：旗標寫在位置參數前後都收。set／append／merge／add 照舊規則（keep＝1，旗標只在 FILE 前）：
     // 它們的值什麼字都可以（--str 時 -x、--check 也是合法的值），FILE 後再認旗標會把值吃掉
-    size_t keep = command == "set" || command == "append" || command == "merge" ? 1 : 0;
+    size_t keep = command == "set" || command == "append" || command == "merge" || command == "add" ? 1 : 0;
     return aos::parse_cli(args, flags, switches, cli_help(command), {}, {}, keep);
 }
 

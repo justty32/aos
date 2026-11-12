@@ -1,9 +1,12 @@
-// write.cpp：【cmd】寫入值——set、batch、del、append、merge。
+// write.cpp：【cmd】寫入值——set、batch、del、append、merge、add。
 //
 // 共用流程：找位置（locate；沒 --follow 時路上經過指示詞＝FollowMissing）→ 在記憶體裡改 → 有變的檔才寫回（save_file，原子）。
 #include "cmd/edit.hpp"
 
 #include "help/help.hpp"
+
+#include <filesystem>
+#include <iostream>
 
 namespace aos::json {
 
@@ -141,6 +144,73 @@ int cmd_merge(const Args& args) {
         t[k] = x;
     }
     ed.save();
+    return 0;
+}
+
+// add [--follow|--raw] [--parents] [--check] [--str] 檔#/指標 [值]：加一項新的，已有就報錯（json 工具 json_add 搬下來，11-12）。
+//   父層是物件＝加新 key（已有＝KeyExists）；父層是陣列＝/N 插在第 N 項前面（0..長度）、/- 接尾巴；
+//   整份（沒 #）＝檔已在 KeyExists、不在建新檔。成功印實際寫到的位置（照給的字面，- 換成真索引）。
+int cmd_add(const Args& args) {
+    Cli cli = parse_args(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}, {"--raw", "raw"}, {"--str", "str"}}, "add");
+    if (cli.rest.empty()) {
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("add"));
+    }
+    const std::string& s = cli.rest[0];
+    Json v = read_value(cli.rest, 1, cli.opts.count("str") > 0);
+    bool follow = cli.opts.count("follow") > 0;
+    bool raw = raw_flag(cli, follow);
+    Spec spec = parse_spec(s);
+    Edit ed;
+    if (cli.opts.count("check")) {
+        ed.check_file = spec.file;
+    }
+    std::string out = s;
+    if (spec.toks.empty()) {
+        if (std::filesystem::exists(spec.file)) {
+            throw Error{code::KeyExists, spec.file + " already exists; use set to replace the whole file"};
+        }
+        Place p = place(ed, s, follow, follow, true, raw);
+        put(p.file->doc, p.toks, v, false, s);
+    } else if (spec.toks.back() == "-") {
+        std::string ptr = s.substr(s.find('#') + 1);
+        ptr = ptr.substr(0, ptr.rfind('/'));
+        std::string parent = spec.file + (ptr.empty() ? "" : "#" + ptr);
+        Place p = place(ed, parent, follow, follow, false, raw);
+        Json& t = existing(p, parent);
+        if (!t.is_array()) {
+            throw Error{code::TargetBad, parent + " is " + std::string(t.type_name()) + ", not an array; - only works at the end of an array path"};
+        }
+        out = s.substr(0, s.size() - 1) + std::to_string(t.size());
+        t.push_back(v);
+    } else {
+        Place p = place(ed, s, follow, false, false, raw);
+        const std::string& last = p.toks.back();
+        if (p.at.rest.empty()) {   // 已在：父層是物件＝KeyExists；是陣列＝插在那一項前面
+            Json& par = parent_of(p.file->doc, p.toks, false, s);
+            if (par.is_object()) {
+                throw Error{code::KeyExists, s + " already exists" + (par[last].is_array() ? "; to add an item to that array write " + s + "/-"
+                                                                                          : std::string("; use set to change it"))};
+            }
+            par.insert(par.begin() + (long)std::stoull(last), v);
+        } else if (p.at.rest.size() == 1) {   // 父層在
+            Json& par = *p.at.at.node;
+            if (par.is_object()) {
+                par[last] = v;
+            } else if (par.is_array() && (last == std::to_string(par.size()) || is_index(last, par.size()))) {
+                par.insert(par.begin() + (long)std::stoull(last), v);
+            } else if (par.is_array()) {
+                throw Error{code::PointerMissing, s + ": array has " + std::to_string(par.size()) + " items; insert at 0.." +
+                                                      std::to_string(par.size()) + " or write /- to append"};
+            } else {
+                throw Error{code::TargetBad, shown(p.at.at.file, p.at.at.toks) + " is " + std::string(par.type_name()) +
+                                                 "; it cannot hold a key or item"};
+            }
+        } else {   // 中間層不在：--parents 建物件層（同 set --parents），不然 PointerMissing
+            put(p.file->doc, p.toks, v, cli.opts.count("parents") > 0, s);
+        }
+    }
+    ed.save();
+    std::cout << out << "\n" << std::flush;
     return 0;
 }
 

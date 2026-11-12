@@ -26,9 +26,12 @@ usage: aos-json [FLAGS] SUBCOMMAND [ARGS...]
 
 subcommands:
   get      print a value
+  ls       list the children of a value
+  search   find keys or values
   peek     inspect one level of a value
   where    locate the source of a value
   set      set a value
+  add      add a new key or array item
   batch    set several values from stdin
   del      delete a key or array element
   append   append to an array
@@ -56,7 +59,8 @@ int main(int argc, char** argv) {
     using namespace aos::json;
     const std::map<std::string, int (*)(const Args&)> table = {
         {"get", cmd_get},       {"peek", cmd_peek},   {"where", cmd_where}, {"set", cmd_set}, {"batch", cmd_batch}, {"del", cmd_del}, {"append", cmd_append},
-        {"merge", cmd_merge},   {"env", cmd_env},     {"ref", cmd_ref}, {"check", cmd_check},
+        {"merge", cmd_merge},   {"env", cmd_env},     {"ref", cmd_ref}, {"check", cmd_check}, {"add", cmd_add},
+        {"ls", cmd_ls},         {"search", cmd_search},
     };
     std::string sub_cmd;
     try {
