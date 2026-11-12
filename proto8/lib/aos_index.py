@@ -41,29 +41,34 @@ def table(t, shown):
 
 
 def natural(path):
-    """天然那份：回 (位置, 表或 None, 沒有時的句子)。節點本身不在或不是 JSON＝照轉 aos-json 的錯。"""
+    """天然那份：回 (位置, 表或 None, 沒有時的句子, 上一層提示或 None)。節點本身不在或不是 JSON＝照轉 aos-json 的錯。
+    沒有時的句子帶一句「上一層的 index 怎麼看這個節點」（只是提示，工具不自己往上找，I10）。"""
     t = aos_json.Target(path)
     where = spot(t)
     it = aos_json.Target(where)
+    if t.ptr:
+        up, item = t.shown(t.parent_ptr()), t.toks[-1]
+    else:
+        bare = t.file.rstrip("/") or t.file
+        up, item = os.path.dirname(bare) or ".", os.path.basename(bare)
+    about = 'What the index of %s says about it: {"path": "%s", "key": "%s"}' % (up, up, item)
     if not it.ptr:                                      # 資料夾那份是整份檔
         if not os.path.exists(it.real):
-            return where, None, "%s does not exist" % where
-        return where, table(it, where), None
+            return where, None, "%s does not exist" % where, about
+        return where, table(it, where), None, None
     node = read(aos_json.Target(it.shown(it.parent_ptr())))
     name = it.toks[-1]
     if not isinstance(node, dict):
-        if t.ptr:
-            up, item = t.shown(t.parent_ptr()), t.toks[-1]
-        else:
-            up, item = os.path.dirname(t.file) or ".", os.path.basename(t.file) + "#"
+        if not t.ptr:
+            item += "#"
         return where, None, ("%s is %s, it cannot hold %s. Entries about its items may sit in a parent's index (keys like %s/0): try index_view %s"
-                             % (t.shown(), aos_json.kind(node), name, item, up))
+                             % (t.shown(), aos_json.kind(node), name, item, up)), None
     if name not in node:
-        return where, None, "%s does not exist" % where
+        return where, None, "%s does not exist" % where, about
     v = node[name]
     if not isinstance(v, dict):
         tool_io.die("IndexBad", "%s is %s; an index must be a JSON object {KEY: {\"description\": ...}}" % (where, aos_json.kind(v)))
-    return where, v, None
+    return where, v, None, None
 
 
 def entries(n):
@@ -90,9 +95,9 @@ def main():
     if type(offset) is not int or offset < 0:
         tool_io.die("ArgumentsBad", "offset must be a non-negative integer")
     cap = aos_json.limit(args, "limit", "AOS_JSON_MAX_ITEMS", aos_json.MAX_ITEMS)
-    base, missing = None, None
+    base, missing, about = None, None, None
     if "path" in args:
-        where, base, missing = natural(args["path"])
+        where, base, missing, about = natural(args["path"])
     if "index" in args:
         mine = table(aos_json.Target(args["index"]), args["index"])
         merged = dict(base or {})
@@ -106,7 +111,7 @@ def main():
         rows = merged
     else:
         if base is None:
-            print("[no index] %s. %s" % (missing, VIEW_NOT_FACTS))
+            print("[no index] %s. %s%s" % (missing, about + ". " if about else "", VIEW_NOT_FACTS))
             return
         head, rows = "[index] %s, %s" % (where, entries(len(base))), base
     out = [head]

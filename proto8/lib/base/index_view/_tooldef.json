@@ -1,5 +1,5 @@
 {
- "description": "Show a node through its index: the notes agents keep about what is under it (KEY<TAB>description). It is a view, not the facts: entries can be missing or stale; for the real contents use ls or json_ls. First line \"[index] WHERE, N entries\" names the index file read; to change an index, edit that place with json_set / json_add / json_del. A key joins back to a path as DIR/KEY (folder) or FILE#/KEY, FILE#/POINTER/KEY (json). Example: {\"path\": \"knowledge/aos\", \"key\": \"tools\"}.",
+ "description": "Show a node through its index: the notes agents keep about what is under it (KEY<TAB>description). It is a view, not the facts: entries can be missing or stale; for the real contents use ls or json_ls. What an index says about one node X is in the index of X's parent: {\"path\": \"kb\", \"key\": \"app.json\"} (not path kb/app.json). First line \"[index] WHERE, N entries\" names the index read. A key joins back to a path as DIR/KEY (folder) or FILE#/KEY, FILE#/POINTER/KEY (json). An entry is KEY: {\"description\": \"...\"}; to change one, edit the place on the [index] line with json_set / json_add / json_del, e.g. json_set {\"path\": \"kb/_index.json#/app.json\", \"value\": {\"description\": \"App settings\"}}.",
  "parameters": {
   "type": "object",
   "properties": {

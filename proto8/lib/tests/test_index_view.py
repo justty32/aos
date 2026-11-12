@@ -93,9 +93,12 @@ class IndexViewTest(unittest.TestCase):
 
     def test_no_index(self):
         out = self.ok(path="empty")
-        self.assertEqual(out, ["[no index] empty/_index.json does not exist. An index is a view, not a listing: "
-                               "use ls or json_ls to see what is really there."])
+        self.assertEqual(out, ['[no index] empty/_index.json does not exist. What the index of . says about it: {"path": ".", "key": "empty"}. '
+                               "An index is a view, not a listing: use ls or json_ls to see what is really there."])
         self.assertTrue(self.ok(path="me.json")[0].startswith("[no index] me.json#/_index does not exist."))
+        self.write("kb/app.json", {"retries": 3})
+        self.assertIn('{"path": "kb", "key": "app.json"}', self.ok(path="kb/app.json")[0])     # 只是提示上一層，不自己往上找
+        self.assertIn('{"path": "cfg.json#/states", "key": "think"}', self.ok(path="cfg.json#/states/think")[0])
         out = self.ok(path="cfg.json#/tags")[0]
         self.assertTrue(out.startswith("[no index] cfg.json#/tags is array, it cannot hold _index."), out)
         self.assertIn("keys like tags/0", out)

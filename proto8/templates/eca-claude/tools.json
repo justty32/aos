@@ -3,5 +3,6 @@
                {"$env": "AOS_HOME", "$path": "/lib/packs/self.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/def.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/mailbox.json"},
-               {"$env": "AOS_HOME", "$path": "/lib/packs/json.json"}],
+               {"$env": "AOS_HOME", "$path": "/lib/packs/json.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/index.json"}],
  "tools": {"do_task": null}}

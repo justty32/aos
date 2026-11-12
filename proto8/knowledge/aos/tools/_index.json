@@ -56,6 +56,9 @@
  "json_multi_set.json": {
   "description": "Tool json_multi_set: set several places in order, one line per place; nothing undone if one fails."
  },
+ "index_view.json": {
+  "description": "Tool index_view: see a node through its index (KEY<TAB>description); a view, not the facts."
+ },
  "jsonx_get.json": {
   "description": "Tool jsonx_get: json_get for aos configuration files: follow $ref, resolve $ref/$env."
  },

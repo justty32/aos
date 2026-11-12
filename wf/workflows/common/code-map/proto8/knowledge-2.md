@@ -75,6 +75,7 @@
 | [`tools/glob.json`](../../../../../proto8/knowledge/aos/tools/glob.json) | 設定（鍵：_description、rules、errors） |
 | [`tools/goal.json`](../../../../../proto8/knowledge/aos/tools/goal.json) | 設定（鍵：_description、rules、errors） |
 | [`tools/grep.json`](../../../../../proto8/knowledge/aos/tools/grep.json) | 設定（鍵：_description、output、rules、errors） |
+| [`tools/index_view.json`](../../../../../proto8/knowledge/aos/tools/index_view.json) | 設定（鍵：_description） |
 | [`tools/json_add.json`](../../../../../proto8/knowledge/aos/tools/json_add.json) | 設定（鍵：_description） |
 | [`tools/json_del.json`](../../../../../proto8/knowledge/aos/tools/json_del.json) | 設定（鍵：_description） |
 | [`tools/json_get.json`](../../../../../proto8/knowledge/aos/tools/json_get.json) | 設定（鍵：_description、path、errors） |
