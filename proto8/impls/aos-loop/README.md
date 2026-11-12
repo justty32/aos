@@ -28,7 +28,7 @@ aos-loop --max 2 loop.json # 每次 `aos-exec -- idle`，旗標蓋過 loop.json 
 
 **讀回自己的狀態**：state／state_flux 不在就安靜重建；在卻讀不了、JSON 壞或根不是物件，先改名成 `<檔名>.bad-<UTC 毫秒時間>` 留證、印一行 warning，再從新狀態開始。好檔仍照常接回有效的 paused／ctl_seq；aos-daemon 等 Loop 子類別也用同一條路。
 
-**跑過幾次要開旗標才寫**（11-09，[N-09 的 11-09 補](../../docs/NORMS/05-基礎設施-窗/02-N-09～N-11.md)）：state 沒有 `counter_runs`；給 `--enable-counters` 而且有 state 窗時，每跑一次寫 state 窗同資料夾的 `counter_runs.txt`（十進位整數＋換行），預設不寫。
+**跑過幾次要開旗標才寫**（11-09，[N-09「計數器」](../../docs/NORMS/05-基礎設施-窗/02-N-09～N-11.md)）：state 沒有 `counter_runs`；給 `--enable-counters` 而且有 state 窗時，每跑一次寫 state 窗同資料夾的 `counter_runs.txt`（十進位整數＋換行），預設不寫。
 
 **引擎的喚醒掛鉤 `wake_`／`woke`**（11-09，給 aos-daemon 的 poke 用，[thinking daemon-interrupt](../../thinking/2026-11/09/daemon-interrupt/README.md)）：子類別把已擋住的訊號放進 `wake_`，`nap` 睡覺時連它們一起等，收到就呼叫 `woke(sig)`，回 true＝這一圈當作到時間了（提前跑）；不當收工訊號、不轉給身體。aos-loop 自己不設、不接 poke，行為不變。**子行程的訊號遮罩改成還原**：`run_folder` fork 出來的子行程用 aos-util `restore_signals` 把遮罩還原成 `block_signals` 之前的樣子（原本寫死只解三個收工訊號），所以起 aos-loop 的人（例 aos-daemon）多擋的訊號，身體照常收得到。
 
