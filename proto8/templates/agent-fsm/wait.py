@@ -117,14 +117,8 @@ def die(code, reason):
     aos_flags.die("agent-fsm", code, reason)
 
 
-def write_atomic(path, text):
-    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".tmp")   # N-05：先寫暫存再改名
-    try:
-        with open(tmp, "w", encoding="utf-8") as f:
-            f.write(text)
-        os.replace(tmp, path)
-    except OSError as e:
-        die("WriteFailed", "cannot write %s: %s" % (path, e))
+sys.dont_write_bytecode = True                   # 定義資料夾不留 __pycache__（P-15）
+from atomic_file import write_atomic  # noqa: E402  （範本資料夾在 sys.path 最前面）
 
 
 def read_obj(path):
@@ -354,7 +348,7 @@ if not name:                                     # 還沒寄
         brain_failed("SendFailed", "aos-llm send exited 0 but printed no letter name")
         die("SendFailed", "aos-llm send exited 0 but printed no letter name")
     forget_warned()                              # 新的一封：提醒從頭算
-    write_atomic(pending, name + "\n")
+    write_atomic(pending, name + "\n", die)
     sys.exit(NOT_YET)
 
 ensure_box()                                     # clone 後空的 think/reply 不在 git：recv 前補（TG 實跑抓到的 MailboxMissing）

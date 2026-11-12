@@ -19,6 +19,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`act.py`](../../../../../proto8/templates/agent-fsm/act.py) | act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。 |
+| [`atomic_file.py`](../../../../../proto8/templates/agent-fsm/atomic_file.py) | agent-fsm 的格（idle、wait）共用的寫檔：先寫同資料夾的 .<名>.tmp 再改名（N-05），寫不成交給呼叫端的 die（WriteFailed）。 |
 | [`body.json`](../../../../../proto8/templates/agent-fsm/body.json) | argv：`aos-loop loop.json` |
 | [`brain.py`](../../../../../proto8/templates/agent-fsm/brain.py) | think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。 |
 | [`fsm.json`](../../../../../proto8/templates/agent-fsm/fsm.json) | 入口 `aos-fsm $AOS_CF`；鍵：start、states |

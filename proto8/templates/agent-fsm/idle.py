@@ -124,14 +124,8 @@ def history_empty():
         die("HistoryBad", "cannot read history.jsonl: %s" % e)
 
 
-def write_atomic(path, text):
-    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".tmp")   # N-05：先寫暫存再改名
-    try:
-        with open(tmp, "w", encoding="utf-8") as f:
-            f.write(text)
-        os.replace(tmp, path)
-    except OSError as e:
-        die("WriteFailed", "cannot write %s: %s" % (path, e))
+sys.dont_write_bytecode = True                   # 定義資料夾不留 __pycache__（P-15）
+from atomic_file import write_atomic  # noqa: E402  （範本資料夾在 sys.path 最前面）
 
 
 def body_of(sig):
@@ -158,13 +152,13 @@ def take():
         body, why = body_of(sig)
         if body is None:                         # 壞信一律丟，不通知寄信人（N-16）
             post(["done", box, sig])
-            write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s rejected: %s\n" % (sig, why.replace("\n", " ")))
+            write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s rejected: %s\n" % (sig, why.replace("\n", " ")), die)
             continue
         content = body["content"]
         r = fire("before_queue", {"letter": sig, "content": content})
         if r["blocked"]:                         # hook 丟掉這封：收掉、不進 history、不算好信
             post(["done", box, sig])
-            write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s dropped by hook %s\n" % (sig, r["hook"]))
+            write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s dropped by hook %s\n" % (sig, r["hook"]), die)
             continue
         content = r["data"]["content"]
         try:
