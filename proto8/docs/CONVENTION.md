@@ -2,7 +2,7 @@
 
 ← [proto8](../README.md)｜原話與拍板：[thinking/ideas](../thinking/2026-10/19/ideas/README.md)｜跟 proto8 原則相撞的七條，使用者已全部裁定：[ideas § 9](../thinking/2026-10/19/ideas/README.md)｜proto8 原則：[CONCEPTS](CONCEPTS.md)、[NORMS](NORMS.md)｜程式：[impls](../impls/README.md)（C++ 是唯一實作；aos-clock 等 Python 工具在 [cmd](../cmd/README.md)）、[templates](../templates/README.md)
 
-**aos 本身只保證六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`；§ 19）和一支 `aos-exec`**（使用者 § 4；已升成規範 [N-57～N-62](NORMS/10-基礎設施-定義與工作區.md)）。其餘全是慣例（P-05～P-45）：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**標準範本的樣子就是標準，stack 裡面自由**（拍板點 1）。現行標準範本是走 queue 的 [templates/agent-fsm](../templates/README.md#agent-fsm)（P-27）；拍板點 1 當時指的範本已刪，條文改不改由使用者定。
+**aos 本身只保證六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`；§ 19）和一支 `aos-exec`**（使用者 § 4；已升成規範 [N-57～N-62](NORMS/10-基礎設施-定義與工作區.md)）。其餘全是慣例（P-05～P-45）：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**agent-bob 現在的樣子就是標準，stack 裡面自由**（拍板點 1）。拍板點 1 指的 agent-bob 已刪，現行範本是走 queue 的 [templates/agent-fsm](../templates/README.md#agent-fsm)（P-27）；條文換不換成 agent-fsm 由使用者定。
 
 每條後面括號是依據：§ 幾＝[ideas](../thinking/2026-10/19/ideas/README.md) 裡使用者原話的段號；拍板點 1～3＝ideas § 8；C-xx／N-xx＝proto8 的概念與規範；引不到的、這份自己定的，標「本稿定」。
 
