@@ -5,7 +5,7 @@
   "properties": {
    "path": {
     "type": "string",
-    "description": "the node to look at: a folder, FILE, or FILE#/POINTER (written like the json tools); shows the index at its natural place. Relative paths start at your workspace."
+    "description": "the node to look at: a folder, FILE, or FILE#/POINTER (written like the json tools); shows the index at its natural place (the index key inside _metainfo first, then the separate _index laid over it: on the same key _index wins). Relative paths start at your workspace."
    },
    "index": {
     "type": "string",

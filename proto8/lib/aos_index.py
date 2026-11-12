@@ -4,6 +4,8 @@
 「path和index可以同時給，指定的那一份有的，會覆蓋掉天然那份。開工吧」。
 只讀 index 寫的內容：不查被描述的節點在不在、不附型別大小、不往上找、不解析鍵（圖紙 01 代定 I1～I19、施工結果 02 代定）。
 三種給法：只 path＝看節點天然位置那份；只 index＝只看指定的那份；兩個都給＝天然那份為底、疊上指定那份，同名的鍵整項以指定那份為準。
+天然那份有兩處（11-12 metainfo，使用者「index_view也要認_metainfo。」，N-69 推薦讀法、M15）：_metainfo 裡的 index 為底、
+疊上獨立的 _index；再給 index 就是三層，後面蓋前面，都是逐項整項覆蓋。只有獨立那份時輸出跟以前逐字一樣。
 讀檔經 aos_json（aos-json get），錯照轉它最後一行（C-52 例外 ⑤）；`[no index]`、`[no entry]`、`[more]` 退 0。"""
 import os
 
@@ -15,10 +17,10 @@ VIEW_NOT_FACTS = "An index is a view, not a listing: use ls or json_ls to see wh
 
 
 def spot(t):
-    """節點 → 它天然位置那份 index 的路徑（腦的寫法）。全系統只有這裡知道 _index.json／_index；搬進 _metainfo 時只改這裡。"""
-    if not t.ptr and os.path.isdir(t.real):
-        return os.path.join(t.file, "_index.json")      # 資料夾：DIR/_index.json 整份
-    return t.shown(t.ptr + "/_index")                   # 整份 json 檔：FILE#/_index；json 內的物件：FILE#/PTR/_index
+    """節點 → 天然那份 index 的兩個位置（裡面、外面；腦的寫法）。全系統只有這裡知道 _metainfo／_index 這些名字。"""
+    if not t.ptr and os.path.isdir(t.real):             # 資料夾：DIR/_metainfo.json 的 index 鍵、DIR/_index.json 整份
+        return os.path.join(t.file, "_metainfo.json") + "#/index", os.path.join(t.file, "_index.json")
+    return t.shown(t.ptr + "/_metainfo/index"), t.shown(t.ptr + "/_index")   # 整份 json 檔：FILE#/_index；json 內的物件：FILE#/PTR/_index
 
 
 def read(t):
@@ -40,35 +42,49 @@ def table(t, shown):
     return v
 
 
-def natural(path):
-    """天然那份：回 (位置, 表或 None, 沒有時的句子, 上一層提示或 None)。節點本身不在或不是 JSON＝照轉 aos-json 的錯。
-    沒有時的句子帶一句「上一層的 index 怎麼看這個節點」（只是提示，工具不自己往上找，I10）。"""
-    t = aos_json.Target(path)
-    where = spot(t)
+def whole(where):
+    """整份檔的內容；檔不在＝None（沒有），讀不了照轉 aos-json 的錯。"""
     it = aos_json.Target(where)
+    return read(it) if os.path.exists(it.real) else None
+
+
+def dig(v, keys, where):
+    """順著 keys 往下取；中途不是物件或沒有那個鍵＝None（這一處沒有）；取到的不是物件＝IndexBad（指明哪一處）。"""
+    for k in keys:
+        if not isinstance(v, dict) or k not in v:
+            return None
+        v = v[k]
+    if not isinstance(v, dict):
+        tool_io.die("IndexBad", "%s is %s; an index must be a JSON object {KEY: {\"description\": ...}}" % (where, aos_json.kind(v)))
+    return v
+
+
+def natural(path):
+    """天然那份：回 ([(位置, 表)…] 有的那幾層、裡面在前, 沒有時的句子, 上一層提示或 None)。節點本身不在或不是 JSON＝照轉 aos-json 的錯。
+    沒有時的句子帶一句「上一層的 index 怎麼看這個節點」（只是提示，工具不自己往上找，I10）；只講獨立那份（11-12 M21）。"""
+    t = aos_json.Target(path)
+    inside, outside = spot(t)
     if t.ptr:
         up, item = t.shown(t.parent_ptr()), t.toks[-1]
     else:
         bare = t.file.rstrip("/") or t.file
         up, item = os.path.dirname(bare) or ".", os.path.basename(bare)
     about = 'What the index of %s says about it: {"path": "%s", "key": "%s"}' % (up, up, item)
-    if not it.ptr:                                      # 資料夾那份是整份檔
-        if not os.path.exists(it.real):
-            return where, None, "%s does not exist" % where, about
-        return where, table(it, where), None, None
-    node = read(aos_json.Target(it.shown(it.parent_ptr())))
-    name = it.toks[-1]
-    if not isinstance(node, dict):
-        if not t.ptr:
-            item += "#"
-        return where, None, ("%s is %s, it cannot hold %s. Entries about its items may sit in a parent's index (keys like %s/0): try index_view %s"
-                             % (t.shown(), aos_json.kind(node), name, item, up)), None
-    if name not in node:
-        return where, None, "%s does not exist" % where, about
-    v = node[name]
-    if not isinstance(v, dict):
-        tool_io.die("IndexBad", "%s is %s; an index must be a JSON object {KEY: {\"description\": ...}}" % (where, aos_json.kind(v)))
-    return where, v, None, None
+    if not t.ptr and os.path.isdir(t.real):             # 資料夾：兩份都是檔（裡面那份再取 index 鍵）
+        o = whole(outside)
+        found = [(inside, dig(whole(inside.rsplit("#", 1)[0]), ["index"], inside)), (outside, None if o is None else dig(o, [], outside))]
+    else:
+        node = read(aos_json.Target(t.shown()))
+        if not isinstance(node, dict):
+            if not t.ptr:
+                item += "#"
+            return [], ("%s is %s, it cannot hold _index. Entries about its items may sit in a parent's index (keys like %s/0): try index_view %s"
+                        % (t.shown(), aos_json.kind(node), item, up)), None
+        found = [(inside, dig(node, ["_metainfo", "index"], inside)), (outside, dig(node, ["_index"], outside))]
+    layers = [(w, v) for w, v in found if v is not None]
+    if not layers:
+        return [], "%s does not exist" % outside, about
+    return layers, None, None
 
 
 def entries(n):
@@ -95,25 +111,23 @@ def main():
     if type(offset) is not int or offset < 0:
         tool_io.die("ArgumentsBad", "offset must be a non-negative integer")
     cap = aos_json.limit(args, "limit", "AOS_JSON_MAX_ITEMS", aos_json.MAX_ITEMS)
-    base, missing, about = None, None, None
+    layers, missing, about = [], None, None
     if "path" in args:
-        where, base, missing, about = natural(args["path"])
+        layers, missing, about = natural(args["path"])
     if "index" in args:
-        mine = table(aos_json.Target(args["index"]), args["index"])
-        merged = dict(base or {})
-        merged.update(mine)                             # 同名的鍵整項以指定那份為準；天然那份的順序在前、只在指定那份的接在後面
-        if "path" not in args:
-            head = "[index] %s, %s" % (args["index"], entries(len(merged)))
-        elif base is None:
-            head = "[index] %s, %s (natural index: %s)" % (args["index"], entries(len(merged)), missing)
-        else:
-            head = "[index] %s + %s (on the same key %s wins), %s" % (where, args["index"], args["index"], entries(len(merged)))
-        rows = merged
-    else:
-        if base is None:
-            print("[no index] %s. %s%s" % (missing, about + ". " if about else "", VIEW_NOT_FACTS))
-            return
-        head, rows = "[index] %s, %s" % (where, entries(len(base))), base
+        layers = layers + [(args["index"], table(aos_json.Target(args["index"]), args["index"]))]
+    if not layers:
+        print("[no index] %s. %s%s" % (missing, about + ". " if about else "", VIEW_NOT_FACTS))
+        return
+    rows = {}
+    for _, v in layers:
+        rows.update(v)                                  # 同名的鍵整項以後面那層為準；前面那層的順序在前、只在後面那層的接在後面
+    names = [w for w, _ in layers]
+    head = names[0] if len(names) == 1 else "%s (on the same key %s wins)" % (
+        " + ".join(names), names[-1] if len(names) == 2 else "the later one")
+    head = "[index] %s, %s" % (head, entries(len(rows)))
+    if missing and "index" in args:
+        head += " (natural index: %s)" % missing
     out = [head]
     if "key" in args:
         k = args["key"]

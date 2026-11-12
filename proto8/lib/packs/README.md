@@ -26,7 +26,7 @@
 |---|---|---|
 | index | [index.json](index.json) | index_view（透過 index 看節點：`path` 看天然那份、`index` 看指定的那份、兩個都給＝疊著看、同名鍵以指定那份為準；只看不改，改 index 用 json 包）——agent-fsm、eca-claude 兩個範本都掛，reviewer 不掛 |
 
-程式在 [`lib/aos_index.py`](../aos_index.py)，「index 放哪」只寫在它的 `spot()`。
+程式在 [`lib/aos_index.py`](../aos_index.py)，「index 放哪」只寫在它的 `spot()`。天然那份有兩處（11-12 [metainfo](../../thinking/2026-11/12/metainfo/README.md)，使用者「index_view也要認_metainfo。」）：`_metainfo` 裡的 `index` 為底、疊上獨立的 `_index.json`／`_index`，同名項整項以獨立那份為準；只有獨立那份時輸出跟以前一樣（[N-69](../../docs/NORMS/10-基礎設施-定義與工作區/11-N-69.md)）。
 
 ## 其他八包（兩個範本都預設開）
 

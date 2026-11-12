@@ -134,6 +134,36 @@ class IndexViewTest(unittest.TestCase):
         (self.ws / "k4" / "_index.json").write_text("not json")
         self.err("FileBad", path="k4")
 
+    # 11-12 metainfo（使用者「index_view也要認_metainfo。」，N-69、M15、M21）：_metainfo 裡的 index 為底、疊上獨立的 _index
+    def test_metainfo_folder(self):
+        (self.ws / "mi").mkdir()
+        self.write("mi/_metainfo.json", {"summary": "s", "index": {"a": {"description": "A inside"}, "b": {"description": "B inside"}}})
+        self.assertEqual(self.ok(path="mi"), ["[index] mi/_metainfo.json#/index, 2 entries", "a\tA inside", "b\tB inside"])
+        self.write("mi/_index.json", {"b": {"description": "B outside"}, "c": {"description": "C outside"}})
+        self.assertEqual(self.ok(path="mi"), [
+            "[index] mi/_metainfo.json#/index + mi/_index.json (on the same key mi/_index.json wins), 3 entries",
+            "a\tA inside", "b\tB outside", "c\tC outside"])                                   # 同名外面贏、順序裡面在前
+        self.assertEqual(self.ok(path="mi", index="me.json#/views"), [
+            "[index] mi/_metainfo.json#/index + mi/_index.json + me.json#/views (on the same key the later one wins), 5 entries",
+            "a\tA inside", "b\tB outside", "c\tC outside", "tools\tThe only part I use", "mine\tOnly in my view"])
+        self.write("empty/_metainfo.json", {"summary": "no index here"})                    # 有 _metainfo.json 但沒有 index＝照舊沒有
+        self.assertTrue(self.ok(path="empty")[0].startswith("[no index] empty/_index.json does not exist."))
+        self.write("mi/_metainfo.json", {"index": [1]})
+        self.assertIn("mi/_metainfo.json#/index is array", self.err("IndexBad", path="mi"))
+
+    def test_metainfo_json_nodes(self):
+        self.write("mj.json", {"_metainfo": {"index": {"x": {"description": "X inside"}, "states": {"description": "S inside"}}},
+                               "_index": {"states": {"description": "S outside"}},
+                               "sub": {"_metainfo": {"index": {"y": {"description": "Y"}}}},
+                               "odd": {"_metainfo": "not an object", "_index": {"z": {}}},
+                               "bad": {"_metainfo": {"index": "nope"}}})
+        self.assertEqual(self.ok(path="mj.json"), [
+            "[index] mj.json#/_metainfo/index + mj.json#/_index (on the same key mj.json#/_index wins), 2 entries",
+            "x\tX inside", "states\tS outside"])
+        self.assertEqual(self.ok(path="mj.json#/sub"), ["[index] mj.json#/sub/_metainfo/index, 1 entry", "y\tY"])
+        self.assertEqual(self.ok(path="mj.json#/odd"), ["[index] mj.json#/odd/_index, 1 entry", "z"])      # _metainfo 不是物件＝裡面沒有
+        self.assertIn("mj.json#/bad/_metainfo/index is string", self.err("IndexBad", path="mj.json#/bad"))
+
 
 if __name__ == "__main__":
     unittest.main()
