@@ -1,12 +1,12 @@
 # INDEX — aos 專案地圖
 
-整個專案的頂層導航。aos = **「資料夾＝程式」的 AI agent 體系，本體是 [proto8/](../proto8/README.md)**（各夾一覽在它的 README）；repo 根只放入口、`wf/` 與 `archive/`（另有 [`impl_cpp/`](../impl_cpp/README.md)＝使用者 11-09 起手寫重寫的 C++ 實作；08～09 月那一代單一執行檔 `aos` 11-05 封存在 `archive/aos-v1/`）。[AGENTS.md](../AGENTS.md) 只放主工作流 + 指向本檔；細節從這裡分流出去。
+整個專案的頂層導航。aos = **「資料夾＝程式」的 AI agent 體系，本體是 [proto8/](../proto8/README.md)**（各夾一覽在它的 README）；repo 根只放入口、`wf/` 與 `archive/`（另有 [`impl_cpp/`](../impl_cpp/README.md)＝使用者手寫重寫的 C++ 實作；08～09 月那一代單一執行檔 `aos` 封存在 `archive/aos-v1/`）。[AGENTS.md](../AGENTS.md) 只放主工作流 + 指向本檔；細節從這裡分流出去。
 
 ---
 
 ## Repo 佈局
 
-佈局表與說明（每個頂層路徑放什麼、`proto8/` 原型與 `archive/` 舊原型、非侵入式佈局）在 [INDEX/01-repo-layout.md](INDEX/01-repo-layout.md)（2026-10-13 tidy：本檔超過 8 KB，整段逐字下放）。
+佈局表與說明（每個頂層路徑放什麼、`proto8/` 原型與 `archive/` 舊原型、非侵入式佈局）在 [INDEX/01-repo-layout.md](INDEX/01-repo-layout.md)。
 
 ## 程式碼在哪 → code map
 
@@ -14,7 +14,7 @@
 
 ## 工作流
 
-工作流的**選擇與入口**見 **[WORKFLOWS.md](WORKFLOWS.md)** 的派發表（本專案合了 **dev、multi-agent** 兩個 flavor；heartbeat flavor 的 tick／routines／schedule 11-05 隨甲代封存）。每個工作流的 durable 知識歸在 `workflows/<該工作流>/` 或單檔 `workflows/<該工作流>.md`（含 `archive/` 封存過時文檔），具體流程在各自入口檔。
+工作流的**選擇與入口**見 **[WORKFLOWS.md](WORKFLOWS.md)** 的派發表（本專案合了 **dev、multi-agent** 兩個 flavor）。每個工作流的 durable 知識歸在 `workflows/<該工作流>/` 或單檔 `workflows/<該工作流>.md`（含 `archive/` 封存過時文檔），具體流程在各自入口檔。
 
 [STRUCTURE](STRUCTURE.md) 是**被動的結構整理參考**（分層原則、膨脹即拆、四級成長、archive 規則）——**只在要重構／整理結構時取用**。always-on 的**鐵律**在 [AGENTS.md](../AGENTS.md)；碰原始碼的**程式碼慣例 + code map 維護鏈**在 [workflows/common/conventions.md](workflows/common/conventions.md)。
 
@@ -50,5 +50,5 @@
 | 檔案 | 用途 |
 |------|------|
 | [SESSION-LOG](SESSION-LOG.md) | 進度 hub → 各工作流 session-log（open-only）|
-| [WAIT_USER](WAIT_USER.md) | 待**使用者**親自做/驗證的入口（10-12 舊帳全清）|
+| [WAIT_USER](WAIT_USER.md) | 待**使用者**親自做/驗證的入口 |
 | [`inbox/`](inbox/)（放信處）+ [workflows/inbox/](workflows/inbox/README.md)（使用方式）| agent 之間的**信件**（像 email，狀態靠位置：`inbox/` 頂層＝未處理、`inbox/done/`＝已處理）|
