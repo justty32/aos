@@ -13,7 +13,7 @@
 | 帶走 `carry` | 定義、agent 記憶 `history.jsonl`、工具與腦設定、hook 清單 `hooks.json`、`state.json`、`state_flux.json`、`procs_state.json`、`stage.txt` | 下次從同一份設定與進度繼續；暫停狀態也要保留 |
 | 帶走 `carry` | 未處理的 `new/`、`cur/`、agent `queue/`、歸檔信、`think/pending.txt`、`think/reply/` | 還沒處理完的工作與問腦回信；不能把所有 `reply/` 一起擋掉 |
 | 帶走 `carry` | agent 自己記的進度：`goal.json`、待辦 `tools/todo/todo.json`、開著的任務 `tools/do_task/tasks.json` | 使用者 11-11「三個都進 git」：跟 history 一起走，換台後 goal 照常提醒、待辦接著做、do_task 的 end 照摺 |
-| 帶走 `carry` | 跟子 agent 有關的帳：`subagents.json`（工具小格 `tools/subagent/` 的記帳、stack 根的配額設定）、fork 的分身紀錄 `tools/fork/children/<分身>/state` | 知道哪些子、哪些分身是我的，換台後還收得回來；分身自己的 stack 在 daemon 的 `procs/` 下，照一般 agent stack 帶走（11-12 線 K 補列，代定） |
+| 帶走 `carry` | 跟子 agent 有關的帳：`subagents.json`（工具小格 `tools/subagent/` 的記帳、stack 根的配額設定）、fork 的分身紀錄 `tools/fork/children/<分身>/state` | 知道哪些子、哪些分身是我的，換台後還收得回來；分身自己的 stack 在 daemon 的 `procs/` 下，照一般 agent stack 帶走（代定） |
 | 帶走 `carry` | `clock`、`ledger.jsonl`、`used.json`、`queue.json` | 時鐘、帳本、額度與隊序接著算；這些本來就可能每輪改動 |
 | 帶走 `carry` | eca 的 `session.txt`、`tool.txt`、`ws.txt`、`stack.txt`、`last.txt` | 保留對話識別與小格狀態；`session.txt` 並不是 CLI 的整段原生對話資料 |
 | 留本機 `local` | `.session_home` | 辨認這台的對話環境；換台不應沿用舊值 |
@@ -37,7 +37,7 @@ cp "$P/cmd/aos-agent/stack.gitignore" "$STACK/.gitignore"
 
 這個方法不看 `defs`、`stacks` 這些名字。改成 `d/`、`s/`，分成多份定義，或把 stack 放到專案外，規則仍從放置 `.gitignore` 的那層往下生效。**專案外的 stack 不會因此進入專案的 git**；要不要另存、存在哪個 repo，由你自己決定。
 
-巢狀 stack 可以各有一份，相同排除規則疊起來有效。樣板的 `!**/.gitignore`、`!**/.gitattributes` 會保留子 stack 的規則本身；原本只寫 `!/.gitignore` 時，只能保留放樣板那一層的檔。
+巢狀 stack 可以各有一份，相同排除規則疊起來有效。樣板的 `!**/.gitignore`、`!**/.gitattributes` 會保留子 stack 的規則本身；只寫 `!/.gitignore` 的話，只能保留放樣板那一層的檔。
 
 代價是它有意在 stack 範圍內使用寬規則：
 
@@ -99,15 +99,15 @@ B 有兩個檔名無法解決的界線。其一，`endpoints.json` 在 kernel st
 
 要保存一致的狀態，先讓使用中的 daemon 整棵 shutdown，再由你自行檢查、commit、push。根 daemon 與另一個專案的 llm kernel 各自保存；`AOS_LLM_KERNEL` 由你在新機指向那邊已啟動的 kernel，aos 不替你安排兩個 repo 的同步。
 
-kernel 收件匣裡排隊、在途的信（`requests/new/`、`requests/cur/`）**樣板與指南都不擋、照帶**（使用者 11-10 裁「都按照推薦」）：避免只因寄件人此刻不在就靜默丟工作。代價：換台前最好讓 kernel 把它們處理完，否則接受重寄——帶走的信在另一台被答時，回信地址可能指向舊位置、**回信可能沒人收**；寄件那邊的 agent 發現信不在 kernel 了會自己重寄一次（11-10 起 wait 格會認）。帶走信件不等於另一個 repo 已同步；兩份 repo 分開搬時，請一併確認尚未完成的工作與路徑。
+kernel 收件匣裡排隊、在途的信（`requests/new/`、`requests/cur/`）**樣板與指南都不擋、照帶**（使用者 11-10 裁「都按照推薦」）：避免只因寄件人此刻不在就靜默丟工作。代價：換台前最好讓 kernel 把它們處理完，否則接受重寄——帶走的信在另一台被答時，回信地址可能指向舊位置、**回信可能沒人收**；寄件那邊的 agent 發現信不在 kernel 了會自己重寄一次（wait 格會認）。帶走信件不等於另一個 repo 已同步；兩份 repo 分開搬時，請一併確認尚未完成的工作與路徑。
 
 git 不保存空資料夾。本次 clone 實跑，一般 daemon 控制信箱、已進入初始化流程的 agent 信箱與 kernel `requests/` 會建回；未使用的領班 ctl 回信箱、尚未進入 idle 的子 agent `queue/` 則按需建立。
 
-**11-10 已修**（`55bc1205b`）：子 agent 保留 `think/pending.txt`、空的 `think/reply/` 沒被 git 保存時，wait 現在會先補回信箱再續收；以前首次會報 `MailboxMissing`。
+子 agent 保留 `think/pending.txt`、空的 `think/reply/` 沒被 git 保存時，wait 會先補回信箱再續收。
 
 任意自行建立的信箱仍須按 `aos-post init` 的契約準備；單獨實跑確認，一般 `aos-post send` 不會替缺少的空信箱補好。新機上的執行檔、路徑與 CLI 登入，也仍由你準備。
 
-## 追蹤檔裡的本機路徑，什麼算外洩（11-11）
+## 追蹤檔裡的本機路徑，什麼算外洩
 
 開發用的整棵實跑檢查 [`extras/gitignore-check`](../../../extras/gitignore-check/check.py) 會在 commit 前找追蹤檔裡的本機記號（暫存根、HOME、使用者名、主機名、repo 位置、`sk-` 金鑰開頭）。使用者 11-11 選「改檢查的標準」（two-machines B05／B06），下面三種**不算**外洩、不動 C++：
 
