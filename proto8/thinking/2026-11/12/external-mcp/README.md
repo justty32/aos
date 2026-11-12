@@ -1,8 +1,10 @@
 # external-mcp：接外部 MCP server 的圖紙（11-12，只規劃、沒施工）——eca 由 CLI 自己接、fsm 經 aos 匯入成包，三題已裁、還沒開工
 
-← [2026-11-12](../README.md)｜[thinking](../../../README.md)｜前一版：[11-11 new-tools 03](../../11/new-tools/03-mcp-client.md)（M1～M8 已裁，照用）｜[01 盤點](01-盤點.md)｜[02 設計](02-設計.md)｜[03 施工切法](03-施工切法.md)｜[04 邊緣狀況](04-邊緣狀況.md)
+← [2026-11-12](../README.md)｜[thinking](../../../README.md)｜前一版：[11-11 new-tools 03](../../11/new-tools/03-mcp-client.md)（M1～M8 已裁，照用）｜[01 盤點](01-盤點.md)｜[02 設計](02-設計.md)｜[03 施工切法](03-施工切法.md)｜[04 邊緣狀況](04-邊緣狀況.md)｜[05 http＋bearer 試接](05-http-bearer試接.md)
 
 > 狀態：圖紙第一版，**三題已裁（使用者 11-12「都按照推薦。」）**。沒改程式、條文、範本；沒下載、沒安裝、沒跑真腦。**還沒施工，等使用者說開工**（他 11-12 上午說的是「等假日在家再來稿」；步 0 公司可做）。
+>
+> 11-12 下午 http＋bearer＋自簽憑證試接 [05](05-http-bearer試接.md)（使用者「好，先驗」）：假 http MCP＋codex luna 經 aos 叫得到、三個 `-c` 寫進 `cli.json` 的 flags 就行；token 用定義的 sh `_entry` 讀 env 檔給＝哪裡都不留，`ctl add --envs` 給＝明文進 stack 的 exec.json；codex 有 `enabled_tools`、沙盒管不到 MCP 連線；圖紙 X5、X9、X12、X17 建議改。
 
 ## 已裁的三題（使用者 11-12：「都按照推薦。」）
 
