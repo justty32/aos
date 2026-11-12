@@ -81,7 +81,9 @@
      同 aos-agent history rm 的規矩、op clear）、刪 session.txt，history 只剩這一問一答，下一輪開新對話；/exit＝畫面開著（沒人接著）就關掉，沒開回一句。
      /compact（claude）之後 history 換成 claude 的摘要一則（cli_session.compact_history：transcript 裡的 isCompactSummary，原文搬走、op compact；
      找不到摘要＝不動）。畫面開著時 /clear、/compact 打進畫面（使用者 Q2「幫我貼進去」，cli_session.type_line），aos 這邊靠畫面 hook 跟上：
-     claude 等 hook 改完 history（上限 SCREEN_WAIT 秒）才記這一問一答；codex 不等（/clear 下一輪 notify 才清，/compact 拿不到摘要、history 不動）；
+     claude 等 hook 改完 history（上限 SCREEN_WAIT 秒）才記這一問一答；codex 的 /clear 不等（下一輪 notify 才清），/compact 等它的 rollout 多一個
+     compacted 再 cli_session.codex_sync_compact（history 換成從 replacement_history 撈出的對話，使用者 Q5；撈不到＝不動、回一句）；
+     畫面 hook 在一輪中間跟上 CLI 改了 history（刪掉 .history_sum）＝不算 ⑩ 的「這一輪中間被改」，下一輪不丟對話；
      畫面正在跑一輪（busy.txt）＝這次不動、信留 cur/、下一輪再試。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
@@ -526,12 +528,29 @@ def history_bytes(stack):
 def on_screen(command, cfg, cell, stack):
     """畫面開著：/clear、/compact 照人打的一樣打進畫面（使用者 Q2「幫我貼進去」）；aos 這邊靠畫面 hook 跟上（id、history）。
     claude＝等 hook 把 history 改掉（SessionStart clear／compact）再回，免得這輪接的 user／回答被 hook 一起搬走；等不到（上限 SCREEN_WAIT）照回、多說一句。
-    codex＝這時沒有事件：/clear 等下一輪 notify 看到新 thread 才清，/compact 拿不到摘要、history 不動。"""
+    codex＝這時沒有事件：/clear 等下一輪 notify 看到新 thread 才清；/compact 等它的 rollout 多一個 compacted（上限 SCREEN_WAIT），
+    再 cli_session.codex_sync_compact（history 換成從 replacement_history 撈出的對話；撈不到＝不動、回一句，Q5）。"""
     before = history_bytes(stack)
+    sid = cell.read("session.txt")
+    if cfg["kind"] != "claude" and command == "/compact" and sid:
+        n0 = cli_session.codex_note_compacts(cell, sid)            # Q5：打之前壓過幾次＝基準
+        cli_session.type_line(cell, command)
+        deadline = time.time() + SCREEN_WAIT
+        while time.time() < deadline and cli_session.codex_compacted(sid)[0] <= n0 and cell.alive():
+            time.sleep(0.5)
+        try:
+            got = cli_session.codex_sync_compact(cell, sid, stack)
+        except OSError as e:
+            raise Fail("WriteFailed", "cannot rewrite history.jsonl: %s" % e)
+        if got is None:
+            return note("/compact: typed into the open screen; codex did not record a compaction within %d s, aos's history is left as it is" % SCREEN_WAIT)
+        if got[0] == "unrecognized":
+            return note("/compact: typed into the open screen; codex compacted, but aos could not read the conversation out of it, so aos's history is left as it is")
+        return note("/compact: typed into the open screen; history replaced by the conversation codex kept (%d messages moved to history_removed.jsonl)" % got[1])
     cli_session.type_line(cell, command)
     if cfg["kind"] != "claude":
         later = ("aos clears its history when the next answer comes from the new thread" if command == "/clear" else
-                 "codex gives no summary text, so aos's history is left as it is")
+                 "there is no conversation yet, so there is nothing for aos to follow")
         return note("%s: typed into the open screen; %s" % (command, later))
     deadline = time.time() + SCREEN_WAIT
     while time.time() < deadline and history_bytes(stack) == before and cell.alive():
@@ -687,6 +706,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
         except Fail as e:
             after.append(e)                                         # 回答照樣接進 history，最後才報（不掉回答）
     before = transcript_now(cfg, cell)                              # ⑬ 進展：交出去之前對話檔多大
+    had_sum = os.path.exists(cell.file(SUM))                        # ⑭ 畫面 hook 跟上 CLI 改 history 時會刪掉它（cli_session.replace_history）
     try:
         text = cli_session.ask(cfg, cell, template, ws, stack, SEP.join(b["content"] for b in bodies), on_busy,
                                handed, lambda limit: reseed(stack, ws, limit))   # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
@@ -702,7 +722,8 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
         raise
     if late:
         raise late[0]
-    edited = bool(mid) and history_sum(stack) != mid[0]             # ⑩ 這一輪中間被改了（腦叫了 self_history）
+    synced = had_sum and not os.path.exists(cell.file(SUM))         # 這一輪中間是畫面 hook 跟著 CLI 改的（codex 的 /clear、/compact 在 notify 時才跟上）
+    edited = bool(mid) and history_sum(stack) != mid[0] and not synced   # ⑩ 這一輪中間被改了（腦叫了 self_history）；跟上 CLI 的不算
     append_history(stack, {"role": "assistant", "content": text[:-1] if text.endswith("\n") else text})
     note_sum(stack, cell, edited)
     note_progress(cfg, cell, stack, before)                         # ⑬ 這輪叫了工具＝goal 計數歸零

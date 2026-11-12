@@ -124,6 +124,57 @@ class HookFollow(unittest.TestCase):
         self.assertEqual([json.loads(l) for l in self.hist.read_text().splitlines()], [{"role": "user", "content": "just asked"}])
         self.assertEqual(len((self.stack / "history_removed.jsonl").read_text().splitlines()), 3)
 
+    COMPACTED = {"type": "compacted", "payload": {"message": "", "replacement_history": [
+        {"type": "additional_tools", "role": "developer", "tools": []},
+        {"type": "message", "role": "developer", "content": [{"type": "input_text", "text": "You are Codex"}]},
+        {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "<environment_context> <cwd>/x</cwd>"}]},
+        {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "Remember LIME-4"}]},
+        {"type": "function_call", "name": "exec", "arguments": "{}"},
+        {"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "ok"}]},
+        {"type": "compaction", "encrypted_content": "xxx"}]}}
+
+    def rollout(self, tid):
+        return self.tmp / "codex-home" / "sessions" / "2026" / "11" / "12" / ("rollout-x-%s.jsonl" % tid)
+
+    def notify(self, cell, tid, text="hi"):
+        cli_session.hook_main("codex", str(cell), json.dumps({"type": "agent-turn-complete", "thread-id": tid, "last-assistant-message": text}))
+
+    def test_codex_compact_rows_keep_only_the_talk(self):
+        self.assertEqual(cli_session.codex_compact_rows(self.COMPACTED["payload"]),
+                         [{"role": "user", "content": "Remember LIME-4"}, {"role": "assistant", "content": "ok"}])
+        self.assertIsNone(cli_session.codex_compact_rows({"message": ""}))
+        self.assertIsNone(cli_session.codex_compact_rows({"replacement_history": [{"type": "compaction"}]}))
+
+    def test_codex_compaction_on_the_same_thread_replaces_history(self):
+        cell = self.codex_cell({"old": 3})
+        (cell / ".compact_seen").write_text(json.dumps({"thread": "old", "compacted": 0}))
+        with open(self.rollout("old"), "a") as f:
+            f.write(json.dumps(self.COMPACTED) + "\n")
+        with open(self.hist, "a") as f:
+            f.write(json.dumps({"role": "user", "content": "just asked"}) + "\n")
+        self.notify(cell, "old")
+        rows = [json.loads(l) for l in self.hist.read_text().splitlines()]
+        self.assertTrue(rows[0]["content"].startswith("[aos] summary: lines 1-3, 3 messages. codex compacted"))
+        self.assertEqual(rows[1:], [{"role": "user", "content": "Remember LIME-4"}, {"role": "assistant", "content": "ok"},
+                                    {"role": "user", "content": "just asked"}])
+        removed = [json.loads(l) for l in (self.stack / "history_removed.jsonl").read_text().splitlines()]
+        self.assertEqual({r["op"] for r in removed}, {"compact"})
+        self.assertEqual(json.loads((cell / ".compact_seen").read_text()), {"thread": "old", "compacted": 1})
+        self.notify(cell, "old")                                 # same count again: nothing more
+        self.assertEqual(len(self.hist.read_text().splitlines()), 4)
+
+    def test_codex_compaction_without_baseline_or_unreadable_leaves_history(self):
+        cell = self.codex_cell({"old": 3})
+        with open(self.rollout("old"), "a") as f:
+            f.write(json.dumps(self.COMPACTED) + "\n")
+        self.notify(cell, "old")                                 # no .compact_seen yet: only the baseline
+        self.assertIn("PLUM-7", self.hist.read_text())
+        with open(self.rollout("old"), "a") as f:
+            f.write(json.dumps({"type": "compacted", "payload": {"message": ""}}) + "\n")
+        self.notify(cell, "old")                                 # compacted again but nothing to read
+        self.assertIn("PLUM-7", self.hist.read_text())
+        self.assertFalse((self.stack / "history_removed.jsonl").exists())
+
     def test_codex_resume_to_an_older_thread_keeps_history(self):
         cell = self.codex_cell({"older": 4})
         cli_session.hook_main("codex", str(cell), json.dumps({"type": "agent-turn-complete", "thread-id": "older", "last-assistant-message": "hi"}))

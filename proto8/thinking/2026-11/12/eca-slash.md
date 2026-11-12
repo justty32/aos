@@ -63,9 +63,16 @@
 - S10 claude 畫面貼進去後最多等 120 秒（`SCREEN_WAIT`），等不到照回、多說一句請人看畫面。
 - S11 畫面正在答題時 say 送的 `/clear`、`/compact` 這輪不動，下一輪再試。
 
-### 還能做但沒做
+### Q5（已裁、已做）
 
-- Q5 codex `/compact` 真同步：把 rollout 最後一個 `compacted` 的 `replacement_history` 裡 user／assistant 的文字當成新 history（要在下一輪 notify 時偵測新出現的 compacted 事件）；目前只留標記。
+使用者原話（逐字）：「Codex 的 /compact改成「從那串結構化資料裡撈出對話文字，當成新的歷史」。我覺得可以做，去做吧」
+
+- **怎麼撈**（`cli_session.codex_compact_rows`）：codex rollout 最後一個 `compacted` 事件的 `payload.replacement_history` 裡，`type` 是 `message`、`role` 是 user 或 assistant 的項，把各 part 的 `text` 接起來；實測 0.167 留下的是 developer 訊息、工具定義、使用者說過的話、一個 `compaction` 項（加密、沒有字），assistant 的話不留。
+- **換法**：history 原文搬到 `history_removed.jsonl`（op compact），新 history＝一則 `[aos] summary: lines 1-N, N messages. codex compacted the conversation; it keeps the messages below (its own summary is not shown)`＋撈出來的話；最後一則 assistant 之後的 user（剛交出去的）留著。
+- **兩條路**：say／chat 送的（畫面開著，貼進去）＝打之前記下壓過幾次，等 rollout 多一個 `compacted`（上限 120 秒）再換；畫面上人打的＝沒有事件，**下一輪 notify 時比對**：同一段 thread、rollout 的 `compacted` 次數比小格 `.compact_seen` 記的多＝壓過了、補做。`.compact_seen`（`{"thread", "compacted"}`）在畫面開起來時與每輪 notify 時更新；不在或記的是別段 thread＝只記基準、不回頭補。畫面沒開時 say 送 `/compact`＝照舊換新 thread 帶 aos 紀錄（codex exec 沒有 compact）。
+- **不觸發「history 被改過」**：hook 換 history 時刪 `.history_sum`；aos-eca-turn 記下交出去前它在、答完不在＝這一輪中間是跟上 CLI 改的，不寫 `edited`（實跑抓到修前會寫 `edited`、下一輪丟掉對話，修後同一段 thread 照接）。
+- **代定**：S12 只留 user／assistant 的文字；developer／system、工具定義、工具呼叫與結果、`compaction` 項略過。S13 codex 自己塞進 user 的區塊（`<environment_context>` 這種以 `<小寫標籤>` 開頭的）略過。S14 撈不到（沒有 `replacement_history`、裡面沒有對話）＝history 不動、回一句講明。S15 `.compact_seen` 沒有基準時不回頭補以前的壓縮。
+- **實跑**（gpt-6-luna、畫面開著）：先講暗號 MANGO-6 再一句 pong（history 6 則）→ say 送 `/compact`：回「history replaced by the conversation codex kept (6 messages moved…)」，history 變 summary＋codex 留下的 user 話；再問暗號＝MANGO-6。接著在畫面上手打 `/compact`、再經 aos 問暗號：notify 時補做（history 9 則→7 則、`.compact_seen` 1→2），答 MANGO-6；關畫面再問照接同一段 thread、答 MANGO-6。
 
 ## 沒試到
 
@@ -78,4 +85,5 @@
 - `e1eeec7ea` 畫面 hook 跟上（①）
 - `cc945235c` say／listen／chat 支援（②）
 - `f9ca77a15` codex 畫面說明與本篇（③）
-- 第二輪（Q1～Q3）見 SESSION-LOG 那行
+- `95db04e50` 第二輪（Q1～Q3）
+- Q5 見 SESSION-LOG 那行

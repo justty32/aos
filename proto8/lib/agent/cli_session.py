@@ -6,7 +6,9 @@
 #                 之後畫面上的 CLI 換了對話（/clear、/resume、codex /new）hook 就改記新的（11-12 eca-slash：CLI 為主、aos 跟上）；
 #                 claude 畫面的 /clear 另外把 aos 這隻的 history 清掉（clear_history，原文搬到 history_removed.jsonl）；/compact 把 history
 #                 換成 claude 的摘要一則（compact_history，SessionStart source compact）；codex 換到剛開的 thread（rollout 只有這一輪，
-#                 codex_turns）＝/clear、清 history（剛交出去的 user 留著），換到有舊輪數的＝/resume、只跟 id（使用者 11-12 Q1～Q3）
+#                 codex_turns）＝/clear、清 history（剛交出去的 user 留著），換到有舊輪數的＝/resume、只跟 id（使用者 11-12 Q1～Q3）；
+#                 codex 同一段 thread 的 rollout 多了 compacted＝/compact，history 換成從 replacement_history 撈出的對話（codex_sync_compact，Q5）
+#   .compact_seen codex 用：{"thread", "compacted"}＝aos 已跟上的壓縮次數（畫面開起來、每輪 notify 時記；Q5）
 #   .session_home 記號檔（不進 git）：{"session", "ws", "home", "machine"}——這段對話是在哪台機器（machine_id()）、哪個工作區（realpath）、
 #                 哪個帳號資料夾（claude：CLAUDE_CONFIG_DIR 或 ~/.claude；codex：CODEX_HOME 或 ~/.codex）開的；跟 session.txt 一起寫、一起刪
 #                 （machine 是 11-10 TS 8 加的：cp -a 時記號檔會跟過去；舊記號檔沒有這個 key＝不比機器）
@@ -893,12 +895,13 @@ def follow_session(kind, cell, sid):
 HISTORY, REMOVED = "history.jsonl", "history_removed.jsonl"
 
 
-def replace_history(cell, op, summary=None, stack=None, keep_tail=False):
+def replace_history(cell, op, summary=None, stack=None, keep_tail=False, rows=()):
     """把這隻 eca 的 history 換掉（11-12 eca-slash，使用者「連 aos 那邊的歷史也要一起清」「3.要動，希望能同步」）：history＝小格 stack.txt
     指的 stack 裡的 history.jsonl（工具形 stack＝小格本身、沒有 history＝不動）。被換掉的原文照 aos-agent history rm 的規矩接到旁邊的
     history_removed.jsonl（每則一行 {"removed_at", "op": op, "line", "message"|"raw"}），先寫那份再換 history：
     summary＝None 換成空檔（/clear）；給了＝換成一則 user「[aos] summary: lines 1-N, N messages. 摘要」（/compact，同 history summarize 的格式；
-    lib 不 import py，這裡自己拼）。keep_tail＝最後一則 assistant 之後的 user（剛交出去、還沒答的那幾則）留著不動。
+    lib 不 import py，這裡自己拼）；rows＝接在那則之後的訊息（codex 的 /compact：從它壓縮後的 replacement_history 撈出來的對話）。
+    keep_tail＝最後一則 assistant 之後的 user（剛交出去、還沒答的那幾則）留著不動。
     刪小格的 .history_sum（aos-eca-turn ⑩ 的記號，沒有＝不比，免得下一輪當成「history 被改過」又丟掉新對話）。回換掉幾則。
     stack＝呼叫者直接給（aos-eca-turn）；沒給＝照 stack.txt（hook）。"""
     if stack is None:
@@ -936,6 +939,7 @@ def replace_history(cell, op, summary=None, stack=None, keep_tail=False):
         if summary is not None:
             note = "[aos] summary: lines 1-%d, %d messages. %s" % (len(lines), len(lines), summary)
             head = [json.dumps({"role": "user", "content": note}, ensure_ascii=False)]
+        head += [json.dumps(r, ensure_ascii=False) for r in rows]
         tmp = os.path.join(stack, "." + HISTORY)       # N-05：先寫暫存再改名
         with open(tmp, "w", encoding="utf-8") as f:
             f.write("".join(l + "\n" for l in head + tail))
@@ -981,6 +985,81 @@ def compact_history(cell, transcript, stack=None):
     if summary is None:
         return None
     return replace_history(cell, "compact", summary, stack)
+
+
+COMPACT_SEEN = ".compact_seen"       # 小格裡：{"thread", "compacted"}＝aos 已跟上的 codex 壓縮次數（11-12 Q5）
+
+
+def codex_compacted(sid):
+    """(這段 thread 的 rollout 裡 compacted 幾次, 最後一次的 payload)；找不到檔＝(0, None)。"""
+    n, last = 0, None
+    for path in transcripts("codex", sid)[:1]:
+        try:
+            with open(path, encoding="utf-8") as f:
+                for line in f:
+                    if '"compacted"' not in line:
+                        continue
+                    try:
+                        m = json.loads(line)
+                    except ValueError:
+                        continue
+                    if isinstance(m, dict) and m.get("type") == "compacted":
+                        n, last = n + 1, m.get("payload")
+        except OSError:
+            pass
+    return n, last
+
+
+_CODEX_INJECTED = re.compile(r"^\s*<[a-z_]+>")
+
+
+def codex_compact_rows(payload):
+    """codex 壓縮後留下的 replacement_history（11-12 實測 0.167：developer 訊息、工具定義、user 訊息、一個 compaction 項，
+    assistant 的話不留、摘要不給文字）裡撈出對話：type message、role user／assistant 的文字（各 part 的 text 接起來）；
+    developer／system、工具定義、工具呼叫與結果、compaction 項都略過；codex 自己塞的 user 區塊（`<environment_context>` 這種
+    以 `<小寫標籤>` 開頭的）也略過。回 [{"role", "content"}]；認不得或撈不到＝None（呼叫者不動 history、只留標記）。"""
+    items = payload.get("replacement_history") if isinstance(payload, dict) else None
+    if not isinstance(items, list):
+        return None
+    rows = []
+    for it in items:
+        if not isinstance(it, dict) or it.get("type") != "message" or it.get("role") not in ("user", "assistant"):
+            continue
+        parts = it.get("content")
+        text = "".join(p.get("text", "") for p in parts if isinstance(p, dict) and isinstance(p.get("text"), str)) \
+            if isinstance(parts, list) else (parts if isinstance(parts, str) else "")
+        if not text.strip() or (it["role"] == "user" and _CODEX_INJECTED.match(text)):
+            continue
+        rows.append({"role": it["role"], "content": text})
+    return rows or None
+
+
+def codex_note_compacts(cell, sid):
+    """記下這段 thread 現在壓過幾次（基準）：畫面開起來時、每輪跟上之後。"""
+    n, _ = codex_compacted(sid)
+    cell.write(COMPACT_SEEN, json.dumps({"thread": sid, "compacted": n}) + "\n")
+    return n
+
+
+def codex_sync_compact(cell, sid, stack=None):
+    """codex 的 /compact 跟上（使用者 Q5「從那串結構化資料裡撈出對話文字，當成新的歷史」）：同一段 thread、rollout 的 compacted
+    比小格 .compact_seen 記的多＝壓過了 → history 換成「[aos] summary: … codex compacted …」一則＋撈出來的對話（原文搬走、op compact；
+    最後一則 assistant 之後的 user 留著）。回 ("synced", 搬走幾則)／("unrecognized", None)＝壓了但撈不到、history 不動／None＝沒新壓縮。
+    .compact_seen 不在或記的是別段 thread＝只記基準、不動（不回頭補以前的）。"""
+    try:
+        seen = json.loads(cell.read(COMPACT_SEEN) or "null")
+    except ValueError:
+        seen = None
+    n, payload = codex_compacted(sid)
+    cell.write(COMPACT_SEEN, json.dumps({"thread": sid, "compacted": n}) + "\n")
+    if not isinstance(seen, dict) or seen.get("thread") != sid or not isinstance(seen.get("compacted"), int) or n <= seen["compacted"]:
+        return None
+    rows = codex_compact_rows(payload)
+    if rows is None:
+        return ("unrecognized", None)
+    moved = replace_history(cell, "compact", "codex compacted the conversation; it keeps the messages below (its own summary is not shown)",
+                            stack, keep_tail=True, rows=rows)
+    return ("synced", moved)
 
 
 def codex_turns(sid):
@@ -1037,6 +1116,10 @@ def hook_main(kind, cell_path, payload_arg=None):
                 # 換到一段剛開的 thread（/clear、/new）＝新對話：aos 的 history 跟著清（使用者 Q1「1.要。」），剛交出去還沒答的 user 留著；
                 # 換到有舊輪數的（/resume 到別段）＝只跟 id、history 不動（不把那段併進來）
                 clear_history(cell, keep_tail=True)
+            if sid and sid == old:
+                codex_sync_compact(cell, sid)               # 同一段 thread 被壓過（畫面上打的 /compact、或它自己壓）＝history 跟上（Q5）
+            elif sid:
+                codex_note_compacts(cell, sid)              # 換了 thread：只記基準
         follow_session(kind, cell, sid)
         link_transcript(cell, kind)
         with open(cell.file("turns.jsonl"), "a", encoding="utf-8") as f:
@@ -1082,6 +1165,8 @@ def start(cfg, cell, ws, stack):
         argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack) + system_argv(cfg) + ["--settings", json.dumps(hooks)]
         argv += ["--resume", sid] if sid else []
     else:
+        if sid:
+            codex_note_compacts(cell, sid)                   # Q5：畫面開起來那刻壓過幾次＝基準，之後多出來的才跟上
         argv = ["codex"] + (["resume", sid] if sid else []) + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack) + system_argv(cfg)
         argv += ["-c", "notify=" + json.dumps(hook_cmd("codex", cell))]
     with open(cell.file("tmux.conf"), "w", encoding="utf-8") as f:
