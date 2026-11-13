@@ -356,3 +356,56 @@
 `lib/aos/kernel/tests`：`Ran 51 tests`、`OK`（原 39＋新 12）；`lib/aos/kernel_llm/tests`：`Ran 32 tests`、`OK`；`kernel-chain-check: 6/6 ok`。
 - **13:05 追加（調度者轉使用者確認「好，5、6、7都照你的看法。」第 7 題＝抄本也抄 `kernel/`）**：重抄多一夾 `proto8/kernel/` → `~/aos-home/kernel/`（知識庫 `aos/kernel.json` 說範例在 `$AOS_HOME/kernel/`，樹裡原本沒有這一夾）。腳本改四處：樹裡原本沒有的夾，precheck 只報告、backup 記進 `tree/ABSENT`、copy 照建、rollback 把它刪掉。暫存樹再預演一次：抄完 `kernel/` 25 檔與該 commit 相同；rollback 後 `kernel/` 不見、其餘四夾內容與模式位元跟抄之前相同。沒有東西會掃 `$AOS_HOME` 底下的夾（`env.sh` 只 export；讀 `AOS_HOME` 的 `aos-tools`、`aos-mcp-launch` 只拼 `lib` 路徑）。兩個提醒：`kernel/docs` 與 README 連到 `../thinking`、`../docs` 的相對連結在樹裡會斷；範本 `llm-kernel`、`llm-team` 的身體仍是 C++ 那支 `aos-llm-kernel`。
 - 另加一段 `swap.sh stray`（調度者交辦、樹停著才做）：`~/aos-home/ws/.stack/procs/repo-aos/` 被別線測試誤寫的 `interfaces.json`、`observed.jsonl` 先備份到備份落點的 `stray-repo-aos/` 再刪；內容不是「`{"aos-observed": {"file": "observed.jsonl"}}`＋兩行、第一行 `ws` 在 `/tmp/`」就不刪（預演驗過這個紅燈）。`daemon_reply/` 不動。
+
+## 十四、下午（線酉）：kernel 第二輪七題的裁定、留著等表態、agent 當門
+
+### 使用者 11-13 下午對 kernel 第二輪前四題的回覆（逐字；題目是調度者問的）
+
+> 「1.就是說我們做的是框架，最底層就是最簡單的hook+判斷。你說的上限這塊，是在框架之上的通用基礎包，所以可以隨意，可以簡單並通用一些。建議甲。2.乙，具體怎麼處理就各自，搞不好有人就說想報錯，反正框架不管...好啦，這是挺基礎的功能，建議弄個選項，預設是可以同時用。3.甲。。4.改。」
+
+第 5、6、7 題，使用者先回「剩下都按照推薦」——這三題當時沒有附推薦，調度者補上自己的看法（5 補、6 不補、7 抄本也抄 `kernel/`）再請他確認，他回（逐字）：
+
+> 「好，5、6、7都照你的看法。我小睡一下」
+
+| 題 | 問什麼 | 裁定 | 結果 |
+|---|---|---|---|
+| 1 | 分流後數量上限怎麼算（甲＝維持合算一個、要分開管在各下一站自己設／乙＝分流站分站計數） | 甲 | 程式沒動。他前半句是對框架的定位，寫進結論（下面）與 [lib/aos/kernel README「兩層」](../../../lib/aos/kernel/README.md)、[kernel/README](../../../kernel/README.md)、[kernel/docs/02](../../../kernel/docs/02-kernel-modes.md) |
+| 2 | `keep_ordered` 與 hook 分流同時用，現在報 `CfgBad`（甲＝維持／乙＝支援） | 乙，做成選項、預設可以同時用 | `d8384df9b`：新鍵 `route_ordered`（預設 true；false＝照舊報錯） |
+| 3 | N-42 (2)「數量另指」條文比程式鬆（甲＝條文改照程式） | 甲 | `0fe01b6b8` |
+| 4 | C-47 標題「已裁定、未實作」、N-42 (2) 子點還叫「判官」 | 改 | `0fe01b6b8` |
+| 5 | 轉寄已寄出、對照還沒寫進 `forwarded.json` 就被砍，重起後回信查不到對照 | 照調度者的看法：補 | `12942854f`：先記待定列再寄 |
+| 6 | 共用引擎不回報是哪個 hook 改了值 | 照調度者的看法：不補 | 沒動 |
+| 7 | 知識庫說 kernel 範例在 `$AOS_HOME/kernel/`、抄本沒有那夾 | 照調度者的看法：抄本也抄 `kernel/` | 調度者另外安排；線酉沒動知識庫那一句 |
+
+### 結論
+
+1. **框架分兩層**（第 1 題的前半句）：框架本身最底層就是最簡單的「hook＋判斷」——收信、叫 hook、照判決走；數量上限這類是蓋在框架之上的「通用基礎包」（掛 proc 那一包）的事，可以簡單、通用一些。跟他同一天講 agent 當門時的「各種的...都可以大家自己設定」是同一件事的兩面：凡是「體系該不該規定 X」，一律不規定，留給各站的 hook、設定或自己換一包（[eca-as-kernel](eca-as-kernel.md) 結論段）。
+2. **留著等表態是骨架的口**：`after_verdict` hook 回 `{"verdict": "hold"}`，信留在站裡；別人寫表態檔 `decisions/<信名>.json`，站照平常的路轉寄或回拒信。誰來判、怎麼通知、哪些信要留、留多久都不是框架的事。做法、十條代定、邊緣狀況在 [eca-as-kernel 第十節](eca-as-kernel.md)。
+3. **agent 當門**有現成的搭法：工具包 `kernel_gate`（不掛進範本）。一隻普通 eca 兩次工具呼叫成為門，真 haiku 實跑過（[02-正式版實跑](eca-as-kernel/02-正式版實跑.md)）。
+
+### 做了什麼（commit 都在 main）
+
+| commit | 內容 |
+|---|---|
+| `6f83a431a` | 骨架的 hold 口、掛 proc 那包的 `held`（只驗寄件人期限）；`tests/test_kernel_hold.py` 12 例 |
+| `306078925` | 工具包 `lib/agent/kernel_gate`（`on`／`off`／`ls`／`pass`／`refuse`＋`tick`、`hold` 兩支 hook 程式）、`lib/packs/kernel_gate.json`；測試 8 例（後來加到 9） |
+| `0fe01b6b8` | 第 3、4 題的條文（同一份檔同一段，合一個 commit） |
+| `12942854f` | 第 5 題：轉寄前先記待定列（鍵 `pending/<原信名>`），重起後到下一站信箱或已到的回信裡認；`tests/test_kernel_cut.py` 12 例（後來 13） |
+| `9be257271` | 說明、知識庫（`aos/kernel.json` 的 `gate`、`write_your_own`）、實跑紀錄 |
+| `dd32bef00` | `extras/kernel-chain-check` 第 8 段（留著等表態走整條鏈），7/7 ok |
+| `1c973e47e` | 通知種類 `kernel_hold` 登記進 `py/aos_flags.py` 與 N-43 續（調度者授權） |
+| `d8384df9b` | 第 2 題：`route_ordered`；保有序又被分流的信轉寄後信名＝`<那一站的序號>.routed.<原信全名>`，跨站不會同名 |
+
+### 代定（線酉；可翻案）
+
+留著等表態與 `kernel_gate` 的十條在 [eca-as-kernel 第十節](eca-as-kernel.md)。框架這邊另外三條：
+
+1. 第 5 題沒照「無序信先記正式列再寄」做，無序、有序統一用待定列：先記正式列的話，「記了還沒寄就被砍」會被當成已轉寄、信就丟了。沒解的窗：下游已做完移走、回信還沒到（或保有序不代回）就重起，仍會重轉一次（README 寫明、測試釘住現況）。
+2. 第 2 題的鍵名 `route_ordered`、信名前綴 `routed.`；同時用的語意取最小——有序只保證到本站門口與各下一站自己的信箱之內，跨站順序不保證。
+3. 第 3、4 題合成一個 commit。C-47 內文「現有判官與問腦總機都收進來」讀起來像判官還在外面（判官已收進來）——照指示只列不改。
+
+### 還沒做、留給之後
+
+- `lib/aos/kernel/letters.py` 到 300 行門檻了（待定列與分流加上去的），下次動它時考慮把轉寄對照那一塊拆出去。
+- 活樹要等下次重抄才有這些（今天 15:08 釘住的 commit 之後才進 main 的不含）。
+

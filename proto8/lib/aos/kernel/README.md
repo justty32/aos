@@ -2,6 +2,16 @@
 
 `_entry` 把 `procs_rules` 交給 `round.run(pack, cfg_path, name="kernel")`；每次執行做一輪，沒信也退 0。由 daemon 身體或 loop proc 一次次叫，不自己常駐。需要 `AOS_STACK`。下一站照三段找：`kernel.json` 的 `next`；沒寫看環境的 `AOS_KERNEL`（指到自己的 `requests/` 就跳過）；再沒有才用 `AOS_DAEMON`。三段都用不上＝`DaemonMissing`。`next` 只有一個；要照規則把不同的信轉給不同的下一站（一封只去一處），寫 `after_verdict` hook 替那一封指定，見下方「分流」。
 
+## 兩層：骨架與包
+
+使用者 11-13：「就是說我們做的是框架，最底層就是最簡單的hook+判斷。你說的上限這塊，是在框架之上的通用基礎包，所以可以隨意，可以簡單並通用一些。」
+
+- **骨架**（`round.py`、`hooks.py`、`hold.py`、`letters.py`）是框架本身：收信、叫 hook、照判決放行／拒／排隊／留著、轉寄與代回。它不認得任何一種請求，也沒有任何規則。
+- **掛 proc 那一包**（`procs_rules.py`、`queue_fifo.py`）是蓋在骨架上的通用基礎包：白名單、數量上限（`max_running`、`count_daemon`）、先來先掛的排隊、寄件人的期限，都是這一包的做法，不是框架的規定。它故意做得簡單、通用：例如分流之後所有下一站合算一個上限，要分開管就在各下一站自己的設定各設各的（使用者 11-13 對「分流後數量上限怎麼算」選「甲」＝維持現況）。
+- 要別種規則：寫 hook，或另寫一包交給骨架（問腦那一包 [`lib/aos/kernel_llm`](../kernel_llm/README.md) 就是）。
+
+下面 `kernel.json` 的鍵裡，`hooks` 是骨架的；`next`、`count_daemon`、`allowed`、`max_running`、`queue`、`keep_ordered`、`route_ordered`、`reply_via_me` 是掛 proc 這一包認的。
+
 ## 零件怎麼用
 
 | 檔案 | 工作 |
@@ -120,7 +130,7 @@ if body.get("lane") == "side":
 - **值**：非空的絕對路徑字串或 null。相對路徑、空字串、別的型別、解開捷徑後是自己的 `requests/`＝hook 自己失敗（照 `on_error`：stop 這輪退 1、信留著；continue 印 warning、當沒這個 hook，信照原本的下一站）。站不驗那個信箱在不在；寄不進去照 `ForwardFailed` 拒信。
 - **站自己仍要有原本的下一站**：三段都用不上照舊 `DaemonMissing`，即使 hook 會替每一封指定。
 - **回信**：跟沒分流時一樣。開 `reply_via_me` 時不管信去哪一站，下游都回到本站的 `replies/`，`forwarded.json` 照轉寄後的信名對回原信、代回原寄件人；對照表的正式列不記信去了哪一站（只有寄到一半的待定列記）。
-- **數量上限**：站只在一個地方數（`count_daemon`），不知道 hook 指的站後面是哪台 daemon。hook 給了 `next`、設定有 `max_running`、卻沒寫 `count_daemon`＝`CfgBad`（沒寫 `next` 時原本預設數 `AOS_DAEMON`，這裡不沿用）。寫了就照字面：不管信去哪一站，都算進同一個上限。各站各自的上限要在各站自己的 `kernel.json` 設。
+- **數量上限**（掛 proc 這一包的做法）：站只在一個地方數（`count_daemon`），不知道 hook 指的站後面是哪台 daemon。hook 給了 `next`、設定有 `max_running`、卻沒寫 `count_daemon`＝`CfgBad`（沒寫 `next` 時原本預設數 `AOS_DAEMON`，這裡不沿用）。寫了就照字面：不管信去哪一站，都算進同一個上限。各站各自的上限要在各站自己的 `kernel.json` 設。
 - **有序信**（使用者 11-13：「這是挺基礎的功能，建議弄個選項，預設是可以同時用。」）：`keep_ordered` 與分流預設可以同時用。有序信照本站的處理順序逐封寄出，分到哪一站就在那一站以有序信寄出（`--ordered`，序號由那一站的信箱自己編）；「有序」只保證到本站門口與各下一站自己的信箱之內，分到不同站的信，站與站之間沒有先後保證，框架不管。被 hook 分流的有序信，轉寄後的信名是 `<那一站的序號>.routed.<原信全名>`（例：`000000000001.routed.000000000003.request`）——各站各自從 1 編號，尾名不帶原信全名的話兩站會編出同名，代回的對照會撞；沒被分流的有序信照舊是 `<序號>.<尾名>`。不想並用就寫 `"route_ordered": false`：開著 `keep_ordered` 時 hook 給 `next`＝`CfgBad`。沒開 `keep_ordered` 時（不管 `route_ordered`）有序信照處理順序逐封寄出、轉成普通信。
 - **防重**：寄進指定的站之後、原信還沒收掉就中斷：下一輪 hook 再指到同一站，站看到那一站的 `new/`、`cur/` 還有同名信就只收原信、不寄第二次。hook 這次指到別站就認不出來，所以分流規則要對同一封信每次給同一個答案。要代回的信（開 `reply_via_me`、原信有 `reply_to`）與保有序的有序信另有待定列記著它去的站，重起那一輪直接收原信、不再問 hook。
 

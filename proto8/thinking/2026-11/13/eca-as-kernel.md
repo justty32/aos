@@ -347,7 +347,7 @@ kernel_gate {"op": "on"}
 - 表態工具那一輪與 `on_clock` 那一輪用同一把鎖（`requests/.flock`）；工具拿不到鎖時回「decision recorded…applied on its next round」。
 - `off` 之後信箱還在：之後寄進來的信沒人認領（帶期限的寄件人自己撤）。
 - `hold.json` 壞＝當空窗、cur 裡的信當新信重判（腦會再收到一次通知）；表態檔壞＝刪掉、信照留（都有測試）。
-- 通知種類 `kernel_hold` 還沒登記在 `py/aos_flags.py` 的 `NOTE_KINDS` 與 N-43 續的名單（不在線酉領地；`tick` 跟 `mail_notify` 一樣自己拼字串，不經那張表，所以不影響跑）。
+- 通知種類 `kernel_hold` 已登記進 `py/aos_flags.py` 的 `NOTE_KINDS` 與 N-43 續的名單（`1c973e47e`，調度者授權）；`tick` 跟 `mail_notify` 一樣自己拼同一個格式。
 
 ### 還要使用者裁的
 
