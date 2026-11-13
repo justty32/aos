@@ -1,0 +1,21 @@
+{
+ "_description": [
+  "# decisions：記決定（本 repo 的版本＝通用版＋本地差異；使用者說「記個決定」「為什麼選 A 不選 B」時讀）",
+  "",
+  "先讀 `base` 指的通用工作流節點（何時記、只記結論與前提、使用者原文要留），再照本檔 `local` 改：本 repo 的決定**不記在 `wf/knowledge/decisions.json`**，記在那次討論的 thinking 檔。`local` 跟 base 衝突時以 `local` 為準。"
+ ],
+ "base": "proto8/knowledge/wf/workflows/decisions.json",
+ "local": {
+  "where": [
+   "「為什麼選 A 不選 B」記在 `proto8/thinking/<月>/<日>/` 那份討論檔的「決定」段：使用者原文逐字＋決定編號（D1、D2…）；AI 寫的理由與過程不留（判準 `wf/workflows/tidy/content-trim.md`）。",
+   "定下的概念同步進 `proto8/docs/CONCEPTS.md`，規範同步進 `proto8/docs/NORMS.md`；當天的 thinking 日索引（`proto8/thinking/<月>/<日>/README.md`）那一列寫一句定了什麼。",
+   "hackathon 各場的評審裁決在 `wf/workflows/hackathon/` 的紀錄；舊的 ideas/verdicts（10-13 封存）與 `docs/roadmap.md` 的 D1～D10 是更早的決策序號，不再新增。"
+  ],
+  "who_decides": "方向性的裁決屬使用者（`AGENTS.md` 鐵律 5）：我只挖邊緣狀況、擺選項與後果，不代裁；等他一句話的記 `wf/WAIT_USER.md`。實作中被迫下的新裁決也算正式裁決，照樣記。",
+  "done_when": [
+   "那份 thinking 檔的「決定」段多一條，附使用者原文。",
+   "影響概念或規範的，`proto8/docs/CONCEPTS.md`／`NORMS.md` 同一個 commit 跟著改。"
+  ],
+  "not_used_here": "base 的「建 `wf/knowledge/decisions.json`、照 `wf/skeletons/decisions.json` 填 records」本 repo 不做。"
+ }
+}

@@ -37,7 +37,7 @@
   | 頂層結構（多／少了目錄）| [INDEX](../../INDEX.md)、根 `README.md` |
 
   **文件裡寫的每一條指令與輸出都要真的跑過再寫上去**，不要照推論寫。
-- 實作中被迫下的新裁決＝正式裁決：記回那次討論的 thinking 檔「決定」段（見 [decisions](../decisions.md)）。
+- 實作中被迫下的新裁決＝正式裁決：記回那次討論的 thinking 檔「決定」段（見 [decisions](../decisions.json)）。
 - 跨 session 時在本工作流 `session-log.md` 補一行 `[功能名] 文檔/code map 待同步`，下個 session 不會誤判已同步。
 
 ## 內容
@@ -54,4 +54,4 @@
 ## 交接
 
 - 驗證怎麼跑 → [testing](../testing.md)；改到一半發現該先整理結構 → [refactor](../refactor/README.md)。
-- 為什麼選這個做法 → [decisions](../decisions.md)（thinking 的決定）；卡在使用者 → [WAIT_USER](../../WAIT_USER.md)。
+- 為什麼選這個做法 → [decisions](../decisions.json)（thinking 的決定）；卡在使用者 → [WAIT_USER](../../WAIT_USER.md)。

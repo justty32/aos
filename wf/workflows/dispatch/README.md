@@ -84,4 +84,4 @@
 - 交接書目錄分三層：本層＝現役、`done/`＝已完成附證據、`superseded/`＝被後續決定推翻（不刪，見 [STRUCTURE](../../STRUCTURE.md) 的 archive 規則）。
 - 線要用獨佔資源 → 在交接書指名可拿哪個鎖（[resources](../resources.md)）。
 - 線回報與催件 → [inbox](../inbox/README.md)；卡在使用者 → [WAIT_USER](../../WAIT_USER.md)。
-- 為什麼這樣切線 → [decisions](../decisions.md)。
+- 為什麼這樣切線 → [decisions](../decisions.json)。

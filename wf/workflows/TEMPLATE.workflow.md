@@ -27,4 +27,4 @@
 
 ## 交接
 
-- 完成後 → 接 <哪個工作流>；卡在使用者 → [WAIT_USER](../WAIT_USER.md) 一行，跨 session → [SESSION-LOG](../SESSION-LOG.md) 一行，為什麼這樣選 → [decisions](decisions.md)。
+- 完成後 → 接 <哪個工作流>；卡在使用者 → [WAIT_USER](../WAIT_USER.md) 一行，跨 session → [SESSION-LOG](../SESSION-LOG.md) 一行，為什麼這樣選 → [decisions](decisions.json)。

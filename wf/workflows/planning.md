@@ -16,4 +16,4 @@ kernel 的 planning 管線（idea → roadmap → 詳規 → 執行）在本專�
 
 ## 交接
 
-- 為什麼選 A 不選 B → [decisions](decisions.md)（→ thinking 的決定）；卡在使用者一句話 → [WAIT_USER](../WAIT_USER.md)；跨 session → [SESSION-LOG](../SESSION-LOG.md)。
+- 為什麼選 A 不選 B → [decisions](decisions.json)（→ thinking 的決定）；卡在使用者一句話 → [WAIT_USER](../WAIT_USER.md)；跨 session → [SESSION-LOG](../SESSION-LOG.md)。

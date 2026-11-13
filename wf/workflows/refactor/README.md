@@ -27,4 +27,4 @@
 
 ## 交接
 
-- 結構就位後要加功能 → [feature-dev](../feature-dev/README.md)；為什麼這樣拆 → [decisions](../decisions.md)。
+- 結構就位後要加功能 → [feature-dev](../feature-dev/README.md)；為什麼這樣拆 → [decisions](../decisions.json)。

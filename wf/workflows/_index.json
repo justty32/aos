@@ -11,8 +11,8 @@
  "decide-page.md": {
   "description": "decide-page — 把一批要使用者裁的題做成離線互動頁，收回答、落回各線"
  },
- "decisions.md": {
-  "description": "decisions — 決策記錄（本專案的落點：proto8/thinking 的決定）"
+ "decisions.json": {
+  "description": "decisions：記決定（本 repo 的版本＝通用版＋本地差異；使用者說「記個決定」「為什麼選 A 不選 B」時讀）"
  },
  "dev-env": {
   "description": "dev-env.md 的分檔：01 兩台機器（家機 Manjaro、公司 WSL）差異與外部工具、02 模型端點（只走 LiteLLM、不碰本機 GPU 模型）"
