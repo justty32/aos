@@ -1,0 +1,9 @@
+[
+ "# 出廠的工作流節點",
+ "",
+ "做事的流程，一個工作流一個節點。這一夾照工作區 `wf/workflows/` 的佈局放：節點裡寫的 `wf/workflows/…`、`wf/knowledge/…` 路徑，在本庫與在工作區讀起來是同一個位置——可以直接照這裡的做，也可以把節點抄進工作區的 `wf/workflows/` 再照專案改。例外：指到 `wf/tidying.json`、`wf/nodes.json`、`wf/layers.json` 的是本庫頂層的組織原則，工作區裡沒有這三份，要看就讀知識庫。",
+ "",
+ "節點的固定形式見 `wf/nodes.json#/workflow_form`，骨架在 `wf/knowledge/workflow-template.json`。",
+ "",
+ "現在有：`tidy.json`（文件整理；子檔在 `tidy/`）、`tidy-manager-brief.json`（tidy 的管理線簡報）。"
+]

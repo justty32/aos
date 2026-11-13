@@ -1,0 +1,7 @@
+[
+ "# 出廠的知識節點",
+ "",
+ "工作流會指過來查的知識與判準。這一夾照工作區 `wf/knowledge/` 的佈局放，路徑讀法同 `wf/workflows/` 那夾。專案自己的記憶（偏好、決策、踩坑記錄、code map…）不在這裡，在各工作區自己的 `wf/knowledge/`。",
+ "",
+ "現在有：`workflow-template.json`（新工作流節點的骨架）、`content-trim.json`（內容精簡的判準）、`gotchas.json`（整理與拆檔踩過的坑）。"
+]

@@ -3,7 +3,7 @@
 
 # proto8 逐檔 code map 生成冊索引
 
-`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：978 個檔、823 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
+`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：988 個檔、833 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
 
 | 冊 | 夾 | 段 | 列／檔 |
 |---|---|---|---|
@@ -25,7 +25,7 @@
 | [impls-8](impls-8.md) | `proto8/impls/` | `aos-lock/`、`aos-loop/`、`aos-post/` |  |
 | [impls-9](impls-9.md) | `proto8/impls/` | `aos-util/`、`cmake/` |  |
 | [kernel](kernel.md) | `proto8/kernel/` | `daemon-kernel/`、`llm-kernel/`、`llm-team/`、`procs-kernel/` | 20／20 |
-| [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層 | 106／106 |
+| [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層 | 116／116 |
 | [knowledge-2](knowledge-2.md) | `proto8/knowledge/` | `aos/` |  |
 | [knowledge-3](knowledge-3.md) | `proto8/knowledge/` | `wf/` |  |
 | [lib](lib.md) | `proto8/lib/` | 頂層 | 249／396 |

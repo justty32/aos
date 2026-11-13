@@ -1,0 +1,14 @@
+{
+ "_description": "tidy 原則 5「內容精簡」的做法（從 `wf/workflows/tidy.json#/content_trim` `$ref` 過來；引用請寫入口的統一路徑）。判準（留什麼、刪什麼、使用者原文怎麼認、哪些檔適用）在 `wf/knowledge/content-trim.json`。",
+ "steps": [
+  "1. 這是改條文：派能改條文的模型，不派只做雜活的便宜模型；提示附 `wf/knowledge/content-trim.json`。",
+  "2. 跟搬檔、拆檔分開 commit；commit 訊息寫「內容精簡」與檔名，之後 `git log --grep 內容精簡 -- <檔>` 找得到。檔內不寫「舊版見某 commit」。commit 由調度者驗收後做，線與工人不 commit。",
+  "3. 要找刪掉的內容：`git log -p -- <檔>`，或 `git log -S '<關鍵字>' -- <檔>`。",
+  "4. 刪鍵或改鍵名前先 `grep -rn '<檔名>#/<鍵>' <repo>`：被別處統一路徑指著的鍵保留，或同步改指。md 形態時刪標題前先 `grep -rn '<檔名>#'`：被別處錨定的標題原文保留（含標題裡的日期），或留同名 `<a id>`，或同步改指。",
+  "5. 驗原文沒丟（引號裡的；引號外的原文人工對；印出的每一筆要嘛不是使用者原文，要嘛是被推翻而刪、列在報告裡）：",
+  "   ```bash",
+  "   git show HEAD:<檔> | grep -oP '「[^」]+」' | sort -u | while IFS= read -r q; do grep -qF -- \"$q\" <檔> || echo \"LOST $q\"; done   # → 0 行",
+  "   ```",
+  "6. 掃殘留歷史：`grep -nE '~~|後來|原本|舊版|被推翻|改成|第.版' <檔>`，每一筆要嘛在原文裡，要嘛已是現在式的結論。"
+ ]
+}

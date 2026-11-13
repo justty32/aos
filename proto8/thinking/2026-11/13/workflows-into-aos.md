@@ -288,6 +288,7 @@
 | 塊 | 來源（模板 repo） | 來源 commit | 進了 aos 哪裡 | 沒帶的與原因 | 舊 repo 那邊請 wf-agent 標「已搬走」的 |
 |---|---|---|---|---|---|
 | 1 組織原則（11-13，線玄） | `wf/knowledge/structure.json` 與它 `$ref` 的 `wf/knowledge/structure/` 四份（`layers`、`nodes`、`tidying`、`repo`） | `7db19654b2bf0a21c8a940cdab9d442d7ae509d0` | 知識庫新的一庫 `proto8/knowledge/wf/`：`_description.json`、`layers.json`、`nodes.json`、`tidying.json`、`source.json`（逐段對照在 `source.json#/carried`） | 見下面清單（同一份在 `source.json#/not_carried`） | `structure.json` 的 `layers`、`skills_vs_memory`、`index_convention`（私有 index 那半）、`names`（wf 多出來的約定那半）、`workflow_form`、`growth`、`split`、`split_method`、`archive`，以及 `structure/layers.json#/logs` |
+| 2 工作流節點的骨架、tidy 一組（11-13，線玄） | `wf/knowledge/workflow-template.json`；`wf/workflows/tidy.json`、`tidy/principles.json`、`tidy/content-trim.json`、`tidy/_description.json`、`tidy-manager-brief.json`；`wf/knowledge/content-trim.json`；`wf/knowledge/gotchas.json` 的 `tidy_` 四段 | `7db5ccc0260aa2c5f0bcb6a931ca5e6960edccb3`（這幾份自 `45a27d6` 起沒再改） | `proto8/knowledge/wf/workflows/`（`tidy.json`、`tidy/`、`tidy-manager-brief.json`）與 `proto8/knowledge/wf/knowledge/`（`workflow-template.json`、`content-trim.json`、`gotchas.json`）；逐檔對照在 `source.json#/blocks/1` | 見「第 2 塊」 | 來源欄列的那幾份整份；`gotchas.json` 只標 `tidy_archive_move`、`tidy_split_datafile`、`tidy_dispatch`、`tidy_env` 四段 |
 
 **放哪與為什麼（第 1 塊）**：開新的一庫 `knowledge/wf/`，不併進 `knowledge/docs/`。
 
@@ -315,20 +316,135 @@
 **牴觸（兩邊說法不同，線玄沒裁、沒帶進來，留給調度者或使用者）**：
 
 1. 「同質記錄一律寫物件陣列」（模板）對 docs/02「要穩定的名字就用物件、不用陣列——別人會用路徑指到的東西放成物件的鍵」。記錄表會不會被人用路徑指到，決定哪句適用。
+   - wf-agent 的意見（11-13 來信）：以 docs/02 為準，它那句不用帶；兩者其實不衝突——它的陣列只用在「不會被單筆引用」的記錄（決策、踩坑、想法，新的在上），會被別處指到的本來就用鍵。可以在 aos 寫成一句：「會被單獨引用的用鍵；只會整批讀、不會單筆引用的同質記錄可以用陣列」。
 2. 「字串陣列有兩種合法用法：清單、一段多行文字」（模板）對 docs/02「字串陣列＝用換行接起來的一段」。題 8 裁了不定判斷規則；但模板的 `done_when`「是字串陣列、一條一個條件」這個用法帶進來了（`nodes.json#/workflow_form` 只寫「每條」），照 docs/02 讀成「一段、一行一條」也說得通。
 3. 「程式碼單檔 > 300 行、給人看的 md > 300 行」（模板，aos 的 `wf/STRUCTURE.md` 也有同一句）對使用者 10-09「原型開發階段不設核心行數上限」。
+   - wf-agent 的意見：不帶。使用者說過不設行數上限。
 4. 檔案格式「UTF-8、LF、縮排 1 格、非 ASCII 不轉義、結尾換行」（模板）：docs/01、02 沒有對應條文。aos 現有的 knowledge 檔實際就是這個格式，只是沒寫成規定。
+   - wf-agent 的意見：建議 aos 有一條「推薦」，直接寫成「跟 `aos-json set` 寫出來的一樣」，工具改的與手改的 diff 才不會互相打架；它選縮排 1 格只是照 aos 知識庫現況，以 `aos-json` 實際輸出為準。
 5. index 的 description「寫繁中『是什麼＋何時讀』」（模板）對 docs/01「英文一句話，說那個節點是什麼」。語言那半有 docs/02 的範圍條可以解釋（英文管的是 `knowledge/aos`）；「＋何時讀」是 docs 沒有的要求，帶進來了（`nodes.json#/names`），只當工作區 `wf/` 的約定。
-6. 「節點之間的引用寫從 repo 根算的統一路徑、放反引號」（模板，帶進來了）：docs/01 只規定 `index` 與 `$ref` 欄位的相對路徑怎麼算，沒規定文字裡的引用怎麼寫；不算牴觸，但 aos 沒有工具會驗這種引用。
+6. 「節點之間的引用寫從 repo 根算的統一路徑、放反引號」（模板，帶進來了）：docs/01 只規定 `index` 與 `$ref` 欄位的相對路徑怎麼算，沒規定文字裡的引用怎麼寫；不算牴觸，但 aos 沒有工具會驗這種引用。使用者 11-13 對線黃那批題裁「都按照推薦」：aos 的 index 檢查不查節點內容裡的引用（[index-check-false-green](index-check-false-green.md)）。
+7. （不在上面六條裡、但 wf-agent 一併回了）`md_for_humans`「內容一律走 json、只留四個 md」：沒帶，等使用者裁 C-42 那題。
+   - wf-agent 的意見：等使用者裁，不帶。
 
-**趕不上今天的重抄**：`knowledge` 在停樹重抄的五夾裡，但今天 15:08 就釘 commit，這一塊在那之後才進 main，今天 15:30 的重抄不會帶到；活樹的 agent 要等**下一次**重抄才讀得到 `knowledge/wf/`。在那之前只有 repo 裡有。
+wf-agent 對第 2、5、6 條沒表示意見。
 
-**下一塊建議併什麼**【意見】（照「小、不依賴別的檔、併完就有人讀得到」排）：
+**活樹有沒有**：第 1 塊寫的時候以為趕不上今天的重抄（當時說 15:08 釘 commit），實際上 15:24 活樹是從 `159414053` 重抄的，第 1 塊趕上了，`knowledge/wf/`（頂層五份）已在活樹。第 2 塊（`workflows/`、`knowledge/` 兩夾）在那之後才寫，要等**下一次**重抄；在那之前只有 repo 裡有。wf-agent 已在舊 repo 標第 1 塊已搬走（它的 commit `f389372`）。
+
+**第 2 塊：放哪、為什麼、沒帶的**
+
+- **放哪**：`knowledge/wf/` 底下開兩個夾，照工作區 `wf/` 的佈局——`workflows/`（出廠的工作流節點）與 `knowledge/`（工作流會指過來查的出廠知識）。理由：節點裡寫的 `wf/workflows/tidy.json#/steps`、`wf/knowledge/content-trim.json` 這種路徑，從 knowledge 這層算與從工作區根算是同一串，所以樹裡的 agent 可以直接照知識庫這份做，也可以整個節點抄進工作區再改，路徑都不用動。唯一例外是指到頂層 `wf/tidying.json`、`wf/nodes.json`、`wf/layers.json` 的（工作區裡沒有這三份），寫在 `workflows/_description.json`。
+- **index**：`wf/` 頂層 7 個東西、`workflows/` 4 個、`knowledge/` 4 個，都沒到 15，不放 `_index.json`；每夾一份 `_description.json`。第 3、4 塊落檔後 `workflows/` 會超過 15，到時放，而且那份就是派發表。
+- **形狀**：多行文字一律一行一個元素的字串陣列；來源裡「陣列的元素又是陣列」的兩處（步驟裡夾著多行）攤平成帶編號的行，照 docs/02「字串陣列＝一段」讀得通。`workflow-template.json` 的 `fields` 從物件陣列改成以鍵名為鍵的物件。
+- **跟 aos 現有的 `wf/workflows/tidy/` 對過**（aos 那份沒動）：兩邊是同一套的新舊版。aos 那份多的：第 6 條原則「收斂優先於拆檔」（使用者 11-03 原話）、`content-trim.md` 的「收斂：改口摺疊與超標」一節、歷次 `reports/`、派工的模型寫死 opus／sonnet。這些是 aos 自己加的，這次**沒有**補進知識庫那份（列在下面的題）。
+- **8 KB**：驗收裡的硬線都拿掉，改成「交接書列出要拆的檔都拆了；超過門檻而不拆的寫理由」，門檻指到 `wf/tidying.json#/split`（使用者 11-13 的說法在那裡）。
+- **沒帶的**（同一份在 `source.json#/blocks/1/not_carried`）：`index_check … RefBad／IndexWanted`、`wf-lint --strict`、`--self`；`.md` > 8192 → 0、README ≤ 300 行／入口 ≤ 100 行、名冊 ≤ 8192、SESSION-LOG ≤ 4096 bytes；`data-files.json`、`tabledb.py`、`find_big_lists.py`、`fix_moved_links.py` 的路徑（改成「工作區有這種工具就用」）；gotchas 三條（`link_columns`、入口壓在 8192 邊緣、用空行躲 BIGLIST）；gotchas 的 `threshold`、`common` 兩段；「push 先問」與指到來源 repo 專案記憶的句子；「只是骨架版本升級…」那句。
+- **wf-agent 指出的 `#/split_method` 走不到**：查過，知識庫的 `wf/tidying.json` 裡 `split` 與 `split_method` 在同一個檔，「本檔 `#/split_method`」走得到，不用改；走不到的是它那邊拆檔後的 `structure.json`。
+
+**下一塊建議併什麼**【意見】（第 1 塊時寫的；第 1、2 項已在第 2 塊做完，第 3、4 項改成下面的「第 3、4 塊落檔計畫」）：
 
 1. `wf/knowledge/workflow-template.json`（工作流節點的範本，2.8 KB）——`nodes.json#/workflow_form` 現在只列了固定鍵，範本本體還沒來。
 2. tidy 那一組（`wf/workflows/tidy.json`、`tidy/` 子檔、`tidy-manager-brief.json`、內容精簡的判準）——使用者說 8 KB「只限於這個工作流」，這個工作流本身還沒進來；要先對 aos 現有的 [wf/workflows/tidy](../../../../wf/workflows/tidy/README.md)，兩邊是同一套的新舊版。
 3. 其餘工作流節點（`wf/workflows/*.json`）一個一個來；每個先跟 aos `wf/workflows/` 的同名工作流對一次，aos 這邊客製多的以 aos 為準。
 4. 最後才是骨架與 `wf-init`（`template/`、`flavors/`、`tools/`）——要先定放 repo 哪個夾（五夾之外）。
+
+## 第 3、4 塊落檔計畫（先不落檔，等調度者通知）
+
+材料：模板 repo 的 `aos-prep/kernel/`（15 檔）與 `aos-prep/dev/`（23 檔），commit `7db5ccc`，節點來源 commit `5d2d0f4`；唯讀看。wf-agent 的獨立稽核還在跑，落檔等它的結果。這份計畫看的是兩批的 `_index.json`、`prep-report*.json`（丟掉的、重疊、工具缺口、拿不準的、要使用者裁的）與四個節點（`kernel/decisions`、`kernel/memory-decisions`、`kernel/live-lists`、`dev/dispatch`）；其餘節點還沒逐份讀，落檔時逐份對。
+
+**落在哪**（都在 `proto8/knowledge/wf/` 底下；不用 repo 裡五夾之外的夾）
+
+| 備料的 kind | 節點 | 落點 | 理由 |
+|---|---|---|---|
+| workflow（12 個） | kernel：`decisions`、`planning`、`gotchas`、`user`；dev：`feature-dev`、`testing`、`refactor`、`moving-things`、`analysis`、`investigation`、`dev-env`、`patch` | `wf/workflows/<名>.json` | 跟第 2 塊的 tidy 同一夾；路徑 `kernel/x.json`、`dev/x.json` 整批改成 `wf/workflows/x.json` |
+| memory（10 個骨架） | `memory-decisions`、`memory-ideas`、`memory-gotchas`、`memory-user`、`memory-verification`、`memory-dev-env`、`memory-code-map`、`memory-conventions`、`memory-notes`、`memory-analysis` | 新夾 `wf/skeletons/<名>.json`（去掉 `memory-` 字首） | 工作流的步驟寫「照骨架建檔」，樹裡的 agent 要讀得到，所以得在知識庫（會隨重抄進活樹），不能放五夾之外；獨立一夾是因為它們是「抄去工作區的空殼」，不是拿來查的知識 |
+| knowledge（5 個） | `reply-style`、`live-lists`、`code-map-rules`、`green-is-not-checked` | `wf/knowledge/<名>.json` | 跟第 2 塊同一夾 |
+| | `dispatch` | 拆開：「可以跳流程」那段進 `wf/workflows/_description.json`；dev 的幾條分辨與「本包沒附的工作流」留成 `wf/knowledge/dev-dispatch.json` | 見下 |
+| meta | 兩批的 `_description.json`、`_index.json`、`prep-report*.json` | 不落檔；`_index.json` 的 description（含觸發說法）拿來寫 `wf/workflows/_index.json`；報告內容收進 `wf/source.json` 的兩個新 block | |
+
+- **`dispatch.json` 該跟派發表同層**——同意 wf-agent 的判斷。「可以跳流程」四條是整個派發層的通則，模板試點也是放在 `wf/workflows/_description.json`。但 `dispatch.json` 裡另外三段（碰原始碼前先讀什麼、analysis／investigation／patch 怎麼分、沒附的工作流）是 dev 包自己的，全塞進派發夾的正文會讓它變成 dev 專用，所以拆開。
+- **`wf/workflows/_index.json`**：落檔後那夾有 12＋4＝16 個以上，超過 15，照 docs/01 要放；它同時就是派發表（description 寫觸發說法）。`kind`、`source` 當額外鍵留著（docs/01 允許）。knowledge 不在 `index_gen` 的範圍（那棵樹手寫維護），這份手寫。
+- **「骨架與導入工具」那個五夾之外的夾**：這兩批用不到。骨架進了知識庫、agent 照著建檔，就不需要 `wf-init` 來鋪；那個夾只在之後要搬 `template/` 的 md 原稿或 `wf-init.sh` 本身時才需要，建議到時再定。
+
+**落檔時要改寫的**
+
+1. 路徑：`kernel/…`、`dev/…` 換成上表的落點；「aos 知識庫的 `wf/…`」去掉「aos 知識庫的」幾個字（已經在同一庫裡）。
+2. 每個節點的 `source` 鍵拿掉，來源 commit 與 notes 收進 `wf/source.json`（第 1、2 塊就是這樣，一個出處）。
+3. 「尚未備料」的指標（例：`decisions` 的 not_when 指到 knowledge 包的 decide 工作流、「內容精簡段尚未備料」）：tidy 已經在了，改成指 `wf/workflows/tidy.json#/content_trim`；其餘五包沒有要做，改成「需要就自建」。
+4. `memory-conventions` 的例子「單檔超過 300 行」拿掉（牴觸第 3 條）。
+5. `live-lists` 的 `which` 是物件陣列、`workflow-template` 我在第 2 塊改成了鍵——落檔時同類的表（`fields`）照第 2 塊的做法以鍵名為鍵；記錄表（`records`）等牴觸第 1 條裁了再定。
+6. 檢查工具：`moving-things` 已改成「專案的連結／引用檢查沒有報問題」，照留。
+
+**跟 aos 既有的重複或牴觸**
+
+- aos 自己的 `wf/workflows/` 有同名的 `decisions.md`、`planning.md`、`dev-env.md`、`testing.md`、`investigation.md`、`feature-dev/`、`refactor/`、`common/user.md`、`common/gotchas.md`，都客製過（decisions 與 planning 改路由到 `proto8/thinking`、CONCEPTS、NORMS；testing 只剩 build 得過；code map 是腳本生成）。這次不動 aos 的 `wf/`；知識庫那份是給別的工作區的通用版，兩份並存到 aos 的 `wf/` 換形態為止。
+- `reply-style` 自稱 always-on：知識庫的節點自己不會 always-on，要工作區的 `AGENTS.md` 指過來才算。aos 這邊使用者的說話偏好在 [user/01](../../../../wf/workflows/common/user/01-說話授權與記憶.md)（先結論、大白話），跟九條規則有沒有對不上的，落檔時逐條對。
+- `live-lists` 的 `wait_user` 照現況寫檔案，跟「寄 NEEDS-USER 信給人」的方向並存（下面題 (a)）。
+- `memory-verification` 要求「至少一列改完必跑」，aos 自己 11-04 起只要求 build 得過——只影響 aos 的 `wf/` 換形態那天。
+- `feature-dev` 流程尾端「→ commit」對 aos 鐵律 2 與派工規矩（被派出去的由調度者驗收後 commit）——下面題 (b)。
+
+**不同意或想改備料的地方**
+
+1. 每個節點帶 `source`：落檔時拿掉，理由見上。備料夾裡留著沒關係。
+2. `memory-` 字首的檔名：落點改成 `skeletons/` 夾後字首多餘。
+3. `dispatch.json` 整份當 dev 的 knowledge：拆開，理由見上。
+4. `reply-style` 的「always-on」寫法：改成「工作區要它 always-on，就在 `AGENTS.md` 指過來」。
+5. `_index.json` 裡把報告檔標 `kind: meta`：落檔時報告不進來，這個 kind 用不到。
+6. 其餘照備料。報告裡 `unsure` 的十幾條大多是命名與放哪，落檔時照上表處理，不另外問。
+
+## 要使用者裁的題（第二批，11-13 下午）
+
+前五題是 wf-agent 來信第 6 點的 (a)～(e)，連同它兩份 `prep-report` 的 `for_user`（內容重疊，併在一起）；它說由我們彙整、不另外問。後面是線玄新列的。建議都是線玄的意見。
+
+**(a) 等使用者的事：何時從 `WAIT_USER.md` 改成寄 NEEDS-USER 信，改了檔還留不留**
+
+- 現況：知識庫要落的 `live-lists` 照現況寫檔案；aos 的方向（11-12 D4）是「把人當成一個 agent、寄信給他」，使用者說先玩、沒施工。
+- A 現在不改，通用版照寫檔案。後果：零工作量；樹裡樹外的工作區都能用。
+- B 樹裡的 agent 改寄信、檔案只留給樹外的 session。後果：要補「讀了≠回了」「人不會被通知」兩個洞（[wf-to-aos/02](../12/wf-to-aos/02-寄信給人與主session.md)）。
+- 判準：你現在會每天看 `aos-mailbox peek` 嗎？不會＝A。建議 A，等玩出需要再改。
+
+**(b)「被派出去的不 commit、由主線驗收後 commit；push 一律先問」要不要成為通用規則**
+
+- 現況：模板沒有這條（feature-dev 尾端只寫「→ commit」，誰 commit 看工作區的 user 偏好）；模板 repo 自己的實例今天才加；aos 的 `wf/` 有（鐵律 2、派工硬規則）。tidy 自己的禁區本來就有「線不 commit」，第 2 塊照帶了。
+- A 寫進通用版（放 `wf/workflows/_description.json` 的派發通則）。後果：每個導入的工作區預設就這樣，單人單 session 的小專案也得照。
+- B 不寫，留給各工作區的 user 偏好與鐵律。後果：通用版只有 tidy 有這條。
+- 判準：這是你對所有專案的習慣，還是只對多線並行的 repo？前者＝A。建議 A 的前半（被派出去的不 commit）當通用、push 先問留在各工作區的鐵律。
+
+**(c) analysis 產物、`PATCH.md`、`APPLY.md` 留 md 還是改 json**
+
+- 牽涉還沒裁的 C-42 那題（哪些檔留 md）。備料照原文留 md。
+- A 留 md（給人看、給別的 repo 的冷啟動 agent 看）。B 改 json。
+- 建議：跟 C-42 一起裁；在那之前照備料留 md 落檔。
+
+**(d) patch 包的落點寫成工作區的 `wf/patches/<patch>/` 對不對**
+
+- A 照備料（`wf/patches/`）：它是交付物，不是查的記錄。B 放 `wf/knowledge/patches/`。C 放工作區根（`patches/`），不進 `wf/`。
+- 判準：你會想在 `wf/` 以外看到 patch 包嗎？建議 A。
+
+**(e) user 偏好骨架裡 kernel 預填的那句回覆風格（「使用者問『要不要』時附可執行判準與後果」），算通用預設還是你個人的偏好**
+
+- A 通用預設：留在骨架的 `defaults`。B 你個人的：從骨架拿掉，只留在各工作區自己的 user 偏好。
+- 連帶：`reply-style`（九條回覆規則）整份也是同一個問題——它是模板的預設，但寫的是你的口味。
+- 建議 A；別的使用者不適用時自己改骨架。
+
+**(f) aos 自己加在 tidy 的東西，要不要補進知識庫那份**（線玄新列）
+
+- 現況：aos 的 `wf/workflows/tidy/` 有第 6 條原則「收斂優先於拆檔」（你 11-03：「檔案太大要拆...不如說，我覺得可以開始收斂了」）與「改口摺疊」一節；模板那份沒有，知識庫現在是模板版（五條）。
+- A 補進去，知識庫變六條。後果：通用版帶著你 11-03 的話；跟你今天「8 KB 只是推薦」方向一致。
+- B 不補，等 aos 的 `wf/` 換形態那天再合。後果：在那之前兩份不一樣，樹裡別的 agent 照五條做。
+- 建議 A。
+
+**(g) 檔案格式要不要在 knowledge/docs 寫一條推薦**（牴觸第 4 條）
+
+- A 寫一句「推薦：跟 `aos-json set` 寫出來的一樣」（wf-agent 的建議）。後果：工具改的與手改的 diff 不互相打架；要先確認 `aos-json set` 實際輸出是什麼格式（沒查）。
+- B 不寫。
+- 建議 A，查完實際輸出再寫。
+
+**(h) 記錄表寫成陣列還是鍵**（牴觸第 1 條）
+
+- A 照 wf-agent 的說法在 docs/02 補一句：「會被單獨引用的用鍵；只會整批讀、不會單筆引用的同質記錄可以用陣列」。後果：決策、踩坑、想法這類「新的在上」的表可以是物件陣列，第 3 塊的骨架照備料落檔。
+- B 不補，一律照 docs/02 現在的字面（要穩定的名字就用鍵）。後果：骨架的 `records` 要改成以某個欄當鍵，「新的在上」靠鍵的順序。
+- 建議 A。docs/02 現在那句本來就只講「別人會用路徑指到的東西」，A 是把另一半講明。
 
 ## 給 wf-agent 的回信草稿（已寄 14:46，由調度者寄；寄出時還沒有上面的裁定）
 

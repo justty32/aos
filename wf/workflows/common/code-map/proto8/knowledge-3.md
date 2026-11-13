@@ -10,7 +10,17 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`_description.json`](../../../../../proto8/knowledge/wf/_description.json) | argv：`# wf：工作區的工作文檔怎麼組織 一個專案（工作區）裡給 agent 用的工作文檔——做事的流程、查得到的知識與記錄、還沒完的事——收在工作區的 `wf/` 夾，用 index 與 json 節點組織。 |
+| [`knowledge/_description.json`](../../../../../proto8/knowledge/wf/knowledge/_description.json) | argv：`# 出廠的知識節點 工作流會指過來查的知識與判準。 |
+| [`knowledge/content-trim.json`](../../../../../proto8/knowledge/wf/knowledge/content-trim.json) | 設定（鍵：_description、criterion、keep、drop、user_words、applies…） |
+| [`knowledge/gotchas.json`](../../../../../proto8/knowledge/wf/knowledge/gotchas.json) | 設定（鍵：_description、tidy_archive_move、tidy_split、tidy_dispatch、tidy_env） |
+| [`knowledge/workflow-template.json`](../../../../../proto8/knowledge/wf/knowledge/workflow-template.json) | 設定（鍵：_description、skeleton、fields、paths） |
 | [`layers.json`](../../../../../proto8/knowledge/wf/layers.json) | 設定（鍵：_description、layers、skills_vs_memory、private_index、logs） |
 | [`nodes.json`](../../../../../proto8/knowledge/wf/nodes.json) | 設定（鍵：_description、names、workflow_form、growth） |
-| [`source.json`](../../../../../proto8/knowledge/wf/source.json) | 設定（鍵：_description、from、carried、not_carried） |
+| [`source.json`](../../../../../proto8/knowledge/wf/source.json) | 設定（鍵：_description、blocks） |
 | [`tidying.json`](../../../../../proto8/knowledge/wf/tidying.json) | 設定（鍵：_description、split、split_method、archive） |
+| [`workflows/_description.json`](../../../../../proto8/knowledge/wf/workflows/_description.json) | argv：`# 出廠的工作流節點 做事的流程，一個工作流一個節點。 |
+| [`workflows/tidy-manager-brief.json`](../../../../../proto8/knowledge/wf/workflows/tidy-manager-brief.json) | 設定（鍵：_description、when、not_when、done_when、role、steps…） |
+| [`workflows/tidy.json`](../../../../../proto8/knowledge/wf/workflows/tidy.json) | 設定（鍵：_description、when、not_when、principles、done_when、roles…） |
+| [`workflows/tidy/_description.json`](../../../../../proto8/knowledge/wf/workflows/tidy/_description.json) | （檔頭沒有一句話） |
+| [`workflows/tidy/content-trim.json`](../../../../../proto8/knowledge/wf/workflows/tidy/content-trim.json) | 設定（鍵：_description、steps） |
+| [`workflows/tidy/principles.json`](../../../../../proto8/knowledge/wf/workflows/tidy/principles.json) | 設定（鍵：_description、principles） |

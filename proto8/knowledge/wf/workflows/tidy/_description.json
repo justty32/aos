@@ -1,0 +1,1 @@
+"tidy 工作流的子檔（大段拆進同名資料夾、原位放 `$ref`）：`principles.json` 五條原則、`content-trim.json` 內容精簡的做法。入口是 `wf/workflows/tidy.json`，從那裡讀。"
