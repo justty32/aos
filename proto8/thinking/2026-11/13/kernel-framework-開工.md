@@ -223,7 +223,7 @@
   1. 禁止 `pkill`／`killall`／`kill $(pgrep …)` 與任何按名字或命令列字串收行程的寫法；`aos-daemon-ctl` 一定帶 `-d`、而且只能指到自己的暫存夾。
   2. 收行程只准兩種：`aos-daemon-ctl -d <自己暫存樹 stack 的絕對路徑> shutdown`（下之前先印出路徑、確認在自己的暫存夾下）；或 kill 起的時候記下的 pid（kill 前 `readlink /proc/<pid>/cwd` 確認在自己的暫存夾裡）。
   3. 起任何 aos 行程前 `env -u` 掉所有 `AOS_*` 變數；暫存夾用獨一無二的路徑。
-  4. 收尾核對 `pgrep -u guanyu -af 'aos-daemon'` 只剩 `~/aos-home` 的兩台，貼進回報；多了或少了立刻停手。
+  4. 收尾核對 `pgrep -u "$USER" -af 'aos-daemon'` 只剩 `~/aos-home` 的兩台，貼進回報；多了或少了立刻停手。
 
 ### 批 11a
 

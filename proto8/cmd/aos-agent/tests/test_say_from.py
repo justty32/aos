@@ -28,7 +28,7 @@ class SayFrom(unittest.TestCase):
         (self.t / "eca" / "cli.json").write_text(json.dumps({"kind": "claude"}))
         self.rows = {"bob": {"stack": str(self.t / "stacks/bob")}, "amy": {"stack": str(self.t / "stacks/amy")}}
 
-    def who(self, opts, stack=None, user="guanyu"):
+    def who(self, opts, stack=None, user="alice"):
         env = {"AOS_STACK": stack} if stack else {}
         with patch.dict(os.environ, env), patch.object(sender, "table", return_value=self.rows), \
                 patch.object(sender.getpass, "getuser", return_value=user):
@@ -39,8 +39,8 @@ class SayFrom(unittest.TestCase):
     def test_precedence(self):
         self.assertEqual(self.who({"from": "carol"}, str(self.t / "stacks/bob")), "carol")
         self.assertEqual(self.who({}, str(self.t / "stacks/bob/tools/x")), "bob")      # agent 的工具下的指令＝那隻 agent
-        self.assertEqual(self.who({}, str(self.t / "elsewhere")), "guanyu")            # 不在表上＝人
-        self.assertEqual(self.who({}), "guanyu")
+        self.assertEqual(self.who({}, str(self.t / "elsewhere")), "alice")            # 不在表上＝人
+        self.assertEqual(self.who({}), "alice")
         self.assertEqual(self.who({}, user='we"ird'), "user")
 
     def test_bad_from(self):
@@ -52,8 +52,8 @@ class SayFrom(unittest.TestCase):
     def test_daemon_table_unreadable_means_person(self):
         with patch.dict(os.environ, {"AOS_STACK": str(self.t / "stacks/bob")}), \
                 patch.object(sender, "table", side_effect=common.Fail("DaemonMissing", "x")), \
-                patch.object(sender.getpass, "getuser", return_value="guanyu"):
-            self.assertEqual(sender.sender({}, "h"), "guanyu")
+                patch.object(sender.getpass, "getuser", return_value="alice"):
+            self.assertEqual(sender.sender({}, "h"), "alice")
 
     def test_only_an_eca_letter_carries_the_name(self):
         with patch.object(sender.aos_ws, "put", return_value="sig") as put:

@@ -69,7 +69,7 @@
 
 | 情況 | 結果 |
 |---|---|
-| `aos-agent say`（閒著） | 畫面「› Message from @guanyu: test S1: …」，答 `S1-OK`；history 兩行、沒有寄件人欄 |
+| `aos-agent say`（閒著） | 畫面「› Message from @<登入名>: test S1: …」，答 `S1-OK`；history 兩行、沒有寄件人欄 |
 | 新信通知（輸入框留著半句「person typing half a sent」） | 「› Message from @aos通知中心: [aos] new_mail: 1 new letter from amy. Look with mailbox_peek, read with mailbox_read.」，它去讀了信；半句原封不動 |
 | 時鐘信（另開一個 tmux 接在畫面上＝有人 attach） | 「› Message from @aos通知中心: [aos] clock: cycle 280. Clock test: …」，答 `TICK-SEEN`；以前 `--on-busy yield` 這時信進不來 |
 | CLI 忙時（正在跑 `find /usr …` 數檔案，第二句 `--from bob`） | 第二句在第一句還沒答完時就被認領、投進去，畫面「› Message from @bob: …」，那步工具做完讀到，同一輪回答兩件事；history 是 user、user、assistant |
@@ -91,7 +91,7 @@
 1. **寄件人放在信 body 的 `name`**（OpenAI user message 自己的選填欄），不新造欄位；`aos-eca-turn` 拿它當署名、**不接進 history**（history 的形狀完全不變）。要讓 history 也記得誰說的，是 `midturn.unnamed` 一行的事。
 2. **只有對 eca 的 say／chat 才帶寄件人**。agent-fsm 那種會把 body 原樣接進 history、再送給模型端點，多一欄端點吃不吃沒驗過，今天不冒險。
 3. **沒寫寄件人的一律「aos通知中心」**，寄的那邊（`mail_notify`、`aos-clock`、goal、開場白）都沒改。
-4. **人的名字＝登入名**（這台是 `guanyu`）；agent 下的指令自動用它在 daemon 表上的名字；都可用 `--from` 明講。名字是寄的那邊自己寫的字，不是身分證明。
+4. **人的名字＝登入名**（這台是自己的登入名）；agent 下的指令自動用它在 daemon 表上的名字；都可用 `--from` 明講。名字是寄的那邊自己寫的字，不是身分證明。
 5. **等回答時又來的信也馬上投**（裁定「馬上送」的字面只講到不因為忙而等；但 `aos-eca-turn` 原本在等上一批回答時不會認領新信，不補這段的話，最常見的「它正在做上一件事」就還是要等）。來的是 slash 指令就不加投、留到下一輪。這條比裁定字面多一點，調度者已當面告知使用者、使用者未反對。
 6. **接線前開著的畫面不自動換新路**，重開才換：那些畫面起的時候沒有帶「跨 session 訊息直接收」的設定，也沒驗過每一隻的權限模式會不會把訊息卡在畫面上等批准。
 7. **沒回執的判定＝CLI 閒著 30 秒**；等回答時加投的信要等第一批有回執之後才投（免得退回貼字時有信只投了沒貼）；判定後那個畫面改回貼字，那一批因為已經收信，貼的時候不再退讓（有人在打字也照貼，跟原本 `--on-busy answer` 一樣）。

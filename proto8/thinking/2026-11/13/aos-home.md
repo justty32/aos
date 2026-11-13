@@ -27,7 +27,7 @@
 - **刪掉的**（使用者授權）：舊 `~/aos-home`；`~/code/` 底下 `playground` 開頭的八夾（`playground`〔11-13 08:16 照 HEAD 重抄一半、沒起樹的半成品〕、`playground-fsm_ann.bak-1110-toolscli`、`playground-lib.bak-1110-toolscli`、`playground.bak-1110`、`playground.bak-1111-1024`、`playground.bak-1111-1306`、`playground.bak-1113-0816`〔11-12 12:45 那份原樣，含 eca_opus 自己寫的 `ws/notes`、`ws/new_tools/aos_cache`〕、`playground.bak-anchor-20261110`；刪前各自 stopped、沒有行程）；`~/repo/aos-tools`（刪前查過：沒有未推 commit、沒有 stash、只有一條 worktree、未追蹤的只有頂層那封過時交接信、ignored 的全是 build／bin／`__pycache__`；沒有連結或行程指著它）；`~/repo/simple_tools/aos`（自己有 `.git` 的獨立 repo、在上層 repo 是未追蹤的 `aos/`，刪了上層不會多刪除變更；查法同上，乾淨）。
 - **沒刪的**：`~/repo/simple_tools` 這個上層 repo（它的 `main` 有 **8 個沒推的 commit**，全是 `freepy/` 的：`57da41f`～`14a0a8f`，遠端沒有），等使用者看過再定；舊 `.pth` 改名檔；`~/aos-saves/aos-home-1113-0825`。
 
-- **`/tmp` 清了**（使用者「/tmp可以清掉，別占用記憶體」）：先確認沒有 aos 行程、沒有行程開著要刪的檔；刪了 guanyu 名下的 `aos-daemon-b.*`、`aos-review-round-*`、`aos-impls-build.lock`、`judge-test.*`（50 夾）、`ft1113`、`ftb`、`pg1113-*`；40M → 572K。留著：`claude-1000`（Claude Code 自己的暫存，可能有 session 在用）、`node-compile-cache`（node 的快取）、root 擁有的系統夾。`/tmp/line*`、`/tmp/fulltest_*`、`/tmp/aos-home-dryrun` 早就不在了。
+- **`/tmp` 清了**（使用者「/tmp可以清掉，別占用記憶體」）：先確認沒有 aos 行程、沒有行程開著要刪的檔；刪了自己帳號名下的 `aos-daemon-b.*`、`aos-review-round-*`、`aos-impls-build.lock`、`judge-test.*`（50 夾）、`ft1113`、`ftb`、`pg1113-*`；40M → 572K。留著：`claude-1000`（Claude Code 自己的暫存，可能有 session 在用）、`node-compile-cache`（node 的快取）、root 擁有的系統夾。`/tmp/line*`、`/tmp/fulltest_*`、`/tmp/aos-home-dryrun` 早就不在了。
 
 ## 十七步跟 11-13 main 對不上的地方（已改進 ops-notes-to-aos）
 
