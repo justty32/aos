@@ -2,6 +2,8 @@
 """codemap_gen — 從 proto8 各檔檔頭的一句話生成逐檔 code map（wf/workflows/common/code-map/proto8/<夾>.md）。
 
   codemap_gen.py [--root REPO] [--apply] [--quiet]
+    （11-13 起是過渡薄殼：命令列轉呼叫 `index_gen.py`，它一次寫 _index.json、wf/knowledge/code-map/ 逐檔表 json 與下面說的 md 冊；
+     本檔留認法函式給 index_gen import。之後刪命令列。）
     不帶 --apply：檢查。生成結果跟 commit 進去的冊一致就退 0；不一致（缺冊、內容不同、多出已不對應的生成冊）
                  每冊印一行 error 與差異、退 1。
     --apply      重寫生成冊；刪掉開頭帶 generated 標記、但已不對應任何夾的舊冊（手寫檔不碰）。
@@ -317,28 +319,13 @@ def books(proto, files):
     return out, stats, len(files)
 
 
-def main(argv):
-    apply = "--apply" in argv
-    quiet = "--quiet" in argv or "-q" in argv
-    if "-h" in argv or "--help" in argv:
-        print(__doc__.split("\n\n")[0] + "\n\n" + "\n".join(__doc__.split("\n")[2:6]))
-        return 0
-    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    if "--root" in argv:
-        i = argv.index("--root")
-        if i + 1 >= len(argv):
-            print(f"{PROG}: error: ArgumentsBad --root needs a path (usage: codemap_gen.py [--root REPO] [--apply] [--quiet])", file=sys.stderr)
-            return 1
-        root = os.path.abspath(argv[i + 1])
-    for a in argv:
-        if a.startswith("-") and a not in ("--apply", "--quiet", "-q", "--root"):
-            print(f"{PROG}: error: FlagUnknown {a} (usage: codemap_gen.py [--root REPO] [--apply] [--quiet])", file=sys.stderr)
-            return 1
+def sync_md(root, apply, quiet):
+    """寫／查 md 生成冊（wf/workflows/common/code-map/proto8/）；回 stale 數（--apply 恆 0）。沒有 proto8 就什麼都不做。
+    11-13 線遷 code map 步 3 起由 index_gen.py 呼叫；md 冊等步 4（刪 md 冊）一起拿掉。"""
     proto = os.path.join(root, "proto8")
     outdir = os.path.join(root, "wf", "workflows", "common", "code-map", "proto8")
     if not os.path.isdir(proto):
-        print(f"{PROG}: error: NotFound {proto}", file=sys.stderr)
-        return 1
+        return 0
     files = tracked(proto)
     want, stats, nfiles = books(proto, files)
     have = {}
@@ -350,9 +337,6 @@ def main(argv):
                     t = f.read()
                 if t.startswith(MARK):
                     have[n] = t
-    if not quiet:
-        for w in stats["warn"]:
-            warn(f"proto8/{w}: no one-line description in the file header")
     stale = sorted(n for n in have if n not in want)
     diff = sorted(n for n in want if have.get(n) != want[n])
     if apply:
@@ -363,24 +347,50 @@ def main(argv):
         for n in stale:
             os.remove(os.path.join(outdir, n))
         if not quiet:
-            print(f"{PROG}: {nfiles} files, {stats['covered']} covered, {stats['rows']} rows, {len(want)} books;"
+            print(f"{PROG}: md books: {nfiles} files, {stats['covered']} covered, {stats['rows']} rows, {len(want)} books;"
                   f" wrote {len(diff)}, removed {len(stale)}, {len(stats['warn'])} warnings")
         return 0
     bad = 0
     for n in diff:
         bad += 1
         kind = "missing" if n not in have else "differs"
-        print(f"{PROG}: error: CodemapStale code-map/proto8/{n} {kind} (run wf/tools/codemap_gen.py --apply)")
+        print(f"{PROG}: error: CodemapStale code-map/proto8/{n} {kind} (run wf/tools/index_gen.py --apply)")
         if n in have and not quiet:
             import difflib
             for ln in list(difflib.unified_diff(have[n].splitlines(), want[n].splitlines(), "committed", "generated", n=0, lineterm=""))[2:12]:
                 print("    " + ln)
     for n in stale:
         bad += 1
-        print(f"{PROG}: error: CodemapStale code-map/proto8/{n} no longer generated (run wf/tools/codemap_gen.py --apply)")
+        print(f"{PROG}: error: CodemapStale code-map/proto8/{n} no longer generated (run wf/tools/index_gen.py --apply)")
     if not quiet:
-        print(f"{PROG}: {nfiles} files, {stats['covered']} covered, {stats['rows']} rows, {len(want)} books, {bad} stale, {len(stats['warn'])} warnings")
-    return 1 if bad else 0
+        print(f"{PROG}: md books: {nfiles} files, {stats['covered']} covered, {stats['rows']} rows, {len(want)} books, {bad} stale, {len(stats['warn'])} warnings")
+    return bad
+
+
+def main(argv):
+    """過渡薄殼（11-13 線遷 code map 步 3，使用者裁 C3 甲）：照舊收 --root／--apply／--quiet，轉呼叫 index_gen.py（它一次寫 _index.json、逐檔表 json 與 md 冊）。"""
+    if "-h" in argv or "--help" in argv:
+        print(__doc__.split("\n\n")[0] + "\n\n" + "\n".join(__doc__.split("\n")[2:8]))
+        return 0
+    fwd = []
+    it = iter(argv)
+    for a in it:
+        if a in ("--apply", "--quiet"):
+            fwd.append(a)
+        elif a == "-q":
+            fwd.append("--quiet")
+        elif a == "--root":
+            v = next(it, None)
+            if v is None:
+                print(f"{PROG}: error: ArgumentsBad --root needs a path (usage: codemap_gen.py [--root REPO] [--apply] [--quiet])", file=sys.stderr)
+                return 1
+            fwd += ["--root", os.path.abspath(v)]
+        else:
+            print(f"{PROG}: error: FlagUnknown {a} (usage: codemap_gen.py [--root REPO] [--apply] [--quiet])", file=sys.stderr)
+            return 1
+    print(f"{PROG}: note: merged into index_gen.py; running `" + " ".join(["python3", "wf/tools/index_gen.py"] + fwd) + "`", file=sys.stderr)
+    import index_gen
+    return index_gen.main(fwd)
 
 
 if __name__ == "__main__":

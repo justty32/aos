@@ -19,7 +19,8 @@
 夾沒有 README.md／INDEX.md 時取它的 `_description.json`；
 wf-table 資料檔寫出處與欄位；程式檔照 codemap_gen 的認法；html 取 <title>。連結語法、粗體去掉，只留字。
 同一次也寫逐檔 code map：proto8 每個頂層夾一份 wf/knowledge/code-map/proto8/<夾>.json（tree 巢狀、葉子＝檔頭一句話；範圍在 index_gen.json 的 codemap 段；
-跟檔頭對不上＝CodemapStale、退 1；規劃 proto8/thinking/2026-11/13/wf-into-aos-plan/08-fable-codemap規劃.md）。
+跟檔頭對不上＝CodemapStale、退 1；過渡期也重寫 wf/workflows/common/code-map/proto8/ 的 md 冊（codemap_gen.sync_md，--out 時不寫）；
+`codemap_gen.py` 命令列是轉呼叫本檔的薄殼；規劃 proto8/thinking/2026-11/13/wf-into-aos-plan/08-fable-codemap規劃.md）。
 格式出處：proto8/thinking/2026-11/12/index.md、index-link.md；規格與代定：proto8/thinking/2026-11/13/index-build.md。查對用 index_check.py。
 純標準庫；只讀檔頭，不跑任何程式。
 """
@@ -373,6 +374,8 @@ def main(argv):
                 fail("IndexStale", "%s no longer matches any folder with entries (run index_gen.py --apply)" % rel)
     cstale, cbooks, cwarn = codemap_sync(root, load(config or "index_gen.json"), apply, out_dir)
     bad += cstale
+    if not out_dir:                                     # md 生成冊（過渡；步 4 刪）
+        bad += codemap_gen.sync_md(root, apply, quiet)
     if not quiet:
         print("%s: %d index files, %d entries, %d without a description%s" % (
             PROG, len(tables), sum(len(t) for t in tables.values()), len(missing),
