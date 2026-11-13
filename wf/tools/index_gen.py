@@ -9,7 +9,7 @@
     --config FILE 改用另一份範圍設定（預設同夾的 index_gen.json；試新範圍時用）。
   某一項取不到一句話：印 `index_gen: error: DescMissing 路徑`、退 1（補檔頭，或寫進 index_gen_desc.json）。
 
-範圍、不建的夾寫在同夾的 index_gen.json；取不到檔頭一句話的（圖、紀錄檔、沒有 README 的夾）手寫在 index_gen_desc.json（路徑 → 一句話，手寫的優先）。
+範圍、不建的夾、手寫不生成的 index（hand_indexes，如 knowledge 既有的三份）寫在同夾的 index_gen.json；取不到檔頭一句話的（圖、紀錄檔、沒有 README 的夾）手寫在 index_gen_desc.json（路徑 → 一句話，手寫的優先）。
 列哪些：`git ls-files` 有的檔，與裡面有這種檔的夾；`_index.json` 自己不列。夾的那一項，在範圍內就帶 `index` 連到它自己的 `_index.json`。
 一句話怎麼認：md 取第一個標題（分檔取導航行的「涵蓋：…」）；夾取它的 README.md／INDEX.md（工具夾取 _tooldef.json／_metainfo.json），沒有就取同名 `夾.md` 的（分檔夾）；
 都沒有時用設定檔的通用句（usual_dirs／usual_files：tests、src、.gitignore 這類名字就說明用途的）；json 取 description／summary／$comment／title，
@@ -127,6 +127,7 @@ def build(root, stage=None, config=None):
     cfg, hand = load(config or "index_gen.json"), load("index_gen_desc.json")["desc"]
     scopes = [s for s in cfg["scopes"] if stage is None or s.get("stage", 1) <= stage]
     skip_names, skip_paths = set(cfg["skip_dir_names"]), set(cfg["skip_dirs"])
+    keep = set(cfg.get("hand_indexes", []))
 
     def skipped(d):                                     # 這個夾裡面不建、也不往下列
         return d in skip_paths or any(p in skip_names for p in d.split("/")) or any(d.startswith(s + "/") for s in skip_paths)
@@ -172,7 +173,7 @@ def build(root, stage=None, config=None):
         return usual(cfg.get("usual_dirs", {}), path)
 
     for d in sorted(kids):
-        if not in_scope(d):
+        if not in_scope(d) or d in keep:                # keep：手寫的 index，不生成、不蓋掉（上一層照樣連過去）
             continue
         table = {}
         for name in sorted(kids[d]):
@@ -192,7 +193,7 @@ def build(root, stage=None, config=None):
     for path in hand:
         if not os.path.lexists(os.path.join(root, path)):
             missing.append(path + "  (in index_gen_desc.json but not in the repo)")
-    return out, missing, scopes, in_scope
+    return out, missing, scopes, lambda d: in_scope(d) and d not in keep
 
 
 def dump(table):

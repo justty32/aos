@@ -69,7 +69,7 @@
 
 會改變輸出、不會壞的：
 
-- code map 生成冊：`codemap_gen.py` 掃 `git ls-files proto8`（docs、thinking、notes、user-advice、archive 除外），所以 `proto8/_index.json` 在 root 冊多一列「設定（鍵：…）」；階段二程式區每份 index 都會多這樣一列（約三百列），冊會變大變多。
+- code map 生成冊：原本每份 `_index.json` 會在生成冊多一列「設定（鍵：…）」；調度者同意後 `codemap_gen.py` 的略過名單加了 `_index.json`（a993379be），生成冊不再列 index（knowledge 既有三份的列也拿掉了）。
 - 腦用的 `ls`、`glob` 等看到的子項多一個。
 
 放了會壞、所以不放的（階段二照這張表避開）：
@@ -94,7 +94,20 @@
 ## 給使用者看的
 
 - **「建滿」的其他讀法**（這次先照「這份 repo」做）：一是也包含裝好的那棵樹自己長出來的東西（`~/aos-home` 的 ws、agents、stack；那裡的 lib、templates、knowledge 是從 repo 抄過去的，repo 鋪好、重抄就有）；二是只指 `proto8/knowledge` 這棵出廠內容樹（已有三份，缺的階段二補）；三是連 json 檔裡面的節點也建（檔內 `_index`）；四是 `archive/` 與 `impl_cpp/` 裡面也建。
-- **code map 要不要略過 `_index.json`**：不略過的話，階段二程式區每份 index 在生成冊多一列沒有資訊的「設定（鍵：…）」。建議 `codemap_gen.py` 的略過名單加一個 `_index.json`（一行；knowledge 既有三份的列也會跟著消失）。
-- **`impl_cpp/` 裡面要不要建**：那是使用者親手寫的夾，這次只在 repo 根留一項、裡面沒放。
+- **`impl_cpp/` 裡面不建**（調度者同意）：那是使用者親手寫的夾，只在 repo 根留一項。
 - **範本與 kernel 的定義夾裡面不放**（原因見上表）：這些夾只在上一層有一句話，`index_view` 走不進去。
-- **維護沒有掛進規矩**：現在要記得跑 `index_gen.py --apply`；要不要寫進鐵律 3、`wf-lint` 要不要加一關，沒有動（不改既有檔）。別條線新增檔後 index 會缺項，`index_check.py` 會報 `EntryMissing`。
+- **維護要不要掛進規矩**：兩個方案在下面「維護」，待使用者裁；裁之前靠記得跑。
+
+## 維護
+
+- **什麼時候跑**：新增、刪除、搬動、改名任何進版控的檔或夾，或改了某個檔的檔頭那一句（md 的第一個標題、README 標題、json 的 `description`、程式檔第一行）之後，commit 前跑 `python3 wf/tools/index_gen.py --apply`，改到的 `_index.json` 跟著同一個 commit。新檔要先 `git add` 才列得到（只列進版控的）。
+- **取不到一句話**：生成器印 `index_gen: error: DescMissing 路徑`、退 1。補檔頭那一句；檔頭放不了的（圖、紀錄檔、沒有 README 的夾）在 `wf/tools/index_gen_desc.json` 加一筆 `"路徑": "一句話"`。搬檔、刪檔後手寫句的舊路徑也會報 `DescMissing …(in index_gen_desc.json but not in the repo)`，把那筆改成新路徑或刪掉。
+- **只想檢查**：`python3 wf/tools/index_gen.py`（不寫檔）：每份該改的印一行 `IndexStale 哪一份 is missing／differs from the file headers`，退 1；都一致退 0。
+- **`index_check.py` 報什麼**（`python3 wf/tools/index_check.py [夾…]`，不靠生成器、任何一棵樹都能查）：`EntryMissing 哪一份: 名 is there but not listed`（加了檔沒重生）、`EntryGone …: 名 is listed but not there`（刪了或搬了沒重生）、`LinkBad …: 名: index 路徑 points to nothing`（子夾的 index 不見了）、`LinkMissing`（子夾有 index、上一層沒連）、`IndexBad`（形狀不對，例如條目寫成字串）。最後一行總數，有問題退 1。
+- **新開一個要建 index 的區域、或某個夾裡面不能放**：改 `wf/tools/index_gen.json` 的 `scopes`、`skip_dirs`／`skip_dir_names`；手寫維護、不要生成器碰的那幾份寫進 `hand_indexes`。
+
+**掛進規矩的兩個方案（待使用者裁，hub 檔沒動）**：
+
+- （甲）改鐵律 3。`AGENTS.md` 鐵律 3 的粗體句「**新檔第一行（腳本跳過 shebang 的第一行）寫一句話；commit 前跑 `python3 wf/tools/codemap_gen.py --apply`**」改成「**新檔第一行（腳本跳過 shebang 的第一行）寫一句話；commit 前跑 `python3 wf/tools/codemap_gen.py --apply`，並跑 `python3 wf/tools/index_gen.py --apply`**」；同一條後段「改檔頭那一句、重生，跟程式同一個 commit」不用改。後果：每個 commit 多跑一支（約一秒），index 永遠跟得上；文件區的 commit 也要跑（code map 那支原本只管程式）。
+- （乙）不改鐵律，`wf/tools/wf-lint.sh` 多查一項。在 CODEMAP 那一關後面加一關 `INDEX`：repo 根有 `wf/tools/index_gen.py` 時跑 `python3 wf/tools/index_gen.py --quiet` 與 `python3 wf/tools/index_check.py --quiet`，任一支退非 0 就印 `INDEX <那支印的錯誤行>`、計入 `broken`（SUMMARY 多一欄 `index=N`）；`.claude/commands/wf-lint.md` 補一句「`INDEX` 表示資料夾的 `_index.json` 跟實際的檔對不上，修法是跑 `python3 wf/tools/index_gen.py --apply`」。後果：平常不用記，跑 wf-lint 時才發現過期、那時再重生；兩次 wf-lint 之間 index 可能缺幾項。注意現在 `/wf-lint` 照慣例只掃 `wf` 與 `.claude/commands`，CODEMAP 那關的條件是掃的根底下有 `proto8/`，所以平常沒跑到；`INDEX` 這關要寫成不看掃哪個根、每次都跑，才有用。
+- 兩個可以都做。
