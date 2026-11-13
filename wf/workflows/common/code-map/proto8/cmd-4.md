@@ -27,3 +27,4 @@
 | [`tests/test_override.py`](../../../../../proto8/cmd/aos-tools/tests/test_override.py) | Test aos-tools "$override" registries (11-10 aos-tools-cli step 4): patch merge with null removal, chains and arrays, loops and diamonds, writes only… |
 | [`tests/test_paths.py`](../../../../../proto8/cmd/aos-tools/tests/test_paths.py) | Test aos-tools path forms: directives in an overriding registry (path and env), add keeping the user's form, --path-json, and the PathMissing line. |
 | [`tests/test_pointer.py`](../../../../../proto8/cmd/aos-tools/tests/test_pointer.py) | Test aos-tools with FILE.json#/POINTER locations: add (stored form, default name), ls -l, get, call through aos-exec, rm by path, and the errors. |
+| [`tests/test_stack_in_caller.py`](../../../../../proto8/cmd/aos-tools/tests/test_stack_in_caller.py) | Test that aos-tools call tells the tool where its cell sits in the caller's stack (AOS_STACK_IN_CALLER=tools/NAME), and drops a stale one when there … |
