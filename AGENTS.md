@@ -9,12 +9,12 @@ aos = **「資料夾＝程式」的 AI agent 體系**，本體是 **[`proto8/`](
 **先知道 aos 體系，再讀本 repo 的規矩，兩邊都走 aos index**（使用者 11-13 晚：「寫進AGENT.md，跟他說要先知道aos體系(給他知識庫連結)，然後去讀一些規矩，並引導他看到common/user那塊，並且是走aos index這條，這算是引入了wf這套公共知識庫這樣。」）：
 
 1. **aos 體系**：讀知識庫入口 `~/aos-home/knowledge/aos/_description.json`（八個詞、五條規則）；其餘用 aos 工具 `index_view` 看 `~/aos-home/knowledge/aos`，一行一項「名 TAB 一句話」，要哪項再 `json_get`。
-2. **本 repo 的規矩**：把 `wf/` 當成一套公共知識庫，同樣用 `index_view` 往下走（`wf/…` 是 repo 根相對路徑；在樹裡的 `repo-aos`，aos 工具的相對路徑本來就從 repo 根算，知識庫那邊則寫絕對路徑）——`index_view wf/workflows` 看有哪些工作流與共用區；`common` 那格是使用者偏好、慣例、code map 所在，`common/` 沒有自己的 index，直接讀 **`wf/workflows/common/user.md`**（這位使用者的偏好與確認邊界，每個 session 都要先讀）與 `common/conventions.md`（碰原始碼才讀）。沒有 `index_view` 的環境就照下面各條的連結讀。
+2. **本 repo 的規矩**：把 `wf/` 當成一套公共知識庫，同樣用 `index_view` 往下走（`wf/…` 是 repo 根相對路徑；在樹裡的 `repo-aos`，aos 工具的相對路徑本來就從 repo 根算，知識庫那邊則寫絕對路徑）——`index_view wf/workflows` 看有哪些工作流與共用區；`common` 那格是使用者偏好與慣例所在（code map 11-13 搬到 `wf/knowledge/code-map.json`），`common/` 沒有自己的 index，直接讀 **`wf/workflows/common/user.md`**（這位使用者的偏好與確認邊界，每個 session 都要先讀）與 `common/conventions.md`（碰原始碼才讀）。沒有 `index_view` 的環境就照下面各條的連結讀。
 
 - 每個 session 先掃三軸：`ls wf/inbox/*.md`（有信先讀，見 [inbox](wf/workflows/inbox/README.md)）→ [wf/SESSION-LOG.md](wf/SESSION-LOG.md)（我的 open 進度）→ [wf/WAIT_USER.md](wf/WAIT_USER.md)（等使用者一句話的）。三份都只列 open，空就跳過。
 - **使用者要你動手做某件事** → **[wf/WORKFLOWS.md](wf/WORKFLOWS.md)**：依意圖派發到對應工作流，再讀該工作流入口。
 - **想看專案長怎樣** → **[wf/INDEX.md](wf/INDEX.md)**：repo 頂層結構地圖。
-- **碰原始碼前** → 慣例與 code map：[conventions](wf/workflows/common/conventions.md)、[code-map](wf/workflows/common/code-map.md)（哪個檔負責什麼，改東西之前先看這張圖）；環境與指令 → [dev-env](wf/workflows/dev-env.md)。
+- **碰原始碼前** → 慣例與 code map：[conventions](wf/workflows/common/conventions.md)、code map＝[`wf/knowledge/code-map.json`](wf/knowledge/code-map.json)（用 `json_get` 讀；哪個夾負責什麼、逐檔表在 `wf/knowledge/code-map/proto8/<頂層夾>.json` 的 `tree`，改東西之前先看）；環境與指令 → [dev-env](wf/workflows/dev-env.md)。
 - **要開 agent 團隊、決定各層派哪級模型** → [team-model](wf/workflows/team-model.md)。
 - 使用者偏好與確認邊界 → [common/user.md](wf/workflows/common/user.md)。
 - **不寫 Claude Code 自動記憶**（使用者 2026-09-30 定）：值得留下的東西一律寫進 `wf/` 對應的檔，記憶資料夾只留一句指回這裡。
