@@ -5,6 +5,13 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/extras/aos-home/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`env.sh`](../../../../../proto8/extras/aos-home/env.sh) | aos-home environment: run "cd ~/aos-home && source env.sh" in every window first. |
+| [`test_env_sh.py`](../../../../../proto8/extras/aos-home/test_env_sh.py) | 驗 env.sh：bash 與 zsh 都 source 得過，source 後環境裡的 AOS_* 只剩 AOS_HOME（＝env.sh 所在的資料夾），CLAUDE 那三個也清掉。 |
+
 ## `proto8/extras/fake-mcp-http/`
 
 | 檔 | 負責什麼 |

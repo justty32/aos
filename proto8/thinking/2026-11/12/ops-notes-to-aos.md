@@ -74,16 +74,10 @@ cd ~/aos-home && R=~/repo/aos/proto8 && cp -r $R/lib $R/py $R/templates $R/knowl
 
 ### ③ 寫 env.sh
 
-每個視窗開始前 source 它。最重要的是 `AOS_HOME`＝這棵樹（定義裡的工具路徑都從它算）。
+每個視窗開始前 source 它。最重要的是 `AOS_HOME`＝這棵樹（定義裡的工具路徑都從它算）。正本在 repo 的 [`proto8/extras/aos-home/env.sh`](../../../extras/aos-home/env.sh)，抄過去就好（11-13 起樹事故後改成清掉全部 `AOS_*`，原本這裡手寫的版本只清三個；為什麼見[正本的 README](../../../extras/aos-home/README.md)）：
 
 ```sh
-cat > ~/aos-home/env.sh <<'EOF'
-# aos-home environment: run "cd ~/aos-home && source env.sh" in every window first.
-unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_SSE_PORT
-unset AOS_DAEMON AOS_KERNEL AOS_CLOCK
-export AOS_HOME=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
-command -v aos-exec >/dev/null || echo "env.sh: aos-exec not on PATH; run ~/repo/aos/proto8/install.sh once" >&2
-EOF
+cp ~/repo/aos/proto8/extras/aos-home/env.sh ~/aos-home/env.sh
 ```
 
 確認：
