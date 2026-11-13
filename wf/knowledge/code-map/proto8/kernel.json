@@ -1,0 +1,40 @@
+{
+ "description": "proto8/kernel 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "generated_by": "wf/tools/index_gen.py",
+ "tree": {
+  "daemon-kernel": {
+   ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
+   "_entry": "入口：`aos-daemon --enable-logs daemon.json`",
+   "daemon.json": "設定（鍵：exec、interval_ms、procs）",
+   "kernel.json": "設定（鍵：allowed、max_running、queue、keep_ordered）"
+  },
+  "llm-kernel": {
+   ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
+   "_entry": "入口：`aos-daemon --enable-logs daemon.json`",
+   "daemon.json": "設定（鍵：exec、interval_ms、procs）",
+   "endpoints": {
+    "litellm": {
+     "_entry": "Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable (unset or empty: no key is sent)."
+    }
+   },
+   "fake_slow": {
+    "_entry": "demo 用的慢假腦 endpoint 函數：先睡 endpoint.delay_s 秒，再把同一份 stdin 交給 lib/base/llm_fake、它的 stdout／結束碼原樣交回"
+   },
+   "interfaces.json": "Declare the stack ledger interface",
+   "kernel.json": "Main llm kernel with backend limits for local models"
+  },
+  "llm-team": {
+   ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
+   "_entry": "Start the team llm daemon with stdout logs",
+   "daemon.json": "Run the team llm kernel",
+   "interfaces.json": "Declare the stack ledger interface",
+   "kernel.json": "Forward team requests to the adjacent main llm kernel"
+  },
+  "procs-kernel": {
+   ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
+   "_entry": "入口：`aos-loop loop.json`",
+   "kernel.json": "設定（鍵：allowed、max_running）",
+   "loop.json": "設定（鍵：exec、interval_ms）"
+  }
+ }
+}

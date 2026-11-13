@@ -124,5 +124,30 @@
   "CMakeLists.txt": "{parent} 的 CMake 建置檔",
   "vcpkg.json": "{parent} 用到的 vcpkg 套件清單",
   "CMakePresets.json": "{parent} 的 CMake 預設組"
+ },
+ "codemap": {
+  "description": "逐檔 code map 的範圍（原本寫死在 codemap_gen.py）：掃 `git ls-files proto8`，去掉 skip_top 的頂層夾、任何一層叫 skip_any_dir 的夾、skip_names 的檔、.md（md_dirs 的頂層夾除外）。out＝逐檔表 json 寫在哪（repo 根相對），一個 proto8 頂層夾一檔、頂層單檔進 proto8.json。",
+  "out": "wf/knowledge/code-map/proto8",
+  "skip_top": [
+   "thinking",
+   "archive",
+   "notes",
+   "user-advice",
+   "docs"
+  ],
+  "skip_any_dir": [
+   "archive",
+   "docs",
+   "__pycache__",
+   ".vscode"
+  ],
+  "skip_names": [
+   ".gitignore",
+   ".gitattributes",
+   "_index.json"
+  ],
+  "md_dirs": [
+   "knowledge"
+  ]
  }
 }

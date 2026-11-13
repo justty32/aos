@@ -1,0 +1,28 @@
+{
+ "description": "proto8/py 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "generated_by": "wf/tools/index_gen.py",
+ "tree": {
+  "aos_clock_register.py": "時鐘檔旁的 <時鐘檔名>_register.json，每格「何時往某個 aos-post 箱子寄一封信」（每 N cycle、某 cycle 一次、牆鐘某時刻一次、cron）；aos-clock 寄、aos-clock-register 改（11-10 晚 clock-letters；11-13 …",
+  "aos_clock_when.py": "解析 at（HH:MM、YYYY-MM-DD HH:MM、+N[smhd]）與五欄 cron、算 cron 的下一次（本機時區；11-13 線鐘 wake-timer）。",
+  "aos_flags.py": "命令列旗標解析（含各支自定短名）、互動確認、公開狀態窗讀取與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 l…",
+  "aos_sweep.py": "一輪（封存、保留期、封存總量、行程）與 purge 的流程、鎖、找列、報告；檔案細節在 aos_sweep_files、行程在 aos_sweep_proc；aos-sweeper 與 aos-daemon-ctl sweep 共用。",
+  "aos_sweep_files.py": "stderr 的 copytruncate 封存（gzip）、封存檔名的 UTC 時間戳、保留期刪除、purge、.bad- 計數、放鎖殘骸；aos_sweep 叫它。",
+  "aos_sweep_proc.py": "認出這台 daemon 預設小格裡「表上沒有、但還活著、確定是這台生的」子 loop，先寫它的 ctl stop，過寬限還在才 TERM／10 秒後 KILL；真 zombie 只報。",
+  "aos_ws.py": "「放一則訊息、等答案、讀 stack」與兩鐘期限的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。",
+  "daemon_ctl": {
+   "__init__.py": "daemon_ctl：daemon 的找址、名單自檢清理、寄信回信、門鈴、子 loop 控制與停 daemon 本身的共用介面。",
+   "base.py": "daemon_ctl 基礎：共用錯誤類別與 daemon 檔名常數。",
+   "ctl.py": "daemon_ctl 控制：檢查 proc 階段、依公開窗名寫入控制並等待套用；也寫 daemon 自己的 ctl 停它本身。",
+   "entry.py": "daemon_ctl 入口：保留目標與 argv 寫法，讀取直接 loop 設定並組成掛子信。",
+   "poke.py": "daemon_ctl 門鈴：核對公開窗與 Linux 行程身分後，用 pidfd 送出宣告的 poke 訊號。",
+   "post.py": "daemon_ctl 信件：寄送、認領與清理回信，並以秒或 cycle 等待 daemon 回應。",
+   "state_path.py": "daemon_ctl 狀態位址：設了 AOS_KERNEL 先寄查詢信問表檔在哪（問不到＝KernelFailed）、沒設照舊找 daemon；讀表吃表檔路徑，相對路徑照表檔所在夾解成絕對。",
+   "table.py": "daemon_ctl 名單：尋找 daemon、解析狀態表、自檢子項與篩選已有 stack 的久未修改列。"
+  },
+  "tests": {
+   "test_clock_when.py": "Test aos_clock_when: at parsing (HH:MM, ISO, +N), 5-field cron parsing and next time, the late text (no files, no clock).",
+   "test_flags_anywhere.py": "Check aos_flags.parse(anywhere=True) and the one-layer commands moved to it (P-44 continued, 11-11 \"全部改\").",
+   "test_state_path.py": "Check daemon_ctl.state_path: ask AOS_KERNEL for the table file with a query letter (a fake kernel answers), KernelFailed when nobody answers, and rea…"
+  }
+ }
+}

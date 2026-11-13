@@ -1,0 +1,439 @@
+{
+ "description": "proto8/lib 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "generated_by": "wf/tools/index_gen.py",
+ "tree": {
+  "agent": {
+   "__init__.py": "agent - 外部 agent CLI 與 agent 工具共用的 lib 模組。",
+   "agent_def": {
+    "def_edit.py": "agent_def 的細的定義動作：tools（ls／get／add／rm，轉 aos-tools --file 定義那份）、llm（ls／set／rm，轉 aos-json）、system（get／set）；改的是定義本身，不碰任何 stack。",
+    "tests": {
+     "test_agent_def.py": "Test agent_def new (copy, rebase, directive from, DefExists, outside the workspace) and check (wraps lib/aos/defs) in a temp folder.",
+     "test_def_edit.py": "Test agent_def tools / llm / system (change a definition directly; args shaped like self_*) in a temp folder, with this repo's aos-tools and aos-json."
+    }
+   },
+   "agent_def/": "定義的創造修改：new＝把範本資料夾整份複製成新定義（tools 檔相對路徑換算、_metainfo.json 記 lineage），check＝轉叫 lib/aos/defs 的 check，tools／llm／system＝直接改某份定義的工具／腦／system",
+   "agent_files.py": "依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。",
+   "agent_tool.py": "claude、codex 共用的工具形入口 ask_cli。",
+   "agents_cmd.py": "subagent 與 agents_ctl 共用：查鍵、組 aos-agent ctl 各動作的旗標、跑 aos-agent（或旁邊的 self_*）並把下層錯翻成自己的。",
+   "agents_ctl": {
+    "tests": {
+     "test_agents_ctl.py": "Test agents_ctl turns each op into the matching aos-agent ctl command line (one key = one flag), rejects unknown keys and passes lower errors up, wit…"
+    }
+   },
+   "agents_ctl/": "aos-agent ctl 的完整純包裝：對 daemon 表上任何一隻 add／rm／ls／state／where／who／start／stop／sleep／wake／pause／resume；不記帳、不算配額",
+   "claude": {
+    "cli.json": "設定（鍵：kind、flags、print_flags、timeout_ms）"
+   },
+   "claude/": "透過 tool_io 收 JSON／旗標，再把 prompt 交給 claude CLI；對話續在工具小格（$AOS_STACK）",
+   "cli_a2a.py": "cli_session 往開著的 claude 畫面投署名訊息（Claude Code 的 cross-session messaging socket）：記 socket、包信封、投遞、等 hook 回執",
+   "cli_ask.py": "cli_session 問一輪：畫面開著往 CLI 的收件 socket 投署名訊息（live_a2a）或從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main",
+   "cli_base.py": "cli_session 各分檔共用的底：錯誤行與提醒行（PROG／ECHO 決定開頭與要不要也印 stdout）、時間、共用常數、找 lib 的 tool_io",
+   "cli_cell.py": "cli_session 的小格：Cell（檔、鎖、畫面 tmux）、畫面 socket 位置、session.txt 與記號檔、認是不是這台的對話、transcripts symlink",
+   "cli_cfg.py": "cli_session 的設定：讀與驗工具資料夾的 cli.json、llm.json 疊 model、system 附加旗標、tools／tools_sub 登記檔",
+   "cli_hook.py": "cli_session 的畫面 hook（CLI 講完一輪時叫）：跟上對話 id、/clear／/compact 時同步 aos 的 history、codex 壓縮跟上",
+   "cli_mcp.py": "cli_session 接 MCP：aos-mcp 那台的旗標（claude 的 mcp.json／codex 的 -c）、外部 MCP server、tools_sub 子 agent 那台與 guard hook",
+   "cli_print.py": "cli_session 的非互動那條路（畫面沒開）：claude -p／codex exec 起 CLI、等回答、記 session",
+   "cli_screen.py": "cli_session 開畫面：tmux 裡起互動的 claude／codex（start）、attach 與叫回畫面（open_cell）",
+   "cli_session.py": "把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 attach 接進互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字",
+   "clock_register": {
+    "tests": {
+     "test_clock_register_tool.py": "Test clock_register wraps aos-clock-register for the calling agent: box left out = my own queue (fake aos-agent ctl who, real aos-clock and aos-post)."
+    }
+   },
+   "clock_register/": "aos-clock-register 的包裝（給腦）：add／rm／ls 時鐘登記表的格，每 every 個 cycle 往一個箱子寄一句；box 不給＝叫我的那隻自己的 queue（定時叫醒自己）。",
+   "cmd_call.py": "給腦用的工具叫下層指令的共用版：在工作區跑一支指令、stderr 原樣往上、退出碼不對＝它最後一行錯誤行的代號與原因當自己的錯；被 TERM／Ctrl-C 先收掉正在跑的那一群。",
+   "codex": {
+    "cli.json": "設定（鍵：kind、flags、print_flags、timeout_ms）"
+   },
+   "codex/": "透過 tool_io 收 JSON／旗標，再把 prompt 交給 codex CLI；對話續在工具小格（$AOS_STACK）",
+   "cooldown.py": "失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。",
+   "do_task": {
+    "tests": {
+     "test_do_task.py": "Test do_task start / end / status on a real history file: a fake aos-agent answers ctl who, its history half is the real aos_agent.history."
+    }
+   },
+   "do_task/": "在自己的 history 裡做一段任務：start 留紀錄點、end 附總結把紀錄點之後那段換成一則總結（aos-agent history 改、原文照舊留在旁邊）、status 看自己在不在任務裡；只給 agent-fsm 的身體",
+   "fork": {
+    "fork_copy.py": "工具 fork 用：把一隻 agent-fsm 的 stack 裡定義宣告的東西（history、tools／llm／hooks／system 覆蓋檔）抄進新 stack，history 尾巴補上沒回的工具呼叫。",
+    "tests": {
+     "test_fork.py": "fork 工具本身（不起 daemon）：參數錯、深度上限、環境錯、收尾次序；fork_copy 的抄法（補 tool 訊息、相對路徑換算、只抄宣告的檔、記號檔）。"
+    }
+   },
+   "fork/": "把叫我的那隻「當下的自己」複製一份（同一份定義＋它 stack 裡改過的 tools／llm／hooks／system＋整段對話），給它一個 goal，只拿回短結論；分身的過程不進叫我的那隻的 history",
+   "goal": {
+    "tests": {
+     "test_goal.py": "Test the goal tool builds the aos-agent goal command line for each op (get, set, done, pause, resume), checks its arguments and passes errors on, wit…"
+    }
+   },
+   "goal/": "aos-agent goal 的包裝，目標改成叫我的那隻自己：get、set、done、pause、resume；狀態在那隻 stack 的 goal.json，身體在它自己停下來時丟提醒",
+   "goal_state.py": "agent 的 goal 共用讀寫與判斷：<agent stack>/goal.json；aos-agent goal 寫、agent-fsm idle.py 與 aos-eca-turn 讀寫（丟提醒、記數）。",
+   "hook_fire": {
+    "_entry": "發 after_start／after_stop 事件：agent 範本 loop.json 的 on_start／on_stop 叫它（hook_fire EVENT DEF_DIR，$AOS_STACK＝agent 的 stack）。"
+   },
+   "hook_noop": {
+    "_entry": "什麼都不做的 hook handler：讀掉 stdin 的事件 JSON、退 0（範本 hooks.json 預設那格 on_clock 的掛點；使用者「預設就是收到信後啥也不做。"
+   },
+   "hooks.py": "agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、on_clock 的檢查、tool_added 的名單；挑出符合事件的 hook、用 aos-exec 跑、解回話交給共用引擎 lib/hook_run.py。",
+   "kernel_gate": {
+    "gate_lib.py": "kernel_gate 工具與它兩支 hook 共用：站在哪、跑一輪、留著的信怎麼列、通知怎麼寄。",
+    "hold": "框架站的 after_verdict hook handler：每一封都回「先留著」，等 agent 用 kernel_gate 表態。",
+    "tests": {
+     "test_kernel_gate.py": "用真的 aos-post、aos-exec 與框架站驗證 kernel_gate 工具與它的 tick／hold 兩支 hook；aos-agent 用暫存的假指令頂替（只答 who、記下 hook 指令）。"
+    },
+    "tick": "agent 身上的 on_clock hook handler：叫框架站做一輪，再把新留下的請求合成一則「[aos] kernel_hold: …」寄進 agent 的 queue。"
+   },
+   "kernel_gate/": "讓叫我的那隻 agent 當 kernel 的門：on 把框架站掛在自己身上（請求先留著、通知自己）、ls 看留著的、pass／refuse 表態（轉寄由站做）、off 收掉",
+   "mail_notify": {
+    "_entry": "on_clock 的 hook handler：看這隻 agent 自己的信箱（<stack>/mailbox，不是 queue）有沒有還沒通知過的新信，有就往自己 queue 寄一則「[aos] new_mail: …」。"
+   },
+   "mailbox_call.py": "mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。",
+   "mailbox_peek/": "aos-mailbox peek 的包裝，目標＝叫我的那隻自己：看信箱裡有幾封還沒讀、誰寄的、標題（不拿走）。",
+   "mailbox_read/": "aos-mailbox read 的包裝，目標＝叫我的那隻自己：拿最舊的一封（all＝全部）、印出來，預設讀完就刪（keep true＝留在 mailbox/archive/；keep 檔名＝在工作區那個檔追加一行 JSON）。",
+   "mailbox_send": {
+    "tests": {
+     "test_mailbox_tools.py": "Test mailbox_send / mailbox_peek / mailbox_read wrap aos-mailbox for the calling agent (fake aos-agent ctl who, real aos-mailbox and aos-post)."
+    }
+   },
+   "mailbox_send/": "aos-mailbox send 的包裝，寄件人＝叫我的那隻自己：照 inbox 協議寄一封給 agent（to 名字＋daemon）或信箱（box 路徑）。",
+   "self_ctl": {
+    "tests": {
+     "test_self_ctl.py": "Test self_ctl builds aos-agent ctl stop / pause / sleep / rm --no-wait for the agent that calls it, with a fake aos-agent."
+    }
+   },
+   "self_ctl/": "aos-agent ctl 的包裝，目標改成叫我的那隻自己；只給對自己有意義的四個：stop、pause、sleep、rm",
+   "self_history": {
+    "tests": {
+     "test_self_history.py": "Test self_history builds the aos-agent history command line (ls, rm, summarize, set) and refuses the step in progress, with a fake aos-agent."
+    }
+   },
+   "self_history/": "aos-agent history 的包裝，目標改成叫我的那隻自己：ls、rm、summarize、set；正在進行的這一步（叫我的那則訊息與之後）不准動",
+   "self_hook": {
+    "tests": {
+     "test_self_hook.py": "Test self_hook builds the aos-agent hook command line for each op and checks its arguments, with a fake aos-agent."
+    }
+   },
+   "self_hook/": "aos-agent hook 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份 hooks 清單，定義不動",
+   "self_llm": {
+    "tests": {
+     "test_self_llm.py": "Test self_llm builds the aos-agent llm command line (ls, set, rm, reset) and checks its arguments, with a fake aos-agent."
+    }
+   },
+   "self_llm/": "aos-agent llm 的包裝，目標改成叫我的那隻自己：ls、set、rm、reset；改的是那隻 stack 裡自己那份 llm 設定，定義不動",
+   "self_state": {
+    "tests": {
+     "test_self_state.py": "Test self_state builds aos-agent ctl state for the agent that calls it (overview, parts, all, json) with a fake aos-agent."
+    }
+   },
+   "self_state/": "aos-agent ctl state 的包裝，目標改成叫我的那隻自己：總覽（每類一行）或點菜（某幾類的細節）；只給數字與事實",
+   "self_system": {
+    "tests": {
+     "test_self_system.py": "Test self_system builds the aos-agent system command line (get, set, reset), hands set's text on stdin and checks its arguments, with a fake aos-agen…"
+    }
+   },
+   "self_system/": "aos-agent system 的包裝，目標改成叫我的那隻自己：get、set、reset；改的是那隻 stack 裡自己那份 system 文字，定義不動",
+   "self_tools": {
+    "tests": {
+     "test_broken_entry.py": "Test self_tools still works when one of the agent's registered tools points nowhere: ls marks it broken, get keeps its PathMissing, rm then add fixes…",
+     "test_self_tools.py": "Test self_tools builds the aos-agent tools command line (replace, envs, env_file) and checks its arguments, with a fake aos-agent."
+    }
+   },
+   "self_tools/": "aos-agent tools 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份登記檔，定義不動",
+   "subagent": {
+    "tests": {
+     "test_daemon.py": "Test subagent and agents_ctl on a real aos-daemon: tools/llm changes land on the subagent (not the parent), and a subagent removed with agents_ctl is…",
+     "test_subagent.py": "Test subagent against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, subagent account copies…",
+     "test_wait.py": "Test the shared runner in agents_cmd waits in bounded segments, cleans up on expiry, polls short on the clock, and that subagent checks wait argument…"
+    }
+   },
+   "subagent/": "我生的子 agent：生、殺、停起、說話、出生後調它的工具／腦／對話／hook；工具自己記帳（subagents.json）、算配額，只碰自己生的",
+   "tests": {
+    "test_cli_a2a.py": "驗畫面開著的 claude 身往 CLI 的收件 socket 投署名訊息（11-13 cli_a2a）：信封與署名、hook 記 socket 與回執、投遞、等回答；",
+    "test_cli_codex_mcp.py": "驗 cli_session 起 codex 時給 aos MCP server 的設定（11-11）：明寫帶 AOS_* 環境（只帶清單裡有設的，AOS_WS／AOS_STACK 用這次的值），只對 aos 這個 server 免核准；claude 那邊不變。",
+    "test_cli_external_mcp.py": "驗 cli.json 的 mcp_servers（11-12 external-mcp 步 1）：server 檔讀取與形狀、codex 的 -c、bearer 只進 CLI 行程的環境、壞的那台 warning 跳過、畫面啟動器。",
+    "test_cli_hook_follow.py": "驗畫面 hook 跟上 CLI 的對話（11-12 eca-slash）：id 換了就改記 session.txt；claude 的 /clear（SessionStart source clear）連 aos 的 history 一起清、原文搬到旁邊；codex 取標題的旁支 thread 不記。",
+    "test_cli_reserved_flags.py": "驗 cli.json 的 flags／print_flags 不准再寫 aos 自己會加的旗標（11-13 eca_main 第 6 項：codex 的 --skip-git-repo-check 寫第二次＝codex 退 2、信被丟）：讀設定時就 CfgBad。",
+    "test_cli_screen_env.py": "驗人開的畫面拿到跟 loop 那邊一致的 AOS_CLOCK、AOS_KERNEL、AOS_LLM_KERNEL（11-13 ops-agent-six-suggestions 第 6 點的 bug）：loop 那邊把自己的 MCP_ENV 記進小格 env.json（note_env），開畫面時…",
+    "test_cli_settings.py": "驗 cli.json 的 settings（11-13 ops-agent-six-suggestions 第 1 題乙：定義自帶 Claude Code 設定）與 flags 裡的 --settings（＝CfgBad，以前被 aos 自己那個靜默蓋掉）：aos 把定義的設定併進它自己加的那一個…",
+    "test_cli_system.py": "驗 cli_session 的 system（11-11 self-system）：宣告了才碰；stack 那份在就整份用它、否則定義那份；claude 附加檔＋snapshot off、codex developer_instructions；空＝不附加。",
+    "test_cli_tools_directive.py": "驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。",
+    "test_cli_tools_sub.py": "驗 cli.json 的 tools_sub（11-12 eca-task-subagent）：只有 claude 身認、--agents 蓋掉 general-purpose 並內嵌 aos_sub、--allowedTools 多 mcp__aos_sub、guard hook 擋子 agen…",
+    "test_hooks_engine.py": "驗 lib/agent/hooks.py 用的是共用引擎 lib/hook_run.py（11-13 kernel-framework 批 1b）：類別同一個、跑與解回話沒有第二份、兩種 import 法都找得到引擎、agent 自己的檢查（on_clock 的鍵、content 的回話）還在。",
+    "test_mail_notify.py": "mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json）只把等著的記成已知；睡醒（first、有記錄）睡前提醒過的不重複、睡著時新到的提醒一…"
+   },
+   "todo": {
+    "tests": {
+     "test_todo.py": "Test the todo tool: the four ops, its errors and limits, where it keeps the list, and that ls never makes the cell (also through aos-tools call)."
+    }
+   },
+   "todo/": "這隻 agent 自己的待辦清單：ls、set、add、mark；存在自己的小格 $AOS_STACK/todo.json（第一次寫才建），每個 op 都印整張",
+   "tools_def": {
+    "tests": {
+     "test_tools_def.py": "Test tools_def new (copy the skeleton, description, PathExists, outside the workspace, into JSON objects), check (folder, JSON file, FILE#/POINTER, b…"
+    }
+   },
+   "tools_def/": "工具定義的創造：new＝把 Python 骨架（templates/tool-python）複製成新工具夾，check＝檢查一個工具位置（資料夾、JSON 檔或 檔#/指標）合不合格、在哪一階段"
+  },
+  "aos": {
+   "box_check": {
+    "tests": {
+     "test_acceptance.py": "Verify boxed and open definitions through actual sandbox and measure boundaries."
+    }
+   },
+   "box_check/": "Verify probe markers, executable visibility and host probe paths.",
+   "defs": {
+    "catalog.py": "Inspect public definition declarations and group agents by tools and endpoint.",
+    "tests": {
+     "test_defs.py": "Verify public definition discovery, three-axis identity, references and check failures."
+    }
+   },
+   "defs/": "List, group, trace references and check public definition declarations.",
+   "feedback/": "Submit command usability feedback through aos-feedback without guessing the caller.",
+   "jsonx_add/": "json_add 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關）",
+   "jsonx_del/": "json_del 加料版：路上有 $ref／$env 要 follow 才穿過去、刪在被參照的那份檔（預設關＝FollowMissing）",
+   "jsonx_get/": "json_get 加料版：follow 穿過 $ref、resolve 把值裡的 $ref／$env 解開（都預設關）",
+   "jsonx_ls/": "json_ls 加料版：follow 穿過 $ref、resolve 列解開 $ref／$env 後的值（都預設關）",
+   "jsonx_multi_get/": "jsonx_get 的一次多格：逐格照 jsonx_get 做（follow、resolve 等選項整批一個），一格一行「路徑 TAB 結果」；有格失敗＝最後一行 PlacesFailed、退 1",
+   "jsonx_multi_set/": "jsonx_set 的一次多格：逐格照 jsonx_set 做（照順序、不回滾；值來源每格各自、其他選項整批一個），一格一行「路徑 TAB 結果」；有格失敗＝最後一行 PlacesFailed、退 1",
+   "jsonx_search/": "json_search 加料版：follow 穿過 $ref、resolve 在解開 $ref／$env 後的值裡找（都預設關；這兩個不能配 up）",
+   "jsonx_set/": "json_set 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關）",
+   "kernel": {
+    "hold.py": "「先留著等表態」：hold.json 記留著的信，decisions/<信名>.json 是別人對某一封的表態（pass／refuse）。",
+    "hooks.py": "kernel 的三個 hook 時機：設定、事件欄位與判決回話，執行一律交給共用引擎。",
+    "letters.py": "包 aos-post 的收信、轉寄、拒信、代回、轉寄對照表與排隊 body。",
+    "procs_rules.py": "掛 proc 那一包：收下游答案、驗信、先來先掛與白名單及 running 上限。",
+    "queue_fifo.py": "掛 proc 的先來先掛排隊窗與寄件人期限。",
+    "round.py": "通用 kernel 的骨架：讀設定、鎖收件箱，串起五個口與三個 hook 時機。",
+    "runner.py": "「自己跑」零件：把一件工作掛成 daemon 的 proc、看表收成品、逾時、重掛一次、拔列；去處由呼叫的包給。",
+    "tests": {
+     "test_kernel.py": "用真的 aos-post 信箱驗證框架站的轉寄、代回與重起防重。",
+     "test_kernel_cut.py": "驗證轉寄中途行程被砍（寄出前、寄出後還沒記對照）重起後不重寄、不漏寄、回信仍代得回去。",
+     "test_kernel_hold.py": "用真的 aos-post 與 aos-exec 驗證 after_verdict hook 的「先留著」（hold）與表態檔 decisions/<信名>.json。",
+     "test_kernel_hooks.py": "用真的 aos-post 與 aos-exec 驗證 kernel 三個 hook 時機和排隊時的保存。",
+     "test_kernel_route.py": "用真的 aos-post 與 aos-exec 驗證 after_verdict hook 替單封信指定下一站（照規則分流）與各種邊緣。",
+     "test_runner.py": "用真的 aos-daemon 與假的端點函數驗「自己跑」零件：掛上、收成品、逾時、重掛一次、放棄。"
+    }
+   },
+   "kernel/": "通用 kernel 的站：讀參數與環境，把掛 proc 那一包交給骨架做一輪。",
+   "kernel_llm": {
+    "budget.py": "問腦的額度與用量帳：總額、每包、每寄件人的上限與窗，used.json 的讀寫。",
+    "ledger.py": "問腦的逐封帳 ledger.jsonl：只留成本與時間，不存請求內容。",
+    "llm_rules.py": "問腦那一包的五個口：收成品、收拾與看信、排序、放不放、掛去跑；回信、撤回與記帳也在這裡。",
+    "order.py": "問腦的排隊：priority 與期限、aging、排序與後端黏著，窗 queue.json 的讀寫。",
+    "packs.py": "問腦的設定與能力包：讀 kernel.json（指示詞用到才解）、查代號、釘死的參數、窗 endpoints.json。",
+    "slots.py": "問腦的格數：總格、high 保留格、包格、後端格與同時幾種包，在飛與這輪新掛的一起算。",
+    "tests": {
+     "test_backends.py": "Verify backend limits, durable switch records, and priority-safe sticky ordering with prepared mailboxes.",
+     "test_hooks.py": "Check the three hook moments on the llm kernel and that add letters go to AOS_KERNEL when it is set.",
+     "test_ledger.py": "Verify kernel finish records fake-brain costs and tolerates ledger write failures.",
+     "test_nesting.py": "Verify nested-kernel error boundaries, ledger fields, and remount invariants with prepared mailboxes.",
+     "test_stopped_slot.py": "Check a brain call someone stopped on the daemon frees its slot after STOPPED_GIVE_UP_S (設計-56).",
+     "test_two_machines.py": "Check two-machines kernel fixes: in-flight brain calls never pin an absolute endpoint path; budget.senders keys that are not folders warn, and sender…"
+    }
+   },
+   "kernel_llm/": "問腦總機：讀參數與環境，把問腦那一包交給通用 kernel 的骨架做一輪。",
+   "llm_forward": {
+    "tests": {
+     "test_forward.py": "Verify exact forwarding of subprocess streams and status, pack errors, and child accounting."
+    }
+   },
+   "llm_forward/": "Forward one endpoint request to the kernel named by its pack.",
+   "measure": {
+    "compare.py": "Compare workspace artifacts using bytes or an observed custom comparator.",
+    "ledger.py": "Fold publicly declared observation ledgers into call trees and aggregate costs.",
+    "runner.py": "Run isolated function or agent cases and summarize repeated measurements.",
+    "tests": {
+     "test_acceptance.py": "Verify batch four acceptance cases through the real measure and metadata tools.",
+     "test_compare.py": "Verify byte scoring and independent custom comparator costs.",
+     "test_fake_agent.py": "Verify measured fake agents, descendant token totals, and real control cleanup.",
+     "test_ledger.py": "Verify public ledger traversal, local token accounting, and call aggregation.",
+     "test_runner.py": "Verify isolated runs, comparator accounting, failure gates and suites."
+    }
+   },
+   "measure/": "Measure isolated cases, costs and repeat consistency as JSON.",
+   "metainfo_check": {
+    "tests": {
+     "test_metainfo_check.py": "Verify cost verdicts, formula ratios, ledger extraction, and read-only tool errors."
+    }
+   },
+   "metainfo_check/": "Compare declared definition costs with observed median cost ratios without writing files.",
+   "promote": {
+    "swap.py": "Swap stopped definitions with retained versions after checking public daemon listings.",
+    "tests": {
+     "test_recovery.py": "Verify swap failures restore the live definition and never consume retained history.",
+     "test_swap.py": "Verify definition swaps, byte recovery, and busy guards through real aos tools."
+    }
+   },
+   "promote/": "Replace an idle definition with a candidate and retain its previous version.",
+   "review_round": {
+    "review_data.py": "Read review settings, traverse definition trees, and account for measured costs.",
+    "round_runner.py": "Execute review steps, promote cheaper passing candidates and record growth signals.",
+    "tests": {
+     "fake_endpoint.py": "Run the real fake endpoint and report the endpoint's configured token usage.",
+     "test_policy.py": "Verify watch exclusions, tree selection, history baselines and retirement decisions.",
+     "test_round.py": "Verify complete review rounds against isolated daemons and real fake endpoints.",
+     "test_suggestions.py": "Verify growth evidence, static references and measured per-node context medians."
+    }
+   },
+   "review_round/": "Measure a case, try cheaper endpoints, and record one review round.",
+   "rollback": {
+    "tests": {
+     "test_rollback.py": "Verify rollback without a previous version leaves the definition unchanged."
+    }
+   },
+   "rollback/": "Restore the newest retained version of an idle definition.",
+   "shell_report": {
+    "report.py": "Summarize declared shell accounts and effective arbitrary execution tools.",
+    "tests": {
+     "test_report.py": "Verify shell stages, public account ownership, shape normalization and tool overrides."
+    }
+   },
+   "shell_report/": "Read public shell accounts and report execution stages and command shapes.",
+   "watch": {
+    "tests": {
+     "test_watch.py": "Verify watch acceptance, persistent retry decisions, public rollback calls and atomic writes."
+    },
+    "watch_state.py": "Maintain promotion windows and invoke rollback through observed tool calls."
+   },
+   "watch/": "Track promoted definitions and roll back failed quality or cost windows."
+  },
+  "aos_index.py": "index_view：透過 index（視角）看節點，一行一項「鍵 TAB description」；index 放哪只寫在 spot() 一處。",
+  "aos_json.py": "腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／len／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set、jsonx_multi_get／set…",
+  "aos_json_multi.py": "json_multi_get／set、jsonx_multi_get／set：一次多格，逐格照 json_get／json_set（jsonx 那兩支照 jsonx_get／jsonx_set）做、照順序、一格一行「路徑 TAB 結果」，不回滾。",
+  "aos_refpath.py": "`$ref` 與 index 共用的「路徑字串 → (檔, 指標)」：`#` 左邊一律檔案系統、右邊一律 json 內部（使用者 11-13 晚定，thinking 2026-11/13/ref-path-rules）。",
+  "base": {
+   "copy/": "複製一個檔或整個資料夾（捷徑照捷徑複製、不跟進去；to 的上層自動建）",
+   "edit/": "在一個檔做一處或幾處「整段原文照字面換掉」，一處不合就整個不改",
+   "glob": {
+    "tests": {
+     "test_glob.py": "glob 工具：** 零層與多層、不含 / 的樣式任何深度、type、sort mtime、翻頁、隱藏與明寫 . 段、資料夾捷徑列出不進、gitignore、PatternBad、FileBad、工作區外。"
+    }
+   },
+   "glob/": "照檔名樣式在一個資料夾底下找路徑（* ? [..] **，不含 / 的樣式＝任何深度的名字）：一行一個路徑、資料夾結尾加 /",
+   "grep": {
+    "tests": {
+     "test_grep.py": "grep 工具：正規式與 fixed、大小寫、context 與 --、files、翻頁、二進位／超大／非 UTF-8、隱藏、資料夾捷徑不跟進、gitignore（有 git、不在 git、git 不在 PATH）、單一檔、工作區外、預算、長行截斷。"
+    }
+   },
+   "grep/": "照內容搜整棵樹（或一個檔）：一行一筆「路徑:行號:那一行」，像 grep -rn；純 Python re，不靠系統的 grep／rg",
+   "index_view/": "透過 index（視角）看節點：一行一項「鍵 TAB description」；只看、不改（改 index 用 json 工具）",
+   "json_add/": "加一項新的：物件已有這個 key＝KeyExists；陣列可插在某個索引前或 /- 接尾巴",
+   "json_del/": "刪一格（key 或陣列元素，後面的往前移）；不刪整份檔",
+   "json_get/": "拿一格的值（一行緊湊 JSON）；太大只回型別與大小、請改用 json_ls",
+   "json_len/": "一格的長度：物件＝key 數、陣列＝項數、字串＝字元數；數字、布林、null＝TargetBad",
+   "json_ls/": "列一格底下的 key／索引，像 ls；long 才附型別與大小，第一行是這一格自己的型別與長度",
+   "json_multi_get/": "一次拿多格的值：逐格照 json_get 做，一格一行「路徑 TAB 結果」；有格失敗＝最後一行 PlacesFailed、退 1",
+   "json_multi_set/": "一次改多格：逐格照 json_set 做（照順序、不回滾），一格一行「路徑 TAB 結果」；有格失敗＝最後一行 PlacesFailed、退 1",
+   "json_search/": "在一格底下（或往上各層祖先）找 key／value，整個相等或 contains；不做 regex",
+   "json_set/": "把一格換成給的值（照字面；缺 key 就新增、/- 接陣列尾、parents 建中間層、整份可建新檔）",
+   "llm_fake/": "假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4）",
+   "llm_http": {
+    "tests": {
+     "test_llm_http.py": "llm_http 金鑰：--key-env 變數沒設或空＝不帶 Authorization 照打、401 才提沒設；設了照帶；壞字＝KeyBad 送出前擋（11-10 夜）。"
+    }
+   },
+   "llm_http/": "endpoint 函數：從自己的環境讀金鑰，把請求 POST 到 OpenAI 相容端點，印剪過的回覆",
+   "ls/": "列一個資料夾的子項，一次一頁；預設一行一項「名字 TAB 類型」，long 多細項欄，json 回整份 JSON",
+   "math/": "算一個算術式子：只認數字、+ - * / // % **、括號、正負號（不用 eval）",
+   "mcp_tool": {
+    "tests": {
+     "fixtures": {
+      "demo.json": "Hand-written MCP pack for mcp_tool tests: the fake stdio server from lib/tests, three tools frozen by hand."
+     },
+     "test_mcp_tool.py": "驗證 mcp_tool 的登記呼叫、媒體存檔、截斷、環境隔離與行程群收尾。"
+    }
+   },
+   "mcp_tool/": "叫外部 MCP server 的一支工具：讀包檔（server 檔）裡的 mcp_server，起 server、tools/call 一次、顯示限量文字並保存媒體、收掉 server",
+   "mkdir/": "建資料夾（上層一起建；已經有＝沒事）",
+   "move/": "搬移或改名一個檔、資料夾或捷徑本身（to 的上層自動建）",
+   "peek_clock": {
+    "tests": {
+     "test_peek_clock.py": "peek_clock：讀 $AOS_CLOCK 回 cycle 與 interval_ms；沒設或缺檔＝ClockMissing（不當 0）、壞檔＝ClockBad（11-10 深夜 tool-packs）。"
+    }
+   },
+   "peek_clock/": "看一眼 daemon 的時鐘：讀 $AOS_CLOCK 那個檔，回現在第幾 cycle（11-10 深夜，使用者「peek_clock就是純粹看daemon clock」）。",
+   "peek_now_time": {
+    "tests": {
+     "test_peek_now_time.py": "Test peek_now_time: no arguments = UTC ending in Z; local true = local ISO with offset and weekday; bad local = ArgumentsBad."
+    }
+   },
+   "peek_now_time/": "在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z）；{\"local\": true}＝本機時間帶時區與星期",
+   "read/": "讀一個文字檔，太長從頭截、告訴你從第幾行接著讀",
+   "remove": {
+    "tests": {
+     "test_remove.py": "remove（rm 的包裝）：檔、捷徑本身、資料夾要 recursive、. ／.. ／/ 拒絕、工作區外照刪（11-10 tool-packs）。"
+    }
+   },
+   "remove/": "真的刪掉一個檔、捷徑或資料夾（rm 的包裝；對比 trash＝丟進工作區的垃圾桶、可以救回）",
+   "run_python": {
+    "tests": {
+     "test_observed.py": "Verify command ledgers preserve inner outcomes and block unwritable execution."
+    }
+   },
+   "run_python/": "用 python3 跑一段程式，回結束碼與輸出（stdout＋stderr 合在一起）",
+   "shell": {
+    "tests": {
+     "test_observed.py": "Verify command ledgers preserve inner outcomes and block unwritable execution."
+    }
+   },
+   "shell/": "在工作區裡用 bash 跑一行指令，回 stdout＋stderr 合在一起的輸出",
+   "stat/": "看單一個檔或資料夾的屬性，回 JSON",
+   "trash/": "刪除一個檔或資料夾：不真的刪，搬進 $AOS_WS/.trash/<時間>/<原路徑>（真的刪用 remove）",
+   "view/": "漸進看一個檔：JSON 一次看一層、大的文字檔先給大綱",
+   "write/": "把整份內容寫進一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建"
+  },
+  "directive_value.py": "把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。",
+  "file_summary.py": "ls、stat、view 共用的檔案摘要小件：資料夾裡有哪些 aos 標記檔、檔案時間寫成 ISO、一個 JSON 值的一句摘要。",
+  "file_walk.py": "grep 與 glob 共用的走樹：隱藏名、.gitignore（問 git）、資料夾捷徑不跟進、只把一般檔當檔、掃描預算與計數；另含兩支共用的檔名樣式（* ? [..] **）。",
+  "hook_run.py": "hook 的共用引擎：事件表由呼叫的人給，這裡只管驗格的共通鍵、比 condition、寫 event.json、用 aos-exec 跑 handler、解回話、on_error。",
+  "mcp_client.py": "MCP client 的 stdio／HTTP 傳輸：握手、列工具、呼叫工具與關閉 session。",
+  "mcp_freeze.py": "把一支外部 MCP 工具凍結成包檔 mcp_tools 的一格（登記名、$ref 展開、說明前綴與截斷、_metainfo）與兩份 mcp_tools 的差異；純函式（external-mcp 07 步 4）",
+  "mcp_server_file.py": "外部 MCP 的 server 檔：讀一份、驗形狀、讀金鑰檔；給 cli_session 翻成 codex 的 -c 與只給 CLI 行程的環境（11-12 external-mcp 02／03 步 1）",
+  "metainfo.py": "Read optional definition metadata and evaluate numeric cost declarations safely.",
+  "observed.py": "Record public stack observations and measured downstream calls.",
+  "observed_children.py": "Preserve declared child observation trees and hand their location to the caller.",
+  "packs": {
+   "change.json": "Pack 2 (change): tools that create or change files - write, edit, copy, move, mkdir.",
+   "def.json": "Pack def: definitions - agent_def (agent definitions), tools_def (new tools from the Python skeleton, and checking a tool).",
+   "delete.json": "Pack 3 (delete): tools that delete - trash (into the workspace .trash, can be moved back) and remove (for real).",
+   "events.json": "Pack events: things that wake you later - clock_register (letters from the clock), self_hook (hooks on your own events).",
+   "gadgets.json": "Pack gadgets: small handy tools - peek_clock (daemon clock cycle), peek_now_time (UTC time), math (one arithmetic expression), do_task (do one task i…",
+   "goal.json": "Pack goal: one sentence you keep working on - goal (get, set, done, pause, resume); aos reminds you of it when you stop by yourself.",
+   "index.json": "Pack index: see a node through its index (the notes agents keep about what is under it) - index_view; to change an index use the json tools.",
+   "json.json": "Pack json: plain JSON access, one place at a time by FILE#/POINTER - json_get, json_ls, json_search, json_len, json_set, json_add, json_del, json_mul…",
+   "jsonx.json": "Pack jsonx: JSON tools for aos configuration files that use $ref/$env - jsonx_get, jsonx_ls, jsonx_search, jsonx_set, jsonx_add, jsonx_del, jsonx_mul…",
+   "kernel_gate.json": "Pack kernel_gate: be a kernel gate - kernel_gate (a kernel station on you holds requests, you decide, it forwards). Not in any stock definition; add …",
+   "look.json": "Pack 1 (look): read-only file tools - read, ls, view, stat, grep, glob.",
+   "mailbox.json": "Pack mailbox: letters - mailbox_peek, mailbox_read, mailbox_send.",
+   "self.json": "Pack self: look at and change yourself - self_tools, self_llm, self_system, self_state, self_ctl, self_history.",
+   "shell.json": "Pack 4 (shell): tools that run any command or program - shell (bash) and run_python.",
+   "subagent.json": "Pack subagent: other agents - subagent (ones you start yourself), agents_ctl (any agent on the daemon), fork (a copy of yourself for one goal, only i…",
+   "todo.json": "Pack todo: your own to-do list for a long task - todo (ls, set, add, mark); kept outside your history, call ls to see it again."
+  },
+  "process_group.py": "收掉自己起的那一群子行程：先 TERM 整群、等一下、還在就 KILL；外面來的 TERM／Ctrl-C 變成例外，讓呼叫處先收拾再走。",
+  "shell_observed.py": "Reserve a writable shell ledger before execution and record the completed command.",
+  "tests": {
+   "fake_mcp_stdio.py": "Provide a standard-library MCP stdio server with tools and failure modes for client tests.",
+   "ref_path_cases.json": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per …",
+   "test_aos_lib_missing.py": "lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。",
+   "test_directive_value.py": "驗 directive_value：給了 file＝{\"$ref\": \"#/…\"} 取那份檔自己；沒給＝原封不動（11-12 ref-hash R1）；resolve_path 一律給設定檔。",
+   "test_file_tools_paths.py": "檔案工具拿掉工作區限制（11-10 tool-packs，使用者「3.對」）：相對從 $AOS_WS、絕對照用，工作區外也能讀寫改搬。",
+   "test_hook_run.py": "Verify the shared hook engine: entry validation, running handlers through aos-exec, replies, blocking, on_error, timeouts, ordering and conditions.",
+   "test_index_extra_keys.py": "index_view 對 index 一項裡多出來的鍵（timeout_ms、自訂鍵…）照常印「名<TAB>description」、不報錯：index 的格都只是參考（使用者 11-12 晚）。",
+   "test_index_link.py": "index paths and $ref share one rule and one parser (aos_refpath.spot): left of # is the file system, right of # is inside the json.",
+   "test_index_view.py": "index_view（lib/aos_index.py，thinking 2026-11/12/index-tools）的定向測試：實跑 _entry，驗三種給法（只 path、只 index、兩個疊著）、key、分頁、沒有 index、壞掉的 index。",
+   "test_json_tools.py": "json 工具一族（lib/aos_json.py；簡單組 json_*、複雜組 jsonx_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。",
+   "test_mcp_client.py": "Verify MCP stdio and HTTP sessions, authentication, wire failures, deadlines, and cleanup.",
+   "test_mcp_freeze.py": "Test lib/mcp_freeze.py: registry names, $ref expansion and $-key removal, description truncation, _metainfo hints, and diff lines.",
+   "test_metainfo.py": "Verify optional metadata reading, timeout declarations, and safe cost formulas; bad metadata is skipped with a note.",
+   "test_observed.py": "Verify shared observation initialization, strict failures and measured call cells.",
+   "test_observed_children.py": "Verify observed_children: a child's declared accounts are copied (and only those), take_child hands the mark over once.",
+   "test_ref_path.py": "The shared \"path string -> (file, pointer)\" rule (aos_refpath.spot): left of # is the file system, right of # is inside the json.",
+   "test_tool_io_keys.py": "不認得的 stdin 鍵＝ArgumentsBad（使用者 11-10 晚「那就報錯」）；additionalProperties 與自由物件照舊收。",
+   "test_tool_io_metainfo.py": "tool_io.load_tooldef 也讀 _metainfo.json 的 tooldef（11-12 metainfo，N-69）：先裡面、再 _tooldef.json，頂層鍵淺合併、外面贏。",
+   "test_tool_io_place.py": "Test tool_io.place and tool_io.os_reason: error lines name program-made paths relative to $AOS_STACK / $AOS_DAEMON / $AOS_WS (counted from the caller…",
+   "test_tool_spec.py": "Test lib/tool_spec.py: declaration to _tooldef/_metainfo, SpecBad, write_defs into a folder and a JSON pointer, and main() at run time."
+  },
+  "tool_io.py": "lib 工具共用的開頭：schema 生成旗標位置的 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區與檔案工具的路徑、訊息裡怎麼寫路徑（place、os_reason）、兩鐘期限。",
+  "tool_spec.py": "給 AI 寫工具的輔助：在一支 Python 裡宣告說明、參數、特性，就產出 _tooldef／_metainfo（資料夾的兩個檔或 JSON 物件的兩個鍵），執行時照宣告驗參數再叫 run(args)。"
+ }
+}

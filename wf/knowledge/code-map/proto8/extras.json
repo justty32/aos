@@ -1,0 +1,51 @@
+{
+ "description": "proto8/extras 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "generated_by": "wf/tools/index_gen.py",
+ "tree": {
+  "aos-home": {
+   "env.sh": "aos-home environment: run \"cd ~/aos-home && source env.sh\" in every window first.",
+   "test_env_sh.py": "驗 env.sh：bash 與 zsh 都 source 得過，source 後環境裡的 AOS_* 只剩 AOS_HOME（＝env.sh 所在的資料夾），CLAUDE 那三個也清掉。"
+  },
+  "fake-mcp-http": {
+   "server.py": "Fake streamable-HTTP MCP server for testing external MCP (external-mcp 05/06): 127.0.0.1 only, TLS, checks Authorization: Bearer, two harmless tools …"
+  },
+  "gitignore-check": {
+   "check.py": "Exercise optional stack ignore rules against a real, entirely fake-brain daemon tree.",
+   "tests": {
+    "test_classes.py": "Check gitignore_classes.json against paths today's tools write: each one classifies to the expected row (11-12 line K: fork children state, subagents…",
+    "test_leaks.py": "Check gitignore-check's local-path rule: which tracked contents count as a leak (B05/B06, 11-11)."
+   }
+  },
+  "image-move-check": {
+   "check.py": "Verify a sleeping fake-brain daemon tree survives copying and a local git clone."
+  },
+  "kernel-chain-check": {
+   "check.py": "在獨立暫存樹驗證 kernel 鏈的掛子、排隊、hook、重啟、ping、照規則分流與留著等表態，並嚴格核對清理範圍。"
+  },
+  "langs": {
+   "janet": {
+    "aos.janet": "用 Janet 描述一支 aos 程式（資料夾＝程式），(emit 程式 輸出資料夾) 把它寫成資料夾＋JSON＋腳本",
+    "bin": {
+     "aos-janet": "把一份 Janet 寫的 aos 程式編成資料夾（_entry、loop.json、fsm.json…）"
+    },
+    "code_write.janet": "把 Janet 的程式碼（被引用的資料）印回 Janet 原始碼；字串裡的中文照原樣，不像 %j 會變成 \\xE5…",
+    "combine.janet": "seq／par／if 三個組合子：各編成一個資料夾，入口是一支短短的 shell 腳本",
+    "emit.janet": "把 (dir …) 寫到磁碟：資料夾照建、JSON 的值寫成 JSON 檔、文字檔照權限寫",
+    "examples": {
+     "count.janet": "一個 loop＋fsm 小例子，葉子用 Janet 寫：tick 把 $AOS_STACK/n.txt 加一，到 3 就退 10 請 loop 停；tock 印一行",
+     "steps.janet": "三個組合子：seq 依序、par 同時、if 看條件；每個都編成一個資料夾（入口是短 shell 腳本）"
+    },
+    "json_write.janet": "把 Janet 的值寫成好讀的 JSON 字串（key 有固定順序、中文不跳脫、短的擠一行）"
+   },
+   "lua": {
+    "aos.lua": "用 Lua table 寫 aos 的資料夾程式，編成資料夾＋JSON（嘗試，2026-10-24）",
+    "bin": {
+     "aos-lua": "把一份 Lua 原始檔編成 aos 的資料夾＋JSON（也能只印、只列）"
+    },
+    "examples": {
+     "clocks.lua": "一個 daemon 顧幾個時鐘 loop（for 迴圈產生子項）"
+    }
+   }
+  }
+ }
+}

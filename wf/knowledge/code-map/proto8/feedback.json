@@ -1,0 +1,11 @@
+{
+ "description": "proto8/feedback 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "generated_by": "wf/tools/index_gen.py",
+ "tree": {
+  "litellm.jsonl": "",
+  "memory_write.jsonl": "",
+  "metainfo_migrate.jsonl": "",
+  "place_run.jsonl": "",
+  "raters.json": "Classify feedback raters by the first matching model name substring."
+ }
+}

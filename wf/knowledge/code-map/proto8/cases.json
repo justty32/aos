@@ -1,0 +1,29 @@
+{
+ "description": "proto8/cases 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "generated_by": "wf/tools/index_gen.py",
+ "tree": {
+  "box-probe": {
+   "check.json": "Require every sandbox boundary check to pass.",
+   "run.json": "Probe the declared shell sandbox boundary.",
+   "stdin.json": "Try writes, network and host visibility using bash builtins."
+  },
+  "smoke": {
+   "addition": {
+    "check.json": "Require a byte-identical answer for the addition question.",
+    "expect": {
+     "stdout.json": ""
+    },
+    "run.json": "Run the fixed addition question through the math tool.",
+    "stdin.json": "Add two fixed integers for the smoke case."
+   },
+   "multiplication": {
+    "check.json": "Require a byte-identical answer for the multiplication question.",
+    "expect": {
+     "stdout.json": ""
+    },
+    "run.json": "Run the fixed multiplication question through the math tool.",
+    "stdin.json": "Multiply two fixed integers for the smoke case."
+   }
+  }
+ }
+}

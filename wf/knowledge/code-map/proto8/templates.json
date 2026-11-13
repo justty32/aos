@@ -1,0 +1,98 @@
+{
+ "description": "proto8/templates 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "generated_by": "wf/tools/index_gen.py",
+ "tree": {
+  "agent-fsm": {
+   "act.py": "act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。",
+   "atomic_file.py": "agent-fsm 的格（idle、wait）共用的寫檔：先寫同資料夾的 .<名>.tmp 再改名（N-05），寫不成交給呼叫端的 die（WriteFailed）。",
+   "body.json": "argv：`aos-loop loop.json`",
+   "brain.py": "think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。",
+   "cell_common.py": "agent-fsm 的格共用的開頭幾步：四格的 on_clock 看時鐘（clock_tick），brain、act 的讀 history.jsonl 與決定用哪份工具登記檔。",
+   "fsm.json": "入口 `aos-fsm $AOS_CF`；鍵：start、states",
+   "hooks.json": "Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added, after_sta…",
+   "idle.py": "idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。",
+   "interfaces.json": "設定（鍵：aos-agent、aos-observed）",
+   "llm.json": "",
+   "llm_settings.py": "agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。",
+   "loop.json": "Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks (lib…",
+   "subagents.json": "設定（鍵：max_subagents）",
+   "system.txt": "",
+   "tools.json": "設定（鍵：$override）",
+   "wait.py": "wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。"
+  },
+  "agent-fsm/": "Run an aos agent with loop and FSM cells.",
+  "daemon-root": {
+   ".env": "defaults for this root (a value already exported in the shell wins); every agent and child daemon inherits them.",
+   "_entry": "Start the root daemon with stdout logs",
+   "daemon.json": "Root daemon: owns the clock and the sweeper; agents join through procs_requests"
+  },
+  "eca-claude": {
+   "cli.json": "設定（鍵：kind、flags、print_flags、tools_sub、timeout_ms）",
+   "hooks.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
+   "interfaces.json": "設定（鍵：aos-agent）",
+   "llm.json": "設定（鍵：model）",
+   "loop.json": "Schedule the Claude agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop ho…",
+   "screen": {
+    "_entry": "入口：`aos-eca-screen --eca ..`",
+    "interfaces.json": "設定（鍵：aos-agent/screen）"
+   },
+   "tools.json": "設定（鍵：$override、tools）",
+   "tools_sub.json": "Registry of the reduced aos tool set for subagents the claude CLI spawns with its Agent tool (cli.json tools_sub): read-only tools only - peek_clock,…"
+  },
+  "eca-claude/": "Run Claude Code as an aos agent: one turn per queue batch, answers appended to history.",
+  "judge-llm": {
+   "judge.json": "Configure the comparator endpoint and per-section byte limit",
+   "prompt.txt": ""
+  },
+  "judge-llm/": "Compare artifacts with one LLM request and public think accounting.",
+  "reviewer": {
+   "body.json": "Run the reviewer loop with shared agent FSM cells.",
+   "fsm.json": "Reuse agent-fsm cells while reading configuration from the reviewer definition.",
+   "interfaces.json": "Declare reviewer agent configuration and its public observation ledger.",
+   "ladder.json": "Configure model downgrade trials, quality gates, and post-promotion watching.",
+   "llm.json": "Use the caller's default kernel endpoint unless model names one.",
+   "loop.json": "Schedule the reviewer FSM and expose public control and state files.",
+   "system.txt": "",
+   "tools.json": "Offer review scripts and workspace readers without arbitrary execution tools."
+  },
+  "reviewer/": "Review measured definition costs and prescribe a fix or split when model downgrades fail.",
+  "tests": {
+   "agent-fsm": {
+    "test_batch3.py": "Verify daemon-managed fake-brain parent and child observations through public interfaces.",
+    "test_cells.py": "Verify task context, tool limits, and best-effort observations with local fake commands.",
+    "test_clock_hook.py": "Test the 11-11 hook events: on_clock (hooks.clock_tick in the cells), after_start / after_stop (lib/agent/hook_fire).",
+    "test_clock_hook_daemon.py": "Acceptance on a real root daemon (no brain needed): after_start / after_stop on start, stop, sleep, wake, kill -9 + auto_restart, rm; on_clock with t…",
+    "test_cooldown.py": "Verify the wait cell's cooldown after outside failures (two-machines 06) with a fake aos-llm on PATH.",
+    "test_do_task_fold.py": "do_task save／load（11-11 fork-and-do-task/02）：真 daemon＋真 llm kernel＋假腦劇本——start→叫工具→end 後 history 只剩紀錄點＋總結、原文留檔；巢狀；任務中等信（預設信一起摺、keep_others 信留著）；停掉再起來…",
+    "test_fork.py": "fork（11-11 fork-and-do-task/01）：真 daemon＋真 llm kernel＋假腦劇本——父先聽到暗號、叫 fork，分身帶著整段對話答出暗號、再叫 fork＝DepthExceeded；結論回到父那則 tool、父 history 沒有分身的過程；分身收掉（keep…",
+    "test_goal.py": "agent-fsm 的 goal（11-11 goal/02）：idle 格單跑（停下被丟、done 後不丟、上限停、pause／resume、信優先、外面設／清、有叫工具歸零、",
+    "test_hooks.py": "Test the hooks of agent-fsm (lib/agent/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added.",
+    "test_integration.py": "Verify agent cells through the real local kernel, llm_fake endpoint, and peek_now_time tool (which leaves no tool cell, 11-11).",
+    "test_mail_notify_daemon.py": "範本預設的 mail_notify hook 實跑（真 root daemon＋時鐘、假腦）：寄一封＝間隔內收到一則 [aos] new_mail；連寄三封只多一則；self_hook 改間隔照新間隔；self_hook rm＝不再收到。",
+    "test_own_system.py": "Test the agent-fsm think cell with the declared system (11-11 self-system): self_system get, set, the next think sends the new text whole (replacing …",
+    "test_own_tools.py": "Test that brain and act use the agent's own tools registry in its stack (\"$override\" of the definition's; 11-10 aos-tools-cli step 4), and fall back …",
+    "test_same_turn_tools.py": "Pin when a tool added in the middle of a turn works in agent-fsm (11-10 tools-def, user \"3.同一輪就生效\"): brain and act re-read the registry on every step…",
+    "test_selfheal.py": "Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools."
+   },
+   "judge-llm": {
+    "endpoint.py": "Return deterministic semantic-comparison replies with nonzero fake token usage.",
+    "test_judge.py": "Verify judge reply normalization, truncation, kernel failures, and measured check costs."
+   },
+   "reviewer": {
+    "endpoint.py": "Return fake reviewer tool calls using the actual previous review_round result.",
+    "test_reviewer.py": "Verify real reviewer, review scripts and shared FSM cells through local fake endpoints."
+   },
+   "test_daily.py": "Acceptance (/tmp, fake brain, fake claude): the user's daily routine across two machines - git clone/pull, one aos-exec line, work, aos-daemon-ctl sh…",
+   "test_paths_move.py": "Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm, copied with cp -r) and an llm kernel project move by git to anothe…",
+   "tool-python": {
+    "test_skeleton.py": "Test the tool-python skeleton: its generated _tooldef.json/_metainfo.json match tool.py, and a copy outside the repo runs with only AOS_HOME or with …"
+   }
+  },
+  "tool-python": {
+   "_entry.json": "Entry of the tool-python skeleton: aos-exec runs tool.py in this folder with python3 (arguments come on stdin).",
+   "_metainfo.json": "Add two numbers and return the sum",
+   "_tooldef.json": "Add two numbers and return the sum. Example: {\"a\": 2, \"b\": 3} -> 5",
+   "tool.py": "最小、合格、能跑的工具：把兩個數相加。"
+  }
+ }
+}

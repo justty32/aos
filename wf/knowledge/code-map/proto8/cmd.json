@@ -1,0 +1,222 @@
+{
+ "description": "proto8/cmd 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "generated_by": "wf/tools/index_gen.py",
+ "tree": {
+  "aos-agent": {
+   "aos_agent": {
+    "__init__.py": "保留頂層說明、命令派發與主入口。",
+    "chat.py": "逐行寄訊息並等候回答的互動迴圈。",
+    "common.py": "共用分層 help、錯誤指路、旗標、找 daemon 與表上的一隻（ctl 動作才用的寄信等回信在 ctl/shared.py）。",
+    "ctl": {
+     "__init__.py": "顯式派發 agent 的掛上與管理命令。",
+     "add.py": "宣告檢查、掛上 agent 並等待 daemon 上表。",
+     "ls.py": "列出 daemon 表上的 proc 與狀態。",
+     "phase.py": "起停、睡醒與暫停恢復 agent。",
+     "rm.py": "拔掉 agent（預設留 stack；--purge 確認後才刪，並保護不能刪除的 stack 路徑）。",
+     "set_def.py": "換掉表上一隻 agent 的定義：stack、工作區、limits、auto_restart 照舊，下一次起來才用新的。",
+     "shared.py": "ctl 動作才用的共用零件：--timeout-s／--on-queued／名字放最後、寄控制信給 daemon 並等回信與公開表。",
+     "state.py": "顯示單隻 agent 的狀態：總覽（每類一行）或點菜（某幾類的細節）；只給數字與事實、不給建議（11-10 self-family self_state）。",
+     "where.py": "顯示 agent 的 stack 或工作區路徑。",
+     "who.py": "由 stack 路徑查詢所屬 agent。"
+    },
+    "decl.py": "讀取介面宣告並呼叫定義中的子介面入口。",
+    "goal.py": "管 agent 的 goal（<stack>/goal.json）：get、set、done、pause、resume、clear；腦自己停下來時由身體（agent-fsm idle、aos-eca-turn）丟提醒。",
+    "hints.py": "讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。",
+    "history.py": "看與改 agent 的對話紀錄（宣告的 history 檔，一行一則訊息）：ls、rm 一段、summarize 一段換成一則、set 任一行；改掉的原文預設搬到旁邊。",
+    "hook.py": "管 agent 自己那份 hooks 清單（疊在定義那份上，同名蓋過、null 關掉）：ls、get、add、rm、reset。",
+    "listen.py": "以秒或 cycle 等待回答，或列出與追蹤歷史對話。",
+    "llm.py": "分層解析腦設定命令（ls／set／rm／reset）並管理 agent 的覆蓋鍵與重設確認。",
+    "read_line.py": "chat 讀一行輸入：終端機上用 readline 行編輯（中文 Backspace、方向鍵），管線照舊按行讀。",
+    "say.py": "寄一則訊息到 agent 的 queue。",
+    "screen.py": "開啟、關閉與追蹤 agent 的畫面子介面。",
+    "sender.py": "11-13 使用者裁「a2a這個按照建議」「say/chat被當成不是使用者打的，我覺得可以」：對 eca 說的話補上真正的寄件人——誰下的指令寫誰。",
+    "system.py": "管 agent 自己那份 system 文字（stack 那份在就整份蓋過定義那份）：get、set、reset。",
+    "tools.py": "分層解析工具命令並管理 agent 自己那份工具登記檔（$override 定義那份）與重設確認。"
+   },
+   "bin": {
+    "aos-agent": "統一的 agent 介面：管掛在 aos-daemon 上的一隻 agent（eca、loop／fsm agent 都一樣），每個子命令只管一隻（11-04）。"
+   },
+   "stack.gitattributes": "把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件）",
+   "stack.gitignore": "可選的 stack 排除範本：暫存、鎖、本機資料與可重建紀錄不進 git。",
+   "tests": {
+    "test_chat_read_line.py": "Test chat's line input in a real pty: Chinese + Backspace, arrow keys, long lines, pastes and EOF are read whole (11-12 chat-utf8).",
+    "test_daemon_down.py": "Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing.",
+    "test_goal.py": "Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0…",
+    "test_history.py": "Test aos-agent history on a fake daemon table (11-10 self-family): ls, rm, summarize, set, the kept originals (default, --keep, --no-keep), ranges an…",
+    "test_hook.py": "Test aos-agent hook on a fake daemon table: add writes only the agent's own hooks list (flags, path forms, --path-json), HookExists / --replace, rm (…",
+    "test_kernel_state_path.py": "Test aos-agent ctl with AOS_KERNEL set: table commands ask it where the table is (query letter) and read that file, letter commands read only their o…",
+    "test_llm.py": "Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and…",
+    "test_ls_health.py": "Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table.",
+    "test_rm_keep.py": "Test aos-agent ctl rm keeps the stack by default and deletes it only with --purge (cli-sweep Q3), on a real aos-daemon.",
+    "test_say_from.py": "Test the sender of aos-agent say / chat (11-13 a2a): --from > the listed agent whose stack holds $AOS_STACK > login name; only an eca's letter carrie…",
+    "test_set_def.py": "Test aos-agent ctl set-def on a real aos-daemon: the row keeps its stack, workspace and auto_restart, the new definition runs from the next start, --…",
+    "test_state_parts.py": "Test aos-agent ctl state (11-10 self-family self_state): the overview (one line per part), picked parts, all, --json, and parts that are not availabl…",
+    "test_system.py": "Test aos-agent system on a fake daemon table (11-11 self-system): get / get -l / get --json, set from stdin and from a file, empty text, reset, missi…",
+    "test_tools_override.py": "Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with \"$override\" (N2 poin…"
+   },
+   "using-aos-agent.sh": "給人的殼 source 用（不是跑）：之後直接打 say／listen／chat／status，像命名空間（11-04 aos-agent 02）。"
+  },
+  "aos-clock": {
+   "bin": {
+    "aos-clock": "時鐘往前走一格（CONCEPTS C-44、NORMS N-01；規格 10-12「做吧」，計畫 10-21 第 4 段）。"
+   }
+  },
+  "aos-clock-register": {
+   "bin": {
+    "aos-clock-register": "時鐘登記表的人用指令：add／rm／ls 時鐘檔旁 <時鐘檔名>_register.json 的格（每 every 個 cycle 往一個 aos-post 箱子寄一句；11-10 晚 clock-letters）。"
+   },
+   "tests": {
+    "test_clock_once_cron.py": "Test aos-clock-register --after/--at/--cron and aos-clock firing them: one-time entries remove themselves, cron moves next, missed ones are sent once…",
+    "test_clock_register.py": "Test aos-clock-register add/rm/ls, aos-clock register (the same thing), and aos-clock sending the registered letters (real aos-post; no daemon)."
+   }
+  },
+  "aos-daemon-ctl": {
+   "bin": {
+    "aos-daemon-ctl": "把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 py/aos_sweep）；說明在 cmd/docs/03、04。"
+   },
+   "tests": {
+    "test_add_rm_checks.py": "aos-daemon-ctl add 撞名＝InstanceExists、rm 表上沒有＝ProcMissing，都報錯不寄（cli-sweep 甲5，11-10）。",
+    "test_already.py": "對已在那個狀態的列下 stop／sleep／start／wake＝印「名字: already 狀態」、退 0、不寄信（cli-sweep Q4＝A，使用者 11-10）。",
+    "test_auto_restart.py": "Verify --auto-restart: add_letter puts \"auto_restart\": true on the row for loop, exec and envs types, and both add commands take the switch.",
+    "test_envs_portable.py": "Verify add_letter's --envs single: with the daemon stack given, the target is {\"$env\": \"AOS_DAEMON\", \"$path\": relative}, so a moved tree still starts…",
+    "test_path_json.py": "add 的 --ws-json／--stack-json／--path-json：指示詞原樣進信（表上記原形、每次起再解；11-10 B01）。",
+    "test_shutdown_timeout.py": "shutdown 等不到 daemon 退出＝StillRunning 錯誤（11-10 two-machines：退 0 會讓人以為可以 commit／push）。"
+   }
+  },
+  "aos-eca": {
+   "aos_eca": {
+    "__init__.py": "aos-eca-turn 的英文說明、旗標檢查與主入口（main）。",
+    "batch.py": "一批信的認領與讀信（開場白、冷卻時只拿一封、take-all）與 goal 提醒的題目與進展。",
+    "common.py": "共用的名字、錯誤（Fail）、lib 模組的載入、aos-post 介面與 mailbox_warning。",
+    "handoff.py": "一批信交給 CLI 的前後（一般一輪與 slash 交給 claude 的那幾條共用）：交出去那刻收信、交出去後失敗記冷卻、成功收尾。",
+    "history.py": "$AOS_STACK/history.jsonl 的讀、附加，與 .history_sum（⑩ history 被改過＝開新對話）。",
+    "hook.py": "這支跑的 hook（before_queue、tool_added；fire 把 hook 停下換成 Fail）。",
+    "midturn.py": "等 CLI 回答的這段時間又來的信：馬上認領、過 hook、交給 cli_ask 投進 CLI（More）；信的寄件人欄（unnamed）。",
+    "reseed.py": "⑧ 換台開新對話時接在題目前面的開場白（從 history 組「整理過的紀錄」）。",
+    "slash.py": "⑭ slash 指令（/clear、/compact、/status、/usage、/exit、/goal）在 aos 這層怎麼做。",
+    "turn.py": "平級形的一輪（one_turn）：認領一批、hook、slash 分流、交給 cli_session、回答接進 history、冷卻。"
+   },
+   "bin": {
+    "aos-eca-screen": "eca 的畫面（介面 aos-agent/screen 的身體；templates/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。",
+    "aos-eca-turn": "外部 coding agent（claude／codex，eca）的一輪：把 stack 的 queue 裡的信照順序全部一起交給 CLI——交出去就收信——等它答完、回答接進 history。"
+   },
+   "tests": {
+    "fake_claude": "stand-in for the claude CLI in aos-eca tests: -p with --session-id/--resume, keeps conversations as files, never calls a model",
+    "fake_codex": "stand-in for the codex CLI in aos-eca tests: exec / exec resume ID with --json and -o, keeps threads as files, never calls a model",
+    "test_goal.py": "Test the goal in aos-eca-turn (11-11 goal/02) with fake claude / codex CLIs: queue empty + last turn answered + goal active = the reminder is the pro…",
+    "test_goal_replace.py": "Test aos-eca-turn's recognition of codex's \"Replace goal?\" menu (11-12 eca-slash /goal): only that menu with the cursor on \"1. Replace current goal\" …",
+    "test_history_edit.py": "Test aos-eca-turn's shrunk history edit (11-10 self-family): history.jsonl changed between turns or during one = the next turn starts a new conversat…",
+    "test_hooks.py": "Test the hooks of aos-eca-turn (eca's reduced set: before_queue, after_queue, brain_failed, tool_added) with a fake claude CLI.",
+    "test_letter_name.py": "Test that a letter's sender (body \"name\", set by aos-agent say for an eca) reaches the CLI side as parts and never enters history, and that letters a…",
+    "test_slash.py": "Test aos-eca-turn's slash commands (11-12 eca-slash): one letter that is exactly /clear, /compact, /status, /usage or /exit is done by aos (or handed…",
+    "test_switch.py": "Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs."
+   }
+  },
+  "aos-feedback": {
+   "aos_feedback": {
+    "__init__.py": "Parse feedback commands through aos_flags and present records and comfort reports.",
+    "comfort.py": "Calculate AI comfort from scored feedback and consecutive observed tool calls.",
+    "storage.py": "Append command feedback and read its local model classification rules."
+   },
+   "bin": {
+    "aos-feedback": "Collect command feedback and report observed AI comfort scores."
+   },
+   "tests": {
+    "test_boundaries.py": "Verify concurrent feedback writes, CLI argument boundaries and damaged input handling.",
+    "test_feedback.py": "Verify feedback CLI storage, comfort calculations and the real aos-exec tool boundary."
+   }
+  },
+  "aos-grow": {
+   "bin": {
+    "aos-grow": "把一個函數往上長一級（或縮回一級），呼叫方跟著改、行為不變。"
+   }
+  },
+  "aos-mailbox": {
+   "aos_mailbox": {
+    "__init__.py": "aos-mailbox 本體：找我的 stack、四個子命令（where、peek、read、send）、叫 aos-post 命令列。"
+   },
+   "bin": {
+    "aos-mailbox": "my mailbox: send letters to agents, see and read the letters sent to me (thin launcher; the body is aos_mailbox/)."
+   },
+   "tests": {
+    "test_mailbox.py": "Test aos-mailbox where / peek / read / send against real aos-post boxes and a hand-written daemon table."
+   }
+  },
+  "aos-mcp": {
+   "bin": {
+    "aos-mcp": "白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。"
+   },
+   "tests": {
+    "test_broken_entry.py": "Verify aos-mcp keeps serving when one registry entry is broken (path gone): tools/list leaves it out, tools/call of the others works (11-12 tool-path…",
+    "test_hooks.py": "Verify aos-mcp's --hooks DEF: before_tool changes / blocks a call, after_tool changes the result, no --hooks = no hooks, a failing hook = isError.",
+    "test_list_changed.py": "Verify aos-mcp sends notifications/tools/list_changed right after a tools/call that changed the list (11-10 tools-def, \"3.同一輪就生效\"), not after one tha…",
+    "test_own_registry.py": "Verify aos-mcp serves an agent's own registry (\"$override\" of the definition's) and the definition's, and has no --overlay flag (11-10 aos-tools-cli …",
+    "test_timeout.py": "Verify MCP reads shared timeout metadata and keeps its CLI fallback."
+   }
+  },
+  "aos-mcp-import": {
+   "bin": {
+    "aos-mcp-import": "連一次外部 MCP server、把它的工具凍結進同一份 server 檔（加 mcp_import、mcp_tools、tools），之後疊進 tools.json 就是一包工具；sync 重問 server、印差異、--yes 才寫（external-mcp 07 步 5、步 7）"
+   },
+   "tests": {
+    "test_import.py": "Test aos-mcp-import (external-mcp 07 steps 5 and 7) against the fake stdio MCP server: all, --only, --except, name clash, PackExists, bytes unchanged…"
+   }
+  },
+  "aos-mcp-launch": {
+   "bin": {
+    "aos-mcp-launch": "起一台外部 stdio MCP server：讀它的 server 檔、讀 env_file（金鑰）放進環境，再 exec 成那支 server（金鑰只活在 server 行程）"
+   }
+  },
+  "aos-sandbox": {
+   "bin": {
+    "aos-sandbox": "照一份設定把 prog 關進沙箱再跑：身分（s6-setuidgid）、上限（s6-softlimit）、看得到哪些路徑與能不能連網（bwrap）"
+   },
+   "examples": {
+    "agent.json": "設定（鍵：commands、ro、rw、env、net、mem_mb…）",
+    "cli-tool.json": "設定（鍵：commands、ro、rw、env、net）",
+    "shell-boxed": {
+     "inner": "→ `../../../../lib/base/shell`"
+    },
+    "shell-boxed/": "Run one bash command line; the working folder is your workspace. Returns stdout and stderr merged; the last line is always [exit code N], your comman…",
+    "subagent-boxed": {
+     "inner": "→ `../../../../lib/agent/subagent`",
+     "sandbox-kernel.json": "Sandbox (mode 2, kernel station in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm lette…",
+     "sandbox.json": "Sandbox (mode 1, no kernel station) for a tool that talks to the daemon (subagent; agents_ctl and self_tools the same way): rw the daemon stack AOS_D…"
+    },
+    "subagent-boxed/": "Start agents that are yours: you can talk to them, change their tools/brain/history, stop and remove them; counted against your quota (max_subagents,…"
+   },
+   "root": {
+    "setup.sh": "沙箱的「身分層」要 root 做的事：裝 s6 到 /usr/local、建帳號 aos-run、給它一個工作的地方、讓我（$SUDO_USER）能換成它"
+   },
+   "tests": {
+    "test_sandbox.py": "Verify aos-sandbox: a broken config runs prog unsandboxed with a warning, real errors stay errors, the deeper of ro/rw wins (T32), writes outside rw …"
+   }
+  },
+  "aos-sweeper": {
+   "bin": {
+    "aos-sweeper": "清道夫跑一輪（掛在 daemon 表上當 loop 列 `_sweeper`，每 interval_ms 一次；使用者 11-10）。"
+   },
+   "tests": {
+    "test_releasing.py": "Test the sweeper removes old <lock>.releasing.* leftovers (open-14) and leaves fresh, foreign and child-daemon ones alone.",
+    "test_sweep.py": "Test aos-sweeper and aos-daemon-ctl sweep (tasks 1–18) with isolated files, real locks, and owned child processes."
+   }
+  },
+  "aos-tools": {
+   "bin": {
+    "aos-tools": "管理工具登記（可 $override 另一份只記差異）、環境與小格，三種工具一律經 aos-exec 從 stdin 呼叫。"
+   },
+   "tests": {
+    "test_broken_entry.py": "Test one broken registry entry (path gone, definition missing or bad) is skipped by ls with a warning while the others list and call as usual, and ge…",
+    "test_cache.py": "Test where aos-tools caches executable tool definitions (11-10 aos-tools-cli step 2): $AOS_STACK/tooldef_cache.json, never the registry.",
+    "test_cell_lazy.py": "Test that aos-tools call does not create the tool cell beforehand (11-11 tool-cells-lazy): a read-only tool leaves no folder, a writing tool makes it…",
+    "test_cli.py": "Test the aos-tools command line (11-10 aos-tools-cli step 1): --file on either side, usage line, late flags, default-file warning, success lines, ls …",
+    "test_env_file.py": "Test aos-tools env_file (11-10 aos-tools-cli step 3): add --env-file stores only the location, call reads it every time, a missing file at call is Pa…",
+    "test_metainfo_tooldef.py": "Test aos-tools reading the tool definition from _metainfo's tooldef as well as the separate _tooldef (11-12 metainfo, N-69): merged one level deep, o…",
+    "test_override.py": "Test aos-tools \"$override\" registries (11-10 aos-tools-cli step 4): patch merge with null removal, chains and arrays, loops and diamonds, writes only…",
+    "test_paths.py": "Test aos-tools path forms: directives in an overriding registry (path and env), add keeping the user's form, --path-json, and the PathMissing line.",
+    "test_pointer.py": "Test aos-tools with FILE.json#/POINTER locations: add (stored form, default name), ls -l, get, call through aos-exec, rm by path, and the errors.",
+    "test_stack_in_caller.py": "Test that aos-tools call tells the tool where its cell sits in the caller's stack (AOS_STACK_IN_CALLER=tools/NAME), and drops a stale one when there …"
+   }
+  }
+ }
+}

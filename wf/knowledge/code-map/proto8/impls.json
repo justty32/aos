@@ -1,0 +1,486 @@
+{
+ "deps": {
+  "aos-daemon": {
+   "private": [],
+   "public": [
+    "aos-loop",
+    "aos-post"
+   ]
+  },
+  "aos-directive": {
+   "private": [],
+   "public": [
+    "aos-util"
+   ]
+  },
+  "aos-exec": {
+   "private": [
+    "aos-inst-static",
+    "Threads::Threads"
+   ],
+   "public": [
+    "aos-util",
+    "aos-directive"
+   ]
+  },
+  "aos-fsm": {
+   "private": [],
+   "public": [
+    "aos-loop"
+   ]
+  },
+  "aos-json": {
+   "private": [],
+   "public": [
+    "aos-util",
+    "aos-directive"
+   ]
+  },
+  "aos-llm": {
+   "private": [],
+   "public": [
+    "aos-util",
+    "aos-post",
+    "aos-llm-kernel"
+   ]
+  },
+  "aos-llm-kernel": {
+   "private": [],
+   "public": [
+    "aos-util",
+    "aos-post",
+    "aos-directive"
+   ]
+  },
+  "aos-lock": {
+   "private": [],
+   "public": [
+    "aos-util"
+   ]
+  },
+  "aos-loop": {
+   "private": [],
+   "public": [
+    "aos-exec",
+    "aos-directive"
+   ]
+  },
+  "aos-post": {
+   "private": [
+    "aos-lock"
+   ],
+   "public": [
+    "aos-util"
+   ]
+  },
+  "aos-util": {
+   "private": [],
+   "public": [
+    "nlohmann_json::nlohmann_json"
+   ]
+  }
+ },
+ "description": "proto8/impls 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。deps＝各專案 CMakeLists.txt 的 target_link_libraries（略過 *_main）。",
+ "generated_by": "wf/tools/index_gen.py",
+ "tree": {
+  "CMakeLists.txt": "proto8/impls 頂層：一次 configure、一次 build 出全家的 bin（11-05 大重構 S3）。",
+  "aos-daemon": {
+   "CMakeLists.txt": "`aos-daemon daemon.json`——一個 aos-loop（同一個骨架 aos::loop::Loop）＋一張子 loop 的表（10-20 重寫）。",
+   "examples": {
+    "root": {
+     "aos-root.service": "Run an ordinary root daemon under an optional systemd user service.",
+     "root.env.example": "Configure credentials and cross-tree hubs inherited by the root service and its children.",
+     "s6": {
+      "run": "Run an ordinary root daemon as an optional s6 supervised service."
+     }
+    }
+   },
+   "src": {
+    "child": {
+     "child.cpp": "建立小格、啟動子 loop 或 exec 型子項，並回收與輸出子項狀態（說明見 child.hpp）。",
+     "child.hpp": "保存 proc 的共同生命週期、可重放入口、公開窗與 stuck 判定資料。",
+     "limits.cpp": "proc 的份額 limits（說明見 limits.hpp；11-05 feat-proto 件 5，等同 s6-softlimit／s6-setuidgid）。",
+     "limits.hpp": "proc 的份額 limits（11-05 feat-proto 件 5，使用者「會想要限制特定aos proc所占用的資源。",
+     "refs.cpp": "把表與內嵌單子的路徑改寫成相對 daemon 或小格的參照。"
+    },
+    "common": {
+     "common.hpp": "aos-daemon 好幾個元素都用到的：型別別名、錯誤代號。"
+    },
+    "daemon": {
+     "adopt.cpp": "接回 proc 表的好列，警告並留存壞檔，尋找小格裡活著的子 loop（說明見 daemon.hpp）。",
+     "body.cpp": "執行 daemon 自己的身體並記錄結果（說明見 daemon.hpp）。",
+     "ctl.cpp": "由控制窗推得期望表、停止與睡眠集合（說明見 daemon.hpp）。",
+     "daemon.cpp": "初始化設定、環境、信箱與 stack 鎖，定義並合併 poke 訊號（說明見 daemon.hpp）。",
+     "daemon.hpp": "Daemon 管普通 proc 表、stuck 判定、手把與狀態窗；aos-loop 的 Loop 子類別，內部標頭。",
+     "failure.cpp": "從子項結束碼與 stderr 整理停止原因（說明見 daemon.hpp）。",
+     "mailbox.cpp": "信箱 procs_requests（10-29，medium-plan § 二 4、§ 四 3；NORMS N-28 的 10-29 補、N-16；11-03 改名 procs、多 stop／start；說明見 daemon.hpp）。",
+     "procs.cpp": "解讀 proc 名單、辨認寫法、整理路徑與合併期望表（說明見 daemon.hpp）。",
+     "reconcile.cpp": "按期望表啟動、收回與調整子項（說明見 daemon.hpp）。",
+     "stuck.cpp": "依公開 ctl/state_flux 窗的刺激與兩鐘期限標記卡住，並選擇收回重起。",
+     "table.cpp": "維護 proc 表、記錄子項與處理狀態窗寫入結果（說明見 daemon.hpp）。",
+     "tend.cpp": "停止、收回與照顧子項，並在 daemon 收工時等它們退完（說明見 daemon.hpp）。",
+     "windows.cpp": "管轄手把 procs_ctl 與有變才寫的 procs_state 狀態窗（說明見 daemon.hpp）。"
+    },
+    "main.cpp": "aos-daemon 命令列——先阻擋收工、poke 與 SIGUSR1/2 訊號，再解設定並服務。"
+   },
+   "tests": {
+    "support.py": "Build isolated real-daemon fixtures and retain evidence for the B lifecycle tests.",
+    "test_bad_letter.py": "Check that a bad procs letter with reply_to gets {\"applied\": false, \"error\": {\"code\": \"BodyBad\", ...}} (11-12), and the rest stay silent.",
+    "test_ctl.py": "Exercise public controls, prune inspection and age selection, command errors and help.",
+    "test_lifecycle.py": "Verify proc lifecycle, damaged-state adoption and owned-state recovery against real daemons.",
+    "test_poke.py": "Verify daemon poke modes, prompt wakeups and pid identity guards with isolated fixtures.",
+    "test_ref_hash.py": "Check {\"$ref\": \"#/...\"} in daemon.json means daemon.json itself, also inside an inline inst moved into its cell (11-12).",
+    "test_stack_make.py": "Check aos-daemon creates a missing $AOS_STACK at start (11-11, make_stack) after the config checks pass.",
+    "test_stale_stop.py": "Check stop → sleep → start keeps the restarted loop running instead of replaying the old stop.",
+    "test_state_path.py": "Check the procs_state_path query letter (11-13, K-F27): the reply carries the absolute path of procs_state.json, null without that window, BodyBad wh…",
+    "test_two_machines.py": "Check two-machines daemon fixes: copies never adopt the original tree, and mailbox rows re-resolve directives on start."
+   },
+   "vcpkg.json": "aos-daemon：照一張名單把幾個 proc 各自起在小格裡、看著它們（C++）"
+  },
+  "aos-directive": {
+   "CMakeLists.txt": "解 JSON 裡的指示詞（$ref、$env）。",
+   "include": {
+    "aos": {
+     "directive.hpp": "指示詞（語法糖：把設定拆成小檔、讀環境變數）（N-45，10-20 改版）。"
+    }
+   },
+   "src": {
+    "env.cpp": "{\"$env\": \"NAME\"}——換成環境變數 NAME 的值（字串）。",
+    "internal.hpp": "resolve.cpp、ref.cpp、env.cpp 之間共用的內部宣告（不公開；放在 aos::directive，公開的只有 aos::resolve）。",
+    "main.cpp": "aos-directive 命令列——讀一份 JSON、解開所有指示詞、印出來。",
+    "ref.cpp": "{\"$ref\": \"路徑\"}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。",
+    "resolve.cpp": "解析整份、單層或指定欄位的指示詞，保留相對路徑起點，並套用字串修飾詞。"
+   },
+   "tests": {
+    "test_ref_hash.py": "Check {\"$ref\": \"#/...\"} takes the file that holds the $ref (11-12), and that ./ and ../ work in the file part of $ref.",
+    "test_ref_spot.py": "Check the $ref path rule (11-13 ref-path-rules): left of # is the file system (from the folder of the file), right of # is"
+   },
+   "vcpkg.json": "aos-directive：解 JSON 裡的指示詞（$ref、$env）的 lib 與命令列"
+  },
+  "aos-exec": {
+   "CMakeLists.txt": "在工作區執行一個 aos 程式（找入口、備好環境變數、cd 進去、開跑）。",
+   "include": {
+    "aos": {
+     "exec.hpp": "aos-exec 的公開介面——在工作區執行一個 aos 程式（定工作區、找入口、設環境變數、cd 進去、讀 .env、開跑）。"
+    }
+   },
+   "src": {
+    "cli": {
+     "cli.cpp": "run_cli（說明見 cli.hpp；10-21 ideas § 3、§ 4）。",
+     "cli.hpp": "命令列 `aos-exec [旗標...] XXX [args...]`（公開介面 run_cli 在 aos/exec.hpp）。"
+    },
+    "common": {
+     "common.hpp": "aos-exec 好幾個元素都用到的：型別別名、entry_name()、找到的入口（Kind、Found）。"
+    },
+    "env": {
+     "dotenv.cpp": "`.env`（10-21 ideas § 4、§ 6、§ 7；10-22 ideas § 3；N-59 第 4 件）。",
+     "env.cpp": "工作區與 AOS_STACK（說明見 env.hpp）。",
+     "env.hpp": "環境變數——工作區與 stack、`.env`（ideas 10-19 § 17、§ 19；10-21 ideas § 4～§ 7；分類照 P-39）。"
+    },
+    "find": {
+     "classify.cpp": "實際的檔 → 種類（說明見 find.hpp）。",
+     "find.cpp": "一跳（hop）——說明見 find.hpp（10-21 ideas § 4～§ 7）。",
+     "find.hpp": "一跳（hop）——XXX → 走進去、讀 .env、挑入口、判種類（10-21 ideas § 4～§ 7；N-59、N-61、N-62）。"
+    },
+    "inst": {
+     "fields.cpp": "單子（$env 已解）→ Inst：認得 17 個 key、驗型別。",
+     "inst.hpp": "行程內跑一張 inst 單子（公開的 run_inst 在 aos/exec.hpp）。",
+     "lib_input.cpp": "Inst → aos-inst 的單子（aos_inst_input_t）。",
+     "run.cpp": "run_inst——行程內跑一張 inst 單子（公開介面見 aos/exec.hpp）。",
+     "signals.cpp": "訊號與 時鐘逾時監工——轉送訊號與逾時終止子程式的整個行程群組。"
+    },
+    "launch": {
+     "launch.cpp": "開跑（說明見 launch.hpp）。",
+     "launch.hpp": "開跑（公開介面 run_inst、argv0 在 aos/exec.hpp）。"
+    },
+    "main.cpp": "aos-exec 命令列——把參數交給公開 API 的 run_cli（aos/exec.hpp、src/cli/）。"
+   },
+   "tests": {
+    "test_classify.py": "Check entry kinds are judged by content (#!, ELF, JSON), not by +x alone, in aos-exec and daemon_ctl.",
+    "test_entry_missing.py": "Check EntryMissing says where a relative entry was counted from and what absolute path it became (two-machines B08).",
+    "test_ref_hash.py": "Check {\"$ref\": \"#/...\"} in an entry (inst, argv array, JSON .env) takes the entry file itself (11-12).",
+    "test_stack_lazy.py": "Check --stack-lazy (11-11 tool-cells-lazy): the stack is made absolute and exported but not created; without it the stack is created as before."
+   },
+   "vcpkg.json": "aos-exec：在工作區執行一個 aos 程式——找入口、備好環境變數、cd 進去、開跑"
+  },
+  "aos-fsm": {
+   "CMakeLists.txt": "`aos-fsm fsm.json`——一次只跑一格。",
+   "src": {
+    "common": {
+     "common.hpp": "aos-fsm 好幾個元素都用到的：型別別名、自己的錯誤代號。"
+    },
+    "main.cpp": "aos-fsm 命令列——一次只跑一格（N-36）。",
+    "state": {
+     "state.cpp": "讀取 stage.txt，狀態內容有變才原子寫入（說明見 state.hpp）。",
+     "state.hpp": "$AOS_STACK 裡 fsm 自己的檔：stage.txt（現在狀態）。"
+    },
+    "table": {
+     "table.cpp": "read_table、check、pick、next_for（說明見 table.hpp；10-22；next 分岔 10-30）。",
+     "table.hpp": "fsm.json——`{\"start\": 狀態名, \"states\": {名: {\"exec\": aos-exec 的目標或 [目標, 參數...], \"next\": 狀態名或 {結束碼: 狀態名}}}}`。"
+    }
+   },
+   "tests": {
+    "test_ref_hash.py": "Check {\"$ref\": \"#/...\"} in fsm.json (a whole state, an inline exec inst) takes fsm.json itself (11-12).",
+    "test_stack_make.py": "Check aos-fsm creates a missing $AOS_STACK at start (11-11, make_stack), runs the state and writes stage.txt as usual."
+   },
+   "vcpkg.json": "aos-fsm：一次只跑一格（fsm.json 的 start／states；狀態在 $AOS_STACK）"
+  },
+  "aos-inst": {
+   "CMakeLists.txt": "共通設定（Release、compile_commands、PIC…）跟全家一樣在 ../cmake/settings.cmake；純 C、沒有 vcpkg.json，toolchain 不裝任何東西。",
+   "include": {
+    "aos": {
+     "inst.h": "aos-inst 的公開介面。"
+    }
+   },
+   "src": {
+    "inst_exec.c": "四個公開函數。",
+    "inst_internal.h": "src/ 各檔之間共用的內部函數宣告。",
+    "inst_proc.c": "起子程式、等它、收它。",
+    "inst_stream.c": "子程式的三個串流。"
+   }
+  },
+  "aos-json": {
+   "CMakeLists.txt": "讀、改 aos 的 JSON 設定（`檔#/指標` 尋址，認得指示詞）。",
+   "src": {
+    "cmd": {
+     "check.cpp": "check [--env] 檔[#/指標]...——驗一份（或幾份）aos 的 JSON，有問題每個一行印在 stdout、退 10（11-05 D1；原退 1）；沒問題不印、退 0。",
+     "cmd.hpp": "每個子命令一個函數：拿到子命令後面的參數（不含 `aos-json 子命令`），回退出碼；錯丟 aos::Error。",
+     "edit.cpp": "寫入共用 helper：讀取值、找位置、找父節點與放入值。",
+     "edit.hpp": "寫入共用的編輯狀態、位置與 helper 宣告，供 write.cpp、ref.cpp 使用。",
+     "list.cpp": "ls（列一格底下的孩子，--long 附型別與大小、--depth 往下幾層）、search（找 key／value，往下或往上）——json 工具 json_ls／json_search 搬下來（11-12）。",
+     "peek.cpp": "peek [--follow] [--depth N] 檔#/指標——漸進展開：一次只看一層，大的值摺成一句摘要（省 token）。",
+     "read.cpp": "讀——get（取值）、where（這個值實際寫在哪份檔的哪個位置）。",
+     "ref.cpp": "寫入 env、ref 指示詞，ref --move 搬值並重算相對 $ref。",
+     "write.cpp": "寫入值——set、batch、del、append、merge、add。"
+    },
+    "common": {
+     "common.hpp": "aos-json 跨元素共用——自己的錯誤代號。"
+    },
+    "doc": {
+     "doc.hpp": "一份 JSON 檔怎麼讀、怎麼照原樣寫回去，與 `檔#/指標` 的尋址。",
+     "file.cpp": "讀一份 JSON 檔、照原樣寫回去。",
+     "pointer.cpp": "`檔#/指標` 的尋址（N-62：第一個 # 就切、# 後一定要 /、指標照 RFC 6901）。",
+     "splice.cpp": "只重寫有變的那一塊，其他照原文一個字都不動（diff 小、手排的格式留著）。"
+    },
+    "follow": {
+     "follow.hpp": "順著指標往下走，遇到指示詞要不要穿過去（--follow）；追 $ref 鏈記下走過哪些檔的哪些位置。",
+     "kind.cpp": "認指示詞（N-45 寬容規則，同 aos-directive 的 ref.cpp／env.cpp）。",
+     "locate.cpp": "從 `檔#/指標` 一格格往下走；路上遇到指示詞看 Mode 決定穿不穿。"
+    },
+    "help": {
+     "help.cpp": "aos-json 各子命令的英文說明與旗標解析。",
+     "help.hpp": "aos-json 子命令的 usage、旗標說明與共同旗標解析入口。"
+    },
+    "main.cpp": "aos-json 命令列——第一個參數挑子命令，其餘交給它（src/cmd/）。"
+   },
+   "tests": {
+    "test_add_ls_search.py": "Check aos-json add / ls / search (the json tools' Python logic moved into C++, 11-12): output formats and error codes.",
+    "test_ref_hash.py": "Check aos-json's own $ref walk takes \"#/...\" (no file name) = the file that holds the $ref (ref-hash, 11-12 night), same as aos-directive.",
+    "test_ref_rel.py": "Check aos-json's own $ref walk follows the same path rule as aos-directive (11-13 ref-path-rules): \"#./\" counts from the"
+   },
+   "vcpkg.json": "aos-json：讀、改 aos 的 JSON 設定（檔#/指標、指示詞）的 lib 與命令列"
+  },
+  "aos-llm": {
+   "CMakeLists.txt": "`aos-llm send|recv|ask|regret|ls`——寄請求信進 LLM kernel 的信箱（$AOS_LLM_KERNEL）、收回信的基礎工具（11-04 由 aos-llm-send 改名）。",
+   "src": {
+    "common": {
+     "common.hpp": "aos-llm 好幾個元素都用到的：型別別名、錯誤代號（信箱型別用 aos-post、LLM 信件協定用 aos-llm-kernel）。"
+    },
+    "ls": {
+     "ls.cpp": "讀含 backend 的能力包窗、印表（說明見 ls.hpp）。",
+     "ls.hpp": "aos-llm ls——讀 kernel 的窗 <stack>/endpoints.json（包的屬性表，11-05 feat-proto），一行一包印出。"
+    },
+    "main.cpp": "aos-llm 命令列——寄請求信進 LLM kernel 的信箱、收回信的基礎工具（定位同 aos-post；thinking 11-04 think-as-function 02/01 § 5）。",
+    "send": {
+     "send.cpp": "找信箱、讀 body、寄信、撤信（說明見 send.hpp）。",
+     "send.hpp": "寄信——找 kernel 的信箱、讀請求信的 body、寄進 new/、撤信。"
+    },
+    "wait": {
+     "wait.cpp": "收回信、等回信、撤信（說明見 wait.hpp）。",
+     "wait.hpp": "收回信（放 recv 子命令與 ask 的等待 ask_wait；沒有 wait 子命令，資料夾名只是「等回信」那一半）——在回信信箱裡找回某封信的那封、印 body.message 或帶信名的完整 body、錯誤 body、收掉；ask 的等待與撤信。"
+    }
+   },
+   "tests": {
+    "test_full.py": "Verify ask/recv full replies, request names, error bodies, and unchanged default output.",
+    "test_ls_backend.py": "Verify ls exposes backend names in both the JSON window and the text columns.",
+    "test_recv_hint.py": "Check recv's exit 10 says why when something is wrong: kernel not running, or the reply never reached BOX (坑-102).",
+    "test_send_hint.py": "Check send's warning, when no llm daemon runs at AOS_LLM_KERNEL, names the letter and where it was written (two-machines B10).",
+    "test_sender_stack.py": "Check the envelope sender of a brain request is the proc's stack ($AOS_STACK) even when $AOS_WS is set (11-13 線修 T31/T38),"
+   },
+   "vcpkg.json": "aos-llm：寄請求信進 LLM kernel 的信箱、收回信（send／recv／ask／regret）"
+  },
+  "aos-llm-kernel": {
+   "CMakeLists.txt": "`aos-llm-kernel kernel.json`——LLM kernel 跑一次（挑信、跑、回信）。",
+   "include": {
+    "aos": {
+     "llm_kernel.hpp": "aos-llm-kernel 的公開介面——LLM kernel 的信箱與信（aos-llm 寄信收信、aos-llm-kernel 收信回信都用這組）。"
+    }
+   },
+   "src": {
+    "budget": {
+     "budget.cpp": "token 回報與額度（說明見 budget.hpp）。",
+     "budget.hpp": "token 回報與額度（10-24，thinking 2026-10-24-llm-kernel「token 回報與額度」）。"
+    },
+    "common": {
+     "common.hpp": "aos-llm-kernel 好幾個元素都用到的：型別別名、錯誤代號。"
+    },
+    "daemon": {
+     "daemon.cpp": "找 daemon、提醒 AOS_KERNEL 缺信箱、寄掛信與讀表（說明見 daemon.hpp）。",
+     "daemon.hpp": "kernel 請 daemon 掛問腦 proc——找 daemon、寄掛信／拔信、讀 daemon 的表（11-05 kernel-daemon 03）。"
+    },
+    "letter": {
+     "letter.cpp": "信箱的路徑、信件名稱、寄信的人還在不在（sender.flock）、priority、回信（說明見 aos/llm_kernel.hpp）。"
+    },
+    "main.cpp": "aos-llm-kernel 命令列——LLM kernel 跑一次：從信箱挑最該跑的信、跑、回信（多半是 daemon.json 的身體，給 daemon 一次次拍；要在 daemon 底下）。",
+    "pack": {
+     "pack.cpp": "endpoint 能力包、後端歸屬驗證與屬性窗（說明見 pack.hpp）。",
+     "pack.hpp": "endpoint 能力包（11-05 feat-proto 件 2、件 3）——後端宣告、backend 歸屬與 kernel.json 的 endpoints 一組＝一個包（代號就是能力名：smart-high、stupid-fast…）。"
+    },
+    "queue": {
+     "queue.cpp": "queue.json 有變才寫、後端狀態驗型與黏著排隊（說明見 queue.hpp）。",
+     "queue.hpp": "排隊——kernel 自己記的帳（$AOS_STACK/queue.json）、後端最後掛的包與黏著排序。"
+    },
+    "serve": {
+     "config.cpp": "讀 kernel 設定、驗 slots、high 保留格與後端格數、解指示詞與 endpoint 函數路徑（說明見 serve.hpp）。",
+     "proc.cpp": "掛問腦 proc、判斷收尾與透明錯誤、沿用換包旗標重掛並收集各後端在飛信件（說明見 serve.hpp）。",
+     "reply.cpp": "寫回信、寄送與撤回回信、記用量與含換包旗標的逐封帳並收掉信件（說明見 serve.hpp）。",
+     "scan.cpp": "檢查排隊信件、挑選與解析含後端歸屬的 endpoint 能力包（說明見 serve.hpp）。",
+     "serve.cpp": "鎖信箱、選開計數、清理寄件人已離開的信、按宣告級數留 high 格、檢查後端限制與記換包，再串起每輪流程（說明見 serve.hpp）。",
+     "serve.hpp": "kernel 跑一次——讀設定、鎖信箱、收拾、排隊、認領、請 daemon 掛問腦 proc、收成品、回信。"
+    }
+   },
+   "tests": {
+    "test_backends.py": "Verify backend limits, durable switch records, and priority-safe sticky ordering with prepared mailboxes.",
+    "test_batch8_live.py": "Verify copied kernel templates nest through two real daemons and batch local packs without blocking urgent mail.",
+    "test_ledger.py": "Verify kernel finish records fake-brain costs and tolerates ledger write failures.",
+    "test_nesting.py": "Verify nested-kernel error boundaries, ledger fields, and remount invariants with prepared mailboxes.",
+    "test_nesting_live.py": "Verify priority stdin, child accounting, and error replies through a real daemon and kernel.",
+    "test_stopped_slot.py": "Check a brain call someone stopped on the daemon frees its slot after STOPPED_GIVE_UP_S (設計-56).",
+    "test_two_machines.py": "Check two-machines kernel fixes: in-flight brain calls never pin an absolute endpoint path; budget.senders keys that are not folders warn, and sender…"
+   },
+   "vcpkg.json": "aos-llm-kernel：LLM kernel 跑一次——從信箱挑最該跑的信、跑、回信（信箱、信的格式也給 aos-llm 用）"
+  },
+  "aos-lock": {
+   "CMakeLists.txt": "鎖（N-15）——mkdir <目標>/.lock/ 或 <目標>.lock/、名牌 holder.json、flock 判存活、兩鐘租約、收屍。",
+   "include": {
+    "aos": {
+     "lock.hpp": "aos-lock 公開介面——mkdir 取鎖、flock 判存活、兩鐘租約、改名放鎖。"
+    }
+   },
+   "src": {
+    "common": {
+     "common.hpp": "aos-lock 跨元素共用的小東西（內部標頭，不對外）。"
+    },
+    "holder": {
+     "holder.cpp": "名牌與 flock 存活快照、兩鐘租約判斷。"
+    },
+    "lock": {
+     "lock.cpp": "mkdir 取鎖、目錄 fd 原子刊登名牌、保管 flock fd、收屍與放鎖。"
+    },
+    "main.cpp": "aos-lock 命令列——無存活標記的持久鎖、時鐘租約、放鎖與查看。"
+   },
+   "tests": {
+    "test_owner.py": "Check `aos-lock release` leaves someone else's lock alone (warning, exit 10) unless --force (設計-52).",
+    "test_release.py": "Check lock release still frees cleanly and stays exclusive under parallel senders after the close-before-rename change."
+   },
+   "vcpkg.json": "aos-lock：鎖（N-15：mkdir .lock/、名牌 holder.json、收屍）的 lib 與命令列"
+  },
+  "aos-loop": {
+   "CMakeLists.txt": "`aos-loop loop.json`——一次次跑 exec，看結束碼決定下一步。",
+   "include": {
+    "aos": {
+     "loop.hpp": "aos-loop 的公開介面——跑「一次」、反覆跑的骨架、ctl／state／state_flux 公開格式與選開計數檔。"
+    }
+   },
+   "src": {
+    "common": {
+     "common.hpp": "aos-loop 好幾個元素都用到的：型別別名。"
+    },
+    "engine": {
+     "config.cpp": "Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、解指示詞（resolve_keys，10-23 晚）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）；",
+     "engine.hpp": "反覆跑的程式的骨架 Loop（公開介面在 aos/loop.hpp）。",
+     "loop.cpp": "Loop 每次怎麼走（說明見 aos/loop.hpp）。",
+     "stack.cpp": "make_stack——aos-loop、aos-fsm 起來時 $AOS_STACK 有設但資料夾不在就 mkdir -p（11-11，說明見 aos/loop.hpp）。",
+     "window.cpp": "ctl／state／state_flux 三扇窗與選開的 counter_runs.txt（NORMS N-06～N-09、N-17、N-32、N-33）。"
+    },
+    "main.cpp": "aos-loop 命令列——block_signals、解命令列、讀設定、Loop::serve（公開 API 見 aos/loop.hpp）。",
+    "run": {
+     "folder.cpp": "run_folder——`aos-exec -- 目標 參數...`，在 fork 出來的子行程裡呼叫 aos-exec 的 run_cli。",
+     "inline.cpp": "run_inline——exec 是物件（內嵌單子）時，行程內跑它（10-24；說明見 aos/loop.hpp 的 run_once）。",
+     "run.cpp": "run_once——跑一次（說明見 aos/loop.hpp）。",
+     "run.hpp": "跑一次（公開介面 block_signals、take_signal、run_once 在 aos/loop.hpp）。",
+     "signals.cpp": "將訊號操作轉交 aos-util（說明見 aos/loop.hpp）。"
+    }
+   },
+   "tests": {
+    "test_on_start_stop.py": "Check loop.json on_start / on_stop: run once before the first run and once on every way out (11-11 clock-hook).",
+    "test_ref_hash.py": "Check {\"$ref\": \"#/...\"} in loop.json (a config key, the inline exec inst, ctl) takes the file that holds it (11-12).",
+    "test_stack_make.py": "Check aos-loop creates a missing $AOS_STACK at start (11-11, make_stack) and writes there as usual."
+   },
+   "vcpkg.json": "aos-loop：一次次跑 run（aos-exec 的目標），看結束碼決定下一步"
+  },
+  "aos-post": {
+   "CMakeLists.txt": "投遞（N-16 信箱）——寄信、認領、處理完、撤回。",
+   "include": {
+    "aos": {
+     "post.hpp": "aos-post 的公開介面——投遞（NORMS N-16）：寄信、認領、讀信、處理完、撤回。"
+    }
+   },
+   "src": {
+    "common": {
+     "common.hpp": "aos-post 跨元素共用的小東西（內部標頭，不對外）。"
+    },
+    "help": {
+     "help.cpp": "aos-post 各子命令的旗標說明與用法字串。",
+     "help.hpp": "aos-post 各子命令的英文說明與 usage。"
+    },
+    "mailbox": {
+     "mailbox.cpp": "信箱的路徑、建信箱、拿信箱、信件名稱的規則（check_name、is_ordered、sort_letters）、"
+    },
+    "main.cpp": "aos-post 命令列——第一個參數挑子命令，其餘照 aos-util 的 parse_cli（旗標在位置參數前面）。",
+    "send": {
+     "send.cpp": "驗信箱與名稱、記牆鐘與選填時鐘值 寄信，並以鎖保證有序投遞。"
+    },
+    "take": {
+     "take.cpp": "認領、驗信封（含選填時鐘值）、回信與處理完，並提供寄信人撤回。"
+    }
+   },
+   "vcpkg.json": "aos-post：投遞（N-16 信箱：寄、認領、處理完、撤回）的 lib 與命令列"
+  },
+  "aos-util": {
+   "CMakeLists.txt": "aos 這一家命令列工具共用的函式庫。",
+   "include": {
+    "aos": {
+     "util": {
+      "cli.hpp": "各支可自定短名、只在旗標位置認 help 的命令列（aos-exec、aos-loop、aos-fsm、aos-daemon 共用）。",
+      "clock.hpp": "讀樹的時鐘，並按兩鐘規則建立與判斷期限。",
+      "error.hpp": "aos 這一家命令列工具共用的錯誤型別，和通用的錯誤代號。",
+      "files.hpp": "檔案的小工具——路徑、目錄操作、讀檔、壞檔留證與文字及 JSON 原子寫入。",
+      "io.hpp": "aos 這一家命令列工具的「三扇門」——stdin 讀一份 JSON、stdout 印一行 JSON、stderr 只有兩種行。",
+      "proc.hpp": "整群送訊號、/proc 身分資訊、UTC 時間與唯一名稱。",
+      "signals.hpp": "建立、阻擋與取出收工訊號，並保留及還原阻擋前的遮罩。",
+      "text.hpp": "UTF-8 字串的小工具（10-22 起 aos-exec 的 .env、aos-fsm 的 state 檔用）。"
+     }
+    }
+   },
+   "src": {
+    "cli.cpp": "命令列旗標（含各支自定短名）與設定檔讀取（規則見 include/aos/util/cli.hpp）。",
+    "clock.cpp": "讀時鐘與標稱間隔，用樹時鐘或 UTC epoch 毫秒計算期限。",
+    "dirs.cpp": "查詢、建立、列出、改名與移除目錄及檔案。",
+    "files.cpp": "路徑、讀檔、壞檔留證與文字及 JSON 原子寫入（說明見 include/aos/util/files.hpp）。",
+    "io.cpp": "三扇門——stdin 讀一份 JSON、stdout 印一行、stderr 印錯誤行／提醒行（說明見 include/aos/util/io.hpp）。",
+    "proc.cpp": "整群送訊號、/proc 身分資訊、UTC 時間與唯一名稱（說明見 include/aos/util/proc.hpp）。",
+    "signals.cpp": "阻擋與取出收工訊號、保存舊遮罩並供子行程還原（說明見 include/aos/util/signals.hpp）。",
+    "text.cpp": "UTF-8 字串的小工具（說明見 include/aos/util/text.hpp）。"
+   },
+   "tests": {
+    "test_parse_cli.py": "Check aos::parse_cli takes flags before or after positionals (P-44 continued, 11-11) through the C++ parts that use it."
+   },
+   "vcpkg.json": "aos-util：aos 這一家命令列工具共用的小函式庫（錯誤、stdin 讀一份 JSON、印結果與錯誤）"
+  },
+  "cmake": {
+   "settings.cmake": "aos 這一家 C++ 專案共用的 CMake 設定。"
+  },
+  "vcpkg.json": "proto8/impls 頂層建置：全家 C++ 專案的相依合併（各專案自己的 vcpkg.json 給單獨建用）"
+ }
+}
