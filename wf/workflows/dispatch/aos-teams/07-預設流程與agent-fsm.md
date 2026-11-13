@@ -1,6 +1,6 @@
 # 預設流程（11-13 晚）：opus 帶隊、sonnet 搜集、fable 規劃、實作的 gpt 走 aos 的 agent-fsm
 
-← [入口](../aos-teams.md)｜涵蓋：預設流程、實作誰做、gpt 系改走 agent-fsm、家機的 gpt 端點、待補｜上一份 [06-公司WSL活樹與任務書硬規則](06-公司WSL活樹與任務書硬規則.md)
+← [入口](../aos-teams.md)｜涵蓋：預設流程、正統規劃流程、實作誰做、gpt 系改走 agent-fsm、家機的 gpt 端點、待補｜上一份 [06-公司WSL活樹與任務書硬規則](06-公司WSL活樹與任務書硬規則.md)
 
 ## 預設流程
 
@@ -11,6 +11,18 @@
 - **fable 規劃與設計架構**：只做頂層規劃／設計，**只讀 opus 備好的匯總**、不廣讀 repo；fable 可再派 fable 子 agent。這一輪可在輪間、輪中跑，次數不限；實作時 fable 不即時參與。
 - **實作照既有分工**（使用者 11-13 晚選 A）：gpt 系優先、照圖紙寫碼，claude（opus 普通、sonnet 簡單）補位；gpt 系不參與設計決策（入口「gpt 系」那條照舊）。**gpt 系改走 aos 體系**：見下節。
 - 派出去的 agent 先通讀 wf/ 規矩，並先讀知識庫 `~/aos-home/knowledge/aos/_description.json` 大致掌握 aos 體系；兩者同一套例外，簡單工作與雜活免讀（入口「讀規矩」；使用者 11-13 晚「照預設走」）。
+
+### 正統規劃流程（11-13 23:40 重述）
+
+使用者重述同一條鏈，叫它「正統規劃，架構設計流程」，多了兩處：
+
+**opus 帶隊 → sonnet／gpt 蒐集 → opus 匯總給 fable → fable 設計 → opus 深化細化、出實作計劃 → Argon 審 → opus 依 Argon 改計劃 → 實作由 astra 帶 sol 做。**
+
+- **Argon 審**：opus 初步深化細化之後、交實作之前，送 Argon 跑一次（指令與 (A) 審查 (B) 提案的格式見 [05](05-同機session與Argon.md#argon-是參與者不只審稿)）；opus 逐條寫採納／不採納與理由，改後的計劃才算定稿。
+- **實作 astra 帶 sol**：照 [astra-kernel-plan](../../../../proto8/thinking/2026-11/13/astra-kernel-plan.md)（astra 指揮、sol 照圖紙寫碼；在 aos 樹裡跑 agent-fsm 身，接下一節）。這是 gpt 系優先那條的具體隊形；astra 只指揮與驗收、不改圖紙的設計，跟入口「gpt 系不參與設計決策」不衝突（圖紙由 opus 定）。施工仍要使用者另外點頭（鐵律 2）。
+- 「sonnet／gpt 蒐集」：gpt 那半照上面「sonnet 搜集」條，等 agent-fsm 有雛形。
+
+原話見 [03「使用者 11-13 23:40 原話」](03-使用者原話.md#使用者-11-13-2340-原話正統規劃流程)；第一次照這條跑的是 [any-resource-os](../../../../proto8/thinking/2026-11/13/any-resource-os.md)。
 
 原話見 [03「使用者 11-13 晚原話」](03-使用者原話.md#使用者-11-13-晚原話工作流程)。第 4 句把 11-07 午那條鏈寫定：搜集由 sonnet 做（11-07 午「可以是opus計劃，讓gpt收集」是舉例）；11-07 午「fable 只做頂層規劃、只吃備料、實作時不參與」與午後「輪中也可、次數不限」照舊。
 
