@@ -12,6 +12,23 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-13 20:30 家機頂層（樹外的 Claude Code）交棒給樹裡的 repo-aos
+
+1. **授權與工作方式**：在家機（Manjaro）。使用者開場：「事情盡量交給agent做，普通工作交給opus，簡單工作交給sonnet。agent做事前要讀過wf/規矩，簡單工作除外。晚上十一點睡覺前再push。」；「今天的優先目標是幫我架起aos」；「總之先搭好。後面我要把你這個session關掉，咱們走aos」——**之後的頂層是樹裡的 `repo-aos`**，這個樹外的 session 會關掉。fable 照 user.md「盡量少用」。
+2. **push**：23:00 睡前推一次，推之前跟使用者說一聲（數量看 `git log origin/main..main`）。
+3. **家機今晚定的**（細節 [aos-home-家機](../proto8/thinking/2026-11/13/aos-home-家機.md)、[日誌](session_logs/2026-11/2026-11-13.md)）：
+   - **repo 改放 `~/repo/aos`**（「直接放~/repoaos」「~/repo/aos」）：從舊位置 clone、origin 指 GitHub；舊的 `~/repo/simple_tools/aos`（`simple_tools` 的子模組）使用者說「不用刪」，留著、不再當工作 repo。impls 在新位置全部重 build，`~/.local/bin` 25 條 `aos-*` 與 `.pth` 都指 `~/repo/aos`（舊 `.pth` 改名留著）；全套 69 夾 1599 例全綠（公司機那 4 支既有紅與 gitignore-check 在家機都沒紅，原因沒查）。
+   - **樹住 `~/aos-home`、從零搭**，陣容 `eca_main`＋`repo-aos`（都 opus；`repo-aos` 工作區 `~/repo/aos`、定義在 `~/aos-home/agents/repo-aos`）。兩隻會答、互寄信收得到、停樹再起 history 在；存檔 `~/aos-saves/aos-home-1113-home`。**驗完樹停著，起樹由使用者自己下**；指令在 [wait-user/03](wait-user/03-試驗場.md)。沒驗：`aos-agent open`（畫面）；`~/aos-home/ws`、`~/repo/aos` 兩處開畫面前要使用者各開一次 `claude` 按信任。
+   - **`.zshrc` 自動 source**（使用者「我想要把它加入我的.zshrc」「要」）：舊的 `export AOS_HOME=…/simple_tools/aos/proto8` 換成 `[[ -z $AOS_STACK && -f ~/aos-home/env.sh ]] && source ~/aos-home/env.sh`（agent 底下的 shell 帶 `AOS_STACK` 就跳過）；三項實測都對。實際檔是 `~/dev/dotfiles/zsh/.zshrc`（那個 repo 有一筆沒 commit 的改動、沒代他 commit），備份 `~/.zshrc.bak-1113-aos-home`。
+   - **舊 aos MCP 那行已拿掉**（選項框「搭好就拿掉」）：`~/.claude.json` 裡 `~/repo/simple_tools/aos` 專案的 `mcpServers.aos` 刪了，備份 `~/.claude.json.bak-1113-aos-mcp`；`arcagi` 專案那行與 `~/.cache/aos-mcp-*` 兩格沒動（`aos-mcp-arcagi/tools.json` 有 3 處寫死舊 repo 路徑，舊 repo 留著所以還能用）。
+   - 收工待裁頁 W7、W16、W17、W18、W23 已施工（`ff97da487`）；wf-lint 刪掉後的補掃做完。
+4. **留著的**：
+   - `env.sh` 只清三個 Claude Code 變數；從 Claude Code 的 shell 起樹還會帶 `CLAUDE_CODE_SESSION_ID`、`CLAUDE_CODE_MESSAGING_SOCKET` 等給樹裡的 claude，有沒有影響沒驗、正本要不要改沒定。
+   - W16「改口摺疊」那節要不要也補進知識庫（WAIT_USER 01）。
+   - `wait-user/03` 裡「家機試驗場 11-12 晚……樹開著」那條可能過時；`~/code/playground` 原樣留著。
+   - 線家的代定（`repo-aos` 用 `--tools default`、`--auto-restart`、`--on-busy yield`、`system.txt` 用絕對路徑、不抄 `kernel/`）在 aos-home-家機，可翻案。
+5. **接下來**（家機能做的，全貌在下一條第 9 點與 [SESSION-LOG](SESSION-LOG.md)）：各 agent 意見整理成題目、workflows 併入第 3、4 塊（模板 repo 在 GitHub）、`set-def` 與「換定義後提醒在等的信」兩件已裁未施工、kernel 批 7b／11b／12、真腦驗證（批 13、14）。公司機那棵樹要的事回公司機做。
+
 ## 2026-11-13 公司 WSL 頂層（repo-aos）收工草稿
 
 （14:00 前後起草，15:40、16:15、16:35 各補一輪；沒有待補的記號了。）
@@ -72,50 +89,3 @@
 5. **明天接什麼**：① 主 session 接 aos（使用者先重連 aos MCP）→ [wf-to-aos 02](../proto8/thinking/2026-11/12/wf-to-aos/02-寄信給人與主session.md)；② eca-tidy 第 8 條 `feedback/*.jsonl` 帶家目錄路徑（使用者「明天再說」）；③ 範本要不要掛 `jsonx`（甲乙丙，[WAIT_USER 01](wait-user/01-要你裁的.md)）；④ eca_tidy 產出剩 SUMMARY 沒做；⑤ 公司機 pull 後重 build 全部 impls、重跑 `proto8/install.sh`、試驗場重抄（細目見下一條第 7 點）。
 6. **試驗場的樹**：關機前使用者自己停（`aos-daemon-ctl -d ~/code/playground/.stack shutdown`）。
 7. **踩過的坑**：多條線共用工作樹——`git add` 指名路徑後馬上 commit、不 `-A`、不 `git stash`；全套測試從空目錄起跑；唯讀 eca 開 mail_notify 就要掛讀信兩支或關 mail_notify。
-
-## 2026-11-12 晚 家機頂層收工
-
-1. **授權與工作方式**：在家（家機 Manjaro，`~/repo/simple_tools/aos` main）。頂層只調度，事情交給 agent：普通 opus、雜活 sonnet、規劃 fable；agent 可以再派子 agent；非雜活先讀 wf/ 規矩。**push：睡前（23:15 關機）一次，推之前頂層先跟使用者說一聲**。使用者：「等一下token額度到上限後別動，我有一個免費的額度重置」（頂層轉述）——額度到上限就停在原地等他，不要自己接著做。之後（頂層轉述）：他說把額度重置了、後天是每週額度重置；接下來的想法都派 fable 隊長、可以找 Argon。
-2. **今晚新定的規矩**（都在 [tidy content-trim](workflows/tidy/content-trim.md#清舊不必逐項先問2026-11-12-定) 開頭）：「本來就該按照tidy規矩，把舊的東西清掉」＝tidy 判準涵蓋的清舊直接做、事後列清單；「不存在的東西就刪掉。」＝條文講到已不存在的 key／指令／檔／機制直接刪；「還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論」＝**條文與說明只寫現在式結論**，之後寫條文的人也照這條（按日紀錄不適用）。
-3. **今晚進 main 的**（約 180 個 commit，都沒 push；細節在 [日誌](session_logs/2026-11/2026-11-12.md)）：
-   - **外部 MCP**：fsm 經 aos 匯入九步（`15e7f8225`～`b9ca076fc`；新指令 `aos-mcp-import`＋`sync`、`lib/mcp_client.py` 等）；Q1 不做白名單、Q2 stdio server 一律在 server 檔資料夾起（`8c4d73d15`）→ [external-mcp 08](../proto8/thinking/2026-11/12/external-mcp/08-fsm施工結果.md)
-   - **eca**：claude 身開 `Agent`／`Skill`、aos MCP 切主／子兩台（`tools_sub`）`2ab15e1c7`；codex 身只調查 `dc303e087` → [eca-task-subagent](../proto8/thinking/2026-11/12/eca-task-subagent.md)；沒畫面時 `/goal`、`/compact` 失敗不再卡信 `db2018b72`
-   - **index 與 `$ref`**：index 每筆可帶 `index`、檔內 `_index` 可為路徑、路徑照 json／檔案系統同像從容器算、收 `#/` 開頭 → [index-link](../proto8/thinking/2026-11/12/index-link.md)；`$ref` 收 `#/`＝寫著它的那份檔 → [ref-hash](../proto8/thinking/2026-11/12/ref-hash.md)
-   - **json 工具續行**：aos-json 加 add／ls／search、新工具 `json_len`、`jsonx_multi_get／set`、`json_ls` 的 `depth` → [json-tools 04](../proto8/thinking/2026-11/12/json-tools/04-aos-json下沉與len與jsonx-multi.md)
-   - **拆檔與程式碼庫整理**：`aos-eca-turn` 拆成 `aos_eca/`、`cli_session` 拆成八份 `cli_*.py`；fable 領隊整個 proto8 程式整理（行為不變、各批各自 commit，收尾 `ae2fd4e8a`）→ [codebase-cleanup](../proto8/thinking/2026-11/12/codebase-cleanup/README.md)
-   - **tidy 三輪**：wf 交接檔瘦身（SESSION-LOG、WAIT_USER 分 `wait-user/`、日誌分月）、conventions 拆檔、C-54／N-28 摺疊、全 docs 沿革只留結論 → [tidy 報告](workflows/tidy/reports/2026-11-12-收尾.md)
-   - **thinking→docs 提取**（10-29～11-12）：W1～W7、W9 做完，新條 C-87～C-92、P-47、P-48；W8 等 U1 → [thinking-to-docs](../proto8/thinking/2026-11/12/thinking-to-docs/README.md)
-   - **wf→aos**：對標調查（必須的都有、缺的是小輔助）；主 session 的 aos MCP 登記檔修好（repo 外，10 支）→ [wf-to-aos](../proto8/thinking/2026-11/12/wf-to-aos.md)、[wf-to-aos 02](../proto8/thinking/2026-11/12/wf-to-aos/02-寄信給人與主session.md)
-   - **試驗場**：家機 11-12 21:04 照 main `415cf6a2c` 第三次整個重建（fsm 48 含 fake_echo、eca 各 26、子 agent 那台 9；假腦／gemma／haiku 子 agent／codex luna／index_view／`$ref #/` 都實跑過；樹停著，`edcb5fc70`）→ [playground-home](../proto8/thinking/2026-11/12/playground-home.md)
-   - **額度重置後四個新想法**（各派一位 fable 隊長、都找了 Argon、都只調查／想清楚，沒改程式與條文；Argon 提示與回覆原文存在各題夾裡）：`$ref` 跟 index 統一的範圍（`$ref` 資料檔 9 個、程式 7 支約 110 處；統一法五種，傾向共用解析器＋記號）→ [ref-index-unify](../proto8/thinking/2026-11/12/ref-index-unify.md)；`_metainfo` 套客觀／通用觀點／主觀（套得順，卡在執行類的格）→ [metainfo-views](../proto8/thinking/2026-11/12/metainfo-views.md)；kernel 是上面與硬體的橋（四種整理法、圖紙不用重畫）→ [kernel-as-bridge](../proto8/thinking/2026-11/12/kernel-as-bridge/README.md)；linux user 是可互動的對象（linux 事實、對到 aos 現況、五個念頭的讀法）→ [linux-user](../proto8/thinking/2026-11/12/linux-user.md)
-   - **收尾修補**：proto8 舊文件壞連結修 21 條 `64b22d69f`；fork 測試 `test_kernel_alone_is_not_a_daemon` 改在空的暫存目錄跑 `6602f453c`（紅的原因是 repo 裡留著 11-02 的空 `proto8/.stack` 夾被 `ctl who` 猜到、不是回歸；那個空夾頂層已 `rmdir`，照公司條「空殼夾准刪」）
-4. **使用者今晚的裁定**（原話短引）：
-   - 試驗場：「我沒在跑，試驗場那邊也可以全清空。」
-   - 全域 MCP：「全域mcp這個我們管不着，只要確定不要干擾到我們的aos就好。」
-   - 外部 MCP Q1／Q2：「1.不用，風險自己承擔。2.這個我不是很清楚，如果你覺得要統一那就統一吧，我直覺上感覺OK，反正之後出事再說」；之後「外部MCP，明天再說」（頂層轉述）。
-   - index 三題：「1. 甲。2.甲。3.甲，話說ref應該支援#/開頭吧」（都維持現狀；`$ref` 收 `#/` 另做）；index 路徑收 `#/`：「也跟進吧」；資料夾的 `_index.json` 裡寫 `#/` 算不算：「算數。」
-   - 拆檔與整理：「東西都弄好後，可以來做重構拆檔+tidy。」「重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。」「盡量做」；tidy 的三句見第 2 點。
-   - fsm 真腦跑一晚：「fsm真腦跑一整晚...假日再說。」（頂層轉述）
-   - wf→aos 五點：「…4.把人類這個linux user作爲agent，寄信過去就是了。5.對，這個明天開始。」（全句在 [wf-to-aos](../proto8/thinking/2026-11/12/wf-to-aos.md)）；「就是說，沒有硬性缺的了，現在wf/的東西，我們拼拼湊湊就能有了。」「以後一定會比wf/好用，放心。寄信這個以後自然就能夠搞定，反正必須的都有了。」
-   - 主 session 接 MCP：「好，這些都不是問題。只是主session接mcp這個要處理。邊緣狀況這邊就先這樣，之後踩坑再說。」
-   - 四個新想法（同一則訊息，開頭「接下來我會輸出一連串想法，要麻煩你都派fable隊長。」、結尾「這些都可以讓argon幫忙」）：
-     - 「首先是$ref這塊，可以的話還是想要跟index統一，去幫我看看牽涉到的範圍有多大。」
-     - 「然後是metainfo這東西，就是說，還是今天thinking中所說的，客觀，通用觀點，主觀那套index/description，metainfo其實也是一樣，去想想。」
-     - 「然後是kernel這塊我也有新的想法，就是說，我一直說kernel負責排程和資源分配，後來發現linux kernel這個最通用的kernel，他的核心功能其實是作業系統與硬體的橋梁，套用到我們這邊，首先是root daemon本身就是一個kernel，他的所謂硬體對象就是linux，那，如果root daemon底下掛了另一個daemon，那對這個子daemon來說，root daemon就是他的硬體，去幫我想想。」
-     - 「再派一個：關於linux使用者，不管背後是人還是agent，他都是一個可以互動的對象。這個很特別，我第一次跨足這塊。首先是root daemon本身掛在一個使用者底下。然後是一個linux user，他對於linux這個硬體來說，他就是一個proc(不管這個proc背後是誰，反正從linux這邊看過去，他就是一個proc)，他其實跟root daemon是平級的。Hmmm，假如是root user的root daemon呢？或者說，一個linux user他搞不好會說某個root daemon那個proc，就代表他？總之先做初步調查。」
-   - 四個新想法的回覆（11-12 晚，一則訊息，逐字）：「當然，全都是觀點，全都是參考用，出事了自行負責。_index的obj內要不要再多塞東西...可以，想塞啥塞啥，出事了自己負責。主觀的metainfo的位置也不規定。客觀那個你不管怎麼描述無法描述全，所以能被我們記錄下來的，非私有的，全都是通用視角(公用視角)(自己公開給別人的聲稱)。_metainfo不算index，_metainfo他是描述自身節點的一個子節點，可以塞任何東西來描述自身，因爲index也是一種描述自身的東西，所以也可以塞入其中。$ref這塊，可以用#/指代根obj，同時也算指代自身所在檔案，所以可以用#/key, #/../other.json。kernel這塊，我的請求寄給誰...這個確實有點寬泛，他背後的那個概念(資源排程)和我們的現在的概念有點衝突(硬體橋梁)，linux kernel當然同時包含這兩種概念，但我覺得硬體橋梁比較重要，資源排程這塊linux kernel更像是對硬體的資源進行排程與管理。所以資源排程這塊我覺得還是別叫kernel好了。kernel這塊等等細聊。linux user要等等。然後等等幫我準備好遊樂場。我想試試看用claude eca來初步整理proto8，唯讀的，整理結果放外面。」
-     各題去向：`_metainfo`／index 那幾句、`$ref` 那句各有一位 fable 落實中（各自記錄，見 [metainfo-views](../proto8/thinking/2026-11/12/metainfo-views.md)、[ref-index-unify](../proto8/thinking/2026-11/12/ref-index-unify.md)）；kernel 方向已說（硬體橋樑比較重要、資源排程那塊別叫 kernel），細節等細聊、新名字未定，題 1、3 未答（同晚細聊後「資源排程別叫 kernel」收回、名字都不改，見下一步 8） → [kernel-as-bridge § 使用者回覆](../proto8/thinking/2026-11/12/kernel-as-bridge/README.md#使用者回覆11-12-晚)；linux user 等等；遊樂場另有人在準備。
-5. **下一步**（依優先）：
-   1. 主 session 接 aos（明天）：使用者先重連 aos MCP；接著 Skill 放哪、主 session 身分、always-on 規矩、`todo` 歸誰 → [wf-to-aos 02](../proto8/thinking/2026-11/12/wf-to-aos/02-寄信給人與主session.md#明天主-session-開始現在卡在三點)
-   2. 外部 MCP 接真的別人寫的 stdio server（明天；要下載先問）＋codex 沙盒對 stdio、`disabled_tools` → [external-mcp 08](../proto8/thinking/2026-11/12/external-mcp/08-fsm施工結果.md)
-   3. thinking→docs W8：等使用者裁 U1 → [thinking-to-docs](../proto8/thinking/2026-11/12/thinking-to-docs/README.md)
-   4. 程式碼庫整理剩的（agent-fsm 兩段逐字相同與 `clock_tick`、找 lib 五種寫法、兩處文件舊出處）→ [codebase-cleanup](../proto8/thinking/2026-11/12/codebase-cleanup/README.md#做到哪11-12-晚收線)
-   5. 待裁各題（WAIT_USER 01）裁了就照做。
-   6. kernel 框架施工與 fsm 真腦跑一晚：假日。
-   7. 四個新想法（ref-index-unify、metainfo-views、kernel-as-bridge、linux-user）等他看，各題要他定的在 WAIT_USER 01；都不擋別的。
-   8. kernel 細聊：已聊出「手／門」（daemon 是手、kernel 是門）、kernel 是主觀的概念、daemon 也是概念（使用者「好，就是這樣。」）；「資源排程別叫 kernel」收回、名字都不改（「對，收回，名字都不用改。」）；他要頂層多講 daemon、建立自己的心智模型——已講完、他認可（「我覺得這樣就OK了」）；剩：題 1 嚴到哪、題 3 圖紙；`aos-daemon-ctl` 不經判官的出入待給他看 → [kernel-as-bridge 06](../proto8/thinking/2026-11/12/kernel-as-bridge/06-細聊-手與門.md)
-   9. 遊樂場：使用者要用 claude eca 唯讀初步整理 proto8、整理結果放外面——`eca_tidy` 已備好、樹開著，等他試（[wait-user/03](wait-user/03-試驗場.md)）。
-6. **等使用者的**：都在 [WAIT_USER](WAIT_USER.md)（要你裁的、真機驗證、試驗場、雜事四類）；最急的是 push 與重連 aos MCP。
-7. **另一台機器（公司）要注意**：pull 之後①重 build 全部 impls（aos-directive 介面變了；aos-json 沒重 build 的話 `json_ls`／`json_search`／`json_add` 會報 `CommandUnknown`）②重跑 `proto8/install.sh`（新指令 `aos-mcp-import`）③試驗場 `lib／py／cmd／templates/agent-fsm` 整份重抄④`~/.cache/aos-mcp-*/tools.json` 的壞格照 [wait-user/04](wait-user/04-雜事.md) 那行指令清。impls 又重 build 過（`$at`），pull 後要重 build 全部 impls。
-8. **踩過的坑**：多條線共用一個工作樹時，`git add` 指名路徑後要馬上 commit，不然別人 staged 的會被一起帶走——今晚發生兩次（json 線帶走 tidy 的刪檔、提取 W2 帶走 W5），另有一次誤 amend、已還原；同時開的 agent 數有上限（約 20）；全套測試要注意起跑目錄——repo 裡若留著空的 `.stack` 夾會被 `ctl who` 猜到（今晚紅一支就是這個）；多條線共用工作樹時不要 `git stash`（會把別人沒提交的改動一起收走）。
-9. **測試與 HEAD**：全套最後一次全綠是 61 夾 1244 例（對應 `9da8be804` 的樹；跟先前記的 65 夾 1325 例算法／範圍不同、原因沒查），`lib/aos/measure` 連跑五次全過、先前偶發的紅未重現；之後 aos-sandbox 那輪另跑相關夾 716 例全過、新增 `cmd/aos-sandbox/tests` 8 例；codemap 0 stale。HEAD 與 push：以 origin/main 是否含本條為準（頂層收工時問過使用者後推）。

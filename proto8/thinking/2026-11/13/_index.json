@@ -14,6 +14,9 @@
  "aos-1113-收工待裁.html": {
   "description": "11-13 收工前：24 題待你裁"
  },
+ "aos-home-家機.md": {
+  "description": "家機也住 `~/aos-home`（11-13 晚，線家）：從零照十七步搭好根＋領班＋opus `eca_main`＋工作區是 `~/repo/aos` 的 opus `repo-aos`，真腦、互寄信、停起、存檔都過，驗完樹停著"
+ },
  "aos-home-手冊.html": {
   "description": "11-13 給使用者照著做的 aos-home 手冊（公司 WSL）HTML 原稿：從零搭 ~/aos-home 一棵小樹與 opus eca 的步驟"
  },
