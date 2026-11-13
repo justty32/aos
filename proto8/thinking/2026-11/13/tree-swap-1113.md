@@ -111,6 +111,8 @@ bash ~/repo/aos/proto8/extras/tree-swap/rollback.sh
 
 **`54789088d`**（頂層 22:4x 傳的最終 commit，專區段 2 已收線；之後只會有 `proto8/cmd` 的新檢視指令與 wf 記帳，不影響換的四夾）。C++ 十支在 `~/code/swap-1113/src2`（`BUILD_REF`＝`54789088d`）。早先的 `9736e54a0`／`src`（`0e62d640e` 編的）作廢：`check` 會因 `proto8/impls` 不同而紅燈。
 
+**第二次換（11-13 晚）**：使用者已換成 `54789088d`（備份 `~/.aos/saves/tree-swap/20261113-225536`），頂層再傳 `65af5fde7`。`proto8/impls` 跟 `54789088d` 無差異，沿用 `src2`；暫存樹改從活樹現況（＝`54789088d`）唯讀抄起，第七輪 12 段（19 項）全綠：要換 lib 改 7＋新 1、knowledge 改 1、py 改 1，換 1.42 s、退回 0.27 s 逐位元同。手冊改成 `--ref 65af5fde7`，註明會另開時間夾備份、要退到第一次之前用 `rollback.sh --backup …/20261113-225536`。
+
 ## 實際換樹紀錄（11-13 晚，使用者照桌面手冊換）
 
 - **第一次被 `swap.sh` 擋下（RED）**：使用者先 `aos-daemon-ctl -d ~/aos-home/.stack shutdown` 停了樹，但 `aos-agent open -t <名>` 開的 agent 畫面（tmux、裡面的 claude、aos-mcp）是獨立行程，停 daemon 不會關，`check` 看到它們還活著就 RED（退 3、什麼都沒改）。手冊原本只寫「兩個畫面會跟著退出」，這句是錯的。
