@@ -268,3 +268,28 @@
 6. 步 5、6 照 fable。
 
 **要使用者裁的**：C1～C5，fable 推薦全是甲，隊長同意，沒有要另加的題。另有一件要協調、不是要裁的：步 4 碰到 impls／extras 的 13 個連入，等線址、線修收工再做。
+
+## 施工紀錄（opus 隊長，11-13 晚，家機；使用者「code map這塊，就按照推薦。」＝C1～C5 全甲）
+
+| 步 | commit | 做了什麼 |
+|---|---|---|
+| 0 | —（沒做） | 沒叫 aos 工具實跑（這台活樹不碰）。改用避開法：手寫地圖的 `per_file` 寫**純字串路徑**、不用 `$ref`，`json_get` 會不會展開 `$ref` 就不影響；`json_search` 搜整夾、`json_ls` 印不印值仍待驗 |
+| 1 | `e22127f63` | `index_gen.py --apply` 多寫 `wf/knowledge/code-map/proto8/<頂層夾>.json`（11 冊，頂層單檔進 `proto8.json`；impls 有 `deps`＝{專案: {public, private}}）；codemap_gen 寫死的排除清單搬進 `index_gen.json` 的 `codemap` 段；工具夾認法抽成 `codemap_gen.unit_desc` 兩邊共用；新測試 `wf/tools/tests/test_codemap_json.py`。驗收：葉子 873＝md 冊 873 列、涵蓋 1028 檔；連跑兩次無 diff；改檔頭＝CodemapStale 退 1；刪頂層夾＝多出的冊 |
+| 2 | `f55e8a5f6` | 新 `wf/knowledge/code-map.json`：鍵照通用骨架（`domains` 物件陣列、`truth_order` 字串）＋`per_file`、`headline_rule`、`lookup`、`truth_rules`、`base`；`common/code-map.md` 縮成轉址（留「常查的東西在哪」標題，thinking 有一個錨點連它）；AGENTS.md「碰原始碼前」改指 json |
+| 3 | `b21bec87e` | `index_gen.py --apply` 過渡期也寫 md 冊（`codemap_gen.sync_md`）；`codemap_gen.py` 命令列變薄殼（stderr 印一行 note、轉呼叫 `index_gen.main`）；鐵律 3、`conventions/02`、`feature-dev/README`、`code-map/README` 改字。驗收：兩個指令各跑一次工作樹完全相同、檢查模式都退 0 |
+| 4 | —（沒做） | 見下「沒做的」 |
+| 5 | `2b91e9b22` | 通用版 `code-map-rules.json` 加 `per_file_table`；骨架 `fields` 加選用 `per_file`、`headline_rule` |
+| 6 | —（沒做） | C5 甲：轉址檔留到連入的 md 各自轉 json；薄殼等別線都改用新指令 |
+
+**全新 sonnet 驗收**（只給「改 proto8/lib/aos_refpath.py 前要先看哪裡說它負責什麼」）：AGENTS.md「碰原始碼前」→ `wf/knowledge/code-map.json` 的 `lookup`（$ref 路徑那列）與 `domains` lib 那列的 `per_file` → `wf/knowledge/code-map/proto8/lib.json` 的 `tree/aos_refpath.py`，拿到原句、再核對檔頭一致；說好走。它提的小缺點：`lookup` 沒直接附那一句、要多開一層；巢狀 `tree` 它用 python 取、沒走 `json_get`。
+
+施工中別線同時在改（gitignore-check 刪除、aos-tree-start 新增）：步 1 的 `extras.json` 改在 repo 外 worktree 照 HEAD 生成再 commit，別線的 md 冊改動沒收進本線 commit。
+
+**沒做的**：
+
+- 步 4（刪 `wf/workflows/common/code-map/` 整夾、刪 `codemap_gen.render`／`books`／`sync_md`）：連到生成冊的 md 還有 13 個在 impls／extras——`proto8/extras/README.md`、`proto8/impls/README.md` 與 impls 的 12 份 docs（跟線址、線修另約，這次不動）。那 13 檔改指 `wf/knowledge/code-map/proto8/<夾>.json` 之後才能刪；wf 這邊的兩個連入（`conventions/02` 已在步 3 改掉、`code-map.md` 已縮成轉址）已清。
+- 步 6：`common/code-map.md` 的 71 個連入（C5 甲，各檔轉 json 時順手改）、刪轉址檔、刪 `codemap_gen.py` 命令列薄殼。
+- 步 0 的三樣實跑（`json_search` 搜整夾、`json_ls --depth` 印不印值、`json_get` 讀整份展不展開 `$ref`）。
+- fable §1.3「頂層夾有、手寫 `domains` 沒有就 warning」沒做進生成器；目前靠 `headline_rule` 一句提醒。
+- `wf/tools/index_gen_desc.json` 裡 `wf/tools`、`wf/workflows/common/code-map*` 三列的手寫一句話還寫 codemap_gen（別線當時正改這檔，沒碰；步 4 刪夾時一起改）。
+- 活樹知識庫副本沒重抄（通用版改了 code-map-rules／骨架，等停樹）。
