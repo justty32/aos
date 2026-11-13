@@ -1,0 +1,26 @@
+{
+ "01-N-06～N-08.md": {
+  "description": "控制：ctl 與 state"
+ },
+ "02-N-09～N-11.md": {
+  "description": "- N-09 要回報狀態，寫到另一個檔（state），不碰 ctl.json；一個 state 檔只有被控制的那個東西自己寫；選填；沒給就不開、也不提醒（N-13；fsm 的 state 見 N-13）。aos-loop（與繼承它的 aos-daemon）的 `ctl`／`state` 沒寫＝預設名 `ctl.json`／`state.json`、寫 `null`＝不開（使用者題 5「留 key…"
+ },
+ "03-N-13～N-14.md": {
+  "description": "內部狀態的外顯與窗的族譜"
+ },
+ "04-N-15.md": {
+  "description": "- N-15（使用者 10-29「都照建議」，thinking 10-29 medium-plan § 五、決定 4、6、條文草稿；10-28 medium「留待實作」四點、決定 5、10、18、22；使用者 11-05「aos-lock就改檔案鎖。」，11-05 no-pid、tick-time 04；實作 aos-lock）鎖：鎖是一個資料夾，`mkdir` 建成功的人拿到鎖，在裡面寫名牌 …"
+ },
+ "05-N-16.md": {
+  "description": "- N-16（使用者 10-28「通常會有一個資料夾，大家就將請求投遞過去」、10-29「窗可以跟投遞並列」，看完衝突與方向題回「都照建議」，thinking 10-29 medium-plan § 二、§ 三、決定 1～3、8、9、條文草稿；10-28 medium 決定 4、7、9、18、19、21、22、25、27；aos-post 的用法、環境變數、佈局、json：使用者 11-03 晚…"
+ },
+ "06-N-17.md": {
+  "description": "- N-17（ideas 10-22 § 5）判死活（不設心跳）：state 帶 pid、`started_at_ticks`（啟動時間）、`boot_id`（開機 id），內容沒變就不碰檔（N-09），閒著跑身體、睡著時窗都不動（`responded_at` 只在 ctl、信、子項起落時更新，在 state_flux，見細則 N-32）。不從檔案的更新時間判死活（`updated_at` 新不…"
+ },
+ "07-細則.md": {
+  "description": "窗規範的細則分檔 N-32～N-33：state 判死活欄位（started_at_ticks、boot_id、updated_at、responded_at、daemon 欄）與 ctl 的 seq"
+ },
+ "08-N-66.md": {
+  "description": "- N-66 非同步呼叫（使用者「四題都按照推薦。」、「所以不要去與aos-post耦合太深。」；body-protocol 原文與分層、四題與推薦）：非同步呼叫建在 N-16 的信封與投遞之上，收信→跑→回信是呼叫層的事；aos-post 只收發信、不管 body，函數只認自己的 stdin／stdout／stderr／結束碼。aos-post 不為這層改：不加 `kind`／協議版本標記、不…"
+ }
+}

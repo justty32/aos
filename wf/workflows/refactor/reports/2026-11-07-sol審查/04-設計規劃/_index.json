@@ -1,0 +1,50 @@
+{
+ "01-special-cases.md": {
+  "description": "sol 審查 D 區 special-cases 題的白話總結與發現 1～3：特例定義放太寬、升格門檻數字無原話、選項框比條文窄"
+ },
+ "01-續-special-cases發現4到6.md": {
+  "description": "4. K7 的條文比使用者選的那個選項寬"
+ },
+ "01-續2-special-cases決策表.md": {
+  "description": "sol 審查 D 區 special-cases 題的決策表：sol／K 隊替使用者定下的 18 個設計決定，逐列對原話判 OK／翻案／該問"
+ },
+ "02-git-image.md": {
+  "description": "sol 審查 D 區 git-image 題的白話總結與發現 1～3：搬家食譜關 gc 讓本機 .git 一直長、push --force 沒防呆、70 GiB 估算過頭"
+ },
+ "02-續-git-image發現4到5.md": {
+  "description": "4. 極限情境跑不到，外推數字嚇人過頭；「不隨週數長」自相矛盾"
+ },
+ "02-續2-git-image決策表.md": {
+  "description": "sol 審查 D 區 git-image 題的決策表：sol 替使用者定下的 15 個設計決定，逐列對原話判 OK／翻案與推薦修法"
+ },
+ "03-mailbox-naming.md": {
+  "description": "sol 審查 D 區 mailbox 命名題的白話總結、發現與已核對：「有序是信的屬性」結論站得住、requests/ 改名乾淨、R14 漏引原話"
+ },
+ "03-續-mailbox-naming決策表.md": {
+  "description": "sol 審查 D 區 mailbox 命名題的決策表：替使用者定下的 8 個設計決定（不改名 queue、queue 定義等），逐列對原話與選項"
+ },
+ "04-效能標準.md": {
+  "description": "sol 審查 D 區公司 WSL 效能標準 3／2／6／8 題的白話總結與發現 4.1～4.3：數字是代定、授權原話被刪、6 那級沒依據"
+ },
+ "04-續-效能標準發現4.4到4.5.md": {
+  "description": "4.4 跟總則對照：沒打架，但「每隊 2 個 CLI」跟「全機 3 個」合起來等於忙時只能開一隊半"
+ },
+ "04-續2-效能標準決策表.md": {
+  "description": "sol 審查 D 區效能標準題的決策表：替使用者定下的 8 個設計決定（CLI 上限各級），逐列對原話與 A／B 選項"
+ },
+ "05-no-pid-os-impl.md": {
+  "description": "sol 審查 D 區 no-pid P7～P9 與 os-impl 05～08 題的白話總結與發現 1～2：留格範本沒開、搬家食譜 tick 寫反"
+ },
+ "05-續-no-pid-os-impl發現3到4.md": {
+  "description": "3. 「P7 邊界那處照舊保留」掛在使用者裁定段，但不是他說的"
+ },
+ "05-續2-no-pid-os-impl發現5到7.md": {
+  "description": "5. K-3 做完要人打 `AOS_KERNEL=` 清空——人殼怎麼管判官是新題，被代定、隔天翻案"
+ },
+ "05-續3-no-pid-os-impl-P9抽10列與已核對.md": {
+  "description": "sol 審查 D 區 no-pid／os-impl 題分檔：P9 邊緣實測抽 10 列核判法對不對，加已核對沒問題的清單"
+ },
+ "05-續4-no-pid-os-impl決策表.md": {
+  "description": "設計決策一覽（五欄；判斷欄前一個詞＝照裁定／照推薦／代定）"
+ }
+}

@@ -1,0 +1,11 @@
+{
+ "01-fork.md": {
+  "description": "01 fork：把當下的自己複製一份、給一個 goal、只收回結論（11-11 線 K 施工）"
+ },
+ "02-do_task.md": {
+  "description": "02 do_task：改成 save／load——start 留紀錄點、end 附總結把那段 history 換成總結（11-11，線 K 施工）"
+ },
+ "README.md": {
+  "description": "fork-and-do-task：do_task 拆成兩支——fork（整份複製自己）與 do_task（save／load 摺疊 history）（11-11）"
+ }
+}

@@ -1,0 +1,11 @@
+{
+ "05-knowledge改名.md": {
+  "description": "05 knowledge 改名：memory 整家改叫 knowledge，舊名一律不留"
+ },
+ "06-列表長短四項.md": {
+  "description": "列表長短四項：agents_children、lib/base/ls、history ls 改好，defs ls 不動（使用者「1.好。2.好。3.好。3.好。」）"
+ },
+ "README.md": {
+  "description": "tonight-rulings（11-10 深夜）：總整合後的八題與一個代定，使用者答了"
+ }
+}

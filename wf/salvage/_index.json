@@ -1,0 +1,8 @@
+{
+ "README.md": {
+  "description": "salvage — `roadmap-run` 打撈包"
+ },
+ "archive": {
+  "description": "salvage 打撈包封存的六篇正文：已驗證的規格結論、踩過的坑、裁決與理由、還沒解的問題、值得抄的程式、協作流程收穫（2026-10-13 封存）"
+ }
+}

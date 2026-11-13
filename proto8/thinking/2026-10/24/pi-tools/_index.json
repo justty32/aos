@@ -1,0 +1,11 @@
+{
+ "01-使用者原文.md": {
+  "description": "涵蓋：使用者原文（整理版，10-24）、pi 怎麼做（2026-10-24 查，`badlogic/pi-mono` 主線 commit `136b87e8`）、決定（使用者 10-24「都按建議做」，照推薦定、可翻案）、邊緣狀況（攤出來，不擋）"
+ },
+ "02-10-24-稍晚-資料夾與檔案的工具要特別設計.md": {
+  "description": "涵蓋：10-24 稍晚：資料夾與檔案的工具要特別設計（file-tools）"
+ },
+ "README.md": {
+  "description": "2026-10-24 仿 pi coding agent 的基本工具組（pi-tools）與 agent-pip"
+ }
+}

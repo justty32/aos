@@ -1,0 +1,26 @@
+{
+ "01-成本.csv": {
+  "description": "資料表（csv）：欄位 name、code_files、code_lines、doc_files、doc_lines、knowledge_files、prompt_files、test_playground_files"
+ },
+ "01-盤點.csv": {
+  "description": "資料表（csv）：欄位 id、name、kind、program、meaning、ordered、order_rule、writer"
+ },
+ "01-盤點.md": {
+  "description": "mailbox-naming 盤點說明：全 repo 名字帶 mailbox／queue／requests／reply 等的 228 列與改名成本表的欄位怎麼讀、統計"
+ },
+ "02-有序是什麼.md": {
+  "description": "mailbox-naming 釐清：aos 程式裡「有序」是一封信的屬性不是信箱的，有序與無序信在投遞、名字、處理順序上各保證什麼（11-06 讀碼）"
+ },
+ "03-建議表.md": {
+  "description": "判準（照 04 草稿 第 2、6 點）"
+ },
+ "04-規則草稿.md": {
+  "description": "草稿（暫稱 C-54 R14，接在 R13 後；照 R1～R2「先一句白話再取名」寫）"
+ },
+ "05-requests改名結果.md": {
+  "description": "mailbox-naming 施工結果：llm kernel 收件箱 mailbox/ 改名 requests/ 與裁定 1～3 改了哪些程式、文件、知識庫，照 R14 哪些不改、驗收"
+ },
+ "README.md": {
+  "description": "mailbox-naming 入口：使用者原文、四題選項框裁定與照做結果、分檔目錄；有序的 mailbox 要不要改叫 queue 的調查"
+ }
+}

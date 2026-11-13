@@ -1,0 +1,101 @@
+{
+ "check_anchors.py": {
+  "description": "Check fragments in local Markdown links."
+ },
+ "codemap_gen.py": {
+  "description": "從 proto8 各檔檔頭的一句話生成逐檔 code map（wf/workflows/common/code-map/proto8/<夾>.md）。"
+ },
+ "compact_reload.sh": {
+  "description": "compact 後重讀：Claude Code SessionStart（matcher=compact）hook 呼叫，stdout 會進 compact 後的上下文。"
+ },
+ "decide_page": {
+  "description": "離線待裁頁工具 decide_page.py：把一批題目 JSON 做成單檔互動頁，讓使用者點選與補充後複製回覆，再 parse／apply 讀回落地裁定",
+  "index": "decide_page/_index.json"
+ },
+ "find_big_lists.py": {
+  "description": "找出 markdown 裡超過門檻的條列式區塊（表格或清單）。"
+ },
+ "fix_moved_links.py": {
+  "description": "搬檔後照 `舊<TAB>新` 重寫 md 與資料檔裡的相對連結。"
+ },
+ "fix_moved_links_fmt.py": {
+  "description": "搬檔時資料檔 cell 值（含 `$fmt` 路徑代號）的重寫。"
+ },
+ "fmt-vars.json": {
+  "description": "設定（鍵：contract、vars、namespaces）"
+ },
+ "forum_admin.sh": {
+  "description": "Moderate the local forum (pin, feature, soft delete) and grant or revoke line permissions."
+ },
+ "forum_post.sh": {
+  "description": "Append a forum post or reply for a line to the local forum event file."
+ },
+ "hook-settings-snippet.json": {
+  "description": "設定（鍵：_comment、hooks）"
+ },
+ "inbox_mail.sh": {
+  "description": "Deliver a message to one member, team, topic, or the sender's upstream."
+ },
+ "inbox_poll.sh": {
+  "description": "Poll personal mail, team mail, subscribed topics, and append-only orders."
+ },
+ "inbox_read.sh": {
+  "description": "Print one line per unread letter in an inbox. Read-only: never moves or"
+ },
+ "inbox_send.sh": {
+  "description": "Deliver one letter into another agent's inbox. Atomic: write a temp file in"
+ },
+ "inbox_team.sh": {
+  "description": "Create, extend, and archive inbox teams."
+ },
+ "index_check.py": {
+  "description": "查 aos 的 index（`_index.json`）跟實際的樹對不對得上：列了但不在、在但沒列、連結指不到、形狀不對。"
+ },
+ "index_gen.json": {
+  "description": "index_gen 的範圍：哪些夾要建 `_index.json`（deep＝連底下每一層）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區。"
+ },
+ "index_gen.py": {
+  "description": "從各檔檔頭的一句話，替 repo 的資料夾生成 aos 的 index（每夾一份 `_index.json`：`{名: {\"description\": …, \"index\": …}}`）。"
+ },
+ "index_gen_desc.json": {
+  "description": "index_gen 取不到檔頭一句話時用的手寫一句話：repo 相對路徑 → 一句話（手寫的優先於檔頭）。"
+ },
+ "metainfo_migrate.py": {
+  "description": "Move legacy metainfo estimates and execution limits into separate fields."
+ },
+ "notify_watch.sh": {
+  "description": "Continuously announce new dispatcher-facing messages once. This watcher is"
+ },
+ "progress_answers.sh": {
+  "description": "Read progress-board answers and unanswered questions with optional time and line filters."
+ },
+ "progress_board": {
+  "description": "aos 本機進度看板 dash.py：把各線回報、交棒、commit、機器負載、待裁題、論壇放在同一頁（127.0.0.1:8765），附 eli5 白話說明、手機遠端版與測試",
+  "index": "progress_board/_index.json"
+ },
+ "progress_post.sh": {
+  "description": "Append one validated progress event to the board using a locked JSON line."
+ },
+ "tabledb.py": {
+  "description": "同質列表資料檔（.json / .csv）的統一 CRUD 與連結解析。"
+ },
+ "tabledb_fmt.py": {
+  "description": "資料檔 json 裡 `$fmt` 路徑代號的展開（契約 wf-table/1 附錄）。"
+ },
+ "tabledb_fmt_vars.py": {
+  "description": "`$fmt` 變數表（fmt-vars.json，契約 `wf-fmt-vars/1`）的載入與合併。"
+ },
+ "tabledb_links.py": {
+  "description": "資料檔（wf-table/1）裡連結欄位的抽取與解析。"
+ },
+ "test_inbox.sh": {
+  "description": "inbox 收發信腳本（inbox_team、inbox_mail、inbox_poll）的 bash 測試，每案在暫存夾設 AGENT_INBOX_ROOT 跑並計 ok／fail"
+ },
+ "tests": {
+  "description": "wf/tools 腳本的 Python 測試夾，目前只有 test_metainfo_migrate.py（驗 _metainfo 一次性遷移、保留、排除與冪等）",
+  "index": "tests/_index.json"
+ },
+ "wf-lint.sh": {
+  "description": "工作流文檔的機械檢查（bash + grep/sed/awk/find，部分借 python3）"
+ }
+}

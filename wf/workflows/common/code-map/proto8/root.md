@@ -9,4 +9,5 @@
 
 | 檔 | 負責什麼 |
 |---|---|
+| [`_index.json`](../../../../../proto8/_index.json) | 設定（鍵：README.md、archive、cases、cmd、docs、extras…） |
 | [`install.sh`](../../../../../proto8/install.sh) | symlink the aos commands onto PATH (default ~/.local/bin) and register the Python import paths in the user site. |

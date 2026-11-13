@@ -1,0 +1,20 @@
+{
+ "01-N-01～N-17.md": {
+  "description": "條號 → 出處（N-01～N-17）"
+ },
+ "02-N-18～N-43.md": {
+  "description": "條號 → 出處（N-18～N-43）"
+ },
+ "03-N-45～N-64.md": {
+  "description": "條號 → 出處（N-45～N-67、作廢的幾條）"
+ },
+ "04-各批原話.md": {
+  "description": "NORMS 10 月各批拍板時使用者的逐字原話，照日期並標對應 N- 條號與 thinking，查某條規範原話時看"
+ },
+ "05-各批原話-11月.md": {
+  "description": "各批原話（續）：11 月起"
+ },
+ "06-11-06-lift-to-norms.md": {
+  "description": "11-06 lift-to-norms"
+ }
+}

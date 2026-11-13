@@ -1,0 +1,17 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-10-29"
+ },
+ "agent-bob": {
+  "description": "10-29 agent-bob 試驗紀錄：射後不理、射後有理兩隻實跑，aos-say／listen 當通用接口；10-30 定決定 33～35（agent 層是 queue、aos-loop 是內部組件、外部 agent 生命週期外包）",
+  "index": "agent-bob/_index.json"
+ },
+ "medium-plan": {
+  "description": "10-29 介質後續的細節規劃（fable）：投遞與信箱四格、有順序的投遞、daemon 兩個手把兩扇窗、鎖、父子交代（N-64）、窗的改口；使用者「都照建議」，條文已落、已實作",
+  "index": "medium-plan/_index.json"
+ },
+ "playground-queue": {
+  "description": "10-29 playground 試驗紀錄：agent 輸入是對話簿 history.jsonl、看信箱做成 aos-mcp 的 inbox tool；實跑後發現兩個使用場景都用不到，inbox tool 解錯題，帶給使用者的題擱著",
+  "index": "playground-queue/_index.json"
+ }
+}

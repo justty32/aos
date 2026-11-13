@@ -1,0 +1,33 @@
+{
+ "INDEX.md": {
+  "description": "hackathon — 結構索引"
+ },
+ "README.md": {
+  "description": "hackathon — 黑客松（多 agent 動手做、只收坑）"
+ },
+ "archive": {
+  "description": "hackathon 的封存區：proto5～7 年代各場次紀錄 records/（agent-loop、argv-split、core-scope、deliver-contract 等），11-03 整批封存"
+ },
+ "arena.md": {
+  "description": "黑客松怎麼把參賽者跑起來：場地開在 WSL 的 aos-hack 整包複製、不用 /tmp、codex exec 的指令形態與跟 workshop 的差異"
+ },
+ "briefs.md": {
+  "description": "hackathon — 題目書與參賽者任務書"
+ },
+ "gotchas.md": {
+  "description": "hackathon 踩坑（主辦人專用）"
+ },
+ "roles.md": {
+  "description": "黑客松六個角色（主辦人、參賽者、評委、書記團、祕書等）各做什麼、參賽者與評委的名人 persona 名單與挑人方式"
+ },
+ "rounds.md": {
+  "description": "一場怎麼跑（預設三輪迭代，2026-08-26 使用者指定）"
+ },
+ "staff": {
+  "description": "黑客松收場四棒的任務書夾：README 講順序（書記→評委→資料員→祕書）與不帶 persona 的理由，scribe、judge、researcher、secretary 各一份可整段複製的模板",
+  "index": "staff/_index.json"
+ },
+ "staff.md": {
+  "description": "舊單檔已拆成 staff/ 後留下的導航頁：只列 staff/ 底下五個檔各是什麼、每輪第幾棒用"
+ }
+}

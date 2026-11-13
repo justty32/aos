@@ -1,0 +1,81 @@
+{
+ "11": {
+  "description": "10-11 的討論紀錄：為什麼重來開 proto8、河堤邊與三輪口述的 aos 基本概念（計算任務、資源、排程、agent＝狀態機）",
+  "index": "11/_index.json"
+ },
+ "12": {
+  "description": "10-12 的討論紀錄：tasks 與 tick-tock、loop／daemon 分層、inst 進 json（結束碼、timeout_ms）、ctl 規範（宣告式 ctl.json 與指令式控制資料夾）",
+  "index": "12/_index.json"
+ },
+ "13": {
+  "description": "10-13 的討論紀錄：JSON 路徑 檔#/位置（N-35）與 _metainfo、kernel 是能管任務的 inst、agent 可基於 loop 或 daemon",
+  "index": "13/_index.json"
+ },
+ "14": {
+  "description": "10-14 的討論紀錄：函數統一入口改成 JSON、argv 空出來、aos-fsm 抽成通用、daemon 套 fsm（json-entry 一夾 15 份分檔）",
+  "index": "14/_index.json"
+ },
+ "15": {
+  "description": "10-15 的討論紀錄：主題分法與清帳、kernel 截流與 LLM kernel、判官與小模型實跑、JSON 格式族、同像性、兩條總原則與 KISS、命名 C-54、inst／aos-exec 第二至四版、KISS 審視",
+  "index": "15/_index.json"
+ },
+ "16": {
+  "description": "10-16 的討論紀錄：KISS 也是最後原則（C-56）、KISS 重審五件拍板、agent 繼承與當函數、結束碼只是參考與用檔案借權限（C-63、C-64）",
+  "index": "16/_index.json"
+ },
+ "19": {
+  "description": "10-19 的討論紀錄：新想法資料夾＝程式（AOS_ENTRY 等環境變數、只留 aos-exec 一支 CLI）、重寫順序",
+  "index": "19/_index.json"
+ },
+ "20": {
+  "description": "10-20 的討論紀錄：指示詞與 argv 第一個元素（$env／$ref 放 argv、argv[0] 帶 / 插 aos-exec、$path、$prefix）；$fmt、D15 未決",
+  "index": "20/_index.json"
+ },
+ "21": {
+  "description": "10-21 的討論紀錄：aos-exec 收旗標與支援 .env、計畫把 loop／daemon／fsm／agent 搬到新 aos-exec 上（已做）",
+  "index": "21/_index.json"
+ },
+ "22": {
+  "description": "10-22 的討論紀錄：Python 版向 C++ 版看齊、對 s6／runit 報告的回應、.env 基礎子集、分層方向、loop 條文定稿、daemon 三題、fsm",
+  "index": "22/_index.json"
+ },
+ "23": {
+  "description": "10-23 的討論紀錄：命名統合與命名方法 R1～R12、daemon 壓測六個問題、daemon 的 ctl 只寫變動與 $ref 切檔、在 fsm 上做 aos-agent 與 aos-kernel、腦的工具呼叫",
+  "index": "23/_index.json"
+ },
+ "24": {
+  "description": "10-24 的討論紀錄：內嵌單子、agent 當工具、say／listen、pi 工具、_metainfo、aos-ai、記憶庫、寄信、函數成長、Janet／Lua、組 context、自我改進、LLM kernel、工具庫、沙箱等",
+  "index": "24/_index.json"
+ },
+ "25": {
+  "description": "10-25 的討論紀錄：由上而下拆資料夾樹（讓 fable 試系統設計，甲乙兩隊拆 galtxt），沒有人評、量測沒做完",
+  "index": "25/_index.json"
+ },
+ "26": {
+  "description": "10-26 的討論紀錄：playground 呼叫 claude code cli 的節點，從 _entry＋初始 prompt 做起、claude -p 實跑通，10-27 經 aos-mcp 接上 aos 工具",
+  "index": "26/_index.json"
+ },
+ "27": {
+  "description": "10-27 的討論紀錄：很多 claude 同時跑時的 aos-hub（列出、cd 接入、收起與叫回）",
+  "index": "27/_index.json"
+ },
+ "28": {
+  "description": "10-28 的討論紀錄：aos-hub 常駐 kernel、aos-tools 工具註冊檔、hub 的 say／listen 協議與適配表、agent 函數常用操作、agent 一輪（round）設計、介質概念（決定 1～32）",
+  "index": "28/_index.json"
+ },
+ "29": {
+  "description": "10-29 的討論紀錄：介質後續規劃（投遞、鎖、daemon 兩手把、父子交代）、playground 對話簿與看信箱 tool、agent-bob 射後不理／有理實跑（決定 33～35）",
+  "index": "29/_index.json"
+ },
+ "30": {
+  "description": "10-30 的討論紀錄：agent 的 queue 與外部 coding agent 生命週期、使用者看現況地圖的想法、eca 外部 agent 平級與 aos-eca-hub、aos-round 薄殼與 fsm next 分岔",
+  "index": "30/_index.json"
+ },
+ "31": {
+  "description": "10-31 的討論紀錄：aos-var（已收回）、parts 組合化與 round 重切的收斂（11-01 使用者裁 parts 退成約定、round 不重切）",
+  "index": "31/_index.json"
+ },
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-10"
+ }
+}

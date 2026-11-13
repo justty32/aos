@@ -1,0 +1,29 @@
+{
+ "01-簡報.md": {
+  "description": "1. 使用者原話（逐字）"
+ },
+ "02-規劃-fable.md": {
+  "description": "fable 對想法 20 節點池的規劃結論：節點＝有 _metainfo.json 的定義資料夾、梯度＝投進信箱的一行信、錢＝token 記帳由 pool 腳本分，扣到 0 只建議退休；第五輪只做帳＋封存最小版"
+ },
+ "03-設計.md": {
+  "description": "1. 第 0 epoch 試算（11-08，唯讀，第四輪 A 批 20 地）"
+ },
+ "04-簡報-想法21.md": {
+  "description": "給 fable 的想法 21 簡報：蒸餾後再壓縮（百科式 vs 啟發式）併入 node-pool 第五輪一起試，附使用者原話、蒸餾資產現況、邊緣狀況、跟 03 圖紙的接點"
+ },
+ "05-規劃-fable-想法21.md": {
+  "description": "fable 對想法 21 的規劃：第五輪壓縮只做零 LLM 機械歸納（covered 標記、嵌詞模板、短名嵌長名函式），定本質的資料形狀與量法，LLM 歸納推到第六輪；後被 06 與 q1:B 改掉部分"
+ },
+ "06-設計-想法21.md": {
+  "description": "想法 21 蒸餾後壓縮的第五輪施工圖紙：唯讀試算（規則池 186→95 條、真庫抓到 2 條錯連）、改掉 05 兩處、資料格式、工具介面、量法與施工單 N6～N10"
+ },
+ "README.md": {
+  "description": "使用者原話（11-08）"
+ },
+ "decide_20261108_node-pool.json": {
+  "description": "Decision questions for node-pool (idea 20) design."
+ },
+ "decide_20261108_np21.json": {
+  "description": "Decision questions for node-pool idea 21 (compression after distillation)."
+ }
+}

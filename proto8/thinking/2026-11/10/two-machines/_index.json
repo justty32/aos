@@ -1,0 +1,96 @@
+{
+ "01-整體圖像.md": {
+  "description": "涵蓋：三樣東西各擺哪、怎麼相連、進不進 git"
+ },
+ "02-機器專屬設定.md": {
+  "description": "涵蓋：這台才有的值放哪、進 git 的定義怎麼指過去、實測、新機器第一次要準備什麼"
+ },
+ "03-收工與開工.md": {
+  "description": "涵蓋：`aos-image` 的 freeze／thaw／status／init 規格"
+ },
+ "04-防呆.md": {
+  "description": "涵蓋：沒有跨機鎖時怎麼不互蓋——標記、判斷表、四種誤操作、怎麼少丟"
+ },
+ "05-eca換台.md": {
+  "description": "涵蓋：eca（claude／codex 當 agent）換台後怎麼接著做（裁定 4、5）"
+ },
+ "06-長跑自動重起.md": {
+  "description": "涵蓋：`--auto-restart`、重起太頻繁的保護、冷卻、信怎麼累積、怎麼看（裁定 5、6）"
+ },
+ "07-知識庫接點.md": {
+  "description": "涵蓋：知識庫怎麼掛、不在時的表現、耦合清單、W5／W6、可選的同步工具"
+ },
+ "08-邊緣狀況.md": {
+  "description": "涵蓋：執行失敗、各種失敗、延遲——每條會怎樣、設計怎麼處理或為什麼不處理"
+ },
+ "09-衝突與要裁的.md": {
+  "description": "涵蓋：要你裁的 3 題、跟既有條文與裁定的衝突、代定表"
+ },
+ "10-施工步驟.md": {
+  "description": "涵蓋：給隊長的施工線、/tmp 模擬兩台的驗法、要更新的文件"
+ },
+ "11-給使用者的一頁.md": {
+  "description": "涵蓋：兩台輪流跑的每日用法、這台要備好什麼、第一次建立、gitignore、可以放哪、kernel 沒開時、什麼時候要你動手、要知道的坑"
+ },
+ "12-圖紙對照.md": {
+  "description": "涵蓋：上午圖紙（01～11）各部分在午後方向改變後是保留、修改還是作廢"
+ },
+ "13-施工結果": {
+  "description": "two-machines 施工結果分檔：各線做了什麼（auto-restart 冷卻、eca 換台、路徑三種寫法、gitignore 樣板等）、跟圖紙不同之處與留給明天的清單",
+  "index": "13-施工結果/_index.json"
+ },
+ "13-施工結果.md": {
+  "description": "涵蓋：11-10 午後各施工線的結果總覽、代定表、持久格式要重建什麼、prefix-fixes 跨機待辦對照、/mnt/c 數字"
+ },
+ "14-真機驗證.md": {
+  "description": "涵蓋：給你親手做的真機驗證（真 claude／codex 的行為、eca 換台整條、/mnt/c 起一棵、公司↔家機來回一次）"
+ },
+ "15-回家那台開工.md": {
+  "description": "涵蓋：家機（Manjaro）11-10 晚開工照抄步驟（拉、重建安裝、環境變數、刷新試驗場、起、問、看、停）、常見錯誤、今天手感上的改變、這台驗不了的部分"
+ },
+ "16-B01後半施工結果.md": {
+  "description": "16 B01 後半施工結果：絕對路徑原樣存、JSON 純字串照字面送（11-10 晚家機）"
+ },
+ "17-B07到B10施工結果.md": {
+  "description": "17 B07～B10 施工結果：一列壞不拖垮整台、錯誤訊息講清楚（11-10 晚家機）"
+ },
+ "README.md": {
+  "description": "2026-11-10 兩台機器經 GitHub 輪流跑同一批 agent（two-machines：上午 fable 規劃、午後方向大改後施工）"
+ },
+ "assumptions.json": {
+  "description": "11-10 午後施工靠著、但沒在真機（真 claude／codex、真的兩台、真 LLM）驗過的假設；A01～A08 是 T3 回報那 8 條。"
+ },
+ "cached_values.json": {
+  "description": "資料表（wf-table/1）：抽自 13-施工結果.md，21 列，欄位 id、what、stores、kind、effect_on_move、fix"
+ },
+ "decided.json": {
+  "description": "11-10 午後各施工線隊員自己拿的小決定（真的落地的；作廢的 aos-image 那些不列）。全部可翻案，overturn 寫改哪裡。"
+ },
+ "edge_cases.json": {
+  "description": "Edge cases for running one aos image alternately on two machines through GitHub: what happens and how the design handles it (or why it does not)."
+ },
+ "files_in_git.json": {
+  "description": "Which kinds of files in an aos image go into git, why, and whether today's ignore rules already get it right."
+ },
+ "fs_features.json": {
+  "description": "資料表（wf-table/1）：抽自 13-施工結果.md，19 列，欄位 feature、used_by、mntc_result、if_missing、grade"
+ },
+ "gitignore_classes.json": {
+  "description": "Classify observed aos files for an optional user-managed stack gitignore."
+ },
+ "kb_coupling.json": {
+  "description": "Where current proto8 code is coupled to the knowledge base, judged under: the knowledge base is any folder on a path, possibly not a local file system, possibly not git."
+ },
+ "leftovers.json": {
+  "description": "資料表（wf-table/1）：抽自 13-施工結果.md，30 列，欄位 id、what、owner、stale_effect、self_heals、fix"
+ },
+ "next_todo.json": {
+  "description": "11-10 午後施工抓到、留給明天或大修的問題；B01～B04 會在日常用法碰到，其餘是訊息、邊緣或大修題。"
+ },
+ "path_fields.json": {
+  "description": "I1 調查：所有會寫「指到外面（repo 的 proto8/lib、ws、知識庫…）的路徑」的欄位／檔，三種寫法（相對、絕對、$env 指示詞）現在收不收、誰讀誰寫、怎麼補。依據行號以 WSL ~/repo/aos-tools 工作樹 233514b4a＋未 commit 改動為準（proto8/ 開頭）。實測在 /tmp mktemp -d、~/.local/bin、假程式，跑完已刪。"
+ },
+ "work_lines.json": {
+  "description": "Construction lines for the two-machines design: non-overlapping files, language, rebuild need, how to verify, dependencies, rough effort, and whether it must land before the user starts."
+ }
+}

@@ -1,0 +1,11 @@
+{
+ "gitimage_bench.py": {
+  "description": "Benchmark synthetic frozen aos images with bounded disk, time, and cleanup."
+ },
+ "run_all.sh": {
+  "description": "Run the full matrix sequentially; each benchmark cleans up its own trees."
+ },
+ "summarize.py": {
+  "description": "Summarize measured git image costs and explicit one-week extrapolation models."
+ }
+}

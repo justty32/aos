@@ -1,0 +1,11 @@
+{
+ "01-使用者原文-11-02-晚-逐字.md": {
+  "description": "涵蓋：使用者原文（11-02 晚，逐字）；決定；方向題的答案；daemon 的 ctl／state 跟 loop 的格式一樣（結論）"
+ },
+ "03-同一個-stack-裡有兩對-ctl-s.md": {
+  "description": "涵蓋：結論：改完每個元件的窗叫什麼、「末端加前綴」目前沒有套用對象；代定"
+ },
+ "README.md": {
+  "description": "2026-11-02 晚 loop 這一系的窗檔名：控制自身的 ctl／state 就叫 `ctl.json`／`state.json`，不加前綴"
+ }
+}

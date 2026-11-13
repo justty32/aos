@@ -1,0 +1,23 @@
+{
+ "02-格式規則.md": {
+  "description": "JSON 記憶庫的格式規則圖紙：一棵樹長怎樣、_index.json 與 _description、統一路徑寫法，每條標出處"
+ },
+ "03-工具.md": {
+  "description": "JSON 記憶庫的工具圖紙：memory（read／ls／find）與 memory_write（add／set／rm）兩支的動作與路徑規則"
+ },
+ "04-轉換與連帶.md": {
+  "description": "04 `knowledge/aos` 直接轉與連帶（圖紙）"
+ },
+ "05-步驟與代定.md": {
+  "description": "05 施工步驟與代定（圖紙）"
+ },
+ "06-可玩驗收.md": {
+  "description": "06 可玩驗收（S3，11-10 晚家機）"
+ },
+ "07-怎麼玩與刷新試驗場.md": {
+  "description": "07 怎麼玩 memory 與刷新試驗場（照抄）"
+ },
+ "README.md": {
+  "description": "記憶庫改成純 JSON 樹（11-10 晚家機，討論紀錄）"
+ }
+}

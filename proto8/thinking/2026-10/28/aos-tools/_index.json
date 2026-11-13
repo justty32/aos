@@ -1,0 +1,17 @@
+{
+ "01-使用者原文.md": {
+  "description": "涵蓋：使用者原文、決定（10-28）、未決"
+ },
+ "02-跟原則的對照.md": {
+  "description": "涵蓋：跟原則對不上的地方（10-28，結論裡已化解）"
+ },
+ "03-結論.md": {
+  "description": "涵蓋：結論（10-28 實作，照原則代定、可翻案）"
+ },
+ "04-11-03-no-cache.md": {
+  "description": "涵蓋：11-03 exe 快取的開關（`add --no-cache`）"
+ },
+ "README.md": {
+  "description": "2026-10-28 aos-tools：一份工具註冊檔，aos agent 直接吃、外部 agent 經 aos-mcp 吃"
+ }
+}

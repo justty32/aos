@@ -1,0 +1,44 @@
+{
+ "01-aos-agent.md": {
+  "description": "aos-agent（lv5）"
+ },
+ "02-aos-daemon-ctl.md": {
+  "description": "aos-daemon-ctl（指令本身是 Python 殼；動到 aos-daemon 本體的才算 lv2）"
+ },
+ "03-aos-exec與copy-out.md": {
+  "description": "aos-exec（lv1——這裡的改法一律只動 help／訊息，行為改動全部標「留大修」）"
+ },
+ "04-aos-llm-eca-mcp.md": {
+  "description": "aos-llm（lv4——改法只列加法與訊息，行為改動留大修）"
+ },
+ "05-其餘指令.md": {
+  "description": "其餘現役指令（aos-loop、aos-json、aos-post、aos-fsm、aos-clock 等）照 C-85 淺掃，附 install.sh 放進 PATH 的 22 支指令盤點"
+ },
+ "06-跨指令不一致.md": {
+  "description": "跨指令不一致十五項 X1～X15 的總表與對照（指對象、指名字、旗標位置、--stack 四個意思等）"
+ },
+ "07-指令樹.md": {
+  "description": "使用者原話（11-10，頂層轉達）"
+ },
+ "08-改法與施工順序.md": {
+  "description": "指令改法分甲乙丙三級，每項改前改後、後果、連帶檔、工量，最後是施工順序與代定表（未施工的建議）"
+ },
+ "09-Q1補-旗標放中間目標放最後.md": {
+  "description": "使用者這次的話（11-10，頂層轉達，答 Q1）"
+ },
+ "10a-施工結果-tools與copy-out.md": {
+  "description": "涵蓋：11-10 傍晚 Q8（aos-agent tools add）與 Q7（copy-out --template）的施工結果；另一位隊長的段在 10-施工結果"
+ },
+ "10b-施工結果-兩支ctl.md": {
+  "description": "涵蓋：11-10 傍晚兩支 ctl（aos-daemon-ctl、aos-agent ctl）已裁項的施工結果與續行"
+ },
+ "10c-施工結果-甲6Q3Q6.md": {
+  "description": "10c 施工結果：甲6、Q3、Q6（11-10 晚家機）"
+ },
+ "10d-施工結果-Q1旗標位置.md": {
+  "description": "10d 施工結果：Q1 旗標寫在哪、Q2 名字放最後、Q3 之後停止解析（11-10 晚）"
+ },
+ "README.md": {
+  "description": "2026-11-10 其餘指令照 C-85 掃一遍：每支的一段白話、裝不下的東西、跨指令不一致與改法（規劃報告，未施工）"
+ }
+}

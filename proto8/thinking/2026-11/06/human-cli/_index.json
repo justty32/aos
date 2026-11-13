@@ -1,0 +1,35 @@
+{
+ "01-樣本-aos-agent-續.md": {
+  "description": "涵蓋：照慣例後 `aos-agent say --help`、`listen --help` 全文"
+ },
+ "01-樣本-aos-agent.md": {
+  "description": "涵蓋：照慣例後 aos-agent 的 `--help` 全文（頂層、`ctl`、`ctl add`、`ctl rm`）與 `cmd/aos-agent/` 子資料夾結構示意——使用者「實作的時候我要看一眼」的那份；`say`／`listen` 在續篇"
+ },
+ "01-樣本-aos-daemon-ctl.md": {
+  "description": "涵蓋：照慣例後 aos-daemon-ctl 的 `--help` 全文（頂層、`add`、`ls`）；單檔不拆、只拆 help"
+ },
+ "02-盤點.csv": {
+  "description": "資料表（csv）：欄位 cmd、sub、lang、who、global_flags、sub_flags、positional、help_kind"
+ },
+ "02-盤點.md": {
+  "description": "涵蓋：盤點表的欄位、統計、白話總結（資料在 02-盤點.csv）"
+ },
+ "03-慣例草案-續.md": {
+  "description": "涵蓋：給人用的指令慣例 H9～H16（stdin 與優先序、錯誤與結束碼、互動確認與 `--yes`（已裁）、顏色／tty、環境變數、字彙、`--version`、條文落點）"
+ },
+ "03-慣例草案.md": {
+  "description": "涵蓋：給人用的指令慣例 H1～H8（給誰用、子命令結構與檔案結構、旗標、位置參數、`--help`、man、人看 vs `--json`）"
+ },
+ "04-落到S8S9.md": {
+  "description": "涵蓋：哪些併進今晚 S8、S9，哪些排大重構後；跟 json-argv J2～J8、no-pid P 步的分工；估時"
+ },
+ "05-邊緣與衝突.md": {
+  "description": "涵蓋：邊緣狀況（照 user.md 通則：沒答案也留著供實作時想起）；跟現行條文、json-argv 代定、artifact 說明頁的衝突（哪條、衝突在哪、各自後果）"
+ },
+ "06-方向題.md": {
+  "description": "涵蓋：四題方向題與兩題新方向題的選項全文（11-06 全部已裁，裁定在 README）"
+ },
+ "README.md": {
+  "description": "2026-11-06 「給人用的指令」慣例——json-argv 的另一半（human-cli，fable 規劃，沒改程式、沒改條文）"
+ }
+}

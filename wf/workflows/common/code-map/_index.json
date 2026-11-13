@@ -1,0 +1,9 @@
+{
+ "README.md": {
+  "description": "code map 各分冊導覽"
+ },
+ "proto8": {
+  "description": "codemap_gen.py 從 proto8 各檔檔頭生成的逐檔 code map，一個頂層夾一冊（cmd、impls、lib、kernel、py…，大的切 -2、-3），README 是冊索引；不要手改",
+  "index": "proto8/_index.json"
+ }
+}

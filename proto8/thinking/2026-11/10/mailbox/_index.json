@@ -1,0 +1,11 @@
+{
+ "01-設計.md": {
+  "description": "01 設計（一頁；照原話與既有慣例代定）"
+ },
+ "02-施工結果.md": {
+  "description": "02 施工結果（11-10 晚）"
+ },
+ "README.md": {
+  "description": "mailbox（11-10 晚）：agent 之間的信箱——aos-post 上的純 inbox 協議"
+ }
+}

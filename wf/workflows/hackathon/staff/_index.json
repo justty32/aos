@@ -1,0 +1,17 @@
+{
+ "README.md": {
+  "description": "hackathon — 收場四棒的任務書（書記／評委／資料員／祕書）"
+ },
+ "judge.md": {
+  "description": "2. 評委（打分 ＋ 指出下一輪該修什麼）"
+ },
+ "researcher.md": {
+  "description": "3. 資料員（下一輪的資料包）"
+ },
+ "scribe.md": {
+  "description": "1. 書記（發生了什麼）"
+ },
+ "secretary.md": {
+  "description": "4. 祕書（讓使用者讀得動）"
+ }
+}

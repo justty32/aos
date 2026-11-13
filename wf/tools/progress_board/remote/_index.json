@@ -1,0 +1,8 @@
+{
+ "README.md": {
+  "description": "手機遠端看板的說明：artifact 網址、remote_sync.py 怎麼把本機看板狀態、待裁題與論壇推上去，以及怎麼把使用者在手機上的回答與回帖拉回本機"
+ },
+ "remote.html": {
+  "description": "手機遠端看板的頁面原始檔（claude.ai artifact），進度、待你裁、論壇三個分頁，給使用者出門用手機看"
+ }
+}

@@ -1,0 +1,8 @@
+{
+ "README.md": {
+  "description": "aos spec（09-05 舊版，歷史）：入口"
+ },
+ "archive": {
+  "description": "舊 spec 的封存區：09-05 那代 01-terms～14-conformance 共 23 份規格正文、schemas、合規表、寫 spec 當天的 notes 與條款來源表，只作歷史、不再維護"
+ }
+}

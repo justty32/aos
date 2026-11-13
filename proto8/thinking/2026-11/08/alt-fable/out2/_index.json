@@ -1,0 +1,41 @@
+{
+ "D1-Argon.md": {
+  "description": "(A) 審查：盲點、原意偏離、過保守與過複雜"
+ },
+ "D1.md": {
+  "description": "fable 深挖 D1：v3 鑄模廠空轉與 LLM 黑盒程式拆不開，解法是把蠟模最小單位從整題改成一步（檢查點契約、逐步軌跡、斷裂面微任務、步驟間反合一）"
+ },
+ "D2-Argon.md": {
+  "description": "(A) 審查：盲點、原意偏離與複雜度失衡"
+ },
+ "D2.md": {
+  "description": "錘子 v4 深挖：預算分配與信用分配（Argon 問題 3）"
+ },
+ "D3-Argon.md": {
+  "description": "(A) 審查：D3 的盲點、偏離、過度保守與過度複雜"
+ },
+ "D3.md": {
+  "description": "可進化的審查節點（錘子設計圖 v4 補章：審查也要被暴力搜）"
+ },
+ "P1-Argon.md": {
+  "description": "(A) 審查：P1 產出的盲點、原意偏離與過度設計"
+ },
+ "P1.md": {
+  "description": "他山之石：錘子設計圖的文獻掃描"
+ },
+ "S1-Argon.md": {
+  "description": "(A) 審查：盲點、原意偏離、過度保守與複雜化"
+ },
+ "S1.md": {
+  "description": "錘子架構與設計體系 v1（對照 aos NORMS／CONCEPTS）"
+ },
+ "S2-Argon.md": {
+  "description": "(A) 審查：原意偏離、數學盲點、過度保守與複雜"
+ },
+ "S2.md": {
+  "description": "錘子的 ML 類比與數學骨架（給 v4）"
+ },
+ "v4-Argon整合.md": {
+  "description": "錘子設計圖 v4（整合定稿）"
+ }
+}

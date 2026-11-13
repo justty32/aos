@@ -1,0 +1,8 @@
+{
+ "02-新題-11-04-晚.md": {
+  "description": "aos-agent 11-04 晚的兩條衝突（AOS_AGENT 放名字 vs N-63、add 不先驗）與兩題方向題（定義位置誰記、直跑 agent 要不要 --stack）及使用者裁定"
+ },
+ "03-新題-tools-llm.md": {
+  "description": "衝突 3：`tools add`／`llm set` 改定義資料夾，對上 P-15【已答：「改副本。改定義那塊用aos-tools」】"
+ }
+}

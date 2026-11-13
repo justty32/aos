@@ -1,0 +1,9 @@
+{
+ "02-第二輪": {
+  "description": "10-20 tidy 第二輪（清 thinking 的 AI 段）的分檔：01 每份檔刪了什麼與 bytes 前後、核驗結果，02 待使用者裁定的 17 條與處理結果",
+  "index": "02-第二輪/_index.json"
+ },
+ "02-第二輪.md": {
+  "description": "第二輪：清 thinking 的 AI 段（細節）"
+ }
+}

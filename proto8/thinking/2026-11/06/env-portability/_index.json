@@ -1,0 +1,38 @@
+{
+ "01-盤點-AOS.csv": {
+  "description": "env-portability 的 AOS_* 環境變數盤點表（csv）：每個變數的性質、誰設誰讀、形狀、沒設時怎樣、有沒有落檔與可遷移性判定"
+ },
+ "01-盤點-其他.csv": {
+  "description": "env-portability 的非 AOS_ 環境變數盤點表（csv）：PATH、HOME、TMUX、金鑰指示詞等外部變數的設讀者、落檔情形與可遷移性判定"
+ },
+ "01-盤點.md": {
+  "description": "涵蓋：全 repo 程式與範本讀的環境變數盤點（資料檔）與欄位說明、統計"
+ },
+ "02-判準.csv": {
+  "description": "資料表（csv）：欄位 criterion、result"
+ },
+ "02-評估.md": {
+  "description": "涵蓋：照 C-83／N-67 六個判準逐項評估盤點表裡的變數；有問題的四個附實際情境與 /tmp 實測結果"
+ },
+ "03-建議.csv": {
+  "description": "資料表（csv）：欄位 id、now、change、touches"
+ },
+ "03-建議與搬家食譜.md": {
+  "description": "涵蓋：哪些改寫進檔或定義、哪些維持環境變數；搬家時要重設哪些（P8 食譜的一段）"
+ },
+ "04-規範草稿.md": {
+  "description": "涵蓋：N-67 可遷移性檢查單加三項的草稿（只草稿、不改條文）"
+ },
+ "05-衝突.csv": {
+  "description": "資料表（csv）：欄位 id、principle、conflict、effect"
+ },
+ "05-衝突與方向題.md": {
+  "description": "涵蓋：跟既有原則的衝突（N-63 繼承、N-59 外層贏、C-83、N-67、json-argv）與原則推不出的方向題（推薦放第一）"
+ },
+ "06-E1改-金鑰歸小proc.md": {
+  "description": "涵蓋：使用者 11-06 更正 E1——金鑰歸那個跑一次的 endpoint 函數 proc（「小 proc」）自己保管；照原則定的細節、代定、方向題"
+ },
+ "README.md": {
+  "description": "環境變數與可遷移性（env-portability，J 隊）"
+ }
+}

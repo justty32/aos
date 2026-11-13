@@ -1,0 +1,70 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-10-15"
+ },
+ "clerk-live.md": {
+  "description": "2026-10-15 報時員（agent 當工具）用 LM Studio 實跑"
+ },
+ "general-kernel.md": {
+  "description": "2026-10-15 通用 kernel：判官是一個 agent，閘門照舊"
+ },
+ "homoiconic.md": {
+  "description": "2026-10-15 同像性：inst 也是「純值或物件」的大號版"
+ },
+ "inst-exec-v3.md": {
+  "description": "2026-10-15 inst 只吃 stdin／aos-exec 第三版：aos-exec 只是「讀檔灌 stdin」，agent 的定義隨 inst 走"
+ },
+ "inst-exec-v4": {
+  "description": "10-15 inst 只吃 stdin／aos-exec 第四版討論紀錄：agent 定義＝一張 inst、工具走 frame、零 sh，C-50 選 a 其餘照推薦；「沒有指示詞」已被 N-45 推翻、frame 那段 10-16 改掉",
+  "index": "inst-exec-v4/_index.json"
+ },
+ "inst-exec.md": {
+  "description": "2026-10-15 inst 只吃 stdin、aos-exec 當語法糖、TARGET 全拿掉、`$ref` 從所在檔算"
+ },
+ "json-families.md": {
+  "description": "2026-10-15 JSON 格式族：沿用現有幾族、不依賴指示詞"
+ },
+ "judge-live.md": {
+  "description": "2026-10-15 agent 判官實跑（LM Studio Qwen3-1.7B）"
+ },
+ "judge-live2.md": {
+  "description": "2026-10-15 agent 判官實跑之二（補位之後）"
+ },
+ "kernel-intercept.md": {
+  "description": "2026-10-15 kernel 截流：agent 只管叫、貴的呼叫先排隊"
+ },
+ "kiss": {
+  "description": "10-15 深夜 KISS 審視彙整：8 份稿去重、衝突、總表與批次；批次 1 已做，10-16 使用者撤回「都照推薦」，批次 2～6 暫停，現況看 10-16 kiss-recheck",
+  "index": "kiss/_index.json"
+ },
+ "layout-growth.md": {
+  "description": "2026-10-15 布局成長：檔案→資料夾、純值→物件，同一套規則"
+ },
+ "litellm-live.md": {
+  "description": "2026-10-15 proto8 新架構用 LiteLLM（GPT 類）實跑"
+ },
+ "llm-kernel.md": {
+  "description": "2026-10-15 LLM kernel：請求自己填優先級"
+ },
+ "naming": {
+  "description": "2026-10-15 命名習慣：好懂、結構先行、一次記住",
+  "index": "naming/_index.json"
+ },
+ "opinions-1-4.md": {
+  "description": "2026-10-15 意見 1～4：fsm 只管「狀態→inst」、agent＝fsm＋inst、binding 用 json＋資料夾（Lisp 式）"
+ },
+ "opinions-5-7.md": {
+  "description": "2026-10-15 收工後意見 5～7：資料夾⇄JSON、JSON schema"
+ },
+ "paint-live.md": {
+  "description": "2026-10-15 畫家 demo 用 LiteLLM 真腦實跑"
+ },
+ "principles": {
+  "description": "2026-10-15 兩條總原則：巢狀只管自己這一層、錯誤只處理自己的（深夜加：KISS 最高原則）",
+  "index": "principles/_index.json"
+ },
+ "topics": {
+  "description": "10-15 討論紀錄（4 份分檔）：早上清帳待定（N-35、N-36～N-41 進規範）、條文按主題分、fsm 補細則、agent 工具與思考介面、試 146 ollama 與 LM Studio 小模型、agent 當函數",
+  "index": "topics/_index.json"
+ }
+}

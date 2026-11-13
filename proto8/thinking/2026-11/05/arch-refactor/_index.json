@@ -1,0 +1,29 @@
+{
+ "01-現況地圖.md": {
+  "description": "涵蓋：repo 兩代並存、proto8 內部各夾與呼叫鏈、數字、殘渣"
+ },
+ "02-問題清單-續.md": {
+  "description": "涵蓋：問題清單 D～G（重複碼、死碼、命名與分層、code map）"
+ },
+ "02-問題清單.md": {
+  "description": "涵蓋：問題清單 A～C（兩代並存、四夾沒判準、建置重工）"
+ },
+ "03-重構方案-續.md": {
+  "description": "涵蓋：目標形狀 § 5～8（去重分層、拆檔、命名、死碼）"
+ },
+ "03-重構方案.md": {
+  "description": "涵蓋：目標形狀 § 1～4（根、proto8 內部、impls 建置、code map 機制）"
+ },
+ "04-實作步驟.md": {
+  "description": "涵蓋：分步（每步一個 commit、單獨做完 build 得過）、哪步可先做、等誰"
+ },
+ "05-風險與邊緣.md": {
+  "description": "涵蓋：風險與邊緣狀況（每條：會怎麼壞、怎麼防、哪一步）"
+ },
+ "06-工作量與排程.md": {
+  "description": "涵蓋：每步估時、今晚（11-05）排程與實際進度、明天剩什麼"
+ },
+ "README.md": {
+  "description": "2026-11-05 夜 架構大重構：兩代並存收成一代、proto8 按角色分夾、impls 一次建、code map 改生成（arch-refactor，fable 規劃、未實作）"
+ }
+}

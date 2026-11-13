@@ -1,0 +1,17 @@
+{
+ "context.md": {
+  "description": "context 管理——每層管自己下級的 context"
+ },
+ "grades.md": {
+  "description": "涵蓋：二、聰明度分級（總分）、三、token 消耗速度"
+ },
+ "plans.md": {
+  "description": "訂閱方案現況（Claude、GPT 各一個 200 美元方案）與現行隊形，以及退掉 GPT 時各層角色改派誰；隨每月帳單改、只寫現況"
+ },
+ "probe-2026-10-09.json": {
+  "description": "資料表（wf-table/1）：抽自 team-model.md 二、三節的暫定列，13 列，欄位 side、model、secs、tokens、hits_r8_11_12、hits_known4、note"
+ },
+ "speed.md": {
+  "description": "執行速度、時程與逐模型指揮心得"
+ }
+}

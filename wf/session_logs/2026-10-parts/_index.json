@@ -1,0 +1,53 @@
+{
+ "01-10-02至10-09.md": {
+  "description": "涵蓋：2026-10-02、2026-10-03、2026-10-04、2026-10-05、2026-10-09"
+ },
+ "02-10-12至10-14.md": {
+  "description": "涵蓋：2026-10-12、2026-10-13、2026-10-14"
+ },
+ "03-10-15.md": {
+  "description": "涵蓋：2026-10-15、KISS 批次 1「純刪」照做（10-15 深夜，fable）"
+ },
+ "04-10-16.md": {
+  "description": "涵蓋：2026-10-16、KISS 重審五件拍板寫進概念與規範（10-16）"
+ },
+ "05-10-19.md": {
+  "description": "2026-10 月摘要的 10-19 分檔：定了資料夾＝程式、入口由 AOS_ENTRY 指、aos 只訂環境變數和一支 aos-exec，proto8-2 併進 proto8、N-52 作廢"
+ },
+ "06-10-20.md": {
+  "description": "2026-10 月摘要的 10-20 分檔：子 agent 派工分級（普通 opus、簡單 sonnet、難規劃 fable），指示詞 path 改 $path、加 $prefix 並寬容寫法"
+ },
+ "07-10-21之一.md": {
+  "description": "2026-10 月摘要的 10-21 第一份：aos-exec 旗標放在 XXX 前並支援 .env、沒 argv 的 JSON 物件當資料夾往下走（AOS_CO）、loop／daemon／fsm 只收一個設定檔"
+ },
+ "08-10-21之二.md": {
+  "description": "涵蓋：使用者不在時代定：aos-loop 收旗標（計畫第 1 段，10-21 下午）、使用者不在時代定：daemon 收尾（計畫第 2 段，10-21 下午）、使用者不在時代定：fsm（計畫第 3 段，10-21 下午）"
+ },
+ "09-10-21之三.md": {
+  "description": "涵蓋：2026-10-21（續）、使用者不在時代定：aos-tick（計畫第 4 段，10-21 晚）"
+ },
+ "10-10-22.md": {
+  "description": "2026-10 月摘要的 10-22 分檔：分層定為核心 aos-exec＋loop／daemon、標準庫 fsm、最上層 agent／kernel（C-74），.env 預設不蓋已有變數，aos-tick 擱置"
+ },
+ "11-10-23.md": {
+  "description": "2026-10 月摘要的 10-23 分檔：命名照 C-54 統合（_entry、.stack/、exec、.txt），刪 Python 版全改 C++，$ref 可寫陣列"
+ },
+ "12-10-24.md": {
+  "description": "涵蓋：2026-10-24、LLM kernel 下一步（從 SESSION-LOG 逐字搬來）、下一步（open）"
+ },
+ "13-10-25至10-27.md": {
+  "description": "涵蓋：2026-10-25、代定清單、2026-10-26、2026-10-27"
+ },
+ "14-10-28.md": {
+  "description": "2026-10 月摘要的 10-28 分檔：hub 以 kernel 記的為準並分 pause／stop、每個 agent 資料夾一份 aos-tools 註冊檔、agent 各單位都要是 aos 函數"
+ },
+ "15-10-29.md": {
+  "description": "2026-10 月摘要的 10-29 分檔：窗與投遞並列、身分＝路徑、agent 輸入是 queue（history.jsonl），塞話偷看共用 aos-say／listen，介質規劃照建議"
+ },
+ "16-10-30.md": {
+  "description": "2026-10 月摘要的 10-30 分檔：agent 這層是訊息 queue、aos-loop 是內部組件，外部 coding agent 當黑盒子，aos-hub 改 aos-eca-hub，round 化作薄殼"
+ },
+ "17-10-31.md": {
+  "description": "2026-10 月摘要的 10-31 分檔：parts 與 fsm 平級進標準庫層（待裁）、固定名字限縮到單一入口檔、aos 環境變數補 AOS_ 前綴"
+ }
+}

@@ -1,0 +1,71 @@
+{
+ "ak-style.fallback.css": {
+  "description": "Provide the reference Arknights visual style when its source is unavailable."
+ },
+ "app.js": {
+  "description": "This script safely renders progress snapshots and polls the local board when served over HTTP."
+ },
+ "asks.js": {
+  "description": "This script renders decision questions while retaining drafts and focused controls across polls."
+ },
+ "designs.css": {
+  "description": "This stylesheet styles fable design cards and gives their inline figures theme-aware colors."
+ },
+ "designs.html": {
+  "description": "aos｜fable 的設計"
+ },
+ "designs.js": {
+  "description": "This script renders fable design cards from data/designs.js and refreshes them from the local server."
+ },
+ "detail.html": {
+  "description": "進度看板的細節頁：唯讀顯示某條線的即時細節、正在跑的 Codex 工作、回報與可安全顯示的文字檔"
+ },
+ "detail.js": {
+  "description": "This script polls read-only detail endpoints and preserves filters, folds, and scroll while updating changed sections."
+ },
+ "eli5.js": {
+  "description": "This helper updates plain-language text and per-item freshness without replacing surrounding content."
+ },
+ "forum.css": {
+  "description": "This stylesheet lays out forum lists, posts, replies, and submission forms."
+ },
+ "forum.html": {
+  "description": "進度看板的論壇頁：顯示本機論壇快照，透過 HTTP 讓使用者發文與回帖"
+ },
+ "forum.js": {
+  "description": "This script renders offline forum snapshots and polls live posts while preserving the open discussion and drafts."
+ },
+ "guide-detail.html": {
+  "description": "aos 詳解｜arcagi"
+ },
+ "guide-play.html": {
+  "description": "aos 帶玩｜arcagi"
+ },
+ "guide.css": {
+  "description": "This stylesheet lays out the three arcagi guide pages (intro, detail, play) on top of style.css."
+ },
+ "guide.html": {
+  "description": "aos 入門｜arcagi"
+ },
+ "guide.js": {
+  "description": "This script fixes guide nav links for HTTP versus file snapshots and adds copy buttons to command blocks."
+ },
+ "index.html": {
+  "description": "進度看板主頁：顯示各線進度，開伺服器時即時輪詢、不開時當離線快照看"
+ },
+ "md.js": {
+  "description": "This renderer builds Markdown and whitelisted HTML as safe DOM nodes without copying active attributes."
+ },
+ "rounds.css": {
+  "description": "This stylesheet adds round status bars and report details to the shared Arknights layout."
+ },
+ "rounds.html": {
+  "description": "進度看板的輪次頁：把每條工作線依時間排成一輪輪的報告，可離線看"
+ },
+ "rounds.js": {
+  "description": "This script renders live round reports while preserving unchanged sections, folds, hashes, and scroll."
+ },
+ "style.css": {
+  "description": "This stylesheet provides a responsive light and dark layout for the aos progress board."
+ }
+}

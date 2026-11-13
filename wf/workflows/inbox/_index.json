@@ -1,0 +1,17 @@
+{
+ "PROTOCOL.md": {
+  "description": "inbox 協議 — 檔名、信件格式、STATUS、通道"
+ },
+ "README.md": {
+  "description": "inbox — 跟別資料夾的 agent 通信（怎麼寄、怎麼收）"
+ },
+ "ROSTER.md": {
+  "description": "ROSTER — 誰在線上、各自是誰（身份聲明簿）"
+ },
+ "TEMPLATE.letter.md": {
+  "description": "跨資料夾 agent 通信的信件模板：frontmatter（from、to、status、at、reply-to）與做了什麼、產出、沒做到、待決定四段，附檔名規則"
+ },
+ "wake-policy.md": {
+  "description": "inbox 各層醒鐘策略（從 PROTOCOL 拆出）：頂層、領導、工人各收誰的信、哪些 STATUS 要被叫醒"
+ }
+}

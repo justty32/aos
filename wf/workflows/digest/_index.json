@@ -1,0 +1,13 @@
+{
+ "2026-08-26": {
+  "description": "digest 第一批：把 2026-08-26 一天（一場討論會、三場動手做、一次大整理）的大量紀錄濃縮成七篇白話文，含會吃資料的問題、agent loop 跑通、投遞命令、待裁事項",
+  "index": "2026-08-26/_index.json"
+ },
+ "2026-10-25至11-01": {
+  "description": "digest 第二批：10-25～11-01 一週 proto8/thinking 的八篇白話總結，涵蓋 agent 的一輪、parts 與工具註冊檔、外部 coding agent、say/listen、介質與信箱、環境變數、待裁事項",
+  "index": "2026-10-25至11-01/_index.json"
+ },
+ "README.md": {
+  "description": "digest — 精簡版（給人讀的，不是給機器讀的）"
+ }
+}

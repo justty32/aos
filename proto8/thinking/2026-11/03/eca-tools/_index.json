@@ -1,0 +1,17 @@
+{
+ "01-使用者原文.md": {
+  "description": "涵蓋：使用者原文；決定（11-03，使用者）；規劃（fable，照原則定的細節，可翻案） › 1. 登記檔放哪、怎麼指、2. MCP 設定由誰、何時產生、放哪"
+ },
+ "02-3-工作區與-stack-怎麼給-aos.md": {
+  "description": "涵蓋：規劃（fable，照原則定的細節，可翻案） › 3. 工作區與 stack 怎麼給 aos-mcp、4. allowedTools 怎麼來、5. codex 怎麼接、6. 畫面那條路（open／tmux）、7. log 與 aos-mcp 的其他旗標、8. 錯誤代號"
+ },
+ "03-9-aos-eca-的入口檢查與-sta.md": {
+  "description": "涵蓋：規劃（fable，照原則定的細節，可翻案） › 9. aos-eca 的入口檢查與 `state`、10. demo、11. 不動的"
+ },
+ "04-要使用者看的.md": {
+  "description": "涵蓋：要使用者看的；實作時代定（11-03，實作者照原則定的，可翻案）"
+ },
+ "README.md": {
+  "description": "2026-11-03 eca 接 aos 工具：`cli.json` 指登記檔、cli_session 自己接 aos-mcp，工作區與 stack 跟著實例走"
+ }
+}

@@ -1,0 +1,14 @@
+{
+ "01-1-Python-版-aos-inst-刪掉-寬.md": {
+  "description": "涵蓋：1. Python 版 aos-inst 刪掉、寬鬆度與錯誤代號照 C++ 版（10-22）、2. 對 fable 的 aos-exec × s6／runit 報告的回應（10-22）"
+ },
+ "02-3-env-基礎子集與---dotenv-ove.md": {
+  "description": "涵蓋：3. `.env` 基礎子集與 `--dotenv-override`（10-22）、4. 分層方向（10-22）"
+ },
+ "03-5-loop.md": {
+  "description": "涵蓋：5. loop（10-22）、6. daemon（10-22）、7. fsm（10-22）"
+ },
+ "README.md": {
+  "description": "2026-10-22 Python 版向 C++ 版看齊；對 s6／runit 對照報告的回應；.env 基礎子集；分層方向；loop 條文定稿；daemon 三題；fsm"
+ }
+}

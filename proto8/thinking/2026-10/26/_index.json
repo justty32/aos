@@ -1,0 +1,8 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-10-26"
+ },
+ "playground.md": {
+  "description": "2026-10-26 playground：先弄一個呼叫 claude code cli 的節點"
+ }
+}

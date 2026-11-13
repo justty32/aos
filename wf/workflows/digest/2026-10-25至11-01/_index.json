@@ -1,0 +1,29 @@
+{
+ "01-這一週每天定了什麼.md": {
+  "description": "10-25～11-01 週 digest 第 1 篇全景：八天每天定了什麼（命名規則、外部 agent 零件、信箱、瘦身），哪幾條線先定後翻"
+ },
+ "02-agent的一輪-從五格到刪掉.md": {
+  "description": "10-28：什麼都要是資料夾程式，一輪也是"
+ },
+ "03-零件去哪找-parts與工具註冊檔.md": {
+  "description": "先講結論（11-01 早為止）"
+ },
+ "04-外部coding-agent怎麼接進來.md": {
+  "description": "週 digest 第 4 篇：claude code、codex 等外部 coding agent 怎麼接進 aos，aos-mcp、aos-hub 長出來又在 10-30 拆成 aos-daemon＋aos-eca-hub 的經過"
+ },
+ "05-跟agent說話-say-listen與queue.md": {
+  "description": "起點（10-24）：題目一張、答案一張"
+ },
+ "06-程式之間怎麼傳東西-介質與信箱.md": {
+  "description": "週 digest 第 6 篇：10-28～29「介質」討論的白話版，程式之間怎麼傳東西、aos-loop 外圈與管家、信箱怎麼寄、哪些不寫進標準；這條線大致穩定"
+ },
+ "07-環境變數這條線.md": {
+  "description": "週 digest 第 7 篇：環境變數從 10-31 補 AOS_ 前綴到「這就是濫用」改成參數或檔案的經過，五題裁了什麼、傳話筒那題在問什麼"
+ },
+ "08-等你決定的事.md": {
+  "description": "週 digest 第 8 篇：截至 11-01 還卡在使用者身上的待裁事項清單（整體瘦身範圍等），每條附選項與「回一句什麼就能推進」"
+ },
+ "README.md": {
+  "description": "digest 第二批：2026-10-25 至 11-01 這一週的 thinking"
+ }
+}

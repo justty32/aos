@@ -1,0 +1,17 @@
+{
+ "01-設計.md": {
+  "description": "涵蓋：設計（fable 照原則定的細節，可翻案）"
+ },
+ "02-跟-eca-對照.md": {
+  "description": "涵蓋：跟 eca 對照（兩邊一樣的、兩邊不一樣的、條文加的註）"
+ },
+ "03-實作步驟.md": {
+  "description": "loop／fsm agent 11-04 實際做了什麼（agent-fsm 範本各檔、test_agent_fsm 十二項、條文加註）與實作時代定，已照做"
+ },
+ "04-衝突與方向題.md": {
+  "description": "涵蓋：使用者 11-04 裁的衝突與方向題"
+ },
+ "README.md": {
+  "description": "2026-11-04 aos 體系自己的 loop／fsm agent：用 aos-loop＋aos-fsm 組、腦接 LLM、走 queue 協議、對外接法跟 eca 對齊（fable 規劃）"
+ }
+}

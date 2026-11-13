@@ -1,0 +1,17 @@
+{
+ "00-分檔說明.md": {
+  "description": "2026-10-12-loop-daemon 分檔"
+ },
+ "01-原文結論與三json.md": {
+  "description": "0. 使用者原文（語音轉文字，大意照記）"
+ },
+ "02-loop與daemon.md": {
+  "description": "10-12 loop／daemon 分檔二：loop 每圈怎麼跑、times、ctl.json 輪詢、狀態物件、退出碼，以及 daemon 管多個 loop 的決定"
+ },
+ "03-遷移與未決.md": {
+  "description": "5. tasks 怎麼拿子程式的碼"
+ },
+ "README.md": {
+  "description": "2026-10-12 loop／daemon：loop 包一個 inst，daemon 管多個 loop、自己也是一個 loop"
+ }
+}

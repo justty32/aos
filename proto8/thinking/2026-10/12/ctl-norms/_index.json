@@ -1,0 +1,14 @@
+{
+ "00-分檔說明.md": {
+  "description": "2026-10-12-ctl-norms 分檔"
+ },
+ "01-原文結論與宣告式ctl.md": {
+  "description": "10-12 ctl 規範分檔一：使用者原文、宣告式 ctl.json 與指令式控制資料夾兩種 ctl 的結論，及 ctl.json 欄位（paused／stop 的 val／now）、語意、state.json 的決定"
+ },
+ "02-指令式資料夾與未決.md": {
+  "description": "4. 決定：指令式控制資料夾（維持現狀，拆成規範／慣例）"
+ },
+ "README.md": {
+  "description": "2026-10-12 ctl 規範：宣告式 ctl.json 與指令式控制資料夾"
+ }
+}

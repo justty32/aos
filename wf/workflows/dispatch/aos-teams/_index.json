@@ -1,0 +1,17 @@
+{
+ "01-公司WSL.md": {
+  "description": "公司那台（WSL）的 codex、claude 隊員與監看門檻"
+ },
+ "02-指令沙箱與試玩.md": {
+  "description": "涵蓋：指令與沙箱（含 codex 可用 slug）、每段做完派人試玩（2026-09-13 起）"
+ },
+ "03-使用者原話.md": {
+  "description": "涵蓋：使用者 11-06 原話（現行隊形的出處）、使用者 11-07 原話（家機假日隊形與 gpt 的分工限制）"
+ },
+ "04-進度回報.md": {
+  "description": "涵蓋：使用者原話、各線什麼時候回報、看板與匯總者、論壇：什麼時候發帖、手機遠端看板"
+ },
+ "05-同機session與Argon.md": {
+  "description": "同機 session 傳話與 Argon 共同設計"
+ }
+}

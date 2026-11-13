@@ -1,0 +1,29 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-11-08"
+ },
+ "ak-guide": {
+  "description": "2026-11-08 ak-guide：給使用者的 arknights-kb 桌面入門頁（ELI5、圖多、細節摺疊）",
+  "index": "ak-guide/_index.json"
+ },
+ "alt-fable": {
+  "description": "使用者 11-08 晚 6 條「錘子」意見原話，與 alt 帳號 fable＋Argon 反芻出的錘子設計圖 v1～v4（節點樹自我審查改進）；v3、v4 方向題已裁照推薦",
+  "index": "alt-fable/_index.json"
+ },
+ "aos-self-opt": {
+  "description": "想法 27 把 arcagi 的方法用回 aos 自身優化：簡報、fable 規劃、可施工圖紙（離線重播、零 LLM 符號迴歸、py/aos_metaopt）；4 個 ask 已裁 A，只規劃未施工",
+  "index": "aos-self-opt/_index.json"
+ },
+ "codex-sandbox": {
+  "description": "家機 codex 開 workspace-write 沙箱也能連 LiteLLM 的實測：多帶 -c sandbox_workspace_write.network_access=true 即可；使用者 11-08 裁 A、已進派工指令",
+  "index": "codex-sandbox/_index.json"
+ },
+ "forum": {
+  "description": "手機遠端看板（claude.ai artifact 當純界面、db 當橋、本機為源頭）與本機 jsonl 論壇的原話、結論、事件格式；第一段上線、第二段發帖與權限腳本、論壇頁已完成",
+  "index": "forum/_index.json"
+ },
+ "node-pool": {
+  "description": "想法 20（節點池、梯度信箱、錢財制度）與想法 21（蒸餾後壓縮）的簡報、fable 規劃與第五輪施工圖紙 N1～N10；兩份決定頁使用者已裁",
+  "index": "node-pool/_index.json"
+ }
+}

@@ -1,0 +1,47 @@
+{
+ "2026-11-01-artifact-回寫.md": {
+  "description": "11-01 artifact 回寫 parts 瘦身（A 題）"
+ },
+ "2026-11-01.md": {
+  "description": "11-01 的工作日誌：parts 降為慣例層約定並刪掉 aos-parts、試驗場 bob 開跑、環境變數只在必要時用的五題裁定、刪 aos-round"
+ },
+ "2026-11-02.md": {
+  "description": "11-02 的工作日誌：記下使用者 CPU 類比（CF／CD／CO 與 STACK／WS）原文，試驗場 bob-cathy 代定 8 條"
+ },
+ "2026-11-03.md": {
+  "description": "11-03 的工作日誌：aos-eca-hub 改名 aos-eca-ctl（不留舊名，代定 6 條），以及 procs 合一、aos-post 等當天施工"
+ },
+ "2026-11-04.md": {
+  "description": "11-04 的工作日誌：tidy 收斂、aos-post 改版完成、四元素審查十題實作、思考是 aos 函數（問腦＝寄信給 llm kernel、aos-llm 成基礎工具）"
+ },
+ "2026-11-05.md": {
+  "description": "11-05 的工作日誌：aos-mcp 失敗附 stderr、無痛遷移規劃（sleep／wake、image 路徑、四步啟動）、kernel＝管 proc、知識庫與 memory 工具"
+ },
+ "2026-11-06.md": {
+  "description": "11-06 的工作日誌：daemon stack 鎖不被 fork 帶走、adopt 比 boot_id、大重構 S5 把 proto8 分成 impls／cmd／py／lib／kernel／templates、responded_at"
+ },
+ "2026-11-07.md": {
+  "description": "11-07 的工作日誌：aos-daemon-ctl 直寄 daemon、aos-agent 經判官，sol 審查 32 題裁定，gpt 系派工範圍，知識庫節點用英文，daemon 失敗語意裁 B"
+ },
+ "2026-11-08.md": {
+  "description": "11-08 的工作日誌：家機 codex 開沙箱連 LiteLLM，帶 network_access=true 即可（使用者裁 A、派工指令已改）"
+ },
+ "2026-11-09.md": {
+  "description": "11-09 的工作日誌：時鐘改名 clock／cycle、熱寫檔有變才寫並拆 state_flux.json、daemon 只做 poke 訊號門鈴、格式版本只埋種子、試驗場改三層"
+ },
+ "2026-11-10.md": {
+  "description": "11-10 的工作日誌：arcagi 停線、兩台機器輪流跑的做法、晚上七條線收進 main（self_*、mailbox、時鐘叫醒、生子、JSON 記憶庫）"
+ },
+ "2026-11-11.md": {
+  "description": "11-11 的工作日誌：agents_children 改名 subagent、self_system、on_clock hook、do_task／fork／todo／goal 工具、kernel 回到資源管理＋排程"
+ },
+ "2026-11-12.md": {
+  "description": "11-12 的工作日誌：eca 不給 aos 基礎檔案工具、knowledge 工具拆掉改普通 json＋_index、json_*／jsonx_* 兩套、_metainfo 只是約定、Q01～Q16 結清"
+ },
+ "2026-11-13.md": {
+  "description": "11-13 的工作日誌：公司 WSL 不再當遊樂場、改住 ~/aos-home（一隻 opus eca），repo 換到 ~/repo/aos，舊遊樂場與舊 repo 刪掉"
+ },
+ "README.md": {
+  "description": "session_logs／2026-11 — 2026-11 每日索引"
+ }
+}

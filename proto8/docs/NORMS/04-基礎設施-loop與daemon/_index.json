@@ -1,0 +1,11 @@
+{
+ "01-N-10.md": {
+  "description": "loop 與 daemon 規範分檔 N-10：已刪的「指令式控制資料夾」條號錨點，附 daemon 兩義說明；改用 ctl 宣告與 state 窗"
+ },
+ "02-N-28.md": {
+  "description": "- N-28（ideas 10-22 § 5）daemon.json 是 loop.json 的嚴格超集：同名 key 同義（節奏、窗、收尾），預設值可以不同（daemon `max` 預設不限、`interval_ms` 200；loop `max` 沒寫＝不限、`interval_ms` 0；10-14 深夜定：「沒寫 `max` 的 loop.json 丟給 daemon 會一直跑」）。一…"
+ },
+ "03-N-54.md": {
+  "description": "- N-54（ideas 10-22 § 5）daemon 表上有誰，寫在 daemon 的管轄手把 `procs_ctl.json`（使用者 10-16 對 N-10：「不留」，照 KISS 彙整 3.1 原推薦，KISS 重審拍板 1；分成兩個手把：使用者 10-28「一個控制loop面向和自身屬性，一個控制管轄的aos函數」、10-29「ctl和投遞信箱並存，那就是程式設計者自己決定哪個負…"
+ }
+}

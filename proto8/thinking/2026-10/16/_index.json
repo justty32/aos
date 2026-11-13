@@ -1,0 +1,18 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-10-16"
+ },
+ "agent-inherit": {
+  "description": "10-16 討論紀錄：agent 的擴張與當函數（Lua 式繼承、不造 args.json／ret.json）；食譜／廚房那套 10-19 作廢，仍有效的是 agent 當函數是概念上的、stack 與工作區分開（C-65～C-67）",
+  "index": "agent-inherit/_index.json"
+ },
+ "exitcode-perm.md": {
+  "description": "2026-10-16 結束碼只是參考；用檔案是為了借 Linux 權限"
+ },
+ "kiss-last.md": {
+  "description": "2026-10-16 KISS 是最高原則，也是最後原則；撤回「都照推薦」；寫什麼就做什麼"
+ },
+ "kiss-recheck.md": {
+  "description": "2026-10-16 KISS 大掃除重審：用「最高也是最後原則」＋「寫什麼就做什麼」＋「食譜與廚房」把批次 2～6 重看一遍"
+ }
+}

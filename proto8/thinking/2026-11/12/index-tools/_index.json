@@ -1,0 +1,11 @@
+{
+ "01-圖紙.md": {
+  "description": "index 工具圖紙：一支 `index_view`（只看、不改），index 放哪只寫在 `spot()` 一處"
+ },
+ "02-施工結果.md": {
+  "description": "index 工具施工結果：`index_view` 照圖紙做好（path、index 可同時給），json 小修 J2～J4，真腦兩家各一題"
+ },
+ "README.md": {
+  "description": "index 工具（只看、不改）：使用者 11-12 原話與決定，已施工（一支 `index_view`）"
+ }
+}

@@ -1,0 +1,65 @@
+{
+ "description": "index_gen 的範圍：哪些夾要建 `_index.json`（deep＝連底下每一層）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區。",
+ "scopes": [
+  {
+   "path": ".",
+   "stage": 1
+  },
+  {
+   "path": "wf",
+   "deep": true,
+   "stage": 1
+  },
+  {
+   "path": "proto8",
+   "stage": 1
+  },
+  {
+   "path": "proto8/docs",
+   "deep": true,
+   "stage": 1
+  },
+  {
+   "path": "proto8/thinking",
+   "deep": true,
+   "stage": 1
+  },
+  {
+   "path": "proto8/notes",
+   "deep": true,
+   "stage": 1
+  },
+  {
+   "path": "proto8/user-advice",
+   "deep": true,
+   "stage": 1
+  }
+ ],
+ "skip_dir_names": [
+  "archive",
+  "__pycache__",
+  ".git",
+  ".claude",
+  ".vscode"
+ ],
+ "skip_dirs": [
+  "wf/inbox"
+ ],
+ "usual_dirs": {
+  "tests": "{parent} 的測試",
+  "src": "{parent} 的原始碼",
+  "include": "{parent} 對外的標頭（別的專案只 include 這裡）",
+  "bin": "{parent} 的啟動檔：指令的入口",
+  "docs": "{parent} 的說明文件",
+  "cmake": "{parent} 共用的 CMake 設定",
+  "scripts": "{parent} 的腳本",
+  ".vscode": "{parent} 的 VS Code 設定"
+ },
+ "usual_files": {
+  ".gitignore": "{parent} 這一夾不進版控的東西",
+  ".gitkeep": "空檔，只為了讓空夾進版控",
+  "CMakeLists.txt": "{parent} 的 CMake 建置檔",
+  "vcpkg.json": "{parent} 用到的 vcpkg 套件清單",
+  "CMakePresets.json": "{parent} 的 CMake 預設組"
+ }
+}

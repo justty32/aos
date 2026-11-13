@@ -1,0 +1,20 @@
+{
+ "01a-未裁逐條-1～6.md": {
+  "description": "涵蓋：方向性-未裁 1～6（排隊預設、毫秒解讀、Q5 Python 半、排隊牆鐘、子資料夾未看、nice 偏離「建議經 daemon」）"
+ },
+ "01b-未裁逐條-7～12.md": {
+  "description": "涵蓋：方向性-未裁 7～12（8 處偏離判不當衝突、`--help` 位置、英文化範圍、transcripts 不進 image、不做 `--version`、loop 型接回看 done）"
+ },
+ "02a-設計決策一覽-未裁.md": {
+  "description": "涵蓋：隊長要的「設計決策一覽」五欄表——方向性-未裁 12 件（csv 16 列合併同件）"
+ },
+ "02b-設計決策一覽-已裁-上.md": {
+  "description": "涵蓋：方向性-已裁一覽（上）：no-pid、json-argv、tick-time、os-impl"
+ },
+ "02c-設計決策一覽-已裁-下.md": {
+  "description": "涵蓋：方向性-已裁一覽（下）：os-concepts、daemon-board、body-protocol、env-portability、git-image、apply-ideas、human-cli、lift-to-norms、日誌"
+ },
+ "03-已核對與沒撈的.md": {
+  "description": "涵蓋：313 條細節裡值得隊長知道的、覆蓋範圍、沒撈的"
+ }
+}

@@ -1,0 +1,18 @@
+{
+ "01-施工結果.md": {
+  "description": "01 施工結果（11-10 晚，history 線）"
+ },
+ "02-self_state與self_ctl.md": {
+  "description": "02 self_state 與 self_ctl（11-10 晚）"
+ },
+ "03-self_state與self_ctl施工結果.md": {
+  "description": "03 self_state 與 self_ctl 施工結果（11-10 晚）"
+ },
+ "README.md": {
+  "description": "self-family（11-10 晚）：給腦改自己的一家子——self_history 與 `aos-agent history`"
+ },
+ "hook": {
+  "description": "11-10 討論紀錄：hook 機制——事件發生時跑指定 aos 函數，aos-agent hook 與 self_hook 的圖紙、施工結果、知識庫節點，已施工",
+  "index": "hook/_index.json"
+ }
+}

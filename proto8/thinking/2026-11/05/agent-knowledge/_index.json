@@ -1,0 +1,23 @@
+{
+ "01-層級式記憶工具.md": {
+  "description": "層級式記憶工具 `memory`（fable 照原則定的細節，可翻案）"
+ },
+ "02-aos知識庫.md": {
+  "description": "aos 體系知識庫（層級式記憶工具的第一個知識庫）"
+ },
+ "03-接進agent與工具說明.md": {
+  "description": "接進 agent、工具說明建立在知識上（fable 代定，可翻案）"
+ },
+ "04-實測.md": {
+  "description": "實測：小模型拿著根能不能一路翻到對的頁、答出對的指令"
+ },
+ "05-給使用者的說明.md": {
+  "description": "給你看的說明（ELI5）"
+ },
+ "06-11-05晚-接線.md": {
+  "description": "11-05 晚 接線（K1～K8、R1）"
+ },
+ "README.md": {
+  "description": "2026-11-05 下午 給 agent 的 aos 體系知識＋層級式記憶工具 `memory`（fable 規劃，工具與知識庫已做、沒改既有程式）"
+ }
+}

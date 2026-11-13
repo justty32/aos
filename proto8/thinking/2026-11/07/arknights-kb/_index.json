@@ -1,0 +1,147 @@
+{
+ "01-盤點-aos.md": {
+  "description": "aos 在 11-07 開線時能做到哪（opus 隊員盤點）的結論；全文已搬到報告夾。"
+ },
+ "01-盤點-語料.md": {
+  "description": "arknights 敘事庫盤點（11-07，codex 寫）的結論；全文已搬到報告夾。"
+ },
+ "02-設計": {
+  "description": "arknights-kb 第一版設計（fable 11-07）的四份分檔：庫的三層與節點格式、窄領域 agent 與確定性工具、kernel 與 git、第一輪範圍與施工；入口與要使用者裁的題在 02-設計.md",
+  "index": "02-設計/_index.json"
+ },
+ "02-設計-修正.md": {
+  "description": "arknights-kb 第一版設計的修正（隊長照 opus 審查定，蓋過 02-設計 同題的寫法；可翻案）"
+ },
+ "02-設計-審查.md": {
+  "description": "arknights-kb 第一版設計審查（opus 11-07）：方向對、可開工，但有 7 條必修（預算鍵、數量、路徑、lint 會卡死），修完 T4／T5／T7 才能照做"
+ },
+ "02-設計.md": {
+  "description": "arknights-kb 第一版設計（fable 11-07，只寫結論與代定、可翻案；衝突與方向題在「要使用者裁」）"
+ },
+ "03-W1到W4施工結果.md": {
+  "description": "knowledge-write W1～W4（`memory_write` 等）施工結果的結論；全文已搬到報告夾。"
+ },
+ "04-第一輪實跑.md": {
+  "description": "第一輪實跑（T1～T7，places 40 節兩趟）的結論；全文已搬到報告夾。"
+ },
+ "05-小實驗-sol.md": {
+  "description": "05 小實驗（sol，11-07 午）"
+ },
+ "06-問答agent原型.md": {
+  "description": "問答 agent 原型：在 ~/code/playground-qa 用 aos 搭一隻附出處回答 arknights 問題的 agent，10 題實測答對 90%、出處對 90%、每題平均約 1.6 萬 token"
+ },
+ "07-停不下與消失.md": {
+  "description": "不足 #15／#11（agent 停不下）與 #16（腦失敗後列消失）的重現、根因與處理：#16 提示已修，停不下根因是 body.json 寫成物件形，後續 11-07 裁 B（daemon 不分類）"
+ },
+ "08-daemon不分類once盤點.json": {
+  "description": "逐一記錄 HEAD 中與啟動分類有關的 once 與 check_once 程式使用處及其處理。"
+ },
+ "08-daemon不分類實作結果.md": {
+  "description": "daemon 照 11-07 裁定 B 統一各種 proc 生命週期（stop、sleep、自然退出、出錯）的施工結果與真程式實測表；當時未 commit"
+ },
+ "08-daemon不分類實測.json": {
+  "description": "三種身體（loop 分陣列與物件）四種情況與寫 ctl 失敗的實測證據。"
+ },
+ "08-daemon不分類檔案.json": {
+  "description": "本次未提交改動的完整檔案清單與責任範圍。"
+ },
+ "08-第二輪簡報.md": {
+  "description": "第二輪開跑前給 fable 的簡報（隊長匯總、codex 收資材）的結論；全文已搬到報告夾。"
+ },
+ "09-第二輪規劃-fable.md": {
+  "description": "arknights-kb 第二輪 fable 規劃：一個地點一個地點把存原文、找名字、建連結、貼 tag 各步壓到最低成本與模型，每地點後審視、把重複的事工具化；第一輪 writer 流程作廢"
+ },
+ "09b-第二輪規劃-fable-續.md": {
+  "description": "涵蓋：三、優先序與階段～八、輪末交接（晚審第 11 題：只拆不搬）"
+ },
+ "10-第二輪設計.md": {
+  "description": "一、aos 本體要改的五處（階段 0，施工 B1）"
+ },
+ "11-輪中簡報.md": {
+  "description": "arknights-kb 第二輪做完 3 個地點後給 fable 的輪中簡報：題目與規矩、前半數字與現況，請規劃地點 4 起的後半並回答三題"
+ },
+ "12-第二輪輪中規劃-fable.md": {
+  "description": "arknights-kb 第二輪後半的 fable 規劃：地點 4～8 收輪，審視從隊長手上交給系統（兩本帳＋審視者在試驗場落最小版），試驗成本壓回 1 倍以下，agent 只在有真實叫用時才長"
+ },
+ "13-第二輪後半設計.md": {
+  "description": "一、隊長對 12 的補全與修正"
+ },
+ "14-第二輪總結簡報.md": {
+  "description": "arknights-kb 第二輪（地點 1～8）總結簡報上半，給第三輪 fable 規劃用：這條線在做什麼、使用者給第三輪的建議原文、數字與事實；下半在 14b"
+ },
+ "14b-第二輪總結簡報-續.md": {
+  "description": "1. 收輪判準（12 §1.3）對照"
+ },
+ "15-第三輪規劃-fable-A.md": {
+  "description": "arknights-kb 第三輪 fable 規劃主題 A：linker 按題型分級、每次降級要過語意閘批准，先回放第二輪 8 地驗閘，再做地點 9～20 與 5 個人物，指標照使用者公式只算單任務"
+ },
+ "15-第三輪規劃-fable-B.md": {
+  "description": "1. 第三輪審視要達成什麼"
+ },
+ "15-第三輪規劃-fable-C.md": {
+  "description": "1. 這個包第三輪的目標"
+ },
+ "16-第三輪設計.md": {
+  "description": "一、隊長對三份規劃的裁定"
+ },
+ "17-蒸餾簡報.md": {
+  "description": "1. 使用者原話（逐字）"
+ },
+ "18-蒸餾規劃-fable.md": {
+  "description": "arknights-kb 蒸餾的 fable 規劃：把 LLM 每次重判的知識抽成關係事實表與條件→結論規則兩種資料檔，第三輪只影子跑、第四輪按數字接手部分 T2、第五輪讓規則庫自長自退"
+ },
+ "19-第三輪總結簡報.md": {
+  "description": "arknights-kb 第三輪（回放 8 地＋地點 9～20＋人物 5 人）總結簡報上半，給第四輪 fable 規劃與方向討論：做了什麼、收輪判準結果與數字；下半在 19b"
+ },
+ "19b-第三輪總結簡報-續.md": {
+  "description": "1. 蒸餾影子實驗（想法 17；第三輪只影子跑、不改生產）"
+ },
+ "20-第四輪簡報.md": {
+  "description": "1. 使用者定的主題（原話，11-07 晚）"
+ },
+ "21-第四輪規劃-fable.md": {
+  "description": "arknights-kb 第四輪 fable 規劃：零人工吞吐、4 worker 並行寫庫、蒸餾規則逐條升降上線的骨架、收輪數字與給 codex 的工單，帶給使用者兩題（量、「歲」分類）"
+ },
+ "22-第四輪設計.md": {
+  "description": "0. 跟 21 的差別（隊長改的）"
+ },
+ "23-第四輪總結簡報.md": {
+  "description": "arknights-kb 第四輪（A 批 20 地＋主題批「雪山降臨1101」22 任務）總結簡報，給第五輪規劃用：建設項、使用者翻案不跑全量、數字與事實"
+ },
+ "24-第五輪簡報.md": {
+  "description": "0. 新方向：元優化（想法 22，11-08 上午，以本節為準，與下文衝突時本節勝）"
+ },
+ "25-第五輪規劃-fable.md": {
+  "description": "arknights-kb 第五輪 fable 規劃第一版：以想法 22 元優化為框架，從不帶知識的基準快照反覆重跑謝拉格 22 任務、量成長曲線，排入想法 20／21；已被 25b、25c 修正取代"
+ },
+ "25b-第五輪規劃-fable-反芻1.md": {
+  "description": "arknights-kb 第五輪規劃修正版一（fable 反芻 1）：修掉 25「剝掉知識後第 1 pass 全 T2」的錯假設與衍生的達標、成本，補元審視、佈局、重置表；取代 25，後又被 25c 取代"
+ },
+ "25c-第五輪規劃-fable-反芻2.md": {
+  "description": "arknights-kb 第五輪規劃最終版（fable 反芻 2）：照 T 批成本結構把主指標換成送 LLM 的 T2 題數、拿掉動不了的錯連條件、堵升降門檻灌水、元審視要寫可核預測；取代 25b，第五輪照此施工"
+ },
+ "26-第五輪設計.md": {
+  "description": "0. 跟 25c 的差別（隊長改的）"
+ },
+ "27-第五輪總結簡報.md": {
+  "description": "arknights-kb 第五輪（元優化：v0 兩條、改教練、v1 一條）總結簡報兼收線：成績曲線、新教練值不值、預期與實際、代定 93～106，宣告本線暫停；重啟先讀"
+ },
+ "28-帶去arcagi清單.md": {
+  "description": "arknights-kb 暫停時寫給 arcagi 的清單（11-08 定稿）：哪些工具、量法、規矩可以帶去怎麼用，哪些坑別再踩，哪些留在原地；arcagi 冷啟動先看"
+ },
+ "README.md": {
+  "description": "2026-11-07 把 arknights 敘事庫歸納進 aos 的知識庫體系，藉此大量實跑 aos、挖不足再優化（arknights-kb，長線）"
+ },
+ "不足清單.md": {
+  "description": "arknights-kb 不足清單（實跑挖到的 aos 不足）"
+ },
+ "交棒.md": {
+  "description": "arknights-kb 交棒檔（隨時保持最新：做到哪、下一步、代定、還開著的程序）"
+ },
+ "代定清單.md": {
+  "description": "arknights-kb 代定清單（使用者 11-07 外出時隊長代定，每條可翻案）"
+ },
+ "得失.md": {
+  "description": "arknights-kb 每輪得失（做了什麼、得到什麼、失去／踩到什麼、下輪怎麼改）"
+ }
+}

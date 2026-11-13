@@ -1,0 +1,8 @@
+{
+ "01-跨機與外部工具.md": {
+  "description": "dev-env 分檔：家機 Manjaro 與公司 WSL 兩台的差異、repo 位置、codex／claude 怎麼叫、Windows 側補充；開場確認在哪台時看"
+ },
+ "02-模型端點.md": {
+  "description": "模型端點（2026-09-25 定，10-10 核對）"
+ }
+}

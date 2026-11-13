@@ -1,0 +1,29 @@
+{
+ "01-盤點.md": {
+  "description": "01 盤點：aos 現在跟 MCP 有關的一切、這台的 claude／codex 怎麼接外部 MCP server、使用者講過與定過的"
+ },
+ "02-設計.md": {
+  "description": "02 設計：一台外部 MCP server 一份 server 檔（stdio 或 http）；寫進 cli.json 就是 CLI 自己接，疊進 tools.json 就是經 aos 接"
+ },
+ "03-施工切法.md": {
+  "description": "03 施工切法：五步，每步各自能獨立合併——先 codex 身＋http server，再 `--envs` 的文件警告、claude 身、stdio＋`aos-mcp-launch`、範本與說明；fsm 那條延後"
+ },
+ "04-邊緣狀況.md": {
+  "description": "04 邊緣狀況：原生掛這條的 26 項（第 5 項作廢、23～26 是 http 多出來的），推得出答案的寫答案，推不出的三項升成題、使用者 11-12 已裁"
+ },
+ "05-http-bearer試接.md": {
+  "description": "05 http＋bearer＋自簽憑證試接（11-12 下午，公司 WSL，只驗不改程式）：接得上；token 用定義自己的 `_entry` 讀 env 檔給就哪裡都不留，用 `ctl add --envs` 給會明文寫進 stack 的 exec.json"
+ },
+ "06-施工結果.md": {
+  "description": "06 施工結果（11-12 下午，公司 WSL）：五步做完四步半——codex／claude 兩身都接得上 http（Bearer＋自簽 CA）與 stdio 外部 MCP server，金鑰只進 CLI 或 server 行程；範本與說明寫好；沒 push，fsm 那條沒做"
+ },
+ "07-fsm施工單.md": {
+  "description": "07 fsm 施工單：「fsm 經 aos 用外部 MCP」切成九步，每步半天以內、各自一個 commit、各自有驗法；做完步 2 就看得到 `aos-tools call` 叫到一支外部工具，步 8 才需要 fsm 真腦"
+ },
+ "08-fsm施工結果.md": {
+  "description": "08 fsm 施工結果（11-12 晚，家機）：07 的九步全做完（步 8 真腦驗收也在家機暫存樹跑過）——`aos-mcp-import` 把外部 server 的工具凍結進 server 檔，疊進 `tools.json` 後 `aos-tools call` 叫得到外部 stdio 與 http（Bearer＋自簽 CA）工具；代定 G1～G13 可翻案；Q1、Q2 已裁（Q2 施工見文末…"
+ },
+ "README.md": {
+  "description": "external-mcp：接外部 MCP server（11-12）——eca 由 CLI 自己接，11-12 下午施工做完五步（codex／claude 兩身、http 與 stdio、範本與說明）；fsm 經 aos 匯入成包延後"
+ }
+}

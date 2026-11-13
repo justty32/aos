@@ -1,0 +1,20 @@
+{
+ "01-拆法與命名.md": {
+  "description": "agents 工具拆成三塊的拆法表、各塊包哪支指令與最後定名（agents_children、agents_ctl、agent_def）"
+ },
+ "02-施工單.md": {
+  "description": "agents_children、agents_ctl、agent_def 三支工具的施工單：環境、動作、參數、錯誤與為何另開 agent_def"
+ },
+ "03-驗收結果.md": {
+  "description": "03 驗收結果（11-10 晚）"
+ },
+ "04-agents.json": {
+  "description": "設定（鍵：_description、_index、agents_children、agents_ctl、agent_def、thought）"
+ },
+ "04-知識庫節點.md": {
+  "description": "04 知識庫節點：舊 `agents` 節點換成三支（交 json-memory 隊放進 `knowledge/aos`）"
+ },
+ "README.md": {
+  "description": "agents-split（11-10 晚）：把 `agents` 工具拆成三塊"
+ }
+}

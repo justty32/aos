@@ -1,0 +1,68 @@
+{
+ "01-盤點-cpp.md": {
+  "description": "涵蓋：C／C++ 側（proto8/impls）逐處盤點：哪些是 daemon 本身或 Linux 原生機制可留、哪些要改"
+ },
+ "01-盤點-py.md": {
+  "description": "涵蓋：Python／sh 側逐處盤點（aos-agent、aos-daemon-ctl、lib 工具、aos-eca-screen、沙箱）"
+ },
+ "02-轉接設計.md": {
+  "description": "涵蓋：以 state.json 為主的判活、信不回＝呼叫失敗、daemon 要多暴露什麼、Python 共用模組、每個呼叫者改成什麼樣"
+ },
+ "03-找daemon與脫鉤.md": {
+  "description": "涵蓋：找 daemon 只靠環境變數的規則、環境變數脫鉤時的失敗樣子、`--env-file`／`--envs` 跟脫鉤的關係、要寫進 conventions／lib 規則的工具設計原則"
+ },
+ "04-沙箱.md": {
+  "description": "涵蓋：沙箱（aos-sandbox／bwrap）因為不靠 pid 能解掉哪些題、還要綁什麼、剩什麼沒解"
+ },
+ "05-監管樹.md": {
+  "description": "涵蓋：daemon 自己卡住或 crash 怎麼辦——監管樹、stuck 與重起、根 daemon 交給系統"
+ },
+ "06-衝突與邊緣.md": {
+  "description": "涵蓋：跟既有條文的衝突（要加註或改寫的）、邊緣狀況"
+ },
+ "07-實作步驟.md": {
+  "description": "涵蓋：分步草稿（給隊長；fable 不實作）、跟大重構 S6 怎麼合、派誰、驗收"
+ },
+ "08-P1實作結果.md": {
+  "description": "涵蓋：P1 做了什麼、代定、實測、新發現的邊緣（11-06 公司 WSL）"
+ },
+ "09-P2實作結果.md": {
+  "description": "涵蓋：P2 做了什麼、代定、實測、新發現的邊緣（11-06 公司 WSL）"
+ },
+ "10-P3實作結果.md": {
+  "description": "涵蓋：P3（＝大重構 S6）做了什麼、代定、實測、隊員分工、新發現的邊緣、P5b 要跟著改的（11-06 公司 WSL）"
+ },
+ "11-P4實作結果.md": {
+  "description": "涵蓋：P4（lib 工具去 pid：thought 子名唯一＋租約、`_tooldef.json` 的 `env`、lib 規則 11、knowledge 的 `DaemonMissing`）做了什麼、代定、實測、隊員分工、新發現的邊緣（11-06 公司 WSL）"
+ },
+ "12-P5b條文結果.md": {
+  "description": "涵蓋：P5b 條文結果、代定、概念變動、留著沒處理的"
+ },
+ "13-P5實作結果.md": {
+  "description": "涵蓋：P5 非 C++ 半（沙箱範例 `thought-boxed` 模式 1／2、aos-sandbox README）做了什麼、代定、假腦實測、張力判斷、新發現的邊緣（11-06 公司 WSL）"
+ },
+ "14-P6實作結果.md": {
+  "description": "涵蓋：P6 daemon 型 proc 做了什麼、代定、三層實測、新發現的邊緣（11-06 公司 WSL）"
+ },
+ "15-P6去耦合.md": {
+  "description": "涵蓋：使用者 11-06「不要耦合」之後 P6 怎麼改、監管樹改讀成什麼"
+ },
+ "16-P7重設計.md": {
+  "description": "涵蓋：P7（判卡住 `stuck`）照 C-52 新讀法重設計：判什麼、讀哪些檔、`stuck_after_ticks`、`restart_on_stuck`、09 邊緣 1、代定、方向題"
+ },
+ "17-P7實作結果.md": {
+  "description": "涵蓋：P7 只看公開窗判卡住的實作、代定、九案驗證與新邊緣"
+ },
+ "18-P8實作結果.md": {
+  "description": "P8 實作結果：根 daemon、三層試驗場與睡醒搬家（11-06 晚家機）。"
+ },
+ "19-P9邊緣實測.csv": {
+  "description": "資料表（csv）：欄位 id、scenario、method、result、threshold、gate、verdict、followup"
+ },
+ "19-P9邊緣實測.md": {
+  "description": "P9 邊緣實測：36 列完成；量到 high 等太久、晚套孤兒；未來 ctl 誤標與跨 boot 接回兩個 C++ 小 bug 隊長已修並複驗。"
+ },
+ "README.md": {
+  "description": "2026-11-05 晚 不靠 pid 找東西：daemon 是 Linux 行程與 aos 之間唯一的橋、寄信不回＝呼叫失敗、監管樹（no-pid；使用者方向＋fable 規劃；11-06 P1～P4、P5b 已做）"
+ }
+}

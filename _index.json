@@ -1,0 +1,34 @@
+{
+ ".claude": {
+  "description": "Claude Code 的設定夾：slash 指令 /wf-lint 與 compact 後重讀規矩的 hook；只有放 repo 根才讀得到，工作流本體在 wf/"
+ },
+ ".gitattributes": {
+  "description": "把工作區的行尾一律釘成 LF（專案只在 POSIX 上建置，CRLF 會讓 .sh 與 shebang 壞掉）"
+ },
+ ".gitignore": {
+  "description": "不進版控的清單：build／install／vcpkg 產物、Python 快取、跑出來的紀錄；proto8 各處手寫的 bin/ 另外放行"
+ },
+ "AGENTS.md": {
+  "description": "給 agent 的最頂層入口：開場先掃哪三處、鐵律、分層原則、要做事／看結構／碰程式各往哪走；每個 session 先讀這份"
+ },
+ "CLAUDE.md": {
+  "description": "Claude Code 的入口，只有一句：去讀 AGENTS.md"
+ },
+ "README.md": {
+  "description": "給人讀的專案總覽：aos 是什麼、怎麼建置與安裝、各資料夾放什麼"
+ },
+ "archive": {
+  "description": "repo 根的封存處：舊原型 proto～proto7-2 與 08～09 月那一代單一執行檔 aos-v1；凍結、不再建不再維護，裡面不建 index，要找看 archive/README.md"
+ },
+ "impl_cpp": {
+  "description": "使用者 11-09 起親手重寫 aos 核心的 C++23 實作（一個零件一夾在 core/）；核心程式由使用者自己寫，agent 只動開發環境，怎麼建、跑、測、除錯看它的 README"
+ },
+ "proto8": {
+  "description": "現役本體（第八版原型）：C／C++ 基礎層 impls、人打的指令 cmd、腦叫的工具 lib、agent 範本 templates、kernel、出廠內容 knowledge、條文 docs、討論紀錄 thinking；要找程式、條文或某次討論從這裡往下走",
+  "index": "proto8/_index.json"
+ },
+ "wf": {
+  "description": "工作流系統（agent 怎麼在這個 repo 做事）：派發表 WORKFLOWS、專案地圖 INDEX、各工作流 workflows/、進度與待使用者、日誌 session_logs、信件 inbox、檢查與 inbox 腳本 tools",
+  "index": "wf/_index.json"
+ }
+}

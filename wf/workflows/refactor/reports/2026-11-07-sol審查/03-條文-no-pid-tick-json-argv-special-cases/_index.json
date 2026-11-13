@@ -1,0 +1,26 @@
+{
+ "01-no-pid-P5b-續.md": {
+  "description": "no-pid P5b（續）"
+ },
+ "01-no-pid-P5b.md": {
+  "description": "no-pid P5b（子 agent fable 審、隊長收攏）"
+ },
+ "02-tick-time-續.md": {
+  "description": "tick-time（續）"
+ },
+ "02-tick-time.md": {
+  "description": "tick-time（子 agent opus 審、隊長收攏）"
+ },
+ "03-json-argv-J7.md": {
+  "description": "json-argv J7"
+ },
+ "04-special-cases.md": {
+  "description": "special-cases"
+ },
+ "05-四批之間打架.md": {
+  "description": "sol 審查 C 區分檔：no-pid P5b、tick-time、json-argv J7、special-cases 四批條文互相矛盾或疊在同一條的地方（K3 退路、C-52 清單、N-28 四層註等）"
+ },
+ "06-已核對-json-argv與special-cases.md": {
+  "description": "已核對沒問題的（json-argv）"
+ }
+}

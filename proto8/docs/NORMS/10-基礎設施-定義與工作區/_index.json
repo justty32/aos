@@ -1,0 +1,45 @@
+{
+ "01-N-57.md": {
+  "description": "- N-57（10-19 定，草稿；ideas § 14、§ 19）aos 只訂環境變數，共六個（使用者「然後我想要再加上兩個環境變數：AOS_CF, AOS_CD，也就是current file，current dir。」「AOS_CF不動。但是我們再加上AOS_CO」「aos current obj」；`AOS_CF`／`AOS_CD` 的定義由 fable 擬、使用者「同意做」，ideas…"
+ },
+ "02-N-58.md": {
+  "description": "- N-58（10-19 定，草稿；ideas § 15、§ 17、§ 19、ideas 10-21）`aos-exec [FLAGS...] XXX [args...]`＝「在工作區執行 XXX 這個程式」。XXX 前面是 aos-exec 自己的旗標，第一個不是旗標的參數就是 XXX，之後原樣傳下去；`--` 結束旗標（XXX 可以 `-` 開頭）；XXX 之後不再解析旗標。旗標跟環境變數同…"
+ },
+ "03-N-59.md": {
+  "description": "- N-59（10-19 定，草稿；ideas § 17～§ 20）aos-exec 只做這幾件事（使用者 § 17 確認：「就是這樣，aos-exec他就是cd進去後，準備好AOS_XXX那三個環境變數，然後開跑」）："
+ },
+ "04-N-60.md": {
+  "description": "- N-60（10-19 定，草稿；ideas § 18）aos-exec 自己的錯一律退 1：命令列不合（不認得的旗標、旗標缺值、沒有 XXX，N-58；不帶值的旗標寫成 `--dotenv-override=V`；stderr 一行 `aos-exec: error: ArgumentsBad … (usage: …)`（N-43），不認得的旗標代號是 `FlagUnknown`，think…"
+ },
+ "05-N-61～N-62.md": {
+  "description": "- N-61（10-19 下班前定，草稿，ideas § 15、§ 17、§ 18）aos-exec 怎麼從 XXX 找到入口、怎麼判斷種類："
+ },
+ "06-N-50～N-53.md": {
+  "description": "stack 與工作區（10-16 夜）"
+ },
+ "07-hub-型環境變數與父子交代": {
+  "description": "N-63 hub 型環境變數（10-28）的分檔夾：三件事與實例（AOS_STACK、AOS_LLM_KERNEL、AOS_KERNEL、AOS_DAEMON）、沒有 AOS_HUB、AOS_ 變數四種性質",
+  "index": "07-hub-型環境變數與父子交代/_index.json"
+ },
+ "07-hub-型環境變數與父子交代.md": {
+  "description": "hub 型環境變數（10-28）"
+ },
+ "08-父子交代.md": {
+  "description": "資料夾程式規範分檔 N-64 父子交代（10-29）：上一代給什麼、下一代留什麼、以 $AOS_WS 自報身分、用 hub 型變數找信箱"
+ },
+ "09-N-67.md": {
+  "description": "可遷移性檢查單（11-06）"
+ },
+ "09-續-N-67.md": {
+  "description": "image 帶什麼、不帶什麼（11-07）"
+ },
+ "10-N-68.md": {
+  "description": "函數的 _metainfo.json：估的成本與逾時（11-07）"
+ },
+ "10-續-N-68.md": {
+  "description": "N-68 續篇：他見的帳 observed.jsonl 與 aos-observed 介面。"
+ },
+ "11-N-69.md": {
+  "description": "函數的 _metainfo：放哪、怎麼找、誰讀（10-24）"
+ }
+}

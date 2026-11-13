@@ -1,0 +1,26 @@
+{
+ "01a-要使用者裁的-1～3.md": {
+  "description": "涵蓋：要使用者裁的題 1～3（P-44 九短名、image 範圍、wait 退 11）"
+ },
+ "01b-要使用者裁的-4～7.md": {
+  "description": "涵蓋：要使用者裁的題 4～7（N-66 對 C-52、時鐘停住、P7 用 mtime、C-81 三類四類）"
+ },
+ "02a-NORMS-1～5.md": {
+  "description": "涵蓋：NORMS 那一路發現 1～5（N-28／N-16 翻案寫成改讀、N-67 與逾時句過時、K3 對缺檔 0 格）"
+ },
+ "02b-NORMS-6～10.md": {
+  "description": "涵蓋：NORMS 那一路發現 6～10（AOS_TICK_INTERVAL 傳法、毫秒字面、N-03／性質表引文、語氣過硬）"
+ },
+ "03a-CONCEPTS-1～5.md": {
+  "description": "涵蓋：CONCEPTS 那一路發現 1～5（C-47 寫反、C-83 ③、C-78、C-42 續、C-44 過時）"
+ },
+ "03b-CONCEPTS-6～10.md": {
+  "description": "涵蓋：CONCEPTS 那一路發現 6～10（R6 例子、板子比喻用詞、C-16 比喻來源、C-75 少半句、C-80 對 C-83）"
+ },
+ "04-CONVENTION.md": {
+  "description": "涵蓋：CONVENTION 那一路（sol 第一輪）的發現"
+ },
+ "05-三題裁定-不收抽查-已核對.md": {
+  "description": "涵蓋：README「打架的題」三題裁定落點、不收 233 項抽查、三路已核對沒問題的"
+ }
+}

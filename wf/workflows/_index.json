@@ -1,0 +1,92 @@
+{
+ "TEMPLATE.handoff.md": {
+  "description": "交接書範本：派線給別的 agent 時複製改寫，段落含背景與唯一目標、工作步驟、禁區與鎖、驗收；寫交接書前先看"
+ },
+ "TEMPLATE.workflow.md": {
+  "description": "新工作流的範本：單檔型或資料夾型入口的固定段落（何時用、Done when、流程、內容），新開工作流時複製並在 WORKFLOWS.md 加一列"
+ },
+ "common": {
+  "description": "跨工作流共用的東西：共通踩坑 gotchas、使用者偏好 user、資料檔契約 data-files、程式碼慣例 conventions、code-map；使用者說「記／查踩坑」「我的偏好是…」或要找哪個檔負責什麼時走這裡",
+  "index": "common/_index.json"
+ },
+ "decide-page.md": {
+  "description": "decide-page — 把一批要使用者裁的題做成離線互動頁，收回答、落回各線"
+ },
+ "decisions.md": {
+  "description": "decisions — 決策記錄（本專案的落點：proto8/thinking 的決定）"
+ },
+ "dev-env": {
+  "description": "dev-env.md 的分檔：01 兩台機器（家機 Manjaro、公司 WSL）差異與外部工具、02 模型端點（只走 LiteLLM、不碰本機 GPU 模型）",
+  "index": "dev-env/_index.json"
+ },
+ "dev-env.md": {
+  "description": "dev-env — 開發環境、指令、外部工具"
+ },
+ "digest": {
+  "description": "digest 工作流：把看不動的 thinking 與紀錄濃縮成使用者半小時讀得完的白話版，只讀不產；使用者說「濃縮給我看」「我只有半小時」時走它，各批一個日期夾",
+  "index": "digest/_index.json"
+ },
+ "dispatch": {
+  "description": "dispatch 工作流：把大工作切成幾條線派給別的 agent、寫交接書、劃領地、收線驗收，含本專案隊形 aos-teams 與派線踩坑 lessons；使用者說「切成幾條線派出去」「開一隊」「收線」時走它",
+  "index": "dispatch/_index.json"
+ },
+ "experiments": {
+  "description": "experiments 工作流：拿一個明確假設到真環境實跑、要是／否的實測紀錄（T5 agent loop、Claude 訂閱 OAuth 調查）；使用者說「直接去試試看」「跑個實驗」時走它",
+  "index": "experiments/_index.json"
+ },
+ "feature-dev": {
+  "description": "feature-dev 工作流入口：新增或修改 aos 功能、修 bug，從動手到驗證綠燈再 commit；使用者說「我想開發／修改某個功能」「修 bug」時走它",
+  "index": "feature-dev/_index.json"
+ },
+ "hackathon": {
+  "description": "hackathon 工作流：派幾個 agent 各自動手試做同一題，只收踩坑報告與評委判斷，含場地、角色、題目書、收場四棒任務書與已辦場次；使用者說「辦個黑客松」「讓他們各自試做 X」時走它",
+  "index": "hackathon/_index.json"
+ },
+ "ideas": {
+  "description": "ideas 工作流（舊）：09-05 那代的 aos 構想入口，正文已在 10-13 封存，只留脈絡；使用者說「我有個 idea」時現行落點改在 proto8/docs/CONCEPTS.md 與 proto8/thinking",
+  "index": "ideas/_index.json"
+ },
+ "inbox": {
+  "description": "inbox 工作流：跟別資料夾 agent 通信的使用方式，含信件格式與 STATUS（PROTOCOL）、誰是誰（ROSTER）、信範本與醒鐘策略；使用者說「看看信箱」「寄信給 X」「回報做完了」時走它",
+  "index": "inbox/_index.json"
+ },
+ "investigation.md": {
+  "description": "investigation — 調查 / 解讀外部系統 / 可行性"
+ },
+ "investigations": {
+  "description": "investigation 工作流（入口在 investigation.md）留下的調查報告：proto5 宿主機 root daemon 第二道牆、Linux 外牆三條路線的可行性與小實驗；只讀不改、回答窄問題",
+  "index": "investigations/_index.json"
+ },
+ "planning.md": {
+  "description": "planning — 想法成熟管線（本專案的落點：proto8 thinking → CONCEPTS／NORMS）"
+ },
+ "refactor": {
+  "description": "refactor 工作流：行為不變地重構、拆檔、整理結構，含搬檔改名專章 moving-things 與歷次審查報告 reports；使用者說「重構／拆檔／整理程式結構」「搬檔案／改目錄名」時走它",
+  "index": "refactor/_index.json"
+ },
+ "resources.md": {
+  "description": "resources — 獨佔資源的鎖（螢幕、鍵鼠、主工作樹、裝置）"
+ },
+ "spec": {
+  "description": "spec 工作流（舊）：09-05 那代的 aos 規格，正文 10-13 已封存、不再是現行；使用者說「寫 spec」時現行落點改在 proto8/docs/NORMS.md 與 CONVENTION.md",
+  "index": "spec/_index.json"
+ },
+ "team-model": {
+  "description": "team-model.md 的分檔：context 管理五條規則、聰明度分級與 token 消耗速度、方案與時間軸（訂閱方案現況）、執行速度與逐模型心得、codex 試水溫紀錄 probe json",
+  "index": "team-model/_index.json"
+ },
+ "team-model.md": {
+  "description": "team-model — 誰來做：角色三層、聰明度分級、選人判準"
+ },
+ "testing.md": {
+  "description": "testing — 驗證（單檔工作流）"
+ },
+ "tidy": {
+  "description": "tidy 工作流：文件層整理（封存過時、分類雜亂、抽資料檔、刪過往記錄只留結論），含內容精簡規則與歷次整理報告；使用者說「整理 X」「封存過時的」「太大要拆」「只留結論」時走它",
+  "index": "tidy/_index.json"
+ },
+ "workshop": {
+  "description": "workshop 工作流：研討會／腦力激盪，派多個 codex 各扮一種身份提供靈感、由主持人收攏成紀錄，含議題書、書記任務書、codex 指令形態；使用者說「開個研討會討論 X」「給我一些靈感」時走它",
+  "index": "workshop/_index.json"
+ }
+}

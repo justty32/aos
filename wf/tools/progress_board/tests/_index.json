@@ -1,0 +1,38 @@
+{
+ "eli5_support.py": {
+  "description": "Provide isolated offline board fixtures and an inspectable fake explanation endpoint."
+ },
+ "rounds_dom.cjs": {
+  "description": "Provide a dependency-free DOM fixture for executing the actual rounds page script."
+ },
+ "test_eli5_collect.py": {
+  "description": "Verify actual collection and serialized browser state preserve the explanation contract offline."
+ },
+ "test_eli5_evidence.py": {
+  "description": "Verify bounded evidence, independent fingerprints and filtered commit cache behavior offline."
+ },
+ "test_eli5_offline.py": {
+  "description": "Verify explanation caching, changed-only prompts, cleanup, partial replies and CLI offline."
+ },
+ "test_eli5_worker.py": {
+  "description": "Verify the server uses one sequential summary and explanation worker without sockets."
+ },
+ "test_llm_lock.py": {
+  "description": "Verify cross-process model exclusion, bounded waiting and refreshed eligibility offline."
+ },
+ "test_rounds_collect.py": {
+  "description": "Verify round posting, inference, complete collection, answers, and mounted reports offline."
+ },
+ "test_static_sites.py": {
+  "description": "Verify read-only mounted files, traversal refusal, Host validation, and HTTP methods."
+ },
+ "verify_eli5.cjs": {
+  "description": "Verify ELI5 updates preserve surrounding controls and per-item freshness."
+ },
+ "verify_md.cjs": {
+  "description": "Verify the Markdown whitelist with an offline, text-only DOM fixture."
+ },
+ "verify_rounds.cjs": {
+  "description": "Verify the real rounds UI layout, data, live updates, and offline snapshot behavior without dependencies."
+ }
+}

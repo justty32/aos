@@ -1,0 +1,11 @@
+{
+ "01-1-使用者回來要看的.md": {
+  "description": "涵蓋：1. 使用者回來要看的、2. loop"
+ },
+ "02-3-daemon.md": {
+  "description": "涵蓋：3. daemon、4. fsm、5. agent"
+ },
+ "README.md": {
+  "description": "2026-10-21 計畫：loop、daemon、fsm、agent 搬到新 aos-exec 上"
+ }
+}

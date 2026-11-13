@@ -1,0 +1,50 @@
+{
+ "02-規劃-fable.md": {
+  "description": "11-07 五份設計的實作規劃（fable 一次性規劃）"
+ },
+ "04-批1施工結果.md": {
+  "description": "批 1 施工結果：晚審 R2～R7 與 memory find 認 tag"
+ },
+ "05-批2施工結果.md": {
+  "description": "批 2 施工結果：`_metainfo` 改 `cost`＋`timeout_ms`、任意執行標記、範本記憶與自稱"
+ },
+ "06-批3-observed引用.json": {
+  "description": "Read-only grep results for Python files containing observed in playground-ak."
+ },
+ "06-批3施工結果.md": {
+  "description": "批 3 施工結果：他見帳 `lib/observed.py`"
+ },
+ "07-批4施工結果.md": {
+  "description": "批 4 施工結果：量測、比對門、自洽、估值評估與 smoke 考題"
+ },
+ "08-批4b施工結果.md": {
+  "description": "批 4b 施工結果：`aos-feedback` 收意見與 `comfort` 舒適度（使用者想法 18）"
+ },
+ "09-批5施工結果.md": {
+  "description": "批 5 施工結果：promote／rollback 與裁判比對器 judge-llm"
+ },
+ "10-批6施工結果.md": {
+  "description": "批 6 施工結果：審視者一輪 review_round、換上後盯梢 watch、審視者範本"
+ },
+ "11-批9施工結果.md": {
+  "description": "批 9、9b 施工結果：bash-boxed 白名單、shell_report、關箱考題、定義樹工具 defs、agents new 記血緣"
+ },
+ "12-批7施工結果.md": {
+  "description": "批 7 施工結果：llm kernel 嵌套 K1～K4（C++）"
+ },
+ "13-批8施工結果.md": {
+  "description": "批 8 施工結果：llm_forward、本機後端互斥與黏著、隊總機範本 llm-team（K5～K8）"
+ },
+ "14-完成總結.md": {
+  "description": "五份設計實作完成總結：九批（含 4b、9b）的程式都已進本體並裝上"
+ },
+ "README.md": {
+  "description": "11-07 五份設計的程式實作計畫（impl-plan）"
+ },
+ "交棒.md": {
+  "description": "impl-plan 交棒"
+ },
+ "代定.md": {
+  "description": "impl-plan 代定（可翻案）"
+ }
+}

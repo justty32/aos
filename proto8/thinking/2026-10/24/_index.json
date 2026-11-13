@@ -1,0 +1,81 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-10-24"
+ },
+ "agent-as-tool.md": {
+  "description": "2026-10-24 把 agent 當工具給 agent 叫（agent-eve 叫 pyfix）"
+ },
+ "agent-talk": {
+  "description": "10-24 討論紀錄（嘗試、照推薦定可翻案）：agent 之間寄信，team 用 aos-daemon 跑、max_hops／max_sends 擋迴圈；未決：自動寄回或模型自己寄、信箱與 LLM kernel 統一",
+  "index": "agent-talk/_index.json"
+ },
+ "ai-tools": {
+  "description": "10-24 討論紀錄（照推薦定可翻案）：給 AI 用的 aos 工具集，aos-ai 命令列、Claude Code skill、spawn／ask_agent 等工具；附已知限制，未決：MCP server 等選項",
+  "index": "ai-tools/_index.json"
+ },
+ "aos-json.md": {
+  "description": "2026-10-24 改 JSON 的工具集（aos-json）"
+ },
+ "cli-tools": {
+  "description": "10-24 討論紀錄：claude／codex CLI 當工具共用一段對話、人可 attach 接進去；demo agent-fay 11-03 已刪，lib/agent 的工具形留著；附已知限制與未決選項",
+  "index": "cli-tools/_index.json"
+ },
+ "compact": {
+  "description": "10-24 討論紀錄：agent-hal 的土法 compact，超過門檻才壓、工具呼叫各一句再逐段總結、新 history＝摘要＋最近 2 題；未決：跟 P-41「只附加」衝突（現用輪替）",
+  "index": "compact/_index.json"
+ },
+ "exec-relative": {
+  "description": "10-24 討論紀錄（已施工）：fsm 格的 exec 拼不出「相對於這格」，改成 loop／fsm／daemon 的 exec 可直接放內嵌單子在行程內跑；附審後六項修正與邊緣狀況",
+  "index": "exec-relative/_index.json"
+ },
+ "fn-grow": {
+  "description": "10-24 討論紀錄（照推薦定可翻案）：函數成長，太大或特性到了就長成資料夾、函數分六級、第 2 級起呼叫方只寫名字，原型 aos-grow；11-12 已落 C-55",
+  "index": "fn-grow/_index.json"
+ },
+ "intent-context": {
+  "description": "10-24 討論紀錄（照推薦定）：agent-kai 按意圖組 context，history 照存、問腦時另組工作 context、不做摘要；附已知限制，未決：其他組法",
+  "index": "intent-context/_index.json"
+ },
+ "janet-compile.md": {
+  "description": "2026-10-24 Janet 編成 aos（嘗試）"
+ },
+ "llm-kernel": {
+  "description": "10-24 討論紀錄（已做第一版）：LLM kernel 把問腦變成請求排隊跑，aos-gate＋aos-kernel-llm、slots、額度認次數與 token；附邊緣狀況，未決：llm_tokens 擋時用 val 或 max",
+  "index": "llm-kernel/_index.json"
+ },
+ "lua-nvim": {
+  "description": "10-24 討論紀錄（嘗試、照推薦定）：用 Lua 寫 aos 編成 JSON（langs/lua）與 nvim 外掛（11-03 封存）；附邊緣狀況，未決：Fennel、aos-lua 要不要進 aos-exec 入口",
+  "index": "lua-nvim/_index.json"
+ },
+ "memory.md": {
+  "description": "2026-10-24 記憶庫：在記憶庫裡存放各類東西（heap）"
+ },
+ "metainfo": {
+  "description": "10-24 討論紀錄（照推薦定可翻案，11-12 已落 N-69）：_metainfo 記函數特性，放哪、通用 key 全選填、time_ms 是宣告而 timeout_ms 才強制、誰讀與 LLM kernel 接法",
+  "index": "metainfo/_index.json"
+ },
+ "pi-tools": {
+  "description": "10-24 討論紀錄：仿 pi coding agent 做 read／bash／edit／write 四個工具與 agent-pip，另做 file-tools（輸出 JSON、刪除＝搬進 .trash）；工具現已收進 lib/base",
+  "index": "pi-tools/_index.json"
+ },
+ "sandbox": {
+  "description": "10-24 討論紀錄（嘗試、照推薦定可翻案）：aos-sandbox 藉 s6 那套接在 argv 前把函數關起來跑、存取控制純靠 Linux；附要使用者用 root 做的事，未決：kernel 照信跑會跳出沙箱",
+  "index": "sandbox/_index.json"
+ },
+ "say-listen": {
+  "description": "10-24 討論紀錄（照推薦定）：aos-say／aos-listen／aos-chat 讓人 對跑著的 fsm agent 說話、連問接同一段 history，正規用法 aos-say \"...\" && aos-listen；只用假腦跑過",
+  "index": "say-listen/_index.json"
+ },
+ "self-improve": {
+  "description": "10-24 討論紀錄（嘗試、照推薦定，demo 11-03 封存）：自我改進流程 run → judge → improve 三格、改進者看不到判準、每版存 versions/；未決：只用假腦跑過",
+  "index": "self-improve/_index.json"
+ },
+ "thoughts": {
+  "description": "10-24 討論紀錄（嘗試、照推薦定可翻案）：小念頭 agent-gus 先規劃 steps、每步 fork 出去、只帶結論接回 history；附給別的程式叫的 thought.json",
+  "index": "thoughts/_index.json"
+ },
+ "tool-lib": {
+  "description": "10-24 討論紀錄（已施工、遷移完成）：工具＝函式庫，三層 lib/base → lib/aos → lib/agent、一個工具＝_entry＋tool.json＋_metainfo、引用＝一條相對捷徑；附留給之後的選項",
+  "index": "tool-lib/_index.json"
+ }
+}

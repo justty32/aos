@@ -1,0 +1,20 @@
+{
+ "01-現況與實測.md": {
+  "description": "01 現況與實測（11-09；讀程式＋WSL /tmp 複本實測）"
+ },
+ "02-三條路.md": {
+  "description": "02 三條路（照使用者四條前提；fable 規劃、opus 補）"
+ },
+ "03-衝突與邊緣.md": {
+  "description": "03 衝突與邊緣（fable 規劃、opus 補）"
+ },
+ "04-方向題與結論.md": {
+  "description": "04 方向題與結論（fable 規劃、opus 補；方向題待使用者裁）"
+ },
+ "05-施工結果.md": {
+  "description": "05 施工結果（poke；11-09 使用者裁定後施工）"
+ },
+ "README.md": {
+  "description": "2026-11-09 daemon 真正的中斷（daemon-interrupt；規劃＋使用者裁定（11-09）：做成 `aos-daemon-ctl poke`；施工結果見 05）"
+ }
+}

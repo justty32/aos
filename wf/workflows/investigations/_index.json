@@ -1,0 +1,12 @@
+{
+ "proto5-host-root-second-wall.md": {
+  "description": "proto5：宿主機 root daemon 的第二道牆"
+ },
+ "proto5-linux-wall-feasibility": {
+  "description": "proto5-linux-wall-feasibility.md 拆出的分檔夾，兩份：01 三條路線共同的執行入口與三候選、02 NNP、bwrap、Landlock 小實驗結果；入口在同層同名 .md",
+  "index": "proto5-linux-wall-feasibility/_index.json"
+ },
+ "proto5-linux-wall-feasibility.md": {
+  "description": "proto5：Linux 外牆的實作可行性與複雜度"
+ }
+}

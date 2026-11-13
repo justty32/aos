@@ -1,0 +1,13 @@
+{
+ "2026-10": {
+  "description": "2026-10 的討論紀錄（10-11～10-31 每天一夾）：重來的理由、loop／daemon、aos-exec 與指示詞、命名、LLM kernel、aos-hub、aos-tools、介質、eca；README 每天一句定案與未決",
+  "index": "2026-10/_index.json"
+ },
+ "2026-11": {
+  "description": "11 月的討論紀錄，一天一夾：試驗場 bob、procs 合一、aos-post、loop／fsm agent、無痛遷移、大重構 S5、知識庫與 json 工具、subagent、self 一家、kernel 定義",
+  "index": "2026-11/_index.json"
+ },
+ "README.md": {
+  "description": "proto8 討論紀錄的總入口：只留原文、決定、結論的規矩、舊路徑對照、月份索引（2026-10、2026-11）與「月份／日期／子項／分檔」的存放路徑規則"
+ }
+}

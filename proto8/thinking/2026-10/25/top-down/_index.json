@@ -1,0 +1,14 @@
+{
+ "01-使用者原文-10-25-逐字.md": {
+  "description": "涵蓋：使用者原文（10-25，逐字）；怎麼試（頂層 10-25 派隊）"
+ },
+ "02-乙隊-galtxt-galtxt-b.md": {
+  "description": "涵蓋：乙隊：galtxt（galtxt-b）"
+ },
+ "03-甲隊-galtxt-galtxt-a.md": {
+  "description": "涵蓋：甲隊：galtxt（galtxt-a）"
+ },
+ "README.md": {
+  "description": "2026-10-25 由上而下拆資料夾樹（讓 fable 試系統設計）"
+ }
+}

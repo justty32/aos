@@ -1,0 +1,11 @@
+{
+ "01-inst至fsm.md": {
+  "description": "基礎設施概念條文分檔：inst、loop 與 daemon、proc 之間的交流、tasks 組合子、fsm 各段（C-08、C-34、C-42b、C-36、C-41、C-18、C-25、C-39、C-49 等）"
+ },
+ "01-續-C-75.md": {
+  "description": "proc 之間的交流（10-29）續"
+ },
+ "02-資料夾程式-工作區與-stack.md": {
+  "description": "資料夾程式、工作區與 stack（10-19）"
+ }
+}

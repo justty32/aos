@@ -1,0 +1,8 @@
+{
+ "test_index_tools.py": {
+  "description": "Verify index_gen (build folder indexes from file headers) and index_check (listed-but-gone, there-but-unlisted, bad links) on a throwaway git tree."
+ },
+ "test_metainfo_migrate.py": {
+  "description": "Verify one-time metadata migration, preservation, exclusions, and idempotence."
+ }
+}

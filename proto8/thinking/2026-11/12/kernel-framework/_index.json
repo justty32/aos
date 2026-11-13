@@ -1,0 +1,26 @@
+{
+ "01-框架零件.md": {
+  "description": "通用 kernel 框架的零件：一支 Python 資料夾程式 `lib/aos/kernel`，每跑一次做一輪，照 `kernel.json` 收信、判、轉寄、回信、排隊"
+ },
+ "02-判官收編.md": {
+  "description": "判官怎麼收進框架：功能逐項對到零件、改名清單、範本與試驗場怎麼跟著改"
+ },
+ "03-狀態查詢信.md": {
+  "description": "「狀態在哪」查詢信：一般 proc 寄一封信問 `AOS_KERNEL`，最底的 daemon 回自己那張表的檔案路徑；工具先問再讀"
+ },
+ "04-問腦併不併.md": {
+  "description": "問腦總機收進框架（使用者 11-12 已裁）：問腦＝同一份骨架＋問腦專屬那一包 `lib/aos/kernel_llm`，用 Python 重寫、對外的樣子一點不變"
+ },
+ "05-施工步驟.md": {
+  "description": "施工步驟表：十四步，每步各自進 main、各自驗，合計約 81 小時（公司可做 75、要回家 6）"
+ },
+ "06-邊緣狀況.md": {
+  "description": "邊緣狀況清單：每條寫現有原則下的自然答案；全部推得出來，沒有新增方向題"
+ },
+ "07-Argon審查.md": {
+  "description": "Argon（Gemini 4 Argon High，agy）對第一版圖紙的審查意見原文（11-12；是 Argon 的意見，不是使用者的；fable 怎麼採納見 README「Argon 審查與改圖」）"
+ },
+ "README.md": {
+  "description": "通用 kernel 框架圖紙（11-12，只規劃、沒施工）：一份骨架，判官與問腦總機都收進來；加下一站、數量另指、回信二選一、三個 hook 時機，與「狀態在哪」查詢信"
+ }
+}

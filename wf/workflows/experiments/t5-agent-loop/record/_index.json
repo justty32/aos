@@ -1,0 +1,14 @@
+{
+ "01-結論.md": {
+  "description": "T5 實測結論：假模型三回合跑通，但 Ctrl-C 後續跑只在 aos exec --loop 成立、單次中止留 .runi 只能重播整批，真模型（Codex、Claude、pi）都沒跑通"
+ },
+ "02-實際做了什麼.md": {
+  "description": "T5 實測現場前半：基線 build（vcpkg 鎖被沙盒擋）、假模型 golden slice、投遞、Ctrl-C 與 .runi 等各段的原始指令與輸出"
+ },
+ "03-5-空-instjson-與沒有.md": {
+  "description": "5. 空 `inst.json` 與沒有 `inst.json`"
+ },
+ "04-哪幾題被實驗回答了.md": {
+  "description": "T5 實測對 roadmap OPEN 題的回答（core 回撤到哪、golden slice 先用哪支真 agent CLI 等），只到實驗覆蓋的範圍"
+ }
+}

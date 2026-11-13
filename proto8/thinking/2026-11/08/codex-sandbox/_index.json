@@ -1,0 +1,5 @@
+{
+ "README.md": {
+  "description": "家機 codex 沙箱連 LiteLLM 的調查：只帶 -s workspace-write 會擋 socket，五項探針實測各做法，結論加 network_access=true；使用者裁 A"
+ }
+}

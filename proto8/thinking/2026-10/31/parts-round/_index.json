@@ -1,0 +1,17 @@
+{
+ "02-題A-parts.md": {
+  "description": "題 A 結論：parts 現有功能逐項對照 aos-exec 已能做的，結論 parts 退成「aos-exec 格式的約定」，parts.json 每槽就是 aos-exec 認得的值（代定可翻案）"
+ },
+ "03-題B-round.md": {
+  "description": "題 B 結論：照「檔案系統公民」四項判準逐塊重判，round 不重切，維持 aos-round＋兩張表＋五薄格，只吸收草圖一點"
+ },
+ "04-匯流與衝突.md": {
+  "description": "parts 與 round 兩題的匯流，與三條衝突（C-74 parts 進標準庫、C-51 只一個固定檔 vs 決定 16、round 重切 vs 10-30 薄殼決定）及 11-01 使用者的裁定"
+ },
+ "05-方向題與實作計畫.md": {
+  "description": "parts-round 的兩個方向題（parts.json 留名不併進 agent.json、五格何時收回 aos-round 單體，皆 11-01 使用者已裁）與實作計畫（A 題 parts 瘦身步驟、B 題零步）"
+ },
+ "README.md": {
+  "description": "2026-10-31 parts 組合化與 round 重切：收斂（fable 規劃）"
+ }
+}

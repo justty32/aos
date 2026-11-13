@@ -1,0 +1,57 @@
+{
+ "README.md": {
+  "description": "proto8 — 重新想過一遍"
+ },
+ "archive": {
+  "description": "proto8 的封存區：llm-kernel 示範、self-improve、nvim 外掛、aos-chat、resident-bob 等不再維護的舊東西；查某個被拿掉的功能原本長怎樣時進去，README 有封存日期與原因表"
+ },
+ "cases": {
+  "description": "measure 量測用的共用考題夾：單題格式（run.json、stdin、初始工作區、expect）、比對器契約與現成套題 smoke、box-probe；要出題或跑門與自洽量測時進去"
+ },
+ "cmd": {
+  "description": "人在終端打的 Python 指令，一支一夾（執行檔在 <名>/bin/）：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-eca、aos-mcp 等；要用或改這些指令時進去"
+ },
+ "docs": {
+  "description": "使用者親口定下的三份條文：CONCEPTS 概念（C-）、NORMS 規範（N-）、CONVENTION agent 慣例（P-），各為入口 md＋同名分檔夾；做設計前先通讀",
+  "index": "docs/_index.json"
+ },
+ "extras": {
+  "description": "還沒決定歸哪一夾的嘗試：假 http MCP server、gitignore 檢查、休眠搬家檢查、kernel 鏈假腦劇本、Janet／Lua 寫 aos；找手跑的開發者檢查或實驗性東西時進去"
+ },
+ "feedback": {
+  "description": "aos 指令與函數的使用意見存放處：每個 key 一份只追加的 .jsonl（進 git）加評分者辨識規則 raters.json；要看或留跨 session 的使用意見時進去，人用 aos-feedback 寫"
+ },
+ "impls": {
+  "description": "aos 的 C／C++ 實作：aos-inst→aos-exec→aos-loop／aos-fsm→aos-daemon 一路疊上，加 aos-util、aos-directive、aos-json 等；要改或建置核心程式時進去"
+ },
+ "install.sh": {
+  "description": "symlink the aos commands onto PATH (default ~/.local/bin) and register the Python import paths in the user site."
+ },
+ "kernel": {
+  "description": "掛在 daemon 上、收請求管資源與排程的 kernel 範本：daemon-kernel、procs-kernel（框架站兩種掛法）、llm-kernel（問腦）、llm-team；要讓 agent 問腦或做請求把關時進去"
+ },
+ "knowledge": {
+  "description": "出廠內容樹：普通資料夾加 .json、大節點補 _index，第一本 aos/ 是給小模型的 aos 體系英文說明；要改 agent 讀的 aos 知識或看 index／_description 實例時進去"
+ },
+ "lib": {
+  "description": "agent 的工具函式庫（腦可以叫的外部函數，一份標準版、掛捷徑引用）：base 底層原語、aos 動 aos 的、agent 整隻 agent 的，另有 json、mcp、metainfo 等共用模組；要加改工具時進去"
+ },
+ "notes": {
+  "description": "AI 寫的參考筆記（不算數、不是條文）：aos 跟 s6／runit 對照、aos-exec 可借的工具、.env 格式比較、命名老慣例查證；想找外部前例或借鏡點時進去",
+  "index": "notes/_index.json"
+ },
+ "py": {
+  "description": "cmd 共用的 Python 模組（不進 PATH）：aos_flags、aos_ws、daemon_ctl、aos_sweep 系列、aos_clock_register 與其測試；改指令共用的旗標、工作區或 daemon 控制邏輯時進去"
+ },
+ "templates": {
+  "description": "複製出去用的 agent 範本：eca-claude（外部 coding agent）、agent-fsm（aos 自己的 loop／fsm agent），另有 daemon-root、judge-llm 等；開新 agent 或改範本時進去"
+ },
+ "thinking": {
+  "description": "proto8 的討論紀錄，按月／日／子項存，只留使用者原文、決定、結論與未決；要查某個設計決定的出處、使用者原話或還沒裁的題時進去，月份 README 一天一列",
+  "index": "thinking/_index.json"
+ },
+ "user-advice": {
+  "description": "使用者親手寫的意見稿（非 AI 產出）：9 月早期構想、資料夾即函數、agent 節點長成樹並降低消耗等想法；要對照使用者最初的原意時進去",
+  "index": "user-advice/_index.json"
+ }
+}

@@ -1,0 +1,11 @@
+{
+ "01-施工結果.md": {
+  "description": "01 施工結果 — 工具分包、改名、拿掉工作區限制（11-10 深夜）"
+ },
+ "02-memory-read施工結果.md": {
+  "description": "02 施工結果 — memory 改名 memory_read、沒有預設庫根、出廠根上移到 knowledge/（11-10 深夜）"
+ },
+ "README.md": {
+  "description": "tool-packs — 通用工具分四包、純包裝、拿掉工作區限制（11-10 深夜）"
+ }
+}

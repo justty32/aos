@@ -1,0 +1,8 @@
+{
+ "01-使用者原文-11-02-逐字.md": {
+  "description": "涵蓋：使用者原文（11-02，逐字）；決定（11-02，使用者）；aos-daemon-ctl 的定位（11-02，使用者）"
+ },
+ "README.md": {
+  "description": "2026-11-02 daemon 的環境變數：`AOS_DAEMON` 指 stack 不對勁——三個名字（定義／stack／ws）還是一個名字（溝通入口）"
+ }
+}

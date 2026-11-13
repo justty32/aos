@@ -1,0 +1,14 @@
+{
+ "01-使用者原文.md": {
+  "description": "10-28 agent 函數常用操作的使用者原文逐字：aos-say／listen 當 queue 的 push／pop、看 queue、換 endpoint、tools 增刪改查與時間點、阻塞，以及「各種單位都要跟 aos 函數對上」"
+ },
+ "02-決定.md": {
+  "description": "10-28 agent 函數常用操作的決定 1～16 條文：各單位都是 aos 函數含 endpoint、P-23／P-41 照新做法、迴圈時間點是插座、history 是單位、round 留 lib、格全走註冊檔等"
+ },
+ "03-提案一-常用操作.md": {
+  "description": "涵蓋：提案一：常用操作、提案二：照決定 1 重寫的 pseudo code（都是提案，未定）、未決"
+ },
+ "README.md": {
+  "description": "2026-10-28 agent 函數的常用操作：queue、endpoint、tools、時間點、阻塞，都要是 aos 函數"
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "01-四桶.md": {
+  "description": "prefix-fixes 01：問題清單 207 列歸四桶"
+ },
+ "02-施工線.md": {
+  "description": "prefix-fixes 02：第 1 桶的五條施工線"
+ },
+ "03-C級坑.md": {
+  "description": "prefix-fixes 03：用的時候知道就好的坑（不修）"
+ },
+ "04-施工結果.md": {
+  "description": "prefix-fixes 04：施工結果（第 1 桶 61 列＋線 6 改名）"
+ },
+ "05-procs_requests改名.md": {
+  "description": "prefix-fixes 05：線 6——`procs_ctl_mailbox` 改名 `procs_requests`"
+ },
+ "README.md": {
+  "description": "2026-11-10 大修前先修：問題清單 207 列分桶與施工線（prefix-fixes）"
+ },
+ "decide_20261110_prefix.json": {
+  "description": "Decision questions (A+B bucket) for the pre-overhaul quick-fix pass on the current proto8, 2026-11-10."
+ }
+}

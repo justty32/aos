@@ -1,0 +1,9 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-10-22"
+ },
+ "ideas": {
+  "description": "2026-10-22 Python 版向 C++ 版看齊；對 s6／runit 對照報告的回應；.env 基礎子集；分層方向；loop 條文定稿；daemon 三題；fsm",
+  "index": "ideas/_index.json"
+ }
+}

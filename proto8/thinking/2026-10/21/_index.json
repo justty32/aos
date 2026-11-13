@@ -1,0 +1,13 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-10-21"
+ },
+ "ideas": {
+  "description": "10-21 使用者原話與決定（7 份分檔）：aos-exec／aos-loop 旗標前置、.env 讀法與優先序、標準實作與 AOS_ENTRY 順序、JSON 物件當資料夾與 AOS_CO、設定檔是唯一位置參數；已落進規範",
+  "index": "ideas/_index.json"
+ },
+ "plan": {
+  "description": "10-21 計畫（使用者「都沒問題」、已施工）：loop、daemon、fsm、agent 搬到新 aos-exec 上，fable 代定的各條與留給使用者討論的題；當天名字 _exec、run、val 現已改名",
+  "index": "plan/_index.json"
+ }
+}

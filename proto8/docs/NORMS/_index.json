@@ -1,0 +1,92 @@
+{
+ "01-總則": {
+  "description": "NORMS 總則的分檔夾：N-05 先寫暫存再改名、N-43 結束碼 0／10／其他與 stderr 兩種行、N-18 實作分級",
+  "index": "01-總則/_index.json"
+ },
+ "01-總則.md": {
+  "description": "NORMS 總則入口：跨主題規範的前言與分檔目錄（N-05、N-43 結束碼與錯誤行、N-18 實作分級）"
+ },
+ "02-設計理念-時空.md": {
+  "description": "設計理念／時空的規範條文 N-01～N-03、N-65：內部看時鐘、時鐘到點寄信、資料夾別亂弄、格間打包＝收工硬凍、兩鐘規則"
+ },
+ "03-基礎設施-inst.md": {
+  "description": "inst 單子的規範條文 N-04、N-25、N-27、N-30：單子認的 key、run_inst 程式內呼叫與 Result 欄位、子程式參數、結果回傳"
+ },
+ "04-基礎設施-loop與daemon": {
+  "description": "NORMS loop 與 daemon 的分檔夾：N-10（已刪留錨點）、N-28 daemon.json 是 loop.json 的嚴格超集、N-54 daemon 表上有誰寫在 procs_ctl",
+  "index": "04-基礎設施-loop與daemon/_index.json"
+ },
+ "04-基礎設施-loop與daemon.md": {
+  "description": "基礎設施／loop、daemon"
+ },
+ "05-基礎設施-窗": {
+  "description": "NORMS 窗的分檔夾：ctl 與 state（N-06～N-11）、內部狀態外顯與窗族譜（N-13～N-17：鎖、信箱、判死活）、細則 N-32～N-33、N-66 非同步呼叫",
+  "index": "05-基礎設施-窗/_index.json"
+ },
+ "05-基礎設施-窗.md": {
+  "description": "NORMS 窗入口：ctl、state、鎖、信箱、判死活這一族的前言與分檔目錄（N-06～N-17、N-32、N-33、N-66）"
+ },
+ "06-基礎設施-命令列與指示詞.md": {
+  "description": "指示詞規範 N-45：$env 與 $ref（含 $path、$prefix、$at）的語意、解不開＝錯、寫法寬容；命令列語法糖條號已作廢"
+ },
+ "07-基礎設施-組合子": {
+  "description": "NORMS 組合子的分檔夾：tasks（N-20、N-34，未實作）與 fsm（N-36 next 照碼分岔、N-38、N-39、N-41）",
+  "index": "07-基礎設施-組合子/_index.json"
+ },
+ "07-基礎設施-組合子.md": {
+  "description": "基礎設施／組合子（tasks、fsm）"
+ },
+ "08-待定": {
+  "description": "NORMS 待定的分檔夾：AI 整理、使用者還沒定的候選（agent 當工具的題目、kernel 評估、argv[0] 規矩等）與 _metainfo 轉址",
+  "index": "08-待定/_index.json"
+ },
+ "08-待定.md": {
+  "description": "NORMS 待定入口：AI 整理、使用者還沒定的規範候選分檔目錄，不算數"
+ },
+ "09-kernel": {
+  "description": "NORMS kernel 的分檔夾：N-42 (1) LLM kernel 全文、能力包與排程及每寄件人份額兩份",
+  "index": "09-kernel/_index.json"
+ },
+ "09-kernel.md": {
+  "description": "kernel 規範 N-42：兩種 kernel（LLM kernel、通用 kernel 框架站）收進同一框架，判官排隊、有序信開關、直寄與 ping 等現況"
+ },
+ "10-基礎設施-定義與工作區": {
+  "description": "NORMS 資料夾程式與執行的分檔夾：N-57～N-62 aos 保證的底、N-50～N-53、N-63 hub 變數、N-64 父子交代、N-67 可遷移性、N-68～N-69 _metainfo",
+  "index": "10-基礎設施-定義與工作區/_index.json"
+ },
+ "10-基礎設施-定義與工作區.md": {
+  "description": "基礎設施／資料夾程式與執行"
+ },
+ "README.md": {
+  "description": "這是 NORMS.md 的分檔，目錄在入口。"
+ },
+ "主題.md": {
+  "description": "主題（10-15 使用者定：概念、規範、實作之外，再用主題分）"
+ },
+ "命名.md": {
+  "description": "命名（規則在 C-54 命名方法；只換名字、不改原意，不留舊名；舊名在歷史敘述裡照留。舊名 → 現名一張表在附錄3 舊名對照）："
+ },
+ "附錄1-條號表.md": {
+  "description": "NORMS 條號表：每個 N- 條號在哪份分檔、實作狀態與歷次改動註，作廢條號只留號，要找某條 N-xx 時先看"
+ },
+ "附錄2-各批出處": {
+  "description": "NORMS 各批出處的分檔夾：N-01～N-17、N-18～N-43、N-45～N-69 各條的出處 thinking，10 月與 11 月各批使用者原話，11-06 lift-to-norms",
+  "index": "附錄2-各批出處/_index.json"
+ },
+ "附錄2-各批出處.md": {
+  "description": "NORMS 各批出處入口：條號 → 定下或改過它的 thinking 批次的分檔目錄，另列 11-07、11-09 兩批的改動摘要"
+ },
+ "附錄3-舊名對照": {
+  "description": "NORMS 舊名對照續的分檔夾：JSON key 的舊名 → 現名與 10-25 計數、時間點、上限的改名",
+  "index": "附錄3-舊名對照/_index.json"
+ },
+ "附錄3-舊名對照.md": {
+  "description": "舊名 → 現名對照表：程式與子命令、環境變數、旗標、代號、檔名與資料夾的改名與出處，讀舊 thinking 遇到舊名時查"
+ },
+ "附錄4-持久檔.json": {
+  "description": "NORMS 附錄 4：proto8 哪些檔與資料夾跨版本長期活著（持久）、哪些是暫時的；誰寫、誰讀、進不進 image、壞了現在怎麼反應（format-versioning S1，11-09）"
+ },
+ "附錄4-持久檔.md": {
+  "description": "持久檔與暫時檔盤點：哪些檔跨版本長期活著、誰寫誰讀、進不進 image，正式版與 format 版本標記的規矩；資料在附錄4-持久檔.json"
+ }
+}

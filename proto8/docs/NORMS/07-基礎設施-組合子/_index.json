@@ -1,0 +1,8 @@
+{
+ "01-N-20～N-36.md": {
+  "description": "tasks（seq／par／if）"
+ },
+ "02-N-38～N-41.md": {
+  "description": "- N-38（定稿，ideas 10-22 § 7；CONVENTION P-20、P-21）fsm 出錯：那格結束碼非 0（含被訊號殺、逾時）、查不到那格、表壞（含 `exec` 不合；開跑時查整張表、哪一格壞都算，見 N-36）、state 檔在但讀不了（見 N-36）＝錯；格指到的單子壞是 aos-exec 的錯（它退 1、自己說），對 fsm 來說就是那格非 0。出錯時 state 不動…"
+ }
+}

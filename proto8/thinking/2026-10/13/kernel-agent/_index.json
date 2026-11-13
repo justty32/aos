@@ -1,0 +1,11 @@
+{
+ "01-使用者原文.md": {
+  "description": "2026-10-13 kernel／agent：使用者原文"
+ },
+ "02-結論未決.md": {
+  "description": "2026-10-13 kernel／agent：結論與未決"
+ },
+ "README.md": {
+  "description": "2026-10-13 kernel 不是一層：能管任務的 inst 就是 kernel；agent 可以基於 loop 或 daemon"
+ }
+}

@@ -1,0 +1,11 @@
+{
+ "01-使用者原文.md": {
+  "description": "涵蓋：使用者原文（10-30，逐字）、決定（10-30）"
+ },
+ "02-結論.md": {
+  "description": "map-review 十一點各自的去向（10-31 補）：每點是什麼、狀態（已定／開著）、落在哪份紀錄或條文；查 plan 9 檔案串流、round、eca、改名等點後來怎麼了時看"
+ },
+ "README.md": {
+  "description": "2026-10-30 使用者看現況地圖後的想法：plan 9 式檔案串流、round 的定位、外部 agent 平級、aos-hub 通用化、掛 daemon 的指令、kernel 與 gate 改名"
+ }
+}

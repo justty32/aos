@@ -1,0 +1,18 @@
+{
+ "README.md": {
+  "description": "tidy — 文件整理（封存過時、分類雜亂、抽資料檔、內容精簡）"
+ },
+ "content-trim.md": {
+  "description": "tidy／content-trim — 內容精簡（檔內只留現行結論）"
+ },
+ "gotchas.md": {
+  "description": "tidy／gotchas — 整理與拆檔踩過的坑"
+ },
+ "manager-brief.md": {
+  "description": "manager-brief — 管理線簡報"
+ },
+ "reports": {
+  "description": "tidy 每一輪整理的施工報告，照日期一份（10-02 wf 超標檔、10-13 proto8＋wf、10-20 proto8 文件層、10-26 頂層結構、11-03 收斂、11-12 收尾），大的帶同名分檔夾；查某次整理改了什麼來這裡",
+  "index": "reports/_index.json"
+ }
+}

@@ -1,0 +1,50 @@
+{
+ "01-原文-0至1h.md": {
+  "description": "2026-10-14 JSON 入口：使用者原文（0～1h）"
+ },
+ "02-原文-1i至1q.md": {
+  "description": "2026-10-14 JSON 入口：使用者原文（1i～1q）"
+ },
+ "03-決定未決.md": {
+  "description": "2026-10-14 JSON 入口：決定與未決"
+ },
+ "04-argv與七題.md": {
+  "description": "2026-10-14 JSON 入口：argv 空出來（下午）與重做七題拍板"
+ },
+ "05-aos-llm-agent題.md": {
+  "description": "2026-10-14 aos-llm／agent 規劃頁未決題拍板（下午）"
+ },
+ "06-fsm.md": {
+  "description": "2026-10-14 aos-fsm：agent 變成一張方法表（傍晚）"
+ },
+ "07-fsm樹與一拍.md": {
+  "description": "2026-10-14 aos-fsm：資料夾樹、一拍、巢狀接法"
+ },
+ "08-fsm拍板與改寫.md": {
+  "description": "2026-10-14 aos-fsm：十題拍板、改寫清單、風險、未決"
+ },
+ "09-daemon套fsm.md": {
+  "description": "2026-10-14 daemon 套 fsm 的紀律"
+ },
+ "10-lisp組合子.md": {
+  "description": "2026-10-14 Lisp／組合子視角"
+ },
+ "11-下班前待辦.md": {
+  "description": "2026-10-14 下班前待辦"
+ },
+ "12-七題回覆.md": {
+  "description": "2026-10-14 夜：使用者回 7 題、a～f 先隨意"
+ },
+ "13-動工前拍板.md": {
+  "description": "2026-10-14 夜末：fsm state 窗必填、動工拍板、daemon.json 放 inst"
+ },
+ "14-h拍板.md": {
+  "description": "2026-10-14 深夜：動工自定點 h 拍板"
+ },
+ "15-ret與半份JSON.md": {
+  "description": "2026-10-14 深夜收尾：ret／err 增長、半份 JSON、今晚交接"
+ },
+ "README.md": {
+  "description": "2026-10-14 函數的統一入口改成 JSON"
+ }
+}

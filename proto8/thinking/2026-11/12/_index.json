@@ -1,0 +1,125 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-11-12"
+ },
+ "agent-def-fine-lineage.md": {
+  "description": "agent-def-fine-lineage：agent_def 加「細的」定義動作與血統（Q09，11-12）"
+ },
+ "autosave.md": {
+  "description": "樹在 /tmp 跑、每五分鐘 auto save 到 ~/（11-12 下午公司 WSL 實測）：行得通，但這台 /tmp 跟 ~/ 是同一顆 ext4、不比較快，還每次開機清空——建議整棵放 ~/、auto save 照掛"
+ },
+ "chat-utf8.md": {
+  "description": "aos-agent chat 打中文偶爾整句「not UTF-8」被丟：原因是 WSL 終端機沒開 iutf8，改成終端機上用 readline 讀一行（11-12，已施工）"
+ },
+ "codebase-cleanup": {
+  "description": "11-12 晚程式碼庫整理（fable 領隊）：哪裡不乾淨十項、批次表、做到哪（當晚收線）、待裁題",
+  "index": "codebase-cleanup/_index.json"
+ },
+ "defs-check-align.md": {
+  "description": "定義檢查與條文跟實作對齊（Q10）：eca-claude 已經過、defs 對「一份定義」照查它自己的名字，C-42 續與 C-52 ⑧ 照現行三支改"
+ },
+ "eca-file-tools.md": {
+  "description": "eca 不給基礎檔案工具：施工結果（11-12，公司 WSL）"
+ },
+ "eca-slash.md": {
+  "description": "eca 的 slash 指令（11-12 公司 WSL）：實測 claude／codex 的 /clear、/compact、/status、/usage、/exit，修成 aos 跟上 CLI（畫面 hook 跟 id、/clear 連 history 清；say／chat 也認；codex 有畫面）"
+ },
+ "eca-task-subagent.md": {
+  "description": "eca 的子 agent 與 skill、aos MCP 切兩台：調查與施工結果（11-12 晚，家機）"
+ },
+ "eca-tidy-review.md": {
+  "description": "eca_tidy 產出抽查結果（11-12 晚）：產出可以用、命中約九成；十條值得處理的發現還沒修，等使用者說修哪些"
+ },
+ "external-mcp": {
+  "description": "11-12 討論紀錄：接外部 MCP server，盤點、設計、施工切法、http Bearer 試接、施工結果與 fsm 施工單，eca 兩身已施工、fsm 經 aos 匯入延後",
+  "index": "external-mcp/_index.json"
+ },
+ "index-link.md": {
+  "description": "index 指到下一份 index：每項可放 `index`、檔內 `_index` 可以是路徑字串，相對路徑照 json 與檔案系統同像去算（11-12 晚，家機；已施工）"
+ },
+ "index-tools": {
+  "description": "11-12 討論紀錄：index 工具只看不改，使用者原話與決定、圖紙、施工結果，已施工成一支 index_view",
+  "index": "index-tools/_index.json"
+ },
+ "index.md": {
+  "description": "檔案系統＋json 當 memory、index（description 與 index 合一）（11-12 公司；knowledge 拆除與出廠檔 index 已施工，knowledge-removal）"
+ },
+ "json-tools": {
+  "description": "11-12 討論紀錄：json 工具 aos_json 兩套（簡單組 json_*、複雜組 jsonx_*）的規劃與三輪施工結果，已施工",
+  "index": "json-tools/_index.json"
+ },
+ "kernel-as-bridge": {
+  "description": "11-12 晚討論紀錄（只想清楚、沒改程式條文）：kernel 是上面與硬體之間的橋，對到現況、四種整理法、邊緣狀況，留三題待裁",
+  "index": "kernel-as-bridge/_index.json"
+ },
+ "kernel-framework": {
+  "description": "11-12 通用 kernel 框架圖紙：框架零件、判官收編、狀態查詢信、問腦併不併、施工步驟、邊緣、Argon 審查；11-13 部分題已裁並開工",
+  "index": "kernel-framework/_index.json"
+ },
+ "kernel-norms.md": {
+  "description": "kernel 條文改寫（11-12）：照 11-11 kernel 討論的結論改 C-47、N-42、N-63 等與文件、內容檔補 kernel 一頁"
+ },
+ "kernel-small-fixes.md": {
+  "description": "kernel 討論的兩件小修：daemon 壞信也回信、fork／subagent 不再自己讀 AOS_DAEMON（11-12，已施工）"
+ },
+ "knowledge-removal.md": {
+  "description": "拿掉 knowledge 工具、只給太大的出廠內容檔補 index：施工結果（11-12，公司 WSL）"
+ },
+ "line-k-leftovers.md": {
+  "description": "line-k-leftovers：線 K 剩兩件——gitignore 分類漏列、history 結果行帶絕對路徑；之後再修出錯時的錯誤行（11-12）"
+ },
+ "linux-user": {
+  "description": "linux-user.md 的分檔：linux 使用者這件事的 linux 事實、對到 aos 現況、各念頭讀法與後果，加 Argon 回覆（11-12 晚，只調查）",
+  "index": "linux-user/_index.json"
+ },
+ "linux-user.md": {
+  "description": "linux 使用者是一個可以互動的對象：初步調查——linux 的事實、對到 aos 現況、五個念頭各自的讀法與後果（11-12 晚家機，只調查、沒施工、沒出設計）"
+ },
+ "metainfo": {
+  "description": "11-12 討論紀錄：_metainfo 是一條約定、tooldef／index／description 可寫在裡面、外面獨立那份蓋過裡面，盤點、設計、題與代定，已裁已施工見 05",
+  "index": "metainfo/_index.json"
+ },
+ "metainfo-views": {
+  "description": "metainfo-views.md 的附檔夾，只放送 Argon 的提示與回覆原文（_metainfo 客觀／通用／主觀觀點那題，11-12 晚）",
+  "index": "metainfo-views/_index.json"
+ },
+ "metainfo-views.md": {
+  "description": "`_metainfo` 套「客觀／通用觀點／主觀」那套看法（11-12 晚，家機）：使用者已裁——`_metainfo` 裡的格全是觀點、參考用；被記下來且非私有的都是通用視角（公用視角），私有的是主觀、放哪不規定；`_metainfo` 是節點描述自己的子節點、不算 index；`_index` 一項裡想多放什麼都可以。已落實（壞掉的格略過不擋、條文 N-68／N-69／C-88），裁定在「使…"
+ },
+ "ops-notes-to-aos.md": {
+  "description": "ops-notes-to-aos：把 ops-notes 與兩隻 Codex agent 搬到 WSL 走 aos 跑——盤點完：整套只需要一台 http MCP（團隊站），建議先搬兩隻 gpt-*、ops-notes 主 session 暫不搬；下一步是使用者拿真 token 起第一隻"
+ },
+ "playground-home.md": {
+  "description": "家機試驗場整個重建（11-12 晚）：照 main `15e7f8225` 清空重抄四隻（fsm_ann gemma、eca_bob haiku、eca_opus opus、eca_cody gpt-6-luna），假腦整套、gemma／haiku／luna 各一句都過，樹已停"
+ },
+ "playground.md": {
+  "description": "公司試驗場重刷（11-12 上午，公司 WSL）：照 main 重抄三隻，eca 25 支、codex workspace-write，假腦與兩個真腦各一輪都過"
+ },
+ "ref-hash.md": {
+  "description": "`$ref` 收 `#/` 開頭＝寫著它的那份檔自己（11-12 晚，家機；已施工）"
+ },
+ "ref-index-unify": {
+  "description": "ref-index-unify.md 的附檔夾，只放送 Argon 的提示與回覆原文（$ref 要不要跟 index 路徑統一那題，11-12 晚）",
+  "index": "ref-index-unify/_index.json"
+ },
+ "ref-index-unify.md": {
+  "description": "`$ref` 要不要跟 index 路徑統一：範圍調查與幾種統一法（11-12 晚，家機；先調查，使用者裁定後已施工，見最後一節）"
+ },
+ "small-rulings.md": {
+  "description": "small-rulings（11-12）：使用者一次裁完一批待裁小題與「已過時建議結案」清單"
+ },
+ "thinking-to-docs": {
+  "description": "11-12 晚討論紀錄：從 10-29 起的 thinking 提取進 proto8/docs，分批、總表 290 列、W1～W7、W9 做完，W8 與待裁 U1～U8 未完",
+  "index": "thinking-to-docs/_index.json"
+ },
+ "tool-path-broken.md": {
+  "description": "工具登記一條壞掉不再拖垮整份清單：aos-tools ls 略過那支、提醒一行、self_tools 標 broken（11-12，公司 WSL）"
+ },
+ "wf-to-aos": {
+  "description": "wf-to-aos.md 的分檔：現有 aos 東西對標 wf/ 規矩的調查結論、寄信給人與主 session 卡在哪（11-12 晚，唯讀調查）",
+  "index": "wf-to-aos/_index.json"
+ },
+ "wf-to-aos.md": {
+  "description": "用 aos 體系把 wf/ 變成更適合 agent 的樣子（11-12 使用者新方向，只記原話；沒施工、沒規劃）"
+ }
+}

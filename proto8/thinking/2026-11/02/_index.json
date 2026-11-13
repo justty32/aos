@@ -1,0 +1,34 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-11-02"
+ },
+ "ctl-state-names": {
+  "description": "11-02 晚討論紀錄：loop／daemon 控制自身的窗檔名就叫 ctl.json／state.json、不加前綴，取代同日 daemon_ctl.json 等說法；已落地",
+  "index": "ctl-state-names/_index.json"
+ },
+ "daemon-env": {
+  "description": "11-02 討論紀錄：daemon 的環境變數只用一個、值＝daemon 的 stack，不分定義／stack／ws 三個名字；當天叫 AOS_DAEMON_STACK，11-04 改回 AOS_DAEMON",
+  "index": "daemon-env/_index.json"
+ },
+ "exec-inheritance.md": {
+  "description": "2026-11-02 aos-exec 一環套一環、共用 stack＝像繼承"
+ },
+ "loop-stdio.md": {
+  "description": "2026-11-02 loop／daemon 的 stdin／stdout 與 log"
+ },
+ "playground-cathy": {
+  "description": "11-02 試驗場討論紀錄：bob 經 aos-mcp／aos-tools 叫資料夾工具 cathy（後改成並排的 agent）、CPU 暫存器類比原文、aos-mcp 改給登記檔；頂層代做可翻案",
+  "index": "playground-cathy/_index.json"
+ },
+ "playground-daemon.md": {
+  "description": "2026-11-02 試驗場：daemons/main（普通 daemon 掛 loop）＋ bob 直接掛上去（execs）"
+ },
+ "stack-tools": {
+  "description": "11-02 討論紀錄：工具小格從 .stack/<名> 改到 $AOS_STACK/tools/<名>/（使用者選 B）、fable 規劃連帶細節與衝突題；已落地，daemon 子項 11-03 改 procs/<名>",
+  "index": "stack-tools/_index.json"
+ },
+ "state-window": {
+  "description": "11-02 討論紀錄：state 窗改成啟動寫一次、有變動才更新，拿掉心跳與 kind／recorded_at、加 updated_at；已實作，以 01 決定與 06 實作結論為準",
+  "index": "state-window/_index.json"
+ }
+}

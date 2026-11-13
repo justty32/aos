@@ -1,0 +1,9 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-10-27"
+ },
+ "claude-switch": {
+  "description": "10-27 很多 claude 同時跑的討論與實作：小格登記、aos-hub 列出／cd 接入／收起／叫回，代定閒 30 分自動收起；之後由 10-28 hub-kernel、10-30 eca 改方向",
+  "index": "claude-switch/_index.json"
+ }
+}

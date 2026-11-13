@@ -1,0 +1,9 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-10-25"
+ },
+ "top-down": {
+  "description": "10-25 讓 fable 由上而下拆資料夾樹的試驗紀錄：甲乙兩隊各拆 galtxt、寫 _metainfo、做優化盤點與反向收攏（原型 proto8/topdown/）；沒有人評、真腦量測沒做完",
+  "index": "top-down/_index.json"
+ }
+}

@@ -1,0 +1,21 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-10-30"
+ },
+ "agent-lifecycle": {
+  "description": "10-30 fable 規劃：agent 的 queue＝N-16 有序投遞、外部 coding agent 掛 daemon 管生命週期、hub pause 改 close、session 檔 symlink 進小格；使用者「都照建議」",
+  "index": "agent-lifecycle/_index.json"
+ },
+ "aos-round": {
+  "description": "10-30 fable 規劃：fsm 的 next 照結束碼分岔（N-36 改口）、round 化作 aos-loop／fsm 上的 aos-round 薄殼，已實作；11-01 晚刪 aos-round、11-03 晚 round 線全刪",
+  "index": "aos-round/_index.json"
+ },
+ "eca": {
+  "description": "10-30 eca 規劃：外部 coding agent 跟 aos agent 平級，aos-eca-hub 建在 daemon 上；使用者「都照建議」已做，10-31～11-04 的改口（改名 aos-eca 等）在分檔 10～21",
+  "index": "eca/_index.json"
+ },
+ "map-review": {
+  "description": "10-30 使用者看 aos 現況地圖後的十一點想法：round 化作 aos-round、外部 agent 平級、aos-hub 改名 aos-eca-hub 等已定，plan 9 式檔案串流開著；每點去向見 02-結論",
+  "index": "map-review/_index.json"
+ }
+}

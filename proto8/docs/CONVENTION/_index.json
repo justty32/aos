@@ -1,0 +1,35 @@
+{
+ "01-保證佈局入口": {
+  "description": "CONVENTION 一～三節的分檔夾：aos 保證的底與佈局（P-01～P-04）、入口／loop／fsm（P-05～P-10）兩份",
+  "index": "01-保證佈局入口/_index.json"
+ },
+ "01-保證佈局入口.md": {
+  "description": "CONVENTION 一～三節入口：分檔目錄，指向「aos 保證的與佈局」（P-01～P-04）和「入口、loop、fsm」（P-05～P-10）兩份"
+ },
+ "02-題目stack停錯腦": {
+  "description": "CONVENTION 四～七、十三節的分檔夾：題目與答案、stack、停與錯、腦與工具、命令列（P-11～P-26、P-41～P-45、P-47、P-48）",
+  "index": "02-題目stack停錯腦/_index.json"
+ },
+ "02-題目stack停錯腦.md": {
+  "description": "CONVENTION 四～七、十三節入口：分檔目錄，列 P-11～P-26、P-41～P-45、P-47、P-48 各在哪份（queue、stack、停與錯、腦與工具、命令列、MCP、mailbox）"
+ },
+ "03-shell版與inst版.md": {
+  "description": "八、shell 版與 inst 版"
+ },
+ "04-範例三種寫法.md": {
+  "description": "範例：同一隻 agent 的三種寫法"
+ },
+ "05-不管落實待決.md": {
+  "description": "CONVENTION 九～十一節：慣例不管的事、impls C++ 程式對這份慣例的落實情形、要使用者決定的題與裁定"
+ },
+ "06-巢狀": {
+  "description": "CONVENTION 十二節「巢狀：層層疊疊」的分檔夾：P-32（已移除）～P-40，含 P-35 碼到不了 loop、P-36 逾時算式、P-38 stack 樹＝呼叫樹",
+  "index": "06-巢狀/_index.json"
+ },
+ "06-巢狀.md": {
+  "description": "CONVENTION 十二節「巢狀」入口：分檔目錄，指向 P-33～P-34、P-35～P-36、P-36、P-37～P-40 各份"
+ },
+ "README.md": {
+  "description": "這是 CONVENTION.md 的分檔，目錄在入口。"
+ }
+}

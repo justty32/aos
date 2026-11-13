@@ -1,0 +1,17 @@
+{
+ "README.md": {
+  "description": "thinking→docs 提取（11-12 晚，家機）：起點、分批、做到哪、待裁"
+ },
+ "各批結論.md": {
+  "description": "thinking→docs 提取：各批結論（施工＋對讀）"
+ },
+ "待裁.json": {
+  "description": "資料表（wf-table/1）：抽自 README.md，8 列，欄位 id、題目、建議"
+ },
+ "提取總表.json": {
+  "description": "資料表（wf-table/1）：抽自 README.md，290 列，欄位 id、結論、出處、性質、docs現況、現行、建議動作、動作類"
+ },
+ "舊協議殘句.json": {
+  "description": "資料表（wf-table/1）：抽自 README.md，18 列，欄位 位置、內容、建議"
+ }
+}

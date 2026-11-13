@@ -1,0 +1,47 @@
+{
+ "01-P-11～P-14.md": {
+  "description": "agent 慣例「四、題目與答案」分檔 P-11～P-14：輸入是 $AOS_STACK/queue 信箱、一次收一批、附檔怎麼給、agent 只寫 stack"
+ },
+ "02-P-42.md": {
+  "description": "- P-42 agent 對話協議（使用者 10-30「都照建議」，thinking 10-30 agent-lifecycle 條文草稿、衝突 1、6；10-29 agent-bob 決定 33～36）：人或程式要對一隻跑著的 aos agent 說話、看它說什麼、停它，只碰它 stack 裡的三樣東西：① queue＝`$AOS_STACK/queue/`（N-16 有順序投遞，也收無序的信…"
+ },
+ "03-P-43-本文.md": {
+  "description": "- P-43 外部 coding agent（eca）的定義（使用者 10-30「都照建議」，thinking 10-30 eca B 結論 1、2、5、條文草稿、衝突 5、方向題 2、3；10-29 agent-bob 決定 33～35；照實作寫，cmd/aos-eca/bin/aos-eca-turn）：claude code、codex 這類外部 coding agent 要進 aos，包…"
+ },
+ "03-P-43.md": {
+  "description": "P-43 全文見 03-P-43-本文。"
+ },
+ "03-P-43續-11-04-aos-agent.md": {
+  "description": "- P-43（續）：範本的 aos-agent 介面（使用者 11-03「aos_ws,aos-say/listen,aos-ai這些之後都會整合進aos-agent」、11-04 晚「幫我弄個aos-agent chat指令，ctrl-c退出」「aos-agent add --name bob ../agents/bob這樣」，thinking 11-04 aos-agent、03/01 兩個…"
+ },
+ "04-五-stack續-P-15.md": {
+  "description": "- P-15 執行中的一切（狀態、草稿、紀錄、小格）只寫 `$AOS_STACK`，定義資料夾不被寫；所以同一個 agent 可以同時被兩個工作區跑。`aos-agent tools`／`llm`／`system`（腦用 `self_system`）改的是那一隻 stack 裡自己那份（`$AOS_STACK/tools.json`＝覆蓋層：一份普通登記檔，`\"$override\"` 指向定義那…"
+ },
+ "04-五-stack與六-停與錯.md": {
+  "description": "agent 慣例「五、stack」與「六、停與錯」分檔 P-16～P-20：各格共用 stack、叫工具給小格、兩隻 agent 分 stack、結束碼三種、失敗停下等人"
+ },
+ "04-六-停與錯續-P-21～P-22.md": {
+  "description": "agent 慣例「六、停與錯」續 P-21～P-22：誰的錯誰在自己 stderr 講（錯誤行形狀）、shell 版沒有逾時要改 inst 版寫 timeout_ms"
+ },
+ "05-P-23～P-26.md": {
+  "description": "agent 慣例「七、腦與工具」分檔 P-23～P-26：腦＝寄信給 llm kernel 收回信、想跟做分開、工具放在叫它那格的資料夾、參數怎麼進由工具說明定"
+ },
+ "06-P-41.md": {
+  "description": "- P-41 腦的工具呼叫（`tool_calls`）（範本 `templates/agent-fsm`；thinking 2026-10-23-tool-calls；走 queue 的做法：使用者 11-04「接下來是弄aos loop/fsm agent了」、看完規劃四題都選建議並說「記完就實作」，thinking 11-04 loop-fsm-agent）："
+ },
+ "07-P-44.md": {
+  "description": "agent 慣例「十三、命令列」分檔 P-44：aos 自己程式的命令列形狀（長旗標、時間單位、FlagUnknown、--help 英文、--env-file／--envs）與給人用的指令"
+ },
+ "07-P-44續-11-10-旗標位置.md": {
+  "description": "P-44 續：旗標寫在哪"
+ },
+ "08-P-45.md": {
+  "description": "agent 慣例「十三、命令列」續 P-45：純 aos 函數的旗標映射到 stdin JSON、優先級旗標＞stdin＞環境變數、不認得的鍵報 ArgumentsBad"
+ },
+ "09-P-47.md": {
+  "description": "- P-47 外部 MCP server（使用者 11-11 選項框裁 M1～M8，new-tools、03；11-12 三題「都按照推薦。」，external-mcp；fsm 那條 08 施工結果）：別人寫好的 MCP server 怎麼接進 aos。"
+ },
+ "10-P-48.md": {
+  "description": "- P-48 agent 之間的信箱（mailbox）（使用者 11-10「a2a看過了，太繁重了。我們先做純inbox協議。這次就叫mailbox。」，thinking 11-10 mailbox、01 設計）：agent 跟 agent（含把自己當一隻 agent 的人）互相寄信。跟 P-42 不同：P-42 的 say／listen 直接碰對方的 queue 與 history，是偏給使用…"
+ }
+}

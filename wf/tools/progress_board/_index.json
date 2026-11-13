@@ -1,0 +1,74 @@
+{
+ "README.md": {
+  "description": "進度看板的說明：dash.py start／stop／collect、離線快照位置、各線用 progress_post.sh 回報的狀態種類、待裁題與回答、匯總與細節頁、檔案位置"
+ },
+ "answers.py": {
+  "description": "Read board questions and answers, validate local submissions, and append locked answers."
+ },
+ "assets.py": {
+  "description": "Copy board pages and the current reference style with a bundled offline fallback."
+ },
+ "codex_api.py": {
+  "description": "Inspect active codex exec processes and safely read their bounded logs and output."
+ },
+ "collect.py": {
+  "description": "Collect board state, design and forum snapshots, ELI5 explanations, handoffs, commits, and host samples."
+ },
+ "config.json": {
+  "description": "Config for the aos progress board: lines, repos, polling and the LLM summarizer."
+ },
+ "dash.py": {
+  "description": "Run the local progress board server, detail, answer and forum endpoints, snapshots, summaries, and ELI5 explanations."
+ },
+ "designs.json": {
+  "description": "Hand-written fable design cards for the progress board designs page (one row per design)."
+ },
+ "designs.py": {
+  "description": "Merge hand-written fable design cards with auto-discovered fable design files for the designs page."
+ },
+ "details_api.py": {
+  "description": "Serve read-only progress details, filtered commits, process information, and allowed files."
+ },
+ "eli5.py": {
+  "description": "Generate cached everyday Chinese explanations with bounded evidence and recorded costs."
+ },
+ "eli5_inputs.py": {
+  "description": "Gather bounded evidence and change fingerprints for everyday progress explanations."
+ },
+ "forum.py": {
+  "description": "Local forum store: append-only forum.jsonl events, permission table, and the post/admin command-line entry points."
+ },
+ "forum_board.py": {
+  "description": "Build offline forum snapshots and accept validated user posts and replies from the board."
+ },
+ "llm_lock.py": {
+  "description": "Serialize board model requests across processes with bounded optional waiting."
+ },
+ "remote": {
+  "description": "進度看板的手機遠端版：claude.ai artifact 頁 remote.html（進度、待你裁、論壇三分頁）與推快照、拉回使用者回答的說明",
+  "index": "remote/_index.json"
+ },
+ "remote_sync.py": {
+  "description": "Export board and forum snapshots for the phone artifact and write pulled artifact answers back locally."
+ },
+ "rounds.py": {
+  "description": "Infer event rounds and collect complete round history with safe mounted reports."
+ },
+ "safe_files.py": {
+  "description": "Read bounded UTF-8 text only from regular allowed files beneath configured roots."
+ },
+ "static_sites.py": {
+  "description": "Serve configured local sites as read-only files within their resolved roots."
+ },
+ "summarize.py": {
+  "description": "Summarize progress, open asks and new user answers through a compatible endpoint."
+ },
+ "tests": {
+  "description": "進度看板的測試：eli5 白話說明的收集、證據、離線與 worker、跨行程模型鎖 llm_lock、輪次收集、靜態站，加幾支驗頁面的 .cjs",
+  "index": "tests/_index.json"
+ },
+ "web": {
+  "description": "進度看板的網頁前端：主頁 index、細節 detail、論壇 forum、輪次 rounds、designs、guide 各頁的 html／js／css",
+  "index": "web/_index.json"
+ }
+}

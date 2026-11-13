@@ -1,0 +1,39 @@
+{
+ "01-子命令": {
+  "description": "aos-agent 子命令分檔夾：目前只有錯誤代號一份（沿用與新增的代號、stderr 一行退 1）；子命令總表與旗標在上層 01-子命令.md",
+  "index": "01-子命令/_index.json"
+ },
+ "01-子命令.md": {
+  "description": "涵蓋：子命令總表、旗標、錯誤代號"
+ },
+ "02-找-agent.md": {
+  "description": "涵蓋：找 agent（`--target`／`AOS_AGENT`；沒有 `--stack`）、哪個 daemon（`--daemon`／`AOS_DAEMON`）、`using-aos-agent.sh`、chat 怎麼運作"
+ },
+ "03-種類與契約": {
+  "description": "aos-agent 介面契約的分檔夾：tools／llm 選配子介面、改副本的做法與兩個範本要改什麼（01），screen 與 tools 子介面規格（02）",
+  "index": "03-種類與契約/_index.json"
+ },
+ "03-種類與契約.md": {
+  "description": "涵蓋：介面契約（介面叫什麼、裡面有哪些項目、agent 怎麼宣告、沒做到怎麼報錯、選配子介面）；`tools`／`llm` 子介面與副本在 03/01；`screen`、`tools` 規格在 03/02"
+ },
+ "04-過渡與邊緣.md": {
+  "description": "涵蓋：舊指令怎麼退場、失敗與邊緣狀況"
+ },
+ "05-實作步驟": {
+  "description": "aos-agent 實作步驟的分檔夾：步 0 範圍與測試清單（01）、步 6～7 四元素必修與舊指令退場（02）、實作時改的設計（03）；都已實作",
+  "index": "05-實作步驟/_index.json"
+ },
+ "05-實作步驟.md": {
+  "description": "涵蓋：實作了什麼（步 0～7 各一句）；步 0、測試清單、條文加註在 05/01；步 6～7 在 05/02"
+ },
+ "06-衝突與方向題": {
+  "description": "aos-agent 衝突與方向題的分檔夾：11-04 晚新題與裁定（02）、追加 tools／llm 子命令後的題與 AOS_BRAIN_URL 原文（03）；都已裁",
+  "index": "06-衝突與方向題/_index.json"
+ },
+ "06-衝突與方向題.md": {
+  "description": "涵蓋：使用者 11-04 的回覆與原則（逐字）與決定；衝突與方向題的裁定在 06/02、06/03"
+ },
+ "README.md": {
+  "description": "2026-11-04 aos-agent：統一的 agent 介面（eca＋loop／fsm agent 同一套子命令；fable 規劃，11-04 晚第二版）"
+ }
+}

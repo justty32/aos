@@ -1,0 +1,17 @@
+{
+ "01-耦合點全表.md": {
+  "description": "01 耦合點全表（11-09，opus 隊長盤點；只讀、沒改）"
+ },
+ "02-解耦方案.md": {
+  "description": "02 解耦方案（11-09，fable 一次性規劃；只規劃、沒改程式）"
+ },
+ "03-衝突邊緣與方向題.md": {
+  "description": "03 衝突、邊緣與方向題（11-09，fable；只規劃、沒改條文）"
+ },
+ "04-施工結果.md": {
+  "description": "04 施工結果（11-09，opus 隊長；codex sol 寫碼、claude 隊員改條文與桌面頁）"
+ },
+ "README.md": {
+  "description": "2026-11-09 `_clock` 跟 daemon 解耦（clock-decouple；方向題 3 題使用者 11-09 已裁；11-09 已施工，結果 04）"
+ }
+}

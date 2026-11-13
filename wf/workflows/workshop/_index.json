@@ -1,0 +1,23 @@
+{
+ "INDEX.md": {
+  "description": "workshop — 結構索引"
+ },
+ "README.md": {
+  "description": "workshop — 研討會／腦力激盪（多 agent 提供靈感）"
+ },
+ "SESSIONS.md": {
+  "description": "研討會的 codex session 一覽"
+ },
+ "archive": {
+  "description": "workshop 封存區：11-03 整批封存的 proto5～7 年代研討會紀錄 records、背景資料 background、待答題 OPEN-QUESTIONS（10-12 已清帳結案），只作歷史"
+ },
+ "briefs.md": {
+  "description": "workshop — 議題書與參與者任務書"
+ },
+ "commands.md": {
+  "description": "workshop — codex exec 指令形態"
+ },
+ "staff.md": {
+  "description": "workshop — 書記與祕書（收場那兩棒）"
+ }
+}

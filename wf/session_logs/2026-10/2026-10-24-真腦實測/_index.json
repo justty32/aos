@@ -1,0 +1,26 @@
+{
+ "01-基礎.md": {
+  "description": "01 基礎：dan、pip、json_edit、liv、kernel-llm"
+ },
+ "02-組合.md": {
+  "description": "02 組合：eve、gus、meg、talk、kai、hal、self-improve"
+ },
+ "03-外部與人.md": {
+  "description": "03 外部與人：aos-ai、say／listen、fay、Janet、Lua／nvim、grow、沙箱"
+ },
+ "README.md": {
+  "description": "交接：開 LiteLLM 後實測、打磨 10-24 的嘗試"
+ },
+ "結果-01-基礎.md": {
+  "description": "結果 01：建議順序第 1～6 項真腦實測"
+ },
+ "結果-02-組合A.md": {
+  "description": "結果 02 組合 A：meg、hal、eve、gus、talk（真腦）"
+ },
+ "結果-02-組合B.md": {
+  "description": "結果 02-B：agent-kai bench、self-improve 真腦實測"
+ },
+ "結果-03-外部.md": {
+  "description": "結果 03 外部：aos-ai（含 skill）、agent-fay 叫 claude／codex（真腦）"
+ }
+}

@@ -1,0 +1,8 @@
+{
+ "page.css": {
+  "description": "Style the offline decision page with shared light and dark palette tokens."
+ },
+ "page.js": {
+  "description": "Wire offline choices, notes, seen state, themes, and reply copying."
+ }
+}

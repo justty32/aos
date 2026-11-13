@@ -1,0 +1,42 @@
+{
+ "README.md": {
+  "description": "common — 跨工作流共享（入口）"
+ },
+ "archive": {
+  "description": "共享文檔的封存區：舊 roadmap、routines、tick、use-aos、wait-user-2026-10-12 舊帳、已刪程式的舊 code map 分冊；README 有封存日期與原因表，只作歷史查詢"
+ },
+ "code-map": {
+  "description": "code map 的逐檔表部分：README 說明分冊怎麼生成，底下 proto8/ 放 codemap_gen.py 自動生成的逐檔冊；要知道 proto8 某檔負責什麼時從這進",
+  "index": "code-map/_index.json"
+ },
+ "code-map.md": {
+  "description": "code map — aos 程式碼結構導航圖"
+ },
+ "conventions": {
+  "description": "conventions.md 拆出的分檔夾，兩份：01 程式碼慣例（proto8 位置、C++20、三扇門與結束碼）、02 導航 index（code map）維護鏈；入口與目錄在同層 conventions.md",
+  "index": "conventions/_index.json"
+ },
+ "conventions.md": {
+  "description": "程式碼慣例 + 導航 index 維護鏈（碼相關工作流共用）"
+ },
+ "data-files-fmt.md": {
+  "description": "data-files-fmt — json 內路徑代號 `$fmt`（契約 `wf-table/1` 附錄）"
+ },
+ "data-files.md": {
+  "description": "data-files — 資料檔契約 `wf-table/1`（>1 KB 條列走 .json / .csv）"
+ },
+ "gotchas": {
+  "description": "gotchas.md 拆出的分檔夾，兩份：01 建置與相依（CMake 私有相依、vcpkg、AOS_API）、04 使用 aos、改文件、公司 Windows 的坑；入口與分流表在同層 gotchas.md",
+  "index": "gotchas/_index.json"
+ },
+ "gotchas.md": {
+  "description": "跨工作流共通踩坑的入口：說明哪類坑記哪裡（工作流專屬的坑導去各自 gotchas），並列出 gotchas/ 底下兩份分檔涵蓋什麼"
+ },
+ "user": {
+  "description": "user.md 拆出的分檔夾，三份：01 說話方式、push 授權、記憶與額度；02 compact 前交接、收工與日誌寫法；03 討論紀錄只留原文與結論、規劃交給 fable；入口在同層 user.md",
+  "index": "user/_index.json"
+ },
+ "user.md": {
+  "description": "user — 使用者偏好與確認邊界"
+ }
+}

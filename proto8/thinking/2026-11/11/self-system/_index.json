@@ -1,0 +1,11 @@
+{
+ "01-調查摘要.md": {
+  "description": "01 調查摘要：system 怎麼開放給 agent"
+ },
+ "02-施工結果與代定.md": {
+  "description": "02 施工結果、實測、代定、要重建什麼"
+ },
+ "README.md": {
+  "description": "self-system：agent 改自己的 system 文字（aos-agent system＋self_system）"
+ }
+}

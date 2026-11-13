@@ -1,0 +1,11 @@
+{
+ "01-圖紙與改向.md": {
+  "description": "clock-hook 先定的圖紙（時鐘登記＋專用信箱＋mail_arrived，已被改向取代、不做）與使用者改向後的做法"
+ },
+ "02-施工結果.md": {
+  "description": "clock-hook 施工結果：aos-loop on_start／on_stop、hooks.py 新事件、hook_fire／hook_noop、範本 timer，及第二輪裁定（事件名改 on_clock）"
+ },
+ "README.md": {
+  "description": "clock-hook：hook 加「起來／停下」與「照時鐘觸發」（11-11）"
+ }
+}

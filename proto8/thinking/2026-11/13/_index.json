@@ -1,0 +1,72 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-11-13"
+ },
+ "aos-home-手冊.html": {
+  "description": "11-13 給使用者照著做的 aos-home 手冊（公司 WSL）HTML 原稿：從零搭 ~/aos-home 一棵小樹與 opus eca 的步驟"
+ },
+ "aos-home.md": {
+  "description": "公司 WSL 改住 `~/aos-home`（11-13 早）：repo 換成 `~/repo/aos`、重 build＋install、全套測試，`~/aos-home` 從零重搭一隻 opus eca，遊樂場與舊 repo 刪掉"
+ },
+ "aos-wu-1113-r2-待你裁.html": {
+  "description": "今天第二輪：43 題待你裁"
+ },
+ "aos-wu-1113-top-待你裁.html": {
+  "description": "先看這 17 題：128 題裡挑出來的"
+ },
+ "aos-wu-1113-待你裁.html": {
+  "description": "要你裁的：128 題一次看完"
+ },
+ "convention-vs-agent-fsm.md": {
+  "description": "CONVENTION 條文跟現行 agent-fsm 範本對不上的 19 條（前 14 條＋02 夾新題 5 條，另有 02 夾 6 處指回前面、1 題舊協議刪除要確認）：逐條原句、範本實際、當初用意、收法與建議；使用者要逐條看；11-13 第二輪待裁頁 20 題都裁了，裁定在各節建議下面"
+ },
+ "decide_20261113_wu-r2.json": {
+  "description": "Second round of 11-13 questions for the user: convention vs agent-fsm, eca_main letter, line-b leftovers, two note readings, kernel framework."
+ },
+ "decide_20261113_wu-r2.reply.txt": {
+  "description": "11-13 第二輪待裁頁（wu-r2，43 題）使用者回覆原文一行，如 cv-P05:A、fx-2:A 等，查裁定出處時看"
+ },
+ "decide_20261113_wu-top.json": {
+  "description": "Top 17 of the 128 questions in decide_20261113_wu.json (same ids), picked for the user to read first."
+ },
+ "decide_20261113_wu-top.reply.txt": {
+  "description": "11-13 精選 17 題待裁頁（wu-top）使用者回覆原文一行，如 kf-K-F47:A、kf-K-F50:B 與備註，查裁定出處時看"
+ },
+ "decide_20261113_wu.json": {
+  "description": "Decision batch built from wf/wait-user/01 (2026-11-13): every open item split into single questions."
+ },
+ "eca-a2a-notify": {
+  "description": "eca-a2a-notify.md 的分檔：eca 身直接塞進 CLI 輸入的 12 項盤點，與 Claude Code a2a 機制的文件、實測、讀碼（11-13 調查）",
+  "index": "eca-a2a-notify/_index.json"
+ },
+ "eca-a2a-notify.md": {
+  "description": "eca 的通知改走 a2a（11-13 調查，只讀沒施工）：外部行程可以直接往 Claude Code 的 session socket 投遞、寄件人可以寫成不存在的「aos通知中心」（都實測過）；建議畫面那條路把「貼字＋Enter」換成投 socket，留兩題給使用者裁"
+ },
+ "eca-main-six-fixes.md": {
+  "description": "eca_main 來信七項（11-13）：四項是 bug、修法與 patch 草稿備好（1 定義檢查找 aos-tools、3 rm／stop 要 ws、6 codex 重複旗標、7 codex 子 agent thread），2、4 是新功能，5 與 AOS_HOME 的意思是設計題；這一階段只評估與重現，repo 程式沒動"
+ },
+ "external-mcp-real-server.md": {
+  "description": "外部 MCP 接真的別人寫的 stdio server（11-13 公司 WSL，線丙）：官方 everything／time／filesystem 三台，eca（claude 經 aos＋CLI 自己接、codex CLI 自己接＋經 aos）與 agent-fsm（經 aos 匯入）都叫得到；codex 的 `disabled_tools` 有效；codex 沙盒管不到 stdio serv…"
+ },
+ "fixes-施工結果.md": {
+  "description": "線庚施工結果（11-13）：eca_main 第 7、6、3、1 項與外部 MCP 實測三題都修了、各一個 commit，set-def 做了但 daemon 有一個缺口；全套測試只紅既有的"
+ },
+ "index-build.md": {
+  "description": "把 repo 的 index 建好建滿：每個資料夾一份生成的 `_index.json`，從 repo 根用 `index_view` 一路往下都看得到每樣東西是什麼（11-13 公司；階段一文件區已鋪，階段二程式區等停樹後）"
+ },
+ "kernel-framework-開工.md": {
+  "description": "通用 kernel 框架開工計畫（11-13，階段 0：只出計畫、沒改程式）：圖紙十四步拆成 17 批，今天不動 C++ 能做的是框架本體三批（1a、2、3），其餘卡在別線、C++ 或待裁題"
+ },
+ "line-b-cleanup.md": {
+  "description": "線乙（11-13 上午，fable 隊長）：舊路徑、agent-fsm 重複收一支、說明清舊、do_task 摺疊被砍重複"
+ },
+ "main-session-in-aos.md": {
+  "description": "主 session 接 aos 的四題（11-13 早，公司 WSL）：主 session 已經是樹裡的一隻 eca proc「repo-aos」，四題照現況與原則各自定案；留兩題給使用者裁（只規劃、沒施工）"
+ },
+ "tool-stack-path.md": {
+  "description": "11-13 fx-2:A 施工紀錄：工具印的 $AOS_STACK 路徑改照叫方的 stack 算，aos-tools 給 AOS_STACK_IN_CALLER，含設計、盤點、代定、要補的條文"
+ },
+ "裁定落地-1113.md": {
+  "description": "11-13 使用者裁定落地：精選頁 17 題的回覆（16 題有選、N-17 先不選但留了一句原則）＋對話裡直接答的三組（主 session 兩題、a2a 兩題、kernel 框架開工）；每題裁定已寫回原文件，本檔列「裁定後待施工」；同日第二輪待裁頁 43 題的回覆（裁了 38 題、5 題未裁）也落在這裡，第二輪的待施工另列一節"
+ }
+}

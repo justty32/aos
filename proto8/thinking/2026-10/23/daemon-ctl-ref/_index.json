@@ -1,0 +1,11 @@
+{
+ "01-使用者原文.md": {
+  "description": "daemon-ctl-ref 的使用者原文整理版：10-23 晚到深夜講 ctl 只寫變動、大 JSON 自動用 $ref 切、各種 JSON 都支援指示詞、$ref 陣列兩個細節"
+ },
+ "02-結論.md": {
+  "description": "daemon-ctl-ref 的結論細則：$ref 陣列怎麼合與報錯、aos 讀的 JSON 都解指示詞、ctl 的 loops_added／loops_removed、$ref 每份 100 個切檔"
+ },
+ "README.md": {
+  "description": "2026-10-23 daemon 的 ctl 只寫變動、`$ref` 自動切檔、指示詞全面支援"
+ }
+}

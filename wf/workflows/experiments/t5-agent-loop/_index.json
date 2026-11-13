@@ -1,0 +1,15 @@
+{
+ "README.md": {
+  "description": "T5 agent loop 實測 — 導航"
+ },
+ "record": {
+  "description": "record.md 的四份分檔：01 結論（T5 驗收未全過）、02 實際做了什麼（假模型、投遞、Ctrl-C）、03 空 inst.json 與沒有 inst.json、04 哪幾題被實驗回答了",
+  "index": "record/_index.json"
+ },
+ "record.md": {
+  "description": "T5 agent loop 實測"
+ },
+ "subcommand-specs.md": {
+  "description": "痛在哪：可直接寫成子命令的需求"
+ }
+}

@@ -1,0 +1,13 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-10-13"
+ },
+ "json-path": {
+  "description": "2026-10-13 JSON 也是檔案系統：`檔#/位置`、loop.json 排法、單檔自指；`_metainfo`",
+  "index": "json-path/_index.json"
+ },
+ "kernel-agent": {
+  "description": "2026-10-13 kernel 不是一層：能管任務的 inst 就是 kernel；agent 可以基於 loop 或 daemon",
+  "index": "kernel-agent/_index.json"
+ }
+}

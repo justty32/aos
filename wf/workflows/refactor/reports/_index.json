@@ -1,0 +1,14 @@
+{
+ "2026-11-07-arknights-kb": {
+  "description": "arknights-kb 線（用 arknights 敘事語料試 aos 知識庫）的 AI 大檔：語料與 aos 盤點、W1～W4 施工結果、第一輪實跑、第二輪簡報；從 thinking 11-07 搬來",
+  "index": "2026-11-07-arknights-kb/_index.json"
+ },
+ "2026-11-07-sol審查": {
+  "description": "2026-11-07 sol 審查：11-06 起 codex sol 做的設定、條文、設計決定跟使用者原話對不對（總入口）",
+  "index": "2026-11-07-sol審查/_index.json"
+ },
+ "2026-11-07-晚審": {
+  "description": "2026-11-07 晚審：11-07 一整天 proto8 本體 47 個 commit 的設計審（總入口）",
+  "index": "2026-11-07-晚審/_index.json"
+ }
+}
