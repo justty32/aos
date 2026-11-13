@@ -8,7 +8,7 @@ from pathlib import Path
 
 TOOLS = Path(__file__).parents[1]
 sys.path.insert(0, str(TOOLS))
-import codemap_gen  # noqa: E402
+import codemap_lib  # noqa: E402
 import index_gen  # noqa: E402
 
 OUT = 'wf/knowledge/code-map/proto8'
@@ -73,7 +73,7 @@ class CodemapJsonTests(unittest.TestCase):
         # 葉子數＝掃到的列數（工具夾三檔併一列）
         proto = str(self.root / 'proto8')
         total = sum(self.leaves(self.read(n)['tree']) for n in names)
-        self.assertEqual(total, len(codemap_gen.units(proto, codemap_gen.tracked(proto))))
+        self.assertEqual(total, len(codemap_lib.units(proto, codemap_lib.tracked(proto))))
 
     def test_rerun_is_stable_and_check_passes(self):
         self.assertEqual(self.run_gen('--apply'), 0)

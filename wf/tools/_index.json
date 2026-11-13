@@ -2,8 +2,8 @@
  "check_anchors.py": {
   "description": "Check fragments in local Markdown links."
  },
- "codemap_gen.py": {
-  "description": "檔頭一句話的認法（函式庫，給 index_gen.py 寫逐檔 code map 用）；命令列是轉呼叫 index_gen.py 的薄殼。"
+ "codemap_lib.py": {
+  "description": "檔頭一句話的認法（函式庫，給 index_gen.py 寫逐檔 code map 用；沒有命令列）。"
  },
  "compact_reload.sh": {
   "description": "compact 後重讀：Claude Code SessionStart（matcher=compact）hook 呼叫，stdout 會進 compact 後的上下文。"

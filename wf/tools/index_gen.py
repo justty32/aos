@@ -17,10 +17,10 @@
 都沒有時用設定檔的通用句（usual_dirs／usual_files：tests、src、.gitignore 這類名字就說明用途的）；json 取 description／summary／$comment／title（knowledge 節點取 `_description` 那段的標題；`_description.json` 整份是一段正文、同樣取標題），
 一段文字寫成字串或字串陣列（一行一個元素）都認（使用者 11-13，proto8/thinking/2026-11/13/text-as-string-array.md）：description 那幾個鍵是陣列時取第一行有字的；
 夾沒有 README.md／INDEX.md 時取它的 `_description.json`；
-wf-table 資料檔寫出處與欄位；程式檔照 codemap_gen 的認法；html 取 <title>。連結語法、粗體去掉，只留字。
+wf-table 資料檔寫出處與欄位；程式檔照 codemap_lib 的認法；html 取 <title>。連結語法、粗體去掉，只留字。
 同一次也寫逐檔 code map：proto8 每個頂層夾一份 wf/knowledge/code-map/proto8/<夾>.json（tree 巢狀、葉子＝檔頭一句話；範圍在 index_gen.json 的 codemap 段；
 跟檔頭對不上＝CodemapStale、退 1；舊的 md 冊 11-13 刪了；
-`codemap_gen.py` 命令列是轉呼叫本檔的薄殼；規劃 proto8/thinking/2026-11/13/wf-into-aos-plan/08-fable-codemap規劃.md）。
+認法函式在 `codemap_lib.py`；規劃 proto8/thinking/2026-11/13/wf-into-aos-plan/08-fable-codemap規劃.md）。
 格式出處：proto8/thinking/2026-11/12/index.md、index-link.md；規格與代定：proto8/thinking/2026-11/13/index-build.md。查對用 index_check.py。
 純標準庫；只讀檔頭，不跑任何程式。
 """
@@ -32,7 +32,7 @@ import sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, HERE)
-import codemap_gen  # noqa: E402  共用檔頭一句話的認法
+import codemap_lib  # noqa: E402  共用檔頭一句話的認法
 
 PROG = "index_gen"
 NAME = "_index.json"
@@ -124,7 +124,7 @@ def file_desc(root, path):
     if name.endswith(".md"):
         return md_desc(text)
     if name.endswith(".json"):
-        return json_desc(text, name) or codemap_gen.clean(codemap_gen.json_desc(text, name == "_entry"), [name])
+        return json_desc(text, name) or codemap_lib.clean(codemap_lib.json_desc(text, name == "_entry"), [name])
     if name.endswith((".html", ".htm")):
         m = re.search(r"<title>(.*?)</title>", text, re.S | re.I)
         return plain(m.group(1)) if m else ""
@@ -134,7 +134,7 @@ def file_desc(root, path):
     if name.endswith((".txt", ".log", ".jsonl", ".err")):
         return ""
     stem = os.path.splitext(name)[0]
-    return codemap_gen.clean(codemap_gen.text_desc(text, path), [name, stem])
+    return codemap_lib.clean(codemap_lib.text_desc(text, path), [name, stem])
 
 
 def load(name):
@@ -235,18 +235,18 @@ def codemap_tables(root, cfg):
     """逐檔 code map：proto8 每個頂層夾一份 `<夾>.json`（頂層單檔進 proto8.json），回 ({檔名: 表}, 取不到一句話的列)。
     形狀（11-13 線遷 code map，proto8/thinking/2026-11/13/wf-into-aos-plan/08-fable-codemap規劃.md §1.2）：
     `tree` 照資料夾巢狀，字串＝檔、物件＝夾，值＝檔頭一句話（取不到＝""）；工具夾三個契約檔併成一格 `名/`；
-    有 CMake 專案的夾多一個 `deps`＝{專案: {public, private}}。掃描範圍與認法照 codemap_gen（同一份設定、同一次掃描）。"""
+    有 CMake 專案的夾多一個 `deps`＝{專案: {public, private}}。掃描範圍與認法照 codemap_lib（同一份設定、同一次掃描）。"""
     proto = os.path.join(root, "proto8")
     if not os.path.isdir(proto):
         return {}, []
     groups = {}
-    for f in codemap_gen.tracked(proto):
+    for f in codemap_lib.tracked(proto):
         groups.setdefault(f.split("/")[0] if "/" in f else "", []).append(f)
     out, warns = {}, []
     for top in sorted(groups):
         tree = {}
-        for rel, cov in codemap_gen.units(proto, groups[top]):
-            d, bad = codemap_gen.unit_desc(proto, rel, cov)
+        for rel, cov in codemap_lib.units(proto, groups[top]):
+            d, bad = codemap_lib.unit_desc(proto, rel, cov)
             if bad:
                 warns.append(rel)
             parts = (rel[len(top) + 1:] if top else rel).rstrip("/").split("/")
@@ -259,7 +259,7 @@ def codemap_tables(root, cfg):
                                 "工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 "
                                 "python3 wf/tools/index_gen.py --apply。",
                  "generated_by": GEN_BY, "tree": tree}
-        dep = codemap_gen.deps(proto, top, groups[top]) if top else []
+        dep = codemap_lib.deps(proto, top, groups[top]) if top else []
         if dep:
             table["description"] += "deps＝各專案 CMakeLists.txt 的 target_link_libraries（略過 *_main）。"
             table["deps"] = {p: {"public": pub, "private": priv} for p, pub, priv in dep}

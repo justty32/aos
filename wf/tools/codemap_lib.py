@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""codemap_gen — 檔頭一句話的認法（函式庫，給 index_gen.py 寫逐檔 code map 用）；命令列是轉呼叫 index_gen.py 的薄殼。
-
-  codemap_gen.py [--root REPO] [--apply] [--quiet]
-    薄殼：照舊收這三個旗標，轉呼叫 `python3 wf/tools/index_gen.py`（它一次寫 _index.json 與 wf/knowledge/code-map/proto8/<夾>.json 逐檔表）。
-    舊的 md 生成冊（common 底下的 code-map 夾與 code-map.md 轉址檔）11-13 晚刪了（使用者「舊的md版逐檔表和轉址檔可以刪。」）；沒人再跑本指令時刪命令列。
+"""codemap_lib — 檔頭一句話的認法（函式庫，給 index_gen.py 寫逐檔 code map 用；沒有命令列）。
 
 掃哪些檔：`git ls-files proto8`，去掉 thinking／archive／notes／user-advice／docs 夾、任何一層叫 archive／docs／
 __pycache__ 的夾、.md（knowledge/ 除外）、.gitignore／.gitattributes、`_index.json`（資料夾的 index）、.vscode/（這份清單寫在 index_gen.json 的
@@ -30,7 +26,7 @@ SKIP_ANY_DIR = set(CFG["skip_any_dir"])
 SKIP_NAMES = set(CFG["skip_names"])   # _index.json＝index_gen.py 生成的資料夾 index，不是程式檔
 MD_DIRS = set(CFG["md_dirs"])         # 這些頂層夾的 .md 也列（出廠內容樹的說明）
 TOOL_PARTS = ("_entry", "_tooldef.json", "_metainfo.json")
-PROG = "codemap_gen"
+PROG = "codemap_lib"
 
 
 def warn(msg):
@@ -224,33 +220,3 @@ def unit_desc(proto, rel, cov):
         if rel + alt in cov:
             d, bad = describe(proto, rel + alt, follow=True, comment_only=co)
     return d, bad
-
-
-def main(argv):
-    """過渡薄殼（11-13 線遷 code map 步 3，使用者裁 C3 甲）：照舊收 --root／--apply／--quiet，轉呼叫 index_gen.py。"""
-    if "-h" in argv or "--help" in argv:
-        print("\n".join(__doc__.split("\n")[:6]))
-        return 0
-    fwd = []
-    it = iter(argv)
-    for a in it:
-        if a in ("--apply", "--quiet"):
-            fwd.append(a)
-        elif a == "-q":
-            fwd.append("--quiet")
-        elif a == "--root":
-            v = next(it, None)
-            if v is None:
-                print(f"{PROG}: error: ArgumentsBad --root needs a path (usage: codemap_gen.py [--root REPO] [--apply] [--quiet])", file=sys.stderr)
-                return 1
-            fwd += ["--root", os.path.abspath(v)]
-        else:
-            print(f"{PROG}: error: FlagUnknown {a} (usage: codemap_gen.py [--root REPO] [--apply] [--quiet])", file=sys.stderr)
-            return 1
-    print(f"{PROG}: note: merged into index_gen.py; running `" + " ".join(["python3", "wf/tools/index_gen.py"] + fwd) + "`", file=sys.stderr)
-    import index_gen
-    return index_gen.main(fwd)
-
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))

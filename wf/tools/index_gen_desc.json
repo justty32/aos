@@ -668,7 +668,7 @@
   "wf/session_logs/2026-11/2026-11-12.md": "11-12 的工作日誌：eca 不給 aos 基礎檔案工具、knowledge 工具拆掉改普通 json＋_index、json_*／jsonx_* 兩套、_metainfo 只是約定、Q01～Q16 結清",
   "wf/session_logs/2026-11/2026-11-13.md": "11-13 的工作日誌：公司 WSL 不再當遊樂場、改住 ~/aos-home（一隻 opus eca），repo 換到 ~/repo/aos，舊遊樂場與舊 repo 刪掉",
   "wf/session_logs/archive": "已收成月摘要的月份每日原檔封存處（2026-08、2026-09、2026-10 的每日檔），只作歷史保留；月摘要找不到的細節才來翻",
-  "wf/tools": "wf 工作流的腳本：index_gen（_index.json 與 code map 逐檔表；codemap_gen 是它的認法函式庫與舊指令薄殼）、tabledb 資料表讀寫、進度看板 progress_board、離線待裁頁 decide_page、連結修補等；要跑生成器或檢查時進去",
+  "wf/tools": "wf 工作流的腳本：index_gen（_index.json 與 code map 逐檔表；codemap_lib 是它的檔頭一句話認法函式庫）、tabledb 資料表讀寫、進度看板 progress_board、離線待裁頁 decide_page、連結修補等；要跑生成器或檢查時進去",
   "wf/tools/decide_page": "離線待裁頁工具 decide_page.py：把一批題目 JSON 做成單檔互動頁，讓使用者點選與補充後複製回覆，再 parse／apply 讀回落地裁定",
   "wf/tools/decide_page/README.md": "decide_page 的說明：離線待裁頁的 check／build／parse／apply 指令、回覆格式、沒看過的題算待定、裁定怎麼落地與 SVG 樣式",
   "wf/tools/decide_page/web": "decide_page 產生的離線待裁頁的前端：page.css 樣式、page.js 處理選項、備註、已看狀態、主題與複製回覆",
