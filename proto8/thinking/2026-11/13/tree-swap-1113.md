@@ -30,7 +30,7 @@
 
 ## 不會被動的
 
-`~/aos-home` 底下：`agents/`（`eca_main`、`repo-aos`）、`defs/`（`shared`、`gpt-lead`、`gpt-worker`）、`teams/t1`、`kernels/llm-gpt`、`ws/`（`public`、`tools`、`.stack` 與各 agent 的 procs）、`.stack/`、`root/`、`daemon/`、`env.sh`；樹外：`~/.aos`（使用者專區）、`~/.local/bin` 的連結、repo 工作樹（除了那十個 gitignore 的執行檔）。`check` 段另有一道：四夾裡若有「只在樹裡有」的檔（換了會丟），紅燈不換。
+`~/aos-home` 底下：`agents/`（`eca_main`、`repo-aos`）、`defs/`（`shared`、`gpt-lead`、`gpt-worker`）、`teams/t1`、`kernels/llm-gpt`、`ws/`（`public`、`tools`、`.stack` 與各 agent 的 procs）、`.stack/`、`root/`、`daemon/`、`env.sh`；樹外：`~/.aos/user`（使用者專區；備份另寫在 `~/.aos/saves/tree-swap`）、`~/.local/bin` 的連結、repo 工作樹（除了那十個 gitignore 的執行檔）。`check` 段另有一道：四夾裡若有「只在樹裡有」的檔（換了會丟），紅燈不換。
 
 ## 預演（暫存樹 `~/code/swap-1113/tree`）
 
@@ -74,7 +74,7 @@
 3. **5 處 Python 接 `aos-directive --at`**（新執行檔換上後才可以接；這裡只列，不改）：`lib/directive_value.py`、`cmd/aos-agent/aos_agent/tools.py`、`py/aos_clock_register.py`、`lib/mcp_server_file.py`、`lib/hook_run.py`。接完 `lib`、`py` 要再換一次樹才生效（`cmd/` 存檔即生效）。
 4. （可選）`proto8/install.sh` 跑一次，把新指令 `aos-tree-start` 連上 PATH，之後起樹改用它（擋殼裡繼承的外來 `AOS_*`）。
 5. 換完 repo 的 `impls/*/build` 比 `bin/` 舊；之後在 repo 重 build 會從已 commit 的原始碼編出等價的檔。
-6. 備份留在 `~/aos-saves/tree-swap/<時間>/`（約 42 MB），確定沒事再自己刪。
+6. 備份留在 `~/.aos/saves/tree-swap/<時間>/`（約 42 MB），確定沒事再自己刪。
 
 ## 給使用者的單子
 

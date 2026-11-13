@@ -12,7 +12,7 @@
 | [common.sh](common.sh) | 預設路徑、「樹在跑」偵測、計時 |
 
 - **換什麼**：樹裡已經有的 `lib templates knowledge py kernel`（沒有的夾不建），與 `$TS_BIN_ROOT/<p>/bin/<p>` 十支（`aos-daemon directive exec fsm json llm llm-kernel lock loop post`；`~/.local/bin/aos-*` 指的就是 repo 的 `proto8/impls/<p>/bin/<p>`，gitignore 著）。
-- **不碰**：`agents defs teams kernels ws root daemon .stack env.sh`、`~/.aos`。
+- **不碰**：`agents defs teams kernels ws root daemon .stack env.sh`、`~/.aos` 裡除了備份夾 `saves/tree-swap` 以外的東西（專區 `~/.aos/user` 等）。
 - **「樹在跑」怎麼算**：自己的行程裡，環境的 `AOS_STACK`／`AOS_DAEMON` 落在樹底下，或 cwd 在樹底下且是 aos／claude／python／node。不看 `AOS_HOME`（`.zshrc` 每個殼都設）。從某隻 agent 的殼裡下（殼裡有 `AOS_STACK` 等）直接拒絕。
-- **路徑**用環境變數改：`TS_TREE`（預設 `~/aos-home`）、`TS_REPO`、`TS_BUILD`、`TS_BIN_ROOT`、`TS_BACKUP_ROOT`（預設 `~/aos-saves/tree-swap`，`LAST` 記最近一份）。
+- **路徑**用環境變數改：`TS_TREE`（預設 `~/aos-home`）、`TS_REPO`、`TS_BUILD`、`TS_BIN_ROOT`、`TS_BACKUP_ROOT`（預設 `~/.aos/saves/tree-swap`，`LAST` 記最近一份）。
 - 換完之後 repo 的 `impls/*/build` 比執行檔舊；之後在 repo 重 build 會從已 commit 的原始碼編出等價的檔。
