@@ -140,10 +140,10 @@
    "source_path": "workflows-into-aos.md",
    "source_lines": "443",
    "source_excerpt": "**(h) 記錄表寫成陣列還是鍵**（牴觸第 1 條）",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W7",

@@ -135,10 +135,10 @@
    "source_path": "../../../../wf/wait-user/01-要你裁的.md",
    "source_lines": "29",
    "source_excerpt": "- **`json_text` 折行把「e.g.」「a.」這類當句尾誤折，要不要處理（11-13）**：線地修的是行首清單編號不被折開（`b374ac376`），縮寫與字母編號沒處理——見桌面頁 `aos-1113-收工待裁.html`（原稿在 thinking 11-13，檔名 【頁名1113】）",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W2",
@@ -174,10 +174,10 @@
    "source_path": "tool-stack-path.md",
    "source_lines": "15",
    "source_excerpt": "- **為什麼給相對位置、不給叫方 stack 的絕對路徑**：CONVENTION P-17 寫「被叫的只看到自己的 stack、不知道上面有誰」。給絕對路徑＝直接把上面那層的位置交給工具，跟這句字面打架；給相對位置，工具仍然只認得自己的小格，只是多知道「讀我輸出的人怎麼稱呼這一格」。另外相對值就算被哪支工具不小心寫進檔，也不違反 N-67 ⑦（絕對路徑不落檔）。裁定原句是「多給一個叫我的那方的 stack」，這裡給的是「從那方的 stack 看我在哪」，效果（印的路徑都照叫方的 stack 算）一樣，機制比原句窄一點——**這一點是代定，使用者可翻成給絕對路徑**（翻的話變數改名 `AOS_CALLER_STACK`、P-17 那句要一起改）。",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W3",
@@ -603,10 +603,10 @@
    "source_path": "workflows-into-aos.md",
    "source_lines": "399",
    "source_excerpt": "**(a) 等使用者的事：何時從 `WAIT_USER.md` 改成寄 NEEDS-USER 信，改了檔還留不留**",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W12",
@@ -686,10 +686,10 @@
    "source_path": "workflows-into-aos.md",
    "source_lines": "413",
    "source_excerpt": "**(c) analysis 產物、`PATCH.md`、`APPLY.md` 留 md 還是改 json**",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "C",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W14",
@@ -833,10 +833,10 @@
    "source_path": "workflows-into-aos.md",
    "source_lines": "437",
    "source_excerpt": "**(g) 檔案格式要不要在 knowledge/docs 寫一條推薦**（牴觸第 4 條）",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W18",
@@ -869,10 +869,10 @@
    "source_path": "workflows-into-aos.md",
    "source_lines": "443",
    "source_excerpt": "**(h) 記錄表寫成陣列還是鍵**（牴觸第 1 條）",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W19",
@@ -910,10 +910,10 @@
    "source_path": "workflows-into-aos.md",
    "source_lines": "321-328",
    "source_excerpt": "3. 「程式碼單檔 > 300 行、給人看的 md > 300 行」（模板，aos 的 `wf/STRUCTURE.md` 也有同一句）對使用者 10-09「原型開發階段不設核心行數上限」。\n   - wf-agent 的意見：不帶。使用者說過不設行數上限。\n4. 檔案格式「UTF-8、LF、縮排 1 格、非 ASCII 不轉義、結尾換行」（模板）：docs/01、02 沒有對應條文。aos 現有的 knowledge 檔實際就是這個格式，只是沒寫成規定。\n   - wf-agent 的意見：建議 aos 有一條「推薦」，直接寫成「跟 `aos-json set` 寫出來的一樣」，工具改的與手改的 diff 才不會互相打架；它選縮排 1 格只是照 aos 知識庫現況，以 `aos-json` 實際輸出為準。\n5. index 的 description「寫繁中『是什麼＋何時讀』」（模板）對 docs/01「英文一句話，說那個節點是什麼」。語言那半有 docs/02 的範圍條可以解釋（英文管的是 `knowledge/aos`）；「＋何時讀」是 docs 沒有的要求，帶進來了（`nodes.json#/names`），只當工作區 `wf/` 的約定。\n6. 「節點之間的引用寫從 repo 根算的統一路徑、放反引號」（模板，帶進來了）：docs/01 只規定 `index` 與 `$ref` 欄位的相對路徑怎麼算，沒規定文字裡的引用怎麼寫；不算牴觸，但 aos 沒有工具會驗這種引用。使用者 11-13 對線黃那批題裁「都按照推薦」：aos 的 index 檢查不查節點內容裡的引用（index-check-false-green）。\n7. （不在上面六條裡、但 wf-agent 一併回了）`md_for_humans`「內容一律走 json、只留四個 md」：沒帶，等使用者裁 C-42 那題。\n   - wf-agent 的意見：等使用者裁，不帶。",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W20",
