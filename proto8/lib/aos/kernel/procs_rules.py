@@ -123,6 +123,7 @@ def collect(ctx, before_reply=None):
     ctx.daemon, ctx.count_daemon = daemon, count_daemon
     prepare_targets(ctx, bool(names))
     ctx.admitted = set()
+    letters.settle_pending(ctx)
     for name in names:
         if letters.already_forwarded(ctx, name):
             letters.finish_forwarded(ctx, name)

@@ -32,6 +32,7 @@
 | [`kernel/round.py`](../../../../../proto8/lib/aos/kernel/round.py) | 通用 kernel 的骨架：讀設定、鎖收件箱，串起五個口與三個 hook 時機。 |
 | [`kernel/runner.py`](../../../../../proto8/lib/aos/kernel/runner.py) | 「自己跑」零件：把一件工作掛成 daemon 的 proc、看表收成品、逾時、重掛一次、拔列；去處由呼叫的包給。 |
 | [`kernel/tests/test_kernel.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel.py) | 用真的 aos-post 信箱驗證框架站的轉寄、代回與重起防重。 |
+| [`kernel/tests/test_kernel_cut.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel_cut.py) | 驗證轉寄中途行程被砍（寄出前、寄出後還沒記對照）重起後不重寄、不漏寄、回信仍代得回去。 |
 | [`kernel/tests/test_kernel_hold.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel_hold.py) | 用真的 aos-post 與 aos-exec 驗證 after_verdict hook 的「先留著」（hold）與表態檔 decisions/<信名>.json。 |
 | [`kernel/tests/test_kernel_hooks.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel_hooks.py) | 用真的 aos-post 與 aos-exec 驗證 kernel 三個 hook 時機和排隊時的保存。 |
 | [`kernel/tests/test_kernel_route.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel_route.py) | 用真的 aos-post 與 aos-exec 驗證 after_verdict hook 替單封信指定下一站（照規則分流）與各種邊緣。 |
