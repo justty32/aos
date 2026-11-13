@@ -18,6 +18,8 @@
 
 三種工具（資料夾、JSON、可執行檔）都經 `aos-exec`、arguments 原樣從 stdin 進。`call` 統一把父 `AOS_STACK` 換成 `tools/<登記名>/` 小格；呼叫者只傳自己的 stack，登記格 env 不能蓋掉小格。父沒設時交 aos-exec 給預設。
 
+**`AOS_STACK_IN_CALLER`：小格在叫方 stack 裡的位置**（使用者 11-13 裁 fx-2:A「全家一起改」，[tool-stack-path](../../thinking/2026-11/13/tool-stack-path.md)）：父有 `AOS_STACK` 時，`call` 多給工具 `AOS_STACK_IN_CALLER=tools/<登記名>`（相對路徑、結尾沒有 `/`），每次 call 重設，登記格 env 與外面帶進來的同名值都蓋不掉；父沒設 `AOS_STACK`＝不給，外面有也拿掉。用途只有一個：工具把自己小格裡的路徑印給叫方時，寫成 `$AOS_STACK/tools/<登記名>/…`——叫方（腦）讀到的 `$AOS_STACK` 是它自己的 stack，照字面找得到。Python 工具走 `tool_io.place` 就會照它印；值跟工具自己的 `AOS_STACK` 結尾對不上（被別的程式繼承走）＝當沒設。工具不靠它讀寫叫方的 stack。測試 `tests/test_stack_in_caller.py`。
+
 **小格不先建**（使用者「我確實想改成工具真的寫東西時才建資料夾」，[tool-cells-lazy](../../thinking/2026-11/11/tool-cells-lazy.md)）：`call` 只設 `AOS_STACK=<父 stack>/tools/<名>/`、叫 `aos-exec --stack-lazy`，不建資料夾；工具真的要寫才自己 `mkdir -p`（shell、run_python 的記帳、subagent 的帳、claude／codex 的對話等），只讀的工具不留空資料夾。
 
 `add` 可用可重複的 `--envs K=V` 補 hub 變數（存進登記格 `env`，值照打的存——不放金鑰）；`--env-file FILE` **只記位置**（aos-tools-cli 步 3，使用者 Q1）：存進登記格 `env_file`，寫法同 XXX，內容不進登記檔；add 當下檔在就讀一次只為驗格式與 hub 提醒、不在＝warning 照登記；每次 `call` 才讀，檔裡的 `${…}` 照那次呼叫的環境展開，不在＝`PathMissing` 不跑（N4「報錯不跑」）。call 時後面的贏：工具自己的 `.env`（只補沒設的）＜ 呼叫者環境 ＜ `env_file` ＜ `env` ＜ `AOS_STACK` 小格。`ls -l` 的 ENV 欄印 `env` 的名字與 `@"存的 env_file"`，不印值。測試 `tests/test_env_file.py`。`--replace` 整項重寫。工具定義 `env` 列的名稱若當下環境與這次設定都沒有，印一行 warning，仍登記、退 0。`ls --json` 保留完整 tooldef；brain／aos-mcp 給模型時只取 description／parameters，不傳 hub 值。
