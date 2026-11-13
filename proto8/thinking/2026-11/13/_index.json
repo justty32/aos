@@ -113,6 +113,12 @@
  "kernel-framework-開工.md": {
   "description": "通用 kernel 框架開工計畫（11-13，階段 0：只出計畫、沒改程式）：圖紙十四步拆成 17 批，今天不動 C++ 能做的是框架本體三批（1a、2、3），其餘卡在別線、C++ 或待裁題"
  },
+ "kernel-limits-plan": {
+  "description": "kernel 限資源與設 uid 規劃的分檔夾；入口與一張圖在 kernel-limits-plan.md。"
+ },
+ "kernel-limits-plan.md": {
+  "description": "kernel 限資源與設 uid（線限 11-13 晚規劃，未施工）：kernel 只定政策、把限制與身分寫進放行的信，daemon 在 fork 時真的套（setrlimit、二期 cgroup、免 root 的 subuid 換身分），bwrap 照舊管看得到什麼，要 root 的隔成預設不裝的包"
+ },
  "line-b-cleanup.md": {
   "description": "線乙（11-13 上午，fable 隊長）：舊路徑、agent-fsm 重複收一支、說明清舊、do_task 摺疊被砍重複"
  },
