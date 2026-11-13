@@ -146,6 +146,9 @@
  "tool-stack-path.md": {
   "description": "11-13 fx-2:A 施工紀錄：工具印的 $AOS_STACK 路徑改照叫方的 stack 算，aos-tools 給 AOS_STACK_IN_CALLER，含設計、盤點、代定、要補的條文"
  },
+ "tree-swap-1113.md": {
+  "description": "家機活樹停樹換檔（線換，11-13 晚）：腳本 `proto8/extras/tree-swap/`、暫存樹預演三輪（第三輪全綠）、會換／不會動的清單、換後收尾清單、給使用者的單子"
+ },
  "user-zone-plan": {
   "description": "使用者專區規劃的分檔夾：入口在上一層的 user-zone-plan.md，這裡是 01～06 的細節"
  },

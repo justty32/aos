@@ -47,3 +47,12 @@
 | [`lua/aos.lua`](../../../../../proto8/extras/langs/lua/aos.lua) | 用 Lua table 寫 aos 的資料夾程式，編成資料夾＋JSON（嘗試，2026-10-24） |
 | [`lua/bin/aos-lua`](../../../../../proto8/extras/langs/lua/bin/aos-lua) | 把一份 Lua 原始檔編成 aos 的資料夾＋JSON（也能只印、只列） |
 | [`lua/examples/clocks.lua`](../../../../../proto8/extras/langs/lua/examples/clocks.lua) | 一個 daemon 顧幾個時鐘 loop（for 迴圈產生子項） |
+
+## `proto8/extras/tree-swap/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`build.sh`](../../../../../proto8/extras/tree-swap/build.sh) | 在 repo 外用 git archive 把某個 commit 的 proto8 抄到 $TS_BUILD、編出 swap.sh 要的十支 C++ 執行檔，並寫 BUILD_REF；不碰 repo 工作樹、不碰樹。 |
+| [`common.sh`](../../../../../proto8/extras/tree-swap/common.sh) | tree-swap 三支腳本共用：預設路徑、「樹在跑」偵測、計時（被 source，不單獨跑） |
+| [`rollback.sh`](../../../../../proto8/extras/tree-swap/rollback.sh) | 把 swap.sh 換過的樹複本與十支 C++ 執行檔還原成它換之前的備份；樹要停著，不含任何 kill／shutdown。 |
+| [`swap.sh`](../../../../../proto8/extras/tree-swap/swap.sh) | 停樹後把一棵 aos 樹的程式複本（lib／templates／knowledge／py／kernel）與十支 C++ 執行檔換成某個釘住 commit 的版本；先備份、抄到旁邊再改名，不含任何 kill／shutdown。 |
