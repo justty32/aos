@@ -7,7 +7,7 @@ aos 體系自己的 agent：**一隻＝一個範本資料夾**，複製一份、
 **複製出 repo**（templates-cp，使用者「copy-out能刪就刪」）：開一隻新 agent 就 `cp -r`：
 
 ```sh
-export AOS_HOME=$HOME/repo/aos/proto8   # 每台設一次＝這台 proto8 的位置（改了值重起樹就生效；也可寫進根的 .env）
+export AOS_HOME=$HOME/repo/aos/proto8   # 每台設一次＝放 lib、templates、knowledge 的那個資料夾（proto8 本身或它的抄本；改了值重起樹就生效；也可寫進根的 .env）
 cp -r $AOS_HOME/templates/agent-fsm bob
 ```
 

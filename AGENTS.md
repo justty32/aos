@@ -37,7 +37,7 @@ AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md / wf/INDEX.md → 各工作流
 
 ## 開發環境
 
-單機開發，沒有跨機或離線的特殊情況。vcpkg 在 `~/dev/vcpkg`、`proto8/impls/cmake/settings.cmake` 會自動找到；細節、指令表與外部工具見 [wf/workflows/dev-env.md](wf/workflows/dev-env.md)，驗證（11-04 起只剩 build 得過）見 [wf/workflows/testing.md](wf/workflows/testing.md)。
+家機（Manjaro）與公司 WSL（Ubuntu）兩台輪流開發，repo 都在 `~/repo/aos`；公司 WSL 的樹住 `~/aos-home`、頂層 session 是樹裡的 `repo-aos`。開場先確認在哪台，各台的細節見 [dev-env/01](wf/workflows/dev-env/01-跨機與外部工具.md)。vcpkg 在 `~/dev/vcpkg`、`proto8/impls/cmake/settings.cmake` 會自動找到；細節、指令表與外部工具見 [wf/workflows/dev-env.md](wf/workflows/dev-env.md)，驗證（11-04 起只剩 build 得過）見 [wf/workflows/testing.md](wf/workflows/testing.md)。
 
 ## 主工作流（活狀態：進度 / 待測 / 信件）
 

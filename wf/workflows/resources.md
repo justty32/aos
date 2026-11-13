@@ -53,7 +53,7 @@ CPU、網路頻寬鎖不了，改**限流**：重運算（含 `cmake --build`）
 | 資源 | 鎖路徑 | 取得順序 | 誰會搶 | 備註 |
 |------|--------|---------|--------|------|
 | 螢幕／鍵鼠 | `~/shared_agent_locks/desktop.lock` | 1（最外）| 所有線 + 使用者本人 | 跨 repo 共用同一把 |
-| 主工作樹的 commit 權（`~/repo/simple_tools/aos/`）| `.lock/worktree.lock`（repo 根，已 `.gitignore`）| 2 | 本專案各隊 | 同一時間只有一隊在主工作樹 commit；其他隊用 `git worktree`（見 [dispatch](dispatch/README.md)）|
+| 主工作樹的 commit 權（`~/repo/aos/`）| `.lock/worktree.lock`（repo 根，已 `.gitignore`）| 2 | 本專案各隊 | 同一時間只有一隊在主工作樹 commit；其他隊用 `git worktree`（見 [dispatch](dispatch/README.md)）|
 | 本機 LM Studio（`localhost:1234`）| `~/shared_agent_locks/lmstudio.lock` | 2 | 要真模型實測的線 | 一次只能載一個模型，換模型前先 unload 舊的；**他打遊戲時 GPU 歸他，連碰都不准**（見 [dev-env](dev-env.md)「模型端點」）|
 | CPU | （不鎖）| — | 全部 | 用 `nice -n 19` 限流；並行 build 別超過兩個 |
 

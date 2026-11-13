@@ -193,6 +193,13 @@
      "what": "not_when 的「只是骨架版本升級…照上游變動記錄手動套」",
      "why": "講的是模板的版本升級，來源 repo 幾乎不再更新"
     }
+   ],
+   "added_here": [
+    {
+     "here": "wf/workflows/tidy/principles.json 第 6 條（收斂優先於拆檔）",
+     "from": "aos repo 自己的 `wf/workflows/tidy/README.md` 第 6 條，模板沒有",
+     "why": "使用者 2026-11-13 收工待裁頁 W16 選「補進去，知識庫變六條」"
+    }
    ]
   }
  ]

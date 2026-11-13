@@ -10,7 +10,7 @@
 ```bash
 # 家裡（WSL / Linux）
 codex exec -s read-only -c model_reasoning_effort=medium \
-  -C /home/lorkhan/repo/simple_tools/aos \
+  -C ~/repo/aos \
   -o <scratchpad>/r1-p1.md - < <scratchpad>/r1-p1.brief.md
 
 # 公司（Windows codex.exe，從 Git Bash 跑；-C 與 -o 用 Windows 路徑，stdin 用 POSIX 路徑）

@@ -19,7 +19,7 @@ md 裡**每列同一組欄位的條列式區塊 > 1 KB**（表格、清單）抽
 - `contract` 固定 `wf-table/1`；`source`＝抽出自哪份 md（**相對本檔**）；`extracted`＝`YYYY-MM-DD`。
 - `columns` 是欄位順序；`rows` 每筆同一組欄位，**缺的欄位視為空字串**。值是字串（可多行）或巢狀物件；原表怎麼寫就怎麼存（粗體、行內 code、連結原樣），不清洗。
 - `link_columns`：哪些欄位的值是連結（可省略，見下）。
-- 舊檔沒有 `contract` 也要能開（工具不拒讀，只是 lint 不掃它）。
+- 舊檔沒有 `contract` 也要能開（工具不拒讀）。
 
 **CSV**：第一列欄位名；只給**扁平、無多行值**的表；沒地方放 `link_columns`，改用**欄位名結尾 `_path` 或 `_link`** 表示該欄是連結。
 
@@ -39,7 +39,7 @@ md 裡**每列同一組欄位的條列式區塊 > 1 KB**（表格、清單）抽
 
 ## 索引檔 `index.json`（可選）
 
-只用在 **AI 要批次處理的清單**（逐件盤點、逐件核對），不是給人導航的目錄。欄位固定 `path`（相對本檔）、`title`、`summary`、`status`（可空），`link_columns: ["path"]`。給人看的導航表留 md，表前一行放 `<!-- wf-nav -->` 讓 lint 安靜（`AGENTS.md`／`WORKFLOWS.md`／`INDEX.md` 三個頂層路由器整檔免標）。
+只用在 **AI 要批次處理的清單**（逐件盤點、逐件核對），不是給人導航的目錄。欄位固定 `path`（相對本檔）、`title`、`summary`、`status`（可空），`link_columns: ["path"]`。給人看的導航表留 md，表前一行放 `<!-- wf-nav -->` 讓 `find_big_lists.py` 跳過（`AGENTS.md`／`WORKFLOWS.md`／`INDEX.md` 三個頂層路由器整檔免標）。
 
 ## 工具契約 `tools/tabledb.py`
 
