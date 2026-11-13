@@ -110,3 +110,11 @@ bash ~/repo/aos/proto8/extras/tree-swap/rollback.sh
 ## 釘住的 commit
 
 **`54789088d`**（頂層 22:4x 傳的最終 commit，專區段 2 已收線；之後只會有 `proto8/cmd` 的新檢視指令與 wf 記帳，不影響換的四夾）。C++ 十支在 `~/code/swap-1113/src2`（`BUILD_REF`＝`54789088d`）。早先的 `9736e54a0`／`src`（`0e62d640e` 編的）作廢：`check` 會因 `proto8/impls` 不同而紅燈。
+
+## 實際換樹紀錄（11-13 晚，使用者照桌面手冊換）
+
+- **第一次被 `swap.sh` 擋下（RED）**：使用者先 `aos-daemon-ctl -d ~/aos-home/.stack shutdown` 停了樹，但 `aos-agent open -t <名>` 開的 agent 畫面（tmux、裡面的 claude、aos-mcp）是獨立行程，停 daemon 不會關，`check` 看到它們還活著就 RED（退 3、什麼都沒改）。手冊原本只寫「兩個畫面會跟著退出」，這句是錯的。
+- **第二次成功**：停樹 → 每個開著的畫面 `tmux -S /run/user/1000/aos-tty-1000/<sock> kill-server`（sock 名由 RED 列的行程或 `ls /run/user/1000/aos-tty-1000/` 看到）→ `swap.sh --ref 54789088d check` 沒 RED → `swap.sh ... all` → 起樹 → `aos-agent open -t repo-aos`、`aos-agent open -t eca_main` 重開畫面。
+- **備份位置**：`~/.aos/saves/tree-swap/20261113-225536`；四夾章 `54789088d`。
+- **補進**：桌面手冊（第 2 步加關畫面、第 3 步拆成先 `check` 再 `all`、第 5 步重開畫面）、[tree-swap README](../../../extras/tree-swap/README.md)、[aos-teams/06](../../../../wf/workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md#停樹換檔的做法)。
+- 剩換後收尾清單（見上）。

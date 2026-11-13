@@ -8,7 +8,7 @@
 
 ## 最新進度
 
-- **open｜換樹（使用者今晚照桌面手冊換，釘 `54789088d`）**：換後收尾清單在手冊與 [tree-swap-1113](../proto8/thinking/2026-11/13/tree-swap-1113.md)；換後要派線接 5 處 Python `--at`（`directive_value.py`、`cmd/aos-agent/aos_agent/tools.py`、`py/aos_clock_register.py`、`lib/mcp_server_file.py`、`lib/hook_run.py`），接完再換一次樹（連同 `user_verify`〔`783a9ad60`〕與之後的 lib 改動）；專區段 2 換後步驟（計時器、notify on、door 重建）照手冊；停樹換檔做法 → [aos-teams/06 § 停樹換檔的做法](workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md#停樹換檔的做法)
+- **open｜換樹（已換：`54789088d`，備份 `~/.aos/saves/tree-swap/20261113-225536`；剩換後收尾）**：第一次被擋是因停 daemon 不關 agent 畫面，紀錄在 tree-swap-1113「實際換樹紀錄」；換後收尾清單在手冊與 [tree-swap-1113](../proto8/thinking/2026-11/13/tree-swap-1113.md)；換後要派線接 5 處 Python `--at`（`directive_value.py`、`cmd/aos-agent/aos_agent/tools.py`、`py/aos_clock_register.py`、`lib/mcp_server_file.py`、`lib/hook_run.py`），接完再換一次樹（連同 `user_verify`〔`783a9ad60`〕與之後的 lib 改動）；專區段 2 換後步驟（計時器、notify on、door 重建）照手冊；停樹換檔做法 → [aos-teams/06 § 停樹換檔的做法](workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md#停樹換檔的做法)
 - **open｜明天開工：astra 當 kernel 施工、kernel 限資源施工**：astra-kernel-plan（Q1～Q8 全已裁）、kernel-limits-plan（K1～K18 已裁；cgroup 可選、一台 daemon 一個群組）都已規劃完、未施工 → [astra-kernel-plan](../proto8/thinking/2026-11/13/astra-kernel-plan.md)、[kernel-limits-plan](../proto8/thinking/2026-11/13/kernel-limits-plan.md)
 - **open｜team-model 來源沒同步**：`~/repo/moddings/skyrim/agentctl/docs/team-model.md`（唯讀、不動）與本 repo `workflows/team-model.md` 未同步
 - **open｜公司機：W6 清個人設定檔的舊信任紀錄、W8 刪暫存夾**（改前備份、動的是 repo 外的檔；刪前名單先給使用者看，留 `kf2-1113`、`wf-agent-scratch-1113` 與他點名的） → [收工待裁-回覆落地 § 逐題落地表](../proto8/thinking/2026-11/13/收工待裁-回覆落地.md#逐題落地表)
