@@ -56,7 +56,8 @@ Checks tracked files against gitignore_classes.json, sensitive content, and hot
 changes. --inject-unknown writes stacks/root/zzz_unknown.txt: this MUST exit 1.
 Only local disposable fixture repositories are staged or committed. Temporary
 projects and all owned processes are removed; evidence is copied to DIR
-(default: /tmp/tm-team). --mntc uses the Windows temporary directory; startup
+(default: /tmp/tm-team). --mntc uses the folder in AOS_TEST_MNTC_DIR (a
+temporary folder on /mnt/c; unset = ArgumentsBad); startup
 and environment/setup failures are reported with the original error.
 Exit 0: all assertions passed (documented clone expected failures excluded).
 Exit 1: any assertion, setup, or cleanup failed. No production state is changed.
@@ -166,6 +167,8 @@ def leak_places(name, content, tokens, mine=frozenset()):
     for label, v in tokens.items():
         if not v or v.encode() not in content:
             continue
+        if label == "key prefix" and not re.search(rb"(?<![A-Za-z0-9])" + re.escape(v.encode()), content):
+            continue  # 前面黏著字母數字的（例 task-subagent 裡的 sk-）不是金鑰開頭
         if label in PATH_TOKENS and allowed_file(name):
             continue
         docs = json_values(content.decode("utf-8", "replace")) if label in PATH_TOKENS else None
@@ -184,7 +187,7 @@ class Check:
         self.timeout = float(opts.get("timeout", 45))
         self.evidence = Path(opts.get("evidence", "/tmp/tm-team")).resolve()
         self.evidence.mkdir(parents=True, exist_ok=True)
-        base = "/mnt/c/Users/WG-Guanyu/AppData/Local/Temp" if opts.get("mntc") else None
+        base = os.environ["AOS_TEST_MNTC_DIR"] if opts.get("mntc") else None  # /mnt/c 上的暫存夾，main 已驗有設
         self.work = Path(tempfile.mkdtemp(prefix="aos-gitignore-", dir=base))
         self.project = self.work / "something"
         self.llms = self.work / "llms"
@@ -686,6 +689,8 @@ def main():
         aos_flags.die(PROG, "ArgumentsBad", "--timeout-s must be a positive number")
     if not math.isfinite(timeout) or timeout <= 0:
         aos_flags.die(PROG, "ArgumentsBad", "--timeout-s must be positive")
+    if opts.get("mntc") and not os.environ.get("AOS_TEST_MNTC_DIR"):
+        aos_flags.die(PROG, "ArgumentsBad", "--mntc needs AOS_TEST_MNTC_DIR (a temporary folder on /mnt/c)")
     try:
         check = Check(opts)
     except (OSError, ValueError, KeyError) as e:

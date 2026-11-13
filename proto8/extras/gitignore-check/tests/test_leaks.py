@@ -36,6 +36,10 @@ class Leaks(unittest.TestCase):
     def test_key_prefix_always_checked(self):
         self.assertIn("key prefix", leaks("defs/a/tools.json", '{"k": "sk-abc"}'))
         self.assertIn("key prefix", leaks("stacks/k/ledger.jsonl", '{"k": "sk-abc"}\n'))
+        self.assertIn("key prefix", leaks("defs/a/.env", "KEY=sk-abc\n"))
+
+    def test_key_prefix_inside_a_word_is_not_a_key(self):
+        self.assertEqual(leaks("defs/a/README.md", "see [x](../eca-task-subagent.md)\n"), {})
 
 
 if __name__ == "__main__":
