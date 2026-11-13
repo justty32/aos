@@ -1,4 +1,4 @@
-# kernel 限資源與設 uid（線限 11-13 晚規劃，未施工）：kernel 只定政策、把限制與身分寫進放行的信，daemon 在 fork 時真的套（setrlimit、二期 cgroup、免 root 的 subuid 換身分），bwrap 照舊管看得到什麼，要 root 的隔成預設不裝的包；11-13 22:15 使用者裁：cgroup 可選（推薦預設關）、先以無 root 規劃，其餘照推薦；同晚再裁群組採「各自 uid＋ACL」但一台 daemon 一個群組、K12～K16 照推薦；新待裁 K17、K18
+# kernel 限資源與設 uid（線限 11-13 晚規劃，未施工）：kernel 只定政策、把限制與身分寫進放行的信，daemon 在 fork 時真的套（setrlimit、二期 cgroup、免 root 的 subuid 換身分），bwrap 照舊管看得到什麼，要 root 的隔成預設不裝的包；11-13 22:15 使用者裁：cgroup 可選（推薦預設關）、先以無 root 規劃，其餘照推薦；同晚再裁群組採「各自 uid＋ACL」但一台 daemon 一個群組、K12～K16 照推薦；K17、K18 也照推薦，全部已裁
 
 ← [11-13 日索引](README.md)｜分檔夾 [kernel-limits-plan/](kernel-limits-plan/README.md)
 
@@ -24,7 +24,7 @@
 同晚再裁（逐字）：「都按照推薦。然後每隻agent一個自己的群組，感覺有點浪費，我會覺得，在普通用途下，一個kernel/daemon一個群組就好，可以再去想想。」
 
 - **K6 落定**：採 C 的思路（每隻 agent 自己的 uid＋共用夾用預設 ACL 把使用者加進去），**普通用途一台 daemon 一個群組**。補測（X29～X37）：stack、投遞箱、互殺都靠 uid 擋得住；失去的只有「同台再分隊」（改拆子 daemon）與「群組當金鑰門」（改點名 uid）。每隊／每隻一個群組降為進階，判準見 [08 最後一節](kernel-limits-plan/08-群組用法.md#一個-daemon-一個群組11-13-晚使用者裁)。
-- 新待裁：K17 子 daemon 的 agent 帶不帶上層群組（推薦不帶、要分享就點名）、K18 群組號怎麼給（推薦 daemon.json 寫 `group`，子 daemon 沒寫就沿用父的）。
+- K17（子 daemon 的 agent 不帶上層群組，要分享就點名）、K18（daemon.json 寫 `group`，子 daemon 沒寫就沿用父的）：同晚使用者「好，都按照推薦」，已裁。**K1～K18 全部裁完**，施工另等放行。
 
 ## 一張圖
 
@@ -63,7 +63,7 @@
 | [02 fable 設計](kernel-limits-plan/02-fable設計.md) | fable 原稿 |
 | [03 opus 細化](kernel-limits-plan/03-opus細化.md) | 跟 fable 不同的 8 處、分層定稿對到檔、kernel.json 新鍵、邊緣狀況 |
 | [04 施工與驗收](kernel-limits-plan/04-施工與驗收.md) | 段 1 daemon 收緊、段 2 kernel 附限制、段 3 subuid＋群組／ACL、段 4 cgroup（可選）、段 5 root（不做） |
-| [05 待裁與衝突](kernel-limits-plan/05-待裁與衝突.md) | 22:15 與同晚再裁的裁定、新待裁 K17～K18、前一輪 K12～K16 與原題 K1～K11、衝突 C1～C7 |
+| [05 待裁與衝突](kernel-limits-plan/05-待裁與衝突.md) | 22:15 與同晚再裁的裁定（K1～K18 全已裁）、前一輪 K12～K16 與原題 K1～K11、衝突 C1～C7 |
 | [06 試驗紀錄](kernel-limits-plan/06-試驗紀錄.md) | X1～X37 實測、撞到的問題 L1～L10 |
 | [07 cgroup 可選](kernel-limits-plan/07-cgroup可選.md) | 開關 `off｜auto｜on`、開與不開的差別、K12～K14 |
 | [08 群組用法](kernel-limits-plan/08-群組用法.md) | 十種用法、K6 選項 C、號段；最後一節「一台 daemon 一個群組」（成立／失去／替代、進階判準、K17～K18） |
