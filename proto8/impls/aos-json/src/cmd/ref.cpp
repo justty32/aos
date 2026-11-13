@@ -32,8 +32,11 @@ int cmd_env(const Args& args) {
 }
 
 // 搬走的值裡的相對 $ref，從 from 改成從 to 算（同一個資料夾就不用動）。`#/…`（＝原本那份檔 self）搬到別的檔時改寫成
-// 「到 self 的相對路徑#/…」，仍指原本那份檔（搬進同一份檔＝不動）。
-static void rebase(Json& v, const std::string& from, const std::string& to, const std::string& self, bool same_file) {
+// 「到 self 的相對路徑#/…」，仍指原本那份檔（搬進同一份檔＝不動）。`#./…`、`#../…`（11-13，從所在物件算）：指到的地方也在搬走的值裡面＝不動
+// （整段一起搬，相對位置不變）；指到外面＝換成原本那個位置的 `#/…`（再照上一條）。loc＝v 原本在 self 裡的位置（token，跳脫後）；
+// root＝搬走的那一格原本的位置。路徑寫壞的照留（讀的時候才報）。
+static void rebase(Json& v, const std::string& from, const std::string& to, const std::string& self, bool same_file,
+                   const std::vector<std::string>& loc, const std::vector<std::string>& root) {
     if (kind_of(v) == Kind::Ref) {
         Json& r = v["$ref"];
         std::vector<Json*> items;
@@ -48,6 +51,24 @@ static void rebase(Json& v, const std::string& from, const std::string& to, cons
             std::string s = x->get<std::string>();
             size_t hash = s.find('#');
             std::string path = s.substr(0, hash);
+            if (path.empty() && hash != std::string::npos && s.size() > hash + 1 && s[hash + 1] == '.') {
+                std::optional<RefSpot> spot;
+                try {
+                    spot = aos::ref_spot(s, RefBase{from, self, loc});
+                } catch (const Error&) {
+                    continue;
+                }
+                std::vector<std::string> t = aos::pointer_tokens(spot->pointer);
+                if (t.size() >= root.size() && std::equal(root.begin(), root.end(), t.begin())) {
+                    continue;   // 指到搬走的值裡面：一起搬，不動
+                }
+                s = "#" + spot->pointer;
+                if (spot->pointer.empty()) {
+                    s = "#";
+                }
+                hash = 0;
+                *x = s;
+            }
             if (path.starts_with("/") || (path.empty() && same_file)) {
                 continue;
             }
@@ -56,10 +77,17 @@ static void rebase(Json& v, const std::string& from, const std::string& to, cons
             *x = rel + (hash == std::string::npos ? "" : s.substr(hash));
         }
     }
-    if (v.is_object() || v.is_array()) {
+    if (v.is_object()) {
         for (auto& [k, x] : v.items()) {
-            (void)k;
-            rebase(x, from, to, self, same_file);
+            std::vector<std::string> l = loc;
+            l.push_back(aos::token_of(k));
+            rebase(x, from, to, self, same_file, l, root);
+        }
+    } else if (v.is_array()) {
+        for (size_t i = 0; i < v.size(); ++i) {
+            std::vector<std::string> l = loc;
+            l.push_back(std::to_string(i));
+            rebase(v[i], from, to, self, same_file, l, root);
         }
     }
 }
@@ -75,14 +103,19 @@ int cmd_ref(const Args& args) {
     const std::string& target = cli.rest[1];
     Json ref = {{"$ref", target}};
     if (kind_of(ref) != Kind::Ref) {
-        throw Error{code::ValueBad, "target " + target + " is not a $ref form (FILE[#/POINTER])"};
+        throw Error{code::ValueBad, "target " + target + " is not a $ref form (FILE, FILE#/POINTER, #/POINTER, #./KEY, #../KEY)"};
     }
     bool parents = cli.opts.count("parents") > 0;
     Edit ed;
     Place src = place(ed, spec, false, false);
     if (cli.opts.count("move")) {
         Json moved = existing(src, spec);
-        RefSpot spot = aos::ref_spot(target, RefBase{src.at.at.base, src.file->real}).value();   // `#/…`＝搬進同一份檔；`#/../x.json`＝隔壁那份
+        std::vector<std::string> root = aos::pointer_tokens(pointer_of(src.toks));
+        std::optional<RefSpot> got = aos::ref_spot(target, RefBase{src.at.at.base, src.file->real, root});   // `#/…`、`#./…`＝搬進同一份檔；`x.json#/…`＝別份
+        if (!got) {
+            throw Error{code::ValueBad, "target " + target + " cannot be placed"};
+        }
+        RefSpot spot = *got;
         const std::string& dest = spot.file;
         const std::string& ptr = spot.pointer;
         std::string dir = aos::dirname(aos::abspath(dest));
@@ -91,7 +124,8 @@ int cmd_ref(const Args& args) {
         if (ec) {
             throw Error{code::FileMissing, "target directory not found: " + dir};
         }
-        rebase(moved, src.at.at.base, real_dir, src.file->real, std::filesystem::weakly_canonical(aos::abspath(dest)).string() == src.file->real);
+        rebase(moved, src.at.at.base, real_dir, src.file->real, std::filesystem::weakly_canonical(aos::abspath(dest)).string() == src.file->real,
+               root, root);
         if (ptr.empty()) {
             File& f = ed.docs.open(dest, true);
             if (f.exists) {

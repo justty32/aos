@@ -15,7 +15,8 @@ up：
   --take PATH（只給 --to dir）：把只有它用的檔（相對設定檔的資料夾）搬進 NAME/，單子 argv 裡等於 PATH 的那一項改成 {"$env": "AOS_CD", "$path": "/檔名"}。
 down：反過來縮一級：NAME/（裡面只剩 _entry）→ NAME.json；NAME.json → 內嵌回那格。設定檔資料夾底下還有別份 JSON 提到 NAME＝不縮。
 
-搬的時候只動「位置相關」的東西，讓跑起來一樣：單子的 cwd（沒寫＝入口所在的資料夾）、相對的 $ref 檔名（"#/…" 指自己那份＝補上原檔名）、
+搬的時候只動「位置相關」的東西，讓跑起來一樣：單子的 cwd（沒寫＝入口所在的資料夾）、相對的 $ref 檔名（只寫 # 的照 11-13 ref-path-rules 算出指到哪：
+指在搬走的那格裡面＝#./ #../ 照舊、#/ 換成新位置；指在外面＝補上原檔名、改成 檔#/絕對指標）、
 {"$env": "AOS_CD", "$path": …}，一律換成相對新位置、指回原本那個地方。單子裡有 $env AOS_CF／AOS_CO＝不搬（搬了值就變了，TargetBad）。
 --dry-run：只印會做什麼（新檔全文、改的檔 unified diff、搬／刪哪些），什麼都不寫。
 假設（慣例下成立）：呼叫方跑字串目標時的 cwd＝設定檔的資料夾（aos-loop／aos-fsm 被 aos-exec 起來時就是）。
@@ -27,6 +28,8 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
 import aos_flags  # noqa: E402  proto8/py/aos_flags.py：P-44 的解析
 from daemon_ctl.entry import is_program  # noqa: E402  看內容判程式（11-10：/mnt/c 每個檔都 +x）
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
+import aos_refpath  # noqa: E402  proto8/lib/aos_refpath.py：$ref／index 共用的路徑規則（11-13）
 
 PROG = "aos-grow"
 ENTRY = os.environ.get("AOS_ENTRY") or "_entry"
@@ -173,8 +176,14 @@ def rel(p, start):
     return "." if r == "" else r
 
 
-def rebase(inst, src, dst, src_file):
-    """回傳新的單子（不改原物件）。src／dst 是絕對路徑資料夾；src_file＝單子原本所在的那份檔（"#/…" 的 $ref 要指回它）。"""
+def esc(t):
+    return str(t).replace("~", "~0").replace("/", "~1")
+
+
+def rebase(inst, src, dst, src_file, src_at=(), new_at=()):
+    """回傳新的單子（不改原物件）。src／dst 是絕對路徑資料夾；src_file＝單子原本所在的那份檔（只寫 # 的 $ref 要指回它）。
+    src_at／new_at＝單子在原檔／新檔裡的位置（沒跳脫的 key 串；()＝整份檔）。"""
+    src_at, new_at = [esc(t) for t in src_at], [esc(t) for t in new_at]
     out = json.loads(json.dumps(inst))
     cwd = out.get("cwd")
     if cwd is None or isinstance(cwd, str):
@@ -186,9 +195,25 @@ def rebase(inst, src, dst, src_file):
             out["cwd"] = new
     # cwd 是指示詞＝照原樣（跑的時候才解，下面 fix 會把裡面的 $ref／AOS_CD 一起改）
 
-    def fix(v):
+    def hashed(r, at):
+        """只寫 # 的 $ref（at＝$ref 物件在單子裡的位置）→ 搬完照樣指到同一個地方的寫法。"""
+        holder = src_at + at[:-1] if (src_at or at) else None      # 所在物件＝裝著 $ref 物件那格的上層（D1）
+        try:
+            _, toks = aos_refpath.spot(r, file=os.path.join(src, src_file), here=holder)
+        except aos_refpath.RefPathUnknown:
+            raise Fail("TargetBad", "$ref %r: the instruction is a whole file and is the $ref itself; it sits in no object" % r) from None
+        except aos_refpath.RefPathBad as e:
+            raise Fail("TargetBad", "$ref %s" % e) from None
+        if toks[:len(src_at)] == src_at:                           # 指在搬走的那格裡面
+            if r[1:2] == ".":
+                return r                                           # #./ #../ 跟著一起搬，相對位置不變
+            return "#" + "".join("/" + t for t in new_at + toks[len(src_at):])
+        return rel(os.path.join(src, src_file), dst) + "#" + "".join("/" + t for t in toks)
+
+    def fix(v, at=()):
+        at = list(at)
         if isinstance(v, list):
-            return [fix(x) for x in v]
+            return [fix(x, at + [str(i)]) for i, x in enumerate(v)]
         if not isinstance(v, dict):
             return v
         if "$env" in v:
@@ -202,23 +227,24 @@ def rebase(inst, src, dst, src_file):
                 np = "/" + rel(os.path.normpath(src + p) if p else src, dst)
                 w["$path"] = "" if np == "/." else np
                 return w
-            return {k: fix(x) for k, x in v.items()}
+            return {k: fix(x, at + [esc(k)]) for k, x in v.items()}
         if "$ref" in v:
-            w = {k: fix(x) for k, x in v.items()}
+            w = {k: fix(x, at + [esc(k)]) for k, x in v.items()}
             refs = v["$ref"] if isinstance(v["$ref"], list) else [v["$ref"]]
             new = []
             for r in refs:
                 if not isinstance(r, str):
                     raise Fail("TargetBad", "$ref is not a string, cannot rewrite it: %r" % r)
+                if r.startswith("#"):
+                    new.append(hashed(r, at))
+                    continue
                 f, sep, frag = r.partition("#")
-                if f == "":
-                    f = src_file
                 if not os.path.isabs(f):
                     f = rel(os.path.normpath(os.path.join(src, f)), dst)
                 new.append(f + sep + frag)
             w["$ref"] = new if isinstance(v["$ref"], list) else new[0]
             return w
-        return {k: fix(x) for k, x in v.items()}
+        return {k: fix(x, at + [esc(k)]) for k, x in v.items()}
 
     return fix(out)
 
@@ -328,11 +354,11 @@ def up(caller, to, name, takes):
         if to == "file":
             if takes:
                 raise Fail("ArgumentsBad", "--take is only for --to dir")
-            inst = rebase(val, cdir, cdir, os.path.basename(cfg))
+            inst = rebase(val, cdir, cdir, os.path.basename(cfg), parts)
             plan.writes.append((os.path.join(cdir, name + ".json"), text(inst), None))
         else:
             fdir = os.path.join(cdir, name)
-            inst = rebase(val, cdir, fdir, os.path.basename(cfg))
+            inst = rebase(val, cdir, fdir, os.path.basename(cfg), parts)
             inst = take(inst, takes, cdir, fdir, plan)
             plan.mkdirs.append(fdir)
             plan.writes.append((os.path.join(fdir, ENTRY), text(inst), None))
@@ -409,7 +435,7 @@ def down(caller):
     inst = load(fjson)
     if not is_inst(inst):
         raise Fail("TargetBad", "%s is not an instruction" % fjson)
-    box[key] = rebase(inst, cdir, cdir, os.path.basename(fjson))
+    box[key] = rebase(inst, cdir, cdir, os.path.basename(fjson), (), parts)
     plan.writes.append((cfg, text(doc), old_text))
     plan.removes.append(fjson)
     return plan

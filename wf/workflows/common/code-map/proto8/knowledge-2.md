@@ -107,4 +107,5 @@
 | [`tools/view.json`](../../../../../proto8/knowledge/aos/tools/view.json) | 設定（鍵：_description、examples、errors） |
 | [`tools/write.json`](../../../../../proto8/knowledge/aos/tools/write.json) | 設定（鍵：_description、errors） |
 | [`tools_def.json`](../../../../../proto8/knowledge/aos/tools_def.json) | 設定（鍵：_description、tools_def、tool_spec） |
+| [`user_zone.json`](../../../../../proto8/knowledge/aos/user_zone.json) | 設定（鍵：_description、what、send、answer） |
 | [`world.json`](../../../../../proto8/knowledge/aos/world.json) | （檔頭沒有一句話） |

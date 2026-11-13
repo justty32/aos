@@ -99,10 +99,10 @@ struct Checker {
         if (k == Kind::Ref) {
             auto parts = ref_parts(v);
             std::vector<std::string> kinds;
-            for (const auto& [path, ptr] : parts) {
+            for (const std::string& path : parts) {
                 Chain mine = chain;
                 try {
-                    Cursor x = fetch(docs, c, path, ptr, mine);
+                    Cursor x = fetch(docs, c, path, mine);
                     std::pair<std::string, std::string> here{x.file, pointer_of(x.toks)};
                     if (!seen.count(here)) {
                         seen.insert(here);

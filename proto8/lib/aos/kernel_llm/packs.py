@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 
+import aos_refpath
 import budget
 import runner
 from budget import MAX, dumps, is_count
@@ -84,13 +85,15 @@ def _load(spec):
 def _endpoints(raw, base):
     """表本身只換一層（整張可以是 {"$ref": 檔}），每組裡的指示詞留到用的時候才解。"""
     if isinstance(raw, dict) and set(raw) == {"$ref"} and isinstance(raw["$ref"], str):
-        path, _, pointer = raw["$ref"].partition("#")
-        file = os.path.abspath(os.path.join(base[0], path)) if path else base[1]
+        try:                                             # 跟 index 同一支（11-13 ref-path-rules）；寫法不合或算不出來交給 aos-directive
+            file, toks = aos_refpath.spot(raw["$ref"], file=base[1], folder=base[0])
+        except ValueError:
+            return resolve(raw, base), base
         try:
             with open(file, "rb") as stream:
                 table = json.loads(stream.read())
-            if pointer.strip("/"):
-                table = _at(table, pointer)
+            if toks:
+                table = _at(table, "".join("/" + tok for tok in toks))
         except (OSError, ValueError, UnicodeError, KeyError, IndexError, TypeError):
             return resolve(raw, base), base              # 讀不了交給 aos-directive 說原因
         if not (isinstance(table, dict) and any(key.startswith("$") for key in table)):

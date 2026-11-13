@@ -15,7 +15,7 @@
 | [cmd-5](cmd-5.md) | `proto8/cmd/` | `aos-tools/` |  |
 | [extras](extras.md) | `proto8/extras/` | `aos-home/`、`fake-mcp-http/`、`gitignore-check/`、`image-move-check/`、`kernel-chain-check/`、`langs/` | 19／19 |
 | [feedback](feedback.md) | `proto8/feedback/` | 頂層 | 5／5 |
-| [impls](impls.md) | `proto8/impls/` | 依賴圖、頂層 | 212／212 |
+| [impls](impls.md) | `proto8/impls/` | 依賴圖、頂層 | 211／211 |
 | [impls-2](impls-2.md) | `proto8/impls/` | `aos-daemon/` |  |
 | [impls-3](impls-3.md) | `proto8/impls/` | `aos-directive/`、`aos-exec/` |  |
 | [impls-4](impls-4.md) | `proto8/impls/` | `aos-fsm/`、`aos-inst/` |  |
@@ -25,7 +25,7 @@
 | [impls-8](impls-8.md) | `proto8/impls/` | `aos-lock/`、`aos-loop/`、`aos-post/` |  |
 | [impls-9](impls-9.md) | `proto8/impls/` | `aos-util/`、`cmake/` |  |
 | [kernel](kernel.md) | `proto8/kernel/` | `daemon-kernel/`、`llm-kernel/`、`llm-team/`、`procs-kernel/` | 20／20 |
-| [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層 | 146／146 |
+| [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層 | 147／147 |
 | [knowledge-2](knowledge-2.md) | `proto8/knowledge/` | `aos/` |  |
 | [knowledge-3](knowledge-3.md) | `proto8/knowledge/` | `wf/` |  |
 | [lib](lib.md) | `proto8/lib/` | 頂層 | 253／400 |

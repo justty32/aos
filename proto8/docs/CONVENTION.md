@@ -12,7 +12,7 @@
 
 - loop.json 與 fsm 格要跑的東西都叫 `exec`（使用者：「fsm.json，現在是用val，幫我改成exec」；「exec，loop／daemon 的 run 也一起改 exec」）。
 - fsm 不寫 trace（使用者 11-03「整個拿掉」，[thinking 11-03 trace](../thinking/2026-11/03/trace.md)，N-39）。時間點＝C-54 命名方法 R6「時間點＝`<發生了什麼>_at`」（使用者 10-25「state.json中，runs改counter，at改成recorded_at」，回頂層兩題「都好」，頂層代定、可翻案）；其他 JSON 的命名見 [NORMS.md](NORMS.md)。
-- 指示詞的檔內位置只認 `#/`。計數說「次」（使用者「我們都是說"次"」）。
+- 指示詞的檔內位置寫在 `#` 右邊（`#/`、`#./`、`#../`）。計數說「次」（使用者「我們都是說"次"」）。
 - 純文字檔帶 `.txt`（fsm 的 `stage.txt`、daemon 小格的 `stderr.txt`、agent-fsm 的 `system.txt`／`think/pending.txt`／`mailbox_warning.txt`）；`AOS_STACK` 預設 `$AOS_WS/.stack/`；agent 的輸入是 `$AOS_STACK/queue/`（P-11、P-42）。
 - 入口預設名 `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者「改。然後_開頭=附註這個概念刪掉。」，原話裡的 `_exec` 照留）；不認得的 key 一律忽略（「不認得的key就是忽略」，C-48），`_` 開頭沒有特別意思。
 

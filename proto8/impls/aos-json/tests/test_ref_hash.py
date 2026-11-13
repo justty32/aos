@@ -67,10 +67,13 @@ class RefHash(unittest.TestCase):
         self.assertEqual(self.run_('check', 'loop.json').returncode, 10)
         self.assertEqual(self.run_('check', 'main.json').returncode, 0)
 
-    def test_hash_alone_still_not_a_ref(self):
-        self.put('bad.json', {'r': {'$ref': '#'}, 's': {'$ref': '#x'}})
-        self.err('PointerMissing', 'get', '--follow', 'bad.json#/r/k')
-        self.assertIn('DirectiveFormBad', self.run_('check', 'bad.json').stdout)
+    def test_hash_alone_is_the_whole_file_and_not_slash_is_an_error(self):
+        self.put('whole.json', {'r': {'$ref': 'main.json#'}})
+        self.assertEqual(self.ok('where', 'whole.json#/r'), 'whole.json#/r\nmain.json\n')
+        self.put('bad.json', {'s': {'$ref': '#x'}})
+        self.err('DirectiveBad', 'get', '--follow', 'bad.json#/s/k')
+        out = self.run_('check', 'bad.json')
+        self.assertIn('DirectiveBad', out.stdout + out.stderr)
 
     def test_writes_follow_into_same_file(self):
         self.ok('set', '--follow', 'main.json#/use/1', '"yo"')

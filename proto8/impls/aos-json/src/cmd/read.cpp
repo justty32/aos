@@ -33,7 +33,7 @@ Json get_value(const std::string& spec, bool follow, bool resolve) {
     }
     Json v = *at.at.node;
     if (resolve) {
-        v = aos::resolve(v, aos::RefBase{at.at.base, at.at.file});
+        v = aos::resolve(v, aos::RefBase{at.at.base, at.at.file, aos::pointer_tokens(pointer_of(at.at.toks))});
     }
     return v;
 }

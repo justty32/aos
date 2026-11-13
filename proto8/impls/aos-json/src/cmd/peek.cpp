@@ -123,7 +123,7 @@ int cmd_peek(const Args& args) {
     Json v = *at.at.node;
     std::string note;
     if (mode.follow && kind_of(v) == Kind::Ref) {
-        v = aos::resolve_shallow(v, aos::RefBase{at.at.base, at.at.file}).value;
+        v = aos::resolve_shallow(v, aos::RefBase{at.at.base, at.at.file, aos::pointer_tokens(pointer_of(at.at.toks))}).value;
         note = " ($ref expanded)";
     }
     std::string out;

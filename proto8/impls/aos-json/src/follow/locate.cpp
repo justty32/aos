@@ -12,10 +12,14 @@
 
 namespace aos::json {
 
-Cursor fetch(Docs& docs, const Cursor& at, const std::string& spec, const std::string& step, Chain& chain) {
-    std::string where = spec + (step.empty() ? "" : " $at " + step);
-    // 字串→位置：跟 aos-directive 同一支（# 後的 `..`、走出檔再進別的檔都在裡面）
-    RefSpot spot = aos::ref_step(aos::ref_spot(spec, RefBase{at.base, at.file}).value(), step).value();
+Cursor fetch(Docs& docs, const Cursor& at, const std::string& spec, Chain& chain) {
+    const std::string& where = spec;
+    // 字串→位置：跟 aos-directive 同一支（# 左邊檔案系統、右邊 json 內部；#./、#../ 從 at 這一格的上一層算）
+    std::optional<RefSpot> got = aos::ref_spot(spec, RefBase{at.base, at.file, aos::pointer_tokens(pointer_of(at.toks))});
+    if (!got) {
+        throw Error{code::DirectiveBad, "$ref " + spec + " cannot be placed (which file it is in is not known)"};
+    }
+    RefSpot spot = *got;
     File* f = nullptr;
     try {
         f = &docs.open(spot.file, false);
@@ -46,7 +50,7 @@ Cursor settle(Docs& docs, Cursor c, Chain& chain) {
         if (parts.size() != 1) {
             throw Error{code::TargetBad, shown(c.file, c.toks) + ": $ref array inside a $ref array, not supported by --follow yet"};
         }
-        c = fetch(docs, c, parts[0].first, parts[0].second, chain);
+        c = fetch(docs, c, parts[0], chain);
     }
     return c;
 }
@@ -56,14 +60,14 @@ static Cursor jump(Docs& docs, const Cursor& c, std::string* want, Chain& chain,
     auto parts = ref_parts(*c.node);
     if (parts.size() == 1) {
         merged = false;
-        return fetch(docs, c, parts[0].first, parts[0].second, chain);
+        return fetch(docs, c, parts[0], chain);
     }
     std::vector<Cursor> cs;
     bool objects = true;
     bool arrays = true;
-    for (const auto& [path, ptr] : parts) {
+    for (const std::string& path : parts) {
         Chain mine = chain;
-        cs.push_back(settle(docs, fetch(docs, c, path, ptr, mine), mine));
+        cs.push_back(settle(docs, fetch(docs, c, path, mine), mine));
         objects = objects && cs.back().node->is_object();
         arrays = arrays && cs.back().node->is_array();
     }

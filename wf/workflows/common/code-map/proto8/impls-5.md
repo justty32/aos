@@ -31,6 +31,6 @@
 | [`src/help/help.hpp`](../../../../../proto8/impls/aos-json/src/help/help.hpp) | aos-json 子命令的 usage、旗標說明與共同旗標解析入口。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-json/src/main.cpp) | aos-json 命令列——第一個參數挑子命令，其餘交給它（src/cmd/）。 |
 | [`tests/test_add_ls_search.py`](../../../../../proto8/impls/aos-json/tests/test_add_ls_search.py) | Check aos-json add / ls / search (the json tools' Python logic moved into C++, 11-12): output formats and error codes. |
-| [`tests/test_ref_at.py`](../../../../../proto8/impls/aos-json/tests/test_ref_at.py) | Check aos-json's own $ref walk follows the same "string -> place" rule as aos-directive: ".." after # steps out |
 | [`tests/test_ref_hash.py`](../../../../../proto8/impls/aos-json/tests/test_ref_hash.py) | Check aos-json's own $ref walk takes "#/..." (no file name) = the file that holds the $ref (ref-hash, 11-12 night), same as aos-directive. |
+| [`tests/test_ref_rel.py`](../../../../../proto8/impls/aos-json/tests/test_ref_rel.py) | Check aos-json's own $ref walk follows the same path rule as aos-directive (11-13 ref-path-rules): "#./" counts from the |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-json/vcpkg.json) | aos-json：讀、改 aos 的 JSON 設定（檔#/指標、指示詞）的 lib 與命令列 |

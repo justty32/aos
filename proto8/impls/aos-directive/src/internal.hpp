@@ -1,7 +1,7 @@
 // internal.hpp：resolve.cpp、ref.cpp、env.cpp 之間共用的內部宣告（不公開；放在 aos::directive，公開的只有 aos::resolve）。
 //
 //   resolve.cpp  走遍整份 JSON、認出指示詞（有 $ref 看 $ref、否則有 $env 看 $env）、換完再接 $path／$prefix
-//   ref.cpp      {"$ref": "檔[#/指標]"}
+//   ref.cpp      {"$ref": "路徑"}（# 左邊檔案系統、右邊 json 內部）
 //   env.cpp      {"$env": "NAME"}
 #pragma once
 
@@ -16,11 +16,11 @@ namespace aos::directive {
 // 正在解的 $ref 鏈：每一層是「實際的檔（realpath）＋指標」。指回鏈上同一個位置＝繞圈。
 using Chain = std::vector<std::pair<std::string, std::string>>;
 
-// 走一個值（遇到指示詞就換掉）。base＝這一層相對 $ref 的起點與寫著它的那份檔。
+// 走一個值（遇到指示詞就換掉）。base＝這一層相對 $ref 的起點、寫著它的那份檔、這個值在那份檔裡的位置。
 Json walk(const Json& v, const RefBase& base, Chain& chain);
 
-// 被 $ref 進來的那份檔（realpath）往下解時的起點：它的資料夾＋它自己（`#/…` 指它）。
-RefBase base_of(const std::string& file);
+// 被 $ref 進來的那份檔（realpath）往下解時的起點：它的資料夾＋它自己（`#/…` 指它）＋取的那個指標（`#./`、`#../` 從那裡算）。
+RefBase base_of(const std::string& file, const std::string& ptr);
 
 // {"$ref": …}（整個物件 d）→ 每一份的原文（還沒往下解）＋位置（檔＋指標，推上鏈用）：$ref 是字串＝一份；
 // 是陣列（10-23 使用者）＝照順序每個元素一份。寫法不合（含空陣列、有一個元素不合）回 nullopt。

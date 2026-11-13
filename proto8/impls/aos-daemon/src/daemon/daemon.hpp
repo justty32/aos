@@ -98,7 +98,7 @@ bool same_tree(pid_t pid, const std::string& cell, const std::string& dstack);
 //   寫法：物件 {名字: proc}（拆成好幾份檔＝{"$ref": [檔, …]}，aos-directive 合物件、同名後面的蓋前面的）。
 //   指示詞（base＝v 裡相對 $ref 的起點）：procs 本身、每個 proc 本身先換一層（子項的起點＝它來自的那份檔的）；字串或陣列（aos-exec 的目標）
 //   就整個解、要是字串或非空字串陣列；物件只解 daemon 認的格（exec、max、interval_ms、ctl、state、state_flux、ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_cycles、stuck_after_ms），其他 key（body…）原樣交給子 loop。
-//   exec 是單子（物件）：只換一層、裡面不解，相對的 $ref 檔名照它來自的那份檔轉成絕對（abs_refs）。
+//   exec 是單子（物件）：只換一層、裡面不解，相對的 $ref 檔名照它來自的那份檔轉成絕對、`#…`（含 `#./`、`#../`）換成「絕對檔#/絕對指標」（abs_refs）。
 //   名字非空、不含 /、不含 #、不以 . 開頭。物件的 ws、stack、def：要是非空字串（null＝拿掉）、從 daemon 的 cwd 轉絕對（stack 結尾不帶 /）。
 //   exec 型的物件（is_once）的 exec 要是目標或單子。
 // 壞丟 Error{CfgBad, 原因}（key＝訊息裡的名字）；指示詞解不開丟 DirectiveBad。

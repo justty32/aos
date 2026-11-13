@@ -14,11 +14,10 @@
 | [`src/env.cpp`](../../../../../proto8/impls/aos-directive/src/env.cpp) | {"$env": "NAME"}——換成環境變數 NAME 的值（字串）。 |
 | [`src/internal.hpp`](../../../../../proto8/impls/aos-directive/src/internal.hpp) | resolve.cpp、ref.cpp、env.cpp 之間共用的內部宣告（不公開；放在 aos::directive，公開的只有 aos::resolve）。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-directive/src/main.cpp) | aos-directive 命令列——讀一份 JSON、解開所有指示詞、印出來。 |
-| [`src/ref.cpp`](../../../../../proto8/impls/aos-directive/src/ref.cpp) | {"$ref": "檔[#/指標]"}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。 |
+| [`src/ref.cpp`](../../../../../proto8/impls/aos-directive/src/ref.cpp) | {"$ref": "路徑"}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。 |
 | [`src/resolve.cpp`](../../../../../proto8/impls/aos-directive/src/resolve.cpp) | 解析整份、單層或指定欄位的指示詞，保留相對路徑起點，並套用字串修飾詞。 |
-| [`tests/ref_spot_cases.json`](../../../../../proto8/impls/aos-directive/tests/ref_spot_cases.json) | argv：`{'at': 'kb/m.json', 'text': 'other.json', 'to': 'kb/other.json'} {'at': 'kb/m.json', 'text': './sub/../other.json#/k', 'to': 'kb/other.json#/k'… |
 | [`tests/test_ref_hash.py`](../../../../../proto8/impls/aos-directive/tests/test_ref_hash.py) | Check {"$ref": "#/..."} takes the file that holds the $ref (11-12), and that ./ and ../ work in the file part of $ref. |
-| [`tests/test_ref_spot.py`](../../../../../proto8/impls/aos-directive/tests/test_ref_spot.py) | Check the "string -> place" rule of $ref: after # a ".." steps out one level, and stepping out of the root object lands in |
+| [`tests/test_ref_spot.py`](../../../../../proto8/impls/aos-directive/tests/test_ref_spot.py) | Check the $ref path rule (11-13 ref-path-rules): left of # is the file system (from the folder of the file), right of # is |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-directive/vcpkg.json) | aos-directive：解 JSON 裡的指示詞（$ref、$env）的 lib 與命令列 |
 
 ## `proto8/impls/aos-exec/`

@@ -36,8 +36,8 @@ static std::string join_path(const std::string& v, const std::string& sub) {
 Json walk(const Json& v, const RefBase& base, Chain& chain) {
     if (v.is_array()) {
         Json out = Json::array();
-        for (const Json& x : v) {
-            out.push_back(walk(x, base, chain));
+        for (size_t i = 0; i < v.size(); ++i) {
+            out.push_back(walk(v[i], base.in(i), chain));
         }
         return out;
     }
@@ -52,7 +52,7 @@ Json walk(const Json& v, const RefBase& base, Chain& chain) {
     } else {
         Json out = Json::object();
         for (auto& [k, x] : v.items()) {
-            out[k] = walk(x, base, chain);
+            out[k] = walk(x, base.in(k), chain);
         }
         return out;
     }
@@ -92,7 +92,7 @@ static Resolved shallow(const Json& v, const RefBase& base, const Chain& chain) 
         for (const Fetched& f : *fs) {
             Chain c = chain;
             c.push_back(f.here);
-            parts.push_back(shallow(f.value, base_of(f.here.first), c));
+            parts.push_back(shallow(f.value, base_of(f.here.first, f.here.second), c));
         }
         Resolved in = merge(parts, aos::dumps(v["$ref"]));
         in.value = decorate(v, in.value);
@@ -112,9 +112,12 @@ static Resolved shallow(const Json& v, const RefBase& base, const Chain& chain) 
 
 namespace aos {
 
-// 起點整理成絕對路徑（file 空照舊空）。
+// 起點整理成絕對路徑（file 空照舊空；位置照帶）。
 static RefBase absolute(const RefBase& b) {
-    return RefBase{aos::abspath(b.dir), b.file.empty() ? "" : aos::abspath(b.file)};
+    RefBase a = b;
+    a.dir = aos::abspath(b.dir);
+    a.file = b.file.empty() ? "" : aos::abspath(b.file);
+    return a;
 }
 
 Json resolve(const Json& doc, const RefBase& base) {
@@ -140,13 +143,13 @@ Resolved resolve_keys(const Json& doc, const RefBase& base, const std::vector<st
     return r;
 }
 
-const RefBase& Resolved::dir_of(const std::string& key) const {
+RefBase Resolved::dir_of(const std::string& key) const {
     auto it = key_dirs.find(key);
-    return it == key_dirs.end() ? base_dir : it->second;
+    return it == key_dirs.end() ? base_dir.in(key) : it->second;
 }
 
-const RefBase& Resolved::dir_of(size_t i) const {
-    return i < item_dirs.size() ? item_dirs[i] : base_dir;
+RefBase Resolved::dir_of(size_t i) const {
+    return i < item_dirs.size() ? item_dirs[i] : base_dir.in(i);
 }
 
 }  // namespace aos

@@ -1,4 +1,4 @@
-# `$ref` 與 index 路徑改成「`#` 左邊一律檔案系統、右邊一律 json 內部」（線址，11-13 晚，家機）：盤點、新規則表、代定；共用 Python 解析器與對照表已做好未接上，C++ 要動、停在件數 gate 等放行。
+# `$ref` 與 index 路徑改成「`#` 左邊一律檔案系統、右邊一律 json 內部」（線址，11-13 晚，家機）：盤點、新規則表、代定、施工紀錄；Python 與 C++ 都接上、`$at` 刪掉，C++ 執行檔待停樹換。
 
 ← [11-13 日索引](README.md) ・ 被廢掉的舊規則：[ref-index-unify](../12/ref-index-unify.md)「定案」、[index-link](../12/index-link.md)、[ref-hash](../12/ref-hash.md)
 
@@ -129,7 +129,7 @@ C++ 合計約 10～12 個檔、約 20 處（sonnet 估）。
 
 ## 改法
 
-1. **共用解析函式**：Python 一份 `lib/aos_refpath.py` 的 `spot(字串, 檔, 所在物件, 資料夾)` → `(檔案系統路徑, token 串或 None)`；寫法不合丟 `RefPathBad`、算不出來丟 `RefPathUnknown`（都是 `ValueError`），呼叫者換成自己的既有代號（`$ref`＝`DirectiveBad`、index＝`IndexBad`）。C++ 一份重寫 `aos::ref_spot`，簽章多帶位置。兩邊跑同一張 `lib/tests/ref_path_cases.json`（取代 `impls/aos-directive/tests/ref_spot_cases.json`）。**已做：Python 那份＋對照表＋定向測試（5 支、表 44 列全綠），未接上任何呼叫處。**
+1. **共用解析函式**：Python 一份 `lib/aos_refpath.py` 的 `spot(字串, 檔, 所在物件, 資料夾)` → `(檔案系統路徑, token 串或 None)`；寫法不合丟 `RefPathBad`、算不出來丟 `RefPathUnknown`（都是 `ValueError`），呼叫者換成自己的既有代號（`$ref`＝`DirectiveBad`、index＝`IndexBad`）。C++ 一份重寫 `aos::ref_spot`，簽章多帶位置。兩邊跑同一張 `lib/tests/ref_path_cases.json`（取代 `impls/aos-directive/tests/ref_spot_cases.json`）。**已做（commit d980a950b）。** 舊表 `impls/aos-directive/tests/ref_spot_cases.json` 刪掉。
 2. **index（Python）**：`aos_index.link()` 改叫 `spot()`，`home()` 只回所在物件；`wf/tools/index_check.py` 改 import 同一支；改 `test_index_link.py`、`test_index_view.py`、`index_view` 的 `_tooldef.json` 與知識庫 `tools/index_view.json`。
 3. **`$ref`（C++）**：照上面盤點改 `ref_spot`、`RefBase` 帶位置、`abs_refs`、aos-json 三處、丟位置的 4 處；`aos-directive` 加旗標讓 Python 給位置；`directive_value.py` 等 5 處 Python 給位置；`packs.py`、`aos-grow` 改叫共用函式。build 在 repo 外，活樹執行檔待停樹換。
 4. **資料、條文**：N-45、N-62 半句、knowledge `cli/parts/directive.json`、`knowledge/docs/01` 等照新表改寫，例子換掉。
@@ -142,13 +142,21 @@ C++ 合計約 10～12 個檔、約 20 處（sonnet 估）。
 - **D4 `#.`、`#..`（不帶尾 `/`）也收**，同 `#./`、`#../`；`#.x`、`#...` 報錯。
 - **D5 `#/`＝整份**，所以名字是空字串的根 key 寫不到（`#//x` 是 `""` 底下的 `x`，照 RFC 仍寫得到下一層）。
 - **D6 json 工具與入口的「位置」不跟**：`json_get` 等的 `path`、`aos-json` 的引數、`entries` 宣告都是 `檔#/指標`（N-62），照舊 `x.json#` 不收、`x.json#/` 是空字串 key。使用者這次說的是 `$ref` 與 index 路徑。
-- **D7 `$at` 不動**：使用者沒提。它的 `..` 現在可以走出檔到資料夾（11-12「就這樣」），跟「`#` 右邊才是 json」不衝突（`$at` 是另一個 key），但跟新的 `#../` 功能重疊。列給使用者。
+- ~~D7 `$at` 不動~~ → 使用者裁定**刪掉 `$at`**（見上方「使用者裁定」），不留相容、不留提示。
 - **D8 不知道是哪份檔（stdin、信）時 `#/…`**：維持原封不動（C++ 現狀），`#aaa` 這種寫法錯則一律報錯（不看知不知道檔）。
 - **D9 錯誤代號沿用**：`$ref`＝`DirectiveBad`、index＝`IndexBad`（項目裡壞的照舊只在那一行標 `bad (…)`），不新增代號。
 
+## 施工紀錄（放行後）
+
+- **index（commit cbadd29a2）**：`lib/aos_index.py` 的 `link()` 叫 `aos_refpath.spot`、`home()` 刪；`wf/tools/index_check.py` 叫同一支；`test_index_link.py` 跑共用表。改 `aos_index.py` 時曾有幾秒存著語法錯的版本（活樹當時若 import 會壞），隨即修好。
+- **`$ref`（C++，本 commit）**：`aos::ref_spot` 重寫（`impls/aos-directive/src/ref.cpp`），`RefBase` 帶位置（`at` token 串＋`placed`）、`in(key)`／`in(i)` 往下走；`ref_step`／`ref_at_of`／`$at` 全刪；`aos-directive` 加 `--at POINTER`（要 `--file`，給 stdin 那份在檔裡的位置）。連帶 aos-json（`follow/kind.cpp`、`follow.hpp`、`locate.cpp`、`cmd/check.cpp`、`ref.cpp`、`read.cpp`、`peek.cpp`；`ref --move` 搬走時：指在搬走那格裡面的 `#./`、`#../` 照舊，指在外面的改成 `#/絕對`）、aos-daemon（`procs.cpp` 的 `abs_refs` 帶位置、`#…` 換成「絕對檔#/絕對指標」）、aos-exec（`find/classify.cpp` 的 `.env` 位置）。測試：`aos-directive/tests/test_ref_spot.py` 跑共用表 44 列＋9 支、`test_ref_hash.py` 改；`aos-json/tests/test_ref_at.py` 刪、新 `test_ref_rel.py`（5 支）。**build 只在 repo 外（~/code/ref-1113），活樹執行檔沒換，待停樹換**；換之前活樹的 C++ 還是舊規則。
+- **Python 其他**：`lib/aos/kernel_llm/packs.py` 的 `_endpoints()` 改叫 `aos_refpath.spot`（原本自己切 `#`、`#aaa` 會放過）；`cmd/aos-grow/bin/aos-grow` 搬單子時只寫 `#` 的 `$ref` 照新規則算指到哪：指在搬走那格裡面＝`#./`、`#../` 照舊、`#/` 換新位置，指在外面＝`原檔#/絕對指標`（原本一律補檔名，`#./` 補上變成新規則的錯寫法）。
+- **`$at` 移除清單**：實際資料（知識庫、範本、設定）用到 `$at` 的 0 處。程式與測試：`impls/aos-directive/{include/aos/directive.hpp, src/main.cpp, src/ref.cpp, tests/test_ref_spot.py}`、`impls/aos-json/{src/follow/follow.hpp, kind.cpp, locate.cpp, tests/test_ref_at.py（整支刪）}`。說明與條文：`docs/NORMS/06`（N-45）、`docs/NORMS/_index.json`、`docs/NORMS/附錄1`、`docs/CONCEPTS/01-設計理念/01-C-01～C-48.md`、`impls/aos-directive/{README.md, docs/01}`、`impls/aos-json/docs/02`、`knowledge/aos/cli/parts/directive.json`、`knowledge/docs/01`。`docs/NORMS/附錄2-各批出處/04-各批原話.md` 是歷史原話，不改。`archive/` 不動。
+
 ## 沒做的
 
-- **停在件數 gate**：新規則要改 C++（aos-directive 的 `ref_spot` 與 `RefBase` 帶位置，連帶 aos-daemon、aos-json、aos-exec 約 10～12 檔），照任務書先停下回報。這次 commit 只有新檔（共用 Python 解析器、對照表、定向測試、這份），**沒接上任何既有路徑，活樹行為完全沒變**。
-- index 那半（`aos_index.link()`、`index_check.py`、兩支測試、工具說明）只牽 Python，可以先接；但跟 D1／D2 綁在一起，而且先接的話 index 用新規則、`$ref` 還是舊規則，條文會兩套並存，所以一起等放行。
-- 資料、條文、知識庫一處都還沒改（盤點在上面）。
-- 待使用者裁：D1（`$ref` 從哪個物件算）、D2（index 各項的 `index` 欄從節點算還是從那一格算）、D7（`$at`）、D8。
+- **C++ 執行檔待停樹換**（見上）。
+- **活樹知識庫要重抄**：這次改了 `knowledge/` 裡的節點與說明（`aos/cli/parts/directive.json`、`aos/tools/index_view.json`、`docs/01`、`docs/02`、`README.md`），`~/aos-home` 那份是複本，沒動。
+- **Python 把一格包成 `{"v": 值}` 交給 aos-directive 的 5 處沒給位置**（`lib/directive_value.py`、`cmd/aos-agent/aos_agent/tools.py`、`py/aos_clock_register.py`、`lib/mcp_server_file.py`、`lib/hook_run.py`）：新 aos-directive 有 `--at`，但活樹的舊執行檔不認這個旗標，現在接上會讓活樹全壞；所以這幾處寫 `#./`、`#../` 目前原封不動（D8 的「不知道位置」）。停樹換完執行檔後再接。
+- `adopt.cpp` 只給資料夾、不知道位置，`#./` 原封不動，沒改。
+- 保守沒改的說明（判為講「位置」N-62 不是 `$ref`）：`impls/docs/03-錯誤.md:21`、`aos-loop/docs/03`、`aos-fsm/docs/02`、`cmd/aos-sandbox/README.md:44`。

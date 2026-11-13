@@ -145,7 +145,6 @@
   "proto8/impls/aos-directive/README.md": "aos-directive 的說明：解 JSON 指示詞 $ref（檔#/指標、$at）與 $env（$path、$prefix）的 C++ lib 加命令列，aos 讀設定都靠它；查 $ref 細則以這裡為準",
   "proto8/impls/aos-directive/docs/01-用法等.md": "aos-directive 分檔：$ref／$env／$at／$path／$prefix 各寫法換成什麼的規則表、命令列用法、元素、公開介面（resolve 系列函數）、建置與測試",
   "proto8/impls/aos-directive/include/aos": "aos-directive 的公開標頭 directive.hpp：解指示詞的函數（含 resolve_shallow、resolve_keys 這類只解自己讀的欄位的介面）",
-  "proto8/impls/aos-directive/tests/ref_spot_cases.json": "$ref 字串指到哪裡的測試案例表（at、text、to 三欄，含 #/.. 往外走與不合法寫法回 null），test_ref_spot.py 與 lib 的 test_index_link.py 共用",
   "proto8/impls/aos-exec": "aos-exec 專案（C++）：在工作區執行一個資料夾程式（定工作區、走進去讀 .env、挑入口、設環境變數、開跑，inst 單子在行程內跑）；loop／fsm／daemon 每次起子項都經它",
   "proto8/impls/aos-exec/README.md": "aos-exec 的入口說明：一句話與命令列、比喻（門口換鞋）、例子、規範出處（N-57～N-62）、轉交結束碼的規則與分檔目錄",
   "proto8/impls/aos-exec/docs/01-用法.md": "aos-exec 用法分檔：命令列旗標（--ws、--stack、--stack-lazy、--dotenv-override）與 XXX 的認法，以及一跳（hop）怎麼走進去、讀 .env、挑入口",

@@ -17,8 +17,8 @@ static void check_name(const std::string& name, const std::string& key) {
 Json abs_refs(const Json& v, const aos::RefBase& base) {
     if (v.is_array()) {
         Json out = Json::array();
-        for (const Json& x : v) {
-            out.push_back(abs_refs(x, base));
+        for (size_t i = 0; i < v.size(); ++i) {
+            out.push_back(abs_refs(v[i], base.in(i)));
         }
         return out;
     }
@@ -26,7 +26,7 @@ Json abs_refs(const Json& v, const aos::RefBase& base) {
         return v;
     }
     Json out = v;
-    if (v.contains("$ref")) {   // 指示詞：只動 $ref 的檔名（其他 key 指示詞不看，不往裡面走）
+    if (v.contains("$ref")) {   // 指示詞：只動 $ref 的路徑（其他 key 指示詞不看，不往裡面走）
         auto fix = [&](Json& s) {
             if (!s.is_string()) {
                 return;
@@ -36,8 +36,15 @@ Json abs_refs(const Json& v, const aos::RefBase& base) {
             std::string file = r.substr(0, hash);
             if (!file.empty() && file[0] != '/') {
                 s = aos::join(base.dir, file) + (hash == std::string::npos ? "" : r.substr(hash));
-            } else if (file.empty() && r.starts_with("#/") && !base.file.empty()) {   // `#/…`＝寫著它的那份檔（11-12）
-                s = aos::abspath(base.file) + r;
+            } else if (file.empty() && hash != std::string::npos && !base.file.empty()) {
+                // `#…`＝寫著它的那份檔（11-12）；`#./`、`#../` 從所在物件算（11-13）：搬進小格前換成「絕對檔#/絕對指標」。寫壞的照留（讀的時候才報）。
+                try {
+                    std::optional<aos::RefSpot> spot = aos::ref_spot(r, base);
+                    if (spot) {
+                        s = aos::abspath(spot->file) + (spot->pointer.empty() ? "" : "#" + spot->pointer);
+                    }
+                } catch (const Error&) {
+                }
             }
         };
         Json& ref = out["$ref"];
@@ -51,7 +58,7 @@ Json abs_refs(const Json& v, const aos::RefBase& base) {
         return out;
     }
     for (auto& [k, x] : out.items()) {
-        x = abs_refs(x, base);
+        x = abs_refs(x, base.in(k));
     }
     return out;
 }
@@ -85,21 +92,21 @@ static Json written_of(const Json& raw, const Json& resolved, const aos::RefBase
     Json w = Json::object();
     if (!raw.is_object()) {
         if (raw.is_array() && !raw.empty() && is_directive(raw[0])) {
-            w["exec"] = abs_refs(raw[0], base);
+            w["exec"] = abs_refs(raw[0], base.in(size_t{0}));
         }
         return w;
     }
     for (const char* k : {"ws", "stack", "def"}) {
         if (raw.contains(k) && is_directive(raw[k])) {
-            w[k] = abs_refs(raw[k], base);
+            w[k] = abs_refs(raw[k], base.in(std::string(k)));
         }
     }
     Json ex = raw.value("exec", Json());
     Json got = resolved.is_object() ? resolved.value("exec", Json()) : Json();
     if (is_directive(ex) && got.is_string()) {
-        w["exec"] = abs_refs(ex, base);
+        w["exec"] = abs_refs(ex, base.in("exec"));
     } else if (ex.is_array() && !ex.empty() && is_directive(ex[0]) && got.is_array() && !got.empty() && got[0].is_string()) {
-        w["exec"] = abs_refs(ex[0], base);
+        w["exec"] = abs_refs(ex[0], base.in("exec").in(size_t{0}));
     }
     return w;
 }

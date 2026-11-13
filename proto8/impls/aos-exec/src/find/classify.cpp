@@ -125,7 +125,9 @@ Classified classify(const std::string& file, const std::string& pointer, Chain& 
             here += "#" + out.at;
         }
         if (entry_name() != ".env" && doc.contains(".env")) {
-            out.names = json_env(doc[".env"], here, aos::RefBase{dirname(file), file}, layer.dotenv_override);   // 只留最後讀的那一份（10-21 ideas § 7）
+            std::vector<std::string> env_at = aos::pointer_tokens(out.at);   // .env 那一格在檔裡的位置（#./、#../ 從這裡算，11-13）
+            env_at.push_back(".env");
+            out.names = json_env(doc[".env"], here, aos::RefBase{dirname(file), file, env_at}, layer.dotenv_override);   // 只留最後讀的那一份（10-21 ideas § 7）
             out.read_env = true;
             layer.apply();
         }

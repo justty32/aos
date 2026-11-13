@@ -84,11 +84,20 @@ class RefHash(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn('DirectiveBad $ref pointer not found: %s#/nope' % (self.d / 'm.json'), err)
 
-    def test_hash_alone_or_not_slash_is_left_as_is(self):
-        self.put('m.json', {'a': {'$ref': '#'}, 'b': {'$ref': '#a'}, 'c': {'$ref': ['#/c', '#']}})
+    def test_hash_alone_is_the_whole_file_and_not_slash_is_an_error(self):
+        self.put('x.json', {'k': 1})
+        self.put('m.json', {'a': {'$ref': 'x.json#'}, 'b': {'$ref': 'x.json#/'}})
         code, out, _ = self.run_file('m.json')
-        self.assertEqual(code, 0)
-        self.assertEqual(out, {'a': {'$ref': '#'}, 'b': {'$ref': '#a'}, 'c': {'$ref': ['#/c', '#']}})
+        self.assertEqual((code, out), (0, {'a': {'k': 1}, 'b': {'k': 1}}))
+        for text in ('#', ['#/c', '#']):                  # this whole file, from inside it: a loop
+            self.put('m.json', {'c': {'$ref': text}})
+            code, _, err = self.run_file('m.json')
+            self.assertEqual(code, 1)
+            self.assertIn('DirectiveBad $ref loop', err)
+        self.put('m.json', {'b': {'$ref': '#a'}})
+        code, _, err = self.run_file('m.json')
+        self.assertEqual(code, 1)
+        self.assertIn('DirectiveBad $ref #a: after # write /, ./ or ../', err)
 
     def test_dot_and_dotdot_in_file_part(self):
         self.put('sub/leaf.json', 'leaf')
