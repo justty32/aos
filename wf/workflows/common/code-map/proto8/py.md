@@ -26,6 +26,7 @@
 | [`entry.py`](../../../../../proto8/py/daemon_ctl/entry.py) | daemon_ctl 入口：保留目標與 argv 寫法，讀取直接 loop 設定並組成掛子信。 |
 | [`poke.py`](../../../../../proto8/py/daemon_ctl/poke.py) | daemon_ctl 門鈴：核對公開窗與 Linux 行程身分後，用 pidfd 送出宣告的 poke 訊號。 |
 | [`post.py`](../../../../../proto8/py/daemon_ctl/post.py) | daemon_ctl 信件：寄送、認領與清理回信，並以秒或 cycle 等待 daemon 回應。 |
+| [`state_path.py`](../../../../../proto8/py/daemon_ctl/state_path.py) | daemon_ctl 狀態位址：設了 AOS_KERNEL 先寄查詢信問表檔在哪（問不到＝KernelFailed）、沒設照舊找 daemon；讀表吃表檔路徑，相對路徑照表檔所在夾解成絕對。 |
 | [`table.py`](../../../../../proto8/py/daemon_ctl/table.py) | daemon_ctl 名單：尋找 daemon、解析狀態表、自檢子項與篩選已有 stack 的久未修改列。 |
 
 ## `proto8/py/tests/`
@@ -33,3 +34,4 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`test_flags_anywhere.py`](../../../../../proto8/py/tests/test_flags_anywhere.py) | Check aos_flags.parse(anywhere=True) and the one-layer commands moved to it (P-44 continued, 11-11 "全部改"). |
+| [`test_state_path.py`](../../../../../proto8/py/tests/test_state_path.py) | Check daemon_ctl.state_path: ask AOS_KERNEL for the table file with a query letter (a fake kernel answers), KernelFailed when nobody answers, and rea… |

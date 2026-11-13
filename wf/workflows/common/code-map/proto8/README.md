@@ -3,12 +3,12 @@
 
 # proto8 逐檔 code map 生成冊索引
 
-`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：955 個檔、802 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
+`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：958 個檔、805 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
 
 | 冊 | 夾 | 段 | 列／檔 |
 |---|---|---|---|
 | [cases](cases.md) | `proto8/cases/` | `box-probe/`、`smoke/` | 11／11 |
-| [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/` | 118／121 |
+| [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/` | 119／122 |
 | [cmd-2](cmd-2.md) | `proto8/cmd/` | `aos-clock/`、`aos-clock-register/`、`aos-daemon-ctl/` |  |
 | [cmd-3](cmd-3.md) | `proto8/cmd/` | `aos-eca/`、`aos-feedback/`、`aos-grow/`、`aos-mailbox/` |  |
 | [cmd-4](cmd-4.md) | `proto8/cmd/` | `aos-mcp/`、`aos-mcp-import/`、`aos-mcp-launch/`、`aos-sandbox/`、`aos-sweeper/` |  |
@@ -32,7 +32,7 @@
 | [lib-3](lib-3.md) | `proto8/lib/` | `aos/` |  |
 | [lib-4](lib-4.md) | `proto8/lib/` | `base/` |  |
 | [lib-5](lib-5.md) | `proto8/lib/` | `packs/`、`tests/` |  |
-| [py](py.md) | `proto8/py/` | 頂層、`daemon_ctl/`、`tests/` | 14／14 |
+| [py](py.md) | `proto8/py/` | 頂層、`daemon_ctl/`、`tests/` | 16／16 |
 | [root](root.md) | `proto8/` 頂層單檔 | 頂層 | 1／1 |
 | [templates](templates.md) | `proto8/templates/` | 頂層、`agent-fsm/`、`daemon-root/`、`eca-claude/`、`judge-llm/`、`reviewer/` | 68／73 |
 | [templates-2](templates-2.md) | `proto8/templates/` | `tests/`、`tool-python/` |  |
