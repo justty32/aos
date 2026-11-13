@@ -3,7 +3,7 @@ import os
 
 import aos_flags
 
-from .common import NAME, Fail, cli_cell, cli_cfg, cli_hook, cooldown, hooks, goal_state, mailbox_warning, must_post, names, post
+from .common import NAME, Fail, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown, hooks, goal_state, mailbox_warning, must_post, names, post
 from .history import SUM, append_history, history_changed, history_sum, note_sum
 from .hook import before_queue, fire, tool_added
 from .batch import SEP, goal_prompt, letter_body, note_progress, pick_one, take_all, transcript_now
@@ -23,6 +23,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
         raise Fail(type(e).__name__, e)
     cfg = cli_cfg.load_cfg(template)
     cell = cli_cell.Cell(os.path.join(stack, cfg["kind"]))
+    cli_mcp.note_env(cell)                                         # 11-13：loop 這邊的 AOS_CLOCK 等記進小格，人開畫面（aos-agent open）時照它給
     cool, _ = cooldown.state(stack)                                # ⑨ 認領信之前看冷卻（06）
     if cool == "cooling":
         return 0                                                    # 一封都不認領：new/、cur/、history 都不動

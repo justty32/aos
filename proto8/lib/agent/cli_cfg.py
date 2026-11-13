@@ -15,9 +15,11 @@ else:
 
 # aos 每次起 CLI 自己會加、cli.json 的 flags／print_flags 不准再寫的旗標（寫了＝CfgBad：在認領信之前就停，信留在 queue、不進冷卻）。
 # codex exec 的這幾個不准重複（寫第二次 codex 退 2：cannot be used multiple times）；claude 的是輸出格式與接哪段對話，重寫會解不開輸出或接錯對話。
-# 有宣告才加的（--mcp-config、--allowedTools、--append-system-prompt-file、--settings、--agents、codex 的 -c …）可重複，不擋。
+# 有宣告才加的（--mcp-config、--allowedTools、--append-system-prompt-file、--agents、codex 的 -c …）可重複，不擋。
+# claude 的 --settings 不能重複（11-13 實測：命令列上兩個 --settings 只有最後一個算數，前一個整個不見、沒有提醒；aos 自己那個接在後面），
+# 所以也擋；要帶 CLI 自己的設定（hooks、permissions…）寫 cli.json 的 settings 鍵，aos 併進它那一個（cli_settings、cli_mcp.settings_argv）。
 AOS_FLAGS = {"codex": ("--skip-git-repo-check", "--json", "-o", "--output-last-message"),
-             "claude": ("-p", "--print", "--output-format", "--session-id", "--resume", "-r", "--continue", "-c")}
+             "claude": ("-p", "--print", "--output-format", "--session-id", "--resume", "-r", "--continue", "-c", "--settings")}
 
 
 def reserved_flags(kind, flags):
@@ -43,7 +45,8 @@ def load_cfg(tool_dir):
     for k in ("flags", "print_flags"):
         mine = reserved_flags(cfg["kind"], cfg.get(k, []))
         if mine:
-            cli_base.die("CfgBad", "%s: %s has %s, which aos adds itself; remove it" % (path, k, ", ".join(mine)))
+            hint = " (for --settings: put the settings in the settings key of cli.json; aos merges them into its own)" if "--settings" in mine else ""
+            cli_base.die("CfgBad", "%s: %s has %s, which aos adds itself; remove it%s" % (path, k, ", ".join(mine), hint))
     rb = cfg.get("reseed_bytes", RESEED_BYTES)                     # 11-10 two-machines 05：開新對話時接在題目前的紀錄上限
     if not isinstance(rb, int) or isinstance(rb, bool) or rb < 0:
         cli_base.die("CfgBad", "%s: reseed_bytes must be a non-negative integer" % path)
@@ -55,8 +58,35 @@ def load_cfg(tool_dir):
     cfg["sub_registry"] = sub_registry(cfg, tool_dir, path)        # 11-12 eca-task-subagent：cli.json 的 tools_sub
     cfg["hooks_def"] = os.path.abspath(tool_dir) if files.get("hooks") else None   # 11-10 hook：宣告了 hooks＝aos-mcp 帶 --hooks
     cfg["external"] = external_servers(cfg, tool_dir, path)        # 11-12 external-mcp 步 1：cli.json 的 mcp_servers
+    cfg["cli_settings"] = cli_settings(cfg, tool_dir, path)        # 11-13 第 1 題乙：cli.json 的 settings（定義自帶的 CLI 設定）
+    cfg["cli_def"] = os.path.abspath(tool_dir)
     stack_copies(cfg, tool_dir, files)
     return cfg
+
+
+def cli_settings(cfg, tool_dir, path):
+    """cli.json 選填 settings（使用者 11-13「都按照建議」＝ops-agent-six-suggestions 第 1 題乙）：這份定義自帶的 Claude Code 設定
+    （hooks、permissions…，CLI 的 settings.json 那種物件），規矩跟著定義走、不必放工作區。物件＝就是它；字串＝一個 JSON 檔的路徑
+    （相對從 cli.json 的資料夾算），每次 load_cfg（每題）重讀。沒寫＝None。只有 claude 身認（codex 身寫了＝CfgBad）。
+    形狀不對（不是物件、檔讀不了、hooks 不是「事件名: 陣列」）＝CfgBad。內容不驗（CLI 自己的格式），照樣交給 CLI。"""
+    if "settings" not in cfg:
+        return None
+    if cfg["kind"] != "claude":
+        cli_base.die("CfgBad", "%s: settings is only for kind claude" % path)
+    s = cfg["settings"]
+    if isinstance(s, str) and s:
+        file = os.path.normpath(os.path.join(os.path.abspath(tool_dir), s))
+        try:
+            with open(file, encoding="utf-8") as f:
+                s = json.load(f)
+        except (OSError, ValueError) as e:
+            cli_base.die("CfgBad", "%s: settings names %s, which cannot be read as JSON: %s" % (path, tool_io.place(file), tool_io.os_reason(e)))
+    if not isinstance(s, dict):
+        cli_base.die("CfgBad", "%s: settings must be an object (Claude Code settings) or the path of a JSON file holding one" % path)
+    hooks = s.get("hooks", {})
+    if not isinstance(hooks, dict) or not all(isinstance(v, list) for v in hooks.values()):
+        cli_base.die("CfgBad", "%s: hooks in settings must be an object of EVENT: [entries]" % path)
+    return s
 
 
 def read_llm(path):

@@ -116,6 +116,75 @@ MCP_ENV = ("AOS_HOME", "AOS_DAEMON", "AOS_CLOCK", "AOS_CLOCK_INTERVAL", "AOS_LLM
            "AOS_LINUX_USER_STACK")                # 11-11 舊 do_task 的 AOS_DO_TASK_DEPTH／AOS_DO_TASK_FROM 隨它拿掉
 
 
+# 人開的畫面（aos-agent open）是從開畫面那個人的殼起的：殼裡的 MCP_ENV（AOS_CLOCK、AOS_KERNEL、AOS_LLM_KERNEL…）可能沒有或不一樣，
+# 畫面裡的 CLI 與它帶起來的 aos-mcp 就跟 loop 那邊（daemon 底下）看到的世界不同（11-13 ops-agent-six-suggestions 第 6 點的 bug）。
+# 收法：loop 那邊每次把自己手上的 MCP_ENV 記進小格的 env.json（note_env；aos-eca-turn 每一圈、ask 每一題），
+# 開畫面時照它蓋（screen_env；cli_screen.start）。還沒記過（畫面比 loop 先開）＝照舊用開畫面的殼、提醒一行。
+ENV_FILE = "env.json"
+
+
+def note_env(cell):
+    """把這個行程手上的 MCP_ENV（有設、非空的）記進小格的 env.json；跟上次一樣就不寫。寫不成不擋正事。"""
+    text = json.dumps({k: os.environ[k] for k in MCP_ENV if os.environ.get(k)}, ensure_ascii=False, sort_keys=True)
+    try:
+        if cell.read(ENV_FILE) != text:
+            cell.write(ENV_FILE, text + "\n")
+    except (OSError, UnicodeError):
+        pass
+
+
+def noted_env(cell):
+    """小格記的那份 {變數名: 值}；沒記過或讀不懂＝None。只認 MCP_ENV 裡的名字、字串值。"""
+    try:
+        env = json.loads(cell.read(ENV_FILE) or "null")
+    except (OSError, ValueError):
+        return None
+    if not isinstance(env, dict):
+        return None
+    return {k: v for k, v in env.items() if k in MCP_ENV and isinstance(v, str) and v}
+
+
+def screen_env(cfg, cell):
+    """開畫面時要用的整份環境（給 cli_screen.start 暫時換上）：自己的 os.environ，MCP_ENV 那幾個照小格記的那份——有記的設成那個值、
+    沒記的拿掉（跟 loop 那邊一致）；沒記過＝不動、提醒一行。定義帶了 settings＝再加 AOS_CLI_DEF（定義資料夾，給它的 hook 指令找自己的檔）。"""
+    env = dict(os.environ)
+    noted = noted_env(cell)
+    if noted is None:
+        cli_base.warn("no %s in the cell yet (the agent's loop has not run a turn); the screen takes %s from this shell"
+                      % (ENV_FILE, "AOS_CLOCK, AOS_KERNEL, AOS_LLM_KERNEL"))
+    else:
+        for k in MCP_ENV:
+            env.pop(k, None)
+        env.update(noted)
+    env.update(settings_env(cfg))
+    return env
+
+
+def settings_env(cfg):
+    """定義帶了 settings＝{"AOS_CLI_DEF": 定義資料夾的絕對路徑}（只給 CLI 行程；hook 指令寫 "$AOS_CLI_DEF/…" 找定義裡的檔）；沒帶＝{}。"""
+    return {"AOS_CLI_DEF": cfg["cli_def"]} if cfg.get("cli_settings") is not None else {}
+
+
+def settings_argv(cfg, mine):
+    """這次要給 claude 的 --settings（命令列上只會有這一個：CLI 只認最後一個，flags 裡自己寫＝CfgBad）。mine＝aos 自己要加的那份
+    （畫面：三個 hook＋收件口設定＋guard；非互動：guard，沒有＝{}）。定義沒帶 settings＝照舊（mine 空＝[]，否則就是 mine）。
+    定義帶了（cfg["cli_settings"]，11-13 第 1 題乙）＝以它為底併上 mine：hooks 每個事件的表接在一起（定義的在前、aos 的在後，兩邊都會跑）；
+    其他頂層鍵定義有寫的照定義（寫什麼就做什麼）、沒寫的用 aos 的。"""
+    own = cfg.get("cli_settings")
+    if own is None:
+        return ["--settings", json.dumps(mine)] if mine else []
+    out = dict(own)
+    hooks = {event: list(entries) for event, entries in (own.get("hooks") or {}).items()}
+    for event, entries in (mine.get("hooks") or {}).items():
+        hooks[event] = hooks.get(event, []) + list(entries)
+    for k, v in mine.items():
+        if k != "hooks":
+            out.setdefault(k, v)
+    if hooks:
+        out["hooks"] = hooks
+    return ["--settings", json.dumps(out, ensure_ascii=False)]
+
+
 def mcp_env(ws, stack):
     """給 codex 的 aos MCP server 的環境：MCP_ENV 裡有設（非空）的，加上這次的 AOS_WS、AOS_STACK（跟 --ws／--stack 同值）。"""
     env = {k: os.environ[k] for k in MCP_ENV if os.environ.get(k)}

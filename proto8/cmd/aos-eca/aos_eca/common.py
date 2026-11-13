@@ -4,7 +4,7 @@ import os
 import aos_ws
 
 # lib/agent 的共用模組（bin 入口已把 lib 放進 sys.path）；問 CLI 那段在 cli_*.py 分檔。
-from agent import cli_ask, cli_base, cli_cell, cli_cfg, cli_hook, cooldown, goal_state, hooks  # noqa: E402,F401
+from agent import cli_ask, cli_base, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown, goal_state, hooks  # noqa: E402,F401
 
 NAME = "aos-eca-turn"
 NOT_FOUND = 10

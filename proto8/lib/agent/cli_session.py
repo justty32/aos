@@ -45,7 +45,14 @@
 #             on_busy="answer" 時不退讓：照樣貼、busy.txt 等它消失，10-31）
 # aos 自己會加的旗標（cli.json 的 flags／print_flags 再寫＝CfgBad，cli_cfg.AOS_FLAGS）：codex＝--skip-git-repo-check、--json、-o／--output-last-message
 #   （codex 不收重複的，寫第二次它退 2）；claude＝-p／--print、--output-format、--session-id、--resume／-r、--continue／-c。有宣告才加、可以重複的
-#   不擋：--mcp-config、--allowedTools、--append-system-prompt-file、--system-prompt-snapshot、--settings、--agents（跟 tools_sub 同寫另有 CfgBad）、--model、codex 的 -c。
+#   不擋：--mcp-config、--allowedTools、--append-system-prompt-file、--system-prompt-snapshot、--agents（跟 tools_sub 同寫另有 CfgBad）、--model、codex 的 -c。
+#   claude 的 --settings 也擋（11-13：命令列上兩個 --settings 只有最後一個算數，aos 自己那個接在後面，以前寫了被靜默蓋掉）；要帶 CLI 自己的設定
+#   （hooks、permissions…）寫 cli.json 選填的 settings：物件，或一個 JSON 檔的路徑（相對從 cli.json 的資料夾算）。aos 把它併進自己那一個 --settings
+#   （hooks 每個事件的表接在一起、定義的在前；其他頂層鍵定義有寫的照定義），兩條路都帶；CLI 行程多一個環境變數 AOS_CLI_DEF＝定義資料夾，
+#   hook 指令寫 "$AOS_CLI_DEF/…" 找定義裡的檔。只有 claude 身認（codex 身寫了＝CfgBad）。cli_cfg.cli_settings、cli_mcp.settings_argv／settings_env。
+# env.json  loop 那邊（aos-eca-turn 每一圈、ask 每一題）記的 AOS_HOME、AOS_DAEMON、AOS_CLOCK、AOS_CLOCK_INTERVAL、AOS_LLM_KERNEL、AOS_KERNEL、
+#   AOS_LINUX_USER_STACK（cli_mcp.note_env；值沒變不重寫）。開畫面（cli_screen.start）時這幾個照它給、不用開畫面那個人的殼的（有記的設成那個值、
+#   沒記的拿掉）；還沒記過＝照舊用殼的、提醒一行（11-13：人開的畫面裡 peek_clock 回 ClockMissing 的 bug）。
 # 工具（11-03 eca-tools，thinking 2026-11-03-eca-tools）：cli.json 選填 tools＝aos-tools 的登記檔（相對路徑從 cli.json 的資料夾算；
 #   也可寫指示詞，例 {"$env": "AOS_HOME", "$path": "/lib/x/tools.json"}，每次讀才解、不寫回，11-10 two-machines TC；{"$ref": "#/…"} 沒檔名＝cli.json 自己，11-12 ref-hash），
 #   沒寫＝cli.json 同層有 tools.json 就用它（使用者 11-03「如果cli.json沒有指定，那就去找默認的tools.json」）、沒有＝不接工具；

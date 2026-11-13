@@ -6,12 +6,14 @@ if __package__:
     from .cli_base import RESEED_BYTES, SCREEN_RESEED_BYTES, TMUX_SESSION
     from .cli_cell import Cell, link_transcript, note_cell, session_here
     from .cli_cfg import load_cfg
+    from .cli_mcp import note_env
     from .cli_print import print_claude, print_codex
 else:
     import cli_a2a, cli_base
     from cli_base import RESEED_BYTES, SCREEN_RESEED_BYTES, TMUX_SESSION
     from cli_cell import Cell, link_transcript, note_cell, session_here
     from cli_cfg import load_cfg
+    from cli_mcp import note_env
     from cli_print import print_claude, print_codex
 
 
@@ -162,6 +164,7 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, re
     （live：能往 CLI 的收件 socket 投就一封一個署名信封，11-13）；開場白另成一項、不署寄件人。more＝選填，同一條路才看
     （live_a2a：等回答時又來的信）。"""
     note_cell(cell, tool_dir, ws, stack)
+    note_env(cell)                                       # 11-13：這邊（loop、daemon 底下）的 AOS_CLOCK 等記下來，人開畫面時照它給
     f, ok = cell.lock()
     if not ok:
         if on_busy == "yield":

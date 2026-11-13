@@ -7,14 +7,14 @@ if __package__:
     from .cli_cell import Cell, drop_session, link_transcript, note_cell, session_here
     from .cli_cfg import load_cfg, system_argv
     from .cli_hook import codex_note_compacts
-    from .cli_mcp import exec_wrap, external_claude, external_codex, guard_hooks, mcp_argv
+    from .cli_mcp import exec_wrap, external_claude, external_codex, guard_hooks, mcp_argv, screen_env, settings_argv
 else:
     import cli_a2a, cli_base
     from cli_base import SELF, TMUX_SESSION
     from cli_cell import Cell, drop_session, link_transcript, note_cell, session_here
     from cli_cfg import load_cfg, system_argv
     from cli_hook import codex_note_compacts
-    from cli_mcp import exec_wrap, external_claude, external_codex, guard_hooks, mcp_argv
+    from cli_mcp import exec_wrap, external_claude, external_codex, guard_hooks, mcp_argv, screen_env, settings_argv
 
 
 # ---------------------------------------------------------------- 開畫面（attach 用）
@@ -40,6 +40,19 @@ def start(cfg, cell, ws, stack):
     """畫面沒開就開一個（在 tmux 裡、背景）；有對話而且是這台的就接著那段，沒有或不是這台的就開新的。有登記檔＝跟非互動同一段接上 aos-mcp（11-03 eca-tools）。"""
     if cell.alive():
         return False
+    # 11-13：畫面裡的行程（CLI、它帶起來的 aos-mcp）要拿到跟 loop 那邊一致的 AOS_CLOCK、AOS_KERNEL、AOS_LLM_KERNEL…，
+    # 不是開畫面那個人的殼的（cli_mcp.screen_env）。起 tmux 這段暫時換上那份環境（codex 的 mcp_env 也讀 os.environ），做完換回來。
+    mine, theirs = dict(os.environ), screen_env(cfg, cell)
+    os.environ.clear()
+    os.environ.update(theirs)
+    try:
+        return _start(cfg, cell, ws, stack)
+    finally:
+        os.environ.clear()
+        os.environ.update(mine)
+
+
+def _start(cfg, cell, ws, stack):
     sid = cell.read("session.txt")
     if sid and not session_here(cfg, cell, ws, sid):     # 不是這台的（換台、搬位置、換帳號資料夾）：清掉、開新的（05）
         drop_session(cell)
@@ -53,7 +66,7 @@ def start(cfg, cell, ws, stack):
         hooks.update(cli_a2a.SETTINGS)
         hooks["hooks"].update(guard_hooks(cfg))            # 11-12 eca-task-subagent：子 agent 叫主 agent 那台 aos 的工具＝擋
         ext, _, spec = external_claude(cfg)
-        argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack, ext) + system_argv(cfg) + ["--settings", json.dumps(hooks)]
+        argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack, ext) + system_argv(cfg) + settings_argv(cfg, hooks)
         argv += ["--resume", sid] if sid else []
         argv = exec_wrap(argv, spec)
     else:

@@ -5,12 +5,12 @@ if __package__:
     from . import cli_base
     from .cli_cell import codex_main_thread, drop_session, mark_session, transcripts
     from .cli_cfg import system_argv
-    from .cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv
+    from .cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv, settings_argv, settings_env
 else:
     import cli_base
     from cli_cell import codex_main_thread, drop_session, mark_session, transcripts
     from cli_cfg import system_argv
-    from cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv
+    from cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv, settings_argv, settings_env
 
 
 # ---------------------------------------------------------------- 非互動（畫面沒開）
@@ -113,7 +113,8 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
     ext, env, _ = external_claude(cfg)
     argv += mcp_argv(cfg, cell, ws, stack, ext) + system_argv(cfg)
     guard = guard_hooks(cfg)
-    argv += ["--settings", json.dumps({"hooks": guard})] if guard else []
+    argv += settings_argv(cfg, {"hooks": guard} if guard else {})   # 定義帶了 settings＝併進這一個（11-13 第 1 題乙）
+    env = dict(env or {}, **settings_env(cfg)) or None
     argv += ["--resume", sid] if sid else ["--session-id", new]
 
     def given():
