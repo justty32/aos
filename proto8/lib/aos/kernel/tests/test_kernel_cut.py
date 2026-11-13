@@ -256,5 +256,20 @@ class KernelCutTest(unittest.TestCase):
         self.assertIn("kernel: error: StateBad cannot read forwarded.json", result.stderr)
 
 
+    def test_13_ordered_letter_routed_by_a_hook_cut_after_send(self):
+        script = "print(json.dumps({'next': %r}))" % str(self.side)
+        self.configure(keep_ordered=True, reply_via_me=True, hooks=self.hook("route", "after_verdict", script))
+        name = self.send(ordered=True)
+        self.cut_round(self.side)
+        sent = self.names(self.side)
+        self.assertEqual((sent, self.names(self.requests, "cur")), (["000000000001.routed." + name], [name]))
+        self.assert_round()
+        self.assert_round()
+        self.assertEqual((self.everywhere(self.side), self.names(self.requests, "cur")), (sent, []))
+        self.assertEqual(self.everywhere(self.ctl), [])
+        self.assertEqual(len(self.events()), 1)
+        self.answer(self.side, name)
+
+
 if __name__ == "__main__":
     unittest.main()

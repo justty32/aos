@@ -93,20 +93,69 @@ class KernelRouteTest(unittest.TestCase):
                          [("to-default", "to-default"), ("to-side", "to-side")])
         self.assertEqual(json.loads((self.stack / "forwarded.json").read_text()), {})
 
-    def test_04_keep_ordered_with_next_is_a_configuration_error(self):
+    def test_04_keep_ordered_letters_are_routed_and_stay_ordered(self):
         self.configure(keep_ordered=True, hooks=self.route_hook())
+        first = self.post("send", "--ordered", self.requests, "request", body={"lane": "side"})
+        second = self.post("send", "--ordered", self.requests, "second", body={"ping": True})
+        self.assert_round()
+        self.assertEqual(self.names(self.requests, "cur"), [])
+        # 分流的那一封到站仍是有序信，尾名是 routed.<原信全名>；沒分流的照舊 <序號>.<尾名>。
+        self.assertEqual(self.names(self.side), ["000000000001.routed." + first])
+        self.assertEqual(self.names(self.ctl), ["000000000001.second"])
+        self.assertEqual((first, second), ("000000000001.request", "000000000002.second"))
+        self.assertEqual(self.read_new(self.side)[1]["body"], {"lane": "side"})
+
+    def test_04b_route_ordered_off_is_a_configuration_error(self):
+        self.configure(keep_ordered=True, route_ordered=False, hooks=self.route_hook())
         name = self.post("send", "--ordered", self.requests, "request", body={"lane": "side"})
         result = self.kernel()
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("kernel: error: CfgBad a hook gave next but keep_ordered is on", result.stderr)
         self.assertEqual(self.names(self.requests, "cur"), [name])
         self.assertEqual(self.names(self.side) + self.names(self.ctl), [])
-        # 沒開 keep_ordered：有序信照處理順序分到各站，轉出去是普通信。
-        self.configure(hooks=self.route_hook())
+        # 沒開 keep_ordered：有序信照處理順序分到各站，轉出去是普通信；route_ordered 關著也一樣。
+        self.configure(route_ordered=False, hooks=self.route_hook())
         self.post("send", "--ordered", self.requests, "second", body={"ping": True})
         self.assert_round()
         self.assertEqual(self.names(self.side), ["request"])
         self.assertEqual(self.names(self.ctl), ["second"])
+
+    def test_04c_route_ordered_must_be_a_boolean(self):
+        self.configure(route_ordered="yes")
+        result = self.kernel()
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("kernel: error: CfgBad route_ordered must be a boolean", result.stderr)
+
+    def test_04d_same_tail_in_different_stations_replies_reach_the_right_sender(self):
+        other = self.root / "other" / "requests"
+        self.post("init", other)
+        lanes = {"side": self.side, "other": other, "main": self.ctl}
+        self.configure(keep_ordered=True, reply_via_me=True,
+                       hooks=self.route_hook(table={"side": str(self.side), "other": str(other)}))
+        originals, senders = {}, {}
+        for lane in lanes:
+            senders[lane] = self.root / ("sender-" + lane)
+            self.post("init", senders[lane])
+            originals[lane] = self.post("send", "--ordered", "--reply-to", senders[lane], self.requests,
+                                        "request", body={"lane": lane})
+        self.assert_round()
+        # 三站各自從 1 編號：分流的兩封尾名帶原信全名，所以轉寄後的信名三封都不同。
+        sent = {lane: self.names(box) for lane, box in lanes.items()}
+        self.assertEqual(sent, {"side": ["000000000001.routed." + originals["side"]],
+                                "other": ["000000000001.routed." + originals["other"]],
+                                "main": ["000000000001.request"]})
+        records = json.loads((self.stack / "forwarded.json").read_text())
+        self.assertEqual({key: row["letter"] for key, row in records.items()},
+                         {sent[lane][0]: originals[lane] for lane in lanes})
+        for lane, box in lanes.items():
+            forwarded, _ = self.read_new(box)
+            self.post("done", "--reply", box, forwarded, body={"from": lane})
+        result = self.assert_round()
+        self.assertEqual(result.stderr, "")
+        for lane in lanes:
+            _, reply = self.read_new(senders[lane])
+            self.assertEqual((reply["in_reply_to"], reply["body"]), (originals[lane], {"from": lane}))
+        self.assertEqual(json.loads((self.stack / "forwarded.json").read_text()), {})
 
     def test_05_max_running_needs_count_daemon_and_counts_all_stations_together(self):
         self.configure(max_running=1, hooks=self.route_hook())

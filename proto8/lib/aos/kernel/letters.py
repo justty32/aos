@@ -8,6 +8,7 @@ import tool_io
 
 NOT_FOUND = 10
 ORDERED = re.compile(r"^[0-9]{12}\.")
+ROUTED = "routed."  # 保有序又被 hook 分流的信，轉寄時的尾名前綴（後面接原信全名）。
 PENDING = "pending/"  # 待定列的鍵前綴；信名不含 /，不會跟轉寄後信名撞。
 
 
@@ -248,13 +249,17 @@ def relay_replies(ctx, before_reply=None):
 
 def forward(ctx, name, letter, box=None):
     """box＝hook 替這一封指定的下一站；沒給就寄站原本的下一站。"""
-    if box and in_box(box, name):
-        # 上一輪已寄進指定的站、原信還沒收就中斷：不再寄第二次。
-        finish_forwarded(ctx, name)
-        return None
     is_ordered = bool(ORDERED.match(name))
     tail = name.split(".", 1)[1] if is_ordered else name
     preserve = is_ordered and ctx.cfg.get("keep_ordered", False)
+    if box and preserve:
+        # 各站各自從頭編序號，同尾名的信在兩站會編出同一個信名、代回的對照會撞；
+        # 分流的有序信尾名改帶原信全名（本站的序號不重複），轉寄後信名就不會跨站相同。
+        tail = ROUTED + name
+    elif box and in_box(box, name):
+        # 上一輪已寄進指定的站、原信還沒收就中斷：不再寄第二次。（保有序的靠待定列認。）
+        finish_forwarded(ctx, name)
+        return None
     reply_to = letter.get("reply_to")
     original_reply = os.path.abspath(os.path.join(ctx.requests, reply_to)) if reply_to else None
     relay = bool(original_reply and ctx.cfg.get("reply_via_me", False))

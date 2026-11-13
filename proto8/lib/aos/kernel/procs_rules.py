@@ -20,6 +20,8 @@ def load(cfg, cfg_dir):
         cfg["keep_ordered"] = False
     if not isinstance(cfg["keep_ordered"], bool):
         raise CfgBad("keep_ordered must be a boolean or null")
+    if not isinstance(cfg.get("route_ordered", True), bool):
+        raise CfgBad("route_ordered must be a boolean")
     if not isinstance(cfg.get("reply_via_me", False), bool):
         raise CfgBad("reply_via_me must be a boolean")
     if not cfg.get("reply_via_me", False) and any(
@@ -91,7 +93,7 @@ def next_source(ctx):
 
 def check_next(ctx, box):
     """hook 替單封信指定下一站時驗設定配不配；寄不寄得進去留給轉寄。"""
-    if ctx.cfg["keep_ordered"]:
+    if ctx.cfg["keep_ordered"] and not ctx.cfg.get("route_ordered", True):
         ctx.die("CfgBad", "a hook gave next but keep_ordered is on: letters sent to different next stations "
                 "cannot keep their order")
     if "max_running" in ctx.cfg and "count_daemon" not in ctx.cfg:
