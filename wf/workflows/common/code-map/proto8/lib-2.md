@@ -47,7 +47,7 @@
 | [`goal_state.py`](../../../../../proto8/lib/agent/goal_state.py) | agent 的 goal 共用讀寫與判斷：<agent stack>/goal.json；aos-agent goal 寫、agent-fsm idle.py 與 aos-eca-turn 讀寫（丟提醒、記數）。 |
 | [`hook_fire/_entry`](../../../../../proto8/lib/agent/hook_fire/_entry) | 發 after_start／after_stop 事件：agent 範本 loop.json 的 on_start／on_stop 叫它（hook_fire EVENT DEF_DIR，$AOS_STACK＝agent 的 stack）。 |
 | [`hook_noop/_entry`](../../../../../proto8/lib/agent/hook_noop/_entry) | 什麼都不做的 hook handler：讀掉 stdin 的事件 JSON、退 0（範本 hooks.json 預設那格 on_clock 的掛點；使用者「預設就是收到信後啥也不做。 |
-| [`hooks.py`](../../../../../proto8/lib/agent/hooks.py) | agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、挑出符合事件的 hook、用 aos-exec 跑、解回話。 |
+| [`hooks.py`](../../../../../proto8/lib/agent/hooks.py) | agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、on_clock 的檢查、tool_added 的名單；挑出符合事件的 hook、用 aos-exec 跑、解回話交給共用引擎 lib/hook_run.py。 |
 | [`kernel_gate/`](../../../../../proto8/lib/agent/kernel_gate/) | 讓叫我的那隻 agent 當 kernel 的門：on 把框架站掛在自己身上（請求先留著、通知自己）、ls 看留著的、pass／refuse 表態（轉寄由站做）、off 收掉 |
 | [`kernel_gate/gate_lib.py`](../../../../../proto8/lib/agent/kernel_gate/gate_lib.py) | kernel_gate 工具與它兩支 hook 共用：站在哪、跑一輪、留著的信怎麼列、通知怎麼寄。 |
 | [`kernel_gate/hold`](../../../../../proto8/lib/agent/kernel_gate/hold) | 框架站的 after_verdict hook handler：每一封都回「先留著」，等 agent 用 kernel_gate 表態。 |
@@ -88,6 +88,7 @@
 | [`tests/test_cli_system.py`](../../../../../proto8/lib/agent/tests/test_cli_system.py) | 驗 cli_session 的 system（11-11 self-system）：宣告了才碰；stack 那份在就整份用它、否則定義那份；claude 附加檔＋snapshot off、codex developer_instructions；空＝不附加。 |
 | [`tests/test_cli_tools_directive.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_directive.py) | 驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。 |
 | [`tests/test_cli_tools_sub.py`](../../../../../proto8/lib/agent/tests/test_cli_tools_sub.py) | 驗 cli.json 的 tools_sub（11-12 eca-task-subagent）：只有 claude 身認、--agents 蓋掉 general-purpose 並內嵌 aos_sub、--allowedTools 多 mcp__aos_sub、guard hook 擋子 agen… |
+| [`tests/test_hooks_engine.py`](../../../../../proto8/lib/agent/tests/test_hooks_engine.py) | 驗 lib/agent/hooks.py 用的是共用引擎 lib/hook_run.py（11-13 kernel-framework 批 1b）：類別同一個、跑與解回話沒有第二份、兩種 import 法都找得到引擎、agent 自己的檢查（on_clock 的鍵、content 的回話）還在。 |
 | [`tests/test_mail_notify.py`](../../../../../proto8/lib/agent/tests/test_mail_notify.py) | mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json）只把等著的記成已知；睡醒（first、有記錄）睡前提醒過的不重複、睡著時新到的提醒一… |
 | [`todo/`](../../../../../proto8/lib/agent/todo/) | 這隻 agent 自己的待辦清單：ls、set、add、mark；存在自己的小格 $AOS_STACK/todo.json（第一次寫才建），每個 op 都印整張 |
 | [`todo/tests/test_todo.py`](../../../../../proto8/lib/agent/todo/tests/test_todo.py) | Test the todo tool: the four ops, its errors and limits, where it keeps the list, and that ls never makes the cell (also through aos-tools call). |

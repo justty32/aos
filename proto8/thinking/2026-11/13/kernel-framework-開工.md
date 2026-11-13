@@ -410,3 +410,52 @@
 - `lib/aos/kernel/tests` 在乾淨複本（`adee4511d`）上整夾跑 18 次：第一次 `Ran 79 … FAILED (failures=1)`（當時只留了最後幾行，不知道是哪一例；同時別條線也在跑測試），之後連續 17 次全 OK。原因沒查到，記著。
 - 活樹要等下次重抄才有這些（今天 15:08 釘住的 commit 之後才進 main 的不含）。
 
+## 十五、批 1b（線戌）：agent 的 `hooks.py` 改用共用引擎
+
+使用者 11-13（頂層問：「agent 的 hooks.py 要改用今天抽出來的共用引擎。改了之後，一格同時有兩種設定錯的時候，先報的那一句會跟現在不同（合不合格的判定不變）。可以嗎？」選項甲「可以，直接改」）：「4可以。」
+
+### 做了什麼
+
+- `lib/agent/hooks.py`：跑 handler、收行程群、解回話、比 `condition`、補預設值、驗共通鍵這幾段原本跟 `lib/hook_run.py` 各有一份，現在只剩引擎那一份（469 行 → 331 行）。`hooks.py` 留下 agent 自己的：事件表、清單從哪讀與兩份怎麼疊、`on_clock` 的鍵與檢查、`content` 的回話要求、`tool_added` 的名單。`HooksBad`／`HookFailed` 就是引擎的那兩個類別。
+- **呼叫者一行沒改**；**引擎 `lib/hook_run.py` 一行沒改、沒有補口**（引擎現有的 `check` 口與 `only` 參數就夠 agent 這邊用）。`lib/aos/kernel/` 沒碰。
+- 怎麼找到引擎：`hooks.py` 在 import 那一下把自己真實路徑的父層（`lib/`）暫時放上 `sys.path`、import 完拿掉——不管呼叫者是 `from agent import hooks` 還是只放 `lib/agent` 的 `import hooks`，拿到的都是同一棵樹的 `hook_run.py`。
+- 新測試 `lib/agent/tests/test_hooks_engine.py` 5 例（拿改之前的 `hooks.py` 跑：9 處失敗）。
+- 說明：`lib/docs/01-分層等.md` 的分層圖加 `lib/hook_run.py` 一列；`cmd/aos-agent/docs/06-hook.md` 開頭那句補「挑、跑、解回話那段是共用引擎」。條文沒動。
+
+### 行為差異（只有使用者同意的那一種）
+
+一格 hook 同時有「`on_clock` 專用鍵的錯」與「`on_error` 或 `timeout_ms` 的錯」時，先報的那句換了；合不合格的判定不變。改前先報 `on_clock` 那句，改後先報 `on_error`／`timeout_ms` 那句：
+
+| 這格寫了什麼 | 改前先報 | 改後先報 |
+|---|---|---|
+| `on_clock`、`every_ms`／`every_cycles` 都沒寫或都寫 ＋ 壞的 `on_error`／`timeout_ms` | `event on_clock needs exactly one of every_cycles, every_ms` | `on_error must be stop or continue`／`timeout_ms must be a positive integer` |
+| `on_clock`、`every_cycles`（或 `every_ms`）不是正整數 ＋ 同上 | `every_cycles must be a positive integer`（或 `every_ms must be a positive integer`） | 同上兩句之一 |
+| `on_clock`、`clock` 是空字串或不是字串 ＋ 同上 | `clock must be a non-empty string (a proc name, or the path of a clock file or of a folder with one)` | 同上兩句之一 |
+| 不是 `on_clock` 的事件卻寫了 `clock`／`every_cycles`／`every_ms` ＋ 同上 | `clock is only for event on_clock`（或 `every_cycles is only…`、`every_ms is only…`） | 同上兩句之一 |
+
+`on_error` 與 `timeout_ms` 兩個都壞時，改前改後都先報 `on_error` 那句。
+
+### 新舊對照（repo 外的複本 `~/code/xu-1113/`：`git archive` 原樣 對 同一個 commit＋這批的檔；13:00 在 `46ca83ce1`、接線前 15:31 在 `c0f37b872` 各做一次，結果相同）
+
+- 驗格：145157 種寫法逐一餵兩版（事件 7 種 × handler 3 × intercept 2 × async 2 × condition 3 × on_error 3 × timeout_ms 4 × every_cycles 4 × every_ms 3 × clock 4，另加 5 種不是物件的）——142549 種逐字相同、2608 種只差上表那一種、其他差異 0、**合格變不合格或反過來的 0**。
+- 行為：51 組（讀清單與疊兩份、清單壞 15 種 × 兩層、九個事件各跑一次、回話不是 JSON、退 10、退其他碼、`before_queue`／`after_tool` 改 `content` 的 15＋6 種回話、`before_tool` 的 `condition` 與改 `arguments`、多個 hook 的順序與 `only`／`entries`、中途攔下、中途失敗 stop／continue、handler 是資料夾／指示詞物件／`.json`／不存在／不能執行、stack 那份蓋定義那份、`async`、逾時 stop／continue／不理 TERM、stderr 透出、相對路徑的 stack、`tools_added`、`on_clock` 的 `every_cycles`／`every_ms`／第一次／錯過幾次／時鐘倒退／找不到時鐘／`clock` 鍵九種寫法／handler 失敗／狀態檔寫不了／狀態檔壞；真指令 `hook_fire` 14 組），每組比 stdout（每次呼叫的回傳或例外類別與句子、warning）、stderr、結束碼、留下的每個檔的內容。兩種 import 法各跑一輪，結果相同：**48 組全同、3 組只差允許的那一種、其他差異 0**。
+- 對照器會變紅：拿一份故意改壞的新版（照名字排改成倒著排、`content` 不驗空字串）跑其中 5 組，4 組報差異（剩 1 組是一次只發一個 hook 的 `on_clock`，本來就不受那兩處影響）。
+
+### 測試（乾淨複本，`c0f37b872`＋這批的檔；清掉 `AOS_*`）
+
+全套 68 夾 1597 例，紅的 3 夾跟沒加這批的同一份複本一樣：`cmd/aos-agent/tests` 的 `test_daemon_down` 2 例、`lib/aos/box_check/tests` 的 `test_acceptance` 2 例（都是既有的），`cmd/aos-feedback/tests` 1 例（這次暫存夾放在家目錄下、路徑被印成 `~/…`；暫存夾放 `/tmp` 就不紅）。`lib/agent/tests` Ran 111 OK、`cmd/aos-eca/tests` 99、`cmd/aos-mcp/tests` 16、`lib/agent/self_hook/tests` 5、`templates/tests/agent-fsm` 92、`lib/tests` 163、`lib/aos/kernel/tests` 79、`lib/aos/kernel_llm/tests` 32，`kernel-chain-check: 7/7 ok`。`extras/gitignore-check` 34 PASS、1 FAIL（`shutdown sensitive tracked content`：eca queue 信的 `/body/name` 是使用者名；沒加這批的複本一樣紅，不是這批的）。
+
+### 沒照做、留著的
+
+- 引擎收行程群那段沒改用 `process_group.stop`：照搬（調度者轉述：維持）。
+- 「引擎要不要回報是哪個 hook 改了值」（kf-1b2）使用者沒裁：沒做。
+
+### 代定（線戌；可翻案）
+
+1. **`fire` 裡「複製 data」與「讀清單」的先後對調了**：改前先複製再讀清單，改後先讀清單、複製在引擎裡。只有「data 裡有不能複製的東西（例如鎖）又剛好清單壞」才看得出來（改前丟 `TypeError`、改後丟 `HooksBad`）；所有呼叫者的 data 都是從 JSON 來的，走不到。要逐字相同就在 `hooks.fire` 讀清單前多複製一次（多一行、每次發事件多複製一次），沒加。
+2. **`hooks.py` 被單獨帶走時**（範本夾自己放一份 `hooks.py`、旁邊沒有 `lib/`——四個格有這條分支，目前沒人用）：引擎照標準 `sys.path` 找（`install.sh` 的 `aos-proto8.pth` 或格放上去的 `lib/`）。沒裝 `.pth` 又沒有 `lib/` 的機器上會是一段 traceback、不是乾淨的一行；這是圖紙 K-F22「agent 的 `hooks.py` 用引擎」帶來的依賴，沒另外處理。
+3. 例外類別的 `__module__` 從 `hooks` 變成 `hook_run`（類別名、繼承、句子都沒變；沒有人印它）。
+
+### 生效
+
+`lib/agent/hooks.py` 存檔即生效：`~/.local/bin` 的 `aos-eca-turn`、`aos-mcp`、`aos-agent` 直接 import repo 這份（連同 repo 的 `lib/hook_run.py`）。已經開著的 `aos-mcp`（長駐）記憶體裡還是舊版，重開畫面才換。活樹 `~/aos-home/lib/` 裡的複本（`hook_fire`、範本格用的）要重抄才換；舊版 `hooks.py` 不需要引擎，新舊混著跑沒有壞的組合，寫出的 `event.json`、`on_clock.json`、`hook_tools_seen.json` 格式沒變。混著跑的期間，同一格兩種錯並存時 repo 那邊與樹裡複本先報的那句會不同。

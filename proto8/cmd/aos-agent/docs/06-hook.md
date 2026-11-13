@@ -4,7 +4,7 @@
 
 **一句話**：在 agent 身上掛「某件事發生時跑這支」——信要進對話、工具要跑／跑完、腦叫失敗、多了工具、起來／停下、時鐘走到了；被跑的那支從 stdin 收到一份事件 JSON，想的話還能改掉或攔下那件事。
 
-使用者 11-10 晚：「還有self_hook，用於在有東西進到queue，或是一些事件發生，比如呼叫了某特定工具，比如brain呼叫失敗，或是新增了某些特定工具之類時，執行指定aos函數。」設計在 [圖紙](../../../thinking/2026-11/10/self-family/hook/01-圖紙.md)；讀清單、挑、跑、解回話全在 [lib/agent/hooks.py](../../../lib/agent/hooks.py)，四個格、aos-eca-turn、aos-mcp、`aos-agent hook` 共用它。
+使用者 11-10 晚：「還有self_hook，用於在有東西進到queue，或是一些事件發生，比如呼叫了某特定工具，比如brain呼叫失敗，或是新增了某些特定工具之類時，執行指定aos函數。」設計在 [圖紙](../../../thinking/2026-11/10/self-family/hook/01-圖紙.md)；讀清單、挑、跑、解回話全從 [lib/agent/hooks.py](../../../lib/agent/hooks.py) 進去，四個格、aos-eca-turn、aos-mcp、`aos-agent hook` 共用它；挑、跑、解回話那段是共用引擎 [lib/hook_run.py](../../../lib/hook_run.py)（框架站的 hook 也用同一份），`hooks.py` 自己管清單怎麼讀怎麼疊、`on_clock`、`tool_added`。
 
 ## 事件
 
