@@ -59,6 +59,9 @@
  "index_gen_desc.json": {
   "description": "index_gen 取不到檔頭一句話時用的手寫一句話：repo 相對路徑 → 一句話（手寫的優先於檔頭）。"
  },
+ "json_text.py": {
+  "description": "把一份 json 展開成給人看、給 git 逐行比的文字（git textconv 用；純標準庫、自足，可整支抄到別的 repo）。"
+ },
  "metainfo_migrate.py": {
   "description": "Move legacy metainfo estimates and execution limits into separate fields."
  },
