@@ -10,6 +10,7 @@ from .batch import SEP, goal_prompt, letter_body, note_progress, pick_one, take_
 from .slash import slash_of, slash_turn
 from .reseed import reseed
 from .handoff import Handoff
+from .midturn import More, unnamed
 
 
 def one_turn(template, stack, ws, empty_code, on_busy, prompt):
@@ -56,6 +57,8 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
             good.append(sig)
         if not good and not goal:
             return 0
+    parts = [(b.get("name"), b["content"]) for b in bodies]         # 11-13：信的 name＝寄件人（aos-agent say 填；沒有＝機器通知），只給信封用
+    bodies = [unnamed(b) for b in bodies]                           # 接進 history 的照舊不帶寄件人
     tool_added(cfg, template, stack)                                # hook：登記檔多了誰（交出去之前；hook 停下＝信留 cur/）
     history_changed(stack, cell)                                    # ⑩ history 被改過＝開新對話
     command = slash_of(bodies, goal)
@@ -71,7 +74,8 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
     before = transcript_now(cfg, cell)                              # ⑬ 進展：交出去之前對話檔多大
     had_sum = os.path.exists(cell.file(SUM))                        # ⑭ 畫面 hook 跟上 CLI 改 history 時會刪掉它（cli_hook.replace_history）
     text = hand.ask(cfg, cell, ws, SEP.join(b["content"] for b in bodies), on_busy,
-                    lambda limit: reseed(stack, ws, limit))         # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
+                    lambda limit: reseed(stack, ws, limit), parts,  # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
+                    None if cool == "due" else More(hand, template, stack, box))   # 等回答時又來的信馬上投（冷卻剛到的那輪只試一封，不加）
     if text is None:
         return 0                                                    # SessionBad：整批留 cur/，下一次再試
     synced = had_sum and not os.path.exists(cell.file(SUM))         # 這一輪中間是畫面 hook 跟著 CLI 改的（codex 的 /clear、/compact 在 notify 時才跟上）

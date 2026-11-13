@@ -22,7 +22,7 @@
 | [`claude/`](../../../../../proto8/lib/agent/claude/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 claude CLI；對話續在工具小格（$AOS_STACK） |
 | [`claude/cli.json`](../../../../../proto8/lib/agent/claude/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
 | [`cli_a2a.py`](../../../../../proto8/lib/agent/cli_a2a.py) | cli_session 往開著的 claude 畫面投署名訊息（Claude Code 的 cross-session messaging socket）：記 socket、包信封、投遞、等 hook 回執 |
-| [`cli_ask.py`](../../../../../proto8/lib/agent/cli_ask.py) | cli_session 問一輪：畫面開著從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main |
+| [`cli_ask.py`](../../../../../proto8/lib/agent/cli_ask.py) | cli_session 問一輪：畫面開著往 CLI 的收件 socket 投署名訊息（live_a2a）或從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main |
 | [`cli_base.py`](../../../../../proto8/lib/agent/cli_base.py) | cli_session 各分檔共用的底：錯誤行與提醒行（PROG／ECHO 決定開頭與要不要也印 stdout）、時間、共用常數、找 lib 的 tool_io |
 | [`cli_cell.py`](../../../../../proto8/lib/agent/cli_cell.py) | cli_session 的小格：Cell（檔、鎖、畫面 tmux）、畫面 socket 位置、session.txt 與記號檔、認是不是這台的對話、transcripts symlink |
 | [`cli_cfg.py`](../../../../../proto8/lib/agent/cli_cfg.py) | cli_session 的設定：讀與驗工具資料夾的 cli.json、llm.json 疊 model、system 附加旗標、tools／tools_sub 登記檔 |
@@ -73,6 +73,7 @@
 | [`subagent/tests/test_daemon.py`](../../../../../proto8/lib/agent/subagent/tests/test_daemon.py) | Test subagent and agents_ctl on a real aos-daemon: tools/llm changes land on the subagent (not the parent), and a subagent removed with agents_ctl is… |
 | [`subagent/tests/test_subagent.py`](../../../../../proto8/lib/agent/subagent/tests/test_subagent.py) | Test subagent against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, subagent account copies… |
 | [`subagent/tests/test_wait.py`](../../../../../proto8/lib/agent/subagent/tests/test_wait.py) | Test the shared runner in agents_cmd waits in bounded segments, cleans up on expiry, polls short on the clock, and that subagent checks wait argument… |
+| [`tests/test_cli_a2a.py`](../../../../../proto8/lib/agent/tests/test_cli_a2a.py) | 驗畫面開著的 claude 身往 CLI 的收件 socket 投署名訊息（11-13 cli_a2a）：信封與署名、hook 記 socket 與回執、投遞、等回答； |
 | [`tests/test_cli_codex_mcp.py`](../../../../../proto8/lib/agent/tests/test_cli_codex_mcp.py) | 驗 cli_session 起 codex 時給 aos MCP server 的設定（11-11）：明寫帶 AOS_* 環境（只帶清單裡有設的，AOS_WS／AOS_STACK 用這次的值），只對 aos 這個 server 免核准；claude 那邊不變。 |
 | [`tests/test_cli_external_mcp.py`](../../../../../proto8/lib/agent/tests/test_cli_external_mcp.py) | 驗 cli.json 的 mcp_servers（11-12 external-mcp 步 1）：server 檔讀取與形狀、codex 的 -c、bearer 只進 CLI 行程的環境、壞的那台 warning 跳過、畫面啟動器。 |
 | [`tests/test_cli_hook_follow.py`](../../../../../proto8/lib/agent/tests/test_cli_hook_follow.py) | 驗畫面 hook 跟上 CLI 的對話（11-12 eca-slash）：id 換了就改記 session.txt；claude 的 /clear（SessionStart source clear）連 aos 的 history 一起清、原文搬到旁邊；codex 取標題的旁支 thread 不記。 |

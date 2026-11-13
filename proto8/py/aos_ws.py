@@ -99,13 +99,17 @@ def post(args, stdin_text=""):
     return out.strip()
 
 
-def put(stack, text):
+def put(stack, text, name=None):
     """把一段文字變成一則 user message 寄進 <stack>/queue/（沒有 queue 就 aos-post init，寄信人先建信箱＝可以先說再跑 agent）；
-    content＝文字去掉結尾的換行。回信件名稱（new/ 裡的名字，帶序號）。錯＝Error("PostFailed")。"""
+    content＝文字去掉結尾的換行；name＝選填、寄件人（message 的 name 欄；11-13 aos-agent say 對 eca 才給）。
+    回信件名稱（new/ 裡的名字，帶序號）。錯＝Error("PostFailed")。"""
     box = box_of(stack)
     if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
         post(["init", box])
-    return post(["send", "--ordered", box], json.dumps({"role": "user", "content": text.rstrip("\n")}, ensure_ascii=False))
+    body = {"role": "user", "content": text.rstrip("\n")}
+    if name:
+        body["name"] = name
+    return post(["send", "--ordered", box], json.dumps(body, ensure_ascii=False))
 
 
 # 同一路徑的壞行只提醒一次；fork 後各行程分開計算。

@@ -17,7 +17,9 @@ in order, to the CLI as one prompt (handing it over = the letters are done), wai
 DEF_DIR: the eca definition folder (absolute; cli.json at its top, optional tools.json). It is never written; everything goes to $AOS_STACK.
 Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad letters are dropped and noted in
   $AOS_STACK/mailbox_warning.txt; good contents are joined with a blank line and asked once (a pasted screen if one is open,
-  otherwise claude -p --resume / codex exec resume). The user messages go into history.jsonl when the prompt is handed over, the
+  otherwise claude -p --resume / codex exec resume). An open claude screen opened by this version gets each letter as a signed
+  message on the CLI's own cross-session socket instead (sender = the letter's "name", else aos通知中心; --on-busy is not looked at,
+  letters that arrive while waiting are delivered at once); no socket or no receipt = pasted as before. cli.json "a2a": false = always paste. The user messages go into history.jsonl when the prompt is handed over, the
   answer goes in as one assistant message.
   --on-empty stop (default): empty queue = exit 10 | idle: exit 0.
   --on-busy yield (default): the session is busy (lock taken, someone attached, busy.txt) = leave the batch in cur/, exit 0 |
@@ -56,7 +58,7 @@ Needs aos-post on PATH (loop form) and AOS_STACK.
 Errors: one stderr line `aos-eca-turn: error: CODE reason`, exit 1 (tool form: the line also goes to stdout). aos-post's own stderr
   is passed through as it is. Codes: ArgumentsBad, FlagUnknown, AgentBad, StackMissing, PromptMissing, HistoryBad, PostFailed,
   WriteFailed, HookFailed, HooksBad, ToolsBad, CfgMissing, CfgBad, ToolsMissing, CliMissing, CliFailed, ReplyMissing,
-  TrustMissing (claude on the screen waits at its trust-this-folder prompt; nothing typed: a person attaches and chooses)."""
+  TrustMissing (claude on the screen waits at its trust-this-folder prompt; nothing typed or delivered: a person attaches and chooses)."""
 
 def die(code, reason):
     aos_flags.die(NAME, code, reason)

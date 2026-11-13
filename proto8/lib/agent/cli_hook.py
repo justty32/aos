@@ -2,9 +2,11 @@
 import json, os, re, sys
 
 if __package__:
+    from . import cli_a2a
     from .cli_base import now
     from .cli_cell import Cell, codex_parent, link_transcript, mark_session, transcripts
 else:
+    import cli_a2a
     from cli_base import now
     from cli_cell import Cell, codex_parent, link_transcript, mark_session, transcripts
 
@@ -235,6 +237,8 @@ def codex_turns(sid):
 def hook_main(kind, cell_path, payload_arg=None):
     """claude：stdin 一份 hook JSON（SessionStart／UserPromptSubmit／Stop）；codex：notify 把 JSON 放在最後一個參數。
     對話 id 跟 session.txt 不同就改記（follow_session）；claude 的 SessionStart source clear＝clear_history（11-12 eca-slash）。
+    claude 的指令最後帶 cli_a2a.HOOK_MARK（11-13 之後開的畫面）＝SessionStart 把這個 session 的收件 socket 路徑抄進小格、
+    UserPromptSubmit 看到 aos 投的信封就記一行回執（cli_a2a）；沒帶的舊畫面不記＝照舊貼字。
     hook 不准讓 CLI 出錯：任何問題都吞掉、退 0。"""
     try:
         cell = Cell(cell_path)
@@ -242,7 +246,10 @@ def hook_main(kind, cell_path, payload_arg=None):
         p = json.loads(raw)
         if kind == "claude":
             event, sid = p.get("hook_event_name"), p.get("session_id")
+            a2a = payload_arg == cli_a2a.HOOK_MARK
             if event == "SessionStart":                    # 11-12 eca-slash：開畫面、/clear、/compact、/resume 都會叫；/clear＝aos 的 history 跟著清
+                if a2a:
+                    cli_a2a.note_socket(cell)
                 if p.get("source") != "startup":           # 畫面開新對話（startup）照舊等第一輪才記：ask 看 session.txt 空著才接 reseed
                     follow_session(kind, cell, sid)
                 if p.get("source") == "clear":
@@ -253,6 +260,8 @@ def hook_main(kind, cell_path, payload_arg=None):
             if event == "UserPromptSubmit":
                 follow_session(kind, cell, sid)
                 cell.write("busy.txt", now() + "\n")
+                if a2a:
+                    cli_a2a.note_ack(cell, p.get("prompt"))
                 return
             if event != "Stop":
                 return

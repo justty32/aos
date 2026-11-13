@@ -1,14 +1,14 @@
-# cli_ask.py - cli_session 問一輪：畫面開著從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main
+# cli_ask.py - cli_session 問一輪：畫面開著往 CLI 的收件 socket 投署名訊息（live_a2a）或從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main
 import fcntl, json, os, re, shlex, signal, sys, time
 
 if __package__:
-    from . import cli_base
+    from . import cli_a2a, cli_base
     from .cli_base import RESEED_BYTES, SCREEN_RESEED_BYTES, TMUX_SESSION
     from .cli_cell import Cell, link_transcript, note_cell, session_here
     from .cli_cfg import load_cfg
     from .cli_print import print_claude, print_codex
 else:
-    import cli_base
+    import cli_a2a, cli_base
     from cli_base import RESEED_BYTES, SCREEN_RESEED_BYTES, TMUX_SESSION
     from cli_cell import Cell, link_transcript, note_cell, session_here
     from cli_cfg import load_cfg
@@ -31,10 +31,81 @@ def trust_prompt(screen):
     return "trust" in tail.lower() and bool(_TRUST_OPTION.search(tail))
 
 
-def live(cfg, cell, prompt, on_busy="yield", handed=None):
-    """on_busy＝yield（預設）：有人接在畫面上、或 busy.txt 在＝SessionBad；answer（10-31 eca --on-busy）：有人接著照樣貼，
+def trust_check(cfg, cell):
+    """claude 的畫面停在信任資料夾選單＝TrustMissing（不貼、不投）。"""
+    if cfg.get("kind") == "claude" and trust_prompt(cell.tmux("capture-pane", "-p", "-t", TMUX_SESSION).stdout):
+        ws = os.path.normpath(os.path.join(cell.path, cell.read("ws.txt") or "."))
+        cli_base.die("TrustMissing", "claude on the screen is waiting at its trust-this-folder prompt for %s; nothing was typed. "
+            "Choose yourself: attach to the screen (aos-agent open), or run claude there once and pick trust: cd %s && claude"
+            % (ws, shlex.quote(ws)))
+
+
+def live_a2a(cfg, cell, parts, path, handed, deadline, more=None):
+    """往 CLI 的收件 socket 投一批署名訊息（cli_a2a；11-13 使用者裁「馬上送，eca他會自己處理」：不看有沒有人接著、不等這一輪講完）。
+    回 ("answered", 回答)／("unsent", None)＝一行都沒投出去，呼叫者照舊貼字／("unacked", None)＝投了、CLI 閒著 ACK_GRACE_S 秒
+    都沒有回執（這版不吃這個格式，或被它的設定拒收）：這個畫面記成不再投，呼叫者改貼字（handed 已經叫過）。
+    more＝選填：等回答的這段時間又來的信也馬上投——每圈叫 more.take() 拿 [(寄件人, 內文)]（沒有＝[]），投出去叫 more.sent()、
+    投不出去叫 more.unsent()（那幾封呼叫者留到下一輪）。
+    回答＝全部回執都到之後講完的那一輪；CLI 忙時信在手上那步工具做完才讀到，回答就是正在跑的那一輪的。中途加投的信若趕不上
+    那一輪、CLI 另開一輪答，第一則回執之後講完的各輪照順序用一個空行接成一段。"""
+    seen, offset = len(cell.turns()), cli_a2a.acks_size(cell)
+    ids, data = cli_a2a.wire(parts)
+    try:
+        cli_a2a.deliver(path, data)
+    except cli_a2a.Undelivered as e:
+        cli_base.warn("cannot deliver to the CLI's message socket (%s); typing into the screen instead" % e)
+        return "unsent", None
+    if handed:
+        handed()
+    idle_since = None
+    while time.time() < deadline:
+        got = cli_a2a.acked(cell, offset, ids)
+        if len(got) == len(ids):
+            first, last = min(got.values()), max(got.values())
+            mine = [t for t in cell.turns()[seen:] if (t.get("answered_at") or "") >= first]
+            if mine and (mine[-1].get("answered_at") or "") >= last:
+                return "answered", "\n\n".join(t.get("text") or "" for t in mine)
+        elif not got and not os.path.exists(cell.file("busy.txt")):
+            idle_since = idle_since or time.time()
+            if time.time() - idle_since > cli_a2a.ACK_GRACE_S:
+                why = "no receipt %d s after delivering to the CLI's message socket" % cli_a2a.ACK_GRACE_S
+                cli_a2a.mark_off(cell, why)
+                cli_base.warn("%s; typing into the screen instead, for this screen from now on" % why)
+                return "unacked", None
+        else:
+            idle_since = None
+        if not cell.alive():
+            cli_base.die("CliFailed", "the screen closed before the turn finished")
+        late = more.take() if more and got else []           # 第一批有回執了才加投（沒回執要退回貼字時，不會有信只投了沒貼）
+        if late:
+            new_ids, data = cli_a2a.wire(late)
+            try:
+                cli_a2a.deliver(path, data)
+            except cli_a2a.Undelivered as e:
+                cli_base.warn("cannot deliver to the CLI's message socket (%s); those letters wait for the next turn" % e)
+                more.unsent()
+            else:
+                ids += new_ids
+                more.sent()
+        time.sleep(0.2)
+    cli_base.die("ReplyMissing", "no answer %d s after sending (may be stuck on a permission or trust prompt; attach to look)"
+        % (cfg.get("timeout_ms", 600000) // 1000))
+
+
+def live(cfg, cell, prompt, on_busy="yield", handed=None, parts=None, more=None):
+    """parts＝選填、[(寄件人名字或 None, 內文)]（aos-eca-turn 給，一封信一項）：這格記得 CLI 的收件 socket（cli_a2a）就走 live_a2a——
+    不貼字、不看 on_busy（more 照傳）；沒給、沒記到、連不上、沒回執＝照下面貼 prompt。
+    on_busy＝yield（預設）：有人接在畫面上、或 busy.txt 在＝SessionBad；answer（10-31 eca --on-busy）：有人接著照樣貼，
     busy.txt 在就等它消失再貼——等它跟等回答共用 timeout_ms 的期限，逾時 ReplyMissing。貼上、按 Enter 之後叫 handed（交出去了，11-03）。"""
     deadline = time.time() + cfg.get("timeout_ms", 600000) / 1000
+    path = cli_a2a.socket_path(cfg, cell) if parts else None
+    if path:
+        trust_check(cfg, cell)
+        status, text = live_a2a(cfg, cell, parts, path, handed, deadline, more)
+        if status == "answered":
+            return text
+        if status == "unacked":                              # 已經交出去過（信收了、接進 history 了）：不再退讓，貼完等回答
+            handed, on_busy = None, "answer"
     if on_busy == "yield":
         who = cell.clients()
         if who:
@@ -47,11 +118,7 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None):
         time.sleep(0.2)
     if os.path.exists(cell.file("busy.txt")):                # 等到期限還在跑：不貼，免得逾時了還打進畫面
         cli_base.die("ReplyMissing", "the turn on the screen did not finish within %d s; not sent (attach to look)" % (cfg.get("timeout_ms", 600000) // 1000))
-    if cfg.get("kind") == "claude" and trust_prompt(cell.tmux("capture-pane", "-p", "-t", TMUX_SESSION).stdout):
-        ws = os.path.normpath(os.path.join(cell.path, cell.read("ws.txt") or "."))
-        cli_base.die("TrustMissing", "claude on the screen is waiting at its trust-this-folder prompt for %s; nothing was typed. "
-            "Choose yourself: attach to the screen (aos-agent open), or run claude there once and pick trust: cd %s && claude"
-            % (ws, shlex.quote(ws)))
+    trust_check(cfg, cell)
     seen = len(cell.turns())
     r = cell.tmux("load-buffer", "-b", "aos", "-", input=prompt)
     if r.returncode != 0:
@@ -80,7 +147,7 @@ def type_line(cell, text):
     cell.tmux("send-keys", "-t", TMUX_SESSION, "Enter")
 
 
-def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, reseed=None):
+def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, reseed=None, parts=None, more=None):
     """問 CLI 一句 → 回答文字：記下這格（note_cell）→ 拿格的 lock（拿不到：on_busy＝yield（預設）＝SessionBad、
     answer＝等到拿到，同 open_cell）→ 畫面開著走 live（on_busy 照傳）、沒開走非互動
     → 建 transcripts symlink。lib/agent/agent_tool.py 的 ask_cli 與 aos-eca-turn（含 --one 的 call_main）共用這一段。
@@ -90,7 +157,10 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, re
     （工具形印一行退 1；aos-eca-turn 把 die 換成丟例外）。
     reseed＝選填、reseed(上限 bytes) -> 開場白（整理過的舊紀錄，結尾一個空行；沒紀錄回 ""）：這次是新對話（session.txt 沒有，
     或 session_here 認不出是這台的）就接在題目前面（11-10 two-machines 05；aos-eca-turn 給）。沒給而且是「有舊 id 但不在這台」
-    ＝stderr 一行 warning、照樣開新的（工具形）。"""
+    ＝stderr 一行 warning、照樣開新的（工具形）。
+    parts＝選填、[(寄件人名字或 None, 內文)]：prompt 拆成一封一項的版本（aos-eca-turn 給；工具形不給）。只有畫面開著那條路看它
+    （live：能往 CLI 的收件 socket 投就一封一個署名信封，11-13）；開場白另成一項、不署寄件人。more＝選填，同一條路才看
+    （live_a2a：等回答時又來的信）。"""
     note_cell(cell, tool_dir, ws, stack)
     f, ok = cell.lock()
     if not ok:
@@ -102,8 +172,11 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, re
         sid = cell.read("session.txt")
         if cell.alive():                                 # 畫面開著＝這台的；session.txt 還沒有＝新對話（hook 第一輪才寫）
             if not sid and reseed:
-                prompt = reseed(min(limit, SCREEN_RESEED_BYTES)) + prompt
-            text = live(cfg, cell, prompt, on_busy, handed)
+                opening = reseed(min(limit, SCREEN_RESEED_BYTES))
+                prompt = opening + prompt
+                if parts and opening.strip():
+                    parts = [(None, opening.strip("\n"))] + list(parts)
+            text = live(cfg, cell, prompt, on_busy, handed, parts, more)
         else:
             if sid and not session_here(cfg, cell, ws, sid):
                 if not reseed:

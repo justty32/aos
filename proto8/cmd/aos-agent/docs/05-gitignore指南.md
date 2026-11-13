@@ -67,6 +67,8 @@ cp "$P/cmd/aos-agent/stack.gitignore" "$STACK/.gitignore"
 **/codex/mcp.json
 **/tmux.conf
 **/busy.txt
+**/a2a.json
+**/a2a_acks.jsonl
 **/tools/run_python/main.py
 **/tooldef_cache.json
 **/procs_requests/reply/

@@ -2,14 +2,14 @@
 import fcntl, json, os, shlex, sys, time
 
 if __package__:
-    from . import cli_base
+    from . import cli_a2a, cli_base
     from .cli_base import SELF, TMUX_SESSION
     from .cli_cell import Cell, drop_session, link_transcript, note_cell, session_here
     from .cli_cfg import load_cfg, system_argv
     from .cli_hook import codex_note_compacts
     from .cli_mcp import exec_wrap, external_claude, external_codex, guard_hooks, mcp_argv
 else:
-    import cli_base
+    import cli_a2a, cli_base
     from cli_base import SELF, TMUX_SESSION
     from cli_cell import Cell, drop_session, link_transcript, note_cell, session_here
     from cli_cfg import load_cfg, system_argv
@@ -46,9 +46,11 @@ def start(cfg, cell, ws, stack):
         sid = ""
     link_transcript(cell, cfg["kind"])                   # 叫回舊對話：id 早就知道
     if cfg["kind"] == "claude":
-        cmd = " ".join(shlex.quote(a) for a in hook_cmd("claude", cell))
+        # 11-13：hook 指令最後帶 HOOK_MARK＝這個畫面的 hook 會記收件 socket 與回執；--settings 併進「跨 session 訊息直接收」（cli_a2a）
+        cmd = " ".join(shlex.quote(a) for a in hook_cmd("claude", cell) + [cli_a2a.HOOK_MARK])
         hooks = {"hooks": {e: [{"hooks": [{"type": "command", "command": cmd}]}]
                            for e in ("SessionStart", "UserPromptSubmit", "Stop")}}
+        hooks.update(cli_a2a.SETTINGS)
         hooks["hooks"].update(guard_hooks(cfg))            # 11-12 eca-task-subagent：子 agent 叫主 agent 那台 aos 的工具＝擋
         ext, _, spec = external_claude(cfg)
         argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack, ext) + system_argv(cfg) + ["--settings", json.dumps(hooks)]
@@ -66,6 +68,7 @@ def start(cfg, cell, ws, stack):
     for name in ("busy.txt",):
         if os.path.exists(cell.file(name)):
             os.remove(cell.file(name))
+    cli_a2a.forget(cell)                                 # 上一個畫面的收件 socket 與回執不算數；新畫面的 SessionStart hook 會重抄
     try:
         r = cell.tmux("-f", cell.file("tmux.conf"), "new-session", "-d", "-s", TMUX_SESSION,
                       "-x", "160", "-y", "45", "-c", ws, "--", *argv, new=True)

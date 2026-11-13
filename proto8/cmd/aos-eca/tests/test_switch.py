@@ -657,7 +657,7 @@ class Screen(unittest.TestCase):
     def test_live_new_conversation_gets_capped_reseed(self):
         got, limits = [], []
 
-        def live(cfg, cell, prompt, on_busy, handed):
+        def live(cfg, cell, prompt, on_busy, handed, *rest):
             got.append(prompt)
             return "ok"
         self.cfg["reseed_bytes"] = 48000

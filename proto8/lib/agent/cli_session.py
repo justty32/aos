@@ -20,6 +20,8 @@
 #   tmux.conf     attach 開畫面時寫的 tmux 設定（Ctrl-] 或 Ctrl-\ 跳出、不用 prefix）
 #   turns.jsonl   互動畫面每講完一輪，hook 接一行 {"answered_at", "text"}（answered_at＝講完的時間，10-25 前叫 at）（agent 從這裡拿回答，不去解析畫面）
 #   busy.txt      claude 的畫面正在跑一輪（有人送出、還沒講完）
+#   a2a.json、a2a_acks.jsonl  claude 畫面的收件 socket 路徑（{"socket"}，投了沒回執改成 {"off": 原因}）與回執（一行 {"at", "id"}）；
+#                 hook 寫、開畫面時先刪，跟這台機器與這次開的畫面綁在一起（cli_a2a，11-13）
 #   lock          同一時間只有一個人用這段對話（agent 的一次呼叫、attach 開畫面）
 #   live.jsonl    非互動的即時紀錄兼副產物：claude 的 stream-json、codex 的 --json 事件，一行一事件、只接不重寫（10-28；10-27 是每次重寫）
 #   tool.txt、ws.txt  這格屬於哪個工具資料夾、哪個工作區（相對小格；open_cell 叫回畫面時用）
@@ -32,8 +34,14 @@
 #
 # 兩條路（每次呼叫自己挑）：
 #   畫面沒開 → 非互動：claude -p --resume <id>（第一次 --session-id <新 id>）、codex exec resume <id> -（第一次 codex exec -）
-#   畫面開著 → 從 pty 送字：tmux paste-buffer 貼上＋Enter，等 hook 在 turns.jsonl 接一行（有人接著看、或 claude 正在跑一輪＝SessionBad；
-#             claude 停在信任資料夾選單＝TrustMissing、不貼，11-10 深夜；
+#   畫面開著 → claude 身、呼叫者給了一封一項的 parts（aos-eca-turn）、小格記得收件 socket＝往 Claude Code 這個 session 自己的
+#             收件口（cross-session messaging 的 Unix socket）寫，一封一行 JSON、一封一個署名信封（寄件人＝信的 name，沒有＝「aos通知中心」）；
+#             不看 on_busy、有人接著或正在跑一輪都照投（11-13 使用者「馬上送，eca他會自己處理」）。socket 不回話，靠 UserPromptSubmit hook
+#             記的回執認；開畫面時 hook 指令最後帶 a2a、--settings 併進 crossSessionInbound accept，SessionStart hook 把
+#             CLAUDE_CODE_MESSAGING_SOCKET 抄進 a2a.json（沒帶 a2a 的舊畫面不記＝照舊貼字）。投不出去＝warning、改貼字；
+#             投了、CLI 閒著 30 秒沒回執＝warning、a2a.json 記 off、這個畫面之後都貼字（到下一次 SessionStart）。關掉：cli.json "a2a": false，
+#             或 cli_a2a.ENABLED。其餘（codex、工具形、退回時）從 pty 送字：tmux paste-buffer 貼上＋Enter，等 hook 在 turns.jsonl 接一行
+#             （有人接著看、或 claude 正在跑一輪＝SessionBad；claude 停在信任資料夾選單＝TrustMissing、不貼不投，11-10 深夜；
 #             on_busy="answer" 時不退讓：照樣貼、busy.txt 等它消失，10-31）
 # aos 自己會加的旗標（cli.json 的 flags／print_flags 再寫＝CfgBad，cli_cfg.AOS_FLAGS）：codex＝--skip-git-repo-check、--json、-o／--output-last-message
 #   （codex 不收重複的，寫第二次它退 2）；claude＝-p／--print、--output-format、--session-id、--resume／-r、--continue／-c。有宣告才加、可以重複的
@@ -92,8 +100,8 @@
 #
 # 分檔（11-12 晚 R3 重構拆檔，行為不變）：本檔只留上面的說明與 hook／guard 的執行入口（hook 指令一直指著本檔，不能搬不能改名），
 #   本體在同層：cli_base（錯誤行、PROG／ECHO、共用常數）、cli_cfg（cli.json、llm、system）、cli_mcp（aos 與外部 MCP、tools_sub、guard）、
-#   cli_cell（小格、畫面 socket、session 記號）、cli_print（非互動）、cli_ask（畫面送字、ask、call_main）、cli_hook（hook、history 同步）、
-#   cli_screen（開畫面、attach）。呼叫者直接 import 要用的分檔（例 cli_ask.ask、cli_cell.Cell）；執行期會被換掉或設定的只有
+#   cli_cell（小格、畫面 socket、session 記號）、cli_print（非互動）、cli_ask（畫面投信或送字、ask、call_main）、cli_hook（hook、history 同步）、
+#   cli_screen（開畫面、attach）、cli_a2a（claude 畫面的收件 socket、署名信封、回執；11-13 加）。呼叫者直接 import 要用的分檔（例 cli_ask.ask、cli_cell.Cell）；執行期會被換掉或設定的只有
 #   cli_base 的 die、warn、PROG、ECHO——各分檔一律寫 cli_base.die(…)，所以設 cli_base.X 一處就全部生效（agent_tool 設 PROG／ECHO、
 #   aos-eca 換 die；測試 patch 定義那份，例 cli_ask.live、cli_cell.open）。
 import sys

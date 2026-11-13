@@ -33,10 +33,27 @@ class Handoff:
         except Fail as e:
             self.after = e                                          # 回答照樣接進 history，最後才報（不掉回答）
 
-    def ask(self, cfg, cell, ws, prompt, on_busy, reseed=None):
-        """cli_ask.ask → 回答文字；None＝SessionBad（只有 --on-busy yield 會丟，一定在交出去之前：整批留 cur/，下一次再試）。"""
+    def extra(self, sig, body):
+        """等回答時又交出去的一封（11-13 馬上送）：同 handed 那幾步——接進 history、收信、after_queue；出錯一樣留到最後報。"""
         try:
-            text = cli_ask.ask(cfg, cell, self.template, ws, self.stack, prompt, on_busy, self.handed, reseed)
+            append_history(self.stack, body)
+            must_post(["done", self.box, sig])
+            self.mid = history_sum(self.stack)
+        except Fail as e:
+            self.late = self.late or e
+            return
+        self.good.append(sig)
+        self.bodies.append(body)
+        try:
+            fire("after_queue", {"letter": sig, "content": body["content"]}, self.template, self.stack)
+        except Fail as e:
+            self.after = self.after or e
+
+    def ask(self, cfg, cell, ws, prompt, on_busy, reseed=None, parts=None, more=None):
+        """cli_ask.ask → 回答文字；None＝SessionBad（只有 --on-busy yield 會丟，一定在交出去之前：整批留 cur/，下一次再試）。
+        parts＝[(寄件人名字或 None, 內文)]，一封一項（11-13：畫面開著的 claude 身一封一個署名信封）；more＝等回答時又來的信（midturn.More）。"""
+        try:
+            text = cli_ask.ask(cfg, cell, self.template, ws, self.stack, prompt, on_busy, self.handed, reseed, parts, more)
         except Fail as e:
             if e.code == "SessionBad":
                 return None

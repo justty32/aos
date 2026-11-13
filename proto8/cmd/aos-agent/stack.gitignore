@@ -32,6 +32,9 @@
 **/codex/mcp.json
 **/tmux.conf
 **/busy.txt
+# claude 畫面的收件 socket 路徑與回執（跟這台、這次開的畫面綁在一起；開畫面時重記，11-13）
+**/a2a.json
+**/a2a_acks.jsonl
 **/tools/run_python/main.py
 # 可執行檔工具的定義快取（aos-tools 寫；key 是這台的絕對路徑、stamp 是這台的修改時間，可重建；11-10 aos-tools-cli）
 **/tooldef_cache.json

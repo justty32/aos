@@ -1,10 +1,11 @@
 # aos_agent/chat.py - 逐行寄訊息並等候回答的互動迴圈。
 HELP = """aos-agent chat - send one line per message and wait for each answer
 
-usage: aos-agent [--daemon D] chat [-t NAME]
+usage: aos-agent [--daemon D] chat [-t NAME] [--from WHO]
 
 flags:
   -t, --target NAME   which agent (default: $AOS_AGENT)
+  --from WHO          the sender's name on each message (same as aos-agent say --from)
   -h, --help          show this help
 
 Reads messages from stdin; the prompt goes to stderr and answers go to stdout.
@@ -22,6 +23,7 @@ import sys
 from .common import Fail, bad_args, find, note, parse, target
 from .listen import wait_latest
 from .read_line import read_line
+from . import sender
 
 NOT_UTF8 = ("this line is not UTF-8, not sent; type it again "
             "(a half-erased character usually means the terminal lacks iutf8: stty iutf8)")
@@ -30,10 +32,11 @@ NOT_UTF8 = ("this line is not UTF-8, not sent; type it again "
 def cmd(argv):
     """say＋listen 的迴圈（02「chat 怎麼運作」）：提示符在 stderr、stdout 只有回答；Ctrl-C 退 130、stdin 結束退 0
     （中途印過錯誤行＝退 1：有錯誤行不准退 0，11-05 R1）。"""
-    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",))
+    opts, rest = parse(argv, dict({"--target": "target"}, **sender.FLAG), help=HELP, short=("-t",))
     if rest:
         raise bad_args(HELP, "chat takes no positional arguments: %s (pick the target with --target)" % rest[0])
     a = target(opts)
+    who = sender.sender(opts, HELP)
     note("chatting with %s (Ctrl-C to exit)" % a.name)
     sent, failed = False, False
     try:
@@ -52,7 +55,7 @@ def cmd(argv):
                 continue
             a = find(a.name)            # 11-05 edge-agent：聊到一半被 ctl rm --purge＝原本照寄、把刪掉的 stack 建回來、然後一直等
             before = len(aos_ws.answers(a.stack))
-            aos_ws.put(a.stack, line)
+            sender.put(a, line, who)
             sent = True
             try:
                 wait_latest(a, None, before)
