@@ -24,6 +24,10 @@
 | [`jsonx_search/`](../../../../../proto8/lib/aos/jsonx_search/) | json_search 加料版：follow 穿過 $ref、resolve 在解開 $ref／$env 後的值裡找（都預設關；這兩個不能配 up） |
 | [`jsonx_set/`](../../../../../proto8/lib/aos/jsonx_set/) | json_set 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關） |
 | [`kernel/`](../../../../../proto8/lib/aos/kernel/) | 通用 kernel 的站：讀參數與環境，把掛 proc 那一包交給骨架做一輪。 |
+| [`kernel/letters.py`](../../../../../proto8/lib/aos/kernel/letters.py) | 包 aos-post 的收信、轉寄、拒信、代回與轉寄對照表。 |
+| [`kernel/procs_rules.py`](../../../../../proto8/lib/aos/kernel/procs_rules.py) | 掛 proc 那一包：收下游答案、驗信、先來先掛與白名單及 running 上限。 |
+| [`kernel/queue_fifo.py`](../../../../../proto8/lib/aos/kernel/queue_fifo.py) | 掛 proc 的先來先掛排隊窗與寄件人期限。 |
+| [`kernel/round.py`](../../../../../proto8/lib/aos/kernel/round.py) | 通用 kernel 的骨架：讀設定、鎖收件箱、照五個口做完一輪。 |
 | [`kernel/tests/test_kernel.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel.py) | 用真的 aos-post 信箱驗證框架站的轉寄、代回與重起防重。 |
 | [`llm_forward/`](../../../../../proto8/lib/aos/llm_forward/) | Forward one endpoint request to the kernel named by its pack. |
 | [`llm_forward/tests/test_forward.py`](../../../../../proto8/lib/aos/llm_forward/tests/test_forward.py) | Verify exact forwarding of subprocess streams and status, pack errors, and child accounting. |

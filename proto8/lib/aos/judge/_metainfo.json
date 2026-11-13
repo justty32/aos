@@ -1,7 +1,0 @@
-{"summary": "Apply a judge.json policy to daemon requests for one round, forwarding admitted requests, optionally relaying ordered replies, and replying to refused requests",
- "resource": ["cpu", "disk"],
- "side_effect": true,
- "idempotent": false,
- "deterministic": false,
- "interrupt": "resumable",
- "parallel": false}

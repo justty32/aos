@@ -1,0 +1,12 @@
+{
+  "summary": "Run one kernel round to admit, queue, forward requests and relay replies",
+  "resource": [
+    "cpu",
+    "disk"
+  ],
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "resumable",
+  "parallel": false
+}

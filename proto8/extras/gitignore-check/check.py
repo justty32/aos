@@ -307,8 +307,8 @@ class Check:
                      "foreman": {"exec": "foreman", "auto_restart": True},
                      "judge": {"exec": "judge", "auto_restart": True}}})
         self.daemon(defs / "foreman", {"procs": {"_sweeper": sweeper}})
-        shutil.copytree(PROTO / "kernel/daemon-judge", defs / "judge")
-        self.daemon(defs / "judge", {"exec": {"argv": ["aos-exec", str(PROTO / "lib/aos/judge"), "judge.json"]}, "procs": {"_sweeper": sweeper}})
+        shutil.copytree(PROTO / "kernel/daemon-kernel", defs / "judge")
+        self.daemon(defs / "judge", {"exec": {"argv": ["aos-exec", str(PROTO / "lib/aos/kernel"), "kernel.json"]}, "procs": {"_sweeper": sweeper}})
         self.copy_agent("agent-fsm", defs / "worker")
         self.copy_agent("agent-fsm", defs / "child-worker")
         self.copy_agent("eca-claude", defs / "eca")

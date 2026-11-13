@@ -10,6 +10,23 @@
 
 前情：11-12 收工前「kernel先這樣就好，開工等假日。我自己也要思考一下」。
 
+### 使用者 11-13 在待裁頁的裁定（逐字；題目與選項在 [decide_20261113_wu-top.json](decide_20261113_wu-top.json)，用 id 查）
+
+- `kf-K-F47:A`——問腦總機用 Python 重寫成 `lib/aos/kernel_llm`、刪 C++ 的 `impls/aos-llm-kernel`。
+- `kf-K-F50:B*（備註：可以用unset吧。kernel.json的next感覺有點畫蛇添足。）`——選的是「照條文 N-63：總機照舊看 `AOS_KERNEL`」，翻掉圖紙代定 K-F50。
+- `kb-ctl:A*`——照現況：`aos-daemon-ctl` 是人直接敲板子的保底，「唯一的門」只約束 proc。
+- `t2d-U4:A*`——條文改成現在式「打包＝收工硬凍；軟凍沒做」，kernel 打包算遠期。
+- `mv-q2:C*（備註：這只是用來參考的概念。）`——通用與主觀兩句都留、不二選一。
+
+對這條線的影響：
+
+- K-F47 已准，但調度者代定不變：這週不開問腦那一包、不停樹，今天範圍照舊。
+- K-F50 翻成 B：問腦那包（批 9）的掛信照舊看 `AOS_KERNEL`、問腦的 `kernel.json` 不加 `next`；N-63 那句不用改（批 12 少一項）。避開「總機繼承到給一般 proc 的 `AOS_KERNEL`」那個坑的辦法，照他的備註是起 llm daemon 的殼 `unset AOS_KERNEL`。
+- **備註那句「kernel.json的next感覺有點畫蛇添足」有沒有連框架站的 `next` 一起講，未定**（等使用者確認，兩種讀法見下）。11-11 選項框他對框架站的下一站選過「寫進 judge.json」（N-42 (2)），較大的讀法會翻掉那一題，所以不自己認定。
+  - 最小讀法：只講問腦總機。框架站的 `next` 照圖紙留著；圖紙只改 K-F50 與 04 的「新鍵」表（問腦包拿掉 `next`、`count_daemon` 兩鍵）、衝突 2 改成已裁照條文。批 2 不用改。
+  - 較大讀法：框架站也不要 `next`，下一站看站自己環境裡的 `AOS_KERNEL`（有就轉寄到那、沒有就 `AOS_DAEMON`），要串站就給每一站設各自的 `AOS_KERNEL`、不要往下傳的就 `unset`。要改：K-F3、K-F4、K-F5、K-F6、K-F7 與 01 的鍵表、「下一站」「數量另指」兩節、05 步 2 的測試例與鏈劇本的擺法；批 2 拿掉 `next` 鍵與「寫了 `next` 沒寫 `count_daemon`＝`CfgBad`」那條，改成讀 `AOS_KERNEL`，測試 1、3、4（明寫那半）、7 重寫。`count_daemon`、`reply_via_me`、`forwarded.json`、防重、鎖都不受影響。
+- kb-ctl 選 A：跟圖紙 K-F34 一致，不用改。t2d-U4、mv-q2 不碰這條線的程式。
+
 ## 一、現況盤點（唯讀查到的，影響排法）
 
 - 兩條前提線（kernel 小修、條文）都已在 main（小修 commit `c10175bac`；N-42 已寫「收進同一份框架」）。
@@ -149,3 +166,24 @@
 建議 B 起步、隨時可改 A：批 5 本來就要等修 bug 線，今天排不到。
 
 圖紙原有的待裁（K-F47、K-F50、bridge 題 1、題 3、`aos-daemon-ctl` 的出入）照舊在待裁頁上，這裡不重問；它們卡到哪見第三節。
+
+## 九、施工中的代定（可翻案）
+
+1. **K-F50 備註照最小讀法做（調度者 11-13 代定）**：「可以用unset吧。kernel.json的next感覺有點畫蛇添足。」先當成只講問腦總機；框架站的 `next` 照圖紙做進批 2。若使用者答較大讀法：拿掉 `next` 改讀 `AOS_KERNEL`，重寫批 2 新增測試的 1、3、4、7，約一小時。
+2. **骨架與包的介面（隊長定，圖紙只說「五個口」）**：`round.run(pack, cfg_path, name="kernel")`；包提供 `collect(ctx, before_reply=None)`、`check(ctx)`、`order(ctx, letters)`、`admit(ctx, name, letter)`、`dispatch(ctx, name, letter, detail)` 五個口，另加 `load(cfg, cfg_dir)`（驗自己的鍵）、`refuse(…)`（拒信形狀歸包）、`finish(ctx, queued)`（寫窗）；判決字串 `pass`／`refuse`／`queue`。
+3. **空輪不讀 daemon 的表（照原判官的行為保留）**：所以「從 `AOS_DAEMON` 算出來的轉寄目標就是自己」這種設定錯，要等有信那一輪才報 `CfgBad`；明寫 `next` 指到自己的每輪都報。
+
+## 十、實作結果
+
+### 批 1a（747c48ca9）
+
+`lib/hook_run.py`＋`lib/tests/test_hook_run.py`（10 例）。`lib/agent/hooks.py` 沒動。留給批 1b：改用引擎後「一格兩個錯時先報哪句」會變（on_clock 專用鍵的檢查排到共通鍵之後）；收行程群那段沒用 `process_group.stop`（不等價）。
+
+### 批 2
+
+`lib/aos/judge` → `lib/aos/kernel`：`_entry`（薄殼）、`round.py`（骨架）、`letters.py`、`procs_rules.py`、`queue_fifo.py`、`README.md`；範本 `kernel/daemon-judge` → `kernel/daemon-kernel`，兩份 `judge.json` → `kernel.json`；`extras/gitignore-check/check.py`、`lib/directive_value.py` 註解、`kernel/docs/03-feat-proto.md` 件 4 跟著換。新鍵 `next`、`count_daemon`、`reply_via_me`；代回失敗改成 warning 收掉不重試；鎖 `requests/.flock`（`LockFailed`）。
+
+- 測試：`lib/aos/kernel/tests/test_kernel.py` 原 6 例＋新 10 例全過。
+- `extras/gitignore-check/check.py` 整棵：33 項過、2 項紅——紅的是「追蹤檔含敏感字樣」掃到 `templates/eca-claude/README.md` 裡 `eca-task-subagent` 連結的 `sk-` 三個字（該檔 11-12 的 commit 就有、這批沒碰），跟框架站無關；帶框架站的那幾項（掛 proc 經站、在飛的請求留著、收工不留行程）都過。
+- **要重建什麼**：正在跑的判官重起前刪掉 stack 裡的 `judge_replies/`、`judge_ordered.json`（新程式不認）；定義夾裡的 `judge.json` 改名 `kernel.json`、`daemon.json`／`loop.json` 的 `exec` 改指 `lib/aos/kernel`。`queue.json`、`requests/` 不用動。公司這台的樹沒有判官，不用做。
+- 已知限制（照舊或同類）：轉寄寄出、對照還沒寫進 `forwarded.json` 就被砍的那一瞬間，重起後原信會被當成已轉寄收掉，但回信回來查不到對照、被丟掉（寄件人靠自己的逾時）。

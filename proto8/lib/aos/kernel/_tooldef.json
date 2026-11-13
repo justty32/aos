@@ -1,0 +1,22 @@
+{
+  "description": "Run one kernel round to admit, queue or refuse proc requests, forward them to the next mailbox and optionally relay replies.",
+  "env": [
+    "AOS_STACK"
+  ],
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  },
+  "errors": [
+    "ArgumentsBad",
+    "CfgMissing",
+    "CfgBad",
+    "StackMissing",
+    "DaemonMissing",
+    "StateBad",
+    "MailboxMissing",
+    "CommandMissing",
+    "PostFailed",
+    "LockFailed"
+  ]
+}

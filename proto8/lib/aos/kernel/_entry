@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+# 通用 kernel 的站：讀參數與環境，把掛 proc 那一包交給骨架做一輪。
+import os
+import sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.exit(1)
+
+
+import round
+import procs_rules
+
+HELP = """usage: kernel KERNEL.json   (run with aos-exec as a daemon body or loop proc)
+Run one round: collect replies, claim requests, admit, refuse or queue, then forward.
+KERNEL.json is resolved by aos-directive; relative paths start at its directory.
+Needs AOS_STACK; needs AOS_DAEMON unless next is configured.
+Exit 0 after a round, including an empty inbox; errors go to stderr and exit 1.
+"""
+
+
+def main():
+    tool_io.start("kernel", HELP, echo=False)
+    if len(sys.argv) != 2 or not sys.argv[1]:
+        tool_io.die("ArgumentsBad", "need exactly one argument, the path of kernel.json (usage: kernel KERNEL.json)")
+    return round.run(procs_rules, sys.argv[1])
+
+
+if __name__ == "__main__":
+    sys.exit(main())

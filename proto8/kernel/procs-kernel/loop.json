@@ -1,1 +1,1 @@
-{"exec": {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/aos/judge"}, {"$env": "AOS_CD", "$path": "judge.json"}]}, "interval_ms": 300}
+{"exec": {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/aos/kernel"}, {"$env": "AOS_CD", "$path": "kernel.json"}]}, "interval_ms": 300}
