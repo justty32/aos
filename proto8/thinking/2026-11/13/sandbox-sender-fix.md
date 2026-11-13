@@ -32,6 +32,8 @@
 | T31／T38 | 送給 llm kernel 的信封 `sender`＝`aos::identity()`（`$AOS_WS` 優先），同工作區的 agent 共用一格額度；信箱信封卻是 stack | aos-util 加 `aos::stack_identity()`＝`$AOS_STACK`（空字串算沒設、相對的從 cwd 算、轉絕對）＞`aos::identity()`；aos-post 的 `SendOpts` 加可選 `sender`（不給＝照舊 `identity()`，aos-post 自己的行為不變）；aos-llm 的 `send` 與 `ask`（`send_held`）都改用 `stack_identity()` | `impls/aos-llm/tests/test_sender_stack.py`（4 則：send、相對 stack、沒 stack 退回工作區、ask） |
 | T39 | 額度 key 寫錯不報錯 | 查證：Python 與 C++ kernel 本來就會在 key「不是資料夾」時印 warning（活樹 `procs/llm-gpt/budget_warned.txt` 確實有那行，只是沒人看 stderr；06 說「不提醒」不準）。真正易錯的是 `used.json` 的 key 相對 kernel stack、`kernel.json` 的 key 相對設定檔所在夾。最小改動：① 不是資料夾、而「從 kernel stack 算」對得上時，warning 多寫一句對的路徑；② key 是資料夾卻沒有 `state.json`（不是起過的 proc 的 stack，多半照舊寫成了工作區——改成 stack 之後這種 key 永遠對不上）也印一行。兩邊（`lib/aos/kernel_llm/budget.py`、`impls/aos-llm-kernel/src/budget/budget.cpp`）同一套字 | 兩邊 `test_two_machines.py` 各加 2 則、改 1 則（`agents/here` 補 `state.json`） |
 
+**全套比對撞到一處**（`impls/aos-llm-kernel/tests/test_batch8_live.py`，換新 aos-llm 後紅）：嵌套 kernel 的轉寄器 `lib/aos/llm_forward` 跑在每封請求自己的小格裡（`$AOS_STACK`＝那封的 `requests/cur/<信>`），改 stack 優先後下層 kernel 會把每封看成不同寄件人。改法：轉寄時拿掉 `AOS_STACK`，照舊由 `identity()`（`$AOS_WS`＝上層 kernel）當寄件人，整台上層算一個人；那支測試回綠。
+
 文件與知識庫跟著改：`knowledge/aos/brain.json#/priority`（寄件人＝你的 stack）、`knowledge/aos/cli/sandbox.json`（run、config 兩節）、`kernel/docs/01-llm-kernel.md`、`impls/aos-llm-kernel/{README.md, docs/02, docs/04}`、`impls/aos-llm/docs/01`、`cmd/aos-sandbox/README.md` 與 `examples/shell-boxed/README.md`、`--help`；兩處 gitignore 指南的「sender＝工作區」註解改成分開講。
 
 ## 代定
@@ -40,7 +42,8 @@
 2. 沒有 `$AOS_STACK`（人在殼裡打 `aos-llm ask`）＝退回 `identity()`。
 3. 「不是 proc 的 stack」用「資料夾裡沒有 `state.json`」判斷（daemon 給每個 proc 的 stack 都會寫）。只是提醒、照樣收那格。
 4. T34 自動綁的是**設定檔所在的資料夾**（不是 cwd）；已被 ro／rw 蓋到就不綁，所以不會把 rw 裡的工具夾變唯讀。
-5. T36 `/tmp` 照舊可寫（程式常要暫存）；寫進去的跟以前一樣跑完就沒了。
+5. 工具（例 `templates/judge-llm`）在工具小格裡叫 aos-llm 時，寄件人＝那個小格（它的 `$AOS_STACK`），不是叫它的 agent；在 agent 的 stack 底下、分得出是哪支工具花的，沒再往上收。
+6. T36 `/tmp` 照舊可寫（程式常要暫存）；寫進去的跟以前一樣跑完就沒了。
 
 ## 沒做的
 

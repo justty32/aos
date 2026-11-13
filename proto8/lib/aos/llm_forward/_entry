@@ -24,6 +24,15 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.exit(1)
 
 
+
+def forward_env(kernel):
+    """轉寄時的環境：AOS_LLM_KERNEL 換成下層 kernel；拿掉 AOS_STACK（那是這封請求自己的小格），
+    aos-llm 就照 identity() 算寄件人＝這台 kernel（$AOS_WS）：下層 kernel 把整台上層看成一個寄件人
+    （11-13 線修：aos-llm 改成 $AOS_STACK 優先之後，不拿掉會變成每封一個寄件人）。"""
+    env = {k: v for k, v in os.environ.items() if k != 'AOS_STACK'}
+    env['AOS_LLM_KERNEL'] = kernel
+    return env
+
 def main():
     tool_io.start('llm_forward', echo=False, help_text='''llm_forward - Forward one request to another llm kernel.
 usage: llm_forward [FLAGS] < REQUEST.json   (run with aos-exec)
@@ -58,7 +67,7 @@ Own failure: one error line on stderr, exit 1.
     try:
         result = subprocess.run(['aos-llm', 'ask', '--full'], input=json.dumps(body).encode(),
                                 capture_output=True,
-                                env={**os.environ, 'AOS_LLM_KERNEL': pack['kernel']})
+                                env=forward_env(pack['kernel']))
     except OSError as error:
         tool_io.die('LaunchFailed', str(error))
     if result.returncode:
