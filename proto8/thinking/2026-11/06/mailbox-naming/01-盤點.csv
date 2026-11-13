@@ -118,12 +118,12 @@ M116,reply_box,identifier,aos-llm,<kernel mailbox>/reply位置,n.a.,n.a.,n.a.,n.
 M117,find_reply,identifier,aos-llm,未排序listdir；比對in_reply_to，seen避重讀,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../impls/aos-llm/src/wait/wait.cpp
 M118,box,identifier,aos-llm,recv的自訂回信箱參數,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../impls/aos-llm/src/wait/wait.cpp
 M119,Mailbox,identifier,aos-llm,using aos::post::Mailbox；不是另一型別,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,8,../../../../impls/aos-llm/src/common/common.hpp
-M120,requests/,dir,judge,兩種kernel模式的procs收件箱；容量不足立即拒，不留作隊列,mixed,sort_letters：有序在前按12位序號；無序在後按名字；不保證完成先後,daemon_ctl無ordered；人可send --ordered,take-all，cur舊新合併letter_key排序；verdict→forward/refuse→done,cur-then-delete,no-by-convention,ordered-before-unordered,external,5,../../../../lib/aos/judge/_entry
-M121,_tooldef.json,file,judge,判官執行契約文字；明示不是給腦用的工具,n.a.,n.a.,開發者,工具索引／人,keep,n.a.,n.a.,external,1,../../../../lib/aos/judge/_tooldef.json
-M122,inbox,identifier,judge,requests絕對路徑變數與forward/refuse參數,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../lib/aos/judge/_entry
-M123,ctl_box,identifier,judge,daemon_view讀state取得的轉寄箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../lib/aos/judge/_entry
-M124,letter_key,identifier,judge,有序先、無序後，各按信名字典序,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../lib/aos/judge/_entry
-M125,ORDERED,identifier,judge,辨認12位前綴；轉寄有序信重取號,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../lib/aos/judge/_entry
+M120,requests/,dir,judge,兩種kernel模式的procs收件箱；容量不足立即拒，不留作隊列,mixed,sort_letters：有序在前按12位序號；無序在後按名字；不保證完成先後,daemon_ctl無ordered；人可send --ordered,take-all，cur舊新合併letter_key排序；verdict→forward/refuse→done,cur-then-delete,no-by-convention,ordered-before-unordered,external,5,../../../../lib/aos/kernel/_entry
+M121,_tooldef.json,file,judge,判官執行契約文字；明示不是給腦用的工具,n.a.,n.a.,開發者,工具索引／人,keep,n.a.,n.a.,external,1,../../../../lib/aos/kernel/_tooldef.json
+M122,inbox,identifier,judge,requests絕對路徑變數與forward/refuse參數,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../lib/aos/kernel/_entry
+M123,ctl_box,identifier,judge,daemon_view讀state取得的轉寄箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../lib/aos/kernel/_entry
+M124,letter_key,identifier,judge,有序先、無序後，各按信名字典序,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../lib/aos/kernel/_entry
+M125,ORDERED,identifier,judge,辨認12位前綴；轉寄有序信重取號,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../lib/aos/kernel/_entry
 M126,queue.json,file,judge,規劃，未實作：將列queued窗；現有_entry完全不讀寫此檔,n.a.,n.a.,規劃判官,規劃aos-agent,n.a.,n.a.,n.a.,external,7,../os-impl/05-寄信者自設逾時.md
 M127,queue,json_key,judge,規劃judge.json queue:true啟用等待；現行load_policy只讀allowed/max_running,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,9,../os-impl/03-判官排隊選項.md
 M128,queue_wait_ms,body_key,judge,規劃寄件人最長排隊毫秒；現行判官不驗不採用,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,9,../os-impl/05-寄信者自設逾時.md
