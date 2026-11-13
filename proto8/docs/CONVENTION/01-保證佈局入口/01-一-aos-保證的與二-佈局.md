@@ -33,7 +33,7 @@ agent-fsm/                 一個 agent＝一個資料夾程式（§ 1）
   README.md                說明（怎麼複製、怎麼收緊工具）
 
 workspace/                 ＝$AOS_WS，使用者的（§ 2）；範本不在裡面規定任何檔
-  .stack/                  預設 $AOS_STACK（§ 2）＝這隻的 stack（P-16）；經 _entry 掛上 daemon 時 stack 預設在 <daemon stack>/procs/<名>/，裡面長一樣：
+  .stack/                  預設 $AOS_STACK（§ 2）＝直接 aos-exec 跑時這隻的 stack（P-16）；經 _entry 掛上 daemon 時 stack 預設在 <daemon stack>/procs/<名>/（P-18），裡面長一樣：
     stage.txt              fsm 停在哪格（P-07）
     queue/{tmp,new,cur}/   輸入的信箱（P-11）；idle 接進 history 就收掉
     history.jsonl          對話，一行一則訊息、只附加（P-41）
