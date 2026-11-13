@@ -60,7 +60,10 @@
   "description": "index_gen 取不到檔頭一句話時用的手寫一句話：repo 相對路徑 → 一句話（手寫的優先於檔頭）。"
  },
  "json_text.py": {
-  "description": "把一份 json 展開成給人看、給 git 逐行比的文字（git textconv 用；純標準庫、自足，可整支抄到別的 repo）。"
+  "description": "把一份 json 展開成給人看、給 git 逐行比的文字（git textconv 用；純標準庫；--help 與 --setup 在同夾的 json_text_cli.py，兩支一起整支抄到別的 repo 就能用）。"
+ },
+ "json_text_cli.py": {
+  "description": "json_text.py 的 --help 文字與 --setup（在所在 repo 的 .git/config 設 diff.json_text.textconv）；跟 json_text.py 放同一夾，由它 import，不單獨跑。"
  },
  "metainfo_migrate.py": {
   "description": "Move legacy metainfo estimates and execution limits into separate fields."

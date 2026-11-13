@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""json_text — 把一份 json 展開成給人看、給 git 逐行比的文字（git textconv 用；純標準庫、自足，可整支抄到別的 repo）。
+"""json_text — 把一份 json 展開成給人看、給 git 逐行比的文字（git textconv 用；純標準庫；--help 與 --setup 在同夾的 json_text_cli.py，兩支一起整支抄到別的 repo 就能用）。
 
   json_text.py FILE            展開成逐行文字，印到 stdout（git textconv 就這樣叫）
   json_text.py --md FILE       展開成簡單的 Markdown（每個字串一節，內容原樣）
   json_text.py --setup         在這支所在的 repo 設好 diff.json_text.textconv（只寫該 repo 的 .git/config；重跑不出錯、印現況）
   json_text.py --setup --check 只看不改：設好了退 0，沒設或不一樣退 1
-  json_text.py --help
+  json_text.py --help         （--help、--setup 由同夾的 json_text_cli.py 做；少了它這兩個退 1，展開照常）
 
 預設輸出（照文件順序，key 不排序）：
   #/steps/build            字串節點：一行標頭（JSON Pointer，~ 與 / 轉成 ~0、~1），
@@ -22,38 +22,10 @@
 import json
 import os
 import re
-import subprocess
 import sys
 
 PROG = "json_text"
-KEY = "diff.json_text.textconv"
 USAGE = "(usage: json_text.py [--md] FILE | --setup [--check])"
-HELP = """json_text - expand a JSON file into line-oriented text for humans and for git diff (textconv).
-
-usage: json_text.py [--md] FILE
-       json_text.py --setup [--check]
-  FILE      the JSON file; output goes to stdout as UTF-8
-  --md      print a simple Markdown view instead (one section per string)
-  --setup   set diff.json_text.textconv in the .git/config of the repo this
-            script lives in (safe to rerun; prints the current state)
-  --check   with --setup: only look; exit 0 if set as expected, 1 if not
-  --help    show this help
-
-Default output, in document order (keys are not sorted):
-  #/a/b            a string node: a header line (JSON Pointer), then the content;
-    line one       each content line is indented by two spaces; long lines are
-    ↪ next one      folded after sentence ends, folded lines start with '↪ '
-  #/n = 3          numbers (as written), true/false/null, "", {}, []
-  #/list/-/name    array elements are written as '-', never as an index, so
-                   inserting an element does not change the lines after it
-  #/x = {"$ref": "a.json"}   objects with a '$' key are printed on one line
-Control characters other than tab are shown as \\u000d etc.
-If FILE is not valid JSON (or not UTF-8), a warning goes to stderr, the raw text
-is printed unchanged and the exit code is 0, so git falls back to a plain diff.
-
-git: put 'PATTERN diff=json_text' in .gitattributes, then once per clone run
-  python3 wf/tools/json_text.py --setup      (or: python ... on Windows)
-"""
 
 INDENT = "  "
 FOLD = "↪ "          # marks a folded continuation line (not a newline in the content)
@@ -161,66 +133,22 @@ def fail(what):
     sys.stderr.write("%s: error: %s\n" % (PROG, what))
 
 
-def git(top, *args):
-    return subprocess.run(["git", "-C", top] + list(args), capture_output=True, text=True,
-                          encoding="utf-8", errors="replace")
-
-
-def interpreter():
-    """The name of a Python 3 on PATH, as it should appear in the git config ('python3' or 'python')."""
-    for name in ("python3", "python"):
-        try:
-            r = subprocess.run([name, "-c", "import sys; sys.exit(sys.version_info[0] != 3)"], capture_output=True)
-        except OSError:
-            continue
-        if r.returncode == 0:
-            return name
-    return None
-
-
-def setup(check):
-    here = os.path.dirname(os.path.abspath(__file__))
-    r = git(here, "rev-parse", "--show-toplevel")
-    if r.returncode != 0:
-        fail("NotInRepo %s is not inside a git work tree" % here)
-        return 1
-    top = r.stdout.strip()
-    rel = os.path.relpath(os.path.abspath(__file__), os.path.abspath(top)).replace(os.sep, "/")
-    name = interpreter()
-    if name is None:
-        fail("PythonMissing neither python3 nor python on PATH runs Python 3")
-        return 1
-    want = '%s -B "%s"' % (name, rel) if " " in rel else "%s -B %s" % (name, rel)
-    now = git(top, "config", "--local", "--get", KEY).stdout.strip()
-    used = git(top, "ls-files", ":(attr:diff=json_text)").stdout.split("\n")
-    note = "%d tracked files use diff=json_text" % len([u for u in used if u])
-    if now == want:
-        write("%s = %s (already set; %s)\n" % (KEY, want, note))
-        return 0
-    if check:
-        write("%s is %s, expected %s (%s)\n" % (KEY, repr(now) if now else "not set", want, note))
-        return 1
-    r = git(top, "config", "--local", KEY, want)
-    if r.returncode != 0:
-        fail("ConfigFailed git config: %s" % r.stderr.strip())
-        return 1
-    write("%s = %s (was %s; %s)\n" % (KEY, want, repr(now) if now else "not set", note))
-    return 0
-
-
 def main(argv):
     args = argv[1:]
     if not args:
         fail("ArgumentsBad no FILE given %s" % USAGE)
         return 2
-    if args[0] in ("-h", "--help"):
-        write(HELP)
-        return 0
-    if args[0] == "--setup":
-        if args[1:] not in ([], ["--check"]):
-            fail("ArgumentsBad --setup takes only --check %s" % USAGE)
-            return 2
-        return setup(args[1:] == ["--check"])
+    if args[0] in ("-h", "--help", "--setup"):
+        here = os.path.abspath(__file__)
+        cli = os.path.join(os.path.dirname(here), "json_text_cli.py")      # load by path: works under -I too
+        if not os.path.isfile(cli):
+            fail("CliMissing %s needs json_text_cli.py next to json_text.py" % args[0])
+            return 1
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("json_text_cli", cli)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.main(here, args)
     md = args[0] == "--md"
     if md:
         args = args[1:]

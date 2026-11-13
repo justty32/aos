@@ -17,7 +17,7 @@
 1. **vcpkg**：本機裝在 `~/dev/vcpkg`，`proto8/impls/cmake/settings.cmake` 會自動找到，不用設 `VCPKG_ROOT`；要用別的路徑就設 `VCPKG_ROOT` 環境變數（或 configure 時給 `-DCMAKE_TOOLCHAIN_FILE`）。`git clone --depth 1` 的 vcpkg 會缺各專案 `vcpkg.json` 指定的 baseline commit，要 `git fetch --depth 1 origin <sha>` 補，不必 unshallow。
 2. 照 [testing「proto8」](testing.md#proto8)把 `proto8/impls/` 建一次（repo 根沒有 CMake）。
 3. `proto8/install.sh` 把指令放進 PATH（見下表）。
-4. 內容 json 的 diff：跑一次 `python3 wf/tools/json_text.py --setup`（Windows 可能叫 `python`；重跑無妨，`--setup --check` 只看）——在這個 clone 的 `.git/config` 設 `diff.json_text.textconv`，`git diff`／`show`／`log -p` 碰到 `.gitattributes` 點名的知識庫與 `_index.json`／`_description.json` 就展開成逐行文字再比；沒設照原檔比。`--stat`／`--numstat`／`--shortstat` 不吃這個設定，數的是原檔的行（要看展開後改了幾行就數 `git diff` 本身的 +／- 行）。`git blame` 預設也吃這個設定（要原檔行號加 `--no-textconv`）；要做成 patch 給 `git apply` 用時加 `--no-textconv` 或用 `format-patch`。
+4. 內容 json 的 diff：跑一次 `python3 wf/tools/json_text.py --setup`（Windows 可能叫 `python`；重跑無妨，`--setup --check` 只看；`--help`／`--setup` 由同夾的 `json_text_cli.py` 做，抄到別的 repo 要兩支一起抄）——在這個 clone 的 `.git/config` 設 `diff.json_text.textconv`，`git diff`／`show`／`log -p` 碰到 `.gitattributes` 點名的知識庫與 `_index.json`／`_description.json` 就展開成逐行文字再比；沒設照原檔比。`--stat`／`--numstat`／`--shortstat` 不吃這個設定，數的是原檔的行（要看展開後改了幾行就數 `git diff` 本身的 +／- 行）。`git blame` 預設也吃這個設定（要原檔行號加 `--no-textconv`）；要做成 patch 給 `git apply` 用時加 `--no-textconv` 或用 `format-patch`。
 
 ## 指令表
 
