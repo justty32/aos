@@ -20,7 +20,7 @@
    "description": "Pack gadgets: peek_clock, peek_now_time, math, do_task (fold one task of your own history into a summary; agent-fsm only)."
   },
   "events": {
-   "description": "Pack events: clock_register (clock letters to your queue), self_hook (run a program when something happens to you)."
+   "description": "Pack events: clock_register (clock letters to your queue: every N cycles, once, at a wall-clock time, or cron), self_hook (run a program when something happens to you)."
   },
   "todo": {
    "description": "Pack todo: todo (your own to-do list for a long task: ls, set, add, mark)."
@@ -58,7 +58,7 @@
  "change": "Pack change: Editing files: write (whole file), edit (replace exact text), copy, move (also rename), mkdir. One node per tool: aos/tools/write.json, aos/tools/edit.json, aos/tools/copy.json, aos/tools/move.json, aos/tools/mkdir.json.",
  "delete": "Pack delete: trash (move into your workspace .trash/, can be moved back) and remove (delete for real; a folder needs recursive). One node per tool: aos/tools/trash.json, aos/tools/remove.json.",
  "shell": "Pack shell: shell (one bash command; not a sandbox) and run_python (a short Python program). One node per tool: aos/tools/shell.json, aos/tools/run_python.json.",
- "gadgets": "Pack gadgets: Small handy tools: peek_clock (the daemon clock: current cycle and interval_ms; ClockMissing when you have no daemon clock), peek_now_time (current UTC time), math (one arithmetic expression), do_task (agent-fsm only: start a task in your own conversation and end it with a summary that replaces its messages; see aos/me.json#/do_task).",
+ "gadgets": "Pack gadgets: Small handy tools: peek_clock (the daemon clock: current cycle and interval_ms; ClockMissing when you have no daemon clock), peek_now_time (current UTC time, or local time with local: true), math (one arithmetic expression), do_task (agent-fsm only: start a task in your own conversation and end it with a summary that replaces its messages; see aos/me.json#/do_task).",
  "events": "Pack events: Things that run later: clock_register (a fixed letter every N cycles; leave out box to wake yourself) and self_hook (run a program when something happens to you).",
  "self": "Pack self: Look at and change yourself: self_tools (your tools), self_llm (your brain settings), self_system (your system text), self_state (facts and numbers about you), self_ctl (stop, pause, sleep or remove yourself), self_history (your conversation).",
  "subagent": "Pack subagent: Other agents: subagent (agents you start yourself; counted against your quota) and agents_ctl (any agent on your daemon table; not counted), and fork (agent-fsm only: a copy of yourself, settings and whole conversation, for one goal; only its short conclusion comes back; see aos/agents.json#/fork).",

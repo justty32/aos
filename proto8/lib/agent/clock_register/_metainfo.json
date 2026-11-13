@@ -1,5 +1,5 @@
 {
-  "summary": "Add, remove or list clock letters (aos-clock-register); without box the letter wakes the calling agent",
+  "summary": "Add, remove or list clock letters (aos-clock-register): every N cycles, once (after N cycles or at a wall-clock time) or by cron; without box the letter wakes the calling agent",
   "resource": "cpu",
   "side_effect": true,
   "idempotent": false,

@@ -1,5 +1,8 @@
-"""aos_clock_register 時鐘登記表：時鐘檔旁的 <時鐘檔名>_register.json，每格「每 every 個 cycle 往某個 aos-post 箱子寄一封信」；aos-clock 寄、aos-clock-register 改（11-10 晚 clock-letters）。
-形狀：{"description": …, "letters": {名字: {"every": 正整數, "box": 路徑字串或指示詞物件, "text": 非空字串, "by": 誰登記的（給人看）}}}。
+"""aos_clock_register 時鐘登記表：時鐘檔旁的 <時鐘檔名>_register.json，每格「何時往某個 aos-post 箱子寄一封信」（每 N cycle、某 cycle 一次、牆鐘某時刻一次、cron）；aos-clock 寄、aos-clock-register 改（11-10 晚 clock-letters；11-13 線鐘 wake-timer）。
+形狀：{"description": …, "letters": {名字: {排法, "box": 路徑字串或指示詞物件, "text": 非空字串, "by": 誰登記的（給人看）}}}。
+排法四選一（11-13 wake-timer）："every": 正整數（cycle % every == 0，留著）｜"at_cycle": 非負整數（cycle ≥ 它寄一次、拿掉）｜
+"at_time": 帶時區 ISO（牆鐘 ≥ 它寄一次、拿掉）｜"cron": 五欄＋"next": ISO（牆鐘 ≥ next 寄、next 往後推）。牆鐘只在時鐘走一格時看；
+錯過的（樹睡著）醒來第一格補一次，cron 錯過多次也只一次。到期的格不論寄得到寄不到都算用掉（同 every：寄不到只 warning）。
 box 相對路徑從登記表所在資料夾算；物件＝aos-directive 解（$env、$path…，cwd＝登記表所在資料夾），同 hooks／tools 的寫法。
 寄的信 body 一份形狀兩邊都收：{"role": "user", "content": …}（fsm idle、aos-eca-turn 當一則 user 收進 history）＋ inbox 協議的 from／status／title／what（aos-mailbox 讀得出來）＋ cycle、register。
 fire 只回提醒句子、不丟例外、不印東西：時鐘不能被登記表拖垮（壞表、寄不到＝呼叫方印 warning，時鐘照樣成功）。
@@ -13,6 +16,7 @@ import subprocess
 import sys
 
 import aos_flags
+import aos_clock_when as when_  # 牆鐘排法（at、cron）
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "lib"))
 import directive_value  # noqa: E402  指示詞交給 aos-directive 解的共用版（tool_io 已由 aos_flags 載入）
@@ -22,6 +26,8 @@ SUFFIX = "_register.json"
 KEY = "letters"
 DESCRIPTION = ("Clock register: every EVERY cycles (when the new cycle number divides by EVERY) aos-clock sends TEXT "
                "as one letter to BOX (an aos-post mailbox, e.g. an agent's queue). Edit with aos-clock-register.")
+KINDS = ("every", "at_cycle", "at_time", "cron")   # 一格的排法，四選一
+ONCE = ("at_cycle", "at_time")                      # 寄完拿掉的
 SEND_TIMEOUT_S = 5
 CHECK_EVERY = 100            # 自我檢查的預設間隔（cycle）；登記表頂層 check_every 可改
 NAME_BAD = re.compile(r"[\x00-\x1f\x7f/]")
@@ -48,9 +54,21 @@ def entry_problem(entry):
     """一格的形狀問題（英文）；沒問題＝None。不認得的鍵不管。"""
     if not isinstance(entry, dict):
         return "must be a JSON object"
-    every = entry.get("every")
-    if not isinstance(every, int) or isinstance(every, bool) or every <= 0:
+    kinds = [k for k in KINDS if k in entry]
+    if len(kinds) > 1:
+        return "give only one of %s (got %s)" % (", ".join(KINDS), ", ".join(kinds))
+    kind = kinds[0] if kinds else "every"
+    v = entry.get(kind)
+    if kind == "every" and (not isinstance(v, int) or isinstance(v, bool) or v <= 0):
         return "every must be a positive integer"
+    if kind == "at_cycle" and (not isinstance(v, int) or isinstance(v, bool) or v < 0):
+        return "at_cycle must be a non-negative integer"
+    checks = {"at_time": [("at_time", when_.parse_iso)], "cron": [("cron", when_.parse_cron), ("next", when_.parse_iso)]}
+    for key, check in checks.get(kind, []):
+        try:
+            check(entry.get(key))
+        except (ValueError, TypeError) as e:
+            return "%s: %s" % (key, e)
     box = entry.get("box")
     if not ((isinstance(box, str) and box) or (isinstance(box, dict) and box)):
         return "box must be a non-empty path string or a directive object"
@@ -131,11 +149,37 @@ def is_box(path):
     return all(os.path.isdir(os.path.join(path, d)) for d in ("tmp", "new", "cur"))
 
 
-def body(name, text, cycle):
-    """一封信的 body：fsm／eca 的 queue 收 role＋content，aos-mailbox 讀 from／status／title／what。"""
-    return {"role": "user", "content": aos_flags.aos_note("clock", "cycle %d. %s" % (cycle, text)),
-            "from": "clock", "status": "PROGRESS", "title": "clock cycle %d: %s" % (cycle, name), "what": text,
-            "cycle": cycle, "register": name}
+def kind(entry):
+    """一格的排法（已過 entry_problem）：every、at_cycle、at_time、cron 之一。"""
+    return next((k for k in KINDS if k in entry), "every")
+
+
+def when(entry):
+    """給 ls 看的排法一欄：every＝數字（舊輸出不變）；cycle N；at 時刻；cron 式 next 時刻。"""
+    k = kind(entry) if isinstance(entry, dict) else "every"
+    v = entry.get(k, "?") if isinstance(entry, dict) else "?"
+    if k == "every":
+        return str(v)
+    if k == "at_cycle":
+        return "cycle %s" % v
+    if k == "at_time":
+        return "at %s" % v
+    return "cron %s next %s" % (v, entry.get("next", "?"))
+
+
+def body(name, text, cycle, due=None, now=None):
+    """一封信的 body：fsm／eca 的 queue 收 role＋content，aos-mailbox 讀 from／status／title／what。due＝牆鐘排法的到期時刻（多帶 due 鍵與晚了多久）。"""
+    head = "cycle %d" % cycle
+    if due is not None:
+        head += ", due %s" % when_.show(due)
+        late = when_.late(due, now or when_.now())
+        head += " (%s)" % late if late else ""
+    doc = {"role": "user", "content": aos_flags.aos_note("clock", "%s. %s" % (head, text)),
+           "from": "clock", "status": "PROGRESS", "title": "clock cycle %d: %s" % (cycle, name), "what": text,
+           "cycle": cycle, "register": name}
+    if due is not None:
+        doc["due"] = when_.fmt(due)
+    return doc
 
 
 def last_error(stderr, fallback):
@@ -155,8 +199,20 @@ def send(box, doc):
     return None if r.returncode == 0 else last_error(r.stderr, "aos-post send exited %d" % r.returncode)
 
 
-def fire(clock, cycle):
-    """時鐘剛寫進 cycle：登記表裡 cycle % every == 0 的格各寄一封。回提醒句子的清單（空＝沒事或沒登記表）。不丟例外。"""
+def due_at(entry, cycle, now):
+    """這格這一格該不該寄：(該寄, 牆鐘到期時刻或 None)。"""
+    k = kind(entry)
+    if k == "every":
+        return cycle % entry["every"] == 0, None
+    if k == "at_cycle":
+        return cycle >= entry["at_cycle"], None
+    t = when_.parse_iso(entry["at_time"] if k == "at_time" else entry["next"])
+    return now >= t, t
+
+
+def fire(clock, cycle, now=None):
+    """時鐘剛寫進 cycle：登記表裡到期的格各寄一封（every：cycle % every == 0；at_cycle／at_time／cron 見檔頭）。
+    一次性的寄完拿掉、cron 的 next 往後推（寫回）。回提醒句子的清單（空＝沒事或沒登記表）。不丟例外。now＝牆鐘（測試用）。"""
     path = path_for(clock)
     if not os.path.lexists(path):
         return []
@@ -164,9 +220,11 @@ def fire(clock, cycle):
         doc = load_doc(path)
     except Bad as e:
         return ["clock register skipped: %s" % e]
+    now = now or when_.now()
     letters = doc.get(KEY, {})
     base = os.path.dirname(path)
     warnings = []
+    used = {}                                      # 名字 → 寄時的那格（一次性、cron：寫回用）
     if cycle % check_every(doc) == 0:
         letters = dict(letters)
         warnings += self_check(path, letters, base)
@@ -176,18 +234,45 @@ def fire(clock, cycle):
         if why:
             warnings.append("clock register entry %r skipped: %s" % (name, why))
             continue
-        if cycle % entry["every"]:
+        go, due = due_at(entry, cycle, now)
+        if not go:
             continue
+        if kind(entry) != "every":
+            used[name] = entry                     # 寄得到寄不到都算用掉（同 every：寄不到只提醒一次）
         try:
             box = resolve_box(entry["box"], base, path)
         except Bad as e:
             warnings.append("clock register entry %s: %s" % (name, e))
             continue
-        why = send(box, body(name, entry["text"], cycle))
+        why = send(box, body(name, entry["text"], cycle, due, now))
         if why:
             warnings.append("clock register entry %s: cannot send to %s: %s" % (name, box, why))
+    if used:
+        warnings += write_back(path, used, now)
     return warnings
 
+
+def write_back(path, used, now):
+    """寄過的一次性格拿掉、cron 格的 next 推到 now 之後；寫回前重讀，只動內容跟寄時一樣的格（別人剛換掉的不動）。回提醒句子。"""
+    out = []
+    try:
+        fresh = load(path)
+        for name, entry in used.items():
+            if fresh.get(name) != entry:
+                continue
+            if kind(entry) in ONCE:
+                del fresh[name]
+                continue
+            try:
+                fresh[name] = dict(entry, next=when_.fmt(when_.cron_next(entry["cron"], now)))
+            except ValueError as e:
+                del fresh[name]
+                out.append("clock register: removed entry %s: %s" % (name, e))
+        save(path, fresh)
+    except (Bad, OSError) as e:
+        out.append("clock register: cannot write back %s (one-time entries stay, cron next not moved): %s"
+                   % (path, getattr(e, "strerror", None) or e))
+    return out
 
 
 def self_check(path, letters, base):

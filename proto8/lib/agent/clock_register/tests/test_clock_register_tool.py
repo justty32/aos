@@ -58,6 +58,31 @@ class ClockRegisterTool(unittest.TestCase):
         self.assertEqual([l["body"]["content"] for l in letters], ["[aos] clock: cycle 2. Time to check."])
         self.assertEqual(self.tool({"op": "rm", "name": "wake"}).stdout, "removed wake\n")
 
+    def test_after_at_cron(self):
+        """11-13 wake-timer：after／at／cron 照轉；四選一。"""
+        r = self.tool({"op": "add", "name": "once", "after": 2, "text": "Once."})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("once at cycle 2 (now 0)", r.stdout)
+        self.assertIn("your own queue", r.stdout)
+        self.assertEqual(self.tool({"op": "add", "name": "at", "at": "+1h", "text": "Later."}).returncode, 0)
+        self.assertEqual(self.tool({"op": "add", "name": "mon", "cron": "0 9 * * 1", "text": "Monday."}).returncode, 0)
+        ls = self.tool({"op": "ls"}).stdout
+        self.assertTrue(ls.startswith("NAME\tWHEN\tBOX\tTEXT\n"), ls)
+        self.assertIn("once\tcycle 2\t", ls)
+        self.assertIn("at\tat 20", ls)
+        self.assertIn("mon\tcron 0 9 * * 1 next 20", ls)
+        for _ in range(3):
+            subprocess.run([sys.executable, str(PROTO / "cmd" / "aos-clock" / "bin" / "aos-clock"), str(self.clock)],
+                           check=True, env=self.env)
+        new = self.tmp / "ann" / "queue" / "new"
+        self.assertEqual([json.loads((new / n / "letter.json").read_text())["body"]["content"] for n in os.listdir(new)],
+                         ["[aos] clock: cycle 2. Once."])
+        self.assertNotIn("once\t", self.tool({"op": "ls"}).stdout)
+        out = self.tool({"op": "add", "name": "x", "every": 2, "at": "+1m", "text": "x"}).stdout
+        self.assertIn("clock_register: error: ArgumentsBad give exactly one of every, after, at, cron", out)
+        self.assertIn("ArgumentsBad", self.tool({"op": "add", "name": "x", "after": 0, "text": "x"}).stdout)
+        self.assertIn("clock_register: error: ArgumentsBad cron", self.tool({"op": "add", "name": "x", "cron": "9", "text": "x"}).stdout)
+
     def test_daemon(self):
         (self.tmp / "other").mkdir()
         r = self.tool({"op": "add", "name": "w", "every": 3, "text": "x", "daemon": str(self.tmp / "other")})

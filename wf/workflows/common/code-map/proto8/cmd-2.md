@@ -16,6 +16,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-clock-register`](../../../../../proto8/cmd/aos-clock-register/bin/aos-clock-register) | 時鐘登記表的人用指令：add／rm／ls 時鐘檔旁 <時鐘檔名>_register.json 的格（每 every 個 cycle 往一個 aos-post 箱子寄一句；11-10 晚 clock-letters）。 |
+| [`tests/test_clock_once_cron.py`](../../../../../proto8/cmd/aos-clock-register/tests/test_clock_once_cron.py) | Test aos-clock-register --after/--at/--cron and aos-clock firing them: one-time entries remove themselves, cron moves next, missed ones are sent once… |
 | [`tests/test_clock_register.py`](../../../../../proto8/cmd/aos-clock-register/tests/test_clock_register.py) | Test aos-clock-register add/rm/ls, aos-clock register (the same thing), and aos-clock sending the registered letters (real aos-post; no daemon). |
 
 ## `proto8/cmd/aos-daemon-ctl/`

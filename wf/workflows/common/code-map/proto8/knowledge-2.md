@@ -49,7 +49,7 @@
 | [`cli/tool_env.json`](../../../../../proto8/knowledge/aos/cli/tool_env.json) | （檔頭沒有一句話） |
 | [`cli/tool_flags.json`](../../../../../proto8/knowledge/aos/cli/tool_flags.json) | （檔頭沒有一句話） |
 | [`cli/tools.json`](../../../../../proto8/knowledge/aos/cli/tools.json) | 設定（鍵：_description、registry、add、ls_rm_get、call） |
-| [`clock.json`](../../../../../proto8/knowledge/aos/clock.json) | 設定（鍵：_description、wake_me、rules、quiet_timer、choose） |
+| [`clock.json`](../../../../../proto8/knowledge/aos/clock.json) | 設定（鍵：_description、wake_me、wake_at、rules、quiet_timer、choose） |
 | [`definition.json`](../../../../../proto8/knowledge/aos/definition.json) | 設定（鍵：_description、files、only、overlay） |
 | [`errors.json`](../../../../../proto8/knowledge/aos/errors.json) | 設定（鍵：_description、codes、common、exits） |
 | [`errors/_description.json`](../../../../../proto8/knowledge/aos/errors/_description.json) | （檔頭沒有一句話） |

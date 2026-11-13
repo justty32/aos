@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # aos-clock-register - 時鐘登記表的人用指令：add／rm／ls 時鐘檔旁 <時鐘檔名>_register.json 的格（每 every 個 cycle 往一個 aos-post 箱子寄一句；11-10 晚 clock-letters）。
 # 使用者 11-10 晚：「clock那邊看看能不能加上一個hook，有需要的人可以去註冊」「時鐘這塊幫我改成寄信好了，不要用跑任意aos函數。」「指令是aos-clock-register嗎？」
+# 11-13 線鐘 wake-timer：add 的排法四選一 --every N｜--after N（再過 N cycle 一次）｜--at WHEN（牆鐘一次）｜--cron "M H D M W"（牆鐘重複）；一次性的寄完自己拿掉。
 # 形狀（P-44）：aos-clock-register [-c CLOCK | -d D] 子命令 [旗標] 位置…；-c／-d 子命令前後都收（前後不同＝ArgumentsBad，同 aos-mailbox 的 -s）。
 # 時鐘檔：-c CLOCK ＞ -d D（daemon 的 stack，當成 D/clock；11-10 深夜使用者選「加 -d」）＞ $AOS_CLOCK；-c 與 -d 同時給＝ArgumentsBad。
-#   add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-   BOX 相對路徑從 cwd 算；存進表時同頂層資料夾＝相對登記表資料夾，否則絕對
+#   add (--every N|--after N|--at WHEN|--cron EXPR) --box BOX [--by WHO] [--replace] NAME TEXT...|-   BOX 相對路徑從 cwd 算；存進表時同頂層資料夾＝相對登記表資料夾，否則絕對
 #   rm NAME        沒有那格＝EntryMissing
 #   ls [-j]        一行一格 NAME TAB EVERY TAB BOX TAB TEXT；-j＝{"file", "letters"}；沒登記表＝沒輸出退 0
 # 誰都能登記、拿掉（寫得到登記表就行，不另外擋）；寄不到由 aos-clock 印 warning；箱子資料夾不在了的格，aos-clock 每 check_every 個 cycle（預設 100）自己拿掉（11-10 深夜）。
@@ -17,16 +18,17 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
 import aos_flags  # noqa: E402
 import aos_clock_register as reg  # noqa: E402
+import aos_clock_when as when_  # noqa: E402
 
 PROG = "aos-clock-register"
 SHORT = {"-c": "--clock", "-d": "--daemon"}
-HELP = """aos-clock-register - letters from the clock: every N cycles, send a fixed text to a mailbox
+HELP = """aos-clock-register - letters from the clock: send a fixed text to a mailbox every N cycles, once, or on a wall-clock schedule
 
 usage: aos-clock-register [-c CLOCK | -d D] SUBCOMMAND [FLAGS...] [ARGS...]
        aos-clock-register SUBCOMMAND --help
 
 subcommands:
-  add   add an entry: every N cycles send TEXT to BOX
+  add   add an entry: send TEXT to BOX every N cycles, once (--after, --at), or by cron
   rm    remove an entry
   ls    list the entries
 
@@ -38,7 +40,9 @@ Flags may go anywhere after the name they belong to (-c and -d also after the su
 add's TEXT and everything after it is text.
 
 aos-clock reads the register after each cycle: an entry fires when the new cycle number divides by
-its EVERY (cycles 10, 20, 30... for every 10), and sends one letter with aos-post send. The letter body is
+its EVERY (cycles 10, 20, 30... for every 10), and sends one letter with aos-post send. --after, --at
+and --cron entries are checked at each cycle too (wall-clock ones at most one cycle late; missed while
+the tree slept = sent once at the first cycle after waking). The letter body is
 {"role": "user", "content": "[aos] clock: cycle N. TEXT", "from": "clock", "status": "PROGRESS", "title", "what", "cycle", "register"}:
 an agent's queue takes it as a user message, aos-mailbox reads it as a letter.
 Anyone who can write the register can add or remove entries. A letter that cannot be sent is one warning
@@ -49,10 +53,23 @@ more: proto8/cmd/aos-clock-register/README.md"""
 HELPS = {
     "add": """aos-clock-register add - add an entry to the clock register
 
-usage: aos-clock-register [-c CLOCK | -d D] add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-
+usage: aos-clock-register [-c CLOCK | -d D] add (--every N | --after N | --at WHEN | --cron EXPR)
+                          --box BOX [--by WHO] [--replace] NAME TEXT...|-
+
+when (give exactly one):
+  --every N     send when the cycle number divides by N (a positive integer); stays
+  --after N     send once when the clock reaches now + N cycles; then the entry removes itself
+  --at WHEN     send once at a wall-clock time, local time of this machine; then the entry removes itself.
+                WHEN is HH:MM (today; tomorrow if already past), YYYY-MM-DD HH:MM[:SS], or +N with
+                s, m, h or d (from now, like +10m). A time already past is ArgumentsBad.
+  --cron EXPR   send at wall-clock times by a 5-field cron expression, local time: minute hour
+                day-of-month month day-of-week (like "0 9 * * 1" = Mondays 09:00); stays.
+                Fields take *, N, A-B, */S, A-B/S and comma lists; day of week 0-7 (0 and 7 = Sunday).
+Wall-clock entries are checked when the clock moves a cycle: at most one cycle late. Missed while the tree
+slept: sent once at the first cycle after waking (a cron entry once, however many times it was missed);
+the letter says "due TIME" and how late it is.
 
 flags:
-  --every N     send when the cycle number divides by N (a positive integer)
   --box BOX     an aos-post mailbox folder, e.g. an agent's queue: STACK/queue (relative = from here)
   --by WHO      who added it, shown by ls (default: $AOS_WS, else $AOS_STACK, else this folder)
   --replace     replace an entry with the same NAME (default: EntryExists)
@@ -60,7 +77,9 @@ flags:
 NAME names the entry; TEXT is the fixed text of every letter (- reads it from stdin).
 Flags may go before or after NAME, not after TEXT starts (from TEXT on everything is text).
 A BOX that is not a mailbox yet is only a warning: the entry is added anyway.
-example: aos-clock-register add --every 10 --box stacks/root/procs/ann/queue ann-wake "Check data/ for new files." """,
+example: aos-clock-register add --every 10 --box stacks/root/procs/ann/queue ann-wake "Check data/ for new files."
+         aos-clock-register add --at +15m --box stacks/root/procs/ann/queue ann-standup "Post the status letter."
+         aos-clock-register add --cron "0 9 * * 1" --box stacks/root/procs/ann/queue ann-monday "Weekly review is due." """,
     "rm": """aos-clock-register rm - remove an entry from the clock register
 
 usage: aos-clock-register [-c CLOCK | -d D] rm NAME
@@ -73,7 +92,8 @@ usage: aos-clock-register [-c CLOCK | -d D] ls [-j]
 flags:
   -j, --json   one JSON object {"file": REGISTER, "check_every": N, "letters": {NAME: {every, box, text, by}}}
 
-One line per entry: NAME TAB EVERY TAB BOX TAB TEXT (BOX as stored: relative = from the register's folder).
+One line per entry: NAME TAB WHEN TAB BOX TAB TEXT (BOX as stored: relative = from the register's folder).
+WHEN is the number N for --every, "cycle N" for --after, "at TIME" for --at, "cron EXPR next TIME" for --cron.
 No register yet = no output, exit 0.""",
 }
 
@@ -136,8 +156,47 @@ def identity():
     return os.getcwd()
 
 
+def clock_now(clock):
+    """時鐘檔現在的 cycle（沒檔、空＝0）；壞＝ClockBad。"""
+    try:
+        with open(clock, "rb") as f:
+            text = f.read().strip()
+    except FileNotFoundError:
+        return 0
+    except OSError as e:
+        raise Fail("ClockBad", "cannot read clock file %s: %s" % (clock, e.strerror or e))
+    if text and not text.isdigit():
+        raise Fail("ClockBad", "clock file %s is bad: its content is not a cycle number" % clock)
+    return int(text or b"0")
+
+
+def schedule(opts, clock):
+    """--every／--after／--at／--cron 四選一 → (存進格的鍵值, 給人看的一句)。"""
+    given = [k for k in ("every", "after", "at", "cron") if opts.get(k) is not None]
+    if len(given) != 1:
+        raise Fail("ArgumentsBad", "give exactly one of --every, --after, --at, --cron (got %s)"
+                   % (", ".join("--" + k for k in given) or "none"))
+    k, v = given[0], opts[given[0]]
+    if k in ("every", "after"):
+        if not v.isdigit() or not v.isascii() or int(v) <= 0:
+            raise Fail("ArgumentsBad", "--%s needs a positive integer (got %r)" % (k, v))
+        if k == "every":
+            return {"every": int(v)}, "every %s cycles" % v
+        now = clock_now(clock)
+        return {"at_cycle": now + int(v)}, "once at cycle %d (now %d)" % (now + int(v), now)
+    try:
+        if k == "at":
+            t = when_.parse_at(v)
+            return {"at_time": when_.fmt(t)}, "once at %s" % when_.show(t)
+        nxt = when_.cron_next(v, when_.now())
+        return {"cron": " ".join(v.split()), "next": when_.fmt(nxt)}, "cron %s, next %s" % (" ".join(v.split()), when_.show(nxt))
+    except ValueError as e:
+        raise Fail("ArgumentsBad", str(e))
+
+
 def cmd_add(argv):
-    opts, rest = parse(argv, "add", {"--every": "every", "--box": "box", "--by": "by"}, {"--replace": "replace"},
+    opts, rest = parse(argv, "add", {"--every": "every", "--after": "after", "--at": "at", "--cron": "cron",
+                                     "--box": "box", "--by": "by"}, {"--replace": "replace"},
                        keep=2)   # 11-10 cli-sweep Q3：TEXT 起原樣收（信的內容裡的 - 開頭字不是旗標）
     if len(rest) < 2:
         raise Fail("ArgumentsBad", "give NAME and TEXT (usage: %s add --every N --box BOX NAME TEXT...|-)" % PROG)
@@ -149,27 +208,24 @@ def cmd_add(argv):
     text = text[:-1] if text.endswith("\n") else text
     if not text.strip():
         raise Fail("ArgumentsBad", "TEXT is empty")
-    every = opts.get("every")
-    if every is None or not every.isdigit() or not every.isascii() or int(every) <= 0:
-        raise Fail("ArgumentsBad", "--every needs a positive integer (got %r)" % every)
     if not opts.get("box"):
         raise Fail("ArgumentsBad", "--box needs a mailbox folder")
     path = register()
+    clock = path[:-len(reg.SUFFIX)]
+    plan, said = schedule(opts, clock)
     if not os.path.isdir(os.path.dirname(path)):
         raise Fail("WriteFailed", "the clock's folder %s does not exist" % os.path.dirname(path))
     box = os.path.abspath(opts["box"])
     letters = load(path)
     if name in letters and not opts.get("replace"):
         raise Fail("EntryExists", "entry %s is already in %s (give --replace to replace it)" % (name, path))
-    clock = path[:-len(reg.SUFFIX)]
     if not os.path.exists(clock):
         aos_flags.warn(PROG, "no clock file %s yet: nothing fires until a clock writes it (only the root daemon has one)" % clock)
     if not reg.is_box(box):
         aos_flags.warn(PROG, "%s is not a mailbox yet (no tmp/, new/, cur/); added anyway, the clock warns until it is" % box)
-    letters[name] = {"every": int(every), "box": reg.stored_box(box, os.path.dirname(path)), "text": text,
-                     "by": opts.get("by") or identity()}
+    letters[name] = dict(plan, box=reg.stored_box(box, os.path.dirname(path)), text=text, by=opts.get("by") or identity())
     save(path, letters)
-    print("added %s: every %s cycles to %s" % (name, every, box))
+    print("added %s: %s to %s" % (name, said, box))
 
 
 def cmd_rm(argv):
@@ -201,7 +257,7 @@ def cmd_ls(argv):
         return
     for name in sorted(letters):
         e = letters[name] if isinstance(letters[name], dict) else {}
-        print("\t".join(one_line(x) for x in (name, e.get("every", "?"), e.get("box", "?"), e.get("text", "?"))))
+        print("\t".join(one_line(x) for x in (name, reg.when(e), e.get("box", "?"), e.get("text", "?"))))
 
 
 SUBS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls}

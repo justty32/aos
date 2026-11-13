@@ -1,11 +1,11 @@
-# proto8/cmd/aos-clock-register — 時鐘登記表：每 N 個 cycle 寄一封信
+# proto8/cmd/aos-clock-register — 時鐘登記表：每 N 個 cycle、一次、或照牆鐘排程寄一封信
 
 ← [cmd](../README.md)｜時鐘本體：[aos-clock](../aos-clock/README.md)｜紀錄：[thinking 11-10 clock-letters](../../thinking/2026-11/10/clock-letters/README.md)
 
 使用者 11-10 晚「時鐘這塊幫我改成寄信好了，不要用跑任意aos函數。」「指令是aos-clock-register嗎？」：時鐘檔旁邊放一張**登記表**，每格寫「每幾個 cycle、寄到哪個箱子、寄什麼字」。`aos-clock` 每走一格，新數字除得盡的格就各寄一封（用 `aos-post send`）。最常用的是**定時叫醒一隻 agent**：箱子寫它的 `queue/`，信就當一則 user 訊息進它的對話。
 
 ```
-aos-clock-register [-c CLOCK | -d D] add --every N --box BOX [--by WHO] [--replace] NAME TEXT...|-
+aos-clock-register [-c CLOCK | -d D] add (--every N | --after N | --at WHEN | --cron EXPR) --box BOX [--by WHO] [--replace] NAME TEXT...|-
 aos-clock-register [-c CLOCK | -d D] rm NAME
 aos-clock-register [-c CLOCK | -d D] ls [-j]
 # aos-clock register … 跟 aos-clock-register … 完全一樣（時鐘檔真叫 register 的寫 ./register）
@@ -15,6 +15,8 @@ aos-clock-register [-c CLOCK | -d D] ls [-j]
 
 ```sh
 aos-clock-register add --every 10 --box stacks/root/procs/ann/queue ann-wake "Check data/ for new files."
+aos-clock-register add --at 21:30 --box stacks/root/procs/ann/queue ann-call "Send the report."     # 一次、寄完自己拿掉
+aos-clock-register add --cron "0 9 * * 1" --box stacks/root/procs/ann/queue ann-mon "Weekly review."
 aos-clock-register ls          # ann-wake	10	procs/ann/queue	Check data/ for new files.
 aos-clock-register rm ann-wake
 ```
@@ -31,6 +33,14 @@ aos-clock-register rm ann-wake
   - `by`＝誰登記的，給 `ls`／人看（預設 `$AOS_WS`＞`$AOS_STACK`＞`$AOS_CF`＞cwd；工具填 agent 名字）。
   - 搬家：登記表跟時鐘檔一起帶走（two-machines 分類 G094）；暫存 `.clock_register.json.PID` 不帶（G095）。
 - **什麼時候寄**：`aos-clock` 寫好新數字 n 之後，`n % every == 0` 的格各寄一封。**對齊整數倍**（every 10＝cycle 10、20、30…），不是從登記那刻起算。
+- **排法四選一**（11-13 線鐘 [wake-timer](../../thinking/2026-11/13/wake-timer.md)，使用者「loop fsm有叫醒自己的工具嗎，類似crontime這種」）：
+  - `--every N`＝上面那條，格 `{"every": N}`，留著。
+  - `--after N`＝再過 N 個 cycle 寄一次：格 `{"at_cycle": 現在＋N}`，新 cycle ≥ 它就寄、寄完拿掉。樹睡著 cycle 不走，等待也不走。
+  - `--at WHEN`＝牆鐘某時刻寄一次（本機時區）：`HH:MM`（今天，已過＝明天）、`YYYY-MM-DD HH:MM[:SS]`、`+N` 加 `s`／`m`／`h`／`d`；已過的絕對時刻＝`ArgumentsBad`。格 `{"at_time": "2026-11-13T21:30:00+08:00"}`，寄完拿掉。
+  - `--cron "M H D M W"`＝牆鐘重複，五欄數字（`*`、`N`、`A-B`、`*/S`、`A-B/S`、逗號；週 0～7；日與週都限定時任一符合）。格 `{"cron": …, "next": ISO}`，到 next 寄、next 往後推。
+  - 牆鐘兩種在時鐘每走一格時看（最多晚一格）；樹睡著錯過的，醒來第一格**補一次**（cron 錯過多次也一次），信多 `due` 鍵、content 寫 `cycle N, due 時刻 (late by …)`。
+  - 到期的格寄不到也算用掉（一次性照拿掉、cron 照推；同 every 寄不到只提醒）。寫回前重讀、只動內容沒被換掉的格。
+  - `ls` 第二欄＝排法：every 印數字（舊輸出不變）、`cycle N`、`at 時刻`、`cron 式 next 時刻`。時鐘檔讀不懂（`--after` 要讀現在的 cycle）＝`ClockBad`。
 - **信的 body**（一份形狀兩邊都收）：
   `{"role": "user", "content": "[aos] clock: cycle N. TEXT", "from": "clock", "status": "PROGRESS", "title": "clock cycle N: NAME", "what": "TEXT", "cycle": N, "register": "NAME"}`
   - fsm 的 idle 格、`aos-eca-turn` 只看 `role`＋`content`，當一則 user 訊息收進 history（其他鍵不管）；
@@ -40,6 +50,6 @@ aos-clock-register rm ann-wake
 - **時鐘自己清**（使用者「時鐘本身會每隔一定的cycle檢查自身。」）：新數字 % `check_every`（登記表頂層鍵，正整數，沒寫或壞＝100）== 0 時，箱子資料夾**已經不在**的格從表裡拿掉，各印一行 `aos-clock: warning: clock register: removed entry NAME (added by BY): its box BOX no longer exists`。資料夾還在、只是暫時寄不到（不是信箱、不可寫）的不算；指示詞解不開的判不了、不動。寫回前重讀一次表、只拿掉那幾格；寫不回只 warning。`check_every` 手改登記表設；`add`／`rm` 會照留。
 - `add` 時箱子還不是信箱（沒有 `tmp/ new/ cur/`）＝warning、照加。同名＝`EntryExists`（`--replace` 換掉）；`rm` 沒有那格＝`EntryMissing`；表讀不懂＝`RegisterBad`；寫不了＝`WriteFailed`。錯一律 `aos-clock-register: error: 代號 原因`、退 1。
 - 同時兩個人改表不管（後寫的整份蓋過先寫的）。
-- 測試：`python3 cmd/aos-clock-register/tests/test_clock_register.py`、`python3 lib/agent/clock_register/tests/test_clock_register_tool.py`。
+- 測試：`python3 cmd/aos-clock-register/tests/test_clock_register.py`、`python3 cmd/aos-clock-register/tests/test_clock_once_cron.py`、`python3 py/tests/test_clock_when.py`、`python3 lib/agent/clock_register/tests/test_clock_register_tool.py`。
 
 </details>

@@ -1,5 +1,5 @@
 {
- "description": "Letters from the clock. An entry sends a fixed text to a mailbox every N cycles (at cycles N, 2N, 3N...). Leave out box to send to your own queue: the text then wakes you up as a user message every N cycles. op is add, rm or ls. Examples:\n- wake me every 10 cycles: {\"op\": \"add\", \"name\": \"check-inbox\", \"every\": 10, \"text\": \"Check data/ for new files.\"}\n- remove it: {\"op\": \"rm\", \"name\": \"check-inbox\"}\n- list all entries: {\"op\": \"ls\"}\nErrors: ArgumentsBad, OpUnknown, EntryExists, EntryMissing, ClockMissing, RegisterBad, WriteFailed.",
+ "description": "Letters from the clock: a fixed text sent to a mailbox. Leave out box to send to your own queue: the text then wakes you up as a user message. op is add, rm or ls. add takes exactly one of: every (every N cycles, stays), after (once, N cycles from now, then the entry removes itself), at (once at a wall-clock time, local time of the machine: \"21:30\", \"2026-11-14 09:00\" or \"+10m\" / \"+2h\"; then removes itself), cron (wall-clock times by a 5-field cron expression, local time: \"0 9 * * 1\" = Mondays 09:00; stays). Wall-clock entries are checked when the clock moves (at most one cycle late); missed while the tree slept = sent once on waking, and the letter says how late. Examples:\n- wake me every 10 cycles: {\"op\": \"add\", \"name\": \"check-inbox\", \"every\": 10, \"text\": \"Check data/ for new files.\"}\n- wake me once at 21:30: {\"op\": \"add\", \"name\": \"call\", \"at\": \"21:30\", \"text\": \"Send the report to ann.\"}\n- every Monday 09:00: {\"op\": \"add\", \"name\": \"monday\", \"cron\": \"0 9 * * 1\", \"text\": \"Weekly review is due.\"}\n- remove one: {\"op\": \"rm\", \"name\": \"check-inbox\"}\n- list all entries: {\"op\": \"ls\"}\nErrors: ArgumentsBad, OpUnknown, EntryExists, EntryMissing, ClockMissing, ClockBad, RegisterBad, WriteFailed.",
  "env": [
   "AOS_CLOCK"
  ],
@@ -9,6 +9,7 @@
   "EntryExists",
   "EntryMissing",
   "ClockMissing",
+  "ClockBad",
   "RegisterBad",
   "WriteFailed",
   "WsMissing",
@@ -35,7 +36,19 @@
    },
    "every": {
     "type": "integer",
-    "description": "add: send every this many cycles (a positive integer)"
+    "description": "add: send every this many cycles (a positive integer); the entry stays"
+   },
+   "after": {
+    "type": "integer",
+    "description": "add: send once, this many cycles from now (a positive integer); then the entry removes itself"
+   },
+   "at": {
+    "type": "string",
+    "description": "add: send once at this wall-clock time, local time: HH:MM (today, or tomorrow if past), YYYY-MM-DD HH:MM, or +N with s, m, h or d (like +10m); then the entry removes itself"
+   },
+   "cron": {
+    "type": "string",
+    "description": "add: send at wall-clock times by a 5-field cron expression, local time: minute hour day-of-month month day-of-week (like \"*/15 * * * *\" or \"0 9 * * 1\"); the entry stays"
    },
    "text": {
     "type": "string",
