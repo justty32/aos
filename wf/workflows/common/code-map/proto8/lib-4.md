@@ -37,7 +37,8 @@
 | [`move/`](../../../../../proto8/lib/base/move/) | 搬移或改名一個檔、資料夾或捷徑本身（to 的上層自動建） |
 | [`peek_clock/`](../../../../../proto8/lib/base/peek_clock/) | 看一眼 daemon 的時鐘：讀 $AOS_CLOCK 那個檔，回現在第幾 cycle（11-10 深夜，使用者「peek_clock就是純粹看daemon clock」）。 |
 | [`peek_clock/tests/test_peek_clock.py`](../../../../../proto8/lib/base/peek_clock/tests/test_peek_clock.py) | peek_clock：讀 $AOS_CLOCK 回 cycle 與 interval_ms；沒設或缺檔＝ClockMissing（不當 0）、壞檔＝ClockBad（11-10 深夜 tool-packs）。 |
-| [`peek_now_time/`](../../../../../proto8/lib/base/peek_now_time/) | 在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z） |
+| [`peek_now_time/`](../../../../../proto8/lib/base/peek_now_time/) | 在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z）；{"local": true}＝本機時間帶時區與星期 |
+| [`peek_now_time/tests/test_peek_now_time.py`](../../../../../proto8/lib/base/peek_now_time/tests/test_peek_now_time.py) | Test peek_now_time: no arguments = UTC ending in Z; local true = local ISO with offset and weekday; bad local = ArgumentsBad. |
 | [`read/`](../../../../../proto8/lib/base/read/) | 讀一個文字檔，太長從頭截、告訴你從第幾行接著讀 |
 | [`remove/`](../../../../../proto8/lib/base/remove/) | 真的刪掉一個檔、捷徑或資料夾（rm 的包裝；對比 trash＝丟進工作區的垃圾桶、可以救回） |
 | [`remove/tests/test_remove.py`](../../../../../proto8/lib/base/remove/tests/test_remove.py) | remove（rm 的包裝）：檔、捷徑本身、資料夾要 recursive、. ／.. ／/ 拒絕、工作區外照刪（11-10 tool-packs）。 |

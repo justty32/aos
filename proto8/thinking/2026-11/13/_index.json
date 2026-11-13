@@ -125,6 +125,9 @@
  "tool-stack-path.md": {
   "description": "11-13 fx-2:A 施工紀錄：工具印的 $AOS_STACK 路徑改照叫方的 stack 算，aos-tools 給 AOS_STACK_IN_CALLER，含設計、盤點、代定、要補的條文"
  },
+ "wake-timer.md": {
+  "description": "叫醒自己的計時器（線鐘 11-13 晚）：clock_register 加三種排法——after（再過 N 個 cycle 一次）、at（牆鐘某時刻一次）、cron（牆鐘五欄重複）；一次性的寄完自己消失"
+ },
  "workflows-into-aos.md": {
   "description": "模板 repo（workflows）併入 aos：調查＋意見稿（11-13 下午，線玄；只查只寫、沒改程式、沒寄信）"
  },

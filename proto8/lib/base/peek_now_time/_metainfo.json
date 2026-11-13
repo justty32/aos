@@ -1,5 +1,5 @@
 {
-  "summary": "Print the current UTC time",
+  "summary": "Print the current UTC time, or the local time with offset and weekday (local: true)",
   "resource": "cpu",
   "side_effect": false,
   "idempotent": true,

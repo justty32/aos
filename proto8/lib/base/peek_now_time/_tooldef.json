@@ -1,3 +1,3 @@
-{"description": "Get the current UTC time in ISO 8601, e.g. 2026-10-23T08:00:00Z. No arguments.",
- "parameters": {"type": "object", "properties": {}},
+{"description": "Get the current time. No arguments = UTC in ISO 8601, e.g. 2026-10-23T08:00:00Z. {\"local\": true} = the local time of this machine with its UTC offset and weekday, e.g. 2026-11-13T21:30:00+08:00 Friday (the time clock_register at and cron use).",
+ "parameters": {"type": "object", "properties": {"local": {"type": "boolean", "description": "true = local time of this machine with UTC offset and weekday instead of UTC"}}},
  "errors": ["ArgumentsBad"]}
