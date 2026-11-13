@@ -20,3 +20,10 @@
 | [`tests/test_paths.py`](../../../../../proto8/cmd/aos-tools/tests/test_paths.py) | Test aos-tools path forms: directives in an overriding registry (path and env), add keeping the user's form, --path-json, and the PathMissing line. |
 | [`tests/test_pointer.py`](../../../../../proto8/cmd/aos-tools/tests/test_pointer.py) | Test aos-tools with FILE.json#/POINTER locations: add (stored form, default name), ls -l, get, call through aos-exec, rm by path, and the errors. |
 | [`tests/test_stack_in_caller.py`](../../../../../proto8/cmd/aos-tools/tests/test_stack_in_caller.py) | Test that aos-tools call tells the tool where its cell sits in the caller's stack (AOS_STACK_IN_CALLER=tools/NAME), and drops a stale one when there … |
+
+## `proto8/cmd/aos-tree-start/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`bin/aos-tree-start`](../../../../../proto8/cmd/aos-tree-start/bin/aos-tree-start) | 起一棵樹的根（aos-tree-start root＝aos-exec root）；殼裡帶著 AOS_HOME 以外的 AOS_*（從別棵樹或 agent 的殼繼承來的）就拒絕，除非 --force（11-13 線瑣，agents-feedback T07）。 |
+| [`tests/test_tree_start.py`](../../../../../proto8/cmd/aos-tree-start/tests/test_tree_start.py) | Test aos-tree-start: refuses inherited AOS_* (names only, never values), --force warns and goes on, a clean shell execs aos-exec ARGS (a fake aos-exe… |

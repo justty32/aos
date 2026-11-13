@@ -9,7 +9,9 @@
 
 | 檔 | 負責什麼 |
 |---|---|
+| [`copy_tree.py`](../../../../../proto8/extras/aos-home/copy_tree.py) | 把 repo 某個 commit 的 lib／templates／knowledge／py／kernel 抄進一棵樹，每夾留一份 .aos-source.json 記抄自哪個 commit、何時抄的（11-13 線瑣，agents-feedback T05）。 |
 | [`env.sh`](../../../../../proto8/extras/aos-home/env.sh) | aos-home environment: run "cd ~/aos-home && source env.sh" in every window first. |
+| [`test_copy_tree.py`](../../../../../proto8/extras/aos-home/test_copy_tree.py) | 驗 copy_tree.py：在暫存夾自建小 git repo 與小樹，抄五夾、每夾有 .aos-source.json 記 commit；舊內容被換掉；--stamp-only、--dry-run、髒工作樹提醒與幾種錯。 |
 | [`test_env_sh.py`](../../../../../proto8/extras/aos-home/test_env_sh.py) | 驗 env.sh：bash 與 zsh 都 source 得過，source 後環境裡的 AOS_* 只剩 AOS_HOME（＝env.sh 所在的資料夾），CLAUDE 那三個也清掉。 |
 
 ## `proto8/extras/fake-mcp-http/`
