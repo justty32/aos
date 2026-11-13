@@ -132,6 +132,21 @@ class McpToolThroughAosTools(unittest.TestCase):
             self.assertNotIn(str(stack), r.stdout + r.stderr)
         self.assertNotEqual(*paths)
 
+    def test_image_run_directly_counts_from_its_own_stack_whatever_the_folder_is_called(self):
+        """11-13 fx-2：不再看小格是不是 tools/<名>/ 這個形狀——沒經 aos-tools（沒有 AOS_STACK_IN_CALLER）＝從自己的 $AOS_STACK 算；
+        有給且對得上＝從叫方算（通用做法在 tool_io.place）。"""
+        stack = self.tmp / "someone" / "tools" / "shot"
+        r = self.call("image", AOS_STACK=str(stack))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        match = re.fullmatch(r"\[image saved: \$AOS_STACK/([^/]+) \(image/png, \d+ bytes\)\]\n", r.stdout)
+        self.assertIsNotNone(match, r.stdout)
+        self.assertTrue((stack / match[1]).is_file())
+        r = self.call("image", AOS_STACK=str(stack), AOS_STACK_IN_CALLER="tools/shot")
+        match = re.fullmatch(r"\[image saved: \$AOS_STACK/(tools/shot/[^/]+) \(image/png, \d+ bytes\)\]\n", r.stdout)
+        self.assertIsNotNone(match, r.stdout)
+        self.assertTrue((self.tmp / "someone" / match[1]).is_file())
+        self.assertNotIn(str(self.tmp), r.stdout + r.stderr)
+
     def test_image_through_tools_prints_path_the_caller_can_open(self):
         """經 aos-tools 叫：檔存在工具自己的小格（父 stack/tools/<名>/），提示行的 $AOS_STACK 要從叫工具的那方（腦）的 stack 算，
         照字面就找得到（11-13 外部 MCP 實測：原本印小格裡的 $AOS_STACK/檔，腦在自己的 stack 找不到）；不印絕對路徑。"""

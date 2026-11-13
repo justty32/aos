@@ -4,7 +4,7 @@
 #   包檔是 aos-mcp-import 寫的（或手寫）：mcp_server（怎麼連，mcp_server_file.load 驗）、mcp_tools（鍵＝外部原名，每格 _entry／_tooldef／_metainfo）、tools（登記）。
 #   aos-exec 跑包檔裡那格的 _entry 時 cwd＝包檔的資料夾，所以 --pack 只寫檔名；server 的 cwd＝server 檔（包檔）的資料夾，command 與 args 的相對路徑都從那裡算（11-12 Q2 代定 G13，mcp_server_file.stdio_launch 決定）。
 #   逾時＝那格 _metainfo.timeout_ms（沒寫或不是正數＝60 秒，不是正數另印一行提醒）。
-# 輸出：文字／資源依序印，image／audio 解碼存 $AOS_STACK、提示行印叫工具那方找得到的路徑（shown_path）；最多前 2000 行或 50KB，未知種類保留 placeholder。
+# 輸出：文字／資源依序印，image／audio 解碼存 $AOS_STACK、提示行的路徑走 tool_io.place（經 aos-tools 叫＝從叫方的 stack 算，AOS_STACK_IN_CALLER）；最多前 2000 行或 50KB，未知種類保留 placeholder。
 # 錯：stderr 與 stdout 各一行「mcp_tool: error: 代號 原因」、退 1：ArgumentsBad、FlagUnknown、PackMissing、PackBad、PathMissing、DotenvBad、
 #   ToolUnknown（包檔的 mcp_tools 沒有 NAME）、CommandMissing（server 起不來）、ServerFailed、ServerBad、CommandFailed（逾時）、
 #   CallFailed（server 回 isError：內容照印，最後一行是錯誤行）；mcp_server_file／mcp_client 丟的代號照轉。
@@ -19,7 +19,8 @@ stdin is the external tool's arguments as one JSON object, passed as is (empty =
 --pack and --tool are flags only, not keys on stdin. Timeout: the tool's _metainfo.timeout_ms (default 60000; not a positive number = a warning and the default).
 Result on stdout: text/resources in order; image/audio saved in $AOS_STACK (created only on write),
 shown as [image saved: PATH (MIME, N bytes)]. Run through aos-tools, PATH is written from the caller's
-stack: $AOS_STACK/tools/NAME/FILE (this tool's own $AOS_STACK is that tools/NAME/ folder).
+stack: $AOS_STACK/tools/NAME/FILE (this tool's own $AOS_STACK is that tools/NAME/ folder; aos-tools
+says so in AOS_STACK_IN_CALLER). Run directly, PATH is $AOS_STACK/FILE.
 Only the first 2000 lines or 50KB are shown, followed by a truncation note.
 Unknown content types print [TYPE content not shown]. TERM/INT close the server before exit (128 + signal).
 If the server reports isError, the content is printed and then the error line (CallFailed), exit 1.
@@ -101,17 +102,6 @@ def frozen_cell(pack, tool):
     return tools[tool], ms / 1000.0
 
 
-def shown_path(stack, path):
-    """提示行裡存檔的路徑，要讓叫工具的那方（腦）照字面找得到：經 aos-tools 叫時自己的 $AOS_STACK 是
-    <叫的那方的 stack>/tools/<登記名>/（aos-tools 給 call 的小格），腦讀到的 $AOS_STACK 卻是它自己的 stack——
-    小格是這個形狀就印成從叫的那方算的 "$AOS_STACK/tools/<登記名>/檔"；不是（直接被叫）＝照 tool_io.place。
-    不印絕對路徑：結果行會進 history（N-67 ⑦）。"""
-    cell = os.path.abspath(stack)
-    if os.path.basename(os.path.dirname(cell)) == "tools":
-        return "$AOS_STACK/tools/%s/%s" % (os.path.basename(cell), os.path.basename(path))
-    return tool_io.place(path)
-
-
 def saved_media(content):
     """驗媒體後寫自己的小格；唯一檔名讓平行呼叫互不覆蓋。"""
     kind, mime, encoded = content["type"], content.get("mimeType"), content.get("data")
@@ -132,7 +122,7 @@ def saved_media(content):
     except OSError as e:
         raise tool_io.Error("WriteFailed", "cannot save MCP %s in %s: %s" %
                             (kind, tool_io.place(stack), tool_io.os_reason(e))) from None
-    return "[%s saved: %s (%s, %d bytes)]" % (kind, shown_path(stack, path), mime, len(data))
+    return "[%s saved: %s (%s, %d bytes)]" % (kind, tool_io.place(path), mime, len(data))
 
 
 def limited_text(text):
