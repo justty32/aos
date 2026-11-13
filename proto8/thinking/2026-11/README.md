@@ -18,3 +18,4 @@
 | [2026-11-10](10/README.md) | 16 | 大修前先修（prefix-fixes）：問題清單 207 列分桶、直接修 61 列切五條施工線、A＋B 待裁 2 題 |
 | [2026-11-11](11/README.md) | 16 | 工具 `agents_children` 改名 `subagent`、舊名不留（subagent-rename）；包名 `children` 等相關名字待使用者裁；agent 能改自己的 system 文字（self-system：`aos-agent system`＋`self_system`，fsm 取代、eca 附加） |
 | [2026-11-12](12/README.md) | 34 | eca 不給 aos 基礎檔案工具（claude 用內建、codex `workspace-write`）；knowledge 工具拆除、出廠內容留作普通 json＋`_index`、`index_view`；json 工具 `json_*`／`jsonx_*`／`json_multi_*`（`#/` 照標準）；`_metainfo` 只是約定（裡外都讀、外面贏、壞了不擋）；Q01～Q16 清帳；錯誤行不帶絕對路徑；一條工具登記壞掉不拖垮全部（P-41 改）；kernel 條文改寫與小修、通用 kernel 框架圖紙（沒施工、待看）；eca slash 指令經畫面與 say／chat 都同步；外部 MCP 五步做完（fsm 那條沒做）；auto save 只實測；wf/ 往 aos 走只記原話；ops-notes 與兩隻 Codex 搬進 aos 盤點完（ops-notes-to-aos） |
+| [2026-11-13](13/README.md) | 1 | 公司 WSL 改住 `~/aos-home`（一隻 opus eca）、repo 用 `~/repo/aos`；遊樂場與舊 repo 刪掉 |

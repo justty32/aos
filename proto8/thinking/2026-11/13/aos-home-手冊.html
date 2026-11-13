@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aos-home 手冊</title>
+<!-- aos-home-手冊.html - company WSL ~/aos-home how-to for the user (11-13); every command was run on 11-13 unless marked -->
+<style>
+:root{--bg:#fbfaf7;--fg:#22211f;--mute:#6b675f;--line:#e2ded5;--code:#f1eee7;--acc:#2f6f5e;--warn:#9a5b13;--card:#ffffff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#1b1c1e;--fg:#e9e6df;--mute:#a19d94;--line:#34363a;--code:#26282b;--acc:#7cc4ad;--warn:#e0a85a;--card:#222326}}
+:root[data-theme="dark"]{--bg:#1b1c1e;--fg:#e9e6df;--mute:#a19d94;--line:#34363a;--code:#26282b;--acc:#7cc4ad;--warn:#e0a85a;--card:#222326}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif}
+main{max-width:820px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:1.6rem;margin:.2em 0 .1em}
+h2{font-size:1.15rem;margin:2em 0 .4em;padding-top:.6em;border-top:1px solid var(--line)}
+p{margin:.4em 0}
+.sub{color:var(--mute);margin-bottom:1.2em}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;font:14px/1.5 ui-monospace,Consolas,monospace;position:relative}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.92em;background:var(--code);padding:0 4px;border-radius:4px}
+pre code{background:none;padding:0}
+.see{color:var(--mute);font-size:.94em}
+.first{background:var(--card);border:2px solid var(--acc);border-radius:10px;padding:12px 16px}
+.tag{display:inline-block;font-size:.78em;padding:0 6px;border-radius:4px;border:1px solid var(--warn);color:var(--warn);margin-left:6px;vertical-align:middle}
+.hand{border-color:var(--acc);color:var(--acc)}
+details{margin:.6em 0;border:1px solid var(--line);border-radius:8px;padding:6px 12px;background:var(--card)}
+summary{cursor:pointer;color:var(--mute)}
+button.cp{position:absolute;top:6px;right:6px;font-size:12px;border:1px solid var(--line);background:var(--bg);color:var(--mute);border-radius:4px;padding:1px 6px;cursor:pointer}
+svg{max-width:100%;height:auto}
+svg text{fill:var(--fg);font:13px system-ui,sans-serif}
+svg .box{fill:var(--card);stroke:var(--acc);stroke-width:1.5}
+svg .ln{stroke:var(--mute);stroke-width:1.5;fill:none}
+ul{padding-left:1.3em}
+</style>
+</head>
+<body>
+<main>
+<h1>aos-home 手冊（公司 WSL）</h1>
+<p class="sub">11-13 早從零搭好：一棵樹、一隻懂 aos 的 opus（<code>eca_main</code>，不設花費上限）。下面每條指令 11-13 都實跑過，沒跑過的會標「沒實跑」。所有指令都在 <b>WSL 終端機</b>裡打。</p>
+
+<svg viewBox="0 0 640 150" role="img" aria-label="樹的長相">
+  <rect class="box" x="10" y="50" width="130" height="48" rx="8"/><text x="75" y="72" text-anchor="middle">根 root/</text><text x="75" y="90" text-anchor="middle">aos-exec root</text>
+  <rect class="box" x="200" y="50" width="140" height="48" rx="8"/><text x="270" y="72" text-anchor="middle">領班 daemon/</text><text x="270" y="90" text-anchor="middle">管 agent，工作區 ws/</text>
+  <rect class="box" x="400" y="50" width="120" height="48" rx="8"/><text x="460" y="72" text-anchor="middle">eca_main</text><text x="460" y="90" text-anchor="middle">opus（Claude Code）</text>
+  <rect class="box" x="400" y="112" width="230" height="32" rx="8"/><text x="515" y="133" text-anchor="middle">knowledge/：aos 說明（json）</text>
+  <path class="ln" d="M140 74 H200"/><path class="ln" d="M340 74 H400"/><path class="ln" d="M520 98 L520 112"/>
+  <text x="10" y="30">~/aos-home 一個資料夾就是整棵樹；程式指回 ~/repo/aos</text>
+</svg>
+
+<div class="first">
+<h2 style="border:0;margin-top:0;padding-top:0">今天第一次要先做的</h2>
+<p>1. <b>信任工作區</b> <span class="tag hand">要你親手</span> ：這台的 claude 已經信任過 <code>~/aos-home/ws</code>（11-13 查過是「已信任」），通常不用做。若開畫面時看到 <code>TrustMissing</code>，在那裡開一次 claude、選信任、打 <code>/exit</code>：</p>
+<pre><code>cd ~/aos-home/ws && claude</code></pre>
+<p>2. <b>Windows 那份 repo 不用了</b>：公司現在的 repo 是 WSL 的 <code>~/repo/aos</code>（指令、程式都指它）。</p>
+<p>3. <b>主 session 的 aos MCP</b>：公司 WSL 沒有登記檔（<code>~/.cache/aos-mcp-*</code> 不存在），不用重連。</p>
+</div>
+
+<h2>① 進來、設環境</h2>
+<p>每開一個視窗先打這行。</p>
+<pre><code>cd ~/aos-home && source env.sh</code></pre>
+
+<h2>② 起樹</h2>
+<p>視窗一，前景跑著；Ctrl-C＝整棵停。</p>
+<pre><code>cd ~/aos-home && source env.sh && aos-exec root</code></pre>
+<details><summary>想放背景跑（11-13 實測用的是這個）</summary>
+<pre><code>cd ~/aos-home && source env.sh && (setsid nohup aos-exec root > /tmp/aos-home-root.log 2>&1 < /dev/null &)</code></pre>
+</details>
+
+<h2>③ 確認掛上</h2>
+<pre><code>cd ~/aos-home && source env.sh && cd ws && aos-agent ctl ls</code></pre>
+<p class="see">看到 <code>eca_main	running	/home/guanyu/aos-home/ws</code> 就對。它已經掛好了，<b>不用再 add</b>；停樹再起，它自己醒、對話還在。</p>
+<details><summary>看它有幾支 aos 工具（應該 26 支）</summary>
+<pre><code>cd ~/aos-home && source env.sh && cd ws && aos-agent tools --target eca_main ls | wc -l</code></pre>
+<p>26 支：json 工具（get／set／ls／search／add／del／len、multi_get／multi_set）、<code>index_view</code>、信箱三支、改自己的 <code>self_*</code>、時間、<code>math</code> 等；讀寫檔、跑指令用 Claude Code 自己的 Read／Write／Edit／Glob／Grep／Bash。它叫子 agent（Agent 工具）時，子 agent 那邊只有唯讀 9 支。開頭會印一行 warning「using the definition's tools.json」，正常。</p>
+</details>
+
+<h2>④ 跟 eca_main 講話</h2>
+<p>一行一句、等它回；Ctrl-C 離開，樹照跑。</p>
+<pre><code>cd ~/aos-home && source env.sh && cd ws && aos-agent chat -t eca_main</code></pre>
+<p class="see">先試這句（會花一點 claude 額度）：<code>Use the aos tool index_view on ../knowledge/aos and tell me in one line how many entries it shows.</code>——11-13 它答 20 項、也讀得出 <code>_description.json</code> 的第一句。</p>
+<details><summary>看 Claude Code 的互動畫面 <span class="tag">沒實跑</span></summary>
+<pre><code>cd ~/aos-home && source env.sh && cd ws && aos-agent open -t eca_main</code></pre>
+<p>要真的終端機（11-13 從程式叫沒有畫面可開，所以沒驗）。看到 TrustMissing 就做「今天第一次」第 1 條。</p>
+</details>
+<details><summary>一句話不進 chat</summary>
+<pre><code>cd ~/aos-home && source env.sh && cd ws && aos-agent say --target eca_main 'hello' && aos-agent listen --target eca_main --timeout-s 300</code></pre>
+</details>
+
+<h2>⑤ 停樹</h2>
+<pre><code>aos-daemon-ctl -d ~/aos-home/.stack shutdown</code></pre>
+<p class="see">看到 <code>… stopped …; 3 procs asleep, they wake when it starts again</code>。</p>
+
+<h2>⑥ 存檔、讀檔</h2>
+<p>都要先停樹。存檔＝整份抄一份：</p>
+<pre><code>mkdir -p ~/aos-saves && cp -a ~/aos-home ~/aos-saves/aos-home-$(date +%m%d-%H%M)</code></pre>
+<p>讀檔＝換回來（<code>&lt;存檔名&gt;</code> 換成 <code>ls ~/aos-saves</code> 看到的那個；現在的 aos-home 會被蓋掉）：</p>
+<pre><code>rm -rf ~/aos-home && cp -a ~/aos-saves/&lt;存檔名&gt; ~/aos-home</code></pre>
+<p class="see">11-13 已有一份 <code>~/aos-saves/aos-home-1113-0825</code>（剛搭好、問過一句的樣子），讀回來起樹，eca_main 照樣在、對話也在。</p>
+
+<h2>⑦ repo 更新之後</h2>
+<p>拉新的：</p>
+<pre><code>cd ~/repo/aos && git -c 'url.git@github.com:.insteadOf=https://github.com/' pull --ff-only</code></pre>
+<p>C++ 有改（或不確定）就重 build，再重跑 install：</p>
+<pre><code>cd ~/repo/aos/proto8/impls && cmake -B build && cmake --build build -j4</code></pre>
+<pre><code>~/repo/aos/proto8/install.sh</code></pre>
+<p>指令本來就指回 repo，改了就生效；<b>抄進 aos-home 的 lib、knowledge 不會跟</b>，要重抄（可以不停樹）：</p>
+<pre><code>cd ~/aos-home && rm -rf lib && cp -r ~/repo/aos/proto8/lib . && find lib -name __pycache__ -prune -exec rm -rf {} + && find lib -type d -empty -delete</code></pre>
+<pre><code>cd ~/aos-home && rm -rf knowledge && cp -r ~/repo/aos/proto8/knowledge . && find knowledge -name __pycache__ -prune -exec rm -rf {} +</code></pre>
+<details><summary>py、templates 也有改的話 <span class="tag">沒實跑</span></summary>
+<p>同一個寫法把 <code>lib</code> 換成 <code>py</code> 或 <code>templates</code>。eca_main 的定義（<code>agents/eca_main</code>）是當初從範本抄的，不會跟範本變；要跟就先停樹、照手冊原稿第 ⑥⑦ 步重做一份。</p>
+</details>
+
+<h2>⑧ 加第二隻 agent</h2>
+<p>例：<code>eca_two</code>（opus、不設上限、也找得到 knowledge）。樹起著時，在 <code>ws/</code> 裡打：</p>
+<pre><code>cd ~/aos-home && source env.sh && cd ws && cp -r ~/aos-home/templates/eca-claude ~/aos-home/agents/eca_two && echo '{"model": "opus"}' > ~/aos-home/agents/eca_two/llm.json && aos-json set ~/aos-home/agents/eca_two/cli.json#/print_flags '[]' && cp ~/aos-home/agents/eca_main/system.txt ~/aos-home/agents/eca_two/ && aos-agent ctl add ../agents/eca_two</code></pre>
+<details><summary>拿掉它（會刪它的對話）</summary>
+<pre><code>cd ~/aos-home && source env.sh && cd ws && aos-agent ctl rm --purge -y eca_two && rm -rf ~/aos-home/agents/eca_two</code></pre>
+<p>換模型：<code>echo '{"model": "haiku"}' &gt; ~/aos-home/agents/eca_two/llm.json</code>（在 add 之前改）。要設花費上限：<code>aos-json set ~/aos-home/agents/eca_two/cli.json#/print_flags '["--max-budget-usd", "3"]'</code>（管的是一輪）。</p>
+</details>
+
+<h2>常見卡住的</h2>
+<ul>
+<li><b>TrustMissing</b>：那個工作區 claude 沒信任過 → 「今天第一次」第 1 條。</li>
+<li><b>InstanceExists</b>：同名已經掛著，不用再 add。</li>
+<li><b>aos-agent 找不到領班</b>：要在 <code>~/aos-home/ws</code> 裡打（它看目前資料夾的 <code>./.stack</code>）。</li>
+<li><b>install.sh 說 skip、LinkFailed</b>：<code>~/.local/bin</code> 已有同名連結指別份 repo（11-13 撞過）。看 <code>readlink ~/.local/bin/aos-exec</code>，指的不是 <code>~/repo/aos</code> 就先刪那些舊連結再跑 install。</li>
+<li><b>樹在跑時別整夾重抄 agent 定義</b>：先停樹；lib、knowledge 可以不停。</li>
+<li>eca 每句話都花錢；別把 hook（例如 <code>on_clock</code>）掛在 eca 上。</li>
+</ul>
+
+<details><summary>這棵樹裡有什麼</summary>
+<ul>
+<li><code>root/</code> 根（時鐘、清潔工、領班三列）、<code>daemon/</code> 領班、<code>agents/eca_main</code> 定義（opus、<code>print_flags []</code>＝不設上限、<code>system.txt</code> 告訴它 knowledge 在 <code>../knowledge</code>）、<code>ws/</code> 工作區。</li>
+<li><code>lib py templates knowledge</code> 是 11-13 從 <code>~/repo/aos</code>（<code>2e8eb6736</code>）抄的；<code>env.sh</code> 只設 <code>AOS_HOME</code>＝這棵樹、清掉 CLAUDE 相關變數。</li>
+<li>沒有問腦總機（llm kernel）：eca 自己叫 claude，用不到。</li>
+<li>手冊原稿在 repo <code>proto8/thinking/2026-11/13/aos-home-手冊.html</code>，搭法十七步在 <code>proto8/thinking/2026-11/12/ops-notes-to-aos.md</code>。</li>
+</ul>
+</details>
+</main>
+<script>
+document.querySelectorAll('pre').forEach(function(p){var b=document.createElement('button');b.className='cp';b.textContent='複製';b.onclick=function(){var t=p.querySelector('code').innerText;try{navigator.clipboard.writeText(t);b.textContent='已複製';setTimeout(function(){b.textContent='複製'},1200)}catch(e){}};p.appendChild(b)});
+</script>
+</body>
+</html>

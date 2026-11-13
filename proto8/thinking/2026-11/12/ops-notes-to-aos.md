@@ -39,14 +39,14 @@
 
 使用者原話（11-12 傍晚）：「emmm，說是要移植，但不是說完全移植。我會更傾向於在wsl開闢一個空間，然後從一個daemon、一個懂aos的fable eca開始，一步一步慢慢把東西建立起來」、「不用幫我，告訴我怎麼一步一步做。我自己來」、「啊，其實不用fable啦，opus就夠了」
 
-下面每一步的指令都在公司 WSL 照抄乾跑過（路徑換成 `/tmp/aos-home-dryrun`，跑到掛上 agent、`tools` 25 支、停樹、存檔為止；沒有問腦）。例子用 `~/aos-home` 和 `eca_main`，兩個名字都可以自己取，換的話整份一起換。
+下面每一步的指令 11-13 在公司 WSL 照 main `2e8eb6736` 真搭一次 `~/aos-home` 跑過（掛上 agent、`tools` 26 支、opus 問一句、停樹、存檔讀檔都過，見 [11-13 aos-home](../13/aos-home.md)；repo 是 `~/repo/aos`）。例子用 `~/aos-home` 和 `eca_main`，兩個名字都可以自己取，換的話整份一起換。
 
 ### 先要有的
 
 - `aos-*` 指令在 PATH。今天多了一支 `aos-mcp-launch`（外部 MCP 用），先跑一次 install（已經有的會跳過）：
 
 ```sh
-~/repo/aos-tools/proto8/install.sh
+~/repo/aos/proto8/install.sh
 ```
 
   做完最後一行是 `done: …`（今天這台會多連一支、其餘 already）；`command -v aos-exec` 印出 `~/.local/bin/aos-exec` 就對了。
@@ -67,7 +67,7 @@ mkdir -p ~/aos-home/root ~/aos-home/daemon ~/aos-home/agents ~/aos-home/ws && ls
 抄 `lib`、`py`、`templates`、`knowledge` 四夾，再刪掉快取和已拆工具留下的空殼夾。
 
 ```sh
-cd ~/aos-home && R=~/repo/aos-tools/proto8 && cp -r $R/lib $R/py $R/templates $R/knowledge . && find lib py templates knowledge -name __pycache__ -prune -exec rm -rf {} + && find lib py templates knowledge -type d -empty -delete && ls
+cd ~/aos-home && R=~/repo/aos/proto8 && cp -r $R/lib $R/py $R/templates $R/knowledge . && find lib py templates knowledge -name __pycache__ -prune -exec rm -rf {} + && find lib py templates knowledge -type d -empty -delete && ls
 ```
 
 看到：`agents  daemon  knowledge  lib  py  root  templates  ws`
@@ -82,7 +82,7 @@ cat > ~/aos-home/env.sh <<'EOF'
 unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_SSE_PORT
 unset AOS_DAEMON AOS_KERNEL AOS_CLOCK
 export AOS_HOME=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
-command -v aos-exec >/dev/null || echo "env.sh: aos-exec not on PATH; run ~/repo/aos-tools/proto8/install.sh once" >&2
+command -v aos-exec >/dev/null || echo "env.sh: aos-exec not on PATH; run ~/repo/aos/proto8/install.sh once" >&2
 EOF
 ```
 
@@ -130,7 +130,7 @@ chmod +x ~/aos-home/daemon/_entry && echo '{"interval_ms": 200, "procs_requests"
 cd ~/aos-home && cp -r templates/eca-claude agents/eca_main && echo '{"model": "opus"}' > agents/eca_main/llm.json && aos-json set agents/eca_main/cli.json#/print_flags '[]' && cat agents/eca_main/cli.json
 ```
 
-看到：`"print_flags": []`，flags 是 `--tools Read,Write,Edit,Glob,Grep,Bash`、`--permission-mode dontAsk`、`--allowedTools Write,Edit,Bash`、`--strict-mcp-config`。
+看到：`"print_flags": []`、`"tools_sub": "tools_sub.json"`，flags 是 `--tools Read,Write,Edit,Glob,Grep,Bash,Agent,Skill`、`--permission-mode dontAsk`、`--allowedTools Write,Edit,Bash`、`--strict-mcp-config`。
 
 ### ⑦ 讓它找得到 knowledge
 
@@ -175,7 +175,7 @@ cd ~/aos-home && source env.sh && aos-daemon-ctl -d .stack ls
 cd ~/aos-home && source env.sh && cd ws && aos-agent ctl add ../agents/eca_main && aos-agent ctl ls
 ```
 
-看到：`eca_main	running	/home/<你>/aos-home/ws	0	-`。再確認工具：`aos-agent tools --target eca_main ls | wc -l` 是 `25`。
+看到：`eca_main	running	/home/<你>/aos-home/ws	0	-`。再確認工具：`aos-agent tools --target eca_main ls | wc -l` 是 `26`。
 
 ### ⑪ 跟它講話
 
@@ -203,7 +203,7 @@ Use the aos tool index_view on ../knowledge/aos and tell me in one line how many
 List the names of your aos tools (mcp__aos__*) and count them.
 ```
 
-應該是 25 支，有 `json_get`、`index_view`、`mailbox_send`、`self_system`…，沒有 read、write、shell。
+應該是 26 支，有 `json_get`、`index_view`、`mailbox_send`、`self_system`…，沒有 read、write、shell。
 
 ### ⑬ 停樹
 
@@ -240,11 +240,11 @@ cp -r ~/aos-home/templates/eca-claude ~/aos-home/agents/eca_two && echo '{"model
 `aos-*` 指令是 symlink，repo 一改就生效；抄進來的四夾不會，要重抄。工具改了抄 lib，說明檔改了抄 knowledge（agent 每次讀都是現讀，不用停樹）：
 
 ```sh
-cd ~/aos-home && rm -rf lib && cp -r ~/repo/aos-tools/proto8/lib . && find lib -name __pycache__ -prune -exec rm -rf {} + && find lib -type d -empty -delete
+cd ~/aos-home && rm -rf lib && cp -r ~/repo/aos/proto8/lib . && find lib -name __pycache__ -prune -exec rm -rf {} + && find lib -type d -empty -delete
 ```
 
 ```sh
-cd ~/aos-home && rm -rf knowledge && cp -r ~/repo/aos-tools/proto8/knowledge . && find knowledge -name __pycache__ -prune -exec rm -rf {} +
+cd ~/aos-home && rm -rf knowledge && cp -r ~/repo/aos/proto8/knowledge . && find knowledge -name __pycache__ -prune -exec rm -rf {} +
 ```
 
 ### ⑰ 之後要接外部 MCP
