@@ -29,8 +29,23 @@
 | [`kernel/procs_rules.py`](../../../../../proto8/lib/aos/kernel/procs_rules.py) | 掛 proc 那一包：收下游答案、驗信、先來先掛與白名單及 running 上限。 |
 | [`kernel/queue_fifo.py`](../../../../../proto8/lib/aos/kernel/queue_fifo.py) | 掛 proc 的先來先掛排隊窗與寄件人期限。 |
 | [`kernel/round.py`](../../../../../proto8/lib/aos/kernel/round.py) | 通用 kernel 的骨架：讀設定、鎖收件箱，串起五個口與三個 hook 時機。 |
+| [`kernel/runner.py`](../../../../../proto8/lib/aos/kernel/runner.py) | 「自己跑」零件：把一件工作掛成 daemon 的 proc、看表收成品、逾時、重掛一次、拔列；去處由呼叫的包給。 |
 | [`kernel/tests/test_kernel.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel.py) | 用真的 aos-post 信箱驗證框架站的轉寄、代回與重起防重。 |
 | [`kernel/tests/test_kernel_hooks.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel_hooks.py) | 用真的 aos-post 與 aos-exec 驗證 kernel 三個 hook 時機和排隊時的保存。 |
+| [`kernel/tests/test_runner.py`](../../../../../proto8/lib/aos/kernel/tests/test_runner.py) | 用真的 aos-daemon 與假的端點函數驗「自己跑」零件：掛上、收成品、逾時、重掛一次、放棄。 |
+| [`kernel_llm/`](../../../../../proto8/lib/aos/kernel_llm/) | 問腦總機：讀參數與環境，把問腦那一包交給通用 kernel 的骨架做一輪。 |
+| [`kernel_llm/budget.py`](../../../../../proto8/lib/aos/kernel_llm/budget.py) | 問腦的額度與用量帳：總額、每包、每寄件人的上限與窗，used.json 的讀寫。 |
+| [`kernel_llm/ledger.py`](../../../../../proto8/lib/aos/kernel_llm/ledger.py) | 問腦的逐封帳 ledger.jsonl：只留成本與時間，不存請求內容。 |
+| [`kernel_llm/llm_rules.py`](../../../../../proto8/lib/aos/kernel_llm/llm_rules.py) | 問腦那一包的五個口：收成品、收拾與看信、排序、放不放、掛去跑；回信、撤回與記帳也在這裡。 |
+| [`kernel_llm/order.py`](../../../../../proto8/lib/aos/kernel_llm/order.py) | 問腦的排隊：priority 與期限、aging、排序與後端黏著，窗 queue.json 的讀寫。 |
+| [`kernel_llm/packs.py`](../../../../../proto8/lib/aos/kernel_llm/packs.py) | 問腦的設定與能力包：讀 kernel.json（指示詞用到才解）、查代號、釘死的參數、窗 endpoints.json。 |
+| [`kernel_llm/slots.py`](../../../../../proto8/lib/aos/kernel_llm/slots.py) | 問腦的格數：總格、high 保留格、包格、後端格與同時幾種包，在飛與這輪新掛的一起算。 |
+| [`kernel_llm/tests/test_backends.py`](../../../../../proto8/lib/aos/kernel_llm/tests/test_backends.py) | Verify backend limits, durable switch records, and priority-safe sticky ordering with prepared mailboxes. |
+| [`kernel_llm/tests/test_hooks.py`](../../../../../proto8/lib/aos/kernel_llm/tests/test_hooks.py) | Check the three hook moments on the llm kernel and that add letters go to AOS_KERNEL when it is set. |
+| [`kernel_llm/tests/test_ledger.py`](../../../../../proto8/lib/aos/kernel_llm/tests/test_ledger.py) | Verify kernel finish records fake-brain costs and tolerates ledger write failures. |
+| [`kernel_llm/tests/test_nesting.py`](../../../../../proto8/lib/aos/kernel_llm/tests/test_nesting.py) | Verify nested-kernel error boundaries, ledger fields, and remount invariants with prepared mailboxes. |
+| [`kernel_llm/tests/test_stopped_slot.py`](../../../../../proto8/lib/aos/kernel_llm/tests/test_stopped_slot.py) | Check a brain call someone stopped on the daemon frees its slot after STOPPED_GIVE_UP_S (設計-56). |
+| [`kernel_llm/tests/test_two_machines.py`](../../../../../proto8/lib/aos/kernel_llm/tests/test_two_machines.py) | Check two-machines kernel fixes: in-flight brain calls never pin an absolute endpoint path; budget.senders keys that are not folders warn, and sender… |
 | [`llm_forward/`](../../../../../proto8/lib/aos/llm_forward/) | Forward one endpoint request to the kernel named by its pack. |
 | [`llm_forward/tests/test_forward.py`](../../../../../proto8/lib/aos/llm_forward/tests/test_forward.py) | Verify exact forwarding of subprocess streams and status, pack errors, and child accounting. |
 | [`measure/`](../../../../../proto8/lib/aos/measure/) | Measure isolated cases, costs and repeat consistency as JSON. |

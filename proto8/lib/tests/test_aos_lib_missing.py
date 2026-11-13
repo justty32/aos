@@ -10,7 +10,7 @@ import unittest
 sys.dont_write_bytecode = True
 AOS = Path(__file__).resolve().parents[1] / 'aos'
 # 給腦用的兩邊印；不是給腦用的（tool_io.start(..., echo=False)）只印 stderr
-STDERR_ONLY = {'defs', 'kernel', 'llm_forward', 'measure'}
+STDERR_ONLY = {'defs', 'kernel', 'kernel_llm', 'llm_forward', 'measure'}
 NAME = {'metainfo_check': 'metainfo-check'}
 
 

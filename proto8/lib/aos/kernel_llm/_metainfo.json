@@ -1,0 +1,12 @@
+{
+  "summary": "Run one llm kernel round to collect finished brain calls, reply, and mount the best waiting requests",
+  "resource": [
+    "cpu",
+    "disk"
+  ],
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "resumable",
+  "parallel": false
+}

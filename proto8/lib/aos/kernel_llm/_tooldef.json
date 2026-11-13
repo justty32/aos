@@ -1,0 +1,30 @@
+{
+  "description": "Run one llm kernel round with hooks: collect finished brain calls and reply to their letters, then order the waiting request letters and ask the daemon to run them on endpoint packs within slots and budgets.",
+  "env": [
+    "AOS_STACK",
+    "AOS_DAEMON"
+  ],
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  },
+  "errors": [
+    "ArgumentsBad",
+    "CfgMissing",
+    "CfgBad",
+    "DirectiveBad",
+    "StackMissing",
+    "DaemonMissing",
+    "MailboxMissing",
+    "CommandMissing",
+    "PostFailed",
+    "LockFailed",
+    "QueueBad",
+    "UsedBad",
+    "CounterBad",
+    "ClockBad",
+    "StateBad",
+    "WriteFailed",
+    "HookFailed"
+  ]
+}

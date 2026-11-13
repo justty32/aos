@@ -12,6 +12,7 @@
 | `hooks.py` | 三個事件的設定與回話規則，執行交給共用 hook_run |
 | `procs_rules.py` | 掛 proc 的五個口、設定檢查、白名單與 running 上限 |
 | `queue_fifo.py` | 先來先掛的排隊窗、寄件人期限與時間換算 |
+| `runner.py` | 「自己跑」零件：把一件工作掛成 daemon 的 proc、看表收成品、逾時、重掛一次、拔列；去處由呼叫的包給 |
 
 包提供 `collect(ctx, before_reply=None)`、`check(ctx)`、`order(ctx, letters)`、`admit(ctx, name, letter)`、`dispatch(ctx, name, letter, detail)`，以及 `load(cfg, cfg_dir)`、`refuse(ctx, name, letter, code, msg)`、`finish(ctx, queued)`。設定不對丟 `round.CfgBad`。骨架給的 `ctx` 有 `cfg`、`stack`、`requests`、`name`、`die`、`warn`、`previous`（上一輪的排隊列）與 `queued`（這輪已確定留隊的列）；包需要的輪內狀態自己加。
 
@@ -134,3 +135,12 @@ hooks/<名>/        hook 小格，event.json 是最後一次事件
 | `SlotMissing` | 期限已過或沒有足夠格子且不能排 |
 | `ForwardFailed` | 下一站信箱不在或寄不進去 |
 | `HookRejected` | hook 攔下請求或回信，或改判拒絕但沒有完整 error |
+
+## runner（自己跑）
+
+給「放行＝自己掛去跑」的包用（問腦那一包 [`lib/aos/kernel_llm`](../kernel_llm/README.md)）；掛 proc 那一包用不到。它不決定掛信寄去哪：呼叫的包給掛信信箱 `box` 與 daemon 的 stack `daemon`。一件工作一個資料夾 `job`，也是那個 proc 的 stack 與 cwd；工作的狀態記在 `job/proc.json`（`name`、`exec`、`mount_letter`、`mounted_at`、`retries`，等舊列拔掉時多 `remount`、被人停著時多 `stopped_seen_at`；包自己的鍵原樣留著）。
+
+- `mount(job, name, target, proc, box, daemon, timeout_ms=None)`：寄 `{"procs_added": {name: {"exec": {argv: ["aos-exec", 目標], cwd, stdin: "request.json", stdout: "reply.json", timeout_ms?}, "max": 1, "stack": job}}}`、寫 `proc.json`。目標寫成相對 `AOS_DAEMON`。寄不進丟 `runner.Failed(code, msg)`。
+- `read_table(daemon)`：回 `(列, mailbox_warning)`；窗不在或讀不懂當空的。
+- `settle(job, proc, table, box, daemon, timeout_ms=None, name=None, target_for=None, accept=None, give_up_s=300)`：回 `None`＝還在飛（睡著的列、daemon 還沒套的掛信都算）。跑完回 `{"kind": "exit", "code", "timed_out"}`，成品在 `job/reply.json`、`job/stderr.txt`，並順手寄 `procs_removed`。被收掉、死在半路、沒到時限的 143 重掛一次（列還在就先拔、下一輪才掛），第二次回 `{"kind": "twice"}`。daemon 的 `mailbox_warning` 提到那封掛信或重掛信寄不進回 `{"kind": "launch", "msg"}`。列被人 stop 超過 `give_up_s` 回 `{"kind": "stopped", "name", "seconds"}`。`proc.json` 寫不了回 `{"kind": "write", "msg"}`。`accept(code)` 讓包說「退非 0 但這份成品我認」；`target_for(proc)` 讓包在重掛時重算目標。
+- 怎麼把結果說成回信（代號、訊息）是包的事。

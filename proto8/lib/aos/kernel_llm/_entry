@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+# 問腦總機：讀參數與環境，把問腦那一包交給通用 kernel 的骨架做一輪。
+import os
+import sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE, os.path.join(os.path.dirname(HERE), "kernel")] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.exit(1)
+
+
+import hooks
+import llm_rules
+import packs
+import round
+
+HELP = """usage: kernel_llm [--enable-counters] KERNEL.json   (run with aos-exec as the body of the llm daemon)
+One round of the LLM kernel: collect finished brain calls and reply to their letters, then pick
+the best waiting request letters from $AOS_STACK/requests/ and ask the daemon to run them on an
+endpoint pack. A bad letter is answered with an error reply; it is not the kernel's error.
+Hooks in KERNEL.json run before_verdict, after_verdict and before_reply.
+  --enable-counters   count rounds in $AOS_STACK/counter_kernel_runs.txt
+Needs AOS_STACK and AOS_DAEMON; add letters go to AOS_KERNEL when it is set.
+Exit 0 after a round, including an empty inbox; errors go to stderr and exit 1.
+"""
+USAGE = "usage: kernel_llm [--enable-counters] kernel.json"
+
+
+def load(enable_counters):
+    def read(pack, path):
+        """問腦的設定每組指示詞用到才解，所以不走骨架「整份先過 aos-directive」的讀法；hooks 照骨架驗。"""
+        stack = os.environ.get("AOS_STACK")
+        if not stack:
+            tool_io.die("StackMissing", "AOS_STACK is not set")
+        try:
+            cfg = packs.read_cfg(path, os.path.abspath(stack))
+            cfg["hooks"] = hooks.load(cfg["hooks"], cfg["file"])
+            cfg["host"] = llm_rules.find_host()
+        except tool_io.Error as error:
+            tool_io.die(error.code, str(error))
+        except (ValueError, TypeError) as error:
+            tool_io.die("CfgBad", str(error))
+        cfg["enable_counters"] = enable_counters
+        return cfg
+    return read
+
+
+def main():
+    tool_io.start("kernel_llm", HELP, echo=False)
+    flags = [arg for arg in sys.argv[1:] if arg.startswith("--")]
+    rest = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
+    unknown = [flag for flag in flags if flag != "--enable-counters"]
+    if unknown:
+        tool_io.die("FlagUnknown", "unknown flag %s (%s)" % (unknown[0], USAGE))
+    if len(rest) != 1 or not rest[0]:
+        why = "missing config file" if not rest else "only one config file allowed, got extra %s" % rest[1]
+        tool_io.die("ArgumentsBad", "%s (%s)" % (why, USAGE))
+    # 骨架目前只有一種讀設定的方法（round.load）；等它開口讓包自己讀之前，先在這個行程裡換掉。
+    round.load = load(bool(flags))
+    return round.run(llm_rules, rest[0], name="kernel_llm")
+
+
+if __name__ == "__main__":
+    sys.exit(main())
