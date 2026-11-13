@@ -365,6 +365,16 @@
    "evidence": "proto8/lib/agent/cli_cell.py（mark_session、session_here、drop_session）"
   },
   {
+   "path": "<eca 小格>/a2a.json、a2a_acks.jsonl",
+   "lifetime": "暫時",
+   "writer": "畫面的 hook（lib/agent/cli_hook：SessionStart 把 CLI 的收件 socket 路徑抄進 a2a.json、UserPromptSubmit 看到 aos 投的訊息就在 a2a_acks.jsonl 記一行回執；只有開畫面時帶了記號 a2a 的 hook 才寫）、lib/agent/cli_ask（投了沒回執＝a2a.json 改寫成 {\"off\": 原因}）、lib/agent/cli_screen（開畫面先刪這兩個）",
+   "reader": "lib/agent/cli_ask（live、live_a2a，經 cli_a2a）",
+   "image": "不進：跟這台機器與這次開的畫面綁在一起；cmd/aos-agent/stack.gitignore 擋",
+   "on_bad": "a2a.json 不在、不是 JSON、沒有 socket、那個路徑不是 socket＝不投、照舊貼字；連不上＝warning 一行、照舊貼字；a2a_acks.jsonl 不在、壞行＝當沒回執，CLI 閒著 30 秒就把這個畫面記成不再投、改貼字",
+   "note": "11-13 新增（CONVENTION P-43「畫面開著的 claude 身，信投進 CLI 的收件口」）。新檔，不用重建",
+   "evidence": "proto8/lib/agent/cli_a2a.py（note_socket、note_ack、mark_off、forget、socket_path、acked）、proto8/lib/agent/cli_hook.py（hook_main）、proto8/lib/agent/cli_ask.py（live、live_a2a）、proto8/lib/agent/cli_screen.py（start）"
+  },
+  {
    "path": "$AOS_STACK/think/（pending.txt、reply/ 信箱）",
    "lifetime": "持久",
    "writer": "templates/agent-fsm（brain、wait）",
@@ -510,7 +520,7 @@
    "writer": "lib/agent/cli_session、templates/agent-fsm idle、aos-mcp",
    "reader": "lib/agent/cli_session（busy.txt、turns）、人",
    "image": "不進",
-   "on_bad": "busy.txt 留著＝等到期限不貼；其他沒程式依賴",
+   "on_bad": "busy.txt 留著＝貼字那條路等到期限不貼（走收件口的不等它、照投）；其他沒程式依賴",
    "note": "⑩ 只給人看的紀錄",
    "evidence": "proto8/lib/agent/cli_print.py（print_claude、run_claude_stream）、proto8/lib/agent/cli_ask.py（live）、proto8/templates/agent-fsm/idle.py（take）"
   },
