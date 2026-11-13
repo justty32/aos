@@ -368,5 +368,7 @@ kernel_gate {"op": "on"}
 | `knowledge/aos/kernel.json`、`packs.json` | 複本，下次重抄才有 |
 | `kernel/`、`extras/kernel-chain-check`、條文、thinking | 不在活樹裡用 |
 
+（11-13 23 點註：家機活樹 22:55 換樹到 `54789088d`，表上前三列（`lib/aos/kernel`、`lib/agent/kernel_gate` 與 `lib/packs/kernel_gate.json`、`knowledge/aos/kernel.json`）都已包含在內；「15:08 釘住的 commit 不含」那句以 SESSION-LOG 為準記為過時；公司 WSL 活樹沒查。）
+
 沒有動 `proto8/cmd`、`proto8/py`、被指令直接 import 的 `lib/agent/*.py`：沒有「存檔即生效」的項目。
 

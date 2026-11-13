@@ -334,6 +334,8 @@ wf-agent 對第 2、5、6 條沒表示意見。
 
 **活樹有沒有**：第 1 塊寫的時候以為趕不上今天的重抄（當時說 15:08 釘 commit），實際上 15:24 活樹是從 `159414053` 重抄的，第 1 塊趕上了，`knowledge/wf/`（頂層五份）已在活樹。第 2 塊（`workflows/`、`knowledge/` 兩夾）在那之後才寫，要等**下一次**重抄；在那之前只有 repo 裡有。wf-agent 已在舊 repo 標第 1 塊已搬走（它的 commit `f389372`）。
 
+（11-13 23 點註：家機活樹 22:55 換樹到 `54789088d`，上段說「要等下一次重抄」的第 2 塊——`knowledge/wf/` 底下的 `workflows/`、`knowledge/` 兩夾——已在家機活樹；公司 WSL 活樹沒查。）
+
 **第 2 塊：放哪、為什麼、沒帶的**
 
 - **放哪**：`knowledge/wf/` 底下開兩個夾，照工作區 `wf/` 的佈局——`workflows/`（出廠的工作流節點）與 `knowledge/`（工作流會指過來查的出廠知識）。理由：節點裡寫的 `wf/workflows/tidy.json#/steps`、`wf/knowledge/content-trim.json` 這種路徑，從 knowledge 這層算與從工作區根算是同一串，所以樹裡的 agent 可以直接照知識庫這份做，也可以整個節點抄進工作區再改，路徑都不用動。唯一例外是指到頂層 `wf/tidying.json`、`wf/nodes.json`、`wf/layers.json` 的（工作區裡沒有這三份），寫在 `workflows/_description.json`。

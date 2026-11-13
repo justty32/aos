@@ -117,6 +117,19 @@
 - **代定：`~/aos-home/kernels/llm-gpt/` 留著當正式的 gpt 腦 kernel**。資料夾不收；proc 這輪收尾時已從表上 rm，下一輪試驗用 `aos-daemon-ctl add` 再掛回去。
 - `agent_def check` 兩份都 0 problems。
 
+## 換樹後第二次真工作（11-13 23 點，線隊二）
+
+使用者 11-13 23:00 原話（頂層轉）：「gpt隊可以跑跑看，弄一弄修改一下這樣」。活樹 22:55 已換到 `54789088d`（腦請求寄件人＝stack）。
+
+- **掛回**：`cd ~/aos-home/ws && aos-daemon-ctl -d .stack add --name llm-gpt --auto-restart ../kernels/llm-gpt`（常駐的 gpt 腦，帶 `--auto-restart`；收尾時留在表上）。
+- **每隻額度**（`budget.senders`，絕對路徑；整隊仍是一天 400 次，偏給工人，照使用者「雜事交給 sol」）：`procs/gpt-lead2` 160、`procs/sol-T03` 120、`procs/sol-T04` 120。改前備份在 `~/code/team2-1113/backup/`。
+- **工單**：[real2/blueprint-doc-align.md](gpt-fsm-team/real2/blueprint-doc-align.md)：SESSION-LOG「11-13 文件裡還沒對齊的幾處」裡的兩處，各補一行換樹後的註（只加註、不改原文；先用 git 驗 8 條事實，不成立就 BLOCKED）。
+- **經過**：23:00 起 `gpt-lead2`（新名字，避開舊 stack 的 history）→ astra 寫 T03、起 sol-T03 → sol 驗 F1～F8、用 `edit` 插兩處、跑 C1～C4 → astra 自己重驗、rm sol-T03、23:05 寄 DONE。約 5 分鐘。用量：astra 25 次、37 萬 token；sol 16 次、48 萬 token（上一輪 astra 31 次、52 萬）。
+- **隊長審**：兩檔 numstat 各 `2 0`、插入文字跟圖紙逐字相同、沒動原有任何一行、`git status` 沒有別的檔被隊伍改到。收下、commit。
+- **隊伍設定這輪改的**（都在 `~/aos-home/defs/`，改前整包備份 `~/code/team2-1113/backup/defs-teams-t1-2259.tgz`）：gpt-lead system 第 2 步（工單從最大號往後編、工人照單號命名，T44）；gpt-worker system 兩句（改檔用 edit／write、沒有 apply_patch，T50；短單不用 todo，T49）；`teams/t1/blueprint.txt` 指到 real2。
+- **新試驗紀錄**：06 的 T44～T50。
+- **收尾**：`ctl rm gpt-lead2`（不 purge）；sol-T03 由 astra rm。表上剩 `_sweeper`、`eca_main`、`repo-aos`、`llm-gpt`。
+
 ## 下一步想法（未排）
 
 使用者 11-13 晚原話（逐字，頂層轉）：「然後我這邊還有新的想法，就是說astra指揮sol，目前是默認他們都在同個daemon底下，或是走aos-subagents工具，我在想，或許可以讓astra變成kernel，然後他底下掛sol們，這樣試試看。不過這比較大膽，可以下一步再做。」
