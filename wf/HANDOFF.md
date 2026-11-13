@@ -14,10 +14,10 @@
 
 ## 2026-11-13 公司 WSL 頂層（repo-aos）收工草稿
 
-（14:00 前後起草、15:40 補停樹結果、16:15 補線戌、線卯與「下一個接手的是家機」。還標 【待補1113】 的只剩 push 一處。）
+（14:00 前後起草，15:40、16:15、16:35 各補一輪；沒有待補的記號了。）
 
 1. **授權與工作方式**：公司 WSL，頂層就是 `~/aos-home` 樹裡的一隻 eca `repo-aos`（工作區 `~/repo/aos`、只有 `main`）。使用者開場：「事情盡量都交給agent做，普通工作交給opus，簡單工作或雜活交給sonnet。agent做事前都要讀過wf/規矩，簡單工作或雜活除外。agent可以再派子agent，模型隨意。我今天五點下班，下班前再統一push。」；「都可以用fable帶隊」「fable多多的用，因為明天額度重置」（**只限今天**，明天起回到 user.md 的「fable 盡量少用」）；「都可以清、都可以下載。」「反正有需要我判斷的東西就丟桌面」（要他裁的做成頁放 Windows 桌面）。**`eca_main` 派來的普通工作算使用者的授權；push、刪檔這類不可逆或對外的仍要他本人說**（「1.算。」「2.對。」，已寫進 [AGENTS 鐵律 2](../AGENTS.md)）。停樹、起樹只由使用者自己下（15:13 他同意今天那次由 `eca_main` 代）。**這台公司機 17:00 關機，下一個接手的是家機上的 session**（使用者 16:08：「今天五點下班後，我就是關機，回到家用另一台電腦」）。
-2. **push**：今天的 commit 都沒推——寫這條時 `git log origin/main..main` 是 88 個（另加這一輪文書）；下班前統一推一次，推之前跟他說一聲、他說推才推。【待補1113】 推了沒、推到哪個 hash。
+2. **push**：收工前由調度者問使用者（他開場說「下班前再統一push」），他說推才推；推了沒看 `git status -sb` 的 ahead 數（沒有 ahead＝推了）。push 前做過兩筆隱私修正（`5a87aa55b`、`233ca54fa`）。
 3. **今天定下的**（原話與細節都在 [thinking 11-13](../proto8/thinking/2026-11/13/README.md)、[日誌](session_logs/2026-11/2026-11-13.md)）：
    - 公司 WSL 改住 `~/aos-home`、repo 用 `~/repo/aos`，舊遊樂場與舊 repo 全刪（[aos-home](../proto8/thinking/2026-11/13/aos-home.md)）；主 session 四題定案、家機也要改成樹裡的一隻（[main-session-in-aos](../proto8/thinking/2026-11/13/main-session-in-aos.md)）。
    - 三輪裁定：精選 17 題、第二輪 43 題（38 題有裁）、對話裡的 kernel 七題與 ops、a2a 各題——落在哪見 [裁定落地-1113](../proto8/thinking/2026-11/13/裁定落地-1113.md)（它的兩張待施工表比 git log 舊）；條文線辛、線丑、線午、線寅都改完。大頁 128 題還剩 109 題。
@@ -46,11 +46,14 @@
 7. **repo 外的暫存夾**（`~/code/` 底下 13 個——16:05 多了 `tian-1113` 與 `wf-agent-scratch-1113`〔`wf-agent` 五份報告的抄本，`/tmp` 那份重開機會沒〕，都沒刪，要不要刪列在 [wait-user/04](wait-user/04-雜事.md)）：`kf2-1113`（停樹腳本、備份、三份補丁——補丁進 main 前不能刪）、`kbuild-1113`、`xu-1113`（線戌成品）、`you-1113`、`shen-try-1113`、`a2a-build-1113`、`a2a-try-1113`、`mcp-try-1113`、`ops-try-1113`、`si-try-1113`、`six-try-1113`。
 8. **測試**：全套今天跑過三次都只紅既有 4 支（早上 66 夾 1354 例、線乙 1357 例、線庚 1412 例）；11:41 線己二試跑一次是 4 夾紅（`cmd/aos-agent/tests`、`extras/gitignore-check/tests`、`lib/aos/box_check/tests`、`templates/tests`，原因沒寫）；kernel tests 整夾 18 次裡第一次紅 1 例、原因沒查到。15:08 釘住的 `159414053` 在乾淨複本跑全套：68 夾 1592 例只紅既有 4 支（aos-agent `test_daemon_down` 2、box_check `test_acceptance` 2）。
 9. **下一個接手的是家機**（公司機 17:00 關機；先 `git pull`）：
-   - **家機能做的**：開兩份待裁頁原稿作答——[aos-1113-收工待裁.html](../proto8/thinking/2026-11/13/aos-1113-收工待裁.html)（24 題 W1～W23＋W9b，資料檔 `decide_20261113_shougong.json`、批名 `1113-shougong`）與精簡的「優先裁」頁（原稿預計 `aos-1113-優先裁.html`，寫這條時還沒 commit）；不需要活樹的 repo 工作（已裁還沒施工兩件：`set-def` 改「停→拔→同一個 stack 掛回」fx-1:B、跑過的 agent 換定義後照「睡醒」提醒在等的信 em-Q2:B；kernel 批 7b、11b、12 等）；[WAIT_USER 02](wait-user/02-真機驗證.md) 的家機題（kernel 問腦那包回家用真腦驗＝批 13、14；fsm 真腦跑一晚）；家機的主 session 改成樹裡的一隻（ms-2）。
+   - **家機能做的**：待裁頁使用者 16:13 已答、16:24 補「喔喔，我都看過了，應該算就按照推薦」：21 題裁定、W3／W9／W10 未裁，逐題落地表在 [收工待裁-回覆落地](../proto8/thinking/2026-11/13/收工待裁-回覆落地.md#逐題落地表)，**都還沒施工**——不需要活樹的幾件家機就能照表做（W7、W16、W17、W18、W23；W6 與 W8 動的是公司機的檔、回公司機做）；頁面原稿 [aos-1113-收工待裁.html](../proto8/thinking/2026-11/13/aos-1113-收工待裁.html)（24 題 W1～W23＋W9b，資料檔 `decide_20261113_shougong.json`、批名 `1113-shougong`）與精簡的 [aos-1113-優先裁.html](../proto8/thinking/2026-11/13/aos-1113-優先裁.html)；不需要活樹的 repo 工作（已裁還沒施工兩件：`set-def` 改「停→拔→同一個 stack 掛回」fx-1:B、跑過的 agent 換定義後照「睡醒」提醒在等的信 em-Q2:B；kernel 批 7b、11b、12 等）；[WAIT_USER 02](wait-user/02-真機驗證.md) 的家機題（kernel 問腦那包回家用真腦驗＝批 13、14；fsm 真腦跑一晚）；家機的主 session 改成樹裡的一隻（ms-2）。
    - **家機做不了的**：任何要公司這棵活樹的驗證、下次重抄、workflows 併入第 3、4 塊落檔（備料在公司機的模板 repo `/mnt/c/code/mine/workflows`，`wf-agent` 有沒 push 的 commit、含 `aos-prep`，家機看不到，除非它 push）、kernel 批 5 接線＋6、10（補丁只在公司機 `~/code/kf2-1113/`）。
    - **關機會沒的**：`/tmp` 底下全部（調度者的 scratchpad、`/tmp/kf2f/` 的全套輸出、`wf-agent` 的 scratchpad——它五份報告已抄到 `~/code/wf-agent-scratch-1113/`）；活樹 `~/aos-home` 跟著停。
    - **留在公司機磁碟、家機拿不到的**：`~/code/` 底下 13 個暫存夾（`kf2-1113` 含停樹腳本、備份與三份補丁，`kbuild-1113` 預編的 daemon，`xu-1113`，`wf-agent-scratch-1113`…）、`~/aos-home` 整棵樹與各 agent 的信箱留底、Windows 桌面的 html（兩份待裁頁的原稿進版控）、模板 repo。
    - **公司機下次開工照順序**：① 起樹——`cd ~/aos-home && source env.sh`，在 agent 的 shell 裡起要先清掉全部 `AOS_*`（今天 15:24:54 起錯的原因；`env.sh` 正本在 `proto8/extras/aos-home/`）；② 重抄——帶 `lib` 底下五份 `_index.json`、`knowledge/wf` 第 2 塊、knowledge 補的 `env.sh` 那句、新版 `hooks.py`，要再走一次停樹換料流程（腳本 `~/code/kf2-1113/stop-tree/`，`ST_REF` 另釘、先在乾淨複本跑全套）；③ 收 `wf-agent` 的新 commit 落第 3、4 塊（已放行的只有 kernel 薄流程與 dev 包，其餘五包等使用者裁 W21；計畫在 [workflows-into-aos § 第 3、4 塊落檔計畫](../proto8/thinking/2026-11/13/workflows-into-aos.md#第-34-塊落檔計畫先不落檔等調度者通知)）。
+   - **照落地表施工（下次開工，兩台分著做）**：W7 改 AGENTS「單機開發」那句成現況、W16 知識庫 tidy 補第 6 條「收斂優先於拆檔」、W23 三處 `AOS_HOME` 等對齊、W17 檔案格式推薦一句（先查 `aos-json set` 實際輸出）、W18 docs/02 補一句、W6 清個人設定檔的舊信任紀錄（改前備份、動的是 repo 外的檔）、W8 刪暫存夾（刪前名單給使用者看；留 `kf2-1113`、`wf-agent-scratch-1113` 與他點名的）；併入時照做的：W12＝B、W15＝B、W14、W21＝B（只併 kernel、dev 兩批）、W22＝A。
+   - **lint／check 要不要留（未裁，方向題）**：使用者「我很討厭wf-lint這東西，很想把它刪掉」「這種check啦，lint啦，之類的測試用的東西都是阻礙開發的。開發初期不該有這種東西。」；調度者擺了三種讀法問他、並問 14:53「檢查工具，wf/的那邊就完全不留」是不是也指 aos 的 `wf/tools`，**他還沒答，答之前照舊**；盤點在 [收工待裁-回覆落地 § lint／check 盤點](../proto8/thinking/2026-11/13/收工待裁-回覆落地.md#lintcheck-盤點)。
+   - **wf-agent 備料最終 commit `f3d70ea`**（取代 `7db5ccc`／`158dbd2`；複核報告抄在 `~/code/wf-agent-scratch-1113/prep-audit2.md`）：第 3、4 塊下次在公司機落，沒有卡住的題；它 repo 的 push 它問了使用者、未答；它新增的 for_user 題下次彙整帶上。
    - **文件沒回頭標的**：[裁定落地-1113](../proto8/thinking/2026-11/13/裁定落地-1113.md) 的 em-Q1、cv-P14 兩列與幾處已做沒標的（kf-next、kf-t1、a2a、ms-1），下次動它的人補；其餘 open 看 [SESSION-LOG](SESSION-LOG.md)，`wf/inbox` 是空的。
 
 ## 2026-11-12 23:00 家機頂層關機前
