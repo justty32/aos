@@ -38,8 +38,8 @@
  "ideas": {
   "description": "ideas 工作流（舊）：09-05 那代的 aos 構想入口，正文已在 10-13 封存，只留脈絡；使用者說「我有個 idea」時現行落點改在 proto8/docs/CONCEPTS.md 與 proto8/thinking"
  },
- "inbox": {
-  "description": "inbox 工作流：跟別資料夾 agent 通信的使用方式，含信件格式與 STATUS（PROTOCOL）、誰是誰（ROSTER）、信範本與醒鐘策略；使用者說「看看信箱」「寄信給 X」「回報做完了」時走它"
+ "inbox.json": {
+  "description": "inbox：跟別的 agent 收發信（本 repo 的版本；使用者說「看看信箱」「寄信給 X」「回 arcagi 的信」「回報做完了」時讀）"
  },
  "investigation.md": {
   "description": "investigation — 調查 / 解讀外部系統 / 可行性"

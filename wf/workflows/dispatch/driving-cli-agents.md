@@ -57,7 +57,7 @@ sleep 5
 
 ## 通訊
 
-- 終局回報永遠走 `new/`；`orders`／`mail`／`topics` **沒有推播**，**每完成一個工作步驟跑一次輪詢**（見 [inbox/PROTOCOL](../inbox/PROTOCOL.md)）。
+- 線的終局回報（DONE／BLOCKED／NEEDS-USER／FAILED）一定要回；跨資料夾、跨樹的回報怎麼寄見 [inbox.json](../inbox.json)。
 - 要線檢查環境變數時，**只准回報「有／無」，禁止印值**：
 
   ```sh
@@ -96,4 +96,4 @@ sleep 5
 ## 交接
 
 - 派線流程與領地表 → [dispatch](README.md)；踩過的坑 → [lessons](lessons.md)。
-- 鎖與限流 → [resources](../resources.md)；通訊契約 → [inbox/PROTOCOL](../inbox/PROTOCOL.md)。
+- 鎖與限流 → [resources](../resources.md)；通訊契約 → [inbox.json](../inbox.json)。

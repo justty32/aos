@@ -10,8 +10,8 @@
 | `impl_cpp/` | **使用者手寫重寫的 C++ 實作**（大修；C++23、骨架取自 `archive/aos-v1/`、一個零件一夾在 `core/<零件>/`，自成一體不 include proto8）。環境怎麼建、跑、除錯看 [impl_cpp/README](../../impl_cpp/README.md)；核心程式由使用者自己寫，agent 只動環境 |
 | `archive/` | **封存處**：舊原型 `proto/`～`proto7-2/` 共 20 個（使用者 11-04「舊的proto1~7都封存」），與 08～09 月那一代單一執行檔 `aos`（根 `CMakeLists.txt`／`core/`／`modules/`／`app/`／`docs/`／`playground/`／`reference/`…）整組封存成的 `aos-v1/`（arch-refactor 方向題 1）；各版是什麼看索引 [archive/README](../../archive/README.md)。凍結，不再建、不再維護 |
 | `wf/` | **本工作流系統**（就是你現在在讀的這包）。入口見 [WORKFLOWS.md](../WORKFLOWS.md)；共享區 [workflows/common/](../workflows/common/README.md) |
-| `wf/inbox/` | agent 之間的**信件**收件匣：頂層＝未處理、`done/`＝已處理（放信處，保持乾淨；使用方式見 [workflows/inbox/](../workflows/inbox/README.md)）|
-| `wf/tools/` | kernel 工具：`tabledb.py`（資料檔 CRUD／連結）、`find_big_lists.py`、`fix_moved_links.py`、`check_anchors.py`；inbox 腳本：`inbox_send.sh`／`inbox_read.sh`（單一收件匣），`inbox_mail.sh`／`inbox_poll.sh`／`inbox_team.sh`／`notify_watch.sh`（五通道升級後才用）；`compact_reload.sh`（compact 後 SessionStart hook 印 user.md＋[HANDOFF](../HANDOFF.md) 最新一條）。資料檔契約見 [common/data-files](../workflows/common/data-files.md) |
+| `wf/inbox/` | agent 之間的**信件**收件匣：頂層＝未處理、`done/`＝已處理（樹外專案的放信處，保持乾淨；使用方式見 [workflows/inbox.json](../workflows/inbox.json)）|
+| `wf/tools/` | kernel 工具：`tabledb.py`（資料檔 CRUD／連結）、`find_big_lists.py`、`fix_moved_links.py`、`check_anchors.py`（inbox 收發腳本 11-13 刪掉，改走 aos 信箱，見 [inbox.json](../workflows/inbox.json)）；`compact_reload.sh`（compact 後 SessionStart hook 印 user.md＋[HANDOFF](../HANDOFF.md) 最新一條）。資料檔契約見 [common/data-files](../workflows/common/data-files.md) |
 | `wf/salvage/` | **`roadmap-run` 打撈包**（2026-08-29）：那條分支跑完 M0→M2 後被凍結、系統要重新架構，這裡是抽出來的教訓與已驗證結論——七篇，給「從零重寫這套系統的人」讀。入口見 [salvage/README](../salvage/README.md) |
 | `.claude/` | `.claude/settings.json` 掛 SessionStart（`compact`）hook 跑 `wf/tools/compact_reload.sh`。**必須**放在 repo 根的 `.claude/`，不能收進 `wf/`，否則 Claude Code 讀不到 |
 | `README.md` | 給人讀的專案總覽 |

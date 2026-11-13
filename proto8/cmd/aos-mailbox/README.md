@@ -2,7 +2,7 @@
 
 ← [cmd](../README.md)｜設計：[thinking 11-10 mailbox](../../thinking/2026-11/10/mailbox/README.md)（[01 設計](../../thinking/2026-11/10/mailbox/01-設計.md)）
 
-使用者 11-10 晚「我們先做純inbox協議。這次就叫mailbox。」：agent 跟 agent（含把自己當一隻 agent 的人）互相寄信。**每個 stack 一個信箱 `<stack>/mailbox/`**，就是一個 [aos-post](../../impls/aos-post/README.md) 箱子（`tmp/ new/ cur/`，留著的進 `archive/`），跟 `queue/` 分開、信不會自己進 history。信照 [wf inbox 協議](../../../wf/workflows/inbox/PROTOCOL.md) 最基本的一人一格。給腦用的是 [`mailbox_peek`／`mailbox_read`／`mailbox_send`](../../lib/docs/03-索引-agent等.md)，都是這支的純包裝。
+使用者 11-10 晚「我們先做純inbox協議。這次就叫mailbox。」：agent 跟 agent（含把自己當一隻 agent 的人）互相寄信。**每個 stack 一個信箱 `<stack>/mailbox/`**，就是一個 [aos-post](../../impls/aos-post/README.md) 箱子（`tmp/ new/ cur/`，留著的進 `archive/`），跟 `queue/` 分開、信不會自己進 history。信照 wf inbox 協議（原 `wf/workflows/inbox/PROTOCOL.md`，11-13 縮進 [inbox.json](../../../wf/workflows/inbox.json)）最基本的一人一格。給腦用的是 [`mailbox_peek`／`mailbox_read`／`mailbox_send`](../../lib/docs/03-索引-agent等.md)，都是這支的純包裝。
 
 ```
 aos-mailbox [-s STACK] where                         印我的信箱路徑（沒有就建）

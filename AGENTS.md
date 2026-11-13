@@ -11,7 +11,7 @@ aos = **「資料夾＝程式」的 AI agent 體系**，本體是 **[`proto8/`](
 1. **aos 體系**：讀知識庫入口 `~/aos-home/knowledge/aos/_description.json`（八個詞、五條規則）；其餘用 aos 工具 `index_view` 看 `~/aos-home/knowledge/aos`，一行一項「名 TAB 一句話」，要哪項再 `json_get`。
 2. **本 repo 的規矩**：把 `wf/` 當成一套公共知識庫，同樣用 `index_view` 往下走（`wf/…` 是 repo 根相對路徑；在樹裡的 `repo-aos`，aos 工具的相對路徑本來就從 repo 根算，知識庫那邊則寫絕對路徑）——`index_view wf/workflows` 看有哪些工作流與共用區；`common` 那格是使用者偏好與慣例所在（code map 11-13 搬到 `wf/knowledge/code-map.json`），`common/` 沒有自己的 index，直接讀 **`wf/workflows/common/user.md`**（這位使用者的偏好與確認邊界，每個 session 都要先讀）與 `common/conventions.md`（碰原始碼才讀）。沒有 `index_view` 的環境就照下面各條的連結讀。
 
-- 每個 session 先掃三軸：`ls wf/inbox/*.md`（有信先讀，見 [inbox](wf/workflows/inbox/README.md)）→ [wf/SESSION-LOG.md](wf/SESSION-LOG.md)（我的 open 進度）→ [wf/WAIT_USER.md](wf/WAIT_USER.md)（等使用者一句話的）。三份都只列 open，空就跳過。
+- 每個 session 先掃三軸：信（樹內 `mailbox_peek`、樹外 `ls wf/inbox/*.md`；有信先讀，見 [inbox](wf/workflows/inbox.json)）→ [wf/SESSION-LOG.md](wf/SESSION-LOG.md)（我的 open 進度）→ [wf/WAIT_USER.md](wf/WAIT_USER.md)（等使用者一句話的）。三份都只列 open，空就跳過。
 - **使用者要你動手做某件事** → **[wf/WORKFLOWS.md](wf/WORKFLOWS.md)**：依意圖派發到對應工作流，再讀該工作流入口。
 - **想看專案長怎樣** → **[wf/INDEX.md](wf/INDEX.md)**：repo 頂層結構地圖。
 - **碰原始碼前** → 慣例與 code map：[conventions](wf/workflows/common/conventions.md)、code map＝[`wf/knowledge/code-map.json`](wf/knowledge/code-map.json)（用 `json_get` 讀；哪個夾負責什麼、逐檔表在 `wf/knowledge/code-map/proto8/<頂層夾>.json` 的 `tree`，改東西之前先看）；環境與指令 → [dev-env](wf/workflows/dev-env.md)。
@@ -19,7 +19,7 @@ aos = **「資料夾＝程式」的 AI agent 體系**，本體是 **[`proto8/`](
 - 使用者偏好與確認邊界 → [common/user.md](wf/workflows/common/user.md)。
 - **不寫 Claude Code 自動記憶**（使用者 2026-09-30 定）：值得留下的東西一律寫進 `wf/` 對應的檔，記憶資料夾只留一句指回這裡。
 
-> **本專案採「非侵入式」佈局**：頂層只留 `AGENTS.md` 與 `CLAUDE.md` 兩個入口，工作流的其餘檔案（含 `wf/inbox/` 放信處與 `wf/tools/` 檢查／inbox 腳本）全部收在 [`wf/`](wf/) 裡，不去弄亂程式本身的結構（`proto8/`）。唯一的例外是 `.claude/`——compact 後重讀 hook（`.claude/settings.json`）只有放在那裡才會被讀到，但它是隱藏資料夾，不影響觀感。
+> **本專案採「非侵入式」佈局**：頂層只留 `AGENTS.md` 與 `CLAUDE.md` 兩個入口，工作流的其餘檔案（含 `wf/inbox/` 放信處與 `wf/tools/` 工具腳本）全部收在 [`wf/`](wf/) 裡，不去弄亂程式本身的結構（`proto8/`）。唯一的例外是 `.claude/`——compact 後重讀 hook（`.claude/settings.json`）只有放在那裡才會被讀到，但它是隱藏資料夾，不影響觀感。
 
 ## 分層思想（本專案的組織原則）
 
@@ -51,8 +51,8 @@ AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md / wf/INDEX.md → 各工作流
 - **進度**（我自己的 open in-flight）→ [wf/SESSION-LOG.md](wf/SESSION-LOG.md)
 - **待使用者**（等使用者親自做／驗證）→ [wf/WAIT_USER.md](wf/WAIT_USER.md)
 - **日誌**（哪天做了什麼，不是知識庫）→ [wf/session_logs/](wf/session_logs/README.md)，寫法見 [user/02](wf/workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)
-- **信件**（agent 之間的訊息交換，像 email；放信處是 [`wf/inbox/`](wf/inbox/)）→ 使用方式見 [wf/workflows/inbox/](wf/workflows/inbox/README.md)
+- **信件**（agent 之間的訊息交換，像 email；同一棵 aos 樹裡走 aos 信箱；樹外專案的信放進 [`wf/inbox/`](wf/inbox/)）→ 使用方式見 [wf/workflows/inbox.json](wf/workflows/inbox.json)
 
-> 三軸各管一種「還沒完的事」：進度＝我手上的、待使用者＝卡在人、信件＝agent 之間收發（寄失敗／不回都無妨，但接了事就得回終局狀態）。使用者說「**看看信箱**」＝跑 `wf/tools/inbox_read.sh`，把 [`wf/inbox/`](wf/inbox/) 頂層的待辦辦掉。
+> 三軸各管一種「還沒完的事」：進度＝我手上的、待使用者＝卡在人、信件＝agent 之間收發（寄失敗／不回都無妨，但接了事就得回終局狀態）。使用者說「**看看信箱**」＝樹內 `mailbox_peek`、樹外 `ls wf/inbox/*.md`，把有的信辦掉（樹外的辦完 `mv` 進 `wf/inbox/done/`；回樹外的信怎麼寫見 [inbox.json](wf/workflows/inbox.json)）。
 
 <!-- wf-kernel v0.5 (2026-08-30) -->

@@ -5,7 +5,7 @@
 把一件大工作切成幾條線交給別的 agent 跑，並負責**仲裁與驗收**。調度者不深潛實作。
 
 **何時用**：一件工作大到要同時開幾條線，或要派給別資料夾／別機器的 agent 做；workshop／hackathon 開隊也照這裡。
-**何時不用**：一兩個檔的小改（開線的交接成本大過收益）；需求還沒定、要跟使用者來回確認方向；只是要問一件事或送一則情報 → [inbox](../inbox/README.md)。
+**何時不用**：一兩個檔的小改（開線的交接成本大過收益）；需求還沒定、要跟使用者來回確認方向；只是要問一件事或送一則情報 → [inbox](../inbox.json)。
 
 **本專案的隊形**（頂層只調度、opus 隊長＋codex／claude 兩名隊員；開隊與 codex 的呼叫方式、幾條硬規則）→ [aos-teams](aos-teams.md)。
 
@@ -20,7 +20,7 @@
 1. **切線**：按**獨立 repo** 或**明確列舉的檔案清單**切，**不按功能切**。**同一時間一個目錄只能有一條線持有寫入權**——兩條線寫同一處，先寫的一定被蓋掉。
 2. **登記領地**：在 [CLAIMS](CLAIMS.md)「現役」表加一列。**線只能追加自己那一格，不得改動既有內容**；收線移除與歷史整理歸調度者。落後於現實的領地表比沒有更危險。
 3. **寫交接書**：照 [TEMPLATE.handoff.md](../TEMPLATE.handoff.md)，最容易踩的六條見下一節。
-4. **啟動**：借現成通道——同機在線用 agent 工具內建的即時通道或子 agent（Claude Code 的 SendMessage、Agent），跨資料夾用 [inbox](../inbox/README.md) 寄 `REQUEST`；外部 CLI agent（codex）的啟動、監看與收線七步見 [driving-cli-agents](driving-cli-agents.md)。給整條線的目標與邊界，不逐步替它重算。
+4. **啟動**：借現成通道——同機在線用 agent 工具內建的即時通道或子 agent（Claude Code 的 SendMessage、Agent），同一棵 aos 樹裡用 `mailbox_send`、樹外用 [inbox](../inbox.json) 寄 `REQUEST`；外部 CLI agent（codex）的啟動、監看與收線七步見 [driving-cli-agents](driving-cli-agents.md)。給整條線的目標與邊界，不逐步替它重算。
 5. **監看**三個訊號，缺一不可：
 
    | 訊號 | 代表 |
@@ -48,7 +48,7 @@
 
 大任務走「調度者 → 隊長 → 隊員」：隊長寫子線交接書、派子線、核驗收；調度者只切線、仲裁、收線、管資源。**每一層要派哪級模型、怎麼分角色，見 [team-model](../team-model.md)。**
 
-**任何一層上線第一件事都是在 [ROSTER](../inbox/ROSTER.md) 追加自己那一格**（跨資料夾的線）或在交接書裡寫明領地（同機子 agent）——我是誰、對誰回報、領地在哪、答得出什麼、答不出什麼；沒聲明就開工，別人只能用猜的畫邊界。
+**任何一層上線第一件事都是在 [CLAIMS](CLAIMS.md) 登記自己那一格**（ROSTER 身份簿 11-13 隨 inbox 腳本退場）或在交接書裡寫明領地（同機子 agent）——我是誰、對誰回報、領地在哪、答得出什麼、答不出什麼；沒聲明就開工，別人只能用猜的畫邊界。
 
 **資源協調集中在調度者**：子層不得自取鎖，需要就發 `NEEDS-USER` 給調度者（見 [resources](../resources.md)）。
 
@@ -83,5 +83,5 @@
 
 - 交接書目錄分三層：本層＝現役、`done/`＝已完成附證據、`superseded/`＝被後續決定推翻（不刪，見 [STRUCTURE](../../STRUCTURE.md) 的 archive 規則）。
 - 線要用獨佔資源 → 在交接書指名可拿哪個鎖（[resources](../resources.md)）。
-- 線回報與催件 → [inbox](../inbox/README.md)；卡在使用者 → [WAIT_USER](../../WAIT_USER.md)。
+- 線回報與催件 → [inbox](../inbox.json)；卡在使用者 → [WAIT_USER](../../WAIT_USER.md)。
 - 為什麼這樣切線 → [decisions](../decisions.json)。

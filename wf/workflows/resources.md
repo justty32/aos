@@ -28,7 +28,7 @@ mkdir "$LOCK" 2>/dev/null \
   || { echo BUSY; cat "$LOCK/owner"; }
 ```
 
-`BUSY` 就**別做**那件事——去做不需鎖的部分，或寄一封 `BLOCKED` 給上游（見 [inbox/PROTOCOL](inbox/PROTOCOL.md)）。
+`BUSY` 就**別做**那件事——去做不需鎖的部分，或寄一封 `BLOCKED` 給上游（見 [inbox](inbox.json)）。
 
 ### 釋放
 
@@ -66,6 +66,6 @@ CPU、網路頻寬鎖不了，改**限流**：重運算（含 `cmake --build`）
 
 ## 交接
 
-- 資源被別人佔住、等得太久 → 寄 `BLOCKED` 給上游（[inbox](inbox/README.md)）。
+- 資源被別人佔住、等得太久 → 寄 `BLOCKED` 給上游（[inbox](inbox.json)）。
 - 要使用者親自讓出鍵鼠／實機操作 → [WAIT_USER](../WAIT_USER.md) 一行。
 - 哪條線可以拿哪個鎖，由交接書指定 → [dispatch](dispatch/README.md)。

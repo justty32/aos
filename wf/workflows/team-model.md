@@ -2,10 +2,10 @@
 
 ← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
 
-本檔記**誰來做**——分幾層角色、每層派哪一級的模型、按什麼順序選人（分級與速度是使用者定的、跨專案共通，源頭是 `~/repo/moddings/skyrim/agentctl/docs/team-model.md`，兩邊要一起改）。**怎麼做**在別處：切線與交接書見 [dispatch](dispatch/README.md)（含本專案的隊形與 codex 呼叫），資源鎖見 [resources](resources.md)，通訊見 [inbox/PROTOCOL](inbox/PROTOCOL.md)。
+本檔記**誰來做**——分幾層角色、每層派哪一級的模型、按什麼順序選人（分級與速度是使用者定的、跨專案共通，源頭是 `~/repo/moddings/skyrim/agentctl/docs/team-model.md`，兩邊要一起改）。**怎麼做**在別處：切線與交接書見 [dispatch](dispatch/README.md)（含本專案的隊形與 codex 呼叫），資源鎖見 [resources](resources.md)，通訊見 [inbox](inbox.json)。
 
 **何時用**：要開一個 agent 團隊、要決定某一層派哪級模型、要按用途分角色。
-**何時不用**：只有一條線、一兩個檔的小改（見 [dispatch](dispatch/README.md) 的「何時不用」）；只是要送一則情報 → [inbox](inbox/README.md)。
+**何時不用**：只有一條線、一兩個檔的小改（見 [dispatch](dispatch/README.md) 的「何時不用」）；只是要送一則情報 → [inbox](inbox.json)。
 
 ## Done when
 
@@ -78,7 +78,7 @@ Claude 系列消耗與聰明度成正比、GPT 系列整體往下移兩級，所
 - **領導**對自己團隊送來的 STATUS **全醒**；上呈時重寫標題、帶自己的判斷，不是原文轉貼。
 - **工人**沒有醒鐘，**每完成一個工作步驟輪詢一次**，延遲上限就是一個工作步驟。
 
-誰醒誰不醒以 [inbox/wake-policy](inbox/wake-policy.md) 為準。
+（原本的醒鐘細則 `inbox/wake-policy.md` 11-13 隨 inbox 腳本刪掉；同一棵 aos 樹裡的新信由 aos 信箱的 hook 通知，見 aos 知識庫 `aos/mailbox.json` 的 `check`。）
 
 ## 內容
 
@@ -93,4 +93,4 @@ Claude 系列消耗與聰明度成正比、GPT 系列整體往下移兩級，所
 
 - 切線、交接書、領地表 → [dispatch](dispatch/README.md)。
 - 獨佔資源與鎖 → [resources](resources.md)。
-- 通訊契約與醒鐘 → [inbox/PROTOCOL](inbox/PROTOCOL.md)。
+- 通訊契約 → [inbox](inbox.json)。

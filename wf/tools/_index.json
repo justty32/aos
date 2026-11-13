@@ -29,24 +29,6 @@
  "forum_post.sh": {
   "description": "Append a forum post or reply for a line to the local forum event file."
  },
- "hook-settings-snippet.json": {
-  "description": "設定（鍵：_comment、hooks）"
- },
- "inbox_mail.sh": {
-  "description": "Deliver a message to one member, team, topic, or the sender's upstream."
- },
- "inbox_poll.sh": {
-  "description": "Poll personal mail, team mail, subscribed topics, and append-only orders."
- },
- "inbox_read.sh": {
-  "description": "Print one line per unread letter in an inbox. Read-only: never moves or"
- },
- "inbox_send.sh": {
-  "description": "Deliver one letter into another agent's inbox. Atomic: write a temp file in"
- },
- "inbox_team.sh": {
-  "description": "Create, extend, and archive inbox teams."
- },
  "index_check.py": {
   "description": "查 aos 的 index（`_index.json`）跟實際的樹對不對得上：列了但不在、在但沒列、連結指不到、形狀不對。"
  },
@@ -67,9 +49,6 @@
  },
  "metainfo_migrate.py": {
   "description": "Move legacy metainfo estimates and execution limits into separate fields."
- },
- "notify_watch.sh": {
-  "description": "Continuously announce new dispatcher-facing messages once. This watcher is"
  },
  "progress_answers.sh": {
   "description": "Read progress-board answers and unanswered questions with optional time and line filters."
@@ -92,9 +71,6 @@
  },
  "tabledb_links.py": {
   "description": "資料檔（wf-table/1）裡連結欄位的抽取與解析。"
- },
- "test_inbox.sh": {
-  "description": "inbox 收發信腳本（inbox_team、inbox_mail、inbox_poll）的 bash 測試，每案在暫存夾設 AGENT_INBOX_ROOT 跑並計 ok／fail"
  },
  "tests": {
   "description": "wf/tools 腳本的 Python 測試夾，目前只有 test_metainfo_migrate.py（驗 _metainfo 一次性遷移、保留、排除與冪等）"

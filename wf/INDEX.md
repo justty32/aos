@@ -51,4 +51,4 @@
 |------|------|
 | [SESSION-LOG](SESSION-LOG.md) | 進度 hub → 各工作流 session-log（open-only）|
 | [WAIT_USER](WAIT_USER.md) | 待**使用者**親自做/驗證的入口 |
-| [`inbox/`](inbox/)（放信處）+ [workflows/inbox/](workflows/inbox/README.md)（使用方式）| agent 之間的**信件**（像 email，狀態靠位置：`inbox/` 頂層＝未處理、`inbox/done/`＝已處理）|
+| [`inbox/`](inbox/)（樹外專案的放信處）+ [workflows/inbox.json](workflows/inbox.json)（使用方式）| agent 之間的**信件**（同一棵 aos 樹裡走 aos 信箱；樹外的像 email，狀態靠位置：`inbox/` 頂層＝未處理、`inbox/done/`＝已處理）|

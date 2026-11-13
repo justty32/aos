@@ -37,13 +37,13 @@
 ## 完成／阻塞回報（必做）
 
 - 我是誰：`<線名>`。本線團隊：`teams/<TEAM>`（沒有就寫「無」）。
-- 回報方式（擇一，照專案的 inbox 佈局）：
-  - **基本佈局**（單一收件匣）：`tools/inbox_send.sh <上游的 inbox 路徑> <線名> <STATUS> '<一句自足結論>' [正文檔]`
-  - **升級後佈局**（五通道）：`tools/inbox_mail.sh <線名> --up <STATUS> '<一句自足結論>' [正文檔]`
-    ——它會依團隊名冊自動送到你的領導，**你不需要知道上游叫什麼名字**。
+- 回報方式（擇一）：
+  - **同一棵 aos 樹裡**：`mailbox_send` 寄給上游（`{"to": "<上游>", "status": "<STATUS>", "title": "<一句自足結論>", "what": "<正文>"}`）。
+  - **同機子 agent**：agent 工具內建的回報／`SendMessage`。
+  - **樹外**：手寫一封信放進上游的 inbox 夾（先寫 `.tmp` 再 `mv`），格式見 [inbox.json](inbox.json) 的 `letter_format`。
 - 結束時必發終局 STATUS 之一：`DONE` / `BLOCKED` / `NEEDS-USER` / `FAILED`。
 - **卡住超過 10 分鐘也要先發 `BLOCKED`**（需使用者決定用 `NEEDS-USER`），不可無聲等待。
 - 標題要是自足的一句結論，不可只寫「完成」「報告」。正文照四段格式。
-- 完整契約：[inbox/PROTOCOL.md](inbox/PROTOCOL.md)。
+- 完整契約：[inbox.json](inbox.json)（樹內的規則在 aos 知識庫 `aos/mailbox.json`）。
 
 > 送出前對照一次「背景與唯一目標」和「工作」有沒有互相矛盾——衝突處要寫死哪個為準。
