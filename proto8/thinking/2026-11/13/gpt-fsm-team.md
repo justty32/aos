@@ -19,7 +19,7 @@
  └ 頂層 Claude（調度，只放行）
     └ opus 隊長（出圖紙、加 endpoint 包、建定義、寫守門、起 astra、重驗、審 diff、commit）
        │   交接：goal 一句指到 隊夾/blueprint.txt；回報：astra 寄信到 隊夾/mailbox（DONE/BLOCKED/NEEDS-USER/FAILED）
-       └ gpt-lead（astra-medium）×1：切工單、開收 sol、對圖紙驗收、寫 status.md
+       └ gpt-lead（astra-high）×1：切工單、開收 sol、對圖紙驗收、寫 status.md
           │   派工：工單檔＋subagent say；收回報：subagent listen；收單後 subagent rm
           └ gpt-worker（sol-high）sol-T01、sol-T02…：一張單一隻，第一輪同時 1 隻（之後 ≤2）
              └ （不能再生）
@@ -39,7 +39,7 @@
 | self、def、events 包 | 沒有（整包拿掉，加不回工具、關不掉 hook） | 沒有 |
 | mailbox、goal | 有 | 沒有 |
 | commit／push | 不准 | 不准 |
-| 腦 | `astra-medium`，`--max-tool-calls 300` | `sol-high`，`--max-tool-calls 80` |
+| 腦 | `astra-high`，`--max-tool-calls 300` | `sol-high`，`--max-tool-calls 80` |
 
 ## 分檔目錄
 

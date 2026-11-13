@@ -50,7 +50,7 @@
 | 檔 | 跟 sol 不同 |
 |---|---|
 | `tools.json` | 多 mailbox、goal、subagent 包，再加 `"agents_ctl": null`、`"fork": null`；delete 包整包不給；`do_task` 留著 |
-| `llm.json` | `{"model": "astra-medium"}` |
+| `llm.json` | `{"model": "astra-high"}` |
 | `hooks.json` | `guard`＋`mail_notify` 兩格 |
 | `guard.json` | `write_roots: [<隊夾>]`；`subagent` 只放行 `add`（`def` realpath 必須是 gpt-worker、`name` 必須 `sol-` 開頭、不准 `auto_restart`、`envs`、`stack`、`def_json`）、`say`、`listen`、`ls`、`state`、`history`（只准 `ls`）、`stop`、`rm`（不准 `purge`）；其餘 op（`tools`、`llm`、`system`、`hook`、`ask`）攔下 |
 | `fsm.json` | `--max-tool-calls 300` |
@@ -62,7 +62,7 @@
 **llm kernel 兩包**（放在活樹 llm kernel 的 `kernel.json` `endpoints`）：
 
 ```json
-"astra-medium": {"exec": "endpoints/litellm", "url": "http://127.0.0.1:4000/v1", "model": "chatgpt-gpt-6-astra-medium", "slots": 1, "cost": "high", "summary": "LiteLLM gpt-6 astra, medium effort: gpt team lead"},
+"astra-high": {"exec": "endpoints/litellm", "url": "http://127.0.0.1:4000/v1", "model": "chatgpt-gpt-6-astra-high", "slots": 1, "cost": "high", "summary": "LiteLLM gpt-6 astra, high effort: gpt team lead"},
 "sol-high":     {"exec": "endpoints/litellm", "url": "http://127.0.0.1:4000/v1", "model": "chatgpt-gpt-6.1-sol-high", "slots": 2, "cost": "high", "summary": "LiteLLM gpt-6.1 sol, high effort: gpt team worker"}
 ```
 
