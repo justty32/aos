@@ -597,12 +597,12 @@
   {
    "path": "$AOS_STACK/hooks/<名>/（hook 小格，含 event.json）",
    "lifetime": "暫時",
-   "writer": "lib/agent/hooks.py（event.json）、hook 本身（aos-exec --stack）",
+   "writer": "lib/hook_run.py（run 寫 event.json；lib/agent/hooks.py 的 fire 經共用引擎 hook_run.fire 叫到）、hook 本身（aos-exec --stack）",
    "reader": "hook 本身（event.json 當 stdin）",
    "image": "不進：執行中狀態；stack.gitignore 的 **/hooks/ 擋（two-machines gitignore_classes G092）",
    "on_bad": "每次觸發重寫 event.json；不在＝自動建",
    "note": "11-10 晚 self-family/hook 新增。新檔，不用重建",
-   "evidence": "proto8/lib/agent/hooks.py（_run）"
+   "evidence": "proto8/lib/hook_run.py（run）、proto8/lib/agent/hooks.py（fire）"
   },
   {
    "path": "$AOS_STACK/hook_tools_seen.json",
