@@ -1,0 +1,158 @@
+{
+ "description": "Send one letter to the user (the human) through the user zone, as you. Use it only for what only the user can do: kind decide (questions with options and your recommendation), verify (try it on the real machine; needs done_when), trial (play with it, say how it feels), chore (something only the user can do, like logging in; needs done_when), fyi (just so you know; no answer comes). The letter is checked against the zone's rules (the door) before it goes: at most 7 questions, every question has at least 2 options and a recommend, default_if_silent needs a deadline and is not allowed with risk irreversible. The answer comes back to your mailbox as a normal letter (status DONE, in_reply_to = the letter name, answers = [{id, answer, differs}]). A letter that breaks the rules comes back as status FAILED with the reason. Do not send progress (use the board) or questions you can find out yourself. Example: {\"kind\": \"decide\", \"title\": \"Which clock tick for the demo?\", \"questions\": [{\"id\": \"q1\", \"question\": \"Default tick?\", \"eli5\": \"How often the clock ticks. Faster costs more.\", \"options\": [{\"key\": \"a\", \"label\": \"1 second\"}, {\"key\": \"b\", \"label\": \"1 minute\"}], \"recommend\": \"b\"}]}\nErrors: ArgumentsBad, SchemaBad, ZoneMissing, ToolMissing, MailboxMissing, LaunchFailed, CommandFailed.",
+ "env": [
+  "AOS_WS"
+ ],
+ "errors": [
+  "ArgumentsBad",
+  "SchemaBad",
+  "ZoneMissing",
+  "ToolMissing",
+  "MailboxMissing",
+  "MailboxBad",
+  "WriteFailed",
+  "StackMissing",
+  "LaunchFailed",
+  "CommandFailed",
+  "InstanceMissing",
+  "DaemonMissing"
+ ],
+ "parameters": {
+  "type": "object",
+  "required": [
+   "kind",
+   "title"
+  ],
+  "properties": {
+   "kind": {
+    "type": "string",
+    "enum": [
+     "decide",
+     "verify",
+     "trial",
+     "chore",
+     "fyi"
+    ],
+    "description": "decide = questions only the user can decide; verify = try it on the real machine; trial = play with it; chore = only the user can do it; fyi = just so you know"
+   },
+   "title": {
+    "type": "string",
+    "description": "one line that makes sense on its own"
+   },
+   "what": {
+    "type": "string",
+    "description": "one or two sentences: what you need (optional for decide)"
+   },
+   "questions": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "required": [
+      "id",
+      "question",
+      "eli5",
+      "options",
+      "recommend"
+     ],
+     "properties": {
+      "id": {
+       "type": "string",
+       "description": "q1, q2 ... (1-16 letters, digits, _ or -; unique)"
+      },
+      "question": {
+       "type": "string",
+       "description": "one line"
+      },
+      "eli5": {
+       "type": "string",
+       "description": "two plain sentences"
+      },
+      "options": {
+       "type": "array",
+       "items": {
+        "type": "object",
+        "required": [
+         "key",
+         "label"
+        ],
+        "properties": {
+         "key": {
+          "type": "string",
+          "description": "1-8 letters or digits, not other"
+         },
+         "label": {
+          "type": "string",
+          "description": "what this choice is, in a few words"
+         },
+         "consequence": {
+          "type": "string",
+          "description": "what happens if the user picks it (optional)"
+         }
+        }
+       },
+       "description": "at least 2 choices"
+      },
+      "recommend": {
+       "type": "string",
+       "description": "the key you recommend"
+      },
+      "why": {
+       "type": "string",
+       "description": "why you recommend it (optional)"
+      },
+      "details": {
+       "type": "string",
+       "description": "more (optional)"
+      },
+      "source_path": {
+       "type": "string",
+       "description": "a file with the background (optional)"
+      }
+     }
+    },
+    "description": "decide only: 1 to 7 questions"
+   },
+   "done_when": {
+    "type": "string",
+    "description": "verify and chore: when it counts as done"
+   },
+   "urgent": {
+    "type": "boolean",
+    "description": "true only when no answer blocks everything"
+   },
+   "deadline": {
+    "type": "string",
+    "description": "2026-11-15 or 2026-11-15T18:00 (local time)"
+   },
+   "default_if_silent": {
+    "type": "string",
+    "description": "what you will do if no answer by the deadline (needs deadline; not with risk irreversible)"
+   },
+   "risk": {
+    "type": "string",
+    "enum": [
+     "normal",
+     "irreversible"
+    ],
+    "description": "irreversible = push, delete, sending outside"
+   },
+   "dedupe_key": {
+    "type": "string",
+    "description": "the same key from two agents is shown once and both get the answer"
+   },
+   "origin": {
+    "type": "string",
+    "description": "who first asked, when you pass a question on (paste it unchanged)"
+   },
+   "status": {
+    "type": "string",
+    "enum": [
+     "DONE",
+     "FAILED",
+     "BLOCKED"
+    ],
+    "description": "fyi only (default DONE)"
+   }
+  }
+ }
+}

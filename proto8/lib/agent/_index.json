@@ -133,5 +133,11 @@
  },
  "tools_def": {
   "description": "tools_def 工具（定義包）：從 Python 骨架做新工具、檢查工具或一步步建工具"
+ },
+ "user_send": {
+  "description": "Send one letter to the user (the human) through the user zone, as you. Use it only for what only the user can do: kind decide (questions with options and your recommendation), verify (try it on the r…"
+ },
+ "user_zone_guard": {
+  "description": "user_zone_guard（不是給腦的工具）：before_tool 的 hook handler，aos 工具的參數路徑落在使用者專區、又不在它的 mailbox/ 底下（工具也不是唯讀）就擋"
  }
 }

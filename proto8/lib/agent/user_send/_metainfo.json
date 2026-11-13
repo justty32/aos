@@ -1,0 +1,14 @@
+{
+  "summary": "Send a letter to the user zone (~/.aos/user) as the agent calling me, checked against the zone's rules first (aos-user send)",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+# user_send - aos-user send 的包裝，寄件人＝叫我的那隻自己：給沒 shell 的身（agent-fsm、gpt 隊）寄一封照專區規矩的信進使用者專區 ~/.aos/user/mailbox。
+# 使用者 11-13 晚「專區第二階段可以開始了」；規劃 proto8/thinking/2026-11/13/user-zone-plan/04 段 2「aos 工具 user_send 給沒 shell 的身；範本預設不掛，誰要誰加」。
+# 介面：stdin {kind, title, what?, questions?, done_when?, urgent?, deadline?, default_if_silent?, risk?, dedupe_key?, origin?, status?}；
+#   from＝我在 daemon 表上的名字，回信地址＝我的 stack/mailbox，信封寄件人＝我的 stack（叫 aos-user 時 AOS_STACK 換成我的 stack，不是這個工具的小格）。
+#   格式照專區 schema 驗（aos-user 那邊驗，不合＝SchemaBad、沒寄）。結果：寄出的信名一行加一句說明。
+# 找 aos-user：$AOS_USER_TOOL ＞ $AOS_WS/tools/aos-user/aos-user（使用者 11-13 晚裁 U12：程式就放 ws/tools）＞ PATH 上的 aos-user；都沒有＝ToolMissing。
+#   專區位置由 aos-user 自己找（$AOS_USER_ZONE ＞ ~/.aos/user）。需要 PATH 上有 aos-agent、aos-post。
+import json, os, shutil, signal, sys
+NAME = "user_send"
+HELP = """\
+usage: user_send < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Send one letter to the user zone (aos-user send) as the agent calling me; the answer comes to my mailbox.
+The letter is checked against the zone's rules first; a bad letter is not sent (SchemaBad, with the reason).
+aos-user is found at $AOS_USER_TOOL, else $AOS_WS/tools/aos-user/aos-user, else on PATH.
+Result on stdout. On error: one line "user_send: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib, os.path.join(_lib, "agent")] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+tool_io.start(NAME, HELP)
+signal.signal(signal.SIGINT, lambda s, f: sys.exit(130))
+import mailbox_call  # noqa: E402
+import cmd_call  # noqa: E402
+
+
+def find_tool():
+    for p in (os.environ.get("AOS_USER_TOOL", ""),
+              os.path.join(os.environ.get("AOS_WS", ""), "tools", "aos-user", "aos-user") if os.environ.get("AOS_WS") else ""):
+        if p and os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    p = shutil.which("aos-user")
+    if p:
+        return p
+    tool_io.die("ToolMissing", "aos-user not found ($AOS_USER_TOOL, $AOS_WS/tools/aos-user/aos-user, PATH); "
+                "the user zone is not set up on this machine")
+
+
+args = tool_io.arguments("kind", "title")
+who = mailbox_call.me()
+tool = find_tool()
+body = {k: v for k, v in args.items() if k not in ("kind", "title", "description")}
+os.environ["AOS_STACK"] = who["stack"]          # 信封寄件人＝我的 stack（aos-post 從 AOS_STACK 算）
+_, out, _ = cmd_call.call(tool, ["send", "--kind", args["kind"], "--title", args["title"], "--from", who["name"],
+                                 "--reply-to", os.path.join(who["stack"], "mailbox"), "-"],
+                          text=json.dumps(body, ensure_ascii=False))
+print("sent letter %s to the user zone; %s" % (
+    out.strip(), "no answer comes for fyi" if args["kind"] == "fyi" else
+    "the answer comes to your mailbox (mailbox_peek); a letter that breaks the zone's rules comes back as FAILED"))

@@ -39,10 +39,10 @@
   "description": "要你裁的：128 題一次看完"
  },
  "astra-kernel-plan": {
-  "description": "分檔夾：astra 當 kernel（線核 11-13 晚規劃，未施工）：用現成的 kernel_gate 把門掛在 astra 身上，sol 做完寄「停自己」的請求當門鈴、astra 表態＝驗收；sol 的腦走機器隊站 llm-t1、不經 astra；全是活樹新增、不改 aos 程式；8 題待裁"
+  "description": "分檔夾：astra 當 kernel（線核 11-13 晚規劃，未施工）：用現成的 kernel_gate 把門掛在 astra 身上，sol 做完寄「停自己」的請求當門鈴、astra 表態＝驗收；sol 的腦走機器隊站 llm-t1、不經 astra；全是活樹新增、不改 aos 程式；8 題 11-13 22:15 使用者全照推薦"
  },
  "astra-kernel-plan.md": {
-  "description": "astra 當 kernel（線核 11-13 晚規劃，未施工）：用現成的 kernel_gate 把門掛在 astra 身上，sol 做完寄「停自己」的請求當門鈴、astra 表態＝驗收；sol 的腦走機器隊站 llm-t1、不經 astra；全是活樹新增、不改 aos 程式；8 題待裁"
+  "description": "astra 當 kernel（線核 11-13 晚規劃，未施工）：用現成的 kernel_gate 把門掛在 astra 身上，sol 做完寄「停自己」的請求當門鈴、astra 表態＝驗收；sol 的腦走機器隊站 llm-t1、不經 astra；全是活樹新增、不改 aos 程式；8 題 11-13 22:15 使用者全照推薦"
  },
  "convention-vs-agent-fsm.md": {
   "description": "CONVENTION 條文跟現行 agent-fsm 範本對不上的 19 條（前 14 條＋02 夾新題 5 條，另有 02 夾 6 處指回前面、1 題舊協議刪除要確認）：逐條原句、範本實際、當初用意、收法與建議；使用者要逐條看；11-13 第二輪待裁頁 20 題都裁了，裁定在各節建議下面"
@@ -117,7 +117,7 @@
   "description": "kernel 限資源與設 uid 規劃的分檔夾；入口與一張圖在 kernel-limits-plan.md。"
  },
  "kernel-limits-plan.md": {
-  "description": "kernel 限資源與設 uid（線限 11-13 晚規劃，未施工）：kernel 只定政策、把限制與身分寫進放行的信，daemon 在 fork 時真的套（setrlimit、二期 cgroup、免 root 的 subuid 換身分），bwrap 照舊管看得到什麼，要 root 的隔成預設不裝的包"
+  "description": "kernel 限資源與設 uid（線限 11-13 晚規劃，未施工）：kernel 只定政策、把限制與身分寫進放行的信，daemon 在 fork 時真的套（setrlimit、二期 cgroup、免 root 的 subuid 換身分），bwrap 照舊管看得到什麼，要 root 的隔成預設不裝的包；11-13 22:15 使用者裁：cgroup 可選（推薦預設關）、先以無 root 規劃，其…"
  },
  "line-b-cleanup.md": {
   "description": "線乙（11-13 上午，fable 隊長）：舊路徑、agent-fsm 重複收一支、說明清舊、do_task 摺疊被砍重複"
@@ -150,7 +150,7 @@
   "description": "家機活樹停樹換檔（線換，11-13 晚）：腳本 `proto8/extras/tree-swap/`、暫存樹預演五輪（釘 `9736e54a0` 的第五輪全綠）、會換／不會動的清單、換後收尾清單、給使用者的單子"
  },
  "user-zone-plan": {
-  "description": "使用者專區規劃的分檔夾：入口在上一層的 user-zone-plan.md，這裡是 01～06 的細節"
+  "description": "使用者專區規劃的分檔夾：入口在上一層的 user-zone-plan.md，這裡是 01～08 的細節"
  },
  "user-zone-plan.md": {
   "description": "使用者專區（線人 11-13 晚規劃；線專同晚施工段 1＋網頁）：專區放 `~/.aos/user/`、它本身就是你的 stack，agent 把要你裁／驗／做／知道的事寄進它的 `mailbox/`，你用 `aos-user` 列、看、回，回了才消；桌面網頁 8766 只綁本機；手機先不做"
