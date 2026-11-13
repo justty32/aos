@@ -1,0 +1,20 @@
+{
+ "_description": "跑測試／驗證：改完怎麼確認沒壞——挑出這次要跑的驗證、agent 跑得了的自己跑、跑不了的交給使用者。驗證表、測試分類、離線子集是專案自己的，記在工作區的 `wf/knowledge/verification.json`（骨架 `wf/skeletons/verification.json`）。",
+ "when": "改完程式要驗、使用者說「跑測試」「驗證一下」「這樣改有沒有壞」、重構前要記基準。",
+ "not_when": "環境還沒裝好、不知道指令哪來 → `wf/workflows/dev-env.json`；驗證紅了要查成因 → `wf/workflows/investigation.json`。",
+ "done_when": [
+  "工作區的 `wf/knowledge/verification.json#/checks` 標「改完必跑」的列，指令回傳 0。",
+  "「誰跑」是使用者的列，已在工作區的 `wf/WAIT_USER.md` 各留一行（寫明跑什麼、什麼算過）。"
+ ],
+ "steps": [
+  "1. 從工作區的 `wf/knowledge/verification.json` 挑這次要跑的（還沒有 → 照 `wf/skeletons/verification.json#/skeleton` 建，先填一列「改完必跑」）：工作區的 `wf/knowledge/verification.json#/checks` 標「改完必跑」的一定跑；再照工作區的 `wf/knowledge/verification.json#/categories` 依改動範圍加跑（改 producer／consumer／協定跑 contract、commit 前或大改後跑 full）；在離線或缺特殊環境的機器上只跑工作區的 `wf/knowledge/verification.json#/offline_subset`。",
+  "2. 「誰跑」是 **agent** 的（本機跑得動）：自己跑到回傳 0。",
+  "3. 「誰跑」是 **使用者 → WAIT_USER** 的（要實機、外部服務、帳號、付費、目視）：在工作區的 `wf/WAIT_USER.md` 記一行，寫明跑什麼、什麼算過。**判不準就當後者。**",
+  "4. 新增或修改一道檢查（測試、lint 規則、腳本裡的守門條件）時，照 `wf/knowledge/green-is-not-checked.json` 證明它能變紅，沒做過的綠燈不算證據。",
+  "5. 靜態全過不等於畫面上是對的：方框、亂碼、截斷、手感只有人眼看得出來，記到工作區的 `wf/WAIT_USER.md`，不要自己宣稱通過。"
+ ],
+ "handoff": [
+  "- 綠燈後回 `wf/workflows/feature-dev.json` 接完剩下的步驟（code map → 文檔 → commit）。",
+  "- 同一個紅燈第二次撞到 → `wf/workflows/gotchas.json`（記進工作區的 `wf/knowledge/gotchas.json`）。"
+ ]
+}

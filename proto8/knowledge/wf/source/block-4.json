@@ -1,0 +1,212 @@
+{
+ "_description": "第 4 塊：dev（開發類）的八條工作流、它們的記憶骨架、通用規則。來源是 workflows 模板 repo 的備料 `aos-prep/dev/`（備料把模板的 md 原稿轉成 json 節點；每份備料自己記的模板原稿與 commit 留在 `template_files`、`prep_commit`）。搬遷紀錄與代定在 aos repo 的 `proto8/thinking/2026-11/13/workflows-into-aos.md`。",
+ "block": 4,
+ "what": "dev（開發類）的八條工作流、它們的記憶骨架、通用規則",
+ "from": {
+  "repo": "workflows 模板 repo",
+  "commit": "0d0091a2ec046e3d7bc734a70dfbd51fa80e961c",
+  "note": "備料最終版 01959cecec110a8322544dc92196a12bd13c128b；它到 0d0091a 之間 aos-prep 只改了內文引用的 commit 編號",
+  "date": "2026-11-13",
+  "paths": [
+   "aos-prep/dev/feature-dev.json",
+   "aos-prep/dev/testing.json",
+   "aos-prep/dev/refactor.json",
+   "aos-prep/dev/moving-things.json",
+   "aos-prep/dev/analysis.json",
+   "aos-prep/dev/investigation.json",
+   "aos-prep/dev/dev-env.json",
+   "aos-prep/dev/patch.json",
+   "aos-prep/dev/memory-verification.json",
+   "aos-prep/dev/memory-dev-env.json",
+   "aos-prep/dev/memory-code-map.json",
+   "aos-prep/dev/memory-conventions.json",
+   "aos-prep/dev/memory-notes.json",
+   "aos-prep/dev/memory-analysis.json",
+   "aos-prep/dev/code-map-rules.json",
+   "aos-prep/dev/green-is-not-checked.json",
+   "aos-prep/dev/dispatch.json"
+  ]
+ },
+ "carried": [
+  {
+   "here": "wf/workflows/feature-dev.json",
+   "from": "aos-prep/dev/feature-dev.json",
+   "template_files": [
+    "flavors/dev/workflows/feature-dev/README.md",
+    "flavors/dev/WORKFLOWS.dev.md",
+    "template/WORKFLOWS.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；尾端 commit 照備料，不加「被派出去的不 commit」（W12＝B）"
+  },
+  {
+   "here": "wf/workflows/testing.json",
+   "from": "aos-prep/dev/testing.json",
+   "template_files": [
+    "flavors/dev/workflows/testing.md",
+    "flavors/dev/WORKFLOWS.dev.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡"
+  },
+  {
+   "here": "wf/workflows/refactor.json",
+   "from": "aos-prep/dev/refactor.json",
+   "template_files": [
+    "flavors/dev/workflows/refactor/README.md",
+    "flavors/dev/WORKFLOWS.dev.md",
+    "template/WORKFLOWS.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡"
+  },
+  {
+   "here": "wf/workflows/moving-things.json",
+   "from": "aos-prep/dev/moving-things.json",
+   "template_files": [
+    "flavors/dev/workflows/refactor/moving-things.md",
+    "flavors/dev/WORKFLOWS.dev.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`tool_gap` 改寫成使用者已裁不帶 workflows 檢查工具、knowledge 沒有查連結的出廠工具（wf-lint 的路徑改成只寫檔名）"
+  },
+  {
+   "here": "wf/workflows/analysis.json",
+   "from": "aos-prep/dev/analysis.json",
+   "template_files": [
+    "flavors/dev/workflows/analysis.md",
+    "flavors/dev/WORKFLOWS.dev.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；not_when 的「research 包（若有導入）」改成「本庫沒有，需要就自建」；產物照原文留 md（W13）"
+  },
+  {
+   "here": "wf/workflows/investigation.json",
+   "from": "aos-prep/dev/investigation.json",
+   "template_files": [
+    "flavors/dev/workflows/investigation.md",
+    "flavors/dev/WORKFLOWS.dev.md",
+    "template/WORKFLOWS.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡"
+  },
+  {
+   "here": "wf/workflows/dev-env.json",
+   "from": "aos-prep/dev/dev-env.json",
+   "template_files": [
+    "flavors/dev/workflows/dev-env.md",
+    "flavors/dev/WORKFLOWS.dev.md",
+    "flavors/dev/README.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡"
+  },
+  {
+   "here": "wf/workflows/patch.json",
+   "from": "aos-prep/dev/patch.json",
+   "template_files": [
+    "flavors/dev/workflows/patch.md",
+    "flavors/dev/WORKFLOWS.dev.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；產物落點照備料寫工作區的 `wf/patches/<patch>/`（W14＝A）；PATCH.md、APPLY.md 留 md（W13）"
+  },
+  {
+   "here": "wf/skeletons/verification.json",
+   "from": "aos-prep/dev/memory-verification.json",
+   "template_files": [
+    "flavors/dev/workflows/testing.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件"
+  },
+  {
+   "here": "wf/skeletons/dev-env.json",
+   "from": "aos-prep/dev/memory-dev-env.json",
+   "template_files": [
+    "flavors/dev/workflows/dev-env.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件"
+  },
+  {
+   "here": "wf/skeletons/code-map.json",
+   "from": "aos-prep/dev/memory-code-map.json",
+   "template_files": [
+    "flavors/dev/workflows/common/code-map.md",
+    "flavors/dev/COMMON.dev.md"
+   ],
+   "prep_commit": "9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件"
+  },
+  {
+   "here": "wf/skeletons/conventions.json",
+   "from": "aos-prep/dev/memory-conventions.json",
+   "template_files": [
+    "flavors/dev/workflows/common/conventions.md",
+    "flavors/dev/COMMON.dev.md",
+    "flavors/dev/AGENTS.dev.md"
+   ],
+   "prep_commit": "9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件；`suggested_items` 檔案拆分那條的「單檔超過 300 行」拿掉，改成「檔太大照 `wf/tidying.json#/split` 檢視」（第 1 塊牴觸第 3 條）"
+  },
+  {
+   "here": "wf/skeletons/notes.json",
+   "from": "aos-prep/dev/memory-notes.json",
+   "template_files": [
+    "flavors/dev/workflows/investigation.md"
+   ],
+   "prep_commit": "9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件"
+  },
+  {
+   "here": "wf/skeletons/analysis.json",
+   "from": "aos-prep/dev/memory-analysis.json",
+   "template_files": [
+    "flavors/dev/workflows/analysis.md"
+   ],
+   "prep_commit": "9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件；`skeleton` 照備料是檔名清單（`[\"session_log.md\"]`），沒改名"
+  },
+  {
+   "here": "wf/knowledge/code-map-rules.json",
+   "from": "aos-prep/dev/code-map-rules.json",
+   "template_files": [
+    "flavors/dev/workflows/common/code-map.md"
+   ],
+   "prep_commit": "9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡"
+  },
+  {
+   "here": "wf/knowledge/green-is-not-checked.json",
+   "from": "aos-prep/dev/green-is-not-checked.json",
+   "template_files": [
+    "flavors/dev/workflows/testing.md"
+   ],
+   "prep_commit": "9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡"
+  },
+  {
+   "here": "wf/knowledge/dev-dispatch.json",
+   "from": "aos-prep/dev/dispatch.json",
+   "template_files": [
+    "flavors/dev/AGENTS.dev.md",
+    "flavors/dev/WORKFLOWS.dev.md",
+    "flavors/dev/README.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`_description` 改寫（派發通則改指 `wf/workflows/_description.json`、觸發說法改指 `wf/workflows/_index.json`）；`disambiguation` 的「混合型專案（同時用了 knowledge 包）」一條拿掉（knowledge 包不併，W21）；`menu` 的「本包」改「本庫」"
+  }
+ ],
+ "not_carried": [
+  {
+   "what": "aos-prep/dev/_description.json、_index.json、prep-report*.json（六份）",
+   "why": "備料的說明與報告，不是節點；`_index.json` 的 description 拿來寫 `wf/workflows/_index.json`"
+  },
+  {
+   "what": "「被派出去的不 commit、由主線驗收後 commit；push 一律先問」",
+   "why": "使用者 2026-11-13 W12＝B：不寫進通用版，留給各工作區自己的偏好與鐵律"
+  }
+ ]
+}

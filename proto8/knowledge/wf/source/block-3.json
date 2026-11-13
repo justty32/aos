@@ -1,0 +1,151 @@
+{
+ "_description": "第 3 塊：kernel 的四條薄工作流、它們的記憶骨架、鐵律、派發通則、活清單寫法。來源是 workflows 模板 repo 的備料 `aos-prep/kernel/`（備料把模板的 md 原稿轉成 json 節點；每份備料自己記的模板原稿與 commit 留在 `template_files`、`prep_commit`）。搬遷紀錄與代定在 aos repo 的 `proto8/thinking/2026-11/13/workflows-into-aos.md`。",
+ "block": 3,
+ "what": "kernel 的四條薄工作流、它們的記憶骨架、鐵律、派發通則、活清單寫法",
+ "from": {
+  "repo": "workflows 模板 repo",
+  "commit": "0d0091a2ec046e3d7bc734a70dfbd51fa80e961c",
+  "note": "備料最終版 01959cecec110a8322544dc92196a12bd13c128b；它到 0d0091a 之間 aos-prep 只改了內文引用的 commit 編號",
+  "date": "2026-11-13",
+  "paths": [
+   "aos-prep/kernel/decisions.json",
+   "aos-prep/kernel/planning.json",
+   "aos-prep/kernel/gotchas.json",
+   "aos-prep/kernel/user.json",
+   "aos-prep/kernel/memory-decisions.json",
+   "aos-prep/kernel/memory-ideas.json",
+   "aos-prep/kernel/memory-gotchas.json",
+   "aos-prep/kernel/memory-user.json",
+   "aos-prep/kernel/live-lists.json",
+   "aos-prep/kernel/iron-rules.json",
+   "aos-prep/kernel/dispatch.json"
+  ]
+ },
+ "carried": [
+  {
+   "here": "wf/workflows/decisions.json",
+   "from": "aos-prep/kernel/decisions.json",
+   "template_files": [
+    "template/workflows/decisions.md",
+    "template/WORKFLOWS.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；not_when 指到 knowledge 包 decide 工作流的那句改成「本庫沒有，需要就自建」"
+  },
+  {
+   "here": "wf/workflows/planning.json",
+   "from": "aos-prep/kernel/planning.json",
+   "template_files": [
+    "template/workflows/planning.md",
+    "template/WORKFLOWS.md",
+    "flavors/dev/WORKFLOWS.dev.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；指到 knowledge 包 plan-a-thing 的三處改成「本庫沒有對應的工作流，需要就自建」；拿掉「（dev 包）」"
+  },
+  {
+   "here": "wf/workflows/gotchas.json",
+   "from": "aos-prep/kernel/gotchas.json",
+   "template_files": [
+    "template/workflows/common/gotchas.md",
+    "template/WORKFLOWS.md"
+   ],
+   "prep_commit": "9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡"
+  },
+  {
+   "here": "wf/workflows/user.json",
+   "from": "aos-prep/kernel/user.json",
+   "template_files": [
+    "template/workflows/common/user.md",
+    "template/WORKFLOWS.md",
+    "template/workflows/common/README.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；「回覆風格：通用規則在 kernel/reply-style.json」那步改成只記這位使用者的回覆偏好（reply-style 沒落，W15＝B）"
+  },
+  {
+   "here": "wf/skeletons/decisions.json",
+   "from": "aos-prep/kernel/memory-decisions.json",
+   "template_files": [
+    "template/workflows/decisions.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件；`records` 照備料是物件陣列（W18＝A）"
+  },
+  {
+   "here": "wf/skeletons/ideas.json",
+   "from": "aos-prep/kernel/memory-ideas.json",
+   "template_files": [
+    "template/workflows/planning.md"
+   ],
+   "prep_commit": "9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 的兩張表各從物件陣列改成以鍵名為鍵的物件"
+  },
+  {
+   "here": "wf/skeletons/gotchas.json",
+   "from": "aos-prep/kernel/memory-gotchas.json",
+   "template_files": [
+    "template/workflows/common/gotchas.md"
+   ],
+   "prep_commit": "9eb8f20a6b5e35e5d278f06d30e9f5e0dab892c2",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件"
+  },
+  {
+   "here": "wf/skeletons/user.json",
+   "from": "aos-prep/kernel/memory-user.json",
+   "template_files": [
+    "template/workflows/common/user.md",
+    "template/workflows/common/README.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`fields` 從物件陣列改成以鍵名為鍵的物件；W15＝B：`defaults` 整段、`rules` 講 defaults 那條、skeleton 回覆風格那格的出廠句與 skeleton `_description` 的出廠預設說明都拿掉；`holds` 的「通用回覆規則」拿掉"
+  },
+  {
+   "here": "wf/knowledge/live-lists.json",
+   "from": "aos-prep/kernel/live-lists.json",
+   "template_files": [
+    "template/SESSION-LOG.md",
+    "template/WAIT_USER.md",
+    "template/WORKFLOWS.md",
+    "template/AGENTS.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`which` 第三列的信件軸改成「同樹走 mailbox、樹外照工作區自己的做法」（multi-agent 包不併，W21）；`aos_note` 改寫成使用者 W11 的裁定（現在不改，照寫檔案）；`which` 照備料是物件陣列（W18＝A）"
+  },
+  {
+   "here": "wf/knowledge/iron-rules.json",
+   "from": "aos-prep/kernel/iron-rules.json",
+   "template_files": [
+    "template/AGENTS.md",
+    "flavors/dev/AGENTS.dev.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；「裝了開發包」兩處改成不提包"
+  },
+  {
+   "here": "wf/workflows/_description.json＋wf/workflows/_index.json",
+   "from": "aos-prep/kernel/dispatch.json",
+   "template_files": [
+    "template/WORKFLOWS.md",
+    "flavors/dev/WORKFLOWS.dev.md"
+   ],
+   "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；不單獨成檔：`route`、`skip`、`fallback`、`live_state` 寫進 `wf/workflows/_description.json` 的「派發」一節，`kernel_triggers` 變成 `wf/workflows/_index.json` 各格的 description；heartbeat／multi-agent 包那句改成「本庫沒有，需要就自建」"
+  }
+ ],
+ "not_carried": [
+  {
+   "what": "aos-prep/kernel/reply-style.json（回覆風格九條）",
+   "why": "使用者 2026-11-13 收工待裁頁 W15＝B：算個人偏好，不當通用知識節點落檔，只留在各工作區自己的 user 偏好"
+  },
+  {
+   "what": "aos-prep/kernel/_description.json、_index.json、prep-report*.json（五份）",
+   "why": "備料的說明與報告，不是節點；報告裡跟落檔有關的取捨記在這裡與搬遷紀錄"
+  },
+  {
+   "what": "備料報告 for_user 第 3 題「條列走資料檔、導航留 md」要不要另立一條鐵律",
+   "why": "備料本身已拿掉這條；W22＝A（JSON 是推薦、md 照樣可以）之後沒有人要求另立，沒加"
+  }
+ ]
+}

@@ -1,0 +1,23 @@
+{
+ "_description": "開發環境、指令、外部工具：這台機器上要能開發需要什麼、怎麼裝、跑什麼指令；外部工具設定與 env var 也收在這裡。指令、fresh clone 步驟、跨機差異、外部工具與 env var 都是專案自己的，記在工作區的 `wf/knowledge/dev-env.json`（骨架 `wf/skeletons/dev-env.json`）。",
+ "when": "fresh clone、換機器、裝不起來、忘了指令、要加一個外部工具或環境變數；使用者說「環境怎麼裝」「fresh clone 後要做什麼」「指令是什麼」。",
+ "not_when": "驗證／測試怎麼跑 → `wf/workflows/testing.json`；程式碼慣例 → 工作區的 `wf/knowledge/conventions.json`。",
+ "done_when": [
+  "照工作區的 `wf/knowledge/dev-env.json#/fresh_clone` 走完，工作區的 `wf/knowledge/dev-env.json#/smoke` 記的冒煙指令回傳 0。",
+  "工作區 `wf/knowledge/dev-env.json` 的 `commands`、`machines`、`tools` 三張表沒有空欄；要使用者親自做的（帳號、授權、金鑰）在工作區的 `wf/WAIT_USER.md` 各佔一行。"
+ ],
+ "steps": [
+  "0. 工作區還沒有 `wf/knowledge/dev-env.json` → 照 `wf/skeletons/dev-env.json#/skeleton` 建。",
+  "1. 照工作區的 `wf/knowledge/dev-env.json#/fresh_clone` 逐條做（通常是：取得完整原始碼 → 安裝依賴 → 設定 env var → 跑一次冒煙指令確認裝好了）。",
+  "2. 跑工作區的 `wf/knowledge/dev-env.json#/smoke` 的冒煙指令，回傳 0 才算裝好。",
+  "3. 指令忘了 → 查工作區的 `wf/knowledge/dev-env.json#/commands`；這台機器跑不了某些東西 → 查工作區的 `wf/knowledge/dev-env.json#/machines` 的「跑不了的 → 怎麼辦」。",
+  "4. 要加外部工具或環境變數：在工作區的 `wf/knowledge/dev-env.json#/tools` 加一筆（怎麼取得、版本要求；env var 寫放哪、預設值，**金鑰不進 repo**）。",
+  "5. 需要帳號、付費、授權才能取得的：要有授權來源（使用者當場確認，或他親自登記在清單裡；見 `wf/knowledge/iron-rules.json#/rules/authorization`，落地後在工作區 `AGENTS.md` 的鐵律段），並在工作區的 `wf/WAIT_USER.md` 記一行。",
+  "",
+  "驗證與測試指令不列在 dev-env——連同「誰跑」一起在工作區的 `wf/knowledge/verification.json`（流程 `wf/workflows/testing.json`）。"
+ ],
+ "handoff": [
+  "- 環境就緒要開工 → `wf/workflows/feature-dev.json`；先確認驗證跑得動 → `wf/workflows/testing.json`。",
+  "- 同一個裝機坑第二次撞到 → `wf/workflows/gotchas.json`。"
+ ]
+}

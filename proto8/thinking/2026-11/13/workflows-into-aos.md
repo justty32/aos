@@ -290,6 +290,8 @@
 |---|---|---|---|---|---|
 | 1 組織原則（11-13，線玄） | `wf/knowledge/structure.json` 與它 `$ref` 的 `wf/knowledge/structure/` 四份（`layers`、`nodes`、`tidying`、`repo`） | `7db19654b2bf0a21c8a940cdab9d442d7ae509d0` | 知識庫新的一庫 `proto8/knowledge/wf/`：`_description.json`、`layers.json`、`nodes.json`、`tidying.json`、`source.json`（逐段對照在 `source.json#/carried`） | 見下面清單（同一份在 `source.json#/not_carried`） | `structure.json` 的 `layers`、`skills_vs_memory`、`index_convention`（私有 index 那半）、`names`（wf 多出來的約定那半）、`workflow_form`、`growth`、`split`、`split_method`、`archive`，以及 `structure/layers.json#/logs` |
 | 2 工作流節點的骨架、tidy 一組（11-13，線玄） | `wf/knowledge/workflow-template.json`；`wf/workflows/tidy.json`、`tidy/principles.json`、`tidy/content-trim.json`、`tidy/_description.json`、`tidy-manager-brief.json`；`wf/knowledge/content-trim.json`；`wf/knowledge/gotchas.json` 的 `tidy_` 四段 | `7db5ccc0260aa2c5f0bcb6a931ca5e6960edccb3`（這幾份自 `45a27d6` 起沒再改） | `proto8/knowledge/wf/workflows/`（`tidy.json`、`tidy/`、`tidy-manager-brief.json`）與 `proto8/knowledge/wf/knowledge/`（`workflow-template.json`、`content-trim.json`、`gotchas.json`）；逐檔對照在 `source.json#/blocks/1` | 見「第 2 塊」 | 來源欄列的那幾份整份；`gotchas.json` 只標 `tidy_archive_move`、`tidy_split_datafile`、`tidy_dispatch`、`tidy_env` 四段 |
+| 3 kernel：四條薄工作流、記憶骨架、鐵律、派發通則、活清單（11-13 晚，線落二，家機） | 備料 `aos-prep/kernel/` 的 11 個節點（`reply-style` 不落） | `0d0091a2ec046e3d7bc734a70dfbd51fa80e961c`（備料最終版 `01959ce`；到 `0d0091a` 之間 `aos-prep/` 只改了內文引用的 commit 編號） | `wf/workflows/`（`decisions`、`planning`、`gotchas`、`user`）、`wf/skeletons/`（`decisions`、`ideas`、`gotchas`、`user`）、`wf/knowledge/`（`live-lists`、`iron-rules`）；`kernel/dispatch.json` 拆進 `wf/workflows/_description.json` 與 `_index.json`；逐檔對照在 `source.json#/blocks/2`（`$ref` 到 `source/block-3.json`） | 見「第 3、4 塊」 | `aos-prep/kernel/` 整夾 |
+| 4 dev：八條開發工作流、記憶骨架、通用規則（11-13 晚，線落二，家機） | 備料 `aos-prep/dev/` 的 17 個節點 | 同上 | `wf/workflows/`（`feature-dev`、`testing`、`refactor`、`moving-things`、`analysis`、`investigation`、`dev-env`、`patch`）、`wf/skeletons/`（`verification`、`dev-env`、`code-map`、`conventions`、`notes`、`analysis`）、`wf/knowledge/`（`code-map-rules`、`green-is-not-checked`、`dev-dispatch`）；逐檔對照在 `source.json#/blocks/3`（`$ref` 到 `source/block-4.json`） | 見「第 3、4 塊」 | `aos-prep/dev/` 整夾 |
 
 **放哪與為什麼（第 1 塊）**：開新的一庫 `knowledge/wf/`，不併進 `knowledge/docs/`。
 
@@ -342,6 +344,33 @@ wf-agent 對第 2、5、6 條沒表示意見。
 - **沒帶的**（同一份在 `source.json#/blocks/1/not_carried`）：`index_check … RefBad／IndexWanted`、`wf-lint --strict`、`--self`；`.md` > 8192 → 0、README ≤ 300 行／入口 ≤ 100 行、名冊 ≤ 8192、SESSION-LOG ≤ 4096 bytes；`data-files.json`、`tabledb.py`、`find_big_lists.py`、`fix_moved_links.py` 的路徑（改成「工作區有這種工具就用」）；gotchas 三條（`link_columns`、入口壓在 8192 邊緣、用空行躲 BIGLIST）；gotchas 的 `threshold`、`common` 兩段；「push 先問」與指到來源 repo 專案記憶的句子；「只是骨架版本升級…」那句。
 - **wf-agent 指出的 `#/split_method` 走不到**：查過，知識庫的 `wf/tidying.json` 裡 `split` 與 `split_method` 在同一個檔，「本檔 `#/split_method`」走得到，不用改；走不到的是它那邊拆檔後的 `structure.json`。
 
+**第 3、4 塊：落了什麼、怎麼取捨、代定、沒做的**（11-13 晚，線落二，家機；調度者放行 33 份＋`proto8/knowledge/README.md`、`_description.json` 兩檔）
+
+- **來源**：家機 `~/repo/workflows` fetch 後 `origin/main`＝`519a4ba`（含 `0d0091a`）；`519a4ba` 沒動 `aos-prep/`，所以記 `0d0091a`。一律用 `git show 0d0091a:aos-prep/…` 讀，模板 repo 沒改。
+- **落的檔**（`proto8/knowledge/wf/` 底下，新增 31 份、改 4 份）：
+  - `workflows/` 新增 12 份工作流＋`_index.json`（16 項，過 15 的門檻；它就是派發表，description 照備料 `_index.json` 的觸發說法，留 `kind`、`source` 當額外鍵）；改 `_description.json`（加「派發」一節）。
+  - 新夾 `skeletons/`：10 份記憶骨架（去掉 `memory-` 字首）＋`_description.json`。
+  - `knowledge/` 新增 `live-lists`、`iron-rules`、`code-map-rules`、`green-is-not-checked`、`dev-dispatch` 五份；改 `_description.json`。
+  - 頂層改 `_description.json`、`source.json`；新增 `source/block-3.json`、`source/block-4.json`（`source.json` 加兩塊會超過 16 KB，拆出去、`blocks` 裡原位放 `$ref`）。
+  - 庫外兩檔：`proto8/knowledge/README.md` 的 `wf/` 那列、`proto8/knowledge/_description.json` 的 wf 那句，只改「現在有什麼」。
+- **照計畫的改寫**：路徑 `kernel/…`、`dev/…` 換成落點、「aos 知識庫的」拿掉；每個節點的 `source` 拿掉、收進 `source/block-*.json`（連同備料記的模板原稿與 commit）；骨架的 `fields` 從物件陣列改成以鍵名為鍵；`memory-conventions` 的「單檔超過 300 行」拿掉；「尚未備料」的別包（knowledge、research、heartbeat、multi-agent）一律改成「本庫沒有，需要就自建」（W21＝B）。
+- **照第二批裁定**：W11＝A `live-lists` 照寫檔案，`aos_note` 改寫成這個裁定；W12＝B `feature-dev` 尾端照備料、派發通則不加「被派出去的不 commit」；W13＋W22 analysis 產物與 PATCH.md／APPLY.md 留 md；W14＝A patch 落點 `wf/patches/`；W15＝B 見代定 1；W18＝A `records`、`which` 等記錄表照備料用物件陣列。W16、W17 已在 `ff97da487` 做過，這次沒動。
+- **代定清單**（計畫沒寫、照最保守或文件推薦定的）：
+  1. `reply-style` 整份**不落檔**（W15＝B 的兩種讀法裡取不落、不做空殼）；`skeletons/user.json` 的 `defaults`、講 defaults 的規則、skeleton 回覆風格那格的出廠句都拿掉，`workflows/user.json` 那步改成「只記這位使用者的回覆偏好」。
+  2. 備料比計畫多出的 `kernel/dispatch.json`：不單獨成檔，`route`、`skip`、`fallback`、`live_state` 寫進 `workflows/_description.json`，`kernel_triggers` 變成 `_index.json` 的 description；原本指到 `kernel/dispatch.json#/skip` 的改指 `wf/workflows/_description.json` 的「可以跳流程」（`_description` 不能帶鍵，指不到段）。
+  3. 備料比計畫多出的 `kernel/iron-rules.json`：落成 `wf/knowledge/iron-rules.json`（它是查的知識、會被工作流指到），「裝了開發包」兩處改成不提包。
+  4. `dev/dispatch.json` 的「混合型專案（同時用了 knowledge 包）」一條拿掉（knowledge 包不併）。
+  5. `skeletons/analysis.json` 的 `skeleton` 照備料留檔名清單、不改名 `init_files`（備料 unsure 交我們定；跟「產物留 md」一起，最小變動）。
+  6. `moving-things` 的 done_when「連結歸零（跑了第 4 步才適用）」照備料留著，不拿掉。
+  7. `source.json` 拆出 `source/` 夾（見上）；`skeletons/` 與 `wf/workflows/_description.json` 寫明「工作區裡沒有 `wf/skeletons/`」。
+  8. 兩批 `_index.json` 的 kind 不一致（kernel 沒寫、dev 寫 `meta`）：報告檔不落，不用處理。
+- **沒做的**：
+  - 公司機的 `prep-audit2.md` 家機讀不到。這次的取捨都照備料本身與它的 `prep-report*`（含 `prep-report-fixes` 的稽核修正）做，沒有遇到非它不可的判斷；它若列了備料之後才發現、還沒修進 `0d0091a` 的問題，這次沒帶到，要回公司機對一次。
+  - 備料報告 unsure 留給我們、這次沒處理的：空工作區沒有 `wf/workflows/_index.json` 時派發起點落空（複核 N10）、「照骨架建」會建出空檔（N8、N9）、testing／patch 要不要也寫「碰原始碼前先讀」、記憶檔建了要填多少——都是「怎麼給新工作區鋪初始檔案」那題，沒動。
+  - analysis 原文就有的空白（Level 由誰指定、Level 4–6 沒定義等）照原樣。
+  - 舊 repo 標「已搬走」：模板 repo 唯讀，沒標；要 wf-agent 在 `aos-prep/_index.json` 與兩批的 `_description.json` 標。
+  - 活樹：要等下一次重抄才有；這次沒碰 `~/aos-home`。
+
 **下一塊建議併什麼**【意見】（第 1 塊時寫的；第 1、2 項已在第 2 塊做完，第 3、4 項改成下面的「第 3、4 塊落檔計畫」）：
 
 1. `wf/knowledge/workflow-template.json`（工作流節點的範本，2.8 KB）——`nodes.json#/workflow_form` 現在只列了固定鍵，範本本體還沒來。
@@ -350,6 +379,8 @@ wf-agent 對第 2、5、6 條沒表示意見。
 4. 最後才是骨架與 `wf-init`（`template/`、`flavors/`、`tools/`）——要先定放 repo 哪個夾（五夾之外）。
 
 ## 第 3、4 塊落檔計畫（先不落檔，等調度者通知）
+
+> 11-13 晚已落檔（線落二，家機）：落了什麼、照計畫與照裁定的改寫、代定與沒做的，見[搬遷紀錄](#搬遷紀錄)的「第 3、4 塊」。
 
 材料：模板 repo 的 `aos-prep/kernel/`（15 檔）與 `aos-prep/dev/`（23 檔），commit `7db5ccc`，節點來源 commit `5d2d0f4`；唯讀看。wf-agent 的獨立稽核還在跑，落檔等它的結果。這份計畫看的是兩批的 `_index.json`、`prep-report*.json`（丟掉的、重疊、工具缺口、拿不準的、要使用者裁的）與四個節點（`kernel/decisions`、`kernel/memory-decisions`、`kernel/live-lists`、`dev/dispatch`）；其餘節點還沒逐份讀，落檔時逐份對。
 

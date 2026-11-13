@@ -26,7 +26,7 @@
 | 資料夾 | 內容 | 給誰 |
 |---|---|---|
 | [aos/](aos/_index.json) | aos 體系知識（路徑寫 `aos/…`）：`_description.json` 一頁簡介＋八個詞＋五條規則；`world.json` 心智模型、`definition.json` 定義資料夾各檔、`body.json` agent-fsm 與 eca 兩種身體、`me.json` 我是誰與 `self_*` 工具、`agents.json` 子 agent 與定義、`mailbox.json` 信、`clock.json` 定時、`brain.json` 問腦、`status.json` daemon 表與 phase、`errors.json` 錯誤行與結束碼、`rules.json` 禁忌、`kernel.json` kernel 是什麼、範本在哪、怎麼自己寫一個、`packs.json` 工具包、`tools/` 每支出廠工具一份、`cli/` 給人與外部 agent 的指令（底層零件在 `cli/parts/`） | 跑在 aos 裡的 agent（小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
-| [wf/](wf/_description.json) | 工作區的工作文檔怎麼組織（路徑寫 `wf/…`）：`layers.json` 分層與歸屬、流程與知識分家、私有 index、日誌寫法；`nodes.json` 檔名、工作流節點的固定形式與成長軌跡；`tidying.json` 什麼時候拆、怎麼拆、封存；`source.json` 來源與沒帶的；`workflows/` 出廠的工作流節點（現在有 tidy 文件整理）、`knowledge/` 工作流會查的出廠知識（工作流節點骨架、內容精簡判準、整理踩過的坑）——這兩夾照工作區 `wf/` 的佈局放。內文繁中（從 workflows 模板 repo 併入，11-13 起分塊，[thinking workflows-into-aos](../thinking/2026-11/13/workflows-into-aos.md)）；樹怎麼寫仍以本夾 docs/01、02 為準、那一庫不重講 | 工作區裡帶 `wf/` 的 agent、人 |
+| [wf/](wf/_description.json) | 工作區的工作文檔怎麼組織（路徑寫 `wf/…`）：`layers.json` 分層與歸屬、流程與知識分家、私有 index、日誌寫法；`nodes.json` 檔名、工作流節點的固定形式與成長軌跡；`tidying.json` 什麼時候拆、怎麼拆、封存；`source.json` 來源與沒帶的；`workflows/` 出廠的工作流節點（kernel 的記決定、規劃、記踩坑、記偏好、tidy 文件整理；開發類的功能開發、測試、重構、搬檔、分析、調查、環境、patch；那夾的 `_index.json` 就是派發表）、`knowledge/` 工作流會查的出廠知識（工作流節點骨架、內容精簡判準、整理踩過的坑、活清單寫法、鐵律、開發類派發分辨、code map 規則、綠燈不等於有檢查）——這兩夾照工作區 `wf/` 的佈局放；`skeletons/` 專案自己要填的記錄的空殼（工作流叫你建檔時照它抄進工作區）。內文繁中（從 workflows 模板 repo 併入，11-13 起分塊，[thinking workflows-into-aos](../thinking/2026-11/13/workflows-into-aos.md)）；樹怎麼寫仍以本夾 docs/01、02 為準、那一庫不重講 | 工作區裡帶 `wf/` 的 agent、人 |
 
 試一下（從 `proto8/`）：
 

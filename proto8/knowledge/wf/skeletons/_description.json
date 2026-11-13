@@ -1,0 +1,9 @@
+[
+ "# 記憶骨架",
+ "",
+ "專案自己要填的記錄與知識（決策、想法、踩坑、使用者偏好、驗證表、開發環境、code map、寫碼慣例、調查筆記、分析產物）的空殼。每份寫：放什麼、不放什麼（`holds`）、欄位（`fields`，以鍵名為鍵）、規則（`rules`），與一份 `skeleton`。",
+ "",
+ "怎麼用：工作流的步驟寫「還沒有就照 `wf/skeletons/<名>.json#/skeleton` 建」時，把 `skeleton` 的值抄成工作區的 `wf/knowledge/<名>.json` 再填（`notes` 是一篇一檔的 `wf/knowledge/notes/<主題>.json`；`analysis` 的 `skeleton` 是要先建的檔名清單，建在 `wf/knowledge/analysis/<project>/`）。`skeleton` 裡寫的路徑是工作區裡的路徑。這一夾只在本庫，工作區裡沒有 `wf/skeletons/`。",
+ "",
+ "現在有：`decisions`、`ideas`、`gotchas`、`user`（配 `wf/workflows/` 的 decisions、planning、gotchas、user）；`verification`、`dev-env`、`code-map`、`conventions`、`notes`、`analysis`（配開發類工作流）。"
+]

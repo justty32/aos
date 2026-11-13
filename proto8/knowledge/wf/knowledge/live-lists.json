@@ -1,0 +1,34 @@
+{
+ "_description": "兩份活清單（工作區的 `wf/SESSION-LOG.md` 進度、`wf/WAIT_USER.md` 等使用者）怎麼寫：誰記哪份、何時寫、條目格式、開場怎麼看。「只列 open、完成即刪、膨脹就拆、hub 只留導航表」已在 `wf/layers.json#/layers`（第 3 條），日誌寫法在 `wf/layers.json#/logs`，這裡不重講。",
+ "which": [
+  {
+   "waiting_for": "使用者做／驗證／決定",
+   "where": "工作區的 `wf/WAIT_USER.md`"
+  },
+  {
+   "waiting_for": "同 repo 另一個 session／fork",
+   "where": "工作區的 `wf/SESSION-LOG.md` 一行 open"
+  },
+  {
+   "waiting_for": "別資料夾的 agent",
+   "where": "信件（在 aos 裡同一棵樹的 agent 之間是 mailbox，見 `aos/mailbox.json`；不在樹裡的照工作區自己的做法）"
+  }
+ ],
+ "session_start": "每個 session 開場先數兩份清單的條目：`grep -c '^- \\[' wf/SESSION-LOG.md wf/WAIT_USER.md`；非 0 才打開那份讀；檔不存在就當 0。",
+ "session_log": [
+  "寫入時機：",
+  "1. 開始多步驟工作前先寫一行 open（不是做完才寫）；硬中斷時這份才有「進行中」。",
+  "2. 每次 commit 後更新或刪除該行。",
+  "條目格式：`- [工作流] 一句 open 狀態 → 下一步／指到哪`；完成即刪，歷史交給 git log，決策落到 `wf/workflows/decisions.json` 那份記錄。",
+  "檔的形狀：一段「最新進度」放條目，沒有就寫「（目前無）」；一張「各工作流 session-log」導航表 `| 工作流 | session-log | open 摘要 |`——某工作流長出自己的 session-log 後加一列，空表很正常。",
+  "膨脹拆成 `session_logs/` 時按工作流拆檔，hub 留導航表。"
+ ],
+ "wait_user": [
+  "記什麼：需要使用者親自做／驗證／決定的事——實機測試、外部服務登入、環境變數、權限、付費、需帳號的下載、去開另一個 agent。agent 做到結構性驗證的極限，跨不過的那關記這裡。",
+  "不記什麼：等別的 session／agent 的不記這裡（看本檔 `#/which`）。",
+  "條目格式：`- [工作流] 請使用者做什麼 → 做完我接著做什麼`，做完即刪。",
+  "檔的形狀：一段「待使用者項」放條目，沒有就寫「（目前無）」。",
+  "膨脹拆成 `wait-user/` 時：按類別拆檔，hub 只留一張 `| 類別 | open | 清單 |` 導航表，每列指到 `wait-user/<類別>.md`。"
+ ],
+ "aos_note": "`aos/mailbox.json#/rules` 有 `NEEDS-USER` 狀態；使用者 2026-11-13 裁（收工待裁頁 W11）：現在不改，通用版照寫工作區的 `wf/WAIT_USER.md`。"
+}

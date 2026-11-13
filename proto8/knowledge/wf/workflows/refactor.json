@@ -1,0 +1,17 @@
+{
+ "_description": "重構／拆檔／整理結構：只改結構、不改行為。拆與分類的方法在 `wf/tidying.json#/split_method`，本節點只管流程；搬檔、改目錄名、拆 repo 的專章在 `wf/workflows/moving-things.json`。",
+ "when": "結構門檻超標（單檔過大、資料夾雜亂：`wf/tidying.json#/split`；程式碼單檔的行數門檻是專案自己的，記在工作區的 `wf/knowledge/conventions.json`），或使用者說「重構」「拆檔」「整理結構」（行為不變）。",
+ "not_when": "順手改了行為 → `wf/workflows/feature-dev.json`；還沒搞懂現況 → `wf/workflows/investigation.json`；使用者說「整理 X」「封存過時的」「檔案太多／太雜」「太大要拆」「只留結論」而對象是工作文檔（不是程式碼）→ tidy 工作流（`wf/workflows/tidy.json`；整理規則在 `wf/tidying.json`）。",
+ "done_when": [
+  "工作區的 `wf/knowledge/verification.json#/checks` 的驗證指令綠燈，且與動手前結果相同。",
+  "工作區的 `wf/knowledge/code-map.json#/domains` 中受影響領域的列已更新。"
+ ],
+ "steps": [
+  "0. 碰原始碼前先讀工作區的 `wf/knowledge/conventions.json`（寫碼慣例）與 `wf/knowledge/code-map.json`（哪個檔負責什麼）；環境與指令看 `wf/knowledge/dev-env.json`（`wf/knowledge/dev-dispatch.json#/before_code`）。工作區還沒有 → 照 `wf/skeletons/conventions.json#/skeleton`、`wf/skeletons/code-map.json#/skeleton` 建。驗證指令在工作區的 `wf/knowledge/verification.json`（還沒有 → 照 `wf/skeletons/verification.json#/skeleton` 建）。",
+  "1. 先跑驗證指令記下基準；紅的先修掉，別和重構混在一起。",
+  "2. 照 `wf/tidying.json#/split_method` 按職責拆／分類，不等分硬切。",
+  "3. 一次搬一塊，搬完就跑驗證（換位置、改名、拆 repo 照 `wf/workflows/moving-things.json`）。",
+  "4. 更新 code map 與所有指向舊路徑的引用（統一路徑、連結）。"
+ ],
+ "handoff": "結構就位後要加功能 → `wf/workflows/feature-dev.json`；為什麼這樣拆 → `wf/workflows/decisions.json`。"
+}

@@ -1,5 +1,5 @@
 {
- "_description": "這一庫的內容從哪裡來、哪些沒帶進來。併入的經過與之後每一塊的搬遷紀錄在 aos repo 的 `proto8/thinking/2026-11/13/workflows-into-aos.md`。",
+ "_description": "這一庫的內容從哪裡來、哪些沒帶進來。併入的經過與之後每一塊的搬遷紀錄在 aos repo 的 `proto8/thinking/2026-11/13/workflows-into-aos.md`。第 3、4 塊太大，拆在 `source/block-3.json`、`source/block-4.json`，`blocks` 裡原位放 `$ref`。",
  "commit_ids": "模板 repo 在 2026-11-13 push 前改寫過還沒公開的歷史（把內容裡的帳號名換掉；最後的檔案樹與改寫前逐位元相同），commit 編號全變，舊編號已經拿不到。下面各塊的 `commit` 都是改寫後的新編號。當初搬的時候記的舊編號：第 1 塊 7db19654b2bf0a21c8a940cdab9d442d7ae509d0（現在是 019c91240c1fad9a9d6c870f7493bdf2361c9d56）；第 2 塊 7db5ccc0260aa2c5f0bcb6a931ca5e6960edccb3（現在是 584f3f59f6539cfe3e0d761ba68300c7aa4c4014）、「自 45a27d6 起沒再改」的 45a27d68d02325d5000cf475a363560f5d8775f2（現在是 905c096e61fb603fc114303d6e95e68b23bd58dc）。完整對照在 aos repo 的 `proto8/thinking/2026-11/13/workflows-into-aos.md`。",
  "blocks": [
   {
@@ -201,6 +201,12 @@
      "why": "使用者 2026-11-13 收工待裁頁 W16 選「補進去，知識庫變六條」"
     }
    ]
+  },
+  {
+   "$ref": "source/block-3.json"
+  },
+  {
+   "$ref": "source/block-4.json"
   }
  ]
 }
