@@ -354,3 +354,5 @@
 ### 結果
 
 `lib/aos/kernel/tests`：`Ran 51 tests`、`OK`（原 39＋新 12）；`lib/aos/kernel_llm/tests`：`Ran 32 tests`、`OK`；`kernel-chain-check: 6/6 ok`。
+- **13:05 追加（調度者轉使用者確認「好，5、6、7都照你的看法。」第 7 題＝抄本也抄 `kernel/`）**：重抄多一夾 `proto8/kernel/` → `~/aos-home/kernel/`（知識庫 `aos/kernel.json` 說範例在 `$AOS_HOME/kernel/`，樹裡原本沒有這一夾）。腳本改四處：樹裡原本沒有的夾，precheck 只報告、backup 記進 `tree/ABSENT`、copy 照建、rollback 把它刪掉。暫存樹再預演一次：抄完 `kernel/` 25 檔與該 commit 相同；rollback 後 `kernel/` 不見、其餘四夾內容與模式位元跟抄之前相同。沒有東西會掃 `$AOS_HOME` 底下的夾（`env.sh` 只 export；讀 `AOS_HOME` 的 `aos-tools`、`aos-mcp-launch` 只拼 `lib` 路徑）。兩個提醒：`kernel/docs` 與 README 連到 `../thinking`、`../docs` 的相對連結在樹裡會斷；範本 `llm-kernel`、`llm-team` 的身體仍是 C++ 那支 `aos-llm-kernel`。
+- 另加一段 `swap.sh stray`（調度者交辦、樹停著才做）：`~/aos-home/ws/.stack/procs/repo-aos/` 被別線測試誤寫的 `interfaces.json`、`observed.jsonl` 先備份到備份落點的 `stray-repo-aos/` 再刪；內容不是「`{"aos-observed": {"file": "observed.jsonl"}}`＋兩行、第一行 `ws` 在 `/tmp/`」就不刪（預演驗過這個紅燈）。`daemon_reply/` 不動。
