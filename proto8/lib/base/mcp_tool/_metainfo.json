@@ -10,7 +10,7 @@
   "parallel": true,
   "timeout_ms": 60000,
   "tooldef": {
-    "description": "Call one tool on an external MCP server once and print its limited text/resources result and save image/audio in AOS_STACK. Not registered for brains: each pack entry's _entry runs it with --pack and --tool; stdin is the external tool's arguments, passed as is.",
+    "description": "Call one tool on an external MCP server once and print its limited text/resources result and save image/audio in AOS_STACK (run through aos-tools, the result line shows the file as $AOS_STACK/tools/NAME/FILE, counted from the caller's stack). Not registered for brains: each pack entry's _entry runs it with --pack and --tool; stdin is the external tool's arguments, passed as is.",
     "parameters": {
       "type": "object",
       "additionalProperties": true,

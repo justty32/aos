@@ -132,14 +132,18 @@ class McpToolThroughAosTools(unittest.TestCase):
             self.assertNotIn(str(stack), r.stdout + r.stderr)
         self.assertNotEqual(*paths)
 
-    def test_image_through_tools_uses_own_cell(self):
+    def test_image_through_tools_prints_path_the_caller_can_open(self):
+        """經 aos-tools 叫：檔存在工具自己的小格（父 stack/tools/<名>/），提示行的 $AOS_STACK 要從叫工具的那方（腦）的 stack 算，
+        照字面就找得到（11-13 外部 MCP 實測：原本印小格裡的 $AOS_STACK/檔，腦在自己的 stack 找不到）；不印絕對路徑。"""
         stack = self.tmp / "parent-stack"
         stack.mkdir()
         r = self.tools("call", "demo_image", "{}", AOS_STACK=str(stack))
         self.assertEqual(r.returncode, 0, r.stderr)
-        match = re.fullmatch(r"\[image saved: (\$AOS_STACK/.*?) \(image/png, (\d+) bytes\)\]\n", r.stdout)
+        match = re.fullmatch(r"\[image saved: \$AOS_STACK/(tools/demo_image/[^/]+) \(image/png, (\d+) bytes\)\]\n", r.stdout)
         self.assertIsNotNone(match, r.stdout)
-        saved = stack / "tools" / "demo_image" / match[1].removeprefix("$AOS_STACK/")
+        saved = stack / match[1]                              # the caller's own $AOS_STACK
+        self.assertTrue(saved.is_file(), match[1])
+        self.assertNotIn(str(stack), r.stdout + r.stderr)
         self.assertTrue(saved.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"))
         self.assertEqual(len(saved.read_bytes()), int(match[2]))
 
