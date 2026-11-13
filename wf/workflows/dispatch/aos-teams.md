@@ -34,6 +34,7 @@
 | [03-使用者原話](aos-teams/03-使用者原話.md) | 使用者 11-06 原話（現行隊形的出處）、使用者 11-07 原話（家機假日隊形與 gpt 的分工限制） |
 | [04-進度回報](aos-teams/04-進度回報.md) | 進度回報與桌面看板 |
 | [05-同機session與Argon](aos-teams/05-同機session與Argon.md) | 同機 session 傳話（a2a 與 inbox）、Argon 共同設計與指令、agy、LM Studio、家機假日隊形 |
+| [06-公司WSL活樹與任務書硬規則](aos-teams/06-公司WSL活樹與任務書硬規則.md) | 公司 WSL 現況（樹住 `~/aos-home`、頂層是樹裡的 `repo-aos`）、任務書必貼的硬規則、停樹換檔的做法 |
 
 <a id="指令與沙箱"></a>
 <a id="codex-呼叫與沙箱"></a>

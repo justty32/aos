@@ -1,9 +1,10 @@
-← [入口](../gotchas.md)｜涵蓋：使用 aos、改文件、公司 Windows 這台
+← [入口](../gotchas.md)｜涵蓋：使用 aos、改文件、公司 Windows 這台｜下一份 [05-在跑著的樹旁邊做事](05-在跑著的樹旁邊做事.md)
 
 ## 使用 aos
 
 - **家機 Manjaro 的 zsh 把 `ls` 設成 `eza --icons --git`，在 Claude Code 的 Bash 工具（非互動、沒有 tty）裡會掛住不回**（容易被誤判成 claude -p 超時）：agent 跑的指令用 `/bin/ls`（或 `command ls`），別用 `ls`。
 - **從管線或程式叫 `claude -p`，stdin 開著又沒東西時它會等 stdin 等到卡住**：不是終端機直接跑的就 `</dev/null`。
+- **公司 WSL 有一棵使用者在用的樹**：收行程、清 `AOS_*`、改 repo 哪些檔存檔即生效 → [05-在跑著的樹旁邊做事](05-在跑著的樹旁邊做事.md)。
 
 ## 改文件
 
@@ -37,7 +38,7 @@
 - **WSL 看 `/mnt/c` 底下的檔全是 `+x`**（沒開 metadata）：aos-exec 會把 repo 裡的 JSON 入口（`loop.json#/body`）當可執行檔，報 `bad entry: an executable cannot take #/`（10-21 撞到）。跑 proto8 測試與 demo 前，先把 `proto8/` 複製到 WSL 自己的檔案系統、全部 `chmod 644`，再照 `git ls-files -s` 的 `100755` 補 `+x`。
 - **在 `/mnt/c` 上跑 proto8 tests 有約 12 個假失敗**（10-22）：`/mnt/c` 底下所有檔都被當可執行（同上一條）。先把 repo 複製到 WSL 自己的檔案系統（如 `~/tmp`）再跑。
 - **Git Bash 跑 `wsl git -C /mnt/c/...` 會被 MSYS 路徑轉換改寫成 `C:/Program Files/Git/mnt/...` 而失敗**（10-22）：改用 PowerShell 跑，或加 `MSYS_NO_PATHCONV=1`。WSL 的 git 用 https 推會卡在等帳密，改加 `-c 'url.git@github.com:.insteadOf=https://github.com/'` 走 SSH。
-- **同一個 clone 裡，別人的 `git commit` 會把你已 stage 的檔一起帶走**（11-06 no-pid P3：隊長 `git add` 完、還沒 commit，同 clone 的 fable 一跑 `git commit` 就把 P3 全部程式收進它的 body-protocol commit、還推上去了，見 [no-pid 10](../../../../proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md)）：多人共用工作樹時，stage 跟 commit 寫在同一個指令裡、中間不停；自己 commit 時用 `git commit -F 訊息 -- <自己的路徑>`（只提交這些路徑，不收別人 stage 的東西）。
+- **同一個 clone 裡，別人的 `git commit` 會把你已 stage 的檔一起帶走**（11-06 no-pid P3：隊長 `git add` 完、還沒 commit，同 clone 的 fable 一跑 `git commit` 就把 P3 全部程式收進它的 body-protocol commit、還推上去了，見 [no-pid 10](../../../../proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md)）：多人共用工作樹時，stage 跟 commit 寫在同一個指令裡、中間不停；自己 commit 時用 `git commit -F 訊息 -- <自己的路徑>`（只提交這些路徑，不收別人 stage 的東西）。**點名的檔裡若有別線還沒 commit 的字，照樣整個帶走**（11-13 兩處）：同一個檔同一時間只給一條線、commit 前看 `git diff -- <檔>`，見 [dispatch/lessons 16](../../dispatch/lessons/03-坑14-20.md#16-多條線共用一棵工作樹同一個檔同一時間只給一條線)。
 - **`codex exec resume` 沒有 `-s` 旗標**（11-06 E 隊）：續跑時改用 `-c sandbox_mode="workspace-write"` 雖然是同一個沙箱，但會被安全分類器標成「Safety Bypass Flag」警告；要續跑就**開新的 `codex exec -s workspace-write`**（把上一輪的 out.md 當任務書的一段），不用 resume 帶 `-c sandbox_mode`。`resume --help` 會列出繞過沙箱的旗標，照樣不准用。
-- **實測收尾對 aos-exec 那組送 SIGINT，收不到它底下的 aos-daemon**（11-06 A 隊留了 3 支 llm kernel daemon 跑 4.5 小時）：aos-daemon 自己另開一組，所以收尾要對**daemon 的 pid**（讀它 stack 的 `state.json` 或啟動時記下）送 SIGINT，收完用 `pgrep -af aos-` 對自己的 /tmp 夾確認沒殘留。
+- **實測收尾對 aos-exec 那組送 SIGINT，收不到它底下的 aos-daemon**（11-06 A 隊留了 3 支 llm kernel daemon 跑 4.5 小時）：aos-daemon 自己另開一組，所以收尾要對**daemon 的 pid**（讀它 stack 的 `state.json` 或啟動時記下）送 SIGINT，收完用 `pgrep -af aos-` 對自己的 /tmp 夾確認沒殘留。按名字收（`pkill`）不准，見 [05](05-在跑著的樹旁邊做事.md)。
 - **多 agent 同時在同一工作樹時，不要用 `git pull --rebase --autostash`**（10-22 發生過）：它可能停在半截 rebase，把別人的未提交改動收進 autostash（有 agent 的改動一度消失）。只 `add` 自己的檔。

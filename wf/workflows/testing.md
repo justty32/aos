@@ -34,6 +34,25 @@ repo 根沒有 CMake，要建的只有 `proto8/impls/`：頂層 `impls/CMakeList
 
 `proto8/cmd/`（指令）、`proto8/py/`（共用模組）、`proto8/lib/`、`proto8/kernel/`、`proto8/templates/` 是 Python／sh，沒有建置步驟；要確認就手跑（用法在各自的 README）。aos 的程式都不動 PATH，手跑時把 `proto8/impls/<名>/bin/`、`proto8/cmd/<名>/bin/` 放進 PATH（`proto8/install.sh` 一次放進 `~/.local/bin`）。
 
+## 不碰跑著的樹
+
+公司 WSL 的 `~/aos-home` 有使用者在用的樹，agent 的 Bash 帶著它的 `AOS_*`（[gotchas/05](common/gotchas/05-在跑著的樹旁邊做事.md)）；在這台跑任何測試、手跑任何 aos 指令：
+
+- **先清環境，用 bash 腳本、不在 zsh 裡清**：把下面存成暫存夾裡的 `clean-env.sh`，一律 `bash clean-env.sh <指令…>` 跑（不 `source`）。zsh 的 `env -u $VARS`、在 zsh `source` bash 寫法的環境檔都等於沒清（11-13 線寅、線申各中一次，檔寫進活樹頂層那格 stack）。
+
+  ```bash
+  #!/bin/bash
+  [ -n "$BASH_VERSION" ] || { echo "not bash, refuse" >&2; exit 2; }
+  for v in $(compgen -e | grep '^AOS_'); do unset "$v"; done
+  if env | grep -q '^AOS_'; then echo "AOS_* still set, refuse" >&2; exit 2; fi
+  exec "$@"
+  ```
+
+- **全套測試、要當基準的那次，在乾淨複本上跑**：`git archive <commit> | tar -x -C <repo 外的暫存夾>`，不在共用的工作樹上跑——別線改到一半的檔會讓結果只反映當下的工作樹，測試寫錯環境時也不會碰到 repo 與活樹。
+- **要起樹就起在 repo 外獨一無二的暫存夾**，tmux 用 `-S <暫存夾內 socket>`；收行程只收自己記下的（寫法在 [aos-teams/06](dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md#任務書必貼的硬規則) 第 4 條）。
+- **跑完核對**：`pgrep -u "$USER" -af aos-daemon` 跟開工前一樣、活樹裡頂層那格 stack 的 `ls` 跟開工前一樣；指令與輸出貼進回報。
+- **測試程式自己也不寫 `pkill -f`**：收自己記下的 pid。
+
 ## 綠燈不等於有檢查
 
 **一道檢查通過，可能是因為它根本沒在檢查。** 新增或修改一道檢查（例如 `wf/tools/wf-lint.sh` 的一條）時，要證明它能變紅：先餵一個**應該被擋**的輸入，確認 exit ≠ 0；再餵正確的輸入，確認 exit = 0。**build 得過不等於跑起來是對的**；真模型、外部 CLI 的行為只有實跑看得出，這類記到 [WAIT_USER](../WAIT_USER.md)，不要自己宣稱通過。
