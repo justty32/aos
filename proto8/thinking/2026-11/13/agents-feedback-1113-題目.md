@@ -320,7 +320,11 @@ C 段「好用、請保留」不算題，另列在[請保留的清單](#請保�
 
 > 4.agent自己的stack，建議把它當記憶體或/tmp看待，雖然和那種關機就沒了的真正記憶體不同，但終究是比較...你懂得。所以我建議是找個地方放啦，比如工作區弄個temp/agents/xxx/，或是~/temp/agents/xxx。
 
-- **結論**：stack 當記憶體或 `/tmp` 看待，不放持久的暫存（推薦的 A 不採）。另外找地方放，候選兩個、使用者沒定哪個：工作區的 `temp/agents/<名>/`，或 `~/temp/agents/<名>/`。
+（同晚定了位置）
+
+> 暫存夾用工作區的 ~/aos-home/ws/temp/agents/xxx/
+
+- **結論**：stack 當記憶體或 `/tmp` 看待，不放持久的暫存（推薦的 A 不採）。持久暫存放 `~/aos-home/ws/temp/agents/<agent 名>/`（原本兩個候選，已定這個）。
 - **後續**：見[待辦](#裁定後的待辦只列沒施工) 5。
 
 ### 裁-5（T08、T09）：使用者的話怎麼讓各 agent 直接讀到？
@@ -347,7 +351,7 @@ C 段「好用、請保留」不算題，另列在[請保留的清單](#請保�
 2. **T02 通用新程式**：做一套放 `~/aos-home/ws/tools` 的共用程式（例如通知過濾、PROGRESS 攢著一起看），不動 `aos-post`、信件格式、`mail_notify`。這套共用程式可以就是兩層 hook 裡「第二層判斷」那支（看信有沒有特定 key、決定要不要叫醒）。是之後的新工作，今晚不做。
 3. **T02 約定寫進知識庫**：信件 JSON 可以加額外 key 或寫進 body；別亂寄、別打擾人是紀律，寫成 prompt 或 agent 之間的約定。另外在知識庫（`aos/mailbox.json`、`aos/clock.json` 或 `me/self_hook` 相關處）寫明兩種做法：怕吵就把 mail hook 間隔調長（例如 15 分鐘，像免打擾）；要收重要信就設兩層 hook（第一層所有信都觸發，第二層看特定 key 決定叫不叫醒）。
 4. **T04 約定寫進知識庫**：agent 之間盡量寫 aos 名稱、走信件，要送進畫面的由 aos 中轉。
-5. **T06 定位置**：在 `temp/agents/<名>/`（工作區）和 `~/temp/agents/<名>/` 兩個候選裡定一個，寫進知識庫（`me.json` 說 stack 當記憶體看、暫存放哪）。
+5. **T06 寫進知識庫**：把 `~/aos-home/ws/temp/agents/<agent 名>/` 這個位置寫進知識庫 `me.json`（與相關處），一起寫明 stack 當記憶體看、不放持久暫存。
 6. **T08／T09 共通位置**：`~/aos-home/ws/public` 當放共通東西的候選；`~/.aos/user/` 收信夾和搭配網頁、通知的決策 agent 是之後的事，先記著。
 7. **T19 回 eca_main**：告訴它 rename 已經裁了（em-Q4:B，改名用兩步 `ctl rm OLD`＋`ctl add -n NEW -s <舊 stack>`），兩步寫法補進說明與知識庫（SESSION-LOG「eca_main 來信七項」那條）。要不要寄、誰寄，交頂層。
 
