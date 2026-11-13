@@ -35,6 +35,9 @@
 #   畫面開著 → 從 pty 送字：tmux paste-buffer 貼上＋Enter，等 hook 在 turns.jsonl 接一行（有人接著看、或 claude 正在跑一輪＝SessionBad；
 #             claude 停在信任資料夾選單＝TrustMissing、不貼，11-10 深夜；
 #             on_busy="answer" 時不退讓：照樣貼、busy.txt 等它消失，10-31）
+# aos 自己會加的旗標（cli.json 的 flags／print_flags 再寫＝CfgBad，cli_cfg.AOS_FLAGS）：codex＝--skip-git-repo-check、--json、-o／--output-last-message
+#   （codex 不收重複的，寫第二次它退 2）；claude＝-p／--print、--output-format、--session-id、--resume／-r、--continue／-c。有宣告才加、可以重複的
+#   不擋：--mcp-config、--allowedTools、--append-system-prompt-file、--system-prompt-snapshot、--settings、--agents（跟 tools_sub 同寫另有 CfgBad）、--model、codex 的 -c。
 # 工具（11-03 eca-tools，thinking 2026-11-03-eca-tools）：cli.json 選填 tools＝aos-tools 的登記檔（相對路徑從 cli.json 的資料夾算；
 #   也可寫指示詞，例 {"$env": "AOS_HOME", "$path": "/lib/x/tools.json"}，每次讀才解、不寫回，11-10 two-machines TC；{"$ref": "#/…"} 沒檔名＝cli.json 自己，11-12 ref-hash），
 #   沒寫＝cli.json 同層有 tools.json 就用它（使用者 11-03「如果cli.json沒有指定，那就去找默認的tools.json」）、沒有＝不接工具；

@@ -13,6 +13,19 @@ else:
     from cli_mcp import external_servers
 
 
+# aos 每次起 CLI 自己會加、cli.json 的 flags／print_flags 不准再寫的旗標（寫了＝CfgBad：在認領信之前就停，信留在 queue、不進冷卻）。
+# codex exec 的這幾個不准重複（寫第二次 codex 退 2：cannot be used multiple times）；claude 的是輸出格式與接哪段對話，重寫會解不開輸出或接錯對話。
+# 有宣告才加的（--mcp-config、--allowedTools、--append-system-prompt-file、--settings、--agents、codex 的 -c …）可重複，不擋。
+AOS_FLAGS = {"codex": ("--skip-git-repo-check", "--json", "-o", "--output-last-message"),
+             "claude": ("-p", "--print", "--output-format", "--session-id", "--resume", "-r", "--continue", "-c")}
+
+
+def reserved_flags(kind, flags):
+    """flags 裡 aos 自己會加的那幾個（含 --旗標=值 的寫法），排序去重；沒有＝[]。"""
+    mine = AOS_FLAGS[kind]
+    return sorted({a.split("=", 1)[0] if a.startswith("--") else a for a in flags} & set(mine))
+
+
 def load_cfg(tool_dir):
     path = os.path.join(tool_dir, "cli.json")
     try:
@@ -27,6 +40,10 @@ def load_cfg(tool_dir):
     for k in ("flags", "print_flags", "tools_flags"):
         if not isinstance(cfg.get(k, []), list) or not all(isinstance(a, str) for a in cfg.get(k, [])):
             cli_base.die("CfgBad", "%s: %s must be an array of strings" % (path, k))
+    for k in ("flags", "print_flags"):
+        mine = reserved_flags(cfg["kind"], cfg.get(k, []))
+        if mine:
+            cli_base.die("CfgBad", "%s: %s has %s, which aos adds itself; remove it" % (path, k, ", ".join(mine)))
     rb = cfg.get("reseed_bytes", RESEED_BYTES)                     # 11-10 two-machines 05：開新對話時接在題目前的紀錄上限
     if not isinstance(rb, int) or isinstance(rb, bool) or rb < 0:
         cli_base.die("CfgBad", "%s: reseed_bytes must be a non-negative integer" % path)

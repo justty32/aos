@@ -11,6 +11,13 @@ claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是�
  "timeout_ms": 600000}
 ```
 
+**aos 自己會加的旗標，`flags`／`print_flags` 不要再寫**——寫了＝讀設定時 `CfgBad …: print_flags has --skip-git-repo-check, which aos adds itself; remove it`，這隻停下、信留在 queue（不進冷卻、不掉信），把那個旗標拿掉再 `aos-agent ctl start` 就接著答：
+
+| 身體 | 寫了＝`CfgBad` | aos 有宣告才加、你也可以自己寫的 |
+|---|---|---|
+| codex | `--skip-git-repo-check`、`--json`、`-o`／`--output-last-message`（codex 不收重複的旗標，寫第二次它退 2） | `-c …`（`mcp_servers.*`、`developer_instructions`、畫面的 `notify`；`-c` 可以重複） |
+| claude | `-p`／`--print`、`--output-format`、`--session-id`、`--resume`／`-r`、`--continue`／`-c`（輸出格式與接哪段對話歸 aos） | `--mcp-config`、`--allowedTools`、`--append-system-prompt-file`、`--system-prompt-snapshot`、`--settings`、`--model`（`llm.json` 有寫就換掉）；`--agents` 跟 `tools_sub` 同寫＝`CfgBad` |
+
 ```
 eca-claude/
   _entry      ["aos-loop", "loop.json"]（JSON 入口）

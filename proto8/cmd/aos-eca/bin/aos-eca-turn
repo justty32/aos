@@ -15,7 +15,7 @@
     沒給＝沒有開場白（不找 prompt.txt）。例：["aos-eca-turn", "--on-empty", "stop", "--prompt", "prompt.txt", {"$env": "AOS_CD"}]。
 
 定義資料夾＝eca 的定義（templates/eca-claude 那種）：頂層 cli.json（kind claude｜codex、flags、print_flags、timeout_ms；
-  cli_session 讀的同一份；11-03 起選填 tools、tools_flags；寫了 prompt 不看，開場白走 --prompt）、選填 tools.json（aos-tools 的登記檔：cli.json 沒寫 tools
+  cli_session 讀的同一份；flags／print_flags 寫了 aos 自己會加的旗標＝CfgBad，在認領信之前就停、信留在 queue，清單見 cli_session.py 開頭；11-03 起選填 tools、tools_flags；寫了 prompt 不看，開場白走 --prompt）、選填 tools.json（aos-tools 的登記檔：cli.json 沒寫 tools
   就用它，接上 aos-mcp，工作區＝$AOS_WS、stack＝$AOS_STACK；11-03 eca-tools）。定義不被寫（P-15）；寫的都在 $AOS_STACK。
 
 平級形（沒有 --one）——一次替它答一批（11-03 起：使用者 11-03「每次aos-eca-turn就是把所有信一起丟進去(當然，是有順序的)」「一批幾封無上限」，thinking 2026-10-30-eca/17-11-03-批次-status.md；原本一次一則）：

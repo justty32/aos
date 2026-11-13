@@ -389,6 +389,23 @@ class CodexSwitch(Base):
         self.assertTrue(last["stdin"].startswith("[aos] session: "))
         self.assertEqual(self.queue(), [])
 
+    def test_cfgbad_flag_keeps_the_letter(self):
+        """11-13: print_flags repeats a flag aos adds itself: stopped before the letter is claimed, no cooldown, codex never called."""
+        self.write_cfg({"print_flags": ["--skip-git-repo-check"]})
+        self.say("x")
+        r = self.turn()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("error: CfgBad", r.stderr)
+        self.assertIn("print_flags has --skip-git-repo-check, which aos adds itself; remove it", r.stderr)
+        self.assertEqual(len(os.listdir(self.stack / "queue" / "new")), 1)
+        self.assertEqual(os.listdir(self.stack / "queue" / "cur"), [])
+        self.assertIsNone(cooldown.read(str(self.stack)))
+        self.assertEqual(self.calls(), [])
+        self.write_cfg({})                                              # fixed: the same letter is answered
+        self.ok_turn()
+        self.assertEqual(self.calls()[-1]["stdin"], "x")
+        self.assertEqual(self.queue(), [])
+
     def sub_thread(self, tid, parent):
         """A multi-agent sub-agent rollout as codex 0.167.2 writes its first line (11-13)."""
         d = self.home / ".codex" / "sessions" / "2026" / "11" / "10"
