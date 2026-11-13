@@ -16,7 +16,7 @@
 | [`knowledge/workflow-template.json`](../../../../../proto8/knowledge/wf/knowledge/workflow-template.json) | 設定（鍵：_description、skeleton、fields、paths） |
 | [`layers.json`](../../../../../proto8/knowledge/wf/layers.json) | 設定（鍵：_description、layers、skills_vs_memory、private_index、logs） |
 | [`nodes.json`](../../../../../proto8/knowledge/wf/nodes.json) | 設定（鍵：_description、names、workflow_form、growth） |
-| [`source.json`](../../../../../proto8/knowledge/wf/source.json) | 設定（鍵：_description、blocks） |
+| [`source.json`](../../../../../proto8/knowledge/wf/source.json) | 設定（鍵：_description、commit_ids、blocks） |
 | [`tidying.json`](../../../../../proto8/knowledge/wf/tidying.json) | 設定（鍵：_description、split、split_method、archive） |
 | [`workflows/_description.json`](../../../../../proto8/knowledge/wf/workflows/_description.json) | argv：`# 出廠的工作流節點 做事的流程，一個工作流一個節點。 |
 | [`workflows/tidy-manager-brief.json`](../../../../../proto8/knowledge/wf/workflows/tidy-manager-brief.json) | 設定（鍵：_description、when、not_when、done_when、role、steps…） |

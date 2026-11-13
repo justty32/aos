@@ -1,12 +1,13 @@
 {
  "_description": "這一庫的內容從哪裡來、哪些沒帶進來。併入的經過與之後每一塊的搬遷紀錄在 aos repo 的 `proto8/thinking/2026-11/13/workflows-into-aos.md`。",
+ "commit_ids": "模板 repo 在 2026-11-13 push 前改寫過還沒公開的歷史（把內容裡的帳號名換掉；最後的檔案樹與改寫前逐位元相同），commit 編號全變，舊編號已經拿不到。下面各塊的 `commit` 都是改寫後的新編號。當初搬的時候記的舊編號：第 1 塊 7db19654b2bf0a21c8a940cdab9d442d7ae509d0（現在是 019c91240c1fad9a9d6c870f7493bdf2361c9d56）；第 2 塊 7db5ccc0260aa2c5f0bcb6a931ca5e6960edccb3（現在是 584f3f59f6539cfe3e0d761ba68300c7aa4c4014）、「自 45a27d6 起沒再改」的 45a27d68d02325d5000cf475a363560f5d8775f2（現在是 905c096e61fb603fc114303d6e95e68b23bd58dc）。完整對照在 aos repo 的 `proto8/thinking/2026-11/13/workflows-into-aos.md`。",
  "blocks": [
   {
    "block": 1,
    "what": "組織原則",
    "from": {
     "repo": "workflows 模板 repo（使用者 2026-11-13：「workflows repo仍在，只是幾乎不再更新」）",
-    "commit": "7db19654b2bf0a21c8a940cdab9d442d7ae509d0",
+    "commit": "019c91240c1fad9a9d6c870f7493bdf2361c9d56",
     "date": "2026-11-13",
     "paths": [
      "wf/knowledge/structure.json",
@@ -112,8 +113,8 @@
    "what": "工作流節點的骨架、tidy 一組",
    "from": {
     "repo": "workflows 模板 repo",
-    "commit": "7db5ccc0260aa2c5f0bcb6a931ca5e6960edccb3",
-    "note": "這幾份自 45a27d6 起沒再改",
+    "commit": "584f3f59f6539cfe3e0d761ba68300c7aa4c4014",
+    "note": "這幾份自 905c096e61fb603fc114303d6e95e68b23bd58dc 起沒再改",
     "date": "2026-11-13",
     "paths": [
      "wf/knowledge/workflow-template.json",
