@@ -1,4 +1,4 @@
-# astra 當 kernel（線核 11-13 晚規劃，未施工）：用現成的 kernel_gate 把門掛在 astra 身上，sol 做完寄「停自己」的請求當門鈴、astra 表態＝驗收；sol 的腦走機器隊站 llm-t1、不經 astra；全是活樹新增、不改 aos 程式；8 題待裁
+# astra 當 kernel（線核 11-13 晚規劃，未施工）：用現成的 kernel_gate 把門掛在 astra 身上，sol 做完寄「停自己」的請求當門鈴、astra 表態＝驗收；sol 的腦走機器隊站 llm-t1、不經 astra；全是活樹新增、不改 aos 程式；8 題 11-13 22:15 使用者全照推薦
 
 ← [11-13 日索引](README.md)｜前一份：[gpt-fsm-team](gpt-fsm-team.md)（現行 subagent 做法與「下一步想法」節）｜相關：[eca-as-kernel](eca-as-kernel.md)（kernel_gate 的來歷）、[kernel-framework-開工](kernel-framework-開工.md)、[aos 問題總表](aos-issues-1113.md)
 
@@ -9,6 +9,12 @@
 1. 「然後我這邊還有新的想法，就是說astra指揮sol，目前是默認他們都在同個daemon底下，或是走aos-subagents工具，我在想，或許可以讓astra變成kernel，然後他底下掛sol們，這樣試試看。不過這比較大膽，可以下一步再做。」
 2. 「astra當kernel都可以先去跑。」
 3. 流程：「先派opus帶隊，指揮sonnet搜集訊息，然後opus整理匯總，交給fable規劃與設計架構，然後opus深化細化架構，最後再來實作。」
+
+## 使用者裁定（11-13 22:15，逐字）
+
+「astra八題這塊都按照推薦。限制資源這塊十一題：cgroup這塊要可選。群組這塊可以再多挖一些用法。要root的做法可以想想，但先以沒有root的情況做規劃。」
+
+→ 前半句定了這份：Q1～Q8 全照推薦（逐題落定見 [06](astra-kernel-plan/06-待裁與衝突.md#使用者裁定11-13-2215)）。後半句是 [kernel-limits-plan](kernel-limits-plan.md) 的。
 
 ## 一張圖
 
@@ -41,7 +47,7 @@
 | [05-試驗紀錄](astra-kernel-plan/05-試驗紀錄.md) | 撞到的 aos 問題 AK1～AK13（只記不改）；fable 預見 15 條的核對 |
 | [06-待裁與衝突](astra-kernel-plan/06-待裁與衝突.md) | 要你裁的 8 題（選項＋推薦）；跟現行規矩的衝突 7 條 |
 
-## 要你裁的（摘要，全文見 06）
+## 已裁（11-13 22:15 全照推薦；全文見 06）
 
 - Q1 形狀：**甲先跑**（agent 兼門，現成）／丙（前面機器站、astra 只看例外）／乙（子 daemon 當手）。
 - Q2 經過 astra 的請求：**只有起停（門鈴）**／腦請求也要（要改 aos）。
@@ -54,5 +60,5 @@
 
 ## 還沒做的
 
-- 全部施工（04）；8 題待裁。標「待驗」的（tools.json 能不能單列一支工具、`.env` 寫空值的意思、ctl 信實際 sender）留給階段 0。
+- 全部施工（04）；8 題已裁（照推薦），施工另等放行（鐵律 2「不開新工作」）。標「待驗」的（tools.json 能不能單列一支工具、`.env` 寫空值的意思、ctl 信實際 sender）留給階段 0。
 - wf 條文（aos-teams、07 分檔）要跟著改的只列在 06 衝突表，沒動 wf/。
