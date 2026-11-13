@@ -14,6 +14,9 @@
  "cmd-4.md": {
   "description": "`proto8/cmd/` 逐檔表（生成，4／5）"
  },
+ "cmd-5.md": {
+  "description": "`proto8/cmd/` 逐檔表（生成，5／5）"
+ },
  "cmd.md": {
   "description": "`proto8/cmd/` 逐檔表（生成，1／5）"
  },
