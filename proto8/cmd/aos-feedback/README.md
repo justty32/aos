@@ -27,7 +27,7 @@ flowchart LR
 
 模型名對 `<dir>/raters.json` 的 `rules` 做不分大小寫子字串比對，第一條命中即停；沒有規則檔或沒命中時為 `unknown`。預設規則有 opus、sonnet、sol、terra、12b；更換 `AOS_FEEDBACK` 時，規則也從該目錄讀，不自動複製或改寫。
 
-成功印 `aos-feedback: recorded <file>`。`add --json` 改印新紀錄物件。紀錄有 UTC 毫秒 `at`、原樣 `command`／`pain`、選填 `suggest`／`score`、`kind`、`by`、`rater`、`cwd`；檔案只追加，同檔寫者用檔案鎖避免交錯。
+成功印 `aos-feedback: recorded <file>`。`add --json` 改印新紀錄物件。紀錄有 UTC 毫秒 `at`、原樣 `command`／`pain`、選填 `suggest`／`score`、`kind`、`by`、`rater`、`cwd`（家目錄前綴寫成 `~`，意見檔進 git、不帶帳號名）；檔案只追加，同檔寫者用檔案鎖避免交錯。
 
 `ls` 每 key 一行 `KEY  COUNT  LATEST`，按筆數降序、同筆數按 key 升序；`--json` 印 `[{"key", "feedback", "latest"}, ...]`。`show KEY` 逐行印完整意見，換行文字以 JSON 字串表示；`--json` 印原始紀錄陣列。不存在的 key 視為空意見，不產生檔案。
 

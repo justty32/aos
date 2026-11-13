@@ -47,7 +47,7 @@
 ## 未定
 
 - 十條修了九條（下節）；第 8 條使用者選項框選「明天再說」；第 1 條留下「範本要不要掛 `jsonx`」甲乙丙一題待裁（見下節第 1 條末）。
-- **第 8 條裁定（11-13）＝選 A：把路徑改成不含家目錄的寫法（例如相對路徑），寫死的兩處改讀環境變數。** 使用者回覆原文：「eca-8:A*」（11-13 待裁頁 `wu-1113-top`；回覆整行見[回覆檔](../13/decide_20261113_wu-top.reply.txt)，裁定後待施工見[裁定落地-1113](../13/裁定落地-1113.md)）。還沒施工。
+- **第 8 條裁定（11-13）＝選 A：把路徑改成不含家目錄的寫法（例如相對路徑），寫死的兩處改讀環境變數。** 使用者回覆原文：「eca-8:A*」（11-13 待裁頁 `wu-1113-top`；回覆整行見[回覆檔](../13/decide_20261113_wu-top.reply.txt)，裁定後待施工見[裁定落地-1113](../13/裁定落地-1113.md)）。11-13 已施工（一處沒做）：`aos-feedback` 寫紀錄時 `cwd` 的家目錄前綴寫成 `~`（不在家目錄底下的照原樣），現有四份 jsonl 的四行照同一寫法改掉；`templates/tests/test_daily.py` 的 `/mnt/c` 暫存夾改讀環境變數 `AOS_TEST_MNTC_DIR`（沒設＝那兩支照舊跳過）。沒做：`extras/gitignore-check/check.py` 第 187 行（那夾當天是別線的領地），要改成讀同一個變數。代定（可翻案）：用 `~` 而不是相對路徑（相對誰沒有固定的基準）；變數名 `AOS_TEST_MNTC_DIR`。git 歷史裡的舊紀錄沒動（這題沒問、沒答）。
 - **第 1 條剩的那題裁定（11-13）＝選 A（甲）：範本掛 `jsonx` 工具。** 使用者回覆原文：「eca-1:A*」（出處同上）。11-13 已施工：`templates/agent-fsm/tools.json`、`templates/eca-claude/tools.json` 的 `$override` 各加一行 jsonx 包（agent-fsm 15 包 55 支、eca-claude 8 包 34 支），說明文件與知識庫 `aos/packs.json`、`aos/body.json` 的事實句跟上。代定（可翻案）：(1) 掛整包 8 支（含會寫的 `jsonx_set`／`jsonx_add`／`jsonx_del`／`jsonx_multi_set`），沒有只掛唯讀那四支——題目寫「掛 `jsonx` 工具」，掛整包只多一行、不用逐支關；(2) 子 agent 的精簡組 `tools_sub.json` 不掛（它只放唯讀小工具，取最小）；(3) reviewer、judge-llm 等其他範本不掛；codex 身用的是同一份 eca-claude，跟著有。
 
 ## 修了哪些（11-12 晚）

@@ -6,7 +6,7 @@
 #   → 起 llms → 一行起 something → 不下其他指令：留在信箱的那封被答、fsm／eca 接著答（eca 新對話、開場白）、history 接續
 #   → shutdown → git status 只有 carry 類變動、專案檔與歷史沒動 → commit、push（不 force）。主劇本再從 B 回 A 一輪。
 # 變體：名字改掉、stack 在專案外、defs 在專案外、同一台改指環境變數、llms 沒起（含下班時有一題在途）、
-#   shutdown 打斷 fsm／eca 的一輪、/mnt/c（AOS_TEST_MNTC=1 或 --mntc）。AOS_TEST_BEATS=FILE 把每拍延遲寫成 JSON。
+#   shutdown 打斷 fsm／eca 的一輪、/mnt/c（AOS_TEST_MNTC=1 或 --mntc，再加 AOS_TEST_MNTC_DIR=/mnt/c 上的暫存夾）。AOS_TEST_BEATS=FILE 把每拍延遲寫成 JSON。
 # 跑法：python3 -W ignore test_daily.py [-v] [--mntc]；KEEP=1 留下試驗資料夾。用 ~/.local/bin 的 aos 指令，不碰 ~/code、/mnt/c/code。
 import json
 import os
@@ -28,7 +28,7 @@ FAKE_CLAUDE = REPO / "cmd" / "aos-eca" / "tests" / "fake_claude"
 GITIGNORE = REPO / "cmd" / "aos-agent" / "stack.gitignore"
 CLASSES = REPO / "thinking" / "2026-11" / "10" / "two-machines" / "gitignore_classes.json"
 PARTS = ("lib", "py", "templates", "kernel", "knowledge")
-MNTC_BASE = Path("/mnt/c/Users/WG-Guanyu/AppData/Local/Temp")
+MNTC_BASE = os.environ.get("AOS_TEST_MNTC_DIR")      # /mnt/c 上放試驗資料夾的地方（例：Windows 的 Temp），不寫死在檔裡
 if "--mntc" in sys.argv:
     sys.argv.remove("--mntc")
     os.environ["AOS_TEST_MNTC"] = "1"
@@ -914,7 +914,7 @@ class T8ShutdownMidTurn(Daily):
             self.shutdown_all(m, h)
 
 
-@unittest.skipUnless(MNTC, "set AOS_TEST_MNTC=1 or pass --mntc to run on /mnt/c")
+@unittest.skipUnless(MNTC and MNTC_BASE, "set AOS_TEST_MNTC=1 (or pass --mntc) and AOS_TEST_MNTC_DIR=<a temporary folder on /mnt/c> to run on /mnt/c")
 class T7Mntc(Daily):
     def test_mntc_main(self):
         """⑥ 主劇本（A → B）整套在 /mnt/c 的 Temp 子夾：專案、HOME、proto8 複本、bare 都在 /mnt/c。"""

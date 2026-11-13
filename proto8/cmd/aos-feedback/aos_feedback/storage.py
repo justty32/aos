@@ -77,6 +77,15 @@ def rater(root, options):
             'tier': options.get('tier', tier)}
 
 
+def cwd_without_home():
+    """The working directory, with the home directory prefix written as ~ (records go into git)."""
+    cwd = os.getcwd()
+    home = os.path.expanduser('~').rstrip('/')
+    if home and home != '~' and (cwd == home or cwd.startswith(home + '/')):
+        return '~' + cwd[len(home):]
+    return cwd
+
+
 def add(root, arguments, options):
     command, pain = arguments[:2]
     key = command_key(command)
@@ -94,7 +103,7 @@ def add(root, arguments, options):
         record['score'] = score_number(options['score'])
     definition = os.environ.get('AOS_CD')
     record.update(by=options.get('by', Path(definition).name if definition else 'unknown'),
-                  rater=rater(root, options), cwd=os.getcwd())
+                  rater=rater(root, options), cwd=cwd_without_home())
     path = key_path(root, key)
     root.mkdir(parents=True, exist_ok=True)
     # Each append owns the file until its complete JSON line has been flushed.

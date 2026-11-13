@@ -4,6 +4,8 @@
 
 看的程式：main `1f6422272`（下面提到的檔與 HEAD 相同，沒有未提交的改動）。重現都在暫存小樹 `~/code/six-try-1113/`（假 claude／codex，照 testing.md 起一台 daemon＋時鐘列），沒碰 `~/aos-home` 的檔與行程；第 1 項唯讀看了它的佈局，第 7 項唯讀看了 gpt-price 的 stack 與它的 codex 對話檔第一行。
 
+路徑的家目錄前綴已改寫成 `~`（含原信引文與指令輸出裡的），其餘逐字不動。
+
 ## 原信（逐字，出處）
 
 使用者已裁：eca_main 轉來的普通工作算他的授權。
@@ -15,7 +17,7 @@
 > 5) 換完之後，信箱裡原本就在等的信不會被 mail_notify 提醒（因為算 fresh start）。但 stack 是保留的，這些信就漏了。stack 有之前的紀錄時，應照「睡醒」的規則處理。
 > 6) codex eca：aos-eca-turn 自己會加 --skip-git-repo-check，但定義的 print_flags 再寫一次時，codex 因參數重複 exit 2（CliFailed），進入冷卻，信也被丟掉。建議 aos-eca-turn 去掉重複參數，或 check 時警告；文件也要寫清楚哪些參數是 aos 自己會加的。
 
-> 補第 7 項：codex eca 的 session.txt 指到 multi-agent 子 thread，resume 失敗。gpt-price（codex eca，定義 /home/guanyu/aos-home/ws/defs/gpt-price，stack /home/guanyu/aos-home/ws/.stack/procs/gpt-price）在使用者開著畫面使用之後，下一輪非畫面回合 resume 失敗：
+> 補第 7 項：codex eca 的 session.txt 指到 multi-agent 子 thread，resume 失敗。gpt-price（codex eca，定義 ~/aos-home/ws/defs/gpt-price，stack ~/aos-home/ws/.stack/procs/gpt-price）在使用者開著畫面使用之後，下一輪非畫面回合 resume 失敗：
 > Error: thread/resume: thread/resume failed: cannot resume an unloaded multi-agent v2 sub-agent through its parent; resume the parent first, or use thread/read to inspect it (code -32600)
 > → CliFailed codex exited 1，進入冷卻（cooldown.json dropped 1）。冷卻結束後，aos-eca-turn 判定 history 有變動，開了新對話，後續正常。
 > 推測：畫面的 hook 把 codex 子 agent 的 thread id 當成「換到別段對話」，記進 session.txt（cli_session.py 的 codex /resume 判斷），於是 aos 去 resume 一個子 thread。建議記 session 時排除子 agent 的 thread，或者 resume 遇到這個錯誤時，自動改 resume 父 thread 或開新對話，不要白白進冷卻、丟掉信。stderr.txt 在上面那個 stack 裡。
@@ -40,7 +42,7 @@
 
 ```
 echo '{"op":"check","path":"../agents/eca_a"}' | aos-exec $AOS_HOME/lib/agent/agent_def
-{"problems": [{"path": ".", "reason": "cannot merge /home/guanyu/code/six-try-1113/agents/eca_a/tools.json with aos-tools: [Errno 2] No such file or directory: '/home/guanyu/code/six-try-1113/cmd/aos-tools/bin/aos-tools'"}]}
+{"problems": [{"path": ".", "reason": "cannot merge ~/code/six-try-1113/agents/eca_a/tools.json with aos-tools: [Errno 2] No such file or directory: '~/code/six-try-1113/cmd/aos-tools/bin/aos-tools'"}]}
 agent_def: error: DefBad 1 definition problems found
 ```
 
@@ -71,7 +73,7 @@ agent_def: error: DefBad 1 definition problems found
 ```
 aos-agent ctl rm eca_m        # 留 stack
 aos-agent ctl add -n eca_r -s $PWD/.stack/procs/eca_m ../agents/eca_m2
-eca_r	running	/home/guanyu/code/six-try-1113/ws	0	-
+eca_r	running	~/code/six-try-1113/ws	0	-
 ```
 
 history 4 → 6 行接著長、`aos-agent history -t eca_r` 看得到舊的；拔掉期間寄進信箱的信，掛回來後 mail_notify 照提（`notified.json` 在 stack 裡，跟著保留）。原信說「history 不會帶過去」是因為 add 沒給 `-s` 時預設 stack＝`<daemon>/procs/<新名>`（新的空 stack）。
@@ -99,7 +101,7 @@ history 4 → 6 行接著長、`aos-agent history -t eca_r` 看得到舊的；�
 
 ```
 aos-agent ctl add -w ../wsb ../agents/eca_b ; mv ../wsb ../wsb.gone ; aos-agent ctl rm eca_b
-aos-exec: error: WsMissing workspace does not exist: /home/guanyu/code/six-try-1113/wsb
+aos-exec: error: WsMissing workspace does not exist: ~/code/six-try-1113/wsb
 ```
 
 退 1、eca_b 還在表上；`ctl stop -t eca_b` 一樣被擋。定義資料夾不在時 rm 是過的（`InterfaceMissing` 本來就略過）。
@@ -111,9 +113,9 @@ aos-exec: error: WsMissing workspace does not exist: /home/guanyu/code/six-try-1
 **修法**（patch 的 decl.py 段）：`run_entry()` 多一個選填 `ws`；`close_screen_if_any()` 在 `a.ws` 不是資料夾時：stack 也不在＝沒有畫面可關、略過；stack 在＝提醒一行 `aos-agent: warning: the workspace of NAME is gone (WS); closing its screen from its stack instead`，改用 stack 當 aos-exec 的工作區去 close。暫存樹驗過（抄一份 aos-agent 套 patch）：
 
 ```
-aos-agent: warning: the workspace of eca_w is gone (/home/guanyu/code/six-try-1113/wsc); closing its screen from its stack instead
+aos-agent: warning: the workspace of eca_w is gone (~/code/six-try-1113/wsc); closing its screen from its stack instead
 no screen (already closed)
-removed eca_w; stack /home/guanyu/code/six-try-1113/ws/.stack/procs/eca_w kept (...)
+removed eca_w; stack ~/code/six-try-1113/ws/.stack/procs/eca_w kept (...)
 ```
 
 - 跟著改：rm 與 stop 的 HELP 補一句「a workspace that is gone does not block it」；`cmd/aos-agent/README.md` 對應段。
@@ -176,7 +178,7 @@ exit=2
 **修法**（patch 的 cli_cfg 段）：`cli_cfg.py` 加常數 `AOS_FLAGS`——codex：`--skip-git-repo-check`、`--json`、`-o`、`--output-last-message`；claude：`-p`、`--print`、`--output-format`、`--session-id`、`--resume`、`-r`、`--continue`、`-c`。`load_cfg()` 驗完型別後，flags／print_flags 有其中任何一個＝`CfgBad <cli.json>: print_flags has --skip-git-repo-check, which aos-eca-turn adds itself; remove it`。`load_cfg()` 在認領信之前就跑，所以**信留在 queue/new、不進冷卻**，agent 停下並帶 reason。暫存樹驗過（抄一份 aos-eca 套 patch）：
 
 ```
-aos-eca-turn: error: CfgBad /home/guanyu/code/six-try-1113/agents/eca_codex2/cli.json: print_flags has --skip-git-repo-check, which aos-eca-turn adds itself; remove it
+aos-eca-turn: error: CfgBad ~/code/six-try-1113/agents/eca_codex2/cli.json: print_flags has --skip-git-repo-check, which aos-eca-turn adds itself; remove it
 queue/new: 000000000001.01794534880697579730.398264.613514     ← 信還在；沒有 cooldown.json
 eca_codex2	stopped	...	failed to start: exited within 3s of wake/start (code 1): ...
 ```

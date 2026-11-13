@@ -86,6 +86,17 @@ class FeedbackAcceptance(FeedbackFixture):
         self.assertEqual(self.add('lib/base/read')['by'], 'unknown')
         self.assertTrue((self.feedback / 'read.jsonl').is_file())
 
+
+    def test_add_writes_cwd_without_the_home_prefix(self):
+        self.env['HOME'] = str(self.work.parent)
+        self.assertEqual(self.add()['cwd'], '~/' + self.work.name)
+        self.env['HOME'] = str(self.work)
+        self.assertEqual(self.add()['cwd'], '~')
+        self.env['HOME'] = str(self.work) + '-other'
+        self.assertEqual(self.add()['cwd'], str(self.work))
+        text = (self.feedback / 'demo.jsonl').read_text()
+        self.assertEqual(text.count(str(self.work)), 1)
+
     def test_model_rules_and_explicit_free_strings(self):
         for model, family, tier in [('claude-opus', 'claude', 'high'),
                                     ('claude-sonnet', 'claude', 'mid'),
