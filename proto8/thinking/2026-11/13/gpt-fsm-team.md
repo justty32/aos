@@ -57,3 +57,42 @@
 - 全部施工（[04](gpt-fsm-team/04-施工與驗收.md) 0～10 步）；11 題待裁（[05](gpt-fsm-team/05-待裁與衝突.md)）。
 - 標「待驗」的（hook 環境有沒有 `AOS_WS`、沙箱裡 rw 跟 ro 綁定的先後、`.git` 唯讀時 `git status`、改 llm kernel 設定要不要重起、推理模型收不收 temperature、proxy 實際模型名）都留給步驟 1～5 的乾跑。
 - wf 條文（aos-teams、team-model、grades、07 分檔）要跟著改的地方只列在 05 的衝突清單，沒動 wf/。
+
+## 施工紀錄（11-13 晚，線隊）
+
+使用者放行（頂層轉）：照 04 動工，先乾跑步驟 1～5、再假工單、通了且時間夠才做一件小的真工作；活樹只新增不改不刪。
+
+**施工時的代定**（跟 03／04 不同的地方）：
+
+- llm kernel：活樹沒有（06 T33），也不能起第二台 daemon，所以改用 Python 版 `lib/aos/kernel_llm` 當 loop proc，掛在既有的 ws daemon 上（`~/aos-home/kernels/llm-gpt/`，proc 名 `llm-gpt`）。
+- astra 的工作區改成隊夾 `~/aos-home/teams/t1`，不用 repo：腦請求的寄件人是工作區（T31），這樣 astra 才有自己的額度 key。
+- jsonx 包兩種角色都不給（T35）。
+- 沙箱：repo 整個唯讀，只有子夾 proto8、wf 可寫（T32）。
+- 守門程式放 `~/aos-home/defs/shared/guard`，各定義用兩行包裝腳本叫它（symlink 不行，T37）。
+
+**步驟結果**：
+
+| 步 | 結果 |
+|---|---|
+| 1 proxy | 189 個模型，astra-high、sol-high 都在 |
+| 2 llm kernel | 兩包都回 OK，ledger 有用量 |
+| 3 守門程式 | 假事件 31 則全過（擋：repo 外、`..`、symlink 出界、`.git`、git 寫入類、`aos-*`、curl、subagent 改工具／腦／hook、purge、history rm；放行：該放的） |
+| 4 定義 | `agent_def check` 兩份都 0 問題；工具清單核對過 |
+| 5 沙箱 | worker：寫 proto8 成功、寫 repo 根目錄 Read-only、`git commit` index.lock Read-only、斷網。lead：寫隊夾成功、寫 repo Read-only、`git -C … status/diff` 正常、斷網 |
+| 7 假工單 | 第一次起：守門程式找不到設定檔，astra 停（T37），修好後從 act 格續跑。接著 astra 照規則寄 BLOCKED：目標檔被隊長 staged 成「A」，是隊長佈置失誤，astra 判得對。commit 後叫它續做：寫工單、`subagent add sol-T01`、say、listen、自己用 tail/wc、diff、逐 byte 比對驗收、`rm sol-T01`（不 purge）、寄 DONE、goal done。約 2 分鐘；astra 29 次呼叫、37.5 萬 token，sol 6 次、4.4 萬 token |
+
+**真工作題目**（先寫在這裡再開工）：[real1/blueprint-ledger-sum.md](gpt-fsm-team/real1/blueprint-ledger-sum.md)。在隊自己的夾裡新增 `ledger_sum.py`＋測試資料，把 llm kernel 的 ledger 按端點包×寄件人加總，給 Q1 看用量。範圍小、不碰 aos 程式和 wf/，可以逐字驗收。
+
+## 下一步想法（未排）
+
+使用者 11-13 晚原話（逐字，頂層轉）：「然後我這邊還有新的想法，就是說astra指揮sol，目前是默認他們都在同個daemon底下，或是走aos-subagents工具，我在想，或許可以讓astra變成kernel，然後他底下掛sol們，這樣試試看。不過這比較大膽，可以下一步再做。」
+
+線隊初步看法（沒驗，只讀了知識庫 `aos/kernel.json` 的 what、gate、write_your_own 三節）：
+
+- **跟現在比**：現在是 astra 用 `subagent` 工具**主動**加、叫、收 sol，權限靠守門程式擋。改成 kernel 後，astra **被動**：sol 的 `AOS_KERNEL`（起停、喚醒）或 `AOS_LLM_KERNEL`（問腦）指到 astra 的收件夾，每封請求由 astra pass 或 refuse。這樣管得更細（每次叫腦、每次起停都要 astra 點頭），但 astra 就從「派工的」變成「批公文的」，派工本身還是要有人做。
+- **會撞到的 aos 機制**：
+  - `kernel_gate` 工具不在任何現成定義裡，要靠 `self_tools` 加。但這隊把 self 包整包拿掉了，所以只能改寫進 gpt-lead 的 tools.json，守門程式也要放行它的 pass／refuse。
+  - 收件站是 on_clock hook：astra 在回合中或睡著時不跑。astra-high 一個回合可能好幾分鐘，`aos-agent ctl` 預設 30 秒期限，請求會以 `SlotMissing` 被拒。期限要拉長，或讓規則先放行，只把例外留給 astra。
+  - 信件 `from` 不驗證，寄件身分又是 `$AOS_WS` 優先（06 的 T31）。所有 sol 的 ws 都是 repo，astra 分不出是哪一隻寄來的。
+  - 如果要管腦，得在 llm-gpt 前面加一站（類似 `kernel/llm-team/`），讓 astra 那一站的 `next` 指到 llm-gpt。
+- **建議的下一步做法**：先只讓 sol 的**腦請求**經過 astra（規則自動放行、超過額度才留給 astra 裁），起停仍然用現在的 subagent 做法。這樣改動最小，就能看出「astra 當 kernel」值不值得。

@@ -1,1 +1,2 @@
 gpt-fsm-team dry-run target. Lines below are added by the gpt team (astra -> sol) following blueprint-dry.md.
+T01 done by sol
