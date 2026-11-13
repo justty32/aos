@@ -92,6 +92,16 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None, env=
     return p.returncode, lines
 
 
+def warn_unconnected(init, external):
+    """claude 開場的 init 事件列了每台 MCP server 的連線狀態：cli.json 列的外部 server 不是 connected＝提醒一行
+    （CLI 自己不說，那台的工具只是不見）。只看 aos 交給它的外部 server；codex 的 --json 沒有這種事件。"""
+    names = {s["name"] for s in external}
+    servers = init.get("mcp_servers")
+    for s in servers if isinstance(servers, list) else []:
+        if isinstance(s, dict) and s.get("name") in names and s.get("status") != "connected":
+            cli_base.warn("external MCP server %s was not connected when claude started (status %s)" % (s["name"], s.get("status")))
+
+
 def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
     """sid＝要接的對話（ask 已認過是這台的）；空＝開新對話：我們產 id、--session-id 給，交出去那一刻先寫 session.txt 與
     記號檔再叫呼叫者的 handed（第一輪就失敗也不留孤兒，05）。沒給 sid（None）＝照舊讀 session.txt。"""
@@ -120,6 +130,8 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
             continue
         if isinstance(ev, dict) and "result" in ev:
             out = ev
+        elif isinstance(ev, dict) and ev.get("type") == "system" and ev.get("subtype") == "init":
+            warn_unconnected(ev, ext)
     stdout = "".join(lines)
     if out is None or code != 0 or out.get("is_error"):
         if sid and not transcripts("claude", sid):          # 以為是這台的、這台卻找不到：清掉，下一封開新的（05）

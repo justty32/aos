@@ -60,6 +60,8 @@
 #   claude 身（步 3）：小格 mcp.json 跟 aos 那格並排 {"type": "http", "url", "headersHelper"}（helper＝mcp_server_file.py --headers，token 只經管線、
 #   不進 claude 環境＝Bash 看不到）、--allowedTools 加 mcp__<名>（only＝逐支）、except＝--disallowedTools；ca_file＝NODE_EXTRA_CA_CERTS。
 #   stdio（步 4）：兩身都經 aos-mcp-launch <server 檔>（PATH 找；它讀 env_file、exec 成 server＝金鑰只進 server 行程）；codex 另帶 env＝MCP_ENV 那幾個。
+#   起不來的 server CLI 不說（那台的工具只是不見）：每次起 CLI 前先看 stdio 那幾台的指令解不解得開、找不找得到、能不能執行（cli_mcp.stdio_ready），
+#   不過＝warning 跳過那台；claude 非互動那條另外讀開場 init 事件，列的外部 server 不是 connected＝提醒一行（cli_print.warn_unconnected）。
 # 子 agent 那台（11-12 eca-task-subagent，thinking 2026-11/12/eca-task-subagent.md）：cli.json 選填 tools_sub＝第二份 aos-tools 登記檔（寫法同 tools；
 #   只有 claude 身認，codex 身寫了＝CfgBad）。claude 用 Agent 工具叫出的子 agent 預設繼承主對話所有 MCP 工具；寫了 tools_sub＝
 #   --agents 蓋掉內建的 general-purpose：disallowedTools mcp__aos（看不到主 agent 那台）、mcpServers 內嵌 aos_sub（另一隻 aos-mcp 接這份登記檔，

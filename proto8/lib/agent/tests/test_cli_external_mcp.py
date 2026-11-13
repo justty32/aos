@@ -194,6 +194,37 @@ class ExternalMcp(unittest.TestCase):
         r = subprocess.run([launcher, "../mcp/r.json"], capture_output=True, text=True, cwd=self.tmp / "elsewhere")
         self.assertEqual((r.returncode, r.stdout), (0, "from the server folder\n"), r.stderr)
 
+    def test_stdio_server_that_cannot_start_is_skipped(self):
+        """11-13: a server the CLI connects to itself that cannot start is silent in the CLI; aos checks before starting the CLI."""
+        self.stdio()                                              # demo: fine
+        self.stdio("gone.json", name="gone", command="bin/does-not-exist")
+        self.stdio("nopath.json", name="nopath", command="surely-not-a-command-%s" % self.token)
+        noexec = self.tmp / "mcp" / "plain.txt"
+        noexec.write_text("not a program\n")
+        self.stdio("noexec.json", name="noexec", command="./plain.txt")
+        self.stdio("nokey.json", name="nokey", env_file="../keys/demo.env")
+        launcher = str(LIB.parent / "cmd" / "aos-mcp-launch" / "bin" / "aos-mcp-launch")
+        files = ["mcp/gone.json", "mcp/s.json", "mcp/nopath.json", "mcp/noexec.json", "mcp/nokey.json"]
+        for kind in ("claude", "codex"):
+            with self.subTest(kind=kind), patch.object(cli_mcp.shutil, "which", lambda n: launcher if n == "aos-mcp-launch" else None):
+                c, err = self.cfg(files, kind=kind)
+                self.assertEqual(err, "")                                     # the files themselves read fine
+                out = io.StringIO()
+                with redirect_stderr(out):
+                    if kind == "claude":
+                        kept, _, _ = cli_mcp.external_claude(c)
+                        names = [s["name"] for s in kept]
+                    else:
+                        argv, _, _ = cli_mcp.external_codex(c)
+                        names = sorted(tomllib.loads("\n".join(argv[1::2]))["mcp_servers"])
+                self.assertEqual(sorted(names), ["demo", "nokey"])
+                lines = out.getvalue().splitlines()
+                self.assertEqual(len(lines), 3, lines)
+                self.assertIn("warning: external MCP server gone skipped: CommandMissing its command is not found or cannot be run: %s"
+                              % (self.tmp / "mcp" / "bin" / "does-not-exist"), lines[0])
+                self.assertIn("external MCP server nopath skipped: CommandMissing", lines[1])
+                self.assertIn("external MCP server noexec skipped: CommandMissing", lines[2])
+
     def test_stdio_launcher_missing(self):
         self.stdio()
         c, _ = self.cfg(["mcp/s.json"])

@@ -94,7 +94,7 @@ hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停�
 
 兩條路：**CLI 自己接**（本節前半）與**經 aos**（本節最後一段，凍結成一包 aos 工具）。一台選一條。
 
-定義資料夾放一份 **server 檔**（一台一份，例 `mcp/teamsite.json`），`cli.json` 加 `"mcp_servers": ["mcp/teamsite.json"]`（相對從 `cli.json` 的資料夾算，也可寫指示詞；可列好幾份）。claude、codex 兩身都吃；CLI 自己連、自己列工具（不凍結說明），列了的那台整台免核准，`only`／`except` 挑工具。某一份壞了＝`cli_session: warning: external MCP server … skipped: …`，其他照接。設計：[external-mcp 02](../../thinking/2026-11/12/external-mcp/02-設計.md)；程式：`lib/mcp_server_file.py`、`cmd/aos-mcp-launch`。
+定義資料夾放一份 **server 檔**（一台一份，例 `mcp/teamsite.json`），`cli.json` 加 `"mcp_servers": ["mcp/teamsite.json"]`（相對從 `cli.json` 的資料夾算，也可寫指示詞；可列好幾份）。claude、codex 兩身都吃；CLI 自己連、自己列工具（不凍結說明），列了的那台整台免核准，`only`／`except` 挑工具。某一份壞了＝`cli_session: warning: external MCP server … skipped: …`，其他照接；stdio 的每次起 CLI 前還會先看指令找不找得到、能不能執行，不行＝同一種 warning（`… skipped: CommandMissing its command is not found or cannot be run: …`）跳過那台。claude 非互動那條若 CLI 開場回報某台沒連上，stderr 多一行 `warning: external MCP server X was not connected when claude started (status failed)`（回合照走；codex 沒有這種回報，起來之後才壞的看不到）。設計：[external-mcp 02](../../thinking/2026-11/12/external-mcp/02-設計.md)；程式：`lib/mcp_server_file.py`、`cmd/aos-mcp-launch`。
 
 **http（Bearer＋自簽 CA）**：
 

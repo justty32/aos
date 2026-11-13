@@ -49,12 +49,37 @@ def external_servers(cfg, tool_dir, path):
     return out
 
 
+def stdio_ready(servers):
+    """起 CLI 前先看每台 stdio server 起不起得來：CLI 自己接的 server 起不來，CLI 只是少了那台的工具、不說原因，aos 看不到。
+    照 aos-mcp-launch 的讀法解出指令與環境（mcp_server_file.stdio_launch：指示詞、env、env_file）；解不開、指令找不到或不能執行
+    ＝warning 跳過那台、其他照接（X8）。只看起不起得來；起來之後才壞的（握手失敗、中途死掉）只有 CLI 知道。回留下的 servers。"""
+    msf, kept = _server_mod(), []
+    for s in servers:
+        if s["transport"] == "stdio":
+            sys.path.insert(0, _lib)                  # stdio_launch 用到才 import directive_value（同在 lib/）
+            try:
+                argv, env, _ = msf.stdio_launch(s["file"])
+            except tool_io.Error as err:
+                cli_base.warn("external MCP server %s skipped: %s %s" % (s["name"], err.code, err))
+                continue
+            finally:
+                sys.path.pop(0)
+            cmd = argv[0]
+            tries = [cmd] if "/" in cmd else [os.path.join(d or ".", cmd) for d in env.get("PATH", os.defpath).split(os.pathsep)]
+            if not any(os.path.isfile(t) and os.access(t, os.X_OK) for t in tries):
+                cli_base.warn("external MCP server %s skipped: CommandMissing its command is not found or cannot be run: %s"
+                              % (s["name"], cmd))
+                continue
+        kept.append(s)
+    return kept
+
+
 def external_codex(cfg):
     """codex 這一次要加的 (-c 旗標, 只給 codex 行程的環境, 畫面啟動器的 spec)：每次起 codex 前叫，env 檔在這一刻才讀。"""
     if not cfg.get("external"):
         return [], {}, None
     msf = _server_mod()
-    kept, env, spec = msf.http_plan(cfg["external"], cli_base.warn)
+    kept, env, spec = msf.http_plan(stdio_ready(cfg["external"]), cli_base.warn)
     launcher = _launcher(kept)
     stdio_env = {k: os.environ[k] for k in MCP_ENV if os.environ.get(k)}
     return msf.codex_argv(kept, launcher, stdio_env), env, (spec if spec["set"] or spec["from"] else None)
@@ -74,7 +99,7 @@ def external_claude(cfg):
     """claude 這一次的 (留下的 http server, 只給 claude 行程的環境, 畫面啟動器的 spec)：token 走 headersHelper、不進環境；ca_file＝NODE_EXTRA_CA_CERTS。"""
     if not cfg.get("external"):
         return [], {}, None
-    return _server_mod().claude_plan(cfg["external"], cli_base.warn)
+    return _server_mod().claude_plan(stdio_ready(cfg["external"]), cli_base.warn)
 
 
 def exec_wrap(argv, spec):

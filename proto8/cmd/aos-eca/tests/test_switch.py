@@ -349,6 +349,21 @@ class ClaudeSwitch(Base):
         self.ok_turn()
         self.assertEqual(os.listdir(self.stack / "queue" / "cur") and len(os.listdir(self.stack / "queue" / "cur")), 1)
 
+    def test_external_server_not_connected_is_a_warning(self):
+        """11-13: claude's init event says an external server of cli.json did not connect: one warning line, the turn goes on."""
+        (self.defn / "demo.json").write_text(json.dumps({"description": "x", "mcp_server": {
+            "name": "demo", "transport": "stdio", "command": "sh", "args": ["-c", "exit 0"]}}))
+        self.write_cfg({"mcp_servers": ["demo.json"]})
+        self.say("x")
+        status = [{"name": "aos", "status": "connected"}, {"name": "demo", "status": "failed"}, {"name": "theirs", "status": "failed"}]
+        r = self.ok_turn(FAKE_CLI_MCP=json.dumps(status))
+        self.assertEqual([l for l in r.stderr.splitlines() if "MCP server" in l],
+                         ["cli_session: warning: external MCP server demo was not connected when claude started (status failed)"])
+        self.assertEqual(self.history()[-1]["content"], "FAKE: x")
+        self.say("y")
+        status[1]["status"] = "connected"
+        self.assertNotIn("MCP server", self.ok_turn(FAKE_CLI_MCP=json.dumps(status)).stderr)
+
     def test_bad_reseed_bytes(self):
         self.write_cfg({"reseed_bytes": -1})
         self.say("x")
