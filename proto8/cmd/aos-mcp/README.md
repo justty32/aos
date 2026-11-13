@@ -2,7 +2,7 @@
 
 **aos-mcp - 把 aos-tools 登記的工具當 MCP tools，給外部 agent（Claude Code、codex…；eca 經 cli_session 自動接上）叫。**
 
-← [cmd](../README.md)｜用到的程式：[aos-tools](../aos-tools/README.md)、[impls](../../impls/README.md)（aos-exec、aos-json）｜接它的：eca 範本 [templates/eca-claude](../../templates/docs/01-eca-claude.md)（`proto8/lib/agent/cli_session.py` 的 `mcp_argv`）、[aos-agent](../aos-agent/README.md)
+← [cmd](../README.md)｜用到的程式：[aos-tools](../aos-tools/README.md)、[impls](../../impls/README.md)（aos-exec、aos-json）｜接它的：eca 範本 [templates/eca-claude](../../templates/docs/01-eca-claude.md)（`proto8/lib/agent/cli_mcp.py` 的 `mcp_argv`）、[aos-agent](../aos-agent/README.md)
 
 ```
 aos-mcp/
