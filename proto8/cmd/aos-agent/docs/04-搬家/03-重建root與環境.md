@@ -62,7 +62,7 @@ AOS_CLOCK=${AOS_STACK}/clock
 
 ```sh
 export AOS_LLM_KERNEL="$PWD/llm_image"
-export AOS_HOME="$HOME/repo/aos-tools/proto8"   # 這台 proto8 的位置；範本的 {"$env": "AOS_HOME", …} 寫法靠它（11-10）
+export AOS_HOME="$HOME/repo/aos/proto8"   # 這台 proto8 的位置；範本的 {"$env": "AOS_HOME", …} 寫法靠它（11-10）
 unset AOS_KERNEL AOS_DAEMON AOS_CLOCK   # 殼裡留著 AOS_CLOCK 的話，根的 .env 不會蓋它
 # 有判官才另 export AOS_KERNEL；端點需要的金鑰在此殼 export。
 ```

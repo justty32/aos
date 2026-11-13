@@ -24,7 +24,7 @@ PARTS = ("lib", "py", "templates", "kernel", "knowledge")
 T0 = time.monotonic()
 # 只給人看的歷史紀錄（記當時的路徑，不拿來解路徑）：log、llm kernel 的帳 ledger.jsonl、觀測帳 observed.jsonl
 LOGS = (".log", "/ledger.jsonl", "/observed.jsonl")
-COMMENTED = "# AOS_HOME=${HOME}/repo/aos-tools/proto8"      # 範本 .env 裡示範寫法的那行註解
+COMMENTED = "# AOS_HOME=${HOME}/repo/aos/proto8"      # 範本 .env 裡示範寫法的那行註解
 
 
 def log(msg):

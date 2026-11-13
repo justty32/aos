@@ -7,7 +7,7 @@ aos 體系自己的 agent：**一隻＝一個範本資料夾**，複製一份、
 **複製出 repo**（templates-cp，使用者「copy-out能刪就刪」）：開一隻新 agent 就 `cp -r`：
 
 ```sh
-export AOS_HOME=$HOME/repo/aos-tools/proto8   # 每台設一次＝這台 proto8 的位置（改了值重起樹就生效；也可寫進根的 .env）
+export AOS_HOME=$HOME/repo/aos/proto8   # 每台設一次＝這台 proto8 的位置（改了值重起樹就生效；也可寫進根的 .env）
 cp -r $AOS_HOME/templates/agent-fsm bob
 ```
 
@@ -60,7 +60,7 @@ agent-fsm/
 ```sh
 # PATH 要有 impls 的 aos-exec／aos-loop／aos-fsm／aos-post／aos-llm-kernel／aos-llm、proto8/cmd/aos-tools/bin 的 aos-tools
 # 先起 llm kernel 那台 daemon（見 kernel/docs/01-llm-kernel），把它的 stack export 成 AOS_LLM_KERNEL
-mkdir -p /tmp/k && (cd /tmp/k && aos-exec --stack . ~/repo/simple_tools/aos/proto8/kernel/llm-kernel &)
+mkdir -p /tmp/k && (cd /tmp/k && aos-exec --stack . ~/repo/aos/proto8/kernel/llm-kernel &)
 export AOS_LLM_KERNEL=/tmp/k
 aos-exec --ws ~/proj proto8/templates/agent-fsm/body.json & # 直接跑（不掛 daemon）：stack＝~/proj/.stack/；說話用 aos-post send --ordered ~/proj/.stack/queue
 echo '{"cmd": "stop", "seq": 1}' > ~/proj/.stack/ctl.json  # 收工（這格跑完 loop 退 0）

@@ -9,7 +9,7 @@
 ### 件 1：agent 給自己加工具（`self_tools`）
 
 ```sh
-P=~/repo/simple_tools/aos/proto8
+P=~/repo/aos/proto8
 export AOS_HOME=$P                                                # 範本與 kernel 的路徑都寫 {"$env": "AOS_HOME", …}
 T=/tmp/feat-s9-self && rm -rf $T && mkdir -p $T/ws/.stack && cd $T
 aos-exec --stack $T/k $P/kernel/llm-kernel > k.log 2>&1 & K=$!     # llm daemon（假腦包都在它的 kernel.json）；K 記它的 pid 好收工

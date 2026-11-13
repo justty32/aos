@@ -15,7 +15,7 @@ aos-lua - 把一份 Lua 原始檔編成 aos 的資料夾＋JSON（嘗試）
 ## 用法
 
 ```sh
-R=~/repo/simple_tools/aos/proto8
+R=~/repo/aos/proto8
 nvim -l $R/extras/langs/lua/bin/aos-lua ls $R/extras/langs/lua/examples/clocks.lua          # 沒有 lua 時用 nvim 跑
 ```
 
