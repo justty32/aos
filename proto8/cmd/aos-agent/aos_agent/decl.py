@@ -90,9 +90,9 @@ def sub_entry(a, key, iface, missing, bad):
     return folder, entry
 
 
-def run_entry(a, entry, args, capture_err=True):
-    """aos-exec --ws <ws> --stack <stack> <入口> args…；stdin／stdout 接呼叫者的。回 (結束碼, stderr)。"""
-    argv = ["aos-exec", "--ws", a.ws, "--stack", a.stack, entry] + list(args)
+def run_entry(a, entry, args, capture_err=True, ws=None):
+    """aos-exec --ws <ws> --stack <stack> <入口> args…；stdin／stdout 接呼叫者的。回 (結束碼, stderr)。ws 沒給＝表上那格。"""
+    argv = ["aos-exec", "--ws", ws or a.ws, "--stack", a.stack, entry] + list(args)
     try:
         r = subprocess.run(argv, stderr=subprocess.PIPE if capture_err else None, text=True,
                            env=dict(os.environ, AOS_DAEMON=daemon_path()))   # --daemon 給的也傳下去（screen 的 watch 靠它讀表）
@@ -116,13 +116,21 @@ def screen_entry(a):
 
 
 def close_screen_if_any(a):
-    """rm／stop 前：宣告了 screen 就先 close（正在答＝入口報 SessionBad，原樣轉、不往下做）。沒宣告就略過。"""
+    """rm／stop 前：宣告了 screen 就先 close（正在答＝入口報 SessionBad，原樣轉、不往下做）。沒宣告就略過。
+    工作區已經不在（aos-exec 會報 WsMissing，rm／stop 不該被它擋）：close 只用 stack 裡的小格，改拿 stack 當 aos-exec 的工作區去關、
+    提醒一行；stack 也不在＝沒有畫面可關，略過。"""
     try:
         _, entry = screen_entry(a)
     except Fail as e:
         if e.code in ("ScreenMissing", "InterfaceMissing"):
             return
         raise
-    rc, err = run_entry(a, entry, ["close"])
+    ws = None
+    if not os.path.isdir(a.ws):
+        if not os.path.isdir(a.stack):
+            return
+        note("the workspace of %s is gone (%s); closing its screen from its stack instead" % (a.name, a.ws))
+        ws = a.stack
+    rc, err = run_entry(a, entry, ["close"], ws=ws)
     if rc != 0:
         pass_err(rc, err)

@@ -17,7 +17,7 @@
 
 ```
 aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] [--limits JSON] [--envs K=V ...] [--auto-restart] [--timeout-s 秒] [--on-queued fail|ok] XXX     掛一隻；等上表、印 stack
-aos-agent [--daemon D] ctl rm [--purge [--yes]] [--timeout-s 秒] 名字                       拔掉、stack 留著（cli-sweep Q3，使用者「兩支都留 stack，要刪另外說」；印 `removed X; stack S kept (…)`，同名同 `--stack` 再 `ctl add` 接著用）。`--purge` 才連 stack 一起刪（名字要明講；先關畫面，正在答＝SessionBad、什麼都不動；stack 是工作區、定義、daemon 資料夾、目前資料夾、家目錄、表上別隻的 stack 或在它們上層的不刪；終端裡先問 [y/N]）；`-y` 沒配 `--purge`＝`ArgumentsBad`
+aos-agent [--daemon D] ctl rm [--purge [--yes]] [--timeout-s 秒] 名字                       拔掉、stack 留著（cli-sweep Q3，使用者「兩支都留 stack，要刪另外說」；印 `removed X; stack S kept (…)`，同名同 `--stack` 再 `ctl add` 接著用）。`--purge` 才連 stack 一起刪（名字要明講；先關畫面，正在答＝SessionBad、什麼都不動；stack 是工作區、定義、daemon 資料夾、目前資料夾、家目錄、表上別隻的 stack 或在它們上層的不刪；終端裡先問 [y/N]）；`-y` 沒配 `--purge`＝`ArgumentsBad`；工作區（表上那列的 `ws`）已經不在不擋 `ctl rm`／`ctl stop`：stderr 一行 `aos-agent: warning: the workspace of X is gone (…); closing its screen from its stack instead`，畫面改從 stack 關
 aos-agent [--daemon D] ctl ls [--json] [--long]                           列 daemon 表上全部：名字 狀態 工作區 queue 幾封（-l 多印健康欄，見下「ctl ls 看狀況」）
 aos-agent [--daemon D] ctl start|stop|sleep|wake [名字|--target 名字] [--timeout-s 秒]   stop／sleep 另收 --no-wait；add／start／wake 另收 --on-queued fail|ok
 aos-agent [--daemon D] ctl pause|resume [--target 名字]                    pause 另收 --no-wait

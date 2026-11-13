@@ -80,6 +80,40 @@ class RmKeep(unittest.TestCase):
         self.assertIn("deleted stack", r.stdout)
         self.assertFalse((self.d / "procs" / "bob").exists())
 
+    def test_rm_and_stop_when_workspace_is_gone(self):
+        """11-13: a workspace that is gone must not block rm / stop (closing the screen only needs the stack)."""
+        defn = self.tmp / "defn"
+        (defn / "screen").mkdir(parents=True)
+        (defn / "interfaces.json").write_text('{"aos-agent": {"screen": "screen"}}\n')
+        (defn / "screen" / "interfaces.json").write_text('{"aos-agent/screen": {}}\n')
+        closed = self.tmp / "closed.log"
+        for entry, text in ((defn / "_entry", '#!/bin/sh\nwhile [ ! -e "$AOS_STACK/ctl.json" ]; do sleep 0.1; done\n'),   # leaves when stop writes ctl.json
+                            (defn / "screen" / "_entry", '#!/bin/sh\necho "$1 $AOS_STACK" >> %s\necho "no screen (already closed)"\n' % closed)):
+            entry.write_text(text)
+            entry.chmod(0o755)
+        for n in ("cat", "dan"):
+            ws = self.tmp / ("ws-" + n)
+            ws.mkdir()
+            r = self.agent("ctl", "add", "-n", n, "-w", str(ws), str(defn))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            until(lambda: self.row(n).get("phase") == "running")
+            ws.rmdir()
+        r = self.agent("-t", "cat", "ctl", "stop")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("aos-agent: warning: the workspace of cat is gone (%s); closing its screen from its stack instead" % (self.tmp / "ws-cat"), r.stderr)
+        self.assertNotIn("WsMissing", r.stderr)
+        self.assertEqual(self.row("cat").get("phase"), "stopped")
+        r = self.agent("ctl", "rm", "dan")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("the workspace of dan is gone", r.stderr)
+        self.assertIn("removed dan; stack %s kept" % (self.d / "procs" / "dan"), r.stdout)
+        self.assertEqual(self.row("dan"), {})
+        self.assertTrue((self.d / "procs" / "dan").is_dir())
+        self.assertEqual([l.split()[0] for l in closed.read_text().splitlines()], ["close", "close"])   # the screen entry still ran
+        r = self.agent("ctl", "rm", "cat")                      # stopped, workspace gone: still removable
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.row("cat"), {})
+
     def test_yes_needs_purge(self):
         r = self.agent("ctl", "rm", "-y", "ann")
         self.assertEqual(r.returncode, 1)

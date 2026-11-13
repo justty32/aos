@@ -13,9 +13,10 @@ HELP = """aos-agent ctl rm - detach one agent; its stack is kept unless --purge
 usage: aos-agent [--daemon D] ctl rm [--purge [-y]] [--no-wait] [--timeout-s S] NAME
 
 NAME must be spelled out ($AOS_AGENT is not used here). Closes its screen first (answering
-= SessionBad, nothing removed) and detaches it from the daemon. Its stack (history, queue,
-overlays) stays where it is, the same as aos-daemon-ctl rm; aos-agent ctl add with the same
---stack picks it up again.
+= SessionBad, nothing removed) and detaches it from the daemon. A workspace that is gone
+does not block it (one warning line; the screen is closed from the stack). Its stack
+(history, queue, overlays) stays where it is, the same as aos-daemon-ctl rm; aos-agent ctl
+add with the same --stack picks it up again.
 
 --purge also deletes the stack. A stack that covers the workspace, the definition, the
 daemon, the cwd, home or another listed stack is kept even then. With --purge it asks on a

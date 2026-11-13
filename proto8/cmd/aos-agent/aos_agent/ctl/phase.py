@@ -33,6 +33,7 @@ flags:
   -h, --help          show this help
 
 Stops when this round ends. --no-wait waits only for the daemon to accept the letter.
+Closes its screen first; a workspace that is gone does not block it (one warning line).
 Prints one result line on stdout; state already reached is a successful no-op.
 exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, PhaseBad, CtlRejected...).
 more: proto8/cmd/aos-agent/README.md
