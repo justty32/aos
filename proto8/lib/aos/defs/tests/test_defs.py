@@ -2,11 +2,15 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 ENTRY = Path(__file__).resolve().parents[1] / '_entry'
+PROTO = ENTRY.parents[3]
+TOOLS_BIN = PROTO / 'cmd' / 'aos-tools' / 'bin'
 
 
 class DefinitionsTest(unittest.TestCase):
@@ -29,10 +33,10 @@ class DefinitionsTest(unittest.TestCase):
         self.write(path / 'llm.json', {'model': endpoint})
         return path
 
-    def call(self, op, **extra):
-        env = os.environ.copy()
-        env.pop('AOS_STACK', None)
-        result = subprocess.run([str(ENTRY)], input=json.dumps({'op': op, 'root': str(self.root), **extra}), text=True, capture_output=True, env=env)
+    def call(self, op, entry=ENTRY, path=None, **extra):
+        env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
+        env['PATH'] = '%s:%s' % (TOOLS_BIN, env.get('PATH', '')) if path is None else path     # aos-tools is found on PATH
+        result = subprocess.run([sys.executable, str(entry)], input=json.dumps({'op': op, 'root': str(self.root), **extra}), text=True, capture_output=True, env=env)
         return result, json.loads(result.stdout) if result.stdout else None
 
     def test_prompt_ignored_endpoint_distinct_and_non_agent_excluded(self):
@@ -83,6 +87,38 @@ class DefinitionsTest(unittest.TestCase):
         result, data = self.call('dup')
         self.assertEqual([g['members'] for g in data['groups']], [['a', 'b']])
         self.assertIn('/lib/base/peek_clock', data['groups'][0]['key'])
+
+    def packed(self):
+        d = self.definition('a')
+        self.write(d / 'tools.json', {'$override': [{'$env': 'AOS_HOME', '$path': '/lib/packs/gadgets.json'}], 'tools': {}})
+        return d
+
+    def test_override_merge_from_a_copied_lib_without_cmd(self):
+        """11-13: lib copied into a tree that has no cmd/ (an aos home): aos-tools comes from PATH, AOS_HOME defaults to that tree."""
+        self.packed()
+        home = Path(tempfile.mkdtemp(prefix='defs-home-'))
+        self.addCleanup(shutil.rmtree, home, True)
+        skip = shutil.ignore_patterns('tests', '__pycache__')
+        for part in ('aos/defs', 'packs', 'base'):
+            shutil.copytree(PROTO / 'lib' / part, home / 'lib' / part, ignore=skip)
+        shutil.copy(PROTO / 'lib' / 'tool_io.py', home / 'lib' / 'tool_io.py')
+        self.assertFalse((home / 'cmd').exists())
+        result, data = self.call('check', entry=home / 'lib' / 'aos' / 'defs' / '_entry')
+        self.assertEqual(data, {'problems': []}, result.stderr)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result, data = self.call('ls', entry=home / 'lib' / 'aos' / 'defs' / '_entry')
+        self.assertIn('{"$env":"AOS_HOME","$path":"/lib/base/peek_clock"}', data['defs'][0]['tools'])   # the pack was merged; paths stay as written
+
+    def test_override_merge_needs_aos_tools_on_path(self):
+        self.packed()
+        empty = self.root.parent / (self.root.name + '-bin')
+        empty.mkdir()
+        self.addCleanup(shutil.rmtree, empty, True)
+        result, data = self.call('check', path=str(empty))
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual([p['path'] for p in data['problems']], ['a'])
+        self.assertIn('aos-tools is not on PATH (put it there with proto8/install.sh)', data['problems'][0]['reason'])
+        self.assertIn('defs: error: DefBad 1 definition problems found', result.stderr)
 
     def test_discovery_stops_at_definition_and_skips_hidden(self):
         self.definition('category/a')
