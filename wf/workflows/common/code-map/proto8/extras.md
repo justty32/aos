@@ -18,14 +18,6 @@
 |---|---|
 | [`server.py`](../../../../../proto8/extras/fake-mcp-http/server.py) | Fake streamable-HTTP MCP server for testing external MCP (external-mcp 05/06): 127.0.0.1 only, TLS, checks Authorization: Bearer, two harmless tools … |
 
-## `proto8/extras/gitignore-check/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`check.py`](../../../../../proto8/extras/gitignore-check/check.py) | Exercise optional stack ignore rules against a real, entirely fake-brain daemon tree. |
-| [`tests/test_classes.py`](../../../../../proto8/extras/gitignore-check/tests/test_classes.py) | Check gitignore_classes.json against paths today's tools write: each one classifies to the expected row (11-12 line K: fork children state, subagents… |
-| [`tests/test_leaks.py`](../../../../../proto8/extras/gitignore-check/tests/test_leaks.py) | Check gitignore-check's local-path rule: which tracked contents count as a leak (B05/B06, 11-11). |
-
 ## `proto8/extras/image-move-check/`
 
 | 檔 | 負責什麼 |

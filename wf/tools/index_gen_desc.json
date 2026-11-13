@@ -112,7 +112,6 @@
   "proto8/docs/NORMS/附錄3-舊名對照/02-JSON的key與計數.md": "舊名對照續：JSON key 的改名（run／val→exec、children→procs、loops_ctl→procs_ctl 等）與 10-25 計數 counter_*、時間點 _at、上限 max_*",
   "proto8/docs/NORMS/附錄4-持久檔.md": "持久檔與暫時檔盤點：哪些檔跨版本長期活著、誰寫誰讀、進不進 image，正式版與 format 版本標記的規矩；資料在附錄4-持久檔.json",
   "proto8/extras": "還沒決定歸哪一夾的嘗試：假 http MCP server、gitignore 檢查、休眠搬家檢查、kernel 鏈假腦劇本、Janet／Lua 寫 aos；找手跑的開發者檢查或實驗性東西時進去",
-  "proto8/extras/gitignore-check": "手跑的開發者回歸檢查：起一棵全假腦 daemon 樹，驗 stack 的 gitignore 規則分類與有沒有把本機路徑外洩進 git（check.py＋tests）",
   "proto8/extras/langs": "用別的語言寫 aos 程式：把 Janet 或 Lua 寫的一段編成 aos 的資料夾＋JSON（_entry、loop.json、fsm.json），兩種都是嘗試性質",
   "proto8/extras/langs/janet": "aos-janet：把一份 Janet 寫的 aos 程式編成資料夾（_entry、loop.json、fsm.json、短腳本），含編譯器各段與例子；嘗試性質",
   "proto8/extras/langs/janet/examples": "aos-janet 的例子：count.janet（loop＋fsm，葉子加一到 3 停）、steps.janet（seq／par／if 三個組合子）",

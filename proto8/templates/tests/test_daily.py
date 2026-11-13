@@ -66,7 +66,7 @@ def copy_proto(dest):
 
 
 def matches(pattern, name):
-    """gitignore_classes.json 的 pattern（**/ 也配零層）配一條 posix 路徑；照 extras/gitignore-check/check.py。"""
+    """gitignore_classes.json 的 pattern（**/ 也配零層）配一條 posix 路徑。"""
     out, i = "", 0
     while i < len(pattern):
         if pattern[i:i + 3] == "**/":

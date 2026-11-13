@@ -96,7 +96,7 @@ B 有兩個檔名無法解決的界線。其一，`endpoints.json` 在 kernel st
 
 此外，只認檔名仍可能撞名：專案自己的 `app/stderr.txt` 也會被 `**/stderr.txt` 擋。專案根的規則也管不到 repo 外的 stack。要補齊 B，必須由你依實際位置與自訂名稱補規則或例外；能選出純 stack 範圍時，A 較容易完整。
 
-這兩種擺法已用五種獨立 git 測試樹驗過：原名、改名、多定義與巢狀 stack、外置 stack、外置定義。A 保留測試中的所有持久檔、定義與專案檔；B 保留 `.env`、`tmp/`、`state.json`，同時重現上述漏擋與 `stderr.txt` 撞名。這是 git 規則測試，daemon 真正跑動與 clone 接續另由可選的[開發者回歸工具](../../../extras/gitignore-check/check.py)驗證；它不是日常使用必跑的一步。
+這兩種擺法已用五種獨立 git 測試樹驗過：原名、改名、多定義與巢狀 stack、外置 stack、外置定義。A 保留測試中的所有持久檔、定義與專案檔；B 保留 `.env`、`tmp/`、`state.json`，同時重現上述漏擋與 `stderr.txt` 撞名。這是 git 規則測試，daemon 真正跑動與 clone 接續另無專用回歸工具（原 `extras/gitignore-check` 已於 11-13 刪除）。
 
 ## 存下來與換台
 
@@ -112,7 +112,7 @@ git 不保存空資料夾。本次 clone 實跑，一般 daemon 控制信箱、�
 
 ## 追蹤檔裡的本機路徑，什麼算外洩
 
-開發用的整棵實跑檢查 [`extras/gitignore-check`](../../../extras/gitignore-check/check.py) 會在 commit 前找追蹤檔裡的本機記號（暫存根、HOME、使用者名、主機名、repo 位置、`sk-` 金鑰開頭）。使用者 11-11 選「改檢查的標準」（two-machines B05／B06），下面三種**不算**外洩、不動 C++：
+原開發用的整棵實跑檢查 `extras/gitignore-check`（11-13 已刪）曾在 commit 前找追蹤檔裡的本機記號（暫存根、HOME、使用者名、主機名、repo 位置、`sk-` 金鑰開頭）。使用者 11-11 選「改檢查的標準」（two-machines B05／B06），下面三種**不算**外洩、不動 C++：
 
 - **使用者自己寫的絕對路徑**：`defs/` 底下的定義與設定整份；daemon 表上原樣存的 `as_written`；程式從定義原樣抄到別處、跟定義裡一字不差的同一個字串。
 - **帳本**：`ledger.jsonl`（只記當時路徑、不拿來解路徑）。
