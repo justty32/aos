@@ -8,12 +8,12 @@
 
 <!-- wf-nav -->
 - **頂層（多為 Opus）只當調度者**：只跟使用者交流與派隊，不親自做內容。使用者原話：「頂層不要做太多事」（08-30）、「你不要自己做事，盡量交給 agent」（09-24），11-06 第 1 句同意思。頂層在主 repo 親手做的**只剩 `git merge --ff-only`＋`git push`**；重跑驗證、解 rebase 衝突、改 SESSION-LOG／WAIT_USER、清 backlog、報告存檔全派出去。收線＝讀隊長附的證據逐條對，不重跑；真要獨立驗證就派一條便宜的線去跑。想「順手」做小事時先問：能不能一句話交給別人？
-- **一隊的編制（第 2、4 句）**：**opus 隊長**（Claude Code 自家 subagent）＋**兩名隊員**——codex `gpt-6.1-sol`、claude CLI `claude-opus-5-5`。隊長寫任務書、審 diff、跑 build、commit、push；隊員與其子 agent **不 commit**。
-- **隊員往下派（第 5、7 句）**：兩名隊員都可**無上限**派子 agent。codex 那邊普通工作（寫碼、審查、調查）一律 `gpt-6.1-sol`、簡單工作 `gpt-5.6-terra`；`gpt-6-astra` **只在圖像、創意類才派**（同級但價格約 sol 的 3 倍）。claude 那邊普通 opus、簡單 sonnet。**盡量把工作派給 codex**，claude 隊員補位。任務書寫「不限人數」與這套分工，頂層監看報警時才改寫上限。
+- **一隊的編制（第 2、4 句）**：**opus 隊長**（Claude Code 自家 subagent）＋**兩名隊員**——codex `gpt-6.1-sol`、claude CLI `claude-opus-5-5`。隊長寫任務書、審 diff、跑 build、commit、push；隊員與其子 agent **不 commit**。派 gpt 系改走 agent-fsm（11-13 晚，[07](aos-teams/07-預設流程與agent-fsm.md)）。
+- **隊員往下派（第 5、7 句）**：兩名隊員都可**無上限**派子 agent。codex 那邊普通工作（寫碼、審查、調查）一律 `gpt-6.1-sol`、簡單工作 `gpt-5.6-terra`；`gpt-6-astra` **只在圖像、創意類才派**（同級但價格約 sol 的 3 倍）。claude 那邊普通 opus、簡單 sonnet。**盡量把工作派給 codex**（改走 agent-fsm，同上），claude 隊員補位。任務書寫「不限人數」與這套分工，頂層監看報警時才改寫上限。
 - **「簡單工作」的界線**（使用者 11-06 確認：「1.對。2.是。」）：雜活、純文字小改、查找盤點、跑指令收結果才算簡單，給 sonnet／terra。**碰程式碼邏輯、改寫使用者的概念／規範條文不算簡單**，不給 sonnet（使用者 09-30「不要 sonnet」「就 opus」；見 [common/user「子 agent 模型」](../common/user.md)），codex 那邊用同一把尺、不給 terra。
-- **讀規矩（第 1、5 句）**：派出去的 agent 做事前先通讀 wf/ 規矩（AGENTS.md、WORKFLOWS.md、common/user.md、common/conventions.md 等），**簡單工作與雜活例外**；隊員與其子 agent 同樣適用。任務書開頭寫明，並要隊員往下派時也寫進子任務書。例外對子 agent 一樣成立（雜活子 agent 可免讀）——使用者 11-06 確認（「1.對。2.是。」）。
+- **讀規矩（第 1、5 句）**：派出去的 agent 做事前先通讀 wf/ 規矩（AGENTS.md、WORKFLOWS.md、common/user.md、common/conventions.md 等），**簡單工作與雜活例外**；另先讀知識庫 `~/aos-home/knowledge/aos/_description.json`（11-13）；隊員與其子 agent 同樣適用。任務書開頭寫明，並要隊員往下派時也寫進子任務書。例外對子 agent 一樣成立（雜活子 agent 可免讀）——使用者 11-06 確認（「1.對。2.是。」）。
 - **一般 agent 再派子 agent，模型隨意**（第 1 句）；隊員那層照上面第 5 句的分工。
-- **fable→opus→gpt**：fable 只做頂層規劃／設計，只讀備料、不廣讀 repo。opus 收集與匯總→fable 一次性規劃→opus 補全加深架構，輪間、輪中皆可，次數不限；gpt 嘗試時 fable 仍不即時參與。opus 負責輪內架構、權衡、審 gpt 與流程；gpt 照設計施工／嘗試。[原話](aos-teams/03-使用者原話.md)。
+- **預設流程（11-13 晚）**：opus 帶隊→sonnet 搜集→opus 匯總→fable 規劃設計架構→opus 深化細化→實作（gpt 系優先、改走 aos 的 agent-fsm，claude 補位）。細節 [07](aos-teams/07-預設流程與agent-fsm.md)。
 - **同機 session 傳話**：同帳號原則上用 a2a，但兩邊權限模式不同時會卡在對方畫面等批准，**兩個方向都寄 wf/inbox**；Argon 也是共同設計者（審查＋提案）。細節與原話見 [05](aos-teams/05-同機session與Argon.md)。 agy、LM Studio、家機假日隊形也在 05。
 - **程序數要少（第 3、6 句）**：codex、claude CLI 都是 nodejs，跑在使用者也在用的機器上，所以**每隊同時最多兩個 CLI 程序**（一個 codex、一個 claude），子 agent 跑在隊員自己的程序裡、不另開 CLI。同時開幾隊由頂層看負載定。頂層開一個**背景監看**，定時看負載、可用記憶體、CLI 程序數，**超門檻才通知**；通知了就叫各隊收斂子 agent 或輪流跑。純改檔負擔不大，「稍微監控」即可，不逐次回報。各機門檻與指令見 [公司 WSL](aos-teams/01-公司WSL.md)。
 - **codex 要設 goal**：codex 愛做到一半就說做完，提示參數要以 `/goal <完成條件>` 開頭，指令與核對見 [02](aos-teams/02-指令沙箱與試玩.md#codex-呼叫與沙箱)。
@@ -31,10 +31,11 @@
 |---|---|
 | [01-公司WSL](aos-teams/01-公司WSL.md) | 公司那台（WSL）的 codex 捷徑與 slug、claude 隊員帳號、沙箱、監看門檻 |
 | [02-指令沙箱與試玩](aos-teams/02-指令沙箱與試玩.md) | 指令與沙箱（開隊長、開隊員、codex 呼叫與沙箱、Claude API 不穩時、codex 可用 slug）、每段做完派人試玩（2026-09-13 起） |
-| [03-使用者原話](aos-teams/03-使用者原話.md) | 使用者 11-06 原話（現行隊形的出處）、使用者 11-07 原話（家機假日隊形與 gpt 的分工限制） |
+| [03-使用者原話](aos-teams/03-使用者原話.md) | 使用者 11-06、11-07 原話（隊形、家機假日隊形、gpt 分工限制）、11-13 晚原話 |
 | [04-進度回報](aos-teams/04-進度回報.md) | 進度回報與桌面看板 |
 | [05-同機session與Argon](aos-teams/05-同機session與Argon.md) | 同機 session 傳話（a2a 與 inbox）、Argon 共同設計與指令、agy、LM Studio、家機假日隊形 |
 | [06-公司WSL活樹與任務書硬規則](aos-teams/06-公司WSL活樹與任務書硬規則.md) | 公司 WSL 現況（樹住 `~/aos-home`、頂層是樹裡的 `repo-aos`）、任務書必貼的硬規則、停樹換檔的做法 |
+| [07-預設流程與agent-fsm](aos-teams/07-預設流程與agent-fsm.md) | 預設流程（11-13 晚）、gpt 系改走 agent-fsm、家機 proxy |
 
 <a id="指令與沙箱"></a>
 <a id="codex-呼叫與沙箱"></a>
