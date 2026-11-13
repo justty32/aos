@@ -10,7 +10,6 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`_description.json`](../../../../../proto8/knowledge/aos/_description.json) | （檔頭沒有一句話） |
-| [`_index.json`](../../../../../proto8/knowledge/aos/_index.json) | 設定（鍵：me.json、me、errors.json、errors、world.json、definition.json…） |
 | [`agents.json`](../../../../../proto8/knowledge/aos/agents.json) | 設定（鍵：_description、subagent、agents_ctl、agent_def、fork） |
 | [`agents/_description.json`](../../../../../proto8/knowledge/aos/agents/_description.json) | （檔頭沒有一句話） |
 | [`agents/fork.json`](../../../../../proto8/knowledge/aos/agents/fork.json) | 設定（鍵：_description、rules、results） |
@@ -18,7 +17,6 @@
 | [`body.json`](../../../../../proto8/knowledge/aos/body.json) | 設定（鍵：_description、brain_tools、system_history） |
 | [`brain.json`](../../../../../proto8/knowledge/aos/brain.json) | 設定（鍵：_description、priority、codes） |
 | [`cli/_description.json`](../../../../../proto8/knowledge/aos/cli/_description.json) | （檔頭沒有一句話） |
-| [`cli/_index.json`](../../../../../proto8/knowledge/aos/cli/_index.json) | 設定（鍵：flags.json、errors.json、safety.json、agent.json、talk_settings.json、history.json…） |
 | [`cli/agent.json`](../../../../../proto8/knowledge/aos/cli/agent.json) | 設定（鍵：_description、add、ls_state、phases、where_who） |
 | [`cli/clock.json`](../../../../../proto8/knowledge/aos/cli/clock.json) | 設定（鍵：_description、clock、register） |
 | [`cli/daemon.json`](../../../../../proto8/knowledge/aos/cli/daemon.json) | 設定（鍵：_description、add、lifecycle、letters、ls、shutdown…） |
@@ -70,7 +68,6 @@
 | [`rules.json`](../../../../../proto8/knowledge/aos/rules.json) | （檔頭沒有一句話） |
 | [`status.json`](../../../../../proto8/knowledge/aos/status.json) | （檔頭沒有一句話） |
 | [`tools/_description.json`](../../../../../proto8/knowledge/aos/tools/_description.json) | （檔頭沒有一句話） |
-| [`tools/_index.json`](../../../../../proto8/knowledge/aos/tools/_index.json) | 設定（鍵：read.json、ls.json、view.json、stat.json、grep.json、glob.json…） |
 | [`tools/copy.json`](../../../../../proto8/knowledge/aos/tools/copy.json) | 設定（鍵：_description、errors） |
 | [`tools/edit.json`](../../../../../proto8/knowledge/aos/tools/edit.json) | 設定（鍵：_description、errors） |
 | [`tools/glob.json`](../../../../../proto8/knowledge/aos/tools/glob.json) | 設定（鍵：_description、rules、errors） |
