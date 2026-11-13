@@ -32,6 +32,14 @@ if re.search(r"\b(ssh|scp|rsync|docker)\b", cmd) and any(h in cmd for h in PROD)
 
 hook 什麼都不印＝照跑、不問人；印 `deny`＝不跑、腦收到理由；印 `ask`＝**畫面開著**（`aos-agent open`）時畫面上跳確認框等人按，畫面沒開（aos 走 `claude -p`）時等於拒絕。同一個檔裡寫權限規則（`permissions.ask`／`permissions.deny`）在 `dontAsk` 下只會拒絕、不跳框。管不到的：人在畫面上自己打的 `!` 指令（不叫 hook）、codex 身。這道閘擋得住「順手就做了」，擋不住存心繞過（腦有 Bash 與 Write，改得到這個檔）。規矩放工作區＝同一個資料夾的所有 Claude Code session 都吃到，包含人自己開的。
 
+**只想管這隻 agent、不想放工作區**：把同樣的設定寫進這份定義的 `cli.json`，鍵叫 `settings`（物件，或一個 JSON 檔的路徑；11-13 實測過兩條路都擋得住）。aos 把它併進自己加的那個 `--settings`，hook 指令用 `$AOS_CLI_DEF`（這份定義資料夾）找檔：
+
+```json
+"settings": {"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/host_gate.py\""}]}]}}
+```
+
+`flags` 裡不要自己寫 `--settings`（＝`CfgBad`）。細節在 [eca-claude 說明](../docs/01-eca-claude.md)。
+
 **接外部 MCP server**：`cli.json` 加 `"mcp_servers": ["mcp/<名>.json"]`，一台一份 server 檔（http 或 stdio），寫法見 [eca-claude 說明的「接外部 MCP server」](../docs/01-eca-claude.md#接外部-mcp-server11-12-external-mcp)；token 放 server 檔的 `env_file`，不要用 `ctl add --envs`。
 
 `interfaces.json` 宣告畫面、工具、腦設定、history 與 hook 的位置。`_metainfo.json` 宣告估時 `cost.time_ms`（一輪約一分鐘，粗估）與 `llm` 資源，未設定逾時（一輪的上限在 `cli.json` 的 `timeout_ms` 與 `loop.json` 的 `timeout_ms`）。

@@ -16,7 +16,11 @@ claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是�
 | 身體 | 寫了＝`CfgBad` | aos 有宣告才加、你也可以自己寫的 |
 |---|---|---|
 | codex | `--skip-git-repo-check`、`--json`、`-o`／`--output-last-message`（codex 不收重複的旗標，寫第二次它退 2） | `-c …`（`mcp_servers.*`、`developer_instructions`、畫面的 `notify`；`-c` 可以重複） |
-| claude | `-p`／`--print`、`--output-format`、`--session-id`、`--resume`／`-r`、`--continue`／`-c`（輸出格式與接哪段對話歸 aos） | `--mcp-config`、`--allowedTools`、`--append-system-prompt-file`、`--system-prompt-snapshot`、`--settings`、`--model`（`llm.json` 有寫就換掉）；`--agents` 跟 `tools_sub` 同寫＝`CfgBad` |
+| claude | `-p`／`--print`、`--output-format`、`--session-id`、`--resume`／`-r`、`--continue`／`-c`（輸出格式與接哪段對話歸 aos）、`--settings`（CLI 只認命令列上最後一個，aos 自己那個接在後面；要帶設定寫 `cli.json` 的 `settings` 鍵，見下） | `--mcp-config`、`--allowedTools`、`--append-system-prompt-file`、`--system-prompt-snapshot`、`--model`（`llm.json` 有寫就換掉）；`--agents` 跟 `tools_sub` 同寫＝`CfgBad` |
+
+**定義自帶 Claude Code 設定（`cli.json` 的 `settings`，選填；使用者 11-13「都按照建議」，[ops-agent-six-suggestions 第 1 題乙](../../thinking/2026-11/13/ops-agent-six-suggestions.md)）**：值是 Claude Code `settings.json` 那種物件（`hooks`、`permissions`…），或一個 JSON 檔的路徑（相對從 `cli.json` 的資料夾算，每輪重讀）。aos 把它併進自己加的那一個 `--settings`：`hooks` 每個事件的表接在一起（定義的在前、aos 的在後，兩邊都會跑）；其他頂層鍵定義有寫的照定義、沒寫的用 aos 的。非互動與畫面兩條路都帶。有寫 `settings` 時 CLI 行程多一個環境變數 `AOS_CLI_DEF`＝這份定義資料夾的絕對路徑，hook 指令寫 `python3 "$AOS_CLI_DEF/gate.py"` 就找得到定義裡的檔。只有 claude 身認（codex 身寫了＝`CfgBad`；codex 的核准設定另議）；不是物件、檔讀不了、`hooks` 不是「事件名: 陣列」＝`CfgBad`。內容 aos 不驗，照樣交給 CLI。範本本身不帶 `settings`（預設全面開放）。跟工作區 `.claude/settings.json` 的差別：這份只管這隻 agent，不影響同一個資料夾的其他 session；兩邊都有就都算數。
+
+**畫面裡的環境變數跟 loop 一致（11-13 修）**：`aos-eca-turn` 每一圈把自己手上的 `AOS_HOME`、`AOS_DAEMON`、`AOS_CLOCK`、`AOS_CLOCK_INTERVAL`、`AOS_LLM_KERNEL`、`AOS_KERNEL`、`AOS_LINUX_USER_STACK` 記進小格的 `env.json`（值沒變不重寫），`aos-agent open` 開畫面時這幾個照它給（有記的設成那個值、沒記的拿掉），不用開畫面那個人的殼的——以前人開的畫面裡 `peek_clock` 會回 `ClockMissing`。還沒記過（畫面比 loop 先開）＝照舊用殼的、stderr 提醒一行。已經開著的畫面不會變，關掉重開才拿到。
 
 ```
 eca-claude/

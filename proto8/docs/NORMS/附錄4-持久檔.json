@@ -375,6 +375,16 @@
    "evidence": "proto8/lib/agent/cli_a2a.py（note_socket、note_ack、mark_off、forget、socket_path、acked）、proto8/lib/agent/cli_hook.py（hook_main）、proto8/lib/agent/cli_ask.py（live、live_a2a）、proto8/lib/agent/cli_screen.py（start）"
   },
   {
+   "path": "<eca 小格>/env.json",
+   "lifetime": "暫時",
+   "writer": "loop 那邊：aos-eca-turn 每一圈（cmd/aos-eca/aos_eca/turn.py one_turn）、lib/agent/cli_ask（ask 每一題）經 cli_mcp.note_env；值跟上次一樣不重寫",
+   "reader": "lib/agent/cli_screen（start，經 cli_mcp.screen_env：開畫面時 AOS_CLOCK 等照它給）",
+   "image": "不進：這台的絕對路徑；cmd/aos-agent/stack.gitignore 擋",
+   "on_bad": "不在、不是 JSON、不是物件＝當沒記過：畫面照舊用開畫面那個殼的環境、warning 一行；寫不成＝不擋",
+   "note": "11-13 新增（人開的畫面拿不到 AOS_CLOCK 的 bug，thinking 2026-11/13/ops-fixes-施工結果）：{變數名: 值}，只記 AOS_HOME、AOS_DAEMON、AOS_CLOCK、AOS_CLOCK_INTERVAL、AOS_LLM_KERNEL、AOS_KERNEL、AOS_LINUX_USER_STACK 裡有設的。新檔，不用重建",
+   "evidence": "proto8/lib/agent/cli_mcp.py（note_env、noted_env、screen_env）、proto8/lib/agent/cli_screen.py（start）、proto8/cmd/aos-eca/aos_eca/turn.py（one_turn）"
+  },
+  {
    "path": "$AOS_STACK/think/（pending.txt、reply/ 信箱）",
    "lifetime": "持久",
    "writer": "templates/agent-fsm（brain、wait）",
