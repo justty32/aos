@@ -14,7 +14,7 @@
 
 ## 2026-11-13 公司 WSL 頂層（repo-aos）收工草稿
 
-（草稿：14:00 前後寫的。標 【待補1113】 的幾處要等 15:08 釘 commit、15:30 停樹、16:00 後接線與收工 push 之後才知道，收工時搜尋這個字樣逐處補上或刪掉。）
+（草稿：14:00 前後寫、15:40 補了停樹結果。還標 【待補1113】 的是 push、線戌、線卯三處，收工時搜尋這個字樣補上或刪掉。）
 
 1. **授權與工作方式**：公司 WSL，頂層就是 `~/aos-home` 樹裡的一隻 eca `repo-aos`（工作區 `~/repo/aos`、只有 `main`）。使用者開場：「事情盡量都交給agent做，普通工作交給opus，簡單工作或雜活交給sonnet。agent做事前都要讀過wf/規矩，簡單工作或雜活除外。agent可以再派子agent，模型隨意。我今天五點下班，下班前再統一push。」；「都可以用fable帶隊」「fable多多的用，因為明天額度重置」（**只限今天**，明天起回到 user.md 的「fable 盡量少用」）；「都可以清、都可以下載。」「反正有需要我判斷的東西就丟桌面」（要他裁的做成頁放 Windows 桌面）。**`eca_main` 派來的普通工作算使用者的授權；push、刪檔這類不可逆或對外的仍要他本人說**（「1.算。」「2.對。」，已寫進 [AGENTS 鐵律 2](../AGENTS.md)）。停樹、起樹只由使用者自己下。
 2. **push**：今天的 commit 都沒推——寫這條時 `git log origin/main..main` 是 88 個（另加這一輪文書）；下班前統一推一次，推之前跟他說一聲、他說推才推。【待補1113】 推了沒、推到哪個 hash。
@@ -25,24 +25,25 @@
    - eca 通知改走 a2a（使用者：aos 先不原生支援 a2a 協議、頂多做中轉；history 記不記寄件人「不用」）（[a2a-施工結果](../proto8/thinking/2026-11/13/a2a-施工結果.md)）；ops-agent 六點（「都按照建議」）做了五件（[ops-fixes-施工結果](../proto8/thinking/2026-11/13/ops-fixes-施工結果.md)）；`eca_main` 來信七項修了四項 bug＋`set-def`（[fixes-施工結果](../proto8/thinking/2026-11/13/fixes-施工結果.md)）；工具印的路徑照叫方 stack 算（[tool-stack-path](../proto8/thinking/2026-11/13/tool-stack-path.md)）；外部 MCP 接真 server（[external-mcp-real-server](../proto8/thinking/2026-11/13/external-mcp-real-server.md)）；repo 的 index 照 11-12 門檻（[index-build](../proto8/thinking/2026-11/13/index-build.md)）。
    - 規矩：在跑著的樹旁邊做事的六條坑、任務書必貼的九條硬規則、派線坑 14～20（[aos-teams/06](workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md)、[gotchas/05](workflows/common/gotchas/05-在跑著的樹旁邊做事.md)、[lessons/03](workflows/dispatch/lessons/03-坑14-20.md)）；起因是 10:25 子 agent 用 `pkill` 誤停使用者的樹約 4 分 20 秒（[開工紀錄第十一節](../proto8/thinking/2026-11/13/kernel-framework-開工.md#十一事故子-agent-誤停使用者的樹11-13-1025)）。四條教訓 `eca_main` 已收進樹裡的共用知識庫 `~/aos-home/ws/public/`。
 4. **進行中與排定的**（領地在 [dispatch/CLAIMS](workflows/dispatch/CLAIMS.md)）：
-   - **15:30 停樹換檔（線己二）**：跟 `eca_main` 約 15:30 停、16:00 前起回來，使用者沒醒就順延、拖過 16:00 改下次開工前；步驟表在[開工紀錄 § 停樹時照做](../proto8/thinking/2026-11/13/kernel-framework-開工.md#停樹時照做11-13-1530腳本在-repo-外-codekf2-1113stop-tree)，腳本與備份落點在 `~/code/kf2-1113/stop-tree/`。【待補1113】 停樹結果：`ST_REF` 釘的 hash、全套結果、重抄了哪幾夾、有沒有換新 `aos-daemon`、verify 幾列、實際停了多久、有沒有退回。
-   - **線戌（批 1b，agent 的 `hooks.py` 改用共用引擎）**：成品與結果稿在 `~/code/xu-1113/`，排在 16:00 後接線進 main。【待補1113】 接了沒、commit、開工紀錄第十五節進了沒。
-   - **線卯階段二**：程式區 8 份 `_index.json` 等停樹重抄後才放。【待補1113】 放了沒、commit。
+   - **停樹換檔做完了（線己二）**：15:23:50 `eca_main` 代使用者 shutdown（使用者 15:13「同意」改成由它停樹、起樹，並等全套跑完再停）；15:24:18～24 線己二 `swap.sh` 全過：從釘住的 `159414053`（15:08:14 釘；乾淨複本全套 68 夾 1592 例只紅既有 4 支、`impls/aos-daemon/tests` 90 綠）重抄 `lib`／`templates`／`knowledge`／`py`／`kernel` 五夾（`kernel` 是新夾、`knowledge` 多 `wf/` 一庫）、換上預編的新 `aos-daemon`、清掉 `repo-aos` 那格兩個誤寫檔，備份在 `~/code/kf2-1113/stop-tree/backup-1113-152418/`；15:25:43 起回來，15:29 `verify.sh` ALL PASS（根 3 列、領班 9 列同停樹前、都 running；查詢信兩台都答）；實際停了約 2 分鐘。**起樹事故**：15:24:54 `eca_main` 第一次起樹是在自己的 shell 跑，`~/aos-home/env.sh` 只清 `AOS_DAEMON`／`AOS_KERNEL`／`AOS_CLOCK`、沒清 `AOS_STACK`，root 把 `ws/.stack/procs/eca_main/` 當成 root stack；約 35 秒（到 15:25:30）真的領班與 9 個 agent 掛在錯的 root 底下醒著、看到錯的鐘（`elsa-watch` 15:24:56 掃一次寄信給 `gpt-price`，已正常處理）；它自己用 `aos-daemon-ctl -d` 指那格停掉、`env -u` 清乾淨重起，查過沒有其他後遺症。**留兩件等使用者說**：`eca_main` 那格的殘留五樣（`.sweeper.lock`、`clock`、`procs/`、`procs_requests/`、`procs_state.json`）還沒刪；`env.sh` 要補成清全部 `AOS_*`、而且 repo 沒有它的正本（都在 [wait-user/04](wait-user/04-雜事.md)）。退回沒用到。
+   - **線戌（批 1b，agent 的 `hooks.py` 改用共用引擎）**：成品與結果稿在 `~/code/xu-1113/`，15:32 調度者已放行、接線進行中。【待補1113】 接了沒、commit、開工紀錄第十五節進了沒。
+   - **線卯階段二**：程式區 8 份 `_index.json` 排在線戌之後放。【待補1113】 放了沒、commit。
+   - 下午 compact 後新進 main 的：線天（一段文字可寫成字串或字串陣列，[text-as-string-array](../proto8/thinking/2026-11/13/text-as-string-array.md)）、線地（`wf/tools/json_text` 折行修正與拆兩支）、線玄（workflows 模板併入 aos：使用者裁「變成aos的東西」「邊用邊併」，第 1 塊進 `proto8/knowledge/wf/`，[workflows-into-aos](../proto8/thinking/2026-11/13/workflows-into-aos.md)）、線黃（`index_check` 假綠，「都按照推薦」，[index-check-false-green](../proto8/thinking/2026-11/13/index-check-false-green.md)）；排著一條小線把 8 KB 三處改成推薦語氣（使用者 15:03「好」）。
    - kernel 沒做的批：5 接線＋6（補丁 `~/code/kf2-1113/a4/`）、10（補丁 `~/code/kf2-1113/a2/`，C++ 沒 build 過）、7b、11b、12、13、14（回家用真腦）。
    - 已裁還沒施工：`set-def` 改「停→拔→掛回」、換定義後照睡醒提醒在等的信、家機主 session 改成樹裡一隻（其餘見 [SESSION-LOG](SESSION-LOG.md)）。
-5. **活樹現況**（13:48 `aos-agent ctl ls`）：九列都 running——`_sweeper`、`eca_main`、`ops-agent`、`me-agent`、`repo-aos`、`gpt-price`、`elsa-watch`、`gpt-soap`、`wf-agent`（13:14 使用者新加的）；根 daemon 與領班兩台。各 agent 用的定義 `ws/defs/agent` 是今早抄的七包、沒有 `jsonx`，重抄範本也不會自己變。【待補1113】 起樹後的列數與狀態。
-6. **今天的改動在樹裡生效了沒**（停樹重抄前的狀態；【待補1113】 重抄後把「等重抄」那一列改掉）：
+5. **活樹現況**（13:48 `aos-agent ctl ls`）：九列都 running——`_sweeper`、`eca_main`、`ops-agent`、`me-agent`、`repo-aos`、`gpt-price`、`elsa-watch`、`gpt-soap`、`wf-agent`（13:14 使用者新加的）；根 daemon 與領班兩台。15:29 起樹後 verify：根 3 列、領班 9 列跟停樹前一樣、都 running。各 agent 用的定義 `ws/defs/agent` 是今早抄的七包、沒有 `jsonx`，重抄範本也不會自己變。
+6. **今天的改動在樹裡生效了沒**（15:24 重抄與換 daemon 之後的狀態；重抄的是 15:00 的 `159414053`，之後才進 main 的不含）：
 
    | 狀態 | 哪些 |
    |---|---|
    | 已生效（`cmd/`、`py/`、被指令直接 import 的 `lib/agent/*.py` 存檔即生效） | `eca_main` 來信第 7、6、3 項與 `aos-agent ctl set-def`、外部 MCP 的預檢與 `sync` 報改名；a2a 送信（只對接線後才開的畫面）；`aos-mailbox --keep-to`、`cli.json` 的 `settings` 鍵、`flags` 寫 `--settings` 報 `CfgBad`、各 agent 的 `env.json`；`aos-tools call` 多給 `AOS_STACK_IN_CALLER`；通知種類 `kernel_hold` |
-   | 等重抄 `lib`／`templates`／`knowledge`／`py`／`kernel` 複本 | 定義檢查找 `aos-tools`（第 1 項）、工具印的路徑新寫法（`tool_io` 與各工具夾）、`mailbox_read`／`mailbox_send` 的 `keep` 收檔名、今天所有知識庫與範本的字句（含範本掛 `jsonx`、`stack.gitignore` 的 `env.json`）、kernel 框架整包（`lib/aos/kernel`、`kernel_llm`、`kernel_gate`、新夾 `kernel/`） |
-   | 等停樹換執行檔 | 新 `aos-daemon`（認查詢信 `procs_state_path`；編好放在 `~/code/kbuild-1113/`） |
+   | 15:24 重抄後樹裡已有（agent 的工具每次叫都是新的；開著畫面的那隻要重開畫面才看到工具的新說明） | 定義檢查找 `aos-tools`（第 1 項）、工具印的路徑新寫法（`tool_io` 與各工具夾）、`mailbox_read`／`mailbox_send` 的 `keep` 收檔名、今天所有知識庫與範本的字句（含範本掛 `jsonx`、`stack.gitignore` 的 `env.json`）、kernel 框架整包（`lib/aos/kernel`、`kernel_llm`、`kernel_gate`、新夾 `kernel/`）、`index_view` 認字串陣列的 description、新知識庫 `knowledge/wf/`（現役定義 `ws/defs/agent` 還是七包，範本掛的 `jsonx` 要定義自己加） |
+   | 15:24 換了執行檔、15:25 起樹後生效 | 新 `aos-daemon`（認查詢信 `procs_state_path`，verify 兩台都答；要靠它的批 5 接線還沒進 main，所以指令還沒走這條路） |
    | 要使用者把開著的畫面關掉重開 | 時鐘（`AOS_CLOCK` 等環境變數）、a2a 新送法；重抄後工具的新說明（開著畫面的 `aos-mcp` 是長駐的） |
-   | 還沒進 main | kernel 批 5 接線、批 6（上線要先清各 agent 的 `tools/subagent/subagents.json` 舊帳）、批 10、批 1b；index 程式區 8 份 |
+   | 還沒進 main | kernel 批 5 接線、批 6（上線要先清各 agent 的 `tools/subagent/subagents.json` 舊帳）、批 10、批 1b（15:32 放行、接線中）；index 程式區 8 份；15:00 之後進 main 的（線黃的 `index_check` 是 repo 腳本、不進樹） |
 
 7. **repo 外的暫存夾**（`~/code/` 底下 11 個，都沒刪，要不要刪列在 [wait-user/04](wait-user/04-雜事.md)）：`kf2-1113`（停樹腳本、備份、三份補丁——補丁進 main 前不能刪）、`kbuild-1113`、`xu-1113`（線戌成品）、`you-1113`、`shen-try-1113`、`a2a-build-1113`、`a2a-try-1113`、`mcp-try-1113`、`ops-try-1113`、`si-try-1113`、`six-try-1113`。
-8. **測試**：全套今天跑過三次都只紅既有 4 支（早上 66 夾 1354 例、線乙 1357 例、線庚 1412 例）；11:41 線己二試跑一次是 4 夾紅（`cmd/aos-agent/tests`、`extras/gitignore-check/tests`、`lib/aos/box_check/tests`、`templates/tests`，原因沒寫）；kernel tests 整夾 18 次裡第一次紅 1 例、原因沒查到。【待補1113】 15:08 釘住那個 commit 的全套結果。
+8. **測試**：全套今天跑過三次都只紅既有 4 支（早上 66 夾 1354 例、線乙 1357 例、線庚 1412 例）；11:41 線己二試跑一次是 4 夾紅（`cmd/aos-agent/tests`、`extras/gitignore-check/tests`、`lib/aos/box_check/tests`、`templates/tests`，原因沒寫）；kernel tests 整夾 18 次裡第一次紅 1 例、原因沒查到。15:08 釘住的 `159414053` 在乾淨複本跑全套：68 夾 1592 例只紅既有 4 支（aos-agent `test_daemon_down` 2、box_check `test_acceptance` 2）。
 9. **下一個 session 先看**：`wf/inbox` 是空的；[SESSION-LOG](SESSION-LOG.md) 第一條（停樹）與 kernel 那條；[WAIT_USER 01](wait-user/01-要你裁的.md)（push 與收工那一輪桌面頁的幾題）。
 
 ## 2026-11-12 23:00 家機頂層關機前
