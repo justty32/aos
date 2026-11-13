@@ -39,7 +39,7 @@
 
 使用者原話（11-12 傍晚）：「emmm，說是要移植，但不是說完全移植。我會更傾向於在wsl開闢一個空間，然後從一個daemon、一個懂aos的fable eca開始，一步一步慢慢把東西建立起來」、「不用幫我，告訴我怎麼一步一步做。我自己來」、「啊，其實不用fable啦，opus就夠了」
 
-下面每一步的指令 11-13 在公司 WSL 照 main `2e8eb6736` 真搭一次 `~/aos-home` 跑過（掛上 agent、`tools` 26 支、opus 問一句、停樹、存檔讀檔都過，見 [11-13 aos-home](../13/aos-home.md)；repo 是 `~/repo/aos`）。例子用 `~/aos-home` 和 `eca_main`，兩個名字都可以自己取，換的話整份一起換。
+下面每一步的指令 11-13 在公司 WSL 照 main `2e8eb6736` 真搭一次 `~/aos-home` 跑過（掛上 agent、`tools` 26 支、opus 問一句、停樹、存檔讀檔都過，見 [11-13 aos-home](../13/aos-home.md)；repo 是 `~/repo/aos`）；11-13 晚在家機照 main `42a5e704c` 再搭一次也全過（工具支數已是 34，見 [aos-home-家機](../13/aos-home-家機.md)）。例子用 `~/aos-home` 和 `eca_main`，兩個名字都可以自己取，換的話整份一起換。
 
 ### 先要有的
 
@@ -169,7 +169,7 @@ cd ~/aos-home && source env.sh && aos-daemon-ctl -d .stack ls
 cd ~/aos-home && source env.sh && cd ws && aos-agent ctl add ../agents/eca_main && aos-agent ctl ls
 ```
 
-看到：`eca_main	running	/home/<你>/aos-home/ws	0	-`。再確認工具：`aos-agent tools --target eca_main ls | wc -l` 是 `26`。
+看到：`eca_main	running	/home/<你>/aos-home/ws	0	-`。再確認工具：`aos-agent tools --target eca_main ls | wc -l` 是 `34`（範本八包，多了 jsonx 包的 8 支）。
 
 ### ⑪ 跟它講話
 
@@ -197,7 +197,7 @@ Use the aos tool index_view on ../knowledge/aos and tell me in one line how many
 List the names of your aos tools (mcp__aos__*) and count them.
 ```
 
-應該是 26 支，有 `json_get`、`index_view`、`mailbox_send`、`self_system`…，沒有 read、write、shell。
+應該是 34 支，有 `json_get`、`jsonx_get`、`index_view`、`mailbox_send`、`self_system`…，沒有 read、write、shell。
 
 ### ⑬ 停樹
 
@@ -228,6 +228,8 @@ cp -r ~/aos-home/templates/eca-claude ~/aos-home/agents/eca_two && echo '{"model
 ```
 
 要它也找得到 knowledge，把 ⑦ 那份 `system.txt` 抄過去：`cp ~/aos-home/agents/eca_main/system.txt ~/aos-home/agents/eca_two/`。
+
+工作區不在 `ws/`（例如直接在 repo 裡做事的那隻）：`ctl add` 加 `-w <工作區絕對路徑>`，`system.txt` 裡的 `../knowledge` 改成 `~/aos-home/knowledge` 的絕對路徑（相對路徑是從它的工作區算）。家機的 `repo-aos` 就是這樣搭的（[aos-home-家機](../13/aos-home-家機.md)）。
 
 ### ⑯ repo 更新後只重抄 lib 或 knowledge
 
