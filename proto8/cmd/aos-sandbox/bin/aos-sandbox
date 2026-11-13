@@ -10,13 +10,17 @@
 #   user     字串：帳號名或 uid:gid → s6-setuidgid（要 root；沒寫＝不換身分）
 #   base     路徑陣列：系統唯讀底（預設 /usr /bin /sbin /lib /lib64 /etc 裡存在的）
 #   commands 指令名陣列：照 PATH 找到它，所在資料夾唯讀看得到（例 aos-exec）
-#   ro、rw   路徑陣列：唯讀／可寫看得到（相對的從 cwd 算；rw 最後綁，可蓋在 ro 裡面）
+#   ro、rw   路徑陣列：唯讀／可寫看得到（相對的從 cwd 算）。ro、rw 混在一起照路徑深淺排、淺的先綁＝**深的那條說了算**
+#            （11-13 線修 T32：rw [repo]＋ro [repo/.git]＝repo 可寫、.git 唯讀；反過來也行；同一條路徑兩邊都列＝rw）
 #            rw 裡的 $AOS_STACK 不在＝先建（11-11 tool-cells-lazy：aos-tools call 不先建工具小格）；其他路徑不在照舊 PathMissing
 #   net      布林：能不能連網（預設 false：只有自己的 loopback）
 #   mem_mb、cpu_s、procs、file_mb、files  正整數 → s6-softlimit 的 -a＋-d、-t、-p、-f、-o
 #   env      環境變數名陣列：只帶這幾個進去（外面有設的才帶；bwrap --clearenv＋--setenv）；沒寫＝ENV_BASE 那幾個（PATH、語系、aos 的六個、hub 型的 AOS_DAEMON／AOS_LLM_KERNEL／AOS_KERNEL／AOS_CLOCK）；
 #            寫了＝整份取代 ENV_BASE，不是往預設上加（要預設那幾個就自己列）
-#   沒列到的路徑一律看不到；/proc、/dev、/tmp（空的）一定有。
+#   沒列到的路徑一律看不到；/proc、/dev、/tmp（空的、可寫、跑完就沒了）一定有。
+#   設定檔所在的資料夾（工具夾）沒被 ro／rw 蓋到＝自動唯讀綁（11-13 線修 T34：_entry 用相對路徑叫 inner，看不到工具夾就找不到）。
+#   最後把沙箱的根 / 改成唯讀（11-13 線修 T36）：寫到沒綁的地方＝Read-only file system、失敗，不再默默寫進暫存、退 0；
+#   能寫的只有 rw 列的與 /tmp。
 #   能不能用 LLM kernel 不另設開關（使用者 10-24「就是看他能不能存取檔案」）：信箱有綁進來（rw 列了 {"$env": "AOS_LLM_KERNEL", "$path": "/requests"}；
 #   AOS_LLM_KERNEL＝llm kernel 的 stack，只綁信箱、不綁整個 stack）、env 有帶 AOS_LLM_KERNEL 就能寄，
 #   沒有就看不到；再細的由信箱的擁有者、群組、權限位管（root/setup.sh --mailbox）。
@@ -57,6 +61,9 @@ Config keys (all optional; unknown keys are ignored): user (account or uid:gid, 
   net (boolean, default false), mem_mb, cpu_s, procs, file_mb, files (positive integers), env (variable names to pass in;
   default PATH, locale, TZ, PYTHON*, the six AOS_ run variables and the hub ones AOS_DAEMON, AOS_LLM_KERNEL, AOS_KERNEL,
   AOS_CLOCK; an env list replaces that default as a whole, it does not add to it).
+When ro and rw nest, the deeper path wins (rw [repo] + ro [repo/.git] = repo writable, .git read-only).
+The folder holding CONFIG is always visible (read-only unless an rw path covers it). After all binds / is made read-only:
+  only rw paths and /tmp (empty, gone when prog ends) are writable; a write anywhere else fails (Read-only file system).
 A broken CONFIG (unreadable, not JSON, not an object, a key of the wrong type, $ref, an unset $env) counts as not written:
   prog runs WITHOUT a sandbox and stderr gets `aos-sandbox: warning: sandbox config ignored, running unsandboxed: reason`.
   A CONFIG that is not there (no file, the pointer points at nothing) and things the machine lacks (a listed path,
@@ -126,7 +133,7 @@ def load(spec):
     cfg = pointer(doc, ptr, spec)
     if not isinstance(cfg, dict):
         raise CfgBad("%s must be a JSON object" % spec)
-    return resolve(cfg, spec)
+    return resolve(cfg, spec), os.path.dirname(os.path.abspath(path))
 
 
 def resolve(v, where):
@@ -186,7 +193,31 @@ def bind(opts, flag, path, dry):
     opts += [flag, path, path]
 
 
-def build(cfg, prog, dry):
+def depth(p):
+    """路徑有幾層（照實際位置：是符號連結的看它指到的地方，那才是掛載點）。"""
+    real = os.path.realpath(p) if os.path.lexists(p) else p
+    return len([x for x in real.split("/") if x])
+
+
+def ordered_binds(ro, rw):
+    """ro、rw 混在一起、淺的先綁（bwrap 後綁的蓋前面的＝深的說了算；T32）；同深度 ro 先、rw 後（同一條兩邊都列＝rw，同舊）。"""
+    items = [("--ro-bind", p) for p in ro] + [("--bind", p) for p in rw]
+    return sorted(items, key=lambda it: (depth(it[1]), it[0] == "--bind"))
+
+
+def covered(d, listed):
+    """d 已經在某條 ro／rw 裡（同一條或在它底下；照字面與實際位置各比一次）。"""
+    cands = {os.path.abspath(d), os.path.realpath(d)}
+    for p in listed:
+        for q in {os.path.abspath(p), os.path.realpath(p)}:
+            q = q.rstrip("/") or "/"
+            for c in cands:
+                if c == q or c.startswith(q.rstrip("/") + "/"):
+                    return True
+    return False
+
+
+def build(cfg, prog, dry, cfg_dir=None):
     if "net" in cfg and type(cfg["net"]) is not bool:
         raise CfgBad("net must be true or false")
     chain = []
@@ -236,16 +267,19 @@ def build(cfg, prog, dry):
             tool_io = os.path.join(os.path.dirname(commands_dir), "lib", "tool_io.py")
             if os.path.isfile(tool_io):
                 bind(opts, "--ro-bind", tool_io, dry)
-    for p in paths(cfg, "ro"):
-        bind(opts, "--ro-bind", p, dry)
+    ro, rw = paths(cfg, "ro"), paths(cfg, "rw")
     stack = os.environ.get("AOS_STACK")
-    for p in paths(cfg, "rw"):
+    for p in rw:
         if stack and not dry and not os.path.lexists(p) and os.path.abspath(p) == os.path.abspath(stack):
             try:                                    # 11-11 tool-cells-lazy：小格不先建，綁給裡面寫的 $AOS_STACK 由這支先建
                 os.makedirs(p)
             except OSError as e:
                 die("PathMissing", "cannot create %s: %s" % (p, e.strerror or e))
-        bind(opts, "--bind", p, dry)
+    if cfg_dir and not covered(cfg_dir, ro + rw):   # T34：工具夾自己沒列到＝唯讀綁
+        ro = ro + [cfg_dir]
+    for flag, p in ordered_binds(ro, rw):
+        bind(opts, flag, p, dry)
+    opts += ["--remount-ro", "/"]                   # T36：根唯讀，沒綁的地方寫不進去（綁定都在這之前）
     opts.append("--clearenv")
     for n in dict.fromkeys(names):
         if n in os.environ:
@@ -256,7 +290,8 @@ def build(cfg, prog, dry):
 def main():
     dry, spec, prog = parse_args(sys.argv[1:])
     try:
-        chain = build(load(spec), prog, dry)
+        cfg, cfg_dir = load(spec)
+        chain = build(cfg, prog, dry, cfg_dir)
     except CfgBad as e:                             # 設定是觀點：壞了＝當沒寫＝不套沙箱，直接跑 prog（照 PATH 找）
         aos_flags.warn("aos-sandbox", "sandbox config ignored, running unsandboxed: %s" % e)
         chain = [which(prog[0], dry)] + prog[1:]
