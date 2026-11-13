@@ -23,6 +23,9 @@
  "aos-grow": {
   "description": "aos-grow：把一個函數往上長一級或縮回一級、呼叫方跟著改的原型指令（嘗試性質，純標準庫 Python）"
  },
+ "aos-json-view": {
+  "description": "aos-json-view — 只讀：把 json 印成人好讀的樣子"
+ },
  "aos-mailbox": {
   "description": "aos-mailbox：每個 stack 一個 aos-post 信箱，where／peek／read／send 照 inbox 協議跟 agent 互寄信；人也能把自己當一隻 agent 用"
  },

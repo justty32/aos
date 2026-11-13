@@ -131,6 +131,14 @@
     "aos-grow": "把一個函數往上長一級（或縮回一級），呼叫方跟著改、行為不變。"
    }
   },
+  "aos-json-view": {
+   "bin": {
+    "aos-json-view": "只讀：把一份 json（或其中一段）印成人好讀的樣子，不改任何檔。"
+   },
+   "tests": {
+    "test_json_view.py": "Test aos-json-view: text blocks (newlines and string arrays), compact inline objects/arrays, key alignment, wrapping by display width, $ref, control …"
+   }
+  },
   "aos-mailbox": {
    "aos_mailbox": {
     "__init__.py": "aos-mailbox 本體：找我的 stack、四個子命令（where、peek、read、send）、叫 aos-post 命令列。"
