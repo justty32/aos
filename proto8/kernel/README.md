@@ -17,6 +17,8 @@
 
 框架只是一包方便的零件，不是概念。自己手寫一支收信的程式，一樣算 kernel。
 
+框架分兩層（使用者 11-13：「我們做的是框架，最底層就是最簡單的hook+判斷。你說的上限這塊，是在框架之上的通用基礎包」）：骨架只管收信、叫 hook、照判決放行／拒／留著、轉寄與代回；白名單、數量上限、排隊、期限是蓋在骨架上的「掛 proc 那一包」的做法。下表「規則」「數量另指」「排隊」三列屬於那一包。
+
 | 零件 | 做什麼 | 在 `kernel.json` 怎麼開 |
 |---|---|---|
 | 收信 | 對外收件箱固定是站的 `$AOS_STACK/requests/`，每輪認領、逐封看 | 不用開 |
@@ -26,6 +28,7 @@
 | 回信 | 下游的回信直接回給寄件人，或先回到我這站再代回 | `reply_via_me` |
 | 排隊 | 沒格時先來先掛地排，或立刻拒 | `queue` |
 | hook | 在三個時機插自己的程式：判之前、判之後、代回回信之前 | `hooks` |
+| 留著等表態 | `after_verdict` hook 回 `{"verdict": "hold"}`：信留在站裡，等有人把 pass／refuse 寫進 `decisions/<信名>.json`，站再照平常的路轉寄或回拒信 | 寫在 hook 裡；agent 當門用工具 `kernel_gate`（[02](docs/02-kernel-modes.md#agent-當門請求先留著等它表態)） |
 
 ## `kernel.json` 的鍵
 
@@ -81,5 +84,5 @@
 | 分檔 | 涵蓋的段 |
 |---|---|
 | [01-llm-kernel](docs/01-llm-kernel.md) | llm kernel 範本 llm-kernel（問腦＝寄信給它、收回信；自己一台 daemon；能力包、`aos-llm ls`） |
-| [02-kernel-modes](docs/02-kernel-modes.md) | kernel 是什麼（資源管理＋排程、從寄件人看）；框架站怎麼判、怎麼排隊、怎麼回信；三種擺法與手跑指令；鏈與 hook 的例子；`AOS_KERNEL`、誰能繞過 kernel（靠 Linux 權限）；已知限制 |
+| [02-kernel-modes](docs/02-kernel-modes.md) | kernel 是什麼（資源管理＋排程、從寄件人看）；框架站怎麼判、怎麼排隊、怎麼回信；三種擺法與手跑指令；鏈與 hook 的例子；agent 當門（留著等表態、`kernel_gate`）；`AOS_KERNEL`、誰能繞過 kernel（靠 Linux 權限）；已知限制 |
 | [03-feat-proto](docs/03-feat-proto.md) | 新功能原型的假腦劇本：agent 給自己加工具、能力包與排程、agent 生 agent、資源份額 |

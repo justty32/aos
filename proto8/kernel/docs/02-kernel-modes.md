@@ -24,6 +24,8 @@
 
 ### 框架站怎麼判
 
+**分兩層**（使用者 11-13：「就是說我們做的是框架，最底層就是最簡單的hook+判斷。你說的上限這塊，是在框架之上的通用基礎包，所以可以隨意，可以簡單並通用一些。」）：框架本身只有「收信、叫 hook、照判決放行／拒／留著、轉寄與代回」這個骨架；下面的白名單、數量上限、排隊、期限是蓋在骨架上的**掛 proc 那一包**（`procs_rules.py`）的做法，不是框架的規定。想要別種規則，寫 hook，或換一包。
+
 - **規則**（寫在 `kernel.json`，放在定義裡）：`allowed`＝名字的白名單（`null` 或沒寫＝不限）；`max_running`＝同時最多幾個在跑（數 `count_daemon` 那台表上 `running` 與 `stuck` 的列，加上這一輪已放行的新名字）。`procs_added` 兩條都看；`procs_started`、`procs_woken`（讓停著、睡著的回來跑）不看 `allowed`，但照樣算進 `max_running`（不算的話 sleep 一隻、add 一隻、再 wake 就超過）。`procs_removed`、`procs_stopped`、`procs_slept`、`{"ping": true}` 與其他不認得的 body 都不判、原樣轉。`allowed`、`max_running` 都沒寫、信也沒帶期限時，站連 body 是不是物件都不驗。
 - **放行**：body 原樣轉寄給下一站，原信的 `reply_to` 照帶，所以下游（例如 daemon）套完直接回 `{"applied": true}` 給原寄件人。站只判斷、轉寄與代回，不自己跑任何東西。
 - **不放行**：站回 `{"applied": false, "error": {"code": "…", "msg": "…"}}` 給原寄件人，同一句印在自己的 stderr：`kernel: warning: letter <名> refused: 代號 原因`。拒信是站的答案、不是它的錯，這一輪照樣退 0。代號：`NameUnknown`（不在白名單）、`SlotMissing`（沒格，或期限過了）、`BodyBad`（規則要看的欄形狀不對）、`ForwardFailed`（轉不進下一站）、`HookRejected`（被 hook 攔下）。信沒 `reply_to`＝只收掉，只有 stderr 那行。
@@ -238,6 +240,26 @@ cat $T/me/box4/new/*/letter.json                                 # 兩封都是 
 
 收工：`aos-daemon-ctl -d $T/front/st shutdown`、`aos-daemon-ctl -d $T/back/st shutdown`、`aos-daemon-ctl -d $T/side/st shutdown`，最後 `rm -r $T`。
 
+### agent 當門：請求先留著，等它表態
+
+使用者 11-13：「讓agent成為kernel，我期望看到的景象是：一個普通的agent隨便弄些hook、json設定啥的，就可以收請求了。請求進來後agent收到通知，他自己判斷要不要過，然後再去轉送」。做法是把框架站掛在 agent 自己身上，站多一個判決「先留著」（`hold`）：信留在站裡，agent 表態之後由站照平常的路轉寄或回拒信。
+
+一隻普通的 eca 兩次工具呼叫就成為門（真 haiku 實跑過，通知、工具呼叫、回信原文在 [thinking 11-13 eca-as-kernel 02](../../thinking/2026-11/13/eca-as-kernel/02-正式版實跑.md)）：
+
+```text
+self_tools  {"op": "add", "path": "<AOS_HOME>/lib/agent/kernel_gate"}
+kernel_gate {"op": "on"}        印出收件信箱 <它的 stack>/hooks/kernel_gate/requests；寄件人把 AOS_KERNEL 設成它
+```
+
+之後有請求被留下，它收到一則 `[aos] kernel_hold: …`（每封列信名、寄件人、request、期限、寄件人多寫的其他鍵原樣），用 `kernel_gate {"op": "pass", "letter": …}` 或 `{"op": "refuse", "letter": …, "reason": …}` 表態；`{"op": "off"}` 收掉。
+
+- 站就是同一支框架站，stack 是 agent 的 `<stack>/hooks/kernel_gate/`，由它身上一支 `on_clock` hook 每個時鐘週期叫一輪；`kernel.json` 在那個夾裡，agent 自己可以加 `allowed`、`max_running`、`next`、別的 hook。
+- 機器先照 `kernel.json` 的規則判，規則拒的直接拒；規則放行的才留給 agent（預設那支 hook 的 `condition` 是 `pass`）。只想看其中一部分，把 hook 換成自己的（例子在 [lib/aos/kernel README「先留著等表態」](../../lib/aos/kernel/README.md)）。
+- agent 表態 pass 蓋不過規則與寄件人的期限：站會重判一次，期限過了就拒 `SlotMissing`。`aos-agent ctl add` 預設只等 30 秒，要讓腦來得及判，寄件人加 `--timeout-s`。
+- agent 自己在一輪裡（等模型回答）或睡著時，它身上的 hook 不跑，站也就不跑：信躺在信箱裡沒被認領，帶期限的寄件人到期自己撤信。
+- 請求信裡多帶什麼鍵都可以（使用者 11-13：「反正json，不認得的key，只要沒設限制，就能過」）：站原樣給 agent 看、原樣轉寄，不過濾；寫的內容會進 agent 的對話，風險由當門的那一站自己承擔（使用者 11-13：「提示注入這塊就是風險自己承擔」）。
+- 不用這支工具也做得到（`self_hook` 掛一支跑框架站的腳本、手寫 `kernel.json` 與 hook、表態＝寫一個檔 `decisions/<信名>.json`）：步驟在知識庫 `aos/kernel.json#/write_your_own`。
+
 ### 改成自己的
 
 複製範本資料夾、改 `kernel.json`。範本裡框架站的路徑寫成 `{"$env": "AOS_HOME", "$path": "/lib/aos/kernel"}`（`AOS_HOME`＝這台 proto8 資料夾的絕對路徑），搬到 repo 外不用改；設定檔用 `{"$env": "AOS_CD", "$path": "kernel.json"}` 指定義資料夾裡那份（aos-exec 會 cd 進框架站自己的資料夾，相對路徑會算錯）。
@@ -250,4 +272,5 @@ cat $T/me/box4/new/*/letter.json                                 # 兩封都是 
 - 站當 loop proc 時跟 daemon 各自打拍子：轉了、daemon 還沒套的不算在跑，連著很快寄好幾封時可能多放幾個。當 daemon 身體時沒這個問題（站跑在 daemon 那一圈裡，下一圈之前 daemon 已套完）。
 - **當 loop proc 的站睡著或停著**：信照 `AOS_KERNEL` 寄、不認誰是 kernel、不預判收件者有沒有在跑；沒有回信就等寄件人期限。站睡著＝這是設計系統的人要管的風險（使用者 11-07），手動叫醒：`aos-daemon-ctl wake NAME`（停著用 `start`；這支是指名 daemon 的工具，一律直寄 daemon、不看 `AOS_KERNEL`）。程式不自動辨識、不自動叫醒、不自動繞過。逾時撤信與已轉寄後撤不回的競態見 [aos-agent 已知限制](../../cmd/aos-agent/docs/02-已知限制.md)。
 - 站自己的錯（`kernel.json` 壞、下一站三段都找不到、daemon 沒開 ctl 信箱、`on_error: stop` 的 hook 失敗）退 1。當 daemon 身體時 daemon 不停——stderr 一行 `aos-daemon: warning: body … failed (code N), retrying next round`（碼變了才印，好了印 ok again）、`state.json` 記 `body_code`、下一圈再跑（使用者裁「記一行、下一圈再跑 (Recommended)」，N-28「daemon 的身體失敗」）；那段時間站沒在跑、`requests/` 的信沒人判。當 loop proc 時那個 proc 出錯結束、表上留 `stopped`＋`reason`，修好 `start`（P-20）。
+- **留著等表態的信**：站沒有自己的「最多留多久」，只認寄件人的 `queue_wait_ms`；沒帶期限的信會一直留到有人表態。留著的信不佔 `max_running` 的格。
 - 同一個收件箱同時只能有一個站在跑：第二個會拿不到 `requests/.flock`，報 `LockFailed` 退 1。

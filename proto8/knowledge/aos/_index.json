@@ -53,13 +53,13 @@
   "index": "tools/_index.json"
  },
  "packs.json": {
-  "description": "Your tools come in packs (look, change, delete, shell, gadgets, events, todo, self, subagent, def, mailbox, goal, json, jsonx, index): one sentence per tool, and how a pack is turned off.",
+  "description": "Your tools come in packs (look, change, delete, shell, gadgets, events, todo, self, subagent, def, mailbox, goal, json, jsonx, index; kernel_gate is in no stock definition): one sentence per tool, and how a pack is turned off.",
   "index": "packs.json#/_index"
  },
  "_description.json": {
   "description": "aos in one page: what aos is, the eight words, five rules, and where to read more."
  },
  "kernel.json": {
-  "description": "What a kernel is (resource management and scheduling, seen from the sender), where to send requests, the example kernels, and how to write your own."
+  "description": "What a kernel is (resource management and scheduling, seen from the sender), where to send requests, the example kernels, how to be a kernel yourself (kernel_gate), and how to write your own."
  }
 }

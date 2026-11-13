@@ -199,6 +199,44 @@ class KernelGateTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 1)
                 self.assertIn("kernel_gate: error: %s " % code, result.stdout)
 
+    def test_09_by_hand_without_the_tool(self):
+        # 知識庫 aos/kernel.json#/write_your_own 第 3 種：只用 self_hook 掛一支 run、手寫 kernel.json 與一支 hook、表態＝寫一個檔。
+        gate = self.root / "ws" / "gate"
+        gate.mkdir()
+        (gate / "kernel.json").write_text(json.dumps(
+            {"hooks": {"ask": {"event": "after_verdict", "condition": "pass", "handler": "ask"}}}))
+        (gate / "run").write_text('#!/bin/sh\nexec aos-exec --stack "$AOS_STACK" "$AOS_HOME/lib/aos/kernel" "$(dirname "$0")/kernel.json"\n')
+        (gate / "ask").write_text(
+            "#!%s\n"
+            "# 暫存的測試 hook：留下這封信，並往 agent 的 queue 寄一則通知。\n"
+            "import json, os, subprocess, sys\n"
+            "event = json.load(sys.stdin)\n"
+            "queue = os.path.join(event['stack'], '..', '..', 'queue')\n"
+            "note = {'role': 'user', 'content': 'request %%s waits: %%s' %% (event['letter'], json.dumps(event['body']))}\n"
+            "subprocess.run(['aos-post', 'send', queue], input=json.dumps(note), text=True, check=True, stdout=subprocess.DEVNULL)\n"
+            "print(json.dumps({'verdict': 'hold'}))\n" % sys.executable)
+        for name in ("run", "ask"):
+            (gate / name).chmod(0o755)
+        cell = self.stack / "hooks" / "gate"
+        cell.mkdir(parents=True)
+        env = dict(self.env, AOS_STACK=str(cell), AOS_HOME=str(PROTO8))
+
+        def round_by_hook():
+            result = subprocess.run([str(gate / "run")], text=True, capture_output=True, env=env)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+        round_by_hook()
+        body = {"procs_added": {"x": {}}, "desc": "please"}
+        self.post("send", "--reply-to", self.sender, cell / "requests", "a", body=body)
+        round_by_hook()
+        round_by_hook()
+        self.assertEqual([note["content"] for note in self.notices()], ["request a waits: " + json.dumps(body)])
+        self.assertEqual(self.names(self.ctl), [])
+        (cell / "decisions").mkdir()
+        (cell / "decisions" / "a.json").write_text('{"verdict": "pass"}')
+        round_by_hook()
+        self.assertEqual(json.loads((self.ctl / "new" / "a" / "letter.json").read_text())["body"], body)
+
 
 if __name__ == "__main__":
     unittest.main()

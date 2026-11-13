@@ -1,8 +1,8 @@
-# 一隻普通的 agent（先想 eca）怎麼讓自己成為 kernel（11-13，線申；只設計＋暫存樹原型，沒改 main 的程式）：最輕的做法是「一個信箱＋一支通知 hook＋一支表態工具」，原型用真 haiku 跑通（收通知、自己判、自己轉送、回信都回到寄件人）；`desc` 現在就帶得過去；留三題機制缺口給使用者
+# 一隻普通的 agent（先想 eca）怎麼讓自己成為 kernel（11-13；上午線申設計＋暫存樹原型，下午線酉照使用者「1乙，總之先做」做成正式版＝框架站多一個「先留著等表態」的口＋工具包 `kernel_gate`，見第十節）：原型那時的結論——最輕的做法是「一個信箱＋一支通知 hook＋一支表態工具」，原型用真 haiku 跑通（收通知、自己判、自己轉送、回信都回到寄件人）；`desc` 現在就帶得過去；留三題機制缺口給使用者
 
-← [11-13 日索引](README.md)｜相關：[kernel-framework-開工](kernel-framework-開工.md)（框架站、hook 分流）、[手與門](../12/kernel-as-bridge/06-細聊-手與門.md)、[CONCEPTS kernel C-47](../../../docs/CONCEPTS/04-kernel.md)、[NORMS N-42](../../../docs/NORMS/09-kernel.md)（(2)「以 agent 作判斷」那半還沒做，這題就是它）｜分檔：[01-原型實跑](eca-as-kernel/01-原型實跑.md)（重跑指令、通知原文、工具呼叫、回信原文、邊緣狀況的實跑輸出）
+← [11-13 日索引](README.md)｜相關：[kernel-framework-開工](kernel-framework-開工.md)（框架站、hook 分流）、[手與門](../12/kernel-as-bridge/06-細聊-手與門.md)、[CONCEPTS kernel C-47](../../../docs/CONCEPTS/04-kernel.md)、[NORMS N-42](../../../docs/NORMS/09-kernel.md)（(2)「以 agent 作判斷」那半還沒做，這題就是它）｜分檔：[01-原型實跑](eca-as-kernel/01-原型實跑.md)（線申的原型：重跑指令、通知原文、工具呼叫、回信原文、邊緣狀況的實跑輸出）、[02-正式版實跑](eca-as-kernel/02-正式版實跑.md)（線酉的正式版：同一套景象的原文）
 
-> 路徑一律寫 `~/…`；貼出來的實際輸出裡，家目錄也換成 `~`。原型在 repo 外 `~/code/shen-try-1113/`，不進 main。
+> 路徑一律寫 `~/…`；貼出來的實際輸出裡，家目錄也換成 `~`。原型在 repo 外 `~/code/shen-try-1113/`，不進 main。第一～九節是線申上午寫的（原型＝候選一「agent 自己轉送」）；進 main 的是第十節（候選二「agent 只表態、機器轉送」）。
 
 ## 使用者原文（11-13，逐字，依序）
 
@@ -15,11 +15,21 @@
 
 （第 2～6 句經調度者轉述，逐字。第 5 句的「這種」有兩種讀法：甲＝請求裡夾帶 `desc` 之類的額外訊息，每一站自己決定收不收；乙＝要不要讓 agent 當門、要不要承擔提示注入的風險，各站自己選。兩種讀法在設計上是同一件事：做成每站各自的選擇，預設照現況。）
 
+看完上面的設計與三題之後，對調度者重排的四題的回覆（逐字）：
+
+7. 「1乙，總之先做。 2甲 3乙，我那個只是舉例，實際上大家就隨便加，反正json，不認得的key，只要沒設限制，就能過。 4可以。」
+
+四題與對應（題目是調度者問的）：1 乙＝重用框架站骨架，加一個「先留著等表態」的口，agent 只表態、機器轉送，「總之先做」＝現在就做（原型那支自己轉送的 `gate` 不做）；2 甲＝門自己在忙時通知發不出來，先不補；3 乙＝寄件人那側不加 `--desc` 入口，`desc` 只是舉例，請求信是 json，寄的人想加什麼鍵就加，不認得的鍵、站沒設限制就能過；4＝另一條線的事（agent 的 hooks 改用共用引擎）。
+
+同一天下午對 kernel 第二輪第 1 題（分流後數量上限怎麼算）的回覆，前半句是對框架的定位（逐字；全句與其餘各題在 [kernel-framework-開工 第十四節](kernel-framework-開工.md)）：
+
+8. 「就是說我們做的是框架，最底層就是最簡單的hook+判斷。你說的上限這塊，是在框架之上的通用基礎包，所以可以隨意，可以簡單並通用一些。」
+
 同一天稍早對 `AOS_KERNEL` 的定位（逐字，出處 [kernel-framework-開工](kernel-framework-開工.md)）：「我會覺得AOS_KERNEL他就是在有需要掛一個aos proc的時候，就使用的一個目標，一個通用的，基礎的目標。好比所有C語言程式使用syscall的時候，只要沒有特別指定，不然就是走linux kernel那個記憶體位置。啊如果有需要其他目標...那就自己找方法指定」
 
 ## 結論
 
-**收斂的原則（第 6 句）：「各種的...都可以大家自己設定」。** 體系只提供機制，政策留給每一站自己寫。套在這題上：
+**收斂的原則（第 6 句）：「各種的...都可以大家自己設定」。** 體系只提供機制，政策留給每一站自己寫。第 8 句給了它結構上的說法：「我們做的是框架，最底層就是最簡單的hook+判斷」——框架本身只有收信、叫 hook、照判決走；數量上限這類是蓋在框架之上的通用基礎包的事。兩句合起來：凡是「體系該不該規定 X」一律不規定，留給各站的 hook 與設定。套在這題上：
 
 | 體系給的機制 | 每一站自己定的政策（體系不規定） |
 |---|---|
@@ -28,7 +38,7 @@
 | 一個信箱、通知、表態與轉送的工具 | 等多久算逾時、忙的時候怎麼辦、要不要承擔注入風險 |
 | 下一站三段（設定的 `next` → `AOS_KERNEL` → `AOS_DAEMON`） | 放行後寄去哪、回信要不要經過自己 |
 
-其餘結論：
+其餘結論（第 1、5 點講的是上午的原型；正式版照第 7 句改走候選二，現況在第十節）：
 
 1. **他要的景象今天就做得出來，而且很輕。** 一隻 eca 成為門只要三樣：自己 stack 裡一個信箱、一支 `on_clock` 通知 hook、一支表態工具。原型把三樣包成一支工具 `gate`，agent 叫一次 `{"op": "on"}` 就全掛好、回報「把請求寄到這個路徑」。真 haiku 實跑：收到通知 → 自己判 → 過的那封自己轉送到 daemon 掛起來、不過的回拒信，兩封回信都回到寄件人（[01](eca-as-kernel/01-原型實跑.md)）。
 2. **`desc` 現在就帶得過去，什麼都不用改。** 框架站對 body 裡不認得的鍵原樣轉寄、daemon 收到多的鍵照掛（都實測過）。缺的只有兩頭：寄件人那側沒有入口可以寫它（只能手寄信），門這側沒有人把它拿給腦看（原型的通知已經把它跟「實際要掛什麼」並列）。
@@ -258,3 +268,106 @@ bash ~/code/shen-try-1113/demo.sh
 
 - **失誤（12:22）**：有兩行指令我直接在 zsh 裡 `source` 了暫存樹的環境檔，檔裡清 `AOS_*` 的那行用的是 bash 才有的寫法，在 zsh 裡沒生效。結果那兩次 `aos-agent ctl add` 帶著調度者 session 的 `AOS_STACK`，把回信箱開在 `~/aos-home` 樹裡調度者那一格的 `daemon_reply/`：兩封回信短暫進出、被我自己的指令收走，沒有留下檔案；請求本身寄的是我的暫存樹。同時掛起來的測試 proc 工作區被設成 repo 根，它只閒置、沒寫任何東西，隨後已收掉。之後環境檔改成「不是 bash 就拒絕、清完還有殘留就拒絕」，所有指令都經 bash 腳本。
 - 暫存樹已停（`aos-daemon-ctl -d ~/code/shen-try-1113/tree/stacks/root shutdown`）。repo 裡只新增這份與同名夾一份分檔。
+
+## 十、正式版（線酉，11-13 下午）：框架站的「先留著等表態」＋工具包 `kernel_gate`
+
+照第 7 句「1乙，總之先做」做成進 main 的東西。實跑原文在 [02-正式版實跑](eca-as-kernel/02-正式版實跑.md)。
+
+### 做了什麼
+
+| 層 | 東西 | 在哪 |
+|---|---|---|
+| 骨架的口 | `after_verdict` hook 回 `{"verdict": "hold"}`＝這封留在站裡；別人把 `{"verdict": "pass"}` 或 `{"verdict": "refuse", "error": …}` 寫進 `<站的 stack>/decisions/<信名>.json`，站下一輪照做。轉寄走平常那條路（下一站三段、hook 分流、代回、防重、臨轉寄再驗期限） | [`lib/aos/kernel`](../../../lib/aos/kernel/README.md)（`hold.py`、`round.py`、`hooks.py`），commit `6f83a431a` |
+| 包的口 | 掛 proc 那一包的 `held`：留著的信每輪只驗寄件人的期限，過了拒 `SlotMissing` | `procs_rules.py`，同一個 commit |
+| 工具包 | `kernel_gate`：`on`／`off`／`ls`／`pass`／`refuse`；附兩支 hook 程式 `tick`（agent 身上的 `on_clock`：叫站跑一輪＋發通知）與 `hold`（站的 `after_verdict`：回 hold） | [`lib/agent/kernel_gate`](../../../lib/agent/kernel_gate/)、[`lib/packs/kernel_gate.json`](../../../lib/packs/kernel_gate.json)，commit `306078925` |
+| 說明 | 框架 README「先留著等表態」、[kernel/docs/02「agent 當門」](../../../kernel/docs/02-kernel-modes.md)、知識庫 `aos/kernel.json` 的 `gate` 與 `write_your_own`、`aos/packs.json` | |
+
+分層照第 8 句：留著與表態是骨架的口（機制）；誰來判、怎麼通知、哪些信要留、留多久，全是各站 hook 與設定的事（政策）。`kernel_gate` 只是其中一種現成的搭法。
+
+### 一隻普通 eca 變成門：兩次工具呼叫
+
+```text
+self_tools  {"op": "add", "path": "<AOS_HOME 的實際路徑>/lib/agent/kernel_gate"}
+kernel_gate {"op": "on"}
+```
+
+`on` 做三件事並回報：建站的 stack（`<agent 的 stack>/hooks/kernel_gate/`，含 `requests/` 收件信箱）；沒有 `kernel.json` 才寫預設那份（一支 `hold` hook、`condition: "pass"`）；在自己身上掛一支 `on_clock` hook `kernel_gate`（每個時鐘週期跑站一輪）。印出的第一行就是「把請求寄到這個路徑」。收掉：`kernel_gate {"op": "off"}`（把還留著的全部回拒 `HoldRefused`、拿掉 hook；`kernel.json` 與信箱留著，再 `on` 就接著用）。
+
+之後：有請求被留下 → 一則 `[aos] kernel_hold: N requests held …` 進它的 queue，每封五行（信名、`from`、`request`＝`procs_*` 與 `ping` 那幾個鍵的原樣 JSON、期限、寄件人多寫的其他鍵原樣 JSON）→ 它叫 `kernel_gate {"op": "pass", "letter": …}` 或 `{"op": "refuse", "letter": …, "reason": …}` → 工具寫表態檔、當場叫站跑一輪、回報結果。
+
+完全不用新工具也行（只靠 `self_hook`、手寫 `kernel.json` 與一支 hook、表態＝用 Write 寫一個檔）：步驟寫在知識庫 `aos/kernel.json#/write_your_own` 第 3 種，`lib/agent/kernel_gate/tests/test_kernel_gate.py` 的 `test_09` 照那份步驟跑過。這條路 agent 不必手寄信（轉寄是站做的），所以跟 [rules.json](../../../knowledge/aos/rules.json) 第 5 條不再打架；知識庫原本教「每輪手打 `aos-post`」的那段改成「這是寫給程式做的，不要自己在殼裡手打」。
+
+混合用法（機器先照規則判、只有規則沒把握的才留給腦）：`kernel.json` 寫 `allowed`／`max_running`，hook 自己決定哪些信回 hold。最小例子（只留帶 `desc` 的）在框架 README 與知識庫 `aos/kernel.json#/gate`；`test_kernel_hold.py` 的 `test_11`、`test_kernel_gate.py` 的 `test_06` 蓋住。
+
+### 代定（線酉；可翻案）
+
+1. **表態 pass 蓋不過規則**：有人說 pass 的那一輪，站把信重判一次（期限、白名單、上限、排隊都照跑，`after_verdict` 也再跑一次、這次 hook 再回 hold 不算數）。所以期限過了才說的 pass 不放行；想讓腦蓋過規則，是那一站自己寫 hook 的事。
+2. **名字**：判決值 `hold`；窗 `hold.json`；表態檔 `decisions/<信名>.json`，形狀跟 hook 的 stdout 一樣（`verdict`＋選填 `error`）；拒信代號預設 `HoldRefused`（表態檔自己給了 `error` 就用它的）；工具與包叫 `kernel_gate`；通知種類 `kernel_hold`。
+3. **跟 `queue` 的關係**：兩個各自獨立的窗。排隊＝等格子（機器自己放）；留著＝等表態。留著的信不佔格、不擋後面的信；表態 pass 之後沒格就進排隊窗，出隊時不再被留。
+4. **留著的信不重跑 `before_verdict`**、改過的 body 存 `bodies/`（跟排隊的信同一套）；留著時 hook 給的 `next` 不記，重判那次給才算。
+5. **站沒有自己的「最多留多久」**：只認寄件人的 `queue_wait_ms`。沒帶期限的信一直留到有人表態（原型的 `max_wait_s` 沒做——那是政策）。
+6. **通知與 `ls` 不解讀額外的鍵**：`procs_*`、`queue_wait_ms`、`ping` 算「request」，其餘鍵整包原樣 JSON 印一行；不挑 `desc`、不截長、不過濾（第 4 句「提示注入這塊就是風險自己承擔」）。
+7. **預設那份 `kernel.json` 的 hook 寫 `condition: "pass"`**：規則拒的直接拒、不吵腦。
+8. **`pass`／`refuse` 當場叫站跑一輪**：agent 在自己的一輪裡時 `on_clock` 不跑，不當場跑的話要等這一輪結束才轉寄。
+9. **`off` 把留著的回拒**：不留「認領了卻沒人答」的信。
+10. **不掛進任何範本**（要不要掛，見下面的題）。
+
+### 第五節的邊緣狀況，在這個做法下各自變成怎樣
+
+「實跑」＝02 那次真 haiku；「測試」＝單元測試蓋住；沒標的是讀程式推的。
+
+| # | 狀況 | 現在 |
+|---|---|---|
+| 1 | 門正在自己的一輪裡 | **還在**（使用者「2甲」：先不補）。它身上的 hook 不跑＝站不跑，信躺在信箱沒被認領，帶期限的寄件人到期自己撤信 |
+| 2 | 門睡著／停著 | 同上；站的狀態都在 stack 裡，醒來接著跑 |
+| 3 | 冷卻中 | hook 照跑＝站照跑，期限照驗；通知要等冷卻過了才交給腦 |
+| 4 | 畫面有人 | 沒變（沒測） |
+| 5 | 寄件人的期限到了 | **由機器管了**：留著的信每輪驗期限，過了回 `SlotMissing`（測試）；期限過了才說 pass＝站重判時拒、工具回 `LetterRefused`（測試）。實跑裡帶 4 秒期限的那封 haiku 在 3.8 秒內放行成功。前提仍是站有在跑（第 1 條） |
+| 6 | 它忘了表態 | 只通知一次、不再提醒。帶期限的到期由站拒；沒帶期限的一直留著（代定 5） |
+| 7 | 表態後轉送失敗 | **變了**：站照平常回 `ForwardFailed` 拒信給寄件人並收信，工具回 `LetterRefused`；信不會留著等重試 |
+| 8 | 放行不等於掛得起來 | 預設回信直接回寄件人，門不知道。可以在 `kernel.json` 開 `reply_via_me` 讓站代回（還能掛 `before_reply` hook）；腦仍不會被通知 |
+| 9 | 數量上限沒人數 | **消失**：`kernel.json` 寫 `max_running`（下一站不是自己的 daemon 時加 `count_daemon`），機器數 |
+| 10 | 一輪進來很多封 | 留得住（測試 5 封；實跑 3 封合成一則通知）。放行先後是表態先後 |
+| 11 | 只能整批認領 | 還在（站每輪整批認領，認領後寄件人撤不回）。差別：認領後到期，站會回拒信，不會懸著 |
+| 12 | 判一封要花一輪腦 | 每批一輪。另外每個時鐘週期起一次站（比原型的通知 hook 重）。混合用法可以少問腦 |
+| 13 | 它判自己發的請求 | 還在（它等指令回來的時候站不跑）。門自己要掛東西得直寄下一站 |
+| 14 | 整棵樹的 `AOS_KERNEL` 都指到這隻 | 站的三段照舊：指到自己就跳過、進 `AOS_DAEMON`（框架的測試） |
+| 15 | 兩隻互相當下一站 | 還在，不偵測 |
+| 16 | 被 stop／sleep | stack 留著：信、`hold.json`、表態檔都在，回來接著跑 |
+| 17 | 被 rm | 不帶 `--purge` 同上；帶了整個沒了 |
+| 18 | 改名 | 沒變 |
+| 19 | 換定義 | 沒變（站、hook、工具登記都在 stack 裡） |
+| 20 | 它死了誰知道 | 沒有人 |
+| 21 | 別人憑什麼聽 | 沒變 |
+| 22 | 跟框架站串成鏈 | 門本身就是一個框架站，放在鏈上哪一站都行，分流、代回、上限都現成 |
+| 23 | 提示注入 | 沒變：額外的鍵原樣進對話，風險自己承擔 |
+
+這個做法多出來的：
+
+- 表態工具那一輪與 `on_clock` 那一輪用同一把鎖（`requests/.flock`）；工具拿不到鎖時回「decision recorded…applied on its next round」。
+- `off` 之後信箱還在：之後寄進來的信沒人認領（帶期限的寄件人自己撤）。
+- `hold.json` 壞＝當空窗、cur 裡的信當新信重判（腦會再收到一次通知）；表態檔壞＝刪掉、信照留（都有測試）。
+- 通知種類 `kernel_hold` 還沒登記在 `py/aos_flags.py` 的 `NOTE_KINDS` 與 N-43 續的名單（不在線酉領地；`tick` 跟 `mail_notify` 一樣自己拼字串，不經那張表，所以不影響跑）。
+
+### 還要使用者裁的
+
+照第 6、8 句，政策題都不問。剩一題：
+
+**`kernel_gate` 要不要掛進 eca-claude／agent-fsm 範本？**（現在：不掛；要用的 agent 自己 `self_tools add`。）
+
+- 甲（現況，代定）：不掛。範本的工具數不變；想當門的多叫一次 `self_tools`。
+- 乙：掛進兩個範本。每隻 agent 多一支工具說明（多一點 prompt）；`on` 之前什麼都不會發生。
+
+另外沒補、記著的機制缺口（第 1、2 個是線申記的，照舊）：`aos-post` 沒有「只認領指定那一封」；門沒回時 `aos-agent ctl` 的錯誤訊息說的是 daemon；門在忙時通知發不出來（使用者已裁先不補）。
+
+### 生效表
+
+| 改的東西 | 活樹（`~/aos-home`）什麼時候有 |
+|---|---|
+| `lib/aos/kernel`（hold、轉寄對照的洞、有序＋分流） | 複本，下次重抄才有；今天 15:08 釘住的 commit 不含。樹裡沒人用框架站 |
+| `lib/agent/kernel_gate`、`lib/packs/kernel_gate.json` | 新夾，下次重抄才有。沒掛進任何範本，重抄後也要 agent 自己加才會用到 |
+| `knowledge/aos/kernel.json`、`packs.json` | 複本，下次重抄才有 |
+| `kernel/`、`extras/kernel-chain-check`、條文、thinking | 不在活樹裡用 |
+
+沒有動 `proto8/cmd`、`proto8/py`、被指令直接 import 的 `lib/agent/*.py`：沒有「存檔即生效」的項目。
+

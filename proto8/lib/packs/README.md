@@ -41,6 +41,12 @@
 | 信箱 | [mailbox.json](mailbox.json) | mailbox_peek、mailbox_read、mailbox_send |
 | 目標 | [goal.json](goal.json) | goal（eca 不掛：使用者 11-11「eca基本都有goal，所以goal不用給eca」；一支分動作 get、set、done、pause、resume；自己停下來〔答話不叫工具〕又沒信時，身體丟一則 `[aos] goal: …` 提醒，連續十次沒進展就暫停；使用者「todo/goal也一起做吧」、裁「一支 goal 分動作」，[goal 02](../../thinking/2026-11/11/goal/02-裁定與施工結果.md)） |
 
+## 選掛的一包（兩個範本都不掛）
+
+| 包 | 檔 | 工具 |
+|---|---|---|
+| kernel 的門 | [kernel_gate.json](kernel_gate.json) | kernel_gate（讓 agent 自己當 kernel 的門：`on` 把框架站掛在自己身上、請求先留著並通知自己，`pass`／`refuse` 表態、轉寄由站做，`ls`、`off`；使用者 11-13「一個普通的agent隨便弄些hook、json設定啥的，就可以收請求了。請求進來後agent收到通知，他自己判斷要不要過，然後再去轉送」，[eca-as-kernel](../../thinking/2026-11/13/eca-as-kernel.md)）——要用的 agent 自己 `self_tools {"op": "add", "path": "<AOS_HOME>/lib/agent/kernel_gate"}`，或定義的 `$override` 串加這一包 |
+
 ## 怎麼用、怎麼關
 
 每份就是一般的工具清單（`{"tools": {名: {"path": …}}}`，路徑寫 `{"$env": "AOS_HOME", "$path": "/lib/…"}`，整夾 `cp -r` 出去仍通）。範本的 `tools.json` 用 `"$override": [包, 包, …]` 疊起來，自己只剩必要的格（例 eca 範本的 `"do_task": null`）。
