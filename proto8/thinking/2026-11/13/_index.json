@@ -5,6 +5,9 @@
  "a2a-施工結果.md": {
   "description": "線壬施工結果（11-13）：畫面開著的 claude 身，信改用署名訊息投進 CLI 的收件口；投不進去就照舊貼字"
  },
+ "aos-1113-收工待裁.html": {
+  "description": "11-13 收工前：24 題待你裁"
+ },
  "aos-home-手冊.html": {
   "description": "11-13 給使用者照著做的 aos-home 手冊（公司 WSL）HTML 原稿：從零搭 ~/aos-home 一棵小樹與 opus eca 的步驟"
  },
@@ -22,6 +25,9 @@
  },
  "convention-vs-agent-fsm.md": {
   "description": "CONVENTION 條文跟現行 agent-fsm 範本對不上的 19 條（前 14 條＋02 夾新題 5 條，另有 02 夾 6 處指回前面、1 題舊協議刪除要確認）：逐條原句、範本實際、當初用意、收法與建議；使用者要逐條看；11-13 第二輪待裁頁 20 題都裁了，裁定在各節建議下面"
+ },
+ "decide_20261113_shougong.json": {
+  "description": "End-of-day 11-13 questions still waiting for the user: workflows-into-aos second batch and conflicts, json_text, leftovers from the day's lines."
  },
  "decide_20261113_wu-r2.json": {
   "description": "Second round of 11-13 questions for the user: convention vs agent-fsm, eca_main letter, line-b leftovers, two note readings, kernel framework."
