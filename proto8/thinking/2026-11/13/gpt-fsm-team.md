@@ -99,6 +99,24 @@
 - 表上只剩原有的 _sweeper、eca_main、repo-aos。
 - 活樹新增檔都留著：`~/aos-home/kernels/llm-gpt/`、`~/aos-home/defs/{shared,gpt-lead,gpt-worker}/`、`~/aos-home/teams/t1/`。daemon stack 下另有 `procs/{llm-gpt,gpt-lead,sol-T01,sol-T02}/`，以及 `procs/repo-aos/daemon_reply/`（T42）。
 
+## 試驗後的調整
+
+使用者對試驗結果的回覆（11-13 晚，逐字，頂層轉）：「1.貴不是他的問題，是我的問題(泣)...好啦不鬧，這塊就是要跟astra說，請他盡量把雜事和簡單工作交給sol，要是這樣還貴的話就沒辦法，之後慢慢調整成medium或轉而讓sol指揮，反正慢慢調整。其次是gpt的額度很耐用，所以我覺得還行。2.好，總之修到順手。3.好，就統一用stack，這確實該這樣。剩下的都隨你。」
+
+頂層的分派：第 2、3 點（沙箱 T21／T32／T34／T36、寄件人身分 T31／T38／T39）另開「線修」改 aos 程式，線隊不碰。「剩下的都隨你」由頂層代定。線隊這輪做的（只動自己建的活樹新增夾、沒起 agent、沒叫真腦）：
+
+- **第 1 點**：`~/aos-home/defs/gpt-lead/system.txt` 在「How to work」前面加了一節「Hand work down」：
+  - 雜事和簡單工作（翻 repo、跑檢查、蒐集事實）盡量交給 sol；astra 自己只切工單、派工、對著圖紙驗收。
+  - 少用回合：先一次寫完全部工單，再一隻接一隻派出去（`subagents.json` 一次只准一隻），逐張收報告。
+  - 腦維持 astra-high。還是貴的話，照原話之後再調成 medium，或改由 sol 指揮。
+- **代定：`clock_register` 加回兩份定義**（events 整包不加、`self_hook` 不加）：
+  - 兩份 tools.json 各單加這一支。
+  - 守門程式加一條：不給 `box`（只叫醒自己）都放行；給了 `box` 只准寄到 `guard.json` 的 `clock_boxes`。gpt-lead 只准隊信箱，gpt-worker 一個都不准。
+  - hooks.json 的守門條件加上 `clock_register`。
+  - 假事件測過：放行與擋下都照設計；原有 31 則仍全過。
+- **代定：`~/aos-home/kernels/llm-gpt/` 留著當正式的 gpt 腦 kernel**。資料夾不收；proc 這輪收尾時已從表上 rm，下一輪試驗用 `aos-daemon-ctl add` 再掛回去。
+- `agent_def check` 兩份都 0 problems。
+
 ## 下一步想法（未排）
 
 使用者 11-13 晚原話（逐字，頂層轉）：「然後我這邊還有新的想法，就是說astra指揮sol，目前是默認他們都在同個daemon底下，或是走aos-subagents工具，我在想，或許可以讓astra變成kernel，然後他底下掛sol們，這樣試試看。不過這比較大膽，可以下一步再做。」
