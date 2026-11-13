@@ -144,10 +144,10 @@
   "description": "叫醒自己的計時器（線鐘 11-13 晚）：clock_register 加三種排法——after（再過 N 個 cycle 一次）、at（牆鐘某時刻一次）、cron（牆鐘五欄重複）；一次性的寄完自己消失"
  },
  "wf-into-aos-plan": {
-  "description": "分檔夾：repo 的 wf/ 走入 aos 的規劃（線遷 11-13 晚，家機；只規劃、未施工）：規矩改成 json 節點、只寫跟通用版不同的地方；歷史原地凍結；活狀態留 repo 的 md；每個 session 開場用 CLI hook 印使用者偏好；分十段、一段一段進 main，段 3 以後用到才換"
+  "description": "分檔夾：repo 的 wf/ 走入 aos 的規劃與施工（線遷 11-13 晚，家機；使用者已裁，段 1～3 已進 main）：規矩改成 json 節點、只寫跟通用版不同的地方；歷史原地凍結；AGENTS.md 開場導向 aos 知識庫與 wf 公共知識庫；SESSION-LOG 單條化成 json；code map 搬進 aos json；分段進 main，段 3 以後用到才換"
  },
  "wf-into-aos-plan.md": {
-  "description": "repo 的 wf/ 走入 aos 的規劃（線遷 11-13 晚，家機；只規劃、未施工）：規矩改成 json 節點、只寫跟通用版不同的地方；歷史原地凍結；活狀態留 repo 的 md；每個 session 開場用 CLI hook 印使用者偏好；分十段、一段一段進 main，段 3 以後用到才換"
+  "description": "repo 的 wf/ 走入 aos 的規劃與施工（線遷 11-13 晚，家機；使用者已裁，段 1～3 已進 main）：規矩改成 json 節點、只寫跟通用版不同的地方；歷史原地凍結；AGENTS.md 開場導向 aos 知識庫與 wf 公共知識庫；SESSION-LOG 單條化成 json；code map 搬進 aos json；分段進 main，段 3 以後用到才換"
  },
  "workflows-into-aos.md": {
   "description": "模板 repo（workflows）併入 aos：調查＋意見稿（11-13 下午，線玄；只查只寫、沒改程式、沒寄信）"
