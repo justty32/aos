@@ -5,6 +5,9 @@
  "a2a-施工結果.md": {
   "description": "線壬施工結果（11-13）：畫面開著的 claude 身，信改用署名訊息投進 CLI 的收件口；投不進去就照舊貼字"
  },
+ "agents-feedback-1113.md": {
+  "description": "11-13 各 agent 對 aos 的意見彙整（給 repo-aos）"
+ },
  "aos-1113-優先裁.html": {
   "description": "11-13 優先裁：7 題"
  },
