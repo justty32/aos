@@ -136,7 +136,7 @@
     "aos-json-view": "只讀：把一份 json（或其中一段）印成人好讀的樣子，不改任何檔。"
    },
    "tests": {
-    "test_json_view.py": "Test aos-json-view: text blocks (newlines and string arrays), compact inline objects/arrays, key alignment, wrapping by display width, $ref, control …"
+    "test_json_view.py": "Test aos-json-view: indent guides (| per level, colour by depth), colours by type, text blocks (newlines and string arrays), compact inline objects/a…"
    }
   },
   "aos-mailbox": {

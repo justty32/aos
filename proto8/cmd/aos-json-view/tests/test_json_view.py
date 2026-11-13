@@ -1,4 +1,4 @@
-"""Test aos-json-view: text blocks (newlines and string arrays), compact inline objects/arrays, key alignment, wrapping by display width, $ref, control characters, pointers, colour and errors."""
+"""Test aos-json-view: indent guides (| per level, colour by depth), colours by type, text blocks (newlines and string arrays), compact inline objects/arrays, key alignment, wrapping by display width, $ref, control characters, pointers, colour and errors."""
 import importlib.machinery
 import importlib.util
 import json
@@ -28,11 +28,11 @@ def run(*args, env_extra=None):
 
 class Render(unittest.TestCase):
     def test_newline_in_string_breaks_line(self):
-        self.assertEqual(view({"a": "one\ntwo"}), "a:\n  one\n  two\n")
+        self.assertEqual(view({"a": "one\ntwo"}), "a:\n| one\n| two\n")
 
     def test_string_array_is_text_block(self):
         out = view({"d": ["# Title", "", "Body line."]})
-        self.assertEqual(out, "d:\n  # Title\n\n  Body line.\n")
+        self.assertEqual(out, "d:\n| # Title\n|\n| Body line.\n")
 
     def test_short_containers_inline_and_keys_aligned(self):
         out = view({"name": "x", "n": 3, "tags": ["a", "b"], "o": {"k": True, "z": None}})
@@ -40,8 +40,8 @@ class Render(unittest.TestCase):
 
     def test_long_array_uses_dashes(self):
         out = view({"items": [{"name": "alpha", "role": "r" * 50}, {"name": "beta", "role": "s"}]}, width=50)
-        self.assertIn("items:\n  - name: alpha\n    role: ", out)
-        self.assertIn("  - {name: beta, role: s}", out)
+        self.assertIn("items:\n| - name: alpha\n| | role: ", out)
+        self.assertIn("| - {name: beta, role: s}", out)
 
     def test_wrap_counts_wide_chars(self):
         out = view({"k": "字" * 30}, width=30)
@@ -53,9 +53,9 @@ class Render(unittest.TestCase):
     def test_text_block_continuation_hangs(self):
         out = view({"t": ["word " * 20, "next"]}, width=40)
         lines = out.splitlines()
-        self.assertTrue(lines[1].startswith("  word"))
-        self.assertTrue(lines[2].startswith("    word"))
-        self.assertEqual(lines[-1], "  next")
+        self.assertTrue(lines[1].startswith("| word"))
+        self.assertTrue(lines[2].startswith("|   word"))
+        self.assertEqual(lines[-1], "| next")
 
     def test_ref_shown_not_followed(self):
         self.assertEqual(view({"$ref": "other.json#/a"}), "$ref: -> other.json#/a\n")
@@ -76,6 +76,31 @@ class Render(unittest.TestCase):
         out = view({"k": 1}, color=True)
         self.assertIn("\x1b[1;36mk\x1b[0m", out)
         self.assertIn("\x1b[33m1\x1b[0m", out)
+
+    def test_colour_per_type(self):
+        def c(v, style, text):
+            self.assertIn("\x1b[%sm%s\x1b[0m" % (jv.STYLE[style], text), view({"k": v}, color=True))
+        c(True, "bool", "true")
+        c(7, "int", "7")
+        c(1.5, "float", "1.5")
+        c(None, "null", "null")
+        c("hi", "str", "hi")
+        self.assertIn("\x1b[%sm-> x.json\x1b[0m" % jv.STYLE["ref"], view({"$ref": "x.json"}, color=True))
+        styles = [jv.STYLE[k] for k in ("bool", "int", "float", "null", "str", "ref")]
+        self.assertEqual(len(set(styles)), len(styles))          # every type its own colour
+
+    def test_guides_by_depth(self):
+        v = {"a": {"b": {"c": {"d": ["x " * 30, "y"]}}}}
+        plain = view(v, width=30)
+        self.assertIn("| | | | x x", plain)
+        for line in plain.splitlines()[1:]:                      # wrapped lines keep the guides too
+            self.assertTrue(line.startswith("|"), line)
+        out = view(v, width=30, color=True)
+        deepest = [l for l in out.splitlines() if "y" in l and "x" not in l][0]
+        for i in range(4):
+            self.assertIn("\x1b[%sm|\x1b[0m" % jv.GUIDE[i], deepest)
+        self.assertEqual(len(set(jv.GUIDE)), 6)
+        self.assertEqual(jv.View(color=True).guides(14).count(jv.GUIDE[0]), 2)   # 7 levels: colours cycle
 
 
 class Cli(unittest.TestCase):

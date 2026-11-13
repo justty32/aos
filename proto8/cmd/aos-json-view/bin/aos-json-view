@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """aos-json-view [旗標] FILE[#/指標] — 只讀：把一份 json（或其中一段）印成人好讀的樣子，不改任何檔。
 出處：11-13 晚使用者「直接看json當然不好讀。建議幫我弄個程式，把json內的換行弄好，格式這塊稍微緊湊些。」
+縮排每層兩格，第一格畫 `|`（導引線，上色時顏色隨深度 6 色輪換；折行的續行照畫，不斷線）；上色時值依型別各一色（11-13 晚使用者「彩色字，就是bool一個顏色，int一個顏色。然後縮排這塊，不是兩個空格嗎，第一個空格幫我換成|，然後顏色要隨着深度不同而變換」）。
 印法：物件＝`鍵: 值` 一行一鍵、同層鍵名對齊；短的物件／陣列擠成一行（`{a: 1, b: x}`、`[a, b]`）；陣列元素前面 `- `。
 字串不加引號；字串裡的 `\\n` 真的換行；字串陣列（非空、每個元素都是字串，thinking/2026-11/13/text-as-string-array 那條認法）當一段文字，一個元素一行。
 長的一行照終端寬度折行（中日文算兩格），折出來的續行多縮兩格，看得出哪裡是元素邊界。`$ref` 的值前面加 `→ `，原字串照印、不展開。
@@ -32,7 +33,9 @@ Layout: objects become `key: value` lines with aligned keys; short objects and a
 line ({a: 1, b: x}, [a, b]); longer arrays list items after `- `. Strings are printed without quotes,
 "\\n" inside a string starts a new line, and an array of strings is shown as one block of text, one
 element per line. Long lines wrap at the terminal width (wide CJK characters count as 2); a wrapped
-continuation is indented 2 more columns. A "$ref" value is shown as `-> target`, not followed.
+continuation is indented 2 more columns. Each indent level is "| " (a guide line); with colour the
+guides change colour by depth (6 colours, cycling) and values are coloured by type: string green,
+integer yellow, float orange, true/false magenta, null red, $ref underlined sky blue, keys bold cyan. A "$ref" value is shown as `-> target`, not followed.
 Control characters in strings are shown as \\xNN.
 
     --color / --no-color   colour on or off (default: on when stdout is a terminal and NO_COLOR is unset)
@@ -46,7 +49,20 @@ POINTER is a JSON pointer (RFC 6901): FILE#/a/0/b, or a second argument #/a/0/b.
 Errors: one stderr line `aos-json-view: error: CODE reason`, exit 1.
 Codes: ArgumentsBad, FlagUnknown, FileBad (cannot read / not JSON), PointerBad (nothing there)."""
 
-STYLE = {"key": "1;36", "num": "33", "lit": "35", "ref": "32", "dim": "2", "head": "1"}
+# 顏色（11-13 晚使用者「彩色字，就是bool一個顏色，int一個顏色。」）：16 色裡避開藍（深底看不清）與黑白，
+# 細分的用 256 色的中亮度色，深底淺底都看得到。README 有對照表。
+STYLE = {"key": "1;36",            # 鍵名：粗體青
+         "str": "32",              # 字串：綠
+         "int": "33",              # 整數：黃
+         "float": "38;5;208",      # 浮點：橘
+         "bool": "35",             # true／false：洋紅
+         "null": "31",             # null：紅
+         "ref": "4;38;5;75",       # $ref：底線天藍
+         "fold": "3;38;5;245",     # --depth 摺起來的：斜體灰
+         "punct": "38;5;245",      # 括號、冒號、逗號、`- `：灰
+         "head": "1"}              # 指標標頭行：粗體
+# 縮排導引線 `|` 隨深度輪換的 6 色（第 1 層起循環）
+GUIDE = ["38;5;203", "38;5;214", "38;5;113", "38;5;80", "38;5;111", "38;5;177"]
 INLINE_MAX = 72        # 擠成一行的物件／陣列最多幾格寬（再寬就拆行，比較好讀）
 TAG_MAX = 24           # 字串陣列裡每個元素都不超過這寬才擠成 [a, b]，否則當一段文字
 KEY_PAD_MAX = 24       # 鍵名對齊最多補到這寬
@@ -143,32 +159,41 @@ def text_lines(v):
 
 
 class View:
+    """排版：每行先存成 (縮排欄數, 內容)，最後才把縮排畫成導引線（每層兩格的第一格是 `|`，顏色隨深度輪換）。
+    折行的續行同樣帶它那一行的縮排欄數，導引線不會斷。"""
     def __init__(self, width=100, color=False):
         self.width, self.color = width, color
         self.out = []
 
     def p(self, text, style):
-        if not self.color or not style or not text:
+        if not self.color or style is None or not text:   # style 0＝第 0 層導引線的顏色，不是「不上色」
             return text
-        return "\x1b[%sm%s\x1b[0m" % (STYLE[style], text)
+        code = STYLE[style] if isinstance(style, str) else GUIDE[style % len(GUIDE)]
+        return "\x1b[%sm%s\x1b[0m" % (code, text)
+
+    def guides(self, n):
+        """縮排 n 欄：每兩欄一層，第一欄畫 `|`（第 i 層一個顏色），第二欄空白；n 是奇數的最後一欄補空白。"""
+        return "".join(self.p("|", i) + " " for i in range(n // 2)) + " " * (n % 2)
 
     # ---- 一行的形（回 (純文字寬, 上過色的字) 或 None） ----
     def scalar(self, v, in_container=False, ref=False):
         if isinstance(v, Folded):
-            return dw(v.text), self.p(v.text, "dim")
-        if isinstance(v, bool) or v is None:
+            return dw(v.text), self.p(v.text, "fold")
+        if isinstance(v, bool):
             t = json.dumps(v)
-            return dw(t), self.p(t, "lit")
+            return dw(t), self.p(t, "bool")
+        if v is None:
+            return 4, self.p("null", "null")
         if isinstance(v, (int, float)):
             t = json.dumps(v)
-            return dw(t), self.p(t, "num")
+            return dw(t), self.p(t, "int" if isinstance(v, int) else "float")
         s = clean(v)
         if ref:
             t = "-> " + s
             return dw(t), self.p(t, "ref")
         if s == "" or (in_container and (re.search(r"[,\[\]{}]|: ", s) or s != s.strip())):
             s = json.dumps(s, ensure_ascii=False)
-        return dw(s), s
+        return dw(s), self.p(s, "str")
 
     def inline(self, v, budget, ref=False, in_container=False):
         if isinstance(v, str):
@@ -182,7 +207,7 @@ class View:
         budget = min(budget, INLINE_MAX)
         if not v:
             t = "[]" if isinstance(v, list) else "{}"
-            return 2, self.p(t, "dim")
+            return 2, self.p(t, "punct")
         if isinstance(v, list) and all(isinstance(x, str) for x in v) and (
                 any(dw(x) > TAG_MAX or not x.strip() or "\n" in x for x in v) or v[0].startswith("# ")):
             return None                                   # 像一段文字的字串陣列（有長句、空行、md 標題）不擠
@@ -196,50 +221,44 @@ class View:
             if k is not None:
                 kt = clean(k) or '""'
                 pw += dw(kt) + 2
-                pt = self.p(kt, "key") + self.p(":", "dim") + " " + pt
+                pt = self.p(kt, "key") + self.p(":", "punct") + " " + pt
             total += pw + (2 if parts else 0)
             if total > budget:
                 return None
             parts.append(pt)
         o, c = ("[", "]") if isinstance(v, list) else ("{", "}")
-        return total, self.p(o, "dim") + self.p(", ", "dim").join(parts) + self.p(c, "dim")
+        return total, self.p(o, "punct") + self.p(", ", "punct").join(parts) + self.p(c, "punct")
 
     # ---- 多行的形 ----
-    def emit_text(self, lines, ind, first_prefix=None, style=None, hang=HANG):
-        """一段文字：每行折到寬度，續行多縮 HANG 格。first_prefix＝第一行前面的字（已上色、寬度另算）。"""
+    def emit_text(self, lines, ind, head=("", 0), style="str", hang=HANG):
+        """一段文字，縮排 ind。head＝(第一行縮排後先印的字〔已上色〕, 它的寬)；續行從 ind＋head 寬＋hang 起。"""
         first = True
         for line in lines:
             line = clean(line)
-            if first and first_prefix is not None:
-                pre_txt, pre_w = first_prefix
-                col = pre_w
-            else:
-                pre_txt, col = " " * ind, ind
-            pieces = wrap(line, self.width - col) if line else [""]
-            self.out.append((pre_txt + self.p(pieces[0], style)).rstrip())
+            pre, pw = head if first else ("", 0)
+            pieces = wrap(line, self.width - ind - pw) if line else [""]
+            self.out.append((ind, pre + self.p(pieces[0], style)))
             for piece in pieces[1:]:
-                self.out.append(" " * (col + hang) + self.p(piece, style))
+                self.out.append((ind, " " * (pw + hang) + self.p(piece, style)))
             first = False
 
-    def block(self, v, ind, prefix=None):
-        """v 放在縮排 ind 的位置。prefix＝(已上色的字, 寬)：第一行改用它開頭（陣列的 `- `）。"""
+    def block(self, v, ind, dash=False):
+        """v 放在縮排 ind 的位置。dash＝陣列的一項：第一行退兩欄、前面加 `- `。"""
         start = len(self.out)
-        lead = (" " * ind, ind) if prefix is None else prefix
-        r = None if (ind == 0 and prefix is None and isinstance(v, (dict, list)) and v) else \
-            self.inline(v, self.width - lead[1])          # 最外層的物件／陣列一律展開
-        if r is not None:
-            self.out.append(lead[0] + r[1])
-            return
+        r = None if (ind == 0 and not dash and isinstance(v, (dict, list)) and v) else \
+            self.inline(v, self.width - ind)              # 最外層的物件／陣列一律展開
         lines = text_lines(v)
-        if lines is not None:
-            self.emit_text(lines, ind, lead)
-            return
-        if isinstance(v, dict):
+        if r is not None:
+            self.out.append((ind, r[1]))
+        elif lines is not None:
+            self.emit_text(lines, ind)
+        elif isinstance(v, dict):
             self.obj(v, ind)
         else:
             self.arr(v, ind)
-        if prefix is not None and len(self.out) > start:
-            self.out[start] = prefix[0] + self.out[start][ind:]
+        if dash and len(self.out) > start:
+            n, text = self.out[start]
+            self.out[start] = (ind - 2, self.p("-", "punct") + " " + " " * (n - ind) + text)
 
     def obj(self, d, ind):
         flat = [k for k, x in d.items()
@@ -249,29 +268,32 @@ class View:
         for k, x in d.items():
             kt = clean(k) or '""'
             kw = dw(kt)
-            head = " " * ind + self.p(kt, "key") + self.p(":", "dim")
-            col = ind + max(kw, pad if k in flat else 0) + 2
-            r = self.inline(x, self.width - col, ref=(k == "$ref"))
+            head = self.p(kt, "key") + self.p(":", "punct")
+            vw = max(kw, pad if k in flat else 0) + 2      # 值從縮排後第幾欄開始
+            r = self.inline(x, self.width - ind - vw, ref=(k == "$ref"))
             if r is not None:
-                self.out.append(head + " " * (col - ind - kw - 1) + r[1])
+                self.out.append((ind, head + " " * (vw - kw - 1) + r[1]))
                 continue
-            if isinstance(x, str) and "\n" not in x and col <= self.width * 0.4:
-                style = "ref" if k == "$ref" else None
-                self.emit_text([("-> " if k == "$ref" else "") + x], ind,
-                               (head + " " * (col - ind - kw - 1), col), style, hang=0)
+            if isinstance(x, str) and "\n" not in x and ind + vw <= self.width * 0.4:
+                ref = k == "$ref"
+                self.emit_text([("-> " if ref else "") + x], ind, (head + " " * (vw - kw - 1), vw),
+                               "ref" if ref else "str", hang=0)
                 continue
-            self.out.append(head)
+            self.out.append((ind, head))
             self.block(x, ind + 2)
 
     def arr(self, a, ind):
-        dash = (" " * ind + self.p("-", "dim") + " ", ind + 2)
         for x in a:
-            self.block(x, ind + 2, dash)
+            self.block(x, ind + 2, dash=True)
 
     def render(self, v):
         self.out = []
         self.block(v, 0)
-        return "\n".join(self.out) + "\n"
+        lines = []
+        for n, text in self.out:
+            line = (self.guides(n) + text).rstrip(" ")
+            lines.append(line)
+        return "\n".join(lines) + "\n"
 
 
 def resolve(doc, ptr, where):
