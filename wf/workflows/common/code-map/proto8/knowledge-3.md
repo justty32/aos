@@ -11,16 +11,46 @@
 |---|---|
 | [`_description.json`](../../../../../proto8/knowledge/wf/_description.json) | argv：`# wf：工作區的工作文檔怎麼組織 一個專案（工作區）裡給 agent 用的工作文檔——做事的流程、查得到的知識與記錄、還沒完的事——收在工作區的 `wf/` 夾，用 index 與 json 節點組織。 |
 | [`knowledge/_description.json`](../../../../../proto8/knowledge/wf/knowledge/_description.json) | argv：`# 出廠的知識節點 工作流會指過來查的知識與判準。 |
+| [`knowledge/code-map-rules.json`](../../../../../proto8/knowledge/wf/knowledge/code-map-rules.json) | 設定（鍵：_description、truth_order、maintenance_chain） |
 | [`knowledge/content-trim.json`](../../../../../proto8/knowledge/wf/knowledge/content-trim.json) | 設定（鍵：_description、criterion、keep、drop、user_words、applies…） |
+| [`knowledge/dev-dispatch.json`](../../../../../proto8/knowledge/wf/knowledge/dev-dispatch.json) | 設定（鍵：_description、before_code、disambiguation、menu） |
 | [`knowledge/gotchas.json`](../../../../../proto8/knowledge/wf/knowledge/gotchas.json) | 設定（鍵：_description、tidy_archive_move、tidy_split、tidy_dispatch、tidy_env） |
+| [`knowledge/green-is-not-checked.json`](../../../../../proto8/knowledge/wf/knowledge/green-is-not-checked.json) | 設定（鍵：_description、rule、corollaries） |
+| [`knowledge/iron-rules.json`](../../../../../proto8/knowledge/wf/knowledge/iron-rules.json) | 設定（鍵：_description、rules、adopt、agents_md_entry） |
+| [`knowledge/live-lists.json`](../../../../../proto8/knowledge/wf/knowledge/live-lists.json) | 設定（鍵：_description、which、session_start、session_log、wait_user、aos_note） |
 | [`knowledge/workflow-template.json`](../../../../../proto8/knowledge/wf/knowledge/workflow-template.json) | 設定（鍵：_description、skeleton、fields、paths） |
 | [`layers.json`](../../../../../proto8/knowledge/wf/layers.json) | 設定（鍵：_description、layers、skills_vs_memory、private_index、logs） |
 | [`nodes.json`](../../../../../proto8/knowledge/wf/nodes.json) | 設定（鍵：_description、names、workflow_form、growth） |
+| [`skeletons/_description.json`](../../../../../proto8/knowledge/wf/skeletons/_description.json) | argv：`# 記憶骨架 專案自己要填的記錄與知識（決策、想法、踩坑、使用者偏好、驗證表、開發環境、code map、寫碼慣例、調查筆記、分析產物）的空殼。 |
+| [`skeletons/analysis.json`](../../../../../proto8/knowledge/wf/skeletons/analysis.json) | 設定（鍵：_description、holds、fields、fields_note、rules、skeleton…） |
+| [`skeletons/code-map.json`](../../../../../proto8/knowledge/wf/skeletons/code-map.json) | 設定（鍵：_description、holds、fields、rules、skeleton） |
+| [`skeletons/conventions.json`](../../../../../proto8/knowledge/wf/skeletons/conventions.json) | 設定（鍵：_description、holds、fields、suggested_items、rules、skeleton） |
+| [`skeletons/decisions.json`](../../../../../proto8/knowledge/wf/skeletons/decisions.json) | 設定（鍵：_description、holds、fields、rules、skeleton） |
+| [`skeletons/dev-env.json`](../../../../../proto8/knowledge/wf/skeletons/dev-env.json) | 設定（鍵：_description、holds、fields、rules、skeleton） |
+| [`skeletons/gotchas.json`](../../../../../proto8/knowledge/wf/skeletons/gotchas.json) | 設定（鍵：_description、holds、fields、rules、skeleton） |
+| [`skeletons/ideas.json`](../../../../../proto8/knowledge/wf/skeletons/ideas.json) | 設定（鍵：_description、holds、fields、rules、skeleton） |
+| [`skeletons/notes.json`](../../../../../proto8/knowledge/wf/skeletons/notes.json) | 設定（鍵：_description、holds、fields、index、rules、skeleton） |
+| [`skeletons/user.json`](../../../../../proto8/knowledge/wf/skeletons/user.json) | 設定（鍵：_description、holds、fields、items、rules、glossary…） |
+| [`skeletons/verification.json`](../../../../../proto8/knowledge/wf/skeletons/verification.json) | 設定（鍵：_description、holds、fields、suggested_checks、rules、skeleton） |
 | [`source.json`](../../../../../proto8/knowledge/wf/source.json) | 設定（鍵：_description、commit_ids、blocks） |
+| [`source/block-3.json`](../../../../../proto8/knowledge/wf/source/block-3.json) | 設定（鍵：_description、block、what、from、carried、not_carried） |
+| [`source/block-4.json`](../../../../../proto8/knowledge/wf/source/block-4.json) | 設定（鍵：_description、block、what、from、carried、not_carried） |
 | [`tidying.json`](../../../../../proto8/knowledge/wf/tidying.json) | 設定（鍵：_description、split、split_method、archive） |
 | [`workflows/_description.json`](../../../../../proto8/knowledge/wf/workflows/_description.json) | argv：`# 出廠的工作流節點 做事的流程，一個工作流一個節點。 |
+| [`workflows/analysis.json`](../../../../../proto8/knowledge/wf/workflows/analysis.json) | 設定（鍵：_description、when、not_when、done_when、steps、level3_templates…） |
+| [`workflows/decisions.json`](../../../../../proto8/knowledge/wf/workflows/decisions.json) | 設定（鍵：_description、when、not_when、done_when、steps、handoff） |
+| [`workflows/dev-env.json`](../../../../../proto8/knowledge/wf/workflows/dev-env.json) | 設定（鍵：_description、when、not_when、done_when、steps、handoff） |
+| [`workflows/feature-dev.json`](../../../../../proto8/knowledge/wf/workflows/feature-dev.json) | 設定（鍵：_description、when、not_when、done_when、steps、grows…） |
+| [`workflows/gotchas.json`](../../../../../proto8/knowledge/wf/workflows/gotchas.json) | 設定（鍵：_description、when、not_when、done_when、steps、handoff） |
+| [`workflows/investigation.json`](../../../../../proto8/knowledge/wf/workflows/investigation.json) | 設定（鍵：_description、when、not_when、done_when、steps、handoff） |
+| [`workflows/moving-things.json`](../../../../../proto8/knowledge/wf/workflows/moving-things.json) | 設定（鍵：_description、when、not_when、done_when、iron_rule、breakages…） |
+| [`workflows/patch.json`](../../../../../proto8/knowledge/wf/workflows/patch.json) | 設定（鍵：_description、when、not_when、done_when、steps、outputs…） |
+| [`workflows/planning.json`](../../../../../proto8/knowledge/wf/workflows/planning.json) | 設定（鍵：_description、when、not_when、done_when、stages、steps…） |
+| [`workflows/refactor.json`](../../../../../proto8/knowledge/wf/workflows/refactor.json) | 設定（鍵：_description、when、not_when、done_when、steps、handoff） |
+| [`workflows/testing.json`](../../../../../proto8/knowledge/wf/workflows/testing.json) | 設定（鍵：_description、when、not_when、done_when、steps、handoff） |
 | [`workflows/tidy-manager-brief.json`](../../../../../proto8/knowledge/wf/workflows/tidy-manager-brief.json) | 設定（鍵：_description、when、not_when、done_when、role、steps…） |
 | [`workflows/tidy.json`](../../../../../proto8/knowledge/wf/workflows/tidy.json) | 設定（鍵：_description、when、not_when、principles、done_when、roles…） |
 | [`workflows/tidy/_description.json`](../../../../../proto8/knowledge/wf/workflows/tidy/_description.json) | （檔頭沒有一句話） |
 | [`workflows/tidy/content-trim.json`](../../../../../proto8/knowledge/wf/workflows/tidy/content-trim.json) | 設定（鍵：_description、steps） |
 | [`workflows/tidy/principles.json`](../../../../../proto8/knowledge/wf/workflows/tidy/principles.json) | 設定（鍵：_description、principles） |
+| [`workflows/user.json`](../../../../../proto8/knowledge/wf/workflows/user.json) | 設定（鍵：_description、when、not_when、done_when、steps、handoff） |
