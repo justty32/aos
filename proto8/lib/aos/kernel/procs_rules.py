@@ -22,6 +22,9 @@ def load(cfg, cfg_dir):
         raise CfgBad("keep_ordered must be a boolean or null")
     if not isinstance(cfg.get("reply_via_me", False), bool):
         raise CfgBad("reply_via_me must be a boolean")
+    if not cfg.get("reply_via_me", False) and any(
+            entry["event"] == "before_reply" for entry in cfg.get("hooks", {}).values()):
+        raise CfgBad("before_reply hooks require reply_via_me")
     if "next" in cfg and "max_running" in cfg and "count_daemon" not in cfg:
         raise CfgBad("next with max_running requires count_daemon")
 
@@ -74,7 +77,7 @@ def prepare_targets(ctx, active):
 
 
 def collect(ctx, before_reply=None):
-    """先防重收原信，再代回；回呼留給之後的 before_reply。"""
+    """先防重收原信，再透過 before_reply 回呼代回。"""
     cfg = ctx.cfg
     daemon = os.environ.get("AOS_DAEMON")
     if "next" not in cfg and (not daemon or not os.path.isdir(daemon)):
@@ -86,13 +89,12 @@ def collect(ctx, before_reply=None):
     ctx.forwarded = letters.read_forwarded(ctx.forwarded_path, ctx.die)
     ctx.replies = os.path.join(ctx.stack, "replies")
     ctx.window = os.path.join(ctx.stack, "queue.json")
-    ctx.previous = queue_fifo.queue_view(ctx.window, ctx.warn) if cfg.get("queue", False) else {}
+    ctx.previous = queue_fifo.queue_view(ctx.window, ctx.warn)
     letters.take_all(ctx.requests, ctx.die)
     names = letters.names(ctx.requests)
     ctx.daemon, ctx.count_daemon = daemon, count_daemon
     prepare_targets(ctx, bool(names))
     ctx.admitted = set()
-    ctx.waiting = False
     for name in names:
         if letters.already_forwarded(ctx, name):
             letters.finish_forwarded(ctx, name)
@@ -181,12 +183,11 @@ def admit(ctx, name, letter):
         return "pass", []
     allowed, cap = ctx.cfg.get("allowed"), ctx.cfg.get("max_running")
     bad, detail = verdict(body, allowed, cap, ctx.running, ctx.admitted)
-    if ctx.cfg.get("queue", False) and ctx.waiting and bad is None and detail:
+    if ctx.cfg.get("queue", False) and ctx.queued and bad is None and detail:
         bad, detail = "SlotMissing", "an earlier letter is waiting for a slot"
     if bad == "SlotMissing" and ctx.cfg.get("queue", False) and body.get("queue_wait_ms") != 0:
         _, fresh = verdict(body, allowed, None, ctx.running, ctx.admitted)
         row = queue_fifo.queue_row(name, letter, fresh, ctx.previous, ctx.die)
-        ctx.waiting = True
         return "queue", row
     if bad:
         return "refuse", (bad, detail)
@@ -194,12 +195,24 @@ def admit(ctx, name, letter):
 
 
 def dispatch(ctx, name, letter, detail):
-    message = queue_fifo.expiry_message(letter, name in ctx.previous)
-    if message:
-        return "SlotMissing", message
+    # 讀信和前面的轉寄也花時間；規則放行的（detail 不是 None）臨轉寄再驗一次期限，免得這一輪中途到期還被掛上。
+    # hook 改判成放行的（detail 是 None）照字面放行、不回頭驗。
+    if detail is not None:
+        message = queue_fifo.expiry_message(letter, name in ctx.previous)
+        if message:
+            return "SlotMissing", message
     failure = letters.forward(ctx, name, letter)
     if failure is None:
-        ctx.admitted.update(detail)
+        # hook 能把拒或排改成放行；此處只數實際轉出的名字，不再驗規則。
+        body = letter.get("body")
+        if isinstance(body, dict):
+            added = body.get("procs_added")
+            if isinstance(added, dict):
+                ctx.admitted.update(n for n in added if n not in ctx.running)
+            for key in ("procs_started", "procs_woken"):
+                names = body.get(key)
+                if isinstance(names, list):
+                    ctx.admitted.update(n for n in names if isinstance(n, str) and n not in ctx.running)
     return failure
 
 

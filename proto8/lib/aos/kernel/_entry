@@ -28,6 +28,7 @@ import procs_rules
 HELP = """usage: kernel KERNEL.json   (run with aos-exec as a daemon body or loop proc)
 Run one round: collect replies, claim requests, admit, refuse or queue, then forward.
 KERNEL.json is resolved by aos-directive; relative paths start at its directory.
+Hooks in KERNEL.json run before_verdict, after_verdict and before_reply.
 Needs AOS_STACK; needs AOS_DAEMON unless next is configured.
 Exit 0 after a round, including an empty inbox; errors go to stderr and exit 1.
 """

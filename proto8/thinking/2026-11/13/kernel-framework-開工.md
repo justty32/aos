@@ -22,9 +22,11 @@
 
 - K-F47 已准，但調度者代定不變：這週不開問腦那一包、不停樹，今天範圍照舊。
 - K-F50 翻成 B：問腦那包（批 9）的掛信照舊看 `AOS_KERNEL`、問腦的 `kernel.json` 不加 `next`；N-63 那句不用改（批 12 少一項）。避開「總機繼承到給一般 proc 的 `AOS_KERNEL`」那個坑的辦法，照他的備註是起 llm daemon 的殼 `unset AOS_KERNEL`。
-- **備註那句「kernel.json的next感覺有點畫蛇添足」有沒有連框架站的 `next` 一起講，未定**（等使用者確認，兩種讀法見下）。11-11 選項框他對框架站的下一站選過「寫進 judge.json」（N-42 (2)），較大的讀法會翻掉那一題，所以不自己認定。
-  - 最小讀法：只講問腦總機。框架站的 `next` 照圖紙留著；圖紙只改 K-F50 與 04 的「新鍵」表（問腦包拿掉 `next`、`count_daemon` 兩鍵）、衝突 2 改成已裁照條文。批 2 不用改。
-  - 較大讀法：框架站也不要 `next`，下一站看站自己環境裡的 `AOS_KERNEL`（有就轉寄到那、沒有就 `AOS_DAEMON`），要串站就給每一站設各自的 `AOS_KERNEL`、不要往下傳的就 `unset`。要改：K-F3、K-F4、K-F5、K-F6、K-F7 與 01 的鍵表、「下一站」「數量另指」兩節、05 步 2 的測試例與鏈劇本的擺法；批 2 拿掉 `next` 鍵與「寫了 `next` 沒寫 `count_daemon`＝`CfgBad`」那條，改成讀 `AOS_KERNEL`，測試 1、3、4（明寫那半）、7 重寫。`count_daemon`、`reply_via_me`、`forwarded.json`、防重、鎖都不受影響。
+- 備註那句「kernel.json的next感覺有點畫蛇添足」有沒有連框架站的 `next` 一起講——**已結案**。調度者把兩種讀法連同「11-11 你選過寫進設定檔」拿去問，使用者 11-13 回（逐字）：
+
+  > 「Hmmm，好啦，next也可以。只是說，我會覺得AOS_KERNEL他就是在有需要掛一個aos proc的時候，就使用的一個目標，一個通用的，基礎的目標。好比所有C語言程式使用syscall的時候，只要沒有特別指定，不然就是走linux kernel那個記憶體位置。啊如果有需要其他目標...那就自己找方法指定」
+
+  決定：框架站設定檔的 `next` 留著，批 2 的做法已確認、不再是代定。他後半段講的是 `AOS_KERNEL` 的定位：要掛 aos proc 時、沒特別指定就用的通用基礎目標；要別的目標就自己另外指定（`next` 是其中一種指定法）。
 - kb-ctl 選 A：跟圖紙 K-F34 一致，不用改。t2d-U4、mv-q2 不碰這條線的程式。
 
 ## 一、現況盤點（唯讀查到的，影響排法）
@@ -169,7 +171,7 @@
 
 ## 九、施工中的代定（可翻案）
 
-1. **K-F50 備註照最小讀法做（調度者 11-13 代定）**：「可以用unset吧。kernel.json的next感覺有點畫蛇添足。」先當成只講問腦總機；框架站的 `next` 照圖紙做進批 2。若使用者答較大讀法：拿掉 `next` 改讀 `AOS_KERNEL`，重寫批 2 新增測試的 1、3、4、7，約一小時。
+1. （已結案，不再是代定）K-F50 備註有沒有連框架站的 `next` 一起講：使用者 11-13「好啦，next也可以。」——`next` 留著，原話在開頭「使用者原話」段。
 2. **骨架與包的介面（隊長定，圖紙只說「五個口」）**：`round.run(pack, cfg_path, name="kernel")`；包提供 `collect(ctx, before_reply=None)`、`check(ctx)`、`order(ctx, letters)`、`admit(ctx, name, letter)`、`dispatch(ctx, name, letter, detail)` 五個口，另加 `load(cfg, cfg_dir)`（驗自己的鍵）、`refuse(…)`（拒信形狀歸包）、`finish(ctx, queued)`（寫窗）；判決字串 `pass`／`refuse`／`queue`。
 3. **空輪不讀 daemon 的表（照原判官的行為保留）**：所以「從 `AOS_DAEMON` 算出來的轉寄目標就是自己」這種設定錯，要等有信那一輪才報 `CfgBad`；明寫 `next` 指到自己的每輪都報。
 
@@ -187,3 +189,25 @@
 - `extras/gitignore-check/check.py` 整棵：33 項過、2 項紅——紅的是「追蹤檔含敏感字樣」掃到 `templates/eca-claude/README.md` 裡 `eca-task-subagent` 連結的 `sk-` 三個字（該檔 11-12 的 commit 就有、這批沒碰），跟框架站無關；帶框架站的那幾項（掛 proc 經站、在飛的請求留著、收工不留行程）都過。
 - **要重建什麼**：正在跑的判官重起前刪掉 stack 裡的 `judge_replies/`、`judge_ordered.json`（新程式不認）；定義夾裡的 `judge.json` 改名 `kernel.json`、`daemon.json`／`loop.json` 的 `exec` 改指 `lib/aos/kernel`。`queue.json`、`requests/` 不用動。公司這台的樹沒有判官，不用做。
 - 已知限制（照舊或同類）：轉寄寄出、對照還沒寫進 `forwarded.json` 就被砍的那一瞬間，重起後原信會被當成已轉寄收掉，但回信回來查不到對照、被丟掉（寄件人靠自己的逾時）。
+
+### 批 3
+
+`lib/aos/kernel/hooks.py`（三個事件的事件表、設定、判決回話；執行全交給 `lib/hook_run.py`）接上骨架：`before_verdict`（新信一次、可改 body、退 10 直接拒且不跑規則與 `after_verdict`）、`after_verdict`（新信判完一次、離開隊再一次；可改判 pass／refuse）、`before_reply`（代回之前、可改回信、退 10 改回 `HookRejected`）。改過的 body 進隊存 `bodies/<信名>.json`。新代號 `HookRejected`（拒信）、`HookFailed`（自己的錯，退 1、信留著）。
+
+- 測試：`test_kernel`＋`test_kernel_hooks`（新 11 例）共 27 例全過。
+- 隊長審 diff 時改回一處：codex 把「臨轉寄再驗一次期限」整段拿掉了；改成規則放行的照舊再驗、hook 改判成放行的照字面不驗。
+- 代定（圖紙沒寫，照保守做）：多個 `after_verdict` 的 `condition` 比的是內建規則最初的判決，前一格改判不影響後面哪幾格會被叫（後面的看得到改過的值）；`bodies/` 讀不了、刪不掉也算 `StateBad`；設定關掉 `queue` 後，上一輪窗裡的信仍算隊中信（不重跑 `before_verdict`）、照新設定判。
+- `hook_run.py` 用起來的不順：改了值時引擎不回是哪個 hook 改的，所以 `after_verdict` 一格一格叫才補得上「refused by hook <名>」；引擎沒改。
+
+## 十一、事故：子 agent 誤停使用者的樹（11-13 10:25）
+
+- **時間**：2026-11-13 10:25:05（台北）。
+- **指令**：批 11a 的子 agent 在暫存夾手跑框架站範本，收工時下 `pkill -INT -f "aos-daemon --enable-logs daemon.json"`。這個字串不含暫存夾路徑，`~/aos-home` 根 daemon 的命令列一模一樣。
+- **影響**：`~/aos-home` 的根 daemon（退 130）與領班那台（退 143）都停了，底下的鐘、清道夫與各 agent 的 loop 全停；各 agent 的 CLI 畫面與 `aos-mcp` 還在。停了約數分鐘。repo 的檔沒受影響。
+- **怎麼復原**：子 agent 發現後立刻停手回報、沒自己重起；使用者自己把樹起回來，調度者核過七列都 running、沒有重複。
+- **原因在任務書**：只寫了「不碰 ~/aos-home、跑完把起的行程收掉」，沒規定怎麼收。
+- **之後的規則**（這條線的隊長、子 agent、codex 都適用，寫在每份任務書開頭）：
+  1. 禁止 `pkill`／`killall`／`kill $(pgrep …)` 與任何按名字或命令列字串收行程的寫法；`aos-daemon-ctl` 一定帶 `-d`、而且只能指到自己的暫存夾。
+  2. 收行程只准兩種：`aos-daemon-ctl -d <自己暫存樹 stack 的絕對路徑> shutdown`（下之前先印出路徑、確認在自己的暫存夾下）；或 kill 起的時候記下的 pid（kill 前 `readlink /proc/<pid>/cwd` 確認在自己的暫存夾裡）。
+  3. 起任何 aos 行程前 `env -u` 掉所有 `AOS_*` 變數；暫存夾用獨一無二的路徑。
+  4. 收尾核對 `pgrep -u guanyu -af 'aos-daemon'` 只剩 `~/aos-home` 的兩台，貼進回報；多了或少了立刻停手。

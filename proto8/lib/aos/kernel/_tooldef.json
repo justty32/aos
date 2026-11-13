@@ -1,5 +1,5 @@
 {
-  "description": "Run one kernel round to admit, queue or refuse proc requests, forward them to the next mailbox and optionally relay replies.",
+  "description": "Run one kernel round with hooks to admit, queue or refuse proc requests, forward them to the next mailbox and optionally relay replies.",
   "env": [
     "AOS_STACK"
   ],
@@ -17,6 +17,7 @@
     "MailboxMissing",
     "CommandMissing",
     "PostFailed",
-    "LockFailed"
+    "LockFailed",
+    "HookFailed"
   ]
 }

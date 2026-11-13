@@ -1,4 +1,4 @@
-# 包 aos-post 的收信、轉寄、拒信、代回與轉寄對照表。
+# 包 aos-post 的收信、轉寄、拒信、代回、轉寄對照表與排隊 body。
 import json
 import os
 import re
@@ -75,6 +75,38 @@ def write_json(path, value, label, die):
         die("StateBad", "cannot write %s: %s" % (label, error))
 
 
+def body_path(ctx, name):
+    return os.path.join(ctx.stack, "bodies", name + ".json")
+
+
+def save_body(ctx, name, body):
+    path = body_path(ctx, name)
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+    except OSError as error:
+        ctx.die("StateBad", "cannot create bodies/: %s" % error)
+    write_json(path, body, "queued body %s" % name, ctx.die)
+
+
+def restore_body(ctx, name, letter):
+    try:
+        with open(body_path(ctx, name), encoding="utf-8") as stream:
+            letter["body"] = json.load(stream)
+    except FileNotFoundError:
+        pass  # 沒改過 body 的排隊信沒有另存檔。
+    except (OSError, ValueError, UnicodeError) as error:
+        ctx.die("StateBad", "cannot read queued body %s: %s" % (name, error))
+
+
+def remove_body(ctx, name):
+    try:
+        os.unlink(body_path(ctx, name))
+    except FileNotFoundError:
+        pass
+    except OSError as error:
+        ctx.die("StateBad", "cannot remove queued body %s: %s" % (name, error))
+
+
 def read_forwarded(path, die):
     try:
         with open(path, encoding="utf-8") as stream:
@@ -110,6 +142,7 @@ def already_forwarded(ctx, name):
 
 def finish_forwarded(ctx, name):
     done(ctx.requests, name, ctx.die)
+    remove_body(ctx, name)
     removed = [key for key in record_keys(ctx, name)
                if ctx.forwarded[key]["reply_to"] is None]
     for key in removed:

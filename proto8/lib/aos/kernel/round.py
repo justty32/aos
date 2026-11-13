@@ -1,10 +1,12 @@
-# 通用 kernel 的骨架：讀設定、鎖收件箱、照五個口做完一輪。
+# 通用 kernel 的骨架：讀設定、鎖收件箱，串起五個口與三個 hook 時機。
 import fcntl
 import json
 import os
 from types import SimpleNamespace
 
 import letters
+import hooks
+import hook_run
 import tool_io
 
 
@@ -33,6 +35,7 @@ def load(pack, path):
                 if not isinstance(cfg[key], str) or not cfg[key]:
                     raise ValueError("%s must be a non-empty path string" % key)
                 cfg[key] = os.path.abspath(os.path.join(os.path.dirname(path), cfg[key]))
+        cfg["hooks"] = hooks.load(cfg.get("hooks", {}), path)
         pack.load(cfg, os.path.dirname(path))
     except (ValueError, TypeError) as error:
         tool_io.die("CfgBad", str(error))
@@ -59,21 +62,43 @@ def run(pack, cfg_path, name="kernel"):
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as error:
             ctx.die("LockFailed", "cannot lock requests/.flock: %s" % error)
-        pack.collect(ctx)
-        incoming = pack.check(ctx)
-        names = pack.order(ctx, incoming)
-        queued = []
-        # 逐封判決集中在這一段，之後的 hook 可在判之前、之後插入。
-        for letter_name in names:
-            letter = incoming[letter_name]
-            verdict, detail = pack.admit(ctx, letter_name, letter)
-            if verdict == "queue":
-                queued.append(detail)
-            elif verdict == "refuse":
-                pack.refuse(ctx, letter_name, letter, *detail)
-            elif verdict == "pass":
-                failure = pack.dispatch(ctx, letter_name, letter, detail)
-                if failure is not None:
-                    pack.refuse(ctx, letter_name, letter, *failure)
-        pack.finish(ctx, queued)
+        try:
+            ctx.previous = {}
+            pack.collect(ctx, before_reply=lambda original, reply: hooks.before_reply(ctx, original, reply))
+            incoming = pack.check(ctx)
+            names = pack.order(ctx, incoming)
+            ctx.queued = []
+            for letter_name in names:
+                letter = incoming[letter_name]
+                was_queued = letter_name in ctx.previous
+                changed_body = False
+                if was_queued:
+                    letters.restore_body(ctx, letter_name, letter)
+                else:
+                    result = hooks.before_verdict(ctx, letter_name, letter)
+                    if result["blocked"]:
+                        pack.refuse(ctx, letter_name, letter, *hooks.rejected(result))
+                        letters.remove_body(ctx, letter_name)
+                        continue
+                    changed_body = "body" in result["changed"]
+                verdict, detail = pack.admit(ctx, letter_name, letter)
+                if not was_queued or verdict != "queue":
+                    verdict, detail = hooks.after_verdict(ctx, letter_name, letter, verdict, detail)
+                if verdict == "queue":
+                    if changed_body:
+                        letters.save_body(ctx, letter_name, letter["body"])
+                    elif not was_queued:
+                        letters.remove_body(ctx, letter_name)
+                    ctx.queued.append(detail)
+                elif verdict == "refuse":
+                    pack.refuse(ctx, letter_name, letter, *detail)
+                    letters.remove_body(ctx, letter_name)
+                elif verdict == "pass":
+                    failure = pack.dispatch(ctx, letter_name, letter, detail)
+                    if failure is not None:
+                        pack.refuse(ctx, letter_name, letter, *failure)
+                    letters.remove_body(ctx, letter_name)
+            pack.finish(ctx, ctx.queued)
+        except hook_run.HookFailed as error:
+            ctx.die("HookFailed", str(error))
     return 0
