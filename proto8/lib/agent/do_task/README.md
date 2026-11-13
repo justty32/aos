@@ -10,7 +10,7 @@
 | `end` | `summary`（必給）、`keep_others`（選填，預設 false） | 收最裡面那段：紀錄點那則與它的 tool 結果之後、到叫 end 的那則之前的訊息換成一則 `[aos] summary: lines A-B, N messages. Task "…" ended: …`（role user）。別人給的 user 訊息（信、goal 提醒、new_mail 通知）預設一起摺（使用者 11-11「可選。預設清掉。」；原文照舊留檔，end 的結果說摺了幾則別人的）；`keep_others: true`＝這些不摺，照原順序接在總結後面 |
 | `status` | — | 列開著的任務（外到內）、紀錄點現在第幾行 |
 
-改 history 全走 `aos-agent history`（同 self_history：`ctl who`、`ls --json`、`keep_others` 有要留的訊息時先 `set` 挪到段尾、再 `summarize` 一次），原文照舊進 `history_removed.jsonl`。叫 end 那則與它的結果照常由 act 接在後面。只看 history 的形狀判身體：沒有「叫到一半的 tool call」＝`BodyUnsupported`（eca）。只在 daemon 下跑的 agent 能用。
+改 history 全走 `aos-agent history`（同 self_history：`ctl who`、`ls --json`、`keep_others` 有要留的訊息時先 `set` 挪到段尾、再 `summarize` 一次），原文照舊進 `history_removed.jsonl`。挪之前先把這次要留哪幾則記進 `tasks.json` 的 `moving`，end 在挪到一半或摺之前被砍、act 重跑同一個 call 時照它重放再摺，留下的訊息不會多一份；摺完還沒記上就被砍＝認出那則總結、只關不再摺。叫 end 那則與它的結果照常由 act 接在後面。只看 history 的形狀判身體：沒有「叫到一半的 tool call」＝`BodyUnsupported`（eca）。只在 daemon 下跑的 agent 能用。
 
 摺疊前後（真 daemon＋假腦實跑）：
 

@@ -26,8 +26,11 @@ with open(os.environ["FAKE_LOG"], "a") as f:
 if sys.argv[1:3] == ["ctl", "who"]:
     print("bob")
     sys.exit(0)
-if os.environ.get("FAKE_FAIL") and sys.argv[4:5] == [os.environ["FAKE_FAIL"]]:
-    aos_flags.die("aos-agent", "WriteFailed", "cannot write the history (test)")
+if os.environ.get("FAKE_FAIL") and sys.argv[4:5] == [os.environ["FAKE_FAIL"]]:   # FAKE_FAIL_NTH＝log 裡第幾次這個子指令起才失敗（預設第 1 次）
+    with open(os.environ["FAKE_LOG"]) as f:
+        seen = sum(1 for l in f if json.loads(l)[3:4] == [os.environ["FAKE_FAIL"]])
+    if seen >= int(os.environ.get("FAKE_FAIL_NTH", "1")):
+        aos_flags.die("aos-agent", "WriteFailed", "cannot write the history (test)")
 history.target = lambda opts: SimpleNamespace(name="bob", stack=os.path.dirname(os.environ["FAKE_HISTORY"]))
 history.history_file = lambda a: os.environ["FAKE_HISTORY"]
 try:
@@ -250,6 +253,55 @@ class DoTask(unittest.TestCase):
         self.assertIn("2 messages from others during the task are kept after the summary", out)
         folded = [r["message"] for r in self.removed() if r["op"] == "summarize"]
         self.assertEqual(len(folded), 9)
+
+    def letters_end_cut(self, **fail):
+        """task_with_letters 那段，但叫 end 那次被砍在 fail 那一步（假 aos-agent 讓它失敗＝程序死在那裡）；act 再跑同一個 call。"""
+        self.step("c1", {"op": "start", "task": "t"})
+        self.other("c2")
+        self.write(self.read() + [{"role": "assistant", "content": "Waiting for bob."}, self.LETTER])
+        self.other("c3")
+        self.write(self.read() + [{"role": "assistant", "content": "Hm."}, self.GOAL,
+                                  {"role": "user", "content": "[aos] summary: lines 9-9, 1 message. old"}])
+        self.other("c4")
+        before = self.read()
+        args = {"op": "end", "summary": "bob said 42", "keep_others": True}
+        self.write(before + [asks("c5", args)])
+        self.log.unlink()
+        cut = self.run_tool(args, **fail)
+        self.assertEqual(cut.returncode, 1, cut.stdout)
+        state = (self.cell / "tasks.json").read_text()
+        again = self.run_tool(args)
+        self.assertEqual(again.returncode, 0, again.stdout)
+        return before, state, again.stdout
+
+    def assert_kept_once(self, before, out):
+        h = self.read()
+        self.assertEqual([m for m in h if m in (self.LETTER, self.GOAL)], [self.LETTER, self.GOAL])   # 各一次、不重複
+        self.assertEqual(h[3]["content"], "[aos] summary: lines 4-12, 9 messages. Task \"t\" ended: bob said 42")
+        self.assertEqual(h[4:6], [self.LETTER, self.GOAL])          # 照原順序接在總結後面
+        self.assertEqual(len(h), 7)                                  # 總結、兩則、叫 end 那則
+        self.assertIn("9 messages (lines 4-14) are now one summary at line 4", out)
+        self.assertIn("2 messages from others during the task are kept after the summary", out)
+        self.assertEqual([r["message"] for r in self.removed() if r["op"] == "set"], before[12:14])   # 被蓋掉的兩則各留一次
+        self.assertEqual(len([r for r in self.removed() if r["op"] == "summarize"]), 9)
+        self.assertEqual(json.loads((self.cell / "tasks.json").read_text())["tasks"], [])
+
+    def test_keep_others_cut_before_summarize(self):
+        before, _, out = self.letters_end_cut(FAKE_FAIL="summarize")   # 兩則都挪完、summarize 前死掉
+        self.assert_kept_once(before, out)
+
+    def test_keep_others_cut_between_moves(self):
+        before, _, out = self.letters_end_cut(FAKE_FAIL="set", FAKE_FAIL_NTH="2")   # 第一則挪完、第二則前死掉
+        self.assert_kept_once(before, out)
+
+    def test_keep_others_cut_after_summarize(self):
+        before, state, _ = self.letters_end_cut(FAKE_FAIL="summarize")
+        once = self.read()
+        (self.cell / "tasks.json").write_text(state)              # 摺完、記上之前死掉：小格還是 summarize 前那份
+        r = self.run_tool({"op": "end", "summary": "bob said 42", "keep_others": True})
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("Already folded", r.stdout)
+        self.assertEqual(self.read(), once)
 
     def test_restart_keeps_the_mark(self):
         self.step("c1", {"op": "start", "task": "long job"})

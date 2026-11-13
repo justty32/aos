@@ -13,9 +13,11 @@
 # 「這一步」與紀錄點：先 aos-agent ctl who 認出是哪隻、history ls --json 讀全部；最後一則 assistant 帶 tool_calls、後面只有 tool＝這一步，
 #   它的 tool_calls 裡第一個還沒有 tool 結果的＝叫我的這一個（act 一個一個照順序跑）。找不到＝BodyUnsupported（eca 的工具來回在 CLI 裡、history 沒有這種行；
 #   手動 aos-tools call 也一樣）——不看定義、只看 history 的形狀。
-# 狀態：工具小格 $AOS_STACK（＝<agent stack>/tools/do_task/）的 tasks.json {"tasks": [{"call", "task"?, "started_at"}], "ended"?: {"call", "result"}}，
+# 狀態：工具小格 $AOS_STACK（＝<agent stack>/tools/do_task/）的 tasks.json {"tasks": [{"call", "task"?, "started_at"}], "ended"?: {"call", "result"},
+#   "moving"?: {"call", "lines", "lo", "hi", "keep": [訊息…]}}（keep_others 要挪訊息時，挪之前記、end 記上時清），
 #   寫才建、暫存檔再改名。agent 掛掉或被停再起來，紀錄點照在（status 看得到）。act 中途斷了重跑同一個 call：start 同 id＝照印、不再開；
-#   end 同 id（ended.call）＝照印上次的結果；摺完還沒記上就斷了（總結那則已在、內容對得上）＝不再摺、只關掉。
+#   end 同 id（ended.call）＝照印上次的結果；摺完還沒記上就斷了（總結那則已在、內容對得上）＝不再摺、只關掉；
+#   挪到一半或挪完、摺之前斷了（moving.call 同 id）＝照 moving 重放挪的那幾步再摺，留下的不會多一份（history 行數變了＝StateBad、不摺）。
 # 錯：stderr 與 stdout 各一行「do_task: error: 代號 原因」、退 1（tool_io.die）；aos-agent 退非 0＝它最後一行錯誤行的代號與原因接成自己的
 #   （C-52 例外 ⑤，同 self_history）、沒那行＝CommandFailed。只在 daemon 下跑的 agent 能用。每次叫 aos-agent 最多 60 秒；被 TERM 先收掉它再走。
 import json, os, sys
@@ -206,17 +208,28 @@ while lo < lock and msgs[lo - 1] and msgs[lo - 1].get("role") == "tool":   # 紀
     lo += 1
 hi = lock - 1
 others = [n for n in range(lo, hi + 1) if kept(msgs[n - 1])]
-keep = others if keep_others else []
-fold = [n for n in range(lo, hi + 1) if n not in keep]
+keep = [msgs[n - 1] for n in (others if keep_others else [])]
+fold = [n for n in range(lo, hi + 1) if n not in (others if keep_others else [])]
 done_before = (len(fold) == 1 and isinstance((msgs[fold[0] - 1] or {}).get("content"), str)
                and msgs[fold[0] - 1]["content"].startswith(SUMMARY) and msgs[fold[0] - 1]["content"].endswith(text))
+# 挪到一半或挪完、summarize 前被砍：小格的 moving 記著這個 call 挪之前算好的「留哪幾則」，照它重放（set 冪等）再摺，
+# 不從挪過的 history 重算（重算會把挪過去的那份也當成要留的、多一份）。挪不改行數，所以 lines／lo／hi 要跟記下的一樣。
+moving = state.pop("moving", None)
+if isinstance(moving, dict) and moving.get("call") == call and not done_before:
+    if [moving.get(k) for k in ("lines", "lo", "hi")] != [len(msgs), lo, hi] or not isinstance(moving.get("keep"), list):
+        die("StateBad", "%s has an unfinished end of this call (it was cut while moving messages from others), "
+            "but your history changed since; nothing was folded" % tool_io.place(state_path))
+    keep = moving["keep"]
+    fold = list(range(lo, hi + 1 - len(keep)))
 where = ""
 if fold and not done_before:
     first = hi - len(keep) + 1                  # 留下的挪到這段最後（照原順序），前面空出來的一整段交給 summarize
-    for j, n in enumerate(keep):
-        if first + j != n:
-            agent("history", "--target", me, "set", "--", str(first + j), json.dumps(msgs[n - 1], ensure_ascii=False))
-    out = agent("history", "--target", me, "summarize", "--", "%d-%d" % (lo, lo + len(fold) - 1), text)
+    moves = [(first + j, m) for j, m in enumerate(keep) if msgs[first + j - 1] != m]
+    if moves:
+        save(dict(state, moving={"call": call, "lines": len(msgs), "lo": lo, "hi": hi, "keep": keep}))
+    for line, m in moves:
+        agent("history", "--target", me, "set", "--", str(line), json.dumps(m, ensure_ascii=False))
+    out = agent("history", "--target", me, "summarize", "--", "%d-%d" % (lo, first - 1), text)
     where = out.strip().rpartition("; ")[2]
 tasks.pop()
 lines = ["Task ended (depth %d)%s." % (len(tasks) + 1, quoted(t))]
