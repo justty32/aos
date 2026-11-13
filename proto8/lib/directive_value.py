@@ -12,9 +12,11 @@ import subprocess
 from tool_io import Error
 
 
-def resolve(value, cwd, file=None, stderr=None, timeout=None):
+def resolve(value, cwd, file=None, stderr=None, timeout=None, at=None):
     """value 是物件＝送 aos-directive 解（cwd 是相對 $ref 的起點），回解完的值；不是物件＝原樣回。
     file＝這格是從哪份檔讀來的（知道才給，11-12 ref-hash）：{"$ref": "#/a/b"} 取那份檔自己的 /a/b；沒給＝這種 $ref 原封不動（R1）。
+    at＝value 這格在 file 裡的 JSON 指標（"/a/b"，用 pointer() 組；知道才給、要跟 file 一起，11-13 線址二）：
+    給了＝aos-directive --at，#./、#../ 從這格所在的物件算（value 是 /a/b 的指示詞＝#./x 指 /a/x）；沒給＝跟以前一樣。
     stderr＝aos-directive 的 stderr 往哪去：None（預設）＝照轉；subprocess.DEVNULL＝吞掉；subprocess.PIPE＝收起來放進丟出的 Error.stderr。
     timeout＝秒，None（預設）＝不設。
     aos-directive 起不來（不在 PATH）＝CommandMissing；逾時、退非 0 或印的不是 JSON＝DirectiveBad。
@@ -23,7 +25,8 @@ def resolve(value, cwd, file=None, stderr=None, timeout=None):
     if not isinstance(value, dict):
         return value
     try:
-        r = subprocess.run(["aos-directive"] + (["--file", os.path.abspath(file)] if file else []),
+        r = subprocess.run(["aos-directive"] + (["--file", os.path.abspath(file)] if file else [])
+                           + (["--at", at] if file and at is not None else []),
                            input=json.dumps(value, ensure_ascii=False), stdout=subprocess.PIPE, stderr=stderr, text=True,
                            cwd=cwd, timeout=timeout)
     except OSError as e:
@@ -39,19 +42,24 @@ def resolve(value, cwd, file=None, stderr=None, timeout=None):
         raise _error("DirectiveBad", "aos-directive printed no JSON", cause=e) from None
 
 
+def pointer(*keys):
+    """一串 key（字串）與 index（整數）→ RFC 6901 指標（~ 寫成 ~0、/ 寫成 ~1）；什麼都不給＝""（整份）。給 resolve 的 at 用。"""
+    return "".join("/" + str(k).replace("~", "~0").replace("/", "~1") for k in keys)
+
+
 def _error(code, reason, cause=None, returncode=None, stderr=None):
     e = Error(code, reason)
     e.cause, e.returncode, e.stderr = cause, returncode, stderr
     return e
 
 
-def resolve_path(value, cfg_file, key):
+def resolve_path(value, cfg_file, key, at=None):
     """設定檔 cfg_file 裡 key 那格的指示詞物件 → 解完的非空字串（相對的原樣回，呼叫者照自己的基準接）。
-    {"$ref": "#/a/b"}＝cfg_file 自己的 /a/b。
+    {"$ref": "#/a/b"}＝cfg_file 自己的 /a/b。at＝這格在 cfg_file 裡的指標（同 resolve；沒給＝當它是整份檔，#./、#../ 會報錯）。
     解不開、解完不是非空字串＝CfgBad（指名檔、欄、寫的與解出的）；aos-directive 不在 PATH＝CommandMissing。"""
     written = json.dumps(value, ensure_ascii=False)
     try:
-        got = resolve(value, os.path.dirname(os.path.abspath(cfg_file)), cfg_file)
+        got = resolve(value, os.path.dirname(os.path.abspath(cfg_file)), cfg_file, at=at)
     except Error as e:
         raise Error("CommandMissing" if e.code == "CommandMissing" else "CfgBad",
                     "%s: %s %s cannot be resolved: %s" % (cfg_file, key, written, e)) from None
