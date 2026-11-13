@@ -40,6 +40,7 @@
 | [`aos_eca/handoff.py`](../../../../../proto8/cmd/aos-eca/aos_eca/handoff.py) | 一批信交給 CLI 的前後（一般一輪與 slash 交給 claude 的那幾條共用）：交出去那刻收信、交出去後失敗記冷卻、成功收尾。 |
 | [`aos_eca/history.py`](../../../../../proto8/cmd/aos-eca/aos_eca/history.py) | $AOS_STACK/history.jsonl 的讀、附加，與 .history_sum（⑩ history 被改過＝開新對話）。 |
 | [`aos_eca/hook.py`](../../../../../proto8/cmd/aos-eca/aos_eca/hook.py) | 這支跑的 hook（before_queue、tool_added；fire 把 hook 停下換成 Fail）。 |
+| [`aos_eca/midturn.py`](../../../../../proto8/cmd/aos-eca/aos_eca/midturn.py) | 等 CLI 回答的這段時間又來的信：馬上認領、過 hook、交給 cli_ask 投進 CLI（More）；信的寄件人欄（unnamed）。 |
 | [`aos_eca/reseed.py`](../../../../../proto8/cmd/aos-eca/aos_eca/reseed.py) | ⑧ 換台開新對話時接在題目前面的開場白（從 history 組「整理過的紀錄」）。 |
 | [`aos_eca/slash.py`](../../../../../proto8/cmd/aos-eca/aos_eca/slash.py) | ⑭ slash 指令（/clear、/compact、/status、/usage、/exit、/goal）在 aos 這層怎麼做。 |
 | [`aos_eca/turn.py`](../../../../../proto8/cmd/aos-eca/aos_eca/turn.py) | 平級形的一輪（one_turn）：認領一批、hook、slash 分流、交給 cli_session、回答接進 history、冷卻。 |

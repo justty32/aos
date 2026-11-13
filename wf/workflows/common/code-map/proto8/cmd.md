@@ -32,6 +32,7 @@
 | [`aos_agent/read_line.py`](../../../../../proto8/cmd/aos-agent/aos_agent/read_line.py) | chat 讀一行輸入：終端機上用 readline 行編輯（中文 Backspace、方向鍵），管線照舊按行讀。 |
 | [`aos_agent/say.py`](../../../../../proto8/cmd/aos-agent/aos_agent/say.py) | 寄一則訊息到 agent 的 queue。 |
 | [`aos_agent/screen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/screen.py) | 開啟、關閉與追蹤 agent 的畫面子介面。 |
+| [`aos_agent/sender.py`](../../../../../proto8/cmd/aos-agent/aos_agent/sender.py) | 11-13 使用者裁「a2a這個按照建議」「say/chat被當成不是使用者打的，我覺得可以」：對 eca 說的話補上真正的寄件人——誰下的指令寫誰。 |
 | [`aos_agent/system.py`](../../../../../proto8/cmd/aos-agent/aos_agent/system.py) | 管 agent 自己那份 system 文字（stack 那份在就整份蓋過定義那份）：get、set、reset。 |
 | [`aos_agent/tools.py`](../../../../../proto8/cmd/aos-agent/aos_agent/tools.py) | 分層解析工具命令並管理 agent 自己那份工具登記檔（$override 定義那份）與重設確認。 |
 | [`bin/aos-agent`](../../../../../proto8/cmd/aos-agent/bin/aos-agent) | 統一的 agent 介面：管掛在 aos-daemon 上的一隻 agent（eca、loop／fsm agent 都一樣），每個子命令只管一隻（11-04）。 |

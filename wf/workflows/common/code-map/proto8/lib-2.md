@@ -21,6 +21,7 @@
 | [`agents_ctl/tests/test_agents_ctl.py`](../../../../../proto8/lib/agent/agents_ctl/tests/test_agents_ctl.py) | Test agents_ctl turns each op into the matching aos-agent ctl command line (one key = one flag), rejects unknown keys and passes lower errors up, wit… |
 | [`claude/`](../../../../../proto8/lib/agent/claude/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 claude CLI；對話續在工具小格（$AOS_STACK） |
 | [`claude/cli.json`](../../../../../proto8/lib/agent/claude/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
+| [`cli_a2a.py`](../../../../../proto8/lib/agent/cli_a2a.py) | cli_session 往開著的 claude 畫面投署名訊息（Claude Code 的 cross-session messaging socket）：記 socket、包信封、投遞、等 hook 回執 |
 | [`cli_ask.py`](../../../../../proto8/lib/agent/cli_ask.py) | cli_session 問一輪：畫面開著從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main |
 | [`cli_base.py`](../../../../../proto8/lib/agent/cli_base.py) | cli_session 各分檔共用的底：錯誤行與提醒行（PROG／ECHO 決定開頭與要不要也印 stdout）、時間、共用常數、找 lib 的 tool_io |
 | [`cli_cell.py`](../../../../../proto8/lib/agent/cli_cell.py) | cli_session 的小格：Cell（檔、鎖、畫面 tmux）、畫面 socket 位置、session.txt 與記號檔、認是不是這台的對話、transcripts symlink |
