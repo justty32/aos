@@ -264,7 +264,9 @@ def _under(p, env):
 def place(p):
     """訊息裡寫「程式自己算出的路徑」用這個（11-12 線 errpath：錯誤行會被 act 接進 history，history 進 git；N-67 ⑦ 要記就記相對的）：
     在 $AOS_STACK／$AOS_DAEMON 裡＝"$AOS_STACK/相對"／"$AOS_DAEMON/相對"，在工作區裡＝相對 $AOS_WS（同 shown_path），
-    同時在幾個裡面取最近的那個（根最長）；都不在＝照原樣。呼叫者自己給的路徑照字面印，不經這裡。"""
+    同時在幾個裡面取最近的那個（根最長）；都不在＝照原樣。呼叫者自己給的路徑照字面印，不經這裡。
+    經 aos-tools call 被叫時（11-13 使用者裁 fx-2:A）自己的 $AOS_STACK 是叫方 stack 裡的小格，讀這行的叫方（腦）卻把 $AOS_STACK 當成它自己的 stack：
+    $AOS_STACK_IN_CALLER 有給且對得上（_stack_in_caller）＝印成從叫方算的 "$AOS_STACK/tools/<名>/相對"，叫方照字面找得到；沒給＝照自己的小格印。"""
     p = os.path.abspath(p)
     hits = [(hit[0], env, hit[1]) for env in ("AOS_STACK", "AOS_DAEMON", "AOS_WS") if (hit := _root_of(p, env))]
     if not hits:
@@ -272,7 +274,22 @@ def place(p):
     _, env, rel = max(hits, key=lambda h: h[0])
     if env == "AOS_WS":
         return rel
+    if env == "AOS_STACK" and (cell := _stack_in_caller()):
+        rel = cell if rel == "." else cell + "/" + rel
     return "$" + env if rel == "." else "$%s/%s" % (env, rel)
+
+
+def _stack_in_caller():
+    """$AOS_STACK_IN_CALLER 的值（"tools/<名>"，結尾沒有 /）：aos-tools call 給的「這個小格在叫方 stack 裡的相對位置」。
+    只在它真的是自己 $AOS_STACK（照字面轉絕對）的結尾時才算數；沒設、空、絕對路徑、帶 . 或 ..、對不上
+    （例：被另起、換過 AOS_STACK 的子程式繼承走）＝None，place 照自己的 stack 印。"""
+    cell, stack = os.environ.get("AOS_STACK_IN_CALLER"), os.environ.get("AOS_STACK")
+    if not cell or not stack or os.path.isabs(cell):
+        return None
+    parts = [x for x in cell.split(os.sep) if x]
+    if not parts or any(x in (".", "..") for x in parts):
+        return None
+    return "/".join(parts) if os.path.abspath(stack).endswith(os.sep + os.sep.join(parts)) else None
 
 
 def os_reason(e):
