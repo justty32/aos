@@ -33,10 +33,15 @@
 ## 未決（要使用者裁）
 
 1. **do_task 的 `interrupt: unsafe` 要不要改 `safe`**：(a) 維持（建議；下一題的窗口還在）；(b) 改 safe。
+   - **裁定（11-13）＝選 A＝(a)：維持 `unsafe`**（照建議）。使用者回覆原文：「lb-1:A」（11-13 第二輪待裁頁 `wu-1113-r2`；回覆整行見[回覆檔](decide_20261113_wu-r2.reply.txt)，裁定後待施工見[裁定落地-1113 § 第二輪](裁定落地-1113.md#第二輪wu-1113-r2裁定後待施工)）。不用動。
 2. **do_task 剩的窗口**：挪到一半是 aos-agent 回錯（不是被砍），腦再叫一次 end 是新的 call，留下的訊息仍會多一份。(a) 先不補（建議；要 aos-agent 寫檔失敗才碰得到）；(b) 改看 history 形狀認沒做完的計畫（程式複雜、容易認錯）；(c) aos-agent 提供一步完成的「挪＋摺」（動設計）。
+   - **裁定（11-13）＝選 A＝(a)：先不補**（照建議）。使用者回覆原文：「lb-2:A」（出處同第 1 題）。不用動。
 3. **`cmd/docs/01` 的 aos-eca-turn 錯誤代號清單少三個**（`HooksBad`、`ToolsBad`、`SessionBad`，程式會報）：(a) 補上（建議；照程式寫）；(b) 不補。
+   - **裁定（11-13）＝選 A＝(a)：補上（照程式寫）**（照建議）。使用者回覆原文：「lb-3:A」（出處同第 1 題）。已做（commit `85651ce3f`，當時是調度者代定）。
 4. **`cmd/aos-mcp/README` 例子指 `~/code/playground/agents/bob-cathy/mcp.json`**：公司機遊樂場已刪。(a) 刪掉這個例子（建議）；(b) 留著（家機若還有）。
+   - **裁定（11-13）＝選 A＝(a)：刪掉這個例子**（照建議）。使用者回覆原文：「lb-4:A」（出處同第 1 題）。已做（commit `85651ce3f`，當時是調度者代定）。
 5. **`impls/aos-directive` docs/01 的「D9」「ideas § 9」這類出處標籤**指向已封存的 ideas：(a) 留著（建議；是出處不是沿革）；(b) 清掉。
+   - **裁定（11-13）＝選 B＝(b)：清掉**（跟建議「(a) 留著」不同）。使用者回覆原文：「lb-5:B*」（出處同第 1 題）。還沒施工。
 6. **wf 裡還寫舊路徑的現行說明**（不在這條線的可寫範圍）：`wf/tools/progress_board/` 的 README、`config.json`、`designs.py`、web 兩檔寫 `~/repo/simple_tools/aos`；`wf/workflows/dev-env/01` 寫家機 repo 在 `~/repo/simple_tools/aos`。(a) 另派一條線改成兩台各自的現況（建議）；(b) 不管。
 
 ## 沒做

@@ -1,0 +1,896 @@
+<!-- 11-13 第二輪待你裁頁：各線施工冒出的 43 題（條文對不上範本、eca_main 來信與修補、線乙、兩則備註讀法、kernel 框架），由 decide_20261113_wu-r2.json 用 decide_page.py 產生 -->
+<!doctype html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>今天第二輪：43 題待你裁</title><style>/* Style the offline decision page with shared light and dark palette tokens. */
+
+:root{
+  --bg:#f7f6f2; --panel:#ffffff; --ink:#1d1d1b; --muted:#5f5d57; --line:#d9d6cc;
+  --ask:#c25a14; --ask-soft:#fbe9dc; --on-ask:#ffffff;
+  --fix:#6b7f8e; --fix-soft:#e6ecf0; --on-fix:#ffffff;
+  --good:#2f7d4f; --bad:#b3362c; --quote:#f1efe7; --code:#efede6;
+  --star:#c25a14;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161614; --panel:#201f1c; --ink:#ecebe6; --muted:#a8a59c; --line:#3a3833;
+    --ask:#f08a45; --ask-soft:#3b2717; --on-ask:#1a1209;
+    --fix:#8fa6b6; --fix-soft:#22292e; --on-fix:#11171b;
+    --good:#5fbf86; --bad:#ef6f62; --quote:#2a2925; --code:#2c2b27;
+    --star:#f08a45;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161614; --panel:#201f1c; --ink:#ecebe6; --muted:#a8a59c; --line:#3a3833;
+  --ask:#f08a45; --ask-soft:#3b2717; --on-ask:#1a1209;
+  --fix:#8fa6b6; --fix-soft:#22292e; --on-fix:#11171b;
+  --good:#5fbf86; --bad:#ef6f62; --quote:#2a2925; --code:#2c2b27;
+  --star:#f08a45;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;
+  font-size:17px;line-height:1.75}
+.wrap{max-width:820px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:1.65rem;line-height:1.35;margin:.2em 0 .4em}
+h2{font-size:1.35rem;margin:2.4em 0 .5em;padding-top:.6em;border-top:2px solid var(--line)}
+h3{font-size:1.08rem;margin:0;line-height:1.5}
+h4{font-size:1rem;margin:.9em 0 .2em}
+p{margin:.5em 0}
+.lead{font-size:1.05rem}
+.lead li{margin:.35em 0}
+.muted{color:var(--muted)}
+.note{background:var(--fix-soft);border-left:4px solid var(--fix);padding:.6em .9em;border-radius:6px;margin:1em 0}
+figure{margin:1.2em 0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+figure svg{display:block;width:100%;height:auto}
+figcaption{font-size:.95rem;margin-top:.5em}
+.concl{font-weight:600}
+code{font-family:ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;font-size:.88em;background:var(--code);padding:.08em .35em;border-radius:4px;word-break:break-all}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:1.1em 0}
+.card header{display:flex;gap:.7em;align-items:flex-start}
+.num{flex:none;background:var(--ask);color:var(--on-ask);font-weight:700;border-radius:8px;padding:.05em .55em;font-size:.95rem;margin-top:.15em}
+.num.both{background:linear-gradient(90deg,var(--ask) 50%,var(--fix) 50%)}
+blockquote.quote{margin:.8em 0;background:var(--quote);border-left:4px solid var(--ask);padding:.5em .8em;border-radius:6px}
+blockquote.quote p{margin:.2em 0}
+blockquote.quote cite{display:block;font-style:normal;font-size:.82rem;color:var(--muted);word-break:break-all}
+.opts{list-style:none;padding:0;margin:.6em 0}
+.opts li{border:1px solid var(--line);border-radius:8px;padding:.45em .7em;margin:.4em 0}
+.opts li.rec .star{background:var(--ask-soft);border-radius:999px;padding:0 .3em}
+.opts b{display:inline-block;min-width:1.4em}
+.star{color:var(--star);font-weight:700}
+.sub{border-top:1px dashed var(--line);margin-top:.6em}
+details{margin:.6em 0 0;border-top:1px solid var(--line);padding-top:.4em}
+summary{cursor:pointer;color:var(--muted);font-size:.95rem}
+details[open] summary{margin-bottom:.4em}
+details ul{padding-left:1.2em;margin:.3em 0}
+details li{margin:.25em 0}
+details .files{font-size:.85rem;color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+td,th{border-bottom:1px solid var(--line);padding:.35em .4em;text-align:left;vertical-align:top}
+.tag{display:inline-block;font-size:.78rem;border-radius:999px;padding:0 .6em;background:var(--fix);color:var(--on-fix);white-space:nowrap}
+.reply{background:var(--panel);border:2px solid var(--ask);border-radius:12px;padding:12px 16px}
+.reply pre{background:var(--code);padding:.6em .8em;border-radius:8px;overflow-x:auto;font-size:1rem;margin:.5em 0}
+.toc{display:flex;flex-wrap:wrap;gap:.4em;margin:1em 0}
+.toc a{color:var(--ink);text-decoration:none;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:.15em .8em;font-size:.92rem}
+#theme{position:fixed;top:10px;right:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:.25em .8em;font:inherit;font-size:.85rem;cursor:pointer}
+/* svg tokens */
+.s-ink{fill:var(--ink)} .s-muted{fill:var(--muted)}
+.s-ask{fill:var(--ask)} .s-fix{fill:var(--fix)} .s-on{fill:var(--on-ask)} .s-onfix{fill:var(--on-fix)}
+.s-panel{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+.s-box{fill:var(--bg);stroke:var(--muted);stroke-width:1.5}
+.s-askbox{fill:var(--ask-soft);stroke:var(--ask);stroke-width:1.5}
+.s-dash{fill:none;stroke:var(--ask);stroke-width:1.5;stroke-dasharray:5 4}
+.s-line{stroke:var(--muted);stroke-width:2;fill:none}
+.s-good{fill:var(--good)} .s-bad{fill:var(--bad)}
+.s-goodl{stroke:var(--good);stroke-width:2.5;fill:none} .s-badl{stroke:var(--bad);stroke-width:2.5;fill:none}
+.s-freeze{fill:var(--fix-soft);stroke:var(--fix);stroke-dasharray:4 3}
+svg text{font-family:inherit}
+.t14{font-size:14px} .t13{font-size:13px} .t12{font-size:12px} .t16{font-size:16px;font-weight:700}
+/* Interactive controls use the same light/dark tokens as the original page. */
+.wrap{overflow-wrap:anywhere;padding-bottom:120px}
+.card h3{min-width:0}
+.opts.is-interactive li{padding:0;position:relative}
+.option-label{display:grid;grid-template-columns:1.2em minmax(0,1fr) 1.1em;gap:.5em;padding:.6em .7em;cursor:pointer;align-items:start}
+.option-label input{margin:.4em 0 0;width:1.1em;height:1.1em;accent-color:var(--good);cursor:pointer}
+.option-content{min-width:0}
+.option-check{visibility:hidden;color:var(--good);font-weight:700}
+.opts.is-interactive li.is-selected{border-color:var(--good);background:var(--fix-soft);box-shadow:inset 0 0 0 1px var(--good)}
+.is-selected .option-check{visibility:visible}
+.opts.is-interactive li:focus-within{outline:2px solid var(--fix);outline-offset:3px}
+.star{white-space:nowrap;font-size:.88em}
+.review-note{display:block;margin:.9em 0 .6em;font-size:.9rem;color:var(--muted)}
+.review-note textarea,.reply-output{display:block;width:100%;min-width:0;border:1px solid var(--line);border-radius:8px;padding:.55em .7em;background:var(--bg);color:var(--ink);font:inherit;line-height:1.6;resize:vertical}
+.review-note textarea{margin-top:.3em;min-height:3em}
+.review-note textarea::placeholder{color:var(--muted);opacity:1}
+.review-note textarea:focus,.reply-output:focus,.reply-dock button:focus-visible{outline:2px solid var(--fix);outline-offset:2px}
+.reply-dock{position:fixed;right:16px;bottom:16px;z-index:10;width:350px;max-width:calc(100vw - 32px);max-height:72vh;max-height:72dvh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px var(--line);overflow:hidden;font-size:.9rem}
+.reply-dock[hidden]{display:none}
+.reply-toggle{display:flex;align-items:center;gap:.6em;width:100%;border:0;padding:.75em 1em;background:var(--fix-soft);color:var(--ink);font:inherit;cursor:pointer;text-align:left}
+.reply-toggle strong{font-size:1rem;white-space:nowrap}
+.reply-compact{margin-left:auto;font-size:.78rem;color:var(--muted)}
+.reply-toggle-action{color:var(--muted);font-size:.8rem;white-space:nowrap}
+.reply-body{padding:12px 14px;min-height:0;overflow-y:auto}
+.reply-progress label{display:block;color:var(--muted);font-size:.85rem}
+.reply-progress progress{display:block;width:100%;height:8px;margin:.4em 0 .8em;border:0;border-radius:999px;overflow:hidden;background:var(--line);accent-color:var(--good)}
+.reply-progress progress::-webkit-progress-bar{background:var(--line)}
+.reply-progress progress::-webkit-progress-value{background:var(--good)}
+.reply-progress progress::-moz-progress-bar{background:var(--good)}
+.reply-changes{color:var(--muted);font-size:.8rem;margin:.5em 0}
+.reply-output{background:var(--code);font-size:.9rem;min-height:7em;max-height:25vh;max-height:25dvh;overflow-wrap:anywhere}
+.reply-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.reply-actions button{border:1px solid var(--line);border-radius:8px;padding:.5em .75em;font:inherit;cursor:pointer;background:var(--panel);color:var(--ink);min-height:44px}
+.reply-actions .reply-copy{background:var(--ask);color:var(--on-ask);border-color:var(--ask);font-weight:700}
+.reply-status{min-height:1.6em;margin:.4em 0 0;font-size:.85rem;color:var(--muted)}
+@media (min-width:1100px){.wrap{margin-right:394px;margin-left:auto}}
+@media (max-width:700px){
+  html{scroll-padding-bottom:90px}
+  .wrap{padding-top:52px}
+  .reply-dock{left:8px;right:8px;bottom:8px;bottom:max(8px,env(safe-area-inset-bottom));width:auto;max-width:none;max-height:60vh;max-height:60dvh}
+  .reply-toggle{min-height:52px;padding:.65em .8em;gap:.4em}
+  .reply-body{padding:10px 12px}
+  .reply-output{min-height:5.5em}
+}
+
+html{scroll-behavior:smooth;scroll-padding-top:1em}
+.wrap{max-width:860px;padding-bottom:170px}
+.section-head{margin-top:2.4em}
+.section-head h2{margin:0;border:0;padding:0}
+.section-head figure{margin:.7em 0 1.2em;padding:12px}
+.card{scroll-margin-top:16px}
+.num{font-size:.78rem;white-space:nowrap}
+.option-consequence{display:block;color:var(--muted);font-size:.91rem;margin-top:.15em}
+.option-title b{min-width:1.2em}
+.opt-star{display:inline-block;margin-left:.25em}
+.review-note textarea{min-height:3.4em}
+.source-excerpt{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.87rem;background:var(--quote);padding:.7em .8em;border-radius:8px}
+.related{font-size:.91rem;color:var(--ask);margin:.55em 0}
+.related a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+a{color:var(--ask)}
+.section-count{font-size:.9rem;font-weight:400;color:var(--muted);white-space:nowrap}
+.details-label{font-weight:700;font-size:.92rem;margin-top:.7em}
+.read-mark{font:inherit;font-size:.83rem;border:1px solid var(--line);border-radius:8px;padding:.45em .7em;min-height:44px;color:var(--muted);background:var(--bg);cursor:pointer}
+.card.is-seen .read-mark{color:var(--good);border-color:var(--good)}
+.button-row{margin:.6em 0;display:flex;align-items:center;gap:.5em}
+.section-head svg{max-height:95px}
+.overview svg{max-height:355px}
+.reply-output{max-height:25dvh}
+#theme{z-index:11;min-height:38px}
+@media (min-width:1100px){.wrap{max-width:860px;margin-left:max(16px,calc((100vw - 1260px)/2));margin-right:394px}}
+@media (max-width:700px){body{font-size:16px}.wrap{padding-left:12px;padding-right:12px}.card{padding:13px 12px}.card header{display:block}.num{display:inline-block;margin:0 0 .5em}h1{font-size:1.5rem}.option-label{padding:.65em .55em}.reply-dock{max-height:64dvh}.section-head h2{font-size:1.25rem}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+.s-quote{fill:var(--quote)}
+pre,table{max-width:100%;overflow-x:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.reply-body[hidden]{display:none}.card,.wrap{min-width:0}svg{max-width:100%}
+.reply-dock{bottom:max(16px,env(safe-area-inset-bottom))}
+</style></head><body><button id="theme" type="button" aria-label="切換淺色深色">淺／深</button><main class="wrap"><p class="muted">11-13 · 各線施工又冒出來、要你點頭的題，收成這一份</p><h1>今天第二輪：43 題待你裁</h1><figure class="overview"><svg viewBox="0 0 640 400" role="img" aria-label="各區題數"><text x="8" y="32" class="t14 s-ink">A-1 先看這四條</text><rect x="330" y="13" width="80" height="26" rx="5" class="s-box"/><rect x="330" y="13" width="80" height="26" rx="5" class="s-ask"/><text x="630" y="32" text-anchor="end" class="t14 s-ink">4 題</text><text x="8" y="80" class="t14 s-ink">A-2 一件已經做了、要你確認的事</text><rect x="330" y="61" width="20" height="26" rx="5" class="s-box"/><rect x="330" y="61" width="20" height="26" rx="5" class="s-ask"/><text x="630" y="80" text-anchor="end" class="t14 s-ink">1 題</text><text x="8" y="128" class="t14 s-ink">A-3 其餘對不上的條文（前言、01、03～06 夾）</text><rect x="330" y="109" width="200" height="26" rx="5" class="s-box"/><rect x="330" y="109" width="200" height="26" rx="5" class="s-ask"/><text x="630" y="128" text-anchor="end" class="t14 s-ink">10 題</text><text x="8" y="176" class="t14 s-ink">A-4 02 夾換例子時新發現的五條</text><rect x="330" y="157" width="100" height="26" rx="5" class="s-box"/><rect x="330" y="157" width="100" height="26" rx="5" class="s-ask"/><text x="630" y="176" text-anchor="end" class="t14 s-ink">5 題</text><text x="8" y="224" class="t14 s-ink">B. eca_main 來信要你定的四題，加修的時候冒出的三題</text><rect x="330" y="205" width="140" height="26" rx="5" class="s-box"/><rect x="330" y="205" width="140" height="26" rx="5" class="s-ask"/><text x="630" y="224" text-anchor="end" class="t14 s-ink">7 題</text><text x="8" y="272" class="t14 s-ink">C. 線乙（清舊那條線）留的五題</text><rect x="330" y="253" width="100" height="26" rx="5" class="s-box"/><rect x="330" y="253" width="100" height="26" rx="5" class="s-ask"/><text x="630" y="272" text-anchor="end" class="t14 s-ink">5 題</text><text x="8" y="320" class="t14 s-ink">D. 今早兩則備註，想確認你的意思</text><rect x="330" y="301" width="40" height="26" rx="5" class="s-box"/><rect x="330" y="301" width="0" height="26" rx="5" class="s-ask"/><text x="630" y="320" text-anchor="end" class="t14 s-ink">2 題</text><text x="8" y="368" class="t14 s-ink">E. kernel 框架</text><rect x="330" y="349" width="180" height="26" rx="5" class="s-box"/><rect x="330" y="349" width="40" height="26" rx="5" class="s-ask"/><text x="630" y="368" text-anchor="end" class="t14 s-ink">9 題</text></svg><figcaption class="muted">共 43 題。實心＝有建議、已預選（34 題）；空心＝來源沒建議、停在「先不選」（9 題，在 D、E 兩區）。</figcaption></figure><ul class="lead"><li>共 43 題，全部看完大約 30 分鐘；先看 <strong>A-1「先看這四條」</strong>（約 8 分鐘），那四條定了，A-3 多半跟著定；A-2 是一題已經做了、請你確認的事。</li><li>有建議的題已預選建議（★），同意就不用動；9 題來源沒有建議，預設停在「還沒想好，先不選」，要你自己挑。選項與建議都照各線的結果檔，沒有替你判斷。</li><li>答完按底部「複製」，把那一行貼回對話；沒點開過的題會帶 <code>?</code>，仍算待定、之後再問。</li></ul><nav class="toc" aria-label="跳到各節"><a href="#sec-a1">A-1 先看這四條：規範跟現行範本對不上的「根」 4</a><a href="#sec-a0">A-2 一件已經做了、要你確認的事 1</a><a href="#sec-a2">A-3 其餘對不上的條文（前言、01、03～06 夾） 10</a><a href="#sec-a3">A-4 02 夾換例子時新發現的五條 5</a><a href="#sec-b">B. eca_main 來信要你定的四題，加修的時候冒出的三題 7</a><a href="#sec-c">C. 線乙（清舊那條線）留的五題 5</a><a href="#sec-d">D. 今早兩則備註，想確認你的意思 2</a><a href="#sec-e">E. kernel 框架：兩件代定請你看一眼，加七個新題 9</a><a href="#reply">怎麼回覆</a></nav><details><summary>怎麼用</summary><p>每題點一個選項，想補充就寫備註。點選項、寫備註、打開細節或按「看過」都算看過；沒看過的題在回覆裡會帶「?」，那題仍算待定、不算你裁過，之後會再問你。右下「我的回覆」會組好一行字，按「複製」後貼回對話，或貼到看板「待你裁」裡這批那題的意見框送出。選擇會存在這個瀏覽器。</p></details><section><h2 id="sec-a1">A-1 先看這四條：規範跟現行範本對不上的「根」</h2><p class="muted">標準範本今早已換成 <code>templates/agent-fsm</code>，換完發現有些規定本身跟範本對不上。這四條定的是「標準 agent 長什麼樣」，別的條文多半跟著它們走。來源檔的收法甲／乙／丙，這頁寫成 A／B／C；建議是寫手的，不是定案。</p><figure class=""><svg viewBox="0 0 640 92" role="img" aria-label="四條根條文牽動哪些條"><rect x="4" y="6" width="150" height="34" rx="6" class="s-askbox"/><text x="79" y="28" text-anchor="middle" class="t13 s-ink">P-05 入口長怎樣</text><path d="M154 23 H196 M190 18 L196 23 L190 28" class="s-line"/><text x="204" y="28" class="t13 s-ink">P-29、P-35 →（P-34 的例子、P-36 的公式）</text><rect x="4" y="52" width="150" height="34" rx="6" class="s-askbox"/><text x="79" y="74" text-anchor="middle" class="t13 s-ink">P-27 格怎麼寫</text><path d="M154 69 H196 M190 64 L196 69 L190 74" class="s-line"/><text x="204" y="74" class="t13 s-ink">P-09、P-33 →（P-38、P-25）、04 範例</text></svg><figcaption class="muted">P-05 和 P-27 是源頭；先定這兩條，箭頭右邊的幾乎都跟著定。</figcaption></figure><article class="card" id="q-cv-P05" data-qid="cv-P05"><header><span class="num">cv-P05</span><h3 id="heading-cv-P05">入口（P-05）：規範說 agent 的入口是一支 shell 檔、裡面直接跑 loop；現行範本的入口卻是一張「把自己掛上 daemon」的單子。規範要不要改成照範本？</h3></header><p class="muted"><strong>條文說</strong>：入口 <code>_entry</code> 一定是帶 <code>#!/bin/sh</code> 的可執行檔，下一行 <code>exec aos-loop loop.json</code>。<strong>範本實際</strong>：<code>_entry</code> 是沒有執行權限的一行 JSON，做的事是叫 <code>aos-agent ctl add</code> 把自己掛上 daemon、然後就回來；真正跑 loop 的是 daemon，跑的是 <code>body.json</code>。<strong>為什麼要你裁</strong>：這是整份慣例的第一條、照抄的人最先看；條文自己最後一句也寫「本條改不改由使用者定」。</p><blockquote class="quote"><p>aos-agent add。當然，你也可以把_entry寫成aos agent add，這樣我們也可以aos-exec了。</p><cite>使用者 11-05（portable-flow 題 4；同一天範本的 <code>_entry</code> 就改成這樣）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P05"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P05" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 條文改成照範本：入口＝掛上 daemon 的 JSON 單子、身體在 <code>body.json</code>；shell 入口降成「也可以這樣寫」 <span class="star">★ 推薦</span></span><span class="option-consequence">不動程式；P-35、P-29 要跟著改；你 10-19 的原話留在括號當沿革。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P05" value="B"><span class="option-content"><span class="option-title"><b>B</b> 兩種入口並列，不說誰是「一定」</span><span class="option-consequence">改動最小、不動程式；但沒回答「照抄的人該抄哪種」，P-35 還是懸著。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P05" value="C"><span class="option-content"><span class="option-title"><b>C</b> 範本改回照條文（<code>_entry</code> 改成 shell 檔直接跑 loop）</span><span class="option-consequence">要動範本、測試、<code>aos-agent</code> 與子 agent 工具的掛法；而且跟你 11-05、11-03 說的反著走。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：標準已裁成 agent-fsm，入口是整份慣例的開頭，寫明「入口＝掛上 daemon、身體在 body.json」最不會讓照抄的人抄錯；有你 11-05 的原話撐著。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P05 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>然後我們所謂的寫程式，就是定義一個資料夾agent-bob/，然後設定入口：一個shell檔案，經過chmod +x，內容是aos-loop loop.json</p><cite>使用者 10-19 早上（條文當初的依據）</cite></blockquote><blockquote class="quote"><p>agent不需要佔據workspace。agent本身就是一支aos proc，由daemon管理(對，先暫時忽略直接aos-exec出來的那些)</p><cite>使用者 11-03</cite></blockquote><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>proto8/docs/CONVENTION/01-保證佈局入口/02-三-入口-loop-fsm.md</code> 第 5 行；同一條開頭說「一定帶 shebang」，尾巴又說標準範本不是這種。</li><li>「一定帶 shebang、用 <code>exec</code>」是條文自己定的（標「本稿定」），理由是少一層行程、訊號直達 loop。</li><li><strong>牽連</strong>：這條是「入口＝掛上 daemon、常駐」那一組的源頭。選 A → P-29 自動跟 A、P-35 開頭那句「入口一定是它自己的 loop」就沒依據；選 C → 這一組條文都不用改，但要動範本與掛法。</li><li>02 夾跟著這題走的一處：<strong>P-20</strong>「人修好後再 <code>aos-exec</code> 一次」——掛在 daemon 上的修好後是 <code>aos-agent ctl start</code>；這題選 A，那句補成兩種都寫。</li><li>條文原句、範本的 <code>_entry</code> 與 <code>body.json</code> 全文、當初用意的出處，都在下面「來源原文」。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:40-85</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## P-05 入口：條文說入口是一支 shell、裡面直接跑 loop；範本的入口是一張「把自己掛上 daemon」的單子
+
+**1. 條文原句**（`01-保證佈局入口/02-三-入口-loop-fsm.md` 第 5 行）
+
+&gt; - **P-05** 入口 `_entry`（預設 `$AOS_ENTRY`，…）一定帶 shebang（`#!/bin/sh`），下一行 `exec aos-loop loop.json`（設定檔是 aos-loop 唯一的位置參數，…）。也可以讓 loop.json 帶 `_entry`、入口寫 `exec aos-exec loop.json`。（§ 4 原話「#usr/bin/sh aos-loop loop.json」。…範本仍寫 shebang、不靠那條退路；`exec` 少一層行程、訊號直達 loop——本稿定。帶 shebang 的是**可執行檔入口**這一種；入口也可以是沒 `+x` 的 JSON（單子、argv 陣列、`js[$AOS_ENTRY]`，C-73，§ 14），那種入口由 aos-exec 讀、**不寫 shebang、不設 `+x`**（寫法見 P-40）。標準範本 [templates/agent-fsm]… 的 `_entry` 是這種沒 `+x` 的 JSON（單子 `aos-agent ctl add`；`aos-loop loop.json` 寫在 `body.json`，C-73、P-27）；本條改不改由使用者定）
+
+同一條裡，開頭說「一定帶 shebang」「範本仍寫 shebang」，尾巴又說標準範本不是這種。
+
+**2. 範本實際長相**
+
+```
+$ ls -la templates/agent-fsm/_entry
+-rw-r--r--  …  85  _entry          ← 沒有 +x
+```
+
+`_entry`（整份）：
+
+```json
+{&quot;argv&quot;: [&quot;aos-agent&quot;, &quot;ctl&quot;, &quot;add&quot;, {&quot;$env&quot;: &quot;AOS_CD&quot;}], &quot;cwd&quot;: {&quot;$env&quot;: &quot;AOS_WS&quot;}}
+```
+
+`body.json`（整份）：
+
+```json
+[&quot;aos-loop&quot;, &quot;loop.json&quot;]
+```
+
+`interfaces.json` 裡 `&quot;entry&quot;: &quot;body.json&quot;`。也就是：`aos-exec 這個資料夾` 做的事是「跟 daemon 說：把我掛上去」，然後就回來；真的跑 loop 的是 daemon，它跑的是 `body.json`。
+
+**3. 這條規定當初的用意**
+
+- 入口是 shell 檔＋`aos-loop loop.json`：使用者 10-19 早上（[01-原話](../../2026-10/19/ideas/01-原話.md) § 1）「然後我們所謂的寫程式，就是定義一個資料夾agent-bob/，然後設定入口：一個shell檔案，經過chmod +x，內容是aos-loop loop.json」；§ 4「因為agent-bob/.aos/exec的內容就是#usr/bin/sh aos-loop loop.json，而cwd就是agent-bob/」。
+- 「一定帶 shebang、用 `exec`」是條文自己定的（條文標「本稿定」），理由寫在條文裡：少一層行程、訊號直達 loop。
+- 入口也可以是 JSON：使用者 10-19 下班前（[03-原話](../../2026-10/19/ideas/03-原話.md) § 14，後來的 [C-73](../../../docs/CONCEPTS/01-設計理念/07-C-73.md)）「要麼自己是可執行檔，要麼是可以被aos-exec的標準實作所執行的檔案(aos-exec _exec)」。
+- 範本為什麼變成現在這樣：
+  - 11-04 [loop-fsm-agent 設計稿](../04/loop-fsm-agent/01-設計.md) 的 `_entry` 還是 `[&quot;aos-loop&quot;, &quot;loop.json&quot;]`（已經不是 shell）。
+  - 使用者在 [11-03 aos-agent](../03/aos-agent.md) 那份說：「agent不需要佔據workspace。agent本身就是一支aos proc，由daemon管理(對，先暫時忽略直接aos-exec出來的那些)」。
+  - 使用者 11-05（[portable-flow](../05/portable-flow/README.md) 題 4）：「aos-agent add。當然，你也可以把_entry寫成aos agent add，這樣我們也可以aos-exec了。」——同一天 commit `6e49aafab` 把 agent-fsm 的 `_entry` 改成呼叫 `aos-agent ctl add`。這句已寫進 [P-43（續）](../../../docs/CONVENTION/02-題目stack停錯腦/03-P-43續-11-04-aos-agent.md)「入口也可用來掛上 daemon」。
+
+**4. 可行的收法**
+
+- **(甲) 條文改成照範本**：P-05 第一句改成「標準範本的入口 `_entry` 是沒 `+x` 的 JSON 單子：`aos-agent ctl add` 把這隻掛上 daemon；身體的入口是 `body.json`＝`[&quot;aos-loop&quot;, &quot;loop.json&quot;]`，由 `interfaces.json` 的 `entry` 指」。shell 入口（`#!/bin/sh`＋`exec aos-loop loop.json`）降成「也可以這樣寫」的另一種。後果：不動程式；P-35（靠「入口一定是自己的 loop」）、P-29（說 JSON 入口不是範本）要跟著改；10-19 的原話留在括號當沿革。
+- **(乙) 條文留著，把兩種入口並列、不說誰是「一定」**：把「一定帶 shebang」改成「入口有兩種：可執行檔（寫法如下）或沒 `+x` 的 JSON（P-40）；標準範本用後者來掛上 daemon」，尾巴那句「本條改不改由使用者定」拿掉。後果：改動最小、不動程式；但條文沒有回答「照抄的人該抄哪種」，P-35 還是懸著。
+- **(丙) 範本改回照條文**：`_entry` 改成 shell 檔直接跑 loop。後果：要動範本、測試、`aos-agent`／子 agent 工具的掛法，而且跟使用者 11-05 那句、11-03「agent 是 daemon 管的一支 proc」反著走。
+
+**5. 建議（寫手的，不是定案）**：甲。標準已經裁成 agent-fsm，入口這條是整份慣例的開頭，寫明「入口＝掛上 daemon、身體在 body.json」最不會讓照抄的人抄錯；而且有使用者 11-05 的原話撐著。</pre></details></details></article><article class="card" id="q-cv-P27" data-qid="cv-P27"><header><span class="num">cv-P27</span><h3 id="heading-cv-P27">格怎麼寫（P-27）：規範說「有真邏輯的格開一個子資料夾、裡面寫 shell」；現行範本四格都有真邏輯，卻全是「一張單子叫一支 python 檔」。規範要不要改成照範本？</h3></header><p class="muted">「格」＝狀態機表上的一步（等信、想、等腦、做）。<strong>條文說</strong>：標準範本是「混合寫法」——表寫在 <code>fsm.json</code>，一行講得完的格直接內嵌單子，有真邏輯的格開子資料夾、裡面用 shell 寫。<strong>範本實際</strong>：四格（idle、think、wait、act）各叫一支 200～400 行的 python 檔，沒有任何子資料夾、沒有任何 shell 檔。<strong>為什麼要你裁</strong>：這條定的是「標準長什麼樣」；P-09、P-33、P-38、04 範例都跟著它走。</p><blockquote class="quote"><p>好主意。然後我要提醒一下，因為以後會是巢狀嵌入，層層疊疊，act中所使用的工具可能又是另一個agent-cathy，一層一層這樣</p><cite>使用者 10-19（回應 AI 提的「混合寫法」）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P27"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P27" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 條文改成照範本：每一格是一張單子，叫範本資料夾裡的一支程式檔；「開子資料夾寫 shell」降成另一種可用寫法 <span class="star">★ 推薦</span></span><span class="option-consequence">不動程式；P-08、P-09、P-33 都靠「格有自己的資料夾」，要一起看；「混合」這個名字變成歷史稱呼或拿掉。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P27" value="B"><span class="option-content"><span class="option-title"><b>B</b> 條文留著，只補一句現況（範本目前四格都是單子叫 python、沒有資料夾格）</span><span class="option-consequence">改最少；但「標準＝混合寫法」跟「標準範本裡沒有混合」同時寫著，讀的人還是會問哪個才是標準。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P27" value="C"><span class="option-content"><span class="option-title"><b>C</b> 範本改成照條文：四格搬成四個子資料夾</span><span class="option-consequence">要動範本、<code>templates/reviewer</code>（它借這四支檔）、測試與所有說明；沒有你的話要求這樣做。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：你 10-19 贊成的重點是「表在一份 fsm.json、要常改的集中在一處」，這點範本照做了；「邏輯一定用 shell、一定開資料夾」是跟著 agent-bob 來的，bob 已刪。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P27 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>都還好。主要是單子是資料這塊，可以直接嵌套其他JSON，在不希望資料夾佈局太複雜的時候很好用。結果是結構化的這塊也很舒服。 我覺得就是可選啦，想要簡單直接，那就上shell指令，想要用在複雜專案上那就用這套</p><cite>使用者 10-19</cite></blockquote><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/03-shell版與inst版.md</code> 第 5 行；同一個說法也在 01 夾第一份第 9 行、<code>04-範例三種寫法.md</code> 第 58 行。</li><li>範本改成 python 檔的來歷：11-04 loop-fsm-agent 設計稿定「各格是範本裡一支純標準庫 Python」，你看完四題都選建議、說「記完就實作」。沒有找到你針對「格用 python 還是 shell」單獨說過的話。</li><li><strong>牽連</strong>：這條是「格有沒有自己的資料夾」那一組的源頭。選 A → P-09 改開頭句、04 範例只留標準寫法、P-33 只能選 A 或 B（C 要先有資料夾格）。</li><li>條文原句與範本的 <code>fsm.json</code> 全文在下面「來源原文」。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:89-132</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## P-27 混合寫法：條文說「有真邏輯的格開一個子資料夾、裡面寫 shell」；範本四格都有真邏輯，卻全是「一張單子叫一支 python 檔」
+
+**1. 條文原句**（`03-shell版與inst版.md` 第 5 行；同一個說法也在 `01-保證佈局入口/01-一-aos-保證的與二-佈局.md` 第 9 行、`04-範例三種寫法.md` 第 58 行）
+
+&gt; - **P-27** 標準範本＝**混合寫法**，就是第二節 [templates/agent-fsm]… 的樣子：…**狀態表一律寫在 `fsm.json`**；一行講完的格（跑哪支程式、多久逾時）內嵌單子，直接寫在 `exec`：`&quot;exec&quot;: {&quot;argv&quot;: [&quot;python3&quot;, &quot;brain.py&quot;]}`…——agent-fsm 的四格都是這種，邏輯寫在範本資料夾的 python 檔，沒有資料夾格；有真邏輯的格 `exec` 寫子資料夾名、裡面是 shell。要頻繁改的東西（流程、逾時、誰接誰）全在一份 `fsm.json` 裡；要寫邏輯就開資料夾、用 shell，不用把 shell 塞進 JSON。
+
+01 第 9 行：
+
+&gt; 混合寫法（§ 10 使用者「好主意」）：狀態表一律寫在 `fsm.json`；一行講完的格內嵌單子；有真邏輯的格 `exec` 寫子資料夾名。…四格 idle／think／wait／act 都是單子叫範本裡的 python，沒有資料夾格。
+
+**2. 範本實際長相**
+
+`fsm.json`（整份）：
+
+```json
+{&quot;_entry&quot;: [&quot;aos-fsm&quot;, {&quot;$env&quot;: &quot;AOS_CF&quot;}],
+ &quot;start&quot;: &quot;idle&quot;,
+ &quot;states&quot;: {
+   &quot;idle&quot;:  {&quot;exec&quot;: {&quot;argv&quot;: [&quot;python3&quot;, &quot;idle.py&quot;]},
+             &quot;next&quot;: {&quot;0&quot;: &quot;think&quot;, &quot;10&quot;: &quot;idle&quot;}},
+   &quot;think&quot;: {&quot;exec&quot;: {&quot;argv&quot;: [&quot;python3&quot;, &quot;brain.py&quot;]},
+             &quot;next&quot;: {&quot;0&quot;: &quot;wait&quot;, &quot;10&quot;: &quot;idle&quot;}},
+   &quot;wait&quot;:  {&quot;exec&quot;: {&quot;argv&quot;: [&quot;python3&quot;, &quot;wait.py&quot;]},
+             &quot;next&quot;: {&quot;0&quot;: &quot;act&quot;, &quot;10&quot;: &quot;wait&quot;, &quot;11&quot;: &quot;think&quot;}},
+   &quot;act&quot;:   {&quot;exec&quot;: {&quot;argv&quot;: [&quot;python3&quot;, &quot;act.py&quot;], &quot;timeout_ms&quot;: 1800000},
+             &quot;next&quot;: {&quot;0&quot;: &quot;think&quot;, &quot;10&quot;: &quot;idle&quot;}}}}
+```
+
+四支 python 的行數：`idle.py` 247、`brain.py` 217、`wait.py` 426、`act.py` 247（都是真邏輯）。範本裡沒有任何子資料夾、沒有任何 shell 檔。
+
+**3. 這條規定當初的用意**
+
+- 使用者 10-19（[02-原話](../../2026-10/19/ideas/02-原話.md) § 10）。那段的前情是 AI 提的做法：「狀態表一律寫在 `fsm.json`（ann 式），一行講完的格內嵌單子，有真邏輯的格 `val` 寫資料夾名（bob 式）」，使用者回：「好主意。然後我要提醒一下，因為以後會是巢狀嵌入，層層疊疊，act中所使用的工具可能又是另一個agent-cathy，一層一層這樣」。
+- § 7 使用者：「都還好。主要是單子是資料這塊，可以直接嵌套其他JSON，在不希望資料夾佈局太複雜的時候很好用。結果是結構化的這塊也很舒服。 我覺得就是可選啦，想要簡單直接，那就上shell指令，想要用在複雜專案上那就用這套」。
+- 「用 shell 寫邏輯」是當時 agent-bob 的樣子（拍板點 1 使用者選「(b) 中：agent-bob 現在的形狀就是標準，stack 內部自由。」）。
+- 範本為什麼變成 python 檔：11-04 [loop-fsm-agent](../04/loop-fsm-agent/README.md) 設計稿定「表上三格 idle／think／act 各是範本裡一支純標準庫 Python」，使用者看完規劃四題都選建議、說「記完就實作」；其中方向題 1 選「放範本裡，每隻複製」（[04 衝突與方向題](../04/loop-fsm-agent/04-衝突與方向題.md)）。沒有找到使用者針對「格用 python 還是 shell」單獨說過話。
+
+**4. 可行的收法**
+
+- **(甲) 條文改成照範本**：P-27 的定義改成「狀態表一律在 `fsm.json`；每一格是一張單子，叫範本資料夾裡的一支程式檔（agent-fsm 是 python）」；「有真邏輯的格開子資料夾、裡面是 shell」那兩句降成「另一種可用寫法（資料夾格）」，「混合」這個名字改成只是歷史稱呼或拿掉。01 第 9 行、04 的「加資料夾格（混合）」段跟著改。後果：不動程式；P-08「資料夾格就再加一個子資料夾」、P-09、P-33（工具放在格的資料夾裡）都靠「格有自己的資料夾」，要一起看。
+- **(乙) 條文留著，只補一句現況**：保留「混合寫法」的定義，在後面加「標準範本目前四格都是單子叫 python 檔、沒有資料夾格；資料夾格仍是認可的寫法，現在沒有現成例子」。後果：改最少；但「標準＝混合寫法」跟「標準範本裡沒有混合」同時寫著，讀的人還是會問哪個才是標準。
+- **(丙) 範本改成照條文**：把四格搬成四個子資料夾。後果：要動範本、`templates/reviewer`（它借這四支檔）、測試與所有說明；沒有使用者的話要求這樣做。
+
+**5. 建議（寫手的，不是定案）**：甲。使用者 § 10 贊成的重點是「表在一份 `fsm.json`、要常改的集中在一處」，這點範本照做了；「邏輯一定用 shell、一定開資料夾」是跟著 agent-bob 來的，bob 已刪。</pre></details></details></article><article class="card" id="q-cv-P33" data-qid="cv-P33"><header><span class="num">cv-P33</span><h3 id="heading-cv-P33">工具放哪（P-33）：規範說工具放在「叫它的那一格」的資料夾裡、用相對路徑叫；現行範本的工具都登記在一份清單、本體放函式庫。規範要怎麼收？</h3></header><p class="muted"><strong>條文說</strong>：工具放在 <code>&lt;格&gt;/tools/&lt;名&gt;/</code>，格裡寫 <code>aos-exec tools/&lt;名&gt;</code>；不給「程式根」變數、不用 PATH。<strong>範本實際</strong>：沒有格的資料夾、也沒有 <code>tools/</code> 夾；工具登記在 <code>tools.json</code>（15 包），本體在 <code>proto8/lib</code>，靠 <code>AOS_HOME</code> 這個變數找到，用 <code>aos-tools call &lt;名&gt;</code> 叫。<strong>為什麼要你裁</strong>：兩種叫法都出自你的話（10-16 不用 PATH；10-28、11-10 改成登記與整包掛），哪一種寫成「標準」要你定。</p><blockquote class="quote"><p>copy-out能刪就刪</p><cite>使用者 11-10（之後範本的 <code>tools/</code> 夾與捷徑整個拿掉，改成登記函式庫、路徑寫 <code>AOS_HOME</code>）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P33"><li class=""><label class="option-label"><input type="radio" name="q-cv-P33" value="A"><span class="option-content"><span class="option-title"><b>A</b> 條文改成照範本：標準＝登記在 <code>tools.json</code>、本體在函式庫；原來「放在格的資料夾」降成另一種叫法</span><span class="option-consequence">不動程式；但 P-25、P-37、P-38 都建在舊說法上，要一起改，巢狀那一節等於整節重寫，工程較大。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P33" value="B" checked><span class="option-content"><span class="option-title"><b>B</b> 條文留著，開頭加一句界定：「本條講的是沒經 <code>tools.json</code> 的叫法；標準範本走登記檔，見 P-41」 <span class="star">★ 推薦</span></span><span class="option-consequence">改最少、跟 C-61 現在的寫法一致；但 P-33 變成一條「標準範本用不到」的條文，P-37、P-38 也只對這種叫法成立。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P33" value="C"><span class="option-content"><span class="option-title"><b>C</b> 範本改成照條文：把工具搬回 <code>act/tools/…</code></span><span class="option-consequence">跟你 11-10「copy-out能刪就刪」那輪的結果直接相反；也要先有格的資料夾（P-27 選 C 才行）。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 B：寫手建議：C-61 已經把兩種叫法都收了，P-33 只要標明自己管哪一種就不打架；要搬到「標準」位置的內容 P-41 已經寫了。想讓巢狀那一節整節照範本，才選 A。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P33 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>像現在這樣掃tool.json，實在太土太粗暴，不夠靈活</p><cite>使用者 10-28（之後工具改由 <code>aos-tools</code> 管的登記檔）</cite></blockquote><blockquote class="quote"><p>可以不使用PATH嗎？</p><cite>使用者 10-16 夜（看完提案回「好!」）</cite></blockquote><blockquote class="quote"><p>要用相對位置、絕對位置、環境變數指定都可</p><cite>使用者 11-10（路徑怎麼給）</cite></blockquote><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/06-巢狀/01-P-33～P-34.md</code> 第 8 行；02 夾的 P-25 是同一件事的短版。</li><li>範本跟條文不同的三點：工具不在自己資料夾裡；靠 <code>AOS_HOME</code> 找函式庫（它不在 aos 保證的六個變數裡，作用就是條文說不給的「根變數」，只是指函式庫的根）；沒有捷徑。</li><li>「放在格的資料夾、零個 <code>..</code>、不給根變數」是 10-19 第二輪 fable 照原則定的，不是你的原話。</li><li><strong>牽連</strong>：選 A 或 B → P-38 的標題句照改；02 夾的 P-25 要用同一個說法（P-25 現在的寫法已經接近 B）。</li><li>02 夾跟著這題走的兩處：<strong>P-25</strong>（同一件事的短版，現在的寫法已經是 B 的寫法，選 B 就不用再動）、<strong>P-17</strong>（「小格名＝工具資料夾名」→ 選 B 只改成「小格名＝登記名」；選 A 整句改寫）。</li><li>條文原句、<code>tools.json</code> 與 <code>act.py</code> 的片段在下面「來源原文」。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:136-182</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## P-33 工具放哪：條文說工具放在叫它那一格的資料夾裡、用相對路徑叫；範本的工具都登記在一份清單、放在函式庫
+
+**1. 條文原句**（`06-巢狀/01-P-33～P-34.md` 第 8 行）
+
+&gt; - **P-33 工具放在叫它的那一格的資料夾裡：`&lt;格&gt;/tools/&lt;名&gt;/`，格裡寫 `aos-exec tools/&lt;名&gt;`，永遠零個 `..`。** 相對路徑從 cwd 算，而格起跑時 cwd 就是格自己的資料夾（N-59），所以不管這格被埋在第幾層，路徑都一樣長、一樣對。例：bob 的 act 格叫 `tools/cathy`，cathy 的 act 格叫 `tools/stamp`——`&lt;bob 的資料夾&gt;/act/tools/cathy/act/tools/stamp/` 這條路徑就是呼叫鏈本身（P-38）。內嵌單子格（think）的 cwd 是 agent 資料夾，它若要工具就是 agent 根下的 `tools/&lt;名&gt;`，同一條規則。**不給程式根變數**（aos 只訂那幾個變數，§ 4；…）；**不用 PATH**（C-61）。幾格共用一個工具、幾隻 agent 共用一隻 cathy：共用的收進函式庫 `proto8/lib/`（C-61），在自己的 `tools/` 放一條捷徑指過去（…），或登記進 `tools.json`；同名自己的贏；要釘版、要改寫才複製一份（複製＝自己維護，版本＝git；使用者 11-12 裁 Q16「a」）。
+
+（02 夾的 P-25 是同一件事的短版：「工具＝`tools/&lt;名&gt;/` 子資料夾程式，**放在叫它的那一格的資料夾裡**（`act/tools/cathy/`），格裡寫 `aos-exec tools/&lt;名&gt;`」。）
+
+**2. 範本實際長相**
+
+範本沒有格的資料夾，也沒有 `tools/` 夾。`tools.json`（前三行與最後一行，中間同形共 15 包）：
+
+```json
+{&quot;$override&quot;: [{&quot;$env&quot;: &quot;AOS_HOME&quot;, &quot;$path&quot;: &quot;/lib/packs/look.json&quot;},
+               {&quot;$env&quot;: &quot;AOS_HOME&quot;, &quot;$path&quot;: &quot;/lib/packs/change.json&quot;},
+               {&quot;$env&quot;: &quot;AOS_HOME&quot;, &quot;$path&quot;: &quot;/lib/packs/delete.json&quot;},
+               …
+               {&quot;$env&quot;: &quot;AOS_HOME&quot;, &quot;$path&quot;: &quot;/lib/packs/index.json&quot;}]}
+```
+
+`act.py` 叫工具的那兩行：
+
+```python
+TOOLS = [&quot;aos-tools&quot;] + ([&quot;--file&quot;, tools_file] if tools_file else [])
+p = subprocess.Popen(TOOLS + [&quot;call&quot;, name], stdin=subprocess.PIPE, …
+```
+
+三件事跟條文不一樣：(1) 工具不在自己資料夾裡，在 `proto8/lib`；(2) 靠 `AOS_HOME` 這個環境變數找到函式庫——它不是 aos 保證的六個變數之一，作用就是條文說不給的「根變數」（只是指的是函式庫的根，不是 agent 的根）；(3) 沒有捷徑，「放捷徑指過去」這個做法範本不用。
+
+**3. 這條規定當初的用意**
+
+- 不用 PATH：使用者 10-16 夜「可以不使用PATH嗎？」，看完提案「好!」（[C-61](../../../docs/CONCEPTS/05-agent/02-agent-的工具與agent-就是一台狀態機.md)、[10-16 agent-inherit](../../2026-10/16/agent-inherit/02-四-使用者決定.md)）。
+- 「放在格的資料夾、零個 `..`、不給根變數」是 10-19 第二輪 fable 照原則定的（條文括號：C-61、N-50、C-56、§ 4）。§ 4 使用者：「反正我們就是訂下一些環境變數，就這樣。」
+- C-61 現在的本文其實把兩種叫法都寫了，而且**登記那種排前面**：「**agent 的工具由自己資料夾的 `tools.json` 登記**」，放格資料夾那種寫成「**沒經 `tools.json` 的叫法**（例 topdown 的 agent、bob 的 `act/tools/cathy`）」。
+- 範本為什麼用登記的：
+  - 使用者 10-28（[aos-tools 原文](../../2026-10/28/aos-tools/01-使用者原文.md)）：「像現在這樣掃tool.json，實在太土太粗暴，不夠靈活」——之後工具改由 `aos-tools` 管的登記檔。
+  - 使用者 11-10（[tool-packs](../10/tool-packs/README.md)）：「1.預設開到第四包，想要安全就自行限制。」——通用工具整包掛在 `lib/packs`。
+  - 使用者 11-10「copy-out能刪就刪」（[templates-cp 04](../10/templates-cp/04-刪copy-out前要解決的.md)）：範本的 `tools/` 夾與捷徑整個拿掉，改成登記 lib 那格、路徑寫 `AOS_HOME`（[templates-cp](../10/templates-cp/README.md) 選項 (a)）；路徑怎麼給：「要用相對位置、絕對位置、環境變數指定都可」。
+  - 使用者 11-12 Q16「a」（[small-rulings](../12/small-rulings.md)）：條文已引。
+
+**4. 可行的收法**
+
+- **(甲) 條文改成照範本**：P-33 的粗體句改成「標準範本的工具登記在 agent 資料夾的 `tools.json`（`aos-tools` 管），工具本體放在函式庫 `proto8/lib`、路徑寫 `{&quot;$env&quot;: &quot;AOS_HOME&quot;, …}`；格用 `aos-tools call &lt;名&gt;` 叫」；原來那套「放在格的資料夾、`aos-exec tools/&lt;名&gt;`」降成「沒經登記檔的叫法（C-61 後半）」。「不給程式根變數」補一句「`AOS_HOME` 是指到函式庫的人設變數，不是 aos 保證的六個」。後果：不動程式；P-25（02 夾）、P-37（「工具在呼叫者資料夾裡所以寫不出循環」）、P-38（tools 資料夾樹）都建在舊說法上，要一起改；10-28 例外段（round 已刪）可以順手處理。
+- **(乙) 條文留著，開頭加一句界定範圍**：P-33 前面加「本條講的是**沒經 `tools.json`** 的叫法（C-61）；標準範本 agent-fsm 的工具走登記檔，見 P-41」，其餘不動。後果：改最少、跟 C-61 現在的寫法一致；但 P-33 就變成一條「標準範本用不到」的條文，P-37、P-38 仍然只對這種叫法成立。
+- **(丙) 範本改成照條文**：把工具搬回 `act/tools/…`。後果：跟 11-10「copy-out能刪就刪」那輪的結果（範本不帶 tools 夾、不帶捷徑）直接相反，也要先有格的資料夾（P-27 丙）。
+
+**5. 建議（寫手的，不是定案）**：乙。C-61 已經把兩種叫法都收了，P-33 只要標明自己管哪一種就不打架；真正要搬到「標準」位置的內容 P-41 已經寫了。若使用者想讓巢狀那一節整節照範本，才走甲（工程較大）。</pre></details></details></article><article class="card" id="q-cv-P35" data-qid="cv-P35"><header><span class="num">cv-P35</span><h3 id="heading-cv-P35">把 agent 當工具（P-35）：規範說被叫的 agent「跑到沒事才回來」；現行範本做的 agent 是掛上 daemon 就回來、而且常駐不收工。規範要怎麼收？</h3></header><p class="muted"><strong>條文說</strong>：當工具的 agent 入口一定是它自己的 loop，被叫一次就跑到沒事（idle 退 10）才回來；格叫工具時，工具的非 0 一律當失敗。<strong>範本實際</strong>：入口是「掛上 daemon」就回來；沒信時停著等、不收工；要把另一隻 agent 當工具，是用 <code>subagent</code> 工具把它掛上 daemon、再用 say／listen 跟它講話；工具的非 0 是回給腦、不算這格失敗。<strong>為什麼要你裁</strong>：這條定的是「agent 疊 agent」怎麼疊，P-34、P-36 的例子與公式跟著它走。</p><blockquote class="quote"><p>好主意。然後我要提醒一下，因為以後會是巢狀嵌入，層層疊疊，act中所使用的工具可能又是另一個agent-cathy，一層一層這樣</p><cite>使用者 10-19</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P35"><li class=""><label class="option-label"><input type="radio" name="q-cv-P35" value="A"><span class="option-content"><span class="option-title"><b>A</b> 條文改成照範本：標準的 agent 是常駐的，當工具要經轉接工具（例 <code>subagent</code>）；工具非 0 回給腦</span><span class="option-consequence">不動程式；P-34 的例子要換說法；P-05 也選 A 才講得通。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P35" value="B" checked><span class="option-content"><span class="option-title"><b>B</b> 條文留著，標成「跑完就退的那種 agent」的規矩；標準範本是常駐的、不適用，當工具的做法見 P-41 <span class="star">★ 推薦</span></span><span class="option-consequence">改最少；但「跑完就退」的寫法現在沒有現成範本可指，只能說「把範本的 idle 改一下、入口換一下」。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P35" value="C"><span class="option-content"><span class="option-title"><b>C</b> 後半拿掉：只留「不可以把別人的 <code>fsm.json</code> 當自己的一格」與 11-04 加註</span><span class="option-consequence">最乾淨；但「agent 當工具怎麼叫」在巢狀這節就沒有正面說法，只剩 P-41 那一句。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 B：寫手建議：「一次叫完就回來」的 agent 仍是合理的寫法（範本檔頭自己寫了怎麼改成收工），只是不是標準範本的預設；先標清楚適用範圍，不急著重寫整條。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P35 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>agent的定義就是一個狀態機……我們的規範會說，為了讓agent方便審視自己，所以agent就是一個被人驅動的狀態機，需要外面有人用loop驅動他</p><cite>使用者 10-16</cite></blockquote><blockquote class="quote"><p>aos-loop是aos agent這個程式中的內部組件</p><cite>使用者 10-29</cite></blockquote><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/06-巢狀/02-P-35～P-36.md</code> 第 3～4 行。</li><li>對不上的三句：「入口一定是它自己的 loop」「被叫一次跑到 idle 退 10 才回來」「工具的非 0 一律當失敗、自己 exit 1」（最後一句條文加註裡已經承認 agent-fsm 不這樣）。</li><li>「整隻叫、不拿別人 fsm 的一格」「工具非 0 當失敗」是 fable 照原則定的，沒有找到你針對這兩句的原話。</li><li><strong>牽連</strong>：P-05 若選 A，這條開頭的「（P-05）」引用要一起改；這條怎麼界定（常駐／跑完就退），P-34 的例子和 P-36 的公式就用同一個界定。</li><li>02 夾跟著這題走的一處：<strong>P-19</strong>「10＝正常停…loop 收到 10 以 0 結束」——範本連 idle 的 10 也被表接住、不收工；這題選 A 或 B，那裡補半句即可。</li><li>寫手另外提了「最省事的一組」：P-05 選 A、P-27 選 A、P-33 選 B、P-35 選 B，其餘照各題建議（這頁的預選就是這一組）。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:186-221</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## P-35 agent 當工具：條文說被叫的 agent 入口是自己的 loop、跑到沒事才回來；範本的入口是「掛上 daemon」就回來，而且常駐不收工
+
+**1. 條文原句**（`06-巢狀/02-P-35～P-36.md` 第 3～4 行）
+
+&gt; - **P-35 格可以是一整隻 agent，不可以是別人 fsm 的一次；10 只有 idle 退。** 當工具的 agent 入口一定是它自己的 loop（P-05），被叫一次就從現在的 state 跑到它的 idle 退 10 為止才回來；它的 loop 收到 10 退 0，所以呼叫它的格看到的是 0，上層的 loop 不會被誤停——cathy 的 10 到不了 bob。…格叫工具時**工具的非 0 一律當失敗、自己 `exit 1`**（…），不把工具的碼原樣 `exit`——工具若退 10 會被 fsm→loop 當成「停」。
+
+第 4 行的加註：
+
+&gt; - **接住的 10 到不了 loop**（使用者 10-30「都照建議」，…）：「10 只有 idle 退」是字串 `next` 那種表的慣例；物件 `next`（N-36）的表上，任何一格的 10 都可以被接住…。例子是 `templates/agent-fsm`（使用者 11-04 衝突 2 選「think 也退 10，條文加註」，…）：…idle 退 10＝queue 空，範本表上接住＝停著等、改成字串 `next`＝10 到 loop＝收工…。「格叫工具時工具的非 0 一律當失敗、自己 exit 1」不變；agent-fsm 的 act 把工具的非 0 回給腦、自己不退那個碼。
+
+**2. 範本實際長相**
+
+- 入口：見 P-05（`_entry` 是 `aos-agent ctl add`，掛上就回來）。
+- `loop.json` 沒有 `max`，`fsm.json` 的 idle 格 `&quot;next&quot;: {&quot;0&quot;: &quot;think&quot;, &quot;10&quot;: &quot;idle&quot;}`——idle 退 10 被表接住、留在 idle，loop 永遠收不到 10，所以不會「跑到沒事就回來」，是常駐的。
+- `idle.py` 檔頭：`10＝沒信（表上接住＝停著等，改成字串 next＝收工）`。
+- `act.py` 檔頭：`工具退非 0 時 stderr 多一行提醒「agent-fsm: warning: tool &lt;名&gt; exit code N (passed back to the brain)」（…不是這格的錯，照樣退 0）`。
+- 現在「把另一隻 agent 當工具」實際怎麼做：`lib/packs/subagent.json` 那包的 `subagent` 工具（`lib/agent/subagent/_entry`），做法是把子 agent 掛上 daemon、再用 say／listen 跟它講話，不是 `aos-exec` 它等它跑完。P-41 也寫了：「要把另一隻 agent 給腦當工具，轉接寫在那個工具資料夾自己的 `_entry`，範本不管（C-52）」。
+
+所以 P-35 有三句對不上：「入口一定是它自己的 loop」「被叫一次跑到 idle 退 10 才回來」「工具的非 0 一律當失敗、自己 exit 1」（最後一句條文加註裡已經自己承認 agent-fsm 不這樣）。
+
+**3. 這條規定當初的用意**
+
+- 巢狀：使用者 § 10「以後會是巢狀嵌入，層層疊疊，act中所使用的工具可能又是另一個agent-cathy，一層一層這樣」。
+- 停止碼 10 照用、agent 資料夾可帶 loop 當入口：§ 9 使用者「盛夏都用今天的做法」（「盛夏」＝「剩下」），七條裁定的第 4、5 條是整理句（[02-原話](../../2026-10/19/ideas/02-原話.md)）。
+- 「整隻叫、不拿別人 fsm 的一格」「工具非 0 當失敗」是 fable 照 P-19、P-21、C-52、N-53 定的，沒有找到使用者針對這兩句的原話。
+- agent 是被外面 loop 驅動的狀態機：使用者 10-16「agent的定義就是一個狀態機……我們的規範會說，為了讓agent方便審視自己，所以agent就是一個被人驅動的狀態機，需要外面有人用loop驅動他」；10-29「aos-loop是aos agent這個程式中的內部組件」（都引在 [loop-fsm-agent README](../04/loop-fsm-agent/README.md)）。
+- 範本為什麼常駐：11-04 設計稿「沒有 `max`：常駐版靠 ctl `stop` 收工。要『跑幾次就停』自己加」（[01-設計](../04/loop-fsm-agent/01-設計.md) § 2）；使用者 11-04 衝突 2 選「think 也退 10，條文加註」。入口改成掛 daemon 見 P-05 的出處。
+- 工具非 0 回給腦：P-41 的規定（「叫工具出的問題回給腦、不停」），出處在 P-41 條文裡，這次沒有另外追。
+
+**4. 可行的收法**
+
+- **(甲) 條文改成照範本**：保留標題的前半（「格可以是一整隻 agent，不可以是別人 fsm 的一次」——這個道理沒變），把「當工具的 agent 入口一定是它自己的 loop…跑到 idle 退 10 才回來」改成「標準範本做的 agent 是常駐的（掛在 daemon 上、idle 的 10 被表接住）；要把它當工具，用轉接工具（例 `subagent`：掛上、say、listen）跟它講話，不是 `aos-exec` 等它跑完」；「工具的非 0 一律當失敗」改成「標準範本的 act 把工具的非 0 回給腦（P-41）；沒有腦可回的格才自己 `exit 1`」。後果：不動程式；P-34（「正常結束時 stack 停在起點」「再叫一次 cathy」）的例子要跟著換說法；P-05 走甲才講得通。
+- **(乙) 條文留著，標成「跑完就收工的那種 agent」的規矩**：開頭加「本條講的是**跑完就退**的 agent（表上 idle 的 `next` 寫字串、10 會到 loop；入口直接是 loop）；標準範本是常駐的，不適用『跑到 idle 退 10 才回來』，當工具的做法見 P-41」。後果：改最少；跑完就退的寫法現在沒有現成範本可指（只能說「把範本的 idle 改成字串 `next`、入口改成 `body.json` 那種」）。
+- **(丙) 這條的後半拿掉**：只留「不可以把別人的 `fsm.json` 當自己的一格」與 11-04 加註，其餘刪。後果：最乾淨，但「agent 當工具怎麼叫」在巢狀這節就沒有正面說法，只剩 P-41 那一句。
+
+**5. 建議（寫手的，不是定案）**：乙。「一次叫完就回來」的 agent 仍是合理的寫法（範本檔頭自己寫了怎麼改成收工），只是不是標準範本的預設；先標清楚適用範圍，不急著重寫整條。若 P-05 裁甲，這條開頭的「（P-05）」引用要一起改。</pre></details></details></article></section><section><h2 id="sec-a0">A-2 一件已經做了、要你確認的事</h2><p class="muted">寫手代定、可還原；因為你沒有逐字說過「刪」，單獨拿出來問。</p><article class="card" id="q-cv-old" data-qid="cv-old"><header><span class="num">cv-old</span><h3 id="heading-cv-old">規範裡「題目資料夾」那套舊協議，寫手已經整段刪掉了。你當時說的是「要」換成 agent-fsm，沒有逐字說刪——照這樣可以嗎？</h3></header><p class="muted"><strong>刪了什麼</strong>：舊協議＝「題目放工作區的 <code>new/</code>、認領搬 <code>cur/</code>、答案寫 <code>out/</code>、做完搬 <code>done/</code>」那一套給 agent 派題的做法。這次從規範 02 夾整段拿掉：P-11 的「舊協議」子項、P-12 與 P-13 的前半、P-14 的半句、P-19 與 P-42 各一句。<strong>為什麼判斷可以刪</strong>：現在沒有任何範本或程式在用它（條文自己也寫「現在沒有範本用它；新東西不用」），標準已換成走 queue 的 agent-fsm，今早的待施工清單也點名了這幾句。<strong>少了哪句你的話</strong>：連帶刪掉一句你 10-23 的選項原話「改成一致的階段名」（講的是舊協議的階段名 <code>new/</code>、<code>cur/</code>、<code>done/</code>；原話仍留在 10-23 的討論紀錄裡）。<strong>為什麼要你確認</strong>：這是寫手的代定、可還原；你答的是「要」換例子，不是逐字說「舊協議刪掉」，而且這段昨天刪過一次又被還原，理由就是「留給你裁」。</p><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（第 2 點「要」＝回答「02 夾的舊協議與 bob 式例子要不要同樣換成 agent-fsm」）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-old"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-old" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 照這樣，舊協議不留 <span class="star">★ 推薦</span></span><span class="option-consequence">條文只剩 queue 一種輸入；10-23 那句原話只留在討論紀錄；想看舊協議長怎樣要翻 git 歷史。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-old" value="B"><span class="option-content"><span class="option-title"><b>B</b> 還原成「仍可用的另一種協議」</span><span class="option-consequence">P-11 子項與 P-12、P-13、P-14、P-19、P-42 那幾句放回去；條文繼續描述一套現在沒有範本、沒有程式在用的做法，而且 <code>aos-agent say</code>／<code>listen</code> 不認它。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議照這樣：沒有東西在用它，標準也已換成走 queue 的 agent-fsm；你說過舊的刪掉沒差、要找回靠 git。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-old 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>不用，舊的東西刪掉也沒差，反正有git commit可以回去找，這樣還省了我定期跑tidy工作流的功夫。</p><cite>使用者 11-07 檢討點 2（寫手引的依據）</cite></blockquote><blockquote class="quote"><p>改成一致的階段名</p><cite>使用者 10-23 選項原話（這次連帶從條文刪掉的那句；講舊協議的階段名）</cite></blockquote><ul><li>連帶的另一處：P-14「只進不出，清理是人的事」原本講 <code>done/</code>，改掛到 queue 的 <code>archive/</code>。</li><li>「proto8 下沒有任何程式實作它」是刪的那位寫手的依據；對照的寫手註明這句他沒有另外全面搜過。</li><li>前情：11-12 那輪刪過一次，對讀時整段還原，理由是它屬於「留給使用者裁」的那組。</li><li>02 夾的改動目前在工作樹裡（改了 6 個檔）。選 B 的話，P-12、P-13、P-14、P-19、P-42 各有一句要跟著放回去。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:547-561</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">### 先要使用者確認的一題：題目資料夾那套舊協議整段刪了
+
+**做了什麼（另一位寫手的代定，可翻案）**：舊協議＝「題目放 `$AOS_WS/new/`、認領搬 `cur/`、答案寫 `out/`、做完搬 `done/`」那一套。這次把它從條文整段拿掉：P-11 的「舊協議：題目資料夾」子項、P-12 與 P-13 的前半、P-14 的半句、P-19 與 P-42 各一句。連帶：
+
+- 刪掉一句使用者 10-23 的選項原話「改成一致的階段名」（講的是舊協議的階段名 `new/`、`cur/`、`done/`；原話仍在 [10-23 naming](../../2026-10/23/naming.md)）。
+- P-14「只進不出，清理是人的事」原本講 `done/`，改掛到 queue 的 `archive/`。
+
+**他的依據**：proto8 下沒有任何程式實作它；條文自己寫「現在沒有範本用它；新東西不用」；[裁定落地-1113](裁定落地-1113.md) 的待施工清單點名「連同舊協議殘句 P-11～P-14、P-19」。（「沒有任何程式實作它」這句我沒有另外全面搜過。）
+
+**要知道的前情**：這段 11-12 那輪（W7a）刪過一次，對讀時又整段還原，理由是它屬於「留給使用者裁」的那組（[thinking-to-docs README](../12/thinking-to-docs/README.md)「CONVENTION 舊協議 P-11～P-14、P-19」那條）。使用者之後答的是「2.要。」——題目問的是「同樣換成 agent-fsm」，沒有逐字說「舊協議刪掉」。所以寫成一題請他確認：
+
+- **(甲) 照這樣，舊協議不留**。後果：條文只剩 queue 一種輸入；10-23 那句原話只留在 thinking；想看舊協議長怎樣要翻 git 歷史。
+- **(乙) 還原成「仍可用的另一種協議」**。後果：P-11 子項與 P-12、P-13、P-14、P-19、P-42 那幾句放回去；條文繼續描述一套現在沒有範本、沒有程式在用的做法，而且 `aos-agent say`／`listen` 不認它。
+
+**建議（寫手的，不是定案）**：甲。沒有東西在用它，標準也已經換成走 queue 的 agent-fsm；使用者說過舊的刪掉沒差、要找回靠 git（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md) 11-07 檢討點 2「舊的東西刪掉也沒差，反正有git commit可以回去找」）。</pre></details></details></article></section><section><h2 id="sec-a2">A-3 其餘對不上的條文（前言、01、03～06 夾）</h2><p class="muted">多半是「例子過期」或「條文落後程式」，不改規定的意思；有幾條跟著上面四條走，題目裡有寫。</p><article class="card" id="q-cv-P06" data-qid="cv-P06"><header><span class="num">cv-P06</span><h3 id="heading-cv-P06">loop.json 的欄位（P-06）：規範說 aos-loop 認的欄位「共五個」，程式現在認八個。條文要不要補齊？</h3></header><p class="muted"><strong>條文說</strong>：<code>loop.json</code> 裡 aos-loop 認的 key 共五個（<code>exec</code>、<code>max</code>、<code>interval_ms</code>、<code>ctl</code>、<code>state</code>）。<strong>實際</strong>：程式另外認 <code>state_flux</code>、<code>on_start</code>、<code>on_stop</code>，範本三個都用了。這題是條文落後程式，不牽涉取捨；因為是條文，還是請你看一眼。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P06"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P06" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 條文補齊到八個 <span class="star">★ 推薦</span></span><span class="option-consequence">只改條文；純粹追上程式，沒有方向問題。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P06" value="B"><span class="option-content"><span class="option-title"><b>B</b> 條文不列數字，改成「以 aos-loop 的說明為準」</span><span class="option-consequence">以後程式加 key 條文不用再追；但照抄的人要多點一層才看得到全表。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P06" value="C"><span class="option-content"><span class="option-title"><b>C</b> 不動</span><span class="option-consequence">條文繼續寫錯的數字；第十節「沒有落後」那句也就不成立。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：是事實更新，不牽涉取捨。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P06 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>exec，loop／daemon 的 run 也一起改 exec</p><cite>使用者（條文引的；當時五個 key 的來歷之一）</cite></blockquote><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/01-保證佈局入口/02-三-入口-loop-fsm.md</code> 第 6 行。</li><li><code>description</code> 是 loop 不看的 key，條文已寫「其他 key loop 不看」，不算對不上；範本沒寫 <code>max</code> 也不算（條文自己寫「沒寫＝不限」）。</li><li>順帶：02 夾的 P-42 寫「agent 的 loop.json 不用寫這兩格」，範本卻把 <code>ctl</code>、<code>state</code>、<code>state_flux</code> 明寫了（寫的就是預設值，行為一樣）。</li><li>02 夾跟著這題走的一處：<strong>P-42</strong>「loop.json 不用寫這兩格」——範本明寫了預設值，而且窗現在是三個；這題選 A 時那句順手改。</li><li>獨立的一題，怎麼選都不影響別條。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:225-259</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## P-06 loop.json 的欄位：條文說 aos-loop 認的 key 共五個；程式現在認八個，範本用到其中三個新的
+
+**1. 條文原句**（`01-保證佈局入口/02-三-入口-loop-fsm.md` 第 6 行）
+
+&gt; - **P-06** `loop.json` 的欄位：aos-loop 認的 key 照 [impls/aos-loop]… 共五個：`exec`、`max`，加選填的 `interval_ms`〔…〕、`ctl`、`state`〔窗的檔名，在 `$AOS_STACK` 底下；沒寫＝`ctl.json`／`state.json`、寫 `null`＝不開（…）〕；其他 key 如 `body`、`_entry` loop 不看，是給 aos-exec 用的
+
+**2. 範本實際長相**
+
+`loop.json`（整份，一行；這裡斷行好讀）：
+
+```json
+{&quot;description&quot;: &quot;Schedule the agent FSM and expose public control, stable state, and state flux files; …&quot;,
+ &quot;exec&quot;: &quot;fsm.json&quot;, &quot;interval_ms&quot;: 300,
+ &quot;ctl&quot;: &quot;ctl.json&quot;, &quot;state&quot;: &quot;state.json&quot;, &quot;state_flux&quot;: &quot;state_flux.json&quot;,
+ &quot;on_start&quot;: {&quot;argv&quot;: [{&quot;$env&quot;: &quot;AOS_HOME&quot;, &quot;$path&quot;: &quot;/lib/agent/hook_fire/_entry&quot;}, &quot;after_start&quot;, {&quot;$env&quot;: &quot;AOS_CD&quot;}]},
+ &quot;on_stop&quot;:  {&quot;argv&quot;: [{&quot;$env&quot;: &quot;AOS_HOME&quot;, &quot;$path&quot;: &quot;/lib/agent/hook_fire/_entry&quot;}, &quot;after_stop&quot;, {&quot;$env&quot;: &quot;AOS_CD&quot;}]}}
+```
+
+程式說明（[aos-loop docs/01](../../../impls/aos-loop/docs/01-用法.md) 第 19 行）：「選填 `interval_ms`、`ctl`、`state`、`state_flux`」；[aos-loop README](../../../impls/aos-loop/README.md)：「loop.json 選填 `on_start`、`on_stop`，寫法同 `exec`」。所以程式認的是 `exec`、`max`、`interval_ms`、`ctl`、`state`、`state_flux`、`on_start`、`on_stop` 八個。`description` loop 不看（條文「其他 key loop 不看」已涵蓋）。
+
+順帶：02 夾的 P-42 寫「aos-loop 沒寫就是這兩個名，所以 agent 的 loop.json 不用寫這兩格」，範本卻把 `ctl`、`state`、`state_flux` 三格都明寫了（寫的就是預設值，行為一樣）。
+
+**3. 這條規定當初的用意**
+
+- 五個 key 是 10 月下旬到 11-04 的現況：`exec`／`max` 的名字（使用者「exec，loop／daemon 的 run 也一起改 exec」）、`ctl`／`state`（使用者 11-04 題 5「留 key、沒寫時預設就是這兩個名」）——都引在條文裡。
+- `state_flux`：11-05 no-pid 線加的第三個窗（aos-loop README 寫的出處；使用者原話這次沒追）。
+- `on_start`／`on_stop`：aos-loop README 寫「使用者要 agent 的 hook 有『起來與停下』兩個事件，掛哪層選『aos-loop 自己加』」（[clock-hook](../11/clock-hook/README.md)）。
+
+**4. 可行的收法**
+
+- **(甲) 條文補齊到八個**：「共五個」改成「共八個：`exec`、`max`，加選填的 `interval_ms`、`ctl`、`state`、`state_flux`（第三個窗，沒寫＝`state_flux.json`）、`on_start`、`on_stop`（起來、要退時各跑一次，寫法同 `exec`）」。後果：只改條文；純粹是追上程式，沒有方向問題。
+- **(乙) 條文不列數字**：改成「aos-loop 認的 key 以 [impls/aos-loop 的說明](../../../impls/aos-loop/docs/01-用法.md) 為準，慣例只規定 `exec` 怎麼寫」，把清單交給程式說明。後果：以後程式加 key 條文不用再追；但照抄的人要多點一層才看得到全表。
+- **(丙) 不動**：後果：條文繼續寫錯的數字，第十節「沒有落後」那句也就不成立。
+
+**5. 建議（寫手的，不是定案）**：甲。是事實更新，不牽涉取捨；順手把 P-42 那句「不用寫這兩格」留給 02 夾的寫手看要不要補「範本明寫了預設值」。</pre></details></details></article><article class="card" id="q-cv-P09" data-qid="cv-P09"><header><span class="num">cv-P09</span><h3 id="heading-cv-P09">「每一格都是資料夾程式」（P-09）：標準範本四格沒有一格是。開頭那句要不要改？</h3></header><p class="muted"><strong>條文說</strong>：每一格都是資料夾程式；後半句又寫了例外——直接放單子的格不是。<strong>範本實際</strong>：四格全都是「直接放單子」的那種，所以開頭句在標準範本上一格都不成立。真正要守的是第二句「fsm 只看結束碼、不管格裡面怎麼做」，這句範本照做。</p><blockquote class="quote"><p>不過exec本來就應該要可以直接放內嵌單子吧</p><cite>使用者 10-24（條文後半那個例外的出處）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P09"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P09" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 改開頭句成「每一格是一個資料夾程式或一張單子」 <span class="star">★ 推薦</span></span><span class="option-consequence">只改一句；跟 P-27 選 A 同方向。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P09" value="B"><span class="option-content"><span class="option-title"><b>B</b> 不動，尾巴補一句「標準範本四格都是直接放單子的那種」</span><span class="option-consequence">標題句仍然跟標準相反。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P09" value="C"><span class="option-content"><span class="option-title"><b>C</b> 不處理</span><span class="option-consequence">條文後半已經寫了例外，算說得通。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：選 A，跟著 P-27 一起改；如果 P-27 你選了 B 或 C，這條就改選 C。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P09 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/01-保證佈局入口/02-三-入口-loop-fsm.md</code> 第 14 行。</li><li>這是對照時新發現的一條（今早那張清單沒有）。</li><li><strong>牽連</strong>：跟著 P-27 走。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:263-279</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## P-09 每一格都是資料夾程式（新加）：標準範本的四格沒有一格是
+
+**1. 條文原句**（`01-保證佈局入口/02-三-入口-loop-fsm.md` 第 14 行）
+
+&gt; - **P-09** 每一格都是資料夾程式：`exec` 是字串時經 aos-exec 跑，內嵌在 `fsm.json` 的 `檔#/…/body` 單子格也是經 aos-exec 跑的一個入口（P-07）；`exec` 直接放單子物件時由 fsm 行程內跑，那格不是資料夾程式（…）。fsm 只看格的結束碼，不讀格的 stderr、不管格裡面怎麼做
+
+**2. 範本實際長相**：四格都是「`exec` 直接放單子物件」（見 P-27 貼的 `fsm.json`），也就是條文自己說的「不是資料夾程式」那種。開頭那句「每一格都是資料夾程式」在標準範本上一格都不成立。
+
+**3. 這條規定當初的用意**：條文括號是 C-52、N-38、N-41（上層只看結束碼、不管格裡面）。後半句的例外來自使用者 10-24「不過exec本來就應該要可以直接放內嵌單子吧」（[exec-relative 原文](../../2026-10/24/exec-relative/01-使用者原文.md)）。真正要守的是第二句「fsm 只看結束碼、不管格裡面怎麼做」，這句範本照做。
+
+**4. 可行的收法**
+
+- **(甲) 改開頭句**：「每一格都是資料夾程式」改成「每一格是一個資料夾程式或一張單子」，後面照舊。後果：只改一句；跟 P-27 甲同方向。
+- **(乙) 不動，補一句**：尾巴加「標準範本四格都是直接放單子的那種」。後果：標題句仍然跟標準相反。
+- **(丙) 不處理**：條文後半已經寫了例外，算說得通。
+
+**5. 建議（寫手的，不是定案）**：甲，跟著 P-27 一起改；若 P-27 裁乙或丙，這條就走丙。</pre></details></details></article><article class="card" id="q-cv-P27b" data-qid="cv-P27b"><header><span class="num">cv-P27b</span><h3 id="heading-cv-P27b">範本的格「每隻複製一份、不跨 agent 互指」（P-27 末句與 04 尾句）：另一個範本 reviewer 直接借 agent-fsm 的四格，範本也不再帶捷徑。條文要不要跟上？</h3></header><p class="muted"><strong>條文說</strong>：範本各格的程式每隻 agent 複製一份、自己改，不跨 agent 互指；有第三份一樣的才抽進函式庫、「範本改捷徑」。<strong>實際</strong>：<code>templates/reviewer</code> 的四格直接用 <code>AOS_HOME</code> 指到 agent-fsm 的檔（沒複製）；範本 11-10 起不帶捷徑。</p><blockquote class="quote"><p>copy-out能刪就刪</p><cite>使用者 11-10（捷徑拿掉的出處）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P27b"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P27b" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 改條文：「改捷徑」換成「用 <code>AOS_HOME</code> 指過去」；尾句改成「複製出來的 agent 各有一份；範本之間可以借格」 <span class="star">★ 推薦</span></span><span class="option-consequence">只改條文。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P27b" value="B"><span class="option-content"><span class="option-title"><b>B</b> 改 reviewer 範本：讓它自己帶一份四格</span><span class="option-consequence">動範本與測試；四支檔變兩份，之後改一邊要記得改另一邊。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P27b" value="C"><span class="option-content"><span class="option-title"><b>C</b> 不處理，當成 reviewer 是特例</span><span class="option-consequence">條文那句「不跨 agent 互指」有一個現成的反例擺著。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：「每隻複製」講的是你開新 agent 的做法（cp -r），這點沒變；借格與不帶捷徑是後來已經發生的事，條文跟上就好。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P27b 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>放範本裡，每隻複製</p><cite>使用者 11-04 方向題 1 選的那格</cite></blockquote><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/03-shell版與inst版.md</code> 第 5 行末、<code>04-範例三種寫法.md</code> 第 75 行。</li><li>reviewer 範本為什麼用借的：這次沒有追到你的話，查不到。</li><li>這是對照時新發現的一條。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:283-315</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## P-27 末句與 04 尾句（新加）：條文說範本的格「每隻複製一份、不跨 agent 互指」「有第三份才抽進 lib、範本改捷徑」；另一個範本直接借 agent-fsm 的格，範本也不再帶捷徑
+
+**1. 條文原句**
+
+`03-shell版與inst版.md` 第 5 行（P-27 末）：
+
+&gt; 範本各格的程式（agent-fsm 的 idle.py、brain.py、wait.py、act.py）放在範本資料夾，每隻 agent 複製一份、自己改；有第三份一樣的才抽進 lib、範本改捷徑（使用者 11-04 選「放範本裡，每隻複製」，…）。
+
+`04-範例三種寫法.md` 第 75 行：
+
+&gt; 範本各格的程式每隻 agent 複製一份，不跨 agent 互指（P-27、P-33）。
+
+**2. 範本實際長相**
+
+`templates/reviewer/fsm.json`（節錄）：
+
+```json
+{&quot;description&quot;: &quot;Reuse agent-fsm cells while reading configuration from the reviewer definition.&quot;,
+ …
+   &quot;idle&quot;: {&quot;exec&quot;: {&quot;argv&quot;: [&quot;python3&quot;, {&quot;$env&quot;: &quot;AOS_HOME&quot;, &quot;$path&quot;: &quot;/templates/agent-fsm/idle.py&quot;}]},
+```
+
+四格都這樣指到 agent-fsm 的檔＝跨範本互指、沒有複製。另外 agent-fsm 的四支格程式都 import 函式庫（`lib/agent/hooks.py`、`agent_files.py`、`py/aos_flags.py` 等），範本自己的 README 寫「指回 proto8 的路徑都寫成 `{&quot;$env&quot;: &quot;AOS_HOME&quot;, …}`、沒有捷徑」——「範本改捷徑」這個做法 11-10 起不用了。
+
+**3. 這條規定當初的用意**：使用者 11-04 方向題 1 選「放範本裡，每隻複製」（[04 衝突與方向題](../04/loop-fsm-agent/04-衝突與方向題.md)）；「有第三份才抽進 lib」是設計稿引的 lib 規則。捷徑拿掉：使用者 11-10「copy-out能刪就刪」（見 P-33）。reviewer 範本為什麼用借的：這次沒有追到使用者的話，查不到。
+
+**4. 可行的收法**
+
+- **(甲) 改條文**：「範本改捷徑」改成「範本改成用 `{&quot;$env&quot;: &quot;AOS_HOME&quot;, …}` 指過去（範本不帶捷徑，11-10）」；04 尾句「不跨 agent 互指」改成「照範本複製出來的 agent 各有一份；範本之間可以用 `AOS_HOME` 借格（例 reviewer 借 agent-fsm 的四格）」。後果：只改條文。
+- **(乙) 改 reviewer 範本**：讓它自己帶一份四格。後果：動範本與測試；四支檔變兩份，之後改一邊要記得改另一邊。
+- **(丙) 不處理**：當成 reviewer 是特例。後果：條文那句「不跨 agent 互指」有一個現成的反例擺著。
+
+**5. 建議（寫手的，不是定案）**：甲。「每隻複製」講的是使用者開新 agent 的做法（`cp -r`），這點沒變；借格與不帶捷徑是後來已經發生的事，條文跟上就好。</pre></details></details></article><article class="card" id="q-cv-P29" data-qid="cv-P29"><header><span class="num">cv-P29</span><h3 id="heading-cv-P29">範本給哪種單子寫法（P-29）：規範說 JSON 入口「不是範本」，但範本的入口自己就是 JSON 入口。這句要不要照實改？</h3></header><p class="muted"><strong>條文說</strong>：範本給的是「表裡內嵌單子」這一種；「拿一個沒執行權限的 JSON 檔當入口」也能用，但不是範本。<strong>範本實際</strong>：四格是表裡內嵌單子，而 <code>_entry</code>、<code>body.json</code> 兩個入口都是 JSON 檔——兩種都用了。這條只是在描述範本。</p><blockquote class="quote"><p>1跟2都要，反正就自由，隨便，只是後續我們aos agent這塊要有個慣例用法，弄成標準規範。</p><cite>使用者 10-19</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P29"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P29" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 改條文：寫成「範本兩種都用；shell 小殼那種仍能用、不是範本」 <span class="star">★ 推薦</span></span><span class="option-consequence">只改一句；跟 P-05 選 A 一致。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P29" value="B"><span class="option-content"><span class="option-title"><b>B</b> 主句不改，尾巴補一句「標準範本的入口是 JSON 檔」</span><span class="option-consequence">前一句說它不是範本、後一句說範本有它，讀起來彆扭。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P29" value="C"><span class="option-content"><span class="option-title"><b>C</b> 範本入口改成別種</span><span class="option-consequence">等同 P-05 選 C，後果同那題。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：這條只是在描述範本，照實寫就好；P-05 怎麼裁，這條跟著走。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P29 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/03-shell版與inst版.md</code> 第 13 行。</li><li>「範本主推哪種」你當時沒答（拍板點 5「沒再問」），是 fable 照原則定的；當時 bob 的入口是 shell 檔，所以 JSON 入口不在範本裡。</li><li><strong>牽連</strong>：跟著 P-05 走。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:319-337</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## P-29 範本給哪種單子寫法：條文說範本給的是「表裡內嵌單子」，JSON 入口「不是範本」；範本的入口自己就是 JSON 入口
+
+**1. 條文原句**（`03-shell版與inst版.md` 第 13 行）
+
+&gt; - **P-29** 範本給的是 (2)：`fsm.json` 裡內嵌單子（agent-fsm 的四格，直接寫在 `exec`，…）（見下面範例）。(1)、(B) 仍都能用——一個資料夾格自己想用單子寫入口時用 (B)（把單子寫成沒 `+x` 的 `_entry.json`，P-40）——但不是範本。
+
+（(1)＝shell 小殼讀旁邊的 JSON；(2)＝loop／fsm 設定裡內嵌單子；(B)＝任何沒 `+x` 的 JSON 檔當入口。定義在同檔 P-28。）
+
+**2. 範本實際長相**：`_entry` 是沒 `+x` 的 JSON 單子、`body.json` 是沒 `+x` 的 JSON 陣列（見 P-05 貼的兩份）——兩個都是 (B)。`fsm.json` 的四格是 (2)，`fsm.json` 自己帶的 `&quot;_entry&quot;: [&quot;aos-fsm&quot;, {&quot;$env&quot;: &quot;AOS_CF&quot;}]` 也是 (B) 的一種。所以範本是 (2) 和 (B) 都用，(1) 沒用。
+
+**3. 這條規定當初的用意**：§ 7 使用者對幾種接法的話：「1跟2都要，反正就自由，隨便，只是後續我們aos agent這塊要有個慣例用法，弄成標準規範。」「AB都可以。然後我們再來想想aos agent的慣例」。「範本主推哪種」使用者沒答（拍板點 5「沒再問」），是 fable 照原則定成 (2)（[01-原話](../../2026-10/19/ideas/01-原話.md) § 8 末）。當時 bob 的入口是 shell 檔，所以 (B) 不在範本裡。
+
+**4. 可行的收法**
+
+- **(甲) 改條文**：「範本給的是 (2)…(1)、(B) 仍都能用…但不是範本」改成「範本用 (2) 和 (B)：四格是 `fsm.json` 裡內嵌的單子，入口 `_entry`、`body.json` 是沒 `+x` 的 JSON；(1) 仍能用、不是範本」。後果：只改一句；跟 P-05 甲一致。
+- **(乙) 不改主句、補一句**：尾巴加「標準範本的 `_entry` 與 `body.json` 是 (B)」。後果：前一句說 (B) 不是範本、後一句說範本有 (B)，讀起來彆扭。
+- **(丙) 範本入口改成別種**：等同 P-05 丙，後果同那邊。
+
+**5. 建議（寫手的，不是定案）**：甲。這條只是在描述範本，照實寫就好；P-05 怎麼裁，這條跟著走。</pre></details></details></article><article class="card" id="q-cv-P31" data-qid="cv-P31"><header><span class="num">cv-P31</span><h3 id="heading-cv-P31">單子裡怎麼指到檔（P-31）：規則沒錯，但條文舉的例子範本裡找不到。例子要不要換成範本真的有的？</h3></header><p class="muted"><strong>條文說</strong>：單子要指到檔，寫 <code>{&quot;$env&quot;: &quot;AOS_STACK&quot;, &quot;$path&quot;: &quot;history.jsonl&quot;}</code> 這種；範本只用 <code>$env</code>。<strong>範本實際</strong>：沒有任何一處指 <code>AOS_STACK</code>，指的幾乎都是 <code>AOS_HOME</code> 底下的函式庫；而 <code>AOS_HOME</code> 不在 aos 保證的六個變數裡，是人自己設的。規則本身（用 <code>$env</code>＋<code>$path</code>）範本照做。</p><blockquote class="quote"><p>我希望那個path可以換成$path，然後添加$prefix</p><cite>使用者（條文引的）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P31"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P31" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 換例子、補一句：例子換成範本有的，說明 <code>AOS_HOME</code> 是人設的變數、不在保證的六個裡 <span class="star">★ 推薦</span></span><span class="option-consequence">只改條文；規則本身不變。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P31" value="B"><span class="option-content"><span class="option-title"><b>B</b> 例子不動，只補一句「agent-fsm 的單子指的是 <code>AOS_HOME</code> 底下的函式庫」</span><span class="option-consequence">改最少；例子仍是範本裡找不到的。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P31" value="C"><span class="option-content"><span class="option-title"><b>C</b> 不處理</span><span class="option-consequence">規則沒錯，只是例子不是範本的。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：規則不動、例子換成抄得到的，順便把 AOS_HOME 這個「第七個變數」的身分講清楚，免得跟「aos 只保證六個」看起來矛盾。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P31 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>要用相對位置、絕對位置、環境變數指定都可</p><cite>使用者 11-10</cite></blockquote><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/03-shell版與inst版.md</code> 第 15 行。</li><li>今早清單把 <code>tools.json</code> 的 <code>$override</code> 算成對不上，這次更正：它是工具登記檔自己的鍵，不是單子的寫法。</li><li><code>AOS_HOME</code> 指什麼，這頁 B 區第一題（<code>em-Q1</code>）也在問，兩題相關。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:341-373</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## P-31 單子裡怎麼指到檔：條文的例子是「stack 底下的 history.jsonl」；範本的單子從不指 stack，指的都是函式庫（`AOS_HOME`）
+
+**1. 條文原句**（`03-shell版與inst版.md` 第 15 行）
+
+&gt; - **P-31** 單子要指到 stack 或工作區底下的檔，寫 `{&quot;$env&quot;: &quot;AOS_STACK&quot;, &quot;$path&quot;: &quot;history.jsonl&quot;}`：意思是「那個環境變數指的資料夾底下的 `history.jsonl`」…。**範本只用 `$env`**；規範另有 `$ref`（…），但單子本來就能內嵌、不必拆檔，所以範本與 demo 不寫 `$ref`。
+
+**2. 範本實際長相**
+
+範本裡所有 `$env`（搜過 `_entry` 與全部 `.json`）：
+
+```
+_entry       {&quot;$env&quot;: &quot;AOS_CD&quot;}、{&quot;$env&quot;: &quot;AOS_WS&quot;}
+fsm.json     {&quot;$env&quot;: &quot;AOS_CF&quot;}
+loop.json    {&quot;$env&quot;: &quot;AOS_HOME&quot;, &quot;$path&quot;: &quot;/lib/agent/hook_fire/_entry&quot;}、{&quot;$env&quot;: &quot;AOS_CD&quot;}
+hooks.json   {&quot;$env&quot;: &quot;AOS_HOME&quot;, &quot;$path&quot;: &quot;/lib/agent/hook_noop&quot;}、…/mail_notify
+tools.json   &quot;$override&quot;: [{&quot;$env&quot;: &quot;AOS_HOME&quot;, &quot;$path&quot;: &quot;/lib/packs/look.json&quot;}, …]
+```
+
+- 沒有任何一處指 `AOS_STACK`（stack 底下的檔都是 python 格自己用環境變數去開的）。
+- 沒有 `$ref`——「範本不寫 `$ref`」成立。
+- `$path` 都以 `/` 開頭（條文的例子沒有開頭的 `/`；條文說兩種都對）。
+- `AOS_HOME` 不是 aos 保證的六個變數，是使用者在殼裡或根的 `.env` 設的（[agent-fsm 說明](../../../templates/docs/02-agent-fsm.md)）。
+- `$override` 是工具登記檔的鍵，不是單子的寫法（上午清單把它算成對不上，這裡更正）。
+
+**3. 這條規定當初的用意**：條文標「本稿定」，依據 C-48／C-55／C-56、N-45；條文裡引的使用者話是「我希望那個path可以換成$path，然後添加$prefix」與 10-19 晚「impls這塊，指示詞是OK的」。`AOS_HOME` 的來歷見 P-33（11-10「要用相對位置、絕對位置、環境變數指定都可」）；`$override`：使用者 11-10 答 Q4「&quot;override&quot;:&quot;../another_tools.json&quot;」（[aos-tools-cli](../10/aos-tools-cli/README.md)）。
+
+**4. 可行的收法**
+
+- **(甲) 換例子、補一句**：條文的例子換成範本真的有的（例 `{&quot;$env&quot;: &quot;AOS_HOME&quot;, &quot;$path&quot;: &quot;/lib/agent/hook_noop&quot;}`），說明「指到函式庫用 `AOS_HOME`（人設的變數，不在 aos 保證的六個裡）」；「範本只用 `$env`」改成「範本的單子只用 `$env`、不寫 `$ref`；工具登記檔另有 `$override`（P-15、P-41）」。後果：只改條文；規則本身（用 `$env`＋`$path`、不用字串內插）不變。
+- **(乙) 只補一句**：例子不動，尾巴加「agent-fsm 的單子沒有指 stack 的，指的是 `AOS_HOME` 底下的函式庫」。後果：改最少；例子仍是範本裡找不到的。
+- **(丙) 不處理**：規則沒錯，只是例子不是範本的。
+
+**5. 建議（寫手的，不是定案）**：甲。規則不動、例子換成抄得到的，順便把 `AOS_HOME` 這個「第七個變數」的身分講清楚，免得跟「aos 只保證六個」看起來矛盾。</pre></details></details></article><article class="card" id="q-cv-P36" data-qid="cv-P36"><header><span class="num">cv-P36</span><h3 id="heading-cv-P36">逾時怎麼寫（P-36）：主句對得上，但範本另有兩道期限條文沒提，而且「外層要算內層跑幾圈」的公式在常駐的範本上算不出來。要不要補？</h3></header><p class="muted"><strong>條文說</strong>：逾時寫在最靠近會卡的那格；外層的期限要 ≥ 內層一圈各格逾時之和 × 內層的 <code>max</code>（跑幾圈）。<strong>範本實際</strong>：只有 act 格寫 30 分鐘；每支工具另有自己的期限（act 的 python 在管）；等腦回信不設期限、每 10 分鐘提醒一次；沒有 <code>max</code>、是常駐的，所以公式沒得算。</p><blockquote class="quote"><p>如果llms那邊我沒開aos daemon，那就是我自己的問題，但我也希望他不要搞壞</p><cite>使用者 11-10（等腦不設期限、只提醒的相關原話）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P36"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P36" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 補三句照範本：工具各自的期限、等腦只提醒不設限、內層常駐時公式不適用 <span class="star">★ 推薦</span></span><span class="option-consequence">只改條文；都是事實補充、不改規定。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P36" value="B"><span class="option-content"><span class="option-title"><b>B</b> 只補一句界定：公式只適用「內層是跑完就退的 agent」</span><span class="option-consequence">改最少；工具期限與等腦那兩件事仍只在範本說明裡。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P36" value="C"><span class="option-content"><span class="option-title"><b>C</b> 不處理</span><span class="option-consequence">條文主句成立，其餘算細節。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：都是事實補充、不改規定；P-35 若選 B（標成「跑完就退的那種」），這條的公式就用同一個界定。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P36 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/06-巢狀/02-P-36.md</code> 第 3 行。</li><li>等腦不設期限來自坑-74「推薦 A：只提醒不停」，施工紀錄記「照選項 A 做了」；那題你有沒有親口選 A，這次沒查到原話。</li><li>今早清單寫「會卡的 wait 刻意不設期限」，這次更正：wait 每一拍看一眼就退、行程不卡，條文那句字面成立。</li><li>02 夾跟著這題走的一處：<strong>P-22</strong>「卡住的那格加逾時」——範本等腦是跨拍等、不設期限、只提醒，沒有「卡住的那格」可加；收法跟著這題。</li><li>獨立的一題。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:377-402</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## P-36 逾時：條文的那句寫法大致對得上，但「外層要算內層的 max」在常駐的範本上算不出來，離工具最近的那道期限也不是條文說的那種
+
+**1. 條文原句**（`06-巢狀/02-P-36.md` 第 3 行，節錄跟這題有關的）
+
+&gt; …寫法：逾時寫在最靠近會卡的那格（agent-fsm 是 act 跑工具那格，`timeout_ms` 1800000）；要包住整隻子 agent，呼叫它的格在 `fsm.json` 寫成 `{&quot;exec&quot;: {&quot;argv&quot;: [&quot;aos-exec&quot;, &quot;act&quot;], &quot;timeout_ms&quot;: …}, &quot;next&quot;: …}`（…）；**外層 ≥ 內層一圈各格逾時之和 × 內層 `max`**，不然外層會先殺人；`grace_ms` 外 ≥ 內…
+
+（02 夾的 P-22 相關：「某格卡住（模型沒載入、網路不通）loop 只會等…要逾時就把那格換成 inst 版、寫 `timeout_ms`」。）
+
+**2. 範本實際長相**
+
+- `fsm.json` 只有 act 寫 `&quot;timeout_ms&quot;: 1800000`（30 分鐘），其餘三格沒寫。
+- `wait.py` 檔頭：「loop 照跑、不卡著等：每拍一下就退」「沒有自己的逾時（kernel 的 timeout_ms／priority.deadline 守）」「等太久只提醒…滿 10 分鐘印一行 warning…照樣退 10 繼續等」。
+- `act.py` 檔頭：「逾時取 _metainfo.timeout_ms（毫秒），沒寫或壞了＝不設…自成一群，逾時或本格中斷時 TERM 整群，2 秒後 KILL」——每支工具自己的期限是 act.py 這支 python 在管，不是單子的 `timeout_ms`。
+- `loop.json` 沒有 `max`。
+
+對不上的三點：(1) 最靠近工具的那道期限是 act.py 照工具的 `_metainfo` 管的，條文只講單子的 `timeout_ms`；(2)「× 內層 `max`」——範本沒有 `max`、是常駐的，這個公式算不出來；(3) 「等腦」在範本裡是跨很多拍地等、沒有期限、只提醒，P-22 設想的「卡住的那格加逾時」用不上。（上午清單寫「會卡的 wait 刻意不設期限」，這裡更正：wait 的行程不卡，條文那句字面成立。）
+
+**3. 這條規定當初的用意**：條文括號 N-41「靠 `timeout_ms` 守」、P-22、P-30、C-52；整群殺是 § 20 的預設；巢狀 grace 使用者 10-12 夜定「只當慣例、不進規範」（條文裡引的）。等腦不設期限：[prefix-fixes 01](../10/prefix-fixes/01-四桶.md) 坑-74「wait 格等腦回信沒期限，kernel 沒開＝永遠停 wait、表上 running。推薦 A：只提醒不停」，施工結果記「坑-74 照選項 A 做了」；使用者相關的話是 11-10「如果llms那邊我沒開aos daemon，那就是我自己的問題，但我也希望他不要搞壞」（[two-machines](../10/two-machines/README.md)）。坑-74 那題使用者有沒有親口選 A，這次沒查到原話。
+
+**4. 可行的收法**
+
+- **(甲) 補三句照範本**：寫法那段補「agent-fsm 另有兩道：每支工具照自己的 `_metainfo.timeout_ms`（act 管，沒寫＝不設）；等腦回信不設期限、每 10 分鐘提醒一次（kernel 那邊的期限守）」；公式那句補「內層是常駐的（沒有 `max`）就不適用這條算式，外層改用 listen 的等待上限之類自己定」。後果：只改條文。
+- **(乙) 只補一句界定**：「外層 ≥ …× 內層 `max`」後面加「（內層是跑完就退的 agent 時）」。後果：改最少；工具期限與等腦那兩件事仍只在範本說明裡。
+- **(丙) 不處理**：條文主句成立，其餘算細節。
+
+**5. 建議（寫手的，不是定案）**：甲。都是事實補充、不改規定；P-35 若裁乙（標成「跑完就退的那種」），這條的公式就用同一個界定。</pre></details></details></article><article class="card" id="q-cv-P38" data-qid="cv-P38"><header><span class="num">cv-P38</span><h3 id="heading-cv-P38">看全貌（P-38）：規範說「stack 樹＝呼叫樹＝tools 資料夾樹」，但範本沒有 tools 資料夾樹。標題句要不要改？</h3></header><p class="muted"><strong>條文說</strong>：執行中留下的 stack 樹、誰叫了誰的呼叫樹、定義裡的 <code>tools/</code> 資料夾樹，三棵是同一棵，看全貌就看它。<strong>範本實際</strong>：前兩棵相等仍成立（工具的小格照登記名開在 stack 的 <code>tools/</code> 底下）；第三棵沒有——範本沒有 <code>tools/</code> 夾。</p><blockquote class="quote"><p>至於agent-bob他子程式的stack，就由agent-bob自己訂，有可能他會是AOS_STACK/think, /act</p><cite>使用者 10-19</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P38"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P38" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 改標題句：「stack 樹＝呼叫樹（走登記檔的工具，小格名＝登記名）；工具放在格資料夾裡的那種叫法，tools 資料夾樹也是同一棵」 <span class="star">★ 推薦</span></span><span class="option-consequence">只改一句；P-33 選 B 時剛好對得上。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P38" value="B"><span class="option-content"><span class="option-title"><b>B</b> 不動，靠 P-33 的界定帶過</span><span class="option-consequence">stack 樹對標準範本其實也成立，這樣寫會少講一半。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P38" value="C"><span class="option-content"><span class="option-title"><b>C</b> 不處理</span><span class="option-consequence">標題句照舊。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：一句話的事；子 agent 的 stack 落在哪要先查實再寫進條文（後來查了，見細節）。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P38 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/06-巢狀/03-P-37～P-40.md</code> 第 4 行。</li><li>「三棵樹相等」是 P-33 的推論，沒有你的原話。</li><li>子 agent 的 stack 落在哪，寫手後來查了（見 <code>cv-P18</code>）：<code>subagent</code> 生的子 agent 是 daemon 上的另一支 proc，stack 預設在 daemon 底下，不在父的 <code>.stack/tools/</code> 裡。</li><li>這是對照時新發現的一條；跟著 P-33 走。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:406-422</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## P-38 看全貌（新加）：條文說「stack 樹＝呼叫樹＝tools 資料夾樹」；範本沒有 tools 資料夾樹
+
+**1. 條文原句**（`06-巢狀/03-P-37～P-40.md` 第 4 行）
+
+&gt; - **P-38 stack 樹＝呼叫樹＝tools 資料夾樹；看全貌就看那棵樹。** 每層照 P-17 在 `tools/` 底下用工具名開小格，所以 `$AOS_STACK` 底下長出來的就是這次誰叫了誰：`.stack/{stage.txt,tools/cathy/{stage.txt,tools/stamp/}}`。看法：`tree -a &quot;$AOS_STACK&quot;`。不另做彙整工具。
+
+**2. 範本實際長相**：stack 那一半成立——`act.py` 檔頭「工具的小格由 aos-tools call 算成 $AOS_STACK/tools/&lt;名&gt;/（P-17；11-11 起不先建，工具真的寫才建）」。定義那一半不成立——範本沒有 `tools/` 夾（見 P-33），所以沒有「tools 資料夾樹」可以對。另外用 `subagent` 工具生出來的子 agent 是掛在 daemon 上的另一支 proc，它的 stack 在不在父的 `.stack/tools/` 底下，這次沒查。
+
+**3. 這條規定當初的用意**：拍板點 3 使用者選「(a) 維持現狀：失敗就停、人來看。」（人來看 → 要有一處看得到全貌）；C-54、C-56；§ 3 使用者「至於agent-bob他子程式的stack，就由agent-bob自己訂，有可能他會是AOS_STACK/think, /act」。「三棵樹相等」是 P-33 的推論，沒有使用者原話。
+
+**4. 可行的收法**
+
+- **(甲) 改標題句**：改成「stack 樹＝呼叫樹（走登記檔的工具，小格名＝登記名）；工具放在格資料夾裡的那種叫法，tools 資料夾樹也是同一棵」。後果：只改一句；P-33 裁乙時剛好對得上。
+- **(乙) 不動，靠 P-33 的界定帶過**：P-33 若加了「本條講沒經登記檔的叫法」，P-38 跟著只對那種成立。後果：stack 樹對標準範本其實也成立，這樣寫會少講一半。
+- **(丙) 不處理**。
+
+**5. 建議（寫手的，不是定案）**：甲，一句話的事；子 agent 的 stack 落在哪要先查實再寫進條文。</pre></details></details></article><article class="card" id="q-cv-P39" data-qid="cv-P39"><header><span class="num">cv-P39</span><h3 id="heading-cv-P39">往下傳什麼（P-39）：規定對得上，但兩個例子已不存在，還有一句「agent 類工具不讀 stdin」容易讀反。要不要改？</h3></header><p class="muted"><strong>條文說</strong>：每層的位置變數由 aos-exec 重設，要往下傳就明給；agent 類工具不讀 stdin。<strong>範本實際</strong>：規定照做——工具的參數是 act 用管線明給的，不是去讀繼承來的終端機。對不上的只有：例子裡的 <code>stamp</code> 工具和 <code>tools/</code> 夾現在都不存在；「不讀 stdin」那句跟 P-41「參數從 stdin 進」擺在一起，容易被讀成相反。</p><blockquote class="quote"><p>反正我們就是訂下一些環境變數，就這樣。</p><cite>使用者 10-19</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P39"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P39" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 換例子、也改那句措辭（改成「不要去讀繼承來的 stdin；要餵就明給」） <span class="star">★ 推薦</span></span><span class="option-consequence">只改條文、規定不變。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P39" value="B"><span class="option-content"><span class="option-title"><b>B</b> 不處理（<code>stamp</code> 當名字的例子比照今早的決定留著）</span><span class="option-consequence">措辭容易讀反這點還在。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P39" value="C"><span class="option-content"><span class="option-title"><b>C</b> 只改那句措辭，例子不換</span><span class="option-consequence">最小的改法；例子仍是不存在的工具。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手原話是「丙或甲都行，偏甲」（＝這頁的 C 或 A，偏 A）：規定沒問題，值得動的是「不讀 stdin」那句，免得跟 P-41 看起來相反。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P39 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/06-巢狀/03-P-37～P-40.md</code> 第 5 行。</li><li>今早清單把這條寫成規定打架，這次更正為只有例子與措辭。</li><li>「不讀 stdin」是 fable 定的防呆；那個 <code>stamp</code> 的例子是頂層轉述時舉的，不是你的話。</li><li>獨立的一題。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:426-453</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## P-39 往下傳什麼：規定對得上，對不上的是兩個例子（`stamp`、`tools/` 夾都不存在）和一句容易讀反的話
+
+**1. 條文原句**（`06-巢狀/03-P-37～P-40.md` 第 5 行，節錄）
+
+&gt; …**每層覆寫**——`AOS_CF`、`AOS_CD`、`AOS_CO` 由 aos-exec 每次呼叫重設（N-57），每層看到自己的、不用管也不該改，要往下傳自己的位置就拿它的值明給（例 `aos-exec &quot;$AOS_CD/tools/stamp&quot;`）。stdin 一路繼承到最底層，所以**agent 類工具不讀 stdin**（會卡在終端上），要餵東西就 `&lt;` 明給（stamp 那種）。
+
+**2. 範本實際長相**
+
+`act.py`：
+
+```python
+p = subprocess.Popen(TOOLS + [&quot;call&quot;, name], stdin=subprocess.PIPE, …, start_new_session=True)
+out, err = p.communicate(arguments.encode(&quot;utf-8&quot;), timeout=limit)
+```
+
+檔頭：「工具的介面（P-41）：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果」。也就是每支工具（包含把子 agent 包起來的 `subagent`）都從 stdin 收東西，但那是 act 用管線**明給**的，不是繼承來的終端機——跟條文的意思（別讀繼承來的、要餵就明給）一致。agent-fsm 這隻 agent 本身不讀 stdin，題目從 queue 進。
+
+對不上的只有：`stamp` 這個工具現在不存在；`$AOS_CD/tools/stamp` 這種路徑範本沒有（沒有 `tools/` 夾）；「agent 類工具不讀 stdin」這句粗體，跟 P-41「arguments 從 stdin 進」擺在一起容易被讀成相反。（上午清單把這條寫成規定打架，這裡更正為只有例子與措辭。）
+
+**3. 這條規定當初的用意**：§ 19 使用者「同意做」（`AOS_CF`／`AOS_CD`；那個 `aos-exec &quot;$AOS_CD/tools/stamp&quot;` 的例子是頂層轉 fable 的定義時舉的，不是使用者的話）；§ 4「反正我們就是訂下一些環境變數，就這樣。」；N-55、P-21、C-53。「不讀 stdin」是 fable 定的防呆。工具走 stdin：使用者 11-05「統一 lib 契約 (Recommended)」（[stdio-unify](../05/stdio-unify/README.md)，P-41 引的）。
+
+**4. 可行的收法**
+
+- **(甲) 換例子、改一句措辭**：`aos-exec &quot;$AOS_CD/tools/stamp&quot;` 換成範本真的有的（例 `loop.json` 的 `on_start` 把 `{&quot;$env&quot;: &quot;AOS_CD&quot;}` 當參數明給 `hook_fire`）；「agent 類工具不讀 stdin…要餵東西就 `&lt;` 明給（stamp 那種）」改成「不要去讀**繼承來的** stdin（會卡在終端上）；要餵就明給——agent-fsm 的 act 用管線把 arguments 餵給每支工具（P-41）」。後果：只改條文、規定不變。
+- **(乙) 不處理**：bob／cathy／stamp 當名字的例子上午就決定留著（commit 訊息有寫），這條的 `stamp` 可比照。後果：措辭容易讀反這點還在。
+- **(丙) 只改那句措辭、例子不換**。
+
+**5. 建議（寫手的，不是定案）**：丙或甲都行，偏甲。規定沒問題，值得動的是「不讀 stdin」那句，免得跟 P-41 看起來相反。</pre></details></details></article><article class="card" id="q-cv-04" data-qid="cv-04"><header><span class="num">cv-04</span><h3 id="heading-cv-04">「同一隻 agent 的三種寫法」（04 範例）：三種裡只有一種有現成的東西可抄，另兩種要不要縮成各一句？</h3></header><p class="muted"><strong>條文說</strong>：同一隻 agent 有三種寫法——標準、加資料夾格（混合）、全 shell——各給一段範例。<strong>實際</strong>：只有「標準」是 agent-fsm 真的那份；「混合」沒有任何現存例子；「全 shell」那 11 行是今早寫手照表寫的，只用假格跑過、沒真的接腦與工具，也沒有測試守著。</p><blockquote class="quote"><p>我覺得就是可選啦，想要簡單直接，那就上shell指令，想要用在複雜專案上那就用這套</p><cite>使用者 10-19</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-04"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-04" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 只留標準寫法，另兩種縮成各一句「也可以這樣寫」，全 shell 那段拿掉 <span class="star">★ 推薦</span></span><span class="option-consequence">條文變短、不再擺沒人維護的範例；想寫 shell 版的人少一個起點。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-04" value="B"><span class="option-content"><span class="option-title"><b>B</b> 照現在這樣留著（已標「沒有現成範本」）</span><span class="option-consequence">不用再改；那段 sh 沒有測試守著，表改了它不會跟著改。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-04" value="C"><span class="option-content"><span class="option-title"><b>C</b> 把全 shell 補成真的範本</span><span class="option-consequence">要寫範本與測試、之後要維護；沒有你的要求。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手的建議是有條件的：「看 P-27 怎麼裁——P-27 選 A 就選 A，P-27 選 B 就選 B」。這裡預選 A 是因為 P-27 的建議是 A；你 P-27 若選了 B，這題請改選 B。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-04 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/04-範例三種寫法.md</code> 第 58、60 行。</li><li>三種寫法並陳是 10-19 的結果，當時三種都有實物（bob、ann 等），後來都刪了。</li><li><strong>牽連</strong>：跟著 P-27 走。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:457-479</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## 04 範例三種寫法：三種裡只有一種有現成的東西可抄
+
+**1. 條文原句**（`04-範例三種寫法.md`）
+
+第 58 行：
+
+&gt; **加資料夾格（混合）**——某一格要用 shell 寫邏輯時，那格的 `exec` 改寫子資料夾名（`&quot;exec&quot;: &quot;act&quot;`，身體是 `act/_entry`），其他格照舊是單子、表還是那一份（P-27、P-09）。agent-fsm 沒有這種格。
+
+第 60 行：
+
+&gt; **全 shell（對照）**——…下面這份的表跟上面 agent-fsm 的 `fsm.json` 同一張（沒有現成範本；拿四個只退指定碼的假格跑過，換狀態與結束碼都跟表一樣）：
+
+**2. 範本實際長相**：「標準寫法」那段是 agent-fsm 的 `fsm.json` 整份照抄，對得上。「混合」沒有任何現存範本或例子，只剩一段說明。「全 shell」那 11 行 sh 是上午寫手照 `fsm.json` 的表寫的，repo 裡沒有對應的範本，只用假格跑過換狀態，沒有真的接腦與工具。標題「同一隻 agent 的三種寫法」因此名不副實：只有一種是真的那隻 agent。
+
+**3. 這條規定當初的用意**：三種寫法並陳是 10-19 的結果——§ 7 使用者「想要簡單直接，那就上shell指令，想要用在複雜專案上那就用這套」、§ 10「好主意」（混合）。當時三種都有實物（bob、ann 等），後來都刪了。P-07 還寫著「shell 版 fsm…是對照寫法…兩種可互換」。
+
+**4. 可行的收法**
+
+- **(甲) 只留標準寫法，另兩種縮成各一句**：「混合」「全 shell」不再給整段範例，改成一句「也可以這樣寫」＋指回 P-27／P-07；全 shell 那段 sh 拿掉。後果：條文變短、不再擺沒人維護的範例；想寫 shell 版的人少一個起點。
+- **(乙) 照現在這樣留著**：已經標了「沒有現成範本」「agent-fsm 沒有這種格」。後果：不用再改；那段 sh 沒有測試守著，表改了它不會跟著改。
+- **(丙) 把全 shell 補成真的範本**：在 `templates/` 開一個能跑的 shell 版。後果：要寫範本與測試、之後要維護；沒有使用者要求。
+
+**5. 建議（寫手的，不是定案）**：看 P-27 怎麼裁。P-27 裁甲就走甲（標準只有一種，其餘一句帶過）；P-27 裁乙就走乙。</pre></details></details></article><article class="card" id="q-cv-s10" data-qid="cv-s10"><header><span class="num">cv-s10</span><h3 id="heading-cv-s10">第十節那句「這份慣例都已落實，沒有程式落後的地方」：跟前面幾條並看不成立，要不要先把範圍講窄？</h3></header><p class="muted"><strong>條文說</strong>：這份慣例都已落實，沒有程式落後的地方；範本與 demo 只用 <code>$env</code>。<strong>實際</strong>：四支 C++ 程式有照條文做，這點沒發現反例；但標準範本有四條不是照條文做的，P-06 還反過來是條文落後程式；「demo」這個資料夾也沒了。這句是狀態描述，不是規定。</p><blockquote class="quote"><p>python版本可以刪掉了。aos-exec/loop/daemon都用C++</p><cite>使用者（10 月下旬，這句現況聲明的來歷）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-s10"><li class=""><label class="option-label"><input type="radio" name="q-cv-s10" value="A"><span class="option-content"><span class="option-title"><b>A</b> 等上面各條裁完再改這句</span><span class="option-consequence">這句是其他條的總結，最後改一次就好；在那之前它繼續不成立。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-s10" value="B" checked><span class="option-content"><span class="option-title"><b>B</b> 現在就把範圍講窄：先改成「impls 的程式對這份都已落實」，不提範本 <span class="star">★ 推薦</span></span><span class="option-consequence">馬上就不算錯；範本那半留給各條。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-s10" value="C"><span class="option-content"><span class="option-title"><b>C</b> 整句拿掉</span><span class="option-consequence">第十節剩下逐項清單，少一句總括。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 B：寫手建議：現在就能改、不用等別條；其他條裁完若都對齊了，再看要不要寫回總括句。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-s10 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>1. 好，給我看。 2.要。3.不管。4.整包</p><cite>使用者 11-13（問「條文跟範本對不上的怎麼收」時的回覆；第 1 點＝要逐條看）</cite></blockquote><ul><li>條文在 <code>CONVENTION/05-不管落實待決.md</code> 第 9、17 行。</li><li>它是總括句，內容看前面各條怎麼裁；只有 B 可以現在就做。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:483-503</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">## 第十節「都已落實，沒有程式落後的地方」：跟上面幾條並看不成立，而且有一處反過來是條文落後程式
+
+**1. 條文原句**（`05-不管落實待決.md` 第 9 行）
+
+&gt; …這份慣例（含 § 14～§ 24、N-57～N-62、C-73、P-40）都已落實，沒有程式落後的地方。
+
+同節第 17 行：
+
+&gt; …範本與 demo 只用 `$env`（P-31）。
+
+**2. 範本實際長相**：這句原意是「aos-exec／aos-loop／aos-fsm／aos-daemon 這幾支 C++ 程式有照條文做」，這點這次沒有發現反例。但把範本也算進「落實」的話：P-05（入口）、P-27（格的寫法）、P-33（工具放哪）、P-35（當工具）四條，標準範本都不是照條文做的。P-06 則是反過來——程式比條文多認三個 key，落後的是條文。「demo」現在也沒有這個資料夾了（範本在 `templates/`）。
+
+**3. 這條規定當初的用意**：10 月下旬把 Python 版刪掉、只留 C++ 時寫的現況聲明（條文引使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」）。是狀態描述，不是規定。
+
+**4. 可行的收法**
+
+- **(甲) 等上面各條裁完再改這句**：照結果改成「impls 的四支程式都已落實；標準範本跟條文不同的地方見各條的註」，「demo」字眼拿掉。後果：這句是其他條的總結，最後改一次就好。
+- **(乙) 現在就把範圍講窄**：先改成「**impls 的程式**對這份都已落實」，不提範本。後果：馬上就不算錯；範本那半留給各條。
+- **(丙) 整句拿掉**：狀態描述容易過期。後果：第十節剩下逐項清單，少一句總括。
+
+**5. 建議（寫手的，不是定案）**：乙，現在就能改而且不用等別條；其他條裁完若都對齊了，再看要不要寫回總括句。</pre></details></details></article></section><section><h2 id="sec-a3">A-4 02 夾換例子時新發現的五條</h2><p class="muted">02 夾＝講題目、stack、停與錯、腦的那幾條。P-14、P-24 兩題跟前面都不相干，要單獨想；其餘三題是事實更新。</p><article class="card" id="q-cv-P12" data-qid="cv-P12"><header><span class="num">cv-P12</span><h3 id="heading-cv-P12">一次做幾題（P-12）：條文開頭寫「一次做一題」，但現在沒有任何東西是一次做一題了。開頭要不要改？</h3></header><p class="muted"><strong>條文說</strong>：P-12 開頭是「一次做一題」；後半其實已照實寫了範本怎麼做。<strong>範本實際</strong>：agent-fsm 一次把信箱裡現有的信全收、一次答整批；外部 coding agent 也是整批交出去。舊協議拿掉之後，「一次一題」已沒有對應的實作。</p><blockquote class="quote"><p>每次aos-eca-turn就是把所有信一起丟進去(當然，是有順序的)</p><cite>使用者 11-03</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P12"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P12" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 改開頭：「一次做一題」改成「一次收一批（照順序），答完才收下一批」 <span class="star">★ 推薦</span></span><span class="option-consequence">只改幾個字。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P12" value="B"><span class="option-content"><span class="option-title"><b>B</b> 不動</span><span class="option-consequence">條文後半已寫明範本怎麼做；開頭那四個字繼續沒有對應的實作。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：純事實更新。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P12 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>等答完回 idle 再收</p><cite>使用者 11-04 方向題 2 選的那格</cite></blockquote><ul><li>條文在 <code>CONVENTION/02-題目stack停錯腦/01-P-11～P-14.md</code> 第 6 行。</li><li>「一次做一題」是 bob 時代題目資料夾的做法。「<code>cur/</code> 有沒做完的先接」那半句仍成立。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:582-606</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">### P-12 一次做幾題：條文標題說「一次做一題」；範本一次收一批、一次答整批，現在沒有東西是一次做一題
+
+**1. 條文原句**（`01-P-11～P-14.md` 第 6 行）
+
+&gt; - **P-12** 一次做一題、`cur/` 有沒做完的先接：資料夾是 `$AOS_STACK/queue/` 的 `new/`、`cur/`；…範本 `templates/agent-fsm` 一次收一批（queue 裡全部、照處理順序，think 一次答整批），信接進 history 就收（P-11）；思考中來的信留在 queue，答完回 idle 再收、跟下一批一起答（範本的預設；使用者 11-04 方向題 2 選「等答完回 idle 再收」，P-41）。外部 coding agent（P-43）是例外：信交給 CLI 就算完成、當場收掉…
+
+**2. 範本實際長相**
+
+`idle.py` 檔頭：「一次收全部、照處理順序…；cur/ 有上次認領了還沒接完的先接（P-12）」。程式：
+
+```python
+def take():
+    &quot;&quot;&quot;這一批＝cur/ 全部（上次認領了還沒接完的）＋ new/ 全部（aos-post take-all）；照處理順序。…&quot;&quot;&quot;
+```
+
+條文後半已經照實寫了範本的做法，所以規定本身沒錯；對不上的只有開頭四個字「一次做一題」——舊協議刪掉之後，agent-fsm 是一次一批，外部 coding agent 也是整批交出去，沒有任何東西是一次一題了。「`cur/` 有沒做完的先接」這半句成立。
+
+**3. 這條規定當初的用意**：「一次做一題」是 bob 時代題目資料夾的做法（條文括號「原型現狀；拍板點 1」）。一次收一批：使用者 11-04 方向題 2 選「等答完回 idle 再收」（[04 衝突與方向題](../04/loop-fsm-agent/04-衝突與方向題.md)）；外部 agent 那邊，使用者 11-03「每次aos-eca-turn就是把所有信一起丟進去(當然，是有順序的)」（引在 [loop-fsm-agent README](../04/loop-fsm-agent/README.md)）。
+
+**4. 可行的收法**
+
+- **(甲) 改開頭**：「一次做一題」改成「一次收一批（queue 裡現有的全部、照順序），答完才收下一批」，其餘不動。後果：只改幾個字。
+- **(乙) 不動**：條文後半已寫明範本怎麼做。後果：開頭那四個字繼續沒有對應的實作。
+
+**5. 建議（寫手的，不是定案）**：甲，純事實更新。</pre></details></details></article><article class="card" id="q-cv-P13" data-qid="cv-P13"><header><span class="num">cv-P13</span><h3 id="heading-cv-P13">信的附檔（P-13）：條文說附檔可以放在信的資料夾裡；範本只讀信的文字，附檔會跟著信被安靜地收掉。條文要不要照實寫？</h3></header><p class="muted"><strong>條文說</strong>：需要附檔時，附檔就是信資料夾裡的其他檔；一個 agent 認哪種形狀寫在它自己的說明。<strong>範本實際</strong>：只取信裡的那段文字接進對話紀錄，然後就把信收掉（預設刪）——信資料夾裡若有別的檔，範本不看，還會一起被收掉。現在要給 agent 檔案，實際做法是把檔放工作區、在信裡講路徑。</p><blockquote class="quote"><p>(a) 純文字一題一檔，需要附檔再升級成資料夾。</p><cite>使用者 10-19 拍板點 2 選的那格</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P13"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P13" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 條文照實寫：範本只讀文字、不讀附檔，信收掉時附檔一起收；要給檔案就放工作區、在信裡寫路徑 <span class="star">★ 推薦</span></span><span class="option-consequence">只改條文。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P13" value="B"><span class="option-content"><span class="option-title"><b>B</b> 不動，當成「附檔是以後的升級，範本還沒做」</span><span class="option-consequence">照條文寄了帶附檔的信，附檔會被安靜地丟掉，條文沒提醒。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P13" value="C"><span class="option-content"><span class="option-title"><b>C</b> 範本補上讀附檔</span><span class="option-consequence">要動 <code>idle.py</code> 與測試、要先定附檔怎麼交給腦；沒有你的要求。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：至少把「附檔會跟著信被收掉」寫出來，免得有人照條文寄附檔。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P13 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>條文在 <code>CONVENTION/02-題目stack停錯腦/01-P-11～P-14.md</code> 第 7 行。</li><li>範本為什麼不讀附檔：沒找到相關的話，查不到。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:608-637</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">### P-13 附檔：條文說附檔放在信的資料夾裡、各 agent 認哪種形狀自己寫；範本只讀信的文字，不讀附檔
+
+**1. 條文原句**（`01-P-11～P-14.md` 第 7 行）
+
+&gt; - **P-13** 需要附檔時：附檔＝信資料夾裡的其他檔（N-16「其他檔隨意」），題文在 `body`、答案在 history。一個 agent 認哪種形狀寫在它自己的說明。
+
+**2. 範本實際長相**
+
+`idle.py`：
+
+```python
+body = json.loads(out).get(&quot;body&quot;)
+if not (isinstance(body, dict) and body.get(&quot;role&quot;) == &quot;user&quot; and isinstance(body.get(&quot;content&quot;), str)
+        and body[&quot;content&quot;].strip()):
+    return None, &quot;body must be {\&quot;role\&quot;: \&quot;user\&quot;, \&quot;content\&quot;: non-empty string}&quot;
+…
+post([&quot;done&quot;, box, sig])                 # 接進 history 就算收到
+```
+
+只取 `body.content` 這段文字接進 history，然後就把信收掉（預設刪）——信資料夾裡若有別的檔，範本不看，而且會跟著信一起被收掉。範本的說明也沒有寫「認哪種形狀」。舊協議刪掉後「哪種形狀」只剩一種，這句也沒有東西可選了。
+
+**3. 這條規定當初的用意**：拍板點 2 使用者選「(a) 純文字一題一檔，需要附檔再升級成資料夾。」（[01-原話](../../2026-10/19/ideas/01-原話.md) § 8）——當時就定了附檔是「需要再說」的升級。queue 版的說法來自 10-30 agent-lifecycle 的條文草稿（使用者「都照建議」）。範本為什麼不讀附檔：沒找到相關的話，查不到；現在要給 agent 檔案，實際做法是把檔放工作區、在信裡講路徑。
+
+**4. 可行的收法**
+
+- **(甲) 條文照實寫**：改成「附檔可以放在信資料夾的其他檔（N-16）；標準範本只讀 `body` 的文字、不讀附檔，信收掉時附檔一起收——要給它檔案就放工作區、在信裡寫路徑」，「認哪種形狀」那句拿掉。後果：只改條文。
+- **(乙) 不動**：當成「附檔是以後的升級，範本還沒做」。後果：照條文寄了帶附檔的信，附檔會被安靜地丟掉，條文沒提醒。
+- **(丙) 範本補上讀附檔**。後果：要動 `idle.py` 與測試、要先定附檔怎麼交給腦；沒有使用者要求。
+
+**5. 建議（寫手的，不是定案）**：甲。至少把「附檔會跟著信被收掉」寫出來，免得有人照條文寄附檔。</pre></details></details></article><article class="card" id="q-cv-P14" data-qid="cv-P14"><header><span class="num">cv-P14</span><h3 id="heading-cv-P14">agent 能動哪些檔（P-14）：條文說只動自己的 stack 和說明寫明的檔；範本的工具是讀、寫、刪、跑指令四包全開，工作區外也不擋。條文要怎麼收？</h3></header><p class="muted"><strong>條文說</strong>：agent 只動 <code>$AOS_STACK</code> 與工作區裡它說明寫明的檔，工作區其他東西不碰。<strong>範本實際</strong>：範本自己的四支格程式只寫 stack，這半符合；但腦叫工具可以讀寫刪工作區裡外任何檔、跑任何指令（能不能動只看 Linux 權限），說明也沒列「它會動哪些檔」。<strong>為什麼要你裁</strong>：範本全開是照你 11-10 那句話做的，跟這條的字面相反；這題跟前面幾組都不相干，要單獨裁。</p><blockquote class="quote"><p>1.預設開到第四包，想要安全就自行限制。</p><cite>使用者 11-10（tool-packs）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P14"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P14" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 條文改成兩層：agent 自己的程式只寫 stack；腦經工具動哪些檔，由掛了哪些工具決定——範本預設四包全開，想收緊自己拿掉 <span class="star">★ 推薦</span></span><span class="option-consequence">只改條文；等於承認「工作區其他東西不碰」不是標準範本的保證，C-65「工作區保持乾淨」那句要不要跟著加註另看。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P14" value="B"><span class="option-content"><span class="option-title"><b>B</b> 條文留著當建議：註明這是對「寫死流程的 agent」的要求，標準範本工具全開、不保證</span><span class="option-consequence">改最少；條文繼續把一件標準範本做不到的事寫成規定。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P14" value="C"><span class="option-content"><span class="option-title"><b>C</b> 範本預設收緊（例如檔案工具擋工作區外）</span><span class="option-consequence">要動工具與範本；而且跟你 11-10 那句反著走。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：你 11-10 的話很明確，條文照那句寫；C 是翻你的案，不建議。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P14 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>條文在 <code>CONVENTION/02-題目stack停錯腦/01-P-11～P-14.md</code> 第 8 行。</li><li>bob 時代 agent 做的事是寫死的，所以「說明寫明動哪些檔」做得到；現在的標準範本是一隻全聽腦的通用 agent。</li><li>這條的後半句（要留紀錄的信進 <code>archive/</code>、只進不出）跟上面「舊協議刪除」那題有關。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:639-664</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">### P-14 agent 能動哪些檔：條文說只動 stack 與工作區裡說明寫明的檔；範本的工具四包全開、不擋工作區外的路徑
+
+**1. 條文原句**（`01-P-11～P-14.md` 第 8 行）
+
+&gt; - **P-14** agent 只動 `$AOS_STACK` 與工作區裡它說明寫明的檔（queue 在 `$AOS_STACK` 裡），工作區其他東西不碰。queue 要留紀錄的信進 `archive/`（P-11），只進不出，清理是人的事。（C-65 工作區保持乾淨；C-56 不為清理加機制；…）
+
+**2. 範本實際長相**
+
+`templates/agent-fsm/README.md`：
+
+```
+**通用工具四包全開**（tool-packs，使用者「1.預設開到第四包，想要安全就自行限制」）：…
+這些檔案工具不擋工作區外的路徑（相對從 `$AOS_WS` 算、絕對照用），能不能動看 Linux 權限。
+```
+
+`tools.json` 掛了 look、change、delete、shell 四包（讀、寫、刪、跑指令）。也就是：範本**自己的四支格程式**只寫 stack（`history.jsonl`、`think/…` 等），這半符合條文；但**腦叫工具**可以讀寫刪工作區裡外任何檔、跑任何指令，範本的說明也沒有列「它會動哪些檔」。
+
+**3. 這條規定當初的用意**：C-65「工作區保持乾淨」（條文括號）；bob 時代 agent 做的事是寫死的，所以「說明寫明動哪些檔」做得到。範本為什麼全開：使用者 11-10（[tool-packs](../10/tool-packs/README.md)）「1.預設開到第四包，想要安全就自行限制。」——這句是使用者明講的方向，跟 P-14 的字面相反。
+
+**4. 可行的收法**
+
+- **(甲) 條文改成兩層**：改成「agent 自己的程式（各格）只寫 `$AOS_STACK`；腦經工具動哪些檔，由掛了哪些工具決定——標準範本預設四包全開、不擋工作區外，想收緊自己從 `tools.json` 拿掉（使用者 11-10）」。後果：只改條文；等於承認「工作區其他東西不碰」不是標準範本的保證，C-65 那句要不要跟著加註另看。
+- **(乙) 條文留著當建議**：加一句「這是對寫死流程的 agent 的要求；標準範本是通用 agent、工具全開，不保證」。後果：改最少；條文繼續把一件標準範本做不到的事寫成規定。
+- **(丙) 範本預設收緊**（例如檔案工具擋工作區外）。後果：要動工具與範本，而且跟使用者 11-10 那句「預設開到第四包，想要安全就自行限制」反著走。
+
+**5. 建議（寫手的，不是定案）**：甲。使用者 11-10 的話很明確，條文照那句寫；丙是翻他的案，不建議。</pre></details></details></article><article class="card" id="q-cv-P18" data-qid="cv-P18"><header><span class="num">cv-P18</span><h3 id="heading-cv-P18">stack 放哪（P-18）：條文說預設值只保證「一個工作區一隻 agent」不撞；照標準範本掛上 daemon 後，stack 預設根本不在工作區裡、多隻也不會撞。要不要補一句？</h3></header><p class="muted"><strong>條文說</strong>：一個工作區同時跑兩隻 agent 時，呼叫的人要給不同的 <code>AOS_STACK</code>；預設值只保證一個工作區一隻不撞。<strong>範本實際</strong>：範本的入口是掛上 daemon，掛上去的 agent stack 預設在 daemon 底下、一隻一個名字一個夾，同工作區掛多隻不會撞。條文講的預設只在「不經 daemon、直接跑」時才用到。</p><blockquote class="quote"><p>agent不需要佔據workspace。agent本身就是一支aos proc，由daemon管理(對，先暫時忽略直接aos-exec出來的那些)，所以我們要找agent，那就是透過環境變數AOS_DAEMON，然後藉此找到agent這個aos proc的stack</p><cite>使用者 11-03</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P18"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P18" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 補一句現況：掛上 daemon 的 stack 預設在 daemon 底下、一隻一夾；本條的預設值講的是直接跑的情形 <span class="star">★ 推薦</span></span><span class="option-consequence">只改條文；01 的佈局樹最好同時加一行註。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P18" value="B"><span class="option-content"><span class="option-title"><b>B</b> 不動</span><span class="option-consequence">條文對直接跑的情形仍正確；但照標準範本做的人會以為要自己錯開 stack，其實不用。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：純事實補充；跟 P-05 選 A 同方向。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P18 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>所以我們再設定一個AOS_STACK=ws/.aos/</p><cite>使用者 10-19（當時的預設位置）</cite></blockquote><ul><li>條文在 <code>CONVENTION/02-題目stack停錯腦/04-五-stack與六-停與錯.md</code> 第 12 行。</li><li>預設位置：<code>aos-agent ctl add</code> 沒給 <code>--stack</code> 時是 <code>&lt;daemon 的 stack&gt;/procs/&lt;名字&gt;/</code>。</li><li>順帶查實了 <code>cv-P38</code> 留的那點：用 <code>subagent</code> 工具生的子 agent 也是照這個預設落在 daemon 底下，不在父的 <code>.stack/tools/</code> 裡（預設值本身寫手只看了 add 的用法說明）。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:666-689</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">### P-18 stack 放哪：條文說預設值只保證「一個工作區一個 agent」不撞；範本掛上 daemon 之後，stack 預設根本不在工作區裡
+
+**1. 條文原句**（`04-五-stack與六-停與錯.md` 第 12 行）
+
+&gt; - **P-18** 一個工作區同時跑兩個 agent 時，呼叫方給不同的 `AOS_STACK`（例 `$AOS_WS/.stack/bob/`）；預設值只保證「一個工作區一個 agent」不撞。（C-67；C-53 入口默認正常、誤用不歸組件管）
+
+**2. 範本實際長相**
+
+`cmd/aos-agent/aos_agent/ctl/add.py` 的用法說明：
+
+```
+  -s, --stack S       its stack (default: &lt;daemon stack&gt;/procs/&lt;name&gt;/)
+```
+
+範本的入口是 `aos-agent ctl add`（見 P-05），所以照標準做法掛上去的 agent，stack 預設在 daemon 底下、一隻一個名字一個夾；同一個工作區掛兩隻不會撞，也不用呼叫方另外給。條文說的預設值（`$AOS_WS/.stack/`）只在「不經 daemon、直接 `aos-exec fsm.json`」時才用到。順帶兩處同源：(1) 01 第二節佈局樹把 `workspace/.stack/` 畫成這隻的 stack，那是直接跑的情形；(2) 前面 P-38 那節留的「子 agent 的 stack 在哪沒查」——`subagent` 工具是轉手叫 `aos-agent ctl add`，沒另外給 stack 時照同一個預設落在 daemon 底下、不在父的 `.stack/tools/` 裡（`lib/agent/agents_cmd.py` 有把 `stack` 參數轉成 `--stack` 的路，預設值本身我只看了 add.py 的說明）。
+
+**3. 這條規定當初的用意**：C-67「stack 放哪由呼叫方決定」；§ 2 使用者「所以我們再設定一個AOS_STACK=ws/.aos/」（[01-原話](../../2026-10/19/ideas/01-原話.md)，當時的預設位置）。改成放 daemon 底下的方向：使用者在 [11-03 aos-agent](../03/aos-agent.md) 說「agent不需要佔據workspace。agent本身就是一支aos proc，由daemon管理(對，先暫時忽略直接aos-exec出來的那些)，所以我們要找agent，那就是透過環境變數AOS_DAEMON，然後藉此找到agent這個aos proc的stack」。
+
+**4. 可行的收法**
+
+- **(甲) 補一句現況**：尾巴加「掛上 daemon 的（標準範本的做法）stack 預設是 `&lt;daemon 的 stack&gt;/procs/&lt;名字&gt;/`，一隻一夾、同工作區多隻不撞；本條的預設值講的是直接 `aos-exec` 的情形」。後果：只改條文；01 的佈局樹最好同時加一行註。
+- **(乙) 不動**：條文對直接跑的情形仍然正確。後果：照標準範本做的人讀到「一個工作區只保證一隻」會以為要自己錯開 stack，其實不用。
+
+**5. 建議（寫手的，不是定案）**：甲，純事實補充；跟 P-05 裁甲同方向。</pre></details></details></article><article class="card" id="q-cv-P24" data-qid="cv-P24"><header><span class="num">cv-P24</span><h3 id="heading-cv-P24">想跟做分開（P-24）：條文說「能寫死的步驟放在 act 格、不交給模型」；範本的 act 只會照腦點名跑工具，沒有任何寫死的步驟。條文要怎麼講？</h3></header><p class="muted"><strong>條文說</strong>：think 問腦、只決定要做什麼；act 照計畫動手；能寫死的步驟（搬檔、寫檔）放在 act 這種程式格，不交給模型。<strong>範本實際</strong>：think 只組好請求、真正問腦的是 wait 格；act 只做一件事——腦點名哪支工具就跑哪支，搬檔寫檔也是腦去叫工具，每一步都是模型決定的。「act 不問腦」這半句成立。<strong>為什麼要你裁</strong>：「能寫死的換成程式」是你在意的方向，現在的範本是「先全交給模型」的起點那一端；條文要不要講清楚在範本上該加在哪。</p><blockquote class="quote"><p>我預期的是agent作爲萬能函數，拆出來的子功能先弄成agent呼叫，後續再慢慢優化成函數。但我也擔心，是否變成腳本的，都是一些無關痛癢的子功能，而主要功能仍需大量依賴LLM，而不是我設想的，逐步削減LLM的級別與使用。</p><cite>使用者 11-07 檢討點 3</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-cv-P24"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-cv-P24" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 改兩處措辭：「think 組請求、wait 問腦」；寫死的步驟＝自己在表上加一格程式格，或做成一支工具（範本預設每一步都由腦點工具） <span class="star">★ 推薦</span></span><span class="option-consequence">只改條文；原則不變，只是講清楚在現在的範本上怎麼落。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P24" value="B"><span class="option-content"><span class="option-title"><b>B</b> 只改「think 問腦」那幾個字</span><span class="option-consequence">改最少；「放在 act 這種程式格」在範本上仍找不到對應。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-cv-P24" value="C"><span class="option-content"><span class="option-title"><b>C</b> 不動，當成原則性的話</span><span class="option-consequence">條文照舊。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：寫手建議：「寫死的步驟換成程式」是你在意的方向，值得在條文裡講清楚現在該加在哪，而不是指向一個已經不是那個用途的 act 格。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="cv-P24 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>並且可以的話，考慮非同步呼叫，也就是正在跑的loop不停。</p><cite>使用者 11-04 晚（think／wait 拆開的出處）</cite></blockquote><ul><li>條文在 <code>CONVENTION/02-題目stack停錯腦/05-P-23～P-26.md</code> 第 9 行。</li><li>這題跟前面幾組都不相干，要單獨裁。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/convention-vs-agent-fsm.md:691-711</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">### P-24 想跟做分開：條文說 think 問腦、能寫死的步驟放 act 不交給模型；範本的 think 不問腦，act 也沒有任何寫死的步驟
+
+**1. 條文原句**（`05-P-23～P-26.md` 第 9 行）
+
+&gt; - **P-24** 想跟做分開：think 問腦、只決定「要做什麼」；act 照 plan 動手、不問腦。能寫死的步驟（搬檔、寫檔）放在 act 這種程式格，不交給模型。`templates/agent-fsm` 裡腦的決定（`$AOS_STACK/history.jsonl` 最後一則 assistant）就是 plan，act 照它叫工具或交答案、不問腦（P-41）。（C-22 能寫死的節點換成程式；C-25）
+
+**2. 範本實際長相**
+
+- `brain.py`（think 格）檔頭：「帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。」真的寄出去、收回信的是 wait 格（`wait.py`：「寄請求、逐拍收 llm kernel 回信」）。所以「think 問腦」字面不對，是 think 組請求、wait 問腦（P-08、P-41 已經這樣寫）。
+- `act.py` 檔頭：「依序 aos-tools call…結果接進 history」。act 只做一件事：腦點名哪支工具就跑哪支。搬檔、寫檔是腦去叫 change 包的 `move`、`write`——每一步都是模型決定的，範本裡沒有任何「寫死、不交給模型」的步驟。
+- 「act 照 plan 動手、不問腦」這半句成立。
+
+**3. 這條規定當初的用意**：C-22「能寫死的節點換成程式」（條文括號）。使用者相關的話，11-07 檢討點 3（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）：「我預期的是agent作爲萬能函數，拆出來的子功能先弄成agent呼叫，後續再慢慢優化成函數。但我也擔心，是否變成腳本的，都是一些無關痛癢的子功能，而主要功能仍需大量依賴LLM，而不是我設想的，逐步削減LLM的級別與使用。」——也就是「先全交給模型、之後逐步換成程式」是他預期的走法，標準範本是起點那一端。think／wait 拆開：使用者 11-04 晚「並且可以的話，考慮非同步呼叫，也就是正在跑的loop不停。」（[think-as-function](../04/think-as-function/README.md)）。
+
+**4. 可行的收法**
+
+- **(甲) 改兩處措辭**：「think 問腦」改成「think 組請求、wait 問腦，只決定『要做什麼』」；「能寫死的步驟…放在 act 這種程式格」改成「能寫死的步驟做成程式，不交給模型——在標準範本上＝自己在 `fsm.json` 加一格程式格（P-08），或把那一步做成一支工具；範本本身是通用 agent，預設每一步都由腦點工具」。後果：只改條文；原則（C-22）不變，只是講清楚在現在的範本上怎麼落。
+- **(乙) 只改「think 問腦」那幾個字**，寫死步驟那句不動。後果：改最少；「放在 act 這種程式格」在範本上仍然找不到對應（範本的 act 不是放寫死步驟的地方）。
+- **(丙) 不動**：當成原則性的話。
+
+**5. 建議（寫手的，不是定案）**：甲。「寫死的步驟換成程式」是使用者在意的方向（11-07 那段），值得在條文裡講清楚現在該加在哪，而不是指向一個已經不是那個用途的 act 格。</pre></details></details></article></section><section><h2 id="sec-b">B. eca_main 來信要你定的四題，加修的時候冒出的三題</h2><p class="muted">你那棵樹裡的 eca_main 回報了七個問題；bug 都修了，前四題是設計或要不要做，後三題（<code>fx-</code>）是線庚修的時候發現的。</p><article class="card" id="q-em-Q1" data-qid="em-Q1"><header><span class="num">em-Q1</span><h3 id="heading-em-Q1"><code>AOS_HOME</code> 這個變數到底指哪裡：指 repo 裡的 proto8，還是可以指你那棵樹裡抄出來的那一份？</h3></header><p class="muted">條文和知識庫都說「<code>AOS_HOME</code>＝這台 proto8 的位置」。但這台的 <code>~/aos-home</code> 是另外搭的一棵樹，裡面抄了一份 lib、templates、knowledge，跟 proto8 是分開的。eca_main 來信指出兩邊說法不一樣。這是「變數的定義」，要你定。程式那一半（找 <code>aos-tools</code> 改成從 PATH 找）已經修好進 main，不管選哪個都不受影響。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-em-Q1"><li class=""><label class="option-label"><input type="radio" name="q-em-Q1" value="A"><span class="option-content"><span class="option-title"><b>A</b> 照條文：<code>AOS_HOME</code> 就是 repo 的 proto8；<code>~/aos-home</code> 不再抄那幾夾</span><span class="option-consequence">只有一份、不會兩個版本混用；但 repo 一改，工具和知識庫也馬上生效（指令本來就已經這樣）。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-em-Q1" value="B" checked><span class="option-content"><span class="option-title"><b>B</b> 照這台現況改條文：<code>AOS_HOME</code>＝「放 lib、templates、knowledge 的那個資料夾，可以是 proto8 本身或它的抄本」 <span class="star">★ 推薦</span></span><span class="option-consequence">lib 與知識庫可以凍住、要更新時才重抄；但指令與 lib 的版本可能不一致。知識庫那句要改，kernel 範例要嘛也抄、要嘛改說「在 proto8 的 kernel/」。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-em-Q1" value="C"><span class="option-content"><span class="option-title"><b>C</b> 條文不動，只修程式（已修）</span><span class="option-consequence">知識庫說的跟這台不一樣，這件事繼續存在。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 B：來源檔推薦 B：這台已經這樣搭、手冊也這樣寫，改字句最少；不管選哪個，程式那半都要做（已做）。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="em-Q1 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>另外，知識庫說 AOS_HOME＝proto8 所在的地方，但這台的 aos-home 和 proto8 是分開的，需要釐清設計。</p><cite>eca_main 來信第 1 項（不是你的話，是 eca_main 的來信；你已裁「它轉來的普通工作算你的授權」）</cite></blockquote><ul><li>程式那半：<code>lib/aos/defs/catalog.py</code> 改從 PATH 找 <code>aos-tools</code>，commit <code>0b0aaf106</code>；要重抄 lib 進 <code>~/aos-home</code> 才生效。</li><li>「<code>AOS_HOME</code> 指什麼」的條文與知識庫字句都還沒動，等這題。</li><li>A 區的 <code>cv-P31</code>、<code>cv-P33</code> 也提到 <code>AOS_HOME</code> 的身分（人設的、不在 aos 保證的六個變數裡），這題定了那兩題的字句可以引用。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/eca-main-six-fixes.md:233-237</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">**Q1 `AOS_HOME` 指什麼？**（第 1 項）條文和知識庫說「這台 proto8 的位置」，這台的 aos-home 是「抄了 lib、templates、knowledge 的樹」。
+- A. 照條文：AOS_HOME＝`~/repo/aos/proto8`，aos-home 不再抄四夾、system.txt 改指 `$AOS_HOME/knowledge`。後果：只有一份、不會兩個版本混用；但 repo 一改，工具和知識庫也馬上生效（指令本來就已經這樣）。
+- B. 照這台現況改條文：AOS_HOME＝「放 lib、templates、knowledge 的那個資料夾，可以是 proto8 本身或它的抄本」；指令一律從 PATH 找；知識庫「where proto8 is」改成這句，kernel 範例要嘛也抄、要嘛知識庫改說「在 proto8 的 kernel/」。後果：lib／知識庫可以凍住、要更新時才重抄（⑯ 現成），但指令與 lib 版本可能不一致。
+- C. 條文不動，只修程式（catalog 走 PATH）。後果：知識庫說的跟這台不一樣這件事繼續存在。
+- 推薦 **B**：這台已經這樣搭、手冊也這樣寫，改字句最少；不管選哪個，catalog 走 PATH 都要做。</pre></details></details></article><article class="card" id="q-em-Q2" data-qid="em-Q2"><header><span class="num">em-Q2</span><h3 id="heading-em-Q2">agent 換了定義再掛回來時，信箱裡本來就在等的信，要不要提醒它一次？</h3></header><p class="muted">現在的規矩（你 11-11 晚認可的代定）：沒有「提醒過哪些信」的紀錄，就當它是全新的，只把現有的信記成已知、不提醒。eca_main 遇到的是：這個 agent 明明跑過，只是沒留下那份紀錄（舊定義沒掛新信通知、或那時沒有時鐘），結果在等的信沒人提。實測多數情況其實會提醒，只有這種才漏。改的話會動到你認可過的代定，所以要你裁。</p><blockquote class="quote"><p>沒啥好翻的，我覺得都OK</p><cite>使用者 11-11 晚（認可那批代定，其中代定 1 就是「沒紀錄＝只提醒新到的」）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-em-Q2"><li class=""><label class="option-label"><input type="radio" name="q-em-Q2" value="A"><span class="option-content"><span class="option-title"><b>A</b> 維持：沒紀錄就只記不提；文件寫「換定義後自己看一次信箱」</span><span class="option-consequence">來信那種漏信還會發生（只在舊定義沒掛新信通知或沒時鐘時）。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-em-Q2" value="B" checked><span class="option-content"><span class="option-title"><b>B</b> 跑過的（stack 裡有對話紀錄）就照「睡醒」提醒在等的信；全新的照舊只記 <span class="star">★ 推薦</span></span><span class="option-consequence">符合來信要的「stack 有之前的紀錄時照睡醒」；全新 agent 的行為不變。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-em-Q2" value="C"><span class="option-content"><span class="option-title"><b>C</b> 沒紀錄一律提醒在等的信</span><span class="option-consequence">最簡單；但全新 agent 一掛上就會被舊信提醒一次，等於翻掉 11-11「只提醒新到的」。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 B：來源檔推薦 B。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="em-Q2 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>換完之後，信箱裡原本就在等的信不會被 mail_notify 提醒（因為算 fresh start）。但 stack 是保留的，這些信就漏了。stack 有之前的紀錄時，應照「睡醒」的規則處理。</p><cite>eca_main 來信第 5 項（不是你的話，是 eca_main 的來信；你已裁「它轉來的普通工作算你的授權」）</cite></blockquote><ul><li>選 B 的修法已想好：<code>lib/agent/mail_notify/_entry</code> 多看一眼 stack 裡的 <code>history.jsonl</code> 存在且非空；加兩支測試；說明與知識庫幾處跟著改。</li><li>改完要重抄 lib 進 <code>~/aos-home</code> 才生效，不用重啟。</li><li>這一項（來信第 5 項）目前沒施工，等這題。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/eca-main-six-fixes.md:239-243</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">**Q2 stack 跑過、但沒有 mail_notify 紀錄時，掛上那次要不要提醒在等的信？**（第 5 項；會改到 11-11 晚認可的代定 1）
+- A. 維持：沒紀錄就只記不提；文件寫「換定義後自己 mailbox_peek 一次」。後果：原信那種漏信還會發生（雖然只在舊定義沒掛 mail_notify 或沒時鐘時）。
+- B. stack 有 history（跑過）就照睡醒提醒；全新的照舊只記。後果：符合原信「stack 有之前的紀錄時照睡醒」；全新 agent 行為不變。
+- C. 沒紀錄一律提醒在等的信。後果：最簡單，但全新 agent 一掛上就會被舊信提醒一次（等於翻掉 11-11「只提醒新到的」）。
+- 推薦 **B**。</pre></details></details></article><article class="card" id="q-em-Q3" data-qid="em-Q3"><header><span class="num">em-Q3</span><h3 id="heading-em-Q3">eca 把信交給 CLI 之後 CLI 失敗，那封信要不要照舊丟掉？</h3></header><p class="muted">現行是你 11-10 裁的：交出去之後失敗＝掉那一封、但自動重起（agent-fsm 那種則是重寄、不掉）。這次 eca_main 兩次丟信，原因其實是 aos 自己的錯（旗標重複、記錯對話），兩個都已修好：現在這類錯會在交出去之前就停下，信留著。剩下要問的是：外面服務（Claude、codex）自己出錯時，還要不要照舊丟。</p><blockquote class="quote"><p>掉那一封、但自動重起</p><cite>使用者 11-10 選項框裁定 5 選的那格</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-em-Q3"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-em-Q3" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 維持：aos 自己的錯已改成不掉信，外面服務的錯照舊丟那一封 <span class="star">★ 推薦</span></span><span class="option-consequence">規矩不變；真的遇到外面服務出錯時那封還是會掉。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-em-Q3" value="B"><span class="option-content"><span class="option-title"><b>B</b> 改成跟 agent-fsm 一樣不丟：冷卻時間到了拿同一封再試</span><span class="option-consequence">信不會不見；但一封「本身就會讓 CLI 失敗」的信，每次冷卻到了就再撞一次，間隔拉到 30 分鐘後會一直卡在那封。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：來源檔推薦 A。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="em-Q3 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>建議記 session 時排除子 agent 的 thread，或者 resume 遇到這個錯誤時，自動改 resume 父 thread 或開新對話，不要白白進冷卻、丟掉信。</p><cite>eca_main 來信第 7 項（不是你的話，是 eca_main 的來信；你已裁「它轉來的普通工作算你的授權」）</cite></blockquote><ul><li>兩個 bug 的修補：第 7 項 commit <code>a89759e57</code>、第 6 項 commit <code>ee906d9ee</code>，存檔即生效。</li><li>條文在 CONVENTION 02 夾「失敗後冷卻」那段；來源檔的判斷是「不是 bug，是現行條文的決定」。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/eca-main-six-fixes.md:245-248</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">**Q3 eca 交出去之後 CLI 失敗，那封信要不要丟？**（第 6、7 項的共同點；現行是使用者 11-10 裁定 5「掉那一封、但自動重起」）
+- A. 維持：修好 6、7 之後，aos 自己的錯在交出去之前就停（信不掉），只剩外面服務的錯照舊丟。
+- B. 改成跟 agent-fsm 一樣不丟：冷卻到了拿同一封再試。後果：信不會不見；但一封「本身就會讓 CLI 失敗」的信會每次冷卻到了就再撞一次，間隔拉到 30 分鐘後一直卡在那封。
+- 推薦 **A**。</pre></details></details></article><article class="card" id="q-em-Q4" data-qid="em-Q4"><header><span class="num">em-Q4</span><h3 id="heading-em-Q4"><code>aos-agent ctl</code> 要不要加「改名」和「換定義」兩個指令？（頂層已先代定：只做換定義，而且已經做完）</h3></header><p class="muted">這兩件事本來就做得到：先 rm、再 add 並指回同一個 stack，兩步，什麼都保留（實測過）。eca_main 希望各有一個指令。<strong>現況</strong>：頂層先代定了 B——只做換定義（<code>set-def</code>），不做改名（<code>rename</code>）；<code>set-def</code> 今天已做完進 main。這題請你確認，或翻案。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-em-Q4"><li class=""><label class="option-label"><input type="radio" name="q-em-Q4" value="A"><span class="option-content"><span class="option-title"><b>A</b> 兩個都做</span><span class="option-consequence">再花約半天做 <code>rename</code>；還要定改名時 stack 資料夾要不要跟著搬（來源檔建議不搬）。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-em-Q4" value="B" checked><span class="option-content"><span class="option-title"><b>B</b> 只做 <code>set-def</code>（頂層代定、已做完）；改名照舊用兩步，寫法寫進說明與知識庫 <span class="star">★ 推薦</span></span><span class="option-consequence">現況，不用再動。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-em-Q4" value="C"><span class="option-content"><span class="option-title"><b>C</b> 兩個都不做，兩種寫法只寫進文件</span><span class="option-consequence">今天做好的 <code>set-def</code> 要拿掉。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 B：來源檔推薦 B：daemon 本來就支援「同名換設定」，改動小；改名的兩步寫法實測什麼都保留。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="em-Q4 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>沒有改名指令：aos-agent ctl 沒有 rename，只能 rm 再 add，history 不會帶過去（除非新舊名用同一個 stack）。希望有 ctl rename OLD NEW，保留 history、queue、mailbox、overlay。</p><cite>eca_main 來信第 2 項（不是你的話，是 eca_main 的來信；你已裁「它轉來的普通工作算你的授權」）</cite></blockquote><blockquote class="quote"><p>換定義只能 rm（保留 stack）再 add：希望有 ctl set-def NAME DEF（或 add --replace）。</p><cite>eca_main 來信第 4 項（不是你的話，是 eca_main 的來信；你已裁「它轉來的普通工作算你的授權」）</cite></blockquote><ul><li><code>set-def</code>：commit <code>ab19068d0</code>，<code>aos-agent ctl set-def [--restart] NAME DEF</code>；stack、工作區、limits 都照舊。</li><li><code>set-def</code> 實測發現 daemon 有一個缺口：換的設定在那隻 agent 重起之前只活在跑著的 daemon 裡；還沒重起、daemon 自己先重啟＝回到舊定義。加 <code>--restart</code>（或自己 stop＋start）之後就不會掉。</li><li>這個缺口怎麼收是下一題 <code>fx-1</code>。</li><li>來信說「history 不會帶過去」，是因為 add 沒給 <code>-s</code> 時預設用新的空 stack。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/eca-main-six-fixes.md:250-255</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">**Q4 rename、set-def 要不要做？**（第 2、4 項；現在 rm＋add `-s` 已經什麼都保留，實測過）
+- A. 兩個都做。
+- B. 只做 set-def（daemon 已經支援同名換設定，改動小）；rename 把「rm、再 add -n 新名 -s 舊 stack」寫進 `aos-agent ctl` 的 help 與知識庫。
+- C. 都不做，兩個寫法都寫進文件。
+- 子題（選 A 時）：改名時 stack 資料夾要不要跟著搬成 `procs/新名`？推薦不搬（KISS，路徑只是名字）。
+- 推薦 **B**。</pre></details></details></article><article class="card" id="q-fx-1" data-qid="fx-1"><header><span class="num">fx-1</span><h3 id="heading-fx-1">「換定義」指令（<code>set-def</code>）有個缺口：換完沒重起那隻 agent，daemon 自己先重啟的話會回到舊定義。要怎麼收？</h3></header><p class="muted"><code>set-def</code> 今天做好了，用的是 daemon 本來就收的「同名再掛一次＝換設定」。實測發現：換的設定在那隻 agent 重起之前，只活在跑著的 daemon 記憶裡，表上那列還是舊的；這時 daemon 自己先重啟，就回到舊定義（在跑的、停著的都一樣）。加 <code>--restart</code>（或自己 stop＋start）之後就寫進表、不會掉。徹底補要動 daemon 的 C++，所以要你定。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-fx-1"><li class=""><label class="option-label"><input type="radio" name="q-fx-1" value="A"><span class="option-content"><span class="option-title"><b>A</b> 維持現狀，文件寫明「設完要重起才算數」</span><span class="option-consequence">不動程式；沒重起又遇到 daemon 重啟時，會安靜地回到舊定義。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-fx-1" value="B"><span class="option-content"><span class="option-title"><b>B</b> <code>set-def</code> 改成「停→拔→用同一個 stack 掛回」</span><span class="option-consequence">表馬上換、不怕 daemon 重啟；但中間有一小段不在表上，這時寄給它的信會被退。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-fx-1" value="C" checked><span class="option-content"><span class="option-title"><b>C</b> 改 daemon：讓「同名再掛一次」直接改表 <span class="star">★ 推薦</span></span><span class="option-consequence">缺口根治；要動 C++（重 build、要能停樹才換得上）。在那之前先照 A。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 C：線庚建議 C，在那之前先 A。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="fx-1 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>換定義只能 rm（保留 stack）再 add：希望有 ctl set-def NAME DEF（或 add --replace）。</p><cite>eca_main 來信第 4 項（不是你的話，是 eca_main 的來信；你已裁「它轉來的普通工作算你的授權」）</cite></blockquote><ul><li><code>set-def</code>：commit <code>ab19068d0</code>。缺口已寫進 <code>--help</code>、提醒行、README，並留了兩支「預期失敗」的測試當記號。</li><li>跟上一題 <code>em-Q4</code>（要不要做這兩個指令）連著看。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/fixes-施工結果.md:41</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">1. **set-def 的缺口怎麼收**：(a) 維持現狀，文件寫明「設完要重起才算數」；(b) set-def 改成「停→拔→用同一個 stack 掛回」（表馬上換、不怕 daemon 重啟，但中間有一小段不在表上，寄給它的信會被退）；(c) 改 daemon，讓同名 `procs_added` 直接改表（要動 C++）。建議 (c)，在那之前先 (a)。</pre></details></details></article><article class="card" id="q-fx-2" data-qid="fx-2"><header><span class="num">fx-2</span><h3 id="heading-fx-2">工具印出來的 <code>$AOS_STACK/…</code> 路徑，是從工具自己的小格算的，腦讀到卻會當成自己的 stack。要不要全部工具一起改？</h3></header><p class="muted">每支工具被叫時有自己的一小格 stack。工具存了檔、告訴腦「檔在 <code>$AOS_STACK/…</code>」時，這個 <code>$AOS_STACK</code> 指的是工具那一小格；但腦看到會以為是自己的 stack，照著找就找不到。這次只修了外部 MCP 工具的存檔提示（改成從腦的 stack 算）。其他工具是同一類問題、還沒處理；全改要動 <code>aos-tools</code> 給工具的東西，所以問。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-fx-2"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-fx-2" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 全家一起改：<code>aos-tools</code> 多給工具一個「叫我的那方的 stack」，印路徑都照它算 <span class="star">★ 推薦</span></span><span class="option-consequence">腦讀到的路徑都從自己的 stack 算、找得到；要另開一條線做。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-fx-2" value="B"><span class="option-content"><span class="option-title"><b>B</b> 先不改</span><span class="option-consequence">只有 <code>mcp_tool</code> 那一處是對的；其他工具印的路徑腦照著找仍會找錯地方。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：線庚建議改，另開一條線。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="fx-2 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>這次修的那一處：commit <code>a4ae7d573</code>（<code>mcp_tool</code> 的存檔提示改印 <code>$AOS_STACK/tools/&lt;登記名&gt;/檔</code>）；沒印絕對路徑，是因為結果行會進對話紀錄、規範說不落絕對路徑。</li><li>共用的那段程式 <code>tool_io.place</code> 與 <code>aos-tools</code> 這次都沒動。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/fixes-施工結果.md:42</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">2. **工具印的 `$AOS_STACK/…` 到底從誰的 stack 算**：現在工具印的是自己小格的，腦讀到會當成自己的 stack。這次只修了 `mcp_tool` 的存檔提示。要不要全家一起改（aos-tools 多給工具一個「叫我的那方的 stack」，`tool_io.place` 照它算）？建議改，另開一條線。</pre></details></details></article><article class="card" id="q-fx-3" data-qid="fx-3"><header><span class="num">fx-3</span><h3 id="heading-fx-3">外部 MCP 的 server 設定檔被改名或抄成別名後，現在要到「同步」時才會報錯。要不要在叫工具的那一刻就擋？</h3></header><p class="muted">外部 MCP 的工具是匯入進來的一份檔。有人把那份檔改名、或抄一份成別的名字，裡面的指標還指著舊檔，叫工具時會安靜地跑到舊檔那一格。今天已讓 <code>aos-mcp-import sync</code> 遇到這種檔就報錯。要在「叫工具那一刻」擋，<code>aos-tools</code> 得多傳一個變數給工具（等於新增一個對外格式），所以問。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-fx-3"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-fx-3" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 先不做，靠 <code>sync</code> 報 <span class="star">★ 推薦</span></span><span class="option-consequence">現況；沒跑 <code>sync</code> 之前，抄成別名的檔叫起來仍會跑到舊檔那一格。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-fx-3" value="B"><span class="option-content"><span class="option-title"><b>B</b> 做：<code>aos-tools</code> 多傳「是哪份檔登記的」給工具，叫的那一刻就擋</span><span class="option-consequence">當場就擋得住；<code>aos-tools</code> 給工具的對外格式多一個變數。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：線庚建議先不做：sync 已經會報。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="fx-3 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>今天做的那半：commit <code>1b9fcec2b</code>（<code>sync</code> 報 <code>PackBad</code>、README 寫重新匯入的步驟）。</li><li>為什麼叫的那一刻認不出來：抄出來的檔，工具手上拿到的檔名、路徑、目前資料夾全都跟正常時一致。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/fixes-施工結果.md:43</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">3. **抄成別名的 server 檔要不要在叫工具時就擋**：要的話 aos-tools 得多傳一個變數給工具（新增對外格式）。建議先不做，`sync` 已經會報。</pre></details></details></article></section><section><h2 id="sec-c">C. 線乙（清舊那條線）留的五題</h2><p class="muted">都是小事，每題都有建議。</p><article class="card" id="q-lb-1" data-qid="lb-1"><header><span class="num">lb-1</span><h3 id="heading-lb-1">「做任務」工具（do_task）的說明上標著「中途被打斷不安全」，要不要改成「安全」？</h3></header><p class="muted">do_task 是讓 agent 開一段任務、做完把過程摺起來的工具。它的標記是 <code>interrupt: unsafe</code>（中途被砍可能留下做到一半的狀態）。線乙今天修掉了一個「被砍後重跑會多留一份訊息」的洞，但還剩一個窗口（下一題），所以問標記要不要跟著改。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-lb-1"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-lb-1" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 維持 <code>unsafe</code> <span class="star">★ 推薦</span></span><span class="option-consequence">標記照舊；下一題那個窗口還在，說法跟實況一致。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-lb-1" value="B"><span class="option-content"><span class="option-title"><b>B</b> 改成 <code>safe</code></span><span class="option-consequence">標記變樂觀；但下一題那個窗口還在的話，標記會比實況好看。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：線乙建議維持：下一題的窗口還在。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="lb-1 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>今天修的那個洞：commit <code>4696428dd</code>，只動 <code>lib/agent/do_task</code>，<code>tasks.json</code> 多一個選填鍵 <code>moving</code>。</li><li>這題跟下一題（<code>lb-2</code>）連著看。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/line-b-cleanup.md:35</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">1. **do_task 的 `interrupt: unsafe` 要不要改 `safe`**：(a) 維持（建議；下一題的窗口還在）；(b) 改 safe。</pre></details></details></article><article class="card" id="q-lb-2" data-qid="lb-2"><header><span class="num">lb-2</span><h3 id="heading-lb-2">do_task 還剩一個會多留一份訊息的窗口，要不要補？</h3></header><p class="muted">情況：任務結束、訊息挪到一半時，不是被砍、而是 <code>aos-agent</code> 自己回了錯；腦再叫一次「結束」會被當成新的一次，留下的訊息仍會多一份。要 <code>aos-agent</code> 寫檔失敗才碰得到。補法會動到設計，所以問。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-lb-2"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-lb-2" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 先不補 <span class="star">★ 推薦</span></span><span class="option-consequence">窗口留著；要 <code>aos-agent</code> 寫檔失敗才碰得到。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-lb-2" value="B"><span class="option-content"><span class="option-title"><b>B</b> 改成看對話紀錄的形狀，認出沒做完的計畫</span><span class="option-consequence">程式複雜、容易認錯。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-lb-2" value="C"><span class="option-content"><span class="option-title"><b>C</b> <code>aos-agent</code> 提供一步完成的「挪＋摺」</span><span class="option-consequence">要動 <code>aos-agent</code> 的設計。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：線乙建議先不補：要 aos-agent 寫檔失敗才碰得到。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="lb-2 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>線乙另記：真 daemon 下真的被砍沒實跑，只在單元測試用假的 <code>aos-agent</code> 讓那一步失敗來模擬。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/line-b-cleanup.md:36</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">2. **do_task 剩的窗口**：挪到一半是 aos-agent 回錯（不是被砍），腦再叫一次 end 是新的 call，留下的訊息仍會多一份。(a) 先不補（建議；要 aos-agent 寫檔失敗才碰得到）；(b) 改看 history 形狀認沒做完的計畫（程式複雜、容易認錯）；(c) aos-agent 提供一步完成的「挪＋摺」（動設計）。</pre></details></details></article><article class="card" id="q-lb-3" data-qid="lb-3"><header><span class="num">lb-3</span><h3 id="heading-lb-3"><code>aos-eca-turn</code> 的說明裡，錯誤代號清單少了三個程式會報的，要不要補上？</h3></header><p class="muted"><code>cmd/docs/01</code> 列的錯誤代號少了 <code>HooksBad</code>、<code>ToolsBad</code>、<code>SessionBad</code> 三個，程式實際會報。純粹是說明落後程式；線乙這輪的任務是「清舊」不是「補新」，所以留給你點頭。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-lb-3"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-lb-3" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 補上（照程式寫） <span class="star">★ 推薦</span></span><span class="option-consequence">說明跟程式一致。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-lb-3" value="B"><span class="option-content"><span class="option-title"><b>B</b> 不補</span><span class="option-consequence">說明繼續少三個代號。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：線乙建議補上：照程式寫。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="lb-3 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>檔案：<code>proto8/cmd/docs/01</code>。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/line-b-cleanup.md:37</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">3. **`cmd/docs/01` 的 aos-eca-turn 錯誤代號清單少三個**（`HooksBad`、`ToolsBad`、`SessionBad`，程式會報）：(a) 補上（建議；照程式寫）；(b) 不補。</pre></details></details></article><article class="card" id="q-lb-4" data-qid="lb-4"><header><span class="num">lb-4</span><h3 id="heading-lb-4"><code>aos-mcp</code> 說明裡有一個例子指向公司機已刪的遊樂場，要不要刪掉這個例子？</h3></header><p class="muted"><code>cmd/aos-mcp/README</code> 的例子寫 <code>~/code/playground/agents/bob-cathy/mcp.json</code>；公司機的遊樂場已經刪了，家機可能還有。刪說明裡的東西，問你一聲。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-lb-4"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-lb-4" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 刪掉這個例子 <span class="star">★ 推薦</span></span><span class="option-consequence">說明裡少一個跑不了的例子。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-lb-4" value="B"><span class="option-content"><span class="option-title"><b>B</b> 留著（家機若還有那個遊樂場）</span><span class="option-consequence">公司機上照著做會找不到檔。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：線乙建議刪掉。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="lb-4 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>本來就該按照tidy規矩，把舊的東西清掉</p><cite>使用者 11-12（清舊的通則）</cite></blockquote><ul><li>檔案：<code>proto8/cmd/aos-mcp/README.md</code>。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/line-b-cleanup.md:38</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">4. **`cmd/aos-mcp/README` 例子指 `~/code/playground/agents/bob-cathy/mcp.json`**：公司機遊樂場已刪。(a) 刪掉這個例子（建議）；(b) 留著（家機若還有）。</pre></details></details></article><article class="card" id="q-lb-5" data-qid="lb-5"><header><span class="num">lb-5</span><h3 id="heading-lb-5"><code>aos-directive</code> 說明裡「D9」「ideas § 9」這類出處標籤，指向的討論紀錄已封存，要留還是清？</h3></header><p class="muted"><code>impls/aos-directive</code> 的 docs/01 裡有一些小標籤，標明某個設計出自哪一段討論；那些討論紀錄已經封存。它們是「出處」不是「沿革」，照清舊規矩不一定該清，所以問。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-lb-5"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-lb-5" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 留著 <span class="star">★ 推薦</span></span><span class="option-consequence">標籤照舊；讀的人要去封存區才找得到那段討論。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-lb-5" value="B"><span class="option-content"><span class="option-title"><b>B</b> 清掉</span><span class="option-consequence">說明更乾淨；但少了「這個設計出自哪裡」的線索。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：線乙建議留著：是出處不是沿革。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="lb-5 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>本來就該按照tidy規矩，把舊的東西清掉</p><cite>使用者 11-12（清舊的通則）</cite></blockquote><ul><li>檔案：<code>proto8/impls/aos-directive/docs/01</code>。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/line-b-cleanup.md:39</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">5. **`impls/aos-directive` docs/01 的「D9」「ideas § 9」這類出處標籤**指向已封存的 ideas：(a) 留著（建議；是出處不是沿革）；(b) 清掉。</pre></details></details></article></section><section><h2 id="sec-d">D. 今早兩則備註，想確認你的意思</h2><p class="muted">今早你在兩題寫了備註，落地時發現各有不只一種讀法；沒有替你選。</p><article class="card" id="q-rd-C81" data-qid="rd-C81"><header><span class="num">rd-C81</span><h3 id="heading-rd-C81">你今早對 C-81 寫的「拿掉限制。等以後踩坑再回來處理。」——要拿掉到哪一層？</h3></header><p class="muted">C-81 講的是「外人能不能讀寫別人的 stack」。整理後的條文是「讀沒問題，寫只限 <code>interfaces.json</code> 宣告過的覆蓋層」。你今早選了「不照這句」，並寫了這句備註。「拿掉限制」有三種讀法，一種比一種大；落地的人沒有替你選，所以回來問。「等以後踩坑再回來處理」三種讀法都照字面記：現在不設限制，出事再補。</p><blockquote class="quote"><p>拿掉限制。等以後踩坑再回來處理。</p><cite>使用者 11-13 上午（精選頁 <code>tok-C81</code> 選 B 的備註）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-rd-C81"><li class="is-selected"><label class="option-label"><input type="radio" name="q-rd-C81" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源檔沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-rd-C81" value="A"><span class="option-content"><span class="option-title"><b>A</b> 只改這一條：C-81 改回「外人讀寫別人的 stack 沒問題」，拿掉「寫限宣告的覆蓋層」那半句</span><span class="option-consequence">只動 C-81；11-06 的裁定與程式都不碰。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-rd-C81" value="B"><span class="option-content"><span class="option-title"><b>B</b> 連 11-06 你在選項框選的「宣告過的覆蓋層可寫」那個裁定也一起翻掉</span><span class="option-consequence">引用那個裁定的其他條文、<code>interfaces.json</code> 的可寫宣告在文件裡的地位，都要跟著看。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-rd-C81" value="C"><span class="option-content"><span class="option-title"><b>C</b> 連程式也算：現在若有程式照「沒宣告就不讓外人寫」在擋，也一起拿掉</span><span class="option-consequence">範圍最大；有沒有這樣的程式還沒查，要先查。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：來源檔把三種讀法照列、沒有選邊，所以不預選。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="rd-C81 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>要動的條文：<code>proto8/docs/CONCEPTS/03-基礎設施/02-資料夾程式-工作區與-stack.md</code> 的 C-81。</li><li>今早那題的選項 B 後果欄寫了「改回就推翻 11-06」，所以才有第二種讀法。</li><li>這題目前還沒施工。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/裁定落地-1113.md:84-89</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">**C-81「拿掉限制。等以後踩坑再回來處理。」**（選的是 B：不照「讀沒問題，寫限覆蓋層」）
+
+- 讀法一：只改條文。C-81 改回「外人讀寫別人的 stack 沒問題」，把「寫限 `interfaces.json` 宣告的覆蓋層」那半句拿掉。
+- 讀法二：連 11-06 選項框選的「宣告過的覆蓋層可寫 (Recommended)」那個裁定也一起翻掉（出題時選項 B 的後果欄寫了「改回就推翻 11-06」）。那麼引用那個裁定的其他條文、`interfaces.json` 的可寫宣告在文件裡的地位，都要跟著看。
+- 讀法三：也包括程式——現在若有程式照「沒宣告就不讓外人寫」在擋，也拿掉。有沒有這樣的程式這次沒查。
+- 「等以後踩坑再回來處理」照字面＝現在不設限制，出事再補。</pre></details></details></article><article class="card" id="q-rd-C42" data-qid="rd-C42"><header><span class="num">rd-C42</span><h3 id="heading-rd-C42">你今早對 C-42 寫的「推薦都用json…這是推薦，不遵守也沒差」——條文語氣要寫成哪一種？</h3></header><p class="muted">C-42 講記憶庫用什麼格式。你今早選了「以『記憶庫是純 JSON 樹』為準」，備註卻說「這是推薦，不遵守也沒差」。「是純 JSON」和「推薦 JSON」寫成條文不一樣：前者是規定，後者要交代別種格式怎麼辦。落地的人沒有替你選。</p><blockquote class="quote"><p>推薦都用json，我們做的東西也盡量以json為主。這是推薦，不遵守也沒差</p><cite>使用者 11-13 上午（精選頁 <code>tcf-C42</code> 選 B 的備註）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-rd-C42"><li class="is-selected"><label class="option-label"><input type="radio" name="q-rd-C42" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源檔沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-rd-C42" value="A"><span class="option-content"><span class="option-title"><b>A</b> 條文照你選的寫「記憶庫是純 JSON 樹」，備註只當補充態度</span><span class="option-consequence">條文是肯定句；你的原話留作出處、註明現在只做 JSON。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-rd-C42" value="B"><span class="option-content"><span class="option-title"><b>B</b> 條文語氣放成「推薦 JSON、別的格式不禁止」</span><span class="option-consequence">比較接近今早那題另一個選項的後果：工具與文件要交代非 JSON 的檔怎麼處理。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：來源檔把兩種寫法照列、沒有選邊，所以不預選。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="rd-C42 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>要動的條文：<code>proto8/docs/CONCEPTS/05-agent/01-續-C-42.md</code> 第 7、9 行。</li><li>另一個沒定的點：「我們做的東西也盡量以json為主」範圍比記憶庫大（aos 自己出的東西都算），跟你 11-12「.json比markdown好」同方向；要不要寫成一條通則，你沒說。想順便定，請寫在備註。</li><li>這題目前還沒施工。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/裁定落地-1113.md:98-101</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">**C-42「推薦都用json，我們做的東西也盡量以json為主。這是推薦，不遵守也沒差」**（選的是 B：以「純 JSON 樹」為準）
+
+- 選項 B 的字面是「註明現在只做 JSON」；備註的字面是「推薦」「不遵守也沒差」。兩者合起來有兩種寫法：(一) 條文照 B 寫「記憶庫是純 JSON 樹」，備註只是補充態度；(二) 條文的語氣要從「是純 JSON 樹」放成「推薦 JSON、別的格式不禁止」——這就比較接近選項 A 的後果（工具與文件要交代非 JSON 的檔怎麼處理）。
+- 「我們做的東西也盡量以json為主」範圍比記憶庫大（aos 自己出的東西），跟 11-12「.json比markdown好」同一個方向；要不要寫成一條通則，他沒說。</pre></details></details></article></section><section><h2 id="sec-e">E. kernel 框架：兩件代定請你看一眼，加七個新題</h2><p class="muted">前兩題是頂層先代定的（可翻案）；後面七題來源檔沒有建議，預設停在「先不選」。</p><article class="card" id="q-kf-n1" data-qid="kf-n1"><header><span class="num">kf-n1</span><h3 id="heading-kf-n1">kernel 框架裡「問腦那一包」這週先不開工，可以嗎？（頂層已先代定：不開）</h3></header><p class="muted">框架分兩半：通用站（管掛 proc、排隊，eca 用得到；今天骨架、掛 proc 那一包、hook 三個時機都做出來了）和問腦那一包（把問腦總機用 Python 重寫，你今早已准）。這台公司機沒有真的問腦端點、只能用假腦驗，你現在也用不到。頂層先代定「這週不開」，請你看一眼。</p><blockquote class="quote"><p>kernel框架現在就可以開工了。只是說我們現在只有eca能用。</p><cite>使用者 11-13 上午</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-kf-n1"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-kf-n1" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> 先不做，這週只做通用站與查詢信（頂層代定） <span class="star">★ 推薦</span></span><span class="option-consequence">問腦總機照舊是 C++ 那支，暫時沒有 hook；骨架先只有掛 proc 那一包在用。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-n1" value="B"><span class="option-content"><span class="option-title"><b>B</b> 現在就用假腦做（Python 重寫），真腦回家再驗</span><span class="option-consequence">公司這邊多花約 24 人時的施工額度；這台驗不到真端點。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：來源檔建議 A：這台驗不到真端點，你現在也用不到；等通用站在 eca 上跑順了再開。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="kf-n1 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>kernel先這樣就好，開工等假日。我自己也要思考一下</p><cite>使用者 11-12 收工前（前情）</cite></blockquote><ul><li>這題就是「只有eca能用」那句兩種讀法的差別：(甲) 真腦驗證只能靠 eca，問腦那包照做、用假腦；(乙) 現在用得到框架的只有 eca，問腦那包先放著。你確認過的是前半（這台真腦只有 eca）。</li><li>問腦那一包＝圖紙批 8、9、10、12、14；其中批 10 要動 C++、重 build、重跑 install，本來就要等能停樹。</li><li>來源檔原本寫「之後若 K-F47 翻成 C++ 留著，這 24 人時白做」；K-F47 你今早已選 A（Python 重寫），這個風險已經不在。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/kernel-framework-開工.md:150-157</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">**新題 1：問腦那一包現在要不要開工？**（就是「只有eca能用」讀法甲、乙的差別，也等於 K-F47 現在答不答）
+
+| 選項 | 後果 |
+|---|---|
+| A 先不做，這週只做通用站與查詢信（eca 用得到的） | 問腦總機照舊是 C++ 那支，暫時沒有 hook；K-F47、K-F50 可以慢慢想；骨架先只有判官那一包在用 |
+| B 照圖紙現在就用假腦做（Python 重寫），真腦回家再驗 | 公司這邊多花約 24 人時的施工額度；之後若 K-F47 翻成「C++ 留著」，這 24 人時白做 |
+
+建議 A：這台驗不到真端點，使用者現在也用不到；等通用站在 eca 上跑順了、K-F47 答了再開。</pre></details></details></article><article class="card" id="q-kf-n2" data-qid="kf-n2"><header><span class="num">kf-n2</span><h3 id="heading-kf-n2">什麼時候可以把你那棵樹停一次？（頂層已先代定：等假日）</h3></header><p class="muted">不是設計題，是跟你約時間。有兩件事要停樹才做得了：daemon 加一種新的信（要改 C++、重 build），和樹裡那份 lib 重抄並清掉舊帳。沒做之前，agent 要兩個變數（<code>AOS_KERNEL</code>、<code>AOS_DAEMON</code>）都設才能用框架站；「只設 <code>AOS_KERNEL</code>」還不行。</p><blockquote class="quote"><p>kernel框架現在就可以開工了。只是說我們現在只有eca能用。</p><cite>使用者 11-13 上午</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-kf-n2"><li class=""><label class="option-label"><input type="radio" name="q-kf-n2" value="A"><span class="option-content"><span class="option-title"><b>A</b> 今天收工前或明天開工前停一次</span><span class="option-consequence">查詢信那整條線這兩天就能通。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-kf-n2" value="B" checked><span class="option-content"><span class="option-title"><b>B</b> 等假日回家再做（頂層代定） <span class="star">★ 推薦</span></span><span class="option-consequence">公司這邊先只有框架站（兩個變數都要設）；程式可以先寫好、用假 kernel 驗，接真 daemon 的那一步留到假日。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 B：來源檔建議 B 起步、隨時可改 A：要先做的那批本來就要等修 bug 那條線，今天排不到。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="kf-n2 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>要停樹的是圖紙批 4（aos-daemon 認「狀態在哪」這種信）與批 6 的上線（重抄 <code>~/aos-home/lib</code>、清各 agent stack 裡的 <code>subagents.json</code> 舊帳）。</li><li>批 6 上線那一刻有子 agent 在跑的 agent 會對不上帳，所以要先收掉子 agent 或刪舊帳。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/kernel-framework-開工.md:159-168</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">**新題 2：什麼時候可以停樹一次？**（不是設計題，是約時間）
+
+批 4（aos-daemon 加「狀態在哪」這種信）要改 C++、重 build；批 6 上線要重拷 `~/aos-home/lib` 並清掉 `subagents.json` 舊帳。沒做這兩件，「只設 `AOS_KERNEL`、不設 `AOS_DAEMON`」就還是 `DaemonMissing`。
+
+| 選項 | 後果 |
+|---|---|
+| A 今天收工前或明天開工前停一次 | 查詢信整條線這兩天就能通，SESSION-LOG 那句「只設 `AOS_KERNEL` 仍 `DaemonMissing`」可以消掉 |
+| B 等假日回家再做 | 公司這邊先只有框架站（要兩個變數都設才能用）；程式（批 5、6）可以先寫好、用假 kernel 驗，接真 daemon 的那一步留到假日 |
+
+建議 B 起步、隨時可改 A：批 5 本來就要等修 bug 線，今天排不到。</pre></details></details></article><article class="card" id="q-kf-next" data-qid="kf-next"><header><span class="num">kf-next</span><h3 id="heading-kf-next">框架站的設定沒寫「下一站」（<code>next</code>）時，放行的信預設要轉去哪？</h3></header><p class="muted">框架站＝收「請幫我掛 proc」的信、判過之後往下一站轉的那一站。<strong>現況</strong>：設定檔沒寫 <code>next</code>，就轉給 <code>AOS_DAEMON</code> 那台。你今早說 <code>AOS_KERNEL</code> 是「通用的、基礎的目標」（原話在下面）。照這句，沒寫 <code>next</code> 時是不是該先看 <code>AOS_KERNEL</code>？這是從你那句話冒出來的新題，條文和圖紙都推不出答案，所以要你定。</p><blockquote class="quote"><p>Hmmm，好啦，next也可以。只是說，我會覺得AOS_KERNEL他就是在有需要掛一個aos proc的時候，就使用的一個目標，一個通用的，基礎的目標。好比所有C語言程式使用syscall的時候，只要沒有特別指定，不然就是走linux kernel那個記憶體位置。啊如果有需要其他目標...那就自己找方法指定</p><cite>使用者 11-13（頂層追問 K-F50 備註時的回答，逐字）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-kf-next"><li class="is-selected"><label class="option-label"><input type="radio" name="q-kf-next" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源檔沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-next" value="A"><span class="option-content"><span class="option-title"><b>A</b> 照現況：沒寫 <code>next</code> 就寄 <code>AOS_DAEMON</code></span><span class="option-consequence">程式與條文都不動（N-42 (2) 現在寫的就是「沒寫照舊寄給 <code>AOS_DAEMON</code>」）。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-next" value="B"><span class="option-content"><span class="option-title"><b>B</b> 改成三段：先看 <code>next</code>，沒有就看 <code>AOS_KERNEL</code>，再沒有才 <code>AOS_DAEMON</code>；哪一個指到自己就跳過</span><span class="option-consequence">要改框架站找下一站的那段與它的測試，N-42 (2) 那句也要改。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：這題是頂層照你那段話提的，來源檔沒有建議，所以不預選。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="kf-next 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>現況的出處：<code>proto8/kernel/README.md</code> 的鍵表——<code>next</code> 沒寫時用「<code>$AOS_DAEMON</code> 那台的 ctl 信箱」。</li><li><code>AOS_KERNEL</code> 是給寄件人看的（要掛 proc 的人把請求寄到那裡）；<code>next</code> 是給站自己看的（放行之後轉去哪）。</li><li>相關的已知行為：沒寫 <code>next</code>、而從 <code>AOS_DAEMON</code> 算出來的轉寄目標剛好是自己，要等有信那一輪才報設定錯。</li><li><code>next</code> 這個鍵本身留著，今早已結案（「好啦，next也可以」）。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/kernel-framework-開工.md:25-29</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">- 備註那句「kernel.json的next感覺有點畫蛇添足」有沒有連框架站的 `next` 一起講——**已結案**。調度者把兩種讀法連同「11-11 你選過寫進設定檔」拿去問，使用者 11-13 回（逐字）：
+
+  &gt; 「Hmmm，好啦，next也可以。只是說，我會覺得AOS_KERNEL他就是在有需要掛一個aos proc的時候，就使用的一個目標，一個通用的，基礎的目標。好比所有C語言程式使用syscall的時候，只要沒有特別指定，不然就是走linux kernel那個記憶體位置。啊如果有需要其他目標...那就自己找方法指定」
+
+  決定：框架站設定檔的 `next` 留著，批 2 的做法已確認、不再是代定。他後半段講的是 `AOS_KERNEL` 的定位：要掛 aos proc 時、沒特別指定就用的通用基礎目標；要別的目標就自己另外指定（`next` 是其中一種指定法）。</pre></details></details></article><article class="card" id="q-kf-t1" data-qid="kf-t1"><header><span class="num">kf-t1</span><h3 id="heading-kf-t1">條文說「開了保持順序，站就會代回信」；做出來的程式是兩個開關各管各的。條文要不要改寫？</h3></header><p class="muted">「有序信」＝要照寄出順序處理的信。<strong>條文（你 11-07 裁的那點）說</strong>：框架站開了 <code>keep_ordered</code>，就照有序轉寄，並且自己記對照、收到回信後代回給原寄件人。<strong>程式現在</strong>（照圖紙代定）：代回歸另一個開關 <code>reply_via_me</code> 管，兩個各自獨立；只開 <code>keep_ordered</code> 時回信對到的是轉寄後的新信名，要對得上原信得兩個都開。條文是你的，字面跟程式不同，所以問。</p><blockquote class="quote"><p>我希望這是可選的。默認是不帶有序。</p><cite>使用者 11-07（條文這一點引的原話）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-kf-t1"><li class="is-selected"><label class="option-label"><input type="radio" name="q-kf-t1" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源檔沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-t1" value="A"><span class="option-content"><span class="option-title"><b>A</b> 條文改寫成照程式：兩個開關各自獨立、照字面</span><span class="option-consequence">等於認可圖紙的代定；動到你 11-07 裁過那點的字面。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-t1" value="B"><span class="option-content"><span class="option-title"><b>B</b> 條文不改，維持現在的加註</span><span class="option-consequence">條文字面與程式不同，讀的人要連加註一起看。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-t1" value="C"><span class="option-content"><span class="option-title"><b>C</b> 程式改回照條文：開了 <code>keep_ordered</code> 就自動代回</span><span class="option-consequence">要改今天做好的框架站與測試；圖紙審查時沒採這個做法，理由是「預設值跟著另一個鍵變是暗規則」。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：來源檔只記了「要不要改寫由使用者或條文線定」，沒有建議，所以不預選。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="kf-t1 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>這三處批 11a 都只在條文旁加了註、沒改字；來源檔寫「要不要改寫由使用者或條文線定」。</li><li>條文在 <code>proto8/docs/NORMS/09-kernel.md</code> 的 N-42 (2)「有序信經判官」那點。</li><li>圖紙代定編號 K-F39（K-F12「開有序一定要同時開代回」已作廢）；選項 C 的那句理由出自圖紙的審查採納表。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/kernel-framework-開工.md:219-224</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">條文裡跟現況字面對不上、只加註沒改的（要不要改寫由使用者或條文線定）：
+- N-42 (2)「有序信經判官」說開了 `keep_ordered` 就代回；現在代回歸 `reply_via_me`、兩鍵獨立（圖紙 K-F39 代定）。
+- N-42 (2)「數量另指」說「下一站不是 daemon 時」才報設定錯；程式是寫了 `next`＋`max_running` 就一定要 `count_daemon`（圖紙 K-F6 代定）。
+- N-42 (2) 各子點仍叫「判官」、標籤仍寫「方向（已定，未實作）」；C-47 標題仍是「已裁定、未實作」。
+- N-42、C-47 引的 11-12「開工等假日」原話留著，旁邊加註 11-13 已開工。
+沒實跑的：`after_verdict` 的例子（只列在表裡）、`keep_ordered`。</pre></details></details></article><article class="card" id="q-kf-t2" data-qid="kf-t2"><header><span class="num">kf-t2</span><h3 id="heading-kf-t2">條文說「下一站不是 daemon 時」沒指定去哪數才算設定錯；程式是「寫了下一站又設上限，就一定要指定」。條文要不要改寫？</h3></header><p class="muted">框架站可以設「同時最多跑幾個」（<code>max_running</code>），這就要有一台 daemon 的表可以數。<strong>條文說</strong>：沒另外指定去哪台數、而且下一站不是 daemon 時，設了上限才算設定錯。<strong>程式現在</strong>（照圖紙代定）：不去猜下一站是不是 daemon——只要寫了 <code>next</code> 又寫了 <code>max_running</code>，就一定要寫 <code>count_daemon</code>，沒寫就報錯。比條文嚴一點。</p><blockquote class="quote"><p>數量另外指一台</p><cite>使用者 11-11 選項框選的那格（條文這一點引的）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-kf-t2"><li class="is-selected"><label class="option-label"><input type="radio" name="q-kf-t2" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源檔沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-t2" value="A"><span class="option-content"><span class="option-title"><b>A</b> 條文改寫成照程式：寫了 <code>next</code> 又設上限就要寫 <code>count_daemon</code></span><span class="option-consequence">等於認可圖紙的代定；動到你 11-11 選項框裁過那點的字面。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-t2" value="B"><span class="option-content"><span class="option-title"><b>B</b> 條文不改，維持現在的加註</span><span class="option-consequence">條文字面與程式不同，讀的人要連加註一起看。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-t2" value="C"><span class="option-content"><span class="option-title"><b>C</b> 程式改成照條文：下一站是 daemon 時可以不寫</span><span class="option-consequence">要讓框架站去猜下一站是不是 daemon；圖紙的理由是猜不準（信箱不一定在 stack 下一層、daemon 剛起還沒有表、下一站是別台 daemon 的身體時會數錯台）。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：來源檔只記了「要不要改寫由使用者或條文線定」，沒有建議，所以不預選。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="kf-t2 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>這三處批 11a 都只在條文旁加了註、沒改字；來源檔寫「要不要改寫由使用者或條文線定」。</li><li>條文在 <code>proto8/docs/NORMS/09-kernel.md</code> 的 N-42 (2)「數量另指」那句。</li><li>圖紙代定編號 K-F6；選項 C 的理由出自圖紙 README 的 K-F6 說明。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/kernel-framework-開工.md:219-224</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">條文裡跟現況字面對不上、只加註沒改的（要不要改寫由使用者或條文線定）：
+- N-42 (2)「有序信經判官」說開了 `keep_ordered` 就代回；現在代回歸 `reply_via_me`、兩鍵獨立（圖紙 K-F39 代定）。
+- N-42 (2)「數量另指」說「下一站不是 daemon 時」才報設定錯；程式是寫了 `next`＋`max_running` 就一定要 `count_daemon`（圖紙 K-F6 代定）。
+- N-42 (2) 各子點仍叫「判官」、標籤仍寫「方向（已定，未實作）」；C-47 標題仍是「已裁定、未實作」。
+- N-42、C-47 引的 11-12「開工等假日」原話留著，旁邊加註 11-13 已開工。
+沒實跑的：`after_verdict` 的例子（只列在表裡）、`keep_ordered`。</pre></details></details></article><article class="card" id="q-kf-t3" data-qid="kf-t3"><header><span class="num">kf-t3</span><h3 id="heading-kf-t3">條文裡還叫它「判官」、標著「已定，未實作」，其實掛 proc 那一半今天做出來了。稱呼與標籤要不要改寫？</h3></header><p class="muted">N-42 (2) 各小點仍用舊名「判官」，段落標籤仍寫「方向（已定，未實作）」；C-47 那段的標題也仍是「已裁定、未實作」。實際上：判官已收進框架站，掛 proc 那一半 11-13 已實作；問腦那包與「狀態在哪」的查詢信還沒做。現在是標籤照舊、旁邊加註說明現況。</p><blockquote class="quote"><p>kernel框架現在就可以開工了。只是說我們現在只有eca能用。</p><cite>使用者 11-13 上午</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-kf-t3"><li class="is-selected"><label class="option-label"><input type="radio" name="q-kf-t3" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源檔沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-t3" value="A"><span class="option-content"><span class="option-title"><b>A</b> 現在改寫：舊名換成框架站，標籤照實分成「已實作」與「還沒做」</span><span class="option-consequence">條文的字要動（意思不變）；之後問腦、查詢信做完還要再改一次標籤。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-t3" value="B"><span class="option-content"><span class="option-title"><b>B</b> 維持加註，等整個框架都做完再一次改</span><span class="option-consequence">現況；這段時間標題與加註要並著讀。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：來源檔只記了「要不要改寫由使用者或條文線定」，沒有建議，所以不預選。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="kf-t3 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>這三處批 11a 都只在條文旁加了註、沒改字；來源檔寫「要不要改寫由使用者或條文線定」。</li><li>條文在 <code>proto8/docs/NORMS/09-kernel.md</code> 的 N-42 (2)、<code>proto8/docs/CONCEPTS/04-kernel.md</code> 的 C-47。</li><li>N-42、C-47 引的你 11-12「開工等假日」原話留著，旁邊加註 11-13 已開工。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/kernel-framework-開工.md:219-224</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">條文裡跟現況字面對不上、只加註沒改的（要不要改寫由使用者或條文線定）：
+- N-42 (2)「有序信經判官」說開了 `keep_ordered` 就代回；現在代回歸 `reply_via_me`、兩鍵獨立（圖紙 K-F39 代定）。
+- N-42 (2)「數量另指」說「下一站不是 daemon 時」才報設定錯；程式是寫了 `next`＋`max_running` 就一定要 `count_daemon`（圖紙 K-F6 代定）。
+- N-42 (2) 各子點仍叫「判官」、標籤仍寫「方向（已定，未實作）」；C-47 標題仍是「已裁定、未實作」。
+- N-42、C-47 引的 11-12「開工等假日」原話留著，旁邊加註 11-13 已開工。
+沒實跑的：`after_verdict` 的例子（只列在表裡）、`keep_ordered`。</pre></details></details></article><article class="card" id="q-kf-1b1" data-qid="kf-1b1"><header><span class="num">kf-1b1</span><h3 id="heading-kf-1b1">agent 的 hook 檢查換成共用引擎後，一格設定同時有兩個錯時「先報哪一句」會跟以前不同，可以嗎？</h3></header><p class="muted">hook＝在特定時機自動跑的小程式。今天把「驗設定、執行 hook」抽成一份共用引擎，框架站已經在用；下一步（批 1b）要讓 agent 那邊也改用它，目標是「行為不變」。查到一個小差別：某一格同時寫錯兩處時，先報哪一句的順序會變（時鐘 hook 專用的檢查排到共通檢查之後）。批 1b 開工前要先定，所以問。批 1b 今天不做（它一存檔就影響跑著的 eca）。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-kf-1b1"><li class="is-selected"><label class="option-label"><input type="radio" name="q-kf-1b1" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源檔沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-1b1" value="A"><span class="option-content"><span class="option-title"><b>A</b> 接受：先報哪句跟著共用引擎</span><span class="option-consequence">只影響「同一格同時錯兩處」時先看到哪一句。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-1b1" value="B"><span class="option-content"><span class="option-title"><b>B</b> 不接受：要對回原本的順序</span><span class="option-consequence">批 1b 要多做一段把順序對回原樣。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：來源檔只記了這件事要留給批 1b，沒有建議，所以不預選。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="kf-1b1 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>kernel框架現在就可以開工了。只是說我們現在只有eca能用。</p><cite>使用者 11-13 上午</cite></blockquote><ul><li>共用引擎：<code>proto8/lib/hook_run.py</code>（commit <code>747c48ca9</code>）；agent 那邊是 <code>proto8/lib/agent/hooks.py</code>，還沒動。</li><li>來源檔同一句還記了另一點：收行程群那段沒用 <code>process_group.stop</code>（不等價）。</li><li>批 1b 排在 a2a 線與修 bug 線之後。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/kernel-framework-開工.md:180-182</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">### 批 1a（747c48ca9）
+
+`lib/hook_run.py`＋`lib/tests/test_hook_run.py`（10 例）。`lib/agent/hooks.py` 沒動。留給批 1b：改用引擎後「一格兩個錯時先報哪句」會變（on_clock 專用鍵的檢查排到共通鍵之後）；收行程群那段沒用 `process_group.stop`（不等價）。</pre></details></details></article><article class="card" id="q-kf-1b2" data-qid="kf-1b2"><header><span class="num">kf-1b2</span><h3 id="heading-kf-1b2">共用 hook 引擎要不要多回一項「這個值是哪個 hook 改的」？</h3></header><p class="muted">框架站被某個 hook 改判成拒絕時，拒信上要寫「是哪個 hook 拒的」。共用引擎現在只回改完的結果、不回是誰改的，所以框架站只好一格一格叫 hook 才補得上名字。隊長記成「用起來的不順」，引擎沒改。引擎是共用的（agent 之後也用），動它對外的樣子要先定。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-kf-1b2"><li class="is-selected"><label class="option-label"><input type="radio" name="q-kf-1b2" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源檔沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-1b2" value="A"><span class="option-content"><span class="option-title"><b>A</b> 引擎加：回傳多帶「是哪個 hook 改的」</span><span class="option-consequence">框架站不用再一格一格叫；引擎對外的回傳多一項，批 1b 接 agent 時要一起對。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-1b2" value="B"><span class="option-content"><span class="option-title"><b>B</b> 不加，照現況</span><span class="option-consequence">引擎不動；框架站繼續一格一格叫。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：來源檔只記了這個不順，沒有建議，所以不預選。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="kf-1b2 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>kernel框架現在就可以開工了。只是說我們現在只有eca能用。</p><cite>使用者 11-13 上午</cite></blockquote><ul><li>出處是批 3 的實作結果：<code>after_verdict</code> 一格一格叫才補得上「refused by hook &lt;名&gt;」。</li><li>相關檔：<code>proto8/lib/hook_run.py</code>、<code>proto8/lib/aos/kernel/hooks.py</code>。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/kernel-framework-開工.md:200</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">- `hook_run.py` 用起來的不順：改了值時引擎不回是哪個 hook 改的，所以 `after_verdict` 一格一格叫才補得上「refused by hook &lt;名&gt;」；引擎沒改。</pre></details></details></article><article class="card" id="q-kf-lim" data-qid="kf-lim"><header><span class="num">kf-lim</span><h3 id="heading-kf-lim">框架站有一個已知的洞：信剛轉寄出去、還沒記帳就被砍，回信會被丟掉。要不要現在補？</h3></header><p class="muted">框架站代人轉寄時會記一筆「新信名↔原信名」的對照，回信回來才知道要代回給誰。如果信剛寄出、對照還沒寫進檔的那一瞬間站被砍掉：重起後原信被當成已轉寄、收掉；回信回來卻查不到對照、被丟掉，寄件人只能靠自己的逾時發現。來源檔記為「已知限制」。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-kf-lim"><li class="is-selected"><label class="option-label"><input type="radio" name="q-kf-lim" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源檔沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-lim" value="A"><span class="option-content"><span class="option-title"><b>A</b> 現在補</span><span class="option-consequence">框架線多一批（改 <code>lib/aos/kernel</code> 與測試）；補法來源檔沒寫，要先設計。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-kf-lim" value="B"><span class="option-content"><span class="option-title"><b>B</b> 先不補，留在已知限制</span><span class="option-consequence">現況；要剛好在「寄出後、記帳前」那一瞬間被砍才碰得到，碰到時寄件人靠自己的逾時。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：來源檔只把它記成已知限制，沒有建議，所以不預選。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="kf-lim 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>拿掉限制。等以後踩坑再回來處理。</p><cite>使用者 11-13 上午（講的是另一題 C-81，不是這題；只是同一天你對「先不管、踩到再說」的態度，供參考）</cite></blockquote><ul><li>對照記在框架站 stack 的 <code>forwarded.json</code>。</li><li>今天的整棵鏈劇本（批 7a）驗過「兩站各重起一次，隊序與待代回不變、沒有信轉第二次」；這個洞是更窄的那一瞬間，劇本沒涵蓋。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/kernel-framework-開工.md:191</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">- 已知限制（照舊或同類）：轉寄寄出、對照還沒寫進 `forwarded.json` 就被砍的那一瞬間，重起後原信會被當成已轉寄收掉，但回信回來查不到對照、被丟掉（寄件人靠自己的逾時）。</pre></details></details></article></section><details><summary>這一頁沒放的（已答、已代定、或另外問）</summary><ul><li>線乙第 6 題（<code>wf/</code> 裡還寫舊 repo 路徑的現行說明）：頂層已決定收尾時當雜活改掉。</li><li>線辛早先三題（02 夾的例子要換、git 歷史不管、jsonx 整包掛）：你已答。</li><li>今早大頁還沒答的題照舊在桌面那兩份頁面上。</li></ul></details><details><summary>來源檔（都在 proto8/thinking/2026-11/13/）</summary><ul><li>A 區：<code>convention-vs-agent-fsm.md</code></li><li>B 區：<code>eca-main-six-fixes.md</code>（施工結果在 <code>fixes-施工結果.md</code>）</li><li>C 區：<code>line-b-cleanup.md</code></li><li>D 區：<code>裁定落地-1113.md</code></li><li>E 區：<code>kernel-framework-開工.md</code></li></ul></details><h2 id="reply">怎麼回覆</h2><p>在「我的回覆」按「複製」，貼回對話或看板這批的意見框。</p><details><summary>全照推薦時等於回這一行</summary><pre>[wu-1113-r2] cv-P05:A、cv-P27:A、cv-P33:B、cv-P35:B、cv-old:A、cv-P06:A、cv-P09:A、cv-P27b:A、cv-P29:A、cv-P31:A、cv-P36:A、cv-P38:A、cv-P39:A、cv-04:A、cv-s10:B、cv-P12:A、cv-P13:A、cv-P14:A、cv-P18:A、cv-P24:A、em-Q1:B、em-Q2:B、em-Q3:A、em-Q4:B、fx-1:C、fx-2:A、fx-3:A、lb-1:A、lb-2:A、lb-3:A、lb-4:A、lb-5:A、rd-C81:U、rd-C42:U、kf-n1:A、kf-n2:B、kf-next:U、kf-t1:U、kf-t2:U、kf-t3:U、kf-1b1:U、kf-1b2:U、kf-lim:U</pre></details></main><aside class="reply-dock"><button class="reply-toggle" type="button" aria-expanded="true" aria-controls="reply-body"><strong>我的回覆</strong><span class="reply-compact">已看過 0／43 題</span><span class="reply-toggle-action">收合</span></button><div class="reply-body" id="reply-body"><div class="reply-progress"><progress value="0" max="43" aria-label="已看過題數"></progress></div><p class="reply-changes">* ＝跟推薦不同（0 題）；? ＝還沒看過（43 題，仍算待定、之後再問）</p><textarea class="reply-output" readonly aria-label="我的回覆">[wu-1113-r2] cv-P05:A?、cv-P27:A?、cv-P33:B?、cv-P35:B?、cv-old:A?、cv-P06:A?、cv-P09:A?、cv-P27b:A?、cv-P29:A?、cv-P31:A?、cv-P36:A?、cv-P38:A?、cv-P39:A?、cv-04:A?、cv-s10:B?、cv-P12:A?、cv-P13:A?、cv-P14:A?、cv-P18:A?、cv-P24:A?、em-Q1:B?、em-Q2:B?、em-Q3:A?、em-Q4:B?、fx-1:C?、fx-2:A?、fx-3:A?、lb-1:A?、lb-2:A?、lb-3:A?、lb-4:A?、lb-5:A?、rd-C81:U*?、rd-C42:U*?、kf-n1:A?、kf-n2:B?、kf-next:U*?、kf-t1:U*?、kf-t2:U*?、kf-t3:U*?、kf-1b1:U*?、kf-1b2:U*?、kf-lim:U*?</textarea><div class="reply-actions"><button class="reply-copy" type="button">複製</button><button class="reply-reset" type="button">全部重設為推薦</button></div><p class="reply-status" role="status" aria-live="polite"></p></div></aside><script type="application/json" id="decide-data">{"batch":"wu-1113-r2","storage_key":"aos-decide-wu-1113-r2-daaae663dbd9","rows":[{"id":"cv-P05","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-P27","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-P33","keys":["A","B","C"],"recommend":"B","fallback":"B"},{"id":"cv-P35","keys":["A","B","C"],"recommend":"B","fallback":"B"},{"id":"cv-old","keys":["A","B"],"recommend":"A","fallback":"A"},{"id":"cv-P06","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-P09","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-P27b","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-P29","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-P31","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-P36","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-P38","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-P39","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-04","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-s10","keys":["A","B","C"],"recommend":"B","fallback":"B"},{"id":"cv-P12","keys":["A","B"],"recommend":"A","fallback":"A"},{"id":"cv-P13","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-P14","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"cv-P18","keys":["A","B"],"recommend":"A","fallback":"A"},{"id":"cv-P24","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"em-Q1","keys":["A","B","C"],"recommend":"B","fallback":"B"},{"id":"em-Q2","keys":["A","B","C"],"recommend":"B","fallback":"B"},{"id":"em-Q3","keys":["A","B"],"recommend":"A","fallback":"A"},{"id":"em-Q4","keys":["A","B","C"],"recommend":"B","fallback":"B"},{"id":"fx-1","keys":["A","B","C"],"recommend":"C","fallback":"C"},{"id":"fx-2","keys":["A","B"],"recommend":"A","fallback":"A"},{"id":"fx-3","keys":["A","B"],"recommend":"A","fallback":"A"},{"id":"lb-1","keys":["A","B"],"recommend":"A","fallback":"A"},{"id":"lb-2","keys":["A","B","C"],"recommend":"A","fallback":"A"},{"id":"lb-3","keys":["A","B"],"recommend":"A","fallback":"A"},{"id":"lb-4","keys":["A","B"],"recommend":"A","fallback":"A"},{"id":"lb-5","keys":["A","B"],"recommend":"A","fallback":"A"},{"id":"rd-C81","keys":["U","A","B","C"],"recommend":"","fallback":"U"},{"id":"rd-C42","keys":["U","A","B"],"recommend":"","fallback":"U"},{"id":"kf-n1","keys":["A","B"],"recommend":"A","fallback":"A"},{"id":"kf-n2","keys":["A","B"],"recommend":"B","fallback":"B"},{"id":"kf-next","keys":["U","A","B"],"recommend":"","fallback":"U"},{"id":"kf-t1","keys":["U","A","B","C"],"recommend":"","fallback":"U"},{"id":"kf-t2","keys":["U","A","B","C"],"recommend":"","fallback":"U"},{"id":"kf-t3","keys":["U","A","B"],"recommend":"","fallback":"U"},{"id":"kf-1b1","keys":["U","A","B"],"recommend":"","fallback":"U"},{"id":"kf-1b2","keys":["U","A","B"],"recommend":"","fallback":"U"},{"id":"kf-lim","keys":["U","A","B"],"recommend":"","fallback":"U"}]}</script><script>/* Wire offline choices, notes, seen state, themes, and reply copying. */
+(() => {
+  'use strict';
+  const data = JSON.parse(document.getElementById('decide-data').textContent);
+  const choices = Object.create(null), notes = Object.create(null), seen = Object.create(null);
+  const cards = new Map();
+  const output = document.querySelector('.reply-output');
+  const status = document.querySelector('.reply-status');
+  const reset = document.querySelector('.reply-reset');
+  const theme = document.documentElement;
+  try {
+    const savedTheme = localStorage.getItem('aos-theme');
+    if (savedTheme === 'light' || savedTheme === 'dark') theme.dataset.theme = savedTheme;
+  } catch (_) { /* Storage is optional. */ }
+  document.getElementById('theme').addEventListener('click', () => {
+    const dark = theme.dataset.theme ? theme.dataset.theme === 'dark' :
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
+    theme.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem('aos-theme', theme.dataset.theme); } catch (_) { /* Keep the current theme. */ }
+  });
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(data.storage_key) || '{}') || {}; }
+  catch (_) { /* Ignore unavailable or malformed saved state. */ }
+  function validObject(value) { return value && typeof value === 'object' && !Array.isArray(value); }
+  for (const row of data.rows) {
+    choices[row.id] = validObject(saved.choices) && row.keys.includes(saved.choices[row.id]) ?
+      saved.choices[row.id] : row.fallback;
+    notes[row.id] = validObject(saved.notes) && typeof saved.notes[row.id] === 'string' ? saved.notes[row.id] : '';
+    seen[row.id] = !!(validObject(saved.seen) && saved.seen[row.id] === true);
+    cards.set(row.id, document.getElementById('q-' + row.id));
+  }
+  function store() {
+    try { localStorage.setItem(data.storage_key, JSON.stringify({choices, notes, seen})); }
+    catch (_) { /* The page continues to work in memory. */ }
+  }
+  function refresh() {
+    let count = 0, changed = 0;
+    const items = data.rows.map(row => {
+      const card = cards.get(row.id);
+      if (seen[row.id]) count++;
+      const different = row.keys.length > 0 && choices[row.id] !== row.recommend;
+      if (different) changed++;
+      card.classList.toggle('is-seen', seen[row.id]);
+      const mark = card.querySelector('.read-mark');
+      mark.textContent = seen[row.id] ? '✓ 已看過' : '看過，先照這個';
+      mark.setAttribute('aria-pressed', String(seen[row.id]));
+      card.querySelectorAll('input[type="radio"]').forEach(input => {
+        input.checked = input.value === choices[row.id];
+        input.closest('li').classList.toggle('is-selected', input.checked);
+      });
+      const note = notes[row.id].trim().replace(/\r\n|\r|\n/g, ' / ');
+      return row.id + ':' + choices[row.id] + (different ? '*' : '') + (seen[row.id] ? '' : '?') +
+        (note ? '（備註：' + note + '）' : '');
+    });
+    output.value = '[' + data.batch + '] ' + items.join('、');
+    document.querySelector('.reply-compact').textContent = '已看過 ' + count + '／' + data.rows.length + ' 題';
+    document.querySelector('.reply-progress progress').value = count;
+    document.querySelector('.reply-changes').textContent = '* ＝跟推薦不同（' + changed +
+      ' 題）；? ＝還沒看過（' + (data.rows.length - count) + ' 題，仍算待定、之後再問）';
+  }
+  function update(row) {
+    seen[row.id] = true;
+    status.textContent = '';
+    refresh();
+    store();
+  }
+  for (const row of data.rows) {
+    const card = cards.get(row.id);
+    card.querySelectorAll('input[type="radio"]').forEach(input => {
+      input.addEventListener('click', () => { choices[row.id] = input.value; update(row); });
+      input.addEventListener('change', () => { choices[row.id] = input.value; update(row); });
+    });
+    const note = card.querySelector('textarea');
+    note.value = notes[row.id];
+    note.addEventListener('input', () => { notes[row.id] = note.value; update(row); });
+    card.querySelector('.read-mark').addEventListener('click', () => update(row));
+    card.querySelectorAll('details').forEach(details => {
+      details.addEventListener('toggle', () => { if (details.open) update(row); });
+    });
+  }
+  const toggle = document.querySelector('.reply-toggle');
+  const body = document.getElementById('reply-body');
+  function collapse(value) {
+    body.hidden = value;
+    toggle.setAttribute('aria-expanded', String(!value));
+    document.querySelector('.reply-toggle-action').textContent = value ? '展開' : '收合';
+  }
+  collapse(window.matchMedia('(max-width: 700px)').matches);
+  toggle.addEventListener('click', () => collapse(!body.hidden));
+  document.querySelector('.reply-copy').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(output.value);
+      status.textContent = '已複製';
+    } catch (_) {
+      output.focus();
+      output.select();
+      output.setSelectionRange(0, output.value.length);
+      status.textContent = '已選取，請按 Ctrl+C';
+    }
+  });
+  let resetTimer = null;
+  reset.addEventListener('click', () => {
+    if (resetTimer === null) {
+      reset.textContent = '再按一次確認重設';
+      resetTimer = window.setTimeout(() => {
+        resetTimer = null;
+        reset.textContent = '全部重設為推薦';
+      }, 4000);
+      return;
+    }
+    window.clearTimeout(resetTimer);
+    resetTimer = null;
+    reset.textContent = '全部重設為推薦';
+    for (const row of data.rows) {
+      choices[row.id] = row.fallback;
+      notes[row.id] = '';
+      seen[row.id] = false;
+      cards.get(row.id).querySelector('textarea').value = '';
+    }
+    refresh();
+    store();
+    status.textContent = '已重設為推薦';
+  });
+  refresh();
+})();
+</script></body></html>
