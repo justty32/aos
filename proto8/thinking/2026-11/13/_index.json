@@ -26,6 +26,9 @@
  "aos-home.md": {
   "description": "公司 WSL 改住 `~/aos-home`（11-13 早）：repo 換成 `~/repo/aos`、重 build＋install、全套測試，`~/aos-home` 從零重搭一隻 opus eca，遊樂場與舊 repo 刪掉"
  },
+ "aos-issues-1113.md": {
+  "description": "aos 問題總表 1113：把 11-13 晚各條線記下的「撞到的 aos 問題／試驗紀錄」合併成一張表（只整理，不判斷設計、不提新方案）"
+ },
  "aos-wu-1113-r2-待你裁.html": {
   "description": "今天第二輪：43 題待你裁"
  },
