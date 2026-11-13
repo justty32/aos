@@ -77,3 +77,18 @@ def queue_row(name, letter, fresh, previous, die):
     if "queue_wait_ms" in body:
         row["expires_at"] = utc_text(utc_ms(letter["sent_at"]) + body["queue_wait_ms"])
     return row
+
+
+def held_expiry(letter):
+    """留著等表態的信：寄件人的期限到了回原因句，否則 None；期限或時間格式不對的不在這裡管。"""
+    body = letter.get("body")
+    wait = body.get("queue_wait_ms") if isinstance(body, dict) else None
+    if not isinstance(wait, int) or isinstance(wait, bool) or wait <= 0:
+        return None
+    try:
+        elapsed = tool_io.utc_now_epoch_ms() - utc_ms(letter["sent_at"])
+    except (ValueError, TypeError, KeyError, OverflowError):
+        return None
+    if elapsed < wait:
+        return None
+    return "held %d ms, nobody decided in time (queue_wait_ms %d)" % (elapsed, wait)

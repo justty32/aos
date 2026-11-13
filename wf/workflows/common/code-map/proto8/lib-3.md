@@ -24,6 +24,7 @@
 | [`jsonx_search/`](../../../../../proto8/lib/aos/jsonx_search/) | json_search 加料版：follow 穿過 $ref、resolve 在解開 $ref／$env 後的值裡找（都預設關；這兩個不能配 up） |
 | [`jsonx_set/`](../../../../../proto8/lib/aos/jsonx_set/) | json_set 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關） |
 | [`kernel/`](../../../../../proto8/lib/aos/kernel/) | 通用 kernel 的站：讀參數與環境，把掛 proc 那一包交給骨架做一輪。 |
+| [`kernel/hold.py`](../../../../../proto8/lib/aos/kernel/hold.py) | 「先留著等表態」：hold.json 記留著的信，decisions/<信名>.json 是別人對某一封的表態（pass／refuse）。 |
 | [`kernel/hooks.py`](../../../../../proto8/lib/aos/kernel/hooks.py) | kernel 的三個 hook 時機：設定、事件欄位與判決回話，執行一律交給共用引擎。 |
 | [`kernel/letters.py`](../../../../../proto8/lib/aos/kernel/letters.py) | 包 aos-post 的收信、轉寄、拒信、代回、轉寄對照表與排隊 body。 |
 | [`kernel/procs_rules.py`](../../../../../proto8/lib/aos/kernel/procs_rules.py) | 掛 proc 那一包：收下游答案、驗信、先來先掛與白名單及 running 上限。 |
@@ -31,6 +32,7 @@
 | [`kernel/round.py`](../../../../../proto8/lib/aos/kernel/round.py) | 通用 kernel 的骨架：讀設定、鎖收件箱，串起五個口與三個 hook 時機。 |
 | [`kernel/runner.py`](../../../../../proto8/lib/aos/kernel/runner.py) | 「自己跑」零件：把一件工作掛成 daemon 的 proc、看表收成品、逾時、重掛一次、拔列；去處由呼叫的包給。 |
 | [`kernel/tests/test_kernel.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel.py) | 用真的 aos-post 信箱驗證框架站的轉寄、代回與重起防重。 |
+| [`kernel/tests/test_kernel_hold.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel_hold.py) | 用真的 aos-post 與 aos-exec 驗證 after_verdict hook 的「先留著」（hold）與表態檔 decisions/<信名>.json。 |
 | [`kernel/tests/test_kernel_hooks.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel_hooks.py) | 用真的 aos-post 與 aos-exec 驗證 kernel 三個 hook 時機和排隊時的保存。 |
 | [`kernel/tests/test_kernel_route.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel_route.py) | 用真的 aos-post 與 aos-exec 驗證 after_verdict hook 替單封信指定下一站（照規則分流）與各種邊緣。 |
 | [`kernel/tests/test_runner.py`](../../../../../proto8/lib/aos/kernel/tests/test_runner.py) | 用真的 aos-daemon 與假的端點函數驗「自己跑」零件：掛上、收成品、逾時、重掛一次、放棄。 |

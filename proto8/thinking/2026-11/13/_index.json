@@ -44,6 +44,12 @@
  "eca-a2a-notify.md": {
   "description": "eca 的通知改走 a2a（11-13 調查，只讀沒施工）：外部行程可以直接往 Claude Code 的 session socket 投遞、寄件人可以寫成不存在的「aos通知中心」（都實測過）；建議畫面那條路把「貼字＋Enter」換成投 socket，留兩題給使用者裁"
  },
+ "eca-as-kernel": {
+  "description": "分檔夾：一隻普通的 agent（先想 eca）怎麼讓自己成為 kernel（11-13，線申；只設計＋暫存樹原型，沒改 main 的程式）：最輕的做法是「一個信箱＋一支通知 hook＋一支表態工具」，原型用真 haiku 跑通（收通知、自己判、自己轉送、回信都回到寄件人）；`desc` 現在就帶得過去；留三題機制缺口給使用者"
+ },
+ "eca-as-kernel.md": {
+  "description": "一隻普通的 agent（先想 eca）怎麼讓自己成為 kernel（11-13，線申；只設計＋暫存樹原型，沒改 main 的程式）：最輕的做法是「一個信箱＋一支通知 hook＋一支表態工具」，原型用真 haiku 跑通（收通知、自己判、自己轉送、回信都回到寄件人）；`desc` 現在就帶得過去；留三題機制缺口給使用者"
+ },
  "eca-main-six-fixes.md": {
   "description": "eca_main 來信七項（11-13）：四項是 bug、修法與 patch 草稿備好（1 定義檢查找 aos-tools、3 rm／stop 要 ws、6 codex 重複旗標、7 codex 子 agent thread），2、4 是新功能，5 與 AOS_HOME 的意思是設計題；這一階段只評估與重現，repo 程式沒動"
  },

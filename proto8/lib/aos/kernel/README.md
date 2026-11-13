@@ -10,6 +10,7 @@
 | `round.py` | 讀設定、鎖 `requests/.flock`、派發三個 hook 時機、逐封套用判決 |
 | `letters.py` | 包 aos-post：認領、看信、收信、轉寄、拒信、代回、轉寄對照與排隊 body |
 | `hooks.py` | 三個事件的設定與回話規則，執行交給共用 hook_run |
+| `hold.py` | 「先留著等表態」：留著的信的窗 `hold.json`、表態檔 `decisions/<信名>.json` |
 | `procs_rules.py` | 掛 proc 的五個口、設定檢查、白名單與 running 上限 |
 | `queue_fifo.py` | 先來先掛的排隊窗、寄件人期限與時間換算 |
 | `runner.py` | 「自己跑」零件：把一件工作掛成 daemon 的 proc、看表收成品、逾時、重掛一次、拔列；去處由呼叫的包給 |
@@ -19,6 +20,8 @@
 `admit` 回 `(verdict, detail)`：`pass` 的 detail 是新名字清單、`refuse` 是 `(code, msg)`、`queue` 是窗的一列。hook 從拒或排改成 pass 時，交給 `dispatch` 的 detail 是 None；包從 body 數實際轉出的名字，不回頭驗規則。`dispatch` 成功回 `None`，失敗回 `(code, msg)` 交骨架拒信。包的 `collect(ctx, before_reply=None)` 可傳代回前的回呼；每封對得上表的回信會以 `(原信記錄, 回信信封)` 呼叫，回傳要代回的 body。骨架在這個回呼派發 `before_reply`，三個時機都交給共用的 `lib/hook_run.py` 執行。
 
 包另外提供 `check_next(ctx, box)` 時，骨架才收 `after_verdict` hook 替單封信指定的下一站：hook 給了就先叫它驗（設定配不上由包 `ctx.die`，這個值不能用丟 `ValueError`、算 hook 自己失敗），放行時路徑放在 `ctx.route[信名]`，包在 `dispatch` 取走。沒有這個口的包（問腦那一包，放行＝自己掛去跑、不轉寄）遇到 hook 給 `next` 算 hook 自己失敗。
+
+包另外提供 `held(ctx, name, letter)` 時，骨架才收 `after_verdict` hook 的「先留著」（`hold`，見下方「先留著等表態」）：留著、還沒人表態的信每輪交給它，回 `None`＝繼續留，回 `(code, msg)`＝現在就拒。掛 proc 這一包的 `held` 只驗寄件人的期限。沒有這個口的包（問腦那一包）遇到 hook 回 `hold` 算 hook 自己失敗。
 
 ## kernel.json
 
@@ -54,7 +57,7 @@
 1. 讀設定、檢查 stack、建 requests 信箱，嘗試鎖 `requests/.flock`。
 2. 認領信，先收掉已轉寄的原信：對照表同時比 key 與 `letter`；也看下一站 `new/`、`cur/` 的同名信（有序轉普通時比尾名）。不等回信的對照列隨原信收掉。
 3. 收 replies，查表、跑 `before_reply`、代回；再認領並看 requests 的信封，壞信 warning 丟掉。
-4. 已在隊的照原隊序先看，新信照 aos-post 順序（有序先、再名字）。新信先跑 `before_verdict`；隊中信讀回保存的 body，不重跑它。依序判期限、白名單、上限；新信判完跑 `after_verdict`，隊中信只有這輪出隊才跑。放行轉寄並收原信，拒信回 `{"applied": false, "error": {"code", "msg"}}` 並收原信，留隊繼續留在 cur。
+4. 已在隊的照原隊序先看，新信照 aos-post 順序（有序先、再名字）。新信先跑 `before_verdict`；隊中信讀回保存的 body，不重跑它。依序判期限、白名單、上限；新信判完跑 `after_verdict`，隊中信只有這輪出隊才跑。放行轉寄並收原信，拒信回 `{"applied": false, "error": {"code", "msg"}}` 並收原信，留隊繼續留在 cur。hook 回 `hold` 的信也留在 cur、不回信；之後每輪先看表態檔，沒人表態就不重判、不再問 hook（見「先留著等表態」）。
 5. 改過 body 的新入隊信原子存到 `bodies/<信名>.json`；出隊轉寄或拒掉後刪掉。寫排隊窗（空隊也寫空陣列），釋放鎖、退 0。
 
 `queue_wait_ms` 必須是非負整數。正數從本站收到的 `sent_at` 起算，過期即拒 `SlotMissing`，有格也拒；0 不算過期，有格照放行，沒格不排。隊首沒格會擋住後方要新格的信，不增加 running 的信照轉。隊中信每輪仍驗期限；`queued_at`、`queued_at_cycles` 續用，壞窗 warning 後當空窗、從 cur 重排。
@@ -66,7 +69,7 @@
 | 事件 | 時機與事件欄位 | 能改 |
 |---|---|---|
 | `before_verdict` | 新信在內建規則前；`letter`、`sender`、`sent_at`、`reply_to`、`body` | `body` |
-| `after_verdict` | 新信判完一次；隊中信出隊再一次，繼續排不跑。上述欄位再加 `verdict`、`error`（拒信的 `{code, msg}`，否則 null）、`next`（null；只有會轉寄的包有這一欄） | `verdict`（只收 pass／refuse）、`error`、`next`（這一封的下一站，見「分流」） |
+| `after_verdict` | 新信判完一次；隊中信出隊再一次，繼續排不跑。上述欄位再加 `verdict`、`error`（拒信的 `{code, msg}`，否則 null）、`next`（null；只有會轉寄的包有這一欄）、`decision`（平常 null；留著的信有人表態 pass、重判那一次是 `"pass"`；只有收 hold 的包有這一欄） | `verdict`（pass／refuse／hold；hold 見「先留著等表態」）、`error`、`next`（這一封的下一站，見「分流」） |
 | `before_reply` | 下游回信代回前；`letter`（原信名）、`sender`（原寄件人）、`reply_to`（原回信箱）、`reply_sender`、`body` | `body` |
 
 每份事件 JSON 都有 `event`、`hook`、`stack`（站的 stack），沒有 `names` 等 proc 專用欄。事件從 handler 的 stdin 進，也留在 `hooks/<名>/event.json`；handler 經 `aos-exec --stack <小格>/ <handler>` 跑。同一事件照 hook 名字排序，前一個改過的內容後一個看得到。退 0、stdout 空＝不改；stdout 是 JSON 物件時只取允許改的鍵。`intercept: false` 或 `async: true` 是純通知，不看 stdout，退 10 也不攔。
@@ -75,7 +78,7 @@
 
 三個事件退 10 都能攔。`before_verdict` 直接拒 `HookRejected`，不跑內建規則和 `after_verdict`；`after_verdict` 也拒 `HookRejected`。原因用 stdout 去頭尾空白，空則用 `blocked by hook <name>`。`before_reply` 改代回 `{"applied": false, "error": {"code": "HookRejected", "msg": "reply blocked by hook <name>: <stdout>"}}`。
 
-`after_verdict` 改成 refuse 卻沒完整的 `error`（物件、`code` 與 `msg` 都是字串），補 `{"code": "HookRejected", "msg": "refused by hook <name>"}`。把 refuse 或 queue 改成 pass 就照放行，不回頭驗期限、白名單或上限；其他 verdict 值算 hook 自己失敗。
+`after_verdict` 改成 refuse 卻沒完整的 `error`（物件、`code` 與 `msg` 都是字串），補 `{"code": "HookRejected", "msg": "refused by hook <name>"}`。把 refuse 或 queue 改成 pass 就照放行，不回頭驗期限、白名單或上限；改成 hold＝先留著；其他 verdict 值算 hook 自己失敗。
 
 hook 自己逾時、退非 0／10、起不來或回話不合：`on_error: stop` 印 `kernel: error: HookFailed ...`、這輪退 1，信留在 cur，下輪重來；`before_reply` 失敗時回信留在 replies/cur。只有上一輪已寫進 `queue.json` 的信算隊中信，其他信下輪仍跑 `before_verdict`。`continue` 印一行 warning、當沒這個 hook。async 放出去就不等結果。
 
@@ -120,6 +123,49 @@ if body.get("lane") == "side":
 - **有序信**：分到不同站的信，站與站之間沒有先後保證。`keep_ordered` 開著時 hook 給 `next`＝`CfgBad`（另一個原因：各站各自編有序信名，兩站可能編出同名，代回的對照會撞）。沒開 `keep_ordered` 時有序信照處理順序逐封寄出、轉成普通信，「有序」只保證到本站門口。
 - **防重**：寄進指定的站之後、原信還沒收掉就中斷：下一輪 hook 再指到同一站，站看到那一站的 `new/`、`cur/` 還有同名信就只收原信、不寄第二次。hook 這次指到別站就認不出來，所以分流規則要對同一封信每次給同一個答案。
 
+### 先留著等表態：hook 回 `hold`，別人寫表態檔，機器轉寄
+
+使用者 11-13：「請求進來後agent收到通知，他自己判斷要不要過，然後再去轉送」；四題回覆「1乙，總之先做。」＝重用框架站，加一個「先留著等表態」的口，判的人只表態、轉寄由機器做。
+
+`after_verdict` hook 的 stdout 回 `{"verdict": "hold"}`：這一封留在 `requests/cur/`，不轉寄、不回信，記進 `hold.json`。誰來判、怎麼通知他，站不管（hook 自己通知，或別的程式看 `hold.json`）。判的人把答案寫成一個檔 `<站的 stack>/decisions/<信名>.json`（先寫暫存檔再改名）：
+
+```json
+{"verdict": "pass"}
+{"verdict": "refuse", "error": {"code": "NotNow", "msg": "say what it is for"}}
+```
+
+下一輪站看到表態檔就照做：
+
+- `refuse`：回拒信 `{"applied": false, "error": …}`、收原信。`error` 沒寫或不完整（要物件、`code` 與 `msg` 都是字串）＝`{"code": "HoldRefused", "msg": "refused by the decision for this letter"}`。不再問 hook。
+- `pass`：這一輪把這封信**重判一次**——內建規則照跑（期限、白名單、上限、排隊），`after_verdict` 再跑一次（事件的 `decision` 是 `"pass"`，這一次 hook 再回 `hold` 不算數、照那一格之前的判決走；分流的 `next` 這時給才算），之後照平常放行、拒或排隊。所以表態 pass 蓋不過規則：規則會拒的信照樣拒。放行走的是平常那條轉寄路（下一站三段、分流、代回、防重、臨轉寄再驗期限）。
+- 沒有表態檔：繼續留著。不重判、不再問 hook、`before_verdict` 也不重跑（改過的 body 存在 `bodies/<信名>.json`，跟排隊的信一樣）。
+
+其他：
+
+- **寄件人的期限**：留著的信每輪驗 `queue_wait_ms`（從 `sent_at` 起算）。過了就拒 `SlotMissing`、原因 `held N ms, nobody decided in time (queue_wait_ms N)`，不等表態；期限過了才寫的 pass 不放行。沒帶期限的信一直留到有人表態。站沒有自己的「最多留多久」；要的話寫在通知或表態那一側。
+- **哪些信會被留**：hook 自己決定。`condition: "pass"` 的 hook 只看內建規則放行的信，規則拒的直接拒、不留；不寫 condition 就連規則拒的、排隊的都看得到（留了規則拒的信，有人說 pass 時規則還是會拒）。
+- **表態後沒格**：開著 `queue` 時進排隊窗，表態檔留著；出隊那一次 hook 回 `hold` 一樣不算數。排隊中的信有表態檔也算數（`refuse`＝現在拒）。
+- **不算進數量上限**：留著的信不佔格、不擋後面的信。
+- **站重起**：`hold.json`、表態檔、`bodies/` 都在 stack 裡，重起後照舊。`hold.json` 讀不懂＝warning、當沒有留著的信，cur 裡那些當新信重判（hook 會再被問一次）。表態檔讀不懂或 `verdict` 不是 pass／refuse＝warning、刪掉那個檔、信照舊留著。
+- **站裡沒有這封信的表態檔**（信已離站、或信名打錯）：每輪收尾時刪掉。
+- **只有掛 proc 這一包收 `hold`**；問腦那一包沒有 `held` 這個口，hook 回 `hold` 算 hook 自己失敗。
+
+最小例子：機器先照 `kernel.json` 的規則判，規則放行的信裡只有帶 `desc` 的留給人看，其餘直接放行。`kernel.json` 與可執行的 `ask` 放同一夾。
+
+```json
+{"allowed": ["worker"], "hooks": {"ask": {"event": "after_verdict", "condition": "pass", "handler": "ask"}}}
+```
+
+```python
+#!/usr/bin/env python3
+# 規則放行的信裡，帶 desc 的先留著等人表態；不說話＝照規則的判決走。
+import json, sys
+event = json.load(sys.stdin)
+body = event["body"] if isinstance(event["body"], dict) else {}
+if "desc" in body:
+    print(json.dumps({"verdict": "hold"}))
+```
+
 `keep_ordered` 與 `reply_via_me` 各自獨立。有序轉寄會產生新信名；只開保有序時，下游直接回的 `in_reply_to` 會是新信名。開代回且原信有 `reply_to` 才改成自己的 replies；代回時以原信名當 `in_reply_to`。原回信箱以絕對路徑記錄，不留原 body。
 
 代回寄不進去或原信箱已不在：warning、刪對照、收掉回信，不重試。找不到對照的回信也 warning 丟掉。下游一直不回的對照列不自動清。沒開代回的無序信，若下游已做完移走、原信又還沒收掉就重起，仍可能重轉。
@@ -130,6 +176,8 @@ if body.get("lane") == "side":
 requests/          對外收件箱，AOS_KERNEL 指這裡
   .flock           一輪的互斥鎖
 queue.json         {"queued": [{letter, names, queued_at, queued_at_cycles?, expires_at?}]}
+hold.json          {"held": [{letter, held_at, held_at_cycles?, expires_at?}]}，留著等表態的信
+decisions/<信名>.json 別人對留著的那一封的表態 {"verdict": "pass"} 或 {"verdict": "refuse", "error"?}，站照做後刪
 bodies/<信名>.json before_verdict 改過且還在排隊的 body，原子寫入、出隊後刪
 replies/           下游回信箱
 forwarded.json     {轉寄後信名: {"letter": 原信名, "reply_to": 原信箱或null, "sender": 原寄件人}}
@@ -162,7 +210,8 @@ hooks/<名>/        hook 小格，event.json 是最後一次事件
 |---|---|
 | `BodyBad` | 規則要看的 body、期限或時間格式不對 |
 | `NameUnknown` | procs_added 名字不在 allowed |
-| `SlotMissing` | 期限已過或沒有足夠格子且不能排 |
+| `SlotMissing` | 期限已過（含留著等表態等到過期）或沒有足夠格子且不能排 |
+| `HoldRefused` | 留著的信被表態拒絕、表態檔沒給完整的 error（給了就用它的 code 與 msg） |
 | `ForwardFailed` | 下一站（站原本的，或 hook 替這一封指定的）信箱不在或寄不進去 |
 | `HookRejected` | hook 攔下請求或回信，或改判拒絕但沒有完整 error |
 

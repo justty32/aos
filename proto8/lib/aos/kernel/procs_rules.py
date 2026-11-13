@@ -222,6 +222,12 @@ def admit(ctx, name, letter):
     return "pass", detail
 
 
+def held(ctx, name, letter):
+    """留著等表態的信每輪只驗寄件人的期限（過了就拒，不等表態）；其餘規則等有人說 pass 那一輪重判。"""
+    message = queue_fifo.held_expiry(letter)
+    return ("SlotMissing", message) if message else None
+
+
 def dispatch(ctx, name, letter, detail):
     # 讀信和前面的轉寄也花時間；規則放行的（detail 不是 None）臨轉寄再驗一次期限，免得這一輪中途到期還被掛上。
     # hook 改判成放行的（detail 是 None）照字面放行、不回頭驗。
