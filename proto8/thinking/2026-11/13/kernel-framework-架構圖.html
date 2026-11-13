@@ -1,0 +1,602 @@
+<!-- kernel-framework-架構圖.html - kernel 框架的架構圖（11-13）：八張圖講請求怎麼走、站裡面長怎樣、問腦與查詢信、17 批進度；以當下 main 的程式為準 -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kernel 框架架構圖</title>
+<style>
+:root{--bg:#fbfaf7;--fg:#22211f;--mute:#6b675f;--line:#d9d4c9;--code:#f1eee7;--card:#ffffff;
+--acc:#2f6f5e;--door:#e1f0ea;--warn:#9a5b13;--hand:#fbeeda;--hook:#5b4bb0;--hookbg:#ece8f8;
+--done:#2e7d4f;--donebg:#dff2e5;--wip:#2563a8;--wipbg:#e1edfa;--dec:#7a3fa0;--decbg:#f1e6f8;--later:#7d796f;--laterbg:#eeece6}
+@media (prefers-color-scheme: dark){:root{--bg:#1b1c1e;--fg:#e9e6df;--mute:#a7a299;--line:#3a3c40;--code:#26282b;--card:#222326;
+--acc:#7cc4ad;--door:#1f3a33;--warn:#e0a85a;--hand:#3d2f18;--hook:#a99cf0;--hookbg:#2c2847;
+--done:#7fd39c;--donebg:#1d3a28;--wip:#86b8f0;--wipbg:#1c2f47;--dec:#cf9cf0;--decbg:#35224a;--later:#9a968d;--laterbg:#2a2b2e}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 72px}
+h1{font-size:1.6rem;margin:.2em 0 .1em}
+h2{font-size:1.18rem;margin:2.2em 0 .5em;padding-top:.7em;border-top:1px solid var(--line)}
+p{margin:.45em 0}
+.sub{color:var(--mute);margin-bottom:1em}
+.lead{background:var(--card);border:2px solid var(--acc);border-radius:10px;padding:10px 16px;margin:1em 0}
+.lead ol{margin:.3em 0;padding-left:1.3em}
+nav{font-size:.93em;color:var(--mute);margin:.8em 0}
+nav a{color:var(--acc);text-decoration:none;margin-right:.7em;white-space:nowrap}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.9em;background:var(--code);padding:0 4px;border-radius:4px;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:9px 12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;font:13.5px/1.5 ui-monospace,Consolas,monospace;margin:.5em 0}
+blockquote{margin:.7em 0;padding:.5em 1em;border-left:4px solid var(--acc);background:var(--card);border-radius:0 8px 8px 0}
+blockquote footer{color:var(--mute);font-size:.88em;margin-top:.3em}
+details{margin:.6em 0;border:1px solid var(--line);border-radius:8px;padding:6px 12px;background:var(--card)}
+summary{cursor:pointer;color:var(--mute)}
+details ul{padding-left:1.2em;margin:.4em 0}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;font-size:.92em;margin:.5em 0;min-width:100%}
+th,td{border:1px solid var(--line);padding:4px 8px;text-align:left;vertical-align:top}
+th{background:var(--code)}
+.fig{overflow-x:auto;margin:.6em 0;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:6px}
+.fig svg{display:block;width:100%;min-width:620px;height:auto}
+.tag{display:inline-block;font-size:.8em;padding:0 7px;border-radius:10px;border:1px solid;margin-right:4px;white-space:nowrap}
+.t-done{color:var(--done);background:var(--donebg)}.t-wip{color:var(--wip);background:var(--wipbg)}
+.t-stop{color:var(--warn);background:var(--hand)}.t-dec{color:var(--dec);background:var(--decbg)}.t-later{color:var(--later);background:var(--laterbg)}
+.undec li{margin:.25em 0}
+svg text{fill:var(--fg);font:13px system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif}
+svg .s{font-size:12px}
+svg .mu{fill:var(--mute)}
+svg .bd{font-weight:700}
+svg .m{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+svg .b{fill:var(--bg);stroke:var(--mute);stroke-width:1.3}
+svg .door{fill:var(--door);stroke:var(--acc);stroke-width:1.6}
+svg .hand{fill:var(--hand);stroke:var(--warn);stroke-width:1.6}
+svg .hk{fill:var(--hookbg);stroke:var(--hook);stroke-width:1.6;stroke-dasharray:5 3}
+svg .hks{fill:var(--hookbg);stroke:var(--hook);stroke-width:1.6}
+svg .pill{fill:var(--code);stroke:var(--mute);stroke-width:1}
+svg .ln{stroke:var(--mute);stroke-width:1.5;fill:none;marker-end:url(#ar)}
+svg .lnd{stroke:var(--mute);stroke-width:1.5;fill:none;stroke-dasharray:5 4;marker-end:url(#ar)}
+svg .ld{stroke:var(--mute);stroke-width:1;fill:none}
+svg .ah{fill:var(--mute)}
+svg .st-done{fill:var(--donebg);stroke:var(--done);stroke-width:1.6}
+svg .st-wip{fill:var(--wipbg);stroke:var(--wip);stroke-width:1.6}
+svg .st-stop{fill:var(--hand);stroke:var(--warn);stroke-width:1.6}
+svg .st-dec{fill:var(--decbg);stroke:var(--dec);stroke-width:1.6}
+svg .st-later{fill:var(--laterbg);stroke:var(--later);stroke-width:1.3}
+svg .st-mix{fill:var(--donebg);stroke:var(--warn);stroke-width:2.5;stroke-dasharray:7 4}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0 0 L10 5 L0 10 z"/></marker>
+</defs></svg>
+<main>
+<h1>kernel 框架架構圖</h1>
+<p class="sub">截至 2026-11-13 13:37（機器時鐘）、main＝<code>fd9ae490a</code>（kernel 程式最後一個 commit 是 <code>d8384df9b</code>）。照當下 main 上的程式畫；圖紙與程式不一樣的地方，照程式畫、摺疊裡註一句。</p>
+
+<div class="lead">
+<b>四句話看完</b>
+<ol>
+<li><b>daemon 是手、kernel 是門。</b>手真的去起、關行程；門決定「這個請求放不放」。一個 proc 想掛另一個 proc，就寄信給門。</li>
+<li><b>框架站＝一份固定的骨架＋可換的「包」。</b>框架最底層就是「hook＋判斷」；數量上限、排隊、期限這類是蓋在上面的通用基礎包（掛 proc 那一包）的事。掛 proc 那一包已在 main；問腦那一包的 Python 版也進 main 了，只是還沒換上。</li>
+<li><b>請求往哪寄：</b>沒特別指定就寄 <code>AOS_KERNEL</code>；站自己找下一站照三段：<code>next</code> → <code>AOS_KERNEL</code> → <code>AOS_DAEMON</code>。<code>next</code> 只有一個；要照規則分流，寫 hook 替那一封指定下一站。</li>
+<li><b>agent 也能自己當門：</b>兩次工具呼叫，請求進來先留著、它收到通知、自己表態過不過，機器再去轉寄。</li>
+</ol>
+</div>
+
+<nav>
+<a href="#s1">① 總圖</a><a href="#s2">② 往哪寄</a><a href="#s3">③ 站的裡面</a><a href="#s4">④ hook</a><a href="#s5">⑤ 設定檔</a><a href="#s10">⑥ agent 當門</a><a href="#s6">⑦ 問腦那包</a><a href="#s7">⑧ 查詢信</a><a href="#s8">⑨ 進度地圖</a>
+</nav>
+
+<!-- ============ 1 ============ -->
+<h2 id="s1">① 總圖：一封請求怎麼走到「手」</h2>
+<div class="fig">
+<svg viewBox="0 0 760 365" role="img" aria-label="請求從 proc 出發，經一站或多站框架站，到 daemon 動手；回信回到寄件人。問腦走另一個信箱。">
+  <rect class="b" x="625" y="6" width="125" height="34" rx="8"/><text x="687" y="28" text-anchor="middle">新的 proc</text>
+  <path class="ln" d="M687 70 V42"/><text x="678" y="60" text-anchor="end" class="s">③ 動手起</text>
+
+  <rect class="b" x="10" y="70" width="130" height="60" rx="8"/><text x="75" y="95" text-anchor="middle" class="bd">一個 proc</text><text x="75" y="115" text-anchor="middle" class="s mu">（例：agent）</text>
+  <rect class="door" x="215" y="70" width="130" height="60" rx="8"/><text x="280" y="95" text-anchor="middle" class="bd">框架站 A</text><text x="280" y="115" text-anchor="middle" class="s">判：放・拒・排</text>
+  <rect class="door" x="420" y="70" width="130" height="60" rx="8"/><text x="485" y="95" text-anchor="middle" class="bd">框架站 B</text><text x="485" y="115" text-anchor="middle" class="s">可有可無、可再串</text>
+  <rect class="hand" x="625" y="70" width="125" height="60" rx="8"/><text x="687" y="95" text-anchor="middle" class="bd">daemon</text><text x="687" y="115" text-anchor="middle" class="s">照表起、關行程</text>
+
+  <path class="ln" d="M140 100 H213"/><text x="177" y="92" text-anchor="middle" class="s">① 請求信</text>
+  <path class="ln" d="M345 100 H418"/><text x="382" y="92" text-anchor="middle" class="s">② 轉寄</text>
+  <path class="ln" d="M550 100 H623"/><text x="587" y="92" text-anchor="middle" class="s">② 再轉</text>
+
+  <path class="ln" d="M280 70 V46 H75 V68"/><text x="178" y="38" text-anchor="middle" class="s">拒信：沒過規則，在這一站就回掉</text>
+
+  <path class="ln" d="M687 130 V160 H75 V132"/>
+  <text x="385" y="179" text-anchor="middle" class="s">④ 回信 {"applied": true}：預設直接回寄件人；站開 reply_via_me 就一站一站代回</text>
+
+  <path class="ln" d="M40 130 V275 H213"/>
+  <text x="52" y="218" class="s">問腦走另一個信箱：$AOS_LLM_KERNEL/requests（答案也是寄回信）</text>
+  <rect class="b" x="215" y="235" width="345" height="80" rx="8"/><text x="387" y="253" text-anchor="middle" class="s mu">llm daemon（另外一台；門和手在同一台）</text>
+  <rect class="door" x="228" y="262" width="150" height="44" rx="6"/><text x="303" y="289" text-anchor="middle" class="s">問腦總機：排隊、挑包</text>
+  <rect class="hand" x="397" y="262" width="150" height="44" rx="6"/><text x="472" y="289" text-anchor="middle" class="s">掛 llm_&lt;信名&gt; 去問</text>
+  <rect class="b" x="625" y="250" width="125" height="50" rx="8"/><text x="687" y="272" text-anchor="middle">模型端點</text><text x="687" y="290" text-anchor="middle" class="s mu">（LiteLLM 等）</text>
+  <path class="ln" d="M560 275 H623"/><text x="592" y="267" text-anchor="middle" class="s">去問</text>
+
+  <rect class="door" x="10" y="334" width="16" height="14" rx="3"/><text x="32" y="346" class="s">門（kernel）：信寄到哪，哪裡對寄件人就是 kernel</text>
+  <rect class="hand" x="400" y="334" width="16" height="14" rx="3"/><text x="422" y="346" class="s">手（daemon）：真的動手起、關行程的那個</text>
+</svg>
+</div>
+<p><b>結論：</b>proc 不直接叫 daemon 動手，而是把請求信寄給「門」；門放行才轉到「手」。門可以只有一站，也可以串好幾站；門和手也可以是同一台 daemon（它自己的身體就是框架站）。</p>
+<pre>python3 proto8/extras/kernel-chain-check/check.py   # 暫存夾起一棵「兩站＋daemon」的樹，七段都過會印 7/7 ok</pre>
+<details><summary>細節：手與門的出處、三種擺法、檔案位置</summary>
+<ul>
+<li><b>手與門</b>（使用者 11-12 晚同意「好，就是這樣。」）：daemon 是手的名字，kernel 是門的名字。kernel 是<b>主觀的概念</b>——對需要它的那個 proc 來說，請求寄得過去的那個目標就是 kernel。出處 <code>proto8/thinking/2026-11/12/kernel-as-bridge/06-細聊-手與門.md</code>。</li>
+<li><b>daemon 故意很笨</b>：只有一張表＋一雙照表做事的手，不決定「該不該起」——那是門的事。</li>
+<li><b>三種擺法</b>（只是範例）：框架站當 daemon 的身體（範本 <code>proto8/kernel/daemon-kernel/</code>）；當 daemon 底下一個 loop proc（<code>proto8/kernel/procs-kernel/</code>）；當鏈的中間站（上面任一種再指到別的站）。</li>
+<li><b>框架只是一包方便的零件</b>：自己手寫一支收信的程式，一樣算 kernel。</li>
+<li>程式：<code>proto8/lib/aos/kernel/</code>；說明：<code>proto8/kernel/README.md</code>、<code>proto8/kernel/docs/02-kernel-modes.md</code>；條文：N-42（<code>proto8/docs/NORMS/09-kernel.md</code>）、C-47（<code>proto8/docs/CONCEPTS/04-kernel.md</code>）；給 agent 看的：<code>proto8/knowledge/aos/kernel.json</code>。</li>
+<li>整鏈劇本驗的七段：掛子經兩站且回信代回對得上、超過上限排隊再出隊、壞信被 hook 立刻擋、兩站重起後隊序不變、<code>ping</code> 穿兩站、照規則分流（第 7 段：一個站、兩個下一站，兩種信各到各的）。另有第 8 段：留著等表態走整條鏈。第 3 段（查詢信）還沒做，見 ⑧。</li>
+</ul>
+</details>
+
+<!-- ============ 2 ============ -->
+<h2 id="s2">② 請求往哪寄：<code>AOS_KERNEL</code>、<code>next</code>、<code>AOS_DAEMON</code></h2>
+<div class="fig">
+<svg viewBox="0 0 760 468" role="img" aria-label="一般 proc 寄到 AOS_KERNEL；人用 aos-daemon-ctl 直寄 daemon；站找下一站照 next、AOS_KERNEL、AOS_DAEMON 三段；要分流就用 after_verdict hook 替單封信指定下一站。">
+  <rect class="b" x="10" y="24" width="120" height="48" rx="8"/><text x="70" y="53" text-anchor="middle" class="bd">一般 proc</text>
+  <rect class="door" x="290" y="24" width="200" height="48" rx="8"/><text x="390" y="44" text-anchor="middle" class="m">$AOS_KERNEL</text><text x="390" y="63" text-anchor="middle" class="s">某一站的 requests/ 信箱</text>
+  <rect class="hand" x="630" y="24" width="120" height="48" rx="8"/><text x="690" y="44" text-anchor="middle" class="bd">daemon</text><text x="690" y="63" text-anchor="middle" class="s">的 ctl 信箱</text>
+  <path class="ln" d="M130 48 H288"/><text x="209" y="40" text-anchor="middle" class="s">沒特別指定，就寄這裡</text>
+  <path class="ln" d="M490 48 H628"/><text x="559" y="40" text-anchor="middle" class="s">站找下一站（下半）</text>
+
+  <rect class="b" x="10" y="104" width="120" height="44" rx="8"/><text x="70" y="131" text-anchor="middle" class="bd">人（終端機）</text>
+  <path class="ln" d="M130 126 H690 V74"/>
+  <text x="410" y="118" text-anchor="middle" class="s">aos-daemon-ctl -d &lt;那台&gt;：直寄 daemon、不經門（人的保底；「唯一的門」只管 proc）</text>
+
+  <text x="10" y="180" class="bd">站放行一封信之後，下一站照三段找：</text>
+  <rect class="door" x="10" y="195" width="200" height="90" rx="8"/>
+  <text x="110" y="218" text-anchor="middle" class="bd">① kernel.json 的 next</text><text x="110" y="244" text-anchor="middle" class="s">有寫 → 用它</text><text x="110" y="266" text-anchor="middle" class="s mu">指到自己 → CfgBad（報錯）</text>
+  <rect class="door" x="280" y="195" width="200" height="90" rx="8"/>
+  <text x="380" y="218" text-anchor="middle" class="bd">② 環境的 AOS_KERNEL</text><text x="380" y="244" text-anchor="middle" class="s">指到別站 → 用它</text><text x="380" y="266" text-anchor="middle" class="s mu">指到自己 → 跳過這段</text>
+  <rect class="hand" x="550" y="195" width="200" height="90" rx="8"/>
+  <text x="650" y="218" text-anchor="middle" class="bd">③ AOS_DAEMON 那台</text><text x="650" y="244" text-anchor="middle" class="s">用它的 ctl 信箱</text><text x="650" y="266" text-anchor="middle" class="s mu">算出來是自己 → CfgBad</text>
+  <path class="ln" d="M210 240 H278"/><text x="244" y="232" text-anchor="middle" class="s">沒寫</text>
+  <path class="ln" d="M480 240 H548"/><text x="514" y="232" text-anchor="middle" class="s">沒有</text>
+  <path class="ln" d="M650 285 V326"/><text x="660" y="310" class="s">也沒有</text>
+  <rect class="b" x="550" y="328" width="200" height="38" rx="8"/><text x="650" y="352" text-anchor="middle" class="s">DaemonMissing（報錯）</text>
+  <text x="10" y="328" class="s">整棵樹都 export AOS_KERNEL 時，站自己也會繼承到：</text>
+  <text x="10" y="348" class="s">指到自己才跳過。不想要 → 起站的殼 unset AOS_KERNEL，或明寫 next。</text>
+
+  <text x="10" y="396" class="bd">要照規則分流（一封只去一處）：next 還是只有一個，規則寫在 hook 裡</text>
+  <rect class="door" x="10" y="408" width="100" height="46" rx="8"/><text x="60" y="436" text-anchor="middle" class="bd">一個站</text>
+  <path class="ln" d="M110 431 H190"/><text x="150" y="423" text-anchor="middle" class="s">放行的信</text>
+  <rect class="hk" x="192" y="408" width="190" height="46" rx="8"/><text x="287" y="427" text-anchor="middle" class="m bd">after_verdict hook</text><text x="287" y="445" text-anchor="middle" class="s">回 {"next": 路徑}，或不回</text>
+  <path class="ln" d="M382 420 H548"/><text x="465" y="413" text-anchor="middle" class="s">有回 → 這一封去那站</text>
+  <path class="ln" d="M382 443 H548"/><text x="465" y="459" text-anchor="middle" class="s">沒回 → 照上面三段</text>
+  <rect class="b" x="550" y="408" width="200" height="23" rx="6"/><text x="650" y="424" text-anchor="middle" class="s">hook 指的那一站</text>
+  <rect class="b" x="550" y="433" width="200" height="23" rx="6"/><text x="650" y="449" text-anchor="middle" class="s">原本的下一站</text>
+</svg>
+</div>
+<blockquote>「我會覺得AOS_KERNEL他就是在有需要掛一個aos proc的時候，就使用的一個目標，一個通用的，基礎的目標。好比所有C語言程式使用syscall的時候，只要沒有特別指定，不然就是走linux kernel那個記憶體位置。啊如果有需要其他目標...那就自己找方法指定」
+<footer>使用者 11-13 原話（逐字）。站設定檔的 <code>next</code> 就是「自己找方法指定」的其中一種。</footer></blockquote>
+<p><b>結論：</b><code>AOS_KERNEL</code> 是「沒特別指定時的通用目標」，像 C 程式的 syscall 預設走 linux kernel。站自己放行後要轉去哪，先看明寫的 <code>next</code>，再看 <code>AOS_KERNEL</code>，最後才是 <code>AOS_DAEMON</code>。人拿 <code>aos-daemon-ctl</code> 直接敲 daemon 是保底的旁路。<code>next</code> 只有一個；要照規則分流（一封只去一處），寫 <code>after_verdict</code> hook 回 <code>{"next": 路徑}</code>，沒回的照三段。</p>
+<p class="sub">出處：使用者 11-13「next只能一個嗎？」→「按照規則分流吧。就用hook」（commit <code>7694e05f7</code>）。</p>
+<pre>export AOS_KERNEL=&lt;那一站的 stack&gt;/requests   # 之後 aos-agent ctl 的掛／停／收信，都改寄到這個信箱</pre>
+<details><summary>細節：三段的每個分支、相關裁定、commit</summary>
+<div class="tw"><table>
+<tr><th>情況</th><th>程式怎麼做（<code>lib/aos/kernel/procs_rules.py</code>）</th></tr>
+<tr><td>寫了 <code>next</code></td><td>照字面用它。解開捷徑後就是自己的 <code>requests/</code>＝<code>CfgBad</code>，不跳過（明寫的值不偷偷換行為）</td></tr>
+<tr><td>沒寫 <code>next</code>、有 <code>AOS_KERNEL</code></td><td>指到自己的 <code>requests/</code> 就跳過；指到別的信箱就用它（不讀任何表、不驗在不在，寄不進去才回 <code>ForwardFailed</code> 拒信）。這一段不需要 <code>AOS_DAEMON</code></td></tr>
+<tr><td>前兩段都沒有</td><td><code>$AOS_DAEMON</code> 表上的 <code>procs_requests</code>。算出來是自己＝<code>CfgBad</code>（有信那一輪才讀表、才報）</td></tr>
+<tr><td>三段都用不上</td><td><code>DaemonMissing</code></td></tr>
+<tr><td>兩站互指成環</td><td>不偵測</td></tr>
+<tr><td>hook 替這一封給了 <code>next</code></td><td>這一封放行時改寄那個信箱（只收絕對路徑）；沒回或回 null 照上面三段。站自己仍要有原本的下一站，三段都用不上照舊 <code>DaemonMissing</code></td></tr>
+</table></div>
+<ul>
+<li><b>kf-next:B</b>（使用者 11-13 中午）：找下一站改三段。備註「如果覺得麻煩，那就直接報錯算了」——線己二代定：<code>AOS_KERNEL</code> 指到自己＝跳過；明寫的 <code>next</code> 指到自己＝報錯。可翻案。commit <code>4fcb631fd</code>。</li>
+<li><b>kb-ctl:A</b>：<code>aos-daemon-ctl</code> 直寄照現況，「唯一的門」只約束 proc、不約束人；擋不擋得住直寄靠 Linux 權限。條文 N-42 (2) 已加註。</li>
+<li><b>kf-K-F50:B</b>：問腦總機自己要掛 proc 時照舊看 <code>AOS_KERNEL</code>（不加 <code>next</code>）；起 llm daemon 的殼記得 <code>unset AOS_KERNEL</code>（使用者備註「可以用unset吧」）。</li>
+<li>圖紙原本只有兩段（<code>next</code> → <code>AOS_DAEMON</code>）；程式照 11-13 的裁定是三段，<b>以程式為準</b>。分流也是圖紙沒有、11-13 才加的（線未代定：時機選 <code>after_verdict</code>、欄位名 <code>next</code>，可翻案）。</li>
+<li>分流的範例在 <code>proto8/kernel/docs/02-kernel-modes.md</code>「分流的例子」，整鏈劇本第 7 段實跑。</li>
+<li>條文：N-63（hub 型環境變數 <code>AOS_KERNEL</code>、<code>AOS_LLM_KERNEL</code>）、N-42 (2)、C-47。</li>
+</ul>
+</details>
+
+<!-- ============ 3 ============ -->
+<h2 id="s3">③ 一個框架站裡面：骨架一輪做什麼</h2>
+<div class="fig">
+<svg viewBox="0 0 760 520" role="img" aria-label="骨架一輪：讀設定上鎖、collect、check、order，然後每封信 admit 判成 pass、refuse、queue，hook 還能回 hold 先留著；最後 finish。下面是兩層：骨架只有 hook 加判斷，上限、排隊、期限是掛 proc 那一包的事。">
+  <text x="10" y="22" class="s mu">骨架 round.py：每次被叫只做一輪，不自己常駐。等寬字是「包」提供的口。</text>
+  <rect class="b" x="10" y="36" width="185" height="60"/><text x="102" y="60" text-anchor="middle" class="bd">讀設定・上鎖</text><text x="102" y="82" text-anchor="middle" class="s">每輪重讀 kernel.json</text>
+  <rect class="door" x="195" y="36" width="185" height="60"/><text x="287" y="60" text-anchor="middle" class="m bd">collect</text><text x="287" y="82" text-anchor="middle" class="s">收下游回信、代回</text>
+  <rect class="door" x="380" y="36" width="185" height="60"/><text x="472" y="60" text-anchor="middle" class="m bd">check</text><text x="472" y="82" text-anchor="middle" class="s">認領新信、看信封</text>
+  <rect class="door" x="565" y="36" width="185" height="60"/><text x="657" y="60" text-anchor="middle" class="m bd">order</text><text x="657" y="82" text-anchor="middle" class="s">排順序：隊裡的先看</text>
+
+  <path class="ln" d="M380 96 V138"/><text x="390" y="122" class="s">照順序，一封一封</text>
+  <rect class="door" x="280" y="140" width="200" height="54" rx="8"/><text x="380" y="162" text-anchor="middle" class="m bd">admit</text><text x="380" y="182" text-anchor="middle" class="s">包的規則判，hook 可改判</text>
+
+  <path class="ln" d="M280 160 H95 V238"/><text x="187" y="152" text-anchor="middle" class="s">pass 放行</text>
+  <path class="ln" d="M300 194 V238"/><text x="308" y="222" class="s">refuse 拒</text>
+  <path class="ln" d="M460 194 V238"/><text x="452" y="222" text-anchor="end" class="s">queue 沒格</text>
+  <path class="ln" d="M480 160 H665 V238"/><text x="573" y="152" text-anchor="middle" class="s">hold（只有 hook 能回）</text>
+
+  <rect class="st-done" x="10" y="240" width="170" height="60" rx="8"/><text x="95" y="264" text-anchor="middle" class="m bd">dispatch</text><text x="95" y="285" text-anchor="middle" class="s">原樣轉寄給下一站</text>
+  <rect class="st-stop" x="200" y="240" width="170" height="60" rx="8"/><text x="285" y="264" text-anchor="middle" class="m bd">refuse</text><text x="285" y="285" text-anchor="middle" class="s">回拒信、收掉原信</text>
+  <rect class="st-wip" x="390" y="240" width="170" height="60" rx="8"/><text x="475" y="264" text-anchor="middle" class="bd">排隊（等格子）</text><text x="475" y="285" text-anchor="middle" class="s">queue.json，下輪再判</text>
+  <rect class="st-dec" x="580" y="240" width="170" height="60" rx="8"/><text x="665" y="264" text-anchor="middle" class="bd">留著（等表態）</text><text x="665" y="285" text-anchor="middle" class="s">hold.json，下輪先看表態檔</text>
+
+  <path class="ln" d="M380 300 V336"/><text x="390" y="323" class="s">全部判完</text>
+  <rect class="door" x="10" y="338" width="740" height="40" rx="8"/><text x="380" y="363" text-anchor="middle"><tspan class="m bd">finish</tspan>：寫窗 queue.json、hold.json → 解鎖 → 退 0（沒信也退 0）</text>
+
+  <text x="10" y="406" class="bd">兩層：框架最底層＝hook＋判斷；上限、排隊、期限是蓋在上面那一包的事</text>
+  <rect class="door" x="10" y="416" width="740" height="38" rx="8"/><text x="380" y="440" text-anchor="middle" class="s"><tspan class="bd">骨架（框架本身，只有一份）</tspan>：收信 → 叫 hook → 照判決走；留著等表態也是骨架的口</text>
+  <rect class="st-done" x="10" y="464" width="235" height="46" rx="8"/><text x="127" y="483" text-anchor="middle" class="s bd">掛 proc 那一包（通用基礎包）</text><text x="127" y="501" text-anchor="middle" class="s">白名單、數量上限、排隊、期限</text>
+  <rect class="st-mix" x="262" y="464" width="235" height="46" rx="8"/><text x="379" y="483" text-anchor="middle" class="s bd">問腦那一包 kernel_llm/</text><text x="379" y="501" text-anchor="middle" class="s">Python 版已進 main，還沒換上</text>
+  <rect class="b" x="515" y="464" width="235" height="46" rx="8"/><text x="632" y="483" text-anchor="middle" class="s bd">你自己寫的包</text><text x="632" y="501" text-anchor="middle" class="s">照五個口寫就能掛上骨架</text>
+</svg>
+</div>
+<blockquote>「就是說我們做的是框架，最底層就是最簡單的hook+判斷。你說的上限這塊，是在框架之上的通用基礎包，所以可以隨意，可以簡單並通用一些。」
+<footer>使用者 11-13 下午原話（逐字）。</footer></blockquote>
+<p><b>結論：</b>骨架只管「順序」，放不放由「包」（pack＝一組規則）說。包的判決有三種：<code>pass</code> 放行轉寄、<code>refuse</code> 回拒信、<code>queue</code> 等格子排隊；hook 還能回第四種 <code>hold</code>：先留著，等別人寫表態檔，下一輪照表態轉寄或回拒。掛 proc 那一包管三件事：名字在不在白名單、同時幾個在跑、寄件人給的期限過了沒。</p>
+<pre>aos-exec proto8/lib/aos/kernel &lt;kernel.json&gt;   # 手跑一輪（要先設 AOS_STACK）；平常是 daemon 每一圈替你叫</pre>
+<details><summary>細節：五個口、掛 proc 那包的規則、站的 stack 長相、錯誤代號</summary>
+<div class="tw"><table>
+<tr><th>口（包要提供）</th><th>做什麼</th></tr>
+<tr><td><code>collect(ctx, before_reply)</code></td><td>收掉已轉寄的原信；收下游回信、查對照、代回</td></tr>
+<tr><td><code>check(ctx)</code></td><td>認領 requests 的新信、看信封；壞信 warning 丟掉</td></tr>
+<tr><td><code>order(ctx, letters)</code></td><td>已在隊的照原隊序先看，新信照 aos-post 的順序</td></tr>
+<tr><td><code>admit(ctx, name, letter)</code></td><td>回 <code>(判決, 細節)</code>：<code>pass</code>／<code>refuse</code>／<code>queue</code></td></tr>
+<tr><td><code>dispatch(ctx, name, letter, detail)</code></td><td>放行的轉寄出去；失敗回 <code>(code, msg)</code> 交骨架拒信</td></tr>
+<tr><td>另有 <code>load</code>、<code>refuse</code>、<code>finish</code>、<code>held</code></td><td>驗自己的設定鍵、拒信長什麼樣、收尾寫窗；<code>held</code>＝留著的信每輪只驗寄件人的期限，過了拒 <code>SlotMissing</code></td></tr>
+<tr><td>選填 <code>check_next(ctx, box)</code>、<code>read(path)</code></td><td>有 <code>check_next</code> 的包才收 hook 給的下一站（掛 proc 那包有、問腦那包沒有）；有 <code>read</code> 的包自己讀設定</td></tr>
+</table></div>
+<ul>
+<li><b>掛 proc 那一包依序判</b>：寄件人的期限（<code>queue_wait_ms</code>，過期拒 <code>SlotMissing</code>）→ 白名單（不在＝<code>NameUnknown</code>）→ 上限（滿了：開 <code>queue</code> 就排、沒開就拒 <code>SlotMissing</code>）。隊首沒格會擋住後面也要新格的信；不增加在跑數的信照轉。</li>
+<li><b>站的 stack</b>：<code>requests/</code>（對外收件箱，<code>AOS_KERNEL</code> 指這裡，<code>.flock</code> 是一輪的鎖）、<code>queue.json</code>（排隊窗）、<code>bodies/</code>（hook 改過且還在排隊的信）、<code>replies/</code>（下游回信箱）、<code>forwarded.json</code>（轉寄對照；另有寄到一半的暫時待定列，鍵是 <code>pending/&lt;原信名&gt;</code>）、<code>hold.json</code>（留著等表態的信）、<code>decisions/&lt;信名&gt;.json</code>（別人的表態，站照做後刪）、<code>hooks/&lt;名&gt;/</code>。</li>
+<li><b>留著等表態</b>：<code>after_verdict</code> hook 回 <code>{"verdict": "hold"}</code>，信留在站裡、不佔格、不擋後面的信。表態檔寫 <code>{"verdict": "pass"}</code> 或 <code>{"verdict": "refuse", "error": …}</code>。表態 pass 蓋不過規則：那一輪整封重判（期限、白名單、上限照跑）。站沒有自己的「最多留多久」，只認寄件人的期限。名字與這些做法是線酉代定，可翻案。</li>
+<li><b>兩層</b>：<code>kernel.json</code> 的鍵裡只有 <code>hooks</code> 是骨架的，其餘（<code>next</code>、<code>allowed</code>、<code>max_running</code>、<code>queue</code>…）都是掛 proc 那一包認的。</li>
+<li><b>拒信代號</b>：<code>BodyBad</code>、<code>NameUnknown</code>、<code>SlotMissing</code>、<code>ForwardFailed</code>、<code>HookRejected</code>、<code>HoldRefused</code>（表態拒絕）。<b>站自己的錯</b>（退 1）：<code>CfgMissing</code>、<code>CfgBad</code>、<code>StackMissing</code>、<code>DaemonMissing</code>、<code>StateBad</code>、<code>LockFailed</code>、<code>HookFailed</code> 等。</li>
+<li>檔案：<code>round.py</code>（骨架）、<code>procs_rules.py</code>（掛 proc 那包）、<code>letters.py</code>（收信／轉寄／代回）、<code>queue_fifo.py</code>（先來先掛的隊）、<code>hooks.py</code>（三個時機）；全表在 <code>proto8/lib/aos/kernel/README.md</code>。</li>
+<li>「五個口」的名字與簽名是隊長代定（圖紙只說五個口），可翻案。<code>runner.py</code>（「自己跑」零件，給問腦那包用）已進 main（<code>df1c25ff2</code>）。</li>
+<li>原本已知的洞（信剛轉寄出去、對照還沒寫進檔就被砍，回信會被丟掉）<b>已補</b>：先記待定列再寄（commit <code>12942854f</code>）。還沒解的窗：下游已做完移走、回信還沒到就重起，仍會重轉一次。</li>
+<li>commit：批 2 <code>cc5130d69</code>（判官收進框架，<code>lib/aos/judge</code> → <code>lib/aos/kernel</code>）、留著等表態 <code>6f83a431a</code>、兩層的說法 <code>adee4511d</code>。</li>
+</ul>
+</details>
+
+<!-- ============ 4 ============ -->
+<h2 id="s4">④ hook：三個時機插在一輪的哪裡</h2>
+<div class="fig">
+<svg viewBox="0 0 760 345" role="img" aria-label="before_verdict 在判之前、after_verdict 在判之後（可改判、可替這一封指定下一站）、before_reply 在代回回信之前；都交給共用引擎 hook_run 執行。">
+  <rect class="b" x="10" y="30" width="70" height="54" rx="8"/><text x="45" y="62" text-anchor="middle" class="bd">新信</text>
+  <rect class="hk" x="132" y="30" width="140" height="54" rx="8"/><text x="202" y="52" text-anchor="middle" class="m bd">before_verdict</text><text x="202" y="72" text-anchor="middle" class="s">判之前</text>
+  <rect class="door" x="324" y="30" width="120" height="54" rx="8"/><text x="384" y="52" text-anchor="middle" class="bd">內建規則</text><text x="384" y="72" text-anchor="middle" class="s">（包的 admit）</text>
+  <rect class="hk" x="496" y="30" width="140" height="54" rx="8"/><text x="566" y="52" text-anchor="middle" class="m bd">after_verdict</text><text x="566" y="72" text-anchor="middle" class="s">判之後</text>
+  <rect class="b" x="688" y="30" width="64" height="54" rx="8"/><text x="720" y="52" text-anchor="middle" class="s">照判決</text><text x="720" y="72" text-anchor="middle" class="s">去做</text>
+  <path class="ln" d="M80 57 H130"/><text x="105" y="49" text-anchor="middle" class="s">body</text>
+  <path class="ln" d="M272 57 H322"/><text x="297" y="49" text-anchor="middle" class="s">改過</text>
+  <path class="ln" d="M444 57 H494"/><text x="469" y="49" text-anchor="middle" class="s">判決</text>
+  <path class="ln" d="M636 57 H686"/><text x="661" y="49" text-anchor="middle" class="s">改判</text>
+  <text x="202" y="104" text-anchor="middle" class="s">能改：信的 body</text><text x="202" y="122" text-anchor="middle" class="s mu">退 10＝直接拒，不跑規則</text>
+  <text x="566" y="104" text-anchor="middle" class="s">能改：判決（pass／refuse／hold）、這一封的下一站（next）</text><text x="566" y="122" text-anchor="middle" class="s mu">退 10＝拒；排隊的信出隊時再跑一次</text>
+
+  <rect class="b" x="10" y="160" width="100" height="54" rx="8"/><text x="60" y="192" text-anchor="middle" class="bd">下游回信</text>
+  <rect class="hk" x="200" y="160" width="140" height="54" rx="8"/><text x="270" y="182" text-anchor="middle" class="m bd">before_reply</text><text x="270" y="202" text-anchor="middle" class="s">代回之前</text>
+  <rect class="b" x="440" y="160" width="150" height="54" rx="8"/><text x="515" y="192" text-anchor="middle" class="bd">代回給原寄件人</text>
+  <path class="ln" d="M110 187 H198"/><text x="154" y="179" text-anchor="middle" class="s">回信 body</text>
+  <path class="ln" d="M340 187 H438"/><text x="389" y="179" text-anchor="middle" class="s">改過的回信</text>
+  <text x="270" y="234" text-anchor="middle" class="s">能改：回信 body；退 10＝改回 HookRejected</text><text x="270" y="252" text-anchor="middle" class="s mu">站要開 reply_via_me 才有這一步</text>
+
+  <text x="10" y="282" class="s mu">怎麼跑 handler、怎麼看退出碼，都交給同一份引擎：</text>
+  <rect class="door" x="10" y="292" width="190" height="46" rx="8"/><text x="105" y="311" text-anchor="middle" class="s bd">框架站的三個時機</text><text x="105" y="329" text-anchor="middle" class="m">lib/aos/kernel/hooks.py</text>
+  <rect class="hks" x="285" y="292" width="190" height="46" rx="8"/><text x="380" y="311" text-anchor="middle" class="s bd">共用引擎</text><text x="380" y="329" text-anchor="middle" class="m">lib/hook_run.py</text>
+  <rect class="b" x="560" y="292" width="190" height="46" rx="8"/><text x="655" y="311" text-anchor="middle" class="s bd">agent 的 hooks</text><text x="655" y="329" text-anchor="middle" class="m">lib/agent/hooks.py</text>
+  <path class="ln" d="M200 315 H283"/><text x="242" y="307" text-anchor="middle" class="s">已在用</text>
+  <path class="lnd" d="M560 315 H477"/><text x="518" y="307" text-anchor="middle" class="s">還沒接</text><text x="518" y="333" text-anchor="middle" class="s mu">（批 1b）</text>
+</svg>
+</div>
+<p><b>結論：</b>hook＝在固定時機自動跑的小程式。站有三個時機：判之前（可改信）、判之後（可改判、可替這一封指定下一站、可回 <code>hold</code> 先留著）、代回回信之前（可改回信）；三個都能用「退出碼 10」攔下。執行的引擎是從 agent 的 hooks 抽出來的同一份，但 <b>agent 那邊還沒換過來</b>（批 1b：使用者同意直接改，另一條線施工中、還沒接線）。留著的信不再問 hook；有人表態 pass 的那一輪重問一次，這次回 <code>hold</code> 不算數。</p>
+<p class="sub">出處：使用者 11-13「next只能一個嗎？」→「按照規則分流吧。就用hook」。</p>
+<pre>{"hooks": {"rewrite": {"event": "before_verdict", "handler": "rewrite"}}}   # 寫進 kernel.json；handler 是同一夾裡的可執行檔</pre>
+<details><summary>細節：每格的鍵、handler 怎麼回話、失敗怎麼算</summary>
+<div class="tw"><table>
+<tr><th>事件</th><th>事件 JSON 帶什麼</th><th>能改</th></tr>
+<tr><td><code>before_verdict</code></td><td><code>letter</code>、<code>sender</code>、<code>sent_at</code>、<code>reply_to</code>、<code>body</code>（只有新信跑；隊中信不重跑）</td><td><code>body</code></td></tr>
+<tr><td><code>after_verdict</code></td><td>上面再加 <code>verdict</code>、<code>error</code>、<code>next</code>（null）、<code>decision</code>（平常 null；留著的信有人表態 pass、重判那一次是 <code>"pass"</code>）（新信判完一次；隊中信出隊再一次）</td><td><code>verdict</code>（pass／refuse／hold）、<code>error</code>、<code>next</code>（絕對路徑；這一封改寄那一站）</td></tr>
+<tr><td><code>before_reply</code></td><td><code>letter</code>（原信名）、<code>sender</code>、<code>reply_to</code>、<code>reply_sender</code>、<code>body</code></td><td><code>body</code></td></tr>
+</table></div>
+<ul>
+<li><b>每格的鍵</b>：必填 <code>event</code>、<code>handler</code>；選填 <code>intercept</code>（預設 true）、<code>async</code>（false）、<code>on_error</code>（<code>stop</code>／<code>continue</code>，預設 stop）、<code>timeout_ms</code>（60000）、<code>condition</code>（只有 <code>after_verdict</code> 收，比判決）。</li>
+<li><b>handler 怎麼回話</b>：事件從 stdin 進（也留在 <code>hooks/&lt;名&gt;/event.json</code>）。退 0、stdout 空＝不改；stdout 是 JSON 物件＝只取允許改的鍵；退 10＝攔下（拒信代號 <code>HookRejected</code>）。</li>
+<li><b>hook 自己壞了</b>（逾時、退其他碼）：<code>on_error: stop</code>＝這輪退 1（<code>HookFailed</code>）、信留著下輪重來；<code>continue</code>＝印 warning、當沒這個 hook。</li>
+<li><b>hook 把拒／排改成放行</b>：照放行，不回頭再驗期限、白名單、上限。</li>
+<li><b>hook 給 <code>next</code>（分流）</b>：最後判決是 pass 才算數；留隊、被拒時給的不記（留隊的出隊時 hook 會再跑一次）。相對路徑、指到自己的 <code>requests/</code>＝hook 自己失敗（<code>HookFailed</code>）。問腦那一包不收 <code>next</code>。同一封信每次要給同一個答案（站重起後靠它認出已經轉過的信）。範例在 <code>kernel/docs/02</code>「分流的例子」，整鏈劇本第 7 段實跑。</li>
+<li><b>跟 agent hooks 的關係</b>：<code>lib/hook_run.py</code> 是從 <code>lib/agent/hooks.py</code> 抽出來的（驗格、排序、跑 handler、解回話、on_error），事件表由呼叫的人給。現在 <code>lib/agent/hooks.py</code> 裡還沒有 import 它——兩邊暫時各一份同樣行為的程式。</li>
+<li><b>已裁</b>：agent 的 <code>hooks.py</code> 改用共用引擎，使用者同意直接改（「4可以。」），另一條線施工中；製作當下 <code>lib/agent/hooks.py</code> 還沒 import 它。引擎要不要多回「是哪個 hook 改的」＝不補（照調度者的看法，使用者「好，5、6、7都照你的看法。」）。</li>
+<li>commit：批 1a <code>747c48ca9</code>（引擎）、批 3 <code>8d05ad5d5</code>（三時機接上骨架）、分流 <code>7694e05f7</code>、hold <code>6f83a431a</code>。</li>
+</ul>
+</details>
+
+<!-- ============ 5 ============ -->
+<h2 id="s5">⑤ 站的設定檔 <code>kernel.json</code>：每個鍵管哪裡</h2>
+<div class="fig">
+<svg viewBox="0 0 760 400" role="img" aria-label="kernel.json 的九個鍵各自管站裡的哪一段：hooks、allowed、max_running、count_daemon 管判，keep_ordered、route_ordered 管轉寄，next 管下一站，queue 管排隊，reply_via_me 管回信。">
+  <rect class="pill" x="15" y="30" width="70" height="26" rx="13"/><text x="50" y="48" text-anchor="middle" class="m">hooks</text><text x="50" y="74" text-anchor="middle" class="s">三個時機插程式</text>
+  <rect class="pill" x="100" y="30" width="76" height="26" rx="13"/><text x="138" y="48" text-anchor="middle" class="m">allowed</text><text x="138" y="74" text-anchor="middle" class="s">名字白名單</text>
+  <rect class="pill" x="186" y="30" width="106" height="26" rx="13"/><text x="239" y="48" text-anchor="middle" class="m">max_running</text><text x="239" y="74" text-anchor="middle" class="s">最多幾個在跑</text>
+  <rect class="pill" x="302" y="30" width="116" height="26" rx="13"/><text x="360" y="48" text-anchor="middle" class="m">count_daemon</text><text x="360" y="74" text-anchor="middle" class="s">去哪台 daemon 數</text>
+  <rect class="pill" x="432" y="30" width="116" height="26" rx="13"/><text x="490" y="48" text-anchor="middle" class="m">keep_ordered</text><text x="490" y="74" text-anchor="middle" class="s">有序信照有序轉</text>
+  <rect class="pill" x="558" y="30" width="118" height="26" rx="13"/><text x="617" y="48" text-anchor="middle" class="m">route_ordered</text><text x="617" y="74" text-anchor="middle" class="s">有序信可否分流</text>
+  <rect class="pill" x="690" y="30" width="60" height="26" rx="13"/><text x="720" y="48" text-anchor="middle" class="m">next</text><text x="720" y="74" text-anchor="middle" class="s">下一站的信箱</text>
+  <path class="ld" d="M50 82 L222 138"/><path class="ld" d="M138 82 L246 138"/><path class="ld" d="M239 82 L265 138"/><path class="ld" d="M360 82 L300 138"/><path class="ld" d="M490 82 L455 138"/><path class="ld" d="M617 82 L500 138"/><path class="ld" d="M720 82 V138"/>
+
+  <rect class="b" x="20" y="140" width="110" height="50" rx="8"/><text x="75" y="161" text-anchor="middle" class="bd">收信</text><text x="75" y="180" text-anchor="middle" class="m">requests/</text>
+  <rect class="door" x="210" y="140" width="110" height="50" rx="8"/><text x="265" y="161" text-anchor="middle" class="bd">判</text><text x="265" y="180" text-anchor="middle" class="s">規則＋hook</text>
+  <rect class="door" x="400" y="140" width="110" height="50" rx="8"/><text x="455" y="161" text-anchor="middle" class="bd">轉寄</text><text x="455" y="180" text-anchor="middle" class="s">body 原樣</text>
+  <rect class="hand" x="620" y="140" width="120" height="50" rx="8"/><text x="680" y="161" text-anchor="middle" class="bd">下一站</text><text x="680" y="180" text-anchor="middle" class="s">別的站或 daemon</text>
+  <path class="ln" d="M130 165 H208"/><text x="169" y="157" text-anchor="middle" class="s">每封信</text>
+  <path class="ln" d="M320 165 H398"/><text x="359" y="157" text-anchor="middle" class="s">放行的</text>
+  <path class="ln" d="M510 165 H618"/><text x="564" y="157" text-anchor="middle" class="s">寄進信箱</text>
+
+  <path class="ln" d="M265 190 V243"/><text x="273" y="222" class="s">沒格</text>
+  <rect class="st-wip" x="210" y="245" width="110" height="46" rx="8"/><text x="265" y="264" text-anchor="middle" class="bd">排隊窗</text><text x="265" y="282" text-anchor="middle" class="m">queue.json</text>
+  <rect class="pill" x="60" y="255" width="64" height="26" rx="13"/><text x="92" y="273" text-anchor="middle" class="m">queue</text><text x="92" y="299" text-anchor="middle" class="s">沒格時排不排</text>
+  <path class="ld" d="M124 268 H210"/>
+
+  <path class="ln" d="M680 190 V352 H552"/><text x="688" y="280" class="s">下游回信</text>
+  <rect class="door" x="400" y="330" width="150" height="46" rx="8"/><text x="475" y="349" text-anchor="middle" class="bd">代回</text><text x="475" y="367" text-anchor="middle" class="s">in_reply_to＝原信名</text>
+  <rect class="pill" x="405" y="286" width="116" height="26" rx="13"/><text x="463" y="304" text-anchor="middle" class="m">reply_via_me</text><text x="530" y="304" class="s">回信先回到我這站</text>
+  <path class="ld" d="M463 312 V330"/>
+  <path class="ln" d="M400 353 H132"/><text x="266" y="345" text-anchor="middle" class="s">回給原寄件人</text>
+  <rect class="b" x="20" y="330" width="110" height="46" rx="8"/><text x="75" y="358" text-anchor="middle" class="bd">寄件人</text>
+  <text x="20" y="394" class="s mu">沒開 reply_via_me 時，下游直接把回信寄給寄件人，不經這一站。</text>
+</svg>
+</div>
+<p><b>結論：</b>設定檔每一輪都重讀，改了下一輪就生效。最小的設定是 <code>{}</code>：什麼都不管、全部原樣轉給下一站。<code>keep_ordered</code> 與 <code>reply_via_me</code> 是兩個各自獨立的開關（kf-t1:A）。九個鍵裡只有 <code>hooks</code> 是骨架的，其餘都是掛 proc 那一包認的。</p>
+<pre>{"allowed": ["kid1", "kid2"], "max_running": 5, "queue": true}   # 只准這兩個名字、最多 5 個在跑、滿了就排隊</pre>
+<details><summary>細節：九個鍵的完整表、搭配限制</summary>
+<div class="tw"><table>
+<tr><th>鍵</th><th>白話</th><th>沒寫時</th></tr>
+<tr><td><code>next</code></td><td>放行的信轉去哪個信箱（路徑）。<code>next</code> 只有一個；要照規則分流（一封只去一處），寫 <code>after_verdict</code> hook 回 <code>{"next": 路徑}</code>，沒回的照三段</td><td>看 <code>AOS_KERNEL</code>（不是自己才用），再沒有才 <code>AOS_DAEMON</code> 那台的 ctl 信箱（見 ②）</td></tr>
+<tr><td><code>count_daemon</code></td><td>「幾個在跑」去哪一台 daemon 的表上數（那台的 stack）</td><td>下一站是 <code>AOS_DAEMON</code> 那台時就是它；其他情形沒有預設</td></tr>
+<tr><td><code>allowed</code></td><td>准掛的名字白名單</td><td>不限</td></tr>
+<tr><td><code>max_running</code></td><td>同時最多幾個在跑</td><td>不限</td></tr>
+<tr><td><code>queue</code></td><td>沒格時排隊（true）還是立刻拒（false）</td><td>false</td></tr>
+<tr><td><code>keep_ordered</code></td><td>有序信要不要照有序轉寄</td><td>false</td></tr>
+<tr><td><code>route_ordered</code></td><td>開著 <code>keep_ordered</code> 時，hook 能不能替單封信指定下一站（有序信與分流能不能並用）</td><td>true＝可以並用；寫 false 才報設定錯</td></tr>
+<tr><td><code>reply_via_me</code></td><td>下游的回信先回到我這站、再由我代回</td><td>false</td></tr>
+<tr><td><code>hooks</code></td><td><code>{名字: 一格}</code>，見 ④</td><td>沒有 hook</td></tr>
+</table></div>
+<ul>
+<li>內容先過 <code>aos-directive</code>，可以寫 <code>{"$env": …, "$path": …}</code>；<code>next</code>、<code>count_daemon</code>、<code>handler</code> 的相對路徑從 <code>kernel.json</code> 所在的夾算。不認得的鍵不管。</li>
+<li><b>要一起寫的</b>：寫了 <code>next</code>（或下一站取自 <code>AOS_KERNEL</code>）又寫了 <code>max_running</code>，就一定要寫 <code>count_daemon</code>，不然 <code>CfgBad</code>——站不去猜下一站是哪一台。有 <code>before_reply</code> 的 hook 就一定要開 <code>reply_via_me</code>。</li>
+<li><b>hook 會給 <code>next</code> 的站</b>：有 <code>max_running</code> 就要寫 <code>count_daemon</code>（全部下一站合算一個上限；使用者裁維持合算，要分開管就在各下一站自己設）。<code>keep_ordered</code> 與分流預設可以並用（使用者「建議弄個選項，預設是可以同時用」）；只有把 <code>route_ordered</code> 關掉才報 <code>CfgBad</code>。並用時有序只保證到本站門口與各下一站自己的信箱之內，跨站順序不保證。commit <code>d8384df9b</code>。</li>
+<li><b>條文已改照程式（已裁）</b>：N-42 (2)「數量另指」原本比程式鬆，使用者裁「3.甲」＝條文改照程式；同一個 commit 也把條文裡的「判官」字樣與「未實作」標籤改掉（「4.改」）。commit <code>0fe01b6b8</code>。</li>
+<li><b>kf-t1:A</b>：條文原本說「開 <code>keep_ordered</code> 就代回」；程式是兩個開關各自獨立，使用者裁「條文照程式改」（commit <code>4fcb631fd</code> 已改兩句）。</li>
+<li>只開 <code>keep_ordered</code> 時，有序轉寄會產生新信名，下游直接回的 <code>in_reply_to</code> 會是新信名。<code>keep_ordered</code> 的例子沒實跑過（開工紀錄註明）。</li>
+</ul>
+</details>
+
+<!-- ============ gate ============ -->
+<h2 id="s10">⑥ agent 自己當門：收到通知、自己判、機器轉寄</h2>
+<div class="fig">
+<svg viewBox="0 0 760 318" role="img" aria-label="一隻普通 eca 兩次工具呼叫變成門：請求進來，站先留著，agent 收到 kernel_hold 通知，用 kernel_gate 表態 pass 或 refuse，機器再轉寄或回拒信。">
+  <text x="10" y="22" class="bd">一隻普通 eca，兩次工具呼叫就變成門：</text>
+  <rect class="pill" x="10" y="32" width="430" height="30" rx="8"/><text x="225" y="52" text-anchor="middle" class="m">① self_tools {"op":"add","path":"…/lib/agent/kernel_gate"}</text>
+  <rect class="pill" x="460" y="32" width="290" height="30" rx="8"/><text x="605" y="52" text-anchor="middle" class="m">② kernel_gate {"op":"on"}</text>
+
+  <rect class="b" x="10" y="112" width="100" height="56" rx="8"/><text x="60" y="145" text-anchor="middle" class="bd">寄件人</text>
+  <rect class="door" x="250" y="112" width="160" height="56" rx="8"/><text x="330" y="135" text-anchor="middle" class="bd">agent 身上的站</text><text x="330" y="155" text-anchor="middle" class="s">hook 回 hold：先留著</text>
+  <rect class="b" x="600" y="112" width="150" height="56" rx="8"/><text x="675" y="135" text-anchor="middle" class="bd">agent（腦）</text><text x="675" y="155" text-anchor="middle" class="s">自己判要不要過</text>
+  <path class="ln" d="M110 128 H248"/><text x="180" y="120" text-anchor="middle" class="s">① 請求信（json）</text>
+  <path class="ln" d="M250 154 H112"/><text x="180" y="172" text-anchor="middle" class="s">④ refuse：回拒信</text>
+  <path class="ln" d="M410 128 H598"/><text x="505" y="120" text-anchor="middle" class="s">② 通知 [aos] kernel_hold: …</text>
+  <path class="ln" d="M600 154 H412"/><text x="505" y="172" text-anchor="middle" class="s">③ kernel_gate pass／refuse</text>
+  <path class="ln" d="M330 168 V236"/><text x="338" y="208" class="s">④ pass：機器轉寄</text>
+  <rect class="hand" x="250" y="238" width="160" height="46" rx="8"/><text x="330" y="257" text-anchor="middle" class="bd">下一站</text><text x="330" y="275" text-anchor="middle" class="s">照三段，或 hook 分流</text>
+
+  <text x="10" y="232" class="s">留著的信不佔格、不擋後面的信。</text>
+  <text x="10" y="252" class="s">帶期限的，到期由站回拒。</text>
+  <text x="10" y="272" class="s mu">門自己在忙時站不跑（先不補）。</text>
+
+  <rect class="b" x="460" y="200" width="290" height="100" rx="8"/>
+  <text x="474" y="221" class="s bd">通知裡每封列什麼</text>
+  <text x="474" y="241" class="s">・機器事實：信名、from、request、期限</text>
+  <text x="474" y="261" class="s">・寄件人多寫的其他 key：原樣一行</text>
+  <text x="474" y="281" class="s mu">・不挑、不截、不過濾</text>
+</svg>
+</div>
+<blockquote>「讓agent成為kernel，我期望看到的景象是：一個普通的agent隨便弄些hook、json設定啥的，就可以收請求了。請求進來後agent收到通知，他自己判斷要不要過，然後再去轉送」
+<footer>使用者 11-13 原話（逐字）。同一天：「各種的...都可以大家自己設定」。</footer></blockquote>
+<p><b>結論：</b>agent 不用另外寫一支 kernel：加一個工具包、叫一次 <code>on</code>，它身上就多一個框架站。請求進來先留著，agent 收到通知後只表態（過／不過），轉寄、回拒、驗期限都是機器做。這個工具包預設不掛進範本，要當門的 agent 自己加。</p>
+<pre>kernel_gate {"op": "pass", "letter": "&lt;信名&gt;"}   # agent 對留著的那一封表態放行；不放行用 "op": "refuse" 加 "reason"</pre>
+<details><summary>細節：on 做了什麼、請求能帶什麼、還在的缺口</summary>
+<ul>
+<li><b>兩次工具呼叫</b>：<code>self_tools {"op": "add", "path": "&lt;AOS_HOME 的實際路徑&gt;/lib/agent/kernel_gate"}</code> → <code>kernel_gate {"op": "on"}</code>。</li>
+<li><b><code>on</code> 做三件事</b>：建站的 stack（<code>&lt;agent 的 stack&gt;/hooks/kernel_gate/</code>，含 <code>requests/</code> 收件信箱）；沒有 <code>kernel.json</code> 才寫預設那份（一支 <code>hold</code> hook、<code>condition: "pass"</code>＝規則拒的直接拒、不吵腦）；在自己身上掛一支 <code>on_clock</code> hook（每個時鐘週期跑站一輪＋發通知）。印出的第一行就是「把請求寄到這個路徑」。</li>
+<li><b>其他動作</b>：<code>ls</code> 看留著的、<code>off</code> 收掉（把還留著的全部回拒 <code>HoldRefused</code>、拿掉 hook；信箱與設定留著，再 <code>on</code> 接著用）。</li>
+<li><b>請求信是 json</b>：寄的人想加什麼 key 都行，站沒設限制就能過（使用者：「我那個只是舉例，實際上大家就隨便加，反正json，不認得的key，只要沒設限制，就能過。」）。通知把 <code>procs_*</code>、<code>queue_wait_ms</code>、<code>ping</code> 算成 request，其餘 key 整包原樣印一行。</li>
+<li><b>提示注入</b>：額外的 key 原樣進 agent 的對話，風險自己承擔（使用者：「提示注入這塊就是風險自己承擔」）。</li>
+<li><b>預設不掛</b>：不進任何範本（使用者：「預設不掛」）。</li>
+<li><b>混合用法</b>：<code>kernel.json</code> 寫 <code>allowed</code>／<code>max_running</code> 讓機器先照規則判，hook 自己決定哪些信才留給腦。</li>
+<li><b>不用新工具也行</b>：只靠 <code>self_hook</code>、手寫 <code>kernel.json</code> 與一支 hook、表態＝寫一個檔；步驟在知識庫 <code>aos/kernel.json</code> 的 <code>write_your_own</code>。</li>
+<li><b>還在的缺口</b>：門正在自己的一輪裡、睡著或停著時站不跑，信躺在信箱沒人認領（使用者裁先不補）；只通知一次、不再提醒；沒帶期限的信會一直留到有人表態；門死了沒有人知道；兩隻互相當下一站不偵測。</li>
+<li><b>驗過什麼</b>（照 eca-as-kernel 第十節寫的，我沒重跑）：真 haiku 實跑過一次；單元測試；整鏈劇本第 8 段。</li>
+<li><b>活樹什麼時候有</b>：<code>~/aos-home</code> 用的是抄本，下次重抄才有；重抄後也要 agent 自己加才會用到。</li>
+<li>程式：<code>proto8/lib/agent/kernel_gate/</code>、<code>proto8/lib/packs/kernel_gate.json</code>、骨架的口在 <code>proto8/lib/aos/kernel/hold.py</code>。說明：<code>proto8/kernel/docs/02-kernel-modes.md</code>「agent 當門」。設計與邊緣狀況：<code>proto8/thinking/2026-11/13/eca-as-kernel.md</code>。commit：<code>6f83a431a</code>（骨架的口）、<code>306078925</code>（工具包）、<code>1c973e47e</code>（通知種類登記）、<code>dd32bef00</code>（劇本第 8 段）。</li>
+</ul>
+</details>
+
+<!-- ============ 6 ============ -->
+<h2 id="s6">⑦ 問腦那一包：現在的樣子與要變成的樣子</h2>
+<div class="fig">
+<svg viewBox="0 0 760 330" role="img" aria-label="現在接著用的問腦總機是 C++ 的 aos-llm-kernel；Python 的問腦那一包已進 main、假腦測過，還沒換上。公司這棵樹目前沒有問腦總機，真腦只有 eca 能用。">
+  <text x="10" y="22" class="bd">現在範本接的（還是這一支）</text>
+  <rect class="b" x="10" y="30" width="320" height="200" rx="10"/>
+  <rect class="hand" x="30" y="48" width="280" height="52" rx="8"/><text x="170" y="70" text-anchor="middle" class="bd">aos-llm-kernel（C++ 一支）</text><text x="170" y="89" text-anchor="middle" class="s">llm daemon 的身體，每 300 ms 一輪</text>
+  <text x="34" y="128" class="s">・收信、排隊、回信：自己另外一份</text>
+  <text x="34" y="152" class="s">・能力包、格數、額度、帳</text>
+  <text x="34" y="176" class="s">・自己請 daemon 掛 proc 去問</text>
+  <text x="34" y="200" class="s">・沒有 hook</text>
+
+  <path class="ln" d="M330 130 H428"/><text x="380" y="121" text-anchor="middle" class="s">切換＝批 10</text><text x="380" y="148" text-anchor="middle" class="s mu">還沒做</text>
+
+  <text x="430" y="22" class="bd">要換成（已進 main，還沒換上）</text>
+  <rect class="b" x="430" y="30" width="320" height="200" rx="10"/>
+  <rect class="door" x="450" y="44" width="280" height="40" rx="8"/><text x="590" y="69" text-anchor="middle" class="s bd">骨架 round.py（跟掛 proc 共用）</text>
+  <rect class="st-done" x="450" y="92" width="280" height="40" rx="8"/><text x="590" y="117" text-anchor="middle" class="s bd">問腦那一包 lib/aos/kernel_llm/</text>
+  <rect class="st-done" x="450" y="140" width="280" height="40" rx="8"/><text x="590" y="165" text-anchor="middle" class="s bd">runner.py：自己掛 proc 去問、收成品</text>
+  <text x="590" y="207" text-anchor="middle" class="s">＋hook 三個時機自動就有</text>
+
+  <text x="10" y="254" class="s">對外不變：kernel.json 的寫法、信與回信的格式、錯誤代號、AOS_LLM_KERNEL 都照舊。</text>
+  <rect class="hand" x="10" y="266" width="740" height="56" rx="8"/>
+  <text x="24" y="288" class="s bd">公司這棵樹現在：沒有問腦總機、也沒設 AOS_KERNEL；真腦只有 eca（它自己的 CLI 去問）能用。</text>
+  <text x="24" y="309" class="s">所以這一包只用假腦驗過，真端點與本機模型等回家。</text>
+</svg>
+</div>
+<p><b>結論：</b>問腦總機（替大家排隊問 LLM 的那支）現在是 C++ 自成一份；使用者裁定用 Python 重寫成「同一份骨架＋問腦那一包」，之後刪掉 C++。Python 版已進 main、假腦測到綠；範本還接著 C++ 那支，切換與刪 C++ 還沒做。對寄信的人來說什麼都不變。</p>
+<pre>echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | aos-llm ask   # 問腦＝寄信到 $AOS_LLM_KERNEL、等回信（公司這棵樹目前沒起總機）</pre>
+<details><summary>細節：裁定、問腦那包的檔、現在做到哪</summary>
+<ul>
+<li><b>kf-K-F47:A</b>：Python 重寫成 <code>lib/aos/kernel_llm</code>、刪 C++ 的 <code>impls/aos-llm-kernel</code>。<b>kf-n1:B</b>：現在就用假腦做，真腦回家再驗。<b>kf-K-F50:B</b>：總機自己要掛 proc 時照舊看 <code>AOS_KERNEL</code>，起 llm daemon 的殼 <code>unset AOS_KERNEL</code> 避開「掛到別台」。</li>
+<li>使用者 11-13：「kernel框架現在就可以開工了。只是說我們現在只有eca能用。」</li>
+<li><b>已進 main（批 8、9，commit <code>df1c25ff2</code>）</b>：<code>lib/aos/kernel_llm/</code>（<code>_entry</code>、<code>llm_rules.py</code> 五個口、<code>packs.py</code> 能力包、<code>order.py</code> 排隊、<code>slots.py</code> 格數、<code>budget.py</code> 額度、<code>ledger.py</code> 逐封帳）與 <code>lib/aos/kernel/runner.py</code>。開工紀錄記的結果：五支黑箱測試改指新程式全過、跟 C++ 逐欄比 46 輪＋真 daemon 12 封全同；200 封排隊一輪 51～64 ms（C++ 3～5 ms）。這些數字是開工紀錄寫的，我沒重跑。</li>
+<li><b>還沒做</b>：切換（範本 <code>kernel/llm-kernel/daemon.json</code> 的 <code>exec</code> 現在仍是 <code>aos-llm-kernel</code>）、刪 C++、條文（批 10、12）。批 10 的補丁備在 repo 外（50 檔），C++ 部分沒 build 過，開工紀錄寫今天不做。</li>
+<li>跟 C++ 那支的已知差異：收到 TERM 當場結束（C++ 做完這輪）、<code>kernel.json</code> 多認 <code>hooks</code>、<code>deadline</code> 驗得較嚴、每輪多起幾個子行程。問腦那包不收 hook 給的 <code>next</code>（不分流）。</li>
+<li>問腦的排法（現況，C++ 那支）：優先級（等久了會升級）→ 期限 → 同後端黏著 → 包的快慢 → 等得久的先；包的格滿了就跳過讓別包補位；額度到頂回 <code>BudgetMissing</code>。全文在 <code>proto8/kernel/docs/01-llm-kernel.md</code>、條文 N-42 (1)。</li>
+</ul>
+</details>
+
+<!-- ============ 7 ============ -->
+<h2 id="s7">⑧ 查詢信：「誰活著的那張表在哪」改成用問的</h2>
+<div class="fig">
+<svg viewBox="0 0 760 330" role="img" aria-label="工具寄查詢信到 AOS_KERNEL，站原樣轉，daemon 回表檔的路徑，工具再照路徑去讀。daemon 那端要停樹才換得上。">
+  <text x="10" y="24" class="s">信的 body：<tspan class="m">{"procs_state_path": true}</tspan>　回信多帶同名的 key＝表檔路徑（沒開那扇窗＝null）</text>
+  <rect class="b" x="10" y="50" width="130" height="56" rx="8"/><text x="75" y="73" text-anchor="middle" class="bd">工具</text><text x="75" y="93" text-anchor="middle" class="m">aos-agent ctl ls</text>
+  <rect class="door" x="315" y="50" width="130" height="56" rx="8"/><text x="380" y="73" text-anchor="middle" class="bd">框架站</text><text x="380" y="93" text-anchor="middle" class="s">不認得就原樣轉</text>
+  <rect class="hand" x="620" y="50" width="130" height="56" rx="8"/><text x="685" y="73" text-anchor="middle" class="bd">daemon</text><text x="685" y="93" text-anchor="middle" class="s">最底那一台</text>
+  <path class="ln" d="M140 66 H313"/><text x="227" y="58" text-anchor="middle" class="s">① 查詢信：表在哪？</text>
+  <path class="ln" d="M445 66 H618"/><text x="532" y="58" text-anchor="middle" class="s">② 原樣轉</text>
+  <path class="ln" d="M620 92 H447"/><text x="532" y="108" text-anchor="middle" class="s">③ 回：表檔的絕對路徑</text>
+  <path class="ln" d="M315 92 H142"/><text x="227" y="108" text-anchor="middle" class="s">④ 回到工具手上</text>
+
+  <text x="102" y="128" text-anchor="middle" class="s">批 5：新模組已進 main</text><text x="102" y="145" text-anchor="middle" class="s mu">還沒接線（補丁在 repo 外）</text>
+  <text x="380" y="128" text-anchor="middle" class="s">程式不用改</text><text x="380" y="145" text-anchor="middle" class="s mu">要給刪減版＝寫 before_reply hook</text>
+  <text x="685" y="128" text-anchor="middle" class="s">批 4：原始碼已進 main</text><text x="685" y="145" text-anchor="middle" class="s mu">執行檔還沒換 → 等停樹</text>
+
+  <path class="ln" d="M16 106 V198"/><text x="24" y="182" class="s">⑤ 照路徑去讀</text>
+  <rect class="b" x="10" y="200" width="240" height="46" rx="8"/><text x="130" y="219" text-anchor="middle" class="m">procs_state.json</text><text x="130" y="237" text-anchor="middle" class="s">誰活著的那張表</text>
+
+  <rect class="hand" x="280" y="176" width="470" height="122" rx="8"/>
+  <text x="296" y="198" class="bd">為什麼要停樹才換得上</text>
+  <text x="296" y="220" class="s">・daemon 是 C++：改了要重 build，會換掉 bin 裡跑著的樹在用的那一支</text>
+  <text x="296" y="240" class="s">・跑著的 daemon 還是舊程式，要重起才認得查詢信</text>
+  <text x="296" y="260" class="s">・樹用的 lib 是早上抄的一份，改了要停樹重抄才生效</text>
+  <text x="296" y="280" class="s">・工具端接線要排在新 daemon 之後；批 6 上線還要先清舊帳</text>
+  <text x="10" y="320" class="s mu">現在：工具直接到 $AOS_DAEMON 讀表，所以只設 AOS_KERNEL、不設 AOS_DAEMON 會 DaemonMissing。</text>
+</svg>
+</div>
+<p><b>結論：</b>一般 proc 只該認得「門」。所以連「看誰活著」也改成寄一封信問門，由最底的 daemon 回答「表在這個路徑」，工具再去讀。做完之後只設 <code>AOS_KERNEL</code> 就夠用。daemon 那一端的程式已進 main，執行檔等今天 15:30 停樹時換；工具端的新模組也進了 main，但還沒接線。</p>
+<pre>aos-agent ctl ls   # 用法不變；批 5 上線後，有設 AOS_KERNEL 時它會先寄查詢信、再讀表</pre>
+<details><summary>細節：信的形狀、各端做到哪、停樹時要換的東西</summary>
+<ul>
+<li><b>為什麼用問的</b>：使用者 11-11「然後kernel給狀態位址...希望不是使用symlink，我不希望aos體系硬性依賴symlink，或許可以折衷？寄信問，取得狀態位址這樣。」</li>
+<li><b>daemon 端（批 4，commit <code>42870fa27</code>）</b>：body 寫 <code>"procs_state_path": true</code>，有 <code>reply_to</code> 的回信多帶同名 key＝<code>procs_state.json</code> 的絕對路徑；沒開那扇窗＝<code>null</code>；寫了不是 <code>true</code>＝壞信（<code>BodyBad</code>）；可以跟 <code>procs_added</code> 等寫在同一封。<b>只改了原始碼，repo 裡沒 build、沒 install。</b></li>
+<li><b>工具端（批 5）</b>：新模組 <code>py/daemon_ctl/state_path.py</code> 與兩支測試已進 main（<code>bb4204242</code>），但沒人 import、<code>aos-agent ctl</code> 的行為還沒變。接線（12 檔）與批 6（22 檔）是 repo 外備著的補丁，還沒進 main。問不到會報 <code>KernelFailed</code>；接線配舊 daemon 會在掛子那段 <code>KernelFailed</code>，所以接線要排在新 daemon 之後。</li>
+<li><b>中間站</b>：<code>procs_state_path</code> 對框架站是不認得的 key，照轉。要讓下游只看到刪減過的表：開 <code>reply_via_me</code>＋寫一個 <code>before_reply</code> hook 把回信裡的表檔路徑換成刪減版。真的要隔得住，靠 Linux 權限。<b>這個「換表檔路徑」的 hook 仍是圖紙如此、沒有現成範例，整鏈劇本第 3 段還是 TODO。</b>（別跟分流混在一起：「hook 替一封信換下一站」是另一件事，那個有範例——<code>kernel/docs/02</code>「分流的例子」，整鏈劇本第 7 段實跑。）</li>
+<li><b>停樹的約定</b>（kf-n2:A）：今天 15:30 停、16:00 前起回來；停樹、起樹的指令由使用者自己下。</li>
+<li><b>今天停樹時換的</b>（照開工紀錄的步驟表）：把樹裡的 <code>lib</code>、<code>templates</code>、<code>knowledge</code>、<code>py</code> 四夾換成釘住的那個 commit（先備份）；把預先在 repo 外編好的 <code>aos-daemon</code> 換上；起樹後驗 ping 與查詢信有答。<b>今天不做</b>：批 6 上線（要先清各 agent 的 <code>tools/subagent/subagents.json</code> 舊帳）、批 10 刪 C++ 問腦。</li>
+<li>條文：N-63（<code>ctl who</code> 現在寫「只查表」，批 11b 要改成先問再讀）、N-28（壞信怎麼回）。</li>
+</ul>
+</details>
+
+<!-- ============ 8 ============ -->
+<h2 id="s8">⑨ 進度地圖：17 批做到哪</h2>
+<div class="fig">
+<svg viewBox="0 0 760 500" role="img" aria-label="17 批的進度：框架線五批、問腦線批 8、9 已進 main；批 4 與批 5 已進但還沒換上或沒接線；批 5 接線、批 6、批 10 的補丁備在 repo 外；批 1b 已裁、施工中；另外加做了五件，都已進 main。">
+  <text x="10" y="22" class="s mu">截至 2026-11-13 13:37（機器時鐘）、main＝fd9ae490a。每一列由左到右是先後順序。</text>
+
+  <text x="10" y="80" class="bd">框架線</text>
+  <path class="ld" d="M110 75 H742"/>
+  <rect class="st-done" x="110" y="50" width="112" height="50" rx="8"/><text x="166" y="70" text-anchor="middle" class="bd">批 1a</text><text x="166" y="89" text-anchor="middle" class="s">hook 共用引擎</text>
+  <rect class="st-done" x="240" y="50" width="112" height="50" rx="8"/><text x="296" y="70" text-anchor="middle" class="bd">批 2</text><text x="296" y="89" text-anchor="middle" class="s">判官→框架站</text>
+  <rect class="st-done" x="370" y="50" width="112" height="50" rx="8"/><text x="426" y="70" text-anchor="middle" class="bd">批 3</text><text x="426" y="89" text-anchor="middle" class="s">hook 三個時機</text>
+  <rect class="st-done" x="500" y="50" width="112" height="50" rx="8"/><text x="556" y="70" text-anchor="middle" class="bd">批 7a</text><text x="556" y="89" text-anchor="middle" class="s">整鏈劇本五段</text>
+  <rect class="st-done" x="630" y="50" width="112" height="50" rx="8"/><text x="686" y="70" text-anchor="middle" class="bd">批 11a</text><text x="686" y="89" text-anchor="middle" class="s">文件與條文</text>
+
+  <text x="10" y="160" class="bd">查詢信線</text>
+  <path class="ld" d="M110 155 H742"/>
+  <rect class="st-mix" x="110" y="130" width="112" height="50" rx="8"/><text x="166" y="150" text-anchor="middle" class="bd">批 4</text><text x="166" y="169" text-anchor="middle" class="s">daemon 答查詢信</text>
+  <rect class="st-mix" x="240" y="130" width="112" height="50" rx="8"/><text x="296" y="150" text-anchor="middle" class="bd">批 5</text><text x="296" y="169" text-anchor="middle" class="s">ctl 先問再讀</text>
+  <rect class="st-wip" x="370" y="130" width="112" height="50" rx="8"/><text x="426" y="150" text-anchor="middle" class="bd">批 6</text><text x="426" y="169" text-anchor="middle" class="s">fork／subagent</text>
+  <rect class="st-stop" x="500" y="130" width="112" height="50" rx="8"/><text x="556" y="150" text-anchor="middle" class="bd">批 7b</text><text x="556" y="169" text-anchor="middle" class="s">劇本補第 3 段</text>
+  <rect class="st-later" x="630" y="130" width="112" height="50" rx="8"/><text x="686" y="150" text-anchor="middle" class="bd">批 11b</text><text x="686" y="169" text-anchor="middle" class="s">文件與條文</text>
+
+  <text x="10" y="240" class="bd">問腦線</text>
+  <path class="ld" d="M110 235 H742"/>
+  <rect class="st-done" x="110" y="210" width="112" height="50" rx="8"/><text x="166" y="230" text-anchor="middle" class="bd">批 8</text><text x="166" y="249" text-anchor="middle" class="s">「自己跑」零件</text>
+  <rect class="st-done" x="240" y="210" width="112" height="50" rx="8"/><text x="296" y="230" text-anchor="middle" class="bd">批 9</text><text x="296" y="249" text-anchor="middle" class="s">問腦那一包</text>
+  <rect class="st-wip" x="370" y="210" width="112" height="50" rx="8"/><text x="426" y="230" text-anchor="middle" class="bd">批 10</text><text x="426" y="249" text-anchor="middle" class="s">切換、刪 C++</text>
+  <rect class="st-later" x="500" y="210" width="112" height="50" rx="8"/><text x="556" y="230" text-anchor="middle" class="bd">批 12</text><text x="556" y="249" text-anchor="middle" class="s">問腦的條文</text>
+  <rect class="st-later" x="630" y="210" width="112" height="50" rx="8"/><text x="686" y="230" text-anchor="middle" class="bd">批 14</text><text x="686" y="249" text-anchor="middle" class="s">回家驗真腦</text>
+
+  <text x="10" y="320" class="bd">不在線上的</text>
+  <rect class="st-wip" x="110" y="290" width="112" height="50" rx="8"/><text x="166" y="310" text-anchor="middle" class="bd">批 1b</text><text x="166" y="329" text-anchor="middle" class="s">agent 換用引擎</text>
+  <rect class="st-later" x="240" y="290" width="112" height="50" rx="8"/><text x="296" y="310" text-anchor="middle" class="bd">批 13</text><text x="296" y="329" text-anchor="middle" class="s">公司真腦各驗一題</text>
+
+  <text x="10" y="400" class="bd">加做的</text>
+  <rect class="st-done" x="110" y="370" width="112" height="50" rx="8"/><text x="166" y="390" text-anchor="middle" class="s bd">找下一站三段</text><text x="166" y="409" text-anchor="middle" class="m">4fcb631fd</text>
+  <rect class="st-done" x="240" y="370" width="112" height="50" rx="8"/><text x="296" y="390" text-anchor="middle" class="s bd">hook 分流</text><text x="296" y="409" text-anchor="middle" class="m">7694e05f7</text>
+  <rect class="st-done" x="370" y="370" width="112" height="50" rx="8"/><text x="426" y="390" text-anchor="middle" class="s bd">留著等表態</text><text x="426" y="409" text-anchor="middle" class="m">6f83a431a</text>
+  <rect class="st-done" x="500" y="370" width="112" height="50" rx="8"/><text x="556" y="390" text-anchor="middle" class="s bd">agent 當門</text><text x="556" y="409" text-anchor="middle" class="m">306078925</text>
+  <rect class="st-done" x="630" y="370" width="112" height="50" rx="8"/><text x="686" y="390" text-anchor="middle" class="s bd">有序可分流、補洞</text><text x="686" y="409" text-anchor="middle" class="m">d8384df9b 等</text>
+
+  <rect class="st-done" x="10" y="446" width="18" height="14" rx="3"/><text x="34" y="458" class="s">已進 main</text>
+  <rect class="st-wip" x="120" y="446" width="18" height="14" rx="3"/><text x="144" y="458" class="s">施工中或補丁備在 repo 外，還沒進 main</text>
+  <rect class="st-stop" x="420" y="446" width="18" height="14" rx="3"/><text x="444" y="458" class="s">等前面幾批與停樹</text>
+  <rect class="st-later" x="10" y="474" width="18" height="14" rx="3"/><text x="34" y="486" class="s">還沒排到／要回家</text>
+  <rect class="st-mix" x="180" y="474" width="18" height="14" rx="3"/><text x="204" y="486" class="s">已進 main，但還沒換上（批 4 執行檔，等 15:30 停樹）或還沒接線（批 5）</text>
+</svg>
+</div>
+<p><b>結論：</b>框架本體（骨架、掛 proc 那包、hook、整鏈劇本、文件）五批都在 main 了，現在就能用——只是要 <code>AOS_KERNEL</code> 與 <code>AOS_DAEMON</code> 兩個都設（只設 <code>AOS_KERNEL</code> 現在仍是 <code>DaemonMissing</code>）。查詢信線：daemon 的執行檔等今天 15:30 停樹時換，工具端接線與批 6 的補丁還在 repo 外。問腦線：Python 版（批 8、9）已進 main，切換與刪 C++（批 10）還沒做。另外加做了五件，都已進 main；整鏈劇本現在是七段、7/7。</p>
+<p><b>目前沒有等你裁的題。</b>上一版列的七題今天下午都有答案了：</p>
+<ul class="undec">
+<li><span class="tag t-done">已裁</span>分流後的數量上限：維持合算一個；要分開管就在各下一站自己設。程式沒動。</li>
+<li><span class="tag t-done">已裁</span>有序信＋分流：做成選項 <code>route_ordered</code>，預設可以並用。</li>
+<li><span class="tag t-done">已裁</span>「數量另指」條文比程式鬆：條文改照程式。條文裡的「判官」字樣與「未實作」標籤也改了。</li>
+<li><span class="tag t-done">已裁</span>轉寄對照的洞：已補。</li>
+<li><span class="tag t-done">已裁</span>共用引擎不回報是哪個 hook 改了值：不補。</li>
+<li><span class="tag t-wip">已裁、施工中</span>agent 的 hooks 改用共用引擎（批 1b）：使用者同意直接改，另一條線在做，還沒接線。</li>
+</ul>
+<pre>git log --oneline -20 -- proto8/lib/aos proto8/kernel proto8/impls/aos-daemon proto8/py/daemon_ctl proto8/extras/kernel-chain-check   # 自己看哪些進了 main</pre>
+<details><summary>細節：每一批的 commit、為什麼是那個顏色、已裁的題</summary>
+<div class="tw"><table>
+<tr><th>批</th><th>做什麼</th><th>狀態</th><th>commit／依據</th></tr>
+<tr><td>1a</td><td>hook 共用引擎 <code>lib/hook_run.py</code></td><td><span class="tag t-done">已進</span></td><td><code>747c48ca9</code></td></tr>
+<tr><td>2</td><td>判官收進框架（骨架＋掛 proc 那包、<code>next</code>、<code>count_daemon</code>、<code>reply_via_me</code>）</td><td><span class="tag t-done">已進</span></td><td><code>cc5130d69</code></td></tr>
+<tr><td>3</td><td>hook 三個時機接上骨架</td><td><span class="tag t-done">已進</span></td><td><code>8d05ad5d5</code></td></tr>
+<tr><td>7a</td><td>整鏈假腦劇本（第 1、2、4、5、6 段；後來加第 7、8 段，現在 7/7）</td><td><span class="tag t-done">已進</span></td><td><code>54623831f</code>、<code>dd32bef00</code></td></tr>
+<tr><td>11a</td><td>框架站的文件與條文加註</td><td><span class="tag t-done">已進</span></td><td><code>3ea5123d2</code>（另 <code>e41c09ffb</code> 把說明裡的「判官」換成框架站）</td></tr>
+<tr><td>加做</td><td>找下一站改三段、N-42 兩句照裁定改寫（kf-next:B、kf-t1:A）</td><td><span class="tag t-done">已進</span></td><td><code>4fcb631fd</code>（不在原本 17 批裡）</td></tr>
+<tr><td>加做</td><td>hook 分流：<code>after_verdict</code> 替單封信指定下一站；整鏈劇本加第 7 段</td><td><span class="tag t-done">已進</span></td><td><code>7694e05f7</code>（不在原本 17 批裡；使用者「按照規則分流吧。就用hook」）</td></tr>
+<tr><td>加做</td><td>留著等表態：hook 回 <code>hold</code>、別人寫表態檔、機器轉寄</td><td><span class="tag t-done">已進</span></td><td><code>6f83a431a</code></td></tr>
+<tr><td>加做</td><td>agent 當門：工具包 <code>kernel_gate</code>（預設不掛進範本）</td><td><span class="tag t-done">已進</span></td><td><code>306078925</code>、<code>1c973e47e</code>、<code>9be257271</code></td></tr>
+<tr><td>加做</td><td>有序信與分流可並用（<code>route_ordered</code>）；補轉寄對照的洞；條文改照程式；兩層的說法</td><td><span class="tag t-done">已進</span></td><td><code>d8384df9b</code>、<code>12942854f</code>、<code>0fe01b6b8</code>、<code>adee4511d</code></td></tr>
+<tr><td>4</td><td>aos-daemon 認查詢信</td><td><span class="tag t-done">原始碼已進</span><span class="tag t-stop">執行檔 15:30 停樹時換</span></td><td><code>42870fa27</code></td></tr>
+<tr><td>5</td><td><code>py/daemon_ctl</code>、<code>aos-agent ctl</code> 先問再讀</td><td><span class="tag t-done">新模組已進</span><span class="tag t-wip">接線在補丁</span></td><td><code>bb4204242</code>（沒人 import、行為不變）；接線補丁 12 檔在 repo 外，要排在新 daemon 之後</td></tr>
+<tr><td>6</td><td><code>fork</code>、<code>subagent</code> 不靠 <code>AOS_DAEMON</code>；帳改存絕對路徑</td><td><span class="tag t-wip">補丁備好</span></td><td>補丁 22 檔在 repo 外；上線要重抄 lib＋清舊帳，今天不做</td></tr>
+<tr><td>7b</td><td>劇本補第 3 段與「只設 <code>AOS_KERNEL</code>」</td><td><span class="tag t-stop">等前面幾批</span></td><td>靠 4、5、6</td></tr>
+<tr><td>11b</td><td>查詢信部分的文件與條文（N-63、N-28）</td><td><span class="tag t-later">還沒排到</span></td><td>在 4～6 之後</td></tr>
+<tr><td>8</td><td>「自己跑」零件 <code>runner.py</code></td><td><span class="tag t-done">已進</span></td><td><code>df1c25ff2</code></td></tr>
+<tr><td>9</td><td>問腦那一包 <code>lib/aos/kernel_llm/</code>（假腦測到綠；新舊並存）</td><td><span class="tag t-done">已進</span></td><td><code>df1c25ff2</code>（另 <code>d5f276737</code>：骨架開一個口讓包自己讀設定）</td></tr>
+<tr><td>10</td><td>切換範本、刪 C++、重跑 install</td><td><span class="tag t-wip">補丁備好</span></td><td>補丁 50 檔在 repo 外；C++ 部分沒 build 過，今天不做</td></tr>
+<tr><td>12</td><td>問腦部分的條文與文件</td><td><span class="tag t-later">還沒排到</span></td><td>在 10 之後</td></tr>
+<tr><td>14</td><td>回家驗真端點、LM Studio、試驗場</td><td><span class="tag t-later">要回家</span></td><td>—</td></tr>
+<tr><td>1b</td><td><code>lib/agent/hooks.py</code> 改用共用引擎</td><td><span class="tag t-wip">已裁、施工中</span></td><td>使用者同意直接改；另一條線在做，製作當下還沒接線（檔裡沒有 import <code>hook_run</code>）。存檔即影響跑著的 eca</td></tr>
+<tr><td>13</td><td>公司真腦各驗一題（eca claude、codex）</td><td><span class="tag t-later">還沒排到</span></td><td>兩個變數都設的版本隨時可跑；只設 <code>AOS_KERNEL</code> 的版本等停樹</td></tr>
+</table></div>
+<ul>
+<li><b>「補丁備在 repo 外」是照開工紀錄寫的</b>（第十二節）：補丁本身我沒看過；哪一批算做完以開工紀錄為準（<code>proto8/thinking/2026-11/13/kernel-framework-開工.md</code>）。</li>
+<li><b>已裁（11-13）</b>：kf-K-F47:A（問腦用 Python 重寫、刪 C++）、kf-K-F50:B（總機照舊看 <code>AOS_KERNEL</code>）、kb-ctl:A（<code>aos-daemon-ctl</code> 直寄照現況）、kf-next:B（找下一站三段）、kf-t1:A（兩個開關各自獨立）、kf-n1:B（問腦那包現在用假腦做）、kf-n2:A（今天停樹一次）、「next只能一個嗎？」→「按照規則分流吧。就用hook」；下午 kernel 第二輪七題與 agent 當門四題的回覆在開工紀錄第十四節與 <code>proto8/thinking/2026-11/13/eca-as-kernel.md</code>。題目與選項在 <code>proto8/thinking/2026-11/13/decide_20261113_wu-top.json</code>、<code>decide_20261113_wu-r2.json</code>。</li>
+<li>相依：框架線 1a→2→3→7a→11a；查詢信線 4→5→6→7b→11b；問腦線 8→9→10→12→14；1b 獨立。</li>
+<li>記著沒補的機制缺口（不是待裁題）：<code>aos-post</code> 沒有「只認領指定那一封」；門沒回時 <code>aos-agent ctl</code> 的錯誤訊息說的是 daemon；門在忙時通知發不出來（已裁先不補）；框架站測試整夾跑 18 次有 1 次紅、原因沒查到。</li>
+<li>圖紙：<code>proto8/thinking/2026-11/12/kernel-framework/</code>（十四步；為了「新碼放新檔、最後才接線」拆成 17 批）。</li>
+</ul>
+</details>
+
+<p class="sub" style="margin-top:2.5em">原稿：<code>proto8/thinking/2026-11/13/kernel-framework-架構圖.html</code>。圖是照讀碼與讀文件畫的，沒有為了畫圖去起任何 aos 行程。</p>
+</main>
+</body>
+</html>

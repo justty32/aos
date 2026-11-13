@@ -2,6 +2,8 @@
 
 ← [回入口](../wf-to-aos.md)｜所在段落：[現有東西夠不夠對標 wf/ 規矩](../wf-to-aos.md#現有東西夠不夠對標-wf-規矩11-12-晚家機)｜上一份：[01-對標調查結論](01-對標調查結論.md)
 
+> 11-13 回註：「明天主 session 開始：現在卡在三點」與邊緣狀況裡的幾個前提（主 session 不在表上→`DaemonMissing`、沒有登記的做法所以 mailbox 掛不上、Skill 與規矩兩套、`todo` 共用一張會互蓋）被 11-13 的事實推翻——公司 WSL 的主 session 是樹裡的 `repo-aos`、mailbox 已掛著、規矩只有一份；以 [11-13 main-session-in-aos](../../13/main-session-in-aos.md) 的結論為準（家機裁定也改成樹裡的一隻）。
+
 ## 等使用者＝寄信給人：照抄指令與兩個洞
 
 在 scratchpad 實跑過；不給 `-s` 就是人自己的 `~/.aos/stack`（家機這個信箱已經存在）。

@@ -108,7 +108,7 @@
 ### 現況事實
 
 - `todo` 工具在 `proto8/lib/packs/todo.json`、本體 `lib/agent/todo/`；清單存在叫它的那隻 agent 自己 stack 的小格（`<stack>/tools/todo/todo.json`，第一次寫才建）——讀 `lib/agent/todo/_entry` 檔頭確認。
-- `repo-aos` 的定義沒掛 `todo`（`tools.json` 七包：gadgets、events、self、def、mailbox、json、index）；`--tools default`＝CLI 自己的工具全開（CLI 自帶的待辦工具有沒有真的出現在頂層的清單裡，本線看不到頂層的工具表，沒查）。
+- `repo-aos` 的定義沒掛 `todo`（`tools.json` 七包：gadgets、events、self、def、mailbox、json、index）（11-13 下午註：七包是樹裡 `ws/defs/agent` 這份定義的實況——它是今早 08:24 從當時的範本抄的；repo 的 `templates/eca-claude/tools.json` 同一天 `2e1e69de2` 加了 `jsonx`、現在八包，樹裡的定義與 `~/aos-home/templates` 的複本都還是七包，定義不會自己跟著範本變）；`--tools default`＝CLI 自己的工具全開（CLI 自帶的待辦工具有沒有真的出現在頂層的清單裡，本線看不到頂層的工具表，沒查）。
 - 昨晚的顧慮是「經 `~/.cache/aos-mcp-aos` 用時，這台機器所有主 session 共用一張、會互蓋」；公司 WSL 沒有那個 cache 夾（[aos-home](aos-home.md)），主 session 也不走那條路了。
 
 ### 結論

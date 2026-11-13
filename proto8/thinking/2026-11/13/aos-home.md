@@ -2,6 +2,8 @@
 
 ← [11-13 日索引](README.md)｜搭法十七步：[ops-notes-to-aos § 從零搭一棵小樹](../12/ops-notes-to-aos.md#從零搭一棵小樹一個-daemon一隻懂-aos-的-opus-eca使用者自己做)｜桌面手冊原稿：[aos-home-手冊.html](aos-home-手冊.html)
 
+> 11-13 下午現況註：下面寫的「驗完樹停著」「一隻 `eca_main`」是早上 08:30 前後的事。之後使用者把樹起起來一直在用，13:48 `aos-agent ctl ls` 有九列都 running（`_sweeper`、`eca_main`、`ops-agent`、`me-agent`、`repo-aos`、`gpt-price`、`elsa-watch`、`gpt-soap`、`wf-agent`）；頂層 session 就是其中的 `repo-aos`（[main-session-in-aos](main-session-in-aos.md)）。
+
 ## 使用者原文
 
 - 「幫我把現有的WSL遊樂場重刷一次，包括裡面的知識庫。」
