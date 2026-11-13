@@ -1,0 +1,7 @@
+{"endpoint": "astra-high", "sender": "/t/a", "usage": {"total_tokens": 100}}
+{"endpoint": "sol-high", "sender": "/r", "usage": {"total_tokens": 50}}
+not json
+{"endpoint": "sol-high", "sender": "/r", "usage": {"total_tokens": 70}}
+
+{"endpoint": "astra-high", "sender": "/t/a"}
+{"endpoint": "sol-high", "sender": "/t/a", "usage": {"total_tokens": 5}}

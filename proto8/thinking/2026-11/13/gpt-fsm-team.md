@@ -83,6 +83,22 @@
 
 **真工作題目**（先寫在這裡再開工）：[real1/blueprint-ledger-sum.md](gpt-fsm-team/real1/blueprint-ledger-sum.md)。在隊自己的夾裡新增 `ledger_sum.py`＋測試資料，把 llm kernel 的 ledger 按端點包×寄件人加總，給 Q1 看用量。範圍小、不碰 aos 程式和 wf/，可以逐字驗收。
 
+**真工作結果**（21:03～21:10，約 7 分鐘）：
+
+- astra 寫了 T02 工單、起 sol-T02。sol 寫出 [real1/ledger_sum.py](gpt-fsm-team/real1/ledger_sum.py) 和 `testdata/ledger-sample.jsonl`。
+- astra 自己驗：照圖紙跑樣本，另外多驗了空輸入、預設值、排序、行號、非物件 JSON。驗完寫 status.md、`rm sol-T02`、寄 DONE。
+- 隊長重驗：stdout 跟圖紙逐字相同（diff 空）、stderr 一行、退出碼 0；讀不到檔與不給參數都退 2；樣本 7 行逐 byte 對；全程式讀過，跟圖紙一致；`git status` 只有這兩個新檔；沒有 commit。
+- 用量：astra 31 次、約 52 萬 token；sol 19 次、約 23 萬 token。拿這支新工具對真 ledger 加總：全晚 86 次、116 萬 token。
+- 圖紙沒規定、程式也沒處理的一處：`usage` 是 `null` 時會出錯。真 ledger 目前沒有這種行，留著不修。
+- 觀察：astra 中途也講過一句不帶工具的話（T28 的形狀），靠 goal 提醒接回來。sol 第一下就想用 `apply_patch`（codex 的習慣），沒有這個指令，就改用 shell 寫檔（見 06 的 T43）。
+
+**收尾**：
+
+- 已收：`ctl rm gpt-lead`；sol-T01、sol-T02 都由 astra rm。三者都沒 purge，stack 留作紀錄。
+- `aos-daemon-ctl rm llm-gpt`：pid 124830 已退。
+- 表上只剩原有的 _sweeper、eca_main、repo-aos。
+- 活樹新增檔都留著：`~/aos-home/kernels/llm-gpt/`、`~/aos-home/defs/{shared,gpt-lead,gpt-worker}/`、`~/aos-home/teams/t1/`。daemon stack 下另有 `procs/{llm-gpt,gpt-lead,sol-T01,sol-T02}/`，以及 `procs/repo-aos/daemon_reply/`（T42）。
+
 ## 下一步想法（未排）
 
 使用者 11-13 晚原話（逐字，頂層轉）：「然後我這邊還有新的想法，就是說astra指揮sol，目前是默認他們都在同個daemon底下，或是走aos-subagents工具，我在想，或許可以讓astra變成kernel，然後他底下掛sol們，這樣試試看。不過這比較大膽，可以下一步再做。」
