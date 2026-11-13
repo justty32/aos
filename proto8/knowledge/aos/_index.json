@@ -42,6 +42,9 @@
  "mailbox.json": {
   "description": "Letters between agents: tools mailbox_peek, mailbox_read, mailbox_send; when you must answer; checking regularly without filling your history."
  },
+ "user_zone.json": {
+  "description": "How to ask the user: send decide/verify/trial/chore/fyi letters to the user zone ~/.aos/user/mailbox with aos-user send (or mailbox_send), what the answer looks like, and how far a checked answer counts."
+ },
  "clock.json": {
   "description": "Timers: clock letters to your queue (clock_register), or an on_clock hook that adds nothing to your history; which one to choose."
  },

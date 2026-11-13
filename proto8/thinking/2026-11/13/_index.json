@@ -135,7 +135,7 @@
   "description": "使用者專區規劃的分檔夾：入口在上一層的 user-zone-plan.md，這裡是 01～06 的細節"
  },
  "user-zone-plan.md": {
-  "description": "使用者專區規劃（線人 11-13 晚，未施工）：專區放 `~/.aos/user/`、它本身就是你的 stack，agent 把要你裁／驗／做／知道的事寄進它的 `mailbox/`，你用一支 `aos-user` 列、看、回，回了才消；之後疊桌面網頁（8766，只綁本機）與手機（tailscale 或 artifact 中轉）"
+  "description": "使用者專區（線人 11-13 晚規劃；線專同晚施工段 1＋網頁）：專區放 `~/.aos/user/`、它本身就是你的 stack，agent 把要你裁／驗／做／知道的事寄進它的 `mailbox/`，你用 `aos-user` 列、看、回，回了才消；桌面網頁 8766 只綁本機；手機先不做"
  },
  "wake-timer.md": {
   "description": "叫醒自己的計時器（線鐘 11-13 晚）：clock_register 加三種排法——after（再過 N 個 cycle 一次）、at（牆鐘某時刻一次）、cron（牆鐘五欄重複）；一次性的寄完自己消失"
