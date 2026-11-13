@@ -3,7 +3,7 @@
   "description": "Check fragments in local Markdown links."
  },
  "codemap_gen.py": {
-  "description": "從 proto8 各檔檔頭的一句話生成逐檔 code map（wf/workflows/common/code-map/proto8/<夾>.md）。"
+  "description": "檔頭一句話的認法（函式庫，給 index_gen.py 寫逐檔 code map 用）；命令列是轉呼叫 index_gen.py 的薄殼。"
  },
  "compact_reload.sh": {
   "description": "compact 後重讀：Claude Code SessionStart（matcher=compact）hook 呼叫，stdout 會進 compact 後的上下文。"

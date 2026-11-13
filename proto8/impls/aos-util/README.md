@@ -25,7 +25,7 @@ int main() {
 
 ## 元素（一個標頭一個元素）
 
-逐檔「哪個檔負責什麼」從檔頭一句話生成，在 code map 的 [proto8 生成冊](../../../wf/workflows/common/code-map/proto8/README.md)（`impls` 冊的 `aos-util/` 段）；改說明去改檔頭。
+逐檔「哪個檔負責什麼」從檔頭一句話生成，在 code map 的 [逐檔表 impls.json](../../../wf/knowledge/code-map/proto8/impls.json)（`#/tree/aos-util`）；改說明去改檔頭。
 
 標頭開頭都有白話說明，從那裡讀；原子寫入的原因另見 `src/files.cpp`。
 

@@ -10,7 +10,7 @@
 
 ### 開發 flavor
 
-碰原始碼的工作流共用 [common/conventions](workflows/common/conventions.md)（程式碼慣例 + code map 維護鏈）與 [common/code-map](workflows/common/code-map.md)（哪個檔負責什麼）。
+碰原始碼的工作流共用 [common/conventions](workflows/common/conventions.md)（程式碼慣例 + code map 維護鏈）與 [code map](knowledge/code-map.json)（哪個檔負責什麼）。
 
 | 觸發（你說…）| 工作流 | 入口檔（先讀這個）|
 |--------------|--------|-------------------|
@@ -26,7 +26,7 @@
 | 「重構 / 拆檔 / 整理程式結構」（行為不變）| **refactor** | [workflows/refactor/README.md](workflows/refactor/README.md) |
 | 「搬檔案 / 改目錄名 / 拆 repo」 | **refactor**（搬移專章）| [workflows/refactor/moving-things.md](workflows/refactor/moving-things.md) |
 | 「環境怎麼裝」「fresh clone 後要做什麼」「指令是什麼」 | **dev-env** | [workflows/dev-env.md](workflows/dev-env.md) |
-| 「這段程式在哪 / 哪個檔負責什麼」 | **code map** | [workflows/common/code-map.md](workflows/common/code-map.md) |
+| 「這段程式在哪 / 哪個檔負責什麼」 | **code map** | [wf/knowledge/code-map.json](knowledge/code-map.json) |
 | 「**把這些東西濃縮給我看**」「我只有半小時」「寫個我看得懂的版本」 | **digest** | [workflows/digest/README.md](workflows/digest/README.md) |
 
 > **digest 跟其他工作流的分界**：其他工作流**產生**東西，digest **只讀不產**——

@@ -70,11 +70,10 @@ class CodemapJsonTests(unittest.TestCase):
         self.assertEqual(self.read('cmd.json')['tree']['tool']['tests']['t.py'], 'tests tool.')
         self.assertEqual(self.read('impls.json')['deps'], {'foo': {'public': ['bar'], 'private': ['baz']}})
         self.assertEqual(self.read('proto8.json')['tree'], {'x.py': 'top file.'})
-        # 葉子數＝md 冊的列數（同一次掃描）
+        # 葉子數＝掃到的列數（工具夾三檔併一列）
         proto = str(self.root / 'proto8')
-        _books, stats, _n = codemap_gen.books(proto, codemap_gen.tracked(proto))
         total = sum(self.leaves(self.read(n)['tree']) for n in names)
-        self.assertEqual(total, stats['rows'])
+        self.assertEqual(total, len(codemap_gen.units(proto, codemap_gen.tracked(proto))))
 
     def test_rerun_is_stable_and_check_passes(self):
         self.assertEqual(self.run_gen('--apply'), 0)

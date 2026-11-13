@@ -13,4 +13,4 @@
 | [langs/](langs/README.md) | 用 Janet、Lua 寫 aos 程式，編成資料夾＋JSON |
 | [tree-swap/](tree-swap/README.md) | 停樹後換一棵樹的程式複本（lib／templates／knowledge／py／kernel）與十支 C++ 執行檔：先備份、抄到旁邊再改名、蓋來源章、附退回；樹沒停就紅燈，不含 kill／shutdown |
 
-逐檔說明在 code map 的 [proto8 生成冊](../../wf/workflows/common/code-map/proto8/README.md)（從檔頭一句話生成）。
+逐檔說明在 code map 的 [逐檔表 extras.json](../../wf/knowledge/code-map/proto8/extras.json)（從檔頭一句話生成）。

@@ -293,3 +293,10 @@
 - fable §1.3「頂層夾有、手寫 `domains` 沒有就 warning」沒做進生成器；目前靠 `headline_rule` 一句提醒。
 - `wf/tools/index_gen_desc.json` 裡 `wf/tools`、`wf/workflows/common/code-map*` 三列的手寫一句話還寫 codemap_gen（別線當時正改這檔，沒碰；步 4 刪夾時一起改）。
 - 活樹知識庫副本沒重抄（通用版改了 code-map-rules／骨架，等停樹）。
+
+### 步 4＋6（11-13 22:15 使用者「舊的md版逐檔表和轉址檔可以刪。」，頂層轉來）
+
+- 刪：`wf/workflows/common/code-map/` 整夾 34 檔（README、proto8/README、proto8/_index.json、31 本 md 冊）＋轉址檔 `wf/workflows/common/code-map.md`，共 35 檔；`codemap_gen.py` 刪 MARK、LIMIT、section_key、render、books、sync_md，`index_gen.py` 不再呼叫 sync_md。
+- 改連結 24 檔：impls／extras 13 檔（12 個改指 `impls.json`＋`#/tree/<專案>`、impls/docs/01 寫 `deps`／`tree`，extras 指 `extras.json`）；wf 這邊 `INDEX.md`、`INDEX/01`、`WORKFLOWS.md`、`salvage/README`、`common/README`、`feature-dev/README`、`investigation.md`、`refactor/README`；`index_gen_desc.json`（刪兩列已不存在的路徑、改兩列句子）；`dispatch/lessons/03` 改字；`_index.json` 兩份由 index_gen 重生。先前估的「71 個連入」大多在 archive／reports／thinking 等歷史裡，非歷史只剩上面這些。
+- 沒改（歷史或不是本 repo 路徑）：任何一層 `archive/`、`reports/`、`proto8/thinking`、`wf/session_logs`、`wf/inbox/done`；`wf/workflows/digest/2026-08-26/07-檔案結構變了.md`（8 月的結構紀錄）；`proto8/knowledge/wf/source/block-4.json`（通用版來源紀錄，寫的是 `flavors/dev/workflows/common/code-map.md`）。
+- 薄殼 `codemap_gen.py` 命令列**留著**：別線任務書可能還寫舊指令，沒法確認已無人用；它現在只轉呼叫 index_gen，條文都已寫 index_gen。要刪時刪 `main` 與鐵律 3、conventions/02、lessons/03 那半句。

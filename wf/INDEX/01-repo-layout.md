@@ -6,7 +6,7 @@
 
 | 路徑 | 內容 |
 |------|------|
-| `proto8/` | **現役本體**（第八版原型；使用者 11-05「我們在proto8內……畢竟是prototype-8」）：C／C++ 的基礎層與標準庫在 `proto8/impls/`（各專案獨立 CMake，建法見 [testing「proto8」](../workflows/testing.md#proto8)），Python／sh 的指令在 `proto8/cmd/`（共用模組 `proto8/py/`）、腦叫的工具在 `proto8/lib/`、掛在 daemon 上的管理元件在 `proto8/kernel/`、agent 範本在 `proto8/templates/`；概念 CONCEPTS、規範 NORMS、慣例 CONVENTION 在 `proto8/docs/`，討論紀錄在它的 [thinking/](../../proto8/thinking/README.md)，使用者自己的意見稿在 `proto8/user-advice/`（含 09 月的草稿）。各夾一覽在 [proto8/README](../../proto8/README.md)；內部分工 → [code map](../workflows/common/code-map.md) |
+| `proto8/` | **現役本體**（第八版原型；使用者 11-05「我們在proto8內……畢竟是prototype-8」）：C／C++ 的基礎層與標準庫在 `proto8/impls/`（各專案獨立 CMake，建法見 [testing「proto8」](../workflows/testing.md#proto8)），Python／sh 的指令在 `proto8/cmd/`（共用模組 `proto8/py/`）、腦叫的工具在 `proto8/lib/`、掛在 daemon 上的管理元件在 `proto8/kernel/`、agent 範本在 `proto8/templates/`；概念 CONCEPTS、規範 NORMS、慣例 CONVENTION 在 `proto8/docs/`，討論紀錄在它的 [thinking/](../../proto8/thinking/README.md)，使用者自己的意見稿在 `proto8/user-advice/`（含 09 月的草稿）。各夾一覽在 [proto8/README](../../proto8/README.md)；內部分工 → [code map](../knowledge/code-map.json) |
 | `impl_cpp/` | **使用者手寫重寫的 C++ 實作**（大修；C++23、骨架取自 `archive/aos-v1/`、一個零件一夾在 `core/<零件>/`，自成一體不 include proto8）。環境怎麼建、跑、除錯看 [impl_cpp/README](../../impl_cpp/README.md)；核心程式由使用者自己寫，agent 只動環境 |
 | `archive/` | **封存處**：舊原型 `proto/`～`proto7-2/` 共 20 個（使用者 11-04「舊的proto1~7都封存」），與 08～09 月那一代單一執行檔 `aos`（根 `CMakeLists.txt`／`core/`／`modules/`／`app/`／`docs/`／`playground/`／`reference/`…）整組封存成的 `aos-v1/`（arch-refactor 方向題 1）；各版是什麼看索引 [archive/README](../../archive/README.md)。凍結，不再建、不再維護 |
 | `wf/` | **本工作流系統**（就是你現在在讀的這包）。入口見 [WORKFLOWS.md](../WORKFLOWS.md)；共享區 [workflows/common/](../workflows/common/README.md) |

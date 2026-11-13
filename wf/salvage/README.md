@@ -91,7 +91,7 @@ git ls-tree -r --name-only roadmap-run -- wf      # 看還有什麼
 - `wf/workflows/build-cycle/archive/m1-loop-side/review/` — 報告 ＋ **58 支腳本**（報告當時寫「57 支」，複測時又搬進併發壓力腳本 `conc.sh`）。
   報告要**挑著讀**：§0 總結、§3 兩張驗證表（含「打了但沒問題的」）、§4 沒覆蓋到的角落、
   §6 修補後複測。
-- `wf/workflows/common/code-map/` — 逐檔職責表，**寫的是「為什麼是這個形狀」而不只是
+- `wf/knowledge/code-map/` — 逐檔職責表，**寫的是「為什麼是這個形狀」而不只是
   「這個檔做什麼」**。
 - `wf/workflows/digest/2026-08-28/` — 給使用者看的白話版五篇，語感可參考。
 - `wf/workflows/build-cycle/m3-roster/` — 規劃完成但從未動工的那一階段（87 KB plan）。

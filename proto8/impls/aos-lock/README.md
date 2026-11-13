@@ -37,7 +37,7 @@ aos-lock show data.json                                                         
  main ──▶ 子命令表 ──▶ parse_cli ──▶ lock_dir_of ──▶ acquire（try_acquire：mkdir → 寫名牌｜look → reapable → reap）｜release｜look
 ```
 
-逐檔「哪個檔負責什麼」從檔頭一句話生成，在 code map 的 [proto8 生成冊](../../../wf/workflows/common/code-map/proto8/README.md)（`impls` 冊的 `aos-lock/` 段）；改說明去改檔頭。
+逐檔「哪個檔負責什麼」從檔頭一句話生成，在 code map 的 [逐檔表 impls.json](../../../wf/knowledge/code-map/proto8/impls.json)（`#/tree/aos-lock`）；改說明去改檔頭。
 
 ## 錯誤代號
 

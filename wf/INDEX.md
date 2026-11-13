@@ -10,7 +10,7 @@
 
 ## 程式碼在哪 → code map
 
-**改程式之前先讀 [workflows/common/code-map.md](workflows/common/code-map.md)**：哪個檔負責什麼領域、要改某件事該動哪幾個檔、測試在哪，全在那一張圖上。本檔只描述「頂層有哪些資料夾」，不描述檔案層級。
+**改程式之前先讀 [wf/knowledge/code-map.json](knowledge/code-map.json)**：哪個檔負責什麼領域、要改某件事該動哪幾個檔、測試在哪，全在那一張圖上。本檔只描述「頂層有哪些資料夾」，不描述檔案層級。
 
 ## 工作流
 
@@ -35,7 +35,7 @@
 | 路徑 | 內容 |
 |------|------|
 | [common/README](workflows/common/README.md) | 跨工作流共通的入口 |
-| [common/code-map](workflows/common/code-map.md) | **程式碼結構導航圖**（本 flavor 的導航中樞）＋ 真相層優先序 |
+| [code map](knowledge/code-map.json) | **程式碼結構導航圖**（本 flavor 的導航中樞）＋ 真相層優先序 |
 | [common/conventions](workflows/common/conventions.md) | 程式碼慣例 + code map 維護鏈 |
 | [common/gotchas](workflows/common/gotchas.md) | 跨工作流共通踩坑 |
 | [common/user](workflows/common/user.md) | 使用者偏好、確認邊界、時區 |

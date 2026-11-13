@@ -10,7 +10,7 @@
 ## Done when
 
 - [testing](../testing.md) 的建置指令回傳 0；行為不變靠讀碼與手跑確認。
-- [common/code-map](../common/code-map.md) 中受影響領域的列已更新。
+- [code map](../../knowledge/code-map.json) 中受影響領域的列已更新。
 
 ## 流程
 

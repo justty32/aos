@@ -6,7 +6,7 @@
   "description": "新工作流的範本：單檔型或資料夾型入口的固定段落（何時用、Done when、流程、內容），新開工作流時複製並在 WORKFLOWS.md 加一列"
  },
  "common": {
-  "description": "跨工作流共用的東西：共通踩坑 gotchas、使用者偏好 user、資料檔契約 data-files、程式碼慣例 conventions、code-map；使用者說「記／查踩坑」「我的偏好是…」或要找哪個檔負責什麼時走這裡"
+  "description": "跨工作流共用的東西：共通踩坑 gotchas、使用者偏好 user、資料檔契約 data-files、程式碼慣例 conventions（code map 11-13 搬到 wf/knowledge/code-map.json）；使用者說「記／查踩坑」「我的偏好是…」時走這裡"
  },
  "decide-page.md": {
   "description": "decide-page — 把一批要使用者裁的題做成離線互動頁，收回答、落回各線"

@@ -12,6 +12,6 @@
 | [data-files.md](data-files.md) | 資料檔契約 `wf-table/1`：給 AI 消化的條列 >1 KB 抽 `.json`／`.csv`、`tabledb.py` 讀寫；給人導航的連結表留 md | kernel |
 | [data-files-fmt.md](data-files-fmt.md) | json 值裡跨層路徑用 `$fmt` 代號展開，省 `../../../` | kernel |
 | [conventions.md](conventions.md) | **程式碼慣例 + code map 維護鏈**；碰原始碼的工作流共用 | dev 包 |
-| [code-map.md](code-map.md) | **程式碼結構導航圖**（本專案的導航中樞）＋ 真相層優先序；逐檔分冊在 [`code-map/`](code-map/README.md) | dev 包 |
+| [code map](../../knowledge/code-map.json) | **程式碼結構導航圖**（本專案的導航中樞）＋ 真相層優先序；11-13 搬到 `wf/knowledge/code-map.json`，逐檔表在 `wf/knowledge/code-map/proto8/<頂層夾>.json`（`index_gen.py --apply` 生成） | dev 包 |
 
 > 過時的共通文檔封存進 `common/archive/`。本入口檔若膨脹，照 [STRUCTURE](../../STRUCTURE.md) 拆。
