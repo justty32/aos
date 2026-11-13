@@ -68,7 +68,7 @@ ul{padding-left:1.3em}
 
 <h2>③ 確認掛上</h2>
 <pre><code>cd ~/aos-home && source env.sh && cd ws && aos-agent ctl ls</code></pre>
-<p class="see">看到 <code>eca_main	running	/home/guanyu/aos-home/ws</code> 就對。它已經掛好了，<b>不用再 add</b>；停樹再起，它自己醒、對話還在。</p>
+<p class="see">看到 <code>eca_main	running	~/aos-home/ws</code> 就對。它已經掛好了，<b>不用再 add</b>；停樹再起，它自己醒、對話還在。</p>
 <details><summary>看它有幾支 aos 工具（應該 26 支）</summary>
 <pre><code>cd ~/aos-home && source env.sh && cd ws && aos-agent tools --target eca_main ls | wc -l</code></pre>
 <p>26 支：json 工具（get／set／ls／search／add／del／len、multi_get／multi_set）、<code>index_view</code>、信箱三支、改自己的 <code>self_*</code>、時間、<code>math</code> 等；讀寫檔、跑指令用 Claude Code 自己的 Read／Write／Edit／Glob／Grep／Bash。它叫子 agent（Agent 工具）時，子 agent 那邊只有唯讀 9 支。開頭會印一行 warning「using the definition's tools.json」，正常。</p>
