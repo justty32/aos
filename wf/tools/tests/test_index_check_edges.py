@@ -68,6 +68,19 @@ class EdgeTests(unittest.TestCase):
         self.assertIn('build', r.stderr)
         self.assertIn('1 skipped', r.stdout)
 
+    def test_archive_is_not_checked_but_told(self):
+        # user 11-13 15:18 "都按照推薦": archive keeps no inner links, so its indexes are skipped and counted, not checked
+        put(self.t, {'live.md': '# l\n', 'archive/old/o.md': '# o\n',
+                     'archive/_index.json': {'gone.md': {'description': 'stale'}},
+                     'archive/old/_index.json': {'gone.md': {'description': 'moved away later'},
+                                                 'live': {'description': 'x', 'index': '../../live/_index.json'}},
+                     '_index.json': {'live.md': {'description': 'l'}, 'archive': {'description': 'old things'}}})
+        r = check(self.t, '--fs')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn('warning: archive/_index.json is not checked', r.stderr)
+        self.assertIn('warning: archive/old/_index.json is not checked', r.stderr)
+        self.assertIn('1 index files, 2 entries, 0 problems; 2 skipped', r.stdout)
+
     def test_no_index_at_all_is_told(self):
         put(self.t, {'x/f.md': 'hi\n'})
         for args in (('--fs',), ('--fs', '--quiet')):

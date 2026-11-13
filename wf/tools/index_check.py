@@ -8,8 +8,8 @@
     --view  不查「在但沒列」（index 是視角、本來就可以只列一部分；只想查列的東西與連結對不對時用）。
   每個問題一行 `index_check: error: 代號 哪一份: 說明`，最後一行總數；有問題退 1，沒有退 0。只讀、不改任何檔。
   不靜默跳過（11-13 假綠實測，proto8/thinking/2026-11/13/index-check-false-green.md）：PATH 在 root 外＝PathBad；某夾沒有任何檔在 git 裡＝印 warning、照磁碟算；
-  照名字不走的夾（SKIP）裡有 `_index.json`＝印 warning、總數行加「N skipped」；PATH 底下一份 `_index.json` 都沒有＝印 warning。warning 不改退出碼。
-  不查（範圍外）：節點內容裡的引用（md 連結、json 字串裡的路徑、`$ref`）、archive 不另外對待、`index` 指到的那份不往下跟（檔內 `_index` 除外）。
+  照名字不走的夾（SKIP）裡有 `_index.json`、`archive/` 底下任何一層的 `_index.json`（封存不維護內部連結；上一層那一項也不必帶 `index`）＝印 warning、總數行加「N skipped」；PATH 底下一份 `_index.json` 都沒有＝印 warning。warning 不改退出碼。
+  不查（範圍外）：節點內容裡的引用（md 連結、json 字串裡的路徑、`$ref`）、`index` 指到的那份不往下跟（檔內 `_index` 除外）。
   代號：IndexBad（整份或某項形狀不對：要 `{名: {"description": "…", "index": "路徑"}}`，description 非空字串，
         或字串陣列——一行一個元素、接起來不是空的；空陣列、含非字串元素都算形狀不對）、
         EntryGone（列了但不在）、EntryMissing（在但沒列）、
@@ -26,7 +26,8 @@ import sys
 PROG = "index_check"
 NAME = "_index.json"
 SKIP = {".git", "__pycache__", "build", "install", "vcpkg_installed", "node_modules", ".cache"}
-USAGE = "(usage: index_check.py [--root DIR] [--fs] [--view] [--quiet] [PATH…])"
+ARCHIVE = "archive"     # 封存夾：不維護內部連結（wf/STRUCTURE「archive 規則」），裡面的 index 不查、只計數（使用者 11-13 15:18「都按照推薦」）
+USAGE ="(usage: index_check.py [--root DIR] [--fs] [--view] [--quiet] [PATH…])"
 
 
 class JsonTooDeep(ValueError):
@@ -181,7 +182,7 @@ def check_dir(root, d, fs, view, cache, problems, seen_inner):
                             gone = [ik for ik in v if not isinstance(holder, dict) or ik not in holder]
                         for ik in gone:
                             problems.append(("EntryGone", inner_where, "%s is listed but not in that object" % ik))
-        elif os.path.isfile(os.path.join(target, NAME)) and "#" not in k:
+        elif os.path.isfile(os.path.join(target, NAME)) and "#" not in k and k != ARCHIVE:   # archive 裡的 index 不查，上一層不必連過去
             problems.append(("LinkMissing", where, "%s has its own %s but the entry has no index" % (k, NAME)))
     if not view:
         listed = {k.partition("#")[0].split("/")[0] for k in table}
@@ -226,7 +227,13 @@ def main(argv):
                 if x in SKIP and os.path.isfile(os.path.join(cur, x, NAME)):
                     skipped.append(os.path.relpath(os.path.join(cur, x), root))
                     warn(f"{skipped[-1]}/{NAME} is not checked (folders named {x} are not walked)")
-            dirs[:] = sorted(x for x in dirs if x not in SKIP)
+                elif x == ARCHIVE:                      # archive 底下每一層的 index 都數
+                    for acur, adirs, anames in os.walk(os.path.join(cur, x)):
+                        adirs[:] = sorted(a for a in adirs if a not in SKIP)
+                        if NAME in anames:
+                            skipped.append(os.path.relpath(acur, root))
+                            warn(f"{skipped[-1]}/{NAME} is not checked (archive keeps no inner links)")
+            dirs[:] = sorted(x for x in dirs if x not in SKIP and x != ARCHIVE)
             if NAME in names:
                 files += 1
                 entries += check_dir(root, os.path.relpath(cur, root), fs, view, cache, problems, seen_inner)
