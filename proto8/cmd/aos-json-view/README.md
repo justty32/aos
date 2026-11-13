@@ -8,7 +8,10 @@
 aos-json-view wf/workflows/decisions.json            # 整份
 aos-json-view wf/knowledge/code-map.json#/domains/0  # 一段（或第二個參數寫 '#/domains/0'）
 aos-json-view --width 80 --no-color FILE | less      # 指定寬度、不上色
+aos-json-view --depth 1 wf/knowledge/code-map.json   # 只看第一層，再深的摺成 {…3 keys}／[…5 items]
 ```
+
+- 給了指標＝開頭先印一行 `# FILE#/指標`，看得出看的是哪一段（11-13 晚使用者「都按照推薦，- 不用加」：字串陣列不加 `- `，照舊接成段落）。
 
 - 物件＝`鍵: 值`，同層鍵名對齊；短的物件／陣列擠成一行（`{a: 1, b: x}`、`[a, b]`）；其餘陣列元素前加 `- `。
 - 字串不加引號（空字串、擠在一行裡會混淆的才加）；`\n` 真的換行；字串陣列（非空、全是字串，[認法](../../thinking/2026-11/13/text-as-string-array.md)）當一段文字、一個元素一行。

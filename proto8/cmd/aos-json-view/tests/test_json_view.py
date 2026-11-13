@@ -90,9 +90,28 @@ class Cli(unittest.TestCase):
 
     def test_pointer_in_path_and_second_arg(self):
         r = run(self.f + "#/a/0/b~1c")
-        self.assertEqual((r.returncode, r.stdout), (0, "deep\n"))
+        self.assertEqual((r.returncode, r.stdout.splitlines()[1:]), (0, ["deep"]))
         r = run(self.f, "#/a/0/t~0")
-        self.assertEqual((r.returncode, r.stdout), (0, "1\n"))
+        self.assertEqual((r.returncode, r.stdout.splitlines()[1:]), (0, ["1"]))
+
+    def test_pointer_header_line(self):
+        r = run(self.f + "#/a")
+        self.assertEqual(r.stdout.splitlines()[0], "# %s#/a" % self.f)
+        r = run(self.f, "#/a/0")
+        self.assertEqual(r.stdout.splitlines()[0], "# %s#/a/0" % self.f)
+        self.assertFalse(run(self.f).stdout.startswith("# "))     # no pointer, no header
+
+    def test_depth(self):
+        deep = os.path.join(self.tmp.name, "deep.json")
+        with open(deep, "w") as f:
+            json.dump({"x": {"y": {"p": 1, "q": 2, "r": 3}, "l": [1, 2, 3, 4, 5]}, "e": {}, "t": ["a"]}, f)
+        r = run("--depth", "1", deep)
+        self.assertEqual(r.stdout, "x: {…2 keys}\ne: {}\nt: [a]\n")
+        r = run("--depth", "2", deep)
+        self.assertEqual(r.stdout, "x: {y: {…3 keys}, l: […5 items]}\ne: {}\nt: [a]\n")
+        r = run("--depth", "0", deep)
+        self.assertEqual(r.returncode, 1)
+        self.assertRegex(r.stderr, "^aos-json-view: error: ArgumentsBad ")
 
     def test_no_color_when_piped(self):
         r = run(self.f)

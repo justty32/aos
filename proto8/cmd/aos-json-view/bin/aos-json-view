@@ -5,6 +5,7 @@
 字串不加引號；字串裡的 `\\n` 真的換行；字串陣列（非空、每個元素都是字串，thinking/2026-11/13/text-as-string-array 那條認法）當一段文字，一個元素一行。
 長的一行照終端寬度折行（中日文算兩格），折出來的續行多縮兩格，看得出哪裡是元素邊界。`$ref` 的值前面加 `→ `，原字串照印、不展開。
 字串裡的控制字元（換行以外）印成 `\\xNN`，不讓檔案內容改到終端。
+給了指標＝開頭先印一行 `# FILE#/指標`（看的是哪一段）。`--depth N`：只展開到第 N 層，再深的物件／陣列摺成 `{…3 keys}`／`[…5 items]`，字串陣列是一段文字、不摺（11-13 晚使用者「都按照推薦」）。
 旗標：`--color`／`--no-color`（預設：stdout 是終端且沒設 NO_COLOR 才上色）、`--width N`（預設終端寬，不是終端＝COLUMNS 或 100）。
 指標：`FILE#/a/0/b`（RFC 6901，`~0`＝~、`~1`＝/），或第二個位置參數 `#/a/0/b`；FILE 本身就叫 `x#y` 而且存在＝照字面當檔名。
 錯：stderr 一行 `aos-json-view: error: 代號 原因`、退 1。代號 ArgumentsBad、FlagUnknown、FileBad（讀不到或不是 json）、PointerBad（指標指不到）。"""
@@ -21,7 +22,7 @@ import aos_flags
 
 PROG = "aos-json-view"
 USAGE = "aos-json-view [FLAGS] FILE[#/POINTER] [#/POINTER]"
-FLAGS = {"--width": "width"}
+FLAGS = {"--width": "width", "--depth": "depth"}
 SWITCHES = {"--color": "color", "--no-color": "no_color"}
 aos_flags.HELP = """aos-json-view - print a JSON file (or one part of it) in a compact, readable layout. Read only.
 
@@ -36,6 +37,10 @@ Control characters in strings are shown as \\xNN.
 
     --color / --no-color   colour on or off (default: on when stdout is a terminal and NO_COLOR is unset)
     --width N              wrap width (default: terminal width, else $COLUMNS, else 100)
+    --depth N              expand only N levels; deeper objects/arrays show as {…3 keys} / […5 items]
+                           (arrays of strings are text and are never folded)
+
+With a POINTER, the first line is `# FILE#POINTER` (which part you are looking at).
 
 POINTER is a JSON pointer (RFC 6901): FILE#/a/0/b, or a second argument #/a/0/b.
 Errors: one stderr line `aos-json-view: error: CODE reason`, exit 1.
@@ -46,6 +51,29 @@ INLINE_MAX = 72        # 擠成一行的物件／陣列最多幾格寬（再寬�
 TAG_MAX = 24           # 字串陣列裡每個元素都不超過這寬才擠成 [a, b]，否則當一段文字
 KEY_PAD_MAX = 24       # 鍵名對齊最多補到這寬
 HANG = 2               # 折行的續行多縮幾格
+
+
+class Folded:
+    """--depth 摺起來的物件／陣列：印成 {…N keys}／[…N items]。"""
+    def __init__(self, v):
+        n = len(v)
+        if isinstance(v, dict):
+            self.text = "{…%d key%s}" % (n, "" if n == 1 else "s")
+        else:
+            self.text = "[…%d item%s]" % (n, "" if n == 1 else "s")
+
+
+def fold(v, depth, level=0):
+    """第 depth 層（最外層＝0）起的非空物件／陣列換成 Folded（字串陣列除外）。"""
+    if isinstance(v, (dict, list)) and v:
+        if text_lines(v) is not None:                     # 字串陣列＝一段文字，跟字串一樣不摺
+            return v
+        if level >= depth:
+            return Folded(v)
+        if isinstance(v, dict):
+            return {k: fold(x, depth, level + 1) for k, x in v.items()}
+        return [fold(x, depth, level + 1) for x in v]
+    return v
 
 
 def die(code, msg):
@@ -126,6 +154,8 @@ class View:
 
     # ---- 一行的形（回 (純文字寬, 上過色的字) 或 None） ----
     def scalar(self, v, in_container=False, ref=False):
+        if isinstance(v, Folded):
+            return dw(v.text), self.p(v.text, "dim")
         if isinstance(v, bool) or v is None:
             t = json.dumps(v)
             return dw(t), self.p(t, "lit")
@@ -282,6 +312,11 @@ def main():
         ptr = rest[1][1:]
     elif len(rest) > 1:
         die("ArgumentsBad", "unexpected argument: %s (usage: %s)" % (rest[1], USAGE))
+    depth = opts.get("depth")
+    if depth is not None:
+        if not re.fullmatch(r"[1-9][0-9]*", depth):
+            die("ArgumentsBad", "--depth needs a positive number, got: %s" % depth)
+        depth = int(depth)
     width = opts.get("width")
     if width is not None:
         if not re.fullmatch(r"[1-9][0-9]*", width):
@@ -304,7 +339,12 @@ def main():
         die("FileBad", "%s is not JSON: %s" % (path, e))
     if ptr is not None:
         doc = resolve(doc, ptr, path)
-    sys.stdout.write(View(width, bool(color)).render(doc))
+    if depth is not None:
+        doc = fold(doc, depth)
+    view = View(width, bool(color))
+    if ptr is not None:
+        sys.stdout.write(view.p(clean("# %s#%s" % (path, ptr)), "head") + "\n")
+    sys.stdout.write(view.render(doc))
 
 
 if __name__ == "__main__":
