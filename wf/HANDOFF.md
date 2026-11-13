@@ -12,6 +12,39 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-13 公司 WSL 頂層（repo-aos）收工草稿
+
+（草稿：14:00 前後寫的。標 【待補1113】 的幾處要等 15:08 釘 commit、15:30 停樹、16:00 後接線與收工 push 之後才知道，收工時搜尋這個字樣逐處補上或刪掉。）
+
+1. **授權與工作方式**：公司 WSL，頂層就是 `~/aos-home` 樹裡的一隻 eca `repo-aos`（工作區 `~/repo/aos`、只有 `main`）。使用者開場：「事情盡量都交給agent做，普通工作交給opus，簡單工作或雜活交給sonnet。agent做事前都要讀過wf/規矩，簡單工作或雜活除外。agent可以再派子agent，模型隨意。我今天五點下班，下班前再統一push。」；「都可以用fable帶隊」「fable多多的用，因為明天額度重置」（**只限今天**，明天起回到 user.md 的「fable 盡量少用」）；「都可以清、都可以下載。」「反正有需要我判斷的東西就丟桌面」（要他裁的做成頁放 Windows 桌面）。**`eca_main` 派來的普通工作算使用者的授權；push、刪檔這類不可逆或對外的仍要他本人說**（「1.算。」「2.對。」，已寫進 [AGENTS 鐵律 2](../AGENTS.md)）。停樹、起樹只由使用者自己下。
+2. **push**：今天的 commit 都沒推——寫這條時 `git log origin/main..main` 是 88 個（另加這一輪文書）；下班前統一推一次，推之前跟他說一聲、他說推才推。【待補1113】 推了沒、推到哪個 hash。
+3. **今天定下的**（原話與細節都在 [thinking 11-13](../proto8/thinking/2026-11/13/README.md)、[日誌](session_logs/2026-11/2026-11-13.md)）：
+   - 公司 WSL 改住 `~/aos-home`、repo 用 `~/repo/aos`，舊遊樂場與舊 repo 全刪（[aos-home](../proto8/thinking/2026-11/13/aos-home.md)）；主 session 四題定案、家機也要改成樹裡的一隻（[main-session-in-aos](../proto8/thinking/2026-11/13/main-session-in-aos.md)）。
+   - 三輪裁定：精選 17 題、第二輪 43 題（38 題有裁）、對話裡的 kernel 七題與 ops、a2a 各題——落在哪見 [裁定落地-1113](../proto8/thinking/2026-11/13/裁定落地-1113.md)（它的兩張待施工表比 git log 舊）；條文線辛、線丑、線午、線寅都改完。大頁 128 題還剩 109 題。
+   - **kernel 框架開工**：框架分兩層（骨架只有 hook＋判斷；上限、排隊是蓋在上面的包）、找下一站三段 `next`→`AOS_KERNEL`→`AOS_DAEMON`、照規則分流用 hook、`keep_ordered` 與分流可並用（`route_ordered`）、留著等表態（hold）、agent 當門的工具包 `kernel_gate`（「預設不掛」）、問腦那包用 Python 重寫（假腦）（[開工紀錄](../proto8/thinking/2026-11/13/kernel-framework-開工.md)、[eca-as-kernel](../proto8/thinking/2026-11/13/eca-as-kernel.md)、頁 [架構圖](../proto8/thinking/2026-11/13/kernel-framework-架構圖.html)）。目前沒有等使用者裁的 kernel 題。
+   - eca 通知改走 a2a（使用者：aos 先不原生支援 a2a 協議、頂多做中轉；history 記不記寄件人「不用」）（[a2a-施工結果](../proto8/thinking/2026-11/13/a2a-施工結果.md)）；ops-agent 六點（「都按照建議」）做了五件（[ops-fixes-施工結果](../proto8/thinking/2026-11/13/ops-fixes-施工結果.md)）；`eca_main` 來信七項修了四項 bug＋`set-def`（[fixes-施工結果](../proto8/thinking/2026-11/13/fixes-施工結果.md)）；工具印的路徑照叫方 stack 算（[tool-stack-path](../proto8/thinking/2026-11/13/tool-stack-path.md)）；外部 MCP 接真 server（[external-mcp-real-server](../proto8/thinking/2026-11/13/external-mcp-real-server.md)）；repo 的 index 照 11-12 門檻（[index-build](../proto8/thinking/2026-11/13/index-build.md)）。
+   - 規矩：在跑著的樹旁邊做事的六條坑、任務書必貼的九條硬規則、派線坑 14～20（[aos-teams/06](workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md)、[gotchas/05](workflows/common/gotchas/05-在跑著的樹旁邊做事.md)、[lessons/03](workflows/dispatch/lessons/03-坑14-20.md)）；起因是 10:25 子 agent 用 `pkill` 誤停使用者的樹約 4 分 20 秒（[開工紀錄第十一節](../proto8/thinking/2026-11/13/kernel-framework-開工.md#十一事故子-agent-誤停使用者的樹11-13-1025)）。四條教訓 `eca_main` 已收進樹裡的共用知識庫 `~/aos-home/ws/public/`。
+4. **進行中與排定的**（領地在 [dispatch/CLAIMS](workflows/dispatch/CLAIMS.md)）：
+   - **15:30 停樹換檔（線己二）**：跟 `eca_main` 約 15:30 停、16:00 前起回來，使用者沒醒就順延、拖過 16:00 改下次開工前；步驟表在[開工紀錄 § 停樹時照做](../proto8/thinking/2026-11/13/kernel-framework-開工.md#停樹時照做11-13-1530腳本在-repo-外-codekf2-1113stop-tree)，腳本與備份落點在 `~/code/kf2-1113/stop-tree/`。【待補1113】 停樹結果：`ST_REF` 釘的 hash、全套結果、重抄了哪幾夾、有沒有換新 `aos-daemon`、verify 幾列、實際停了多久、有沒有退回。
+   - **線戌（批 1b，agent 的 `hooks.py` 改用共用引擎）**：成品與結果稿在 `~/code/xu-1113/`，排在 16:00 後接線進 main。【待補1113】 接了沒、commit、開工紀錄第十五節進了沒。
+   - **線卯階段二**：程式區 8 份 `_index.json` 等停樹重抄後才放。【待補1113】 放了沒、commit。
+   - kernel 沒做的批：5 接線＋6（補丁 `~/code/kf2-1113/a4/`）、10（補丁 `~/code/kf2-1113/a2/`，C++ 沒 build 過）、7b、11b、12、13、14（回家用真腦）。
+   - 已裁還沒施工：`set-def` 改「停→拔→掛回」、換定義後照睡醒提醒在等的信、家機主 session 改成樹裡一隻（其餘見 [SESSION-LOG](SESSION-LOG.md)）。
+5. **活樹現況**（13:48 `aos-agent ctl ls`）：九列都 running——`_sweeper`、`eca_main`、`ops-agent`、`me-agent`、`repo-aos`、`gpt-price`、`elsa-watch`、`gpt-soap`、`wf-agent`（13:14 使用者新加的）；根 daemon 與領班兩台。各 agent 用的定義 `ws/defs/agent` 是今早抄的七包、沒有 `jsonx`，重抄範本也不會自己變。【待補1113】 起樹後的列數與狀態。
+6. **今天的改動在樹裡生效了沒**（停樹重抄前的狀態；【待補1113】 重抄後把「等重抄」那一列改掉）：
+
+   | 狀態 | 哪些 |
+   |---|---|
+   | 已生效（`cmd/`、`py/`、被指令直接 import 的 `lib/agent/*.py` 存檔即生效） | `eca_main` 來信第 7、6、3 項與 `aos-agent ctl set-def`、外部 MCP 的預檢與 `sync` 報改名；a2a 送信（只對接線後才開的畫面）；`aos-mailbox --keep-to`、`cli.json` 的 `settings` 鍵、`flags` 寫 `--settings` 報 `CfgBad`、各 agent 的 `env.json`；`aos-tools call` 多給 `AOS_STACK_IN_CALLER`；通知種類 `kernel_hold` |
+   | 等重抄 `lib`／`templates`／`knowledge`／`py`／`kernel` 複本 | 定義檢查找 `aos-tools`（第 1 項）、工具印的路徑新寫法（`tool_io` 與各工具夾）、`mailbox_read`／`mailbox_send` 的 `keep` 收檔名、今天所有知識庫與範本的字句（含範本掛 `jsonx`、`stack.gitignore` 的 `env.json`）、kernel 框架整包（`lib/aos/kernel`、`kernel_llm`、`kernel_gate`、新夾 `kernel/`） |
+   | 等停樹換執行檔 | 新 `aos-daemon`（認查詢信 `procs_state_path`；編好放在 `~/code/kbuild-1113/`） |
+   | 要使用者把開著的畫面關掉重開 | 時鐘（`AOS_CLOCK` 等環境變數）、a2a 新送法；重抄後工具的新說明（開著畫面的 `aos-mcp` 是長駐的） |
+   | 還沒進 main | kernel 批 5 接線、批 6（上線要先清各 agent 的 `tools/subagent/subagents.json` 舊帳）、批 10、批 1b；index 程式區 8 份 |
+
+7. **repo 外的暫存夾**（`~/code/` 底下 11 個，都沒刪，要不要刪列在 [wait-user/04](wait-user/04-雜事.md)）：`kf2-1113`（停樹腳本、備份、三份補丁——補丁進 main 前不能刪）、`kbuild-1113`、`xu-1113`（線戌成品）、`you-1113`、`shen-try-1113`、`a2a-build-1113`、`a2a-try-1113`、`mcp-try-1113`、`ops-try-1113`、`si-try-1113`、`six-try-1113`。
+8. **測試**：全套今天跑過三次都只紅既有 4 支（早上 66 夾 1354 例、線乙 1357 例、線庚 1412 例）；11:41 線己二試跑一次是 4 夾紅（`cmd/aos-agent/tests`、`extras/gitignore-check/tests`、`lib/aos/box_check/tests`、`templates/tests`，原因沒寫）；kernel tests 整夾 18 次裡第一次紅 1 例、原因沒查到。【待補1113】 15:08 釘住那個 commit 的全套結果。
+9. **下一個 session 先看**：`wf/inbox` 是空的；[SESSION-LOG](SESSION-LOG.md) 第一條（停樹）與 kernel 那條；[WAIT_USER 01](wait-user/01-要你裁的.md)（push 與收工那一輪桌面頁的幾題）。
+
 ## 2026-11-12 23:00 家機頂層關機前
 
 （今晚最終現況；全貌看下一條「晚 家機頂層收工」，該條的 push 與試驗場句以本條為準。）
@@ -73,29 +106,3 @@
 7. **另一台機器（公司）要注意**：pull 之後①重 build 全部 impls（aos-directive 介面變了；aos-json 沒重 build 的話 `json_ls`／`json_search`／`json_add` 會報 `CommandUnknown`）②重跑 `proto8/install.sh`（新指令 `aos-mcp-import`）③試驗場 `lib／py／cmd／templates/agent-fsm` 整份重抄④`~/.cache/aos-mcp-*/tools.json` 的壞格照 [wait-user/04](wait-user/04-雜事.md) 那行指令清。impls 又重 build 過（`$at`），pull 後要重 build 全部 impls。
 8. **踩過的坑**：多條線共用一個工作樹時，`git add` 指名路徑後要馬上 commit，不然別人 staged 的會被一起帶走——今晚發生兩次（json 線帶走 tidy 的刪檔、提取 W2 帶走 W5），另有一次誤 amend、已還原；同時開的 agent 數有上限（約 20）；wf-lint 的數字要先看掃描範圍再比；全套測試要注意起跑目錄——repo 裡若留著空的 `.stack` 夾會被 `ctl who` 猜到（今晚紅一支就是這個）；多條線共用工作樹時不要 `git stash`（會把別人沒提交的改動一起收走）。
 9. **測試與 HEAD**：全套最後一次全綠是 61 夾 1244 例（對應 `9da8be804` 的樹；跟先前記的 65 夾 1325 例算法／範圍不同、原因沒查），`lib/aos/measure` 連跑五次全過、先前偶發的紅未重現；之後 aos-sandbox 那輪另跑相關夾 716 例全過、新增 `cmd/aos-sandbox/tests` 8 例；codemap 0 stale；wf-lint 掃 `wf` 為 0。HEAD 與 push：以 origin/main 是否含本條為準（頂層收工時問過使用者後推）。
-
-## 2026-11-12 收工 公司頂層
-
-1. **授權與工作方式**：公司機（Windows＋WSL Ubuntu）。頂層只交流與調度，事情盡量交給 agent（普通 opus、雜活 sonnet、規劃 fable；非雜活先通讀 wf/）。**push：下班前統一推一次**，推之前仍要使用者開口。公司真腦只用 eca（claude haiku、codex `gpt-6-luna`），公司不建 proxy。`/tmp` 殘留與空殼夾准刪（頂層收工處理）。eca「以 CLI 為主、aos 盡量跟上」；「一處壞掉不該擋住其他好的」（工具登記、`_metainfo` 都照這條做）。
-2. **main 位置**：WSL `~/repo/aos-tools` 從 origin 的 `8979e1a66` 前進到 `d547d4cf1`（71 個 commit）＋本條收工文書。**push：收工時頂層問過使用者後推；以 origin/main 是否含本條為準**。推了之後家機 `git pull` 就是今天全部；Windows `C:\code\mine\simple_tools\aos` 頂層還原手寫的 HANDOFF 後再 pull。合併做法：各線在自己的 `/tmp/line-*` clone 做、rebase 到 `~/repo/aos-tools` main 再 ff。
-3. **今天進 main 的**（原話與裁定都在 [thinking 11-12](../proto8/thinking/2026-11/12/README.md)、[日誌](session_logs/2026-11/2026-11-12.md)）：
-   - **工具面**：eca 拿掉 aos 基礎檔案工具，claude 開內建 Read／Write／Edit／Glob／Grep／Bash（dontAsk＋白名單）、codex `workspace-write`（[eca-file-tools](../proto8/thinking/2026-11/12/eca-file-tools.md)）；json 工具全套 `json_*`／`jsonx_*`／`json_multi_*`，`#/` 回標準寫法（[json-tools](../proto8/thinking/2026-11/12/json-tools/README.md)）；knowledge 工具拆除、出廠內容留作普通 json＋index，講已拆機制的內容與條文刪掉（P-46 刪）（[knowledge-removal](../proto8/thinking/2026-11/12/knowledge-removal.md)）；`_index`／`_index.json` 與 `index_view`（[index](../proto8/thinking/2026-11/12/index.md)、[index-tools](../proto8/thinking/2026-11/12/index-tools/README.md)）；`_metainfo`：只活在概念與規範、裡外都認外面贏、壞掉不報錯、`{}` 也算定義（[metainfo](../proto8/thinking/2026-11/12/metainfo/README.md)）。
-   - **清帳與小修**：Q01～Q16 一次裁完、agent_def 細改＋lineage、defs 與條文對齊（[small-rulings](../proto8/thinking/2026-11/12/small-rulings.md)、[agent-def-fine-lineage](../proto8/thinking/2026-11/12/agent-def-fine-lineage.md)、[defs-check-align](../proto8/thinking/2026-11/12/defs-check-align.md)）；線 K 收尾與錯誤行不帶絕對路徑（[line-k-leftovers](../proto8/thinking/2026-11/12/line-k-leftovers.md)）；一條工具登記壞掉不拖垮全部＋P-41 改寫（[tool-path-broken](../proto8/thinking/2026-11/12/tool-path-broken.md)）；`aos-agent chat` 打中文不再被丟（[chat-utf8](../proto8/thinking/2026-11/12/chat-utf8.md)）。
-   - **kernel**：壞信回 `BodyBad`、fork／subagent 走 `AOS_KERNEL`（[kernel-small-fixes](../proto8/thinking/2026-11/12/kernel-small-fixes.md)）；C-47、N-42、N-63 改寫，猜 `./.stack` 留（[kernel-norms](../proto8/thinking/2026-11/12/kernel-norms.md)）；**通用 kernel 框架圖紙**（fable→Argon 審→fable 改；使用者裁「問腦總機要收進框架」；沒施工）（[kernel-framework](../proto8/thinking/2026-11/12/kernel-framework/README.md)）。
-   - **eca**：slash 指令 `/clear`／`/compact`／`/status`／`/usage`／`/exit`／`/goal`——畫面同步、say／listen／chat 支援、codex 有畫面、codex `/compact` 撈對話、codex `/goal` 的 Replace 自動選 yes；題 G1、G2 使用者收工前裁「codex目標這塊不用管，就是這樣」＝不做（[eca-slash](../proto8/thinking/2026-11/12/eca-slash.md)）。
-   - **外部 MCP**：圖紙、三題照推薦、http＋bearer 試接、施工五步（codex／claude 兩身的 http 與 stdio、新指令 `aos-mcp-launch`、假 server 收進 `proto8/extras/fake-mcp-http`）（[external-mcp 06](../proto8/thinking/2026-11/12/external-mcp/06-施工結果.md)）。
-   - **ops-notes 與 Codex agent 進 aos**：盤點完，使用者改成不整套移植、在 WSL 開一塊空間從一個 daemon＋一隻懂 aos 的 eca 慢慢建（原話與照抄步驟在 [ops-notes-to-aos](../proto8/thinking/2026-11/12/ops-notes-to-aos.md)）。
-   - **只實測／只記錄**：auto save（`/tmp` 不是記憶體也不快、放 `~/`；使用者裁不做 auto save，停樹後整份複製、頂層建議 `cp -a`）（[autosave § 使用者裁定](../proto8/thinking/2026-11/12/autosave.md#使用者裁定11-12-下午)）；wf/ 往 aos 體系走（只記原話，他要先玩）（[wf-to-aos](../proto8/thinking/2026-11/12/wf-to-aos.md)）。
-4. **試驗場**（公司 `~/code/playground`）：12:45 照 main `a85603894` 乾淨重刷＋`eca_opus`、花費無上限（[playground](../proto8/thinking/2026-11/12/playground.md)）。**之後 main 的變更還沒刷進去**：eca slash、codex 畫面、外部 MCP、tool-path-broken 以外的（指令類是 symlink、即時生效）。
-5. **下一步**（依優先）：
-   1. 外部 MCP 續行（照 06 與 07；07 題一已裁 a 只收 Bearer、F1～F12 使用者「先這樣」）：fsm 經 aos 匯入成包（`aos-mcp-import`、aos-mcp 當 client）；沒驗的 codex 沙盒對 stdio、`disabled_tools`、真的別人寫的 stdio server（要下載、先問）→ [06](../proto8/thinking/2026-11/12/external-mcp/06-施工結果.md)。使用者「做不完就push上去，我回家繼續做」。
-   2. 在 WSL 開一塊空間、從一個 daemon＋一隻懂 aos 的 eca（opus）開始慢慢建，使用者自己照步驟做 → [ops-notes-to-aos § 從零搭一棵小樹](../proto8/thinking/2026-11/12/ops-notes-to-aos.md#從零搭一棵小樹一個-daemon一隻懂-aos-的-opus-eca使用者自己做)；搬兩隻 Codex agent（照 06 的照抄步驟、真 token）變成之後的事，盤點與準備步驟也在同一份。
-   3. 試驗場重刷（兩台；家機要整個重抄）。
-   4. kernel 框架：使用者「kernel先這樣就好，開工等假日。我自己也要思考一下」（[kernel-framework § 已裁](../proto8/thinking/2026-11/12/kernel-framework/README.md#已裁問腦總機收進框架)）；待他看兩處——問腦怎麼收（K-F47 推薦 Python 重寫、刪 C++）、N-63 衝突（K-F50）→ [kernel-framework](../proto8/thinking/2026-11/12/kernel-framework/README.md)。
-   5. 外部 MCP 留題：`--envs` 明文落地（05 的 P1，只做了文件警告）、外部 server 壞了 aos 看不到（P3）；代定 E1～E7 待使用者看；外部 MCP 沒經 Argon 審。
-   6. json 工具續行點（aos-json 的 add／ls／search、json_len、複雜組 multi）→ [json-tools 03](../proto8/thinking/2026-11/12/json-tools/03-multi與複雜組補齊.md)；index 未定三題（路徑相對誰、過時、專屬工具）→ [index](../proto8/thinking/2026-11/12/index.md)。
-   7. wf→aos：等使用者玩完再說。
-6. **等使用者的**（都在 [WAIT_USER](WAIT_USER.md)）：要不要 push；真 token 起第一隻 Codex agent；kernel 框架兩處；外部 MCP 代定 E1～E7；試驗場親手玩；fsm 真腦回家測。
-7. **家機要注意**：重跑 `proto8/install.sh`（新指令 `aos-mcp-launch`）；C++ 有改要重 build（aos-daemon、aos-json）；試驗場整個重抄；家機兩項殘留准刪、家機 session 動手；`~/.cache/aos-mcp-aos/tools.json` 刪 knowledge／memory 兩格（WAIT_USER 有照抄一行）。
-8. **踩過的坑**：scratchpad 多 session 共用、暫存腳本檔名要加前綴（今天撞過一次）；從 Windows 改 WSL 檔會掉執行位元；`wsl … bash -lc '…'` 裡的 `$變數` 會被外層吃掉，複雜指令寫成腳本檔再 `tr -d '\r' < 檔 | bash`。
-9. **已知紅**：aos-agent `test_daemon_down` 2 支、box_check 2 支（15:07 在 `3befa7edf` 全套 72 夾 1019 支只紅這 4 支）。最終全套：16:05～16:27 在 `~/repo/aos-tools` 重跑全套（起跑時 HEAD d547d4cf1；期間只合入文件類 commit 至 416fc47d4）：72 夾、1040 支，只紅既有 4 支（aos-agent `test_daemon_down` 的 test_add、test_stop；box_check 2 支），無逾時、無偶發。輸出在公司 WSL `/tmp/fulltest_1112b/`（收工會清）。
