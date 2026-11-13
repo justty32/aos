@@ -14,7 +14,7 @@
 | `queue_fifo.py` | 先來先掛的排隊窗、寄件人期限與時間換算 |
 | `runner.py` | 「自己跑」零件：把一件工作掛成 daemon 的 proc、看表收成品、逾時、重掛一次、拔列；去處由呼叫的包給 |
 
-包提供 `collect(ctx, before_reply=None)`、`check(ctx)`、`order(ctx, letters)`、`admit(ctx, name, letter)`、`dispatch(ctx, name, letter, detail)`，以及 `load(cfg, cfg_dir)`、`refuse(ctx, name, letter, code, msg)`、`finish(ctx, queued)`。設定不對丟 `round.CfgBad`。骨架給的 `ctx` 有 `cfg`、`stack`、`requests`、`name`、`die`、`warn`、`previous`（上一輪的排隊列）與 `queued`（這輪已確定留隊的列）；包需要的輪內狀態自己加。
+包提供 `collect(ctx, before_reply=None)`、`check(ctx)`、`order(ctx, letters)`、`admit(ctx, name, letter)`、`dispatch(ctx, name, letter, detail)`，以及 `load(cfg, cfg_dir)`、`refuse(ctx, name, letter, code, msg)`、`finish(ctx, queued)`。設定不對丟 `round.CfgBad`。包另外提供 `read(path)` 時，骨架改叫它讀設定、不走下面「整份先過 aos-directive」的讀法，hooks 也由包自己交給 `hooks.load` 驗（問腦那一包用：每組端點的指示詞用到才解）。骨架給的 `ctx` 有 `cfg`、`stack`、`requests`、`name`、`die`、`warn`、`previous`（上一輪的排隊列）與 `queued`（這輪已確定留隊的列）；包需要的輪內狀態自己加。
 
 `admit` 回 `(verdict, detail)`：`pass` 的 detail 是新名字清單、`refuse` 是 `(code, msg)`、`queue` 是窗的一列。hook 從拒或排改成 pass 時，交給 `dispatch` 的 detail 是 None；包從 body 數實際轉出的名字，不回頭驗規則。`dispatch` 成功回 `None`，失敗回 `(code, msg)` 交骨架拒信。包的 `collect(ctx, before_reply=None)` 可傳代回前的回呼；每封對得上表的回信會以 `(原信記錄, 回信信封)` 呼叫，回傳要代回的 body。骨架在這個回呼派發 `before_reply`，三個時機都交給共用的 `lib/hook_run.py` 執行。
 

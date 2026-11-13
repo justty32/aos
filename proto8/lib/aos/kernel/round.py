@@ -16,6 +16,9 @@ class CfgBad(ValueError):
 
 def load(pack, path):
     path = os.path.abspath(path)
+    if hasattr(pack, "read"):
+        # 包自己讀設定（問腦那包：每組指示詞用到才解，不能整份先過 aos-directive）；hooks 也由它驗。
+        return pack.read(path)
     try:
         with open(path, encoding="utf-8") as stream:
             text = stream.read()

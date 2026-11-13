@@ -40,7 +40,7 @@ USAGE = "usage: kernel_llm [--enable-counters] kernel.json"
 
 
 def load(enable_counters):
-    def read(pack, path):
+    def read(path):
         """問腦的設定每組指示詞用到才解，所以不走骨架「整份先過 aos-directive」的讀法；hooks 照骨架驗。"""
         stack = os.environ.get("AOS_STACK")
         if not stack:
@@ -68,8 +68,8 @@ def main():
     if len(rest) != 1 or not rest[0]:
         why = "missing config file" if not rest else "only one config file allowed, got extra %s" % rest[1]
         tool_io.die("ArgumentsBad", "%s (%s)" % (why, USAGE))
-    # 骨架目前只有一種讀設定的方法（round.load）；等它開口讓包自己讀之前，先在這個行程裡換掉。
-    round.load = load(bool(flags))
+    # 骨架看到包有 read 就讓包自己讀設定；--enable-counters 是命令列的事，所以在這裡才接上。
+    llm_rules.read = load(bool(flags))
     return round.run(llm_rules, rest[0], name="kernel_llm")
 
 

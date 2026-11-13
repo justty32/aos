@@ -259,3 +259,52 @@
    - 三段都用不上＝`DaemonMissing`。
 5. **下一站來自 `AOS_KERNEL` 時去哪數 `max_running`**：這時下一站是別的站、不是 daemon，設定寫了 `max_running` 卻沒寫 `count_daemon`＝`CfgBad`（條文「下一站不是 daemon 時設了 `max_running`＝報設定錯」與程式現有的「寫了 `next` 就要寫 `count_daemon`」在這裡結論相同，所以不碰未裁的 kf-t2）。
 6. **整棵樹 export `AOS_KERNEL` 時的後果（kf-next:B 帶來的，寫進說明）**：沒寫 `next` 的站會把信轉給 `AOS_KERNEL` 指的那一站；兩站互指成環照舊不偵測。不想要就在起那一站的殼 `unset AOS_KERNEL` 或明寫 `next`（同使用者對 K-F50 的備註「可以用unset吧」）。
+7. **問腦那一包的代定**（批 8、9；細節在 [`lib/aos/kernel_llm/README`](../../../lib/aos/kernel_llm/README.md)）：五個口另放 `llm_rules.py`（圖紙列的五個檔各管一塊資料，口放哪個都不對）；骨架加一個小口——包有 `read(path)` 就由包自己讀設定（問腦的設定每組指示詞用到才解，骨架原本整份先過 aos-directive 會讓一組解不開就整台 `CfgBad`）；`before_reply` 失敗重來不重複記帳，靠 `proc.json` 多一個暫時鍵 `counted`；`before_reply` 只對掛出去跑過、有結果的信跑，總機自己拒掉的不跑；hook 把驗不過的信改判放行＝沒有包可跑、照原本的錯回信；信封讀不懂的信不交給 hook；`LaunchFailed`、`DirectiveBad` 的訊息為了跟 C++ 逐字相同，從 aos-post、aos-directive 的錯誤行解代號。`runner.py` 不自己決定掛信去處、由包給信箱（K-F50 翻成 B 之後的做法）。
+8. **批 4 的代定**：回信路徑照字面轉絕對、不解捷徑；壞信（不是 `true`）整封不套、回信不帶那個 key；沒問的信回信不多帶 key；多一例「沒開窗回 `null`」。
+9. **批 5、6 的代定**（碼在補丁裡、還沒接線，接線時一起生效）：走 kernel 那條路的條件＝設了 `AOS_KERNEL` 且沒明給 `--daemon`；只看回信的是 add、rm（不帶 `--purge`）、stop、start、sleep、wake，`rm --purge`、`set-def`、`pause`／`resume` 仍要查表（經查詢信拿）；`--timeout-s` 只加在 `ctl ls`／`who`／`where`／`state`；subagent 看到舊帳的相對路徑報 `ReadFailed` 並指路、不默默忘掉；`on_clock` 找不到鐘時 30 秒內不重問。
+10. **批 5 今天不接線**：接線後凡是設了 `AOS_KERNEL` 的都要 daemon 會答查詢信；跑著的樹沒設 `AOS_KERNEL`、今天接沒有好處，而 `cmd/`、`py/` 存檔即生效。等新 daemon 上線、挑一個樹不忙的時段再接。
+
+### 下午的實作結果
+
+#### 批 1：kf-next＋kf-t1（`4fcb631fd`）
+
+`lib/aos/kernel/procs_rules.py` 找下一站改三段（做法見代定 4～6）；N-42 (2)「下一站」「有序信」兩句照裁定改寫，其餘沒動；說明與知識庫跟上；`kernel-chain-check` 改成兩站都不寫 `next`、都拿到指向領班信箱的 `AOS_KERNEL`。測試：`lib/aos/kernel/tests` 32 例 OK（新 5 例）、鏈劇本 5/5、`gitignore-check` 整棵過。
+留意：範本 `kernel/daemon-kernel`、`kernel/procs-kernel` 都寫了 `max_running`、沒寫 `next` 與 `count_daemon`——繼承到指向**別站**的 `AOS_KERNEL` 時每輪 `CfgBad`（指向自己沒事）。
+
+#### 批 4：aos-daemon 認 `procs_state_path`（`42870fa27`）
+
+只改原始碼；repo 裡沒 build。驗法：CMake 把執行檔寫回原始碼夾的 `bin/`，所以把 `impls` 整份抄到 repo 外 `~/code/kbuild-1113/impls` 編（configure 1 分、只建 daemon 3 分 15 秒、全量約 5 分鐘；build 前後 repo 那支的 mtime、inode 沒變）。新 4 例在舊執行檔全紅、新執行檔 OK；既有 8 支與鏈劇本用新執行檔都過。`tests/support.py` 把 repo 的 bin 放 PATH 最前面，新測試另認 `AOS_TEST_DAEMON_BIN_DIR`。
+
+#### 批 8、9：問腦那一包（`df1c25ff2`）
+
+`lib/aos/kernel/runner.py`＋`lib/aos/kernel_llm/`。五支黑箱測試改指新程式全過、新 hook 5 例、runner 7 例；跟 C++ 逐欄比 46 輪＋真 daemon 12 封全同；200 封排隊一輪 51～64 ms（C++ 3～5 ms），不用記已知限制。C++ 那支與範本接線沒動。
+跟 C++ 的已知差異（README 也列）：stderr 前綴；收到 TERM 當場結束（C++ 做完這輪）；鎖與建信箱在骨架；`kernel.json` 多認 `hooks`；`endpoints` 整張寫成指示詞時只有「單一 `$ref` 指到一份 JSON 檔」做得到每組用到才解；`deadline` 驗得較嚴；每輪多起幾個子行程。
+骨架還不順、沒改的三處（等有需要再動）：`before_verdict` 在排序之後才跑（hook 改了 `priority` 的新信第一輪照舊值排）；`hooks.before_reply` 攔下時回的是掛 proc 那包的形狀（問腦包自己拿掉 `applied`）；hook `on_error: stop` 中途退 1 時 `pack.finish` 不會被叫（這輪的後端黏著記錄不落檔）。
+`kernel/docs/03-feat-proto.md` 件 2、3 寫的「兩列 running、8 秒後 4 封」跟範本（`slots` 2、`reserved.high` 1）對不上，實際 1 列、2 封；兩支行為相同，是文件的問題，批 12 一起修。
+
+#### 批 5 前半（`bb4204242`）與批 5 接線、批 6（補丁，沒進 main）
+
+進 main 的只有新模組 `py/daemon_ctl/state_path.py` 與兩支測試（沒人 import，行為不變）。接線與批 6 在 repo 外：`~/code/kf2-1113/a4/batch5-wiring.patch`（12 檔）、`batch6.patch`（22 檔），在 repo 複本驗過：沒設 `AOS_KERNEL` 的 39 步改前改後 rc／stdout／stderr 一致（只有 `--help` 與 usage 字串多了 `--timeout-s` 與 `AOS_KERNEL` 的說明）；只設 `AOS_KERNEL` 經假 kernel 能掛子、分身；接線＋批 6＋新 daemon 時鏈劇本 5/5，接線＋舊 daemon 時第 1 段 `KernelFailed`（所以接線要排在新 daemon 之後）。`on_clock` 沒做真 daemon 端到端。
+批 6 上線要重建什麼：各 agent 的 `<stack>/tools/subagent/subagents.json`（帳；`<stack>/subagents.json` 是配額設定、不要刪）舊帳不認——先 `aos-agent ctl rm` 掉列在裡面的子 agent 或接受它們不再歸工具管，再刪帳、重抄 lib；沒清不會壞資料，工具報 `ReadFailed … relative stack path`。
+
+#### 批 10 備料（補丁，沒進 main）
+
+`~/code/kf2-1113/a2/batch10.patch`（50 檔：兩個範本換身體、標頭與 `letter.cpp` 搬進 `impls/aos-llm`、刪 `impls/aos-llm-kernel`、CMake、測試與 extras 換身體）。Python 部分在 repo 複本驗過（`judge-llm`、`image-move-check`、`reviewer`、`measure`、`review_round`、agent-fsm 幾支都過）；**C++ 部分沒 build 過**，所以今天不做。照做的步驟：套補丁 → `rm -rf proto8/impls/aos-llm-kernel proto8/impls/build` → 重 build → `install.sh`＋手動 `rm ~/.local/bin/aos-llm-kernel`（install 不會自己清斷掉的捷徑）→ 跑 `lib/aos/kernel_llm/tests`、`impls/aos-llm/tests`、`templates/tests`、兩支 extras；退＝`git apply -R` 後重 build、重 install。`~/aos-home` 沒有問腦總機，不用重建樹裡的東西。
+
+### 停樹時照做（11-13 15:30；腳本在 repo 外 `~/code/kf2-1113/stop-tree/`）
+
+停樹、起樹由使用者下指令；樹停後由線己二隊長跑腳本。腳本不含任何 kill／shutdown，每段先確認「cwd 在 `~/aos-home` 底下的 aos-daemon／loop／fsm／exec 一個都不在」才動。
+
+| 步 | 指令 | 必做／可延後 | 實測 |
+|---|---|---|---|
+| 停之前 | 15:08 釘一個 commit 當 `ST_REF`、在乾淨檢出上跑全套（`~/code/kf2-1113/fullsuite.sh <ref>`，約 13 分鐘）；核對 `~/code/kbuild-1113/impls` 的原始碼＝該 commit | 必做 | — |
+| 1 | `ST_REF=<hash> swap.sh precheck backup copy`：備份樹的 `lib`、`templates`、`knowledge`、`py` 與十支 C++ 執行檔到 `stop-tree/backup-<時間>/`，再從 `git archive <hash>` 把四夾換進樹（先抄到旁邊再改名） | 必做 | 各不到 1 秒 |
+| 2 | `ST_REF=<hash> swap.sh daemon`：把預先編好的 `aos-daemon` 原子換到 `~/repo/aos/proto8/impls/aos-daemon/bin/aos-daemon`（`~/.local/bin/aos-daemon` 實際指到的檔）；原始碼不等於該 commit 就不換 | 可延後 | 不到 1 秒 |
+| 起樹後 | `ST_EXPECT_STATE_PATH=1 verify.sh`：兩台 daemon 在、八列 running 不重複、ping、查詢信有答、elsa-watch 三件（一個實例、有 `scan_complete`、`last_success` 有更新） | 必做 | 1.4 秒 |
+| 退回 | 樹停著時 `rollback.sh all`（或 `tree`／`bin`）：還原備份 | — | 0.4 秒 |
+
+- 批 6 上線、批 10 刪 C++ 問腦：今天不做（腳本裡是佔位段，叫了直接報錯）。
+- `install.sh` 不用重跑（`--dry-run`：would link 0, already 25）。
+- 換檔之後 repo 的 `impls/build` 比執行檔舊；之後在 repo 重 build 會從已 commit 的原始碼編出等價的檔。
+- 重抄等於把當天所有線已 commit 的 `lib`／`templates`／`knowledge`／`py` 改動一次帶進樹；樹裡這四夾 08:32 之後沒人改過（跟 `2e8eb6736` 逐檔相同），不會蓋掉使用者的東西。`agents/*`、`ws/defs/*` 不動。
+- 預演：在暫存樹（根 daemon＋ws daemon＋鐘＋兩列假 proc）完整跑兩輪都過，含「樹在跑時被擋」的紅燈與 rollback 後逐位元相同。
