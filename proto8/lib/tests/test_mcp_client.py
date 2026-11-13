@@ -630,5 +630,21 @@ class HttpTlsTests(unittest.TestCase):
                 session.close()
 
 
+@unittest.skipUnless(shutil.which("aos-directive"), "aos-directive not on PATH")
+class StdioLaunchAt(unittest.TestCase):
+    """11-13 線址二：command／args 的指示詞照它在 server 檔裡的位置解，#./、#../ 從所在物件算。"""
+    def test_dot_and_dotdot(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = os.path.realpath(d)
+            path = os.path.join(d, "server.json")
+            with open(path, "w") as f:
+                json.dump({"defs": {"cmd": "srv-bin"}, "mcp_server": {
+                    "name": "srv", "transport": "stdio", "command": {"$ref": "#../defs/cmd"},
+                    "args": [{"$ref": "#./1"}, "--flag", {"$ref": "#../name"}]}}, f)
+            argv, _, cwd = mcp_server_file.stdio_launch(path)
+        self.assertEqual(argv, ["srv-bin", "--flag", "--flag", "srv"])
+        self.assertEqual(cwd, d)
+
+
 if __name__ == "__main__":
     unittest.main()

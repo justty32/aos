@@ -13,7 +13,7 @@ agent 的 hooks.py 與通用 kernel 框架都用這份。放 lib 最底層：純
     validate_name(name) -> None；不對丟 HooksBad（原因不含名字與檔路徑，呼叫方自己加）
     complete(entry, path) -> 格＝原格的鍵＋DEFAULTS 補齊＋"from"（來自哪份檔）＋"base"（解 handler 相對路徑的資料夾）
     matches(entry, events, data) -> 這格的 condition 合不合這次的 data
-    target(entry) -> handler 解成 aos-exec 的目標路徑；解不開丟 OSError
+    target(entry, name=None) -> handler 解成 aos-exec 的目標路徑；解不開丟 OSError
     run(name, entry, event, data, stack) -> (結束碼, stdout 字串)；async true＝(None, "")；自己失敗丟 OSError／TimeoutError
     fire(event, data, entries, stack, events, warn=None, only=None, check=None) -> {"data": 改過的 data（新 dict）,
                     "changed": [改過的鍵], "blocked": bool, "hook": 攔下的 hook 名或 None, "text": 攔下那個 hook 的 stdout 或 ""}
@@ -106,14 +106,21 @@ def _stop_group(p):
         pass
 
 
-def target(entry):
-    """handler → aos-exec 的目標（絕對路徑）；解不開＝丟 OSError 帶原因（當成起不來）。指示詞物件經 aos-directive --file 解。"""
+def target(entry, name=None):
+    """handler → aos-exec 的目標（絕對路徑）；解不開＝丟 OSError 帶原因（當成起不來）。指示詞物件經 aos-directive --file 解。
+    name＝hook 名：給了＝handler 在清單裡的位置是 /hooks/<name>/handler（agent 與 kernel 的清單都把表放在檔根的 hooks），
+    交給 aos-directive --at，#./、#../ 從那一格算（11-13 線址二）；沒給＝照舊包成 {"v": …}（不知道位置）。"""
     t = entry["handler"]
     if isinstance(t, dict):
+        if name is None:
+            argv, doc, unwrap = ["aos-directive", "--file", entry["from"]], {"v": t}, True
+        else:
+            at = "".join("/" + k.replace("~", "~0").replace("/", "~1") for k in ("hooks", name, "handler"))
+            argv, doc, unwrap = ["aos-directive", "--file", entry["from"], "--at", at], t, False
         try:
-            r = subprocess.run(["aos-directive", "--file", entry["from"]], input=json.dumps({"v": t}), stdout=subprocess.PIPE,
+            r = subprocess.run(argv, input=json.dumps(doc), stdout=subprocess.PIPE,
                                stderr=subprocess.DEVNULL, text=True, cwd=entry["base"])   # #/… ＝ 這格所在的那份清單
-            t = json.loads(r.stdout).get("v") if r.returncode == 0 else None
+            t = (json.loads(r.stdout).get("v") if unwrap else json.loads(r.stdout)) if r.returncode == 0 else None
         except (OSError, ValueError, AttributeError) as e:
             raise OSError("cannot resolve handler directive: %s" % e) from e
         if not isinstance(t, str) or not t:
@@ -131,7 +138,7 @@ def run(name, entry, event, data, stack):
     with open(tmp, "w", encoding="utf-8") as f:
         f.write(json.dumps(doc, ensure_ascii=False) + "\n")
     os.replace(tmp, path)
-    argv = ["aos-exec", "--stack", cell + "/", target(entry)]
+    argv = ["aos-exec", "--stack", cell + "/", target(entry, name)]
     wait = not entry["async"]
     with open(path, "rb") as stdin:
         p = subprocess.Popen(argv, stdin=stdin, stdout=subprocess.PIPE if wait else subprocess.DEVNULL,

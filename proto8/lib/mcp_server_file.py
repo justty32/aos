@@ -27,8 +27,8 @@ KEYS = {"http": COMMON | {"url", "bearer_token_env", "ca_file"},
 def _path(value, server_file, key):
     """env_file／ca_file：指示詞先解；相對路徑從 server 檔的資料夾算；回絕對路徑。"""
     if isinstance(value, dict):
-        from directive_value import resolve_path
-        value = resolve_path(value, server_file, key)
+        from directive_value import pointer, resolve_path
+        value = resolve_path(value, server_file, key, at=pointer("mcp_server", key))   # #./、#../ 從 mcp_server 那格算
     if not isinstance(value, str) or not value:
         raise Error("PackBad", "%s: %s must be a path (a non-empty string)" % (server_file, key))
     return os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(server_file)), os.path.expanduser(value)))
@@ -233,10 +233,11 @@ def stdio_launch(server_file):
     s = load(server_file)
     if s["transport"] != "stdio":
         raise Error("PackBad", "%s: transport is %s; aos-mcp-launch only starts stdio servers" % (server_file, s["transport"]))
-    from directive_value import resolve
-    base = os.path.dirname(s["file"])
-    cmd = resolve(s["command"], base, s["file"])            # #/… ＝ server 檔自己
-    args = resolve(s["args"], base, s["file"]) if isinstance(s["args"], dict) else [resolve(a, base, s["file"]) for a in s["args"]]
+    from directive_value import pointer, resolve
+    base, f = os.path.dirname(s["file"]), s["file"]
+    cmd = resolve(s["command"], base, f, at=pointer("mcp_server", "command"))   # #/… ＝ server 檔自己；#./、#../ 從 mcp_server 那格算
+    args = (resolve(s["args"], base, f, at=pointer("mcp_server", "args")) if isinstance(s["args"], dict)
+            else [resolve(a, base, f, at=pointer("mcp_server", "args", i)) for i, a in enumerate(s["args"])])
     if not isinstance(cmd, str) or not cmd:
         raise Error("PackBad", "%s: command must resolve to a non-empty string" % server_file)
     if not isinstance(args, list) or not all(isinstance(a, str) for a in args):

@@ -136,5 +136,32 @@ class ClockRegister(unittest.TestCase):
         self.assertIn("aos-clock-register: error: ClockMissing", r.stderr)
 
 
+@unittest.skipUnless(shutil.which("aos-directive"), "aos-directive not on PATH")
+class ResolveBoxAt(unittest.TestCase):
+    """11-13 線址二：box 的指示詞照它在表裡的位置 /letters/<名>/box 解，#./、#../ 從那裡算。"""
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "py"))
+        try:
+            import aos_clock_register
+        finally:
+            sys.path.pop(0)
+        cls.m = aos_clock_register
+
+    def test_dot_and_dotdot(self):
+        with tempfile.TemporaryDirectory() as d:
+            d = os.path.realpath(d)
+            table = os.path.join(d, "c_register.json")
+            doc = {"boxes": {"far": "far/box"}, "letters": {
+                "n": {"every": 1, "text": "t", "alt": "near/box", "box": {"$ref": "#./alt"}},
+                "m": {"every": 1, "text": "t", "box": {"$ref": "#../../boxes/far"}}}}
+            with open(table, "w") as f:
+                json.dump(doc, f)
+            self.assertEqual(self.m.resolve_box(doc["letters"]["n"]["box"], d, table, "n"), os.path.join(d, "near/box"))
+            self.assertEqual(self.m.resolve_box(doc["letters"]["m"]["box"], d, table, "m"), os.path.join(d, "far/box"))
+            with self.assertRaises(self.m.Bad):        # 沒給名字＝照舊不知道位置：#./alt 從根算、根沒有 alt
+                self.m.resolve_box(doc["letters"]["n"]["box"], d, table)
+
+
 if __name__ == "__main__":
     unittest.main()

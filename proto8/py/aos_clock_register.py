@@ -129,11 +129,16 @@ def stored_box(box, base):
     return os.path.relpath(box, base) if top(box) == top(base) else box
 
 
-def resolve_box(box, base, table=None):
-    """表裡的 box → 絕對路徑；解不開丟 Bad。table＝登記表的路徑（給了＝指示詞裡的 #/… 取表自己，11-12 ref-hash）。"""
+def resolve_box(box, base, table=None, name=None):
+    """表裡的 box → 絕對路徑；解不開丟 Bad。table＝登記表的路徑（給了＝指示詞裡的 #/… 取表自己，11-12 ref-hash）。
+    name＝這格的名字（跟 table 一起給＝box 在表裡是 /letters/<name>/box，#./、#../ 從那裡算，11-13 線址二；沒給＝照舊不知道位置）。"""
     if isinstance(box, dict):
         try:
-            box = directive_value.resolve({"v": box}, base, table, stderr=subprocess.PIPE, timeout=SEND_TIMEOUT_S).get("v")
+            if table and name is not None:
+                box = directive_value.resolve(box, base, table, stderr=subprocess.PIPE, timeout=SEND_TIMEOUT_S,
+                                              at=directive_value.pointer(KEY, name, "box"))
+            else:
+                box = directive_value.resolve({"v": box}, base, table, stderr=subprocess.PIPE, timeout=SEND_TIMEOUT_S).get("v")
         except directive_value.Error as e:
             if e.returncode is not None:
                 raise Bad("cannot resolve the box directive: %s" % last_error(e.stderr, "aos-directive exited %d" % e.returncode))
@@ -240,7 +245,7 @@ def fire(clock, cycle, now=None):
         if kind(entry) != "every":
             used[name] = entry                     # 寄得到寄不到都算用掉（同 every：寄不到只提醒一次）
         try:
-            box = resolve_box(entry["box"], base, path)
+            box = resolve_box(entry["box"], base, path, name)
         except Bad as e:
             warnings.append("clock register entry %s: %s" % (name, e))
             continue
@@ -282,7 +287,7 @@ def self_check(path, letters, base):
         if name_problem(name) or entry_problem(entry):
             continue
         try:
-            box = resolve_box(entry["box"], base, path)
+            box = resolve_box(entry["box"], base, path, name)
         except Bad:
             continue                               # 判不了就不動
         if not os.path.isdir(box):

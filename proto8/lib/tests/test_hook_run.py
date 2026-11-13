@@ -226,5 +226,34 @@ class FireTests(unittest.TestCase):
             self.assertEqual(json.load(f), expected)
 
 
+@unittest.skipUnless(__import__("shutil").which("aos-directive"), "aos-directive not on PATH")
+class TargetAt(unittest.TestCase):
+    """11-13 線址二：handler 的指示詞照它在清單裡的位置 /hooks/<名>/handler 解，#./、#../ 從那裡算。"""
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = os.path.realpath(self.tmp.name)
+        self.path = os.path.join(self.root, "hooks.json")
+        self.doc = {"handler_dir": "top/h", "hooks": {
+            "a": {"event": "before", "path": "near/h", "handler": {"$ref": "#./path"}},
+            "b": {"event": "before", "handler": {"$ref": "#../../handler_dir"}}}}
+        with open(self.path, "w") as f:
+            json.dump(self.doc, f)
+
+    def entry(self, name):
+        return hook_run.complete(self.doc["hooks"][name], self.path)
+
+    def test_dot(self):
+        self.assertEqual(hook_run.target(self.entry("a"), "a"), os.path.join(self.root, "near/h"))
+
+    def test_dotdot(self):
+        self.assertEqual(hook_run.target(self.entry("b"), "b"), os.path.join(self.root, "top/h"))
+
+    def test_no_name_is_unchanged(self):
+        """沒給名字＝照舊包成 {"v": …}：#./path 從根算，根沒有 path＝解不開。"""
+        with self.assertRaises(OSError):
+            hook_run.target(self.entry("a"))
+
+
 if __name__ == "__main__":
     unittest.main()
