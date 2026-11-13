@@ -13,7 +13,7 @@
 - loop.json 與 fsm 格要跑的東西都叫 `exec`（使用者：「fsm.json，現在是用val，幫我改成exec」；「exec，loop／daemon 的 run 也一起改 exec」）。
 - fsm 不寫 trace（使用者 11-03「整個拿掉」，[thinking 11-03 trace](../thinking/2026-11/03/trace.md)，N-39）。時間點＝C-54 命名方法 R6「時間點＝`<發生了什麼>_at`」（使用者 10-25「state.json中，runs改counter，at改成recorded_at」，回頂層兩題「都好」，頂層代定、可翻案）；其他 JSON 的命名見 [NORMS.md](NORMS.md)。
 - 指示詞的檔內位置只認 `#/`。計數說「次」（使用者「我們都是說"次"」）。
-- 純文字檔帶 `.txt`（fsm 的 `stage.txt`、daemon 小格的 `stderr.txt`、agent-fsm 的 `system.txt`／`think/pending.txt`／`mailbox_warning.txt`、P-13 的 `prompt.txt`／`answer.txt`）；`AOS_STACK` 預設 `$AOS_WS/.stack/`；題目資料夾 `new/`（認領搬 `cur/`、做完 `done/`，答案 `out/`）；新 agent 的輸入是 `$AOS_STACK/queue/`，題目資料夾是舊協議（P-11、P-42）。
+- 純文字檔帶 `.txt`（fsm 的 `stage.txt`、daemon 小格的 `stderr.txt`、agent-fsm 的 `system.txt`／`think/pending.txt`／`mailbox_warning.txt`）；`AOS_STACK` 預設 `$AOS_WS/.stack/`；agent 的輸入是 `$AOS_STACK/queue/`（P-11、P-42）。
 - 入口預設名 `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者「改。然後_開頭=附註這個概念刪掉。」，原話裡的 `_exec` 照留）；不認得的 key 一律忽略（「不認得的key就是忽略」，C-48），`_` 開頭沒有特別意思。
 
 **腦的工具呼叫**＝**P-41**（第七節；[thinking 2026-10-23-tool-calls](../thinking/2026-10/23/tool-calls/README.md)，使用者「litellm我開了，去做吧。」「盡量都用gpt的」）：工具資料夾裡的 `_tooldef.json`（清單由 agent 資料夾的 `tools.json` 登記，[aos-tools](../cmd/README.md)）給模型看、`arguments` 從 stdin 進、stdout 出、對話落在 `$AOS_STACK/history.jsonl`、四格 idle → think → wait → act、錯怎麼報都寫在 P-41。
@@ -24,7 +24,7 @@
 | 分檔 | 涵蓋的段 |
 |---|---|
 | [01-保證佈局入口.md](CONVENTION/01-保證佈局入口.md) | 一、aos 保證的（不是慣例，是底）；二、佈局（每檔一句）；三、入口、loop、fsm |
-| [02-題目stack停錯腦.md](CONVENTION/02-題目stack停錯腦.md) | 四、題目與答案（含 P-11 輸入是 queue〔舊協議是題目資料夾〕、P-42 agent 對話協議〔外部 coding agent 也只碰這三樣〕、P-43 外部 coding agent〔eca〕的定義）；五、stack；六、停與錯（P-20：用物件 `next` 的表，表上沒接住那個碼時才是預設停）；七、腦與工具（含 P-41 腦的工具呼叫）；十三、命令列（P-44 aos 自己程式的命令列形狀） |
+| [02-題目stack停錯腦.md](CONVENTION/02-題目stack停錯腦.md) | 四、題目與答案（含 P-11 輸入是 queue、P-42 agent 對話協議〔外部 coding agent 也只碰這三樣〕、P-43 外部 coding agent〔eca〕的定義）；五、stack；六、停與錯（P-20：用物件 `next` 的表，表上沒接住那個碼時才是預設停）；七、腦與工具（含 P-41 腦的工具呼叫）；十三、命令列（P-44 aos 自己程式的命令列形狀） |
 | [08-P-45.md](CONVENTION/02-題目stack停錯腦/08-P-45.md) | 十三、命令列：P-45 純 aos 函數的旗標映射 |
 | [09-P-47.md](CONVENTION/02-題目stack停錯腦/09-P-47.md) | 七、腦與工具（續）：P-47 外部 MCP server |
 | [10-P-48.md](CONVENTION/02-題目stack停錯腦/10-P-48.md) | 四、題目與答案（續）：P-48 agent 之間的信箱（mailbox） |
