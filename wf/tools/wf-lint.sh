@@ -3,11 +3,11 @@
 #   wf-lint.sh [--strict] [--quiet] <dir>...   檢查一個（導入後的）專案目錄
 #   wf-lint.sh --self                          在模板 repo 內：template/ + examples/ + 各 flavor 合併模擬
 #
-# 檢查：① 相對連結 ② workflows/ 單檔 >8192 bytes ③ 模板標記殘留 ④ inbox/ 未辦信
+# 檢查：① 相對連結 ② workflows/ 單檔 >8192 bytes（推薦值，只報數不算失敗）③ 模板標記殘留 ④ inbox/ 未辦信
 #       ⑤ BIGLIST（>1 KB 條列；導航表印 BIGLIST-LINKS）⑥ 資料檔連結（tabledb.py check）
 #       ⑦ QUERYCMD（md 殘留查詢指令）⑧ BROKEN-ANCHOR（#錨點不存在，計入 broken）
 #       ⑨ CODEMAP（有 proto8/ 與 codemap_gen.py 時：逐檔 code map 生成冊跟檔頭不一致，每冊一筆，計入 broken）
-# 結束碼：BROKEN > 0 → 1；--strict 時 residue / oversize / biglist / querycmd > 0 也 → 1。
+# 結束碼：BROKEN > 0 → 1；--strict 時 residue / biglist / querycmd > 0 也 → 1（oversize 只報數：8 KB 是拆檔工作流 tidy 的推薦值、只限 .md，11-13 使用者裁）。
 set -u
 
 strict=0 self=0 quiet=0
@@ -192,8 +192,8 @@ if [[ $self -eq 1 ]]; then
     | while read -r f; do [[ -f $f ]] && echo "$repo/$f"; done)
   b=$checked_broken; total_broken=$((total_broken + b)); echo "SUMMARY root: broken=$b"
 
-  # 本 repo 規矩：任何檔都不超過 8192 bytes
-  while IFS= read -r f; do echo "OVERSIZE ${f#$repo/} ($(wc -c <"$f") bytes > 8192)"; total_broken=$((total_broken + 1)); done \
+  # 超過 8192 bytes 的檔只報數提醒、不算 broken（8 KB 是推薦值，11-13 使用者裁）
+  while IFS= read -r f; do echo "OVERSIZE ${f#$repo/} ($(wc -c <"$f") bytes > 8192)"; done \
     < <(find "$repo" -type f -not -path '*/.git/*' -not -path '*/.claude/worktrees/*' -not -path '*/__pycache__/*' -size +8192c | sort)
 
   lint_dir "$repo/template" template
@@ -229,5 +229,5 @@ fi
 
 echo "TOTAL broken=$total_broken$( [[ $strict -eq 1 ]] && echo " residue=$total_residue oversize=$total_oversize biglist=$total_biglist querycmd=$total_querycmd" )"
 [[ $total_broken -gt 0 ]] && exit 1
-[[ $strict -eq 1 && $((total_residue + total_oversize + total_biglist + total_querycmd)) -gt 0 ]] && exit 1
+[[ $strict -eq 1 && $((total_residue + total_biglist + total_querycmd)) -gt 0 ]] && exit 1
 exit 0
