@@ -10,6 +10,14 @@
 
 前情：11-12 收工前「kernel先這樣就好，開工等假日。我自己也要思考一下」。
 
+### 使用者 11-13 看完架構圖後（逐字；結果在第十三節）
+
+> 「kernel架構圖我看過了，我覺得都不錯。但有一個問題：next只能一個嗎？」
+
+調度者答：現在 `next` 只能一個（一個信箱路徑字串，放行的信全轉給那一站）；可以串成鏈，沒有內建分岔；「多個」有三種意思——照規則分流（一封信只去一處）、備援、同時寄多站。
+
+> 「按照規則分流吧。就用hook」
+
 ### 使用者 11-13 在待裁頁的裁定（逐字；題目與選項在 [decide_20261113_wu-top.json](decide_20261113_wu-top.json)，用 id 查）
 
 - `kf-K-F47:A`——問腦總機用 Python 重寫成 `lib/aos/kernel_llm`、刪 C++ 的 `impls/aos-llm-kernel`。
@@ -308,3 +316,41 @@
 - 換檔之後 repo 的 `impls/build` 比執行檔舊；之後在 repo 重 build 會從已 commit 的原始碼編出等價的檔。
 - 重抄等於把當天所有線已 commit 的 `lib`／`templates`／`knowledge`／`py` 改動一次帶進樹；樹裡這四夾 08:32 之後沒人改過（跟 `2e8eb6736` 逐檔相同），不會蓋掉使用者的東西。`agents/*`、`ws/defs/*` 不動。
 - 預演：在暫存樹（根 daemon＋ws daemon＋鐘＋兩列假 proc）完整跑兩輪都過，含「樹在跑時被擋」的紅燈與 rollback 後逐位元相同。
+
+## 十三、照規則分流（線未）：hook 替單封信指定下一站
+
+使用者原話在最上面「看完架構圖後」。結論：`next` 維持一個不變；分流規則寫在 `after_verdict` hook 裡，hook 的 stdout 回 `{"next": "<信箱的絕對路徑>"}`，這一封放行時就寄去那裡，一封信只去一處；沒回（或回 null）照原本三段（`next` → `AOS_KERNEL` → `AOS_DAEMON`）。
+
+### 改之前的現況
+
+三個時機都換不了下一站。`hooks.py` 的事件表只收 `before_verdict` 的 `body`、`after_verdict` 的 `verdict` 與 `error`、`before_reply` 的 `body`；共用引擎對不在表上的鍵直接略過、不報錯，所以 hook 回 `next` 沒有任何效果。圖紙也沒寫過「hook 換下一站」（圖紙的「換路徑」指的是查詢信的表檔路徑），整鏈劇本沒寫的第 3 段是查詢信，不是分流。證據：新測試檔在改之前的程式上跑，12 例裡 16 處失敗（test_01 信照舊進原本的下一站），只有 test_02（另兩個時機回 `next` 不被理會）、test_08、test_11 過。
+
+### 做了什麼
+
+- `lib/aos/kernel/hooks.py`：`after_verdict` 能改的鍵加 `next`；會轉寄的包事件多一欄 `next`（null）；最後判決是 pass 才把路徑記進 `ctx.route[信名]`。
+- `round.py`：`ctx.route`，以及包有 `check_next(ctx, box)` 才收 `next`（沒有這個口的包——問腦那一包——遇到 hook 給 `next` 算 hook 自己失敗；`lib/aos/kernel_llm` 一行沒動）。
+- `procs_rules.py`：`check_next`（下面代定 3、4、5）；`dispatch` 把這一封的路徑交給轉寄。
+- `letters.py`：`forward` 多一個選填的信箱；`in_box` 從 `already_forwarded` 抽出來，指定的站裡已有同名信就不寄第二次。
+- 新測試 `lib/aos/kernel/tests/test_kernel_route.py` 12 例；`extras/kernel-chain-check` 加第 7 段（一個站、兩個下一站、兩種信各到各的、回信都經原路代回），結尾改印 `6/6 ok`。
+- 說明：`lib/aos/kernel` README（「分流」一節、hook 表、包的口、錯誤代號）、`kernel/README.md`、`kernel/docs/02`（「分流的例子」，指令在暫存夾實跑過：`kid4` 掛到旁站、`kid3` 掛到後站、兩封回信都是 `{"applied": true}`）、知識庫 `knowledge/aos/kernel.json` 一句、N-42 (2) 一處加註（沒改條文意思）、`_entry` 的 help 一行。
+
+### 代定（線未；可翻案）
+
+1. **時機選 `after_verdict`**：它是「判決定下來的那一刻」，下一站是「放行之後去哪」，同一件事；排隊的信出隊時它本來就會再跑一次，所以不用另存「這封要去哪」。選 `before_verdict` 的話排隊信要多一份落檔。
+2. **欄位名 `next`**，跟 `kernel.json` 的鍵同名；值只收絕對路徑或 null。相對路徑有兩種算法（設定檔所在夾、hook 自己的小格），不猜，直接算 hook 失敗。
+3. **指到自己的 `requests/`**＝hook 自己失敗（`HookFailed`，照 `on_error`；預設 stop：這輪退 1、信留著）。照使用者 11-13 對同類情形的備註「如果覺得麻煩，那就直接報錯算了」；不報 `CfgBad` 是因為錯的是 hook 的回話、不是設定檔。
+4. **數量上限**：hook 給了 `next`、設定有 `max_running`、沒寫 `count_daemon`＝`CfgBad`（現有「寫了 `next`＋`max_running` 就要 `count_daemon`、不猜下一站是哪台」最保守的延伸；沒寫 `next` 時原本預設數 `AOS_DAEMON` 的那條不沿用到被分流的站）。寫了 `count_daemon` 就照字面：不管信去哪一站都算進同一個上限。
+5. **有序信**：`keep_ordered` 開著時 hook 給 `next`＝`CfgBad`（不分那一封是不是有序信）。分到不同站的信沒有先後保證；而且各站各自編有序信名，兩站可能編出同名，`forwarded.json` 的對照會撞。沒開 `keep_ordered` 照舊：有序只保證到本站門口。
+6. **留隊、被拒時給的 `next` 不記**（沒有信要寄；留隊的出隊時 hook 再跑一次）。
+7. **站自己仍要有原本的下一站**：三段都用不上照舊 `DaemonMissing`，即使 hook 會替每一封指定。
+8. **防重**只認「指定的站裡還有同名信」；hook 對同一封信前後兩次給不同答案時認不出來，寫進說明當限制。
+9. **`forwarded.json` 格式沒改**：不記信去了哪一站（代回只靠轉寄後的信名，夠用）。
+
+### 要使用者裁的
+
+- **各下一站各自的數量上限**：分流後如果要「甲站後面那台最多 N 個、乙站後面那台最多 M 個」，現有設定只有一個 `max_running`＋一個 `count_daemon`，原則推不出該怎麼寫（每個下一站各寫一組？還是一律交給各站自己管？）。這次沒做：現在的行為是全部算進同一個上限，要分開管就在各下一站自己的 `kernel.json` 設。
+- **`keep_ordered` 與分流同時要**：現在直接報設定錯。真有需要時要先定「有序」的範圍（同一個下一站之內？）與對照表怎麼分站。
+
+### 結果
+
+`lib/aos/kernel/tests`：`Ran 51 tests`、`OK`（原 39＋新 12）；`lib/aos/kernel_llm/tests`：`Ran 32 tests`、`OK`；`kernel-chain-check: 6/6 ok`。

@@ -21,7 +21,7 @@
 |---|---|---|
 | 收信 | 對外收件箱固定是站的 `$AOS_STACK/requests/`，每輪認領、逐封看 | 不用開 |
 | 規則 | 名字白名單、同時最多幾個在跑、寄件人給的期限 | `allowed`、`max_running` |
-| 下一站 | 放行的信原樣轉寄到哪個信箱 | `next`；沒寫看環境的 `AOS_KERNEL`，再沒有才 `AOS_DAEMON` |
+| 下一站 | 放行的信原樣轉寄到哪個信箱 | `next`；沒寫看環境的 `AOS_KERNEL`，再沒有才 `AOS_DAEMON`。`next` 只有一個；照規則分流用 `after_verdict` hook 替單封信指定 |
 | 數量另指 | 「幾個在跑」去哪一台 daemon 的表上數 | `count_daemon` |
 | 回信 | 下游的回信直接回給寄件人，或先回到我這站再代回 | `reply_via_me` |
 | 排隊 | 沒格時先來先掛地排，或立刻拒 | `queue` |
@@ -53,6 +53,8 @@
 3. 前兩段都沒有：`$AOS_DAEMON` 那台的 ctl 信箱。
 
 三段都用不上＝`DaemonMissing`。
+
+`next` 只能寫一個信箱。要照規則把不同的信轉給不同的下一站（一封信只去一處），分流規則寫在 hook 裡（使用者 11-13：「按照規則分流吧。就用hook」）：`after_verdict` hook 回 `{"next": "<信箱的絕對路徑>"}`，這一封就寄去那裡；沒回的照上面三段。例子在 [02「分流的例子」](docs/02-kernel-modes.md#分流的例子照規則把信分到兩個下一站)，限制在 [lib/aos/kernel README「分流」](../lib/aos/kernel/README.md#分流hook-替這一封指定下一站)。
 
 整棵樹 export `AOS_KERNEL` 時，沒寫 `next` 的站也會繼承到它：指到自己才跳過，指到別站就把信轉給那一站。不想要就在起那一站的殼 `unset AOS_KERNEL`，或明寫 `next`。
 

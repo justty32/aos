@@ -133,11 +133,15 @@ def record_keys(ctx, name):
             if key == name or row["letter"] == name]
 
 
-def already_forwarded(ctx, name):
+def in_box(box, name):
+    """這封信（有序轉普通時比尾名）是不是還躺在那個信箱裡。"""
     tail = name.split(".", 1)[1] if ORDERED.match(name) else name
-    return bool(record_keys(ctx, name)) or any(
-        os.path.exists(os.path.join(ctx.next_box, slot, candidate))
-        for slot in ("new", "cur") for candidate in (name, tail))
+    return any(os.path.exists(os.path.join(box, slot, candidate))
+               for slot in ("new", "cur") for candidate in (name, tail))
+
+
+def already_forwarded(ctx, name):
+    return bool(record_keys(ctx, name)) or in_box(ctx.next_box, name)
 
 
 def finish_forwarded(ctx, name):
@@ -178,7 +182,12 @@ def relay_replies(ctx, before_reply=None):
         done(ctx.replies, name, ctx.die)
 
 
-def forward(ctx, name, letter):
+def forward(ctx, name, letter, box=None):
+    """box＝hook 替這一封指定的下一站；沒給就寄站原本的下一站。"""
+    if box and in_box(box, name):
+        # 上一輪已寄進指定的站、原信還沒收就中斷：不再寄第二次。
+        finish_forwarded(ctx, name)
+        return None
     is_ordered = bool(ORDERED.match(name))
     tail = name.split(".", 1)[1] if is_ordered else name
     preserve = is_ordered and ctx.cfg.get("keep_ordered", False)
@@ -190,7 +199,7 @@ def forward(ctx, name, letter):
         args += ["--reply-to", ctx.replies if relay else original_reply]
     if preserve:
         args += ["--ordered"]
-    args += [ctx.next_box, tail]
+    args += [box or ctx.next_box, tail]
     code, out = post(args, json.dumps(letter["body"], ensure_ascii=False))
     if code != 0:
         return "ForwardFailed", "aos-post send to the next mailbox exited %d (reason in its stderr)" % code

@@ -89,6 +89,17 @@ def next_source(ctx):
     return "daemon", None
 
 
+def check_next(ctx, box):
+    """hook 替單封信指定下一站時驗設定配不配；寄不寄得進去留給轉寄。"""
+    if ctx.cfg["keep_ordered"]:
+        ctx.die("CfgBad", "a hook gave next but keep_ordered is on: letters sent to different next stations "
+                "cannot keep their order")
+    if "max_running" in ctx.cfg and "count_daemon" not in ctx.cfg:
+        ctx.die("CfgBad", "a hook gave next with max_running but count_daemon is not configured")
+    if os.path.realpath(box) == os.path.realpath(ctx.requests):
+        raise ValueError("next in stdout must not be this station's requests mailbox")
+
+
 def collect(ctx, before_reply=None):
     """先防重收原信，再透過 before_reply 回呼代回。"""
     cfg = ctx.cfg
@@ -218,7 +229,7 @@ def dispatch(ctx, name, letter, detail):
         message = queue_fifo.expiry_message(letter, name in ctx.previous)
         if message:
             return "SlotMissing", message
-    failure = letters.forward(ctx, name, letter)
+    failure = letters.forward(ctx, name, letter, ctx.route.pop(name, None))
     if failure is None:
         # hook 能把拒或排改成放行；此處只數實際轉出的名字，不再驗規則。
         body = letter.get("body")

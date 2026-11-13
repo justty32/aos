@@ -54,7 +54,9 @@ def run(pack, cfg_path, name="kernel"):
     stack = os.path.abspath(stack)
     requests = os.path.join(stack, "requests")
     ctx = SimpleNamespace(cfg=cfg, stack=stack, requests=requests, name=name,
-                          die=tool_io.die, warn=tool_io.warn)
+                          die=tool_io.die, warn=tool_io.warn, route={})
+    # 包有 check_next 才收 after_verdict hook 替單封信指定的下一站；指定的路徑記在 ctx.route[信名]。
+    ctx.check_next = (lambda box: pack.check_next(ctx, box)) if hasattr(pack, "check_next") else None
     letters.init(requests, ctx.die)
     try:
         lock = open(os.path.join(requests, ".flock"), "a")

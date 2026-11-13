@@ -1,10 +1,12 @@
 # kernel 的三個 hook 時機：設定、事件欄位與判決回話，執行一律交給共用引擎。
+import os
+
 import hook_run
 
 
 EVENTS = {
     "before_verdict": {"condition": None, "intercept": ("body",), "block": True},
-    "after_verdict": {"condition": "verdict", "intercept": ("verdict", "error"), "block": True},
+    "after_verdict": {"condition": "verdict", "intercept": ("verdict", "error", "next"), "block": True},
     "before_reply": {"condition": None, "intercept": ("body",), "block": True},
 }
 
@@ -23,14 +25,22 @@ def load(table, path):
     return entries
 
 
-def check(event, key, value):
+def check(ctx, event, key, value):
     if event == "after_verdict" and key == "verdict" and value not in ("pass", "refuse"):
         raise ValueError("verdict in stdout must be pass or refuse")
+    if event == "after_verdict" and key == "next" and value is not None:
+        # 替這一封指定下一站：只有會轉寄的包收；配不配得上這一站的設定由包自己說。
+        if ctx.check_next is None:
+            raise ValueError("next in stdout is not supported by this station (it does not forward letters)")
+        if not isinstance(value, str) or not os.path.isabs(value):
+            raise ValueError("next in stdout must be an absolute mailbox path or null")
+        ctx.check_next(value)
 
 
 def fire(ctx, event, data, entries=None):
     return hook_run.fire(event, data, ctx.cfg["hooks"] if entries is None else entries,
-                         ctx.stack, EVENTS, warn=ctx.warn, check=check)
+                         ctx.stack, EVENTS, warn=ctx.warn,
+                         check=lambda event, key, value: check(ctx, event, key, value))
 
 
 def request_data(name, letter):
@@ -52,6 +62,8 @@ def before_verdict(ctx, name, letter):
 def after_verdict(ctx, name, letter, verdict, detail):
     data = request_data(name, letter)
     data.update(verdict=verdict, error=dict(zip(("code", "msg"), detail)) if verdict == "refuse" else None)
+    if ctx.check_next is not None:
+        data["next"] = None  # null＝沒指定，照站原本的下一站。
     # 比對沿用引擎的語意：condition 看最初判決；逐格 fire 才能把預設拒因歸給正確的 hook。
     eligible = {n: e for n, e in ctx.cfg["hooks"].items()
                 if e["event"] == "after_verdict" and hook_run.matches(e, EVENTS, data)}
@@ -71,6 +83,8 @@ def after_verdict(ctx, name, letter, verdict, detail):
         if data["verdict"] != "refuse":
             data["error"] = None
     final = data["verdict"]
+    if final == "pass" and data.get("next"):
+        ctx.route[name] = data["next"]  # 只有放行才用得上；留隊的信出隊時 hook 會再跑一次。
     if final == "refuse":
         return final, (data["error"]["code"], data["error"]["msg"])
     return final, detail if final == verdict else None

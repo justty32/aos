@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# 在獨立暫存樹驗證兩站 kernel 的掛子、排隊、hook、重啟與 ping，並嚴格核對清理範圍。
+# 在獨立暫存樹驗證 kernel 鏈的掛子、排隊、hook、重啟、ping 與照規則分流，並嚴格核對清理範圍。
 import argparse
 import json
 import os
@@ -25,6 +25,15 @@ with (station / "audit.jsonl").open("a") as stream:
 if event["event"] == "before_verdict" and "evil" in (event.get("body") or {}).get("procs_added", {}):
     print("evil is blocked")
     sys.exit(10)
+'''
+
+# A 的分流 hook：body 的 lane 是 side 的信改寄旁站，其餘不說話＝照站原本的下一站。
+ROUTE = '''#!/usr/bin/env python3
+# 照信裡的 lane 欄替這一封挑下一站。
+import json, pathlib, sys
+event = json.load(sys.stdin)
+if (event.get("body") or {}).get("lane") == "side":
+    print(json.dumps({"next": str(pathlib.Path(event["stack"]).parent / "station_b" / "requests")}))
 '''
 
 IDLE = '''#!/usr/bin/env python3
@@ -61,6 +70,7 @@ class Check:
         self.work = Path(result.stdout.strip()).resolve()
         self.root = self.work / "stacks/root"
         self.a = self.root / "procs/station_a"
+        self.b = self.root / "procs/station_b"
         self.foreman = self.root / "procs/foreman"
         self.agent = self.foreman / "procs/agent"
         self.defs = self.work / "defs"
@@ -142,11 +152,11 @@ class Check:
             time.sleep(0.1)
         raise RuntimeError("timed out waiting for " + label)
 
-    def kernel(self, folder, cfg):
+    def kernel(self, folder, cfg, **extra):
         hooks = {name: {"event": name, "handler": str(self.defs / "audit"),
                         "timeout_ms": 5000}
                  for name in ("before_verdict", "after_verdict", "before_reply")}
-        save(folder / "kernel.json", dict(cfg, hooks=hooks, reply_via_me=True))
+        save(folder / "kernel.json", dict(cfg, hooks=dict(hooks, **extra), reply_via_me=True))
 
     def make(self):
         for command in ("aos-exec", "aos-daemon", "aos-daemon-ctl", "aos-loop",
@@ -156,6 +166,9 @@ class Check:
         audit = self.defs / "audit"
         audit.write_text(HOOK, encoding="utf-8")
         audit.chmod(0o755)
+        route = self.defs / "route"
+        route.write_text(ROUTE, encoding="utf-8")
+        route.chmod(0o755)
         idle = self.defs / "idle"
         idle.mkdir()
         (idle / "tick.py").write_text(IDLE, encoding="utf-8")
@@ -178,7 +191,14 @@ class Check:
                  {"exec": {"argv": ["aos-exec", str(PROTO / "lib/aos/kernel"),
                                     str(self.defs / name / "kernel.json")],
                            "envs": {"AOS_KERNEL": str(self.foreman / "requests")}}, "interval_ms": 150})
-        self.kernel(self.defs / "station_a", {})
+        # 旁站 B：不給 AOS_KERNEL、不寫 next，放行的信進根 daemon 的 ctl 信箱。只有 A 的分流 hook 會把信指到它。
+        shutil.copytree(PROTO / "kernel/procs-kernel", self.defs / "station_b")
+        save(self.defs / "station_b/loop.json",
+             {"exec": {"argv": ["aos-exec", str(PROTO / "lib/aos/kernel"),
+                                str(self.defs / "station_b/kernel.json")]}, "interval_ms": 150})
+        self.kernel(self.defs / "station_b", {})
+        self.kernel(self.defs / "station_a", {}, route={
+            "event": "after_verdict", "condition": "pass", "handler": str(route), "timeout_ms": 5000})
         self.kernel(self.defs / "foreman", {"max_running": 4, "queue": True})
         foreman_cfg = read(self.defs / "foreman/daemon.json")
         foreman_cfg["procs"] = {
@@ -191,6 +211,7 @@ class Check:
         save(self.defs / "daemon.json", {"interval_ms": 150, "procs": {
             "_clock": {"exec": {"argv": ["aos-clock", str(self.root / "clock")]}, "interval_ms": 1000},
             "station_a": {"exec": str(self.defs / "station_a"), "stack": str(self.a)},
+            "station_b": {"exec": str(self.defs / "station_b"), "stack": str(self.b)},
             "foreman": {"exec": str(self.defs / "foreman"), "stack": str(self.foreman)}}})
 
     def spec(self, name):
@@ -208,10 +229,12 @@ class Check:
             self.wait("daemon ping at " + str(stack), lambda stack=stack:
                       (stack / "state.json").exists() and
                       self.ctl(stack, "ping", "--timeout-s", "1", check=False).returncode == 0)
-        self.wait("station A mailbox", lambda: (self.a / "requests/new").is_dir())
+        self.wait("station A and B mailboxes", lambda: all(
+            (stack / "requests/new").is_dir() for stack in (self.a, self.b)))
         self.wait("agent and other running", lambda: all(
             self.table(self.foreman).get(name, {}).get("phase") == "running" for name in ("agent", "other")))
-        self.wait("station A running", lambda: self.table(self.root).get("station_a", {}).get("phase") == "running")
+        self.wait("stations A and B running", lambda: all(
+            self.table(self.root).get(name, {}).get("phase") == "running" for name in ("station_a", "station_b")))
 
     def post(self, *args, body=None):
         result = self.run(["aos-post", *args], env=self.agent_env, check=False,
@@ -273,6 +296,32 @@ class Check:
         reply_event = self.events(self.a, "before_reply", letter)[0]
         require(reply_event["sender"] == original["sender"] and Path(reply_event["reply_to"]).resolve() == box,
                 "A did not retain the original sender and reply mailbox")
+
+    def side_route(self, tag):
+        """分流到旁站的信：A 與 B 各進一次、領班沒看到，回信經 B、A 兩站代回。"""
+        letter, box = self.sent[tag]
+        for stack in (self.a, self.b):
+            for event in ("before_verdict", "before_reply"):
+                require(len(self.events(stack, event, letter)) == 1,
+                        "missing or repeated %s at %s for %s" % (event, stack.name, tag))
+            require(sum(row["verdict"] == "pass" for row in self.events(stack, "after_verdict", letter)) == 1,
+                    "request passed more or less than once at %s for %s" % (stack.name, tag))
+        require(not any(self.events(self.foreman, event, letter)
+                        for event in ("before_verdict", "after_verdict", "before_reply")),
+                "side letter also reached the foreman for " + tag)
+        require(self.events(self.a, "after_verdict", letter)[0].get("next", "absent") is None,
+                "A's after_verdict event did not carry next: null")
+        relayed = self.events(self.b, "before_verdict", letter)[0]
+        require((self.b / "requests" / relayed["reply_to"]).resolve() == self.a / "replies",
+                "station B reply bypassed A")
+        reply_event = self.events(self.a, "before_reply", letter)[0]
+        require(reply_event["body"] == self.replies[tag]["body"] and Path(reply_event["reply_to"]).resolve() == box,
+                "A did not relay the side station's reply to the original mailbox")
+
+    def no_late_replies(self):
+        for tag, (_, box) in self.sent.items():
+            require(not list((box / "new").glob("*/letter.json")) and not list((box / "cur").glob("*/letter.json")),
+                    "unexpected late or duplicate reply for " + tag)
 
     def queue(self):
         return read(self.foreman / "queue.json", {"queued": []})["queued"]
@@ -371,10 +420,26 @@ class Check:
         time.sleep(1)
         for tag in ("kid1", "kid2", "kid3", "kid4", "ping"):
             self.route(tag)
-        for tag, (_, box) in self.sent.items():
-            require(not list((box / "new").glob("*/letter.json")) and not list((box / "cur").glob("*/letter.json")),
-                    "unexpected late or duplicate reply for " + tag)
+        self.no_late_replies()
         print("ok 6 ping crossed both stations and the daemon reply returned through A", flush=True)
+
+        self.stage = "7"
+        # 一個站、兩個下一站：A 的 after_verdict hook 照 lane 欄把信分到旁站 B 或照舊給領班，一封只去一處。
+        self.send("side", {"ping": True, "lane": "side"})
+        self.send("main", {"ping": True, "lane": "main"})
+        for tag in ("side", "main"):
+            self.receive(tag)
+        time.sleep(1)
+        self.side_route("side")
+        self.route("main")
+        require(not any(self.events(self.b, event, self.sent["main"][0])
+                        for event in ("before_verdict", "after_verdict", "before_reply")),
+                "main letter also reached station B")
+        for tag in ("kid1", "kid2", "kid3", "kid4", "ping"):
+            require(not self.events(self.b, "before_verdict", self.sent[tag][0]), tag + " reached station B")
+        self.wait("A relay records empty", lambda: not read(self.a / "forwarded.json", {}))
+        self.no_late_replies()
+        print("ok 7 A's hook split two letters between two next stations and both replies returned", flush=True)
 
     def cleanup(self):
         # 起不來也先嘗試自有根樹的公開 shutdown；fallback 只准記錄的 Popen pid。
@@ -412,7 +477,7 @@ class Check:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Check five kernel-chain scenarios in an isolated disposable tree.")
+    parser = argparse.ArgumentParser(description="Check six kernel-chain scenarios in an isolated disposable tree.")
     parser.add_argument("--timeout-s", type=float, default=30, help="positive timeout per wait (default: 30)")
     opts = parser.parse_args()
     require(0 < opts.timeout_s <= 300, "--timeout-s must be in (0, 300]")
@@ -431,7 +496,7 @@ def main():
             passed = False
             print("kernel-chain-check: error: CleanupFailed " + str(error), flush=True)
     if passed:
-        print("kernel-chain-check: 5/5 ok", flush=True)
+        print("kernel-chain-check: 6/6 ok", flush=True)
         return 0
     return 1
 

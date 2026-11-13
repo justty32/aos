@@ -171,7 +171,7 @@ hook 是站在三個時機叫的小程式（設定寫在 `kernel.json` 的 `hook
 | 事件 | 什麼時候 | 能改什麼 |
 |---|---|---|
 | `before_verdict` | 一封新信、內建規則判之前 | 信的 `body`；退 10＝直接拒 |
-| `after_verdict` | 判決定下來的那一刻 | 判決（只能改成 `pass` 或 `refuse`）與拒因 |
+| `after_verdict` | 判決定下來的那一刻 | 判決（只能改成 `pass` 或 `refuse`）與拒因；`next`＝這一封改寄哪個下一站（見下面「分流的例子」） |
 | `before_reply` | 下游回信到了、代回之前（要開 `reply_via_me` 才有） | 回信的 `body` |
 
 接著上面的鏈，給前站加兩個 hook：`no_rm` 不准「收掉 proc」的信經過，`hide` 把代回的回信換成一句短的。事件 JSON 從 handler 的 stdin 進來。
@@ -198,7 +198,45 @@ echo "{\"next\": \"$T/back/st/requests\", \"reply_via_me\": true, \"hooks\": {\"
 - `{"procs_removed": ["kid"]}`：被 `no_rm` 攔下，回信是 `{"applied": false, "error": {"code": "HookRejected", "msg": "rm is not allowed through this station"}}`，前站 stderr 一行 `kernel: warning: letter <信名> refused: HookRejected rm is not allowed through this station`。
 - `procs_added` 的 `kid2`：照常轉給後站、掛上去；回信經過 `hide`，寄件人收到的是 `{"applied": true, "note": "via front"}`。
 
-每個 hook 在前站的 stack 有自己的小格 `hooks/<名>/`，裡面的 `event.json` 是它最後一次收到的事件。收工：`aos-daemon-ctl -d $T/front/st shutdown`、`aos-daemon-ctl -d $T/back/st shutdown`，最後 `rm -r $T`。
+每個 hook 在前站的 stack 有自己的小格 `hooks/<名>/`，裡面的 `event.json` 是它最後一次收到的事件。
+
+### 分流的例子：照規則把信分到兩個下一站
+
+`next` 只能寫一個。要「這種信去甲站、那種信去乙站」（一封信只去一處），規則寫在 `after_verdict` hook 裡：hook 回 `{"next": "<信箱的絕對路徑>"}`，這一封就寄去那裡；不說話的照站原本的下一站（使用者 11-13：「按照規則分流吧。就用hook」）。
+
+接著上面的鏈，再起一台旁站，前站加一個 `route`：掛 `kid4` 的信去旁站，其餘照 `next` 去後站。
+
+```sh
+mkdir -p $T/side && cd $T/side
+aos-exec --stack $T/side/st $P/kernel/daemon-kernel &            # 旁站
+
+cat > $T/front-def/hooks/route <<EOF
+#!/usr/bin/env python3
+# send letters that add the proc kid4 to the side station; say nothing for the rest
+import json, sys
+event = json.load(sys.stdin)
+body = event["body"] if isinstance(event["body"], dict) else {}
+if "kid4" in (body.get("procs_added") or {}):
+    print(json.dumps({"next": "$T/side/st/requests"}))
+EOF
+chmod +x $T/front-def/hooks/route
+echo "{\"next\": \"$T/back/st/requests\", \"reply_via_me\": true, \"hooks\": {\"route\": {\"event\": \"after_verdict\", \"condition\": \"pass\", \"handler\": \"hooks/route\"}}}" > $T/front-def/kernel.json
+
+aos-post init $T/me/box4
+# 寄 procs_added 的 kid4 與 kid3 到 $T/front/st/requests（都帶 --reply-to $T/me/box4）
+aos-daemon-ctl -d $T/side/st ls                                  # kid4 掛在旁站那台
+aos-daemon-ctl -d $T/back/st ls                                  # kid3 掛在後站那台
+cat $T/me/box4/new/*/letter.json                                 # 兩封都是 {"applied": true}
+```
+
+兩封回信都經前站代回，`in_reply_to` 是各自的原信名：不管信去了哪一站，下游都回到前站的 `replies/`。`condition: "pass"` 讓 hook 只在信放行時被叫。要記得的幾件事（細節在 [lib/aos/kernel README「分流」](../../lib/aos/kernel/README.md#分流hook-替這一封指定下一站)）：
+
+- 只有 `after_verdict` 收 `next`；值要是絕對路徑，寫錯或指到自己＝hook 自己失敗（預設這輪退 1、信留著）。指的信箱寄不進去＝這封拒 `ForwardFailed`。
+- 前站如果設了 `max_running`，一定要寫 `count_daemon`，而且不管信去哪一站都算進同一個上限；各站各自的上限在各站自己設。
+- `keep_ordered` 開著時不能分流（`CfgBad`）：分到不同站的信沒有先後保證。
+- 分流規則對同一封信每次要給同一個答案（站重起後靠它認出已經轉過的信）。
+
+收工：`aos-daemon-ctl -d $T/front/st shutdown`、`aos-daemon-ctl -d $T/back/st shutdown`、`aos-daemon-ctl -d $T/side/st shutdown`，最後 `rm -r $T`。
 
 ### 改成自己的
 

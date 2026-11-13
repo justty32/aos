@@ -29,6 +29,7 @@ HELP = """usage: kernel KERNEL.json   (run with aos-exec as a daemon body or loo
 Run one round: collect replies, claim requests, admit, refuse or queue, then forward.
 KERNEL.json is resolved by aos-directive; relative paths start at its directory.
 Hooks in KERNEL.json run before_verdict, after_verdict and before_reply.
+An after_verdict hook may print {"next": "/abs/mailbox"} to send that one letter there.
 Needs AOS_STACK. Next station: next in KERNEL.json, else AOS_KERNEL (skipped when it
 is this station's own requests mailbox), else the ctl mailbox of AOS_DAEMON.
 Exit 0 after a round, including an empty inbox; errors go to stderr and exit 1.
