@@ -70,3 +70,11 @@
 已抽到 [待裁.json](待裁.json)（8 列；欄位：`id`、`題目`＝打架的兩句、`建議`）。一句話：U1 標準範本 agent-bob→agent-fsm（＝W8）；U2 C-54 小寫底線 vs 夾名連字號；U3 「不拿 mailbox 命名」vs 信箱夾叫 mailbox；U4 kernel 打包與軟凍；U5 不同質比幾軸；U6 token 指標與 10B 是不是通則；U7 `_metainfo` 壞了略過 vs `FileBad`（同程式碼庫整理待裁 1）；U8 codex 身沒有只給子 agent 的 MCP（同 eca-task-subagent U1）。
 
 U7 已裁（11-12 晚）＝略過：使用者「對，略過，出事自己負責」，N-69 已改、已施工，見 [metainfo-views § 使用者裁定](../metainfo-views.md#使用者裁定11-12-晚)。
+
+U1 已裁（11-13）＝選 A：標準換成 `agent-fsm`，整段佈局圖與範例重寫（照建議）。使用者回覆原文：「t2d-U1:A」。
+
+U4 已裁（11-13）＝選 A：改成現在式「打包＝收工硬凍；軟凍沒做」，kernel 打包算遠期。使用者回覆原文：「t2d-U4:A*」。
+
+U6 已裁（11-13）＝選 C：只屬 arknights 文字線，不進 docs（跟建議「寫進 C-22 續但限定文字處理任務」不同）。使用者回覆原文：「t2d-U6:C*」。
+
+以上三題（11-13 待裁頁 `wu-1113-top`；回覆整行見[回覆檔](../../13/decide_20261113_wu-top.reply.txt)，裁定後待施工見[裁定落地-1113](../../13/裁定落地-1113.md)）。U2、U3、U5 仍未裁；U8 見 [eca-task-subagent § 未定題](../eca-task-subagent.md#未定題要使用者裁)（11-13 已裁丙）。

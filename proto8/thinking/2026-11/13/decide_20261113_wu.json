@@ -1,0 +1,5469 @@
+{
+ "description": "Decision batch built from wf/wait-user/01 (2026-11-13): every open item split into single questions.",
+ "contract": "wf-table/1",
+ "source": "README.md",
+ "extracted": "2026-11-13",
+ "kind": "decide-page/1",
+ "batch": "wu-1113",
+ "line": "repo-aos",
+ "title": "要你裁的：128 題一次看完",
+ "kicker": "11-13 · 把 WAIT_USER「要你裁的」每條拆成小題",
+ "lead": [
+  "每題已預選原文件的**建議或現況（代定）**；不翻就照它，按「看過，先照這個」即可。",
+  "有 31 題原文件沒有建議，預設停在「還沒想好，先不選」，等你挑。",
+  "沒點開過的題回覆帶 `?`，仍算待定、之後再問。答完按底部「複製」貼回對話。"
+ ],
+ "sections": [
+  {
+   "id": "mainsess",
+   "title": "主 session 接 aos（11-13）",
+   "intro": "公司這台做 aos 的 session 今天起就是 aos 樹裡的一隻 agent，叫 `repo-aos`；剩兩題要你定。"
+  },
+  {
+   "id": "ecatidy",
+   "title": "eca 唯讀整理抽查剩下的兩題",
+   "intro": "抽查找到的十條修了九條，剩一條外洩問題和一個設計選擇。"
+  },
+  {
+   "id": "t2d",
+   "title": "把討論紀錄寫進規範時撞到的矛盾",
+   "intro": "thinking 跟 docs 兩句打架、原則推不出答案的六題。"
+  },
+  {
+   "id": "cleanup",
+   "title": "程式碼庫整理留下要你定的事",
+   "intro": "整理只做了行為不變的部分；這些會改行為、改對外樣子或動條文。"
+  },
+  {
+   "id": "subagent",
+   "title": "eca 的子 agent 能拿哪些工具",
+   "intro": "claude 版已切成主、子兩台工具；兩個未定題加九條代定給你看。"
+  },
+  {
+   "id": "tidyok",
+   "title": "條文整理第三輪：改了意思、要你點頭的幾處",
+   "intro": "整理時照程式或照後來的裁定改了條文字面，意思有變；每處問你照改的行不行。"
+  },
+  {
+   "id": "tidyconf",
+   "title": "條文整理第三輪留下的矛盾",
+   "intro": "整理時發現兩邊說法對不上、整理的人不能自己選邊的地方；報告都沒有建議。"
+  },
+  {
+   "id": "kernel",
+   "title": "kernel：框架圖紙與「kernel 是橋」剩下的題",
+   "intro": "都不急，你說過開工等假日、你自己也要想；這裡先把題擺好。"
+  },
+  {
+   "id": "extmcp",
+   "title": "外部 MCP：接別人的工具伺服器時隊長先定的細節",
+   "intro": "E 是讓 codex／claude 直接接外部 server 的那條，G 是先抄進包檔、經 aos 叫的那條；都已施工，看要不要翻。"
+  },
+  {
+   "id": "json",
+   "title": "json 工具第三輪：隊長先定的細節",
+   "intro": "新工具 `json_len`、底下搬到 C++、一次讀寫多格、多層列表；都已施工，看要不要翻。"
+  },
+  {
+   "id": "ref",
+   "title": "目錄表指到別份目錄表、`$ref` 指自己這份檔：隊長先定的細節",
+   "intro": "三題你已裁維持現狀、`#/` 已做；這裡只剩施工時順手定的細節。"
+  },
+  {
+   "id": "unify",
+   "title": "`$ref` 跟 index 統一：剩五個小細節",
+   "intro": "寫法已定案、已施工，這幾個是隊長自己先定的細節，看要不要翻。"
+  },
+  {
+   "id": "meta",
+   "title": "`_metainfo` 全是觀點：剩的代定與讀法疑義",
+   "intro": "主裁定已落實；前六題是隊長代定的細節，後三題是你原話有兩種讀法的地方。"
+  }
+ ],
+ "columns": [
+  "id",
+  "section",
+  "question",
+  "eli5",
+  "options",
+  "recommend",
+  "why",
+  "quotes",
+  "details",
+  "source_path",
+  "source_lines",
+  "source_excerpt",
+  "answer",
+  "answer_state",
+  "answer_note",
+  "answered_at"
+ ],
+ "link_columns": [
+  "source_path"
+ ],
+ "rows": [
+  {
+   "id": "ms-1",
+   "section": "mainsess",
+   "question": "中心 agent `eca_main` 傳來的話，算不算你本人的授權？",
+   "eli5": "`eca_main` 是你指定的「總管」agent，它的話會直接出現在 `repo-aos` 的對話裡，看起來跟你打的字一樣、分不出來。但規矩（鐵律 2）說 push、刪檔、開新工作要你本人當場點頭，agent 寄來的不算。",
+   "options": [
+    {
+     "key": "A",
+     "label": "甲：一律不算，只當建議",
+     "consequence": "最安全、規矩一字不改；但你想透過 `eca_main` 一句話指揮時，`repo-aos` 會停下來等你本人。"
+    },
+    {
+     "key": "B",
+     "label": "乙：普通工作算，不可逆的不算",
+     "consequence": "`eca_main` 能派 `repo-aos` 改程式、查東西（都能 git 退回）；push、刪檔、對外送出仍要你本人說。鐵律 2「開新工作」要改寫。"
+    },
+    {
+     "key": "C",
+     "label": "丙：全部都算，含 push 與刪檔",
+     "consequence": "最省事；但 `eca_main` 被別的信誤導或搞錯時，會直接變成 push 或刪檔，沒人擋。"
+    }
+   ],
+   "recommend": "B",
+   "why": "原文件建議乙：你定的角色是「`eca_main` 派工、追蹤、彙報」，甲讓它派不動；丙把不可逆的事交給分不清真假來源的通道。你回答前照現行字面走（等於甲）。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話；最相關：「user是哪個proc...對，就是aos眼中一個能收信的對象。」",
+     "cite": "使用者 11-12 晚（linux-user）"
+    }
+   ],
+   "details": [
+    "這是新做法跟既有原則（鐵律 2）的衝突。",
+    "根源：`aos-agent say` 的信沒有寄件人欄，收的那隻只能靠對方在內文自報名字。",
+    "裁完要改：`AGENTS.md` 鐵律 2 補 queue 與中心 agent 的說法。"
+   ],
+   "source_path": "main-session-in-aos.md#要使用者裁的",
+   "source_lines": "140-148",
+   "source_excerpt": "建議：**乙**。你定的角色是「`eca_main` 派工、追蹤、彙報」，甲會讓它派不動這隻；丙把不可逆的事交給一隻分不清真假來源的通道，風險不對等。你回答之前，`repo-aos` 照現行鐵律 2 字面走（等於甲）。",
+   "answer": "B",
+   "answer_state": "picked",
+   "answer_note": "1.算。2.可以。／（頂層問第 1 題是不是讀成「普通工作算、push 和刪檔這類不可逆的還是要他本人說」）2.對。",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "ms-2",
+   "section": "mainsess",
+   "question": "家機做 aos 的主 session，要不要也改成 aos 樹裡的一隻 agent？",
+   "eli5": "公司這台的 session 已經是樹裡的一隻，有信箱、有名字。家機昨晚修好的是另一種：直接開 Claude Code、外掛 10 支 aos 工具，沒有信箱、沒有名字（像沒掛門牌的房間，信寄不進去）。",
+   "options": [
+    {
+     "key": "A",
+     "label": "甲：家機也照公司這樣",
+     "consequence": "兩台一樣、只有一種做法；要你在家機花幾分鐘照手冊加一隻（或回家叫頂層做），昨晚的外掛設定（`~/.claude.json` 的 aos 那行）拿掉。"
+    },
+    {
+     "key": "B",
+     "label": "乙：家機維持直接開",
+     "consequence": "不用動；但家機 session 收不到其他 agent 的信，規矩要一直寫「有信箱時…沒信箱時…」兩種。"
+    },
+    {
+     "key": "C",
+     "label": "丙：兩種都留，看當天",
+     "consequence": "最自由；文件與規矩兩種都要顧，昨晚「todo 共用一張」那類問題在直接開的那種仍在。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議甲：一種做法最簡單，昨晚剩的問題全是「不在樹裡」造成的。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話；最相關：「user是哪個proc...對，就是aos眼中一個能收信的對象。」",
+     "cite": "使用者 11-12 晚（linux-user）"
+    }
+   ],
+   "details": [
+    "這是原則推不出的方向題。",
+    "裁完要做（在家機）：照裁定留或拿掉家機 `~/.claude.json` 的 aos MCP 那行、`~/.cache/aos-mcp-aos/`（使用者的設定檔，要你點頭）。"
+   ],
+   "source_path": "main-session-in-aos.md#要使用者裁的",
+   "source_lines": "150-158",
+   "source_excerpt": "建議：**甲**。一種做法最簡單（KISS），昨晚剩的問題全是「不在樹裡」造成的。",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "1.算。2.可以。",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "eca-8",
+   "section": "ecatidy",
+   "question": "`feedback/*.jsonl` 每筆都帶家目錄完整路徑、而且進了 git，另有兩處寫死含帳號名的 `/mnt/c` 路徑，要怎麼處理？",
+   "eli5": "這就像把寫著自家地址的便條貼在公開佈告欄：家目錄路徑裡有帳號名，照專案「家目錄、帳號名算外洩」的規矩不該進 git。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "把路徑改成不含家目錄的寫法（例如相對路徑），寫死的兩處改讀環境變數",
+     "consequence": "外洩點拿掉；要改寫 jsonl 舊紀錄和寫入它們的程式，兩支測試要跟著改。"
+    },
+    {
+     "key": "B",
+     "label": "`feedback/*.jsonl` 不再進 git（加進忽略清單），寫死的兩處另改",
+     "consequence": "git 裡不再有新的外洩；但這些回饋紀錄就只留在本機、不跟 repo 走。"
+    },
+    {
+     "key": "C",
+     "label": "維持現況",
+     "consequence": "什麼都不動，跟外洩政策的矛盾留著。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議；你上次在選項框選了「明天再說」。",
+   "quotes": [
+    {
+     "text": "明天再說",
+     "cite": "使用者 11-12 晚（選項框）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "原文件是 eca_tidy 抽查「最值得看的十條」的第 8 條，十條裡唯一沒修的；未定段寫「第 8 條使用者選項框選『明天再說』」。",
+    "11-13 實看：`proto8/feedback/` 下 `litellm.jsonl`、`memory_write.jsonl`、`metainfo_migrate.jsonl`、`place_run.jsonl` 各有一行含 `/home/`。",
+    "寫死的兩處：`extras/gitignore-check/check.py` 第 187 行、`templates/tests/test_daily.py` 第 31 行，都是 `/mnt/c/Users/<帳號名>/AppData/Local/Temp`（只在加 `--mntc` 才用到）。",
+    "三個選項是出題時整理的做法，原文件只列問題沒列選項。"
+   ],
+   "source_path": "../12/eca-tidy-review.md#最值得看的十條",
+   "source_lines": "38",
+   "source_excerpt": "| 8 | `feedback/*.jsonl` 每筆都帶家目錄絕對路徑並進了 git，跟「家目錄、帳號名算外洩」的政策矛盾；`gitignore-check/check.py:187`、`templates/tests/test_daily.py:31` 寫死含帳號名的 `/mnt/c` 路徑 | `survey/E-kernel-templates-misc.md:36` |",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "eca-1",
+   "section": "ecatidy",
+   "question": "agent 讀知識樹時碰到「指到另一份檔」的記號 `$ref`，要不要讓範本多掛一組會自動跟過去的 `jsonx` 工具？",
+   "eli5": "`$ref` 像書裡寫「詳見第 5 章」；一般的 `json_get` 不會翻過去，只會說找不到。這次已把出廠知識樹裡 66 處這種指標都改成直接指到目的地，剩下的是「以後怎麼防」。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "甲：範本掛 `jsonx` 工具",
+     "consequence": "agent 能直接讀穿過 `$ref` 的路徑；但多一組工具，小模型要分清 `json_get` 和 `jsonx_get`。"
+    },
+    {
+     "key": "B",
+     "label": "乙：在 `_description.json` 加一句「讀到 `$ref` 就去讀那份檔」",
+     "consequence": "不加工具；但日後新寫的穿過指標照樣會壞。"
+    },
+    {
+     "key": "C",
+     "label": "丙：什麼都不加，靠 wf-lint 這類檢查擋穿過的指標",
+     "consequence": "像這次的回歸抓得到；但 agent 讀到出廠以外的 `$ref` 仍得自己跟。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議，寫「給使用者定」。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "eca_tidy 抽查第 1 條：知識樹正文約 66 處指標穿過 `$ref`，用 `json_get` 讀會撞 `PointerMissing`。正文部分 11-12 晚已修（commit `91d9ffd00`）：315 條指標裡 68 條穿過，`aos/` 正文 66 條改指被 `$ref` 的那份檔，重掃 0 條穿過。",
+    "刻意留 2 條：`README.md`、`docs/01` 示範 `--follow` 的那行。",
+    "這題只剩「範本要不要掛 `jsonx`」這個設計選擇。"
+   ],
+   "source_path": "../12/eca-tidy-review.md#修了哪些11-12-晚",
+   "source_lines": "62",
+   "source_excerpt": "沒動的設計題：(甲) 範本掛 `jsonx`——agent 能直接讀穿過的路徑，但多一組工具、小模型要分 `json_get`／`jsonx_get`；(乙) `_description.json` 加一句「讀到 `{\"$ref\": …}` 就去讀那份檔」——不加工具，日後新寫的穿過指標仍會壞；(丙) 什麼都不加、靠 wf-lint 類的檢查擋穿過指標——今晚這種回歸能抓到，但 agent 讀到別處（非出廠）的 `$ref` 仍得自己跟。給使用者定。測試（空暫存目錄起跑）：`templates/tests/test_paths_move.py` OK、`test_daily.py` 16 支 OK（2 skip、2 預期失敗）、`lib/tests/test_*.py` 15 檔全 OK。",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "t2d-U1",
+   "section": "t2d",
+   "question": "規範裡說「`agent-bob` 現在的樣子就是標準」，但 `agent-bob` 11-04 已刪，標準要不要換成現行範本 `templates/agent-fsm`？",
+   "eli5": "就像說明書寫「照樣品 A 做」，但樣品 A 已經丟了、現在擺的是樣品 B。因為這是「標準是誰」，要你點頭。",
+   "options": [
+    {
+     "key": "A",
+     "label": "標準換成 `agent-fsm`，整段佈局圖與範例重寫",
+     "consequence": "CONVENTION 前言、01、03～06 照現行範本改寫（＝施工批 W8，含舊協議殘句）。"
+    },
+    {
+     "key": "B",
+     "label": "維持寫 `agent-bob`，只留註記說它已刪",
+     "consequence": "條文不大改；但讀的人要自己對到 `agent-fsm`。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議換成 `agent-fsm`、整段重寫；因為改的是「標準是誰」才要你點頭。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "好了之後，要從大約兩個禮拜前開始的thinking中，提取東西進proto8/docs(覆蓋)。",
+     "cite": "使用者 11-12 晚（整個提取工作的原話）"
+    }
+   ],
+   "details": [
+    "牽動：CONVENTION 前言「agent-bob 現在的樣子就是標準」（你拍板過的拍板點 1）、P-27、bob／cathy 佈局圖、04 範例、P-34 例子。",
+    "現況：CONVENTION.md 前言已加一句「拍板點 1 指的 agent-bob 已刪，現行範本是 `templates/agent-fsm`；條文換不換成 agent-fsm 由使用者定」。",
+    "施工批 W8 整批在等這題；CONVENTION 舊協議 P-11～P-14、P-19 也併進 W8。",
+    "總表與舊協議殘句清單在 `thinking-to-docs/提取總表.json`、`舊協議殘句.json`。"
+   ],
+   "source_path": "../12/thinking-to-docs/待裁.json",
+   "source_lines": "11-15",
+   "source_excerpt": "  {\n   \"id\": \"U1\",\n   \"題目\": \"CONVENTION 前言「agent-bob 現在的樣子就是標準」（你拍板）＋P-27、bob／cathy 佈局圖、04 範例、P-34 例子，但 agent-bob 11-04 已刪，現行範本是 `templates/agent-fsm`\",\n   \"建議\": \"標準換成 agent-fsm，整段佈局圖與範例重寫（＝W8，含舊協議殘句）；因為是「標準是誰」，要你點頭\"\n  },",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "t2d-U2",
+   "section": "t2d",
+   "question": "命名規矩 C-54 說「資料夾、檔名、key 全小寫加底線」，可是 `agent-fsm`、`eca-claude`、`templates/` 這些夾名用的是連字號，怎麼對齊？",
+   "eli5": "規矩寫「名字只能用底線」，實際一排門牌都用了連字號；要改門牌，還是在規矩裡補一句准用。",
+   "options": [
+    {
+     "key": "A",
+     "label": "夾名不改，C-54 補一句「定義夾名照指令名可用連字號」",
+     "consequence": "只動一句條文；程式、路徑、已抄出去的實例都不用改。"
+    },
+    {
+     "key": "B",
+     "label": "夾名照 C-54 改成底線",
+     "consequence": "條文不用動；但牽動 `aos-agent ctl add` 的路徑、文件、已經抄出去的實例。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議夾名不改、在 C-54 補一句准用連字號。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "好了之後，要從大約兩個禮拜前開始的thinking中，提取東西進proto8/docs(覆蓋)。",
+     "cite": "使用者 11-12 晚（整個提取工作的原話）"
+    }
+   ],
+   "details": [
+    "這題跟「程式碼庫整理」第 5 題 (c) 是同一件事（見 `cl-5c`），裁一處兩邊都算。",
+    "現行定義夾名規則是 `[a-z0-9_-]+`。"
+   ],
+   "source_path": "../12/thinking-to-docs/待裁.json",
+   "source_lines": "16-20",
+   "source_excerpt": "  {\n   \"id\": \"U2\",\n   \"題目\": \"C-54「資料夾、檔名、JSON key 全小寫加底線」vs `agent-fsm`、`eca-claude`、`templates/` 等夾名用連字號（定義夾名規則 `[a-z0-9_-]+`）\",\n   \"建議\": \"夾名不改，C-54 補「定義夾名照指令名可用連字號」\"\n  },",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "t2d-U3",
+   "section": "t2d",
+   "question": "C-54 的 R14 說「資料夾不直接拿 mailbox 命名」，可是新的 agent 信箱夾就叫 `<stack>/mailbox/`，兩句都是你說的，怎麼對齊？",
+   "eli5": "R14 是命名方法裡的一條：照「裝的東西」取名，不拿功能名當夾名。新的信箱夾剛好就叫 mailbox。",
+   "options": [
+    {
+     "key": "A",
+     "label": "R14 加例外「agent 之間的信箱就叫 mailbox」",
+     "consequence": "夾名不動，R14 多一條例外。"
+    },
+    {
+     "key": "B",
+     "label": "R14 只管功能名、不管夾名，改寫 R14 的範圍",
+     "consequence": "R14 範圍變窄，信箱夾自然不算違反。"
+    },
+    {
+     "key": "C",
+     "label": "信箱夾改名，照 R14",
+     "consequence": "R14 不動；`mailbox/` 夾與用到它的程式、文件都要改。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議 R14 加例外；並請你確認 R14 是指功能名還是也含夾名。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "好了之後，要從大約兩個禮拜前開始的thinking中，提取東西進proto8/docs(覆蓋)。",
+     "cite": "使用者 11-12 晚（整個提取工作的原話）"
+    }
+   ],
+   "details": [
+    "原文件附帶一個要你確認的小問：R14 指的是功能名，還是也包含夾名？可以寫在備註。",
+    "選項 B、C 是出題時整理的另兩條路，原文件只寫了 A。"
+   ],
+   "source_path": "../12/thinking-to-docs/待裁.json",
+   "source_lines": "21-25",
+   "source_excerpt": "  {\n   \"id\": \"U3\",\n   \"題目\": \"C-54 R14「資料夾不直接拿 mailbox 命名」vs 新信箱夾就叫 `<stack>/mailbox/`（兩句都是你的原話）\",\n   \"建議\": \"R14 加例外「agent 之間的信箱就叫 mailbox」；請確認 R14 是指功能名還是也含夾名\"\n  },",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "t2d-U4",
+   "section": "t2d",
+   "question": "條文裡「打包由 kernel 做」和「軟凍」的例子，跟另一條「現在只有硬凍、沒有軟凍」打架；kernel 打包這件事是作廢了，還是遠期要做？",
+   "eli5": "「凍」是把 agent 收工時的狀態封存起來；硬凍＝整個停下封好，軟凍＝邊跑邊封，後者現在沒做。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "改成現在式「打包＝收工硬凍；軟凍沒做」，kernel 打包算遠期",
+     "consequence": "條文照現況寫，kernel 打包留作以後的方向。"
+    },
+    {
+     "key": "B",
+     "label": "改成現在式，kernel 打包作廢",
+     "consequence": "條文照現況寫，kernel 打包的說法拿掉。"
+    },
+    {
+     "key": "C",
+     "label": "條文都不動",
+     "consequence": "兩處繼續打架。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件建議改成現在式（原話留引號），但 kernel 打包是作廢還是遠期沒有建議、要問你。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "好了之後，要從大約兩個禮拜前開始的thinking中，提取東西進proto8/docs(覆蓋)。",
+     "cite": "使用者 11-12 晚（整個提取工作的原話）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "牽動條文：N-03、C-44（打包由 kernel 做、軟凍例子）與 C-16（現在只有硬凍）。",
+    "A、B 共同部分＝原文件建議的「改現在式、原話留引號」；差別只在 kernel 打包的去留。"
+   ],
+   "source_path": "../12/thinking-to-docs/待裁.json",
+   "source_lines": "26-30",
+   "source_excerpt": "  {\n   \"id\": \"U4\",\n   \"題目\": \"N-03／C-44「打包由 kernel 做」＋軟凍例子 vs C-16「現在只有硬凍、沒有軟凍」\",\n   \"建議\": \"改現在式「打包＝收工硬凍；軟凍沒做」，原話留引號；問 kernel 打包是作廢還是遠期\"\n  },",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "t2d-U5",
+   "section": "t2d",
+   "question": "比兩隻 agent「是不是同一種」時要比哪幾樣：原話是「工具、腦、記憶」三樣，但 memory 工具已拆、`defs dup` 現在只比工具和腦，條文要怎麼寫？",
+   "eli5": "像判斷兩台車是不是同款：要比引擎、車身，還要不要比後車廂裝了什麼。",
+   "options": [
+    {
+     "key": "A",
+     "label": "寫「工具、腦；有宣告記憶根的再加記憶」",
+     "consequence": "跟現行程式大致對齊，記憶只在有宣告時才比。"
+    },
+    {
+     "key": "B",
+     "label": "照原話三軸「工具、腦、記憶」都比",
+     "consequence": "條文不改；程式之後要補比記憶。"
+    },
+    {
+     "key": "C",
+     "label": "只比工具、腦",
+     "consequence": "照程式現況寫，記憶不比。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議寫「工具、腦；有宣告記憶根的再加記憶」。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "好了之後，要從大約兩個禮拜前開始的thinking中，提取東西進proto8/docs(覆蓋)。",
+     "cite": "使用者 11-12 晚（整個提取工作的原話）"
+    }
+   ],
+   "details": [
+    "C-89 現在寫「比哪幾軸待使用者裁」。",
+    "`defs dup` 現在只比工具＋endpoint（腦）。"
+   ],
+   "source_path": "../12/thinking-to-docs/待裁.json",
+   "source_lines": "31-35",
+   "source_excerpt": "  {\n   \"id\": \"U5\",\n   \"題目\": \"不同質三軸「工具、腦、記憶」vs memory 工具已拆、`defs dup` 只比工具＋endpoint\",\n   \"建議\": \"寫「工具、腦；有宣告記憶根的再加記憶」（C-89 現在寫「比哪幾軸待使用者裁」）\"\n  },",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "t2d-U6",
+   "section": "t2d",
+   "question": "token 估算公式（位元組數×2）和「模型不低於 10B」這兩條，是整個 aos 的通則，還是只屬於 arknights 文字處理那條線？",
+   "eli5": "token 是模型計字數的單位；10B 指模型大小（一百億個參數）。問的是這兩條經驗值要不要寫成全專案都適用。",
+   "options": [
+    {
+     "key": "A",
+     "label": "寫進 C-22 續，但限定「文字處理任務」",
+     "consequence": "條文收進來，範圍只限文字處理。"
+    },
+    {
+     "key": "B",
+     "label": "寫成 aos 通則",
+     "consequence": "所有 agent 都照這兩條。"
+    },
+    {
+     "key": "C",
+     "label": "只屬 arknights 文字線，不進 docs",
+     "consequence": "條文不動。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議寫進 C-22 續但限定「文字處理任務」。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "好了之後，要從大約兩個禮拜前開始的thinking中，提取東西進proto8/docs(覆蓋)。",
+     "cite": "使用者 11-12 晚（整個提取工作的原話）"
+    }
+   ],
+   "details": [
+    "總表列號 B07-10；C-22 續目前沒動，等這題。"
+   ],
+   "source_path": "../12/thinking-to-docs/待裁.json",
+   "source_lines": "36-40",
+   "source_excerpt": "  {\n   \"id\": \"U6\",\n   \"題目\": \"token 指標公式（bytes×2）＋「模型不低於 10B」是 aos 通則還是只屬 arknights 文字線\",\n   \"建議\": \"寫進 C-22 續但限定「文字處理任務」\"\n  },",
+   "answer": "C",
+   "answer_state": "changed",
+   "answer_note": "",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "cl-2",
+   "section": "cleanup",
+   "question": "讀 env 檔（一行一個 `名字=值` 的設定檔）的函式有兩份、規則不同，要統一成哪一種？",
+   "eli5": "同一張設定單，兩個人讀出來不一樣：例如 `A=x # note`，`aos-tools` 讀成 `x`，MCP 那邊讀成 `x # note`。",
+   "options": [
+    {
+     "key": "A",
+     "label": "用 `aos-tools` 那份完整讀法（`${X}` 展開、行內註解、嚴格引號）",
+     "consequence": "跟 C++ 那套同一想法；MCP server 檔的 `env_file` 裡值含 `#`、`$`、`\\` 的讀法會變。"
+    },
+    {
+     "key": "B",
+     "label": "用 MCP 那份簡單規則",
+     "consequence": "`aos-tools` 失去插值與嚴格檢查。"
+    },
+    {
+     "key": "C",
+     "label": "維持兩份，文件寫明差異",
+     "consequence": "程式不動，兩邊繼續讀法不同。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議 (a)，跟 C++ 的 dotenv 同一套想法；但要等外部 MCP 那條線穩了再做。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [
+    "兩份位置：`proto8/cmd/aos-tools/bin/aos-tools` 與 `proto8/lib/mcp_server_file.py` 的 `read_env_file`（11-13 實看兩份都還在）。",
+    "thinking→docs 提取也把這題列為「延後、不必現在問（實作層）」。"
+   ],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "79",
+   "source_excerpt": "2. **兩份 `read_env_file` 統一成哪種**：(a) 用 aos-tools 的完整 dotenv（`${X}` 展開、行內註解、嚴格引號）——MCP server 檔的 `env_file` 裡值含 `#`、`$`、`\\` 的讀法會變；(b) 用 MCP 那份簡單規則——aos-tools 失去插值與嚴格檢查；(c) 維持兩份、文件寫明差異。例：`A=x # note` 現在 aos-tools 讀成 `x`、MCP 讀成 `x # note`。建議 (a)（跟 C++ 的 dotenv 同一套想法），外部 MCP 那條線穩了再做。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "cl-3",
+   "section": "cleanup",
+   "question": "`cli_screen.attach_main` 是沒人呼叫的死碼，要刪掉還是接回去？",
+   "eli5": "死碼＝寫好了但沒有任何地方會走到的程式，留著只會讓人誤以為它有用。",
+   "options": [
+    {
+     "key": "A",
+     "label": "刪掉，`cli_session.py` 檔頭講 attach 的幾段一起改",
+     "consequence": "少一段沒人用的程式；attach 照舊由 `aos-agent` 自己做。"
+    },
+    {
+     "key": "B",
+     "label": "接回 `cli_session.py attach`",
+     "consequence": "多一個進入點，跟 `aos-agent` 的 attach 重疊。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議 (a)：aos-agent 自己有 attach。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [
+    "位置：`proto8/lib/agent/cli_screen.py` 的 `attach_main`（11-13 實看還在）。"
+   ],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "80",
+   "source_excerpt": "3. **`cli_screen.attach_main`（死碼）**：(a) 刪掉，`cli_session.py` 檔頭講 attach 的幾段一起改（aos-agent 自己有 attach）；(b) 接回 `cli_session.py attach`。建議 (a)。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "cl-4",
+   "section": "cleanup",
+   "question": "範本要不要做到「抄出去一行都不依賴 repo 裡的共用程式」？",
+   "eli5": "範本像一份食譜；問的是食譜能不能引用「見基本醬料篇」，還是每份都得把醬料做法完整抄一遍。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "照舊，範本可以 import `py` 與 `lib`",
+     "consequence": "範本裡的小函式之後可以再往 `lib` 收、少重複。"
+    },
+    {
+     "key": "B",
+     "label": "完全自帶，不依賴外面",
+     "consequence": "範本搬去哪都能跑；重複的小函式維持各帶一份。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議；現況是 A（`templates/agent-fsm` 本來就 import `py` 與 `lib`）。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "這次整理只在範本夾內收重複，不受這題影響。",
+    "第 12 題（`hooks.py` 自叫 `aos-directive`）跟這題是同一題，見 `cl-12`。"
+   ],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "81",
+   "source_excerpt": "4. **範本要不要「抄出去一行都不依賴」**：現在 `templates/agent-fsm` 本來就 import `py` 與 `lib`。若照舊，範本裡的小函式之後可以再往 lib 收；若要完全自帶，就維持各帶一份。這次只在夾內收，不受這題影響。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "cl-5a",
+   "section": "cleanup",
+   "question": "`py/` 底下的模組名有的帶 `aos_` 前綴、有的不帶，要不要統一？",
+   "eli5": "像同一層樓的門牌有的寫「A棟-101」有的只寫「101」。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "全部加前綴（例如 `daemon_ctl` 改 `aos_daemon_ctl`）",
+     "consequence": "名字一致；要改所有 import 這些模組的地方。"
+    },
+    {
+     "key": "B",
+     "label": "全部去掉 `aos_` 前綴",
+     "consequence": "名字一致、較短；同樣要改所有 import。"
+    },
+    {
+     "key": "C",
+     "label": "不改",
+     "consequence": "維持現況，名字不一致。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件說「(a) 聽他的」，沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "原文件第 5 題「改名」分 (a)(b)(c) 三小題，各自一張卡（`cl-5a`、`cl-5b`、`cl-5c`）。"
+   ],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "82",
+   "source_excerpt": "(a) `py/` 前綴統一（`daemon_ctl` → `aos_daemon_ctl`，或全部去掉 `aos_`）；(b) `lib/agent/agents_cmd.py` 改掉舊工具名；(c) `templates/`、`kernel/`、`extras/` 的夾名照 C-54 改底線——牽動 `aos-agent ctl add` 的路徑、文件、已經抄出去的實例。建議做 (b)，(a) 聽他的，(c) 不做（在 C-54 補一句「範本／kernel 夾名照指令名用連字號」比較省，但那是動條文）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "cl-5b",
+   "section": "cleanup",
+   "question": "`lib/agent/agents_cmd.py` 還沿用已拆掉的舊工具名，要不要改掉？",
+   "eli5": "工具早就改名或拆了，這支檔的名字還停在舊名，看了會找不到對應的東西。",
+   "options": [
+    {
+     "key": "A",
+     "label": "改掉舊工具名",
+     "consequence": "名字跟現行工具對得上；要改引用它的地方。"
+    },
+    {
+     "key": "B",
+     "label": "不改",
+     "consequence": "維持現況。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議做 (b)。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [
+    "原文件第 5 題 (b)。"
+   ],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "82",
+   "source_excerpt": "(b) `lib/agent/agents_cmd.py` 改掉舊工具名；(c) `templates/`、`kernel/`、`extras/` 的夾名照 C-54 改底線——牽動 `aos-agent ctl add` 的路徑、文件、已經抄出去的實例。建議做 (b)，(a) 聽他的，(c) 不做（在 C-54 補一句「範本／kernel 夾名照指令名用連字號」比較省，但那是動條文）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "cl-5c",
+   "section": "cleanup",
+   "question": "`templates/`、`kernel/`、`extras/` 的夾名用連字號，要不要照 C-54 改成底線？",
+   "eli5": "跟提取那邊的 U2 是同一件事：改門牌，還是在規矩裡補一句准用連字號。",
+   "options": [
+    {
+     "key": "A",
+     "label": "夾名不改，在 C-54 補一句「範本／kernel 夾名照指令名用連字號」",
+     "consequence": "比較省；但那是動條文。"
+    },
+    {
+     "key": "B",
+     "label": "照 C-54 改成底線",
+     "consequence": "牽動 `aos-agent ctl add` 的路徑、文件、已經抄出去的實例。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議 (c) 不做，在 C-54 補一句比較省（但那是動條文）。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [
+    "原文件第 5 題 (c)；跟 thinking→docs 提取的 U2 同一題（見 `t2d-U2`），裁一處兩邊都算。"
+   ],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "82",
+   "source_excerpt": "(c) `templates/`、`kernel/`、`extras/` 的夾名照 C-54 改底線——牽動 `aos-agent ctl add` 的路徑、文件、已經抄出去的實例。建議做 (b)，(a) 聽他的，(c) 不做（在 C-54 補一句「範本／kernel 夾名照指令名用連字號」比較省，但那是動條文）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "cl-7",
+   "section": "cleanup",
+   "question": "`extras/langs`（10-24 試做的 janet、lua）沒人引用但還跑得起來，留著還是封存？",
+   "eli5": "封存＝搬進 `archive/` 收起來，不刪但也不再維護。",
+   "options": [
+    {
+     "key": "A",
+     "label": "留著",
+     "consequence": "不動；`image-move-check` 同樣沒人引用、也留著。"
+    },
+    {
+     "key": "B",
+     "label": "封存進 `archive/`",
+     "consequence": "`extras/` 乾淨一點；要用時去 archive 找。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議 (a) 留著。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "84",
+   "source_excerpt": "7. **`extras/langs`（janet、lua，10-24 的嘗試）**：沒人引用、還跑得起來。(a) 留著；(b) 封存進 `archive/`。建議 (a)。`image-move-check` 同樣沒人引用、留著。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "cl-8",
+   "section": "cleanup",
+   "question": "`lib/aos/shell_report/report.py` 伸手去用上層 agent 層的 `declared_files`（下層依賴上層），要把它往下搬，還是留著當例外？",
+   "eli5": "像一樓的水管接到二樓去取水；整理的原則是下層不該依賴上層。",
+   "options": [
+    {
+     "key": "A",
+     "label": "把 `declared_files` 往下搬到 `lib/` 頂層",
+     "consequence": "依賴方向理順；但牽動 cmd、範本、`cli_cfg` 的 import，要另排一批。"
+    },
+    {
+     "key": "B",
+     "label": "留著，當明文例外",
+     "consequence": "不動程式，文件寫明這是例外。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議 (a)，但牽動多處 import、另排一批。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [
+    "同一題還附一個同類小題，另成一張卡 `cl-8b`。"
+   ],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "85",
+   "source_excerpt": "8. **`lib/aos/shell_report/report.py` import 了上層的 `agent.agent_files.declared_files`**（aos 層依賴 agent 層）：(a) 把 `declared_files` 往下搬到 `lib/` 頂層；(b) 留著、當明文例外。建議 (a)，但牽動 cmd、範本、`cli_cfg` 的 import，另排一批。同類：`promote/swap.py` 被隔壁的 `rollback` 伸手進來用——搬到 `lib/aos/` 或留著。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "cl-8b",
+   "section": "cleanup",
+   "question": "`promote/swap.py` 被隔壁的 `rollback` 伸手進來用，要搬到 `lib/aos/` 共用，還是留著？",
+   "eli5": "兩個相鄰工具共用一段程式，現在是一個直接進另一個的資料夾拿。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "搬到 `lib/aos/`",
+     "consequence": "成為共用模組，誰用都從同一處拿。"
+    },
+    {
+     "key": "B",
+     "label": "留著",
+     "consequence": "不動。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議（只寫「搬到 `lib/aos/` 或留著」）。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "原文件第 8 題末尾的「同類」小題。"
+   ],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "85",
+   "source_excerpt": "同類：`promote/swap.py` 被隔壁的 `rollback` 伸手進來用——搬到 `lib/aos/` 或留著。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "cl-9",
+   "section": "cleanup",
+   "question": "`lib/aos` 幾支審查工具「找 lib」的寫法有五種，要不要對齊成標準樣板？",
+   "eli5": "每支程式開頭都要先找到共用程式庫放哪；寫法不一，找不到時的反應也不一樣。",
+   "options": [
+    {
+     "key": "A",
+     "label": "對齊成標準樣板",
+     "consequence": "lib 找不到時從一大串 traceback 變成一行 `ModuleMissing`（會改錯誤輸出）。"
+    },
+    {
+     "key": "B",
+     "label": "維持五種",
+     "consequence": "不動。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議對齊。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [
+    "五種：固定 `parents[2]`、`parents[1]`、`next(...)` 不帶 `ModuleMissing`、標準樣板。"
+   ],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "86",
+   "source_excerpt": "9. **`lib/aos` 審查工具「找 lib」寫法五種**（固定 `parents[2]`、`parents[1]`、`next(...)` 不帶 `ModuleMissing`、標準樣板）：對齊成標準樣板＝lib 找不到時從 traceback 變成一行 `ModuleMissing`。建議對齊。",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "cl-10",
+   "section": "cleanup",
+   "question": "收掉下層程式有兩種做法並存，要不要統一成「送 TERM 不理就升到 KILL」？",
+   "eli5": "TERM 是客氣地請程式結束，KILL 是強制關掉。現在有的工具只請一次就走，下層不理就會留著。",
+   "options": [
+    {
+     "key": "A",
+     "label": "統一成升到 KILL（照 subagent／fork）",
+     "consequence": "下層不會殘留；但這是改行為。"
+    },
+    {
+     "key": "B",
+     "label": "維持兩種",
+     "consequence": "`self_*`／mailbox 工具照舊只送一次 TERM。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議統一，但註明那是改行為。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "87",
+   "source_excerpt": "10. **兩種「收掉下層」的做法並存**：`self_*`／mailbox 工具送一次 TERM 就退（下層不理 TERM 會留著）；subagent／fork 會升到 KILL。要不要統一成後者。建議統一，但那是改行為。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "cl-11",
+   "section": "cleanup",
+   "question": "`py/daemon_ctl/__init__` 對外清單裡約 25 個外面沒人讀的名字，要不要拿掉？",
+   "eli5": "對外清單像店門口的菜單；上面有 25 道菜其實沒人點過。",
+   "options": [
+    {
+     "key": "A",
+     "label": "拿掉",
+     "consequence": "清單變短；算改模組對外的樣子。"
+    },
+    {
+     "key": "B",
+     "label": "留著",
+     "consequence": "不動。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件建議拿掉。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "88",
+   "source_excerpt": "11. **`py/daemon_ctl/__init__` 對外清單裡約 25 個外面沒人讀的名字**：要不要拿掉（算改模組對外的樣子）。建議拿掉。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "cl-12",
+   "section": "cleanup",
+   "question": "`lib/agent/hooks.py` 的 `_target` 還自己叫 `aos-directive`（其他五處已改用共用的 `directive_value`），要不要也換？",
+   "eli5": "`hooks.py` 是範本可以單獨帶走的純標準庫模組；換成共用的就多一個依賴。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "換成 `directive_value`",
+     "consequence": "六處寫法一致；`hooks.py` 不再能單獨帶走。"
+    },
+    {
+     "key": "B",
+     "label": "維持自叫 `aos-directive`",
+     "consequence": "`hooks.py` 照舊零依賴。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議，寫明跟第 4 題（範本要不要完全自帶）同一題。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "重構拆檔和tidy結束後，派fable領隊，去做整個程式碼庫的整理，架構弄乾淨些。",
+     "cite": "使用者 11-12 晚（整理工作的原話）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "跟 `cl-4` 同一題；`cl-4` 選 A（可依賴）通常就是這題 A，選 B（完全自帶）就是這題 B。"
+   ],
+   "source_path": "../12/codebase-cleanup/README.md#待使用者裁",
+   "source_lines": "89",
+   "source_excerpt": "12. **`lib/agent/hooks.py` 的 `_target` 還自己叫 `aos-directive`**（其他五處已改用 `directive_value`）：`hooks.py` 是範本可以單獨帶走的純標準庫模組，換了就多一個依賴——跟第 4 題同一題。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "sub-U1",
+   "section": "subagent",
+   "question": "codex 版 agent 叫出來的子 agent，要不要也像 claude 版一樣少拿一些 aos 工具？",
+   "eli5": "子 agent 像主 agent 臨時找來的幫手。claude 版已經讓幫手只拿八支唯讀工具；codex 沒有官方設定能這樣分。",
+   "options": [
+    {
+     "key": "A",
+     "label": "甲：關掉 codex 原生子 agent（flags 加 `-c agents.enabled=false`）",
+     "consequence": "codex 版就沒有子 agent 可用。"
+    },
+    {
+     "key": "B",
+     "label": "乙：子 agent 開著，由 aos-mcp 看 codex 的內部欄位 `thread_source` 擋",
+     "consequence": "工具照列、叫了才擋；靠 codex 沒寫進文件的欄位，哪天改了就失效。"
+    },
+    {
+     "key": "C",
+     "label": "丙：不管，子 agent 跟主 agent 拿一樣的工具",
+     "consequence": "兩身行為不同：claude 切了、codex 沒切（codex 子 agent 也拿得到 `self_ctl`、`mailbox_send`）。"
+    }
+   ],
+   "recommend": "C",
+   "why": "原文件說原則推不出、沒有建議；標明現況是丙。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "codex eca那塊也去研究看看，應該也有類似功能",
+     "cite": "使用者 11-12 晚"
+    }
+   ],
+   "details": [
+    "同提取 U8（thinking→docs 待裁 U8 已併進這題，不另出題）；提取那邊 P-43 先寫「`tools_sub` 只有 claude 身」。",
+    "實測（codex-cli 0.167.0）：子 agent 繼承主 agent 全部 MCP，角色檔裡改 MCP 不算數；`tools/call` 的 `_meta` 裡主對話是 `\"thread_source\":\"user\"`、子 agent 是 `\"subagent\"`。",
+    "codex 範本沒改（你只說「研究看看」）。"
+   ],
+   "source_path": "../12/eca-task-subagent.md#未定題要使用者裁",
+   "source_lines": "99-102",
+   "source_excerpt": "- **U1 codex 的子 agent 要不要也少拿 aos 工具**（原則推不出）。現況＝丙。\n  - 甲：關掉 codex 原生子 agent（範本說明的 codex 版 flags 加 `-c agents.enabled=false`）。後果：codex 身沒有子 agent 可用。\n  - 乙：子 agent 開著，由 aos-mcp 在 `tools/call` 看 `thread_source`，子 agent 叫不在少功能清單裡的工具就拒絕（工具照列、叫了才擋）。後果：靠 codex 沒寫進文件的內部欄位，哪天改了就失效；aos-mcp 要多認一個 CLI 的私有欄位。\n  - 丙：不管，codex 的子 agent 跟主 agent 拿一樣的 aos 工具（含 self_ctl、mailbox_send）。後果：兩身行為不一樣——claude 切了、codex 沒切。",
+   "answer": "C",
+   "answer_state": "picked",
+   "answer_note": "以後再想辦法處理，不急。",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "sub-U2",
+   "section": "subagent",
+   "question": "claude 版裡除了預設那種，其他類型的子 agent（Explore、Plan 等）要不要也給少功能那台 aos 工具？",
+   "eli5": "現在只有預設類型 `general-purpose` 拿到八支少功能工具；其他類型看得到主 agent 的工具，但一叫就被擋，也沒有少功能那台。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：不給，叫了被擋",
+     "consequence": "其他類型子 agent 用不到任何 aos 工具。"
+    },
+    {
+     "key": "B",
+     "label": "給：替每個類型各寫一份定義",
+     "consequence": "蓋掉內建 Explore、Plan 會換掉它們原本的 prompt；外掛與你帳號自己定義的類型還是蓋不到。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定（T3）的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "codex eca那塊也去研究看看，應該也有類似功能",
+     "cite": "使用者 11-12 晚"
+    }
+   ],
+   "details": [
+    "對應代定 T3（見 `sub-T3`）。"
+   ],
+   "source_path": "../12/eca-task-subagent.md#未定題要使用者裁",
+   "source_lines": "103",
+   "source_excerpt": "- **U2 claude 身其他類型的子 agent 要不要也給少功能那台**（T3 代定「不給、叫了被擋」）。要給的話得替每個類型各寫一份定義（蓋掉內建的 Explore、Plan 會換掉它們原本的 prompt），外掛與使用者自己定義的類型還是蓋不到。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "sub-T1",
+   "section": "subagent",
+   "question": "子 agent 那台放哪幾支 aos 工具？",
+   "eli5": "判準是「沒有副作用、講的不是這隻 agent 自己」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：八支：peek_clock、peek_now_time、math、json_get、json_ls、json_search、json_multi_get、index_view；不放寫入類、self 一族、events、def、mailbox 三支",
+     "consequence": "不用動，維持現在的做法。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "依你的意見改範本或程式，再重跑測試。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [
+    "翻案＝改 `templates/eca-claude/tools_sub.json`。",
+    "唯讀的 `self_state`、`mailbox_peek` 也不放：一個講自己、一個信箱是主 agent 的。"
+   ],
+   "source_path": "../12/eca-task-subagent.md#代定清單可翻案",
+   "source_lines": "62",
+   "source_excerpt": "- **T1 子 agent 那台放八支**：peek_clock、peek_now_time、math、json_get、json_ls、json_search、json_multi_get、index_view。判準：`_metainfo.side_effect` 是 false，而且講的不是「這隻 agent 自己」。不放 json_set／add／del／multi_set、self 一族（含唯讀的 self_state）、events、def、mailbox 三支（含唯讀的 mailbox_peek：信箱是主 agent 的）。翻案＝改 `templates/eca-claude/tools_sub.json`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "sub-T2",
+   "section": "subagent",
+   "question": "切的是哪個子 agent 類型？",
+   "eli5": "Agent 工具沒指定類型時用的叫 `general-purpose`；要限制它就得用同名定義蓋掉內建那份。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：切 `general-purpose`；蓋掉後它的說明與 prompt 是 aos 寫的英文短版，不是 claude 內建那份",
+     "consequence": "不用動，維持現在的做法。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "依你的意見改範本或程式，再重跑測試。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [],
+   "source_path": "../12/eca-task-subagent.md#代定清單可翻案",
+   "source_lines": "63",
+   "source_excerpt": "- **T2 切的是 `general-purpose`**（Agent 工具沒指定類型時用的那個）；因為要蓋掉內建的，定義裡的說明與 prompt 是 aos 寫的短版（英文），不是 claude 內建那份。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "sub-T3",
+   "section": "subagent",
+   "question": "Explore、Plan、外掛或你自己定義的子 agent 類型怎麼處理？",
+   "eli5": "這些類型沒有被重新定義，照 claude 預設會繼承主 agent 的全部工具。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：不給 aos：看得到 `mcp__aos__*` 但叫了被擋，也沒有 `aos_sub`；沒去關掉這些類型（關掉＝少功能）",
+     "consequence": "不用動，維持現在的做法。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "依你的意見改範本或程式，再重跑測試。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [
+    "跟 `sub-U2` 是同一件事；裁 U2 時一起看。"
+   ],
+   "source_path": "../12/eca-task-subagent.md#代定清單可翻案",
+   "source_lines": "64",
+   "source_excerpt": "- **T3 其他類型不給 aos**：Explore、Plan、外掛或使用者自己定義的類型，看得到 `mcp__aos__*` 但叫了被擋，也沒有 `aos_sub`。沒去關掉這些類型（關掉＝少功能；eca「以 CLI 為主」）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "sub-T4",
+   "section": "subagent",
+   "question": "新設定的名字怎麼取？",
+   "eli5": "主題放前面的命名習慣。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：設定鍵叫 `tools_sub`、子 agent 那台 server 叫 `aos_sub`，工具名是 `mcp__aos_sub__<名>`",
+     "consequence": "不用動，維持現在的做法。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "依你的意見改範本或程式，再重跑測試。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [],
+   "source_path": "../12/eca-task-subagent.md#代定清單可翻案",
+   "source_lines": "65",
+   "source_excerpt": "- **T4 鍵名 `tools_sub`、server 名 `aos_sub`**（主題放前面）；工具名是 `mcp__aos_sub__<名>`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "sub-T5",
+   "section": "subagent",
+   "question": "定義裡沒寫 `tools_sub` 時怎麼辦？",
+   "eli5": "寫什麼就做什麼的原則。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：沒寫＝不切、不擋，照 CLI 預設；範本預設有寫",
+     "consequence": "不用動，維持現在的做法。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "依你的意見改範本或程式，再重跑測試。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [],
+   "source_path": "../12/eca-task-subagent.md#代定清單可翻案",
+   "source_lines": "66",
+   "source_excerpt": "- **T5 沒寫 `tools_sub`＝不切、不擋**（寫什麼就做什麼）；範本預設有寫。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "sub-T6",
+   "section": "subagent",
+   "question": "用 `self_tools`／`aos-agent tools` 加減工具時，影響哪一台？",
+   "eli5": "主 agent 可以在執行中加減自己的工具。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：只進主 agent 那台；子 agent 那台只看定義裡的 `tools_sub.json`",
+     "consequence": "不用動，維持現在的做法。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "依你的意見改範本或程式，再重跑測試。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [],
+   "source_path": "../12/eca-task-subagent.md#代定清單可翻案",
+   "source_lines": "67",
+   "source_excerpt": "- **T6 `self_tools`／`aos-agent tools` 的加減只進主 agent 那台**，子 agent 那台只看定義的 `tools_sub.json`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "sub-T7",
+   "section": "subagent",
+   "question": "`Agent`、`Skill` 兩個工具要不要列進允許清單 `--allowedTools`？",
+   "eli5": "允許清單是「不用問就能用」的工具名單。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：不列；實測 dontAsk 模式下不需要",
+     "consequence": "不用動，維持現在的做法。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "依你的意見改範本或程式，再重跑測試。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [],
+   "source_path": "../12/eca-task-subagent.md#代定清單可翻案",
+   "source_lines": "68",
+   "source_excerpt": "- **T7 `Agent`、`Skill` 不列進 `--allowedTools`**：實測 dontAsk 下不需要。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "sub-T8",
+   "section": "subagent",
+   "question": "守門的 hook 讀不懂輸入時要放行還是擋？",
+   "eli5": "hook 是每次叫工具前先跑的一段檢查。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：讀不懂就擋（擋錯只少一次工具呼叫；放錯是子 agent 用到主 agent 那台）",
+     "consequence": "不用動，維持現在的做法。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "依你的意見改範本或程式，再重跑測試。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [],
+   "source_path": "../12/eca-task-subagent.md#代定清單可翻案",
+   "source_lines": "69",
+   "source_excerpt": "- **T8 guard 讀不懂輸入＝擋**：擋錯只少一次工具呼叫；放錯是子 agent 用到主 agent 那台。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "sub-T9",
+   "section": "subagent",
+   "question": "codex 版定義裡寫了 `tools_sub` 會怎樣？",
+   "eli5": "codex 做不到這種切法。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：報 `CfgBad` 設定錯，不靜靜吞掉",
+     "consequence": "不用動，維持現在的做法。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "依你的意見改範本或程式，再重跑測試。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [],
+   "source_path": "../12/eca-task-subagent.md#代定清單可翻案",
+   "source_lines": "70",
+   "source_excerpt": "- **T9 codex 身寫 `tools_sub`＝`CfgBad`**（不靜靜吞掉）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tok-N28",
+   "section": "tidyok",
+   "question": "N-28 那句「daemon.json 比 loop.json 多的設定只有五個」改成列出 9 個，可以嗎？",
+   "eli5": "條文原本說 daemon 的設定檔比 loop 的多五個欄位，但同一條後面跟程式（`daemon.cpp`）其實認 9 個；整理時照程式補齊，字面上算新增了 4 個名字。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照改的：多的欄位寫成 9 個（加 `procs_loop`、`procs_exec`、`procs_stderr`、`limits`）",
+     "consequence": "條文維持現在的樣子，不用再動。"
+    },
+    {
+     "key": "B",
+     "label": "要改回或改別的（意見寫在備註）",
+     "consequence": "要改回「五個」或改成別的列法，條文與程式就又對不上，得另外說明哪邊為準。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是第三輪改完、對讀過的現況；報告特別標了「請點頭」，不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "現在的句子在 `proto8/docs/NORMS/04-基礎設施-loop與daemon/02-N-28.md` 第 3 行：多的 key 只有 `procs`、`adopt`、`procs_ctl`、`procs_state`、`procs_requests`、`procs_loop`、`procs_exec`、`procs_stderr`、`limits`。",
+    "依據：同條後文與 `daemon.cpp`；commit `e6f10c8a5`（NORMS 04）。",
+    "報告原文：「字面算新增，請點頭」。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "149",
+   "source_excerpt": "**照程式改正的句子**（精簡時發現條文跟程式對不上、以程式為準，對讀確認）：N-16、N-66「daemon ctl 信箱 body 壞仍不回」→ 已回 `BodyBad`；N-33 刪「daemon 不寫子 loop 的 ctl」；寄信逾時改「已由寄信者給（`--timeout-s`）」；N-45 `procs_ctl.json` 補 `procs_slept`／`procs_woken`；N-28 開頭「daemon.json 多的 key 只有五個」補成 9 個",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tok-C55",
+   "section": "tidyok",
+   "question": "C-55「值長成物件時，原值那一格一律叫 `val`」改成「推薦叫 `val`」，可以嗎？",
+   "eli5": "一個設定值不夠用時可以長成物件，原本的值放進其中一格；條文原本說那格「一律」叫 `val`，但問腦總機的 `priority` 用的是 `level`，跟 11-07 的裁定不合，所以放軟成「推薦」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照改的：原值那一格「推薦」叫 `val`（`priority` 用 `level` 也算合規）",
+     "consequence": "條文維持現在的樣子，不用再動。"
+    },
+    {
+     "key": "B",
+     "label": "要改回或改別的（意見寫在備註）",
+     "consequence": "改回「一律」的話，`priority` 的 `level` 就變成違規，要嘛改程式、要嘛另寫例外。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是第三輪改完、對讀過的現況；報告特別標了「請點頭」，不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "現在的句子在 `proto8/docs/CONCEPTS/01-設計理念/05-布局成長與檔案權限.md` C-55：「**原值那一格推薦叫 `val`**（…aos-llm-kernel 的 `priority` 展開形用 `level`，C-48、11-07 使用者裁定…）」。",
+    "報告原文：「對齊 C-48 的 11-07 裁定——請點頭」。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "149",
+   "source_excerpt": "**照程式改正的句子**（精簡時發現條文跟程式對不上、以程式為準，對讀確認）：N-16、N-66「daemon ctl 信箱 body 壞仍不回」→ 已回 `BodyBad`；N-33 刪「daemon 不寫子 loop 的 ctl」；寄信逾時改「已由寄信者給（`--timeout-s`）」；N-45 `procs_ctl.json` 補 `procs_slept`／`procs_woken`；N-28 開頭「daemon.json 多的 key 只有五個」補成 9 個",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tok-C81",
+   "section": "tidyok",
+   "question": "C-81「外人讀寫別人的地盤沒問題」跟後來加的「寫限覆蓋層」合成一句「讀沒問題，寫限覆蓋層」，可以嗎？",
+   "eli5": "每個程式的 stack 資料夾是它自己的地盤。原本正文說外人讀寫都沒問題，11-06 又加註說外人只能寫對方宣告開放的那層（覆蓋層）；整理時把兩句合成一句現在式。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照改的：外人讀沒問題；寫只限對方在 `interfaces.json` 宣告可從外面寫的覆蓋層，其他走信箱或 ctl",
+     "consequence": "條文維持現在的樣子，不用再動。"
+    },
+    {
+     "key": "B",
+     "label": "要改回或改別的（意見寫在備註）",
+     "consequence": "改回「讀寫都沒問題」就推翻 11-06 選的「宣告過的覆蓋層可寫」；要別的寫法請在備註說。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是第三輪合句後的現況；報告標了「請確認」，不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "現在的句子在 `proto8/docs/CONCEPTS/03-基礎設施/02-資料夾程式-工作區與-stack.md` C-81：「外人讀它 stack 裡的檔沒問題；外人寫別人 stack 的檔，限對方在 `interfaces.json` 宣告可從外面寫的（覆蓋層），其他經信箱或 ctl」。",
+    "出處：使用者 11-06 選項框「宣告過的覆蓋層可寫 (Recommended)」。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "149",
+   "source_excerpt": "**照程式改正的句子**（精簡時發現條文跟程式對不上、以程式為準，對讀確認）：N-16、N-66「daemon ctl 信箱 body 壞仍不回」→ 已回 `BodyBad`；N-33 刪「daemon 不寫子 loop 的 ctl」；寄信逾時改「已由寄信者給（`--timeout-s`）」；N-45 `procs_ctl.json` 補 `procs_slept`／`procs_woken`；N-28 開頭「daemon.json 多的 key 只有五個」補成 9 個",
+   "answer": "B",
+   "answer_state": "changed",
+   "answer_note": "拿掉限制。等以後踩坑再回來處理。",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "tok-N16-66",
+   "section": "tidyok",
+   "question": "N-16、N-66 原本說「daemon 收到內容壞掉的指令信不回信」，改成照程式「會回 `BodyBad` 錯誤信」，可以嗎？",
+   "eli5": "daemon 有個收指令的信箱。信封好但內容（body）不對時，程式其實已經回一封錯誤信（代號 `BodyBad`）給寄信的人，條文卻還寫不回；整理時以程式為準。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照改的：內容壞的指令信，有回信地址就回 `BodyBad`；信封本身壞才丟掉不回",
+     "consequence": "條文維持現在的樣子，不用再動。"
+    },
+    {
+     "key": "B",
+     "label": "要改回或改別的（意見寫在備註）",
+     "consequence": "改回「不回」的話，要改程式讓 daemon 不再回錯誤信。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是第三輪照程式改正、對讀確認過的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "現在的條文：`proto8/docs/NORMS/05-基礎設施-窗/05-N-16.md`（壞信＝信封壞才丟）、`08-N-66.md`（body 不合有 `reply_to` 就回錯誤信）。",
+    "wait-user 把這條列為改了意思、要你點頭的。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "149",
+   "source_excerpt": "**照程式改正的句子**（精簡時發現條文跟程式對不上、以程式為準，對讀確認）：N-16、N-66「daemon ctl 信箱 body 壞仍不回」→ 已回 `BodyBad`；N-33 刪「daemon 不寫子 loop 的 ctl」；寄信逾時改「已由寄信者給（`--timeout-s`）」；N-45 `procs_ctl.json` 補 `procs_slept`／`procs_woken`；N-28 開頭「daemon.json 多的 key 只有五個」補成 9 個",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tok-N33",
+   "section": "tidyok",
+   "question": "N-33 刪掉「daemon 不寫子 loop 的 ctl」這句（照程式），可以嗎？",
+   "eli5": "ctl 是給 loop 下指令的小檔。條文有一句說 daemon 不會去寫它底下 loop 的 ctl，但程式其實會寫（還會把序號加一），所以整理時把這句刪了。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照改的：刪掉那句；現在 N-33 寫「daemon 寫子 loop 的 ctl 時把 seq 加一」",
+     "consequence": "條文維持現在的樣子，不用再動。"
+    },
+    {
+     "key": "B",
+     "label": "要改回或改別的（意見寫在備註）",
+     "consequence": "要留那句的話，就得改程式讓 daemon 不寫子 loop 的 ctl。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是第三輪照程式改正、對讀確認過的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "現在的條文：`proto8/docs/NORMS/05-基礎設施-窗/07-細則.md` N-33。",
+    "wait-user 把這條列為改了意思、要你點頭的。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "149",
+   "source_excerpt": "**照程式改正的句子**（精簡時發現條文跟程式對不上、以程式為準，對讀確認）：N-16、N-66「daemon ctl 信箱 body 壞仍不回」→ 已回 `BodyBad`；N-33 刪「daemon 不寫子 loop 的 ctl」；寄信逾時改「已由寄信者給（`--timeout-s`）」；N-45 `procs_ctl.json` 補 `procs_slept`／`procs_woken`；N-28 開頭「daemon.json 多的 key 只有五個」補成 9 個",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tok-N45",
+   "section": "tidyok",
+   "question": "N-45 的 `procs_ctl.json` 補上 `procs_slept`／`procs_woken` 兩格（照程式），可以嗎？",
+   "eli5": "`procs_ctl.json` 是叫 daemon 增刪停起底下程式的名單檔；程式已經認「睡」「醒」這兩種，條文列的欄位卻少了這兩格，整理時補上。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照改的：`procs_ctl.json` 認的欄位補上 `procs_slept`、`procs_woken`",
+     "consequence": "條文維持現在的樣子，不用再動。"
+    },
+    {
+     "key": "B",
+     "label": "要改回或改別的（意見寫在備註）",
+     "consequence": "拿掉的話條文又比程式少兩格；要改程式不認睡醒就得另開工。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是第三輪照程式改正、對讀確認過的現況；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "睡／醒指令的出處：N-28「sleep／wake 也是指令」（portable-flow 衝突 1 使用者選「嚴格分」）。",
+    "commit 在 NORMS 10＋N-45 那組（`6a9a11bd6` 等）。",
+    "wait-user 把這條列為改了意思、要你點頭的。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "149",
+   "source_excerpt": "**照程式改正的句子**（精簡時發現條文跟程式對不上、以程式為準，對讀確認）：N-16、N-66「daemon ctl 信箱 body 壞仍不回」→ 已回 `BodyBad`；N-33 刪「daemon 不寫子 loop 的 ctl」；寄信逾時改「已由寄信者給（`--timeout-s`）」；N-45 `procs_ctl.json` 補 `procs_slept`／`procs_woken`；N-28 開頭「daemon.json 多的 key 只有五個」補成 9 個",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-N17",
+   "section": "tidyconf",
+   "question": "N-17 說「除了兩個例外都不碰 pid」，但有兩處程式會去 /proc 看程式活著沒；要把它列成第三個例外，還是改程式？",
+   "eli5": "pid 是 linux 給每個行程的號碼。規矩說 aos 的工具不直接拿 pid 做事（只有 poke 跟清道夫例外），但 `aos-daemon-ctl ls` 跟 `aos-agent` 的共用碼都會讀 /proc 判斷活不活。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "以程式為準、改 N-17：列第三個例外「判活」",
+     "consequence": "程式不用動；N-17 多一條例外。"
+    },
+    {
+     "key": "B",
+     "label": "以 N-17 為準、改程式：這兩處不再讀 /proc",
+     "consequence": "規矩不變；要改兩處程式，改用別的方式判活（例如看 daemon 的表）。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "程式位置：`aos-daemon-ctl` 的 bin 第 265～271 行（`ls`）、`aos-agent` 的 `common.py` 第 179 行。",
+    "N-17 的例外段名是「例外一：poke」「例外二：清道夫」。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "156",
+   "source_excerpt": "N-17「除 poke、清道夫外不碰 pid」vs `aos-daemon-ctl ls`（bin:265-271）與 `aos-agent` common.py:179 都對 /proc 判活：列第三例外或改程式？",
+   "answer": "U",
+   "answer_state": "picked",
+   "answer_note": "盡量只讓daemon相關的碰pid，這是原則，推薦遵守。不遵守也沒差。",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "tcf-C42",
+   "section": "tidyconf",
+   "question": "C-42 說「記憶庫是純 JSON 樹」，但同一條引的原話說「markdown、json、yaml 之類的格式都可以」；以哪邊為準？",
+   "eli5": "記憶庫是 agent 存知識的地方。條文第 7 行把格式限成只有 JSON，第 9 行你的原話卻說多種格式都行，兩句擺在一起互相打架。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "以原話為準、改第 7 行：記憶庫可以混多種格式",
+     "consequence": "條文放寬；讀記憶庫的工具與文件要寫明怎麼處理非 JSON 的檔。"
+    },
+    {
+     "key": "B",
+     "label": "以「純 JSON 樹」為準、改第 9 行旁的說明：原話留作出處，註明現在只做 JSON",
+     "consequence": "現況不用動；原話那句的意思要另外交代。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "markdown, json, yaml之類的格式都可以",
+     "cite": "使用者原話（C-42 續第 9 行引的）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`proto8/docs/CONCEPTS/05-agent/01-續-C-42.md` 第 7、9 行。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "157",
+   "source_excerpt": "C-42（05-agent/01-續）第 7 行「記憶庫是純 JSON 樹」vs 第 9 行原話「markdown, json, yaml之類的格式都可以」。",
+   "answer": "B",
+   "answer_state": "picked",
+   "answer_note": "推薦都用json，我們做的東西也盡量以json為主。這是推薦，不遵守也沒差",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "tcf-C52",
+   "section": "tidyconf",
+   "question": "C-52 的升格規則說「原句照舊留在原處」，跟這輪的「沿革只留結論」打架；以哪邊為準？",
+   "eli5": "升格是把幾處重複的說法收成一條通則。C-52 續寫著升格後原句照留，但這輪新規矩要把舊句收成結論；兩條擺在一起會互相打架。這句是 agent 當初推的，不是你的原話。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "以「沿革只留結論」為準、改 C-52 續那句",
+     "consequence": "升格後原處只留指向通則的一句，不再保留原句。"
+    },
+    {
+     "key": "B",
+     "label": "以 C-52 續為準：升格時原句照留，當成「只留結論」的例外",
+     "consequence": "兩條規矩並存，content-trim 要寫明這個例外。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`proto8/docs/CONCEPTS/01-設計理念/03-續-C-52-例外.md` 第 27 行。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "158",
+   "source_excerpt": "C-52 續 :27 升格門檻「原句照舊留在原處」跟今晚「沿革只留結論」打架（agent 推的，非原話）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-P33",
+   "section": "tidyconf",
+   "question": "P-33 裡講 round 的例外段，要不要也照新規矩清掉？",
+   "eli5": "round 是已經刪掉的舊程式。11-04 你說過「round 那批條文原字不動」，但這輪 P-25、P-35 裡 round 的部分已照新規矩清了，只剩 P-33 還留著，前後不一致。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "以新規矩為準、P-33 的 round 例外段也清掉",
+     "consequence": "三條一致都清；11-04 那句「原字不動」就算被這次取代。"
+    },
+    {
+     "key": "B",
+     "label": "以 11-04「原字不動」為準、P-33 照留",
+     "consequence": "P-33 留著；P-25、P-35 已清的部分跟這句有出入，要不要改回請在備註說。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "round 那批條文原字不動",
+     "cite": "使用者 11-04（報告轉引）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "P-33 在 `proto8/docs/CONVENTION/06-巢狀.md`、`04-範例三種寫法.md` 有出現。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "159",
+   "source_excerpt": "P-33 的 round 例外段原字留（11-04 使用者裁「round 那批條文原字不動」）；但 P-25、P-35 這輪已照新規矩清掉 round／parts 部分——跟 11-04 那句有出入，要不要 P-33 也清？",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-P05-27",
+   "section": "tidyconf",
+   "question": "CONVENTION 裡舊協議與 agent-bob 的示意（P-05、P-11～P-14、P-27、P-29、第八節）跟現行做法對不上，要怎麼處理？",
+   "eli5": "agent-bob 是早就刪掉的範本，現在的範本叫 agent-fsm；入口也改成 JSON 的 `_entry`。但 P-05 還寫「入口一定帶 shebang（腳本開頭那行）」，P-27 還寫「標準＝agent-bob」，只標了「示意」。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "以現行為準、改寫這幾條：標準換成 `templates/agent-fsm`、入口照 `_entry`",
+     "consequence": "條文跟現況對齊；改的量較大。"
+    },
+    {
+     "key": "B",
+     "label": "整段當歷史示意，搬去封存或刪掉",
+     "consequence": "CONVENTION 變短；舊協議只在封存裡查得到。"
+    },
+    {
+     "key": "C",
+     "label": "先不動，等「thinking→docs 提取」的 U1（標準換不換成 agent-fsm）裁了一起做",
+     "consequence": "這輪不動；跟 U1 綁在一起裁。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "`CONVENTION.md` 現在寫明「agent-bob 已刪，換不換成 agent-fsm 由使用者定」。",
+    "同一件事在另一張單也有：thinking-to-docs 的 U1（那邊建議換成 `templates/agent-fsm`）。",
+    "wait-user 把 P-05／P-06／P-27 寫在一起；P-06 另一題。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "160",
+   "source_excerpt": "CONVENTION 舊協議與 agent-bob 示意（P-11～P-14、P-27、P-29、第八節）：範本早不在，只標「示意」；P-05「入口一定帶 shebang」、P-27「標準＝agent-bob」跟現行 JSON `_entry` 對不上；`CONVENTION.md` 寫明「agent-bob 已刪，換不換成 agent-fsm 由使用者定」。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-P06",
+   "section": "tidyconf",
+   "question": "P-06 說 loop.json 只有五個 key，但 aos-loop 還認另外四個；P-43 的 `interfaces.json` 範例也少鍵。要照程式補齊嗎？",
+   "eli5": "loop.json 是 loop 的設定檔。條文列的欄位比程式實際認的少：程式還認 `state_flux`、`on_start`、`on_stop`、`on_timeout_ms`。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "以程式為準、改 P-06 與 P-43 範例：補齊少的 key",
+     "consequence": "條文跟程式一致。"
+    },
+    {
+     "key": "B",
+     "label": "以條文為準、改程式：只認那五個",
+     "consequence": "要動 aos-loop，已在用那四個欄位的設定會失效。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`proto8/docs/CONVENTION` 的 P-06、P-43 續。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "161",
+   "source_excerpt": "P-06「loop.json key 共五個」但 aos-loop 還認 `state_flux`、`on_start`、`on_stop`、`on_timeout_ms`；P-43 續 `interfaces.json` 範例少鍵；",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-demo",
+   "section": "tidyconf",
+   "question": "P-31、P-39 和 CONVENTION 05 檔還提到已經不在的 `proto8/demo`，要刪那幾句還是換成現有的例子？",
+   "eli5": "`proto8/demo` 是早期的示範資料夾，已經不存在，但幾條條文還拿它當例子。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "刪掉提到 demo 的那幾句",
+     "consequence": "條文變短；少了例子。"
+    },
+    {
+     "key": "B",
+     "label": "換成現在還在的例子（範本或測試）",
+     "consequence": "例子保留，要找合適的替代品。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`proto8/docs/CONVENTION` 的 P-31（03-shell版與inst版）、P-39、`05-不管落實待決.md`。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "161",
+   "source_excerpt": "P-31、P-39、05 檔仍提已不在的 `proto8/demo`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-P15",
+   "section": "tidyconf",
+   "question": "P-15 引的原話「aos-agent llm 改正在跑著的，aos-llm 改定義」後半已被推翻，要不要只留前半？",
+   "eli5": "這句原話講兩支指令各改什麼。前半（`aos-agent llm` 改跑著的）還成立，後半（`aos-llm` 改定義）已經被後來的決定推翻；同一句在 P-23 那處已經刪了，P-15 還留整句。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "只留前半句",
+     "consequence": "原話被截一半；P-15 跟現況一致。"
+    },
+    {
+     "key": "B",
+     "label": "整句照留",
+     "consequence": "原話完整，但後半跟現況不合，讀的人要自己知道已推翻。"
+    },
+    {
+     "key": "C",
+     "label": "整句刪掉，P-15 只寫結論",
+     "consequence": "照「只留結論」最乾淨；出處要另找現行那句。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "aos-agent llm改正在跑著的，aos-llm改定義",
+     "cite": "使用者原話（P-15 引的）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`proto8/docs/CONVENTION/02-題目stack停錯腦/04-五-stack續-P-15.md`。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "162",
+   "source_excerpt": "P-15 原話「aos-agent llm改正在跑著的，aos-llm改定義」後半已被推翻，要不要只留前半。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-08-7",
+   "section": "tidyconf",
+   "question": "「08-待定/01」第 7 行【fsm】那題自稱已解，卻還帶著代定「路 1 不做」；算結案移出待定，還是留著？",
+   "eli5": "08-待定 是條文裡放還沒定的題的地方。這題寫著已解，但裡面又有一個隊長代定，狀態說不清。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "算已解：移出待定，代定「路 1 不做」照留成結論",
+     "consequence": "待定清單少一題。"
+    },
+    {
+     "key": "B",
+     "label": "留在待定，等你裁那個代定",
+     "consequence": "狀態維持現在的樣子。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`proto8/docs/NORMS/08-待定/01-待定之一.md` 第 7 行。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "163",
+   "source_excerpt": "08-待定/01 第 7 行「【fsm】相對於這格的 exec」自稱已解但含代定「路 1 不做」；",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-08-5",
+   "section": "tidyconf",
+   "question": "「08-待定/01」第 5 行「agent 當工具時題目怎麼交」，例子全是已不在的東西；是不是已經被 subagent 工具答掉了？",
+   "eli5": "這題原本問：一個 agent 被別人當工具叫時，題目要怎麼交給它。後來做了 subagent 工具，可能已經是答案，但條文沒更新。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "算已答掉：刪這條或改成指向 subagent 工具",
+     "consequence": "待定清單少一題。"
+    },
+    {
+     "key": "B",
+     "label": "還沒答掉：留著，例子換成現有的東西",
+     "consequence": "題目保留，要重寫例子。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`proto8/docs/NORMS/08-待定/01-待定之一.md` 第 5 行。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "163",
+   "source_excerpt": "第 5 行「agent 當工具時題目怎麼交」例子全是已不在的東西，是否已被 subagent 工具答掉。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-N25",
+   "section": "tidyconf",
+   "question": "N-25 還寫 `ref_base`＝「單子所在的資料夾」，但程式的 `RefBase` 已經改成「資料夾＋檔名」兩格；要照程式改條文嗎？",
+   "eli5": "`ref_base` 是 `$ref`（指到別的檔的寫法）算相對路徑的起點。`$ref` 那條線把它從一個資料夾改成記資料夾和檔名兩樣，條文沒跟上。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "以程式為準、改 N-25",
+     "consequence": "條文跟程式一致。"
+    },
+    {
+     "key": "B",
+     "label": "以條文為準、改程式",
+     "consequence": "要退回 `$ref` 線的改動。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`proto8/docs/NORMS/03-基礎設施-inst.md` 第 12 行 N-25，現在寫「`ref_base`＝單子裡 `$ref` 的起點（寫著單子的檔所在的資料夾）」。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "164",
+   "source_excerpt": "N-25 `ref_base` 仍寫「單子所在資料夾」，程式 `RefBase` 已改 `{dir, file}`（`$ref` 線）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-C74",
+   "section": "tidyconf",
+   "question": "知識庫的 `errors.json` 還拿 `AgentExists` 當「已經有同名的」錯誤例子，但條文那段已刪；要換掉這個例子嗎？",
+   "eli5": "`errors.json` 是給 agent 查錯誤代號的知識節點。`AgentExists` 原本跟 parts 那段有關，這輪條文已刪掉；目前程式裡也搜不到這個代號（子 agent 查的）。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "從例子裡拿掉 `AgentExists`",
+     "consequence": "知識庫跟現況一致。"
+    },
+    {
+     "key": "B",
+     "label": "照留",
+     "consequence": "例子裡留一個現在沒人用的代號。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`proto8/knowledge/aos/errors.json`；這輪沒動 json 節點，所以留給你定。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "165",
+   "source_excerpt": "C-74 parts 段已刪，`knowledge/aos/errors.json` 仍拿 `AgentExists` 當例子（json 節點不在範圍）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-agent01",
+   "section": "tidyconf",
+   "question": "「05-agent/01-腦」第 25 行寫「aos-agent 做成範本」，但現在範本叫 agent-fsm；要改名字嗎？",
+   "eli5": "aos-agent 是指令，範本是另一樣東西（`templates/agent-fsm`）；這句把兩個名字混在一起。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "改成 agent-fsm",
+     "consequence": "名字跟現況一致。"
+    },
+    {
+     "key": "B",
+     "label": "照留",
+     "consequence": "讀的人要自己知道指的是範本。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`proto8/docs/CONCEPTS/05-agent/01-腦-工具-可預測性與agent函數binding.md` 第 25 行。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "166",
+   "source_excerpt": "`05-agent/01-腦…:25`「aos-agent 做成範本」跟現況名字對不上（範本叫 agent-fsm）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-hack",
+   "section": "tidyconf",
+   "question": "wf 的 hackathon 說明第 34～39 行列的題目來源全都已經封存了；要清掉還是改指封存處？",
+   "eli5": "hackathon 是一條工作流，說明裡列了去哪找題目，但那些地方都已封存。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "刪掉那幾行",
+     "consequence": "說明變短；要找題目得另想來源。"
+    },
+    {
+     "key": "B",
+     "label": "改指封存的位置",
+     "consequence": "照舊找得到，但都是舊東西。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`wf/workflows/hackathon/README.md` 第 34～39 行。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "167",
+   "source_excerpt": "wf：hackathon/README:34-39 題目來源全已封存；",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-conv",
+   "section": "tidyconf",
+   "question": "wf 的 conventions/01 第 23 行說「例外四類」，但 C-52 續現在的表多了 ⑥⑦；以哪邊為準？",
+   "eli5": "C-52 列的是「什麼時候可以不照通則」的例外。條文那邊已經長到更多類，wf 那份還寫四類。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "以 C-52 續為準、改 wf conventions/01",
+     "consequence": "兩邊一致。"
+    },
+    {
+     "key": "B",
+     "label": "以 wf 為準、回頭檢查 C-52 續多的那兩類",
+     "consequence": "要確認 ⑥⑦ 是不是該在。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`wf/workflows/common/conventions/01-程式碼慣例.md` 第 23 行；`proto8/docs/CONCEPTS/01-設計理念/03-續-C-52-例外.md`。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "167",
+   "source_excerpt": "conventions/01:23「例外四類」vs C-52 續現行表多 ⑥⑦；",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-sandbox",
+   "section": "tidyconf",
+   "question": "wf 的 aos-teams/02 第 27 行（家機 codex 改用沙箱）跟入口寫的「家機 danger-full-access 照用」對不上；以哪邊為準？",
+   "eli5": "danger-full-access 是 codex 不設沙箱、什麼都能動的模式。一份說家機改用沙箱，入口那份還說家機照用不設沙箱。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "以 aos-teams/02 為準（家機用沙箱）、改入口",
+     "consequence": "入口跟 11-08 的裁定一致。"
+    },
+    {
+     "key": "B",
+     "label": "以入口為準（家機照用 danger-full-access）、改 aos-teams/02",
+     "consequence": "家機照舊不設沙箱。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "codex可以改用沙箱，準備好就可以用",
+     "cite": "使用者 11-08（aos-teams/02 引的）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`wf/workflows/dispatch/aos-teams/02-指令沙箱與試玩.md` 第 27 行，寫著「家機（11-08 使用者裁「codex可以改用沙箱，準備好就可以用」）」。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "167",
+   "source_excerpt": "aos-teams/02:27 vs 入口「家機 danger-full-access 照用」；",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "tcf-plans",
+   "section": "tidyconf",
+   "question": "wf 的 team-model/plans 寫「Claude、GPT 各一個 200 美元方案」，這句現在還對嗎？",
+   "eli5": "這是記你訂了哪些付費方案的地方；整理的人沒辦法核實，只能問你。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "還對，照留",
+     "consequence": "不用改。"
+    },
+    {
+     "key": "B",
+     "label": "不對（實際情況寫在備註）",
+     "consequence": "照你寫的改。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`wf/workflows/team-model/plans.md` 第 5 行。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "167",
+   "source_excerpt": "team-model/plans「兩個 200 美元方案」能否核實；",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-agents",
+   "section": "tidyconf",
+   "question": "AGENTS.md 寫「單機開發」，但 INDEX 和 dev-env 寫「兩台輪流」；以哪邊為準？",
+   "eli5": "AGENTS.md 是每個 agent 開工先讀的總說明。它說只有一台機器、沒有跨機情況；dev-env 那份卻寫家裡 Manjaro 和公司 WSL 兩台輪流開發。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "以「兩台輪流」為準、改 AGENTS.md",
+     "consequence": "總說明跟現況一致，agent 會知道有跨機的事。"
+    },
+    {
+     "key": "B",
+     "label": "以「單機」為準、改 INDEX 與 dev-env",
+     "consequence": "跨機那些說明要收掉或標成過去。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "AGENTS.md 第 40 行：「單機開發，沒有跨機或離線的特殊情況」。",
+    "`wf/workflows/dev-env/01-跨機與外部工具.md` 第 5 行：「兩台輪流開發：家裡 Manjaro Linux…、公司 WSL2 Ubuntu（repo 在 `~/repo/aos`…）」（11-13 剛改過公司路徑）。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "167",
+   "source_excerpt": "AGENTS.md「單機開發」vs INDEX/01、dev-env/01「兩台輪流」。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-know",
+   "section": "tidyconf",
+   "question": "knowledge/README 第 9、17 行講 index 的話跟「index 是視角」互相牴觸；要怎麼對齊？",
+   "eli5": "index 是每個資料夾的目錄說明。第 9 行引的原話說 index 有「天然位置」、就是 agent 對這節點的理解；第 17 行又說 index 是視角、天然位置那份只是通用視角。牽涉 11-12 的 thinking，這輪沒動。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "以「index 是視角」為準、改第 9 行的說明（原話照留當出處）",
+     "consequence": "說明一致；原話的讀法要另外交代。"
+    },
+    {
+     "key": "B",
+     "label": "以第 9 行原話為準、改第 17 行",
+     "consequence": "「視角」那套說法要收回或改寫。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`proto8/knowledge/README.md` 第 9、17 行。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "168",
+   "source_excerpt": "knowledge/README 第 9、17 行 index 原話與「index 是視角」互相牴觸（牽涉今天 thinking，沒動）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-thinkref",
+   "section": "tidyconf",
+   "question": "11-12 的 thinking 裡有兩處引用變成舊名（不是連結、不會壞）；要改成新段名，還是照「thinking 不碰」不動？",
+   "eli5": "條文的段名這輪改過；兩份 11-12 的思考記錄還寫舊的叫法。規矩是 thinking 不補註。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "不動（thinking 是當時的紀錄）",
+     "consequence": "舊名留著，讀的人要自己對到新段名。"
+    },
+    {
+     "key": "B",
+     "label": "改成新段名",
+     "consequence": "引用好找，但破了「thinking 不碰」的例。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "`thinking/2026-11/12/kernel-small-fixes.md:50`「N-28 第 51 行」；`kernel-framework/07-Argon審查.md:112`「N-63 02 的 11-05 例外」。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "169",
+   "source_excerpt": "今天 thinking 裡變成舊名的引用（不是連結、不會壞）：`thinking/2026-11/12/kernel-small-fixes.md:50`「N-28 第 51 行」、`kernel-framework/07-Argon審查.md:112`「N-63 02 的 11-05 例外」。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-appendix",
+   "section": "tidyconf",
+   "question": "NORMS 附錄 1 條號表、附錄 2 各批出處、附錄 3 舊名對照，本身就是出處和舊名表；要不要照「只留結論」整份清？",
+   "eli5": "這三份附錄記的就是「哪條從哪來、以前叫什麼」，正好是這輪要刪的那種沿革；所以這輪沒動，留給你定。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "整份清掉（或封存）",
+     "consequence": "NORMS 變短；要查舊名、出處只能翻 git 或封存。"
+    },
+    {
+     "key": "B",
+     "label": "照留，當成「只留結論」的例外",
+     "consequence": "查舊名、出處方便；這三份會跟著每次改名繼續長。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`proto8/docs/NORMS/附錄1-條號表.md` 等三份。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "153",
+   "source_excerpt": "NORMS 附錄1 條號表、附錄2 各批出處、附錄3 舊名對照（本身就是出處／舊名表，要不要整份清請使用者定）",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "tcf-specideas",
+   "section": "tidyconf",
+   "question": "`wf/workflows/spec/README.md` 和 `ideas/README.md` 整份已經是歷史；要不要把這兩個入口封存？",
+   "eli5": "這兩份是早期的工作流入口，內容都是過去的紀錄，現在沒人走這兩條路。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "整個入口封存",
+     "consequence": "工作流清單少兩個；舊內容在封存裡。"
+    },
+    {
+     "key": "B",
+     "label": "照留",
+     "consequence": "不用動；入口裡留著歷史內容。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "還有，什麼11/5幹了啥，這個也刪掉，以後面的爲準，全部匯總成結論，只留結論",
+     "cite": "使用者 11-12 晚（第三輪的起因）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "位置：`wf/workflows/spec/README.md`、`wf/workflows/ideas/README.md`。"
+   ],
+   "source_path": "../../../../wf/workflows/tidy/reports/2026-11-12-收尾.md#第三輪沿革只留結論11-12-晚",
+   "source_lines": "153",
+   "source_excerpt": "整份已是歷史的 `wf/workflows/spec/README.md`、`ideas/README.md`（要不要封存整個入口請定）",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "kf-K-F47",
+   "section": "kernel",
+   "question": "問腦總機收進 kernel 框架時，要用 Python 整支重寫、刪掉 C++ 版嗎？",
+   "eli5": "問腦總機是替大家排隊問 LLM 的那支程式，現在是 C++ 寫的；你已經定要把它收進通用 kernel 框架，這題問「怎麼收」。這是工時最大的一條（約 35 小時）。你說過開工等假日、你自己也要想一想。",
+   "options": [
+    {
+     "key": "A",
+     "label": "Python 重寫成 `lib/aos/kernel_llm`，刪掉 C++ 的 `impls/aos-llm-kernel`（隊長代定）",
+     "consequence": "骨架真的只有一份、問腦自動有三個 hook 時機；每輪比 C++ 慢一點，信很多時要量。"
+    },
+    {
+     "key": "B",
+     "label": "C++ 留著，只在裡面加 hook 點",
+     "consequence": "省約 20 小時；但收信、排隊、回信還是兩種語言各一份，骨架其實沒併。"
+    },
+    {
+     "key": "C",
+     "label": "C++ 留著，前面串一站框架站",
+     "consequence": "0 小時就有 hook；但每個寄件人的額度、「寄件人走了就收掉」都會失效。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況（圖紙標「採用」）：對外完全不變，現有黑箱測試改指新程式就是驗收；不翻就照它。",
+   "quotes": [
+    {
+     "text": "問腦總機要收進框架",
+     "cite": "使用者 11-12"
+    },
+    {
+     "text": "kernel先這樣就好，開工等假日。我自己也要思考一下",
+     "cite": "使用者 11-12 收工前"
+    }
+   ],
+   "details": [
+    "對外不變：`kernel.json` 照認、stack 裡每個檔的格式、信與回信、錯誤代號都一樣（K-F48）。",
+    "問腦這部分約 35 小時，真端點與本機模型要回家驗。",
+    "kernel-as-bridge 那邊也看過：K-F47 是工法，不受「kernel 是橋」新看法影響。",
+    "原文說「開工等假日，你自己也要想」：這題不急，假日開工前定就好。"
+   ],
+   "source_path": "../12/kernel-framework/README.md#已裁問腦總機收進框架",
+   "source_lines": "13-19、133",
+   "source_excerpt": "**問腦怎麼收（代定 K-F47，工時最大的一條，可翻案）**：用 Python 把問腦總機重寫成「同一份骨架＋問腦專屬那一包 `lib/aos/kernel_llm`」，刪掉 C++ 的 `impls/aos-llm-kernel`。對外完全不變——`kernel.json` 照認、stack 裡每個檔的格式、信與回信、錯誤代號都一樣——所以現有的黑箱測試改指新程式就是驗收。問腦這部分約 35 小時，真端點與本機模型要回家驗。",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "kf-K-F50",
+   "section": "kernel",
+   "question": "問腦總機要把「掛問腦程式」的信寄去哪：只看自己設定檔寫的下一站，還是照舊看環境變數 `AOS_KERNEL`？",
+   "eli5": "`AOS_KERNEL` 是給一般程式找「該把請求寄去哪道門」的環境變數。現在問腦總機只要看到它就照它寄；框架裡的站一律只看設定檔的 `next`。收進框架後兩種規矩只能留一種，條文 N-63 寫的是舊的那種。你說過開工等假日、你自己也要想一想。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：只看 `kernel.json` 的 `next`（沒寫＝`AOS_DAEMON`），N-63 那句跟著改",
+     "consequence": "總機跟框架站同一個規矩，繼承到 `AOS_KERNEL` 也不出事；原本靠設 `AOS_KERNEL` 轉站的人要改在 `kernel.json` 寫 `next`。"
+    },
+    {
+     "key": "B",
+     "label": "照條文 N-63：總機照舊看 `AOS_KERNEL`",
+     "consequence": "不用改設定；但總機成了唯一「身為 kernel 卻看 `AOS_KERNEL`」的例外，要靠「起 llm daemon 的殼別設 `AOS_KERNEL`」這條約定避坑。"
+    }
+   ],
+   "recommend": "A",
+   "why": "圖紙寫「目前照代定走；要照條文的話說一聲」：小修線實跑撞過問腦 proc 名字被那台白名單擋掉的坑。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "kernel先這樣就好，開工等假日。我自己也要思考一下",
+     "cite": "使用者 11-12 收工前"
+    }
+   ],
+   "details": [
+    "這是圖紙「跟既有原則的衝突」第 2 條，N-63 寫「認 `AOS_KERNEL` 的是 aos-llm-kernel 與 aos-agent」。",
+    "K-F50 也規定：看問腦 proc 跑完沒的表，照 `count_daemon` 同一條規則。",
+    "kernel-as-bridge 的看法：在「kernel 是橋」的新看法下這條理由更順——`AOS_KERNEL` 是給上面的東西找橋頭的，kernel 自己往下找硬體走另一條線。"
+   ],
+   "source_path": "../12/kernel-framework/README.md#跟既有原則的衝突",
+   "source_lines": "136、148-154",
+   "source_excerpt": "**衝突 2：N-63 的「認 `AOS_KERNEL` 的是 aos-llm-kernel 與 aos-agent」，對上代定 K-F50「問腦總機的掛信只看 `kernel.json` 的 `next`」。**\n衝突在哪：現在總機只要環境裡有 `AOS_KERNEL`，就把掛問腦 proc 的信寄到那裡；框架的站（它自己就是 kernel）一律只看設定裡的 `next`。問腦收進框架後兩種規矩只能留一種。",
+   "answer": "B",
+   "answer_state": "changed",
+   "answer_note": "可以用unset吧。kernel.json的next感覺有點畫蛇添足。",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "kb-1",
+   "section": "kernel",
+   "question": "「每一層的上一層就是它的硬體」這句要當多嚴的規矩？",
+   "eli5": "你的新看法：根 daemon 的硬體是 linux，子 daemon 的硬體是根 daemon。問題是子層做事要不要都經上一層——像容器那樣，上一層起你時把框定好、之後在框裡直接用 linux；還是什麼都得跟上一層要。",
+   "options": [
+    {
+     "key": "A",
+     "label": "① 照現況：管你的事（電源、時鐘、環境）經上一層，你做的事直通 linux",
+     "consequence": "不用做事；總量上限沒人擋。"
+    },
+    {
+     "key": "B",
+     "label": "② 上層畫框、下層在框裡直通（像容器）",
+     "consequence": "以後補 cgroup、沙箱、帳號時都掛在「起 proc 的那層套」這條線上；信怎麼走不變。"
+    },
+    {
+     "key": "C",
+     "label": "③ 全部經上一層：子層要一個行程也得寄信跟上一層要",
+     "consequence": "根什麼都知道，但跟「父只看活著」相反；每多一層多等一拍；根一停底下起不了新行程。"
+    }
+   ],
+   "recommend": "B",
+   "why": "隊長的建議（可不採）：② 就是現況往前一步，跟 11-06「盡量解耦合」、11-11「保底就是 linux 本身」都合；真要全部經上一層的地方用擺法做（把那層做成站），不立成規矩。",
+   "quotes": [
+    {
+     "text": "那，如果root daemon底下掛了另一個daemon，那對這個子daemon來說，root daemon就是他的硬體，去幫我想想。",
+     "cite": "使用者 11-12 晚"
+    },
+    {
+     "text": "沒有針對這題的原話（題 1 你還沒答）",
+     "cite": ""
+    }
+   ],
+   "details": [
+    "② 現在有一半：環境、時鐘、單一行程上限有；總量上限、沙箱自動套沒有。",
+    "嚴不嚴格 aos 說了不算、linux 說了才算：同一台機器上沒設帳號與沙箱時誰都能繞過上一層，這時「上一層是硬體」是約定。",
+    "③ 現在就能當一種擺法做出來：把子層做成站、`next` 指向根，proc 全掛在根的表上；代價是那一層不再是 daemon。",
+    "細聊（手與門）之後這題仍未答；不排施工，假日開工前想就好。"
+   ],
+   "source_path": "../12/kernel-as-bridge/README.md#要使用者定的三題",
+   "source_lines": "52、60-62",
+   "source_excerpt": "| 1.「上一層是硬體」嚴到哪 | ① 照現況 | 不用做事；總量上限沒人擋 |\n| | ② 上層畫框、下層在框裡直通 | 以後補 cgroup、沙箱、帳號時都掛在「起 proc 的那層套」這條線上；信怎麼走不變 |\n| | ③ 全部經上一層 | 根什麼都知道，但跟「父只看活著」相反；每多一層多等一拍；根一停底下起不了新行程 |",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "kb-3",
+   "section": "kernel",
+   "question": "要不要為「kernel 是橋」這個新看法重畫 kernel 框架圖紙？",
+   "eli5": "框架圖紙畫的全是「橋頭管制」那一半的零件（判官、問腦總機怎麼判信），新看法補的是「橋通往哪」那一半，所以照理不衝突。你說過開工等假日、你自己也要想一想。",
+   "options": [
+    {
+     "key": "A",
+     "label": "不重畫：假日照原圖紙開工",
+     "consequence": "圖紙不動；新看法之後只改幾句條文。"
+    },
+    {
+     "key": "B",
+     "label": "重畫",
+     "consequence": "只有想把「查我有多少額度」這類問硬體規格的信加進框架時才需要（原本選乙改名也要，但改名已收回）。"
+    }
+   ],
+   "recommend": "A",
+   "why": "隊長的建議（可不採）：四種整理法都不用重畫，照原訂假日開工不受這題影響。",
+   "quotes": [
+    {
+     "text": "對，收回，名字都不用改。",
+     "cite": "使用者 11-12 晚（題 2 已結）"
+    },
+    {
+     "text": "kernel先這樣就好，開工等假日。我自己也要思考一下",
+     "cite": "使用者 11-12 收工前"
+    }
+   ],
+   "details": [
+    "題 2 已結：「資源排程別叫 kernel」收回、名字都不改，所以原本「選乙要重畫」那條路已經不在。",
+    "K-F50 在新看法下理由更順；K-F47 是工法、不受影響。",
+    "細聊之後這題仍未答。"
+   ],
+   "source_path": "../12/kernel-as-bridge/README.md#要使用者定的三題",
+   "source_lines": "54、66-67",
+   "source_excerpt": "| 3. 要不要為這個看法重畫框架圖紙 | 不重畫 | 假日照原圖紙開工 |\n| | 重畫 | 只有選乙，或想把「查我有多少額度」這類問硬體規格的信加進框架時才需要 |",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "kb-ctl",
+   "section": "kernel",
+   "question": "`aos-daemon-ctl` 一律直接寄信給 daemon、不經判官，跟你說的「kernel 是唯一能下 daemon 指令的」對不上；怎麼看？",
+   "eli5": "細聊時你說：早期的想法是 kernel 是 daemon 底下唯一有權限下 daemon 指令的 proc（「門」）。但 11-07 你選了「`aos-daemon-ctl` 永遠直寄」：人用這支指令就是直接敲板子、不經門。整理的人只把出入列給你看，沒下結論。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "照現況：`aos-daemon-ctl` 是人直接敲板子的保底，「唯一的門」只約束 proc",
+     "consequence": "不用改程式；門的定義裡註明人不受限。"
+    },
+    {
+     "key": "B",
+     "label": "要收緊：有門的時候 `aos-daemon-ctl` 也得經門",
+     "consequence": "推翻 11-07 選的「永遠直寄」；判官睡著時人要另找路叫醒。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議（列為要給你看的出入，不下結論）。",
+   "quotes": [
+    {
+     "text": "我就是說有一個daemon，掌管aos proc的生死，而kernel則是他底下的一個特殊proc，是唯一具有權限能下daemon ctl的proc。",
+     "cite": "使用者 11-12 晚細聊"
+    },
+    {
+     "text": "判官睡着，這是使用者在設計系統時要承擔與管理的風險。",
+     "cite": "使用者 11-07 早（選「aos-daemon-ctl 永遠直寄」時補的）"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "11-07 的分工：`aos-agent ctl`＝經作業系統（判官，看 `AOS_KERNEL`）；`aos-daemon-ctl`＝人直接敲板子，不管 `AOS_KERNEL`；叫醒判官寫 `aos-daemon-ctl wake 名字`。紀錄在 `proto8/thinking/2026-11/06/os-impl/08-aos-daemon-ctl永遠直寄實作結果.md`。",
+    "細聊的結論：daemon 是手、kernel 是門；kernel 是主觀的概念。",
+    "另外跟「門」有關的邊緣狀況：同一台機器上沒設帳號與沙箱時，子層的 proc 也能直接寄信給根（跳層寄信），現在靠約定與 linux 權限擋。"
+   ],
+   "source_path": "../12/kernel-as-bridge/06-細聊-手與門.md#未定",
+   "source_lines": "29-32",
+   "source_excerpt": "- 「門」是不是真的唯一：現況 `aos-daemon-ctl` 一律直寄 daemon、不經判官（os-impl 08、wait-user/03），跟第 5 點「唯一具有權限能下daemon ctl的proc」對不上。列為要給他看的出入，不下結論。",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "ext-E1",
+   "section": "extmcp",
+   "question": "claude 那身接外部 server 時，通行碼用「小幫手程式現場遞」的方式給，好不好？",
+   "eli5": "外部 MCP server＝別人寫好、提供一組工具的小程式；aos 讓 agent 接上它。通行碼（bearer token）就像門禁卡；原本打算直接寫進設定，但實測發現那樣 agent 自己在殼裡就看得到卡號，所以改成每次由一支小幫手程式（`headersHelper`）現場遞過去。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：claude 身一律用 `headersHelper` 遞通行碼，卡號不進 claude 的環境；小幫手的指令裡只有 python、程式路徑、env 檔路徑、變數名",
+     "consequence": "現況不變；agent 在殼裡查不到通行碼（實測 0 次）"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "外部 MCP 開工吧，做不完就push上去，我回家繼續做",
+     "cite": "使用者 11-12 下午（最相關的一句）"
+    }
+   ],
+   "details": [
+    "原計畫（03）寫「驗不過就不掛」；實測後改用 helper。",
+    "實測：`headers` 寫 `${VAR}` 會展開，但 Bash 看得到（1）；`headersHelper` 看不到（0）。",
+    "外部 MCP 06 代定 E1。"
+   ],
+   "source_path": "../12/external-mcp/06-施工結果.md#代定隊長定的可翻案",
+   "source_lines": "25",
+   "source_excerpt": "**E1** claude 身 bearer 走 `headersHelper`（03 原本寫「驗不過就不掛」——驗過了，`headers` 的 `${VAR}` 會讓 Bash 看得到，所以改用 helper，值不進 claude 環境）。helper 指令裡只有 python、本檔路徑、env 檔路徑、變數名。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-E2",
+   "section": "extmcp",
+   "question": "寫了通行碼變數、卻沒指定存通行碼的檔（`env_file`）時，要照現在這樣直接拿現成環境變數，還是改成警告後跳過那台？",
+   "eli5": "外部 MCP server＝別人寫好、提供一組工具的小程式；aos 讓 agent 接上它。通常通行碼放在一份只有自己能讀的小檔裡；沒寫那份檔時，程式就從「起 agent 的那個殼」裡拿同名變數。claude 那身這樣做的話，agent 在殼裡看得到卡號。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：codex 身用 codex 本來繼承的那個變數；claude 身寫成 `Bearer ${變數}`（agent 的殼看得到），文件沒特別警告",
+     "consequence": "現況不變；有人沒寫 `env_file` 時，claude 那身的通行碼 agent 看得到"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況；原文說要不要改成警告跳過「看使用者」，沒有另外推薦",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "外部 MCP 開工吧，做不完就push上去，我回家繼續做",
+     "cite": "使用者 11-12 下午（最相關的一句）"
+    }
+   ],
+   "details": [
+    "原文寫明「要不要改成 warning 跳過，看使用者」——這題本來就是留給你的。",
+    "翻案的一種做法：沒寫 `env_file` 就印警告、不接那台 server。",
+    "外部 MCP 06 代定 E2。"
+   ],
+   "source_path": "../12/external-mcp/06-施工結果.md#代定隊長定的可翻案",
+   "source_lines": "26",
+   "source_excerpt": "**E2** bearer 寫了但沒寫 `env_file`：codex＝用 codex 行程本來繼承的那個變數；claude＝`headers` 寫 `Bearer ${變數}`（Bash 看得到，文件沒特別警告——要不要改成 warning 跳過，看使用者）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-E3",
+   "section": "extmcp",
+   "question": "存通行碼那份小檔（env 檔）的寫法規則，照現在這套簡單的就好嗎？",
+   "eli5": "env 檔＝一行一個 `名字=值` 的小文字檔。現在外部 MCP 這邊自己寫了一份簡單的讀法，沒有共用 aos-tools 已有的那份。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：收 `KEY=VALUE`、可以有 `export `、`#` 開頭當註解、成對引號拿掉；讀不懂＝`DotenvBad`（只說第幾行，不印內容）；自己一份讀法、不共用 aos-tools 的",
+     "consequence": "現況不變；同一份 env 檔，aos-tools 與外部 MCP 讀出來可能不一樣"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "外部 MCP 開工吧，做不完就push上去，我回家繼續做",
+     "cite": "使用者 11-12 下午（最相關的一句）"
+    }
+   ],
+   "details": [
+    "跟「程式碼庫整理」第 2 題（兩份 `read_env_file` 統一成哪種）是同一件事：那題裁了，這條會跟著改。那題建議統一成 aos-tools 的完整讀法、等外部 MCP 線穩了再做。",
+    "例：`A=x # note`，aos-tools 讀成 `x`、MCP 讀成 `x # note`。",
+    "外部 MCP 06 代定 E3。"
+   ],
+   "source_path": "../12/external-mcp/06-施工結果.md#代定隊長定的可翻案",
+   "source_lines": "27",
+   "source_excerpt": "**E3** env 檔格式：`KEY=VALUE`、可有 `export `、`#` 註解、成對引號拿掉；認不得＝`DotenvBad`（句子只講第幾行）。沒用 aos-tools 的 `--env-file` 解析器（沒去找共用，KISS）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-E4",
+   "section": "extmcp",
+   "question": "外部 server 的設定檔壞了時，agent 每輪都重讀、每輪都印一次警告，可以嗎？",
+   "eli5": "agent 每回一題就重新讀一次設定（`load_cfg`）；壞掉的那台 server 因此每題都會被跳過並警告一次。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：每題都重讀 server 檔，壞的那台每題警告一次",
+     "consequence": "現況不變；改好設定下一題就生效，但壞著的時候 log 會一直重複"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "外部 MCP 開工吧，做不完就push上去，我回家繼續做",
+     "cite": "使用者 11-12 下午（最相關的一句）"
+    }
+   ],
+   "details": [
+    "外部 MCP 06 代定 E4。"
+   ],
+   "source_path": "../12/external-mcp/06-施工結果.md#代定隊長定的可翻案",
+   "source_lines": "28",
+   "source_excerpt": "**E4** 每題 `load_cfg` 都重讀 server 檔＝壞的那台每題都 warning 一次。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-E5",
+   "section": "extmcp",
+   "question": "codex 那身「這台 server 某幾支工具不要開」的設定，照字面轉過去就好、不另外實測，可以嗎？",
+   "eli5": "設定可以列「除了這幾支以外都開」（`except`），codex 那邊對應的是 `disabled_tools`。這條轉了但沒實際跑過；另外有個兩邊都設同一個環境排除項時誰說了算也沒驗。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`except` 照翻成 codex 的 `disabled_tools`，**沒實測**；`flags` 自己也寫 `shell_environment_policy.exclude` 時，程式補的那條排在後面，誰贏沒驗",
+     "consequence": "現況不變；真的要用 `except` 時才可能發現不生效"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "外部 MCP 開工吧，做不完就push上去，我回家繼續做",
+     "cite": "使用者 11-12 下午（最相關的一句）"
+    }
+   ],
+   "details": [
+    "08 的「沒做／沒驗」也列了 `disabled_tools` 沒驗。",
+    "外部 MCP 06 代定 E5。"
+   ],
+   "source_path": "../12/external-mcp/06-施工結果.md#代定隊長定的可翻案",
+   "source_lines": "29",
+   "source_excerpt": "**E5** codex 的 `disabled_tools`（`except`）照翻，**沒實測**；`flags` 自己也寫 `shell_environment_policy.exclude` 時，cli_session 補的那條排在後面（誰贏沒驗）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-E6",
+   "section": "extmcp",
+   "question": "codex 在畫面模式下自己起的小程式也拿得到通行碼，不另外擋，可以嗎？",
+   "eli5": "通行碼只給 codex 這支程式；但 codex 自己再開的小程式（實測看到 Windows 剪貼簿小幫手）會照規矩繼承它的環境，也就看得到。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：那些是 codex 自己的子行程，跟非互動模式一樣，不另外擋",
+     "consequence": "現況不變；codex 底下的子程式看得到通行碼"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "外部 MCP 開工吧，做不完就push上去，我回家繼續做",
+     "cite": "使用者 11-12 下午（最相關的一句）"
+    }
+   ],
+   "details": [
+    "外部 MCP 06 代定 E6。"
+   ],
+   "source_path": "../12/external-mcp/06-施工結果.md#代定隊長定的可翻案",
+   "source_lines": "30",
+   "source_excerpt": "**E6** codex 畫面那條路，codex 自己起的子行程（實測看到一支 Windows 剪貼簿 helper）會繼承 token——它是 codex 的子行程，跟非互動一樣，不另擋。",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "ext-E7",
+   "section": "extmcp",
+   "question": "外部 server 的網址與名字限制，照現在這樣可以嗎？",
+   "eli5": "網址只收 `http` 或 `https` 開頭；server 名字只能小寫英文開頭、後面接小寫英文數字或底線、最多 32 字，`aos` 這個名字保留給自己。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`url` 只收 `http`／`https` 開頭；名字 `[a-z][a-z0-9_]*`、最多 32 字、`aos` 保留（照設計稿 02）",
+     "consequence": "現況不變；名字含大寫或連字號的 server 要改名才接得上"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "外部 MCP 開工吧，做不完就push上去，我回家繼續做",
+     "cite": "使用者 11-12 下午（最相關的一句）"
+    }
+   ],
+   "details": [
+    "外部 MCP 06 代定 E7。"
+   ],
+   "source_path": "../12/external-mcp/06-施工結果.md#代定隊長定的可翻案",
+   "source_lines": "31",
+   "source_excerpt": "**E7** `url` 只收 `http://`／`https://` 開頭；名字 `[a-z][a-z0-9_]*`、最多 32 字、`aos` 保留（照 02）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-G1",
+   "section": "extmcp",
+   "question": "外部 server 回錯誤訊息時，aos 不幫它把裡面的環境變數值塗黑，可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。原本寫手把 server 環境的每個值都塗成 `[redacted]`，但像 `LANG=C` 這種很短的值會把整句訊息塗爛，隊長就拿掉了；http 那條只塗通行碼本身。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：不塗 server 錯誤訊息裡的環境值；http 只塗通行碼；server 自己把金鑰印進錯誤訊息算 server 的事",
+     "consequence": "現況不變；寫得差的 server 若把金鑰印進錯誤訊息，agent 會看到"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決",
+     "cite": "使用者 11-12 傍晚，講的是圖紙 F1～F12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "fsm 施工結果 08 代定 G1。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "43",
+   "source_excerpt": "**G1** `mcp_client` 不遮 server 自己錯誤訊息裡的環境變數值（寫手原本把 server 環境每個值都遮成 `[redacted]`，`LANG=C` 這類短值會把訊息遮爛；隊長拿掉）。http 那條只遮 bearer 本身。server 自己把金鑰印進錯誤訊息算 server 的事。",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "ext-G2",
+   "section": "extmcp",
+   "question": "aos 接 https server 時用 Python 預設的嚴格憑證檢查、不放寬，可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。憑證＝證明「我真的是那台主機」的證件。Python 3.13 起查得更嚴，自己簽的證件少了幾個欄位就會被擋（codex／claude 自己接的那條不受影響）。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：照預設嚴格驗；假 server 產證件時補齊欄位；真主機的公司憑證若驗不過，再議換正規憑證或放寬",
+     "consequence": "現況不變；之後接公司主機可能要先處理憑證"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決",
+     "cite": "使用者 11-12 傍晚，講的是圖紙 F1～F12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "fsm 施工結果 08 代定 G2。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "44",
+   "source_excerpt": "**G2** http 用 Python 預設的嚴格憑證驗證（3.13 起 `VERIFY_X509_STRICT`）：自簽 CA 沒有 `keyUsage`、leaf 沒有 key identifier 會驗不過（codex／claude 不受影響）。沒放寬；假 server 的產憑證步驟補上這幾個欄位。真主機的公司 CA 若驗不過，要嘛換正規 CA，要嘛再議放寬。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-G3",
+   "section": "extmcp",
+   "question": "外部 server 那邊某支工具不見了時，回給 agent 的是「參數不對」（`ArgumentsBad`），而不是「請重新同步」，可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。工具清單是之前抄下來的；如果 server 後來拿掉了某支，agent 照舊叫就會失敗。原計畫想回「server 出錯了，跑 `aos-mcp-import sync` 重抄一次」，但協定上 server 回的錯誤碼跟「參數錯」是同一個，分不開。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：照協定把 `-32602` 翻成 `ArgumentsBad`（例 `ArgumentsBad no such tool: gone`），不做「請重新 sync」的提示",
+     "consequence": "現況不變；agent 看到的是參數錯，不會被提醒去重新同步"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況；原文說兩種錯誤從協定上分不開，所以沒做",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決",
+     "cite": "使用者 11-12 傍晚，講的是圖紙 F1～F12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "01 那行點名「尤其 G3」；08 的「要使用者看的」Q3 也說 G3 可翻案。",
+    "原計畫是 07 邊緣狀況第 8 條寫的 `ServerFailed …(run aos-mcp-import sync)`。",
+    "fsm 施工結果 08 代定 G3。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "45",
+   "source_excerpt": "**G3** server 那邊工具不見了時，aos-mcp 與假 server 都回 JSON-RPC `-32602`，照步 1 規則翻成 `ArgumentsBad`（例 `ArgumentsBad no such tool: gone`），不是 07 邊緣 8 寫的 `ServerFailed …(run aos-mcp-import sync)`——兩者從協定上分不開，沒做。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-G4",
+   "section": "extmcp",
+   "question": "重新同步（`sync`）時，只比工具說明與參數、不比工具的性質標記，可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。`sync`＝跟 server 對一次工具清單、有變就重抄。性質標記（annotations）是像「會不會改東西」「重複叫結果一樣嗎」這類標籤。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：只比 description 與 parameters；只有性質標記變了＝`no changes`、不寫；server 檔改名後舊名稱也看不出來",
+     "consequence": "現況不變；server 改了某支工具的性質標記，aos 這邊不會跟上"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況（照圖紙）；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決",
+     "cite": "使用者 11-12 傍晚，講的是圖紙 F1～F12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "01 那行點名「尤其 G4」；08 的「要使用者看的」Q3 也說 G4 可翻案。",
+    "性質標記指 `side_effect`、`idempotent`、`resource`。",
+    "另一個看不出的情況：server 檔改名後，`--pack` 與 `tools.path` 還指舊名。",
+    "fsm 施工結果 08 代定 G4。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "46",
+   "source_excerpt": "**G4** `sync` 的差異只比 description 與 parameters（照圖）：只有 annotations（`side_effect`、`idempotent`、`resource`）變了＝`no changes`、不寫；server 檔改名後 `--pack` 與 `tools.path` 還指舊名，sync 也看不出。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-G5",
+   "section": "extmcp",
+   "question": "`sync --yes` 會把包檔裡的工具清單整份重做，人手加的條目會被拿掉，可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。包檔裡那段 `tools` 被當成「匯入程式產生的東西」，不是給人手改的。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`sync --yes` 整份重建 `tools`，人手加的條目會消失",
+     "consequence": "現況不變；要手加工具得放別的地方"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決",
+     "cite": "使用者 11-12 傍晚，講的是圖紙 F1～F12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "fsm 施工結果 08 代定 G5。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "47",
+   "source_excerpt": "**G5** `sync --yes` 整份重建 `tools`：人在包檔 `tools` 裡手加的條目會被拿掉（包檔的 `tools` 當成匯入產物）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-G6",
+   "section": "extmcp",
+   "question": "只想開的工具名單（`only`）裡有一支 server 已經沒有了，匯入報錯、同步只警告，可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。匯入時嚴格（照圖報 `ToolUnknown`）；同步時寬鬆，因為不然有 `only` 的檔永遠同步不掉消失的那支。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：匯入＝`ToolUnknown`；sync＝警告、當成拿掉；`--except` 列了 server 沒有的名字＝警告",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決",
+     "cite": "使用者 11-12 傍晚，講的是圖紙 F1～F12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "fsm 施工結果 08 代定 G6。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "48",
+   "source_excerpt": "**G6** `only` 裡的工具 server 已經沒有：匯入＝`ToolUnknown`（照圖）；sync＝warning、當成拿掉（不然有 `only` 的檔永遠 sync 不掉消失的那支）。`--except` 列了 server 沒有的名字＝warning。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-G7",
+   "section": "extmcp",
+   "question": "判斷「這份 server 檔已經匯入過」的條件放寬成三個欄位任一個在就算，可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。已匯入過再匯一次會報 `PackExists`。圖紙只看 `mcp_tools` 一欄；隊長多看兩欄，免得把人手寫的 `tools` 蓋掉。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：檔裡有 `mcp_tools`、`mcp_import`、`tools` 任一個就算已匯入（`PackExists`）",
+     "consequence": "現況不變；手寫過 `tools` 的檔不能直接拿來匯入"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決",
+     "cite": "使用者 11-12 傍晚，講的是圖紙 F1～F12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "fsm 施工結果 08 代定 G7。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "49",
+   "source_excerpt": "**G7** 已匯入的判定：檔裡有 `mcp_tools`、`mcp_import`、`tools` 任一個就算 `PackExists`（圖只寫 `mcp_tools`），免得蓋掉手寫的 `tools`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-G8",
+   "section": "extmcp",
+   "question": "匯入的時限（`--timeout-s N`）算「每一步各自的上限」而不是「總共的上限」，可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。匯入時要先跟 server 打招呼、再一頁一頁拿工具清單；時限是每一步各算 N 秒。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：initialize 與每頁 `tools/list` 各自 N 秒，不是總時限；為此兩個函式多了逾時參數",
+     "consequence": "現況不變；工具很多頁時，總時間可能超過 N 秒"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決",
+     "cite": "使用者 11-12 傍晚，講的是圖紙 F1～F12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "fsm 施工結果 08 代定 G8。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "50",
+   "source_excerpt": "**G8** `--timeout-s N`＝initialize 與每頁 `tools/list` 各自的上限（不是總時限）；為此 `open_session` 加 `init_timeout_s`、`list_tools` 加 `timeout_s`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-G9",
+   "section": "extmcp",
+   "question": "外部工具回圖片或聲音時，存進這棵樹的暫存處（`$AOS_STACK`），沒有就報錯，可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。工具結果若是圖片、聲音，aos 存成檔再告訴 agent 位置。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：存 `$AOS_STACK`，沒有＝`StackMissing`；檔名不重複、副檔名照檔案類型",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決",
+     "cite": "使用者 11-12 傍晚，講的是圖紙 F1～F12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "fsm 施工結果 08 代定 G9。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "51",
+   "source_excerpt": "**G9** 媒體（image／audio）存 `$AOS_STACK`，沒有＝`StackMissing`；檔名唯一、副檔名照 MIME。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-G10",
+   "section": "extmcp",
+   "question": "外部工具沒寫「會不會連外網」時，當成「不連」，可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。MCP 規格裡這個標記（`openWorldHint`）沒寫時預設是「會」；aos 這邊改成「有寫才算」。走 http 的 server 一律算連網。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`openWorldHint` 沒寫＝不算 `net`；transport 是 http 一律算 `net`",
+     "consequence": "現況不變；沒寫標記的 stdio 工具不會被當成連網工具（跟 MCP 規格預設相反）"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決",
+     "cite": "使用者 11-12 傍晚，講的是圖紙 F1～F12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "fsm 施工結果 08 代定 G10。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "52",
+   "source_excerpt": "**G10** `openWorldHint` 沒寫＝不算 `net`（MCP 規格的預設是 true，這裡照「有寫才算」）；transport 是 http 一律 `net`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-G11",
+   "section": "extmcp",
+   "question": "外部工具在 aos 裡的名字照「server名_工具名」接起來再整串轉換，可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。例：server `demo` 的 `peek_clock` 在 aos 裡叫 `demo_peek_clock`。接好再轉，工具名開頭的底線會併掉；server 名叫 `aos` 也不行。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：先接成 `<server>_<tool>` 再整串轉，開頭的 `_` 會併掉；server 名叫 `aos` 算 `NameBad`",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決",
+     "cite": "使用者 11-12 傍晚，講的是圖紙 F1～F12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "fsm 施工結果 08 代定 G11。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "53",
+   "source_excerpt": "**G11** 登記名先接成 `<server>_<tool>` 再整串轉，工具名開頭的 `_` 會併掉；server 名叫 `aos` 也算 `NameBad`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-G12",
+   "section": "extmcp",
+   "question": "`mcp_tool --help` 有一句自動產生的說明對兩個旗標不準，只在屬性說明補「flag only」、不改產生器，可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。那句說明是共用程式 `tool_io` 自動產生的，說每個旗標都會設 stdin JSON 的同名欄位；`--pack`／`--tool` 其實不是這樣。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：屬性說明補「flag only」，`tool_io` 不動",
+     "consequence": "現況不變；`--help` 那句對這兩個旗標仍不準"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "那就a。fable代定就先這樣，感覺都OK，以後出問題再來解決",
+     "cite": "使用者 11-12 傍晚，講的是圖紙 F1～F12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "fsm 施工結果 08 代定 G12。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "55",
+   "source_excerpt": "**G12** `mcp_tool --help` 的旗標段是 `tool_io` 生成的固定句「each sets the same key of the JSON object on stdin」，對 `--pack`／`--tool` 不準（它們只是旗標，stdin 原樣轉交）；屬性說明裡補了「flag only」，`tool_io` 沒動。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ext-G13",
+   "section": "extmcp",
+   "question": "你裁了「統一」之後，隊長的做法是：外部 stdio server 一律在 server 檔所在的資料夾起、相對路徑都從那裡算，這樣可以嗎？",
+   "eli5": "這批是「fsm 那條」：用 `aos-mcp-import` 把外部 server 的工具清單先抄進一份包檔（凍結），之後所有 agent 都經 aos 叫那些工具。stdio server＝在本機當成小程式啟動的 server。原本 `command` 和 `args` 裡的相對路徑起點不同，容易踩；你說要統一就統一。這題只看「統一成哪個起點」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：一律在 server 檔所在資料夾起，`command`、`args` 的相對路徑都從那裡算；要工作區的路徑就在 `args` 裡寫指示詞（`{\"$env\": \"AOS_WS\", \"$path\": \"data\"}`）",
+     "consequence": "現況不變（已施工）；整夾 `cp -r` 帶走仍通，但預設操作 `.` 的檔案類 server 會看到包檔資料夾，要寫明工作區"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "你已裁「統一」，這是隊長照那句選的做法、已施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "2.這個我不是很清楚，如果你覺得要統一那就統一吧，我直覺上感覺OK，反正之後出事再說",
+     "cite": "使用者 11-12 晚（Q2）"
+    }
+   ],
+   "details": [
+    "這是 Q2 的做法，翻掉圖紙 07 的 F12；已施工（`lib/mcp_server_file.py`、`lib/mcp_client.py`、`cmd/aos-mcp-launch`）、測試全過。",
+    "理由：aos 的登記檔與包檔裡的相對路徑一向從寫著它的那份檔的資料夾算（`$ref`、`tools.json` 的 `path`、`env_file`／`ca_file`）。",
+    "例：`mcp/demo.json` 寫 `\"command\": \"bin/run\", \"args\": [\"bin/server.py\"]`＝在 `mcp/` 跑 `mcp/bin/run bin/server.py`。",
+    "fsm 施工結果 08 代定 G13。"
+   ],
+   "source_path": "../12/external-mcp/08-fsm施工結果.md#代定隊長與寫手定的可翻案",
+   "source_lines": "54",
+   "source_excerpt": "**G13**（Q2 的做法，翻掉 07 F12）**stdio server 一律在 server 檔所在的資料夾起，`command` 與 `args` 的相對路徑都從那裡算**；兩條路同一條規則（`mcp_server_file.stdio_launch` 回 cwd：`mcp_client` 照它開、`aos-mcp-launch` 先 `cd` 再 exec）。例：`mcp/demo.json` 寫 `\"command\": \"bin/run\", \"args\": [\"bin/server.py\"]`＝在 `mcp/` 跑 `mcp/bin/run bin/server.py`。理由：aos 的登記檔與包檔裡的相對路徑一向從寫著它的那份檔的資料夾算（N-45 `$ref`、`tools.json` 的 `path`、server 檔自己的 `env_file`／`ca_file`）…",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "js-D40",
+   "section": "json",
+   "question": "新工具 `json_len`（問一格有多長）照現在的形狀，可以嗎？",
+   "eli5": "json 工具＝給 agent 讀寫 JSON 檔的一組工具；aos-json 是底下真正做事的 C++ 程式。`json_len` 回一個整數：物件回有幾個鍵、陣列回有幾項、字串回幾個字。數字、真假、空值沒有長度。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：物件＝鍵數、陣列＝項數、字串＝字數；純值報 `TargetBad`（不回 0，免得 agent 以為是空的）；只做簡單組一支，不做 `jsonx_len`",
+     "consequence": "現況不變（已施工）"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "json_len",
+     "cite": "使用者 11-11（列了這支）"
+    }
+   ],
+   "details": [
+    "11-11 你列過 `json_len`，所以這輪做出來，舊代定 D11（不做）作廢。",
+    "json-tools 04 代定 D40。"
+   ],
+   "source_path": "../12/json-tools/04-aos-json下沉與len與jsonx-multi.md#代定接-d39可翻案",
+   "source_lines": "46",
+   "source_excerpt": "**D40 json_len 做出來，D11 作廢**：使用者 11-11 原話列了它。形狀照 json_ls 第一行的「長度」：物件 key 數、陣列項數、字串字元數；純值沒有長度＝`TargetBad`（不回 0、不回型別，免得腦以為是空的）。只有簡單組一支，不做 jsonx_len（`jsonx_ls` 第一行就有）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "js-D41",
+   "section": "json",
+   "question": "`json_len` 也給 eca 的子 agent（少功能那台）用，可以嗎？",
+   "eli5": "json 工具＝給 agent 讀寫 JSON 檔的一組工具；aos-json 是底下真正做事的 C++ 程式。子 agent 只拿部分工具；原則是「不改東西、不是講這隻 agent 自己的」就放。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：放進子 agent 那台",
+     "consequence": "現況不變；子 agent 的 json 工具變九支"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "建議做成一個aos_json工具(順便把原本的aos-json也一起更新一下？)",
+     "cite": "使用者 11-12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "照 templates/docs/01 的原則。",
+    "json-tools 04 代定 D41。"
+   ],
+   "source_path": "../12/json-tools/04-aos-json下沉與len與jsonx-multi.md#代定接-d39可翻案",
+   "source_lines": "47",
+   "source_excerpt": "**D41 json_len 進子 agent 那台**：照 templates/docs/01 的原則（不改東西、不是講這隻 agent 自己＝放）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "js-D42",
+   "section": "json",
+   "question": "一次讀寫很多格的複雜組工具（`jsonx_multi_get`／`set`），選項怎麼給的規則照現在這樣，可以嗎？",
+   "eli5": "json 工具＝給 agent 讀寫 JSON 檔的一組工具；aos-json 是底下真正做事的 C++ 程式。「複雜組」＝會順著 `$ref`（指到別處的記號）走的那組。一次處理多格時，有些選項整批共用、有些每格各給。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`follow`、`resolve`、`check`、`parents`、`max_bytes`、`full` 整批一個；值從 `value`／`text`／`from` 每格剛好給一個，不然那格報 `ArgumentsBad`；每格裡放整批選項＝那格報 `unknown key in item`",
+     "consequence": "現況不變（已施工）"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "建議做成一個aos_json工具(順便把原本的aos-json也一起更新一下？)",
+     "cite": "使用者 11-12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "json-tools 04 代定 D42。"
+   ],
+   "source_path": "../12/json-tools/04-aos-json下沉與len與jsonx-multi.md#代定接-d39可翻案",
+   "source_lines": "48",
+   "source_excerpt": "**D42 jsonx_multi 的選項**：`follow`、`resolve`、`check`、`parents`、`max_bytes`、`full` 整批一個；值來源 `value`／`text`／`from` 每格各自剛好一個，不是＝那格 `[error] ArgumentsBad`；item 裡放選項（例 `follow`）＝那格 `unknown key in item`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "js-D43",
+   "section": "json",
+   "question": "aos-json 只有新的 `add` 會印「實際寫到哪」，其他寫入指令照舊不印，可以嗎？",
+   "eli5": "json 工具＝給 agent 讀寫 JSON 檔的一組工具；aos-json 是底下真正做事的 C++ 程式。`add` 插進陣列尾端時要回報真正的索引；`set`／`append`／`del` 不改，免得動到別的呼叫者。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`add` 印實際位置，`set`／`append`／`del` 照舊不印",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "建議做成一個aos_json工具(順便把原本的aos-json也一起更新一下？)",
+     "cite": "使用者 11-12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "json-tools 04 代定 D43。"
+   ],
+   "source_path": "../12/json-tools/04-aos-json下沉與len與jsonx-multi.md#代定接-d39可翻案",
+   "source_lines": "49",
+   "source_excerpt": "**D43 aos-json add 印實際位置、其他寫入子命令照舊不印**：Python 拿它接 `ok `；`set`／`append`／`del` 不改，免得動到別的呼叫者。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "js-D44",
+   "section": "json",
+   "question": "aos-json 的 `ls`／`search` 沒給筆數上限時就全部列出，可以嗎？",
+   "eli5": "json 工具＝給 agent 讀寫 JSON 檔的一組工具；aos-json 是底下真正做事的 C++ 程式。給 agent 用的工具那層一律會帶上限；底下的命令列本身不設。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：不給 `--limit`＝全列；上限由工具那層明給",
+     "consequence": "現況不變；人直接在命令列用時大檔會整份印出"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "建議做成一個aos_json工具(順便把原本的aos-json也一起更新一下？)",
+     "cite": "使用者 11-12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "json-tools 04 代定 D44。"
+   ],
+   "source_path": "../12/json-tools/04-aos-json下沉與len與jsonx-multi.md#代定接-d39可翻案",
+   "source_lines": "50",
+   "source_excerpt": "**D44 aos-json ls／search 不給 `--limit`＝全列**：上限是工具（給腦）那層的事，Python 一律明給。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "js-D45",
+   "section": "json",
+   "question": "工作搬到 C++ 之後，幾句錯誤訊息變了（只在出錯時），照現在這樣可以嗎？",
+   "eli5": "json 工具＝給 agent 讀寫 JSON 檔的一組工具；aos-json 是底下真正做事的 C++ 程式。原本由 Python 做的 `add`／`ls`／`search` 搬給 aos-json 做，有幾句出錯時的提示跟著變。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：接受新句子：`add` 中間層不在改帶 `\"parents\": true` 提示；檔不在帶 `json_set FILE {}` 提示；簡單組碰到 `$ref` 只說沒有這個 key、不再叫 agent 改用 jsonx；`offset`／`limit` 型別錯一律先報 `ArgumentsBad`；`key` 不是字串報 `ArgumentsBad`",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "建議做成一個aos_json工具(順便把原本的aos-json也一起更新一下？)",
+     "cite": "使用者 11-12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "最後一點以前是「當成沒中」，現在明白報錯。",
+    "01 那行有點名「下沉後幾句錯誤句變了」。",
+    "json-tools 04 代定 D45。"
+   ],
+   "source_path": "../12/json-tools/04-aos-json下沉與len與jsonx-multi.md#代定接-d39可翻案",
+   "source_lines": "51",
+   "source_excerpt": "**D45 下沉後幾句錯誤句變了**（都只在錯的時候）：add 中間層不在改帶 `\"parents\": true` 提示；add 帶指標而檔不在帶 `json_set FILE {}` 提示（同 json_set）；簡單組 add 碰到 `$ref` 物件照原文說「沒有這個 key」，不再叫腦改用 jsonx；json_ls 的 `offset`／`limit` 給錯型別一律先報 `ArgumentsBad`；json_search 的 `key` 不是字串報 `ArgumentsBad`（以前當成沒中）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "js-D46",
+   "section": "json",
+   "question": "`json_search` 比對數字的規則照原本 Python（`1` 等於 `1.0`），可以嗎？",
+   "eli5": "json 工具＝給 agent 讀寫 JSON 檔的一組工具；aos-json 是底下真正做事的 C++ 程式。搜「值等於多少」時，整數與小數算同一個數；但數字不等於同樣字樣的字串，`true` 也不等於 `1`。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`1` 等於 `1.0`；`1` 不等於 `\"1\"`；`true` 不等於 `1`",
+     "consequence": "現況不變（跟搬家前一樣）"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "建議做成一個aos_json工具(順便把原本的aos-json也一起更新一下？)",
+     "cite": "使用者 11-12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "json-tools 04 代定 D46。"
+   ],
+   "source_path": "../12/json-tools/04-aos-json下沉與len與jsonx-multi.md#代定接-d39可翻案",
+   "source_lines": "55",
+   "source_excerpt": "**D46 數字比對照 Python**：search 的 `value` 比對 `1` 等於 `1.0`（同原本 Python），`1` 不等於 `\"1\"`、`true` 不等於 `1`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "js-D47",
+   "section": "json",
+   "question": "`json_ls` 新的 `depth`（一次列好幾層）用「一行一個相對路徑」的形狀，可以嗎？",
+   "eli5": "json 工具＝給 agent 讀寫 JSON 檔的一組工具；aos-json 是底下真正做事的 C++ 程式。原本 `json_ls` 只列一層；`depth` 大於 1 時往下列 N 層，每行寫成像 `states/think/next` 的路徑，可以直接接在原路徑後面用。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：一行一個相對路徑、不畫縮排樹；不設上限（靠 `limit` 與 `[more]` 分頁）；`depth` 小於 1＝`ArgumentsBad`",
+     "consequence": "現況不變（已施工）"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "建議做成一個aos_json工具(順便把原本的aos-json也一起更新一下？)",
+     "cite": "使用者 11-12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "01 那行有點名「`depth` 形狀」。",
+    "json-tools 04 代定 D47。"
+   ],
+   "source_path": "../12/json-tools/04-aos-json下沉與len與jsonx-multi.md#代定接-d39可翻案",
+   "source_lines": "52",
+   "source_excerpt": "**D47 depth 的形狀**：子孫一行一個、寫成相對路徑（同 search 命中行一樣能直接接在 path 後面），不做縮排樹；不設上限（`limit` 擋著、`[more]` 給下一頁）；`depth` < 1＝`ArgumentsBad`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "js-D48",
+   "section": "json",
+   "question": "`ref --move` 把一塊搬到別份檔時，裡面寫的 `#/…`（指本檔的記號）改寫成指回原檔，可以嗎？",
+   "eli5": "json 工具＝給 agent 讀寫 JSON 檔的一組工具；aos-json 是底下真正做事的 C++ 程式。`#/…`＝「我這份檔裡的某處」。整塊搬到別份檔後，如果不改寫，它就會改指新檔，意思就變了。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：搬到別檔時改寫成指回原檔（搬家不改它指的東西）；搬進同一份檔照原樣；它指的正好在被搬走那塊裡面時會指錯——邊緣狀況，沒處理",
+     "consequence": "現況不變；那種邊緣狀況仍會指錯"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "建議做成一個aos_json工具(順便把原本的aos-json也一起更新一下？)",
+     "cite": "使用者 11-12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "01 那行有點名「`ref --move` 改寫 `#/`」。",
+    "json-tools 04 代定 D48。"
+   ],
+   "source_path": "../12/json-tools/04-aos-json下沉與len與jsonx-multi.md#代定接-d39可翻案",
+   "source_lines": "53",
+   "source_excerpt": "**D48 `ref --move` 搬到別檔時，裡面的 `#/…` 改寫成指回原檔**（搬家不改它指的東西）；搬進同一份檔照原樣。它指的若正好是被搬走那塊裡面，搬完會指回原檔已換成 `$ref` 的那格——邊緣狀況，沒處理。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "js-D49",
+   "section": "json",
+   "question": "`--resolve`（把 `$ref` 解開）時說的「那份檔」，算值實際所在的那份，可以嗎？",
+   "eli5": "json 工具＝給 agent 讀寫 JSON 檔的一組工具；aos-json 是底下真正做事的 C++ 程式。有 `--follow` 時會先穿過 `$ref` 走到別份檔；這時 `#/…` 指的是穿過去之後那份，跟相對路徑的起點同一份。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：「那份檔」＝值實際所在的檔，跟相對起點同一份（同 `$ref` 代定 R1）",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "建議做成一個aos_json工具(順便把原本的aos-json也一起更新一下？)",
+     "cite": "使用者 11-12（最相關的一句）"
+    }
+   ],
+   "details": [
+    "json-tools 04 代定 D49；跟本頁 `rh-R1` 同一套想法。"
+   ],
+   "source_path": "../12/json-tools/04-aos-json下沉與len與jsonx-multi.md#代定接-d39可翻案",
+   "source_lines": "54",
+   "source_excerpt": "**D49 `--resolve` 用的「那份檔」＝值實際所在的檔**（有 `--follow` 就是穿過去那份，跟相對起點同一份，同 ref-hash R1）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "il-L2",
+   "section": "ref",
+   "question": "目錄表指到別份目錄表時，工具印出「已經接好的完整路徑」而不是原本寫的字面，可以嗎？",
+   "eli5": "index＝一份「這裡有什麼」的目錄表（`_index.json` 或 JSON 裡的 `_index` 鍵）；這次讓目錄表的一項可以指到另一份目錄表。例：表裡寫 `sub/_index.json`，工具印 `kb/sub/_index.json`，agent 可以直接拿去用。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：印接好的路徑（從工作區算、`檔#/指標` 完整寫法、可直接當 `index` 參數），不印原字面；絕對路徑照用不整理；`#` 後照字面",
+     "consequence": "現況不變（已施工）"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "這個要用json與檔案系統的同像性去想。如果是在json物件內的，某key的_index，那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "index-link 代定 L2。"
+   ],
+   "source_path": "../12/index-link.md#代定可翻",
+   "source_lines": "76",
+   "source_excerpt": "**L2 印出來的是接好的路徑**（工作區相對，N-45 `檔#/指標` 完整寫法，可以直接當 `index` 參數），不印原字面；絕對路徑照用、不整理；`#` 後的指標照字面。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "il-L3",
+   "section": "ref",
+   "question": "「這是不是一個路徑」只檢查寫法、不檢查指到的東西在不在，可以嗎？",
+   "eli5": "index＝一份「這裡有什麼」的目錄表（`_index.json` 或 JSON 裡的 `_index` 鍵）；這次讓目錄表的一項可以指到另一份目錄表。只看是不是非空字串、有沒有檔名、有 `#` 的話後面是不是 `/`；不去看那份檔存不存在、名字是不是 `_index`。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：只查寫法（`x.json#` 不收）；不查存在、不查名字",
+     "consequence": "現況不變；指到不存在的檔要等 agent 去讀才知道"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "這個要用json與檔案系統的同像性去想。如果是在json物件內的，某key的_index，那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "好處：`_metainfo.json#/index`、agent 自己的主觀目錄表也能被指。",
+    "index-link 代定 L3。"
+   ],
+   "source_path": "../12/index-link.md#代定可翻",
+   "source_lines": "77",
+   "source_excerpt": "**L3 「是路徑」只查寫法**：非空字串、有檔名、有 `#` 時後面一定是 `/`（`x.json#` 不收，同 json 工具）；不查指到的東西在不在、名字是不是 `_index`／`_index.json`（工具本來就不查被描述的節點，I2、I6；也讓 `_metainfo.json#/index`、自己的主觀 index 能被指）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "il-L4",
+   "section": "ref",
+   "question": "目錄表裡某一項的指向寫壞了，只在那一行標「壞」、其他照常，可以嗎？",
+   "eli5": "index＝一份「這裡有什麼」的目錄表（`_index.json` 或 JSON 裡的 `_index` 鍵）；這次讓目錄表的一項可以指到另一份目錄表。「一處壞掉不該擋住其他好的」。但如果是整份目錄表本身（檔內 `_index`）既不是物件也不是合法路徑，就整份算壞（`IndexBad`）。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：項目的 `index` 壞＝那行印 `index: bad (…)`、其他照常、退 0；檔內 `_index` 壞＝照舊 `IndexBad`",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "這個要用json與檔案系統的同像性去想。如果是在json物件內的，某key的_index，那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "index-link 代定 L4。"
+   ],
+   "source_path": "../12/index-link.md#代定可翻",
+   "source_lines": "78",
+   "source_excerpt": "**L4 壞的只標那一行**：項目的 `index` 不是字串或不是路徑＝那一行印 `index: bad (…)`，其他項照常、退 0（「一處壞掉不該擋住其他好的」）。檔內 `_index` 既不是物件也不是合法路徑字串＝照舊 `IndexBad`（整份 index 壞了，跟原本不是物件同一條）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "il-L5",
+   "section": "ref",
+   "question": "只做你說的兩處可以寫路徑，其他地方寫成字串仍算壞，可以嗎？",
+   "eli5": "index＝一份「這裡有什麼」的目錄表（`_index.json` 或 JSON 裡的 `_index` 鍵）；這次讓目錄表的一項可以指到另一份目錄表。你說的兩處：目錄表每一項的 `index`、JSON 裡的 `_index` 鍵。資料夾的 `_index.json` 整份是字串、`_metainfo` 裡的 `index` 是字串，都還不收。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：只做那兩處；`_index.json` 整份是字串＝`IndexBad`；`_metainfo` 裡的 `index` 是字串照舊當壞的略過",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "就是後面那個obj裏面，除了description之外，還可以放index，值必須是字串，必須是路徑，指向另一個_index或_index.json。",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "index-link 代定 L5。"
+   ],
+   "source_path": "../12/index-link.md#代定可翻",
+   "source_lines": "79",
+   "source_excerpt": "**L5 只做使用者說的兩處**：資料夾的 `_index.json` 整份是字串仍是 `IndexBad`；`_metainfo` 裡的 `index` 是字串照舊當壞的略過。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "il-L6",
+   "section": "ref",
+   "question": "工具印目錄表時，指向放在第三欄 `index: 路徑`，可以嗎？",
+   "eli5": "index＝一份「這裡有什麼」的目錄表（`_index.json` 或 JSON 裡的 `_index` 鍵）；這次讓目錄表的一項可以指到另一份目錄表。每行原本是「名字 TAB 說明」，新的接在後面；沒有說明時第二欄空著。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：第三欄 `index: 路徑`；沒有 description 時第二欄空著",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "這個要用json與檔案系統的同像性去想。如果是在json物件內的，某key的_index，那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "照 I13「之後加欄就接在 TAB 後面」。",
+    "index-link 代定 L6。"
+   ],
+   "source_path": "../12/index-link.md#代定可翻",
+   "source_lines": "80",
+   "source_excerpt": "**L6 輸出欄位**：第三欄 `index: 路徑`（I13「之後加欄就接在 TAB 後面」）；沒有 description 時第二欄空著（`鍵<TAB><TAB>index: 路徑`）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "il-L7",
+   "section": "ref",
+   "question": "照「JSON 跟資料夾同像」推出來的走法細節：物件的根就是這份檔、名字一律當鍵、進檔要明寫 `#`，可以嗎？",
+   "eli5": "index＝一份「這裡有什麼」的目錄表（`_index.json` 或 JSON 裡的 `_index` 鍵）；這次讓目錄表的一項可以指到另一份目錄表。「同像」＝把 JSON 物件當資料夾看。在物件裡往外走（`..`）走到根就等於這份檔，再 `..` 就是檔所在的資料夾。物件裡寫的名字都當 JSON 的鍵，不去看磁碟上有沒有同名檔。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：根物件的 `..`＝檔案所在資料夾；物件裡名字一律當鍵；檔案系統那邊要進 JSON 得明寫 `#`（`x.json/a/_index` 是資料夾路徑）",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "1. 甲。",
+     "cite": "使用者 11-12 晚（只針對「物件裡直接寫別的檔」那半）"
+    },
+    {
+     "text": "這個要用json與檔案系統的同像性去想。如果是在json物件內的，某key的_index，那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "其中「物件裡不能直接寫 `w.json#/…`、要先 `..` 走出去」那半你已裁維持（「1. 甲。」），這題只看其餘推出來的部分。",
+    "後續 ref-index-unify 讓 `#` 後也能寫 `..`，沒改這條。",
+    "index-link 代定 L7。"
+   ],
+   "source_path": "../12/index-link.md#代定可翻",
+   "source_lines": "82",
+   "source_excerpt": "**L7 往外走與進檔**（同像推的；「物件裡不能直接寫 `w.json#/…`、要先 `..` 走出去」**使用者已裁維持**：「1. 甲。」）：根物件＝這個檔，它的 `..`＝檔案所在的資料夾；從物件裡要指到別的檔，先 `..` 走出檔再寫 `檔#/指標`。物件裡的名字一律當 key，不看磁碟上有沒有同名檔；檔案系統那邊的名字一律當資料夾／檔名，進 json 要明寫 `#`（`x.json/a/_index` 是資料夾路徑、不是 `x.json#/a/_index`）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "il-L8",
+   "section": "ref",
+   "question": "物件裡的每一段照 JSON 指標的寫法讀（`/` 寫成 `~1`、`~` 寫成 `~0`；空段和 `.` 略過），可以嗎？",
+   "eli5": "index＝一份「這裡有什麼」的目錄表（`_index.json` 或 JSON 裡的 `_index` 鍵）；這次讓目錄表的一項可以指到另一份目錄表。跟 json 工具一樣的跳脫規則。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：照 JSON Pointer 的 token 讀；`~1`＝`/`、`~0`＝`~`；空段與 `.` 略過",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "這個要用json與檔案系統的同像性去想。如果是在json物件內的，某key的_index，那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "注意：`#` 後面那段的規則不同——ref-index-unify U2 定的是空段、`.` 都當鍵名（保住 R5 與 L12）；這條講的是 `#` 前面物件裡那段。",
+    "index-link 代定 L8。"
+   ],
+   "source_path": "../12/index-link.md#代定可翻",
+   "source_lines": "83",
+   "source_excerpt": "**L8 物件裡的段照字面當 JSON Pointer 的 token**：key 裡有 `/` 寫 `~1`、`~` 寫 `~0`（同 json 工具）；空段與 `.` 略過。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "il-L10",
+   "section": "ref",
+   "question": "目錄表放在其他地方（`_metainfo` 裡、agent 自己的主觀表）時，也照「從裝著它的容器算」，可以嗎？",
+   "eli5": "index＝一份「這裡有什麼」的目錄表（`_index.json` 或 JSON 裡的 `_index` 鍵）；這次讓目錄表的一項可以指到另一份目錄表。容器＝這份表描述的那個節點。`_metainfo` 裡的表跟獨立的 `_index` 同一個起點；agent 明講的主觀表從表所在的上一層算。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：其他住處同一條「從裝著它的容器算」（`_metainfo` 同 `DIR`／`FILE#/P`；主觀表＝上一層）",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "這個要用json與檔案系統的同像性去想。如果是在json物件內的，某key的_index，那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "原文另提一點出入：主觀表的鍵相對誰仍是「寫它的 agent 自己知道」，路徑卻照這條從上一層算，兩者不一定是同一個節點。",
+    "index-link 代定 L10。"
+   ],
+   "source_path": "../12/index-link.md#代定可翻",
+   "source_lines": "87",
+   "source_excerpt": "**L10 其他住處同一條「從裝著它的容器算」**：容器＝這份表描述的那個節點。`_metainfo` 裡的 index（`DIR/_metainfo.json#/index`、`FILE#/P/_metainfo/index`）＝跟獨立的 `_index.json`／`_index` 同一個容器（`DIR`、`FILE#/P`）；腦明講的主觀 index（`index` 參數，如 `me.json#/views`）＝表所在的上一層（`me.json#/views` → 根物件＝`me.json`；整份 `me/v.json` → 資料夾 `me`）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "il-L11",
+   "section": "ref",
+   "question": "所有地方寫 `#/…` 時，「本檔」一律指位置裡 `#` 前面那份檔，可以嗎？",
+   "eli5": "index＝一份「這裡有什麼」的目錄表（`_index.json` 或 JSON 裡的 `_index` 鍵）；這次讓目錄表的一項可以指到另一份目錄表。例：`DIR/_index.json` 裡寫 `#/x`，本檔就是它自己；`FILE#/P/_index` 裡寫的，本檔是 `FILE`。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：本檔＝位置的 `#` 前面那段，所有住處同一條",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "算數。然後$ref支援./, ../嗎",
+     "cite": "使用者 11-12 晚（前兩字針對 `_index.json` 那一處）"
+    }
+   ],
+   "details": [
+    "其中「資料夾的 `_index.json` 裡寫 `#/x` 算不算」你已裁「算數。」；其餘住處是照同一條推的。",
+    "index-link 代定 L11。"
+   ],
+   "source_path": "../12/index-link.md#代定可翻",
+   "source_lines": "85",
+   "source_excerpt": "**L11 本檔＝`where` 的 `#` 前面那段**：所有住處同一條——`DIR/_index.json` 是它自己（使用者已裁「算數。」）、`DIR/_metainfo.json#/index` 是 `DIR/_metainfo.json`、`FILE#/P/_index` 與 `FILE#/P/_metainfo/index` 是 `FILE`、主觀 index `me.json#/views` 是 `me.json`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "il-L12",
+   "section": "ref",
+   "question": "只寫 `#/`（空指標）也收，可以嗎？",
+   "eli5": "index＝一份「這裡有什麼」的目錄表（`_index.json` 或 JSON 裡的 `_index` 鍵）；這次讓目錄表的一項可以指到另一份目錄表。`#/` 算出 `檔#/`，跟 json 工具的完整寫法 `x.json#/` 一樣。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`#/` 也收，算出 `檔#/`",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "這個要用json與檔案系統的同像性去想。如果是在json物件內的，某key的_index，那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "index-link 代定 L12；跟本頁 `rh-R5` 同一件。"
+   ],
+   "source_path": "../12/index-link.md#代定可翻",
+   "source_lines": "86",
+   "source_excerpt": "**L12 `#/`（空指標）也收**：算出 `檔#/`，同 N-45 完整寫法 `x.json#/`。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "rh-R1",
+   "section": "ref",
+   "question": "「這份檔是哪份」由讀檔的程式告訴解析器、解析器不自己猜，可以嗎？",
+   "eli5": "`$ref`＝JSON 裡「這格的內容去別處拿」的記號；這次讓它可以寫 `#/a/b`，意思是「我這份檔自己裡面的 /a/b」。解析器只拿到一團 JSON 時，不知道它是從哪份檔讀來的；這時 `#/…` 就照寬容規則原封不動留著。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：最外層由讀檔的程式給，被換進來的檔由解析器自己記；不知道時（stdin 沒給 `--file`、daemon 的信、程式內給的 JSON）原封不動",
+     "consequence": "現況不變（已施工）"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "1. 甲。2.甲。3.甲，話說ref應該支援#/開頭吧",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "後續 codebase-cleanup 線已讓知道檔的 Python 呼叫處都給 `--file`；腦給的參數、旗標給的值照這條維持原封不動。",
+    "ref-hash 代定 R1。"
+   ],
+   "source_path": "../12/ref-hash.md#代定可翻",
+   "source_lines": "48",
+   "source_excerpt": "**R1 「那份檔」由呼叫者給、庫不猜**：被 `$ref` 換進來的檔由庫自己記；最外層由讀檔的程式給（上面那張表）。不知道的情況（stdin 沒給 `--file`、daemon 的信、行程內給的 JSON）照寬容規則，原封不動留著。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "rh-R2",
+   "section": "ref",
+   "question": "`#/…` 取的是磁碟上那份檔的原文，而不是程式手上已經改過的版本，可以嗎？",
+   "eli5": "`$ref`＝JSON 裡「這格的內容去別處拿」的記號；這次讓它可以寫 `#/a/b`，意思是「我這份檔自己裡面的 /a/b」。例：程式讀完設定又用命令列旗標蓋過某些值；`#/…` 取的仍是檔案原文。設定檔在兩次讀之間被改，取到的是新的。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：取磁碟上的原文（跟 `ctl.json#/x` 一樣）",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "1. 甲。2.甲。3.甲，話說ref應該支援#/開頭吧",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "ref-hash 代定 R2。"
+   ],
+   "source_path": "../12/ref-hash.md#代定可翻",
+   "source_lines": "49",
+   "source_excerpt": "**R2 取的是磁碟上那份檔的原文**，不是程式手上已經蓋過旗標的那份。ctl 在兩次讀之間被改的話，取到的是新的（跟 `ctl.json#/x` 一樣）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "rh-R3",
+   "section": "ref",
+   "question": "`#/…` 指到包著自己的上層時，會多繞一層才報「繞圈」，可以嗎？",
+   "eli5": "`$ref`＝JSON 裡「這格的內容去別處拿」的記號；這次讓它可以寫 `#/a/b`，意思是「我這份檔自己裡面的 /a/b」。指到自己的祖先等於繞圈，會報 `DirectiveBad`；只是檢查鏈上沒放「整份檔」那層，所以晚一步才發現。錯誤還是同一個。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：照現況多走一層才報 `$ref loop`，錯誤代號不變",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "1. 甲。2.甲。3.甲，話說ref應該支援#/開頭吧",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "ref-hash 代定 R3。"
+   ],
+   "source_path": "../12/ref-hash.md#代定可翻",
+   "source_lines": "50",
+   "source_excerpt": "**R3 頂層的 `#/…` 指到包著自己的祖先**：鏈上沒有放「整份檔」那一層，所以會多走一層才報 `$ref loop`。錯誤還是同一個。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "rh-R4",
+   "section": "ref",
+   "question": "`$ref` 寫成陣列、其中有 `#/…` 卻不知道是哪份檔時，整格原封不動，可以嗎？",
+   "eli5": "`$ref`＝JSON 裡「這格的內容去別處拿」的記號；這次讓它可以寫 `#/a/b`，意思是「我這份檔自己裡面的 /a/b」。`$ref` 可以寫成陣列一次合好幾份；只要有一個元素解不了，就當整格不合、原樣留著。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：整個物件原封不動（等於「有一個元素不合」）",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "1. 甲。2.甲。3.甲，話說ref應該支援#/開頭吧",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "ref-index-unify U6 沿用這條。",
+    "ref-hash 代定 R4。"
+   ],
+   "source_path": "../12/ref-hash.md#代定可翻",
+   "source_lines": "51",
+   "source_excerpt": "**R4 `$ref` 陣列裡有 `#/…`、但不知道是哪份檔**：整個物件原封不動（等於「有一個元素不合」）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "rh-R5",
+   "section": "ref",
+   "question": "只寫 `#/`（空指標）時，指的是名字為空字串的那個鍵，可以嗎？",
+   "eli5": "`$ref`＝JSON 裡「這格的內容去別處拿」的記號；這次讓它可以寫 `#/a/b`，意思是「我這份檔自己裡面的 /a/b」。這是 JSON 指標標準（RFC 6901）的讀法；不是「整份檔」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`#/`＝名字為空字串的那個鍵",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "1. 甲。2.甲。3.甲，話說ref應該支援#/開頭吧",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "ref-index-unify 說 R5 不變。",
+    "ref-hash 代定 R5；跟本頁 `il-L12` 同一件。"
+   ],
+   "source_path": "../12/ref-hash.md#代定可翻",
+   "source_lines": "52",
+   "source_excerpt": "**R5 `#/`（空指標）也收**：指的是名字為空字串的那個 key，同 RFC 6901。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "rh-R6",
+   "section": "ref",
+   "question": "命令列給 `--file 檔` 時，連相對路徑的起點也一起改成那份檔的資料夾，可以嗎？",
+   "eli5": "`$ref`＝JSON 裡「這格的內容去別處拿」的記號；這次讓它可以寫 `#/a/b`，意思是「我這份檔自己裡面的 /a/b」。`aos-directive --file 檔`＝告訴它「stdin 這團 JSON 是從這份檔讀來的」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`--file` 同時決定 `#/` 指哪份檔、相對路徑從它的資料夾算",
+     "consequence": "現況不變"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "1. 甲。2.甲。3.甲，話說ref應該支援#/開頭吧",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "ref-hash 代定 R6。"
+   ],
+   "source_path": "../12/ref-hash.md#代定可翻",
+   "source_lines": "53",
+   "source_excerpt": "**R6 `--file` 會一起把相對起點改成那份檔的資料夾**（同「從寫著它的那份檔所在的資料夾算」）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "rh-R7",
+   "section": "ref",
+   "question": "daemon 收到的信裡夾著的小單子寫了 `#/…`，因為信沒有檔可以補，就原樣寫進小格，可以嗎？",
+   "eli5": "`$ref`＝JSON 裡「這格的內容去別處拿」的記號；這次讓它可以寫 `#/a/b`，意思是「我這份檔自己裡面的 /a/b」。daemon＝背景總管；信裡可以直接夾一份「要起什麼」的小單子。這份單子沒有來源檔，寫進小格後 `#/…` 會被當成小格自己那份檔。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：原樣寫進小格，在小格裡被當成小格那份檔；邊緣狀況，沒處理",
+     "consequence": "現況不變；信裡單子寫 `#/…` 會指到小格自己的檔，可能不是寫信的人想的"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的備註改程式與說明；沒寫怎麼翻就再來問你"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已經施工；不翻就照它",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "1. 甲。2.甲。3.甲，話說ref應該支援#/開頭吧",
+     "cite": "使用者 11-12 晚（最相關的一句）"
+    }
+   ],
+   "details": [
+    "01 那行特別點名 R7。",
+    "從 daemon.json 來的單子已會補成絕對路徑，只有信裡的沒有。",
+    "ref-index-unify U6 說「daemon 的信同 R7」。",
+    "ref-hash 代定 R7。"
+   ],
+   "source_path": "../12/ref-hash.md#代定可翻",
+   "source_lines": "54",
+   "source_excerpt": "**R7 daemon 信裡的內嵌單子寫 `#/…`**：信沒有檔可以補，就原樣寫進小格，在小格裡會被當成小格那份檔。屬於邊緣狀況，沒處理。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ru-A7",
+   "section": "unify",
+   "question": "`$ref` 一次指好幾份檔（寫成陣列）又帶 `$at` 時，`$at` 要套在每一份上，還是套在合好的結果上？",
+   "eli5": "`$ref` 像「去拿這份檔」，`$at` 像「拿到後再往裡翻到哪一頁」。`$ref` 可以一次列好幾份、拿到後合成一份；問題是「翻到哪一頁」是每份各翻一次再合，還是先合好再翻。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：每一份各自接著 `$at` 往下走，走完再合起來",
+     "consequence": "跟「`$ref` 指到哪、`$at` 從那接著走」一致；先合再取位置的寫法就做不到。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的意見改程式、測試與條文。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已照這樣施工；不翻就照它。原文件照「`$ref` 指到哪、`$at` 從那接著走」逐份套。",
+   "quotes": [
+    {
+     "text": "$at就變成$ref後面接着。$at仍不支援#",
+     "cite": "使用者 11-12 晚（ref-index-unify 第 5 句）"
+    }
+   ],
+   "details": [
+    "原文件細節代定 A7。",
+    "這題 10-23 刪 `$at` 時頂層就問過（接在每一份的指標後面，還是對合好的結果再取位置），當時沒答。",
+    "要看的第 1 條。"
+   ],
+   "source_path": "../12/ref-index-unify.md#要使用者看的",
+   "source_lines": "226, 232",
+   "source_excerpt": "- **A7 `$ref` 是陣列時，`$at` 套在每一份上**（各自接著走、再合），不是對合好的結果取位置。這正是 10-23 他刪 `$at` 時頂層問的那題（「接在每一份的指標後面，還是對合好的結果再取位置」），當時沒答；這次照「`$ref` 指到哪、`$at` 從那接著走」逐份套，列給使用者。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ru-A6",
+   "section": "unify",
+   "question": "物件裡只寫 `$at`、沒寫 `$ref` 的，要不要當成沒事、原封不動？",
+   "eli5": "`$at` 本來是跟在 `$ref` 後面說「往裡走到哪」。單獨一個 `$at` 沒說從哪份檔出發，現在就當普通資料，不去換它。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：只有 `$at` 沒有 `$ref`＝不是指示詞、不管",
+     "consequence": "單獨的 `$at` 不會被換；要指本檔照舊寫 `{\"$ref\": \"#/…\"}`。若想讓單獨的 `$at` 表示「從這個物件所在處走」，是另一題。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的意見改程式、測試與條文。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已照這樣施工；不翻就照它。本檔已有 `{\"$ref\": \"#/…\"}` 可用，所以沒推成「＝本檔」。",
+   "quotes": [
+    {
+     "text": "用讀法二吧，然後讓$ref給檔，$at給位置。然後兩者都不支援#",
+     "cite": "使用者 11-12 晚（第 3 句；「兩者都不支援#」後來改成只有 $at 不收）"
+    },
+    {
+     "text": "$at就變成$ref後面接着。$at仍不支援#",
+     "cite": "使用者 11-12 晚（ref-index-unify 第 5 句）"
+    }
+   ],
+   "details": [
+    "原文件細節代定 A6；定案表那列：`{\"$at\": \"k\"}`（沒有 `$ref`）＝不是指示詞，不管。",
+    "要看的第 2 條。"
+   ],
+   "source_path": "../12/ref-index-unify.md#要使用者看的",
+   "source_lines": "225, 233",
+   "source_excerpt": "- **A6 只有 `$at` 沒有 `$ref`＝不是指示詞、不管**。沒有推成「＝本檔」：本檔已有 `{\"$ref\": \"#/…\"}`；要不要讓單獨的 `$at` 表示「從這個物件所在處走」是另一題，列給使用者。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ru-A5",
+   "section": "unify",
+   "question": "`$at` 寫壞了（不是字串、或裡面有 `#`）時，整個物件原封不動，對嗎？",
+   "eli5": "寫壞的指示就整句不執行，原樣留著；另一種做法是「只當沒寫 `$at`」，但那樣會悄悄拿到整份檔，比你要的大一塊。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`$at` 寫壞＝整個物件原封不動（`aos-json check` 會提醒一句）",
+     "consequence": "壞的寫法看得出來還在原處；不會悄悄換成整份檔。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的意見改程式、測試與條文。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已照這樣施工；不翻就照它。沒選「只忽略 `$at`」，因為那樣會悄悄換成比想要的大的一塊。",
+   "quotes": [
+    {
+     "text": "$at就變成$ref後面接着。$at仍不支援#",
+     "cite": "使用者 11-12 晚（ref-index-unify 第 5 句）"
+    }
+   ],
+   "details": [
+    "原文件細節代定 A5；定案表：`{\"$ref\": \"x.json\", \"$at\": \"#/k\"}`、`$at` 不是字串＝原封不動（寫法不合）。",
+    "`aos-json check` 會印 `DirectiveFormBad … aos will leave it as is`。",
+    "要看的第 3 條。"
+   ],
+   "source_path": "../12/ref-index-unify.md#要使用者看的",
+   "source_lines": "224, 234",
+   "source_excerpt": "- **A5 `$at` 不是字串、或裡面有 `#`＝寫法不合，整個物件原封不動**。沒有選「只忽略 `$at`」：那樣會悄悄換成比想要的大的一塊（整份檔）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ru-U5",
+   "section": "unify",
+   "question": "檔是捷徑時，`link.json#/../y.json` 的「往外一層」要從捷徑所在的資料夾算，還是從它真正指向的那份檔的資料夾算？",
+   "eli5": "捷徑（symlink）像桌面上的捷徑圖示，本尊放在別處。「走出這份檔、找隔壁的 `y.json`」時，隔壁是指圖示旁邊，還是本尊旁邊。現在照字面算圖示旁邊，所以從外面寫和在被換進來的檔裡面寫，會落在不同資料夾。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：照字面取、捷徑不解開（從外面寫落在捷徑所在資料夾）",
+     "consequence": "從外面寫的 `link.json#/../y.json` 和被換進來的 `link.json` 裡面寫的 `#/../y.json` 可能落在兩個不同資料夾；要一致就得改成走出檔時先解捷徑。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的意見改程式、測試與條文。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已照這樣施工；不翻就照它。原文件先照字面，把兩邊不一致列給你看。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "$ref這塊，可以用#/指代根obj，同時也算指代自身所在檔案，所以可以用#/key, #/../other.json。",
+     "cite": "使用者 11-12 晚（第 1 句）"
+    }
+   ],
+   "details": [
+    "原文件細節代定 U5；不一致是對讀的 opus 實跑抓到的。",
+    "要翻的話，可以在備註寫「走出檔時先解捷徑」，兩邊就一致。",
+    "要看的第 4 條。"
+   ],
+   "source_path": "../12/ref-index-unify.md#要使用者看的",
+   "source_lines": "214, 235",
+   "source_excerpt": "- **U5 帶檔名的也收**：`x.json#/../y.json` 同一套。走出檔時「所在資料夾」照字面取，**`x.json` 是捷徑時不解開**——所以 `link.json#/../y.json`（從外面寫）落在捷徑所在的資料夾，而被換進來的 `link.json` 裡面寫的 `#/../y.json` 落在它實際指向的檔的資料夾（對讀的 opus 實跑抓到）。要兩邊一致就在走出檔時先解捷徑；先照字面，列給使用者。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "ru-U3A3",
+   "section": "unify",
+   "question": "名字剛好叫 `..` 的 key（以及 `$at` 裡叫 `.`、空字串的 key）在 `$ref`／index 路徑裡指不到，接不接受？",
+   "eli5": "`..` 現在被拿來當「往外一層」，所以真有一格資料的名字就叫 `..`，就再也用這種寫法指不到它。這種名字極少見，是讓出來的代價。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`$ref`／index 路徑裡 `..` 一律當往外一層；`$at` 裡 `..`、`.`、空字串都走不到同名 key（後兩種仍可寫在 `$ref` 的 `#/` 後面）",
+     "consequence": "原本 `x.json#/..` 指得到名叫 `..` 的 key，現在不行；入口路徑與 json 工具的 `檔#/指標` 照字面、不受影響。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的意見改程式、測試與條文。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已照這樣施工；不翻就照它。`..` 已拿來當往外一層，只有這幾種名字讓出來。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "$ref這塊，可以用#/指代根obj，同時也算指代自身所在檔案，所以可以用#/key, #/../other.json。",
+     "cite": "使用者 11-12 晚（第 1 句）"
+    }
+   ],
+   "details": [
+    "原文件細節代定 U3（`$ref`／index 路徑）與 A3（`$at`）合成一題。",
+    "N-62 的 json 工具 `檔#/指標` 不受影響。",
+    "要看的第 5 條。"
+   ],
+   "source_path": "../12/ref-index-unify.md#要使用者看的",
+   "source_lines": "212, 222, 236",
+   "source_excerpt": "- **U3 名字就叫 `..` 的 key 在 `$ref`／index 路徑裡指不到**（原本 `x.json#/..` 指得到，現在不行）。入口路徑與 json 工具的 `檔#/指標`（N-62）不受影響，照字面。\n- **A3 名字是 `..`、`.`、空字串的 key 用 `$at` 走不到**；後兩種可以寫在 `$ref` 的 `#/` 後面。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "mv-sbx-key",
+   "section": "meta",
+   "question": "沙箱設定裡只有某一格寫壞（例如 `ro` 型別不對）時，整份沙箱設定都略過、不套沙箱照跑，對嗎？",
+   "eli5": "你已裁沙箱設定寫壞＝當沒寫、不套沙箱照跑。剩下的細節是：只壞一格時，是整份丟掉，還是只丟那一格、其他照套。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：某個 key 壞了＝整份設定略過，stderr 提醒一行，不套沙箱直接跑",
+     "consequence": "不會跑出一個跟設定寫的不一樣、缺一格的半套沙箱；代價是那次整個沒沙箱。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的意見改程式、測試與條文。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已照這樣施工；不翻就照它。照原話「不關沙箱照跑」；只丟一格會變成跟設定寫的不一樣的沙箱。",
+   "quotes": [
+    {
+     "text": "甲，出事自己負責",
+     "cite": "使用者 11-12 晚（沙箱設定寫壞時也略過、不套沙箱照跑）"
+    }
+   ],
+   "details": [
+    "原文件代定第 2 點；表格「某個 key 型別不對（`net`、上限、`user`、`base`／`ro`／`rw`／`commands`／`env`）」那列。",
+    "stderr 那行：`aos-sandbox: warning: sandbox config ignored, running unsandboxed: 原因`。"
+   ],
+   "source_path": "../12/metainfo-views.md#代定可翻案第-1-點已被使用者翻案並落實",
+   "source_lines": "64, 75",
+   "source_excerpt": "| 某個 key 型別不對（`net`、上限、`user`、`base`／`ro`／`rw`／`commands`／`env`） | 同上（整份設定略過，不是只略過那一格） |\n- **某個 key 壞了是整份設定略過**，不是只略過那一格：照原話「不關沙箱照跑」；只丟掉一格（例如壞的 `ro`）會變成一個跟設定寫的不一樣的沙箱。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "mv-sbx-ref",
+   "section": "meta",
+   "question": "沙箱設定裡有 `$ref`，或 `$env` 指的環境變數沒設時，算「設定讀不出來」，一樣略過、不套沙箱照跑，對嗎？",
+   "eli5": "`$ref` 是「這格去別的檔拿」、`$env` 是「這格去讀某個環境變數」。沙箱這邊不去解這些，遇到就當設定讀不懂。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：有 `$ref`、`$env` 沒設＝算設定讀不出來＝略過＋提醒、不套沙箱照跑",
+     "consequence": "沙箱設定得直接寫明值；寫了 `$ref` 或靠沒設的變數，那次就沒沙箱。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的意見改程式、測試與條文。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已照這樣施工；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "甲，出事自己負責",
+     "cite": "使用者 11-12 晚（沙箱設定寫壞時也略過、不套沙箱照跑）"
+    }
+   ],
+   "details": [
+    "原文件代定第 1 點表格裡標「代定：算設定讀不出來」那列。",
+    "對照：設定不在（檔不在、沒有 `sandbox` 這格）照舊 `CfgMissing` 報錯。"
+   ],
+   "source_path": "../12/metainfo-views.md#代定可翻案第-1-點已被使用者翻案並落實",
+   "source_lines": "65",
+   "source_excerpt": "| 裡面有 `$ref`、`$env` 指的變數沒設 | 同上（代定：算設定讀不出來） |",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "mv-sbx-path",
+   "section": "meta",
+   "question": "沙箱設定壞了、要跑的程式又不在 PATH 上時，報 `CommandMissing`，對嗎？",
+   "eli5": "設定壞了本來會「不套沙箱直接跑」，但要跑的程式本身找不到，就沒東西可跑，只能報錯。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：設定壞了且程式不在 PATH＝`CommandMissing` 報錯",
+     "consequence": "找不到程式時一定看得到錯，不會默默什麼都沒做。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的意見改程式、測試與條文。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已照這樣施工；不翻就照它。沒東西可跑。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "既然環境做不到，那這個程式就該報錯",
+     "cite": "使用者 11-12 晚"
+    }
+   ],
+   "details": [
+    "原文件代定第 3 點。"
+   ],
+   "source_path": "../12/metainfo-views.md#代定可翻案第-1-點已被使用者翻案並落實",
+   "source_lines": "76",
+   "source_excerpt": "- **設定壞了、prog 又不在 PATH 上**＝`CommandMissing`（沒東西可跑）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "mv-stderr",
+   "section": "meta",
+   "question": "格寫壞被略過時，提醒只印在 stderr、一支工具一行，不放進工具的結果，對嗎？",
+   "eli5": "stderr 像程式旁邊的小紙條，給看紀錄的人看；工具的結果是交給呼叫者的正事。提醒寫在紙條上，不混進正事。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：提醒印在 stderr、一支工具一行，不進工具結果",
+     "consequence": "工具結果的形狀不變；要看到提醒得看 stderr／紀錄。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的意見改程式、測試與條文。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已照這樣施工；不翻就照它。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "對，略過，出事自己負責",
+     "cite": "使用者 11-12 晚（壞掉的 _metainfo 改成略過）"
+    }
+   ],
+   "details": [
+    "原文件代定第 4 點。",
+    "適用的地方：act 格、aos-mcp、`mcp_tool`、aos-sandbox（見原文件「推出的後果」第二點的表）。"
+   ],
+   "source_path": "../12/metainfo-views.md#代定可翻案第-1-點已被使用者翻案並落實",
+   "source_lines": "77",
+   "source_excerpt": "- **提醒印在 stderr、一支工具一行**，不進工具的結果。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "mv-idxview",
+   "section": "meta",
+   "question": "`_index` 一項裡多放的東西，`index_view` 不印、也不提示有多的欄位，對嗎？",
+   "eli5": "你裁了「`_index` 一項裡想塞啥塞啥」。`index_view`（看目錄的工具）照舊只顯示說明和下一層目錄，多塞的不顯示；要看就用 `json_get` 直接讀。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`index_view` 只看 `description`、`index` 兩格，多的鍵不讀、不印、不提示",
+     "consequence": "看目錄時看不到多塞的東西，也不知道有；要看得自己 `json_get`。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的意見改程式、測試與條文。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已照這樣施工；不翻就照它。程式本來就容得下，沒改，補了一個測試釘住。",
+   "quotes": [
+    {
+     "text": "_index的obj內要不要再多塞東西...可以，想塞啥塞啥，出事了自己負責。",
+     "cite": "使用者 11-12 晚"
+    }
+   ],
+   "details": [
+    "原文件代定第 5 點；推出的後果第四點。",
+    "程式在 `lib/aos_index.py`。"
+   ],
+   "source_path": "../12/metainfo-views.md#代定可翻案第-1-點已被使用者翻案並落實",
+   "source_lines": "49, 78",
+   "source_excerpt": "**四、`_index` 的一項多放東西：程式本來就容得下，沒改。** `index_view`（`lib/aos_index.py`）只看每項的 `description` 與 `index` 兩格，各有各的形狀檢查；其他鍵不讀、不檢查、不報錯，也不印（代定：不印、也不提示有額外欄位，要看就 `json_get`）。補了一個測試釘住。\n- **`index_view` 不印一項裡多出來的鍵**（見上第四點）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "mv-notes",
+   "section": "meta",
+   "question": "審視工具 `metainfo_check` 遇到寫壞的格時，輸出多一個 `notes` 寫明略過了什麼，對嗎？",
+   "eli5": "寫壞的格現在當沒寫，審視結果會標成「沒宣稱」。多一張附註，才分得出是真的沒寫，還是寫壞被略過。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照代定：`metainfo_check` 有略過時多一個 `notes` 鍵（沒略過就不出現）",
+     "consequence": "審視的人分得出沒寫和寫壞；輸出形狀在有略過時多一個鍵。"
+    },
+    {
+     "key": "B",
+     "label": "要翻（意見寫在備註）",
+     "consequence": "隊長照你的意見改程式、測試與條文。"
+    }
+   ],
+   "recommend": "A",
+   "why": "這是隊長代定的現況，已照這樣施工；不翻就照它。不然看到 `unclaimed` 分不出是沒寫還是寫壞。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    },
+    {
+     "text": "對，略過，出事自己負責",
+     "cite": "使用者 11-12 晚（壞掉的 _metainfo 改成略過）"
+    }
+   ],
+   "details": [
+    "原文件代定第 6 點；推出的後果第二點表格 `metainfo_check` 那列。"
+   ],
+   "source_path": "../12/metainfo-views.md#代定可翻案第-1-點已被使用者翻案並落實",
+   "source_lines": "43, 79",
+   "source_excerpt": "| `metainfo_check`（審視工具） | 壞的那個宣稱當沒宣稱（`unclaimed`），輸出多一個 `notes` 寫明略過了什麼 | `FileBad`／`CalBad` |\n- **`metainfo_check` 多一個 `notes` 鍵**（有略過才出現）：不然審視的人看到 `unclaimed` 分不出是沒寫還是寫壞。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "mv-q1",
+   "section": "meta",
+   "question": "你說「_index的obj內」想塞啥塞啥，那個 obj 是指 index 裡的每一項，還是整份 `_index` 最外層？",
+   "eli5": "`_index` 像一本目錄，裡面每一條是一個小物件（有說明文字）。可以讀成「每一條裡可以多寫東西」，也可以讀成「整本目錄最外層也能多放東西」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "指每一項的值（`{\"description\": …}` 那個物件）",
+     "consequence": "現況；每一項多放的鍵不讀、不印、不報錯。"
+    },
+    {
+     "key": "B",
+     "label": "指整份 `_index` 最外層",
+     "consequence": "現在的程式會把最外層多出來的鍵當成一項、印出鍵名（不報錯）；要改成不當一項得動 `index_view`。"
+    },
+    {
+     "key": "C",
+     "label": "兩者都算",
+     "consequence": "每一項照現況；最外層多的鍵也得改成不當一項。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件照最小的做，讀成每一項的值（呼應原話四「obj裡面以後不只會有純文字description」）。",
+   "quotes": [
+    {
+     "text": "_index的obj內要不要再多塞東西...可以，想塞啥塞啥，出事了自己負責。",
+     "cite": "使用者 11-12 晚"
+    }
+   ],
+   "details": [
+    "原文件讀法疑義第 1 點。"
+   ],
+   "source_path": "../12/metainfo-views.md#原話讀法上的疑義照列沒有自己選邊的地方照最小的做",
+   "source_lines": "83",
+   "source_excerpt": "1. **「_index的obj內」的 obj 指哪個物件**：讀成 index 一項的值（`{\"description\": …}` 那個物件，原話四「obj裡面以後不只會有純文字description」）。若他指整份 `_index` 物件的頂層，現在的程式會把多出來的頂層鍵當成一項、印出鍵名（不報錯）。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "mv-q2",
+   "section": "meta",
+   "question": "通用（公用）和主觀現在用什麼分：看放的位置，還是看私不私有？",
+   "eli5": "之前用位置分：放在天然位置那份算通用、自己另存的算主觀。這次你說「非私有的全都是通用視角」，是用私不私有分。現在兩種分法剛好重合；分歧在 agent 放在別處、但別人讀得到的看法算哪邊。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "原文件沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "看位置（天然位置那份＝通用、自己存的＝主觀）",
+     "consequence": "放在別處但公開的看法算主觀；條文刪「非私有」那句。"
+    },
+    {
+     "key": "B",
+     "label": "看私不私有（公開給別人的聲稱＝通用）",
+     "consequence": "放在別處但別人讀得到的看法算通用；條文刪位置那句。"
+    },
+    {
+     "key": "C",
+     "label": "兩句都留、不二選一",
+     "consequence": "現況；兩種分法重合時沒差，碰到放別處又公開的就沒定論。"
+    }
+   ],
+   "recommend": "",
+   "why": "原文件沒有建議；條文兩句都寫，沒有替你二選一（照字面會偏向 B）。",
+   "quotes": [
+    {
+     "text": "客觀那個你不管怎麼描述無法描述全，所以能被我們記錄下來的，非私有的，全都是通用視角(公用視角)(自己公開給別人的聲稱)。",
+     "cite": "使用者 11-12 晚"
+    }
+   ],
+   "details": [
+    "原文件沒有建議，頁面不替你預選。",
+    "原文件讀法疑義第 2 點。",
+    "條文見 N-68、N-69、C-88。"
+   ],
+   "source_path": "../12/metainfo-views.md#原話讀法上的疑義照列沒有自己選邊的地方照最小的做",
+   "source_lines": "84",
+   "source_excerpt": "2. **通用與主觀現在用什麼分**：之前用位置分（天然位置那份＝通用、自己存的＝主觀），這次用「非私有／私有」分。現況兩種分法重合；agent 放在別處、但別人讀得到的看法算哪邊，照這次的字面是通用視角（公開給別人的聲稱）。條文兩句都寫、沒有替他二選一。",
+   "answer": "C",
+   "answer_state": "picked",
+   "answer_note": "這只是用來參考的概念。",
+   "answered_at": "2026-11-13"
+  },
+  {
+   "id": "mv-q3",
+   "section": "meta",
+   "question": "「全都是觀點」有沒有包含「主觀那份蓋過去就算數」，也就是執行的程式要不要改照某一份主觀的跑？",
+   "eli5": "現在執行的程式（act、aos-mcp）只拿公開那份當參考值。另一種讀法是：你自己存的主觀看法蓋上去，程式就照你的跑；這得另開一條「指定看哪份」的管道。",
+   "options": [
+    {
+     "key": "A",
+     "label": "只落實前半：全是觀點、參考用、壞了略過；主觀蓋過去不算數",
+     "consequence": "現況；程式不讀主觀那份，後半留在未定 1。"
+    },
+    {
+     "key": "B",
+     "label": "也包含後半：呼叫者可指定照哪份主觀的跑",
+     "consequence": "得另開管道（整理法三、題 1 的 (d)），要改執行的程式。"
+    }
+   ],
+   "recommend": "A",
+   "why": "原文件照最小的做：你只說全是觀點、參考用，加上主觀位置不規定，沒說執行的程式要去讀主觀那份。",
+   "quotes": [
+    {
+     "text": "當然，全都是觀點，全都是參考用，出事了自行負責。",
+     "cite": "使用者 11-12 晚"
+    },
+    {
+     "text": "主觀的metainfo的位置也不規定。",
+     "cite": "使用者 11-12 晚"
+    }
+   ],
+   "details": [
+    "原文件讀法疑義第 3 點；推出的後果第三點。"
+   ],
+   "source_path": "../12/metainfo-views.md#原話讀法上的疑義照列沒有自己選邊的地方照最小的做",
+   "source_lines": "85",
+   "source_excerpt": "3. **「全都是觀點」有沒有包含「主觀蓋過去就算數」**：題 1 的 (c) 原文有後半句「主觀蓋過去就算數」。他只說全是觀點、參考用，加上主觀的位置不規定；沒說執行的程式要去讀主觀那份。所以只落實前半（地位與壞了略過），後半留在未定 1。",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  }
+ ]
+}

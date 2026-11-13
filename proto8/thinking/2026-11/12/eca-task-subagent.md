@@ -100,6 +100,7 @@
   - 甲：關掉 codex 原生子 agent（範本說明的 codex 版 flags 加 `-c agents.enabled=false`）。後果：codex 身沒有子 agent 可用。
   - 乙：子 agent 開著，由 aos-mcp 在 `tools/call` 看 `thread_source`，子 agent 叫不在少功能清單裡的工具就拒絕（工具照列、叫了才擋）。後果：靠 codex 沒寫進文件的內部欄位，哪天改了就失效；aos-mcp 要多認一個 CLI 的私有欄位。
   - 丙：不管，codex 的子 agent 跟主 agent 拿一樣的 aos 工具（含 self_ctl、mailbox_send）。後果：兩身行為不一樣——claude 切了、codex 沒切。
+  - **已裁（11-13）＝選 C（丙）：不管，維持現況。** 使用者備註原話：「以後再想辦法處理，不急。」回覆原文：「sub-U1:C（備註：以後再想辦法處理，不急。）」（11-13 待裁頁 `wu-1113-top`；回覆整行見[回覆檔](../13/decide_20261113_wu-top.reply.txt)，裁定後待施工見[裁定落地-1113](../13/裁定落地-1113.md)）。thinking→docs 的 U8 是同一題，跟著結。
 - **U2 claude 身其他類型的子 agent 要不要也給少功能那台**（T3 代定「不給、叫了被擋」）。要給的話得替每個類型各寫一份定義（蓋掉內建的 Explore、Plan 會換掉它們原本的 prompt），外掛與使用者自己定義的類型還是蓋不到。
 - 跟既有 CONCEPTS／NORMS 條文沒有發現衝突。P-43「工具」那段只寫了 `cli.json` 的 `tools`，沒提 `tools_sub`；條文沒改，要不要補一句由使用者定。
 

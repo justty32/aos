@@ -84,6 +84,7 @@
 7. **`extras/langs`（janet、lua，10-24 的嘗試）**：沒人引用、還跑得起來。(a) 留著；(b) 封存進 `archive/`。建議 (a)。`image-move-check` 同樣沒人引用、留著。
 8. **`lib/aos/shell_report/report.py` import 了上層的 `agent.agent_files.declared_files`**（aos 層依賴 agent 層）：(a) 把 `declared_files` 往下搬到 `lib/` 頂層；(b) 留著、當明文例外。建議 (a)，但牽動 cmd、範本、`cli_cfg` 的 import，另排一批。同類：`promote/swap.py` 被隔壁的 `rollback` 伸手進來用——搬到 `lib/aos/` 或留著。
 9. **`lib/aos` 審查工具「找 lib」寫法五種**（固定 `parents[2]`、`parents[1]`、`next(...)` 不帶 `ModuleMissing`、標準樣板）：對齊成標準樣板＝lib 找不到時從 traceback 變成一行 `ModuleMissing`。建議對齊。
+   - **已裁（11-13）＝選 A：對齊成標準樣板**（照建議）。使用者回覆原文：「cl-9:A」（11-13 待裁頁 `wu-1113-top`；回覆整行見[回覆檔](../../13/decide_20261113_wu-top.reply.txt)，裁定後待施工見[裁定落地-1113](../../13/裁定落地-1113.md)）。還沒施工。
 10. **兩種「收掉下層」的做法並存**：`self_*`／mailbox 工具送一次 TERM 就退（下層不理 TERM 會留著）；subagent／fork 會升到 KILL。要不要統一成後者。建議統一，但那是改行為。
 11. **`py/daemon_ctl/__init__` 對外清單裡約 25 個外面沒人讀的名字**：要不要拿掉（算改模組對外的樣子）。建議拿掉。
 12. **`lib/agent/hooks.py` 的 `_target` 還自己叫 `aos-directive`**（其他五處已改用 `directive_value`）：`hooks.py` 是範本可以單獨帶走的純標準庫模組，換了就多一個依賴——跟第 4 題同一題。

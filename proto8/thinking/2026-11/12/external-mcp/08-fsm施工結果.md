@@ -40,7 +40,7 @@
 
 ## 代定（隊長與寫手定的，可翻案）
 
-- **G1** `mcp_client` 不遮 server 自己錯誤訊息裡的環境變數值（寫手原本把 server 環境每個值都遮成 `[redacted]`，`LANG=C` 這類短值會把訊息遮爛；隊長拿掉）。http 那條只遮 bearer 本身。server 自己把金鑰印進錯誤訊息算 server 的事。
+- **G1** `mcp_client` 不遮 server 自己錯誤訊息裡的環境變數值（寫手原本把 server 環境每個值都遮成 `[redacted]`，`LANG=C` 這類短值會把訊息遮爛；隊長拿掉）。http 那條只遮 bearer 本身。server 自己把金鑰印進錯誤訊息算 server 的事。 **使用者裁（11-13）＝選 A：照代定，不塗 server 錯誤訊息裡的環境值。** 回覆原文：「ext-G1:A」（11-13 待裁頁 `wu-1113-top`；回覆整行見[回覆檔](../../13/decide_20261113_wu-top.reply.txt)，裁定後待施工見[裁定落地-1113](../../13/裁定落地-1113.md)）。
 - **G2** http 用 Python 預設的嚴格憑證驗證（3.13 起 `VERIFY_X509_STRICT`）：自簽 CA 沒有 `keyUsage`、leaf 沒有 key identifier 會驗不過（codex／claude 不受影響）。沒放寬；假 server 的產憑證步驟補上這幾個欄位。真主機的公司 CA 若驗不過，要嘛換正規 CA，要嘛再議放寬。
 - **G3** server 那邊工具不見了時，aos-mcp 與假 server 都回 JSON-RPC `-32602`，照步 1 規則翻成 `ArgumentsBad`（例 `ArgumentsBad no such tool: gone`），不是 07 邊緣 8 寫的 `ServerFailed …(run aos-mcp-import sync)`——兩者從協定上分不開，沒做。
 - **G4** `sync` 的差異只比 description 與 parameters（照圖）：只有 annotations（`side_effect`、`idempotent`、`resource`）變了＝`no changes`、不寫；server 檔改名後 `--pack` 與 `tools.path` 還指舊名，sync 也看不出。

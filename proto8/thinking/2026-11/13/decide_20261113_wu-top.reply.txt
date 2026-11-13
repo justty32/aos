@@ -1,0 +1,1 @@
+[wu-1113-top] t2d-U1:A、t2d-U6:C*、kf-K-F47:A、kf-K-F50:B*（備註：可以用unset吧。kernel.json的next感覺有點畫蛇添足。）、eca-8:A*、eca-1:A*、cl-9:A、sub-U1:C（備註：以後再想辦法處理，不急。）、kb-ctl:A*、tcf-sandbox:A*、ext-E6:A、ext-G1:A、tok-C81:B*（備註：拿掉限制。等以後踩坑再回來處理。）、tcf-N17:U*（備註：盡量只讓daemon相關的碰pid，這是原則，推薦遵守。不遵守也沒差。）、tcf-C42:B*（備註：推薦都用json，我們做的東西也盡量以json為主。這是推薦，不遵守也沒差）、t2d-U4:A*、mv-q2:C*（備註：這只是用來參考的概念。）
