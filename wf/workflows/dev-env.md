@@ -25,7 +25,8 @@
 |--------|------|------|
 | 建 proto8 的 C++ 實作 | 照 [testing「proto8」](testing.md#proto8)，在 `proto8/impls/` 建 | proto8 的 aos-exec／loop／fsm／daemon 只有 C++ 版，手跑前要先建；各專案獨立 CMake、也能單獨 `cd <專案> && cmake -B build && cmake --build build`；重運算，派給隊員時 `nice -n 19`（見 [resources](resources.md)）|
 | 把 proto8 的指令放進 PATH | `proto8/install.sh`（WSL clone 裡跑；預設 symlink 進 `~/.local/bin`，給參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉）| 也在 Python user site 寫 `aos-proto8.pth`，兩行為本 repo `proto8/py`／`proto8/lib` 絕對路徑；`--dry-run` 不寫、`--uninstall` 只刪內容完全相符的本 repo 那份；user site 不可用只 warning、其餘照裝，可改給 `PYTHONPATH`。impls 先建好；冪等、同名的別的東西不蓋；repo 換位置要重跑。開新 agent 不用指令：`cp -r $AOS_HOME/templates/名 目的資料夾`（範本都寫 `{"$env": "AOS_HOME", …}`，每台設一次 `AOS_HOME`；[templates/docs/02](../../proto8/templates/docs/02-agent-fsm.md)）。之後不用每殼 source env.sh 設 PATH |
-| 查 md 連結／錨點 | `python3 wf/tools/check_anchors.py` | 要查時跑 |
+| 查 md 連結／錨點 | `python3 wf/tools/check_anchors.py` | 想查才跑（大量搬檔後）；不是 commit 前必跑（使用者 11-13 晚，見 [user](common/user.md)）|
+| 查 `_index.json` 跟樹對不對得上 | `python3 wf/tools/index_check.py` | 同上，想查才跑；commit 前必跑的只有生成器 `index_gen.py --apply`（鐵律 3）|
 
 驗證與測試指令不列這裡——連同「誰跑」一起在 [testing](testing.md)。
 
