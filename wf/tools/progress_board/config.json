@@ -3,11 +3,10 @@
   "sites": [{"mount": "arknights", "dir": "~/Desktop/aos-arknights"}],
   "port": 8765,
   "collect_interval_sec": 15,
-  "aos_repo": "~/repo/simple_tools/aos",
-  "read_roots": ["~/repo/simple_tools/aos", "~/code/playground-ak", "~/Desktop/aos-arknights", "~/Desktop/aos-進度", "/tmp/claude-1000"],
+  "read_roots": ["~/code/playground-ak", "~/Desktop/aos-arknights", "~/Desktop/aos-進度", "/tmp/claude-1000"],
   "report_globs": ["~/code/playground-ak/runs/*/*-report.md"],
   "repos": [
-    {"name": "aos", "path": "~/repo/simple_tools/aos"},
+    {"name": "aos"},
     {"name": "playground-ak", "path": "~/code/playground-ak"}
   ],
   "lines": [

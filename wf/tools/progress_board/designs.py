@@ -21,7 +21,7 @@ def first_line(path):
 
 def designs_state(cfg):
     options = cfg.get("designs", {})
-    repo = Path(cfg.get("aos_repo", "~/repo/simple_tools/aos")).expanduser()
+    repo = Path(cfg.get("aos_repo", ROOT.parents[2])).expanduser()  # 沒寫＝看板所在的 repo（同 collect.load_config）
     source = ROOT / options.get("file", "designs.json")
     warnings, cards = [], []
     try:

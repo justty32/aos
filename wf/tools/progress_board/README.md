@@ -5,22 +5,22 @@
 
 ## 怎麼開
 
-`python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py start`
+指令都在 aos repo 根跑（公司 WSL 是 `~/repo/aos`）：`python3 wf/tools/progress_board/dash.py start`
 
 然後開 http://127.0.0.1:8765/ 。設定檔每輪重讀；改連接埠後要重開。
 
 ## 不開伺服器
 
 直接開 `~/Desktop/aos-進度/index.html` 看最後快照。
-用 `python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py collect` 重產。
+用 `python3 wf/tools/progress_board/dash.py collect` 重產。
 
 ## 怎麼關
 
-`python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py stop`
+`python3 wf/tools/progress_board/dash.py stop`
 
 ## 各線怎麼回報
 
-`~/repo/simple_tools/aos/wf/tools/progress_post.sh progress-board progress 'Built the snapshot' README.md`
+`wf/tools/progress_post.sh progress-board progress 'Built the snapshot' README.md`
 
 | 狀態 | 意思 |
 | --- | --- |
@@ -36,27 +36,27 @@
 
 ## 放題目給使用者裁（ask）
 
-`~/repo/simple_tools/aos/wf/tools/progress_post.sh progress-board ask 'How should we refresh?' --option 'A：Refresh automatically; uses more resources' --option 'B：Refresh manually; requires a click' --recommend A README.md`
+`wf/tools/progress_post.sh progress-board ask 'How should we refresh?' --option 'A：Refresh automatically; uses more resources' --option 'B：Refresh manually; requires a click' --recommend A README.md`
 
 每個選項寫成「代號：做法＋後果」，推薦代號必須是其中一個選項；也可不設選項，讓使用者只填補充。指令回傳題目 ID；看板在「待你裁」區列出最近七天的題目。使用者選選項或填補充、按「送出」後才存進本機；已回答的題目會收起。API 可再次送出同題回答，最後一次有效回答為準。離線快照只能看題目，回答要開本機伺服器。
 
 ## 讀回答（progress_answers.sh）
 
-`~/repo/simple_tools/aos/wf/tools/progress_answers.sh --line progress-board --since 2026-11-07T00:00:00+08:00`
+`wf/tools/progress_answers.sh --line progress-board --since 2026-11-07T00:00:00+08:00`
 
 不帶旗標讀全部回答；`--line` 限定線名、`--since` 限定時間、`--open` 改列尚未回答的題目、`--json` 輸出 JSON Lines（每行一筆 JSON）。讀取不會消耗或刪除回答；agent 用題目 ID 接回原題，依選項和補充繼續工作。
 
 ## 怎麼加一條線
 
 改程式旁 `config.json` 的 `lines`，或直接用新線名 post，就會自己長出卡片。
-交棒路徑相對於 `aos_repo`，也可用絕對路徑或 `~`。
+交棒路徑相對於 `aos_repo`，也可用絕對路徑或 `~`。`aos_repo` 沒寫＝看板程式所在的 repo；它自動算進 `read_roots`，`repos` 裡沒寫 `path` 的那筆（`aos`）也指它。
 
 ## 匯總
 
 `config.json` 裡的 `summary.enabled` 控制開關，`min_interval_min` 設最短間隔，`model` 選模型。
 有新回報、新回答、交棒更新或新 commit 才會自動跑；失敗也會等間隔，避免一直重試。
 「需要使用者決定的事」只列最近七天尚未回答的題目；新收到的回答列在「跟上次比進展了什麼」。
-手動跑：`python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py summarize --force`，強制時會略過開關與間隔。
+手動跑：`python3 wf/tools/progress_board/dash.py summarize --force`，強制時會略過開關與間隔。
 總結在 `summary/latest.md`，每次耗時與 tokens 記在 `summary/cost.jsonl`。
 
 ## 細節頁
@@ -75,7 +75,7 @@
 任何狀態都可加 `--round '<name>'`，例如：
 
 ```sh
-~/repo/simple_tools/aos/wf/tools/progress_post.sh arknights-kb progress 'Reviewing the next batch' --round '第三輪'
+wf/tools/progress_post.sh arknights-kb progress 'Reviewing the next batch' --round '第三輪'
 ```
 
 未指定時，依文字中首次出現的 `第[一二三四五六七八九十0-9]+輪` 或 `批\s*[0-9]+[a-z]?` 推斷；「批5」「批 5」統一為「批 5」。仍找不到就沿用同線上一筆的輪次，第一筆沒有輪次則歸「未分輪」。`state.json` 的各線含 `rounds` 統計與 `current_round`；輪次內保留完整事件。
@@ -110,9 +110,9 @@
 總覽、各線、每道待裁題與細節區塊各自用輸入的 SHA256 判斷變動；只重寫有變的項目，其餘沿用原文字與更新時間。總覽與細節都用 `summary.eli5_min_interval_min` 設最短間隔（預設 4 分鐘），不必等匯總成功才檢查。
 每個框末顯示「白話更新於 HH:MM」；原始資料已變、白話還沒跟上時，旁邊顯示「白話更新中」。各線直接提供的待裁題說明改標「各線自己寫的白話」，不顯示更新中。
 `summary.eli5_enabled` 控制白話開關，`summary.eli5_max_tokens` 控制每次上限（預設 2500）；連線、模型與逾時沿用匯總設定。
-手動更新：`python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py eli5 --force`，略過開關與間隔，仍只重寫有變的項目；加 `--all` 才重寫全部。模型只回一部分時，已成功的項目先存下，缺漏的項目保留舊說明與更新中標記，下輪再試，不把整批誤當成功。
+手動更新：`python3 wf/tools/progress_board/dash.py eli5 --force`，略過開關與間隔，仍只重寫有變的項目；加 `--all` 才重寫全部。模型只回一部分時，已成功的項目先存下，缺漏的項目保留舊說明與更新中標記，下輪再試，不把整批誤當成功。
 結果放在 `eli5/main.json`、`eli5/detail.json`，每個項目各存文字、更新時間與輸入雜湊，頁面共用 `eli5.js` 顯示；每次請求（包含重寫）都記進 `summary/cost.jsonl`，`kind` 分為 `summary`、`eli5-main`、`eli5-detail`。
-發待裁題的人請加 `--eli5 '<plain text>'`，直接說清楚在問什麼、每個選項會怎樣；這份說明優先使用，沒有才自動產生。例如：`~/repo/simple_tools/aos/wf/tools/progress_post.sh progress-board ask 'How much detail?' --eli5 'Choose how much explanation you want.'`。
+發待裁題的人請加 `--eli5 '<plain text>'`，直接說清楚在問什麼、每個選項會怎樣；這份說明優先使用，沒有才自動產生。例如：`wf/tools/progress_post.sh progress-board ask 'How much detail?' --eli5 'Choose how much explanation you want.'`。
 
 匯總、總覽白話與細節白話共用 `data/llm.lock`。伺服器碰到鎖已被占用就略過這輪；手動指令最多等 120 秒，仍忙則印 `dash: warning: busy, skipped`。拿到鎖後重新檢查輸入與間隔，避免同時啟動時重複呼叫模型。
 

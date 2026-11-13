@@ -7,7 +7,7 @@
   const roundsLink = () => { const a = el("a", "button", "輪次"); a.href = `rounds.html?line=${encodeURIComponent(lineId)}`; return a; };
   if (location.protocol === "file:") {
     const header = el("header"); if (lineId != null) header.append(roundsLink());
-    board.replaceChildren(header, el("p", "banner", "細節頁要開伺服器才看得到：python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py start，然後開 http://127.0.0.1:8765/detail.html")); return;
+    board.replaceChildren(header, el("p", "banner", "細節頁要開伺服器才看得到：python3 ~/repo/aos/wf/tools/progress_board/dash.py start，然後開 http://127.0.0.1:8765/detail.html")); return;
   }
   const labels = {start: "開線", progress: "進度", done: "完成", blocked: "卡住", decision: "代定", handoff: "交棒", ask: "待你裁"};
   const colors = {start: "blue", progress: "blue", done: "green", blocked: "red", decision: "amber", handoff: "purple", ask: "amber"};

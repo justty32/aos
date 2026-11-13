@@ -16,6 +16,7 @@ from forum_board import write_forum
 from rounds import rounds_state, tag_events
 
 ROOT = Path(__file__).resolve().parent
+REPO = ROOT.parents[2]  # 看板住在 <aos repo>/wf/tools/progress_board：repo 位置從這裡推，兩台機器路徑不同也不用改設定
 STATUSES = {"start", "progress", "done", "blocked", "decision", "handoff", "ask"}
 
 
@@ -24,7 +25,14 @@ def board_path():
 
 
 def load_config():
-    return json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
+    """讀 config.json；沒寫 aos_repo＝看板所在的 repo，它一定在 read_roots 裡，repos 裡沒寫 path 的那筆也指它。"""
+    cfg = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
+    cfg.setdefault("aos_repo", str(REPO))
+    if cfg["aos_repo"] not in cfg.setdefault("read_roots", []):
+        cfg["read_roots"].insert(0, cfg["aos_repo"])
+    for repo in cfg.get("repos", []):
+        repo.setdefault("path", cfg["aos_repo"])
+    return cfg
 
 
 def iso_now():
