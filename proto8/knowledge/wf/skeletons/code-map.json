@@ -6,7 +6,9 @@
  ],
  "fields": {
   "domains": "領域表，物件陣列：`domain`（領域名，例 匯入）、`files`（檔案，可用 glob，例 `src/import/*`）、`role`（一句話：這塊負責什麼）、`tests`（測試在哪，例 `tests/import/`）。",
-  "truth_order": "本專案的真相層優先序，一行字串。沒改就照抄預設 `code/tests > schema/examples/fixtures > code map > docs > generated`（`wf/knowledge/code-map-rules.json#/truth_order`）。"
+  "truth_order": "本專案的真相層優先序，一行字串。沒改就照抄預設 `code/tests > schema/examples/fixtures > code map > docs > generated`（`wf/knowledge/code-map-rules.json#/truth_order`）。",
+  "per_file": "（選用）有生成逐檔表時：`domains` 每列可加 `per_file`＝那個領域的逐檔表路徑（例 `wf/knowledge/code-map/src.json`）；做法見 `wf/knowledge/code-map-rules.json#/per_file_table`。",
+  "headline_rule": "（選用）有生成逐檔表時：各種檔的檔頭一句話寫在哪、怎麼重生，字串陣列一行一條。"
  },
  "rules": [
   "- **一列一個領域、不是一列一個檔**；檔案欄可用 glob。",

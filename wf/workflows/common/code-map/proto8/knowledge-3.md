@@ -11,7 +11,7 @@
 |---|---|
 | [`_description.json`](../../../../../proto8/knowledge/wf/_description.json) | argv：`# wf：工作區的工作文檔怎麼組織 一個專案（工作區）裡給 agent 用的工作文檔——做事的流程、查得到的知識與記錄、還沒完的事——收在工作區的 `wf/` 夾，用 index 與 json 節點組織。 |
 | [`knowledge/_description.json`](../../../../../proto8/knowledge/wf/knowledge/_description.json) | argv：`# 出廠的知識節點 工作流會指過來查的知識與判準。 |
-| [`knowledge/code-map-rules.json`](../../../../../proto8/knowledge/wf/knowledge/code-map-rules.json) | 設定（鍵：_description、truth_order、maintenance_chain） |
+| [`knowledge/code-map-rules.json`](../../../../../proto8/knowledge/wf/knowledge/code-map-rules.json) | 設定（鍵：_description、truth_order、maintenance_chain、per_file_table） |
 | [`knowledge/content-trim.json`](../../../../../proto8/knowledge/wf/knowledge/content-trim.json) | 設定（鍵：_description、criterion、keep、drop、user_words、applies…） |
 | [`knowledge/dev-dispatch.json`](../../../../../proto8/knowledge/wf/knowledge/dev-dispatch.json) | 設定（鍵：_description、before_code、disambiguation、menu） |
 | [`knowledge/gotchas.json`](../../../../../proto8/knowledge/wf/knowledge/gotchas.json) | 設定（鍵：_description、tidy_archive_move、tidy_split、tidy_dispatch、tidy_env） |
