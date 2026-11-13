@@ -1,0 +1,78 @@
+{
+ "README.md": {
+  "description": "proto8/lib — aos agent 的函式庫（腦可以叫的工具，收成一份、被引用）"
+ },
+ "agent": {
+  "description": "高層工具：動 agent 自己與子 agent 的工具（self_*、subagent、fork、mailbox_*、goal、todo、hook 處理器、claude／codex）加 CLI 對話共用模組 cli_*.py",
+  "index": "agent/_index.json"
+ },
+ "aos": {
+  "description": "中層工具：動 aos 自己東西的工具，jsonx_*、量測與換版（measure、promote、rollback、watch、review_round）、框架站 kernel、kernel_llm、llm_forward",
+  "index": "aos/_index.json"
+ },
+ "aos_index.py": {
+  "description": "index_view：透過 index（視角）看節點，一行一項「鍵 TAB description」；index 放哪只寫在 spot() 一處。"
+ },
+ "aos_json.py": {
+  "description": "腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／len／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set、jsonx_multi_get／set…"
+ },
+ "aos_json_multi.py": {
+  "description": "json_multi_get／set、jsonx_multi_get／set：一次多格，逐格照 json_get／json_set（jsonx 那兩支照 jsonx_get／jsonx_set）做、照順序、一格一行「路徑 TAB 結果」，不回滾。"
+ },
+ "base": {
+  "description": "底層原語工具：檔案與資料夾（read、write、edit、ls…）、json_*、shell、run_python、小工具（math、peek_*）、llm_http／llm_fake 端點函數",
+  "index": "base/_index.json"
+ },
+ "directive_value.py": {
+  "description": "把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。"
+ },
+ "docs": {
+  "description": "lib 的說明文件"
+ },
+ "file_summary.py": {
+  "description": "ls、stat、view 共用的檔案摘要小件：資料夾裡有哪些 aos 標記檔、檔案時間寫成 ISO、一個 JSON 值的一句摘要。"
+ },
+ "file_walk.py": {
+  "description": "grep 與 glob 共用的走樹：隱藏名、.gitignore（問 git）、資料夾捷徑不跟進、只把一般檔當檔、掃描預算與計數；另含兩支共用的檔名樣式（* ? [..] **）。"
+ },
+ "hook_run.py": {
+  "description": "hook 的共用引擎：事件表由呼叫的人給，這裡只管驗格的共通鍵、比 condition、寫 event.json、用 aos-exec 跑 handler、解回話、on_error。"
+ },
+ "mcp_client.py": {
+  "description": "MCP client 的 stdio／HTTP 傳輸：握手、列工具、呼叫工具與關閉 session。"
+ },
+ "mcp_freeze.py": {
+  "description": "把一支外部 MCP 工具凍結成包檔 mcp_tools 的一格（登記名、$ref 展開、說明前綴與截斷、_metainfo）與兩份 mcp_tools 的差異；純函式（external-mcp 07 步 4）"
+ },
+ "mcp_server_file.py": {
+  "description": "外部 MCP 的 server 檔：讀一份、驗形狀、讀金鑰檔；給 cli_session 翻成 codex 的 -c 與只給 CLI 行程的環境（11-12 external-mcp 02／03 步 1）"
+ },
+ "metainfo.py": {
+  "description": "Read optional definition metadata and evaluate numeric cost declarations safely."
+ },
+ "observed.py": {
+  "description": "Record public stack observations and measured downstream calls."
+ },
+ "observed_children.py": {
+  "description": "Preserve declared child observation trees and hand their location to the caller."
+ },
+ "packs": {
+  "description": "工具分包清單：每包一份 JSON（look、change、delete、shell、json、jsonx、index、gadgets、self、subagent、mailbox…），範本用 $override 疊；要開關一整包時看"
+ },
+ "process_group.py": {
+  "description": "收掉自己起的那一群子行程：先 TERM 整群、等一下、還在就 KILL；外面來的 TERM／Ctrl-C 變成例外，讓呼叫處先收拾再走。"
+ },
+ "shell_observed.py": {
+  "description": "Reserve a writable shell ledger before execution and record the completed command."
+ },
+ "tests": {
+  "description": "lib 的測試",
+  "index": "tests/_index.json"
+ },
+ "tool_io.py": {
+  "description": "lib 工具共用的開頭：schema 生成旗標位置的 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區與檔案工具的路徑、訊息裡怎麼寫路徑（place、os_reason）、兩鐘期限。"
+ },
+ "tool_spec.py": {
+  "description": "給 AI 寫工具的輔助：在一支 Python 裡宣告說明、參數、特性，就產出 _tooldef／_metainfo（資料夾的兩個檔或 JSON 物件的兩個鍵），執行時照宣告驗參數再叫 run(args)。"
+ }
+}

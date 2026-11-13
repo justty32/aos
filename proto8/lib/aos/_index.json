@@ -1,0 +1,65 @@
+{
+ "box_check": {
+  "description": "box_check 工具（lib/aos 層，關箱考題的比對器）：比對關箱探測輸出與主機暫存檔，看有沒有越出隔離界線、給 0／1 分"
+ },
+ "defs": {
+  "description": "defs 工具（lib/aos 層，定義目錄）：只讀宣告，搜尋定義、按工具／腦端點／記憶三軸分同質群、查靜態引用與宣告是否齊全"
+ },
+ "feedback": {
+  "description": "feedback 工具（lib/aos 層）：把腦對指令或函數的使用意見交給 aos-feedback add，不推測呼叫者"
+ },
+ "jsonx_add": {
+  "description": "jsonx_add 工具（jsonx 包）：同 json_add，給用 $ref／$env 的 aos 設定檔，值從 value／text／from 擇一"
+ },
+ "jsonx_del": {
+  "description": "jsonx_del 工具（jsonx 包）：同 json_del，但路上有 $ref／$env 會擋，follow 才穿過去刪被參照的檔"
+ },
+ "jsonx_get": {
+  "description": "jsonx_get 工具（jsonx 包）：同 json_get，多 follow 穿過 $ref、resolve 回解開 $ref／$env 後的值"
+ },
+ "jsonx_ls": {
+  "description": "jsonx_ls 工具（jsonx 包）：同 json_ls，多 follow 與 resolve（例：列 tools.json 疊完的工具表）"
+ },
+ "jsonx_multi_get": {
+  "description": "jsonx_multi_get 工具（jsonx 包）：一次拿多格，逐格照 jsonx_get、選項整批共用"
+ },
+ "jsonx_multi_set": {
+  "description": "jsonx_multi_set 工具（jsonx 包）：一次改多格，逐格照 jsonx_set、照順序、不回滾"
+ },
+ "jsonx_search": {
+  "description": "jsonx_search 工具（jsonx 包）：同 json_search，多 follow 與 resolve（在解開後的值裡往下找）"
+ },
+ "jsonx_set": {
+  "description": "jsonx_set 工具（jsonx 包）：同 json_set，給用 $ref／$env 的 aos 設定檔，值從 value／text／from 擇一"
+ },
+ "kernel": {
+  "description": "通用 kernel 的站（框架站、不是腦的工具）：每次跑一輪，收 requests/ 的 procs_* 信，照 kernel.json 判掛、排隊或轉寄給下一站"
+ },
+ "kernel_llm": {
+  "description": "問腦總機：通用 kernel 的骨架加問腦專屬那一包，每跑一次做一輪。"
+ },
+ "llm_forward": {
+  "description": "llm_forward（lib/aos 層的端點函數）：把問腦請求轉交包指定的下一層 kernel，成功用 child 串起兩本帳，失敗原樣轉交"
+ },
+ "measure": {
+  "description": "measure 工具（lib/aos 層）：每次用全新工作區重跑考題，回報產出比對、成本與重跑一致性"
+ },
+ "metainfo_check": {
+  "description": "metainfo_check 工具（lib/aos 層）：拿實測中位數核對定義 _metainfo 自稱的時間與 token 估值，只報告不寫檔"
+ },
+ "promote": {
+  "description": "promote 工具（lib/aos 層，換版）：查 daemon 表確認定義沒在用後換上副本，前版留在 .prev/ 可退回"
+ },
+ "review_round": {
+  "description": "review_round 工具（lib/aos 層）：跑一輪七步審視，量測、挑目標、試降級、換上並記錄只記不做的成長建議"
+ },
+ "rollback": {
+  "description": "rollback 工具（lib/aos 層，換版）：確認定義沒在用後換回最新前版，消耗那份歷史；與 promote 共用 swap.py"
+ },
+ "shell_report": {
+  "description": "shell_report 工具（lib/aos 層）：唯讀彙整公開 shell 帳，依有效工具推權限階段並歸納指令形狀"
+ },
+ "watch": {
+  "description": "watch 工具（lib/aos 層）：換版後記品質與單位成本（open／feed），滿窗決定轉正，品質不過就自動退回前版"
+ }
+}

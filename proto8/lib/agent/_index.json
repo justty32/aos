@@ -1,0 +1,137 @@
+{
+ "__init__.py": {
+  "description": "agent - 外部 agent CLI 與 agent 工具共用的 lib 模組。"
+ },
+ "agent_def": {
+  "description": "agent_def 工具（定義包）：從範本複製出新 agent 定義、檢查定義夾，或改定義的工具、腦設定與 system 文字並記血統"
+ },
+ "agent_files.py": {
+  "description": "依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。"
+ },
+ "agent_tool.py": {
+  "description": "claude、codex 共用的工具形入口 ask_cli。"
+ },
+ "agents_cmd.py": {
+  "description": "subagent 與 agents_ctl 共用：查鍵、組 aos-agent ctl 各動作的旗標、跑 aos-agent（或旁邊的 self_*）並把下層錯翻成自己的。"
+ },
+ "agents_ctl": {
+  "description": "agents_ctl 工具（子 agent 包）：aos-agent ctl 的完整包裝，管 daemon 表上任何一隻 agent，不記帳、不算配額"
+ },
+ "claude": {
+  "description": "claude 工具（lib/agent 層，不在分包裡）：把一件事交給工作區裡只能讀檔的 Claude Code CLI，同一段對話接著講，回它的答案"
+ },
+ "cli_a2a.py": {
+  "description": "cli_session 往開著的 claude 畫面投署名訊息（Claude Code 的 cross-session messaging socket）：記 socket、包信封、投遞、等 hook 回執"
+ },
+ "cli_ask.py": {
+  "description": "cli_session 問一輪：畫面開著往 CLI 的收件 socket 投署名訊息（live_a2a）或從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main"
+ },
+ "cli_base.py": {
+  "description": "cli_session 各分檔共用的底：錯誤行與提醒行（PROG／ECHO 決定開頭與要不要也印 stdout）、時間、共用常數、找 lib 的 tool_io"
+ },
+ "cli_cell.py": {
+  "description": "cli_session 的小格：Cell（檔、鎖、畫面 tmux）、畫面 socket 位置、session.txt 與記號檔、認是不是這台的對話、transcripts symlink"
+ },
+ "cli_cfg.py": {
+  "description": "cli_session 的設定：讀與驗工具資料夾的 cli.json、llm.json 疊 model、system 附加旗標、tools／tools_sub 登記檔"
+ },
+ "cli_hook.py": {
+  "description": "cli_session 的畫面 hook（CLI 講完一輪時叫）：跟上對話 id、/clear／/compact 時同步 aos 的 history、codex 壓縮跟上"
+ },
+ "cli_mcp.py": {
+  "description": "cli_session 接 MCP：aos-mcp 那台的旗標（claude 的 mcp.json／codex 的 -c）、外部 MCP server、tools_sub 子 agent 那台與 guard hook"
+ },
+ "cli_print.py": {
+  "description": "cli_session 的非互動那條路（畫面沒開）：claude -p／codex exec 起 CLI、等回答、記 session"
+ },
+ "cli_screen.py": {
+  "description": "cli_session 開畫面：tmux 裡起互動的 claude／codex（start）、attach 與叫回畫面（open_cell）"
+ },
+ "cli_session.py": {
+  "description": "把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 attach 接進互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字"
+ },
+ "clock_register": {
+  "description": "clock_register 工具（事件包）：時鐘登記表，每隔 N 個 cycle 寄一段固定文字到信箱，不給 box＝寄自己 queue、定時叫醒自己"
+ },
+ "cmd_call.py": {
+  "description": "給腦用的工具叫下層指令的共用版：在工作區跑一支指令、stderr 原樣往上、退出碼不對＝它最後一行錯誤行的代號與原因當自己的錯；被 TERM／Ctrl-C 先收掉正在跑的那一群。"
+ },
+ "codex": {
+  "description": "codex 工具（lib/agent 層，不在分包裡）：把一件事交給唯讀沙盒裡的 Codex CLI，同一段對話接著講，回它的答案"
+ },
+ "cooldown.py": {
+  "description": "失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。"
+ },
+ "do_task": {
+  "description": "do_task 工具（小工具包，eca 不掛）：在自己的 history 裡做一段任務，save／load 兩步，做完那段換成總結"
+ },
+ "fork": {
+  "description": "fork 工具（子 agent 包）：把當下的自己連對話複製一份給一個 goal，只拿回短結論"
+ },
+ "goal": {
+  "description": "goal 工具（目標包，eca 不掛）：自己的一句目標，分 get／set／done／pause／resume；自己停下又沒信時身體會丟 goal 提醒"
+ },
+ "goal_state.py": {
+  "description": "agent 的 goal 共用讀寫與判斷：<agent stack>/goal.json；aos-agent goal 寫、agent-fsm idle.py 與 aos-eca-turn 讀寫（丟提醒、記數）。"
+ },
+ "hook_fire": {
+  "description": "hook_fire（不是給腦的工具）：範本 loop.json 的 on_start／on_stop 叫它，發 after_start／after_stop 事件給 agent 的 hook"
+ },
+ "hook_noop": {
+  "description": "hook_noop（不是給腦的工具）：什麼都不做的 hook handler，讀掉事件 JSON 退 0，範本 hooks.json 預設掛點"
+ },
+ "hooks.py": {
+  "description": "agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、on_clock 的檢查、tool_added 的名單；挑出符合事件的 hook、用 aos-exec 跑、解回話交給共用引擎 lib/hook_run.py。"
+ },
+ "kernel_gate": {
+  "description": "Be a kernel gate: other procs send their requests to start or change procs to a mailbox of yours; a kernel station running on you holds each one, you are told, and you decide; the station forwards wh…"
+ },
+ "mail_notify": {
+  "description": "mail_notify（不是給腦的工具）：on_clock 的 hook handler，看自己信箱有沒有沒通知過的新信，有就往自己 queue 寄一則 [aos] new_mail"
+ },
+ "mailbox_call.py": {
+  "description": "mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。"
+ },
+ "mailbox_peek": {
+  "description": "mailbox_peek 工具（信箱包）：看自己信箱有幾封信、誰寄的、狀態與標題，不拿走"
+ },
+ "mailbox_read": {
+  "description": "mailbox_read 工具（信箱包）：讀自己信箱最舊的一封（或全部），印寄件人、狀態、內容與 reply_to，預設讀完就刪"
+ },
+ "mailbox_send": {
+  "description": "mailbox_send 工具（信箱包）：以自己名義寄一封信，給 agent 名字或信箱路徑，狀態 REQUEST／DONE／BLOCKED 等"
+ },
+ "self_ctl": {
+  "description": "self_ctl 工具（自我管理包）：停、暫停、睡或拔掉自己（只限叫它的 agent），送出請求就回"
+ },
+ "self_history": {
+  "description": "self_history 工具（自我管理包）：看、刪、摘要、改自己的對話紀錄，進行中的那一步不能改"
+ },
+ "self_hook": {
+  "description": "self_hook 工具（事件包）：看、加、拿掉自己的 hook（事件發生時跑的工具夾或程式），定義不變、下一次事件生效"
+ },
+ "self_llm": {
+  "description": "self_llm 工具（自我管理包）：列出或改自己的腦設定（端點、模型等），下一次問腦生效、不動定義"
+ },
+ "self_state": {
+  "description": "self_state 工具（自我管理包）：看自己的事實與數字，總覽一行一部分或點名細看，不自動加進 prompt"
+ },
+ "self_system": {
+  "description": "self_system 工具（自我管理包）：看、換、重設自己那份 system 文字，不動定義與別隻"
+ },
+ "self_tools": {
+  "description": "self_tools 工具（自我管理包）：管自己的工具箱（加、拿掉、列），立刻生效、不動定義與別隻"
+ },
+ "subagent": {
+  "description": "subagent 工具（子 agent 包）：生自己的子 agent，跟它說話、調它的工具／腦／對話、停起與收掉，算配額 max_subagents"
+ },
+ "tests": {
+  "description": "agent 的測試"
+ },
+ "todo": {
+  "description": "todo 工具（待辦包，eca 不掛）：自己的待辦清單 ls／set／add／mark，存在小格裡、對話被摘要後還在"
+ },
+ "tools_def": {
+  "description": "tools_def 工具（定義包）：從 Python 骨架做新工具、檢查工具或一步步建工具"
+ }
+}

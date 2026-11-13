@@ -1,0 +1,53 @@
+{
+ "__init__.py": {
+  "description": "aos_agent/__init__.py - 保留頂層說明、命令派發與主入口。"
+ },
+ "chat.py": {
+  "description": "aos_agent/chat.py - 逐行寄訊息並等候回答的互動迴圈。"
+ },
+ "common.py": {
+  "description": "aos_agent/common.py - 共用分層 help、錯誤指路、旗標、找 daemon 與表上的一隻（ctl 動作才用的寄信等回信在 ctl/shared.py）。"
+ },
+ "ctl": {
+  "description": "aos-agent ctl 的各動作：add 掛上、rm 拔掉、起停睡醒暫停、ls 列表、state 看單隻狀態、where／who 找 stack、set-def 換定義與共用的寄控制信等回信"
+ },
+ "decl.py": {
+  "description": "aos_agent/decl.py - 讀取介面宣告並呼叫定義中的子介面入口。"
+ },
+ "goal.py": {
+  "description": "aos_agent/goal.py - 管 agent 的 goal（<stack>/goal.json）：get、set、done、pause、resume、clear；腦自己停下來時由身體（agent-fsm idle、aos-eca-turn）丟提醒。"
+ },
+ "hints.py": {
+  "description": "aos_agent/hints.py - 讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。"
+ },
+ "history.py": {
+  "description": "aos_agent/history.py - 看與改 agent 的對話紀錄（宣告的 history 檔，一行一則訊息）：ls、rm 一段、summarize 一段換成一則、set 任一行；改掉的原文預設搬到旁邊。"
+ },
+ "hook.py": {
+  "description": "aos_agent/hook.py - 管 agent 自己那份 hooks 清單（疊在定義那份上，同名蓋過、null 關掉）：ls、get、add、rm、reset。"
+ },
+ "listen.py": {
+  "description": "aos_agent/listen.py - 以秒或 cycle 等待回答，或列出與追蹤歷史對話。"
+ },
+ "llm.py": {
+  "description": "aos_agent/llm.py - 分層解析腦設定命令（ls／set／rm／reset）並管理 agent 的覆蓋鍵與重設確認。"
+ },
+ "read_line.py": {
+  "description": "aos_agent/read_line.py - chat 讀一行輸入：終端機上用 readline 行編輯（中文 Backspace、方向鍵），管線照舊按行讀。"
+ },
+ "say.py": {
+  "description": "aos_agent/say.py - 寄一則訊息到 agent 的 queue。"
+ },
+ "screen.py": {
+  "description": "aos_agent/screen.py - 開啟、關閉與追蹤 agent 的畫面子介面。"
+ },
+ "sender.py": {
+  "description": "11-13 使用者裁「a2a這個按照建議」「say/chat被當成不是使用者打的，我覺得可以」：對 eca 說的話補上真正的寄件人——誰下的指令寫誰。"
+ },
+ "system.py": {
+  "description": "aos_agent/system.py - 管 agent 自己那份 system 文字（stack 那份在就整份蓋過定義那份）：get、set、reset。"
+ },
+ "tools.py": {
+  "description": "aos_agent/tools.py - 分層解析工具命令並管理 agent 自己那份工具登記檔（$override 定義那份）與重設確認。"
+ }
+}

@@ -1,5 +1,5 @@
 {
- "description": "index_gen 的範圍：哪些夾可以建 `_index.json`（deep＝連底下每一層）、門檻 more_than（夾裡直接的東西超過這個數才放，11-12 的門檻＝15）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區。",
+ "description": "index_gen 的範圍：哪些夾可以建 `_index.json`（deep＝連底下每一層）、門檻 more_than（夾裡直接的東西超過這個數才放，11-12 的門檻＝15）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區；templates、kernel 只看頂層與 docs／tests（定義夾會被整夾抄走）、lib/packs 與各 bin、cases 的 expect／ws 不放、knowledge 不在範圍（那棵樹手寫維護）。",
  "more_than": 15,
  "scopes": [
   {
@@ -34,6 +34,64 @@
    "path": "proto8/user-advice",
    "deep": true,
    "stage": 1
+  },
+  {
+   "path": "proto8/lib",
+   "deep": true,
+   "stage": 2
+  },
+  {
+   "path": "proto8/cmd",
+   "deep": true,
+   "stage": 2
+  },
+  {
+   "path": "proto8/py",
+   "deep": true,
+   "stage": 2
+  },
+  {
+   "path": "proto8/impls",
+   "deep": true,
+   "stage": 2
+  },
+  {
+   "path": "proto8/extras",
+   "deep": true,
+   "stage": 2
+  },
+  {
+   "path": "proto8/cases",
+   "deep": true,
+   "stage": 2
+  },
+  {
+   "path": "proto8/feedback",
+   "deep": true,
+   "stage": 2
+  },
+  {
+   "path": "proto8/templates",
+   "stage": 2
+  },
+  {
+   "path": "proto8/templates/docs",
+   "deep": true,
+   "stage": 2
+  },
+  {
+   "path": "proto8/templates/tests",
+   "deep": true,
+   "stage": 2
+  },
+  {
+   "path": "proto8/kernel",
+   "stage": 2
+  },
+  {
+   "path": "proto8/kernel/docs",
+   "deep": true,
+   "stage": 2
   }
  ],
  "skip_dir_names": [
@@ -41,10 +99,14 @@
   "__pycache__",
   ".git",
   ".claude",
-  ".vscode"
+  ".vscode",
+  "bin",
+  "expect",
+  "ws"
  ],
  "skip_dirs": [
-  "wf/inbox"
+  "wf/inbox",
+  "proto8/lib/packs"
  ],
  "usual_dirs": {
   "tests": "{parent} 的測試",

@@ -1,0 +1,95 @@
+{
+ "copy": {
+  "description": "copy 工具（改包）：複製一個檔或整個資料夾，to 已存在就不複製、捷徑照捷徑複製"
+ },
+ "edit": {
+  "description": "edit 工具（改包）：一個檔裡幾處照字面替換，每處要剛好出現一次，一處不合整個不改"
+ },
+ "glob": {
+  "description": "glob 工具（看包）：照檔名樣式（* ** ? [abc]）在資料夾底下找檔"
+ },
+ "grep": {
+  "description": "grep 工具（看包）：用 Python 正規式搜檔案內容，像 grep -rn，印 路徑:行號:內容"
+ },
+ "index_view": {
+  "description": "index_view 工具（index 包）：透過 _index.json／_metainfo 的 index 看一個節點底下每樣東西是什麼，只看不改"
+ },
+ "json_add": {
+  "description": "json_add 工具（json 包）：在 JSON 檔加新的 key 或陣列項，已有就報 KeyExists、不蓋"
+ },
+ "json_del": {
+  "description": "json_del 工具（json 包）：刪 JSON 檔裡一個 key 或陣列一項，要存在、不刪整份檔"
+ },
+ "json_get": {
+  "description": "json_get 工具（json 包）：拿 JSON 檔一格的值印成一行，太大就只給型別與大小"
+ },
+ "json_len": {
+  "description": "json_len 工具（json 包）：JSON 檔一格的長度（物件 key 數、陣列項數、字串字元數）"
+ },
+ "json_ls": {
+  "description": "json_ls 工具（json 包）：像 ls 一樣列 JSON 檔一格底下的 key 或項目與型別"
+ },
+ "json_multi_get": {
+  "description": "json_multi_get 工具（json 包）：一次拿 JSON 多格，逐格照 json_get、一格一行"
+ },
+ "json_multi_set": {
+  "description": "json_multi_set 工具（json 包）：一次改 JSON 多格，逐格照 json_set、照順序、不回滾"
+ },
+ "json_search": {
+  "description": "json_search 工具（json 包）：在 JSON 檔裡往下或往上一層層找 key 或 value，不收正規式"
+ },
+ "json_set": {
+  "description": "json_set 工具（json 包）：把 JSON 檔一格換成給的值（沒有就加），/- 結尾加在陣列尾、只給檔＝整份換"
+ },
+ "llm_fake": {
+  "description": "llm_fake（lib/base 的端點函數，測試用）：假腦，形狀同 llm_http、不碰網路，有工具就叫、否則答 FAKE ANSWER"
+ },
+ "llm_http": {
+  "description": "llm_http（lib/base 的端點函數）：把一份 OpenAI chat completions 請求送到相容端點，回助手訊息、用量與模型"
+ },
+ "ls": {
+  "description": "ls 工具（看包）：列一個資料夾，預設一行一項 名字＋類型，long 多大小、時間與 aos 記號"
+ },
+ "math": {
+  "description": "math 工具（小工具包）：算一個算術式子（只有數字與 + - * / // % **），不改任何東西"
+ },
+ "mcp_tool": {
+  "description": "mcp_tool 工具（lib/base 層，不在分包裡）：照 MCP 包檔叫外部 MCP 伺服器上的一個工具"
+ },
+ "mkdir": {
+  "description": "mkdir 工具（改包）：建資料夾、上層一起建，已有就沒事"
+ },
+ "move": {
+  "description": "move 工具（改包）：搬移或改名檔案／資料夾，to 已有東西就不搬，也用來從 .trash 救回"
+ },
+ "peek_clock": {
+  "description": "peek_clock 工具（小工具包）：看 daemon 時鐘現在第幾個 cycle 與 interval_ms，不改任何東西"
+ },
+ "peek_now_time": {
+  "description": "peek_now_time 工具（小工具包）：回現在的 UTC 時間（ISO 8601）"
+ },
+ "read": {
+  "description": "read 工具（看包）：讀一個文字檔，最多 2000 行或 50KB，被截時告訴你從哪個 offset 接著讀"
+ },
+ "remove": {
+  "description": "remove 工具（刪包）：真的刪檔、捷徑或資料夾（rm 的包裝），沒有回頭路，資料夾要 recursive"
+ },
+ "run_python": {
+  "description": "run_python 工具（殼包）：跑一段 Python，回輸出與結束碼，並在自己的小格留下內層結果"
+ },
+ "shell": {
+  "description": "shell 工具（殼包）：用 bash 在工作區跑一行指令，回輸出與 [exit code N]，在自己的小格留內層結果（11-10 由 bash 改名）"
+ },
+ "stat": {
+  "description": "stat 工具（看包）：印一個檔或資料夾的屬性 JSON（類型、時間、權限、大小、行數、格式等）"
+ },
+ "trash": {
+  "description": "trash 工具（刪包）：把檔或資料夾搬進工作區 .trash/<時間>/，可以用 move 救回"
+ },
+ "view": {
+  "description": "view 工具（看包）：漸進看一個檔，JSON 照指標一次一層、大文字檔先給大綱"
+ },
+ "write": {
+  "description": "write 工具（改包）：整份寫一個檔，沒有就建、有就整份蓋，上層資料夾自動建"
+ }
+}

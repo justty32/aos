@@ -1,4 +1,4 @@
-# 把 repo 的 index 建好建滿：照 11-12 的門檻，東西超過 15 個的資料夾各一份生成的 `_index.json`（11-13 公司；先每層都鋪、使用者裁照門檻後收回；文件區 25 份已在，程式區 8 份等停樹後）
+# 把 repo 的 index 建好建滿：照 11-12 的門檻，東西超過 15 個的資料夾各一份生成的 `_index.json`（11-13 公司；先每層都鋪、使用者裁照門檻後收回；文件區 25 份、程式區 8 份）
 
 ← [11-13 日索引](README.md) ・ 前情：[11-12 index](../12/index.md)（格式、天然位置）、[index-link](../12/index-link.md)（`index` 連到下一份）、[index-tools](../12/index-tools/README.md)（`index_view`）、[ops-agent 六點建議](ops-agent-six-suggestions/01-原信.md)（第 2、3 點：沒有索引檢查工具、字串形條目）
 
@@ -130,9 +130,11 @@
 - `index_check.py`：28 份（含 knowledge 既有三份）655 項，`0 problems`。
 - 子 agent 順手看到、沒動的：幾份 thinking README 的標題還寫舊狀態（「未施工」「沒改程式」，夾裡其實已施工），手寫句照夾裡後來的結果寫；`proto8/user-advice/2026-09/aos-tools.md` 只有標題；`wf/session_logs/2026-11/README.md` 的 11-06 那一列有一段重複貼了兩次。
 
-## 階段二備料（程式區，照門檻在暫存夾重算，還沒放進 repo）
+## 階段二結果（程式區，停樹重抄後 15:52 放行，已放）
 
-- 超過門檻、要放的 8 份共 188 項：`proto8/cmd`（16）、`proto8/cmd/aos-agent/aos_agent`（17）、`proto8/impls`（17）、`proto8/lib`（24）、`proto8/lib/agent`（44）、`proto8/lib/aos`（21）、`proto8/lib/base`（31）、`proto8/lib/tests`（18）。`proto8/_index.json` 的 cmd、impls、lib 三項會多 `index` 欄。
+- 照門檻放了 8 份、189 項（對 56a7fe498 重生）：`proto8/cmd`（16）、`proto8/cmd/aos-agent/aos_agent`（17）、`proto8/impls`（17）、`proto8/lib`（24）、`proto8/lib/agent`（45）、`proto8/lib/aos`（21）、`proto8/lib/base`（31）、`proto8/lib/tests`（18）。`proto8/_index.json` 的 cmd、impls、lib 三項多了 `index` 欄。
+- lib 那五份在活樹重抄的夾裡（`~/aos-home/lib` 是從 repo 抄的）：下次重抄才進活樹；cmd、impls 那三份只在 repo。
+- 驗：`index_gen` 檢查 0 不一致；`index_check` 36 份 857 項 `0 problems`，`--fs` 對 lib、cmd、impls 8 份 189 項 `0 problems`；wf-lint wf `broken=0`、proto8 `broken=11`；code map 0 變動（index 不進生成冊）；測試 lib/tests 163、lib/agent/tests 111、mcp_tool 22、tools_def 12、templates/tests/tool-python 4 全過。
 - 超過門檻但在避開清單、不放的 2 個：`proto8/lib/packs`（16；一支測試讀這夾每份 json）、`proto8/templates/agent-fsm`（19；範本定義夾，會被整夾抄走）。
 - 避開清單其餘的（`templates/tool-python`、其他範本與 kernel 的定義夾、cases 的 `expect`／`ws`、各 `bin`）與 py、extras、kernel、templates 頂層、cases、feedback、`impl_cpp` 都不到門檻，本來就不放。knowledge 不動（X9；既有三份 21、24、40 個東西，正好是超過門檻的三夾）。
 - 生成器為這一區加的認法：工具夾取 `_tooldef.json`／`_metainfo.json`；`tests`、`src`、`include`、`docs`、`.gitignore`、`CMakeLists.txt` 這類用通用句；knowledge 節點的 json 取 `_description` 那段的標題。

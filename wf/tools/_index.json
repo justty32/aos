@@ -51,7 +51,7 @@
   "description": "查 aos 的 index（`_index.json`）跟實際的樹對不對得上：列了但不在、在但沒列、連結指不到、形狀不對。"
  },
  "index_gen.json": {
-  "description": "index_gen 的範圍：哪些夾可以建 `_index.json`（deep＝連底下每一層）、門檻 more_than（夾裡直接的東西超過這個數才放，11-12 的門檻＝15）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區。"
+  "description": "index_gen 的範圍：哪些夾可以建 `_index.json`（deep＝連底下每一層）、門檻 more_than（夾裡直接的東西超過這個數才放，11-12 的門檻＝15）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區；templates、kernel 只看頂層與 docs／tests（定義夾會被整夾抄走）、lib/packs 與各 bin、cases 的 exp…"
  },
  "index_gen.py": {
   "description": "從各檔檔頭的一句話，替 repo 的資料夾生成 aos 的 index（東西多的夾一份 `_index.json`：`{名: {\"description\": …, \"index\": …}}`）。"

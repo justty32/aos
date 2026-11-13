@@ -1,0 +1,53 @@
+{
+ "CMakeLists.txt": {
+  "description": "impls 的 CMake 建置檔"
+ },
+ "README.md": {
+  "description": "proto8/impls：aos 的 C／C++ 實作（總入口）"
+ },
+ "aos-daemon": {
+  "description": "aos-daemon 專案（C++）：照 daemon.json 的 procs 名單把每個 proc 經 aos-exec 起在自己的 stack、看著、停、睡醒、收掉；要改 daemon 怎麼管 proc、窗、信箱時進去"
+ },
+ "aos-directive": {
+  "description": "aos-directive 專案（C++ lib＋命令列）：解 JSON 裡的指示詞 $ref（換成別份檔或同檔某位置的值）與 $env（換成環境變數）；要改指示詞語法或解法時進去"
+ },
+ "aos-exec": {
+  "description": "aos-exec 專案（C++）：在工作區執行一個資料夾程式（定工作區、走進去讀 .env、挑入口、設環境變數、開跑，inst 單子在行程內跑）；loop／fsm／daemon 每次起子項都經它"
+ },
+ "aos-fsm": {
+  "description": "aos-fsm 專案（C++ lib＋命令列）：照 fsm.json 狀態表一次跑一格、照 next 換狀態並記在 stage.txt；要改 fsm 的表格式、換狀態規則或錯誤代號時進去"
+ },
+ "aos-inst": {
+  "description": "aos-inst 專案（純 C 函式庫、沒有命令列）：起一個子程式、等它結束、回報結束碼或超時，給 aos-exec 與 FFI 呼叫；要改起行程、串流、逾時收尾時進去"
+ },
+ "aos-json": {
+  "description": "aos-json 專案（C++ lib＋命令列）：用 檔#/指標 讀、改 aos 的 JSON 設定，認得 $ref／$env（穿過參照改、追來源、漸進展開、驗）；要改 aos-json 子命令或寫回規則時進去"
+ },
+ "aos-llm": {
+  "description": "aos-llm 專案（C++ lib＋命令列）：send／recv／ask／regret／ls，把問腦請求寫成信寄進 LLM kernel 信箱、收回信，定位同 aos-post 的基礎工具；要改寄信收信端時進去"
+ },
+ "aos-llm-kernel": {
+  "description": "aos-llm-kernel 專案（C++ lib＋命令列＋公開標頭）：LLM kernel 跑一輪，收回信、照優先度挑請求信、請 daemon 掛問腦 proc、管額度與能力包；要改 kernel 排隊或額度時進去"
+ },
+ "aos-lock": {
+  "description": "aos-lock 專案：檔案／資料夾的鎖（NORMS N-15），mkdir 掛名牌、flock 判持有者死活、租約按格算；含 libaos-lock.a 與命令列，要改鎖的取放、收屍或租約時進去"
+ },
+ "aos-loop": {
+  "description": "aos-loop 專案：照 loop.json 一次次跑 exec、看結束碼決定續跑或停，含 ctl／state／state_flux 窗與 on_start／on_stop；aos-daemon 繼承它的 Loop 骨架"
+ },
+ "aos-post": {
+  "description": "aos-post 專案：信箱投遞（NORMS N-16），send 寄進 new/、take 認領進 cur/、done 收信、regret 撤回，有序投遞靠 aos-lock；要改信件 IPC 時進去"
+ },
+ "aos-util": {
+  "description": "aos-util 專案：全家 C++ 工具共用的小函式庫（錯誤型別、三扇門、旗標、路徑與原子寫入、行程身分、時鐘、訊號），只出 libaos-util.a；要改多支工具共有的基礎行為時進去"
+ },
+ "cmake": {
+  "description": "impls 共用的 CMake 設定"
+ },
+ "docs": {
+  "description": "impls 的說明文件"
+ },
+ "vcpkg.json": {
+  "description": "proto8/impls 頂層建置：全家 C++ 專案的相依合併（各專案自己的 vcpkg.json 給單獨建用）"
+ }
+}
