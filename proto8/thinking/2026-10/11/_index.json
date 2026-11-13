@@ -1,9 +1,0 @@
-{
- "README.md": {
-  "description": "proto8 討論紀錄：2026-10-11"
- },
- "restart": {
-  "description": "10-11 為什麼重來 proto8 的討論紀錄（分檔）：太繁複、做太快，河堤邊與三輪口述講 aos 基本概念（計算任務、資源、排程、agent＝狀態機也是函式）；kernel 排程格式等未決",
-  "index": "restart/_index.json"
- }
-}

@@ -1,8 +1,0 @@
-{
- "01-執行入口與三候選.md": {
-  "description": "proto5 Linux 外牆調查的發現前半：三條路線共同需要的執行入口與降權順序（UID/GID、capability、NNP）與三個候選方案"
- },
- "02-小實驗結果.md": {
-  "description": "proto5 Linux 外牆調查的小實驗結果：NNP 與 bwrap 相容、Landlock 的 FD 邊界與 signal scope 等實測，以及能推論到哪"
- }
-}

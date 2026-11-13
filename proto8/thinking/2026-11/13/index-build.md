@@ -1,4 +1,4 @@
-# 把 repo 的 index 建好建滿：每個資料夾一份生成的 `_index.json`，從 repo 根用 `index_view` 一路往下都看得到每樣東西是什麼（11-13 公司；階段一文件區已鋪，階段二程式區等停樹後）
+# 把 repo 的 index 建好建滿：照 11-12 的門檻，東西超過 15 個的資料夾各一份生成的 `_index.json`（11-13 公司；先每層都鋪、使用者裁照門檻後收回；文件區 25 份已在，程式區 8 份等停樹後）
 
 ← [11-13 日索引](README.md) ・ 前情：[11-12 index](../12/index.md)（格式、天然位置）、[index-link](../12/index-link.md)（`index` 連到下一份）、[index-tools](../12/index-tools/README.md)（`index_view`）、[ops-agent 六點建議](ops-agent-six-suggestions/01-原信.md)（第 2、3 點：沒有索引檢查工具、字串形條目）
 
@@ -6,14 +6,22 @@
 
 > 「對了，可以派fable去把index建好建滿，其子agent隨意開」
 
-## 決定（調度者的讀法，照做）
+調度者問：repo 每層都建、不設門檻，還是照 11-12 的門檻（只給太大的補——夾裡超過 15 個東西才放 index）。使用者：
 
-- 對象是這份 repo：repo 頂層、`wf/`、`proto8/`。用 aos 自己的 index 機制（資料夾的 `_index.json`，每項 `名: {"description": …}`，子夾那一項帶 `index` 連到它自己的那一份），讓 agent 用 `index_view` 從 repo 根往下走，每一層都看得到底下每樣東西是什麼。
-- 分兩階段：階段一文件區（repo 頂層、`wf/` 整棵、`proto8/` 頂層一份、`proto8/docs`、`proto8/thinking`、`proto8/notes`、`proto8/user-advice`）；階段二程式區（`proto8` 的 lib、cmd、py、templates、kernel、impls、extras、knowledge、cases、feedback）等 11-13 下午停樹重抄之後才放。
+> 「index範圍按照11-12的門檻。」
+
+## 決定
+
+- **範圍照 11-12 的門檻**（使用者 11-13「index範圍按照11-12的門檻。」）：只給太大的補。門檻出處逐字——使用者 11-12（[index](../12/index.md) 原話八）：「當節點下的某些東西太龐大了，所以用index給他做一個簡介。所以現有aos知識庫中，如果有些東西太大，那就補index.json/_index。如果夠小，那其實也不用做看法了，直接讀就是了。」；數字是 11-12 施工時定、寫在 [knowledge-removal](../12/knowledge-removal.md) 代定 1：「資料夾裡超過 15 個東西（`_index.json` 自己不算）才放 `_index.json`」，與 `proto8/knowledge/README.md`「門檻：夾裡超過 15 個東西」、`knowledge/docs/01`「資料夾裡超過 15 個東西才放 `_index.json`」、`docs/02`「資料夾的 `_index.json` 要列出夾裡每一個東西（`_description.json`、`README.md`、`docs` 也列）」。原本的代定 X1「每層都建」作廢。
+
+- 對象是這份 repo：repo 頂層、`wf/`、`proto8/`。用 aos 自己的 index 機制（資料夾的 `_index.json`，每項 `名: {"description": …}`，子夾那一項帶 `index` 連到它自己的那一份），讓 agent 用 `index_view` 看東西多的夾底下每樣東西是什麼。
+- 分兩階段：階段一文件區（repo 頂層、`wf/` 整棵、`proto8/` 頂層一份、`proto8/docs`、`proto8/thinking`、`proto8/notes`、`proto8/user-advice`）；階段二程式區（`proto8` 的 lib、cmd、py、templates、kernel、impls、extras、cases、feedback；knowledge 不動，X9）等 11-13 下午停樹重抄之後才放。
 
 ## 結論：規格
 
-**放什麼檔**：每個資料夾一份 `_index.json`（獨立那份；不用 `_metainfo.json` 裡的 `index`）。整份由 `wf/tools/index_gen.py` 生成，不手改；要改某一句就改來源（檔頭那一句，或手寫句的檔）再重生。
+**門檻**：一個夾直接的東西超過 15 個（16 個起）才放。怎麼數：只數直接子項，檔與子夾都算一個，`_` 開頭的、`README.md` 都算（照 knowledge「每一個東西…也列」）；`_index.json` 自己不算（knowledge-removal 原句）；只數進 git 的（沒進版控的不列，所以也不數；代定 X7）。剛好 15 個不放（「超過」）。不到門檻的夾不放，上一層那一項也不帶 `index`；上一層自己不到門檻時，下面超過門檻的夾照樣有自己那一份，只是沒有從上面連下來的路。門檻寫在 `wf/tools/index_gen.json` 的 `more_than`。
+
+**放什麼檔**：超過門檻的資料夾各一份 `_index.json`（獨立那份；不用 `_metainfo.json` 裡的 `index`）。整份由 `wf/tools/index_gen.py` 生成，不手改；要改某一句就改來源（檔頭那一句，或手寫句的檔）再重生。
 
 **一項長什麼樣**：一律物件形 `名: {"description": "一句話"}`；子夾自己也有 `_index.json` 時多一欄 `"index": "子夾/_index.json"`（相對所在的夾，照 index-link 的算法）。鍵＝夾裡的名字（檔名或子夾名），照名字排序；`_index.json` 自己不列。
 
@@ -30,9 +38,9 @@
 
 **語言**：repo 的文件區與程式區用繁體中文（照所在區域的文件語言）；`proto8/knowledge` 照它既有的英文（那是給 aos 裡的 agent 讀的出廠內容）。
 
-**多深**：範圍內每一層資料夾都建，不設「夠小就不建」的門檻。大夾不另分冊：資料夾本來就按月、日、主題分層（`thinking/2026-11/13/…`），每層一份、上一層用 `index` 連下去；目前單一夾最多四十幾項，`index_view` 一頁（200 項）放得下。
+**多深**：範圍內每一層都看，超過門檻的才放。大夾不另分冊，目前最多四十幾項，`index_view` 一頁（200 項）放得下。
 
-**不建的地方**（裡面不放 `_index.json`，只在上一層留一項、不帶 `index`）：任何一層叫 `archive` 的夾（封存的當它不存在，要找看它的 README）、`.git`、`.claude`、`.vscode`、`__pycache__`、build／install／vcpkg 產物（本來就不在 git 裡）、`wf/inbox`（信件來來去去，建了馬上過時）。
+**不建的地方**（超過門檻也不放）：任何一層叫 `archive` 的夾（封存的當它不存在，要找看它的 README）、`.git`、`.claude`、`.vscode`、`__pycache__`、build／install／vcpkg 產物（本來就不在 git 裡）、`wf/inbox`（信件來來去去，建了馬上過時）。
 
 **跟既有 README／INDEX／code map 生成冊不重複**：一句話取自它們的來源（檔頭），不另抄一份；README 是給人讀的導引，code map 生成冊是「哪個程式檔負責什麼」的 md 表，`_index.json` 是給 agent 用 `index_view` 看的同一句話。來源只有一處，改檔頭、重跑兩支生成器。
 
@@ -47,7 +55,8 @@
 
 ## 代定（可翻）
 
-- X1 範圍內每個夾都建、不設門檻。使用者 11-12 說過「如果夠小，那其實也不用做看法了，直接讀就是了」；這次照「建好建滿」每層都建，好處是從根往下每一步 `index_view` 都有東西。
+- X1（作廢）範圍內每個夾都建、不設門檻：**使用者翻案**（「index範圍按照11-12的門檻。」），改照上面「決定」。
+- X10 門檻怎麼數裡沒寫到的取最小：只數直接子項、只數進 git 的；門檻數字 repo 全區用同一個 15（knowledge 的檔內 `_index` 門檻 8000 bytes／10 個內容鍵這次沒用到，repo 的 json 檔裡面不建）。
 - X2 一句話預設跟著檔頭走、不夠用才手寫；手寫句集中放一個檔，`_index.json` 整份是生成物。
 - X3 語言照所在區域：repo 繁中、knowledge 英文。
 - X4 `archive` 夾裡不建。
@@ -55,7 +64,7 @@
 - X6 `proto8/notes`、`proto8/user-advice` 算文件區，放進階段一；`proto8/cases`、`proto8/feedback` 跟程式區一起階段二。
 - X7 只列進版控的檔。別條線還沒 commit 的新檔不會出現，等它們進了 git 再重生。
 - X8 用獨立的 `_index.json`，不放進 `_metainfo.json` 的 `index`。
-- X9 `proto8/knowledge` 裡面不新增 index。那棵樹自己的說明（knowledge/docs/01）寫明照使用者 11-12 的話「只給太大的補」：夾裡超過 15 個東西才放，現在就是 `aos/`、`aos/cli/`、`aos/tools/` 三份；其餘的夾（頂層、docs、aos/me、errors、agents、cli/parts）都不到門檻。既有三份查過沒有錯，所以 knowledge 這次一個檔都不動；`proto8/_index.json` 裡 knowledge 那一句寫明從 `knowledge/aos/_index.json` 看起。這跟 X1「每層都建」不一樣，是照那棵樹既有的規矩。
+- X9 `proto8/knowledge` 裡面不新增 index。那棵樹自己的說明（knowledge/docs/01）寫明照使用者 11-12 的話「只給太大的補」：夾裡超過 15 個東西才放，現在就是 `aos/`、`aos/cli/`、`aos/tools/` 三份；其餘的夾（頂層、docs、aos/me、errors、agents、cli/parts）都不到門檻。既有三份查過沒有錯，所以 knowledge 這次一個檔都不動；`proto8/_index.json` 裡 knowledge 那一句寫明從 `knowledge/aos/_index.json` 看起。使用者 11-13 的裁定跟這條同一個方向。
 
 ## 結論：會不會踩到東西（放之前逐項查過，讀程式碼判斷）
 
@@ -84,37 +93,68 @@
 | 各 `bin/` | 只該放那一支指令 |
 | `wf/inbox/` | 放信處只放信 |
 
-## 階段一結果（文件區，已鋪）
+## 階段一結果（文件區）
 
-- 305 份 `_index.json`、1915 項：repo 根 1 份 10 項、`proto8/` 頂層 1 份 17 項、`proto8/docs` 22 份 158 項、`proto8/thinking` 206 份 1220 項、`proto8/notes` 5 份 21 項、`proto8/user-advice` 2 份 11 項、`wf/` 68 份 478 項。
-- 一句話的來源：手寫 528 句（七個 opus 子 agent 分區讀內容後寫：所有資料夾，與檔頭取到的太短、同夾重複、取不到的檔），其餘跟著檔頭走。
-- `index_check.py`：`0 problems`（含 knowledge 既有三份：82 項，沒有列了不在、在了沒列、連結指不到的）。
-- `index_view` 從 repo 根往下走：`{"path": "."}` → `proto8`、`wf` 兩項帶 `index:`；`{"path": "proto8/thinking/2026-11", "key": "13"}` → 當天主題一句話與下一份的路徑；`{"path": "wf/workflows/dispatch"}`、`{"path": "proto8/docs/NORMS"}` 都看得到每一項。
+- 先每層都鋪（418e17927：305 份、1915 項），使用者裁照門檻後**收回不到門檻的 280 份**，留下 25 份、573 項（都是今天生成的；knowledge 既有三份沒碰）：
+
+| 夾 | 幾項 |
+|---|---|
+| `proto8`（頂層） | 17 |
+| `proto8/docs/CONCEPTS/01-設計理念` | 16 |
+| `proto8/docs/NORMS` | 27 |
+| `proto8/thinking/2026-10` | 20 |
+| `proto8/thinking/2026-10/14/json-entry` | 16 |
+| `proto8/thinking/2026-10/15` | 21 |
+| `proto8/thinking/2026-10/24` | 21 |
+| `proto8/thinking/2026-10/30/eca` | 18 |
+| `proto8/thinking/2026-11/05` | 17 |
+| `proto8/thinking/2026-11/05/no-pid` | 22 |
+| `proto8/thinking/2026-11/07/arknights-kb` | 48 |
+| `proto8/thinking/2026-11/07/impl-plan` | 16 |
+| `proto8/thinking/2026-11/10` | 17 |
+| `proto8/thinking/2026-11/10/two-machines` | 31 |
+| `proto8/thinking/2026-11/11` | 17 |
+| `proto8/thinking/2026-11/12` | 37 |
+| `proto8/thinking/2026-11/13` | 24 |
+| `wf/session_logs/2026-10-parts` | 17 |
+| `wf/tools` | 32 |
+| `wf/tools/progress_board` | 23 |
+| `wf/tools/progress_board/web` | 23 |
+| `wf/workflows` | 25 |
+| `wf/workflows/common/code-map/proto8` | 30 |
+| `wf/workflows/refactor/reports/2026-11-07-sol審查` | 22 |
+| `wf/workflows/refactor/reports/2026-11-07-sol審查/04-設計規劃` | 16 |
+
+- repo 根（10 個東西）、`wf/`（14 個）、`proto8/thinking`、`proto8/docs` 頂層都不到門檻，沒有 index；從根往下沒有一條連到底的路，要看哪個夾有 index 就直接 `index_view` 那個夾（沒有會印 `[no index]`）。
+- 一句話的來源：手寫句留在 `wf/tools/index_gen_desc.json`（約 790 句，含程式區的；多數現在用不到，夾長大超過門檻時直接用得上），其餘跟著檔頭走。
+- `index_check.py`：28 份（含 knowledge 既有三份）655 項，`0 problems`。
 - 子 agent 順手看到、沒動的：幾份 thinking README 的標題還寫舊狀態（「未施工」「沒改程式」，夾裡其實已施工），手寫句照夾裡後來的結果寫；`proto8/user-advice/2026-09/aos-tools.md` 只有標題；`wf/session_logs/2026-11/README.md` 的 11-06 那一列有一段重複貼了兩次。
 
-## 階段二備料（程式區，11-13 中午在暫存夾生成、審過，還沒放進 repo）
+## 階段二備料（程式區，照門檻在暫存夾重算，還沒放進 repo）
 
-- 範圍：`proto8` 的 lib、cmd、py、impls、extras、cases、feedback 每一層；templates、kernel 只建頂層與它們的 docs、tests（各範本、各 kernel 的定義夾裡面不放）；不放的：`lib/packs`、各 `bin`、cases 的 `expect`／`ws`、knowledge（X9）、`impl_cpp`。
-- 暫存夾生成結果：新增 293 份、1180 項（impls 106 份、lib 120、cmd 38、extras 11、templates 7、cases 5、py 3、kernel 2、feedback 1）。手寫句再加約 260 句（五個 opus 子 agent：各專案與內層夾、每支工具一句繁中、各範本與 kernel、太短的說明文件）。
+- 超過門檻、要放的 8 份共 188 項：`proto8/cmd`（16）、`proto8/cmd/aos-agent/aos_agent`（17）、`proto8/impls`（17）、`proto8/lib`（24）、`proto8/lib/agent`（44）、`proto8/lib/aos`（21）、`proto8/lib/base`（31）、`proto8/lib/tests`（18）。`proto8/_index.json` 的 cmd、impls、lib 三項會多 `index` 欄。
+- 超過門檻但在避開清單、不放的 2 個：`proto8/lib/packs`（16；一支測試讀這夾每份 json）、`proto8/templates/agent-fsm`（19；範本定義夾，會被整夾抄走）。
+- 避開清單其餘的（`templates/tool-python`、其他範本與 kernel 的定義夾、cases 的 `expect`／`ws`、各 `bin`）與 py、extras、kernel、templates 頂層、cases、feedback、`impl_cpp` 都不到門檻，本來就不放。knowledge 不動（X9；既有三份 21、24、40 個東西，正好是超過門檻的三夾）。
 - 生成器為這一區加的認法：工具夾取 `_tooldef.json`／`_metainfo.json`；`tests`、`src`、`include`、`docs`、`.gitignore`、`CMakeLists.txt` 這類用通用句；knowledge 節點的 json 取 `_description` 那段的標題。
+- 樹裡的 agent 與工具看到新檔會不會有事（讀碼查過）：不會壞。`aos-tools` 只照登記檔與固定檔名讀、不列夾；包每格寫死路徑；`agent_def` 列範本只認有 `interfaces.json` 的子夾；lib 裡沒有「夾內每個 json 都讀」的寫法，hook、kernel 的站、mcp 都按名字找。會變的：agent 用 `ls`／`glob` 看這 8 個夾多一項，`index_view` 看它們從 `[no index]` 變成有列表；knowledge 的顯示不變。重抄是 `cp -r` 磁碟上的東西，git 還沒收的檔也會進樹、但 index 只列 git 有的，等它們進 git 重生一次才對上。
 
 ## 給使用者看的
 
 - **「建滿」的其他讀法**（這次先照「這份 repo」做）：一是也包含裝好的那棵樹自己長出來的東西（`~/aos-home` 的 ws、agents、stack；那裡的 lib、templates、knowledge 是從 repo 抄過去的，repo 鋪好、重抄就有）；二是只指 `proto8/knowledge` 這棵出廠內容樹（已有三份；照它自己「太大才補」的規矩現在不缺，X9）；三是連 json 檔裡面的節點也建（檔內 `_index`）；四是 `archive/` 與 `impl_cpp/` 裡面也建。
 - **`impl_cpp/` 裡面不建**（調度者同意）：那是使用者親手寫的夾，只在 repo 根留一項。
-- **範本與 kernel 的定義夾裡面不放**（原因見上表）：這些夾只在上一層有一句話，`index_view` 走不進去。
+- **`proto8/lib/packs`、`proto8/templates/agent-fsm` 超過門檻但不放**（原因見上表）。
 - **維護要不要掛進規矩**：兩個方案在下面「維護」，待使用者裁；裁之前靠記得跑。
 
 ## 維護
 
-- **什麼時候跑**：新增、刪除、搬動、改名任何進版控的檔或夾，或改了某個檔的檔頭那一句（md 的第一個標題、README 標題、json 的 `description`、程式檔第一行）之後，commit 前跑 `python3 wf/tools/index_gen.py --apply`，改到的 `_index.json` 跟著同一個 commit。新檔要先 `git add` 才列得到（只列進版控的）。
-- **取不到一句話**：生成器印 `index_gen: error: DescMissing 路徑`、退 1。補檔頭那一句；檔頭放不了的（圖、紀錄檔、沒有 README 的夾）在 `wf/tools/index_gen_desc.json` 加一筆 `"路徑": "一句話"`。搬檔、刪檔後手寫句的舊路徑也會報 `DescMissing …(in index_gen_desc.json but not in the repo)`，把那筆改成新路徑或刪掉。
-- **只想檢查**：`python3 wf/tools/index_gen.py`（不寫檔）：每份該改的印一行 `IndexStale 哪一份 is missing／differs from the file headers`，退 1；都一致退 0。
-- **`index_check.py` 報什麼**（`python3 wf/tools/index_check.py [夾…]`，不靠生成器、任何一棵樹都能查）：`EntryMissing 哪一份: 名 is there but not listed`（加了檔沒重生）、`EntryGone …: 名 is listed but not there`（刪了或搬了沒重生）、`LinkBad …: 名: index 路徑 points to nothing`（子夾的 index 不見了）、`LinkMissing`（子夾有 index、上一層沒連）、`IndexBad`（形狀不對，例如條目寫成字串）。最後一行總數，有問題退 1。
-- **新開一個要建 index 的區域、或某個夾裡面不能放**：改 `wf/tools/index_gen.json` 的 `scopes`、`skip_dirs`／`skip_dir_names`；手寫維護、不要生成器碰的那幾份寫進 `hand_indexes`。
+- **什麼時候跑**：新增、刪除、搬動、改名任何進版控的檔或夾，或改了某個檔的檔頭那一句之後，commit 前跑 `python3 wf/tools/index_gen.py --apply`，變動的 `_index.json` 跟著同一個 commit。新檔要先 `git add` 才算得到。
+- **夾長到超過門檻時誰補第一份**：加第 16 個東西的那個 commit 的人——不用自己判斷，跑 `--apply` 生成器就會寫出那一份、並在上一層的 index（如果上一層有）那一項補 `index`；夾縮回 15 個以下，`--apply` 會把那一份刪掉。新的那一份裡每一項的一句話取自檔頭；取不到的會報 `DescMissing`，補檔頭或在 `wf/tools/index_gen_desc.json` 加一筆。
+- **只想檢查**：`python3 wf/tools/index_gen.py`（不寫檔）：該寫、該改、該刪的每份印一行 `IndexStale …`，退 1；都一致退 0。不到門檻的夾沒有 index 不算錯。
+- **`index_check.py` 報什麼**（`python3 wf/tools/index_check.py [夾…]`，不靠生成器、不管門檻、任何一棵樹都能查；只查已經存在的 index）：`EntryMissing …: 名 is there but not listed`（加了檔沒重生）、`EntryGone …: 名 is listed but not there`（刪了或搬了沒重生）、`LinkBad`（`index` 指不到）、`LinkMissing`（某份 index 列的子夾自己有 index、那一項卻沒連；上一層沒有 index 就沒有這一條）、`IndexBad`（形狀不對，例如條目寫成字串）。有問題退 1。
+- **改門檻、新開區域、某個夾不能放**：改 `wf/tools/index_gen.json` 的 `more_than`、`scopes`、`skip_dirs`／`skip_dir_names`；手寫維護、不要生成器碰的寫進 `hand_indexes`。
 
 **掛進規矩的兩個方案（待使用者裁，hub 檔沒動）**：
 
-- （甲）改鐵律 3。`AGENTS.md` 鐵律 3 的粗體句「**新檔第一行（腳本跳過 shebang 的第一行）寫一句話；commit 前跑 `python3 wf/tools/codemap_gen.py --apply`**」改成「**新檔第一行（腳本跳過 shebang 的第一行）寫一句話；commit 前跑 `python3 wf/tools/codemap_gen.py --apply`，並跑 `python3 wf/tools/index_gen.py --apply`**」；同一條後段「改檔頭那一句、重生，跟程式同一個 commit」不用改。後果：每個 commit 多跑一支（約一秒），index 永遠跟得上；文件區的 commit 也要跑（code map 那支原本只管程式）。
-- （乙）不改鐵律，`wf/tools/wf-lint.sh` 多查一項。在 CODEMAP 那一關後面加一關 `INDEX`：repo 根有 `wf/tools/index_gen.py` 時跑 `python3 wf/tools/index_gen.py --quiet` 與 `python3 wf/tools/index_check.py --quiet`，任一支退非 0 就印 `INDEX <那支印的錯誤行>`、計入 `broken`（SUMMARY 多一欄 `index=N`）；`.claude/commands/wf-lint.md` 補一句「`INDEX` 表示資料夾的 `_index.json` 跟實際的檔對不上，修法是跑 `python3 wf/tools/index_gen.py --apply`」。後果：平常不用記，跑 wf-lint 時才發現過期、那時再重生；兩次 wf-lint 之間 index 可能缺幾項。注意現在 `/wf-lint` 照慣例只掃 `wf` 與 `.claude/commands`，CODEMAP 那關的條件是掃的根底下有 `proto8/`，所以平常沒跑到；`INDEX` 這關要寫成不看掃哪個根、每次都跑，才有用。
+- （甲）改鐵律 3。`AGENTS.md` 鐵律 3 的粗體句改成「**新檔第一行（腳本跳過 shebang 的第一行）寫一句話；commit 前跑 `python3 wf/tools/codemap_gen.py --apply`，並跑 `python3 wf/tools/index_gen.py --apply`**」，同一條句尾補半句「東西超過 15 個的夾有一份生成的 `_index.json`，同樣不手改」。後果：每個 commit 多跑一支（約一秒），index 永遠跟得上，夾一超過門檻當下就有第一份；文件區的 commit 也要跑。
+- （乙）不改鐵律，`wf/tools/wf-lint.sh` 多查一項。在 CODEMAP 那一關後面加一關 `INDEX`：跑 `python3 wf/tools/index_gen.py --quiet` 與 `python3 wf/tools/index_check.py --quiet`，任一支退非 0 就印 `INDEX <那支印的錯誤行>`、計入 `broken`（SUMMARY 多一欄 `index=N`）；`.claude/commands/wf-lint.md` 補一句「`INDEX` 表示東西超過 15 個的夾的 `_index.json` 跟實際的檔對不上（缺一份、多一份或內容過期），修法是跑 `python3 wf/tools/index_gen.py --apply`」。後果：平常不用記，跑 wf-lint 時才發現、那時由跑的人重生（剛超過門檻的夾第一份也是那時才補）；兩次 wf-lint 之間 index 可能缺項。注意現在 `/wf-lint` 只掃 `wf` 與 `.claude/commands`，CODEMAP 那關的條件是掃的根底下有 `proto8/`、平常沒跑到；`INDEX` 這關要寫成不看掃哪個根、每次都跑，才有用。
 - 兩個可以都做。

@@ -45,8 +45,7 @@
   "description": "Serialize board model requests across processes with bounded optional waiting."
  },
  "remote": {
-  "description": "進度看板的手機遠端版：claude.ai artifact 頁 remote.html（進度、待你裁、論壇三分頁）與推快照、拉回使用者回答的說明",
-  "index": "remote/_index.json"
+  "description": "進度看板的手機遠端版：claude.ai artifact 頁 remote.html（進度、待你裁、論壇三分頁）與推快照、拉回使用者回答的說明"
  },
  "remote_sync.py": {
   "description": "Export board and forum snapshots for the phone artifact and write pulled artifact answers back locally."
@@ -64,8 +63,7 @@
   "description": "Summarize progress, open asks and new user answers through a compatible endpoint."
  },
  "tests": {
-  "description": "進度看板的測試：eli5 白話說明的收集、證據、離線與 worker、跨行程模型鎖 llm_lock、輪次收集、靜態站，加幾支驗頁面的 .cjs",
-  "index": "tests/_index.json"
+  "description": "進度看板的測試：eli5 白話說明的收集、證據、離線與 worker、跨行程模型鎖 llm_lock、輪次收集、靜態站，加幾支驗頁面的 .cjs"
  },
  "web": {
   "description": "進度看板的網頁前端：主頁 index、細節 detail、論壇 forum、輪次 rounds、designs、guide 各頁的 html／js／css",

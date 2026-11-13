@@ -1,8 +1,0 @@
-{
- "01-建置與相依.md": {
-  "description": "共通踩坑分檔：建置與相依，CMake PRIVATE 相依漏進匯出、外部消費測試要 env -u VCPKG_ROOT、公開標頭漏標 AOS_API 到連結才爆"
- },
- "04-使用aos與改文件與公司Windows.md": {
-  "description": "涵蓋：使用 aos、改文件、公司 Windows 這台"
- }
-}

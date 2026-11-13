@@ -1,5 +1,6 @@
 {
- "description": "index_gen 的範圍：哪些夾要建 `_index.json`（deep＝連底下每一層）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區。",
+ "description": "index_gen 的範圍：哪些夾可以建 `_index.json`（deep＝連底下每一層）、門檻 more_than（夾裡直接的東西超過這個數才放，11-12 的門檻＝15）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區。",
+ "more_than": 15,
  "scopes": [
   {
    "path": ".",

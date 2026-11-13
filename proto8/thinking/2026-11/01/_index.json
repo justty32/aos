@@ -1,9 +1,0 @@
-{
- "README.md": {
-  "description": "proto8 討論紀錄：2026-11-01"
- },
- "playground-bob": {
-  "description": "11-01 試驗場 agents/bob 的討論紀錄：環境變數別濫用（像 Janet 的 dyn）、59 個 AOS_* 盤點與五題裁定、格旋鈕改 argv 與檔的實作",
-  "index": "playground-bob/_index.json"
- }
-}

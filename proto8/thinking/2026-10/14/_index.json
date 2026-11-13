@@ -1,9 +1,0 @@
-{
- "README.md": {
-  "description": "proto8 討論紀錄：2026-10-14"
- },
- "json-entry": {
-  "description": "10-14 討論紀錄（15 份分檔）：函數統一入口改成 JSON（stdin 參數、stdout 結果）、argv 空出來 D-1～D-6、aos-fsm 架構與拍板、daemon 套 fsm、Lisp 組合子視角；多數已拍板",
-  "index": "json-entry/_index.json"
- }
-}

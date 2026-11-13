@@ -1,5 +1,0 @@
-{
- "01-各狀況.md": {
-  "description": "eca 掛 daemon 跑 claude 時各狀況細節與嚴重度：沒信任的工作區讓 claude 退出丟信、工作區 hooks／CLAUDE.md 混進 eca 等；使用者定自擔風險"
- }
-}

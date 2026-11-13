@@ -6,8 +6,7 @@
   "description": "arknights 敘事庫盤點（11-07，codex 寫）的結論；全文已搬到報告夾。"
  },
  "02-設計": {
-  "description": "arknights-kb 第一版設計（fable 11-07）的四份分檔：庫的三層與節點格式、窄領域 agent 與確定性工具、kernel 與 git、第一輪範圍與施工；入口與要使用者裁的題在 02-設計.md",
-  "index": "02-設計/_index.json"
+  "description": "arknights-kb 第一版設計（fable 11-07）的四份分檔：庫的三層與節點格式、窄領域 agent 與確定性工具、kernel 與 git、第一輪範圍與施工；入口與要使用者裁的題在 02-設計.md"
  },
  "02-設計-修正.md": {
   "description": "arknights-kb 第一版設計的修正（隊長照 opus 審查定，蓋過 02-設計 同題的寫法；可翻案）"

@@ -12,8 +12,7 @@
   "description": "人在終端打的 Python 指令，一支一夾（執行檔在 <名>/bin/）：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-eca、aos-mcp 等；要用或改這些指令時進去"
  },
  "docs": {
-  "description": "使用者親口定下的三份條文：CONCEPTS 概念（C-）、NORMS 規範（N-）、CONVENTION agent 慣例（P-），各為入口 md＋同名分檔夾；做設計前先通讀",
-  "index": "docs/_index.json"
+  "description": "使用者親口定下的三份條文：CONCEPTS 概念（C-）、NORMS 規範（N-）、CONVENTION agent 慣例（P-），各為入口 md＋同名分檔夾；做設計前先通讀"
  },
  "extras": {
   "description": "還沒決定歸哪一夾的嘗試：假 http MCP server、gitignore 檢查、休眠搬家檢查、kernel 鏈假腦劇本、Janet／Lua 寫 aos；找手跑的開發者檢查或實驗性東西時進去"
@@ -37,8 +36,7 @@
   "description": "agent 的工具函式庫（腦可以叫的外部函數，一份標準版、掛捷徑引用）：base 底層原語、aos 動 aos 的、agent 整隻 agent 的，另有 json、mcp、metainfo 等共用模組；要加改工具時進去"
  },
  "notes": {
-  "description": "AI 寫的參考筆記（不算數、不是條文）：aos 跟 s6／runit 對照、aos-exec 可借的工具、.env 格式比較、命名老慣例查證；想找外部前例或借鏡點時進去",
-  "index": "notes/_index.json"
+  "description": "AI 寫的參考筆記（不算數、不是條文）：aos 跟 s6／runit 對照、aos-exec 可借的工具、.env 格式比較、命名老慣例查證；想找外部前例或借鏡點時進去"
  },
  "py": {
   "description": "cmd 共用的 Python 模組（不進 PATH）：aos_flags、aos_ws、daemon_ctl、aos_sweep 系列、aos_clock_register 與其測試；改指令共用的旗標、工作區或 daemon 控制邏輯時進去"
@@ -47,11 +45,9 @@
   "description": "複製出去用的 agent 範本：eca-claude（外部 coding agent）、agent-fsm（aos 自己的 loop／fsm agent），另有 daemon-root、judge-llm 等；開新 agent 或改範本時進去"
  },
  "thinking": {
-  "description": "proto8 的討論紀錄，按月／日／子項存，只留使用者原文、決定、結論與未決；要查某個設計決定的出處、使用者原話或還沒裁的題時進去，月份 README 一天一列",
-  "index": "thinking/_index.json"
+  "description": "proto8 的討論紀錄，按月／日／子項存，只留使用者原文、決定、結論與未決；要查某個設計決定的出處、使用者原話或還沒裁的題時進去，月份 README 一天一列"
  },
  "user-advice": {
-  "description": "使用者親手寫的意見稿（非 AI 產出）：9 月早期構想、資料夾即函數、agent 節點長成樹並降低消耗等想法；要對照使用者最初的原意時進去",
-  "index": "user-advice/_index.json"
+  "description": "使用者親手寫的意見稿（非 AI 產出）：9 月早期構想、資料夾即函數、agent 節點長成樹並降低消耗等想法；要對照使用者最初的原意時進去"
  }
 }

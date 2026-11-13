@@ -1,8 +1,0 @@
-{
- "01-repo-layout.md": {
-  "description": "INDEX.md 的分檔「Repo 佈局」：repo 的 remote、兩台機器開發一律用相對路徑，以及 proto8／wf 等頂層路徑各放什麼的對照表"
- },
- "README.md": {
-  "description": "INDEX/ — INDEX.md 的分檔"
- }
-}

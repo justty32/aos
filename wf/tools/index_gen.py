@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""index_gen — 從各檔檔頭的一句話，替 repo 的資料夾生成 aos 的 index（每夾一份 `_index.json`：`{名: {"description": …, "index": …}}`）。
+"""index_gen — 從各檔檔頭的一句話，替 repo 的資料夾生成 aos 的 index（東西多的夾一份 `_index.json`：`{名: {"description": …, "index": …}}`）。
 
   index_gen.py [--root REPO] [--apply] [--out DIR] [--stage N] [--config FILE] [--quiet]
     不帶 --apply：檢查。生成結果跟磁碟上的 `_index.json` 一致就退 0；不一致（缺、內容不同、多出不該有的）每份印一行 error、退 1。
@@ -10,6 +10,8 @@
   某一項取不到一句話：印 `index_gen: error: DescMissing 路徑`、退 1（補檔頭，或寫進 index_gen_desc.json）。
 
 範圍、不建的夾、手寫不生成的 index（hand_indexes，如 knowledge 既有的三份）寫在同夾的 index_gen.json；取不到檔頭一句話的（圖、紀錄檔、沒有 README 的夾）手寫在 index_gen_desc.json（路徑 → 一句話，手寫的優先）。
+門檻：夾裡直接的東西（進版控的檔與子夾，`_index.json` 自己不算）超過設定檔的 more_than 個才放；不到的夾不放，上一層那一項也不帶 `index`
+（使用者 11-13「index範圍按照11-12的門檻。」；11-12 的門檻＝超過 15 個，出處 proto8/knowledge/README.md、thinking/2026-11/12/knowledge-removal.md）。
 列哪些：`git ls-files` 有的檔，與裡面有這種檔的夾；`_index.json` 自己不列。夾的那一項，在範圍內就帶 `index` 連到它自己的 `_index.json`。
 一句話怎麼認：md 取第一個標題（分檔取導航行的「涵蓋：…」）；夾取它的 README.md／INDEX.md（工具夾取 _tooldef.json／_metainfo.json），沒有就取同名 `夾.md` 的（分檔夾）；
 都沒有時用設定檔的通用句（usual_dirs／usual_files：tests、src、.gitignore 這類名字就說明用途的）；json 取 description／summary／$comment／title（knowledge 節點取 `_description` 那段的標題），
@@ -130,6 +132,7 @@ def build(root, stage=None, config=None):
     scopes = [s for s in cfg["scopes"] if stage is None or s.get("stage", 1) <= stage]
     skip_names, skip_paths = set(cfg["skip_dir_names"]), set(cfg["skip_dirs"])
     keep = set(cfg.get("hand_indexes", []))
+    more_than = cfg.get("more_than", 0)
 
     def skipped(d):                                     # 這個夾裡面不建、也不往下列
         return d in skip_paths or any(p in skip_names for p in d.split("/")) or any(d.startswith(s + "/") for s in skip_paths)
@@ -177,6 +180,8 @@ def build(root, stage=None, config=None):
     for d in sorted(kids):
         if not in_scope(d) or d in keep:                # keep：手寫的 index，不生成、不蓋掉（上一層照樣連過去）
             continue
+        if len([n for n in kids[d] if n != NAME]) <= more_than:     # 門檻：夾裡的東西超過這個數才放（_index.json 自己不算）
+            continue
         table = {}
         for name in sorted(kids[d]):
             if name == NAME:
@@ -192,6 +197,11 @@ def build(root, stage=None, config=None):
             table[name] = item
         if table:
             out[NAME if d == "." else d + "/" + NAME] = table
+    for rel, table in out.items():                      # 子夾沒有 index（不到門檻）就不連
+        base = os.path.dirname(rel)
+        for name, item in table.items():
+            if "index" in item and ((base + "/" if base else "") + item["index"]) not in out and ((base + "/" if base else "") + name) not in keep:
+                del item["index"]
     for path in hand:
         if not os.path.lexists(os.path.join(root, path)):
             missing.append(path + "  (in index_gen_desc.json but not in the repo)")

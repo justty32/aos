@@ -37,8 +37,8 @@ class IndexToolsTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def build(self, hand=None):
-        cfg = {'scopes': [{'path': '.', 'stage': 1}, {'path': 'docs', 'deep': True, 'stage': 1}],
+    def build(self, hand=None, more_than=0):
+        cfg = {'more_than': more_than, 'scopes': [{'path': '.', 'stage': 1}, {'path': 'docs', 'deep': True, 'stage': 1}],
                'skip_dir_names': ['archive'], 'skip_dirs': []}
         real = index_gen.load
         index_gen.load = lambda name: cfg if name == 'index_gen.json' else {'desc': hand or {}}
@@ -59,6 +59,15 @@ class IndexToolsTests(unittest.TestCase):
         self.assertNotIn('index', docs['archive'])                                            # archive: entry only
         self.assertIn('抽自 a.md', docs['data.json']['description'])
         self.assertEqual(tables['docs/a/_index.json']['01.md']['description'], 'part one of a, see x')
+
+    def test_threshold_keeps_only_big_folders(self):
+        hand = {'code': 'the programs', 'docs/archive': 'old things'}
+        tables, _m, _s, _i = self.build(hand, more_than=3)          # docs has 5 things, the root 3, docs/a 1
+        self.assertEqual(sorted(tables), ['docs/_index.json'])
+        self.assertEqual(tables['docs/_index.json']['a'], {'description': '分檔夾：涵蓋：甲、乙'})     # small child: no link
+        tables, _m, _s, _i = self.build(hand, more_than=2)          # now the root too; it links to docs
+        self.assertEqual(sorted(tables), ['_index.json', 'docs/_index.json'])
+        self.assertEqual(tables['_index.json']['docs']['index'], 'docs/_index.json')
 
     def test_missing_description_is_reported(self):
         _tables, missing, _scopes, _in = self.build()

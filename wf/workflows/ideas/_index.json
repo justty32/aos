@@ -1,8 +1,0 @@
-{
- "README.md": {
-  "description": "aos 構想的入口：用一段話講 aos 是什麼（LLM 當 CPU、資料夾當程式），舊 13 章構想已封存到 archive/，現行概念改看 proto8/docs/CONCEPTS.md"
- },
- "archive": {
-  "description": "舊一套 aos 構想筆記的封存區（09-05、10-13 兩批）：01～13 章正文、fuse-host、nested-eval、machine-shape、daemon 時鐘等數十份，只作歷史保留"
- }
-}

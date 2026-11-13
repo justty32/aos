@@ -3,67 +3,52 @@
   "description": "proto8 討論紀錄：2026-11-05"
  },
  "agent-knowledge": {
-  "description": "2026-11-05 下午 給 agent 的 aos 體系知識＋層級式記憶工具 `memory`（fable 規劃，工具與知識庫已做、沒改既有程式）",
-  "index": "agent-knowledge/_index.json"
+  "description": "2026-11-05 下午 給 agent 的 aos 體系知識＋層級式記憶工具 `memory`（fable 規劃，工具與知識庫已做、沒改既有程式）"
  },
  "arch-refactor": {
-  "description": "11-05 夜討論紀錄：架構大重構（兩代收成一代、proto8 按角色分夾、impls 一次建、code map 改生成）的現況地圖、問題、方案與排程；七題照推薦、當晚開始施工",
-  "index": "arch-refactor/_index.json"
+  "description": "11-05 夜討論紀錄：架構大重構（兩代收成一代、proto8 按角色分夾、impls 一次建、code map 改生成）的現況地圖、問題、方案與排程；七題照推薦、當晚開始施工"
  },
  "edge-agent": {
-  "description": "11-05 C 線邊緣實測：aos-agent、判官、agent-fsm、eca 試出的問題與修法，兩題已裁（出錯留表、判官不掛用 --reply-to 告知）",
-  "index": "edge-agent/_index.json"
+  "description": "11-05 C 線邊緣實測：aos-agent、判官、agent-fsm、eca 試出的問題與修法，兩題已裁（出錯留表、判官不掛用 --reply-to 告知）"
  },
  "edge-daemon": {
-  "description": "11-05 B 線邊緣實測：aos-daemon、aos-daemon-ctl、aos-loop、install.sh、搬家試 14 類、修 6 處，兩題已裁（身體失敗記一行下一圈再跑、醒來後失敗也留表）",
-  "index": "edge-daemon/_index.json"
+  "description": "11-05 B 線邊緣實測：aos-daemon、aos-daemon-ctl、aos-loop、install.sh、搬家試 14 類、修 6 處，兩題已裁（身體失敗記一行下一圈再跑、醒來後失敗也留表）"
  },
  "edge-llm": {
-  "description": "11-05 A 線邊緣實測：llm kernel 改掛 daemon 後用壞 endpoint 函數、kill -9 等情境試出的問題與修法（commit 07305e54），原有題已裁",
-  "index": "edge-llm/_index.json"
+  "description": "11-05 A 線邊緣實測：llm kernel 改掛 daemon 後用壞 endpoint 函數、kill -9 等情境試出的問題與修法（commit 07305e54），原有題已裁"
  },
  "edge-round2": {
-  "description": "11-05 午第二輪邊緣實測：跨元件、時間軸、壓力、環境（當機接回、大批信、磁碟滿等）修了什麼，狀態窗寫不進去那題已裁記一行下一圈再試",
-  "index": "edge-round2/_index.json"
+  "description": "11-05 午第二輪邊緣實測：跨元件、時間軸、壓力、環境（當機接回、大批信、磁碟滿等）修了什麼，狀態窗寫不進去那題已裁記一行下一圈再試"
  },
  "feat-proto": {
-  "description": "2026-11-05 午 新功能原型五件：agent 自改工具、endpoint 能力包、依信排程、agent 生 agent、資源份額（fable 規劃；11-05 午已實作）",
-  "index": "feat-proto/_index.json"
+  "description": "2026-11-05 午 新功能原型五件：agent 自改工具、endpoint 能力包、依信排程、agent 生 agent、資源份額（fable 規劃；11-05 午已實作）"
  },
  "fs-image": {
-  "description": "11-05 夜討論紀錄：使用者原文與當場結論——信封與 body（信是 IPC、body 不多限制）、暫停時間像 lisp image、時鐘回到 tick；細節交 tick-time、body-protocol",
-  "index": "fs-image/_index.json"
+  "description": "11-05 夜討論紀錄：使用者原文與當場結論——信封與 body（信是 IPC、body 不多限制）、暫停時間像 lisp image、時鐘回到 tick；細節交 tick-time、body-protocol"
  },
  "json-argv": {
-  "description": "11-05 晚討論紀錄：為何用 JSON、argv＝method 名與給人用的兩面、旗標↔stdin JSON 映射設計；三題已裁，J1～J7 已實作（結果在 08～13）",
-  "index": "json-argv/_index.json"
+  "description": "11-05 晚討論紀錄：為何用 JSON、argv＝method 名與給人用的兩面、旗標↔stdin JSON 映射設計；三題已裁，J1～J7 已實作（結果在 08～13）"
  },
  "kernel-daemon": {
-  "description": "11-05 早討論紀錄：daemon 是最基礎的 kernel、模式 0／1／2、問腦改成 daemon 下的 proc、llm daemon 佈局；fable 規劃，11-05 隊長已照步 0～6 實作",
-  "index": "kernel-daemon/_index.json"
+  "description": "11-05 早討論紀錄：daemon 是最基礎的 kernel、模式 0／1／2、問腦改成 daemon 下的 proc、llm daemon 佈局；fable 規劃，11-05 隊長已照步 0～6 實作"
  },
  "knowledge-write": {
-  "description": "2026-11-05 夜 知識庫的增刪改與多庫（knowledge-write，K7，fable 規劃；W1～W4 已實作）",
-  "index": "knowledge-write/_index.json"
+  "description": "2026-11-05 夜 知識庫的增刪改與多庫（knowledge-write，K7，fable 規劃；W1～W4 已實作）"
  },
  "no-pid": {
   "description": "11-05 晚討論紀錄：不靠 pid 找東西、daemon 是 Linux 行程與 aos 唯一的橋、寄信不回＝呼叫失敗、監管樹；P1～P9 分步實作，結果在 08～19",
   "index": "no-pid/_index.json"
  },
  "portable-flow": {
-  "description": "11-05 討論紀錄：無痛遷移的使用者旅程（裝好→複製 agents→起 daemon→sleep→整份搬走續跑）與 image 模型、絕對路徑盤點；八題已裁、已實作",
-  "index": "portable-flow/_index.json"
+  "description": "11-05 討論紀錄：無痛遷移的使用者旅程（裝好→複製 agents→起 daemon→sleep→整份搬走續跑）與 image 模型、絕對路徑盤點；八題已裁、已實作"
  },
  "small-thought": {
-  "description": "11-05 傍晚討論紀錄：把「小念頭」做成工具 thought，派任務出去只拿回短結論；三題已裁、11-05 晚已實作，代定與步驟草稿在 02、03",
-  "index": "small-thought/_index.json"
+  "description": "11-05 傍晚討論紀錄：把「小念頭」做成工具 thought，派任務出去只拿回短結論；三題已裁、11-05 晚已實作，代定與步驟草稿在 02、03"
  },
  "stdio-unify": {
-  "description": "11-05 討論紀錄：三扇門與結束碼統一的施工規格 R1～R15（stderr 只有 error／warning 兩種行、工具出錯照 lib 契約、全都有英文 --help 等），已照改 56 支",
-  "index": "stdio-unify/_index.json"
+  "description": "11-05 討論紀錄：三扇門與結束碼統一的施工規格 R1～R15（stderr 只有 error／warning 兩種行、工具出錯照 lib 契約、全都有英文 --help 等），已照改 56 支"
  },
  "tick-time": {
-  "description": "11-05 夜討論紀錄：aos 內部約時間改用 tick 回合數、AOS_TICK 指時鐘檔；11-06 裁五題（Q1／Q2 改、新設計在 03），T 線已實作（04、05），後由 11-09 clock-decouple 改讀",
-  "index": "tick-time/_index.json"
+  "description": "11-05 夜討論紀錄：aos 內部約時間改用 tick 回合數、AOS_TICK 指時鐘檔；11-06 裁五題（Q1／Q2 改、新設計在 03），T 線已實作（04、05），後由 11-09 clock-decouple 改讀"
  }
 }

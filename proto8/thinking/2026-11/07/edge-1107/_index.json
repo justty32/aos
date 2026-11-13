@@ -1,5 +1,0 @@
-{
- "README.md": {
-  "description": "11-07 下午 8 個邊緣實驗 E1～E8 的一覽、逐個結果、已裁修正（00a0a1b14）與已知限制：daemon 重起與 ctl_seq、判官重送 bug、aos-tick 併寫掉數、timeout_s 溢位等"
- }
-}

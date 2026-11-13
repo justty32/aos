@@ -3,64 +3,49 @@
   "description": "proto8 討論紀錄：2026-11-10"
  },
  "agents-split": {
-  "description": "11-10 討論紀錄：舊 agents 工具拆成 agents_children、agents_ctl、agent_def 三支，含拆法、施工單、驗收，已施工",
-  "index": "agents-split/_index.json"
+  "description": "11-10 討論紀錄：舊 agents 工具拆成 agents_children、agents_ctl、agent_def 三支，含拆法、施工單、驗收，已施工"
  },
  "aos-tools-cli": {
-  "description": "11-10 討論紀錄：aos-tools 命令列為什麼怪、怎麼改（fable 規劃，help 草稿、改裁後設計），後來已施工，結果見 08",
-  "index": "aos-tools-cli/_index.json"
+  "description": "11-10 討論紀錄：aos-tools 命令列為什麼怪、怎麼改（fable 規劃，help 草稿、改裁後設計），後來已施工，結果見 08"
  },
  "cli-sweep": {
-  "description": "11-10 規劃報告：其餘 aos-* 指令照 C-85 掃一遍，每支一段白話、跨指令不一致 X1～X15、分級改法與施工順序；使用者題已答、未施工",
-  "index": "cli-sweep/_index.json"
+  "description": "11-10 規劃報告：其餘 aos-* 指令照 C-85 掃一遍，每支一段白話、跨指令不一致 X1～X15、分級改法與施工順序；使用者題已答、未施工"
  },
  "clock-letters": {
-  "description": "11-10 討論紀錄：時鐘改成每 N 個 cycle 寄一封信（clock_register.json、aos-clock-register、clock_register 工具），已施工",
-  "index": "clock-letters/_index.json"
+  "description": "11-10 討論紀錄：時鐘改成每 N 個 cycle 寄一封信（clock_register.json、aos-clock-register、clock_register 工具），已施工"
  },
  "json-memory": {
-  "description": "11-10 討論紀錄＋圖紙：記憶庫改成資料夾＋.json 一棵樹、統一路徑 檔.json#/指標、_index 當表，工具與轉換，已施工並有可玩驗收",
-  "index": "json-memory/_index.json"
+  "description": "11-10 討論紀錄＋圖紙：記憶庫改成資料夾＋.json 一棵樹、統一路徑 檔.json#/指標、_index 當表，工具與轉換，已施工並有可玩驗收"
  },
  "mailbox": {
-  "description": "11-10 討論紀錄：agent 之間的信箱（aos-post 上的純 inbox 協議、aos-mailbox 指令、mailbox_peek／read／send 工具），已施工、三種腦驗過",
-  "index": "mailbox/_index.json"
+  "description": "11-10 討論紀錄：agent 之間的信箱（aos-post 上的純 inbox 協議、aos-mailbox 指令、mailbox_peek／read／send 工具），已施工、三種腦驗過"
  },
  "prefix-fixes": {
-  "description": "11-10 規劃：大修前先修，問題清單 207 列分桶（直接修 61 列切五條施工線），不動環境變數、json 格式、佈局與 lib 介面",
-  "index": "prefix-fixes/_index.json"
+  "description": "11-10 規劃：大修前先修，問題清單 207 列分桶（直接修 61 列切五條施工線），不動環境變數、json 格式、佈局與 lib 介面"
  },
  "self-family": {
-  "description": "11-10 討論紀錄：給腦改自己的一家子——aos-agent history、self_history、self_state／self_ctl，底下另有 hook 子夾，已施工",
-  "index": "self-family/_index.json"
+  "description": "11-10 討論紀錄：給腦改自己的一家子——aos-agent history、self_history、self_state／self_ctl，底下另有 hook 子夾，已施工"
  },
  "self-tools": {
-  "description": "11-10 討論紀錄：給腦改自己工具與腦設定的 self_tools、self_llm，含不認得的鍵報錯、設定改名與試驗場驗收，已施工",
-  "index": "self-tools/_index.json"
+  "description": "11-10 討論紀錄：給腦改自己工具與腦設定的 self_tools、self_llm，含不認得的鍵報錯、設定改名與試驗場驗收，已施工"
  },
  "sweeper": {
-  "description": "11-10 討論紀錄：清道夫 proc aos-sweeper（stderr 封存、保留期、收表外子 loop）的設計與施工結果，已施工",
-  "index": "sweeper/_index.json"
+  "description": "11-10 討論紀錄：清道夫 proc aos-sweeper（stderr 封存、保留期、收表外子 loop）的設計與施工結果，已施工"
  },
  "templates-cp": {
-  "description": "11-10 調查＋施工：範本改 $env AOS_HOME 寫法、拿掉 tools/ 捷徑、自帶 .env、刪 copy-out，開新 agent 只要 cp -r，已施工見 05",
-  "index": "templates-cp/_index.json"
+  "description": "11-10 調查＋施工：範本改 $env AOS_HOME 寫法、拿掉 tools/ 捷徑、自帶 .env、刪 copy-out，開新 agent 只要 cp -r，已施工見 05"
  },
  "tonight": {
-  "description": "11-10 晚總整合：今晚多了什麼指令與工具、照抄例子、整棵從零實跑驗收與試驗場刷新；要快速上手當時新功能時看",
-  "index": "tonight/_index.json"
+  "description": "11-10 晚總整合：今晚多了什麼指令與工具、照抄例子、整棵從零實跑驗收與試驗場刷新；要快速上手當時新功能時看"
  },
  "tonight-rulings": {
-  "description": "11-10 深夜裁定紀錄：總整合攤的八題（self_tools ls 變短、hook 預設與選項改名、範本 tests 搬家等）使用者一次答完",
-  "index": "tonight-rulings/_index.json"
+  "description": "11-10 深夜裁定紀錄：總整合攤的八題（self_tools ls 變短、hook 預設與選項改名、範本 tests 搬家等）使用者一次答完"
  },
  "tool-packs": {
-  "description": "11-10 討論紀錄：通用工具分看／改／刪／殼四包、純包裝、拿掉工作區限制，agent 工具分七包，memory 改名 memory_read，已施工",
-  "index": "tool-packs/_index.json"
+  "description": "11-10 討論紀錄：通用工具分看／改／刪／殼四包、純包裝、拿掉工作區限制，agent 工具分七包，memory 改名 memory_read，已施工"
  },
  "tools-def": {
-  "description": "11-10 討論紀錄：給腦造新工具的 tools_def（new 抄 Python 骨架、check 檢查）與輔助 lib tool_spec.py，已施工",
-  "index": "tools-def/_index.json"
+  "description": "11-10 討論紀錄：給腦造新工具的 tools_def（new 抄 Python 骨架、check 檢查）與輔助 lib tool_spec.py，已施工"
  },
  "two-machines": {
   "description": "11-10 規劃＋施工：兩台機器經 GitHub 輪流跑同一批 agent，午後改成 cp 過去 aos-exec --stack 一行接著跑、aos-image 作廢；含真機驗證與施工結果",

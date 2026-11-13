@@ -15,8 +15,7 @@
   "description": "2026-10-15 inst 只吃 stdin／aos-exec 第三版：aos-exec 只是「讀檔灌 stdin」，agent 的定義隨 inst 走"
  },
  "inst-exec-v4": {
-  "description": "10-15 inst 只吃 stdin／aos-exec 第四版討論紀錄：agent 定義＝一張 inst、工具走 frame、零 sh，C-50 選 a 其餘照推薦；「沒有指示詞」已被 N-45 推翻、frame 那段 10-16 改掉",
-  "index": "inst-exec-v4/_index.json"
+  "description": "10-15 inst 只吃 stdin／aos-exec 第四版討論紀錄：agent 定義＝一張 inst、工具走 frame、零 sh，C-50 選 a 其餘照推薦；「沒有指示詞」已被 N-45 推翻、frame 那段 10-16 改掉"
  },
  "inst-exec.md": {
   "description": "2026-10-15 inst 只吃 stdin、aos-exec 當語法糖、TARGET 全拿掉、`$ref` 從所在檔算"
@@ -34,8 +33,7 @@
   "description": "2026-10-15 kernel 截流：agent 只管叫、貴的呼叫先排隊"
  },
  "kiss": {
-  "description": "10-15 深夜 KISS 審視彙整：8 份稿去重、衝突、總表與批次；批次 1 已做，10-16 使用者撤回「都照推薦」，批次 2～6 暫停，現況看 10-16 kiss-recheck",
-  "index": "kiss/_index.json"
+  "description": "10-15 深夜 KISS 審視彙整：8 份稿去重、衝突、總表與批次；批次 1 已做，10-16 使用者撤回「都照推薦」，批次 2～6 暫停，現況看 10-16 kiss-recheck"
  },
  "layout-growth.md": {
   "description": "2026-10-15 布局成長：檔案→資料夾、純值→物件，同一套規則"
@@ -47,8 +45,7 @@
   "description": "2026-10-15 LLM kernel：請求自己填優先級"
  },
  "naming": {
-  "description": "2026-10-15 命名習慣：好懂、結構先行、一次記住",
-  "index": "naming/_index.json"
+  "description": "2026-10-15 命名習慣：好懂、結構先行、一次記住"
  },
  "opinions-1-4.md": {
   "description": "2026-10-15 意見 1～4：fsm 只管「狀態→inst」、agent＝fsm＋inst、binding 用 json＋資料夾（Lisp 式）"
@@ -60,11 +57,9 @@
   "description": "2026-10-15 畫家 demo 用 LiteLLM 真腦實跑"
  },
  "principles": {
-  "description": "2026-10-15 兩條總原則：巢狀只管自己這一層、錯誤只處理自己的（深夜加：KISS 最高原則）",
-  "index": "principles/_index.json"
+  "description": "2026-10-15 兩條總原則：巢狀只管自己這一層、錯誤只處理自己的（深夜加：KISS 最高原則）"
  },
  "topics": {
-  "description": "10-15 討論紀錄（4 份分檔）：早上清帳待定（N-35、N-36～N-41 進規範）、條文按主題分、fsm 補細則、agent 工具與思考介面、試 146 ollama 與 LM Studio 小模型、agent 當函數",
-  "index": "topics/_index.json"
+  "description": "10-15 討論紀錄（4 份分檔）：早上清帳待定（N-35、N-36～N-41 進規範）、條文按主題分、fsm 補細則、agent 工具與思考介面、試 146 ollama 與 LM Studio 小模型、agent 當函數"
  }
 }

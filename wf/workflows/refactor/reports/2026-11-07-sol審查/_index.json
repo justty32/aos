@@ -3,15 +3,13 @@
   "description": "11-07 sol 審查 A 區：設定檔（kernel 範本、agent 範本、工具登記、stack.gitignore、沙箱範例、根 daemon 範例、試驗場）"
  },
  "02-條文-lift-to-norms": {
-  "description": "分檔夾：11-07 sol 審查 B 區：lift-to-norms 那批條文（N-65～N-67、C-76～C-83、P-45／P-46、附註改讀）跟使用者原話對不對",
-  "index": "02-條文-lift-to-norms/_index.json"
+  "description": "分檔夾：11-07 sol 審查 B 區：lift-to-norms 那批條文（N-65～N-67、C-76～C-83、P-45／P-46、附註改讀）跟使用者原話對不對"
  },
  "02-條文-lift-to-norms.md": {
   "description": "11-07 sol 審查 B 區：lift-to-norms 那批條文（N-65～N-67、C-76～C-83、P-45／P-46、附註改讀）跟使用者原話對不對"
  },
  "03-條文-no-pid-tick-json-argv-special-cases": {
-  "description": "sol 審查 C 區分檔夾：no-pid P5b、tick-time、json-argv J7、special-cases 四批條文逐句對使用者原話，含各批發現、四批打架與已核對",
-  "index": "03-條文-no-pid-tick-json-argv-special-cases/_index.json"
+  "description": "sol 審查 C 區分檔夾：no-pid P5b、tick-time、json-argv J7、special-cases 四批條文逐句對使用者原話，含各批發現、四批打架與已核對"
  },
  "03-條文-no-pid-tick-json-argv-special-cases.md": {
   "description": "03 條文：no-pid／tick／json-argv／special-cases（C 隊）"
@@ -24,8 +22,7 @@
   "description": "11-07 sol 審查 D 區：sol 寫的設計／規劃本身（special-cases 分群、git-image、mailbox 命名、效能標準、no-pid P7 以後與 os-impl 05～08）跟使用者原話一不一致、有沒有代定"
  },
  "05-代定盤點": {
-  "description": "分檔夾：11-07 sol 審查 E 區：11-05～11-06 的「代定（可翻案）」逐條判是細節還是該由使用者裁的方向（總表在 csv）",
-  "index": "05-代定盤點/_index.json"
+  "description": "分檔夾：11-07 sol 審查 E 區：11-05～11-06 的「代定（可翻案）」逐條判是細節還是該由使用者裁的方向（總表在 csv）"
  },
  "05-代定盤點.csv": {
   "description": "資料表（csv）：欄位 id、出處檔行、哪隊、代定內容、判定、理由、使用者原話、建議"
@@ -34,22 +31,19 @@
   "description": "11-07 sol 審查 E 區：11-05～11-06 的「代定（可翻案）」逐條判是細節還是該由使用者裁的方向（總表在 csv）"
  },
  "06-special-cases抽核": {
-  "description": "sol 審查 F 隊題一分檔夾：special-cases 現行表與盤點 csv 抽 20 列核對條文、程式、commit，分發現與已核對兩份",
-  "index": "06-special-cases抽核/_index.json"
+  "description": "sol 審查 F 隊題一分檔夾：special-cases 現行表與盤點 csv 抽 20 列核對條文、程式、commit，分發現與已核對兩份"
  },
  "06-special-cases抽核.md": {
   "description": "06 special-cases 抽核（F 隊）"
  },
  "07-tick一致性實驗": {
-  "description": "sol 審查 G 隊分檔夾：tick 回合時鐘在 C++、daemon、Python 三處讀法與期限行為的實驗，含對照表、發現 1～6、已核對",
-  "index": "07-tick一致性實驗/_index.json"
+  "description": "sol 審查 G 隊分檔夾：tick 回合時鐘在 C++、daemon、Python 三處讀法與期限行為的實驗，含對照表、發現 1～6、已核對"
  },
  "07-tick一致性實驗.md": {
   "description": "07 tick 一致性實驗（G 隊）"
  },
  "08-信箱取件順序": {
-  "description": "sol 審查 F 隊題二分檔夾：七處挑下一封信的排序文件與程式對照，含總表、發現（判官排隊 sent_at）、實測與已核對",
-  "index": "08-信箱取件順序/_index.json"
+  "description": "sol 審查 F 隊題二分檔夾：七處挑下一封信的排序文件與程式對照，含總表、發現（判官排隊 sent_at）、實測與已核對"
  },
  "08-信箱取件順序.md": {
   "description": "08 信箱取件順序（F 隊）"
@@ -61,8 +55,7 @@
   "description": "sol 審查判「翻」與錯誤行為項目的修正結果：逐項修了什麼、commit、怎麼驗證，及因要選方向而沒修的 4 件"
  },
  "11-使用者裁定": {
-  "description": "sol 審查使用者裁定的分檔夾：目前只有 01-落實結果（11-07 裁定各題做了什麼、改哪些檔、commit）；原話與對照表在同層 11-使用者裁定.md",
-  "index": "11-使用者裁定/_index.json"
+  "description": "sol 審查使用者裁定的分檔夾：目前只有 01-落實結果（11-07 裁定各題做了什麼、改哪些檔、commit）；原話與對照表在同層 11-使用者裁定.md"
  },
  "11-使用者裁定.md": {
   "description": "使用者原話（11-07 上午，逐字）"

@@ -1,8 +1,0 @@
-{
- "01-各家做法.md": {
-  "description": "涵蓋：各家環境檔怎麼處理拿掉變數、多行、引號、`${}`、註解、`export`"
- },
- "04-拿掉env改用envdir.md": {
-  "description": "涵蓋：選項「拿掉 aos 的 `.env`、改在 argv 鏈上接 s6-envdir（或 envdir／chpst -e）」——envdir 補不回來什麼、多出什麼"
- }
-}

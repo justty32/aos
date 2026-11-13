@@ -1,8 +1,0 @@
-{
- "01-盤點.md": {
-  "description": "eca 身現在有哪些東西是「直接塞進 CLI 的輸入」：盤點 12 項（11-13，看的是 commit 3cf4a9226 當下的檔）"
- },
- "02-a2a機制與實測.md": {
-  "description": "Claude Code 的 a2a（跨 session 傳訊）到底是什麼、外部行程能不能投遞：文件、實測、推測分開寫（11-13，claude 2.1.323、codex 0.167.2）"
- }
-}

@@ -9,19 +9,16 @@
   "description": "carry-over：11-10「明天順序」逐項盤點（11-11，線 J）"
  },
  "clock-hook": {
-  "description": "11-11 討論紀錄：aos-loop 加 on_start／on_stop、hook 加 after_start／after_stop／on_clock，原定時鐘信箱方案被改向取代，已施工",
-  "index": "clock-hook/_index.json"
+  "description": "11-11 討論紀錄：aos-loop 加 on_start／on_stop、hook 加 after_start／after_stop／on_clock，原定時鐘信箱方案被改向取代，已施工"
  },
  "do-task-rename.md": {
   "description": "do-task-rename：工具 thought 改名 do_task、預設用呼叫者自己的定義（11-11，線 I）"
  },
  "fork-and-do-task": {
-  "description": "11-11 討論紀錄：do_task 拆成 fork（整份複製自己去做 goal）與 do_task start／end（摺疊 history），已施工（線 K）",
-  "index": "fork-and-do-task/_index.json"
+  "description": "11-11 討論紀錄：do_task 拆成 fork（整份複製自己去做 goal）與 do_task start／end（摺疊 history），已施工（線 K）"
  },
  "goal": {
-  "description": "goal：agent 自己停下來時自動丟目標給它（11-11）——已施工（線 K）",
-  "index": "goal/_index.json"
+  "description": "goal：agent 自己停下來時自動丟目標給它（11-11）——已施工（線 K）"
  },
  "i18n.md": {
   "description": "i18n：整個 aos 體系支援多語（11-11，只記想法）"
@@ -30,27 +27,22 @@
   "description": "json 工具：路徑一整串、給值直接換（11-11 晚，只記錄、沒施工）"
  },
  "kernel": {
-  "description": "11-11 討論紀錄（只釐清概念、沒施工沒改條文）：kernel 回歸資源管理＋排程、從寄件人看的身分、一律寄 AOS_KERNEL、判官收進通用框架",
-  "index": "kernel/_index.json"
+  "description": "11-11 討論紀錄（只釐清概念、沒施工沒改條文）：kernel 回歸資源管理＋排程、從寄件人看的身分、一律寄 AOS_KERNEL、判官收進通用框架"
  },
  "knowledge-fix": {
-  "description": "11-11 討論紀錄：出廠知識庫修整補全（每支工具與指令都有節點、knowledge_check、大小推薦值），六題已裁，已施工（線 C）",
-  "index": "knowledge-fix/_index.json"
+  "description": "11-11 討論紀錄：出廠知識庫修整補全（每支工具與指令都有節點、knowledge_check、大小推薦值），六題已裁，已施工（線 C）"
  },
  "mail-notify.md": {
   "description": "mail-notify：信箱有新信時用 on_clock hook 提醒自己（11-11，線 I）"
  },
  "new-tools": {
-  "description": "11-11 討論紀錄：要補的 grep／glob、todo、MCP client 三樣，前兩樣已施工（線 K），MCP client 匯入停在設計稿",
-  "index": "new-tools/_index.json"
+  "description": "11-11 討論紀錄：要補的 grep／glob、todo、MCP client 三樣，前兩樣已施工（線 K），MCP client 匯入停在設計稿"
  },
  "playground": {
-  "description": "11-11 試驗場紀錄：公司與家機的 ~/code/playground 照 main 刷新、怎麼玩、各腦驗收，另有 11 個模型配工具的實測發現",
-  "index": "playground/_index.json"
+  "description": "11-11 試驗場紀錄：公司與家機的 ~/code/playground 照 main 刷新、怎麼玩、各腦驗收，另有 11 個模型配工具的實測發現"
  },
  "self-system": {
-  "description": "11-11 討論紀錄：agent 改自己的 system 文字（aos-agent system get／set／reset、self_system 工具），fsm 取代、eca 附加，已施工",
-  "index": "self-system/_index.json"
+  "description": "11-11 討論紀錄：agent 改自己的 system 文字（aos-agent system get／set／reset、self_system 工具），fsm 取代、eca 附加，已施工"
  },
  "subagent-rename.md": {
   "description": "subagent 改名：工具 agents_children 改叫 subagent，舊名不留"

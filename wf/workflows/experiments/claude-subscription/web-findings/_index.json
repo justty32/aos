@@ -1,8 +1,0 @@
-{
- "01-litellm-與官方態度.md": {
-  "description": "一、litellm 支不支援用 Claude 訂閱 OAuth 打 Anthropic？"
- },
- "02-社群現成的做法.md": {
-  "description": "三、社群現成的做法（本地 proxy，最多列六個）"
- }
-}

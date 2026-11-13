@@ -39,8 +39,7 @@
   "description": "Decision batch built from wf/wait-user/01 (2026-11-13): every open item split into single questions."
  },
  "eca-a2a-notify": {
-  "description": "eca-a2a-notify.md 的分檔：eca 身直接塞進 CLI 輸入的 12 項盤點，與 Claude Code a2a 機制的文件、實測、讀碼（11-13 調查）",
-  "index": "eca-a2a-notify/_index.json"
+  "description": "eca-a2a-notify.md 的分檔：eca 身直接塞進 CLI 輸入的 12 項盤點，與 Claude Code a2a 機制的文件、實測、讀碼（11-13 調查）"
  },
  "eca-a2a-notify.md": {
   "description": "eca 的通知改走 a2a（11-13 調查，只讀沒施工）：外部行程可以直接往 Claude Code 的 session socket 投遞、寄件人可以寫成不存在的「aos通知中心」（都實測過）；建議畫面那條路把「貼字＋Enter」換成投 socket，留兩題給使用者裁"
@@ -55,7 +54,7 @@
   "description": "線庚施工結果（11-13）：eca_main 第 7、6、3、1 項與外部 MCP 實測三題都修了、各一個 commit，set-def 做了但 daemon 有一個缺口；全套測試只紅既有的"
  },
  "index-build.md": {
-  "description": "把 repo 的 index 建好建滿：每個資料夾一份生成的 `_index.json`，從 repo 根用 `index_view` 一路往下都看得到每樣東西是什麼（11-13 公司；階段一文件區已鋪，階段二程式區等停樹後）"
+  "description": "把 repo 的 index 建好建滿：照 11-12 的門檻，東西超過 15 個的資料夾各一份生成的 `_index.json`（11-13 公司；先每層都鋪、使用者裁照門檻後收回；文件區 25 份已在，程式區 8 份等停樹後）"
  },
  "kernel-framework-開工.md": {
   "description": "通用 kernel 框架開工計畫（11-13，階段 0：只出計畫、沒改程式）：圖紙十四步拆成 17 批，今天不動 C++ 能做的是框架本體三批（1a、2、3），其餘卡在別線、C++ 或待裁題"

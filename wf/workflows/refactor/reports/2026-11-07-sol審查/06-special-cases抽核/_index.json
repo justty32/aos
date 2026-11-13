@@ -1,8 +1,0 @@
-{
- "01-發現.md": {
-  "description": "sol 審查 F 隊 special-cases 抽核的逐條發現：C-52 現行表與盤點 csv 抽 20 列，跟程式、commit 對不上的地方與抽樣方法"
- },
- "02-已核對沒問題的.md": {
-  "description": "sol 審查 F 隊 special-cases 抽核的已核對清單：條文、盤點 csv、程式、commit 四者一致的列，附檔:行"
- }
-}

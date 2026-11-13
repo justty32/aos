@@ -36,8 +36,7 @@
   "description": "涵蓋：上午圖紙（01～11）各部分在午後方向改變後是保留、修改還是作廢"
  },
  "13-施工結果": {
-  "description": "two-machines 施工結果分檔：各線做了什麼（auto-restart 冷卻、eca 換台、路徑三種寫法、gitignore 樣板等）、跟圖紙不同之處與留給明天的清單",
-  "index": "13-施工結果/_index.json"
+  "description": "two-machines 施工結果分檔：各線做了什麼（auto-restart 冷卻、eca 換台、路徑三種寫法、gitignore 樣板等）、跟圖紙不同之處與留給明天的清單"
  },
  "13-施工結果.md": {
   "description": "涵蓋：11-10 午後各施工線的結果總覽、代定表、持久格式要重建什麼、prefix-fixes 跨機待辦對照、/mnt/c 數字"

@@ -9,8 +9,7 @@
   "description": "compact 後重讀：Claude Code SessionStart（matcher=compact）hook 呼叫，stdout 會進 compact 後的上下文。"
  },
  "decide_page": {
-  "description": "離線待裁頁工具 decide_page.py：把一批題目 JSON 做成單檔互動頁，讓使用者點選與補充後複製回覆，再 parse／apply 讀回落地裁定",
-  "index": "decide_page/_index.json"
+  "description": "離線待裁頁工具 decide_page.py：把一批題目 JSON 做成單檔互動頁，讓使用者點選與補充後複製回覆，再 parse／apply 讀回落地裁定"
  },
  "find_big_lists.py": {
   "description": "找出 markdown 裡超過門檻的條列式區塊（表格或清單）。"
@@ -52,10 +51,10 @@
   "description": "查 aos 的 index（`_index.json`）跟實際的樹對不對得上：列了但不在、在但沒列、連結指不到、形狀不對。"
  },
  "index_gen.json": {
-  "description": "index_gen 的範圍：哪些夾要建 `_index.json`（deep＝連底下每一層）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區。"
+  "description": "index_gen 的範圍：哪些夾可以建 `_index.json`（deep＝連底下每一層）、門檻 more_than（夾裡直接的東西超過這個數才放，11-12 的門檻＝15）、哪些夾裡面不建（只在上一層留一項）。stage 1＝文件區，2＝程式區。"
  },
  "index_gen.py": {
-  "description": "從各檔檔頭的一句話，替 repo 的資料夾生成 aos 的 index（每夾一份 `_index.json`：`{名: {\"description\": …, \"index\": …}}`）。"
+  "description": "從各檔檔頭的一句話，替 repo 的資料夾生成 aos 的 index（東西多的夾一份 `_index.json`：`{名: {\"description\": …, \"index\": …}}`）。"
  },
  "index_gen_desc.json": {
   "description": "index_gen 取不到檔頭一句話時用的手寫一句話：repo 相對路徑 → 一句話（手寫的優先於檔頭）。"
@@ -92,8 +91,7 @@
   "description": "inbox 收發信腳本（inbox_team、inbox_mail、inbox_poll）的 bash 測試，每案在暫存夾設 AGENT_INBOX_ROOT 跑並計 ok／fail"
  },
  "tests": {
-  "description": "wf/tools 腳本的 Python 測試夾，目前只有 test_metainfo_migrate.py（驗 _metainfo 一次性遷移、保留、排除與冪等）",
-  "index": "tests/_index.json"
+  "description": "wf/tools 腳本的 Python 測試夾，目前只有 test_metainfo_migrate.py（驗 _metainfo 一次性遷移、保留、排除與冪等）"
  },
  "wf-lint.sh": {
   "description": "工作流文檔的機械檢查（bash + grep/sed/awk/find，部分借 python3）"

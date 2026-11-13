@@ -1,5 +1,0 @@
-{
- "02-JSON的key與計數.md": {
-  "description": "舊名對照續：JSON key 的改名（run／val→exec、children→procs、loops_ctl→procs_ctl 等）與 10-25 計數 counter_*、時間點 _at、上限 max_*"
- }
-}
