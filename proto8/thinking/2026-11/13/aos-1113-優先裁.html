@@ -1,0 +1,288 @@
+<!doctype html><html lang="zh-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>11-13 優先裁：7 題</title><style>/* Style the offline decision page with shared light and dark palette tokens. */
+
+:root{
+  --bg:#f7f6f2; --panel:#ffffff; --ink:#1d1d1b; --muted:#5f5d57; --line:#d9d6cc;
+  --ask:#c25a14; --ask-soft:#fbe9dc; --on-ask:#ffffff;
+  --fix:#6b7f8e; --fix-soft:#e6ecf0; --on-fix:#ffffff;
+  --good:#2f7d4f; --bad:#b3362c; --quote:#f1efe7; --code:#efede6;
+  --star:#c25a14;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161614; --panel:#201f1c; --ink:#ecebe6; --muted:#a8a59c; --line:#3a3833;
+    --ask:#f08a45; --ask-soft:#3b2717; --on-ask:#1a1209;
+    --fix:#8fa6b6; --fix-soft:#22292e; --on-fix:#11171b;
+    --good:#5fbf86; --bad:#ef6f62; --quote:#2a2925; --code:#2c2b27;
+    --star:#f08a45;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161614; --panel:#201f1c; --ink:#ecebe6; --muted:#a8a59c; --line:#3a3833;
+  --ask:#f08a45; --ask-soft:#3b2717; --on-ask:#1a1209;
+  --fix:#8fa6b6; --fix-soft:#22292e; --on-fix:#11171b;
+  --good:#5fbf86; --bad:#ef6f62; --quote:#2a2925; --code:#2c2b27;
+  --star:#f08a45;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;
+  font-size:17px;line-height:1.75}
+.wrap{max-width:820px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:1.65rem;line-height:1.35;margin:.2em 0 .4em}
+h2{font-size:1.35rem;margin:2.4em 0 .5em;padding-top:.6em;border-top:2px solid var(--line)}
+h3{font-size:1.08rem;margin:0;line-height:1.5}
+h4{font-size:1rem;margin:.9em 0 .2em}
+p{margin:.5em 0}
+.lead{font-size:1.05rem}
+.lead li{margin:.35em 0}
+.muted{color:var(--muted)}
+.note{background:var(--fix-soft);border-left:4px solid var(--fix);padding:.6em .9em;border-radius:6px;margin:1em 0}
+figure{margin:1.2em 0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+figure svg{display:block;width:100%;height:auto}
+figcaption{font-size:.95rem;margin-top:.5em}
+.concl{font-weight:600}
+code{font-family:ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace;font-size:.88em;background:var(--code);padding:.08em .35em;border-radius:4px;word-break:break-all}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:1.1em 0}
+.card header{display:flex;gap:.7em;align-items:flex-start}
+.num{flex:none;background:var(--ask);color:var(--on-ask);font-weight:700;border-radius:8px;padding:.05em .55em;font-size:.95rem;margin-top:.15em}
+.num.both{background:linear-gradient(90deg,var(--ask) 50%,var(--fix) 50%)}
+blockquote.quote{margin:.8em 0;background:var(--quote);border-left:4px solid var(--ask);padding:.5em .8em;border-radius:6px}
+blockquote.quote p{margin:.2em 0}
+blockquote.quote cite{display:block;font-style:normal;font-size:.82rem;color:var(--muted);word-break:break-all}
+.opts{list-style:none;padding:0;margin:.6em 0}
+.opts li{border:1px solid var(--line);border-radius:8px;padding:.45em .7em;margin:.4em 0}
+.opts li.rec .star{background:var(--ask-soft);border-radius:999px;padding:0 .3em}
+.opts b{display:inline-block;min-width:1.4em}
+.star{color:var(--star);font-weight:700}
+.sub{border-top:1px dashed var(--line);margin-top:.6em}
+details{margin:.6em 0 0;border-top:1px solid var(--line);padding-top:.4em}
+summary{cursor:pointer;color:var(--muted);font-size:.95rem}
+details[open] summary{margin-bottom:.4em}
+details ul{padding-left:1.2em;margin:.3em 0}
+details li{margin:.25em 0}
+details .files{font-size:.85rem;color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+td,th{border-bottom:1px solid var(--line);padding:.35em .4em;text-align:left;vertical-align:top}
+.tag{display:inline-block;font-size:.78rem;border-radius:999px;padding:0 .6em;background:var(--fix);color:var(--on-fix);white-space:nowrap}
+.reply{background:var(--panel);border:2px solid var(--ask);border-radius:12px;padding:12px 16px}
+.reply pre{background:var(--code);padding:.6em .8em;border-radius:8px;overflow-x:auto;font-size:1rem;margin:.5em 0}
+.toc{display:flex;flex-wrap:wrap;gap:.4em;margin:1em 0}
+.toc a{color:var(--ink);text-decoration:none;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:.15em .8em;font-size:.92rem}
+#theme{position:fixed;top:10px;right:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:.25em .8em;font:inherit;font-size:.85rem;cursor:pointer}
+/* svg tokens */
+.s-ink{fill:var(--ink)} .s-muted{fill:var(--muted)}
+.s-ask{fill:var(--ask)} .s-fix{fill:var(--fix)} .s-on{fill:var(--on-ask)} .s-onfix{fill:var(--on-fix)}
+.s-panel{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+.s-box{fill:var(--bg);stroke:var(--muted);stroke-width:1.5}
+.s-askbox{fill:var(--ask-soft);stroke:var(--ask);stroke-width:1.5}
+.s-dash{fill:none;stroke:var(--ask);stroke-width:1.5;stroke-dasharray:5 4}
+.s-line{stroke:var(--muted);stroke-width:2;fill:none}
+.s-good{fill:var(--good)} .s-bad{fill:var(--bad)}
+.s-goodl{stroke:var(--good);stroke-width:2.5;fill:none} .s-badl{stroke:var(--bad);stroke-width:2.5;fill:none}
+.s-freeze{fill:var(--fix-soft);stroke:var(--fix);stroke-dasharray:4 3}
+svg text{font-family:inherit}
+.t14{font-size:14px} .t13{font-size:13px} .t12{font-size:12px} .t16{font-size:16px;font-weight:700}
+/* Interactive controls use the same light/dark tokens as the original page. */
+.wrap{overflow-wrap:anywhere;padding-bottom:120px}
+.card h3{min-width:0}
+.opts.is-interactive li{padding:0;position:relative}
+.option-label{display:grid;grid-template-columns:1.2em minmax(0,1fr) 1.1em;gap:.5em;padding:.6em .7em;cursor:pointer;align-items:start}
+.option-label input{margin:.4em 0 0;width:1.1em;height:1.1em;accent-color:var(--good);cursor:pointer}
+.option-content{min-width:0}
+.option-check{visibility:hidden;color:var(--good);font-weight:700}
+.opts.is-interactive li.is-selected{border-color:var(--good);background:var(--fix-soft);box-shadow:inset 0 0 0 1px var(--good)}
+.is-selected .option-check{visibility:visible}
+.opts.is-interactive li:focus-within{outline:2px solid var(--fix);outline-offset:3px}
+.star{white-space:nowrap;font-size:.88em}
+.review-note{display:block;margin:.9em 0 .6em;font-size:.9rem;color:var(--muted)}
+.review-note textarea,.reply-output{display:block;width:100%;min-width:0;border:1px solid var(--line);border-radius:8px;padding:.55em .7em;background:var(--bg);color:var(--ink);font:inherit;line-height:1.6;resize:vertical}
+.review-note textarea{margin-top:.3em;min-height:3em}
+.review-note textarea::placeholder{color:var(--muted);opacity:1}
+.review-note textarea:focus,.reply-output:focus,.reply-dock button:focus-visible{outline:2px solid var(--fix);outline-offset:2px}
+.reply-dock{position:fixed;right:16px;bottom:16px;z-index:10;width:350px;max-width:calc(100vw - 32px);max-height:72vh;max-height:72dvh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px var(--line);overflow:hidden;font-size:.9rem}
+.reply-dock[hidden]{display:none}
+.reply-toggle{display:flex;align-items:center;gap:.6em;width:100%;border:0;padding:.75em 1em;background:var(--fix-soft);color:var(--ink);font:inherit;cursor:pointer;text-align:left}
+.reply-toggle strong{font-size:1rem;white-space:nowrap}
+.reply-compact{margin-left:auto;font-size:.78rem;color:var(--muted)}
+.reply-toggle-action{color:var(--muted);font-size:.8rem;white-space:nowrap}
+.reply-body{padding:12px 14px;min-height:0;overflow-y:auto}
+.reply-progress label{display:block;color:var(--muted);font-size:.85rem}
+.reply-progress progress{display:block;width:100%;height:8px;margin:.4em 0 .8em;border:0;border-radius:999px;overflow:hidden;background:var(--line);accent-color:var(--good)}
+.reply-progress progress::-webkit-progress-bar{background:var(--line)}
+.reply-progress progress::-webkit-progress-value{background:var(--good)}
+.reply-progress progress::-moz-progress-bar{background:var(--good)}
+.reply-changes{color:var(--muted);font-size:.8rem;margin:.5em 0}
+.reply-output{background:var(--code);font-size:.9rem;min-height:7em;max-height:25vh;max-height:25dvh;overflow-wrap:anywhere}
+.reply-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.reply-actions button{border:1px solid var(--line);border-radius:8px;padding:.5em .75em;font:inherit;cursor:pointer;background:var(--panel);color:var(--ink);min-height:44px}
+.reply-actions .reply-copy{background:var(--ask);color:var(--on-ask);border-color:var(--ask);font-weight:700}
+.reply-status{min-height:1.6em;margin:.4em 0 0;font-size:.85rem;color:var(--muted)}
+@media (min-width:1100px){.wrap{margin-right:394px;margin-left:auto}}
+@media (max-width:700px){
+  html{scroll-padding-bottom:90px}
+  .wrap{padding-top:52px}
+  .reply-dock{left:8px;right:8px;bottom:8px;bottom:max(8px,env(safe-area-inset-bottom));width:auto;max-width:none;max-height:60vh;max-height:60dvh}
+  .reply-toggle{min-height:52px;padding:.65em .8em;gap:.4em}
+  .reply-body{padding:10px 12px}
+  .reply-output{min-height:5.5em}
+}
+
+html{scroll-behavior:smooth;scroll-padding-top:1em}
+.wrap{max-width:860px;padding-bottom:170px}
+.section-head{margin-top:2.4em}
+.section-head h2{margin:0;border:0;padding:0}
+.section-head figure{margin:.7em 0 1.2em;padding:12px}
+.card{scroll-margin-top:16px}
+.num{font-size:.78rem;white-space:nowrap}
+.option-consequence{display:block;color:var(--muted);font-size:.91rem;margin-top:.15em}
+.option-title b{min-width:1.2em}
+.opt-star{display:inline-block;margin-left:.25em}
+.review-note textarea{min-height:3.4em}
+.source-excerpt{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:.87rem;background:var(--quote);padding:.7em .8em;border-radius:8px}
+.related{font-size:.91rem;color:var(--ask);margin:.55em 0}
+.related a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+a{color:var(--ask)}
+.section-count{font-size:.9rem;font-weight:400;color:var(--muted);white-space:nowrap}
+.details-label{font-weight:700;font-size:.92rem;margin-top:.7em}
+.read-mark{font:inherit;font-size:.83rem;border:1px solid var(--line);border-radius:8px;padding:.45em .7em;min-height:44px;color:var(--muted);background:var(--bg);cursor:pointer}
+.card.is-seen .read-mark{color:var(--good);border-color:var(--good)}
+.button-row{margin:.6em 0;display:flex;align-items:center;gap:.5em}
+.section-head svg{max-height:95px}
+.overview svg{max-height:355px}
+.reply-output{max-height:25dvh}
+#theme{z-index:11;min-height:38px}
+@media (min-width:1100px){.wrap{max-width:860px;margin-left:max(16px,calc((100vw - 1260px)/2));margin-right:394px}}
+@media (max-width:700px){body{font-size:16px}.wrap{padding-left:12px;padding-right:12px}.card{padding:13px 12px}.card header{display:block}.num{display:inline-block;margin:0 0 .5em}h1{font-size:1.5rem}.option-label{padding:.65em .55em}.reply-dock{max-height:64dvh}.section-head h2{font-size:1.25rem}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+.s-quote{fill:var(--quote)}
+pre,table{max-width:100%;overflow-x:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.reply-body[hidden]{display:none}.card,.wrap{min-width:0}svg{max-width:100%}
+.reply-dock{bottom:max(16px,env(safe-area-inset-bottom))}
+</style></head><body><button id="theme" type="button" aria-label="切換淺色深色">淺／深</button><main class="wrap"><p class="muted">11-13 下班前 · 從完整頁 24 題裡挑出來、最要緊的幾題</p><h1>11-13 優先裁：7 題</h1><figure class="overview"><svg viewBox="0 0 640 104" role="img" aria-label="兩區題數"><text x="8" y="32" class="t14 s-ink">一、卡住落檔與日常規矩的</text><rect x="330" y="13" width="80" height="26" rx="5" class="s-box"/><rect x="330" y="13" width="40" height="26" rx="5" class="s-ask"/><text x="630" y="32" text-anchor="end" class="t14 s-ink">4 題（2 題有建議）</text><text x="8" y="80" class="t14 s-ink">二、方向性的、要想一下</text><rect x="330" y="61" width="60" height="26" rx="5" class="s-box"/><text x="630" y="80" text-anchor="end" class="t14 s-ink">3 題（0 題有建議）</text></svg><figcaption class="muted">共 7 題。實心＝有建議、已預選（2 題）；空心＝來源沒建議、停在「先不選」。</figcaption></figure><ul class="lead"><li><strong>怎麼挑的</strong>：不裁就卡住後面的工作（模板併入第 3、4 塊落檔、wf-agent 備料範圍、每次 commit 都會踩到的規矩），或是方向性的、只有你能定的。純請過目與清理類的不在這份。共 7 題，題號跟完整頁相同。</li><li>2 題有建議、已預選（★）；其餘來源沒有建議，停在「先不選」。<strong>建議一覽</strong>（— ＝沒有建議）：W12C；W18A；W7—；W9—；W10—；W21—；W22—。也可以直接在對話短答，例：<code>W12C W18A W7A W9A</code>。</li><li><strong>在家</strong>：<code>git pull</code> 之後用瀏覽器開 repo 裡的 <code>proto8/thinking/2026-11/13/aos-1113-優先裁.html</code>，內容跟公司桌面那份一樣；點選的紀錄存在各台瀏覽器、不會跟著走，在哪台答就在哪台按底部「複製」、把那一行貼回對話。</li><li>其餘 17 題在同夾的 <code>aos-1113-收工待裁.html</code>（完整頁），都不急。</li></ul><nav class="toc" aria-label="跳到各節"><a href="#sec-p1">一、卡住落檔與日常規矩的（4 題，多半一句話） 4</a><a href="#sec-p2">二、方向性的、要想一下（3 題，來源都沒有建議） 3</a><a href="#reply">怎麼回覆</a></nav><details><summary>怎麼用</summary><p>每題點一個選項，想補充就寫備註。點選項、寫備註、打開細節或按「看過」都算看過；沒看過的題在回覆裡會帶「?」，那題仍算待定、不算你裁過，之後會再問你。右下「我的回覆」會組好一行字，按「複製」後貼回對話，或貼到看板「待你裁」裡這批那題的意見框送出。選擇會存在這個瀏覽器。</p></details><section><h2 id="sec-p1">一、卡住落檔與日常規矩的（4 題，多半一句話）</h2><p class="muted">前兩題有線玄的建議、已預選；後兩題來源沒有建議。每題說明最後一句寫了「不裁會卡住什麼」。</p><article class="card" id="q-W12" data-qid="W12"><header><span class="num">W12</span><h3 id="heading-W12">(b)「被派出去的 agent 不 commit、由主線驗收後 commit；push 一律先問」要不要變成所有工作區的通用規則？</h3></header><p class="muted">aos 的 <code>wf/</code> 有這條（鐵律 2、派工硬規則）；模板本來沒有（只寫「→ commit」，誰 commit 看各工作區的偏好）。併進知識庫的通用版要不要預設帶這條？ <strong>不裁會卡住什麼</strong>：第 3、4 塊落檔時 <code>feature-dev</code> 流程尾端那句「→ commit」要怎麼寫、派發通則放不放這條；沒裁就只能照模板原文落檔，之後再改一次。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-W12"><li class=""><label class="option-label"><input type="radio" name="q-W12" value="A"><span class="option-content"><span class="option-title"><b>A</b> 整條寫進通用版</span><span class="option-consequence">每個導入的工作區預設就這樣；單人單 session 的小專案也得照。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W12" value="B"><span class="option-content"><span class="option-title"><b>B</b> 不寫，留給各工作區自己的偏好與鐵律</span><span class="option-consequence">通用版只有 tidy 那個工作流有「線不 commit」。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-W12" value="C" checked><span class="option-content"><span class="option-title"><b>C</b> 只把前半（被派出去的不 commit）當通用；「push 先問」留在各工作區的鐵律 <span class="star">★ 推薦</span></span><span class="option-consequence">折衷：多線規矩通用、push 授權各自定。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 C：線玄的建議：「A 的前半（被派出去的不 commit）當通用、push 先問留在各工作區的鐵律」——這頁把它列成 C 方便你點。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="W12 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>判準（線玄給的）：這是你對<strong>所有專案</strong>的習慣，還是只對多線並行的 repo？前者＝A。</li><li>來源檔只列 A、B 兩個選項；C 是把線玄建議的那句話單獨列出來，不是新主張。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/workflows-into-aos.md:406</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">**(b)「被派出去的不 commit、由主線驗收後 commit；push 一律先問」要不要成為通用規則**</pre></details></details></article><article class="card" id="q-W18" data-qid="W18"><header><span class="num">W18</span><h3 id="heading-W18">(h) 一張「記錄表」（決策、踩坑、想法這種一筆一筆的）在 json 裡寫成陣列、還是每筆一個鍵？</h3></header><p class="muted">aos 的 docs/02 寫「要穩定的名字就用物件、不用陣列——別人會用路徑指到的東西放成物件的鍵」。模板寫「同質記錄一律寫物件陣列」。兩句看起來打架（牴觸清單第 1 條）；wf-agent 說其實不衝突：它的陣列只用在「不會被單筆引用」的記錄。 <strong>不裁會卡住什麼</strong>：第 3 塊的骨架（決策、踩坑、想法這些記錄表）用陣列還是鍵——線玄的落檔計畫寫明「記錄表（<code>records</code>）等牴觸第 1 條裁了再定」，沒裁這幾份骨架落不了檔。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-W18"><li class="rec is-selected"><label class="option-label"><input type="radio" name="q-W18" value="A" checked><span class="option-content"><span class="option-title"><b>A</b> docs/02 補一句：「會被單獨引用的用鍵；只會整批讀、不會單筆引用的同質記錄可以用陣列」 <span class="star">★ 推薦</span></span><span class="option-consequence">決策、踩坑、想法這類「新的在上」的表可以是陣列；第 3 塊的骨架照備料落檔。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W18" value="B"><span class="option-content"><span class="option-title"><b>B</b> 不補，一律照 docs/02 現在的字面（要穩定的名字就用鍵）</span><span class="option-consequence">骨架的 <code>records</code> 要改成以某個欄當鍵，「新的在上」靠鍵的順序。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 A：線玄的建議：A。wf-agent 的意見：以 docs/02 為準、兩者不衝突，可以在 aos 寫成 A 那一句。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="W18 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>線玄：docs/02 現在那句本來就只講「別人會用路徑指到的東西」，A 是把另一半講明。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/workflows-into-aos.md:443</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">**(h) 記錄表寫成陣列還是鍵**（牴觸第 1 條）</pre></details></details></article><article class="card" id="q-W7" data-qid="W7"><header><span class="num">W7</span><h3 id="heading-W7">AGENTS.md 寫「單機開發，沒有跨機或離線的特殊情況」，但現在是家機、公司 WSL 兩台輪流。這句要不要改？</h3></header><p class="muted">AGENTS.md「開發環境」一節第一句還是「單機開發，沒有跨機或離線的特殊情況」。<strong>現況</strong>：家機與公司 WSL 兩台輪流；公司 WSL 的樹住在 aos-home、頂層 session 是樹裡的 <code>repo-aos</code>。這句是每個新 session 最先讀到的，11-13 沒人改、等你說。 <strong>不裁會卡住什麼</strong>：你今晚就換家機：新 session 最先讀的 AGENTS.md 還寫「單機開發」，家機的 agent 不會從入口知道有兩台、公司這棵樹住哪。不擋施工，但正好是今晚會碰到的。</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-W7"><li class="is-selected"><label class="option-label"><input type="radio" name="q-W7" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W7" value="A"><span class="option-content"><span class="option-title"><b>A</b> 改成照現況（兩台輪流、各自的樹在哪）</span><span class="option-consequence">改 AGENTS.md 一句＋指到 dev-env；新 session 不會再以為只有一台。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W7" value="B"><span class="option-content"><span class="option-title"><b>B</b> 不改</span><span class="option-consequence">現況；新 session 讀到跟實際不符的一句，要靠 HANDOFF 才知道有兩台。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：來源（tidy 第三輪留下的矛盾）只寫「11-13 沒改、等你說」，沒有建議。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="W7 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>AGENTS.md 是最頂層入口，照規矩 agent 不擅自改它的事實陳述，所以列成題。</li></ul><p class="files">來源：<code>wf/wait-user/01-要你裁的.md:18</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">- **tidy 第三輪留下的矛盾（11-12 晚；C-42、aos-teams 沙箱那句、P-05／P-06／P-27 對不上那處 11-13 已裁）**：N-17 不碰 pid vs 兩處 /proc 判活（11-13 你選「先不選」、留了一句原則，列第三例外或改程式仍沒選）、P-33 round 例外段清不清（11-13 `cv-P33` 只在開頭加了界定，這題沒問到）、NORMS 附錄 1～3 與 `spec`／`ideas` 兩份純歷史入口清不清、AGENTS「開發環境」那句「單機開發，沒有跨機…」vs 現況（家機、公司 WSL 兩台輪流；公司 WSL 住 `~/aos-home`、頂層是樹裡的 `repo-aos`；11-13 沒改、等你說）等 → tidy 報告 § 第三輪</pre></details></details></article><article class="card" id="q-W9" data-qid="W9"><header><span class="num">W9</span><h3 id="heading-W9">index（資料夾目錄檔）以後怎麼維護，要掛進哪條規矩？</h3></header><p class="muted">今天 repo 裡東西超過 15 個的夾都放了一份生成的 <code>_index.json</code>（文件區 25 份＋程式區 8 份）。加檔、刪檔後要重跑 <code>index_gen.py --apply</code> 它才跟得上；現在<strong>靠記得跑</strong>。線卯給了兩個掛法。 <strong>不裁會卡住什麼</strong>：沒掛進規矩之前只能「靠記得跑」；今天之後每次加檔、刪檔、搬檔，repo 裡三十幾份 index 都可能缺項或多項，越晚定、落後越多。</p><blockquote class="quote"><p>index範圍按照11-12的門檻。</p><cite>使用者 11-13（講的是放哪些夾，不是這題的維護方式；供對照）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-W9"><li class="is-selected"><label class="option-label"><input type="radio" name="q-W9" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W9" value="A"><span class="option-content"><span class="option-title"><b>A</b> 甲：改鐵律 3——每個 commit 前多跑一支 <code>index_gen.py --apply</code></span><span class="option-consequence">每個 commit 多約一秒；index 永遠跟得上，夾一超過 15 個當下就有第一份；純文件的 commit 也要跑。要改 AGENTS.md 鐵律 3 的字。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W9" value="B"><span class="option-content"><span class="option-title"><b>B</b> 乙：不改鐵律，<code>wf-lint</code> 多查一關 <code>INDEX</code></span><span class="option-consequence">平常不用記；跑 wf-lint 時才發現、那時重生。兩次 wf-lint 之間 index 可能缺項。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W9" value="C"><span class="option-content"><span class="option-title"><b>C</b> 兩個都做</span><span class="option-consequence">commit 前跑、lint 再把關一次；兩處都要改。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：來源檔寫「待使用者裁」，沒有建議；只寫了「兩個可以都做」。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="W9 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>判準：你能不能接受「index 偶爾落後幾個 commit」？不能＝A 或 C；能＝B。</li><li>乙的注意事項（線卯寫的）：現在 <code>/wf-lint</code> 只掃 <code>wf</code> 與 <code>.claude/commands</code>，新的 <code>INDEX</code> 那關要寫成不看掃哪個根、每次都跑，才有用。</li><li>甲要改的原句：鐵律 3 粗體句後面加「並跑 <code>python3 wf/tools/index_gen.py --apply</code>」，句尾補半句「東西超過 15 個的夾有一份生成的 <code>_index.json</code>，同樣不手改」。</li></ul><p class="files">來源：<code>proto8/thinking/2026-11/13/index-build.md:158</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">**掛進規矩的兩個方案（待使用者裁，hub 檔沒動）**：</pre></details></details></article></section><section><h2 id="sec-p2">二、方向性的、要想一下（3 題，來源都沒有建議）</h2><p class="muted">選項是把各種走法的後果擺出來；可以不選、在備註寫一句你的說法。每題說明最後一句寫了「不裁會卡住什麼」。</p><article class="card" id="q-W10" data-qid="W10"><header><span class="num">W10</span><h3 id="heading-W10"><code>gitignore-check</code> 這支檢查變紅，說是因為排隊的信現在帶了寄件人的登入名。要改檢查、還是改寄件人的取名？</h3></header><p class="muted"><code>extras/gitignore-check</code> 會建一個假專案跑一輪，檢查「不該進版控的東西有沒有漏出來」。調度者說：a2a 改完之後，queue 裡的信帶了<strong>寄件人的登入名</strong>，這支檢查因此變紅。<strong>注意：這件事只有調度者口述，結果檔沒收；我沒有重現、也沒核對原因</strong>，線戌的證據在 <code>~/code/xu-1113/gi-evidence/</code>。 <strong>不裁會卡住什麼</strong>：照調度者的說法這支檢查現在會紅；不處理的話每次跑全套都多一支紅的，真的漏東西時不容易看出來。（原因還沒核實，見題內。）</p><blockquote class="quote"><p>沒有針對這題的原話</p><cite></cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-W10"><li class="is-selected"><label class="option-label"><input type="radio" name="q-W10" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W10" value="A"><span class="option-content"><span class="option-title"><b>A</b> 改檢查（讓它認得、放過這種寄件人欄）</span><span class="option-consequence">檢查變綠；信裡照舊帶登入名。要先確認那個欄位落進去的檔本來就不進版控。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W10" value="B"><span class="option-content"><span class="option-title"><b>B</b> 改寄件人的取名（信裡不放登入名，換成別的名字）</span><span class="option-consequence">信的格式要動（a2a 那條線的程式與條文）；好處是機器帳號名不會出現在任何信裡。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W10" value="C"><span class="option-content"><span class="option-title"><b>C</b> 先叫人把原因查清楚、寫進結果檔，再來問我</span><span class="option-consequence">今天不裁；明天多一個小調查。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：來源沒有建議；而且原因還沒核實，所以不預選。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="W10 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><ul><li>11:41 線己二試跑全套時紅的 4 夾裡有 <code>extras/gitignore-check/tests</code>（原因當時沒寫）；15:08 釘住的 commit 在乾淨複本跑全套時，紅的只有既有 4 支、<strong>不含</strong>這支——所以它是不是穩定紅，我也沒把握。</li><li>判準：你在不在意「登入名出現在信裡」？在意＝B；不在意＝A；想先看證據＝C。</li></ul><p class="files">來源：<code>wf/SESSION-LOG.md:26</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">- **open｜eca 通知改走 a2a（11-13 線壬、線午做完）剩的**：codex 身沒接（照舊貼字）；沒實測：帳號端關掉跨 session 傳訊時、父對子說話的署名（只有單元測試）、確認框等人時訊息擠進來；`extras/gitignore-check` 因 queue 信帶寄件人登入名而紅（調度者說的，結果檔沒收、待核，線戌的證據在 `~/code/xu-1113/gi-evidence/`） → a2a-施工結果 § 沒做的</pre></details></details></article><article class="card" id="q-W21" data-qid="W21"><header><span class="num">W21</span><h3 id="heading-W21">模板 repo 的七個「包」，是不是全部都要併進 aos？</h3></header><p class="muted">模板 repo 有七包內容：<strong>kernel</strong>（最薄的那層流程）與 <strong>dev</strong>（開發工作流）你已放行、正在併。還沒問的五包：<strong>knowledge</strong>（寫作／研讀／決策）、<strong>research</strong>（文獻累積）、<strong>teaching</strong>（教材）、<strong>ops</strong>（維運）、<strong>multi-agent</strong>（檔案信箱、派工、模型分級）、<strong>heartbeat</strong>（定期事務清單）。前四包跟 aos 完全不重疊、也不依賴 aos；<strong>multi-agent 與 heartbeat 跟 aos 自己的 mailbox、clock 重疊最多</strong>（細節見摺疊）。 <strong>不裁會卡住什麼</strong>：wf-agent 現在只備了 kernel、dev 兩批料；其餘幾包要不要備、備到哪，等這題。沒裁它就停在這兩批，或自己猜範圍白做。</p><blockquote class="quote"><p>1.變成aos的東西。2.都可以。3.都可以(也可以都要)。4.不用。workflows repo仍在，只是幾乎不再更新。5.邊用邊併。6.8kb上限可帶入(但只限.md)，檢查工具不留。7.拆。8.不用。9.不用</p><cite>使用者 11-13 14:47 前後（九題的回覆；第 5 點「邊用邊併」）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-W21"><li class="is-selected"><label class="option-label"><input type="radio" name="q-W21" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W21" value="A"><span class="option-content"><span class="option-title"><b>A</b> 全部都併</span><span class="option-consequence">工作量最大；multi-agent 的檔案信箱會跟 aos mailbox 並存兩套說法，要有人寫清楚「樹裡用哪套」。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W21" value="B"><span class="option-content"><span class="option-title"><b>B</b> 只併已放行的 kernel、dev，其餘五包不併</span><span class="option-consequence">最省；其餘留在舊 repo（它幾乎不再更新）。之後要用得回舊 repo 翻。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W21" value="C"><span class="option-content"><span class="option-title"><b>C</b> 併 knowledge／research／teaching／ops；multi-agent、heartbeat 只併 aos 沒有的那幾塊</span><span class="option-consequence">重疊的部分以 aos 的 mailbox、clock 為準；只搬 aos 沒有的（例：派工與模型分級、「要做什麼、到期怎麼判」的清單）。要逐塊判斷，最花腦。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W21" value="D"><span class="option-content"><span class="option-title"><b>D</b> 現在不定，併完 kernel、dev 再說（邊用邊併）</span><span class="option-consequence">照你「邊用邊併」字面；這題留到下一批。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：這題是調度者列的，結果檔沒有建議；選項是這頁依 wf-agent 的盤點事實整理的，不是誰的主張。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="W21 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>能愈快併入愈好，但不要因為趕工而喪失品質</p><cite>使用者 11-13（wf-agent 信裡轉述的，repo-aos 沒有直接聽到）</cite></blockquote><ul><li><strong>數量的說法對一下</strong>：任務書說「七個包」；wf-agent 的盤點列的 flavors 是 dev、knowledge、teaching、research、ops、heartbeat、multi-agent 七個，kernel 是 template 那層、不在 flavors 裡。所以「還沒問的」照盤點是六包（上面六個粗體）。</li><li><strong>multi-agent ↔ aos mailbox</strong>（wf-agent 的盤點，標【查】的）：aos 的 mailbox 本來就是照這套 inbox 協議做的——信的四段（做了什麼／產出／沒做到／需要決定）與六個 STATUS 一一對得上。差別：wf 的信在工作區、進 git，aos 的信在 stack、不進 git；wf 有五通道、團隊、主題訂閱、上游路由，aos 都沒有；wf 的醒鐘照 STATUS 分層，aos 的 <code>mail_notify</code> 不分；wf 的通訊錄 ROSTER 有「領地」「答不出」，aos 的 <code>agents.json</code> 沒有。</li><li><strong>multi-agent 的另一半</strong>（派線、驅動 CLI agent、資源鎖、交接書、模型分級表）：不綁 aos；aos repo 的 <code>wf/workflows/dispatch/</code>、<code>team-model*</code> 有舊版。</li><li><strong>heartbeat ↔ aos clock</strong>：wf 只有清單（routines、schedule）、引擎外借（Claude Code <code>/loop</code>、cron）；aos 有引擎（<code>clock_register</code>、<code>on_clock</code> hook）但算的是 cycle、沒有「每天幾點」，也沒有「要做什麼、到期怎麼判」的清單。wf-agent 的話：「只有觸發那一半有 aos 對應，清單那一半沒有」。</li><li>七包都不依賴 aos（盤點：<code>flavors/</code> 0 級 11 項，grep 不到 aos 字樣）。</li><li>事實來源：wf-agent 的盤點筆記 <code>aos-binding.md</code>（在今天的暫存夾 <code>wf-agent-scratch-1113</code>，見完整頁 W8——裁這題前別刪）§2、§3.1、§3.2。</li></ul><p class="files">來源：<code>wf/wait-user/01-要你裁的.md:28</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">- **模板 repo 的七個領域包要不要全併進 aos（11-13）**：現在放行的只有 kernel 薄流程與 dev 包，其餘五包等你裁；骨架與 `wf-init` 放 repo 哪個夾也沒定——見桌面頁 `aos-1113-收工待裁.html`（原稿在 thinking 11-13，檔名 【頁名1113】） → workflows-into-aos § 第 3、4 塊落檔計畫</pre></details></details></article><article class="card" id="q-W22" data-qid="W22"><header><span class="num">W22</span><h3 id="heading-W22">你說過三句關於「檔案用什麼格式」的話，擺在一起對不上。哪句為準？</h3></header><p class="muted">① <strong>C-42（你今天第二輪裁的 rd-C42:B）</strong>：「推薦 JSON、別的格式不禁止」。② <strong>D1（你 11-12）</strong>：內容走 json、不走 markdown。③ <strong>鐵律 6</strong>：條列走資料檔（json／csv）、導航留 md。問題：非 JSON 的檔（md 等）工具與文件要怎麼交代？要交代到哪、動不動程式，第二輪那題寫明有這個後果但沒定。模板的 <code>md_for_humans</code>（「內容一律走 json、只留四個 md」，牴觸第 7 條）與 完整頁的 W13 都在等這題。 <strong>不裁會卡住什麼</strong>：併入時「哪些檔留 md」定不了：模板的 <code>md_for_humans</code>（只留四個 md）沒帶進來、analysis／PATCH／APPLY 用 md 還是 json（完整頁 W13）、以及 aos 自己的工具與文件怎麼交代非 JSON 的檔，都在等這句。</p><blockquote class="quote"><p>.json比markdown好，有需要的話再做一些輔助工具和程式幫助人看json就好。2.先放着，這是後面一邊玩一邊自然會要做的。…</p><cite>使用者 11-12（wf-to-aos；D1 的出處，來源檔的引法、後面有省略）</cite></blockquote><ul class="opts is-interactive" role="radiogroup" aria-labelledby="heading-W22"><li class="is-selected"><label class="option-label"><input type="radio" name="q-W22" value="U" checked><span class="option-content"><span class="option-title"><b>U</b> 還沒想好，先不選</span><span class="option-consequence">來源沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W22" value="A"><span class="option-content"><span class="option-title"><b>A</b> 以 ① 為準：JSON 是推薦，md 等別的格式照樣可以；D1 當方向、不當規定</span><span class="option-consequence">改動最少；工具不用管非 JSON 的檔；模板的「只留四個 md」不帶進來。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W22" value="B"><span class="option-content"><span class="option-title"><b>B</b> 以 ② 為準：新內容一律 json，md 只留點名的幾種（入口、給人看的說明…）</span><span class="option-consequence">要列出「哪幾種留 md」的名單（模板那份是四個）；C-42 的字面要再收緊一點；W13 傾向改 json。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li><li class=""><label class="option-label"><input type="radio" name="q-W22" value="C"><span class="option-content"><span class="option-title"><b>C</b> 照 ③ 分工：條列／記錄走 json，導航與給人讀的敘述留 md</span><span class="option-consequence">跟 aos 的 <code>wf/</code> 現況一致；D1 的「不走 markdown」讀成只講條列內容。</span></span><span class="option-check" aria-hidden="true">✓</span></label></li></ul><p class="concl">推薦 ：來源只寫「要你一句話定哪句為準」，沒有建議。三個選項是這頁把三句話各自當準時的後果擺出來，來源檔沒有列選項。</p><label class="review-note">備註（選填）<textarea rows="2" placeholder="想補一句話？" aria-label="W22 備註"></textarea></label><div class="button-row"><button class="read-mark" type="button" aria-pressed="false">看過，先照這個</button></div><details><summary>細節・原話・來源</summary><blockquote class="quote"><p>rd-C42:B</p><cite>使用者 11-13（第二輪待裁頁；B＝語氣放寬成「推薦 JSON、別的格式不禁止」）</cite></blockquote><ul><li>鐵律 6 全文在 AGENTS.md：「條列走資料檔、導航留 md：給 AI 消化的同質記錄表 &gt;1 KB 存 <code>.json</code>／<code>.csv</code>…給人點的導航連結表留 md。」</li><li>你也可以不選 A/B/C、直接在備註寫一句你的說法——三句話怎麼並存由你定。</li><li>判準：你希望半年後 repo 裡的 md <strong>越來越少</strong>（＝B）、<strong>維持現在的分工</strong>（＝C）、還是<strong>不管它</strong>（＝A）？</li></ul><p class="files">來源：<code>wf/wait-user/01-要你裁的.md:13</code></p><details><summary>來源原文（逐字）</summary><pre class="source-excerpt">- **C-42 放寬成「推薦 JSON、別的格式不禁止」之後，非 JSON 的檔工具與文件要怎麼交代（11-13；題目寫明有這個後果、沒定交代到哪）**：連同你 11-12 的 D1「內容走 json、不走 markdown」與鐵律 6「條列走資料檔、導航留 md」三句擺在一起對不上的地方，要你一句話定哪句為準 → 裁定落地 § 第二輪、wf-to-aos</pre></details></details></article></section><details><summary>沒放進這份、但跟落檔有關的（在完整頁；都有建議，回「照建議」就行）</summary><ul><li>W13 analysis／PATCH／APPLY 留 md 或改 json——線玄建議跟 W22 一起裁、先留 md。</li><li>W19 模板的「300 行就拆」帶不帶——wf-agent 建議不帶；第 3 塊落檔時會把那個例子拿掉。</li><li>W11、W14～W17（等使用者的事何時改寄信、patch 包放哪、回覆風格算不算通用、tidy 第 6 條、檔案格式推薦）——線玄都有建議，不裁也能照建議先落檔、之後可翻。</li></ul></details><details><summary>其他</summary><ul><li>完整頁（24 題）：同夾 <code>aos-1113-收工待裁.html</code>；今早的大頁（還剩 109 題沒答）：同夾 <code>aos-wu-1113-待你裁.html</code>。</li><li>今天的 commit 都還沒 push——你說過「我今天五點下班，下班前再統一push。」；沒推的話家機 pull 不到這兩頁。</li></ul></details><h2 id="reply">怎麼回覆</h2><p>在「我的回覆」按「複製」，貼回對話或看板這批的意見框。</p><details><summary>全照推薦時等於回這一行</summary><pre>[1113-priority] W12:C、W18:A、W7:U、W9:U、W10:U、W21:U、W22:U</pre></details></main><aside class="reply-dock"><button class="reply-toggle" type="button" aria-expanded="true" aria-controls="reply-body"><strong>我的回覆</strong><span class="reply-compact">已看過 0／7 題</span><span class="reply-toggle-action">收合</span></button><div class="reply-body" id="reply-body"><div class="reply-progress"><progress value="0" max="7" aria-label="已看過題數"></progress></div><p class="reply-changes">* ＝跟推薦不同（0 題）；? ＝還沒看過（7 題，仍算待定、之後再問）</p><textarea class="reply-output" readonly aria-label="我的回覆">[1113-priority] W12:C?、W18:A?、W7:U*?、W9:U*?、W10:U*?、W21:U*?、W22:U*?</textarea><div class="reply-actions"><button class="reply-copy" type="button">複製</button><button class="reply-reset" type="button">全部重設為推薦</button></div><p class="reply-status" role="status" aria-live="polite"></p></div></aside><script type="application/json" id="decide-data">{"batch":"1113-priority","storage_key":"aos-decide-1113-priority-aa61e372f4d7","rows":[{"id":"W12","keys":["A","B","C"],"recommend":"C","fallback":"C"},{"id":"W18","keys":["A","B"],"recommend":"A","fallback":"A"},{"id":"W7","keys":["U","A","B"],"recommend":"","fallback":"U"},{"id":"W9","keys":["U","A","B","C"],"recommend":"","fallback":"U"},{"id":"W10","keys":["U","A","B","C"],"recommend":"","fallback":"U"},{"id":"W21","keys":["U","A","B","C","D"],"recommend":"","fallback":"U"},{"id":"W22","keys":["U","A","B","C"],"recommend":"","fallback":"U"}]}</script><script>/* Wire offline choices, notes, seen state, themes, and reply copying. */
+(() => {
+  'use strict';
+  const data = JSON.parse(document.getElementById('decide-data').textContent);
+  const choices = Object.create(null), notes = Object.create(null), seen = Object.create(null);
+  const cards = new Map();
+  const output = document.querySelector('.reply-output');
+  const status = document.querySelector('.reply-status');
+  const reset = document.querySelector('.reply-reset');
+  const theme = document.documentElement;
+  try {
+    const savedTheme = localStorage.getItem('aos-theme');
+    if (savedTheme === 'light' || savedTheme === 'dark') theme.dataset.theme = savedTheme;
+  } catch (_) { /* Storage is optional. */ }
+  document.getElementById('theme').addEventListener('click', () => {
+    const dark = theme.dataset.theme ? theme.dataset.theme === 'dark' :
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
+    theme.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem('aos-theme', theme.dataset.theme); } catch (_) { /* Keep the current theme. */ }
+  });
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(data.storage_key) || '{}') || {}; }
+  catch (_) { /* Ignore unavailable or malformed saved state. */ }
+  function validObject(value) { return value && typeof value === 'object' && !Array.isArray(value); }
+  for (const row of data.rows) {
+    choices[row.id] = validObject(saved.choices) && row.keys.includes(saved.choices[row.id]) ?
+      saved.choices[row.id] : row.fallback;
+    notes[row.id] = validObject(saved.notes) && typeof saved.notes[row.id] === 'string' ? saved.notes[row.id] : '';
+    seen[row.id] = !!(validObject(saved.seen) && saved.seen[row.id] === true);
+    cards.set(row.id, document.getElementById('q-' + row.id));
+  }
+  function store() {
+    try { localStorage.setItem(data.storage_key, JSON.stringify({choices, notes, seen})); }
+    catch (_) { /* The page continues to work in memory. */ }
+  }
+  function refresh() {
+    let count = 0, changed = 0;
+    const items = data.rows.map(row => {
+      const card = cards.get(row.id);
+      if (seen[row.id]) count++;
+      const different = row.keys.length > 0 && choices[row.id] !== row.recommend;
+      if (different) changed++;
+      card.classList.toggle('is-seen', seen[row.id]);
+      const mark = card.querySelector('.read-mark');
+      mark.textContent = seen[row.id] ? '✓ 已看過' : '看過，先照這個';
+      mark.setAttribute('aria-pressed', String(seen[row.id]));
+      card.querySelectorAll('input[type="radio"]').forEach(input => {
+        input.checked = input.value === choices[row.id];
+        input.closest('li').classList.toggle('is-selected', input.checked);
+      });
+      const note = notes[row.id].trim().replace(/\r\n|\r|\n/g, ' / ');
+      return row.id + ':' + choices[row.id] + (different ? '*' : '') + (seen[row.id] ? '' : '?') +
+        (note ? '（備註：' + note + '）' : '');
+    });
+    output.value = '[' + data.batch + '] ' + items.join('、');
+    document.querySelector('.reply-compact').textContent = '已看過 ' + count + '／' + data.rows.length + ' 題';
+    document.querySelector('.reply-progress progress').value = count;
+    document.querySelector('.reply-changes').textContent = '* ＝跟推薦不同（' + changed +
+      ' 題）；? ＝還沒看過（' + (data.rows.length - count) + ' 題，仍算待定、之後再問）';
+  }
+  function update(row) {
+    seen[row.id] = true;
+    status.textContent = '';
+    refresh();
+    store();
+  }
+  for (const row of data.rows) {
+    const card = cards.get(row.id);
+    card.querySelectorAll('input[type="radio"]').forEach(input => {
+      input.addEventListener('click', () => { choices[row.id] = input.value; update(row); });
+      input.addEventListener('change', () => { choices[row.id] = input.value; update(row); });
+    });
+    const note = card.querySelector('textarea');
+    note.value = notes[row.id];
+    note.addEventListener('input', () => { notes[row.id] = note.value; update(row); });
+    card.querySelector('.read-mark').addEventListener('click', () => update(row));
+    card.querySelectorAll('details').forEach(details => {
+      details.addEventListener('toggle', () => { if (details.open) update(row); });
+    });
+  }
+  const toggle = document.querySelector('.reply-toggle');
+  const body = document.getElementById('reply-body');
+  function collapse(value) {
+    body.hidden = value;
+    toggle.setAttribute('aria-expanded', String(!value));
+    document.querySelector('.reply-toggle-action').textContent = value ? '展開' : '收合';
+  }
+  collapse(window.matchMedia('(max-width: 700px)').matches);
+  toggle.addEventListener('click', () => collapse(!body.hidden));
+  document.querySelector('.reply-copy').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(output.value);
+      status.textContent = '已複製';
+    } catch (_) {
+      output.focus();
+      output.select();
+      output.setSelectionRange(0, output.value.length);
+      status.textContent = '已選取，請按 Ctrl+C';
+    }
+  });
+  let resetTimer = null;
+  reset.addEventListener('click', () => {
+    if (resetTimer === null) {
+      reset.textContent = '再按一次確認重設';
+      resetTimer = window.setTimeout(() => {
+        resetTimer = null;
+        reset.textContent = '全部重設為推薦';
+      }, 4000);
+      return;
+    }
+    window.clearTimeout(resetTimer);
+    resetTimer = null;
+    reset.textContent = '全部重設為推薦';
+    for (const row of data.rows) {
+      choices[row.id] = row.fallback;
+      notes[row.id] = '';
+      seen[row.id] = false;
+      cards.get(row.id).querySelector('textarea').value = '';
+    }
+    refresh();
+    store();
+    status.textContent = '已重設為推薦';
+  });
+  refresh();
+})();
+</script></body></html>

@@ -11,6 +11,7 @@
  "lead": [
   "共 24 題，照「一句話就能裁」排前面、要想的排後面。**12 題有建議、已預選（★）**，同意就不用動；其餘 12 題來源沒有建議，停在「先不選」。",
   "最短的回法：直接回「都照建議」，再補沒建議的幾題（例：`W3A W4A W8B`）。**建議一覽**（— ＝沒有建議）：W1A；W2A；W3—；W4—；W5—；W6—；W7—；W8—；W9—；W9bA；W10—；W11A；W12C；W13C；W14A；W15A；W16A；W17A；W18A；W19A；W20—；W21—；W22—；W23—。",
+  "**在家**：`git pull` 之後用瀏覽器開 repo 裡的 `proto8/thinking/2026-11/13/aos-1113-收工待裁.html`，內容跟公司桌面那份一樣；點選的紀錄存在各台瀏覽器、不會跟著走，在哪台答就在哪台按「複製」。只想先裁最要緊的 7 題，看同夾的 `aos-1113-優先裁.html`（題號相同）。",
   "答完按底部「複製」，把那一行貼回對話；沒點開過的題會帶 `?`，仍算待定、之後再問。題號 W1～W23（含 W9b）是固定的，之後對話裡可以直接引用。"
  ],
  "overview_svg": "<svg viewBox=\"0 0 640 200\" role=\"img\" aria-label=\"各區題數\"><text x=\"8\" y=\"32\" class=\"t14 s-ink\">一、一句話就能裁</text><rect x=\"330\" y=\"13\" width=\"220\" height=\"26\" rx=\"5\" class=\"s-box\"/><rect x=\"330\" y=\"13\" width=\"60\" height=\"26\" rx=\"5\" class=\"s-ask\"/><text x=\"630\" y=\"32\" text-anchor=\"end\" class=\"t14 s-ink\">11 題（3 題有建議）</text><text x=\"8\" y=\"80\" class=\"t14 s-ink\">二、模板併入：第二批八題</text><rect x=\"330\" y=\"61\" width=\"160\" height=\"26\" rx=\"5\" class=\"s-box\"/><rect x=\"330\" y=\"61\" width=\"160\" height=\"26\" rx=\"5\" class=\"s-ask\"/><text x=\"630\" y=\"80\" text-anchor=\"end\" class=\"t14 s-ink\">8 題（8 題有建議）</text><text x=\"8\" y=\"128\" class=\"t14 s-ink\">三、模板併入：牴觸清單</text><rect x=\"330\" y=\"109\" width=\"40\" height=\"26\" rx=\"5\" class=\"s-box\"/><rect x=\"330\" y=\"109\" width=\"20\" height=\"26\" rx=\"5\" class=\"s-ask\"/><text x=\"630\" y=\"128\" text-anchor=\"end\" class=\"t14 s-ink\">2 題（1 題有建議）</text><text x=\"8\" y=\"176\" class=\"t14 s-ink\">四、要想一下的</text><rect x=\"330\" y=\"157\" width=\"60\" height=\"26\" rx=\"5\" class=\"s-box\"/><rect x=\"330\" y=\"157\" width=\"0\" height=\"26\" rx=\"5\" class=\"s-ask\"/><text x=\"630\" y=\"176\" text-anchor=\"end\" class=\"t14 s-ink\">3 題（0 題有建議）</text></svg>",
@@ -133,7 +134,7 @@
    ],
    "source_path": "../../../../wf/wait-user/01-要你裁的.md",
    "source_lines": "29",
-   "source_excerpt": "- **`json_text` 折行把「e.g.」「a.」這類當句尾誤折，要不要處理（11-13；調度者列的題，結果檔還沒收）**：線地修的是行首清單編號（`1.`、`12.`、`1.2.`、`4)`）不被折開（`b374ac376`），縮寫與字母編號這類沒處理 → `wf/tools/json_text.py` 檔頭",
+   "source_excerpt": "- **`json_text` 折行把「e.g.」「a.」這類當句尾誤折，要不要處理（11-13）**：線地修的是行首清單編號不被折開（`b374ac376`），縮寫與字母編號沒處理——見桌面頁 `aos-1113-收工待裁.html`（原稿在 thinking 11-13，檔名 【頁名1113】）",
    "answer": "",
    "answer_state": "pending",
    "answer_note": "",
@@ -389,7 +390,7 @@
    "id": "W8",
    "section": "s1",
    "question": "今天各線在 `~/code/` 留了 13 個暫存夾（共約 750M 以上），要不要刪？",
-   "eli5": "WAIT_USER 記的是 11 個；我 16:00 看到 **13 個**（多了 `tian-1113`、`wf-agent-scratch-1113`）。裡面有的已經用完，有的**還不能刪**：`kf2-1113` 放著 kernel 批 5／6／10 三份補丁（**只在這裡，進 main 前不能刪**）。agent 都沒刪，等你說。",
+   "eli5": "共 **13 個**（16:05 多了 `tian-1113`、`wf-agent-scratch-1113`）。裡面有的已經用完，有的**還不能刪**：`kf2-1113` 放著 kernel 批 5／6／10 三份補丁（**只在這裡，進 main 前不能刪**）；`wf-agent-scratch-1113` 是 wf-agent 報告的抄本，模板第 3、4 塊落檔前不能刪。agent 都沒刪，等你說。",
    "options": [
     {
      "key": "U",
@@ -403,7 +404,7 @@
     },
     {
      "key": "B",
-     "label": "刪掉「確定用完的」，留 `kf2-1113`（補丁）與你在備註點名要留的",
+     "label": "刪掉「確定用完的」，留 `kf2-1113`（補丁）、`wf-agent-scratch-1113`（報告抄本）與你在備註點名要留的",
      "consequence": "調度者逐個確認成品已進 main 才刪；`kf2-1113` 留到批 5／6／10 進 main。"
     },
     {
@@ -421,13 +422,13 @@
     }
    ],
    "details": [
-    "WAIT_USER 列的 11 個：`a2a-build-1113`（a2a 施工實測樹）、`a2a-try-1113`、`kbuild-1113`（編好的新 `aos-daemon`，15:24 停樹時已換上）、`kf2-1113`、`mcp-try-1113`（下載的三台外部 MCP server，當時留著給你看）、`ops-try-1113`、`shen-try-1113`、`si-try-1113`、`six-try-1113`（含 patch 草稿）、`xu-1113`（線戌批 1b 成品——15:49 已進 main `56a7fe498`；裡面還有 gitignore-check 的證據，見 W9）、`you-1113`。",
+    "其中 11 個的說明：`a2a-build-1113`（a2a 施工實測樹）、`a2a-try-1113`、`kbuild-1113`（編好的新 `aos-daemon`，15:24 停樹時已換上）、`kf2-1113`、`mcp-try-1113`（下載的三台外部 MCP server，當時留著給你看）、`ops-try-1113`、`shen-try-1113`、`si-try-1113`、`six-try-1113`（含 patch 草稿）、`xu-1113`（線戌批 1b 成品——15:49 已進 main `56a7fe498`；裡面還有 gitignore-check 的證據，見 W9）、`you-1113`。",
     "另有測試留下的對話紀錄與兩個測試夾的信任紀錄（見 W6）。",
     "`wf-agent-scratch-1113` 是 wf-agent 盤點模板 repo 的筆記（W21 的事實來源）。"
    ],
    "source_path": "../../../../wf/wait-user/04-雜事.md",
    "source_lines": "9",
-   "source_excerpt": "- **公司 WSL `~/code/` 底下 11-13 各線留的 11 個暫存夾，要不要刪（agent 沒刪，等你說）**：`a2a-build-1113`（341M，a2a 施工實測樹）、`a2a-try-1113`（a2a 調查）、`kbuild-1113`（66M，編好的新 `aos-daemon`，停樹要用）、`kf2-1113`（停樹腳本與備份落點、批 5／6／10 三份補丁——**補丁只在這裡，進 main 前不能刪**）、`mcp-try-1113`（124M，下載的三台外部 MCP server，當時留著給你看）、`ops-try-1113`、`shen-try-1113`、`si-try-1113`、`six-try-1113`（含 patch 草稿）、`xu-1113`（118M，線戌批 1b 的成品，還沒進 main）、`you-1113`（104M）；另有測試留下的對話紀錄（`~/.claude/projects/`、`~/.codex/sessions/2026/11/13/`）與 `~/.claude.json` 裡兩個測試夾的信任紀錄 → thinking 11-13",
+   "source_excerpt": "- **公司 WSL `~/code/` 底下 11-13 各線留的 13 個暫存夾（16:05 多了 `tian-1113` 與 `wf-agent-scratch-1113`——後者是 `wf-agent` 五份報告的抄本，第 3、4 塊落檔前不能刪），要不要刪（agent 沒刪，等你說）**：`a2a-build-1113`（341M，a2a 施工實測樹）、`a2a-try-1113`（a2a 調查）、`kbuild-1113`（66M，編好的新 `aos-daemon`，停樹要用）、`kf2-1113`（停樹腳本與備份落點、批 5／6／10 三份補丁——**補丁只在這裡，進 main 前不能刪**）、`mcp-try-1113`（124M，下載的三台外部 MCP server，當時留著給你看）、`ops-try-1113`、`shen-try-1113`、`si-try-1113`、`six-try-1113`（含 patch 草稿）、`xu-1113`（118M，線戌批 1b 的成品，還沒進 main）、`you-1113`（104M）；另有測試留下的對話紀錄（`~/.claude/projects/`、`~/.codex/sessions/2026/11/13/`）與 `~/.claude.json` 裡兩個測試夾的信任紀錄 → thinking 11-13",
    "answer": "",
    "answer_state": "pending",
    "answer_note": "",
@@ -1009,7 +1010,7 @@
    ],
    "source_path": "../../../../wf/wait-user/01-要你裁的.md",
    "source_lines": "28",
-   "source_excerpt": "- **模板 repo 的七個領域包（flavors）要不要全併進 aos（11-13；調度者列的題，結果檔還沒收）**：現在只裁了「邊用邊併」、先併組織原則那幾份；骨架與 `wf-init`、`flavors/` 排最後、放 repo 哪個夾也沒定 → workflows-into-aos § 使用者裁定",
+   "source_excerpt": "- **模板 repo 的七個領域包要不要全併進 aos（11-13）**：現在放行的只有 kernel 薄流程與 dev 包，其餘五包等你裁；骨架與 `wf-init` 放 repo 哪個夾也沒定——見桌面頁 `aos-1113-收工待裁.html`（原稿在 thinking 11-13，檔名 【頁名1113】） → workflows-into-aos § 第 3、4 塊落檔計畫",
    "answer": "",
    "answer_state": "pending",
    "answer_note": "",

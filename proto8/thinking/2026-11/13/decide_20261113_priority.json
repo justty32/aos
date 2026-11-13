@@ -1,0 +1,397 @@
+{
+ "description": "Priority subset of the 11-13 end-of-day questions: the few that block later work or set direction.",
+ "contract": "wf-table/1",
+ "source": "README.md",
+ "extracted": "2026-11-13",
+ "kind": "decide-page/1",
+ "batch": "1113-priority",
+ "line": "repo-aos",
+ "title": "11-13 優先裁：7 題",
+ "kicker": "11-13 下班前 · 從完整頁 24 題裡挑出來、最要緊的幾題",
+ "lead": [
+  "**怎麼挑的**：不裁就卡住後面的工作（模板併入第 3、4 塊落檔、wf-agent 備料範圍、每次 commit 都會踩到的規矩），或是方向性的、只有你能定的。純請過目與清理類的不在這份。共 7 題，題號跟完整頁相同。",
+  "2 題有建議、已預選（★）；其餘來源沒有建議，停在「先不選」。**建議一覽**（— ＝沒有建議）：W12C；W18A；W7—；W9—；W10—；W21—；W22—。也可以直接在對話短答，例：`W12C W18A W7A W9A`。",
+  "**在家**：`git pull` 之後用瀏覽器開 repo 裡的 `proto8/thinking/2026-11/13/aos-1113-優先裁.html`，內容跟公司桌面那份一樣；點選的紀錄存在各台瀏覽器、不會跟著走，在哪台答就在哪台按底部「複製」、把那一行貼回對話。",
+  "其餘 17 題在同夾的 `aos-1113-收工待裁.html`（完整頁），都不急。"
+ ],
+ "overview_svg": "<svg viewBox=\"0 0 640 104\" role=\"img\" aria-label=\"兩區題數\"><text x=\"8\" y=\"32\" class=\"t14 s-ink\">一、卡住落檔與日常規矩的</text><rect x=\"330\" y=\"13\" width=\"80\" height=\"26\" rx=\"5\" class=\"s-box\"/><rect x=\"330\" y=\"13\" width=\"40\" height=\"26\" rx=\"5\" class=\"s-ask\"/><text x=\"630\" y=\"32\" text-anchor=\"end\" class=\"t14 s-ink\">4 題（2 題有建議）</text><text x=\"8\" y=\"80\" class=\"t14 s-ink\">二、方向性的、要想一下</text><rect x=\"330\" y=\"61\" width=\"60\" height=\"26\" rx=\"5\" class=\"s-box\"/><text x=\"630\" y=\"80\" text-anchor=\"end\" class=\"t14 s-ink\">3 題（0 題有建議）</text></svg>",
+ "overview_caption": "共 7 題。實心＝有建議、已預選（2 題）；空心＝來源沒建議、停在「先不選」。",
+ "sections": [
+  {
+   "id": "p1",
+   "title": "一、卡住落檔與日常規矩的（4 題，多半一句話）",
+   "intro": "前兩題有線玄的建議、已預選；後兩題來源沒有建議。每題說明最後一句寫了「不裁會卡住什麼」。"
+  },
+  {
+   "id": "p2",
+   "title": "二、方向性的、要想一下（3 題，來源都沒有建議）",
+   "intro": "選項是把各種走法的後果擺出來；可以不選、在備註寫一句你的說法。每題說明最後一句寫了「不裁會卡住什麼」。"
+  }
+ ],
+ "columns": [
+  "id",
+  "section",
+  "question",
+  "eli5",
+  "options",
+  "recommend",
+  "why",
+  "quotes",
+  "details",
+  "source_path",
+  "source_lines",
+  "source_excerpt",
+  "answer",
+  "answer_state",
+  "answer_note",
+  "answered_at"
+ ],
+ "link_columns": [
+  "source_path"
+ ],
+ "appendix": [
+  {
+   "title": "沒放進這份、但跟落檔有關的（在完整頁；都有建議，回「照建議」就行）",
+   "items": [
+    "W13 analysis／PATCH／APPLY 留 md 或改 json——線玄建議跟 W22 一起裁、先留 md。",
+    "W19 模板的「300 行就拆」帶不帶——wf-agent 建議不帶；第 3 塊落檔時會把那個例子拿掉。",
+    "W11、W14～W17（等使用者的事何時改寄信、patch 包放哪、回覆風格算不算通用、tidy 第 6 條、檔案格式推薦）——線玄都有建議，不裁也能照建議先落檔、之後可翻。"
+   ]
+  },
+  {
+   "title": "其他",
+   "items": [
+    "完整頁（24 題）：同夾 `aos-1113-收工待裁.html`；今早的大頁（還剩 109 題沒答）：同夾 `aos-wu-1113-待你裁.html`。",
+    "今天的 commit 都還沒 push——你說過「我今天五點下班，下班前再統一push。」；沒推的話家機 pull 不到這兩頁。"
+   ]
+  }
+ ],
+ "rows": [
+  {
+   "id": "W12",
+   "section": "p1",
+   "question": "(b)「被派出去的 agent 不 commit、由主線驗收後 commit；push 一律先問」要不要變成所有工作區的通用規則？",
+   "eli5": "aos 的 `wf/` 有這條（鐵律 2、派工硬規則）；模板本來沒有（只寫「→ commit」，誰 commit 看各工作區的偏好）。併進知識庫的通用版要不要預設帶這條？ **不裁會卡住什麼**：第 3、4 塊落檔時 `feature-dev` 流程尾端那句「→ commit」要怎麼寫、派發通則放不放這條；沒裁就只能照模板原文落檔，之後再改一次。",
+   "options": [
+    {
+     "key": "A",
+     "label": "整條寫進通用版",
+     "consequence": "每個導入的工作區預設就這樣；單人單 session 的小專案也得照。"
+    },
+    {
+     "key": "B",
+     "label": "不寫，留給各工作區自己的偏好與鐵律",
+     "consequence": "通用版只有 tidy 那個工作流有「線不 commit」。"
+    },
+    {
+     "key": "C",
+     "label": "只把前半（被派出去的不 commit）當通用；「push 先問」留在各工作區的鐵律",
+     "consequence": "折衷：多線規矩通用、push 授權各自定。"
+    }
+   ],
+   "recommend": "C",
+   "why": "線玄的建議：「A 的前半（被派出去的不 commit）當通用、push 先問留在各工作區的鐵律」——這頁把它列成 C 方便你點。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [
+    "判準（線玄給的）：這是你對**所有專案**的習慣，還是只對多線並行的 repo？前者＝A。",
+    "來源檔只列 A、B 兩個選項；C 是把線玄建議的那句話單獨列出來，不是新主張。"
+   ],
+   "source_path": "workflows-into-aos.md",
+   "source_lines": "406",
+   "source_excerpt": "**(b)「被派出去的不 commit、由主線驗收後 commit；push 一律先問」要不要成為通用規則**",
+   "answer": "",
+   "answer_state": "pending",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "W18",
+   "section": "p1",
+   "question": "(h) 一張「記錄表」（決策、踩坑、想法這種一筆一筆的）在 json 裡寫成陣列、還是每筆一個鍵？",
+   "eli5": "aos 的 docs/02 寫「要穩定的名字就用物件、不用陣列——別人會用路徑指到的東西放成物件的鍵」。模板寫「同質記錄一律寫物件陣列」。兩句看起來打架（牴觸清單第 1 條）；wf-agent 說其實不衝突：它的陣列只用在「不會被單筆引用」的記錄。 **不裁會卡住什麼**：第 3 塊的骨架（決策、踩坑、想法這些記錄表）用陣列還是鍵——線玄的落檔計畫寫明「記錄表（`records`）等牴觸第 1 條裁了再定」，沒裁這幾份骨架落不了檔。",
+   "options": [
+    {
+     "key": "A",
+     "label": "docs/02 補一句：「會被單獨引用的用鍵；只會整批讀、不會單筆引用的同質記錄可以用陣列」",
+     "consequence": "決策、踩坑、想法這類「新的在上」的表可以是陣列；第 3 塊的骨架照備料落檔。"
+    },
+    {
+     "key": "B",
+     "label": "不補，一律照 docs/02 現在的字面（要穩定的名字就用鍵）",
+     "consequence": "骨架的 `records` 要改成以某個欄當鍵，「新的在上」靠鍵的順序。"
+    }
+   ],
+   "recommend": "A",
+   "why": "線玄的建議：A。wf-agent 的意見：以 docs/02 為準、兩者不衝突，可以在 aos 寫成 A 那一句。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [
+    "線玄：docs/02 現在那句本來就只講「別人會用路徑指到的東西」，A 是把另一半講明。"
+   ],
+   "source_path": "workflows-into-aos.md",
+   "source_lines": "443",
+   "source_excerpt": "**(h) 記錄表寫成陣列還是鍵**（牴觸第 1 條）",
+   "answer": "",
+   "answer_state": "pending",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "W7",
+   "section": "p1",
+   "question": "AGENTS.md 寫「單機開發，沒有跨機或離線的特殊情況」，但現在是家機、公司 WSL 兩台輪流。這句要不要改？",
+   "eli5": "AGENTS.md「開發環境」一節第一句還是「單機開發，沒有跨機或離線的特殊情況」。**現況**：家機與公司 WSL 兩台輪流；公司 WSL 的樹住在 aos-home、頂層 session 是樹裡的 `repo-aos`。這句是每個新 session 最先讀到的，11-13 沒人改、等你說。 **不裁會卡住什麼**：你今晚就換家機：新 session 最先讀的 AGENTS.md 還寫「單機開發」，家機的 agent 不會從入口知道有兩台、公司這棵樹住哪。不擋施工，但正好是今晚會碰到的。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "來源沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "改成照現況（兩台輪流、各自的樹在哪）",
+     "consequence": "改 AGENTS.md 一句＋指到 dev-env；新 session 不會再以為只有一台。"
+    },
+    {
+     "key": "B",
+     "label": "不改",
+     "consequence": "現況；新 session 讀到跟實際不符的一句，要靠 HANDOFF 才知道有兩台。"
+    }
+   ],
+   "recommend": "",
+   "why": "來源（tidy 第三輪留下的矛盾）只寫「11-13 沒改、等你說」，沒有建議。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [
+    "AGENTS.md 是最頂層入口，照規矩 agent 不擅自改它的事實陳述，所以列成題。"
+   ],
+   "source_path": "../../../../wf/wait-user/01-要你裁的.md",
+   "source_lines": "18",
+   "source_excerpt": "- **tidy 第三輪留下的矛盾（11-12 晚；C-42、aos-teams 沙箱那句、P-05／P-06／P-27 對不上那處 11-13 已裁）**：N-17 不碰 pid vs 兩處 /proc 判活（11-13 你選「先不選」、留了一句原則，列第三例外或改程式仍沒選）、P-33 round 例外段清不清（11-13 `cv-P33` 只在開頭加了界定，這題沒問到）、NORMS 附錄 1～3 與 `spec`／`ideas` 兩份純歷史入口清不清、AGENTS「開發環境」那句「單機開發，沒有跨機…」vs 現況（家機、公司 WSL 兩台輪流；公司 WSL 住 `~/aos-home`、頂層是樹裡的 `repo-aos`；11-13 沒改、等你說）等 → tidy 報告 § 第三輪",
+   "answer": "",
+   "answer_state": "pending",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "W9",
+   "section": "p1",
+   "question": "index（資料夾目錄檔）以後怎麼維護，要掛進哪條規矩？",
+   "eli5": "今天 repo 裡東西超過 15 個的夾都放了一份生成的 `_index.json`（文件區 25 份＋程式區 8 份）。加檔、刪檔後要重跑 `index_gen.py --apply` 它才跟得上；現在**靠記得跑**。線卯給了兩個掛法。 **不裁會卡住什麼**：沒掛進規矩之前只能「靠記得跑」；今天之後每次加檔、刪檔、搬檔，repo 裡三十幾份 index 都可能缺項或多項，越晚定、落後越多。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "來源沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "甲：改鐵律 3——每個 commit 前多跑一支 `index_gen.py --apply`",
+     "consequence": "每個 commit 多約一秒；index 永遠跟得上，夾一超過 15 個當下就有第一份；純文件的 commit 也要跑。要改 AGENTS.md 鐵律 3 的字。"
+    },
+    {
+     "key": "B",
+     "label": "乙：不改鐵律，`wf-lint` 多查一關 `INDEX`",
+     "consequence": "平常不用記；跑 wf-lint 時才發現、那時重生。兩次 wf-lint 之間 index 可能缺項。"
+    },
+    {
+     "key": "C",
+     "label": "兩個都做",
+     "consequence": "commit 前跑、lint 再把關一次；兩處都要改。"
+    }
+   ],
+   "recommend": "",
+   "why": "來源檔寫「待使用者裁」，沒有建議；只寫了「兩個可以都做」。",
+   "quotes": [
+    {
+     "text": "index範圍按照11-12的門檻。",
+     "cite": "使用者 11-13（講的是放哪些夾，不是這題的維護方式；供對照）"
+    }
+   ],
+   "details": [
+    "判準：你能不能接受「index 偶爾落後幾個 commit」？不能＝A 或 C；能＝B。",
+    "乙的注意事項（線卯寫的）：現在 `/wf-lint` 只掃 `wf` 與 `.claude/commands`，新的 `INDEX` 那關要寫成不看掃哪個根、每次都跑，才有用。",
+    "甲要改的原句：鐵律 3 粗體句後面加「並跑 `python3 wf/tools/index_gen.py --apply`」，句尾補半句「東西超過 15 個的夾有一份生成的 `_index.json`，同樣不手改」。"
+   ],
+   "source_path": "index-build.md",
+   "source_lines": "158",
+   "source_excerpt": "**掛進規矩的兩個方案（待使用者裁，hub 檔沒動）**：",
+   "answer": "",
+   "answer_state": "pending",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "W10",
+   "section": "p2",
+   "question": "`gitignore-check` 這支檢查變紅，說是因為排隊的信現在帶了寄件人的登入名。要改檢查、還是改寄件人的取名？",
+   "eli5": "`extras/gitignore-check` 會建一個假專案跑一輪，檢查「不該進版控的東西有沒有漏出來」。調度者說：a2a 改完之後，queue 裡的信帶了**寄件人的登入名**，這支檢查因此變紅。**注意：這件事只有調度者口述，結果檔沒收；我沒有重現、也沒核對原因**，線戌的證據在 `~/code/xu-1113/gi-evidence/`。 **不裁會卡住什麼**：照調度者的說法這支檢查現在會紅；不處理的話每次跑全套都多一支紅的，真的漏東西時不容易看出來。（原因還沒核實，見題內。）",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "來源沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "改檢查（讓它認得、放過這種寄件人欄）",
+     "consequence": "檢查變綠；信裡照舊帶登入名。要先確認那個欄位落進去的檔本來就不進版控。"
+    },
+    {
+     "key": "B",
+     "label": "改寄件人的取名（信裡不放登入名，換成別的名字）",
+     "consequence": "信的格式要動（a2a 那條線的程式與條文）；好處是機器帳號名不會出現在任何信裡。"
+    },
+    {
+     "key": "C",
+     "label": "先叫人把原因查清楚、寫進結果檔，再來問我",
+     "consequence": "今天不裁；明天多一個小調查。"
+    }
+   ],
+   "recommend": "",
+   "why": "來源沒有建議；而且原因還沒核實，所以不預選。",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話",
+     "cite": ""
+    }
+   ],
+   "details": [
+    "11:41 線己二試跑全套時紅的 4 夾裡有 `extras/gitignore-check/tests`（原因當時沒寫）；15:08 釘住的 commit 在乾淨複本跑全套時，紅的只有既有 4 支、**不含**這支——所以它是不是穩定紅，我也沒把握。",
+    "判準：你在不在意「登入名出現在信裡」？在意＝B；不在意＝A；想先看證據＝C。"
+   ],
+   "source_path": "../../../../wf/SESSION-LOG.md",
+   "source_lines": "26",
+   "source_excerpt": "- **open｜eca 通知改走 a2a（11-13 線壬、線午做完）剩的**：codex 身沒接（照舊貼字）；沒實測：帳號端關掉跨 session 傳訊時、父對子說話的署名（只有單元測試）、確認框等人時訊息擠進來；`extras/gitignore-check` 因 queue 信帶寄件人登入名而紅（調度者說的，結果檔沒收、待核，線戌的證據在 `~/code/xu-1113/gi-evidence/`） → a2a-施工結果 § 沒做的",
+   "answer": "",
+   "answer_state": "pending",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "W21",
+   "section": "p2",
+   "question": "模板 repo 的七個「包」，是不是全部都要併進 aos？",
+   "eli5": "模板 repo 有七包內容：**kernel**（最薄的那層流程）與 **dev**（開發工作流）你已放行、正在併。還沒問的五包：**knowledge**（寫作／研讀／決策）、**research**（文獻累積）、**teaching**（教材）、**ops**（維運）、**multi-agent**（檔案信箱、派工、模型分級）、**heartbeat**（定期事務清單）。前四包跟 aos 完全不重疊、也不依賴 aos；**multi-agent 與 heartbeat 跟 aos 自己的 mailbox、clock 重疊最多**（細節見摺疊）。 **不裁會卡住什麼**：wf-agent 現在只備了 kernel、dev 兩批料；其餘幾包要不要備、備到哪，等這題。沒裁它就停在這兩批，或自己猜範圍白做。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "來源沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "全部都併",
+     "consequence": "工作量最大；multi-agent 的檔案信箱會跟 aos mailbox 並存兩套說法，要有人寫清楚「樹裡用哪套」。"
+    },
+    {
+     "key": "B",
+     "label": "只併已放行的 kernel、dev，其餘五包不併",
+     "consequence": "最省；其餘留在舊 repo（它幾乎不再更新）。之後要用得回舊 repo 翻。"
+    },
+    {
+     "key": "C",
+     "label": "併 knowledge／research／teaching／ops；multi-agent、heartbeat 只併 aos 沒有的那幾塊",
+     "consequence": "重疊的部分以 aos 的 mailbox、clock 為準；只搬 aos 沒有的（例：派工與模型分級、「要做什麼、到期怎麼判」的清單）。要逐塊判斷，最花腦。"
+    },
+    {
+     "key": "D",
+     "label": "現在不定，併完 kernel、dev 再說（邊用邊併）",
+     "consequence": "照你「邊用邊併」字面；這題留到下一批。"
+    }
+   ],
+   "recommend": "",
+   "why": "這題是調度者列的，結果檔沒有建議；選項是這頁依 wf-agent 的盤點事實整理的，不是誰的主張。",
+   "quotes": [
+    {
+     "text": "1.變成aos的東西。2.都可以。3.都可以(也可以都要)。4.不用。workflows repo仍在，只是幾乎不再更新。5.邊用邊併。6.8kb上限可帶入(但只限.md)，檢查工具不留。7.拆。8.不用。9.不用",
+     "cite": "使用者 11-13 14:47 前後（九題的回覆；第 5 點「邊用邊併」）"
+    },
+    {
+     "text": "能愈快併入愈好，但不要因為趕工而喪失品質",
+     "cite": "使用者 11-13（wf-agent 信裡轉述的，repo-aos 沒有直接聽到）"
+    }
+   ],
+   "details": [
+    "**數量的說法對一下**：任務書說「七個包」；wf-agent 的盤點列的 flavors 是 dev、knowledge、teaching、research、ops、heartbeat、multi-agent 七個，kernel 是 template 那層、不在 flavors 裡。所以「還沒問的」照盤點是六包（上面六個粗體）。",
+    "**multi-agent ↔ aos mailbox**（wf-agent 的盤點，標【查】的）：aos 的 mailbox 本來就是照這套 inbox 協議做的——信的四段（做了什麼／產出／沒做到／需要決定）與六個 STATUS 一一對得上。差別：wf 的信在工作區、進 git，aos 的信在 stack、不進 git；wf 有五通道、團隊、主題訂閱、上游路由，aos 都沒有；wf 的醒鐘照 STATUS 分層，aos 的 `mail_notify` 不分；wf 的通訊錄 ROSTER 有「領地」「答不出」，aos 的 `agents.json` 沒有。",
+    "**multi-agent 的另一半**（派線、驅動 CLI agent、資源鎖、交接書、模型分級表）：不綁 aos；aos repo 的 `wf/workflows/dispatch/`、`team-model*` 有舊版。",
+    "**heartbeat ↔ aos clock**：wf 只有清單（routines、schedule）、引擎外借（Claude Code `/loop`、cron）；aos 有引擎（`clock_register`、`on_clock` hook）但算的是 cycle、沒有「每天幾點」，也沒有「要做什麼、到期怎麼判」的清單。wf-agent 的話：「只有觸發那一半有 aos 對應，清單那一半沒有」。",
+    "七包都不依賴 aos（盤點：`flavors/` 0 級 11 項，grep 不到 aos 字樣）。",
+    "事實來源：wf-agent 的盤點筆記 `aos-binding.md`（在今天的暫存夾 `wf-agent-scratch-1113`，見完整頁 W8——裁這題前別刪）§2、§3.1、§3.2。"
+   ],
+   "source_path": "../../../../wf/wait-user/01-要你裁的.md",
+   "source_lines": "28",
+   "source_excerpt": "- **模板 repo 的七個領域包要不要全併進 aos（11-13）**：現在放行的只有 kernel 薄流程與 dev 包，其餘五包等你裁；骨架與 `wf-init` 放 repo 哪個夾也沒定——見桌面頁 `aos-1113-收工待裁.html`（原稿在 thinking 11-13，檔名 【頁名1113】） → workflows-into-aos § 第 3、4 塊落檔計畫",
+   "answer": "",
+   "answer_state": "pending",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "W22",
+   "section": "p2",
+   "question": "你說過三句關於「檔案用什麼格式」的話，擺在一起對不上。哪句為準？",
+   "eli5": "① **C-42（你今天第二輪裁的 rd-C42:B）**：「推薦 JSON、別的格式不禁止」。② **D1（你 11-12）**：內容走 json、不走 markdown。③ **鐵律 6**：條列走資料檔（json／csv）、導航留 md。問題：非 JSON 的檔（md 等）工具與文件要怎麼交代？要交代到哪、動不動程式，第二輪那題寫明有這個後果但沒定。模板的 `md_for_humans`（「內容一律走 json、只留四個 md」，牴觸第 7 條）與 完整頁的 W13 都在等這題。 **不裁會卡住什麼**：併入時「哪些檔留 md」定不了：模板的 `md_for_humans`（只留四個 md）沒帶進來、analysis／PATCH／APPLY 用 md 還是 json（完整頁 W13）、以及 aos 自己的工具與文件怎麼交代非 JSON 的檔，都在等這句。",
+   "options": [
+    {
+     "key": "U",
+     "label": "還沒想好，先不選",
+     "consequence": "來源沒有建議，所以預設停在這格；選它＝這題維持未裁、之後再問。"
+    },
+    {
+     "key": "A",
+     "label": "以 ① 為準：JSON 是推薦，md 等別的格式照樣可以；D1 當方向、不當規定",
+     "consequence": "改動最少；工具不用管非 JSON 的檔；模板的「只留四個 md」不帶進來。"
+    },
+    {
+     "key": "B",
+     "label": "以 ② 為準：新內容一律 json，md 只留點名的幾種（入口、給人看的說明…）",
+     "consequence": "要列出「哪幾種留 md」的名單（模板那份是四個）；C-42 的字面要再收緊一點；W13 傾向改 json。"
+    },
+    {
+     "key": "C",
+     "label": "照 ③ 分工：條列／記錄走 json，導航與給人讀的敘述留 md",
+     "consequence": "跟 aos 的 `wf/` 現況一致；D1 的「不走 markdown」讀成只講條列內容。"
+    }
+   ],
+   "recommend": "",
+   "why": "來源只寫「要你一句話定哪句為準」，沒有建議。三個選項是這頁把三句話各自當準時的後果擺出來，來源檔沒有列選項。",
+   "quotes": [
+    {
+     "text": ".json比markdown好，有需要的話再做一些輔助工具和程式幫助人看json就好。2.先放着，這是後面一邊玩一邊自然會要做的。…",
+     "cite": "使用者 11-12（wf-to-aos；D1 的出處，來源檔的引法、後面有省略）"
+    },
+    {
+     "text": "rd-C42:B",
+     "cite": "使用者 11-13（第二輪待裁頁；B＝語氣放寬成「推薦 JSON、別的格式不禁止」）"
+    }
+   ],
+   "details": [
+    "鐵律 6 全文在 AGENTS.md：「條列走資料檔、導航留 md：給 AI 消化的同質記錄表 >1 KB 存 `.json`／`.csv`…給人點的導航連結表留 md。」",
+    "你也可以不選 A/B/C、直接在備註寫一句你的說法——三句話怎麼並存由你定。",
+    "判準：你希望半年後 repo 裡的 md **越來越少**（＝B）、**維持現在的分工**（＝C）、還是**不管它**（＝A）？"
+   ],
+   "source_path": "../../../../wf/wait-user/01-要你裁的.md",
+   "source_lines": "13",
+   "source_excerpt": "- **C-42 放寬成「推薦 JSON、別的格式不禁止」之後，非 JSON 的檔工具與文件要怎麼交代（11-13；題目寫明有這個後果、沒定交代到哪）**：連同你 11-12 的 D1「內容走 json、不走 markdown」與鐵律 6「條列走資料檔、導航留 md」三句擺在一起對不上的地方，要你一句話定哪句為準 → 裁定落地 § 第二輪、wf-to-aos",
+   "answer": "",
+   "answer_state": "pending",
+   "answer_note": "",
+   "answered_at": ""
+  }
+ ]
+}
