@@ -10,12 +10,14 @@
 //   apply_letter   body 要是物件，只認 procs_added（物件，寫法同 procs_ctl）、procs_removed、procs_stopped、procs_started、procs_slept、procs_woken（11-05，名字的陣列），其他 key 忽略；
 //                  檢查照 procs_ctl（check_lists；相對 $ref 從 daemon 的 cwd 算——信收完就刪了，不能從信的資料夾算）；不按起法拒信。
 //                  另認 ping：有寫就必須是 true，只回 applied、不改底；跟其他 key 一起寫時其他 key 照常套。
+//                  另認 procs_state_path（11-13，kernel 框架 K-F27「狀態在哪」查詢信）：有寫就必須是 true、不改底、其他 key 照常套；答案在 done_letters 的回信裡。
 //                  好的才套：procs_added（已在名單上的換設定、不在的接在尾巴）→procs_removed（名單與 stopped 集合都拿掉）→procs_stopped 加進 stopped 集合→
 //                  procs_started 從 stopped 集合拿掉（同名兩邊都寫＝起）；後面的信蓋前面的
 //                  11-10（設計-46）：好信 procs_removed 的名字若 procs_ctl 還宣告著（它的 procs 或 procs_added 有、procs_removed 沒有），
 //                  下一圈會被疊回來——行為不變，只在套這封信時印一行 warning（一封信一個名字一次；之後每圈不再印，再寄一封 rm 才再印；
 //                  cur/ 殘骸重做也算一封）
-//   done_letters   對完表之後：有 reply_to 的回信——好信 {"applied": true}；body 壞的（不是物件、ping 不是 true、check_lists 不過、指示詞解不開）
+//   done_letters   對完表之後：有 reply_to 的回信——好信 {"applied": true}（請求寫了 procs_state_path 的多帶 "procs_state_path"：
+//                  procs_state.json 的絕對路徑，沒開那扇窗＝null）；body 壞的（不是物件、ping／procs_state_path 不是 true、check_lists 不過、指示詞解不開）
 //                  回 {"applied": false, "error": {"code": "BodyBad", "msg": 原因}}（11-12，kernel 討論 11-11 裁定「改成會回」；形狀同判官拒信）。
 //                  信封壞的（see 不過）讀不到 reply_to、回不了：照舊只記 mailbox_warning_。沒寫 reply_to＝不回。全部 done 收掉（不留 archive/）。
 //                  回信寄不出去、收不掉（信被別人拿走、寫不了）都不管：不另外通知（決定 27），也不讓 daemon 因此結束
@@ -80,11 +82,13 @@ Daemon::Letters Daemon::take_letters() {
     Letters got;
     for (const std::string& id : names) {
         std::optional<std::string> bad;
+        bool asks = false;   // 好信而且寫了 procs_state_path：回信要帶表的路徑
         try {
             aos::post::Seen c = aos::post::see(mbox_, id);
             bad = c.ok ? apply_letter(c.letter["body"]) : std::optional<std::string>(c.reason);
             if (!bad) {
                 warn_redeclared(id, c.letter["body"]);
+                asks = c.letter["body"].contains("procs_state_path");
             }
         } catch (const Error&) {
             continue;   // 不在 cur/ 了（被人拿走、刪掉）：沒有這封
@@ -92,7 +96,7 @@ Daemon::Letters Daemon::take_letters() {
         if (bad) {
             mailbox_warning_ = "letter " + id + " rejected: " + *bad;
         }
-        got.push_back({id, bad});
+        got.push_back({id, bad, asks});
     }
     return got;
 }
@@ -103,6 +107,9 @@ std::optional<std::string> Daemon::apply_letter(const Json& body) {
     }
     if (body.contains("ping") && (!body["ping"].is_boolean() || body["ping"] != true)) {
         return std::string("ping must be true");
+    }
+    if (body.contains("procs_state_path") && (!body["procs_state_path"].is_boolean() || body["procs_state_path"] != true)) {
+        return std::string("procs_state_path must be true");
     }
     Json doc = Json::object();
     // 名單增減與起停睡醒；沒有整份的 procs（信是增減，整份宣告留給 procs_ctl）
@@ -165,10 +172,13 @@ std::optional<std::string> Daemon::apply_letter(const Json& body) {
 }
 
 void Daemon::done_letters(const Letters& got) {
-    for (const auto& [id, bad] : got) {
+    for (const auto& [id, bad, asks] : got) {
         try {
             // 沒寫 reply_to、信封壞＝reply 不回（aos::post::reply 自己判）
             Json answer = bad ? Json{{"applied", false}, {"error", {{"code", "BodyBad"}, {"msg", *bad}}}} : Json{{"applied", true}};
+            if (asks) {   // 查詢信：自己那份表在哪（絕對路徑；沒開 procs_state 窗＝null）
+                answer["procs_state_path"] = pstate_path_.empty() ? Json() : Json(aos::abspath(pstate_path_));
+            }
             aos::post::reply(mbox_, id, answer);
         } catch (const Error&) {
         }

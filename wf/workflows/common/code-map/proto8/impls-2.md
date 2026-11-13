@@ -41,5 +41,6 @@
 | [`tests/test_ref_hash.py`](../../../../../proto8/impls/aos-daemon/tests/test_ref_hash.py) | Check {"$ref": "#/..."} in daemon.json means daemon.json itself, also inside an inline inst moved into its cell (11-12). |
 | [`tests/test_stack_make.py`](../../../../../proto8/impls/aos-daemon/tests/test_stack_make.py) | Check aos-daemon creates a missing $AOS_STACK at start (11-11, make_stack) after the config checks pass. |
 | [`tests/test_stale_stop.py`](../../../../../proto8/impls/aos-daemon/tests/test_stale_stop.py) | Check stop → sleep → start keeps the restarted loop running instead of replaying the old stop. |
+| [`tests/test_state_path.py`](../../../../../proto8/impls/aos-daemon/tests/test_state_path.py) | Check the procs_state_path query letter (11-13, K-F27): the reply carries the absolute path of procs_state.json, null without that window, BodyBad wh… |
 | [`tests/test_two_machines.py`](../../../../../proto8/impls/aos-daemon/tests/test_two_machines.py) | Check two-machines daemon fixes: copies never adopt the original tree, and mailbox rows re-resolve directives on start. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-daemon/vcpkg.json) | aos-daemon：照一張名單把幾個 proc 各自起在小格裡、看著它們（C++） |

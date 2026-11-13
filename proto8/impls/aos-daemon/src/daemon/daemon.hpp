@@ -33,7 +33,7 @@
 // procs_ctl.json 認（N-54）：procs＝整份名單、procs_added、procs_removed、procs_stopped（要停的名字）、procs_started（要起的名字）、seq。
 // 期望表＝（procs_ctl 的 procs，沒寫＝底 want_）＋procs_added－procs_removed；stopped 集合＝底 stopped_＋procs_stopped－procs_started（同名兩邊都寫＝起）。
 // 底（記憶體）：want_＝daemon.json 的 procs（開了信箱再加 adopt 接回、不在上面的，設定記 null）＋信改過的；stopped_＝adopt 接回的 stopped 列＋信改過的。
-// 信（procs_requests）body 認 procs_added、procs_removed、procs_stopped、procs_started、procs_slept、procs_woken，改的是底；ping 必須是 true，只回信、不改底；壞信原因進 state_flux 的 mailbox_warning。
+// 信（procs_requests）body 認 procs_added、procs_removed、procs_stopped、procs_started、procs_slept、procs_woken，改的是底；ping 必須是 true，只回信、不改底；procs_state_path（11-13）必須是 true，回信多帶 procs_state.json 的絕對路徑（沒開窗＝null）、不改底；壞信原因進 state_flux 的 mailbox_warning。
 // procs_stopped／procs_started／procs_slept／procs_woken 適用所有 proc；不在期望表的名字＝不管。
 // 四態（procs § 0、§ 2c；ctl-commands § 5）：running（表上、活著）、stopping（收的途中）、stopped（表上、行程不在、stack 留著）、表上沒有；
 //   11-03 多一態 sleeping（procs § 8 sleep／wake）：daemon 收工（ctl 的 stop、SIGTERM／SIGINT）時 running 的 proc＝SIGTERM 收掉、列留成 sleeping
@@ -204,11 +204,16 @@ private:
     void reconcile(const Json& want, const Names& stopped, const Names& slept);   // 對表：收多的、停要停的、看誰結束、起少的與要 start 的
 
     // 信箱（mailbox.cpp）
-    using Letters = std::vector<std::pair<std::string, std::optional<std::string>>>;   // 這圈的信（照處理順序）：{信件名稱, 壞信的原因（好信＝nullopt）}
+    struct Letter {
+        std::string id;                    // 信件名稱
+        std::optional<std::string> bad;    // 壞信的原因（好信＝nullopt）
+        bool asks_state_path;              // 好信而且寫了 procs_state_path（11-13 查詢信）：回信帶表的絕對路徑
+    };
+    using Letters = std::vector<Letter>;   // 這圈的信（照處理順序）
     void open_mailbox();                                     // 建 tmp/ new/ cur/（已在就沿用）、cur/ 的殘骸記進 redo_
     Letters take_letters();                                  // 認領、逐封驗；好信依序套進底
     std::optional<std::string> apply_letter(const Json& body);   // 驗 body、套進 want_／stopped_；壞＝回原因、底不動
-    void done_letters(const Letters& got);                   // 有 reply_to 的回信：好信 applied true、壞 body applied false＋BodyBad（11-12）；全部收掉
+    void done_letters(const Letters& got);                   // 有 reply_to 的回信：好信 applied true（查詢信多帶 procs_state_path）、壞 body applied false＋BodyBad（11-12）；全部收掉
 
     Json procs_ = Json::object();                        // daemon.json 的 procs
     std::map<std::string, std::string> bad_rows_;        // 11-10 晚 B07：daemon.json 裡指示詞解不開的列 → 原因（那列留 stopped＋reason，其他照起）
