@@ -17,7 +17,7 @@
 - **同機 session 傳話**：同帳號原則上用 a2a，但兩邊權限模式不同時會卡在對方畫面等批准，**兩個方向都寄 wf/inbox**；Argon 也是共同設計者（審查＋提案）。細節與原話見 [05](aos-teams/05-同機session與Argon.md)。 agy、LM Studio、家機假日隊形也在 05。
 - **程序數要少（第 3、6 句）**：codex、claude CLI 都是 nodejs，跑在使用者也在用的機器上，所以**每隊同時最多兩個 CLI 程序**（一個 codex、一個 claude），子 agent 跑在隊員自己的程序裡、不另開 CLI。同時開幾隊由頂層看負載定。頂層開一個**背景監看**，定時看負載、可用記憶體、CLI 程序數，**超門檻才通知**；通知了就叫各隊收斂子 agent 或輪流跑。純改檔負擔不大，「稍微監控」即可，不逐次回報。各機門檻與指令見 [公司 WSL](aos-teams/01-公司WSL.md)。
 - **codex 要設 goal**：codex 愛做到一半就說做完，提示參數要以 `/goal <完成條件>` 開頭，指令與核對見 [02](aos-teams/02-指令沙箱與試玩.md#codex-呼叫與沙箱)。
-- **權限邊界**：codex 隊員用 `-s workspace-write`（它自己的沙箱），claude 隊員用 `--permission-mode acceptEdits`＋`--allowedTools` 列需要的工具。**agent 不加全繞過沙箱／權限的旗標**（Claude Code 的安全檢查也會擋）——這是使用者的權限邊界，要開由使用者親自開（例：家機 `~/.codex/config.toml` 的 `danger-full-access` 是使用者自己設的，照用）。
+- **權限邊界**：codex 隊員用 `-s workspace-write`（它自己的沙箱），claude 隊員用 `--permission-mode acceptEdits`＋`--allowedTools` 列需要的工具。**agent 不加全繞過沙箱／權限的旗標**（Claude Code 的安全檢查也會擋）——這是使用者的權限邊界，要開由使用者親自開。家機的 codex 隊員也用沙箱（`-s workspace-write`），不靠不帶 `-s` 去吃家機 `~/.codex/config.toml` 的 `danger-full-access`（使用者 11-08「codex可以改用沙箱，準備好就可以用」，指令見 [02](aos-teams/02-指令沙箱與試玩.md#codex-呼叫與沙箱)）。
 - **codex 可用 slug**（`gpt-6.1-sol` 為主力；全表與寫錯 slug 的症狀）見 [02](aos-teams/02-指令沙箱與試玩.md#codex-可用-slug)。
 - **進度回報**：各線在開線、做完一批／一個地點、代定、卡住、交棒時叫 `progress_post.sh` 上桌面看板，回報頂層只寫一兩句：[04](aos-teams/04-進度回報.md)。
 - 開隊前**先把打算怎麼做講給他聽**，等他回應或糾正再派；他可能在手機上、回得慢，問題與選項照發、附預設建議。
