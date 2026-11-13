@@ -27,7 +27,7 @@
   "description": "Use aos-mailbox to see your mailbox folder, peek, read and send mailbox letters from a shell."
  },
  "daemon.json": {
-  "description": "Use aos-daemon-ctl for any proc on one daemon (add, stop, sleep, pause, ls, ping, shutdown, prune, sweep); it bypasses the judge."
+  "description": "Use aos-daemon-ctl for any proc on one daemon (add, stop, sleep, pause, ls, ping, shutdown, prune, sweep); it bypasses the kernel."
  },
  "tools.json": {
   "description": "Use aos-tools to edit a registry and call a registered tool with JSON on stdin."

@@ -26,7 +26,7 @@ def _post(args, text="", code="PostFailed"):
 
 
 def mailbox_of(d, direct=False):
-    """掛子信與 ping 走同一個收件位置：沒給 direct 且設了 AOS_KERNEL＝判官信箱（aos-agent 走這條）；direct＝這個 daemon 自己的 ctl 信箱（aos-daemon-ctl 一律走這條，11-07）。"""
+    """掛子信與 ping 走同一個收件位置：沒給 direct 且設了 AOS_KERNEL＝那個 kernel 的收件箱（例如框架站）（aos-agent 走這條）；direct＝這個 daemon 自己的 ctl 信箱（aos-daemon-ctl 一律走這條，11-07）。"""
     kernel = os.environ.get("AOS_KERNEL", "")
     if kernel and not direct:
         box = os.path.abspath(kernel)

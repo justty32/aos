@@ -43,7 +43,7 @@ Mutation commands drop letters into the daemon's ctl mailbox (procs_added, procs
 procs_stopped, ...) or write the proc's own ctl window (pause / resume). A letter only
 asks; the daemon applies it on its next round. See the result with ls.
 Letters always go straight to this daemon's ctl mailbox; AOS_KERNEL is not read.
-To go through the judge (AOS_KERNEL), use aos-agent ctl instead.
+To go through the kernel (AOS_KERNEL), use aos-agent ctl instead.
 add / rm / stop / start / sleep / wake also take --reply-to BOX (send only, do not wait).
 Without --reply-to they read the daemon's reply: a refused letter (bad body) is an error
 with the daemon's code and reason (BodyBad).

@@ -1,4 +1,4 @@
-{"description": "Sandbox (mode 2, judge in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm letters must go to AOS_KERNEL), rw its procs/ (the child's stack gets its declared tools and brain overlays), AOS_KERNEL, the workspace and the caller's stack; no network",
+{"description": "Sandbox (mode 2, kernel station in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm letters must go to AOS_KERNEL), rw its procs/ (the child's stack gets its declared tools and brain overlays), AOS_KERNEL, the workspace and the caller's stack; no network",
  "commands": ["aos-exec", "aos-agent", "aos-post", "aos-tools", "aos-json"],
  "ro": ["inner", "../../../../lib", "../../../../templates/agent-fsm", "../../../aos-agent/aos_agent", {"$env": "AOS_DAEMON"}],
  "rw": [{"$env": "AOS_DAEMON", "$path": "/procs"}, {"$env": "AOS_KERNEL"}, {"$env": "AOS_WS"}, {"$env": "AOS_STACK"}],
