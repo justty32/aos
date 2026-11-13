@@ -89,6 +89,9 @@
  "tool-stack-path.md": {
   "description": "11-13 fx-2:A 施工紀錄：工具印的 $AOS_STACK 路徑改照叫方的 stack 算，aos-tools 給 AOS_STACK_IN_CALLER，含設計、盤點、代定、要補的條文"
  },
+ "workflows-into-aos.md": {
+  "description": "模板 repo（workflows）併入 aos：調查＋意見稿（11-13 下午，線玄；只查只寫、沒改程式、沒寄信）"
+ },
  "裁定落地-1113.md": {
   "description": "11-13 使用者裁定落地：精選頁 17 題的回覆（16 題有選、N-17 先不選但留了一句原則）＋對話裡直接答的三組（主 session 兩題、a2a 兩題、kernel 框架開工）；每題裁定已寫回原文件，本檔列「裁定後待施工」；同日第二輪待裁頁 43 題的回覆（裁了 38 題、5 題未裁）也落在這裡，第二輪的待施工另列一節"
  }
