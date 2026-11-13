@@ -1,4 +1,4 @@
-# 家機活樹停樹換檔（線換，11-13 晚）：腳本 `proto8/extras/tree-swap/`、暫存樹預演三輪（第三輪全綠）、會換／不會動的清單、換後收尾清單、給使用者的單子
+# 家機活樹停樹換檔（線換，11-13 晚）：腳本 `proto8/extras/tree-swap/`、暫存樹預演五輪（釘 `9736e54a0` 的第五輪全綠）、會換／不會動的清單、換後收尾清單、給使用者的單子
 
 ← [11-13 日索引](README.md)｜規格：[aos-teams/06「停樹換檔的做法」](../../../../wf/workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md#停樹換檔的做法)｜腳本：[tree-swap](../../../extras/tree-swap/README.md)｜要換進去的內容：[ref-path-rules](ref-path-rules.md)、[sandbox-sender-fix](sandbox-sender-fix.md)、[wake-timer](wake-timer.md)、[user-zone-plan](user-zone-plan.md)、[gpt-fsm-team](gpt-fsm-team.md)
 
@@ -14,17 +14,17 @@
 - C++ 十支在 repo 外 `~/code/swap-1113/src` 從 `git archive 0e62d640e` 重編（每支 6～18 秒，共約 110 秒）；`0e62d640e` 到現在 `proto8/impls` 沒有任何差別，`check` 段會再核一次（不同就紅燈，要用 `build.sh --ref` 重編）。
 - 頂層轉來另一條線的 `copy_tree.py`（`41f06e9a4`）：選「自己抄、抄完補跑 `--stamp-only`」——備份、退回、紅燈這套已經寫好預演過；`stamp` 段用**釘住 commit 裡的** `copy_tree.py`（解到暫存夾跑，不用工作樹那份），換完每夾都有 `.aos-source.json`（`how: stamp-only`）。`check`／`verify` 比對時略過這個檔，`verify` 另核章裡的 commit。
 
-## 會被換的（盤點：活樹複本 vs `0e62d640e`，`diff -rq` 唯讀比、略過 `__pycache__`）
+## 會被換的（盤點：活樹複本 vs 釘住的 `9736e54a0`，`diff -rq` 唯讀比、略過 `__pycache__`；共 77 檔＋十支）
 
 | 夾 | 不同 | commit 有、樹裡沒有 | 只在樹裡有 |
 |---|---|---|---|
 | `lib` | 19 | 4（`aos_refpath.py`、`tests/ref_path_cases.json`、`tests/test_ref_path.py`、`base/peek_now_time/tests/`） | 0 |
-| `templates` | 0 | 0 | 0 |
-| `knowledge` | 17 | 32（`aos/user_zone.json`、`wf/` 底下 skeletons、source、workflows 十幾個 json 等） | 0 |
+| `templates` | 1（`tests/test_daily.py`，別線 22 點後改的） | 0 | 0 |
+| `knowledge` | 18 | 32（`aos/user_zone.json`、`wf/` 底下 skeletons、source、workflows 十幾個 json 等） | 0 |
 | `py` | 1（`aos_clock_register.py`） | 2（`aos_clock_when.py`、`tests/test_clock_when.py`） | 0 |
 | C++ 十支 | `aos-daemon directive exec fsm json llm llm-kernel lock loop post` 全換（同一 commit 編出，一致） | | |
 
-- 那 37 個「不同」的檔，樹裡的內容逐一拿去 `git hash-object` 都在 git 歷史裡找得到——全是舊複本，沒有人在樹裡改過。
+- 一開始對 `0e62d640e` 盤點時那 37 個「不同」的檔，樹裡的內容逐一拿去 `git hash-object` 都在 git 歷史裡找得到——全是舊複本，沒有人在樹裡改過。
 - 樹裡沒有 `kernel/`（家機搭樹時代定不抄），腳本只換樹裡已經有的夾，不會多建。
 - `~/.local/bin/aos-*` 的 C++ 那十支指到 repo 的 `proto8/impls/<p>/bin/<p>`（gitignore 著），所以換執行檔＝換那十個檔，`git status` 不受影響。`cmd/`、`py` 的 Python 指令本來就從 repo 跑，不在這次範圍。
 
@@ -40,22 +40,24 @@
 |---|---|---|
 | 1 | `0e62d640e`（還沒有 stamp 段） | 12 段全綠 |
 | 2 | `2b91e9b22`（加了 stamp 段） | **stamp 段紅**：`copy_tree.py` 經 `py/aos_flags` 要 import `lib/tool_io`，我只解了 extras 和 py。順帶驗到「換到一半紅燈→退回」照樣逐位元還原。修：連 `proto8/lib` 一起解 |
-| 3 | `85bef94a0` | 12 段全綠（下表） |
+| 3 | `85bef94a0` | 12 段全綠 |
+| 4 | `9736e54a0`（本線 commit） | 只有預演腳本自己的 7c 紅：拿短 hash 去 grep 章，章裡是完整 hash（swap.sh 的 verify 用完整 hash 核過、是綠的）；預演腳本改成先轉完整 hash |
+| 5 | `9736e54a0` | 12 段全綠（下表） |
 
 | 段 | 結果 | 時間 |
 |---|---|---|
 | 1 起樹（舊執行檔）；舊 `aos-json get --follow …#/g/dot/k`（`#./here`）＝`PointerMissing` | 過 | 0.17 s |
-| 2 樹在跑時 `swap.sh check`：列出 5 個行程、`RED`、退 3 | 過 | 0.28 s |
-| 3 樹在跑時 `swap.sh copy`：`RED`、四夾與十支一個位元都沒變 | 過 | 0.28 s |
+| 2 樹在跑時 `swap.sh check`：列出 5 個行程、`RED`、退 3 | 過 | 0.31 s |
+| 3 樹在跑時 `swap.sh copy`：`RED`、四夾與十支一個位元都沒變 | 過 | 0.33 s |
 | 4 從帶 `AOS_STACK` 的殼下（＝從 agent 裡下）：`RED` | 過 | 0.00 s |
-| 5 停樹 | 過 | 0.43 s |
-| 6 `swap.sh all`（check、backup、copy、stamp、bin、verify） | 過 | 1.42 s |
+| 5 停樹 | 過 | 0.46 s |
+| 6 `swap.sh all`（check、backup、copy、stamp、bin、verify） | 過 | 1.44 s |
 | 7 樹裡四夾以外（含使用者資料）雜湊不變；四夾確實換了；四夾 `.aos-source.json` 都是該 commit、`how: stamp-only` | 過 | — |
-| 8 `rollback.sh all`：四夾內容＋權限位元、十支，跟換之前逐位元相同 | 過 | 0.28 s |
-| 9 再換一次 | 過 | 1.43 s |
+| 8 `rollback.sh all`：四夾內容＋權限位元、十支，跟換之前逐位元相同 | 過 | 0.26 s |
+| 9 再換一次 | 過 | 1.38 s |
 | 10 起樹（新執行檔）：根三列、領班 `_sweeper` running | 過 | 0.14 s |
 | 11 smoke：`aos-json get`；`$ref` `#./`、`#../` 新規則照新表走到；`aos-directive --help` 有 `--at`；`index_view` 看 `knowledge/aos` 21 項、有 `user_zone`；領班 running | 過 | 0.05 s |
-| 12 停樹，樹的行程一個不剩 | 過 | 0.41 s |
+| 12 停樹，樹的行程一個不剩 | 過 | 0.35 s |
 
 另跑一次收尾清單第 1 條的指令（暫存樹起著，`cd tree/ws && aos-daemon-ctl -d .stack add --name llm-gpt --auto-restart ../kernels/llm-gpt`）：0.23 秒、`llm-gpt running`，停樹後收乾淨。備份每份約 42 MB（四夾＋十支）。
 
@@ -84,7 +86,7 @@ aos-daemon-ctl -d ~/aos-home/.stack shutdown
 #    起樹那個視窗的 aos-exec root 會自己結束。專區網頁 aos-user serve 若開著，到它的視窗 Ctrl-C。
 
 # 2. 換（約 2 秒）。REF 用下面這個 commit；要用更新的也可以，check 會核 C++ 對不對得上：
-bash ~/repo/aos/proto8/extras/tree-swap/swap.sh --ref REF_HASH all
+bash ~/repo/aos/proto8/extras/tree-swap/swap.sh --ref 9736e54a0 all
 #    看到 "verify: green" 就好。出現 RED: 先看它說什麼——樹還有行程活著就照它列的 pid 關掉再跑一次；
 #    換到一半紅燈就跑第 5 步退回。
 
@@ -102,8 +104,7 @@ bash ~/repo/aos/proto8/extras/tree-swap/rollback.sh
 #    然後照第 3 步起樹。
 ```
 
-`REF_HASH`＝下一節記的 commit。
 
 ## 釘住的 commit
 
-見下一個 commit 補記（腳本本身在這個 commit；樹裡四夾的內容只跟 `lib templates knowledge py` 有關，任何更新的 commit 都可以拿來換，`check` 會擋 C++ 對不上的情形）。
+`9736e54a0`（本線放腳本的那個 commit；第五輪預演用的就是它）。C++ 十支在 `~/code/swap-1113/src`（`BUILD_REF`＝`0e62d640e`，到 `9736e54a0` 為止 `proto8/impls` 沒有差別）。要換更新的 commit 也可以：`check` 會核 `proto8/impls` 跟 build 的一不一樣，不一樣就紅燈，先 `build.sh --ref <新的>`（`TS_BUILD` 指一個新夾）再換；新的 commit 沒在暫存樹預演過，要的話照 `~/code/swap-1113/rehearse.sh <ref>` 跑一次（約 5 秒，要先 `setup.sh` 重搭）。
