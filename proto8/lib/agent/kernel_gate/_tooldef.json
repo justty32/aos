@@ -1,0 +1,8 @@
+{"description": "Be a kernel gate: other procs send their requests to start or change procs to a mailbox of yours; a kernel station running on you holds each one, you are told, and you decide; the station forwards what you pass. One op per call:\n- switch on: {\"op\": \"on\"} (prints the mailbox path; senders set AOS_KERNEL to it)\n- held requests: {\"op\": \"ls\"}\n- let one through: {\"op\": \"pass\", \"letter\": \"<name>\"} (the station forwards it and its rules still apply)\n- refuse one: {\"op\": \"refuse\", \"letter\": \"<name>\", \"reason\": \"one line for the sender\"}\n- switch off: {\"op\": \"off\"} (refuses what is still held)\nHeld requests reach you as a message \"[aos] kernel_hold: ...\". More: aos/kernel.json#/gate. Errors: ArgumentsBad, OpUnknown, LetterMissing, LetterRefused, PostFailed, WriteFailed, LaunchFailed, CommandFailed, DaemonMissing, DaemonFailed, InstanceMissing.",
+ "env": ["AOS_DAEMON"],
+ "errors": ["ArgumentsBad", "OpUnknown", "LetterMissing", "LetterRefused", "PostFailed", "WriteFailed", "LaunchFailed", "CommandFailed", "DaemonMissing", "DaemonFailed", "InstanceMissing"],
+ "parameters": {"type": "object",
+                "properties": {"op": {"type": "string", "enum": ["on", "off", "ls", "pass", "refuse"], "description": "on = become a gate, off = stop, ls = held requests, pass = let one through, refuse = refuse one"},
+                               "letter": {"type": "string", "description": "pass, refuse: the letter name from the notice or from ls"},
+                               "reason": {"type": "string", "description": "refuse: one line the sender will read"}},
+                "required": ["op"]}}

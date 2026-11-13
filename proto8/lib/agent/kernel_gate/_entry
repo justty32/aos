@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+# kernel_gate - 讓叫我的那隻 agent 當 kernel 的門：on 把框架站掛在自己身上（請求先留著、通知自己）、ls 看留著的、pass／refuse 表態（轉寄由站做）、off 收掉
+# 使用者 11-13：「一個普通的agent隨便弄些hook、json設定啥的，就可以收請求了。請求進來後agent收到通知，他自己判斷要不要過，然後再去轉送」；
+#   四題回覆「1乙，總之先做。」＝重用框架站、agent 只表態、機器轉寄（thinking/2026-11/13/eca-as-kernel.md）。
+# 做法：站＝lib/aos/kernel，stack＝agent 的 <stack>/hooks/kernel_gate/（就是那支 on_clock hook 的小格），設定 kernel.json 也在那裡、agent 自己可以改。
+#   on    建小格與 requests 信箱；沒有 kernel.json 才寫預設那份（一支 after_verdict hook＝同夾的 hold，condition pass）；
+#         掛 on_clock hook kernel_gate（同夾的 tick：每個時鐘週期跑站一輪＋通知）；印收件信箱路徑。
+#   ls    列留著的信（機器讀到的事實＋寄件人多寫的鍵原樣）。
+#   pass／refuse  寫 <小格>/decisions/<信名>.json，當場叫站跑一輪，回報結果（站那一輪的拒信行轉成自己的話）。
+#   off   先跑一輪、把留著的全部回拒（HoldRefused）、再拿掉 on_clock hook；kernel.json 與信箱留著。
+# 介面（lib/README 的契約）：stdin 收 {"op": …}；結果印 stdout；錯＝stderr 與 stdout 各一行「kernel_gate: error: 代號 原因」、退 1。
+# 需要 PATH 上有 aos-agent、aos-post、aos-exec、aos-directive（proto8/install.sh）。
+import json, os, sys, time
+HELP = """\
+usage: kernel_gate < ARGUMENTS.json   (a tool: run it with aos-exec)
+Make the agent that calls me a kernel gate: other procs send their requests to a mailbox of mine,
+a kernel station on me holds each one, I am told, and I decide; the station forwards what I pass.
+op on | off | ls | pass | refuse.
+Result on stdout. On error: one line "kernel_gate: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE, os.path.dirname(HERE)] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+    import cmd_call  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name not in ("tool_io", "cmd_call", "process_group"):
+        raise
+    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), error.name)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+import gate_lib as g  # noqa: E402
+
+NAME = "kernel_gate"
+tool_io.start(NAME, HELP)
+die = tool_io.die
+DEFAULT_CFG = {"hooks": {"hold": {"event": "after_verdict", "condition": "pass", "handler": None}}}
+
+
+def agent(*args):
+    """aos-agent args…：stderr 原樣往上；退非 0＝它最後一行錯誤行的代號與原因當自己的錯。回 stdout。"""
+    _, out, _ = cmd_call.call("aos-agent", args, shown=2)
+    return out
+
+
+def round_now(cell):
+    try:
+        return g.round_once(cell)
+    except g.Failed as e:
+        die(e.code, e.why)
+
+
+def next_text(cell):
+    cfg = g.read_json(os.path.join(cell, "kernel.json"), {})
+    requests = os.path.join(cell, "requests")
+    if isinstance(cfg, dict) and cfg.get("next"):
+        return "%s (next in kernel.json)" % cfg["next"]
+    box = os.environ.get("AOS_KERNEL")
+    if box and os.path.realpath(box) != os.path.realpath(requests):
+        return "%s (AOS_KERNEL)" % box
+    return "the ctl mailbox of your daemon (AOS_DAEMON=%s)" % (os.environ.get("AOS_DAEMON") or "not set")
+
+
+cmd_call.catch_signals()
+args = tool_io.arguments()
+OPS = {"on": (), "off": (), "ls": (), "pass": ("letter",), "refuse": ("letter", "reason")}
+op = args.get("op")
+if op is None:
+    die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
+if op not in OPS:
+    die("OpUnknown", "op must be one of %s (got %r)" % (", ".join(OPS), op))
+extra = sorted(k for k in args if k != "op" and k not in OPS[op])
+if extra:
+    die("ArgumentsBad", "op %s does not take %s (it takes %s)" % (op, ", ".join(extra), ", ".join(OPS[op]) or "nothing else"))
+try:
+    who = json.loads(agent("ctl", "who", "--json"))
+    stack, me = who["stack"], who["name"]
+except (ValueError, KeyError, TypeError):
+    die("CommandFailed", "aos-agent ctl who --json did not print name and stack")
+cell = g.cell_of(stack)
+cfg_path = os.path.join(cell, "kernel.json")
+requests = os.path.join(cell, "requests")
+is_on = os.path.isfile(cfg_path)
+
+try:
+    if op == "on":
+        os.makedirs(cell, exist_ok=True)
+        kept = os.path.isfile(cfg_path)
+        if not kept:
+            cfg = json.loads(json.dumps(DEFAULT_CFG))
+            cfg["hooks"]["hold"]["handler"] = g.handler_ref("hold")
+            g.write_json(cfg_path, cfg)
+        code, _, err = g.run(["aos-post", "init", requests])
+        if code != 0:
+            die("PostFailed", "cannot create the request mailbox %s: %s" % (requests, (err.strip().splitlines() or ["?"])[-1]))
+        agent("hook", "--target", me, "add", "--event", "on_clock", "--every-cycles", "1", "--on-error", "continue",
+              "--timeout-ms", "60000", "--name", g.HOOK, "--replace", "--path-json", json.dumps(g.handler_ref("tick")))
+        print("kernel_gate is on. Requests go to this mailbox: %s" % requests)
+        print("A sender uses it by setting AOS_KERNEL to that path (or a station names it as next).")
+        print("The station on you runs once every clock cycle while you are not in a turn. It holds each request its rules "
+              "let through and tells you once: \"[aos] kernel_hold: ...\". Answer each with op pass or op refuse.")
+        print("What you pass, the station forwards to: %s." % next_text(cell))
+        print("Its settings (%s): %s. Edit it to add rules (allowed, max_running, next, hooks ...): aos/kernel.json#/gate."
+              % ("kept as you left them" if kept else "written now", cfg_path))
+    elif op == "ls":
+        rows = g.held(cell)
+        if not rows:
+            print("no requests held%s" % ("" if is_on else " (kernel_gate is not on: op on)"))
+        now = int(time.time() * 1000)
+        for row in rows:
+            print("\n".join(g.lines(*row, now)))
+    elif op == "off":
+        refused = 0
+        if is_on:
+            round_now(cell)                       # 先收進來：等一下不留「認領了卻沒人答」的信
+            names = [name for name, _, _ in g.held(cell)]
+            for name in names:
+                g.decide(cell, name, "refuse", g.OFF_MSG)
+            if names:
+                round_now(cell)
+            refused = len(names) - len(g.held(cell))
+        agent("hook", "--target", me, "rm", g.HOOK)
+        print("kernel_gate is off: the station no longer runs. %d held request%s refused (HoldRefused %s)."
+              % (refused, " was" if refused == 1 else "s were", g.OFF_MSG))
+        print("The mailbox %s and kernel.json stay; letters sent there now wait unanswered until op on." % requests)
+    else:
+        name = args.get("letter")
+        if not isinstance(name, str) or not name or "/" in name:
+            die("ArgumentsBad", "letter is required: the letter name from the notice or from op ls")
+        if name not in [row[0] for row in g.held(cell)]:
+            die("LetterMissing", "no held request %s: it was already decided, its sender stopped waiting, or the name is wrong (op ls shows what is held)" % name)
+        reason = None
+        if op == "refuse":
+            reason = args.get("reason")
+            if not isinstance(reason, str) or not reason.strip():
+                die("ArgumentsBad", "refuse needs reason: one line the sender will read")
+            reason = reason.strip()
+        g.decide(cell, name, op, reason)
+        code, err = round_now(cell)
+        said = g.refusal(err, name)
+        left = os.path.exists(os.path.join(requests, "cur", name))
+        if left and code != 0:
+            print("decision recorded (%s %s). The station round failed just now (its error line is on stderr); "
+                  "the decision is applied on its next round." % (op, name))
+        elif op == "refuse":
+            print("refused %s; the sender got: %s" % (name, said or "HoldRefused " + reason))
+        elif said:
+            die("LetterRefused", "%s was not passed on: the station refused it after your pass: %s (the sender got that answer)" % (name, said))
+        elif left:
+            print("passed %s; it now waits at the station for a free slot (max_running in kernel.json) and is forwarded when one frees." % name)
+        else:
+            print("passed %s: the station forwarded it to the next station (%s)." % (name, next_text(cell)))
+except g.Failed as e:
+    die(e.code, e.why)

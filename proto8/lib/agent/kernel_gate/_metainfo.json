@@ -1,0 +1,14 @@
+{
+  "summary": "Make the agent calling me a kernel gate: a kernel station on it holds requests, the agent decides, the station forwards",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 1000
+  },
+  "timeout_ms": 120000
+}

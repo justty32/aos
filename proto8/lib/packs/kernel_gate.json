@@ -1,0 +1,3 @@
+{"description": "Pack kernel_gate: be a kernel gate - kernel_gate (a kernel station on you holds requests, you decide, it forwards). Not in any stock definition; add it yourself.",
+ "tools": {
+           "kernel_gate": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/kernel_gate"}}}}

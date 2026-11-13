@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+# kernel_gate/tick - agent 身上的 on_clock hook handler：叫框架站做一輪，再把新留下的請求合成一則「[aos] kernel_hold: …」寄進 agent 的 queue。
+# 介面：stdin＝事件 JSON（stack＝agent 的 stack）；$AOS_STACK＝這支 hook 的小格＝站的 stack（kernel.json、requests/、hold.json、decisions/ 都在這裡）。
+# 小格裡沒有 kernel.json（沒開過 kernel_gate on）＝什麼都不做。通知過的信名記在 $AOS_STACK/notified.json（只留還留著的）。
+# 錯：stderr 一行「kernel_gate: error: 代號 原因」、退 1；站那一輪自己的錯誤行原樣在上面。掛它用 on_error: continue。
+import json, os, sys, time
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import gate_lib as g
+
+HELP = """usage: tick < EVENT.json   (an on_clock hook handler; $AOS_STACK = this hook's cell = the station's stack)
+Run one round of the kernel station in $AOS_STACK (kernel.json there), then tell the agent once about
+each request the station holds: one message "[aos] kernel_hold: ..." to STACK/queue (STACK = the event's stack).
+No kernel.json in the cell = nothing at all. exit codes: 0 done; 1 error ("kernel_gate: error: CODE reason").
+"""
+
+
+def die(code, why):
+    sys.stderr.write("kernel_gate: error: %s %s\n" % (code, why))
+    sys.exit(1)
+
+
+def main():
+    if sys.argv[1:2] in (["-h"], ["--help"]):
+        sys.stdout.write(HELP)
+        return 0
+    try:
+        event = json.load(sys.stdin)
+        stack = event["stack"]
+    except (ValueError, KeyError, TypeError) as e:
+        die("ArgumentsBad", "the event on stdin is not JSON with a stack: %s" % e)
+    cell = os.environ.get("AOS_STACK")
+    if not cell:
+        die("StackMissing", "AOS_STACK is not set (this hook's own cell)")
+    if not os.path.isfile(os.path.join(cell, "kernel.json")):
+        return 0
+    try:
+        code, _ = g.round_once(cell)
+        rows = g.held(cell)
+        seen_path = os.path.join(cell, "notified.json")
+        seen = g.read_json(seen_path, [])
+        seen = set(x for x in seen if isinstance(x, str)) if isinstance(seen, list) else set()
+        new = [r for r in rows if r[0] not in seen]
+        if new:
+            rc, _, err = g.run(["aos-post", "send", "--ordered", os.path.join(stack, "queue")],
+                               json.dumps({"role": "user", "content": g.notice(new, int(time.time() * 1000))}, ensure_ascii=False))
+            if rc != 0:
+                die("CommandFailed", "cannot send the notice to %s/queue: %s" % (stack, (err.strip().splitlines() or ["?"])[-1]))
+        keep = sorted(r[0] for r in rows)
+        if new or sorted(seen) != keep:
+            g.write_json(seen_path, keep)
+    except g.Failed as e:
+        die(e.code, e.why)
+    if code != 0:
+        die("RoundFailed", "the station round exited %d (its own error line is above)" % code)
+    return 0
+
+
+sys.exit(main())

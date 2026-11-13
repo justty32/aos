@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+# kernel_gate/hold - 框架站的 after_verdict hook handler：每一封都回「先留著」，等 agent 用 kernel_gate 表態。
+import sys
+sys.stdin.read()
+print('{"verdict": "hold"}')
