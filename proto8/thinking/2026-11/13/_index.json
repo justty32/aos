@@ -2,6 +2,9 @@
  "README.md": {
   "description": "proto8 討論紀錄：2026-11-13"
  },
+ "a2a-施工結果.md": {
+  "description": "線壬施工結果（11-13）：畫面開著的 claude 身，信改用署名訊息投進 CLI 的收件口；投不進去就照舊貼字"
+ },
  "aos-home-手冊.html": {
   "description": "11-13 給使用者照著做的 aos-home 手冊（公司 WSL）HTML 原稿：從零搭 ~/aos-home 一棵小樹與 opus eca 的步驟"
  },

@@ -9,7 +9,7 @@
   "description": "03 驗收結果（11-10 晚）"
  },
  "04-agents.json": {
-  "description": "設定（鍵：_description、_index、agents_children、agents_ctl、agent_def、thought）"
+  "description": "Other agents: which tool"
  },
  "04-知識庫節點.md": {
   "description": "04 知識庫節點：舊 `agents` 節點換成三支（交 json-memory 隊放進 `knowledge/aos`）"

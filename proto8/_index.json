@@ -31,7 +31,7 @@
   "description": "掛在 daemon 上、收請求管資源與排程的 kernel 範本：daemon-kernel、procs-kernel（框架站兩種掛法）、llm-kernel（問腦）、llm-team；要讓 agent 問腦或做請求把關時進去"
  },
  "knowledge": {
-  "description": "出廠內容樹：普通資料夾加 .json、大節點補 _index，第一本 aos/ 是給小模型的 aos 體系英文說明；要改 agent 讀的 aos 知識或看 index／_description 實例時進去"
+  "description": "出廠內容樹：給 aos 裡的 agent 讀的英文內容（aos 是什麼、規則、錯誤、工具、包、信箱、時鐘、指令），普通資料夾＋json；照它自己的規矩只有太大的節點才有 index，從 knowledge/aos/_index.json 看起；要改 agent 讀到的說明時進去"
  },
  "lib": {
   "description": "agent 的工具函式庫（腦可以叫的外部函數，一份標準版、掛捷徑引用）：base 底層原語、aos 動 aos 的、agent 整隻 agent 的，另有 json、mcp、metainfo 等共用模組；要加改工具時進去"

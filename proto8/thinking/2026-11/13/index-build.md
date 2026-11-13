@@ -55,6 +55,7 @@
 - X6 `proto8/notes`、`proto8/user-advice` 算文件區，放進階段一；`proto8/cases`、`proto8/feedback` 跟程式區一起階段二。
 - X7 只列進版控的檔。別條線還沒 commit 的新檔不會出現，等它們進了 git 再重生。
 - X8 用獨立的 `_index.json`，不放進 `_metainfo.json` 的 `index`。
+- X9 `proto8/knowledge` 裡面不新增 index。那棵樹自己的說明（knowledge/docs/01）寫明照使用者 11-12 的話「只給太大的補」：夾裡超過 15 個東西才放，現在就是 `aos/`、`aos/cli/`、`aos/tools/` 三份；其餘的夾（頂層、docs、aos/me、errors、agents、cli/parts）都不到門檻。既有三份查過沒有錯，所以 knowledge 這次一個檔都不動；`proto8/_index.json` 裡 knowledge 那一句寫明從 `knowledge/aos/_index.json` 看起。這跟 X1「每層都建」不一樣，是照那棵樹既有的規矩。
 
 ## 結論：會不會踩到東西（放之前逐項查過，讀程式碼判斷）
 
@@ -91,9 +92,15 @@
 - `index_view` 從 repo 根往下走：`{"path": "."}` → `proto8`、`wf` 兩項帶 `index:`；`{"path": "proto8/thinking/2026-11", "key": "13"}` → 當天主題一句話與下一份的路徑；`{"path": "wf/workflows/dispatch"}`、`{"path": "proto8/docs/NORMS"}` 都看得到每一項。
 - 子 agent 順手看到、沒動的：幾份 thinking README 的標題還寫舊狀態（「未施工」「沒改程式」，夾裡其實已施工），手寫句照夾裡後來的結果寫；`proto8/user-advice/2026-09/aos-tools.md` 只有標題；`wf/session_logs/2026-11/README.md` 的 11-06 那一列有一段重複貼了兩次。
 
+## 階段二備料（程式區，11-13 中午在暫存夾生成、審過，還沒放進 repo）
+
+- 範圍：`proto8` 的 lib、cmd、py、impls、extras、cases、feedback 每一層；templates、kernel 只建頂層與它們的 docs、tests（各範本、各 kernel 的定義夾裡面不放）；不放的：`lib/packs`、各 `bin`、cases 的 `expect`／`ws`、knowledge（X9）、`impl_cpp`。
+- 暫存夾生成結果：新增 293 份、1180 項（impls 106 份、lib 120、cmd 38、extras 11、templates 7、cases 5、py 3、kernel 2、feedback 1）。手寫句再加約 260 句（五個 opus 子 agent：各專案與內層夾、每支工具一句繁中、各範本與 kernel、太短的說明文件）。
+- 生成器為這一區加的認法：工具夾取 `_tooldef.json`／`_metainfo.json`；`tests`、`src`、`include`、`docs`、`.gitignore`、`CMakeLists.txt` 這類用通用句；knowledge 節點的 json 取 `_description` 那段的標題。
+
 ## 給使用者看的
 
-- **「建滿」的其他讀法**（這次先照「這份 repo」做）：一是也包含裝好的那棵樹自己長出來的東西（`~/aos-home` 的 ws、agents、stack；那裡的 lib、templates、knowledge 是從 repo 抄過去的，repo 鋪好、重抄就有）；二是只指 `proto8/knowledge` 這棵出廠內容樹（已有三份，缺的階段二補）；三是連 json 檔裡面的節點也建（檔內 `_index`）；四是 `archive/` 與 `impl_cpp/` 裡面也建。
+- **「建滿」的其他讀法**（這次先照「這份 repo」做）：一是也包含裝好的那棵樹自己長出來的東西（`~/aos-home` 的 ws、agents、stack；那裡的 lib、templates、knowledge 是從 repo 抄過去的，repo 鋪好、重抄就有）；二是只指 `proto8/knowledge` 這棵出廠內容樹（已有三份；照它自己「太大才補」的規矩現在不缺，X9）；三是連 json 檔裡面的節點也建（檔內 `_index`）；四是 `archive/` 與 `impl_cpp/` 裡面也建。
 - **`impl_cpp/` 裡面不建**（調度者同意）：那是使用者親手寫的夾，只在 repo 根留一項。
 - **範本與 kernel 的定義夾裡面不放**（原因見上表）：這些夾只在上一層有一句話，`index_view` 走不進去。
 - **維護要不要掛進規矩**：兩個方案在下面「維護」，待使用者裁；裁之前靠記得跑。

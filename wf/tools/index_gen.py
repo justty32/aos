@@ -12,7 +12,7 @@
 範圍、不建的夾、手寫不生成的 index（hand_indexes，如 knowledge 既有的三份）寫在同夾的 index_gen.json；取不到檔頭一句話的（圖、紀錄檔、沒有 README 的夾）手寫在 index_gen_desc.json（路徑 → 一句話，手寫的優先）。
 列哪些：`git ls-files` 有的檔，與裡面有這種檔的夾；`_index.json` 自己不列。夾的那一項，在範圍內就帶 `index` 連到它自己的 `_index.json`。
 一句話怎麼認：md 取第一個標題（分檔取導航行的「涵蓋：…」）；夾取它的 README.md／INDEX.md（工具夾取 _tooldef.json／_metainfo.json），沒有就取同名 `夾.md` 的（分檔夾）；
-都沒有時用設定檔的通用句（usual_dirs／usual_files：tests、src、.gitignore 這類名字就說明用途的）；json 取 description／summary／$comment／title，
+都沒有時用設定檔的通用句（usual_dirs／usual_files：tests、src、.gitignore 這類名字就說明用途的）；json 取 description／summary／$comment／title（knowledge 節點取 `_description` 那段的標題），
 wf-table 資料檔寫出處與欄位；程式檔照 codemap_gen 的認法；html 取 <title>。連結語法、粗體去掉，只留字。
 格式出處：proto8/thinking/2026-11/12/index.md、index-link.md；規格與代定：proto8/thinking/2026-11/13/index-build.md。查對用 index_check.py。
 純標準庫；只讀檔頭，不跑任何程式。
@@ -83,6 +83,8 @@ def json_desc(text, name):
         for k in ("description", "summary", "$comment", "title"):
             if isinstance(d.get(k), str) and d[k].strip():
                 return d[k]
+        if isinstance(d.get("_description"), str) and d["_description"].strip():   # knowledge 的節點：_description 是一段 md，取它的標題
+            return md_desc(d["_description"])
         if str(d.get("contract", "")).startswith("wf-table/"):
             cols = "、".join(str(c) for c in d.get("columns", [])[:8])
             src = d.get("source")
