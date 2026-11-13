@@ -21,7 +21,7 @@
 **哪個檔負責什麼**不手寫：`wf/tools/codemap_gen.py` 從每個檔的檔頭一句話生成，一個 proto8 頂層夾一冊，索引在 **[code-map/proto8/README](code-map/proto8/README.md)**（照實際夾名產，夾改名後重跑就跟上）。
 
 - 一句話寫在哪：C／C++ 第一行 `// 檔名：一句話`；腳本與 `_entry` 跳過 shebang 後第一行 `# 名 - 一句話`（Python 也可以是 docstring 第一行）；CMake 第一行註解；JSON 用 `description`（工具夾的 `_tooldef.json`）、`summary`、`$comment` 或 `title`；knowledge 的 md 用第一個標題。
-- **新增、刪除檔或某檔職責變了**：改檔頭那一句，commit 前跑 `python3 wf/tools/codemap_gen.py --apply`，生成冊跟程式同一個 commit。不帶參數＝只檢查，`wf-lint` 的 CODEMAP 就是它（不一致算 broken）。
+- **新增、刪除檔或某檔職責變了**：改檔頭那一句，commit 前跑 `python3 wf/tools/codemap_gen.py --apply`，生成冊跟程式同一個 commit。不帶參數＝只檢查（不一致退 1）。
 - 一句話空或只寫檔名，生成器印 warning（不擋），順手補檔頭。
 - 行為細節不在 code map：看各程式自己的 README（[impls/README](../../../proto8/impls/README.md)、[lib/README](../../../proto8/lib/README.md) 等）。
 

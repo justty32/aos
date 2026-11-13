@@ -10,7 +10,7 @@
 ## Done when
 
 - [testing](../testing.md) 標「改完必跑」的建置指令回傳 0（build 得過）。
-- 新檔有檔頭一句話、職責變了的已改那一句，並跑過 `python3 wf/tools/codemap_gen.py --apply`（[code map](../common/code-map.md) 生成冊跟程式同一個 commit；`wf-lint` 的 CODEMAP＝0）。
+- 新檔有檔頭一句話、職責變了的已改那一句，並跑過 `python3 wf/tools/codemap_gen.py --apply`（[code map](../common/code-map.md) 生成冊跟程式同一個 commit）。
 - 下表對應的文檔已補；要使用者實機驗證的在 [WAIT_USER](../../WAIT_USER.md) 有一行；跨 session 沒收尾的在 [SESSION-LOG](../../SESSION-LOG.md) 有一行。
 
 ## 流程

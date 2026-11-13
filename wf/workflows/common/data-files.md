@@ -35,7 +35,7 @@ md 裡**每列同一組欄位的條列式區塊 > 1 KB**（表格、清單）抽
 
 抽完後原 md **留在原路徑**（外部連結都指它），內容只剩：**目的**一句、`已抽到 [x.json](x.json)（N 列）`、**欄位說明**（每欄一行）、**統計**（幾列、各狀態幾件），加上原本表以外的散文。**不留表的副本**——同一份東西不同時存在 md 與資料檔。
 
-**不寫查詢指令、不寫工具路徑。** agent 照本契約就知道資料檔一律走 `tabledb.py`，md 再貼一次 `python3 …/tools/tabledb.py x.json` 只是雜訊；人要查法看本檔。需要指路時最多一句「查法見工作流的資料檔說明」，**不寫檔案路徑、不寫指令**。`wf-lint.sh` 的 `QUERYCMD` 會掃出殘留。
+**不寫查詢指令、不寫工具路徑。** agent 照本契約就知道資料檔一律走 `tabledb.py`，md 再貼一次 `python3 …/tools/tabledb.py x.json` 只是雜訊；人要查法看本檔。需要指路時最多一句「查法見工作流的資料檔說明」，**不寫檔案路徑、不寫指令**。
 
 ## 索引檔 `index.json`（可選）
 
@@ -60,7 +60,5 @@ Python 端：`from tabledb import load; t = load("x.json"); t.rows / t.get(i) / 
 ## 其他工具怎麼對待資料檔
 
 **`tools/find_big_lists.py [--min 1024] [--links-only] <path>…`** 列 md 裡超標的表／清單，每行附 `links=N` 與 `linked=all|some|none`（`all`＝每列都有連結＝連結表）；`--links-only` 改成列**連結 > 10 條**的區塊（不看 bytes），由人判斷用途；表前一行 `<!-- wf-nav -->` 豁免該區塊；清單項之間只隔一個空行仍算同一區塊（用空行切塊躲不掉門檻）。
-
-**`tools/wf-lint.sh`** ① 呼叫 `find_big_lists.py --min 1024` 報 `BIGLIST`：同質記錄表（`linked` 不是 `all`）`--strict` 才算失敗；純連結表印 `BIGLIST-LINKS` 只 warning、永不算失敗。② 掃 repo 內所有 `.json`／`.csv`（`archive/` 除外）：有 `"contract": "wf-table/` 的 json 與所有 csv 跑 `tabledb.py check`，壞連結印 `BROKEN <檔>[<index>.<column>] -> <target>` 計入 `broken`。③ 呼叫 `check_anchors.py` 驗 md 連結的 `#錨點`（heading slug 與顯式 `id=`）在目標檔是否存在，不存在印 `BROKEN-ANCHOR <檔>:<行> -> <目標>#<錨點>` 計入 `broken`。④ 掃 md 裡殘留的查詢指令：任一行含 `tabledb.py` 且含 `python3 ` 或 `tools/tabledb.py` 就印 `QUERYCMD <檔>:<行>`（`archive/`、`wf/`、`AGENTS.md` 與本契約檔免掃）；平時只是 warning，`--strict` 才算失敗。
 
 **`tools/fix_moved_links.py [--apply] [--root DIR] [--prefix SUB] moves.tsv`** 搬檔後照 `舊<TAB>新` 重寫 md 與資料檔（json 字串值、csv cell）裡的連結；**檔案本身被搬**時，其內連結以舊位置解析、以新位置重算。流程見 [tidy](../tidy/README.md)。

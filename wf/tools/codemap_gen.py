@@ -3,7 +3,7 @@
 
   codemap_gen.py [--root REPO] [--apply] [--quiet]
     不帶 --apply：檢查。生成結果跟 commit 進去的冊一致就退 0；不一致（缺冊、內容不同、多出已不對應的生成冊）
-                 每冊印一行 error 與差異、退 1。wf-lint 的 CODEMAP 就是跑這個。
+                 每冊印一行 error 與差異、退 1。
     --apply      重寫生成冊；刪掉開頭帶 generated 標記、但已不對應任何夾的舊冊（手寫檔不碰）。
   一句話空或＝檔名：印 warning，不擋。
 
@@ -31,7 +31,7 @@ SKIP_ANY_DIR = {"archive", "docs", "__pycache__", ".vscode"}
 SKIP_NAMES = {".gitignore", ".gitattributes", "_index.json"}   # _index.json＝index_gen.py 生成的資料夾 index，不是程式檔
 MD_DIRS = {"knowledge"}          # 這些頂層夾的 .md 也列（出廠內容樹的說明）
 TOOL_PARTS = ("_entry", "_tooldef.json", "_metainfo.json")
-LIMIT = 7600                     # 冊的大小上限（wf-lint OVERSIZE 是 8192）
+LIMIT = 7600                     # 冊的大小上限（文件單檔上限是 8192）
 PROG = "codemap_gen"
 
 

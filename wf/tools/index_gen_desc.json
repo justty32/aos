@@ -1,7 +1,7 @@
 {
  "description": "index_gen 取不到檔頭一句話時用的手寫一句話：repo 相對路徑 → 一句話（手寫的優先於檔頭）。",
  "desc": {
-  ".claude": "Claude Code 的設定夾：slash 指令 /wf-lint 與 compact 後重讀規矩的 hook；只有放 repo 根才讀得到，工作流本體在 wf/",
+  ".claude": "Claude Code 的設定夾：compact 後重讀規矩的 hook；只有放 repo 根才讀得到，工作流本體在 wf/",
   ".gitattributes": "把工作區的行尾一律釘成 LF（專案只在 POSIX 上建置，CRLF 會讓 .sh 與 shebang 壞掉）",
   ".gitignore": "不進版控的清單：build／install／vcpkg 產物、Python 快取、跑出來的紀錄；proto8 各處手寫的 bin/ 另外放行",
   "AGENTS.md": "給 agent 的最頂層入口：開場先掃哪三處、鐵律、分層原則、要做事／看結構／碰程式各往哪走；每個 session 先讀這份",
@@ -670,7 +670,7 @@
   "wf/session_logs/2026-11/2026-11-12.md": "11-12 的工作日誌：eca 不給 aos 基礎檔案工具、knowledge 工具拆掉改普通 json＋_index、json_*／jsonx_* 兩套、_metainfo 只是約定、Q01～Q16 結清",
   "wf/session_logs/2026-11/2026-11-13.md": "11-13 的工作日誌：公司 WSL 不再當遊樂場、改住 ~/aos-home（一隻 opus eca），repo 換到 ~/repo/aos，舊遊樂場與舊 repo 刪掉",
   "wf/session_logs/archive": "已收成月摘要的月份每日原檔封存處（2026-08、2026-09、2026-10 的每日檔），只作歷史保留；月摘要找不到的細節才來翻",
-  "wf/tools": "wf 工作流的腳本：wf-lint、codemap_gen、index_gen、tabledb 資料表讀寫、inbox 收發信、進度看板 progress_board、離線待裁頁 decide_page、連結修補等；要跑檢查或收發信時進去",
+  "wf/tools": "wf 工作流的腳本：codemap_gen、index_gen、tabledb 資料表讀寫、inbox 收發信、進度看板 progress_board、離線待裁頁 decide_page、連結修補等；要跑檢查或收發信時進去",
   "wf/tools/decide_page": "離線待裁頁工具 decide_page.py：把一批題目 JSON 做成單檔互動頁，讓使用者點選與補充後複製回覆，再 parse／apply 讀回落地裁定",
   "wf/tools/decide_page/README.md": "decide_page 的說明：離線待裁頁的 check／build／parse／apply 指令、回覆格式、沒看過的題算待定、裁定怎麼落地與 SVG 樣式",
   "wf/tools/decide_page/web": "decide_page 產生的離線待裁頁的前端：page.css 樣式、page.js 處理選項、備註、已看狀態、主題與複製回覆",

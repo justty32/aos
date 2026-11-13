@@ -12,7 +12,7 @@
 
   --min           區塊 bytes 門檻（預設 1024，即契約的 1 KB）
   --links-only    改列「連結 > 10 條」的區塊，不看 bytes 門檻（--min 忽略），由人判斷用途
-  --exempt-file   檔名等於 NAME 的整檔跳過（可重複；wf-lint 用它豁免頂層路由器）
+  --exempt-file   檔名等於 NAME 的整檔跳過（可重複；用來豁免頂層路由器）
   --exclude-dir   跳過的資料夾名（預設 archive / .git / node_modules，可重複）
 
 豁免：區塊**前一行**（中間可有空行）含 `<!-- wf-nav -->` 就跳過該區塊——導航表要留在

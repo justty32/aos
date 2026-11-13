@@ -29,7 +29,7 @@ SKIP_PARTS = {
     "vendor",
     "snapshot",
 }
-# 跟 wf-lint.sh 的 list_owned_files 對齊：固定版本快照／評估／測試固定資料，兩段路徑才算，不下鑽。
+# 固定版本快照／評估／測試固定資料，兩段路徑才算，不下鑽。
 SKIP_SUFFIXES = {
     ("eval", "golden"),
     ("eval", "calib"),

@@ -98,8 +98,5 @@
  },
  "tests": {
   "description": "wf/tools 腳本的 Python 測試夾，目前只有 test_metainfo_migrate.py（驗 _metainfo 一次性遷移、保留、排除與冪等）"
- },
- "wf-lint.sh": {
-  "description": "工作流文檔的機械檢查（bash + grep/sed/awk/find，部分借 python3）"
  }
 }

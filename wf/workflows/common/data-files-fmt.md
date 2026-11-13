@@ -49,7 +49,7 @@
 | `links`／`check`／`open`／`resolve` | 展開後抽連結；來自 `$fmt` 的項多 `raw`；展開失敗的項 `target`／`resolved` 為 null、`exists=false`、加 `error` |
 | **`fmt FILE`** | 每個 `$fmt` 的 `[{index, column, raw, expanded}]`（meta `source` 以 `index: null` 列）；失敗加 `error` |
 
-**`fix_moved_links.py`**：`$fmt` 值以**舊位置**的變數值展開、remap、再以**新位置**的**同一代號**寫回（`${var}/` + 相對該代號目錄）；新目標不在該代號目錄下就改用包含它的最內層代號，都沒有就 `${fileDirname}/相對路徑`。結果仍是 `$fmt` 物件。json 自己被搬到另一層 repo 時，`${gitRoot}` 等以新目錄重算。`find_big_lists.py`／`wf-lint.sh` 不動（後者靠 `check`）。
+**`fix_moved_links.py`**：`$fmt` 值以**舊位置**的變數值展開、remap、再以**新位置**的**同一代號**寫回（`${var}/` + 相對該代號目錄）；新目標不在該代號目錄下就改用包含它的最內層代號，都沒有就 `${fileDirname}/相對路徑`。結果仍是 `$fmt` 物件。json 自己被搬到另一層 repo 時，`${gitRoot}` 等以新目錄重算。`find_big_lists.py` 不動。
 
 ## 與 llmkit／aos 的對應
 

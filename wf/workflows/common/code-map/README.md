@@ -8,6 +8,6 @@
 |------|------|---------------|
 | [proto8/README](proto8/README.md) | proto8 每個進版控的程式檔一列（生成），含 impls 的 CMake 依賴表 | 要改 proto8 任何程式、想知道某個檔負責什麼 |
 
-**新增、刪除檔或某檔職責變了**：改那個檔的檔頭一句話，commit 前跑 `python3 wf/tools/codemap_gen.py --apply`（會重寫生成冊、刪掉已不對應任何夾的舊生成冊）。不帶參數只檢查、不一致退 1；`wf-lint` 的 CODEMAP 檢查就是跑它。
+**新增、刪除檔或某檔職責變了**：改那個檔的檔頭一句話，commit 前跑 `python3 wf/tools/codemap_gen.py --apply`（會重寫生成冊、刪掉已不對應任何夾的舊生成冊）。不帶參數只檢查、不一致退 1。
 
 甲代（repo 根 `core/`、`app/`）的分冊 11-05 封存在 `common/archive/code-map/`（索引見 [common/archive](../archive/README.md)）。
