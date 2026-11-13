@@ -19,6 +19,6 @@
 3. **push**：未 push（使用者說「晚上十一點睡覺前再push。」；數量看 `git log origin/main..main`，若使用者已推，下個 session 會看到 origin/main 跟上）。
 4. **換樹**：使用者今晚照桌面手冊換（釘 `54789088d`，預演第六輪 12 段全綠；備份預設在 `~/.aos/saves/tree-swap`）。換後收尾清單在手冊與 [tree-swap-1113](../proto8/thinking/2026-11/13/tree-swap-1113.md)。
 5. **下一步**：新 session 先確認樹起來了（沒起就問使用者，起樹由他下）→ 做換後收尾（含專區段 2 的計時器、notify on、door 重建）→ 派線接 5 處 Python `--at`（`directive_value.py`、`cmd/aos-agent/aos_agent/tools.py`、`py/aos_clock_register.py`、`lib/mcp_server_file.py`、`lib/hook_run.py`）→ 接完再換一次樹（連同 `user_verify` 與之後的 lib 改動）。
-6. **明天開工**：astra 當 kernel 施工（[astra-kernel-plan](../proto8/thinking/2026-11/13/astra-kernel-plan.md)，Q1～Q8 已裁）、kernel 限資源施工（[kernel-limits-plan](../proto8/thinking/2026-11/13/kernel-limits-plan.md)，K1～K18 已裁）。
+6. **明天開工**：astra 當 kernel 施工（[astra-kernel-plan](../proto8/thinking/2026-11/13/astra-kernel-plan.md)，Q1～Q8 已裁）、kernel 限資源施工（[kernel-limits-plan](../proto8/thinking/2026-11/13/kernel-limits-plan.md)，K1～K18 已裁）、kernel 框架批 5、6、10 重做（公司補丁不用了）與批 12～14（家機用真腦）。
 7. **wf 搬遷剩**：段 2b SESSION-LOG 轉 json、段 9 收尾（見 [SESSION-LOG](SESSION-LOG.md)）。
 8. **段 0 驗**：這次 compact／新 session 讀到這條就算 `compact_reload.sh` 補驗過（驗完補 user/02 那句，見 SESSION-LOG「主 session 接 aos」）。
