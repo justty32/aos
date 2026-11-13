@@ -2,6 +2,9 @@
  "fake_mcp_stdio.py": {
   "description": "Provide a standard-library MCP stdio server with tools and failure modes for client tests."
  },
+ "ref_path_cases.json": {
+  "description": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per rule, run by lib/tests/test_ref_path.py."
+ },
  "test_aos_lib_missing.py": {
   "description": "lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。"
  },
@@ -40,6 +43,9 @@
  },
  "test_observed_children.py": {
   "description": "Verify observed_children: a child's declared accounts are copied (and only those), take_child hands the mark over once."
+ },
+ "test_ref_path.py": {
+  "description": "The shared \"path string -> (file, pointer)\" rule (aos_refpath.spot): left of # is the file system, right of # is inside the json."
  },
  "test_tool_io_keys.py": {
   "description": "不認得的 stdin 鍵＝ArgumentsBad（使用者 11-10 晚「那就報錯」）；additionalProperties 與自由物件照舊收。"

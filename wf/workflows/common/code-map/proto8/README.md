@@ -3,7 +3,7 @@
 
 # proto8 逐檔 code map 生成冊索引
 
-`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：1024 個檔、869 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
+`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：1027 個檔、872 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
 
 | 冊 | 夾 | 段 | 列／檔 |
 |---|---|---|---|
@@ -28,7 +28,7 @@
 | [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層 | 146／146 |
 | [knowledge-2](knowledge-2.md) | `proto8/knowledge/` | `aos/` |  |
 | [knowledge-3](knowledge-3.md) | `proto8/knowledge/` | `wf/` |  |
-| [lib](lib.md) | `proto8/lib/` | 頂層 | 250／397 |
+| [lib](lib.md) | `proto8/lib/` | 頂層 | 253／400 |
 | [lib-2](lib-2.md) | `proto8/lib/` | `agent/` |  |
 | [lib-3](lib-3.md) | `proto8/lib/` | `aos/` |  |
 | [lib-4](lib-4.md) | `proto8/lib/` | `base/` |  |

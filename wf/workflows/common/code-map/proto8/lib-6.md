@@ -10,6 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`fake_mcp_stdio.py`](../../../../../proto8/lib/tests/fake_mcp_stdio.py) | Provide a standard-library MCP stdio server with tools and failure modes for client tests. |
+| [`ref_path_cases.json`](../../../../../proto8/lib/tests/ref_path_cases.json) | Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per … |
 | [`test_aos_lib_missing.py`](../../../../../proto8/lib/tests/test_aos_lib_missing.py) | lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。 |
 | [`test_directive_value.py`](../../../../../proto8/lib/tests/test_directive_value.py) | 驗 directive_value：給了 file＝{"$ref": "#/…"} 取那份檔自己；沒給＝原封不動（11-12 ref-hash R1）；resolve_path 一律給設定檔。 |
 | [`test_file_tools_paths.py`](../../../../../proto8/lib/tests/test_file_tools_paths.py) | 檔案工具拿掉工作區限制（11-10 tool-packs，使用者「3.對」）：相對從 $AOS_WS、絕對照用，工作區外也能讀寫改搬。 |
@@ -23,6 +24,7 @@
 | [`test_metainfo.py`](../../../../../proto8/lib/tests/test_metainfo.py) | Verify optional metadata reading, timeout declarations, and safe cost formulas; bad metadata is skipped with a note. |
 | [`test_observed.py`](../../../../../proto8/lib/tests/test_observed.py) | Verify shared observation initialization, strict failures and measured call cells. |
 | [`test_observed_children.py`](../../../../../proto8/lib/tests/test_observed_children.py) | Verify observed_children: a child's declared accounts are copied (and only those), take_child hands the mark over once. |
+| [`test_ref_path.py`](../../../../../proto8/lib/tests/test_ref_path.py) | The shared "path string -> (file, pointer)" rule (aos_refpath.spot): left of # is the file system, right of # is inside the json. |
 | [`test_tool_io_keys.py`](../../../../../proto8/lib/tests/test_tool_io_keys.py) | 不認得的 stdin 鍵＝ArgumentsBad（使用者 11-10 晚「那就報錯」）；additionalProperties 與自由物件照舊收。 |
 | [`test_tool_io_metainfo.py`](../../../../../proto8/lib/tests/test_tool_io_metainfo.py) | tool_io.load_tooldef 也讀 _metainfo.json 的 tooldef（11-12 metainfo，N-69）：先裡面、再 _tooldef.json，頂層鍵淺合併、外面贏。 |
 | [`test_tool_io_place.py`](../../../../../proto8/lib/tests/test_tool_io_place.py) | Test tool_io.place and tool_io.os_reason: error lines name program-made paths relative to $AOS_STACK / $AOS_DAEMON / $AOS_WS (counted from the caller… |

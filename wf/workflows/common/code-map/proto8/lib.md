@@ -12,6 +12,7 @@
 | [`aos_index.py`](../../../../../proto8/lib/aos_index.py) | index_view：透過 index（視角）看節點，一行一項「鍵 TAB description」；index 放哪只寫在 spot() 一處。 |
 | [`aos_json.py`](../../../../../proto8/lib/aos_json.py) | 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／len／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set、jsonx_multi_get／set… |
 | [`aos_json_multi.py`](../../../../../proto8/lib/aos_json_multi.py) | json_multi_get／set、jsonx_multi_get／set：一次多格，逐格照 json_get／json_set（jsonx 那兩支照 jsonx_get／jsonx_set）做、照順序、一格一行「路徑 TAB 結果」，不回滾。 |
+| [`aos_refpath.py`](../../../../../proto8/lib/aos_refpath.py) | `$ref` 與 index 共用的「路徑字串 → (檔, 指標)」：`#` 左邊一律檔案系統、右邊一律 json 內部（使用者 11-13 晚定，thinking 2026-11/13/ref-path-rules）。 |
 | [`directive_value.py`](../../../../../proto8/lib/directive_value.py) | 把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。 |
 | [`file_summary.py`](../../../../../proto8/lib/file_summary.py) | ls、stat、view 共用的檔案摘要小件：資料夾裡有哪些 aos 標記檔、檔案時間寫成 ISO、一個 JSON 值的一句摘要。 |
 | [`file_walk.py`](../../../../../proto8/lib/file_walk.py) | grep 與 glob 共用的走樹：隱藏名、.gitignore（問 git）、資料夾捷徑不跟進、只把一般檔當檔、掃描預算與計數；另含兩支共用的檔名樣式（* ? [..] **）。 |

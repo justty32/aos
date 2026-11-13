@@ -119,6 +119,9 @@
  "ops-fixes-施工結果.md": {
   "description": "線巳施工結果（11-13）：ops-agent 六點建議裡使用者裁要做的幾件——信的留底進工作區（A1）、範本 README 指到 CLI 自己的 hook（A2）、畫面的環境變數（B1）、flags 裡的 `--settings`（B2）、定義自帶 CLI 設定（B3）"
  },
+ "ref-path-rules.md": {
+  "description": "`$ref` 與 index 路徑改成「`#` 左邊一律檔案系統、右邊一律 json 內部」（線址，11-13 晚，家機）：盤點、新規則表、代定；共用 Python 解析器與對照表已做好未接上，C++ 要動、停在件數 gate 等放行。"
+ },
  "text-as-string-array.md": {
   "description": "一段文字可以寫成字串、也可以寫成字串陣列：工具與說明跟上（11-13，線天施工）"
  },

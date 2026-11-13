@@ -19,6 +19,9 @@
  "aos_json_multi.py": {
   "description": "json_multi_get／set、jsonx_multi_get／set：一次多格，逐格照 json_get／json_set（jsonx 那兩支照 jsonx_get／jsonx_set）做、照順序、一格一行「路徑 TAB 結果」，不回滾。"
  },
+ "aos_refpath.py": {
+  "description": "`$ref` 與 index 共用的「路徑字串 → (檔, 指標)」：`#` 左邊一律檔案系統、右邊一律 json 內部（使用者 11-13 晚定，thinking 2026-11/13/ref-path-rules）。"
+ },
  "base": {
   "description": "底層原語工具：檔案與資料夾（read、write、edit、ls…）、json_*、shell、run_python、小工具（math、peek_*）、llm_http／llm_fake 端點函數",
   "index": "base/_index.json"
