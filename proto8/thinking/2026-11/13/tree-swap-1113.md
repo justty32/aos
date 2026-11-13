@@ -1,4 +1,4 @@
-# 家機活樹停樹換檔（線換，11-13 晚）：腳本 `proto8/extras/tree-swap/`、暫存樹預演五輪（釘 `9736e54a0` 的第五輪全綠）、會換／不會動的清單、換後收尾清單、給使用者的單子
+# 家機活樹停樹換檔（線換，11-13 晚）：腳本 `proto8/extras/tree-swap/`、暫存樹預演六輪（釘最終 commit `54789088d` 的第六輪全綠）、會換／不會動的清單、換後收尾清單、給使用者的單子
 
 ← [11-13 日索引](README.md)｜規格：[aos-teams/06「停樹換檔的做法」](../../../../wf/workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md#停樹換檔的做法)｜腳本：[tree-swap](../../../extras/tree-swap/README.md)｜要換進去的內容：[ref-path-rules](ref-path-rules.md)、[sandbox-sender-fix](sandbox-sender-fix.md)、[wake-timer](wake-timer.md)、[user-zone-plan](user-zone-plan.md)、[gpt-fsm-team](gpt-fsm-team.md)
 
@@ -11,14 +11,14 @@
 ## 結論
 
 - 腳本：`proto8/extras/tree-swap/`（`swap.sh`、`rollback.sh`、`build.sh`、`common.sh`）。不含 kill／shutdown；每段動手前看這棵樹還有沒有行程活著，有就 `RED:` 退 3、什麼都不改。
-- C++ 十支在 repo 外 `~/code/swap-1113/src` 從 `git archive 0e62d640e` 重編（每支 6～18 秒，共約 110 秒）；`0e62d640e` 到現在 `proto8/impls` 沒有任何差別，`check` 段會再核一次（不同就紅燈，要用 `build.sh --ref` 重編）。
+- C++ 十支：最終 commit `54789088d` 的 `proto8/impls` 跟最早 build 的 `0e62d640e` 不同（只改了 12 個 md 的 code map 連結，程式碼沒變；但 `check` 是整夾比對），所以用 `build.sh --ref 54789088d` 在 repo 外 `~/code/swap-1113/src2` 重編，十支共約 106 秒。換的時候用 `TS_BUILD=~/code/swap-1113/src2`（單子已寫）。
 - 頂層轉來另一條線的 `copy_tree.py`（`41f06e9a4`）：選「自己抄、抄完補跑 `--stamp-only`」——備份、退回、紅燈這套已經寫好預演過；`stamp` 段用**釘住 commit 裡的** `copy_tree.py`（解到暫存夾跑，不用工作樹那份），換完每夾都有 `.aos-source.json`（`how: stamp-only`）。`check`／`verify` 比對時略過這個檔，`verify` 另核章裡的 commit。
 
-## 會被換的（盤點：活樹複本 vs 釘住的 `9736e54a0`，`diff -rq` 唯讀比、略過 `__pycache__`；共 77 檔＋十支）
+## 會被換的（盤點：活樹複本 vs 最終 commit `54789088d`，`diff -rq` 唯讀比、略過 `__pycache__`；共 85 檔＋十支）
 
 | 夾 | 不同 | commit 有、樹裡沒有 | 只在樹裡有 |
 |---|---|---|---|
-| `lib` | 19 | 4（`aos_refpath.py`、`tests/ref_path_cases.json`、`tests/test_ref_path.py`、`base/peek_now_time/tests/`） | 0 |
+| `lib` | 20 | 11（`aos_refpath.py`、`tests/ref_path_cases.json`、`tests/test_ref_path.py`、`base/peek_now_time/tests/`、專區段 2 的 `agent/user_send/`、`agent/user_zone_guard/` 等） | 0 |
 | `templates` | 1（`tests/test_daily.py`，別線 22 點後改的） | 0 | 0 |
 | `knowledge` | 18 | 32（`aos/user_zone.json`、`wf/` 底下 skeletons、source、workflows 十幾個 json 等） | 0 |
 | `py` | 1（`aos_clock_register.py`） | 2（`aos_clock_when.py`、`tests/test_clock_when.py`） | 0 |
@@ -42,7 +42,8 @@
 | 2 | `2b91e9b22`（加了 stamp 段） | **stamp 段紅**：`copy_tree.py` 經 `py/aos_flags` 要 import `lib/tool_io`，我只解了 extras 和 py。順帶驗到「換到一半紅燈→退回」照樣逐位元還原。修：連 `proto8/lib` 一起解 |
 | 3 | `85bef94a0` | 12 段全綠 |
 | 4 | `9736e54a0`（本線 commit） | 只有預演腳本自己的 7c 紅：拿短 hash 去 grep 章，章裡是完整 hash（swap.sh 的 verify 用完整 hash 核過、是綠的）；預演腳本改成先轉完整 hash |
-| 5 | `9736e54a0` | 12 段全綠（下表） |
+| 5 | `9736e54a0` | 12 段全綠 |
+| 6 | `54789088d`（頂層傳的最終 commit；C++ 用 `src2` 新編的） | 12 段全綠（下表；時間跟第五輪差不到 0.3 秒）。另跑一段：HOME 指暫存夾的假家目錄、不設 `TS_BACKUP_ROOT`，`swap.sh all`＋`rollback.sh` 都綠，備份自己建出 `<假家>/.aos/saves/tree-swap/<時間>/` 與 `LAST`（＝預設位置的建夾邏輯對；真的 `~/.aos/saves` 沒建）；暫存樹換完 `lib/agent/` 有 `user_send`、`user_zone_guard` |
 
 | 段 | 結果 | 時間 |
 |---|---|---|
@@ -75,6 +76,7 @@
 4. （可選）`proto8/install.sh` 跑一次，把新指令 `aos-tree-start` 連上 PATH，之後起樹改用它（擋殼裡繼承的外來 `AOS_*`）。
 5. 換完 repo 的 `impls/*/build` 比 `bin/` 舊；之後在 repo 重 build 會從已 commit 的原始碼編出等價的檔。
 6. 備份留在 `~/.aos/saves/tree-swap/<時間>/`（約 42 MB），確定沒事再自己刪。
+7. 專區段 2（[08-段2施工](user-zone-plan/08-段2施工.md)「換樹後要做的」）：第 4、5 步（重抄 `user_zone.json`、`user_send`、`user_zone_guard`）已含在這次換樹；建議做：裝計時器 `aos-user-tick.timer`、`door.json` 換新（`init`，出門模式會回 normal）；可選：`notify on`、agent 自己加 `user_send`／守門 hook。指令寫在桌面手冊。
 
 ## 給使用者的單子
 
@@ -86,7 +88,7 @@ aos-daemon-ctl -d ~/aos-home/.stack shutdown
 #    起樹那個視窗的 aos-exec root 會自己結束。專區網頁 aos-user serve 若開著，到它的視窗 Ctrl-C。
 
 # 2. 換（約 2 秒）。REF 用下面這個 commit；要用更新的也可以，check 會核 C++ 對不對得上：
-bash ~/repo/aos/proto8/extras/tree-swap/swap.sh --ref 9736e54a0 all
+TS_BUILD=$HOME/code/swap-1113/src2 bash ~/repo/aos/proto8/extras/tree-swap/swap.sh --ref 54789088d all
 #    看到 "verify: green" 就好。出現 RED: 先看它說什麼——樹還有行程活著就照它列的 pid 關掉再跑一次；
 #    換到一半紅燈就跑第 5 步退回。
 
@@ -107,4 +109,4 @@ bash ~/repo/aos/proto8/extras/tree-swap/rollback.sh
 
 ## 釘住的 commit
 
-`9736e54a0`（本線放腳本的那個 commit；第五輪預演用的就是它）。C++ 十支在 `~/code/swap-1113/src`（`BUILD_REF`＝`0e62d640e`，到 `9736e54a0` 為止 `proto8/impls` 沒有差別）。要換更新的 commit 也可以：`check` 會核 `proto8/impls` 跟 build 的一不一樣，不一樣就紅燈，先 `build.sh --ref <新的>`（`TS_BUILD` 指一個新夾）再換；新的 commit 沒在暫存樹預演過，要的話照 `~/code/swap-1113/rehearse.sh <ref>` 跑一次（約 5 秒，要先 `setup.sh` 重搭）。
+**`54789088d`**（頂層 22:4x 傳的最終 commit，專區段 2 已收線；之後只會有 `proto8/cmd` 的新檢視指令與 wf 記帳，不影響換的四夾）。C++ 十支在 `~/code/swap-1113/src2`（`BUILD_REF`＝`54789088d`）。早先的 `9736e54a0`／`src`（`0e62d640e` 編的）作廢：`check` 會因 `proto8/impls` 不同而紅燈。
