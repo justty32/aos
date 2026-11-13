@@ -9,7 +9,7 @@
 #   --only／--except 給了＝寫進 mcp_server.only／except；檔裡已有且不同（或寫的是另一個）＝ArgumentsBad。兩個都沒有＝看檔裡的（F8），
 #   檔裡也沒有＝全收，超過 20 支印 warning。only 有 server 沒有的名字＝ToolUnknown；except 有 server 沒有的名字＝warning。
 #   --timeout-s N：initialize 與每頁 tools/list 各自的上限，到了＝ServerFailed（沒給＝30 秒）。
-#   sync（步 7）：檔裡沒有 mcp_tools＝PackBad（教先匯入）→ 重連、照檔裡的 only／except 重新凍結（F8；only 裡 server 已經沒有的＝warning、當成拿掉）
+#   sync（步 7）：檔裡沒有 mcp_tools＝PackBad（教先匯入）→ tools 的指標寫的不是這份檔的名字（匯入後改名、抄成別名）＝PackBad（教重新匯入）→ 重連、照檔裡的 only／except 重新凍結（F8；only 裡 server 已經沒有的＝warning、當成拿掉）
 #   → 舊格的 _metainfo.timeout_ms 照抄到新格（人手改的保留，其他欄位照 server 的）→ mcp_freeze.diff_tools 的行印 stdout。
 #   沒差＝印 no changes、不寫；有差沒 --yes＝差異＋run again with --yes to write、不寫；--yes＝原子寫回 mcp_import、mcp_tools、tools，
 #   末行 synced N of M tools from <名> -> <檔>。三種都退 0。
@@ -56,6 +56,7 @@ sync: ask the server again, freeze the tools the file's only/except pick, and pr
   No differences = "no changes"; differences without --yes = "run again with --yes to write"; both write nothing.
   --yes = rewrite mcp_import, mcp_tools and tools atomically. A timeout_ms you edited by hand is kept;
   everything else comes from the server. A file with no mcp_tools = PackBad (import it first). Exit 0 in all three cases.
+  A file renamed or copied under another name after its import = PackBad: its tools still run the old file; import it again.
 Errors: one stderr line `aos-mcp-import: error: CODE reason`, exit 1; the file is left byte for byte as it was.
   Codes: ArgumentsBad, FlagUnknown, PackMissing, PackBad, PathMissing, DotenvBad, PackExists,
   CommandMissing, ServerFailed, ServerRejected, ServerBad, ToolUnknown, NameBad, WriteFailed.""" % (USAGE, SYNC_USAGE, MANY)
@@ -185,6 +186,17 @@ def parse_args(argv, flags, switches, usage):
     return opts, rest[0], timeout_s
 
 
+def imported_as(doc, basename):
+    """檔裡 tools 的指標（"<匯入時的檔名>#/mcp_tools/…"）寫的不是這份檔自己的名字＝回那個名字；都對得上＝None。
+    改名或抄成別名後指標還指著舊檔，疊進 tools.json 叫到的是舊檔那台（放進別的資料夾、檔名不變不算）。"""
+    reg = doc.get("tools")
+    for entry in (reg.values() if isinstance(reg, dict) else []):
+        p = entry.get("path") if isinstance(entry, dict) else None
+        if isinstance(p, str) and "#/mcp_tools/" in p and p.split("#", 1)[0] != basename:
+            return p.split("#", 1)[0]
+    return None
+
+
 def sync(argv):
     """步 7：重問、重新凍結、印差異；--yes 才原子寫回。"""
     opts, path, timeout_s = parse_args(argv, {"--timeout-s": "timeout_s"}, {"--yes": "yes"}, SYNC_USAGE)
@@ -196,6 +208,11 @@ def sync(argv):
             raise tool_io.Error("PackBad", "%s has no mcp_tools; import it first: aos-mcp-import %s" % (path, path))
         if not isinstance(old, dict) or not all(isinstance(c, dict) for c in old.values()):
             raise tool_io.Error("PackBad", "%s: mcp_tools must be an object of tool cells" % path)
+        was = imported_as(doc, os.path.basename(path))
+        if was:
+            raise tool_io.Error("PackBad", "%s was imported as %s and its tools still run that file; a renamed or copied server file "
+                                "must be imported again: remove its mcp_import, mcp_tools and tools keys, then aos-mcp-import %s"
+                                % (path, was, path))
         tools, version = list_server_tools(path, timeout_s)
         chosen = pick(server["name"], tools, server.get("only"), server.get("except"), strict=False)
         cells, registry = freeze(server["name"], os.path.basename(path), server["transport"], chosen)

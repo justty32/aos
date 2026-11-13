@@ -332,6 +332,22 @@ class Sync(Base):
         self.assertEqual(doc["mcp_tools"]["echo"]["_metainfo"]["timeout_ms"], 60000)
         self.assertTrue(doc["mcp_tools"]["echo"]["_metainfo"]["side_effect"])
 
+    def test_copied_under_another_name_is_packbad(self):
+        """11-13: a copy under another name still runs the file it was imported as; sync says so instead of "no changes"."""
+        p = self.server_file()
+        self.imported(p)
+        copy = self.mcp / "other.json"
+        shutil.copy(p, copy)
+        for args in (("sync", copy), ("sync", "--yes", copy)):
+            r = self.fails("PackBad", copy, *args)
+            self.assertIn("%s was imported as fake.json and its tools still run that file" % copy, r.stderr)
+            self.assertIn("aos-mcp-import %s" % copy, r.stderr)
+        moved = self.tmp / "elsewhere"                              # another folder, same name: fine
+        moved.mkdir()
+        shutil.copy(p, moved / "fake.json")
+        r = self.run_import("sync", moved / "fake.json")
+        self.assertEqual((r.returncode, r.stdout), (0, "no changes\n"), r.stderr)
+
     def test_not_imported(self):
         p = self.server_file()
         r = self.fails("PackBad", p, "sync", p)

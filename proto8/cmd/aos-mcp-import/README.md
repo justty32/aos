@@ -12,6 +12,7 @@ aos-mcp-import --help
   - `mcp_import`：`imported_at`、`protocol_version`、`server_tools`（server 當時總共幾支）
   - `mcp_tools`：鍵是外部原名，每格 `_entry`（叫 `lib/base/mcp_tool/_entry --pack <檔名> --tool <原名>`）、`_tooldef`、`_metainfo`
   - `tools`：登記名 `<server 名>_<工具名>` → `"<檔名>#/mcp_tools/<原名>"`（原名的 `~`、`/` 跳脫成 `~0`、`~1`；只寫檔名，整夾 `cp -r` 帶走仍通）
+- **改名／抄成別名＝重新匯入**：`tools` 的指標與 `_entry` 的 `--pack` 都寫死匯入當時的檔名，同一夾裡 `cp a.json b.json` 再改 b 的 `command`、把 b 疊進 tools.json，叫起來照樣起 a 那台、叫的那一刻不報錯（工具那邊手上的資訊都指著 a，認不出來）；`aos-mcp-import sync b.json` 會報 `PackBad … was imported as a.json and its tools still run that file`。要讓 b 自己算數：刪掉 b 的 `mcp_import`、`mcp_tools`、`tools` 三鍵（`aos-json del b.json#/mcp_tools`，三鍵各一次；不刪＝`PackExists`），再 `aos-mcp-import b.json`。放進別的資料夾、檔名不變不用重匯。
 - `description` 與 `mcp_server` 的值不動（整份重新排版成縮排 2 格）；`--only`／`--except` 給了才補寫進 `mcp_server.only`／`except`。之後 `mcp_server_file.load` 照樣讀得過，eca 那條仍能用同一份檔。
 - stdio server 不管誰叫（匯入、`sync`、腦叫工具）都在 server 檔的資料夾起，`command` 與 `args` 的相對路徑都從那裡算（規則同 [aos-mcp-launch](../aos-mcp-launch/README.md)）；它拿到叫它那個行程的全部環境變數（使用者裁不做白名單）。
 - 挑工具：`--only`／`--except` ＞ 檔裡的 `only`／`except` ＞ 全收（超過 20 支印 warning）。檔裡已有另一組＝`ArgumentsBad`（先改檔）。`--only` 有 server 沒有的名字＝`ToolUnknown`；`--except` 的只印 warning。兩支轉成同一個登記名＝`NameBad`（用 `--except` 排掉一支）。
