@@ -26,13 +26,15 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 | `user` | `帳號` 或 `uid:gid` | `s6-setuidgid` 換身分（只有 root 能用） | 不換 |
 | `base` | 路徑陣列 | 系統唯讀底 | `/usr /bin /sbin /lib /lib64 /etc` 裡存在的 |
 | `commands` | 指令名陣列 | 照 PATH 找到，所在資料夾唯讀看得到（例 `aos-exec`）；真位置在 `…/cmd/<名>/bin/<名>` 的，連同它們共用的 `…/py` 一起唯讀綁 | 沒有 |
-| `ro` | 路徑陣列 | 唯讀看得到 | 沒有 |
-| `rw` | 路徑陣列 | 可寫看得到（最後綁，可以蓋在 `ro` 裡面）；列了 `$AOS_STACK` 而它不在＝先建（[tool-cells-lazy](../../thinking/2026-11/11/tool-cells-lazy.md)：`aos-tools call` 不先建工具小格），其他路徑不在＝`PathMissing` | 沒有 |
+| `ro` | 路徑陣列 | 唯讀看得到；跟 `rw` 巢狀時**深的那條說了算**（`rw: [repo]`＋`ro: [repo/.git]`＝repo 可寫、`.git` 唯讀；反過來 `ro: [repo]`＋`rw: [repo/sub]` 也行；11-13 線修 T32） | 沒有 |
+| `rw` | 路徑陣列 | 可寫看得到（`ro`、`rw` 混在一起照路徑深淺排、淺的先綁；同一條兩邊都列＝可寫）；列了 `$AOS_STACK` 而它不在＝先建（[tool-cells-lazy](../../thinking/2026-11/11/tool-cells-lazy.md)：`aos-tools call` 不先建工具小格），其他路徑不在＝`PathMissing` | 沒有 |
 | `net` | 布林 | 能不能連網 | `false`（只有沙箱自己的 loopback） |
 | `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files` | 正整數 | `s6-softlimit` 的 `-a`＋`-d`（`mem_mb`；不用 `-m`：它連堆疊上限一起設，aos-exec 一開執行緒就失敗）、`-t`、`-p`、`-f`、`-o` | 不限 |
 | `env` | 環境變數名陣列 | 只帶這幾個進去（外面有設的才帶；bwrap `--clearenv`＋`--setenv`）；**明列 `env` 就是整份取代預設清單，不是往預設上加**——要預設那幾個就自己一起列 | `PATH`、`LANG`、`LC_ALL`、`LC_CTYPE`、`TZ`、`PYTHONDONTWRITEBYTECODE`、`PYTHONIOENCODING` 與 aos 的六個（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`）、hub 型的 `AOS_DAEMON`、`AOS_LLM_KERNEL`（N-63 ③ 子 process 預設繼承）、`AOS_KERNEL`、`AOS_CLOCK`（同一條；使用者 11-06 選項框「預設補上」）；外面沒設的照樣不帶；只帶變數、不綁它指的路徑（要看得到就自己列進 `ro`／`rw`）；API key 一律不帶，要就明寫 |
 
-- **沒列到的路徑一律看不到**（白名單）；`/proc`、`/dev`、空的 `/tmp` 一定有。綁進來的路徑在沙箱裡是同一個位置；相對路徑從 cwd 算。路徑是符號連結的，沙箱裡做同一條連結再綁它指到的地方。
+- **沒列到的路徑一律看不到**（白名單）；`/proc`、`/dev`、空的 `/tmp` 一定有。
+- **能寫的只有 `rw` 列的與 `/tmp`**（11-13 線修 T36）：所有綁定之後把沙箱的根 `/` 改成唯讀（bwrap `--remount-ro /`），寫到沒綁的地方（例 `$HOME`、別的定義夾）＝`Read-only file system`、指令失敗，不再默默寫進沙箱的暫存根、退 0、主機上卻沒檔。`/tmp` 照舊可寫，但它是沙箱自己的、跑完就沒了。
+- **設定檔所在的資料夾自動唯讀看得到**（11-13 線修 T34）：工具的 `_entry` 寫 `["aos-sandbox", "_metainfo.json#/sandbox", "aos-exec", "inner"]`，`inner` 是相對工具夾的；以前 `ro` 改寫成絕對路徑、漏了工具夾，就報 `EntryMissing entry not found: inner (relative paths count from /: /inner)`。已被某條 `ro`／`rw` 蓋到（同一條或在它底下）就不另綁（在 `rw` 裡的照舊可寫）。所以**別把祕密放在沙箱設定旁邊**。`inner` 指到的地方（例 `lib/base/shell`）照舊要列進 `ro`。綁進來的路徑在沙箱裡是同一個位置；相對路徑從 cwd 算。路徑是符號連結的，沙箱裡做同一條連結再綁它指到的地方。
 - 設定檔可以寫 `檔#/指標`（例 `_metainfo.json#/sandbox`）；值可以用 `{"$env": 名, "$path": 接後面, "$prefix": 接前面}`（不解 `$ref`）。
 - `--dry-run`：不跑，印出那一條 argv（一行 JSON）。
 - **`cpu_s` 是 CPU 時間**（`s6-softlimit -t`，到了收 SIGXCPU、退 152），跟單子的 `timeout_ms`、庫的 bash 的 `timeout_s` 那種**牆鐘時間**不同種：`sleep` 一整天不吃 CPU、`cpu_s` 擋不到；要限總時間用叫它那格的 `timeout_ms`。
@@ -53,7 +55,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 
 | 例子 | 檔 | 說明 |
 |---|---|---|
-| shell 工具 | [examples/shell-boxed/](examples/shell-boxed) | 庫的 shell（[lib/base/shell](../../lib/base/shell)）原封不動（`inner` 捷徑），連它 import 的 [lib/tool_io.py](../../lib/tool_io.py) 一起綁唯讀（lib 工具共用的開頭，沒綁就起不來），外面包一層：只寫得到 `$AOS_WS` 與自己的 stack、斷網、環境照預設那幾個；`cpu_s` 120 是 CPU 時間，shell 自己的 `timeout_s`（最多 300）是牆鐘 |
+| shell 工具 | [examples/shell-boxed/](examples/shell-boxed) | 工具夾本身自動唯讀綁（上面 T34），`ro` 改成絕對路徑時不用再列它；庫的 shell（[lib/base/shell](../../lib/base/shell)）原封不動（`inner` 捷徑），連它 import 的 [lib/tool_io.py](../../lib/tool_io.py) 一起綁唯讀（lib 工具共用的開頭，沒綁就起不來），外面包一層：只寫得到 `$AOS_WS` 與自己的 stack、斷網、環境照預設那幾個；`cpu_s` 120 是 CPU 時間，shell 自己的 `timeout_s`（最多 300）是牆鐘 |
 | 子 agent（要碰 daemon 的工具） | [examples/subagent-boxed/](examples/subagent-boxed) | 庫的 subagent 原封不動（`inner` 捷徑；`inner` 指 subagent 之後沒重測）。`sandbox.json`（模式 1，沒有框架站）：rw 綁 `$AOS_DAEMON`（寄 ctl 信、子的 stack 要寫介面宣告的工具／腦覆蓋層）、`$AOS_WS`、`$AOS_STACK`（回信信箱在這）；ro 綁整個 `lib/`（範本的工具都指到 lib）、add 時 `def` 指的子定義（本例綁 `templates/agent-fsm`；換 `def` 時跟著換綁定）、aos-agent 的套件 `cmd/aos-agent/aos_agent`；`commands` 帶 aos-exec、aos-agent、aos-post、aos-tools、aos-json；斷網。`sandbox-kernel.json`（模式 2，框架站是 procs-kernel）：daemon stack 只 ro（ctl 信箱寫不進去，信只能寄 `$AOS_KERNEL`）、rw 綁它的 `procs/`＋`$AOS_KERNEL`。兩份都明列 `env`（不帶 `AOS_LLM_KERNEL`），列了 `AOS_KERNEL`、`AOS_CLOCK`、`AOS_HOME`（範本的工具路徑寫 `{"$env": "AOS_HOME", …}`，沒帶進沙箱就解不開；未實測）。沒寫上限（這台公司 WSL 沒有 s6）。實測見 [no-pid 13](../../thinking/2026-11/05/no-pid/13-P5實作結果.md) |
 | claude／codex CLI | [examples/cli-tool.json](examples/cli-tool.json) | 要連網、要寫自己的設定資料夾；擋的是「讀寫工作區以外」；環境只帶 `PATH`、`HOME`、`TERM`、語系與 aos 的六個（登入靠 `~/.claude`、`~/.codex` 裡的檔；用環境變數給 key 的話自己加進 `env`） |
 | agent 當工具 | [examples/agent.json](examples/agent.json) | 斷網、信箱綁進來（`rw` 的 `$AOS_LLM_KERNEL/requests`，只綁信箱；腦只能經信箱用 aos-llm 問）；`commands` 帶 aos-post、aos-tools（agent-fsm 的 wait／act 要用；aos-tools 在 `cmd/aos-tools/bin/`，所以 `proto8/py` 也跟著綁）、環境另帶 `AOS_LLM_KERNEL`（端點、模型、金鑰都在 kernel 那邊的 `kernel.json`，agent 看不到）。沙箱有自己的行程編號也行：kernel 認寄信的人看信裡 `sender.flock` 的檔案鎖、不看 pid（紀錄 S15） |

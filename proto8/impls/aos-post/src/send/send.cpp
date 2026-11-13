@@ -134,7 +134,8 @@ std::string send(const Mailbox& mb, const Json& body, const SendOpts& opts) {
             throw Error{code::ArgumentsBad, "a given letter name must not look like an ordered name (12 digits then .): " + *opts.name};
         }
     }
-    std::string who = aos::identity();   // aos-util：$AOS_WS ＞ $AOS_STACK ＞ $AOS_CF ＞ cwd（cwd 拿不到丟 Internal）
+    // aos-util：$AOS_WS ＞ $AOS_STACK ＞ $AOS_CF ＞ cwd（cwd 拿不到丟 Internal）；呼叫者給了 opts.sender 就用它（aos-llm，11-13 線修）
+    std::string who = opts.sender ? *opts.sender : aos::identity();
     // 在建 tmp/ 信件前讀鐘；壞鐘直接 ClockBad，不留下半封信。
     std::optional<long long> sent_at_cycles = aos::now_cycle();
     // 1. mkdir tmp/<名>（預設名撞名換一個；同一奈秒同一行程才會撞）

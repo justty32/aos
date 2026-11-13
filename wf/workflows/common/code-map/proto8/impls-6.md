@@ -22,4 +22,5 @@
 | [`tests/test_ls_backend.py`](../../../../../proto8/impls/aos-llm/tests/test_ls_backend.py) | Verify ls exposes backend names in both the JSON window and the text columns. |
 | [`tests/test_recv_hint.py`](../../../../../proto8/impls/aos-llm/tests/test_recv_hint.py) | Check recv's exit 10 says why when something is wrong: kernel not running, or the reply never reached BOX (坑-102). |
 | [`tests/test_send_hint.py`](../../../../../proto8/impls/aos-llm/tests/test_send_hint.py) | Check send's warning, when no llm daemon runs at AOS_LLM_KERNEL, names the letter and where it was written (two-machines B10). |
+| [`tests/test_sender_stack.py`](../../../../../proto8/impls/aos-llm/tests/test_sender_stack.py) | Check the envelope sender of a brain request is the proc's stack ($AOS_STACK) even when $AOS_WS is set (11-13 線修 T31/T38), |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-llm/vcpkg.json) | aos-llm：寄請求信進 LLM kernel 的信箱、收回信（send／recv／ask／regret） |

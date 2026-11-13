@@ -86,6 +86,7 @@ struct SendOpts {
     std::optional<std::string> name;          // 自己給的信件名稱（ordered 時是尾名）；不給＝aos::unique_id
     std::optional<std::string> reply_to;      // 信箱路徑（轉絕對照 send 的信箱驗法驗；信封裡存相對信箱根，見 reply_to_rel）
     std::optional<std::string> in_reply_to;   // 原信的信件名稱（check_name；不驗那封在不在）
+    std::optional<std::string> sender;        // 信封的 sender；不給＝aos::identity()（aos-llm 給 aos::stack_identity()，11-13 線修 T31）
     bool ordered = false;                     // 有順序的投遞（order.lock/＋order.json）；拿不到鎖就一直等
     // 信裡另放的檔（N-16「其他檔隨意」）：{信裡的名字, 來源檔路徑}，在寫 letter.json 之前複製進去；複製不了丟 WriteFailed。
     // 名字要是單純的檔名、不能叫 letter.json（ArgumentsBad）。aos-llm-kernel 的回信 10-30～11-04 用它附 stdout.txt、stderr.txt（11-04 起不附）

@@ -1,4 +1,4 @@
-# Verify aos-sandbox treats a broken config as not written (runs prog unsandboxed with a warning) and keeps real errors.
+# Verify aos-sandbox: a broken config runs prog unsandboxed with a warning, real errors stay errors, the deeper of ro/rw wins (T32), writes outside rw fail (T36) and the config's folder is visible (T34).
 import json
 import os
 from pathlib import Path
@@ -112,11 +112,71 @@ class SandboxTests(unittest.TestCase):
     def test_good_config_really_runs_inside_bwrap(self):
         secret = self.dir / 'secret.txt'
         secret.write_text('x', encoding='utf-8')
-        result = self.run_box(self.cfg({}), 'sh', '-c', 'test -e "$0" && echo seen || echo hidden', str(secret))
+        (self.dir / 'box').mkdir()     # 設定檔所在的夾會被唯讀綁（T34）；設定放自己的夾，祕密不在裡面
+        result = self.run_box(self.cfg({}, 'box/sandbox.json'), 'sh', '-c', 'test -e "$0" && echo seen || echo hidden', str(secret))
         self.assertEqual((result.returncode, result.stdout, result.stderr), (0, 'hidden\n', ''))
         result = self.run_box(self.cfg('{bad'), 'sh', '-c', 'test -e "$0" && echo seen || echo hidden', str(secret))
         self.assertEqual((result.returncode, result.stdout), (0, 'seen\n'))
         self.assertIn(WARNING, result.stderr)
+
+    def test_dry_run_orders_binds_by_depth_and_ends_read_only(self):
+        repo = self.dir / 'repo'
+        (repo / '.git').mkdir(parents=True)
+        result = self.run_box('--dry-run', self.cfg({'ro': [str(repo / '.git')], 'rw': [str(repo)]}), 'echo', 'ran')
+        self.assertEqual((result.returncode, result.stderr), (0, ''))
+        argv = json.loads(result.stdout)
+        i_rw = argv.index(str(repo)) - 1
+        i_ro = argv.index(str(repo / '.git')) - 1
+        self.assertEqual((argv[i_rw], argv[i_ro]), ('--bind', '--ro-bind'))
+        self.assertLess(i_rw, i_ro)                                  # 深的（.git）後綁＝說了算
+        self.assertEqual(argv[argv.index('--remount-ro') + 1], '/')
+        self.assertGreater(argv.index('--remount-ro'), i_ro)          # 根唯讀放在所有綁定之後
+
+    def test_dry_run_binds_the_config_folder_only_when_not_listed(self):
+        tool = self.dir / 'tool'
+        tool.mkdir()
+        spec = str(tool / 'sandbox.json')
+        Path(spec).write_text('{}', encoding='utf-8')
+        argv = json.loads(self.run_box('--dry-run', spec, 'echo', 'ran').stdout)
+        self.assertEqual(argv[argv.index(str(tool)) - 1], '--ro-bind')
+        Path(spec).write_text(json.dumps({'rw': [str(self.dir)]}), encoding='utf-8')
+        argv = json.loads(self.run_box('--dry-run', spec, 'echo', 'ran').stdout)
+        self.assertNotIn(str(tool), argv)                             # 已在 rw 裡＝不另綁（不會把它變唯讀）
+
+    @unittest.skipUnless(bwrap_works(), 'bwrap is not usable here')
+    def test_ro_inside_rw_stays_read_only(self):
+        repo = self.dir / 'repo'
+        (repo / '.git').mkdir(parents=True)
+        (repo / 'sub').mkdir()
+        script = 'touch "$0/a" && echo a-ok; touch "$0/.git/b" 2>/dev/null && echo git-written || echo git-ro'
+        result = self.run_box(self.cfg({'ro': [str(repo / '.git')], 'rw': [str(repo)]}), 'sh', '-c', script, str(repo))
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (0, 'a-ok\ngit-ro\n', ''))
+        self.assertFalse((repo / '.git/b').exists())
+        # 反過來：repo 唯讀、裡面的 sub 可寫
+        script = 'touch "$0/c" 2>/dev/null && echo c-written || echo c-ro; touch "$0/sub/d" && echo d-ok'
+        result = self.run_box(self.cfg({'rw': [str(repo / 'sub')], 'ro': [str(repo)]}), 'sh', '-c', script, str(repo))
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (0, 'c-ro\nd-ok\n', ''))
+        self.assertTrue((repo / 'sub/d').exists())
+
+    @unittest.skipUnless(bwrap_works(), 'bwrap is not usable here')
+    def test_write_outside_rw_fails_loudly(self):
+        # 以前寫進沙箱的暫存根、退 0、主機上沒檔；現在根唯讀＝失敗、看得到錯
+        result = self.run_box(self.cfg({}), 'sh', '-c', 'mkdir -p /aos-sandbox-t36/x')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Read-only file system', result.stderr)
+        result = self.run_box(self.cfg({}), 'sh', '-c', 'echo y > /tmp/scratch && cat /tmp/scratch')
+        self.assertEqual((result.returncode, result.stdout), (0, 'y\n'), result.stderr)   # /tmp 照舊可寫（空的、跑完就沒了）
+
+    @unittest.skipUnless(bwrap_works(), 'bwrap is not usable here')
+    def test_config_folder_is_visible_so_relative_entries_work(self):
+        tool = self.dir / 'tool'
+        tool.mkdir()
+        (tool / 'inner').write_text('hello\n', encoding='utf-8')
+        spec = tool / '_metainfo.json'
+        spec.write_text(json.dumps({'sandbox': {'ro': []}}), encoding='utf-8')
+        result = subprocess.run([str(SANDBOX), '_metainfo.json#/sandbox', 'cat', 'inner'], capture_output=True, text=True,
+                                env=self.env, cwd=tool, timeout=60)
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (0, 'hello\n', ''))
 
 
 if __name__ == '__main__':

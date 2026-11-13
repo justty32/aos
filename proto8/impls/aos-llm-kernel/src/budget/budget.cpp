@@ -93,9 +93,24 @@ Budget parse_budget(const Json& v, const std::string& base, const std::string& s
             b.senders[who] = parse_limit(x, "budget.senders." + k);
             b.senders[who].key = k;
             std::error_code ec;
-            if (!fs::is_directory(sender, ec)) {   // B09：key 對不上任何資料夾＝這格多半不會生效，提醒一行（agent 還沒建也可能，照樣收）
-                b.warnings.push_back("budget.senders key " + aos::dumps(Json(k)) + " is not a folder: " + sender +
-                                     " (relative keys count from " + base + ", the kernel config's folder); this limit only applies to letters whose sender is exactly that path");
+            // B09／11-13 線修 T39：寄件人＝proc 的 stack（aos-llm 寫 $AOS_STACK）。key 對不上任何起過的 proc＝這格多半不會生效，
+            // 提醒一行（agent 還沒建也可能，照樣收）：不是資料夾、或是資料夾卻沒有 state.json（多半寫成了工作區）。
+            if (fs::is_directory(sender, ec)) {
+                if (!fs::exists(fs::path(sender) / "state.json", ec)) {
+                    b.warnings.push_back("budget.senders key " + aos::dumps(Json(k)) + " is a folder but not a proc stack (no state.json): " + sender +
+                                         "; the sender of a brain request is the asking proc's stack ($AOS_STACK), not its workspace, "
+                                         "so this limit only applies if a proc runs with exactly that stack");
+                }
+            } else {
+                std::string line = "budget.senders key " + aos::dumps(Json(k)) + " is not a folder: " + sender +
+                                   " (relative keys count from " + base + ", the kernel config's folder; an absolute path avoids the mix-up); "
+                                   "this limit only applies to letters whose sender is exactly that path";
+                // used.json 的 key 相對 kernel stack；照抄進 kernel.json 會錯位，對得上時點出來
+                std::string from_stack = aos::abspath(aos::join(stack, k));
+                if (from_stack != sender && fs::is_directory(from_stack, ec)) {
+                    line += "; counted from the kernel stack (as used.json keys are) it would be " + from_stack + ", write that path instead";
+                }
+                b.warnings.push_back(line);
             }
         }
     }

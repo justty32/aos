@@ -107,6 +107,7 @@ std::string send(const Mailbox& mb, const Json& body, const std::string& reply_t
     aos::make_dir(mb.fresh());
     aos::post::SendOpts opts;
     opts.reply_to = reply_to;
+    opts.sender = aos::stack_identity();   // 腦請求的寄件人＝proc 的 stack（11-13 線修 T31／T38，跟信箱信封一致）
     return aos::post::send(aos::post::open(mb.root), body, opts);
 }
 
@@ -118,7 +119,7 @@ static void hold_sender(const std::string& tmp) {
 std::string send_held(const Mailbox& mb, const Json& body) {
     aos::post::init(reply_box(mb));   // 建不了丟 MkdirFailed
     Json letter = Json::object();
-    letter["sender"] = aos::identity();   // 信封（N-16），同 aos-post
+    letter["sender"] = aos::stack_identity();   // 信封（N-16）：$AOS_STACK ＞ identity()（11-13 線修 T31／T38）
     letter["sent_at"] = aos::utc_now_ms();
     letter["reply_to"] = aos::post::reply_to_rel(mb, reply_box(mb));   // 相對信箱根＝"reply"（11-05，同 aos-post send）
     letter["body"] = body;

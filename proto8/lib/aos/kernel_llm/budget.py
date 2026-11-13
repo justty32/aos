@@ -85,12 +85,28 @@ def parse(value, base, stack):
             if who in budget["senders"]:
                 raise Error("CfgBad", "budget.senders: %s names the same sender (%s) as another key" % (key, sender))
             budget["senders"][who] = dict(_limit(senders[key], "budget.senders." + key), key=key)
-            if not os.path.isdir(sender):
-                budget["warnings"].append(
-                    "budget.senders key %s is not a folder: %s (relative keys count from %s, the kernel config's "
-                    "folder); this limit only applies to letters whose sender is exactly that path"
-                    % (dumps(key), sender, base))
+            budget["warnings"] += sender_key_warnings(key, sender, base, stack)
     return budget
+
+
+def sender_key_warnings(key, sender, base, stack):
+    """budget.senders 的一個 key 對不上任何 proc 的提醒（B09；11-13 線修 T39）。寄件人＝proc 的 stack（$AOS_STACK）：
+    解出來不是資料夾、或是資料夾卻沒有 state.json（不是起過的 proc 的 stack，多半寫成了工作區）＝這格多半不會生效。
+    used.json 的 key 是相對 kernel stack 的；照抄進 kernel.json（相對設定檔所在夾）就會錯位，對得上時順便點出來。"""
+    if os.path.isdir(sender):
+        if os.path.exists(os.path.join(sender, "state.json")):
+            return []
+        return ["budget.senders key %s is a folder but not a proc stack (no state.json): %s; the sender of a brain "
+                "request is the asking proc's stack ($AOS_STACK), not its workspace, so this limit only applies if "
+                "a proc runs with exactly that stack" % (dumps(key), sender)]
+    line = ("budget.senders key %s is not a folder: %s (relative keys count from %s, the kernel config's folder; "
+            "an absolute path avoids the mix-up); this limit only applies to letters whose sender is exactly that path"
+            % (dumps(key), sender, base))
+    from_stack = os.path.abspath(os.path.join(stack, key))
+    if from_stack != sender and os.path.isdir(from_stack):
+        line += ("; counted from the kernel stack (as used.json keys are) it would be %s, write that path instead"
+                 % from_stack)
+    return [line]
 
 
 def warn(budget, stack):

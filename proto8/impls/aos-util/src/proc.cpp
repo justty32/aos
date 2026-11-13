@@ -101,6 +101,24 @@ std::string identity() {
     return abspath(get_cwd());
 }
 
+std::string stack_identity() {
+    const char* v = std::getenv("AOS_STACK");
+    if (v != nullptr && v[0] != '\0' && v[0] == '/') {
+        return abspath(v);
+    }
+    if (v != nullptr && v[0] != '\0') {
+        std::vector<char> buf(4096);
+        while (getcwd(buf.data(), buf.size()) == nullptr) {
+            if (errno != ERANGE) {
+                throw Error{code::Internal, std::string("cannot get cwd: ") + std::strerror(errno)};
+            }
+            buf.resize(buf.size() * 2);
+        }
+        return abspath(std::string(buf.data()) + "/" + v);
+    }
+    return identity();
+}
+
 std::string unique_id() {
     return unique_id(utc_now_ns());
 }

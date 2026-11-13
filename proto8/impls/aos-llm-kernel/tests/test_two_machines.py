@@ -75,9 +75,29 @@ class BudgetSenders(unittest.TestCase):
         self.assertIn('relative keys count from %s' % self.stack, err)
         self.assertEqual(self.kernel({'agents/gone': {'max_calls': 5}}), '')   # 下一拍同樣的不重印
         (self.stack / 'agents/here').mkdir(parents=True)
+        (self.stack / 'agents/here/state.json').write_text('{}')   # 起過的 proc 的 stack
         self.assertEqual(self.kernel({'agents/here': {'max_calls': 5}}), '')
         self.assertFalse((self.stack / 'budget_warned.txt').exists())
         self.assertIn('agents/gone', self.kernel({'agents/gone': {'max_calls': 5}}))   # 又壞＝再印
+
+    def test_folder_that_is_not_a_proc_stack_warns(self):
+        # 11-13 線修 T39：寄件人是 proc 的 stack；寫成工作區（有資料夾、沒 state.json）的 key 對不上任何腦請求
+        (self.stack / 'teams/t1').mkdir(parents=True)
+        err = self.kernel({'teams/t1': {'max_calls': 5}})
+        self.assertIn('aos-llm-kernel: warning: budget.senders key "teams/t1" is a folder but not a proc stack '
+                      '(no state.json): %s/teams/t1' % self.stack, err)
+        self.assertIn("the asking proc's stack ($AOS_STACK), not its workspace", err)
+
+    def test_key_counted_from_the_stack_gets_a_hint(self):
+        # 11-13 線修 T39：used.json 的 key 相對 kernel stack；照抄進另一夾的 kernel.json 會錯位，提醒寫出對的路徑
+        (self.stack / 'procs/lead').mkdir(parents=True)
+        (self.stack / 'procs/lead/state.json').write_text('{}')
+        (self.stack / 'def').mkdir()
+        self.config = self.stack / 'def/kernel.json'
+        err = self.kernel({'procs/lead': {'max_calls': 5}})
+        self.assertIn('budget.senders key "procs/lead" is not a folder: %s/def/procs/lead' % self.stack, err)
+        self.assertIn('counted from the kernel stack (as used.json keys are) it would be %s/procs/lead' % self.stack, err)
+        self.assertEqual(self.kernel({str(self.stack / 'procs/lead'): {'max_calls': 5}}), '')   # 絕對路徑＝對上、不提醒
 
     def test_sender_budget_missing_names_the_key(self):
         ws = self.stack / 'agents/a'

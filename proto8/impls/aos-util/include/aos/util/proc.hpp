@@ -40,4 +40,9 @@ std::string unique_id(long long ns);
 // cwd 拿不到（被刪了）丟 Error{Internal}。
 std::string identity();
 
+// proc 的身分（路徑）：$AOS_STACK ＞ identity()（空字串算沒設、轉絕對路徑）。
+// aos-llm 寄給 llm kernel 的信封 sender 用這個（11-13 線修 T31／T38：一隻 agent 一個額度 key、跟信箱信封一樣是 stack；
+// 同一個工作區的 agent 不再共用一個 key）。人在殼裡打、沒有 $AOS_STACK＝照 identity()。
+std::string stack_identity();
+
 }  // namespace aos
