@@ -15,6 +15,7 @@
 | [`directive_value.py`](../../../../../proto8/lib/directive_value.py) | 把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。 |
 | [`file_summary.py`](../../../../../proto8/lib/file_summary.py) | ls、stat、view 共用的檔案摘要小件：資料夾裡有哪些 aos 標記檔、檔案時間寫成 ISO、一個 JSON 值的一句摘要。 |
 | [`file_walk.py`](../../../../../proto8/lib/file_walk.py) | grep 與 glob 共用的走樹：隱藏名、.gitignore（問 git）、資料夾捷徑不跟進、只把一般檔當檔、掃描預算與計數；另含兩支共用的檔名樣式（* ? [..] **）。 |
+| [`hook_run.py`](../../../../../proto8/lib/hook_run.py) | hook 的共用引擎：事件表由呼叫的人給，這裡只管驗格的共通鍵、比 condition、寫 event.json、用 aos-exec 跑 handler、解回話、on_error。 |
 | [`mcp_client.py`](../../../../../proto8/lib/mcp_client.py) | MCP client 的 stdio／HTTP 傳輸：握手、列工具、呼叫工具與關閉 session。 |
 | [`mcp_freeze.py`](../../../../../proto8/lib/mcp_freeze.py) | 把一支外部 MCP 工具凍結成包檔 mcp_tools 的一格（登記名、$ref 展開、說明前綴與截斷、_metainfo）與兩份 mcp_tools 的差異；純函式（external-mcp 07 步 4） |
 | [`mcp_server_file.py`](../../../../../proto8/lib/mcp_server_file.py) | 外部 MCP 的 server 檔：讀一份、驗形狀、讀金鑰檔；給 cli_session 翻成 codex 的 -c 與只給 CLI 行程的環境（11-12 external-mcp 02／03 步 1） |

@@ -32,6 +32,7 @@
 | [`fake_mcp_stdio.py`](../../../../../proto8/lib/tests/fake_mcp_stdio.py) | Provide a standard-library MCP stdio server with tools and failure modes for client tests. |
 | [`test_directive_value.py`](../../../../../proto8/lib/tests/test_directive_value.py) | 驗 directive_value：給了 file＝{"$ref": "#/…"} 取那份檔自己；沒給＝原封不動（11-12 ref-hash R1）；resolve_path 一律給設定檔。 |
 | [`test_file_tools_paths.py`](../../../../../proto8/lib/tests/test_file_tools_paths.py) | 檔案工具拿掉工作區限制（11-10 tool-packs，使用者「3.對」）：相對從 $AOS_WS、絕對照用，工作區外也能讀寫改搬。 |
+| [`test_hook_run.py`](../../../../../proto8/lib/tests/test_hook_run.py) | Verify the shared hook engine: entry validation, running handlers through aos-exec, replies, blocking, on_error, timeouts, ordering and conditions. |
 | [`test_index_extra_keys.py`](../../../../../proto8/lib/tests/test_index_extra_keys.py) | index_view 對 index 一項裡多出來的鍵（timeout_ms、自訂鍵…）照常印「名<TAB>description」、不報錯：index 的格都只是參考（使用者 11-12 晚）。 |
 | [`test_index_link.py`](../../../../../proto8/lib/tests/test_index_link.py) | index paths and $ref share one "string -> place" rule after #: ".." steps out one level, stepping out of the root object |
 | [`test_index_view.py`](../../../../../proto8/lib/tests/test_index_view.py) | index_view（lib/aos_index.py，thinking 2026-11/12/index-tools）的定向測試：實跑 _entry，驗三種給法（只 path、只 index、兩個疊著）、key、分頁、沒有 index、壞掉的 index。 |
