@@ -22,7 +22,7 @@
 | [`cli/agent.json`](../../../../../proto8/knowledge/aos/cli/agent.json) | 設定（鍵：_description、add、ls_state、phases、where_who） |
 | [`cli/clock.json`](../../../../../proto8/knowledge/aos/cli/clock.json) | 設定（鍵：_description、clock、register） |
 | [`cli/daemon.json`](../../../../../proto8/knowledge/aos/cli/daemon.json) | 設定（鍵：_description、add、lifecycle、letters、ls、shutdown…） |
-| [`cli/eca.json`](../../../../../proto8/knowledge/aos/cli/eca.json) | 設定（鍵：_description、turn、screen、external_mcp） |
+| [`cli/eca.json`](../../../../../proto8/knowledge/aos/cli/eca.json) | 設定（鍵：_description、turn、screen、external_mcp、cli_hooks） |
 | [`cli/errors.json`](../../../../../proto8/knowledge/aos/cli/errors.json) | 設定（鍵：_description、codes、timeouts） |
 | [`cli/feedback.json`](../../../../../proto8/knowledge/aos/cli/feedback.json) | （檔頭沒有一句話） |
 | [`cli/flags.json`](../../../../../proto8/knowledge/aos/cli/flags.json) | 設定（鍵：_description、placement、target、text、help、short） |
@@ -62,7 +62,7 @@
 | [`me/_description.json`](../../../../../proto8/knowledge/aos/me/_description.json) | （檔頭沒有一句話） |
 | [`me/do_task.json`](../../../../../proto8/knowledge/aos/me/do_task.json) | 設定（鍵：_description、rules） |
 | [`me/self_history.json`](../../../../../proto8/knowledge/aos/me/self_history.json) | 設定（鍵：_description、rules） |
-| [`me/self_hook.json`](../../../../../proto8/knowledge/aos/me/self_hook.json) | 設定（鍵：_description、events、clock、answer、handler、examples） |
+| [`me/self_hook.json`](../../../../../proto8/knowledge/aos/me/self_hook.json) | 設定（鍵：_description、events、clock、daily、answer、handler…） |
 | [`me/self_llm.json`](../../../../../proto8/knowledge/aos/me/self_llm.json) | （檔頭沒有一句話） |
 | [`me/self_system.json`](../../../../../proto8/knowledge/aos/me/self_system.json) | （檔頭沒有一句話） |
 | [`me/self_tools.json`](../../../../../proto8/knowledge/aos/me/self_tools.json) | 設定（鍵：_description、add、rules） |

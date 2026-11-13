@@ -42,7 +42,7 @@
   "description": "Use aos-grow to move a function one level up (inline to file to folder) or down; preview with --dry-run."
  },
  "eca.json": {
-  "description": "aos-eca-turn answers one turn of an external coding agent (claude, codex); aos-eca-screen opens, closes or watches its screen."
+  "description": "aos-eca-turn answers one turn of an external coding agent (claude, codex); aos-eca-screen opens, closes or watches its screen; guarding the CLI's own tools (Bash ...) with the CLI's own hooks."
  },
  "clock.json": {
   "description": "aos-clock moves a clock file one cycle forward; aos-clock-register adds letters the clock sends every N cycles."
