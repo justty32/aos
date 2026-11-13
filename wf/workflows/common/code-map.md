@@ -34,7 +34,7 @@
 | Python 共用模組怎麼找到、repo 外的複本怎麼 import | 自己的資料夾 → 自己 realpath 往上找 repo `py/`／`lib/` → 標準 `sys.path`（`install.sh` 的 user site `aos-proto8.pth` 或 `PYTHONPATH`）；說明在 [py/README](../../../proto8/py/README.md) |
 | claude／codex 對話、tools／llm 宣告檔位置 | `lib/agent/cli_session.py`、`lib/agent/agent_files.py`（cmd 與範本可共用） |
 | 某支人打的指令 | `cmd/<名>/bin/<名>`，說明在 [cmd/README](../../../proto8/cmd/README.md) |
-| agent 範本、問腦的 kernel、判官 | `templates/`、`kernel/`（判官工具本身在 `lib/aos/judge`） |
+| agent 範本、問腦的 kernel、通用 kernel 的站（框架站） | `templates/`、`kernel/`（框架站的程式本身在 `lib/aos/kernel`） |
 | 誰連誰（C++） | 生成冊 `impls` 冊開頭的依賴表 |
 | 一個資料夾程式怎麼被找到、怎麼起 | `impls/aos-exec`（條文在 proto8 NORMS N-57～N-62） |
 | Python 找 daemon、讀表／prune 自檢、寄信等回信（ping）、共用回信信箱 | `py/daemon_ctl/`（aos-daemon-ctl 是薄殼；aos-agent、aos-eca-screen import 它；prune 自檢只看檔案，行程存活由 daemon 判斷） |

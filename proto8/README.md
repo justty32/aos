@@ -25,7 +25,7 @@
 | [install.sh](install.sh) | 把 `impls/*/bin/*` 與 `cmd/*/bin/*` symlink 進 `~/.local/bin`，並在 Python user site 寫兩行 repo `py`／`lib` 絕對路徑的 `aos-proto8.pth`（參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉；用法在 [cmd/README](cmd/README.md)） |
 | [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），templates 用相對捷徑引用 |
 | [cases/](cases/README.md) | measure 的共用考題、固定答案與比對器契約；smoke 用 math 的兩題驗門與自洽 |
-| [kernel/](kernel/README.md) | llm-kernel（問腦的那台）、daemon-judge、procs-kernel（判官的兩種掛法） |
+| [kernel/](kernel/README.md) | llm-kernel（問腦的那台）、daemon-kernel、procs-kernel（通用 kernel 的站的兩種掛法） |
 | [templates/](templates/README.md) | 兩個 agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent） |
 | [knowledge/](knowledge/README.md) | 出廠內容樹：普通資料夾＋`.json`，用一般檔案／json 工具讀；第一本是 `aos/`——給小模型的 aos 體系說明（英文） |
 | [extras/](extras/README.md) | langs：Janet／Lua 寫 aos |
@@ -41,7 +41,7 @@
 
 - **資料夾＝程式**（使用者 10-19 定）：aos 只訂六個環境變數和一支 `aos-exec [--ws WS] XXX [args...]`；入口四種、`XXX` 的找法、`#/` 尋址、`+x` 但沒 `#!` 的檔用 `/bin/sh` 跑（§ 21「不擋」、§ 22「乙」）都在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62）。巢狀由程式自己訂子 stack；這次要做啥隨意。10-16 那套作廢；原話與裁定在 [thinking/2026-10/19/ideas/README.md](thinking/2026-10/19/ideas/README.md)（使用者：「那是帶著鐐銬跳舞跳得很棒，終究不如我們現在直接把鐐銬拿掉」）。
 - **實作**：[impls/](impls/README.md) 是唯一實作（C／C++；使用者 10-23「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也用 C++、時鐘先留 Python，[cmd/](cmd/README.md) 是 Python 的 aos-clock 等），命令列有 aos-exec、aos-loop、aos-fsm、aos-daemon 等（全表見它的 README）；刻意沒有 aos-inst 命令列。loop／daemon／fsm 格「要跑什麼」那一格叫 `exec`（使用者「exec，loop／daemon 的 run 也一起改 exec」，[thinking](thinking/2026-10/23/naming.md)）。
-- **kernel** 已有 [kernel/](kernel/README.md) 的 llm-kernel（問腦）、daemon-judge 與 procs-kernel（判官的兩種掛法）；底層用 impls 的 `aos-daemon`／`aos-loop`。tasks 仍無實作，待照新做法重寫（[NORMS 待定](docs/NORMS/08-待定.md)）；時鐘是 `cmd/aos-clock`，腦的工具呼叫範本是 `templates/agent-fsm`、慣例 [P-41](docs/CONVENTION.md)。
+- **kernel** 已有 [kernel/](kernel/README.md) 的 llm-kernel（問腦）、daemon-kernel 與 procs-kernel（通用 kernel 的站的兩種掛法）；底層用 impls 的 `aos-daemon`／`aos-loop`。tasks 仍無實作，待照新做法重寫（[NORMS 待定](docs/NORMS/08-待定.md)）；時鐘是 `cmd/aos-clock`，腦的工具呼叫範本是 `templates/agent-fsm`、慣例 [P-41](docs/CONVENTION.md)。
 
 ## 入口
 
@@ -49,7 +49,7 @@
 - **[NORMS.md](docs/NORMS.md)**：規範——從概念推出來、大家都要守的（比實作重要，C-45）；程式符合規範但不強制。底在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62：六個環境變數、`aos-exec XXX`、找入口、`#/` 尋址）。
 - **[CONVENTION.md](docs/CONVENTION.md)**：aos agent 慣例（P-05～P-48）——我們自己人寫 agent 時照抄的標準形狀，不要求別人守。
 - **[templates/](templates/README.md)**：`eca-claude`（外部 coding agent 範本）與 `agent-fsm`（aos 自己的 loop／fsm agent 範本，idle／think／wait／act 四格），都用 `aos-agent ctl add` 掛（宣告在 `interfaces.json`）；`agent-fsm` 的 think 組請求、wait 經 [kernel/](kernel/README.md) 的 llm-kernel 寄信與收回信。
-- **[kernel/](kernel/README.md)**：llm-kernel 的啟動與問腦用法、daemon-judge／procs-kernel 的判官接法。
+- **[kernel/](kernel/README.md)**：llm-kernel 的啟動與問腦用法、daemon-kernel／procs-kernel 的框架站接法。
 - **10-24 一天的嘗試**（使用者「我隨便說，你隨便做，反正只是嘗試」；代定都可翻案，一覽在 [session log 10-24](../wf/session_logs/2026-10-parts/12-10-24.md#2026-10-24)）：[lib/](lib/README.md)（工具＝函式庫）、給人用的 say／listen（在 [aos-agent](cmd/aos-agent/README.md) 裡）、[aos-mcp](cmd/aos-mcp/README.md)、[aos-grow](cmd/aos-grow/README.md)（函數成長）、[langs/](extras/langs/README.md)（Janet、Lua 寫 aos）、[aos-sandbox](cmd/aos-sandbox/README.md)（Linux 權限與沙箱）。
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
 - **[notes/](notes/README.md)**：AI 寫的參考筆記（不是規範、不算數）：拿外面現成的東西跟 aos 對照，例如 [跟 s6、runit 的對照](notes/s6-runit.md)。

@@ -75,14 +75,14 @@
    "evidence": "proto8/impls/aos-llm-kernel/src/pack/pack.cpp（read_packs）、proto8/impls/aos-llm-kernel/src/main.cpp（main）、proto8/impls/aos-daemon/src/daemon/body.cpp（Daemon::run_body）"
   },
   {
-   "path": "<判官定義>/judge.json",
+   "path": "<框架站定義>/kernel.json",
    "lifetime": "持久",
    "writer": "人手寫",
-   "reader": "lib/aos/judge",
+   "reader": "lib/aos/kernel",
    "image": "看情況：定義＝原始碼、不算 image（C-79）",
    "on_bad": "讀不了、不是 JSON＝CfgBad 退 1（daemon 身體＝warning 下圈再跑）",
    "note": "",
-   "evidence": "proto8/lib/aos/judge/_entry（load_policy）"
+   "evidence": "proto8/lib/aos/kernel/round.py（load）、proto8/lib/aos/kernel/procs_rules.py（load）"
   },
   {
    "path": "<定義資料夾>/interfaces.json",
@@ -168,7 +168,7 @@
    "path": "$AOS_STACK/procs_state.json（＋procs_state_procs/ 分檔）",
    "lifetime": "持久",
    "writer": "aos-daemon",
-   "reader": "aos-daemon（adopt）、aos-daemon-ctl、aos-agent、aos-llm-kernel、lib/aos/judge",
+   "reader": "aos-daemon（adopt）、aos-daemon-ctl、aos-agent、aos-llm-kernel、lib/aos/kernel",
    "image": "進",
    "on_bad": "daemon：不在＝第一次安靜；整份壞＝改名 .bad-<時間>＋warning＋照定義開空表；壞幾列＝複製留證、跳過那列；原因進 state_flux adopt_warning。ctl 讀壞＝StateBad",
    "note": "11-09 必修 1 已改；分檔夾名＝主檔名去副檔名＋_procs；11-10 列多選填 as_written（ctl add 經信箱加的列裡 ws／stack／exec／def 的指示詞原形，每次起照當下環境重解；原本的欄照舊放解好的字串；加法，舊表照讀，不用重建；11-10 前加的列要 rm 再 add 才有原形）；11-10 晚 B01 後半：as_written 也可放使用者打成絕對路徑的 ws／stack／def／exec（字串，表上原樣存、不換算），加法、不用重建",
@@ -278,7 +278,7 @@
    "path": "<信箱>/{new,cur}/<信名>/letter.json（queue/、procs_requests/、kernel requests/、think/reply/、<stack>/mailbox/）",
    "lifetime": "持久",
    "writer": "aos-post send（aos-daemon-ctl、aos-agent、aos-llm、aos-llm-kernel 回信、idle 開場白、aos-mailbox send／mailbox_send、aos-clock 照登記表寄）",
-   "reader": "aos-post take／see（aos-daemon、templates/agent-fsm idle、aos-llm-kernel、aos-llm recv、lib/aos/judge、aos-mailbox read／mailbox_read）；aos-mailbox peek／mailbox_peek 直接讀 new/*/letter.json",
+   "reader": "aos-post take／see（aos-daemon、templates/agent-fsm idle、aos-llm-kernel、aos-llm recv、lib/aos/kernel、aos-mailbox read／mailbox_read）；aos-mailbox peek／mailbox_peek 直接讀 new/*/letter.json",
    "image": "進",
    "on_bad": "壞信＝收掉：daemon 記 mailbox_warning，body 壞且有 reply_to 回 {\"applied\": false, \"error\": {\"code\": \"BodyBad\"}}（信封壞或沒 reply_to 不回）；idle 寫 mailbox_warning.txt；kernel 回 LetterBad",
    "note": "cur/ 殘骸 daemon 起來會重做。11-10 晚 mailbox：每個 stack（agent 的，或人的 ~/.aos/stack〔11-11 前是 ~/.stack〕、$AOS_LINUX_USER_STACK）多一個 mailbox/ 箱子，跟 queue/ 分開、信不進 history；用名字寄時替收件人建、用路徑寄時不建。新檔，不用重建",
@@ -315,24 +315,24 @@
    "evidence": "proto8/impls/aos-llm-kernel/src/budget/budget.cpp（read_used、add_used）"
   },
   {
-   "path": "<kernel／判官 stack>/queue.json",
+   "path": "<kernel／框架站 stack>/queue.json",
    "lifetime": "持久",
-   "writer": "aos-llm-kernel、lib/aos/judge",
-   "reader": "aos-llm-kernel、lib/aos/judge、aos-agent（提示用）",
+   "writer": "aos-llm-kernel、lib/aos/kernel",
+   "reader": "aos-llm-kernel、lib/aos/kernel、aos-agent（提示用）",
    "image": "進",
    "on_bad": "kernel：形狀不對＝QueueBad（提示刪掉重來）；不在＝空",
    "note": "stack.gitignore 註明不擋（等待時間、隊序要帶）",
-   "evidence": "proto8/impls/aos-llm-kernel/src/queue/queue.cpp（read_queue）、proto8/lib/aos/judge/_entry（main）、proto8/cmd/aos-agent/aos_agent/common.py（queue_position）"
+   "evidence": "proto8/impls/aos-llm-kernel/src/queue/queue.cpp（read_queue）、proto8/lib/aos/kernel/queue_fifo.py（queue_view、write_queue）、proto8/cmd/aos-agent/aos_agent/common.py（queue_position）"
   },
   {
-   "path": "<判官 stack>/judge_ordered.json",
+   "path": "<框架站 stack>/forwarded.json",
    "lifetime": "持久",
-   "writer": "lib/aos/judge",
-   "reader": "lib/aos/judge",
+   "writer": "lib/aos/kernel",
+   "reader": "lib/aos/kernel",
    "image": "進",
    "on_bad": "壞＝StateBad 退 1；不在＝{}",
    "note": "01 盤點沒列",
-   "evidence": "proto8/lib/aos/judge/_entry（main）"
+   "evidence": "proto8/lib/aos/kernel/letters.py（read_forwarded、write_forwarded）"
   },
   {
    "path": "$AOS_STACK/tools/subagent/subagents.json（誰是我生的）",

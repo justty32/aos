@@ -211,3 +211,14 @@
   2. 收行程只准兩種：`aos-daemon-ctl -d <自己暫存樹 stack 的絕對路徑> shutdown`（下之前先印出路徑、確認在自己的暫存夾下）；或 kill 起的時候記下的 pid（kill 前 `readlink /proc/<pid>/cwd` 確認在自己的暫存夾裡）。
   3. 起任何 aos 行程前 `env -u` 掉所有 `AOS_*` 變數；暫存夾用獨一無二的路徑。
   4. 收尾核對 `pgrep -u guanyu -af 'aos-daemon'` 只剩 `~/aos-home` 的兩台，貼進回報；多了或少了立刻停手。
+
+### 批 11a
+
+`kernel/README.md`、`kernel/docs/02-kernel-modes.md` 重寫成「框架站＋擺法」（零件表、`kernel.json` 的鍵、三種擺法、鏈與 hook 的例子；指令都在暫存夾實跑過：daemon 的身體、排隊、loop proc、兩站的鏈、`before_verdict` 與 `before_reply`）；舊名換新名（附錄 4 持久檔 12 處、lib 索引、impls 地圖、aos-daemon docs/06、proto8/README、knowledge `aos/kernel.json`、wf code-map 地圖）；N-42、C-47、C-51 只加註現況與換路徑——N-42 (2) 收進使用者 11-13 對 `next` 的原話與 kb-ctl 裁定（`aos-daemon-ctl` 直寄照現況，「唯一的門」只約束 proc）。
+
+條文裡跟現況字面對不上、只加註沒改的（要不要改寫由使用者或條文線定）：
+- N-42 (2)「有序信經判官」說開了 `keep_ordered` 就代回；現在代回歸 `reply_via_me`、兩鍵獨立（圖紙 K-F39 代定）。
+- N-42 (2)「數量另指」說「下一站不是 daemon 時」才報設定錯；程式是寫了 `next`＋`max_running` 就一定要 `count_daemon`（圖紙 K-F6 代定）。
+- N-42 (2) 各子點仍叫「判官」、標籤仍寫「方向（已定，未實作）」；C-47 標題仍是「已裁定、未實作」。
+- N-42、C-47 引的 11-12「開工等假日」原話留著，旁邊加註 11-13 已開工。
+沒實跑的：`after_verdict` 的例子（只列在表裡）、`keep_ordered`。
