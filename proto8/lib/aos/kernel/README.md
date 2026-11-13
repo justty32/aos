@@ -1,6 +1,6 @@
 # 通用 kernel 的站：共用一輪骨架，掛 proc 的包負責規則、排隊與轉寄。
 
-`_entry` 把 `procs_rules` 交給 `round.run(pack, cfg_path, name="kernel")`；每次執行做一輪，沒信也退 0。由 daemon 身體或 loop proc 一次次叫，不自己常駐。需要 `AOS_STACK`；沒寫 `next` 時也需要 `AOS_DAEMON`。
+`_entry` 把 `procs_rules` 交給 `round.run(pack, cfg_path, name="kernel")`；每次執行做一輪，沒信也退 0。由 daemon 身體或 loop proc 一次次叫，不自己常駐。需要 `AOS_STACK`。下一站照三段找：`kernel.json` 的 `next`；沒寫看環境的 `AOS_KERNEL`（指到自己的 `requests/` 就跳過）；再沒有才用 `AOS_DAEMON`。三段都用不上＝`DaemonMissing`。
 
 ## 零件怎麼用
 
@@ -23,8 +23,8 @@
 
 | 鍵 | 值與作用 | 沒寫時 |
 |---|---|---|
-| `next` | 下一站信箱的非空路徑字串 | `$AOS_DAEMON` 表上 `procs_requests`；表未寫出來用 `procs_requests` |
-| `count_daemon` | 數 running 的 daemon stack 路徑字串 | 沒寫 `next` 時用 `$AOS_DAEMON` |
+| `next` | 下一站信箱的非空路徑字串 | 環境有非空的 `AOS_KERNEL`、又不是自己的 `requests/`＝用它；否則 `$AOS_DAEMON` 表上 `procs_requests`，表未寫出來用 `procs_requests` |
+| `count_daemon` | 數 running 的 daemon stack 路徑字串 | 下一站是從 `$AOS_DAEMON` 來的才用 `$AOS_DAEMON`；其他情形沒有預設 |
 | `allowed` | `procs_added` 名字的字串陣列或 null | 不限 |
 | `max_running` | 非負整數或 null | 不限 |
 | `queue` | 布林，滿格是否留隊 | false |
@@ -32,7 +32,17 @@
 | `reply_via_me` | 布林，下游回信是否先寄到自己再代回 | false |
 | `hooks` | `{名字: 一格}`，只讀這一份；格的鍵見下方 | 沒有 hook |
 
-寫了 `next` 與 `max_running` 就須寫 `count_daemon`，即使上限值為 null；不猜下一站是哪台。`count_daemon` 必須是資料夾；表還沒有時 running 為 0，讀不懂時整輪報錯。只數 `running`、`stuck` 與本輪放行的新名字，在飛的信不算。數量另指時不看那台的 ctl 信箱。轉寄目標解開捷徑後若等於自己的 `requests/`，設定不成立。
+寫了 `next` 與 `max_running` 就須寫 `count_daemon`，即使上限值為 null；不猜下一站是哪台。下一站取自 `AOS_KERNEL` 時同理：寫了 `max_running` 卻沒寫 `count_daemon`＝`CfgBad`。`count_daemon` 必須是資料夾；表還沒有時 running 為 0，讀不懂時整輪報錯。只數 `running`、`stuck` 與本輪放行的新名字，在飛的信不算。數量另指時不看那台的 ctl 信箱。轉寄目標解開捷徑後若等於自己的 `requests/`，設定不成立。
+
+下一站的三段（使用者 11-13 裁）：
+
+1. 寫了 `next`：照字面用它。它解開捷徑後就是自己的 `requests/`＝`CfgBad`，不跳過。
+2. 沒寫 `next`、環境有非空的 `AOS_KERNEL`：解開捷徑後等於自己的 `requests/` 就跳過這一段；否則下一站就是它（轉成絕對路徑，不讀任何表、不驗它在不在，寄不進去照 `ForwardFailed` 拒信）。這一段不需要 `AOS_DAEMON`。
+3. 前兩段都沒有：`$AOS_DAEMON` 表上的 `procs_requests`。算出來是自己的 `requests/`＝`CfgBad`（有信那一輪才讀表、才報）。
+
+三段都用不上（`AOS_DAEMON` 沒設或不是資料夾）＝`DaemonMissing`。兩站互指成環不偵測。
+
+整棵樹 export `AOS_KERNEL` 時，沒寫 `next` 的站也會繼承到它：指到自己才跳過，指到別站就把信轉給那一站。不想要就在起那一站的殼 `unset AOS_KERNEL`，或明寫 `next`。
 
 空輪照原本行為不讀 daemon 表。其他 body 原樣轉；未寫有效 `allowed`、`max_running` 且信未帶期限時，連 body 是不是物件也不驗。規則需要的 `procs_added` 必須是物件，`procs_started`、`procs_woken` 必須是字串陣列。
 
@@ -107,9 +117,9 @@ hooks/<名>/        hook 小格，event.json 是最後一次事件
 |---|---|
 | `ArgumentsBad` | 不是恰好一個非空設定檔參數 |
 | `CfgMissing` | 設定檔不存在 |
-| `CfgBad` | 設定讀不懂、鍵的型別錯、缺數量來源、轉寄目標是自己，或 hooks 設定不合 |
+| `CfgBad` | 設定讀不懂、鍵的型別錯、缺數量來源（寫了 `next` 或下一站取自 `AOS_KERNEL`，有 `max_running` 沒 `count_daemon`）、轉寄目標是自己，或 hooks 設定不合 |
 | `StackMissing` | 沒設 AOS_STACK |
-| `DaemonMissing` | 所需 daemon 未設或不是資料夾 |
+| `DaemonMissing` | 下一站三段都用不上（沒寫 `next`、`AOS_KERNEL` 沒設或指到自己、`AOS_DAEMON` 未設或不是資料夾），或 `count_daemon` 不是資料夾 |
 | `StateBad` | daemon 表、轉寄對照讀不懂，或對照／窗／保存的 body 讀寫不了 |
 | `MailboxMissing` | 目標 daemon 的表明寫 procs_requests 為 null |
 | `CommandMissing` | aos-post 或 aos-directive 起不來 |

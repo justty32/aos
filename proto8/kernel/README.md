@@ -21,7 +21,7 @@
 |---|---|---|
 | 收信 | 對外收件箱固定是站的 `$AOS_STACK/requests/`，每輪認領、逐封看 | 不用開 |
 | 規則 | 名字白名單、同時最多幾個在跑、寄件人給的期限 | `allowed`、`max_running` |
-| 下一站 | 放行的信原樣轉寄到哪個信箱 | `next` |
+| 下一站 | 放行的信原樣轉寄到哪個信箱 | `next`；沒寫看環境的 `AOS_KERNEL`，再沒有才 `AOS_DAEMON` |
 | 數量另指 | 「幾個在跑」去哪一台 daemon 的表上數 | `count_daemon` |
 | 回信 | 下游的回信直接回給寄件人，或先回到我這站再代回 | `reply_via_me` |
 | 排隊 | 沒格時先來先掛地排，或立刻拒 | `queue` |
@@ -33,8 +33,8 @@
 
 | 鍵 | 意思 | 沒寫時 |
 |---|---|---|
-| `next` | 下一站的信箱資料夾 | `$AOS_DAEMON` 那台的 ctl 信箱 |
-| `count_daemon` | 去哪台 daemon 的表上數在跑的（值是那台的 stack 資料夾） | 沒寫 `next` 時是 `$AOS_DAEMON` |
+| `next` | 下一站的信箱資料夾 | 站的環境有 `AOS_KERNEL`、又不是指到自己＝它；否則 `$AOS_DAEMON` 那台的 ctl 信箱 |
+| `count_daemon` | 去哪台 daemon 的表上數在跑的（值是那台的 stack 資料夾） | 下一站是 `$AOS_DAEMON` 那台時就是 `$AOS_DAEMON`；其他情形沒有預設 |
 | `allowed` | `procs_added` 的名字白名單 | 不限 |
 | `max_running` | 同時最多幾個在跑（非負整數） | 不限 |
 | `queue` | 沒格時排隊（`true`）還是立刻拒（`false`） | `false` |
@@ -42,17 +42,25 @@
 | `reply_via_me` | 下游的回信是否先回到我這站、再由我代回 | `false` |
 | `hooks` | `{名字: 一格}`，每格寫 `event` 與 `handler` | 沒有 hook |
 
-最小的設定是 `{}`：什麼都不管，全部原樣轉給自己那台 daemon（啥都不管也是一種管理）。寫了 `next` 又寫了 `max_running` 的話，一定要寫 `count_daemon`，不然報 `CfgBad`（站不去猜下一站是哪一台）。
+最小的設定是 `{}`：什麼都不管，全部原樣轉給下一站（啥都不管也是一種管理）。寫了 `next` 又寫了 `max_running` 的話，一定要寫 `count_daemon`，不然報 `CfgBad`（站不去猜下一站是哪一台）；下一站取自 `AOS_KERNEL` 時也一樣。
 
-### `next` 與 `AOS_KERNEL` 各管什麼
+### 下一站怎麼找：`next`、`AOS_KERNEL`、`AOS_DAEMON` 三段
 
-`AOS_KERNEL` 是給寄件人看的：一般 proc 要掛 proc 時，請求寄到 `$AOS_KERNEL`。`next` 是給站自己看的：這一站放行之後，信要轉去哪。
+`AOS_KERNEL` 是要掛 proc 時沒特別指定就用的通用目標：一般 proc 的請求寄到 `$AOS_KERNEL`。站自己放行之後信要轉去哪，照三段找：
+
+1. `kernel.json` 寫了 `next`：用它。它指到自己的 `requests/`＝設定錯（`CfgBad`），明寫的值照字面、不跳過。
+2. 沒寫 `next`、站的環境有 `AOS_KERNEL`：指到自己的 `requests/` 就跳過這一段；指到別的信箱就轉去那裡，不需要 `AOS_DAEMON`。
+3. 前兩段都沒有：`$AOS_DAEMON` 那台的 ctl 信箱。
+
+三段都用不上＝`DaemonMissing`。
+
+整棵樹 export `AOS_KERNEL` 時，沒寫 `next` 的站也會繼承到它：指到自己才跳過，指到別站就把信轉給那一站。不想要就在起那一站的殼 `unset AOS_KERNEL`，或明寫 `next`。
 
 使用者 11-13 原話：
 
 > 「Hmmm，好啦，next也可以。只是說，我會覺得AOS_KERNEL他就是在有需要掛一個aos proc的時候，就使用的一個目標，一個通用的，基礎的目標。好比所有C語言程式使用syscall的時候，只要沒有特別指定，不然就是走linux kernel那個記憶體位置。啊如果有需要其他目標...那就自己找方法指定」
 
-所以框架站設定檔的 `next` 留著。
+所以框架站設定檔的 `next` 留著。三段的順序是使用者 11-13 待裁頁的裁定（`kf-next:B*（備註：如果覺得麻煩，那就直接報錯算了）`，[回覆檔](../thinking/2026-11/13/decide_20261113_wu-r2.reply.txt)、[開工紀錄](../thinking/2026-11/13/kernel-framework-開工.md)）。
 
 ## 三種擺法
 
@@ -62,7 +70,7 @@
 |---|---|---|---|
 | daemon 的身體 | `daemon.json` 的 `exec` 寫框架站，daemon 每一圈跑一輪 | `<那台 daemon 的 stack>/requests` | `daemon-kernel/` |
 | daemon 底下一個 loop proc | `loop.json` 的 `exec` 寫框架站，掛到一台普通 daemon 上 | `<那個 proc 的 stack>/requests` | `procs-kernel/` |
-| 鏈的中間站 | 上面兩種任一種，`kernel.json` 多寫 `next` 指到別的站 | 同上 | 沒有現成範本，例子在 [02](docs/02-kernel-modes.md) |
+| 鏈的中間站 | 上面兩種任一種，`kernel.json` 多寫 `next` 指到別的站（或站的環境 `AOS_KERNEL` 指到別的站） | 同上 | 沒有現成範本，例子在 [02](docs/02-kernel-modes.md) |
 
 手跑的指令、鏈的例子、hook 的例子、已知限制都在 [02-kernel-modes](docs/02-kernel-modes.md)。
 

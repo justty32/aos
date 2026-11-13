@@ -5,14 +5,17 @@
 ```text
 root daemon
  ├ _clock
- ├ station_a     procs-kernel：next → foreman/requests，reply_via_me=true
+ ├ station_a     procs-kernel：沒寫 next，環境 AOS_KERNEL=foreman/requests，reply_via_me=true
  │               before_verdict：evil → exit 10
- └ foreman       daemon-kernel：max_running=4，queue=true，reply_via_me=true
+ └ foreman       daemon-kernel：沒寫 next，身體的環境 AOS_KERNEL=foreman/requests（自己）
+     │           max_running=4，queue=true，reply_via_me=true
      ├ agent     agent-fsm 範本；AOS_KERNEL=station_a/requests，AOS_DAEMON=foreman
      └ other     無關的測試 loop
 ```
 
 驗證第 1、2、4、5、6 段；第 3 段「查詢信拿刪減表」等 aos-daemon 認 procs_state_path 後補，程式同處留 TODO。各站另掛只記錄事件的 hook，核對信件路徑、原回信箱、代回內容與每封信只進站一次；不改被測框架。
+
+兩站的 `kernel.json` 都不寫 `next`，下一站靠三段裡的後兩段：`station_a` 的 `loop.json` 與領班的 `daemon.json` 都在站那支程式的 `exec.envs` 給 `AOS_KERNEL`＝領班的 `requests/`。A 照它轉給領班（A 沒設 `max_running`，不需要 `count_daemon`）；領班發現它指到自己就跳過、照 `AOS_DAEMON` 轉進自己的 ctl 信箱。hook 把自己看到的 `AOS_KERNEL` 記進事件，劇本逐封核對兩站都真的帶著這個值在跑。
 
 - 第 1 段用現成 `llm_fake` 的 `script/tool_calls` 產生 `subagent add`，劇本手動跑這一輪的真 `lib/agent/subagent` 工具；工具內部走 `aos-agent ctl add`。agent-fsm 保持 idle，不另起問腦總機，也不假稱完整 FSM 問腦回合。另寄一封同型掛子信，保留最終信封，核對兩站代回後的 `in_reply_to`。
 - 第 2、4、5、6 段，以及第 1 段的信封探針，由劇本帶 agent 的環境直接呼叫 `aos-post send/take-all/see/done`，走真 kernel 與 daemon。使用公開的 `procs_added`／`ping` body，沒有模擬框架的回信。每封探針有獨立的 agent 工具回信箱。

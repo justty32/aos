@@ -31,7 +31,7 @@
 - **排隊窗**：`$AOS_STACK/queue.json` 是公開的進度窗：`{"queued": [{"letter", "names", "queued_at", "queued_at_cycles"?, "expires_at"?}]}`，陣列順序就是順位（已在隊的保持原順位；同一輪新進的照 aos-post 處理順序：有序信先、再照信名）；有 `AOS_CLOCK` 才記 `queued_at_cycles`。窗讀不懂（搬家、人手改壞）＝站印一行 `kernel: warning:`、當空窗，從 `requests/cur/` 照處理順序重排，不整輪退 1。
 - **寄件人的期限**：信 body 的選填 `queue_wait_ms` 必須是非負整數。`0`＝不排，沒格就拒。正值從信封 `sent_at` 起按牆鐘算，不是從站第一次看到信起算；到期不轉、回 `SlotMissing` 並收信，就算當下有格也拒，不能補掛。`queue: false` 時也先拒已過期的信。沒有期限就一直排。**期限用牆鐘；凍住期間牆鐘照走，醒來第一輪已過期的排隊信一起拒絕；要跨凍住排隊，用 `--on-queued ok`。**（使用者裁定 sol 審查 #6）`--on-queued ok` 不帶期限，表示信可能永遠排著。（使用者裁定 sol 審查 #4）
 - **有序信**：`keep_ordered` 選填布林，沒寫或 `null` 都是 `false`（使用者裁定 sol 審查 #3）。關的時候，有序信用去掉序號的尾名當一般信轉寄：**經過站不保有序，下游回信的 `in_reply_to` 是尾名，要對得上請寄一般信**。（代定、可翻案：[晚審 04](../../../wf/workflows/refactor/reports/2026-11-07-晚審/04-要使用者裁定.md)）開的時候照有序轉寄，信名會變，站在 `$AOS_STACK/forwarded.json` 記一列防重。
-- **回信先回我**：`reply_via_me: true` 時，轉寄的信把 `reply_to` 改成站自己的 `$AOS_STACK/replies/`，並在 `forwarded.json` 記 `{轉寄後信名: {"letter": 原信名, "reply_to": 原回信箱, "sender": 原寄件人}}`。之後每輪收 `replies/`，用原信名代回原回信箱。原信沒 `reply_to` 就不改。代回寄不進去或原回信箱不在了＝一行 warning、收掉，不重試（寄件人本來就靠自己的逾時）。`keep_ordered` 與 `reply_via_me` 是兩個獨立的鍵：只開 `keep_ordered` 時下游直接回，回信對到的是轉寄後的新信名；要保有序又要回信對得上原信，兩個都開。（框架圖紙代定）
+- **回信先回我**：`reply_via_me: true` 時，轉寄的信把 `reply_to` 改成站自己的 `$AOS_STACK/replies/`，並在 `forwarded.json` 記 `{轉寄後信名: {"letter": 原信名, "reply_to": 原回信箱, "sender": 原寄件人}}`。之後每輪收 `replies/`，用原信名代回原回信箱。原信沒 `reply_to` 就不改。代回寄不進去或原回信箱不在了＝一行 warning、收掉，不重試（寄件人本來就靠自己的逾時）。`keep_ordered` 與 `reply_via_me` 是兩個獨立的鍵：只開 `keep_ordered` 時下游直接回，回信對到的是轉寄後的新信名；要保有序又要回信對得上原信，兩個都開。（使用者 11-13 待裁頁 `kf-t1:A*`：兩個開關各自獨立、照字面）
 - **`aos-agent ctl` 怎麼收到拒信**（[edge-agent 題 2](../../thinking/2026-11/05/edge-agent/README.md)，使用者選「加 --reply-to 等回信」）：`aos-agent ctl add` 等每封都帶共用回信信箱（`$AOS_STACK/daemon_reply/`，人殼＝`<daemon stack>/procs_requests/reply/`），站不放行＝立刻 `AddRejected`（start／wake 被 `max_running` 擋＝`CtlRejected`）＋站的代號與原因，不用等滿 `--timeout-s`（預設 30 秒）（[aos-agent README「等回信」](../../cmd/aos-agent/README.md)）。
 
 ### `AOS_KERNEL`＝一般 proc 寄請求的地方
@@ -40,7 +40,7 @@
 - **沒設＝kernel 就是 daemon**：寄到 `$AOS_DAEMON` 的 ctl 信箱（不報錯）。`AOS_DAEMON` 也沒設時，再找 cwd 的 `./.stack`，也不是資料夾才 `DaemonMissing`（[N-63「`AOS_DAEMON` 沒設＝找 cwd 的 `./.stack`」](../../docs/NORMS/10-基礎設施-定義與工作區/07-hub-型環境變數與父子交代/02-N-63-實例-AOS_DAEMON與沒有AOS_HUB.md)）。
 - **有設**：`aos-agent ctl` 的 `procs_*` 信改寄到 `$AOS_KERNEL`。站當 daemon 身體時設成 `<daemon 的 stack>/requests`，當 loop proc 時設成 `<那個 proc 的 stack>/requests`；可以由人設，或寫進 daemon 的 `.env` 帶給子項。
 - **`aos-daemon-ctl` 不看它、一律直寄 daemon**（使用者 11-07 選項框「aos-daemon-ctl 永遠直寄」，[os-impl 08](../../thinking/2026-11/06/os-impl/08-aos-daemon-ctl永遠直寄實作結果.md)）：它是「指名 daemon」的工具，直寄＝不經過站，有 Linux 權限就能用。使用者 11-13 裁定照現況：`aos-daemon-ctl` 是人直接敲板子的保底，「唯一的門」只約束 proc（[裁定落地-1113](../../thinking/2026-11/13/裁定落地-1113.md)）。
-- 站自己要把信轉去哪，是 `kernel.json` 的 `next`，跟 `AOS_KERNEL` 各管一事（[入口「`next` 與 `AOS_KERNEL` 各管什麼」](../README.md)）。問腦的 llm kernel 用另一個變數 `AOS_LLM_KERNEL`（[01](01-llm-kernel.md)）。
+- 站自己要把信轉去哪，照三段找：`kernel.json` 的 `next`；沒寫看站自己環境的 `AOS_KERNEL`（指到自己的 `requests/` 就跳過）；再沒有才是 `$AOS_DAEMON` 的 ctl 信箱（[入口「下一站怎麼找」](../README.md)）。所以站自己繼承到指向自己的 `AOS_KERNEL` 也沒事（跳過、照舊轉給自己那台 daemon）。整棵樹 export `AOS_KERNEL` 時，沒寫 `next` 的站也會繼承到它：指到自己才跳過，指到別站就把信轉給那一站。不想要就在起那一站的殼 `unset AOS_KERNEL`，或明寫 `next`。（同使用者 11-13 對問腦總機的備註「可以用unset吧」。）問腦的 llm kernel 用另一個變數 `AOS_LLM_KERNEL`（[01](01-llm-kernel.md)）。
 
 ### 誰能繞過 kernel：靠 Linux 權限
 
@@ -131,7 +131,12 @@ aos-daemon-ctl -d $T/m2/st ls                                    # procs-kernel�
 mkdir -p $T/hand/st && echo '{}' > $T/hand/kernel.json
 AOS_STACK=$T/hand/st AOS_DAEMON=$T/m2/st aos-exec $P/lib/aos/kernel $T/hand/kernel.json   # 沒信也退 0，建好 st/requests/
 AOS_STACK=$T/hand/st aos-exec $P/lib/aos/kernel $T/hand/kernel.json
-# kernel: error: DaemonMissing AOS_DAEMON is not set or not a directory: (empty)      （退 1）
+# kernel: error: DaemonMissing no next station: next is not configured, AOS_KERNEL is not set or points to this station, and AOS_DAEMON is not set or not a directory: (empty)      （退 1）
+AOS_STACK=$T/hand/st AOS_KERNEL=$T/hand/st/requests aos-exec $P/lib/aos/kernel $T/hand/kernel.json   # AOS_KERNEL 指到自己＝跳過，同一句 DaemonMissing（退 1）
+AOS_STACK=$T/hand/st AOS_KERNEL=$T/me/box aos-exec $P/lib/aos/kernel $T/hand/kernel.json   # 退 0：沒寫 next，下一站＝AOS_KERNEL 指的信箱，不需要 AOS_DAEMON
+echo '{"max_running": 1}' > $T/hand/kernel.json
+AOS_STACK=$T/hand/st AOS_KERNEL=$T/me/box aos-exec $P/lib/aos/kernel $T/hand/kernel.json
+# kernel: error: CfgBad AOS_KERNEL as the next station with max_running requires count_daemon   （退 1）
 echo '{"next": "x", "max_running": 1}' > $T/hand/kernel.json
 AOS_STACK=$T/hand/st aos-exec $P/lib/aos/kernel $T/hand/kernel.json
 # kernel: error: CfgBad next with max_running requires count_daemon                   （退 1）
@@ -139,7 +144,7 @@ AOS_STACK=$T/hand/st aos-exec $P/lib/aos/kernel $T/hand/kernel.json
 
 ### 鏈的例子：前站轉給後站
 
-一封請求可以走「寄件人 → 前站 → 後站 → daemon」。站不知道自己在鏈上，只知道信從哪來、`next` 寫要轉去哪。下面的後站用 `daemon-kernel` 範本原樣；前站是另一台 daemon，身體也是框架站，`kernel.json` 只寫兩個鍵：轉給後站、回信先回我。
+一封請求可以走「寄件人 → 前站 → 後站 → daemon」。站不知道自己在鏈上，只知道信從哪來、下一站是哪個信箱（這裡用 `next` 寫；不寫 `next`、改在前站的環境給 `AOS_KERNEL` 指到後站也行）。下面的後站用 `daemon-kernel` 範本原樣；前站是另一台 daemon，身體也是框架站，`kernel.json` 只寫兩個鍵：轉給後站、回信先回我。
 
 ```sh
 mkdir -p $T/back && cd $T/back
@@ -206,5 +211,5 @@ echo "{\"next\": \"$T/back/st/requests\", \"reply_via_me\": true, \"hooks\": {\"
 - 沒開 `reply_via_me` 的無序信，防重的依據只有下一站信箱 `new/`、`cur/` 裡的同名信。下游已做完並移走那封信、站才重起，站認不出原信已經轉過，可能再轉一次。
 - 站當 loop proc 時跟 daemon 各自打拍子：轉了、daemon 還沒套的不算在跑，連著很快寄好幾封時可能多放幾個。當 daemon 身體時沒這個問題（站跑在 daemon 那一圈裡，下一圈之前 daemon 已套完）。
 - **當 loop proc 的站睡著或停著**：信照 `AOS_KERNEL` 寄、不認誰是 kernel、不預判收件者有沒有在跑；沒有回信就等寄件人期限。站睡著＝這是設計系統的人要管的風險（使用者 11-07），手動叫醒：`aos-daemon-ctl wake NAME`（停著用 `start`；這支是指名 daemon 的工具，一律直寄 daemon、不看 `AOS_KERNEL`）。程式不自動辨識、不自動叫醒、不自動繞過。逾時撤信與已轉寄後撤不回的競態見 [aos-agent 已知限制](../../cmd/aos-agent/docs/02-已知限制.md)。
-- 站自己的錯（`kernel.json` 壞、沒 `AOS_DAEMON`、daemon 沒開 ctl 信箱、`on_error: stop` 的 hook 失敗）退 1。當 daemon 身體時 daemon 不停——stderr 一行 `aos-daemon: warning: body … failed (code N), retrying next round`（碼變了才印，好了印 ok again）、`state.json` 記 `body_code`、下一圈再跑（使用者裁「記一行、下一圈再跑 (Recommended)」，N-28「daemon 的身體失敗」）；那段時間站沒在跑、`requests/` 的信沒人判。當 loop proc 時那個 proc 出錯結束、表上留 `stopped`＋`reason`，修好 `start`（P-20）。
+- 站自己的錯（`kernel.json` 壞、下一站三段都找不到、daemon 沒開 ctl 信箱、`on_error: stop` 的 hook 失敗）退 1。當 daemon 身體時 daemon 不停——stderr 一行 `aos-daemon: warning: body … failed (code N), retrying next round`（碼變了才印，好了印 ok again）、`state.json` 記 `body_code`、下一圈再跑（使用者裁「記一行、下一圈再跑 (Recommended)」，N-28「daemon 的身體失敗」）；那段時間站沒在跑、`requests/` 的信沒人判。當 loop proc 時那個 proc 出錯結束、表上留 `stopped`＋`reason`，修好 `start`（P-20）。
 - 同一個收件箱同時只能有一個站在跑：第二個會拿不到 `requests/.flock`，報 `LockFailed` 退 1。

@@ -19,6 +19,7 @@ HOOK = '''#!/usr/bin/env python3
 import json, os, pathlib, sys
 event = json.load(sys.stdin)
 station = pathlib.Path(event["stack"])
+event["kernel_env"] = os.environ.get("AOS_KERNEL")
 with (station / "audit.jsonl").open("a") as stream:
     stream.write(json.dumps(event) + "\\n")
 if event["event"] == "before_verdict" and "evil" in (event.get("body") or {}).get("procs_added", {}):
@@ -171,11 +172,13 @@ class Check:
                  {"argv": [str(PROTO / "lib" / tool / "_entry")], "cwd": str(self.work)})
         shutil.copytree(PROTO / "kernel/procs-kernel", self.defs / "station_a")
         shutil.copytree(PROTO / "kernel/daemon-kernel", self.defs / "foreman")
+        # 兩站都不寫 next、都拿到指向領班信箱的 AOS_KERNEL：A 照它轉；領班發現指到自己就跳過、照 AOS_DAEMON 轉。
         for name, config in (("station_a", "loop.json"), ("foreman", "daemon.json")):
             save(self.defs / name / config,
                  {"exec": {"argv": ["aos-exec", str(PROTO / "lib/aos/kernel"),
-                                    str(self.defs / name / "kernel.json")]}, "interval_ms": 150})
-        self.kernel(self.defs / "station_a", {"next": str(self.foreman / "requests")})
+                                    str(self.defs / name / "kernel.json")],
+                           "envs": {"AOS_KERNEL": str(self.foreman / "requests")}}, "interval_ms": 150})
+        self.kernel(self.defs / "station_a", {})
         self.kernel(self.defs / "foreman", {"max_running": 4, "queue": True})
         foreman_cfg = read(self.defs / "foreman/daemon.json")
         foreman_cfg["procs"] = {
@@ -257,6 +260,10 @@ class Check:
                     "request passed more or less than once at %s for %s" % (stack.name, tag))
         original = self.events(self.a, "before_verdict", letter)[0]
         relayed = self.events(self.foreman, "before_verdict", letter)[0]
+        # 兩站的 kernel.json 都沒寫 next：信到得了領班與 daemon，靠的是 AOS_KERNEL 與「指到自己就跳過」。
+        require(all(Path(row["kernel_env"] or "/").resolve() == self.foreman / "requests"
+                    for row in (original, relayed)),
+                "a station did not run with AOS_KERNEL set to the foreman mailbox")
         require((self.a / "requests" / original["reply_to"]).resolve() == box,
                 "A did not receive the original reply mailbox")
         require((self.foreman / "requests" / relayed["reply_to"]).resolve() == self.a / "replies",

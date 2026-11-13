@@ -55,10 +55,13 @@ def prepare_targets(ctx, active):
     """有信才讀表；兩次認領之間到的新信也必須先完成解析。"""
     cfg = ctx.cfg
     daemon, count_daemon = ctx.daemon, ctx.count_daemon
+    from_daemon = ctx.next_from == "daemon"
     # 空輪不讀 daemon 的表，保留原本第一圈或空輪可先跑的行為。
-    target_state = state_view(daemon, ctx) if active and "next" not in cfg else {}
-    if "next" in cfg:
+    target_state = state_view(daemon, ctx) if active and from_daemon else {}
+    if ctx.next_from == "next":
         ctx.next_box = cfg["next"]
+    elif ctx.next_from == "kernel":
+        ctx.next_box = ctx.kernel_box
     else:
         if "procs_requests" in target_state and target_state["procs_requests"] is None:
             ctx.die("MailboxMissing", "daemon has no ctl mailbox (procs_requests in procs_state.json is null)")
@@ -70,19 +73,33 @@ def prepare_targets(ctx, active):
         ctx.die("CfgBad", "the next mailbox must not be this station's requests mailbox")
     state = {}
     if active and count_daemon is not None:
-        state = target_state if count_daemon == daemon and "next" not in cfg else state_view(count_daemon, ctx)
+        state = target_state if count_daemon == daemon and from_daemon else state_view(count_daemon, ctx)
     ctx.running = {n for n, row in (state.get("procs") or {}).items()
                    if isinstance(row, dict) and row.get("phase") in {"running", "stuck"}}
     ctx.targets_loaded = active
 
 
+def next_source(ctx):
+    """下一站三段：設定的 next、AOS_KERNEL（指到自己就跳過）、AOS_DAEMON。"""
+    if "next" in ctx.cfg:
+        return "next", None
+    box = os.environ.get("AOS_KERNEL")
+    if box and os.path.realpath(box) != os.path.realpath(ctx.requests):
+        return "kernel", os.path.abspath(box)
+    return "daemon", None
+
+
 def collect(ctx, before_reply=None):
     """先防重收原信，再透過 before_reply 回呼代回。"""
     cfg = ctx.cfg
+    ctx.next_from, ctx.kernel_box = next_source(ctx)
     daemon = os.environ.get("AOS_DAEMON")
-    if "next" not in cfg and (not daemon or not os.path.isdir(daemon)):
-        ctx.die("DaemonMissing", "AOS_DAEMON is not set or not a directory: %s" % (daemon or "(empty)"))
-    count_daemon = cfg.get("count_daemon", daemon if "next" not in cfg else None)
+    if ctx.next_from == "daemon" and (not daemon or not os.path.isdir(daemon)):
+        ctx.die("DaemonMissing", "no next station: next is not configured, AOS_KERNEL is not set or points to "
+                "this station, and AOS_DAEMON is not set or not a directory: %s" % (daemon or "(empty)"))
+    if ctx.next_from == "kernel" and "max_running" in cfg and "count_daemon" not in cfg:
+        ctx.die("CfgBad", "AOS_KERNEL as the next station with max_running requires count_daemon")
+    count_daemon = cfg.get("count_daemon", daemon if ctx.next_from == "daemon" else None)
     if count_daemon is not None and not os.path.isdir(count_daemon):
         ctx.die("DaemonMissing", "count_daemon is not a directory: %s" % count_daemon)
     ctx.forwarded_path = os.path.join(ctx.stack, "forwarded.json")

@@ -37,6 +37,7 @@ class KernelTest(unittest.TestCase):
                         PYTHONDONTWRITEBYTECODE="1",
                         PATH=os.pathsep.join([str(POST.parent), str(DIRECTIVE), os.environ["PATH"]]))
         self.env.pop("AOS_CLOCK", None)
+        self.env.pop("AOS_KERNEL", None)
         for box in (self.requests, self.replies, self.ctl, self.sender):
             self.post("init", box)
 
@@ -205,6 +206,77 @@ class KernelTest(unittest.TestCase):
                 result = self.kernel()
                 self.assertEqual(result.returncode, 1, result.stderr)
                 self.assertIn("kernel: error: CfgBad", result.stderr)
+
+    def test_kernel_env_mailbox_is_next_without_daemon(self):
+        target = self.root / "other"
+        self.post("init", target)
+        self.env.pop("AOS_DAEMON")
+        self.env["AOS_KERNEL"] = str(target)
+        name = self.post("send", self.requests, "request", body={"ping": True})
+        self.assert_round()
+        forwarded, letter = self.read_new(target)
+        self.assertEqual(forwarded, name)
+        self.assertEqual(letter["body"], {"ping": True})
+        self.assertEqual(list((self.ctl / "new").iterdir()), [])
+
+    def test_kernel_env_pointing_to_self_falls_back_to_daemon(self):
+        shortcut = self.root / "own_box"
+        shortcut.symlink_to(self.requests, target_is_directory=True)
+        self.env["AOS_KERNEL"] = str(shortcut)
+        name = self.post("send", self.requests, "request", body={"ping": True})
+        self.assert_round()
+        self.assertTrue((self.ctl / "new" / name / "letter.json").is_file())
+
+    def test_next_wins_over_kernel_env(self):
+        target, other = self.root / "other", self.root / "kernel_box"
+        self.post("init", target)
+        self.post("init", other)
+        self.configure(next="other")
+        self.env["AOS_KERNEL"] = str(other)
+        name = self.post("send", self.requests, "request", body={"ping": True})
+        self.assert_round()
+        self.assertTrue((target / "new" / name / "letter.json").is_file())
+        self.assertEqual(list((other / "new").iterdir()), [])
+        self.assertEqual(list((self.ctl / "new").iterdir()), [])
+
+    def test_kernel_env_with_max_running_requires_count_daemon(self):
+        target = self.root / "other"
+        self.post("init", target)
+        self.env["AOS_KERNEL"] = str(target)
+        self.configure(max_running=1)
+        result = self.kernel()
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("kernel: error: CfgBad", result.stderr)
+        self.assertIn("count_daemon", result.stderr)
+        counter = self.root / "counter"
+        counter.mkdir()
+        state = counter / "procs_state.json"
+        state.write_text(json.dumps({"procs": {"busy": {"phase": "running"}}}))
+        self.env.pop("AOS_DAEMON")
+        self.configure(max_running=1, count_daemon="counter")
+        self.post("send", "--reply-to", self.sender, self.requests, "full",
+                  body={"procs_added": {"worker": {}}})
+        self.assert_round()
+        _, reply = self.read_new(self.sender)
+        self.assertEqual(reply["body"]["error"]["code"], "SlotMissing")
+        self.assertEqual(list((target / "new").iterdir()), [])
+        state.write_text(json.dumps({"procs": {}}))
+        name = self.post("send", self.requests, "room", body={"procs_added": {"worker": {}}})
+        self.assert_round()
+        self.assertTrue((target / "new" / name).is_dir())
+        self.assertEqual(list((self.ctl / "new").iterdir()), [])
+
+    def test_no_next_station_is_daemon_missing(self):
+        for own in (False, True):
+            with self.subTest(kernel_env_points_to_self=own):
+                self.fixture()
+                self.env.pop("AOS_DAEMON")
+                if own:
+                    self.env["AOS_KERNEL"] = str(self.requests)
+                result = self.kernel()
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn("kernel: error: DaemonMissing", result.stderr)
+                self.assertIn("AOS_KERNEL", result.stderr)
 
     def test_zero_queue_wait_passes_when_slot_is_available(self):
         self.configure(max_running=1, queue=True)
