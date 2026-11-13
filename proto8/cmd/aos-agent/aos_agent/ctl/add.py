@@ -51,6 +51,26 @@ flags:
 exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, DaemonMissing, DaemonFailed...).
 """
 
+def definition(arg, verb="add"):
+    """XXX 是不是一份掛得上的 agent 定義（add 與 set-def 共用）：是資料夾、interfaces.json 宣告了 aos-agent、宣告的 entry 在。
+    回 (定義絕對路徑, 宣告, 入口, def_dir)；宣告 entry 時入口與定義資料夾分開給（def_dir＝定義），沒宣告＝def_dir None。"""
+    xxx = os.path.abspath(arg)
+    if not os.path.isdir(xxx):
+        raise Fail("PathMissing", "%s does not exist (%s takes an agent folder)" % (arg, verb))
+    decl, why = read_decl(xxx, IFACE)
+    if decl is None:
+        raise Fail("InterfaceMissing", "%s does not declare the aos-agent interface (%s); put interfaces.json at its top: {\"aos-agent\": {}}" % (xxx, why))
+    entry_target, def_dir = xxx, None
+    ent = decl.get("entry")
+    if ent is not None:
+        if not isinstance(ent, str) or not ent or os.path.isabs(ent) or ".." in ent.split("#")[0].split("/"):
+            raise Fail("InterfaceBad", "the entry declared by %s must be a relative path to an entry in the definition (e.g. \"body.json\"), not %s" % (xxx, json.dumps(ent, ensure_ascii=False)))
+        if not os.path.exists(os.path.join(xxx, ent.partition("#")[0])):
+            raise Fail("InterfaceBad", "the entry declared by %s does not exist: %s" % (xxx, os.path.join(xxx, ent)))
+        entry_target, def_dir = os.path.join(xxx, ent), xxx
+    return xxx, decl, entry_target, def_dir
+
+
 def cmd(argv):
     try:
         opts, rest = aos_flags.parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits", "--timeout-s": "timeout_s", "--on-queued": "on_queued",
@@ -78,20 +98,7 @@ def cmd(argv):
     if len(rest) != 1:
         raise bad_args(HELP, "add takes one agent folder XXX"
                        + ("; extra argument %s (add takes no -- arguments)" % rest[1] if len(rest) > 1 else ""))
-    xxx = os.path.abspath(rest[0])
-    if not os.path.isdir(xxx):
-        raise Fail("PathMissing", "%s does not exist (add takes an agent folder)" % rest[0])
-    decl, why = read_decl(xxx, IFACE)
-    if decl is None:
-        raise Fail("InterfaceMissing", "%s does not declare the aos-agent interface (%s); put interfaces.json at its top: {\"aos-agent\": {}}" % (xxx, why))
-    entry_target, def_dir = xxx, None               # 宣告 entry 時，入口與定義資料夾分開給
-    ent = decl.get("entry")
-    if ent is not None:
-        if not isinstance(ent, str) or not ent or os.path.isabs(ent) or ".." in ent.split("#")[0].split("/"):
-            raise Fail("InterfaceBad", "the entry declared by %s must be a relative path to an entry in the definition (e.g. \"body.json\"), not %s" % (xxx, json.dumps(ent, ensure_ascii=False)))
-        if not os.path.exists(os.path.join(xxx, ent.partition("#")[0])):
-            raise Fail("InterfaceBad", "the entry declared by %s does not exist: %s" % (xxx, os.path.join(xxx, ent)))
-        entry_target, def_dir = os.path.join(xxx, ent), xxx
+    xxx, decl, entry_target, def_dir = definition(rest[0])
     if opts.get("limits") is not None:                # 11-05 feat-proto 件 5：--limits 整份蓋過宣告
         try:
             limits = json.loads(opts["limits"])

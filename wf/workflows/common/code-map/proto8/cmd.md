@@ -17,6 +17,7 @@
 | [`aos_agent/ctl/ls.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/ls.py) | 列出 daemon 表上的 proc 與狀態。 |
 | [`aos_agent/ctl/phase.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/phase.py) | 起停、睡醒與暫停恢復 agent。 |
 | [`aos_agent/ctl/rm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/rm.py) | 拔掉 agent（預設留 stack；--purge 確認後才刪，並保護不能刪除的 stack 路徑）。 |
+| [`aos_agent/ctl/set_def.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/set_def.py) | 換掉表上一隻 agent 的定義：stack、工作區、limits、auto_restart 照舊，下一次起來才用新的。 |
 | [`aos_agent/ctl/shared.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/shared.py) | ctl 動作才用的共用零件：--timeout-s／--on-queued／名字放最後、寄控制信給 daemon 並等回信與公開表。 |
 | [`aos_agent/ctl/state.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/state.py) | 顯示單隻 agent 的狀態：總覽（每類一行）或點菜（某幾類的細節）；只給數字與事實、不給建議（11-10 self-family self_state）。 |
 | [`aos_agent/ctl/where.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/where.py) | 顯示 agent 的 stack 或工作區路徑。 |
@@ -44,6 +45,7 @@
 | [`tests/test_llm.py`](../../../../../proto8/cmd/aos-agent/tests/test_llm.py) | Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and… |
 | [`tests/test_ls_health.py`](../../../../../proto8/cmd/aos-agent/tests/test_ls_health.py) | Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table. |
 | [`tests/test_rm_keep.py`](../../../../../proto8/cmd/aos-agent/tests/test_rm_keep.py) | Test aos-agent ctl rm keeps the stack by default and deletes it only with --purge (cli-sweep Q3), on a real aos-daemon. |
+| [`tests/test_set_def.py`](../../../../../proto8/cmd/aos-agent/tests/test_set_def.py) | Test aos-agent ctl set-def on a real aos-daemon: the row keeps its stack, workspace and auto_restart, the new definition runs from the next start, --… |
 | [`tests/test_state_parts.py`](../../../../../proto8/cmd/aos-agent/tests/test_state_parts.py) | Test aos-agent ctl state (11-10 self-family self_state): the overview (one line per part), picked parts, all, --json, and parts that are not availabl… |
 | [`tests/test_system.py`](../../../../../proto8/cmd/aos-agent/tests/test_system.py) | Test aos-agent system on a fake daemon table (11-11 self-system): get / get -l / get --json, set from stdin and from a file, empty text, reset, missi… |
 | [`tests/test_tools_override.py`](../../../../../proto8/cmd/aos-agent/tests/test_tools_override.py) | Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with "$override" (N2 poin… |
