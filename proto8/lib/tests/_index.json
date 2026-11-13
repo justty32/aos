@@ -21,7 +21,7 @@
   "description": "index_view 對 index 一項裡多出來的鍵（timeout_ms、自訂鍵…）照常印「名<TAB>description」、不報錯：index 的格都只是參考（使用者 11-12 晚）。"
  },
  "test_index_link.py": {
-  "description": "index paths and $ref share one \"string -> place\" rule after #: \"..\" steps out one level, stepping out of the root object"
+  "description": "index paths and $ref share one rule and one parser (aos_refpath.spot): left of # is the file system, right of # is inside the json."
  },
  "test_index_view.py": {
   "description": "index_view（lib/aos_index.py，thinking 2026-11/12/index-tools）的定向測試：實跑 _entry，驗三種給法（只 path、只 index、兩個疊著）、key、分頁、沒有 index、壞掉的 index。"

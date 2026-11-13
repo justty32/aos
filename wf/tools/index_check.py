@@ -15,13 +15,16 @@
         EntryGone（列了但不在）、EntryMissing（在但沒列）、
         LinkBad（`index` 指不到另一份 index：指到的要是 `_index.json` 整份（物件）、檔內 `_index` 鍵、或 `_metainfo` 的 index；巢太深讀不了的 json 也算讀不了）、
         LinkMissing（子夾自己有 `_index.json`，上一層那一項卻沒帶 `index`）。
-  路徑算法照 proto8/lib/aos_index.py 的 link()，這裡只做資料夾的 `_index.json` 用得到的部分（相對所在夾、`檔#/指標`、`#/指標`＝本檔）。
+  路徑算法跟 `$ref`、index_view 同一支 proto8/lib/aos_refpath.py（# 左邊檔案系統、從所在夾算；右邊 json 內部：`#/`＝本檔根、`#./`＝這一項、`#../`＝上一層）。
   規格：proto8/thinking/2026-11/13/index-build.md。生成用 index_gen.py。純標準庫。
 """
 import json
 import os
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), "proto8", "lib"))
+import aos_refpath  # noqa: E402  路徑字串怎麼算：$ref 與 index 共用一支（proto8/thinking/2026-11/13/ref-path-rules）
 
 PROG = "index_check"
 NAME = "_index.json"
@@ -156,10 +159,14 @@ def check_dir(root, d, fs, view, cache, problems, seen_inner):
             continue
         link = e.get("index")
         if isinstance(link, str) and link:
-            lf, _, lptr = link.partition("#")
-            lpath = os.path.join(base, NAME) if not lf else os.path.normpath(os.path.join(base, lf))
-            if "#" in link and not lptr.startswith("/"):
-                problems.append(("LinkBad", where, "%s: index %s is not a path (after # comes /)" % (k, link)))
+            try:                                        # 同 $ref 一支（aos_refpath）：這一項的 index 欄寫在 _index.json 的 /KEY 物件裡
+                lpath, ltoks = aos_refpath.spot(link, os.path.join(base, NAME), [k.replace("~", "~0").replace("/", "~1")])
+                lptr = "".join("/" + t for t in ltoks or [])
+            except ValueError as e:
+                lpath = None
+                problems.append(("LinkBad", where, "%s: index %s is not a path (%s)" % (k, link, e)))
+            if lpath is None:
+                pass
             elif not os.path.isfile(lpath):
                 problems.append(("LinkBad", where, "%s: index %s points to nothing" % (k, link)))
             else:

@@ -9,12 +9,13 @@
 讀檔經 aos_json（aos-json get），錯照轉它最後一行（C-52 例外 ⑤）；`[no index]`、`[no entry]`、`[more]`、`[index link]` 退 0。
 指到另一份 index 的路徑（11-12 晚，使用者「除了description之外，還可以放index，值必須是字串，必須是路徑，指向另一個_index或_index.json。」
 「json object內的_index這個key……我希望能支援字串，同樣也是路徑」「不跟着往下走。路徑相對...以_index, _index.json的位置爲準。」）：
-每項的 index 欄、檔內 _index 是字串，都只顯示路徑、不往下讀；相對路徑從裝著那份 index 的容器（資料夾或 json 物件）算，只寫在 home()／link()（thinking 2026-11/12/index-link）。
+每項的 index 欄、檔內 _index 是字串，都只顯示路徑、不往下讀；路徑規則跟 $ref 同一支 aos_refpath.spot，只在 link() 接（thinking 2026-11/13/ref-path-rules）。
 description 可以是字串、也可以是字串陣列（一行一個元素；使用者 11-13「AI可以隨便寫，也可以按照推薦用字串陣列」，thinking 2026-11/13/text-as-string-array）：只寫在 text()。"""
 import json
 import os
 
 import aos_json
+import aos_refpath
 import tool_io
 
 NAME = "index_view"
@@ -43,76 +44,19 @@ def read(t):
 SHAPE = "an index must be a JSON object {KEY: {\"description\": ...}}, or (as _index inside a JSON file) a path string to another index"
 
 
-def home(where):
-    """一份 index 表的位置 → 裝著它的容器（它描述的那個節點）：(檔或資料夾, 指標 token 串或 None＝在檔案系統那邊)。
-    DIR/_index.json、DIR/_metainfo.json#/index → 資料夾 DIR；FILE#/P/_index、FILE#/P/_metainfo/index → 物件 FILE#/P（P 空＝根物件＝這個檔）；
-    其他位置（腦明講的主觀 index）照同一條：表所在的上一層（FILE#/P/q → FILE#/P；整份 FILE → FILE 所在的資料夾）。token 保持跳脫後的樣子。"""
-    cut = where.find("#")
-    if cut < 0:
-        return os.path.dirname(where) or ".", None
-    f, toks = where[:cut], where[cut + 2:].split("/")
-    if os.path.basename(f) == "_metainfo.json" and toks == ["index"]:
-        return os.path.dirname(f) or ".", None
-    return f, toks[:-2] if toks[-2:] == ["_metainfo", "index"] else toks[:-1]
-
-
-def link(where, value):
-    """index 裡寫的路徑 → N-45 完整寫法（可直接給 index_view 的 index）；不是合法路徑＝None。翻案只改這裡（與 home()）。
-    使用者 11-12 晚「路徑相對...以_index, _index.json的位置爲準。」「這個要用json與檔案系統的同像性去想。如果是在json物件內的，某key的_index，
-    那他就從這個json物件開始算(把這個json物件當成資料夾)。然後如果這個json物件是這個.json檔案的根，那他就等同於這個檔案。」：
-    從裝著那份 index 的容器（資料夾或 json 物件）一段一段走：在物件裡，名字＝往下一個 key、`..`＝外層物件，根物件的 `..`＝檔案所在的資料夾；
-    在檔案系統裡照資料夾走。`#/指標` 只能接在檔案系統那邊（進檔要明寫 #，寫法上 / 與 #/ 仍分得出來）。絕對路徑照用。
-    `#/指標` 開頭（使用者「也跟進吧」，同 N-45 `{"$ref": "#/a/b"}`）＝本檔根算起的絕對位置、跟容器無關：
-    本檔＝這份 index 實際所在的那個 json 檔（where 的 # 前面；DIR/_index.json、DIR/_metainfo.json 也是）。
-    # 後面跟 `$ref` 同一套（使用者 11-12 晚「$ref這塊，可以用#/指代根obj，同時也算指代自身所在檔案，所以可以用#/key, #/../other.json。」；
-    C++ 那份＝aos-directive 的 aos::ref_spot，兩邊跑同一張對照表 impls/aos-directive/tests/ref_spot_cases.json）：
-    段照字面當 JSON Pointer 的 token，只有 `..` 另算＝往外一層；根物件＝這個檔，再 `..`＝檔案所在的資料夾，之後照資料夾走、再寫 # 又進那份檔。"""
-    if not isinstance(value, str) or not value:
+def link(where, value, key=None):
+    """index 裡寫的路徑字串 → N-62 完整寫法（可直接給 index_view 的 index）；不是合法路徑＝None。規則跟 $ref 同一套、同一支（aos_refpath.spot，
+    使用者 11-13 晚「$ref和index路徑的規則要相同」，thinking 2026-11/13/ref-path-rules）：# 左邊檔案系統（從這份 json 檔所在的資料夾算）、
+    右邊 json 內部（#/＝本檔根、#./＝所在物件、#../＝上一層）。where＝那份 index 表的位置；key＝哪一項（看它的 index 欄），沒給＝where 本身就是這個字串（檔內 _index）。
+    所在物件＝字串所在那一格的上一層：檔內 _index 字串＝裝著 _index 的物件；某項的 index 欄＝那一項（_index/KEY）。"""
+    f, _, ptr = where.partition("#")
+    toks = ptr[1:].split("/") if ptr.startswith("/") and ptr != "/" else []
+    if key is not None:
+        toks = toks + [key.replace("~", "~0").replace("/", "~1"), "index"]
+    try:
+        return aos_refpath.shown(*aos_refpath.spot(value, f, toks[:-1] if toks else None))
+    except ValueError:
         return None
-    cut = value.find("#")
-    if cut == 0:
-        f, toks = where.split("#", 1)[0], None
-    else:
-        walk = value if cut < 0 else value[:cut]
-        if os.path.isabs(walk):
-            f, toks = walk, None
-        else:
-            f, toks = home(where)
-            for seg in walk.split("/"):
-                if seg in ("", "."):
-                    continue
-                if toks is None:                            # 在檔案系統那邊：照資料夾走
-                    f = os.path.normpath(os.path.join(f, seg))
-                elif seg != "..":
-                    toks = toks + [seg]                     # 在物件裡：往下一個 key（照字面，已是跳脫後的 token）
-                elif toks:
-                    toks = toks[:-1]                        # 外層物件
-                else:
-                    f, toks = os.path.normpath(os.path.join(f, "..")), None   # 根物件＝這個檔，它的上一層＝檔案所在的資料夾
-        if cut < 0:
-            return f if toks is None or not toks else "%s#/%s" % (f, "/".join(toks))
-        if toks is not None:
-            return None                                     # 已在物件裡又寫 #：不是路徑
-    rest = value[cut + 1:]
-    while True:                                             # 在 f 這份檔裡：rest 是 /tok/tok…
-        if not rest.startswith("/"):
-            return None                                     # # 後不是 /（`x.json#` 也不收，同 json 工具）
-        toks, segs, out = [], rest[1:].split("/"), None
-        for i, seg in enumerate(segs):
-            if seg != "..":
-                toks.append(seg)
-            elif toks:
-                toks.pop()
-            else:
-                out = "/".join(segs[i + 1:])                # 走出這份檔：剩下的到下一個 # 之前是資料夾／檔名
-                break
-        if out is None:
-            return f + "".join("/" + t for t in toks).replace("/", "#/", 1)
-        h = out.find("#")
-        f = os.path.normpath(os.path.join(os.path.dirname(f), "./" + (out if h < 0 else out[:h])))
-        if h < 0:
-            return f
-        rest = out[h + 1:]
 
 
 def table(t, shown):
@@ -227,9 +171,9 @@ def line(key, entry, where):
     out = key if not isinstance(desc, str) else "%s\t%s" % (key, desc.replace("\r", " ").replace("\n", " ").replace("\t", " "))
     if not isinstance(entry, dict) or "index" not in entry:
         return out                                      # 項目壞掉或沒有 description：只印鍵（C-48，I14）
-    to = link(where, entry["index"])
+    to = link(where, entry["index"], key)
     if to is None:
-        to = "bad (%s; must be a path string to another index, counted from what holds this index: e.g. sub/_index.json, or in a JSON object sub/_index, ../a.json#/_index; #/a/_index counts from the root of this file)" % (
+        to = "bad (%s; must be a path string to another index: left of # is the file system, from the folder of this JSON file (sub/_index.json, ../a.json#/_index); right of # is inside JSON: #/a/_index from the root of this file, #./a/_index from the object holding this string, #../ one level up)" % (
             "not a path" if isinstance(entry["index"], str) else aos_json.kind(entry["index"]))
     return "%s%s\tindex: %s" % (out, "" if isinstance(desc, str) else "\t", to)
 
