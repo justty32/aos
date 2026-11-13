@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+# user_verify - aos-user verify 的包裝（唯讀）：給沒 shell 的身（agent-fsm、gpt 隊）驗「這封回信真的是使用者從專區回的」（L1：寄件人是專區、跟專區 done/ 的副本逐欄一樣、專區 log 有同一筆）。
+# 使用者 11-13 晚「都按照推薦」（線專段 2 待裁第 2 題：加唯讀 user_verify，授權上跟有 shell 的 aos-user verify 同等）；規劃 proto8/thinking/2026-11/13/user-zone-plan/08-段2施工.md。
+# 介面：stdin {letter}；letter 沒有 /＝信名，在叫我的那隻自己的信箱找（stack/mailbox/new/ 再 cur/）；有 /＝信資料夾路徑（相對＝接 $AOS_WS）。
+#   mailbox_read 讀完就刪信，所以要在讀之前驗（信名從 mailbox_peek 拿）。結果：ok 一行；不合＝VerifyBad（aos-user 的錯誤行照轉）、退 1。
+# 找 aos-user 跟 user_send 同一套：$AOS_USER_TOOL ＞ $AOS_WS/tools/aos-user/aos-user ＞ PATH。不寫任何檔。需要 PATH 上有 aos-agent（信名查法要知道我的 stack）。
+import os, shutil, signal, sys
+NAME = "user_verify"
+HELP = """\
+usage: user_verify < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Check that a reply letter really came from the user zone (aos-user verify, level 1). Reads only.
+letter = a letter name in my mailbox (new/, then cur/), or a letter folder path (relative = from $AOS_WS).
+Check before mailbox_read: reading removes the letter.
+aos-user is found at $AOS_USER_TOOL, else $AOS_WS/tools/aos-user/aos-user, else on PATH.
+Result on stdout. On error: one line "user_verify: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib, os.path.join(_lib, "agent")] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+tool_io.start(NAME, HELP)
+signal.signal(signal.SIGINT, lambda s, f: sys.exit(130))
+import mailbox_call  # noqa: E402
+import cmd_call  # noqa: E402
+
+
+def find_tool():
+    for p in (os.environ.get("AOS_USER_TOOL", ""),
+              os.path.join(os.environ.get("AOS_WS", ""), "tools", "aos-user", "aos-user") if os.environ.get("AOS_WS") else ""):
+        if p and os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    p = shutil.which("aos-user")
+    if p:
+        return p
+    tool_io.die("ToolMissing", "aos-user not found ($AOS_USER_TOOL, $AOS_WS/tools/aos-user/aos-user, PATH); "
+                "the user zone is not set up on this machine")
+
+
+args = tool_io.arguments("letter")
+ref = args["letter"].strip()
+if "/" in ref:
+    folder = os.path.expanduser(ref)
+    if not os.path.isabs(folder):
+        folder = os.path.join(tool_io.workspace(), folder)
+    if not os.path.isfile(os.path.join(folder, "letter.json")):
+        tool_io.die("LetterMissing", "no letter.json in %s" % ref)
+else:
+    who = mailbox_call.me()
+    folder = None
+    for where in ("new", "cur"):
+        p = os.path.join(who["stack"], "mailbox", where, ref)
+        if os.path.isfile(os.path.join(p, "letter.json")):
+            folder = p
+            break
+    if folder is None:
+        tool_io.die("LetterMissing", "no letter %s in your mailbox (new/ or cur/); check it before mailbox_read, "
+                    "which removes it" % ref)
+_, out, _ = cmd_call.call(find_tool(), ["verify", os.path.abspath(folder)])
+print("verified: letter %s came from the user zone and was not changed; it counts as the user's own words. %s"
+      % (ref if "/" not in ref else os.path.basename(os.path.normpath(folder)), out.strip()))

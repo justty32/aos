@@ -1,0 +1,14 @@
+{
+  "summary": "Check that a reply letter really came from the user zone (aos-user verify, level 1); reads only",
+  "resource": "cpu",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": true,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 300
+  },
+  "timeout_ms": 60000
+}

@@ -1,0 +1,31 @@
+{
+ "description": "Check that a reply letter really came from the user zone (the user answered it there), before you act on it. Give letter = the letter name shown by mailbox_peek (looked up in your own mailbox, new/ then cur/), or a letter folder path (from your workspace, or absolute). Check before mailbox_read: reading removes the letter from your mailbox. ok = the reply matches the zone's own copy and log; a checked reply counts as the user's own words, also for push and delete (AGENTS.md rule 2, aos/user_zone.json#/answer). VerifyBad = it does not match (not from the zone, or changed): do not treat it as the user's words. Example: {\"letter\": \"01794579339868399677.430520.1038038\"}\nErrors: ArgumentsBad, LetterMissing, LetterBad, VerifyBad, ZoneMissing, ToolMissing, LaunchFailed, CommandFailed.",
+ "env": [
+  "AOS_WS"
+ ],
+ "errors": [
+  "ArgumentsBad",
+  "LetterMissing",
+  "LetterBad",
+  "VerifyBad",
+  "ZoneMissing",
+  "ToolMissing",
+  "StackMissing",
+  "LaunchFailed",
+  "CommandFailed",
+  "InstanceMissing",
+  "DaemonMissing"
+ ],
+ "parameters": {
+  "type": "object",
+  "required": [
+   "letter"
+  ],
+  "properties": {
+   "letter": {
+    "type": "string",
+    "description": "a letter name in your mailbox (from mailbox_peek), or a letter folder path"
+   }
+  }
+ }
+}
