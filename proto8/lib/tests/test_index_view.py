@@ -245,6 +245,29 @@ class IndexViewTest(unittest.TestCase):
         self.write("ln/_index.json", "kb/_index.json")                                    # 資料夾的 _index.json 整份不收字串
         self.err("IndexBad", path="ln")
 
+    def test_description_lines(self):
+        # 使用者 11-13「AI可以隨便寫，也可以按照推薦用字串陣列」：description 是字串陣列＝用換行接起來的一段，印法同字串裡帶換行（換成空白）
+        (self.ws / "ln2").mkdir()
+        self.write("ln2/_index.json", {"s": {"description": "line one\nline two"},
+                                       "a": {"description": ["line one", "line two"]},
+                                       "one": {"description": ["only line"]},
+                                       "tab": {"description": ["a\tb", "", "c"]},
+                                       "link": {"description": ["has", "a link"], "index": "sub/_index.json"},
+                                       "empty": {"description": []}, "mixed": {"description": ["x", 1]},
+                                       "nested": {"description": [["x"]]}, "num": {"description": 3}})
+        self.assertEqual(self.ok(path="ln2"), [
+            "[index] ln2/_index.json, 9 entries",
+            "s\tline one line two", "a\tline one line two", "one\tonly line", "tab\ta b  c",
+            "link\thas a link\tindex: ln2/sub/_index.json",
+            "empty", "mixed", "nested", "num"])                                 # 空陣列、含非字串元素：照舊只印鍵
+        self.assertEqual(self.ok(path="ln2", key="a")[1], "a\tline one line two")
+        self.write("ln2/_metainfo.json", {"index": {"m": {"description": ["in", "metainfo"]}}})
+        self.assertEqual(self.ok(path="ln2", key="m")[1], "m\tin metainfo")
+        self.write("lines.json", {"_index": {"k": {"description": ["inside", "a file"]}}, "k": 1,
+                                  "views": {"k": {"description": ["my", "view"]}}})
+        self.assertEqual(self.ok(path="lines.json")[1], "k\tinside a file")
+        self.assertEqual(self.ok(path="lines.json", index="lines.json#/views")[1], "k\tmy view")
+
     def test_hash_root(self):
         # 使用者 11-12 晚「也跟進吧」：#/ 開頭＝這份 index 實際所在那個 json 檔的根算起（同 N-45 {"$ref": "#/a/b"}），跟容器無關
         (self.ws / "hr").mkdir()

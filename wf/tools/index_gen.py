@@ -14,7 +14,9 @@
 （使用者 11-13「index範圍按照11-12的門檻。」；11-12 的門檻＝超過 15 個，出處 proto8/knowledge/README.md、thinking/2026-11/12/knowledge-removal.md）。
 列哪些：`git ls-files` 有的檔，與裡面有這種檔的夾；`_index.json` 自己不列。夾的那一項，在範圍內就帶 `index` 連到它自己的 `_index.json`。
 一句話怎麼認：md 取第一個標題（分檔取導航行的「涵蓋：…」）；夾取它的 README.md／INDEX.md（工具夾取 _tooldef.json／_metainfo.json），沒有就取同名 `夾.md` 的（分檔夾）；
-都沒有時用設定檔的通用句（usual_dirs／usual_files：tests、src、.gitignore 這類名字就說明用途的）；json 取 description／summary／$comment／title（knowledge 節點取 `_description` 那段的標題），
+都沒有時用設定檔的通用句（usual_dirs／usual_files：tests、src、.gitignore 這類名字就說明用途的）；json 取 description／summary／$comment／title（knowledge 節點取 `_description` 那段的標題；`_description.json` 整份是一段正文、同樣取標題），
+一段文字寫成字串或字串陣列（一行一個元素）都認（使用者 11-13，proto8/thinking/2026-11/13/text-as-string-array.md）：description 那幾個鍵是陣列時取第一行有字的；
+夾沒有 README.md／INDEX.md 時取它的 `_description.json`；
 wf-table 資料檔寫出處與欄位；程式檔照 codemap_gen 的認法；html 取 <title>。連結語法、粗體去掉，只留字。
 格式出處：proto8/thinking/2026-11/12/index.md、index-link.md；規格與代定：proto8/thinking/2026-11/13/index-build.md。查對用 index_check.py。
 純標準庫；只讀檔頭，不跑任何程式。
@@ -76,17 +78,28 @@ def md_desc(text):
     return ""
 
 
+def lines(v):
+    """一段文字：字串，或字串陣列（一行一個元素，用換行接起來）；其他形狀或接起來是空的＝""。同 proto8/lib/aos_index.py 的 text()。"""
+    if isinstance(v, list) and v and all(isinstance(x, str) for x in v):
+        v = "\n".join(v)
+    return v if isinstance(v, str) and v.strip() else ""
+
+
 def json_desc(text, name):
     try:
         d = json.loads(text)
     except ValueError:
         return ""
+    if name == "_description.json":                     # 資料夾自己的正文：整份是一段 md（字串或字串陣列），取它的標題
+        return md_desc(lines(d))
     if isinstance(d, dict):
         for k in ("description", "summary", "$comment", "title"):
             if isinstance(d.get(k), str) and d[k].strip():
                 return d[k]
-        if isinstance(d.get("_description"), str) and d["_description"].strip():   # knowledge 的節點：_description 是一段 md，取它的標題
-            return md_desc(d["_description"])
+            if isinstance(d.get(k), list) and lines(d[k]):          # 寫成字串陣列的檔頭：取第一行有字的
+                return next(x for x in d[k] if x.strip())
+        if lines(d.get("_description")):                # knowledge 的節點：_description 是一段 md（字串或字串陣列），取它的標題
+            return md_desc(lines(d["_description"]))
         if str(d.get("contract", "")).startswith("wf-table/"):
             cols = "、".join(str(c) for c in d.get("columns", [])[:8])
             src = d.get("source")
@@ -166,7 +179,7 @@ def build(root, stage=None, config=None):
             return hand[path]
         if not is_dir:
             return file_desc(root, path) or usual(cfg.get("usual_files", {}), path)
-        for entry in ("README.md", "INDEX.md", "_tooldef.json", "_metainfo.json"):
+        for entry in ("README.md", "INDEX.md", "_tooldef.json", "_metainfo.json", "_description.json"):
             if entry in kids.get(path, {}):
                 d = file_desc(root, path + "/" + entry)
                 if d:

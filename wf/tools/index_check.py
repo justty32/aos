@@ -7,7 +7,8 @@
     --fs    「在但沒列」照磁碟上有什麼算（給不在 git 裡的樹用，例如裝好的 knowledge）；預設照 `git ls-files`（root 不是 git 的樹時自動照磁碟算）。
     --view  不查「在但沒列」（index 是視角、本來就可以只列一部分；只想查列的東西與連結對不對時用）。
   每個問題一行 `index_check: error: 代號 哪一份: 說明`，最後一行總數；有問題退 1，沒有退 0。只讀、不改任何檔。
-  代號：IndexBad（整份或某項形狀不對：要 `{名: {"description": "…", "index": "路徑"}}`，description 非空字串）、
+  代號：IndexBad（整份或某項形狀不對：要 `{名: {"description": "…", "index": "路徑"}}`，description 非空字串，
+        或字串陣列——一行一個元素、接起來不是空的；空陣列、含非字串元素都算形狀不對）、
         EntryGone（列了但不在）、EntryMissing（在但沒列）、LinkBad（`index` 指不到另一份 index）、
         LinkMissing（子夾自己有 `_index.json`，上一層那一項卻沒帶 `index`）。
   路徑算法照 proto8/lib/aos_index.py 的 link()，這裡只做資料夾的 `_index.json` 用得到的部分（相對所在夾、`檔#/指標`、`#/指標`＝本檔）。
@@ -76,6 +77,15 @@ def children(root, d, fs, cache):
     return here
 
 
+def text(v):
+    """一段文字：字串，或字串陣列（一行一個元素，用換行接起來）；其他形狀＝None。同 proto8/lib/aos_index.py 的 text()。"""
+    if isinstance(v, str):
+        return v
+    if isinstance(v, list) and v and all(isinstance(x, str) for x in v):
+        return "\n".join(v)
+    return None
+
+
 def check_table(table, where, problems):
     """形狀：回 True＝是物件、可以往下查各項。"""
     if not isinstance(table, dict):
@@ -84,7 +94,7 @@ def check_table(table, where, problems):
     for k, e in table.items():
         if not isinstance(e, dict):
             problems.append(("IndexBad", where, "entry %s is not an object {\"description\": ...}" % k))
-        elif not isinstance(e.get("description"), str) or not e["description"].strip():
+        elif not (text(e.get("description")) or "").strip():
             problems.append(("IndexBad", where, "entry %s has no description" % k))
         elif "index" in e and (not isinstance(e["index"], str) or not e["index"]):
             problems.append(("IndexBad", where, "entry %s: index is not a path string" % k))

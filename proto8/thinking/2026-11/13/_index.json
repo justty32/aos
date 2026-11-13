@@ -83,6 +83,9 @@
  "ops-fixes-施工結果.md": {
   "description": "線巳施工結果（11-13）：ops-agent 六點建議裡使用者裁要做的幾件——信的留底進工作區（A1）、範本 README 指到 CLI 自己的 hook（A2）、畫面的環境變數（B1）、flags 裡的 `--settings`（B2）、定義自帶 CLI 設定（B3）"
  },
+ "text-as-string-array.md": {
+  "description": "一段文字可以寫成字串、也可以寫成字串陣列：工具與說明跟上（11-13，線天施工）"
+ },
  "tool-stack-path.md": {
   "description": "11-13 fx-2:A 施工紀錄：工具印的 $AOS_STACK 路徑改照叫方的 stack 算，aos-tools 給 AOS_STACK_IN_CALLER，含設計、盤點、代定、要補的條文"
  },

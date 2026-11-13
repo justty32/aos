@@ -9,7 +9,8 @@
 讀檔經 aos_json（aos-json get），錯照轉它最後一行（C-52 例外 ⑤）；`[no index]`、`[no entry]`、`[more]`、`[index link]` 退 0。
 指到另一份 index 的路徑（11-12 晚，使用者「除了description之外，還可以放index，值必須是字串，必須是路徑，指向另一個_index或_index.json。」
 「json object內的_index這個key……我希望能支援字串，同樣也是路徑」「不跟着往下走。路徑相對...以_index, _index.json的位置爲準。」）：
-每項的 index 欄、檔內 _index 是字串，都只顯示路徑、不往下讀；相對路徑從裝著那份 index 的容器（資料夾或 json 物件）算，只寫在 home()／link()（thinking 2026-11/12/index-link）。"""
+每項的 index 欄、檔內 _index 是字串，都只顯示路徑、不往下讀；相對路徑從裝著那份 index 的容器（資料夾或 json 物件）算，只寫在 home()／link()（thinking 2026-11/12/index-link）。
+description 可以是字串、也可以是字串陣列（一行一個元素；使用者 11-13「AI可以隨便寫，也可以按照推薦用字串陣列」，thinking 2026-11/13/text-as-string-array）：只寫在 text()。"""
 import json
 import os
 
@@ -211,9 +212,18 @@ def entries(n):
     return "%d entr%s" % (n, "y" if n == 1 else "ies")
 
 
+def text(v):
+    """一段文字的兩種寫法 → 字串：字串照用；字串陣列（至少一個元素、每個都是字串）＝用換行接起來的一段；其他＝None（不是一段文字）。"""
+    if isinstance(v, str):
+        return v
+    if isinstance(v, list) and v and all(isinstance(x, str) for x in v):
+        return "\n".join(v)
+    return None
+
+
 def line(key, entry, where):
     """一項一行：鍵 TAB description，有 index 欄再接 TAB index: 路徑（只顯示、不往下讀）；index 欄壞了只在這一行標出來，其他項照常。"""
-    desc = entry.get("description") if isinstance(entry, dict) else None
+    desc = text(entry.get("description")) if isinstance(entry, dict) else None
     out = key if not isinstance(desc, str) else "%s\t%s" % (key, desc.replace("\r", " ").replace("\n", " ").replace("\t", " "))
     if not isinstance(entry, dict) or "index" not in entry:
         return out                                      # 項目壞掉或沒有 description：只印鍵（C-48，I14）

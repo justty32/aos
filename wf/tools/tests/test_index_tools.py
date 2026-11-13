@@ -96,6 +96,41 @@ class IndexToolsTests(unittest.TestCase):
             self.assertIn(code, bad.stderr)
         self.assertNotIn('EntryMissing', check(self.root, '--view').stderr)
 
+    def test_text_as_lines(self):
+        # user 11-13: a piece of text may be one string or an array of strings (one line each); both read the same
+        for rel, doc in [('docs/kb/_description.json', ['# kb — the notes', '', 'Body line.']),
+                         ('docs/kb/node.json', {'_description': ['# Node one', '', 'More.'], 'x': 1}),
+                         ('docs/kb/str.json', {'_description': '# Node two\n\nMore.'}),
+                         ('docs/kb/head.json', {'description': ['first line of the header', 'second line'], 'x': 1}),
+                         ('docs/kb/argv.json', ['prog', '--flag']),
+                         ('docs/one/_description.json', '# one — a single string\n\nBody.')]:
+            path = self.root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(doc), encoding='utf-8')
+        subprocess.run(['git', '-C', str(self.root), 'add', '-A'], check=True)
+        tables, missing, _scopes, _in = self.build({'code': 'the programs', 'docs/archive': 'old things'})
+        self.assertEqual(missing, [])
+        kb = tables['docs/kb/_index.json']
+        self.assertEqual(kb['_description.json']['description'], 'kb — the notes')
+        self.assertEqual(kb['node.json']['description'], 'Node one')
+        self.assertEqual(kb['str.json']['description'], 'Node two')
+        self.assertEqual(kb['head.json']['description'], 'first line of the header')
+        self.assertEqual(kb['argv.json']['description'], 'argv：`prog --flag`')              # a string array elsewhere is still an argv file
+        self.assertEqual(tables['docs/_index.json']['kb']['description'], 'kb — the notes')  # a folder without README: its _description.json
+        self.assertEqual(tables['docs/_index.json']['one']['description'], 'one — a single string')
+        self.assertEqual(tables['docs/one/_index.json']['_description.json']['description'], 'one — a single string')
+
+    def test_check_description_lines(self):
+        (self.root / 'code/_index.json').write_text(json.dumps({'x.py': {'description': ['does x', 'second line']}}), encoding='utf-8')
+        ok = check(self.root, 'code')
+        self.assertEqual(ok.returncode, 0, ok.stderr)
+        self.assertIn('1 index files, 1 entries, 0 problems', ok.stdout)
+        for bad in ([], [''], ['  ', ''], ['x', 1], [['x']], 3, None, ''):
+            (self.root / 'code/_index.json').write_text(json.dumps({'x.py': {'description': bad}}), encoding='utf-8')
+            r = check(self.root, 'code')
+            self.assertEqual(r.returncode, 1, repr(bad))
+            self.assertIn('IndexBad code/_index.json: entry x.py has no description', r.stderr, repr(bad))
+
 
 if __name__ == '__main__':
     unittest.main()
