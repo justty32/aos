@@ -15,7 +15,8 @@
 #   攔下＝不跑，tool 訊息＝hook 的 stdout，空就「[aos] hook: tool NAME blocked by hook HOOK.」，不記 observed、不觸發 after_tool）；
 #   跑完、content 組好（含失敗尾巴）之後、接進 history 之前 after_tool（可改 content）。history 裡 assistant 的 tool_calls 不動。
 #   hook 停下＝HookFailed／HooksBad 退 1（這個 id 還沒有 tool 訊息，重跑會再跑一次）。
-# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
+# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick（經 cell_common.clock_tick）——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
+# 讀 history、決定用哪份工具登記檔跟 brain.py 同一套，在 cell_common.py。
 import json, os, signal, subprocess, sys, time
 from pathlib import Path
 
@@ -74,6 +75,10 @@ def die(code, reason):
     aos_flags.die("agent-fsm", code, reason)
 
 
+sys.dont_write_bytecode = True                   # 定義資料夾不留 __pycache__（P-15）
+import cell_common  # noqa: E402  （範本資料夾在 sys.path 最前面）
+
+
 try:
     values, rest = aos_flags.parse(sys.argv[1:], {}, multi={'--tools': '--tools'}, help=HELP)
 except aos_flags.Error as e:
@@ -88,39 +93,15 @@ opts = {flag: items[-1] for flag, items in values.items()}
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
-try:                                             # 11-11 on_clock：每格開頭看一次時鐘，到了才起 handler（hooks.clock_tick）
-    hooks.clock_tick(os.environ.get("AOS_CD") or ".", stack, warn=lambda line: aos_flags.warn("agent-fsm", line))
-except (hooks.HookFailed, hooks.HooksBad) as e:
-    die(type(e).__name__, str(e))
+cell_common.clock_tick(hooks, stack, lambda line: aos_flags.warn("agent-fsm", line), die)   # 11-11 on_clock：每格開頭看一次時鐘，到了才起 handler
 try:
     files = declared_files(os.environ.get("AOS_CD") or ".")
 except ValueError as e:
     die("InterfaceBad", str(e))
-tools_rel = opts.get("--tools", files.get("tools"))
-tools_file = os.path.join(os.environ.get("AOS_CD") or ".", tools_rel) if tools_rel else None
-if "--tools" in opts and not os.path.isfile(tools_file):
-    die("ToolsMissing", "tool registry not found: %s" % tools_file)
-own = os.path.join(stack, tools_rel) if tools_rel and "--tools" not in opts else None
-if own and os.path.isfile(own):                   # 這隻自己那份（$override 定義那份，aos-tools 疊；11-10 aos-tools-cli 步 4）在就用它
-    tools_file = own
+tools_file = cell_common.tools_file(opts, files, stack, die)   # --tools，否則這隻自己那份在就用它、不在用定義那份
 TOOLS = ["aos-tools"] + (["--file", tools_file] if tools_file else [])
 history_path = os.path.join(stack, "history.jsonl")
-history = []
-try:
-    with open(history_path, encoding="utf-8") as f:
-        for n, line in enumerate(f, 1):
-            if line.strip():
-                try:
-                    m = json.loads(line)
-                except ValueError:
-                    m = None
-                if not isinstance(m, dict):
-                    die("HistoryBad", "history.jsonl line %d is not a JSON object" % n)
-                history.append(m)
-except FileNotFoundError:
-    pass
-except OSError as e:
-    die("HistoryBad", "cannot read history.jsonl: %s" % e)
+history = cell_common.read_history(history_path, die)
 last = max((i for i, m in enumerate(history) if m.get("role") == "assistant"), default=None)
 if last is None:
     die("HistoryBad", "no assistant message in history.jsonl")

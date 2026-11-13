@@ -7,7 +7,7 @@
 #   不進 history、不算好信、mailbox_warning.txt 寫一行是哪個 hook 丟的），接進去並 done 之後 after_queue。hook 停下（HookFailed／HooksBad）時
 #   還沒 done 的信留在 cur/、下次重跑再接（P-12）。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）。aos-post 的 stderr 不攔、原樣透出（stdio-unify R10）。--help 印英文用法；Ctrl-C 退 130。設計：proto8/thinking/2026-11/04/loop-fsm-agent/01-設計.md § 3。
-# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格建好 queue 之後、收信之前先 hooks.clock_tick——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
+# on_clock（11-11 thinking/2026-11/11/clock-hook）：這格建好 queue 之後、收信之前先 hooks.clock_tick（經 cell_common.clock_tick）——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 # goal（11-11 thinking/2026-11/11/goal/02，使用者「當agent自己停下來時(在沒有新user prompt的情況下，自己不再呼叫工具)，自動丟goal給他」）：
 #   收不到信（信優先）、history 最後一則是沒有 tool_calls 的 assistant（或 history 還空：外面先 set 的 goal 當開場題目，11-11 稍後使用者「也丟，當開場題目」）、
 #   $AOS_STACK/goal.json 是 active＝把一則 user「[aos] goal: …」直接接進 history、退 0 去 think（不走 queue、不觸發 before_queue／after_queue）。
@@ -126,6 +126,7 @@ def history_empty():
 
 sys.dont_write_bytecode = True                   # 定義資料夾不留 __pycache__（P-15）
 from atomic_file import write_atomic  # noqa: E402  （範本資料夾在 sys.path 最前面）
+import cell_common  # noqa: E402
 
 
 def body_of(sig):
@@ -201,10 +202,7 @@ def opening():
 
 if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
     post(["init", box])                          # 先建好，aos-agent say／listen 認得（同 aos-eca-turn）
-try:                                             # 11-11 on_clock：idle 在建好 queue 之後看時鐘（第一次就跑的 handler 可能往 queue 寄信），到了才起 handler（hooks.clock_tick）
-    hooks.clock_tick(os.environ.get("AOS_CD") or ".", stack, warn=lambda line: aos_flags.warn("agent-fsm", line))
-except (hooks.HookFailed, hooks.HooksBad) as e:
-    die(type(e).__name__, str(e))
+cell_common.clock_tick(hooks, stack, lambda line: aos_flags.warn("agent-fsm", line), die)   # 11-11 on_clock：idle 在建好 queue 之後看時鐘（第一次就跑的 handler 可能往 queue 寄信），到了才起 handler
 def goal_turn():
     """沒信時：腦停下來了、goal active＝接一則 [aos] goal: 進 history，回 True（去 think）。"""
     if not os.path.isfile(goal_state.path(stack)):  # 先只看檔在不在：沒 goal 的 agent 每拍不讀 history

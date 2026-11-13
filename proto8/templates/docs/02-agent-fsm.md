@@ -42,6 +42,7 @@ agent-fsm/
                等回信不設期限，寄出（pending.txt 的 mtime）每滿 10 分鐘印一行 agent-fsm: warning、照樣等（記在 think/wait_warned.txt）
   act.py       跑工具：逐個 aos-tools call，照 metainfo 限時；失敗附 stderr 尾，結果各接一則 tool、退 0；沒有 tool_calls（最後答案）退 10
   atomic_file.py  idle、wait 共用的寫檔（先寫暫存再改名；寫不成＝那格的 WriteFailed）
+  cell_common.py  四格共用的開頭幾步：on_clock 看時鐘（四格）；讀 history.jsonl、決定用哪份工具登記檔（brain、act）；錯誤交那格的 die
   system.txt   system 訊息（interfaces.json 宣告 "system": "system.txt"，self-system；$AOS_STACK/system.txt 在就整份用那份〔aos-agent system set／self_system〕；每格從檔讀、不存進 history；內容是英文）
   tools.json   aos-tools 登記檔：幾乎只剩 `"$override"` 一串 [lib/packs](../../lib/packs/README.md) 十三包——通用四包 look、change、delete、shell（17 支，預設全開），再加八包 gadgets（peek_clock、peek_now_time、math、do_task）、events（clock_register、self_hook）、todo（todo）、self（self_tools、self_llm、self_system、self_state、self_ctl、self_history）、subagent（subagent、agents_ctl、fork）、def（agent_def、tools_def）、mailbox（mailbox_peek／read／send）、goal（goal）、json（json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set）、index（index_view），共 47 支（使用者「照包砍」「2.都開吧」）；關法見範本 README；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
   llm.json     腦設定：{}＝用 kernel 的預設代號；model＝kernel 的 endpoint 包代號（例 "smart-high"；寄信時填進 body 的 endpoint 欄，真正的模型名固定在包上）；
