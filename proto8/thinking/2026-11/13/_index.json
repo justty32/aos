@@ -32,8 +32,14 @@
  "decide_20261113_priority.json": {
   "description": "Priority subset of the 11-13 end-of-day questions: the few that block later work or set direction."
  },
+ "decide_20261113_priority.reply.txt": {
+  "description": "11-13 優先裁頁（7 題）的回覆一行，桌面頁線照完整頁回覆抄的、不是使用者貼的，同步資料檔用"
+ },
  "decide_20261113_shougong.json": {
   "description": "End-of-day 11-13 questions still waiting for the user: workflows-into-aos second batch and conflicts, json_text, leftovers from the day's lines."
+ },
+ "decide_20261113_shougong.reply.txt": {
+  "description": "11-13 收工待裁頁（24 題）使用者回覆原文一行，如 W12:B、W21:B 與 W9、W10 的備註，查裁定出處時看"
  },
  "decide_20261113_wu-r2.json": {
   "description": "Second round of 11-13 questions for the user: convention vs agent-fsm, eca_main letter, line-b leftovers, two note readings, kernel framework."
@@ -106,6 +112,9 @@
  },
  "workflows-into-aos.md": {
   "description": "模板 repo（workflows）併入 aos：調查＋意見稿（11-13 下午，線玄；只查只寫、沒改程式、沒寄信）"
+ },
+ "收工待裁-回覆落地.md": {
+  "description": "收工待裁頁：使用者回覆落地（11-13 16:14，桌面頁線；只讀回與盤點，沒施工、沒動 hub 檔）"
  },
  "裁定落地-1113.md": {
   "description": "11-13 使用者裁定落地：精選頁 17 題的回覆（16 題有選、N-17 先不選但留了一句原則）＋對話裡直接答的三組（主 session 兩題、a2a 兩題、kernel 框架開工）；每題裁定已寫回原文件，本檔列「裁定後待施工」；同日第二輪待裁頁 43 題的回覆（裁了 38 題、5 題未裁）也落在這裡，第二輪的待施工另列一節"

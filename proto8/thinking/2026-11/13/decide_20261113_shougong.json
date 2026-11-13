@@ -258,10 +258,10 @@
    "source_path": "a2a-施工結果.md",
    "source_lines": "117",
    "source_excerpt": "下列四項 11-13 條文線已照程式現況改進條文（P-43 新增一項「畫面開著的 claude 身，信投進 CLI 的收件口」、P-12、附錄 4 多一列、N-43 續；N-43 續的種類名單順手對齊 `py/aos_flags.py`：補 `new_mail`、`goal`、`fork`、`slash`，拿掉程式裡沒有的 `knowledge`）。",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W5",
@@ -299,10 +299,10 @@
    "source_path": "../../../../wf/wait-user/04-雜事.md",
    "source_lines": "7",
    "source_excerpt": "- **拿真 token 起第一隻 Codex agent（11-12；11-13 公司 WSL 的樹上已有你自己加的 `gpt-price`〔codex 身〕、`gpt-soap`，這條是不是可以劃掉請你說一聲）**：照 06 的照抄步驟（佔位符換成真的；token 放 env 檔、不用 `--envs`），頂層建議先搬兩隻 gpt-*、ops-notes 主 session 暫不搬 → external-mcp 06 § 照抄步驟",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W6",
@@ -340,10 +340,10 @@
    "source_path": "../../../../wf/wait-user/04-雜事.md",
    "source_lines": "10",
    "source_excerpt": "- **`~/.claude.json`、`~/.codex/config.toml` 還留著舊路徑的信任紀錄（11-13 早）**：`~/repo/simple_tools`、`~/repo/aos-tools` 都刪了，設定檔裡指向它們的幾格（`~/.claude.json` 6 處命中、`~/.codex/config.toml` 1 處）沒清；無害，要不要清你說 → 11-13 早的交接信",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W7",
@@ -381,10 +381,10 @@
    "source_path": "../../../../wf/wait-user/01-要你裁的.md",
    "source_lines": "18",
    "source_excerpt": "- **tidy 第三輪留下的矛盾（11-12 晚；C-42、aos-teams 沙箱那句、P-05／P-06／P-27 對不上那處 11-13 已裁）**：N-17 不碰 pid vs 兩處 /proc 判活（11-13 你選「先不選」、留了一句原則，列第三例外或改程式仍沒選）、P-33 round 例外段清不清（11-13 `cv-P33` 只在開頭加了界定，這題沒問到）、NORMS 附錄 1～3 與 `spec`／`ideas` 兩份純歷史入口清不清、AGENTS「開發環境」那句「單機開發，沒有跨機…」vs 現況（家機、公司 WSL 兩台輪流；公司 WSL 住 `~/aos-home`、頂層是樹裡的 `repo-aos`；11-13 沒改、等你說）等 → tidy 報告 § 第三輪",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W8",
@@ -429,10 +429,10 @@
    "source_path": "../../../../wf/wait-user/04-雜事.md",
    "source_lines": "9",
    "source_excerpt": "- **公司 WSL `~/code/` 底下 11-13 各線留的 13 個暫存夾（16:05 多了 `tian-1113` 與 `wf-agent-scratch-1113`——後者是 `wf-agent` 五份報告的抄本，第 3、4 塊落檔前不能刪），要不要刪（agent 沒刪，等你說）**：`a2a-build-1113`（341M，a2a 施工實測樹）、`a2a-try-1113`（a2a 調查）、`kbuild-1113`（66M，編好的新 `aos-daemon`，停樹要用）、`kf2-1113`（停樹腳本與備份落點、批 5／6／10 三份補丁——**補丁只在這裡，進 main 前不能刪**）、`mcp-try-1113`（124M，下載的三台外部 MCP server，當時留著給你看）、`ops-try-1113`、`shen-try-1113`、`si-try-1113`、`six-try-1113`（含 patch 草稿）、`xu-1113`（118M，線戌批 1b 的成品，還沒進 main）、`you-1113`（104M）；另有測試留下的對話紀錄（`~/.claude/projects/`、`~/.codex/sessions/2026/11/13/`）與 `~/.claude.json` 裡兩個測試夾的信任紀錄 → thinking 11-13",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "B",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W9",
@@ -477,10 +477,10 @@
    "source_path": "index-build.md",
    "source_lines": "158",
    "source_excerpt": "**掛進規矩的兩個方案（待使用者裁，hub 檔沒動）**：",
-   "answer": "",
-   "answer_state": "pending",
-   "answer_note": "",
-   "answered_at": ""
+   "answer": "U",
+   "answer_state": "picked",
+   "answer_note": "我很討厭wf-lint這東西，很想把它刪掉",
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W9b",
@@ -520,10 +520,10 @@
    "source_path": "index-build.md",
    "source_lines": "138",
    "source_excerpt": "- 超過門檻但在避開清單、不放的 2 個：`proto8/lib/packs`（16；一支測試讀這夾每份 json）、`proto8/templates/agent-fsm`（19；範本定義夾，會被整夾抄走）。",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W10",
@@ -567,10 +567,10 @@
    "source_path": "../../../../wf/SESSION-LOG.md",
    "source_lines": "26",
    "source_excerpt": "- **open｜eca 通知改走 a2a（11-13 線壬、線午做完）剩的**：codex 身沒接（照舊貼字）；沒實測：帳號端關掉跨 session 傳訊時、父對子說話的署名（只有單元測試）、確認框等人時訊息擠進來；`extras/gitignore-check` 因 queue 信帶寄件人登入名而紅（調度者說的，結果檔沒收、待核，線戌的證據在 `~/code/xu-1113/gi-evidence/`） → a2a-施工結果 § 沒做的",
-   "answer": "",
-   "answer_state": "pending",
-   "answer_note": "",
-   "answered_at": ""
+   "answer": "U",
+   "answer_state": "picked",
+   "answer_note": "這種check啦，lint啦，之類的測試用的東西都是阻礙開發的。開發初期不該有這種東西。",
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W11",
@@ -645,10 +645,10 @@
    "source_path": "workflows-into-aos.md",
    "source_lines": "406",
    "source_excerpt": "**(b)「被派出去的不 commit、由主線驗收後 commit；push 一律先問」要不要成為通用規則**",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "B",
+   "answer_state": "changed",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W13",
@@ -727,10 +727,10 @@
    "source_path": "workflows-into-aos.md",
    "source_lines": "419",
    "source_excerpt": "**(d) patch 包的落點寫成工作區的 `wf/patches/<patch>/` 對不對**",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W15",
@@ -763,10 +763,10 @@
    "source_path": "workflows-into-aos.md",
    "source_lines": "424",
    "source_excerpt": "**(e) user 偏好骨架裡 kernel 預填的那句回覆風格（「使用者問『要不要』時附可執行判準與後果」），算通用預設還是你個人的偏好**",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "B",
+   "answer_state": "changed",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W16",
@@ -797,10 +797,10 @@
    "source_path": "workflows-into-aos.md",
    "source_lines": "430",
    "source_excerpt": "**(f) aos 自己加在 tidy 的東西，要不要補進知識庫那份**（線玄新列）",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W17",
@@ -951,10 +951,10 @@
    "source_path": "workflows-into-aos.md",
    "source_lines": "320",
    "source_excerpt": "2. 「字串陣列有兩種合法用法：清單、一段多行文字」（模板）對 docs/02「字串陣列＝用換行接起來的一段」。題 8 裁了不定判斷規則；但模板的 `done_when`「是字串陣列、一條一個條件」這個用法帶進來了（`nodes.json#/workflow_form` 只寫「每條」），照 docs/02 讀成「一段、一行一條」也說得通。",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W21",
@@ -1011,10 +1011,10 @@
    "source_path": "../../../../wf/wait-user/01-要你裁的.md",
    "source_lines": "28",
    "source_excerpt": "- **模板 repo 的七個領域包要不要全併進 aos（11-13）**：現在放行的只有 kernel 薄流程與 dev 包，其餘五包等你裁；骨架與 `wf-init` 放 repo 哪個夾也沒定——見桌面頁 `aos-1113-收工待裁.html`（原稿在 thinking 11-13，檔名 【頁名1113】） → workflows-into-aos § 第 3、4 塊落檔計畫",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "B",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W22",
@@ -1063,10 +1063,10 @@
    "source_path": "../../../../wf/wait-user/01-要你裁的.md",
    "source_lines": "13",
    "source_excerpt": "- **C-42 放寬成「推薦 JSON、別的格式不禁止」之後，非 JSON 的檔工具與文件要怎麼交代（11-13；題目寫明有這個後果、沒定交代到哪）**：連同你 11-12 的 D1「內容走 json、不走 markdown」與鐵律 6「條列走資料檔、導航留 md」三句擺在一起對不上的地方，要你一句話定哪句為準 → 裁定落地 § 第二輪、wf-to-aos",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   },
   {
    "id": "W23",
@@ -1110,10 +1110,10 @@
    "source_path": "../../../../wf/wait-user/01-要你裁的.md",
    "source_lines": "12",
    "source_excerpt": "- **P-33／P-35 加了界定之後，旁邊幾條要不要也對齊（11-13 第二輪帶出來、題目沒問到的）**：P-37 要不要也加同一句界定、P-34 的例子與 P-36 的公式用不用同一個界定、`templates/README` 與 `templates/docs/02` 的「`AOS_HOME`＝這台 proto8 的位置」要不要跟著 em-Q1 改 → 裁定落地 § 第二輪",
-   "answer": "",
-   "answer_state": "pending",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-13"
   }
  ]
 }

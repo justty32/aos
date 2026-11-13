@@ -619,6 +619,8 @@
   "proto8/thinking/2026-11/12/wf-to-aos": "wf-to-aos.md 的分檔：現有 aos 東西對標 wf/ 規矩的調查結論、寄信給人與主 session 卡在哪（11-12 晚，唯讀調查）",
   "proto8/thinking/2026-11/13": "11-13 的討論紀錄：改住 ~/aos-home、主 session 接 aos、eca 通知走 a2a、外部 MCP 真 server、kernel 框架開工、兩輪待裁與裁定落地、工具路徑照叫方算",
   "proto8/thinking/2026-11/13/aos-home-手冊.html": "11-13 給使用者照著做的 aos-home 手冊（公司 WSL）HTML 原稿：從零搭 ~/aos-home 一棵小樹與 opus eca 的步驟",
+  "proto8/thinking/2026-11/13/decide_20261113_priority.reply.txt": "11-13 優先裁頁（7 題）的回覆一行，桌面頁線照完整頁回覆抄的、不是使用者貼的，同步資料檔用",
+  "proto8/thinking/2026-11/13/decide_20261113_shougong.reply.txt": "11-13 收工待裁頁（24 題）使用者回覆原文一行，如 W12:B、W21:B 與 W9、W10 的備註，查裁定出處時看",
   "proto8/thinking/2026-11/13/decide_20261113_wu-r2.reply.txt": "11-13 第二輪待裁頁（wu-r2，43 題）使用者回覆原文一行，如 cv-P05:A、fx-2:A 等，查裁定出處時看",
   "proto8/thinking/2026-11/13/decide_20261113_wu-top.reply.txt": "11-13 精選 17 題待裁頁（wu-top）使用者回覆原文一行，如 kf-K-F47:A、kf-K-F50:B 與備註，查裁定出處時看",
   "proto8/thinking/2026-11/13/eca-a2a-notify": "eca-a2a-notify.md 的分檔：eca 身直接塞進 CLI 輸入的 12 項盤點，與 Claude Code a2a 機制的文件、實測、讀碼（11-13 調查）",
