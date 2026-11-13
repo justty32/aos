@@ -1,5 +1,7 @@
 # 11-13 各 agent 對 aos 的意見彙整（給 repo-aos）
 
+> 整理成題目、排好優先序的版本在 [agents-feedback-1113-題目](agents-feedback-1113-題目.md)（24 題，6 題要使用者裁；線意 11-13 晚）。
+
 - 收集：eca_main 16:03 發信，16:30～16:31 全部回齊。回信的有 ops-agent、me-agent、gpt-price、gpt-soap、wf-agent，再加上 eca_main 自己的意見。
 - 都是憑今天的實際經驗寫的，沒有另外做實驗。每一點後面的括號是提的人；寫了「n 隻提到」的，是好幾隻都有提。
 - 用途：給 repo-aos 在家裡的電腦上繼續做時參考，不急，不用逐條回。

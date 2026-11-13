@@ -5,6 +5,9 @@
  "a2a-施工結果.md": {
   "description": "線壬施工結果（11-13）：畫面開著的 claude 身，信改用署名訊息投進 CLI 的收件口；投不進去就照舊貼字"
  },
+ "agents-feedback-1113-題目.md": {
+  "description": "11-13 各 agent 對 aos 的意見整理成 24 題：每題查了現況（已做／部分做／已有對應條／全新），排了優先序建議，6 題要使用者裁（線意，11-13 晚家機；只整理、沒施工）"
+ },
  "agents-feedback-1113.md": {
   "description": "11-13 各 agent 對 aos 的意見彙整（給 repo-aos）"
  },
