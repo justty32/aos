@@ -10,7 +10,7 @@
 預設輸出（照文件順序，key 不排序）：
   #/steps/build            字串節點：一行標頭（JSON Pointer，~ 與 / 轉成 ~0、~1），
     first line             接著內容；\\n 照實換行，每行前面兩格空白。
-    ↪ next sentence        一行超過 LONG 字時在句尾（. ! ? 後的空白、。！？後）折行，
+    ↪ next sentence        一行超過 LONG 字時在句尾（. ! ? 後的空白、。！？後）折行（行首的清單編號「1. 」「1) 」後面不折），
                            折出來的接續行前面是「↪ 」（只為了讓改一句話只動一行；不是內容裡的換行）。
   #/n = 3                  數字（照原文字面）、true／false／null、空字串 ""、空物件 {}、空陣列 []
   #/records/-/date         陣列元素的路徑一律寫 `-`、不寫索引：前面插一筆，後面各筆的行不會跟著變
@@ -59,6 +59,7 @@ INDENT = "  "
 FOLD = "↪ "          # marks a folded continuation line (not a newline in the content)
 LONG = 100                # lines longer than this are folded at sentence ends
 _SENT = re.compile(r"(?<=[.!?]) +(?=\S)|(?<=[。！？])(?=\S)")
+_LIST = re.compile(r"[ \t]*\d+(?:\.\d+)*[.)] +")   # a list number at the start of a line ("1. ", "  12. ", "1.2. ", "1) "): never fold right after it
 _CTRL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 _CTRL_NL = re.compile(r"[\x00-\x08\x0a-\x1f\x7f]")      # for paths: a newline in a key is shown too
 
@@ -86,7 +87,11 @@ def token(key):
 def fold(line):
     if len(line) <= LONG:
         return [line]
-    return [p for p in _SENT.split(line) if p != ""] or [line]
+    m = _LIST.match(line)
+    head = m.group() if m else ""
+    parts = [p for p in _SENT.split(line[len(head):]) if p != ""] or [""]
+    parts[0] = head + parts[0]
+    return parts
 
 
 def is_text(v):

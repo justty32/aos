@@ -66,6 +66,20 @@ class JsonTextTests(unittest.TestCase):
         self.assertIn('  第一句。', lines)
         self.assertIn('  ↪ 第三句', lines)
 
+    def test_long_line_keeps_list_number_with_its_text(self):
+        tail = ' '.join('Sentence number %d is here.' % i for i in range(5))
+        lines = ['1. First item is here. ' + tail, '12. Twelfth item. ' + tail, '   3. Indented item. ' + tail,
+                 '1.2. Nested item. ' + tail, '4) Paren item. ' + tail]
+        out, _ = self.text({'s': '\n'.join(lines)})
+        got = out.split('\n')
+        for head in ['  1. First item is here.', '  12. Twelfth item.', '     3. Indented item.',
+                     '  1.2. Nested item.', '  4) Paren item.']:
+            self.assertIn(head, got)
+        for bad in ['  1.', '  12.', '     3.', '  1.2.', '  ↪ First item is here.', '  ↪ Twelfth item.',
+                    '  ↪ Indented item.', '  ↪ Nested item.']:
+            self.assertNotIn(bad, got)
+        self.assertIn('  ↪ Sentence number 0 is here.', got)    # the rest of the line still folds
+
     def test_whole_file_is_a_string_and_duplicates_and_bom(self):
         out, _ = self.text('"one\\ntwo"')
         self.assertEqual(out, '#\n  one\n  two\n')

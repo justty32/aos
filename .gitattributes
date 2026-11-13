@@ -19,7 +19,8 @@
 wf/workflows/dispatch/trial/sandbox/solo/out/C.stdout.log -text
 
 # 內容 json（一段多行文字是一個 json 字串、整行存）的 diff 改用 wf/tools/json_text.py 展開成逐行文字再比。
-# 影響 diff／show／log -p 與 blame（blame 預設吃 textconv，要原檔行號加 --no-textconv）；merge、apply、checkout、
+# 影響 diff／show／log -p 與 blame（blame 預設吃 textconv，要原檔行號加 --no-textconv）；--stat／--numstat／--shortstat
+# 不吃 textconv（數的是原檔的行，git 2.43 實測）；merge、apply、checkout、
 # format-patch 照原檔。沒設 driver 的 clone 行為跟沒寫這幾行一樣；
 # 每個 clone 設一次：python3 wf/tools/json_text.py --setup（見 wf/workflows/dev-env.md）。
 # 只套知識庫與資料夾 index／描述；程式設定、測試資料、wf-table 資料檔等其他 *.json 不套。
