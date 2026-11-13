@@ -25,6 +25,12 @@
 |---|---|
 | [`check.py`](../../../../../proto8/extras/image-move-check/check.py) | Verify a sleeping fake-brain daemon tree survives copying and a local git clone. |
 
+## `proto8/extras/kernel-chain-check/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`check.py`](../../../../../proto8/extras/kernel-chain-check/check.py) | 在獨立暫存樹驗證兩站 kernel 的掛子、排隊、hook、重啟與 ping，並嚴格核對清理範圍。 |
+
 ## `proto8/extras/langs/`
 
 | 檔 | 負責什麼 |

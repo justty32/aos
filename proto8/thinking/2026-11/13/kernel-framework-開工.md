@@ -222,3 +222,10 @@
 - N-42 (2) 各子點仍叫「判官」、標籤仍寫「方向（已定，未實作）」；C-47 標題仍是「已裁定、未實作」。
 - N-42、C-47 引的 11-12「開工等假日」原話留著，旁邊加註 11-13 已開工。
 沒實跑的：`after_verdict` 的例子（只列在表裡）、`keep_ordered`。
+
+### 批 7a
+
+新夾 `extras/kernel-chain-check/`（`check.py`＋`README.md`）：暫存夾起根 daemon → `station_a`（loop proc 式框架站，`next` 指領班、`reply_via_me`、`before_verdict` 擋 `evil`）→ 領班（daemon 身體式框架站，`max_running` 4、`queue`），五段都過（掛子經兩站且回信經 A 代回對得上原信、超過上限排隊再出隊、`evil` 立刻 `HookRejected`、兩站重起後隊序與待代回不變且沒有信轉第二次、`ping` 穿兩站）。第 1 段用 `llm_fake` 產生工具呼叫、劇本手動跑真的 `subagent` 工具；第 2、4、5、6 段由劇本帶 agent 的環境直接寄信。第 3 段（`ctl ls` 走查詢信拿刪減表）留 TODO，等批 4。
+
+- 隊長改掉一處：codex 把「全機只准剩 `~/aos-home` 兩台 daemon」的核對寫進了劇本（那是給施工者的規矩，不該進程式；別台機器、別條線起著測試 daemon 時會誤報），拿掉；劇本只核對自己暫存夾底下沒有殘留行程。
+- 劇本收行程只用 `aos-daemon-ctl -d <暫存夾裡的 stack> shutdown` 與自己記下的 pid（送訊號前核 `/proc/<pid>/cwd` 在暫存夾裡）。
