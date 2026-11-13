@@ -8,6 +8,30 @@ Run Claude Code as an aos agent: one turn per queue batch, answers appended to h
 
 **子 agent 與 skill（[thinking eca-task-subagent](../../thinking/2026-11/12/eca-task-subagent.md)）**：使用者「claude code cli自己本身有Task工具，可以的話幫我加入claude eca範本和定義中(Skill也加上)」「將aos mcp切成幾個，一個是給主agent用的，另一個是比較少功能的，給子agent用的」。`cli.json` 的 `--tools` 多 `Agent`（子 agent；舊名 `Task` 還認）與 `Skill`，dontAsk 下不用另外列進 `--allowedTools`。`cli.json` 的 `"tools_sub": "tools_sub.json"`＝**子 agent 那台**：claude 的子 agent 預設會繼承主對話全部 MCP 工具（含 `mcp__aos__*` 34 支），寫了這格就改成——內建的 `general-purpose` 子 agent 看不到 `mcp__aos__*`，改拿另一隻 aos-mcp 接 `tools_sub.json` 的 `mcp__aos_sub__*`（代定只放不改東西的九支：peek_clock、peek_now_time、math、json_get、json_ls、json_search、json_len、json_multi_get、index_view）；主對話看不到 `aos_sub`；其他類型的子 agent（Explore、Plan、外掛或你自己定義的）還看得到 `mcp__aos__*`，但一叫就被擋（回一句說明）。要子 agent 多一支＝改 `tools_sub.json`（格式同 `tools.json`）；不要切＝拿掉 `tools_sub` 那格（子 agent 照 CLI 預設繼承全部）；不要子 agent 或 skill＝從 `--tools` 拿掉 `Agent`／`Skill`。skill 是 claude 自己找的：工作區的 `.claude/skills/`、你帳號的 `~/.claude/skills/` 與外掛。codex 身不認 `tools_sub`（寫了＝`CfgBad`）。
 
+**權限與擋 CLI 自己的工具**（[thinking 11-13 ops-agent-six-suggestions](../../thinking/2026-11/13/ops-agent-six-suggestions.md) 第 1 點）：範本是 `--permission-mode dontAsk` 加 `--allowedTools Write,Edit,Bash`——Bash、Write、Edit **沒有任何人按確認**，全面開放。aos 的 hook（`hooks.json` 的 `before_tool`／`after_tool`）只看得到 aos 自己的工具，看不到 CLI 自己的。**要擋 CLI 自己的工具，用 CLI 自己的 hook**：aos 起的 claude 照讀工作區的 `.claude/settings.json`（[P-43](../../docs/CONVENTION/02-題目stack停錯腦/03-P-43-本文.md)「照吃、不隔離」），它的 hook 跟 aos 加的並存。給腦看的完整說明在知識庫 `aos/cli/eca.json#/cli_hooks`（[knowledge/aos/cli/eca.json](../../knowledge/aos/cli/eca.json)）。範本本身不帶任何這種 hook；下面是想擋的人可以照抄的最小例子（11-13 實測過：claude 2.1.323、haiku）。
+
+工作區 `.claude/settings.json`（路徑寫絕對路徑）：
+
+```json
+{"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 /abs/path/to/ws/.claude/hooks/host_gate.py"}]}]}}
+```
+
+`.claude/hooks/host_gate.py`（指令裡有 ssh／docker 這類字、對象又在正式主機名單上，就要人在畫面上確認）：
+
+```python
+#!/usr/bin/env python3
+# host_gate - PreToolUse hook for Bash: commands that touch a production host need a person's confirmation on the screen
+import json, re, sys
+PROD = ("prod-db", "prod-web", "10.0.0.")          # host names or address prefixes that count as production
+d = json.load(sys.stdin)
+cmd = (d.get("tool_input") or {}).get("command", "")
+if re.search(r"\b(ssh|scp|rsync|docker)\b", cmd) and any(h in cmd for h in PROD):
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask",
+          "permissionDecisionReason": "this command touches a production host; a person must confirm on the screen"}}))
+```
+
+hook 什麼都不印＝照跑、不問人；印 `deny`＝不跑、腦收到理由；印 `ask`＝**畫面開著**（`aos-agent open`）時畫面上跳確認框等人按，畫面沒開（aos 走 `claude -p`）時等於拒絕。同一個檔裡寫權限規則（`permissions.ask`／`permissions.deny`）在 `dontAsk` 下只會拒絕、不跳框。管不到的：人在畫面上自己打的 `!` 指令（不叫 hook）、codex 身。這道閘擋得住「順手就做了」，擋不住存心繞過（腦有 Bash 與 Write，改得到這個檔）。規矩放工作區＝同一個資料夾的所有 Claude Code session 都吃到，包含人自己開的。
+
 **接外部 MCP server**：`cli.json` 加 `"mcp_servers": ["mcp/<名>.json"]`，一台一份 server 檔（http 或 stdio），寫法見 [eca-claude 說明的「接外部 MCP server」](../docs/01-eca-claude.md#接外部-mcp-server11-12-external-mcp)；token 放 server 檔的 `env_file`，不要用 `ctl add --envs`。
 
 `interfaces.json` 宣告畫面、工具、腦設定、history 與 hook 的位置。`_metainfo.json` 宣告估時 `cost.time_ms`（一輪約一分鐘，粗估）與 `llm` 資源，未設定逾時（一輪的上限在 `cli.json` 的 `timeout_ms` 與 `loop.json` 的 `timeout_ms`）。
