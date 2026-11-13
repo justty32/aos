@@ -6,8 +6,7 @@
 
 | 線 | 可寫目錄 | 唯讀 / 禁區 | 上線時間 |
 |----|---------|------------|---------|
-| 線戌（kernel 批 1b：agent 的 `hooks.py` 改用共用引擎；成品在 repo 外，11-13 15:32 調度者已放行，接線進行中） | repo 外 `~/code/xu-1113/`；放行後 `proto8/lib/agent/hooks.py`、`lib/agent/tests/test_hooks_engine.py`、兩份說明、開工紀錄第十五節 | 引擎 `lib/hook_run.py`、`lib/aos/kernel/` 不碰；`hooks.py` 存檔即生效，放行前不動 | 11-13 下午 |
-| 線卯（repo 的 index；階段二程式區 8 份排在線戌接線之後才放進 repo） | `wf/tools/index_gen*`、各夾生成的 `_index.json`、[index-build](../../../proto8/thinking/2026-11/13/index-build.md) | 線戌接完前不放程式區的 `_index.json`；`proto8/knowledge` 不動 | 11-13 上午 |
+| 併入線（workflows 模板併入 aos 的第 3、4 塊；等 `wf-agent` 在它 repo 的新 commit，下次開工由調度者重開一條線落檔） | 開線時再定；計畫在 [workflows-into-aos](../../../proto8/thinking/2026-11/13/workflows-into-aos.md#第-34-塊落檔計畫先不落檔等調度者通知) | 已放行的範圍只有 kernel 薄流程與 dev 包，其餘五包等使用者裁；模板 repo 唯讀 | 還沒上線 |
 
 ### 保留給調度者，任何線都不得寫
 
@@ -45,3 +44,7 @@
 | 線玄（workflows 模板併入 aos：調查＋意見稿、使用者裁定、第 1 塊進 `proto8/knowledge/wf/`） | `2784848aa`、`bf305f206`、`745975e82`、`159414053`；結果檔 [workflows-into-aos](../../../proto8/thinking/2026-11/13/workflows-into-aos.md) | 11-13 15:00 |
 | 線黃（`index_check` 假綠五案例、archive 夾跳過） | `2b0d36095`、`c0f37b872`；結果檔 [index-check-false-green](../../../proto8/thinking/2026-11/13/index-check-false-green.md) | 11-13 15:19 |
 | 線己二（kernel 框架下午：找下一站三段、批 4、批 8、9、批 5 前半、停樹換檔；批 5 接線、批 6、批 10 留成 repo 外補丁沒進 main） | `4fcb631fd`、`42870fa27`、`df1c25ff2`、`bb4204242`、`d5f276737`、`da54d416f`；停樹換檔：釘 `159414053` 全套 68 夾 1592 例只紅既有 4 支、15:24 `swap.sh` 全過、15:29 `verify.sh` ALL PASS，備份 `~/code/kf2-1113/stop-tree/backup-1113-152418/` | 11-13 15:29 |
+| 線戌（kernel 批 1b：agent 的 `hooks.py` 改用共用引擎） | `56a7fe498` | 11-13 15:50 |
+| 線卯（repo 的 index：文件區 25 份、程式區 8 份，生成器與檢查腳本） | `418e17927`、`a993379be`、`e5c365457`、`ebe6836ba`、`6c939aed0`、`fe4908ba9`、`24df73f61`；結果檔 [index-build](../../../proto8/thinking/2026-11/13/index-build.md) | 11-13 15:56 |
+| 線玄續（workflows 併入第 2 塊：工作流節點骨架＋tidy 一組進 `knowledge/wf/`） | `dbefe6fd2` | 11-13 15:56 |
+| 線宇（8 KB 三處改推薦語氣、附錄 4 hook 那列、`env.sh` 正本進 `proto8/extras/aos-home/`） | `9f60cb0d8`、`2a6087735`、`40dc42b57` | 11-13 16:02 |
