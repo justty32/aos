@@ -54,8 +54,22 @@ class RmKeep(unittest.TestCase):
             self.p.wait(timeout=20)
         finally:
             self.err.close()
-            subprocess.run(["pkill", "-f", str(self.tmp)], check=False)
+            self.kill_left_in_tmp()
             shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def kill_left_in_tmp(self):
+        """Anything the daemon left behind: only processes whose cwd is inside this test's own temp folder (never by name)."""
+        root = os.path.realpath(self.tmp)
+        for pid in (int(n) for n in os.listdir("/proc") if n.isdigit()):
+            try:
+                cwd = os.readlink("/proc/%d/cwd" % pid)
+            except OSError:
+                continue
+            if pid != os.getpid() and (cwd == root or cwd.startswith(root + os.sep)):
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except OSError:
+                    pass
 
     def row(self, n):
         try:
