@@ -62,6 +62,9 @@
  "index-build.md": {
   "description": "把 repo 的 index 建好建滿：照 11-12 的門檻，東西超過 15 個的資料夾各一份生成的 `_index.json`（11-13 公司；先每層都鋪、使用者裁照門檻後收回；文件區 25 份已在，程式區 8 份等停樹後）"
  },
+ "index-check-false-green.md": {
+  "description": "index_check 會不會假綠：拿模板 repo 實測到的五種案例來測 aos 這支（11-13，線黃）"
+ },
  "kernel-framework-架構圖.html": {
   "description": "kernel 框架架構圖"
  },
