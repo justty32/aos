@@ -29,7 +29,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`check.py`](../../../../../proto8/extras/kernel-chain-check/check.py) | 在獨立暫存樹驗證 kernel 鏈的掛子、排隊、hook、重啟、ping 與照規則分流，並嚴格核對清理範圍。 |
+| [`check.py`](../../../../../proto8/extras/kernel-chain-check/check.py) | 在獨立暫存樹驗證 kernel 鏈的掛子、排隊、hook、重啟、ping、照規則分流與留著等表態，並嚴格核對清理範圍。 |
 
 ## `proto8/extras/langs/`
 

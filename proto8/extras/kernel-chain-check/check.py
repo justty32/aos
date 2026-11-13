@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# 在獨立暫存樹驗證 kernel 鏈的掛子、排隊、hook、重啟、ping 與照規則分流，並嚴格核對清理範圍。
+# 在獨立暫存樹驗證 kernel 鏈的掛子、排隊、hook、重啟、ping、照規則分流與留著等表態，並嚴格核對清理範圍。
 import argparse
 import json
 import os
@@ -34,6 +34,20 @@ import json, pathlib, sys
 event = json.load(sys.stdin)
 if (event.get("body") or {}).get("lane") == "side":
     print(json.dumps({"next": str(pathlib.Path(event["stack"]).parent / "station_b" / "requests")}))
+'''
+
+# A 的表態 hook：body 的 hold_me 是 true 的信先留著等表態，並記下每次被問；其餘不說話。
+# 名字 ask 排在記錄事件的 after_verdict 之後、route 之前：記錄看到的是規則的 pass，route 只在表態 pass 重判那次生效。
+ASK = '''#!/usr/bin/env python3
+# 把帶 hold_me 的信留著等表態，每次被問都記一列。
+import json, pathlib, sys
+event = json.load(sys.stdin)
+body = event["body"] if isinstance(event.get("body"), dict) else {}
+if body.get("hold_me") is True:
+    with (pathlib.Path(event["stack"]) / "ask.jsonl").open("a") as stream:
+        stream.write(json.dumps({"letter": event["letter"], "verdict": event["verdict"],
+                                 "decision": event.get("decision")}) + "\\n")
+    print(json.dumps({"verdict": "hold"}))
 '''
 
 IDLE = '''#!/usr/bin/env python3
@@ -77,6 +91,7 @@ class Check:
         self.processes = []
         self.logs = []
         self.sent = {}
+        self.bodies = {}
         self.replies = {}
         self.stage = "setup"
         self.env = dict(self.clean, HOME=str(self.work / "home"),
@@ -169,6 +184,9 @@ class Check:
         route = self.defs / "route"
         route.write_text(ROUTE, encoding="utf-8")
         route.chmod(0o755)
+        ask = self.defs / "ask"
+        ask.write_text(ASK, encoding="utf-8")
+        ask.chmod(0o755)
         idle = self.defs / "idle"
         idle.mkdir()
         (idle / "tick.py").write_text(IDLE, encoding="utf-8")
@@ -198,7 +216,8 @@ class Check:
                                 str(self.defs / "station_b/kernel.json")]}, "interval_ms": 150})
         self.kernel(self.defs / "station_b", {})
         self.kernel(self.defs / "station_a", {}, route={
-            "event": "after_verdict", "condition": "pass", "handler": str(route), "timeout_ms": 5000})
+            "event": "after_verdict", "condition": "pass", "handler": str(route), "timeout_ms": 5000}, ask={
+            "event": "after_verdict", "condition": "pass", "handler": str(ask), "timeout_ms": 5000})
         self.kernel(self.defs / "foreman", {"max_running": 4, "queue": True})
         foreman_cfg = read(self.defs / "foreman/daemon.json")
         foreman_cfg["procs"] = {
@@ -248,6 +267,7 @@ class Check:
         self.post("init", box)
         letter = self.post("send", "--reply-to", box, self.a / "requests", body=body)
         self.sent[tag] = (letter, box)
+        self.bodies[tag] = body
         return letter
 
     def receive(self, tag, applied=True):
@@ -273,14 +293,19 @@ class Check:
         rows = [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
         return [row for row in rows if row["event"] == event and (letter is None or row["letter"] == letter)]
 
-    def route(self, tag):
+    def judged(self, stack, letter, tag, held):
+        # 留著的信在 A 判兩次：規則先判一次（之後 ask 改成 hold），表態 pass 後重判一次；其餘每站一次。
+        passes = [row.get("decision") for row in self.events(stack, "after_verdict", letter) if row["verdict"] == "pass"]
+        require(passes == ([None, "pass"] if held and stack == self.a else [None]),
+                "request passed more or less than expected at %s for %s: %s" % (stack.name, tag, passes))
+
+    def route(self, tag, held=False):
         letter, box = self.sent[tag]
         for stack in (self.a, self.foreman):
             for event in ("before_verdict", "before_reply"):
                 require(len(self.events(stack, event, letter)) == 1,
                         "missing or repeated %s at %s for %s" % (event, stack.name, tag))
-            require(sum(row["verdict"] == "pass" for row in self.events(stack, "after_verdict", letter)) == 1,
-                    "request passed more or less than once at %s for %s" % (stack.name, tag))
+            self.judged(stack, letter, tag, held)
         original = self.events(self.a, "before_verdict", letter)[0]
         relayed = self.events(self.foreman, "before_verdict", letter)[0]
         # 兩站的 kernel.json 都沒寫 next：信到得了領班與 daemon，靠的是 AOS_KERNEL 與「指到自己就跳過」。
@@ -297,15 +322,14 @@ class Check:
         require(reply_event["sender"] == original["sender"] and Path(reply_event["reply_to"]).resolve() == box,
                 "A did not retain the original sender and reply mailbox")
 
-    def side_route(self, tag):
+    def side_route(self, tag, held=False):
         """分流到旁站的信：A 與 B 各進一次、領班沒看到，回信經 B、A 兩站代回。"""
         letter, box = self.sent[tag]
         for stack in (self.a, self.b):
             for event in ("before_verdict", "before_reply"):
                 require(len(self.events(stack, event, letter)) == 1,
                         "missing or repeated %s at %s for %s" % (event, stack.name, tag))
-            require(sum(row["verdict"] == "pass" for row in self.events(stack, "after_verdict", letter)) == 1,
-                    "request passed more or less than once at %s for %s" % (stack.name, tag))
+            self.judged(stack, letter, tag, held)
         require(not any(self.events(self.foreman, event, letter)
                         for event in ("before_verdict", "after_verdict", "before_reply")),
                 "side letter also reached the foreman for " + tag)
@@ -322,6 +346,38 @@ class Check:
         for tag, (_, box) in self.sent.items():
             require(not list((box / "new").glob("*/letter.json")) and not list((box / "cur").glob("*/letter.json")),
                     "unexpected late or duplicate reply for " + tag)
+
+    def held(self):
+        return sorted(row["letter"] for row in read(self.a / "hold.json", {"held": []})["held"])
+
+    def asked(self, letter):
+        path = self.a / "ask.jsonl"
+        rows = [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+        return [row["decision"] for row in rows if row["letter"] == letter]
+
+    def still_held(self, tags):
+        """留著的信：在 A 的窗與 cur 裡、只進過 A 一次、ask 只問一次、領班與 B 沒看到、寄件人沒回信。"""
+        letters = sorted(self.sent[tag][0] for tag in tags)
+        require(self.held() == letters, "hold.json does not list exactly the held letters: %s" % self.held())
+        in_cur = sorted(path.parent.name for path in (self.a / "requests/cur").glob("*/letter.json"))
+        require(in_cur == letters, "A's requests/cur/ does not hold exactly the held letters: %s" % in_cur)
+        for tag in tags:
+            letter, box = self.sent[tag]
+            require(len(self.events(self.a, "before_verdict", letter)) == 1, "before_verdict ran again for " + tag)
+            require(self.asked(letter) == [None], "ask was not asked exactly once for %s: %s" % (tag, self.asked(letter)))
+            require(not any(self.events(stack, event, letter) for stack in (self.foreman, self.b)
+                            for event in ("before_verdict", "after_verdict", "before_reply")),
+                    "held letter left A for " + tag)
+            require(not list(box.glob("*/*/letter.json")), "held letter already got a reply for " + tag)
+
+    def decide(self, tag, said):
+        # 照框架說的：先寫暫存檔再改名進 decisions/<信名>.json。
+        letter = self.sent[tag][0]
+        folder = self.inside(self.a / "decisions")
+        folder.mkdir(exist_ok=True)
+        temp = self.inside(self.work / "decision.tmp")
+        save(temp, said)
+        os.rename(temp, folder / (letter + ".json"))
 
     def queue(self):
         return read(self.foreman / "queue.json", {"queued": []})["queued"]
@@ -441,6 +497,51 @@ class Check:
         self.no_late_replies()
         print("ok 7 A's hook split two letters between two next stations and both replies returned", flush=True)
 
+        self.stage = "8"
+        # 先留著等表態：A 的 ask hook 把帶 hold_me 的信留在 A；有人寫了表態檔，站才照它放行或拒。
+        probes = {"held_pass": {"ping": True, "hold_me": True, "desc": "forward after a yes"},
+                  "held_refuse": {"ping": True, "hold_me": True, "why": {"asked_by": "chain-check", "n": 2}},
+                  "held_side": {"ping": True, "hold_me": True, "lane": "side", "desc": {"note": "side after a yes"}}}
+        for tag, body in probes.items():
+            self.send(tag, body)
+        self.wait("three letters held at A", lambda: self.held() == sorted(self.sent[tag][0] for tag in probes))
+        self.still_held(probes)
+        time.sleep(1)
+        self.still_held(probes)
+        # 表態 pass：重判一次後照平常的路 A → 領班 → 根 daemon，回信經兩站代回；body 原樣（額外鍵也在）。
+        self.decide("held_pass", {"verdict": "pass"})
+        reply = self.receive("held_pass")
+        require(reply["body"] == {"applied": True}, "held_pass reply is not the daemon's ping reply")
+        self.route("held_pass", held=True)
+        require(self.events(self.foreman, "before_verdict", self.sent["held_pass"][0])[0]["body"] == probes["held_pass"],
+                "A did not forward the held body unchanged")
+        require(self.asked(self.sent["held_pass"][0]) == [None, "pass"], "ask was not asked once more on the re-judge")
+        # 表態 refuse：寄件人拿到表態寫的 code 與 msg，信沒離開 A。
+        self.decide("held_refuse", {"verdict": "refuse", "error": {"code": "NotNow", "msg": "say what it is for"}})
+        reply = self.receive("held_refuse", applied=False)
+        require(reply["body"] == {"applied": False, "error": {"code": "NotNow", "msg": "say what it is for"}},
+                "held_refuse reply does not carry the decision's error: " + json.dumps(reply["body"]))
+        letter = self.sent["held_refuse"][0]
+        require(not any(self.events(stack, event, letter) for stack in (self.foreman, self.b)
+                        for event in ("before_verdict", "after_verdict", "before_reply")),
+                "refused held letter left A")
+        require(self.asked(letter) == [None] and not self.events(self.a, "before_reply", letter),
+                "refused held letter was asked or relayed again")
+        # 帶 lane=side 的留著信：表態 pass 重判時 route 才給 next，分到 B，回信經 B、A 代回。
+        self.decide("held_side", {"verdict": "pass"})
+        reply = self.receive("held_side")
+        require(reply["body"] == {"applied": True}, "held_side reply is not the daemon's ping reply")
+        self.side_route("held_side", held=True)
+        require(self.events(self.b, "before_verdict", self.sent["held_side"][0])[0]["body"] == probes["held_side"],
+                "A did not forward the held side body unchanged")
+        time.sleep(1)
+        require(read(self.a / "hold.json") == {"held": []}, "hold.json is not empty: " + json.dumps(read(self.a / "hold.json")))
+        require(not list((self.a / "decisions").iterdir()), "decision files left in A's decisions/")
+        require(not list((self.a / "requests/cur").glob("*/letter.json")), "letters left in A's requests/cur/")
+        self.wait("A relay records empty", lambda: not read(self.a / "forwarded.json", {}))
+        self.no_late_replies()
+        print("ok 8 three held letters waited at A until decided: pass, refuse and pass split to B", flush=True)
+
     def cleanup(self):
         # 起不來也先嘗試自有根樹的公開 shutdown；fallback 只准記錄的 Popen pid。
         if hasattr(self, "root_proc") and self.root_proc.poll() is None:
@@ -477,7 +578,7 @@ class Check:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Check six kernel-chain scenarios in an isolated disposable tree.")
+    parser = argparse.ArgumentParser(description="Check seven kernel-chain scenarios in an isolated disposable tree.")
     parser.add_argument("--timeout-s", type=float, default=30, help="positive timeout per wait (default: 30)")
     opts = parser.parse_args()
     require(0 < opts.timeout_s <= 300, "--timeout-s must be in (0, 300]")
@@ -496,7 +597,7 @@ def main():
             passed = False
             print("kernel-chain-check: error: CleanupFailed " + str(error), flush=True)
     if passed:
-        print("kernel-chain-check: 6/6 ok", flush=True)
+        print("kernel-chain-check: 7/7 ok", flush=True)
         return 0
     return 1
 
