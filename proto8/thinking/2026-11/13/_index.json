@@ -65,6 +65,9 @@
  "main-session-in-aos.md": {
   "description": "主 session 接 aos 的四題（11-13 早，公司 WSL）：主 session 已經是樹裡的一隻 eca proc「repo-aos」，四題照現況與原則各自定案；留兩題給使用者裁（只規劃、沒施工）"
  },
+ "ops-fixes-施工結果.md": {
+  "description": "線巳施工結果（11-13）：ops-agent 六點建議裡使用者裁要做的幾件——信的留底進工作區（A1）、範本 README 指到 CLI 自己的 hook（A2）、畫面的環境變數（B1）、flags 裡的 `--settings`（B2）、定義自帶 CLI 設定（B3）"
+ },
  "tool-stack-path.md": {
   "description": "11-13 fx-2:A 施工紀錄：工具印的 $AOS_STACK 路徑改照叫方的 stack 算，aos-tools 給 AOS_STACK_IN_CALLER，含設計、盤點、代定、要補的條文"
  },

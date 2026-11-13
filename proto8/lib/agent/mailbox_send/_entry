@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 # mailbox_send - aos-mailbox send 的包裝，寄件人＝叫我的那隻自己：照 inbox 協議寄一封給 agent（to 名字＋daemon）或信箱（box 路徑）。
 # 使用者 11-10 晚 mailbox 第 2 題：「用名字的話，要指定daemon，也可以直接用路徑，該路徑需要符合信箱資料夾佈局」；3「用json」；4 白名單擋、兩條規則寫說明。
-# 介面：stdin {to | box, daemon?, status, title, what, outputs?, not_done?, decide?, in_reply_to?}＝send --to/--box … WHAT；from＝我在 daemon 表上的名字。
+# 使用者 11-13「都按照建議」（ops-agent-six-suggestions 第 3 題甲）：keep＝檔名，寄出的那封在工作區那個檔追加一行 JSON（＝send --keep-to FILE）。
+# 介面：stdin {to | box, daemon?, status, title, what, outputs?, not_done?, decide?, in_reply_to?, keep?}＝send --to/--box … WHAT；from＝我在 daemon 表上的名字。
 #   daemon 不給＝自己的 daemon（$AOS_DAEMON，下層照 aos-agent 一樣找）。別的鍵＝ArgumentsBad（tool_io 擋）。結果：寄出的信名一行加一句說明。
 import os, signal, sys
 NAME = "mailbox_send"
 HELP = """\
 usage: mailbox_send < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Send one letter to an agent (to = its name, daemon = its daemon, default mine) or to a mailbox folder (box)
-(aos-mailbox send with the sender = me). Replies come back to my mailbox.
+(aos-mailbox send with the sender = me). Replies come back to my mailbox. keep = a file name appends one JSON
+line for the sent letter to that file.
 Result on stdout. On error: one line "mailbox_send: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -41,11 +43,13 @@ if bool(args.get("to")) == bool(args.get("box")):
 who = mailbox_call.me()
 more = ["--from", who["name"], "--status", args["status"], "--title", args["title"]]
 for key, flag in (("to", "--to"), ("box", "--box"), ("daemon", "--daemon"), ("outputs", "--outputs"),
-                  ("not_done", "--not-done"), ("decide", "--decide"), ("in_reply_to", "--in-reply-to")):
+                  ("not_done", "--not-done"), ("decide", "--decide"), ("in_reply_to", "--in-reply-to"),
+                  ("keep", "--keep-to")):
     if args.get(key):
         more += [flag, args[key]]
 # 腦常寫 to: "self"／"me"（11-11 晚 gemma、sonnet 實測）：查不到名字時補一句它自己的名字
 hint = {"InstanceMissing": "; to is an agent's name: to mail yourself use your own name, %s" % who["name"]}
 _, out, _ = cmd_call.call("aos-mailbox", ["--stack", who["stack"], "send"] + more + ["--", args["what"]],
                           fix=lambda code, reason: reason + hint.get(code, ""))
-print("sent letter %s; the answer (if any) comes to your mailbox: check with mailbox_peek" % out.strip())
+print("sent letter %s%s; the answer (if any) comes to your mailbox: check with mailbox_peek"
+      % (out.strip(), " (one line added to %s)" % args["keep"] if args.get("keep") else ""))

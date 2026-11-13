@@ -51,7 +51,7 @@
 | [`mail_notify/_entry`](../../../../../proto8/lib/agent/mail_notify/_entry) | on_clock 的 hook handler：看這隻 agent 自己的信箱（<stack>/mailbox，不是 queue）有沒有還沒通知過的新信，有就往自己 queue 寄一則「[aos] new_mail: …」。 |
 | [`mailbox_call.py`](../../../../../proto8/lib/agent/mailbox_call.py) | mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。 |
 | [`mailbox_peek/`](../../../../../proto8/lib/agent/mailbox_peek/) | aos-mailbox peek 的包裝，目標＝叫我的那隻自己：看信箱裡有幾封還沒讀、誰寄的、標題（不拿走）。 |
-| [`mailbox_read/`](../../../../../proto8/lib/agent/mailbox_read/) | aos-mailbox read 的包裝，目標＝叫我的那隻自己：拿最舊的一封（all＝全部）、印出來，預設讀完就刪（keep＝留在 mailbox/archive/）。 |
+| [`mailbox_read/`](../../../../../proto8/lib/agent/mailbox_read/) | aos-mailbox read 的包裝，目標＝叫我的那隻自己：拿最舊的一封（all＝全部）、印出來，預設讀完就刪（keep true＝留在 mailbox/archive/；keep 檔名＝在工作區那個檔追加一行 JSON）。 |
 | [`mailbox_send/`](../../../../../proto8/lib/agent/mailbox_send/) | aos-mailbox send 的包裝，寄件人＝叫我的那隻自己：照 inbox 協議寄一封給 agent（to 名字＋daemon）或信箱（box 路徑）。 |
 | [`mailbox_send/tests/test_mailbox_tools.py`](../../../../../proto8/lib/agent/mailbox_send/tests/test_mailbox_tools.py) | Test mailbox_send / mailbox_peek / mailbox_read wrap aos-mailbox for the calling agent (fake aos-agent ctl who, real aos-mailbox and aos-post). |
 | [`self_ctl/`](../../../../../proto8/lib/agent/self_ctl/) | aos-agent ctl 的包裝，目標改成叫我的那隻自己；只給對自己有意義的四個：stop、pause、sleep、rm |

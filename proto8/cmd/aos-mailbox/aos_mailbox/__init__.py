@@ -25,7 +25,7 @@ usage: aos-mailbox [-s STACK] SUBCOMMAND [FLAGS...] [ARGS...]
 subcommands:
   where   print my mailbox folder (create it if missing)
   peek    list waiting letters without taking them: LETTER TAB FROM TAB STATUS TAB TITLE
-  read    take the oldest letter, print it, then remove it (--keep: keep it in archive/)
+  read    take the oldest letter, print it, then remove it (--keep: keep it in archive/; --keep-to FILE: add a line to FILE)
   send    send a letter to an agent (--to NAME [-d DAEMON]) or to a mailbox folder (--box PATH)
 
 flags:
@@ -57,12 +57,14 @@ One line per letter, oldest first: LETTER TAB FROM TAB STATUS TAB TITLE (? = unr
 Letters stay where they are. No letters (or no mailbox yet) = no output, exit 0.""",
     "read": """aos-mailbox read - read the oldest letter in my mailbox
 
-usage: aos-mailbox [-s STACK] read [--all] [--keep] [-j]
+usage: aos-mailbox [-s STACK] read [--all] [--keep] [--keep-to FILE] [-j]
 
 flags:
-  --all        read every waiting letter
-  --keep       keep what was read in STACK/mailbox/archive/ (default: remove it)
-  -j, --json   one JSON object per letter per line
+  --all            read every waiting letter
+  --keep           keep what was read in STACK/mailbox/archive/ (default: remove it)
+  --keep-to FILE   append one JSON line per letter read to FILE ("kept": "received"; no sender, no reply_to);
+                   a letter is taken out of the mailbox only after its line is written
+  -j, --json       one JSON object per letter per line
 
 A letter left half-read by a crash is read first. To answer, send to its reply_to:
   aos-mailbox send --box REPLY_TO --in-reply-to LETTER --status DONE --title "..." "..."
@@ -71,7 +73,7 @@ exit codes: 0 read; 10 no letter; 1 error.""",
 
 usage: aos-mailbox [-s STACK] send (--to NAME [-d DAEMON] | --box PATH) --status STATUS --title TITLE
                    [--outputs TEXT] [--not-done TEXT] [--decide TEXT] [--in-reply-to LETTER]
-                   [--from NAME] WHAT...|-
+                   [--from NAME] [--keep-to FILE] WHAT...|-
 
 flags:
   --to NAME             the agent's name on a daemon table; its mailbox is created if missing
@@ -84,6 +86,8 @@ flags:
   --decide TEXT         what the receiver or the user must decide (default: none)
   --in-reply-to LETTER  the letter this answers
   --from NAME           my name (default: $USER, else user)
+  --keep-to FILE        append one JSON line for the sent letter to FILE ("kept": "sent");
+                        FILE is opened first: if it cannot be written, nothing is sent
 
 WHAT is the main part (for REQUEST: what the receiver should do); - reads it from stdin.
 Flags go before WHAT (from WHAT on everything is text).
@@ -239,13 +243,37 @@ def show(r):
             print("%s: %s" % (k, "?" if v is None else (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False))))
 
 
+def keep_open(path):
+    """--keep-to FILE：開成 append（沒有就建；上層夾不在不建）。開不了＝WriteFailed。"""
+    try:
+        return os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+    except OSError as e:
+        raise Fail("WriteFailed", "cannot write %s: %s" % (path, aos_flags.os_reason(e)))
+
+
+def keep_line(fd, path, r, kind):
+    """留底一行（jsonl）：kept＝received／sent 放最前；不放 sender、reply_to（這台機器上的絕對路徑），to 是路徑（寄到 --box）也不放。
+    一行一次 write（append 開的檔，兩個行程同時接不會互相切斷）。"""
+    line = {"kept": kind}
+    for k, v in r.items():
+        if k in ("sender", "reply_to") or (k == "to" and isinstance(v, str) and os.path.isabs(v)):
+            continue
+        line[k] = v
+    try:
+        os.write(fd, (json.dumps(line, ensure_ascii=False) + "\n").encode("utf-8"))
+    except OSError as e:
+        raise Fail("WriteFailed", "cannot write %s: %s" % (path, aos_flags.os_reason(e)))
+
+
 def cmd_read(argv):
-    opts, rest = parse(argv, "read", switches={"--all": "all", "--keep": "keep", "--json": "json"}, short=("-j",))
+    opts, rest = parse(argv, "read", {"--keep-to": "keep_to"}, switches={"--all": "all", "--keep": "keep", "--json": "json"},
+                       short=("-j",))
     if rest:
-        raise Fail("ArgumentsBad", "read takes no arguments (usage: aos-mailbox read [--all] [--keep] [-j])")
+        raise Fail("ArgumentsBad", "read takes no arguments (usage: aos-mailbox read [--all] [--keep] [--keep-to FILE] [-j])")
     box = my_box(False)
     if not is_box(box):
         return 10
+    keep_fd = keep_open(opts["keep_to"]) if opts.get("keep_to") else None   # 先開檔：開不了＝一封都不拿
     done = ["done"] + (["--keep"] if opts.get("keep") else [])
     count = 0
     while True:
@@ -263,6 +291,8 @@ def cmd_read(argv):
             post("done", box, name, ok=(0, 10))
             continue
         r = flat(box, name, json.loads(out))
+        if keep_fd is not None:   # 先留底、寫成功才印才收；寫不了＝這封留在 cur/，下次 read 先讀到它
+            keep_line(keep_fd, opts["keep_to"], r, "received")
         if opts.get("json"):
             print(json.dumps(r, ensure_ascii=False))
         else:
@@ -307,7 +337,7 @@ def target_box(opts):
 def cmd_send(argv):
     flags = {"--to": "to", "--daemon": "daemon", "--box": "box", "--status": "status", "--title": "title",
              "--outputs": "outputs", "--not-done": "not_done", "--decide": "decide",
-             "--in-reply-to": "in_reply_to", "--from": "from"}
+             "--in-reply-to": "in_reply_to", "--from": "from", "--keep-to": "keep_to"}
     opts, rest = parse(argv, "send", flags, short=("-d",), keep=1)   # 11-10 cli-sweep Q3：WHAT 起原樣收
     status = opts.get("status")
     if not status:
@@ -333,8 +363,17 @@ def cmd_send(argv):
     args = ["send", "--reply-to", mine]
     if opts.get("in_reply_to"):
         args += ["--in-reply-to", opts["in_reply_to"]]
+    keep_fd = keep_open(opts["keep_to"]) if opts.get("keep_to") else None   # 先開檔：開不了＝不寄
     _, out = post(*(args + [box]), body=json.dumps(body, ensure_ascii=False))
-    print(out.strip())
+    name = out.strip()
+    if keep_fd is not None:
+        sent = load(os.path.join(box, "new", name, "letter.json")) or {}   # 剛寄的那封；已被拿走＝sent_at 是 null
+        r = dict({"letter": name, "sent_at": sent.get("sent_at"), "in_reply_to": opts.get("in_reply_to")}, **body)
+        try:
+            keep_line(keep_fd, opts["keep_to"], r, "sent")
+        except Fail as e:
+            raise Fail(e.code, "letter %s was sent, but: %s" % (name, e))
+    print(name)
 
 
 SUBS = {"where": cmd_where, "peek": cmd_peek, "read": cmd_read, "send": cmd_send}

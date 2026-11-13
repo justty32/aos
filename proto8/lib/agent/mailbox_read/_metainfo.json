@@ -1,5 +1,5 @@
 {
-  "summary": "Read and remove (or keep) the oldest letter in the mailbox of the agent calling me (aos-mailbox read)",
+  "summary": "Read and remove (or keep, or copy to a workspace file) the oldest letter in the mailbox of the agent calling me (aos-mailbox read)",
   "resource": "cpu",
   "side_effect": true,
   "idempotent": false,

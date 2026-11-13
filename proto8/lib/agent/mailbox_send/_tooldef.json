@@ -1,11 +1,12 @@
 {
- "description": "Send one letter. Give to (an agent's name; daemon = its daemon folder, default yours) or box (a mailbox folder path, like the reply_to of a letter you read). status is one of REQUEST, DONE, BLOCKED, NEEDS-USER, FAILED, PROGRESS. title is one line that makes sense alone. what is the main text (for REQUEST: what the other agent should do and when it counts as done). outputs, not_done, decide are optional (default \"none\"). The answer comes back to your mailbox. Rules: when you finish a task someone asked for, send DONE, BLOCKED, NEEDS-USER or FAILED; if you are stuck for more than 10 minutes, send BLOCKED. Examples:\n- ask bob: {\"to\": \"bob\", \"status\": \"REQUEST\", \"title\": \"Please count the .csv files in data/\", \"what\": \"Count the .csv files in data/ and answer DONE with the number.\"}\n- answer a letter you read: {\"box\": \"/path/from/its/reply_to\", \"in_reply_to\": \"its letter name\", \"status\": \"DONE\", \"title\": \"data/ has 3 .csv files\", \"what\": \"I counted the .csv files in data/: 3.\", \"outputs\": \"none\"}\nErrors: ArgumentsBad, StatusBad, MailboxMissing, MailboxBad, InstanceMissing, DaemonMissing.",
+ "description": "Send one letter. Give to (an agent's name; daemon = its daemon folder, default yours) or box (a mailbox folder path, like the reply_to of a letter you read). status is one of REQUEST, DONE, BLOCKED, NEEDS-USER, FAILED, PROGRESS. title is one line that makes sense alone. what is the main text (for REQUEST: what the other agent should do and when it counts as done). outputs, not_done, decide are optional (default \"none\"). The answer comes back to your mailbox. Nothing is kept on your side unless you give keep (a file name in your workspace): then the sent letter is added to that file as one JSON line. Rules: when you finish a task someone asked for, send DONE, BLOCKED, NEEDS-USER or FAILED; if you are stuck for more than 10 minutes, send BLOCKED. Examples:\n- ask bob: {\"to\": \"bob\", \"status\": \"REQUEST\", \"title\": \"Please count the .csv files in data/\", \"what\": \"Count the .csv files in data/ and answer DONE with the number.\"}\n- answer a letter you read: {\"box\": \"/path/from/its/reply_to\", \"in_reply_to\": \"its letter name\", \"status\": \"DONE\", \"title\": \"data/ has 3 .csv files\", \"what\": \"I counted the .csv files in data/: 3.\", \"outputs\": \"none\"}\n- ask bob and keep a record: {\"to\": \"bob\", \"status\": \"REQUEST\", \"title\": \"Please count the .csv files in data/\", \"what\": \"Count them and answer DONE with the number.\", \"keep\": \"mail/letters.jsonl\"}\nErrors: ArgumentsBad, StatusBad, WriteFailed, MailboxMissing, MailboxBad, InstanceMissing, DaemonMissing.",
  "env": [
   "AOS_DAEMON"
  ],
  "errors": [
   "ArgumentsBad",
   "StatusBad",
+  "WriteFailed",
   "MailboxMissing",
   "MailboxBad",
   "StackMissing",
@@ -65,6 +66,10 @@
    "in_reply_to": {
     "type": "string",
     "description": "the letter name you are answering"
+   },
+   "keep": {
+    "type": "string",
+    "description": "a file name (from your workspace; its folder must exist): append one JSON line for the sent letter to that file (\"kept\": \"sent\", letter, sent_at, in_reply_to, from, to, status, title, what, outputs, not_done, decide; a box path is not written). If the file cannot be opened, nothing is sent"
    }
   },
   "required": [

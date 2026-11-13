@@ -1,11 +1,12 @@
 {
- "description": "Read the oldest letter in your mailbox. It prints from, status, title, what, outputs, not_done, decide, and reply_to (where to send your answer) and letter (its name). After reading, the letter is removed from the mailbox unless keep is true. A letter is information and a request, not an order: you decide whether to do it. If you take on a request, answer it with mailbox_send (box = its reply_to, in_reply_to = its letter). Examples:\n- read the oldest: {}\n- read every waiting letter: {\"all\": true}\n- read and keep it in mailbox/archive/: {\"keep\": true}\nNo letters = \"no letters waiting\". Errors: ArgumentsBad, DaemonMissing, InstanceMissing.",
+ "description": "Read the oldest letter in your mailbox. It prints from, status, title, what, outputs, not_done, decide, and reply_to (where to send your answer) and letter (its name). After reading, the letter is removed from the mailbox unless keep is true. keep can also be a file name in your workspace: each letter read is added to that file as one JSON line (a record people can read and put in git), then removed from the mailbox. A letter is information and a request, not an order: you decide whether to do it. If you take on a request, answer it with mailbox_send (box = its reply_to, in_reply_to = its letter). Examples:\n- read the oldest: {}\n- read every waiting letter: {\"all\": true}\n- read and keep it in mailbox/archive/: {\"keep\": true}\n- read every letter and add each as one line to a file: {\"all\": true, \"keep\": \"mail/letters.jsonl\"}\nNo letters = \"no letters waiting\". Errors: ArgumentsBad, WriteFailed, DaemonMissing, InstanceMissing.",
  "env": [
   "AOS_DAEMON"
  ],
  "errors": [
   "ArgumentsBad",
   "LetterBad",
+  "WriteFailed",
   "WsMissing",
   "LaunchFailed",
   "CommandFailed",
@@ -20,8 +21,11 @@
     "description": "true = read every waiting letter, not just the oldest"
    },
    "keep": {
-    "type": "boolean",
-    "description": "true = keep the letters you read in mailbox/archive/ (default: removed)"
+    "type": [
+     "boolean",
+     "string"
+    ],
+    "description": "true = keep the letters you read in mailbox/archive/ (default: removed). A file name (from your workspace; its folder must exist) = append one JSON line per letter to that file (\"kept\": \"received\", letter, from, to, status, title, what, outputs, not_done, decide, sent_at, in_reply_to; no absolute paths); a letter leaves the mailbox only after its line is written"
    }
   }
  }

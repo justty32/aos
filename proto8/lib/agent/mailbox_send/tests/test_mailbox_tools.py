@@ -66,12 +66,40 @@ class MailboxTools(unittest.TestCase):
         self.assertIn("kept in", r.stdout)
         self.assertEqual(self.tool("mailbox_read", {}).stdout, "no letters waiting\n")
 
+    def test_keep_file_in_workspace(self):
+        bob_box = str(self.tmp / "bob" / "mailbox")
+        subprocess.run(["aos-post", "init", bob_box], check=True)
+        (self.tmp / "ws" / "mail").mkdir()
+        log = self.tmp / "ws" / "mail" / "letters.jsonl"
+        r = self.tool("mailbox_send", {"box": bob_box, "status": "REQUEST", "title": "Count files", "what": "Count them.",
+                                       "keep": "mail/letters.jsonl"})                  # 相對路徑從工作區算
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("(one line added to mail/letters.jsonl)", r.stdout)
+        r = self.tool("mailbox_read", {"all": True, "keep": "mail/letters.jsonl"}, me="bob")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("what: Count them.\n", r.stdout)
+        self.assertIn("reply_to: ", r.stdout)                                          # 印給腦看的照舊
+        self.assertIn("(one line per letter added to mail/letters.jsonl; removed from the mailbox)", r.stdout)
+        self.assertFalse((self.tmp / "bob" / "mailbox" / "archive").exists())          # 檔名＝只進檔，不進 archive/
+        lines = [json.loads(l) for l in log.read_text().splitlines()]
+        self.assertEqual([(l["kept"], l["from"], l["title"]) for l in lines],
+                         [("sent", "alice", "Count files"), ("received", "alice", "Count files")])
+        self.assertEqual(lines[0]["letter"], lines[1]["letter"])
+        self.assertNotIn(str(self.tmp), log.read_text())
+        self.assertEqual(self.tool("mailbox_read", {}, me="bob").stdout, "no letters waiting\n")
+        r = self.tool("mailbox_send", {"box": bob_box, "status": "DONE", "title": "t", "what": "w", "keep": "nodir/x.jsonl"})
+        self.assertTrue(r.stdout.startswith("mailbox_send: error: WriteFailed "), r.stdout)
+        r = self.tool("mailbox_read", {"keep": "nodir/x.jsonl"}, me="bob")             # 沒信箱可拿前就先開檔
+        self.assertEqual(self.tool("mailbox_peek", {}, me="bob").stdout, "no letters waiting\n")
+
     def test_refusals(self):
         box = str(self.tmp / "bob")                       # 不是信箱（沒有 tmp/ new/ cur/）
         for name, args, code in (("mailbox_send", {"box": box, "status": "DONE", "title": "t", "what": "w"}, "MailboxBad"),
                                  ("mailbox_send", {"box": box, "status": "OK", "title": "t", "what": "w"}, "StatusBad"),
                                  ("mailbox_send", {"status": "DONE", "title": "t", "what": "w"}, "ArgumentsBad"),
                                  ("mailbox_send", {"box": box, "status": "DONE", "title": "t"}, "ArgumentsBad"),
+                                 ("mailbox_send", {"box": box, "status": "DONE", "title": "t", "what": "w", "keep": True}, "ArgumentsBad"),
+                                 ("mailbox_read", {"keep": 3}, "ArgumentsBad"),
                                  ("mailbox_peek", {"all": True}, "ArgumentsBad"),
                                  ("mailbox_read", {"letter": "x"}, "ArgumentsBad")):
             r = self.tool(name, args)

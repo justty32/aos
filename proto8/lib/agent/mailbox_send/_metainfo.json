@@ -1,5 +1,5 @@
 {
-  "summary": "Send an inbox-protocol letter as the agent calling me (aos-mailbox send)",
+  "summary": "Send an inbox-protocol letter as the agent calling me, with an optional record line in a workspace file (aos-mailbox send)",
   "resource": "cpu",
   "side_effect": true,
   "idempotent": false,

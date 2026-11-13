@@ -81,6 +81,46 @@ class Mailbox(unittest.TestCase):
         r = self.run_mb("fly")
         self.assertIn("error: CommandUnknown", r.stderr)
 
+    def test_keep_to_appends_one_json_line_per_letter(self):
+        log = self.tmp / "letters.jsonl"
+        name = self.ok("send", "--to", "bob", "-d", "d", "--status", "REQUEST", "--title", "Count", "--keep-to", "letters.jsonl",
+                       "count them").strip()
+        sent = json.loads(log.read_text())
+        self.assertEqual((sent["kept"], sent["letter"], sent["from"], sent["to"], sent["status"], sent["what"], sent["in_reply_to"]),
+                         ("sent", name, "alice", "bob", "REQUEST", "count them", None))
+        self.assertTrue(sent["sent_at"])
+        r = json.loads(self.ok("-s", "bob", "read", "-j", "--keep-to", str(log)))
+        self.assertIn("reply_to", r)                                                   # -j 那一行照舊
+        self.ok("-s", "bob", "send", "--box", r["reply_to"], "--in-reply-to", name, "--from", "bob", "--status", "DONE",
+                "--title", "3 files", "--keep-to", str(log), "3.")
+        self.ok("read", "--keep", "--keep-to", "letters.jsonl")                       # 兩個旗標可併用
+        self.assertEqual(len(os.listdir(self.home / ".aos" / "stack" / "mailbox" / "archive")), 1)
+        lines = [json.loads(l) for l in log.read_text().splitlines()]
+        self.assertEqual([(l["kept"], l["status"]) for l in lines],
+                         [("sent", "REQUEST"), ("received", "REQUEST"), ("sent", "DONE"), ("received", "DONE")])
+        self.assertEqual((lines[1]["letter"], lines[1]["to"], lines[3]["in_reply_to"]), (name, "bob", name))
+        self.assertNotIn("to", lines[2])                                               # 寄到 --box：to 是絕對路徑，不留
+        for l in lines:                                                                # 留底那行沒有這台機器上的絕對路徑
+            self.assertNotIn("sender", l)
+            self.assertNotIn("reply_to", l)
+            self.assertNotIn(str(self.tmp), json.dumps(l))
+        self.assertEqual(self.run_mb("read", "--keep-to", "letters.jsonl").returncode, 10)   # 沒信：不加行
+        self.assertEqual(len(log.read_text().splitlines()), 4)
+
+    def test_keep_to_unwritable_takes_and_sends_nothing(self):
+        box = Path(self.ok("-s", "bob", "where").strip())
+        r = self.run_mb("send", "--box", str(box), "--status", "DONE", "--title", "t", "--keep-to", "nodir/x.jsonl", "x")
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stderr.startswith("aos-mailbox: error: WriteFailed "), r.stderr)
+        self.assertEqual(os.listdir(box / "new"), [])                                  # 開不了檔＝沒寄
+        self.ok("send", "--box", str(box), "--status", "DONE", "--title", "t", "x")
+        r = self.run_mb("-s", "bob", "read", "--all", "--keep-to", "nodir/x.jsonl")
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stderr.startswith("aos-mailbox: error: WriteFailed "), r.stderr)
+        self.assertEqual(r.stdout, "")
+        self.assertEqual(len(os.listdir(box / "new")) + len(os.listdir(box / "cur")), 1)   # 信還在
+        self.assertIn("what: x\n", self.ok("-s", "bob", "read"))                      # 下次照樣讀得到
+
     def test_peek_without_mailbox_is_empty(self):
         self.assertEqual(self.ok("-s", "nobody", "peek"), "")
         self.assertFalse((self.tmp / "nobody").exists())
