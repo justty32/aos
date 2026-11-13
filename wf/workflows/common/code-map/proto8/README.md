@@ -23,7 +23,7 @@
 | [impls-7](impls-7.md) | `proto8/impls/` | `aos-llm-kernel/` |  |
 | [impls-8](impls-8.md) | `proto8/impls/` | `aos-lock/`、`aos-loop/`、`aos-post/` |  |
 | [impls-9](impls-9.md) | `proto8/impls/` | `aos-util/`、`cmake/` |  |
-| [kernel](kernel.md) | `proto8/kernel/` | `daemon-judge/`、`llm-kernel/`、`llm-team/`、`procs-kernel/` | 20／20 |
+| [kernel](kernel.md) | `proto8/kernel/` | `daemon-kernel/`、`llm-kernel/`、`llm-team/`、`procs-kernel/` | 20／20 |
 | [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層 | 104／104 |
 | [knowledge-2](knowledge-2.md) | `proto8/knowledge/` | `aos/` |  |
 | [lib](lib.md) | `proto8/lib/` | 頂層 | 211／354 |

@@ -7,6 +7,8 @@
 #                 claude 畫面的 /clear 另外把 aos 這隻的 history 清掉（clear_history，原文搬到 history_removed.jsonl）；/compact 把 history
 #                 換成 claude 的摘要一則（compact_history，SessionStart source compact）；codex 換到剛開的 thread（rollout 只有這一輪，
 #                 codex_turns）＝/clear、清 history（剛交出去的 user 留著），換到有舊輪數的＝/resume、只跟 id（使用者 11-12 Q1～Q3）；
+#                 codex multi-agent 子 agent 的 thread（rollout 第一行有 parent_thread_id，codex_parent）講完也叫 notify：不是換對話，hook 不理；
+#                 session.txt 若已記到子 thread（codex 不給 resume），非互動那條改記、改接它的主對話並提醒一行（codex_main_thread）；
 #                 codex 同一段 thread 的 rollout 多了 compacted＝/compact，history 換成從 replacement_history 撈出的對話（codex_sync_compact，Q5）
 #   .compact_seen codex 用：{"thread", "compacted"}＝aos 已跟上的壓縮次數（畫面開起來、每輪 notify 時記；Q5）
 #   .session_home 記號檔（不進 git）：{"session", "ws", "home", "machine"}——這段對話是在哪台機器（machine_id()）、哪個工作區（realpath）、

@@ -389,6 +389,34 @@ class CodexSwitch(Base):
         self.assertTrue(last["stdin"].startswith("[aos] session: "))
         self.assertEqual(self.queue(), [])
 
+    def sub_thread(self, tid, parent):
+        """A multi-agent sub-agent rollout as codex 0.167.2 writes its first line (11-13)."""
+        d = self.home / ".codex" / "sessions" / "2026" / "11" / "10"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / ("rollout-x-%s.jsonl" % tid)).write_text(json.dumps({"type": "session_meta", "payload": {
+            "id": tid, "parent_thread_id": parent, "thread_source": "subagent",
+            "source": {"subagent": {"thread_spawn": {"parent_thread_id": parent, "depth": 1}}}}}) + "\n")
+
+    def test_session_on_a_subagent_thread_resumes_its_parent(self):
+        """11-13: session.txt was left on a sub-agent thread (codex refuses to resume one): the turn goes to its parent."""
+        self.say("hello")
+        self.ok_turn()
+        parent = self.sid()
+        self.sub_thread("child", parent)
+        self.sub_thread("grandchild", "child")
+        (self.cell / "session.txt").write_text("grandchild\n")
+        (self.cell / ".session_home").write_text(json.dumps(dict(self.mark(), session="grandchild")) + "\n")
+        self.say("again")
+        r = self.ok_turn()
+        last = self.calls()[-1]
+        self.assertEqual(last["argv"][1:4], ["exec", "resume", parent])
+        self.assertEqual(last["stdin"], "again")
+        self.assertEqual(self.sid(), parent)
+        self.assertEqual(self.mark()["session"], parent)
+        self.assertIn("warning: session.txt names a codex sub-agent thread grandchild; resuming its parent thread %s" % parent, r.stderr)
+        self.assertEqual(self.queue(), [])
+        self.assertIsNone(cooldown.read(str(self.stack)))
+
     def test_11_thread_written_on_failure(self):
         self.say("x")
         r = self.turn(FAKE_CLI_FAIL="1", FAKE_CLI_FAIL_SAVED="1")       # codex saved the thread before failing

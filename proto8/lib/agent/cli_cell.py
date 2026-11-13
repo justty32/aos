@@ -188,6 +188,36 @@ def transcripts(kind, sid):
     return sorted(glob.glob(os.path.join(base, "sessions", "**", "*%s.jsonl" % sid), recursive=True))
 
 
+def codex_parent(sid):
+    """codex 這段 thread 是 multi-agent 的子 agent 就回它的父 thread id，不是（或讀不到）＝None。看 rollout 第一行 session_meta 的 payload：
+    parent_thread_id，或 source.subagent.thread_spawn.parent_thread_id（codex 0.167.2 兩處都寫）。子 thread 的 notify 不是換對話，
+    子 thread 也不能自己 resume（codex：cannot resume an unloaded multi-agent v2 sub-agent through its parent）。"""
+    for path in transcripts("codex", sid)[:1]:
+        try:
+            with open(path, encoding="utf-8") as f:
+                meta = json.loads(f.readline())
+        except (OSError, ValueError):
+            return None
+        p = meta.get("payload") if isinstance(meta, dict) else None
+        if not isinstance(p, dict):
+            return None
+        spawn = p.get("source")
+        for key in ("subagent", "thread_spawn"):
+            spawn = spawn.get(key) if isinstance(spawn, dict) else None
+        parent = p.get("parent_thread_id") or (spawn.get("parent_thread_id") if isinstance(spawn, dict) else None)
+        return parent if isinstance(parent, str) and parent and parent != sid else None
+    return None
+
+
+def codex_main_thread(sid):
+    """sid 往上找到不是子 agent 的那段 thread（子 agent 還能再開子 agent）；sid 本來就是主對話＝回它自己。"""
+    seen = set()
+    while sid not in seen:
+        seen.add(sid)
+        sid = codex_parent(sid) or sid
+    return sid
+
+
 def mark_session(kind, cell, ws, sid):
     """寫 session.txt 與記號檔 .session_home（11-10 two-machines 05）。寫不成＝提醒一行、回 False（不擋正事：
     下一輪認不出是這台的，頂多開新對話）。"""

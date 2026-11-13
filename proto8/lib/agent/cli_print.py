@@ -3,12 +3,12 @@ import json, os, signal, subprocess, sys, threading, time, uuid
 
 if __package__:
     from . import cli_base
-    from .cli_cell import drop_session, mark_session, transcripts
+    from .cli_cell import codex_main_thread, drop_session, mark_session, transcripts
     from .cli_cfg import system_argv
     from .cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv
 else:
     import cli_base
-    from cli_cell import drop_session, mark_session, transcripts
+    from cli_cell import codex_main_thread, drop_session, mark_session, transcripts
     from cli_cfg import system_argv
     from cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv
 
@@ -141,6 +141,11 @@ def print_codex(cfg, cell, ws, stack, prompt, handed=None, sid=None):
     """sid＝要接的對話（ask 已認過是這台的）；空＝開新對話。thread id 是 codex 自己產的：不管成敗，讀到 thread.started 就寫
     session.txt 與記號檔（05）。沒給 sid（None）＝照舊讀 session.txt。"""
     sid = cell.read("session.txt") if sid is None else sid
+    main = codex_main_thread(sid) if sid else sid
+    if main != sid:                              # session.txt 記到子 agent 的 thread（codex 不給 resume）：改記、改接它的主對話
+        cli_base.warn("session.txt names a codex sub-agent thread %s; resuming its parent thread %s instead" % (sid, main))
+        mark_session("codex", cell, ws, main)
+        sid = main
     last = cell.file("last.txt")
     argv = ["codex", "exec"] + (["resume", sid] if sid else []) + cfg.get("flags", []) + cfg.get("print_flags", [])
     ext, env, _ = external_codex(cfg)

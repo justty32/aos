@@ -3,10 +3,10 @@ import json, os, re, sys
 
 if __package__:
     from .cli_base import now
-    from .cli_cell import Cell, link_transcript, mark_session, transcripts
+    from .cli_cell import Cell, codex_parent, link_transcript, mark_session, transcripts
 else:
     from cli_base import now
-    from cli_cell import Cell, link_transcript, mark_session, transcripts
+    from cli_cell import Cell, codex_parent, link_transcript, mark_session, transcripts
 
 
 # ---------------------------------------------------------------- hook（互動畫面講完一輪時 CLI 叫的）
@@ -266,6 +266,8 @@ def hook_main(kind, cell_path, payload_arg=None):
             sid = p.get("thread-id") or p.get("thread_id")
             if sid and not transcripts(kind, sid):         # 11-12 實測：codex 替畫面取標題的旁支 thread 也叫 notify，它沒存檔：不是這段對話，不記
                 return
+            if sid and codex_parent(sid):                  # multi-agent 子 agent 的 thread 講完也叫 notify（11-13 實測 codex 0.167.2）：
+                return                                     # 不是這段對話，不換 session.txt、不清 history、不記 turns（主對話那一輪還沒完，busy 照留）
             old = cell.read("session.txt")
             if sid and old and sid != old and codex_turns(sid) <= 1:
                 # 換到一段剛開的 thread（/clear、/new）＝新對話：aos 的 history 跟著清（使用者 Q1「1.要。」），剛交出去還沒答的 user 留著；

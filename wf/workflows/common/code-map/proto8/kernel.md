@@ -5,14 +5,14 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
-## `proto8/kernel/daemon-judge/`
+## `proto8/kernel/daemon-kernel/`
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`.env`](../../../../../proto8/kernel/daemon-judge/.env) | AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here. |
-| [`_entry`](../../../../../proto8/kernel/daemon-judge/_entry) | 入口：`aos-daemon --enable-logs daemon.json` |
-| [`daemon.json`](../../../../../proto8/kernel/daemon-judge/daemon.json) | 設定（鍵：exec、interval_ms、procs） |
-| [`judge.json`](../../../../../proto8/kernel/daemon-judge/judge.json) | 設定（鍵：allowed、max_running、queue、keep_ordered） |
+| [`.env`](../../../../../proto8/kernel/daemon-kernel/.env) | AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here. |
+| [`_entry`](../../../../../proto8/kernel/daemon-kernel/_entry) | 入口：`aos-daemon --enable-logs daemon.json` |
+| [`daemon.json`](../../../../../proto8/kernel/daemon-kernel/daemon.json) | 設定（鍵：exec、interval_ms、procs） |
+| [`kernel.json`](../../../../../proto8/kernel/daemon-kernel/kernel.json) | 設定（鍵：allowed、max_running、queue、keep_ordered） |
 
 ## `proto8/kernel/llm-kernel/`
 
@@ -42,5 +42,5 @@
 |---|---|
 | [`.env`](../../../../../proto8/kernel/procs-kernel/.env) | AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here. |
 | [`_entry`](../../../../../proto8/kernel/procs-kernel/_entry) | 入口：`aos-loop loop.json` |
-| [`judge.json`](../../../../../proto8/kernel/procs-kernel/judge.json) | 設定（鍵：allowed、max_running） |
+| [`kernel.json`](../../../../../proto8/kernel/procs-kernel/kernel.json) | 設定（鍵：allowed、max_running） |
 | [`loop.json`](../../../../../proto8/kernel/procs-kernel/loop.json) | 設定（鍵：exec、interval_ms） |

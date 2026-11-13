@@ -198,6 +198,41 @@ class HookFollow(unittest.TestCase):
         self.assertEqual(json.loads((cell / "turns.jsonl").read_text())["text"], "ok")
         self.assertTrue((cell / "transcripts" / "codex-real.jsonl").is_symlink())
 
+    def sub_meta(self, parent, both=True):
+        payload = {"id": "child", "thread_source": "subagent",
+                   "source": {"subagent": {"thread_spawn": {"parent_thread_id": parent, "depth": 1}}}}
+        if both:
+            payload["parent_thread_id"] = parent
+        return json.dumps({"type": "session_meta", "payload": payload}) + "\n"
+
+    def test_codex_subagent_thread_is_ignored(self):
+        """11-13: a multi-agent sub-agent thread also calls notify; it is not a /new, so nothing changes."""
+        for both in (True, False):                               # codex 0.167.2 writes the parent id in two places
+            with self.subTest(both=both):
+                cell = self.codex_cell({"old": 3})
+                self.rollout("child").write_text(self.sub_meta("old", both)
+                                                 + '{"type": "event_msg", "payload": {"type": "task_complete"}}\n')
+                (cell / "busy.txt").write_text("x\n")
+                before = self.hist.read_text()
+                self.notify(cell, "child", "sub-agent done")
+                self.assertEqual((cell / "session.txt").read_text().strip(), "old")
+                self.assertEqual(self.hist.read_text(), before)
+                self.assertFalse((self.stack / "history_removed.jsonl").exists())
+                self.assertFalse((cell / "turns.jsonl").exists())
+                self.assertTrue((cell / "busy.txt").exists())    # the main thread is still answering
+                self.assertFalse((cell / "transcripts" / "codex-child.jsonl").exists())
+                shutil.rmtree(cell)
+                shutil.rmtree(self.tmp / "codex-home")
+
+    def test_codex_subagent_thread_before_the_first_turn_is_not_recorded(self):
+        cell = self.codex_cell({"main": 0})
+        (cell / "session.txt").unlink()
+        self.rollout("child").write_text(self.sub_meta("main") + '{"type": "event_msg", "payload": {"type": "task_complete"}}\n')
+        self.notify(cell, "child", "sub-agent done")
+        self.assertFalse((cell / "session.txt").exists())
+        self.notify(cell, "main", "ok")
+        self.assertEqual((cell / "session.txt").read_text().strip(), "main")
+
 
 if __name__ == "__main__":
     unittest.main()

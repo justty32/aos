@@ -23,8 +23,8 @@
 | [`jsonx_multi_set/`](../../../../../proto8/lib/aos/jsonx_multi_set/) | jsonx_set 的一次多格：逐格照 jsonx_set 做（照順序、不回滾；值來源每格各自、其他選項整批一個），一格一行「路徑 TAB 結果」；有格失敗＝最後一行 PlacesFailed、退 1 |
 | [`jsonx_search/`](../../../../../proto8/lib/aos/jsonx_search/) | json_search 加料版：follow 穿過 $ref、resolve 在解開 $ref／$env 後的值裡找（都預設關；這兩個不能配 up） |
 | [`jsonx_set/`](../../../../../proto8/lib/aos/jsonx_set/) | json_set 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關） |
-| [`judge/`](../../../../../proto8/lib/aos/judge/) | 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false；選填排隊窗 queue.json 先來先掛、keep_ordered 對照代回有序信 |
-| [`judge/tests/test_judge.py`](../../../../../proto8/lib/aos/judge/tests/test_judge.py) | Verify broken reply recovery and restart deduplication with real aos-post mailboxes. |
+| [`kernel/`](../../../../../proto8/lib/aos/kernel/) | 通用 kernel 的站：讀參數與環境，把掛 proc 那一包交給骨架做一輪。 |
+| [`kernel/tests/test_kernel.py`](../../../../../proto8/lib/aos/kernel/tests/test_kernel.py) | 用真的 aos-post 信箱驗證框架站的轉寄、代回與重起防重。 |
 | [`llm_forward/`](../../../../../proto8/lib/aos/llm_forward/) | Forward one endpoint request to the kernel named by its pack. |
 | [`llm_forward/tests/test_forward.py`](../../../../../proto8/lib/aos/llm_forward/tests/test_forward.py) | Verify exact forwarding of subprocess streams and status, pack errors, and child accounting. |
 | [`measure/`](../../../../../proto8/lib/aos/measure/) | Measure isolated cases, costs and repeat consistency as JSON. |
