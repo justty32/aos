@@ -93,7 +93,7 @@ def reconcile():
     """對帳：名字與 stack 都對得上表上那列的才算還在；不在的忘掉（寫回）。回 (還在的, 忘掉的名字, 表)。"""
     kids = load_json(book_path, [])
     if not isinstance(kids, list) or not all(isinstance(k, dict) and isinstance(k.get("name"), str) for k in kids):
-        die("ReadFailed", "%s is not a JSON array of {name, stack}" % book_path)
+        die("ReadFailed", "%s is not a JSON array of {name, stack}" % tool_io.place(book_path))
     rows = json.loads(cmd.agent(["ctl", "ls", "--json"]) or "[]")
     rows = [r for r in rows if isinstance(r, dict) and isinstance(r.get("stack"), str)] if isinstance(rows, list) else []
     on_table = {(r.get("name"), os.path.normpath(r["stack"])) for r in rows}

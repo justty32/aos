@@ -105,6 +105,18 @@ class Subagent(unittest.TestCase):
     def record(self):
         return json.loads((self.cell / "subagents.json").read_text())
 
+    def test_broken_record_names_a_path_the_caller_can_open(self):
+        """11-13 fx-2：帳壞掉的錯誤行印叫方照自己的 $AOS_STACK 找得到的路徑（aos-tools call 給 AOS_STACK_IN_CALLER），不印絕對路徑；
+        直接被叫（沒給那個變數）＝從自己小格算。"""
+        (self.cell / "subagents.json").write_text('{"not": "a list"}')
+        r = self.run_tool({"op": "ls"}, AOS_STACK_IN_CALLER="tools/" + NAME)
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertEqual(r.stdout.strip(), "%s: error: ReadFailed $AOS_STACK/tools/%s/subagents.json is not a JSON array of {name, stack}" % (NAME, NAME))
+        self.assertTrue((self.mom / "tools" / NAME / "subagents.json").is_file())
+        self.assertNotIn(str(self.tmp), r.stdout + r.stderr)
+        r = self.run_tool({"op": "ls"})
+        self.assertEqual(r.stdout.strip(), "%s: error: ReadFailed $AOS_STACK/subagents.json is not a JSON array of {name, stack}" % NAME)
+
     def test_add_records_and_argv(self):
         out = self.ok({"op": "add", "def": "defs/helper", "name": "kid", "ws": "kid", "limits": {"mem_mb": 64}, "timeout_s": 5})
         self.assertIn("added kid (stack %s); subagents 1/4" % (self.daemon / "procs" / "kid"), out)

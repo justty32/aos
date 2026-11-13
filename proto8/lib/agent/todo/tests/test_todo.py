@@ -183,6 +183,27 @@ class TodoTool(unittest.TestCase):
         self.assertEqual([x["text"] for x in json.loads((stack / "tools" / "todo" / "todo.json").read_text())["items"]],
                          ["first", "second"])
 
+    def test_error_through_aos_tools_names_a_path_the_caller_can_open(self):
+        """11-13 fx-2：經 aos-tools 叫時錯誤行裡的存檔路徑要從叫方（腦）的 stack 算——照字面把 $AOS_STACK 換成叫方的 stack 找得到那個檔；
+        原本印小格裡的 $AOS_STACK/todo.json，腦在自己的 stack 找不到。不印絕對路徑。"""
+        if not (shutil.which("aos-tools") and shutil.which("aos-exec")):
+            self.skipTest("aos-tools / aos-exec not on PATH (put them there with proto8/install.sh)")
+        reg = self.tmp / "tools.json"
+        reg.write_text(json.dumps({"tools": {"todo": {"path": str(TOOL.parent)}}}))
+        stack = self.tmp / "agent"
+        self.cell.mkdir(parents=True)
+        self.file.write_text("{not json")
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        env.update(AOS_STACK=str(stack), PYTHONDONTWRITEBYTECODE="1")
+        r = subprocess.run(["aos-tools", "--file", str(reg), "call", "todo", json.dumps({"op": "ls"})], capture_output=True,
+                           text=True, env=env, cwd=str(self.tmp), timeout=60)
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        line = r.stdout.strip()
+        self.assertTrue(line.startswith("todo: error: ListBad the saved list $AOS_STACK/tools/todo/todo.json is not JSON"), line)
+        shown = line.split("the saved list ", 1)[1].split(" ", 1)[0]
+        self.assertTrue(Path(shown.replace("$AOS_STACK", str(stack), 1)).is_file(), shown)   # 叫方照字面找得到
+        self.assertNotIn(str(self.tmp), r.stdout + r.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
