@@ -2,7 +2,7 @@
 
 ← [proto8](../README.md)｜原話與拍板：[thinking/ideas](../thinking/2026-10/19/ideas/README.md)｜跟 proto8 原則相撞的七條，使用者已全部裁定：[ideas § 9](../thinking/2026-10/19/ideas/README.md)｜proto8 原則：[CONCEPTS](CONCEPTS.md)、[NORMS](NORMS.md)｜程式：[impls](../impls/README.md)（C++ 是唯一實作；aos-clock 等 Python 工具在 [cmd](../cmd/README.md)）、[templates](../templates/README.md)
 
-**aos 本身只保證六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`；§ 19）和一支 `aos-exec`**（使用者 § 4；已升成規範 [N-57～N-62](NORMS/10-基礎設施-定義與工作區.md)）。其餘全是慣例（P-05～P-48，P-46 空號）：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**agent-bob 現在的樣子就是標準，stack 裡面自由**（拍板點 1）。拍板點 1 指的 agent-bob 已刪，現行範本是走 queue 的 [templates/agent-fsm](../templates/README.md#agent-fsm)（P-27）；條文換不換成 agent-fsm 由使用者定。
+**aos 本身只保證六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`；§ 19）和一支 `aos-exec`**（使用者 § 4；已升成規範 [N-57～N-62](NORMS/10-基礎設施-定義與工作區.md)）。其餘全是慣例（P-05～P-48，P-46 空號）：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**標準＝[templates/agent-fsm](../templates/README.md#agent-fsm) 現在的樣子（走 queue；佈局見第二節、P-27），stack 裡面自由**（拍板點 1；拿 agent-fsm 當標準＝使用者 11-13「t2d-U1:A」，[裁定落地-1113](../thinking/2026-11/13/裁定落地-1113.md)）。
 
 每條後面括號是依據：§ 幾＝[ideas](../thinking/2026-10/19/ideas/README.md) 裡使用者原話的段號；拍板點 1～3＝ideas § 8；C-xx／N-xx＝proto8 的概念與規範；引不到的、這份自己定的，標「本稿定」。
 
@@ -13,7 +13,7 @@
 - loop.json 與 fsm 格要跑的東西都叫 `exec`（使用者：「fsm.json，現在是用val，幫我改成exec」；「exec，loop／daemon 的 run 也一起改 exec」）。
 - fsm 不寫 trace（使用者 11-03「整個拿掉」，[thinking 11-03 trace](../thinking/2026-11/03/trace.md)，N-39）。時間點＝C-54 命名方法 R6「時間點＝`<發生了什麼>_at`」（使用者 10-25「state.json中，runs改counter，at改成recorded_at」，回頂層兩題「都好」，頂層代定、可翻案）；其他 JSON 的命名見 [NORMS.md](NORMS.md)。
 - 指示詞的檔內位置只認 `#/`。計數說「次」（使用者「我們都是說"次"」）。
-- 純文字檔帶 `.txt`（fsm 的 `stage.txt`、daemon 小格的 `stderr.txt`、demo 的 `current.txt`／`plan.txt`、P-13 的 `prompt.txt`／`answer.txt`）；`AOS_STACK` 預設 `$AOS_WS/.stack/`；題目資料夾 `new/`（認領搬 `cur/`、做完 `done/`，答案 `out/`）；新 agent 的輸入是 `$AOS_STACK/queue/`，題目資料夾是舊協議（P-11、P-42）。
+- 純文字檔帶 `.txt`（fsm 的 `stage.txt`、daemon 小格的 `stderr.txt`、agent-fsm 的 `system.txt`／`think/pending.txt`／`mailbox_warning.txt`、P-13 的 `prompt.txt`／`answer.txt`）；`AOS_STACK` 預設 `$AOS_WS/.stack/`；題目資料夾 `new/`（認領搬 `cur/`、做完 `done/`，答案 `out/`）；新 agent 的輸入是 `$AOS_STACK/queue/`，題目資料夾是舊協議（P-11、P-42）。
 - 入口預設名 `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者「改。然後_開頭=附註這個概念刪掉。」，原話裡的 `_exec` 照留）；不認得的 key 一律忽略（「不認得的key就是忽略」，C-48），`_` 開頭沒有特別意思。
 
 **腦的工具呼叫**＝**P-41**（第七節；[thinking 2026-10-23-tool-calls](../thinking/2026-10/23/tool-calls/README.md)，使用者「litellm我開了，去做吧。」「盡量都用gpt的」）：工具資料夾裡的 `_tooldef.json`（清單由 agent 資料夾的 `tools.json` 登記，[aos-tools](../cmd/README.md)）給模型看、`arguments` 從 stdin 進、stdout 出、對話落在 `$AOS_STACK/history.jsonl`、四格 idle → think → wait → act、錯怎麼報都寫在 P-41。
