@@ -143,6 +143,18 @@ class Template(unittest.TestCase):
         self.assertEqual(sorted(t["name"] for t in rows), SUB_TOOLS)
         self.assertEqual([t["name"] for t in rows if (t.get("metainfo") or {}).get("side_effect") is not False], [])
 
+    @unittest.skipUnless(shutil.which("aos-tools"), "aos-tools not on PATH")
+    def test_main_registries_have_jsonx_sub_does_not(self):
+        """11-13 使用者裁 eca-1「A」：agent-fsm、eca-claude 的 tools.json 疊 jsonx 整包（8 支）；子 agent 的 tools_sub.json 不掛。"""
+        env = dict(os.environ, AOS_HOME=str(LIB.parent))
+        jsonx = sorted(json.loads((LIB / "packs" / "jsonx.json").read_text())["tools"])
+        self.assertEqual(len(jsonx), 8)
+        for f, want in ((TEMPLATE / "tools.json", jsonx), (LIB.parent / "templates" / "agent-fsm" / "tools.json", jsonx),
+                        (TEMPLATE / "tools_sub.json", [])):
+            r = subprocess.run(["aos-tools", "--file", str(f), "ls", "--json"], capture_output=True, text=True, env=env, timeout=120)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(sorted(t["name"] for t in json.loads(r.stdout) if t["name"].startswith("jsonx_")), want, f)
+
 
 if __name__ == "__main__":
     unittest.main()

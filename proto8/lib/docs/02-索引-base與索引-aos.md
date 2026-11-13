@@ -2,7 +2,7 @@
 
 ## 索引：base
 
-**分包與路徑**（tool-packs）：前 15 支通用工具分四包，清單在 [lib/packs](../packs/README.md)——1 看（read、ls、view、stat、grep、glob）、2 改（write、edit、copy、move、mkdir）、3 刪（trash、remove）、4 殼（shell、run_python）；JSON 九支另成 json 包（下表 json_get～json_multi_set；同一族的複雜組 jsonx_* 在「索引：aos」，包 jsonx 範本不掛；[json-tools](../../thinking/2026-11/12/json-tools/README.md)）；另有小工具包 gadgets（peek_clock、peek_now_time、math，不改任何東西、隨手看一下；另含 agent 工具 do_task（save／load、只給 agent-fsm））。agent 工具也分包（事件、自我管理、子 agent、定義、信箱、記憶），一覽見 [lib/packs](../packs/README.md)。檔案工具的路徑相對從 `$AOS_WS` 算、絕對照用，**不擋工作區外**（使用者「這些就是/usr/bin的包裝」「3.對」），能不能動看 Linux 權限；相對路徑又沒有 `$AOS_WS`＝`WsMissing`。
+**分包與路徑**（tool-packs）：前 15 支通用工具分四包，清單在 [lib/packs](../packs/README.md)——1 看（read、ls、view、stat、grep、glob）、2 改（write、edit、copy、move、mkdir）、3 刪（trash、remove）、4 殼（shell、run_python）；JSON 九支另成 json 包（下表 json_get～json_multi_set；同一族的複雜組 jsonx_* 在「索引：aos」，包 jsonx，agent-fsm、eca-claude 範本都掛；[json-tools](../../thinking/2026-11/12/json-tools/README.md)）；另有小工具包 gadgets（peek_clock、peek_now_time、math，不改任何東西、隨手看一下；另含 agent 工具 do_task（save／load、只給 agent-fsm））。agent 工具也分包（事件、自我管理、子 agent、定義、信箱、記憶），一覽見 [lib/packs](../packs/README.md)。檔案工具的路徑相對從 `$AOS_WS` 算、絕對照用，**不擋工作區外**（使用者「這些就是/usr/bin的包裝」「3.對」），能不能動看 Linux 權限；相對路徑又沒有 `$AOS_WS`＝`WsMissing`。
 
 回 JSON 的工具裡，計數（幾個、幾行、幾字）的 key 一律 `counter_<被數的東西>`（10-25 使用者「計數這塊，幫我改成counter_*」，C-54 命名方法 R6）；陣列本身（`items`、`keys` 清單）不加。
 
@@ -58,7 +58,7 @@
 | [shell_report](../aos/shell_report/README.md) | 讀公開 shell 帳、依有效工具推權限階段並歸納指令形狀 | `stacks`，選填 `defs` | JSON：`reports`，列出階段、任意執行工具、執行檔與形狀 |
 | [box_check](../aos/box_check/README.md) | 比對關箱考題的逃脫嘗試與主機殘留 | `expect`、`got`、`input` | 比對器 JSON：`score`、`diff`、`why` |
 | [defs](../aos/defs/README.md) | 搜尋定義、比三軸、查靜態引用與宣告完整性 | `op`、`root`，選填 `match`、`def` | JSON：`defs`／`groups`／`refs`／`problems`；含 specialize／retire 處方 |
-| [jsonx_get](../aos/jsonx_get/) | json 工具一族的複雜組（包 jsonx，範本不掛；給用 `$ref`／`$env` 的 aos 設定檔）：同 json_get，多穿過 `$ref`、解開指示詞；選項預設全關。程式同 [aos_json.py](../aos_json.py)；aos-json 的 stderr 原樣透到 stderr，它退 1 時接它錯誤行的代號與原因，沒那行＝`CommandFailed`；起不來＝`LaunchFailed`。PATH 要有 aos-json（`resolve` 的值另要 aos-directive） | `path`、`follow`、`resolve`、`max_bytes`、`full` | 同 json_get |
+| [jsonx_get](../aos/jsonx_get/) | json 工具一族的複雜組（包 jsonx，agent-fsm、eca-claude 範本都掛；給用 `$ref`／`$env` 的 aos 設定檔）：同 json_get，多穿過 `$ref`、解開指示詞；選項預設全關。程式同 [aos_json.py](../aos_json.py)；aos-json 的 stderr 原樣透到 stderr，它退 1 時接它錯誤行的代號與原因，沒那行＝`CommandFailed`；起不來＝`LaunchFailed`。PATH 要有 aos-json（`resolve` 的值另要 aos-directive） | `path`、`follow`、`resolve`、`max_bytes`、`full` | 同 json_get |
 | [jsonx_set](../aos/jsonx_set/) | 同 json_set，值從 `value`／`text`（當 JSON 解，壞＝`TextBad`）／`from`（另一格 `檔#/指標`）剛好一個；`resolve` 先解指示詞再存；`follow` 穿過 `$ref` 改被參照的檔（沒給＝路上有指示詞就 `FollowMissing`）；`check` 多出問題就不寫（`CheckFailed`） | `path`、`value`／`text`／`from`、`parents`、`resolve`、`follow`、`check` | `ok 檔#/指標` |
 | [jsonx_add](../aos/jsonx_add/) | 同 json_add，選項同 jsonx_set | 同 jsonx_set | `ok 檔#/指標`；已有＝`KeyExists` |
 | [jsonx_ls](../aos/jsonx_ls/) | 同 json_ls，多 `follow`（路上穿過 `$ref`）、`resolve`（列解開後的值，例 tools.json 疊完的工具表） | `path`、`follow`、`resolve`、`long`、`depth`、`offset`、`limit` | 同 json_ls |

@@ -16,7 +16,7 @@
 | 包 | 檔 | 工具 |
 |---|---|---|
 | json（簡單組） | [json.json](json.json) | json_get、json_ls、json_search、json_len、json_set、json_add、json_del，一次多格的 json_multi_get、json_multi_set——路徑一整串 `檔#/指標`、值照字面、`$ref`／`$env` 當普通物件；agent-fsm、eca-claude 兩個範本都掛 |
-| jsonx（複雜組） | [jsonx.json](jsonx.json) | jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del，一次多格的 jsonx_multi_get、jsonx_multi_set——多 `follow`、`resolve`、`text`、`from`、`check`；**範本都不掛**，要的定義在自己 `tools.json` 的 `$override` 多一行 |
+| jsonx（複雜組） | [jsonx.json](jsonx.json) | jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del，一次多格的 jsonx_multi_get、jsonx_multi_set——多 `follow`、`resolve`、`text`、`from`、`check`；agent-fsm、eca-claude 兩個範本都掛（使用者 11-13「eca-1:A*」＝範本掛 jsonx，[eca-tidy-review](../../thinking/2026-11/12/eca-tidy-review.md)；eca 子 agent 的唯讀精簡組 `tools_sub.json` 不掛） |
 
 十七支的程式都在 [`lib/aos_json.py`](../aos_json.py)（multi 四支在 [`lib/aos_json_multi.py`](../aos_json_multi.py)），各夾只是殼；圖紙 [01-規劃](../../thinking/2026-11/12/json-tools/01-規劃.md)。
 

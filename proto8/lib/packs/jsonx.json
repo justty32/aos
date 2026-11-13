@@ -1,4 +1,4 @@
-{"description": "Pack jsonx: JSON tools for aos configuration files that use $ref/$env - jsonx_get, jsonx_ls, jsonx_search, jsonx_set, jsonx_add, jsonx_del, jsonx_multi_get, jsonx_multi_set (follow, resolve, text, from, check options). Not in the templates by default.",
+{"description": "Pack jsonx: JSON tools for aos configuration files that use $ref/$env - jsonx_get, jsonx_ls, jsonx_search, jsonx_set, jsonx_add, jsonx_del, jsonx_multi_get, jsonx_multi_set (follow, resolve, text, from, check options). The agent-fsm and eca-claude templates stack it (the eca subagent set tools_sub.json does not).",
  "tools": {
            "jsonx_get": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/jsonx_get"}},
            "jsonx_ls": {"path": {"$env": "AOS_HOME", "$path": "/lib/aos/jsonx_ls"}},

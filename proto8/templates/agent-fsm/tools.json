@@ -11,4 +11,5 @@
                {"$env": "AOS_HOME", "$path": "/lib/packs/mailbox.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/goal.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/json.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/jsonx.json"},
                {"$env": "AOS_HOME", "$path": "/lib/packs/index.json"}]}
