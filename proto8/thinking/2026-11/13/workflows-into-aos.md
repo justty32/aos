@@ -281,6 +281,55 @@
 - **檢查工具**：（寫這段時題 6 (a) 還沒確認；14:53 已裁，見上——模板那套不帶進來。）
 - **wf-agent 之後的角色**：從「模板 repo 的維護者」變成「把內容搬進 aos 的那隻」——它最清楚哪些檔是流程、哪些是知識、哪些綁 aos。它的工作區現在是舊 repo；搬的過程要改 aos repo 的檔，照規矩得有領地（[CLAIMS](../../../../wf/workflows/dispatch/CLAIMS.md)）或由它備料、repo-aos 這邊的線落檔。搬完之後這隻留不留、改管什麼，是使用者的題。它原本的 v0.7 回寫計畫（模板出廠公共 index、開 aos flavor）在「repo 幾乎不再更新」之下不必做了，要跟它講。
 
+## 搬遷紀錄
+
+每併一塊加一列。來源路徑都是模板 repo（`/mnt/c/code/mine/workflows`）裡的路徑；模板 repo 只讀、沒動。
+
+| 塊 | 來源（模板 repo） | 來源 commit | 進了 aos 哪裡 | 沒帶的與原因 | 舊 repo 那邊請 wf-agent 標「已搬走」的 |
+|---|---|---|---|---|---|
+| 1 組織原則（11-13，線玄） | `wf/knowledge/structure.json` 與它 `$ref` 的 `wf/knowledge/structure/` 四份（`layers`、`nodes`、`tidying`、`repo`） | `7db19654b2bf0a21c8a940cdab9d442d7ae509d0` | 知識庫新的一庫 `proto8/knowledge/wf/`：`_description.json`、`layers.json`、`nodes.json`、`tidying.json`、`source.json`（逐段對照在 `source.json#/carried`） | 見下面清單（同一份在 `source.json#/not_carried`） | `structure.json` 的 `layers`、`skills_vs_memory`、`index_convention`（私有 index 那半）、`names`（wf 多出來的約定那半）、`workflow_form`、`growth`、`split`、`split_method`、`archive`，以及 `structure/layers.json#/logs` |
+
+**放哪與為什麼（第 1 塊）**：開新的一庫 `knowledge/wf/`，不併進 `knowledge/docs/`。
+
+- `knowledge/_description.json` 寫的是「one folder per subject」；`docs/` 是給人看的 md、講「這棵樹怎麼寫」，`aos/` 講 aos 體系。這塊講的是「工作區的工作文檔怎麼組織」，是另一個題目。
+- 內文留繁體中文：[docs/02](../../../knowledge/docs/02-寫入與節點怎麼寫.md) 的範圍條寫「內容語言英文」管的是出廠的 `knowledge/aos`，從外部收進來的庫節點名英文、內文照原文。
+- 同一件事只留一個出處：`_index`／`_description`／統一路徑／`$ref`／一段文字的寫法／大小數字，這一庫都只寫「見 docs/01、02」，不重講。
+- 形狀：五個東西，沒到 15 項，不放 `_index.json`；每檔一個物件、`_description` 加幾個鍵，多行文字用字串陣列；每檔都小於 8000 bytes。
+- 連帶動的指標：`proto8/knowledge/_description.json` 加一句、`proto8/knowledge/README.md` 的資料夾表加一列。`docs/01`、`docs/02` 沒動。
+
+**第 1 塊沒帶的**：
+
+| 沒帶的 | 原因 |
+|---|---|
+| `node_shape`（節點怎麼寫）整段 | 字串或字串陣列、`$ref` 的寫法 docs 已有；其餘三處見下面「牴觸」 |
+| `md_for_humans`（內容一律走 json、只留四個 md） | aos 這邊「哪些檔留 md」還在等使用者裁（[wait-user/01](../../../../wf/wait-user/01-要你裁的.md) C-42 那條）；又指到模板的 `wf-view` |
+| 「路由線三層不管幾項一律建 index」 | 使用者 11-13 題 9：「不用」 |
+| 「程式碼單檔 > 300 行、給人看的 md > 300 行」 | 見「牴觸」 |
+| 「description 維持一句字串（`index_view` 還不認陣列形）」 | 過時，docs/01 已寫字串陣列也認 |
+| 「`index_check.py` 會驗引用」與 `wf-view.py` | 使用者 11-13：「檢查工具，wf/的那邊就完全不留」 |
+| index 條目的 `source`、筆記的 `title`／`date` | `source` 是給模板升級對照用的，模板幾乎不再更新；額外鍵本身 docs/01 已允許 |
+| `data_files`（`wf-table/1`、tabledb、> 1 KB 抽資料檔） | 綁模板的 md 形態與它的工具，等搬到那塊再說 |
+| `repo.json`（repo 佈局、試點註記） | 講的是模板 repo 自己 |
+| 8 KB 硬上限 | 改寫成使用者 11-13 的說法（推薦、只限 `.md`、只限拆檔工作流），寫在 `tidying.json#/split` |
+
+**牴觸（兩邊說法不同，線玄沒裁、沒帶進來，留給調度者或使用者）**：
+
+1. 「同質記錄一律寫物件陣列」（模板）對 docs/02「要穩定的名字就用物件、不用陣列——別人會用路徑指到的東西放成物件的鍵」。記錄表會不會被人用路徑指到，決定哪句適用。
+2. 「字串陣列有兩種合法用法：清單、一段多行文字」（模板）對 docs/02「字串陣列＝用換行接起來的一段」。題 8 裁了不定判斷規則；但模板的 `done_when`「是字串陣列、一條一個條件」這個用法帶進來了（`nodes.json#/workflow_form` 只寫「每條」），照 docs/02 讀成「一段、一行一條」也說得通。
+3. 「程式碼單檔 > 300 行、給人看的 md > 300 行」（模板，aos 的 `wf/STRUCTURE.md` 也有同一句）對使用者 10-09「原型開發階段不設核心行數上限」。
+4. 檔案格式「UTF-8、LF、縮排 1 格、非 ASCII 不轉義、結尾換行」（模板）：docs/01、02 沒有對應條文。aos 現有的 knowledge 檔實際就是這個格式，只是沒寫成規定。
+5. index 的 description「寫繁中『是什麼＋何時讀』」（模板）對 docs/01「英文一句話，說那個節點是什麼」。語言那半有 docs/02 的範圍條可以解釋（英文管的是 `knowledge/aos`）；「＋何時讀」是 docs 沒有的要求，帶進來了（`nodes.json#/names`），只當工作區 `wf/` 的約定。
+6. 「節點之間的引用寫從 repo 根算的統一路徑、放反引號」（模板，帶進來了）：docs/01 只規定 `index` 與 `$ref` 欄位的相對路徑怎麼算，沒規定文字裡的引用怎麼寫；不算牴觸，但 aos 沒有工具會驗這種引用。
+
+**趕不上今天的重抄**：`knowledge` 在停樹重抄的五夾裡，但今天 15:08 就釘 commit，這一塊在那之後才進 main，今天 15:30 的重抄不會帶到；活樹的 agent 要等**下一次**重抄才讀得到 `knowledge/wf/`。在那之前只有 repo 裡有。
+
+**下一塊建議併什麼**【意見】（照「小、不依賴別的檔、併完就有人讀得到」排）：
+
+1. `wf/knowledge/workflow-template.json`（工作流節點的範本，2.8 KB）——`nodes.json#/workflow_form` 現在只列了固定鍵，範本本體還沒來。
+2. tidy 那一組（`wf/workflows/tidy.json`、`tidy/` 子檔、`tidy-manager-brief.json`、內容精簡的判準）——使用者說 8 KB「只限於這個工作流」，這個工作流本身還沒進來；要先對 aos 現有的 [wf/workflows/tidy](../../../../wf/workflows/tidy/README.md)，兩邊是同一套的新舊版。
+3. 其餘工作流節點（`wf/workflows/*.json`）一個一個來；每個先跟 aos `wf/workflows/` 的同名工作流對一次，aos 這邊客製多的以 aos 為準。
+4. 最後才是骨架與 `wf-init`（`template/`、`flavors/`、`tools/`）——要先定放 repo 哪個夾（五夾之外）。
+
 ## 給 wf-agent 的回信草稿（已寄 14:46，由調度者寄；寄出時還沒有上面的裁定）
 
 > STATUS：DONE

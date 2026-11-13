@@ -1,0 +1,47 @@
+{
+ "_description": "分層與歸屬：東西該放哪一層、流程（skills）與知識（memory）怎麼分、私有 index、日誌寫法。文中的 `wf/…`、`AGENTS.md` 都是工作區裡的路徑。",
+ "layers": [
+  "# 分層原則",
+  "",
+  "1. **分層樹**：工作區的工作文檔是一棵樹，每層**只指向下一層、不存下層細節**：",
+  "   ```",
+  "   AGENTS.md（最頂，薄 md 路由器）→ wf/_index.json（wf 這層的 index）",
+  "     → wf/workflows/_index.json（依意圖派發）／wf/knowledge/_index.json（查知識）",
+  "     → 節點（<名稱>.json）→ 節點內的段／$ref 子檔…",
+  "   ```",
+  "   往下走才找細節；下層節點**不向上連 AGENTS.md**。",
+  "2. **durable 知識歸層**：每份長期知識歸到它所屬的那個工作流／那一層，**絕不往上堆**——AGENTS.md 因此永遠很薄。",
+  "3. **活狀態只列 open**：進度記 `wf/SESSION-LOG.md`、等使用者的記 `wf/WAIT_USER.md`，**完成即刪**；「改了什麼」交給 git log，決定記進 `wf/knowledge/` 的決策記錄；檔內只留現行結論。兩者膨脹就分別拆 `session_logs/`／`wait-user/`，hub 只留導航表；日誌寫法見本檔 `#/logs`。",
+  "4. **鐵律極少而 always-on**：3–5 條任何時刻都適用的規矩常駐 AGENTS.md，其餘一切按需取用。"
+ ],
+ "skills_vs_memory": [
+  "# skills 與 memory 分家",
+  "",
+  "- 工作區的 `wf/workflows/`＝**skills**：做事的流程，一個工作流一個節點（何時用／何時不用／done_when／步驟／交接）。",
+  "- 工作區的 `wf/knowledge/`＝**memory**：純知識與記錄（使用者偏好、慣例、code map、決策、踩坑、想法、驗證表、環境事實、調查筆記）。",
+  "",
+  "**判準一句話**：照著它**做事**的進 `workflows/`；拿來**查**、或做事時往裡**記**的進 `knowledge/`。",
+  "",
+  "舊檔常是「流程外殼包著一張記錄表或參考知識」：流程留在工作流節點，記錄與知識進 `knowledge/`，工作流用統一路徑指過去、不重抄。例：`wf/workflows/decisions.json` 只寫何時記、怎麼記，記錄在 `wf/knowledge/decisions.json#/records`。",
+  "",
+  "planning 的 **spec／plan** 是記錄，進 `knowledge/`：放 `wf/knowledge/specs/`、`wf/knowledge/plans/`（第一份出現時才建資料夾；動工完成後移各自的 `archive/`）。流程本身在工作流節點。",
+  "",
+  "analysis 的**分析產物**也是記錄：放 `wf/knowledge/analysis/<project>/`（用到才建）。"
+ ],
+ "private_index": [
+  "# 私有 index",
+  "",
+  "寫進 repo 的 `_index.json`／`_index` 是公共 index（通用視角），規則在 knowledge 的 `docs/01`。",
+  "",
+  "agent 自己的看法（主觀、cache）可以放一份**私有 index** `wf/_index.local.json`：不進版控（gitignore）、用到才建、不給別人當依據。看的時候用 `index_view` 的 `index` 參數把它疊在公共那份上，同名項以疊上去的為準。"
+ ],
+ "logs": [
+  "# 日誌寫法",
+  "",
+  "工作區若記日誌（`session_logs/`，`wf/SESSION-LOG.md` 膨脹拆出來的那種），它只記「哪天做了什麼」，**不是第二份知識庫**：",
+  "",
+  "- **每日檔少寫**：`session_logs/<月>/<日期>` 每條一行「動了哪些檔／做了什麼」＋指到結論所在處。結論寫進它自己的節點，日誌只指過去；沒有別的家可放的（代定清單、當天交接）才寫在日誌裡。",
+  "- **總目錄**每天一條，寫一句「這天定下了什麼」（結論），不列做了哪些事；指到該日檔，已收月摘要的指月摘要的該日段。",
+  "- **月摘要**：月結後把該月每日檔濃縮成一份：每天一段，只留結論（別處已有就指過去）與使用者原文。被指過的舊錨點／鍵在月摘要保留同名。每日原檔照 `wf/tidying.json#/archive`（本庫）封存，活文件裡指向它的路徑改指月摘要同名段。"
+ ]
+}
