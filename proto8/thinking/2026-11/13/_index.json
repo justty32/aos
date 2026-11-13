@@ -86,6 +86,12 @@
  "fixes-施工結果.md": {
   "description": "線庚施工結果（11-13）：eca_main 第 7、6、3、1 項與外部 MCP 實測三題都修了、各一個 commit，set-def 做了但 daemon 有一個缺口；全套測試只紅既有的"
  },
+ "gpt-fsm-team": {
+  "description": "分檔夾：gpt 實作隊改走 aos 的 agent-fsm（線隊 11-13 晚設計，未施工）：Claude 隊長起一隻 astra 指揮、astra 用 subagent 開 sol 照工單寫碼；兩份新定義拿掉 self／def／events 包、shell 進 bwrap 沙箱、before_tool 守門 hook 管寫入與 astra 對 sol 的操作；gpt 隊不 commit、不改…"
+ },
+ "gpt-fsm-team.md": {
+  "description": "gpt 實作隊改走 aos 的 agent-fsm（線隊 11-13 晚設計，未施工）：Claude 隊長起一隻 astra 指揮、astra 用 subagent 開 sol 照工單寫碼；兩份新定義拿掉 self／def／events 包、shell 進 bwrap 沙箱、before_tool 守門 hook 管寫入與 astra 對 sol 的操作；gpt 隊不 commit、不改設計，做…"
+ },
  "index-build.md": {
   "description": "把 repo 的 index 建好建滿：照 11-12 的門檻，東西超過 15 個的資料夾各一份生成的 `_index.json`（11-13 公司；先每層都鋪、使用者裁照門檻後收回；文件區 25 份、程式區 8 份）"
  },
