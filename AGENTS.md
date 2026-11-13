@@ -11,7 +11,7 @@ aos = **「資料夾＝程式」的 AI agent 體系**，本體是 **[`proto8/`](
 1. **aos 體系**：讀知識庫入口 `~/aos-home/knowledge/aos/_description.json`（八個詞、五條規則）；其餘用 aos 工具 `index_view` 看 `~/aos-home/knowledge/aos`，一行一項「名 TAB 一句話」，要哪項再 `json_get`。
 2. **本 repo 的規矩**：把 `wf/` 當成一套公共知識庫，同樣用 `index_view` 往下走（`wf/…` 是 repo 根相對路徑；在樹裡的 `repo-aos`，aos 工具的相對路徑本來就從 repo 根算，知識庫那邊則寫絕對路徑）——`index_view wf/workflows` 看有哪些工作流與共用區；`common` 那格是使用者偏好與慣例所在（code map 11-13 搬到 `wf/knowledge/code-map.json`），`common/` 沒有自己的 index，直接讀 **`wf/workflows/common/user.md`**（這位使用者的偏好與確認邊界，每個 session 都要先讀）與 `common/conventions.md`（碰原始碼才讀）。沒有 `index_view` 的環境就照下面各條的連結讀。
 
-- 每個 session 先掃三軸：信（樹內 `mailbox_peek`、樹外 `ls wf/inbox/*.md`；有信先讀，見 [inbox](wf/workflows/inbox.json)）→ [wf/SESSION-LOG.md](wf/SESSION-LOG.md)（我的 open 進度）→ [wf/WAIT_USER.md](wf/WAIT_USER.md)（等使用者一句話的）。三份都只列 open，空就跳過。
+- 每個 session 先掃三軸：信（樹內 `mailbox_peek`、樹外 `ls wf/inbox/*.md`；有信先讀，見 [inbox](wf/workflows/inbox.json)）→ [wf/SESSION-LOG.md](wf/SESSION-LOG.md)（我的 open 進度）→ [wf/WAIT_USER.md](wf/WAIT_USER.md)（等使用者一句話的；11-13 晚起新題改寄使用者專區 `aos-user send`，舊條目照舊）。三份都只列 open，空就跳過。
 - **使用者要你動手做某件事** → **[wf/WORKFLOWS.md](wf/WORKFLOWS.md)**：依意圖派發到對應工作流，再讀該工作流入口。
 - **想看專案長怎樣** → **[wf/INDEX.md](wf/INDEX.md)**：repo 頂層結構地圖。
 - **碰原始碼前** → 慣例與 code map：[conventions](wf/workflows/common/conventions.md)、code map＝[`wf/knowledge/code-map.json`](wf/knowledge/code-map.json)（用 `json_get` 讀；哪個夾負責什麼、逐檔表在 `wf/knowledge/code-map/proto8/<頂層夾>.json` 的 `tree`，改東西之前先看）；環境與指令 → [dev-env](wf/workflows/dev-env.md)。
@@ -49,7 +49,7 @@ AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md / wf/INDEX.md → 各工作流
 事情告一段落、因應需求結束、或臨時中止時 → 把**還沒完成**的活狀態記到進度；需要**使用者親自做／驗證**的（實機環境、外部工具實跑、需權限／本機環境）→ 記到待使用者。兩者都**只列 open**，完成即移除、不留已完成清單。
 
 - **進度**（我自己的 open in-flight）→ [wf/SESSION-LOG.md](wf/SESSION-LOG.md)
-- **待使用者**（等使用者親自做／驗證）→ [wf/WAIT_USER.md](wf/WAIT_USER.md)
+- **待使用者**（等使用者親自做／驗證）→ 新題寄使用者專區（`aos-user send`／`user_send`，知識庫 `aos/user_zone.json`）；舊條目在 [wf/WAIT_USER.md](wf/WAIT_USER.md)
 - **日誌**（哪天做了什麼，不是知識庫）→ [wf/session_logs/](wf/session_logs/README.md)，寫法見 [user/02](wf/workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)
 - **信件**（agent 之間的訊息交換，像 email；同一棵 aos 樹裡走 aos 信箱；樹外專案的信放進 [`wf/inbox/`](wf/inbox/)）→ 使用方式見 [wf/workflows/inbox.json](wf/workflows/inbox.json)
 

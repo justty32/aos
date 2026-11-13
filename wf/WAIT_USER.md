@@ -13,6 +13,8 @@
 
 ## 待使用者項
 
+**11-13 晚起，新題寄使用者專區**（使用者裁 U11「段 2 做完起」，[user-zone-plan 08](../proto8/thinking/2026-11/13/user-zone-plan/08-段2施工.md)）：要使用者裁、驗、試、做的新事，有 shell 的用 `~/aos-home/ws/tools/aos-user/aos-user send`、只有 aos 工具的用 `user_send`，寄進 `~/.aos/user/`，回信回自己的信箱（樹內 session＝它在活樹裡那格的 `mailbox/`）；**不再加進下面的 `wait-user/`**。寫法看知識庫 `aos/user_zone.json`。下面四份是舊條目，照舊處理到清空；搬進專區的做法交線遷（[wf-into-aos-plan 第 8 項](../proto8/thinking/2026-11/13/wf-into-aos-plan.md)）。
+
 已照上面「膨脹就拆」分到 `wait-user/`，各類一份（封存的舊分類在 `common/archive/wait-user-2026-10-12/`，跟這裡不同夾）；新項加進對應那份、改這裡的數字。
 
 | 類別 | open | 清單 |
