@@ -12,7 +12,7 @@
 - 名冊、領地登記這種表格類活檔要**把規則段留在活檔**、只搬歷史條目；表格裡的「狀態」欄不可信，判準改用 `SESSION-LOG.md` 或明確給出的現役清單作證據，交接書要直接給出證據，否則線會「不敢猜」留一半。
 - 「不搬某個現役目錄」與「清指向 archive 的連結」會在同一批檔上打架；驗收命令只擋 rename／delete（`git diff --cached --name-status -M <dir>/ | grep -v '^M'`），不擋 modify。
 - 資料夾可能有 `.` 開頭的隱藏檔；用 `ls -A`，否則大小統計也可能漏掉。
-- 線報告的「需要裁示」清單要照 [WAIT_USER](../../WAIT_USER.md) 的格式落地，不能只留在回報裡。
+- 線報告的「需要裁示」清單要寄使用者專區（`aos-user send`，見 [common/user.md](../common/user.md)；舊條目在 [WAIT_USER](../../WAIT_USER.md)），不能只留在回報裡。
 
 ## 拆檔與資料檔
 

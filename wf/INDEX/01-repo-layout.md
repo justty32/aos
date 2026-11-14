@@ -2,7 +2,7 @@
 
 ## Repo 佈局
 
-本專案自己一個 git repo，remote 是 `git@github.com:justty32/aos.git`。**在兩台機器上開發**，checkout 路徑不同（家裡 Linux／WSL、公司 Windows），所以**文件裡一律用 repo 相對路徑，不要寫死絕對路徑**。「從 repo 根目錄」指的是有 `AGENTS.md` 的那一層（根上沒有 CMake）。
+本專案自己一個 git repo，remote 是 `git@github.com:justty32/aos.git`。**在兩台機器上開發**，家機 Manjaro、公司 WSL（Ubuntu），兩台 repo 都在 `~/repo/aos`；**文件裡一律用 repo 相對路徑，不要寫死絕對路徑**。「從 repo 根目錄」指的是有 `AGENTS.md` 的那一層（根上沒有 CMake）。
 
 | 路徑 | 內容 |
 |------|------|
@@ -12,7 +12,7 @@
 | `wf/` | **本工作流系統**（就是你現在在讀的這包）。入口見 [WORKFLOWS.md](../WORKFLOWS.md)；共享區 [workflows/common/](../workflows/common/README.md) |
 | `wf/inbox/` | agent 之間的**信件**收件匣：頂層＝未處理、`done/`＝已處理（樹外專案的放信處，保持乾淨；使用方式見 [workflows/inbox.json](../workflows/inbox.json)）|
 | `wf/tools/` | kernel 工具：`tabledb.py`（資料檔 CRUD／連結）、`find_big_lists.py`、`fix_moved_links.py`、`check_anchors.py`（inbox 收發腳本 11-13 刪掉，改走 aos 信箱，見 [inbox.json](../workflows/inbox.json)）；`compact_reload.sh`（compact 後 SessionStart hook 印 user.md＋[HANDOFF](../HANDOFF.md) 最新一條）。資料檔契約見 [common/data-files](../workflows/common/data-files.md) |
-| `wf/salvage/` | **`roadmap-run` 打撈包**（2026-08-29）：那條分支跑完 M0→M2 後被凍結、系統要重新架構，這裡是抽出來的教訓與已驗證結論——七篇，給「從零重寫這套系統的人」讀。入口見 [salvage/README](../salvage/README.md) |
+| `wf/salvage/` | **`roadmap-run` 打撈包**（2026-08-29）：那條分支跑完 M0→M2 後被凍結、系統要重新架構，這裡是抽出來的教訓與已驗證結論——六篇，給「從零重寫這套系統的人」讀。入口見 [salvage/README](../salvage/README.md) |
 | `.claude/` | `.claude/settings.json` 掛 SessionStart（`compact`）hook 跑 `wf/tools/compact_reload.sh`。**必須**放在 repo 根的 `.claude/`，不能收進 `wf/`，否則 Claude Code 讀不到 |
 | `README.md` | 給人讀的專案總覽 |
 

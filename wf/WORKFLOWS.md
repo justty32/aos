@@ -63,6 +63,6 @@ multi-agent flavor 的派發表在 [WORKFLOWS-parts/01-multi-agent-flavor.md](WO
 
 | 在等誰 | 記哪裡 |
 |--------|--------|
-| 等**使用者**做 / 驗證 / 決定 | [WAIT_USER.md](WAIT_USER.md) |
+| 等**使用者**做 / 驗證 / 決定 | 新題寄使用者專區（`aos-user send`，見 [common/user.md](workflows/common/user.md)）；舊條目在 [WAIT_USER.md](WAIT_USER.md) |
 | 等**同 repo 另一個 session / fork**、或我自己還沒做完的 | [SESSION-LOG.md](SESSION-LOG.md) 一行 open |
 | 等**別資料夾的 agent** | 信件軸：樹內走 aos 信箱，樹外專案的放信處 [`wf/inbox/`](inbox/)，使用方式 [workflows/inbox.json](workflows/inbox.json) |

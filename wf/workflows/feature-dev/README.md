@@ -11,7 +11,7 @@
 
 - [testing](../testing.md) 標「改完必跑」的建置指令回傳 0（build 得過）。
 - 新檔有檔頭一句話、職責變了的已改那一句，並跑過 `python3 wf/tools/index_gen.py --apply`（[code map](../../knowledge/code-map.json) 逐檔表與 `_index.json` 跟程式同一個 commit）。
-- 下表對應的文檔已補；要使用者實機驗證的在 [WAIT_USER](../../WAIT_USER.md) 有一行；跨 session 沒收尾的在 [SESSION-LOG](../../SESSION-LOG.md) 有一行。
+- 下表對應的文檔已補；要使用者實機驗證的已寄使用者專區（`aos-user send`，見 [common/user.md](../common/user.md)；舊條目在 [WAIT_USER](../../WAIT_USER.md)）；跨 session 沒收尾的在 [SESSION-LOG](../../SESSION-LOG.md) 有一行。
 
 ## 流程
 
@@ -23,8 +23,8 @@
   → 全數通過後：檔頭一句話＋index_gen.py --apply → 補文檔 → commit
 ```
 
-- **自動驗證是你（Claude）自己跑**的把關（鐵律：改完跑驗證）。
-- **Claude 跑不了的驗證一律由使用者做**——先靠自動驗證＋結構性檢查把握到極限再交付；需使用者驗證的記到 [WAIT_USER](../../WAIT_USER.md)（見 [testing](../testing.md) 的「誰跑」欄）。
+- **自動驗證是你（Claude）自己跑**的把關（現行只要求 build 得過，見 [testing](../testing.md)）。
+- **Claude 跑不了的驗證一律由使用者做**——先靠自動驗證＋結構性檢查把握到極限再交付；需使用者驗證的寄使用者專區（`aos-user send`；舊條目在 [WAIT_USER](../../WAIT_USER.md)）（見 [testing](../testing.md) 的「誰跑」欄）。
 - 測試迭代期間，code map / 文檔可暫時落後；**commit 前必須對齊**。
 - **「補文檔」要補哪幾份**，依改動的性質而定，不要漏：
 
@@ -54,4 +54,4 @@
 ## 交接
 
 - 驗證怎麼跑 → [testing](../testing.md)；改到一半發現該先整理結構 → [refactor](../refactor/README.md)。
-- 為什麼選這個做法 → [decisions](../decisions.json)（thinking 的決定）；卡在使用者 → [WAIT_USER](../../WAIT_USER.md)。
+- 為什麼選這個做法 → [decisions](../decisions.json)（thinking 的決定）；卡在使用者 → 新題寄使用者專區（`aos-user send`），舊條目在 [WAIT_USER](../../WAIT_USER.md)。

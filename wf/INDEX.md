@@ -26,7 +26,7 @@
 | [STRUCTURE.md](STRUCTURE.md) | 結構整理參考（被動）|
 | [SESSION-LOG.md](SESSION-LOG.md) | 我的 open 進度（hub）|
 | [session_logs/](session_logs/README.md) | 日誌：當月每日檔 `<月>/<日期>.md`、已結束月份的月摘要 `<月>.md`、總目錄（README，分月導航，每天一列在 `<月>/README.md`）|
-| [WAIT_USER.md](WAIT_USER.md) | 等使用者親自做 / 驗證 / 拍板的事（只列 open）|
+| [WAIT_USER.md](WAIT_USER.md) | 等使用者親自做 / 驗證 / 拍板的舊條目（只列 open）；新題寄使用者專區（`aos-user send`，見 [common/user.md](workflows/common/user.md)）|
 | [wait-user/](wait-user/) | WAIT_USER 的分類檔（要你裁的／真機驗證／試驗場／雜事；WAIT_USER.md 只留導航表）|
 | [HANDOFF.md](HANDOFF.md) | compact 交接：compact 前頂層寫、compact 後 hook 自動讀回最新一條 |
 
@@ -50,5 +50,5 @@
 | 檔案 | 用途 |
 |------|------|
 | [SESSION-LOG](SESSION-LOG.md) | 進度 hub → 各工作流 session-log（open-only）|
-| [WAIT_USER](WAIT_USER.md) | 待**使用者**親自做/驗證的入口 |
+| [WAIT_USER](WAIT_USER.md) | 待**使用者**親自做/驗證的舊條目；新題寄使用者專區（`aos-user send`）|
 | [`inbox/`](inbox/)（樹外專案的放信處）+ [workflows/inbox.json](workflows/inbox.json)（使用方式）| agent 之間的**信件**（同一棵 aos 樹裡走 aos 信箱；樹外的像 email，狀態靠位置：`inbox/` 頂層＝未處理、`inbox/done/`＝已處理）|

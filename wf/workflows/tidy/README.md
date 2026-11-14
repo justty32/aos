@@ -13,7 +13,7 @@
 1. **過時的就封存，把指向它的連結清乾淨，當做它不存在**：活文件裡的連結是**拿掉**（改純文字或整句刪），不是改指到 `archive/` 路徑；只有 `archive/README.md` 的索引表可以連過去。「過時」的判準：文件自述歷史／被取代／前提作廢；文件描述的目標（計畫、批次、環境配置）已不存在；結論已整份被某現役文件吸收。
 2. **一個資料夾別擠太多檔，但同類檔案可以放鬆**：同一系列 log／報告／記錄不必為了檔數硬拆；不同用途混放才拆。
 3. **一個資料夾下太多小檔案（<1 KB）就適當合併**：同一批零散記錄併成一個檔或一張表；內容保留、原檔消失。找法：`find <dir> -type f -size -1024c | sed 's|/[^/]*$||' | sort | uniq -c | sort -rn`。
-4. **考慮使用者——給人點的留 md、給 AI 讀的進資料檔**：條列抽資料檔（走 `tools/tabledb.py`）與整檔按語意拆資料夾，兩個門檻各自觸發，門檻在 [STRUCTURE 觸發 A](../../STRUCTURE.md)，契約與拆法在 [common/data-files.md](../common/data-files.md)。掃描：`tools/find_big_lists.py`、`find … -size +8192c`。
+4. **考慮使用者——給人點的留 md、給 AI 讀的進資料檔**：條列抽資料檔（走 `wf/tools/tabledb.py`）與整檔按語意拆資料夾，兩個門檻各自觸發，門檻在 [STRUCTURE 觸發 A](../../STRUCTURE.md)，契約與拆法在 [common/data-files.md](../common/data-files.md)。掃描：`wf/tools/find_big_lists.py`、`find … -size +8192c`。
 5. **檔內只留現行結論、寫精簡，使用者原文逐字留**：決策過程、改過幾版、為什麼這樣定、作廢方案、演變史都刪，靠 git 歷史找；日誌每日檔、報告、`archive/` 不適用。判準、原文認法、適用範圍與驗法在 [content-trim.md](content-trim.md)。
 6. **收斂優先於拆檔**（使用者 2026-11-03：「檔案太大要拆...不如說，我覺得可以開始收斂了」）：檔太大先減總量——合併重複、把「原句＋逐日改口」摺成現行條文、拿掉被推翻的歷史、同一件事散在多處的收成一處（別處只留連結）、已結案的舊紀錄封存；收斂完仍超標才照 [STRUCTURE](../../STRUCTURE.md) 拆。摺法與超標怎麼辦在 [content-trim](content-trim.md#收斂改口摺疊與超標2026-11-03-定)。
 
@@ -35,10 +35,10 @@
    find . -path ./.git -prune -o -type f -print | sed 's|/[^/]*$||' | sort | uniq -c | sort -rn | head   # 哪個資料夾擠
    find <dir> -maxdepth 1 -type f -printf '%s %f\n' | sort -rn | head                                    # 哪個檔肥
    find <dir> -type f -size -1024c | sed 's|/[^/]*$||' | sort | uniq -c | sort -rn                       # 哪個資料夾小檔太多
-   python3 tools/find_big_lists.py --min 1024 <dir>                                                       # 哪個表／清單超標（含 links=N / linked= 判斷是不是連結表）
+   python3 wf/tools/find_big_lists.py --min 1024 <dir>                                                       # 哪個表／清單超標（含 links=N / linked= 判斷是不是連結表）
    git log --since=<兩週前日期> --oneline -- <檔>                                                          # 哪個檔沒人動（封存候選）
    grep -rlE --include='*.md' '<dir>/' <其他資料夾…> | wc -l                                                # 入站連結量：誰在依賴這個資料夾
-   python3 tools/find_big_lists.py --links-only <dir>                                                      # 哪個連結表 > 10 條，要人判斷該留 md 還是抽資料檔
+   python3 wf/tools/find_big_lists.py --links-only <dir>                                                      # 哪個連結表 > 10 條，要人判斷該留 md 還是抽資料檔
    ```
    把病灶寫成編號清單，直接放進交接書；不要讓線自己找範圍。
 <!-- wf-nav -->
@@ -46,7 +46,7 @@
 3. **線跑**：按檔案性質選 A／B 拆法（見 [common/data-files.md](../common/data-files.md)：A 法把同質大表抽成資料檔並在 md 端留摘要、對帳列數；B 法把過長散文按語意拆進同名資料夾，原路徑保留當入口）；共通：一律 `git mv`／新檔 `git add`，不留副本，不改內容實質，不重新判定任何狀態。多批可平行（各批只動自己範圍內的檔）。
    **內容精簡另開一條線**、跟搬檔拆檔分開 commit，照 [content-trim](content-trim.md) 做；它刪歷史但不改現行結論。
 4. **核驗（調度者）**：不信報告，自己跑一次 Done when 的命令；看 `git diff --cached --name-status -M` 確認是 R（rename）不是 D+A；`archive/` 與 `AGENTS.md` 若被動到，只准是連結路徑那種修改。
-5. **搬檔後修連結**：用各批的 `moves.tsv` 跑 `tools/fix_moved_links.py`（先 dry-run 再 `--apply`；它跳過 code fence、解析相對路徑後重算）。**指向被封存檔的連結不重寫**——照第 1 條原則拿掉。跨資料夾／跨 repo 的壞連結留給調度者收尾。
+5. **搬檔後修連結**：用各批的 `moves.tsv` 跑 `wf/tools/fix_moved_links.py`（先 dry-run 再 `--apply`；它跳過 code fence、解析相對路徑後重算）。**指向被封存檔的連結不重寫**——照第 1 條原則拿掉。跨資料夾／跨 repo 的壞連結留給調度者收尾。
 6. **收尾**：確認 Done when 全過，commit 由使用者或調度者決定。
 
 ## 踩過的坑
@@ -55,5 +55,5 @@
 
 ## 交接
 
-- 完成後 → 若整理揭露了要裁示的事，[WAIT_USER](../../WAIT_USER.md) 一行。
+- 完成後 → 若整理揭露了要裁示的事，寄使用者專區（`aos-user send`，見 [common/user.md](../common/user.md)；舊條目在 [WAIT_USER](../../WAIT_USER.md)）。
 - 每輪整理的報告（含 `moves.tsv`、驗證輸出）→ [`reports/`](reports/2026-10-02-wf-tidy.md)，一輪一份、檔名用日期。

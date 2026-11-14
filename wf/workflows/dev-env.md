@@ -10,7 +10,7 @@
 ## Done when
 
 - 照「流程」走完，[testing「proto8」](testing.md#proto8)的建置指令回傳 0，`proto8/impls/*/bin/` 底下有各專案的執行檔。
-- 要使用者親自做的（帳號、授權、金鑰）在 [WAIT_USER](../WAIT_USER.md) 各佔一行。
+- 要使用者親自做的（帳號、授權、金鑰）各寄一封到使用者專區（`aos-user send`，見 [common/user.md](common/user.md)；舊條目在 [WAIT_USER](../WAIT_USER.md)）。
 
 ## 流程（fresh clone 後）
 

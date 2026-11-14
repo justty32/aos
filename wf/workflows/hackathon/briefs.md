@@ -3,7 +3,7 @@
 ← [hackathon README](README.md)｜**收場那四棒（書記／評委／資料員／祕書）的任務書在 [staff.md](staff.md)**
 
 本檔＝**每一輪要發給參賽者的兩份東西**。參賽者帶名人 persona，名單與挑人判準見
-[README 的〈角色〉](README.md)。persona 是 [soul.md](https://github.com/aeonfun/soul.md) 的
+[roles.md](roles.md)。persona 是 [soul.md](https://github.com/aeonfun/soul.md) 的
 精簡版：四行填完就丟進任務書。
 
 ---
