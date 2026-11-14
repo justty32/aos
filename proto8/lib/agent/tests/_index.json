@@ -26,6 +26,9 @@
  "test_cli_settings.py": {
   "description": "驗 cli.json 的 settings（11-13 ops-agent-six-suggestions 第 1 題乙：定義自帶 Claude Code 設定）與 flags 裡的 --settings（＝CfgBad，以前被 aos 自己那個靜默蓋掉）：aos 把定義的設定併進它自己加的那一個…"
  },
+ "test_cli_stream.py": {
+  "description": "驗 cli_stream（wake-1114 主案 S）：claude -p --input-format stream-json 的 stdin 先不關、回答途中投新信；併進同一輪、"
+ },
  "test_cli_system.py": {
   "description": "驗 cli_session 的 system（11-11 self-system）：宣告了才碰；stack 那份在就整份用它、否則定義那份；claude 附加檔＋snapshot off、codex developer_instructions；空＝不附加。"
  },

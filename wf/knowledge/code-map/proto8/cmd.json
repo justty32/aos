@@ -130,6 +130,7 @@
    },
    "tests": {
     "fake_claude": "stand-in for the claude CLI in aos-eca tests: -p with --session-id/--resume, keeps conversations as files, never calls a model",
+    "fake_claude_stream": "stand-in for claude -p --input-format stream-json in tests: reads user lines from stdin, answers each round, never calls a model",
     "fake_codex": "stand-in for the codex CLI in aos-eca tests: exec / exec resume ID with --json and -o, keeps threads as files, never calls a model",
     "test_goal.py": "Test the goal in aos-eca-turn (11-11 goal/02) with fake claude / codex CLIs: queue empty + last turn answered + goal active = the reminder is the pro…",
     "test_goal_replace.py": "Test aos-eca-turn's recognition of codex's \"Replace goal?\" menu (11-12 eca-slash /goal): only that menu with the cursor on \"1. Replace current goal\" …",

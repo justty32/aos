@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+# fake_claude_stream - stand-in for claude -p --input-format stream-json in tests: reads user lines from stdin, answers each round, never calls a model
+"""Usage: fake_claude_stream -p --input-format stream-json [--session-id ID | --resume ID] [other flags ignored] < user lines
+
+stdout starts with {"type": "system", "subtype": "init", "session_id": ...}. Each round takes one stdin user line and echoes it
+as {"type": "user", "isReplay": true, "message": ...}. If its content has SLOW:<seconds>, lines arriving within that many seconds
+join the same round; their echoes come when the wait ends (the real CLI takes letters between tool calls). Then one result line
+{"type": "result", "subtype": "success", "is_error": false, "result": "FAKE: " + the round's contents joined by " | "}.
+EOF on stdin: exit 0.
+FAKE_STREAM_FAIL=1: the first round's result has is_error true and "usage limit reached", then exit 1.
+FAKE_STREAM_DIE_AFTER=N: exit 0 right after the N-th result, without waiting for EOF.
+FAKE_STREAM_SWALLOW=TEXT: a line whose content has TEXT is read but never echoed or answered (a line the CLI never takes).
+FAKE_CLI_LOG=FILE: append {"argv": [...], "line": <content>} as one JSON line per stdin line received."""
+import json, os, re, select, sys, time, uuid
+
+argv = sys.argv[1:]
+if "--help" in argv or "-h" in argv:
+    print(__doc__)
+    sys.exit(0)
+sid = None
+for flag in ("--session-id", "--resume"):
+    if flag in argv and argv.index(flag) + 1 < len(argv):
+        sid = argv[argv.index(flag) + 1]
+        break
+sid = sid or str(uuid.uuid4())
+FAIL = os.environ.get("FAKE_STREAM_FAIL") == "1"
+DIE_AFTER = int(os.environ.get("FAKE_STREAM_DIE_AFTER") or 0)
+LOG = os.environ.get("FAKE_CLI_LOG")
+SWALLOW = os.environ.get("FAKE_STREAM_SWALLOW")
+FD = sys.stdin.fileno()
+buf = [b"", False]                       # 還沒切的位元組、是否已 EOF
+
+
+def out(ev):
+    sys.stdout.write(json.dumps(ev, ensure_ascii=False) + "\n")
+    sys.stdout.flush()
+
+
+def next_line(wait):
+    """回一行已 parse 的 user 訊息；wait＝最多等幾秒（None＝等到有）；逾時或 EOF 回 None。壞行略過。"""
+    end = None if wait is None else time.time() + wait
+    while True:
+        while b"\n" in buf[0]:
+            raw, buf[0] = buf[0].split(b"\n", 1)
+            msg = parse(raw)
+            if msg is not None:
+                return msg
+        if buf[1]:
+            if buf[0].strip():
+                raw, buf[0] = buf[0], b""
+                return parse(raw)
+            return None
+        left = None if end is None else end - time.time()
+        if left is not None and left <= 0:
+            return None
+        ready, _, _ = select.select([FD], [], [], left)
+        if not ready:
+            return None
+        chunk = os.read(FD, 65536)
+        if chunk:
+            buf[0] += chunk
+        else:
+            buf[1] = True
+
+
+def parse(raw):
+    try:
+        ev = json.loads(raw.decode("utf-8"))
+        msg = ev["message"]
+        content = msg["content"] if isinstance(msg["content"], str) else json.dumps(msg["content"], ensure_ascii=False)
+    except (ValueError, KeyError, TypeError):
+        return None
+    if LOG:
+        with open(LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"argv": sys.argv, "line": content}, ensure_ascii=False) + "\n")
+    if SWALLOW and SWALLOW in content:
+        return None
+    return msg, content
+
+
+out({"type": "system", "subtype": "init", "session_id": sid})
+results = 0
+while True:
+    first = next_line(None)
+    if first is None:
+        sys.exit(0)
+    out({"type": "user", "isReplay": True, "message": first[0], "session_id": sid})
+    parts = [first[1]]
+    slow = re.search(r"SLOW:([0-9.]+)", first[1])
+    if slow:
+        end, late = time.time() + float(slow.group(1)), []
+        while time.time() < end:
+            msg = next_line(end - time.time())
+            if msg is None:
+                if buf[1]:
+                    time.sleep(max(0, end - time.time()))     # stdin 關了：手上的工具照樣做完
+                continue
+            late.append(msg)
+        for msg, content in late:
+            out({"type": "user", "isReplay": True, "message": msg, "session_id": sid})
+            parts.append(content)
+    if FAIL:
+        out({"type": "result", "subtype": "success", "is_error": True, "result": "usage limit reached", "session_id": sid})
+        sys.exit(1)
+    out({"type": "result", "subtype": "success", "is_error": False, "result": "FAKE: " + " | ".join(parts), "session_id": sid})
+    results += 1
+    if DIE_AFTER and results >= DIE_AFTER:
+        sys.exit(0)

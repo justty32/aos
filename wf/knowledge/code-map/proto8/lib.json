@@ -49,6 +49,7 @@
    "cli_print.py": "cli_session 的非互動那條路（畫面沒開）：claude -p／codex exec 起 CLI、等回答、記 session",
    "cli_screen.py": "cli_session 開畫面：tmux 裡起互動的 claude／codex（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供",
    "cli_session.py": "把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 aos-agent attach／open 接進或開啟互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字",
+   "cli_stream.py": "非互動那條路的「中途收信」版：claude -p --input-format stream-json，stdin 先不關，回答途中把新信一行一行投進去",
    "clock_register": {
     "tests": {
      "test_clock_register_tool.py": "Test clock_register wraps aos-clock-register for the calling agent: box left out = my own queue (fake aos-agent ctl who, real aos-clock and aos-post)."
@@ -184,6 +185,7 @@
     "test_cli_reserved_flags.py": "驗 cli.json 的 flags／print_flags 不准再寫 aos 自己會加的旗標（11-13 eca_main 第 6 項：codex 的 --skip-git-repo-check 寫第二次＝codex 退 2、信被丟）：讀設定時就 CfgBad。",
     "test_cli_screen_env.py": "驗人開的畫面拿到跟 loop 那邊一致的 AOS_CLOCK、AOS_KERNEL、AOS_LLM_KERNEL（11-13 ops-agent-six-suggestions 第 6 點的 bug）：loop 那邊把自己的 MCP_ENV 記進小格 env.json（note_env），開畫面時…",
     "test_cli_settings.py": "驗 cli.json 的 settings（11-13 ops-agent-six-suggestions 第 1 題乙：定義自帶 Claude Code 設定）與 flags 裡的 --settings（＝CfgBad，以前被 aos 自己那個靜默蓋掉）：aos 把定義的設定併進它自己加的那一個…",
+    "test_cli_stream.py": "驗 cli_stream（wake-1114 主案 S）：claude -p --input-format stream-json 的 stdin 先不關、回答途中投新信；併進同一輪、",
     "test_cli_system.py": "驗 cli_session 的 system（11-11 self-system）：宣告了才碰；stack 那份在就整份用它、否則定義那份；claude 附加檔＋snapshot off、codex developer_instructions；空＝不附加。",
     "test_cli_tools_directive.py": "驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。",
     "test_cli_tools_sub.py": "驗 cli.json 的 tools_sub（11-12 eca-task-subagent）：只有 claude 身認、--agents 蓋掉 general-purpose 並內嵌 aos_sub、--allowedTools 多 mcp__aos_sub、guard hook 擋子 agen…",
