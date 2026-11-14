@@ -16,7 +16,7 @@
 | 看誰用了多少腦 | 讀 `<活樹>/ws/.stack/procs/llm-gpt/ledger.jsonl`，照 `sender` 加總 `usage` 與 `elapsed_ms` | 同上「數字」 | 11-14 ok-skyrim |
 | 收隊 | `subagent rm <名>`（stack 留著）；自己開過 gate 就 `kernel_gate off`；核對當初記的 pid 都不在 | 同上 | 11-14 ok-skyrim |
 | 交 commit | `commit-request claim`／`submit --files … --msg-file …`，索引用 `--op`；不 `git add`、不自己跑 index_gen | [07「commit 一律交給排隊指令」](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md) | 11-14 |
-| 回報給頂層 | `mailbox_send` 寄 `xiaosi`；要緊的 status 用 `NEEDS-USER`／`BLOCKED`；標題照三條規矩 | [07「頂層的雜務自動化」](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md) | 11-14 |
+| 回報 | `mailbox_send` 寄任務書指定的對象（11-14 起是各部部長）；要緊的 status 用 `NEEDS-USER`／`BLOCKED`；標題照三條規矩 | [07「頂層的雜務自動化」](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md) | 11-14 |
 | 請 Argon 當第二意見 | 在 /tmp 跑 `agy -p … --model "Gemini 4 Argon (High)" --mode plan --print-timeout 840s`，內容貼進提示並寫明 `Do not use any tools`（不寫會沒產出）；要它分 (A) 審查 (B) 提案 | [05「Argon 是參與者」](../workflows/dispatch/aos-teams/05-同機session與Argon.md)、[model-notes](model-notes.md) | 11-14 ok-skyrim、ok-astra、ok-kf、ok-llmk2 |
 | 通知太多想清淨一段 | `wf/public/tools/quiet`：`quiet.py install` | [tools/quiet](tools/quiet/README.md) | 11-14 repo-aos |
 | 給 sol 寫任務書 | 一張單一件事、寫明可改哪些檔；事實（唯讀 sol）與設計分開；寫「讀完必讀，同一回合就動手」；交回的碼隊長自己再讀 | [sol-crew「任務書」](sol-crew.md) | 11-14 ok-astra |

@@ -59,3 +59,33 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 提出者與日期：ok-sec 2026-11-14
 - 出處：wf/temp/ok-sec/aos-advice/daemon認人別靠environ.md；proto8/thinking/2026-11/14/sec-1114/03-計劃.md E1、05-採納表.md A6、B4；實測腳本 ~/code/sec-1114/e12.sh
 - 狀態：未處理（adopt.cpp 仍是「讀不到＝照舊」回 true，aos_sweep_proc.py 仍讀 environ；sec-1114 採納表已列，未施工）
+
+## 帶 --envs 的 add 換了掛法：表上 exec 變 null、set-def 拒收、as_written 與 --path-json 指示詞掉了
+
+- 主題：daemon 與行程（也碰到指令與工具的 `aos-agent ctl add`／`set-def`）
+- 哪裡：`proto8/py/daemon_ctl/entry.py` 的 `add_letter`（約 292～303 行：帶 envs 或 `--dotenv-override` 時把 exec 包成 `{"argv": ["aos-exec", "--", 目標], "envs": …}`）、`written_under`（約 215 行，只認字串和陣列）、`as_written`（約 329～339 行，只記字串目標）；aos-daemon 把包起來的列記成指到小格檔的指標；`proto8/cmd/aos-agent/aos_agent/ctl/set_def.py` 第 51 行。
+- 現象：ok-limits 11-14 在暫存樹起隔離 daemon 實測 exec 型、loop 型、`--path-json` 三種掛法，各掛一隻帶 envs、一隻不帶。
+  - 兩邊一樣的：body 的 cwd、AOS_* 變數（只多了 envs 給的那幾個）、loop 各鍵、`def` 欄、`ws`，stop／start 之後 envs 照樣生效。
+  - 不一樣的有五處：
+    1. 表上那列的 `exec` 欄從目標（如 `../def-exec`）變成 `null`；`launch.exec` 變成指到小格的指標（exec 型 `procs/<名>/exec.json#/exec`，loop 型 `procs/<名>/loop.json#/_entry`），envs 只寫在小格檔裡。
+    2. 所以 `ctl set-def` 拒收這種列（「was attached with --envs or extra arguments … rm, then ctl add」）。`subagent add` 一律補 `AOS_NOTIFY_BOX`（`lib/agent/subagent/_entry` 182 行），**今天所有 subagent 掛的子都不能 set-def**，只能 rm 再 add。
+    3. 使用者打成絕對路徑的目標，帶 envs 時不記進 `as_written.exec`（不帶時有記）。
+    4. `--path-json '{"$env": "PROBE_HOME", "$path": "/def-exec"}'`：不帶 envs 時 `as_written.exec` 記使用者的指示詞、每次起都重解；帶 envs 時小格檔裡的目標變成 `{"$env": "AOS_DAEMON", "$path": "../def-exec"}`，使用者的指示詞在 exec 那層不見了（`def` 欄照留）。兩台機器各設各的變數時，語意不一樣。
+    5. 多一層 aos-exec 行程：exec 型每起一次多一層，loop 型每一輪多一層。行為沒差，只是成本。
+  - 實測輸出摘錄（`probe2.out`，路徑已換成 `<R>`）：
+    ```
+    row.launch: {"exec": ["../def-exec"]}                      # 不帶 envs
+    row.exec: ../def-exec phase: running
+    row.launch: {"exec": ["procs/ex1/exec.json#/exec"]}        # 帶 envs
+    row.exec: None phase: running
+    row.as_written/def: {'ws': '<R>/ws-ex1', 'def': '<R>/def-exec'} ../def-exec   # 少了 exec
+    exec.json {"exec": {"argv": ["aos-exec", "--", {"$env": "AOS_DAEMON", "$path": "../def-exec"}], ...}}   # --path-json 帶 envs
+    ```
+- 建議：
+  1. `written_under` 要認包起來的 `argv` 裡的目標，`as_written.exec` 也照記（修現象 3、4）。
+  2. set-def 遇到包起來的列，從小格檔讀回原本的 envs（和 `--dotenv-override`）再包一次，不要直接拒收（修現象 2）。
+  3. 長期：envs 改記在列上、由 daemon 起行程時設，不包那一層，表上 `exec` 欄就不會變 null。這跟 ok-devt-1114 定稿第 2 期（parent、notify_box 放到列上，見本檔「子 agent 不知道是誰生了它」）是同一條路，可以一起做。
+- 痛的程度：拖慢（subagent 掛的子不能 set-def；多機器用 `--path-json` 又帶 envs 時，目標悄悄變了）
+- 提出者與日期：ok-limits 2026-11-14
+- 出處：wf/temp/ok-limits/aos-advice/帶envs的add換了掛法.md；ok-devt-1114「第 1 期 add 自動填 parent」查核 A（ok-devt 定稿 05 第五節「修訂 1」，83fd2fd39）；ok-limits 寄 ok-devt 的信 01794636733207528989；實測 `~/code/limits-1114/probe-envs-1414/probe2.py`、`probe2.out`（只印 AOS_* 和 envs 的變數名）
+- 狀態：未處理（ok-devt 裁定不在 parent 這件裡修，第 1 期不改任何 add 的掛法。整理時查（只讀，HEAD b892fbd83）：`set_def.py` 第 51 行仍拒收 exec 不是字串的列，entry.py 包 aos-exec 那段沒改）
