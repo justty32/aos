@@ -73,6 +73,9 @@ llm kernel（lib/aos/kernel_llm）、腦額度、找 kernel、kernel_gate 的意
 - 痛的程度：拖慢
 - 提出者與日期：skyrim-agent-agentctl 2026-11-14（skyrim-agent 轉來）
 - 出處：同上一條；頂層 11-14 14:27 給 skyrim-agent-agentctl 的信（筆記「14:3x 狀態」有記）；底座部 ok-kf 查證
+- 提出者與日期（第十三批併入）：ok-kf 2026-11-14（程式位置與三個方案）
+- 出處（第十三批併入）：wf/temp/ok-kf/wrapup-1114/建議.md 第 2 則（引給 head-core 的查證信 01794637514318574262.912280.2609996）
+- 第十三批補：程式位置是 `proto8/lib/agent/kernel_gate/_entry` 第 103、107 行（站掛在主人的 on_clock 上，只在主人不在回合裡時每個 clock 週期跑一次）和 `proto8/py/daemon_ctl/state_path.py` 的 `QUERY_S = 3`（第 15 行）、`_asked`（第 16 行：快取只在單一行程內，所以每個工具行程都會重問一次；skyrim-agent 實測）。帶 AOS_KERNEL 的下屬幾乎每次開場都卡。ok-kf 列的三個方案：甲，把問到的表檔路徑存成小檔；乙，站改成 daemon 表上獨立的小行程；丙，只調等待秒數和快取。整理時查：上面行號都對。
 - 狀態：已排入（ok-kf，11-15 出設計）。
 
 ## subagent add 之後馬上 ask，回 SubagentMissing，工人被從名冊刪掉
@@ -108,3 +111,67 @@ llm kernel（lib/aos/kernel_llm）、腦額度、找 kernel、kernel_gate 的意
 - 提出者與日期：ok-fsm 2026-11-14
 - 出處：`proto8/thinking/2026-11/14/ok-fsm-1114/01-預設工具包-設計稿.md`「第二步對照實驗結果」「正式補丁與第二輪對照」；commit 7ce38e7cf
 - 狀態：已解（7ce38e7cf，ok-fsm 11-14；使用者專區回信准、ok-kmsg 審、head-tools 放行）。endpoint pack 多一個鍵 `session_key`，預設關：開了的包，dispatch 在 request 頂層加 `{鍵名: sha256(寄件人 stack 路徑) 前 32 個十六進位字}`，請求自己已有那個鍵、或信沒有寄件人就不加；沒寫＝請求原樣交出去。新測試 `tests/test_session_key.py` 6 支。**活樹還沒開**：要在活樹 llm-gpt 的 kernel.json 的 `sol-high` 包加 `"session_key": "litellm_session_id"` 才生效，換樹後由頂層開。但書：實驗只跑兩隻、各 15 次、提示最大約 2.6 萬 token，活樹十幾隻、提示 10 萬以上的規模沒測。
+
+## state 和 ctl ls 看不出隊員是在排腦的隊、額度被拒，還是卡住
+
+- 主題：kernel 與額度（也碰到指令與工具的 `subagent state`、`aos-agent ctl ls`）
+- 哪裡：`subagent {"op":"state"}`、`aos-agent ctl state`、`aos-agent ctl ls` 的 REASON 欄；llm kernel 的 slots 與 `requests/new|cur`；`proto8/templates/agent-fsm/wait.py` 的 `slow_reason()`；d6a564191 起 stack 裡的 `think/brain_wait.json`；`aos-llm`。
+- 現象：
+  - ok-kmsg：兩隻 sol 蒐集員 50 分鐘沒有任何產出，`state` 只說 running、history 幾則，看不出那封問腦的信是排在 kernel 的 `requests/new`（名額滿）還是正在跑；最後是部長告知 sol-high 名額只有 2。
+  - head-core：部內三條線的 sol（ok-sec 四隻、ok-devt 兩隻、ok-limits 一隻）開工 20～35 分鐘各只走十幾步或零 diff，都在等腦；頂層 13:42 查到 12 個請求在排，使用者 13:43 裁 slots 不放寬。全部收掉改用 Claude 子 agent 後，ok-sec 第 1 期 15 分鐘交件。各線自己沒有辦法查「現在排了幾個」。
+  - ok-misc：暫存 llm kernel 用完日額時，5 隻 sol 一起停，每隻只在自己的 stderr 留一行 BudgetMissing；要一隻隻翻 stderr 才知道原因，再找出 kernel.json 在哪個定義夾。
+- 建議：
+  1. `state` 在 agent-fsm 等腦時多寫一句「waiting for the brain N s (queued at the kernel, position k / running)」。資料 `slow_reason()` 已經會算，現在只在滿 10 分鐘時寫進 stderr；外面的指令可以用 `brain_wait.json`（信名＋kernel 路徑）直接去看 kernel 的 `requests/new|cur`。
+  2. `aos-agent ctl ls` 的 REASON 欄直接帶出 BudgetMissing 的 endpoint 和 resets_at；BudgetMissing 的訊息附上預算設定檔的路徑。
+  3. `aos-llm` 加一個各線都能跑的唯讀查詢「現在排隊幾個」。
+- 痛的程度：拖慢（head-core 原稿寫「會擋工作：今天靠 Claude 額度補位才沒卡」）
+- 提出者與日期：ok-kmsg 2026-11-14；head-core 2026-11-14；ok-misc 2026-11-14
+- 出處：wf/temp/ok-kmsg/wrapup-1114/建議.md「subagent state 看不出隊員是『在排腦的隊』還是卡住」（引 `proto8/thinking/2026-11/14/ok-kmsg-1114.md` 第四、六節）；wf/temp/head-core/wrapup-1114/建議.md「llm-gpt 的 slots 讓 sol 在部內幾乎不能用」（引 ok-sec 13:38、ok-devt 13:41、ok-limits 13:45 的回報）；wf/temp/ok-misc/wrapup-1114/建議.md 第 2 則（引 `~/code/misc-1114/root/.stack/procs/sol-2/stderr.txt` 尾段、`kern/llm-sol/kernel.json:22`）
+- 狀態：未處理。整理時查：`brain_wait.json` 只有 `proto8/cmd/aos-agent/aos_agent/hints.py`（第 57 行，d6a564191 的「kernel 沒在跑」提示）在讀，state、ctl ls 沒用它。head-core 另建議在 aos-teams 短卡補一句「線多時 sol 排隊會慢到不能用」，那是 wf 的派工文件，由頂層定。
+- 相關：本檔「llm kernel 沒開時，外人只看到 listen 逾時」（那條的建議 2「ctl ls 的 REASON 標等腦」沒做，跟這條的建議 1、2 是同一個方向）；[fsm範本](fsm範本.md)「sol 讀完必讀後只回一句『我會照做』就結束回合」（隊長分不出「還在做」和「回合已結束」）。
+
+## 掛 proc 的寄信人收到 BudgetMissing 不會晚點再試，錯誤行也沒印 resets_at
+
+- 主題：kernel 與額度
+- 哪裡：`lib/agent/subagent/_entry`、`agents_ctl` 等寄信給掛 proc 的 kernel 的工具；`proto8/lib/aos/kernel/hooks.py`（d6a564191 起兩種站的 hook 都能回 BudgetMissing＋`resets_at`）。
+- 現象：問腦那邊 agent-fsm 會照 `resets_at` 冷卻重寄；掛 proc 這邊工具只把 error 印出來。hook 作者在掛 proc 的站回「晚點再試」，實際上等於直接拒絕。讀碼發現，沒人實際撞到。
+- 建議：工具的錯誤行把 `resets_at` 印出來（「try again after HH:MM」）；要不要自動重試另議。
+- 痛的程度：小不便
+- 提出者與日期：ok-kmsg 2026-11-14
+- 出處：wf/temp/ok-kmsg/wrapup-1114/建議.md「掛 proc 的寄信人收到 BudgetMissing 不會晚點再試」（引 `proto8/lib/aos/kernel/README.md` hook 段，d6a564191 加的說明）。提出者讀碼發現、沒實測；整理時沒另核。
+- 狀態：未處理
+- 相關：本檔「before_verdict hook 拒信只能回 HookRejected」（已解 d6a564191，問腦那一半）。
+
+## llm kernel 的帳本看不出快取命中率，要自己寫腳本加總
+
+- 主題：kernel 與額度
+- 哪裡：llm kernel 的 `ledger.jsonl`；`aos-llm`；知識庫 `aos/brain.json`。
+- 現象：命中率只有 29% 這件事，是 ok-fsm 為了別的題目自己寫 Python 加總 `usage.prompt_tokens_details.cached_tokens` 才看到的（1,599 次問腦、1.18 億 token）。在那之前沒有任何地方會顯示，燒額度而沒人知道。
+- 建議：`aos-llm` 加一個看帳的子指令（或全景頁加一格）：每個包、每個寄件人的問腦次數、提示 token、命中 token、命中率。至少在知識庫 `aos/brain.json` 寫一句「帳本裡有 cached_tokens，命中率低先查 session id」。
+- 痛的程度：拖慢
+- 提出者與日期：ok-fsm 2026-11-14
+- 出處：wf/temp/ok-fsm/wrapup-1114/建議.md「llm kernel 的帳本看不出快取命中率」（引 `proto8/thinking/2026-11/14/ok-fsm-1114/01-預設工具包-設計稿.md`「另外發現」、commit 7ce38e7cf）
+- 狀態：未處理。整理時查：`proto8/knowledge/aos/brain.json` 沒有 `cached_tokens` 字樣；aos-llm 的子指令整理時沒逐一看。
+- 相關：本檔「提示快取命中率低：llm kernel 沒送固定的 session id」（已解 7ce38e7cf，命中率低的原因那一半）；本檔「Claude 用量沒有任何 aos 入口能看」。
+
+## kernel_llm 管「寄出請求」的測試在乾淨複本跑不了
+
+- 主題：kernel 與額度
+- 哪裡：`proto8/lib/aos/kernel_llm/tests/test_batch8_live.py`。
+- 現象：dispatch 寫 request.json 那一步只有這檔的三支 live 測試會走到，它們要編好的執行檔；`git archive` 的乾淨複本沒有，三支固定紅。ok-fsm 改那一行（7ce38e7cf）時，規定要的「乾淨複本全套」驗不到改動本身，只能另外起一棵暫存樹實跑。
+- 建議：給 dispatch 補一支不靠執行檔的測試（假的 runner.mount，只驗寫出去的 request.json）；或讓這三支在沒有執行檔時 skip 並印原因，不要算紅。
+- 痛的程度：小不便
+- 提出者與日期：ok-fsm 2026-11-14
+- 出處：wf/temp/ok-fsm/wrapup-1114/建議.md「kernel_llm 管『寄出請求』的測試在乾淨複本跑不了」（引 `~/code/fsm-1114/logs/sx-kernel_llm.txt`、`base-kernel_llm.txt`）
+- 狀態：未處理。整理時查：`test_batch8_live.py` 裡沒有 skip 字樣；7ce38e7cf 另加的 `tests/test_session_key.py` 有沒有蓋到 dispatch 寫檔那一步，整理時沒核。
+
+## Claude 用量沒有任何 aos 入口能看
+
+- 主題：kernel 與額度
+- 哪裡：llm kernel 與全景頁的 `power`（電力卡）。
+- 現象：Claude eca、fable、Argon 的呼叫都不經 llm kernel，aos 看不到最緊的資源。ok-llmk2 量出來，本週主帳號的 Claude 輸出約 60% 在 aos 外（`proto8/thinking/2026-11/14/llmk2-1114/` 的 `06-Claude電表原型.md:9`）。額度剩 5% 時，沒有一個地方能看出是誰燒的；11-14 收線就是因為額度。
+- 建議：施工 v1-c，把 Claude 電表做成正式指令並接上電力卡。使用者已裁 q1:b、q2:a：aos 外也列，只顯示、不分配（de7abef5b）。
+- 痛的程度：擋路（原稿寫「卡住。今天收線就是因為額度」）
+- 提出者與日期：ok-llmk2 2026-11-14
+- 出處：wf/temp/ok-llmk2/wrapup-1114/建議.md 第 4 則；commit de7abef5b；原型在 `~/code/llmk2-1114/meter/claude_meter.py`（wf/temp/ok-llmk2/wrapup-1114/交接.md 第 48 行）。60% 這個數字是提出者量的，整理時沒重量。
+- 狀態：已排入（ok-llmk2，v1-c；方向題使用者已裁，還沒施工）。

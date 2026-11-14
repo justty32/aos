@@ -27,6 +27,9 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 痛的程度：拖慢（白等 15 分鐘加排查）
 - 提出者與日期：ok-limits 2026-11-14
 - 出處：wf/temp/ok-limits/aos-advice/subagent-llm-kernel-missing-silent.md；wf/temp/ok-limits/notes/naming.md
+- 提出者與日期（第十三批併入）：ok-view 2026-11-14
+- 出處（第十三批併入）：wf/temp/ok-view/wrapup-1114/建議.md「agent-fsm 子 agent 掛 LiteLLM 時，AOS_LLM_KERNEL 不會自動帶」（ok-view-astra-1，11-14 午）
+- 第十三批補：ok-view 11-14 午在活樹上又撞到：掛 `astra-high` 沒帶 envs，第一次問腦就 LlmKernelMissing，錯誤訊息不說要設哪個變數、設成什麼。整理時查：repo 的 `wait.py` 第 423～425 行（1f61dfbb1）訊息已寫明「AOS_LLM_KERNEL is not set, so this agent has no brain; add it again with the variable, e.g. subagent add envs {"AOS_LLM_KERNEL": "<llm kernel stack>"} …」，活樹的範本是舊的、待換樹。ok-view 另一個建議「範本的 .env 或 llm.json 帶預設 kernel 路徑」沒做。
 - 狀態：已解（1f61dfbb1：AOS_LLM_KERNEL 沒設或空白時，寄信前就 LlmKernelMissing 退 1、停下，不再空轉；知識庫 aos/agents/subagent 同筆補上「agent-fsm 要 AOS_LLM_KERNEL、沒有就馬上停」）。add 時先擋的做法沒做。活樹的知識庫複本要等換樹。
 
 ## 冷卻後重寄的請求可能已過 deadline，agent 還是會停
@@ -124,6 +127,9 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 痛的程度：拖慢（五隻 sol 同時 BLOCKED 一輪）
 - 提出者與日期：ok-misc 2026-11-14
 - 出處：wf/temp/ok-misc/aos-advice/sol可寫範圍要改兩份清單.md；misc-1114 暫存樹的 sol 定義 defs/sol-worker
+- 提出者與日期（第十三批併入）：ok-fsm 2026-11-14（沙箱那一半的原因與圖紙）
+- 出處（第十三批併入）：wf/temp/ok-fsm/wrapup-1114/建議.md「aos-sandbox 的 `$env` 只能換成一條路徑，裝不了『好幾條』」（引 `proto8/thinking/2026-11/14/ok-fsm-1114/03-可寫範圍一份清單-圖紙.md`）
+- 第十三批補：兩份清單合不起來，一個原因在沙箱：`proto8/cmd/aos-sandbox/bin/aos-sandbox` 的 `resolve()`（第 143 行起）把 `ro`／`rw` 的 `{"$env": 名字}` 換成一個字串，裝不了 `AOS_WRITE_ALLOW` 這種用分隔符號串起來的清單，各線只好把絕對路徑寫死在沙箱設定裡。ok-fsm 的圖紙：沙箱設定寫 `"scope": true`，向 guard 的 `--scope` 問；圖紙第 3 版與 Argon 第三次審稿在 8d5d435ca，還沒施工。
 - 狀態：已排入（ok-fsm）。整理時查：還沒改。fsm-guard 擋下的訊息只列 write_roots 的值、沒寫設定檔路徑；repo 裡沒有 roots.json 或 extra_roots。
 - 相關：本檔「guard 看指令字面，連唯讀查詢也擋」，同一支 guard。
 
@@ -159,6 +165,9 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 痛的程度：拖慢
 - 提出者與日期：ok-fsm 2026-11-14
 - 出處：wf/temp/ok-fsm/aos-advice/sol第一輪只回會照做就停.md；proto8/thinking/2026-11/14/ok-fsm-1114.md「13:56 驗收與交件」；stack ok-fsm-sol-1、ok-fsm-sol-2 的 history（第一輪最後一則）
+- 提出者與日期（第十三批併入）：ok-view 2026-11-14
+- 出處（第十三批併入）：wf/temp/ok-view/wrapup-1114/建議.md「agent-fsm 回純文字就結束，隊長很容易誤以為它還在做」（引 repo-aos 11-14 信 01794636346129043210.163520.2493177、`wf/temp/ok-view/pitfall-等隊員要帶逾時.md`）
+- 第十三批補：astra 也一樣，而且隊長那邊看不出來。ok-view 的 astra-2 第一次只回計劃就停，隊長的等待迴圈以為它還在量，卡了 50 分鐘、10 封信沒讀（痛的程度它寫「卡住」）。另外提的做法：`subagent state` 多一欄「回合已結束／在等輸入」；或 kits 的任務書範本預設加「做完前不要用純文字回答」。
 - 狀態：未處理。整理時查：兩份 general.A.txt 都沒有「不要用計畫結束回合」這類句子；sol-crew.md 只寫了「寫明讀完同一回合動手」，這次證明光寫還不夠。
 - 相關：本檔「goal 是 paused 時來了信」（同一套 goal 提醒）。
 
@@ -197,7 +206,10 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 痛的程度：小不便（有 Bash cat 可繞）
 - 提出者與日期：skyrim-agent-agentctl 2026-11-14（skyrim-agent 轉來）
 - 出處：`~/repo/moddings/skyrim/agentctl/tmp/aos/skyrim-agent-agentctl/notes.md`「等 skyrim-agent 定的 4 件」第 1 件與「第三封信」第 1 項；skyrim repo commit d98eb1b6
-- 狀態：未處理。整理時查：aos 這邊的範本 cli.json 仍是 `--allowedTools Write,Edit,Bash`，最後一次改是 2ab15e1c7。
+- 提出者與日期（第十三批併入）：head-comm 2026-11-14；head-core 2026-11-14；ok-kmsg 2026-11-14
+- 出處（第十三批併入）：wf/temp/head-comm/wrapup-1114/建議.md 第 5 則；wf/temp/head-core/wrapup-1114/建議.md「eca 在 dontAsk 模式下，Read／Glob 讀工作區外的檔一律被拒」；wf/temp/ok-kmsg/wrapup-1114/建議.md「eca 的 Read 工具讀不到自己工作區以外的必讀檔」
+- 第十三批補：aos 這邊的部長和線也都撞到。用 fable-kernel、opus-kernel 定義起的 eca（工作區在 `wf/temp/<名>`），開工第一步讀 `AGENTS.md`、`wf/workflows/…`、`wf/temp/heads/部長共通.md` 全被 Read／Glob 擋下（head-comm 被拒五次），只能用 Bash `cat`；Edit 對工作區外的檔要求先 Read，所以也用不了，只能用 python 改檔（ok-kmsg）；head-core 派出去的審稿員也要在任務書先寫「Read 被擋就用 cat」。現在是「擋了但擋不住」，只多一輪失敗。另外提的做法：定義的 settings 把 repo 根與知識庫夾列進 Read／Glob／Grep 的允許範圍（至少 `AGENTS.md`、`wf/`、`proto8/`）；或把工作目錄設在 repo 根、用領地規則管寫入；或在定義的 system 文字寫一句「必讀檔用 cat 讀」。
+- 狀態：未處理。整理時查：aos 這邊的範本 cli.json 仍是 `--allowedTools Write,Edit,Bash`，最後一次改是 2ab15e1c7。第十三批再查：仍沒改。要不要放寬是使用者的事，可以跟本檔「eca-claude 範本預設權限全開」那一題一起問。
 
 ## eca-claude 範本沒關 Claude Code 的自動記憶，工作區在別的 git repo 底下就讀寫那個 repo 的記憶
 
@@ -227,3 +239,80 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 提出者與日期：skyrim-agent 2026-11-14（skyrim-agent-opus-1 整理投稿）
 - 出處：`~/repo/moddings/skyrim/tmp/aos-skyrim-agent/top/aos-advice/skyrim-1114.md`「fsm 隊員沒有 user_send／user_verify」；`~/repo/moddings/skyrim/tmp/aos-skyrim-agent/opus-3/out/facts.md` E8
 - 狀態：未處理。整理時查：`lib/packs/` 18 個包都沒列 user_send、user_verify。
+
+## agent-fsm 範本的 system.txt 叫 agent 讀知識庫，卻沒給路徑
+
+- 主題：fsm 範本
+- 哪裡：`proto8/templates/agent-fsm/system.txt` 第 6 行（「read the knowledge base: aos/_description.json in the aos knowledge folder」）。
+- 現象：陌生人 clone 後知識庫在 `$AOS_HOME/knowledge`，範本原樣起的第一隻 agent 找不找得到沒驗過（要真模型才驗得出來）。ok-release 的對外文件先教使用者在第一句話裡給路徑。ok-release 只讀 repo 查到，沒實跑。
+- 建議：範本自己帶路徑（例如寫 `$AOS_HOME/knowledge`，或起 agent 時填進去）；改之前用真模型驗一次「不給路徑找不找得到」。
+- 痛的程度：小不便（原稿寫「煩：對外的上手路線第一步就會碰到」）
+- 提出者與日期：head-front 2026-11-14（轉 ok-release 的發現）
+- 出處：wf/temp/head-front/wrapup-1114/建議.md 第 7 則（引 ok-release 11-14 15:26 的信 01794641180068917726.2219263.2976779）
+- 狀態：未處理。頂層 11-14 裁定：今天不改、明天併一題問使用者。整理時查：system.txt 第 6 行仍只寫「the aos knowledge folder」，沒有路徑。
+- 相關：本檔下一條「eca-claude 範本預設權限全開」（同一封信、同一題一起問）。
+
+## eca-claude 範本預設權限全開（dontAsk 加 Write、Edit、Bash），陌生人照抄有風險
+
+- 主題：fsm 範本（eca-claude 範本的預設值）
+- 哪裡：`proto8/templates/eca-claude/cli.json`（`--permission-mode dontAsk`、`--allowedTools Write,Edit,Bash`；使用者 11-13 定的）。
+- 現象：這個預設對使用者自己的機器合用；但公開文件教陌生人照抄，等於讓一隻 agent 在對方機器上不問就能寫檔、跑指令。ok-release 的文件會把警語放在那一節最上面，預設不動。
+- 建議：要不要給產品版另一份較保守的預設（或安裝時讓人選），是方向題，留給使用者；在那之前文件的警語不能拿掉。
+- 痛的程度：拖慢（原稿寫「痛：對外風險」；不是眼前擋路，是對外發佈前要定）
+- 提出者與日期：head-front 2026-11-14（轉 ok-release 的發現）
+- 出處：wf/temp/head-front/wrapup-1114/建議.md 第 8 則（同上一條那封信）
+- 狀態：未處理。頂層 11-14 裁定：今天不改、明天併一題問使用者。整理時查：範本 cli.json 仍是 `--permission-mode dontAsk`、`--allowedTools Write,Edit,Bash`。
+- 相關：本檔「eca-claude 範本在 dontAsk 下沒放行 Read／Glob／Grep」（同一個預設，那條嫌唯讀工具反而出不了工作區；兩條方向相反，問使用者時要一起看）、「eca-claude 範本沒關 Claude Code 的自動記憶」。
+
+## brain_failed 事件：agent-fsm 身有 error 欄，eca 身沒有，說明沒寫
+
+- 主題：fsm 範本（hook 事件兩種身對不齊）
+- 哪裡：`proto8/templates/agent-fsm/wait.py` 的 `brain_failed()`（202～209 行）；`proto8/cmd/aos-eca/aos_eca/handoff.py` 第 61 行；說明在 `proto8/lib/agent/self_hook/_tooldef.json` 與知識庫 `aos/me/self_hook.json#/events`。
+- 現象：同一個事件名，兩種身給的欄不一樣。
+  - agent-fsm：`brain_failed(code, reason, error=None)`，事件是 `{name, reason}`，解到 kernel 的 error 物件時再多一個 `error`。代號有 LlmKernelMissing、SendFailed、BudgetMissing、BrainFailed、ReplyBad（wait.py 第 135 行）。
+  - eca：`fire("brain_failed", {"name": e.code, "reason": str(e)}, …)`，永遠沒有 `error`。代號是 CliFailed、ReplyMissing。
+  - self_hook 的工具說明只寫 `brain_failed: your brain call failed (name = the error code, reason)`，沒提 `error`，也沒說兩種身的代號不同。
+  - 後果：照 agent-fsm 寫的 handler（例如 brain_notify 讀 `error.window`、`error.resets_at` 決定標題）搬到 eca 身上拿不到 error，只能退回通用寫法；寫 hook 的人從說明看不出這個差別。
+- 建議（二擇一）：
+  1. 說明寫清楚：`error` 是「有就給」的欄，只有 agent-fsm 會給；並各列兩種身會發的代號。
+  2. eca 也在拿得到結構化錯誤時給 `error`（拿不到就不給），讓 handler 的寫法一致。
+- 痛的程度：小不便
+- 提出者與日期：ok-devt 2026-11-14
+- 出處：wf/temp/ok-devt/aos-advice/brain-failed-two-bodies.md（引 `proto8/thinking/2026-11/14/ok-devt-1114/01-現況.md`「三」）；wf/temp/ok-devt/wrapup-1114/建議.md 開頭列的第一份
+- 狀態：未處理。整理時查：wait.py 202～209 行、handoff.py 第 61 行都對過；handoff.py 第 60 行的判斷是 `e.code in ("CliFailed", "ReplyMissing")`，稿裡「蒐集時讀到，沒逐一核」的兩個代號對得上。
+- 相關：[知識庫與文件](知識庫與文件.md)「沒有一份『表上每一欄、每個事件每一欄』的集中清單」（同一份 01-現況 出來的）。
+
+## wait.py 的 kernel_dir() 沒對 AOS_LLM_KERNEL 去空白，跟寄信前的檢查不一致
+
+- 主題：fsm 範本
+- 哪裡：`proto8/templates/agent-fsm/wait.py` 的 `kernel_dir()`（第 318～319 行：`os.environ.get("AOS_LLM_KERNEL")` 直接用）對照同檔寄信前的檢查（第 423 行：`os.environ.get("AOS_LLM_KERNEL", "").strip()`）。
+- 現象：變數頭尾帶空白時，寄信前的檢查當它有設，`kernel_dir()` 卻可能解不到資料夾；「信不見了」的判斷、10 分鐘提醒的原因、`brain_wait.json` 都靠 `kernel_dir()`。沒實測，Argon 審設計時讀碼指出的（A7.3）。
+- 建議：`kernel_dir()` 也 `.strip()`。
+- 痛的程度：小不便
+- 提出者與日期：ok-kmsg 2026-11-14
+- 出處：wf/temp/ok-kmsg/wrapup-1114/建議.md「wait.py 的 kernel_dir() 沒對 AOS_LLM_KERNEL 去空白」（引 `proto8/thinking/2026-11/14/ok-kmsg-1114/01-Argon審v1.md` 第 7 條之 3）
+- 狀態：未處理。整理時查：兩處行號對過，`kernel_dir()` 仍沒 strip；第 301 行 `slow_reason` 那段也是直接 `os.environ.get("AOS_LLM_KERNEL")`。
+
+## self_tools add 一次只能加一支，沒有「加一整包」
+
+- 主題：fsm 範本（工具包）
+- 哪裡：`aos-agent tools add`（`proto8/cmd/aos-agent/aos_agent/tools.py`）、`self_tools`。
+- 現象：範本預設縮成 40 支之後，想用被拿掉的包（例如 subagent 三支）只能在做定義時改 `tools.json` 的 `$override`，或執行中逐支加、每支都要知道路徑。讀程式看到的，沒有實測整包加會怎樣。
+- 建議：`self_tools`／`aos-agent tools add` 收 `"pack": "<包名>"`。不急：執行中換工具清單會讓提示快取失效，主要做法仍應是做定義時就掛好。
+- 痛的程度：小不便
+- 提出者與日期：ok-fsm 2026-11-14
+- 出處：wf/temp/ok-fsm/wrapup-1114/建議.md「self_tools add 一次只能加一支」（引 `proto8/thinking/2026-11/14/ok-fsm-1114/01-預設工具包-設計稿.md` 採納表 B1.4）
+- 狀態：未處理。整理時查：`tools.py` 裡沒有 `pack` 字樣。
+- 相關：本檔「agent-fsm 範本預設掛 55 支工具」（預設縮成 40 支是那條的後續；整理時查：main 上的範本 tools.json 仍是 15 包，最後一次改是 2e1e69de2，縮成 40 支的改動還沒進 main，所以那條的狀態這批沒動）。
+
+## eca 的 cli.json 只有定義那一份，不能只替一隻打開開關
+
+- 主題：fsm 範本（eca-claude 範本與 aos-eca）
+- 哪裡：`proto8/cmd/aos-eca/aos_eca/turn.py` 第 24 行（`cli_cfg.load_cfg(template)`，template 是定義資料夾）。
+- 現象：live_mail（還有 a2a、timeout_ms 等）都寫在定義的 `cli.json`。用同一份定義的 agent 會一起打開；只想先試一隻（使用者選了 default:some），就要先複製一份定義給它。stack 裡沒有個別覆寫。system.txt 有「stack 複本先、定義其次」的規則（interfaces.json），cli.json 沒有。
+- 建議：比照 system.txt，讓 `<stack>/<kind>/cli.json`（或 stack 裡一份只放覆寫鍵的檔）疊在定義上面，只准覆寫行為開關，例如 live_mail、live_mail_cap、a2a。
+- 痛的程度：小不便（目前靠複製定義繞過）
+- 提出者與日期：ok-wake 2026-11-14
+- 出處：wf/temp/ok-wake/wrapup-1114/建議.md 第 1 則（引 `wf/temp/ok-wake/操作說明-開live_mail.md`「改哪裡」；head-comm 11-14 安排「只開 xiaosi 一隻」）
+- 狀態：未處理。整理時查：turn.py 第 24 行仍是 `cfg = cli_cfg.load_cfg(template)`，只讀定義那份。
+- 相關：[信件與溝通](信件與溝通.md)「agent 在長回合裡收不到新信通知」（live_mail 就是那條的解法）。

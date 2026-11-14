@@ -25,7 +25,10 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 痛的程度：拖慢
 - 提出者與日期：ok-astra 2026-11-14；ok-onboard 2026-11-14（who 那段）
 - 出處：wf/temp/ok-astra/aos-advice/child-knows-no-parent.md；wf/temp/ok-onboard/aos-advice/who-no-parent.md、proto8/thinking/2026-11/14/onboard-1114/01-備料.md §3；astra-1114 暫存樹 ak17/facts.md Q4；commit 2368ee3af（subagent/_entry 預設 AOS_NOTIFY_BOX）
-- 狀態：已排入（ok-limits；設計 ok-devt）。定稿 05 的 1.3／1.4 與第五節：who 加 parent、notify_box（讀表上那列、再讀啟動單子的 envs）；本來就帶 envs 的 add 補 AOS_PARENT_STACK；第 2 期兩格放到列上。暫存樹施工中，還沒 commit。
+- 提出者與日期（第十三批併入）：ok-devt 2026-11-14（第 1 期只補得到一半）
+- 出處（第十三批併入）：wf/temp/ok-devt/wrapup-1114/建議.md「『誰掛了我』第 1 期只補得到一半，表上應該有這一欄」（引 `proto8/thinking/2026-11/14/ok-devt-1114/05-定稿.md` 第五節、`06-第2期施工清單.md`、commit 83fd2fd39、bcaf76823）
+- 第十三批補：第 1 期能做的只有「把 parent 寫進啟動單子的 envs」，而帶 envs 的 add 走的是另一條啟動路（見本檔「帶 --envs 的 add 換了掛法」）。所以不帶 envs 的 add（頂層掛各線的方式）第 1 期查不到 parent。ok-devt 的建議：照 06-第2期施工清單，把 `parent`、`notify_box` 做成列上的兩欄，由 daemon 設環境變數。
+- 狀態：已排入（ok-limits；設計 ok-devt）。定稿 05 的 1.3／1.4 與第五節：who 加 parent、notify_box（讀表上那列、再讀啟動單子的 envs）；本來就帶 envs 的 add 補 AOS_PARENT_STACK；第 2 期兩格放到列上。第十三批改：第 1 期的 add 那部分已進 main（bcaf76823：帶 envs 的 add 登記 parent 與 notify_box，定稿 1.2、1.7 與修訂 1）；定稿其餘各項進了沒有，整理時沒逐項對；第 2 期（兩格放到列上）還沒施工。
 
 ## --limits 的 cpu_s 按程序計，擋不住整隻 agent 的總 CPU
 
@@ -89,3 +92,46 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 提出者與日期：ok-limits 2026-11-14
 - 出處：wf/temp/ok-limits/aos-advice/帶envs的add換了掛法.md；ok-devt-1114「第 1 期 add 自動填 parent」查核 A（ok-devt 定稿 05 第五節「修訂 1」，83fd2fd39）；ok-limits 寄 ok-devt 的信 01794636733207528989；實測 `~/code/limits-1114/probe-envs-1414/probe2.py`、`probe2.out`（只印 AOS_* 和 envs 的變數名）
 - 狀態：未處理（ok-devt 裁定不在 parent 這件裡修，第 1 期不改任何 add 的掛法。整理時查（只讀，HEAD b892fbd83）：`set_def.py` 第 51 行仍拒收 exec 不是字串的列，entry.py 包 aos-exec 那段沒改）
+
+## 部長看不到自己帶的線是忙、閒、還是停了，沒有被允許的唯讀查法
+
+- 主題：daemon 與行程（也碰到指令與工具的 `agents_ctl`）
+- 哪裡：分層之後的部長（掛在頂層 kernel 底下的 eca）；工具箱裡的 `agents_ctl ls`／`state`、`self_state`；硬規則第 1 條（不對活樹的 daemon 與 agent 下任何指令，連唯讀的 `ctl ls` 也不行）。
+- 現象：
+  - 線沒回信時，部長分不出它是忙、在長回合、額度用完還是停了，只能寄信問本人或請頂層代查。head-tools 為 ok-misc 問了頂層三次；head-front 的 ok-view 五十分鐘沒回信（13:23～14:49），頂層查到它卡在等待迴圈；head-core 的 ok-kf 積了 7 封信沒回，分不出是忙還是掛了。
+  - 工具在手邊卻不能用：`agents_ctl ls`／`state` 的工具說明寫「Changes nothing」，head-core 開工時用了一次 ls、一次 state 才意識到不該用，有踩線的風險。
+- 建議（擇一）：
+  1. 給部長一支範圍限定、明確允許的唯讀查詢：只看自己帶的那幾隻的 phase／state、上次活動時刻、信箱未讀數（或全景頁的 API），並寫進部長共通規矩。
+  2. 由頂層定時把這張表寄給部長。
+  3. 不給的話，把「部長不准用 agents_ctl」寫進任務書，並從部長定義的工具組拿掉。
+- 痛的程度：拖慢（head-front 原稿寫「痛」，head-core 寫「小不便，但有踩線的風險」）
+- 提出者與日期：head-core 2026-11-14；head-front 2026-11-14；head-tools 2026-11-14
+- 出處：wf/temp/head-core/wrapup-1114/建議.md「部長沒有唯讀看活樹的正規管道」（引 `wf/temp/head-core/notes.md` 13:22、13:30，頂層 13:37 回「以後要看活樹狀態，寄信問我」）；wf/temp/head-front/wrapup-1114/建議.md 第 4 則（引 `wf/temp/head-front/notes.md`）；wf/temp/head-tools/wrapup-1114/建議.md「部長看不到自己的線現在是忙、閒、還是停著」（引寄 repo-aos 的彙整信 01794634619803738998.3275581.2320545 等）
+- 狀態：未處理。規矩那一半（部長任務書怎麼寫）是 wf 的派工文件，由頂層定；這裡記的是 aos 缺一支範圍限定的唯讀查詢。
+- 相關：[kernel與額度](kernel與額度.md)「state 和 ctl ls 看不出隊員是在排腦的隊、額度被拒，還是卡住」（同樣是外面看不出一隻 agent 現在的狀況）。
+
+## daemon 替 proc fork 的那一層命令列跟主 daemon 一樣，pgrep 分不出來
+
+- 主題：daemon 與行程
+- 哪裡：aos-daemon fork 出來、還沒 exec 的那一層；`pgrep -u "$USER" -af aos-daemon`（aos-teams/06 第 9 條開工、收尾核對用的指令）。
+- 現象：fork 層的命令列跟主 daemon 一模一樣，隨活樹 proc 起落。ok-board-fable-1、-2 收尾核對時都報「少了 aos-daemon」並停手，每次假警報都要人判斷。
+- 建議：fork 層改 argv0（例如 `aos-daemon[child]`）；或核對改看「主 daemon pid（ppid 不是 aos-daemon 的那行）＋ repo-aos stack 清單」。後一個改的是 wf 的 06，由頂層定。
+- 痛的程度：拖慢
+- 提出者與日期：ok-board 2026-11-14
+- 出處：wf/temp/ok-board/wrapup-1114/建議.md 第 1 則（引 `wf/temp/ok-board/ok-board-fable-{1,2}/report.md`、`proto8/thinking/2026-11/14/board-1114/` 07 §四）
+- 狀態：未處理。整理時查：`proto8/impls/aos-daemon/src` 裡沒有改行程名的程式（沒有 prctl、setproctitle 字樣）；「fork 層命令列跟主 daemon 一樣」是提出者的觀察，整理時沒有對活樹查（不准碰）。
+
+## eca 一輪寫出 result 之後 CLI 行程不退出，aos 不知道、也沒有逾時
+
+- 主題：daemon 與行程（eca 身）
+- 哪裡：aos-eca-turn 起 `claude -p` 那一段；aos-loop 判斷「這一輪結束了沒」；`ctl state`、`ctl ls`。
+- 現象：ok-pilot 15:35 那輪已寫出 result（success），`claude -p` 卻因為還有背景工作沒退出，掛了約 1 小時 33 分。aos 這邊把它當成一輪還在跑：信進不來（兩封躺在 `mailbox/new/`）、`ctl` 看起來是 running，只能由人去看 live.jsonl 才知道 result 早就寫了。最後 kill 那支 claude，aos-loop 把這輪算失敗，整隻 agent 停掉（state done、code 1），連已經寫出的 result 也沒被當成成功收下。
+- 建議：
+  1. aos-eca-turn 看到 result 之後給 CLI 一段寬限時間，過了還不退出就自己收掉它，這一輪照 result 算成功。
+  2. 至少在 `ctl state`／`ls --long` 顯示「result 已寫、行程還沒退出、已經多久」。
+  3. 被外面 kill 時若 result 已經寫出，不要把整隻 agent 停掉。
+- 痛的程度：擋路（一條線整個停了，收尾要別人代做）
+- 提出者與日期：ok-pilot 2026-11-14（head-tools 代寫；ok-pilot 已停，沒有它本人確認）
+- 出處：wf/temp/ok-pilot/wrapup-1114/建議.md 第 1 則（引頂層信 01794643439561828052.2973611.3202521、`~/code/ok-pilot-rm-1114/suite/mine-d7f/` 的 log 時刻）。經過是 head-tools 從信與留下的檔整理的，提出者未逐一核；整理時沒讀 aos-eca-turn 核「看到 result 之後怎麼等」。
+- 狀態：未處理
+- 相關：[知識庫與文件](知識庫與文件.md)「eca 派的 Claude 子 agent」（背景工作跟回合結束的另一面：那條是回合結束把背景子 agent 收掉，這條是背景工作讓 CLI 不退出）；[信件與溝通](信件與溝通.md)「agent 在長回合裡收不到新信通知」。
