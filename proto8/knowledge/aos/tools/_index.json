@@ -102,7 +102,7 @@
   "description": "Tool peek_clock: the daemon clock's current cycle and how many ms one cycle is."
  },
  "peek_now_time.json": {
-  "description": "Tool peek_now_time: the current time of day in UTC."
+  "description": "Tool peek_now_time: the current time, in UTC by default, or local time with {\"local\": true}."
  },
  "math.json": {
   "description": "Tool math: compute one arithmetic expression; what is allowed, examples, ExprBad."
