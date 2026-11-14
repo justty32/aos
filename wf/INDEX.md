@@ -27,8 +27,14 @@
 | [SESSION-LOG.md](SESSION-LOG.md) | 我的 open 進度（hub）|
 | [session_logs/](session_logs/README.md) | 日誌：當月每日檔 `<月>/<日期>.md`、已結束月份的月摘要 `<月>.md`、總目錄（README，分月導航，每天一列在 `<月>/README.md`）|
 | [WAIT_USER.md](WAIT_USER.md) | 等使用者親自做 / 驗證 / 拍板的舊條目（只列 open）；新題寄使用者專區（`aos-user send`，見 [common/user.md](workflows/common/user.md)）|
-| [wait-user/](wait-user/) | WAIT_USER 的分類檔（要你裁的／真機驗證／試驗場／雜事；WAIT_USER.md 只留導航表）|
+| [wait-user/](wait-user/) | WAIT_USER 的舊分類檔（要你裁的／真機驗證／試驗場／雜事；新題不再加進來，改寄使用者專區）；WAIT_USER.md 是這四份的導航表，另列「待派工」|
 | [HANDOFF.md](HANDOFF.md) | compact 交接：compact 前頂層寫、compact 後 hook 自動讀回最新一條 |
+| [public/](public/README.md) | 公用知識庫：做法與坑，所有 agent 可讀可投稿，頂層管；`tools/` 放公用小工具 |
+| [advices/](advices/README.md) | 對 aos 本身的意見庫：各隊做事時冒出的改進意見，按主題歸檔 |
+| [knowledge/](knowledge/code-map.json) | wf 的機讀知識：code map（proto8 程式地圖冊）等 json |
+| [tools/](tools/_index.json) | wf 的腳本：`index_gen.py`（生成器）、`commit-request`（交件排隊）、`tabledb.py`、連結修補等 |
+| [salvage/](salvage/README.md) | `roadmap-run` 打撈包：給從零重寫 aos 的人的教訓（2026-10-13 封存，正文在它的 archive/）|
+| `temp/` | 各線的工作區 `temp/<線名>/`（已 gitignore，不進版控）|
 
 ## 通用（跨工作流共享）
 
