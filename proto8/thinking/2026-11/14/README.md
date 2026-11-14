@@ -11,3 +11,4 @@
 | [astra-kernel-1114](astra-kernel-1114.md) | astra 當 kernel 施工（線星）：暫存樹 `~/code/astra-1114` 階段 0 的 0.1～0.4 過，0.5 門鈴留著、表態、轉寄都通了；新坑 AK14（`agents_ctl stop` 停自己會自鎖到 timeout，`aos-agent ctl` 有 `--no-wait` 但工具沒帶出來）、AK15、AK16；全用假腦，沒改程式；交棒給 ok-astra |
 | [misc-1114](misc-1114.md) | 線雜：eca_main 來信七項與線庚剩的（set-def 停拔掛回、睡醒提醒、改名寫法、`AOS_HOME` 那句、真 CLI 實跑）與 T45～T48；只到施工圖與暫存樹（sol 腦通過、工人掛上未派工），程式沒改，交棒 ok-misc；T46 判 bug 可修，T45／T47／T48 牽涉設計只列；真 codex 實跑卡在「不要走codex」待問 |
 | [kernel-limits-1114](kernel-limits-1114.md) | kernel 限資源施工（線限）：段 2、段 3 非 C++ 部分寫成三份施工圖紙（B1 kernel 站 `limits`／`users`／`groups`、B2 `aos-share`、B3 `aos-asuser`＋aos-sandbox 認 `sub:N`），暫存樹 `~/code/limits-1114` 與接 LiteLLM 的 gpt 隊搭好；還沒派工、沒寫碼，交棒 ok-limits；實作級代定 D1～D9、坑 K-a～K-g |
+| [kernel-framework-1114](kernel-framework-1114.md) | 通用 kernel 框架（線框，家機）：批 5 接線做到七成（暫存 `~/code/kf-1114/b5`，沒跑測試、沒進 main，三個設計題待正規流程）；gpt agent-fsm 施工隊暫存樹 `~/code/kf-1114/fsm` 步驟 1～6 驗過、乾跑未跑；批 10 圖紙寫好未派；codex 照「不要走codex」收掉；交棒 ok-kf |
