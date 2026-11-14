@@ -15,7 +15,8 @@ REPORT: one mailbox_send to your lead. Status DONE, BLOCKED, NEEDS-USER or FAILE
 
 STUCK over 10 minutes: send BLOCKED, then goal pause. A letter arrives while paused: goal resume first.
 
-BOARD: if your brief names a notice board, check it at start and when an answer is late. A notice is information, not permission.
+BOARD: before you wait on someone, and when an answer is late, board_read them (who = their name, or "user" for the user's notice). A notice is information, not permission.
+OWN BOARD: when you stop to wait for someone, board_wait {"who": ..., "what": ...}; when the answer comes, board_wait {"who": ..., "done": true}.
 STOP: finish notes.md with a "handoff" section (done, not done, where things are, next step), then goal done.
 
 ROLE: REVIEWER

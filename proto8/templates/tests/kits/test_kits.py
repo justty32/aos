@@ -18,8 +18,10 @@ STEP2_OLD = ('2. Read <KNOWLEDGE>/aos/_description.json; look up more only when 
              'needed (index_view <KNOWLEDGE>/aos).')
 STEP2_NEW = ('2. Read the aos knowledge base: aos/_description.json in the knowledge '
              'folder your brief names (index_view it for more, only when needed).')
-BOARD_NEW = ('BOARD: if your brief names a notice board, check it at start and when '
-             'an answer is late. A notice is information, not permission.')
+BOARD_NEW = ('BOARD: before you wait on someone, and when an answer is late, board_read them '
+             '(who = their name, or "user" for the user\'s notice). A notice is information, not permission.')
+OWN_BOARD_NEW = ('OWN BOARD: when you stop to wait for someone, board_wait {"who": ..., "what": ...}; '
+                 'when the answer comes, board_wait {"who": ..., "done": true}.')
 
 
 def assemble(general, role):
@@ -31,7 +33,7 @@ def assemble(general, role):
         elif line.startswith('BOARD:'):
             out.append(BOARD_NEW)
         elif line.strip() == '<OWN_BOARD>':
-            continue
+            out.append(OWN_BOARD_NEW)
         else:
             out.append(line)
     return '\n'.join(out) + '\n\n' + role

@@ -28,10 +28,10 @@ A system text is assembled from layers, top to bottom:
 Placeholders in general.A.txt:
 
 - `<KNOWLEDGE>` - path of the aos knowledge folder.
-- `<BOARD>` - how to read a notice board (a command, or a file to read). Leave the whole BOARD line out if your site has none.
-- `<OWN_BOARD>` - empty for now; remove the line.
+- `<BOARD>` - how to read a notice board (a command such as board_read, or a file to read). Leave the whole BOARD line out if your site has none.
+- `<OWN_BOARD>` - a line saying how the agent posts who it waits for (board_wait), or remove the line.
 
-The shipped `gather/system.txt` and `review/system.txt` are general.A.txt with these defaults, then a blank line, then the role text: step 2 of START says to read `aos/_description.json` in the knowledge folder the brief names; the BOARD line says to check a notice board only if the brief names one; the `<OWN_BOARD>` line is dropped. Each stays at or below 3,000 characters. If you change a layer, assemble again in the same order (tests/kits/test_kits.py checks this).
+The shipped `gather/system.txt` and `review/system.txt` are general.A.txt with these defaults, then a blank line, then the role text: step 2 of START says to read `aos/_description.json` in the knowledge folder the brief names; the BOARD line says to board_read someone before waiting on them and when an answer is late (`"user"` for the user's notice); the `<OWN_BOARD>` line becomes an OWN BOARD line: board_wait with who and what when it stops to wait, board_wait with done = true when the answer comes. Each stays at or below 3,000 characters. If you change a layer, assemble again in the same order (tests/kits/test_kits.py checks this).
 
 ## How to use
 
@@ -52,11 +52,12 @@ Tool descriptions are the biggest fixed cost of every brain call: they are sent 
 | agent-fsm template as shipped | 55 | about 85,700 | about 37,000 |
 | gather kit | 24 | about 30,100 | about 13,800 |
 
-Cutting tools saves far more than cutting the system text.
+Cutting tools saves far more than cutting the system text. board_read and board_wait were added after this measurement (now 26 tools).
 
-The gather tool set keeps reading, write/edit/mkdir, gadgets, todo, mailbox, goal, read-only json, index and self_state. It leaves out shell, delete, events, subagent, def, jsonx and kernel_gate. self_tools, self_system, self_llm, self_history and self_ctl are turned off, so the agent cannot lift its own limits.
+The gather tool set (26 tools) keeps reading, write/edit/mkdir, gadgets, todo, mailbox, board_read and board_wait (from the comm pack; board_set, board_clear and board_ls are turned off), goal, read-only json, index and self_state. It leaves out shell, delete, events, subagent, def, jsonx and kernel_gate. self_tools, self_system, self_llm, self_history and self_ctl are turned off, so the agent cannot lift its own limits.
 
 ## Known limits
 
 - Writing only inside the workspace is a convention in the system text; no hook enforces it yet.
+- board_read and board_wait run the `aos-comm` command, so it must be on PATH (`install.sh` puts every `cmd/*/bin/*` there); without it those two calls fail and the rest of the kit still works.
 - Only tier A general text and two roles exist so far.

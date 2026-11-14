@@ -48,7 +48,7 @@
   "kits": {
    "gather": {
     "system.txt": "",
-    "tools.json": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal; no shell, delete, events, s…"
+    "tools.json": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only…"
    },
    "general.A.txt": "",
    "kits.json": "Index of the kits in this folder: for each kit its role, folder, system text, tool set, model tiers it was written for, and whether it has a shell.",

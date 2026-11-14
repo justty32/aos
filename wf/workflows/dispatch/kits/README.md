@@ -8,15 +8,19 @@
 
 | 層 | 檔 | 誰改 | 中立嗎 |
 |---|---|---|---|
-| 通用層 | [general.A.txt](general.A.txt)（A 級：sol、opus） | 這條線；P2 交 ok-release 搬進產品範本 | 中立，不放路徑、不放 wf 規矩 |
-| 站台層 | [site.txt](site.txt)，加上 gpt 才加的 [site.gpt.txt](site.gpt.txt)，記號的值在 [site.json](site.json) | 頂層 | wf 專用 |
-| 角色層 | [roles/gather.txt](roles/gather.txt)、[roles/review.txt](roles/review.txt) | 這條線 | 中立 |
+| 通用層 | [general.A.txt](general.A.txt)（A 級：sol、opus） | 以產品版 [proto8/templates/kits/](../../../../proto8/templates/kits/) 為準，先改產品版再抄回 | 中立；必須和產品版一字不差 |
+| 站台層 | [site.txt](site.txt)，加上 gpt 才加的 [site.gpt.txt](site.gpt.txt)，記號的值在 [site.json](site.json) | 頂層 | wf 專用，只留在 wf，不進產品版 |
+| 角色層 | [roles/gather.txt](roles/gather.txt)、[roles/review.txt](roles/review.txt) | 以產品版為準，同通用層 | 中立；必須和產品版一字不差 |
 | 任務層 | 任務書 | 隊長 | — |
 | 隊長流程 | [card.md](card.md) | 頂層 | wf 專用，隊員不讀 |
 
 `gather/system.txt` 是照下面的順序手工拼好的：版本戳、通用層、站台層、gpt 層、角色層。`<KNOWLEDGE>`、`<BOARD>` 換成 site.json 的值，`<OWN_BOARD>` 留空。合計 3,000 字元，是計劃訂的 A 級上限。
 
 改了任何一層，就照同樣的順序重拼，第一行的日期也要換。
+
+**通用層和角色層以產品版為準**：general.A.txt、roles/*.txt 和 proto8/templates/kits/ 的同名檔必須一字不差，改完用 `cmp` 對（例：`cmp general.A.txt ../../../../proto8/templates/kits/general.A.txt`，沒輸出＝相同）。站台層（site.txt、site.gpt.txt、site.json）只在 wf。
+
+**今晚換樹之後**：comm 包（board_read、board_wait）可用，site.json 的 BOARD 值可以改成 `board_read {"who":"user"}`，不再讀檔或跑 aos-view。
 
 ## 「看」包（gather/）
 

@@ -59,6 +59,7 @@
    },
    "errors.json": "設定（鍵：_description、codes、common、exits）",
    "kernel.json": "設定（鍵：_description、what、where_to_send、templates、gate、write_your_own）",
+   "kits.json": "設定（鍵：_description、use、layers、tools、limits）",
    "mailbox.json": "設定（鍵：_description、tools、rules、check、check_hook）",
    "me": {
     "_description.json": "",
