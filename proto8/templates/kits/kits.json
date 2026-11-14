@@ -1,0 +1,25 @@
+{
+ "description": "Index of the kits in this folder: for each kit its role, folder, system text, tool set, model tiers it was written for, and whether it has a shell.",
+ "kits": {
+  "gather": {
+   "role": "gatherer",
+   "dir": "gather",
+   "system": "gather/system.txt",
+   "tools": "gather/tools.json",
+   "tiers": ["A"],
+   "shell": false
+  },
+  "review": {
+   "role": "reviewer",
+   "dir": "review",
+   "system": "review/system.txt",
+   "tools": "gather/tools.json",
+   "tiers": ["A"],
+   "shell": false
+  }
+ },
+ "tiers": {
+  "A": "strong general models; general.A.txt"
+ },
+ "layers": ["general", "site (optional, not shipped)", "role", "task (the brief)"]
+}

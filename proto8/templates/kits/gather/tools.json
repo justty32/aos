@@ -1,0 +1,55 @@
+{
+ "description": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal; no shell, delete, events, subagent, def, jsonx or kernel_gate; self keeps only self_state, so the agent cannot lift its own limits.",
+ "$override": [
+  {
+   "$env": "AOS_HOME",
+   "$path": "/lib/packs/look.json"
+  },
+  {
+   "$env": "AOS_HOME",
+   "$path": "/lib/packs/change.json"
+  },
+  {
+   "$env": "AOS_HOME",
+   "$path": "/lib/packs/gadgets.json"
+  },
+  {
+   "$env": "AOS_HOME",
+   "$path": "/lib/packs/todo.json"
+  },
+  {
+   "$env": "AOS_HOME",
+   "$path": "/lib/packs/self.json"
+  },
+  {
+   "$env": "AOS_HOME",
+   "$path": "/lib/packs/mailbox.json"
+  },
+  {
+   "$env": "AOS_HOME",
+   "$path": "/lib/packs/goal.json"
+  },
+  {
+   "$env": "AOS_HOME",
+   "$path": "/lib/packs/json.json"
+  },
+  {
+   "$env": "AOS_HOME",
+   "$path": "/lib/packs/index.json"
+  }
+ ],
+ "tools": {
+  "copy": null,
+  "move": null,
+  "do_task": null,
+  "self_tools": null,
+  "self_llm": null,
+  "self_system": null,
+  "self_history": null,
+  "self_ctl": null,
+  "json_set": null,
+  "json_add": null,
+  "json_del": null,
+  "json_multi_set": null
+ }
+}

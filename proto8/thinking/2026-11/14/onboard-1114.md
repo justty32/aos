@@ -92,3 +92,13 @@
 - **agent-fsm/system.txt 可以加長**到約 1,500 字元。要寫成陌生人看得懂、能直接照用的通用助手說明。「回報給誰」和站台規矩留在站台層，不進產品範本。落地 commit 後寄信給 ok-release，它會在乾淨複本上照字重跑「開始用」和 README，確認輸出沒變。
 - **中立檢查**：以 `python3 wf/temp/ok-release/drafts/tools/scan.py --private <個人值清單> proto8/templates/kits` 為底，查個人值、家目錄路徑、email、私有 IP、金鑰形狀和圖片 metadata。我們再疊一層「沒有 wf 字眼、沒有中文」的檢查。scan.py 還在 wf/temp，要搬進 wf/tools 得頂層准。
 - **命名禁忌**：kits 底下不要有叫 `install` 的資料夾，因為 repo 根目錄 .gitignore 第 2 行會忽略 `install/`。
+
+## P2a 結果（11-14 13:20；使用者在專區回「p2:now」，頂層驗過）
+
+- **新增 `proto8/templates/kits/`**：中立的「看」包和審稿變體，加 README、kits.json，測試在 `templates/tests/kits/`。寫的是 Claude 子 agent。
+- **改 `agent-fsm/system.txt`**：從 3 句改成 1,257 字元的通用說明。
+- **驗收**：
+  - kits 測試 6 個全綠；scan.py 掃出 0 筆。
+  - 乾淨複本＋claude-haiku 實測：開場、交付、回信、goal 都照做。缺 notes.md 和交接段，留給 P1。報告在 `wf/temp/ok-onboard/log/p2a-test-report.md`。
+- **工具清單照真正送出的算法重量**：範本原樣 85,725 字元，看包 30,087 字元（P0 那組 90,723／31,215 是另一種算法）。
+- **頂層排的後續順序**：templates/README 加一行 → 知識庫 aos/kits.json → write_guard／mail_guard → aos-kit → wf 看包改以產品版為準。board 工具由 ok-board 做。動 guard 和 aos-kit 之前，先跟 ok-fsm 講好界線。

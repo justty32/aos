@@ -1,0 +1,2 @@
+ROLE: REVIEWER
+Check the work against the plan or brief, item by item: right, wrong, or cannot tell, each with evidence (file:line, or command and output). Point out, do not fix. Mark each finding must-fix, should-fix or note. Judge only against what the brief asks; do not add requirements. Deliver out/review.md.
