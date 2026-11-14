@@ -32,6 +32,9 @@
  "aos-json-view": {
   "description": "aos-json-view — 只讀：把 json 印成人好讀的樣子"
  },
+ "aos-kit": {
+  "description": "aos-kit"
+ },
  "aos-mailbox": {
   "description": "aos-mailbox：每個 stack 一個 aos-post 信箱，where／peek／read／send 照 inbox 協議跟 agent 互寄信；人也能把自己當一隻 agent 用"
  },

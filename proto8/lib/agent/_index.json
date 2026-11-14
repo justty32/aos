@@ -95,6 +95,9 @@
  "goal_state.py": {
   "description": "agent 的 goal 共用讀寫與判斷：<agent stack>/goal.json；aos-agent goal 寫、agent-fsm idle.py 與 aos-eca-turn 讀寫（丟提醒、記數）。"
  },
+ "guard": {
+  "description": "guard: before_tool guard for file, shell, mail and control tools"
+ },
  "hook_fire": {
   "description": "hook_fire（不是給腦的工具）：範本 loop.json 的 on_start／on_stop 叫它，發 after_start／after_stop 事件給 agent 的 hook"
  },

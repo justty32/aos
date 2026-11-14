@@ -81,6 +81,15 @@
    },
    "goal/": "aos-agent goal 的包裝，目標改成叫我的那隻自己：get、set、done、pause、resume；狀態在那隻 stack 的 goal.json，身體在它自己停下來時丟提醒",
    "goal_state.py": "agent 的 goal 共用讀寫與判斷：<agent stack>/goal.json；aos-agent goal 寫、agent-fsm idle.py 與 aos-eca-turn 讀寫（丟提醒、記數）。",
+   "guard": {
+    "_entry": "before_tool hook handler: stdin = the tool call event ({\"name\", \"arguments\", ...}); exit 0 = allowed,",
+    "guard.py": "before_tool hook logic: blocks file-tool writes outside the write scope (scope.py: AOS_WS plus",
+    "scope.py": "the write scope of one agent, from one source: realpath($AOS_WS) plus $AOS_WRITE_ALLOW may be written;",
+    "tests": {
+     "test_guard.py": "unittest for the guard: runs _entry as a subprocess with a temp guard.json (relaxed shell check, bypasses,",
+     "test_scope.py": "unittest for scope.py: write_scope(env) from AOS_WS / AOS_WRITE_ALLOW / the deny sources, and its CLI."
+    }
+   },
    "hook_fire": {
     "_entry": "發 after_start／after_stop 事件：agent 範本 loop.json 的 on_start／on_stop 叫它（hook_fire EVENT DEF_DIR，$AOS_STACK＝agent 的 stack）。"
    },

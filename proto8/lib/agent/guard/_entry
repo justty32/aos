@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+# guard - before_tool hook handler: stdin = the tool call event ({"name", "arguments", ...}); exit 0 = allowed,
+# exit 10 with "[aos] guard: blocked: ..." on stdout = blocked, exit 1 with "guard: error: CODE reason" on stderr =
+# broken config or event (mount it with on_error "stop" so that this blocks too). The logic is in guard.py,
+# the write scope in scope.py; "_entry --scope" prints the write scope as JSON (same as python3 scope.py).
+import os, sys
+
+sys.dont_write_bytecode = True   # this folder is denied to agents; do not leave __pycache__ in it
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+
+HELP = """usage: _entry < EVENT.json      (a before_tool hook handler)
+       _entry --scope            (print the write scope as JSON and exit 0)
+Checks one tool call against the write scope and the guard config ($AOS_GUARD_CFG; unset = defaults).
+exit codes: 0 allowed (or --scope printed); 10 blocked ("[aos] guard: blocked: ..." on stdout);
+            1 error ("guard: error: CODE reason" on stderr: CfgMissing, CfgBad, ArgumentsBad, WsMissing).
+See README.md next to this file.
+"""
+
+
+def main():
+    argv = sys.argv[1:]
+    if argv[:1] in (["-h"], ["--help"]):
+        sys.stdout.write(HELP)
+        return 0
+    if argv == ["--scope"]:
+        import scope
+        return scope.main([])
+    if argv:
+        sys.stderr.write("guard: error: ArgumentsBad unknown arguments %s (see --help)\n" % " ".join(argv))
+        return 1
+    import guard
+    guard.main()
+    return 0
+
+
+sys.exit(main())

@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+# aos-kit - list kits, assemble a kit's system text from its layers, check the shipped text, lay a kit over an agent-fsm definition (thin launcher; the body is aos_kit/).
+from pathlib import Path
+import sys
+
+sys.dont_write_bytecode = True                  # leave no __pycache__ in the repo folders
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))
+for parent in HERE.parents:
+    if (parent / 'py' / 'aos_flags.py').is_file():
+        sys.path.insert(0, str(parent / 'py'))
+        break
+import aos_flags  # noqa: E402
+from aos_kit import main  # noqa: E402
+
+aos_flags.run(main)

@@ -168,6 +168,47 @@
     "test_json_view.py": "Test aos-json-view: indent guides (| per level, colour by depth), colours by type, text blocks (newlines and string arrays), compact inline objects/a…"
    }
   },
+  "aos-kit": {
+   "aos_kit": {
+    "__init__.py": "aos-kit body: parse flags, dispatch ls / make / check / add, print. Recipe logic is in recipe.py, writing a definition in add.py.",
+    "add.py": "lay a kit over an agent-fsm definition: system.txt (assembled) and tools.json (copied); old files are kept as *.before-kit.",
+    "recipe.py": "read kits.json and a kit's make block, assemble the system text from its layers, check a kit."
+   },
+   "bin": {
+    "aos-kit": "list kits, assemble a kit's system text from its layers, check the shipped text, lay a kit over an agent-fsm definition (thin launcher; the body is a…"
+   },
+   "tests": {
+    "fixtures": {
+     "kits": {
+      "gather": {
+       "system.txt": "",
+       "tools.json": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only…"
+      },
+      "general.A.txt": "",
+      "kits.json": "Index of the kits in this folder: for each kit its role, folder, system text, tool set, model tiers it was written for, and whether it has a shell.",
+      "review": {
+       "system.txt": ""
+      },
+      "roles": {
+       "gather.txt": "",
+       "review.txt": ""
+      }
+     },
+     "kits-stale": {
+      "gather": {
+       "system.txt": "",
+       "tools.json": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only…"
+      },
+      "general.A.txt": "",
+      "kits.json": "Test fixture: kit gather whose shipped system.txt is stale (assembled before the OWN_BOARD line was filled).",
+      "roles": {
+       "gather.txt": ""
+      }
+     }
+    },
+    "test_kit.py": "Test aos-kit ls / make / check / add against fixture kit folders (a copy of templates/kits with make blocks) and a scratch copy of the agent-fsm temp…"
+   }
+  },
   "aos-mailbox": {
    "aos_mailbox": {
     "__init__.py": "aos-mailbox 本體：找我的 stack、四個子命令（where、peek、read、send）、叫 aos-post 命令列。"
