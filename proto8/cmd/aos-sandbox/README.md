@@ -12,18 +12,18 @@ aos-sandbox [--dry-run] [--] CONFIG prog [args...]
 
 ```
 [s6-softlimit -a … -d … -t …]   上限（設定有寫才接）
-[s6-setuidgid 帳號]        身分（設定有寫 user 才接；要 root）
+[s6-setuidgid 帳號]        root 身分層；非 root 改成 sudo -n -k /usr/local/bin/s6-setuidgid 帳號，放上限之前
 bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接；不用 root）
   -- prog args...
 ```
 
-兩層：**身分**（s6，要先有帳號、要 root）＋**命名空間**（bwrap，免 root）。上限是 s6-softlimit（免 root）。
+兩層：**身分**（s6，要先有帳號；非 root 帳號走 sudo NOPASSWD）＋**命名空間**（bwrap，免 root）。上限是 s6-softlimit（免 root）。
 
 ## 設定（一份 JSON 物件；全選填；不認得的 key 忽略）
 
 | key | 值 | 做什麼 | 沒寫 |
 |---|---|---|---|
-| `user` | `帳號`、`uid:gid` 或 `sub:N` | `s6-setuidgid` 換身分（只有 root 能用）；`sub:N`＝前面接 `aos-asuser --env-all sub:N --`，免 root 換成 subuid（[aos-asuser](../aos-asuser/README.md)） | 不換 |
+| `user` | `帳號`、`uid:gid` 或 `sub:N` | 帳號：root 跑＝`s6-setuidgid`；不是 root＝前面自動接 `sudo -n -k /usr/local/bin/s6-setuidgid 帳號`（要有 root/setup.sh 的 NOPASSWD sudoers）；sudo 不准＝`UserBad`，不會不換身分就跑；`uid:gid` 只准 root；`sub:N` 照舊接 `aos-asuser --env-all sub:N --`（[aos-asuser](../aos-asuser/README.md)） | 不換 |
 | `base` | 路徑陣列 | 系統唯讀底 | `/usr /bin /sbin /lib /lib64 /etc` 裡存在的 |
 | `commands` | 指令名陣列 | 照 PATH 找到，所在資料夾唯讀看得到（例 `aos-exec`）；真位置在 `…/cmd/<名>/bin/<名>` 的，連同它們共用的 `…/py` 一起唯讀綁 | 沒有 |
 | `ro` | 路徑陣列 | 唯讀看得到；跟 `rw` 巢狀時**深的那條說了算**（`rw: [repo]`＋`ro: [repo/.git]`＝repo 可寫、`.git` 唯讀；反過來 `ro: [repo]`＋`rw: [repo/sub]` 也行；11-13 線修 T32） | 沒有 |
@@ -36,6 +36,12 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 bwrap 在這個 user ns 裡照開（[06 X28](../../thinking/2026-11/13/kernel-limits-plan/06-試驗紀錄.md)），仍由 bwrap 清環境。
 工作區的每層祖先都要給「別人」x（可穿越）權限，換成 subuid 才走得到。
 
+非 `sub:` 的 user 只收最長 32 字的帳號名（`^[a-z_][a-z0-9_-]*[$]?$`）或數字 `uid:gid`；其他格式算設定壞掉。非 root 的乾跑也會查 passwd，帳號不存在、uid／gid 為 0、或使用 `uid:gid` 都是 `UserBad`。真正執行前用同一條 `sudo -n -k` 跑系統的 true 預檢；`-k` 忽略快取密碼，只准 NOPASSWD 規則放行。sudo 放最前面，後面才設 s6-softlimit 上限；乾跑不預檢。
+
+非 root 走 sudo 時，`bwrap`、`s6-softlimit`、prog 本身、設定檔所在的資料夾，以及 `commands`、`ro`、`rw` 的路徑都必須讓 aos-run 走得到、讀得到、跑得動（系統路徑或 `/srv/aos-run` 底下）；`/home/<我>` 是 700 時進不去，`~/.local/bin` 這類路徑也不行，不會自動補 ACL。
+
+**env 白名單的值會出現在 sudo 的指令列紀錄裡**：bwrap 的 `--setenv KEY VALUE` 在 argv 裡，所以機密不要列進 `env`。
+
 - **沒列到的路徑一律看不到**（白名單）；`/proc`、`/dev`、空的 `/tmp` 一定有。
 - **能寫的只有 `rw` 列的與 `/tmp`**（11-13 線修 T36）：所有綁定之後把沙箱的根 `/` 改成唯讀（bwrap `--remount-ro /`），寫到沒綁的地方（例 `$HOME`、別的定義夾）＝`Read-only file system`、指令失敗，不再默默寫進沙箱的暫存根、退 0、主機上卻沒檔。`/tmp` 照舊可寫，但它是沙箱自己的、跑完就沒了。
 - **設定檔所在的資料夾自動唯讀看得到**（11-13 線修 T34）：工具的 `_entry` 寫 `["aos-sandbox", "_metainfo.json#/sandbox", "aos-exec", "inner"]`，`inner` 是相對工具夾的；以前 `ro` 改寫成絕對路徑、漏了工具夾，就報 `EntryMissing entry not found: inner (relative paths count from /: /inner)`。已被某條 `ro`／`rw` 蓋到（同一條或在它底下）就不另綁（在 `rw` 裡的照舊可寫）。所以**別把祕密放在沙箱設定旁邊**。`inner` 指到的地方（例 `lib/base/shell`）照舊要列進 `ro`。綁進來的路徑在沙箱裡是同一個位置；相對路徑從 cwd 算。路徑是符號連結的，沙箱裡做同一條連結再綁它指到的地方。
@@ -45,9 +51,9 @@ bwrap 在這個 user ns 裡照開（[06 X28](../../thinking/2026-11/13/kernel-li
 - **能不能用 LLM kernel＝看不看得到信箱**（使用者 10-24「就是看他能不能存取檔案啊」，[紀錄 S14、S17](../../thinking/2026-10/24/sandbox/README.md)）：不另設開關。預設看不到（信箱沒列進 `rw`）；要用就 `rw` 列信箱 `{"$env": "AOS_LLM_KERNEL", "$path": "/requests"}`（`AOS_LLM_KERNEL`＝llm kernel 的 stack、信箱固定在它的 `requests/`；**只綁信箱、不綁整個 stack**：stack 裡還有 kernel 的定義與 `kernel.json`）、`env` 帶 `AOS_LLM_KERNEL`（預設的 `env` 就有；自己寫 `env` 時要列）。綁了信箱的上層資料夾也等於給了信箱（寫什麼就做什麼）。換帳號（`user`／身分層）跑時，寫不寫得進由信箱的擁有者、群組、權限位決定：[root/setup.sh](root/setup.sh) `--mailbox 信箱`。
   寄得進去之後，沙箱外的問腦總機 [`lib/aos/kernel_llm`](../../lib/aos/kernel_llm/README.md)（11-14 前是 C++ 的 aos-llm-kernel）用它自己的身分與環境、跑它自己定義裡的 endpoint 函數（信裡只帶請求、不帶單子）——關在裡面的程式只能寄請求、挑 kernel 登記過的代號，改不了端點與金鑰。
 
-**設定壞了＝當沒寫：不套沙箱、直接跑 prog**（使用者 11-12 晚，回沙箱設定寫壞時怎麼辦，甲＝也略過、不關沙箱照跑、跟其他格一致：「甲，出事自己負責」；[N-69](../../docs/NORMS/10-基礎設施-定義與工作區/11-N-69.md)「全是觀點、參考用」）。stderr 印一行 `aos-sandbox: warning: sandbox config ignored, running unsandboxed: 原因`，prog 照 PATH 找、stdin／stdout／結束碼照舊是它的；`--dry-run` 印的就只有 prog 那條。算「壞」的：檔讀不了、不是 JSON、指到的不是物件、`#` 後面不是 `/`、某個 key 型別不對（`net` 不是布林、上限不是正整數、`user` 不是字串、路徑／指令／`env` 不是字串陣列）、裡面有 `$ref`、`$env` 指的變數沒設。**不算壞、照舊是錯的**：設定不在（檔不在、`#/` 指不到＝`CfgMissing`）、環境做不到（列的路徑不在＝`PathMissing`；bwrap、s6、`commands` 列的指令不在＝`CommandMissing`；要換身分卻不是 root＝`UserBad`）。所以沙箱不是保證：要確定有關住，看 stderr 有沒有那行 warning。
+**設定壞了＝當沒寫：不套沙箱、直接跑 prog**（使用者 11-12 晚，回沙箱設定寫壞時怎麼辦，甲＝也略過、不關沙箱照跑、跟其他格一致：「甲，出事自己負責」；[N-69](../../docs/NORMS/10-基礎設施-定義與工作區/11-N-69.md)「全是觀點、參考用」）。stderr 印一行 `aos-sandbox: warning: sandbox config ignored, running unsandboxed: 原因`，prog 照 PATH 找、stdin／stdout／結束碼照舊是它的；`--dry-run` 印的就只有 prog 那條。算「壞」的：檔讀不了、不是 JSON、指到的不是物件、`#` 後面不是 `/`、某個 key 型別不對（`net` 不是布林、上限不是正整數、`user` 不是字串、路徑／指令／`env` 不是字串陣列）、裡面有 `$ref`、`$env` 指的變數沒設。**不算壞、照舊是錯的**：設定不在（檔不在、`#/` 指不到＝`CfgMissing`）、環境做不到（列的路徑不在＝`PathMissing`；bwrap、s6、`commands` 列的指令不在＝`CommandMissing`；非 root 的帳號／sudo 身分檢查不通過＝`UserBad`）。所以沙箱不是保證：要確定有關住，看 stderr 有沒有那行 warning。
 
-錯：stderr 一行 `aos-sandbox: error: 代號 原因`、退 1——`ArgumentsBad`、`FlagUnknown`、`CfgMissing`（檔不在、`#/` 指不到）、`PathMissing`、`CommandMissing`（PATH 上沒有 bwrap、s6-*、`commands` 列的）、`UserBad`（要換身分卻不是 root）。exec 之後的結束碼都是 prog 的（被訊號停＝128＋N）：**退非 0 時 stderr 有 `aos-sandbox: error:` 這行＝我錯；沒有＝下層（s6／bwrap／prog）的碼**（stdio-unify R8）。`--help`＝英文說明到 stdout、退 0。
+錯：stderr 一行 `aos-sandbox: error: 代號 原因`、退 1——`ArgumentsBad`、`FlagUnknown`、`CfgMissing`（檔不在、`#/` 指不到）、`PathMissing`、`CommandMissing`（PATH 上沒有 bwrap、s6-*、`commands` 列的）、`UserBad`（非 root 的帳號或 sudo 檢查不通過）。exec 之後的結束碼都是 prog 的（被訊號停＝128＋N）：**退非 0 時 stderr 有 `aos-sandbox: error:` 這行＝我錯；沒有＝下層（s6／bwrap／prog）的碼**（stdio-unify R8）。`--help`＝英文說明到 stdout、退 0。
 
 ## 怎麼接
 
@@ -71,7 +77,7 @@ bwrap 在這個 user ns 裡照開（[06 X28](../../thinking/2026-11/13/kernel-li
 ## 要 root 的那半
 
 [root/setup.sh](root/setup.sh)：預設乾跑（只印指令），`sudo sh proto8/cmd/aos-sandbox/root/setup.sh --apply` 才做——把 s6 四支放進 `/usr/local/bin`、建系統帳號 `aos-run`、開 `/srv/aos-run`、加一條 sudoers（只准「換成 aos-run」）。
-**在 `/srv/aos-run` 底下開資料夾**（11-14 線限 sbroot 驗收踩到的）：跑 setup.sh 的人（我）不在 `aos-run` 群組裡。群組外的人對目錄 chmod，kernel 會清掉 setgid 位，之後新建的檔變成我自己的群組，`aos-run` 就讀不到；我也不能把檔 chgrp 到 `aos-run`。所以 `/srv/aos-run` 底下**只 mkdir、不 chmod**，讓子目錄沿用 setgid 帶下來的 `aos-run` 群組；umask 022 建出來是 2755，要讓 `aos-run` 寫的那層再加 `chmod g+w`（群組留著，只有那層的 setgid 會掉）。把自己加進 `aos-run` 群組（`sudo usermod -aG aos-run 我`，重新登入後生效）之後，就不會有這個問題。這層的接法：aos-sandbox 寫了 `user` 就要 root，我不是 root 時改成前面接 `sudo -n /usr/local/bin/s6-setuidgid aos-run`，後面接 aos-sandbox `--dry-run` 印出的那條（驗收紀錄 [kernel-limits-1114](../../thinking/2026-11/14/kernel-limits-1114.md)）。
+**在 `/srv/aos-run` 底下開資料夾**（11-14 線限 sbroot 驗收踩到的）：跑 setup.sh 的人（我）不在 `aos-run` 群組裡。群組外的人對目錄 chmod，kernel 會清掉 setgid 位，之後新建的檔變成我自己的群組，`aos-run` 就讀不到；我也不能把檔 chgrp 到 `aos-run`。所以 `/srv/aos-run` 底下**只 mkdir、不 chmod**，讓子目錄沿用 setgid 帶下來的 `aos-run` 群組；umask 022 建出來是 2755，要讓 `aos-run` 寫的那層再加 `chmod g+w`（群組留著，只有那層的 setgid 會掉）。把自己加進 `aos-run` 群組（`sudo usermod -aG aos-run 我`，重新登入後生效）之後，就不會有這個問題。這層的接法：不是 root 時 aos-sandbox 自己接 `sudo -n -k /usr/local/bin/s6-setuidgid 帳號`，不用手動拼 `--dry-run` 印出的那條（驗收紀錄 [kernel-limits-1114](../../thinking/2026-11/14/kernel-limits-1114.md)）。
 `setup.sh --mailbox 信箱 [--apply]`：只做讓 aos-run 寫得到某個 kernel 信箱——擁有者＝我（跑 kernel 的人）、群組 `aos-run`、2770，四格加預設 ACL（閘門建的信、kernel 寫的回信兩邊都讀寫得到，不看 umask）；信箱要放在 aos-run 走得到的地方（例 `/srv/aos-run/requests`）。不讓寫＝`chmod 700 信箱`。
 另外三個旗標換預設值（不讀環境變數）：`--me 名`（我＝跑 kernel 的人，預設 `$SUDO_USER` 或自己；測試在假 root 裡給數字）、`--s6-bin 路徑`（s6 的 bin，預設試驗場 `/home/<我>/code/try/sandbox/s6-root/bin`）、`--runner 名`（跑不信任函數的帳號與群組，預設 `aos-run`）；repo 現行沒有 `SetupFlagsTest`，乾跑旗標需手動核對。從 repo 根跑以下指令（不帶 `--apply`，只印不執行），確認輸出採用指定的 s6 路徑、使用者與 runner；乾跑不讀取 s6 執行檔，示例的 `--s6-bin` 路徑不必存在：
 
@@ -81,6 +87,6 @@ sh proto8/cmd/aos-sandbox/root/setup.sh --me "$(id -un)" --s6-bin /tmp/pf-line5-
 
 ## 需要
 
-`bwrap`（bubblewrap）、`python3`；設定寫了上限或 `user` 才要 s6（`s6-softlimit`、`s6-setuidgid`、`s6-applyuidgid`，都照 PATH 找）。這台 Arch 的官方庫沒有 s6，試驗場自己編了一份到 `~/code/try/sandbox/s6-root/bin`（skalibs 2.16.0.0、execline 2.10.0.0、s6 2.15.1.1，skarnet.org 原始碼）。
+`bwrap`（bubblewrap）、`python3`；設定寫了上限或 `user` 才要 s6（`s6-softlimit`；root 身分層的 `s6-setuidgid`、`s6-applyuidgid` 照 PATH 找；非 root 另需 sudo 與固定 `/usr/local/bin/s6-setuidgid`）。這台 Arch 的官方庫沒有 s6，試驗場自己編了一份到 `~/code/try/sandbox/s6-root/bin`（skalibs 2.16.0.0、execline 2.10.0.0、s6 2.15.1.1，skarnet.org 原始碼）。
 
 **搬不走的那半**：帳號、sudoers、`/srv` 下的配置與 bind 的主機路徑都屬於這台機器；搬完先改 bind 路徑，再重跑 [root/setup.sh](root/setup.sh)（先乾跑，核對後 `--apply`；信箱另帶 `--mailbox`），不會因複製 image 自動重建。
