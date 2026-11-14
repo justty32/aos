@@ -8,6 +8,12 @@
  "astra-kernel-1114.md": {
   "description": "astra 當 kernel 施工紀錄（線星 11-14）：階段 0 在暫存樹做到 0.5，門鈴「留著→astra 表態→轉寄」通了，撞到一個新坑：sol 停自己會卡住到期限；11-14 交棒給 ok-astra"
  },
+ "board-1114": {
+  "description": "分檔夾：board-1114：布告欄＋信件分級＋頻道 → 協議 `comm/1`（規劃）"
+ },
+ "board-1114.md": {
+  "description": "board-1114：布告欄＋信件分級＋頻道 → 協議 `comm/1`（規劃）"
+ },
  "commit-queue-1114": {
   "description": "分檔夾：commit 排隊（commit-queue-1114）：多條線共用一個工作樹時，commit 交給 `commit-request` 一件一件做"
  },

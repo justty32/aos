@@ -20,3 +20,4 @@
 | [wait-user-rewrite-1114](wait-user-rewrite-1114.md) | WAIT_USER 舊帳 36 筆逐筆查證：37 個子項結案、其餘寄進使用者專區、2 件改列待派工 |
 | [llmk2-1114](llmk2-1114.md) | 線層 ok-llmk2：llm kernel 上一層規劃——部門配額樹（配給＋排程，頁面仍叫電力）；站內照樹放行、站外 aos-llm-quota 改表報帳、Claude 本機紀錄電表先量不管；8 題方向題待拍板，只規劃 |
 | [sec-1114](sec-1114.md) | 線安 ok-sec：借 Linux uid／檔案權限讓 aos 更安全，只規劃——三圈（使用者帳號／每隻 agent 一個 subuid／外來程式進沙箱）、第 0 期免 root 實測 8 項、Argon 審過定稿；第 1 期不改用法，改用法的排在公開 demo 之後；11 題待拍板 |
+| [board](board-1114.md) | board-1114：布告欄＋分級＋頻道協議 comm/1 規劃 |
