@@ -39,8 +39,8 @@
 | [信件與溝通](信件與溝通.md) | mailbox、aos-post 信件格式、專區信、say／ask／listen、回答配對信名、信件交錯 | 3 | 2 | 3 |
 | [kernel與額度](kernel與額度.md) | llm kernel、腦額度、找 kernel、kernel hook、kernel_gate（hold、站跟主人的鐘、hold 通知）、只設 AOS_KERNEL 的 subagent、提示快取與 session id | 2 | 1 | 6 |
 | [fsm範本](fsm範本.md) | agent-fsm 範本、工具包（含 user 包）、system 文字、guard 與可寫範圍、before_tool 擋下的標法、wait 與冷卻、goal、sol 第一輪只說不做、llm_settings 註解、eca-claude 範本（goal 提醒、dontAsk 放行、自動記憶） | 8 | 2 | 5 |
-| [指令與工具](指令與工具.md) | aos-agent（含 ctl stop／rm 碰到答題中、agents_ctl 與 subagent 名冊）、aos-view、建置、wf/tools（含 commit-request）、工具說明（tooldef）、工具錯誤代號、--help 字樣、路徑裡的 `#` 與 keep、agent_def 複製、aos-lock、glob 掃描上限 | 12 | 0 | 3 |
+| [指令與工具](指令與工具.md) | aos-agent（含 ctl stop／rm 碰到答題中、agents_ctl 與 subagent 名冊）、aos-view、建置、wf/tools（含 commit-request）、工具說明（tooldef）、工具錯誤代號、--help 字樣、路徑裡的 `#` 與 keep、agent_def 複製、aos-lock、glob 掃描上限 | 11 | 1 | 3 |
 | [知識庫與文件](知識庫與文件.md) | 知識庫頁、元件 docs 跟程式對不上或該寫沒寫（gate 的 home_roots） | 1 | 0 | 1 |
 | [安全](安全.md) | 密鑰外洩面、proc 環境繼承、暫存檔權限 | 0 | 1 | 0 |
 
-合計 56 條：未處理 28、已排入 9、已解 19（第十二批逐檔數狀態重算；「部分已做／部分已解」的仍算未處理；「安全」那條只有一部分排入，照使用者指定的狀態算已排入）。第一批實際入庫 17 條，上面「16 條」是當時的筆誤，照各檔實數。
+合計 56 條：未處理 27、已排入 10、已解 19（第十二批逐檔數狀態重算；「部分已做／部分已解」的仍算未處理；「安全」那條只有一部分排入，照使用者指定的狀態算已排入）。第一批實際入庫 17 條，上面「16 條」是當時的筆誤，照各檔實數。
