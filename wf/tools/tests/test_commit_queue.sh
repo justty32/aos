@@ -1,5 +1,5 @@
 #!/bin/bash
-# test_commit_queue.sh — 在 repo 外的暫存 clone 上測 commit_queue.py（兩線同時、別人 staged、索引列合併、claim 擋下、生成器失敗、CAS、半途被殺、生成物）；不碰來源 repo
+# test_commit_queue.sh — 在 repo 外的暫存 clone 上測 commit_queue.py（兩線同時、別人 staged、索引列合併、claim 擋下、生成器失敗、CAS、半途被殺、生成物、month_set）；不碰來源 repo
 # 用法：test_commit_queue.sh <來源 repo> <repo 外的暫存夾>   每次在暫存夾下開一個新的 run-<時間> 子夾，不刪任何東西
 set -u
 [ -n "${BASH_VERSION:-}" ] || { echo "not bash" >&2; exit 1; }
@@ -157,6 +157,27 @@ cq submit --line ok-a --files "$DAYDIR/t10e.md" --msg-file "$(msg t10e m10e)" > 
 sleep 0.5; printf '# t10e 又改了\n' > "$DAYDIR/t10e.md"
 wait $PS; E=$?; wait $PL
 check "edited while waiting → BLOCKED ($E)" bash -c "[ $E = 2 ] && grep -q ChangedWhileWaiting $RUN/t10e.out"
+
+echo "== T11 month_set: set the day count, summary untouched, same value again is a no-op, bad count refused"
+MROW0=$(git show main:proto8/thinking/$YM/README.md | grep -F "| [$DAY]($DD/README.md) |" | awk -F'|' '{print $4}')
+cq submit --line ok-a --msg-file "$(msg t11 m11)" --op "{\"op\":\"month_set\",\"date\":\"$DAY\",\"count\":77}" > "$RUN/t11.out" 2>&1; E=$?
+CNT=$(git show main:proto8/thinking/$YM/README.md | grep -F "| [$DAY]($DD/README.md) |" | awk -F'|' '{print $3+0}')
+MROW1=$(git show main:proto8/thinking/$YM/README.md | grep -F "| [$DAY]($DD/README.md) |" | awk -F'|' '{print $4}')
+check "month_set ok ($E), count is 77, one row for the day" bash -c "[ $E = 0 ] && [ $CNT = 77 ] && [ \$(git show main:proto8/thinking/$YM/README.md | grep -cF '| [$DAY]($DD/README.md) |') = 1 ]"
+check "summary cell untouched" [ "$MROW0" = "$MROW1" ]
+check "working tree month index clean" [ -z "$(git status --porcelain -- proto8/thinking/$YM/README.md)" ]
+B=$(head_)
+cq submit --line ok-a --msg-file "$(msg t11b m11b)" --op "{\"op\":\"month_set\",\"date\":\"$DAY\",\"count\":77}" > "$RUN/t11b.out" 2>&1; E=$?
+check "same count again → nothing to commit (BLOCKED $E), main unchanged" bash -c "[ $E = 2 ] && [ $(head_) = $B ]"
+cq submit --line ok-a --msg-file "$(msg t11c m11c)" --op "{\"op\":\"month_set\",\"date\":\"$DAY\",\"count\":\"7\"}" > "$RUN/t11c.out" 2>&1; E=$?
+check "count as a string → refused ($E)" [ $E = 3 ]
+cq submit --line ok-a --msg-file "$(msg t11d m11d)" --op "{\"op\":\"month_set\",\"date\":\"$DAY\",\"count\":-1}" > "$RUN/t11d.out" 2>&1; E=$?
+check "negative count → refused ($E)" [ $E = 3 ]
+cq submit --line ok-a --msg-file "$(msg t11e m11e)" --op "{\"op\":\"month_set\",\"date\":\"$YM-00\",\"count\":1}" > "$RUN/t11e.out" 2>&1; E=$?
+check "no row for that day → BLOCKED ($E), main unchanged" bash -c "[ $E = 2 ] && [ $(head_) = $B ]"
+cq submit --line ok-a --msg-file "$(msg t11f m11f)" --op "{\"op\":\"month_bump\",\"date\":\"$DAY\",\"segment\":\"丁線一段\"}" --op "{\"op\":\"month_set\",\"date\":\"$DAY\",\"count\":5}" > "$RUN/t11f.out" 2>&1; E=$?
+CNT=$(git show main:proto8/thinking/$YM/README.md | grep -F "| [$DAY]($DD/README.md) |" | awk -F'|' '{print $3+0}')
+check "bump then set in one request ($E): count is 5 and the new segment is there" bash -c "[ $E = 0 ] && [ $CNT = 5 ] && git show main:proto8/thinking/$YM/README.md | grep -F '[$DAY]' | grep -qF '；丁線一段 |'"
 
 check "end: nothing staged except the foreign file" [ "$(git diff --cached --name-only)" = proto8/foreign_staged.md ]
 

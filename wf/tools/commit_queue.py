@@ -11,6 +11,7 @@
 共用索引檔不收整檔，只收操作（--op 給 JSON，可重複；--ops-file 給 JSON 陣列）：
   {"op": "day_upsert", "date": "2026-11-14", "name": "x", "link": "x.md", "summary": "…"}   日索引表，以連結 link 認列，有就換、沒有加表尾；那天還沒有日索引就用範本開一份
   {"op": "month_bump", "date": "2026-11-14", "segment": "…"}   月索引那天的列：摘要（以；切段）沒有完全相同的這段才「份數加一、尾加；segment」；沒有那天的列就照日期插入
+  {"op": "month_set", "date": "2026-11-14", "count": 10}   月索引那天的列：份數直接設成 count（非負整數；份數＝那天日索引的列數），摘要不動；已經是這個數就什麼都不改；沒有那天的列＝套不上
   {"op": "log_upsert", "key": "- **open｜主題", "text": "整行"}   wf/SESSION-LOG.md「## 最新進度」段，行首等於 key 的那行換掉，沒有就加段尾
   {"op": "log_delete", "key": "- **open｜主題"}                  刪那一行
 路徑：--files／--rm 的相對路徑從 repo 根算（不管 cwd）；--msg-file、--ops-file 從 cwd 算。
@@ -141,10 +142,12 @@ def month_path(date):
 
 def check_op(op):
     kind = op.get("op")
-    need = {"day_upsert": ("date", "name", "link", "summary"), "month_bump": ("date", "segment"),
+    need = {"day_upsert": ("date", "name", "link", "summary"), "month_bump": ("date", "segment"), "month_set": ("date",),
             "log_upsert": ("key", "text"), "log_delete": ("key",)}
     if kind not in need:
-        raise Stop("FAILED", "OpBad", EXIT["invalid"], f"unknown op {kind!r} (day_upsert, month_bump, log_upsert, log_delete)")
+        raise Stop("FAILED", "OpBad", EXIT["invalid"], f"unknown op {kind!r} (day_upsert, month_bump, month_set, log_upsert, log_delete)")
+    if kind == "month_set" and (isinstance(op.get("count"), bool) or not isinstance(op.get("count"), int) or op["count"] < 0):
+        raise Stop("FAILED", "OpBad", EXIT["invalid"], "month_set: count must be a non-negative integer")
     for k in need[kind]:
         if not isinstance(op.get(k), str) or not op[k].strip():
             raise Stop("FAILED", "OpBad", EXIT["invalid"], f"{kind}: {k} missing or empty")
@@ -207,6 +210,19 @@ def apply_op(text, op):
             after = [i for i, d in rows if d < date]
             at = (after[-1] + 1) if after else rows[0][0]
             lines.insert(at, f"{key} 1 | {seg} |")
+        return "\n".join(lines), None
+    if kind == "month_set":
+        date = op["date"]
+        key = f"| [{date}]({date[8:10]}/README.md) |"
+        hit = [i for i, ln in enumerate(lines) if ln.startswith(key)]
+        if len(hit) != 1:
+            raise ValueError(f"{len(hit)} rows for {date} in month index (month_set needs exactly one)")
+        cells = lines[hit[0]].strip()[1:-1].split("|", 2)
+        if len(cells) != 3:
+            raise ValueError(f"row for {date} is not 3 cells")
+        if cells[1].strip() == str(op["count"]):
+            return text, None
+        lines[hit[0]] = f"{key} {op['count']} | {cells[2].strip()} |"
         return "\n".join(lines), None
     # log_upsert / log_delete
     try:
