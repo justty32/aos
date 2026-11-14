@@ -22,6 +22,11 @@
 - **實作 astra 帶 sol**：照 [astra-kernel-plan](../../../../proto8/thinking/2026-11/13/astra-kernel-plan.md)（astra 指揮、sol 照圖紙寫碼；在 aos 樹裡跑 agent-fsm 身，接下一節）。這是 gpt 系優先那條的具體隊形；astra 只指揮與驗收、不改圖紙的設計，跟入口「gpt 系不參與設計決策」不衝突（圖紙由 opus 定）。施工仍要使用者另外點頭（鐵律 2）。
 - 「sonnet／gpt 蒐集」：gpt 那半照上面「sonnet 搜集」條，等 agent-fsm 有雛形。
 
+**11-14 補（施工各線）**：使用者原話「然後每條線都讓opus作爲協調，要規劃就走正規規劃流程」「蒐集資料和實作都可以試試看交給sol等」「跑一整晚...我們現在就用本地litellm proxy，使用gpt」「作爲我們要的實作」。所以：
+- 每條線都由 opus 協調。施工中碰到圖紙沒寫到、要重新規劃的地方，回頭走這條正統流程，不邊做邊定。
+- 蒐集和寫碼優先交給 gpt（sol／terra），走本地 LiteLLM 上的 agent-fsm 或 codex 都可以，sonnet 和 claude 補位；設計判斷仍由 opus 和 fable 做。上面「等 agent-fsm 有雛形」的條件從 11-14 起改成「直接試」。
+- 原本排的「fsm 真腦跑一整晚」不另外做測試，改成用 LiteLLM gpt 做實際的施工。
+
 **需求還不清楚時先不走這條**（使用者 11-14 早「你們太早就開始規劃實作與架構了…可以先發想，類似頭腦風暴那樣」）：先發散出點子與可丟棄的小實驗，需求浮出來再規劃，見 [user/03「需求不清時先發想」](../../common/user/03-討論紀錄與規劃.md#需求不清時先發想不急著規劃2026-11-14-定)；第一次照這樣跑的是 [11-14 aos-brainstorm](../../../../proto8/thinking/2026-11/14/aos-brainstorm/README.md)。
 
 原話見 [03「使用者 11-13 23:40 原話」](03-使用者原話.md#使用者-11-13-2340-原話正統規劃流程)；第一次照這條跑的是 [any-resource-os](../../../../proto8/thinking/2026-11/13/any-resource-os.md)。
