@@ -75,3 +75,21 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 提出者與日期：ok-onboard 2026-11-14
 - 出處：wf/temp/ok-onboard/aos-advice/goal-paused-letter-resume.md；proto8/thinking/2026-11/14/onboard-1114/05-採納表.md A6
 - 狀態：未處理（未重現；idle.py 讀信那條路沒碰 goal）
+
+## agent-fsm 範本預設掛 55 支工具，工具說明是每次問腦最大的固定成本
+
+- 主題：fsm 範本
+- 哪裡：`proto8/templates/agent-fsm/tools.json`（`$override` 疊 15 包）、各工具的 `_tooldef.json`。
+- 現象：
+  - 11-14 照活樹 lib 的 `_tooldef.json` 加總：範本原樣 55 支、90,723 字元；只留蒐集員要的 24 支是 31,215 字元。
+  - system 才約 2～3 千字元，所以每次問腦送出去的固定內容，大部分是工具說明。
+  - 一隻 sol 一張單約 40 次問腦，光工具說明就約 360 萬字元。
+- 建議（擇一或都做）：
+  1. 範本預設只掛常用的包，其餘包寫進 README，要的人自己加。
+  2. 把 tooldef 的 description 分成短版（送給腦）和長版（給 `self_tools get` 看）。
+  3. 至少在知識庫寫明「每多掛一包，每次問腦多送幾千字元」。
+- 痛的程度：拖慢（燒額度）
+- 提出者與日期：ok-onboard 2026-11-14
+- 出處：wf/temp/ok-onboard/aos-advice/fsm-template-tool-descriptions-cost.md；proto8/thinking/2026-11/14/onboard-1114.md「P0 結果」；wf/workflows/dispatch/kits/README.md
+- 狀態：未處理。範本 tools.json 仍是 15 包 55 支（最後一次改是 2e1e69de2 加 jsonx 包）。繞法：派蒐集員照 [wf/workflows/dispatch/kits](../workflows/dispatch/kits/README.md) 的 gather 只掛 24 支（見 [wf/public recipes「派蒐集員或審稿員」](../public/recipes.md)）。
+- 相關：本檔「蒐集用 sol 的工具包寫不了純文字檔」，同樣是「範本該掛哪些包」的問題，精簡時要留文字寫檔。

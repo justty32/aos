@@ -37,3 +37,17 @@ llm kernel（lib/aos/kernel_llm）、腦額度、找 kernel 的意見。
 - 提出者與日期：ok-llmk2 2026-11-14
 - 出處：wf/temp/ok-llmk2/aos-advice/kernel-llm-hook-reject-code.md；proto8/thinking/2026-11/14/llmk2-1114/03-計劃.md §2.3
 - 狀態：未處理（llm_rules.py 仍只認 HookRejected）
+
+## llm kernel 沒開時，外人只看到 listen 逾時、沒有提示
+
+- 主題：kernel 與額度
+- 哪裡：`proto8/templates/daemon-root/README.md`（「它沒開時 agent 只是一直等、不會壞」那句）；`aos-agent … listen`；`aos-daemon-ctl ls` 的 REASON 欄。
+- 現象：範本 README 有寫 llms 要放在專案旁邊（`.env` 預設 `AOS_LLM_KERNEL=${AOS_WS}/../llms/stacks/llm`）。但照文件打字的外人如果漏起了 llms、或擺的位置不同，agent 會一直等；他看到的只是 `timeout 60 … listen` 時間到、什麼都沒印，不知道是腦沒開。投稿隊是照 README 推的，**沒實測這個情況**。
+- 建議：
+  1. `listen` 等不到時，如果發現 agent 正在等腦，印一行「agent 在等 llm kernel（找的是 <路徑>）；沒開就照範本 README 起一個，或設 AOS_LLM_KERNEL」。
+  2. 或讓 `aos-daemon-ctl ls` 的 REASON 欄標出「等腦」。
+- 痛的程度：投稿沒寫；整理者看是拖慢（對照文件第一次用的外人來說可能擋路）。
+- 提出者與日期：ok-release 2026-11-14
+- 出處：wf/temp/ok-release/aos-advice/腦沒開時listen只會逾時.md；templates/daemon-root/README.md；草稿「開始用」第 3 步與疑難排解「agent 不回」一節（proto8/thinking/2026-11/14/release-1114/06-草稿/v1/_src/docs/zh/）
+- 狀態：未處理。部分已有：agent-fsm 的 wait 現在等腦回信每滿 10 分鐘在 stack 的 stderr 印一行 `agent-fsm: warning: no reply from the brain for N minutes …; still waiting`（附信卡在 kernel 哪一格，見 templates/agent-fsm/README.md）；但這行只在 stderr.txt，`listen` 和 `ctl ls` 都看不到。
+- 相關：[fsm 範本「漏設 AOS_LLM_KERNEL 時 agent-fsm 靜靜卡住」](fsm範本.md)（已解，只管變數沒設；有設但 kernel 沒開這條沒管）。
