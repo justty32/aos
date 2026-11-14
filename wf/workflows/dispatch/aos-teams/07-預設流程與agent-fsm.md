@@ -31,7 +31,7 @@
   - 小廝 `xiaosi`（sonnet eca，定義 `~/aos-home/agents/xiaosi`）收所有 ok-* 的回報：要緊的立刻轉給頂層，其他的每 20 分鐘彙整一封再轉，靠頂層的 clock 項 `xiaosi-digest` 定時叫它。
   - gate 自動初步處理，紀錄見 `proto8/thinking/2026-11/14/gate-auto-1114.md`。
   - commit 排隊，先交給 fable 規劃，紀錄見 `proto8/thinking/2026-11/14/commit-queue-1114.md`。
-- **rlimit**（使用者 11-14「eca...建議不要setrlimit，你就跟他們說請他們自行收斂，但是fsm都可。」）：eca 不設 rlimit，請它們自己收斂用量；agent-fsm 可以設。家機沒有 s6，`--limits` 用不了，要設就用 `prlimit`。
+- **rlimit**（使用者 11-14「eca...建議不要setrlimit，你就跟他們說請他們自行收斂，但是fsm都可。」）：eca 不設 rlimit，請它們自己收斂用量；agent-fsm 可以設。家機 11-14 已裝 s6，fsm 用 `--limits`（mem_mb、files、cpu_s 實測有效；procs 是全帳號計數，別設小）。
 - 原本排的「fsm 真腦跑一整晚」不另外做測試，改成用 LiteLLM gpt 做實際的施工。
 
 **需求還不清楚時先不走這條**（使用者 11-14 早「你們太早就開始規劃實作與架構了…可以先發想，類似頭腦風暴那樣」）：先發散出點子與可丟棄的小實驗，需求浮出來再規劃，見 [user/03「需求不清時先發想」](../../common/user/03-討論紀錄與規劃.md#需求不清時先發想不急著規劃2026-11-14-定)；第一次照這樣跑的是 [11-14 aos-brainstorm](../../../../proto8/thinking/2026-11/14/aos-brainstorm/README.md)。
