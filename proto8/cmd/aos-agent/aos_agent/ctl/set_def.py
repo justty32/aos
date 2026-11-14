@@ -60,8 +60,9 @@ def cmd(argv):
     ws = written["ws"] if isinstance(written.get("ws"), dict) else row.get("ws")          # 指示詞原樣送回去
     stack = written["stack"] if isinstance(written.get("stack"), dict) else a.stack
     old_def = row.get("def")
-    _, request = call_dc(dc.add_letter, entry_target, name=a.name, ws=ws or None, stack=stack, def_dir=def_dir,
-                         limits=row.get("limits"), auto_restart=bool(row.get("auto_restart")), daemon=None if via_kernel() else table_ref(), kept=kept)
+    _, request = call_dc(dc.add_letter, entry_target, daemon=None if via_kernel() else table_ref(),
+                         **add.add_kwargs(a.name, ws or None, stack, def_dir, row.get("limits"), None,
+                                          {"auto_restart": bool(row.get("auto_restart"))}, None, kept))
     # 同名 procs_added＝daemon 把設定換成這份、在跑的不重起（N-54）；表上那列到下一次起來才換，所以只等回信、不看表
     ctl_wait("set-def", request, lambda _: True, "the daemon has not accepted the new definition of %s" % a.name, "CtlRejected",
              secs=secs, replied=True)

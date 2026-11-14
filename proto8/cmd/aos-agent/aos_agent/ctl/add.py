@@ -155,10 +155,8 @@ def cmd(argv):
                 "sleeping": "; it is asleep, to carry on: aos-agent ctl wake --target %s" % name}.get(row.get("phase"), "")
         raise Fail("InstanceExists", "%s is already on the daemon; pick another name (--name), or first aos-agent ctl rm %s%s" % (name, name, hint))
     try:
-        _, request = call_dc(dc.add_letter, entry_target, name=name, ws=ws, stack=stack,
-                                  def_dir=def_dir, limits=limits, envs=envs,
-                                  auto_restart=opts.get("auto_restart", False), dotenv_override=opts.get("dotenv_override", False),
-                                  daemon=daemon_path(), written=written, kept=kept)   # 11-10：--envs 的目標寫成相對 daemon stack 的指示詞，搬家照樣起
+        _, request = call_dc(dc.add_letter, entry_target, daemon=daemon_path(),   # 11-10：--envs 的目標寫成相對 daemon stack 的指示詞，搬家照樣起
+                             **add_kwargs(name, ws, stack, def_dir, limits, envs, opts, written, kept))
         row = ctl_wait("add", request,
                        lambda letter: row_named(name) or rejected(letter),
                        "the daemon has not put %s on the table yet (see aos-agent ctl ls and the daemon's log)" % name, "AddRejected", secs=secs, on_queued=on_queued, name=name)
@@ -169,15 +167,21 @@ def cmd(argv):
         print(Agent(name, row).stack)
 
 
+def add_kwargs(name, ws, stack, def_dir, limits, envs, opts, written, kept):
+    """dc.add_letter 除了目標與 daemon= 以外的參數，ctl add 兩條路（直寄 daemon、經 $AOS_KERNEL）與 set-def 共用一份：
+    加旗標只改這裡，不會一條路帶、一條路漏（wf/advices「ctl add 兩條路各自組參數」；0a3ffe5c4 曾漏 dotenv_override）。
+    opts 只讀開關 auto_restart、dotenv_override（沒給＝False）。"""
+    return {"name": name, "ws": ws, "stack": stack, "def_dir": def_dir, "limits": limits, "envs": envs,
+            "auto_restart": opts.get("auto_restart", False), "dotenv_override": opts.get("dotenv_override", False),
+            "written": written, "kept": kept}
+
+
 def add_via_kernel(name, entry_target, ws, stack, def_dir, limits, envs, opts, written, kept, secs, on_queued):
     """走 kernel（kernel-framework 03）：只看這封 add 信自己的回信（applied: true，或 false＋代號＝AddRejected），
     不先讀表查重名、不核 daemon 活不活、不等表上出現。不知道那台 daemon 在哪＝envs 的目標照舊寫絕對（daemon=None）。"""
     try:
-        _, request = call_dc(dc.add_letter, entry_target, name=name, ws=ws, stack=stack,
-                             def_dir=def_dir, limits=limits, envs=envs,
-                             auto_restart=opts.get("auto_restart", False),
-                             dotenv_override=opts.get("dotenv_override", False),
-                             daemon=None, written=written, kept=kept)
+        _, request = call_dc(dc.add_letter, entry_target, daemon=None,
+                             **add_kwargs(name, ws, stack, def_dir, limits, envs, opts, written, kept))
         got = ctl_wait("add", request, lambda _: True, "the add letter for %s has no reply yet" % name, "AddRejected",
                        secs=secs, on_queued=on_queued, name=name, replied=True)
     except KeyboardInterrupt:

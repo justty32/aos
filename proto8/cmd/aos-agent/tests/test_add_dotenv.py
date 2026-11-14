@@ -96,6 +96,72 @@ class AddViaKernelDotenv(unittest.TestCase):
         self.assertIs(seen.get("dotenv_override"), True)
 
 
+
+class AddBothRoutesSameKwargs(unittest.TestCase):
+    """ctl add straight to the daemon and through $AOS_KERNEL build add_letter's arguments in one place (add_kwargs):
+    the same flags give the same arguments on both routes; only daemon= differs."""
+
+    FLAGS = ["--dotenv-override", "--auto-restart", "--envs", "A=1", "--envs", "B=2", "--limits", "{}", "-n", "ann"]
+
+    def setUp(self):
+        sys.path.insert(0, str(PROTO / "cmd" / "aos-agent"))
+        from aos_agent.ctl import add as add_mod
+        self.add = add_mod
+        self.temp = tempfile.TemporaryDirectory(prefix="add-kwargs-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(os.path.realpath(self.temp.name))
+        self.definition = self.root / "definition"
+        self.definition.mkdir()
+        (self.definition / "interfaces.json").write_text('{"aos-agent": {}}\n')
+        self.workspace = self.root / "workspace"
+        self.workspace.mkdir()
+
+    def route(self, kernel):
+        add_mod, seen = self.add, []
+        real_call_dc = add_mod.call_dc
+
+        def fake_call_dc(fn, *args, **kwargs):
+            if fn is not add_mod.dc.add_letter:
+                return real_call_dc(fn, *args, **kwargs)
+            seen.append((args, kwargs))
+            return "ann", {"procs_added": {}}
+
+        names = ("call_dc", "ctl_wait", "via_kernel", "need_table", "row_named", "daemon_path")
+        old = {n: getattr(add_mod, n) for n in names}
+        add_mod.call_dc, add_mod.ctl_wait = fake_call_dc, lambda *a, **k: None
+        add_mod.via_kernel, add_mod.need_table = (lambda: kernel), (lambda: None)
+        add_mod.row_named, add_mod.daemon_path = (lambda name: None), (lambda: "/daemon/stack")
+        try:
+            add_mod.cmd([*self.FLAGS, "-w", str(self.workspace), str(self.definition)])
+        finally:
+            for n, v in old.items():
+                setattr(add_mod, n, v)
+        self.assertEqual(len(seen), 1)
+        return seen[0]
+
+    def test_same_flags_same_arguments_on_both_routes(self):
+        direct_args, direct = self.route(kernel=False)
+        kernel_args, via = self.route(kernel=True)
+        self.assertEqual(direct.pop("daemon"), "/daemon/stack")
+        self.assertIsNone(via.pop("daemon"))
+        self.assertEqual(direct_args, kernel_args)
+        self.assertEqual(direct, via)
+        self.assertEqual(set(direct), {"name", "ws", "stack", "def_dir", "limits", "envs", "auto_restart",
+                                       "dotenv_override", "written", "kept"})
+
+    def test_direct_route_passes_every_flag(self):
+        _, kw = self.route(kernel=False)
+        self.assertEqual((kw["name"], kw["envs"], kw["limits"], kw["auto_restart"], kw["dotenv_override"]),
+                         ("ann", {"A": "1", "B": "2"}, {}, True, True))
+        self.assertEqual(kw["ws"], str(self.workspace))
+        self.assertEqual(kw["kept"], {"exec", "def", "ws"})
+
+    def test_kernel_route_passes_every_flag(self):
+        _, kw = self.route(kernel=True)
+        self.assertEqual((kw["name"], kw["envs"], kw["limits"], kw["auto_restart"], kw["dotenv_override"]),
+                         ("ann", {"A": "1", "B": "2"}, {}, True, True))
+        self.assertEqual(kw["kept"], {"exec", "def", "ws"})
+
 class AddDotenvDaemon(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="add-dotenv-")
