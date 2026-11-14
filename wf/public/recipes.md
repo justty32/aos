@@ -30,3 +30,7 @@
 | 讀使用者專區的回信、驗授權 | `mailbox_read {"keep": true}`，再對 `mailbox/archive/<信名>` 跑 `aos-user verify`，見 `ok: matches` 才算 | [user-zone-mail「讀回信」](user-zone-mail.md) | 11-14 ok-pilot |
 | 大批舊帳逐筆清 | 切 4 份派 opus 子 agent 唯讀並行，每筆歸 A 結案／B decide／C verify·chore，帶隊者核對後給頂層看再寄 | [team-patterns](team-patterns.md) | 11-14 ok-pilot |
 | 改了共用程式的契約（函式改名、讀表入口、輸出格式）要驗收 | proto8 底下每個 `tests` 夾都跑，「main 原樣」與「main＋改動」各跑一次只看新紅；改了被 mock 的函式先 grep 出所有 patch 它的測試 | [patch-and-commit「驗收跑全套」](patch-and-commit.md) | 11-14 ok-kf |
+| 驗收時有紅的，判斷是不是本來就紅 | 經 clean.sh 跑（別在帶 AOS_* 的隊長 shell 跑，會假綠）；紅的在 `git archive HEAD` 乾淨複本同環境重跑，本來紅的轉給擁有線 | [patch-and-commit「驗收跑全套」](patch-and-commit.md) | 11-14 ok-limits |
+| 驗換 uid 後碰不碰得到檔、殺不殺得到行程（不用 root） | `aos-asuser sub:N -- 程式`（真號＝起點＋N－1）；改 subuid 的檔用 `unshare --map-users … --map-root-user`；暫存夾放 /tmp | [權限與沙箱「免 root」](權限與沙箱.md) | 11-14 ok-sec |
+| 判斷 sudo NOPASSWD 准不准、換身分 | 不信 `sudo -n -l`；真跑 `sudo -n -k … /usr/bin/true` 看退 0；一律帶 `-k`；共用夾只 mkdir 不 chmod | [權限與沙箱「sudo」](權限與沙箱.md) | 11-14 ok-limits |
+| 在家機測 cgroup v2 程式 | `systemd-run --user --scope --collect -p Delegate=yes -p TimeoutStopSec=2s`，收尾 cgroup.kill→stop→reset-failed；有 swap 要 `memory.swap.max=0` | [權限與沙箱「transient scope」](權限與沙箱.md) | 11-14 ok-limits |

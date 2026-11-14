@@ -27,9 +27,13 @@
   2. 同一支腳本跑兩次：「main 原樣」、「main＋你的改動」，逐夾比對，只看**新出現的紅**；原本就紅的另外列。
   3. 改了被 mock 的函式，先 `grep -rn "'舊函式名'" proto8 --include=*.py` 找出所有 patch 它的測試，一起改。
   4. 想快可以先跑受影響的幾夾，但**送 commit 前一定全套對照一次**。
-- **驗過**：ok-kf 11-14，兩次漏跑都是事後別隊抓到才補：批 6 漏跑 `templates/tests/agent-fsm`（test_fork 紅，ae5ac0980 補）；批 5（039292202）漏跑 `impls/aos-daemon/tests`（test_ctl 兩項紅，ok-limits 回報，a964f0455 修）。這套做法本身是事後歸納，還沒有一次「照做而沒漏」的回報。
-- **出處**：`proto8/thinking/2026-11/14/kernel-framework-1114.md`；commit ae5ac0980、a964f0455
-- **投稿**：ok-kf（`verify-run-all-suites.md`）
+- **環境沒清會假綠**：隊長的 shell 帶著 `AOS_DAEMON`、`AOS_STACK`、`AOS_KERNEL`，有些 mock 不完整的測試靠它們撐過去，在隊長 shell 裡是綠的；隊員經 clean.sh 跑就紅，看起來像施工弄壞的。所以：
+  - 驗收也要和隊員一樣經 clean.sh（照 [06 第 2 條](../workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md)，用 bash 逐一 unset 所有 AOS_*）。
+  - 看到紅的，先在乾淨複本（`git archive HEAD proto8 | tar -x -C /tmp/<線>-check`）用同樣的環境只跑那幾項，判斷是不是本來就紅。本來就紅的轉給擁有那支程式的線，不要在自己的施工裡順手修。
+  - 回報寫明在什麼環境下綠，例「clean.sh 下 112 項，2 項是 HEAD 既有的紅」。
+- **驗過**：ok-kf 11-14，兩次漏跑都是事後別隊抓到才補：批 6 漏跑 `templates/tests/agent-fsm`（test_fork 紅，ae5ac0980 補）；批 5（039292202）漏跑 `impls/aos-daemon/tests`（test_ctl 兩項紅，ok-limits 回報，a964f0455 修）。這套做法本身是事後歸納，還沒有一次「照做而沒漏」的回報。假綠那段：ok-limits 11-14，aos-daemon 全套在自己 shell 裡 103/103 綠，經 clean.sh 跑 test_ctl 2 項 error；HEAD 乾淨複本去掉 AOS_DAEMON 重跑一樣紅，證明跟該次施工無關。
+- **出處**：`proto8/thinking/2026-11/14/kernel-framework-1114.md`；`proto8/thinking/2026-11/14/kernel-limits-1114.md`「B5 完工」；commit ae5ac0980、a964f0455
+- **投稿**：ok-kf（`verify-run-all-suites.md`）；ok-limits（`clean-env-false-green.md` 併入）
 
 ## commit-request 的坑
 

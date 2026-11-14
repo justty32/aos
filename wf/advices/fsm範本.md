@@ -64,3 +64,14 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 提出者與日期：ok-onboard 2026-11-14
 - 出處：wf/temp/ok-onboard/aos-advice/system-text-no-layers.md；proto8/thinking/2026-11/14/onboard-1114/01-備料.md §1、§2
 - 狀態：已排入（ok-onboard，計劃未定稿）
+
+## goal 是 paused 時來了信，agent 忘了 resume 就無聲停住
+
+- 主題：fsm 範本
+- 哪裡：`templates/agent-fsm/idle.py` 的 goal_turn（約 201～243 行）、`lib/agent/goal_state.py`。
+- 現象：goal 只在 active 時提醒（goal_turn 看到 status 不是 active 就回 False）。agent 等回信時照規矩 `goal pause`；回信來了，idle 收進信，腦回一段純文字但忘了先 `goal resume`。goal 仍是 paused、不再提醒，agent 就停住，外面看不出是做完還是忘了。這是 Argon 審 onboard-1114 時指出的，**還沒實測重現**。
+- 建議：idle 收到新信、goal 是 paused 時自動改回 active，並在 history 加一則 `[aos] goal: resumed because a letter came`；或至少在這封信之後提醒一次「goal is paused; resume or done」。
+- 痛的程度：小不便（目前沒人踩到，但模板要教 agent pause，之後一定會遇到）
+- 提出者與日期：ok-onboard 2026-11-14
+- 出處：wf/temp/ok-onboard/aos-advice/goal-paused-letter-resume.md；proto8/thinking/2026-11/14/onboard-1114/05-採納表.md A6
+- 狀態：未處理（未重現；idle.py 讀信那條路沒碰 goal）

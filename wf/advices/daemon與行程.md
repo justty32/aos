@@ -48,3 +48,14 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 提出者與日期：ok-pilot 2026-11-14
 - 出處：wf/temp/ok-pilot/aos-advice/小坑三則.md 第 3 則
 - 狀態：未處理（wf 07 已提到「鍵叫 files 不是 nofile」，f856af0eb；別名與工具說明例子沒做）
+
+## daemon 靠 /proc/<pid>/environ 認自己的行程，一換 uid 就認錯
+
+- 主題：daemon 與行程
+- 哪裡：aos-daemon 的 adopt（`impls/aos-daemon/src/daemon/adopt.cpp` 的 same_tree，約 54 行）、sweeper（`py/aos_sweep_proc.py` 約 130 行）。
+- 現象：兩支都讀 `/proc/<pid>/environ` 的 AOS_STACK／AOS_DAEMON 認自己的行程。adopt 讀不到就回 true（當成自己的）；sweeper 讀不到就不管它。11-14 實測：使用者對 subuid（sub:5＝100004）的行程 kill -0、SIGTERM 都可以，`/proc/<pid>/environ` 卻是 Permission denied。所以一開始換 uid，adopt 會把讀不到的全部收養，sweeper 一隻都清不到。今天全部同一個 uid，還沒發作。
+- 建議：adopt 改用 pid＋`/proc/<pid>/stat` 第 22 欄（啟動時間）＋`/proc/<pid>/status` 的 Uid 比對；sweeper 改看 `/proc/<pid>/status` 的 Uid／Gid（人人可讀、`env -i` 洗不掉）。停一隻專屬 uid 的 agent 時可加一步 `aos-asuser sub:N -- kill -9 -1`，連 setsid 跑掉的孫行程一起收。
+- 痛的程度：今天小不便（沒發作）；換 uid 那天擋路（任何換 uid 都要先改這個）
+- 提出者與日期：ok-sec 2026-11-14
+- 出處：wf/temp/ok-sec/aos-advice/daemon認人別靠environ.md；proto8/thinking/2026-11/14/sec-1114/03-計劃.md E1、05-採納表.md A6、B4；實測腳本 ~/code/sec-1114/e12.sh
+- 狀態：未處理（adopt.cpp 仍是「讀不到＝照舊」回 true，aos_sweep_proc.py 仍讀 environ；sec-1114 採納表已列，未施工）
