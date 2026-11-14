@@ -95,7 +95,7 @@
    },
    "mailbox_call.py": "mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。",
    "mailbox_peek/": "aos-mailbox peek 的包裝，目標＝叫我的那隻自己：看信箱裡有幾封還沒讀、誰寄的、標題（不拿走）。",
-   "mailbox_read/": "aos-mailbox read 的包裝，目標＝叫我的那隻自己：拿最舊的一封（all＝全部）、印出來，預設讀完就刪（keep true＝留在 mailbox/archive/；keep 檔名＝在工作區那個檔追加一行 JSON）。",
+   "mailbox_read/": "aos-mailbox read 的包裝，目標＝叫我的那隻自己：拿最舊的一封（all＝全部）、印出來，普通信預設讀完就刪，專區回信一律留在 mailbox/archive/ 供 user_verify 驗證（keep true＝全部歸檔；keep 檔名＝在工作區那個檔追加一行 JSON）。",
    "mailbox_send": {
     "tests": {
      "test_mailbox_tools.py": "Test mailbox_send / mailbox_peek / mailbox_read wrap aos-mailbox for the calling agent (fake aos-agent ctl who, real aos-mailbox and aos-post)."
@@ -194,7 +194,7 @@
    "user_send/": "aos-user send 的包裝，寄件人＝叫我的那隻自己：給沒 shell 的身（agent-fsm、gpt 隊）寄一封照專區規矩的信進使用者專區 ~/.aos/user/mailbox。",
    "user_verify": {
     "tests": {
-     "test_user_verify.py": "Test user_verify wraps aos-user verify (read only): a letter name is looked up in the caller's own mailbox (new/, then cur/), a path is taken from $A…"
+     "test_user_verify.py": "Test user_verify wraps aos-user verify (read only): a letter name is looked up in the caller's own mailbox (new/, then cur/, then archive/), a path i…"
     }
    },
    "user_verify/": "aos-user verify 的包裝（唯讀）：給沒 shell 的身（agent-fsm、gpt 隊）驗「這封回信真的是使用者從專區回的」（L1：寄件人是專區、跟專區 done/ 的副本逐欄一樣、專區 log 有同一筆）。",

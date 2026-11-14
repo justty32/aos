@@ -121,6 +121,83 @@ class Mailbox(unittest.TestCase):
         self.assertEqual(len(os.listdir(box / "new")) + len(os.listdir(box / "cur")), 1)   # 信還在
         self.assertIn("what: x\n", self.ok("-s", "bob", "read"))                      # 下次照樣讀得到
 
+    def post_letter(self, body):
+        box = Path(self.ok('-s', 'bob', 'where').strip())
+        result = subprocess.run(['aos-post', 'send', '--ordered', '--in-reply-to', 'original', str(box)],
+                                input=json.dumps(body), capture_output=True, text=True,
+                                env=self.env, cwd=self.tmp, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return box, result.stdout.strip()
+
+    def test_zone_letter_archived_with_unverified_note(self):
+        for flags, body in (([], {'zone': 'user-zone/1', 'status': 'DONE', 'what': 'yes'}),
+                            (['--keep'], {'zone': 'user-zone/1', 'status': 'FAILED', 'returned': 'original'})):
+            with self.subTest(flags=flags, body=body):
+                box, name = self.post_letter(body)
+                out = self.ok('-s', 'bob', 'read', *flags)
+                archived = box / 'archive' / name
+                note = ('(unverified user-zone reply: kept in %s; verify it with user_verify %s or aos-user verify %s)'
+                        % (archived, json.dumps({'letter': name}), archived))
+                self.assertEqual(out.splitlines()[-1], note)
+                self.assertEqual(json.loads((archived / 'letter.json').read_text())['body'], body)
+                self.assertEqual(self.ok('-s', 'bob', 'peek'), '')
+                self.assertEqual(list((box / 'cur').iterdir()), [])
+                self.assertFalse((box / 'new' / name).exists())
+
+    def test_plain_and_other_zone_letters_still_disappear(self):
+        for body in ({'what': 'plain'}, {'zone': 'another-zone', 'what': 'other'}, 'not an object'):
+            with self.subTest(body=body):
+                box, name = self.post_letter(body)
+                out = self.ok('-s', 'bob', 'read')
+                self.assertNotIn('(unverified user-zone reply:', out)
+                self.assertFalse((box / 'archive' / name).exists())
+                self.assertFalse((box / 'cur' / name).exists())
+                self.assertEqual(self.ok('-s', 'bob', 'peek'), '')
+
+    def test_drop_deletes_zone_letter_and_conflicts_with_keep(self):
+        box, name = self.post_letter({'zone': 'user-zone/1', 'what': 'answer'})
+        result = self.run_mb('-s', 'bob', 'read', '--keep', '--drop')
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('ArgumentsBad --keep and --drop are mutually exclusive', result.stderr)
+        self.assertTrue((box / 'new' / name / 'letter.json').is_file())
+        out = self.ok('-s', 'bob', 'read', '--drop')
+        self.assertNotIn('(unverified user-zone reply:', out)
+        self.assertFalse((box / 'archive' / name).exists())
+        self.assertFalse((box / 'cur' / name).exists())
+        self.assertFalse((box / 'new' / name).exists())
+
+    def test_json_all_marks_only_archived_zone_letters(self):
+        box, first = self.post_letter({'zone': 'user-zone/1', 'what': 'answer'})
+        _, second = self.post_letter({'what': 'plain'})
+        _, third = self.post_letter({'zone': 'user-zone/1', 'status': 'FAILED', 'returned': 'original'})
+        out = self.ok('-s', 'bob', 'read', '--all', '-j')
+        rows = [json.loads(line) for line in out.splitlines()]
+        self.assertEqual([r['letter'] for r in rows], [first, second, third])
+        self.assertEqual(rows[0]['kept'], 'archive')
+        self.assertNotIn('kept', rows[1])
+        self.assertEqual(rows[2]['kept'], 'archive')
+        self.assertNotIn('(unverified user-zone reply:', out)
+        self.assertTrue((box / 'archive' / first / 'letter.json').is_file())
+        self.assertFalse((box / 'archive' / second).exists())
+        self.assertTrue((box / 'archive' / third / 'letter.json').is_file())
+        _, dropped = self.post_letter({'zone': 'user-zone/1'})
+        self.assertNotIn('kept', json.loads(self.ok('-s', 'bob', 'read', '--drop', '-j')))
+        self.assertFalse((box / 'archive' / dropped).exists())
+
+    def test_keep_to_zone_letter_also_archives(self):
+        body = {'zone': 'user-zone/1', 'what': 'answer'}
+        box, name = self.post_letter(body)
+        out = self.ok('-s', 'bob', 'read', '--keep-to', 'zone.jsonl', '-j')
+        self.assertEqual(json.loads(out)['kept'], 'archive')
+        recorded = json.loads((self.tmp / 'zone.jsonl').read_text())
+        self.assertEqual((recorded['kept'], recorded['letter'], recorded['zone']),
+                         ('received', name, 'user-zone/1'))
+        self.assertEqual(json.loads((box / 'archive' / name / 'letter.json').read_text())['body'], body)
+        _, dropped = self.post_letter(body)
+        self.ok('-s', 'bob', 'read', '--keep-to', 'zone.jsonl', '--drop')
+        self.assertEqual(len((self.tmp / 'zone.jsonl').read_text().splitlines()), 2)
+        self.assertFalse((box / 'archive' / dropped).exists())
+
     def test_peek_without_mailbox_is_empty(self):
         self.assertEqual(self.ok("-s", "nobody", "peek"), "")
         self.assertFalse((self.tmp / "nobody").exists())

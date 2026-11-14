@@ -1,5 +1,5 @@
 {
-  "summary": "Read and remove (or keep, or copy to a workspace file) the oldest letter in the mailbox of the agent calling me (aos-mailbox read)",
+  "summary": "Read the oldest letter in the calling agent's mailbox; remove ordinary letters (or keep/copy them), always keep user-zone replies in archive/ for user_verify (aos-mailbox --drop is not exposed)",
   "resource": "cpu",
   "side_effect": true,
   "idempotent": false,

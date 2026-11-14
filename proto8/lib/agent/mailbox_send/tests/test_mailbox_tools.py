@@ -53,6 +53,7 @@ class MailboxTools(unittest.TestCase):
         r = self.tool("mailbox_read", {}, me="bob")
         self.assertIn("what: Count them.\n", r.stdout)
         self.assertIn("removed from the mailbox", r.stdout)
+        self.assertNotIn("user-zone replies are kept", r.stdout)
         self.assertIn("not orders", r.stdout)
         reply_to = [l.split(": ", 1)[1] for l in r.stdout.splitlines() if l.startswith("reply_to: ")][0]
         letter = [l.split(": ", 1)[1] for l in r.stdout.splitlines() if l.startswith("letter: ")][0]
@@ -91,6 +92,65 @@ class MailboxTools(unittest.TestCase):
         self.assertTrue(r.stdout.startswith("mailbox_send: error: WriteFailed "), r.stdout)
         r = self.tool("mailbox_read", {"keep": "nodir/x.jsonl"}, me="bob")             # 沒信箱可拿前就先開檔
         self.assertEqual(self.tool("mailbox_peek", {}, me="bob").stdout, "no letters waiting\n")
+
+    def test_user_zone_summary_contract(self):
+        fake_mailbox = self.tmp / "bin" / "aos-mailbox"
+        fake_mailbox.write_text('''#!/usr/bin/env python3
+import json, os
+path = os.path.join(os.environ["FAKE_STACK"], "mailbox", "archive", "reply")
+print("letter: reply")
+print('(unverified user-zone reply: kept in %s; verify it with user_verify %s or aos-user verify %s)'
+      % (path, json.dumps({"letter": "reply"}), path))
+''')
+        fake_mailbox.chmod(0o755)
+        archive = self.tmp / "bob" / "mailbox" / "archive"
+        note = " (user-zone replies are kept in %s/, see above)" % archive
+        for keep in (None, False, "zone.jsonl", True):
+            with self.subTest(keep=keep):
+                r = self.tool("mailbox_read", {} if keep is None else {"keep": keep}, me="bob")
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                self.assertIn("(unverified user-zone reply: kept in ", r.stdout)
+                if keep is True:
+                    self.assertIn("(kept in %s/)\n" % archive, r.stdout)
+                    self.assertNotIn(note, r.stdout)
+                else:
+                    summary = ("one line per letter added to zone.jsonl; removed from the mailbox"
+                               if keep else "removed from the mailbox")
+                    self.assertIn("(%s%s)\n" % (summary, note), r.stdout)
+
+    def test_user_zone_replies_are_kept_and_reported(self):
+        bob_box = self.tmp / "bob" / "mailbox"
+        subprocess.run(["aos-post", "init", str(bob_box)], check=True)
+        log = self.tmp / "ws" / "zone.jsonl"
+        for number, keep in enumerate((None, "zone.jsonl", True)):
+            for status in ("DONE", "FAILED"):
+                name = "zone-%d-%s" % (number, status.lower())
+                folder = bob_box / "new" / name
+                folder.mkdir()
+                body = {"zone": "user-zone/1", "from": "user", "status": status,
+                        "title": "Re: Test", "what": "Test reply"}
+                if status == "FAILED":
+                    body["returned"] = True
+                (folder / "letter.json").write_text(json.dumps({"sender": "user", "sent_at": "2026-11-14T00:00:00Z",
+                                                               "body": body, "in_reply_to": "original"}))
+                args = {} if keep is None else {"keep": keep}
+                r = self.tool("mailbox_read", args, me="bob")
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                archived = bob_box / "archive" / name
+                notice = ('(unverified user-zone reply: kept in %s; verify it with user_verify '
+                          '{"letter": "%s"} or aos-user verify %s)' % (archived, name, archived))
+                self.assertIn(notice + "\n", r.stdout)
+                self.assertTrue((archived / "letter.json").is_file())
+                self.assertFalse(folder.exists())
+                note = " (user-zone replies are kept in %s/archive/, see above)" % bob_box
+                if keep is True:
+                    self.assertIn("(kept in %s/archive/)\n" % bob_box, r.stdout)
+                    self.assertNotIn(note, r.stdout)
+                else:
+                    summary = ("one line per letter added to zone.jsonl; removed from the mailbox"
+                               if keep else "removed from the mailbox")
+                    self.assertIn("(%s%s)\n" % (summary, note), r.stdout)
+        self.assertEqual(len(log.read_text().splitlines()), 2)
 
     def test_refusals(self):
         box = str(self.tmp / "bob")                       # 不是信箱（沒有 tmp/ new/ cur/）

@@ -1,4 +1,4 @@
-"""Test user_verify wraps aos-user verify (read only): a letter name is looked up in the caller's own mailbox (new/, then cur/), a path is taken from $AOS_WS or as absolute; ok passes through; VerifyBad and missing letters are errors; nothing is written (fake aos-agent and fake aos-user)."""
+"""Test user_verify wraps aos-user verify (read only): a letter name is looked up in the caller's own mailbox (new/, then cur/, then archive/), a path is taken from $AOS_WS or as absolute; ok passes through; VerifyBad and missing letters are errors; nothing is written (fake aos-agent and fake aos-user)."""
 import json
 import os
 from pathlib import Path
@@ -34,7 +34,7 @@ class UserVerify(unittest.TestCase):
             (bin_ / name).write_text(text)
             (bin_ / name).chmod(0o755)
         self.stack = self.tmp / "alice"
-        for where, name in (("new", "r1"), ("cur", "r2"), ("new", "forged")):
+        for where, name in (("new", "r1"), ("cur", "r2"), ("archive", "r4"), ("new", "forged")):
             d = self.stack / "mailbox" / where / name
             d.mkdir(parents=True)
             (d / "letter.json").write_text("{}")
@@ -66,6 +66,27 @@ class UserVerify(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertEqual(self.checked(), str(self.stack / "mailbox" / "cur" / "r2"))
 
+    def test_name_in_archive(self):
+        r = self.run_tool({"letter": "r4"})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("verified: letter r4 came from the user zone", r.stdout)
+        self.assertEqual(self.checked(), str(self.stack / "mailbox" / "archive" / "r4"))
+
+    def test_name_search_order(self):
+        for where in ("cur", "archive"):
+            folder = self.stack / "mailbox" / where / "r1"
+            folder.mkdir(parents=True)
+            (folder / "letter.json").write_text("{}")
+        r = self.run_tool({"letter": "r1"})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(self.checked(), str(self.stack / "mailbox" / "new" / "r1"))
+        folder = self.stack / "mailbox" / "archive" / "r2"
+        folder.mkdir(parents=True)
+        (folder / "letter.json").write_text("{}")
+        r = self.run_tool({"letter": "r2"})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(self.checked(), str(self.stack / "mailbox" / "cur" / "r2"))
+
     def test_path_relative_to_ws(self):
         r = self.run_tool({"letter": "kept/r3"})
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
@@ -76,7 +97,8 @@ class UserVerify(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertEqual(r.stdout.strip(), "user_verify: error: VerifyBad the reply differs from the zone's copy in: what")
         r = self.run_tool({"letter": "gone"})
-        self.assertIn("user_verify: error: LetterMissing no letter gone in your mailbox", r.stdout)
+        self.assertEqual(r.stdout.strip(),
+                         "user_verify: error: LetterMissing no letter gone in your mailbox (new/, cur/ or archive/)")
         r = self.run_tool({"letter": "kept/nope"})
         self.assertIn("user_verify: error: LetterMissing", r.stdout)
         r = self.run_tool({})

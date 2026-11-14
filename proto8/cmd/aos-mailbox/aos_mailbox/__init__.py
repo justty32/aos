@@ -25,7 +25,8 @@ usage: aos-mailbox [-s STACK] SUBCOMMAND [FLAGS...] [ARGS...]
 subcommands:
   where   print my mailbox folder (create it if missing)
   peek    list waiting letters without taking them: LETTER TAB FROM TAB STATUS TAB TITLE
-  read    take the oldest letter, print it, then remove it (--keep: keep it in archive/; --keep-to FILE: add a line to FILE)
+  read    print then remove the oldest letter; user-zone letters go to archive/ unless --drop
+          --keep: archive all letters; --keep-to FILE: also add a line to FILE
   send    send a letter to an agent (--to NAME [-d DAEMON]) or to a mailbox folder (--box PATH)
 
 flags:
@@ -57,15 +58,18 @@ One line per letter, oldest first: LETTER TAB FROM TAB STATUS TAB TITLE (? = unr
 Letters stay where they are. No letters (or no mailbox yet) = no output, exit 0.""",
     "read": """aos-mailbox read - read the oldest letter in my mailbox
 
-usage: aos-mailbox [-s STACK] read [--all] [--keep] [--keep-to FILE] [-j]
+usage: aos-mailbox [-s STACK] read [--all] [--keep | --drop] [--keep-to FILE] [-j]
 
 flags:
   --all            read every waiting letter
-  --keep           keep what was read in STACK/mailbox/archive/ (default: remove it)
+  --keep           keep all letters read in STACK/mailbox/archive/ (exclusive with --drop)
+  --drop           remove even user-zone letters (otherwise user-zone letters are archived)
   --keep-to FILE   append one JSON line per letter read to FILE ("kept": "received"; no sender, no reply_to);
                    a letter is taken out of the mailbox only after its line is written
-  -j, --json       one JSON object per letter per line
+  -j, --json       one JSON object per letter per line; archived user-zone letters get kept: archive
 
+User-zone letters (body.zone = user-zone/1) are kept for later verification, not verified here.
+Text mode prints their archive path and verification instructions; JSON mode prints no extra line.
 A letter left half-read by a crash is read first. To answer, send to its reply_to:
   aos-mailbox send --box REPLY_TO --in-reply-to LETTER --status DONE --title "..." "..."
 exit codes: 0 read; 10 no letter; 1 error.""",
@@ -266,15 +270,16 @@ def keep_line(fd, path, r, kind):
 
 
 def cmd_read(argv):
-    opts, rest = parse(argv, "read", {"--keep-to": "keep_to"}, switches={"--all": "all", "--keep": "keep", "--json": "json"},
+    opts, rest = parse(argv, "read", {"--keep-to": "keep_to"}, switches={"--all": "all", "--keep": "keep", "--drop": "drop", "--json": "json"},
                        short=("-j",))
     if rest:
-        raise Fail("ArgumentsBad", "read takes no arguments (usage: aos-mailbox read [--all] [--keep] [--keep-to FILE] [-j])")
+        raise Fail("ArgumentsBad", "read takes no arguments (usage: aos-mailbox read [--all] [--keep | --drop] [--keep-to FILE] [-j])")
+    if opts.get("keep") and opts.get("drop"):
+        raise Fail("ArgumentsBad", "--keep and --drop are mutually exclusive")
     box = my_box(False)
     if not is_box(box):
         return 10
     keep_fd = keep_open(opts["keep_to"]) if opts.get("keep_to") else None   # 先開檔：開不了＝一封都不拿
-    done = ["done"] + (["--keep"] if opts.get("keep") else [])
     count = 0
     while True:
         cur = letters_in(os.path.join(box, "cur"))
@@ -290,15 +295,25 @@ def cmd_read(argv):
             aos_flags.warn(PROG, "letter %s is unreadable and was dropped" % name)
             post("done", box, name, ok=(0, 10))
             continue
-        r = flat(box, name, json.loads(out))
+        raw = json.loads(out)
+        is_zone = isinstance(raw.get("body"), dict) and raw["body"].get("zone") == "user-zone/1"
+        keep_this = opts.get("keep") or (is_zone and not opts.get("drop"))
+        done = ["done"] + (["--keep"] if keep_this else [])
+        r = flat(box, name, raw)
         if keep_fd is not None:   # 先留底、寫成功才印才收；寫不了＝這封留在 cur/，下次 read 先讀到它
             keep_line(keep_fd, opts["keep_to"], r, "received")
         if opts.get("json"):
+            if is_zone and keep_this:
+                r["kept"] = "archive"
             print(json.dumps(r, ensure_ascii=False))
         else:
             if count:
                 print()
             show(r)
+            if is_zone and keep_this:
+                archived = os.path.join(box, "archive", name)
+                print('(unverified user-zone reply: kept in %s; verify it with user_verify %s or aos-user verify %s)'
+                      % (archived, json.dumps({"letter": name}), archived))
         sys.stdout.flush()
         post(*(done + [box, name]), ok=(0, 10))
         count += 1
