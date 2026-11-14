@@ -30,3 +30,6 @@ wf/workflows/dispatch/trial/archive/sandbox/**/repro-A-01.*/
 wf/workflows/dispatch/trial/archive/sandbox/**/.aos/agents/*/history.json
 wf/workflows/dispatch/trial/archive/sandbox/**/.aos/agents/*/log.md
 wf/workflows/dispatch/trial/archive/sandbox/**/.aos/agents/*/say/
+
+# 頂層分給掛在 repo-aos 底下的 kernel 的工作區（使用者 11-14「你可以在wf弄temp/xxx分給他們」），不進版控
+wf/temp/

@@ -26,6 +26,8 @@
 - 每條線都由 opus 協調。施工中碰到圖紙沒寫到、要重新規劃的地方，回頭走這條正統流程，不邊做邊定。
 - 蒐集和寫碼優先交給 gpt，**只用 sol、不用 terra，sol 頂替 sonnet 的位置**（使用者 11-14「不要terra，盡量用sol，把sol作爲sonnet來用」），一律走本地 LiteLLM 上的 agent-fsm，**不走 codex**（使用者 11-14「不要走codex」）；走不通由 sonnet／claude 補位；設計判斷仍由 opus 和 fable 做。上面「等 agent-fsm 有雛形」的條件從 11-14 起改成「直接試」。
 - 各線有需要可以自己在暫存樹的 aos 裡掛 kernel 或 agent，不用先問（使用者 11-14「然後有需要的，可以自己掛kernel或agent。」）；自己記 pid、收尾收乾淨，活樹照舊不動。
+- **頂層也當 kernel**（使用者 11-14「善用aos體系，掛opus eca，讓他們成爲kernel，然後讓他們自己底下掛各種」「你自己也成爲kernel好了」「讓他們都掛在你底下」「他們的工作區...你可以在wf弄temp/xxx分給他們」）：repo-aos 開 `kernel_gate`，把 opus eca（定義 `~/aos-home/agents/opus-kernel`）掛在自己底下，啟動請求經過頂層的 gate；工作區放在 `wf/temp/<名字>`（已 gitignore）。這些 eca 自己也可以開 gate，在底下掛 sol 的 agent-fsm。
+- **rlimit**（使用者 11-14「eca...建議不要setrlimit，你就跟他們說請他們自行收斂，但是fsm都可。」）：eca 不設 rlimit，請它們自己收斂用量；agent-fsm 可以設。家機沒有 s6，`--limits` 用不了，要設就用 `prlimit`。
 - 原本排的「fsm 真腦跑一整晚」不另外做測試，改成用 LiteLLM gpt 做實際的施工。
 
 **需求還不清楚時先不走這條**（使用者 11-14 早「你們太早就開始規劃實作與架構了…可以先發想，類似頭腦風暴那樣」）：先發散出點子與可丟棄的小實驗，需求浮出來再規劃，見 [user/03「需求不清時先發想」](../../common/user/03-討論紀錄與規劃.md#需求不清時先發想不急著規劃2026-11-14-定)；第一次照這樣跑的是 [11-14 aos-brainstorm](../../../../proto8/thinking/2026-11/14/aos-brainstorm/README.md)。
