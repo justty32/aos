@@ -39,6 +39,7 @@
    "stack.gitattributes": "把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件）",
    "stack.gitignore": "可選的 stack 排除範本：暫存、鎖、本機資料與可重建紀錄不進 git。",
    "tests": {
+    "test_add_dotenv.py": "Test ctl add dotenv override wrapping and definition environment precedence on an isolated daemon.",
     "test_chat_read_line.py": "Test chat's line input in a real pty: Chinese + Backspace, arrow keys, long lines, pastes and EOF are read whole (11-12 chat-utf8).",
     "test_daemon_down.py": "Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing.",
     "test_goal.py": "Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0…",

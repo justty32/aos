@@ -244,10 +244,12 @@ def typed_kept(xxx=None, ws=None, stack=None, def_dir=None):
 
 
 def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limits=None, envs=None, auto_restart=False, daemon=None,
-               written=None, kept=None):
+               written=None, kept=None, dotenv_override=False):
     """判型並組成掛子信；給定的路徑從目前目錄算起。auto_restart＝True：那一列多 "auto_restart": true（daemon 的 key，
     放在列的頂層、跟 exec／ws 同層；loop 型、exec 型、帶 envs 的都一樣，two-machines 06）；False＝不寫這個 key。
-    daemon＝收這封信的 daemon 的 stack（選填，11-10）：給了，envs 包的單子裡的目標寫成相對它的 $env 指示詞（daemon_ref）；
+    dotenv_override＝True：exec 包一張 aos-exec --dotenv-override 的單子，只有啟動定義那一跳的 .env 可蓋已有環境；
+    跟 envs 同給＝一張單子同時帶旗標與 envs。沒給旗標、沒給 envs＝exec 照原樣。
+    daemon＝收這封信的 daemon 的 stack（選填，11-10）：給了，包的單子裡的目標寫成相對它的 $env 指示詞（daemon_ref）；
     沒給＝照舊寫絕對路徑。
     kept＝使用者在命令列上寫成絕對路徑的格（"ws"、"stack"、"def"、"exec" 的集合；11-10 晚 B01，使用者選「絕對路徑原樣存」）：
     那幾格另記進列的 "as_written"，daemon 表上原樣存、不換算成相對它的 stack。由命令列那層照使用者打的字認（typed_kept）；
@@ -287,9 +289,9 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
         spec = loop_spec(found)
     else:
         spec = {"exec": [xxx] + list(extra) if extra else xxx}
-    if envs:
-        if not isinstance(envs, dict) or any(not isinstance(k, str) or not k or "=" in k or "\0" in k
-                                             or not isinstance(v, str) or "\0" in v for k, v in envs.items()):
+    if envs or dotenv_override:
+        if envs and (not isinstance(envs, dict) or any(not isinstance(k, str) or not k or "=" in k or "\0" in k
+                                             or not isinstance(v, str) or "\0" in v for k, v in envs.items())):
             raise Fail("ArgumentsBad", "envs must be an object of environment names and string values")
         target = spec["exec"]
         if isinstance(target, dict):
@@ -298,7 +300,9 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
         argv = list(target) if isinstance(target, list) else [target]
         if "exec" not in kept:      # 使用者寫絕對路徑＝單子裡也照原樣（11-10 晚 B01）
             argv[0] = daemon_ref(argv[0], daemon)   # 參數不動，只換目標
-        spec["exec"] = {"argv": ["aos-exec", "--"] + argv, "envs": dict(envs)}
+        spec["exec"] = {"argv": ["aos-exec"] + (["--dotenv-override"] if dotenv_override else []) + ["--"] + argv}
+        if envs:
+            spec["exec"]["envs"] = dict(envs)
     spec["def"] = os.path.abspath(path)   # 11-04（使用者「那就b。」）：定義資料夾，daemon 記進表的 def 欄
     if def_dir is not None:          # 11-05：aos-agent 的定義宣告了 entry（XXX＝定義裡的那個入口）時，def 另給
         if not def_dir or not os.path.isdir(def_dir):

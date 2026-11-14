@@ -1,0 +1,50 @@
+{
+ "test_add_dotenv.py": {
+  "description": "Test ctl add dotenv override wrapping and definition environment precedence on an isolated daemon."
+ },
+ "test_chat_read_line.py": {
+  "description": "Test chat's line input in a real pty: Chinese + Backspace, arrow keys, long lines, pastes and EOF are read whole (11-12 chat-utf8)."
+ },
+ "test_daemon_down.py": {
+  "description": "Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing."
+ },
+ "test_goal.py": {
+  "description": "Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0…"
+ },
+ "test_history.py": {
+  "description": "Test aos-agent history on a fake daemon table (11-10 self-family): ls, rm, summarize, set, the kept originals (default, --keep, --no-keep), ranges an…"
+ },
+ "test_hook.py": {
+  "description": "Test aos-agent hook on a fake daemon table: add writes only the agent's own hooks list (flags, path forms, --path-json), HookExists / --replace, rm (…"
+ },
+ "test_kernel_state_path.py": {
+  "description": "Test aos-agent ctl with AOS_KERNEL set: table commands ask it where the table is (query letter) and read that file, letter commands read only their o…"
+ },
+ "test_listen_timeout.py": {
+  "description": "Verify zero-second listen waits without a deadline and still rejects invalid timeout combinations."
+ },
+ "test_llm.py": {
+  "description": "Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and…"
+ },
+ "test_ls_health.py": {
+  "description": "Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table."
+ },
+ "test_rm_keep.py": {
+  "description": "Test aos-agent ctl rm keeps the stack by default and deletes it only with --purge (cli-sweep Q3), on a real aos-daemon."
+ },
+ "test_say_from.py": {
+  "description": "Test the sender of aos-agent say / chat (11-13 a2a): --from > the listed agent whose stack holds $AOS_STACK > login name; only an eca's letter carrie…"
+ },
+ "test_set_def.py": {
+  "description": "Test aos-agent ctl set-def on a real aos-daemon: the row keeps its stack, workspace and auto_restart, the new definition runs from the next start, --…"
+ },
+ "test_state_parts.py": {
+  "description": "Test aos-agent ctl state (11-10 self-family self_state): the overview (one line per part), picked parts, all, --json, and parts that are not availabl…"
+ },
+ "test_system.py": {
+  "description": "Test aos-agent system on a fake daemon table (11-11 self-system): get / get -l / get --json, set from stdin and from a file, empty text, reset, missi…"
+ },
+ "test_tools_override.py": {
+  "description": "Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with \"$override\" (N2 poin…"
+ }
+}
