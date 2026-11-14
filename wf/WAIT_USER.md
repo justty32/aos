@@ -30,8 +30,6 @@
 
 不用再等使用者、只是還沒人做的事：11-14 舊帳逐筆查證時從 `wait-user/` 撤出（[wait-user-rewrite-1114](../proto8/thinking/2026-11/14/wait-user-rewrite-1114.md)），由頂層決定派不派；做完即刪。
 
-- **hook 在真 eca 上的 queue／tool 四種事件**：on_clock 11-13 已在真 haiku eca 掛上、會觸發；`queue_before`／`queue_after`／`tool_before`／`tool_after` 還沒在真 eca 上專門驗，agent 可在暫存樹自己跑真 haiku → [hook 02 § eca 真對話照抄](../proto8/thinking/2026-11/10/self-family/hook/02-施工結果.md#eca-真對話照抄會花-claude-額度)
 - **two-machines T7 第 1～7 步**：真 claude／codex 找不到對話時的反應（A02～A07）、eca 換台、memory 那題，agent 可在家機暫存樹自己跑（步驟 11-10 寫的，先對到現況）；第 8、9 步要公司機與你的 repo，另寄專區 → [14-真機驗證](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md)
 - **程式碼整理 5 題落地**（使用者 11-14 專區全照推薦）：兩份 `read_env_file` 統一用 aos-tools 那份完整讀法、收下層 TERM／KILL 統一（不理就強制關）、範本照舊可用共用程式、`py/` 前綴不改、小五件照推薦；改 proto8 程式照 aos-teams/06 第 5 條 → [wait-user-rewrite-1114 § 使用者回覆](../proto8/thinking/2026-11/14/wait-user-rewrite-1114.md#使用者回覆11-14)
-- **條文整理第三輪 5 題落地**（使用者 11-14 專區全照推薦）：照程式改的五處點頭、P-33 round 例外清掉、NORMS 附錄 1～3 留著、wf 的 spec／ideas 入口封存進 archive、十來處小對不上照現況改 → 同上
 - **正規的工作區與 stack 分配機制**（使用者 11-14：「現在先這樣，勉強夠用，等有空的時候可以派fable去規劃更正規的工作區，乃至stack的分配機制，可以和我們的權限系統有關聯。」）：有空時派 fable 規劃；現況是各線 `wf/temp/<線>/`、隊員在其下 `sol-N/`、暫存樹 `~/code/<題>-1114/`，已知不一致：ok-limits 的 sol 共用一格、工作區在 repo 內怕 `git clean`；要跟 ok-sec（uid 權限）與 ok-onboard（開場建工作區）對上 → [user-advice 20261114 第九段](../proto8/user-advice/20261114.md)

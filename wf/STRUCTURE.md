@@ -56,7 +56,7 @@
 
 **導航表超 8 KB 就往下一層放**：整張搬到子資料夾 README，上層留一句指標。
 
-**不動的**：`archive/` 不套門檻；完整 spec 各章（`spec/`、`ideas/`，每章約 12 KB、結尾有「現況對照」）是本質不可分的單體，保留。
+**不動的**：`archive/` 不套門檻；完整 spec 各章（`spec/`、`ideas/`，每章約 12 KB、結尾有「現況對照」）是本質不可分的單體，保留；11-14 已整夾封存進 `workflows/common/archive/`（97cda3435）。
 
 **跑出來的產物不進版控**：mktemp 世界、`.aos/` 動態狀態進了版控就 `rm --cached`＋`.gitignore`，本機保留；先 grep 確認沒程式／測試引用。
 

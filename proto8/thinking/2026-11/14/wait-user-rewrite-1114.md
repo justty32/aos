@@ -133,3 +133,8 @@ ok-pilot 派 4 隻 opus 子 agent 並行唯讀查證（01 前 9 筆、01 後 7 �
 - 沙箱 root 身分層 chore（01794624634448572400.3118933.1322009）：你回「跑好了，都OK」；頂層核對 aos-run uid 951、/srv/aos-run 2770、/usr/local/bin 4 支 s6、`sudo -l` 有 `(root) NOPASSWD: /usr/local/bin/s6-setuidgid aos-run *`。wait-user/02 那行照「做完即刪」拿掉；端到端驗收歸 ok-limits，結果寫進 kernel-limits-1114.md。
 - two-machines 公司機來回（01794624634355980205.3118873.1322000）：你回「好」，等回公司機做，wait-user/02 那行留著。
 - 舊 aos-mcp 殘留（01794624634417922759.3118914.1322006）：你答整夾刪 `~/.cache/aos-mcp-aos`、arcagi 壞 tools.json 不動；頂層 11-14 准 ok-pilot 刪：刪前 `ls -laR` 留底（wf/temp/ok-pilot/wu/aos-mcp-aos-before-rm.txt），`rm -r` 只刪那一夾，wait-user/04 那行結案。
+
+## 待派工落地（11-14 午，ok-pilot）
+
+- 條文整理第三輪 5 題：查過早已由 97cda3435（11-14 10:11）全部落地，spec／ideas 也已封存到 `wf/workflows/common/archive/`。ok-pilot-tidy-1 逐處對過現檔和程式，結果一致，沒有要再改的字。待派工那行照「做完即刪」拿掉；`wf/STRUCTURE.md` 補註 spec／ideas 已封存。team-model 那句「Claude、GPT 各一個 200 美元方案」保留原字，因為 repo 裡查不到可核實的資料。
+- hook 在真 eca 上的四種事件：ok-pilot-hook-1 在暫存樹 `~/code/ok-pilot-hook-1114/`（HEAD d38a0d36f）用真 haiku eca 驗，四種事件 before_queue、after_queue、before_tool、after_tool 都過，順序也對。before_queue 改寫的那句出現在 history 裡，小格 mcp.json 帶了 `--hooks`；加測 before_tool 回 exit 10 擋工具也過。報告、腳本與證據在 `wf/temp/ok-pilot/hook-eca/`。跟 11-10 照抄步驟的差異：旗標改成 `--event before_queue`、`--condition`、`--on-error`，`--change` 已取消、改為預設就攔，工具名是 peek_now_time。附帶觀察：被擋那次 live.jsonl 的 tool_result 是 `is_error:false`，文件沒寫被擋時該怎麼標。

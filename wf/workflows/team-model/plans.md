@@ -2,7 +2,7 @@
 
 本頁由 [`../team-model.md`](../team-model.md) 拆出。**隨每月帳單與錢包變動改這頁，只寫現況**；project-owned，kernel 升級不覆蓋。
 
-- **現況**：Claude、GPT 各一個 200 美元方案，兩套體系同時可用。codex 可用 slug 與試水溫結果見 [dispatch/aos-teams](../dispatch/aos-teams.md) 與 [probe-2026-10-09](probe-2026-10-09.json)；隊形是 opus 隊長（自家 subagent）＋兩名隊員（codex `gpt-6.1-sol`、claude CLI opus），隊員各自無上限派子 agent、盡量派 codex，見 [dispatch/aos-teams](../dispatch/aos-teams.md)。
+- **現況**：Claude、GPT 各一個 200 美元方案（未核實），兩套體系同時可用。codex 可用 slug 與試水溫結果見 [dispatch/aos-teams](../dispatch/aos-teams.md) 與 [probe-2026-10-09](probe-2026-10-09.json)；隊形是 opus 隊長（自家 subagent）＋兩名隊員（codex `gpt-6.1-sol`、claude CLI opus），隊員各自無上限派子 agent、盡量派 codex，見 [dispatch/aos-teams](../dispatch/aos-teams.md)。
 
 ## 若退掉 GPT
 
