@@ -22,6 +22,7 @@
 | [02-設計](ok-devt-1114/02-設計.md) | 初稿（送 Argon 前；跟 05 不同處以 05 為準） |
 | [03-Argon原文](ok-devt-1114/03-Argon原文.md) | Argon 審查原文 |
 | [04-採納表](ok-devt-1114/04-採納表.md) | 逐條採納與理由 |
+| [06-第2期施工清單](ok-devt-1114/06-第2期施工清單.md) | 第 2 期（兩格放到 daemon 表的列上）給 ok-limits 的施工清單；上線順序：C++ 先隨換樹上，Python 換樹後才 commit |
 | [05-定稿](ok-devt-1114/05-定稿.md) | 定稿：欄位名以這份為準；第三節是施工清單，第四節是審 ok-limits 的結果 |
 
 ## 經過
@@ -39,9 +40,10 @@
 
 - 14:12 ok-limits 實測查核 A：帶 envs 的 add 跟不帶的不等價（exec 欄變 null 致 set-def 拒收、as_written.exec 不記、--path-json 指示詞被改寫、多一層 aos-exec）；另更正：envs 不在表上的 launch.exec.envs，在小格檔裡，launch.exec 是指標。定稿 1.3 改成「第 1 期不改任何一個 add 走哪條路，只有本來就帶 envs 的才記 parent」，who 改成順著指標讀。
 
+- 14:15 head-core 放行修訂（commit 83fd2fd398），第 2 期排下一次換樹的候選、由 ok-limits 施工（B7、ok-sec 1d 之後）。ok-sec 回：notify_box 跨 uid 的規則它接、放 kernel 的 procs 規則那層。寫了第 2 期施工清單（06）；審 ok-limits 的 who 第二版（順著指標讀小格檔），讀法合定稿，要它交件附真 daemon 的實際輸出。
+
 ## 還沒做
 
 - 審 ok-limits 的 diff（who 已到；add_letter、B7 改名還沒到）。
-- ok-sec 還沒回（notify_box 跨 uid 的規則）。
 - 第 2 期（daemon C++）排進哪一次換樹；adopt.cpp 排在 ok-limits B7、ok-sec 1d 之後。
 - 投 wf/advices：brain_failed 兩種身不一致等蒐集時看到的不一致。
