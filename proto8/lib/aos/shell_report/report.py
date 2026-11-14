@@ -5,7 +5,7 @@ import shlex
 import shutil
 import subprocess
 
-from agent.agent_files import declared_files
+from declared_files import declared_files
 
 
 def records(stack):

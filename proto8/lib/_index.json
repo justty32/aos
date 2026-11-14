@@ -26,6 +26,9 @@
   "description": "底層原語工具：檔案與資料夾（read、write、edit、ls…）、json_*、shell、run_python、小工具（math、peek_*）、llm_http／llm_fake 端點函數",
   "index": "base/_index.json"
  },
+ "declared_files.py": {
+  "description": "依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。"
+ },
  "directive_value.py": {
   "description": "把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。"
  },

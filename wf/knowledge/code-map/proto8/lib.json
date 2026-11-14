@@ -12,7 +12,7 @@
     }
    },
    "agent_def/": "定義的創造修改：new＝把範本資料夾整份複製成新定義（tools 檔相對路徑換算、_metainfo.json 記 lineage），check＝轉叫 lib/aos/defs 的 check，tools／llm／system＝直接改某份定義的工具／腦／system",
-   "agent_files.py": "依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。",
+   "agent_files.py": "匯出共用的定義檔與 stack 覆蓋檔宣告讀取器。",
    "agent_tool.py": "claude、codex 共用的工具形入口 ask_cli。",
    "agents_cmd.py": "subagent 與 agents_ctl 共用：查鍵、組 aos-agent ctl 各動作的旗標、跑 aos-agent（或旁邊的 self_*）並把下層錯翻成自己的。",
    "agents_ctl": {
@@ -154,6 +154,7 @@
    },
    "subagent/": "我生的子 agent：生、殺、停起、說話、出生後調它的工具／腦／對話／hook；工具自己記帳（subagents.json）、算配額，只碰自己生的",
    "tests": {
+    "test_agent_files.py": "Test declared file validation and shared imports with or without agent on sys.path.",
     "test_cli_a2a.py": "驗畫面開著的 claude 身往 CLI 的收件 socket 投署名訊息（11-13 cli_a2a）：信封與署名、hook 記 socket 與回執、投遞、等回答；",
     "test_cli_codex_mcp.py": "驗 cli_session 起 codex 時給 aos MCP server 的設定（11-11）：明寫帶 AOS_* 環境（只帶清單裡有設的，AOS_WS／AOS_STACK 用這次的值），只對 aos 這個 server 免核准；claude 那邊不變。",
     "test_cli_external_mcp.py": "驗 cli.json 的 mcp_servers（11-12 external-mcp 步 1）：server 檔讀取與形狀、codex 的 -c、bearer 只進 CLI 行程的環境、壞的那台 warning 跳過、畫面啟動器。",
@@ -410,6 +411,7 @@
    "view/": "漸進看一個檔：JSON 一次看一層、大的文字檔先給大綱",
    "write/": "把整份內容寫進一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建"
   },
+  "declared_files.py": "依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。",
   "directive_value.py": "把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。",
   "env_file.py": "Read the shared dotenv subset without changing the process environment.",
   "file_summary.py": "ls、stat、view 共用的檔案摘要小件：資料夾裡有哪些 aos 標記檔、檔案時間寫成 ISO、一個 JSON 值的一句摘要。",

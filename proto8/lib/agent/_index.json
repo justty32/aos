@@ -6,7 +6,7 @@
   "description": "agent_def 工具（定義包）：從範本複製出新 agent 定義、檢查定義夾，或改定義的工具、腦設定與 system 文字並記血統"
  },
  "agent_files.py": {
-  "description": "依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。"
+  "description": "匯出共用的定義檔與 stack 覆蓋檔宣告讀取器。"
  },
  "agent_tool.py": {
   "description": "claude、codex 共用的工具形入口 ask_cli。"
@@ -129,7 +129,8 @@
   "description": "subagent 工具（子 agent 包）：生自己的子 agent，跟它說話、調它的工具／腦／對話、停起與收掉，算配額 max_subagents"
  },
  "tests": {
-  "description": "agent 的測試"
+  "description": "agent 的測試",
+  "index": "tests/_index.json"
  },
  "todo": {
   "description": "todo 工具（待辦包，eca 不掛）：自己的待辦清單 ls／set／add／mark，存在小格裡、對話被摘要後還在"
