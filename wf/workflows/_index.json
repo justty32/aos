@@ -9,7 +9,7 @@
   "description": "跨工作流共用的東西：共通踩坑 gotchas、使用者偏好 user、資料檔契約 data-files、程式碼慣例 conventions（code map 11-13 搬到 wf/knowledge/code-map.json）；使用者說「記／查踩坑」「我的偏好是…」時走這裡"
  },
  "decide-page.md": {
-  "description": "decide-page — 把一批要使用者裁的題做成離線互動頁，收回答、落回各線"
+  "description": "decide-page：離線互動頁已停用（2026-11-14）"
  },
  "decisions.json": {
   "description": "decisions：記決定（本 repo 的版本＝通用版＋本地差異；使用者說「記個決定」「為什麼選 A 不選 B」時讀）"

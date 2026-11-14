@@ -19,3 +19,4 @@
 | [spec/](spec/README.md)、[ideas/](ideas/README.md) | 2026-11-14 | 原 `wf/workflows/spec/`、`wf/workflows/ideas/` 兩個工作流整夾（入口 README 與各自的 `archive/`）；09-05 那代的舊規格與舊構想，已沒有現行內容，原位置只留一行轉址 README；現行規範在 proto8/docs/NORMS.md、CONVENTION.md，概念在 CONCEPTS.md（使用者 11-14 專區答「oldentry:archive」，reply cee70afc742361ba） |
 | `team-model.md` | 2026-11-14 | 原 `wf/workflows/team-model.md` 改寫前全文（單檔工作流入口，沒有自己的封存夾所以放這裡；codex 隊員、terra、「隊長 commit、push」、每隊兩個 CLI 程序是舊隊形）；由改寫成只寫現行做法的同名檔取代（使用者 11-14 專區「q2:move」，kb-1114） |
 | `dev-env.md` | 2026-11-14 | 原 `wf/workflows/dev-env.md` 改寫前全文（單檔工作流入口；只有「git 佈局」一節的 worktree 隔離、rebase、ff-merge 是舊做法，其餘照舊）；由改寫了那一節（只有一個 `main`、不開 worktree 分支，使用者 2026-11-03）的同名檔取代（同上） |
+| `decide-page.md` | 2026-11-14 | 原 `wf/workflows/decide-page.md` 全文（單檔工作流入口）；離線互動頁停用，題目一律寄使用者專區，原位置只留指標（使用者 11-14 專區「q2:retire」，kb-1114） |
