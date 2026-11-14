@@ -18,3 +18,4 @@
 | [commit-queue-1114](commit-queue-1114.md) | commit 排隊（使用者「commit這塊…想辦法」「交給fable規劃」）：`wf/tools/commit-request`，申請者自己拿 flock 當場做、不常駐不掛 hook；repo 外快取樹組 commit（HEAD＋點名的檔＋共用索引檔操作＋index_gen 生成物）、CAS 推 main、補回共用工作樹與 index；claim 擋衝突；fable 設計、Argon 審、採納表；暫存 clone 48/48 綠；本身是它在真 repo 的第一件 |
 | [view-1114](view-1114.md) | 全景頁（線景）：兩輪規劃（小助手＋中轉信箱＋固定程序；公司部門、2D 縮放地圖、嵌套、bot 模型、普通 proc），fable 設計、Argon 審兩輪；第 0 期上線 127.0.0.1:8767（答題、說話、寄信、往來；後端 API 與前端分開）；擴充／HR／電力留接口；下一步 0.5（通知各隊、systemd、指令單）、0b 地圖、1 小助手 |
 | [wait-user-rewrite-1114](wait-user-rewrite-1114.md) | WAIT_USER 舊帳 36 筆逐筆查證：37 個子項結案、其餘寄進使用者專區、2 件改列待派工 |
+| [llmk2-1114](llmk2-1114.md) | 線層 ok-llmk2：llm kernel 上一層規劃——部門配額樹（配給＋排程，頁面仍叫電力）；站內照樹放行、站外 aos-llm-quota 改表報帳、Claude 本機紀錄電表先量不管；8 題方向題待拍板，只規劃 |

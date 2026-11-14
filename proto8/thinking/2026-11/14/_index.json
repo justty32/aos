@@ -26,6 +26,12 @@
  "kernel-limits-1114.md": {
   "description": "kernel 限資源施工（線限 11-14）：非 C++ 部分的三份圖紙寫好（B1 kernel 站附限制、B2 aos-share、B3 aos-asuser＋aos-sandbox 認 sub:N），暫存樹與接 LiteLLM 的 gpt 隊搭好、試問 sol 通；還沒派工、還沒寫碼，交棒給 ok-limits"
  },
+ "llmk2-1114": {
+  "description": "分檔夾：llm kernel 上一層（llmk2-1114）：部門配額樹——站內照樹放行、站外改表報帳、Claude 先量不管（只規劃）"
+ },
+ "llmk2-1114.md": {
+  "description": "llm kernel 上一層（llmk2-1114）：部門配額樹——站內照樹放行、站外改表報帳、Claude 先量不管（只規劃）"
+ },
  "misc-1114.md": {
   "description": "線雜（11-14）：eca_main 來信七項與線庚剩的、T45～T48 的收尾線；做到調查、施工圖與暫存樹搭好就交棒給 ok-misc，程式一行沒改"
  },
