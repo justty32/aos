@@ -218,6 +218,7 @@
     "hold.py": "「先留著等表態」：hold.json 記留著的信，decisions/<信名>.json 是別人對某一封的表態（pass／refuse）。",
     "hooks.py": "kernel 的三個 hook 時機：設定、事件欄位與判決回話，執行一律交給共用引擎。",
     "letters.py": "包 aos-post 的收信、轉寄、拒信、代回、轉寄對照表與排隊 body。",
+    "limits_rule.py": "驗證 kernel 站的份額與身分設定，並在轉寄前套用到新 proc。",
     "procs_rules.py": "掛 proc 那一包：收下游答案、驗信、先來先掛與白名單及 running 上限。",
     "queue_fifo.py": "掛 proc 的先來先掛排隊窗與寄件人期限。",
     "round.py": "通用 kernel 的骨架：讀設定、鎖收件箱，串起五個口與三個 hook 時機。",
@@ -228,6 +229,7 @@
      "test_kernel_hold.py": "用真的 aos-post 與 aos-exec 驗證 after_verdict hook 的「先留著」（hold）與表態檔 decisions/<信名>.json。",
      "test_kernel_hooks.py": "用真的 aos-post 與 aos-exec 驗證 kernel 三個 hook 時機和排隊時的保存。",
      "test_kernel_route.py": "用真的 aos-post 與 aos-exec 驗證 after_verdict hook 替單封信指定下一站（照規則分流）與各種邊緣。",
+     "test_limits_rule.py": "驗證 kernel 站的份額與身分規則、設定錯誤及真信箱轉寄與拒信。",
      "test_runner.py": "用真的 aos-daemon 與假的端點函數驗「自己跑」零件：掛上、收成品、逾時、重掛一次、放棄。"
     }
    },

@@ -39,10 +39,10 @@ aos-asuser --help
    `newgidmap PID 0 <我的 gid> 1 <G> <subgid起+G-1> 1`
    `exec <N>:<G> <PROG ARGS... 用空白接>`
    （字面的 `PID` 三個字母，不換成數字。）
-5. 真跑：開兩條管子（`os.pipe()`：子→父「我開好 ns 了」、父→子「對照表寫好了」），`os.fork()`。
-   - **子行程**：`os.unshare(os.CLONE_NEWUSER)`（失敗＝印 `aos-asuser: error: NsFailed unshare: <原因>` 到 stderr、`os._exit(1)`）→ 寫一個位元組給父 → 讀父的一個位元組（讀到 `b"1"`＝好；讀到別的或 EOF＝`os._exit(1)`，父已經印過錯）→ `os.setgroups([])` → `os.setresgid(G, G, G)` → `os.setresuid(N, N, N)` → 環境（見下）→ `os.closerange(3, 65536)`（管子也一起關）→ `os.execvp(PROG, [PROG, *ARGS])`；exec 失敗＝stderr `aos-asuser: error: CommandMissing cannot start <PROG>: <原因>`、`os._exit(127)`。換身分那三步任何一步丟 OSError＝stderr `aos-asuser: error: NsFailed <哪一步>: <原因>`、`os._exit(1)`。
+5. 真跑：開兩條管子（`os.pipe()`：子→父「我開好 ns 了」、父→子「對照表寫好了」），`os.fork()`；fork 後父子**立刻各自關掉用不到的那兩端**（不然子行程早死時父讀不到 EOF、卡住）。
+   - **子行程**：`os.unshare(os.CLONE_NEWUSER)`（失敗＝印 `aos-asuser: error: NsFailed unshare: <原因>` 到 stderr、`os._exit(1)`）→ 寫一個位元組給父 → 讀父的一個位元組（讀到 `b"1"`＝好；讀到別的或 EOF＝`os._exit(1)`，父已經印過錯）→ `os.setgroups([])` → `os.setresgid(G, G, G)` → `os.setresuid(N, N, N)` → 環境（見下）→ `os.closerange(3, 2**31 - 1)`（管子也一起關）→ `os.execvp(PROG, [PROG, *ARGS])`；exec 失敗＝stderr `aos-asuser: error: CommandMissing cannot start <PROG>: <原因>`、`os._exit(127)`。換身分那三步任何一步丟 OSError＝stderr `aos-asuser: error: NsFailed <哪一步>: <原因>`、`os._exit(1)`。
    - **父行程**：讀子的一個位元組（EOF＝子先死了：等它、退它的結束碼）→ 跑 `newuidmap <子pid> 0 <我的uid> 1 <N> <真uid> 1`，再 `newgidmap <子pid> 0 <我的gid> 1 <G> <真gid> 1`（`subprocess.run(..., capture_output=True, text=True)`）→ 任一個退非 0＝stderr `aos-asuser: error: NsFailed newuidmap: <它的 stderr 第一行>`（或 newgidmap）、寫 `b"0"` 給子、等子、退 1 → 都成功就寫 `b"1"` 給子。
-   - 父接著轉送訊號：`SIGINT`、`SIGTERM`、`SIGHUP`、`SIGQUIT` 收到就 `os.kill(子pid, 同一個訊號)`。`os.waitpid` 等子結束：正常結束＝退它的碼；被訊號 S 殺＝退 `128 + S`。
+   - 父接著轉送訊號：`SIGINT`、`SIGTERM`、`SIGHUP`、`SIGQUIT` 收到就 `os.kill(子pid, 同一個訊號)`（子已經不在的 `ProcessLookupError` 忽略）。`os.waitpid` 等子結束：正常結束＝退它的碼；被訊號 S 殺＝退 `128 + S`。
 6. **環境**：沒給 `--env-all`＝只留白名單裡外面有設的：`PATH`、`LANG`、`LC_ALL`、`LC_CTYPE`、`TZ`、`TERM`、`PYTHONDONTWRITEBYTECODE`、`PYTHONIOENCODING`，與名字以 `AOS_` 開頭的全部；其他（含 `HOME`、各種 API key）都不帶。`HOME` 設成 `/nonexistent`。給了 `--env-all`＝整份照帶（給 aos-sandbox 用，bwrap 自己會再清）。
 7. `--git-safe DIR`：環境多三個 `GIT_CONFIG_COUNT=1`、`GIT_CONFIG_KEY_0=safe.directory`、`GIT_CONFIG_VALUE_0=<DIR 的絕對路徑>`（不管有沒有 `--env-all`）。
 
@@ -53,7 +53,8 @@ aos-asuser --help
 - 對照表對**整段**：`newuidmap <pid> 0 <我的uid> 1 1 <subuid起> <個數>`、`newgidmap <pid> 0 <我的gid> 1 1 <subgid起> <個數>`。
 - 子行程不換 uid（留在 ns 裡的 0＝外面的使用者，有 ns 裡的權限），對每個 PATH（`--recursive` 時連夾裡全部，用 `os.walk(topdown=True)`，不跟符號連結）：`os.lchown(p, 0, 0)`；不是符號連結的再 `os.chmod(p, 目前權限 | (0o700 if 夾 else 0o600))`。某一個失敗＝stderr 一行 `aos-asuser: warning: cannot fix <p>: <原因>`、繼續，最後子行程退 1（全成功退 0）。父行程照子的結束碼退。
 - `--dry-run`：stdout 印兩行對照表（`PID` 字面）＋每個要修的路徑一行 `fix <路徑>`（不展開 `--recursive`，只印給的 PATH），退 0。
-- PATH 不在＝`PathMissing`（開 ns 之前就檢查）。
+- PATH 不在＝`PathMissing`（開 ns 之前用 `os.lstat` 檢查：`FileNotFoundError`＝PathMissing；`PermissionError`＝放行，進 ns 後再看）。
+- `--recursive` 對每個 PATH：先修 PATH 自己；PATH 是真的夾（不是符號連結）才 `os.walk(p, topdown=True, followlinks=False)`，每層先修 `dirnames` 裡的夾再修 `filenames`（`os.walk` 對普通檔什麼都不給，所以 PATH 本身一定要先修）。
 
 ### 2.3 錯誤（stderr 一行 `aos-asuser: error: CODE reason`，退 1）
 
@@ -90,7 +91,14 @@ aos-asuser --help
   2. （真跑）在 `tempfile.mkdtemp()` 做一個 `chmod 600` 的檔，`sub:5 -- cat <檔>` 退非 0。
   3. （真跑）`sub:5 -- sh -c 'exit 7'` 退 7；`sub:5 -- sh -c 'kill -TERM $$'` 退 143。
   4. （真跑）在 `chmod 777` 的暫存夾（祖先要走得到：用 `tempfile.mkdtemp(dir="/tmp")`，`/tmp` 是 1777）裡 `sub:5 -- sh -c 'echo hi > f; chmod 600 f'`，外面 `os.stat(f).st_uid == 100004`、讀不到；再 `--fix <f>` 退 0，之後 `st_uid == os.getuid()`、讀得到。
-  5. （真跑）`--git-safe /x -- sh -c 'echo $GIT_CONFIG_VALUE_0'` 是 `/x`。
+  5. （真跑）`--git-safe /x sub:5 -- sh -c 'echo $GIT_CONFIG_VALUE_0'` 是 `/x`。
   6. `--dry-run sub:5 -- true` 三行跟 2.1 第 4 步的格式逐字相同（用假 subid 檔）。
   7. 錯：`sub:0`、`sub:60001`、少 `--`、`--fix` 加 `sub:5`、`--fix` 的 PATH 不在、假 subid 檔沒有這個使用者——比退出碼 1 與 CODE。
 - 跑法（必須全綠，沙箱裡真跑那幾例是 skip）：`python3 -m unittest discover -s proto8/cmd/aos-asuser/tests`、`python3 -m unittest discover -s proto8/cmd/aos-sandbox/tests`
+
+## 6. Argon 審後的補充（11-14 ok-limits；跟上面衝突時以這節為準）
+
+- subid 檔解析同 B2 第 7 節：空行與 `#` 開頭略過、同一使用者取第一行、N／G 不准前導 0。
+- `os.setgroups([])` 照留：家機實測 newgidmap 之後 `/proc/<pid>/setgroups` 是 `allow`、`setgroups([])` 成功；它失敗時照第 5 步報 `NsFailed setgroups` 退出，**不准略過**（略過的話子行程還帶著使用者的附屬群組）。
+- 真跑測試的偵測改成直接試跑 `aos-asuser sub:1 -- true`，退非 0 就 skip。
+- README 加一句：aos-sandbox 只換主群組（G＝N）；`limits.groups` 的多群組由 daemon 段 3（C++）處理，這支今天只收一個 `--group`。

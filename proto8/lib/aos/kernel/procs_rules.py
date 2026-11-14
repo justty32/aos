@@ -3,6 +3,7 @@ import json
 import os
 
 import letters
+import limits_rule
 import queue_fifo
 from round import CfgBad
 
@@ -29,6 +30,7 @@ def load(cfg, cfg_dir):
         raise CfgBad("before_reply hooks require reply_via_me")
     if "next" in cfg and "max_running" in cfg and "count_daemon" not in cfg:
         raise CfgBad("next with max_running requires count_daemon")
+    limits_rule.load(cfg)
 
 
 def state_view(daemon, ctx):
@@ -238,6 +240,11 @@ def dispatch(ctx, name, letter, detail):
         message = queue_fifo.expiry_message(letter, name in ctx.previous)
         if message:
             return "SlotMissing", message
+    body, bad = limits_rule.apply(ctx.cfg, letter.get("body"), letter.get("sender"))
+    if bad is not None:
+        return bad
+    if body is not letter.get("body"):
+        letter = dict(letter, body=body)
     failure = letters.forward(ctx, name, letter, ctx.route.pop(name, None))
     if failure is None:
         # hook 能把拒或排改成放行；此處只數實際轉出的名字，不再驗規則。

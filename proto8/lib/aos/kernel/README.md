@@ -47,6 +47,9 @@
 | `keep_ordered` | 布林或 null，有序信是否仍以有序寄出；null 等同 false | false |
 | `route_ordered` | 布林，開著 `keep_ordered` 時 hook 能不能替單封信指定下一站；false＝hook 給了 `next` 就 `CfgBad` | true |
 | `reply_via_me` | 布林，下游回信是否先寄到自己再代回 | false |
+| `limits` | `{default, max, by_sender}`：每支新 proc 的份額預設、天花板、照寄件人的預設（值是正整數，鍵同 daemon 的 `limits`） | 不改份額 |
+| `users` | `{名字樣式: 帳號}`，帳號是字串（`sub:N` 或帳號名）或 `{user, groups}` | 不填身分 |
+| `groups` | `{群組名: 60001～65536}`，給 `users` 的 `groups` 換號 | 沒有 |
 | `hooks` | `{名字: 一格}`，只讀這一份；格的鍵見下方 | 沒有 hook |
 
 寫了 `next` 與 `max_running` 就須寫 `count_daemon`，即使上限值為 null；不猜下一站是哪台。下一站取自 `AOS_KERNEL` 時同理：寫了 `max_running` 卻沒寫 `count_daemon`＝`CfgBad`。`count_daemon` 必須是資料夾；表還沒有時 running 為 0，讀不懂時整輪報錯。只數 `running`、`stuck` 與本輪放行的新名字，在飛的信不算。數量另指時不看那台的 ctl 信箱。轉寄目標解開捷徑後若等於自己的 `requests/`，設定不成立。
@@ -72,6 +75,19 @@
 5. 改過 body 的新入隊信原子存到 `bodies/<信名>.json`；出隊轉寄或拒掉後刪掉。寫排隊窗（空隊也寫空陣列），釋放鎖、退 0。
 
 `queue_wait_ms` 必須是非負整數。正數從本站收到的 `sent_at` 起算，過期即拒 `SlotMissing`，有格也拒；0 不算過期，有格照放行，沒格不排。隊首沒格會擋住後方要新格的信，不增加 running 的信照轉。隊中信每輪仍驗期限；`queued_at`、`queued_at_cycles` 續用，壞窗 warning 後當空窗、從 cur 重排。
+
+## 限制與身分（limits、users、groups）
+
+沒寫 `limits`／`users`（或值為 null）＝原樣轉寄；只寫 `groups` 不開規則，只處理 `procs_added`。
+起點：proc 沒帶 `limits`、帶 null 或 `{}`＝用 `limits.default`，再用 sender 完全相等的 `limits.by_sender` 逐鍵蓋過；帶了非空份額＝只用自帶的，不合併預設。
+夾：`limits.max` 每鍵取小、沒帶的鍵補 max，照 `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files` 順序記 `limits_clamped`；非整數怪值留給 daemon 報錯。
+寄件人自帶的 `limits.user`／`limits.groups`／`limits_clamped` 一律丟；丟掉身分後空的份額也用預設，最後仍空就不帶 `limits`，讓 daemon 用預設。
+`users` 照表順序、proc 名字樣式找第一個對到的填身分；物件的 `groups` 用群組表換成號碼，照陣列順序填。
+有 `$` 開頭鍵的 proc 指示詞寫法＝`BodyBad`，必須寫完整 proc；字串／陣列只在要加份額或身分時包成 exec 物件。
+**users 要兜底**：proc 名字是寄件人自己取的；沒對到任何樣式的 proc 不換身分、照 daemon 的帳號跑。要每支都換身分，`users` 最後一條寫 `"*"`，並用站的 `allowed` 限制寄件人能用哪些名字。
+**只寫 users 不寫 limits.default**：轉出的 proc 會帶 `limits: {"user": …}`，daemon 把有寫的 limits 整份當成這支的份額，它自己的預設就不套了；開 `users` 的站請同時寫 `limits.default`。
+
+**跟 daemon 的配合**：今天的 aos-daemon（11-14 前）還不認 `limits_clamped`（exec 型的 proc 多一個鍵會被當成 loop 設定）、`limits.groups` 與 `user: "sub:N"`；daemon 段 1、段 3 換上之前，`max` 只在不會夾到的情況用、`users` 不要填 `sub:N`、不要用 `groups`。見 [kernel-limits-plan 04](../../../thinking/2026-11/13/kernel-limits-plan/04-施工與驗收.md)。
 
 ## hooks
 

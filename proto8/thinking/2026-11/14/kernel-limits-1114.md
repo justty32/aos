@@ -95,3 +95,51 @@ $L/clean.sh aos-daemon-ctl -d stacks/root ls        # _clock、_sweeper、llm-gp
 3. 起 lead：`$L/clean.sh aos-agent -d stacks/root ctl add --name gpt-lead -w teams/L1 defs/gpt-lead`、`$L/clean.sh aos-agent -d stacks/root goal -t gpt-lead set "Do the blueprint named in blueprint.txt …"`；背景看門看 `teams/L1/mailbox/new/`。
 4. 收 DONE 後在沙箱外重跑三份圖紙的測試（`work/` 上；B2、B3 的真跑例子只有沙箱外會跑），讀 diff 對圖紙；把 `work/` 裡新增／改的檔抄回 repo（先 `git status` 看線框、線星有沒有沒 commit 的同一批檔），`index_gen --apply`、逐檔 commit。B3 的 aos-sandbox 那步最後做、先回報頂層。
 5. 撞到的 aos／gpt 隊問題記進本檔新一節（這是使用者要的產出）。
+
+## ok-limits 接手紀錄（11-14）
+
+### 隊形
+
+- 工人：agent-fsm sol（腦 `sol-high`，經 LiteLLM），定義在 `wf/temp/ok-limits/defs/sol`；system text 寫進必讀清單（知識庫 `_description.json` 先讀、AGENTS.md、user.md、aos-teams.md 與 06、07）與硬規則重點（不動活樹、測試只經 `clean.sh`、不 push、不 commit、不刪檔、只 kill 自己記的 pid、只動任務列的檔、輸出英文）；拿掉範本的刪檔工具。每份任務書開頭附同一份必讀清單（`wf/temp/ok-limits/notes/brief-header.md`）。
+- 沒走前任設計的 gpt-lead／gpt-worker 隊（`tree/defs/gpt-lead`）：改成 ok-limits 直接派單隻 sol，設計判斷留在 ok-limits（照 07 的 11-14 補充）。
+- 命名：第一隻叫 `sol-lim1`（規矩出來前掛的）；之後一律 `ok-limits-<角色>-<n>`（頂層 11-14 通知）。
+
+### Argon 審 B1～B3 的採納表
+
+原文 `/tmp/ok-limits-argon/argon.out`（暫存，不進 repo）。
+
+| # | 圖紙 | Argon 說 | 採納 | 怎麼處理／理由 |
+|---|---|---|---|---|
+| 1 | B3 | newgidmap 後 `setgroups([])` 必敗 | 不採 | 家機實測 newgidmap 後 `/proc/<pid>/setgroups` 是 `allow`、成功；照留，失敗就報 `NsFailed setgroups`、不准略過（B3 §6） |
+| 2 | B2 | 有 ACL 時 `stat` 群組位＝mask | 採 | 測試改以 `getfacl -n` 為準、stat 期望值改 640／770（B2 §6、§7） |
+| 3 | B2 | `setfacl -R -d` 遇普通檔報錯 | 不採 | 家機實測退 0（檔被略過） |
+| 4 | B2 | drop 預設 ACL 缺 `X`、mask 被清 | 採 | 預設 ACL 改 `rwX`、mask 用 `wx`；README 寫寄件端要給群組位（B2 §2、§7） |
+| 5 | B1 | 自帶 limits 繞過 default／by_sender；沒帶時被 max 標 `limits_clamped` | 不採 | K 裁定就是「寫了就整份取自帶、再被 max 夾」；上限靠 `max`，default／by_sender 本來就只是預設不是上限。max 補上沒寫的鍵也算「被夾」，標出來對讀者有用 |
+| 6 | B1 | users 沒對到就回宿主 uid | 部分採 | 不強制 `"*"`（站可以只隔離部分名字）；README 加「users 要兜底」一句（T1b） |
+| 7 | B2 | getfacl 印 `user:`／`group:` 不是 `u:`／`g:` | 採 | B2 §3 改寫比對規則 |
+| 8 | B3 | fork 後沒關用不到的管子端 | 採 | B3 §2.1 第 5 步 |
+| 9 | B3 | `--fix` 單檔與 PathMissing 判斷 | 採 | B3 §2.2 |
+| 10 | B1 | load 選填與驗證順序沒寫 | 採 | T1b 第 1 點 |
+| 11 | B1 | 只寫 users 會蓋掉 daemon 預設份額 | 採（文件） | README 加一句（T1b 第 2 點）；daemon 端逐鍵補預設是 C++，不在今天 |
+| 12 | B3 | 測試 5 漏 `sub:N`、偵測過嚴 | 採 | B3 §5、§6 |
+| 13 | B2／B3 | subid 檔註解行、前導 0 | 採 | B2 §7、B3 §6 |
+| 提案 2 | B1 | 站上嚴格驗 own 的鍵與值 | 不採 | daemon 本來就驗；站上重驗兩份規則會分歧 |
+| 提案 3 | B2 | 每次 setfacl 都顯式帶 `g::`、`m::` | 不採 | 第 2、4 條改完已經對；多寫反而跟 chmod 打架 |
+| 提案 5 | B3 | 多群組 | 採（文件） | README 寫只換主群組，多群組歸段 3（B3 §6） |
+
+### B1（kernel 附限制）
+
+- sol（`sol-lim1`）照 B1＋修正單 T1b 寫四個檔：`proto8/lib/aos/kernel/limits_rule.py`（新）、`procs_rules.py`（只在 import、load、dispatch 三處接）、`tests/test_limits_rule.py`（新，21 單元＋5 整站）、`README.md`。
+- 它回 BLOCKED：暫存樹 `work/` 是 `git archive` 出來的，沒有建好的 `proto8/impls/*/bin`，整站測試找不到 `aos-post`。它沒越界自己補，對。ok-limits 把 repo 裡建好的 bin 抄進 `work/`（`cp -a`，只讀 repo），重跑 kernel 全部測試 105 個全綠。
+- ok-limits 讀過 diff 對圖紙：照規格，無退件。抄回 repo（base `90d9a46d0` 到 HEAD 之間 kernel 夾沒有別人改）。
+- **坑**（給之後的暫存樹）：`git archive` 不帶 build 產物；起暫存樹時要順手抄 `proto8/impls/*/bin`，不然整站測試全掛。
+
+### sol 有沒有真的讀必讀（使用者 11-14「這些agent，都要讓他們知道aos體系，和wf規矩。」）
+
+| 任務 | 照讀了沒（工具紀錄） | 回報裡的證據 | 表現差異 |
+|---|---|---|---|
+| T1（B1） | 有：開頭依序 `read` 了 `_description.json`、AGENTS.md、user.md、aos-teams.md、06、07，之後還自己去讀 `kernel.json` 與 `conventions.md` | 六份各寫一句相關點（例：「kernel 的拒絕是決定，不繞過；活樹只讀」「施工隊只照圖紙實作，不自行改設計」） | 有：缺執行檔時沒自己補檔、沒改舊測試、沒跳測試，照「只動四個檔」停手回 BLOCKED；開工收尾都比對活樹 daemon 與頂層 stack，看到頂層 stack 多了 `autoreply`、`quiet`（頂層裝 quiet）也照規矩停手回報而不碰。缺點：第一輪只回計劃不動手，要第二份任務書明說「不要只回我會做」才做完 |
+
+### 換樹要帶的檔（頂層 11-14：lib 換樹才生效）
+
+B1 進活樹 `~/aos-home` 要帶這兩支：`lib/aos/kernel/limits_rule.py`（新）、`lib/aos/kernel/procs_rules.py`。README 和測試不用帶。kernel 站沒寫 `limits`／`users` 時，轉寄出去的 body 跟以前一樣，所以帶過去之後，沒開新鍵的站不受影響。

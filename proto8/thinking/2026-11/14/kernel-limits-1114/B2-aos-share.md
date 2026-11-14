@@ -32,7 +32,7 @@ aos-share --help
 | `read` | G2 唯讀分享夾 | `--group` 一個以上 | PATH 必須已存在；每個 G：`setfacl -R -m g:G:rX PATH` 與 `setfacl -R -d -m g:G:rX PATH`（`-d` 只對夾有效，setfacl 自己會略過檔）；最後 `setfacl -R -m m::rwX PATH` |
 | `key` | G3 金鑰門（點名 uid） | `--uid` 一個以上 | PATH 必須是已存在的普通檔；`chmod 600 PATH`；每個 U：`setfacl -m u:U:r PATH`；最後 `setfacl -m m::r PATH` |
 | `work` | G4 可改不可刪 | `--group` 剛好一個 | 同 `team`，但 `chmod 3770` |
-| `drop` | G5 投遞箱 | `--group` 剛好一個 | `mkdir -p PATH PATH/tmp PATH/new PATH/cur`；PATH、`PATH/tmp`、`PATH/new` 三個各：`chmod 1730`、`setfacl -m g:G:wx,m::rwx X`、`setfacl -d -m u:ME:rw,g::---,o::---,m::rw X`；`PATH/cur`：`chmod 700`（不加 ACL） |
+| `drop` | G5 投遞箱 | `--group` 剛好一個 | `mkdir -p PATH PATH/tmp PATH/new PATH/cur`；PATH、`PATH/tmp`、`PATH/new` 三個各：`chmod 1730`、`setfacl -m g:G:wx,m::wx X`、`setfacl -d -m u:ME:rwX,g::---,o::---,m::rwX X`（大寫 X：寄件人建的信夾收件人進得去；mask 用 wx，`stat` 才看得到 1730）；`PATH/cur`：`chmod 700`（不加 ACL） |
 | `stack` | G6 agent 的 stack | `--uid` 剛好一個 | `mkdir -p PATH`；`chmod 700 PATH`；`setfacl -m u:U:rwx,d:u:U:rwx,d:u:ME:rwx,m::rwx,d:m::rwx PATH` |
 
 - 指令一律用 `subprocess.run([...], capture_output=True, text=True)` 跑真的 `chmod`／`setfacl`（照 PATH 找；`mkdir -p` 與 `chmod` 可以改用 `os.makedirs(..., exist_ok=True)`／`os.chmod`，結果要一樣）。
@@ -42,7 +42,7 @@ aos-share --help
 
 ## 3. 祖先檢查（警告，不擋）
 
-真的做完之後，對 PATH 的每一層祖先夾（從 `/` 到 PATH 的父夾，用 `os.path.realpath(PATH)` 算）看權限位：「別人」沒有 x（`mode & 0o001 == 0`）而且 `getfacl --omit-header --absolute-names -c <夾>` 的輸出裡沒有 `g:G:` 或 `u:U:` 開頭、含 `x` 的那一行（G／U 是這次的號），就 stderr 印一行：
+真的做完之後，對 PATH 的每一層祖先夾（從 `/` 到 PATH 的父夾，用 `os.path.realpath(PATH)` 算）看權限位：「別人」沒有 x（`mode & 0o001 == 0`）而且 `getfacl -n --omit-header --absolute-names -c <夾>` 的輸出裡沒有一行以 `group:<G>:` 或 `user:<U>:` 開頭、權限有 `x` 的（G／U 是這次的號；那行有 `#effective:` 就看它後面的權限，沒有就看第三欄），就 stderr 印一行：
 
 `aos-share: warning: <夾> gives no x to others: uid/gid <號> cannot reach <PATH>`
 
@@ -69,11 +69,17 @@ aos-share --help
 - 假的 subid 檔：程式要支援環境變數 `AOS_SHARE_SUBUID`、`AOS_SHARE_SUBGID`（給了就讀那個檔，不讀 `/etc/...`）；測試寫一份 `<使用者名>:200000:65536` 進去用。README 註明這兩個變數只給測試用。
 - 至少要有：
   1. `team` 真跑：`getfacl` 看得到 `group:200599:rwx`（`sub:600`）、`default:group:200599:rwx`、`default:user:<ME>:rwx`；`stat` 權限是 `2770`。跑第二次 `getfacl` 輸出不變。
-  2. `drop`：四個子夾在、`new` 的權限 `1730`、預設 ACL 有 `default:group::---`；`cur` 是 `700`。
-  3. `key`：檔變 `600`、`user:200004:r--`（`--uid sub:5`）。
+  2. `drop`：四個子夾在、`new` 的權限 `1730`、預設 ACL 有 `default:group::---` 與 `default:user:<ME>:rwX`（getfacl 印成 `rwx`）；`cur` 是 `700`；在 `new` 裡 `os.mkdir` 一個子夾，它的 ACL 有 `user:<ME>:rwx` 而且沒有 `#effective:` 把 x 遮掉。
+  3. `key`：`getfacl -n` 有 `user:200004:r--`（`--uid sub:5`）、`group::---`、`mask::r--`、`other::---`；`stat` 權限是 `640`（有 ACL 時 stat 的群組位就是 mask）。
   4. `read` 兩個 `--group`：兩個 group 項都在，子夾的預設 ACL 也有。
-  5. `stack`：`user:200004:rwx` 與 `default:user:<ME>:rwx`、權限 `700`。
+  5. `stack`：`user:200004:rwx` 與 `default:user:<ME>:rwx`、`group::---`、`other::---`；`stat` 權限是 `770`（同上，群組位＝mask）。
   6. `--dry-run team`：stdout 的行與第 2 節的步驟一一對得上、夾沒被建。
   7. 錯：KIND 不認得、`team` 給了 `--uid`、`sub:0`、subgid 檔沒有這個使用者、`key` 的 PATH 不在，各一例，比對退出碼 1 與 CODE。
   8. 祖先警告：在暫存夾裡建一層 `chmod 700` 的夾 A，`team A/B --group sub:600` → stderr 有 `gives no x to others` 而且點名 A。
 - 跑法（必須全綠）：`python3 -m unittest discover -s proto8/cmd/aos-share/tests`
+
+## 7. Argon 審後的補充（11-14 ok-limits；跟上面衝突時以這節為準）
+
+- `/etc/subuid`、`/etc/subgid`（或測試用檔）解析：空行與 `#` 開頭的行略過；同一使用者多行取第一行。`sub:N` 的 N 與純數字的真號都不准前導 0、正負號、空白。
+- 有 ACL 的檔：`stat` 的群組位顯示的是 `mask::`，所以測試一律以 `getfacl -n` 的項目為準，`stat` 只在第 6 節點名的地方驗。
+- 投遞箱的寄件端建檔／建夾要給群組位（例 `0660`／`0777`），否則 mask 會被交集成 `---`、收件人讀不到；aos-post 建信夾用 `mkdir(..., 0777)`，沒問題。README 的 `drop` 那列加這一句。
