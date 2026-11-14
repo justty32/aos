@@ -1,0 +1,51 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-11-14"
+ },
+ "aos-brainstorm": {
+  "description": "aos 頭腦風暴輪（11-14，線腦）：只發想、不規劃——人是外部計算單元為重點，點子清單＋六個玩完就丟的小實驗，沒出待裁題"
+ },
+ "astra-kernel-1114.md": {
+  "description": "astra 當 kernel 施工紀錄（線星 11-14）：階段 0 在暫存樹做到 0.5，門鈴「留著→astra 表態→轉寄」通了，撞到一個新坑：sol 停自己會卡住到期限；11-14 交棒給 ok-astra"
+ },
+ "commit-queue-1114": {
+  "description": "分檔夾：commit 排隊（commit-queue-1114）：多條線共用一個工作樹時，commit 交給 `commit-request` 一件一件做"
+ },
+ "commit-queue-1114.md": {
+  "description": "commit 排隊（commit-queue-1114）：多條線共用一個工作樹時，commit 交給 `commit-request` 一件一件做"
+ },
+ "gate-auto-1114.md": {
+  "description": "gate-auto-1114：repo-aos 的 kernel_gate 先自動處理一輪請求"
+ },
+ "kernel-framework-1114.md": {
+  "description": "通用 kernel 框架 11-14（線框，家機）：批 5 接線做到一半、gpt 施工隊暫存樹步驟 1～6 驗過，交棒給 ok-kf；這次沒有程式進 main"
+ },
+ "kernel-limits-1114": {
+  "description": "分檔夾：kernel 限資源施工（線限 11-14）：非 C++ 部分的三份圖紙寫好（B1 kernel 站附限制、B2 aos-share、B3 aos-asuser＋aos-sandbox 認 sub:N），暫存樹與接 LiteLLM 的 gpt 隊搭好、試問 sol 通；還沒派工、還沒寫碼，交棒給 ok-limits"
+ },
+ "kernel-limits-1114.md": {
+  "description": "kernel 限資源施工（線限 11-14）：非 C++ 部分的三份圖紙寫好（B1 kernel 站附限制、B2 aos-share、B3 aos-asuser＋aos-sandbox 認 sub:N），暫存樹與接 LiteLLM 的 gpt 隊搭好、試問 sol 通；還沒派工、還沒寫碼，交棒給 ok-limits"
+ },
+ "misc-1114.md": {
+  "description": "線雜（11-14）：eca_main 來信七項與線庚剩的、T45～T48 的收尾線；做到調查、施工圖與暫存樹搭好就交棒給 ok-misc，程式一行沒改"
+ },
+ "proc-mental-model": {
+  "description": "proc 新心智模型（線程，11-14，純發想、不定稿、不出待裁題）：opus 11 個＋fable 8 個，重疊的合起來約 14 種想法。"
+ },
+ "quiet-1114.md": {
+  "description": "清淨時段小工具（11-14）：repo-aos 自己的「暫時免打擾」，擋 new_mail、kernel_hold 兩種通知，時段結束合併寄回"
+ },
+ "skyrim-agentctl": {
+  "description": "skyrim-agentctl 調查線（11-14，做完）：`~/repo/moddings/skyrim` 的 agentctl／wf 有什麼可給 aos／wf 借鑑——能直接抄的不多，最有用的是它撞出來的事故",
+  "index": "skyrim-agentctl/_index.json"
+ },
+ "view-1114": {
+  "description": "分檔夾：全景頁（view-1114）：像管公司一樣看全景——每隊一個便宜小助手 → 中轉信箱 → 固定程序 → 可縮放的部門地圖"
+ },
+ "view-1114.md": {
+  "description": "全景頁（view-1114）：像管公司一樣看全景——每隊一個便宜小助手 → 中轉信箱 → 固定程序 → 可縮放的部門地圖"
+ },
+ "wait-user-rewrite-1114.md": {
+  "description": "WAIT_USER 舊帳 36 筆逐筆查證後怎麼改：37 個子項結案、17 個搬進使用者專區、2 件改列待派工（11-14）"
+ }
+}

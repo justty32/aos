@@ -17,3 +17,4 @@
 | [gate-auto-1114](gate-auto-1114.md) | repo-aos 的 kernel_gate 先自動處理一輪請求：新 hook `lib/agent/kernel_gate/triage` 照 gate 夾的 `triage.json` 判，日常的直接放行、明顯不對的回 `GateRefused`、其他照舊 hold，每封記一行 `triage.jsonl`；站程式沒改；15 題測試與暫存樹 `~/code/gate-1114` 實測過；已換上活樹 gate（備份 `~/.aos/saves/tree-swap/gate-20261114-083348/`） |
 | [commit-queue-1114](commit-queue-1114.md) | commit 排隊（使用者「commit這塊…想辦法」「交給fable規劃」）：`wf/tools/commit-request`，申請者自己拿 flock 當場做、不常駐不掛 hook；repo 外快取樹組 commit（HEAD＋點名的檔＋共用索引檔操作＋index_gen 生成物）、CAS 推 main、補回共用工作樹與 index；claim 擋衝突；fable 設計、Argon 審、採納表；暫存 clone 48/48 綠；本身是它在真 repo 的第一件 |
 | [view-1114](view-1114.md) | 全景頁（線景）：兩輪規劃（小助手＋中轉信箱＋固定程序；公司部門、2D 縮放地圖、嵌套、bot 模型、普通 proc），fable 設計、Argon 審兩輪；第 0 期上線 127.0.0.1:8767（答題、說話、寄信、往來；後端 API 與前端分開）；擴充／HR／電力留接口；下一步 0.5（通知各隊、systemd、指令單）、0b 地圖、1 小助手 |
+| [wait-user-rewrite-1114](wait-user-rewrite-1114.md) | WAIT_USER 舊帳 36 筆逐筆查證：37 個子項結案、其餘寄進使用者專區、2 件改列待派工 |

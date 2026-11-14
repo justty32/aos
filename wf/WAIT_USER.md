@@ -19,9 +19,16 @@
 
 | 類別 | open | 清單 |
 |---|---|---|
-| [要你裁的](wait-user/01-要你裁的.md) | 16 | 要你一句話拍板或看過代定才動得了工的（push、方向題、代定） |
-| [真機真腦驗證](wait-user/02-真機驗證.md) | 11 | 要你在真機、真腦、root 或真帳號上親手跑一次 |
-| [試驗場](wait-user/03-試驗場.md) | 6 | 試驗場現況與用法提醒 |
-| [雜事與清理](wait-user/04-雜事.md) | 3 | repo 外的檔、殘留、要你本人帳號或 token 的一次性動作 |
+| [要你裁的](wait-user/01-要你裁的.md) | 10 | 要你一句話拍板或看過代定才動得了工的（push、方向題、代定） |
+| [真機真腦驗證](wait-user/02-真機驗證.md) | 2 | 要你在真機、真腦、root 或真帳號上親手跑一次 |
+| [試驗場](wait-user/03-試驗場.md) | 0 | 試驗場現況與用法提醒 |
+| [雜事與清理](wait-user/04-雜事.md) | 2 | repo 外的檔、殘留、要你本人帳號或 token 的一次性動作 |
 
 > 2026-10-12 使用者清帳：「舊帳可以清掉」「proto6 已經是老黃曆了，不管」——A 區 71 題、B 區 proto6 帳號真 root 驗收、C 區「先不決定」各項全部結案不再追。原 `wait-user/` 分類檔已封存（見 common/archive 索引），編號不回收。
+
+## 待派工（11-14 起，頂層排）
+
+不用再等使用者、只是還沒人做的事：11-14 舊帳逐筆查證時從 `wait-user/` 撤出（[wait-user-rewrite-1114](../proto8/thinking/2026-11/14/wait-user-rewrite-1114.md)），由頂層決定派不派；做完即刪。
+
+- **hook 在真 eca 上的 queue／tool 四種事件**：on_clock 11-13 已在真 haiku eca 掛上、會觸發；`queue_before`／`queue_after`／`tool_before`／`tool_after` 還沒在真 eca 上專門驗，agent 可在暫存樹自己跑真 haiku → [hook 02 § eca 真對話照抄](../proto8/thinking/2026-11/10/self-family/hook/02-施工結果.md#eca-真對話照抄會花-claude-額度)
+- **two-machines T7 第 1～7 步**：真 claude／codex 找不到對話時的反應（A02～A07）、eca 換台、memory 那題，agent 可在家機暫存樹自己跑（步驟 11-10 寫的，先對到現況）；第 8、9 步要公司機與你的 repo，另寄專區 → [14-真機驗證](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md)
