@@ -1,0 +1,56 @@
+{
+ "01-備料.md": {
+  "description": "01 備料：讓使用者看一頁就掌握全景，現有零件盤點"
+ },
+ "01b-備料-部門與空間介面.md": {
+  "description": "01b 補充備料：公司部門、可縮放的空間介面、嵌套、bot 模型、普通 proc"
+ },
+ "01c-備料-新UI.md": {
+  "description": "01c 第三輪備料：公司部門新 UI（前端使用者體驗）"
+ },
+ "01d-備料-UX重規劃.md": {
+  "description": "01d 第四輪備料：全景前端大型重新規劃（給 fable）"
+ },
+ "01e-使用者原話與裁定-UX.md": {
+  "description": "04 使用者原話與裁定：UX 重規劃（11-14 下午）"
+ },
+ "02-fable稿.md": {
+  "description": "02 fable 設計稿：全景網頁（view-1114）"
+ },
+ "02b-fable稿-部門與空間.md": {
+  "description": "02b fable 設計稿（第二輪）：公司部門、空間介面、嵌套、bot 模型"
+ },
+ "02c-fable稿-新UI.md": {
+  "description": "02c fable 設計稿（第三輪）：公司部門新 UI（v2，前端使用者體驗）"
+ },
+ "02d-fable稿-UX重規劃.md": {
+  "description": "02d fable 設計稿（第四輪）：全景前端大型重新規劃"
+ },
+ "02e-fable第二輪稿-UX重規劃.md": {
+  "description": "02e fable 設計稿（第二輪）：全景前端大型重新規劃"
+ },
+ "02f-fable第三輪稿-左側部門樹.md": {
+  "description": "02f fable 設計稿（第三輪）：左側部門樹、左右都可收"
+ },
+ "03-計劃.md": {
+  "description": "03 實作計劃：全景頁（view-1114），opus 依 fable 稿細化"
+ },
+ "04-Argon原文.md": {
+  "description": "04 Argon 審查原文（view-1114）"
+ },
+ "04b-Argon原文-第二輪.md": {
+  "description": "04b Argon 原文（第二輪）（view-1114）"
+ },
+ "04c-Argon原文-第三輪.md": {
+  "description": "04c Argon 原文（第三輪）（view-1114）"
+ },
+ "05-採納表.md": {
+  "description": "05 採納表：Argon 意見逐條處理（view-1114）"
+ },
+ "05b-採納表-第二輪.md": {
+  "description": "05b 採納表（第二輪）：Argon 意見逐條處理（view-1114）"
+ },
+ "05c-採納表-第三輪.md": {
+  "description": "05c 採納表（第三輪）：Argon 意見逐條處理（view-1114）"
+ }
+}
