@@ -120,7 +120,7 @@ class LimitsRuleTest(unittest.TestCase):
             ({"limits": {"extra": {}}}, "limits.extra is not a known key (default, max, by_sender)"),
             ({"limits": {"default": []}}, "limits.default must be an object of limit keys"),
             ({"limits": {"max": {"user": 1}}},
-             "limits.max.user is not a limit key (mem_mb, cpu_s, procs, file_mb, files)"),
+             "limits.max.user is not a limit key (mem_mb, cpu_s, procs, file_mb, files, mem_total_mb, procs_total)"),
             ({"limits": {"default": {"cpu_s": True}}}, "limits.default.cpu_s must be a positive integer"),
             ({"limits": {"by_sender": []}}, "limits.by_sender must be an object {sender: limits}"),
             ({"limits": {"by_sender": {"/a/b": []}}},
@@ -128,7 +128,7 @@ class LimitsRuleTest(unittest.TestCase):
             ({"limits": {"by_sender": {"/a/b": {"cpu_s": 0}}}},
              "limits.by_sender[/a/b].cpu_s must be a positive integer"),
             ({"limits": {"by_sender": {"/a/b": {"extra": 1}}}},
-             "limits.by_sender[/a/b].extra is not a limit key (mem_mb, cpu_s, procs, file_mb, files)"),
+             "limits.by_sender[/a/b].extra is not a limit key (mem_mb, cpu_s, procs, file_mb, files, mem_total_mb, procs_total)"),
             ({"users": []}, "users must be an object {name pattern: user} or null"),
             ({"users": {"sol-*": 3}}, shape),
             ({"users": {"sol-*": {}}}, shape),
@@ -191,6 +191,15 @@ class LimitsRuleTest(unittest.TestCase):
                 result, bad = limits_rule.apply({"users": {}}, body, None)
                 self.assertIsNone(result)
                 self.assertEqual(bad, ("BodyBad", message))
+
+    def test_cgroup_keys_default_and_clamp(self):
+        result = self.apply({"limits": {"default": {"mem_total_mb": 2048, "procs_total": 64}}},
+                            {"worker": {}})
+        self.assertEqual(result["worker"], {"limits": {"mem_total_mb": 2048, "procs_total": 64}})
+        result = self.apply({"limits": {"max": {"mem_total_mb": 1024, "procs_total": 32}}},
+                            {"worker": {"limits": {"mem_total_mb": 4096, "procs_total": 8}}})
+        self.assertEqual(result["worker"]["limits"], {"mem_total_mb": 1024, "procs_total": 8})
+        self.assertEqual(result["worker"]["limits_clamped"], ["mem_total_mb"])
 
     def test_own_limits_do_not_merge_default(self):
         result = self.apply({"limits": {"default": {"cpu_s": 60}}},

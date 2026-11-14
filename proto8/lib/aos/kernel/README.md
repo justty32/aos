@@ -80,14 +80,14 @@
 
 沒寫 `limits`／`users`（或值為 null）＝原樣轉寄；只寫 `groups` 不開規則，只處理 `procs_added`。
 起點：proc 沒帶 `limits`、帶 null 或 `{}`＝用 `limits.default`，再用 sender 完全相等的 `limits.by_sender` 逐鍵蓋過；帶了非空份額＝只用自帶的，不合併預設。
-夾：`limits.max` 每鍵取小、沒帶的鍵補 max，照 `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files` 順序記 `limits_clamped`；非整數怪值留給 daemon 報錯。
+夾：`limits.max` 每鍵取小、沒帶的鍵補 max，照 `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files`、`mem_total_mb`、`procs_total` 順序記 `limits_clamped`（後兩個是整支 agent 的 cgroup 上限，跟 daemon 的鍵一樣）；非整數怪值留給 daemon 報錯。
 寄件人自帶的 `limits.user`／`limits.groups`／`limits_clamped` 一律丟；丟掉身分後空的份額也用預設，最後仍空就不帶 `limits`，讓 daemon 用預設。
 `users` 照表順序、proc 名字樣式找第一個對到的填身分；物件的 `groups` 用群組表換成號碼，照陣列順序填。
 有 `$` 開頭鍵的 proc 指示詞寫法＝`BodyBad`，必須寫完整 proc；字串／陣列只在要加份額或身分時包成 exec 物件。
 **users 要兜底**：proc 名字是寄件人自己取的；沒對到任何樣式的 proc 不換身分、照 daemon 的帳號跑。要每支都換身分，`users` 最後一條寫 `"*"`，並用站的 `allowed` 限制寄件人能用哪些名字。
 **只寫 users 不寫 limits.default**：轉出的 proc 會帶 `limits: {"user": …}`，daemon 把有寫的 limits 整份當成這支的份額，它自己的預設就不套了；開 `users` 的站請同時寫 `limits.default`。
 
-**跟 daemon 的配合**：今天的 aos-daemon（11-14 前）還不認 `limits_clamped`（exec 型的 proc 多一個鍵會被當成 loop 設定）、`limits.groups` 與 `user: "sub:N"`；daemon 段 1、段 3 換上之前，`max` 只在不會夾到的情況用、`users` 不要填 `sub:N`、不要用 `groups`。見 [kernel-limits-plan 04](../../../thinking/2026-11/13/kernel-limits-plan/04-施工與驗收.md)。
+**跟 daemon 的配合**：今天的 aos-daemon 還不認 `limits.groups`（`BodyBad`）與 `user: "sub:N"`（`LimitBad`）；daemon 認之前，`users` 不要填 `sub:N`、不要用 `groups`。見 [kernel-limits-plan 04](../../../thinking/2026-11/13/kernel-limits-plan/04-施工與驗收.md)。
 
 ## hooks
 

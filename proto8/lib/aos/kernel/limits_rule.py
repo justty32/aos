@@ -5,7 +5,7 @@ import fnmatch
 from round import CfgBad
 
 
-KEYS = ("mem_mb", "cpu_s", "procs", "file_mb", "files")
+KEYS = ("mem_mb", "cpu_s", "procs", "file_mb", "files", "mem_total_mb", "procs_total")
 
 
 def _limit_table(value, path):
@@ -13,7 +13,7 @@ def _limit_table(value, path):
         raise CfgBad("%s must be an object of limit keys" % path)
     for key, number in value.items():
         if key not in KEYS:
-            raise CfgBad("%s.%s is not a limit key (mem_mb, cpu_s, procs, file_mb, files)" % (path, key))
+            raise CfgBad("%s.%s is not a limit key (%s)" % (path, key, ", ".join(KEYS)))
         if not isinstance(number, int) or isinstance(number, bool) or number <= 0:
             raise CfgBad("%s.%s must be a positive integer" % (path, key))
 
