@@ -59,7 +59,7 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 提出者與日期（剩下那半，第十一批併入）：ok-fsm 2026-11-14
 - 出處（剩下那半）：wf/temp/ok-fsm/aos-advice/取隊員最後回答沒有現成指令.md
 - 狀態：未處理（部分已解）。
-  - 建議 1 已解（38271da3b）：新包 `proto8/lib/packs/ws-write.json`，一支工具 `ws_write {path, content, mode}`（`proto8/lib/base/ws_write/`）。mode 有 create（預設，已有就拒）、append、replace（要已存在）；路徑解完捷徑必須落在 `$AOS_WS` 裡，`$AOS_STACK`、`$AOS_CD` 底下也拒；一次上限 262144 bytes、不刪檔。選掛，兩個範本都不掛，要用的定義在 tools.json 的 `$override` 加 `lib/packs/ws-write.json`。測試 `proto8/lib/tests/test_ws_write.py` 19 支。要換樹才進活樹。
+  - 建議 1 已解（38271da3b）：新包 `proto8/lib/packs/ws-write.json`，一支工具 `ws_write {path, content, mode}`（`proto8/lib/base/ws_write/`）。mode 有 create（預設，已有就拒）、append、replace（要已存在）；路徑解完捷徑必須落在 `$AOS_WS` 裡，`$AOS_STACK`、`$AOS_CD` 底下也拒；一次上限 262144 bytes、不刪檔。選掛，兩個範本都不掛，要用的定義在 tools.json 的 `$override` 加 `lib/packs/ws-write.json`。測試 `proto8/lib/tests/test_ws_write.py` 19 支。要換樹才進活樹。後續 c2eced25c（ok-fsm 11-14，head-tools 審稿提出）：ws_write 也擋鄰居的 stack 與任何 `.stack` 夾，兩種都回 PathBad：放 `$AOS_STACK` 的那個夾底下全部（各 agent 的 stack 都在那裡），和路徑裡有一節叫 `.stack` 的。理由是活樹的 `ws/.stack` 就在工作區底下，只擋自己的 stack 仍寫得到鄰居的 queue、tools.json。已知限制：工作區本身在某個 `.stack` 或放 stack 的夾裡時會全部被擋（跟 guard 的 write_guard 同一個限制）。測試增為 20 支。同樣要換樹才進活樹。
   - 建議 2、3 已寫進 [aos-teams/07](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)（「蒐集員的交件要先想好怎麼落地」「sol 沒有 shell」兩條；頂層 11-14 加，還沒 commit）。
   - 沒做：取最後回答的現成指令（`aos-agent history last`）。目前用 `subagent listen` 的 `last: 1`（印在工具結果裡，長的會被截、還混著問句），或 `aos-agent history -t <名字> ls -j` 整份拿回來自己寫腳本取（ok-view 就這樣做）。ok-fsm 的建議：`aos-agent history -t NAME last [--text] [--role assistant]`，預設印最後一則沒有 tool_calls 的 assistant，`--text` 只印文字，方便 `> FILE`。痛的程度：小不便。整理時查：`cmd/aos-agent/aos_agent/history.py` 只有 ls、rm、summarize、set，沒有 last。
 
@@ -198,3 +198,32 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 提出者與日期：skyrim-agent-agentctl 2026-11-14（skyrim-agent 轉來）
 - 出處：`~/repo/moddings/skyrim/agentctl/tmp/aos/skyrim-agent-agentctl/notes.md`「等 skyrim-agent 定的 4 件」第 1 件與「第三封信」第 1 項；skyrim repo commit d98eb1b6
 - 狀態：未處理。整理時查：aos 這邊的範本 cli.json 仍是 `--allowedTools Write,Edit,Bash`，最後一次改是 2ab15e1c7。
+
+## eca-claude 範本沒關 Claude Code 的自動記憶，工作區在別的 git repo 底下就讀寫那個 repo 的記憶
+
+- 主題：fsm 範本（eca-claude 範本的預設值）
+- 哪裡：`proto8/templates/eca-claude/cli.json`（沒有 `settings` 鍵）；`lib/agent/cli_cfg.py` 的 `cli_settings` 與 `cli_mcp.settings_argv`（把 cli.json 的 `settings` 併進 aos 自己那個 `--settings`）。
+- 現象：
+  - Claude Code 的記憶夾照 cwd 的 `git rev-parse --show-toplevel` 算。
+  - eca 的工作區若在某個 repo 的子目錄（skyrim 那邊是 repo 底下的 `tmp/…`），就會載入那個 repo 的主記憶（那次是 129 檔），系統提示也會叫它寫進去：隊員讀到別隊的舊記憶，甚至寫髒它。
+  - 工作區在 submodule 根時，另起一份新的空記憶夾。
+  - 實測：cli.json 加 `"settings": {"autoMemoryEnabled": false}`，aos 會併進 `--settings`，記憶那段就從系統提示消失（transcript 裡 `persistent file-based memory` 0 筆，對照組 3 筆）。
+- 建議：
+  1. 範本 cli.json 預設帶 `autoMemoryEnabled: false`，要記憶的隊伍自己打開。
+  2. 至少在知識庫的 eca 頁寫一句「記憶夾跟著 git 根走，工作區放哪就吃到誰的記憶」。
+- 痛的程度：拖慢（不擋路，但會讀到、寫髒別隊的記憶）
+- 提出者與日期：skyrim-agent 2026-11-14（skyrim-agent-opus-1 整理投稿）
+- 出處：`~/repo/moddings/skyrim/tmp/aos-skyrim-agent/top/aos-advice/skyrim-1114.md`「eca-claude 範本預設不關 Claude 自動記憶」；`~/repo/moddings/skyrim/tmp/aos-skyrim-agent/opus-3/out/facts.md` 第 5、6 節；`~/repo/moddings/skyrim/tmp/aos-skyrim-agent/p1/entry-check.md`（離線驗證）
+- 狀態：未處理。整理時查：範本 cli.json 沒有 `settings` 鍵，proto8 的範本、lib、knowledge 裡都沒有 `autoMemory` 字樣。範本預設放多寬、關不關記憶，跟上一條一樣是使用者的事，改之前先問。
+- 相關：本檔「eca-claude 範本在 dontAsk 下沒放行 Read／Glob／Grep」（同一個範本的預設值，同一隊提出；兩件設定不同，分開記）。做法另收在 [wf/public 定義與換定義](../public/定義與換定義.md)。
+
+## fsm 隊員沒有 user_send／user_verify，問使用者只能經主導轉
+
+- 主題：fsm 範本（工具包）
+- 哪裡：`proto8/lib/packs/*.json`；agent-fsm 範本與 kits 的 gather。`proto8/lib/agent/user_send`、`user_verify` 兩支工具在，但沒有任何 pack 收它們。
+- 現象：fsm 隊員要問使用者，只能用舊式的 `mailbox_send` 寄進專區，或交給 eca 主導寄；用 `mailbox_send` 寄就少了 `user_send` 寄出前照專區規矩的檢查（題數、選項、推薦…），收到回信也沒有 `user_verify` 可驗。
+- 建議：做一個 `user` 小包（user_send＋user_verify），範本預設不掛，要的定義在 tools.json 加一行。
+- 痛的程度：小不便
+- 提出者與日期：skyrim-agent 2026-11-14（skyrim-agent-opus-1 整理投稿）
+- 出處：`~/repo/moddings/skyrim/tmp/aos-skyrim-agent/top/aos-advice/skyrim-1114.md`「fsm 隊員沒有 user_send／user_verify」；`~/repo/moddings/skyrim/tmp/aos-skyrim-agent/opus-3/out/facts.md` E8
+- 狀態：未處理。整理時查：`lib/packs/` 18 個包都沒列 user_send、user_verify。

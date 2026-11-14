@@ -85,3 +85,26 @@ llm kernel（lib/aos/kernel_llm）、腦額度、找 kernel、kernel_gate 的意
 - 提出者與日期：skyrim-agent-agentctl 2026-11-14（skyrim-agent 轉來）
 - 出處：`~/repo/moddings/skyrim/agentctl/tmp/aos/skyrim-agent-agentctl/notes.md`「踩到的」第 2 條；底座部 ok-kf 查證
 - 狀態：已解（c3c1877ea，ok-kf 11-14）：活樹的 lib 是舊的才會這樣。新版 subagent、fork 以 `ctl who` 回的自己那列 stack（絕對路徑）為基準，叫 aos-agent 不帶 `--daemon`、照 kernel 路由，subagents.json 存絕對路徑；只設 AOS_KERNEL、沒有 AOS_DAEMON 也能掛子、對帳、收子（新測試 kernel_fixture）。活樹待換樹（11-14 晚換樹才生效，換樹前照舊用 mailbox_send 派工）。
+
+## kernel_hold 通知分不出「工人要移除自己」還是「別人要移除它」
+
+- 主題：kernel 與額度（kernel_gate）
+- 哪裡：kernel_gate 的 hold 通知（`[aos] kernel_hold: …`），由 `proto8/lib/agent/kernel_gate/gate_lib.py` 的 `lines()`、`notice()` 組（116～120 行：每封印 letter、from、request、deadline、其他鍵）。
+- 現象：工人做完後 `self_ctl rm` 自己，頂層收到的 hold 通知裡 from 是工人自己的 stack 夾；要對照 request 那行裡的名字才知道是「工人要移除自己」，一眼看不出來。
+- 建議：通知分開列「誰發的請求（caller）」和「對誰做（target）」；兩者相同時加註 self。
+- 痛的程度：小不便
+- 提出者與日期：skyrim-agent 2026-11-14（skyrim-agent-opus-1 整理投稿）
+- 出處：`~/repo/moddings/skyrim/tmp/aos-skyrim-agent/top/aos-advice/skyrim-1114.md`「kernel_hold 通知裡，工人 self_ctl rm 的寄件位置顯示成工人自己的夾」；skyrim 那邊自己的 hold 程式在 skyrim repo 的 `agentctl/aos/gate/gate_hold.py`
+- 狀態：未處理。整理時查：`lines()` 只印 `from: <sender>` 和原樣的 request，沒有 target、沒有 self 標記。
+- 相關：本檔「eca 當 gate 時，下屬的唯讀查詢也被 hold」「gate 站掛在主人的 on_clock」（同一場、同一個 gate）。
+
+## 提示快取命中率低：llm kernel 沒送固定的 session id
+
+- 主題：kernel 與額度（llm kernel）
+- 哪裡：`proto8/lib/aos/kernel_llm/llm_rules.py` 的 dispatch（寫 `request.json` 那一步）；endpoint pack（`packs.py`）。
+- 現象：llm-gpt 帳本上提示快取只命中 29%。LiteLLM 的 chatgpt 後端每個請求送一個 session id，呼叫方沒給就每次換一個，上游接不回同一隻 agent 前一次的快取。對照實驗：兩隻 sol 同時跑、各問腦 15 次，帶固定 `litellm_session_id` 的那隻命中 88%，不帶的 18%（不帶的最多只中兩隻共用的開頭那段）；正式補丁再跑一輪是 82% 對 31%。
+- 建議：llm kernel 送請求時帶一個固定的 session id，值由寄件 agent 的 stack 路徑算；非 LiteLLM 的端點收到不認得的鍵會怎樣沒測過，做成 endpoint pack 的開關。
+- 痛的程度：拖慢（燒額度：同樣的工作，沒命中快取的提示 token 從 194,859 降到 27,511）
+- 提出者與日期：ok-fsm 2026-11-14
+- 出處：`proto8/thinking/2026-11/14/ok-fsm-1114/01-預設工具包-設計稿.md`「第二步對照實驗結果」「正式補丁與第二輪對照」；commit 7ce38e7cf
+- 狀態：已解（7ce38e7cf，ok-fsm 11-14；使用者專區回信准、ok-kmsg 審、head-tools 放行）。endpoint pack 多一個鍵 `session_key`，預設關：開了的包，dispatch 在 request 頂層加 `{鍵名: sha256(寄件人 stack 路徑) 前 32 個十六進位字}`，請求自己已有那個鍵、或信沒有寄件人就不加；沒寫＝請求原樣交出去。新測試 `tests/test_session_key.py` 6 支。**活樹還沒開**：要在活樹 llm-gpt 的 kernel.json 的 `sol-high` 包加 `"session_key": "litellm_session_id"` 才生效，換樹後由頂層開。但書：實驗只跑兩隻、各 15 次、提示最大約 2.6 萬 token，活樹十幾隻、提示 10 萬以上的規模沒測。
