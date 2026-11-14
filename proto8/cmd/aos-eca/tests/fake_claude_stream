@@ -9,6 +9,9 @@ join the same round; their echoes come when the wait ends (the real CLI takes le
 EOF on stdin: exit 0.
 FAKE_STREAM_FAIL=1: the first round's result has is_error true and "usage limit reached", then exit 1.
 FAKE_STREAM_DIE_AFTER=N: exit 0 right after the N-th result, without waiting for EOF.
+BG:<seconds> in a round's first line: a background task: {"type": "system", "subtype": "background_tasks_changed", "tasks": [one]},
+result "FAKE: started", then lines arriving within that many seconds are echoed and joined; then tasks [] and a result
+"FAKE: done | " + those lines (the real CLI runs one more round when the task ends).
 FAKE_STREAM_SWALLOW=TEXT: a line whose content has TEXT is read but never echoed or answered (a line the CLI never takes).
 FAKE_CLI_LOG=FILE: append {"argv": [...], "line": <content>} as one JSON line per stdin line received."""
 import json, os, re, select, sys, time, uuid
@@ -99,6 +102,25 @@ while True:
         for msg, content in late:
             out({"type": "user", "isReplay": True, "message": msg, "session_id": sid})
             parts.append(content)
+    bg = re.search(r"BG:([0-9.]+)", first[1])
+    if bg and not FAIL:
+        out({"type": "system", "subtype": "background_tasks_changed", "tasks": [{"task_id": "t1", "task_type": "local_bash"}], "session_id": sid})
+        out({"type": "result", "subtype": "success", "is_error": False, "result": "FAKE: started", "session_id": sid})
+        end, late = time.time() + float(bg.group(1)), []
+        while time.time() < end:
+            msg = next_line(end - time.time())
+            if msg is None:
+                if buf[1]:
+                    time.sleep(max(0, end - time.time()))
+                continue
+            out({"type": "user", "isReplay": True, "message": msg[0], "session_id": sid})
+            late.append(msg[1])
+        out({"type": "system", "subtype": "background_tasks_changed", "tasks": [], "session_id": sid})
+        out({"type": "result", "subtype": "success", "is_error": False, "result": "FAKE: " + " | ".join(["done"] + late), "session_id": sid})
+        results += 2
+        if DIE_AFTER and results >= DIE_AFTER:
+            sys.exit(0)
+        continue
     if FAIL:
         out({"type": "result", "subtype": "success", "is_error": True, "result": "usage limit reached", "session_id": sid})
         sys.exit(1)

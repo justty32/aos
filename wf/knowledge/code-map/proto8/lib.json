@@ -182,6 +182,7 @@
     "test_cli_external_mcp.py": "驗 cli.json 的 mcp_servers（11-12 external-mcp 步 1）：server 檔讀取與形狀、codex 的 -c、bearer 只進 CLI 行程的環境、壞的那台 warning 跳過、畫面啟動器。",
     "test_cli_hook_follow.py": "驗畫面 hook 跟上 CLI 的對話（11-12 eca-slash）：id 換了就改記 session.txt；claude 的 /clear（SessionStart source clear）連 aos 的 history 一起清、原文搬到旁邊；codex 取標題的旁支 thread 不記。",
     "test_cli_linger.py": "驗延後關畫面的到期單、假 tmux 排程、token 與本機身分、小格鎖及 hook 事件入口。",
+    "test_cli_print_mid.py": "驗 print_claude 的開關（wake-1114 主案 S）：cli.json 寫 \"live_mail\": true 又給了 more＝走 cli_stream（argv 多 MID_FLAGS、",
     "test_cli_reserved_flags.py": "驗 cli.json 的 flags／print_flags 不准再寫 aos 自己會加的旗標（11-13 eca_main 第 6 項：codex 的 --skip-git-repo-check 寫第二次＝codex 退 2、信被丟）：讀設定時就 CfgBad。",
     "test_cli_screen_env.py": "驗人開的畫面拿到跟 loop 那邊一致的 AOS_CLOCK、AOS_KERNEL、AOS_LLM_KERNEL（11-13 ops-agent-six-suggestions 第 6 點的 bug）：loop 那邊把自己的 MCP_ENV 記進小格 env.json（note_env），開畫面時…",
     "test_cli_settings.py": "驗 cli.json 的 settings（11-13 ops-agent-six-suggestions 第 1 題乙：定義自帶 Claude Code 設定）與 flags 裡的 --settings（＝CfgBad，以前被 aos 自己那個靜默蓋掉）：aos 把定義的設定併進它自己加的那一個…",

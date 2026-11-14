@@ -8,7 +8,7 @@ else:
 
 MID_FLAGS = ["--input-format", "stream-json", "--replay-user-messages"]
 CAP = {"letters": 5, "seconds": 300}     # 一輪中途最多投幾封、起行程後幾秒內才投
-STALL = 30                               # 看到 result 之後還有行沒回執、stdout 又這麼多秒沒動靜＝CLI 不會再取了：關 stdin（不等到逾時）
+STALL = 30                               # 看過 result、沒有背景任務、stdout 又這麼多秒沒動靜＝CLI 不會再動了：關 stdin（不等到逾時）
 
 
 def user_line(text):
@@ -32,6 +32,34 @@ def results_text(lines):
                        if ev.get("type") == "result" and isinstance(ev.get("result"), str) and ev["result"])
 
 
+def answer_text(lines):
+    """這一輪的回答：每個 result，加上「中途的信被取走之後、下一次用工具之前」模型說的話（它常先回一句、再接著做原本的事，
+    那句不在 result 裡；wake-1114 sonnet 改檔實測），照時間順序用空行接起來。跟緊接著的 result 一字不差的那段不重複收。"""
+    parts, said, echoes, listening = [], [], 0, False
+    for ev in events(lines):
+        kind = ev.get("type")
+        if kind == "user" and ev.get("isReplay"):
+            echoes += 1
+            listening = echoes > 1                    # 第一行是題目本身；之後的是中途的信
+        elif kind == "assistant" and listening:
+            content = ev.get("message", {}).get("content") if isinstance(ev.get("message"), dict) else None
+            for block in content if isinstance(content, list) else []:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "tool_use":
+                    listening = False
+                    break
+                if block.get("type") == "text" and isinstance(block.get("text"), str) and block["text"].strip():
+                    said.append(block["text"])
+        elif kind == "result":
+            text = ev.get("result") if isinstance(ev.get("result"), str) else ""
+            if said and said[-1].strip() == text.strip():
+                said.pop()
+            parts += said + ([text] if text else [])
+            said, listening = [], False
+    return "\n\n".join(parts + said)
+
+
 def run_claude_stream_mid(argv, prompt, ws, seconds, live_path, handed=None, env=None, more=None, cap=None, preexec_fn=None):
     """像 cli_print.run_claude_stream，但 stdin 不關：題目寫一行、叫 handed，之後每次醒來（最多 0.5 秒）從 more 拿新信投進去。
     more＝有 take()（回 [(name, content), ...]，沒有回 []）、sent()、unsent() 的物件；拿到的每一項恰好叫一次 sent 或 unsent。
@@ -45,7 +73,7 @@ def run_claude_stream_mid(argv, prompt, ws, seconds, live_path, handed=None, env
         cli_base.die("CliMissing", "%s is not on PATH" % argv[0])
     start = time.time()
     deadline = None if seconds is None else start + seconds
-    st = {"open": True, "written": 1, "acked": 0, "mid": 0, "after_result": False, "last_out": start}
+    st = {"open": True, "written": 1, "acked": 0, "mid": 0, "after_result": False, "last_out": start, "bg": 0}
 
     def shut():
         st["open"] = False
@@ -83,14 +111,19 @@ def run_claude_stream_mid(argv, prompt, ws, seconds, live_path, handed=None, env
         return n
 
     def seen(ev):
+        if ev.get("type") == "system" and ev.get("subtype") == "background_tasks_changed":
+            tasks = ev.get("tasks")                   # 現在還在跑的背景任務（整份清單）：在跑＝CLI 還會醒來、還能收信
+            st["bg"] = len(tasks) if isinstance(tasks, list) else st["bg"]
+            return                                    # 不算「result 之後又動了」
         st["after_result"] = ev.get("type") == "result"
         if ev.get("type") == "user" and ev.get("isReplay"):
             st["acked"] += 1
         elif ev.get("type") == "result" and st["open"]:
             if ev.get("is_error"):
                 shut()
-            elif st["acked"] >= st["written"] and post() == 0:
-                shut()                                # 全取走了、也沒新信：關 stdin，CLI 做完手上的就退
+            elif st["acked"] >= st["written"] and st["bg"] == 0 and post() == 0:
+                shut()                                # 全取走了、沒有背景任務、也沒新信：關 stdin，CLI 做完手上的就退
+            # 還有背景任務：CLI 等它做完會再跑一輪，這段時間的信照樣投（wake-1114 bg 實測）
             # acked < written：還有信沒被取走，CLI 會再跑一輪，繼續等
 
     try:
@@ -127,9 +160,8 @@ def run_claude_stream_mid(argv, prompt, ws, seconds, live_path, handed=None, env
                         raw, buf = buf.split(b"\n", 1)
                         got(raw + b"\n")
                 post()
-                if (st["open"] and st["after_result"] and st["acked"] < st["written"]
-                        and time.time() - st["last_out"] > STALL):
-                    shut()                            # 寫進去的行一直沒被取走：別讓 CLI 空等到逾時
+                if st["open"] and st["after_result"] and st["bg"] == 0 and time.time() - st["last_out"] > STALL:
+                    shut()                            # result 之後 CLI 不再動（寫進去的行沒被取走等）：別讓它空等到逾時
         p.wait()
     finally:
         if timer is not None:

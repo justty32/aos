@@ -212,6 +212,62 @@ class TestStall(Base):
         self.assertEqual(self.received(), ["first", "ghost"])
 
 
+class TestBackground(Base):
+    def test_k_letter_while_background_task_runs(self):
+        more = self.more(["late"], ready=self.has_result)          # 第一個 result（started）之後才給，那時背景任務還在跑
+        code, lines = self.run_mid("BG:2 go", more=more)
+        self.assertEqual(code, 0)
+        self.assertEqual(cli_stream.results_text(lines), "FAKE: started\n\nFAKE: done | late")
+        self.assertEqual((more.count("sent"), more.queue), (1, []))
+
+    def test_k_no_letter_closes_after_background_ends(self):
+        t = time.time()
+        code, lines = self.run_mid("BG:1 go", more=self.more([]))
+        self.assertEqual((code, len(self.results(lines))), (0, 2))
+        self.assertLess(time.time() - t, 5)
+
+    def test_k_stall_waits_while_background_runs(self):
+        with patch.object(cli_stream, "STALL", 0.5):                # 背景任務 2 秒裡 stdout 安靜：不能提早關
+            code, lines = self.run_mid("BG:2 go", more=self.more(["late"], ready=self.has_result))
+        self.assertEqual(cli_stream.results_text(lines), "FAKE: started\n\nFAKE: done | late")
+
+
+class TestAnswer(unittest.TestCase):
+    @staticmethod
+    def L(*evs):
+        return [json.dumps(e) + "\n" for e in evs]
+
+    ECHO = {"type": "user", "isReplay": True, "message": {"role": "user", "content": "x"}}
+
+    @staticmethod
+    def say(*blocks):
+        return {"type": "assistant", "message": {"content": [{"type": "text", "text": b} if isinstance(b, str) else b for b in blocks]}}
+
+    TOOL = {"type": "tool_use", "name": "Edit", "input": {}}
+
+    def test_reply_to_mid_letter_before_next_tool_is_kept(self):
+        lines = self.L(self.ECHO, self.say("Reading first.", self.TOOL), self.ECHO, self.say("6*7 is 42. Continuing."),
+                       self.say(self.TOOL), self.say("EDITED 3"), {"type": "result", "result": "EDITED 3"})
+        self.assertEqual(cli_stream.answer_text(lines), "6*7 is 42. Continuing.\n\nEDITED 3")
+
+    def test_no_mid_letter_is_just_the_result(self):
+        lines = self.L(self.ECHO, self.say("Reading first.", self.TOOL), self.say("done"), {"type": "result", "result": "done"})
+        self.assertEqual(cli_stream.answer_text(lines), "done")
+
+    def test_second_round_reply_equal_to_result_is_not_doubled(self):
+        lines = self.L(self.ECHO, {"type": "result", "result": "one"}, self.ECHO, self.say("two"), {"type": "result", "result": "two"})
+        self.assertEqual(cli_stream.answer_text(lines), "one\n\ntwo")
+
+    def test_text_after_a_tool_is_not_collected(self):
+        lines = self.L(self.ECHO, self.ECHO, self.say(self.TOOL), self.say("mid chatter"), self.say(self.TOOL),
+                       {"type": "result", "result": "final"})
+        self.assertEqual(cli_stream.answer_text(lines), "final")
+
+    def test_bad_lines_and_unfinished_round(self):
+        lines = ["not json\n"] + self.L(self.ECHO, self.ECHO, self.say("late words"))
+        self.assertEqual(cli_stream.answer_text(lines), "late words")
+
+
 class TestPure(unittest.TestCase):
     def test_user_line(self):
         line = cli_stream.user_line("中文\n第二行")

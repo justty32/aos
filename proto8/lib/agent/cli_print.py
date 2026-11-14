@@ -6,11 +6,13 @@ if __package__:
     from .cli_cell import codex_main_thread, drop_session, mark_session, transcripts
     from .cli_cfg import system_argv
     from .cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv, settings_argv, settings_env
+    from .cli_stream import CAP, MID_FLAGS, answer_text, run_claude_stream_mid
 else:
     import cli_base
     from cli_cell import codex_main_thread, drop_session, mark_session, transcripts
     from cli_cfg import system_argv
     from cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv, settings_argv, settings_env
+    from cli_stream import CAP, MID_FLAGS, answer_text, run_claude_stream_mid
 
 
 # ---------------------------------------------------------------- 非互動（畫面沒開）
@@ -110,14 +112,29 @@ def warn_unconnected(init, external):
             cli_base.warn("external MCP server %s was not connected when claude started (status %s)" % (s["name"], s.get("status")))
 
 
-def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
+def live_cap(cfg):
+    """cli.json 的 live_mail_cap（選填）：{"letters": 非負整數, "seconds": 非負整數}，缺的鍵用 CAP；格式不對＝CfgBad。"""
+    cap = cfg.get("live_mail_cap", {})
+    ok = isinstance(cap, dict) and set(cap) <= set(CAP) and all(
+        isinstance(v, int) and not isinstance(v, bool) and v >= 0 for v in cap.values())
+    if not ok:
+        cli_base.die("CfgBad", 'cli.json: live_mail_cap must be {"letters": N, "seconds": N} (non-negative integers)')
+    return dict(CAP, **cap)
+
+
+def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None, more=None):
     """sid＝要接的對話（ask 已認過是這台的）；空＝開新對話：我們產 id、--session-id 給，交出去那一刻先寫 session.txt 與
-    記號檔再叫呼叫者的 handed（第一輪就失敗也不留孤兒，05）。沒給 sid（None）＝照舊讀 session.txt。"""
+    記號檔再叫呼叫者的 handed（第一輪就失敗也不留孤兒，05）。沒給 sid（None）＝照舊讀 session.txt。
+    more＝選填（midturn.More）：cli.json 寫 "live_mail": true 又給了 more＝stdin 用 stream-json、先不關，等回答時又來的信
+    一封一行寫進去（cli_stream，wake-1114 主案 S）；回答＝cli_stream.answer_text（每個 result，加上取走中途信後先回的話）。其他情況照舊。"""
+    live = more is not None and cfg.get("live_mail") is True
+    cap = live_cap(cfg) if live else None
     sid = cell.read("session.txt") if sid is None else sid
     new = "" if sid else str(uuid.uuid4())
     # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-agent watch 看得到它正在做什麼；
     # 回答取最後一個帶 result 的那行（type: result）
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
+    argv += MID_FLAGS if live else []
     ext, env, _ = external_claude(cfg)
     argv += mcp_argv(cfg, cell, ws, stack, ext) + system_argv(cfg)
     guard = guard_hooks(cfg)
@@ -130,7 +147,11 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
             mark_session("claude", cell, ws, new)
         if handed:
             handed()
-    code, lines = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"), given, env)
+    if live:
+        code, lines = run_claude_stream_mid(argv, prompt, ws, timeout_seconds(cfg.get("timeout_ms", 600000)),
+                                            cell.file("live.jsonl"), given, env, more, cap, parent_death_term())
+    else:
+        code, lines = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"), given, env)
     out = None
     for line in lines:
         try:
@@ -155,6 +176,8 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None):
     got = out.get("session_id")
     if new and isinstance(got, str) and got and (got != new or cell.read("session.txt") != new):
         mark_session("claude", cell, ws, got)              # result 帶了不同的 id（或交出去時沒寫成）：以它為準
+    if live:
+        return answer_text(lines)
     return out.get("result") or ""
 
 
