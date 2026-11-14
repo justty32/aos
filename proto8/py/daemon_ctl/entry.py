@@ -148,7 +148,7 @@ def loop_spec(found):
 
 
 
-LIMIT_INTS = ("mem_mb", "cpu_s", "procs", "file_mb", "files")   # limits 的正整數 key（同 aos-sandbox、daemon 的 check_limits）；另有 user（字串）
+LIMIT_INTS = ("mem_mb", "cpu_s", "procs", "file_mb", "files", "mem_total_mb", "procs_total")   # limits 的正整數 key（同 daemon 的 check_limits；後兩個是 B5 的 cgroup 鍵，11-14 ok-limits 補，aos-sandbox 沒有）；另有 user（字串）
 
 
 

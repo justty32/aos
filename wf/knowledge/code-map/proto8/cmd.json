@@ -106,6 +106,7 @@
     "test_already.py": "對已在那個狀態的列下 stop／sleep／start／wake＝印「名字: already 狀態」、退 0、不寄信（cli-sweep Q4＝A，使用者 11-10）。",
     "test_auto_restart.py": "Verify --auto-restart: add_letter puts \"auto_restart\": true on the row for loop, exec and envs types, and both add commands take the switch.",
     "test_envs_portable.py": "Verify add_letter's --envs single: with the daemon stack given, the target is {\"$env\": \"AOS_DAEMON\", \"$path\": relative}, so a moved tree still starts…",
+    "test_limits_keys.py": "ctl add --limits 的鍵：daemon 認得的 cgroup 鍵 mem_total_mb、procs_total（B5）Python 這邊也要認；nofile 照舊報錯（ok-limits 11-14）。",
     "test_path_json.py": "add 的 --ws-json／--stack-json／--path-json：指示詞原樣進信（表上記原形、每次起再解；11-10 B01）。",
     "test_shutdown_timeout.py": "shutdown 等不到 daemon 退出＝StillRunning 錯誤（11-10 two-machines：退 0 會讓人以為可以 commit／push）。"
    }
