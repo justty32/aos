@@ -5,6 +5,9 @@
  "aos-agent": {
   "description": "aos-agent：給人用的 agent 介面，ctl add／rm／起停睡醒、say／listen／chat、畫面、tools／llm／system／goal／hook 覆蓋層與搬家說明；要改人操作 agent 的指令時進去"
  },
+ "aos-asuser": {
+  "description": "aos-asuser：免 root 換成 subuid 執行程式或救援檔案"
+ },
  "aos-clock": {
   "description": "aos-clock — 把時鐘檔的回合數往前走一格"
  },

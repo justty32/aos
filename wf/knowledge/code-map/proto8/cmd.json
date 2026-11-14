@@ -56,6 +56,14 @@
    },
    "using-aos-agent.sh": "給人的殼 source 用（不是跑）：之後直接打 say／listen／chat／status，像命名空間（11-04 aos-agent 02）。"
   },
+  "aos-asuser": {
+   "bin": {
+    "aos-asuser": "免 root 透過 user namespace 換成 subuid 執行程式或救援檔案。"
+   },
+   "tests": {
+    "test_asuser.py": "Test aos-asuser mappings, validation, environment isolation, exit status and file recovery."
+   }
+  },
   "aos-clock": {
    "bin": {
     "aos-clock": "時鐘往前走一格（CONCEPTS C-44、NORMS N-01；規格 10-12「做吧」，計畫 10-21 第 4 段）。"

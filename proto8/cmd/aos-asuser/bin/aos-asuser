@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+# aos-asuser：免 root 透過 user namespace 換成 subuid 執行程式或救援檔案。
+import os
+import pwd
+import re
+import shutil
+import signal
+import stat
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
+import aos_flags  # noqa: E402
+
+PROG = "aos-asuser"
+USAGE = "(usage: aos-asuser [OPTIONS] sub:N -- PROG [ARGS...] | aos-asuser --fix [--recursive] [--dry-run] PATH...)"
+ENV_BASE = ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "TERM",
+            "PYTHONDONTWRITEBYTECODE", "PYTHONIOENCODING")
+HELP = """aos-asuser - run as a subuid without root, or recover files owned by subuids
+
+usage: aos-asuser [--group sub:G] [--env-all] [--git-safe DIR] [--dry-run] sub:N -- PROG [ARGS...]
+       aos-asuser --fix [--recursive] [--dry-run] PATH...
+       aos-asuser --help
+
+N is 1 to 60000; G is 1 to 65536 and defaults to N. No leading zeroes.
+The current user's first /etc/subuid and /etc/subgid ranges map sub:N to
+range start + N - 1. Requires newuidmap/newgidmap and user namespaces.
+AOS_ASUSER_SUBUID and AOS_ASUSER_SUBGID override range files for tests only.
+
+flags:
+  --group sub:G  use one primary group instead of sub:N
+  --env-all      pass the full environment (otherwise use a whitelist)
+  --git-safe DIR set git safe.directory to the absolute DIR through GIT_CONFIG_*
+  --fix          recover ownership and owner read/write access; no sub:N argument
+  --recursive    recover directory contents too, without following symbolic links
+  --dry-run      print mappings and exec/fix steps without forking or opening a namespace
+  -h, --help     show this help
+
+The default environment keeps PATH, LANG, LC_ALL, LC_CTYPE, TZ, TERM,
+PYTHONDONTWRITEBYTECODE, PYTHONIOENCODING and all AOS_* variables; HOME becomes
+/nonexistent. Other variables, including API keys, are dropped.
+Run outside an existing user namespace; mapping subuids inside a sandbox fails.
+Errors: one stderr line `aos-asuser: error: CODE reason`, exit 1. Codes:
+ArgumentsBad, FlagUnknown, SubidMissing, CommandMissing, PathMissing, NsFailed.
+Exec failure exits 127; otherwise return the program's status (signal S = 128+S).
+more: proto8/cmd/aos-asuser/README.md
+"""
+
+
+def die(code, reason):
+    aos_flags.die(PROG, code, reason)
+
+
+def sub_number(value, maximum):
+    match = re.fullmatch(r"sub:([1-9][0-9]{0,4})", value)
+    if not match or int(match[1]) > maximum:
+        die("ArgumentsBad", "expected sub:N with N from 1 to %s: %r %s" % (maximum, value, USAGE))
+    return int(match[1])
+
+
+def sub_range(kind):
+    user = pwd.getpwuid(os.getuid()).pw_name
+    filename = os.environ.get("AOS_ASUSER_SUB" + kind.upper(), "/etc/sub" + kind)
+    try:
+        with open(filename, encoding="utf-8") as source:
+            for line in source:
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                fields = line.rstrip("\n").split(":")
+                if fields[0] not in (user, str(os.getuid())):
+                    continue
+                if len(fields) != 3 or not all(re.fullmatch(r"[0-9]+", x) for x in fields[1:]):
+                    die("SubidMissing", "invalid line for %s in %s" % (user, filename))
+                return tuple(map(int, fields[1:]))
+    except (OSError, UnicodeError) as exc:
+        die("SubidMissing", "cannot read %s: %s" % (filename, exc))
+    die("SubidMissing", "no line for %s in %s" % (user, filename))
+
+
+def parse_args(argv):
+    before, command = argv, []
+    has_separator = "--" in argv
+    if has_separator:
+        boundary = argv.index("--")
+        before, command = argv[:boundary], argv[boundary + 1:]
+    aos_flags.HELP = HELP
+    try:
+        opts, rest = aos_flags.parse(before, {"--group": "group", "--git-safe": "git_safe"},
+                                     switches={"--env-all": "env_all", "--dry-run": "dry",
+                                               "--fix": "fix", "--recursive": "recursive"}, anywhere=True)
+    except aos_flags.Error as exc:
+        die(exc.code, "%s %s" % (exc, USAGE))
+    if opts.get("fix"):
+        if (not rest or has_separator or any(p.startswith("sub:") for p in rest)
+                or any(key in opts for key in ("group", "env_all", "git_safe"))):
+            die("ArgumentsBad", "--fix needs paths, not run-mode arguments " + USAGE)
+        for path in rest:
+            try:
+                os.lstat(path)
+            except FileNotFoundError:
+                die("PathMissing", "%s does not exist" % path)
+            except PermissionError:
+                pass
+        return opts, rest, command, None, None
+    if len(rest) != 1 or not has_separator or not command or opts.get("recursive"):
+        die("ArgumentsBad", "expected sub:N -- PROG [ARGS...] " + USAGE)
+    number = sub_number(rest[0], 60000)
+    group = sub_number(opts.get("group", rest[0]), 65536)
+    return opts, rest, command, number, group
+
+
+def child_error(code, reason, status=1):
+    print(aos_flags.error_line(PROG, code, reason), file=sys.stderr, flush=True)
+    os._exit(status)
+
+
+def fix_paths(paths, recursive):
+    failed = False
+
+    def warning(path, exc):
+        nonlocal failed
+        failed = True
+        aos_flags.warn(PROG, "cannot fix %s: %s" % (path, exc.strerror or exc))
+
+    def fix_one(path):
+        try:
+            os.lchown(path, 0, 0)
+            mode = os.lstat(path).st_mode
+            if not stat.S_ISLNK(mode):
+                os.chmod(path, stat.S_IMODE(mode) | (0o700 if stat.S_ISDIR(mode) else 0o600))
+            return stat.S_ISDIR(mode)
+        except OSError as exc:
+            warning(path, exc)
+            return False
+
+    for path in paths:
+        directory = fix_one(path)
+        if recursive and directory:
+            for root, dirs, files in os.walk(path, topdown=True, followlinks=False,
+                                              onerror=lambda exc: warning(exc.filename, exc)):
+                for name in dirs + files:
+                    fix_one(os.path.join(root, name))
+    return int(failed)
+
+
+def run_child(opts, paths, command, number, group, ready, mapped):
+    try:
+        os.unshare(os.CLONE_NEWUSER)
+    except (OSError, AttributeError) as exc:
+        child_error("NsFailed", "unshare: %s" % exc)
+    os.write(ready, b"1")
+    os.close(ready)
+    verdict = os.read(mapped, 1)
+    os.close(mapped)
+    if verdict != b"1":
+        os._exit(1)
+    if opts.get("fix"):
+        os._exit(fix_paths(paths, opts.get("recursive", False)))
+    for name, action in (("setgroups", lambda: os.setgroups([])),
+                         ("setresgid", lambda: os.setresgid(group, group, group)),
+                         ("setresuid", lambda: os.setresuid(number, number, number))):
+        try:
+            action()
+        except OSError as exc:
+            child_error("NsFailed", "%s: %s" % (name, exc))
+    if not opts.get("env_all"):
+        env = {key: value for key, value in os.environ.items() if key in ENV_BASE or key.startswith("AOS_")}
+        env["HOME"] = "/nonexistent"
+        os.environ.clear()
+        os.environ.update(env)
+    if "git_safe" in opts:
+        os.environ.update(GIT_CONFIG_COUNT="1", GIT_CONFIG_KEY_0="safe.directory",
+                          GIT_CONFIG_VALUE_0=os.path.abspath(opts["git_safe"]))
+    os.closerange(3, 2**31 - 1)
+    try:
+        os.execvp(command[0], command)
+    except OSError as exc:
+        child_error("CommandMissing", "cannot start %s: %s" % (command[0], exc), 127)
+
+
+def wait_child(pid):
+    _, status = os.waitpid(pid, 0)
+    code = os.waitstatus_to_exitcode(status)
+    return code if code >= 0 else 128 - code
+
+
+def launch(opts, paths, command, number, group, mappings):
+    ready_r, ready_w = os.pipe()
+    mapped_r, mapped_w = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.close(ready_r)
+        os.close(mapped_w)
+        run_child(opts, paths, command, number, group, ready_w, mapped_r)
+        os._exit(1)
+    os.close(ready_w)
+    os.close(mapped_r)
+    ready = os.read(ready_r, 1)
+    os.close(ready_r)
+    if not ready:
+        os.close(mapped_w)
+        return wait_child(pid)
+    for mapping in mappings:
+        argv = [mapping[0], str(pid), *mapping[2:]]
+        try:
+            result = subprocess.run(argv, capture_output=True, text=True)
+            failure = (result.stderr.splitlines()[0] if result.stderr else "exit status %s" % result.returncode) if result.returncode else None
+        except OSError as exc:
+            failure = str(exc)
+        if failure is not None:
+            print(aos_flags.error_line(PROG, "NsFailed", "%s: %s" % (mapping[0], failure)), file=sys.stderr, flush=True)
+            try:
+                os.write(mapped_w, b"0")
+            except BrokenPipeError:
+                pass
+            os.close(mapped_w)
+            wait_child(pid)
+            return 1
+    os.write(mapped_w, b"1")
+    os.close(mapped_w)
+
+    def forward(signum, frame):
+        try:
+            os.kill(pid, signum)
+        except ProcessLookupError:
+            pass
+
+    signals = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT)
+    previous = {sig: signal.signal(sig, forward) for sig in signals}
+    try:
+        return wait_child(pid)
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+
+
+def main():
+    opts, paths, command, number, group = parse_args(sys.argv[1:])
+    uid_start, uid_count = sub_range("uid")
+    gid_start, gid_count = sub_range("gid")
+    if not opts.get("fix") and (number > uid_count or group > gid_count):
+        die("SubidMissing", "requested subuid or subgid exceeds the current user's range")
+    for tool in ("newuidmap", "newgidmap"):
+        if not shutil.which(tool):
+            die("CommandMissing", "%s not found on PATH" % tool)
+    if opts.get("fix"):
+        uid_map = ["1", str(uid_start), str(uid_count)]
+        gid_map = ["1", str(gid_start), str(gid_count)]
+    else:
+        uid_map = [str(number), str(uid_start + number - 1), "1"]
+        gid_map = [str(group), str(gid_start + group - 1), "1"]
+    mappings = [["newuidmap", "PID", "0", str(os.getuid()), "1", *uid_map],
+                ["newgidmap", "PID", "0", str(os.getgid()), "1", *gid_map]]
+    if opts.get("dry"):
+        for mapping in mappings:
+            print(" ".join(mapping))
+        if opts.get("fix"):
+            for path in paths:
+                print("fix " + path)
+        else:
+            print("exec %s:%s %s" % (number, group, " ".join(command)))
+        return
+    sys.exit(launch(opts, paths, command, number, group, mappings))
+
+
+if __name__ == "__main__":
+    aos_flags.run(main)
