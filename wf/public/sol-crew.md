@@ -12,7 +12,7 @@
   2. **事實和設計分開**：先派一隻唯讀 sol 寫 facts.md（附檔名、行號）；設計由隊長（或 fable）定；寫碼再另派。
   3. **寫明「讀完必讀，同一個回合就動手」**：不寫的話，sol 第一回合可能只把必讀重點列成表就結束（sol-3 這樣，催一次才動手）。
   4. **檔案在它腳下被別線改掉時它會停下來問**，是好事。回它「只用現在的版本，行號重抓」。
-  5. **隊長不在同一回合等 sol**：`subagent say` 後結束回合，用 `clock_register` 排時間叫醒自己再看。
+  5. **隊長不在同一回合等 sol**：`subagent say` 後結束回合，用 `clock_register` 排時間叫醒自己再看；Claude Code 隊長也可以背景跑 [tools/waitdone](tools/waitdone/README.md)，答完會通知。
   6. **交回的東西自己再讀一遍碼**：sol-4 寄信漏了 `--from`（寄件人變成使用者名），測試沒抓到，是隊長讀碼才發現。
 - **驗過**：ok-astra 11-14，sol-2（蒐集）、sol-3（改 wait.py）、sol-4（新 hook）與暫存樹 T03～T08、E1；結果在 `wf/temp/ok-astra/notes/sol-readcheck.md`。
 - **出處**：`proto8/thinking/2026-11/14/astra-kernel-1114.md`（階段 2、3、AK17）

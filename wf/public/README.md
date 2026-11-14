@@ -19,12 +19,12 @@
 
 | 夾／檔 | 放什麼 |
 |---|---|
-| [tools/](tools/README.md) | 小工具，一個工具一個夾 |
+| [tools/](tools/README.md) | 小工具，一個工具一個夾：quiet（安靜時段）、waitdone（背景等 fsm 隊員答完） |
 | [recipes.md](recipes.md) | 任務類型→做法（一行一列） |
 | [pitfalls.md](pitfalls.md) | 踩坑與解法：建置（`_main` 目標）、隊長的 shell、試真東西別碰原件 |
-| [patch-and-commit.md](patch-and-commit.md) | 暫存樹改動搬回已往前走的 main、commit-request 的坑 |
+| [patch-and-commit.md](patch-and-commit.md) | 暫存樹改動搬回已往前走的 main、驗收跑全套、commit-request 的坑 |
 | [sol-crew.md](sol-crew.md) | 帶 sol（agent-fsm）隊員：任務書、必讀清單、guard 誤擋、rlimit 與腦額度 |
-| [model-notes.md](model-notes.md) | 模型使用心得：Argon 一次性審查 |
+| [model-notes.md](model-notes.md) | 模型使用心得：Argon 一次性審查（headless 沒產出怎麼辦） |
 | [user-zone-mail.md](user-zone-mail.md) | 經使用者專區寄信、讀回信、照授權動手 |
 | [team-patterns.md](team-patterns.md) | 隊形與流程心得：大批舊帳逐筆清、設計流程的實際分工 |
 

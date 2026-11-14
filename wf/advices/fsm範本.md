@@ -16,7 +16,7 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 痛的程度：拖慢（四隻卡住一輪，其中兩隻要隊長代跑）
 - 提出者與日期：ok-misc 2026-11-14
 - 出處：wf/temp/ok-misc/aos-advice/guard-看字面擋唯讀查詢.md；misc-1114 暫存樹 T11、T14、T15 的 sol 回報
-- 狀態：未處理
+- 狀態：已排入（ok-astra）
 
 ## 漏設 AOS_LLM_KERNEL 時 agent-fsm 靜靜卡住
 
@@ -39,3 +39,28 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 提出者與日期：ok-astra 2026-11-14
 - 出處：wf/temp/ok-astra/aos-advice/resend-past-deadline-stops.md；proto8/thinking/2026-11/14/astra-kernel-1114.md AK17 節；Argon 審稿 A6
 - 狀態：未處理（2368ee3af 的 wait.py 沒有看 deadline）
+
+## 蒐集用 sol 的工具包寫不了純文字檔、也沒有 shell，交件卡住
+
+- 主題：fsm 範本
+- 哪裡：照 07 掛蒐集用 sol 的工具定義：`tools.json` 用 `$override` 只放 `lib/packs/look.json`、`gadgets.json`、`json.json`、`index.json`。
+- 現象：ok-view-sol-6～9 四隻同時蒐集，三隻卡在最後一步：「目前工具只有 JSON 寫入，沒有純文字 write/edit；無法正確建立 Markdown。請提供文字寫入工具。」sol-7 的題目要查版本（`node --version`），沒有 shell，就讀檔一路翻 `~/.npm/_cacache` 和 Node 原始碼，117 步沒停；補的「停下來，直接交」排在 queue 裡讀不到，只好 sleep 收掉。補救是叫它們把全文放進最後回答，再由隊長從 `aos-agent history ls -j` 取出存檔（交出 18～61 KB，品質不錯），代價是多一輪，隊長還要自己寫解析腳本。
+- 建議：
+  1. `lib/packs/` 加一個只能寫進自己工作區的文字寫檔 pack（例 `ws-write.json`：路徑限 `$AOS_WS` 底下、大小有上限）。現有 `change.json` 的 write 不限路徑，要自己掛 before_tool hook 才能限（見 [wf/public recipes「唯讀蒐集的隊員怎麼擋寫檔」](../public/recipes.md)）。
+  2. 07 寫明：蒐集任務書要嘛要求「全文放在回答裡」，要嘛先掛寫檔 pack；並給一個取最後回答存檔的現成指令（例 `aos-agent history -t NAME last --text > FILE`）。
+  3. 07 提醒：sol 沒有 shell，查版本、查環境的事派工的人自己跑，或給唯讀指令白名單工具。
+- 痛的程度：拖慢（每隻多一輪，sol-7 白跑約 15 分鐘）
+- 提出者與日期：ok-view 2026-11-14
+- 出處：wf/temp/ok-view/aos-advice/agent-fsm-sol-沒有寫文字檔工具.md；wf/temp/ok-view/sol-{6,8,9}/（交件全文）；stack ok-view-sol-{6,7,8,9}
+- 狀態：未處理（lib/packs 沒有限路徑的寫檔 pack；aos-agent history 沒有 last）
+
+## agent-fsm 的 system 文字不能分層、不能引用，各線整份抄
+
+- 主題：fsm 範本
+- 哪裡：`templates/agent-fsm/brain.py` 讀 system 檔（約 110～113、163 行）；`agent_def`；`subagent add`。
+- 現象：system 檔每次問腦整份讀、整份送，不支援 include、`$ref` 或變數；stack 那份在就整份取代定義那份。`ctl add`／`subagent add` 沒有 `--system`（只能事後 `aos-agent system set`）。11-14 各線 `wf/temp/*/defs/*/system.txt` 有 13 份，9 份幾乎逐字相同、從 ok-pilot 抄來；規矩一改，13 份都不會跟著改。
+- 建議：interfaces.json 的 `system` 可以是檔案清單、按順序串起來，或支援 `$ref`，讓「通用層＋角色層」共用一份；或讓 `subagent add` 收 `system` 參數。細節等 onboard-1114 計劃定稿。
+- 痛的程度：拖慢
+- 提出者與日期：ok-onboard 2026-11-14
+- 出處：wf/temp/ok-onboard/aos-advice/system-text-no-layers.md；proto8/thinking/2026-11/14/onboard-1114/01-備料.md §1、§2
+- 狀態：已排入（ok-onboard，計劃未定稿）

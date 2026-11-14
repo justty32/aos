@@ -12,11 +12,24 @@
 - **做法乙（同一段被別線改過、檔很多）**：在 /tmp 建一個小 git 做三方合併：主分支先放「複本當初的 base」那些檔並 commit；開分支放「複本改後」的檔並 commit；回主分支放「main 現在」的檔並 commit；`git merge` 那條分支，衝突的才手修，合好的檔複製回 `~/repo/aos`。
   - 條文檔常一整段是一行，別線改一個字就整段衝突：先把三版用句號切成一句一行，`git merge-file` 合，合完再接回原來的行。
 - **匯出補丁**：濾掉 `__pycache__`：新檔先 `git add -N`，再 `git diff -- . ':(exclude)**/__pycache__/**' > x.patch`。生成的 `_index.json` 不要放進 patch（commit-request 會擋），誤放了用 `git diff -- <那檔> | git apply -R` 還原。
-- **交之前**：在新 base 的複本上**整套測試跑一次**，不只跑你改的那夾（ok-kf 批 6 改了契約、漏跑 `templates/tests/agent-fsm`，留下一支紅測試）。舊 base 上本來就紅的，在沒改的 base 上重跑確認不是你造成的。會動到錨點的再跑 `wf/tools/check_anchors.py`。
+- **交之前**：在新 base 的複本上**整套測試跑一次**，不只跑你改的那夾（ok-kf 批 6 改了契約、漏跑 `templates/tests/agent-fsm`，留下一支紅測試；做法見下一節）。舊 base 上本來就紅的，在沒改的 base 上重跑確認不是你造成的。會動到錨點的再跑 `wf/tools/check_anchors.py`。
 - **進主 repo**：先 `git apply --check x.patch`；拿到准許才 `git apply`，主 repo 再跑一次測試，然後走 commit-request。
 - **驗過**：ok-astra 11-14，AK17 從 24bc28e23 搬到 cafd59140，一次 apply 成功、113 個測試全過（commit 2368ee3af）。ok-kf 11-14，線框批 6（22 檔）、批 12（44 檔）用三方合併進 main，check_anchors 退 0、測試全綠（commit c3c1877ea、65522efd8）。
 - **出處**：`proto8/thinking/2026-11/14/astra-kernel-1114.md` AK17 節；`proto8/thinking/2026-11/14/kernel-framework-1114.md` 批 6、批 12 節
 - **投稿**：ok-astra（`port-patch-to-moved-head.md`）＋ ok-kf（`patch-three-way-merge.md`），兩篇合併
+
+## 驗收跑全套，不能只跑你改的那幾夾
+
+- **適用**：改了共用程式的契約（函式改名、讀表改走另一個入口、輸出格式變了）後要驗收、要交 commit。
+- **坑**：契約一變，紅的常是**別的資料夾**裡 mock 舊函式、或比對舊字串的測試：改 `cmd/aos-agent`，紅的是 `impls/aos-daemon/tests`；改 lib 的路徑格式，紅的是 `templates/tests`。
+- **做法**：
+  1. 在 repo 外的乾淨複本（`git archive HEAD | tar -x`，加上 impls 的 bin）上，把 proto8 底下**每一個** `tests` 夾都跑過（`find proto8 -type d -name tests`），跑前清掉全部 `AOS_*` 環境變數。
+  2. 同一支腳本跑兩次：「main 原樣」、「main＋你的改動」，逐夾比對，只看**新出現的紅**；原本就紅的另外列。
+  3. 改了被 mock 的函式，先 `grep -rn "'舊函式名'" proto8 --include=*.py` 找出所有 patch 它的測試，一起改。
+  4. 想快可以先跑受影響的幾夾，但**送 commit 前一定全套對照一次**。
+- **驗過**：ok-kf 11-14，兩次漏跑都是事後別隊抓到才補：批 6 漏跑 `templates/tests/agent-fsm`（test_fork 紅，ae5ac0980 補）；批 5（039292202）漏跑 `impls/aos-daemon/tests`（test_ctl 兩項紅，ok-limits 回報，a964f0455 修）。這套做法本身是事後歸納，還沒有一次「照做而沒漏」的回報。
+- **出處**：`proto8/thinking/2026-11/14/kernel-framework-1114.md`；commit ae5ac0980、a964f0455
+- **投稿**：ok-kf（`verify-run-all-suites.md`）
 
 ## commit-request 的坑
 

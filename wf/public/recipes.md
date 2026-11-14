@@ -11,13 +11,13 @@
 | 給 fsm 隊員設資源上限 | `subagent add`／`ctl add` 帶 `limits`：sol 預設 `{"mem_mb":1024,"files":256}`；`procs` 別設；對 eca 下 prlimit 傳不到隊員 | [07「rlimit」](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)、[sol-crew「rlimit 實測」](sol-crew.md) | 11-14 ok-pilot |
 | 讓 gpt 隊員一路做到完、不要只回「我會做」 | 定義掛 `goal` 工具；任務書寫「第一步 goal set；輸出檔寫完才可以用純文字回答」 | [skyrim-agentctl 03 摩擦 1](../../proto8/thinking/2026-11/14/skyrim-agentctl/03-隊形心得.md) | 11-14 ok-skyrim |
 | 唯讀蒐集的隊員怎麼擋寫檔 | 工具不給 shell 與刪除包；`write`／`edit` 加一個 `before_tool` hook 只准寫指定夾（exit 10＝擋） | 同上「實際的隊形」 | 11-14 ok-skyrim |
-| 等隊員做完 | `say` 交代完就結束這一輪，叫隊員做完 `mailbox_send` 給你；真的要當場等，用短迴圈看 `<隊員 stack>/stage.txt` 變 `idle`，每輪三分鐘內。**不要用 `subagent listen` 等超過 60 秒的事**（會整個被砍） | 同上摩擦 2、[07 頂層提醒](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md) | 11-14 ok-skyrim |
+| 等隊員做完 | `say` 交代完就結束這一輪，叫隊員做完 `mailbox_send` 給你；真的要當場等，用短迴圈看 `<隊員 stack>/stage.txt` 變 `idle`，每輪三分鐘內；Claude Code 隊長可背景跑 [tools/waitdone](tools/waitdone/README.md)（看 `history.jsonl` 末行是不帶 tool_calls 的 assistant）。**不要用 `subagent listen` 等超過 60 秒的事**（活樹換樹前仍會被砍） | 同上摩擦 2、[07 頂層提醒](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)、[tools/waitdone](tools/waitdone/README.md) | 11-14 ok-skyrim、ok-llmk2 |
 | 看隊員是在寫、在等腦、還是停了 | 看三樣：`<stack>/stage.txt`（idle／think／wait／act）、`history.jsonl` 的修改時間、`llm-gpt/requests/cur` 與 `new` 有沒有它的信 | 同上摩擦 3 | 11-14 ok-skyrim |
 | 看誰用了多少腦 | 讀 `<活樹>/ws/.stack/procs/llm-gpt/ledger.jsonl`，照 `sender` 加總 `usage` 與 `elapsed_ms` | 同上「數字」 | 11-14 ok-skyrim |
 | 收隊 | `subagent rm <名>`（stack 留著）；自己開過 gate 就 `kernel_gate off`；核對當初記的 pid 都不在 | 同上 | 11-14 ok-skyrim |
 | 交 commit | `commit-request claim`／`submit --files … --msg-file …`，索引用 `--op`；不 `git add`、不自己跑 index_gen | [07「commit 一律交給排隊指令」](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md) | 11-14 |
 | 回報給頂層 | `mailbox_send` 寄 `xiaosi`；要緊的 status 用 `NEEDS-USER`／`BLOCKED`；標題照三條規矩 | [07「頂層的雜務自動化」](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md) | 11-14 |
-| 請 Argon 當第二意見 | 在 /tmp 跑 `agy -p … --model "Gemini 4 Argon (High)" --mode plan --print-timeout 840s`，內容貼進提示並寫明 `Do not use any tools`（不寫會沒產出）；要它分 (A) 審查 (B) 提案 | [05「Argon 是參與者」](../workflows/dispatch/aos-teams/05-同機session與Argon.md)、[model-notes](model-notes.md) | 11-14 ok-skyrim、ok-astra、ok-kf |
+| 請 Argon 當第二意見 | 在 /tmp 跑 `agy -p … --model "Gemini 4 Argon (High)" --mode plan --print-timeout 840s`，內容貼進提示並寫明 `Do not use any tools`（不寫會沒產出）；要它分 (A) 審查 (B) 提案 | [05「Argon 是參與者」](../workflows/dispatch/aos-teams/05-同機session與Argon.md)、[model-notes](model-notes.md) | 11-14 ok-skyrim、ok-astra、ok-kf、ok-llmk2 |
 | 通知太多想清淨一段 | `wf/public/tools/quiet`：`quiet.py install` | [tools/quiet](tools/quiet/README.md) | 11-14 repo-aos |
 | 給 sol 寫任務書 | 一張單一件事、寫明可改哪些檔；事實（唯讀 sol）與設計分開；寫「讀完必讀，同一回合就動手」；交回的碼隊長自己再讀 | [sol-crew「任務書」](sol-crew.md) | 11-14 ok-astra |
 | sol 隊員要不要給必讀清單 | system 放清單、要它末行自報讀了哪幾份；雜活在任務書寫免讀或略讀 | [sol-crew「必讀清單」](sol-crew.md) | 11-14 ok-pilot |
@@ -29,3 +29,4 @@
 | 寄信問使用者／要授權 | `aos-user send --kind … --from <線> --reply-to <stack>/mailbox`；拿 send 當檢查；每寄件人每小時 10 封 | [user-zone-mail](user-zone-mail.md) | 11-14 ok-pilot |
 | 讀使用者專區的回信、驗授權 | `mailbox_read {"keep": true}`，再對 `mailbox/archive/<信名>` 跑 `aos-user verify`，見 `ok: matches` 才算 | [user-zone-mail「讀回信」](user-zone-mail.md) | 11-14 ok-pilot |
 | 大批舊帳逐筆清 | 切 4 份派 opus 子 agent 唯讀並行，每筆歸 A 結案／B decide／C verify·chore，帶隊者核對後給頂層看再寄 | [team-patterns](team-patterns.md) | 11-14 ok-pilot |
+| 改了共用程式的契約（函式改名、讀表入口、輸出格式）要驗收 | proto8 底下每個 `tests` 夾都跑，「main 原樣」與「main＋改動」各跑一次只看新紅；改了被 mock 的函式先 grep 出所有 patch 它的測試 | [patch-and-commit「驗收跑全套」](patch-and-commit.md) | 11-14 ok-kf |

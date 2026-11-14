@@ -13,7 +13,7 @@ llm kernel（lib/aos/kernel_llm）、腦額度、找 kernel 的意見。
 - 痛的程度：拖慢
 - 提出者與日期：ok-astra 2026-11-14
 - 出處：wf/temp/ok-astra/aos-advice/budget-refusal-structured-retry.md；proto8/thinking/2026-11/14/astra-kernel-1114.md AK17 節；commit 2368ee3af
-- 狀態：未處理。2368ee3af（AK17）只解了「被拒就停下」：現在會冷卻重試並 brain_notify 通知 mom。這條要的結構化欄位還沒有，llm_rules.py 的拒絕仍只回 (code, msg) 文字。
+- 狀態：已排入（ok-astra）。2368ee3af（AK17）只解了「被拒就停下」：現在會冷卻重試並 brain_notify 通知 mom。這條要的結構化欄位還沒有，llm_rules.py 的拒絕仍只回 (code, msg) 文字。
 
 ## aos-llm ls 沒設 AOS_LLM_KERNEL 就不能用
 
@@ -26,3 +26,14 @@ llm kernel（lib/aos/kernel_llm）、腦額度、找 kernel 的意見。
 - 出處：wf/temp/ok-pilot/aos-advice/小坑三則.md 第 1 則；wf/temp/ok-pilot/notes.md 第一輪「摩擦」第 4 點
 - 狀態：未處理
 - 相關：[fsm 範本「漏設 AOS_LLM_KERNEL」](fsm範本.md)，同樣是「找不到 kernel 要自己帶路徑」。
+
+## before_verdict hook 拒信只能回 HookRejected，做不了「額度用完、晚點再試」
+
+- 主題：kernel 與額度
+- 哪裡：`lib/aos/kernel_llm` 的 `before_verdict` hook（README「hooks」表）；agent-fsm `wait.py` 只對 BudgetMissing 走冷卻。
+- 現象：hook 退 10 一律回 `{"error": {"code": "HookRejected", ...}}`。agent-fsm 只對 `BudgetMissing` 走 AK17 冷卻重試，`HookRejected` 當一般 BrainFailed，agent 會停。所以想用 hook 外加額度規則（例 llmk2 的部門配額）時，只能直接殺掉那封請求，不能叫它晚點再來。
+- 建議：讓 `before_verdict` 能在 stdout 回 `{"error": {"code": "BudgetMissing", "msg": "..."}}`，站照這個代號回信（代號白名單：BudgetMissing、HookRejected）。外加額度規則就不用改站本體。可和上一條的結構化欄位一起做。
+- 痛的程度：小不便（規劃時發現，擋住「用 hook 做部門額度」這條路）
+- 提出者與日期：ok-llmk2 2026-11-14
+- 出處：wf/temp/ok-llmk2/aos-advice/kernel-llm-hook-reject-code.md；proto8/thinking/2026-11/14/llmk2-1114/03-計劃.md §2.3
+- 狀態：未處理（llm_rules.py 仍只認 HookRejected）

@@ -31,14 +31,15 @@
 
 ## 索引
 
-第一批（11-14，五隊 15 份稿）整理後共 16 條（小坑三則拆成三條）。主題由整理的子 agent 提，頂層定。
+第一批（11-14，五隊 15 份稿）整理後共 16 條（小坑三則拆成三條）。第二批（11-14，三隊 6 份稿）新增 4 條、合併 2 份進舊條（MCP 60 秒、子 agent 不知道誰生了它），新開「知識庫與文件」。主題由整理的子 agent 提，頂層定。
 
-| 主題檔 | 收什麼 | 未處理 | 已解 |
-|---|---|---|---|
-| [daemon與行程](daemon與行程.md) | daemon、aos-loop、daemon 表、--limits | 4 | 0 |
-| [信件與溝通](信件與溝通.md) | mailbox、專區信、say／ask／listen | 3 | 1 |
-| [kernel與額度](kernel與額度.md) | llm kernel、腦額度、找 kernel | 2 | 0 |
-| [fsm範本](fsm範本.md) | agent-fsm 範本、guard、wait 與冷卻 | 2 | 1 |
-| [指令與工具](指令與工具.md) | aos-agent、aos-view、建置、wf/tools | 4 | 0 |
+| 主題檔 | 收什麼 | 未處理 | 已排入 | 已解 |
+|---|---|---|---|---|
+| [daemon與行程](daemon與行程.md) | daemon、aos-loop、daemon 表、--limits | 4 | 0 | 0 |
+| [信件與溝通](信件與溝通.md) | mailbox、專區信、say／ask／listen | 2 | 1 | 1 |
+| [kernel與額度](kernel與額度.md) | llm kernel、腦額度、找 kernel、kernel hook | 2 | 1 | 0 |
+| [fsm範本](fsm範本.md) | agent-fsm 範本、工具包、system 文字、guard、wait 與冷卻 | 2 | 2 | 1 |
+| [指令與工具](指令與工具.md) | aos-agent、aos-view、建置、wf/tools | 4 | 0 | 0 |
+| [知識庫與文件](知識庫與文件.md) | 知識庫頁、元件 docs 跟程式對不上 | 1 | 0 | 0 |
 
-「知識庫與文件」這批沒有稿，先不開檔。
+合計 21 條：未處理 15、已排入 4、已解 2（「部分已做／部分已解」的仍算未處理）。第一批實際入庫 17 條，上面「16 條」是當時的筆誤，照各檔實數。

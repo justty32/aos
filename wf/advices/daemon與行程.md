@@ -20,11 +20,12 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 主題：daemon 與行程
 - 哪裡：daemon 表的列、`aos-agent ctl add`、`lib/agent/subagent`（帳只記在 mom 那邊）。
 - 現象：AK17 要讓 worker 額度被拒時通知 lead，查過後發現子 agent 的 stack、daemon 表、環境變數都沒有「mom 是誰」。只能讓 `subagent add` 塞一個 `AOS_NOTIFY_BOX=<mom stack>/mailbox`；用 `agents_ctl add`、`aos-agent ctl add` 直接生的就沒有。ok-skyrim 查證時也得到同樣結論（隊員身上沒記「誰掛的我」，見 ad7983618）。
-- 建議：daemon 表的列記 `parent`（是誰的 stack 發出 add）；或 `ctl add` 一律給子行程 `AOS_PARENT_STACK`。hook、工具都靠它找上面的人，不用每種用途各發明一個變數。
+- 現象（續）：`self_state {"parts":["who"]}`（`cmd/aos-agent/aos_agent/ctl/who.py` 約 51 行）只回 name、stack、ws、def、daemon，沒有 parent。`subagent add` 補的 `AOS_NOTIFY_BOX`（`lib/agent/subagent/_entry` 182 行）agent 自己看不到，也可以被覆寫成空字串。新起的 agent 想知道「做完寄給誰」，只能靠任務書或找原信的 reply_to。
+- 建議：daemon 表的列記 `parent`（是誰的 stack 發出 add）；或 `ctl add` 一律給子行程 `AOS_PARENT_STACK`。hook、工具都靠它找上面的人，不用每種用途各發明一個變數。`who` 加一欄 `notify_box`（或 `parent`），照實顯示，並註明不是身分證明。
 - 痛的程度：拖慢
-- 提出者與日期：ok-astra 2026-11-14
-- 出處：wf/temp/ok-astra/aos-advice/child-knows-no-parent.md；astra-1114 暫存樹 ak17/facts.md Q4；commit 2368ee3af（subagent/_entry 預設 AOS_NOTIFY_BOX）
-- 狀態：未處理（目前只有 subagent 路徑的 AOS_NOTIFY_BOX）
+- 提出者與日期：ok-astra 2026-11-14；ok-onboard 2026-11-14（who 那段）
+- 出處：wf/temp/ok-astra/aos-advice/child-knows-no-parent.md；wf/temp/ok-onboard/aos-advice/who-no-parent.md、proto8/thinking/2026-11/14/onboard-1114/01-備料.md §3；astra-1114 暫存樹 ak17/facts.md Q4；commit 2368ee3af（subagent/_entry 預設 AOS_NOTIFY_BOX）
+- 狀態：未處理（目前只有 subagent 路徑的 AOS_NOTIFY_BOX；who 仍沒有 parent／notify_box 欄）
 
 ## --limits 的 cpu_s 按程序計，擋不住整隻 agent 的總 CPU
 
@@ -35,7 +36,7 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 痛的程度：小不便（沒人靠它，但鍵名誤導）
 - 提出者與日期：ok-pilot 2026-11-14
 - 出處：wf/temp/ok-pilot/aos-advice/limits的cpu_s按程序計擋不住總量.md；wf/temp/ok-pilot/notes.md 第四輪
-- 狀態：未處理。部分已做：f856af0eb 在 wf 07 寫明「cpu_s 只按單一程序計、總量要 cgroup」；工具說明與知識庫 aos/agents/subagent 還沒寫，cgroup 鍵還沒做（kernel-limits-1114 有 B5 cgroup 規劃稿，尚未 commit）。
+- 狀態：未處理。部分已做：f856af0eb 在 wf 07 寫明「cpu_s 只按單一程序計、總量要 cgroup」；工具說明與知識庫 aos/agents/subagent 還沒寫，cgroup 鍵還沒做：B5（1082418f0）已做 daemon cgroup v2（mem_total_mb、procs_total），沒有 CPU 總量的鍵。
 
 ## limits 開檔數的鍵叫 files，不叫 nofile
 
