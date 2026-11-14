@@ -6,11 +6,11 @@
 #   之後使用者「eca不給fork。」：只給 agent-fsm 的身體；history 裡找不到叫到一半的 tool call（eca）＝BodyUnsupported、叫它改用 subagent（判法同 do_task）。
 # 介面（lib/docs/01 的契約）：stdin 一份 {"goal", "max_chars"?, "timeout_s"?, "timeout_cycles"?, "keep"?}，沒有 op；別的鍵＝ArgumentsBad（tool_io）。
 #   goal 必要（要做什麼、要帶回什麼）；max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、有限非負數，0＝不限；keep 預設 false。
-# 一次叫＝aos-agent 的幾步（daemon 由 ctl who 回的 daemon 欄定、之後都帶 --daemon 那台；信經 aos-agent 寄，有 $AOS_KERNEL 就寄那裡，11-12）：ctl who（我是誰、我的定義與 stack）→ 抄 stack（fork_copy：定義宣告的 history＋覆蓋檔，
-#   history 尾巴沒回的工具呼叫補 tool 訊息）到 <daemon>/procs/<分身名>/ →
+# 一次叫＝aos-agent 的幾步（查表與寄信都經 kernel，不帶 --daemon）：ctl who（我是誰、我的定義與 stack）→ 抄 stack（fork_copy：定義宣告的 history＋覆蓋檔，
+#   history 尾巴沒回的工具呼叫補 tool 訊息）到自己 stack 的隔壁 <分身名>/ →
 #   ctl add（--name f-<父名前32字>-<UTC毫秒>-<4位hex>、--ws 我的 $AOS_WS、--stack 那份、--envs AOS_FORK_DEPTH=1、我的定義）→
 #   say 開場文（OPENING：你是分身、任務、只回結論、不能再 fork）＋listen --timeout-s／--timeout-cycles →
-#   預設 ctl rm --purge 分身（stack 刪掉）；keep: true＝留著但 ctl stop、結論後多一行 details: <分身的 stack，相對那台 daemon 的 stack>/。
+#   預設 ctl rm --purge 分身（stack 刪掉）；keep: true＝留著但 ctl stop、結論後多一行 details: <分身的絕對 stack>/。
 #   不寫分身的 goal.json（代定：listen 拿第一則回答就收，goal 提醒只會在結論之後才來、白催）。
 # 分身名每次唯一：mkdir $AOS_STACK/children/<分身名>/，撞表或資料夾最多重試五次；state＝running <UTC到秒Z租約>／kept／failed，
 #   每步呼叫前續租至逾時＋5秒，TERM 收回租約；對帳先保護未到期租約與剛建資料夾；表上沒有就忘掉，過期 running 先 stop 再記 failed；
@@ -40,8 +40,9 @@ Result on stdout: the conclusion. The fork is removed afterwards unless keep is 
 its stack is kept and the error line ends with (details: <stack>/).
 Each fork has a unique name; running records use renewable UTC leases. Interrupted leases expire,
 and the next call stops expired forks and keeps their stacks as failed ones.
-DaemonMissing means aos-agent found no daemon table (AOS_DAEMON unset and no ./.stack, or not a folder).
-AOS_KERNEL alone is not enough: the fork's stack is placed on that daemon. Requests go via AOS_KERNEL when set.
+With AOS_KERNEL, queries and requests go through that kernel; AOS_DAEMON is not needed.
+The fork's stack is placed beside your own stack from the table; details paths are absolute.
+KernelFailed means the kernel did not answer the state query. Without AOS_KERNEL, aos-agent finds the daemon as usual.
 DaemonFailed means its directory exists but no reply arrived within the timeout (busy, paused, or down).
 On error: one line "fork: error: CODE reason" on stderr and stdout, exit 1.
 """
@@ -103,7 +104,7 @@ signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、�
 
 
 def agent(argv, text=None, timeout_s=STEP_S, timeout_cycles=None):
-    """叫 aos-agent [--daemon <ctl who 回的 daemon>] argv…（ctl who 之前不給，daemon 由 aos-agent 照它的找法找）；退 0 回 (stdout, None)，退非 0 或逾時回 (stdout, (代號, 原因))。"""
+    """叫 aos-agent argv…（不指定 daemon、照 kernel 路由）；退 0 回 (stdout, None)，退非 0 或逾時回 (stdout, (代號, 原因))。"""
     global child
     if running_kid is not None:
         renew(STEP_S + 5 if timeout_s is None else timeout_s + 5)
@@ -111,7 +112,7 @@ def agent(argv, text=None, timeout_s=STEP_S, timeout_cycles=None):
         deadline = tool_io.deadline_after(timeout_cycles) if timeout_cycles is not None else None
     except tool_io.Error as e:
         return "", (e.code, str(e))
-    cmd = ["aos-agent"] + (["--daemon", daemon] if daemon else []) + argv
+    cmd = ["aos-agent"] + argv
     try:
         child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL,
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
@@ -206,9 +207,7 @@ if depth < 0:
 if depth >= MAX_DEPTH:
     die("DepthExceeded", "you are a fork at depth %d; at most %d level%s of fork (do this step yourself)"
         % (depth, MAX_DEPTH, "" if MAX_DEPTH == 1 else "s"))
-# daemon 不自己讀 $AOS_DAEMON（11-12 kernel 小修）：ctl who 由 aos-agent 照共用找法（--daemon ＞ $AOS_DAEMON ＞ ./.stack）找、回 daemon；
-# 信由 aos-agent 寄（有 $AOS_KERNEL 就寄那裡）。表與分身 stack 的位置仍要知道那台 daemon——kernel 給狀態位址那套還沒做。
-daemon = None
+# 查表交給 aos-agent 問 kernel；分身位置只看自己那列的絕對 stack，不用表檔所在的資料夾。
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
@@ -217,9 +216,8 @@ kids_dir = os.path.join(stack, "children")
 
 
 def rel(p):
-    """分身的 stack 相對管我的 daemon（portable-flow 的相對路徑規矩）。"""
-    r = os.path.relpath(p, daemon)
-    return (p if r.startswith("..") else r).rstrip("/") + "/"
+    """分身的 stack 一律寫絕對路徑。"""
+    return os.path.abspath(p).rstrip("/") + "/"
 
 
 def forget(name):
@@ -301,7 +299,7 @@ def reconcile(table):
     for _, n in sorted(failed)[:max(0, len(failed) - FAILED_KEEP + 1)]:   # 留 FAILED_KEEP-1 隻，加上這次最多 FAILED_KEEP
         child_path = child_stacks.get(n)
         if child_path:
-            copy_child(stack, n, os.path.join(daemon, child_path), publish=False)
+            copy_child(stack, n, child_path, publish=False)
         _, err = agent(["ctl", "rm", "--purge", n])
         if err is None:
             forget(n)
@@ -311,9 +309,6 @@ def reconcile(table):
 
 # ---- 我是誰：定義與 stack ----
 me = json.loads(must(["ctl", "who", "--json"]))
-if not isinstance(me.get("daemon"), str) or not me["daemon"]:
-    die("DaemonMissing", "aos-agent ctl who did not say which daemon table it read")
-daemon = os.path.realpath(me["daemon"])
 own_def = me.get("def")
 if not isinstance(own_def, str) or not own_def.strip():
     die("DefMissing", "the daemon table has no definition for you (%s), so there is nothing to copy" % me.get("name"))
@@ -337,7 +332,7 @@ try:
     os.makedirs(kids_dir, exist_ok=True)
 except OSError as e:
     die("MkdirFailed", "cannot create %s: %s" % (tool_io.place(kids_dir), tool_io.os_reason(e)))
-procs = os.path.join(daemon, "procs")
+procs = os.path.dirname(os.path.abspath(my_stack))
 for attempt in range(5):
     now = datetime.now(timezone.utc)
     stamp = now.strftime("%Y%m%dT%H%M%S") + "%03d" % (now.microsecond // 1000)
@@ -372,8 +367,8 @@ try:
 except fork_copy.ForkCopyBad as e:
     scrap()
     die(e.code, str(e))
-# 定義、工作區、stack 都給相對路徑（11-12 線 K）：給絕對的，ctl add 當成使用者寫的原樣存，分身的 exec.json 就帶著這台的絕對路徑進 git
-out, err = agent(["ctl", "add", "--name", kid, "--ws", os.path.relpath(ws), "--stack", os.path.relpath(kid_stack),
+# stack 用自己那列算出的絕對路徑；定義與工作區照原本給相對路徑。
+out, err = agent(["ctl", "add", "--name", kid, "--ws", os.path.relpath(ws), "--stack", kid_stack,
                   "--envs", "%s=%d" % (DEPTH_ENV, depth + 1), os.path.relpath(definition)])
 if err:
     if err[0] in ("DaemonMissing", "DaemonFailed"):

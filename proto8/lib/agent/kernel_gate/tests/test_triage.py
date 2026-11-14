@@ -133,6 +133,31 @@ class TriageTest(unittest.TestCase):
         self.assertEqual(self.judge({"procs_stopped": ["ok-a"]})[0], "hold")
         self.assertIn("triage.json unreadable", self.log()[0]["why"])
 
+    def test_query_only_passes_and_is_logged_without_rules(self):
+        for body in ({"procs_state_path": True}, {"procs_state_path": True, "desc": "lookup"}):
+            self.assertEqual(self.judge(body)[0], "pass")
+        (self.cell / "triage.json").write_text("{")
+        self.assertEqual(self.judge({"procs_state_path": True})[0], "pass")
+        (self.cell / "triage.json").rename(self.cell / "triage.saved.json")
+        self.assertEqual(self.judge({"procs_state_path": True})[0], "pass")
+        self.assertEqual([r["verdict"] for r in self.log()], ["pass"] * 4)
+        self.assertEqual([r["what"] for r in self.log()], ["state_path"] * 4)
+
+    def test_query_mixed_with_add_keeps_the_add_verdict(self):
+        t = self.repo / "wf" / "temp"
+        cases = [
+            (self.add("ok-b", self.agents / "opus-kernel", t / "ok-b"), "pass"),
+            (self.add("x", self.home / "agents" / "other", t / "x"), "hold"),
+            (self.add("eca_main", self.agents / "opus-kernel", t / "x"), "refuse"),
+        ]
+        for body, expected in cases:
+            with self.subTest(expected=expected):
+                self.assertEqual(self.judge(dict(body, procs_state_path=True))[0], expected)
+        self.assertEqual([r["verdict"] for r in self.log()], ["pass", "hold", "refuse"])
+        self.assertEqual(self.judge({"procs_state_path": True, "procs_unknown": []})[0], "hold")
+        for value in (False, 1, "true", None):
+            self.assertEqual(self.judge({"procs_state_path": value})[0], "hold")
+
     def test_06_through_the_station(self):
         # 真站：kernel.json 只掛 triage；三封信各走放行、拒、留，留的那封通知 agent 的 queue。
         ctl, sender, queue = self.root / "ctl", self.root / "sender", self.stack / "queue"

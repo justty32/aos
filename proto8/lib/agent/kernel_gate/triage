@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-# kernel_gate/triage - 框架站的 after_verdict hook handler：照站旁的 triage.json 先處理一輪，日常的直接放行、明顯不對的拒、其他留給 agent，每封記一行進 triage.jsonl。
+# kernel_gate/triage - 框架站的 after_verdict hook handler：有效狀態查詢直接放行，其餘照 triage.json 判，混寫查詢仍判其他鍵，每封記一行進 triage.jsonl。
 # 使用者 11-14：「太多的請求...你可以派一個claude subagent幫你寫程式，你把需求交給他，讓他幫你弄一些可以自動對請求做初步處理的。」
-# 換掉 kernel_gate 預設的 hold（每封都留）：kernel.json 的 hooks 寫 {"triage": {"event": "after_verdict", "condition": "pass", "handler": <這支>}}。
-# 規則檔＝<站的 stack>/triage.json（事件的 stack；就是 kernel.json 那一夾），每封重讀；沒有或讀不懂＝每封都留（跟 hold 一樣）並記帳。
+# 換掉 kernel_gate 預設的 hold（純狀態查詢以外都留）：kernel.json 的 hooks 寫 {"triage": {"event": "after_verdict", "condition": "pass", "handler": <這支>}}。
+# 規則檔＝<站的 stack>/triage.json（事件的 stack；就是 kernel.json 那一夾），每封重讀；沒有或讀不懂＝有效的純狀態查詢以外都留著並記帳。
 # 判法（一封信裡每一項都過才放行；任一項該拒就整封拒；其餘留著）：
 #   procs_added 每一項：名字在 protect＝拒；def／exec／ws／stack（含 as_written）解成絕對路徑後，在 deny_roots 底下或不在任何 home_roots 底下＝拒；
 #     exec 可以是路徑、{"$env", "$path"} 指示詞，或 aos-agent 帶 envs 時的 {"argv": ["aos-exec", "--", 目標, …]}（看目標）；別的命令列＝留著。
 #     def 與 exec 都是 defs 之一或在 def_roots 底下、ws 在 ws_roots 底下、stack 沒寫或在 ws_roots 底下或是 daemon 的 procs/<同名>＝放行；其他留著。
 #   procs_stopped／procs_started／procs_slept／procs_woken 每個名字：protect＝拒；符合 names（fnmatch）＝放行；
 #     daemon 表上那一列的 def 與 ws 照上面 procs_added 的放行條件都過＝放行（ok-* 掛的子 agent）；其他留著。
-#   procs_removed：protect＝拒，其他留著。別的 procs_* 鍵、body 不是物件、沒有任何 procs_* 鍵＝留著。
+#   procs_state_path 為 true：純查詢放行；跟其他 procs_* 並寫時略過查詢、照其他鍵判。procs_removed：protect＝拒，其他留著。
+#   別的 procs_* 鍵、body 不是物件、沒有任何 procs_* 鍵＝留著。
 # 留著的信（有人表態 pass 那一次，事件的 decision 是 "pass"）不再判、不說話。
 # 回話：放行不印（站的 pass 照走）；拒印 {"verdict": "refuse", "error": {"code": "GateRefused", "msg": 理由}}；留印 {"verdict": "hold"}。
 # 帳：<站的 stack>/<log，預設 triage.jsonl> 一行一封 {"at", "letter", "from", "verdict", "why", "what"}。純標準庫、不 import 包裡別的檔（可以整支抄到站旁邊用）。
@@ -22,7 +23,8 @@ plainly wrong ones are refused ({"verdict": "refuse", ...}, code GateRefused), t
 agent ({"verdict": "hold"}). One JSON line per letter goes to STACK/triage.jsonl (STACK = the event's stack).
 triage.json keys (lists of strings; paths absolute or ~): protect, names, defs, def_roots, ws_roots,
 deny_roots, home_roots; daemon (stack folder whose procs_state.json is read; default $AOS_DAEMON); log.
-Roots may use * inside a path part (fnmatch). No triage.json = hold everything.
+Roots may use * inside a path part (fnmatch). A true procs_state_path query passes; mixed requests
+still follow the other procs_* rules. No triage.json = hold everything except a query-only letter.
 exit codes: 0 always once the event is read; 1 the event on stdin is not JSON with a stack.
 """
 ACTS = ("procs_stopped", "procs_started", "procs_slept", "procs_woken")
@@ -76,6 +78,11 @@ def aos_exec_target(argv):
     if not rest or (isinstance(rest[0], str) and rest[0].startswith("-")):
         return None
     return rest[0]
+
+
+def query_only(body):
+    return (isinstance(body, dict) and body.get("procs_state_path") is True
+            and [k for k in body if k.startswith("procs_")] == ["procs_state_path"])
 
 
 class Judge:
@@ -171,6 +178,8 @@ class Judge:
         """整封：回 (verdict, why, what)。"""
         if not isinstance(body, dict):
             return "hold", "the body is not an object", "?"
+        if query_only(body):
+            return "pass", "state path query", "state_path"
         items, what = [], []
         keys = sorted(k for k in body if k.startswith("procs_"))
         if not keys:
@@ -178,6 +187,8 @@ class Judge:
         for key in keys:
             value = body[key]
             short = key[len("procs_"):]
+            if key == "procs_state_path" and value is True:
+                continue
             if key == "procs_added":
                 if not isinstance(value, dict) or not value:
                     items.append(("hold", "procs_added is not a non-empty object"))
@@ -232,6 +243,8 @@ def main():
     except (OSError, ValueError) as e:
         rules = None
         verdict, why, what = "hold", "triage.json unreadable, holding everything: %s" % e, "?"
+        if query_only(event.get("body")):
+            verdict, why, what = "pass", "state path query", "state_path"
     if rules is not None:
         daemon = rules.get("daemon") if isinstance(rules.get("daemon"), str) else os.environ.get("AOS_DAEMON")
         if daemon and not os.environ.get("AOS_DAEMON"):     # 信裡 {"$env": "AOS_DAEMON", …} 的目標照 daemon 解

@@ -120,10 +120,10 @@ class Subagent(unittest.TestCase):
     def test_add_records_and_argv(self):
         out = self.ok({"op": "add", "def": "defs/helper", "name": "kid", "ws": "kid", "limits": {"mem_mb": 64}, "timeout_s": 5})
         self.assertIn("added kid (stack %s); subagents 1/4" % (self.daemon / "procs" / "kid"), out)
-        self.assertEqual(self.calls("ctl")[-1], ["ctl", "add", "--name", "kid", "--ws", "kid", "--limits", '{"mem_mb": 64}',
+        self.assertEqual(self.calls("ctl")[-1], ["ctl", "add", "--stack", str(self.daemon / "procs/kid"), "--name", "kid", "--ws", "kid", "--limits", '{"mem_mb": 64}',
                                                  "--timeout-s", "5", "defs/helper"])
         self.assertTrue((self.ws / "kid").is_dir())
-        self.assertEqual(self.record(), [{"name": "kid", "stack": "procs/kid"}])
+        self.assertEqual(self.record(), [{"name": "kid", "stack": str(self.daemon / "procs/kid")}])
         self.ok({"op": "add", "def": "defs/kid2"})           # name defaults to the folder name, like ctl add
         self.assertEqual([k["name"] for k in self.record()], ["kid", "kid2"])
         self.assertEqual(self.ok({"op": "ls"}), "kid\t-\t-\t-\t-\nkid2\t-\t-\t-\t-\nsubagents 2/4\n")   # short lines, not mom
@@ -133,6 +133,12 @@ class Subagent(unittest.TestCase):
         self.assertEqual(self.ok({"op": "ls", "long": True}),        # long = ctl ls -l lines of mine, as text
                          "kid\trunning\t-\t-\t-\t2\t0\t-\t-\nkid2\trunning\t-\t-\t-\t2\t0\t-\t-\nsubagents 2/4\n")
         self.assertEqual(json.loads(self.ok({"op": "ls", "long": True, "json": True}))["max_subagents"], 4)   # json wins
+
+    def test_relative_stack_records_are_not_recognized(self):
+        self.ok({"op": "add", "def": "d", "name": "kid"})
+        (self.cell / "subagents.json").write_text(json.dumps([{"name": "kid", "stack": "procs/kid"}]))
+        self.assertEqual(self.ok({"op": "ls"}), "subagents 0/4\n")
+        self.assertEqual(self.record(), [])
 
     def test_each_targeted_op(self):
         self.ok({"op": "add", "def": "d", "name": "kid"})

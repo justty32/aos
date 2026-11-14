@@ -94,3 +94,18 @@
 - `run_entry`：走 kernel 不覆寫 AOS_DAEMON；直連時拿掉 AOS_KERNEL。`state_path(fresh=True)`。`aos-eca-screen watch` 走 kernel 每 5 秒最多重問一次，照 Argon 四步判定。
 - 圖紙 03「decl.py 不改」那列改成「改」並寫原因。
 - C′（範本 after_stop hook 自己收畫面）已寄 xiaosi NEEDS-USER，等使用者裁。
+
+### 批 11b（查詢信的條文、文件、知識庫）
+- opus 子 agent 在 repo 外複本起稿，ok-kf 審、補 README 與 agent.json／me.json，24bc28e23 進 main。
+- 子 agent 讀碼時發現疑似 bug：`ctl add --dotenv-override` 走 kernel 時沒傳下去，已轉 ok-misc（功能是它的）。
+
+### 批 6（lib 端＋gate 放行查詢信）
+- lib 端（ok-kf-sol-1）：fork、subagent 以自己那列的 stack 為基準、放在自己 stack 隔壁、不帶 --daemon、subagents.json 存絕對路徑（舊帳的相對路徑不認，照圖紙 03 第 4 列）；on_clock 經 `ctl ls --json` 找鐘、記鐘檔、讀不到重查一次。批 5 代定的三支過渡測試改成「只設 AOS_KERNEL 也能掛子與分身」。
+- gate（sol-g1）：kernel_gate 的 hold、triage 對只有 `procs_state_path: true` 的信直接放行，並寫時照其他鍵判。sol-g1 查證：框架站對這種信的規則結果是 pass，照 next 轉；reply_via_me 開或不開，回信都回得到原寄件人（附真 daemon 測試）。
+- 合到 main 時 fork/_entry 和 ok-misc 的 timeout_s＝0 撞一處，手動合（兩邊都留）。
+- 知識庫 kernel.json 的 gate 段、N-63 02「批 6 之後」那段跟著改。
+- 頂層要等這批進 main，才讓 eca 帶 AOS_KERNEL（repo-aos 11-14 來信）。注意：活樹的 lib 是另一份，要換樹時重拷才生效。
+
+### 批 10（問腦總機切 Python 版）
+- ok-kf-sol-2 在 repo 外複本 b10tree 施工；ok-kf 在外面建 aos-llm（沒有舊夾也建得起來，19 例過）。
+- 刪 `impls/aos-llm-kernel` 要頂層准（~/.local/bin/aos-llm-kernel 指向它），已寄 xiaosi 選甲／乙。

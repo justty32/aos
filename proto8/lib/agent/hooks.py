@@ -30,6 +30,7 @@ on_clock 專用的鍵與檢查、content 的回話要求、tool_added 的名單�
 """
 import json
 import os
+import subprocess
 import sys
 
 if __package__:
@@ -207,7 +208,7 @@ def tools_added(stack, tools, has_hook):
 
 def _clock_file(entry, stack):
     """clock 鍵 → (時鐘檔絕對路徑, None) 或 (None, 為什麼找不到)。沒寫＝$AOS_CLOCK；路徑（有 / 或 . 開頭）：檔＝它、資料夾＝裡面的 clock
-    （daemon 的 stack 就是這種佈局）；相對＝從 agent 的 stack 算。名字（沒有 /）＝$AOS_DAEMON 表上那一列的 stack 裡的 clock。"""
+    （daemon 的 stack 就是這種佈局）；相對＝從 agent 的 stack 算。名字（沒有 /）＝經 aos-agent ctl ls --json 找那一列的 stack 裡的 clock。"""
     v = entry.get("clock")
     if v is None:
         path = os.environ.get("AOS_CLOCK", "")
@@ -216,18 +217,19 @@ def _clock_file(entry, stack):
     elif "/" in v or v.startswith("."):
         path = v if os.path.isabs(v) else os.path.join(stack, v)
     else:
-        daemon = os.environ.get("AOS_DAEMON", "")
-        if not daemon:
-            return None, "clock %s is a proc name but AOS_DAEMON is not set" % v
         try:
-            with open(os.path.join(daemon, "procs_state.json"), encoding="utf-8") as f:
-                row = (json.load(f).get("procs") or {}).get(v)
-        except (OSError, ValueError, AttributeError) as e:
-            return None, "cannot read the daemon table %s: %s" % (os.path.join(daemon, "procs_state.json"), e)
+            result = subprocess.run(["aos-agent", "ctl", "ls", "--json"], stdin=subprocess.DEVNULL,
+                                    capture_output=True, text=True, timeout=5)
+            if result.returncode:
+                return None, "cannot find clock %s: %s" % (v, result.stderr.strip() or "aos-agent ctl ls failed")
+            rows = json.loads(result.stdout)
+            row = next((r for r in rows if isinstance(r, dict) and r.get("name") == v), None)
+        except (OSError, ValueError, TypeError, subprocess.TimeoutExpired) as e:
+            return None, "cannot find clock %s with aos-agent ctl ls --json: %s" % (v, e)
         st = row.get("stack") if isinstance(row, dict) else None
-        if not isinstance(st, str) or not st:
-            return None, "proc %s is not on the daemon table %s" % (v, daemon)
-        path = st if os.path.isabs(st) else os.path.join(daemon, st)
+        if not isinstance(st, str) or not os.path.isabs(st):
+            return None, "proc %s is not on the daemon table with an absolute stack" % v
+        path = os.path.join(st, "clock")
     path = os.path.abspath(path)
     if os.path.isdir(path):
         path = os.path.join(path, "clock")
@@ -285,10 +287,17 @@ def clock_tick(def_folder, stack, warn=None):
     for name in names:
         entry = entries[name]
         spath, st = _state(stack, name)
-        clock, why = _clock_file(entry, stack)
+        source = entry.get("clock")
+        named = isinstance(source, str) and "/" not in source and not source.startswith(".")
+        cached = named and st.get("clock_source") == source and isinstance(st.get("clock"), str)
+        clock, why = (st["clock"], None) if cached else _clock_file(entry, stack)
         cycle = _read_cycle(clock) if clock else None
+        if cached and cycle is None:             # 記住的鐘讀不到：只重查一次，不退回直接讀 daemon 表
+            clock, why = _clock_file(entry, stack)
+            cycle = _read_cycle(clock) if clock else None
         if clock and cycle is None:
             why = "clock file %s does not hold a cycle number" % clock
+        remembered = {"clock_source": source} if named else {}
         try:
             if why:
                 if st.get("warned") != why:
@@ -301,10 +310,10 @@ def clock_tick(def_folder, stack, warn=None):
             iv = _interval_ms()
             every = entry["every_cycles"] if "every_cycles" in entry else max(1, -(-entry["every_ms"] // iv))
             if not first and cycle - last < every:
-                if st.get("warned"):
-                    _put_state(spath, {"clock": clock, "cycle": last})
+                if st.get("warned") or (named and st.get("clock_source") != source):
+                    _put_state(spath, dict(remembered, clock=clock, cycle=last))
                 continue
-            _put_state(spath, {"clock": clock, "cycle": cycle})             # 先記再跑：handler 失敗也不每拍重跑
+            _put_state(spath, dict(remembered, clock=clock, cycle=cycle))             # 先記再跑：handler 失敗也不每拍重跑
         except OSError as e:
             if warn:
                 warn("hook %s (event %s): cannot write %s: %s" % (name, CLOCK_EVENT, spath, e))

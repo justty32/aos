@@ -21,9 +21,9 @@ class Engine(unittest.TestCase):
         self.assertEqual((hooks.DEFAULTS, hooks.BLOCK, hooks.CELLS), (hook_run.DEFAULTS, hook_run.BLOCK, hook_run.CELLS))
 
     def test_no_second_copy_of_the_runner(self):
-        """跑 handler、收行程群、解回話只在引擎：hooks.py 自己不再起子行程。"""
+        """跑 handler、收行程群、解 handler 回話只在引擎；hooks.py 只另起 aos-agent 查鐘。"""
         source = (LIB / "agent" / "hooks.py").read_text(encoding="utf-8")
-        for word in ("subprocess", "killpg", "Popen", "json.loads"):
+        for word in ("killpg", "Popen", "_run_one", "def _stdout"):
             with self.subTest(word=word):
                 self.assertNotIn(word, source)
 

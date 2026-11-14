@@ -91,36 +91,17 @@ class EntryChecks(unittest.TestCase):
                                text=True, capture_output=True, env=env, timeout=10)
             self.assertIn("error: ArgumentsBad", r.stdout, value)
 
-    def test_kernel_alone_unanswered_is_kernel_failed(self):
-        """11-14 批 5：只設 AOS_KERNEL、kernel 不答查詢信＝KernelFailed；批 6 之後由會答的 kernel 走到成功。"""
-        from concurrent.futures import ThreadPoolExecutor
-        import tempfile
-        import time
-        proto = TOOL.parents[3]
-        bins = [str(p) for p in sorted((proto / "impls").glob("*/bin"))] + [str(p) for p in sorted((proto / "cmd").glob("*/bin"))]
-        with tempfile.TemporaryDirectory() as tmp:
-            kernel, ws = os.path.join(tmp, "kernel"), os.path.join(tmp, "ws")
-            os.makedirs(ws)
-            for stage in ("tmp", "new", "cur"):
-                os.makedirs(os.path.join(kernel, stage))
-            env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-            env.update(PATH=os.pathsep.join(bins + [env["PATH"]]), AOS_KERNEL=kernel, AOS_STACK=tmp, AOS_WS=ws)
-            with ThreadPoolExecutor(max_workers=1) as pool:
-                pending = pool.submit(subprocess.run, [str(TOOL)], input=json.dumps(dict(op="ls")),
-                                      text=True, capture_output=True, env=env, cwd=tmp, timeout=30)
-                end = time.monotonic() + 10
-                letters = []
-                while not letters and not pending.done() and time.monotonic() < end:
-                    letters = list((Path(kernel) / "new").glob("*/letter.json"))
-                    if not letters:
-                        time.sleep(0.01)
-                # 查詢逾時會撤信，先核對等待中的唯一一封，不混入掛／停／收的信。
-                self.assertEqual(len(letters), 1)
-                self.assertEqual(json.loads(letters[0].read_text())["body"], {"procs_state_path": True})
-                r = pending.result(timeout=30)
-            self.assertEqual(r.returncode, 1)
-            self.assertTrue(r.stdout.startswith("subagent: error: KernelFailed "), r.stdout)
-            self.assertEqual(os.listdir(os.path.join(kernel, "new")), [])
+    def test_kernel_alone_can_add_and_wait_for_subagent(self):
+        """只設 AOS_KERNEL，框架站轉查詢信與掛子信，ask 等得到假腦的回答。"""
+        from kernel_fixture import KernelFixture
+        fixture = KernelFixture()
+        self.addCleanup(fixture.close)
+        self.assertNotIn("AOS_DAEMON", fixture.env)
+        added = fixture.tool(TOOL, {"op": "add", "def": str(fixture.definition), "name": "kid"})
+        self.assertEqual(added.returncode, 0, added.stdout + added.stderr)
+        answer = fixture.tool(TOOL, {"op": "ask", "name": "kid", "text": "Return a short answer.", "timeout_s": 10})
+        self.assertEqual(answer.returncode, 0, answer.stdout + answer.stderr)
+        self.assertEqual(answer.stdout.strip(), "kernel-only answer")
 
 
 if __name__ == "__main__":

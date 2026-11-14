@@ -199,6 +199,33 @@ class KernelGateTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 1)
                 self.assertIn("kernel_gate: error: %s " % code, result.stdout)
 
+    def test_query_only_is_forwarded_without_holding_or_notifying(self):
+        self.ok(op="on")
+        self.send("query", procs_state_path=True, desc="lookup")
+        self.send("mixed", procs_state_path=True, procs_added={"worker": {}})
+        result = self.tick()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.names(self.ctl), ["query"])
+        held = json.loads((self.cell / "hold.json").read_text())["held"]
+        self.assertEqual([row["letter"] for row in held], ["mixed"])
+        self.assertEqual(len(self.notices()), 1)
+        self.assertIn("- letter mixed", self.notices()[0]["content"])
+        self.assertNotIn("- letter query", self.notices()[0]["content"])
+
+    def test_hold_does_not_bypass_other_proc_keys_or_invalid_queries(self):
+        cases = [({"procs_state_path": True}, "pass"),
+                 ({"procs_state_path": True, "desc": "lookup"}, "pass"),
+                 ({"procs_state_path": True, "procs_removed": ["worker"]}, "hold"),
+                 ({"procs_state_path": True, "procs_unknown": []}, "hold")]
+        cases += [({"procs_state_path": value}, "hold") for value in (False, 1, "true", None)]
+        for body, verdict in cases:
+            with self.subTest(body=body):
+                result = subprocess.run([str(GATE / "hold")], input=json.dumps({"body": body}),
+                                        text=True, capture_output=True, env=self.env)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                expected = "" if verdict == "pass" else '{"verdict": "hold"}\n'
+                self.assertEqual(result.stdout, expected)
+
     def test_09_by_hand_without_the_tool(self):
         # 知識庫 aos/kernel.json#/write_your_own 第 3 種：只用 self_hook 掛一支 run、手寫 kernel.json 與一支 hook、表態＝寫一個檔。
         gate = self.root / "ws" / "gate"

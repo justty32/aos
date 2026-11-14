@@ -79,33 +79,25 @@ class Arguments(unittest.TestCase):
             self.assertCode({'goal': 'x'}, 'StackMissing', AOS_DAEMON=tmp)
             self.assertCode({'goal': 'x'}, 'WsMissing', AOS_DAEMON=tmp, AOS_STACK=tmp, AOS_WS=os.path.join(tmp, 'nope'))
 
-    def test_kernel_alone_unanswered_is_kernel_failed(self):
-        """11-14 批 5：只設 AOS_KERNEL、kernel 不答查詢信＝KernelFailed；批 6 之後由會答的 kernel 走到成功。"""
-        from concurrent.futures import ThreadPoolExecutor
-        import time
-        proto = LIB.parent
-        bins = [str(p) for p in sorted((proto / 'impls').glob('*/bin'))] + [str(p) for p in sorted((proto / 'cmd').glob('*/bin'))]
-        with tempfile.TemporaryDirectory() as tmp:
-            kernel = os.path.join(tmp, 'kernel')
-            for stage in ('tmp', 'new', 'cur'):
-                os.makedirs(os.path.join(kernel, stage))
-            path = os.pathsep.join(bins + [os.environ['PATH']])
-            with ThreadPoolExecutor(max_workers=1) as pool:
-                pending = pool.submit(run, {'goal': 'x'}, PATH=path, AOS_KERNEL=kernel, AOS_STACK=tmp, AOS_WS=tmp)
-                end = time.monotonic() + 10
-                letters = []
-                while not letters and not pending.done() and time.monotonic() < end:
-                    letters = list((Path(kernel) / 'new').glob('*/letter.json'))
-                    if not letters:
-                        time.sleep(0.01)
-                # 查詢逾時會撤信，趁它還在等時檢查 new/，不把撤回後的空箱誤當沒寄信。
-                self.assertEqual(len(letters), 1)
-                self.assertEqual(json.loads(letters[0].read_text())['body'], {'procs_state_path': True})
-                rc, out, err = pending.result(timeout=30)
-            self.assertEqual(rc, 1)
-            self.assertTrue(out.startswith('fork: error: KernelFailed '), out)
-            self.assertTrue(err.startswith('aos-agent: error: KernelFailed '), err)   # 下層那行原樣透出（R10）
-            self.assertEqual(os.listdir(os.path.join(kernel, 'new')), [])
+    def test_kernel_alone_can_fork_beside_own_stack(self):
+        """只有 AOS_KERNEL：經框架站查表、掛分身、說話、收結論與停下；自訂 stack 不在 daemon/procs 下。"""
+        sys.path.insert(0, str(LIB / 'agent/subagent/tests'))
+        from kernel_fixture import KernelFixture
+        fixture = KernelFixture()
+        self.addCleanup(fixture.close)
+        self.assertNotIn('AOS_DAEMON', fixture.env)
+        KernelFixture.save(fixture.mom / 'history.jsonl', {'role': 'assistant', 'tool_calls': [{'id': 'fork-call'}]})
+        result = fixture.tool(ENTRY, {'goal': 'Return a short answer.', 'keep': True, 'timeout_s': 10},
+                              AOS_STACK=str(fixture.mom / 'tools/fork'))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('kernel-only answer', result.stdout)
+        details = next(line.removeprefix('details: ') for line in result.stdout.splitlines() if line.startswith('details: '))
+        self.assertTrue(os.path.isabs(details), details)
+        kid = Path(details)
+        self.assertEqual(kid.parent, fixture.mom.parent)
+        self.assertTrue((kid / 'history.jsonl').is_file())
+        rows = json.loads(fixture.agent('ctl', 'ls', '--json'))
+        self.assertEqual(next(row['phase'] for row in rows if row['name'] == kid.name), 'stopped')
 
     def test_help(self):
         r = subprocess.run([str(ENTRY), '--help'], capture_output=True, text=True, timeout=30)

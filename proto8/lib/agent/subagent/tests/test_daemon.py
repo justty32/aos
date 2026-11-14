@@ -102,22 +102,30 @@ class RealDaemon(unittest.TestCase):
         self.assertIn("subagents 1/4", self.ok(TOOL, {"op": "add", "def": str(TEMPLATE), "name": "kid2"}))
         self.ok(TOOL, {"op": "rm", "name": "kid2", "purge": True})
 
-    def test_requests_go_to_aos_kernel(self):
-        """11-14 批 5：AOS_DAEMON 與 AOS_KERNEL 都設、kernel 不答查詢信＝KernelFailed，不退回讀 daemon 表。"""
-        kernel = self.tmp / "kernel"
-        subprocess.run(["aos-post", "init", str(kernel)], env=self.env, check=True)
-        self.env["AOS_KERNEL"] = str(kernel)
-        log = self.tmp / "sent.log"
-        watcher = subprocess.Popen(["sh", "-c", 'while :; do for d in "$0"/new/*/; do [ -d "$d" ] && cat "$d/letter.json" >> "$1" && exit 0; done; sleep 0.05; done',
-                                    str(kernel), str(log)])
-        self.addCleanup(watcher.kill)
-        r = self.tool(TOOL, {"op": "add", "def": str(TEMPLATE), "name": "kid", "ws": "kid", "timeout_s": 1})
-        watcher.wait(10)
-        self.assertEqual(r.returncode, 1, r.stdout)
-        self.assertIn("KernelFailed", r.stdout)
-        self.assertEqual(json.loads(log.read_text())["body"], {"procs_state_path": True})   # 先查表，沒寄掛子信
-        self.env.pop("AOS_KERNEL")                       # 查本機帳時明確退出 kernel 路徑
-        self.assertEqual(self.ok(TOOL, {"op": "ls"}), "subagents 0/4\n")
+    def test_requests_go_to_aos_kernel_without_aos_daemon(self):
+        """只靠會答查詢信的框架站掛子、存絕對 stack、對帳、移除；不需要 AOS_DAEMON。"""
+        from kernel_fixture import KernelFixture
+        fixture = KernelFixture()
+        self.addCleanup(fixture.close)
+        self.assertNotIn("AOS_DAEMON", fixture.env)
+        result = fixture.tool(TOOL, {"op": "add", "def": str(fixture.definition), "name": "kid", "ws": "kid"})
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        book = json.loads((fixture.mom / "tools/subagent/subagents.json").read_text())
+        self.assertEqual(Path(book[0]["stack"]), fixture.mom.parent / "kid")
+        listed = fixture.tool(TOOL, {"op": "ls", "json": True})
+        self.assertEqual(listed.returncode, 0, listed.stdout + listed.stderr)
+        self.assertEqual(json.loads(listed.stdout)["subagents"][0]["stack"], book[0]["stack"])
+        removed = fixture.tool(TOOL, {"op": "rm", "name": "kid"})
+        self.assertEqual(removed.returncode, 0, removed.stdout + removed.stderr)
+        self.assertEqual(json.loads((fixture.mom / "tools/subagent/subagents.json").read_text()), [])
+        # 指示詞的 stack 由 daemon 算：ctl add 不印路徑時，工具再問 where，不把空字串記成 cwd。
+        directed = fixture.tool(TOOL, {"op": "add", "def": str(fixture.definition), "name": "directed",
+                                       "stack_json": {"$env": "AOS_WS", "$path": "directed-kid"}})
+        self.assertEqual(directed.returncode, 0, directed.stdout + directed.stderr)
+        book = json.loads((fixture.mom / "tools/subagent/subagents.json").read_text())
+        self.assertEqual(book[0]["stack"], str(fixture.ws / "directed-kid"))
+        listed = fixture.tool(TOOL, {"op": "ls", "json": True})
+        self.assertEqual(json.loads(listed.stdout)["subagents"][0]["name"], "directed")
 
 
 if __name__ == "__main__":

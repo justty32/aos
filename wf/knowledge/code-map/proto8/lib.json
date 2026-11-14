@@ -76,13 +76,14 @@
    "hooks.py": "agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、on_clock 的檢查、tool_added 的名單；挑出符合事件的 hook、用 aos-exec 跑、解回話交給共用引擎 lib/hook_run.py。",
    "kernel_gate": {
     "gate_lib.py": "kernel_gate 工具與它兩支 hook 共用：站在哪、跑一輪、留著的信怎麼列、通知怎麼寄。",
-    "hold": "框架站的 after_verdict hook handler：每一封都回「先留著」，等 agent 用 kernel_gate 表態。",
+    "hold": "框架站的 after_verdict hook handler：只有有效狀態查詢直接放行，其他信留給 agent 表態。",
     "tests": {
      "test_kernel_gate.py": "用真的 aos-post、aos-exec 與框架站驗證 kernel_gate 工具與它的 tick／hold 兩支 hook；aos-agent 用暫存的假指令頂替（只答 who、記下 hook 指令）。",
+     "test_query_daemon.py": "驗證狀態查詢經掛 hold 的真站到暫存 daemon，直接回信與代回兩路都不留給 agent 判。",
      "test_triage.py": "驗 kernel_gate/triage：直接餵事件看放行／拒／留與帳；再用真的 aos-post、aos-exec 與框架站跑 tick，看站照它轉寄、回拒信、留著並通知。"
     },
     "tick": "agent 身上的 on_clock hook handler：叫框架站做一輪，再把新留下的請求合成一則「[aos] kernel_hold: …」寄進 agent 的 queue。",
-    "triage": "框架站的 after_verdict hook handler：照站旁的 triage.json 先處理一輪，日常的直接放行、明顯不對的拒、其他留給 agent，每封記一行進 triage.jsonl。"
+    "triage": "框架站的 after_verdict hook handler：有效狀態查詢直接放行，其餘照 triage.json 判，混寫查詢仍判其他鍵，每封記一行進 triage.jsonl。"
    },
    "kernel_gate/": "讓叫我的那隻 agent 當 kernel 的門：on 把框架站掛在自己身上（請求先留著、通知自己）、ls 看留著的、pass／refuse 表態（轉寄由站做）、off 收掉",
    "mail_notify": {
@@ -142,6 +143,7 @@
    "self_tools/": "aos-agent tools 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份登記檔，定義不動",
    "subagent": {
     "tests": {
+     "kernel_fixture.py": "起一台以框架站為身體的暫存 daemon，讓測試只靠 AOS_KERNEL 查表與掛子，並以 shutdown 收尾。",
      "test_daemon.py": "Test subagent and agents_ctl on a real aos-daemon: tools/llm changes land on the subagent (not the parent), and a subagent removed with agents_ctl is…",
      "test_subagent.py": "Test subagent against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, subagent account copies…",
      "test_wait.py": "Test the shared runner in agents_cmd waits in bounded segments, cleans up on expiry, polls short on the clock, and that subagent checks wait argument…"
@@ -161,6 +163,7 @@
     "test_cli_tools_sub.py": "驗 cli.json 的 tools_sub（11-12 eca-task-subagent）：只有 claude 身認、--agents 蓋掉 general-purpose 並內嵌 aos_sub、--allowedTools 多 mcp__aos_sub、guard hook 擋子 agen…",
     "test_hooks_engine.py": "驗 lib/agent/hooks.py 用的是共用引擎 lib/hook_run.py（11-13 kernel-framework 批 1b）：類別同一個、跑與解回話沒有第二份、兩種 import 法都找得到引擎、agent 自己的檢查（on_clock 的鍵、content 的回話）還在。",
     "test_mail_notify.py": "mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json 也沒有非空 history）只把等著的記成已知；跑過的 stack（有非空 hist…",
+    "test_on_clock_kernel.py": "驗 on_clock 只靠 kernel 查 proc 鐘、記路徑、鐘讀不到才重查一次，且不直接讀 daemon 表。",
     "test_user_zone_guard.py": "user_zone_guard（before_tool 的 hook handler）：參數路徑落在專區、不在 mailbox/、工具不是唯讀＝退 10 擋；mailbox/ 裡、專區外、唯讀工具、相對路徑接 $AOS_WS、~ 展開、JSON 指標、巢狀參數、捷徑都照算；壞事件退 1。"
    },
    "todo": {

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-# kernel_gate/hold - 框架站的 after_verdict hook handler：每一封都回「先留著」，等 agent 用 kernel_gate 表態。
+# kernel_gate/hold - 框架站的 after_verdict hook handler：只有有效狀態查詢直接放行，其他信留給 agent 表態。
+import json
 import sys
-sys.stdin.read()
-print('{"verdict": "hold"}')
+
+body = json.load(sys.stdin).get("body")
+query_only = (isinstance(body, dict) and body.get("procs_state_path") is True
+              and [k for k in body if k.startswith("procs_")] == ["procs_state_path"])
+if not query_only:
+    print('{"verdict": "hold"}')
