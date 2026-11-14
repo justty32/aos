@@ -108,6 +108,38 @@ class SandboxTests(unittest.TestCase):
         self.assertEqual(os.path.basename(argv[0]), 'bwrap')
         self.assertEqual(argv[-3:], ['--', 'echo', 'ran'])
 
+    def test_subuser_dry_run_prepends_asuser_before_limits_and_bwrap(self):
+        fake = self.dir / 'aos-asuser'
+        fake.write_text('#!/bin/sh\n# 這是乾跑測試用的 aos-asuser 替身。\nexit 0\n', encoding='utf-8')
+        fake.chmod(0o755)
+        self.env['PATH'] = str(self.dir) + os.pathsep + self.env.get('PATH', os.defpath)
+        for cfg in ({'user': 'sub:5'}, {'user': 'sub:5', 'procs': 12}, {'user': 'sub:60000'}):
+            with self.subTest(cfg=cfg):
+                result = self.run_box('--dry-run', self.cfg(cfg), 'echo', 'ran')
+                self.assertEqual((result.returncode, result.stderr), (0, ''))
+                argv = json.loads(result.stdout)
+                self.assertEqual(argv[:4], [str(fake), '--env-all', cfg['user'], '--'])
+                bwrap = next(i for i, arg in enumerate(argv) if os.path.basename(arg) == 'bwrap')
+                if 'procs' in cfg:
+                    self.assertEqual(os.path.basename(argv[4]), 's6-softlimit')
+                    self.assertEqual(argv[5:7], ['-p', '12'])
+                    self.assertEqual(bwrap, 7)
+                else:
+                    self.assertEqual(bwrap, 4)
+                self.assertFalse(any(os.path.basename(arg) in ('s6-setuidgid', 's6-applyuidgid') for arg in argv))
+                self.assertIn('--clearenv', argv[bwrap + 1:])
+
+    def test_invalid_subuser_dry_run_ignores_config_with_one_warning(self):
+        for user in ('sub:0', 'sub:60001', 'sub:05', 'sub:', 'sub:-1', 'sub:+5', 'sub:5.0', 'sub:five',
+                     'sub: 5', 'sub:\u0665'):
+            with self.subTest(user=user):
+                result = self.run_box('--dry-run', self.cfg({'user': user}), 'echo', 'ran')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                argv = json.loads(result.stdout)
+                self.assertEqual(os.path.basename(argv[0]), 'echo')
+                self.assertEqual(argv[1:], ['ran'])
+                self.assertEqual(result.stderr, WARNING + 'user sub:N needs N from 1 to 60000\n')
+
     @unittest.skipUnless(bwrap_works(), 'bwrap is not usable here')
     def test_good_config_really_runs_inside_bwrap(self):
         secret = self.dir / 'secret.txt'

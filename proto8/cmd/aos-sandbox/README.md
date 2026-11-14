@@ -23,7 +23,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 
 | key | 值 | 做什麼 | 沒寫 |
 |---|---|---|---|
-| `user` | `帳號` 或 `uid:gid` | `s6-setuidgid` 換身分（只有 root 能用） | 不換 |
+| `user` | `帳號`、`uid:gid` 或 `sub:N` | `s6-setuidgid` 換身分（只有 root 能用）；`sub:N`＝前面接 `aos-asuser --env-all sub:N --`，免 root 換成 subuid（[aos-asuser](../aos-asuser/README.md)） | 不換 |
 | `base` | 路徑陣列 | 系統唯讀底 | `/usr /bin /sbin /lib /lib64 /etc` 裡存在的 |
 | `commands` | 指令名陣列 | 照 PATH 找到，所在資料夾唯讀看得到（例 `aos-exec`）；真位置在 `…/cmd/<名>/bin/<名>` 的，連同它們共用的 `…/py` 一起唯讀綁 | 沒有 |
 | `ro` | 路徑陣列 | 唯讀看得到；跟 `rw` 巢狀時**深的那條說了算**（`rw: [repo]`＋`ro: [repo/.git]`＝repo 可寫、`.git` 唯讀；反過來 `ro: [repo]`＋`rw: [repo/sub]` 也行；11-13 線修 T32） | 沒有 |
@@ -31,6 +31,10 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 | `net` | 布林 | 能不能連網 | `false`（只有沙箱自己的 loopback） |
 | `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files` | 正整數 | `s6-softlimit` 的 `-a`＋`-d`（`mem_mb`；不用 `-m`：它連堆疊上限一起設，aos-exec 一開執行緒就失敗）、`-t`、`-p`、`-f`、`-o` | 不限 |
 | `env` | 環境變數名陣列 | 只帶這幾個進去（外面有設的才帶；bwrap `--clearenv`＋`--setenv`）；**明列 `env` 就是整份取代預設清單，不是往預設上加**——要預設那幾個就自己一起列 | `PATH`、`LANG`、`LC_ALL`、`LC_CTYPE`、`TZ`、`PYTHONDONTWRITEBYTECODE`、`PYTHONIOENCODING` 與 aos 的六個（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`）、hub 型的 `AOS_DAEMON`、`AOS_LLM_KERNEL`（N-63 ③ 子 process 預設繼承）、`AOS_KERNEL`、`AOS_CLOCK`（同一條；使用者 11-06 選項框「預設補上」）；外面沒設的照樣不帶；只帶變數、不綁它指的路徑（要看得到就自己列進 `ro`／`rw`）；API key 一律不帶，要就明寫 |
+
+`sub:N`（N＝1～60000，不准前導 0）是在 user ns 裡換成 uid N，對到真 subuid「起點＋N－1」；aos-sandbox 只換主群組（G＝N），`limits.groups` 的多群組由 daemon 段 3（C++）處理，aos-asuser 今天只收一個 `--group`。
+bwrap 在這個 user ns 裡照開（[06 X28](../../thinking/2026-11/13/kernel-limits-plan/06-試驗紀錄.md)），仍由 bwrap 清環境。
+工作區的每層祖先都要給「別人」x（可穿越）權限，換成 subuid 才走得到。
 
 - **沒列到的路徑一律看不到**（白名單）；`/proc`、`/dev`、空的 `/tmp` 一定有。
 - **能寫的只有 `rw` 列的與 `/tmp`**（11-13 線修 T36）：所有綁定之後把沙箱的根 `/` 改成唯讀（bwrap `--remount-ro /`），寫到沒綁的地方（例 `$HOME`、別的定義夾）＝`Read-only file system`、指令失敗，不再默默寫進沙箱的暫存根、退 0、主機上卻沒檔。`/tmp` 照舊可寫，但它是沙箱自己的、跑完就沒了。

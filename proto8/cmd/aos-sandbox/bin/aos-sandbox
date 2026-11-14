@@ -7,7 +7,7 @@
 #     [s6-softlimit 上限...] [s6-setuidgid 身分] bwrap 綁定... -- prog args...
 #   --dry-run：不跑，把那條 argv 印成一行 JSON（給 root 的人先看、測試看形狀）。
 # 設定（全選填；不認得的 key 忽略，C-48）：
-#   user     字串：帳號名或 uid:gid → s6-setuidgid（要 root；沒寫＝不換身分）
+#   user     字串：帳號名或 uid:gid → s6-setuidgid（要 root）；sub:N → aos-asuser（免 root，換成 subuid）；沒寫＝不換身分
 #   base     路徑陣列：系統唯讀底（預設 /usr /bin /sbin /lib /lib64 /etc 裡存在的）
 #   commands 指令名陣列：照 PATH 找到它，所在資料夾唯讀看得到（例 aos-exec）
 #   ro、rw   路徑陣列：唯讀／可寫看得到（相對的從 cwd 算）。ro、rw 混在一起照路徑深淺排、淺的先綁＝**深的那條說了算**
@@ -57,7 +57,7 @@ which paths are visible and whether the network is reachable (bwrap).
 CONFIG may be FILE#/pointer (e.g. _metainfo.json#/sandbox); {"$env", "$path", "$prefix"} in it are resolved first.
 It builds one chain-loading argv, [s6-softlimit LIMITS...] [s6-setuidgid USER] bwrap BINDS... -- prog args..., and execs it.
 --dry-run: do not run; print that argv as one JSON line.
-Config keys (all optional; unknown keys are ignored): user (account or uid:gid, needs root), base, commands, ro, rw (path arrays),
+Config keys (all optional; unknown keys are ignored): user (account or uid:gid, needs root; sub:N = a subuid through aos-asuser, no root), base, commands, ro, rw (path arrays),
   net (boolean, default false), mem_mb, cpu_s, procs, file_mb, files (positive integers), env (variable names to pass in;
   default PATH, locale, TZ, PYTHON*, the six AOS_ run variables and the hub ones AOS_DAEMON, AOS_LLM_KERNEL, AOS_KERNEL,
   AOS_CLOCK; an env list replaces that default as a whole, it does not add to it).
@@ -235,10 +235,17 @@ def build(cfg, prog, dry, cfg_dir=None):
     if user is not None:
         if not isinstance(user, str) or not user:
             raise CfgBad("user must be a non-empty string (account name or uid:gid)")
-        if not dry and os.geteuid() != 0:
-            die("UserBad", "switching to %s needs root (only root can use s6-setuidgid)" % user)
-        which("s6-applyuidgid", dry)                # s6-setuidgid 照 PATH exec 它
-        chain += [which("s6-setuidgid", dry), user]
+        if user.startswith("sub:"):
+            number = user[4:]
+            if (not number.isascii() or not number.isdecimal() or number.startswith("0")
+                    or len(number) > 5 or not 1 <= int(number) <= 60000):
+                raise CfgBad("user sub:N needs N from 1 to 60000")
+            chain = [which("aos-asuser", dry), "--env-all", user, "--"] + chain
+        else:
+            if not dry and os.geteuid() != 0:
+                die("UserBad", "switching to %s needs root (only root can use s6-setuidgid)" % user)
+            which("s6-applyuidgid", dry)                # s6-setuidgid 照 PATH exec 它
+            chain += [which("s6-setuidgid", dry), user]
     opts = ["--unshare-all", "--die-with-parent"]
     if cfg.get("net", False):
         opts.append("--share-net")
