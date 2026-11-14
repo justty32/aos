@@ -13,7 +13,7 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 痛的程度：拖慢（設計 hook 要繞路）
 - 提出者與日期：ok-kf 2026-11-14
 - 出處：wf/temp/ok-kf/aos-advice/after-stop-no-reason.md；wf/temp/ok-kf/cprime/final.md；kf-1114 暫存樹 kf-check/G-cprime-facts.md 第 1 節
-- 狀態：未處理
+- 狀態：已排入（ok-limits；設計 ok-devt）。B7：daemon 送 SIGTERM 前寫小格的 stop_cause.json，after_stop 帶 `cause`（定稿 proto8/thinking/2026-11/14/ok-devt-1114/05-定稿.md 2.3），暫存樹施工中，還沒 commit。
 
 ## 子 agent 不知道是誰生了它
 
@@ -25,7 +25,7 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 痛的程度：拖慢
 - 提出者與日期：ok-astra 2026-11-14；ok-onboard 2026-11-14（who 那段）
 - 出處：wf/temp/ok-astra/aos-advice/child-knows-no-parent.md；wf/temp/ok-onboard/aos-advice/who-no-parent.md、proto8/thinking/2026-11/14/onboard-1114/01-備料.md §3；astra-1114 暫存樹 ak17/facts.md Q4；commit 2368ee3af（subagent/_entry 預設 AOS_NOTIFY_BOX）
-- 狀態：未處理（目前只有 subagent 路徑的 AOS_NOTIFY_BOX；who 仍沒有 parent／notify_box 欄）
+- 狀態：已排入（ok-limits；設計 ok-devt）。定稿 05 的 1.3／1.4 與第五節：who 加 parent、notify_box（讀表上那列、再讀啟動單子的 envs）；本來就帶 envs 的 add 補 AOS_PARENT_STACK；第 2 期兩格放到列上。暫存樹施工中，還沒 commit。
 
 ## --limits 的 cpu_s 按程序計，擋不住整隻 agent 的總 CPU
 
