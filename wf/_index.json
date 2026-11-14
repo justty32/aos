@@ -1,0 +1,52 @@
+{
+ "HANDOFF.md": {
+  "description": "HANDOFF — compact 交接"
+ },
+ "INDEX": {
+  "description": "wf/INDEX.md 拆出來的分檔夾，目前只有 Repo 佈局一份；要看 repo 頂層路徑各放什麼時進去"
+ },
+ "INDEX.md": {
+  "description": "INDEX — aos 專案地圖"
+ },
+ "SESSION-LOG.md": {
+  "description": "SESSION-LOG — 進度日誌（hub）"
+ },
+ "STRUCTURE.md": {
+  "description": "STRUCTURE — 結構整理參考（被動 / 按需取用）"
+ },
+ "WAIT_USER.md": {
+  "description": "WAIT_USER — 等待使用者的事"
+ },
+ "WORKFLOWS-parts": {
+  "description": "wf/WORKFLOWS.md 拆出來的分檔：multi-agent 那組工作流的觸發對照表、工作流統一形式的出處指引"
+ },
+ "WORKFLOWS.md": {
+  "description": "WORKFLOWS — 工作流派發器"
+ },
+ "inbox": {
+  "description": "樹外專案（arcagi）寄來的信的放信處：頂層的 .md 是未處理的信、done/ 是已處理的；每個 session 開始先 ls 這裡，有信先讀；樹內的信走 aos 信箱"
+ },
+ "knowledge": {
+  "description": "wf 的機讀知識：code map（proto8 程式地圖冊）等生成或手寫的 json"
+ },
+ "public": {
+  "description": "公用知識庫：所有 agent 可讀可投稿，頂層管；tools/ 放公用小工具"
+ },
+ "salvage": {
+  "description": "2026-08-29 roadmap-run 分支被叫停後留下的打撈包：給從零重寫 aos 的人的教訓與已驗證結論，六篇正文 10-13 已封存進 archive/"
+ },
+ "session_logs": {
+  "description": "wf 的每日工作日誌：當月一天一檔放月份夾、已結束月份收成月摘要（2026-08、09、10.md），原檔封存在 archive/；要查某天做了什麼、定了什麼時進去"
+ },
+ "tools": {
+  "description": "wf 工作流的腳本：index_gen（_index.json 與 code map 逐檔表；codemap_lib 是它的檔頭一句話認法函式庫）、tabledb 資料表讀寫、進度看板 progress_board、離線待裁頁 decide_page、連結修補等；要跑生成器或檢查時進去",
+  "index": "tools/_index.json"
+ },
+ "wait-user": {
+  "description": "WAIT_USER 的分類檔，只列還沒做、等使用者本人的事：要你裁的、真機真腦驗證、試驗場、雜事四份"
+ },
+ "workflows": {
+  "description": "wf 的工作流全集：每個工作流一個資料夾或單檔（feature-dev、tidy、dispatch、inbox…），派發表在 wf/WORKFLOWS.md，照使用者說的話挑一個讀入口檔",
+  "index": "workflows/_index.json"
+ }
+}

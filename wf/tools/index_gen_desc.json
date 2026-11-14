@@ -783,6 +783,9 @@
   "wf/workflows/tidy/reports/2026-11-03-收斂": "11-03～11-04 wf／proto8 收斂整理報告的八份分檔：七題裁定與批次、條文摺疊紀錄、round 刪掉後沒實作撐的條文、11-04 晚與夜各批的 commit、代定與留給使用者裁的題",
   "wf/workflows/tidy/reports/2026-11-03-收斂/07-11-04夜-代定與留給使用者.md": "11-03 收斂整理 11-04 夜（續）：隊長的九條頂層代定（可翻案）、留給使用者裁的 P-42、N-14、C-61 等題與裁定結果、範圍外順帶看到沒改的引用",
   "wf/workflows/workshop": "workshop 工作流：研討會／腦力激盪，派多個 codex 各扮一種身份提供靈感、由主持人收攏成紀錄，含議題書、書記任務書、codex 指令形態；使用者說「開個研討會討論 X」「給我一些靈感」時走它",
-  "wf/workflows/workshop/archive": "workshop 封存區：11-03 整批封存的 proto5～7 年代研討會紀錄 records、背景資料 background、待答題 OPEN-QUESTIONS（10-12 已清帳結案），只作歷史"
+  "wf/workflows/workshop/archive": "workshop 封存區：11-03 整批封存的 proto5～7 年代研討會紀錄 records、背景資料 background、待答題 OPEN-QUESTIONS（10-12 已清帳結案），只作歷史",
+  "wf/knowledge": "wf 的機讀知識：code map（proto8 程式地圖冊）等生成或手寫的 json",
+  "wf/public": "公用知識庫：所有 agent 可讀可投稿，頂層管；tools/ 放公用小工具",
+  "wf/temp": "頂層分給掛在它底下的 eca 的工作區（gitignore）"
  }
 }
