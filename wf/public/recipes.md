@@ -27,7 +27,7 @@
 | 暫存樹的改動交回已往前走的 main | 先 `git log <舊base>..HEAD -- <檔>`；衝突少用新 HEAD 複本 `patch -p1`，衝突多在 /tmp 小 git 三方合併；整套測試、`git apply --check` 再交 | [patch-and-commit](patch-and-commit.md) | 11-14 ok-astra、ok-kf |
 | commit-request 報 `DescMissing <夾>/` | 在 `wf/tools/index_gen_desc.json` 加 `"<夾>": "一句說明"`，該檔也 claim、放進 `--files`；中文檔名清單用 `git -c core.quotepath=off` 產 | [patch-and-commit「commit-request 的坑」](patch-and-commit.md) | 11-14 ok-astra、ok-kf |
 | 寄信問使用者／要授權 | `aos-user send --kind … --from <線> --reply-to <stack>/mailbox`；拿 send 當檢查；每寄件人每小時 10 封 | [user-zone-mail](user-zone-mail.md) | 11-14 ok-pilot |
-| 讀使用者專區的回信、驗授權 | `mailbox_read {"keep": true}`，再對 `mailbox/archive/<信名>` 跑 `aos-user verify`，見 `ok: matches` 才算 | [user-zone-mail「讀回信」](user-zone-mail.md) | 11-14 ok-pilot |
+| 讀使用者專區的回信、驗授權 | `mailbox_read`（專區回信自動留在 `mailbox/archive/<信名>`，ace14088d 起不必加 keep），再跑 `aos-user verify`，見 `ok: matches` 才算 | [user-zone-mail「讀回信」](user-zone-mail.md) | 11-14 ok-pilot |
 | 大批舊帳逐筆清 | 切 4 份派 opus 子 agent 唯讀並行，每筆歸 A 結案／B decide／C verify·chore，帶隊者核對後給頂層看再寄 | [team-patterns](team-patterns.md) | 11-14 ok-pilot |
 | 改了共用程式的契約（函式改名、讀表入口、輸出格式）要驗收 | proto8 底下每個 `tests` 夾都跑，「main 原樣」與「main＋改動」各跑一次只看新紅；改了被 mock 的函式先 grep 出所有 patch 它的測試 | [patch-and-commit「驗收跑全套」](patch-and-commit.md) | 11-14 ok-kf |
 | 驗收時有紅的，判斷是不是本來就紅 | 經 clean.sh 跑（別在帶 AOS_* 的隊長 shell 跑，會假綠）；紅的在 `git archive HEAD` 乾淨複本同環境重跑，本來紅的轉給擁有線 | [patch-and-commit「驗收跑全套」](patch-and-commit.md) | 11-14 ok-limits |

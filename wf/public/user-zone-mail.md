@@ -24,8 +24,8 @@
 
 ### 讀回信
 
-- **一律 `mailbox_read {"keep": true}`**：預設不 keep，讀完信夾就刪了，之後沒東西可驗。拿 `done/` 底下的 reply.json 去驗也不行：`VerifyBad not a user-zone reply`。
-- keep 之後對 `<stack>/mailbox/archive/<信名>` 跑 `aos-user verify`，看到 `ok: matches ...` 才算數。push、刪檔的授權尤其要這樣驗。
+- **讀信用 `mailbox_read` 就好**：專區回信（含退信）讀完會自動留在 `<stack>/mailbox/archive/<信名>/`，並印一行 `(unverified user-zone reply: kept in …)`（ace14088d 起；以前要加 `{"keep": true}`，現在加了也不會壞；指令帶 `--drop` 才回到讀完就刪）。拿 `done/` 底下的 reply.json 去驗不行：`VerifyBad not a user-zone reply`。
+- 對 `<stack>/mailbox/archive/<信名>` 跑 `aos-user verify`，看到 `ok: matches ...` 才算數。push、刪檔的授權尤其要這樣驗。
 - 回信 `via: cli` 的 push 授權，頂層還會當面再確認一次。
 - verify、chore 信，使用者回「好」只代表答應會做，不等於做完；等他回「跑好了」才結帳。有旁證（例 `sudo -n -l`、`id <帳號>`）就順手查。
 
