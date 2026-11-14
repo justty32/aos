@@ -238,6 +238,9 @@ void Daemon::adopt() {
         c.stack = st.is_string() && !st.get<std::string>().empty() ? unrel(st).get<std::string>() : cell_of(name, Json());
         if (r.value("ws", Json()).is_string()) {
             c.ws = unrel(r["ws"]);
+        } else if (r.value("ws", Json()).is_null() && c.launch.is_object() && c.launch.value("ws", Json()).is_string()) {
+            // 11-14 線雜：從未啟動的 stopped 列，ws 只在 launch 裡（上面已拼回絕對路徑）。
+            c.ws = c.launch["ws"];
         }
         if (r.value("exec", Json()).is_string()) {
             c.exec = unrel(r["exec"]);   // 11-04 晚：照舊表帶過來（信箱模式接回的列沒有設定，exec 欄只能從這裡來）

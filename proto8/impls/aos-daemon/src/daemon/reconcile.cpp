@@ -77,7 +77,8 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
         if (launch_spec.is_null()) {
             throw Error{code::LaunchFailed, "no recorded launch entry for " + name};
         }
-        if (spec.is_null() && launch_spec.is_object()) {
+        // 11-14 線雜：從未啟動的 stopped 列，ws 只在 launch 裡，不能被空的 kept_ws 蓋掉。
+        if (spec.is_null() && launch_spec.is_object() && !kept_ws.is_null()) {
             launch_spec["ws"] = kept_ws;
         }
         if (once) {

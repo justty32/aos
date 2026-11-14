@@ -439,6 +439,30 @@ time.sleep(12)
                     f.close()
 
 
+    def test_never_started_stopped_row_starts_after_daemon_restart(self):
+        f = self.fixture('never_started_stopped').start()
+        body = f.body('script', 'stop', seconds=.1)
+        ws = f.root / 'work'
+        ws.mkdir()
+        spec = {'exec': str(body), 'interval_ms': 30, 'ws': 'work'}
+        reply = dc.ask(str(f.stack), {'procs_added': {'job': spec}, 'procs_stopped': ['job']})
+        self.assertTrue(reply['applied'])
+        row = f.phase('stopped')
+        self.assertNotIn('ws', row)
+        self.assertEqual(os.path.normpath(os.path.join(f.stack, row['launch']['ws'])), str(ws))
+        self.assertFalse(f.cell.exists())
+        f.close()
+        f.start()
+        row = f.phase('stopped')
+        self.assertEqual(os.path.normpath(os.path.join(f.stack, row['ws'])), str(ws))
+        self.assertFalse(f.cell.exists())
+        reply = dc.ask(str(f.stack), {'procs_started': ['job']})
+        self.assertTrue(reply['applied'])
+        row = f.phase('running')
+        until(lambda: (f.cell / 'ready').exists())
+        self.assertEqual(os.path.normpath(os.path.join(f.stack, row['ws'])), str(ws))
+        self.assertIsNone(f.proc.poll())
+
     def test_pending_loop_can_wake_after_daemon_restart(self):
         f = self.fixture('pending_loop').start()
         body = f.body('script', 'stop', seconds=4)
