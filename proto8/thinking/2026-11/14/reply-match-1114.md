@@ -22,3 +22,5 @@
 
 - 11-14 14:00 備料交齊；fable 稿到；03 v1 寫好，送 Argon 審。
 - 11-14 14:19 Argon 審完。採納 A1～A3、A6～A15，改回 02 的 `letters.json`，落地改成「寫的一方先進」。03 v2 送 head-tools，第 6 節方向問題請轉專區。
+- 11-14 14:22 使用者專區答 go: yes、land: one（一個 commit，不是推薦的分兩次）；head-tools 裁的 2a、3a、5a 照舊。03 改成 v3：§5 改成「一個 commit、換樹當晚最後 submit」，保留舊身體退路，附換樹當晚清單。送 head-tools 看 §5。
+- 11-14 14:26 head-tools 同意 §5 v3、准開工。§5 補兩點：commit 要在 ok-kf pin 的收件截止前進 main、排最後一個，空窗內退路是主路；「新 eca 寫、舊 lib 讀」放進測試矩陣。§2 補上 ok-kmsg 在 listen.py 的保留點。
