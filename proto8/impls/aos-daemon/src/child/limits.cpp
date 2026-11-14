@@ -101,7 +101,25 @@ void check_limits(const Json& v, const std::string& where) {
     }
 }
 
-Limits prep_limits(const Json& limits) {
+void check_limits_max(const Json& lim, const Json& max) {
+    if (max.is_null() || max.empty()) {
+        return;
+    }
+    for (const Key& c : KEYS) {
+        if (!max.contains(c.name)) {
+            continue;
+        }
+        std::string ceiling = aos::dumps(max[c.name]);
+        if (!lim.is_object() || !lim.contains(c.name)) {
+            throw Error{code::LimitBad, std::string(c.name) + " unlimited exceeds limits_max " + ceiling};
+        }
+        if (lim[c.name].get<long long>() > max[c.name].get<long long>()) {
+            throw Error{code::LimitBad, std::string(c.name) + " " + aos::dumps(lim[c.name]) + " exceeds limits_max " + ceiling};
+        }
+    }
+}
+
+Limits prep_limits(const Json& limits, bool& procs_warned) {
     Limits out;
     if (!limits.is_object()) {
         return out;
@@ -112,10 +130,28 @@ Limits prep_limits(const Json& limits) {
         }
         long long n = limits[c.name].get<long long>();
         unsigned long long val = c.mb ? (unsigned long long)n << 20 : (unsigned long long)n;
-        out.rl.push_back({c.resource, val, c.name, n});
-        if (c.resource2 >= 0) {
-            out.rl.push_back({c.resource2, val, c.name, n});
+        for (int resource : {c.resource, c.resource2}) {
+            if (resource < 0) {
+                continue;
+            }
+            struct rlimit inherited;
+            bool finite = getrlimit(resource, &inherited) == 0 && inherited.rlim_max != RLIM_INFINITY;
+            if (finite && val > inherited.rlim_max) {
+                unsigned long long shown = c.mb ? (unsigned long long)inherited.rlim_max >> 20 : inherited.rlim_max;
+                throw Error{code::LimitBad, std::string(c.name) + " " + std::to_string(n) +
+                            " exceeds the daemon's own hard limit " + std::to_string(shown)};
+            }
+            unsigned long long hard = resource == RLIMIT_CPU ? val + 1 : val;
+            if (finite && hard > inherited.rlim_max) {
+                hard = val;
+            }
+            out.rl.push_back({resource, val, hard, c.name, n});
         }
+    }
+    if (limits.contains("procs") && !limits.contains("user") && !procs_warned) {
+        std::fprintf(stderr, "aos-daemon: warning: procs %lld counts every process of uid %lu, not only this proc (no user switch)\n",
+                     limits["procs"].get<long long>(), (unsigned long)getuid());
+        procs_warned = true;
     }
     if (limits.contains("user")) {   // 子行程裡不查（要讀檔、配置）：fork 之前查好（同 s6-setuidgid：uid、主群組、附加群組）
         out.has_user = true;
@@ -149,7 +185,7 @@ void apply_limits(const Limits& lim) {
     for (const Limits::Rl& r : lim.rl) {   // 先 setrlimit 再換身分（同 s6-softlimit … s6-setuidgid 的順序）
         struct rlimit rl;
         rl.rlim_cur = (rlim_t)r.value;
-        rl.rlim_max = (rlim_t)r.value;
+        rl.rlim_max = (rlim_t)r.hard;
         if (setrlimit(r.resource, &rl) != 0) {
             int e = errno;
             if (e == EPERM) {   // 比 daemon 自己的 hard 寬：hard 只能降不能升（不自動夾成 daemon 的，C-56）

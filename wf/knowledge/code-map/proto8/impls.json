@@ -127,6 +127,7 @@
     "test_bad_letter.py": "Check that a bad procs letter with reply_to gets {\"applied\": false, \"error\": {\"code\": \"BodyBad\", ...}} (11-12), and the rest stay silent.",
     "test_ctl.py": "Exercise public controls, prune inspection and age selection, command errors and help.",
     "test_lifecycle.py": "Verify proc lifecycle, damaged-state adoption and owned-state recovery against real daemons.",
+    "test_limits.py": "驗證 daemon 的份額天花板、rlimit、收屍標記與重起行為。",
     "test_poke.py": "Verify daemon poke modes, prompt wakeups and pid identity guards with isolated fixtures.",
     "test_ref_hash.py": "Check {\"$ref\": \"#/...\"} in daemon.json means daemon.json itself, also inside an inline inst moved into its cell (11-12).",
     "test_stack_make.py": "Check aos-daemon creates a missing $AOS_STACK at start (11-11, make_stack) after the config checks pass.",

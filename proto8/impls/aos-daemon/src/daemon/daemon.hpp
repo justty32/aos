@@ -180,14 +180,14 @@ private:
                 const Json& kept_exec = Json(), const Json& kept_def = Json(),
                 const Json& kept_limits = Json(), const Json& kept_launch = Json(), bool kept_auto_restart = false,
                 bool kept_ros = false, long long kept_stuck_after_cycles = 10,
-                std::optional<long long> kept_stuck_after_ms = std::nullopt);   // 照寫法起（spawn／spawn_exec）；spec null 用列上記的 kept_*（含入口與兩個布林）
+                std::optional<long long> kept_stuck_after_ms = std::nullopt, bool kept_procs_warned = false);   // 照寫法起（spawn／spawn_exec）；spec null 用列上記的 kept_*（含入口與兩個布林）
     // 11-10 two-machines：信箱接回只留名的列再起之前，把 as_written（指示詞原形）照現在的環境再解進 ws／stack／def／exec 與入口
     // （子 loop 的入口是小格 loop.json＝改寫它的 exec）。解不開＝留 stopped＋原因（同 start 起不來）、回 false。沒有 as_written＝不動、回 true。
     bool refresh(const std::string& name, Child& c);
     // 11-10（prefix-fixes 沒修的那條，使用者裁現在修）：stopped／sleeping 的列再起之前，小格公開 ctl 若是 daemon 寫的 stop
     // （stop 之後被 sleep 打斷、子 loop 沒回應過），把 cmd 拿掉、seq 照留，新起的子 loop 就不會照做那道舊 stop。別的指令不動。
     void drop_stale_stop(const Child& c);
-    Json limits_of(const Json& spec, const Json& kept) const;   // 11-05：生效的份額＝列的 limits，沒寫＝daemon 預設 limits_；spec null＝kept；{}＝null（不限）
+    Json limits_of(const Json& spec, const Json& kept) const;   // 11-05：生效的份額＝列的 limits，沒寫＝daemon 預設 limits_；spec null＝kept；{}＝用預設
     std::string cell_of(const std::string& name, const Json& spec) const;   // proc 的 stack：寫了 stack＝它，沒寫＝$AOS_STACK/procs/<名字>
     void read_procs_ctl();                // 讀 procs_ctl.json：好的進 pctl_good_、清 pctl_warning_；壞的不採用、原因進 pctl_warning_；檔不在＝不動
     std::optional<std::string> check_lists(Json& doc, const aos::Resolved& where);   // procs、procs_added、三個名字陣列
@@ -218,6 +218,7 @@ private:
     Json procs_ = Json::object();                        // daemon.json 的 procs
     std::map<std::string, std::string> bad_rows_;        // 11-10 晚 B07：daemon.json 裡指示詞解不開的列 → 原因（那列留 stopped＋reason，其他照起）
     std::vector<std::string> bad_refs_;                  // 11-11：daemon.json 的 procs 頂層 $ref 陣列裡跳過的那幾份 → 原因（drop_bad_refs）
+    Json limits_max_;                                    // 數字份額天花板，超過就留單列 stopped
     Json limits_;                                        // daemon.json 頂層的 limits（沒寫 limits 的列用的預設；null＝不限；11-05 feat-proto 件 5）
     std::string cwd_;                                    // 子項的 cwd＝daemon 起來時的 cwd
     std::string dstack_;                                 // 給子項的 AOS_DAEMON＝stack_ 轉絕對、結尾 /；預設小格也從它拼

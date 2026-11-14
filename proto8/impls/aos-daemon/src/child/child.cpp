@@ -96,9 +96,13 @@ static void make_cell(const std::string& name, const std::string& cell, bool dee
 // 小格建好之後：開小格的 stderr.txt（附加）、fork、子行程 run_child(argv, ws, dstack)。spawn 與 spawn_exec 共用。ws＝null 或絕對路徑（記進 Child）。
 static Child launch(const std::string& name, const std::string& cell, const std::string& cwd,
                     const std::vector<std::string>& argv, const Json& ws, const std::string& dstack, const std::string& err_name,
-                    const Json& limits) {
+                    const Json& limits, bool* procs_warned) {
     std::string ws_s = ws.is_string() ? ws.get<std::string>() : std::string();   // fork 之前備好
-    Limits lim = prep_limits(limits);
+    bool warned = procs_warned != nullptr && *procs_warned;
+    Limits lim = prep_limits(limits, warned);
+    if (procs_warned != nullptr) {
+        *procs_warned = warned;
+    }
     std::string err_path = aos::join(cell, err_name);
     int err_fd = open(err_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
     if (err_fd < 0) {
@@ -126,6 +130,7 @@ static Child launch(const std::string& name, const std::string& cell, const std:
     c.err_off = err_off;
     c.ws = ws_s.empty() ? Json() : Json(ws_s);
     c.stack = cell;
+    c.procs_warned = warned;
     c.limits = limits.is_object() && !limits.empty() ? limits : Json();
     return c;
 }
@@ -144,17 +149,18 @@ static void pin_cwd(Json& inst, const std::string& cwd, const std::string& cell,
 }
 
 Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-            const std::string& dstack, const CellNames& names, const Json& limits, const Json& kept_ws) {
+            const std::string& dstack, const CellNames& names, const Json& limits, const Json& kept_ws, bool* procs_warned) {
     std::string lj = aos::join(cell, names.loop);
     if (spec.is_null()) {   // 信箱接回的 stopped／sleeping 列（只留名、沒有設定）再 start／wake：照小格裡現有的 loop.json（11-03），ws 照列上記的（11-03 晚）
         make_cell(name, cell, deep);
-        return launch(name, cell, cwd, {"--", lj + "#/_entry"}, kept_ws, dstack, names.err, limits);
+        return launch(name, cell, cwd, {"--", lj + "#/_entry"}, kept_ws, dstack, names.err, limits, procs_warned);
     }
     Json cfg = spec;
     Json ws = cfg.value("ws", Json());   // ws、stack 是 daemon 的 key（不是 loop 的）：不灌進小格的 loop.json；ws 只進子行程的環境（AOS_WS）
     cfg.erase("ws");
     cfg.erase("stack");
     cfg.erase("def");   // def 同（11-04）：只記進表
+    cfg.erase("limits_clamped");
     cfg.erase("limits");   // limits 同（11-05 feat-proto 件 5）：daemon 在子行程裡做，子 loop 不知道
     cfg.erase("stuck_after_cycles");
     cfg.erase("stuck_after_ms");
@@ -185,11 +191,11 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
     } catch (const Error& e) {
         throw Error{e.code, "cannot start child " + name + ": " + e.msg};
     }
-    return launch(name, cell, cwd, {"--", lj + "#/_entry"}, ws, dstack, names.err, limits);
+    return launch(name, cell, cwd, {"--", lj + "#/_entry"}, ws, dstack, names.err, limits, procs_warned);
 }
 
 Child spawn_exec(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-                 const std::string& dstack, const CellNames& names, const Json& limits) {
+                 const std::string& dstack, const CellNames& names, const Json& limits, bool* procs_warned) {
     // 字串、陣列＝目標本身；物件＝{"exec": 目標或單子, "ws"?, "stack"?}（read_procs 驗過）
     const Json& target = spec.is_object() ? spec["exec"] : spec;
     Json ws = spec.is_object() ? spec.value("ws", Json()) : Json();
@@ -206,7 +212,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
         } catch (const Error& e) {
             throw Error{e.code, "cannot start child " + name + ": " + e.msg};
         }
-        Child c = launch(name, cell, cwd, {"--", aos::join(cell, names.exec) + "#/exec"}, ws, dstack, names.err, limits);
+        Child c = launch(name, cell, cwd, {"--", aos::join(cell, names.exec) + "#/exec"}, ws, dstack, names.err, limits, procs_warned);
         return c;
     }
     if (target.is_string()) {
@@ -217,7 +223,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
         }
     }
     make_cell(name, cell, deep);
-    Child c = launch(name, cell, cwd, argv, ws, dstack, names.err, limits);
+    Child c = launch(name, cell, cwd, argv, ws, dstack, names.err, limits, procs_warned);
     return c;
 }
 
@@ -244,8 +250,18 @@ bool alive(Child& c) {
         if (WIFSIGNALED(status)) {
             c.signal = WTERMSIG(status);
             c.code = 128 + WTERMSIG(status);
-        } else {
+            if (c.limits.is_object()) {
+                if (WTERMSIG(status) == SIGXCPU && c.limits.contains("cpu_s")) {
+                    c.limit_hit = "cpu_s";
+                } else if (WTERMSIG(status) == SIGXFSZ && c.limits.contains("file_mb")) {
+                    c.limit_hit = "file_mb";
+                }
+            }
+        } else if (WIFEXITED(status)) {
             c.code = WEXITSTATUS(status);
+            if (WEXITSTATUS(status) == 1 && c.limits.is_object() && c.limits.contains("mem_mb")) {
+                c.limit_suspect = "mem_mb";
+            }
         }
     }
     return false;
@@ -296,6 +312,12 @@ Json row(const Child& c, const std::string& dstack) {
     }
     if (!c.limits.is_null()) {
         r["limits"] = c.limits;   // 11-05（feat-proto 件 5）：生效的份額，有才寫
+    }
+    if (!c.limit_hit.is_null()) {
+        r["limit_hit"] = c.limit_hit;
+    }
+    if (!c.limit_suspect.is_null()) {
+        r["limit_suspect"] = c.limit_suspect;
     }
     if (c.auto_restart) {
         r["auto_restart"] = true;

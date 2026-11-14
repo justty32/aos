@@ -76,7 +76,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         if (cfg_.contains("procs")) {
             procs_ = read_procs(drop_bad_refs(cfg_["procs"], cfg_dirs_.dir_of("procs"), bad_refs_), cfg_dirs_.dir_of("procs"), "procs", &bad_rows_);
         }
-        for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_requests", "procs_loop", "procs_exec", "procs_stderr", "limits"}) {
+        for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_requests", "procs_loop", "procs_exec", "procs_stderr", "limits", "limits_max"}) {
             if (cfg_.contains(k)) {
                 cfg_[k] = aos::resolve(cfg_[k], cfg_dirs_.dir_of(k));
             }
@@ -132,6 +132,29 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     // 11-05（feat-proto 件 5）：頂層 limits＝沒寫 limits 的列用的預設份額（沒寫、null＝不限）；壞＝CfgBad 退 1
     limits_ = cfg_.value("limits", Json());
     check_limits(limits_, "limits");
+    limits_max_ = cfg_.value("limits_max", Json());
+    if (limits_max_.is_object() && limits_max_.contains("user")) {
+        throw Error{code::CfgBad, "limits_max.user is not allowed (limits_max only caps numbers)"};
+    }
+    check_limits(limits_max_, "limits_max");
+    if (limits_max_.is_object() && !limits_max_.empty()) {
+        if (!limits_.is_object() || limits_.empty()) {
+            throw Error{code::CfgBad, "limits_max needs limits to name a default for every capped key"};
+        }
+        for (const char* k : {"mem_mb", "cpu_s", "procs", "file_mb", "files"}) {
+            if (!limits_max_.contains(k)) {
+                continue;
+            }
+            std::string ceiling = aos::dumps(limits_max_[k]);
+            if (!limits_.contains(k)) {
+                throw Error{code::CfgBad, std::string("limits.") + k + " is missing but limits_max." + k + " is " + ceiling};
+            }
+            if (limits_[k].get<long long>() > limits_max_[k].get<long long>()) {
+                throw Error{code::CfgBad, std::string("limits.") + k + " " + aos::dumps(limits_[k]) +
+                            " exceeds limits_max." + k + " " + ceiling};
+            }
+        }
+    }
     Json a = cfg_.value("adopt", Json(true));
     if (!a.is_boolean()) {
         throw Error{code::CfgBad, "adopt must be true or false"};

@@ -259,6 +259,8 @@ void Daemon::adopt() {
             c.held = true;
             c.code = r.value("code", Json());
             c.signal = r.value("signal", Json());
+            c.limit_hit = r.value("limit_hit", Json());
+            c.limit_suspect = r.value("limit_suspect", Json());
             if (phase == "stopped") {
                 stopped_.insert(name);
             }

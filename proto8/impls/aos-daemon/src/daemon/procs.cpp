@@ -202,7 +202,7 @@ bool is_once(const Json& spec) {
         return false;
     }
     for (auto& [k, v] : spec.items()) {
-        if (k != "exec" && k != "ws" && k != "stack" && k != "def" && k != "limits" && k != "auto_restart" && k != "restart_on_stuck" && k != "stuck_after_cycles" && k != "stuck_after_ms" && k != "as_written") {
+        if (k != "exec" && k != "ws" && k != "stack" && k != "def" && k != "limits" && k != "limits_clamped" && k != "auto_restart" && k != "restart_on_stuck" && k != "stuck_after_cycles" && k != "stuck_after_ms" && k != "as_written") {
             return false;   // 多了任何一個 key＝loop 設定（procs § 2 第 3 條）
         }
     }
@@ -282,7 +282,7 @@ Json read_procs(const Json& v, const aos::RefBase& base, const std::string& key,
                         throw Error{code::CfgBad, key + "[" + name + "]." + k + " must be a boolean or null"};
                     }
                 }
-                if (r.value.contains("limits")) {   // 11-05（feat-proto 件 5）：份額；null＝當沒寫（用 daemon 的預設）、{}＝不限，壞＝同 stack
+                if (r.value.contains("limits")) {   // 11-05（feat-proto 件 5）：份額；null＝當沒寫、{}＝用 daemon 的預設，壞＝同 stack
                     if (r.value["limits"].is_null()) {
                         r.value.erase("limits");
                     } else {
