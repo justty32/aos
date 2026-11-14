@@ -2,6 +2,8 @@
 
 ← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
 
+> **先看這句（11-14）**：本專案 gpt 系現在只用 sol、走 agent-fsm，不走 codex、蒐集和施工不用 terra；隊長不自己 commit／push，交件走 `commit-request`；回報寄任務書指定的對象（11-14 起是各部部長）。下面寫 codex、terra、「隊長 commit、push」的地方是舊寫法，還沒改寫（kb-1114 重整中）。現行見 [aos-teams/07「11-14 補」](dispatch/aos-teams/07-預設流程與agent-fsm.md)。
+
 本檔記**誰來做**——分幾層角色、每層派哪一級的模型、按什麼順序選人（分級與速度是使用者定的、跨專案共通，源頭是 `~/repo/moddings/skyrim/agentctl/docs/team-model.md`，兩邊要一起改）。**怎麼做**在別處：切線與交接書見 [dispatch](dispatch/README.md)（含本專案的隊形與 codex 呼叫），資源鎖見 [resources](resources.md)，通訊見 [inbox](inbox.json)。
 
 **何時用**：要開一個 agent 團隊、要決定某一層派哪級模型、要按用途分角色。

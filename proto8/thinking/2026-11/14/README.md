@@ -22,6 +22,6 @@
 | [sec-1114](sec-1114.md) | 線安 ok-sec：借 Linux uid／檔案權限讓 aos 更安全，只規劃——三圈（使用者帳號／每隻 agent 一個 subuid／外來程式進沙箱）、第 0 期免 root 實測 8 項、Argon 審過定稿；第 1 期不改用法，改用法的排在公開 demo 之後；11 題待拍板 |
 | [board](board-1114.md) | board-1114：布告欄＋分級＋頻道協議 comm/1 規劃 |
 | [release-1114](release-1114.md) | 公開 demo 發佈版（線發 ok-release）：規劃走完（fable 設計、Argon 審、計劃 v2），使用者 ★1～★5 照推薦（核心頁雙語中文先、MIT＋CC BY 4.0、同 repo、不改歷史、頂層加 docs/ 等）；草稿 v2 給使用者看（宣傳頁 A／B 待挑、README 中英、文件 11 頁，指令照字實跑過）；待答：挑版、副標、原話逐句、docker；不 push、發佈檔還沒動 |
-| [kb-1114](kb-1114.md) | 重整 aos 知識庫與 wf/（線庫 ok-kb，fable）：用各隊經驗盤點重複、過時、跟程式對不上、找不到、太長；4 隻 sol＋2 隻 Claude 蒐集中，設計與方向題未出 |
+| [kb-1114](kb-1114.md) | 重整 aos 知識庫與 wf/（線庫 ok-kb，fable）：盤點→設計→Argon 審→計劃走完；結論是現行做法埋在舊條文底下（查怎麼 commit 要讀 63 KB、入口與 07 互相衝突）；使用者 11-14 專區裁定五題都照推薦（鐵律 3 改走 commit-request、舊寫法搬各夾 archive 且 aos-teams 改寫成短卡、hackathon 與 workshop 封存、缺頁的工具與指令在索引加指標、索引表門檻放寬到 16 KB）；小修已交五批，結構改寫施工中 |
 | [tree-swap-1114](tree-swap-1114.md) | 11-14 晚換樹整合步驟表（ok-kf）：各線清單（線雜、ace14088d、AK14／AK17、限 B1／B4／B5、gate triage、C′ A、三個 .env、兩條連結、aos-llm-kernel）對到一張表；釘 `246d4aa49`（含線星 ADV；乾淨複本全套綠，C++ repo 外編好）；swap.sh＋新 extras.sh（eca 定義 hooks 補 screen_linger、.env、guard 換裝附驗法、brain_notify、連結搬開）先 check 再 all、附退回；tree-swap 三支拿掉 rm（`b8ff23ada`）；暫存樹 r1、r2、r4 15 段全綠（r3 紅在 guard 驗法對 lead 的期望、已修）、換約 4 秒、退回 1 秒逐位元同；查到 `.env` 的 PATH 要 `--dotenv-override` 才生效，連結先不移；待使用者定 D0～D3（何時換、連結、brain_notify、aos-llm-kernel 先問 ok-sec）；Q10 佔位、今晚不做 |
 | [wake-1114](wake-1114.md) | 線醒 ok-wake：沒開畫面時 eca claude 怎麼及時收信，實測延遲（閒 2 秒、turn 中要等 turn 完、冷卻中等冷卻完）並比較做法；主案 stdin stream-json 中途餵信，備案 socket；使用者回 build:now，施工待派 |

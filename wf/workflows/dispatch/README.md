@@ -2,6 +2,8 @@
 
 ← [WORKFLOWS](../../WORKFLOWS.md)｜[INDEX](../../INDEX.md)
 
+> **先看這句（11-14）**：本專案現在的隊形是 opus／fable 帶 sol（agent-fsm），不是 codex CLI＋claude CLI；見 [aos-teams/07「11-14 補」](aos-teams/07-預設流程與agent-fsm.md)。本檔提到 codex 隊員與啟動教學的地方是舊隊形，還沒改寫（kb-1114 重整中）。
+
 把一件大工作切成幾條線交給別的 agent 跑，並負責**仲裁與驗收**。調度者不深潛實作。
 
 **何時用**：一件工作大到要同時開幾條線，或要派給別資料夾／別機器的 agent 做；workshop／hackathon 開隊也照這裡。

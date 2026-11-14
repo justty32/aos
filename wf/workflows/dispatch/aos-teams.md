@@ -2,6 +2,8 @@
 
 ← [dispatch](README.md)｜選人判準 [team-model](../team-model.md)
 
+> **先看這句（11-14）**：gpt 系現在只用 sol、走本地 LiteLLM 上的 agent-fsm，不走 codex、蒐集和施工不用 terra，sol 頂替 sonnet 的搜集位置；commit 走 `commit-request`；回報寄任務書指定的對象（11-14 起是各部部長）。下面「誰做什麼」裡 codex 隊員、terra、sonnet 搜集、`/goal`、`-s workspace-write` 的寫法是舊隊形，還沒改寫（kb-1114 重整中）。現行見 [07「11-14 補」](aos-teams/07-預設流程與agent-fsm.md)、[kits](kits/README.md)。
+
 本專案實際怎麼開隊。派線的通用規則在 [dispatch](README.md)，這裡只記 aos 專屬的隊形、指令與硬規則；改制時直接改成現行寫法。任務書送出前要對一次的坑在 [lessons](lessons.md)。
 
 ## 誰做什麼

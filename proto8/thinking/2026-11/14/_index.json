@@ -23,6 +23,9 @@
  "gate-auto-1114.md": {
   "description": "gate-auto-1114：repo-aos 的 kernel_gate 先自動處理一輪請求"
  },
+ "kb-1114": {
+  "description": "分檔夾：kb-1114：重整 aos 知識庫與 wf/（線庫 ok-kb）"
+ },
  "kb-1114.md": {
   "description": "kb-1114：重整 aos 知識庫與 wf/（線庫 ok-kb）"
  },
