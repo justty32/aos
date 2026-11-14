@@ -15,7 +15,7 @@
 
 ```
 ## 硬規則（這台的 ~/aos-home 有一棵使用者正在用的樹；你的 shell 繼承了它的環境）
-1. 活樹不碰：不寫 ~/aos-home 底下任何檔、不對它的 daemon 與 agent 下任何指令、不寄信進去。唯讀查看只限本任務書點名的，與第 9 條的核對。
+1. 活樹不碰：不寫 ~/aos-home 底下任何檔、不對它的 daemon 與 agent 下任何指令、不寄信進去（任務書點名的回報對象與使用者專區除外）。唯讀查看只限本任務書點名的，與第 9 條的核對。
 2. 先清環境：你的 Bash 帶著活樹的 AOS_STACK、AOS_DAEMON、AOS_HOME、AOS_WS 等。起任何 aos 行程、跑任何測試或 aos 指令，一律經一支 bash 腳本：開頭「不是 bash 就拒絕」、逐一 unset 所有 AOS_*、「還有殘留就拒絕」，再 exec 你的指令。不在 zsh 裡 source 環境檔、不用 `env -u $VARS`（在 zsh 都等於沒清）。其他要靠分詞的寫法也一樣（隊長的 shell 是 zsh，`$VAR` 不分詞）：多字迴圈、`set -- $p`、`for f in $(cat list)` 一律包在 `bash -c '…'` 或寫成 bash 腳本。
 3. 暫存樹：要起樹，起在 repo 外獨一無二的暫存夾 <~/code/線名-日期/>；tmux 只用 `tmux -S <暫存夾內的 socket>`。
 4. 收行程只准兩種：(a) `aos-daemon-ctl -d <自己暫存樹 stack 的絕對路徑> shutdown`，下之前 echo 那個路徑、確認在自己的暫存夾下；(b) kill 起的時候自己記下的 pid，kill 前 `readlink /proc/<pid>/cwd` 確認在自己的暫存夾裡。禁止 pkill、killall、`kill $(pgrep …)` 與任何按名字或命令列字串收行程的寫法。
