@@ -37,6 +37,8 @@
 
 - 13:59 頂層看過定稿，同意第 1 期交 ok-limits；head-core 放行六個紀錄檔 commit。ok-board 回：它的 own_root() 確實漏了 hooks/<名>，批 2 補；「為什麼算 gone」的欄照用字規則改叫 gone_cause。ok-limits 回：rm 該蓋過 sleep、envs 落在表上那列的 launch.exec.envs、沒有不同意；who 已照 1.3／1.4 改完待審。
 
+- 14:12 ok-limits 實測查核 A：帶 envs 的 add 跟不帶的不等價（exec 欄變 null 致 set-def 拒收、as_written.exec 不記、--path-json 指示詞被改寫、多一層 aos-exec）；另更正：envs 不在表上的 launch.exec.envs，在小格檔裡，launch.exec 是指標。定稿 1.3 改成「第 1 期不改任何一個 add 走哪條路，只有本來就帶 envs 的才記 parent」，who 改成順著指標讀。
+
 ## 還沒做
 
 - 審 ok-limits 的 diff（who 已到；add_letter、B7 改名還沒到）。
