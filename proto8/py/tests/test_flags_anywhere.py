@@ -66,9 +66,9 @@ class Commands(unittest.TestCase):
         self.assertIn('aos-mcp: error: FlagUnknown unknown flag --nope', p.stderr)
 
     def test_eca_screen_eca_after_subcommand(self):
-        p = run('aos-eca-screen', 'close', '--eca', str(self.d))
+        p = run('aos-eca-screen', 'open', '--eca', str(self.d))   # open (close works without cli.json since 11-14)
         self.assertEqual(p.returncode, 1)
-        self.assertIn('is not an eca dir (no cli.json)', p.stderr)   # --eca was taken after close
+        self.assertIn('is not an eca dir (no cli.json)', p.stderr)   # --eca was taken after open
 
     def test_feedback_flags_both_sides_and_dashes(self):
         env = {'AOS_FEEDBACK': str(self.d / 'fb')}
