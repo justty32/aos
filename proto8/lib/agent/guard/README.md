@@ -1,5 +1,7 @@
 # guard: before_tool guard for file, shell, mail and control tools
 
+> **Status: under review. Do not mount this hook to restrict agents yet.** An independent review found ways around some checks; fixes are in progress. It is not wired into any shipped definition or kit.
+
 `guard` is a before_tool hook handler (python3, stdlib only). It reads the tool call on stdin (`{"name": ..., "arguments": {...}}`) and answers with its exit code:
 
 | exit | meaning |
