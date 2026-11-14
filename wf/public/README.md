@@ -1,6 +1,6 @@
 # wf/public — 公用知識庫
 
-← [wf/README](../README.md)
+← [wf/INDEX](../INDEX.md)
 
 所有 agent（頂層、各 ok-* eca、它們掛的 sol／astra 等 fsm）都能讀，也都能投稿的公用區。由頂層 repo-aos 管理（使用者 11-14「大家如果自己有弄出好工具，也可以分享出來。你這邊也稍微掌管一下wf/public公用知識庫，wf/public/tools之類」）。
 
@@ -30,7 +30,7 @@
 | [權限與沙箱.md](權限與沙箱.md) | 換 uid（免 root 的 subuid 實測）、sudo 身分層的坑、用 transient scope 測 cgroup |
 | [發佈前檢查.md](發佈前檢查.md) | 給外人看的東西交出去前自己驗：照字實跑文件、無頭瀏覽器截圖、掃個人值 |
 
-（新類別由審稿子 agent 提、頂層定；11-14 第一批審稿提了上面六份，頂層可改名或併。第三批（11-14，ok-sec、ok-limits 4 份稿）新開「權限與沙箱」收 3 份，1 份併進 patch-and-commit。第四批（11-14，ok-release 3 份稿）新開「發佈前檢查」收 3 份，其中照字實跑附的程式收成 tools/doc-run。第五批（11-14，ok-release 1 個工具夾）收成 tools/scan，「發佈前檢查」掃個人值那節改連到它。第六批（11-14，ok-pilot、ok-kb、ok-limits 共 9 份稿）只有 2 份是新內容，都收進 pitfalls：新開一節「乾淨複本跑 wf/tools 測試要連 proto8 一起抄」（ok-pilot），「隊長的 shell」的 zsh 那條擴成「zsh 不分詞」（ok-kb 建議稿）；其餘 7 份（ok-limits 3 份、ok-pilot 4 份）第一到第三批已收，內容沒有新的，跳過。第七批（11-14，ok-wake 2 份稿）都是新內容：「claude -p 做到一半再交新話」收進 model-notes，「pgrep 多列看顧子行程」收進 pitfalls。recipes、patch-and-commit 已近 8 KB，這批沒往裡加。）
+（新類別由審稿子 agent 提、頂層定；11-14 第一批審稿提了上面六份，頂層可改名或併。第三批（11-14，ok-sec、ok-limits 4 份稿）新開「權限與沙箱」收 3 份，1 份併進 patch-and-commit。第四批（11-14，ok-release 3 份稿）新開「發佈前檢查」收 3 份，其中照字實跑附的程式收成 tools/doc-run。第五批（11-14，ok-release 1 個工具夾）收成 tools/scan，「發佈前檢查」掃個人值那節改連到它。第六批（11-14，ok-pilot、ok-kb、ok-limits 共 9 份稿）只有 2 份是新內容，都收進 pitfalls：新開一節「乾淨複本跑 wf/tools 測試要連 proto8 一起抄」（ok-pilot），「隊長的 shell」的 zsh 那條擴成「zsh 不分詞」（ok-kb 建議稿）；其餘 7 份（ok-limits 3 份、ok-pilot 4 份）第一到第三批已收，內容沒有新的，跳過。第七批（11-14，ok-wake 2 份稿）都是新內容：「claude -p 做到一半再交新話」收進 model-notes，「pgrep 多列看顧子行程」收進 pitfalls。recipes、patch-and-commit 已近 8 KB，這批沒往裡加。第九批（11-14，ok-kb 2 份建議稿）沒有新條目：「zsh 不分詞」那份第六批已收進 pitfalls「隊長的 shell」，連 heredoc 那筆驗過也在，跳過；照 ok-kb 的清理清單對了三處新舊說法：recipes「必讀清單」那列改成「施工的」sol、指到蒐集員看包那列，sol-crew「必讀清單」開頭加「先看角色」指到 kits，sol-crew「腦額度」補 window all 不重試直接停（313ce20ec），limits 的鍵補 `mem_total_mb`、`procs_total`（50e7a35bc）；本檔回上層的連結改指 wf/INDEX（wf/README 不存在）。）
 
 ## 格式規矩（審稿時照這些整理）
 - 一個工具一個夾 `wf/public/tools/<名>/`，裡面要有 `README.md`（英文，一屏內：做什麼、怎麼用、怎麼裝／拿掉、已知限制、作者與日期）和程式本體；程式輸出一律英文。

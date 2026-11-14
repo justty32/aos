@@ -20,7 +20,7 @@
 | 請 Argon 當第二意見 | 在 /tmp 跑 `agy -p … --model "Gemini 4 Argon (High)" --mode plan --print-timeout 840s`，內容貼進提示並寫明 `Do not use any tools`（不寫會沒產出）；要它分 (A) 審查 (B) 提案 | [05「Argon 是參與者」](../workflows/dispatch/aos-teams/05-同機session與Argon.md)、[model-notes](model-notes.md) | 11-14 ok-skyrim、ok-astra、ok-kf、ok-llmk2 |
 | 通知太多想清淨一段 | `wf/public/tools/quiet`：`quiet.py install` | [tools/quiet](tools/quiet/README.md) | 11-14 repo-aos |
 | 給 sol 寫任務書 | 一張單一件事、寫明可改哪些檔；事實（唯讀 sol）與設計分開；寫「讀完必讀，同一回合就動手」；交回的碼隊長自己再讀 | [sol-crew「任務書」](sol-crew.md) | 11-14 ok-astra |
-| sol 隊員要不要給必讀清單 | system 放清單、要它末行自報讀了哪幾份；雜活在任務書寫免讀或略讀 | [sol-crew「必讀清單」](sol-crew.md) | 11-14 ok-pilot |
+| **施工的** sol 隊員要不要給必讀清單 | system 放清單、要它末行自報讀了哪幾份；雜活在任務書寫免讀或略讀。蒐集員、審稿員不用給，看下面「派蒐集員或審稿員」那列的看包（使用者 11-14 裁按角色分） | [sol-crew「必讀清單」](sol-crew.md) | 11-14 ok-pilot |
 | sol 被 [aos] guard 誤擋唯讀查詢（字面含 rm／kill／aos-） | 不叫它改寫字面繞；隊長代跑搜尋、結果寫成檔叫它讀；行程檢查隊長做 | [sol-crew「guard」](sol-crew.md) | 11-14 ok-misc |
 | 暫存樹改了 impls 的 C++ 要跑測試 | `make <名字>_main`（只 `make <名字>` 不會重編 bin）；跑前看 bin 修改時間 | [pitfalls](pitfalls.md) | 11-14 ok-misc |
 | 殺自己起的行程 | 只 kill 自己記下的 pid；不 `pkill -f <字串>`（會殺到自己的 shell） | [pitfalls「隊長的 shell」](pitfalls.md) | 11-14 ok-kf |

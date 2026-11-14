@@ -102,7 +102,7 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 痛的程度：拖慢（燒額度）
 - 提出者與日期：ok-onboard 2026-11-14
 - 出處：wf/temp/ok-onboard/aos-advice/fsm-template-tool-descriptions-cost.md；proto8/thinking/2026-11/14/onboard-1114.md「P0 結果」；wf/workflows/dispatch/kits/README.md
-- 狀態：未處理。範本 tools.json 仍是 15 包 55 支（最後一次改是 2e1e69de2 加 jsonx 包）。繞法：派蒐集員照 [wf/workflows/dispatch/kits](../workflows/dispatch/kits/README.md) 的 gather 只掛 24 支（見 [wf/public recipes「派蒐集員或審稿員」](../public/recipes.md)）。
+- 狀態：未處理（部分已解）。範本 tools.json 仍是 15 包 55 支（最後一次改是 2e1e69de2 加 jsonx 包）。部分已解：產品版 kits 已進 `proto8/templates/kits/`（3ed649b09，含 gather 看包與 review 變體），知識庫新增 `aos/kits.json`（fdfbc5515），要少掛工具的照 kits 蓋就好；範本預設本身沒精簡、tooldef 沒分長短版（第九批整理補，依 ok-kb 清理清單）。繞法：派蒐集員照 [wf/workflows/dispatch/kits](../workflows/dispatch/kits/README.md) 的 gather 只掛 24 支（見 [wf/public recipes「派蒐集員或審稿員」](../public/recipes.md)）。
 - 相關：本檔「蒐集用 sol 的工具包寫不了純文字檔」，同樣是「範本該掛哪些包」的問題，精簡時要留文字寫檔。
 
 ## sol 的可寫範圍寫在兩份清單裡，換工作區要兩邊都改
@@ -157,3 +157,14 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 出處：wf/temp/ok-fsm/aos-advice/sol第一輪只回會照做就停.md；proto8/thinking/2026-11/14/ok-fsm-1114.md「13:56 驗收與交件」；stack ok-fsm-sol-1、ok-fsm-sol-2 的 history（第一輪最後一則）
 - 狀態：未處理。整理時查：兩份 general.A.txt 都沒有「不要用計畫結束回合」這類句子；sol-crew.md 只寫了「寫明讀完同一回合動手」，這次證明光寫還不夠。
 - 相關：本檔「goal 是 paused 時來了信」（同一套 goal 提醒）。
+
+## llm_settings.py 的註解還說 pack 的 fixed 欄位「照舊蓋過」，實際是整個請求被拒
+
+- 主題：fsm 範本
+- 哪裡：`proto8/templates/agent-fsm/llm_settings.py` 檔頭註解第 8 行。
+- 現象：註解寫「kernel 端 endpoint 包的 fixed 欄位照舊蓋過這裡（llm_http：request 先、fixed 蓋上）」。現在的 llm kernel 不是蓋過：請求帶到被包釘死的鍵，`fixed_clash` 回原因，`pick()` 丟 `RequestBad … is fixed by endpoint <包>`（`proto8/lib/aos/kernel_llm/packs.py` 第 279、313 行）。照註解以為「設了也只是沒作用」的人，會讓那隻 agent 每次問腦都被拒。
+- 建議：註解改成「帶到 fixed 的鍵＝kernel 回 RequestBad，別設」。再想一步：agent-fsm 送出前就把跟包的 fixed 相衝的鍵擋下、說清楚，不等 kernel 拒。知識庫 `aos/me/self_llm.json` 已在 f1ef04ba0 改成現況。
+- 痛的程度：小不便
+- 提出者與日期：ok-kb 2026-11-14（轉 head-front 派的獨立審稿員的發現）
+- 出處：wf/temp/ok-kb/aos-advice/llm_settings註解說fixed欄位會蓋過已過時.md；head-front 審稿員 11-14 核 f1ef04ba0 時讀碼發現，沒實跑；proto8/thinking/2026-11/14/kb-1114.md
+- 狀態：未處理。整理時查：註解仍是「照舊蓋過」，`packs.py` 的 `fixed_clash` 與 RequestBad 對過。

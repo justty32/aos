@@ -21,6 +21,7 @@
 ## 必讀清單要不要給
 
 - **適用**：要不要把「aos 體系＋wf 規矩」必讀清單寫進 sol 的 system 和任務書。
+- **先看角色**：使用者 11-14 裁「按角色分」。本節的結論是給**施工的** sol；蒐集員、審稿員只讀知識庫入口加站台層、任務書不附必讀清單，照 [kits](../workflows/dispatch/kits/README.md) 與 [card 第 3 步](../workflows/dispatch/kits/card.md)（產品版看包在 `proto8/templates/kits/`，3ed649b09、fdfbc5515）。
 - **結論**：
   - sol 很聽話：system 寫「先讀」，它照順序全讀才讀程式；要它在答案末行自報讀了哪幾份，自報跟 history.jsonl 對得上。
   - 代價：每隻多約 5 萬 prompt token（必讀 7 份）。
@@ -53,9 +54,9 @@
   | files（NOFILE） | 32 | 正常 |
   | files（NOFILE） | 8 | 停機：`PostFailed aos-post cannot start ... [Errno 24] Too many open files`；daemon 標 stopped，信留在 queue/new |
   | cpu_s | 2 | 正常但沒用：RLIMIT_CPU 按單一程序計，每格是新程序，管不到總 CPU；總量要 cgroup `cpu.max` |
-- 合法的鍵只有 `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files`、`user`（開檔是 `files` 不是 `nofile`）。
+- 合法的鍵只有 `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files`、`user`（開檔是 `files` 不是 `nofile`）；50e7a35bc 起 `ctl add --limits` 另收 cgroup 的 `mem_total_mb`、`procs_total`（`proto8/py/daemon_ctl/entry.py` 的 `LIMIT_INTS`）。現況以知識庫 `aos/agents/subagent.json#/add` 為準（f1ef04ba0）。
 - subagent 的父程序是 daemon、不是掛它的 eca：對 eca 下 prlimit 不會傳下去，要在 add 時帶 `limits`。對跑著的 aos-loop 下 prlimit 馬上生效，之後每格新起的子程序都繼承。
 - 值照 07：sol 預設 `{"mem_mb":1024,"files":256}`（ok-pilot 建議範圍 mem_mb 1024～2048、files 256～4096），`procs` 別設。
-- **腦額度**：每隻 sol 一份 llm kernel 的 `budget.senders`，key 是 sol 的 stack 路徑（例 150 次），用光被拒 `BudgetMissing`。commit 2368ee3af 起 agent-fsm 被拒不停、等著重試，並由 brain_notify hook 寄一封 BLOCKED 給 mom（見 `proto8/templates/agent-fsm/hooks.json`）。
+- **腦額度**：每隻 sol 一份 llm kernel 的 `budget.senders`，key 是 sol 的 stack 路徑（例 150 次），用光被拒 `BudgetMissing`。commit 2368ee3af 起 agent-fsm 被拒不停、等著重試，並由 brain_notify hook 寄一封 BLOCKED 給 mom（見 `proto8/templates/agent-fsm/hooks.json`）。**例外**：313ce20ec 起 kernel 的錯多帶 window（hour／day／all），window 是 `all`（永不重置）時不重試、直接 BLOCKED 停下（`BudgetMissing … (window all: …)` 退 1，見 `templates/agent-fsm/wait.py` 與知識庫 `aos/brain.json#/priority`），要調高額度再叫起來。
 - **出處**：`wf/temp/ok-pilot/notes.md` 第二、四輪；commit 2368ee3af
 - **投稿**：ok-pilot（`fsm隊員rlimit實測.md`）；ok-astra（`sol-team-briefing.md` 第 8 條）
