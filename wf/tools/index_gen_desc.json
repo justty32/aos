@@ -255,6 +255,7 @@
   "proto8/lib/agent/hook_fire": "hook_fire（不是給腦的工具）：範本 loop.json 的 on_start／on_stop 叫它，發 after_start／after_stop 事件給 agent 的 hook",
   "proto8/lib/agent/hook_noop": "hook_noop（不是給腦的工具）：什麼都不做的 hook handler，讀掉事件 JSON 退 0，範本 hooks.json 預設掛點",
   "proto8/lib/agent/mail_notify": "mail_notify（不是給腦的工具）：on_clock 的 hook handler，看自己信箱有沒有沒通知過的新信，有就往自己 queue 寄一則 [aos] new_mail",
+  "proto8/lib/agent/brain_notify": "brain_notify（不是給腦的工具）：brain_failed 的 hook handler，腦被拒（範本條件 BudgetMissing）時往 AOS_NOTIFY_BOX 寄一封 BLOCKED 信，同一段拒絕只寄一次",
   "proto8/lib/agent/mailbox_peek": "mailbox_peek 工具（信箱包）：看自己信箱有幾封信、誰寄的、狀態與標題，不拿走",
   "proto8/lib/agent/mailbox_read": "mailbox_read 工具（信箱包）：讀自己信箱最舊的一封（或全部），印寄件人、狀態、內容與 reply_to，預設讀完就刪",
   "proto8/lib/agent/mailbox_send": "mailbox_send 工具（信箱包）：以自己名義寄一封信，給 agent 名字或信箱路徑，狀態 REQUEST／DONE／BLOCKED 等",

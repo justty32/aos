@@ -655,6 +655,16 @@
    "evidence": "proto8/lib/agent/mail_notify/_entry"
   },
   {
+   "path": "$AOS_STACK/hooks/brain_notify/notified.json",
+   "lifetime": "暫時",
+   "writer": "lib/agent/brain_notify（範本 agent-fsm hooks.json 的 brain_notify 那格，brain_failed、條件 BudgetMissing）",
+   "reader": "同左",
+   "image": "不進：在 hooks/ 小格裡，stack.gitignore 的 **/hooks/ 擋（G092）",
+   "on_bad": "不在、壞了＝當作沒通知過：這次寄一封；寄不成＝不寫、warning、退 0；寫不了＝warning、退 0（下次可能再寄一封）",
+   "note": "11-14 AK17 新增：{code: 上次通知的代號, history_lines: 當時 agent 的 history.jsonl 行數}；同代號且行數沒變＝同一段拒絕、不再寄；好回信進 history 後行數變了，下一段拒絕再通知。先寫暫存檔再改名。新檔，不用重建",
+   "evidence": "proto8/lib/agent/brain_notify/_entry"
+  },
+  {
    "path": "$AOS_STACK/tools/todo/todo.json（自己的待辦清單）",
    "lifetime": "持久",
    "writer": "lib/agent/todo",

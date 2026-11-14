@@ -21,6 +21,9 @@
     }
    },
    "agents_ctl/": "aos-agent ctl 的完整純包裝：對 daemon 表上任何一隻 add／rm／ls／state／where／who／start／stop／sleep／wake／pause／resume；不記帳、不算配額",
+   "brain_notify": {
+    "_entry": "brain_failed 的 hook handler：把腦拒絕的原因寄到 AOS_NOTIFY_BOX，同一段 history、同一代號只通知一次。"
+   },
    "claude": {
     "cli.json": "設定（鍵：kind、flags、print_flags、timeout_ms）"
    },

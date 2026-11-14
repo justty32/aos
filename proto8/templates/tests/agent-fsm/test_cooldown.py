@@ -27,20 +27,23 @@ class Cooldown(unittest.TestCase):
         self.calls = self.root / 'calls.txt'
         self.env = dict({k: v for k, v in os.environ.items() if not k.startswith('AOS_')}, AOS_STACK=str(self.stack), AOS_CD=str(self.definition),
                         AOS_LLM_KERNEL=str(self.root / 'missing-kernel'),
-                        FAKE_CALLS=str(self.calls), FAKE_SEND='0', FAKE_RECV='0',
+                        FAKE_CALLS=str(self.calls), FAKE_REQUESTS=str(self.root / 'requests.jsonl'),
+                        FAKE_SEND='0', FAKE_RECV='0',
                         PATH=str(self.root) + os.pathsep + os.environ['PATH'])
         self.command('aos-llm', '''import json, os, sys
 with open(os.environ['FAKE_CALLS'], 'a') as f:
     f.write(sys.argv[1] + '\\n')
 if sys.argv[1] == 'send':
-    sys.stdin.read()
+    with open(os.environ['FAKE_REQUESTS'], 'a') as f:
+        f.write(json.dumps(sys.stdin.read()) + '\\n')
     print('letter-1')
     sys.exit(int(os.environ['FAKE_SEND']))
 code = int(os.environ['FAKE_RECV'])
 if code == 0:
     print(json.dumps({'message': {'role': 'assistant', 'content': 'ok'}, 'endpoint': 'local'}))
 elif code == 1:
-    print('aos-llm: error: EndpointFailed fake', file=sys.stderr)
+    print(os.environ.get('FAKE_REPLY', ''))
+    print(os.environ.get('FAKE_ERROR', 'aos-llm: error: EndpointFailed fake'), file=sys.stderr)
 sys.exit(code)
 ''')
         self.command('aos-post', 'pass\n')
@@ -100,6 +103,51 @@ sys.exit(code)
         last = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
         self.assertEqual(last, {'role': 'assistant', 'content': 'ok'})
 
+    def test_budget_missing_cools_then_retries_same_request_and_clears(self):
+        msg = 'budget for this window (day) is used up; not run'
+        request = (self.stack / 'think/request.json').read_text()
+        history = (self.stack / 'history.jsonl').read_text()
+        observed = self.stack / 'observed.jsonl'
+        observed.write_text(json.dumps({'kind': 'think', 'letter': 'previous'}) + '\n')
+        before = observed.read_text()
+        self.wait(10)
+        result = self.wait(10, FAKE_RECV='1',
+                           FAKE_REPLY=json.dumps({'error': {'code': 'BudgetMissing', 'msg': msg}}),
+                           FAKE_ERROR='aos-llm: error: BudgetMissing ' + msg)
+        self.assertIn('agent-fsm: warning: BudgetMissing ' + msg, result.stderr)
+        self.assertNotIn('agent-fsm: error:', result.stderr)
+        rec = self.record()
+        self.assertEqual((rec['code'], rec['failures'], rec['dropped']), ('BudgetMissing', 1, 0))
+        self.assertEqual(rec['reason'], msg)
+        self.assertEqual(self.gap(rec), 30)
+        self.assertEqual(observed.read_text(), before)
+        self.assertEqual((self.stack / 'history.jsonl').read_text(), history)
+        self.assertEqual((self.stack / 'think/request.json').read_text(), request)
+        self.assertFalse((self.stack / 'think/pending.txt').exists())
+        self.wait(10)
+        self.assertEqual(self.sends(), 1)
+        self.assertFalse((self.stack / 'think/pending.txt').exists())
+        self.past()
+        self.wait(10)
+        self.assertEqual(self.sends(), 2)
+        sent = [json.loads(line) for line in (self.root / 'requests.jsonl').read_text().splitlines()]
+        self.assertEqual(sent, [request, request])
+        self.wait(0)
+        self.assertFalse((self.stack / cooldown.NAME).exists())
+        last = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
+        self.assertEqual(last, {'role': 'assistant', 'content': 'ok'})
+        self.assertEqual(len(observed.read_text().splitlines()), 2)
+
+    def test_non_budget_error_stdout_stays_brain_failed(self):
+        replies = [json.dumps({'error': {'code': 'EndpointFailed', 'msg': 'fake'}}),
+                   'not json', '{}', '[]', '{"error":null}', '{"error":"BudgetMissing"}']
+        for reply in replies:
+            with self.subTest(reply=reply):
+                (self.stack / 'think/pending.txt').write_text('letter-1\n')
+                result = self.wait(1, FAKE_RECV='1', FAKE_REPLY=reply)
+                self.assertIn('agent-fsm: error: BrainFailed', result.stderr)
+                self.assertEqual(self.record()['code'], 'BrainFailed')
+
     def test_send_failed_cools(self):
         result = self.wait(10, FAKE_SEND='3')             # 11-10 TS：send 失敗＝warning、留在 wait，不停
         self.assertIn('agent-fsm: warning: aos-llm send exited 3', result.stderr)
@@ -125,7 +173,33 @@ sys.exit(code)
     def test_endpoint_mismatch_still_rebuilds_while_cooling(self):
         cooldown.fail(str(self.stack), 'BrainFailed', 'x')
         (self.definition / 'llm.json').write_text('{"model":"other"}')
+        before = (self.stack / cooldown.NAME).read_text()
         self.wait(11)
+        self.assertEqual((self.stack / cooldown.NAME).read_text(), before)
+        self.assertEqual(self.sends(), 0)
+
+    def test_endpoint_mismatch_clears_budget_missing_cooldown(self):
+        cooldown.fail(str(self.stack), 'BudgetMissing', 'budget used up')
+        (self.definition / 'llm.json').write_text('{"model":"other"}')
+        self.wait(11)
+        self.assertFalse((self.stack / cooldown.NAME).exists())
+        self.assertEqual(self.sends(), 0)
+
+    def test_tuning_mismatch_clears_due_budget_missing_cooldown(self):
+        cooldown.fail(str(self.stack), 'BudgetMissing', 'budget used up')
+        self.past()
+        (self.definition / 'llm.json').write_text('{"model":"local","temperature":0.5}')
+        self.wait(11)
+        self.assertFalse((self.stack / cooldown.NAME).exists())
+        self.assertEqual(self.sends(), 0)
+
+    def test_stale_history_rebuild_keeps_budget_missing_cooldown(self):
+        cooldown.fail(str(self.stack), 'BudgetMissing', 'budget used up')
+        before = (self.stack / cooldown.NAME).read_text()
+        (self.stack / 'history.jsonl').write_text('{"role":"user","content":"changed"}\n')
+        self.wait(11)
+        self.assertEqual((self.stack / cooldown.NAME).read_text(), before)
+        self.assertEqual(self.sends(), 0)
 
 
 if __name__ == '__main__':

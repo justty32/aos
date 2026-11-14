@@ -207,3 +207,74 @@ lead 的 25 次花在哪（run4 history）：讀圖紙 2、git 1、寫工單與 
 
 - 暫存樹 `aos-daemon-ctl -d ~/code/astra-1114/tree/.stack shutdown`：`stopped (ctl seq 3)`；`pids.txt` 裡我記的 pid 全不在。活樹沒動。
 - 這一段沒有 repo 改動要進（只有本紀錄）；省錢 system 要不要變成正式定義，交頂層或使用者。
+
+## AK17：agent-fsm 被腦額度拒絕就停下（ok-astra 11-14 10:00～，頂層 09:47 裁示「收線之後接著做 AK17」）
+
+### 白話
+
+以前 worker 額度用完時，kernel 回 `BudgetMissing`，wait.py 把它當成「腦壞了」：退 1，loop 停下，daemon 表上留一行 `stopped`。子 agent 沒有 auto_restart，所以就一直停著，報告寫不出來，lead 也不知道它為什麼停。
+
+現在改成這樣：
+- 額度拒絕時不停下，留在 wait 冷卻，冷卻到了再寄同一份請求。
+- 範本帶一格 hook，會寄一封 BLOCKED 信給生它的 mom，同一段拒絕只寄一次。
+- 其他錯誤照舊。
+
+### 怎麼決定的
+
+- 事實：ok-astra-sol-2 只讀不寫，寫在 `~/code/astra-1114/ak17/facts.md`。kernel 的錯誤 JSON 就在 `recv --full` 的 stdout；子 agent 不知道誰是它的 mom；`spent: "wait"` 會默默卡住。
+- 小計劃 `~/code/astra-1114/ak17/plan.md` 給 Argon（agy Gemini 4 Argon High）看過。採納的：
+  - A2：llm.json 改了、要重組時，先清 `BudgetMissing` 冷卻。
+  - A3：brain_notify 自己記 `notified.json`，不靠 cooldown.json 的寫入順序。
+  - A4：用 mailbox 協議寄信，寄件人是 agent 自己。
+  - A5：測試不寫死 `error:`。
+  - B2：`subagent add` 預設填好 `AOS_NOTIFY_BOX`。
+  - B3：只處理 `BudgetMissing`，`DeadlineBad`、`SlotMissing` 不併進來。
+- A1「沒掛 hook 就成了殭屍」：`ctl ls --long` 本來就看得到 COOLDOWN 和 LAST ERROR 欄，所以不另外處理。
+
+### 改了什麼
+
+| 檔 | 改動 |
+|---|---|
+| `proto8/templates/agent-fsm/wait.py` | recv 退非 0 時讀 stdout；`error.code == "BudgetMissing"` 時：<br>• 觸發 `brain_failed`（name 是 `BudgetMissing`，reason 是 kernel 的 msg）<br>• 記冷卻，印一行 warning，退 10<br>• 不寫 observed<br>endpoint 或調整鍵改變、退 11 重組時，先清掉 `BudgetMissing` 冷卻 |
+| `proto8/templates/agent-fsm/hooks.json`、`README.md` | 預設掛 `brain_notify`（`brain_failed`，條件 `["BudgetMissing"]`，on_error continue，timeout 10000 ms）；README 加一段說明 |
+| 新 `proto8/lib/agent/brain_notify/_entry` | 寄一封 BLOCKED 信到 `AOS_NOTIFY_BOX`（`aos-mailbox --stack <agent> send --from <agent>`）。<br>代號相同、history 行數也沒變＝同一段拒絕，不重寄。<br>沒設 box、或自己出任何錯：都只印 warning、退 0 |
+| `proto8/lib/agent/subagent/_entry`、`_tooldef.json` | `op add` 時 envs 沒給 `AOS_NOTIFY_BOX`，就預設成 mom 的 `<stack>/mailbox`（明寫的值、包括空字串，都照原樣） |
+| 測試 | `templates/tests/agent-fsm/test_cooldown.py`、`test_hooks.py`、新 `test_brain_notify.py`、`lib/agent/subagent/tests/test_subagent.py` |
+| knowledge | `knowledge/aos/brain.json`（priority 補一句額度拒絕時 agent 這邊怎麼做）、`me/self_hook.json`（brain_failed 的 name 多了 BudgetMissing） |
+| 文件 | `templates/docs/02-agent-fsm.md`（舊句「BudgetMissing＝退 1」改掉，加一條「額度拒絕」）、`lib/docs/03-索引-agent等.md`（brain_notify 一行）、`cmd/aos-agent/docs/06-hook.md`（brain_failed 的代號）、`docs/NORMS/附錄4-持久檔.json`（`hooks/brain_notify/notified.json`） |
+
+寫碼分工：
+- sol-3 寫 wait.py 和它的測試：第一個回合只列了必讀重點、沒改檔，催一次後完成。
+- sol-4 寫 brain_notify 和 subagent：自己修掉了「notified.json 壞了就永遠不寄」的問題。
+- 寄件人漏了 `--from`：ok-astra 補上，測試也跟著改。
+
+### 測試
+
+- 在 24bc28e23 的複本上：test_cooldown、test_hooks、test_brain_notify、subagent 全過。
+- agent-fsm 整套 113 個測試中有 11 個失敗。其中 5 個（test_do_task_fold 4 個、test_goal 1 個）在沒改的 24bc28e23 上重跑，也是 5 個全失敗，所以是舊 base 本身的問題，不是這次改動造成的。換到 HEAD 之後全過（見下）。
+- 轉到 HEAD c4ac4867b 的複本（`~/code/astra-1114/ak17/head`）：
+  - 上游 c3c1877ea 在 subagent 的 argv 插了 `--stack`，所以手動合進來，sol-4 那 3 個新測試的期待值也補上 `--stack`。
+  - subagent：26 個測試過（跳過 2 個）。
+  - test_cooldown、test_hooks、test_brain_notify：過。
+  - agent-fsm 整套：**113 個全過**（95 秒），在 24bc28e23 上那 11 個失敗也沒出現。
+  - 另外讀到這幾份檔的 lib 測試：test_hook_run、fork、test_on_clock_kernel、test_hooks_engine，35 個全過。
+- 暫存樹端到端（ok-astra-sol-E1，額度先設 1）：
+  - 被拒時，daemon 表上仍是 running，`ls --long` 看得到冷卻。
+  - gpt-lead-k 的 mailbox 剛好收到 1 封 BLOCKED 信，`AOS_NOTIFY_BOX` 是 subagent 自動填的。
+  - 額度改成 10 之後重試成功，冷卻也清掉了。
+  - 收尾：rm 那隻，暫存樹 shutdown。
+
+### 換樹時要帶進活樹的檔（lib 要等換樹才生效）
+
+- `proto8/templates/agent-fsm/wait.py`、`hooks.json`、`README.md`
+- `proto8/lib/agent/brain_notify/`（新）
+- `proto8/lib/agent/subagent/_entry`、`_tooldef.json`
+- `proto8/knowledge/aos/brain.json`、`proto8/knowledge/aos/me/self_hook.json`
+- 測試和文件不用帶進活樹；它們跟 repo 一起進。
+- 注意：已經在跑的 agent 是從自己的定義讀 `hooks.json`。舊定義的複本（例如暫存樹 defs/）要自己補掛 `brain_notify`；不掛的話，額度拒絕時一樣不會停，只是不會寄信。
+
+### 行為改變（要知道的）
+
+- 條件只寫 `BrainFailed` 的 hook，額度拒絕時不會再被觸發。repo 裡沒有別的地方依賴這一點。
+- 預算設成 `window: "all"` 時永遠不會重置：agent 每 30 分鐘重試一次，直到有人加額度或停掉它。信只寄第一封。
+- 重寄時如果 deadline 已經過了，kernel 回 `DeadlineBad`，走原本的 BrainFailed（停下）。這點寫下來，沒處理。

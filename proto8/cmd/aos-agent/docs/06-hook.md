@@ -14,7 +14,7 @@
 | `after_queue` | idle：信進 history 之後 | `letter`、`content` | 不收 condition | 不能 |
 | `before_tool` | act：工具要跑之前 | `name`、`id`、`arguments`（解開的 JSON） | 工具名 | 改 `arguments`、攔下不跑 |
 | `after_tool` | act：工具跑完、結果進 history 之前（被攔下的不觸發） | 上面三個＋`content`、`code`（逾時＝null）、`timed_out` | 工具名 | 改 `content` |
-| `brain_failed` | wait：`BrainFailed`／`SendFailed`／`ReplyBad` 那一刻 | `name`（代號）、`reason` | 代號 | 不能 |
+| `brain_failed` | wait：`BrainFailed`／`SendFailed`／`ReplyBad`／`BudgetMissing`（額度拒絕，11-14 AK17）那一刻 | `name`（代號）、`reason` | 代號 | 不能 |
 | `tool_added` | think：工具清單多了名字（一個名字一次；第一次只記不觸發） | `name`、`path` | 工具名 | 不能 |
 | `after_start` | loop 起來、第一次之前（loop.json 的 `on_start` → `lib/agent/hook_fire`） | — | 不收 condition | 不能 |
 | `after_stop` | loop 要退時（`on_stop`：stop、sleep、rm、daemon 收工、出錯停；kill -9 不跑） | `code`（要退的碼）、`signal`（收到的訊號，沒有＝null） | 不收 condition | 不能 |

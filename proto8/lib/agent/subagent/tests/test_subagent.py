@@ -121,6 +121,7 @@ class Subagent(unittest.TestCase):
         out = self.ok({"op": "add", "def": "defs/helper", "name": "kid", "ws": "kid", "limits": {"mem_mb": 64}, "timeout_s": 5})
         self.assertIn("added kid (stack %s); subagents 1/4" % (self.daemon / "procs" / "kid"), out)
         self.assertEqual(self.calls("ctl")[-1], ["ctl", "add", "--stack", str(self.daemon / "procs/kid"), "--name", "kid", "--ws", "kid", "--limits", '{"mem_mb": 64}',
+                                                 "--envs", "AOS_NOTIFY_BOX=%s" % (self.mom / "mailbox"),
                                                  "--timeout-s", "5", "defs/helper"])
         self.assertTrue((self.ws / "kid").is_dir())
         self.assertEqual(self.record(), [{"name": "kid", "stack": str(self.daemon / "procs/kid")}])
@@ -139,6 +140,21 @@ class Subagent(unittest.TestCase):
         (self.cell / "subagents.json").write_text(json.dumps([{"name": "kid", "stack": "procs/kid"}]))
         self.assertEqual(self.ok({"op": "ls"}), "subagents 0/4\n")
         self.assertEqual(self.record(), [])
+
+    def test_add_keeps_explicit_notify_box(self):
+        for i, box in enumerate(("/x", "")):
+            with self.subTest(box=box):
+                self.ok({"op": "add", "def": "d", "name": "kid%d" % i,
+                         "envs": {"AOS_NOTIFY_BOX": box, "LANG": "C"}})
+                self.assertEqual(self.calls("ctl")[-1],
+                                 ["ctl", "add", "--stack", str(self.daemon / ("procs/kid%d" % i)), "--name", "kid%d" % i,
+                                  "--envs", "AOS_NOTIFY_BOX=" + box, "--envs", "LANG=C", "d"])
+
+    def test_add_defaults_notify_box_with_other_envs(self):
+        self.ok({"op": "add", "def": "d", "name": "kid", "envs": {"LANG": "C"}})
+        self.assertEqual(self.calls("ctl")[-1],
+                         ["ctl", "add", "--stack", str(self.daemon / "procs/kid"), "--name", "kid", "--envs", "AOS_NOTIFY_BOX=%s" % (self.mom / "mailbox"),
+                          "--envs", "LANG=C", "d"])
 
     def test_each_targeted_op(self):
         self.ok({"op": "add", "def": "d", "name": "kid"})

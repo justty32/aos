@@ -11,7 +11,7 @@
                                "stack": {"type": "string", "description": "add: its stack folder"},
                                "stack_json": {"type": ["object", "string"], "description": "add, instead of stack: a directive kept as written"},
                                "limits": {"type": "object", "description": "add: resource limits, like {\"mem_mb\": 512}"},
-                               "envs": {"type": "object", "additionalProperties": {"type": "string"}, "description": "add: environment values for it"},
+                               "envs": {"type": "object", "additionalProperties": {"type": "string"}, "description": "add: environment values for it. AOS_NOTIFY_BOX defaults to the parent's stack/mailbox unless explicitly given (even an empty string)."},
                                "auto_restart": {"type": "boolean", "description": "add: restart it whenever it exits"},
                                "on_queued": {"type": "string", "enum": ["fail", "ok"], "description": "add, start, wake: fail (default) or ok when still queued"},
                                "purge": {"type": "boolean", "description": "rm: also delete its stack"},

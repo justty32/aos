@@ -47,6 +47,8 @@ if sys.argv[1] == 'send':
 code = int(os.environ.get('FAKE_RECV', '0'))
 if code == 0:
     print(os.environ.get('FAKE_REPLY', json.dumps({'message': {'role': 'assistant', 'content': 'ok'}})))
+elif code == 1:
+    print(os.environ.get('FAKE_REPLY', ''))
 sys.exit(code)
 """)
 
@@ -228,6 +230,19 @@ sys.exit(code)
         self.run_cell("wait", code=1, FAKE_REPLY="nope")
         self.assertEqual([(e["name"], e["reason"][:15]) for e in self.events()],
                          [("BrainFailed", "aos-llm recv ex"), ("ReplyBad", "aos-llm recv di")])
+
+    def test_budget_missing_hook_gets_kernel_reason_not_brain_failed(self):
+        msg = 'budget.senders key "worker" (sender worker): max_calls 150 reached in this window (day); not run'
+        self.declare({"budget": {"event": "brain_failed", "condition": ["BudgetMissing"],
+                                 "handler": self.hook("budget")},
+                      "broken": {"event": "brain_failed", "condition": ["BrainFailed"],
+                                 "handler": self.hook("broken")}})
+        (self.stack / "think").mkdir()
+        (self.stack / "think" / "pending.txt").write_text("letter-1\n")
+        self.run_cell("wait", code=10, FAKE_RECV="1",
+                      FAKE_REPLY=json.dumps({"error": {"code": "BudgetMissing", "msg": msg}}))
+        self.assertEqual([(e["event"], e["hook"], e["name"], e["reason"]) for e in self.events()],
+                         [("brain_failed", "budget", "BudgetMissing", msg)])
 
     def test_tool_added_first_run_only_records(self):
         self.declare({"new": {"event": "tool_added", "handler": self.hook("new")}})

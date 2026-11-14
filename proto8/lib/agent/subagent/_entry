@@ -5,6 +5,7 @@
 # 介面（lib/README 的契約）：stdin 收 {"op": …, …}；別的鍵＝ArgumentsBad。
 #   add {def | def_json, name, ws | ws_json, stack | stack_json, limits?, envs?, auto_restart?, timeout_s?, on_queued?}
 #        先對帳、數配額（滿＝SubagentSlotMissing、不寄信）→ ctl add（旗標一對一，同 agents_ctl；../agents_cmd.py）→ 記帳；印 added … ; subagents N/MAX
+#        envs 沒給 AOS_NOTIFY_BOX 時補成父 agent 的 <stack>/mailbox（ctl who --json 的 stack）；明給的值（含空字串）優先。
 #   rm {name, purge?, timeout_s?}  先抄公開子帳 → ctl rm [--purge -y]（預設留 stack）→ 從帳上拿掉
 #   stop／sleep {name, timeout_s?}；start／wake {name, timeout_s?, on_queued?}；pause／resume／state {name}＝ctl 同名動作 --target
 #   ls {long?, json?}  一行一隻「NAME TAB STATE TAB WORKSPACE TAB QUEUED TAB REASON」（同 ctl ls；排隊中的＝NAME queued - - letter L），末行 subagents N/MAX；
@@ -177,6 +178,9 @@ if op == "add":
     if len(alive) >= n:
         die("SubagentSlotMissing", "you already have %d of max %d subagents (%s); remove one with op rm first "
             "(max_subagents is set in %s of your definition or your stack)" % (len(alive), n, ", ".join(k["name"] for k in alive) or "-", CFG))
+    args["envs"] = dict(args.get("envs", {}))
+    args["envs"].setdefault("AOS_NOTIFY_BOX", os.path.join(ME["stack"], "mailbox"))
+    argv = cmd.add_argv(args)
     cmd.make_ws(args)
     if "stack" not in args and "stack_json" not in args:
         # 預設把子放自己 stack 隔壁，不拿換過位置的表檔所在夾當 daemon。
