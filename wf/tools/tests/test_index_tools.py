@@ -120,6 +120,27 @@ class IndexToolsTests(unittest.TestCase):
         self.assertEqual(tables['docs/_index.json']['one']['description'], 'one — a single string')
         self.assertEqual(tables['docs/one/_index.json']['_description.json']['description'], 'one — a single string')
 
+    def test_entry_only_folder(self):
+        # ok-astra 11-14 advice: a tool/hook folder with only _entry takes its description from the _entry header
+        for rel, text in [('docs/hooks/notify/_entry', '#!/usr/bin/env python3\n# notify - tell the box once。More detail.\n# second comment line\nimport os\n'),
+                          ('docs/hooks/noop/_entry', '#!/bin/sh\n\n# noop: do nothing\ncat > /dev/null\n'),
+                          ('docs/hooks/code/_entry', '#!/bin/sh\nexit 0\n'),                       # first real line is code: no sentence
+                          ('docs/hooks/argv/_entry', '["python3", "x.py"]\n'),                        # JSON argv: no sentence
+                          ('docs/hooks/argv2/_entry', '["python3", "y.py"]\n'),
+                          ('docs/hooks/both/_entry', '#!/bin/sh\n# both - from the entry\n'),
+                          ('docs/hooks/both/README.md', '# both — from the readme\n')]:
+            path = self.root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding='utf-8')
+        subprocess.run(['git', '-C', str(self.root), 'add', '-A'], check=True)
+        tables, missing, _scopes, _in = self.build({'code': 'the programs', 'docs/archive': 'old things', 'docs/hooks': 'the hooks', 'docs/hooks/argv': 'hand line'})
+        hooks = tables['docs/hooks/_index.json']
+        self.assertEqual(hooks['notify']['description'], 'tell the box once。')      # shebang skipped, folder name stripped, cut at the first 。
+        self.assertEqual(hooks['noop']['description'], 'do nothing')
+        self.assertEqual(hooks['both']['description'], 'both — from the readme')    # README still wins over _entry
+        self.assertEqual(hooks['argv']['description'], 'hand line')                  # index_gen_desc.json still wins
+        self.assertEqual([m for m in missing if m.endswith('/')], ['docs/hooks/argv2/', 'docs/hooks/code/'])  # _entry with no comment line
+
     def test_check_description_lines(self):
         (self.root / 'code/_index.json').write_text(json.dumps({'x.py': {'description': ['does x', 'second line']}}), encoding='utf-8')
         ok = check(self.root, 'code')

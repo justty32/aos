@@ -13,7 +13,7 @@
 門檻：夾裡直接的東西（進版控的檔與子夾，`_index.json` 自己不算）超過設定檔的 more_than 個才放；不到的夾不放，上一層那一項也不帶 `index`
 （使用者 11-13「index範圍按照11-12的門檻。」；11-12 的門檻＝超過 15 個，出處 proto8/knowledge/README.md、thinking/2026-11/12/knowledge-removal.md）。
 列哪些：`git ls-files` 有的檔，與裡面有這種檔的夾；`_index.json` 自己不列。夾的那一項，在範圍內就帶 `index` 連到它自己的 `_index.json`。
-一句話怎麼認：md 取第一個標題（分檔取導航行的「涵蓋：…」）；夾取它的 README.md／INDEX.md（工具夾取 _tooldef.json／_metainfo.json），沒有就取同名 `夾.md` 的（分檔夾）；
+一句話怎麼認：md 取第一個標題（分檔取導航行的「涵蓋：…」）；夾取它的 README.md／INDEX.md（工具夾取 _tooldef.json／_metainfo.json），都沒有就取 `_entry` 檔頭（跳過 shebang 的第一個註解行），再沒有就取同名 `夾.md` 的（分檔夾）；
 都沒有時用設定檔的通用句（usual_dirs／usual_files：tests、src、.gitignore 這類名字就說明用途的）；json 取 description／summary／$comment／title（knowledge 節點取 `_description` 那段的標題；`_description.json` 整份是一段正文、同樣取標題），
 一段文字寫成字串或字串陣列（一行一個元素）都認（使用者 11-13，proto8/thinking/2026-11/13/text-as-string-array.md）：description 那幾個鍵是陣列時取第一行有字的；
 夾沒有 README.md／INDEX.md 時取它的 `_description.json`；
@@ -137,6 +137,21 @@ def file_desc(root, path):
     return codemap_lib.clean(codemap_lib.text_desc(text, path), [name, stem])
 
 
+def entry_desc(root, path):
+    """夾裡 `_entry` 檔頭的一句話：跳過 shebang，取第一個註解行（`# 夾名 - 說明` 去掉夾名）；第一個有意義的行是程式碼或 JSON 就回 ""。"""
+    full = os.path.join(root, path, "_entry")
+    if os.path.islink(full):
+        return ""
+    try:
+        with open(full, encoding="utf-8") as f:
+            text = f.read(16384)
+    except (OSError, UnicodeDecodeError):
+        return ""
+    if text.lstrip()[:1] in ("{", "["):                 # JSON 的 _entry（argv）沒有說明句
+        return ""
+    return codemap_lib.clean(codemap_lib.text_desc(text, path + "/_entry"), [os.path.basename(path), "_entry"])
+
+
 def load(name):
     with open(os.path.join(HERE, name), encoding="utf-8") as f:
         return json.load(f)
@@ -187,6 +202,10 @@ def build(root, stage=None, config=None):
                 d = file_desc(root, path + "/" + entry)
                 if d:
                     return d
+        if "_entry" in kids.get(path, {}):              # 只有 _entry 的工具／hook 夾：取 _entry 檔頭的一句話（最後才看，寫好的說明檔優先）
+            d = entry_desc(root, path)
+            if d:
+                return d
         if path + ".md" in fileset:                     # x.md 拆出來的同名分檔夾
             d = file_desc(root, path + ".md")
             if d:
