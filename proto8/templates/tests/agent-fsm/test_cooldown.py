@@ -26,6 +26,7 @@ class Cooldown(unittest.TestCase):
         (self.definition / 'llm.json').write_text('{"model":"local"}')
         self.calls = self.root / 'calls.txt'
         self.env = dict({k: v for k, v in os.environ.items() if not k.startswith('AOS_')}, AOS_STACK=str(self.stack), AOS_CD=str(self.definition),
+                        AOS_LLM_KERNEL=str(self.root / 'missing-kernel'),
                         FAKE_CALLS=str(self.calls), FAKE_SEND='0', FAKE_RECV='0',
                         PATH=str(self.root) + os.pathsep + os.environ['PATH'])
         self.command('aos-llm', '''import json, os, sys

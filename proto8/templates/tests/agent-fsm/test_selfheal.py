@@ -67,6 +67,7 @@ class Base(unittest.TestCase):
         self.bin.mkdir()
         self.env = dict({k: v for k, v in os.environ.items() if not k.startswith('AOS_')},
                         AOS_STACK=str(self.stack), AOS_CD=str(self.definition), FAKE_CALLS=str(self.calls),
+                        AOS_LLM_KERNEL=str(self.root / 'missing-kernel'),
                         PATH=str(self.bin) + os.pathsep + os.environ['PATH'])
         self.command('aos-llm', FAKE_LLM)
         self.command('aos-post', FAKE_POST)
@@ -176,6 +177,7 @@ class QuietRecv(Base):
     def setUp(self):
         super().setUp()
         self.wait(10)
+        self.env.pop('AOS_LLM_KERNEL')
 
     def recvs(self):
         return [a for a in self.call_log() if a[0] == 'recv']
@@ -237,10 +239,45 @@ class SendFailed(Base):
         self.wait(0)
         self.assertFalse((self.stack / cooldown.NAME).exists())
 
-    def test_unset_kernel_waits(self):
-        result = self.wait(10, FAKE_SEND='1', AOS_LLM_KERNEL='')
-        self.assertIn('agent-fsm: warning:', result.stderr)
-        self.assertNotIn('agent-fsm: error', result.stderr)
+    def assert_missing_kernel_stops(self):
+        request = self.stack / 'think/request.json'
+        before = request.read_bytes()
+        result = self.wait(1)
+        self.assertIn('agent-fsm: error: LlmKernelMissing AOS_LLM_KERNEL is not set', result.stderr)
+        self.assertIn('add it again with the variable', result.stderr)
+        self.assertFalse((self.stack / cooldown.NAME).exists())
+        self.assertEqual(request.read_bytes(), before)
+        self.assertEqual(self.call_log(), [])
+        self.assertFalse((self.stack / 'think/reply').exists())
+
+    def test_unset_kernel_stops_without_cooldown(self):
+        self.env.pop('AOS_LLM_KERNEL')
+        self.assert_missing_kernel_stops()
+
+    def test_empty_kernel_stops_without_cooldown(self):
+        self.env['AOS_LLM_KERNEL'] = ''
+        self.assert_missing_kernel_stops()
+
+    def test_blank_kernel_stops_without_cooldown(self):
+        self.env['AOS_LLM_KERNEL'] = ' \t '
+        self.assert_missing_kernel_stops()
+
+    def test_missing_kernel_fires_brain_failed(self):
+        self.env.pop('AOS_LLM_KERNEL')
+        marker = self.root / 'brain-failed.json'
+        handler = self.definition / 'failed'
+        handler.write_text('#!' + sys.executable + '\nimport json,sys\n'
+                           'from pathlib import Path\nPath(' + repr(str(marker)) + ').write_text(json.dumps(json.load(sys.stdin)))\n')
+        handler.chmod(0o755)
+        (self.definition / 'interfaces.json').write_text(json.dumps({'aos-agent': {
+            'llm': 'llm.json', 'hooks': 'hooks.json'}}))
+        (self.definition / 'hooks.json').write_text(json.dumps({'hooks': {'missing': {
+            'event': 'brain_failed', 'condition': 'LlmKernelMissing',
+            'handler': str(handler)}}}))
+        self.assert_missing_kernel_stops()
+        event = json.loads(marker.read_text())
+        self.assertEqual(event['name'], 'LlmKernelMissing')
+        self.assertIn('this agent has no brain', event['reason'])
 
     def test_send_failure_with_kernel_present_keeps_cooldown(self):
         """kernel 資料夾在、send 還是失敗：照冷卻間隔，不每拍重寄。"""

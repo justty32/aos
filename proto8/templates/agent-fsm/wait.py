@@ -33,8 +33,9 @@
 #     **改了 P-20 在這個情況的行為：kernel 不在＝等它來，不停下。** 記冷卻時 kernel 資料夾解不到，reason 尾巴多寫
 #     「(llm kernel folder not found)」；之後冷卻中而 AOS_LLM_KERNEL 已解得到資料夾＝當作到了、立刻寄（I3 C3：不用等滿 30 分鐘）。
 #     kernel 資料夾在、send 還是失敗（例 body 壞）＝照冷卻間隔重試，不每拍刷屏。
+#   11-14：正要寄時 AOS_LLM_KERNEL 沒設或去空白後為空＝先 brain_failed，再 LlmKernelMissing 退 1、不記冷卻，request.json 留著；環境不會自己補上，要重掛。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1——StackMissing、BrainFailed（kernel 回錯）、
-#   SendFailed（aos-llm 起不來、或 send 退 0 卻沒印信件名稱）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
+#   LlmKernelMissing（寄之前 AOS_LLM_KERNEL 沒設或空白）、SendFailed（aos-llm 起不來、或 send 退 0 卻沒印信件名稱）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
 # hook（lib/agent/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：BrainFailed、SendFailed（send 退非 0、或退 0 沒印信名）、ReplyBad
 #   照原本行為退出／記冷卻之前觸發 brain_failed（name＝代號、reason＝這格那行的原因）；hook 停下＝HookFailed／HooksBad 退 1（冷卻不記）。
 # --help 印英文用法；Ctrl-C 退 130。
@@ -98,13 +99,15 @@ Cooldown after a failure of the outside service, recorded in $AOS_STACK/cooldown
     warning line, exit 10 and stay in wait; the agent does not stop. This changes P-20 for
     this case: no llm kernel yet = wait for it, do not stop.
   BrainFailed (the kernel replied with an error): exit 1 as before.
+  LlmKernelMissing (AOS_LLM_KERNEL unset or blank before sending): run brain_failed, exit 1
+    without cooldown, keep request.json; add the agent again with the variable.
 While that cooldown runs, a request about to be sent is held back (exit 10, stay in wait);
 once it is due the same request is sent again. A SendFailed cooldown recorded while the
 kernel folder was missing counts as due as soon as $AOS_LLM_KERNEL resolves to a folder.
 A good reply deletes cooldown.json.
-Hooks: brain_failed runs on BrainFailed, SendFailed and ReplyBad before the cell goes on as
+Hooks: brain_failed runs on LlmKernelMissing, BrainFailed, SendFailed and ReplyBad before the cell goes on as
 above (name = that code, reason = this cell's reason). A failing hook = HookFailed, exit 1.
-On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
+On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1 (including LlmKernelMissing).
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
@@ -320,6 +323,12 @@ if not name:                                     # 還沒寄
         sys.exit(REBUILD)                        # 腦設定改過（多半是上次 kernel 回錯、人改了代號再起）：brain 重組再寄
     if stale_request(body):
         sys.exit(REBUILD)                        # 請求比 history 舊（reset／clone 後留下的）：brain 重組再寄
+    if not os.environ.get("AOS_LLM_KERNEL", "").strip():
+        reason = ('AOS_LLM_KERNEL is not set, so this agent has no brain; add it again with the variable, e.g. subagent add '
+                  'envs {"AOS_LLM_KERNEL": "<llm kernel stack>"} or aos-agent ctl add --envs AOS_LLM_KERNEL=<stack>, '
+                  "or set it in the daemon's .env")
+        brain_failed("LlmKernelMissing", reason)
+        die("LlmKernelMissing", reason)
     phase, rec = cooldown.state(stack)
     if phase == "cooling" and not (rec.get("code") == "SendFailed" and KERNEL_GONE in str(rec.get("reason"))
                                    and kernel_dir()):

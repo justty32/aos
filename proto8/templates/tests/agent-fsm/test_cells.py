@@ -27,6 +27,7 @@ class Cells(unittest.TestCase):
         (self.definition / 'tools.json').write_text('{}')
         (self.definition / 'llm.json').write_text('{"model":"local"}')
         self.env = dict(os.environ, AOS_STACK=str(self.stack), AOS_CD=str(self.definition),
+                        AOS_LLM_KERNEL=str(self.root / 'missing-kernel'),
                         PATH=str(self.root) + os.pathsep + os.environ['PATH'])
         self.command('aos-tools', '''import json, sys
 if 'ls' in sys.argv:
