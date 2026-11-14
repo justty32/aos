@@ -34,6 +34,11 @@
 | D2 | `defs/gpt-lead`、`defs/gpt-worker` 要不要補 `brain_notify` hook（線星 AK17 留的題） | **補**。不補的話，額度被拒時一樣不會停，只是不寄信給 mom。補了，額度被拒時 gpt 隊長會收到 BLOCKED 信。用 `extras.sh brainnotify`，預演過，退回也驗過 |
 | D3 | `impls/aos-llm-kernel` 今晚刪不刪（使用者已准刪） | ok-sec 的 Q10「一信一檔」提到要改 aos-llm-kernel 的 C++。**刪之前先問 ok-sec 一句**：它要的話就留到 Q10 再說；不要就照准的刪。刪的做法：已進版控的檔走 `commit-request --rm`；未進版控的 `bin/`、`build/` 搬進 `~/.aos/saves/tree-swap/`，不刪 |
 
+- **使用者 11-14 13:33 回了，四題都照推薦**（`aos-user verify` 過，level 1）：
+  - q1（D0）：16:00 額度重置之後、各線收工時換；
+  - q2（D1）：commit-request 連結先不移；
+  - q3（D2）：gpt 兩個定義補 brain_notify，所以第 6 步要加 `brainnotify`；
+  - q4（D3）：刪 aos-llm-kernel 前先問 ok-sec，ok-sec 不要就照准的刪。
 - D0～D3 已寫成一封 decide 信寄進使用者專區（11-14 13:3x，信名 `01794634349835432556.3092424.2293548`，q1～q4），會出現在全景頁；「aos-comm 上 PATH」（可選）另寄一封。
 
 ## 步驟表
@@ -48,7 +53,7 @@
 | 3 | 關畫面，關樹裡其他行程 | 每個 sock 各下一次 `tmux -S /run/user/1000/aos-tty-1000/<sock> kill-server`。`aos-user serve`、全景頁若跑在樹裡，到它們的視窗按 Ctrl-C。cwd 在 `~/aos-home` 的殼要 `cd ~` | — | — | — |
 | 4 | **先 check**，看到兩個 green 為止 | `bash ~/repo/aos/proto8/extras/tree-swap/swap.sh --ref $PIN check` 和 `bash ~/repo/aos/proto8/thinking/2026-11/14/tree-swap-1114/extras.sh --ref $PIN check`，都要加 `TS_BUILD=$HOME/code/ts-1114/src2` | 0.7 s | `check: green`（兩支都要） | 出現 `RED: … still running` 就照它列的 pid 關掉再 check。其他 RED 停下，看訊息 |
 | 5 | 換四夾＋C++ 九支 | `TS_BUILD=$HOME/code/ts-1114/src2 bash …/swap.sh --ref $PIN all` | 2.8 s | `verify: green (folders and 10 bins)`，最後會印 `kept …` 清單 | 跑到一半紅燈就跑第 R 步 |
-| 6 | 換 agents／defs 的幾件 | `bash …/extras.sh --ref $PIN hooks env guard verify`（D2 選補的話，在 `verify` 前面加 `brainnotify`） | 2.4 s | 印出 `guard probe gpt-lead: 0 0 0 0 10 (ok)`、`guard probe gpt-worker: 0 0 10 0 10 (ok)` 和 `verify: green`。記下它印的 `run=…` 夾（退回時要用） | 第 R 步 |
+| 6 | 換 agents／defs 的幾件 | `bash …/extras.sh --ref $PIN hooks env guard brainnotify verify`（brainnotify 是使用者 q3 定的） | 2.4 s | 印出 `guard probe gpt-lead: 0 0 0 0 10 (ok)`、`guard probe gpt-worker: 0 0 10 0 10 (ok)` 和 `verify: green`。記下它印的 `run=…` 夾（退回時要用） | 第 R 步 |
 | 7 | 起樹 | 原本起樹的視窗前景跑：`cd ~/aos-home && source env.sh && aos-exec root` | 0.15 s | `aos-daemon-ctl -d ~/aos-home/.stack ls`：`_clock`、`_sweeper`、`foreman` running。`aos-daemon-ctl -d ~/aos-home/ws/.stack ls`：各 agent 與 `llm-gpt` running | 停樹（第 2、3 步）後跑第 R 步 |
 | 8 | 重開畫面 | `aos-agent open -t repo-aos`，其他照第 1 步記下的開回來 | — | 畫面出得來 | — |
 | 9 | smoke | `ls ~/aos-home/lib/agent/screen_linger ~/aos-home/lib/agent/brain_notify ~/aos-home/lib/agent/mailbox_read`；`cat ~/aos-home/lib/.aos-source.json` | 0.1 s | 三夾都在；章裡 `commit` 是 `$PIN` | — |
