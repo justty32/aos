@@ -47,6 +47,12 @@
  "misc-1114.md": {
   "description": "線雜（11-14）：eca_main 來信七項與線庚剩的、T45～T48 的收尾線；做到調查、施工圖與暫存樹搭好就交棒給 ok-misc，程式一行沒改"
  },
+ "ok-devt-1114": {
+  "description": "分檔夾：ok-devt（11-14）：daemon 給 agent 的「身分」與「事件」模型——設計過 Argon 一輪已定稿；ok-limits 三條小修已審（nofile 已同意先交，B7 要改名 cause，who 再加 parent）；第 1 期交 ok-limits 施工"
+ },
+ "ok-devt-1114.md": {
+  "description": "ok-devt（11-14）：daemon 給 agent 的「身分」與「事件」模型——設計過 Argon 一輪已定稿；ok-limits 三條小修已審（nofile 已同意先交，B7 要改名 cause，who 再加 parent）；第 1 期交 ok-limits 施工"
+ },
  "onboard-1114": {
   "description": "分檔夾：onboard-1114：派 agent 時的配給包（system prompt、工具、功能、權限）規劃（線 ok-onboard，只規劃）"
  },
