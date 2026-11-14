@@ -41,7 +41,7 @@
 - **open｜apply-ideas 剩項**：序 5 條文日那批文件句子、序 6 aos-serve（沒做）；K-1 見上一行 → [apply-ideas 02](../proto8/thinking/2026-11/06/apply-ideas/02-排程.md)
 - **open｜LLM kernel `_metainfo` 第二步**：`llm_tokens` 預估額度、閘門帶 `from` 做按函數統計（沒做） → [10-24 § LLM kernel 下一步](session_logs/2026-10-parts/12-10-24.md#llm-kernel-下一步從-session-log-逐字搬來)
 - **暫停｜arcagi**：等 aos 大修完再續，待裁題跟著擱 → [11-09 日誌](session_logs/2026-11/2026-11-09.md)、[11-10 日誌](session_logs/2026-11/2026-11-10.md)
-- **暫停｜arknights-kb**：五輪做完後暫停；`~/code/playground-ak5` 不刪 → [27 總結](../proto8/thinking/2026-11/07/arknights-kb/27-第五輪總結簡報.md)、[交棒](../proto8/thinking/2026-11/07/arknights-kb/交棒.md)
+- **凍結｜arknights-kb**（使用者 11-14：凍結到至少 2026-12-14，見 [user](workflows/common/user.md)）：五輪做完後暫停；`~/code/playground-ak5` 不刪 → [27 總結](../proto8/thinking/2026-11/07/arknights-kb/27-第五輪總結簡報.md)、[交棒](../proto8/thinking/2026-11/07/arknights-kb/交棒.md)
 - 導覽：[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/docs/CONCEPTS.md)、[NORMS](../proto8/docs/NORMS.md)；停在半路的見 [restart](../proto8/thinking/2026-10/11/restart/README.md) §4
 
 ## 各工作流 session-log

@@ -12,10 +12,10 @@
   "description": "11-13 各 agent 對 aos 的意見彙整（給 repo-aos）"
  },
  "any-resource-os": {
-  "description": "任意資源的作業系統（線資，11-13 晚起）的分檔夾；進行中，結論與待裁清單完成後寫在這裡。入口 any-resource-os.md。"
+  "description": "任意資源的作業系統（線資，11-13 晚起）的分檔夾；已被 11-14 頭腦風暴輪 取代，作參考：使用者 11-14 說太早規劃、先發想，06 的待裁表 D1～D16 不裁、自然浮現。入口 any-resource-os.md。"
  },
  "any-resource-os.md": {
-  "description": "任意資源的作業系統（線資 11-13 晚規劃，進行中）：aos＝能優化任意資源、任意目標的作業系統，主軸是把 agent 逐步沉澱成沒有機率性的純函數；照正統規劃流程走（sonnet 蒐集→opus 備料→fable 設計→opus 實作計劃→Argon 審→改定），只到計劃、不施工"
+  "description": "任意資源的作業系統（線資 11-13 晚規劃，已被 11-14 頭腦風暴輪取代）：aos＝能優化任意資源、任意目標的作業系統，主軸是把 agent 逐步沉澱成沒有機率性的純函數；照正統規劃流程走（sonnet 蒐集→opus 備料→fable 設計→opus 實作計劃→Argon 審→改定），只到計劃、不施工"
  },
  "aos-1113-優先裁.html": {
   "description": "11-13 優先裁：7 題"
