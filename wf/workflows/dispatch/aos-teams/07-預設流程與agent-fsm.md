@@ -1,73 +1,86 @@
-# 預設流程（11-13 晚）：opus 帶隊、sonnet 搜集、fable 規劃、實作的 gpt 走 aos 的 agent-fsm
+# 正統規劃流程、sol 走 agent-fsm、commit 與回報的細節
 
-← [入口](../aos-teams.md)｜涵蓋：預設流程、正統規劃流程、實作誰做、gpt 系改走 agent-fsm、家機的 gpt 端點、待補｜上一份 [06-公司WSL活樹與任務書硬規則](06-公司WSL活樹與任務書硬規則.md)
+← [入口](../aos-teams.md)｜涵蓋：正統規劃流程、sol 走 agent-fsm、commit、回報（寄信怎麼寫）、頂層也當 kernel｜上一份 [06-公司WSL活樹與任務書硬規則](06-公司WSL活樹與任務書硬規則.md)
 
-> **先讀下面的「11-14 補（施工各線）」**：它蓋掉本檔前兩節裡「sonnet 搜集」「等 agent-fsm 有雛形」「簡單工作 terra」「走 codex」的寫法——現在蒐集和寫碼都直接用 sol、走 agent-fsm。文末「待補」列的步驟（複製哪個範本、給哪些工具、工作區、怎麼收結果），蒐集員那部分已在 [kits/card](../kits/card.md)。
+只寫今天的做法（2026-11-14 改寫，使用者專區「q2:move」）。入口短卡已有的指令不重抄，這裡補它沒寫的細節。11-13 那幾版（sonnet 搜集、等 agent-fsm 有雛形、terra、codex、astra 帶 sol）的原文封存在 dispatch 的 `archive/`。
 
-## 預設流程
+<a id="正統規劃流程11-13-2340-重述"></a>
+## 正統規劃流程
 
-**opus 帶隊 → 指揮 sonnet 搜集訊息 → opus 整理匯總 → fable 規劃與設計架構 → opus 深化細化架構 → 實作。**
+**sol 蒐集 → opus 匯總 → fable 設計 → opus 細化出實作計劃 → Argon 審 → opus 逐條寫採納表 → 實作由 opus 帶 sol。**
 
-- **opus 從頭帶到尾**：寫任務書、派 sonnet 搜集、把搜集來的整理成給 fable 的匯總；fable 交稿後深化細化架構；實作時管輪內架構、權衡、審實作與整個流程。
-- **sonnet 搜集**：查找、盤點、跑指令收結果，屬「簡單工作」（界線見[入口「簡單工作」](../aos-teams.md)）。現在給 sonnet；agent-fsm 有雛形之後也可給 gpt 系（簡單 terra、普通 sol）（使用者 11-13 晚「搜集也可以給gpt，只是這可能要等loop fsm有了雛形之後」）。
-- **fable 規劃與設計架構**：只做頂層規劃／設計，**只讀 opus 備好的匯總**、不廣讀 repo；fable 可再派 fable 子 agent。這一輪可在輪間、輪中跑，次數不限；實作時 fable 不即時參與。
-- **實作照既有分工**（使用者 11-13 晚選 A）：gpt 系優先、照圖紙寫碼，claude（opus 普通、sonnet 簡單）補位；gpt 系不參與設計決策（入口「gpt 系」那條照舊）。**gpt 系改走 aos 體系**：見下節。
-- 派出去的 agent 先通讀 wf/ 規矩，並先讀知識庫 `~/aos-home/knowledge/aos/_description.json` 大致掌握 aos 體系；兩者同一套例外，簡單工作與雜活免讀（入口「讀規矩」；使用者 11-13 晚「照預設走」）。
-
-### 正統規劃流程（11-13 23:40 重述）
-
-使用者重述同一條鏈，叫它「正統規劃，架構設計流程」，多了兩處：
-
-**opus 帶隊 → sonnet／gpt 蒐集 → opus 匯總給 fable → fable 設計 → opus 深化細化、出實作計劃 → Argon 審 → opus 依 Argon 改計劃 → 實作由 opus 帶 sol 做（11-14 起；原本是 astra 帶 sol）。**
-
-- **Argon 審**：opus 初步深化細化之後、交實作之前，送 Argon 跑一次（指令與 (A) 審查 (B) 提案的格式見 [05](05-同機session與Argon.md#argon-是參與者不只審稿)）；opus 逐條寫採納／不採納與理由，改後的計劃才算定稿。
-- **實作改成 opus 帶 sol**（使用者 11-14 答「按照推薦」）：線星實測 astra 當門能跑，但不比 gpt 隊省，次數和 token 多 10～50%（[astra-kernel-1114](../../../../proto8/thinking/2026-11/14/astra-kernel-1114.md)），所以 astra 不當常設隊長，由各線的 opus eca 指揮 sol、驗收。以下是舊條文，留作紀錄：**實作 astra 帶 sol**：照 [astra-kernel-plan](../../../../proto8/thinking/2026-11/13/astra-kernel-plan.md)（astra 指揮、sol 照圖紙寫碼；在 aos 樹裡跑 agent-fsm 身，接下一節）。這是 gpt 系優先那條的具體隊形；astra 只指揮與驗收、不改圖紙的設計，跟入口「gpt 系不參與設計決策」不衝突（圖紙由 opus 定）。施工仍要使用者另外點頭（鐵律 2）。
-- 「sonnet／gpt 蒐集」：gpt 那半照上面「sonnet 搜集」條，等 agent-fsm 有雛形。
-
-**11-14 補（施工各線）**：使用者原話「然後每條線都讓opus作爲協調，要規劃就走正規規劃流程」「蒐集資料和實作都可以試試看交給sol等」「跑一整晚...我們現在就用本地litellm proxy，使用gpt」「作爲我們要的實作」。所以：
-- 每條線都由 opus 協調。施工中碰到圖紙沒寫到、要重新規劃的地方，回頭走這條正統流程，不邊做邊定。
-- 蒐集和寫碼優先交給 gpt，**只用 sol、不用 terra，sol 頂替 sonnet 的位置**（使用者 11-14「不要terra，盡量用sol，把sol作爲sonnet來用」），一律走本地 LiteLLM 上的 agent-fsm，**不走 codex**（使用者 11-14「不要走codex」）；走不通由 sonnet／claude 補位；設計判斷仍由 opus 和 fable 做。上面「等 agent-fsm 有雛形」的條件從 11-14 起改成「直接試」。
-- 各線有需要可以自己在暫存樹的 aos 裡掛 kernel 或 agent，不用先問（使用者 11-14「然後有需要的，可以自己掛kernel或agent。」）；自己記 pid、收尾收乾淨，活樹照舊不動。
-- **頂層也當 kernel**（使用者 11-14「善用aos體系，掛opus eca，讓他們成爲kernel，然後讓他們自己底下掛各種」「你自己也成爲kernel好了」「讓他們都掛在你底下」「他們的工作區...你可以在wf弄temp/xxx分給他們」）：repo-aos 開 `kernel_gate`，把 opus eca（定義 `~/aos-home/agents/opus-kernel`）掛在自己底下，啟動請求經過頂層的 gate；工作區放在 `wf/temp/<名字>`（已 gitignore）。這些 eca 自己也可以開 gate，在底下掛 sol 的 agent-fsm。
-  - **commit 一律交給排隊指令**（11-14 起）：各線不再自己 `git commit`，改跑 `~/repo/aos/wf/tools/commit-request`。開工先 `claim --line <線名> 檔…`；交件時 `submit --line <線名> --files 檔… --msg-file 訊息檔`，trailer 自己寫在訊息檔裡。日索引、月索引、SESSION-LOG 不手改，改用 `--op`（`day_upsert`、`month_bump`、`log_upsert`、`log_delete`；月索引份數要直接設成某個數時用 `month_set`，份數＝日索引的列數）。不要再 `git add`，也不要自己跑 `index_gen --apply`，排隊會在 repo 外的乾淨副本上重生生成物，再一起 commit。結果印在最後一行 JSON（雜湊或錯誤原文），exit 2 是被擋（例如別條線 claim 著），回應裡寫著是誰。直接 `git commit` 已被 `.git/hooks/pre-commit` 擋下（使用者 11-14 點頭「1.好。2.好」；人要手動 commit 加 `--no-verify`），`~/.local/bin/commit-request` 暫時連著，可以直接打 `commit-request`；這是過渡，正規作法是定義的 `.env` 寫 `PATH=${HOME}/repo/aos/wf/tools:${PATH}`，但 `.env` 預設不蓋已有的 PATH（N-59），要啟動那一跳帶 `--dotenv-override`，daemon／`ctl add` 還不能帶，已派 ok-misc；換樹後頂層補三份定義的 `.env`、重掛 eca、拔掉連結（使用者 11-14「我原本以爲你會用.env搭配PATH去做」，答「好」）。完整用法與範例見 [commit-queue-1114 § 申請者用法](../../../../proto8/thinking/2026-11/14/commit-queue-1114.md#申請者用法各線照這樣改)。
-- **頂層的雜務自動化**（使用者 11-14「太多的請求...你可以派一個claude subagent幫你寫程式…可以另外弄個sonnet agent，幫你當小廝，重要的事情馬上給你，普通通知每隔一段時間再給你」「commit這塊，你也可以開始想辦法，同樣，寫程式或派小廝。或是弄個fsm agent掛在你底下」「要想辦法，你可以把你的意見交給fable，讓他幫你規劃」）：
-  - 小廝 `xiaosi`（sonnet eca，定義 `~/aos-home/agents/xiaosi`）收所有 ok-* 的回報：要緊的立刻轉給頂層，其他的每 20 分鐘彙整一封再轉，靠頂層的 clock 項 `xiaosi-digest` 定時叫它。
-  - **寄給 xiaosi 的信怎麼寫**（頂層 11-14 採用；各 ok-* 與它們底下的隊長都適用；出處 skyrim 的「領導轉發三條規矩」，見 [skyrim-agentctl 02、04](../../../../proto8/thinking/2026-11/14/skyrim-agentctl/04-wf改稿.md)）：
-    1. **標題寫你的判斷，不轉貼隊員原話**：「線 X 做完，Y 已 commit（雜湊）」「線 X 卡在 Z，已試過 A、B」；不寫「完成」「報告」「sol 回報如下」。
-    2. **標題或第一句標明你要什麼**：要使用者裁（status `NEEDS-USER`）、要頂層給資源或放行（`BLOCKED`）、只是報備（`PROGRESS`／`DONE`）。xiaosi 只看 status 與標題分輕重，寫錯就會被排進 20 分鐘彙整或被誤當急件。
-    3. **正文先寫你已經排除的可能**：卡住或出錯的信，第一段列「試過什麼、為什麼不是那個」，頂層才不用重跑一次你做過的判斷。
-  - gate 自動初步處理，紀錄見 `proto8/thinking/2026-11/14/gate-auto-1114.md`。
-  - commit 排隊：已啟用 `wf/tools/commit-request`，不需要常駐程式，也不用掛 hook（fable 規劃、Argon 審過），用法在上面「頂層也當 kernel」那條底下，紀錄見 `proto8/thinking/2026-11/14/commit-queue-1114.md`。
-- **隊長的 shell 是 zsh，範例指令要分詞的一律包 `bash -c`**（11-14 ok-misc 與頂層各踩一次：ok-misc 因此把一封信寄錯對象，頂層開線失敗一次）：zsh 的 `$VAR` 不分詞，`for p in "a b"; do set -- $p; …` 切不開、`for f in $(cat list)` 只跑一圈。一次對多隻 agent 下指令、逐行讀清單這類寫法，寫成 `bash -c 'for n in a b c; do …; done'`（清單直接寫在 `in` 後面），或 `bash -c 'mapfile -t F < list; for f in "${F[@]}"; do …; done'`；清 `AOS_*` 的腳本同理要是 bash（[06 硬規則第 2 條](06-公司WSL活樹與任務書硬規則.md)）。另見 [pitfalls「隊長的 shell」的「zsh 不分詞」](../../../public/pitfalls.md#隊長的-shellbash-工具)。
-- **命名**（使用者 11-14「掛fsm sol/astra等agent的時候，那個命名要小心別重合到」）：daemon 表上的名字整台共用；各 eca 掛的 agent 一律叫 `<eca名>-<角色>-<編號>`（例 `ok-kf-sol-1`）。
-- **rlimit**（使用者 11-14「eca...建議不要setrlimit，你就跟他們說請他們自行收斂，但是fsm都可。」）：eca 不設 rlimit，請它們自己收斂用量；agent-fsm 可以設。家機 11-14 已裝 s6，fsm 用 `--limits`（mem_mb、files、cpu_s 實測有效；procs 是全帳號計數，別設小）。sol 預設帶 `{"mem_mb":1024,"files":256}`（ok-pilot 11-14 實測：sol 約 RSS 3MB、3 個 fd；開檔的鍵叫 `files` 不是 `nofile`；停機是 NOFILE 8 造成的，AS 壓到 32MB 仍正常（ok-pilot 第四輪）；`cpu_s` 只按單一程序計時，管不到整隻 agent 的總 CPU，要管總量得用 cgroup `cpu.max`，紀錄在 `wf/temp/ok-pilot/notes.md`「第二輪」）。
-- **派 fsm 隊員用配給包**（使用者 11-14「都按照推薦」，[onboard-1114](../../../../proto8/thinking/2026-11/14/onboard-1114.md)）：蒐集員、審稿員不再抄別線的 system.txt，改用 [kits](../kits/README.md) 的「看」包（照 [card](../kits/card.md) 第 1 步蓋到 agent-fsm 範本上）；開場讀多少規矩按角色分，蒐集員只讀知識庫入口加站台層。
-- **蒐集員的交件要先想好怎麼落地**（ok-view 11-14 踩到；[advices/fsm範本](../../../advices/fsm範本.md)）：只掛 look、gadgets、json、index 的蒐集員只有 JSON 寫入，寫不出 Markdown。任務書擇一寫明：① 「全文放在最後一則回答裡」，隊長用 `subagent listen`（`last: 1`）或 `aos-agent history -t <名字> ls -j` 取出存檔；② 先替它掛寫檔的包：定義的 `tools.json` 的 `$override` 加 `lib/packs/ws-write.json`（工具 `ws_write`：只能寫進自己的工作區，一次上限 256 KiB，不刪檔；38271da3b，換樹後活樹才有），任務書寫明交件檔名。
-- **sol 沒有 shell**：查版本、查環境、跑指令收結果這類事，派工的人自己跑好，把輸出貼進任務書或寫成檔叫它讀，不要讓 sol 靠讀檔去猜（ok-view-sol-7 為了查 `node --version` 翻了 117 步）。
-- 原本排的「fsm 真腦跑一整晚」不另外做測試，改成用 LiteLLM gpt 做實際的施工。
+- **每條線由 opus（或 fable）協調**（使用者 11-14「然後每條線都讓opus作爲協調，要規劃就走正規規劃流程」）：寫任務書、派 sol 蒐集、把蒐集來的整理成給 fable 的匯總；實作時管權衡、審實作、驗收。
+- **蒐集與實作交給 sol**（使用者 11-14「蒐集資料和實作都可以試試看交給sol等」）；走不通才由 Claude 子 agent 補位。設計判斷仍由 opus 和 fable 做，sol 只照圖紙做。
+- **fable 設計**：只做頂層規劃與設計；**規劃用的材料只用 opus 備好的匯總**、不廣讀 repo（使用者 11-07 午「他所需要的資材必須是我們準備給他的」），規矩照[入口「讀規矩」](../aos-teams.md)先讀知識庫入口與 wf/ 規矩；fable 可再派 fable 子 agent。輪間、輪中都可以跑，次數不限；實作時 fable 不即時參與。
+- **Argon 審**：opus 細化之後、交實作之前送 Argon 跑一次，(A) 審查 (B) 提案（指令與格式見 [05](05-同機session與Argon.md#argon-是參與者不只審稿)）。opus 逐條寫採納／不採納與理由，改完的計劃才算定稿。
+- **astra 不當常設隊長**：線星實測 astra 當門能跑，但不比 gpt 隊省，次數和 token 多 10～50%（[astra-kernel-1114](../../../../proto8/thinking/2026-11/14/astra-kernel-1114.md)），所以由各線的 opus 直接指揮 sol、驗收（使用者 11-14 答「按照推薦」）。
+- **做到一半發現圖紙沒寫到**、要重新規劃的地方，回頭走這條流程，不邊做邊定。
+- 施工仍要使用者另外點頭（鐵律 2）。
 
 **需求還不清楚時先不走這條**（使用者 11-14 早「你們太早就開始規劃實作與架構了…可以先發想，類似頭腦風暴那樣」）：先發散出點子與可丟棄的小實驗，需求浮出來再規劃，見 [user/03「需求不清時先發想」](../../common/user/03-討論紀錄與規劃.md#需求不清時先發想不急著規劃2026-11-14-定)；第一次照這樣跑的是 [11-14 aos-brainstorm](../../../../proto8/thinking/2026-11/14/aos-brainstorm/README.md)。
 
-原話見 [03「使用者 11-13 23:40 原話」](03-使用者原話.md#使用者-11-13-2340-原話正統規劃流程)；第一次照這條跑的是 [any-resource-os](../../../../proto8/thinking/2026-11/13/any-resource-os.md)。
+這條鏈的使用者原話在 [03「11-13 晚」](03-使用者原話.md#使用者-11-13-晚原話工作流程)與 [03「11-13 23:40」](03-使用者原話.md#使用者-11-13-2340-原話正統規劃流程)（那兩段裡的 sonnet 搜集、astra 帶 sol 已被上面 11-14 的話取代）；第一次照這條跑的是 [any-resource-os](../../../../proto8/thinking/2026-11/13/any-resource-os.md)。
 
-原話見 [03「使用者 11-13 晚原話」](03-使用者原話.md#使用者-11-13-晚原話工作流程)。第 4 句把 11-07 午那條鏈寫定：搜集由 sonnet 做（11-07 午「可以是opus計劃，讓gpt收集」是舉例）；11-07 午「fable 只做頂層規劃、只吃備料、實作時不參與」與午後「輪中也可、次數不限」照舊。
+## sol 走 agent-fsm
 
-## gpt 系改走 aos 的 agent-fsm（11-13 晚）
+使用者 11-13 晚：「codex這塊幫我改一下，改成走aos體系，也不用eca，就直接loop fsm」。11-14：「不要terra，盡量用sol，把sol作爲sonnet來用」「不要走codex」。
 
-使用者：「codex這塊幫我改一下，改成走aos體系，也不用eca，就直接loop fsm」。
+- **是什麼**：在 aos 體系裡開一隻 agent-fsm 身的 agent（aos 自己的四格迴圈 idle、think、wait、act），腦是寄信給 llm kernel。不叫 codex CLI，也不用 eca 身。
+- **腦**：家機本地的 LiteLLM proxy `http://127.0.0.1:4000`（OpenAI 相容）。配給包 `kits/gather/` 裡的兩個檔決定走哪裡：
+  - `llm.json` 內容是 `{"model": "sol-high"}`。`model` 填的是 **endpoint pack 名**，pack 由 llm kernel 擁有（知識庫 `aos/brain.json`）。
+  - `.env` 內容是 `AOS_LLM_KERNEL=${HOME}/aos-home/ws/.stack/procs/llm-gpt`，把信指到 llm-gpt 這個 kernel。
+- **蒐集和施工不用 terra**，只用 sol；terra 只用在使用者點名的地方（例如全景頁的小幫手）。
+- **怎麼掛、怎麼驗收**：步驟在 [kits/card](../kits/card.md)，包的內容與已知限制在 [kits](../kits/README.md)，帶 sol 的心得在 [sol-crew](../../../public/sol-crew.md)。蒐集員、審稿員用「看」包，不抄別線的 system.txt（使用者 11-14「都按照推薦」，[onboard-1114](../../../../proto8/thinking/2026-11/14/onboard-1114.md)）。
+- **自己掛 kernel 或 agent 不用先問**（使用者 11-14「然後有需要的，可以自己掛kernel或agent。」）：掛在暫存樹的 aos 裡，自己記 pid、收尾收乾淨，活樹照舊不動。
+- **隊長的 shell 是 zsh，範例指令要分詞的一律包 `bash -c`**（11-14 ok-misc 與頂層各踩一次：ok-misc 因此把一封信寄錯對象，頂層開線失敗一次）：zsh 的 `$VAR` 不分詞，`for p in "a b"; do set -- $p; …` 切不開、`for f in $(cat list)` 只跑一圈。一次對多隻 agent 下指令、逐行讀清單這類寫法，寫成 `bash -c 'for n in a b c; do …; done'`（清單直接寫在 `in` 後面），或 `bash -c 'mapfile -t F < list; for f in "${F[@]}"; do …; done'`；清 `AOS_*` 的腳本同理要是 bash（[06 硬規則第 2 條](06-公司WSL活樹與任務書硬規則.md)）。另見 [pitfalls「隊長的 shell」的「zsh 不分詞」](../../../public/pitfalls.md#隊長的-shellbash-工具)。
+- **蒐集員的交件要先想好怎麼落地**（ok-view 11-14 踩到；[advices/fsm範本](../../../advices/fsm範本.md)）：只掛 look、gadgets、json、index 的蒐集員只有 JSON 寫入，寫不出 Markdown。任務書擇一寫明：① 「全文放在最後一則回答裡」，隊長用 `subagent listen`（`last: 1`）或 `aos-agent history -t <名字> ls -j` 取出存檔；② 先替它掛寫檔的包：定義的 `tools.json` 的 `$override` 加 `lib/packs/ws-write.json`（工具 `ws_write`：只能寫進自己的工作區，一次上限 256 KiB，不刪檔；38271da3b，換樹後活樹才有），任務書寫明交件檔名。
+- **sol 沒有 shell**：查版本、查環境、跑指令收結果這類事，派工的人自己跑好，把輸出貼進任務書或寫成檔叫它讀，不要讓 sol 靠讀檔去猜（ok-view-sol-7 為了查 `node --version` 翻了 117 步）。
+- **命名**（使用者 11-14「掛fsm sol/astra等agent的時候，那個命名要小心別重合到」）：daemon 表上的名字整台共用，各 eca 掛的 agent 一律叫 `<eca名>-<角色>-<編號>`（例 `ok-kf-sol-1`）。
+- **rlimit**（使用者 11-14「eca...建議不要setrlimit，你就跟他們說請他們自行收斂，但是fsm都可。」）：eca 不設，自己收斂用量；agent-fsm 在 `subagent add` 時帶 `limits`。
+  - 資源的鍵：`mem_mb`、`cpu_s`、`procs`、`file_mb`、`files`，另有整隻 agent 的總量 `mem_total_mb`、`procs_total`（要 daemon 開 cgroup）與 `user`。開檔數的鍵叫 `files`，不是 `nofile`。
+  - sol 預設帶 `{"mem_mb":1024,"files":256}`。
+  - `procs` 算的是整個帳號的程序數，別設小（看包的隊員乾脆不設）。
+  - `cpu_s` 只按單一程序計時，管不到整隻 agent 的總 CPU。
+  - 實測數字與表在 [sol-crew「rlimit 實測與腦額度」](../../../public/sol-crew.md#rlimit-實測與腦額度)。
+- **腦額度每隻 sol 一份**：用光會被拒 `BudgetMissing`：額度窗是 hour／day 時 agent-fsm 不會停，等到窗重置再重試；窗是 `all` 時不重試，停下。兩種都由 `brain_notify` hook 寄一封 BLOCKED 給掛它的人（額度窗見知識庫 `aos/brain.json` 的 `priority`；實測見 [sol-crew](../../../public/sol-crew.md)）。「看」包目前還沒掛這個 hook（kits「已知限制」），用看包的隊員額度用光時不會來信，隊長要自己看。
 
-- 派 gpt 系做事時，**在 aos 體系裡開 agent-fsm 身的 agent**（`loop.json` 的 fsm 身、腦接 gpt 系模型），不直接叫 codex CLI、也不用 eca 身（eca＝外部 CLI 當身，codex 也是一種 eca）。
-- 舊的 codex 條文（入口的 codex 隊員、02 分檔的 codex CLI 指令、沙箱、`/goal`）先留，等 agent-fsm 那套跑通再清（使用者 11-13 晚「照預設走」）。
-- **家機的 gpt 端點**：本地 LiteLLM proxy `http://127.0.0.1:4000`（OpenAI 相容；使用者「我本地litellm proxy開起來了」）。模型普通工作 `chatgpt-gpt-6.1-sol`、簡單工作 `chatgpt-gpt-5.6-terra`；另有 `-low`／`-medium`／`-high`／`-xhigh`／`-max`／`-nothink` 後綴與本地模型。
+還沒確認：公司 WSL 有沒有同樣的 proxy。
 
-### 知識庫查得到的線索
+## commit
 
-- 兩種身：agent-fsm＝aos 自己的四格迴圈（idle、think、wait、act），腦是寄信給 llm kernel；eca＝Claude Code 或 Codex CLI 當身（`aos/body.json`）。
-- agent-fsm 範本獨有 `body.json`（`aos-loop loop.json`）、`fsm.json` 與各格程式；兩個範本都有 `llm.json`（如 `{"model": "sonnet"}`），用 `agent_def` 複製範本（`aos/definition.json`）。
-- agent-fsm 的 `llm.json` 裡 `model` 是 **endpoint pack 名**，身會把它放進信的 `endpoint`；pack 由 llm kernel 擁有、固定模型與取樣設定，`aos-llm ls` 列出現有的 pack（`aos/brain.json`）；kernel 依它的 `kernel.json` 裡的 endpoint pack（slots、priority、budget）挑信（`aos/cli/parts/llm_kernel.json`）。
+**只有一條路：`~/repo/aos/wf/tools/commit-request`**（鐵律 3；使用者 11-14 專區「q1:fix」）。各線不自己 `git commit`、不 `git add`、不自己跑 `index_gen --apply`。兩行指令在[入口第 1 件](../aos-teams.md)，這裡是它沒寫的：
 
-### 待補
+- **開工 `claim`、交件 `submit`**：`claim --line <線名> 檔…` 宣告在改哪些檔；`submit --line <線名> --files 檔… --msg-file 訊息檔` 交件。trailer 自己寫在訊息檔裡，排隊不改訊息。
+- **日索引、月索引、SESSION-LOG 不手改，用 `--op`**：`day_upsert`、`month_bump`、`log_upsert`、`log_delete`；月索引那天的份數要直接設成某個數時用 `month_set`（份數＝日索引的列數）。
+- **生成物由排隊重生**：它在 repo 外的乾淨副本上跑 `index_gen`，生成物跟你的檔同一個 commit。
+- **看結果**：stdout 最後一行是 JSON（雜湊或錯誤原文）。exit 0 是做完；exit 2 是被擋（例如別條線 claim 著那個檔），回應裡寫著是誰，去信協調。
+- **直接 `git commit` 會被 `.git/hooks/pre-commit` 擋下**（使用者 11-14「1.好。2.好」）；人要手動 commit 時加 `--no-verify`。
+- **指令在哪**：任務書與範例一律寫全路徑。家機 2026-11-14 暫時有一個連結 `~/.local/bin/commit-request` 指到 `wf/tools/commit-request`，直接打 `commit-request` 也找得到；這是過渡，之後會拔掉，所以別依賴它。
+- 完整用法、其他 exit 碼、`--dry-run`、`--rm`、`doctor`：[commit-queue-1114「申請者用法」](../../../../proto8/thinking/2026-11/14/commit-queue-1114.md#申請者用法各線照這樣改)；新資料夾、中文檔名、共用的 SESSION-LOG 行這些坑：[patch-and-commit](../../../public/patch-and-commit.md)。
 
-- 怎麼在 llm kernel 加一個指向 LiteLLM proxy、模型 `chatgpt-gpt-6.1-sol`／`chatgpt-gpt-5.6-terra` 的 endpoint pack（知識庫沒寫 pack 的端點網址、模型怎麼填）。
-- 開 agent-fsm agent 做實作的具體步驟（從哪個範本複製、給哪些工具、工作區、怎麼收結果）、它能不能寫碼（工具只有已註冊的 aos 工具）。
-- 公司 WSL 有沒有同樣的 proxy。
+## 回報
+
+**回報寄任務書指定的對象。** 11-14 起頂層底下分了幾個部，各線寄給自己那一部的部長；現在怎麼分看 `wf/temp/heads/routing.md`（當天的安排，會變）。
+
+- **部長做的**：收線的回報、放行或擋下 commit、協調。寫活樹、push、刪檔、開線或關線，部長不自己做，轉給頂層。
+- **小廝 `xiaosi`**（sonnet eca）照舊管使用者專區、通知和群發，並彙整部長的信給頂層；寄到頂層的信由頂層照中轉表轉給部長。
+- 這套的由來：使用者 11-14「太多的請求...你可以派一個claude subagent幫你寫程式…可以另外弄個sonnet agent，幫你當小廝，重要的事情馬上給你，普通通知每隔一段時間再給你」。gate 自動初步處理的紀錄在 [gate-auto-1114](../../../../proto8/thinking/2026-11/14/gate-auto-1114.md)，commit 排隊的紀錄在 [commit-queue-1114](../../../../proto8/thinking/2026-11/14/commit-queue-1114.md)。
+
+### 寄信怎麼寫
+
+各線與它們底下的隊長都適用（頂層 11-14 採用；出處 skyrim 的「領導轉發三條規矩」，見 [skyrim-agentctl 02、04](../../../../proto8/thinking/2026-11/14/skyrim-agentctl/04-wf改稿.md)）：
+
+1. **標題寫你的判斷，不轉貼隊員原話**：「線 X 做完，Y 已 commit（雜湊）」「線 X 卡在 Z，已試過 A、B」；不寫「完成」「報告」「sol 回報如下」。
+2. **標題或第一句標明你要什麼**：要使用者裁（status `NEEDS-USER`）、要頂層給資源或放行（`BLOCKED`）、只是報備（`PROGRESS`／`DONE`）。收信的人只看 status 與標題分輕重，寫錯就會被排進定時彙整或被誤當急件。
+3. **正文先寫你已經排除的可能**：卡住或出錯的信，第一段列「試過什麼、為什麼不是那個」，上面才不用重跑一次你做過的判斷。
+
+要使用者拍板的題目另外寄專區（[入口第 2 件](../aos-teams.md)）。
+
+## 頂層也當 kernel
+
+使用者 11-14：「善用aos體系，掛opus eca，讓他們成爲kernel，然後讓他們自己底下掛各種」「你自己也成爲kernel好了」「讓他們都掛在你底下」「他們的工作區...你可以在wf弄temp/xxx分給他們」。
+
+- 頂層 `repo-aos` 開 `kernel_gate`，各線是掛在它底下的 eca，啟動請求經過頂層的 gate。
+- 定義在 `~/aos-home/agents/`：`opus-kernel`、`fable-kernel`，小廝是 `xiaosi`。
+- 工作區是 `wf/temp/<名字>`（已 gitignore）。
+- 這些 eca 自己也可以開 gate，在底下掛 sol 的 agent-fsm。

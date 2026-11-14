@@ -1,43 +1,85 @@
-# aos 的隊形
+# aos 的隊形：現在怎麼做（短卡）
 
 ← [dispatch](README.md)｜選人判準 [team-model](../team-model.md)
 
-> **先看這句（11-14）**：gpt 系現在只用 sol、走本地 LiteLLM 上的 agent-fsm，不走 codex、蒐集和施工不用 terra，sol 頂替 sonnet 的搜集位置；commit 走 `commit-request`；回報寄任務書指定的對象（11-14 起是各部部長）。下面「誰做什麼」裡 codex 隊員、terra、sonnet 搜集、`/goal`、`-s workspace-write` 的寫法是舊隊形，還沒改寫（kb-1114 重整中）。現行見 [07「11-14 補」](aos-teams/07-預設流程與agent-fsm.md)、[kits](kits/README.md)。
-
-本專案實際怎麼開隊。派線的通用規則在 [dispatch](README.md)，這裡只記 aos 專屬的隊形、指令與硬規則；改制時直接改成現行寫法。任務書送出前要對一次的坑在 [lessons](lessons.md)。
+本專案實際怎麼開隊、五件最常做的事的實際指令。只寫**今天的做法**（11-14 改寫，使用者專區「q2:move」）；細節在分檔，舊隊形（codex 隊員、terra、sonnet 搜集）的原文在本夾 `archive/`。改制時直接改這裡。
 
 ## 誰做什麼
 
-<!-- wf-nav -->
-- **頂層（多為 Opus）只當調度者**：只跟使用者交流與派隊，不親自做內容。使用者原話：「頂層不要做太多事」（08-30）、「你不要自己做事，盡量交給 agent」（09-24），11-06 第 1 句同意思。頂層在主 repo 親手做的**只剩 `git merge --ff-only`＋`git push`**；重跑驗證、解 rebase 衝突、改 SESSION-LOG／WAIT_USER、清 backlog、報告存檔全派出去。收線＝讀隊長附的證據逐條對，不重跑；真要獨立驗證就派一條便宜的線去跑。想「順手」做小事時先問：能不能一句話交給別人？
-- **一隊的編制（第 2、4 句）**：**opus 隊長**（Claude Code 自家 subagent）＋**兩名隊員**——codex `gpt-6.1-sol`、claude CLI `claude-opus-5-5`。隊長寫任務書、審 diff、跑 build、commit、push；隊員與其子 agent **不 commit**。派 gpt 系改走 agent-fsm（11-13 晚，[07](aos-teams/07-預設流程與agent-fsm.md)）。
-- **隊員往下派（第 5、7 句）**：兩名隊員都可**無上限**派子 agent。codex 那邊普通工作（寫碼、審查、調查）一律 `gpt-6.1-sol`、簡單工作 `gpt-5.6-terra`；`gpt-6-astra` **只在圖像、創意類才派**（同級但價格約 sol 的 3 倍）。claude 那邊普通 opus、簡單 sonnet。**盡量把工作派給 codex**（改走 agent-fsm，同上），claude 隊員補位。任務書寫「不限人數」與這套分工，頂層監看報警時才改寫上限。
-- **「簡單工作」的界線**（使用者 11-06 確認：「1.對。2.是。」）：雜活、純文字小改、查找盤點、跑指令收結果才算簡單，給 sonnet／terra。**碰程式碼邏輯、改寫使用者的概念／規範條文不算簡單**，不給 sonnet（使用者 09-30「不要 sonnet」「就 opus」；見 [common/user「子 agent 模型」](../common/user.md)），codex 那邊用同一把尺、不給 terra。
-- **讀規矩（第 1、5 句）**：派出去的 agent 做事前先通讀 wf/ 規矩（AGENTS.md、WORKFLOWS.md、common/user.md、common/conventions.md 等），**簡單工作與雜活例外**；另先讀知識庫 `~/aos-home/knowledge/aos/_description.json`（11-13）；隊員與其子 agent 同樣適用。任務書開頭寫明，並要隊員往下派時也寫進子任務書。例外對子 agent 一樣成立（雜活子 agent 可免讀）——使用者 11-06 確認（「1.對。2.是。」）。
-- **一般 agent 再派子 agent，模型隨意**（第 1 句）；隊員那層照上面第 5 句的分工。
-- **預設流程（11-13 晚）**：opus 帶隊→sonnet 搜集→opus 匯總→fable 規劃設計架構→opus 深化細化→實作（gpt 系優先、改走 aos 的 agent-fsm，claude 補位）。細節 [07](aos-teams/07-預設流程與agent-fsm.md)。
-- **同機 session 傳話**：同帳號原則上用 a2a，但兩邊權限模式不同時會卡在對方畫面等批准，**兩個方向都寄 wf/inbox**；Argon 也是共同設計者（審查＋提案）。細節與原話見 [05](aos-teams/05-同機session與Argon.md)。 agy、LM Studio、家機假日隊形也在 05。
-- **程序數要少（第 3、6 句）**：codex、claude CLI 都是 nodejs，跑在使用者也在用的機器上，所以**每隊同時最多兩個 CLI 程序**（一個 codex、一個 claude），子 agent 跑在隊員自己的程序裡、不另開 CLI。同時開幾隊由頂層看負載定。頂層開一個**背景監看**，定時看負載、可用記憶體、CLI 程序數，**超門檻才通知**；通知了就叫各隊收斂子 agent 或輪流跑。純改檔負擔不大，「稍微監控」即可，不逐次回報。各機門檻與指令見 [公司 WSL](aos-teams/01-公司WSL.md)。
-- **codex 要設 goal**：codex 愛做到一半就說做完，提示參數要以 `/goal <完成條件>` 開頭，指令與核對見 [02](aos-teams/02-指令沙箱與試玩.md#codex-呼叫與沙箱)。
-- **權限邊界**：codex 隊員用 `-s workspace-write`（它自己的沙箱），claude 隊員用 `--permission-mode acceptEdits`＋`--allowedTools` 列需要的工具。**agent 不加全繞過沙箱／權限的旗標**（Claude Code 的安全檢查也會擋）——這是使用者的權限邊界，要開由使用者親自開。家機的 codex 隊員也用沙箱（`-s workspace-write`），不靠不帶 `-s` 去吃家機 `~/.codex/config.toml` 的 `danger-full-access`（使用者 11-08「codex可以改用沙箱，準備好就可以用」，指令見 [02](aos-teams/02-指令沙箱與試玩.md#codex-呼叫與沙箱)）。
-- **codex 可用 slug**（`gpt-6.1-sol` 為主力；全表與寫錯 slug 的症狀）見 [02](aos-teams/02-指令沙箱與試玩.md#codex-可用-slug)。
-- **進度回報**：各線在開線、做完一批／一個地點、代定、卡住、交棒時叫 `progress_post.sh` 上桌面看板，回報頂層只寫一兩句：[04](aos-teams/04-進度回報.md)。
-- 開隊前**先把打算怎麼做講給他聽**，等他回應或糾正再派；他可能在手機上、回得慢，問題與選項照發、附預設建議。
-- **gpt 系不參與設計決策與架構規劃（長期）**：原話「gpt系的模型不可參予軟體工程的設計決策與架構規劃，他們只能按照圖紙施工當碼農，以及寫文件(這個很適合gpt系)，以及各類雜活」。codex（任何 gpt slug）**能做**照已定圖紙寫碼、寫文件、雜活、網頁施工（說明頁、互動頁、artifact 等，內容題目由隊長定）；這範圍內**優先派 gpt**（額度多；每隊仍最多一個）；原話見 [03](aos-teams/03-使用者原話.md)；**不能做**軟體設計決策、架構規劃、審查裡判斷設計對錯（可挑實作錯、與圖紙不符）。怎麼改由派工的 Claude 定好寫進任務書；「盡量派 codex」與 02「sol 做調查」照此讀。
+- **頂層 `repo-aos` 只當調度者**：只跟使用者交流、派線、收線，不親自做內容；收線＝讀隊長附的證據逐條對、不重跑，真要獨立驗證就派一條便宜的線去跑；想順手做小事時先問能不能一句話交給別人（使用者 08-30「頂層不要做太多事」、09-24「你不要自己做事，盡量交給 agent」）。11-14 起頂層底下分了幾個部，各一位 fable 部長（現在怎麼分看 `wf/temp/heads/routing.md`，當天的安排、會變），線的回報與 commit 放行找部長；寫活樹、push、刪檔、開關線由部長轉頂層。
+- **一條線＝一隻 opus 或 fable 的 eca**（名字 `ok-<線名>`，工作區 `wf/temp/<名字>/`），掛在頂層的 kernel_gate 底下，自己也可以開 gate、在底下掛隊員。
+- **隊員＝sol 的 agent-fsm**（腦走本地 LiteLLM，pack `sol-high`）：蒐集、照圖紙寫碼、寫文件、雜活。**蒐集和施工不用 terra、不走 codex**（使用者 11-14「不要terra，盡量用sol，把sol作爲sonnet來用」「不要走codex」）。走不通才由 Claude 子 agent 補位（普通 opus、簡單 sonnet）。
+- **gpt 系不做設計決策**（使用者 11-07，長期；原話在 [03](aos-teams/03-使用者原話.md)）：能做照已定圖紙寫碼、寫文件、雜活、網頁施工（內容題目由隊長定）；審查只挑實作錯、與圖紙不符。設計、架構、判斷設計對錯由 opus／fable 做，寫進任務書。
+- **「簡單工作」的界線**（使用者 11-06 確認：「1.對。2.是。」）：雜活、純文字小改、查找盤點、跑指令收結果才算簡單，才給 sonnet（補位時）。**碰程式碼邏輯、改寫使用者的概念／規範條文不算簡單**，不給 sonnet（使用者 09-30「不要 sonnet」「就 opus」；見 [common/user「子 agent 模型」](../common/user.md)）。
+- **一般 agent 再派子 agent，模型隨意**（使用者 11-06 第 1 句）；sol 隊員一張單只做一件事，要多人由線多掛幾隻。
+- **要規劃就走正統流程**：sol 蒐集 → opus 匯總 → fable 設計 → opus 細化成計劃 → Argon 審 → 採納表 → sol 施工。需求還不清楚時先發想、不急著規劃。細節 [07](aos-teams/07-預設流程與agent-fsm.md)。
+- **讀規矩**（使用者 11-06 第 1、5 句、11-13）：派出去的 agent 做事前先讀知識庫入口 `~/aos-home/knowledge/aos/_description.json`，再通讀 wf/ 規矩（`AGENTS.md`、`WORKFLOWS.md`、`common/user.md`、`common/conventions.md` 等）；**簡單工作與雜活例外**（可免讀），對子 agent 一樣成立。任務書開頭寫明，往下派時也寫進子任務書。用配給包的蒐集員、審稿員照包裡的分級：只讀知識庫入口加站台層（[kits](kits/README.md)）。
+- **開隊前先把打算講給使用者聽**，等他回應或糾正再派；他可能在手機上、回得慢，問題與選項照發、附預設建議。問他的題目寄專區（下面第 2 件）。
+- **權限邊界**：agent 不加全繞過沙箱／權限的旗標，要開由使用者親自開。eca 不設 rlimit、自己收斂；agent-fsm 帶 `limits`。
+- **命名**：daemon 表上的名字整台共用，掛的 agent 一律 `<eca 名>-<角色>-<編號>`（例 `ok-kf-sol-1`）。
+- **Argon 是參與者**：審查之外也提案；正統流程裡在 opus 細化之後、交實作之前送審一次，每篇 fable 設計後也可以跑（指令見 [05](aos-teams/05-同機session與Argon.md)）。
+
+## 五件常做的事
+
+### 1. commit：一律 `commit-request`，不自己 `git add`／`git commit`／跑 `index_gen`
+
+```sh
+~/repo/aos/wf/tools/commit-request claim  --line ok-x 檔…          # 開工：宣告這些檔我在改
+~/repo/aos/wf/tools/commit-request submit --line ok-x --files 檔… --msg-file 訊息檔 \
+    --op '{"op":"day_upsert","date":"2026-11-14","name":"x","link":"x.md","summary":"…"}'
+```
+
+- `--files`／`--rm` 的路徑從 repo 根算，`--msg-file` 從你所在的資料夾算；結果看 stdout 最後一行 JSON（`DONE` 加雜湊，或錯誤原文）；先 `--dry-run` 看會交什麼。
+- 日索引、月索引、`SESSION-LOG.md` 不交整檔，用 `--op`（`day_upsert`、`month_bump`、`month_set`、`log_upsert`、`log_delete`）。生成的 `_index.json`、code map 由排隊重生，不要列進 `--files`（`proto8/knowledge/` 底下手寫的 `_index.json` 例外，照一般檔交）。
+- 交之前 `git diff -- 檔` 確認只有自己的字；**不 push**。
+- **誰放行**：照你的任務書。11-14 起線的 commit 由部長放行（`wf/temp/heads/部長共通.md`，在 gitignore 的 temp 裡），每批先寄它：檔案清單、`git diff --stat`、怎麼驗的。它放行的前提：在乾淨複本（`git archive`）測過並附結果；動到活樹正在用的 `proto8/cmd`、`py`、`lib` 時先寫暫存檔再改名、立刻 import 並跑定向測試、原檔有備份；用 commit-request（共用索引加 `--op`）；不撞別線 claim 的檔。帶 `--rm`（搬檔後移除舊路徑）、跟鐵律有出入的，部長會上交頂層。更多：[07「commit」](aos-teams/07-預設流程與agent-fsm.md)、[patch-and-commit](../../public/patch-and-commit.md)。
+
+### 2. 問使用者：寄專區，題目會出現在全景頁
+
+```sh
+~/aos-home/ws/tools/aos-user/aos-user send --kind decide --from ok-x \
+    --reply-to <自己的 stack>/mailbox --title "一句話" 題目.json
+```
+
+- 一封最多 7 題，每題 `id`、`question`、`eli5`、`options`（`key`、`label`、`consequence`）、`recommend`；每小時最多 10 封。
+- 回信用 `mailbox_read` 讀（專區回信自動留在 `mailbox/archive/<信名>/`），再跑 `aos-user verify <那個夾>`，看到 `ok: matches` 才算數。push、刪檔的授權一定要驗。更多：[user-zone-mail](../../public/user-zone-mail.md)、知識庫 `aos/user_zone.json`。
+
+### 3. 掛 sol 隊員
+
+1. `agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}`，把 [kits/gather/](kits/README.md) 的 `system.txt`、`tools.json`、`llm.json`、`.env` 蓋過去，`agent_def check`。
+2. `subagent {"op":"add","def":"defs/gather","name":"ok-x-sol-1","ws":"ok-x-sol-1","limits":{"mem_mb":1024,"files":256}}`（`ws` 從你的工作區算，所以它的工作區是 `<線夾>/<agent 名>`；`procs` 別設；開檔的鍵是 `files`）。
+3. 任務書一張單只做一件事：唯一目標、可讀可寫的路徑、交付物、完成條件；寫明「讀完同一回合就動手」。
+4. 驗收讀它的 `out/`，逐條對證據；它不 commit。收隊 `subagent rm`（stack 留著）。完整步驟：[kits/card](kits/card.md)、心得 [sol-crew](../../public/sol-crew.md)。
+
+### 4. 等隊員：不要卡在同一回合
+
+`subagent say` 之後就結束這一回合；用 `clock_register {"op":"add","name":"…","at":"+10m","text":"…"}` 叫醒自己再看，或等它寄來的信。`subagent listen` 預設會等 600 秒，別讓它等那麼久：帶 `"timeout_s": 60`，或用 `"last": 1` 只看最後一則不等。
+
+### 5. 活樹旁邊：`~/aos-home` 有使用者正在用的樹
+
+- 活樹不碰（06 第 1 條）：不寫 `~/aos-home` 底下任何檔、不對它的 daemon 與 agent 下任何指令、不寄信進去（任務書點名的回報對象與使用者專區除外）；唯讀查看只限任務書點名的，與 06 第 9 條的核對。
+- 你的 shell 帶著活樹的 `AOS_*`：跑任何 aos 指令或測試，一律經一支 bash 腳本（不是 bash 就拒絕 → 逐一 unset `AOS_*` → 還有殘留就拒絕 → exec）。shell 是 zsh，要分詞的寫法包 `bash -c`。
+- 不把整份環境變數寫進檔、log 或信（`env`、`printenv`、`/proc/*/environ` 都不行，裡面有 API key）；要看只列變數名或只列 `AOS_*`。
+- 不刪檔（連自己的暫存也不刪）。收行程只准兩種（06 第 4 條）：`aos-daemon-ctl -d <自己暫存樹 stack 的絕對路徑> shutdown`，或 kill 自己記下的 pid（kill 前 `readlink /proc/<pid>/cwd`）；禁 `pkill`、`killall` 與任何按名字收行程的寫法。
+- 改 `proto8/cmd`、`proto8/py`、`lib/agent/*.py` 存檔當下活樹就在用；`proto8/knowledge`、`lib`、`templates` 要換樹重抄才生效。
+- 任務書必貼的九條硬規則全文：[06](aos-teams/06-公司WSL活樹與任務書硬規則.md)；踩過的坑：[gotchas/05](../common/gotchas/05-在跑著的樹旁邊做事.md)、[pitfalls](../../public/pitfalls.md)。
+
+## 回報、經驗、意見
+
+- **回報**寄任務書指定的對象（11-14 起是各部部長，分法見 `wf/temp/heads/routing.md`）：標題寫你的判斷與要什麼（`NEEDS-USER`／`BLOCKED`／`PROGRESS`／`DONE`），卡住的信先寫已排除的（[07「寄信怎麼寫」](aos-teams/07-預設流程與agent-fsm.md)）。
+- **別隊也用得上的做法、坑** → 投 [wf/public](../../public/README.md)；**aos 本身哪裡該改** → 投 [wf/advices](../../advices/README.md)。先查這兩處再動手，常見做法一覽在 [recipes](../../public/recipes.md)。
 
 ## 分檔目錄
 
-> 超過 8 KB，依 [STRUCTURE](../../STRUCTURE.md) 按 `##` 標題拆開；本檔留前言與「誰做什麼」，其餘在下列分檔（下面「第 N 句」指 03 裡 11-06 原話的編號）。
-
-| 分檔 | 涵蓋的段 |
+| 分檔 | 涵蓋 |
 |---|---|
-| [01-公司WSL](aos-teams/01-公司WSL.md) | 公司那台（WSL）的 codex 捷徑與 slug、claude 隊員帳號、沙箱、監看門檻 |
-| [02-指令沙箱與試玩](aos-teams/02-指令沙箱與試玩.md) | 指令與沙箱（開隊長、開隊員、codex 呼叫與沙箱、Claude API 不穩時、codex 可用 slug）、每段做完派人試玩（2026-09-13 起） |
-| [03-使用者原話](aos-teams/03-使用者原話.md) | 使用者 11-06、11-07 原話（隊形、家機假日隊形、gpt 分工限制）、11-13 晚原話 |
-| [04-進度回報](aos-teams/04-進度回報.md) | 進度回報與桌面看板 |
-| [05-同機session與Argon](aos-teams/05-同機session與Argon.md) | 同機 session 傳話（a2a 與 inbox）、Argon 共同設計與指令、agy、LM Studio、家機假日隊形 |
-| [06-公司WSL活樹與任務書硬規則](aos-teams/06-公司WSL活樹與任務書硬規則.md) | 公司 WSL 現況（樹住 `~/aos-home`、頂層是樹裡的 `repo-aos`）、任務書必貼的硬規則、停樹換檔的做法 |
-| [07-預設流程與agent-fsm](aos-teams/07-預設流程與agent-fsm.md) | 預設流程（11-13 晚）、gpt 系改走 agent-fsm、家機 proxy |
+| [01-公司WSL](aos-teams/01-公司WSL.md) | 公司那台（WSL）特有的：帳號、監看門檻 |
+| [02-指令沙箱與試玩](aos-teams/02-指令沙箱與試玩.md) | 每段做完派人試玩；Claude API 不穩時 |
+| [03-使用者原話](aos-teams/03-使用者原話.md) | 隊形相關的使用者原話（11-06、11-07、11-13；11-14 的幾句引在 07），檔尾有一節「已被取代的原話（留底）」 |
+| [04-進度回報](aos-teams/04-進度回報.md) | 桌面看板已停用（使用者 11-14），只留指標；回報寄任務書指定的對象 |
+| [05-同機session與Argon](aos-teams/05-同機session與Argon.md) | 同機 session 傳話、Argon 的指令、agy、LM Studio |
+| [06-公司WSL活樹與任務書硬規則](aos-teams/06-公司WSL活樹與任務書硬規則.md) | 活樹現況、任務書必貼的硬規則、停樹換檔 |
+| [07-預設流程與agent-fsm](aos-teams/07-預設流程與agent-fsm.md) | 正統規劃流程、sol 走 agent-fsm、commit 與回報的細節 |
 
 <a id="指令與沙箱"></a>
 <a id="codex-呼叫與沙箱"></a>
@@ -47,5 +89,5 @@
 
 ## 交接
 
-- 派線流程、領地表、收線 → [dispatch](README.md)；外部 CLI 線的啟動與監看 → [driving-cli-agents](driving-cli-agents.md)；任務書 checklist → [lessons](lessons.md)。
+- 派線流程、領地表、收線 → [dispatch](README.md)；任務書 checklist → [lessons](lessons.md)；配給包 → [kits](kits/README.md)。
 - 各層派哪級模型 → [team-model](../team-model.md)；隊伍會撞的資源 → [resources](../resources.md)；模型端點 → [dev-env](../dev-env.md)。

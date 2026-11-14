@@ -30,17 +30,15 @@
 
 驗證與測試指令不列這裡——連同「誰跑」一起在 [testing](testing.md)。
 
-## git 佈局：aos 是獨立 repo；worktree 隔離可以開
+## git 佈局：aos 是獨立 repo；只有一個 `main`、不開 worktree 分支
 
 兩台的工作 repo 都是獨立 clone 的 `~/repo/aos`（自己的 `.git` 資料夾，origin `github.com:justty32/aos`）。家機以前用的 `~/repo/simple_tools/aos`（`simple_tools` 的 submodule，`.git` 是指標檔）11-13 晚起不再是工作 repo，還留在磁碟上（使用者「不用刪」），別在那裡改。
 
-**規則**〔使用者方向 2026-09-30 晚〕：派出去的隊**可以**開 worktree 隔離（`isolation: worktree`／EnterWorktree），但要照下面三條防範：
+**規則**（使用者 2026-11-03 晚，原話在 [common/user.md](common/user.md)「分支慣例」那格）：**本地與遠端都只有一個 `main`**。所有線直接在 `~/repo/aos` 這一棵工作樹的 `main` 上做，不開分支、不開 worktree 分支（派子 agent 時不用 `isolation: worktree`／EnterWorktree），不 push 別的分支。
 
-- **開工**：worktree 起點可能很舊，第一步 `git reset --hard main`（見 [dispatch lessons](dispatch/lessons.md) 第 6 節）。
-- **收尾**：隊員 `git rebase main`，確保能 fast-forward；**不准自己刪 worktree 或分支**（worktree 收尾清理清空過當時 submodule 的 gitdir、丟掉未 push 的 commit）。
-- **清理**：由頂層在主 repo ff-merge 成功後才清：`git worktree remove <路徑>`＋`git branch -d <分支>`。
-
-做完的 commit 仍盡早 push，本機 gitdir 不算可靠。
+- **多條線同時改同一棵工作樹**：靠 `commit-request claim` 先宣告自己在改哪些檔，不靠 worktree 隔開；交件也走 `wf/tools/commit-request`（鐵律 3，用法見 [dispatch/aos-teams](dispatch/aos-teams.md)「1. commit」）。
+- **不准自己刪 worktree 或分支**：真的看到有殘留的，回報、不自己清（worktree 收尾清理清空過當時 submodule 的 gitdir、丟掉未 push 的 commit）。
+- **push 由頂層在使用者點頭後做**（鐵律 2；授權怎麼問見 [user/01「push 授權」](common/user/01-說話授權與記憶.md)），各線不 push。還沒 push 的 commit 只存在本機，本機 gitdir 不算可靠。
 
 ## 跨機、外部工具、模型端點
 

@@ -2,14 +2,12 @@
 
 ← [WORKFLOWS](../../WORKFLOWS.md)｜[INDEX](../../INDEX.md)
 
-> **先看這句（11-14）**：本專案現在的隊形是 opus／fable 帶 sol（agent-fsm），不是 codex CLI＋claude CLI；見 [aos-teams/07「11-14 補」](aos-teams/07-預設流程與agent-fsm.md)。本檔提到 codex 隊員與啟動教學的地方是舊隊形，還沒改寫（kb-1114 重整中）。
-
 把一件大工作切成幾條線交給別的 agent 跑，並負責**仲裁與驗收**。調度者不深潛實作。
 
-**何時用**：一件工作大到要同時開幾條線，或要派給別資料夾／別機器的 agent 做；workshop／hackathon 開隊也照這裡。
+**何時用**：一件工作大到要同時開幾條線，或要派給別資料夾／別機器的 agent 做。
 **何時不用**：一兩個檔的小改（開線的交接成本大過收益）；需求還沒定、要跟使用者來回確認方向；只是要問一件事或送一則情報 → [inbox](../inbox.json)。
 
-**本專案的隊形**（頂層只調度、opus 隊長＋codex／claude 兩名隊員；開隊與 codex 的呼叫方式、幾條硬規則）→ [aos-teams](aos-teams.md)。
+**本專案的隊形**（頂層只調度；一條線＝一隻 opus 或 fable 的 eca，隊員是 sol 的 agent-fsm；commit、問使用者、掛隊員的實際指令與活樹旁的硬規則）→ [aos-teams](aos-teams.md)。
 
 ## Done when
 
@@ -22,7 +20,7 @@
 1. **切線**：按**獨立 repo** 或**明確列舉的檔案清單**切，**不按功能切**。**同一時間一個目錄只能有一條線持有寫入權**——兩條線寫同一處，先寫的一定被蓋掉。
 2. **登記領地**：在 [CLAIMS](CLAIMS.md)「現役」表加一列。**線只能追加自己那一格，不得改動既有內容**；收線移除與歷史整理歸調度者。落後於現實的領地表比沒有更危險。
 3. **寫交接書**：照 [TEMPLATE.handoff.md](../TEMPLATE.handoff.md)，最容易踩的六條見下一節。
-4. **啟動**：借現成通道——同機在線用 agent 工具內建的即時通道或子 agent（Claude Code 的 SendMessage、Agent），同一棵 aos 樹裡用 `mailbox_send`、樹外用 [inbox](../inbox.json) 寄 `REQUEST`；外部 CLI agent（codex）的啟動、監看與收線七步見 [driving-cli-agents](driving-cli-agents.md)。給整條線的目標與邊界，不逐步替它重算。
+4. **啟動**：借現成通道——同機在線用 agent 工具內建的即時通道或子 agent（Claude Code 的 SendMessage、Agent），同一棵 aos 樹裡用 `mailbox_send`、樹外用 [inbox](../inbox.json) 寄 `REQUEST`；外部 CLI agent 的啟動、監看與收線七步見 [driving-cli-agents](driving-cli-agents.md)（通用做法；本專案的隊員是 sol 的 agent-fsm，怎麼掛見 [aos-teams](aos-teams.md)「3. 掛 sol 隊員」）。給整條線的目標與邊界，不逐步替它重算。
 5. **監看**三個訊號，缺一不可：
 
    | 訊號 | 代表 |
@@ -70,14 +68,14 @@
 
 ## 領地登記
 
-三張表（現役／保留給調度者／歷史）是**活狀態**，會隨每輪派線增減，11-13 起放在 **[CLAIMS.md](CLAIMS.md)**（照 [STRUCTURE](../../STRUCTURE.md) 膨脹即拆；本檔只留流程與連結）。登記、收線都改那一份。hackathon 各場的隊伍紀錄在 [hackathon/](../hackathon/README.md) 自己的紀錄裡，不重抄。
+三張表（現役／保留給調度者／歷史）是**活狀態**，會隨每輪派線增減，11-13 起放在 **[CLAIMS.md](CLAIMS.md)**（照 [STRUCTURE](../../STRUCTURE.md) 膨脹即拆；本檔只留流程與連結）。登記、收線都改那一份。hackathon 各場的隊伍紀錄隨該工作流封存（11-14），不重抄。
 
 ## 內容
 
 | 檔案 | 內容 |
 |------|------|
 | [CLAIMS.md](CLAIMS.md) | 領地登記三張表：現役的線、保留給調度者的目錄、收線歷史（附完成證據） |
-| [aos-teams.md](aos-teams.md) | 本專案的隊形：頂層只調度、opus 隊長＋codex／claude 兩名隊員（盡量派 codex、一般工作 sol）；開隊指令、codex 沙箱、每段試玩（分檔在 `aos-teams/`）|
+| [aos-teams.md](aos-teams.md) | 本專案的隊形（短卡）：頂層只調度、線是 opus／fable 的 eca、隊員是 sol 的 agent-fsm；五件常做的事的實際指令（commit、問使用者、掛隊員、等隊員、活樹旁）（分檔在 `aos-teams/`）|
 | [driving-cli-agents.md](driving-cli-agents.md) | 怎麼啟動、驅動、監看一條外部 CLI agent 線，以及收線七步 |
 | [lessons.md](lessons.md) | 派線踩過的坑：預掃範圍、線推翻交接書、交接書自相矛盾、整檔改寫、合併後才刪分支、worktree 起點舊、任務書 checklist、舊東西怎麼用、共用工作樹與活樹旁派線（14～20） |
 
@@ -85,5 +83,5 @@
 
 - 交接書目錄分三層：本層＝現役、`done/`＝已完成附證據、`superseded/`＝被後續決定推翻（不刪，見 [STRUCTURE](../../STRUCTURE.md) 的 archive 規則）。
 - 線要用獨佔資源 → 在交接書指名可拿哪個鎖（[resources](../resources.md)）。
-- 線回報與催件 → [inbox](../inbox.json)；卡在使用者 → [WAIT_USER](../../WAIT_USER.md)。
+- 線回報與催件 → [inbox](../inbox.json)；卡在使用者 → 題目寄使用者專區（做法見 [aos-teams](aos-teams.md)「2. 問使用者」）；舊條目在 [WAIT_USER](../../WAIT_USER.md)。
 - 為什麼這樣切線 → [decisions](../decisions.json)。
