@@ -16,7 +16,11 @@ aos-llm recv $AOS_STACK/llm_box $N; echo $?               # 還沒到：10
 aos-llm recv $AOS_STACK/llm_box $N                        # 到了：{"role": "assistant", "content": "FAKE ANSWER to: hi"}
 echo "$B" | aos-llm ask --priority high                   # 同步：寄、等、印 message
 aos-llm ls                                                # 列 kernel 的能力包：代號 speed cost context slots backend summary
+aos-llm ls --kernel llm-local                             # 指定 AOS_DAEMON 表上的列名
+aos-llm ls --kernel ./stacks/brain                         # 含 / 的值＝kernel stack 路徑（相對 cwd）
 ```
+
+**只列能力包不必先設 `AOS_LLM_KERNEL`**：`ls` 定位順序是 `--kernel NAME|PATH` ＞ `AOS_LLM_KERNEL` ＞ `$AOS_DAEMON` 表上唯一的 llm kernel 列。列名取那列的 stack；含 `/` 的旗標值是 stack 路徑、相對 cwd。自動辨識只看列的 stack：夾裡同時有 `endpoints.json` 檔與 `requests/` 資料夾才算候選，stack 的相對路徑以 daemon stack 真實位置為準；不猜 exec、argv 或 def 名字。零個或多個候選都報 `LlmKernelMissing`，多個時列名字、請用 `--kernel` 選。不猜固定列名、不查程序死活；`send`／`ask`／`regret` 仍只用 `AOS_LLM_KERNEL`。
 
 **stdin 是整份 body**（隊長定案：設計稿寫「stdin＝request.json」，[03 § 1](../../thinking/2026-11/04/think-as-function/03-呼叫端.md) think 寫的 `request.json` 就是 body 的形狀）：`{"endpoint"?: 代號, "request": {"messages": [...], "tools"?, ...}, "priority"?}`——代號、請求、優先度都由呼叫端自己組，aos-llm 原樣當信的 `body` 寄出（只有 `--priority` 有給時蓋掉 `priority`）。
 

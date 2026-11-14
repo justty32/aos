@@ -9,6 +9,8 @@
 
 namespace aos::llm {
 
+// ls 專用定位：--kernel（列名或含 / 的 stack 路徑）＞AOS_LLM_KERNEL＞AOS_DAEMON 表的唯一 llm kernel。
+Mailbox ls_kernel(const std::optional<std::string>& selection);
 Json ls_window(const Mailbox& mb);
 void ls_print(const Json& window, bool json);
 

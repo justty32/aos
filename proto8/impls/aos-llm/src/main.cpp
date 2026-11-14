@@ -4,7 +4,7 @@
 //     aos-llm recv [--full] [--quiet] BOX 信件名稱                              收：到了印 body.message 一行、0；--full 印完整 body（含 usage、model、letter）；沒到 10
 //     aos-llm ask [--priority P] [--full] < body.json                  同步：寄、等、印 body.message、0；--full 印完整 body（含 usage、model、letter）
 //     aos-llm regret 信件名稱                                 撤回還在 new/ 的信；已被認領＝RegretFailed
-//     aos-llm ls [--json]                                     列 kernel 的包（讀 $AOS_LLM_KERNEL 的 stack 底下 endpoints.json）：一行一包；沒窗＝EndpointsMissing
+//     aos-llm ls [--json] [--kernel NAME|PATH]                列 kernel 的包：旗標＞AOS_LLM_KERNEL＞daemon 表唯一候選；沒窗＝EndpointsMissing
 //
 //   block_signals → 子命令 → 命令列（旗標在位置參數前，P-44；aos-util 的 parse_cli）→ $AOS_LLM_KERNEL（send、ask、regret、ls；send／ask 先驗 body 才看它，坑-100）→ 做事
 //   body＝{"endpoint"?: 代號, "request": {"messages": [...], ...}, "priority"?}（呼叫端自己組；--priority 有給就蓋 body.priority）。
@@ -50,7 +50,7 @@ static const std::map<std::string, std::string> SUB_USAGE = {
     {"recv", "aos-llm recv [--full] [--quiet] BOX LETTER"},
     {"ask", "aos-llm ask [--priority P] [--full] < body.json"},
     {"regret", "aos-llm regret LETTER"},
-    {"ls", "aos-llm ls [--json]"},
+    {"ls", "aos-llm ls [--json] [--kernel NAME|PATH]"},
 };
 
 static const std::map<std::string, std::string> SUB_HELP = {
@@ -119,14 +119,19 @@ more: aos-llm/README.md
 )"},
     {"ls", R"(aos-llm ls - List the LLM kernel endpoint packs.
 
-usage: aos-llm ls [--json]
+usage: aos-llm ls [--json] [--kernel NAME|PATH]
        aos-llm ls --help
 
 flags:
-  -j, --json   print the endpoint window as one JSON line
-  -h, --help   show this help
+  --kernel NAME|PATH  use a named row on $AOS_DAEMON's table, or a kernel stack path
+                      (a value containing / is a path, relative to the current directory)
+  -j, --json          print the endpoint window as one JSON line
+  -h, --help          show this help
 
-Read $AOS_LLM_KERNEL/endpoints.json and print one pack per line.
+Select --kernel first, then $AOS_LLM_KERNEL, then the only llm kernel row on
+$AOS_DAEMON's table. Automatic candidates have both an endpoints.json file and a
+requests/ directory in their stack; exec and definition names are not used.
+No matching rows or several matches = LlmKernelMissing; choose --kernel explicitly. Read the selected stack's endpoints.json and print one pack per line.
 Columns (TAB): name, speed, cost, context, slots, backend, summary.
 
 exit codes: 0 listed; 1 error.
@@ -211,8 +216,8 @@ int main(int argc, char** argv) {
             return g::ask_wait(mb, id, cli.opts.count("full") > 0);
         }
         if (cmd == "ls") {
-            aos::Cli cli = parse(args, {}, 0, "ls takes no positional arguments", "ls", {{"--json", "json"}}, {"-j"});
-            g::ls_print(g::ls_window(g::kernel()), cli.opts.count("json") > 0);
+            aos::Cli cli = parse(args, {{"--kernel", "kernel"}}, 0, "ls takes no positional arguments", "ls", {{"--json", "json"}}, {"-j"});
+            g::ls_print(g::ls_window(g::ls_kernel(opt(cli, "kernel"))), cli.opts.count("json") > 0);
             return 0;
         }
         if (cmd == "regret") {
