@@ -31,4 +31,14 @@
 
 ## 索引
 
-（還沒有內容。第一批稿整理完，主題檔會列在這裡。主題由整理的子 agent 提、頂層定，預計會有：daemon 與行程、信件與溝通、kernel 與額度、fsm 範本、指令與工具、知識庫與文件。）
+第一批（11-14，五隊 15 份稿）整理後共 16 條（小坑三則拆成三條）。主題由整理的子 agent 提，頂層定。
+
+| 主題檔 | 收什麼 | 未處理 | 已解 |
+|---|---|---|---|
+| [daemon與行程](daemon與行程.md) | daemon、aos-loop、daemon 表、--limits | 4 | 0 |
+| [信件與溝通](信件與溝通.md) | mailbox、專區信、say／ask／listen | 3 | 1 |
+| [kernel與額度](kernel與額度.md) | llm kernel、腦額度、找 kernel | 2 | 0 |
+| [fsm範本](fsm範本.md) | agent-fsm 範本、guard、wait 與冷卻 | 2 | 1 |
+| [指令與工具](指令與工具.md) | aos-agent、aos-view、建置、wf/tools | 4 | 0 |
+
+「知識庫與文件」這批沒有稿，先不開檔。

@@ -1,0 +1,49 @@
+# daemon 與行程
+
+← [README](README.md)
+
+aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
+
+## after_stop 事件分不出是 stop、sleep 還是 rm
+
+- 主題：daemon 與行程
+- 哪裡：aos-loop 的 on_stop → `lib/agent/hook_fire` 發的 `after_stop` 事件（`impls/aos-loop/src/engine/loop.cpp` 的 end()、`lib/agent/hook_fire/_entry`）。
+- 現象：事件只多 `code`、`signal` 兩欄。`ctl rm`（running）和 `ctl sleep` 都是 daemon 送 SIGTERM，hook 看到的都是 143／15；`ctl stop` 是 0／null，跑滿 max 或 body 退 10 也是 0／null。hook 無法依「為什麼停」做不同的事，例如 rm 想立刻收畫面、sleep 想延後收，只能統一延後，或另讀 daemon 表（走 kernel 時表可能被刪減、daemon 可能不在）。
+- 建議：daemon 送 SIGTERM 前把原因寫進 child ctl 檔（例 `{"reason": "sleep"}`），loop 讀到後設 `AOS_LOOP_REASON`，hook_fire 轉成事件的 `reason` 欄（stop、sleep、rm、max、body_exit、signal）。沒有原因時給 null，相容舊 hook。
+- 痛的程度：拖慢（設計 hook 要繞路）
+- 提出者與日期：ok-kf 2026-11-14
+- 出處：wf/temp/ok-kf/aos-advice/after-stop-no-reason.md；wf/temp/ok-kf/cprime/final.md；kf-1114 暫存樹 kf-check/G-cprime-facts.md 第 1 節
+- 狀態：未處理
+
+## 子 agent 不知道是誰生了它
+
+- 主題：daemon 與行程
+- 哪裡：daemon 表的列、`aos-agent ctl add`、`lib/agent/subagent`（帳只記在 mom 那邊）。
+- 現象：AK17 要讓 worker 額度被拒時通知 lead，查過後發現子 agent 的 stack、daemon 表、環境變數都沒有「mom 是誰」。只能讓 `subagent add` 塞一個 `AOS_NOTIFY_BOX=<mom stack>/mailbox`；用 `agents_ctl add`、`aos-agent ctl add` 直接生的就沒有。ok-skyrim 查證時也得到同樣結論（隊員身上沒記「誰掛的我」，見 ad7983618）。
+- 建議：daemon 表的列記 `parent`（是誰的 stack 發出 add）；或 `ctl add` 一律給子行程 `AOS_PARENT_STACK`。hook、工具都靠它找上面的人，不用每種用途各發明一個變數。
+- 痛的程度：拖慢
+- 提出者與日期：ok-astra 2026-11-14
+- 出處：wf/temp/ok-astra/aos-advice/child-knows-no-parent.md；astra-1114 暫存樹 ak17/facts.md Q4；commit 2368ee3af（subagent/_entry 預設 AOS_NOTIFY_BOX）
+- 狀態：未處理（目前只有 subagent 路徑的 AOS_NOTIFY_BOX）
+
+## --limits 的 cpu_s 按程序計，擋不住整隻 agent 的總 CPU
+
+- 主題：daemon 與行程
+- 哪裡：`subagent add`／`ctl add` 的 `limits.cpu_s`（經 s6-softlimit 設 RLIMIT_CPU）。
+- 現象：給 sol 設 `cpu_s: 2`，照常答題。aos-loop 本身累計只 0.19 秒，每格工作都是新子程序，RLIMIT_CPU 各自重算。鍵名看起來像「整隻最多 2 秒」，實際幾乎擋不住。
+- 建議：文件寫明 cpu_s 是「每個程序」上限；要管總量就提供 cgroup 版的鍵（例 cpu_max 對應 cpu.max，或總 CPU 秒數），可併入 kernel-limits-1114 的 cgroup 計劃。
+- 痛的程度：小不便（沒人靠它，但鍵名誤導）
+- 提出者與日期：ok-pilot 2026-11-14
+- 出處：wf/temp/ok-pilot/aos-advice/limits的cpu_s按程序計擋不住總量.md；wf/temp/ok-pilot/notes.md 第四輪
+- 狀態：未處理。部分已做：f856af0eb 在 wf 07 寫明「cpu_s 只按單一程序計、總量要 cgroup」；工具說明與知識庫 aos/agents/subagent 還沒寫，cgroup 鍵還沒做（kernel-limits-1114 有 B5 cgroup 規劃稿，尚未 commit）。
+
+## limits 開檔數的鍵叫 files，不叫 nofile
+
+- 主題：daemon 與行程
+- 哪裡：`--limits` 的鍵名。
+- 現象：`ArgumentsBad unknown key nofile in --limits (keys: mem_mb, cpu_s, procs, file_mb, files, user)`。錯誤本身很清楚。
+- 建議：把 `nofile` 收為 `files` 的別名，或在 subagent 工具說明的 limits 例子裡用一次 files。
+- 痛的程度：小不便
+- 提出者與日期：ok-pilot 2026-11-14
+- 出處：wf/temp/ok-pilot/aos-advice/小坑三則.md 第 3 則
+- 狀態：未處理（wf 07 已提到「鍵叫 files 不是 nofile」，f856af0eb；別名與工具說明例子沒做）
