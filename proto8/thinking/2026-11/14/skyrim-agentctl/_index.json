@@ -1,0 +1,50 @@
+{
+ "00-原話.md": {
+  "description": "skyrim-agentctl 調查線：使用者原話（11-14，逐字，頂層轉來）"
+ },
+ "01a-蒐集-通訊信箱.md": {
+  "description": "蒐集 01a（sol-a 原文）：skyrim agentctl 的 agent 通訊——五條通道、身份簿 ROSTER、上游路由、輪詢與 ack"
+ },
+ "01b-蒐集-資源鎖與守門工具.md": {
+  "description": "蒐集 01b（sol-c 原文）：skyrim 的資源鎖、工具索引、收工 wrap 與守門工具、wf-lint"
+ },
+ "01c-蒐集-等使用者與教訓庫.md": {
+  "description": "蒐集 01c（sol-d 原文）：skyrim 的等使用者計數表、給使用者看的頁面、教訓庫、能力與已知問題文件、STRUCTURE 差異、hooks"
+ },
+ "01d-蒐集-團隊模型與領地.md": {
+  "description": "蒐集 01d（astra 隊 sol-L01 原文，astra 還沒驗收）：skyrim 的團隊模型三層、領地宣告、session goal 範本、.claude 入口"
+ },
+ "01e-蒐集-BRIEF契約與lint.md": {
+  "description": "蒐集 01e（astra 隊 sol-L02 原文，astra 還沒驗收）：skyrim 的交接書 BRIEF 契約、brief_lint 規則與 commit 前 hook"
+ },
+ "01f-蒐集-通訊第二份.md": {
+  "description": "蒐集 01f（ok-skyrim 隊 sky-sol-a 原文）：skyrim 的 agent 通訊第二份——五通道、輪詢與醒鐘、ack、身份簿與團隊、hook 與 watch，各六格"
+ },
+ "01g-蒐集-隊形派工與外部CLI.md": {
+  "description": "蒐集 01g（ok-skyrim 隊 sky-sol-b 原文）：skyrim 的角色與配額、BRIEF 契約與 lint、回報等待與交棒、外部 CLI 啟動與判活、收線與 commit 閘門"
+ },
+ "01h-蒐集-資源交接衛生.md": {
+  "description": "蒐集 01h（ok-skyrim 隊 sky-sol-c 原文）：skyrim 的資源鎖與八條鐵律、領地、交接與跨場狀態、工具索引、衛生與保留期"
+ },
+ "01i-蒐集-兩邊wf差異.md": {
+  "description": "蒐集 01i（ok-skyrim 隊 sky-astra-d 原文）：skyrim 與 aos 兩邊 wf 骨架的差異——skyrim 有 aos 沒有、兩邊寫法不同、aos 獨有"
+ },
+ "01j-蒐集-派線事故與場次.md": {
+  "description": "蒐集 01j（ok-skyrim 隊 sky-sol-a 原文；工單是前一任的 astra 寫的 L04）：skyrim 的場次生命週期、十二條派線事故與後來定的規矩、外部線判讀、aos 同主題對照"
+ },
+ "01k-蒐集-驗收抽查與機制索引.md": {
+  "description": "蒐集 01k（ok-skyrim 隊 sky-astra-d 原文）：astra 抽查三份 sol 報告十二條（對 11、部分對 1、錯 0）＋九份蒐集的跨檔機制索引"
+ },
+ "02-借鑑清單.md": {
+  "description": "02 借鑑清單：skyrim 的 agentctl／wf 有哪些做法值得 aos／wf 參考（ok-skyrim 判斷，只寫方向、不寫實作計劃、不出待裁題）"
+ },
+ "03-隊形心得.md": {
+  "description": "03 隊形心得：fable 當 kernel，在活樹裡帶 LiteLLM 上的 sol 與 astra（agent-fsm）實際怎麼樣"
+ },
+ "README.md": {
+  "description": "skyrim-agentctl 調查線（11-14，做完）：`~/repo/moddings/skyrim` 的 agentctl／wf 有什麼可給 aos／wf 借鑑——能直接抄的不多，最有用的是它撞出來的事故"
+ },
+ "交棒.md": {
+  "description": "交棒（11-14 08:35，skyrim-agent 這條線搬進 aos，改由活樹裡的 fable eca「ok-skyrim」接手）：蒐集五份已落檔、astra 隊還剩兩張工單沒跑，借鑑清單與定稿都還沒做"
+ }
+}
