@@ -179,6 +179,24 @@ cq submit --line ok-a --msg-file "$(msg t11f m11f)" --op "{\"op\":\"month_bump\"
 CNT=$(git show main:proto8/thinking/$YM/README.md | grep -F "| [$DAY]($DD/README.md) |" | awk -F'|' '{print $3+0}')
 check "bump then set in one request ($E): count is 5 and the new segment is there" bash -c "[ $E = 0 ] && [ $CNT = 5 ] && git show main:proto8/thinking/$YM/README.md | grep -F '[$DAY]' | grep -qF '；丁線一段 |'"
 
+echo "== T12 knowledge _index.json is hand-written: accepted; other _index.json still refused"
+KI=proto8/knowledge/aos/cli/_index.json
+if [ -f "$KI" ]; then
+  python3 -c "import json,sys;p=sys.argv[1];d=json.load(open(p,encoding='utf-8'));d['_t12']={'description':'t12 test entry'};open(p,'w',encoding='utf-8').write(json.dumps(d,ensure_ascii=False,indent=2)+'\n')" "$KI"
+  cq submit --line ok-a --files "$KI" --msg-file "$(msg t12 m12)" > "$RUN/t12.out" 2>&1; E=$?
+  check "knowledge _index.json submitted ($E) and in the commit" bash -c "[ $E = 0 ] && git show main:$KI | grep -q _t12"
+  check "it is listed under files, not generated" python3 -c "import json,sys;d=json.loads(open(sys.argv[1]).read().strip().splitlines()[-1]);sys.exit(0 if sys.argv[2] in d['files'] and sys.argv[2] not in d['generated'] else 1)" "$RUN/t12.out" "$KI"
+else
+  bad "T12 needs $KI in the clone"
+fi
+OI=proto8/cmd/aos-agent/aos_agent/_index.json
+printf ' ' >> "$OI"
+cq submit --line ok-a --files "$OI" --msg-file "$(msg t12b m12b)" > "$RUN/t12b.out" 2>&1; E=$?
+check "proto8 code _index.json still refused as generated ($E)" bash -c "[ $E = 3 ] && grep -q 'generated file' $RUN/t12b.out"
+git checkout -q -- "$OI"
+cq submit --line ok-a --files wf/tools/_index.json --msg-file "$(msg t12c m12c)" > "$RUN/t12c.out" 2>&1; E=$?
+check "wf _index.json still refused as generated ($E)" bash -c "[ $E = 3 ] && grep -q 'generated file' $RUN/t12c.out"
+
 check "end: nothing staged except the foreign file" [ "$(git diff --cached --name-only)" = proto8/foreign_staged.md ]
 
 echo

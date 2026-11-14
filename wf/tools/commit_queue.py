@@ -35,6 +35,7 @@ PROG = "commit-request"
 REF = "refs/heads/main"
 GEN_PREFIX = "wf/knowledge/code-map/"
 GEN_NAME = "_index.json"
+HAND_PREFIX = "proto8/knowledge/"   # 知識庫的 _index.json 是手寫的（index_gen.json：knowledge 不在範圍），佇列不重生，當一般檔收
 LOG_SECTION = "## 最新進度"
 SESSION_LOG = "wf/SESSION-LOG.md"
 SHARED_RE = re.compile(r"proto8/thinking/\d{4}-\d\d/(\d\d/)?README\.md")
@@ -68,6 +69,8 @@ def now():
 
 
 def is_generated(path):
+    if path.startswith(HAND_PREFIX):
+        return False
     return os.path.basename(path) == GEN_NAME or path.startswith(GEN_PREFIX)
 
 
