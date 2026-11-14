@@ -2,6 +2,13 @@
 
 使用者 11-10：「最基礎的就是read/ls/view/stat要有。然後是普通的編輯如write/edit/copy/move/mkdir，再來是trash/remove，最後是shell。就是說，這是一包一包的」；「1.預設開到第四包，想要安全就自行限制」。agent 工具的分法：「clock_register,self_hook兩個分一組，self_tools/llm/state/ctl/history一組。agents一組。mailbox_*一組，memory_*一組。peek_clock一組。」「agent_def另外放」「2.都開吧」；「這種peek_clock,peek_now_time放一起，就是小工具的感覺。」（math 也收進來：「好」）。
 
+## agent-fsm 預設掛哪幾包（11-14 起 11 包、40 支；使用者 11-14「tools40: a」，[ok-fsm-1114 設計稿](../../thinking/2026-11/14/ok-fsm-1114/01-預設工具包-設計稿.md)）
+
+- **預設掛的 11 包**（範本 `templates/agent-fsm/tools.json` 的 `$override`）：look、change、delete、shell、gadgets、todo、self、mailbox、goal、json、index。
+- **改成選掛的 4 包**（範本不掛）：events（clock_register、self_hook）、subagent（subagent、agents_ctl、fork）、def（agent_def、tools_def）、jsonx（jsonx_* 八支）。eca-claude 範本不受影響。
+- **要用怎麼加**：做定義的時候，在那份定義的 `tools.json` 的 `"$override"` 串加一項，例如帶隊的加 `{"$env": "AOS_HOME", "$path": "/lib/packs/subagent.json"}` 與 `/lib/packs/def.json`；kits 也可以替定義加。agent 執行中用 `self_tools add` 逐支加仍然可以，但不是主要做法（一次只收一支、工具清單一變對話快取就失效、還要多問腦一兩次）。
+- **成本**：每掛一包，每次問腦都多送那包的工具說明與參數；各包字元數見知識庫 `aos/packs.json`。
+
 ## 通用四包（agent-fsm 預設開；eca-claude 四包都不掛——使用者 11-11「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「可以先定這樣，然後trash也拿掉。」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）
 
 | 包 | 檔 | 工具 |
@@ -16,7 +23,7 @@
 | 包 | 檔 | 工具 |
 |---|---|---|
 | json（簡單組） | [json.json](json.json) | json_get、json_ls、json_search、json_len、json_set、json_add、json_del，一次多格的 json_multi_get、json_multi_set——路徑一整串 `檔#/指標`、值照字面、`$ref`／`$env` 當普通物件；agent-fsm、eca-claude 兩個範本都掛 |
-| jsonx（複雜組） | [jsonx.json](jsonx.json) | jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del，一次多格的 jsonx_multi_get、jsonx_multi_set——多 `follow`、`resolve`、`text`、`from`、`check`；agent-fsm、eca-claude 兩個範本都掛（使用者 11-13「eca-1:A*」＝範本掛 jsonx，[eca-tidy-review](../../thinking/2026-11/12/eca-tidy-review.md)；eca 子 agent 的唯讀精簡組 `tools_sub.json` 不掛） |
+| jsonx（複雜組） | [jsonx.json](jsonx.json) | jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del，一次多格的 jsonx_multi_get、jsonx_multi_set——多 `follow`、`resolve`、`text`、`from`、`check`；eca-claude 範本掛，agent-fsm 範本 11-14 起不掛（選掛，見上；使用者 11-13「eca-1:A*」＝範本掛 jsonx，[eca-tidy-review](../../thinking/2026-11/12/eca-tidy-review.md)；eca 子 agent 的唯讀精簡組 `tools_sub.json` 不掛） |
 
 十七支的程式都在 [`lib/aos_json.py`](../aos_json.py)（multi 四支在 [`lib/aos_json_multi.py`](../aos_json_multi.py)），各夾只是殼；圖紙 [01-規劃](../../thinking/2026-11/12/json-tools/01-規劃.md)。
 
@@ -28,7 +35,7 @@
 
 程式在 [`lib/aos_index.py`](../aos_index.py)，「index 放哪」只寫在它的 `spot()`。天然那份有兩處（[metainfo](../../thinking/2026-11/12/metainfo/README.md)，使用者「index_view也要認_metainfo。」）：`_metainfo` 裡的 `index` 為底、疊上獨立的 `_index.json`／`_index`，同名項整項以獨立那份為準；只有獨立那份時就只看那份（[N-69](../../docs/NORMS/10-基礎設施-定義與工作區/11-N-69.md)）。
 
-## 其他八包（兩個範本都預設開）
+## 其他八包（agent-fsm 預設開 gadgets、todo、self、mailbox、goal；events、subagent、def 11-14 起選掛，見上）
 
 | 包 | 檔 | 工具 |
 |---|---|---|
@@ -46,7 +53,7 @@
 | 包 | 檔 | 工具 |
 |---|---|---|
 | kernel 的門 | [kernel_gate.json](kernel_gate.json) | kernel_gate（讓 agent 自己當 kernel 的門：`on` 把框架站掛在自己身上、請求先留著並通知自己，`pass`／`refuse` 表態、轉寄由站做，`ls`、`off`；使用者 11-13「一個普通的agent隨便弄些hook、json設定啥的，就可以收請求了。請求進來後agent收到通知，他自己判斷要不要過，然後再去轉送」，[eca-as-kernel](../../thinking/2026-11/13/eca-as-kernel.md)）——要用的 agent 自己 `self_tools {"op": "add", "path": "<AOS_HOME>/lib/agent/kernel_gate"}`，或定義的 `$override` 串加這一包 |
-| 工作區寫文字 | [ws-write.json](ws-write.json) | ws_write（只在自己的 `$AOS_WS` 裡建檔、追加或替換文字，每次上限 262144 UTF-8 bytes，自己的 `$AOS_STACK`、`$AOS_CD` 底下就算在工作區裡也拒絕；來源：wf/advices/fsm範本.md，ok-view 11-14） |
+| 工作區寫文字 | [ws-write.json](ws-write.json) | ws_write（只在自己的 `$AOS_WS` 裡建檔、追加或替換文字，每次上限 262144 UTF-8 bytes，自己的 `$AOS_STACK`、`$AOS_CD`、放各 agent stack 的那個夾（鄰居的 stack）和任何 `.stack` 夾底下，就算在工作區裡也拒絕；來源：wf/advices/fsm範本.md，ok-view 11-14） |
 
 ## 怎麼用、怎麼關
 
