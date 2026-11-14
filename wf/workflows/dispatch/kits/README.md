@@ -24,8 +24,8 @@
 
 ## 「看」包（gather/）
 
-- **工具**：look、change 只留 write／edit／mkdir、gadgets、todo、mailbox、goal、json 只留讀的、index、self 只留 self_state，共 24 支。
-- **沒給的**：shell、delete、events、subagent、def、jsonx、kernel_gate；self_tools、self_system 這類改自己的工具也關掉了，所以它沒辦法自己解除限制。
+- **工具**：look、change 只留 write／edit／mkdir、gadgets、todo、mailbox、goal、json 只留讀的、index、self 只留 self_state，共 24 支。這是 wf 這份的數目。產品版（proto8/templates/kits/gather/）多了 comm 包的 board_read、board_wait 兩支（其他三支關掉），共 26 支；那兩支要 PATH 上有 aos-comm，活樹換樹之後才有，所以 wf 這份換樹前不加。
+- **沒給的**（看包沒有 shell；要 shell 得另外掛 shell 包，掛了才有）：shell、delete、events、subagent、def、jsonx、kernel_gate；self_tools、self_system 這類改自己的工具也關掉了，所以它沒辦法自己解除限制。
 - **腦**：sol-high，走 llm-gpt。
 - **固定成本**（每次問腦都會送，11-14 實測字元數）：
 
