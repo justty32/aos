@@ -103,7 +103,7 @@ class RealDaemon(unittest.TestCase):
         self.ok(TOOL, {"op": "rm", "name": "kid2", "purge": True})
 
     def test_requests_go_to_aos_kernel(self):
-        """11-12：AOS_DAEMON 與 AOS_KERNEL 都設＝表照讀那台 daemon、掛子信寄 AOS_KERNEL（這裡沒人收，所以逾時、信被撤回）。"""
+        """11-14 批 5：AOS_DAEMON 與 AOS_KERNEL 都設、kernel 不答查詢信＝KernelFailed，不退回讀 daemon 表。"""
         kernel = self.tmp / "kernel"
         subprocess.run(["aos-post", "init", str(kernel)], env=self.env, check=True)
         self.env["AOS_KERNEL"] = str(kernel)
@@ -114,8 +114,9 @@ class RealDaemon(unittest.TestCase):
         r = self.tool(TOOL, {"op": "add", "def": str(TEMPLATE), "name": "kid", "ws": "kid", "timeout_s": 1})
         watcher.wait(10)
         self.assertEqual(r.returncode, 1, r.stdout)
-        self.assertIn("DaemonFailed", r.stdout)
-        self.assertIn('"kid"', log.read_text())            # 信到過 AOS_KERNEL（逾時後被撤回）
+        self.assertIn("KernelFailed", r.stdout)
+        self.assertEqual(json.loads(log.read_text())["body"], {"procs_state_path": True})   # 先查表，沒寄掛子信
+        self.env.pop("AOS_KERNEL")                       # 查本機帳時明確退出 kernel 路徑
         self.assertEqual(self.ok(TOOL, {"op": "ls"}), "subagents 0/4\n")
 
 

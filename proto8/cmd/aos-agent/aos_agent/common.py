@@ -1,4 +1,4 @@
-# aos_agent/common.py - 共用分層 help、錯誤指路、旗標、找 daemon 與表上的一隻（ctl 動作才用的寄信等回信在 ctl/shared.py）。
+# aos_agent/common.py - 共用分層 help、錯誤指路、旗標、找 daemon 與表上的一隻（設了 AOS_KERNEL 先問表在哪再讀；ctl 動作才用的寄信等回信在 ctl/shared.py）。
 import json
 import os
 import textwrap
@@ -18,6 +18,7 @@ IFACE = "aos-agent"
 
 TOP = {}                                        # main 的頂層 opts（--daemon、--target；11-10 Q1 起寫在子命令後的也寫回這份）
 TOP_TARGET = None                               # main 裡從子命令前的 --target 定（坑-68）
+QUERY_S = None                                  # ctl ls／who／where／state 的 --timeout-s：等查詢信回信的秒數（None＝daemon_ctl 的預設 3 秒）
 
 
 class Fail(Exception):
@@ -86,13 +87,29 @@ def call_dc(fn, *args, **kwargs):
         raise Fail({"ProcMissing": "InstanceMissing"}.get(e.code, e.code), str(e)) from e
 
 
+def via_kernel():
+    """走 kernel 那條路（kernel-framework 03）：設了 AOS_KERNEL，而且沒明給 --daemon。"""
+    return dc.via_kernel(TOP.get("daemon"))
+
+
+def table_ref():
+    """這次讀的那份表：沒走 kernel＝daemon 的資料夾（照舊）；走 kernel＝寄查詢信問來的表檔（TableFile，一次執行只問一次；
+    問不到＝KernelFailed，不退回去讀 AOS_DAEMON）。daemon_ctl 的 rows／row_of／cell_of／names_of／write_ctl 兩種都吃。"""
+    if not via_kernel():
+        return call_dc(dc.find_daemon, TOP.get("daemon"))
+    return call_dc(dc.state_path, TOP.get("daemon"), QUERY_S)
+
+
 def daemon_path():
-    return call_dc(dc.find_daemon, TOP.get("daemon"))
+    """沒走 kernel＝那台 daemon 的 stack（--daemon ＞ $AOS_DAEMON ＞ ./.stack）；走 kernel＝問來那份表所在的資料夾
+    （ctl who --json 的 daemon 欄照字面＝這次讀的表在哪個資料夾；daemon 自己答時就是它的 stack）。"""
+    ref = table_ref()
+    return os.path.dirname(ref) if isinstance(ref, dc.TableFile) else ref
 
 
 def table():
-    """直接讀 daemon 的表。"""
-    return {n: r for n, r in call_dc(dc.rows, daemon_path()).items() if isinstance(r, dict)}
+    """讀表：daemon 的表，或走 kernel 時問來的那份（路徑欄已拼回絕對）。"""
+    return {n: r for n, r in call_dc(dc.rows, table_ref()).items() if isinstance(r, dict)}
 
 
 def under(path, top):

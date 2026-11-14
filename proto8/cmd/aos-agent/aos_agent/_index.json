@@ -6,7 +6,7 @@
   "description": "aos_agent/chat.py - 逐行寄訊息並等候回答的互動迴圈。"
  },
  "common.py": {
-  "description": "aos_agent/common.py - 共用分層 help、錯誤指路、旗標、找 daemon 與表上的一隻（ctl 動作才用的寄信等回信在 ctl/shared.py）。"
+  "description": "aos_agent/common.py - 共用分層 help、錯誤指路、旗標、找 daemon 與表上的一隻（設了 AOS_KERNEL 先問表在哪再讀；ctl 動作才用的寄信等回信在 ctl/shared.py）。"
  },
  "ctl": {
   "description": "aos-agent ctl 的各動作：add 掛上、rm 拔掉、起停睡醒暫停、ls 列表、state 看單隻狀態、where／who 找 stack、set-def 換定義與共用的寄控制信等回信"

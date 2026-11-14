@@ -10,12 +10,13 @@ from ..common import bad_args, Fail, parse, target
 from ..decl import agent_decl, def_of, show_limits
 from .. import declared_files
 from ..hints import label, queued
+from .shared import query_opt
 
 
 PARTS = ("who", "state", "tools", "llm", "system", "hooks", "history", "mailbox", "subagents", "resources", "time")
 HELP = """aos-agent ctl state - show one agent's state (status = the same)
 
-usage: aos-agent [--daemon D] ctl state [--target NAME] [-j] [PART... | all]
+usage: aos-agent [--daemon D] ctl state [--target NAME] [-j] [--timeout-s S] [PART... | all]
 
 parts:
   who        name, definition, workspace, stack
@@ -33,12 +34,16 @@ parts:
 flags:
   -t, --target NAME   which agent (default: $AOS_AGENT)
   -j, --json          print one JSON object {PART: {...}}
+  --timeout-s S       seconds to wait for AOS_KERNEL's answer about the table (default 3)
   -h, --help          show this help
 
 No PART = the overview: one line per part. PART... = those parts in detail; all = every part.
 Numbers and facts only. A part that cannot be read prints "not available (why)"
 (JSON: {"available": false, "reason": ...}); the other parts still show.
-exit codes: 0 shown; 1 error (TargetMissing, InstanceMissing, ArgumentsBad...).
+With $AOS_KERNEL set (and no --daemon) it first asks AOS_KERNEL where the table is (a
+procs_state_path letter) and reads that file; no answer within --timeout-s = KernelFailed
+(AOS_DAEMON is not read instead).
+exit codes: 0 shown; 1 error (TargetMissing, InstanceMissing, ArgumentsBad, KernelFailed...).
 more: proto8/cmd/aos-agent/README.md
 """
 
@@ -276,12 +281,13 @@ FN = {p: globals()["part_" + p] for p in PARTS}
 
 
 def cmd(argv):
-    opts, rest = parse(argv, {"--target": "target"}, {"--json": "json"}, help=HELP, short=("-t", "-j"))
+    opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout_s"}, {"--json": "json"}, help=HELP, short=("-t", "-j"))
     if "all" in rest:
         rest = [p for p in rest if p != "all"] + list(PARTS)
     bad = [p for p in rest if p not in PARTS]
     if bad:
         raise bad_args(HELP, "unknown part %s (parts: %s, all)" % (bad[0], " ".join(PARTS)))
+    query_opt(opts, HELP)
     a = target(opts)
     picked = list(dict.fromkeys(rest)) or list(PARTS)
     got = {}

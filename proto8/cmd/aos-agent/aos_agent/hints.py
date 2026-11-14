@@ -4,13 +4,13 @@ import aos_ws
 import daemon_ctl as dc
 import json
 import os
-from .common import call_dc, daemon_path, row_named
+from .common import call_dc, daemon_path, row_named, table_ref
 
 
 def loop_state(a):
     """子 loop 自己的 state.json（stack 裡 loop.json〔窗上的 procs_loop〕的 state 那格，沒寫＝state.json）→ 物件；讀不到＝{}。"""
     try:
-        with open(os.path.join(a.stack, call_dc(dc.names_of, daemon_path())["procs_loop"]), encoding="utf-8") as f:
+        with open(os.path.join(a.stack, call_dc(dc.names_of, table_ref())["procs_loop"]), encoding="utf-8") as f:
             name = json.load(f).get("state")
     except (OSError, ValueError, AttributeError):
         name = None
@@ -63,7 +63,7 @@ def off_table(a):
         return None
     return ("it is no longer on the daemon table (a body that exits 0 leaves the table; known nonzero exits stay stopped with a reason; removal or an adopted exit with unknown status can also leave it off the table; its last output is in %s/%s); aos-agent ctl add with the same name "
             "picks it up again (the stack is kept; some bodies resume where they stopped, others drop that batch, so say it again)"
-            % (a.stack, call_dc(dc.names_of, daemon_path())["procs_stderr"]))
+            % (a.stack, call_dc(dc.names_of, table_ref())["procs_stderr"]))
 
 
 def restart_how(d):
@@ -81,7 +81,7 @@ def run_hint(a):
     if held:
         why = "; reason recorded by the daemon: %s" % a.reason if a.reason else ""
         return "it is stopped on the daemon table (%s is stopped%s); start it: aos-agent ctl start --target %s" % (a.name, why, a.name)
-    return "see its error line: %s/%s, or aos-agent ctl state --target %s" % (a.stack, call_dc(dc.names_of, daemon_path())["procs_stderr"], a.name)
+    return "see its error line: %s/%s, or aos-agent ctl state --target %s" % (a.stack, call_dc(dc.names_of, table_ref())["procs_stderr"], a.name)
 
 
 def stuck_hint(a, sig):

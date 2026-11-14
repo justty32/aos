@@ -10,7 +10,7 @@
   "aos_sweep_proc.py": "認出這台 daemon 預設小格裡「表上沒有、但還活著、確定是這台生的」子 loop，先寫它的 ctl stop，過寬限還在才 TERM／10 秒後 KILL；真 zombie 只報。",
   "aos_ws.py": "「放一則訊息、等答案、讀 stack」與兩鐘期限的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。",
   "daemon_ctl": {
-   "__init__.py": "daemon_ctl：daemon 的找址、名單自檢清理、寄信回信、門鈴、子 loop 控制與停 daemon 本身的共用介面。",
+   "__init__.py": "daemon_ctl：daemon 的找址、狀態位址（設了 AOS_KERNEL 先問再讀）、名單自檢清理、寄信回信、門鈴、子 loop 控制與停 daemon 本身的共用介面。",
    "base.py": "daemon_ctl 基礎：共用錯誤類別與 daemon 檔名常數。",
    "ctl.py": "daemon_ctl 控制：檢查 proc 階段、依公開窗名寫入控制並等待套用；也寫 daemon 自己的 ctl 停它本身。",
    "entry.py": "daemon_ctl 入口：保留目標與 argv 寫法，讀取直接 loop 設定並組成掛子信。",

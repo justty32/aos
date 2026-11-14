@@ -6,17 +6,19 @@ import aos_ws
 from agent import cooldown
 from ..common import bad_args, Agent, parse, table
 from ..hints import label, queued
+from .shared import query_opt
 
 
 # ---------------------------------------------------------------- 子命令：查表類＋說話（步 4）
 
 HELP = """aos-agent ctl ls - list every proc on the daemon table
 
-usage: aos-agent [--daemon D] ctl ls [-j] [-l]
+usage: aos-agent [--daemon D] ctl ls [-j] [-l] [--timeout-s S]
 
 flags:
   -j, --json   print one JSON array instead of TAB-separated rows
   -l, --long   add the health columns QUEUE RESTARTS COOLDOWN LAST ERROR to each row
+  --timeout-s S  seconds to wait for AOS_KERNEL's answer about the table (default 3)
   -h, --help   show this help
 
 Rows: NAME STATE WORKSPACE QUEUED REASON. An empty table prints nothing.
@@ -24,7 +26,10 @@ With -l each row also has: QUEUE (letters in queue/new/), RESTARTS (failures in 
 from the stack's cooldown.json), COOLDOWN ("until HH:MM (N)" local time, "due (N)" when
 it has passed, "-" none), LAST ERROR (cooldown code and reason, else the table reason).
 --json rows always carry auto_restart, queue, cooldown and busy (think, act, cli or null).
-exit codes: 0 listed; 1 error (DaemonMissing...).
+With $AOS_KERNEL set (and no --daemon) it first asks AOS_KERNEL where the table is (a
+procs_state_path letter) and reads that file; no answer within --timeout-s = KernelFailed
+(AOS_DAEMON is not read instead).
+exit codes: 0 listed; 1 error (DaemonMissing, KernelFailed...).
 more: proto8/cmd/aos-agent/README.md
 """
 
@@ -90,10 +95,11 @@ def long_cols(a):
 
 
 def cmd(argv):
-    opts, rest = parse(argv, {}, {"--json": "json", "--long": "long"}, help=HELP,
+    opts, rest = parse(argv, {"--timeout-s": "timeout_s"}, {"--json": "json", "--long": "long"}, help=HELP,
                        short={"-j": "--json", "-l": "--long"})
     if rest:
         raise bad_args(HELP, "ls takes no arguments: %s" % rest[0])
+    query_opt(opts, HELP)
     rows = [Agent(n, r) for n, r in table().items()]
     if opts.get("json"):
         print(json.dumps([dict(name=a.name, state=label(a), phase=a.phase, ws=a.row.get("ws") or "", stack=a.stack,

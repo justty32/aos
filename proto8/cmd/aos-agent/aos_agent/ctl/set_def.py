@@ -2,7 +2,7 @@
 # 已知缺口（aos-daemon）：同名 procs_added 換的設定只活在跑著的 daemon 裡，那隻還沒重起、daemon 自己先重啟＝表上回到舊定義（test_set_def 兩支 expectedFailure）。
 import os
 import daemon_ctl as dc
-from ..common import Fail, bad_args, call_dc, daemon_path, find, note, parse, row_named
+from ..common import Fail, bad_args, call_dc, find, note, parse, row_named, table_ref, via_kernel
 from ..decl import read_decl
 from ..common import IFACE
 from .shared import ctl_wait, need_table, timeout_opt
@@ -61,7 +61,7 @@ def cmd(argv):
     stack = written["stack"] if isinstance(written.get("stack"), dict) else a.stack
     old_def = row.get("def")
     _, request = call_dc(dc.add_letter, entry_target, name=a.name, ws=ws or None, stack=stack, def_dir=def_dir,
-                         limits=row.get("limits"), auto_restart=bool(row.get("auto_restart")), daemon=daemon_path(), kept=kept)
+                         limits=row.get("limits"), auto_restart=bool(row.get("auto_restart")), daemon=None if via_kernel() else table_ref(), kept=kept)
     # 同名 procs_added＝daemon 把設定換成這份、在跑的不重起（N-54）；表上那列到下一次起來才換，所以只等回信、不看表
     ctl_wait("set-def", request, lambda _: True, "the daemon has not accepted the new definition of %s" % a.name, "CtlRejected",
              secs=secs, replied=True)
@@ -75,8 +75,8 @@ def cmd(argv):
              "restarts first: aos-agent ctl set-def --restart %s %s, or ctl stop then ctl start" % (a.name, old_def, a.name, rest[1]))
         print("definition of %s set to %s for its next start (stack %s kept)" % (a.name, xxx, a.stack))
         return
-    phase.cmd_stop(["--timeout-s", str(secs), a.name])
-    phase.cmd_start(["--timeout-s", str(secs), a.name])
+    phase.cmd_stop(["--timeout-s", str(secs), a.name], look=True)
+    phase.cmd_start(["--timeout-s", str(secs), a.name], look=True)
     now = (row_named(a.name) or {}).get("def")
     print("definition of %s is now %s (stack %s kept)" % (a.name, now or xxx, a.stack))
 

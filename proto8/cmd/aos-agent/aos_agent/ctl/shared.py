@@ -1,9 +1,10 @@
-# aos_agent/ctl/shared.py - ctl 動作才用的共用零件：--timeout-s／--on-queued／名字放最後、寄控制信給 daemon 並等回信與公開表。
+# aos_agent/ctl/shared.py - ctl 動作才用的共用零件：--timeout-s／--on-queued／名字放最後、寄控制信給 daemon（或 AOS_KERNEL）並等回信與公開表。
 import math
 import os
 import time
 import daemon_ctl as dc
-from ..common import Fail, bad_args, call_dc, daemon_path, kernel_box, note, queue_position
+from .. import common
+from ..common import Fail, bad_args, call_dc, daemon_path, kernel_box, note, queue_position, table_ref, via_kernel
 
 WAIT_S = 30                                     # add／stop／rm／start 等 daemon 的上限（daemon 的 grace 是 10 秒）
 REPLY_GRACE = 1.0                               # 結果先到時再留一秒等回信
@@ -21,7 +22,16 @@ def timeout_opt(opts, help):
     return secs
 
 
+def query_opt(opts, help):
+    """ctl ls／who／where／state 的 --timeout-s：走 kernel 時等查詢信回信的秒數（沒給＝3 秒）；沒走 kernel 不寄信、用不到。"""
+    if opts.get("timeout_s") is not None:
+        common.QUERY_S = timeout_opt(opts, help)
+
+
 def need_table():
+    """沒走 kernel：daemon 的資料夾要有表（照舊）。走 kernel：不核，讀表的地方經查詢信拿、問不到就報。"""
+    if via_kernel():
+        return None
     d = daemon_path()
     if not os.path.isfile(os.path.join(d, "procs_state.json")):
         raise Fail("StateMissing", "%s is not an aos-daemon stack (no procs_state.json); run this in the workspace the daemon was started in (./.stack), "
@@ -77,17 +87,25 @@ def daemon_up(d):
 
 
 def send_only(body):
-    """寄給 daemon、不要回信、不等（11-10 self_ctl：sleep／rm 自己＝等的人會被一起收掉）；回信名。"""
+    """寄給 daemon、不要回信、不等（11-10 self_ctl：sleep／rm 自己＝等的人會被一起收掉）；回信名。走 kernel＝寄 AOS_KERNEL、不核 daemon 活不活。"""
+    if via_kernel():
+        return call_dc(dc.send, None, body)
     d = daemon_path()
     daemon_up(d)
     return call_dc(dc.send, d, body)
 
 
 def ctl_wait(cmd, body, cond, what, refused, secs=WAIT_S, on_queued="fail", name=None, replied=False):
-    """等自己的回信與公開表；排隊可成功返回，逾時先撤未領取的信。replied＝收到 daemon 的回信（applied）就算數、不看表。"""
-    d = daemon_path()
-    daemon_up(d)
-    box = call_dc(dc.reply_box, d)
+    """等自己的回信與公開表；排隊可成功返回，逾時先撤未領取的信。replied＝收到 daemon 的回信（applied）就算數、不看表。
+    走 kernel（kernel-framework 03）＝信寄 AOS_KERNEL、回信信箱照 kernel_reply_box、不核 daemon 活不活；只看回信的指令呼叫時給 replied。"""
+    kernel = via_kernel()
+    if kernel:
+        d = None
+        box = call_dc(dc.kernel_reply_box)
+    else:
+        d = daemon_path()
+        daemon_up(d)
+        box = call_dc(dc.reply_box, d)
     recipient = call_dc(dc.mailbox_of, d)
     if kernel_box():
         note("routing via AOS_KERNEL=%s" % kernel_box())
@@ -143,14 +161,17 @@ def ctl_wait(cmd, body, cond, what, refused, secs=WAIT_S, on_queued="fail", name
             return value
     withdrawn = call_dc(dc.regret, recipient, letter)
     outcome = "letter withdrawn, it will not be applied" if withdrawn else "could not withdraw it; it may still be applied"
+    if kernel:
+        raise Fail("DaemonFailed", "no reply to the %s letter sent to AOS_KERNEL=%s within %g s; %s; inspect adjacent %s"
+                   % (cmd, recipient, secs, outcome, os.path.join(os.path.dirname(recipient), "queue.json")))
     raise Fail("DaemonFailed", "no result from the daemon at %s within %g s; %s%s" % (d, secs, outcome, kernel_hint()))
 
 
-def phase_body(cmd, name):
-    """控制動詞的檢查順序與共用介面一致。"""
-    d = daemon_path()
-    row = call_dc(dc.row_of, d, name)
-    call_dc(dc.need_phase, cmd, name, row)
+def phase_body(cmd, name, look=True):
+    """控制動詞的檢查順序與共用介面一致。look＝先對表上那列核 phase；只看回信的（走 kernel 的 stop／start／sleep／wake）不讀表、不核。"""
+    if look:
+        row = call_dc(dc.row_of, table_ref(), name)
+        call_dc(dc.need_phase, cmd, name, row)
     return {{"stop": "procs_stopped", "start": "procs_started", "sleep": "procs_slept", "wake": "procs_woken"}[cmd]: [name]}
 
 

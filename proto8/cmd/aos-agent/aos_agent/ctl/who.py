@@ -2,29 +2,35 @@
 import json
 import os
 from ..common import bad_args, Fail, daemon_path, parse, table, under
+from .shared import query_opt
 
 
 HELP = """aos-agent ctl who - find which listed agent owns a stack
 
-usage: aos-agent [--daemon D] ctl who [-j] [--stack S]
+usage: aos-agent [--daemon D] ctl who [-j] [--stack S] [--timeout-s S]
 
 flags:
   --stack S    stack path to look up (default: $AOS_STACK)
-  -j, --json   print name, stack, workspace, definition and daemon (the table's daemon stack) as one JSON object
+  -j, --json   print name, stack, workspace, definition and daemon (the folder of the table it read) as one JSON object
+  --timeout-s S  seconds to wait for AOS_KERNEL's answer about the table (default 3)
   -h, --help   show this help
 
 Prints its name; nested tool stacks match their owning agent.
 If several stacks contain S, the deepest listed stack wins.
-exit codes: 0 found; 1 error (StackMissing, InstanceMissing...).
+With $AOS_KERNEL set (and no --daemon) it first asks AOS_KERNEL where the table is (a
+procs_state_path letter) and reads that file; no answer within --timeout-s = KernelFailed
+(AOS_DAEMON is not read instead).
+exit codes: 0 found; 1 error (StackMissing, InstanceMissing, KernelFailed...).
 more: proto8/cmd/aos-agent/README.md
 """
 
 def cmd(argv):
     """ctl who（11-05 feat-proto 件 1 代定 1）：S（--stack ＞ $AOS_STACK）落在表上哪一隻的 stack 裡——那列的 stack 是 S 本身或 S 的上層
     （工具的小格 <agent stack>/tools/<名>/ 也認得）；好幾列都包住 S＝取最深的那列。只查 daemon 表（C-52 經機制看上層），不從 S 往上爬猜。"""
-    opts, rest = parse(argv, {"--stack": "stack"}, {"--json": "json"}, help=HELP, short=("-j",))
+    opts, rest = parse(argv, {"--stack": "stack", "--timeout-s": "timeout_s"}, {"--json": "json"}, help=HELP, short=("-j",))
     if rest:
         raise bad_args(HELP, "who takes no positional arguments: %s (give the path with --stack S)" % rest[0])
+    query_opt(opts, HELP)
     s = opts.get("stack") or os.environ.get("AOS_STACK", "")
     if not s:
         raise Fail("StackMissing", "no --stack and no AOS_STACK; give the stack path to look up")
@@ -38,7 +44,7 @@ def cmd(argv):
         raise Fail("InstanceMissing", "%s is not inside the stack of any proc on the daemon table %s" % (os.path.abspath(s), daemon_path()))
     n, r = hit
     if opts.get("json"):
-        # daemon＝查的是哪一台的表（--daemon ＞ $AOS_DAEMON ＞ ./.stack，同 daemon_path）；fork、subagent 拿它當放 stack 與相對路徑的基準（11-12 kernel 小修）
+        # daemon＝這次讀的那份表所在的資料夾（沒走 kernel＝--daemon ＞ $AOS_DAEMON ＞ ./.stack 那台；走 kernel＝問來那份表檔的資料夾；同 daemon_path）
         print(json.dumps({"name": n, "stack": r.get("stack"), "ws": r.get("ws"), "def": r.get("def"), "daemon": daemon_path()}, ensure_ascii=False))
     else:
         print(n)

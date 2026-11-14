@@ -4,7 +4,7 @@ import daemon_ctl as dc
 import json
 import os
 import re
-from ..common import bad_args, Agent, Fail, IFACE, call_dc, daemon_path, note, row_named
+from ..common import bad_args, Agent, Fail, IFACE, call_dc, daemon_path, note, row_named, via_kernel
 from .shared import ctl_wait, need_table, queued_opt, timeout_opt
 from ..decl import read_decl
 
@@ -13,11 +13,14 @@ from ..decl import read_decl
 
 HELP = """aos-agent ctl add - attach one agent to the daemon
 
-usage: aos-agent [--daemon D] ctl add [-n N] [-w WS | --ws-json J] [-s S | --stack-json J] [--path-json J] [--limits JSON] [--envs K=V ...] [--auto-restart] [--timeout-s S] [--on-queued fail|ok] XXX
+usage: aos-agent [--daemon D] ctl add [-n N] [-w WS | --ws-json J] [-s S | --stack-json J] [--path-json J] [--limits JSON] [--envs K=V ...] [--dotenv-override] [--auto-restart] [--timeout-s S] [--on-queued fail|ok] XXX
 
 XXX is the agent folder; it must declare aos-agent in interfaces.json. The letter goes
 through $AOS_KERNEL when that is set (a warning line says so). Waits until the agent is on
 the table, then prints its stack; the daemon refusing it = AddRejected.
+With $AOS_KERNEL set (and no --daemon) it reads only the reply to its own letter: no table
+lookup first, no check that the daemon is up; it prints the stack only when -s gave one
+(otherwise a warning says to ask aos-agent ctl where N); paths in the letter stay absolute.
 
 Paths on the table: one you type as an absolute path stays that absolute path; a relative one
 (from the current directory, also the default workspace) is stored relative to the daemon's
@@ -38,6 +41,9 @@ flags:
                       the value is stored in plain text in procs/<name>/exec.json and shows on
                       the command line: never pass secrets here (an MCP token goes in the
                       server file's env_file, see external-mcp)
+      --dotenv-override   start the definition with aos-exec --dotenv-override: its .env may
+                          override names already set, e.g. PATH=${HOME}/bin:${PATH}
+                          (stored in the row's exec; only that hop)
       --limits JSON   resource limits, the aos-sandbox keys ('{}' = none)
       --auto-restart  the daemon restarts it whenever it exits (row gets "auto_restart": true);
                       only for agents that stay up; a fire-and-forget agent (eca with
@@ -75,7 +81,7 @@ def cmd(argv):
     try:
         opts, rest = aos_flags.parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits", "--timeout-s": "timeout_s", "--on-queued": "on_queued",
                                              "--ws-json": "ws_json", "--stack-json": "stack_json", "--path-json": "path_json"},
-                                     switches={"--auto-restart": "auto_restart"}, help=HELP, short=("-n", "-w", "-s"),
+                                     switches={"--auto-restart": "auto_restart", "--dotenv-override": "dotenv_override"}, help=HELP, short=("-n", "-w", "-s"),
                                      multi={"--envs": "envs"})
     except aos_flags.Error as e:
         raise bad_args(HELP, str(e)) if e.code == "ArgumentsBad" else Fail(e.code, str(e))
@@ -140,6 +146,8 @@ def cmd(argv):
             raise bad_args(HELP, "--stack must not be empty")
         stack = os.path.abspath(stack)
     name = opts.get("name") or os.path.basename(xxx.rstrip("/"))
+    if via_kernel():
+        return add_via_kernel(name, entry_target, ws, stack, def_dir, limits, envs, opts, written, kept, secs, on_queued)
     need_table()
     row = row_named(name)
     if row is not None:
@@ -149,7 +157,7 @@ def cmd(argv):
     try:
         _, request = call_dc(dc.add_letter, entry_target, name=name, ws=ws, stack=stack,
                                   def_dir=def_dir, limits=limits, envs=envs,
-                                  auto_restart=opts.get("auto_restart", False),
+                                  auto_restart=opts.get("auto_restart", False), dotenv_override=opts.get("dotenv_override", False),
                                   daemon=daemon_path(), written=written, kept=kept)   # 11-10：--envs 的目標寫成相對 daemon stack 的指示詞，搬家照樣起
         row = ctl_wait("add", request,
                        lambda letter: row_named(name) or rejected(letter),
@@ -159,6 +167,27 @@ def cmd(argv):
         raise
     if row is not None:
         print(Agent(name, row).stack)
+
+
+def add_via_kernel(name, entry_target, ws, stack, def_dir, limits, envs, opts, written, kept, secs, on_queued):
+    """走 kernel（kernel-framework 03）：只看這封 add 信自己的回信（applied: true，或 false＋代號＝AddRejected），
+    不先讀表查重名、不核 daemon 活不活、不等表上出現。不知道那台 daemon 在哪＝envs 的目標照舊寫絕對（daemon=None）。"""
+    try:
+        _, request = call_dc(dc.add_letter, entry_target, name=name, ws=ws, stack=stack,
+                             def_dir=def_dir, limits=limits, envs=envs,
+                             auto_restart=opts.get("auto_restart", False),
+                             daemon=None, written=written, kept=kept)
+        got = ctl_wait("add", request, lambda _: True, "the add letter for %s has no reply yet" % name, "AddRejected",
+                       secs=secs, on_queued=on_queued, name=name, replied=True)
+    except KeyboardInterrupt:
+        note("the add letter was sent, the daemon will still attach %s; if you do not want it, aos-agent ctl rm %s (check with aos-agent ctl ls)" % (name, name))
+        raise
+    if got is None:                                   # 排隊中、--on-queued ok：ctl_wait 已印 queued 那行
+        return
+    if isinstance(stack, str) and os.path.isabs(stack):
+        print(stack.rstrip("/") or "/")
+        return
+    note("%s attached; the daemon chose its stack, ask for it with: aos-agent ctl where %s" % (name, name))
 
 
 def rejected(letter):

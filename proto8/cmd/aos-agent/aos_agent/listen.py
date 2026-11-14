@@ -10,7 +10,7 @@ Ctrl-C leaves follow mode with exit 0; reminders go to stderr.
 
 flags:
   -t, --target NAME   which agent (default: $AOS_AGENT)
-  --timeout-s SECS    give up after SECS seconds (AnswerMissing); leave out to wait without limit
+  --timeout-s SECS    give up after SECS seconds (AnswerMissing); 0 = no limit; omitted = no limit
   --timeout-cycles N  give up after N cycles (positive integer); exclusive with --timeout-s
   --last N            show the last N exchanges (a whole number) instead of waiting
   -f, --follow        follow new exchanges (also with --last)
@@ -23,7 +23,7 @@ import math
 import os
 import sys
 import time
-from .common import Fail, bad_args, POLL, daemon_path, note, parse, target
+from .common import Fail, bad_args, POLL, daemon_path, note, parse, target, via_kernel
 from .hints import daemon_held, label, off_table, on_table, run_hint, stuck_hint
 
 
@@ -112,7 +112,10 @@ def wait_latest(a, timeout, before=None, *, timeout_cycles=None):
             continue
         now = time.monotonic()
         if not new_warned and "new" in stages and now - start >= 10 and on_table(a) and a.phase in {"running", "stuck"} and label(a) != "paused":   # 暫停中已另有一句
-            note("%s has not been taken from queue/new/ after 10 s; %s may be busy, or its daemon may be down: aos-daemon-ctl --daemon %s ls (the last line shows what the daemon's supervisor sees)" % (sig, a.name, daemon_path()))
+            if via_kernel():
+                note("%s has not been taken from queue/new/ after 10 s; %s may be busy, or its daemon may be down: aos-agent ctl ls" % (sig, a.name))
+            else:
+                note("%s has not been taken from queue/new/ after 10 s; %s may be busy, or its daemon may be down: aos-daemon-ctl --daemon %s ls (the last line shows what the daemon's supervisor sees)" % (sig, a.name, daemon_path()))
             new_warned = True
         if now >= next_check:
             next_check = now + 1.0
@@ -167,7 +170,7 @@ def follow(a, last, keep):
 
 
 def seconds(v):
-    """--timeout-s：有限、不小於 0 的秒數；不給旗標才是不設上限（inf／1e999／nan 都擋，E1）。"""
+    """--timeout-s：有限、不小於 0 的秒數；0 或不給旗標＝不設上限（inf／1e999／nan 都擋，E1）。"""
     try:
         n = float(v)
         if not math.isfinite(n) or n < 0:
@@ -205,12 +208,12 @@ def cmd(argv):
     if rest:
         raise bad_args(HELP, "listen takes no positional arguments: %s (it always waits for the latest letter)" % rest[0])
     waits = last is None and not opts.get("follow")
-    if not waits and (timeout is not None or timeout_cycles is not None):
+    if not waits and ("timeout" in opts or timeout_cycles is not None):
         raise bad_args(HELP, "--timeout-s / --timeout-cycles are only for waiting on the latest letter, not with --last / --follow")
     a = target(opts)
     try:
         if waits:
-            wait_latest(a, timeout, timeout_cycles=timeout_cycles)
+            wait_latest(a, None if timeout == 0 else timeout, timeout_cycles=timeout_cycles)
         else:
             follow(a, last or 0, bool(opts.get("follow")))
     except KeyboardInterrupt:

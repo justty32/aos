@@ -1,7 +1,7 @@
-# aos_agent/ctl/phase.py - 起停、睡醒與暫停恢復 agent。
+# aos_agent/ctl/phase.py - 起停、睡醒與暫停恢復 agent（走 AOS_KERNEL 時 start／stop／sleep／wake 只看回信）。
 import aos_ws
 import daemon_ctl as dc
-from ..common import call_dc, daemon_path, find, note, parse, row_named, target
+from ..common import call_dc, find, note, parse, row_named, table_ref, target, target_name, via_kernel
 from .shared import ctl_wait, name_last, need_table, phase_body, queued_opt, send_only, timeout_opt, wait_for
 from ..decl import close_screen_if_any
 from ..hints import comes_back_paused, label, queued
@@ -19,6 +19,8 @@ flags:
   -h, --help          show this help
 
 Prints one result line on stdout; state already reached is a successful no-op.
+With $AOS_KERNEL set (and no --daemon) it reads only the reply to its own letter (no table
+lookup, no phase check first, no wait for the table): "start accepted for NAME".
 exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, PhaseBad, CtlRejected...).
 more: proto8/cmd/aos-agent/README.md
 """,
@@ -35,6 +37,8 @@ flags:
 Stops when this round ends. --no-wait waits only for the daemon to accept the letter.
 Closes its screen first; a workspace that is gone does not block it (one warning line).
 Prints one result line on stdout; state already reached is a successful no-op.
+With $AOS_KERNEL set (and no --daemon) it reads only the reply to its own letter (no table
+lookup, no phase check first, no wait for the table): "stop accepted for NAME".
 exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, PhaseBad, CtlRejected...).
 more: proto8/cmd/aos-agent/README.md
 """,
@@ -52,6 +56,8 @@ Running becomes sleeping (wake or daemon restart brings it back).
 Stopping after stop becomes stopped (use start to run it again).
 --no-wait sends the letter and returns at once (the daemon then SIGTERMs it).
 Prints one result line on stdout; state already reached is a successful no-op.
+With $AOS_KERNEL set (and no --daemon) it reads only the reply to its own letter (no table
+lookup, no phase check first, no wait for the table): "sleep accepted for NAME".
 exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, PhaseBad, CtlRejected...).
 more: proto8/cmd/aos-agent/README.md
 """,
@@ -66,6 +72,8 @@ flags:
   -h, --help          show this help
 
 Prints one result line on stdout; state already reached is a successful no-op.
+With $AOS_KERNEL set (and no --daemon) it reads only the reply to its own letter (no table
+lookup, no phase check first, no wait for the table): "wake accepted for NAME".
 exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, PhaseBad, CtlRejected...).
 more: proto8/cmd/aos-agent/README.md
 """,
@@ -98,11 +106,34 @@ more: proto8/cmd/aos-agent/README.md
 """,
 }
 
-def cmd_start(argv):
+def name_only(opts):
+    """只看回信的路：要名字、不讀表（--target ＞ 子命令前的 --target ＞ $AOS_AGENT；都沒有＝TargetMissing）。"""
+    name = target_name(opts)
+    if not name:
+        target(opts)                                  # TargetMissing
+    return name
+
+
+def by_letter(cmd, opts, secs, on_queued="fail"):
+    """走 kernel 的 start／stop／sleep／wake（kernel-framework 03）：只寄那封信、只看它的回信；不讀表、不核 phase、不關畫面、不等表。"""
+    name = name_only(opts)
+    if ctl_wait(cmd, phase_body(cmd, name, look=False), lambda _: True, "the %s letter for %s has no reply yet" % (cmd, name),
+                "CtlRejected", secs=secs, on_queued=on_queued, name=name, replied=True) is None:
+        return None                                   # 排隊中、--on-queued ok：ctl_wait 已印 queued 那行
+    return name
+
+
+def cmd_start(argv, look=None):
+    """look＝讀表核 phase、等表上起來（沒走 kernel 一律如此；set-def --restart 走 kernel 時也明給）；None＝走 kernel 就只看回信。"""
     opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout_s", "--on-queued": "on_queued"}, help=HELP["start"], short=("-t",))
     secs = timeout_opt(opts, HELP["start"])
     on_queued = queued_opt(opts, HELP["start"])
     name_last(opts, rest, HELP["start"])
+    if not (look if look is not None else not via_kernel()):
+        name = by_letter("start", opts, secs, on_queued)
+        if name:
+            print("start accepted for %s" % name)
+        return
     need_table()
     a = target(opts)
     if a.phase == "stopping":                         # 還在停的途中：等它停好再起
@@ -124,10 +155,14 @@ def paused_tail(a, held):
     return "; it was paused when it went down, so it comes back paused: aos-agent ctl resume --target %s" % a.name if held else ""
 
 
-def cmd_stop(argv):
+def cmd_stop(argv, look=None):
     opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout_s"}, {"--no-wait": "no_wait"}, help=HELP["stop"], short=("-t",))
     secs = timeout_opt(opts, HELP["stop"])
     name_last(opts, rest, HELP["stop"])
+    if not (look if look is not None else not via_kernel()):      # --no-wait 也一樣：本來就只等 daemon 收下
+        name = by_letter("stop", opts, secs)
+        print("stop accepted for %s; aos-agent ctl start --target %s to carry on" % (name, name))
+        return
     need_table()
     a = target(opts)
     if a.phase == "stopped":
@@ -154,6 +189,15 @@ def cmd_sleep(argv):
     opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout_s"}, {"--no-wait": "no_wait"}, help=HELP["sleep"], short=("-t",))
     secs = timeout_opt(opts, HELP["sleep"])
     name_last(opts, rest, HELP["sleep"])
+    if via_kernel():
+        if opts.get("no_wait"):                       # 寄出就回、不等回信（同下面沒走 kernel 的 --no-wait）
+            name = name_only(opts)
+            send_only(phase_body("sleep", name, look=False))
+            print("sleep sent for %s; aos-agent ctl ls shows it once the daemon has applied it" % name)
+            return
+        name = by_letter("sleep", opts, secs)
+        print("sleep accepted for %s" % name)
+        return
     need_table()
     a = target(opts)
     if a.phase == "sleeping":
@@ -183,6 +227,11 @@ def cmd_wake(argv):
     secs = timeout_opt(opts, HELP["wake"])
     on_queued = queued_opt(opts, HELP["wake"])
     name_last(opts, rest, HELP["wake"])
+    if via_kernel():
+        name = by_letter("wake", opts, secs, on_queued)
+        if name:
+            print("wake accepted for %s" % name)
+        return
     need_table()
     a = target(opts)
     if a.phase in {"running", "stuck"}:
@@ -201,7 +250,7 @@ def cmd_pause_resume(cmd):
         opts, rest = parse(argv, {"--target": "target"}, {"--no-wait": "no_wait"} if cmd == "pause" else {}, help=HELP[cmd], short=("-t",))
         name_last(opts, rest, HELP[cmd])
         a = target(opts)
-        call_dc(dc.write_ctl, daemon_path(), a.name, cmd, wait=not opts.get("no_wait"))  # seq 對人沒意義、不印
+        call_dc(dc.write_ctl, table_ref(), a.name, cmd, wait=not opts.get("no_wait"))   # 走 kernel＝表檔經查詢信拿  # seq 對人沒意義、不印
         if opts.get("no_wait"):
             print("pause sent; %s pauses between steps and stays paused until aos-agent ctl resume --target %s" % (a.name, a.name))
             return

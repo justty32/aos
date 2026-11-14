@@ -69,3 +69,21 @@
 - 子 agent 寫報告檔會被工具擋（批 5 隊員、隊長代存都撞到），報告直接寫進本檔或回報訊息。
 - 批 5 隊員留了一份 base 抄本在 `/tmp/kf-b5-base-bcegempj`（對照用），可刪。
 - 接線後凡是設了 `AOS_KERNEL` 的都要 daemon 會答查詢信：家機活樹的 `aos-daemon`（repo bin，11-13 23:20）已認 `procs_state_path`（`strings` 看得到），活樹 `env.sh` 不設 `AOS_KERNEL`，所以接線對活樹沒影響。
+
+## ok-kf 接手紀錄（11-14 家機）
+
+### 批 5（ctl 接 AOS_KERNEL 查詢信）
+- 施工：暫存樹 `~/code/kf-1114/fsm` 的 agent-fsm sol（sol-b5 接 b5-wip.patch 補完；sol-g1 蒐集畫面題事實），腦走 LiteLLM chatgpt-gpt-6.1-sol-high。ok-kf 審 diff。
+- 守門：`guard.json` 的 `\baos-[a-z-]+` 會擋 `proto8/cmd/aos-agent` 路徑，`kill`／`curl` 會擋搜尋字串，兩條都拿掉（bwrap `--unshare-all` 已隔開 pid 與網路；`fsm/issues.md` K10、K11）。sol 每次被擋都停下報 BLOCKED，沒有繞路。
+- 三支 fork／subagent 舊測試釘的是 11-12 小修線的契約（只設 AOS_KERNEL＝DaemonMissing），ok-kf 代定照圖紙改成 KernelFailed＋寄出查詢信。
+- 驗收：main 51dc8b931＋本批乾淨複本全綠；py 那支 test_flags_anywhere.test_eca_screen_eca_after_subcommand 在 main 本來就紅（本批沒碰，已轉 xiaosi）。
+- 畫面兩題（走 kernel 時 stop／rm 關不關畫面、run_entry 給畫面的環境與 watch 判走）：sol 蒐集 → ok-kf 匯總 → fable 設計 → ok-kf 細化 → Argon 審 → 採納表。批 5 只寫已知限制，實作留批 5b。計劃與審查在 `wf/temp/ok-kf/b5-design/`（plan.md 末尾的採納表：1a～1c、2a～2d 採，2e 不採）。另開題 C′（eca-claude 範本加 after_stop hook 自己收畫面，sleep 也會收）要交使用者裁。
+
+### sol 有沒有讀必讀（使用者 11-14 要求）
+- 讀清單放進 system text 與任務書開頭之前：兩隻都沒讀過任何必讀檔。
+- 放進去之後：兩隻都讀了全部必讀（history 可證）。之後報告改用中文；看到工作區被別人改過會停下來問；測試和圖紙衝突時不自己選，而是列出兩邊請 ok-kf 裁；交件只寫事實、不夾設計。詳細在 `~/code/kf-1114/fsm/notes-must-read.md`。
+
+### 對頂層加 AOS_KERNEL 的風險（已寄 xiaosi BLOCKED）
+- 批 5 之後，設了 AOS_KERNEL 的查表指令（ctl ls／state／who、say、listen 等經 common.table() 的）都會先寄 `procs_state_path`，3 秒沒回信就 KernelFailed。
+- kernel_gate 的 hold 每封都留；triage 把它判成「不認得」→ hold；框架站 lib/aos/kernel 沒有處理這種信。
+- 所以 eca 帶 AOS_KERNEL 指 gate 要等批 6（站回答或放行查詢信，triage 也認得它）。

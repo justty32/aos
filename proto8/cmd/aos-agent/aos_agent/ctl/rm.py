@@ -3,8 +3,8 @@ import os
 import aos_flags
 from .. import PROG
 import shutil
-from ..common import bad_args, daemon_path, find, parse, row_named, table
-from .shared import ctl_wait, need_table, timeout_opt
+from ..common import bad_args, daemon_path, find, parse, row_named, table, table_ref, via_kernel
+from .shared import ctl_wait, need_table, send_only, timeout_opt
 from ..decl import close_screen_if_any
 
 
@@ -17,6 +17,10 @@ NAME must be spelled out ($AOS_AGENT is not used here). Closes its screen first 
 does not block it (one warning line; the screen is closed from the stack). Its stack
 (history, queue, overlays) stays where it is, the same as aos-daemon-ctl rm; aos-agent ctl
 add with the same --stack picks it up again.
+With $AOS_KERNEL set (and no --daemon), rm without --purge reads only its own reply:
+no table lookup, phase check or screen closing. --no-wait sends it and returns at once.
+With --purge it first asks the kernel for the table and waits for removal before deleting
+its stack; it does not close the screen on this route either.
 
 --purge also deletes the stack. A stack that covers the workspace, the definition, the
 daemon, the cwd, home or another listed stack is kept even then. With --purge it asks on a
@@ -47,6 +51,17 @@ def cmd(argv):
         raise bad_args(HELP, "rm needs the name spelled out (no --target / AOS_AGENT)")
     if opts.get("yes") and not opts.get("purge"):
         raise bad_args(HELP, "-y only goes with --purge (without it nothing is deleted and nothing is asked)")
+    if via_kernel() and not opts.get("purge"):
+        name = rest[0]
+        body = {"procs_removed": [name]}
+        if opts.get("no_wait"):
+            send_only(body)
+            print("rm sent for %s; its stack is kept (delete it with aos-agent ctl rm --purge, or by hand)" % name)
+            return
+        ctl_wait("rm", body, lambda _: True, "the rm letter for %s has no reply yet" % name,
+                 "CtlRejected", secs=secs, replied=True)
+        print("rm accepted for %s; its stack is kept (delete it with aos-agent ctl rm --purge, or by hand)" % name)
+        return
     need_table()
     a = find(rest[0])
     if opts.get("no_wait"):
@@ -63,7 +78,8 @@ def cmd(argv):
     if not aos_flags.confirm(PROG, question, yes=opts.get("yes")):
         aos_flags.warn(PROG, "nothing done")
         return
-    close_screen_if_any(a)
+    if not via_kernel():
+        close_screen_if_any(a)
     ctl_wait("rm", {"procs_removed": [a.name]}, lambda _: row_named(a.name) is None, "the daemon has not removed %s yet" % a.name, "CtlRejected", secs=secs)
     if keep:                                          # 11-04 夜邊緣實測：add --stack . 之後 rm 會連工作區一起刪；stack 蓋住這些的不刪
         print("removed %s; stack %s kept (it is %s or above it)" % (a.name, a.stack, keep))
@@ -80,7 +96,7 @@ d, name, stack, secs = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
 end = time.monotonic() + secs
 while time.monotonic() < end:
     try:
-        if name not in dc.rows(d):
+        if name not in (dc.rows_at(d) if os.path.isfile(d) else dc.rows(d)):
             shutil.rmtree(stack, ignore_errors=True)
             break
     except Exception:
@@ -93,7 +109,6 @@ def no_wait(a, opts, secs):
     """11-10 self_ctl：rm 的是自己＝daemon 會連這支一起收掉；寄出就回。--purge＝另起一個脫離的小行程，等那列不在了再刪 stack。"""
     import subprocess
     import sys
-    from .shared import send_only
     keep = None
     if opts.get("purge"):
         others = [r.get("stack") for n, r in table().items() if n != a.name]
@@ -103,7 +118,7 @@ def no_wait(a, opts, secs):
             return
     send_only({"procs_removed": [a.name]})
     if opts.get("purge") and not keep:
-        subprocess.Popen([sys.executable, "-c", WAITER, daemon_path(), a.name, a.stack, str(max(secs, 60))] + [p for p in sys.path if p],
+        subprocess.Popen([sys.executable, "-c", WAITER, table_ref(), a.name, a.stack, str(max(secs, 60))] + [p for p in sys.path if p],
                          stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True, close_fds=True)
         print("rm sent; %s leaves the daemon table, and its stack %s is deleted once it is gone" % (a.name, a.stack))
     elif keep:

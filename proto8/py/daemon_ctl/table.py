@@ -11,6 +11,7 @@ import daemon_ctl as _pkg
 
 from .base import Fail, NAMES, PATHS, STATE, STATE_FLUX
 from .entry import read_loop
+from .state_path import TableFile, names_at, state_at
 
 
 
@@ -28,7 +29,9 @@ def find_daemon(flag=None):
 
 
 def names_of(d):
-    """讀取 daemon 回報的檔名；壞值用預設，信箱 null 保留。"""
+    """讀取 daemon 回報的檔名；壞值用預設，信箱 null 保留。d 是表檔（TableFile，查詢信問來的）＝讀那份檔。"""
+    if isinstance(d, TableFile):
+        return names_at(d)
     st = aos_flags.read_window(_pkg.PROG, os.path.join(d, STATE))
     out = dict(NAMES)
     if isinstance(st, dict):
@@ -81,7 +84,10 @@ def mailbox_warning(d):
 
 
 def state(d):
-    """讀名單窗與切檔，警告獨立讀 state_flux；名單解析失敗時稍等一次。"""
+    """讀名單窗與切檔，警告獨立讀 state_flux；名單解析失敗時稍等一次。
+    d 是表檔（TableFile，查詢信問來的）＝讀那份檔，相對路徑從它所在的資料夾算（state_at）；rows、row_of、cell_of 等跟著吃表檔。"""
+    if isinstance(d, TableFile):
+        return state_at(d)
     path = os.path.join(d, STATE)
     if not os.path.isfile(path):
         raise Fail("StateMissing", "%s not found (daemon not started yet, or procs_state is off)" % path)

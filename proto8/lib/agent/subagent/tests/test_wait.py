@@ -40,6 +40,12 @@ class Runner(unittest.TestCase):
         self.assertIsNone(agents_cmd.child)
         proc.wait.assert_called_once()
 
+    def test_unlimited_wait_has_no_communicate_deadline(self):
+        proc = self.scope([])
+        proc.communicate.side_effect = [(b'answer', b'')]
+        self.assertEqual(agents_cmd.run(['aos-agent', 'listen'], timeout_s=None), ('answer', None))
+        self.assertIsNone(proc.communicate.call_args.kwargs['timeout'])
+
     def test_expired_wait_cleans_up(self):
         proc = self.scope([0, 0, 2], poll=None)
         with self.assertRaises(Raised):
@@ -58,7 +64,7 @@ class Runner(unittest.TestCase):
 class EntryChecks(unittest.TestCase):
     def test_seconds_checked_before_the_daemon(self):
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-        for value, code in [(1e9, "StackMissing"), (0, "ArgumentsBad"), (-1, "ArgumentsBad"), (float("inf"), "ArgumentsBad"),
+        for value, code in [(1e9, "StackMissing"), (0, "StackMissing"), (-1, "ArgumentsBad"), (float("inf"), "ArgumentsBad"),
                             (float("-inf"), "ArgumentsBad"), (float("nan"), "ArgumentsBad")]:
             with self.subTest(timeout_s=value):
                 r = subprocess.run([str(TOOL)], input=json.dumps(dict(op="ask", name="kid", text="hello", timeout_s=value)),
@@ -67,6 +73,17 @@ class EntryChecks(unittest.TestCase):
                 self.assertIn("error: " + code + " ", r.stdout)
                 self.assertNotIn("Traceback", r.stderr)
 
+    def test_zero_seconds_only_allowed_for_waits(self):
+        self.assertEqual(agents_cmd.seconds({'timeout_s': 0}, allow_zero=True), 0)
+        for op in ('stop', 'start', 'rm', 'sleep', 'wake'):
+            with self.subTest(op=op), mock.patch.object(agents_cmd, 'die', side_effect=Raised):
+                with self.assertRaises(Raised):
+                    agents_cmd.life_argv(op, {'name': 'kid', 'timeout_s': 0})
+        env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
+        r = subprocess.run([str(TOOL)], input=json.dumps(dict(op='listen', name='kid', timeout_s=0)),
+                           text=True, capture_output=True, env=env, timeout=10)
+        self.assertIn('error: StackMissing ', r.stdout)
+
     def test_cycles_checked(self):
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         for value in (0, -3, 2 ** 63, True):
@@ -74,9 +91,11 @@ class EntryChecks(unittest.TestCase):
                                text=True, capture_output=True, env=env, timeout=10)
             self.assertIn("error: ArgumentsBad", r.stdout, value)
 
-    def test_kernel_alone_is_not_a_daemon(self):
-        """11-12：只設 AOS_KERNEL＝aos-agent 找不到 daemon 表（ctl who）＝它的 DaemonMissing 接成自己的；什麼信都沒寄到 kernel。"""
+    def test_kernel_alone_unanswered_is_kernel_failed(self):
+        """11-14 批 5：只設 AOS_KERNEL、kernel 不答查詢信＝KernelFailed；批 6 之後由會答的 kernel 走到成功。"""
+        from concurrent.futures import ThreadPoolExecutor
         import tempfile
+        import time
         proto = TOOL.parents[3]
         bins = [str(p) for p in sorted((proto / "impls").glob("*/bin"))] + [str(p) for p in sorted((proto / "cmd").glob("*/bin"))]
         with tempfile.TemporaryDirectory() as tmp:
@@ -86,9 +105,21 @@ class EntryChecks(unittest.TestCase):
                 os.makedirs(os.path.join(kernel, stage))
             env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
             env.update(PATH=os.pathsep.join(bins + [env["PATH"]]), AOS_KERNEL=kernel, AOS_STACK=tmp, AOS_WS=ws)
-            r = subprocess.run([str(TOOL)], input=json.dumps(dict(op="ls")), text=True, capture_output=True, env=env, cwd=tmp, timeout=30)
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                pending = pool.submit(subprocess.run, [str(TOOL)], input=json.dumps(dict(op="ls")),
+                                      text=True, capture_output=True, env=env, cwd=tmp, timeout=30)
+                end = time.monotonic() + 10
+                letters = []
+                while not letters and not pending.done() and time.monotonic() < end:
+                    letters = list((Path(kernel) / "new").glob("*/letter.json"))
+                    if not letters:
+                        time.sleep(0.01)
+                # 查詢逾時會撤信，先核對等待中的唯一一封，不混入掛／停／收的信。
+                self.assertEqual(len(letters), 1)
+                self.assertEqual(json.loads(letters[0].read_text())["body"], {"procs_state_path": True})
+                r = pending.result(timeout=30)
             self.assertEqual(r.returncode, 1)
-            self.assertTrue(r.stdout.startswith("subagent: error: DaemonMissing "), r.stdout)
+            self.assertTrue(r.stdout.startswith("subagent: error: KernelFailed "), r.stdout)
             self.assertEqual(os.listdir(os.path.join(kernel, "new")), [])
 
 

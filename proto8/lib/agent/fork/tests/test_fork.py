@@ -36,10 +36,27 @@ class Arguments(unittest.TestCase):
 
     def test_bad_arguments(self):
         for arguments in ({}, {'goal': ' '}, {'goal': 'x', 'max_chars': 0}, {'goal': 'x', 'keep': 'yes'},
-                          {'goal': 'x', 'timeout_s': 0}, {'goal': 'x', 'timeout_s': 1, 'timeout_cycles': 1},
+                          {'goal': 'x', 'timeout_s': -1}, {'goal': 'x', 'timeout_s': 1, 'timeout_cycles': 1},
                           {'goal': 'x', 'timeout_cycles': 0}):
             with self.subTest(arguments=arguments):
                 self.assertCode(arguments, 'ArgumentsBad')
+
+    def test_zero_timeout_is_unlimited(self):
+        self.assertCode({'goal': 'x', 'timeout_s': 0}, 'StackMissing')
+        source = ast.parse(ENTRY.read_text())
+        functions = [node for node in source.body if isinstance(node, ast.FunctionDef) and node.name == 'agent']
+        proc = Mock(returncode=0)
+        proc.communicate.side_effect = [subprocess.TimeoutExpired('fake', .2), (b'answer', b'')]
+        renew = Mock()
+        ns = dict(STEP_S=90, child=None, running_kid='kid', daemon=None, renew=renew,
+                  tool_io=Mock(), subprocess=SimpleNamespace(Popen=Mock(return_value=proc),
+                  PIPE=-1, DEVNULL=-3, TimeoutExpired=subprocess.TimeoutExpired),
+                  time=Mock(), sys=SimpleNamespace(stderr=io.StringIO()), kill_group=Mock())
+        exec(compile(ast.Module(body=functions, type_ignores=[]), str(ENTRY), 'exec'), ns)
+        self.assertEqual(ns['agent'](['listen'], timeout_s=None), ('answer', None))
+        self.assertTrue(all(call.kwargs['timeout'] == .2 for call in proc.communicate.call_args_list))
+        self.assertEqual(renew.call_count, 2)
+        ns['time'].monotonic.assert_not_called()
 
     def test_other_definitions_and_settings_are_not_arguments(self):
         for key, value in (('from', 'helpers/basic'), ('tools', []), ('model', 'fake'), ('context', 'x')):
@@ -62,8 +79,10 @@ class Arguments(unittest.TestCase):
             self.assertCode({'goal': 'x'}, 'StackMissing', AOS_DAEMON=tmp)
             self.assertCode({'goal': 'x'}, 'WsMissing', AOS_DAEMON=tmp, AOS_STACK=tmp, AOS_WS=os.path.join(tmp, 'nope'))
 
-    def test_kernel_alone_is_not_a_daemon(self):
-        """11-12：daemon 由 aos-agent ctl who 找（不自己讀 AOS_DAEMON）；只設 AOS_KERNEL＝找不到表＝它的 DaemonMissing 接成自己的，什麼信都沒寄。"""
+    def test_kernel_alone_unanswered_is_kernel_failed(self):
+        """11-14 批 5：只設 AOS_KERNEL、kernel 不答查詢信＝KernelFailed；批 6 之後由會答的 kernel 走到成功。"""
+        from concurrent.futures import ThreadPoolExecutor
+        import time
         proto = LIB.parent
         bins = [str(p) for p in sorted((proto / 'impls').glob('*/bin'))] + [str(p) for p in sorted((proto / 'cmd').glob('*/bin'))]
         with tempfile.TemporaryDirectory() as tmp:
@@ -71,10 +90,21 @@ class Arguments(unittest.TestCase):
             for stage in ('tmp', 'new', 'cur'):
                 os.makedirs(os.path.join(kernel, stage))
             path = os.pathsep.join(bins + [os.environ['PATH']])
-            rc, out, err = run({'goal': 'x'}, PATH=path, AOS_KERNEL=kernel, AOS_STACK=tmp, AOS_WS=tmp)
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                pending = pool.submit(run, {'goal': 'x'}, PATH=path, AOS_KERNEL=kernel, AOS_STACK=tmp, AOS_WS=tmp)
+                end = time.monotonic() + 10
+                letters = []
+                while not letters and not pending.done() and time.monotonic() < end:
+                    letters = list((Path(kernel) / 'new').glob('*/letter.json'))
+                    if not letters:
+                        time.sleep(0.01)
+                # 查詢逾時會撤信，趁它還在等時檢查 new/，不把撤回後的空箱誤當沒寄信。
+                self.assertEqual(len(letters), 1)
+                self.assertEqual(json.loads(letters[0].read_text())['body'], {'procs_state_path': True})
+                rc, out, err = pending.result(timeout=30)
             self.assertEqual(rc, 1)
-            self.assertTrue(out.startswith('fork: error: DaemonMissing '), out)
-            self.assertTrue(err.startswith('aos-agent: error: DaemonMissing '), err)   # 下層那行原樣透出（R10）
+            self.assertTrue(out.startswith('fork: error: KernelFailed '), out)
+            self.assertTrue(err.startswith('aos-agent: error: KernelFailed '), err)   # 下層那行原樣透出（R10）
             self.assertEqual(os.listdir(os.path.join(kernel, 'new')), [])
 
     def test_help(self):
