@@ -192,7 +192,9 @@
     - 8 條全在 test_daily，原因相同：`stacks/root/procs/fsm/think/brain_wait.json is None`。
     - 來源是 d6a564191（ok-kmsg）：agent-fsm/wait.py 會寫 brain_wait.json，但 `thinking/2026-11/10/two-machines/gitignore_classes.json` 沒有給它分類。
     - 影響：用 git 管目錄樹時，會多一個沒被 ignore 的檔。功能本身不受影響。
-    - 已寄 head-core，信 01794644164154455072.3194515.3274980。要不要帶著這 8 紅換，由 head-core 定。
+    - log：`~/code/ts-1114/verify-d7f2f0ae0-b-logs/templates_tests.log` 第 8971 行起。
+    - 明天由 ok-kmsg 補：`gitignore_classes.json` 加上分類列，範本 daemon-root 的 .gitignore 也補上。
+    - **頂層 11-14 16:18 裁：照 PIN-1 換，記成已知。** 今晚不動活樹的 .gitignore，這一項由頂層自己加進換後清單。
 - **suite.sh 今天改了三處**（舊版留著）：
   - 乾淨複本不帶 repo 的 `impls/*/bin`（06 第 6 條）；
   - PATH 拿掉 `~/.local/bin`；
