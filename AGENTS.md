@@ -15,6 +15,7 @@ aos = **「資料夾＝程式」的 AI agent 體系**，本體是 **[`proto8/`](
 - **使用者要你動手做某件事** → **[wf/WORKFLOWS.md](wf/WORKFLOWS.md)**：依意圖派發到對應工作流，再讀該工作流入口。
 - **想看專案長怎樣** → **[wf/INDEX.md](wf/INDEX.md)**：repo 頂層結構地圖。
 - **碰原始碼前** → 慣例與 code map：[conventions](wf/workflows/common/conventions.md)、code map＝[`wf/knowledge/code-map.json`](wf/knowledge/code-map.json)（用 `json_get` 讀；哪個夾負責什麼、逐檔表在 `wf/knowledge/code-map/proto8/<頂層夾>.json` 的 `tree`，改東西之前先看）；環境與指令 → [dev-env](wf/workflows/dev-env.md)。
+- **被派來當一條線、或要派隊員／交 commit／回報** → 先讀短卡 [dispatch/aos-teams](wf/workflows/dispatch/aos-teams.md)（現行隊形與流程，細節再進 07）。
 - **要開 agent 團隊、決定各層派哪級模型** → [team-model](wf/workflows/team-model.md)。
 - 使用者偏好與確認邊界 → [common/user.md](wf/workflows/common/user.md)。
 - **不寫 Claude Code 自動記憶**（使用者 2026-09-30 定）：值得留下的東西一律寫進 `wf/` 對應的檔，記憶資料夾只留一句指回這裡。
