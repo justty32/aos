@@ -41,6 +41,12 @@
  "03-隊形心得.md": {
   "description": "03 隊形心得：fable 當 kernel，在活樹裡帶 LiteLLM 上的 sol 與 astra（agent-fsm）實際怎麼樣"
  },
+ "04-wf改稿.md": {
+  "description": "04 wf 改稿草稿：借鑑清單第一類的三條，寫成「改哪個檔、哪一段、改成什麼」（ok-skyrim 起草；wf 檔本身沒動，等頂層看過再決定誰改）"
+ },
+ "05-Argon原文.md": {
+  "description": "05 Argon 原文：Gemini 4 Argon (High) 審 02 借鑑清單的 (A) 審查與 (B) 提案（11-14，原文照收；採納表在 06）"
+ },
  "README.md": {
   "description": "skyrim-agentctl 調查線（11-14，做完）：`~/repo/moddings/skyrim` 的 agentctl／wf 有什麼可給 aos／wf 借鑑——能直接抄的不多，最有用的是它撞出來的事故"
  },
