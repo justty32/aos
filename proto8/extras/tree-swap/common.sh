@@ -72,3 +72,21 @@ ts_folders() {
   for d in $TS_FOLDERS_ALL; do [ -d "$TS_TREE/$d" ] && out="$out $d"; done
   echo $out
 }
+
+# 不刪（使用者 11-14）：每次跑在 $TS_BACKUP_ROOT/run-<時間>-<pid>-<what>/ 放這次的暫存夾與換下來的夾，結束時列出來。
+ts_run_dir() { TS_RUN="$TS_BACKUP_ROOT/run-$(date +%Y%m%d-%H%M%S)-$$-$1"; mkdir -p "$TS_RUN"; }
+# ts_keep_dir NAME [-n]：$TS_RUN/NAME（已有就加 -2、-3…）；-n＝只回路徑不建（給 mv -T 當目的地）
+ts_keep_dir() {
+  local d="$TS_RUN/$1" i=2
+  while [ -e "$d" ]; do d="$TS_RUN/$1-$i"; i=$((i+1)); done
+  [ "${2:-}" = -n ] || mkdir -p "$d"
+  echo "$d"
+}
+ts_kept_report() {
+  local rc=$? d
+  [ -n "${TS_RUN:-}" ] && [ -d "$TS_RUN" ] || return $rc
+  if [ -z "$(ls -A "$TS_RUN")" ]; then echo "kept: nothing (empty run folder $TS_RUN)"; return $rc; fi
+  echo "kept (nothing is deleted; remove by hand when you decide): $TS_RUN $(du -sh "$TS_RUN" | cut -f1)"
+  for d in "$TS_RUN"/*; do echo "  $(du -sh "$d" | cut -f1)	$d"; done
+  return $rc
+}
