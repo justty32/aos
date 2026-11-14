@@ -2,7 +2,7 @@ ok-board 線（11-14）的正式紀錄：每隻 agent 的布告欄、信件分�
 
 # board-1114：布告欄＋信件分級＋頻道 → 協議 `comm/1`（規劃）
 
-2026-11-14｜線：ok-board（opus eca，掛在 repo-aos 底下）｜流程：sol 蒐集 → fable 設計 → opus 細化 → Argon 審 → 採納表（07 正統規劃流程）｜狀態：**規劃定稿；使用者 11-14 午裁 U1～U7 全甲；未施工**（施工排 ok-release 之後、與 ok-llmk2 同級）
+2026-11-14｜線：ok-board（opus eca，掛在 repo-aos 底下）｜流程：sol 蒐集 → fable 設計 → opus 細化 → Argon 審 → 採納表（07 正統規劃流程）｜狀態：**規劃定稿（U1～U7 全甲）；批 0＋1 已 commit（4d207e56c）；批 2、3 暫存樹原型完成（見 07），進 repo 排 ok-release 之後、head-comm 放行；批 4 未動**
 
 ## 使用者原話（一字不改）
 
@@ -47,6 +47,7 @@ U1～U7 全甲：NORMS 試用一輪後收 N-70～72（之前放 08-待定）；�
 | [04-Argon原文](board-1114/04-Argon原文.md) | 審查 16＋提案 5，原文 |
 | [05-採納表](board-1114/05-採納表.md) | 21 條全收；**定稿＝02＋03＋05，衝突時 05 優先** |
 | [06-給ok-view的board1](board-1114/06-給ok-view的board1.md) | `board/1` 格式單獨一份（已照 A7／A14／A16 改），經 xiaosi 交 ok-view |
+| [07-原型結果與裁定](board-1114/07-原型結果與裁定.md) | 11-14 午兩隊 fable 的批 2 分級、批 3 頻道暫存樹原型結果與 ok-board 裁定（改 05 的 A3、A9 等）；env 傾印事件一行。**衝突時 07 優先於 05** |
 
 ## 對口（經 xiaosi）
 
