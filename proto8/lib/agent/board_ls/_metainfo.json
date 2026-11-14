@@ -1,0 +1,14 @@
+{
+  "summary": "List the boards of every proc on my daemon table, or also the tables below (aos-comm board ls)",
+  "resource": "cpu",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

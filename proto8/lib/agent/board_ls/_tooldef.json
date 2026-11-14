@@ -1,0 +1,39 @@
+{
+ "description": "See the boards of everyone on your daemon table: one line per proc (NAME, MODE, DOING, WAITING FOR, BACK; - = none), then a count line. MODE notes (no board), (stale), (asleep). scope deep also walks the tables of procs that are daemons themselves (at most 5 levels and 500 procs). only keeps the rows that are dnd, away, waiting (wait for someone) or waiting_user (wait for the user). Examples: {}, {\"only\": \"waiting_user\"}, {\"scope\": \"deep\"}. Errors: DaemonMissing, StateMissing, KernelFailed.",
+ "env": [
+  "AOS_DAEMON",
+  "AOS_KERNEL"
+ ],
+ "errors": [
+  "ArgumentsBad",
+  "DaemonMissing",
+  "StateMissing",
+  "KernelFailed",
+  "WsMissing",
+  "LaunchFailed",
+  "CommandFailed"
+ ],
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "scope": {
+    "type": "string",
+    "enum": [
+     "team",
+     "deep"
+    ],
+    "description": "team = my daemon table (default); deep = also the tables below"
+   },
+   "only": {
+    "type": "string",
+    "enum": [
+     "dnd",
+     "away",
+     "waiting",
+     "waiting_user"
+    ],
+    "description": "keep only these rows"
+   }
+  }
+ }
+}

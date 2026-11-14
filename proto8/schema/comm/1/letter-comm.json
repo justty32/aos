@@ -1,0 +1,103 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "comm/1/letter-comm",
+ "title": "aos letter comm object (comm/1)",
+ "description": "Only body.comm of a letter; the rest of the body is not described here. No comm, a comm that is not an object, v above 1 or an unknown level = a normal letter.",
+ "type": "object",
+ "required": [
+  "v"
+ ],
+ "additionalProperties": true,
+ "properties": {
+  "v": {
+   "const": 1
+  },
+  "level": {
+   "enum": [
+    "urgent",
+    "normal",
+    "low"
+   ],
+   "default": "normal"
+  },
+  "why": {
+   "type": "string",
+   "minLength": 1,
+   "maxLength": 200
+  },
+  "expires_at": {
+   "$ref": "#/$defs/time"
+  },
+  "auto": {
+   "type": "boolean"
+  },
+  "wait": {
+   "type": "boolean"
+  },
+  "channel": {
+   "type": "string"
+  },
+  "seq": {
+   "type": "integer",
+   "minimum": 1
+  },
+  "via": {
+   "type": "array",
+   "maxItems": 3,
+   "items": {
+    "type": "string"
+   }
+  },
+  "origin": {
+   "type": "object",
+   "properties": {
+    "from": {
+     "type": "string"
+    },
+    "sender": {
+     "type": "string"
+    },
+    "sent_at": {
+     "type": "string"
+    }
+   }
+  },
+  "op": {
+   "enum": [
+    "post",
+    "join",
+    "leave",
+    "info",
+    "invite",
+    "kick",
+    "set",
+    "close"
+   ]
+  },
+  "args": {
+   "type": "object"
+  }
+ },
+ "if": {
+  "properties": {
+   "level": {
+    "const": "urgent"
+   }
+  },
+  "required": [
+   "level"
+  ]
+ },
+ "then": {
+  "required": [
+   "why"
+  ]
+ },
+ "$defs": {
+  "time": {
+   "type": "string",
+   "format": "date-time",
+   "description": "ISO 8601 UTC with milliseconds, same as letter.json sent_at"
+  }
+ }
+}

@@ -21,6 +21,16 @@
     }
    },
    "agents_ctl/": "aos-agent ctl 的完整純包裝：對 daemon 表上任何一隻 add／rm／ls／state／where／who／start／stop／sleep／wake／pause／resume；不記帳、不算配額",
+   "board_clear/": "aos-comm board clear 的包裝，目標＝叫我的那隻 agent 的根（05 A2）：撕掉自己的布告欄（mode here、清文字與等待）。",
+   "board_ls/": "aos-comm board ls 的包裝：我這張 daemon 表上每隻一行布告欄（名字、mode、doing、等誰、幾點回），最後一行計數；scope deep 再往下走有表的那幾隻。",
+   "board_read/": "aos-comm board show 的包裝：讀一隻的布告欄（名字、user、me＝叫我的那隻 agent 的根），併 daemon 表的 phase、busy，標 stale／overdue／clock_odd／asleep。",
+   "board_set": {
+    "tests": {
+     "test_board_tools.py": "Test board_set / board_clear / board_wait / board_read / board_ls wrap aos-comm for the calling agent's root (real aos-comm and aos-agent, hand-writt…"
+    }
+   },
+   "board_set/": "aos-comm board set 的包裝，目標＝叫我的那隻 agent 的根（05 A2：工具小格 <root>/tools/board_set 認回 <root>，aos-comm 照 $AOS_STACK 認）：整張換掉自己的布告欄。",
+   "board_wait/": "aos-comm board wait 的包裝，目標＝叫我的那隻 agent 的根（05 A2）：在自己布告欄的 waiting_on 加一筆「在等誰、等什麼」，done 拿掉那人的。",
    "brain_notify": {
     "_entry": "brain_failed 的 hook handler：把腦拒絕的原因寄到 AOS_NOTIFY_BOX，同一段 history、同一代號只通知一次。"
    },
@@ -209,6 +219,14 @@
     }
    },
    "box_check/": "Verify probe markers, executable visibility and host probe paths.",
+   "comm": {
+    "__init__.py": "comm - comm/1 協議的共用庫（board-1114 批 1：布告欄）：錯誤類別與共用常數；讀寫布告欄在 board.py，時間在 times.py，找 stack 在 root.py，走表在 walk.py。",
+    "board.py": "布告欄 board/1：<stack>/board.json 的讀（重試一次）、算「現在算數的狀態」四步、寫（鎖＋暫存檔改名）與 set／clear／wait 三種改法。",
+    "check.py": "拿 proto8/schema/comm/1/ 的四份 schema 驗一個值：有 Python jsonschema 就用它，沒有就用這裡只認這四份用到的關鍵字的小驗證器。",
+    "root.py": "布告欄寫在哪一份 stack：自己的根（05 A2：工具小格 <root>/tools/<名> 認回 <root>）、使用者專區。",
+    "times.py": "comm/1 的時間寫法：ISO 8601 UTC 到毫秒（同信封 sent_at，例 2026-11-14T06:30:00.000+00:00）、解析、期間（30m、8h、2d）。",
+    "walk.py": "嵌套走表（02 §2.5）：從一張 daemon 表起廣度優先往下，表裡哪一列的 stack 自己也是 daemon（有 procs_state.json）就再列它那張；"
+   },
    "defs": {
     "catalog.py": "Inspect public definition declarations and group agents by tools and endpoint.",
     "tests": {
@@ -430,6 +448,7 @@
   "observed_children.py": "Preserve declared child observation trees and hand their location to the caller.",
   "packs": {
    "change.json": "Pack 2 (change): tools that create or change files - write, edit, copy, move, mkdir.",
+   "comm.json": "Pack comm: boards (comm/1, batch 1) - board_set, board_clear, board_wait, board_read, board_ls.",
    "def.json": "Pack def: definitions - agent_def (agent definitions), tools_def (new tools from the Python skeleton, and checking a tool).",
    "delete.json": "Pack 3 (delete): tools that delete - trash (into the workspace .trash, can be moved back) and remove (for real).",
    "events.json": "Pack events: things that wake you later - clock_register (letters from the clock), self_hook (hooks on your own events).",

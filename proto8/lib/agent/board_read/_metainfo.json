@@ -1,0 +1,14 @@
+{
+  "summary": "Read the board of an agent, the user or myself, with the daemon phase and the stale/overdue/clock_odd/asleep notes (aos-comm board show)",
+  "resource": "cpu",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

@@ -1,0 +1,14 @@
+{
+  "summary": "Replace the whole board of the agent calling me (aos-comm board set; <root>/board.json)",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

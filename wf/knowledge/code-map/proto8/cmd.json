@@ -81,6 +81,20 @@
     "test_clock_register.py": "Test aos-clock-register add/rm/ls, aos-clock register (the same thing), and aos-clock sending the registered letters (real aos-post; no daemon)."
    }
   },
+  "aos-comm": {
+   "aos_comm": {
+    "__init__.py": "aos-comm 本體：comm/1 協議的命令列（board-1114 批 1：board 五個動作與 check）；讀寫與算法全在 lib/aos/comm，這裡只派發與印。",
+    "board_cmd.py": "aos-comm board 的五個動作（set、clear、wait、show、ls）：解旗標、找誰的布告欄、叫 lib/aos/comm 讀寫、印一行一項或 --json。",
+    "common.py": "aos-comm 各層共用：這次執行的外層旗標（-s STACK、-d DAEMON）與動作那層的旗標解析（錯誤轉成 comm.Fail）。",
+    "procs.py": "aos-comm 問 daemon 表的那幾件事：誰的 stack（aos-agent ctl where）、列一張表（aos-agent ctl ls --json）、一列的機器事實（phase、busy）。"
+   },
+   "bin": {
+    "aos-comm": "the comm/1 protocol on the command line: boards (set, clear, wait, show, ls) and check (thin launcher; the body is aos_comm/, the library lib/aos/com…"
+   },
+   "tests": {
+    "test_comm.py": "Test aos-comm board set/clear/wait/show/ls and check against hand-written boards and a hand-written daemon table (real aos-agent)."
+   }
+  },
   "aos-daemon-ctl": {
    "bin": {
     "aos-daemon-ctl": "把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 py/aos_sweep）；說明在 cmd/docs/03、04。"

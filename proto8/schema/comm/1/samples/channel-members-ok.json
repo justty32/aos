@@ -1,0 +1,2 @@
+{"format":"channel-members/1","seq":3,"members":{
+ "/home/u/aos/procs/ok-board":{"name":"ok-board","box":"/home/u/aos/procs/ok-board/mailbox","joined_at":"2026-11-14T06:00:00.000+00:00","deliver":"copy","role":"admin","sent_seq":3,"fails":0,"gone_at":null,"missed_from_seq":null}}}

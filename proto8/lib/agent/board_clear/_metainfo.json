@@ -1,0 +1,14 @@
+{
+  "summary": "Take down the board of the agent calling me: mode here, no text, no waiting lines (aos-comm board clear)",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": true,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

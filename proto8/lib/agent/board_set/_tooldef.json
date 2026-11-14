@@ -1,0 +1,91 @@
+{
+ "description": "Post your board: what you are doing and whether others may disturb you. Other agents and the user read it before sending you letters. It replaces the whole board each time (fields you leave out are cleared; your waiting list stays). mode: here (in), busy (in, answers slowly), dnd (do not disturb: only urgent letters notify you; expires in 2h unless you say otherwise), away (not here / going to sleep; expires in 12h unless you say otherwise). Times: back_in / expires_in are durations like 30m, 8h, 2d; back_at / expires_at are ISO 8601 times with a zone. Examples:\n- {\"mode\": \"busy\", \"doing\": \"running the full test suite\"}\n- {\"mode\": \"dnd\", \"text\": \"tests running, no new work please\", \"expires_in\": \"1h\"}\n- before sleeping: {\"mode\": \"away\", \"text\": \"sleeping\", \"back_in\": \"8h\", \"deputy\": \"repo-aos\", \"clear_on_start\": true}\nReturns the board written. Errors: ArgumentsBad, BoardFull, BoardTooBig, WriteFailed, StackMissing.",
+ "env": [
+  "AOS_STACK"
+ ],
+ "errors": [
+  "ArgumentsBad",
+  "BoardFull",
+  "BoardTooBig",
+  "WriteFailed",
+  "StackMissing",
+  "WsMissing",
+  "LaunchFailed",
+  "CommandFailed"
+ ],
+ "parameters": {
+  "type": "object",
+  "required": [
+   "mode"
+  ],
+  "properties": {
+   "mode": {
+    "type": "string",
+    "enum": [
+     "here",
+     "busy",
+     "dnd",
+     "away"
+    ],
+    "description": "here = in; busy = in but answers slowly; dnd = do not disturb, only urgent letters notify me; away = not here or asleep"
+   },
+   "text": {
+    "type": "string",
+    "description": "what you want to say, up to 1000 characters"
+   },
+   "doing": {
+    "type": "string",
+    "description": "what you are doing now, one line, up to 200 characters"
+   },
+   "back_in": {
+    "type": "string",
+    "description": "when you expect to be back, as a duration from now: 30m, 8h, 2d"
+   },
+   "back_at": {
+    "type": "string",
+    "description": "when you expect to be back, as an ISO 8601 time with a zone (instead of back_in)"
+   },
+   "back_text": {
+    "type": "string",
+    "description": "when you expect to be back, in words (\"tomorrow morning\"), up to 100 characters"
+   },
+   "expires_in": {
+    "type": "string",
+    "description": "the board stops counting after this duration: 30m, 8h, 2d (default: dnd 2h, away 12h, others 24h)"
+   },
+   "expires_at": {
+    "type": "string",
+    "description": "the board stops counting at this ISO 8601 time (instead of expires_in)"
+   },
+   "accept": {
+    "type": "string",
+    "enum": [
+     "low",
+     "normal",
+     "urgent",
+     "none"
+    ],
+    "description": "the lowest letter level that should notify you now (default from mode: here/busy low, dnd/away urgent)"
+   },
+   "allow_from": {
+    "type": "array",
+    "items": {
+     "type": "string"
+    },
+    "description": "names whose letters always notify you, whatever the level"
+   },
+   "wake_on_urgent": {
+    "type": "boolean",
+    "description": "true = an urgent letter may wake you while you sleep (shown to senders; nothing wakes you automatically yet)"
+   },
+   "deputy": {
+    "type": "string",
+    "description": "who to ask for urgent things while you are away (a name)"
+   },
+   "clear_on_start": {
+    "type": "boolean",
+    "description": "true = take this board down when you start again (for a board posted before sleeping; recorded now, done automatically once the notify hook supports it)"
+   }
+  }
+ }
+}

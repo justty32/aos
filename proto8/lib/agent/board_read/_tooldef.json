@@ -1,0 +1,29 @@
+{
+ "description": "Read a board before you send a letter or when you wonder why someone does not answer. who = an agent's name, \"user\", or \"me\" (default). The result is one JSON object: board (what was posted, null = nothing posted, which is normal), mode (what counts now), live (phase and busy from the daemon table, null if unknown), and notes: stale (expired: the text is old, mode counts as here and its waiting lines do not count), overdue (past its back_at), clock_odd (written with a clock in the future), asleep (the proc sleeps or is stopped: counts as away whatever it posted). Examples: {\"who\": \"ok-view\"}, {\"who\": \"user\"}, {}. Errors: InstanceMissing (no such name on the table), DaemonMissing, KernelFailed.",
+ "env": [
+  "AOS_STACK",
+  "AOS_DAEMON",
+  "AOS_KERNEL",
+  "AOS_USER_ZONE"
+ ],
+ "errors": [
+  "ArgumentsBad",
+  "InstanceMissing",
+  "DaemonMissing",
+  "StateMissing",
+  "KernelFailed",
+  "StackMissing",
+  "WsMissing",
+  "LaunchFailed",
+  "CommandFailed"
+ ],
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "who": {
+    "type": "string",
+    "description": "an agent name, user, or me (default me)"
+   }
+  }
+ }
+}

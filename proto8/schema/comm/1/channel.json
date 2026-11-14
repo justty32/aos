@@ -1,0 +1,115 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "comm/1/channel",
+ "title": "aos channel settings (comm/1)",
+ "description": "<channel stack>/channel.json; a proc whose stack has this file is a channel.",
+ "type": "object",
+ "required": [
+  "format",
+  "name",
+  "created_at"
+ ],
+ "additionalProperties": true,
+ "properties": {
+  "format": {
+   "const": "channel/1"
+  },
+  "name": {
+   "type": "string"
+  },
+  "title": {
+   "type": "string"
+  },
+  "created_at": {
+   "$ref": "#/$defs/time"
+  },
+  "owner": {
+   "type": "string"
+  },
+  "admins": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "default": []
+  },
+  "join": {
+   "enum": [
+    "open",
+    "invite",
+    "closed"
+   ],
+   "default": "open"
+  },
+  "post": {
+   "enum": [
+    "members",
+    "anyone",
+    "admins"
+   ],
+   "default": "members"
+  },
+  "members_from": {
+   "enum": [
+    "list",
+    "daemon"
+   ],
+   "default": "list"
+  },
+  "max_level": {
+   "enum": [
+    "low",
+    "normal",
+    "urgent"
+   ],
+   "default": "normal"
+  },
+  "deliver_default": {
+   "enum": [
+    "copy",
+    "pull"
+   ],
+   "default": "copy"
+  },
+  "keep_days": {
+   "type": "integer",
+   "minimum": 1,
+   "default": 30
+  },
+  "auth": {
+   "enum": [
+    "claimed",
+    "uid"
+   ],
+   "default": "claimed"
+  },
+  "limits": {
+   "type": "object",
+   "properties": {
+    "post_per_min": {
+     "type": "integer",
+     "default": 30
+    },
+    "members_max": {
+     "type": "integer",
+     "default": 500
+    },
+    "what_max": {
+     "type": "integer",
+     "default": 20000
+    },
+    "batch": {
+     "type": "integer",
+     "default": 50
+    }
+   }
+  }
+ },
+ "$defs": {
+  "time": {
+   "type": "string",
+   "format": "date-time",
+   "description": "ISO 8601 UTC with milliseconds, same as letter.json sent_at"
+  }
+ }
+}

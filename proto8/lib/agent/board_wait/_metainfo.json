@@ -1,0 +1,14 @@
+{
+  "summary": "Add or remove a waiting line (who I wait for, what) on the board of the agent calling me (aos-comm board wait)",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": false,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

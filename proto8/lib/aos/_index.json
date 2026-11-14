@@ -2,6 +2,9 @@
  "box_check": {
   "description": "box_check 工具（lib/aos 層，關箱考題的比對器）：比對關箱探測輸出與主機暫存檔，看有沒有越出隔離界線、給 0／1 分"
  },
+ "comm": {
+  "description": "comm/1 協議的共用庫：布告欄讀寫與四步算法、時間、找 stack、走表（aos-comm 與 board_* 工具共用）。"
+ },
  "defs": {
   "description": "defs 工具（lib/aos 層，定義目錄）：只讀宣告，搜尋定義、按工具／腦端點／記憶三軸分同質群、查靜態引用與宣告是否齊全"
  },

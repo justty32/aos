@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+# board_wait - aos-comm board wait 的包裝，目標＝叫我的那隻 agent 的根（05 A2）：在自己布告欄的 waiting_on 加一筆「在等誰、等什麼」，done 拿掉那人的。
+# 圖紙：proto8/thinking/2026-11/14/board-1114/ 02 §5.1、05 P1（等待帳只有 board.json 的 waiting_on 一份）；純包裝。
+# 介面：stdin {who, what?, done?}；done 不給或 false＝加（what 必給），true＝拿掉 who 的每一筆。結果：寫好的整張（一行 JSON），沒得拿＝一句話。
+import json, os, signal, sys
+NAME = "board_wait"
+HELP = """\
+usage: board_wait < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Add one "I wait for WHO: WHAT" line to my board, or with done = true remove WHO's lines (aos-comm board wait).
+Result on stdout. On error: one line "board_wait: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先的 lib（含 lib/agent 的 cmd_call），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib, os.path.join(_lib, "agent")] if os.path.basename(_lib) == "lib" else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+tool_io.start(NAME, HELP)
+signal.signal(signal.SIGINT, lambda s, f: sys.exit(130))
+import cmd_call  # noqa: E402
+
+cmd_call.catch_signals((signal.SIGTERM,))
+args = tool_io.arguments("who")
+if args.get("done"):
+    if args.get("what"):
+        tool_io.die("ArgumentsBad", "done removes every line for who; leave what out")
+    code, out, _ = cmd_call.call("aos-comm", ["board", "wait", "--done", "-j", "--", args["who"]], ok=(0, 10))
+    if code == 10:
+        print("nothing removed: your board has no waiting line for %s" % args["who"])
+        sys.exit(0)
+    print("removed the waiting lines for %s; the board now:" % args["who"])
+else:
+    if not isinstance(args.get("what"), str) or not args["what"].strip():
+        tool_io.die("ArgumentsBad", "missing what (one line: what you wait for from who)")
+    _, out, _ = cmd_call.call("aos-comm", ["board", "wait", "-j", "--", args["who"], args["what"]])
+    print("added the waiting line; remove it with done = true when %s answers. The board now:" % args["who"])
+print(json.dumps(json.loads(out), ensure_ascii=False))

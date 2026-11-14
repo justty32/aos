@@ -1,0 +1,18 @@
+{
+ "description": "Take your board down: mode here, no text, no waiting lines (for example when you are back or done with what you posted). Example: {}  (no arguments). Returns the board written. Errors: WriteFailed, StackMissing.",
+ "env": [
+  "AOS_STACK"
+ ],
+ "errors": [
+  "ArgumentsBad",
+  "WriteFailed",
+  "StackMissing",
+  "WsMissing",
+  "LaunchFailed",
+  "CommandFailed"
+ ],
+ "parameters": {
+  "type": "object",
+  "properties": {}
+ }
+}

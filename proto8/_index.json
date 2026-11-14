@@ -44,6 +44,9 @@
  "py": {
   "description": "cmd 共用的 Python 模組（不進 PATH）：aos_flags、aos_ws、daemon_ctl、aos_sweep 系列、aos_clock_register 與其測試；改指令共用的旗標、工作區或 daemon 控制邏輯時進去"
  },
+ "schema": {
+  "description": "機讀的協議定義（JSON Schema）：各協議一夾、一版一夾，例如 comm/1；普通 proc 照它讀寫，工具拿它驗。"
+ },
  "templates": {
   "description": "複製出去用的 agent 範本：eca-claude（外部 coding agent）、agent-fsm（aos 自己的 loop／fsm agent），另有 daemon-root、judge-llm 等；開新 agent 或改範本時進去"
  },

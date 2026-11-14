@@ -1,0 +1,36 @@
+{
+ "description": "Keep the list of who you are waiting for on your board, so others (and the user's overview page) can see it. Add a line when you send a request and stop to wait; remove it with done = true when the answer comes. who = a proc name or \"user\". At most 20 lines. Examples:\n- {\"who\": \"ok-view\", \"what\": \"schema review\"}\n- {\"who\": \"user\", \"what\": \"decide the six board questions\"}\n- {\"who\": \"ok-view\", \"done\": true}\nReturns the board written (or says nothing was removed). Errors: ArgumentsBad, BoardFull, WriteFailed, StackMissing.",
+ "env": [
+  "AOS_STACK"
+ ],
+ "errors": [
+  "ArgumentsBad",
+  "BoardFull",
+  "BoardTooBig",
+  "WriteFailed",
+  "StackMissing",
+  "WsMissing",
+  "LaunchFailed",
+  "CommandFailed"
+ ],
+ "parameters": {
+  "type": "object",
+  "required": [
+   "who"
+  ],
+  "properties": {
+   "who": {
+    "type": "string",
+    "description": "who you wait for: a proc name, or user"
+   },
+   "what": {
+    "type": "string",
+    "description": "what you wait for, one line up to 200 characters (needed unless done is true)"
+   },
+   "done": {
+    "type": "boolean",
+    "description": "true = remove every waiting line for who"
+   }
+  }
+ }
+}

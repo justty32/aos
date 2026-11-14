@@ -1,0 +1,80 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "comm/1/channel-members",
+ "title": "aos channel members (comm/1)",
+ "description": "<channel stack>/members.json, written only by the channel proc; key = member stack absolute path.",
+ "type": "object",
+ "required": [
+  "format",
+  "members"
+ ],
+ "additionalProperties": true,
+ "properties": {
+  "format": {
+   "const": "channel-members/1"
+  },
+  "seq": {
+   "type": "integer"
+  },
+  "members": {
+   "type": "object",
+   "description": "key = member stack absolute path",
+   "additionalProperties": {
+    "type": "object",
+    "required": [
+     "name",
+     "box",
+     "joined_at"
+    ],
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "box": {
+      "type": "string"
+     },
+     "joined_at": {
+      "$ref": "#/$defs/time"
+     },
+     "deliver": {
+      "enum": [
+       "copy",
+       "pull"
+      ]
+     },
+     "role": {
+      "enum": [
+       "member",
+       "admin"
+      ]
+     },
+     "sent_seq": {
+      "type": "integer"
+     },
+     "fails": {
+      "type": "integer"
+     },
+     "gone_at": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "missed_from_seq": {
+      "type": [
+       "integer",
+       "null"
+      ]
+     }
+    }
+   }
+  }
+ },
+ "$defs": {
+  "time": {
+   "type": "string",
+   "format": "date-time",
+   "description": "ISO 8601 UTC with milliseconds, same as letter.json sent_at"
+  }
+ }
+}

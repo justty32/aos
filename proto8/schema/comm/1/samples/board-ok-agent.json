@@ -1,0 +1,7 @@
+{"format":"board/1","seq":7,"updated_at":"2026-11-14T06:30:00.000+00:00","by":"self",
+ "mode":"dnd","text":"跑全量測試中，結果出來前別丟新工作給我",
+ "doing":"ok-board 規劃第 2 稿",
+ "waiting_on":[{"who":"user","what":"布告欄協議 6 題待裁","since_at":"2026-11-14T05:10:00.000+00:00"},
+               {"who":"ok-sec","what":"uid 粒度","since_at":"2026-11-14T04:00:00.000+00:00","level":"urgent","notified_at":"2026-11-14T04:05:00.000+00:00","ref":"20261114-040000-ab12"}],
+ "back_text":"測試跑完（約一小時）","expires_at":"2026-11-14T08:30:00.000+00:00","deputy":"repo-aos",
+ "ext":{"view":{"color":"red"}},"some_later_key":true}

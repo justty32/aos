@@ -1,0 +1,28 @@
+{
+ "description": "proto8/schema 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "generated_by": "wf/tools/index_gen.py",
+ "tree": {
+  "comm": {
+   "1": {
+    "board.json": "The board of one proc: <stack>/board.json (the user: ~/.aos/user/board.json). Readers ignore keys they do not know.",
+    "channel-members.json": "<channel stack>/members.json, written only by the channel proc; key = member stack absolute path.",
+    "channel.json": "<channel stack>/channel.json; a proc whose stack has this file is a channel.",
+    "letter-comm.json": "Only body.comm of a letter; the rest of the body is not described here. No comm, a comm that is not an object, v above 1 or an unknown level = a norm…",
+    "samples": {
+     "board-bad-mode.json": "設定（鍵：format、mode、text）",
+     "board-bad-waiting.json": "設定（鍵：format、updated_at、mode、waiting_on）",
+     "board-ok-agent.json": "設定（鍵：format、seq、updated_at、by、mode、text…）",
+     "board-ok-user.json": "設定（鍵：format、updated_at、by、mode、text、back_text…）",
+     "channel-bad.json": "設定（鍵：format、created_at、join、keep_days）",
+     "channel-members-bad.json": "設定（鍵：format、members）",
+     "channel-members-ok.json": "設定（鍵：format、seq、members）",
+     "channel-ok.json": "Developers",
+     "letter-comm-bad-urgent.json": "設定（鍵：v、level）",
+     "letter-comm-bad-v.json": "設定（鍵：v、level、via）",
+     "letter-comm-ok-low.json": "設定（鍵：v、level、future_key）",
+     "letter-comm-ok.json": "設定（鍵：v、level、why、expires_at、wait）"
+    }
+   }
+  }
+ }
+}

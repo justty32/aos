@@ -1,0 +1,130 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "comm/1/board",
+ "title": "aos board (comm/1)",
+ "description": "The board of one proc: <stack>/board.json (the user: ~/.aos/user/board.json). Readers ignore keys they do not know.",
+ "type": "object",
+ "required": [
+  "format",
+  "updated_at",
+  "mode"
+ ],
+ "additionalProperties": true,
+ "properties": {
+  "format": {
+   "const": "board/1"
+  },
+  "updated_at": {
+   "$ref": "#/$defs/time"
+  },
+  "mode": {
+   "enum": [
+    "here",
+    "busy",
+    "dnd",
+    "away"
+   ]
+  },
+  "seq": {
+   "type": "integer",
+   "minimum": 0
+  },
+  "by": {
+   "enum": [
+    "self",
+    "auto",
+    "user"
+   ]
+  },
+  "text": {
+   "type": "string",
+   "maxLength": 1000
+  },
+  "doing": {
+   "type": "string",
+   "maxLength": 200
+  },
+  "waiting_on": {
+   "type": "array",
+   "maxItems": 20,
+   "items": {
+    "type": "object",
+    "required": [
+     "who",
+     "what",
+     "since_at"
+    ],
+    "additionalProperties": true,
+    "properties": {
+     "who": {
+      "type": "string",
+      "minLength": 1
+     },
+     "what": {
+      "type": "string",
+      "maxLength": 200
+     },
+     "since_at": {
+      "$ref": "#/$defs/time"
+     },
+     "ref": {
+      "type": "string"
+     },
+     "level": {
+      "enum": [
+       "urgent",
+       "normal",
+       "low"
+      ]
+     },
+     "notified_at": {
+      "$ref": "#/$defs/time"
+     }
+    }
+   }
+  },
+  "back_at": {
+   "$ref": "#/$defs/time"
+  },
+  "back_text": {
+   "type": "string",
+   "maxLength": 100
+  },
+  "expires_at": {
+   "$ref": "#/$defs/time"
+  },
+  "accept": {
+   "enum": [
+    "low",
+    "normal",
+    "urgent",
+    "none"
+   ]
+  },
+  "allow_from": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "wake_on_urgent": {
+   "type": "boolean"
+  },
+  "clear_on_start": {
+   "type": "boolean"
+  },
+  "deputy": {
+   "type": "string"
+  },
+  "ext": {
+   "type": "object"
+  }
+ },
+ "$defs": {
+  "time": {
+   "type": "string",
+   "format": "date-time",
+   "description": "ISO 8601 UTC with milliseconds, same as letter.json sent_at"
+  }
+ }
+}
