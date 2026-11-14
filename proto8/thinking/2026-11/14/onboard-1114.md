@@ -81,3 +81,14 @@
 - 「看」包剩 24 支、31,215 字元，每次問腦少送約 6 萬字元；一隻一張單約 40 次問腦，等於少送約 240 萬字元。
 - 計劃裡「開場固定成本 8,000 字元」那筆帳沒算工具說明。P1 要把它列成主要指標之一。
 - 已另投一則 aos 意見：產品範本預設掛的工具太多。
+
+## ok-release 對 P2 的條件（11-14 12:58，xiaosi 轉來；P2 仍等放行）
+
+- **位置**：產品範本放 `proto8/templates/kits/`。這裡公開，網站之後會連過來，外人看得到每個檔。
+  - 一律英文。
+  - 不放 wf 字眼、私人路徑、帳號名。
+  - 每個檔的開頭用一兩句白話說這個檔是什麼。
+  - kits.json 和知識庫 `aos/kits.json` 之後會由「參考」頁連過去。
+- **agent-fsm/system.txt 可以加長**到約 1,500 字元。要寫成陌生人看得懂、能直接照用的通用助手說明。「回報給誰」和站台規矩留在站台層，不進產品範本。落地 commit 後寄信給 ok-release，它會在乾淨複本上照字重跑「開始用」和 README，確認輸出沒變。
+- **中立檢查**：以 `python3 wf/temp/ok-release/drafts/tools/scan.py --private <個人值清單> proto8/templates/kits` 為底，查個人值、家目錄路徑、email、私有 IP、金鑰形狀和圖片 metadata。我們再疊一層「沒有 wf 字眼、沒有中文」的檢查。scan.py 還在 wf/temp，要搬進 wf/tools 得頂層准。
+- **命名禁忌**：kits 底下不要有叫 `install` 的資料夾，因為 repo 根目錄 .gitignore 第 2 行會忽略 `install/`。
