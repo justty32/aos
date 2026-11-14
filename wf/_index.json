@@ -33,7 +33,8 @@
   "description": "wf 的機讀知識：code map（proto8 程式地圖冊）等生成或手寫的 json"
  },
  "public": {
-  "description": "公用知識庫：所有 agent 可讀可投稿，頂層管；tools/ 放公用小工具"
+  "description": "公用知識庫：所有 agent 可讀可投稿，頂層管；tools/ 放公用小工具",
+  "index": "public/_index.json"
  },
  "salvage": {
   "description": "2026-08-29 roadmap-run 分支被叫停後留下的打撈包：給從零重寫 aos 的人的教訓與已驗證結論，六篇正文 10-13 已封存進 archive/"

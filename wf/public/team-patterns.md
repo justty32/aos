@@ -34,7 +34,7 @@
   1. 回報開頭一句寫「截至 commit X／回 letter Y」（做到哪、讀到哪一封為止）。回一封特定的信時，`mailbox_send` 另帶 `in_reply_to`（那封的信名）。
   2. 收到新指示，先對照自己已做到哪，只做還沒做的部分；新指示說的若是已做完的事，回一句「X 已在 commit … 做完」，不要重做。
   3. 上游發新指示時也寫「截至你的哪封回報」，下屬才分得出這封是看過 DONE 才寫的，還是交錯的。
-- **驗過**：skyrim-agent 11-14 第一場（13:00～14:45），交錯至少 5 次，後來在正文寫「截至 commit X／回 letter Y」才解決（投稿自述，審稿沒另外驗）。
+- **驗過**：skyrim-agent 11-14 第一場（13:00～14:45），交錯至少 5 次，後來在正文寫「截至 commit X／回 letter Y」才解決（投稿自述，審稿沒另外驗）。同日三位部長（head-comm、head-core、head-front）與 ok-kb 也都遇到信交錯，部長那邊的做法（回信第一句講以哪一封為準、以放行信為準）見 [等隊員與讀信](等隊員與讀信.md)。
 - **出處**：skyrim 母 repo `wf/lessons/aos-tree-onboarding-and-leading.md`（skyrim commit a43206a）；`~/repo/moddings/skyrim/tmp/aos-skyrim-agent/opus-1/notes.md`。信件格式加欄位的意見記在 [advices 信件與溝通「信會在路上交錯」](../advices/信件與溝通.md)。
 - **投稿**：skyrim-agent（`skyrim-1114.md` 第 1 件）
 

@@ -39,7 +39,7 @@
 
 - **適用**：用 `wf/tools/commit-request` 交 commit，這次有新資料夾、新檔、中文檔名，或要改共用索引。
 - **一定先 `--dry-run`**：會列出 index_gen 一起生成的檔。夾裡檔數過門檻時多出一份新的 `_index.json` 是正常的，不用手改。
-- **新資料夾只有 `_entry`（沒有 README、_tooldef 這類檔）**：dry-run 報 `GeneratorFailed: index_gen: error: DescMissing <夾>/`。在 `wf/tools/index_gen_desc.json` 加一行 `"<夾路徑>": "一句說明"`（照 mail_notify 那行寫），這個檔也 claim、也放進 `--files`。
+- **新資料夾只有 `_entry`（沒有 README、_tooldef 這類檔）**：dry-run 報 `GeneratorFailed: index_gen: error: DescMissing <夾>/`。在 `wf/tools/index_gen_desc.json` 加一行 `"<夾路徑>": "一句說明"`（照 mail_notify 那行寫），這個檔也 claim、也放進 `--files`；或給新夾一份 README（ok-board 的 `proto8/schema/`、`lib/aos/comm/` 批 1 交件時撞到）。claim 的坑另見 [交件與放行](交件與放行.md)。
 - **新檔也要 claim**：沒 claim 只給 warning、不擋，但別條線不知道你在改。
 - **中文檔名**：`--files` 清單用 `git -c core.quotepath=off diff --name-only` 產，否則檔名被轉義、對不上。
 - **日索引、月索引、SESSION-LOG 只能用 `--op`**（`day_upsert`、`month_bump`、`log_upsert`…，寫在 `--ops-file ops.json`）。

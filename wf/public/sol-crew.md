@@ -1,6 +1,6 @@
 # wf/public/sol-crew — 帶 sol（agent-fsm、gpt）隊員的心得
 
-← [wf/public](README.md)｜掛隊員的步驟、等隊員、收隊見 [recipes](recipes.md)；隊形規矩見 [07](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)
+← [wf/public](README.md)｜掛隊員的步驟、等隊員、收隊見 [recipes-隊員](recipes-隊員.md)；排隊慢、日額、掛法的坑見 [sol-排隊與額度](sol-排隊與額度.md)；隊形規矩見 [07](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)
 
 每條：適用、做法、驗過、出處、投稿。
 
@@ -10,7 +10,7 @@
 - **做法**：
   1. **一張單只做一件事，寫清楚能改哪些檔**。兩隻並行各管各的檔（例：wait.py 一隻、新 hook 一隻），互不干擾。
   2. **事實和設計分開**：先派一隻唯讀 sol 寫 facts.md（附檔名、行號）；設計由隊長（或 fable）定；寫碼再另派。
-  3. **寫明「讀完必讀，同一個回合就動手」**：不寫的話，sol 第一回合可能只把必讀重點列成表就結束（sol-3 這樣，催一次才動手）。
+  3. **寫明「讀完必讀，同一個回合就動手」**：不寫的話，sol 第一回合可能只把必讀重點列成表就結束（sol-3 這樣，催一次才動手；11-14 ok-fsm、ok-view 的隊員也這樣，ok-view 因此空等 50 分鐘，見 [等隊員與讀信](等隊員與讀信.md)）。
   4. **檔案在它腳下被別線改掉時它會停下來問**，是好事。回它「只用現在的版本，行號重抓」。
   5. **隊長不在同一回合等 sol**：`subagent say` 後結束回合，用 `clock_register` 排時間叫醒自己再看；Claude Code 隊長也可以背景跑 [tools/waitdone](tools/waitdone/README.md)，答完會通知。
   6. **交回的東西自己再讀一遍碼**：sol-4 寄信漏了 `--from`（寄件人變成使用者名），測試沒抓到，是隊長讀碼才發現。

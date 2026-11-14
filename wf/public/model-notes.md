@@ -28,10 +28,11 @@
     done
     ```
   - 它提的點不一定對（例：它說「沒掛 hook 就成了殭屍」，其實 `ctl ls --long` 本來就看得到冷卻）。每點都要對照事實再決定。
-- **它擅長的**：抓 race，例如檢查與刪檔之間的 TOCTOU、拿鎖前後的順序（ok-kf）。
+- **它擅長的**：抓 race，例如檢查與刪檔之間的 TOCTOU、拿鎖前後的順序（ok-kf）；砍東西：反對「notify_box 預設寄給掛它的人」、建議不做 `who --chain`、parent 統一成字串，三處都讓設計變小（ok-devt）；多層算式的漏洞（ok-llmk2）。ok-kmsg 九條裡三條是真的會出事的（提示貼設計稿加相關原始碼約 58 KB，回覆 12 KB）。
+- **它不可靠的**：沒看過的圖紙它會照摘要瞎推，採納表要逐條對原文（ok-devt 的 B7）；系統呼叫回哪個錯誤碼這類事實會說錯，以本機小實驗為準（ok-sec E12，見 [設計與查證](設計與查證.md)）。
 - **驗過**：ok-astra 11-14 10:20，AK17 計劃；第一次沒加「不准用工具」沒產出，加了後一次拿到 8 點、採納 5 點。ok-kf 11-14 同樣撞到 read_file 被擋，照同法解。ok-llmk2 11-14 撞到 "command" 那種：同一份 51 KB 提示第一次只得一行錯，開頭加那句後兩次（早評、審計劃）都產出 16～18 KB。
 - **出處**：`proto8/thinking/2026-11/14/astra-kernel-1114.md` AK17 節；`proto8/thinking/2026-11/14/kernel-framework-1114.md`；`proto8/thinking/2026-11/14/llmk2-1114/02b-Argon早評.md` 檔頭
-- **投稿**：ok-astra（`argon-one-shot-review.md`）＋ ok-kf（`pitfalls-shell-and-reviewers.md` 的 Argon、設計流程兩條）＋ ok-llmk2（`argon-headless-no-tools.md`），合併
+- **投稿**：ok-astra（`argon-one-shot-review.md`）＋ ok-kf（`pitfalls-shell-and-reviewers.md` 的 Argon、設計流程兩條）＋ ok-llmk2（`argon-headless-no-tools.md`），合併；11-14 收尾補 `wf/temp/{ok-devt,ok-kmsg,ok-sec,ok-llmk2}/wrapup-1114/經驗.md`
 
 ## claude -p 做到一半再交新話：stdin 用 stream-json、先不關
 
@@ -44,7 +45,16 @@
 - **坑**：
   - PostToolUse hook 回的 `additionalContext` 送得到，但模型會當成「工具輸出裡的可疑指示」而不照做。真要用，system 先講明這段是誰送的、為什麼從這裡來。
   - `claude -p` 的環境裡也有 `CLAUDE_CODE_MESSAGING_SOCKET`（跨 session 收件口），往裡寫信封也收得到，但那是沒寫進文件的介面。能用 stdin 就用 stdin。
-  - 前景 `sleep N` 會被 Claude Code 擋下，模型改丟背景；這時 `-p` 行程會活著等背景任務跑完，中間也收得到訊息。量測時別用包一層的方式繞過這個擋，模型會拒絕。
+  - 前景 `sleep N` 會被 Claude Code 擋下，模型改丟背景；這時 `-p` 行程會活著等背景任務跑完，中間也收得到訊息。量測時別用包一層的方式繞過這個擋，模型會拒絕；要量長指令改用忙迴圈。`-p` 模式沒有 Monitor，給它的提示別叫它用 Monitor。
+  - 模型叫了背景任務會先回一個 result（「在跑了」）：看到 result 就關 stdin 的話，之後的信寫不進去。模型取走中途信後先答的那句不在最後的 result 裡，只看 result 會掉（修在 `lib/agent/cli_stream.py:117`、`:38`；怎麼測見 [審查與實測](審查與實測.md)）。
+  - 用預設的 snapshot `--resume` 時，新加的 `--append-system-prompt` 模型看不到，要 `--system-prompt-snapshot off`（claude 2.1.325；`lib/agent/cli_cfg.py:155` 的 docstring 早有寫，`cli_print.py:141` 只補一次旗標）。
 - **驗過**：ok-wake 11-14，claude 2.1.325、haiku；探針 `run-stdin-1`、`run-stdin-2`（第二則 4.5 秒後、工具做完時進對話），`--resume` 那次接回同一段對話。審稿時對過 02-實測的結論與探針節。
 - **出處**：`proto8/thinking/2026-11/14/wake-1114/02-實測.md`（stdin 探針、additionalContext 探針兩節）、03、05；探針腳本在 `~/code/wake-1114/scripts/`
-- **投稿**：ok-wake（`wf/temp/ok-wake/public-submit/claude-p中途餵信.md`）
+- **投稿**：ok-wake（`wf/temp/ok-wake/public-submit/claude-p中途餵信.md`；後三個坑補自 `wf/temp/ok-wake/wrapup-1114/經驗.md`，探針 `real/bg-1`、`real/edit-1`、`real/hint-1`、`run-sysflags-2`）
+
+## 用 Claude Code 本機紀錄算 token：同一則回覆會寫好幾列，要跨檔去重
+
+- **適用**：用 `~/.claude*/projects/**/*.jsonl` 算 Claude 用量。
+- **做法**：全域以 `message.id` 為鍵，取 `output_tokens` 最大的那列。不能逐列加總（會重算約一倍），也不能只在單檔內去重。
+- **驗過**：ok-llmk2 11-14：主帳號 160,259 列只對到 85,529 個 id；output 不同的 9,578 個 id 都是最後一列最大；82 個 id 跨檔重複（commit db0cfbb29）。
+- **出處**：`proto8/thinking/2026-11/14/llmk2-1114/06-Claude電表原型.md:11-25`；`wf/temp/ok-llmk2/wrapup-1114/經驗.md`
