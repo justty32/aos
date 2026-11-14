@@ -167,7 +167,7 @@
     "testing.json": "設定（鍵：_description、when、not_when、done_when、steps、handoff）",
     "tidy": {
      "_description.json": "",
-     "content-trim.json": "設定（鍵：_description、steps）",
+     "content-trim.json": "設定（鍵：_description、steps、converge）",
      "principles.json": "設定（鍵：_description、principles）"
     },
     "tidy-manager-brief.json": "設定（鍵：_description、when、not_when、done_when、role、steps…）",

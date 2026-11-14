@@ -41,6 +41,9 @@
  "content_trim": {
   "$ref": "tidy/content-trim.json#/steps"
  },
+ "content_converge": {
+  "$ref": "tidy/content-trim.json#/converge"
+ },
  "gotchas": "整理與拆檔實際踩過的坑集中在 `wf/knowledge/gotchas.json` 的 `tidy_` 開頭各段（封存與搬檔、拆檔、派線與工人、執行環境）；動手前先讀一遍。",
  "handoff": "完成後 → 若整理揭露了要裁示的事，`wf/WAIT_USER.md` 一行。"
 }
