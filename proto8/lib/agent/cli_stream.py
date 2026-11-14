@@ -8,6 +8,9 @@ else:
 
 MID_FLAGS = ["--input-format", "stream-json", "--replay-user-messages"]
 CAP = {"letters": 5, "seconds": 300}     # 一輪中途最多投幾封、起行程後幾秒內才投
+LIVE_HINT = ("When a shell command may run for more than about a minute, start it with run_in_background and read its output "
+             "later, so that aos letters arriving meanwhile reach you between steps.")
+                                         # 開了 live_mail 才附加給 CLI 的 system（使用者 background:soft；前景指令跑著時信進不來）
 STALL = 30                               # 看過 result、沒有背景任務、stdout 又這麼多秒沒動靜＝CLI 不會再動了：關 stdin（不等到逾時）
 
 

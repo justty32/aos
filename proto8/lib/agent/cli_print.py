@@ -6,13 +6,13 @@ if __package__:
     from .cli_cell import codex_main_thread, drop_session, mark_session, transcripts
     from .cli_cfg import system_argv
     from .cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv, settings_argv, settings_env
-    from .cli_stream import CAP, MID_FLAGS, answer_text, run_claude_stream_mid
+    from .cli_stream import CAP, LIVE_HINT, MID_FLAGS, answer_text, run_claude_stream_mid
 else:
     import cli_base
     from cli_cell import codex_main_thread, drop_session, mark_session, transcripts
     from cli_cfg import system_argv
     from cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv, settings_argv, settings_env
-    from cli_stream import CAP, MID_FLAGS, answer_text, run_claude_stream_mid
+    from cli_stream import CAP, LIVE_HINT, MID_FLAGS, answer_text, run_claude_stream_mid
 
 
 # ---------------------------------------------------------------- 非互動（畫面沒開）
@@ -137,6 +137,8 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None, more=None)
     argv += MID_FLAGS if live else []
     ext, env, _ = external_claude(cfg)
     argv += mcp_argv(cfg, cell, ws, stack, ext) + system_argv(cfg)
+    if live:                                    # 長指令丟背景的提示（wake-1114 C4）；snapshot 沒關的話 --resume 時新加的 system 送不進去（2.1.325 實測）
+        argv += ([] if "--system-prompt-snapshot" in argv else ["--system-prompt-snapshot", "off"]) + ["--append-system-prompt", LIVE_HINT]
     guard = guard_hooks(cfg)
     argv += settings_argv(cfg, {"hooks": guard} if guard else {})   # 定義帶了 settings＝併進這一個（11-13 第 1 題乙）
     env = dict(env or {}, **settings_env(cfg)) or None

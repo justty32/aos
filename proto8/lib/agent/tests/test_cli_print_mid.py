@@ -76,6 +76,27 @@ class PrintMid(unittest.TestCase):
         self.assertEqual(argv[i:i + len(cli_stream.MID_FLAGS)], cli_stream.MID_FLAGS)
         self.assertEqual(argv.count("--input-format"), 1)
 
+    def test_live_hint_only_when_switch_on(self):
+        self.ask(self.load(live_mail=True), object())
+        argv = self.seen["argv"]
+        self.assertEqual(argv.count(cli_stream.LIVE_HINT), 1)
+        self.assertEqual(argv[argv.index(cli_stream.LIVE_HINT) - 1], "--append-system-prompt")
+        self.assertEqual(argv.count("--system-prompt-snapshot"), 1)              # 沒宣告 system 也補上 off（不然 --resume 送不到）
+        self.assertEqual(argv[argv.index("--system-prompt-snapshot") + 1], "off")
+        for cfg, more in ((self.load(), object()), (self.load(live_mail=True), None)):
+            self.ask(cfg, more)
+            self.assertNotIn(cli_stream.LIVE_HINT, self.seen["argv"])
+            self.assertNotIn("--append-system-prompt", self.seen["argv"])
+
+    def test_live_hint_keeps_one_snapshot_flag_with_a_declared_system(self):
+        (self.d / "interfaces.json").write_text(json.dumps({"aos-agent": {"system": "system.txt"}}))
+        (self.d / "system.txt").write_text("own words\n")
+        self.ask(self.load(live_mail=True), object())
+        argv = self.seen["argv"]
+        self.assertEqual(argv.count("--system-prompt-snapshot"), 1)
+        self.assertIn("--append-system-prompt-file", argv)
+        self.assertIn(cli_stream.LIVE_HINT, argv)
+
     def test_cap_merges_and_bad_cap_is_cfgbad(self):
         self.ask(self.load(live_mail=True, live_mail_cap={"letters": 2}), object())
         self.assertEqual(self.seen["cap"], dict(cli_stream.CAP, letters=2))
