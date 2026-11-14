@@ -10,7 +10,7 @@
 3. **任務書**：開頭寫唯一目標、可讀可寫的路徑、交付物（`out/answer.md`）、完成條件（讓它抄進 goal）。蒐集員不用附必讀清單（使用者 11-14 裁定，按角色分）。
 4. **等人**：`say` 之後結束這一輪，用 `clock_register` 叫醒自己再看。`subagent listen` 不要等超過 60 秒。也可以直接等它寄來的信。
 5. **驗收**：讀 `out/`，逐條對證據，不重跑。
-6. **投稿**：隊員的 `out/submit/` 有稿，就搬到線夾的 `public-submit/` 或 `aos-advice/`，再寄 xiaosi，title 開頭 `[public-submit]` 或 `[aos-advice]`（規矩見 wf/public、wf/advices 的 README）。
-7. **往上報**：寄 xiaosi。標題寫判斷、寫要什麼（status）；卡住的信先寫已排除的。**要使用者拍板的題目**用 `aos-user send --kind decide` 寄進使用者專區，題目會出現在全景頁上（做法照 wf/public/user-zone-mail.md）；寄出後再寄一封 NEEDS-USER 或 PROGRESS 給 xiaosi 備查（使用者 11-14 午）。
+6. **投稿**：隊員的 `out/submit/` 有稿，就搬到線夾的 `public-submit/` 或 `aos-advice/`，再寄任務書指定的對象（11-14 起是各部部長），title 開頭 `[public-submit]` 或 `[aos-advice]`（規矩見 wf/public、wf/advices 的 README）。
+7. **往上報**：寄任務書指定的對象（11-14 起是各部部長）。標題寫判斷、寫要什麼（status）；卡住的信先寫已排除的。**要使用者拍板的題目**用 `aos-user send --kind decide` 寄進使用者專區，題目會出現在全景頁上（做法照 wf/public/user-zone-mail.md）；寄出後再寄一封 NEEDS-USER 或 PROGRESS 給同一個對象備查（使用者 11-14 午）。
 8. **commit**：用 `commit-request claim`／`submit`。隊員不 commit。
 9. **收隊**：`subagent rm`（stack 留著）；核對自己記下的 pid 都不在了。
