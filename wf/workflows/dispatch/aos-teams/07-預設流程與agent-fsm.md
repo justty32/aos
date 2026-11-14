@@ -42,6 +42,8 @@
 - **命名**（使用者 11-14「掛fsm sol/astra等agent的時候，那個命名要小心別重合到」）：daemon 表上的名字整台共用；各 eca 掛的 agent 一律叫 `<eca名>-<角色>-<編號>`（例 `ok-kf-sol-1`）。
 - **rlimit**（使用者 11-14「eca...建議不要setrlimit，你就跟他們說請他們自行收斂，但是fsm都可。」）：eca 不設 rlimit，請它們自己收斂用量；agent-fsm 可以設。家機 11-14 已裝 s6，fsm 用 `--limits`（mem_mb、files、cpu_s 實測有效；procs 是全帳號計數，別設小）。sol 預設帶 `{"mem_mb":1024,"files":256}`（ok-pilot 11-14 實測：sol 約 RSS 3MB、3 個 fd；開檔的鍵叫 `files` 不是 `nofile`；停機是 NOFILE 8 造成的，AS 壓到 32MB 仍正常（ok-pilot 第四輪）；`cpu_s` 只按單一程序計時，管不到整隻 agent 的總 CPU，要管總量得用 cgroup `cpu.max`，紀錄在 `wf/temp/ok-pilot/notes.md`「第二輪」）。
 - **派 fsm 隊員用配給包**（使用者 11-14「都按照推薦」，[onboard-1114](../../../../proto8/thinking/2026-11/14/onboard-1114.md)）：蒐集員、審稿員不再抄別線的 system.txt，改用 [kits](../kits/README.md) 的「看」包（照 [card](../kits/card.md) 第 1 步蓋到 agent-fsm 範本上）；開場讀多少規矩按角色分，蒐集員只讀知識庫入口加站台層。
+- **蒐集員的交件要先想好怎麼落地**（ok-view 11-14 踩到；[advices/fsm範本](../../../advices/fsm範本.md)）：只掛 look、gadgets、json、index 的蒐集員只有 JSON 寫入，寫不出 Markdown。任務書擇一寫明：① 「全文放在最後一則回答裡」，隊長用 `subagent listen`（`last: 1`）或 `aos-agent history -t <名字> ls -j` 取出存檔；② 先替它掛寫檔的包：定義的 `tools.json` 的 `$override` 加 `lib/packs/ws-write.json`（工具 `ws_write`：只能寫進自己的工作區，一次上限 256 KiB，不刪檔；38271da3b，換樹後活樹才有），任務書寫明交件檔名。
+- **sol 沒有 shell**：查版本、查環境、跑指令收結果這類事，派工的人自己跑好，把輸出貼進任務書或寫成檔叫它讀，不要讓 sol 靠讀檔去猜（ok-view-sol-7 為了查 `node --version` 翻了 117 步）。
 - 原本排的「fsm 真腦跑一整晚」不另外做測試，改成用 LiteLLM gpt 做實際的施工。
 
 **需求還不清楚時先不走這條**（使用者 11-14 早「你們太早就開始規劃實作與架構了…可以先發想，類似頭腦風暴那樣」）：先發散出點子與可丟棄的小實驗，需求浮出來再規劃，見 [user/03「需求不清時先發想」](../../common/user/03-討論紀錄與規劃.md#需求不清時先發想不急著規劃2026-11-14-定)；第一次照這樣跑的是 [11-14 aos-brainstorm](../../../../proto8/thinking/2026-11/14/aos-brainstorm/README.md)。

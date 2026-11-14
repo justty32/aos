@@ -52,7 +52,12 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 痛的程度：拖慢（每隻多一輪，sol-7 白跑約 15 分鐘）
 - 提出者與日期：ok-view 2026-11-14
 - 出處：wf/temp/ok-view/aos-advice/agent-fsm-sol-沒有寫文字檔工具.md；wf/temp/ok-view/sol-{6,8,9}/（交件全文）；stack ok-view-sol-{6,7,8,9}
-- 狀態：未處理（lib/packs 沒有限路徑的寫檔 pack；aos-agent history 沒有 last）
+- 提出者與日期（狀態更新）：ok-fsm 2026-11-14
+- 出處（狀態更新）：wf/temp/ok-fsm/aos-advice/已解-蒐集員寫不了純文字檔.md；proto8/thinking/2026-11/14/ok-fsm-1114.md；ok-fsm 工單 T23
+- 狀態：未處理（部分已解）。
+  - 建議 1 已解（38271da3b）：新包 `proto8/lib/packs/ws-write.json`，一支工具 `ws_write {path, content, mode}`（`proto8/lib/base/ws_write/`）。mode 有 create（預設，已有就拒）、append、replace（要已存在）；路徑解完捷徑必須落在 `$AOS_WS` 裡，`$AOS_STACK`、`$AOS_CD` 底下也拒；一次上限 262144 bytes、不刪檔。選掛，兩個範本都不掛，要用的定義在 tools.json 的 `$override` 加 `lib/packs/ws-write.json`。測試 `proto8/lib/tests/test_ws_write.py` 19 支。要換樹才進活樹。
+  - 建議 2、3 已寫進 [aos-teams/07](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)（「蒐集員的交件要先想好怎麼落地」「sol 沒有 shell」兩條；頂層 11-14 加，還沒 commit）。
+  - 沒做：取最後回答的現成指令（`aos-agent history last`）。目前用 `subagent listen` 的 `last: 1`，或 `aos-agent history ls -j` 自己取。
 
 ## agent-fsm 的 system 文字不能分層、不能引用，各線整份抄
 
@@ -74,7 +79,13 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 痛的程度：小不便（目前沒人踩到，但模板要教 agent pause，之後一定會遇到）
 - 提出者與日期：ok-onboard 2026-11-14
 - 出處：wf/temp/ok-onboard/aos-advice/goal-paused-letter-resume.md；proto8/thinking/2026-11/14/onboard-1114/05-採納表.md A6
-- 狀態：未處理（未重現；idle.py 讀信那條路沒碰 goal）
+- 提出者與日期（狀態更新）：ok-fsm 2026-11-14
+- 出處（狀態更新）：wf/temp/ok-fsm/aos-advice/已解-goal暫停後來信.md；proto8/thinking/2026-11/14/ok-fsm-1114.md；ok-fsm 工單 T22
+- 狀態：已解（38271da3b；要換樹才進活樹）。
+  - 沒採「自動 resume」，改成「提醒一次」：goal 是 agent 自己暫停的（goal.json 的 updated_by 是 agent），暫停後有新訊息進來、腦回純文字停下時，idle 往 history 接一則 `[aos] goal: paused (理由). A message came after you paused. …`，讓腦自己決定 resume、done 或繼續等。每次暫停只一則，goal.json 不寫（`idle.py` 的 goal_turn()、`goal_state.py` 的 paused_note()／paused_due()）。
+  - 為什麼不自動 resume：暫停也可能是外面的人下的（updated_by outside），或到提醒上限被 aos 停的；來一封信就自動恢復，會蓋掉這兩種。11-11 goal 的裁定裡 pause 是 agent 自己的宣告。原本「暫停中來信不 resume、不提醒」是 test_goal.py 斷言過的設計，不是漏掉的 bug。
+  - 測試：test_goal.py 原 13 支不改、新增 14 支；agent-fsm 整夾 139 支全過。
+  - 沒做：eca（aos-eca-turn）那邊沒有這個提醒；history 被摺疊、找不到暫停那次 goal 呼叫時不提醒（保守）；知識庫 `aos/tools/goal.json` 的 pause 那句（「A letter does not resume it」）還沒補提醒的事。
 
 ## agent-fsm 範本預設掛 55 支工具，工具說明是每次問腦最大的固定成本
 
@@ -127,3 +138,22 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 提出者與日期：ok-pilot 2026-11-14
 - 出處：wf/temp/ok-pilot/aos-advice/before_tool擋下時tool_result標is_error-false.md；wf/temp/ok-pilot/hook-eca/report.md「附帶觀察」、hk-events.jsonl
 - 狀態：未處理。整理時查：這是現行設計，不是漏做。aos-mcp 的檔頭、`--help` 和 `cmd/aos-mcp/README.md` 都寫了「攔下＝結果文字是 hook stdout（空就 `[aos] hook: tool NAME blocked by hook HOOK.`），不算 isError」。投稿說「文件沒寫」只對知識庫：`aos/me/self_hook` 只寫「you get the hook's stdout as the result」，沒說算不算錯。agent-fsm act.py 一樣把 hook stdout 當 tool 訊息，沒有錯誤標記。
+
+## sol 讀完必讀後只回一句「我會照做」就結束回合，要催一次才動手
+
+- 主題：fsm 範本
+- 哪裡：agent-fsm、腦 sol-high（LiteLLM chatgpt-gpt-6.1-sol）；定義 wf/temp/ok-fsm/defs/sol（look、change、json 三包，沒有 shell）；通用層 system `wf/workflows/dispatch/kits/general.A.txt`（範本複本在 `proto8/templates/kits/general.A.txt`）。
+- 現象：
+  - ok-fsm 11-14 派兩隻 sol 各做一張工單（T22、T23）。system 和任務信都寫了「讀完必讀，同一回合就動手；沒有工具呼叫的回答會結束回合」。
+  - 兩隻都一樣：讀完必讀和工單（約 20 則訊息、5 次問腦）後回一段「已讀完，會照圖紙做 …」，沒有任何寫檔的工具呼叫，回合結束、停在 idle。
+  - 各催一句「你只說了要做、還沒改任何檔，現在動手」才開始改檔，之後都正常做完。llm-gpt 排隊久時，這一來一回各多等約 8～10 分鐘。
+  - 重複出現：[wf/public/sol-crew.md](../public/sol-crew.md) 已記過 ok-astra 的 sol-3 同樣的事（第一回合只列重點表就結束，催一次才動手）。
+- 建議（擇一或都做）：
+  1. 範本層：goal 是 active 時，idle 本來就會提醒它繼續。派工時隊長先替它 `goal set`（或在 kits 的隊長卡寫成固定步驟），它說完「我會照做」停下時 aos 自己催，不用隊長盯。不用改程式，只改隊長卡。
+  2. 通用層 system（kits 的 general.A.txt）把那句移到最後一段、改成更直接的話，例如「Never end a turn with a plan. Your first reply after reading must contain a tool call that changes a file.」
+  3. 知識庫或 sol-crew 寫明：第一輪讀檔多的工單，隊長在 say 之後排一個 5 分鐘的鬧鐘，專門看「有沒有改出第一個檔」。
+- 痛的程度：拖慢
+- 提出者與日期：ok-fsm 2026-11-14
+- 出處：wf/temp/ok-fsm/aos-advice/sol第一輪只回會照做就停.md；proto8/thinking/2026-11/14/ok-fsm-1114.md「13:56 驗收與交件」；stack ok-fsm-sol-1、ok-fsm-sol-2 的 history（第一輪最後一則）
+- 狀態：未處理。整理時查：兩份 general.A.txt 都沒有「不要用計畫結束回合」這類句子；sol-crew.md 只寫了「寫明讀完同一回合動手」，這次證明光寫還不夠。
+- 相關：本檔「goal 是 paused 時來了信」（同一套 goal 提醒）。
