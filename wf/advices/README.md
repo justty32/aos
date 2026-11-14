@@ -37,10 +37,10 @@
 |---|---|---|---|---|
 | [daemon與行程](daemon與行程.md) | daemon、aos-loop、daemon 表、--limits、認行程、帶 envs 的 add 掛法 | 5 | 0 | 1 |
 | [信件與溝通](信件與溝通.md) | mailbox、aos-post 信件格式、專區信、say／ask／listen、回答配對信名 | 3 | 1 | 3 |
-| [kernel與額度](kernel與額度.md) | llm kernel、腦額度、找 kernel、kernel hook | 3 | 0 | 1 |
+| [kernel與額度](kernel與額度.md) | llm kernel、腦額度、找 kernel、kernel hook | 1 | 0 | 3 |
 | [fsm範本](fsm範本.md) | agent-fsm 範本、工具包、system 文字、guard 與可寫範圍、before_tool 擋下的標法、wait 與冷卻、goal、sol 第一輪只說不做、llm_settings 註解 | 6 | 2 | 3 |
 | [指令與工具](指令與工具.md) | aos-agent、aos-view、建置、wf/tools（含 commit-request）、工具說明（tooldef）、工具錯誤代號、--help 字樣 | 5 | 0 | 3 |
 | [知識庫與文件](知識庫與文件.md) | 知識庫頁、元件 docs 跟程式對不上 | 0 | 0 | 1 |
 | [安全](安全.md) | 密鑰外洩面、proc 環境繼承、暫存檔權限 | 0 | 1 | 0 |
 
-合計 38 條：未處理 22、已排入 4、已解 12（「部分已做／部分已解」的仍算未處理；「安全」那條只有一部分排入，照使用者指定的狀態算已排入）。第一批實際入庫 17 條，上面「16 條」是當時的筆誤，照各檔實數。
+合計 38 條：未處理 20、已排入 4、已解 14（「部分已做／部分已解」的仍算未處理；「安全」那條只有一部分排入，照使用者指定的狀態算已排入）。第一批實際入庫 17 條，上面「16 條」是當時的筆誤，照各檔實數。

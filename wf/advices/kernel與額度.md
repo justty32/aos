@@ -36,7 +36,7 @@ llm kernel（lib/aos/kernel_llm）、腦額度、找 kernel 的意見。
 - 痛的程度：小不便（規劃時發現，擋住「用 hook 做部門額度」這條路）
 - 提出者與日期：ok-llmk2 2026-11-14
 - 出處：wf/temp/ok-llmk2/aos-advice/kernel-llm-hook-reject-code.md；proto8/thinking/2026-11/14/llmk2-1114/03-計劃.md §2.3
-- 狀態：未處理（llm_rules.py 仍只認 HookRejected）
+- 狀態：已解（ok-kmsg，d6a564191）。改在共用的 `lib/aos/kernel/hooks.py`：`before_verdict`／`after_verdict` 的 hook 退 10 且 stdout 印 `{"error":{"code":"BudgetMissing","msg":"…","resets_at":"…"}}` 就回 BudgetMissing，回信帶 `resets_at`、`scope: "hook"`、`hook: <名>`，agent-fsm 照 313ce20ec 的冷卻等到 `resets_at`；不給 `resets_at` 照 30 秒起加倍的間隔重試。hook 給的 `window` 等其他鍵不帶（要對方停下照舊印純文字＝HookRejected）；其他 stdout 行為不變。等換樹才在活樹生效。設計與 Argon 採納表：proto8/thinking/2026-11/14/ok-kmsg-1114.md。
 
 ## llm kernel 沒開時，外人只看到 listen 逾時、沒有提示
 
@@ -49,5 +49,5 @@ llm kernel（lib/aos/kernel_llm）、腦額度、找 kernel 的意見。
 - 痛的程度：投稿沒寫；整理者看是拖慢（對照文件第一次用的外人來說可能擋路）。
 - 提出者與日期：ok-release 2026-11-14
 - 出處：wf/temp/ok-release/aos-advice/腦沒開時listen只會逾時.md；templates/daemon-root/README.md；草稿「開始用」第 3 步與疑難排解「agent 不回」一節（proto8/thinking/2026-11/14/release-1114/06-草稿/v1/_src/docs/zh/）
-- 狀態：未處理。部分已有：agent-fsm 的 wait 現在等腦回信每滿 10 分鐘在 stack 的 stderr 印一行 `agent-fsm: warning: no reply from the brain for N minutes …; still waiting`（附信卡在 kernel 哪一格，見 templates/agent-fsm/README.md）；但這行只在 stderr.txt，`listen` 和 `ctl ls` 都看不到。
+- 狀態：已解（ok-kmsg，d6a564191；採建議 1）。agent-fsm 的 wait 寄出請求後記 `think/brain_wait.json`（信名、kernel stack）；`aos-agent listen`／`say`／`ask`（含 `subagent` 工具的 ask／listen）發現 agent 在等腦而 kernel 的 `state.json` 不在、phase 不是 running／waiting／stopping 或 pid 不在時，stderr 印一行 `NAME is waiting for its brain, but the llm kernel at <路徑> is not running (…)`，逾時的 AnswerMissing 行尾也帶同一句；kernel 資料夾不在時印 `NAME cannot reach its brain: …`。`cmd/aos-agent` 那半已生效，`wait.py` 等換樹；建議 2（`ctl ls` 的 REASON 標等腦）沒做。10 分鐘的 stderr 警告照舊。
 - 相關：[fsm 範本「漏設 AOS_LLM_KERNEL 時 agent-fsm 靜靜卡住」](fsm範本.md)（已解，只管變數沒設；有設但 kernel 沒開這條沒管）。
