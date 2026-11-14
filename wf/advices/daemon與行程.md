@@ -36,7 +36,7 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 痛的程度：小不便（沒人靠它，但鍵名誤導）
 - 提出者與日期：ok-pilot 2026-11-14
 - 出處：wf/temp/ok-pilot/aos-advice/limits的cpu_s按程序計擋不住總量.md；wf/temp/ok-pilot/notes.md 第四輪
-- 狀態：未處理。部分已做：f856af0eb 在 wf 07 寫明「cpu_s 只按單一程序計、總量要 cgroup」；工具說明與知識庫 aos/agents/subagent 還沒寫，cgroup 鍵還沒做：B5（1082418f0）已做 daemon cgroup v2（mem_total_mb、procs_total），沒有 CPU 總量的鍵。
+- 狀態：未處理（文件部分已解）。f856af0eb 在 wf 07 寫明「cpu_s 只按單一程序計、總量要 cgroup」；50e7a35bc 在 subagent、agents_ctl 工具說明與知識庫 aos/agents/subagent 寫明 mem_mb、cpu_s、file_mb、files 按程序計，mem_total_mb、procs_total 管整隻（B5 1082418f0），沒有總 CPU 的鍵，同 commit 讓 ctl add --limits 也認這兩個 cgroup 鍵。還沒做：總 CPU 的 cgroup 鍵（cpu.max）。活樹的知識庫、lib 複本要等換樹。
 
 ## limits 開檔數的鍵叫 files，不叫 nofile
 
@@ -47,7 +47,7 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 痛的程度：小不便
 - 提出者與日期：ok-pilot 2026-11-14
 - 出處：wf/temp/ok-pilot/aos-advice/小坑三則.md 第 3 則
-- 狀態：未處理（wf 07 已提到「鍵叫 files 不是 nofile」，f856af0eb；別名與工具說明例子沒做）
+- 狀態：已解（50e7a35bc：工具說明與知識庫的 limits 例子改用 files；nofile 照舊 ArgumentsBad、不收別名，ok-devt 同意）。活樹的複本要等換樹。
 
 ## daemon 靠 /proc/<pid>/environ 認自己的行程，一換 uid 就認錯
 
