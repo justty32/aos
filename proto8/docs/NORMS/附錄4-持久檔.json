@@ -168,7 +168,7 @@
    "path": "$AOS_STACK/procs_state.json（＋procs_state_procs/ 分檔）",
    "lifetime": "持久",
    "writer": "aos-daemon",
-   "reader": "aos-daemon（adopt）、aos-daemon-ctl、aos-agent、aos-llm-kernel、lib/aos/kernel",
+   "reader": "aos-daemon（adopt）、aos-daemon-ctl、aos-agent（設了 AOS_KERNEL＝讀查詢信問來的那份路徑）、aos-llm-kernel、lib/aos/kernel",
    "image": "進",
    "on_bad": "daemon：不在＝第一次安靜；整份壞＝改名 .bad-<時間>＋warning＋照定義開空表；壞幾列＝複製留證、跳過那列；原因進 state_flux adopt_warning。ctl 讀壞＝StateBad",
    "note": "11-09 必修 1 已改；分檔夾名＝主檔名去副檔名＋_procs；11-10 列多選填 as_written（ctl add 經信箱加的列裡 ws／stack／exec／def 的指示詞原形，每次起照當下環境重解；原本的欄照舊放解好的字串；加法，舊表照讀，不用重建；11-10 前加的列要 rm 再 add 才有原形）；11-10 晚 B01 後半：as_written 也可放使用者打成絕對路徑的 ws／stack／def／exec（字串，表上原樣存、不換算），加法、不用重建",
@@ -280,8 +280,8 @@
    "writer": "aos-post send（aos-daemon-ctl、aos-agent、aos-llm、aos-llm-kernel 回信、idle 開場白、aos-mailbox send／mailbox_send、aos-clock 照登記表寄）",
    "reader": "aos-post take／see（aos-daemon、templates/agent-fsm idle、aos-llm-kernel、aos-llm recv、lib/aos/kernel、aos-mailbox read／mailbox_read）；aos-mailbox peek／mailbox_peek 直接讀 new/*/letter.json",
    "image": "進",
-   "on_bad": "壞信＝收掉：daemon 記 mailbox_warning，body 壞且有 reply_to 回 {\"applied\": false, \"error\": {\"code\": \"BodyBad\"}}（信封壞或沒 reply_to 不回）；idle 寫 mailbox_warning.txt；kernel 回 LetterBad",
-   "note": "cur/ 殘骸 daemon 起來會重做。11-10 晚 mailbox：每個 stack（agent 的，或人的 ~/.aos/stack〔11-11 前是 ~/.stack〕、$AOS_LINUX_USER_STACK）多一個 mailbox/ 箱子，跟 queue/ 分開、信不進 history；用名字寄時替收件人建、用路徑寄時不建。新檔，不用重建",
+   "on_bad": "壞信＝收掉：daemon 記 mailbox_warning，body 壞（含 ping／procs_state_path 不是 true）且有 reply_to 回 {\"applied\": false, \"error\": {\"code\": \"BodyBad\"}}（信封壞或沒 reply_to 不回）；idle 寫 mailbox_warning.txt；kernel 回 LetterBad",
+   "note": "cur/ 殘骸 daemon 起來會重做。11-10 晚 mailbox：每個 stack（agent 的，或人的 ~/.aos/stack〔11-11 前是 ~/.stack〕、$AOS_LINUX_USER_STACK）多一個 mailbox/ 箱子，跟 queue/ 分開、信不進 history；用名字寄時替收件人建、用路徑寄時不建。新檔，不用重建。11-13 daemon 多認查詢信 {\"procs_state_path\": true}：回信多帶自己那份 procs_state.json 的絕對路徑（沒開窗＝null）；信的形狀是加法，不用重建",
    "evidence": "proto8/impls/aos-post/src/send/send.cpp（send）、proto8/impls/aos-post/src/take/take.cpp（see）、proto8/impls/aos-daemon/src/daemon/mailbox.cpp（done_letters）、proto8/templates/agent-fsm/idle.py（body_of）、proto8/impls/aos-llm-kernel/src/serve/scan.cpp（Server::scan）、proto8/cmd/aos-mailbox/aos_mailbox/__init__.py（my_stack、cmd_peek、target_box）"
   },
   {
@@ -535,14 +535,14 @@
    "evidence": "proto8/lib/agent/cli_print.py（print_claude、run_claude_stream）、proto8/lib/agent/cli_ask.py（live）、proto8/templates/agent-fsm/idle.py（take）"
   },
   {
-   "path": "<信箱>/tmp/、$AOS_STACK/daemon_reply/、<daemon stack>/procs_requests/reply/",
+   "path": "<信箱>/tmp/、$AOS_STACK/daemon_reply/、<daemon stack>/procs_requests/reply/、$AOS_KERNEL/reply/",
    "lifetime": "暫時",
-   "writer": "aos-post（半封信）、aos-agent／aos-daemon-ctl（共用回信信箱）",
+   "writer": "aos-post（半封信）、aos-agent／aos-daemon-ctl（共用回信信箱；沒有 $AOS_STACK 的人殼走 kernel 時，aos-agent 用 $AOS_KERNEL/reply/）",
    "reader": "aos-agent、aos-daemon-ctl",
    "image": "不進",
    "on_bad": "沒人領的回信 10 分鐘後下一個來拿的人收掉",
    "note": "",
-   "evidence": "proto8/cmd/aos-agent/stack.gitignore、proto8/cmd/aos-agent/README.md"
+   "evidence": "proto8/cmd/aos-agent/stack.gitignore、proto8/cmd/aos-agent/README.md、proto8/py/daemon_ctl/state_path.py（kernel_reply_box）"
   },
   {
    "path": "$AOS_STACK/cooldown.json",
