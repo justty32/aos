@@ -50,7 +50,7 @@ class BrokenEntry(unittest.TestCase):
     def test_ls_marks_broken_and_rm_add_fix_it(self):
         r = self.ok({"op": "ls"})
         self.assertIn("aos_cache\tbroken: PathMissing", r.stdout)
-        self.assertIn("clock\tGet the current UTC time", r.stdout)
+        self.assertIn("clock\tGet the current time", r.stdout)
         self.assertIn("\tbroken\t", self.ok({"op": "ls", "long": True}).stdout)
         r = self.run_tool({"op": "get", "name": "aos_cache"})
         self.assertEqual(r.returncode, 1)
@@ -59,7 +59,7 @@ class BrokenEntry(unittest.TestCase):
         self.ok({"op": "add", "path": "new_tools/aos_cache"})
         r = self.ok({"op": "ls"})
         self.assertNotIn("broken", r.stdout)
-        self.assertIn("aos_cache\tGet the current UTC time", r.stdout)
+        self.assertIn("aos_cache\tGet the current time", r.stdout)
 
 
 if __name__ == "__main__":

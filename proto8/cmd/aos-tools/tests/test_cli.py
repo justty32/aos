@@ -72,7 +72,7 @@ class Brief(Base):
         self.echo_tool()
         self.ok("--file", self.reg, "add", self.tmp / "bin" / "echo")
         r = self.ok("--file", self.reg, "ls")
-        self.assertEqual(r.stdout, "echo\techo stdin\npeek_now_time\tGet the current UTC time in ISO 8601, e.g. 2026-10-23T08:00:00Z.\n")
+        self.assertEqual(r.stdout, "echo\techo stdin\npeek_now_time\tGet the current time.\n")
 
     def test_brief_flag_gone_and_long_with_json_bad(self):
         self.bad("FlagUnknown", "--file", self.reg, "ls", "-b")

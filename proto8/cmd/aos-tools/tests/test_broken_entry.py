@@ -96,7 +96,7 @@ class BrokenEntry(unittest.TestCase):
         r = self.run_tools("ls")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("empty\tbroken: ToolDefMissing (no tool definition there)", r.stdout)
-        self.assertIn("aos_cache\tGet the current UTC time", r.stdout)
+        self.assertIn("aos_cache\tGet the current time", r.stdout)
 
     def test_registry_itself_broken_is_still_an_error(self):
         self.reg.write_text("{not json")
