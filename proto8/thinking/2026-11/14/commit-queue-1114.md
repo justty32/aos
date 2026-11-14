@@ -17,7 +17,7 @@
   - 生成物寫成新版。
   - 三份共用索引檔：工作樹那份若沒被動過就換成新版；有別人沒 commit 的字，就做三方合併，保住那些字。
   - 共用 `.git/index` 只改這次 commit 的路徑，一次寫完。別人 staged 的東西原封不動。
-- **共用索引檔不收整檔、只收操作**：`day_upsert`（日索引一列）、`month_bump`（月索引那天：份數加一、摘要接一段）、`log_upsert`／`log_delete`（SESSION-LOG 一行）。全部冪等。
+- **共用索引檔不收整檔、只收操作**：`day_upsert`（日索引一列）、`month_bump`（月索引那天：份數加一、摘要接一段）、`month_set`（月索引那天的份數直接設成某數；11-14 ok-skyrim 加，d09286ccf；份數＝日索引列數）、`log_upsert`／`log_delete`（SESSION-LOG 一行）。全部冪等。
 - **衝突**：開工時 `claim`。別條線 claim 著的檔，`claim` 與 `submit` 都會 BLOCKED，並回是誰、claim 了幾分鐘。沒 claim 的檔照樣放行，只回警告。
 - **訊息原樣**：trailer 由申請者寫，排隊機制不改。
 
