@@ -1,0 +1,255 @@
+#!/usr/bin/env python3
+# kernel_gate/triage - 框架站的 after_verdict hook handler：照站旁的 triage.json 先處理一輪，日常的直接放行、明顯不對的拒、其他留給 agent，每封記一行進 triage.jsonl。
+# 使用者 11-14：「太多的請求...你可以派一個claude subagent幫你寫程式，你把需求交給他，讓他幫你弄一些可以自動對請求做初步處理的。」
+# 換掉 kernel_gate 預設的 hold（每封都留）：kernel.json 的 hooks 寫 {"triage": {"event": "after_verdict", "condition": "pass", "handler": <這支>}}。
+# 規則檔＝<站的 stack>/triage.json（事件的 stack；就是 kernel.json 那一夾），每封重讀；沒有或讀不懂＝每封都留（跟 hold 一樣）並記帳。
+# 判法（一封信裡每一項都過才放行；任一項該拒就整封拒；其餘留著）：
+#   procs_added 每一項：名字在 protect＝拒；def／exec／ws／stack（含 as_written）解成絕對路徑後，在 deny_roots 底下或不在任何 home_roots 底下＝拒；
+#     exec 可以是路徑、{"$env", "$path"} 指示詞，或 aos-agent 帶 envs 時的 {"argv": ["aos-exec", "--", 目標, …]}（看目標）；別的命令列＝留著。
+#     def 與 exec 都是 defs 之一或在 def_roots 底下、ws 在 ws_roots 底下、stack 沒寫或在 ws_roots 底下或是 daemon 的 procs/<同名>＝放行；其他留著。
+#   procs_stopped／procs_started／procs_slept／procs_woken 每個名字：protect＝拒；符合 names（fnmatch）＝放行；
+#     daemon 表上那一列的 def 與 ws 照上面 procs_added 的放行條件都過＝放行（ok-* 掛的子 agent）；其他留著。
+#   procs_removed：protect＝拒，其他留著。別的 procs_* 鍵、body 不是物件、沒有任何 procs_* 鍵＝留著。
+# 留著的信（有人表態 pass 那一次，事件的 decision 是 "pass"）不再判、不說話。
+# 回話：放行不印（站的 pass 照走）；拒印 {"verdict": "refuse", "error": {"code": "GateRefused", "msg": 理由}}；留印 {"verdict": "hold"}。
+# 帳：<站的 stack>/<log，預設 triage.jsonl> 一行一封 {"at", "letter", "from", "verdict", "why", "what"}。純標準庫、不 import 包裡別的檔（可以整支抄到站旁邊用）。
+import datetime, fnmatch, json, os, sys
+
+sys.dont_write_bytecode = True
+HELP = """usage: triage < EVENT.json   (an after_verdict hook of the kernel station; rules in STACK/triage.json)
+First pass over each request the station's rules let through: everyday requests go on (print nothing),
+plainly wrong ones are refused ({"verdict": "refuse", ...}, code GateRefused), the rest are held for the
+agent ({"verdict": "hold"}). One JSON line per letter goes to STACK/triage.jsonl (STACK = the event's stack).
+triage.json keys (lists of strings; paths absolute or ~): protect, names, defs, def_roots, ws_roots,
+deny_roots, home_roots; daemon (stack folder whose procs_state.json is read; default $AOS_DAEMON); log.
+Roots may use * inside a path part (fnmatch). No triage.json = hold everything.
+exit codes: 0 always once the event is read; 1 the event on stdin is not JSON with a stack.
+"""
+ACTS = ("procs_stopped", "procs_started", "procs_slept", "procs_woken")
+PATH_KEYS = ("def", "exec", "ws", "stack")
+
+
+def strs(rules, key):
+    v = rules.get(key)
+    return [x for x in v if isinstance(x, str) and x] if isinstance(v, list) else []
+
+
+def norm(p):
+    return os.path.normpath(os.path.expanduser(p))
+
+
+def under(path, root):
+    """path 在 root 底下或就是 root；root 的每一段可用 fnmatch 的 *。"""
+    pp, rp = path.strip("/").split("/"), norm(root).strip("/").split("/")
+    return len(pp) >= len(rp) and all(fnmatch.fnmatchcase(a, b) for a, b in zip(pp, rp))
+
+
+def resolve(value, base=None):
+    """信或表上的一格路徑 → 絕對路徑（realpath）；解不開回 None。base＝相對路徑的起點（表上的列）；信裡的相對路徑解不開。"""
+    if isinstance(value, list) and value:
+        value = value[0]
+    if isinstance(value, dict) and set(value) <= {"$env", "$path"} and isinstance(value.get("$env"), str):
+        head = os.environ.get(value["$env"])
+        tail = value.get("$path", "")
+        if not head or not isinstance(tail, str):
+            return None
+        value = head + tail
+    if not isinstance(value, str) or not value:
+        return None
+    value = os.path.expanduser(value.partition("#")[0])     # path#/json/pointer：只看資料夾那一半
+    if not value:
+        return None
+    if not os.path.isabs(value):
+        if base is None:
+            return None
+        value = os.path.join(base, value)
+    return os.path.realpath(value)
+
+
+def aos_exec_target(argv):
+    """{"argv": ["aos-exec", "--", 目標, 參數…]}（aos-agent 帶 envs 時的寫法）→ 目標；別的命令列回 None。"""
+    if not isinstance(argv, list) or not argv or argv[0] != "aos-exec":
+        return None
+    rest = argv[1:]
+    if rest[:1] == ["--"]:
+        rest = rest[1:]
+    if not rest or (isinstance(rest[0], str) and rest[0].startswith("-")):
+        return None
+    return rest[0]
+
+
+class Judge:
+    def __init__(self, rules, daemon):
+        self.r = rules
+        self.daemon = os.path.realpath(daemon) if daemon else None
+        self.protect = strs(rules, "protect")
+        self.defs = [os.path.realpath(norm(p)) for p in strs(rules, "defs")]
+        self._table = None
+
+    def table(self):
+        if self._table is None:
+            self._table = {}
+            try:
+                with open(os.path.join(self.daemon, "procs_state.json"), encoding="utf-8") as f:
+                    procs = json.load(f).get("procs")
+            except (OSError, ValueError, AttributeError, TypeError):
+                procs = None
+            if isinstance(procs, dict):
+                self._table = {k: v for k, v in procs.items() if isinstance(v, dict)}
+            elif isinstance(procs, list):
+                self._table = {v["name"]: v for v in procs if isinstance(v, dict) and isinstance(v.get("name"), str)}
+        return self._table
+
+    def bad_place(self, field, path):
+        for root in strs(self.r, "deny_roots"):
+            if under(path, root):
+                return "%s %s is inside %s" % (field, path, norm(root))
+        homes = strs(self.r, "home_roots")
+        if homes and not any(under(path, h) for h in homes):
+            return "%s %s is outside %s" % (field, path, ", ".join(norm(h) for h in homes))
+        return None
+
+    def ok_def(self, path):
+        return path in self.defs or any(under(path, root) for root in strs(self.r, "def_roots"))
+
+    def ok_ws(self, path):
+        return any(under(path, root) for root in strs(self.r, "ws_roots"))
+
+    def place(self, name, entry, base=None):
+        """一項（信的 procs_added 一項，或表上一列）的路徑：回 ("pass"|"refuse"|"hold", 理由)。"""
+        found = {}
+        for holder in (entry, entry.get("as_written") if isinstance(entry.get("as_written"), dict) else {}):
+            for key in PATH_KEYS:
+                if key not in holder or holder[key] is None:
+                    continue
+                value = holder[key]
+                if key == "exec" and isinstance(value, dict) and "argv" in value:
+                    value = aos_exec_target(value["argv"])
+                    if value is None:
+                        return "hold", "%s: exec is a command line that is not aos-exec of one target" % name
+                path = resolve(value, base)
+                if path is None:
+                    return "hold", "%s: %s is not an absolute path or a known directive (%s)" % (
+                        name, key, json.dumps(holder[key], ensure_ascii=False)[:120])
+                bad = self.bad_place(key, path)
+                if bad:
+                    return "refuse", "%s: %s" % (name, bad)
+                found.setdefault(key, []).append(path)
+        progs = found.get("def", []) + found.get("exec", [])
+        if not progs:
+            return "hold", "%s: no def or exec" % name
+        if not found.get("ws"):
+            return "hold", "%s: no ws" % name
+        odd = [p for p in progs if not self.ok_def(p)]
+        if odd:
+            return "hold", "%s: def %s is not a known definition or under def_roots" % (name, odd[0])
+        odd = [p for p in found["ws"] if not self.ok_ws(p)]
+        if odd:
+            return "hold", "%s: ws %s is not under ws_roots" % (name, odd[0])
+        own = os.path.join(self.daemon, "procs", name) if self.daemon else None
+        odd = [p for p in found.get("stack", []) if not self.ok_ws(p) and p != own]
+        if odd:
+            return "hold", "%s: stack %s is not its own under the daemon nor under ws_roots" % (name, odd[0])
+        return "pass", "%s: def %s, ws %s" % (name, progs[0], found["ws"][0])
+
+    def act(self, key, name):
+        if not isinstance(name, str) or not name:
+            return "hold", "%s has a name that is not a string" % key
+        if name in self.protect:
+            return "refuse", "%s is protected at this gate (%s): ask the gate's agent" % (name, key)
+        if any(fnmatch.fnmatchcase(name, p) for p in strs(self.r, "names")):
+            return "pass", "%s %s: a known name" % (key, name)
+        row = self.table().get(name) if self.daemon else None
+        if row is None:
+            return "hold", "%s %s: not a known name and not on the daemon table" % (key, name)
+        verdict, why = self.place(name, row, self.daemon)
+        if verdict == "pass":
+            return "pass", "%s %s: on the table with %s" % (key, name, why.split(": ", 1)[1])
+        return "hold", "%s %s: on the table but %s" % (key, name, why.split(": ", 1)[1])
+
+    def body(self, body):
+        """整封：回 (verdict, why, what)。"""
+        if not isinstance(body, dict):
+            return "hold", "the body is not an object", "?"
+        items, what = [], []
+        keys = sorted(k for k in body if k.startswith("procs_"))
+        if not keys:
+            return "hold", "no procs_* request in the body", "?"
+        for key in keys:
+            value = body[key]
+            short = key[len("procs_"):]
+            if key == "procs_added":
+                if not isinstance(value, dict) or not value:
+                    items.append(("hold", "procs_added is not a non-empty object"))
+                    continue
+                for name, entry in sorted(value.items()):
+                    what.append("added %s" % name)
+                    if name in self.protect:
+                        items.append(("refuse", "%s is protected at this gate (procs_added): ask the gate's agent" % name))
+                    elif not isinstance(entry, dict):
+                        items.append(("hold", "%s: the entry is not an object" % name))
+                    else:
+                        items.append(self.place(name, entry))
+            elif key in ACTS or key == "procs_removed":
+                if not isinstance(value, list) or not value:
+                    items.append(("hold", "%s is not a non-empty list of names" % key))
+                    continue
+                for name in value:
+                    what.append("%s %s" % (short, name))
+                    if key == "procs_removed":
+                        items.append(("refuse", "%s is protected at this gate (procs_removed): ask the gate's agent" % name)
+                                     if name in self.protect else ("hold", "removing %s is for the gate's agent to decide" % name))
+                    else:
+                        items.append(self.act(key, name))
+            else:
+                what.append(short)
+                items.append(("hold", "%s is not a request this triage knows" % key))
+        for want in ("refuse", "hold"):
+            hit = [why for verdict, why in items if verdict == want]
+            if hit:
+                return want, hit[0], ", ".join(what)
+        return "pass", "; ".join(why for _, why in items), ", ".join(what)
+
+
+def main():
+    if sys.argv[1:2] in (["-h"], ["--help"]):
+        sys.stdout.write(HELP)
+        return 0
+    try:
+        event = json.load(sys.stdin)
+        station = event["stack"]
+        assert isinstance(station, str) and station
+    except (ValueError, KeyError, TypeError, AssertionError) as e:
+        sys.stderr.write("triage: error: ArgumentsBad the event on stdin is not JSON with a stack: %s\n" % e)
+        return 1
+    if event.get("decision") == "pass":            # 有人表態放行、站重判那一次：照它的判決走
+        return 0
+    try:
+        with open(os.path.join(station, "triage.json"), encoding="utf-8") as f:
+            rules = json.load(f)
+        if not isinstance(rules, dict):
+            raise ValueError("not an object")
+    except (OSError, ValueError) as e:
+        rules = None
+        verdict, why, what = "hold", "triage.json unreadable, holding everything: %s" % e, "?"
+    if rules is not None:
+        daemon = rules.get("daemon") if isinstance(rules.get("daemon"), str) else os.environ.get("AOS_DAEMON")
+        if daemon and not os.environ.get("AOS_DAEMON"):     # 信裡 {"$env": "AOS_DAEMON", …} 的目標照 daemon 解
+            os.environ["AOS_DAEMON"] = norm(daemon)
+        verdict, why, what = Judge(rules, norm(daemon) if daemon else None).body(event.get("body"))
+    log = rules.get("log") if isinstance(rules, dict) and isinstance(rules.get("log"), str) else "triage.jsonl"
+    line = {"at": datetime.datetime.now().astimezone().isoformat(timespec="seconds"), "letter": event.get("letter"),
+            "from": event.get("sender"), "verdict": verdict, "why": why, "what": what}
+    try:
+        with open(os.path.join(station, log), "a", encoding="utf-8") as f:
+            f.write(json.dumps(line, ensure_ascii=False) + "\n")
+    except OSError as e:
+        sys.stderr.write("triage: warning: cannot write %s: %s\n" % (os.path.join(station, log), e))
+    if verdict == "refuse":
+        print(json.dumps({"verdict": "refuse", "error": {"code": "GateRefused", "msg": why}}, ensure_ascii=False))
+    elif verdict == "hold":
+        print(json.dumps({"verdict": "hold"}))
+    return 0
+
+
+sys.exit(main())

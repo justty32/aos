@@ -78,9 +78,11 @@
     "gate_lib.py": "kernel_gate 工具與它兩支 hook 共用：站在哪、跑一輪、留著的信怎麼列、通知怎麼寄。",
     "hold": "框架站的 after_verdict hook handler：每一封都回「先留著」，等 agent 用 kernel_gate 表態。",
     "tests": {
-     "test_kernel_gate.py": "用真的 aos-post、aos-exec 與框架站驗證 kernel_gate 工具與它的 tick／hold 兩支 hook；aos-agent 用暫存的假指令頂替（只答 who、記下 hook 指令）。"
+     "test_kernel_gate.py": "用真的 aos-post、aos-exec 與框架站驗證 kernel_gate 工具與它的 tick／hold 兩支 hook；aos-agent 用暫存的假指令頂替（只答 who、記下 hook 指令）。",
+     "test_triage.py": "驗 kernel_gate/triage：直接餵事件看放行／拒／留與帳；再用真的 aos-post、aos-exec 與框架站跑 tick，看站照它轉寄、回拒信、留著並通知。"
     },
-    "tick": "agent 身上的 on_clock hook handler：叫框架站做一輪，再把新留下的請求合成一則「[aos] kernel_hold: …」寄進 agent 的 queue。"
+    "tick": "agent 身上的 on_clock hook handler：叫框架站做一輪，再把新留下的請求合成一則「[aos] kernel_hold: …」寄進 agent 的 queue。",
+    "triage": "框架站的 after_verdict hook handler：照站旁的 triage.json 先處理一輪，日常的直接放行、明顯不對的拒、其他留給 agent，每封記一行進 triage.jsonl。"
    },
    "kernel_gate/": "讓叫我的那隻 agent 當 kernel 的門：on 把框架站掛在自己身上（請求先留著、通知自己）、ls 看留著的、pass／refuse 表態（轉寄由站做）、off 收掉",
    "mail_notify": {
