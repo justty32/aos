@@ -27,6 +27,7 @@
     "grow.json": "",
     "history.json": "",
     "hook.json": "",
+    "json_view.json": "",
     "mailbox.json": "",
     "mcp.json": "設定（鍵：_description、serve、calls）",
     "mcp_import.json": "設定（鍵：_description、where_from、import、sync、routes、errors）",
@@ -45,11 +46,13 @@
     },
     "safety.json": "設定（鍵：_description、rm、reset、confirm）",
     "sandbox.json": "設定（鍵：_description、run、config）",
+    "share.json": "",
     "sweeper.json": "",
     "talk_settings.json": "設定（鍵：_description、say_listen、chat_screen、tools、llm、system）",
     "tool_env.json": "",
     "tool_flags.json": "",
-    "tools.json": "設定（鍵：_description、registry、add、ls_rm_get、call）"
+    "tools.json": "設定（鍵：_description、registry、add、ls_rm_get、call）",
+    "tree_start.json": ""
    },
    "clock.json": "設定（鍵：_description、wake_me、wake_at、rules、quiet_timer、choose）",
    "definition.json": "設定（鍵：_description、files、only、overlay）",

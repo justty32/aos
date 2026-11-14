@@ -113,7 +113,64 @@
  "goal.json": {
   "description": "Tool goal: your goal, reminded when you stop by yourself; set, done, pause, resume."
  },
+ "../mailbox.json#/tools": {
+  "description": "Pointer. Tools mailbox_peek, mailbox_read, mailbox_send: see which letters wait, read the oldest, send one. Explained in aos/mailbox.json#/tools."
+ },
+ "../user_zone.json#/send": {
+  "description": "Pointer. Tool user_send: send a decide/verify/trial/chore/fyi letter to the user zone. Explained in aos/user_zone.json#/send."
+ },
+ "../user_zone.json#/answer": {
+  "description": "Pointer. Tool user_verify: check that an answer letter really came from the user zone. Explained in aos/user_zone.json#/answer."
+ },
+ "../clock.json#/wake_me": {
+  "description": "Pointer. Tool clock_register: letters from the clock every N cycles (add, rm, ls); once, at a time or cron: aos/clock.json#/wake_at. Explained in aos/clock.json#/wake_me."
+ },
+ "../me/self_hook.json#/_description": {
+  "description": "Pointer. Tool self_hook: run a program of yours when something happens to you (your own hooks, on_clock timers). Explained in aos/me/self_hook.json."
+ },
+ "../me/do_task.json#/_description": {
+  "description": "Pointer. Tool do_task (agent-fsm only): do one task inside your own conversation and keep only its summary. Explained in aos/me/do_task.json."
+ },
+ "../me/self_tools.json#/_description": {
+  "description": "Pointer. Tool self_tools: change your own tool list. Explained in aos/me/self_tools.json."
+ },
+ "../me/self_llm.json": {
+  "description": "Pointer. Tool self_llm: change your own brain settings. Explained in aos/me/self_llm.json (the whole file is one text)."
+ },
+ "../me/self_system.json": {
+  "description": "Pointer. Tool self_system: see or change your own system text. Explained in aos/me/self_system.json (the whole file is one text)."
+ },
+ "../me/self_history.json#/_description": {
+  "description": "Pointer. Tool self_history: list, delete, summarize or replace messages in your own conversation. Explained in aos/me/self_history.json."
+ },
+ "../me.json#/self_state": {
+  "description": "Pointer. Tool self_state: facts and numbers about yourself; it only reads. Explained in aos/me.json#/self_state."
+ },
+ "../me.json#/self_ctl": {
+  "description": "Pointer. Tool self_ctl: stop, pause, put to sleep or remove yourself. Explained in aos/me.json#/self_ctl."
+ },
+ "../agents/subagent.json#/_description": {
+  "description": "Pointer. Tool subagent: start and manage agents that are yours (counted against your quota). Explained in aos/agents/subagent.json."
+ },
+ "../agents.json#/agents_ctl": {
+  "description": "Pointer. Tool agents_ctl: aos-agent ctl for any agent on your daemon table, not only yours. Explained in aos/agents.json#/agents_ctl."
+ },
+ "../agents/fork.json#/_description": {
+  "description": "Pointer. Tool fork (agent-fsm only): a copy of yourself for one goal; only its short conclusion comes back. Explained in aos/agents/fork.json."
+ },
+ "../agents.json#/agent_def": {
+  "description": "Pointer. Tool agent_def: make a new agent definition from a template, or check one. Explained in aos/agents.json#/agent_def."
+ },
+ "../tools_def.json#/tools_def": {
+  "description": "Pointer. Tool tools_def: make a new tool from the Python skeleton, or check a tool. Explained in aos/tools_def.json#/tools_def."
+ },
+ "../kernel.json#/gate": {
+  "description": "Pointer. Tool kernel_gate: be a kernel gate: requests from other procs are held, you pass or refuse each one. Explained in aos/kernel.json#/gate."
+ },
+ "../cli/mcp_import.json#/errors": {
+  "description": "Pointer. mcp_tool: the program that runs every imported external MCP tool (you never call it by name); its error codes. Explained in aos/cli/mcp_import.json#/errors."
+ },
  "_description.json": {
-  "description": "One node per stock tool: what it does, when to use it, its arguments, examples with real output and errors; packs are in aos/packs.json."
+  "description": "One node per stock tool that has a page here: what it does, when to use it, its arguments, examples with real output and errors; how to read the pointer rows (keys starting with ../); packs are in aos/packs.json."
  }
 }

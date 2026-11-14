@@ -65,6 +65,21 @@
  "parts": {
   "description": "Low-level programs the other commands are built from: aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-lock, aos-json, aos-directive, aos-llm, and the llm kernel (the tool folder lib/aos/kernel_llm; before 2026-11-14 the program aos-llm-kernel)."
  },
+ "json_view.json": {
+  "description": "aos-json-view prints a JSON file, or one part of it, in a compact layout for a person to read; read only, the output is not JSON."
+ },
+ "share.json": {
+  "description": "Use aos-share to set ACLs on a shared folder or a file for a group or user id (team, read, key, work, drop, stack); preview with --dry-run."
+ },
+ "tree_start.json": {
+  "description": "aos-tree-start starts the root of a tree like aos-exec, but refuses (EnvBad) when the shell carries another tree's AOS_* variables."
+ },
+ "sandbox.json#/config": {
+  "description": "Pointer. aos-asuser: runs a program as one of your sub-ids without root; aos-sandbox uses it for `user: sub:N`. No page of its own: the `user` key in aos/cli/sandbox.json#/config, then `aos-asuser --help`."
+ },
+ "eca.json#/external_mcp": {
+  "description": "Pointer. aos-mcp-launch SERVER_FILE: starts one external stdio MCP server with its env_file read into the server process only; the eca CLI runs it for you. No page of its own: aos/cli/eca.json#/external_mcp."
+ },
  "_description.json": {
   "description": "Commands for humans and external agents: prefer registered tools inside aos, how the daemon and the agent are chosen, and which page to read first."
  }
