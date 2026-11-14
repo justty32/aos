@@ -32,6 +32,9 @@
  "docs": {
   "description": "lib 的說明文件"
  },
+ "env_file.py": {
+  "description": "Read the shared dotenv subset without changing the process environment."
+ },
  "file_summary.py": {
   "description": "ls、stat、view 共用的檔案摘要小件：資料夾裡有哪些 aos 標記檔、檔案時間寫成 ISO、一個 JSON 值的一句摘要。"
  },

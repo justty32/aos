@@ -19,17 +19,15 @@ child = None
 
 
 def kill_group(p):
-    """先 TERM 整群、等 5 秒，還在再 KILL、再等 5 秒；送訊號出任何 OSError 就不再等（agents_cmd、fork 用；做法在 lib/process_group.py）。"""
+    """先 TERM 整群、等 5 秒，還在再 KILL，最後回收子行程（做法在 lib/process_group.py）。"""
     process_group.stop(p, 5, 5, OSError)
+    p.wait()
 
 
 def on_term(signum, frame):
-    """正在跑的那一群還活著就 TERM 它（不等），自己退 128＋訊號號。"""
-    if child is not None and child.poll() is None:
-        try:
-            os.killpg(child.pid, signal.SIGTERM)
-        except OSError:
-            pass
+    """先收掉正在跑的那一群並回收子行程，自己退 128＋訊號號。"""
+    if child is not None:
+        kill_group(child)
     sys.exit(128 + signum)
 
 

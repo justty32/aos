@@ -26,7 +26,7 @@ ARGS after -- are appended to every run's exec.
 Optional CONFIG.json keys on_start / on_stop (written like exec): run once before the first run /
 once when aos-loop is about to exit (stop, done, failure, signal; not SIGKILL). on_stop gets
 AOS_LOOP_CODE (the exit code) and AOS_LOOP_SIGNAL (signal number or empty). Each gets on_timeout_ms
-(default 5000); a failure there is one warning line and changes nothing else.
+(integer >= 0; default 5000; 0 = no limit); a failure there is one warning line and changes nothing else.
 
 flags:
   --max N               stop after N runs (exit 0)

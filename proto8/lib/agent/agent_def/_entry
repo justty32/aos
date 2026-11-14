@@ -39,19 +39,20 @@ shaped like self_tools / self_llm / self_system (no reset: the definition is the
 Result on stdout. On error: one line "%s: error: CODE reason" on stderr and stdout, exit 1.
 """ % (NAME, NAME)
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+# 只找自己的工具夾、旁邊的 lib/agent（cmd_call）、realpath 祖先的 lib，再交給標準 Python 路徑。
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
     if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
         break
     _lib = os.path.dirname(_lib)
-sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
+sys.path[:0] = [HERE, os.path.dirname(HERE)] + ([_lib] if os.path.basename(_lib) == "lib" else [])
 try:
     import tool_io  # noqa: E402
+    from cmd_call import kill_group
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
-    if error.name != "tool_io":
+    if error.name not in ("tool_io", "cmd_call", "process_group"):
         raise
-    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % NAME
+    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (NAME, error.name)
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)
@@ -67,11 +68,8 @@ child = None
 
 
 def on_term(signum, frame):
-    if child is not None and child.poll() is None:
-        try:
-            os.killpg(child.pid, signal.SIGTERM)
-        except OSError:
-            pass
+    if child is not None:
+        kill_group(child)
     sys.exit(128 + signum)                      # new 的暫存夾由下面 except SystemExit 清
 
 

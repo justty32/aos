@@ -3,7 +3,7 @@
 不是工具（沒有 _entry）；兩支工具的 _entry 把 lib/agent/ 放上 sys.path 後 import 它。錯誤行一律走 tool_io.die（名字是 tool_io.start 記的那支）。
 子行程整群收掉的 kill_group 與下層錯誤行的 ERR_RE 在 cmd_call.py。
 來由：thinking 2026-11/10/agents-split 02 施工單「兩支組 ctl add 旗標的程式共用一份」；跑子行程那段（分段等、TERM 先收那一群、下層最後一行錯誤行的
-代號與原因接成自己的，C-52 例外 ⑤）從舊 agents/_entry 搬來。參數跟 aos-agent ctl 一對一：不多給、不多擋；給了才轉（沒給＝下層的預設）。
+代號與原因接成自己的，C-52 例外 ⑤）由 subagent／agents_ctl 共用。參數跟 aos-agent ctl 一對一：不多給、不多擋；給了才轉（沒給＝下層的預設）。
 相對路徑一律交給下層、cwd＝$AOS_WS（aos-agent 從目前目錄算），這層不換算。
 """
 import json, math, os, re, signal, subprocess, sys, time
@@ -238,7 +238,7 @@ def add_argv(args):
 
 
 def make_ws(args):
-    """ws 給了又不在＝先建（相對從 $AOS_WS 算；舊 agents 的行為）。"""
+    """ws 給了又不在＝先建（相對從 $AOS_WS 算；subagent／agents_ctl 的行為）。"""
     ws = args.get("ws")
     if not isinstance(ws, str) or not ws:
         return

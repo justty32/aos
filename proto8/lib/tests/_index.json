@@ -11,6 +11,9 @@
  "test_directive_value.py": {
   "description": "驗 directive_value：給了 file＝{\"$ref\": \"#/…\"} 取那份檔自己；沒給＝原封不動（11-12 ref-hash R1）；resolve_path 一律給設定檔。"
  },
+ "test_env_file.py": {
+  "description": "Test the shared dotenv parser directly, including expansion and strict failures."
+ },
  "test_file_tools_paths.py": {
   "description": "檔案工具拿掉工作區限制（11-10 tool-packs，使用者「3.對」）：相對從 $AOS_WS、絕對照用，工作區外也能讀寫改搬。"
  },

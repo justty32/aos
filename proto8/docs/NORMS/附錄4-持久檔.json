@@ -31,7 +31,7 @@
    "reader": "aos-loop",
    "image": "看情況：定義＝原始碼、不算 image（C-79）；定義放在 ws 裡就跟 ws 走",
    "on_bad": "不是物件、exec 形狀錯＝CfgBad 退 1；不認得的 key 忽略（stuck_after_ticks 這種舊名＝用預設）",
-   "note": "11-11 clock-hook 加選填 on_start、on_stop（寫法同 exec，起來、要退時各跑一次）與 on_timeout_ms（正整數，預設 5000；壞＝CfgBad）；agent 範本兩格指到 lib/agent/hook_fire。加法、不用重建",
+   "note": "11-11 clock-hook 加選填 on_start、on_stop（寫法同 exec，起來、要退時各跑一次）與 on_timeout_ms（非負整數，0＝不限，預設 5000；壞＝CfgBad）；agent 範本兩格指到 lib/agent/hook_fire。加法、不用重建",
    "evidence": "proto8/impls/aos-loop/src/engine/config.cpp（parse_target、Loop::Loop）"
   },
   {

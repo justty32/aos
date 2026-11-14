@@ -110,9 +110,11 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json t = doc.value("timeout_ms", Json());
     if (!t.is_null()) {
         if (!aos::is_count(t)) {
-            throw Error{code::CfgBad, "timeout_ms must be a non-negative integer (time limit for the endpoint function), got " + aos::dumps(t)};
+            throw Error{code::CfgBad, "timeout_ms must be an integer >= 0 (0 = no limit for the endpoint function), got " + aos::dumps(t)};
         }
-        c.timeout_ms = t.get<long long>();
+        if (t != Json(0)) {
+            c.timeout_ms = t.get<long long>();   // 0＝不限：保持 optional 未設定，不補 deadline／inst 期限，也不判逾時。
+        }
     }
     return c;
 }

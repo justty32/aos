@@ -2,7 +2,7 @@
 //
 // 17 個 key 與檢查順序（10-19 版 10 個，11-04 補 6 個）：
 //   argv（非空字串陣列，必填）→ envs（{名: 字串}）→ cwd／stdin／stdout／stderr（字串或 null）→
-//   stdout_append／stderr_append（true／false）→ timeout_ms／timeout_cycles（正整數或 null，擇一）→ grace_ms（非負整數，沒寫 2000）→
+//   stdout_append／stderr_append（true／false）→ timeout_ms（非負整數或 null，0＝不限）／timeout_cycles（正整數或 null，非 null 擇一）→ grace_ms（非負整數，沒寫 2000）→
 //   envs_clear／cwd_mkdir／stdout_mkdir／stderr_mkdir／stderr_merge（true／false，沒寫 false）；id 是標籤，收下不看。
 // 其他 key 一律忽略。驗不過一律 EntryBad（單子就是入口，寫壞＝入口壞）。
 #include "inst/inst.hpp"
@@ -87,8 +87,8 @@ Inst parse_inst(const Json& doc, const std::vector<std::string>& args) {
 
     Json t = doc.value("timeout_ms", Json());
     if (!t.is_null()) {
-        if (!is_int_at_least(t, 1)) {
-            bad("timeout_ms", "a positive integer or null", t);
+        if (!is_int_at_least(t, 0)) {
+            bad("timeout_ms", "an integer >= 0 (0 = no limit) or null", t);
         }
         inst.timeout_ms = t.get<unsigned long long>();
     }
@@ -98,7 +98,7 @@ Inst parse_inst(const Json& doc, const std::vector<std::string>& args) {
             bad("timeout_cycles", "a positive integer or null", cycles);
         }
         inst.timeout_cycles = cycles.get<unsigned long long>();
-        if (inst.timeout_ms != 0) {
+        if (!t.is_null()) {   // 0 也是明寫的非 null 欄位，仍與 timeout_cycles 互斥。
             throw Error{code::EntryBad, "inst timeout_cycles and timeout_ms must not both be non-null"};
         }
     }

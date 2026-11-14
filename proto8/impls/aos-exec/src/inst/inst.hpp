@@ -35,7 +35,7 @@ struct Inst {
     std::map<std::string, std::string> envs;
     std::optional<std::string> paths[3];         // stdin、stdout、stderr；沒寫＝接呼叫者的
     bool appends[3] = {false, false, false};     // [1]stdout_append、[2]stderr_append
-    unsigned long long timeout_ms = 0;           // 0＝不限（單子上是 null 或沒寫）
+    unsigned long long timeout_ms = 0;           // 0＝不限（單子上是 0、null 或沒寫）
     std::optional<unsigned long long> timeout_cycles; // 與 timeout_ms 擇一；有時鐘由 exec 監工，否則換毫秒
     unsigned long long grace_ms = 2000;
     bool envs_clear = false;                     // 真＝不疊現有環境，只留 aos-exec 的六個 AOS_*＋envs

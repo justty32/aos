@@ -79,6 +79,7 @@ import aos_flags
 from daemon_ctl.entry import is_program   # 11-10 two-machines：看內容判型（/mnt/c 每檔 0777），同 aos-exec
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
 import directive_value   # 指示詞交給 aos-directive 解的共用版（tool_io 已由 aos_flags 載入）
+from env_file import Error as EnvFileError, read_env_file
 sys.path.pop(0)
 
 NAME = "aos-tools"
@@ -827,77 +828,6 @@ def write_new(reg, obj):
         raise Fail("WriteFailed", "cannot write %s: %s" % (reg, e))
 
 
-def read_env_file(path):
-    """讀 env 檔；同檔後行蓋前行，插值可見繼承環境與前行，不改 os.environ。"""
-    result = {}
-    inherited = dict(os.environ)
-
-    def bad(line):
-        raise Fail("DotenvBad", "bad env file %s at line %d" % (path, line))
-
-    def expand(value, line):
-        parts, pos = [], 0
-        while True:
-            start = value.find("${", pos)
-            if start < 0:
-                parts.append(value[pos:])
-                return "".join(parts)
-            end = value.find("}", start + 2)
-            if end < 0:
-                bad(line)
-            key = value[start + 2:end]
-            if not ENV_KEY_RE.fullmatch(key) or (key not in result and key not in inherited):
-                bad(line)
-            parts.extend((value[pos:start], result[key] if key in result else inherited[key]))
-            pos = end + 1
-
-    try:
-        with open(path, "rb") as stream:
-            for number, raw in enumerate(stream, 1):
-                try:
-                    line = raw.decode("utf-8").removesuffix("\n").removesuffix("\r")
-                except UnicodeDecodeError:
-                    bad(number)
-                line = line.lstrip(" \t\r\n\v\f")
-                if not line or line.startswith("#"):
-                    continue
-                # export 後接空格或 tab，且接下來不是 = 才算前綴。
-                if line.startswith(("export ", "export\t")):
-                    rest = line[6:].lstrip(" \t")
-                    if not rest.startswith("="):
-                        line = rest
-                key, eq, value = line.partition("=")
-                key = key.rstrip(" \t")
-                if not eq or not ENV_KEY_RE.fullmatch(key) or "\0" in value:
-                    bad(number)
-                trimmed = value.lstrip()
-                if trimmed.startswith("#") and trimmed != value:
-                    bad(number)
-                if trimmed.startswith(("'", '"')):
-                    quote = trimmed[0]
-                    end = trimmed.find(quote, 1)
-                    if end < 0:
-                        bad(number)
-                    value, tail = trimmed[1:end], trimmed[end + 1:].strip()
-                    if (tail and not tail.startswith("#")) or "\\" in value or (quote == "'" and "${" in value):
-                        bad(number)
-                    if quote == '"':
-                        value = expand(value, number)
-                else:
-                    # 只在 # 前面有空白時截掉註解，a#b 與 #fff 保留。
-                    for index, char in enumerate(value):
-                        if char == "#" and index > 0 and value[index - 1].isspace():
-                            value = value[:index]
-                            break
-                    value = expand(value.strip(), number)
-                if "\0" in value:
-                    bad(number)
-                result[key] = value
-    except OSError:
-        raise Fail("DotenvBad", "cannot read env file %s" % path)
-    return result
-
-
 def resolve_path_value(value, folder):
     """登記格的 path 值（字串或指示詞物件）→ 絕對路徑；指示詞交給 aos-directive 解（每次用到才解、不寫回），解完的相對路徑從 folder 算。"""
     if isinstance(value, dict):
@@ -937,7 +867,10 @@ def cmd_add(args):
         absf = os.path.normpath(os.path.abspath(given))
         env_file = absf if os.path.isabs(given) else os.path.relpath(absf, folder)
         if os.path.exists(absf):
-            file_names = read_env_file(absf)         # 只為驗格式與下面的 hub 提醒，內容不存
+            try:
+                file_names = read_env_file(absf)     # 只為驗格式與下面的 hub 提醒，內容不存
+            except EnvFileError as e:
+                raise Fail(e.code, str(e)) from None
         else:
             aos_flags.warn(NAME, "env file %s not found yet; registered anyway (it is read on every call)" % absf)
     if "path_json" in opts:                          # 指示詞（或字串）原樣存；現在解一次只為了驗與取名
@@ -1174,7 +1107,7 @@ def cmd_call(args):
             raise Fail("PathMissing", "tool %s: env file %s (from %s) does not exist" % (name, ef, where))
         try:
             env.update(read_env_file(ef))
-        except Fail as e:
+        except EnvFileError as e:
             raise Fail(e.code, "tool %s (from %s): %s" % (name, where, e))
     env.update(tools[name]["entry"].get("env", {}))
     stack = os.environ.get("AOS_STACK")

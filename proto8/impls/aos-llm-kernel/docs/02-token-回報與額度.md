@@ -7,13 +7,13 @@
 1. 查代號（信的 `body.endpoint`，沒寫用預設）→ 解那組的指示詞 → 那組有 `exec` 就用它、沒有用 kernel.json 的 `exec`；讀那組的 `slots`／`budget`／`speed`（壞了 `CfgBad`）；`request` 撞到釘死的（`fixed` 的 key、那組有 `model` 時的 `model`）＝`RequestBad`；kernel 看的五個鍵（`exec`、`slots`、`budget`、`speed`、`backend`）拿掉。
 2. 認領（`new/` → `cur/` 改名），在信的資料夾（`cur/<信件名稱>/`）寫 `request.json`＝`{"endpoint": 那組（指示詞已解、去掉那五個鍵）, "request": body.request, "priority": {"level", "deadline"?}}`（級數與推得期限見 [01 契約](01-用法.md)）。
 3. 寄一封**掛信**進 daemon（`$AOS_KERNEL`，沒設＝`$AOS_DAEMON` 的 ctl 信箱）：
-   `{"procs_added": {"llm_<信件名稱>": {"exec": {"argv": ["aos-exec", <exec 絕對路徑>], "cwd": "<信>", "stdin": "request.json", "stdout": "reply.json", "timeout_ms"?: kernel.json 的}, "max": 1, "stack": "<信>"}}}`。
+   `{"procs_added": {"llm_<信件名稱>": {"exec": {"argv": ["aos-exec", <exec 絕對路徑>], "cwd": "<信>", "stdin": "request.json", "stdout": "reply.json", "timeout_ms"?: kernel.json 的正數值（0＝不限、不帶這格）}, "max": 1, "stack": "<信>"}}}`。
    `max: 1` 的 loop 型 proc：跑一次就停、`state.json` 留下 `phase` 與結束碼；stderr 由 daemon 接到 `<信>/stderr.txt`。寄出後寫 `<信>/proc.json`＝`{"endpoint": 代號, "sender"?: 信封的 sender, "name", "exec", "mount_letter": 掛信的信件名稱, "seen_at": queue.seen_at_ms / 1000（抄不到＝null）, "mounted_at": epoch 秒, "retries": 重掛過幾次}`（`endpoint` 給「這包在飛幾封」與 `used.json` 的 `packs` 用，`sender` 同理給 `senders`；`request.json` 裡是解好的那組、沒有代號）；寄不進＝那封回 `LaunchFailed`。
    **endpoint 函數的環境＝daemon 給子項的**（`AOS_STACK`＝那封信的資料夾、`AOS_DAEMON`、daemon 的 `AOS_WS`、daemon 殼裡的其他變數），不是 kernel 轉交的；金鑰由端點小定義的 `--key-env NAME` 指定，小 proc 自己讀環境，不進 `request.json`。金鑰與跨樹 hub 由 root 殼 export，不寫定義的 `.env`；其他環境設定照 [N-67](../../../docs/NORMS/10-基礎設施-定義與工作區/09-N-67.md) ⑦⑧⑨。
 4. **下一次收成品**（看 daemon 的表 `$AOS_DAEMON/procs_state.json` 與 `<信>/state.json`）：
    - 收尾、結束碼 0＝`reply.json` 成功物件拿掉 `child` 後當回信，`child` 原值進 ledger；讀不懂或是錯誤物件＝`ReplyBad`。
    - 先判逾時；收尾、非零且 stdout 整份為單行 JSON、頂層只有 `error`、`error.code` 與 `error.msg` 都為字串＝整份原樣回（error 內多的鍵保留）。其餘其他碼＝`EndpointFailed`，msg 帶 `reply.json` 的第一行（llm_http 失敗時 stdout 也印同一行），沒有就帶 `stderr.txt` 的第一行——**原樣**（C-52 明文例外：出口是給人看的回信原因；stdio-unify R10 代定：下層錯誤行的 `程式: error: ` 前綴不去掉，原因裡看得出是誰錯，例 `endpoint function exited with code 1: llm_http: error: 代號 原因`）。
-   - 143（aos-exec 的 TERM）或 137（不理 TERM、寬限後 KILL）而且掛出去已經超過 `timeout_ms`＝`EndpointFailed` 逾時（edge-llm）。
+   - 143（aos-exec 的 TERM）或 137（不理 TERM、寬限後 KILL）而且有正數 `timeout_ms`、掛出去已經超過它＝`EndpointFailed` 逾時（edge-llm）。
    - 被收掉（沒逾時且沒有合格 error 的 143、`stopped`）、死在半路（`state.json` 沒收尾、表上也沒這列）＝**重掛一次**（同名、新掛信、`retries` 變 1；沿用首次 `request.json` 與 `seen_at`，期限不重算）；第二次還是這樣＝`EndpointFailed the brain call ran twice without a result (stopped or died midway)`。
    - 表上還有這列（`running`／`stopping`／`sleeping`）＝還在飛，佔一格。表上沒列、`state.json` 也沒有＝daemon 還沒套（暫停中、還沒輪到），照樣佔一格；daemon 的 `state_flux.json` 中 `mailbox_warning` 提到這封掛信＝daemon 不收＝`LaunchFailed`。
    - 表上列著 `stopped` 而 `state.json` 收尾了＝照上面收，順手寄一封 `procs_removed` 把列拔掉。

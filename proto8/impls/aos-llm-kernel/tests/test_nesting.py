@@ -92,6 +92,27 @@ class NestingFixtures(unittest.TestCase):
                                                 'msg': 'endpoint function timed out (1 ms)'}})
                 self.assertEqual(self.ledger()[-1]['code'], 'EndpointFailed')
 
+    def test_zero_timeout_does_not_classify_signal_as_late(self):
+        cfg = json.loads(self.config.read_text())
+        cfg['timeout_ms'] = 0
+        self.config.write_text(json.dumps(cfg))
+        for code in (143, 137):
+            with self.subTest(code=code):
+                name = 'zero-timeout-' + str(code)
+                self.prepare(name, {'error': {'code': 'X', 'msg': 'y'}}, code=code)
+                self.assertEqual(self.reply_body(name), {'error': {'code': 'X', 'msg': 'y'}})
+
+    def test_negative_timeout_is_refused(self):
+        import subprocess
+        cfg = json.loads(self.config.read_text())
+        cfg['timeout_ms'] = -1
+        self.config.write_text(json.dumps(cfg))
+        result = subprocess.run([str(test_ledger.KERNEL), str(self.config)], env=self.env,
+                                capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('CfgBad', result.stderr)
+        self.assertIn('timeout_ms', result.stderr)
+
     def test_non_timeout_term_can_forward_valid_error(self):
         self.prepare('term', {'error': {'code': 'X', 'msg': 'y'}}, code=143)
         self.assertEqual(self.reply_body('term'), {'error': {'code': 'X', 'msg': 'y'}})

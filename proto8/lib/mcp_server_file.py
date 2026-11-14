@@ -15,6 +15,7 @@ import os
 import re
 import sys
 
+from env_file import Error as EnvFileError, read_env_file as _read_env_file
 from tool_io import Error
 
 NAME_RE = re.compile(r"[a-z][a-z0-9_]{0,31}\Z")
@@ -96,28 +97,15 @@ def load(server_file):
 
 
 def read_env_file(path):
-    """KEY=VALUE 一行一個；空行與 # 開頭略過；可有 export 前綴；值兩邊成對的引號拿掉。認不得的行＝DotenvBad（句子只講第幾行）。"""
+    """同 aos-tools 的 dotenv 子集；壞檔仍用本模組的 DotenvBad 與不洩漏值的句子。"""
     try:
-        with open(path, encoding="utf-8") as f:
-            lines = f.read().splitlines()
-    except (OSError, UnicodeError) as e:
-        raise Error("DotenvBad", "cannot read env file %s: %s" % (path, e.__class__.__name__)) from None
-    env = {}
-    for i, line in enumerate(lines, 1):
-        t = line.strip()
-        if not t or t.startswith("#"):
-            continue
-        if t.startswith("export "):
-            t = t[7:].lstrip()
-        k, eq, v = t.partition("=")
-        k = k.strip()
-        if not eq or not ENV_NAME_RE.match(k):
-            raise Error("DotenvBad", "env file %s line %d is not KEY=VALUE" % (path, i))
-        v = v.strip()
-        if len(v) >= 2 and v[0] == v[-1] and v[0] in "'\"":
-            v = v[1:-1]
-        env[k] = v
-    return env
+        return _read_env_file(path)
+    except EnvFileError as e:
+        if e.cause is not None:
+            message = "cannot read env file %s: %s" % (path, e.cause.__class__.__name__)
+        else:
+            message = "env file %s line %d is not KEY=VALUE" % (path, e.line)
+        raise Error("DotenvBad", message) from None
 
 
 def bearer_value(server):

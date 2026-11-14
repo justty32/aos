@@ -1,4 +1,4 @@
-# cli_session.py - 把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 attach 接進互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字
+# cli_session.py - 把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 aos-agent attach／open 接進或開啟互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字
 #
 # 一個工具的小格（$AOS_STACK，act 給的是 $AOS_STACK/tools/<工具名>/，11-02 起）裡放：
 #   session.txt   這段對話的 id（claude 的 session id／codex 的 thread id）：claude 新對話在交出去那一刻就寫（id 是我們產的）；
@@ -17,12 +17,12 @@
 #   （畫面的 tmux socket 不在小格裡，11-10 TS 10：/mnt/c 上 AF_UNIX bind 不了）實際放 ${XDG_RUNTIME_DIR:-/tmp}/aos-tty-<uid>/<小格 realpath
 #                 sha256 前 16 hex>.sock（資料夾 0700），路徑只由 tty_socket() 算（attach＝tmux -S "$(那條)" attach）；小格搬了＝雜湊不同＝
 #                 畫面當作沒開（本來就是死的）。11-10 以前開的畫面 socket 在小格的 tty.sock：還找得到就照用（過渡），不再新建
-#   tmux.conf     attach 開畫面時寫的 tmux 設定（Ctrl-] 或 Ctrl-\ 跳出、不用 prefix）
+#   tmux.conf     cli_screen.start 開畫面時寫的 tmux 設定（Ctrl-] 或 Ctrl-\ 跳出、不用 prefix）
 #   turns.jsonl   互動畫面每講完一輪，hook 接一行 {"answered_at", "text"}（answered_at＝講完的時間，10-25 前叫 at）（agent 從這裡拿回答，不去解析畫面）
 #   busy.txt      claude 的畫面正在跑一輪（有人送出、還沒講完）
 #   a2a.json、a2a_acks.jsonl  claude 畫面的收件 socket 路徑（{"socket"}，投了沒回執改成 {"off": 原因}）與回執（一行 {"at", "id"}）；
 #                 hook 寫、開畫面時先刪，跟這台機器與這次開的畫面綁在一起（cli_a2a，11-13）
-#   lock          同一時間只有一個人用這段對話（agent 的一次呼叫、attach 開畫面）
+#   lock          同一時間只有一個人用這段對話（agent 的一次呼叫、open_cell 開畫面）
 #   live.jsonl    非互動的即時紀錄兼副產物：claude 的 stream-json、codex 的 --json 事件，一行一事件、只接不重寫（10-28；10-27 是每次重寫）
 #   tool.txt、ws.txt  這格屬於哪個工具資料夾、哪個工作區（相對小格；open_cell 叫回畫面時用）
 #   stack.txt     給 aos-mcp 的 stack（相對小格；平級形＝那隻 eca 的 $AOS_STACK、工具形＝這格本身；open_cell 叫回畫面時用）
@@ -94,21 +94,21 @@
 #   畫面（start）：session.txt 在但不是這台的＝刪兩個檔、不帶 --resume 開新的。人想重開＝手刪 session.txt（正式用法）。
 # 開場白不歸這層（11-04 翻案，使用者「不該在json中指定檔案名稱，應該改成用旗標指定」）：是 aos-eca-turn 的 --prompt FILE；
 #   cli.json 寫了 prompt 跟其他沒認的鍵一樣不看。
-# 錯：aos-eca-turn --one（call_main）照 lib 契約 stderr 與 stdout 各一行「工具名: error: 代號 原因」、退 1；attach 與 hook 是 stderr 一行「cli_session: error: 代號 原因」、退 1。
+# 錯：aos-eca-turn --one（call_main）照 lib 契約 stderr 與 stdout 各一行「工具名: error: 代號 原因」、退 1；hook／guard 是 stderr 一行「cli_session: error: 代號 原因」、退 1。
 #   CLI（claude／codex）與 tmux 自己的 stderr 原樣透到 stderr、不塞進自己的錯（stdio-unify R10）；stdout 只有自己那一行（D2）。
-#   給人看的狀態句（attaching、等對話空出來）是提醒行「cli_session: warning: …」（R1、D5）。工具形認 --help（英文說明印 stdout、退 0）、Ctrl-C 退 130。
+#   給人看的狀態句（等對話空出來）是提醒行「cli_session: warning: …」（R1、D5）。工具形認 --help（英文說明印 stdout、退 0）、Ctrl-C 退 130。
 # 父死子跟著死（11-10 坑-52，Linux）：非互動起的 CLI 設 PR_SET_PDEATHSIG＝SIGTERM——起它的這支（aos-eca-turn、claude／codex 工具）
 #   被 kill -9／OOM，CLI 收 SIGTERM 收掉，不留孤兒拿著同一段對話跟下一輪的 --resume 撞；非 Linux 或載不到 libc 就不設。畫面（tmux）不在此列。
 #
 # 放哪：proto8/lib/agent/cli_session.py；claude、codex 經 agent_tool.py 的 ask_cli 共用 ask，call_main 只給 aos-eca-turn --one；
-# 掛它的 agent 根目錄可以放一份 cli_session.py（或捷徑）給 attach 用（原本的例子 demo/agent-fay 11-03 晚刪了）；工具資料夾自帶一份覆寫時，
-# 要連同全部 cli_*.py（與 agent_files.py）一起帶（分檔彼此同層 import）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
-# agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
+# attach／open 入口由 aos-agent 提供，不由本檔解析；工具資料夾自帶一份覆寫時，
+# 要連同全部 cli_*.py（與 agent_files.py）一起帶（分檔彼此同層 import）。工具資料夾（cli.json 在裡面）由工具入口傳進來，
+# 這支不假設自己放在哪隻 agent 底下。
 #
 # 分檔（11-12 晚 R3 重構拆檔，行為不變）：本檔只留上面的說明與 hook／guard 的執行入口（hook 指令一直指著本檔，不能搬不能改名），
 #   本體在同層：cli_base（錯誤行、PROG／ECHO、共用常數）、cli_cfg（cli.json、llm、system）、cli_mcp（aos 與外部 MCP、tools_sub、guard）、
 #   cli_cell（小格、畫面 socket、session 記號）、cli_print（非互動）、cli_ask（畫面投信或送字、ask、call_main）、cli_hook（hook、history 同步）、
-#   cli_screen（開畫面、attach）、cli_a2a（claude 畫面的收件 socket、署名信封、回執；11-13 加）。呼叫者直接 import 要用的分檔（例 cli_ask.ask、cli_cell.Cell）；執行期會被換掉或設定的只有
+#   cli_screen（開畫面、open_cell 叫回畫面）、cli_a2a（claude 畫面的收件 socket、署名信封、回執；11-13 加）。呼叫者直接 import 要用的分檔（例 cli_ask.ask、cli_cell.Cell）；執行期會被換掉或設定的只有
 #   cli_base 的 die、warn、PROG、ECHO——各分檔一律寫 cli_base.die(…)，所以設 cli_base.X 一處就全部生效（agent_tool 設 PROG／ECHO、
 #   aos-eca 換 die；測試 patch 定義那份，例 cli_ask.live、cli_cell.open）。
 import sys

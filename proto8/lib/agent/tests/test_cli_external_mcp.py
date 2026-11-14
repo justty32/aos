@@ -65,6 +65,30 @@ class ExternalMcp(unittest.TestCase):
         self.assertEqual(s["ca_file"], str(self.tmp / "keys" / "ca.pem"))
         self.assertEqual(s["only"], ["echo"])
 
+    def test_env_file_comments_and_expansion(self):
+        path = self.tmp / "keys" / "site.env"
+        path.write_text("A=x # note\nB=${A}y\n")
+        self.assertEqual(msf.read_env_file(path), {"A": "x", "B": "xy"})
+        server = msf.load(self.server("expanded.json", bearer_token_env="B"))
+        self.assertEqual(msf.bearer_value(server), "xy")
+
+    def test_env_file_errors_keep_type_code_and_safe_messages(self):
+        path = self.tmp / "keys" / "site.env"
+        for content in (b"not a line\n", b'A="private-token\n', b"A=${UNKNOWN}\n", b"A=\xff\n"):
+            path.write_bytes(content)
+            with self.subTest(content=content), self.assertRaises(Error) as cm:
+                msf.read_env_file(path)
+            self.assertEqual(cm.exception.code, "DotenvBad")
+            expected = ("cannot read env file %s: UnicodeDecodeError" % path if b"\xff" in content
+                        else "env file %s line 1 is not KEY=VALUE" % path)
+            self.assertEqual(str(cm.exception), expected)
+            self.assertNotIn("private-token", str(cm.exception))
+        missing = self.tmp / "missing.env"
+        with self.assertRaises(Error) as cm:
+            msf.read_env_file(missing)
+        self.assertEqual(cm.exception.code, "DotenvBad")
+        self.assertEqual(str(cm.exception), "cannot read env file %s: FileNotFoundError" % missing)
+
     def test_load_bad(self):
         for kw, code in (({"name": "aos"}, "PackBad"), ({"name": "Bad-Name"}, "PackBad"), ({"transport": "sse"}, "PackBad"),
                          ({"command": "x"}, "PackBad"), ({"only": ["a"], "except": ["b"]}, "PackBad"),

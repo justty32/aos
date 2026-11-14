@@ -243,8 +243,8 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
         *sides[i] = std::move(t);
     }
     if (cfg_.contains("on_timeout_ms")) {
-        if (!aos::is_count(cfg_["on_timeout_ms"]) || as_ll(cfg_["on_timeout_ms"]) <= 0) {
-            throw Error{code::CfgBad, "on_timeout_ms must be a positive integer"};
+        if (!aos::is_count(cfg_["on_timeout_ms"])) {
+            throw Error{code::CfgBad, "on_timeout_ms must be an integer >= 0 (0 = no limit)"};
         }
         on_timeout_ms_ = as_ll(cfg_["on_timeout_ms"]);
     }

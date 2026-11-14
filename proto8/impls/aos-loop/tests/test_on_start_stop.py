@@ -112,12 +112,29 @@ class OnStartStop(unittest.TestCase):
         self.assertEqual(self.run_loop(cfg)[0], 0)
         self.assertEqual(self.lines(), ['inline /on_start', 'body'])
 
+    def test_zero_timeout_does_not_limit_lifecycle_targets(self):
+        self.script('start', '#!/bin/sh\n# Complete a delayed startup.\nsleep 0.1\necho start >> "$LOG"\n')
+        self.body('exit 10\n')
+        code, err = self.run_loop(self.cfg(on_timeout_ms=0, on_stop={
+            'argv': ['sh', '-c', 'sleep 0.1; echo inline-stop >> "$LOG"']}))
+        self.assertEqual((code, err), (0, ''))
+        self.assertEqual(self.lines(), ['start', 'body', 'inline-stop'])
+
+    def test_inline_zero_timeout_overrides_lifecycle_default(self):
+        self.body('exit 10\n')
+        code, err = self.run_loop(self.cfg(on_start=None, on_timeout_ms=1, on_stop={
+            'argv': ['sh', '-c', 'sleep 0.1; echo inline-stop >> "$LOG"'], 'timeout_ms': 0}))
+        self.assertEqual((code, err), (0, ''))
+        self.assertEqual(self.lines(), ['body', 'inline-stop'])
+
     def test_bad_timeout(self):
         self.body('exit 10\n')
-        code, err = self.run_loop(self.cfg(on_timeout_ms=0))
-        self.assertEqual(code, 1)
-        self.assertIn('CfgBad on_timeout_ms', err)
-        self.assertEqual(self.lines(), [])
+        for value in (-1, .5, True, '0'):
+            with self.subTest(value=value):
+                code, err = self.run_loop(self.cfg(on_timeout_ms=value))
+                self.assertEqual(code, 1)
+                self.assertIn('CfgBad on_timeout_ms', err)
+                self.assertEqual(self.lines(), [])
 
     def test_sigkill_skips_on_stop(self):
         self.body('sleep 30\n')

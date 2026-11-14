@@ -192,7 +192,7 @@ struct Defaults {
 //                 on_start＝第一次之前（讀完舊 state、ctl 之前）；on_stop＝要退時（stop、跑滿、身體 10、身體失敗、訊號、自己的錯，
 //                 finish() 之後、最後一份 state 之前；SIGKILL 跑不到）。on_stop 的環境多 AOS_LOOP_CODE（要退的碼）、AOS_LOOP_SIGNAL（收到的訊號號碼，
 //                 沒有＝空字串）。退非 0、逾時、起不來＝一行 warning，不改 loop 的結束碼、不擋起跑。loop 不知道它們是什麼（C-52）
-//   on_timeout_ms 上面兩格的期限（正整數，沒寫＝5000；aos-daemon 收工只給子項 10 秒）
+//   on_timeout_ms 上面兩格的期限（非負整數，0＝不限，沒寫＝5000；aos-daemon 收工只給子項 10 秒）
 //   ctl, state, state_flux 三扇窗的檔名，在 $AOS_STACK 底下（11-04 起沒寫＝ctl.json／state.json／state_flux.json、寫 null＝不開；要開卻沒設 AOS_STACK＝StackMissing）
 // log 不是 key（11-02 使用者「把log輸出到stdout」；11-02 晚「應該要改成默認不印」）：預設不印，命令列 --enable-logs 才印到 stdout；不寫任何 log 檔。
 // --enable-counters 也是命令列開關：開了 state 窗才每輪寫同資料夾的 counter_runs.txt（本行程起來後跑過幾次）；預設不碰檔。
@@ -289,7 +289,7 @@ protected:
     bool stopping_ = false;       // 收到過 stop（這次跑完以 0 結束，11-03）
     std::optional<Target> on_start_;   // 11-11：起來時跑一次（沒寫＝nullopt）
     std::optional<Target> on_stop_;    // 11-11：要退時跑一次
-    long long on_timeout_ms_ = 5000;   // 11-11：on_start／on_stop 的期限
+    long long on_timeout_ms_ = 5000;   // 11-11：on_start／on_stop 的期限；0＝不限
     Json responded_at_;           // 最近一次有反應的時間（null＝起來後還沒有）
 
 private:

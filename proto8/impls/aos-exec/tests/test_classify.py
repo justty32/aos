@@ -66,6 +66,32 @@ class Classify(unittest.TestCase):
         self.put('inst.json', json.dumps({'argv': ['./p/_entry']}), True)
         self.assertEqual(run('inst.json', cwd=self.d), (0, 'via-aos-exec', ''))
 
+    def test_zero_timeout_runs_delayed_inst_without_limit(self):
+        self.put('zero.json', json.dumps({'argv': [sys.executable, '-c',
+                 'import time; time.sleep(.2); print("done")'], 'timeout_ms': 0}), False)
+        self.assertEqual(run('zero.json', cwd=self.d), (0, 'done', ''))
+
+    def test_timeout_ms_rejects_invalid_values(self):
+        for value in (-1, .5, True, '0'):
+            with self.subTest(value=value):
+                self.put('bad.json', json.dumps({'argv': ['true'], 'timeout_ms': value}), False)
+                code, out, err = run('bad.json', cwd=self.d)
+                self.assertEqual((code, out), (1, ''))
+                self.assertIn('EntryBad', err)
+                self.assertIn('inst timeout_ms must be an integer >= 0', err)
+
+    def test_timeout_ms_zero_is_still_exclusive_with_cycles(self):
+        for value in (0, 10):
+            with self.subTest(timeout_ms=value):
+                self.put('both.json', json.dumps({'argv': ['true'], 'timeout_ms': value,
+                                                 'timeout_cycles': 1}), False)
+                code, _, err = run('both.json', cwd=self.d)
+                self.assertEqual(code, 1)
+                self.assertIn('timeout_cycles and timeout_ms must not both be non-null', err)
+        self.put('null.json', json.dumps({'argv': ['true'], 'timeout_ms': None,
+                                         'timeout_cycles': 10}), False)
+        self.assertEqual(run('null.json', cwd=self.d), (0, '', ''))
+
     def test_daemon_ctl_same_rule(self):
         js = self.put('loop.json', json.dumps({'exec': ['echo', 'x'], 'interval_ms': 5}), True)
         sh = self.put('t', '#!/bin/sh\necho\n', True)

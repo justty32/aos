@@ -163,6 +163,18 @@ print(json.dumps(reply))
         self.assertEqual(request['priority'], {'level': 'normal', 'deadline': deadline})
         self.receive(name, folder)
 
+    def test_zero_timeout_waits_without_adding_deadline(self):
+        self.start(timeout_ms=0)
+        name, folder, request, _ = self.send()
+        self.assertEqual(request['priority'], {'level': 'normal'})
+        time.sleep(.2)
+        self.assertIsNone(self.daemon.poll())
+        self.assertNotEqual((self.read_json(folder / 'state.json') or {}).get('phase'), 'done')
+        result, body, row = self.receive(name, folder)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(body, dict(SUCCESS, letter=name))
+        self.assertIsNone(row['code'])
+
     def test_no_deadline_and_default_level(self):
         self.start()
         for fields, level in (({}, 'normal'), ({'priority': {}}, 'normal'),

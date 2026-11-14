@@ -36,8 +36,8 @@
    "cli_hook.py": "cli_session 的畫面 hook（CLI 講完一輪時叫）：跟上對話 id、/clear／/compact 時同步 aos 的 history、codex 壓縮跟上",
    "cli_mcp.py": "cli_session 接 MCP：aos-mcp 那台的旗標（claude 的 mcp.json／codex 的 -c）、外部 MCP server、tools_sub 子 agent 那台與 guard hook",
    "cli_print.py": "cli_session 的非互動那條路（畫面沒開）：claude -p／codex exec 起 CLI、等回答、記 session",
-   "cli_screen.py": "cli_session 開畫面：tmux 裡起互動的 claude／codex（start）、attach 與叫回畫面（open_cell）",
-   "cli_session.py": "把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 attach 接進互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字",
+   "cli_screen.py": "cli_session 開畫面：tmux 裡起互動的 claude／codex（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供",
+   "cli_session.py": "把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 aos-agent attach／open 接進或開啟互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字",
    "clock_register": {
     "tests": {
      "test_clock_register_tool.py": "Test clock_register wraps aos-clock-register for the calling agent: box left out = my own queue (fake aos-agent ctl who, real aos-clock and aos-post)."
@@ -165,6 +165,7 @@
     "test_cli_tools_directive.py": "驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。",
     "test_cli_tools_sub.py": "驗 cli.json 的 tools_sub（11-12 eca-task-subagent）：只有 claude 身認、--agents 蓋掉 general-purpose 並內嵌 aos_sub、--allowedTools 多 mcp__aos_sub、guard hook 擋子 agen…",
     "test_hooks_engine.py": "驗 lib/agent/hooks.py 用的是共用引擎 lib/hook_run.py（11-13 kernel-framework 批 1b）：類別同一個、跑與解回話沒有第二份、兩種 import 法都找得到引擎、agent 自己的檢查（on_clock 的鍵、content 的回話）還在。",
+    "test_kill_group.py": "Test shared child-group shutdown, escalation, reaping, and signal-handler delegation.",
     "test_mail_notify.py": "mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json 也沒有非空 history）只把等著的記成已知；跑過的 stack（有非空 hist…",
     "test_on_clock_kernel.py": "驗 on_clock 只靠 kernel 查 proc 鐘、記路徑、鐘讀不到才重查一次，且不直接讀 daemon 表。",
     "test_user_zone_guard.py": "user_zone_guard（before_tool 的 hook handler）：參數路徑落在專區、不在 mailbox/、工具不是唯讀＝退 10 擋；mailbox/ 裡、專區外、唯讀工具、相對路徑接 $AOS_WS、~ 展開、JSON 指標、巢狀參數、捷徑都照算；壞事件退 1。"
@@ -410,6 +411,7 @@
    "write/": "把整份內容寫進一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建"
   },
   "directive_value.py": "把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。",
+  "env_file.py": "Read the shared dotenv subset without changing the process environment.",
   "file_summary.py": "ls、stat、view 共用的檔案摘要小件：資料夾裡有哪些 aos 標記檔、檔案時間寫成 ISO、一個 JSON 值的一句摘要。",
   "file_walk.py": "grep 與 glob 共用的走樹：隱藏名、.gitignore（問 git）、資料夾捷徑不跟進、只把一般檔當檔、掃描預算與計數；另含兩支共用的檔名樣式（* ? [..] **）。",
   "hook_run.py": "hook 的共用引擎：事件表由呼叫的人給，這裡只管驗格的共通鍵、比 condition、寫 event.json、用 aos-exec 跑 handler、解回話、on_error。",
@@ -444,6 +446,7 @@
    "ref_path_cases.json": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per …",
    "test_aos_lib_missing.py": "lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。",
    "test_directive_value.py": "驗 directive_value：給了 file＝{\"$ref\": \"#/…\"} 取那份檔自己；沒給＝原封不動（11-12 ref-hash R1）；resolve_path 一律給設定檔。",
+   "test_env_file.py": "Test the shared dotenv parser directly, including expansion and strict failures.",
    "test_file_tools_paths.py": "檔案工具拿掉工作區限制（11-10 tool-packs，使用者「3.對」）：相對從 $AOS_WS、絕對照用，工作區外也能讀寫改搬。",
    "test_hook_run.py": "Verify the shared hook engine: entry validation, running handlers through aos-exec, replies, blocking, on_error, timeouts, ordering and conditions.",
    "test_index_extra_keys.py": "index_view 對 index 一項裡多出來的鍵（timeout_ms、自訂鍵…）照常印「名<TAB>description」、不報錯：index 的格都只是參考（使用者 11-12 晚）。",

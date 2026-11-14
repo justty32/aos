@@ -48,10 +48,10 @@
   "description": "cli_session 的非互動那條路（畫面沒開）：claude -p／codex exec 起 CLI、等回答、記 session"
  },
  "cli_screen.py": {
-  "description": "cli_session 開畫面：tmux 裡起互動的 claude／codex（start）、attach 與叫回畫面（open_cell）"
+  "description": "cli_session 開畫面：tmux 裡起互動的 claude／codex（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供"
  },
  "cli_session.py": {
-  "description": "把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 attach 接進互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字"
+  "description": "把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 aos-agent attach／open 接進或開啟互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字"
  },
  "clock_register": {
   "description": "clock_register 工具（事件包）：時鐘登記表，每隔 N 個 cycle 寄一段固定文字到信箱，不給 box＝寄自己 queue、定時叫醒自己"

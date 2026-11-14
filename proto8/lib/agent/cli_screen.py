@@ -1,23 +1,23 @@
-# cli_screen.py - cli_session 開畫面：tmux 裡起互動的 claude／codex（start）、attach 與叫回畫面（open_cell）
+# cli_screen.py - cli_session 開畫面：tmux 裡起互動的 claude／codex（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供
 import fcntl, json, os, shlex, sys, time
 
 if __package__:
     from . import cli_a2a, cli_base
     from .cli_base import SELF, TMUX_SESSION
-    from .cli_cell import Cell, drop_session, link_transcript, note_cell, session_here
+    from .cli_cell import drop_session, link_transcript, session_here
     from .cli_cfg import load_cfg, system_argv
     from .cli_hook import codex_note_compacts
     from .cli_mcp import exec_wrap, external_claude, external_codex, guard_hooks, mcp_argv, screen_env, settings_argv
 else:
     import cli_a2a, cli_base
     from cli_base import SELF, TMUX_SESSION
-    from cli_cell import Cell, drop_session, link_transcript, note_cell, session_here
+    from cli_cell import drop_session, link_transcript, session_here
     from cli_cfg import load_cfg, system_argv
     from cli_hook import codex_note_compacts
     from cli_mcp import exec_wrap, external_claude, external_codex, guard_hooks, mcp_argv, screen_env, settings_argv
 
 
-# ---------------------------------------------------------------- 開畫面（attach 用）
+# ---------------------------------------------------------------- 開畫面（aos-agent open／attach 共用）
 
 TMUX_CONF = """# tmux.conf - tmux settings for the screen attach opens (cli_session.py rewrites it each time)
 set -g prefix None
@@ -103,58 +103,6 @@ def _start(cfg, cell, ws, stack):
     if not cell.alive():
         cli_base.die("CliFailed", "%s exited right after starting (wrong session id?)" % argv[0])
     return True
-
-
-ATTACH_USAGE = """usage: attach [--ws WS] [-d] [TOOL]
-  Attach to TOOL's interactive screen, opening it first if needed.
-  -d     open only, do not attach
-  no TOOL: list each tool's screen state"""
-
-
-def attach_main(argv, agent_dir):
-    """attach [--ws WS] [-d] [工具名]：接進那個工具的互動畫面；沒開就先開。-d＝只開、不接。沒給工具名＝列出各工具的狀態。"""
-    ws, detached, names = os.environ.get("AOS_WS") or ".", False, []
-    it = iter(argv)
-    for a in it:
-        if a == "--ws":
-            ws = next(it, None) or cli_base.die("ArgumentsBad", "--ws needs a path")
-        elif a.startswith("--ws="):
-            ws = a[5:]
-        elif a == "-d":
-            detached = True
-        elif a in ("-h", "--help"):
-            print(ATTACH_USAGE)
-            return
-        elif a.startswith("-"):
-            cli_base.die("FlagUnknown", a)
-        else:
-            names.append(a)
-    ws = os.path.abspath(ws)
-    if not os.path.isdir(ws):
-        cli_base.die("WsMissing", ws)
-    stack = os.environ.get("AOS_STACK") or os.path.join(ws, ".stack")
-    tools_dir = os.path.join(agent_dir, "tools")
-    known = sorted(t for t in os.listdir(tools_dir) if os.path.isfile(os.path.join(tools_dir, t, "cli.json")))
-    if not names:
-        for t in known:
-            cell = Cell(os.path.join(stack, "tools", t), make=False)
-            state = "screen open" if cell.alive() else "screen closed"
-            if cell.alive() and cell.clients():
-                state += ", attached"
-            print("%-8s %s | session %s | %s" % (t, state, cell.read("session.txt") or "(none yet)", cell.path))
-        return
-    if len(names) > 1:
-        cli_base.die("ArgumentsBad", "attach one tool at a time")
-    if names[0] not in known:
-        cli_base.die("ToolUnknown", "%s (known: %s)" % (names[0], ", ".join(known)))
-    cell = Cell(os.path.join(stack, "tools", names[0]))
-    note_cell(cell, os.path.realpath(os.path.join(tools_dir, names[0])), ws, cell.path)   # 工具形：stack＝這格（同 call_main）
-    opened = open_cell(cell)
-    if detached:
-        print("%s screen %s: %s" % (names[0], "opened" if opened else "already open", cell.sock()))
-        return
-    cli_base.warn("attaching to %s (Ctrl-\\ detaches, the screen stays; /exit inside to end)" % names[0])
-    os.execvp("tmux", ["tmux", "-S", cell.sock(), "attach", "-t", TMUX_SESSION])
 
 
 def open_cell(cell):
