@@ -33,7 +33,7 @@
   "description": "feature-dev 工作流入口：新增或修改 aos 功能、修 bug，從動手到驗證綠燈再 commit；使用者說「我想開發／修改某個功能」「修 bug」時走它"
  },
  "hackathon": {
-  "description": "hackathon 工作流：派幾個 agent 各自動手試做同一題，只收踩坑報告與評委判斷，含場地、角色、題目書、收場四棒任務書與已辦場次；使用者說「辦個黑客松」「讓他們各自試做 X」時走它"
+  "description": "hackathon 工作流已封存（使用者 11-14 專區答 q3:both，kb-1114）：腳本是 codex CLI 與 /mnt/c 那代、11-03 後沒有新場次；原入口與任務書搬進本夾 archive/，這裡只留一份封存說明 README；要再辦得照現在的隊形重寫"
  },
  "ideas": {
   "description": "ideas 工作流已封存（使用者 11-14 專區答 oldentry:archive）：整夾搬到 common/archive/ideas/，這裡只留一份轉址 README；使用者說「我有個 idea」時現行落點在 proto8/docs/CONCEPTS.md 與 proto8/thinking"
@@ -72,6 +72,6 @@
   "description": "tidy 工作流：文件層整理（封存過時、分類雜亂、抽資料檔、刪過往記錄只留結論），含內容精簡規則與歷次整理報告；使用者說「整理 X」「封存過時的」「太大要拆」「只留結論」時走它"
  },
  "workshop": {
-  "description": "workshop 工作流：研討會／腦力激盪，派多個 codex 各扮一種身份提供靈感、由主持人收攏成紀錄，含議題書、書記任務書、codex 指令形態；使用者說「開個研討會討論 X」「給我一些靈感」時走它"
+  "description": "workshop 工作流已封存（使用者 11-14 專區答 q3:both，kb-1114）：全流程是 codex exec 那代、11-03 後沒有新場次；原入口、指令、任務書搬進本夾 archive/，這裡只留一份封存說明 README；要多方發想時先照 user/03「需求不清時先發想」"
  }
 }

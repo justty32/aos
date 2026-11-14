@@ -5,7 +5,7 @@
 只讀不改，查清楚「這怎麼運作／可不可行／為什麼壞」，產出可歸檔的筆記。
 
 **何時用**：看懂外部系統或別人的碼、評估可行性、查 bug 成因、對照前作。
-**何時不用**：已知道怎麼改 → [feature-dev](feature-dev/README.md)；只搬結構 → [refactor](refactor/README.md)；有一個明確假設要**動手跑**才知道是／否 → [experiments](experiments/README.md)；要多方發想 → [workshop](workshop/README.md)。
+**何時不用**：已知道怎麼改 → [feature-dev](feature-dev/README.md)；只搬結構 → [refactor](refactor/README.md)；有一個明確假設要**動手跑**才知道是／否 → [experiments](experiments/README.md)；要多方發想 → 先發想不急著規劃（[user/03](common/user/03-討論紀錄與規劃.md)；舊的 workshop 工作流 11-14 已封存）。
 
 ## Done when
 

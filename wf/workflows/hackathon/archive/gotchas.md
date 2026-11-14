@@ -1,3 +1,5 @@
+> 封存 2026-11-14：工作流停用（腳本是 codex CLI 與 /mnt/c 那代，11-03 後沒有新場次；使用者 11-14 專區「q3:both」，kb-1114）。
+
 # hackathon 踩坑（主辦人專用）
 
 ← [hackathon README](README.md)｜跨工作流共通的坑在 [common/gotchas](../common/gotchas.md)

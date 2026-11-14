@@ -1,3 +1,5 @@
+> 封存 2026-11-14：工作流停用（腳本是 codex CLI 與 /mnt/c 那代，11-03 後沒有新場次；使用者 11-14 專區「q3:both」，kb-1114）。
+
 # 3. 資料員（下一輪的資料包）
 
 ← [收場四棒](README.md)｜[hackathon README](../README.md)｜[發給參賽者的在 briefs.md](../briefs.md)

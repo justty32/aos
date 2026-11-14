@@ -1,3 +1,5 @@
+> 封存 2026-11-14：工作流停用（腳本是 codex CLI 與 /mnt/c 那代，11-03 後沒有新場次；使用者 11-14 專區「q3:both」，kb-1114）。
+
 # workshop — 書記與祕書（收場那兩棒）
 
 ← [workshop README](README.md)｜**發給參與者的在 [briefs.md](briefs.md)**

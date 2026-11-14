@@ -11,3 +11,9 @@
 | [BACKGROUND.md](BACKGROUND.md) | 2026-11-03 | proto5～7 年代舊紀錄，整批封存（使用者 11-03「照建議」） |
 | [OPEN-QUESTIONS/](OPEN-QUESTIONS/README.md)（待答題 10-12 使用者已清帳結案） | 2026-11-03 | proto5～7 年代舊紀錄，整批封存（使用者 11-03「照建議」） |
 | [OPEN-QUESTIONS.md](OPEN-QUESTIONS.md) | 2026-11-03 | proto5～7 年代舊紀錄，整批封存（使用者 11-03「照建議」） |
+| [README-舊入口.md](README-舊入口.md)（原 `workshop/README.md` 入口，搬來時改名，免得蓋掉本索引） | 2026-11-14 | 工作流停用：腳本是 codex CLI 與 /mnt/c 那代，11-03 後沒有新場次（使用者 11-14 專區「q3:both」，kb-1114） |
+| [INDEX.md](INDEX.md) | 2026-11-14 | 工作流停用：腳本是 codex CLI 與 /mnt/c 那代，11-03 後沒有新場次（使用者 11-14 專區「q3:both」，kb-1114） |
+| [SESSIONS.md](SESSIONS.md) | 2026-11-14 | 工作流停用：腳本是 codex CLI 與 /mnt/c 那代，11-03 後沒有新場次（使用者 11-14 專區「q3:both」，kb-1114） |
+| [briefs.md](briefs.md) | 2026-11-14 | 工作流停用：腳本是 codex CLI 與 /mnt/c 那代，11-03 後沒有新場次（使用者 11-14 專區「q3:both」，kb-1114） |
+| [commands.md](commands.md) | 2026-11-14 | 工作流停用：腳本是 codex CLI 與 /mnt/c 那代，11-03 後沒有新場次（使用者 11-14 專區「q3:both」，kb-1114） |
+| [staff.md](staff.md) | 2026-11-14 | 工作流停用：腳本是 codex CLI 與 /mnt/c 那代，11-03 後沒有新場次（使用者 11-14 專區「q3:both」，kb-1114） |

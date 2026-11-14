@@ -12,7 +12,7 @@ kernel 的 planning 管線（idea → roadmap → 詳規 → 執行）在本專�
 | **執行** | — | [feature-dev](feature-dev/README.md) |
 
 **何時用**：「記個想法」→ proto8/thinking；「接下來做什麼」→ SESSION-LOG；「討論方案／寫動工計畫」→ 先查 thinking 的決定與 CONCEPTS／[NORMS](../../proto8/docs/NORMS.md)，別重想已定的。
-**何時不用**：只是要查清楚 → [investigation](investigation.md)；拿一個明確假設去驗 → [experiments](experiments/README.md)；多個 agent 各自試做 → [hackathon](hackathon/README.md)。
+**何時不用**：只是要查清楚 → [investigation](investigation.md)；拿一個明確假設去驗 → [experiments](experiments/README.md)；多個 agent 各自試做 → 照 [dispatch/aos-teams](dispatch/aos-teams.md) 開隊（舊的 hackathon 工作流 11-14 已封存）。
 
 ## 交接
 

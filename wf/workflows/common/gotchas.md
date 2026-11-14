@@ -9,7 +9,7 @@
 | 坑的性質 | 記/查這裡 |
 |---------|----------|
 | 不專屬任一工作流的共通坑 | **common/gotchas**（本檔）|
-| 從 Windows 驅動 WSL、複製場地、跑 codex 開黑客松 | [hackathon/gotchas](../hackathon/gotchas.md) |
+| 從 Windows 驅動 WSL、複製場地、跑 codex 開黑客松 | hackathon 的 gotchas（工作流 11-14 已封存，檔在它的 archive/） |
 
 ---
 
