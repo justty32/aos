@@ -19,7 +19,7 @@
 | **proto8 impls（改完必跑）** | 見下面「proto8」 | agent |
 | 要真模型、外部 CLI agent、跨機的 | 照該實驗檔的步驟 | 使用者 → 新題寄使用者專區（`aos-user send`），舊條目在 [WAIT_USER](../WAIT_USER.md)；本機 LM Studio 跑得動的部分我自己跑 |
 
-「誰跑」只有兩種值：**agent**（本機跑得動）、**使用者 → WAIT_USER**（要實機、外部服務、帳號、付費、目視）。判不準就當後者。
+「誰跑」只有兩種值：**agent**（本機跑得動）、**使用者**（要實機、外部服務、帳號、付費、目視；新題寄使用者專區 `aos-user send`，舊條目在 WAIT_USER）。判不準就當後者。
 
 <a id="proto8"></a>
 <a id="proto8不在-ctest-裡"></a>

@@ -18,7 +18,7 @@
 
 - **禁區**：`<這條線不得寫的路徑>`（唯讀或完全不碰）。
 - **可拿的鎖**：`<資源鎖清單；一個都不給就寫「不取任何鎖」>`（規則見 [resources](resources.md)）。
-- **不 push**；commit 到 `<repo>` 的 `<分支>`，push 等使用者確認（守鐵律 2：授權來源）。
+- **不 push**；commit 走 `wf/tools/commit-request`（`claim`／`submit --line <線名> …`，只有 `main`；沒有 commit-request 的機器才 `git commit -F <訊息檔> -- <逐一點名的檔>`），push 等使用者確認（守鐵律 2：授權來源）。
 - **暫存與丟棄物放哪**：`<大檔丟 /tmp/<線名>-trash/、KB 級文字丟 <交接書目錄>/<線名>/trash/>`；**不要 `rm`**。
 - **整檔改寫用單一 Update 操作**，不要拆成 Delete＋Add（理由見 [dispatch/lessons](dispatch/lessons.md)）。
 - **子 agent 上限**：`<這條線總共最多再掛幾隻（含它們再往下掛的）；填數字、0 或「不限」>`。往下派時把這個數字寫進子任務書。
@@ -48,7 +48,7 @@
 
 ## 完成／阻塞回報（必做）
 
-- 我是誰：`<線名>`。本線團隊：`teams/<TEAM>`（沒有就寫「無」）。
+- 我是誰：`<線名>`。
 - 回報方式（擇一）：
   - **同一棵 aos 樹裡**：`mailbox_send` 寄給上游（`{"to": "<上游>", "status": "<STATUS>", "title": "<一句自足結論>", "what": "<正文>"}`）。
   - **同機子 agent**：agent 工具內建的回報／`SendMessage`。

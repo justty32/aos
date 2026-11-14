@@ -53,7 +53,7 @@
 
 ## 與 llmkit／aos 的對應
 
-aos＝`~/repo/simple_tools/aos/core/inst`（`$env`／`$ref`／`$opt`）；llmkit＝memory-tools 規格的 `{"$ref": …}`。**一致的**：
+aos＝`proto8/impls/aos-directive`（`$ref`／`$env`）；llmkit＝memory-tools 規格的 `{"$ref": …}`。**一致的**：
 
 | 項目 | aos／llmkit | 本契約 |
 |------|----|----|
