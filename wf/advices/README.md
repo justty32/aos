@@ -36,10 +36,10 @@
 | 主題檔 | 收什麼 | 未處理 | 已排入 | 已解 |
 |---|---|---|---|---|
 | [daemon與行程](daemon與行程.md) | daemon、aos-loop、daemon 表、--limits、認行程 | 5 | 0 | 0 |
-| [信件與溝通](信件與溝通.md) | mailbox、aos-post 信件格式、專區信、say／ask／listen | 4 | 0 | 2 |
+| [信件與溝通](信件與溝通.md) | mailbox、aos-post 信件格式、專區信、say／ask／listen | 3 | 0 | 3 |
 | [kernel與額度](kernel與額度.md) | llm kernel、腦額度、找 kernel、kernel hook | 3 | 0 | 1 |
 | [fsm範本](fsm範本.md) | agent-fsm 範本、工具包、system 文字、guard、wait 與冷卻、goal | 4 | 1 | 2 |
-| [指令與工具](指令與工具.md) | aos-agent、aos-view、建置、wf/tools | 4 | 0 | 0 |
-| [知識庫與文件](知識庫與文件.md) | 知識庫頁、元件 docs 跟程式對不上 | 1 | 0 | 0 |
+| [指令與工具](指令與工具.md) | aos-agent、aos-view、建置、wf/tools | 1 | 0 | 3 |
+| [知識庫與文件](知識庫與文件.md) | 知識庫頁、元件 docs 跟程式對不上 | 0 | 0 | 1 |
 
-合計 27 條：未處理 21、已排入 1、已解 5（「部分已做／部分已解」的仍算未處理）。第一批實際入庫 17 條，上面「16 條」是當時的筆誤，照各檔實數。
+合計 27 條：未處理 16、已排入 1、已解 10（「部分已做／部分已解」的仍算未處理）。第一批實際入庫 17 條，上面「16 條」是當時的筆誤，照各檔實數。
