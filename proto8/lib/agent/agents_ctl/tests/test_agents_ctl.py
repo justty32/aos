@@ -57,6 +57,7 @@ class AgentsCtl(unittest.TestCase):
                  ["add", "--name", "w", "--ws-json", '{"$env": "PROJ"}', "--stack-json", '"st/w"', "--path-json", json.dumps(d)]),
                 ({"op": "rm", "name": "w"}, ["rm", "w"]),
                 ({"op": "rm", "name": "w", "purge": True, "timeout_s": 2.5}, ["rm", "--purge", "-y", "--timeout-s", "2.5", "w"]),
+                ({"op": "rm", "name": "w", "no_wait": True, "purge": True}, ["rm", "--no-wait", "--purge", "-y", "w"]),
                 ({"op": "ls"}, ["ls"]),
                 ({"op": "ls", "long": True}, ["ls", "-l"]),
                 ({"op": "ls", "json": True}, ["ls", "--json"]),
@@ -66,10 +67,14 @@ class AgentsCtl(unittest.TestCase):
                 ({"op": "who"}, ["who", "--json"]),
                 ({"op": "who", "stack": "/s/w/tools/x"}, ["who", "--json", "--stack", "/s/w/tools/x"]),
                 ({"op": "stop", "name": "w", "timeout_s": 3}, ["stop", "--target", "w", "--timeout-s", "3"]),
+                ({"op": "stop", "name": "w", "no_wait": True, "timeout_s": 600}, ["stop", "--target", "w", "--no-wait", "--timeout-s", "600"]),
+                ({"op": "stop", "name": "w", "no_wait": False}, ["stop", "--target", "w"]),
                 ({"op": "sleep", "name": "w"}, ["sleep", "--target", "w"]),
+                ({"op": "sleep", "name": "w", "no_wait": True}, ["sleep", "--target", "w", "--no-wait"]),
                 ({"op": "start", "name": "w", "on_queued": "ok"}, ["start", "--target", "w", "--on-queued", "ok"]),
                 ({"op": "wake", "name": "w"}, ["wake", "--target", "w"]),
                 ({"op": "pause", "name": "w"}, ["pause", "--target", "w"]),
+                ({"op": "pause", "name": "w", "no_wait": True}, ["pause", "--target", "w", "--no-wait"]),
                 ({"op": "resume", "name": "w"}, ["resume", "--target", "w"])):
             r = self.run_tool(args)
             self.assertEqual(r.returncode, 0, (args, r.stdout, r.stderr))
@@ -85,6 +90,8 @@ class AgentsCtl(unittest.TestCase):
         for args, word in (({"op": "add", "def": "d", "llm": {"model": "fake"}}, "unknown key llm"),
                            ({"op": "rm", "name": "w", "long": True}, "op rm does not take long"),
                            ({"op": "pause", "name": "w", "timeout_s": 3}, "op pause does not take timeout_s"),
+                           ({"op": "start", "name": "w", "no_wait": True}, "op start does not take no_wait"),
+                           ({"op": "stop", "name": "w", "no_wait": "yes"}, "no_wait must be"),
                            ({"op": "add"}, "def"),
                            ({"op": "add", "def": "d", "def_json": "d"}, "not both"),
                            ({"op": "add", "def": {"$env": "AOS_HOME"}}, "def must be string"),

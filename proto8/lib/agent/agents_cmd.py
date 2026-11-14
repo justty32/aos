@@ -263,9 +263,10 @@ def parse_added(out):
 def life_argv(op, args):
     """LIFE_OPS 的 op → ctl 的 argv（不含 aos-agent）。"""
     name = text(args, "name", True)
+    no_wait = ["--no-wait"] if flag(args, "no_wait") else []
     if op == "rm":
-        return ["ctl", "rm"] + (["--purge", "-y"] if flag(args, "purge") else []) + _timeout_flags(args) + [name]
-    return ["ctl", op, "--target", name] + _timeout_flags(args, with_queued=op in ("start", "wake"))
+        return ["ctl", "rm"] + no_wait + (["--purge", "-y"] if flag(args, "purge") else []) + _timeout_flags(args) + [name]
+    return ["ctl", op, "--target", name] + no_wait + _timeout_flags(args, with_queued=op in ("start", "wake"))
 
 
 def life_guard(op, args):

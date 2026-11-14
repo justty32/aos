@@ -56,3 +56,57 @@
 - 08:23 用 `aos-daemon-ctl -d ~/code/astra-1114/tree/.stack shutdown` 收暫存樹，回「daemon … stopped; 3 procs asleep」。`pids.txt` 裡的 pid（root 148380／148383、時鐘 148385、兩個 sweeper 148386／148392、foreman 148387、`llm-gpt` 148997、`llm-t1` 157950、astra 162530、sol-a 164115 和它卡住的 act 177313）都已經不在了。
 - 活樹兩台 daemon（37179、37183）還在。表上其他的 daemon 是別條線的暫存樹（`skyrim-1114`、`kf-1114` 等），沒碰。
 - 活樹 `repo-aos` 的 stack 比開工時多了 `hooks.json`、`tools.json`（08:19 建的）。我這邊每個 aos 指令都經過 `clean.sh` 清掉環境，指向的是暫存樹，所以推定這兩個檔是頂層同時段掛 eca／當 kernel 時產生的，不是本線造成的。
+
+## ok-astra 接手（11-14 08:25 起）
+
+### 白話結論
+
+- **AK14 解了**：`agents_ctl` 補上 `no_wait`。門鈴改成 `{"op":"stop","name":"<自己>","timeout_s":600,"no_wait":true}`：等到 astra 表態，pass 之後 1 秒內 sol 就停好，工具回「stop accepted」。repo 改的是 lib 四個檔，頂層 11-14 回信同意「補漏，直接 commit」。
+- **階段 0 全過、階段 1 全過**（假腦，七條回信都回到寄件人，表上沒多出不該有的列）。
+- 新撞到兩件：AK17（問腦被額度拒時 agent-fsm 直接退出，sol 不會按鈴）、AK18（被門拒的錯誤代號外層是 `CtlRejected`）。另外，暫存樹裡 llm-t1 帳上的寄件人已經是 sol 的 stack（AK3 在這棵樹的第一站不成立）。
+- 寫碼交給 agent-fsm 的 sol（`astra-sol-1`，LiteLLM `sol-high`，只有讀寫檔工具、沒有 shell），我出圖紙、審 diff、跑測試。sol 有沒有讀必讀規矩的紀錄在 `wf/temp/ok-astra/notes/sol-readcheck.md`（工作區，gitignore）。
+
+### AK14 的改動（repo；換樹時要抄進活樹 lib 的檔）
+
+| 檔 | 改什麼 |
+|---|---|
+| `proto8/lib/agent/agents_cmd.py` | `life_argv`：`no_wait` 為真就加 `--no-wait`（rm 放在 `rm` 後面，其他放在 `--target NAME` 後面）；`LIFE_OPS` 不動，所以 subagent 不收這個鍵 |
+| `proto8/lib/agent/agents_ctl/_entry` | 只有 stop、sleep、pause、rm 收 `no_wait`；檔頭補說明 |
+| `proto8/lib/agent/agents_ctl/_tooldef.json` | 加 `no_wait` 參數，說明裡多一行「停自己」的範例 |
+| `proto8/lib/agent/agents_ctl/tests/test_agents_ctl.py` | 新增 5 個對應案例、2 個錯誤案例 |
+
+驗證：在 `git archive HEAD` 的乾淨複本上跑，agents_ctl 4、subagent 21（skip 2）、fork 13、self_ctl 全 OK。活樹沒動，要等下次換樹重抄 lib 才會生效。
+
+### 暫存樹這邊跟著改的（`~/code/astra-1114`，不進 repo）
+
+- `patch-ak14.py`：把上面三個 lib 檔抄進 `tree/lib`；`shared-k/guard` 規定門鈴要帶 `no_wait: true`（沒帶或帶 false 就擋）、`no_wait` 算合法鍵；`gpt-worker-k/system.txt` 的門鈴那行加上 `"no_wait": true`；假腦 `fake-sol` 劇本的 15 個門鈴都補上 `no_wait`。
+- `guard_test.py` 增為 37 例（多了「沒帶 no_wait」「no_wait false」兩例），37/37 過。
+- `as.sh`（以某隻 agent 的身分叫一支工具；subagent 的 `AOS_STACK` 給工具小格 `tools/subagent/`）、`hist.py`（看 history 尾巴）。舊的 `asagent.sh` 叫 subagent 時，`AOS_STACK` 給的是 agent 本身的 stack，記帳檔會寫到 stack 根，蓋到配額設定的位置；我 08:36 撞到，那個檔已改回 `{}`。
+
+### 階段 0.5 重跑與階段 1
+
+| 條 | 結果 | 回信原文（節錄） |
+|---|---|---|
+| 0.5 門鈴 | **過**。sol-b 按鈴 → 門留著（`deadline: none`）→ pass → 1 秒內 stopped，sol-b 行程已退 | `stop accepted; sol-b stops when this round ends, stack kept (...)` |
+| refuse | **過**。sol-c 按鈴，被拒後照常在跑 | `agents_ctl: error: CtlRejected the stop letter was refused: HoldRefused report section is empty; fill it in` |
+| 過期 | **過**。用 `aos-post` 手寫一封 `{"procs_stopped":["sol-zz"],"queue_wait_ms":20000}`（AK16：`agents_ctl` 帶不出期限）；門列「the sender waits 17 more seconds」，21 秒後回信 | `{"applied": false, "error": {"code": "SlotMissing", "msg": "held 20965 ms, nobody decided in time (queue_wait_ms 20000)"}}` |
+| 停別人 | **過**。從隊長殼設 `AOS_KERNEL`＝門、寄 `ctl stop --target llm-t1`；門留著，由隊長代 astra 拒，llm-t1 照常在跑 | `aos-agent: error: CtlRejected the stop letter was refused: HoldRefused llm-t1 is not one of my workers` |
+| sol shell 跑 `aos-*` | **擋**（守門） | `blocked: this command matches a forbidden pattern (\baos-[a-z-]+)` |
+| sol shell 寫 ctl 信箱 | **擋**（沙箱） | `mkdir: cannot create directory '.../procs_requests': Read-only file system` |
+| sol 用檔案工具寫 ctl 信箱 | **擋**（守門） | `blocked: .../procs_requests/new/x.json is outside the folders you may write` |
+| llm-t1 額度 | **擋**。已用 13 次時把 `max_calls` 改成 15，第 16 次被拒；**但 sol 隨後退出了**（AK17） | `aos-llm: error: BudgetMissing budget for this window (day) is used up; not run` → `agent-fsm: error: BrainFailed` → `sol-c stopped ... RunFailed` |
+| gate off | 只能靠守門擋（guard_test「gate off blocked」） | — |
+
+### 新撞到的（接在 AK16 後面，只記不改）
+
+| # | 現象 | 影響 | 可能改法（選項，沒做） |
+|---|---|---|---|
+| AK17 | **問腦被拒時 agent-fsm 直接退出**：`BudgetMissing` 經 `aos-llm recv` 退 1 → `BrainFailed` → fsm 跑失敗 → 那一列變 stopped（failed）。sol 沒機會寫工單、也不會按鈴 | 規劃 03 E10 寫的「sol 拿到 BudgetMissing → 寫工單、按鈴」不成立。astra 收不到門鈴，只看得到表上 sol 那列 failed | 甲：sol 的定義掛一支 `brain_failed` hook，把這件事寫進工單或寄信到隊信箱；乙：astra 的巡邏提醒裡加一句「看 ls 有沒有 failed 的 sol」；丙：agent-fsm 對 `BudgetMissing` 不當致命錯誤（要改 aos，走規劃） |
+| AK18 | 被門拒時，sol 拿到的代號是 `CtlRejected`，`HoldRefused` 只出現在訊息裡 | worker 的 system 寫「answers HoldRefused」，sol 要比對的是訊息文字，不是代號 | 甲：system 寫成「error line mentions HoldRefused」；乙：`aos-agent ctl` 把 kernel 回的代號原樣往上傳 |
+| AK3 補記 | 暫存樹（repo 那份 `aos-llm`）裡，llm-t1 帳上的寄件人已經是 sol 自己的 stack（`.../procs/sol-c`）；llm-gpt 那邊看到的寄件人是轉寄的那一站 | 「每隻 sol 分開算額度」在隊站這一層已經可以做，不必等換樹；活樹的 `aos-llm` 是不是同一支還沒核 | 階段 3 開工前，核對活樹 `aos-llm` 實際指到哪 |
+
+### 下一步
+
+- 階段 2 換真腦：兩份 `-k` 的 `llm.json` 改成 `astra-high`／`sol-high`，llm-gpt 的 `budget.senders` 換成這一輪的名字，真腦 token 要記帳。開跑前 AK17 先用乙案頂著（巡邏時看有沒有 failed 的 sol）。
+- 階段 3 不做，只列 build（見下一次更新）。
+- 階段 4 做之前要先問使用者（04 寫明它跟「門鈴叫醒 astra」打架）。

@@ -6,10 +6,12 @@
 #   add {def | def_json, name?, ws | ws_json, stack | stack_json, limits?, envs?, auto_restart?, timeout_s?, on_queued?}
 #        ＝ctl add [--name] [--ws | --ws-json] [--stack | --stack-json] [--path-json] [--limits JSON] [--envs K=V]… [--auto-restart] [--timeout-s] [--on-queued] [DEF]
 #        （*_json 收物件或字串，轉成 JSON 原樣交下去；ws 給了又不在＝先建，相對從 $AOS_WS 算）
-#   rm {name, purge?, timeout_s?}  ＝ctl rm [--purge -y] [--timeout-s] NAME（預設留 stack）
+#   rm {name, purge?, timeout_s?, no_wait?}  ＝ctl rm [--no-wait] [--purge -y] [--timeout-s] NAME（預設留 stack）
 #   ls {long?, json?}              ＝ctl ls [-l] [--json]（預設＝短的文字表 NAME STATE WORKSPACE QUEUED REASON；11-10 深夜使用者選「改短版」）
-#   state／pause／resume {name}     ＝ctl state／pause／resume --target NAME
-#   stop／sleep {name, timeout_s?}  start／wake {name, timeout_s?, on_queued?}  ＝ctl 同名動作 --target NAME
+#   state／resume {name}           ＝ctl state／resume --target NAME
+#   pause {name, no_wait?}         ＝ctl pause --target NAME [--no-wait]
+#   stop／sleep {name, timeout_s?, no_wait?}  start／wake {name, timeout_s?, on_queued?}  ＝ctl 同名動作 --target NAME
+#   no_wait＝ctl 的 --no-wait（停／睡／暫停／刪自己用：只等 daemon 或前面的 kernel 收下，不等它真的發生；11-14 線星 AK14）
 #   where {name, what?}            ＝ctl where --target NAME [--stack | --ws]（what: "stack"｜"ws"；沒給＝下層預設 stack）
 #   who {stack?}                   ＝ctl who --json [--stack S]
 #   aos-agent 在 $AOS_WS 跑（相對路徑從工作區算、daemon 照環境的 $AOS_DAEMON）。結果＝下層 stdout 原樣。
@@ -46,6 +48,10 @@ NAME = os.path.basename(HERE)
 tool_io.start(NAME, HELP)
 cmd.install_signals()
 OPS = dict({"add": cmd.ADD_KEYS, "ls": ("long", "json"), "where": ("name", "what"), "who": ("stack",)}, **cmd.LIFE_OPS)
+OPS["stop"] = OPS["stop"] + ("no_wait",)
+OPS["sleep"] = OPS["sleep"] + ("no_wait",)
+OPS["pause"] = OPS["pause"] + ("no_wait",)
+OPS["rm"] = OPS["rm"] + ("no_wait",)
 args = tool_io.arguments()
 op = cmd.check_op(args, OPS)
 
