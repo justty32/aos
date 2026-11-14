@@ -28,3 +28,4 @@
 | [ok-devt-1114](ok-devt-1114.md) | ok-devt：daemon 給 agent 的「身分與事件」模型定稿（parent／notify_box 兩格登記、事件用字規則與停止原因 cause 九值、分兩期）；審 ok-limits 三條小修；過 Argon、頂層同意第 1 期交 ok-limits |
 | [reply-match-1114](reply-match-1114.md) | 回答配對（線工具 ok-pilot）：agent 的回答對到是回哪封信，ask／listen 不再只拿最新那則；備料、fable 設計、Argon 審、計劃 v2（history 加 aos 鍵＋letters.json，寫先讀後）；go、land 兩題待使用者，施工等前置依賴 |
 | [ok-kmsg](ok-kmsg-1114.md) | hook 退 10 可回「晚點再試」（BudgetMissing＋resets_at）；llm kernel 沒在跑時 listen／say 印一行提示；設計、Argon 採納表、施工紀錄 |
+| [ok-fsm-1114](ok-fsm-1114.md) | 線 fsm：agent-fsm 範本五條 advice。goal 暫停後來信提醒一次、新工具 ws_write（38271da3b、c2eced25c）、wait 寄出前看 deadline（3b02a41c4）已進 main；預設工具縮成 40 支（使用者 tools40:a）由 ok-astra 施工；提示快取只命中 29% 查到是每次問腦換 session id，llm kernel 加 session_key 開關（7ce38e7cf，預設關）；可寫範圍一份清單的 aos-sandbox 圖紙待前置 |

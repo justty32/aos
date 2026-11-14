@@ -53,6 +53,12 @@
  "ok-devt-1114.md": {
   "description": "ok-devt（11-14）：daemon 給 agent 的「身分」與「事件」模型——設計過 Argon 一輪已定稿；ok-limits 三條小修已審（nofile 已同意先交，B7 要改名 cause，who 再加 parent）；第 1 期交 ok-limits 施工"
  },
+ "ok-fsm-1114": {
+  "description": "分檔夾：ok-fsm 11-14：agent-fsm 範本四條 advice 的處理紀錄"
+ },
+ "ok-fsm-1114.md": {
+  "description": "ok-fsm 11-14：agent-fsm 範本四條 advice 的處理紀錄"
+ },
  "ok-kmsg-1114": {
   "description": "分檔夾：ok-kmsg 11-14：hook 能回「晚點再試」的拒絕；llm kernel 沒在跑時 listen／say 印一行提示（設計稿與紀錄）"
  },
