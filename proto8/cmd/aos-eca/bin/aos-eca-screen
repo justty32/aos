@@ -222,8 +222,31 @@ def describe(ev):
     return None
 
 
-def gone(eca, stack):
-    """只問 daemon 表上這隻 proc 的狀態；查不到 daemon＝看不出來、照等。"""
+def gone(eca, stack, watch=None):
+    """走 kernel 每五秒重問表檔；空表或自己不再 running 才退出，缺欄與讀不到都照等。直連路照舊。"""
+    if os.environ.get("AOS_KERNEL"):
+        watch = watch if watch is not None else {}
+        now = time.monotonic()
+        if watch.get("last_check") is not None and now - watch["last_check"] < 5:
+            return watch.get("result")
+        watch["last_check"] = now                   # 查詢或讀表失敗也節流。
+        watch["result"] = None
+        try:
+            path = dc.state_path(timeout_s=1, fresh=True)
+            rows = dc.rows_at(path)
+        except (dc.Fail, OSError, ValueError):
+            return None
+        values = [r for r in rows.values() if isinstance(r, dict)]
+        if rows and not any("stack" in r for r in values):
+            return None
+        target = os.path.realpath(stack)
+        own = next((r for r in values if isinstance(r.get("stack"), str) and r["stack"]
+                    and os.path.realpath(r["stack"]) == target), None)
+        if own is not None and ("phase" not in own or own["phase"] == "running"):
+            return None
+        name = watch.get("name") or os.path.basename(stack.rstrip(os.sep))
+        watch["result"] = "watch: %s is no longer running on the table at %s" % (name, path)
+        return watch["result"]
     try:
         daemon = dc.find_daemon()
         rows = dc.rows(daemon)
@@ -249,6 +272,7 @@ def cmd_watch(eca, opts):
     path = cell.file("live.jsonl")
     pos = os.path.getsize(path) if os.path.exists(path) else 0
     aos_flags.warn(PROG, "watching %s; Ctrl-C to leave" % path)
+    watch = {"name": os.path.basename(stack.rstrip(os.sep))}   # 名字在開始時固定，不從退出當下已刪的列取。
     try:
         while True:
             try:
@@ -269,7 +293,7 @@ def cmd_watch(eca, opts):
                     print(s, flush=True)
                 if isinstance(ev, dict) and ev.get("type") in ("result", "turn.completed"):
                     return
-            why = None if end else gone(eca, stack)   # 這一拍沒有新的整行才看
+            why = None if end else gone(eca, stack, watch)   # 這一拍沒有新的整行才看
             if why:
                 aos_flags.warn(PROG, "watch stopped waiting, %s; an answer cut off there never finishes" % why)
                 return

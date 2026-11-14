@@ -82,15 +82,15 @@ def _ask_kernel(kernel, secs):
     return path
 
 
-def state_path(flag=None, timeout_s=None):
+def state_path(flag=None, timeout_s=None, fresh=False):
     """這次要讀的那份表檔（TableFile）：
     明給 --daemon D＝D/procs_state.json，不問；設了 AOS_KERNEL＝寄查詢信問（預設等 3 秒；問不到＝KernelFailed，不退回去讀 AOS_DAEMON）；
-    沒設＝照 find_daemon（$AOS_DAEMON，再來 cwd 的 ./.stack）算 <那台>/procs_state.json，不寄信。"""
+    沒設＝照 find_daemon（$AOS_DAEMON，再來 cwd 的 ./.stack）算 <那台>/procs_state.json，不寄信；fresh=True 每次重問，不沿用快取。"""
     from .table import find_daemon
     if not via_kernel(flag):
         return TableFile(os.path.join(find_daemon(flag), STATE))
     kernel = os.path.abspath(os.environ["AOS_KERNEL"])
-    if kernel not in _asked:
+    if fresh or kernel not in _asked:
         _asked[kernel] = TableFile(_ask_kernel(kernel, QUERY_S if timeout_s is None else timeout_s))
     return _asked[kernel]
 

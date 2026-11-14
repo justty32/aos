@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 import sys
-from .common import Agent, DECL, Fail, IFACE, daemon_path, note, table
+from .common import Agent, DECL, Fail, IFACE, daemon_path, note, table, via_kernel
 
 
 # ---------------------------------------------------------------- 定義與宣告（03）
@@ -93,9 +93,13 @@ def sub_entry(a, key, iface, missing, bad):
 def run_entry(a, entry, args, capture_err=True, ws=None):
     """aos-exec --ws <ws> --stack <stack> <入口> args…；stdin／stdout 接呼叫者的。回 (結束碼, stderr)。ws 沒給＝表上那格。"""
     argv = ["aos-exec", "--ws", ws or a.ws, "--stack", a.stack, entry] + list(args)
+    env = dict(os.environ)
+    if not via_kernel():                            # 指名 daemon 的入口不能再繞回 kernel；走 kernel 則照傳、不猜表檔所在夾。
+        env["AOS_DAEMON"] = daemon_path()
+        env.pop("AOS_KERNEL", None)
     try:
         r = subprocess.run(argv, stderr=subprocess.PIPE if capture_err else None, text=True,
-                           env=dict(os.environ, AOS_DAEMON=daemon_path()))   # --daemon 給的也傳下去（screen 的 watch 靠它讀表）
+                           env=env)
     except OSError as e:
         raise Fail("CommandMissing", "cannot run aos-exec (proto8/impls/aos-exec/bin must be on PATH): %s" % e)
     return r.returncode, (r.stderr or "")

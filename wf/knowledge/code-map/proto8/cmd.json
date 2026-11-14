@@ -45,6 +45,7 @@
     "test_goal.py": "Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0…",
     "test_history.py": "Test aos-agent history on a fake daemon table (11-10 self-family): ls, rm, summarize, set, the kept originals (default, --keep, --no-keep), ranges an…",
     "test_hook.py": "Test aos-agent hook on a fake daemon table: add writes only the agent's own hooks list (flags, path forms, --path-json), HookExists / --replace, rm (…",
+    "test_kernel_screen.py": "驗證 kernel 畫面入口環境與 purge 的回信、關畫面、刪 stack 次序。",
     "test_kernel_state_path.py": "Test aos-agent ctl with AOS_KERNEL set: table commands ask it where the table is (query letter) and read that file, letter commands read only their o…",
     "test_listen_timeout.py": "Verify zero-second listen waits without a deadline and still rejects invalid timeout combinations.",
     "test_llm.py": "Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and…",
@@ -117,6 +118,7 @@
     "test_goal_replace.py": "Test aos-eca-turn's recognition of codex's \"Replace goal?\" menu (11-12 eca-slash /goal): only that menu with the cursor on \"1. Replace current goal\" …",
     "test_history_edit.py": "Test aos-eca-turn's shrunk history edit (11-10 self-family): history.jsonl changed between turns or during one = the next turn starts a new conversat…",
     "test_hooks.py": "Test the hooks of aos-eca-turn (eca's reduced set: before_queue, after_queue, brain_failed, tool_added) with a fake claude CLI.",
+    "test_kernel_watch.py": "驗證 watch 經 kernel 重問表檔、缺欄容錯、空表退出與五秒節流，直連行為不變。",
     "test_letter_name.py": "Test that a letter's sender (body \"name\", set by aos-agent say for an eca) reaches the CLI side as parts and never enters history, and that letters a…",
     "test_slash.py": "Test aos-eca-turn's slash commands (11-12 eca-slash): one letter that is exactly /clear, /compact, /status, /usage or /exit is done by aos (or handed…",
     "test_switch.py": "Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs."

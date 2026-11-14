@@ -87,3 +87,10 @@
 - 批 5 之後，設了 AOS_KERNEL 的查表指令（ctl ls／state／who、say、listen 等經 common.table() 的）都會先寄 `procs_state_path`，3 秒沒回信就 KernelFailed。
 - kernel_gate 的 hold 每封都留；triage 把它判成「不認得」→ hold；框架站 lib/aos/kernel 沒有處理這種信。
 - 所以 eca 帶 AOS_KERNEL 指 gate 要等批 6（站回答或放行查詢信，triage 也認得它）。
+
+### 批 5b（走 kernel 時的畫面）
+- 照 `wf/temp/ok-kf/b5-design/plan.md` 末尾的採納表施工（sol-b5），ok-kf 審 diff。
+- `rm --purge` 走 kernel：讀列 → 寄 rm、等回信 ok → 關畫面 → 刪 stack；被拒什麼都不動；列缺 def 就印 warning、照常 purge。stop、不帶 purge 的 rm 照舊不關畫面（docs/02 寫了 stop 後 close、rm 前 close、已 rm 用 tmux kill-server）。
+- `run_entry`：走 kernel 不覆寫 AOS_DAEMON；直連時拿掉 AOS_KERNEL。`state_path(fresh=True)`。`aos-eca-screen watch` 走 kernel 每 5 秒最多重問一次，照 Argon 四步判定。
+- 圖紙 03「decl.py 不改」那列改成「改」並寫原因。
+- C′（範本 after_stop hook 自己收畫面）已寄 xiaosi NEEDS-USER，等使用者裁。

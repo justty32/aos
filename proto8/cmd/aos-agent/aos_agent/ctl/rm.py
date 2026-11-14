@@ -4,7 +4,7 @@ import aos_flags
 from .. import PROG
 import shutil
 from ..common import bad_args, daemon_path, find, parse, row_named, table, table_ref, via_kernel
-from .shared import ctl_wait, need_table, send_only, timeout_opt
+from .shared import ctl_wait, need_table, send_only, timeout_opt, wait_for
 from ..decl import close_screen_if_any
 
 
@@ -20,7 +20,8 @@ add with the same --stack picks it up again.
 With $AOS_KERNEL set (and no --daemon), rm without --purge reads only its own reply:
 no table lookup, phase check or screen closing. --no-wait sends it and returns at once.
 With --purge it first asks the kernel for the table and waits for removal before deleting
-its stack; it does not close the screen on this route either.
+its stack. After the rm is accepted it closes the screen using the saved row, then deletes
+the stack. A refused request leaves the screen and stack alone.
 
 --purge also deletes the stack. A stack that covers the workspace, the definition, the
 daemon, the cwd, home or another listed stack is kept even then. With --purge it asks on a
@@ -78,9 +79,16 @@ def cmd(argv):
     if not aos_flags.confirm(PROG, question, yes=opts.get("yes")):
         aos_flags.warn(PROG, "nothing done")
         return
-    if not via_kernel():
+    kernel = via_kernel()
+    if not kernel:
         close_screen_if_any(a)
-    ctl_wait("rm", {"procs_removed": [a.name]}, lambda _: row_named(a.name) is None, "the daemon has not removed %s yet" % a.name, "CtlRejected", secs=secs)
+    ctl_wait("rm", {"procs_removed": [a.name]}, lambda _: row_named(a.name) is None, "the daemon has not removed %s yet" % a.name, "CtlRejected", secs=secs, replied=kernel)
+    if kernel:                                      # 先確認 rm 成功，才用寄信前存下的列關畫面；拒信不碰畫面與 stack。
+        if not a.row.get("def"):
+            aos_flags.warn(PROG, "cannot close the screen of %s (the table has no def); close it before rm next time" % a.name)
+        else:
+            close_screen_if_any(a)
+        wait_for(lambda: row_named(a.name) is None, "the daemon has not removed %s yet" % a.name, secs)
     if keep:                                          # 11-04 夜邊緣實測：add --stack . 之後 rm 會連工作區一起刪；stack 蓋住這些的不刪
         print("removed %s; stack %s kept (it is %s or above it)" % (a.name, a.stack, keep))
         return

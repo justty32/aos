@@ -17,6 +17,9 @@
  "test_hook.py": {
   "description": "Test aos-agent hook on a fake daemon table: add writes only the agent's own hooks list (flags, path forms, --path-json), HookExists / --replace, rm (…"
  },
+ "test_kernel_screen.py": {
+  "description": "驗證 kernel 畫面入口環境與 purge 的回信、關畫面、刪 stack 次序。"
+ },
  "test_kernel_state_path.py": {
   "description": "Test aos-agent ctl with AOS_KERNEL set: table commands ask it where the table is (query letter) and read that file, letter commands read only their o…"
  },
