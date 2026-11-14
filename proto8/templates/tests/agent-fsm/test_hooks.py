@@ -273,11 +273,12 @@ sys.exit(code)
         self.assertIn("agent-fsm: error: HooksBad hook a in", r.stderr)
         for entry in ({"event": "before_queue", "handler": "x", "condition": "m"},
                       {"event": "before_tool", "handler": "x", "on_error": "maybe"},
-                      {"event": "before_tool", "handler": "x", "timeout_ms": 0},
+                      {"event": "before_tool", "handler": "x", "timeout_ms": -1},
                       {"event": "nope", "handler": "x"}):
             with self.assertRaises(hooks.HooksBad):
                 hooks.validate_entry(entry)
         hooks.validate_entry({"event": "before_tool", "handler": "x", "intercept": True, "condition": ["a"], "whatever": 1})
+        hooks.validate_entry({"event": "before_tool", "handler": "x", "timeout_ms": 0})   # 0＝不限時（252669c47，頂層 11-14）
         # change 預設開之後：不能改的事件、不等的 hook 寫 change: true＝自然不看回話，不報錯（11-10 深夜）
         hooks.validate_entry({"event": "after_queue", "handler": "x", "intercept": True})
         hooks.validate_entry({"event": "before_tool", "handler": "x", "intercept": True, "async": True})
