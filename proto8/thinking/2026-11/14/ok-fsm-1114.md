@@ -2,6 +2,10 @@
 
 來源：使用者 11-14 專區回信 `fsm:now`；任務書 `wf/temp/ok-fsm/任務書.md`；四條出自 [wf/advices/fsm範本.md](../../../../wf/advices/fsm範本.md)。
 
+## 15:25 收尾
+
+使用者說 Claude 額度剩 5%，除 ok-release 外各線收尾。第 5 條不施工，圖紙停在第 3 版（Argon 看過、使用者 scope8: strict、head-core 准、ok-sec 表態），只差 ok-onboard 的 guard 複審。交接、經驗、建議三份在 `wf/temp/ok-fsm/wrapup-1114/`。第 4 條由 ok-astra 在今晚的 pin 釘完後交。下面的現況表是 14:27 的，除了這一段以外沒有變。
+
 ## 現況（14:27）
 
 | 條 | 題目 | 狀態 |
