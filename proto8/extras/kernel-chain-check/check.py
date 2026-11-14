@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# 在獨立暫存樹驗證 kernel 鏈的掛子、排隊、hook、重啟、ping、照規則分流與留著等表態，並嚴格核對清理範圍。
+# 在獨立暫存樹驗證只靠 kernel 的掛子、刪減表、排隊、hook、重啟、ping、分流與表態，並核對清理範圍。
 import argparse
 import json
 import os
@@ -48,6 +48,52 @@ if body.get("hold_me") is True:
         stream.write(json.dumps({"letter": event["letter"], "verdict": event["verdict"],
                                  "decision": event.get("decision")}) + "\\n")
     print(json.dumps({"verdict": "hold"}))
+'''
+
+# A 的查表回信 hook：以原 sender 的明確政策找 agent，只交付它與它帳上的子，路徑全部轉絕對。
+TRIM_TABLE = '''#!/usr/bin/env python3
+# 依原寄件人的政策產刪減表，換掉查詢回信的表檔路徑。
+import json, os, pathlib, subprocess, sys
+event = json.load(sys.stdin)
+body = event["body"]
+if isinstance(body, dict) and body.get("procs_state_path"):
+    policy = json.loads(pathlib.Path(__file__).with_name("view_policy.json").read_text())
+    owner = pathlib.Path(policy[event["sender"]])
+    source = pathlib.Path(body["procs_state_path"])
+    resolved = subprocess.run(["aos-directive"], input=source.read_text(), cwd=source.parent,
+                              capture_output=True, text=True, check=True)
+    table = json.loads(resolved.stdout)
+    book = owner / "tools/subagent/subagents.json"
+    children = json.loads(book.read_text()) if book.exists() else []
+    allowed = {str(owner)} | {row["stack"] for row in children if "stack" in row}
+    procs = {}
+    for name, row in table["procs"].items():
+        row = dict(row)
+        for key in ("stack", "ws", "exec", "def"):
+            if isinstance(row.get(key), str):
+                row[key] = os.path.abspath(source.parent / row[key])
+        if row.get("stack") in allowed:
+            procs[name] = row
+    table["procs"] = procs
+    target = pathlib.Path(event["stack"]) / "views" / (event["letter"] + ".json")
+    target.parent.mkdir(exist_ok=True)
+    temporary = target.with_suffix(".tmp")
+    temporary.write_text(json.dumps(table) + "\\n")
+    temporary.replace(target)
+    with (pathlib.Path(event["stack"]) / "views.jsonl").open("a") as stream:
+        stream.write(json.dumps({"letter": event["letter"], "sender": event["sender"],
+                                 "source": str(source), "path": str(target)}) + "\\n")
+    print(json.dumps({"body": dict(body, procs_state_path=str(target))}))
+'''
+
+# daemon 起 agent 時會給 AOS_DAEMON，agent 入口明確拿掉，測試本體也不能依賴它。
+AGENT_ENTRY = '''#!/usr/bin/env python3
+# 只保留 kernel 作為 agent 的查詢與掛子入口，並記錄實際啟動的環境。
+import json, os, pathlib, sys
+os.environ.pop("AOS_DAEMON", None)
+(pathlib.Path(os.environ["AOS_STACK"]) / "kernel_only.json").write_text(json.dumps({
+    "has_aos_daemon": "AOS_DAEMON" in os.environ, "kernel": os.environ.get("AOS_KERNEL")}))
+os.execvp("aos-exec", ["aos-exec", sys.argv[1]])
 '''
 
 IDLE = '''#!/usr/bin/env python3
@@ -100,8 +146,7 @@ class Check:
                         PYTHONDONTWRITEBYTECODE="1",
                         PYTHONPATH=os.pathsep.join([str(PROTO / "py"), str(PROTO / "lib")]),
                         AOS_HOME=str(PROTO))
-        self.agent_env = dict(self.env, AOS_DAEMON=str(self.foreman),
-                              AOS_KERNEL=str(self.a / "requests"), AOS_AGENT="agent",
+        self.agent_env = dict(self.env, AOS_KERNEL=str(self.a / "requests"), AOS_AGENT="agent",
                               AOS_WS=str(self.work), AOS_STACK=str(self.agent / "tools/subagent"))
         (self.work / "home").mkdir()
         print("Temporary fixture: " + str(self.work), flush=True)
@@ -187,6 +232,13 @@ class Check:
         ask = self.defs / "ask"
         ask.write_text(ASK, encoding="utf-8")
         ask.chmod(0o755)
+        trim = self.defs / "trim_table"
+        trim.write_text(TRIM_TABLE, encoding="utf-8")
+        trim.chmod(0o755)
+        save(self.defs / "view_policy.json", {str(self.work): str(self.agent)})
+        agent_entry = self.defs / "agent_entry"
+        agent_entry.write_text(AGENT_ENTRY, encoding="utf-8")
+        agent_entry.chmod(0o755)
         idle = self.defs / "idle"
         idle.mkdir()
         (idle / "tick.py").write_text(IDLE, encoding="utf-8")
@@ -217,11 +269,12 @@ class Check:
         self.kernel(self.defs / "station_b", {})
         self.kernel(self.defs / "station_a", {}, route={
             "event": "after_verdict", "condition": "pass", "handler": str(route), "timeout_ms": 5000}, ask={
-            "event": "after_verdict", "condition": "pass", "handler": str(ask), "timeout_ms": 5000})
+            "event": "after_verdict", "condition": "pass", "handler": str(ask), "timeout_ms": 5000}, trim_table={
+            "event": "before_reply", "handler": str(trim), "timeout_ms": 5000})
         self.kernel(self.defs / "foreman", {"max_running": 4, "queue": True})
         foreman_cfg = read(self.defs / "foreman/daemon.json")
         foreman_cfg["procs"] = {
-            "agent": {"exec": {"argv": ["aos-exec", str(self.defs / "agent/body.json")],
+            "agent": {"exec": {"argv": [str(agent_entry), str(self.defs / "agent/body.json")],
                                "envs": {"AOS_KERNEL": str(self.a / "requests")}},
                       "def": str(self.defs / "agent"), "ws": str(self.work)},
             "other": self.spec("other")}
@@ -432,7 +485,43 @@ class Check:
                   self.table(self.foreman).get("kid2", {}).get("phase") == "running")
         print("ok 2 max_running queued the excess request and a freed slot drained it", flush=True)
 
-        # TODO：第 3 段等 aos-daemon 認 procs_state_path 後補；以查詢信驗證刪減表。
+        self.stage = "3"
+        require("AOS_DAEMON" not in self.agent_env, "agent command environment still sets AOS_DAEMON")
+        self.wait("kernel-only agent entry", lambda: (self.agent / "kernel_only.json").exists())
+        require(read(self.agent / "kernel_only.json") == {"has_aos_daemon": False, "kernel": str(self.a / "requests")},
+                "the running agent did not remove AOS_DAEMON or lost AOS_KERNEL")
+        require("other" in self.table(self.foreman), "unfiltered daemon table does not contain other")
+        views_log = self.a / "views.jsonl"
+        before_views = len(views_log.read_text().splitlines())
+        listed = json.loads(self.run(["aos-agent", "ctl", "ls", "--json"], env=self.agent_env).stdout)
+        who = json.loads(self.run(["aos-agent", "ctl", "who", "--json"], env=self.agent_env).stdout)
+        require({row["name"] for row in listed} == {"agent", "kid_tool"},
+                "filtered table does not show exactly the agent and its recorded child: " + json.dumps(listed))
+        require(all(os.path.isabs(row["stack"]) for row in listed), "filtered ctl ls returned a relative stack")
+        require(who["name"] == "agent" and who["stack"] == str(self.agent) and who["def"] == str(self.defs / "agent"),
+                "ctl who did not resolve the agent from the relocated table: " + json.dumps(who))
+        views = [json.loads(line) for line in views_log.read_text().splitlines()][before_views:]
+        require(len(views) == 2, "ctl ls and who did not each query through A exactly once")
+        for view in views:
+            letter = view["letter"]
+            require(view["sender"] == str(self.work), "filtered table policy did not use the original sender")
+            require(view["source"] == str(self.foreman / "procs_state.json"), "query did not reach the foreman daemon")
+            target = self.inside(view["path"])
+            require(target.parent == self.a / "views", "A did not produce its own filtered table")
+            filtered = read(target)["procs"]
+            require(set(filtered) == {"agent", "kid_tool"} and all(os.path.isabs(row["stack"]) for row in filtered.values()),
+                    "A's filtered table has unexpected rows or relative stacks")
+            for stack in (self.a, self.foreman):
+                requests = self.events(stack, "before_verdict", letter)
+                require(len(requests) == 1 and requests[0]["body"] == {"procs_state_path": True},
+                        "state query did not cross each station exactly once")
+                require(len(self.events(stack, "before_reply", letter)) == 1, "state reply did not cross each station once")
+                self.judged(stack, letter, "state query", held=False)
+            require(self.events(self.a, "before_reply", letter)[0]["sender"] == view["sender"],
+                    "before_reply lost the original query sender")
+        require(Path(who["daemon"]) == self.a / "views", "ctl who used the unfiltered daemon table location")
+        print("ok 3 kernel-only ls and who queried through A and received only the agent and its child", flush=True)
+
         self.stage = "4"
         self.send("evil", {"procs_added": {"evil": self.spec("evil")}})
         reply = self.receive("evil", applied=False)
@@ -578,7 +667,7 @@ class Check:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Check seven kernel-chain scenarios in an isolated disposable tree.")
+    parser = argparse.ArgumentParser(description="Check eight kernel-chain scenarios in an isolated disposable tree.")
     parser.add_argument("--timeout-s", type=float, default=30, help="positive timeout per wait (default: 30)")
     opts = parser.parse_args()
     require(0 < opts.timeout_s <= 300, "--timeout-s must be in (0, 300]")
@@ -597,7 +686,7 @@ def main():
             passed = False
             print("kernel-chain-check: error: CleanupFailed " + str(error), flush=True)
     if passed:
-        print("kernel-chain-check: 7/7 ok", flush=True)
+        print("kernel-chain-check: 8/8 ok", flush=True)
         return 0
     return 1
 

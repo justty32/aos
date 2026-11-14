@@ -109,3 +109,7 @@
 ### 批 10（問腦總機切 Python 版）
 - ok-kf-sol-2 在 repo 外複本 b10tree 施工；ok-kf 在外面建 aos-llm（沒有舊夾也建得起來，19 例過）。
 - 刪 `impls/aos-llm-kernel` 要頂層准（~/.local/bin/aos-llm-kernel 指向它），已寄 xiaosi 選甲／乙。
+
+### 批 7b（鏈劇本第 3 段＋只設 AOS_KERNEL）
+- ok-kf-sol-1 施工。鏈劇本裡 agent 的環境拿掉 AOS_DAEMON，只靠 AOS_KERNEL；第 3 段：站 A 的 before_reply hook 照原寄件人產刪減表（路徑轉絕對），agent 的 `ctl ls --json`／`ctl who --json` 只看得到自己和它帳上的子，看不到 other；查詢信每站各過一次、不被留。
+- main 0a3ffe5c4＋本批連跑兩次 8/8。N-28 那句「鏈劇本那段還沒驗」改成驗過。

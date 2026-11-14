@@ -15,7 +15,7 @@
    "check.py": "Verify a sleeping fake-brain daemon tree survives copying and a local git clone."
   },
   "kernel-chain-check": {
-   "check.py": "在獨立暫存樹驗證 kernel 鏈的掛子、排隊、hook、重啟、ping、照規則分流與留著等表態，並嚴格核對清理範圍。"
+   "check.py": "在獨立暫存樹驗證只靠 kernel 的掛子、刪減表、排隊、hook、重啟、ping、分流與表態，並核對清理範圍。"
   },
   "langs": {
    "janet": {
