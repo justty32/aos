@@ -103,7 +103,7 @@ class Judge(unittest.TestCase):
                     'script': [{'content': 'not JSON'}]}}})
             daemon_config = root / 'daemon.json'
             write(daemon_config, {'interval_ms': 10, 'exec': {'argv': [
-                str(PROTO / 'impls/aos-llm-kernel/bin/aos-llm-kernel'), str(config)]}})
+                str(PROTO / 'lib/aos/kernel_llm/_entry'), str(config)]}})
             env['AOS_LLM_KERNEL'] = str(kernel)
             with (root / 'daemon.log').open('w+') as log:
                 process = subprocess.Popen(['aos-daemon', str(daemon_config)], cwd=root,

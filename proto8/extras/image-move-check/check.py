@@ -129,7 +129,7 @@ class Check:
                 "foreman": {"exec": "../foreman", "auto_restart": True}}},
             "foreman": {"interval_ms": 100, "procs": {"_sweeper": SWEEPER}},
             "kernel": {"interval_ms": 100, "procs": {"_sweeper": SWEEPER},
-                       "exec": {"argv": ["aos-llm-kernel", "--enable-counters", "kernel.json"]}},
+                       "exec": {"argv": ["../../lib/aos/kernel_llm/_entry", "--enable-counters", "kernel.json"]}},
         }
         for name, config in configs.items():
             folder = defs / name

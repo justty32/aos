@@ -246,9 +246,11 @@
     "slots.py": "問腦的格數：總格、high 保留格、包格、後端格與同時幾種包，在飛與這輪新掛的一起算。",
     "tests": {
      "test_backends.py": "Verify backend limits, durable switch records, and priority-safe sticky ordering with prepared mailboxes.",
+     "test_batch8_live.py": "Verify copied kernel templates nest through two real daemons and batch local packs without blocking urgent mail.",
      "test_hooks.py": "Check the three hook moments on the llm kernel and that add letters go to AOS_KERNEL when it is set.",
      "test_ledger.py": "Verify kernel finish records fake-brain costs and tolerates ledger write failures.",
      "test_nesting.py": "Verify nested-kernel error boundaries, ledger fields, and remount invariants with prepared mailboxes.",
+     "test_nesting_live.py": "Verify priority stdin, child accounting, and error replies through a real daemon and kernel.",
      "test_stopped_slot.py": "Check a brain call someone stopped on the daemon frees its slot after STOPPED_GIVE_UP_S (設計-56).",
      "test_two_machines.py": "Check two-machines kernel fixes: in-flight brain calls never pin an absolute endpoint path; budget.senders keys that are not folders warn, and sender…"
     }

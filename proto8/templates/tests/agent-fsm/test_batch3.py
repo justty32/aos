@@ -83,7 +83,7 @@ class Batch3Integration(unittest.TestCase):
                 kernel_env = dict(env, AOS_STACK=str(kernel_stack))
                 kernel_daemon_config = root / 'kernel_daemon.json'
                 write(kernel_daemon_config, {'interval_ms': 10, 'exec': {'argv': [
-                    str(PROTO / 'impls/aos-llm-kernel/bin/aos-llm-kernel'), str(kernel_config)]}})
+                    str(PROTO / 'lib/aos/kernel_llm/_entry'), str(kernel_config)]}})
                 kernel = subprocess.Popen(['aos-daemon', str(kernel_daemon_config)], cwd=root,
                                           env=kernel_env, stdout=log, stderr=log)
                 try:

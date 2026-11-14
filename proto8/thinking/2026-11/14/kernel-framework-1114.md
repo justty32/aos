@@ -113,3 +113,5 @@
 ### 批 7b（鏈劇本第 3 段＋只設 AOS_KERNEL）
 - ok-kf-sol-1 施工。鏈劇本裡 agent 的環境拿掉 AOS_DAEMON，只靠 AOS_KERNEL；第 3 段：站 A 的 before_reply hook 照原寄件人產刪減表（路徑轉絕對），agent 的 `ctl ls --json`／`ctl who --json` 只看得到自己和它帳上的子，看不到 other；查詢信每站各過一次、不被留。
 - main 0a3ffe5c4＋本批連跑兩次 8/8。N-28 那句「鏈劇本那段還沒驗」改成驗過。
+- 11-14 頂層裁乙：先交不刪的部分（範本換身體、標頭搬進 aos-llm、CMake／install／tree-swap 拿掉舊名、測試換叫 kernel_llm/_entry、兩支 live 測試搬進 kernel_llm/tests）。`impls/aos-llm-kernel` 舊夾與 `~/.local/bin/aos-llm-kernel` symlink 列進今晚換樹清單，刪檔要使用者點頭。活樹有自己一份範本，不直接讀 repo 的 kernel/llm-kernel。
+- 驗 main 0a3ffe5c4 對 main＋本批：受影響的 7 夾＋image-move-check 結果相同，只有 agent-fsm 兩支紅，兩邊一樣。其中 test_fork 是批 6 漏改：details 改成絕對路徑後，範本測試還在比相對路徑（我批 6 驗收時漏跑 templates/tests/agent-fsm），本批一併改；test_hooks 那支 ok-misc 已在 77a822e1c 修好。

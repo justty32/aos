@@ -1,4 +1,4 @@
-// common.hpp：【common】aos-llm 好幾個元素都用到的：型別別名、錯誤代號（信箱型別用 aos-post、LLM 信件協定用 aos-llm-kernel）。
+// common.hpp：【common】aos-llm 好幾個元素都用到的：型別別名、錯誤代號（信箱型別用 aos-post、LLM 信件協定用本專案的 aos/llm_kernel.hpp）。
 #pragma once
 
 #include "aos/llm_kernel.hpp"

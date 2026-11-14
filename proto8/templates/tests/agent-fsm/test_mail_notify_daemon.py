@@ -29,7 +29,7 @@ class MailNotifyDaemon(unittest.TestCase):
         (self.root / "kernel.json").write_text(json.dumps({"exec": str(PROTO / "lib/base/llm_fake"), "endpoint": "fake",
                                                            "endpoints": {"fake": {}}}))
         (self.root / "kernel_daemon.json").write_text(json.dumps({"interval_ms": 10, "exec": {"argv": [
-            str(PROTO / "impls/aos-llm-kernel/bin/aos-llm-kernel"), str(self.root / "kernel.json")]}}))
+            str(PROTO / "lib/aos/kernel_llm/_entry"), str(self.root / "kernel.json")]}}))
         shutil.copytree(PROTO / "templates" / "daemon-root", self.root / "defs")
         bob = self.root / "defs" / "bob"
         shutil.copytree(PROTO / "templates" / "agent-fsm", bob, ignore=shutil.ignore_patterns("__pycache__"))

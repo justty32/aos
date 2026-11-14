@@ -9,7 +9,7 @@ TS_BUILD=${TS_BUILD:-$HOME/code/swap-1113/src}          # 內有 BUILD_REF 與 p
 TS_BIN_ROOT=${TS_BIN_ROOT:-$TS_REPO/proto8/impls}       # ~/.local/bin/aos-* 指到 <這裡>/<p>/bin/<p>
 TS_BACKUP_ROOT=${TS_BACKUP_ROOT:-$HOME/.aos/saves/tree-swap}
 TS_FOLDERS_ALL="lib templates knowledge py kernel"      # 只換樹裡已經有的那幾夾
-TS_BINS="aos-daemon aos-directive aos-exec aos-fsm aos-json aos-llm aos-llm-kernel aos-lock aos-loop aos-post"
+TS_BINS="aos-daemon aos-directive aos-exec aos-fsm aos-json aos-llm aos-lock aos-loop aos-post"
 
 ts_red() { echo "RED: $*" >&2; exit 3; }
 ts_t0() { TS_T0=$(date +%s.%N); }

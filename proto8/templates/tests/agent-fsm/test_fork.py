@@ -65,7 +65,7 @@ class Fork(unittest.TestCase):
                 'plain': {'script': script(False)}, 'kept': {'script': script(True)}}})
             write(root / 'daemon.json', {'interval_ms': 10, 'procs': {}})
             write(root / 'kernel_daemon.json', {'interval_ms': 10, 'exec': {'argv': [
-                str(PROTO / 'impls/aos-llm-kernel/bin/aos-llm-kernel'), str(kernel_config)]}})
+                str(PROTO / 'lib/aos/kernel_llm/_entry'), str(kernel_config)]}})
 
             def logs():                                 # 失敗時附上各隻的 stderr.txt（daemon 寫在 proc 的 stack）
                 return ''.join('\n== %s\n%s' % (p, p.read_text()[-3000:])
@@ -117,7 +117,7 @@ class Fork(unittest.TestCase):
                     kid = kept[0]
                     table = json.loads(agent('ctl', 'ls', '--json'))
                     self.assertEqual({r['name']: r['phase'] for r in table}[kid.name], 'stopped')
-                    self.assertIn('details: procs/%s/' % kid.name, lines(Path(agent('ctl', 'where', '--target', 'kim').strip())
+                    self.assertIn('details: %s/' % kid, lines(Path(agent('ctl', 'where', '--target', 'kim').strip())
                                                                          / 'history.jsonl')[4]['content'])
                     copied = lines(kid / 'history.jsonl')
                     self.assertEqual(copied[0]['content'], 'The password is %s. Remember it.' % SECRET)   # 整段對話抄過去

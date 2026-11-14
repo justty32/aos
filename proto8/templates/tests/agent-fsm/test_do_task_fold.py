@@ -74,7 +74,7 @@ class DoTaskFold(unittest.TestCase):
                               'endpoints': {n: {'script': s} for n, s in SCRIPTS.items()}})
         write(root / 'daemon.json', {'interval_ms': 10, 'procs': {}})
         write(root / 'kernel_daemon.json', {'interval_ms': 10, 'exec': {'argv': [
-            str(PROTO / 'impls/aos-llm-kernel/bin/aos-llm-kernel'), str(kernel_config)]}})
+            str(PROTO / 'lib/aos/kernel_llm/_entry'), str(kernel_config)]}})
         cls.log = (root / 'daemon.log').open('w+')
         cls.daemons = [subprocess.Popen(['aos-daemon', str(root / 'daemon.json')], cwd=root, env=env, stdout=cls.log, stderr=cls.log),
                        subprocess.Popen(['aos-daemon', str(root / 'kernel_daemon.json')], cwd=root,

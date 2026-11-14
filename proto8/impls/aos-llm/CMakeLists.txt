@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 # aos-llm：`aos-llm send|recv|ask|regret|ls`——寄請求信進 LLM kernel 的信箱（$AOS_LLM_KERNEL）、收回信的基礎工具（11-04 由 aos-llm-send 改名）。
-# 兩個產物：lib/libaos-llm.a、bin/aos-llm。
+# 兩個產物：lib/libaos-llm.a、bin/aos-llm；公開標頭 aos/llm_kernel.hpp 宣告 LLM 信件協定。
 # CMake 的共通設定（vcpkg、Release、compile_commands、PIC、AOS_STATIC_PIE）在 ../cmake/settings.cmake。
 # 照 aos-fsm 的 CMakeLists.txt 改名。
 include(../cmake/settings.cmake)
@@ -12,11 +12,6 @@ project(aos-llm CXX)
 if(NOT TARGET aos-util)
   add_subdirectory(../aos-util aos-util-build)
 endif()
-#   aos-llm-kernel  公開 API（aos/llm_kernel.hpp）：LLM 信件協定的 parse_priority／hold_sender／reply_of；
-#                   kernel 只帶進 aos-util、aos-post 與 aos-directive。
-if(NOT TARGET aos-llm-kernel)
-  add_subdirectory(../aos-llm-kernel aos-llm-kernel-build)
-endif()
 #   aos-post        公開 API（aos/post.hpp）：寄信（send／send_prepared）、認領（take）、回信信箱的建、收掉、撤信（regret）
 if(NOT TARGET aos-post)
   add_subdirectory(../aos-post aos-post-build)
@@ -26,12 +21,12 @@ endif()
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
-# 函式庫 target＝專案名，STATIC。沒有公開標頭（沒有別的專案要用它的庫）。
+# 函式庫 target＝專案名，STATIC；公開標頭與 letter.cpp 只依賴 aos-util、aos-post。
 add_library(aos-llm STATIC ${SOURCES})
-target_include_directories(aos-llm PRIVATE src)
+target_include_directories(aos-llm PUBLIC include PRIVATE src)
 target_compile_features(aos-llm PUBLIC cxx_std_20)
 target_compile_options(aos-llm PRIVATE -Wall -Wextra)
-target_link_libraries(aos-llm PUBLIC aos-util aos-post aos-llm-kernel)
+target_link_libraries(aos-llm PUBLIC aos-util aos-post)
 set_target_properties(aos-llm PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 

@@ -88,7 +88,7 @@ class ReviewerIntegration(unittest.TestCase):
             daemon_config, kernel_config = root / 'daemon.json', root / 'kernel_daemon.json'
             write(daemon_config, {'interval_ms': 10, 'procs': {}})
             write(kernel_config, {'interval_ms': 10, 'exec': {'argv': [
-                str(PROTO / 'impls/aos-llm-kernel/bin/aos-llm-kernel'), str(config)]}})
+                str(PROTO / 'lib/aos/kernel_llm/_entry'), str(config)]}})
 
             def agent(*args):
                 result = subprocess.run(['aos-agent', '--daemon', str(daemon_stack), *args],

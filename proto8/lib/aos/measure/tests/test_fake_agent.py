@@ -114,7 +114,7 @@ class FakeAgentMeasure(unittest.TestCase):
             write(daemon_config, {'interval_ms': 10, 'procs': {}})
             kernel_config = root / 'kernel_daemon.json'
             write(kernel_config, {'interval_ms': 10, 'exec': {'argv': [
-                str(PROTO / 'impls/aos-llm-kernel/bin/aos-llm-kernel'), str(config)]}})
+                str(PROTO / 'lib/aos/kernel_llm/_entry'), str(config)]}})
             # Log actual public API invocations while forwarding every command unchanged.
             shim = root / 'bin'
             shim.mkdir()

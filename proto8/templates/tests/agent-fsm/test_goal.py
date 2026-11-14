@@ -247,7 +247,7 @@ class FakeBrainRun(Base):
         (self.root / "kernel.json").write_text(json.dumps({"exec": str(PROTO / "lib/base/llm_fake"), "endpoint": "fake",
                                                            "endpoints": {"fake": endpoint}}))
         (self.root / "kernel_daemon.json").write_text(json.dumps({"interval_ms": 10, "exec": {"argv": [
-            str(PROTO / "impls/aos-llm-kernel/bin/aos-llm-kernel"), str(self.root / "kernel.json")]}}))
+            str(PROTO / "lib/aos/kernel_llm/_entry"), str(self.root / "kernel.json")]}}))
         log = open(self.root / "kernel.log", "w")
         self.addCleanup(log.close)
         p = subprocess.Popen(["aos-daemon", str(self.root / "kernel_daemon.json")], cwd=self.root,

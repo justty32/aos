@@ -103,7 +103,7 @@ class ReviewRound(unittest.TestCase):
         write(daemon_config, {'interval_ms': 10, 'procs': {}})
         kernel_daemon = self.root / 'kernel_daemon.json'
         write(kernel_daemon, {'interval_ms': 10, 'exec': {'argv': [
-            str(PROTO / 'impls/aos-llm-kernel/bin/aos-llm-kernel'), str(self.kernel_config)]}})
+            str(PROTO / 'lib/aos/kernel_llm/_entry'), str(self.kernel_config)]}})
         for config, stack in ((daemon_config, self.daemon), (kernel_daemon, self.kernel)):
             self.processes.append(subprocess.Popen(['aos-daemon', str(config)],
                 cwd=self.root, env=dict(self.env, AOS_STACK=str(stack)),

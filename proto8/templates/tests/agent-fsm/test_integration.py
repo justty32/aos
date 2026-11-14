@@ -33,7 +33,7 @@ class KernelIntegration(unittest.TestCase):
                                           'endpoint':'fake', 'endpoints':{'fake':{}}}))
             daemon_config = root / 'daemon.json'
             daemon_config.write_text(json.dumps({'interval_ms':10, 'exec':{
-                'argv':[str(PROTO / 'impls/aos-llm-kernel/bin/aos-llm-kernel'), str(config)]}}))
+                'argv':[str(PROTO / 'lib/aos/kernel_llm/_entry'), str(config)]}}))
             env = {k:v for k,v in os.environ.items() if not k.startswith('AOS_')}
             bins = [str(path) for path in (PROTO / 'impls').glob('*/bin')]
             env['PATH'] = os.pathsep.join(bins + [str(PROTO / 'cmd/aos-tools/bin'), env['PATH']])
