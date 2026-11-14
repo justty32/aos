@@ -7,7 +7,8 @@ import tempfile
 HELP = """\
 usage: ws_write < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Write text only inside $AOS_WS: create (default), append, or replace.
-Paths inside $AOS_STACK or $AOS_CD are refused even when they are inside the workspace.
+Paths inside $AOS_STACK or $AOS_CD, inside the folder that holds $AOS_STACK (other agents' stacks),
+or inside any .stack folder are refused even when they are inside the workspace.
 Content is limited to 262144 UTF-8 bytes; missing parent folders are created.
 Result on stdout. On error: one line "ws_write: error: CODE reason" on stderr and stdout, exit 1.
 """
@@ -49,6 +50,13 @@ for _var in ("AOS_STACK", "AOS_CD"):                # the workspace may contain 
         _own = os.path.realpath(_own)
         if path == _own or path.startswith(_own.rstrip(os.sep) + os.sep):
             die("PathBad", "%s is inside $%s (the agent's own stack or definition)" % (args["path"], _var))
+_stack = os.environ.get("AOS_STACK")               # other agents' stacks: the folder that holds the own stack, and any .stack folder
+if _stack:
+    _procs = os.path.dirname(os.path.realpath(_stack))
+    if path == _procs or path.startswith(_procs.rstrip(os.sep) + os.sep):
+        die("PathBad", "%s is inside the folder of agent stacks (%s)" % (args["path"], os.path.relpath(_procs, ws)))
+if ".stack" in os.path.relpath(path, ws).split(os.sep):
+    die("PathBad", "%s is inside a .stack folder (agent and daemon state)" % args["path"])
 if os.path.isdir(path):
     die("FileBad", "%s is a directory" % args["path"])
 try:

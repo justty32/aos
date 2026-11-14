@@ -81,10 +81,28 @@ class WorkspaceWriteTest(unittest.TestCase):
                     self.assertIn("inside $%s" % var, result.stdout)
                     self.assertFalse(target.exists())
         self.assertFalse((stack / "queue").exists())
-        result = self.call(env=env, path=".stack/procs/other.md", content="ok")      # a sibling of the own stack is not refused
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for target in (".stack/procs/other/queue/new/x", ".stack/procs/other.md", ".stack/daemon.json", "sub/.stack/x"):
+            with self.subTest(neighbour=target):                                    # other agents' stacks and any .stack folder
+                result = self.call(env=env, path=target, content="no")
+                self.assertEqual(result.returncode, 1, result.stdout)
+                self.assertTrue(result.stdout.startswith("ws_write: error: PathBad "), result.stdout)
+                self.assertFalse((self.ws / target).exists())
+        self.assertFalse((self.ws / "sub").exists())
         result = self.call(env=env, path="notes.md", content="ok")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_stack_outside_dot_stack_still_guards_neighbours(self):
+        procs = self.ws / "state" / "procs"
+        (procs / "me").mkdir(parents=True)
+        (procs / "other").mkdir()
+        env = dict(self.env, AOS_STACK=str(procs / "me"))
+        line = self.call(env=env, path="state/procs/other/tools.json", content="no")
+        self.assertEqual(line.returncode, 1, line.stdout)
+        self.assertIn("PathBad", line.stdout)
+        self.assertIn("folder of agent stacks", line.stdout)
+        self.assertFalse((procs / "other" / "tools.json").exists())
+        ok = self.call(env=env, path="state/notes.md", content="ok")
+        self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
 
     def test_missing_content_is_arguments_bad(self):
         self.error("ArgumentsBad", path="x.md")
