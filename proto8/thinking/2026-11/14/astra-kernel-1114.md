@@ -105,8 +105,55 @@
 | AK18 | 被門拒時，sol 拿到的代號是 `CtlRejected`，`HoldRefused` 只出現在訊息裡 | worker 的 system 寫「answers HoldRefused」，sol 要比對的是訊息文字，不是代號 | 甲：system 寫成「error line mentions HoldRefused」；乙：`aos-agent ctl` 把 kernel 回的代號原樣往上傳 |
 | AK3 補記 | 暫存樹（repo 那份 `aos-llm`）裡，llm-t1 帳上的寄件人已經是 sol 自己的 stack（`.../procs/sol-c`）；llm-gpt 那邊看到的寄件人是轉寄的那一站 | 「每隻 sol 分開算額度」在隊站這一層已經可以做，不必等換樹；活樹的 `aos-llm` 是不是同一支還沒核 | 階段 3 開工前，核對活樹 `aos-llm` 實際指到哪 |
 
-### 下一步
+## 階段 2：真腦（ok-astra 11-14 08:44～09:19）
 
-- 階段 2 換真腦：兩份 `-k` 的 `llm.json` 改成 `astra-high`／`sol-high`，llm-gpt 的 `budget.senders` 換成這一輪的名字，真腦 token 要記帳。開跑前 AK17 先用乙案頂著（巡邏時看有沒有 failed 的 sol）。
-- 階段 3 不做，只列 build（見下一次更新）。
-- 階段 4 做之前要先問使用者（04 寫明它跟「門鈴叫醒 astra」打架）。
+### 白話結論
+
+- **兩張單都做完、astra 自己重驗過、我也重驗過**；門鈴叫醒 astra 在真腦下也成立，astra 一次 `listen` 都沒用；考題「停 eca_main」8 秒內被拒。
+- **用量沒有比 gpt 隊低**（驗收這條沒過）：大頭在 astra，一張單就要 27～30 次呼叫。照 Q8（用量降了才試換 sol 當門），**換 sol 當門不試**。
+- 第二張單是真的用得上的改動：知識庫 `proto8/knowledge/aos/agents.json` 的 agents_ctl 那節補了 `no_wait` 的用法和「被 kernel 拒絕時錯誤長什麼樣」（AK18）。我重驗後抄進 repo、跟這次紀錄一起 commit；活樹的 knowledge 是複本，要等換樹重抄才生效。
+
+### 怎麼跑的
+
+- 腦：astra＝`astra-high`（直寄 llm-gpt），sol＝`sol-high`（經 llm-t1 轉 llm-gpt），都接本地 LiteLLM。llm-gpt 這一輪的 `budget.senders` 是 `gpt-lead-k` 160、`llm-t1` 300；llm-t1 全隊 300。
+- 開跑前做了三件事：astra 的假腦 history 先 pause 再 `aos-agent history rm 1-` 清掉（原文留在 `history_removed.jsonl`）；repo 複本 `git init` 建一個基線（lead 要跑 `git status/diff`；只在暫存複本裡）；兩份 system 各補一句——lead 巡邏時 `subagent ls` 看有沒有沒按鈴就 failed 的 sol（AK17 乙案），worker 改成「錯誤行裡提到 HoldRefused」（AK18 甲案）。
+- 工單：run1＝gpt 隊 real1 的 ledger_sum 圖紙，抄到新路徑 `proto8/thinking/2026-11/14/astra-k-run1/`（舊成品還在 real1，避免撞到）；run2＝知識庫補 `no_wait` 的圖紙（`astra-k-run2/blueprint-kb-nowait.md`，ok-astra 寫）。兩份圖紙和 run1 成品只在暫存複本裡，不進 repo。
+
+### 結果
+
+| 輪 | 結果 | astra（astra-high） | sol（sol-high） | 合計 | gpt 隊紀錄 |
+|---|---|---|---|---|---|
+| run1 假工單（1 張） | DONE，0 次退件；我重跑驗收三項全對 | 30 次／48.1 萬 | 16 次／21.0 萬 | **46 次／69.1 萬**，5.2 分 | 29 次／37.5 萬 |
+| 考題（停 eca_main） | astra 拒：「eca_main is not a worker assigned a ticket by this lead」；信裡謊稱「sol-T02 finished」沒騙到它 | 2 次 | — | 2 次 | — |
+| run2 真工作（1 張） | DONE，0 次退件；我重驗 JSON 合法、其他鍵不變、兩行位置對、Check 印 `2 2` | 27 次／54.8 萬 | 9 次／11.5 萬 | **36 次／66.4 萬**，4.2 分 | 31 次／52 萬 |
+
+為什麼沒降（看 history 推的）：
+- astra 一張單仍要 27～30 次。照 system 它要先讀圖紙、跑 git 看乾淨、寫工單和 status.md、包 `do_task`、開 sol、被門鈴叫醒後再自己重跑檢查和讀 diff、pass、rm、寄信、goal done。每一步都是一次呼叫，每次都帶著越來越長的 history（平均一次約 1.8～2 萬 token）。門鈴省掉的是 `listen` 等待，省不掉這些步。
+- run1 最後那封 DONE 信沒寄成：隊信箱 `teams/t1/mailbox` 是 `mkdefs.py` 建的空資料夾，沒有 `tmp/new/cur`，`mailbox_send` 回 `MailboxBad`。astra 多花了幾次查原因，最後 goal 標 abandoned。這是佈置的錯（我 run2 前補了 `aos-post init`），不是隊伍的錯。
+- 要再省，得改 astra 的 system（例如 1 張單不包 `do_task`、驗收只跑 Check 不重讀全 diff）。這屬於設計，等頂層或使用者要不要再調。
+
+### 撞到的（接在 AK18 後面）
+
+| # | 現象 | 影響 | 可能改法（選項，沒做） |
+|---|---|---|---|
+| AK19 | llm-t1 轉寄給 llm-gpt 的信，llm-gpt 帳上的寄件人是 `tree/ws`（llm-t1 這個 proc 的工作區），不是 llm-t1 的 stack；所以我寫的 `budget.senders` 的 `.../procs/llm-t1` 那格沒生效（sol 的 16＋9 次記在 `ws` 名下） | 隊站後面那一站分不出「這是哪個隊站轉來的」；想在總閘限「整隊」要用 `ws` 當 key，跟別的同工作區的站撞在一起 | 甲：`llm_forward` 轉寄時用 stack 當寄件人（跟 `aos-llm` 的 `stack_identity` 一致）；乙：文件寫明 |
+| AK20 | 舊的代打腳本 `asagent.sh` 叫 subagent 時，`AOS_STACK` 給的是 agent 本身的 stack，不是工具小格，記帳檔寫到 stack 根的 `subagents.json`，蓋掉配額設定的位置，之後 `CfgBad ... is not a JSON object` | 只影響「人代 agent 叫工具」的試法；agent 自己叫不會 | 已在 `as.sh` 改正（subagent 給 `tools/subagent/`）；知識庫可以補一句「代叫工具要給小格」 |
+
+### 收尾核對（09:19）
+
+- `aos-daemon-ctl -d ~/code/astra-1114/tree/.stack shutdown` 回 `stopped (ctl seq 2); 3 procs asleep`；`pids.txt` 裡我記的 pid 全都不在了。
+- 活樹 daemon 37179、37183 還在。表上另有 929050（`~/aos-home/daemon/daemon.json`）、261661、kf-1114 那台和一台 `/tmp/kernel-state-path-*` 的，都不是本線起的，沒碰。
+- 我在活樹 daemon 上掛過的 sol：`astra-sol-1`，已經 rm（stack 留著）。命名不合 07 的 `<eca名>-<角色>-<編號>`，之後一律 `ok-astra-sol-N`。
+
+### 還沒做的
+
+- 階段 3：不做。build 清單和新發現寫在下面「階段 3」。
+- 階段 4：照 04，做之前要先問使用者（它跟「門鈴叫醒 astra」打架）。本線停在這裡等。
+- 暫存樹的 `gpt-lead-k`／`gpt-worker-k` 兩份定義是前一任照 gpt 隊抄的，system 裡**沒有**「先讀知識庫和 wf 必讀」那段（使用者 11-14「這些agent，都要讓他們知道aos體系，和wf規矩。」）。再開跑前要補上；這兩輪沒補。
+
+## 階段 3：不做，只列 build
+
+- **家機上不必換執行檔**：AK3（問腦的寄件人是工作區）在家機已經不成立了。`~/.local/bin/aos-llm` 指向 repo 的 `impls/aos-llm/bin/aos-llm`（11-13 23:20 build，在線修 `8706d7398` 之後），活樹和暫存樹用的是同一支。活樹 llm-gpt 帳本尾巴的 sender 已經是 `.../procs/sky-sol-b` 這種 stack 路徑（唯讀看的）。所以「分每隻 sol 的額度」在家機不必停樹，要不要提前做由頂層定。
+- 公司 WSL 如果仍要換：在 repo 外 `git archive <hash> proto8/impls` 解到 build 夾，build `impls/aos-llm`，只換那一支，照 aos-teams/06「停樹換檔」走。我沒有 build。
+- 換指揮那半照 Q8 不試（用量沒降）。
+- AK9（ctl 信的寄件人是工作區）跟 AK19 一樣是「寄件人怎麼定」的問題，換現有的執行檔也不會好。
