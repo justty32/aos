@@ -10,7 +10,7 @@ from budget import MAX, dumps, is_count
 from tool_io import Error
 
 TOP_KEYS = ("slots", "reserved", "aging_cycles", "budget", "exec", "endpoint", "timeout_ms", "backends", "hooks")
-PACK_KEYS = ("exec", "slots", "budget", "speed", "backend")                  # kernel 看的，不交給端點函數
+PACK_KEYS = ("exec", "slots", "budget", "speed", "backend", "session_key")   # kernel 看的，不交給端點函數
 WINDOW_KEYS = ("slots", "budget", "speed", "cost", "context", "summary", "fixed", "backend")
 SPEEDS = ("fast", "normal", "slow")
 
@@ -106,7 +106,8 @@ def _endpoints(raw, base):
 def parse_pack(group, name, backends):
     """讀一組的 slots／budget／speed／backend 與窗裡那幾格；形狀不對丟 CfgBad。"""
     at = "kernel.json endpoints." + name
-    pack = {"backend": None, "slots": None, "max_calls": None, "max_tokens": None, "speed": 1, "attrs": {}}
+    pack = {"backend": None, "slots": None, "max_calls": None, "max_tokens": None, "speed": 1, "attrs": {},
+            "session_key": None}
     if "backend" in group:
         backend = group["backend"]
         if not isinstance(backend, str) or backend not in backends:
@@ -142,6 +143,12 @@ def parse_pack(group, name, backends):
     for key in ("cost", "context", "summary"):
         if key in group:
             pack["attrs"][key] = group[key]
+    session_key = group.get("session_key")
+    if session_key is not None:
+        if not isinstance(session_key, str) or not session_key:
+            raise Error("CfgBad", "%s.session_key must be a non-empty string (the request key that carries a fixed "
+                                  "session id per sender, e.g. litellm_session_id), got %s" % (at, dumps(session_key)))
+        pack["session_key"] = session_key
     fixed = group.get("fixed")
     if fixed is not None and not isinstance(fixed, dict):
         raise Error("CfgBad", "%s.fixed must be an object (sampling parameters pinned by this endpoint), got %s"

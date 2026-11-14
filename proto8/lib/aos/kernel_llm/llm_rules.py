@@ -13,6 +13,7 @@ import letters
 import order as ordering
 import packs
 import runner
+import session
 import tool_io
 from slots import Slots
 from tool_io import Error
@@ -530,7 +531,10 @@ def dispatch(ctx, name, letter, detail):
         proc["sender"] = waiting["sender"]
     try:
         runner.write_json(os.path.join(folder, "request.json"),
-                          {"endpoint": waiting["group"], "request": waiting["body"]["request"], "priority": priority})
+                          {"endpoint": waiting["group"],
+                           "request": session.tag(waiting["pack"].get("session_key"), waiting["sender"],
+                                                  waiting["body"]["request"]),
+                           "priority": priority})
         runner.mount(folder, "llm_" + name, waiting["exec"], proc, ctx.box, ctx.daemon, timeout_ms=cfg["timeout_ms"])
     except runner.Failed as error:
         try:
