@@ -64,7 +64,12 @@ def resolve_id(value, kind):
                     continue
                 if len(fields) != 3 or not all(re.fullmatch(r"[0-9]+", x) for x in fields[1:]):
                     aos_flags.die(PROG, "SubidMissing", "invalid line for %s in %s" % (user, filename))
-                start, count = map(int, fields[1:])
+                numbers = [value.lstrip("0") or "0" for value in fields[1:]]
+                if any(len(value) > 10 for value in numbers):
+                    aos_flags.die(PROG, "SubidMissing", "range for %s in %s is out of bounds" % (user, filename))
+                start, count = map(int, numbers)
+                if start > 2**32 - 2 or count > 2**32 - 2 or start + count - 1 > 2**32 - 2:
+                    aos_flags.die(PROG, "SubidMissing", "range for %s in %s is out of bounds" % (user, filename))
                 if number > count:
                     aos_flags.die(PROG, "SubidMissing", "%s exceeds range for %s in %s" % (value, user, filename))
                 return str(start + number - 1)
@@ -133,9 +138,19 @@ def warn_ancestors(path, kind, ids):
             break
         parent = os.path.dirname(parent)
     for parent in reversed(ancestors):
-        if os.stat(parent).st_mode & 0o001:
+        try:
+            if os.stat(parent).st_mode & 0o001:
+                continue
+            result = subprocess.run(["getfacl", "-n", "--omit-header", "--absolute-names", "-c", parent],
+                                    capture_output=True, text=True)
+            if result.returncode:
+                reason = result.stderr.splitlines()[0] if result.stderr else "exit status %s" % result.returncode
+                aos_flags.warn(PROG, "cannot check %s: %s" % (parent, reason))
+                continue
+            acl = result.stdout
+        except OSError as exc:
+            aos_flags.warn(PROG, "cannot check %s: %s" % (parent, exc.strerror or exc))
             continue
-        acl = run_command(["getfacl", "-n", "--omit-header", "--absolute-names", "-c", parent])
         accessible = set()
         for line in acl.splitlines():
             entry, marker, effective = line.partition("#effective:")

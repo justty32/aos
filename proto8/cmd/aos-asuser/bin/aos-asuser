@@ -73,7 +73,13 @@ def sub_range(kind):
                     continue
                 if len(fields) != 3 or not all(re.fullmatch(r"[0-9]+", x) for x in fields[1:]):
                     die("SubidMissing", "invalid line for %s in %s" % (user, filename))
-                return tuple(map(int, fields[1:]))
+                numbers = [value.lstrip("0") or "0" for value in fields[1:]]
+                if any(len(value) > 10 for value in numbers):
+                    die("SubidMissing", "range for %s in %s is out of bounds" % (user, filename))
+                start, count = map(int, numbers)
+                if start > 2**32 - 2 or count > 2**32 - 2 or start + count - 1 > 2**32 - 2:
+                    die("SubidMissing", "range for %s in %s is out of bounds" % (user, filename))
+                return start, count
     except (OSError, UnicodeError) as exc:
         die("SubidMissing", "cannot read %s: %s" % (filename, exc))
     die("SubidMissing", "no line for %s in %s" % (user, filename))
@@ -93,13 +99,14 @@ def parse_args(argv):
     except aos_flags.Error as exc:
         die(exc.code, "%s %s" % (exc, USAGE))
     if opts.get("fix"):
+        rest = [os.path.normpath(path) for path in rest]
         if (not rest or has_separator or any(p.startswith("sub:") for p in rest)
                 or any(key in opts for key in ("group", "env_all", "git_safe"))):
             die("ArgumentsBad", "--fix needs paths, not run-mode arguments " + USAGE)
         for path in rest:
             try:
                 os.lstat(path)
-            except FileNotFoundError:
+            except (FileNotFoundError, NotADirectoryError):
                 die("PathMissing", "%s does not exist" % path)
             except PermissionError:
                 pass
@@ -125,6 +132,7 @@ def fix_paths(paths, recursive):
         aos_flags.warn(PROG, "cannot fix %s: %s" % (path, exc.strerror or exc))
 
     def fix_one(path):
+        path = os.path.normpath(path)
         try:
             os.lchown(path, 0, 0)
             mode = os.lstat(path).st_mode
@@ -136,6 +144,7 @@ def fix_paths(paths, recursive):
             return False
 
     for path in paths:
+        path = os.path.normpath(path)
         directory = fix_one(path)
         if recursive and directory:
             for root, dirs, files in os.walk(path, topdown=True, followlinks=False,
@@ -195,33 +204,11 @@ def launch(opts, paths, command, number, group, mappings):
         os.close(mapped_w)
         run_child(opts, paths, command, number, group, ready_w, mapped_r)
         os._exit(1)
-    os.close(ready_w)
-    os.close(mapped_r)
-    ready = os.read(ready_r, 1)
-    os.close(ready_r)
-    if not ready:
-        os.close(mapped_w)
-        return wait_child(pid)
-    for mapping in mappings:
-        argv = [mapping[0], str(pid), *mapping[2:]]
-        try:
-            result = subprocess.run(argv, capture_output=True, text=True)
-            failure = (result.stderr.splitlines()[0] if result.stderr else "exit status %s" % result.returncode) if result.returncode else None
-        except OSError as exc:
-            failure = str(exc)
-        if failure is not None:
-            print(aos_flags.error_line(PROG, "NsFailed", "%s: %s" % (mapping[0], failure)), file=sys.stderr, flush=True)
-            try:
-                os.write(mapped_w, b"0")
-            except BrokenPipeError:
-                pass
-            os.close(mapped_w)
-            wait_child(pid)
-            return 1
-    os.write(mapped_w, b"1")
-    os.close(mapped_w)
+    forwarded = False
 
     def forward(signum, frame):
+        nonlocal forwarded
+        forwarded = True
         try:
             os.kill(pid, signum)
         except ProcessLookupError:
@@ -230,6 +217,36 @@ def launch(opts, paths, command, number, group, mappings):
     signals = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT)
     previous = {sig: signal.signal(sig, forward) for sig in signals}
     try:
+        os.close(ready_w)
+        os.close(mapped_r)
+        ready = os.read(ready_r, 1)
+        os.close(ready_r)
+        if not ready:
+            os.close(mapped_w)
+            return wait_child(pid)
+        for mapping in mappings:
+            argv = [mapping[0], str(pid), *mapping[2:]]
+            try:
+                result = subprocess.run(argv, capture_output=True, text=True)
+                failure = None
+                if result.returncode:
+                    failure = result.stderr.splitlines()[0] if result.stderr else "exit status %s" % result.returncode
+            except OSError as exc:
+                failure = str(exc)
+            if failure is not None:
+                print(aos_flags.error_line(PROG, "NsFailed", "%s: %s" % (mapping[0], failure)), file=sys.stderr, flush=True)
+                try:
+                    os.write(mapped_w, b"0")
+                except BrokenPipeError:
+                    pass
+                os.close(mapped_w)
+                status = wait_child(pid)
+                return status if forwarded else 1
+        try:
+            os.write(mapped_w, b"1")
+        except BrokenPipeError:
+            pass
+        os.close(mapped_w)
         return wait_child(pid)
     finally:
         for sig, handler in previous.items():

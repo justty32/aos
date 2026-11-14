@@ -2,10 +2,12 @@
 import os
 from pathlib import Path
 import pwd
+import runpy
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
@@ -196,6 +198,59 @@ class Share(unittest.TestCase):
     def test_command_missing(self):
         self.assert_error("CommandMissing", "team", self.tmp / "team", "--group", "1", PATH="")
         self.assertFalse((self.tmp / "team").exists())
+
+    def test_subid_range_bounds(self):
+        maximum = 2**32 - 2
+        for path, kind, flag in ((self.subuid, "stack", "--uid"), (self.subgid, "team", "--group")):
+            for start, count in (("9" * 4301, "1"), ("1", "9" * 4301),
+                                 (str(maximum + 1), "1"), (str(maximum), "2"),
+                                 ("0", str(maximum + 1))):
+                with self.subTest(path=path, start_length=len(start), count_length=len(count)):
+                    path.write_text("%s:%s:%s\n" % (USER, start, count))
+                    result = self.run_cmd("--dry-run", kind, self.tmp / kind, flag, "sub:1")
+                    self.assertEqual((result.returncode, result.stdout), (1, ""))
+                    self.assertEqual(result.stderr, "aos-share: error: SubidMissing range for %s in %s is out of bounds\n" % (USER, path))
+            path.write_text("%s:%s:1\n" % (USER, maximum))
+            result = self.run_cmd("--dry-run", kind, self.tmp / kind, flag, "sub:1")
+            self.assertEqual((result.returncode, result.stderr), (0, ""))
+            self.assertIn(str(maximum), result.stdout)
+
+    def test_ancestor_query_failure_warns_and_continues(self):
+        self.require_acls()
+        bin_dir = self.tmp / "bin"
+        bin_dir.mkdir()
+        fake = bin_dir / "getfacl"
+        fake.write_text("#!/bin/sh\n# 測試用祖先查詢失敗替身。\necho acl-query-unavailable >&2\nexit 1\n")
+        fake.chmod(0o755)
+        parent = self.tmp / "A"
+        parent.mkdir(mode=0o700)
+        path = parent / "B"
+        result = self.run_cmd("team", path, "--group", "sub:600",
+                              PATH=str(bin_dir) + os.pathsep + os.environ.get("PATH", os.defpath))
+        self.assert_ok(result)
+        for folder in (self.tmp, parent):
+            self.assertIn("aos-share: warning: cannot check %s: acl-query-unavailable\n" % folder, result.stderr)
+        self.assertNotIn("aos-share: error:", result.stderr)
+        self.assertIn("group:200599:rwx\n", self.acl(path))
+
+    def test_ancestor_stat_failure_warns_and_continues(self):
+        module = runpy.run_path(str(CMD), run_name="share_tests")
+        parent = self.tmp / "A"
+        parent.mkdir(mode=0o700)
+        real_stat = os.stat
+
+        def stat_or_fail(path, *args, **kwargs):
+            if str(path) == str(self.tmp):
+                raise PermissionError(13, "denied")
+            return real_stat(path, *args, **kwargs)
+
+        with mock.patch.object(os, "stat", side_effect=stat_or_fail), \
+                mock.patch("subprocess.run", return_value=mock.Mock(returncode=0, stdout="", stderr="")), \
+                mock.patch("aos_flags.warn") as warn:
+            module["warn_ancestors"](str(parent / "B"), "group", ["200599"])
+        messages = [call.args[1] for call in warn.call_args_list]
+        self.assertIn("cannot check %s: denied" % self.tmp, messages)
+        self.assertIn("%s gives no x to others: uid/gid 200599 cannot reach %s" % (parent, parent / "B"), messages)
 
     def test_help(self):
         for flag in ("--help", "-h"):

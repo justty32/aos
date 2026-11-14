@@ -176,6 +176,91 @@ class Asuser(unittest.TestCase):
         (self.bin / "newuidmap").rename(self.bin / "uidmap.saved")
         self.assert_error("CommandMissing", "--dry-run", "sub:5", "--", "true", PATH=str(self.bin))
 
+    def test_subid_range_bounds(self):
+        maximum = 2**32 - 2
+        for path in (self.subuid, self.subgid):
+            original = path.read_text()
+            for start, count in (("9" * 4301, "1"), ("1", "9" * 4301),
+                                 (str(maximum + 1), "1"), (str(maximum), "2"),
+                                 ("0", str(maximum + 1))):
+                with self.subTest(path=path, start_length=len(start), count_length=len(count)):
+                    path.write_text("%s:%s:%s\n" % (USER, start, count))
+                    result = self.run_cmd("--dry-run", "sub:1", "--", "true")
+                    self.assertEqual((result.returncode, result.stdout), (1, ""))
+                    self.assertEqual(result.stderr, "aos-asuser: error: SubidMissing range for %s in %s is out of bounds\n" % (USER, path))
+            path.write_text("%s:%s:1\n" % (USER, maximum))
+            result = self.run_cmd("--dry-run", "sub:1", "--", "true")
+            self.assertEqual((result.returncode, result.stderr), (0, ""))
+            path.write_text(original)
+
+    def test_fix_nondirectory_parent(self):
+        self.assert_error("PathMissing", "--fix", self.subuid / "missing")
+
+    def test_real_fix_symlink_with_and_without_trailing_slash(self):
+        self.require_namespaces()
+        target = self.tmp / "target"
+        target.mkdir(mode=0o500)
+        file = target / "file"
+        target.chmod(0o700)
+        file.write_text("sample\n")
+        file.chmod(0o400)
+        target.chmod(0o500)
+        link = self.tmp / "link"
+        link.symlink_to(target, target_is_directory=True)
+        before = {path: (path.stat().st_mode, path.stat().st_uid, path.stat().st_gid)
+                  for path in (target, file)}
+        for suffix in ("", "/"):
+            with self.subTest(suffix=suffix):
+                result = self.run_cmd("--fix", "--recursive", str(link) + suffix, real=True)
+                self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "", ""))
+                for path, expected in before.items():
+                    info = path.stat()
+                    self.assertEqual((info.st_mode, info.st_uid, info.st_gid), expected)
+
+    def test_launch_child_death_and_signal_during_mapping(self):
+        script = r'''
+import os, runpy, signal, sys
+from unittest import mock
+module = runpy.run_path(sys.argv[1], run_name="launch_regression")
+mode = sys.argv[2]
+def child(opts, paths, command, number, group, ready, mapped):
+    if mode == "early":
+        os.close(mapped)
+        os.write(ready, b"1")
+        os.close(ready)
+        os._exit(7)
+    os.write(ready, b"1")
+    os.close(ready)
+    os.read(mapped, 1)
+    os._exit(0)
+sent = False
+def mapping(argv, **kwargs):
+    global sent
+    if mode.startswith("term") and not sent:
+        sent = True
+        assert os.readlink("/proc/%s/cwd" % os.getpid()) == os.getcwd()
+        os.kill(os.getpid(), signal.SIGTERM)
+    failed = mode == "term-failure"
+    return mock.Mock(returncode=int(failed), stderr="mapping failed" if failed else "")
+signals = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT)
+previous = {sig: signal.getsignal(sig) for sig in signals}
+with mock.patch.dict(module["launch"].__globals__, run_child=child), mock.patch("subprocess.run", mapping):
+    status = module["launch"]({}, [], ["true"], 1, 1, [["newuidmap", "PID"], ["newgidmap", "PID"]])
+assert all(signal.getsignal(sig) == handler for sig, handler in previous.items())
+sys.exit(status)
+'''
+        for mode, expected in (("early", 7), ("term", 143), ("term-failure", 143)):
+            with self.subTest(mode=mode):
+                result = subprocess.run([sys.executable, "-c", script, str(CMD), mode],
+                                        cwd=self.tmp, env=self.env, capture_output=True, text=True, timeout=10)
+                self.assertEqual(result.returncode, expected, result.stderr)
+                self.assertEqual(result.stdout, "")
+                self.assertNotIn("Traceback", result.stderr)
+                if mode == "term-failure":
+                    self.assertTrue(result.stderr.startswith("aos-asuser: error: NsFailed newuidmap:"))
+                else:
+                    self.assertEqual(result.stderr, "")
+
     def test_help(self):
         for flag in ("--help", "-h"):
             result = self.run_cmd(flag)
@@ -213,6 +298,29 @@ class Helpers(unittest.TestCase):
         self.assertEqual(child.stat().st_mode & 0o700, 0o700)
         self.assertEqual(file.stat().st_mode & 0o600, 0o600)
         self.assertEqual(target.stat().st_mode & 0o777, 0o400)
+
+    def test_fix_normalizes_symlink_before_checks(self):
+        folder = Path(tempfile.mkdtemp(dir=os.environ.get("KERNEL_TEST_TMP")))
+        target = folder / "target"
+        target.mkdir()
+        file = target / "file"
+        file.touch()
+        file.chmod(0o400)
+        link = folder / "link"
+        link.symlink_to(target, target_is_directory=True)
+        before = {p: p.stat() for p in (target, file)}
+        for suffix in ("", "/"):
+            raw = str(link) + suffix
+            opts, paths, _, _, _ = self.module["parse_args"](["--fix", "--recursive", raw])
+            self.assertEqual(paths, [str(link)])
+            with mock.patch.object(os, "lchown") as chown, mock.patch.object(os, "walk") as walk:
+                self.assertEqual(self.module["fix_paths"]([raw], True), 0)
+            chown.assert_called_once_with(str(link), 0, 0)
+            walk.assert_not_called()
+            for path, info in before.items():
+                after = path.stat()
+                self.assertEqual((after.st_mode, after.st_uid, after.st_gid),
+                                 (info.st_mode, info.st_uid, info.st_gid))
 
     def test_fix_continues_after_failure(self):
         with mock.patch.object(os, "lchown", side_effect=[PermissionError(1, "denied"), None]) as chown, \
