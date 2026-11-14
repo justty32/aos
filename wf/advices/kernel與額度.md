@@ -13,7 +13,7 @@ llm kernel（lib/aos/kernel_llm）、腦額度、找 kernel 的意見。
 - 痛的程度：拖慢
 - 提出者與日期：ok-astra 2026-11-14
 - 出處：wf/temp/ok-astra/aos-advice/budget-refusal-structured-retry.md；proto8/thinking/2026-11/14/astra-kernel-1114.md AK17 節；commit 2368ee3af
-- 狀態：已排入（ok-astra）。2368ee3af（AK17）只解了「被拒就停下」：現在會冷卻重試並 brain_notify 通知 mom。這條要的結構化欄位還沒有，llm_rules.py 的拒絕仍只回 (code, msg) 文字。
+- 狀態：已解（ok-astra，313ce20ec）。kernel 的 BudgetMissing 多帶 `scope`、`window`、`since`、`resets_at`（all 為 null）、`limit`、`max`、`endpoint`／`key`；agent-fsm 冷卻等到 `resets_at`＋5 秒，`window all` 寄 BLOCKED 後停下（退 1、不記冷卻）；舊 kernel 照 AK17（2368ee3af）的冷卻。換樹清單見 astra-kernel-1114 ADV 節，等換樹才在活樹生效。
 
 ## aos-llm ls 沒設 AOS_LLM_KERNEL 就不能用
 

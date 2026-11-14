@@ -16,7 +16,7 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 痛的程度：拖慢（四隻卡住一輪，其中兩隻要隊長代跑）
 - 提出者與日期：ok-misc 2026-11-14
 - 出處：wf/temp/ok-misc/aos-advice/guard-看字面擋唯讀查詢.md；misc-1114 暫存樹 T11、T14、T15 的 sol 回報
-- 狀態：已排入（ok-astra）
+- 狀態：已解（ok-astra，313ce20ec）。guard 實際在活樹 `~/aos-home/defs/shared/guard`（不在 proto8）；新版放 `wf/public/tools/fsm-guard/`：shell 指令整條都是單純唯讀（rg、grep、cat、`sed -n 'N,Mp'`、pgrep…，沒有替換、寫檔重導）就跳過 deny 字樣，其餘照舊；Argon 審三輪、34 個測試。等換樹換掉活樹的 guard 才生效。
 
 ## 漏設 AOS_LLM_KERNEL 時 agent-fsm 靜靜卡住
 
