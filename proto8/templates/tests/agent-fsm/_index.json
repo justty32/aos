@@ -5,6 +5,9 @@
  "test_brain_notify.py": {
   "description": "Test brain_notify with a fake aos-mailbox: refusal notices, deduplication, and nonfatal errors."
  },
+ "test_brain_wait_file.py": {
+  "description": "驗證 wait 寄出後的 brain_wait.json、絕對 kernel 路徑與寫入失敗不改結束碼。"
+ },
  "test_cells.py": {
   "description": "Verify task context, tool limits, and best-effort observations with local fake commands."
  },
@@ -25,6 +28,9 @@
  },
  "test_goal.py": {
   "description": "agent-fsm 的 goal（11-11 goal/02）：idle 格單跑（停下被丟、done 後不丟、上限停、pause／resume、信優先、外面設／清、有叫工具歸零、"
+ },
+ "test_hook_retry_later.py": {
+  "description": "驗證只有 hook 拒因與重置時間的 BudgetMissing 回信會讓 wait 格冷卻後再試。"
  },
  "test_hooks.py": {
   "description": "Test the hooks of agent-fsm (lib/agent/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added."

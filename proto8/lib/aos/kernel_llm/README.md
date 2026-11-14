@@ -42,9 +42,20 @@
 
 | 事件 | 在問腦上 |
 |---|---|
-| `before_verdict` | 每封新信一次，在驗信之前。`body` 就是問腦信的 body（`endpoint`、`request`、`priority`）；改過的 body 之後驗信、額度、掛載都照它。退 10 回 `{"error": {"code": "HookRejected", ...}}` |
+| `before_verdict` | 每封新信一次，在驗信之前。`body` 就是問腦信的 body（`endpoint`、`request`、`priority`）；改過的 body 之後驗信、額度、掛載都照它。退 10 預設回 `{"error": {"code": "HookRejected", ...}}`（晚點再試的寫法見下方） |
 | `after_verdict` | `verdict` 是 `pass`／`refuse`／`queue`。把沒格的改成 `pass` 就照掛（會超過格數）；把驗不過的信改成 `pass` 沒有包可跑，照原本的錯回信 |
 | `before_reply` | 只有掛出去跑過、有結果的信（成功或失敗）在寄回信前跑一次；不用開 `reply_via_me`。`body` 是要寄回去的那份（已拿掉 `child`）；`reply_sender` 是 null。總機自己拒掉的信（`LetterBad`、`BudgetMissing`…）不跑。退 10 改回 `{"error": {"code": "HookRejected", "msg": "reply blocked by hook <名>: <stdout>"}}` |
+
+`before_verdict`／`after_verdict` 退 10 且 stdout 印 `{"error":{"code":"BudgetMissing","msg":"dept quota used up","resets_at":"2026-11-14T16:00:00+08:00"}}`，就是叫寄信的人晚點再試；`msg` 要是非空字串，`resets_at` 只收字串或 null，回信另加 `scope: "hook"`、`hook: <名>`，其餘鍵一律不帶。`resets_at` 給 ISO 8601 帶時區，agent-fsm 就等到那時（加 5 秒、至少 30 秒）；不給或給 null，照 30 秒起加倍、30 分鐘封頂的間隔重試；要對方停下，照舊印純文字（`HookRejected`）。`before_reply` 不變；`after_verdict` 退 0 改判的 error 也照舊原樣帶欄位，不套用退 10 的篩選。
+
+部門配額已用完時的 sh hook 範例（把時間換成實際重置時間）：
+
+```sh
+#!/bin/sh
+# 部門配額用完時，通知寄件人等到重置後再試。
+printf '%s\n' '{"error":{"code":"BudgetMissing","msg":"dept quota used up","resets_at":"2026-11-14T16:00:00+08:00"}}'
+exit 10
+```
 
 - 帳在 `before_reply` 之前記，記的是端點函數原本的回話；hook 只改寄出去的那一份。
 - `before_reply` 自己失敗（`on_error: stop`）：這輪退 1，信留在 `cur/`、`proc.json` 多一個 `"counted": true`，下一輪從 hook 重來，帳不記第二次。

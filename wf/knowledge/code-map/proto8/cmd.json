@@ -42,6 +42,7 @@
    "tests": {
     "test_add_dotenv.py": "Test ctl add dotenv override wrapping and definition environment precedence on an isolated daemon.",
     "test_ask.py": "Test aos-agent ask (say then wait for the latest answer, like the subagent tool's op ask): flags, stdin, timeout exit code, a fake agent's answer.",
+    "test_brain_hint.py": "驗證問腦記錄與 llm kernel 停機時 listen／say 的一次提示及安靜失敗。",
     "test_chat_read_line.py": "Test chat's line input in a real pty: Chinese + Backspace, arrow keys, long lines, pastes and EOF are read whole (11-12 chat-utf8).",
     "test_daemon_down.py": "Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing.",
     "test_goal.py": "Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0…",

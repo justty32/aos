@@ -1,4 +1,5 @@
 # wait.py - wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。
+# 寄出後原子記 think/brain_wait.json 的信名與 kernel 路徑，供 listen／say 提示；寫不成只 warning。
 # loop 照跑、不卡著等：每拍一下就退，ctl 的 pause／stop 每拍都看得到。
 #   think/pending.txt 不在＝還沒寄：aos-post init think/reply（沒有才建）、aos-llm send --reply-to think/reply < request.json，
 #     request.json 不在＝退 11 回 think，從 history＋定義重組；在才寄、信件名稱寫進 pending.txt、退 10（下一拍再來看）。
@@ -96,6 +97,7 @@ each later run look for the reply (aos-llm recv). Exit 0 = reply appended to his
 or request.json was built from an older history (its last message is not the last line of
 history.jsonl, or history.jsonl is newer than it); go back to think to rebuild. A pending request is received even without
 request.json; a missing think/reply mailbox is created first (aos-post init).
+After sending, think/brain_wait.json records the letter and absolute kernel folder for listen/say hints; write failures only warn.
 Waiting never times out here: after every full 10 minutes without a reply (counted from
 think/pending.txt) one warning line goes to stderr, and the cell keeps waiting. Other ticks
 call aos-llm recv --quiet; the warning tick does not, so aos-llm prints why there is no reply.
@@ -323,6 +325,21 @@ def kernel_dir():
     return k if os.path.isdir(k) else None
 
 
+def note_brain_wait(name):
+    """寄出後原子記下信名與 kernel；寫不成只提醒，不改寄信結果。"""
+    kernel = kernel_dir()
+    if kernel is None:
+        return
+    brain_wait = os.path.join(think, "brain_wait.json")
+    tmp = os.path.join(think, ".brain_wait.json.%d.tmp" % os.getpid())
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps({"letter": name, "kernel": os.path.abspath(kernel)}) + "\n")
+        os.replace(tmp, brain_wait)
+    except OSError as e:
+        aos_flags.warn("agent-fsm", "cannot write %s: %s" % (brain_wait, e))
+
+
 KERNEL_GONE = "(llm kernel folder not found)"    # SendFailed 時 kernel 資料夾解不到：記進冷卻的 reason，之後看它在不在
 
 
@@ -441,6 +458,7 @@ if not name:                                     # 還沒寄
         die("SendFailed", "aos-llm send exited 0 but printed no letter name")
     forget_warned()                              # 新的一封：提醒從頭算
     write_atomic(pending, name + "\n", die)
+    note_brain_wait(name)
     sys.exit(NOT_YET)
 
 ensure_box()                                     # clone 後空的 think/reply 不在 git：recv 前補（TG 實跑抓到的 MailboxMissing）

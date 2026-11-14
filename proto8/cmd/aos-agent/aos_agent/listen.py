@@ -24,7 +24,7 @@ import os
 import sys
 import time
 from .common import Fail, bad_args, POLL, daemon_path, note, parse, target, via_kernel
-from .hints import daemon_held, label, off_table, on_table, run_hint, stuck_hint
+from .hints import brain_hint, daemon_held, label, off_table, on_table, run_hint, stuck_hint
 
 
 # ---------------------------------------------------------------- 等回答（搬自 extras/human/bin/aos-listen）
@@ -76,7 +76,20 @@ def wait_latest(a, timeout, before=None, *, timeout_cycles=None):
         return print_answer(a, None)
     start, warned, paused_said, next_check = time.monotonic(), False, False, 0.0
     new_warned = False
+    brain_warned = False
     what = sig or "the latest letter"
+
+    def say_brain():
+        nonlocal brain_warned
+        if not brain_warned:
+            h = brain_hint(a)
+            if h:
+                note(h + ". Still waiting, Ctrl-C to leave")
+                brain_warned = True
+
+    def timeout_reason(reason):
+        h = brain_hint(a)
+        return reason + ("; " + h if h else "")
 
     def say_paused():                                 # 11-05 edge-agent：暫停中原本一聲不吭地等
         nonlocal paused_said
@@ -93,6 +106,7 @@ def wait_latest(a, timeout, before=None, *, timeout_cycles=None):
                 next_check = time.monotonic() + 1.0
                 if on_table(a):
                     say_paused()
+                    say_brain()
                 elif handed_unanswered(a, before):
                     if not os.path.isdir(a.stack):
                         raise Fail("InstanceMissing", "%s was removed (stack %s is gone); %s will never be answered" % (a.name, a.stack, what))
@@ -107,7 +121,7 @@ def wait_latest(a, timeout, before=None, *, timeout_cycles=None):
                         raise Fail("AnswerMissing", "%s was handed over (not in the queue) but history has no answer and nothing is running %s"
                                    " (a batch cut off midway is not answered again by itself; say it again for a new answer)" % (what, a.name))
             if timed_out():
-                raise Fail("AnswerMissing", "waited %s; %s was handed over and is not answered yet" % (duration, what))
+                raise Fail("AnswerMissing", timeout_reason("waited %s; %s was handed over and is not answered yet" % (duration, what)))
             time.sleep(POLL)
             continue
         now = time.monotonic()
@@ -122,13 +136,14 @@ def wait_latest(a, timeout, before=None, *, timeout_cycles=None):
             if on_table(a):
                 warned = False
                 say_paused()
+                say_brain()
             elif not os.path.isdir(a.stack):
                 raise Fail("InstanceMissing", "%s was removed (stack %s is gone); %s will never be answered" % (a.name, a.stack, sig))
             elif not warned:
                 note(stuck_hint(a, sig) + ". Still waiting, Ctrl-C to leave")
                 warned = True
         if timed_out():
-            raise Fail("AnswerMissing", "waited %s; %s is not answered yet (the letter is in queue/%s/)" % (duration, sig, ", ".join(stages)))
+            raise Fail("AnswerMissing", timeout_reason("waited %s; %s is not answered yet (the letter is in queue/%s/)" % (duration, sig, ", ".join(stages))))
         time.sleep(POLL)
 
 

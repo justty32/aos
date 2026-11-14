@@ -20,7 +20,7 @@ exit codes: 0 queued; 1 error (TargetMissing, InstanceMissing, PostFailed...).""
 
 import sys
 from .common import bad_args, note, parse, target
-from .hints import label, on_table, run_hint
+from .hints import brain_hint, label, on_table, run_hint
 from . import sender
 
 
@@ -54,3 +54,7 @@ def cmd(argv):
         note("queued in %s/queue/new/; nothing is running %s now; %s" % (a.stack, a.name, run_hint(a)))
     elif label(a) == "paused":
         note("queued in %s/queue/new/; %s is paused and will not answer until resumed: aos-agent ctl resume --target %s" % (a.stack, a.name, a.name))
+    else:
+        h = brain_hint(a)
+        if h:
+            note(h)

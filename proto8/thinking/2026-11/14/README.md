@@ -27,3 +27,4 @@
 | [wake-1114](wake-1114.md) | 線醒 ok-wake：沒開畫面時 eca claude 怎麼及時收信，實測延遲（閒 2 秒、turn 中要等 turn 完、冷卻中等冷卻完）並比較做法；主案 stdin stream-json 中途餵信，備案 socket；使用者回 build:now，施工待派 |
 | [ok-devt-1114](ok-devt-1114.md) | ok-devt：daemon 給 agent 的「身分與事件」模型定稿（parent／notify_box 兩格登記、事件用字規則與停止原因 cause 九值、分兩期）；審 ok-limits 三條小修；過 Argon、頂層同意第 1 期交 ok-limits |
 | [reply-match-1114](reply-match-1114.md) | 回答配對（線工具 ok-pilot）：agent 的回答對到是回哪封信，ask／listen 不再只拿最新那則；備料、fable 設計、Argon 審、計劃 v2（history 加 aos 鍵＋letters.json，寫先讀後）；go、land 兩題待使用者，施工等前置依賴 |
+| [ok-kmsg](ok-kmsg-1114.md) | hook 退 10 可回「晚點再試」（BudgetMissing＋resets_at）；llm kernel 沒在跑時 listen／say 印一行提示；設計、Argon 採納表、施工紀錄 |

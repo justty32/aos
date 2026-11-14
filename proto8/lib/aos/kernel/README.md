@@ -103,7 +103,9 @@
 
 `after_verdict` 的 condition 沿名單引擎的做法，先比這次內建判決來挑 hook；前一格改判，後一格仍會收到改過的判決。每格拒因的預設值在下一格之前補好。
 
-三個事件退 10 都能攔。`before_verdict` 直接拒 `HookRejected`，不跑內建規則和 `after_verdict`；`after_verdict` 也拒 `HookRejected`。原因用 stdout 去頭尾空白，空則用 `blocked by hook <name>`。`before_reply` 改代回 `{"applied": false, "error": {"code": "HookRejected", "msg": "reply blocked by hook <name>: <stdout>"}}`。
+三個事件退 10 都能攔。`before_verdict` 預設拒 `HookRejected`，不跑內建規則和 `after_verdict`；`after_verdict` 預設也拒 `HookRejected`。原因用 stdout 去頭尾空白，空則用 `blocked by hook <name>`。`before_reply` 改代回 `{"applied": false, "error": {"code": "HookRejected", "msg": "reply blocked by hook <name>: <stdout>"}}`。
+
+`before_verdict`／`after_verdict` 退 10 且 stdout 印 `{"error":{"code":"BudgetMissing","msg":"dept quota used up","resets_at":"2026-11-14T16:00:00+08:00"}}`，就是叫寄信的人晚點再試；`msg` 要是非空字串，`resets_at` 只收字串或 null，回信另加 `scope: "hook"`、`hook: <名>`，其餘鍵一律不帶。`resets_at` 給 ISO 8601 帶時區，agent-fsm 就等到那時（加 5 秒、至少 30 秒）；不給或給 null，照 30 秒起加倍、30 分鐘封頂的間隔重試；要對方停下，照舊印純文字（`HookRejected`）。掛 proc 的寄件人（`subagent`、`agents_ctl`）目前只印拒因、不會自動重試；`after_verdict` 退 0 改判的 error 仍原樣帶欄位，不套用退 10 的篩選。
 
 `after_verdict` 改成 refuse 卻沒完整的 `error`（物件、`code` 與 `msg` 都是字串），補 `{"code": "HookRejected", "msg": "refused by hook <name>"}`。把 refuse 或 queue 改成 pass 就照放行，不回頭驗期限、白名單或上限；改成 hold＝先留著；其他 verdict 值算 hook 自己失敗。
 

@@ -35,6 +35,63 @@ def label(a):
     return a.phase or "-"
 
 
+def brain_hint(a):
+    """只讀問腦記錄；確認 llm kernel 沒在跑才給提示，任何錯都不影響原本操作。"""
+    try:
+        from agent import cooldown
+
+        if a.phase != "running" or label(a) != "running":
+            return None
+        try:
+            with open(os.path.join(a.stack, "think", "pending.txt"), encoding="utf-8") as f:
+                letter = f.readline().strip()
+        except FileNotFoundError:
+            letter = ""
+        if not letter:
+            rec = cooldown.read(a.stack)
+            if rec and rec.get("code") == "SendFailed":
+                reason = rec.get("reason")
+                if isinstance(reason, str) and "(llm kernel folder not found)" in reason:
+                    return "%s cannot reach its brain: %s; it retries by itself once the folder appears" % (a.name, reason)
+            return None
+        with open(os.path.join(a.stack, "think", "brain_wait.json"), encoding="utf-8") as f:
+            wait = json.load(f)
+        if not isinstance(wait, dict) or wait.get("letter") != letter or not isinstance(wait.get("kernel"), str):
+            return None
+        replies = os.path.join(a.stack, "think", "reply", "new")
+        if os.path.isdir(replies) and any(not name.startswith(".") for name in os.listdir(replies)):
+            return None
+        kernel = wait["kernel"]
+        try:
+            with open(os.path.join(kernel, "state.json"), encoding="utf-8") as f:
+                state = json.load(f)
+        except FileNotFoundError:
+            why = "no llm daemon there (no state.json)"
+        else:
+            if not isinstance(state, dict):
+                return None
+            phase = state.get("phase")
+            why = "the llm daemon is not running (state.json phase %s)" % (phase or "?")
+            if phase in ("running", "waiting", "stopping"):
+                pid = state.get("pid")
+                if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
+                    why += ", pid gone"
+                else:
+                    try:
+                        os.kill(pid, 0)
+                    except ProcessLookupError:
+                        why += ", pid gone"
+                    except PermissionError:
+                        return None
+                    else:
+                        return None
+        return ("%s is waiting for its brain, but the llm kernel at %s is not running (%s); start that llm kernel, "
+                "or if AOS_LLM_KERNEL points to the wrong place, add %s again with the right one"
+                % (a.name, kernel, why, a.name))
+    except Exception:
+        return None
+
+
 def queued(a):
     """queue 排幾封（new/＋cur/）；stack 沒 queue/＝None。"""
     if not os.path.isdir(os.path.join(a.stack, "queue")):

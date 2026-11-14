@@ -1,4 +1,5 @@
 # kernel 的三個 hook 時機：設定、事件欄位與判決回話，執行一律交給共用引擎。
+import json
 import os
 
 import hook_run
@@ -51,7 +52,21 @@ def request_data(name, letter):
 
 
 def rejected(result):
-    return "HookRejected", result["text"].strip() or "blocked by hook %s" % result["hook"]
+    text = result["text"].strip()
+    try:
+        data = json.loads(text)
+    except (ValueError, RecursionError):
+        data = None
+    error = data.get("error") if isinstance(data, dict) else None
+    if (isinstance(error, dict) and error.get("code") == "BudgetMissing"
+            and isinstance(error.get("msg"), str) and error["msg"]
+            and ("resets_at" not in error or error["resets_at"] is None
+                 or isinstance(error["resets_at"], str))):
+        extra = {"scope": "hook", "hook": result["hook"]}
+        if "resets_at" in error:
+            extra["resets_at"] = error["resets_at"]
+        return "BudgetMissing", error["msg"], extra
+    return "HookRejected", text or "blocked by hook %s" % result["hook"]
 
 
 def before_verdict(ctx, name, letter):

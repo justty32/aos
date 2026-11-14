@@ -5,6 +5,9 @@
  "test_ask.py": {
   "description": "Test aos-agent ask (say then wait for the latest answer, like the subagent tool's op ask): flags, stdin, timeout exit code, a fake agent's answer."
  },
+ "test_brain_hint.py": {
+  "description": "驗證問腦記錄與 llm kernel 停機時 listen／say 的一次提示及安靜失敗。"
+ },
  "test_chat_read_line.py": {
   "description": "Test chat's line input in a real pty: Chinese + Backspace, arrow keys, long lines, pastes and EOF are read whole (11-12 chat-utf8)."
  },
