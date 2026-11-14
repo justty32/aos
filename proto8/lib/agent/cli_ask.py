@@ -162,8 +162,8 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, re
     或 session_here 認不出是這台的）就接在題目前面（11-10 two-machines 05；aos-eca-turn 給）。沒給而且是「有舊 id 但不在這台」
     ＝stderr 一行 warning、照樣開新的（工具形）。
     parts＝選填、[(寄件人名字或 None, 內文)]：prompt 拆成一封一項的版本（aos-eca-turn 給；工具形不給）。只有畫面開著那條路看它
-    （live：能往 CLI 的收件 socket 投就一封一個署名信封，11-13）；開場白另成一項、不署寄件人。more＝選填，同一條路才看
-    （live_a2a：等回答時又來的信）。"""
+    （live：能往 CLI 的收件 socket 投就一封一個署名信封，11-13）；開場白另成一項、不署寄件人。more＝選填：等回答時又來的信，
+    畫面開著走 live_a2a；沒開、claude、cli.json 寫 "live_mail": true＝print_claude 寫進 stream-json 的 stdin（wake-1114）。"""
     note_cell(cell, tool_dir, ws, stack)
     note_env(cell)                                       # 11-13：這邊（loop、daemon 底下）的 AOS_CLOCK 等記下來，人開畫面時照它給
     f, ok = cell.lock()
@@ -189,7 +189,7 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, re
             if not sid and reseed:
                 prompt = reseed(limit) + prompt
             if cfg["kind"] == "claude":
-                text = print_claude(cfg, cell, ws, stack, prompt, handed, sid)
+                text = print_claude(cfg, cell, ws, stack, prompt, handed, sid, more)   # live_mail 開了才看 more（wake-1114）
             else:
                 text = print_codex(cfg, cell, ws, stack, prompt, handed, sid)
         link_transcript(cell, cfg["kind"])               # 工具形也留（方向題 3）

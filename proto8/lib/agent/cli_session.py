@@ -34,6 +34,8 @@
 #
 # 兩條路（每次呼叫自己挑）：
 #   畫面沒開 → 非互動：claude -p --resume <id>（第一次 --session-id <新 id>）、codex exec resume <id> -（第一次 codex exec -）
+#             claude 身、cli.json "live_mail": true、呼叫者給了 more（aos-eca-turn）＝stdin 用 stream-json、先不關，等回答時又來的信
+#             一封一行寫進去，模型在下一個工具空檔讀到；回答＝每個 result 加上取走中途信後先回的話（cli_stream，wake-1114；預設關）
 #   畫面開著 → claude 身、呼叫者給了一封一項的 parts（aos-eca-turn）、小格記得收件 socket＝往 Claude Code 這個 session 自己的
 #             收件口（cross-session messaging 的 Unix socket）寫，一封一行 JSON、一封一個署名信封（寄件人＝信的 name，沒有＝「aos通知中心」）；
 #             不看 on_busy、有人接著或正在跑一輪都照投（11-13 使用者「馬上送，eca他會自己處理」）。socket 不回話，靠 UserPromptSubmit hook

@@ -12,6 +12,8 @@ FAKE_STREAM_DIE_AFTER=N: exit 0 right after the N-th result, without waiting for
 BG:<seconds> in a round's first line: a background task: {"type": "system", "subtype": "background_tasks_changed", "tasks": [one]},
 result "FAKE: started", then lines arriving within that many seconds are echoed and joined; then tasks [] and a result
 "FAKE: done | " + those lines (the real CLI runs one more round when the task ends).
+Without --input-format stream-json (the old -p path): stdin is read whole as one prompt (SLOW:<seconds> waits), then one result
+"FAKE: <prompt>"; FAKE_CLI_LOG gets {"argv": [...], "line": <prompt>}.
 FAKE_STREAM_SWALLOW=TEXT: a line whose content has TEXT is read but never echoed or answered (a line the CLI never takes).
 FAKE_CLI_LOG=FILE: append {"argv": [...], "line": <content>} as one JSON line per stdin line received."""
 import json, os, re, select, sys, time, uuid
@@ -82,6 +84,16 @@ def parse(raw):
 
 
 out({"type": "system", "subtype": "init", "session_id": sid})
+if "--input-format" not in argv:                      # 舊路：整段 stdin 是一題，答完就退
+    prompt = sys.stdin.read()
+    if LOG:
+        with open(LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"argv": sys.argv, "line": prompt}, ensure_ascii=False) + "\n")
+    slow = re.search(r"SLOW:([0-9.]+)", prompt)
+    if slow:
+        time.sleep(float(slow.group(1)))
+    out({"type": "result", "subtype": "success", "is_error": False, "result": "FAKE: " + prompt, "session_id": sid})
+    sys.exit(0)
 results = 0
 while True:
     first = next_line(None)

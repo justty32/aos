@@ -139,6 +139,7 @@
     "test_hooks.py": "Test the hooks of aos-eca-turn (eca's reduced set: before_queue, after_queue, brain_failed, tool_added) with a fake claude CLI.",
     "test_kernel_watch.py": "驗證 watch 經 kernel 重問表檔、缺欄容錯、空表退出與五秒節流，直連行為不變。",
     "test_letter_name.py": "Test that a letter's sender (body \"name\", set by aos-agent say for an eca) reaches the CLI side as parts and never enters history, and that letters a…",
+    "test_live_mail.py": "驗沒開畫面、cli.json 寫 \"live_mail\": true 的一整輪（wake-1114 主案 S）：aos-eca-turn 起 claude 之後 queue 又來的信，",
     "test_slash.py": "Test aos-eca-turn's slash commands (11-12 eca-slash): one letter that is exactly /clear, /compact, /status, /usage or /exit is done by aos (or handed…",
     "test_switch.py": "Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs."
    }
