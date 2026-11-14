@@ -1,0 +1,3 @@
+#!/bin/sh
+# commit-request — commit 排隊的申請指令（薄殼，本體 commit_queue.py；用法見它的檔頭）
+exec python3 "$(dirname "$(readlink -f "$0")")/commit_queue.py" "$@"

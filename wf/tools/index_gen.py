@@ -218,9 +218,13 @@ def build(root, stage=None, config=None):
         for name, item in table.items():
             if "index" in item and ((base + "/" if base else "") + item["index"]) not in out and ((base + "/" if base else "") + name) not in keep:
                 del item["index"]
-    for path in hand:
-        if not os.path.lexists(os.path.join(root, path)):
-            missing.append(path + "  (in index_gen_desc.json but not in the repo)")
+    gone = [p for p in hand if not os.path.lexists(os.path.join(root, p))]
+    if gone:                                            # 被 .gitignore 的（如 wf/temp）在乾淨的複本裡本來就不在，不算缺
+        ign = subprocess.run(["git", "-C", root, "check-ignore", "--no-index", "--stdin", "-z"], input="\0".join(gone + [p + "/" for p in gone]).encode(),
+                             capture_output=True).stdout.decode().split("\0")
+        for path in gone:
+            if path not in ign and path + "/" not in ign:
+                missing.append(path + "  (in index_gen_desc.json but not in the repo)")
     return out, missing, scopes, lambda d: in_scope(d) and d not in keep
 
 

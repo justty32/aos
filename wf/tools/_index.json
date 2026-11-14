@@ -8,6 +8,12 @@
  "codemap_lib.py": {
   "description": "檔頭一句話的認法（函式庫，給 index_gen.py 寫逐檔 code map 用；沒有命令列）。"
  },
+ "commit-request": {
+  "description": "commit 排隊的申請指令（薄殼，本體 commit_queue.py；用法見它的檔頭）"
+ },
+ "commit_queue.py": {
+  "description": "多條線共用一個工作樹時的 commit 排隊：申請者自己拿鎖當場做，在 repo 外的快取樹組 commit（HEAD＋這次的檔＋共用索引檔操作＋index_gen 生成物），CAS 推進 main，再補回共用 index 與工作樹。"
+ },
  "compact_reload.sh": {
   "description": "compact 後重讀：Claude Code SessionStart（matcher=compact）hook 呼叫，stdout 會進 compact 後的上下文。"
  },

@@ -27,10 +27,11 @@
 - 蒐集和寫碼優先交給 gpt，**只用 sol、不用 terra，sol 頂替 sonnet 的位置**（使用者 11-14「不要terra，盡量用sol，把sol作爲sonnet來用」），一律走本地 LiteLLM 上的 agent-fsm，**不走 codex**（使用者 11-14「不要走codex」）；走不通由 sonnet／claude 補位；設計判斷仍由 opus 和 fable 做。上面「等 agent-fsm 有雛形」的條件從 11-14 起改成「直接試」。
 - 各線有需要可以自己在暫存樹的 aos 裡掛 kernel 或 agent，不用先問（使用者 11-14「然後有需要的，可以自己掛kernel或agent。」）；自己記 pid、收尾收乾淨，活樹照舊不動。
 - **頂層也當 kernel**（使用者 11-14「善用aos體系，掛opus eca，讓他們成爲kernel，然後讓他們自己底下掛各種」「你自己也成爲kernel好了」「讓他們都掛在你底下」「他們的工作區...你可以在wf弄temp/xxx分給他們」）：repo-aos 開 `kernel_gate`，把 opus eca（定義 `~/aos-home/agents/opus-kernel`）掛在自己底下，啟動請求經過頂層的 gate；工作區放在 `wf/temp/<名字>`（已 gitignore）。這些 eca 自己也可以開 gate，在底下掛 sol 的 agent-fsm。
+  - **commit 一律交給排隊指令**（11-14 起）：各線不再自己 `git commit`，改跑 `~/repo/aos/wf/tools/commit-request`。開工先 `claim --line <線名> 檔…`；交件時 `submit --line <線名> --files 檔… --msg-file 訊息檔`，trailer 自己寫在訊息檔裡。日索引、月索引、SESSION-LOG 不手改，改用 `--op`（`day_upsert`、`month_bump`、`log_upsert`、`log_delete`）。不要再 `git add`，也不要自己跑 `index_gen --apply`，排隊會在 repo 外的乾淨副本上重生生成物，再一起 commit。結果印在最後一行 JSON（雜湊或錯誤原文），exit 2 是被擋（例如別條線 claim 著），回應裡寫著是誰。完整用法與範例見 [commit-queue-1114 § 申請者用法](../../../../proto8/thinking/2026-11/14/commit-queue-1114.md#申請者用法各線照這樣改)。
 - **頂層的雜務自動化**（使用者 11-14「太多的請求...你可以派一個claude subagent幫你寫程式…可以另外弄個sonnet agent，幫你當小廝，重要的事情馬上給你，普通通知每隔一段時間再給你」「commit這塊，你也可以開始想辦法，同樣，寫程式或派小廝。或是弄個fsm agent掛在你底下」「要想辦法，你可以把你的意見交給fable，讓他幫你規劃」）：
   - 小廝 `xiaosi`（sonnet eca，定義 `~/aos-home/agents/xiaosi`）收所有 ok-* 的回報：要緊的立刻轉給頂層，其他的每 20 分鐘彙整一封再轉，靠頂層的 clock 項 `xiaosi-digest` 定時叫它。
   - gate 自動初步處理，紀錄見 `proto8/thinking/2026-11/14/gate-auto-1114.md`。
-  - commit 排隊，先交給 fable 規劃，紀錄見 `proto8/thinking/2026-11/14/commit-queue-1114.md`。
+  - commit 排隊：已啟用 `wf/tools/commit-request`，不需要常駐程式，也不用掛 hook（fable 規劃、Argon 審過），用法在上面「頂層也當 kernel」那條底下，紀錄見 `proto8/thinking/2026-11/14/commit-queue-1114.md`。
 - **命名**（使用者 11-14「掛fsm sol/astra等agent的時候，那個命名要小心別重合到」）：daemon 表上的名字整台共用；各 eca 掛的 agent 一律叫 `<eca名>-<角色>-<編號>`（例 `ok-kf-sol-1`）。
 - **rlimit**（使用者 11-14「eca...建議不要setrlimit，你就跟他們說請他們自行收斂，但是fsm都可。」）：eca 不設 rlimit，請它們自己收斂用量；agent-fsm 可以設。家機 11-14 已裝 s6，fsm 用 `--limits`（mem_mb、files、cpu_s 實測有效；procs 是全帳號計數，別設小）。sol 預設帶 `{"mem_mb":1024,"files":256}`（ok-pilot 11-14 實測：sol 約 RSS 3MB、3 個 fd；開檔的鍵叫 `files` 不是 `nofile`；壓到 AS 32MB／NOFILE 8 會停機，紀錄在 `wf/temp/ok-pilot/notes.md`「第二輪」）。
 - 原本排的「fsm 真腦跑一整晚」不另外做測試，改成用 LiteLLM gpt 做實際的施工。
