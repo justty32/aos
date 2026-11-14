@@ -32,7 +32,7 @@
   - gate 自動初步處理，紀錄見 `proto8/thinking/2026-11/14/gate-auto-1114.md`。
   - commit 排隊，先交給 fable 規劃，紀錄見 `proto8/thinking/2026-11/14/commit-queue-1114.md`。
 - **命名**（使用者 11-14「掛fsm sol/astra等agent的時候，那個命名要小心別重合到」）：daemon 表上的名字整台共用；各 eca 掛的 agent 一律叫 `<eca名>-<角色>-<編號>`（例 `ok-kf-sol-1`）。
-- **rlimit**（使用者 11-14「eca...建議不要setrlimit，你就跟他們說請他們自行收斂，但是fsm都可。」）：eca 不設 rlimit，請它們自己收斂用量；agent-fsm 可以設。家機 11-14 已裝 s6，fsm 用 `--limits`（mem_mb、files、cpu_s 實測有效；procs 是全帳號計數，別設小）。
+- **rlimit**（使用者 11-14「eca...建議不要setrlimit，你就跟他們說請他們自行收斂，但是fsm都可。」）：eca 不設 rlimit，請它們自己收斂用量；agent-fsm 可以設。家機 11-14 已裝 s6，fsm 用 `--limits`（mem_mb、files、cpu_s 實測有效；procs 是全帳號計數，別設小）。sol 預設帶 `{"mem_mb":1024,"files":256}`（ok-pilot 11-14 實測：sol 約 RSS 3MB、3 個 fd；開檔的鍵叫 `files` 不是 `nofile`；壓到 AS 32MB／NOFILE 8 會停機，紀錄在 `wf/temp/ok-pilot/notes.md`「第二輪」）。
 - 原本排的「fsm 真腦跑一整晚」不另外做測試，改成用 LiteLLM gpt 做實際的施工。
 
 **需求還不清楚時先不走這條**（使用者 11-14 早「你們太早就開始規劃實作與架構了…可以先發想，類似頭腦風暴那樣」）：先發散出點子與可丟棄的小實驗，需求浮出來再規劃，見 [user/03「需求不清時先發想」](../../common/user/03-討論紀錄與規劃.md#需求不清時先發想不急著規劃2026-11-14-定)；第一次照這樣跑的是 [11-14 aos-brainstorm](../../../../proto8/thinking/2026-11/14/aos-brainstorm/README.md)。
