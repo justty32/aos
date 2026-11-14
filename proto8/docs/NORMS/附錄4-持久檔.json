@@ -68,11 +68,11 @@
    "path": "<kernel 定義>/kernel.json",
    "lifetime": "持久",
    "writer": "人手寫",
-   "reader": "aos-llm-kernel",
+   "reader": "lib/aos/kernel_llm",
    "image": "看情況：定義＝原始碼、不算 image（C-79）",
    "on_bad": "形狀錯＝CfgBad；kernel 是 daemon 的身體，失敗＝daemon 印 warning 下一圈再跑；舊名（aging_ticks）安靜忽略",
    "note": "",
-   "evidence": "proto8/impls/aos-llm-kernel/src/pack/pack.cpp（read_packs）、proto8/impls/aos-llm-kernel/src/main.cpp（main）、proto8/impls/aos-daemon/src/daemon/body.cpp（Daemon::run_body）"
+   "evidence": "proto8/lib/aos/kernel_llm/packs.py（read_cfg）、proto8/lib/aos/kernel_llm/_entry（load）、proto8/impls/aos-daemon/src/daemon/body.cpp（Daemon::run_body）"
   },
   {
    "path": "<框架站定義>/kernel.json",
@@ -168,11 +168,11 @@
    "path": "$AOS_STACK/procs_state.json（＋procs_state_procs/ 分檔）",
    "lifetime": "持久",
    "writer": "aos-daemon",
-   "reader": "aos-daemon（adopt）、aos-daemon-ctl、aos-agent（設了 AOS_KERNEL＝讀查詢信問來的那份路徑）、aos-llm-kernel、lib/aos/kernel",
+   "reader": "aos-daemon（adopt）、aos-daemon-ctl、aos-agent（設了 AOS_KERNEL＝讀查詢信問來的那份路徑）、lib/aos/kernel_llm、lib/aos/kernel",
    "image": "進",
    "on_bad": "daemon：不在＝第一次安靜；整份壞＝改名 .bad-<時間>＋warning＋照定義開空表；壞幾列＝複製留證、跳過那列；原因進 state_flux adopt_warning。ctl 讀壞＝StateBad",
    "note": "11-09 必修 1 已改；分檔夾名＝主檔名去副檔名＋_procs；11-10 列多選填 as_written（ctl add 經信箱加的列裡 ws／stack／exec／def 的指示詞原形，每次起照當下環境重解；原本的欄照舊放解好的字串；加法，舊表照讀，不用重建；11-10 前加的列要 rm 再 add 才有原形）；11-10 晚 B01 後半：as_written 也可放使用者打成絕對路徑的 ws／stack／def／exec（字串，表上原樣存、不換算），加法、不用重建",
-   "evidence": "proto8/impls/aos-daemon/src/daemon/adopt.cpp（Daemon::adopt、Daemon::adopt_warn、Daemon::adopt_bad）、proto8/impls/aos-daemon/src/daemon/daemon.cpp（Daemon::Daemon）、proto8/py/daemon_ctl/table.py（state）、proto8/impls/aos-llm-kernel/src/daemon/daemon.cpp（find_host）、proto8/impls/aos-daemon/src/daemon/procs.cpp（written_of）、proto8/impls/aos-daemon/src/daemon/reconcile.cpp（refresh）"
+   "evidence": "proto8/impls/aos-daemon/src/daemon/adopt.cpp（Daemon::adopt、Daemon::adopt_warn、Daemon::adopt_bad）、proto8/impls/aos-daemon/src/daemon/daemon.cpp（Daemon::Daemon）、proto8/py/daemon_ctl/table.py（state）、proto8/lib/aos/kernel_llm/llm_rules.py（find_host）、proto8/lib/aos/kernel/runner.py（read_table）、proto8/impls/aos-daemon/src/daemon/procs.cpp（written_of）、proto8/impls/aos-daemon/src/daemon/reconcile.cpp（refresh）"
   },
   {
    "path": "$AOS_STACK/procs_ctl.json",
@@ -198,11 +198,11 @@
    "path": "$AOS_STACK/state_flux.json",
    "lifetime": "持久",
    "writer": "aos-loop、aos-daemon",
-   "reader": "aos-loop（醒來讀 ctl_seq）、aos-daemon（判子卡住）、aos-daemon-ctl（等回音、mailbox_warning）、aos-llm-kernel",
+   "reader": "aos-loop（醒來讀 ctl_seq）、aos-daemon（判子卡住）、aos-daemon-ctl（等回音、mailbox_warning）、lib/aos/kernel_llm（mailbox_warning）",
    "image": "進",
    "on_bad": "aos-loop 起來讀不了＝改名 .bad-*＋warning（11-09 S3，N-09「state／state_flux 讀不了要說話」）；daemon 判卡住讀不到＝不判；其他讀者提醒一次當沒有",
    "note": "11-09 拆分前的 stack 沒有這份＝01 #6b 舊 stop 重做",
-   "evidence": "proto8/impls/aos-loop/src/engine/window.cpp（Loop::read_old_state）、proto8/impls/aos-daemon/src/daemon/stuck.cpp（Daemon::check_stuck）、proto8/py/daemon_ctl/ctl.py（wait_applied）、proto8/impls/aos-llm-kernel/src/daemon/daemon.cpp（read_table）"
+   "evidence": "proto8/impls/aos-loop/src/engine/window.cpp（Loop::read_old_state）、proto8/impls/aos-daemon/src/daemon/stuck.cpp（Daemon::check_stuck）、proto8/py/daemon_ctl/ctl.py（wait_applied）、proto8/lib/aos/kernel/runner.py（read_table）"
   },
   {
    "path": "$AOS_STACK/ctl.json",
@@ -277,12 +277,12 @@
   {
    "path": "<信箱>/{new,cur}/<信名>/letter.json（queue/、procs_requests/、kernel requests/、think/reply/、<stack>/mailbox/）",
    "lifetime": "持久",
-   "writer": "aos-post send（aos-daemon-ctl、aos-agent、aos-llm、aos-llm-kernel 回信、idle 開場白、aos-mailbox send／mailbox_send、aos-clock 照登記表寄）",
-   "reader": "aos-post take／see（aos-daemon、templates/agent-fsm idle、aos-llm-kernel、aos-llm recv、lib/aos/kernel、aos-mailbox read／mailbox_read）；aos-mailbox peek／mailbox_peek 直接讀 new/*/letter.json",
+   "writer": "aos-post send（aos-daemon-ctl、aos-agent、aos-llm、lib/aos/kernel_llm 回信、idle 開場白、aos-mailbox send／mailbox_send、aos-clock 照登記表寄）",
+   "reader": "aos-post take／see（aos-daemon、templates/agent-fsm idle、lib/aos/kernel_llm、aos-llm recv、lib/aos/kernel、aos-mailbox read／mailbox_read）；aos-mailbox peek／mailbox_peek 直接讀 new/*/letter.json",
    "image": "進",
    "on_bad": "壞信＝收掉：daemon 記 mailbox_warning，body 壞（含 ping／procs_state_path 不是 true）且有 reply_to 回 {\"applied\": false, \"error\": {\"code\": \"BodyBad\"}}（信封壞或沒 reply_to 不回）；idle 寫 mailbox_warning.txt；kernel 回 LetterBad",
    "note": "cur/ 殘骸 daemon 起來會重做。11-10 晚 mailbox：每個 stack（agent 的，或人的 ~/.aos/stack〔11-11 前是 ~/.stack〕、$AOS_LINUX_USER_STACK）多一個 mailbox/ 箱子，跟 queue/ 分開、信不進 history；用名字寄時替收件人建、用路徑寄時不建。新檔，不用重建。11-13 daemon 多認查詢信 {\"procs_state_path\": true}：回信多帶自己那份 procs_state.json 的絕對路徑（沒開窗＝null）；信的形狀是加法，不用重建",
-   "evidence": "proto8/impls/aos-post/src/send/send.cpp（send）、proto8/impls/aos-post/src/take/take.cpp（see）、proto8/impls/aos-daemon/src/daemon/mailbox.cpp（done_letters）、proto8/templates/agent-fsm/idle.py（body_of）、proto8/impls/aos-llm-kernel/src/serve/scan.cpp（Server::scan）、proto8/cmd/aos-mailbox/aos_mailbox/__init__.py（my_stack、cmd_peek、target_box）"
+   "evidence": "proto8/impls/aos-post/src/send/send.cpp（send）、proto8/impls/aos-post/src/take/take.cpp（see）、proto8/impls/aos-daemon/src/daemon/mailbox.cpp（done_letters）、proto8/templates/agent-fsm/idle.py（body_of）、proto8/lib/aos/kernel_llm/llm_rules.py（check、post_reply）、proto8/cmd/aos-mailbox/aos_mailbox/__init__.py（my_stack、cmd_peek、target_box）"
   },
   {
    "path": "<信箱>/archive/",
@@ -307,22 +307,22 @@
   {
    "path": "<kernel stack>/used.json",
    "lifetime": "持久",
-   "writer": "aos-llm-kernel",
-   "reader": "aos-llm-kernel",
+   "writer": "lib/aos/kernel_llm",
+   "reader": "lib/aos/kernel_llm",
    "image": "進",
    "on_bad": "形狀不對＝UsedBad（提示刪掉從 0 數）；kernel 每圈失敗直到刪檔",
    "note": "",
-   "evidence": "proto8/impls/aos-llm-kernel/src/budget/budget.cpp（read_used、add_used）"
+   "evidence": "proto8/lib/aos/kernel_llm/budget.py（read_used、add_used）"
   },
   {
    "path": "<kernel／框架站 stack>/queue.json",
    "lifetime": "持久",
-   "writer": "aos-llm-kernel、lib/aos/kernel",
-   "reader": "aos-llm-kernel、lib/aos/kernel、aos-agent（提示用）",
+   "writer": "lib/aos/kernel_llm、lib/aos/kernel",
+   "reader": "lib/aos/kernel_llm、lib/aos/kernel、aos-agent（提示用）",
    "image": "進",
    "on_bad": "kernel：形狀不對＝QueueBad（提示刪掉重來）；不在＝空",
    "note": "stack.gitignore 註明不擋（等待時間、隊序要帶）",
-   "evidence": "proto8/impls/aos-llm-kernel/src/queue/queue.cpp（read_queue）、proto8/lib/aos/kernel/queue_fifo.py（queue_view、write_queue）、proto8/cmd/aos-agent/aos_agent/common.py（queue_position）"
+   "evidence": "proto8/lib/aos/kernel_llm/order.py（read_queue、write_queue）、proto8/lib/aos/kernel/queue_fifo.py（queue_view、write_queue）、proto8/cmd/aos-agent/aos_agent/common.py（queue_position）"
   },
   {
    "path": "<框架站 stack>/forwarded.json",
@@ -407,12 +407,12 @@
   {
    "path": "<kernel stack>/ledger.jsonl",
    "lifetime": "持久",
-   "writer": "aos-llm-kernel",
+   "writer": "lib/aos/kernel_llm",
    "reader": "沒有程式讀（interfaces.json 宣告 aos-ledger，給人看）",
    "image": "看情況：stack.gitignore 沒擋＝現況進；照 ⑩「只往後加的 log 不進」應該不進",
    "on_bad": "寫不了只提醒；沒人讀",
    "note": "01 盤點沒列；條文與 gitignore 對不上",
-   "evidence": "proto8/impls/aos-llm-kernel/src/serve/reply.cpp（append_ledger）、proto8/kernel/llm-kernel/interfaces.json"
+   "evidence": "proto8/lib/aos/kernel_llm/ledger.py（append）、proto8/kernel/llm-kernel/interfaces.json"
   },
   {
    "path": "<任何持久檔>.bad-<UTC 毫秒>",
@@ -428,11 +428,11 @@
    "path": "$AOS_STACK/procs/<名>/stderr.txt",
    "lifetime": "暫時",
    "writer": "aos-daemon（子項 stderr 附加）",
-   "reader": "aos-daemon（失敗原因取最後一行）、aos-llm-kernel（端點失敗）、人",
+   "reader": "aos-daemon（失敗原因取最後一行）、lib/aos/kernel_llm（端點失敗）、人",
    "image": "不進",
    "on_bad": "讀不到＝原因空",
    "note": "⑩ 11-07 裁定只留原機",
-   "evidence": "proto8/impls/aos-daemon/src/child/child.hpp（CellNames）、proto8/impls/aos-daemon/src/daemon/failure.cpp（Daemon::fail_reason）、proto8/impls/aos-llm-kernel/src/serve/proc.cpp（Server::settle）"
+   "evidence": "proto8/impls/aos-daemon/src/child/child.hpp（CellNames）、proto8/impls/aos-daemon/src/daemon/failure.cpp（Daemon::fail_reason）、proto8/lib/aos/kernel_llm/llm_rules.py（outcome）"
   },
   {
    "path": "<proc 的 stack>/stderr_archives/<UTC>.txt.gz",
@@ -487,12 +487,12 @@
   {
    "path": "$AOS_STACK/counter_runs.txt、<kernel stack>/counter_kernel_runs.txt",
    "lifetime": "暫時",
-   "writer": "aos-loop、aos-llm-kernel（--enable-counters）",
+   "writer": "aos-loop、lib/aos/kernel_llm（--enable-counters）",
    "reader": "人",
    "image": "不進",
    "on_bad": "沒有程式讀",
    "note": "",
-   "evidence": "proto8/impls/aos-loop/src/engine/window.cpp（Loop::write_counter）、proto8/impls/aos-llm-kernel/src/serve/serve.cpp（count_run）"
+   "evidence": "proto8/impls/aos-loop/src/engine/window.cpp（Loop::write_counter）、proto8/lib/aos/kernel_llm/llm_rules.py（count_run）"
   },
   {
    "path": "$AOS_STACK/think/request.json",
@@ -507,22 +507,22 @@
   {
    "path": "<kernel 信箱>/cur/<信名>/（request.json、reply.json、proc.json、state.json、stderr.txt）",
    "lifetime": "暫時",
-   "writer": "aos-llm-kernel、端點小 proc（llm_http）",
-   "reader": "aos-llm-kernel",
+   "writer": "lib/aos/kernel_llm、端點小 proc（llm_http）",
+   "reader": "lib/aos/kernel_llm",
    "image": "進",
    "on_bad": "回信讀不懂＝回錯給寄信人；收完整夾刪",
    "note": "在飛的信跟 image 走；proc.json／loop.json 存絕對路徑是 N-67 ⑦ 已知待驗；11-10：掛信單子改寫相對 AOS_DAEMON 的指示詞、重掛時照 kernel.json 重算（proc.json 的 exec 只當紀錄）；proc.json 多選填 stopped_seen_at（問腦列被 stop 時第一次看到的時間，停滿 300 秒放格回 EndpointFailed；加法，不用重建）",
-   "evidence": "proto8/impls/aos-llm-kernel/src/serve/proc.cpp（host_ref、Server::mount、exec_for、STOPPED_GIVE_UP_S）、proto8/impls/aos-llm-kernel/src/serve/serve.cpp（Server::run）"
+   "evidence": "proto8/lib/aos/kernel/runner.py（host_ref、mount、settle、GIVE_UP_S）、proto8/lib/aos/kernel_llm/llm_rules.py（dispatch、deliver）、proto8/lib/aos/kernel_llm/packs.py（target_for）"
   },
   {
    "path": "<kernel stack>/endpoints.json",
    "lifetime": "暫時",
-   "writer": "aos-llm-kernel",
+   "writer": "lib/aos/kernel_llm",
    "reader": "aos-llm ls",
    "image": "不進",
    "on_bad": "醒來重寫",
    "note": "",
-   "evidence": "proto8/impls/aos-llm-kernel/src/serve/serve.cpp（write_window）、proto8/impls/aos-llm/src/ls/ls.cpp（ls_window）"
+   "evidence": "proto8/lib/aos/kernel_llm/packs.py（write_window）、proto8/impls/aos-llm/src/ls/ls.cpp（ls_window）"
   },
   {
    "path": "<eca 小格>/live.jsonl、turns.jsonl、transcripts/、busy.txt；$AOS_STACK/mailbox_warning.txt；aos-mcp-logs.jsonl",

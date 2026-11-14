@@ -4,13 +4,13 @@
 
 使用者 11-04 晚：「llm呼叫這塊，我希望是把請求丟到llm kernel(一個loop)，處理好後收回信」「也可以是一個daemon，實際endpoint呼叫就是aos exec」「包起來的」「我是希望走2」「各種llm設定也可以包裝，這樣寄信的時候只要寫簡單的代號就可以」。11-05：「問腦，他本身也可以包裝成一個aos函數，掛成proc去跑。我也建議這樣」「cd ~/llm_kernel && aos-exec --stack . def，把llm的daemon+kernel叫起來」。11-05 午：「把endpoint打包成smart-high, stupid-fast, ...這類，並且附上各種屬性(各種temperature也固定)」。設計：[thinking 11-04 think-as-function](../../thinking/2026-11/04/think-as-function/README.md)、[11-05 kernel-daemon 03、07](../../thinking/2026-11/05/kernel-daemon/07-llm-daemon佈局.md)、[feat-proto 02 能力包](../../thinking/2026-11/05/feat-proto/02-endpoint-packs.md)。
 
-**問腦＝寄一封請求信進 `$AOS_LLM_KERNEL/requests/`、之後收回信**。這個資料夾是一台 **llm daemon** 的定義：daemon 的身體就是 [aos-llm-kernel](../../impls/aos-llm-kernel/README.md)，每 300 ms 拍一次；每封請求，kernel 請這台 daemon 掛成一個問腦 proc（`llm_<信件名稱>`），跑完收結果寄回信。呼叫端只看到信箱＋[`aos-llm`](../../impls/aos-llm/README.md)（`send`／`recv`／`ask`／`regret`／`ls`），裡面怎麼跑不用知道。
+**問腦＝寄一封請求信進 `$AOS_LLM_KERNEL/requests/`、之後收回信**。這個資料夾是一台 **llm daemon** 的定義：daemon 的身體就是問腦總機 [`lib/aos/kernel_llm`](../../lib/aos/kernel_llm/README.md)（通用 kernel 框架＋問腦那一包，`aos-exec` 跑；11-14 前是 C++ 的 aos-llm-kernel），每 300 ms 拍一次；每封請求，kernel 請這台 daemon 掛成一個問腦 proc（`llm_<信件名稱>`），跑完收結果寄回信。呼叫端只看到信箱＋[`aos-llm`](../../impls/aos-llm/README.md)（`send`／`recv`／`ask`／`regret`／`ls`），裡面怎麼跑不用知道。
 像一台專門打電話的總機：各部門（agent daemon）把要問的事丟進總機的收件匣，總機自己排隊、撥號、把答案送回各部門；整棟樓的電話費（`slots`、`budget`）都記在總機這裡。
 
 ```
 llm-kernel/
   _entry       ["aos-daemon", "--enable-logs", "daemon.json"]
-  daemon.json  {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300, "procs": {"_sweeper": {…}}}（身體＝kernel；procs 只帶清道夫一列（見 cmd/aos-sweeper；不要就刪）、不帶鐘列，聽外層的 `AOS_CLOCK`）
+  daemon.json  {"exec": {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/aos/kernel_llm"}, {"$env": "AOS_CD", "$path": "kernel.json"}]}, "interval_ms": 300, "procs": {"_sweeper": {…}}}（身體＝kernel；procs 只帶清道夫一列（見 cmd/aos-sweeper；不要就刪）、不帶鐘列，聽外層的 `AOS_CLOCK`）
   kernel.json  slots 2、reserved＝{"high": 1}（使用者裁定 sol 審查 #7）、timeout_ms 120000、exec＝預設 endpoint 函數 `{"$env": "AOS_HOME", "$path": "/lib/base/llm_http"}`、endpoint＝預設代號 fake、
                不設 budget（使用者選「從範本拿掉」；要限寄件人就自己加 budget.senders，例子在 03 件 5）、
                endpoints＝能力包表（下表）
@@ -28,7 +28,7 @@ llm-kernel/
 | `fake-demo-self`、`fake-demo-spawn` | `llm_fake`＋`script` 劇本（[03](03-feat-proto.md) 件 1、件 4） | 劇本裡的路徑寫 `{"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}`：用到那組時解，`cp -r` 抄出去也指得對 |
 | `fake-demo-fast`、`fake-demo-slow` | `fake_slow`，每封 3 秒 | `slots` 1；`speed` fast／slow（[03](03-feat-proto.md) 件 3）；`fake_slow` 從找到的 `aos_flags.py`（`proto8/py`）旁找 `lib/`，複製出 repo 也對 |
 
-**包怎麼讀**（全文在 [aos-llm-kernel docs/01](../../impls/aos-llm-kernel/docs/01-用法.md)）：信與 agent 的 `llm.json` 只寫代號；kernel 自己看 `exec`／`slots`／`budget`／`speed` 與 `backend` 五個（拿掉後才交給 endpoint 函數），其餘（`url`、`model`、`fixed`、`script`、`delay_s`…）原樣交給函數。金鑰由端點小 proc 自己讀環境，kernel 不讀、不寫、不轉交。**`fixed` 是釘死的**：信的 `request` 寫了 `fixed` 裡的 key、或那包有 `model` 而信寫了 `model`＝那封回 `RequestBad`；換溫度、換模型＝換代號（多登記一包）。`cost`／`context`／`summary` 只給人與腦挑代號用，kernel 每拍寫進窗 `$AOS_STACK/endpoints.json`，`aos-llm ls` 印它。
+**包怎麼讀**（全文在 [kernel_llm docs/01](../../lib/aos/kernel_llm/docs/01-用法.md)）：信與 agent 的 `llm.json` 只寫代號；kernel 自己看 `exec`／`slots`／`budget`／`speed` 與 `backend` 五個（拿掉後才交給 endpoint 函數），其餘（`url`、`model`、`fixed`、`script`、`delay_s`…）原樣交給函數。金鑰由端點小 proc 自己讀環境，kernel 不讀、不寫、不轉交。**`fixed` 是釘死的**：信的 `request` 寫了 `fixed` 裡的 key、或那包有 `model` 而信寫了 `model`＝那封回 `RequestBad`；換溫度、換模型＝換代號（多登記一包）。`cost`／`context`／`summary` 只給人與腦挑代號用，kernel 每拍寫進窗 `$AOS_STACK/endpoints.json`，`aos-llm ls` 印它。
 
 **起來**（PATH 放 `proto8/impls/*/bin` 與 `proto8/cmd/*/bin`，或跑過 `proto8/install.sh`）：
 
@@ -57,7 +57,7 @@ aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 
 - **排程**（[feat-proto 03](../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：信的 `priority` 級數（每 `aging_cycles` 格升一級，預設 3；有 `AOS_CLOCK` 數 kernel 自己樹的鐘，沒有用 `AOS_CLOCK_INTERVAL` 換牆鐘；凍住時鐘＝不升級）→ deadline → 同後端黏著 → 包的 `speed`（fast 先）→ 等得久 → 先寄；包的 `slots` 滿了＝跳過、讓下一封別包的補位；包的 `budget` 到頂＝那封 `BudgetMissing`，不替人降級換包。跨樹信的 `priority.deadline` 留牆鐘（N-65 ③，ISO 8601 或 epoch 秒），kernel 不讀信裡任何時鐘欄。
 - **留格給 high**：範本已在 `kernel.json` 頂層設 `"reserved": {"high": 1}`（使用者裁定 sol 審查 #7）；程式裡是選填，只認 `high`，值須為非負整數且小於頂層 `slots`（`slots: 1` 只能填 0），不合＝`CfgBad`。沒寫、`{}` 或 `high: 0`＝不保留；`reserved` 同 `slots` 整格先解指示詞。低於 high 的信只補到總在飛數 `slots-N`，看 `priority_of` 的宣告 level、不算 aging；跳過不能補的信，後面的 high 可繼續補。保留格不搶占已在飛的請求，high 要用保留範圍外的格仍可能等在飛的跑完。
 - **額度**：kernel 總的 `budget`、每包的 `budget`、每個寄件人的 `budget.senders`（寄件人＝信封 `sender`＝寄信那隻 proc 的 stack `$AOS_STACK`，跟信箱信封一致；11-13 線修 T31 起，之前是工作區；不驗身分）；用量帳在 `$AOS_STACK/used.json`（`packs`、`senders` 各一格；`senders` 的 key 是相對 kernel stack 的路徑，整包搬家相對位置相同就沿用同一格帳）。範本不設預算；要限某隻 agent 就在自己那份 `kernel.json` 寫 `"budget": {"senders": {"<它的 stack，建議寫絕對路徑>": {"max_calls": N}}}`（相對 key 從 kernel.json 所在夾算，`used.json` 的 key 卻是相對 kernel stack，別照抄；對不上起過的 proc 的 key，kernel 會印一行 warning）（[03 件 5](03-feat-proto.md)）。
-- **起 llm daemon 的殼別設 `AOS_KERNEL`**：問腦會掛到別台；非空路徑的 `new/` 不是資料夾時，每行程每路徑 warning 一次，仍用原路徑、不改退路、不因此報錯，後續掛 proc 失敗照舊（[已知限制](../../impls/aos-llm-kernel/docs/04-已知限制.md)）。
+- **起 llm daemon 的殼別設 `AOS_KERNEL`**：問腦會掛到別台；非空路徑的 `new/` 不是資料夾時，每輪 warning 一行，仍用原路徑、不改退路、不因此報錯，後續掛 proc 失敗照舊（[已知限制](../../lib/aos/kernel_llm/docs/04-已知限制.md)）。
 - agent-fsm 問腦一定經這裡（沒設 `AOS_LLM_KERNEL`＝`LlmKernelMissing`），要先起這個。
 
 範本出廠帶 stdout log、**不帶鐘列**（鐘只放在根 daemon，總機掛在樹裡就聽根的鐘；單獨起又沒設 `AOS_CLOCK`＝退牆鐘）；正式使用可在自己的副本拿掉 `_entry` 的 `--enable-logs`。真要總機自己的鐘，照 [aos-daemon docs/02](../../impls/aos-daemon/docs/02-看寫法決定怎麼起.md#時鐘普通一列) 加鐘列＋`.env`（掛在樹裡時還要掛它的那列加 `--dotenv-override`）。
@@ -70,4 +70,4 @@ aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 
 
 兩個定義都有 `interfaces.json` 的 `aos-ledger` 宣告（`ledger.jsonl` 相對 stack）。成功的上層 ledger 用 `child.kernel` 與 `child.letter` 指到下層帳，寄信方只拿這一層的 letter；usage 不重複加總，只加一層。下層合格錯誤原樣穿過，上層不再包一層 EndpointFailed；轉交函數自己的錯才走 EndpointFailed。
 
-主範本 stupid-fast 屬於 lmstudio backend（slots 1、max_packs 1）；再加同服務的包時掛同一後端。同級同期限優先把最後掛的包湊完，high 與更近期限仍能換包；第一次掛與換包第一封 ledger 的 switched 為 true。各台只管自己的後端，細節與盲點見 [impls 後端說明](../../impls/aos-llm-kernel/docs/01-用法.md#後端格數與黏著lm-studio)。
+主範本 stupid-fast 屬於 lmstudio backend（slots 1、max_packs 1）；再加同服務的包時掛同一後端。同級同期限優先把最後掛的包湊完，high 與更近期限仍能換包；第一次掛與換包第一封 ledger 的 switched 為 true。各台只管自己的後端，細節與盲點見 [kernel_llm 後端說明](../../lib/aos/kernel_llm/docs/01-用法.md#後端格數與黏著lm-studio)。

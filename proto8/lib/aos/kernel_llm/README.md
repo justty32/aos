@@ -2,7 +2,7 @@
 
 `_entry` 把 `llm_rules` 交給 `round.run(pack, cfg_path, name="kernel_llm")`（骨架在 [`../kernel/`](../kernel/README.md)）。一輪做的事：收上一輪掛出去、已經跑完的問腦結果寄回信；再看 `$AOS_STACK/requests/new/` 裡排隊的請求信，照急不急排好，在格數與額度內請 daemon 把每封掛成一個問腦 proc（`llm_<信名>`），然後結束，不等它跑完。由那台 llm daemon 當身體一次次叫。
 
-對外的樣子跟 C++ 的 [`impls/aos-llm-kernel`](../../../impls/aos-llm-kernel/README.md) 相同：`kernel.json` 的寫法、stack 裡每個檔的格式、信與回信的形狀、錯誤代號都不變，那邊的用法文件照樣適用。不同的只有三件：stderr 開頭是 `kernel_llm:`、多了三個 hook 時機、下面「跟 C++ 那支的差別」列的幾處。現在兩支並存，範本還是掛 C++ 那支。
+11-14 前問腦總機是 C++ 的 `aos-llm-kernel`（舊夾 `impls/aos-llm-kernel` 已不建，待換樹時刪），11-14 起範本 `kernel/llm-kernel`、`kernel/llm-team` 的身體換成這包；對外跟那支相同：`kernel.json` 的寫法、stack 裡每個檔的格式、信與回信的形狀、錯誤代號都不變，差別見「跟 C++ 那支的差別」。用法全文在下面的分檔。
 
 ```json
 {"exec": {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/aos/kernel_llm"}, {"$env": "AOS_CD", "$path": "kernel.json"}]},
@@ -60,6 +60,8 @@
 
 ## 跟 C++ 那支的差別
 
+歷史對照，給讀舊紀錄的人：
+
 - stderr 開頭 `kernel_llm:`；`--help` 的文字不同。
 - 收到 TERM：C++ 做完這一輪才退 128＋N；這支當場結束。在途的狀態都在 stack 裡，下一輪接手。
 - 先後：C++ 先找 daemon 才建信箱與上鎖；這支的鎖與建信箱在骨架，`LockFailed` 的訊息是骨架的。`StackMissing`、`CfgBad`、`DaemonMissing` 同時成立時先報哪個不變。
@@ -70,8 +72,17 @@
 
 ## 測試
 
-`tests/` 的 `test_ledger`、`test_backends`、`test_nesting`、`test_stopped_slot`、`test_two_machines` 是從 C++ 那支搬來的黑箱測試；`test_hooks` 是三個 hook 時機與 `AOS_KERNEL` 的掛信去處。真端點的兩支（`*_live`）還在 `impls/aos-llm-kernel/tests`。
+`tests/` 的 `test_ledger`、`test_backends`、`test_nesting`、`test_stopped_slot`、`test_two_machines` 是從 C++ 那支搬來的黑箱測試；`test_hooks` 是三個 hook 時機與 `AOS_KERNEL` 的掛信去處；`test_batch8_live`、`test_nesting_live` 要真的 daemon 與模型。
 
 ```sh
 cd proto8/lib/aos/kernel_llm/tests && python3 -m unittest test_ledger
 ```
+
+## 分檔目錄
+
+| 分檔 | 涵蓋的段 |
+|---|---|
+| [01-用法](docs/01-用法.md) | 命令列、`kernel.json` 各鍵、環境、`$AOS_STACK` 的檔、信箱、信、回信、後端格數與黏著 |
+| [02-token-回報與額度](docs/02-token-回報與額度.md) | 跑一封（endpoint 函數）、token 與額度、一次、訊號 |
+| [03-元素等](docs/03-元素等.md) | 元素、做法、錯誤代號、建置與測試 |
+| [04-已知限制](docs/04-已知限制.md) | 已知限制 |
