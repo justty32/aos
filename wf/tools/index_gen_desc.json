@@ -787,6 +787,7 @@
   "wf/workflows/workshop/archive": "workshop 封存區：11-03 整批封存的 proto5～7 年代研討會紀錄 records、背景資料 background、待答題 OPEN-QUESTIONS（10-12 已清帳結案），只作歷史",
   "wf/knowledge": "wf 的機讀知識：code map（proto8 程式地圖冊）等生成或手寫的 json",
   "wf/public": "公用知識庫：所有 agent 可讀可投稿，頂層管；tools/ 放公用小工具",
+  "wf/advices": "對 aos 本身的意見庫：各隊做事時對 aos 的改進意見，頂層派 Claude 子 agent 審與整理、按主題歸檔建索引；之後改進 aos 從這裡找參考",
   "wf/temp": "頂層分給掛在它底下的 eca 的工作區（gitignore）"
  }
 }

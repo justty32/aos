@@ -23,6 +23,9 @@
  "WORKFLOWS.md": {
   "description": "WORKFLOWS — 工作流派發器"
  },
+ "advices": {
+  "description": "對 aos 本身的意見庫：各隊做事時對 aos 的改進意見，頂層派 Claude 子 agent 審與整理、按主題歸檔建索引；之後改進 aos 從這裡找參考"
+ },
  "inbox": {
   "description": "樹外專案（arcagi）寄來的信的放信處：頂層的 .md 是未處理的信、done/ 是已處理的；每個 session 開始先 ls 這裡，有信先讀；樹內的信走 aos 信箱"
  },
