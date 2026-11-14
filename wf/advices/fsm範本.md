@@ -93,3 +93,37 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 出處：wf/temp/ok-onboard/aos-advice/fsm-template-tool-descriptions-cost.md；proto8/thinking/2026-11/14/onboard-1114.md「P0 結果」；wf/workflows/dispatch/kits/README.md
 - 狀態：未處理。範本 tools.json 仍是 15 包 55 支（最後一次改是 2e1e69de2 加 jsonx 包）。繞法：派蒐集員照 [wf/workflows/dispatch/kits](../workflows/dispatch/kits/README.md) 的 gather 只掛 24 支（見 [wf/public recipes「派蒐集員或審稿員」](../public/recipes.md)）。
 - 相關：本檔「蒐集用 sol 的工具包寫不了純文字檔」，同樣是「範本該掛哪些包」的問題，精簡時要留文字寫檔。
+
+## sol 的可寫範圍寫在兩份清單裡，換工作區要兩邊都改
+
+- 主題：fsm 範本
+- 哪裡：照 07 掛的 agent-fsm sol 定義：`guard.json` 的 `write_roots`（檔案工具的寫檔守門，見 [wf/public/tools/fsm-guard](../public/tools/fsm-guard/README.md)）；`shell-boxed/_metainfo.json` 的 `sandbox.ro`／`sandbox.rw`（shell 的 bwrap 沙箱，決定看得到哪裡、能寫哪裡）。兩份彼此無關。
+- 現象：另開一棵新暫存樹（`src2`）派任務，五隻 sol 全部回 BLOCKED：
+  - 檔案工具讀得到 src2、寫不進去：「guard 拒絕：src2 不在允許寫入範圍（目前只有 src/proto8、src/wf）」。
+  - shell 連看都看不到：`cd …/src2` 回 "No such file or directory"，還待在舊的 src。
+  - 隊長手改兩份 JSON、各加一樣的三個路徑，sol 才能做事。
+- 建議：
+  1. 兩邊讀同一份清單：定義裡放一個 `roots.json {"ro": [...], "rw": [...]}`，guard 和 shell-boxed 都用 `$ref` 指向它。
+  2. 或預設「`$AOS_WS` 底下的 proto8、wf 可寫，其餘唯讀」，另加 `extra_roots` 鍵；換工作區（ctl set-def，或 rm 再 add 改 -w）時範圍自己跟著走。
+  3. 擋下時的訊息附設定檔路徑（例「not in write_roots of <def>/guard.json」），隊長不用猜要改哪份。
+- 痛的程度：拖慢（五隻 sol 同時 BLOCKED 一輪）
+- 提出者與日期：ok-misc 2026-11-14
+- 出處：wf/temp/ok-misc/aos-advice/sol可寫範圍要改兩份清單.md；misc-1114 暫存樹的 sol 定義 defs/sol-worker
+- 狀態：已排入（ok-fsm）。整理時查：還沒改。fsm-guard 擋下的訊息只列 write_roots 的值、沒寫設定檔路徑；repo 裡沒有 roots.json 或 extra_roots。
+- 相關：本檔「guard 看指令字面，連唯讀查詢也擋」，同一支 guard。
+
+## before_tool 擋下工具時，tool_result 標 is_error:false，模型分不出是被擋
+
+- 主題：fsm 範本（hook 的行為 eca 和 agent-fsm 都有，建議要兩邊對齊，所以放這裡）
+- 哪裡：before_tool hook 退 10 時，aos-mcp 交回 claude CLI 的 tool_result（`proto8/cmd/aos-mcp/bin/aos-mcp` 約 260 行）；agent-fsm `templates/agent-fsm/act.py` 約 190 行；知識庫 `aos/me/self_hook`；`proto8/thinking/2026-11/10/self-family/hook/02-施工結果.md`。
+- 現象：ok-pilot 11-14 在暫存樹用真 haiku eca 驗 hook，掛一個 before_tool hook（記一行、印一行、退 10），請模型叫一次 peek_now_time。
+  - 工具確實沒跑，after_tool 也沒觸發。模型拿到 hook 的 stdout，照實回「The tool returned exactly: "blocked by ok-pilot acceptance hook" …」。
+  - 但小格的 `claude/live.jsonl` 裡，這次 tool_result 是 `"is_error":false`。從 CLI 和模型看，「被擋」和「工具正常回一句話」分不出來，只能靠 hook 自己印清楚。
+- 建議：
+  1. 推薦：被擋時標 `is_error:true`，內容統一成固定前綴，例如 `HookBlocked <hook 名>: <hook 的 stdout>`。模型和讀紀錄的人一眼看出是被擋，不會把 hook 的字當成工具結果。
+  2. 不改的話，至少在知識庫 hooks 頁寫明「被擋時回的是 hook 的 stdout、標為非錯誤；要讓模型知道被擋，hook 自己要印清楚」。
+  3. agent-fsm 被擋時怎麼標，一起對齊。
+- 痛的程度：小不便（hook 印得清楚就沒事，但模型可能把擋下的訊息當成真結果）
+- 提出者與日期：ok-pilot 2026-11-14
+- 出處：wf/temp/ok-pilot/aos-advice/before_tool擋下時tool_result標is_error-false.md；wf/temp/ok-pilot/hook-eca/report.md「附帶觀察」、hk-events.jsonl
+- 狀態：未處理。整理時查：這是現行設計，不是漏做。aos-mcp 的檔頭、`--help` 和 `cmd/aos-mcp/README.md` 都寫了「攔下＝結果文字是 hook stdout（空就 `[aos] hook: tool NAME blocked by hook HOOK.`），不算 isError」。投稿說「文件沒寫」只對知識庫：`aos/me/self_hook` 只寫「you get the hook's stdout as the result」，沒說算不算錯。agent-fsm act.py 一樣把 hook stdout 當 tool 訊息，沒有錯誤標記。
