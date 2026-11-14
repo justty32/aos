@@ -17,13 +17,13 @@
 | C | gpt-terra（`gpt-5.6-terra`）、Sonnet | 待細分 |
 | D | gpt-luna（`gpt-5.6-luna`）| 待細分 |
 | E、F… | （預留）| 之後 DeepSeek 之類可以更低 |
-| A | `gpt-6.1-sol` | 使用者 10-09 確認；試水溫唯二全中（另一個是 astra）；**codex 一般工作一律用它** |
+| A | `gpt-6.1-sol` | 使用者 10-09 確認；試水溫唯二全中（另一個是 astra）；**gpt 系一般工作一律用它**（本專案走 agent-fsm 的 pack `sol-high`，不走 codex CLI） |
 | A | `gpt-6-astra` | 使用者 10-09 確認；**只派圖像、創意類**（使用者 11-06，見表下）|
 | B | `gpt-6-sol` | 使用者 10-09 確認 |
 | C | `gpt-reserve`、`gpt-5.5` | 使用者 10-09 確認 |
 | D | Haiku、`gpt-6-luna` | 使用者 10-09 確認 |
 
-使用者 11-06：「然後gpt那邊改sol吧，astra主要在於圖像、創意這塊有能力增長，但一般工作上sol也能達到差不多的等級，但價格僅1/3。」——所以級別不動，但 codex 一般工作（寫碼、審查、調查）一律 `gpt-6.1-sol`、簡單工作 `gpt-5.6-terra`，astra 只在圖像、創意類才派。
+使用者 11-06：「然後gpt那邊改sol吧，astra主要在於圖像、創意這塊有能力增長，但一般工作上sol也能達到差不多的等級，但價格僅1/3。」——所以級別不動，gpt 系一般工作（寫碼、審查、調查）一律 sol，astra 只在圖像、創意類才派。**11-14 起本專案蒐集和施工不用 terra、不走 codex CLI**（使用者「不要terra，盡量用sol，把sol作爲sonnet來用」「不要走codex」）：簡單工作也給 sol，sol 走不通由 Claude 子 agent 補位（普通 opus、簡單 sonnet），見 [dispatch/aos-teams](../dispatch/aos-teams.md)。（11-06 當時的寫法是「codex 一般工作一律 `gpt-6.1-sol`、簡單工作 `gpt-5.6-terra`」。）
 
 現用版本：Fable 5.2、Opus 5.5、Sonnet 5.5，級別沿用。使用者 10-09 確認的各列依據 [probe](probe-2026-10-09.json)（一題一次）。
 

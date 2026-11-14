@@ -34,7 +34,7 @@
 - **自己掛 kernel 或 agent 不用先問**（使用者 11-14「然後有需要的，可以自己掛kernel或agent。」）：掛在暫存樹的 aos 裡，自己記 pid、收尾收乾淨，活樹照舊不動。
 - **隊長的 shell 是 zsh，範例指令要分詞的一律包 `bash -c`**（11-14 ok-misc 與頂層各踩一次：ok-misc 因此把一封信寄錯對象，頂層開線失敗一次）：zsh 的 `$VAR` 不分詞，`for p in "a b"; do set -- $p; …` 切不開、`for f in $(cat list)` 只跑一圈。一次對多隻 agent 下指令、逐行讀清單這類寫法，寫成 `bash -c 'for n in a b c; do …; done'`（清單直接寫在 `in` 後面），或 `bash -c 'mapfile -t F < list; for f in "${F[@]}"; do …; done'`；清 `AOS_*` 的腳本同理要是 bash（[06 硬規則第 2 條](06-公司WSL活樹與任務書硬規則.md)）。另見 [pitfalls「隊長的 shell」的「zsh 不分詞」](../../../public/pitfalls.md#隊長的-shellbash-工具)。
 - **蒐集員的交件要先想好怎麼落地**（ok-view 11-14 踩到；[advices/fsm範本](../../../advices/fsm範本.md)）：只掛 look、gadgets、json、index 的蒐集員只有 JSON 寫入，寫不出 Markdown。任務書擇一寫明：① 「全文放在最後一則回答裡」，隊長用 `subagent listen`（`last: 1`）或 `aos-agent history -t <名字> ls -j` 取出存檔；② 先替它掛寫檔的包：定義的 `tools.json` 的 `$override` 加 `lib/packs/ws-write.json`（工具 `ws_write`：只能寫進自己的工作區，一次上限 256 KiB，不刪檔；38271da3b，換樹後活樹才有），任務書寫明交件檔名。
-- **sol 沒有 shell**：查版本、查環境、跑指令收結果這類事，派工的人自己跑好，把輸出貼進任務書或寫成檔叫它讀，不要讓 sol 靠讀檔去猜（ok-view-sol-7 為了查 `node --version` 翻了 117 步）。
+- **沒掛 shell 包的 sol 沒有 shell**（看包和多數施工定義都是；掛了 shell 包的 sol 有，但有 guard 會擋，見 [sol-crew](../../../public/sol-crew.md)）：查版本、查環境、跑指令收結果這類事，派工的人自己跑好，把輸出貼進任務書或寫成檔叫它讀，不要讓 sol 靠讀檔去猜（ok-view-sol-7 為了查 `node --version` 翻了 117 步）。
 - **命名**（使用者 11-14「掛fsm sol/astra等agent的時候，那個命名要小心別重合到」）：daemon 表上的名字整台共用，各 eca 掛的 agent 一律叫 `<eca名>-<角色>-<編號>`（例 `ok-kf-sol-1`）。
 - **rlimit**（使用者 11-14「eca...建議不要setrlimit，你就跟他們說請他們自行收斂，但是fsm都可。」）：eca 不設，自己收斂用量；agent-fsm 在 `subagent add` 時帶 `limits`。
   - 資源的鍵：`mem_mb`、`cpu_s`、`procs`、`file_mb`、`files`，另有整隻 agent 的總量 `mem_total_mb`、`procs_total`（要 daemon 開 cgroup）與 `user`。開檔數的鍵叫 `files`，不是 `nofile`。
@@ -60,7 +60,7 @@
 
 ## 回報
 
-**回報寄任務書指定的對象。** 11-14 起頂層底下分了幾個部，各線寄給自己那一部的部長；現在怎麼分看 `wf/temp/heads/routing.md`（當天的安排，會變）。
+**回報寄任務書指定的對象。** 11-14 起頂層底下分了幾個部，各線寄給自己那一部的部長；你歸哪一部看你的任務書（當天的安排，會變）。
 
 - **部長做的**：收線的回報、放行或擋下 commit、協調。寫活樹、push、刪檔、開線或關線，部長不自己做，轉給頂層。
 - **小廝 `xiaosi`**（sonnet eca）照舊管使用者專區、通知和群發，並彙整部長的信給頂層；寄到頂層的信由頂層照中轉表轉給部長。

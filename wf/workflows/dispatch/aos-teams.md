@@ -6,7 +6,7 @@
 
 ## 誰做什麼
 
-- **頂層 `repo-aos` 只當調度者**：只跟使用者交流、派線、收線，不親自做內容；收線＝讀隊長附的證據逐條對、不重跑，真要獨立驗證就派一條便宜的線去跑；想順手做小事時先問能不能一句話交給別人（使用者 08-30「頂層不要做太多事」、09-24「你不要自己做事，盡量交給 agent」）。11-14 起頂層底下分了幾個部，各一位 fable 部長（現在怎麼分看 `wf/temp/heads/routing.md`，當天的安排、會變），線的回報與 commit 放行找部長；寫活樹、push、刪檔、開關線由部長轉頂層。
+- **頂層 `repo-aos` 只當調度者**：只跟使用者交流、派線、收線，不親自做內容；收線＝讀隊長附的證據逐條對、不重跑，真要獨立驗證就派一條便宜的線去跑；想順手做小事時先問能不能一句話交給別人（使用者 08-30「頂層不要做太多事」、09-24「你不要自己做事，盡量交給 agent」）。11-14 起頂層底下分了幾個部，各一位 fable 部長（你歸哪一部、回報寄誰，看你的任務書），線的回報與 commit 放行找部長；寫活樹、push、刪檔、開關線由部長轉頂層。
 - **一條線＝一隻 opus 或 fable 的 eca**（名字 `ok-<線名>`，工作區 `wf/temp/<名字>/`），掛在頂層的 kernel_gate 底下，自己也可以開 gate、在底下掛隊員。
 - **隊員＝sol 的 agent-fsm**（腦走本地 LiteLLM，pack `sol-high`）：蒐集、照圖紙寫碼、寫文件、雜活。**蒐集和施工不用 terra、不走 codex**（使用者 11-14「不要terra，盡量用sol，把sol作爲sonnet來用」「不要走codex」）。走不通才由 Claude 子 agent 補位（普通 opus、簡單 sonnet）。
 - **gpt 系不做設計決策**（使用者 11-07，長期；原話在 [03](aos-teams/03-使用者原話.md)）：能做照已定圖紙寫碼、寫文件、雜活、網頁施工（內容題目由隊長定）；審查只挑實作錯、與圖紙不符。設計、架構、判斷設計對錯由 opus／fable 做，寫進任務書。
@@ -30,9 +30,9 @@
 ```
 
 - `--files`／`--rm` 的路徑從 repo 根算，`--msg-file` 從你所在的資料夾算；結果看 stdout 最後一行 JSON（`DONE` 加雜湊，或錯誤原文）；先 `--dry-run` 看會交什麼。
-- 日索引、月索引、`SESSION-LOG.md` 不交整檔，用 `--op`（`day_upsert`、`month_bump`、`month_set`、`log_upsert`、`log_delete`）。生成的 `_index.json`、code map 由排隊重生，不要列進 `--files`（`proto8/knowledge/` 底下手寫的 `_index.json` 例外，照一般檔交）。
+- 日索引（`proto8/thinking/<年-月>/<日>/README.md`）、月索引（`proto8/thinking/<年-月>/README.md`）、`wf/SESSION-LOG.md` 不交整檔，用 `--op`（`day_upsert`、`month_bump`、`month_set`、`log_upsert`、`log_delete`）。生成的 `_index.json`、code map 由排隊重生，不要列進 `--files`（`proto8/knowledge/` 底下手寫的 `_index.json` 例外，照一般檔交）。
 - 交之前 `git diff -- 檔` 確認只有自己的字；**不 push**。
-- **誰放行**：照你的任務書。11-14 起線的 commit 由部長放行（`wf/temp/heads/部長共通.md`，在 gitignore 的 temp 裡），每批先寄它：檔案清單、`git diff --stat`、怎麼驗的。它放行的前提：在乾淨複本（`git archive`）測過並附結果；動到活樹正在用的 `proto8/cmd`、`py`、`lib` 時先寫暫存檔再改名、立刻 import 並跑定向測試、原檔有備份；用 commit-request（共用索引加 `--op`）；不撞別線 claim 的檔。帶 `--rm`（搬檔後移除舊路徑）、跟鐵律有出入的，部長會上交頂層。更多：[07「commit」](aos-teams/07-預設流程與agent-fsm.md)、[patch-and-commit](../../public/patch-and-commit.md)。
+- **誰放行**：照你的任務書。11-14 起線的 commit 由你那一部的部長放行，每批先寄它：檔案清單、`git diff --stat`、怎麼驗的。它放行的前提：在乾淨複本（`git archive`）測過並附結果；動到活樹正在用的 `proto8/cmd`、`py`、`lib` 時先寫暫存檔再改名、立刻 import 並跑定向測試、原檔有備份；用 commit-request（共用索引加 `--op`）；不撞別線 claim 的檔。帶 `--rm`（搬檔後移除舊路徑）、跟鐵律有出入的，部長會上交頂層。更多：[07「commit」](aos-teams/07-預設流程與agent-fsm.md)、[patch-and-commit](../../public/patch-and-commit.md)。
 
 ### 2. 問使用者：寄專區，題目會出現在全景頁
 
@@ -45,6 +45,8 @@
 - 回信用 `mailbox_read` 讀（專區回信自動留在 `mailbox/archive/<信名>/`），再跑 `aos-user verify <那個夾>`，看到 `ok: matches` 才算數。push、刪檔的授權一定要驗。更多：[user-zone-mail](../../public/user-zone-mail.md)、知識庫 `aos/user_zone.json`。
 
 ### 3. 掛 sol 隊員
+
+`subagent` 這支工具不是每隻 eca 都有：現成的 eca 範本只掛到 `agent_def`（def 包），線用的定義（`~/aos-home/agents/` 的 `opus-kernel`、`fable-kernel`）才多掛了 `subagent`、`kernel_gate` 兩包。`self_state {"parts":["tools"]}` 看得到自己有沒有。
 
 1. `agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}`，把 [kits/gather/](kits/README.md) 的 `system.txt`、`tools.json`、`llm.json`、`.env` 蓋過去，`agent_def check`。
 2. `subagent {"op":"add","def":"defs/gather","name":"ok-x-sol-1","ws":"ok-x-sol-1","limits":{"mem_mb":1024,"files":256}}`（`ws` 從你的工作區算，所以它的工作區是 `<線夾>/<agent 名>`；`procs` 別設；開檔的鍵是 `files`）。
@@ -66,7 +68,7 @@
 
 ## 回報、經驗、意見
 
-- **回報**寄任務書指定的對象（11-14 起是各部部長，分法見 `wf/temp/heads/routing.md`）：標題寫你的判斷與要什麼（`NEEDS-USER`／`BLOCKED`／`PROGRESS`／`DONE`），卡住的信先寫已排除的（[07「寄信怎麼寫」](aos-teams/07-預設流程與agent-fsm.md)）。
+- **回報**寄任務書指定的對象（11-14 起是各部部長）：標題寫你的判斷與要什麼（`NEEDS-USER`／`BLOCKED`／`PROGRESS`／`DONE`），卡住的信先寫已排除的（[07「寄信怎麼寫」](aos-teams/07-預設流程與agent-fsm.md)）。
 - **別隊也用得上的做法、坑** → 投 [wf/public](../../public/README.md)；**aos 本身哪裡該改** → 投 [wf/advices](../../advices/README.md)。先查這兩處再動手，常見做法一覽在 [recipes](../../public/recipes.md)。
 
 ## 分檔目錄
