@@ -58,7 +58,7 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 痛的程度：今天小不便（沒發作）；換 uid 那天擋路（任何換 uid 都要先改這個）
 - 提出者與日期：ok-sec 2026-11-14
 - 出處：wf/temp/ok-sec/aos-advice/daemon認人別靠environ.md；proto8/thinking/2026-11/14/sec-1114/03-計劃.md E1、05-採納表.md A6、B4；實測腳本 ~/code/sec-1114/e12.sh
-- 狀態：未處理（adopt.cpp 仍是「讀不到＝照舊」回 true，aos_sweep_proc.py 仍讀 environ；sec-1114 採納表已列，未施工）
+- 狀態：已排入（ok-sec）；Python 部分 f4ae9fcf0：sweeper 讀不到 environ 時改看 /proc/<pid>/status 的 Uid 對 <daemon stack>/uids.json，沒帳本照舊 left alone（帳本由第 2 期寫）。adopt C++ 在 ~/code/sec-1114/p1 34fb455：same_tree 讀不到時用 status Uid 對表上 limits.user；等 B7 之後交 ok-kf 換樹。換 uid 那天之前兩半都要上。
 
 ## 帶 --envs 的 add 換了掛法：表上 exec 變 null、set-def 拒收、as_written 與 --path-json 指示詞掉了
 
