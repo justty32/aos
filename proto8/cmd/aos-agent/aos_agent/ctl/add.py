@@ -176,6 +176,7 @@ def add_via_kernel(name, entry_target, ws, stack, def_dir, limits, envs, opts, w
         _, request = call_dc(dc.add_letter, entry_target, name=name, ws=ws, stack=stack,
                              def_dir=def_dir, limits=limits, envs=envs,
                              auto_restart=opts.get("auto_restart", False),
+                             dotenv_override=opts.get("dotenv_override", False),
                              daemon=None, written=written, kept=kept)
         got = ctl_wait("add", request, lambda _: True, "the add letter for %s has no reply yet" % name, "AddRejected",
                        secs=secs, on_queued=on_queued, name=name, replied=True)

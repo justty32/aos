@@ -74,6 +74,28 @@ class AddLetterDotenv(unittest.TestCase):
 
 @unittest.skipUnless(shutil.which("aos-daemon", path=ENV["PATH"]) and shutil.which("aos-post", path=ENV["PATH"]),
                      "aos-daemon and aos-post are required")
+class AddViaKernelDotenv(unittest.TestCase):
+    """Through $AOS_KERNEL (no --daemon) the flag must reach add_letter too (ok-kf 11-14 found it was dropped)."""
+
+    def test_kernel_route_passes_dotenv_override(self):
+        sys.path.insert(0, str(PROTO / "cmd" / "aos-agent"))
+        from aos_agent.ctl import add as add_mod
+        seen = {}
+
+        def fake_call_dc(fn, *args, **kwargs):
+            seen.update(kwargs)
+            return "ann", {"procs_added": {}}
+
+        old = add_mod.call_dc, add_mod.ctl_wait
+        add_mod.call_dc, add_mod.ctl_wait = fake_call_dc, lambda *a, **k: None
+        try:
+            add_mod.add_via_kernel("ann", "/x/def", None, None, None, None, {}, {"dotenv_override": True},
+                                   None, set(), 5, "fail")
+        finally:
+            add_mod.call_dc, add_mod.ctl_wait = old
+        self.assertIs(seen.get("dotenv_override"), True)
+
+
 class AddDotenvDaemon(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="add-dotenv-")
