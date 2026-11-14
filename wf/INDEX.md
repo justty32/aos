@@ -33,6 +33,9 @@
 | [advices/](advices/README.md) | 對 aos 本身的意見庫：各隊做事時冒出的改進意見，按主題歸檔 |
 | [knowledge/](knowledge/code-map.json) | wf 的機讀知識：code map（proto8 程式地圖冊）等 json |
 | [tools/](tools/_index.json) | wf 的腳本：`index_gen.py`（生成器）、`commit-request`（交件排隊）、`tabledb.py`、連結修補等 |
+| [INDEX/](INDEX/README.md) | 本頁的分檔（repo 版面細表 [01-repo-layout](INDEX/01-repo-layout.md)）|
+| [WORKFLOWS-parts/](WORKFLOWS-parts/README.md) | [WORKFLOWS.md](WORKFLOWS.md) 的分檔（multi-agent flavor 派發表、工作流的統一形式）|
+| [_index.json](_index.json) | wf 頂層各檔與夾的一句話索引（機讀）|
 | [salvage/](salvage/README.md) | `roadmap-run` 打撈包：給從零重寫 aos 的人的教訓（2026-10-13 封存，正文在它的 archive/）|
 | `temp/` | 各線的工作區 `temp/<線名>/`（已 gitignore，不進版控）|
 

@@ -9,7 +9,7 @@
 
 ## Done when
 
-- `investigations/<主題>.md` 存在（本資料夾底下，第一份出現時才建 `investigations/`），且下列五段非空。
+- 筆記存在，且下列五段非空：proto8 年代寫在 [proto8/thinking/](../../proto8/thinking/README.md) 的 `<日期>/` 底下（一天一夾，例 [wake-1114](../../proto8/thinking/2026-11/14/wake-1114.md)），或寫成本資料夾的 `investigations/<主題>.md`（第一份出現時才建；現有的只是 proto5 的兩份），兩種都算。
 - 結論是「要動手」→ [SESSION-LOG](../SESSION-LOG.md) 有接手列。
 
 ## 流程

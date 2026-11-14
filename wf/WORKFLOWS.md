@@ -48,6 +48,11 @@
 | 「記個決定」「為什麼選 A 不選 B」 | **decisions** → 本專案落點是 [proto8/thinking](../proto8/thinking/README.md) 的決定與結論（舊的 ideas「待決定」表已封存） | [workflows/decisions.json](workflows/decisions.json)（json 節點：通用版＋本地差異，可用 `index_view`／`json_get` 讀） |
 | 「我的偏好是…」「以後直接做 / 先問」 | **user** | [workflows/common/user.md](workflows/common/user.md) |
 | 「**這批題要我裁**」「做成待你裁的頁」「我回好了（貼一串 `id:代號`）」 | **decide-page** | [workflows/decide-page.md](workflows/decide-page.md) |
+| 「這件事有沒有現成做法」「查別隊踩過的坑」「投稿一個做法」 | **public**（公用知識庫） | [public/README.md](public/README.md) |
+| 「對 aos 本身有改進意見」「這個 aos 設計不好用」 | **advices**（對 aos 的意見庫） | [advices/README.md](advices/README.md) |
+| 「派 fsm 隊員要配什麼 system、工具、權限」 | **kits**（配給包） | [workflows/dispatch/kits/README.md](workflows/dispatch/kits/README.md)（隊長流程 [card](workflows/dispatch/kits/card.md)） |
+| 「交件」「commit」 | **commit-request**（交件排隊，鐵律 3） | [aos-teams/07](workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)（`wf/tools/commit-request` 的 claim／submit） |
+| 「要問使用者」「這題要他拍板」 | **使用者專區**（`aos-user send --kind decide`） | [common/user.md](workflows/common/user.md)「回覆風格」 |
 
 ### multi-agent flavor
 

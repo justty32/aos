@@ -23,6 +23,7 @@
   → 全數通過後：檔頭一句話 → 補文檔 → commit-request submit（排隊跑 index_gen）
 ```
 
+- **要開隊做**（opus 帶 sol、sol 走 agent-fsm）就照 [dispatch/aos-teams](../dispatch/aos-teams.md) 與它的 [07](../dispatch/aos-teams/07-預設流程與agent-fsm.md)；上面的流程是一個 agent 自己做的版本。
 - **自動驗證是你（Claude）自己跑**的把關（現行只要求 build 得過，見 [testing](../testing.md)）。
 - **Claude 跑不了的驗證一律由使用者做**——先靠自動驗證＋結構性檢查把握到極限再交付；需使用者驗證的寄使用者專區（`aos-user send`；舊條目在 [WAIT_USER](../../WAIT_USER.md)）（見 [testing](../testing.md) 的「誰跑」欄）。
 - 測試迭代期間，code map / 文檔可暫時落後；**commit 前必須對齊**。
