@@ -24,7 +24,7 @@ llm kernel（lib/aos/kernel_llm）、腦額度、找 kernel、kernel_gate 的意
 - 痛的程度：小不便
 - 提出者與日期：ok-pilot 2026-11-14
 - 出處：wf/temp/ok-pilot/aos-advice/小坑三則.md 第 1 則；wf/temp/ok-pilot/notes.md 第一輪「摩擦」第 4 點
-- 狀態：未處理
+- 狀態：已解（efa8227c8，ok-misc：`aos-llm ls --kernel NAME|PATH`，沒給旗標也沒設 AOS_LLM_KERNEL 時找 $AOS_DAEMON 表上唯一 stack 有 endpoints.json 與 requests/ 的列；C++ 要換樹重編 aos-llm 才進活樹）
 - 相關：[fsm 範本「漏設 AOS_LLM_KERNEL」](fsm範本.md)，同樣是「找不到 kernel 要自己帶路徑」。
 
 ## before_verdict hook 拒信只能回 HookRejected，做不了「額度用完、晚點再試」
