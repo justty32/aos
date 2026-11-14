@@ -9,7 +9,7 @@ agent 不用重猜的事。always-on 鐵律在 [AGENTS.md](../../../AGENTS.md)�
 | 語言 | 回覆與 `wf/`／`docs/` 一律繁體中文；程式碼沿用各檔既有語言；**程式的輸出（訊息、usage、寫進檔的文字、log）一律英文**（11-05「全都用英文吧」，細節 [conventions](conventions.md)） |
 | 分支慣例 | **本地與遠端都只有一個 `main` 分支**（使用者 2026-11-03 晚：「我希望不管是遠端或本地，都只有一個main分支。寫進記憶吧」）：直接 commit `main`，不開分支、不開 worktree 分支、不 push 別的分支；做到一半要跨機器帶走的，收工前收斂成能進 main 的狀態，或只留在本機工作樹。push 見下方「push 授權」 |
 | 直接做、不用問 | 改 `wf/` 文件、跑唯讀指令、build、開子 agent 隊、做原型讓他試 |
-| commit 前跑什麼 | **只跑生成器**（鐵律 3：`python3 wf/tools/index_gen.py --apply`）；`wf/tools/index_check.py`、`wf/tools/check_anchors.py` **不是必跑**，工具留著，大量搬檔後想查再跑（使用者 2026-11-13 晚被問「commit 前的查錯檢查改成想跑才跑？」答「1.對。」） |
+| commit 怎麼交 | **走 `wf/tools/commit-request`**（鐵律 3；11-14 專區「q1:fix」）：`claim`／`submit --line … --files … --msg-file …`，生成器由排隊跑，各線不自己跑 `index_gen`、不 `git add`（用法見 [aos-teams/07](../dispatch/aos-teams/07-預設流程與agent-fsm.md)）；沒有 commit-request 的機器才自己在 commit 前跑 `python3 wf/tools/index_gen.py --apply`。`wf/tools/index_check.py`、`wf/tools/check_anchors.py` **不是必跑**，工具留著，大量搬檔後想查再跑（使用者 2026-11-13 晚被問「commit 前的查錯檢查改成想跑才跑？」答「1.對。」） |
 | 一定先問 | push、刪檔、開新工作（鐵律 2）；**方向性裁決**（鐵律 5）——我擺選項與後果，他拍板 |
 | 回覆風格 | 先結論、短、**大白話**（見下方）；問「要不要」時附**可執行判準**（門檻數字）與後果。他說「不想看」時用實測取代拍板；**問他的題目寄進使用者專區（`aos-user send --kind decide`），會出現在全景頁上**（11-14 午：「問我的問題你直接放全景網頁，我現在大多在看那邊」），不只寫在終端 |
 | 沒回答的邊緣狀況 | 視為天然差異或實作時自然可解，不追問、不列待辦（見表下）|

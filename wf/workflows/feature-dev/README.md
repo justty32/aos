@@ -10,7 +10,7 @@
 ## Done when
 
 - [testing](../testing.md) 標「改完必跑」的建置指令回傳 0（build 得過）。
-- 新檔有檔頭一句話、職責變了的已改那一句，並跑過 `python3 wf/tools/index_gen.py --apply`（[code map](../../knowledge/code-map.json) 逐檔表與 `_index.json` 跟程式同一個 commit）。
+- 新檔有檔頭一句話、職責變了的已改那一句，交件走 `wf/tools/commit-request`（排隊會跑 `index_gen`，[code map](../../knowledge/code-map.json) 逐檔表與 `_index.json` 跟程式同一個 commit；鐵律 3）。
 - 下表對應的文檔已補；要使用者實機驗證的已寄使用者專區（`aos-user send`，見 [common/user.md](../common/user.md)；舊條目在 [WAIT_USER](../../WAIT_USER.md)）；跨 session 沒收尾的在 [SESSION-LOG](../../SESSION-LOG.md) 有一行。
 
 ## 流程
@@ -20,7 +20,7 @@
   → 增量修改（守 conventions）
   → build 得過（proto8 照 testing 建 impls）
   → 交使用者驗證（若需實機/實環境）→ 回報問題 → 修 → 重複
-  → 全數通過後：檔頭一句話＋index_gen.py --apply → 補文檔 → commit
+  → 全數通過後：檔頭一句話 → 補文檔 → commit-request submit（排隊跑 index_gen）
 ```
 
 - **自動驗證是你（Claude）自己跑**的把關（現行只要求 build 得過，見 [testing](../testing.md)）。
