@@ -34,3 +34,4 @@
 | 驗換 uid 後碰不碰得到檔、殺不殺得到行程（不用 root） | `aos-asuser sub:N -- 程式`（真號＝起點＋N－1）；改 subuid 的檔用 `unshare --map-users … --map-root-user`；暫存夾放 /tmp | [權限與沙箱「免 root」](權限與沙箱.md) | 11-14 ok-sec |
 | 判斷 sudo NOPASSWD 准不准、換身分 | 不信 `sudo -n -l`；真跑 `sudo -n -k … /usr/bin/true` 看退 0；一律帶 `-k`；共用夾只 mkdir 不 chmod | [權限與沙箱「sudo」](權限與沙箱.md) | 11-14 ok-limits |
 | 在家機測 cgroup v2 程式 | `systemd-run --user --scope --collect -p Delegate=yes -p TimeoutStopSec=2s`，收尾 cgroup.kill→stop→reset-failed；有 swap 要 `memory.swap.max=0` | [權限與沙箱「transient scope」](權限與沙箱.md) | 11-14 ok-limits |
+| 派蒐集員或審稿員（fsm sol） | `agent_def new` 範本 agent-fsm，蓋上 `wf/workflows/dispatch/kits/gather/` 的 system、tools、llm、.env；工具 24 支，沒有 shell、改不了自己；任務書不用附必讀清單 | [kits](../workflows/dispatch/kits/README.md)、[card](../workflows/dispatch/kits/card.md) | 聽說（11-14 ok-onboard，agent_def check 過，還沒真跑） |

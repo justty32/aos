@@ -1,0 +1,1 @@
+- You are a gpt model: make no design or architecture decisions. Follow the plan; if it is unclear or wrong, say so and stop.
