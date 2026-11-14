@@ -1,7 +1,7 @@
 # aos_agent/ctl/who.py - 由 stack 路徑查詢所屬 agent。
 import json
 import os
-from ..common import bad_args, Fail, daemon_path, parse, table, under
+from ..common import bad_args, Fail, daemon_path, parse, registered_of, table, under
 from .shared import query_opt
 
 
@@ -11,11 +11,15 @@ usage: aos-agent [--daemon D] ctl who [-j] [--stack S] [--timeout-s S]
 
 flags:
   --stack S    stack path to look up (default: $AOS_STACK)
-  -j, --json   print name, stack, workspace, definition and daemon (the folder of the table it read) as one JSON object
+  -j, --json   print name, stack, workspace, definition, daemon (the folder of the table it read), parent and notify_box as one JSON object
   --timeout-s S  seconds to wait for AOS_KERNEL's answer about the table (default 3)
   -h, --help   show this help
 
 Prints its name; nested tool stacks match their owning agent.
+parent (who asked to add the agent: AOS_PARENT_STACK) and notify_box (where it should report:
+AOS_NOTIFY_BOX; subagent add sets it to the parent's stack/mailbox) are read from the row, then
+from the envs of its launch single (the cell file its launch points at), then (only for your own stack) from your environment; else null.
+They are what the requester wrote at add time, not proof of who started the agent.
 If several stacks contain S, the deepest listed stack wins.
 With $AOS_KERNEL set (and no --daemon) it first asks AOS_KERNEL where the table is (a
 procs_state_path letter) and reads that file; no answer within --timeout-s = KernelFailed
@@ -45,6 +49,8 @@ def cmd(argv):
     n, r = hit
     if opts.get("json"):
         # daemon＝這次讀的那份表所在的資料夾（沒走 kernel＝--daemon ＞ $AOS_DAEMON ＞ ./.stack 那台；走 kernel＝問來那份表檔的資料夾；同 daemon_path）
-        print(json.dumps({"name": n, "stack": r.get("stack"), "ws": r.get("ws"), "def": r.get("def"), "daemon": daemon_path()}, ensure_ascii=False))
+        where = daemon_path()
+        print(json.dumps({"name": n, "stack": r.get("stack"), "ws": r.get("ws"), "def": r.get("def"), "daemon": where,
+                          **registered_of(r, where)}, ensure_ascii=False))
     else:
         print(n)

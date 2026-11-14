@@ -19,7 +19,7 @@ HELP = """aos-agent ctl state - show one agent's state (status = the same)
 usage: aos-agent [--daemon D] ctl state [--target NAME] [-j] [--timeout-s S] [PART... | all]
 
 parts:
-  who        name, definition, workspace, stack
+  who        name, definition, workspace, stack, parent, notify_box (what the requester wrote at add time)
   state      daemon phase, reason, queued letters, latest answer
   tools      its tools (aos-agent tools ls), with its own changes
   llm        its brain settings (aos-agent llm ls)
@@ -88,8 +88,23 @@ def part_who(a):
     except Fail:
         d = None
     j = {"name": a.name, "def": d, "ws": a.row.get("ws"), "stack": a.stack}
+    try:
+        base = common.daemon_path()
+    except Fail:
+        base = None
+    j.update(common.registered_of(a.row, base))
+    shown = dict(j)
+    if j["parent"]:   # 文字版：parent 路徑後順手附表上查到的名字（查不到不附）；JSON 不查名字（05 定稿 1.4）
+        try:
+            names = [n for n, r in common.table().items()
+                     if isinstance(r.get("stack"), str) and os.path.realpath(r["stack"]) == os.path.realpath(j["parent"])]
+        except Fail:
+            names = []
+        if names:
+            shown["parent"] = "%s (%s)" % (j["parent"], names[0])
     return ("%s (def %s, ws %s, stack %s)" % (a.name, d or "-", j["ws"] or "-", a.stack),
-            "\n".join("%-6s %s" % (k, v or "-") for k, v in j.items()), j)
+            "\n".join("%-10s %s" % (k, v or "-") for k, v in shown.items())
+            + "\n(parent and notify_box are what the requester wrote at add time, not proof of who started you)", j)
 
 
 def part_state(a):

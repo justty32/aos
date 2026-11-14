@@ -90,6 +90,77 @@ class State(unittest.TestCase):
         self.assertEqual(list(j), ["tools"])
         self.assertEqual(j["tools"]["names"], ["clock"])
 
+    def run_as(self, env, *args):
+        p = subprocess.run([str(BIN), "--daemon", str(self.d), "ctl", "state", "--target", "bob", *args],
+                           env=clean_env(**env), capture_output=True, text=True, timeout=120, cwd=self.tmp, stdin=subprocess.DEVNULL)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        return p.stdout
+
+    def test_who_notify_box_only_for_itself(self):   # wf/advices「子 agent 不知道是誰生了它」who 那段（ok-limits 11-14）
+        box = str(self.tmp / "mom" / "mailbox")
+        j = json.loads(self.run_as({"AOS_STACK": str(self.stack / "tools" / "self_state"), "AOS_NOTIFY_BOX": " %s\n" % box}, "-j", "who"))
+        self.assertEqual(j["who"]["notify_box"], box)
+        out = self.run_as({"AOS_STACK": str(self.stack), "AOS_NOTIFY_BOX": box}, "who")
+        self.assertIn("notify_box " + box, out)
+        self.assertIn("not proof of who started you", out)
+        for env in ({"AOS_NOTIFY_BOX": box},                                           # 沒有 AOS_STACK：不是它自己在問
+                    {"AOS_STACK": str(self.d / "procs" / "kid"), "AOS_NOTIFY_BOX": box},   # 別隻在問 bob
+                    {"AOS_STACK": str(self.stack), "AOS_NOTIFY_BOX": "  "}):              # 空白＝沒有
+            self.assertIsNone(json.loads(self.run_as(env, "-j", "who"))["who"]["notify_box"], env)
+        self.assertIsNone(json.loads(self.state("-j", "who").stdout)["who"]["notify_box"])
+
+    def test_ctl_who_json_notify_box(self):
+        box = str(self.tmp / "mom" / "mailbox")
+        def who(env, *args):
+            p = subprocess.run([str(BIN), "--daemon", str(self.d), "ctl", "who", "--json", *args], env=clean_env(**env),
+                               capture_output=True, text=True, timeout=120, cwd=self.tmp, stdin=subprocess.DEVNULL)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            return json.loads(p.stdout)
+        me = {"AOS_STACK": str(self.stack / "tools" / "x"), "AOS_NOTIFY_BOX": box}
+        self.assertEqual((who(me)["name"], who(me)["notify_box"]), ("bob", box))
+        self.assertIsNone(who(me, "--stack", str(self.d / "procs" / "kid"))["notify_box"])   # 問別隻＝null
+
+    def test_registered_read_from_row_then_launch_envs(self):   # ok-devt-1114 05 定稿 1.3：列 ＞ launch 的 envs ＞ 自己的環境
+        box, parent = str(self.tmp / "mom" / "mailbox"), str(self.stack)
+        table = json.loads((self.d / "procs_state.json").read_text())
+        cell = self.d / "procs" / "kid"                                    # 真的 daemon 記法：launch 指到小格，envs 在小格檔（ok-limits 探測 probe2）
+        cell.mkdir(parents=True, exist_ok=True)
+        single = {"argv": ["aos-exec", "--", "x"], "envs": {
+            "AOS_PARENT_STACK": parent, "AOS_NOTIFY_BOX": " %s " % box, "FAKE_TOKEN": "secret-value-1114"}}
+        (cell / "exec.json").write_text(json.dumps({"exec": single}))
+        table["procs"]["kid"]["launch"] = {"exec": ["procs/kid/exec.json#/exec"]}
+        (self.d / "procs_state.json").write_text(json.dumps(table))
+        def run(env, *args):
+            p = subprocess.run([str(BIN), "--daemon", str(self.d), "ctl", *args], env=clean_env(**env),
+                               capture_output=True, text=True, timeout=120, cwd=self.tmp, stdin=subprocess.DEVNULL)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertNotIn("secret-value-1114", p.stdout + p.stderr)   # 別的 envs 一個字都不印
+            return p.stdout
+        kid = str(self.d / "procs" / "kid")
+        j = json.loads(run({}, "who", "--json", "--stack", kid))        # 問別隻也查得到（讀表）
+        self.assertEqual((j["name"], j["parent"], j["notify_box"]), ("kid", parent, box))
+        out = run({}, "state", "--target", "kid", "who")
+        self.assertIn("parent     %s (bob)" % parent, out)               # 文字版附名字
+        self.assertIn("(parent and notify_box are what the requester wrote at add time, not proof of who started you)", out)
+        j = json.loads(run({}, "state", "--target", "kid", "-j", "who"))["who"]
+        self.assertEqual((j["parent"], j["notify_box"]), (parent, box))  # JSON 不附名字
+        single["envs"]["AOS_NOTIFY_BOX"] = ""                                   # 明確的空字串＝沒有，不再看自己的環境
+        (cell / "loop.json").write_text(json.dumps({"exec": single, "_entry": ["aos-loop", {"$env": "AOS_CF"}]}))
+        table["procs"]["kid"]["launch"] = {"exec": ["procs/kid/loop.json#/_entry"]}   # loop 型：指 /_entry，單子在 /exec
+        table["procs"]["kid"]["parent"] = None                                  # 列上的欄（第 2 期）優先
+        (self.d / "procs_state.json").write_text(json.dumps(table))
+        j = json.loads(run({"AOS_STACK": kid, "AOS_NOTIFY_BOX": box, "AOS_PARENT_STACK": parent}, "who", "--json"))
+        self.assertEqual((j["name"], j["parent"], j["notify_box"]), ("kid", None, None))
+        table["procs"]["kid"]["launch"] = {"exec": ["../def-x"]}                # 沒帶 envs 的列：launch 是定義路徑
+        del table["procs"]["kid"]["parent"]
+        (self.d / "procs_state.json").write_text(json.dumps(table))
+        self.assertEqual(json.loads(run({}, "who", "--json", "--stack", kid))["notify_box"], None)
+        j = json.loads(run({"AOS_STACK": kid, "AOS_NOTIFY_BOX": box}, "who", "--json"))   # 自己的環境兜底
+        self.assertEqual((j["parent"], j["notify_box"]), (None, box))
+        table["procs"]["kid"]["launch"] = {"exec": ["procs/kid/gone.json#/exec"]}   # 指標指到讀不到的檔＝null
+        (self.d / "procs_state.json").write_text(json.dumps(table))
+        self.assertEqual(json.loads(run({}, "who", "--json", "--stack", kid))["notify_box"], None)
+
     def test_hooks_with_one_hook(self):   # 11-10 最後一輪：hook 鍵改名 event 後 part_hooks 還讀 "on"，有 hook 就 KeyError
         iface = json.loads((self.defn / "interfaces.json").read_text())
         iface["aos-agent"]["hooks"] = "hooks.json"

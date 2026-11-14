@@ -117,6 +117,70 @@ def under(path, top):
     return p == t or p.startswith(t + "/")
 
 
+REGISTERED = (("parent", "AOS_PARENT_STACK"), ("notify_box", "AOS_NOTIFY_BOX"))   # ok-devt-1114 05 定稿 1.3：表的欄、啟動單子 envs 的名字
+
+
+def _launch_single(row, base):
+    """列的啟動單子（物件）或 None。帶 envs 掛的列，daemon 把 launch.exec 記成指到小格的一條指標：exec 型 ["procs/<名>/exec.json#/exec"]，
+    loop 型 ["procs/<名>/loop.json#/_entry"]（單子在同檔的 /exec）；相對路徑從表所在的資料夾（base）算。內嵌物件也認。
+    讀不到（檔不在、經 kernel 刪減過的表、指標壞）＝None。"""
+    launch = row.get("launch")
+    ex = launch.get("exec") if isinstance(launch, dict) else None
+    if isinstance(ex, dict):
+        return ex
+    if isinstance(ex, list) and ex:
+        ex = ex[0]
+    if not isinstance(ex, str) or "#" not in ex:
+        return None
+    f, _, ptr = ex.partition("#")
+    if not f.endswith(".json"):
+        return None
+    if not os.path.isabs(f):
+        if base is None:
+            return None
+        f = os.path.join(base, f)
+    try:
+        with open(f, encoding="utf-8") as fh:
+            doc = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(doc, dict):
+        return None
+    node = doc
+    for part in [p.replace("~1", "/").replace("~0", "~") for p in ptr.split("/")[1:]]:
+        node = node.get(part) if isinstance(node, dict) else None
+    if isinstance(node, dict) and "argv" in node:
+        return node
+    single = doc.get("exec")                 # loop 型：指標指 /_entry，單子在 /exec
+    return single if isinstance(single, dict) else None
+
+
+def _registered(row, single, field, env, mine):
+    """一格登記（parent 或 notify_box）照 05 定稿 1.3 的順序讀：① 列上的欄（第 2 期 daemon 寫）；② 那列啟動單子的 envs（第 1 期）；
+    ③ 查的是自己＝自己的環境變數。前一處有這個鍵（含空字串＝明確沒有）就不看後面；空白、非字串、全讀不到＝None。
+    只取這一個名字，不輸出別的 envs（可能帶金鑰）。"""
+    if field in row:
+        v = row[field]
+        return v.strip() or None if isinstance(v, str) else None
+    envs = single.get("envs") if isinstance(single, dict) else None
+    if isinstance(envs, dict) and env in envs:
+        v = envs[env]
+        return v.strip() or None if isinstance(v, str) else None
+    if mine:
+        return os.environ.get(env, "").strip() or None
+    return None
+
+
+def registered_of(row, base=None):
+    """{"parent": …, "notify_box": …}：add 時請求方寫的登記，字串或 None；是登記不是證明。base＝表所在的資料夾（daemon_path()）。"""
+    row = row if isinstance(row, dict) else {}
+    stack = row.get("stack")
+    me = os.environ.get("AOS_STACK", "")
+    mine = bool(me and isinstance(stack, str) and stack and under(me, stack))
+    single = None if all(field in row for field, _ in REGISTERED) else _launch_single(row, base)
+    return {field: _registered(row, single, field, env, mine) for field, env in REGISTERED}
+
+
 class Agent:
     """表上的一隻：name、row（那一列；路徑欄 daemon_ctl 已拼回絕對）、stack、ws、phase、reason。"""
 

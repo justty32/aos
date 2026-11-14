@@ -58,7 +58,8 @@
     "test_set_def.py": "Test aos-agent ctl set-def on a real aos-daemon: the row keeps its stack, workspace and auto_restart, the new definition runs from the next start, --…",
     "test_state_parts.py": "Test aos-agent ctl state (11-10 self-family self_state): the overview (one line per part), picked parts, all, --json, and parts that are not availabl…",
     "test_system.py": "Test aos-agent system on a fake daemon table (11-11 self-system): get / get -l / get --json, set from stdin and from a file, empty text, reset, missi…",
-    "test_tools_override.py": "Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with \"$override\" (N2 poin…"
+    "test_tools_override.py": "Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with \"$override\" (N2 poin…",
+    "test_who_registered_daemon.py": "ctl who reads parent / notify_box of a row attached with --envs on a real isolated daemon (ok-devt-1114 05 定稿 1.3, ok-limits 11-14)."
    },
    "using-aos-agent.sh": "給人的殼 source 用（不是跑）：之後直接打 say／listen／chat／status，像命名空間（11-04 aos-agent 02）。"
   },
