@@ -650,7 +650,7 @@
    "writer": "lib/agent/mail_notify（範本 hooks.json 的 mail_notify 那格，on_clock 每 60000 ms；11-11 再註：原 10000，使用者翻案「每 1 分鐘」）",
    "reader": "同左",
    "image": "不進：在 hooks/ 小格裡，stack.gitignore 的 **/hooks/ 擋（G092）",
-   "on_bad": "不在、壞了＝當作都沒通知過：信箱裡還沒讀的通知一次；寫不了＝WriteFailed（hook on_error continue＝一行 warning）。11-11 再註：事件 first（起來、睡醒）時不在、壞了＝沒有記錄，信箱裡在等的只記不提醒；所以每次跑都寫（沒信箱、沒信也寫 []）",
+   "on_bad": "不在、壞了＝當作都沒通知過：信箱裡還沒讀的通知一次；寫不了＝WriteFailed（hook on_error continue＝一行 warning）。11-11 再註：事件 first（起來、睡醒）時不在、壞了＝沒有記錄，信箱裡在等的只記不提醒；所以每次跑都寫（沒信箱、沒信也寫 []）。11-14 再註（使用者 11-13「em-Q2:B」）：first 時不在、壞了，但這隻 agent 的 stack 裡 history.jsonl 非空（跑過，例如換了定義、新定義才掛 mail_notify）＝當睡醒，信箱裡在等的提醒一次；history.jsonl 不在或空＝全新起來，照舊只記不提醒",
    "note": "11-11 mail-notify 新增：JSON 陣列，已通知過、還在 mailbox/new/ 的信名（讀掉的下次就拿掉）；事件 first 時不讀它。新檔，不用重建。11-11 再註：使用者翻案「只提醒新到的」，事件 first 時改成照讀、不提醒，只把信箱裡還在的全寫進來（thinking/2026-11/11/backlog-rulings.md）。11-11 再註（同日再裁「睡著時新到的要提」）：first 時照它比——睡前通知過的不再提、睡著時新到的通知一次；只有它不在或壞了（全新起來）才只記不提醒；檔在＝一直有記錄，所以沒信箱、沒信也寫 []。格式沒變，不用重建",
    "evidence": "proto8/lib/agent/mail_notify/_entry"
   },

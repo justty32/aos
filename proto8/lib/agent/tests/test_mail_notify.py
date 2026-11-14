@@ -1,4 +1,4 @@
-"""mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json）只把等著的記成已知；睡醒（first、有記錄）睡前提醒過的不重複、睡著時新到的提醒一次；讀掉的自然掉出記錄。"""
+"""mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json 也沒有非空 history）只把等著的記成已知；跑過的 stack（有非空 history）當睡醒、在等的提醒一次；睡醒（first、有記錄）睡前提醒過的不重複、睡著時新到的提醒一次；讀掉的自然掉出記錄。"""
 import json
 import os
 from pathlib import Path
@@ -65,7 +65,7 @@ class MailNotify(unittest.TestCase):
         self.assertEqual(len(self.notices()), 2)
 
     def test_first_only_marks_waiting_letters(self):
-        # 使用者 11-11 選項框「只提醒新到的」：剛起來（first）不提醒信箱裡等著的，只記成已知；之後新到的才提醒
+        # 全新起來（first、沒有記錄也沒有 history）不提醒信箱裡等著的，只記成已知；之後新到的才提醒
         subprocess.run(["aos-mailbox", "-s", str(self.stack), "where"], capture_output=True, check=True)
         self.send("A")
         self.send("B")
@@ -77,11 +77,39 @@ class MailNotify(unittest.TestCase):
         self.send("C")
         self.fire()
         self.assertEqual(self.notices(), ["[aos] new_mail: 1 new letter from C. Look with mailbox_peek, read with mailbox_read."])
-        (self.cell / "notified.json").unlink()                 # 沒有記錄（例：小格被清）也一樣：first 只記不提醒
+        (self.cell / "notified.json").unlink()                 # 沒有記錄也沒有 history：first 只記不提醒
         self.send("D")
         self.fire(first=True)
         self.assertEqual(len(self.notices()), 1)
         self.assertEqual(len(json.loads((self.cell / "notified.json").read_text())), 4)
+
+    def test_first_without_record_but_with_history_tells_waiting(self):
+        (self.stack / "history.jsonl").write_text('{"role": "user", "content": "before"}\n')
+        self.assertFalse((self.cell / "notified.json").exists())
+        subprocess.run(["aos-mailbox", "-s", str(self.stack), "where"], capture_output=True, check=True)
+        self.send("A")
+        waiting = sorted(d.name for d in (self.stack / "mailbox" / "new").iterdir())
+        self.assertEqual(len(waiting), 1)
+        self.fire(first=True)
+        self.assertEqual(self.notices(), ["[aos] new_mail: 1 new letter from A. Look with mailbox_peek, read with mailbox_read."])
+        self.assertEqual(json.loads((self.cell / "notified.json").read_text()), waiting)
+        self.fire(first=True)
+        self.fire()
+        self.assertEqual(len(self.notices()), 1)
+
+    def test_first_without_record_and_empty_history_only_marks(self):
+        (self.stack / "history.jsonl").write_text("")
+        (self.cell / "history.jsonl").write_text('{"role": "user", "content": "hook only"}\n')
+        self.assertFalse((self.cell / "notified.json").exists())
+        subprocess.run(["aos-mailbox", "-s", str(self.stack), "where"], capture_output=True, check=True)
+        self.send("A")
+        waiting = sorted(d.name for d in (self.stack / "mailbox" / "new").iterdir())
+        self.assertEqual(len(waiting), 1)
+        self.fire(first=True)
+        self.assertEqual(self.notices(), [])
+        self.assertEqual(json.loads((self.cell / "notified.json").read_text()), waiting)
+        self.fire()
+        self.assertEqual(self.notices(), [])
 
     def test_wake_tells_letters_that_came_while_asleep(self):
         # 使用者 11-11 選項框「睡著時新到的要提」：睡醒（first、有記錄）照 notified.json 比——睡前提醒過的不再提，睡著時到的提醒一次
