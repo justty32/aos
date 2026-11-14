@@ -1,4 +1,5 @@
 # Verify the wait cell's cooldown after outside failures (two-machines 06) with a fake aos-llm on PATH.
+import datetime
 import json
 import os
 from pathlib import Path
@@ -137,6 +138,133 @@ sys.exit(code)
         last = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
         self.assertEqual(last, {'role': 'assistant', 'content': 'ok'})
         self.assertEqual(len(observed.read_text().splitlines()), 2)
+
+    def priority_request(self, priority):
+        path = self.stack / 'think/request.json'
+        body = json.loads(path.read_text())
+        body['priority'] = priority
+        path.write_text(json.dumps(body))
+        return path.read_bytes()
+
+    def assert_deadline_rebuild(self, raw):
+        request = self.stack / 'think/request.json'
+        before_request = request.read_bytes()
+        cooling = self.stack / cooldown.NAME
+        before_cooldown = cooling.read_bytes() if cooling.exists() else None
+        sends = self.sends()
+        result = self.wait(11)
+        self.assertEqual(result.stderr.strip(),
+                         "agent-fsm: warning: the request's deadline %s has passed (or passes within 5 s); "
+                         "not sending it, going back to think to rebuild the request" % raw)
+        self.assertEqual(self.sends(), sends)
+        self.assertFalse((self.stack / 'think/pending.txt').exists())
+        self.assertEqual(request.read_bytes(), before_request)
+        self.assertEqual(cooling.read_bytes() if cooling.exists() else None, before_cooldown)
+        return result
+
+    def test_past_epoch_deadline_rebuilds_without_sending(self):
+        raw = time.time() - 60
+        self.priority_request({'level': 'normal', 'deadline': raw})
+        cooldown.fail(str(self.stack), 'BudgetMissing', 'budget used up')
+        self.past()
+        self.assert_deadline_rebuild(raw)
+        self.assertFalse(self.calls.exists())
+        self.assertFalse((self.root / 'requests.jsonl').exists())
+        self.assertFalse((self.stack / 'think/reply').exists())
+        self.assertFalse((self.stack / 'think/sent.json').exists())
+        self.assertFalse((self.stack / 'observed.jsonl').exists())
+
+    def test_past_iso_deadline_with_offset_rebuilds(self):
+        raw = self.iso_at(time.time() - 60)
+        self.priority_request({'level': 'normal', 'deadline': raw})
+        self.assert_deadline_rebuild(raw)
+        self.assertFalse(self.calls.exists())
+        self.assertFalse((self.root / 'requests.jsonl').exists())
+
+    def test_past_utc_z_deadline_rebuilds(self):
+        raw = datetime.datetime.fromtimestamp(time.time() - 60, datetime.timezone.utc).isoformat().replace('+00:00', 'Z')
+        self.priority_request({'level': 'normal', 'deadline': '  ' + raw + '  '})
+        self.assert_deadline_rebuild('  ' + raw + '  ')
+        self.assertFalse(self.calls.exists())
+        self.assertFalse((self.root / 'requests.jsonl').exists())
+
+    def test_pending_request_with_passed_deadline_still_receives(self):
+        self.wait(10)
+        self.priority_request({'level': 'normal', 'deadline': time.time() - 60})
+        result = self.wait(0)
+        self.assertNotIn("the request's deadline", result.stderr)
+        self.assertEqual(self.sends(), 1)
+        self.assertFalse((self.stack / 'think/pending.txt').exists())
+        last = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
+        self.assertEqual(last, {'role': 'assistant', 'content': 'ok'})
+
+    def test_deadline_within_three_seconds_rebuilds(self):
+        raw = time.time() + 3
+        self.priority_request({'level': 'normal', 'deadline': raw})
+        self.assert_deadline_rebuild(raw)
+        self.assertFalse(self.calls.exists())
+
+    def test_future_epoch_and_iso_deadlines_send(self):
+        future = time.time() + 3600
+        utc = datetime.datetime.fromtimestamp(future, datetime.timezone.utc).isoformat().replace('+00:00', 'Z')
+        for raw in (future, int(future), self.iso_at(future), utc, '  ' + self.iso_at(future) + '  '):
+            with self.subTest(deadline=raw):
+                pending = self.stack / 'think/pending.txt'
+                pending.write_text('')
+                request = self.priority_request({'level': 'normal', 'deadline': raw})
+                sends = self.sends()
+                self.wait(10)
+                self.assertEqual(self.sends(), sends + 1)
+                self.assertEqual(pending.read_text(), 'letter-1\n')
+                sent = (self.root / 'requests.jsonl').read_text().splitlines()
+                self.assertEqual(json.loads(sent[-1]), request.decode())
+
+    def test_missing_or_unparseable_deadline_is_left_to_kernel(self):
+        cases = [{}, {'priority': 'high'}, {'priority': {'level': 'normal'}},
+                 {'priority': {'deadline': 'garbage'}}, {'priority': {'deadline': '2000-01-01T00:00:00'}},
+                 {'priority': {'deadline': True}}, {'priority': {'deadline': False}},
+                 {'priority': {'deadline': None}}, {'priority': {'deadline': []}},
+                 {'priority': {'deadline': {}}}, {'priority': {'deadline': float('nan')}},
+                 {'priority': {'deadline': float('inf')}}, {'priority': {'deadline': float('-inf')}}]
+        for fields in cases:
+            with self.subTest(fields=fields):
+                pending = self.stack / 'think/pending.txt'
+                pending.write_text('')
+                body = {'endpoint': 'local', 'request': {'messages': [{'role': 'user', 'content': 'hi'}]}}
+                body.update(fields)
+                request = self.stack / 'think/request.json'
+                request.write_text(json.dumps(body))
+                before = request.read_bytes()
+                sends = self.sends()
+                result = self.wait(10)
+                self.assertEqual(self.sends(), sends + 1)
+                self.assertEqual(pending.read_text(), 'letter-1\n')
+                self.assertNotIn("the request's deadline", result.stderr)
+                self.assertEqual(request.read_bytes(), before)
+                self.assertFalse((self.stack / cooldown.NAME).exists())
+
+    def test_passed_deadline_while_cooling_waits_without_warning(self):
+        self.priority_request({'level': 'normal', 'deadline': time.time() - 60})
+        cooldown.fail_until(str(self.stack), 'BudgetMissing', 'budget used up', time.time() + 3600)
+        before_request = (self.stack / 'think/request.json').read_bytes()
+        before_cooldown = (self.stack / cooldown.NAME).read_bytes()
+        result = self.wait(10)
+        self.assertEqual(result.stderr, '')
+        self.assertEqual(self.sends(), 0)
+        self.assertFalse((self.stack / 'think/pending.txt').exists())
+        self.assertFalse((self.root / 'requests.jsonl').exists())
+        self.assertEqual((self.stack / 'think/request.json').read_bytes(), before_request)
+        self.assertEqual((self.stack / cooldown.NAME).read_bytes(), before_cooldown)
+
+    def test_due_budget_missing_cooldown_with_passed_deadline_rebuilds(self):
+        self.refuse(window='hour', resets_at=self.iso_at(time.time() + 3600))
+        raw = time.time() - 60
+        self.priority_request({'level': 'normal', 'deadline': raw})
+        self.past()
+        sent = (self.root / 'requests.jsonl').read_bytes()
+        self.assert_deadline_rebuild(raw)
+        self.assertEqual(self.sends(), 1)
+        self.assertEqual((self.root / 'requests.jsonl').read_bytes(), sent)
 
     def test_non_budget_error_stdout_stays_brain_failed(self):
         replies = [json.dumps({'error': {'code': 'EndpointFailed', 'msg': 'fake'}}),

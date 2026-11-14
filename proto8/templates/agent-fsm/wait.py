@@ -18,7 +18,7 @@
 #   看 <kernel>/requests/{new,cur}/<名>（只讀不寫）；兩處都沒有＝再 recv 一次（kernel 先寄回信才刪 cur，這次不會誤判）；
 #   還是 10＝刪 pending.txt、印一行 warning、退 10（下一拍 request.json 在就重寄，不在就退 11 回 think 重組）。
 #   AOS_LLM_KERNEL 沒設或解不到資料夾＝不判斷、照舊等。
-# 結束碼（fsm.json 照碼分岔，N-36）：0＝回信接進 history（→ act）；10＝還沒回或冷卻等待（→ wait）；11＝請求不在、腦設定改過或請求比 history 舊，回 think 重組請求。
+# 結束碼（fsm.json 照碼分岔，N-36）：0＝回信接進 history（→ act）；10＝還沒回或冷卻等待（→ wait）；11＝請求不在、腦設定改過、請求比 history 舊或寄出前 deadline 已過／5 秒內到期，回 think 重組請求。
 # 不看 queue：思考中來的信等答完回 idle 再收（使用者 11-04「等答完回 idle 再收」）。沒有自己的逾時（kernel 的 timeout_ms／priority.deadline 守）。
 #   等太久只提醒（11-10 坑-74 選項 A）：寄出（pending.txt 的 mtime）滿 10 分鐘印一行 warning（說信在 kernel 的哪一格，11-10 晚 B10）、之後每滿 10 分鐘再一行，照樣退 10 繼續等；
 #   印到第幾個 10 分鐘記在 think/wait_warned.txt（一個整數；寄新信與收掉回信時刪），每拍是新行程也不重複印。
@@ -30,6 +30,8 @@
 #   冷卻到了（due）或沒有＝照寄。好的回信接進 history 之後刪 cooldown.json（刪不掉＝warning）。ReplyBad、WriteFailed 等不寫冷卻。
 #   BudgetMissing（kernel 額度拒絕）：brain_failed 的 name＝BudgetMissing、reason＝kernel 的 msg，記同代號冷卻、warning、退 10；
 #     冷卻到期重寄同一份 request.json，不寫 observed、不加 history。只認 recv --full 的 JSON error.code，不讀 stderr。
+#     冷卻檢查過後、正要寄時，priority.deadline 可解且已過或 5 秒內到期＝只 warning、退 11 回 think 重組；
+#     不觸發 brain_failed、不改 request.json／cooldown.json，解不開的 priority 仍交 kernel 判斷。
 #     11-14 結構化：kernel 的 error 多帶 window（hour／day／all）、resets_at（下一個視窗起點，ISO 帶時區，all 是 null）等欄位時：
 #       resets_at 在未來＝冷卻到 resets_at＋5 秒（不早於現在＋30 秒，cooldown.fail_until）；resets_at 剛過（60 秒內）＝現在＋30 秒；
 #       解不開、更舊或沒有＝照上面的間隔表（舊 kernel 只有 code／msg，行為不變）；
@@ -49,7 +51,7 @@
 #   照原本行為退出／記冷卻之前觸發 brain_failed（name＝代號、reason＝這格那行的原因）；hook 停下＝HookFailed／HooksBad 退 1（冷卻不記）。
 # --help 印英文用法；Ctrl-C 退 130。
 # on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick（經 cell_common.clock_tick）——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
-import datetime, json, os, signal, subprocess, sys, time
+import datetime, json, math, os, signal, subprocess, sys, time
 from pathlib import Path
 
 _import_paths = [str(Path(__file__).resolve().parent)]
@@ -121,8 +123,11 @@ Cooldown after a failure of the outside service, recorded in $AOS_STACK/cooldown
   LlmKernelMissing (AOS_LLM_KERNEL unset or blank before sending): run brain_failed, exit 1
     without cooldown, keep request.json; add the agent again with the variable.
 While that cooldown runs, a request about to be sent is held back (exit 10, stay in wait);
-once it is due the same request is sent again. A SendFailed cooldown recorded while the
-kernel folder was missing counts as due as soon as $AOS_LLM_KERNEL resolves to a folder.
+once it is due the same request is sent again. Before sending, a parseable priority.deadline
+that has passed or passes within 5 s causes one warning and exit 11 to rebuild in think;
+request.json and cooldown.json stay unchanged, with no brain_failed event.
+A SendFailed cooldown recorded while the kernel folder was missing counts as due as soon as
+$AOS_LLM_KERNEL resolves to a folder.
 A good reply deletes cooldown.json. Rebuilding because the endpoint or tuning changed also
 clears a BudgetMissing cooldown only (failure to clear only warns); other rebuilds do not.
 Hooks: brain_failed runs on LlmKernelMissing, BudgetMissing, BrainFailed, SendFailed and ReplyBad
@@ -230,6 +235,29 @@ def budget_until(error, now):
     if now - at < 60:
         return now + 30                          # 邊界上剛過：kernel 還沒翻視窗，很快就好
     return None
+
+
+def request_deadline(body):
+    """priority.deadline → epoch 秒；解不開或沒時區＝None，priority 的合法性交 kernel 判斷。"""
+    priority = body.get("priority")
+    if not isinstance(priority, dict) or "deadline" not in priority:
+        return None
+    raw = priority["deadline"]
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        try:
+            at = float(raw)
+        except OverflowError:
+            return None
+        return at if math.isfinite(at) else None
+    if not isinstance(raw, str):
+        return None
+    try:
+        when = datetime.datetime.fromisoformat(raw.strip().replace("Z", "+00:00"))
+        if when.tzinfo is None:
+            return None
+        return when.timestamp()
+    except (ValueError, OverflowError, OSError):
+        return None
 
 
 def slow_step():
@@ -385,6 +413,11 @@ if not name:                                     # 還沒寄
     if phase == "cooling" and not (rec.get("code") == "SendFailed" and KERNEL_GONE in str(rec.get("reason"))
                                    and kernel_dir()):
         sys.exit(NOT_YET)                        # 冷卻中：不寄、留在 wait；到了（due）或 kernel 剛出現才重寄同一份
+    deadline = request_deadline(body)
+    if deadline is not None and deadline <= time.time() + 5:
+        aos_flags.warn("agent-fsm", "the request's deadline %s has passed (or passes within 5 s); not sending it, "
+                       "going back to think to rebuild the request" % body["priority"]["deadline"])
+        sys.exit(REBUILD)
     ensure_box()
     try:
         with open(sent_path, "w", encoding="utf-8") as f:
