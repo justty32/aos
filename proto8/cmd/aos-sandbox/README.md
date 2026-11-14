@@ -71,6 +71,7 @@ bwrap 在這個 user ns 裡照開（[06 X28](../../thinking/2026-11/13/kernel-li
 ## 要 root 的那半
 
 [root/setup.sh](root/setup.sh)：預設乾跑（只印指令），`sudo sh proto8/cmd/aos-sandbox/root/setup.sh --apply` 才做——把 s6 四支放進 `/usr/local/bin`、建系統帳號 `aos-run`、開 `/srv/aos-run`、加一條 sudoers（只准「換成 aos-run」）。
+**在 `/srv/aos-run` 底下開資料夾**（11-14 線限 sbroot 驗收踩到的）：跑 setup.sh 的人（我）不在 `aos-run` 群組裡。群組外的人對目錄 chmod，kernel 會清掉 setgid 位，之後新建的檔變成我自己的群組，`aos-run` 就讀不到；我也不能把檔 chgrp 到 `aos-run`。所以 `/srv/aos-run` 底下**只 mkdir、不 chmod**，讓子目錄沿用 setgid 帶下來的 `aos-run` 群組；umask 022 建出來是 2755，要讓 `aos-run` 寫的那層再加 `chmod g+w`（群組留著，只有那層的 setgid 會掉）。把自己加進 `aos-run` 群組（`sudo usermod -aG aos-run 我`，重新登入後生效）之後，就不會有這個問題。這層的接法：aos-sandbox 寫了 `user` 就要 root，我不是 root 時改成前面接 `sudo -n /usr/local/bin/s6-setuidgid aos-run`，後面接 aos-sandbox `--dry-run` 印出的那條（驗收紀錄 [kernel-limits-1114](../../thinking/2026-11/14/kernel-limits-1114.md)）。
 `setup.sh --mailbox 信箱 [--apply]`：只做讓 aos-run 寫得到某個 kernel 信箱——擁有者＝我（跑 kernel 的人）、群組 `aos-run`、2770，四格加預設 ACL（閘門建的信、kernel 寫的回信兩邊都讀寫得到，不看 umask）；信箱要放在 aos-run 走得到的地方（例 `/srv/aos-run/requests`）。不讓寫＝`chmod 700 信箱`。
 另外三個旗標換預設值（不讀環境變數）：`--me 名`（我＝跑 kernel 的人，預設 `$SUDO_USER` 或自己；測試在假 root 裡給數字）、`--s6-bin 路徑`（s6 的 bin，預設試驗場 `/home/<我>/code/try/sandbox/s6-root/bin`）、`--runner 名`（跑不信任函數的帳號與群組，預設 `aos-run`）；repo 現行沒有 `SetupFlagsTest`，乾跑旗標需手動核對。從 repo 根跑以下指令（不帶 `--apply`，只印不執行），確認輸出採用指定的 s6 路徑、使用者與 runner；乾跑不讀取 s6 執行檔，示例的 `--s6-bin` 路徑不必存在：
 

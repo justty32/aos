@@ -92,6 +92,10 @@ fi
 
 echo "# 3. its work area $AREA: owner $ME, group $RUNNER, 2770 (new files take the group, both can read and write; others cannot enter)"
 run install -d -o "$ME" -g "$RUNNER" -m 2770 "$AREA"
+# 在 $AREA 底下開資料夾的坑（11-14 線限 sbroot 驗收）：$ME 不在 $RUNNER 群組裡，群組外的人 chmod 一個目錄，kernel 會清掉它的 setgid 位，
+# 之後新建的檔變成 $ME 自己的群組，$RUNNER 就讀不到了（$ME 也不能 chgrp 到自己不在的群組）。所以 $AREA 底下只 mkdir、不 chmod，
+# 子目錄會沿用 setgid 帶下來的 $RUNNER 群組；umask 022 建出來的是 2755，要讓 $RUNNER 寫的那層再加 chmod g+w（群組留著，只有那層的 setgid 會掉）。
+# 把 $ME 加進 $RUNNER 群組（usermod -aG $RUNNER $ME，重新登入後生效）之後，就不會有這個問題。
 
 echo "# 4. let $ME run any command as $RUNNER (only as it, never as root)"
 RULE="$ME ALL=(root) NOPASSWD: /usr/local/bin/s6-setuidgid $RUNNER *"
