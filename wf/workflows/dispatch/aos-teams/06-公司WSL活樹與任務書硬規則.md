@@ -21,7 +21,7 @@
 4. 收行程只准兩種：(a) `aos-daemon-ctl -d <自己暫存樹 stack 的絕對路徑> shutdown`，下之前 echo 那個路徑、確認在自己的暫存夾下；(b) kill 起的時候自己記下的 pid，kill 前 `readlink /proc/<pid>/cwd` 確認在自己的暫存夾裡。禁止 pkill、killall、`kill $(pgrep …)` 與任何按名字或命令列字串收行程的寫法。
 5. 改 repo＝改活樹：proto8/cmd、proto8/py、被指令直接 import 的 proto8/lib/agent/*.py，存檔當下活樹就在用。新碼先放新檔／新函式、測到綠；接到既有路徑的那一步放在最後一個 commit，動手前先回報調度者、等放行。改既有檔：先寫暫存檔再改名，存完立刻 import 驗一次。不在 repo 裡 build C++（執行檔寫回 impls/*/bin＝換掉活樹的 daemon）；要編就把原始碼抄到 repo 外的 build 夾。
 6. 測試：全套測試在 `git archive <commit>` 抄到 repo 外的乾淨複本上跑；定向測試也先照第 2 條清環境。
-7. git：只 `git commit -F <訊息檔> -- <逐一點名的檔>`，不 `git add -A`、不 `git add .`；commit 前 `git diff -- <那些檔>` 確認裡面只有自己寫的字。只動領地清單上的檔：<領地>。
+7. git：家機 11-14 起改用 `~/repo/aos/wf/tools/commit-request`（開工 `claim`，交件 `submit --line <線名> --files 檔… --msg-file 訊息檔`；共用索引檔走 `--op`，不手改、不自己跑 index_gen；用法見 [07](07-預設流程與agent-fsm.md)）；沒有 commit-request 的機器才用 `git commit -F <訊息檔> -- <逐一點名的檔>`。一律不 `git add -A`、不 `git add .`；commit 前 `git diff -- <那些檔>` 確認裡面只有自己寫的字。只動領地清單上的檔：<領地>。
 8. 叫真模型測試時只給它真的小工作；不編理由、不繞它講明的限制。
 9. 開工前與收尾各跑一次、把指令與輸出貼進回報：`pgrep -u "$USER" -af aos-daemon`（活樹的 daemon 一台不少、你起的一台不剩）、`ls -la <活樹裡頂層那一格 stack>`（跟開工前的清單一樣）。對不上立刻停手回報，不自己重起、不自己清。
 ```
