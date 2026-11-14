@@ -91,5 +91,8 @@
  },
  "write": {
   "description": "write 工具（改包）：整份寫一個檔，沒有就建、有就整份蓋，上層資料夾自動建"
+ },
+ "ws_write": {
+  "description": "Write text only inside the agent's own workspace: create (default, refuses existing files), append (creates if missing), or replace (requires an existing file). Limit: 262144 UTF-8 bytes per call; mi…"
  }
 }

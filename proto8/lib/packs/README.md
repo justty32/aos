@@ -41,11 +41,12 @@
 | 信箱 | [mailbox.json](mailbox.json) | mailbox_peek、mailbox_read、mailbox_send |
 | 目標 | [goal.json](goal.json) | goal（eca 不掛：使用者 11-11「eca基本都有goal，所以goal不用給eca」；一支分動作 get、set、done、pause、resume；自己停下來〔答話不叫工具〕又沒信時，身體丟一則 `[aos] goal: …` 提醒，連續十次沒進展就暫停；使用者「todo/goal也一起做吧」、裁「一支 goal 分動作」，[goal 02](../../thinking/2026-11/11/goal/02-裁定與施工結果.md)） |
 
-## 選掛的一包（兩個範本都不掛）
+## 選掛的兩包（兩個範本都不掛）
 
 | 包 | 檔 | 工具 |
 |---|---|---|
 | kernel 的門 | [kernel_gate.json](kernel_gate.json) | kernel_gate（讓 agent 自己當 kernel 的門：`on` 把框架站掛在自己身上、請求先留著並通知自己，`pass`／`refuse` 表態、轉寄由站做，`ls`、`off`；使用者 11-13「一個普通的agent隨便弄些hook、json設定啥的，就可以收請求了。請求進來後agent收到通知，他自己判斷要不要過，然後再去轉送」，[eca-as-kernel](../../thinking/2026-11/13/eca-as-kernel.md)）——要用的 agent 自己 `self_tools {"op": "add", "path": "<AOS_HOME>/lib/agent/kernel_gate"}`，或定義的 `$override` 串加這一包 |
+| 工作區寫文字 | [ws-write.json](ws-write.json) | ws_write（只在自己的 `$AOS_WS` 裡建檔、追加或替換文字，每次上限 262144 UTF-8 bytes，自己的 `$AOS_STACK`、`$AOS_CD` 底下就算在工作區裡也拒絕；來源：wf/advices/fsm範本.md，ok-view 11-14） |
 
 ## 怎麼用、怎麼關
 
@@ -55,4 +56,4 @@
 - **關掉一支**：`aos-agent tools rm 名`（在覆蓋層寫 `"名": null`）。
 - **看某支從哪包來**：`aos-agent tools ls -l` 的 FROM 欄＝寫那個 `path` 的檔，就是 `lib/packs/包.json`。
 
-工具本身不擋工作區外的路徑（相對從 `$AOS_WS` 算、絕對照用），能不能動看 Linux 權限。
+除選掛的 ws-write 包會限制在自己的 `$AOS_WS` 內，其餘檔案工具不擋工作區外的路徑（相對從 `$AOS_WS` 算、絕對照用），能不能動看 Linux 權限。

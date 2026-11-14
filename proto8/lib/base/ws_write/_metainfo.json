@@ -1,0 +1,12 @@
+{"summary": "Write UTF-8 text only inside the agent's own workspace using create, append, or replace mode.",
+  "resource": "disk",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 30
+  },
+  "timeout_ms": 2000
+}

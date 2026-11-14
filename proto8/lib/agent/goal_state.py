@@ -106,6 +106,12 @@ def limit_note(rec):
     return PREFIX + "reminder limit %d reached; goal paused (op resume to go on). Goal: %s" % (rec["limit"], rec["text"])
 
 
+def paused_note(rec):
+    return (PREFIX + "paused (%s). A message came after you paused. If you can go on, call the goal tool with op resume; "
+            "if the goal is finished, op done; if you are still waiting, just say so. Goal: %s" %
+            (rec.get("reason") or "no reason given", rec["text"]))
+
+
 def plan(rec, progressed):
     """要不要丟、丟什麼：rec 不是 active＝None；否則回 (文字, 新的 rec)，不寫檔（呼叫的人在交出去那刻寫）。
     progressed＝上次提醒之後有叫工具做事＝先歸零。到上限＝那則是 limit_note、新 rec 改成 paused（之後不再丟）。"""
@@ -145,6 +151,26 @@ def due(history):
     """該不該丟（goal 是不是 active 另外看）：腦停下來了，或 history 還是空的（還沒答過任何一輪：外面先 set 了 goal，
     它就是開場題目；11-11 稍後使用者「也丟，當開場題目」）。"""
     return not history or stopped(history)
+
+
+def paused_due(rec, history):
+    """自己暫停後有新訊息、答完又停下才提醒一次；找不到 goal 呼叫或碰到摺疊界線就不猜。"""
+    if rec is None or rec.get("status") != "paused" or rec.get("updated_by") != "agent" or not stopped(history):
+        return False
+    saw_message = False
+    for m in reversed(history):
+        if is_reminder(m) or is_summary(m):
+            return False
+        if not isinstance(m, dict):
+            continue
+        if m.get("role") == "user":
+            saw_message = True
+        if m.get("role") == "assistant" and isinstance(m.get("tool_calls"), list):
+            for c in m["tool_calls"]:
+                fn = c.get("function") if isinstance(c, dict) else None
+                if is_goal_tool(fn.get("name") if isinstance(fn, dict) else None):
+                    return saw_message
+    return False
 
 
 def progressed(history):

@@ -1,5 +1,6 @@
 """agent-fsm 的 goal（11-11 goal/02）：idle 格單跑（停下被丟、done 後不丟、上限停、pause／resume、信優先、外面設／清、有叫工具歸零、
 history 空時當開場題目、do_task 摺過也算進展、提醒找不到時以 summary 為界）＋真 aos-fsm 一步一步走、真 llm kernel＋假腦劇本實跑兩條。"""
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -14,6 +15,9 @@ CELLS = Path(__file__).resolve().parents[2] / "agent-fsm"   # 範本本身
 PROTO = CELLS.parents[1]
 GOAL_TOOL = PROTO / "lib" / "agent" / "goal"
 NOTE = "[aos] goal: "
+_spec = importlib.util.spec_from_file_location("goal_state", PROTO / "lib" / "agent" / "goal_state.py")
+goal_state = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(goal_state)
 
 
 def answer(text):
@@ -149,6 +153,98 @@ class IdleCell(Base):
         self.idle(0)
         self.assertIn("(reminder 1 of 10.", self.notes()[-1])
 
+    def pause_with_history(self):
+        self.goal("set", "Fix the bug.")
+        self.tool({"op": "pause", "reason": "waiting for amy"})
+        self.set_reminded(2)
+        self.write_history({"role": "user", "content": "Fix the bug."},
+                           called("goal", {"op": "pause", "reason": "waiting for amy"}),
+                           {"role": "tool", "tool_call_id": "c1", "content": "status\tpaused"},
+                           answer("I am waiting for amy."))
+
+    def test_agent_pause_letter_gets_one_note_without_changing_goal(self):
+        self.pause_with_history()
+        before = (self.stack / "goal.json").read_bytes()
+        self.say("amy: here is the log")
+        self.idle(0)
+        self.assertEqual(self.history()[-1]["content"], "amy: here is the log")
+        self.assertEqual(self.notes(), [])
+        self.add(answer("Thanks."))
+        self.idle(0)
+        note = goal_state.paused_note(self.rec())
+        self.assertEqual(self.history()[-1], {"role": "user", "content": note})
+        self.assertEqual(self.notes(), [note])
+        self.assertEqual((self.rec()["status"], self.rec()["reminded"]), ("paused", 2))
+        self.assertEqual((self.stack / "goal.json").read_bytes(), before)
+        self.add(answer("I am still waiting."))
+        self.idle(10)
+        self.say("amy: one more log")
+        self.idle(0)
+        self.add(answer("Thanks again."))
+        self.idle(10)
+        self.assertEqual(self.notes(), [note])
+        self.assertEqual((self.stack / "goal.json").read_bytes(), before)
+
+    def test_pause_by_outside_or_aos_gets_no_note(self):
+        for by in ("outside", "aos"):
+            with self.subTest(updated_by=by):
+                self.pause_with_history()
+                r = dict(self.rec(), updated_by=by)
+                (self.stack / "goal.json").write_text(json.dumps(r))
+                before = (self.stack / "goal.json").read_bytes()
+                self.say("amy: here is the log")
+                self.idle(0)
+                self.add(answer("Thanks."))
+                self.idle(10)
+                self.assertEqual(self.notes(), [])
+                self.assertEqual((self.stack / "goal.json").read_bytes(), before)
+
+    def test_agent_pause_without_later_message_gets_no_note(self):
+        self.pause_with_history()
+        self.idle(10)
+        self.assertEqual(self.notes(), [])
+
+    def test_resume_after_paused_note_gets_normal_reminder(self):
+        self.pause_with_history()
+        self.say("amy: here is the log")
+        self.idle(0)
+        self.add(answer("Thanks."))
+        self.idle(0)
+        self.assertIn("paused (waiting for amy).", self.notes()[-1])
+        self.add(called("goal", {"op": "resume"}, "c2"))
+        self.tool({"op": "resume"})
+        self.add({"role": "tool", "tool_call_id": "c2", "content": "status\tactive"}, answer("I can go on."))
+        self.idle(0)
+        self.assertEqual(len(self.notes()), 2)
+        self.assertIn("(reminder 1 of 10.", self.notes()[-1])
+        self.assertEqual(self.rec()["status"], "active")
+
+    def test_paused_tail_discards_partial_line_and_ignores_older_bad_json(self):
+        self.pause_with_history()
+        self.add({"role": "user", "content": "amy: here is the log"}, answer("Thanks."))
+        tail = self.hist.read_bytes()
+        self.hist.write_bytes(b"not JSON\n" + b"x" * 262144 + b"\n" + tail)
+        self.idle(0)
+        last = json.loads(self.hist.read_bytes().splitlines()[-1])
+        self.assertEqual(last, {"role": "user", "content": goal_state.paused_note(self.rec())})
+
+    def test_paused_tail_bad_json_gets_no_note(self):
+        self.pause_with_history()
+        self.add({"role": "user", "content": "amy: here is the log"})
+        with self.hist.open("a") as f:
+            f.write("not JSON\n")
+        self.add(answer("Thanks."))
+        before = self.hist.read_bytes()
+        self.idle(10)
+        self.assertEqual(self.hist.read_bytes(), before)
+
+    def test_paused_tail_without_goal_call_gets_no_note(self):
+        self.pause_with_history()
+        self.add({"role": "user", "content": "x" * 262144}, answer("Thanks."))
+        before = self.hist.read_bytes()
+        self.idle(10)
+        self.assertEqual(self.hist.read_bytes(), before)
+
     def test_letters_come_first(self):
         self.write_history({"role": "user", "content": "hi"}, answer("Hello."))
         self.goal("set", "Fix the bug.")
@@ -238,6 +334,64 @@ class IdleCell(Base):
         (self.stack / "goal.json").write_text("{nope")
         r = self.idle(10)
         self.assertEqual(r.stderr, "")
+
+
+class PausedDue(unittest.TestCase):
+    def setUp(self):
+        self.rec = dict(goal_state.new("Fix the bug.", 10, "agent"), status="paused", reason="waiting for amy")
+        self.pause = called("goal", {"op": "pause", "reason": "waiting for amy"})
+        self.message = {"role": "user", "content": "amy: here is the log"}
+
+    def test_summary_before_any_goal_call_is_a_boundary(self):
+        history = [self.pause, {"role": "user", "content": "[aos] summary: earlier work"},
+                   self.message, answer("Thanks.")]
+        self.assertFalse(goal_state.paused_due(self.rec, history))
+        self.assertFalse(goal_state.paused_due(self.rec, history[1:]))
+
+    def test_new_mail_notice_counts_as_a_message(self):
+        history = [self.pause, {"role": "user", "content": "[aos] new_mail: 1 new letter from amy."}, answer("Thanks.")]
+        self.assertTrue(goal_state.paused_due(self.rec, history))
+
+    def test_reminder_stops_another_paused_note(self):
+        for content in (goal_state.paused_note(self.rec), NOTE + "an earlier reminder"):
+            with self.subTest(content=content):
+                history = [self.pause, {"role": "user", "content": content}, self.message, answer("Thanks.")]
+                self.assertFalse(goal_state.paused_due(self.rec, history))
+
+    def test_only_messages_after_the_nearest_goal_call_count(self):
+        self.assertFalse(goal_state.paused_due(self.rec, [self.message, self.pause, answer("Waiting.")]))
+        self.assertFalse(goal_state.paused_due(self.rec, [self.pause, self.message, called("goal"), answer("Waiting.")]))
+        self.assertFalse(goal_state.paused_due(self.rec, [self.message, answer("Thanks.")]))
+
+    def test_requires_agent_pause_and_stopped_history(self):
+        history = [self.pause, self.message, answer("Thanks.")]
+        for rec in (None, dict(self.rec, status="active"), dict(self.rec, updated_by="outside"),
+                    dict(self.rec, updated_by="aos"), {"status": "paused"}):
+            with self.subTest(rec=rec):
+                self.assertFalse(goal_state.paused_due(rec, history))
+        for history in ([], [self.pause, self.message], [self.pause, self.message, called("peek_now_time")]):
+            with self.subTest(history=history):
+                self.assertFalse(goal_state.paused_due(self.rec, history))
+
+    def test_goal_tool_names_and_unrelated_calls(self):
+        for name in ("goal", "mcp__aos__goal", "aos.goal"):
+            with self.subTest(name=name):
+                history = [called(name), called("peek_now_time"), self.message, answer("Thanks.")]
+                self.assertTrue(goal_state.paused_due(self.rec, history))
+        self.assertFalse(goal_state.paused_due(self.rec, [called("not_goal"), self.message, answer("Thanks.")]))
+
+    def test_paused_note_reason_fallback_and_prefix(self):
+        for reason in (None, ""):
+            rec = dict(self.rec)
+            if reason is None:
+                rec.pop("reason")
+            else:
+                rec["reason"] = reason
+            note = goal_state.paused_note(rec)
+            self.assertEqual(note, NOTE + "paused (no reason given). A message came after you paused. If you can go on, "
+                             "call the goal tool with op resume; if the goal is finished, op done; "
+                             "if you are still waiting, just say so. Goal: Fix the bug.")
+            self.assertTrue(goal_state.is_reminder({"role": "user", "content": note}))
 
 
 class FakeBrainRun(Base):

@@ -13,7 +13,8 @@
 #   $AOS_STACK/goal.json 是 active＝把一則 user「[aos] goal: …」直接接進 history、退 0 去 think（不走 queue、不觸發 before_queue／after_queue）。
 #   上次提醒之後腦叫過 goal 以外的工具（只看 history：goal_state.progressed；do_task 摺過也算得到）＝計數先歸零；連續到上限那次丟
 #   「[aos] goal: reminder limit N reached; goal paused …」、goal 改 paused（之後不丟）。先寫 goal.json 再接 history（寫不成＝warning、不丟）。
-#   goal.json 壞了＝安靜當沒有（每 300 ms 一拍，不洗 log；aos-agent goal get 報 GoalBad）。讀寫走 lib/agent/goal_state.py。
+#   自己暫停後來了訊息、答完又停下＝只讀 history 最後 262144 bytes，找到 goal 呼叫且未碰到提醒或 summary 才加一次 paused 提示；
+#   不改 goal.json、不自動 resume；外面或 aos 設的暫停不提示。goal.json 壞了＝安靜當沒有（每 300 ms 一拍，不洗 log；aos-agent goal get 報 GoalBad）。讀寫走 lib/agent/goal_state.py。
 import json, os, re, signal, subprocess, sys
 from pathlib import Path
 
@@ -51,7 +52,8 @@ The idle cell: take every letter in $AOS_STACK/queue/ into $AOS_STACK/history.js
 Exit 0 = took at least one good letter (go think); 10 = no letter.
 Goal: with no letter, when the last message is an answer without tool_calls (or history is
 still empty) and $AOS_STACK/goal.json is active, one user message "[aos] goal: ..." goes into
-history (exit 0).
+history (exit 0). After an agent pauses its own goal and answers a later message, idle adds
+one paused note asking it to decide whether to resume; the goal stays unchanged.
 --prompt FILE: an opening message put into the queue once while history is empty.
 Hooks (hooks.json declared in interfaces.json): before_queue runs before a good letter goes
 into history (it may change content, or drop the letter: done, not in history, one line in
@@ -203,14 +205,43 @@ def opening():
 if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
     post(["init", box])                          # 先建好，aos-agent say／listen 認得（同 aos-eca-turn）
 cell_common.clock_tick(hooks, stack, lambda line: aos_flags.warn("agent-fsm", line), die)   # 11-11 on_clock：idle 在建好 queue 之後看時鐘（第一次就跑的 handler 可能往 queue 寄信），到了才起 handler
+def history_tail():
+    """只讀最後 262144 bytes；截斷的首行丟掉，壞 JSON／編碼回 None（不猜）。"""
+    try:
+        with open(history_path, "rb") as f:
+            offset = max(0, f.seek(0, os.SEEK_END) - 262144)
+            f.seek(offset)
+            data = f.read(262144)
+    except FileNotFoundError:
+        return []
+    except OSError as e:
+        die("HistoryBad", "cannot read history.jsonl: %s" % e)
+    if offset:
+        data = data.partition(b"\n")[2]
+    try:
+        return [json.loads(line) for line in data.decode("utf-8").splitlines() if line.strip()]
+    except (ValueError, UnicodeError):
+        return None
+
+
 def goal_turn():
-    """沒信時：腦停下來了、goal active＝接一則 [aos] goal: 進 history，回 True（去 think）。"""
+    """沒信時：active 丟一般提醒；自己暫停後有新訊息且又停下，丟一次 paused 提示。"""
     if not os.path.isfile(goal_state.path(stack)):  # 先只看檔在不在：沒 goal 的 agent 每拍不讀 history
         return False
     try:
         rec = goal_state.read(stack)
     except goal_state.GoalBad:
         return False
+    if rec is not None and rec["status"] == "paused" and rec.get("updated_by") == "agent":
+        tail = history_tail()
+        if tail is None or not goal_state.paused_due(rec, tail):
+            return False
+        try:
+            with open(history_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps({"role": "user", "content": goal_state.paused_note(rec)}, ensure_ascii=False) + "\n")
+        except OSError as e:
+            die("WriteFailed", "cannot append to history.jsonl: %s" % e)
+        return True
     if rec is None or rec["status"] != "active":
         return False
     history = []

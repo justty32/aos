@@ -61,5 +61,8 @@
  },
  "test_tool_spec.py": {
   "description": "Test lib/tool_spec.py: declaration to _tooldef/_metainfo, SpecBad, write_defs into a folder and a JSON pointer, and main() at run time."
+ },
+ "test_ws_write.py": {
+  "description": "Test workspace-only text writing, modes, byte limits, and safe create publication."
  }
 }

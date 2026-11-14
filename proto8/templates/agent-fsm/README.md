@@ -9,6 +9,8 @@ kernel 的 `error` 若多帶結構化欄位（`window`＝`hour`／`day`／`all`�
 
 **通用工具四包全開**（tool-packs，使用者「1.預設開到第四包，想要安全就自行限制」）：`tools.json` 的 `"$override"` 疊上 [lib/packs](../../lib/packs/README.md) 的四份清單——1 看（read、ls、view、stat、grep、glob）、2 改（write、edit、copy、move、mkdir）、3 刪（trash、remove）、4 殼（shell、run_python）——加 json 包（json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set；[json-tools](../../thinking/2026-11/12/json-tools/README.md)）與 jsonx 包（複雜組 jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del、jsonx_multi_get、jsonx_multi_set，認 `$ref`／`$env`；使用者 11-13「eca-1:A*」＝範本掛 jsonx），再加八包 agent 工具（兩個範本都開）：小工具 gadgets（peek_clock、peek_now_time、math、do_task）、事件 events（clock_register、self_hook）、待辦 todo（todo）、自我管理 self（self_tools、self_llm、self_system、self_state、self_ctl、self_history）、子 agent subagent（subagent、agents_ctl、fork）、定義 def（agent_def、tools_def）、信箱 mailbox（mailbox_*）、目標 goal（goal），再加 index 包（index_view：透過 index 看節點、只看不改；[index-tools](../../thinking/2026-11/12/index-tools/README.md)），共 55 支。這些檔案工具不擋工作區外的路徑（相對從 `$AOS_WS` 算、絕對照用），能不能動看 Linux 權限。`aos-tools --file tools.json ls -l` 的 FROM 欄看得出每支來自哪一包。**要收緊**：整包關＝從定義 `tools.json` 的 `$override` 那串拿掉那一包（例四包只留 look 就是唯讀；拿掉 subagent 就不能生子 agent），其他包不受影響；只關這一隻的某幾支＝`aos-agent tools rm shell`、`aos-agent tools rm run_python`（一次一支，寫進這隻自己那份、`"名": null`，定義不動）；`aos-agent tools reset` 回定義。
 
+goal 暫停中來信不自動 resume；只有 agent 自己暫停、history 尾段仍找得到最近的 goal 工具呼叫且之後有新訊息、答完又停下時，idle 才補一次 `[aos] goal: paused …` 提示，讓腦選 resume／done／繼續等，碰到既有 goal 提醒或 summary 就不補，外面或 aos 設的暫停與 goal.json 都不動。
+
 `interfaces.json` 宣告身體、工具與腦設定的位置。`_metainfo.json` 宣告估時 `cost.time_ms` 與 `llm` 資源，未設定逾時。
 
 
