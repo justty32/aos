@@ -2,7 +2,7 @@
 """aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；templates/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。
 
     aos-eca-screen --eca ECA_DIR open [--detach]   接進畫面（沒開就開、有對話就 --resume）；--detach＝只開不接
-    aos-eca-screen --eca ECA_DIR close             收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）
+    aos-eca-screen --eca ECA_DIR close             收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）；cli.json 無效也能關（一行提醒）
     aos-eca-screen --eca ECA_DIR watch             跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走；
                                                    daemon 表上那隻不再 running 或列已移除也走；找不到 daemon／讀不到表照等
 
@@ -19,7 +19,7 @@ aos_flags.parse（P-44：長旗標與共用短名 -h；子命令前不認得的�
 錯：stderr 一行 `aos-eca-screen: error: 代號 原因`、退 1：ArgumentsBad（沒給 --eca、多給參數、不是 eca 資料夾）、FlagUnknown、CommandUnknown、StackMissing、SessionBad（正在答題時 close）、
 加 cli_session 的（CfgBad…）。給人看的狀態句（attaching、watching、watch 不等了）是提醒行 `aos-eca-screen: warning: 句子`（R1、D5）。
 `--help`＝英文說明到 stdout、退 0；Ctrl-C＝退 130、不吐 traceback（watch 用 Ctrl-C 離開是正常離開，照舊退 0）。"""
-import json, os, sys, time
+import contextlib, io, json, os, sys, time
 
 sys.dont_write_bytecode = True
 from pathlib import Path
@@ -84,6 +84,7 @@ usage: aos-eca-screen --eca ECA_DIR close
 
 Closes the screen in AOS_STACK; aos-eca-turn can still resume the conversation.
 Prints "closed" or "no screen (already closed)". Refuses while the cell is answering.
+Works even when cli.json is not valid (one warning line).
 
 flags:
       --eca ECA_DIR   definition folder containing cli.json (before or after close; required)
@@ -152,16 +153,43 @@ def cmd_open(eca, opts):
     os.execvpe("tmux", ["tmux", "-S", cell.sock(), "attach", "-t", cli_base.TMUX_SESSION], env)
 
 
+def kind_for_close(eca):
+    # load_cfg 的 die 會先印錯誤再 SystemExit；close 把它改成一行提醒，不擋收畫面。
+    error = io.StringIO()
+    try:
+        with contextlib.redirect_stderr(error):
+            kind = cli_cfg.load_cfg(eca)["kind"]
+    except SystemExit:
+        reason = error.getvalue().strip().split(": error: ", 1)[-1] or "configuration loading failed"
+    else:
+        sys.stderr.write(error.getvalue())
+        return kind
+    try:
+        with open(os.path.join(eca, "cli.json"), encoding="utf-8") as f:
+            cfg = json.load(f)
+        kind = cfg.get("kind") if isinstance(cfg, dict) else None
+    except (OSError, ValueError):
+        kind = None
+    aos_flags.warn(PROG, "cli.json of %s is not valid (%s); closing the screen by its kind only" % (eca, reason))
+    return kind if isinstance(kind, str) and kind.strip() else None
+
+
 def cmd_close(eca, opts):
-    cell, _ = cell_of(eca)
-    if not os.path.isdir(cell.path):
-        print("no screen (already closed)")
-        return
-    f, ok = cell.lock()
-    with f:
-        if not ok:
-            die("SessionBad", "busy answering; close it after the answer finishes")
-        closed = cli_cell.close(cell)
+    stack = os.environ.get("AOS_STACK")
+    if not stack:
+        die("StackMissing", "AOS_STACK is not set (the eca's stack)")
+    kind = kind_for_close(eca)
+    kinds = (kind,) if kind else cli_cfg.AOS_FLAGS
+    closed = False
+    for kind in kinds:
+        cell = cli_cell.Cell(os.path.join(stack, kind), make=False)
+        if not os.path.isdir(cell.path):
+            continue
+        f, ok = cell.lock()
+        with f:
+            if not ok:
+                die("SessionBad", "busy answering; close it after the answer finishes")
+            closed = cli_cell.close(cell) or closed
     print("closed" if closed else "no screen (already closed)")
 
 
@@ -277,7 +305,7 @@ def main():
     if not top.get("eca"):
         die("ArgumentsBad", sub_reason(sub, "ArgumentsBad", "missing --eca ECA_DIR"))
     eca = os.path.realpath(top["eca"])
-    if not os.path.isfile(os.path.join(eca, "cli.json")):
+    if sub != "close" and not os.path.isfile(os.path.join(eca, "cli.json")):
         die("ArgumentsBad", sub_reason(sub, "ArgumentsBad",
                                        "%s is not an eca dir (no cli.json)" % top["eca"]))
     CMDS[sub](eca, opts)

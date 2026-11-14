@@ -128,6 +128,32 @@ class RmKeep(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.row("cat"), {})
 
+    def test_rm_with_invalid_cli_json_keeps_stack(self):
+        defn = self.tmp / "invalid-eca"
+        (defn / "screen").mkdir(parents=True)
+        (defn / "interfaces.json").write_text('{"aos-agent": {"screen": "screen"}}\n')
+        (defn / "screen" / "interfaces.json").write_text('{"aos-agent/screen": {}}\n')
+        (defn / "screen" / "_entry").write_text(json.dumps([
+            sys.executable, str(PROTO / "cmd" / "aos-eca" / "bin" / "aos-eca-screen"),
+            "--eca", str(defn)]) + "\n")
+        entry = defn / "_entry"
+        entry.write_text('#!/bin/sh\nexec sleep 60\n')
+        entry.chmod(0o755)
+        (defn / "cli.json").write_text('{"kind": "claude"}\n')
+        r = self.agent("ctl", "add", "-n", "invalid-eca", "-w", str(self.tmp), str(defn))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        until(lambda: self.row("invalid-eca").get("phase") == "running")
+        stack = self.d / "procs" / "invalid-eca"
+        (stack / "claude").mkdir()
+        (defn / "cli.json").write_text(json.dumps({
+            "kind": "claude", "print_flags": ["--output-format", "json"]}) + "\n")
+        r = self.agent("ctl", "rm", "invalid-eca")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("removed invalid-eca; stack %s kept" % stack, r.stdout)
+        self.assertEqual(self.row("invalid-eca"), {})
+        self.assertTrue(stack.is_dir())
+        self.assertTrue((stack / "claude" / "lock").is_file())
+
     def test_yes_needs_purge(self):
         r = self.agent("ctl", "rm", "-y", "ann")
         self.assertEqual(r.returncode, 1)

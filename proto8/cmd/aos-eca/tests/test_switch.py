@@ -737,6 +737,90 @@ class Screen(unittest.TestCase):
         self.assertTrue(cli_cell.machine_id())
 
 
+class ScreenClose(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import runpy
+        cls.screen = runpy.run_path(str(TURN.with_name("aos-eca-screen")))
+
+    def setUp(self):
+        from unittest import mock
+        self.mock = mock
+        self.tmp = tempfile.TemporaryDirectory(prefix="screen-close-")
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.defn = self.root / "def"
+        self.defn.mkdir()
+        self.stack = self.root / "stack"
+        (self.stack / "claude").mkdir(parents=True)
+        self.closed = []
+
+    def close_screen(self):
+        out, err = io.StringIO(), io.StringIO()
+        code = 0
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        env["AOS_STACK"] = str(self.stack)
+        def close(cell):
+            self.closed.append(Path(cell.path).name)
+            return True
+        with self.mock.patch.dict(os.environ, env, clear=True), \
+                self.mock.patch.object(sys, "argv", ["aos-eca-screen", "--eca", str(self.defn), "close"]), \
+                self.mock.patch.object(cli_cell, "close", side_effect=close), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            try:
+                self.screen["main"]()
+            except SystemExit as e:
+                code = e.code
+        return code, out.getvalue(), err.getvalue()
+
+    def test_close_with_invalid_cli_json_still_closes(self):
+        (self.defn / "cli.json").write_text(json.dumps({
+            "kind": "claude", "print_flags": ["--output-format", "json"]}))
+        code, out, err = self.close_screen()
+        self.assertEqual(code, 0, err)
+        self.assertEqual(out, "closed\n")
+        self.assertEqual(self.closed, ["claude"])
+        self.assertEqual(len(err.splitlines()), 1)
+        self.assertTrue(err.startswith("aos-eca-screen: warning: cli.json of %s is not valid (CfgBad " % self.defn), err)
+        self.assertIn("print_flags has --output-format", err)
+        self.assertTrue(err.endswith("; closing the screen by its kind only\n"), err)
+        self.assertFalse((self.stack / "codex").exists())
+
+    def test_close_without_usable_kind_closes_existing_known_cells(self):
+        (self.stack / "codex").mkdir()
+        for contents in ("{bad", "{}", '{"kind": ""}'):
+            with self.subTest(contents=contents):
+                self.closed.clear()
+                (self.defn / "cli.json").write_text(contents)
+                code, out, err = self.close_screen()
+                self.assertEqual(code, 0, err)
+                self.assertEqual(out, "closed\n")
+                self.assertCountEqual(self.closed, ["claude", "codex"])
+                self.assertEqual(len(err.splitlines()), 1)
+                self.assertIn("aos-eca-screen: warning:", err)
+
+    def test_close_with_missing_cli_json_closes_existing_cell(self):
+        code, out, err = self.close_screen()
+        self.assertEqual(code, 0, err)
+        self.assertEqual(out, "closed\n")
+        self.assertEqual(self.closed, ["claude"])
+        self.assertEqual(len(err.splitlines()), 1)
+        self.assertIn("CfgMissing", err)
+        self.assertFalse((self.stack / "codex").exists())
+
+    def test_close_with_invalid_cli_json_still_refuses_busy_cell(self):
+        (self.defn / "cli.json").write_text(json.dumps({
+            "kind": "claude", "print_flags": ["--output-format", "json"]}))
+        with (self.stack / "claude" / "lock").open("w") as lock:
+            import fcntl
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            code, out, err = self.close_screen()
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertEqual(self.closed, [])
+        self.assertIn("aos-eca-screen: error: SessionBad busy answering", err)
+
+
 class TtySocket(unittest.TestCase):
     """TS 10: the screen's tmux socket lives under ${XDG_RUNTIME_DIR:-/tmp}/aos-tty-<uid>/, not in the cell."""
 
