@@ -35,6 +35,15 @@
  "01k-蒐集-驗收抽查與機制索引.md": {
   "description": "蒐集 01k（ok-skyrim 隊 sky-astra-d 原文）：astra 抽查三份 sol 報告十二條（對 11、部分對 1、錯 0）＋九份蒐集的跨檔機制索引"
  },
+ "01l-查證-信箱.md": {
+  "description": "查證 01l（ok-skyrim 隊 ok-skyrim-sol-1 原文）：回 proto8 程式查借鑑清單的「aos 現況」——mailbox_send 的收件寫法、有沒有記誰掛的我、讀信是不是接案、say／pause／sleep 的差別"
+ },
+ "01m-查證-隊員狀態.md": {
+  "description": "查證 01m（ok-skyrim 隊 ok-skyrim-sol-2 原文）：回 proto8 程式查借鑑清單的「aos 現況」——ls 各欄與 busy、stack 裡的狀態檔、subagent listen 的 60 秒從哪來、純文字結束一輪與 goal 提醒"
+ },
+ "01n-查證-配額與kernel.md": {
+  "description": "查證 01n（ok-skyrim 隊 ok-skyrim-sol-3 原文）：回 proto8 程式查借鑑清單的「aos 現況」——max_subagents 怎麼算、腦預算怎麼分帳、subagent add 經不經門、limits 是不是逐隻、獨佔資源有沒有表示"
+ },
  "02-借鑑清單.md": {
   "description": "02 借鑑清單：skyrim 的 agentctl／wf 有哪些做法值得 aos／wf 參考（ok-skyrim 判斷，只寫方向、不寫實作計劃、不出待裁題）"
  },
@@ -46,6 +55,9 @@
  },
  "05-Argon原文.md": {
   "description": "05 Argon 原文：Gemini 4 Argon (High) 審 02 借鑑清單的 (A) 審查與 (B) 提案（11-14，原文照收；採納表在 06）"
+ },
+ "06-Argon採納與查證修訂.md": {
+  "description": "06 Argon 採納表與查證修訂：02 借鑑清單第一版之後改了什麼、為什麼（ok-skyrim，11-14）"
  },
  "README.md": {
   "description": "skyrim-agentctl 調查線（11-14，做完）：`~/repo/moddings/skyrim` 的 agentctl／wf 有什麼可給 aos／wf 借鑑——能直接抄的不多，最有用的是它撞出來的事故"
