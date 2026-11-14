@@ -1,5 +1,6 @@
 // adopt.cpp：【daemon】接回 proc 表的好列，警告並留存壞檔，尋找小格裡活著的子 loop（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
+#include "child/cgroup.hpp"
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
 
@@ -278,6 +279,12 @@ void Daemon::adopt() {
         bool foreign = now && *now == ticks.get<long long>() && !same_tree((pid_t)pid.get<long long>(), c.stack, dstack_);
         if (now && *now == ticks.get<long long>() && !foreign) {
             c.pid = (pid_t)pid.get<long long>();
+            if (!cgroup_base_.empty()) {
+                std::string cg = cgroup_base_ + "/procs/" + name;
+                if (cgroup_has_pid(cg, c.pid)) {
+                    c.cg = cg;
+                }
+            }
             c.started_at_ticks = ticks.get<long long>();
             if (phase == "stopping") {
                 // 接回收的途中仍照公開 stop_mode；stop 不會因 daemon 重開而改送訊號。

@@ -1,6 +1,7 @@
 // daemon.cpp：【daemon】初始化設定、環境、信箱與 stack 鎖，定義並合併 poke 訊號（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
 #include "child/limits.hpp"
+#include "child/cgroup.hpp"
 #include "aos/util/files.hpp"
 #include <algorithm>
 #include <cerrno>
@@ -76,7 +77,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         if (cfg_.contains("procs")) {
             procs_ = read_procs(drop_bad_refs(cfg_["procs"], cfg_dirs_.dir_of("procs"), bad_refs_), cfg_dirs_.dir_of("procs"), "procs", &bad_rows_);
         }
-        for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_requests", "procs_loop", "procs_exec", "procs_stderr", "limits", "limits_max"}) {
+        for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_requests", "procs_loop", "procs_exec", "procs_stderr", "limits", "limits_max", "cgroup"}) {
             if (cfg_.contains(k)) {
                 cfg_[k] = aos::resolve(cfg_[k], cfg_dirs_.dir_of(k));
             }
@@ -141,7 +142,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         if (!limits_.is_object() || limits_.empty()) {
             throw Error{code::CfgBad, "limits_max needs limits to name a default for every capped key"};
         }
-        for (const char* k : {"mem_mb", "cpu_s", "procs", "file_mb", "files"}) {
+        for (const char* k : {"mem_mb", "cpu_s", "procs", "file_mb", "files", "mem_total_mb", "procs_total"}) {
             if (!limits_max_.contains(k)) {
                 continue;
             }
@@ -155,6 +156,11 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
             }
         }
     }
+    Json cg = cfg_.value("cgroup", Json("off"));
+    if (!cg.is_string() || (cg != "off" && cg != "auto" && cg != "on")) {
+        throw Error{code::CfgBad, "cgroup must be \"off\", \"auto\" or \"on\""};
+    }
+    cgroup_mode_ = cg.get<std::string>();
     Json a = cfg_.value("adopt", Json(true));
     if (!a.is_boolean()) {
         throw Error{code::CfgBad, "adopt must be true or false"};
@@ -196,6 +202,12 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     // 身體是 daemon 起的，照 N-64 ④ 同一句；判官／llm kernel 當身體時靠它找自己這台的 ctl 信箱。子項照舊在 run_child 一律蓋過去。
     setenv("AOS_DAEMON", dstack_.c_str(), 1);
     check_running();   // 11-05（portable-flow 步 5「沒有才起、有就沿用」）
+    if (cgroup_mode_ != "off" && !cgroup_setup(cgroup_base_, cgroup_reason_)) {
+        if (cgroup_mode_ == "on") {
+            throw Error{code::CfgBad, "cgroup on: " + cgroup_reason_};
+        }
+        warn("cgroup: none (" + cgroup_reason_ + ")");
+    }
     if (a.get<bool>()) {
         adopt();
     }

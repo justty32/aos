@@ -1,6 +1,7 @@
 // reconcile.cpp：【daemon】按期望表啟動、收回與調整子項（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
 #include "child/limits.hpp"
+#include "child/cgroup.hpp"
 #include "aos/util/files.hpp"
 #include <filesystem>
 #include <unordered_map>
@@ -40,7 +41,7 @@ std::string Daemon::bad_reason(const std::string& name) const {
 
 Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws, const Json& kept_exec,
                     const Json& kept_def, const Json& kept_limits, const Json& kept_launch, bool kept_auto_restart, bool kept_ros, long long kept_stuck_after_cycles,
-                    std::optional<long long> kept_stuck_after_ms, bool kept_procs_warned) {
+                    std::optional<long long> kept_stuck_after_ms, bool kept_procs_warned, bool kept_cgroup_warned) {
     Json lim = limits_of(spec, kept_limits);
     Json launch_spec = spec.is_null() ? kept_launch : spec;
     bool once = is_once(launch_spec);
@@ -61,6 +62,12 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
             (spec.is_object() && spec["exec"].is_object() ? Json::array({aos::join(cell, names_.exec) + "#/exec"}) :
              spec.is_object() ? spec["exec"] : spec) : Json::array({aos::join(cell, names_.loop) + "#/_entry"})}});
         c.launch = launch_of(c.launch, cwd_);
+        if (!cgroup_base_.empty()) {
+            std::string cg = cgroup_base_ + "/procs/" + name;
+            if (cgroup_has_pid(cg, live->first)) {
+                c.cg = cg;
+            }
+        }
         c.own = false;
         c.pid = live->first;
         c.started_at_ticks = live->second;
@@ -79,6 +86,11 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
         return c;
     }
     Child c;
+    c.cg.clear();
+    c.limits_ignored = Json();
+    bool cgroup_warned = kept_cgroup_warned && lim == kept_limits;
+    Json ignored;
+    std::string cg;
     bool procs_warned = kept_procs_warned && lim == kept_limits;
     try {
         if (launch_spec.is_null() && bad_rows_.count(name) > 0) {
@@ -88,16 +100,35 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
             throw Error{code::LaunchFailed, "no recorded launch entry for " + name};
         }
         check_limits_max(lim, limits_max_);
+        if (!cgroup_base_.empty()) {
+            cg = cgroup_prepare(cgroup_base_, name, lim);
+        } else if (lim.is_object()) {
+            ignored = Json::array();
+            std::string keys;
+            for (const char* key : {"mem_total_mb", "procs_total"}) {
+                if (lim.contains(key)) {
+                    ignored.push_back(key);
+                    keys += (keys.empty() ? "" : ", ") + std::string(key);
+                }
+            }
+            if (!keys.empty() && !cgroup_warned) {
+                warn(name + ": " + keys + " need cgroup (cgroup is " + (cgroup_mode_ == "off" ? "off" : "none") + "), ignored");
+                cgroup_warned = true;
+            }
+        }
         // 11-14 線雜：從未啟動的 stopped 列，ws 只在 launch 裡，不能被空的 kept_ws 蓋掉。
         if (spec.is_null() && launch_spec.is_object() && !kept_ws.is_null()) {
             launch_spec["ws"] = kept_ws;
         }
         if (once) {
-            c = spawn_exec(name, cell, deep, launch_spec, cwd_, dstack_, names_, lim, &procs_warned);
+            c = spawn_exec(name, cell, deep, launch_spec, cwd_, dstack_, names_, lim, &procs_warned, cg);
         } else {
-            c = spawn(name, cell, deep, launch_spec, cwd_, dstack_, names_, lim, kept_ws, &procs_warned);
+            c = spawn(name, cell, deep, launch_spec, cwd_, dstack_, names_, lim, kept_ws, &procs_warned, cg);
         }
+        c.limits_ignored = ignored;
     } catch (const Error& e) {
+        c.cg.clear();
+        c.limits_ignored = Json();
         // 一列起不來也留 stopped，不讓整台 daemon 收工。
         c.launch = launch_of(launch_spec, cwd_);
         c.stack = cell;
@@ -114,6 +145,7 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
         stopped_.insert(name);
         warn("cannot start " + name + " (" + e.code + " " + e.msg + "); leaving it stopped");
     }
+    c.cgroup_warned = cgroup_warned;
     c.procs_warned = procs_warned;
     c.exec = spec.is_null() ? kept_exec : exec_of(spec, cwd_);   // 11-04 晚：列上的 exec 欄
     c.def = spec.is_null() ? kept_def : def_of(spec);              // 11-04：列上的 def 欄
@@ -298,7 +330,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                     continue;
                 }
                 drop_stale_stop(c);   // 11-10：stop→sleep→start 時小格 ctl 還留著沒回應過的 stop，新子 loop 會照做、馬上退
-                Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits, c.launch, c.auto_restart, c.restart_on_stuck, c.stuck_after_cycles, c.stuck_after_ms, c.procs_warned);   // 信箱接回只留名時照列上的值
+                Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits, c.launch, c.auto_restart, c.restart_on_stuck, c.stuck_after_cycles, c.stuck_after_ms, c.procs_warned, c.cgroup_warned);   // 信箱接回只留名時照列上的值
                 nc.as_written = spec.is_null() ? c.as_written : written_of(spec);
                 nc.revived = true;   // 11-05：REVIVE_MS 內退了＝留成 stopped＋原因（衝突 3）
                 nc.revived_at = Clock::now();

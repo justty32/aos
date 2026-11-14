@@ -1,7 +1,7 @@
 // limits.hpp：【child】proc 的份額 limits（11-05 feat-proto 件 5，使用者「會想要限制特定aos proc所占用的資源。以及daemon/kernel自己本身被限制占用資源，
 // 並且會分配份額給proc」、「讓daemon偷偷給底下的proc包s6」）。內部標頭。
 //
-//   check_limits  驗一份 limits（daemon.json 頂層、procs 每列、procs_ctl、信共用）：物件；key 只有 mem_mb、cpu_s、procs、file_mb、files（正整數）
+//   check_limits  驗一份 limits（daemon.json 頂層、procs 每列、procs_ctl、信共用）：物件；key 只有 mem_mb、cpu_s、procs、file_mb、files、mem_total_mb、procs_total（正整數）
 //                 與 user（非空字串）；壞丟 CfgBad（呼叫者照 stack 那三條錯誤路徑處理：daemon.json 退 1、procs_ctl 不採用、壞信）
 //   prep_limits   fork 之前把 limits 備成系統呼叫要的值（rlimit 的數字、user 的 uid／gid／groups 先查好）
 //   apply_limits  子行程裡（setsid、接好 stderr 之後、run_cli 之前）照備好的做：setrlimit（soft＝寫的值；hard 同值，cpu_s 多 1 秒（先收到 SIGXCPU））、setgroups＋setgid＋setuid；

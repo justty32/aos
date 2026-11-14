@@ -180,7 +180,7 @@ private:
                 const Json& kept_exec = Json(), const Json& kept_def = Json(),
                 const Json& kept_limits = Json(), const Json& kept_launch = Json(), bool kept_auto_restart = false,
                 bool kept_ros = false, long long kept_stuck_after_cycles = 10,
-                std::optional<long long> kept_stuck_after_ms = std::nullopt, bool kept_procs_warned = false);   // 照寫法起（spawn／spawn_exec）；spec null 用列上記的 kept_*（含入口與兩個布林）
+                std::optional<long long> kept_stuck_after_ms = std::nullopt, bool kept_procs_warned = false, bool kept_cgroup_warned = false);   // 照寫法起（spawn／spawn_exec）；spec null 用列上記的 kept_*（含入口與兩個布林）
     // 11-10 two-machines：信箱接回只留名的列再起之前，把 as_written（指示詞原形）照現在的環境再解進 ws／stack／def／exec 與入口
     // （子 loop 的入口是小格 loop.json＝改寫它的 exec）。解不開＝留 stopped＋原因（同 start 起不來）、回 false。沒有 as_written＝不動、回 true。
     bool refresh(const std::string& name, Child& c);
@@ -218,6 +218,9 @@ private:
     Json procs_ = Json::object();                        // daemon.json 的 procs
     std::map<std::string, std::string> bad_rows_;        // 11-10 晚 B07：daemon.json 裡指示詞解不開的列 → 原因（那列留 stopped＋reason，其他照起）
     std::vector<std::string> bad_refs_;                  // 11-11：daemon.json 的 procs 頂層 $ref 陣列裡跳過的那幾份 → 原因（drop_bad_refs）
+    std::string cgroup_mode_ = "off";
+    std::string cgroup_base_;
+    std::string cgroup_reason_;
     Json limits_max_;                                    // 數字份額天花板，超過就留單列 stopped
     Json limits_;                                        // daemon.json 頂層的 limits（沒寫 limits 的列用的預設；null＝不限；11-05 feat-proto 件 5）
     std::string cwd_;                                    // 子項的 cwd＝daemon 起來時的 cwd

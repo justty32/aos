@@ -30,6 +30,8 @@ const Key KEYS[] = {
     {"procs", RLIMIT_NPROC, -1, false},
     {"file_mb", RLIMIT_FSIZE, -1, true},
     {"files", RLIMIT_NOFILE, -1, false},
+    {"mem_total_mb", -1, -1, true},
+    {"procs_total", -1, -1, false},
 };
 
 const long long MB_MAX = 0x7fffffffffffffffLL >> 20;   // 換成位元組不溢位
@@ -72,7 +74,7 @@ void check_limits(const Json& v, const std::string& where) {
         return;
     }
     if (!v.is_object()) {
-        throw Error{code::CfgBad, where + " must be an object {mem_mb, cpu_s, procs, file_mb, files: positive integers; user: a string}"};
+        throw Error{code::CfgBad, where + " must be an object {mem_mb, cpu_s, procs, file_mb, files, mem_total_mb, procs_total: positive integers; user: a string}"};
     }
     for (auto& [k, x] : v.items()) {
         if (k == "user") {
@@ -88,7 +90,7 @@ void check_limits(const Json& v, const std::string& where) {
             }
         }
         if (key == nullptr) {
-            throw Error{code::CfgBad, where + ": unknown key " + aos::dumps(Json(k)) + " (known: mem_mb, cpu_s, procs, file_mb, files, user)"};
+            throw Error{code::CfgBad, where + ": unknown key " + aos::dumps(Json(k)) + " (known: mem_mb, cpu_s, procs, file_mb, files, mem_total_mb, procs_total, user)"};
         }
         bool ok = x.is_number_unsigned() ? x.get<unsigned long long>() > 0 && x.get<unsigned long long>() <= 0x7fffffffffffffffULL
                                          : x.is_number_integer() && x.get<long long>() > 0;
@@ -125,7 +127,7 @@ Limits prep_limits(const Json& limits, bool& procs_warned) {
         return out;
     }
     for (const Key& c : KEYS) {
-        if (!limits.contains(c.name)) {
+        if (c.resource < 0 || !limits.contains(c.name)) {
             continue;
         }
         long long n = limits[c.name].get<long long>();
@@ -183,6 +185,9 @@ Limits prep_limits(const Json& limits, bool& procs_warned) {
 
 void apply_limits(const Limits& lim) {
     for (const Limits::Rl& r : lim.rl) {   // 先 setrlimit 再換身分（同 s6-softlimit … s6-setuidgid 的順序）
+        if (r.resource < 0) {
+            continue;
+        }
         struct rlimit rl;
         rl.rlim_cur = (rlim_t)r.value;
         rl.rlim_max = (rlim_t)r.hard;

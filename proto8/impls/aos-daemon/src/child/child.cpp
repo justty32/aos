@@ -16,6 +16,7 @@
 // 兄弟（控制器與 bob）靠它找到共同的 stack；只設這一個（定義資料夾、ws 那兩名不設）。
 #include "child/child.hpp"
 #include "child/limits.hpp"
+#include "child/cgroup.hpp"
 
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
@@ -45,7 +46,7 @@ namespace aos::daemon {
 // lim：份額（fork 之前 prep_limits 備好）；接好 stderr 之後、run_cli 之前照做（11-05 feat-proto 件 5，失敗＝stderr.txt 一行 LimitBad、退 1）。
 [[noreturn]] static void run_child(const std::string& cell, const std::string& cwd, int err_fd,
                                    const std::vector<std::string>& argv, const std::string& ws, const std::string& dstack,
-                                   const Limits& lim) {
+                                   const Limits& lim, const std::string& cg_procs, const std::string& cg) {
     setsid();
     int null_fd = open("/dev/null", O_RDWR);
     if (null_fd >= 0) {
@@ -58,6 +59,21 @@ namespace aos::daemon {
     dup2(err_fd, 2);
     if (err_fd > 2) {
         close(err_fd);
+    }
+    if (!cg_procs.empty()) {
+        int fd = open(cg_procs.c_str(), O_WRONLY | O_CLOEXEC);
+        int e = fd < 0 ? errno : 0;
+        if (fd >= 0) {
+            if (write(fd, "0", 1) != 1) {
+                e = errno;
+            }
+            close(fd);
+        }
+        if (e != 0) {
+            std::fprintf(stderr, "aos-daemon: error: LimitBad cgroup %s: %s\n", cg.c_str(), std::strerror(e));
+            std::fflush(stderr);
+            _exit(126);
+        }
     }
     apply_limits(lim);   // 等同 s6-softlimit／s6-setuidgid（daemon 自己做、不 exec s6）；proc 自己不知道（「偷偷」，C-52）
     aos::restore_signals();
@@ -96,7 +112,7 @@ static void make_cell(const std::string& name, const std::string& cell, bool dee
 // 小格建好之後：開小格的 stderr.txt（附加）、fork、子行程 run_child(argv, ws, dstack)。spawn 與 spawn_exec 共用。ws＝null 或絕對路徑（記進 Child）。
 static Child launch(const std::string& name, const std::string& cell, const std::string& cwd,
                     const std::vector<std::string>& argv, const Json& ws, const std::string& dstack, const std::string& err_name,
-                    const Json& limits, bool* procs_warned) {
+                    const Json& limits, bool* procs_warned, const std::string& cg) {
     std::string ws_s = ws.is_string() ? ws.get<std::string>() : std::string();   // fork 之前備好
     bool warned = procs_warned != nullptr && *procs_warned;
     Limits lim = prep_limits(limits, warned);
@@ -111,6 +127,7 @@ static Child launch(const std::string& name, const std::string& cell, const std:
     struct stat est {};
     long long err_off = fstat(err_fd, &est) == 0 ? (long long)est.st_size : 0;
     std::fflush(nullptr);
+    std::string cg_procs = cg.empty() ? "" : cg + "/cgroup.procs";
     pid_t pid = fork();
     if (pid < 0) {
         int e = errno;
@@ -118,13 +135,14 @@ static Child launch(const std::string& name, const std::string& cell, const std:
         throw Error{code::LaunchFailed, "cannot start child " + name + ": fork failed (" + std::strerror(e) + ")"};
     }
     if (pid == 0) {
-        run_child(cell, cwd, err_fd, argv, ws_s, dstack, lim);
+        run_child(cell, cwd, err_fd, argv, ws_s, dstack, lim, cg_procs, cg);
     }
     close(err_fd);
     Child c;
     Json target = std::vector<std::string>(argv.begin() + 1, argv.end());
     target[0] = aos::abspath(aos::join(cwd, target[0].get<std::string>()));
     c.launch = Json::object({{"exec", target}});
+    c.cg = cg;
     c.pid = pid;
     c.started_at_ticks = aos::proc_started_at_ticks(pid);
     c.err_off = err_off;
@@ -149,11 +167,11 @@ static void pin_cwd(Json& inst, const std::string& cwd, const std::string& cell,
 }
 
 Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-            const std::string& dstack, const CellNames& names, const Json& limits, const Json& kept_ws, bool* procs_warned) {
+            const std::string& dstack, const CellNames& names, const Json& limits, const Json& kept_ws, bool* procs_warned, const std::string& cg) {
     std::string lj = aos::join(cell, names.loop);
     if (spec.is_null()) {   // 信箱接回的 stopped／sleeping 列（只留名、沒有設定）再 start／wake：照小格裡現有的 loop.json（11-03），ws 照列上記的（11-03 晚）
         make_cell(name, cell, deep);
-        return launch(name, cell, cwd, {"--", lj + "#/_entry"}, kept_ws, dstack, names.err, limits, procs_warned);
+        return launch(name, cell, cwd, {"--", lj + "#/_entry"}, kept_ws, dstack, names.err, limits, procs_warned, cg);
     }
     Json cfg = spec;
     Json ws = cfg.value("ws", Json());   // ws、stack 是 daemon 的 key（不是 loop 的）：不灌進小格的 loop.json；ws 只進子行程的環境（AOS_WS）
@@ -191,11 +209,11 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
     } catch (const Error& e) {
         throw Error{e.code, "cannot start child " + name + ": " + e.msg};
     }
-    return launch(name, cell, cwd, {"--", lj + "#/_entry"}, ws, dstack, names.err, limits, procs_warned);
+    return launch(name, cell, cwd, {"--", lj + "#/_entry"}, ws, dstack, names.err, limits, procs_warned, cg);
 }
 
 Child spawn_exec(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-                 const std::string& dstack, const CellNames& names, const Json& limits, bool* procs_warned) {
+                 const std::string& dstack, const CellNames& names, const Json& limits, bool* procs_warned, const std::string& cg) {
     // 字串、陣列＝目標本身；物件＝{"exec": 目標或單子, "ws"?, "stack"?}（read_procs 驗過）
     const Json& target = spec.is_object() ? spec["exec"] : spec;
     Json ws = spec.is_object() ? spec.value("ws", Json()) : Json();
@@ -212,7 +230,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
         } catch (const Error& e) {
             throw Error{e.code, "cannot start child " + name + ": " + e.msg};
         }
-        Child c = launch(name, cell, cwd, {"--", aos::join(cell, names.exec) + "#/exec"}, ws, dstack, names.err, limits, procs_warned);
+        Child c = launch(name, cell, cwd, {"--", aos::join(cell, names.exec) + "#/exec"}, ws, dstack, names.err, limits, procs_warned, cg);
         return c;
     }
     if (target.is_string()) {
@@ -223,7 +241,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
         }
     }
     make_cell(name, cell, deep);
-    Child c = launch(name, cell, cwd, argv, ws, dstack, names.err, limits, procs_warned);
+    Child c = launch(name, cell, cwd, argv, ws, dstack, names.err, limits, procs_warned, cg);
     return c;
 }
 
@@ -235,7 +253,14 @@ std::string ctl_name(const std::string& cell, const CellNames& names) {
 
 bool alive(Child& c) {
     if (!c.own) {
-        return c.started_at_ticks.has_value() && aos::proc_started_at_ticks(c.pid) == c.started_at_ticks;
+        bool living = c.started_at_ticks.has_value() && aos::proc_started_at_ticks(c.pid) == c.started_at_ticks;
+        if (!living && !c.reaped) {
+            c.reaped = true;
+            if (!c.cg.empty() && cgroup_populated(c.cg)) {
+                cgroup_kill(c.cg);
+            }
+        }
+        return living;
     }
     if (c.reaped) {
         return false;
@@ -262,6 +287,20 @@ bool alive(Child& c) {
             if (WEXITSTATUS(status) == 1 && c.limits.is_object() && c.limits.contains("mem_mb")) {
                 c.limit_suspect = "mem_mb";
             }
+        }
+    }
+    if (got == c.pid && !c.cg.empty()) {
+        if (c.limit_hit.is_null() && cgroup_event(c.cg + "/memory.events", "oom_kill") > 0) {
+            c.limit_hit = "mem";
+        }
+        if (c.limit_hit.is_null() && cgroup_event(c.cg + "/pids.events", "max") > 0) {
+            c.limit_hit = "procs";
+        }
+        if (!c.limit_hit.is_null()) {
+            c.limit_suspect = Json();
+        }
+        if (cgroup_populated(c.cg)) {
+            cgroup_kill(c.cg);
         }
     }
     return false;
@@ -318,6 +357,12 @@ Json row(const Child& c, const std::string& dstack) {
     }
     if (!c.limit_suspect.is_null()) {
         r["limit_suspect"] = c.limit_suspect;
+    }
+    if (!c.cg.empty()) {
+        r["cgroup"] = c.cg;
+    }
+    if (c.limits_ignored.is_array() && !c.limits_ignored.empty()) {
+        r["limits_ignored"] = c.limits_ignored;
     }
     if (c.auto_restart) {
         r["auto_restart"] = true;

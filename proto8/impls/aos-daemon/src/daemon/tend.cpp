@@ -1,5 +1,6 @@
 // tend.cpp：【daemon】停止、收回與照顧子項，並在 daemon 收工時等它們退完（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
+#include "child/cgroup.hpp"
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
 #include <csignal>
@@ -115,6 +116,12 @@ bool Daemon::settle(Child& c) {
         aos::signal_group(c.pid, SIGKILL);   // 整群：子 loop 與它同群的孫程式
         for (pid_t g : below) {
             aos::signal_group(g, SIGKILL);   // 底下自成一群的（inst 起的單子，連它的子孫）
+        }
+        if (!c.cg.empty()) {
+            std::string why = cgroup_kill(c.cg);
+            if (!why.empty()) {
+                warn(why);
+            }
         }
         c.killed = true;
     }

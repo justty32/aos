@@ -1,5 +1,6 @@
 // table.cpp：【daemon】維護 proc 表、記錄子項與處理狀態窗寫入結果（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
+#include "child/cgroup.hpp"
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
 
@@ -38,6 +39,12 @@ Daemon::Table::iterator Daemon::drop(Table::iterator it) {
             want_.erase(n);
         }
         ended_.insert(n);
+    }
+    if (!c.cg.empty()) {
+        std::string why = cgroup_empty_cell(c.cg, true);
+        if (!why.empty()) {
+            warn(why);
+        }
     }
     stopped_.erase(n);   // 表上沒有了＝對 daemon 不存在：底的 stopped／slept 集合也不留它
     slept_.erase(n);
@@ -90,6 +97,7 @@ void Daemon::state_ok() {
 
 Json Daemon::info() {
     Json o = Json::object();
+    o["cgroup"] = cgroup_mode_ == "off" ? "off" : cgroup_base_.empty() ? "none (" + cgroup_reason_ + ")" : cgroup_base_;
     o["daemon"] = parent_;
     o["poke"] = Json::object({{"ctl", poke_signal(1)}, {"mail", poke_signal(2)}, {"all", poke_signal(3)}});
     if (has_body_) {

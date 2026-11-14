@@ -81,6 +81,9 @@ struct Child {
     std::chrono::steady_clock::time_point revived_at;
     long long err_off = 0;              // 11-05 第二輪：起它那一刻小格 stderr.txt 的長度——reason 只看這次之後寫的（檔是附加的，前幾輩子的話不算）
     Json def;                           // null 或起它時給的定義資料夾（11-04，aos-agent，使用者「那就b。」）：Daemon 填（def_of）；接回、不變同 exec
+    std::string cg;
+    Json limits_ignored;
+    bool cgroup_warned = false;
     bool procs_warned = false;          // 同列相同份額只提示一次 uid 行程總數
     Json limit_hit;
     Json limit_suspect;
@@ -99,7 +102,7 @@ struct Child {
 // names＝小格裡三個檔名（CellNames）。11-04 起不再替設定補 ctl／state（aos-loop 自己沒寫＝ctl.json／state.json，four-elements 07 步 4）。
 // limits＝生效的份額（null＝不限；check_limits 驗過的物件），子行程照它做（limits.hpp）。spec 裡的 limits 不寫進 loop.json（daemon 的 key）。
 Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-            const std::string& dstack, const CellNames& names, const Json& limits, const Json& kept_ws = Json(), bool* procs_warned = nullptr);
+            const std::string& dstack, const CellNames& names, const Json& limits, const Json& kept_ws = Json(), bool* procs_warned = nullptr, const std::string& cg = "");
 
 // 起一個 exec 型 proc。spec＝aos-exec 的目標：字串或 [目標, 參數...]（read_procs 驗過），
 // 或 {"exec": 上面兩種或單子, "ws"?, "stack"?, "def"?}（子行程設 AOS_WS＝ws；def 只記進表）；cell、deep 同 spawn；相對路徑從 cwd（daemon 的 cwd）算——
@@ -107,7 +110,7 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
 // stderr.txt、子項以 1 結束（phase done、code 1）。自然退 0 才下表；已知非 0 一律留 stopped＋reason。
 // 11-02 晚：spec 的 exec 是內嵌單子（物件）＝寫成小格的 exec.json {"exec": 單子}（cwd 定成 daemon 的 cwd，pin_cwd），子行程跑 `aos-exec -- 小格/exec.json#/exec`。
 Child spawn_exec(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-                 const std::string& dstack, const CellNames& names, const Json& limits, bool* procs_warned = nullptr);
+                 const std::string& dstack, const CellNames& names, const Json& limits, bool* procs_warned = nullptr, const std::string& cg = "");
 
 // 公開 ctl：父寫的 loop 設定有非空 ctl 才用它，其他一律 ctl.json。
 std::string ctl_name(const std::string& cell, const CellNames& names);

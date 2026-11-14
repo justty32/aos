@@ -22,6 +22,7 @@ set(SOURCES
   src/child/child.cpp
   src/child/refs.cpp
   src/child/limits.cpp
+  src/child/cgroup.cpp
   src/daemon/daemon.cpp
   src/daemon/procs.cpp
   src/daemon/adopt.cpp

@@ -96,6 +96,8 @@
    },
    "src": {
     "child": {
+     "cgroup.cpp": "實作 cgroup v2 探測還原、每列份額及由下往上的整格清理。",
+     "cgroup.hpp": "管理 daemon 的可選 cgroup v2 委派、份額、事件與整格清理。",
      "child.cpp": "建立小格、啟動子 loop 或 exec 型子項，並回收與輸出子項狀態（說明見 child.hpp）。",
      "child.hpp": "保存 proc 的共同生命週期、可重放入口、公開窗與 stuck 判定資料。",
      "limits.cpp": "proc 的份額 limits（說明見 limits.hpp；11-05 feat-proto 件 5，等同 s6-softlimit／s6-setuidgid）。",
@@ -125,6 +127,7 @@
    "tests": {
     "support.py": "Build isolated real-daemon fixtures and retain evidence for the B lifecycle tests.",
     "test_bad_letter.py": "Check that a bad procs letter with reply_to gets {\"applied\": false, \"error\": {\"code\": \"BodyBad\", ...}} (11-12), and the rest stay silent.",
+    "test_cgroup.py": "此檔以獨立 transient scope 驗證 daemon 的可選 cgroup 份額與整格回收。",
     "test_ctl.py": "Exercise public controls, prune inspection and age selection, command errors and help.",
     "test_lifecycle.py": "Verify proc lifecycle, damaged-state adoption and owned-state recovery against real daemons.",
     "test_limits.py": "驗證 daemon 的份額天花板、rlimit、收屍標記與重起行為。",
