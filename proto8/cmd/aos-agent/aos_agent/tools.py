@@ -140,10 +140,11 @@ def check_pointer(over, orig):
     if v is None:
         return
     items, folder, found = (v if isinstance(v, list) else [v]), os.path.dirname(os.path.abspath(over)), []
-    for item in items:
+    for i, item in enumerate(items):
         if isinstance(item, dict):
+            at = directive_value.pointer(OVERRIDE_KEY, *([i] if isinstance(v, list) else []))
             try:
-                item = directive_value.resolve({"v": item}, folder, over, stderr=subprocess.DEVNULL).get("v")   # #/… ＝ over 自己
+                item = directive_value.resolve(item, folder, over, stderr=subprocess.DEVNULL, at=at)   # #/… ＝ over 自己；#./、#../ 從這格所在的物件算
             except directive_value.Error:
                 item = None
         if isinstance(item, str) and item:

@@ -139,5 +139,40 @@ class ToolsOverride(unittest.TestCase):
                       p.stdout + p.stderr)
 
 
+@unittest.skipUnless(shutil.which("aos-directive"), "aos-directive not on PATH")
+class CheckPointerAt(unittest.TestCase):
+    """11-13 線址二：$override 陣列裡的指示詞照它的位置 /$override/i 解，#./、#../ 從所在物件算。"""
+    @classmethod
+    def setUpClass(cls):
+        paths = [str(REPO / "proto8" / "cmd" / "aos-agent"), str(REPO / "proto8" / "py"), str(REPO / "proto8" / "lib")]
+        sys.path[:0] = paths
+        try:
+            from aos_agent import tools
+        finally:
+            del sys.path[:len(paths)]
+        cls.tools = tools
+
+    def notes(self, doc, orig):
+        with tempfile.TemporaryDirectory() as d:
+            d = os.path.realpath(d)
+            over = os.path.join(d, "tools.json")
+            with open(over, "w") as f:
+                json.dump(doc, f)
+            said, old = [], self.tools.note
+            self.tools.note = said.append
+            try:
+                self.tools.check_pointer(over, os.path.join(d, orig))
+            finally:
+                self.tools.note = old
+            return said
+
+    def test_dot_in_list(self):
+        self.assertEqual(self.notes({"$override": [{"$ref": "#./1"}, "def.json"]}, "def.json"), [])
+        self.assertEqual(len(self.notes({"$override": [{"$ref": "#./1"}, "def.json"]}, "other.json")), 1)
+
+    def test_dotdot_in_list(self):
+        self.assertEqual(self.notes({"$override": [{"$ref": "#../alt"}], "alt": "def.json"}, "def.json"), [])
+
+
 if __name__ == "__main__":
     unittest.main()
