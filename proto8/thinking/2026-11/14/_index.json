@@ -78,7 +78,8 @@
   "description": "清淨時段小工具（11-14）：repo-aos 自己的「暫時免打擾」，擋 new_mail、kernel_hold 兩種通知，時段結束合併寄回"
  },
  "release-1114": {
-  "description": "分檔夾：release-1114：aos 公開 demo 發佈版（ok-release 線）——草稿 v2 出來了，等使用者看"
+  "description": "分檔夾：release-1114：aos 公開 demo 發佈版（ok-release 線）——草稿 v2 出來了，等使用者看",
+  "index": "release-1114/_index.json"
  },
  "release-1114.md": {
   "description": "release-1114：aos 公開 demo 發佈版（ok-release 線）——草稿 v2 出來了，等使用者看"

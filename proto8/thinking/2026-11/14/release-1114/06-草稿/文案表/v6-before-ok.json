@@ -1,0 +1,840 @@
+{
+ "_about": "Copy table: the one source of every sentence on the landing page and README. Change a sentence here first, then in the pages. status: unseen = user has not looked; ok / change / drop after the user answers. source = user-advice file:line (sol-3 numbering) or 'fact' (checked in code or batch 0) or 'new' (written by the team, not a user quote). kind: built = works today; partial; vision = not built yet. | round 2 (11-14): C5 kind built->partial; \"candidates\" = reviewer rewrites (not user words), each needs the user's yes; v1 kept in 文案表/v1.json | round 3 (11-14 user zone): H2b chosen as subtitle (H2 and its candidates not used); WHO, BIG1, BIG2 drop (user: none); every other row stays unseen: user said ask again before going live; v2 kept in 文案表/v2.json | round 3b: SEC reworded (folder is not isolation), old text in zh_v2/en_v2",
+ "rows": [
+  {
+   "id": "H1",
+   "where": "landing hero title; README title line",
+   "en": "Folders are functions.",
+   "zh": "資料夾，就是函數。",
+   "source": "20261027:1",
+   "kind": "built",
+   "status": "unseen",
+   "round": 1,
+   "round6": "moved: subtitle of section 4 (親手跑一次)",
+   "note": "round6b (C11/C12, structure-v11): removed from landing (user 14:35 \"都拿掉\"); H1 also not on get-started"
+  },
+  {
+   "id": "H2",
+   "where": "landing hero subtitle",
+   "en": "An operating system for agents, built on any resource.",
+   "zh": "給 agent 的作業系統，不靠硬體，靠任意資源。",
+   "source": "20261113:5",
+   "kind": "partial",
+   "status": "drop",
+   "round": 3,
+   "candidates": [
+    {
+     "by": "fable",
+     "zh": "agent 做的每件事，都是你 ls 得到的檔案。",
+     "en": "Everything your agent does is a file you can ls."
+    },
+    {
+     "by": "Argon",
+     "zh": "傳統 OS 把硬體變成檔案；aos 把模型、工具與 agent 變成資料夾。",
+     "en": "Where Unix turns hardware into files, aos turns models, tools, and agents into folders."
+    }
+   ]
+  },
+  {
+   "id": "H2b",
+   "where": "landing hero subtitle (v3)",
+   "en": "Unix philosophy for the age of agents.",
+   "zh": "把 unix 哲學帶進 agent 時代。",
+   "source": "20261106:10",
+   "kind": "partial",
+   "status": "ok",
+   "round": 3,
+   "round6": "out: replaced by SUB5"
+  },
+  {
+   "id": "P1",
+   "where": "one-line pitch (landing under hero; README line 2)",
+   "en": "aos runs AI agents as ordinary Linux processes inside folders. Every tool, every agent, every message is a folder or file you can ls, read, and set permissions on.",
+   "zh": "aos 把 AI agent 當成一般的 Linux 行程，住在資料夾裡。每個工具、每隻 agent、每封信，都是你可以 ls、可以讀、可以設權限的資料夾或檔案。",
+   "source": "fact (knowledge/aos/_description.json)",
+   "kind": "built",
+   "status": "unseen",
+   "round": 1,
+   "round6": "moved to docs/zh/why.md section 1"
+  },
+  {
+   "id": "TAG",
+   "where": "small text above hero",
+   "en": "prototype · demo release",
+   "zh": "原型 · demo 版",
+   "source": "fact",
+   "kind": "built",
+   "status": "unseen",
+   "round": 1
+  },
+  {
+   "id": "C1",
+   "where": "feature card 1",
+   "en": "Folder = function. Put an _entry in a folder and it can be called; its notes and data sit right next to it.",
+   "zh": "資料夾＝函數。資料夾裡放一個 _entry 就能被呼叫，說明和資料就放在旁邊。",
+   "source": "20261027:1, 20261027:3, 20261106:6",
+   "kind": "built",
+   "status": "unseen",
+   "round": 1,
+   "round6": "merged into ADV-FREE and section 4"
+  },
+  {
+   "id": "C2",
+   "where": "feature card 2",
+   "en": "Native to LLMs. Models already know how to read and write files and folders; there is no framework to learn.",
+   "zh": "模型本來就懂。模型天生會讀寫檔案與資料夾，不用另學一套框架。",
+   "source": "20261106:9, 20261113:9",
+   "kind": "partial",
+   "status": "unseen",
+   "round": 1,
+   "note": "design claim, not a measurement: never write 'more accurate' or 'faster'",
+   "candidates": [
+    {
+     "by": "fable",
+     "zh": "模型本來就會。讀檔、寫檔、列資料夾是模型最熟的動作，aos 就拿這些當介面。",
+     "en": "Models already know how. Reading, writing and listing files is what they do best, so that is the interface."
+    }
+   ],
+   "round6": "dropped (不用另學一套框架 not used)"
+  },
+  {
+   "id": "C3",
+   "where": "feature card 3",
+   "en": "Rides on Linux. Permissions are file permissions; write tools in any language.",
+   "zh": "站在 Linux 上。權限就是檔案權限；工具用什麼語言寫都行。",
+   "source": "20261106:6",
+   "kind": "partial",
+   "status": "unseen",
+   "round": 1,
+   "note": "any-language tools: built; permission isolation: experimental (L3)",
+   "candidates": [
+    {
+     "by": "Argon",
+     "zh": "站在 Linux 上。agent 就是一般行程，工具用什麼語言寫都行；權限與環境直接走 Linux 原生機制。",
+     "en": "Rides on Linux. Agents are normal processes and tools can be written in any language, using native Linux mechanisms."
+    }
+   ],
+   "round6": "merged into INTRO1"
+  },
+  {
+   "id": "C4",
+   "where": "feature card 4",
+   "en": "Small parts, Unix style. A few small programs that each do one thing: exec, loop, daemon.",
+   "zh": "小零件，unix 風格。幾支各做一件事的小程式：exec、loop、daemon。",
+   "source": "20261106:10, 20261106:29",
+   "kind": "built",
+   "status": "unseen",
+   "round": 1,
+   "round5": "removed from landing in W5 restructure (C4 overlaps ADV-SIMPLE; C5 link moved to ADV-FREE tag); user's words, not dropped by the user: ask whether to bring back",
+   "round6": "merged into ADV-LEAN"
+  },
+  {
+   "id": "C5",
+   "where": "feature card 5",
+   "en": "Bring your own brain and body. A fake brain for trying, any OpenAI-compatible endpoint, or your own Claude Code as an agent in the tree.",
+   "zh": "腦和身都自己帶。先用假腦試、接任何 OpenAI 相容端點，或把你的 Claude Code 掛進樹裡當一隻 agent。",
+   "source": "20261027:6, 20261027:25",
+   "kind": "partial",
+   "status": "unseen",
+   "round": 1,
+   "note": "round 2: L2 (Claude Code as an agent) is not run yet (review 3-3); candidates below are reviewer rewrites, not the user's words",
+   "candidates": [
+    {
+     "by": "fable",
+     "zh": "腦自己帶。先用假腦試，再換成任何 OpenAI 相容端點。",
+     "en": "Bring your own brain. Start with a fake one, then point it at any OpenAI-compatible endpoint."
+    },
+    {
+     "by": "Argon",
+     "zh": "腦和身都自己帶。先用內建假腦免金鑰試跑，之後可換接 OpenAI 相容端點，或掛入外部 CLI agent（如 Claude Code，實驗中）。",
+     "en": ""
+    }
+   ],
+   "round5": "removed from landing in W5 restructure (C4 overlaps ADV-SIMPLE; C5 link moved to ADV-FREE tag); user's words, not dropped by the user: ask whether to bring back",
+   "round6": "merged into ADV-FREE; Claude Code part not on landing (L2 not run)"
+  },
+  {
+   "id": "C6",
+   "where": "feature card 6",
+   "en": "A kernel is a door. Starting a process or asking a model is a letter; the door can queue it, budget it, or say no.",
+   "zh": "kernel 是一扇門。起行程、問模型都是寄一封信；門可以排隊、算預算、說不。",
+   "source": "20261113:5",
+   "kind": "partial",
+   "status": "unseen",
+   "round": 1,
+   "note": "only what exists: queue, budget, refuse",
+   "round6": "merged into ADV-CONC and INTRO2"
+  },
+  {
+   "id": "L1",
+   "where": "layers block caption",
+   "en": "exec runs one step, loop repeats it, daemon keeps many running. A kernel is the door every request goes through.",
+   "zh": "exec 跑一步，loop 反覆跑，daemon 讓很多個一直跑。kernel 是每個請求都要經過的門。",
+   "source": "fact (proto8/docs/CONCEPTS)",
+   "kind": "built",
+   "status": "unseen",
+   "round": 1
+  },
+  {
+   "id": "V1",
+   "where": "vision band",
+   "en": "Step by step, replace the agent with plain code, until token use goes toward zero.",
+   "zh": "一步一步把 agent 換成確定的程式，token 用量往零走。",
+   "source": "20261106:45, 20261106:56, 20261113:13",
+   "kind": "vision",
+   "status": "unseen",
+   "round": 1,
+   "note": "round6b (C11/C12, structure-v11): removed from landing (user 14:35 \"都拿掉\"); H1 also not on get-started"
+  },
+  {
+   "id": "V2",
+   "where": "vision band",
+   "en": "Start with an agent. End with a program.",
+   "zh": "從一隻 agent 開始，最後換成一支程式。",
+   "source": "20261113:13",
+   "kind": "vision",
+   "status": "unseen",
+   "round": 1,
+   "note": "round6b (C11/C12, structure-v11): removed from landing (user 14:35 \"都拿掉\"); H1 also not on get-started"
+  },
+  {
+   "id": "V3",
+   "where": "vision band",
+   "en": "Functions that improve themselves: first, a function that helps you write functions.",
+   "zh": "會改進自己的函數：先做一個幫你寫函數的函數。",
+   "source": "20261113:19",
+   "kind": "vision",
+   "status": "unseen",
+   "round": 1,
+   "candidates": [
+    {
+     "by": "Argon",
+     "zh": "會改進自己的函數：先做一個「幫你寫函數」的母函數。",
+     "en": ""
+    }
+   ],
+   "round6": "merged into INTRO3",
+   "note": "round6b (C11/C12, structure-v11): removed from landing (user 14:35 \"都拿掉\"); H1 also not on get-started"
+  },
+  {
+   "id": "V4",
+   "where": "vision band",
+   "en": "See the whole tree like a company: departments, staff, status.",
+   "zh": "像看公司一樣看全景：部門、員工、狀態。",
+   "source": "20261114:7",
+   "kind": "vision",
+   "status": "unseen",
+   "round": 1,
+   "note": "in progress; upgrade to a feature card when a screenshot can be shown | round6b (C11/C12, structure-v11): removed from landing (user 14:35 \"都拿掉\"); H1 also not on get-started"
+  },
+  {
+   "id": "NOW",
+   "where": "'today vs vision' left column title",
+   "en": "What you can do today",
+   "zh": "今天 clone 下來就能做的",
+   "source": "new",
+   "kind": "built",
+   "status": "unseen",
+   "round": 1
+  },
+  {
+   "id": "S1",
+   "where": "status block / README Status",
+   "en": "aos is a prototype. File formats and commands still change. Linux only (WSL2 works). One tree lives on one machine; trees do not talk to each other yet.",
+   "zh": "aos 還是原型：檔案格式和指令還會變。只支援 Linux（WSL2 可以）。一棵樹住一台機器；樹和樹之間現在還不會互相連線。",
+   "source": "fact (batch 0 item 8)",
+   "kind": "built",
+   "status": "unseen",
+   "round": 1
+  },
+  {
+   "id": "SEC",
+   "where": "README Security; landing status block",
+   "en": "Agents run programs under your user account: whatever your account can touch, they can touch. Try aos in a throwaway account, a VM, or a container; a separate folder is not isolation. Sandboxing is experimental.",
+   "zh": "agent 會用你的帳號執行程式：你的帳號碰得到的檔案，它都碰得到。請在拋棄式帳號、虛擬機或容器裡試；換一個資料夾並不能隔離。沙箱是實驗功能。",
+   "source": "new",
+   "kind": "built",
+   "status": "unseen",
+   "round": 3,
+   "zh_v2": "agent 會用你的帳號執行程式。請在拋棄式帳號、容器，或丟了也不心疼的資料夾裡試。沙箱是實驗功能。",
+   "en_v2": "Agents run programs under your user account. Try aos in a throwaway account, container, or folder you do not mind losing. Sandboxing is experimental.",
+   "note": "round 3: test-1 T1#3 - the old \"folder you do not mind losing\" read as if a folder isolates; team sentence (source new), changed by lead"
+  },
+  {
+   "id": "TRY",
+   "where": "try-it block title",
+   "en": "Try it without any model",
+   "zh": "不用任何模型，先試試",
+   "source": "fact (batch 0 item 1)",
+   "kind": "built",
+   "status": "unseen",
+   "round": 1,
+   "note": "no minute count until a clean build is timed"
+  },
+  {
+   "id": "FULL",
+   "where": "footer / FAQ",
+   "en": "aos — akatosh operating system",
+   "zh": "aos：akatosh operating system",
+   "source": "20261113:5",
+   "kind": "built",
+   "status": "unseen",
+   "round": 1,
+   "note": "direction question 6"
+  },
+  {
+   "id": "WHO",
+   "where": "status block (only if user says yes to ★3 side question)",
+   "en": "aos is being built by its own team of agents; the working notes are in the repo.",
+   "zh": "aos 是由它自己的 agent 團隊一起做出來的，工作紀錄都在 repo 裡。",
+   "source": "new",
+   "kind": "built",
+   "status": "drop",
+   "round": 3,
+   "note": "★3 side question"
+  },
+  {
+   "id": "BIG1",
+   "where": "vision page only, marked as the author's words",
+   "en": "The new age of programming.",
+   "zh": "程式設計的新時代。",
+   "source": "20261106:3",
+   "kind": "vision",
+   "status": "drop",
+   "round": 3
+  },
+  {
+   "id": "BIG2",
+   "where": "vision page only, marked as the author's words",
+   "en": "The flywheel of RSI starts here.",
+   "zh": "RSI 的飛輪，自此而始。",
+   "source": "20261106:61",
+   "kind": "vision",
+   "status": "drop",
+   "round": 3
+  },
+  {
+   "id": "ADV-SIMPLE-r5",
+   "where": "landing v3, advantages/intro",
+   "en": "",
+   "zh": "精簡：幾支各做一件事的小程式，八個詞講完整套。",
+   "source": "user 11-14 13:36 via fable (structure-v1.md); sentence drafted by fable",
+   "kind": "advantage",
+   "status": "superseded",
+   "round": 5,
+   "round6": "replaced by round-6 rows (structure v5-v7)"
+  },
+  {
+   "id": "ADV-MOVE-r5",
+   "where": "landing v3, advantages/intro",
+   "en": "",
+   "zh": "完全可遷移：一棵樹就是幾個資料夾：停下來、複製到別處，再起來接著跑。",
+   "source": "user 11-14 13:36 via fable (structure-v1.md); sentence drafted by fable",
+   "kind": "advantage",
+   "status": "superseded",
+   "round": 5,
+   "round6": "replaced by round-6 rows (structure v5-v7)"
+  },
+  {
+   "id": "ADV-CONC-r5",
+   "where": "landing v3, advantages/intro",
+   "en": "",
+   "zh": "超高可併發：很多 agent 共用一兩個端點：問模型是寄信給 llm kernel，它照端點的格數排隊。",
+   "source": "user 11-14 13:36 via fable (structure-v1.md); sentence drafted by fable",
+   "kind": "advantage",
+   "status": "superseded",
+   "round": 5,
+   "round6": "replaced by round-6 rows (structure v5-v7)"
+  },
+  {
+   "id": "ADV-FREE-r5",
+   "where": "landing v3, advantages/intro",
+   "en": "",
+   "zh": "可全自由定義：工具、agent、端點、kernel 都是你能改、能自己寫的資料夾。",
+   "source": "user 11-14 13:36 via fable (structure-v1.md); sentence drafted by fable",
+   "kind": "advantage",
+   "status": "superseded",
+   "round": 5,
+   "round6": "replaced by round-6 rows (structure v5-v7)"
+  },
+  {
+   "id": "INTRO-LINUX-r5",
+   "where": "landing v3, advantages/intro",
+   "en": "",
+   "zh": "aos 不重做行程、檔案、權限，直接站在 Linux 上，像作業系統站在板子上。",
+   "source": "user 11-14 13:36 via fable (structure-v1.md); sentence drafted by fable",
+   "kind": "intro",
+   "status": "superseded",
+   "round": 5,
+   "round6": "replaced by round-6 rows (structure v5-v7)"
+  },
+  {
+   "id": "INTRO-KERNEL-r5",
+   "where": "landing v3, advantages/intro",
+   "en": "",
+   "zh": "kernel 是請求要經過的門，門上的規則你自己定：排隊、限額、優先、拒絕。",
+   "source": "user 11-14 13:36 via fable (structure-v1.md); sentence drafted by fable",
+   "kind": "intro",
+   "status": "superseded",
+   "round": 5,
+   "round6": "replaced by round-6 rows (structure v5-v7)"
+  },
+  {
+   "id": "INTRO-JSON-r5",
+   "where": "landing v3, advantages/intro",
+   "en": "",
+   "zh": "設定、信、狀態都是 JSON 檔，模型用現成的讀寫工具就能改。",
+   "source": "user 11-14 13:36 via fable (structure-v1.md); sentence drafted by fable",
+   "kind": "intro",
+   "status": "superseded",
+   "round": 5,
+   "round6": "replaced by round-6 rows (structure v5-v7)"
+  },
+  {
+   "id": "TITLE5",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "新時代的軟體技術棧",
+   "source": "user 11-14 14:06 (verbatim)",
+   "kind": "title",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "SUB5",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "讓unix哲學再次偉大。",
+   "source": "user 11-14 14:09 (verbatim); may echo a political slogan (fable told the user once)",
+   "kind": "subtitle",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "ADV-LEAN",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "精簡｜核心三支程式，約 7500 行；八個詞講完整套概念。｜標籤：（不掛標籤，直接放數字）｜證據行：—",
+   "source": "word: user 11-14 13:36; line: copy-1; tag/evidence: fable labels-v1 + 08-示範.md",
+   "kind": "advantage",
+   "status": "unseen",
+   "round": 6,
+   "history": [
+    {
+     "round": 6,
+     "zh": "精簡：核心三支程式，約 7500 行；八個詞講完整套概念。"
+    }
+   ]
+  },
+  {
+   "id": "ADV-PORT",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "完全可遷移｜整套東西都是資料夾，可以整個搬走。｜標籤：已實測（同一台機器）｜證據行：停下來，把整個資料夾複製到新位置，再起來，對話接著走。換一台機器還沒驗。",
+   "source": "word: user 11-14 13:36; line: copy-1; tag/evidence: fable labels-v1 + 08-示範.md",
+   "kind": "advantage",
+   "status": "unseen",
+   "round": 6,
+   "history": [
+    {
+     "round": 6,
+     "zh": "完全可遷移：整套東西都是資料夾，可以整個搬走。　〔標籤〕已實測（同一台機器）　〔證據〕停下來，把整個資料夾複製到新位置，再起來，對話接著走。換一台機器還沒驗。"
+    }
+   ]
+  },
+  {
+   "id": "ADV-CONC",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "超高可併發｜很多 agent 排隊，共用少少幾個模型端點。｜標籤：已實測（100 隻）｜證據行：100 隻 agent 排隊共用 2 個模型位子，全部答完，沒有掉一個請求。",
+   "source": "word: user 11-14 13:36; line: copy-1; tag/evidence: fable labels-v1 + 08-示範.md",
+   "kind": "advantage",
+   "status": "unseen",
+   "round": 6,
+   "history": [
+    {
+     "round": 6,
+     "zh": "超高可併發：很多 agent 排隊，共用少少幾個模型端點。　〔標籤〕已實測（100 隻）　〔證據〕100 隻 agent 排隊共用 2 個模型位子，全部答完，沒有掉一個請求。"
+    }
+   ]
+  },
+  {
+   "id": "ADV-FREE",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "可全自由定義｜工具、要接哪個模型、誰先誰後的規則，都由你自己定。｜標籤：已實測（工具、端點、排程規則）｜證據行：自己做一個工具、自己接一個模型端點、改一行排程規則，都照文件跑過。",
+   "source": "word: user 11-14 13:36; line: copy-1; tag/evidence: fable labels-v1 + 08-示範.md",
+   "kind": "advantage",
+   "status": "unseen",
+   "round": 6,
+   "history": [
+    {
+     "round": 6,
+     "zh": "可全自由定義：工具、要接哪個模型、誰先誰後的規則，都由你自己定。　〔標籤〕已實測（工具、端點、排程規則）　〔證據〕自己做一個工具、自己接一個模型端點、改一行排程規則，都照文件跑過。"
+    }
+   ]
+  },
+  {
+   "id": "INTRO1",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "對 aos 來說，Linux 就是硬體。在 aos 裡面也照電腦來分：每隻 agent 像一顆一直在跑的 CPU，管這些 agent 的那支程式，就是插著它們的板子。aos 在 Linux 上面再蓋一層作業系統：每隻 agent 是一個住在資料夾裡的行程，每樣資源都寫成 JSON，模型本來就讀得懂、改得動。最底下是 aos 的 kernel，上面分兩塊：做事的 agent，和管事的 kernel；管事的那塊上面，還能再分一次。",
+   "source": "copy-1 draft from user 11-14 13:36/14:06/14:11/14:23 and user-advice (see landing-v5-text.md §3)",
+   "kind": "intro",
+   "status": "unseen",
+   "round": 6,
+   "history": [
+    {
+     "round": 6,
+     "zh": "對 aos 來說，Linux 就是硬體。aos 在它上面再蓋一層作業系統：每隻 agent 是一個住在資料夾裡的行程，每樣資源都寫成 JSON，模型本來就讀得懂、改得動。這一層裡面，還可以再套一層 aos。"
+    }
+   ]
+  },
+  {
+   "id": "INTRO1-NOW",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "今天做到哪：已實測（一層）：在管事的那塊底下再分一層，裡面的 agent 照常對話；停掉外層，裡面一起停。",
+   "source": "copy-1 draft from user 11-14 13:36/14:06/14:11/14:23 and user-advice (see landing-v5-text.md §3)",
+   "kind": "intro",
+   "status": "unseen",
+   "round": 6,
+   "history": [
+    {
+     "round": 6,
+     "zh": "今天做到哪：已實測（一層）：一個 aos 底下再跑一個 aos，裡面的 agent 照常對話；停掉外層，裡面一起停。"
+    }
+   ]
+  },
+  {
+   "id": "INTRO2",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "寫一行 a=1+2，一般只算它佔多少記憶體、跑多久。可是人要花多久看懂它？a 這個名字會不會蓋掉別的？用 AI 寫程式，還要算 token。在 aos 裡，每個請求都經過一扇門（aos 叫它 kernel），這扇門要省哪一種成本，由你定。",
+   "source": "copy-1 rewrite of UA 20261113:27 (a=1+2), user 14:35 asked to bring it back (C11)",
+   "kind": "intro",
+   "status": "unseen",
+   "round": 6,
+   "history": [
+    {
+     "round": 6,
+     "zh": "如果只有二十個模型端點，卻有上千個 agent 要用，誰先？在 aos 裡，每個請求都經過一扇門（aos 叫它 kernel），先後的規則由你定。設計上，agent 寄請求時可以附一句「我在做最後一關的驗證」，讓門判斷先放誰比較划算。這種難量化的話誰來判斷？可以讓門自己也是一隻 agent。"
+    }
+   ]
+  },
+  {
+   "id": "INTRO2-NOW",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "今天做到哪：已實測：這扇門今天管的是排隊、同時幾個、和「同一個寄件人一天最多幾次」：加一行規則，第三個請求就被拒。「看懂要多久」「名字會不會撞」這類成本，還沒有在管，是方向。",
+   "source": "copy-1 draft from user 11-14 13:36/14:06/14:11/14:23 and user-advice (see landing-v5-text.md §3)",
+   "kind": "intro",
+   "status": "unseen",
+   "round": 6,
+   "history": [
+    {
+     "round": 6,
+     "zh": "今天做到哪：跑過排隊共用，和「同一個寄件人一天最多幾次」：加一行規則，第三個請求就被拒。這扇門留了掛判斷程式的位子；讓一隻 agent 來當判斷者，還沒做。"
+    }
+   ]
+  },
+  {
+   "id": "INTRO2-ALT",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "（a=1+2 版，先留著，等 fable 問完使用者）寫一行 a=1+2，一般只算它佔多少記憶體、跑多久。可是人要花多久看懂它？a 這個名字會不會蓋掉別的？用 AI 寫程式，還要算 token。在 aos 裡，每個請求都經過一扇門（aos 叫它 kernel），這扇門要省哪一種成本，由你定。",
+   "source": "copy-1 draft from user 11-14 13:36/14:06/14:11/14:23 and user-advice (see landing-v5-text.md §3)",
+   "kind": "intro",
+   "status": "superseded",
+   "round": 6,
+   "note": "round6b (C11/C12, structure-v11): merged into INTRO2; 20-endpoint example moved to DEMO2 and why.md §4"
+  },
+  {
+   "id": "INTRO3",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "連門都是 agent，token 不是用更多？所以要換一種寫軟體的方式。一個函數先是萬用的 agent，能做就好；再一步步把它換成不靠模型的純程式。aos 裡 agent 本身就是資料夾和檔案，所以這種一步步的改寫，就是改檔。",
+   "source": "copy-1 draft from user 11-14 13:36/14:06/14:11/14:23 and user-advice (see landing-v5-text.md §3)",
+   "kind": "intro",
+   "status": "superseded",
+   "round": 6,
+   "note": "round6b (C11/C12, structure-v11): replaced by INTRO3-1..4 (fable paradigm-v1, user 14:36); the 14:23 Q&A moved to why.md §4 (WHY-CONC)"
+  },
+  {
+   "id": "INTRO3-NOW",
+   "where": "landing v3 (structure v5-v7)",
+   "en": "",
+   "zh": "今天做到哪：資料夾當函數來叫，已實測；agent 替自己加工具，程式裡有，這版還沒驗；一路換到不用模型，還沒做。",
+   "source": "copy-1 draft from user 11-14 13:36/14:06/14:11/14:23 and user-advice (see landing-v5-text.md §3)",
+   "kind": "intro",
+   "status": "unseen",
+   "round": 6,
+   "history": [
+    {
+     "round": 6,
+     "zh": "今天做到哪：這部分還沒做，是方向。"
+    }
+   ]
+  },
+  {
+   "id": "INTRO3-1",
+   "where": "landing v3 §02 intro 3",
+   "en": "",
+   "zh": "有一種寫程式的方式，Lisp 早就示範過：程式就是資料，程式可以寫程式，也可以改自己。它難在不好除錯，也碰不到機器底層。",
+   "source": "copy-1 rewrite of user meaning, UA 20261106 and 20261113:19 (see landing-v5-text.md §3); quote, ask sentence by sentence",
+   "kind": "intro",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "INTRO3-2",
+   "where": "landing v3 §02 intro 3",
+   "en": "",
+   "zh": "aos 拿檔案系統當這種語言：一個資料夾就是一個函數，裡面用什麼語言寫都行，打開就看得到。模型不用另外學，它本來就會讀寫資料夾。",
+   "source": "copy-1 rewrite of user meaning, UA 20261106 and 20261113:19 (see landing-v5-text.md §3); quote, ask sentence by sentence",
+   "kind": "intro",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "INTRO3-3",
+   "where": "landing v3 §02 intro 3",
+   "en": "",
+   "zh": "agent 也只是一個函數：一個迴圈，裡面問模型、用工具。不確定的地方和花掉的 token，都出在問模型那一步。",
+   "source": "copy-1 rewrite of user meaning, UA 20261106 and 20261113:19 (see landing-v5-text.md §3); quote, ask sentence by sentence",
+   "kind": "intro",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "INTRO3-4",
+   "where": "landing v3 §02 intro 3",
+   "en": "",
+   "zh": "所以開發是這樣走的：先放一隻什麼都能做的 agent，再把它拆成幾個小步驟，把要問模型的步驟一個一個換成程式。這件事可以叫 agent 自己動手：改自己，就是在自己的資料夾裡加一個資料夾。",
+   "source": "copy-1 rewrite of user meaning, UA 20261106 and 20261113:19 (see landing-v5-text.md §3); quote, ask sentence by sentence",
+   "kind": "intro",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "WHY-CONC",
+   "where": "docs/zh/why.md §4",
+   "en": "",
+   "zh": "（見 docs/zh/why.md 第四段：二十個端點、上千個 agent 的三段原話與說明）",
+   "source": "user 11-14 14:23 (verbatim, three paragraphs), via fable",
+   "kind": "why",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO-HEAD",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "看它怎麼走",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO-NOTE",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "示意演示：照設計畫的，不是實跑紀錄",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO-END",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "後半段是 aos 要去的方向，還沒做出來。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO-CTA",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "真的跑一次（不用模型）→ 開始用",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO1-TITLE",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "一個函數，從 agent 變成程式",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO1-1",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "aos 開機：其實就是幾個資料夾。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO1-2",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "第一個程式是一隻 agent，它也是一個資料夾。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO1-3",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "把第一個需求交給它：「這個資料夾的文件亂放，幫我分類、改名，再做一份目錄。」它每一步都去問模型。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO1-4",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "結果不太滿意。打開來看：它其實是五個小步驟：讀檔名、照類型分、判斷內容在講什麼、改名、寫目錄。每一步都在問模型。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO1-5",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "叫它改自己：「照類型分」不需要模型，它替自己寫了一段程式來做。改自己，就是在自己的資料夾裡加一個資料夾。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO1-6",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "再跑、再改，來回幾次：讀檔名、改名、寫目錄，也一個一個換成程式。可以一直按。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO1-7",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "最後剩「判斷內容在講什麼」：這一步最難，是 aos 要去的方向。換掉以後，這個函數不再問模型，它是一支程式。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO2-TITLE",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "一大堆呼叫、少少幾個端點、一扇會學的門",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO2-1",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "一大堆模型呼叫一起擠向一個端點：擠不進去的，就被退回。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO2-2",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "aos 接手：所有呼叫先經過一扇門，排隊進去。實測過：100 個 agent 共用 2 個位子，全部答完。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO2-3",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "每個呼叫附上一句，說自己在做什麼。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO2-4",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "這種話很難用公式算。設計上，讓門自己也是一隻 agent，由它讀了決定誰先。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO2-5",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "看看它排得怎樣。門自己也在用模型：叫它改進自己。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO2-6",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "它替自己加了判斷的工具和規則：常見的情況，直接照規則走。可以一直按。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "DEMO2-7",
+   "where": "landing v3 §03 demo-sim",
+   "en": "",
+   "zh": "最後，這扇門也變成一支程式了，隊伍照樣有先後。",
+   "source": "copy-1 draft from user 14:29 two demos, fable storyboard-v2 (see team/copy/demo-text.md)",
+   "kind": "demo",
+   "status": "unseen",
+   "round": 6
+  },
+  {
+   "id": "HERO-BTN",
+   "where": "landing v3 hero, first button",
+   "en": "",
+   "zh": "看它怎麼走 ↓",
+   "source": "web-1, text from DEMO-HEAD; if DEMO-HEAD changes, change this too",
+   "kind": "button",
+   "status": "unseen",
+   "round": 6
+  }
+ ]
+}

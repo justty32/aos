@@ -1,0 +1,53 @@
+{
+ "00-主紀錄": {
+  "description": "主紀錄舊段（release-1114 規劃段的早期版本）"
+ },
+ "01-備料": {
+  "description": "分檔夾：01 備料：aos 公開 demo 發佈版（給 fable 的匯總）"
+ },
+ "01-備料.md": {
+  "description": "01 備料：aos 公開 demo 發佈版（給 fable 的匯總）"
+ },
+ "02-astra稿.md": {
+  "description": "02 astra 稿：另一版發佈方案（白名單乾淨發佈 repo、L0～L3、VitePress）"
+ },
+ "02-fable稿.md": {
+  "description": "02 fable 稿：aos 公開 demo 發佈版怎麼發"
+ },
+ "03-計劃": {
+  "description": "分檔夾：03 實作計劃 v2：aos 公開 demo 發佈版"
+ },
+ "03-計劃.md": {
+  "description": "03 實作計劃 v2：aos 公開 demo 發佈版"
+ },
+ "04-Argon原文": {
+  "description": "Argon 審稿原文（早審備料、審計劃 v1、審草稿 v1）"
+ },
+ "04-fable原文": {
+  "description": "fable 審稿原文（審草稿 v1）"
+ },
+ "05-採納表.md": {
+  "description": "05 採納表（opus 寫；每輪審查一節，舊節不改）"
+ },
+ "06-草稿": {
+  "description": "草稿與文案表（v1、v2 草稿；文案表.json 是頁上每句的狀態，文案表/ 是各輪備份）"
+ },
+ "07-使用者意見": {
+  "description": "使用者意見原樣（專區回答逐輪）"
+ },
+ "08-批0實測.md": {
+  "description": "08 批 0 實測：fable 稿第 13 節的待驗事實（11-14，家機 Manjaro）"
+ },
+ "08-示範.md": {
+  "description": "08 示範：四個不花額度的示範（11-14，使用者 14:16 經 fable 點頭「可以開跑」）"
+ },
+ "09-掃描報告-1": {
+  "description": "分檔夾：09 發佈前掃描報告 第 1 份（11-14，main 工作樹＋全歷史；計劃 v2 第 7 節）"
+ },
+ "09-掃描報告-1.md": {
+  "description": "09 發佈前掃描報告 第 1 份（11-14，main 工作樹＋全歷史；計劃 v2 第 7 節）"
+ },
+ "10-三堂會審": {
+  "description": "三堂會審（11-14 16:12）"
+ }
+}

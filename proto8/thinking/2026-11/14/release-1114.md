@@ -2,6 +2,25 @@
 
 ← [11-14 日索引](README.md)｜任務書：`wf/temp/ok-release/任務書.md`
 
+## 結論（11-14，第四段：介紹定稿、第一隻 agent 實測，今晚收尾）
+
+- 頁上句子全經使用者專區點頭（第 6～8 輪，回信都驗過）；介紹改成三大段連續文字（C18），A 段第 2 段（15:34）與 C 段「檔案系統當語言」（15:38）照使用者的話重寫，這兩段 unseen。逐條在 [05-採納表 第 9 輪](release-1114/05-採納表.md)，文案表 `06-草稿/文案表.json`（95 列）。
+- 第一隻 agent 實測（[08-示範 E～H](release-1114/08-示範.md)）：API 端點（本機代理）照字跑通，給路徑一次讀到知識庫、三句答對；帶金鑰的設定照字走過、金鑰以 Bearer 送出（代理不驗金鑰，雲端真金鑰沒跑）；Claude Code 照 eca-claude 範本出廠設定讀不到樹外檔（dontAsk，Read 未放行），已上交 head-front，範本今天不改。
+- get-started v4 草稿（`wf/temp/ok-release/drafts/v3/docs/zh/get-started.v4.md`，主線 API 端點）3A→4→5 照字跑通；正式頁還是 get-started.md。
+- 三堂會審（使用者 15:48 點名、最高思考程度）：fable、Argon、astra 冷讀宣傳頁純文字，三位卡在幾乎同樣的十處（第一屏看不出是什麼、比喻疊比喻、沒有看得見的實物、講的比做到的大）。原文與匯總在 [10-三堂會審](release-1114/10-三堂會審/README.md)；A 類小改與 B 類方向題等使用者答，這輪頁面沒改。
+- test-1 全站對稿 12 條已修（copy-1 C22）；首頁介紹 15 段補進文案表，全部 unseen。
+- 還欠：使用者看 A、C 新段；C18 第二步潤句；雲端真金鑰、Codex、docker、英文版；push 與 Pages 要使用者另外點頭。
+
+## 結論（11-14，第三段：草稿 v3）
+
+- 使用者在專區回了五題（回信已驗）：宣傳頁要 Argon 的混搭、副標「把 unix 哲學帶進 agent 時代。」、原話上線前再問、WHO／BIG1／BIG2 都不放、docker 之後自己開。
+- 草稿 v3（`wf/temp/ok-release/drafts/v3/`）：宣傳頁只剩一版混搭，其他文件和 v2 相同。即時預覽 http://127.0.0.1:8790/ 已改看 v3。
+- 處理逐條在 [05-採納表 第 4 輪](release-1114/05-採納表.md)；使用者回答原樣在 [07-使用者意見/第1輪](release-1114/07-使用者意見/第1輪.md)。
+- 下一批第一項「接真腦」頁已寫（`drafts/v3/docs/zh/setup/real-brain.md`）：端點也是一個函數資料夾（`def/endpoints/mine/_entry` 指向 llm_http、金鑰從 MY_API_KEY 讀），照字實跑兩次（本機代理、不帶金鑰；腳本 l1-page.sh、l1-page-doc.sh），pong 回來、ann 用真模型叫了 peek_now_time 再回答，無殘留行程。雲端帶金鑰那條沒跑。
+- ok-onboard 3ed649b09（kits、新 agent-fsm/system.txt）驗過：個人值 0 筆；v3 開始用與 README 在新空家目錄照字重跑（clone HEAD 1a2c87d4f），輸出去掉時間／pid 後與 v2 逐行相同，無殘留行程（logs/onb-rerun.log）。
+- 隊伍（使用者 11-14「多掛 eca claude，分別負責不同工作」）：ok-release-web-1（eca claude，網頁）、ok-release-copy-1（eca claude，改稿，使用者可直接聊）、ok-release-test-1（agent-fsm astra，只報不改）；定義在 wf/temp/ok-release/defs/，記錄在 team/。
+- 上線前還欠：原話逐句確認（要再寄一封 decide）、docker 驗其他發行版、英文版、雲端端點實跑。
+
 ## 結論（11-14，第二段）
 
 - **草稿 v1 給使用者看**：入口頁 [06-草稿/v1/index.html](release-1114/06-草稿/v1/index.html)（瀏覽器直接開）。內容：宣傳頁兩版（A 九塊圖解、B 終端×資料夾對照）、README 中英、文件 8 頁（開始用、安裝、需求、教學 01、安全、疑難排解、FAQ、現況）。照推薦的 ★1（中文先）、★3（同 repo）先做，使用者改主意再調。
