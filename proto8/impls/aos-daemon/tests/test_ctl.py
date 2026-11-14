@@ -72,7 +72,7 @@ class Control(unittest.TestCase):
     def test_agent_phase_body_accepts_exec_rows(self):
         for cmd, phase, key in (('stop', 'running', 'stopped'), ('sleep', 'running', 'slept'),
                                 ('start', 'stopped', 'started'), ('wake', 'sleeping', 'woken')):
-            with patch.object(shared, 'daemon_path', return_value=str(self.root)), \
+            with patch.object(shared, 'table_ref', return_value=str(self.root)), \
                  patch.object(dc, 'row_of', return_value={'phase': phase}):
                 self.assertEqual(shared.phase_body(cmd, 'job'), {'procs_' + key: ['job']})
 
@@ -115,6 +115,7 @@ class Control(unittest.TestCase):
         a = SimpleNamespace(name='job', stack=str(self.root))
         with patch.object(hints, 'row_named', return_value=None), \
              patch.object(hints, 'daemon_path', return_value=str(self.root)), \
+             patch.object(hints, 'table_ref', return_value=str(self.root)), \
              patch.object(dc, 'names_of', return_value={'procs_stderr': 'stderr.txt'}):
             text = hints.off_table(a)
             self.assertIn('known nonzero exits stay stopped with a reason', text)
