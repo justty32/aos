@@ -6,7 +6,7 @@
   "description": "Long sections of aos/me.json kept as their own files (self_tools, self_llm, self_system, self_history, do_task, self_hook); aos/me.json points to each with $ref."
  },
  "errors.json": {
-  "description": "How to read a failed call: the `error:` line, `warning:` lines, and exit codes."
+  "description": "How to read a failed call: the `error:` line, `warning:` lines, and exit codes; `#/where` says which page explains a Code (PhaseBad, BudgetMissing ...)."
  },
  "errors": {
   "description": "Long sections of aos/errors.json kept as their own files (common); aos/errors.json points to it with $ref."
@@ -52,7 +52,7 @@
   "description": "Making your own tools: tool tools_def (new from the Python skeleton, check) and the Python helper tool_spec."
  },
  "tools": {
-  "description": "One node per stock tool (read, ls, write, edit, trash, shell ...): when to use it and which tool instead, examples with real output, errors.",
+  "description": "One node per stock tool (read, ls, write, edit, trash, shell ...): when to use it and which tool instead, examples with real output, errors. Tools explained on other pages (mailbox_send, self_tools, subagent ...) are pointer rows in its index.",
   "index": "tools/_index.json"
  },
  "packs.json": {
