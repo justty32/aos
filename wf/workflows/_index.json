@@ -36,7 +36,7 @@
   "description": "hackathon 工作流：派幾個 agent 各自動手試做同一題，只收踩坑報告與評委判斷，含場地、角色、題目書、收場四棒任務書與已辦場次；使用者說「辦個黑客松」「讓他們各自試做 X」時走它"
  },
  "ideas": {
-  "description": "ideas 工作流（舊）：09-05 那代的 aos 構想入口，正文已在 10-13 封存，只留脈絡；使用者說「我有個 idea」時現行落點改在 proto8/docs/CONCEPTS.md 與 proto8/thinking"
+  "description": "ideas 工作流已封存（使用者 11-14 專區答 oldentry:archive）：整夾搬到 common/archive/ideas/，這裡只留一份轉址 README；使用者說「我有個 idea」時現行落點在 proto8/docs/CONCEPTS.md 與 proto8/thinking"
  },
  "inbox.json": {
   "description": "inbox：跟別的 agent 收發信（本 repo 的版本；使用者說「看看信箱」「寄信給 X」「回 arcagi 的信」「回報做完了」時讀）"
@@ -57,7 +57,7 @@
   "description": "resources — 獨佔資源的鎖（螢幕、鍵鼠、主工作樹、裝置）"
  },
  "spec": {
-  "description": "spec 工作流（舊）：09-05 那代的 aos 規格，正文 10-13 已封存、不再是現行；使用者說「寫 spec」時現行落點改在 proto8/docs/NORMS.md 與 CONVENTION.md"
+  "description": "spec 工作流已封存（使用者 11-14 專區答 oldentry:archive）：整夾搬到 common/archive/spec/，這裡只留一份轉址 README；使用者說「寫 spec」時現行落點在 proto8/docs/NORMS.md 與 CONVENTION.md"
  },
  "team-model": {
   "description": "team-model.md 的分檔：context 管理五條規則、聰明度分級與 token 消耗速度、方案與時間軸（訂閱方案現況）、執行速度與逐模型心得、codex 試水溫紀錄 probe json"

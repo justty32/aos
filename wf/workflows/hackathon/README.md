@@ -40,6 +40,8 @@
 proto8 的 [NORMS](../../../proto8/docs/NORMS.md)／[CONVENTION](../../../proto8/docs/CONVENTION.md)（規格）＋
 `roadmap`。
 
+上面這些來源都已封存：BACKGROUND.md、`background/`、OPEN-QUESTIONS、`records/` 在 [workshop/archive/](../workshop/archive/README.md)，`roadmap` 在 [common/archive/](../common/archive/README.md)（使用者 11-14 專區答「small:ok」，reply cee70afc742361ba）。
+
 
 ## 細節在哪（從本檔拆出去的）
 
