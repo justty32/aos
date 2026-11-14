@@ -1,7 +1,7 @@
 # ok-kmsg 11-14：hook 能回「晚點再試」的拒絕；llm kernel 沒在跑時 listen／say 印一行提示（設計稿與紀錄）
 
 > 線 ok-kmsg（fable eca，部長 head-comm）。來源：使用者 11-14 專區回信 `kernel:now*`；意見出處 `wf/advices/kernel與額度.md` 的兩條。
-> 狀態：**v2 定稿（Argon 審過，採納表在第五節；第一、二節與第五節不同處以第五節為準）**；施工中。
+> 狀態：**已交件**（d6a564191 程式與測試、e6c1d8c0e 意見改已解）；第一、二節是 v1，與第五節不同處以第五節（v2 定稿）為準。
 
 ## 〇、已對好的介面（ok-astra，commit 313ce20ec）
 
@@ -141,3 +141,13 @@ text = result["text"].strip()
 - 紅綠：`rejected()` 改回舊版 → `test_hook_retry_later` 8 例 FAIL；拿掉 listen 兩個呼叫 → `test_brain_hint` 2 例 FAIL。
 - 生效：`hints.py`、`listen.py`、`say.py` 存檔即活樹生效（沒有 `brain_wait.json` 的 agent 完全安靜）；`hooks.py`、`wait.py` 等換樹。
 - 還欠：`cmd/aos-agent/README.md`、`templates/agent-fsm/README.md` 各一兩句（別線 claim 中，之後補）。
+
+## 七、交件與收尾（11-14 14:20～14:40）
+
+- 接上活樹（head-comm 放行）：`cmd/aos-agent/aos_agent` 的 `hints.py` → `listen.py`、`say.py`，寫暫存檔再改名，備份在 `~/code/ok-kmsg-1114/backup-live/`；repo 工作樹定向測試 42 OK；暫存樹 `~/code/ok-kmsg-1114/e2e2` 起自己的 daemon＋假 agent 實跑 say／listen／ask，stderr 全空。
+- commit：d6a564191（程式、5 支新測試、三份 README、本紀錄）；e6c1d8c0e（`wf/advices/kernel與額度.md` 兩條改已解、README 計數 20／4／14）。d6a564191 的 git archive 複本四夾：kernel 122、kernel_llm 61、aos-agent 145（expected failures=2，既有）、agent-fsm 152，全 OK。
+- 換樹：ok-kf 把 d6a564191 排進 11-14 晚換樹第 3 步（`hooks.py`、`wait.py` 隨 lib、templates 整夾換）；換後驗＝第一隻 agent-fsm 問過腦後 stack 出現 `think/brain_wait.json`。
+- 對口：ok-astra（欄位介面）、ok-fsm（`wait.py` 先後，它的 3b02a41c4 先進）、ok-sec（Q10 也動 `wait.py`，不重疊）、ok-pilot（`listen.py` 之後改取回答的邏輯，保留 `say_brain()`／`timeout_reason()`）、ok-release（範本改了）。另審了 ok-fsm 的 `session_key` 補丁：不打架。
+- 收隊：四隻 sol 都 `subagent rm`（stack 留著）；自己起的兩台暫存 daemon 用記下的 pid 收掉；沒刪檔。`pgrep -af aos-daemon` 裡 cmdline 是活樹 daemon.json、pid 會換的那些是活樹 daemon 替每隻 agent-fsm fork 的看顧行程（看 PPID 分辨），不是異常。
+- 後補：`cmd/aos-agent/README.md` 兩句（ok-limits 放 claim 後補）；`templates/agent-fsm/README.md` 一列（ok-astra claim 中，等回音）。
+- 沒做、留給別線：`aos-daemon-ctl ls` 的 REASON 標「等腦」；掛 proc 的寄信人收到 BudgetMissing 自動重試；`wait.py` 的 `kernel_dir()` 沒對 `AOS_LLM_KERNEL` 去空白（Argon A7.3）。
