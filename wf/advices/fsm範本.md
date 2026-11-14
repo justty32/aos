@@ -2,7 +2,7 @@
 
 ← [README](README.md)
 
-agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的意見。
+agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的意見；eca-claude 範本（templates/eca-claude）跟 agent-fsm 對不齊、或範本預設值的意見也放這裡。
 
 ## guard 看指令字面，連唯讀查詢也擋
 
@@ -38,7 +38,9 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 痛的程度：小不便（要先被拒很久才會撞到）
 - 提出者與日期：ok-astra 2026-11-14
 - 出處：wf/temp/ok-astra/aos-advice/resend-past-deadline-stops.md；proto8/thinking/2026-11/14/astra-kernel-1114.md AK17 節；Argon 審稿 A6
-- 狀態：未處理（2368ee3af 的 wait.py 沒有看 deadline）
+- 提出者與日期（狀態更新）：ok-fsm 2026-11-14
+- 出處（狀態更新）：wf/temp/ok-fsm/aos-advice/已解-冷卻後重寄過deadline.md；proto8/thinking/2026-11/14/ok-fsm-1114.md；ok-fsm 工單 T21
+- 狀態：已解（3b02a41c4，ok-fsm 11-14；要換樹才進活樹）。照建議的第一案：wait.py 在冷卻檢查通過之後、寄出之前讀 `request.json` 的 `priority.deadline`（數字＝epoch 秒；字串＝帶時區的 ISO 8601），已過或 5 秒內到期就印一行 warning、退 11 回 think 重組，不寄；不觸發 brain_failed、不寫冷卻、不動 request.json；解不開的 priority 照寄、交 kernel 判。出廠 brain.py 每次重寫 request.json 而且不寫 deadline，重組後的請求不會帶著過期的 deadline 空轉。測試 `templates/tests/agent-fsm/test_cooldown.py` 新增 epoch／ISO 過期、5 秒邊界等案例，agent-fsm 整夾 148 支全過。沒做：第二案（kernel 的 DeadlineBad 也走冷卻重組），DeadlineBad 仍走一般 BrainFailed。整理時查：3b02a41c4 只改 wait.py 與 test_cooldown.py，wait.py 檔頭第 22、34 行寫了這條。
 
 ## 蒐集用 sol 的工具包寫不了純文字檔、也沒有 shell，交件卡住
 
@@ -54,10 +56,12 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 出處：wf/temp/ok-view/aos-advice/agent-fsm-sol-沒有寫文字檔工具.md；wf/temp/ok-view/sol-{6,8,9}/（交件全文）；stack ok-view-sol-{6,7,8,9}
 - 提出者與日期（狀態更新）：ok-fsm 2026-11-14
 - 出處（狀態更新）：wf/temp/ok-fsm/aos-advice/已解-蒐集員寫不了純文字檔.md；proto8/thinking/2026-11/14/ok-fsm-1114.md；ok-fsm 工單 T23
+- 提出者與日期（剩下那半，第十一批併入）：ok-fsm 2026-11-14
+- 出處（剩下那半）：wf/temp/ok-fsm/aos-advice/取隊員最後回答沒有現成指令.md
 - 狀態：未處理（部分已解）。
   - 建議 1 已解（38271da3b）：新包 `proto8/lib/packs/ws-write.json`，一支工具 `ws_write {path, content, mode}`（`proto8/lib/base/ws_write/`）。mode 有 create（預設，已有就拒）、append、replace（要已存在）；路徑解完捷徑必須落在 `$AOS_WS` 裡，`$AOS_STACK`、`$AOS_CD` 底下也拒；一次上限 262144 bytes、不刪檔。選掛，兩個範本都不掛，要用的定義在 tools.json 的 `$override` 加 `lib/packs/ws-write.json`。測試 `proto8/lib/tests/test_ws_write.py` 19 支。要換樹才進活樹。
   - 建議 2、3 已寫進 [aos-teams/07](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)（「蒐集員的交件要先想好怎麼落地」「sol 沒有 shell」兩條；頂層 11-14 加，還沒 commit）。
-  - 沒做：取最後回答的現成指令（`aos-agent history last`）。目前用 `subagent listen` 的 `last: 1`，或 `aos-agent history ls -j` 自己取。
+  - 沒做：取最後回答的現成指令（`aos-agent history last`）。目前用 `subagent listen` 的 `last: 1`（印在工具結果裡，長的會被截、還混著問句），或 `aos-agent history -t <名字> ls -j` 整份拿回來自己寫腳本取（ok-view 就這樣做）。ok-fsm 的建議：`aos-agent history -t NAME last [--text] [--role assistant]`，預設印最後一則沒有 tool_calls 的 assistant，`--text` 只印文字，方便 `> FILE`。痛的程度：小不便。整理時查：`cmd/aos-agent/aos_agent/history.py` 只有 ls、rm、summarize、set，沒有 last。
 
 ## agent-fsm 的 system 文字不能分層、不能引用，各線整份抄
 
@@ -168,3 +172,29 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 提出者與日期：ok-kb 2026-11-14（轉 head-front 派的獨立審稿員的發現）
 - 出處：wf/temp/ok-kb/aos-advice/llm_settings註解說fixed欄位會蓋過已過時.md；head-front 審稿員 11-14 核 f1ef04ba0 時讀碼發現，沒實跑；proto8/thinking/2026-11/14/kb-1114.md
 - 狀態：未處理。整理時查：註解仍是「照舊蓋過」，`packs.py` 的 `fixed_clash` 與 RequestBad 對過。
+
+## eca（aos-eca-turn）沒有「goal 暫停後來信提醒一次」，只有 agent-fsm 有
+
+- 主題：fsm 範本（eca 身；跟本檔「goal 是 paused 時來了信」那條是同一件事的另一半）
+- 哪裡：`proto8/cmd/aos-eca/bin/aos-eca-turn` 的 goal 那段（檔頭 ⑬）；agent-fsm 的對應處是 `proto8/templates/agent-fsm/idle.py` 的 goal_turn()；共用判斷在 `proto8/lib/agent/goal_state.py` 的 paused_due()、paused_note()。
+- 現象：38271da3b 起，agent-fsm 的 agent 自己暫停 goal、之後來了訊息、答完又停下時，會收到一則 `[aos] goal: paused …`。eca 身沒有這一則，還是「暫停中不再提醒」，忘了 resume 就停住。ok-fsm 這次沒做，是因為不在它的任務書範圍；也還沒實測 eca 會不會真的踩到。
+- 建議：aos-eca-turn 在 queue 空、goal 是 agent 自己暫停的時候，用同一對函式判斷、丟同一則提示。注意 eca 的工具來回在 CLI 自己的對話檔裡、history 沒有（goal_state.transcript_calls 那條路），paused_due() 現在只看 history，要補一個看對話檔的版本。
+- 痛的程度：小不便（還沒人踩到）
+- 提出者與日期：ok-fsm 2026-11-14
+- 出處：wf/temp/ok-fsm/aos-advice/eca沒有goal暫停後來信的提醒.md；proto8/thinking/2026-11/14/ok-fsm-1114.md「第 2 條的設計決定」；commit 38271da3b
+- 狀態：未處理。整理時查：paused_due／paused_note 只有 goal_state.py、agent-fsm 的 idle.py 和 test_goal.py 在用，aos-eca-turn 沒有。
+- 相關：本檔「goal 是 paused 時來了信」（agent-fsm 那半，已解）。
+
+## eca-claude 範本在 dontAsk 下沒放行 Read／Glob／Grep，讀工作區外的檔被拒，Bash cat 卻可以
+
+- 主題：fsm 範本（eca-claude 範本的預設值）
+- 哪裡：`proto8/templates/eca-claude/cli.json`：`--tools Read,Write,Edit,Glob,Grep,Bash,Agent,Skill`、`--permission-mode dontAsk`、`--allowedTools Write,Edit,Bash`（e9623e525 定，2ab15e1c7 加 Agent、Skill）。
+- 現象：
+  - skyrim 那邊的 eca（skyrim-agent-agentctl）照這個範本開的定義，用 Read、Grep 讀工作區外的必讀清單被拒，只能改用 Bash `cat`。
+  - 原因：dontAsk 模式下，沒列進 `--allowedTools` 的工具只在 Claude Code 自己的工作資料夾裡自動放行，出了工作區就拒。範本放行了 Write、Edit、Bash（寫檔和 shell 哪裡都行），唯讀的 Read、Glob、Grep 反而出不了工作區，鬆緊顛倒；agent 只好繞去 Bash，結果更難守。
+  - 整理時另有一個佐證：本批整理的 Claude 子 agent 也在 don't ask 模式，用 Read 讀 repo 外那份筆記同樣被拒，改用 shell 才讀到。
+- 建議：範本 `--allowedTools` 加上 `Read,Glob,Grep`（skyrim 那邊在自己四份 eca 定義這樣改，d98eb1b6，在 skyrim 的 repo；工人實測三支都讀得到）。範本預設要放多寬是使用者的事（11-12「放寬claude」時代定成現在這樣），改之前先問。至少在 eca-claude 範本 README 或知識庫寫明「dontAsk 下 Read／Glob／Grep 只在工作區裡自動放行」。
+- 痛的程度：小不便（有 Bash cat 可繞）
+- 提出者與日期：skyrim-agent-agentctl 2026-11-14（skyrim-agent 轉來）
+- 出處：`~/repo/moddings/skyrim/agentctl/tmp/aos/skyrim-agent-agentctl/notes.md`「等 skyrim-agent 定的 4 件」第 1 件與「第三封信」第 1 項；skyrim repo commit d98eb1b6
+- 狀態：未處理。整理時查：aos 這邊的範本 cli.json 仍是 `--allowedTools Write,Edit,Bash`，最後一次改是 2ab15e1c7。

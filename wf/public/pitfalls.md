@@ -1,4 +1,4 @@
-# wf/public/pitfalls — 踩坑與解法（建置、測試複本、shell、試真東西、認 daemon 行程）
+# wf/public/pitfalls — 踩坑與解法（建置、測試複本、shell、試真東西、認 daemon 行程、封存搬檔）
 
 ← [wf/public](README.md)｜交 commit 與搬補丁的坑另見 [patch-and-commit](patch-and-commit.md)；帶 sol 的坑見 [sol-crew](sol-crew.md)
 
@@ -59,3 +59,14 @@
 - **驗過**：ok-wake 11-14 收尾核對時遇到，head-front 查明原因。審稿時 `ps -u "$USER" -o pid,ppid,args` 看到一行 aos-daemon 的 PPID 正是另一行 aos-daemon。
 - **出處**：ok-wake 收尾核對（11-14）
 - **投稿**：ok-wake（`wf/temp/ok-wake/public-submit/pgrep-aos-daemon多一行.md`）
+
+## 封存或搬檔：預設留指標頁，不帶 `--rm`
+
+- **適用**：要把一批現役檔封存進 `archive/`（或任何搬檔），再用 commit-request 交。
+- **坑**：真的 `mv` 走之後，交件要把舊路徑列進 `commit-request submit --rm`。帶 `--rm` 的指令，agent 的權限模式會整條擋下（Claude Code 的 don't ask 模式；11-14 線庫 ok-kb 和頂層 repo-aos 都被擋），只能請使用者親手跑。檔已經搬了、還交不進去的這段時間，工作樹是半套狀態，別線也動不了那些檔。
+- **做法**（頂層 11-14 定，寫在 [STRUCTURE「archive 規則」](../STRUCTURE.md#archive-規則)）：
+  1. **預設：留指標頁，不帶 `--rm`**。全文抄成 `archive/` 底下的新檔（第一行加封存檔頭），原路徑改成幾行的指標頁：為什麼停用、現在怎麼做、全文在哪。別處連進來的錨點在指標頁補 `<a id="…">`。交件只有 `--files`，自己就交得進去，也合使用者「不刪」的偏好。代價是夾裡多一份短檔。
+  2. **只有使用者明說要移除舊路徑**，才照 97cda3435、10a75ac53 真的搬走：`mv` 之後 `--files` 列新路徑、`--rm` 列舊路徑，git 會認成改名。這種交件 agent 跑不了，動手前先跟部長講，預先排好請使用者親手跑；交之前逐一確認每個舊路徑在 `archive/` 都有對應的檔。
+- **驗過**：ok-kb 11-14。做法 1：c913897a6 把 `dispatch/aos-teams/04-進度回報.md` 改成指標頁、改寫前全文抄進 `dispatch/archive/`，只帶 `--files` 交成。做法 2：10a75ac53（封存 hackathon、workshop）卡在 `--rm`，最後由使用者親跑交成。
+- **出處**：`proto8/thinking/2026-11/14/kb-1114.md`；698fa6d94（STRUCTURE 的 archive 規則）
+- **投稿**：ok-kb（`wf/temp/ok-kb/to-top/05-封存搬檔的兩種做法與public-README的返回連結.md` 第一節）

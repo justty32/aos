@@ -1,6 +1,6 @@
 # wf/public/patch-and-commit — 把暫存樹的改動搬回 main、交 commit-request 的坑
 
-← [wf/public](README.md)｜commit-request 的正式用法在 [07「commit 一律交給排隊指令」](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)，這裡只放踩過的坑
+← [wf/public](README.md)｜commit-request 的正式用法在 [07「commit」](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md#commit)（兩行指令在 [aos-teams 入口第 1 件](../workflows/dispatch/aos-teams.md)），這裡只放踩過的坑
 
 每條：適用、做法、驗過、出處、投稿。
 

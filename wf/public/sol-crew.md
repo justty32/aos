@@ -26,7 +26,7 @@
   - sol 很聽話：system 寫「先讀」，它照順序全讀才讀程式；要它在答案末行自報讀了哪幾份，自報跟 history.jsonl 對得上。
   - 代價：每隻多約 5 萬 prompt token（必讀 7 份）。
   - 對照組（沒給清單）在同一組規矩題也全對：它從 AGENTS.md 進去、跑 index_view、grep 自己找到。清單換來的是路線固定、出處一致，這組題量不出「沒讀會答錯」。
-- **做法**：system 放清單，要它末行自報讀了哪幾份，方便核對。純蒐集的小雜活照 07「簡單工作與雜活免讀」，在任務書寫明可免讀或略讀（max_lines），不必改定義。
+- **做法**：system 放清單，要它末行自報讀了哪幾份，方便核對。純蒐集的小雜活照 [aos-teams 入口「讀規矩」](../workflows/dispatch/aos-teams.md)（簡單工作與雜活例外，可免讀），在任務書寫明可免讀或略讀（max_lines），不必改定義。
 - **驗過**：ok-pilot 11-14，sol-1、sol-3、sol-4 比較 `defs/sol` 與 `defs/sol-bare`；核對方式是讀 history.jsonl 看實際讀了哪些檔。ok-astra 同日也觀察到「先讀必讀才讀程式」。
 - **出處**：`wf/temp/ok-pilot/notes.md` 第三、四輪
 - **投稿**：ok-pilot（`必讀清單對fsm隊員的效果.md`）；ok-astra 第 1 條併入
