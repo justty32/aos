@@ -61,7 +61,7 @@ endpoint 函數的契約（stdin `{"endpoint", "request", "priority"}` → stdou
 5. **排隊**（使用者 11-05「讓kernel能根據信件中額外附送的priority之類資訊做排程」，[feat-proto 03](../../../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：`level`＋`waited_cycles / aging_cycles`（整數除法；每 `aging_cycles` 格升一級，預設 3，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ 同一 backend 的信黏著最後掛的包 → **那封的包的 `speed`**（`fast` → `normal` → `slow`）→ 等得久的先 → 先寄的先。
    `waited_cycles`：kernel 有時鐘而這封信也有 `seen_at_cycles`，用現在的格數減那一格；否則用 `(現在 UTC epoch 毫秒 − seen_at_ms) / AOS_CLOCK_INTERVAL`（預設 1000 毫秒），負的當 0。「等得久」也比同一個值。同一輪掃描只各讀一次時鐘與牆鐘。時鐘凍住，已有格數記錄的信就不升級；沒有時鐘時凍住再醒仍會計入牆鐘經過的時間。
    跨樹信的 `priority.deadline` 仍是牆鐘（帶時區 ISO 8601 或 epoch 秒；N-65 ③），kernel 不讀信裡任何時鐘欄。
-   不搶位、不保留格；要保證 high 不等＝短 deadline 或多開一包。
+   不搶位（不殺掉在飛的低級信讓 high 進，見 [04](04-已知限制.md)）；保留格看頂層 `reserved.high`（[01](01-用法.md)）：宣告 level 低於 high 的信只補到總在飛數 `slots - reserved.high`，看宣告級數、不含 aging，擋下的跳過、後面的 high 照補；沒寫＝不保留。保留格也滿了 high 照樣等；要再快＝短 deadline 或多開一包。
    同級、同 deadline 狀態下，慢包的信會被後寄的快包信超過（今天就有 priority 超車，aging 保底不會餓死）。
 6. 照排好的順序一封封看（新信先跑 `before_verdict`，判完跑 `after_verdict`；hook 見 [README](../README.md#hooks)）：
    - kernel 的額度到頂＝`refuse` 回 `BudgetMissing`、`wait` 就**停整列**；在飛＋這次新掛的到 kernel 的 `slots` 就停（其餘下一次）。

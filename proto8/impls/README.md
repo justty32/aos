@@ -6,6 +6,19 @@
 
 語意以 [NORMS](../docs/NORMS.md) 為準；各支 README 只寫用法、跟規範不同或規範沒寫的實作細節、實作注意、建置與測試。這一頁講「全家一樣的東西」。
 
+## 編法：只重編某幾支時，目標名要加 `_main`
+
+整套照 [04「建置」](docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md#建置)（`cmake -B build && cmake --build build`，全部目標都編）。**只點名幾個目標時要注意**：有執行檔的專案在 CMake 裡各有兩個目標——
+
+| 目標 | 是什麼 | 產物 |
+|---|---|---|
+| `<名字>`（例 `aos-exec`） | 靜態庫 | `<名字>/lib/lib<名字>.a` |
+| `<名字>_main`（例 `aos-exec_main`） | 執行檔（`OUTPUT_NAME` 改回 `<名字>`） | `<名字>/bin/<名字>` |
+
+所以要重編 bin 得下 `make aos-exec_main aos-loop_main …`（或 `cmake --build build --target aos-exec_main aos-loop_main`）；下 `make aos-exec` 只重編、重連靜態庫，`bin/` 還是舊的（ok-misc 11-14 踩過：測試紅、錯誤訊息是改之前的字）。`aos-util`、`aos-inst` 只有庫、沒有 `_main`（`aos-inst` 是 .so，靜態版的目標叫 `aos-inst-static`）。
+
+`aos-llm-kernel` 已退出建置（ae5ac0980，問腦總機改成 Python 的 `lib/aos/kernel_llm`；夾待換樹時刪），頂層 [`CMakeLists.txt`](CMakeLists.txt) 的專案表沒有它；舊的 `build/` 夾裡若還看得到 `aos-llm-kernel_main`，那是改表之前 configure 留下的。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。
