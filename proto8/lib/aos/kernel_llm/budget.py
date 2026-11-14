@@ -99,6 +99,9 @@ def sender_key_warnings(key, sender, base, stack):
         return ["budget.senders key %s is a folder but not a proc stack (no state.json): %s; the sender of a brain "
                 "request is the asking proc's stack ($AOS_STACK), not its workspace, so this limit only applies if "
                 "a proc runs with exactly that stack" % (dumps(key), sender)]
+    if os.path.isabs(key):
+        return ["budget.senders key %s is not a folder yet: %s "
+                "(no proc has run with this stack yet; the limit applies once one does)" % (dumps(key), sender)]
     line = ("budget.senders key %s is not a folder: %s (relative keys count from %s, the kernel config's folder; "
             "an absolute path avoids the mix-up); this limit only applies to letters whose sender is exactly that path"
             % (dumps(key), sender, base))

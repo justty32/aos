@@ -101,6 +101,9 @@ Budget parse_budget(const Json& v, const std::string& base, const std::string& s
                                          "; the sender of a brain request is the asking proc's stack ($AOS_STACK), not its workspace, "
                                          "so this limit only applies if a proc runs with exactly that stack");
                 }
+            } else if (k[0] == '/') {
+                b.warnings.push_back("budget.senders key " + aos::dumps(Json(k)) + " is not a folder yet: " + sender +
+                                     " (no proc has run with this stack yet; the limit applies once one does)");
             } else {
                 std::string line = "budget.senders key " + aos::dumps(Json(k)) + " is not a folder: " + sender +
                                    " (relative keys count from " + base + ", the kernel config's folder; an absolute path avoids the mix-up); "

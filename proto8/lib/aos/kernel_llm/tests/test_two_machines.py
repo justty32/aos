@@ -80,6 +80,16 @@ class BudgetSenders(unittest.TestCase):
         self.assertFalse((self.stack / 'budget_warned.txt').exists())
         self.assertIn('agents/gone', self.kernel({'agents/gone': {'max_calls': 5}}))   # 又壞＝再印
 
+    def test_missing_absolute_sender_folder_warns_once(self):
+        sender = str(self.stack / 'agents/gone')
+        err = self.kernel({sender: {'max_calls': 5}})
+        self.assertIn('kernel_llm: warning: budget.senders key "%s" is not a folder yet: %s '
+                      '(no proc has run with this stack yet; the limit applies once one does)' % (sender, sender), err)
+        self.assertNotIn('avoids the mix-up', err)
+        self.assertNotIn('relative keys count from', err)
+        self.assertNotIn('counted from the kernel stack', err)
+        self.assertEqual(self.kernel({sender: {'max_calls': 5}}), '')
+
     def test_folder_that_is_not_a_proc_stack_warns(self):
         # 11-13 線修 T39：寄件人是 proc 的 stack；寫成工作區（有資料夾、沒 state.json）的 key 對不上任何腦請求
         (self.stack / 'teams/t1').mkdir(parents=True)
