@@ -69,7 +69,7 @@
 | `intercept`（`--no-intercept`＝false） | 看不看它的回話（只有那三個事件有回話可看） | true |
 | `async`（`--async`＝true） | true＝不等它跑完、放出去不管、不看回話 | false |
 | `on_error`（`--on-error`） | `stop`＝那格印 `agent-fsm: error: HookFailed …`、agent 停下等人；`continue`＝一行 warning、當沒這個 hook | stop |
-| `timeout_ms`（`--timeout-ms`） | 等它的上限，到了整群收掉、算失敗 | 60000 |
+| `timeout_ms`（`--timeout-ms`） | 等它的上限，0＝不限時；到了整群收掉、算失敗 | 60000 |
 | `every_cycles`／`every_ms`（`--every-cycles`／`--every-ms`） | `on_clock` 的條件，二擇一 | — |
 | `clock`（`--clock`） | `on_clock` 看哪個時鐘：proc 名稱或路徑 | `$AOS_CLOCK` |
 

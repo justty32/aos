@@ -22,7 +22,7 @@ After you change `tool.py`, run `tools_def` with `{"op": "check", "path": "<this
    - Only some values allowed: `enum=["c", "f"]`.
    - List of strings: `ts.param("words", "array", "the words", items="string")`.
    - No arguments at all: `PARAMS = []`.
-3. `META`: a dict. Write `{}` or only what is different from the defaults. Defaults: `side_effect` False (set True if the tool writes files or sends things), `deterministic` True (set False if the same input can give a different answer), `timeout_ms` 10000.
+3. `META`: a dict. Write `{}` or only what is different from the defaults. Defaults: `side_effect` False (set True if the tool writes files or sends things), `deterministic` True (set False if the same input can give a different answer), `timeout_ms` 10000 (0 = no limit).
 4. `def run(args):` gets a dict with your parameters (already checked: right types, required ones present, defaults filled in). Return the result:
    - a string is printed as is;
    - a number, dict or list is printed as JSON;

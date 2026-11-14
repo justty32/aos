@@ -138,7 +138,7 @@ class Hook(unittest.TestCase):
         self.fails("FlagUnknown", "add", "--event", "after_queue", "--change", "h/guard")   # --change is gone (on by default)
         for args in (("add", "--event", "nope", "h/guard"),
                      ("add", "--event", "before_queue", "--condition", "x", "h/guard"),
-                     ("add", "--event", "after_tool", "--timeout-ms", "0", "h/guard"),
+                     ("add", "--event", "after_tool", "--timeout-ms", "x", "h/guard"),   # 0 is allowed now (= no limit)
                      ("add", "--event", "after_tool", "--on-error", "maybe", "h/guard"),
                      ("add", "h/guard")):                                          # no --on
             p = self.fails("ArgumentsBad", *args)

@@ -5,7 +5,7 @@
 #   施工記錄與代定：proto8/thinking/2026-11/11/fork-and-do-task/01-fork.md。開小幫手、等結論、抄帳、收掉這套程式照搬 do_task（原 thought）11-11 那版。
 #   之後使用者「eca不給fork。」：只給 agent-fsm 的身體；history 裡找不到叫到一半的 tool call（eca）＝BodyUnsupported、叫它改用 subagent（判法同 do_task）。
 # 介面（lib/docs/01 的契約）：stdin 一份 {"goal", "max_chars"?, "timeout_s"?, "timeout_cycles"?, "keep"?}，沒有 op；別的鍵＝ArgumentsBad（tool_io）。
-#   goal 必要（要做什麼、要帶回什麼）；max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、只要求有限正數；keep 預設 false。
+#   goal 必要（要做什麼、要帶回什麼）；max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、有限非負數，0＝不限；keep 預設 false。
 # 一次叫＝aos-agent 的幾步（daemon 由 ctl who 回的 daemon 欄定、之後都帶 --daemon 那台；信經 aos-agent 寄，有 $AOS_KERNEL 就寄那裡，11-12）：ctl who（我是誰、我的定義與 stack）→ 抄 stack（fork_copy：定義宣告的 history＋覆蓋檔，
 #   history 尾巴沒回的工具呼叫補 tool 訊息）到 <daemon>/procs/<分身名>/ →
 #   ctl add（--name f-<父名前32字>-<UTC毫秒>-<4位hex>、--ws 我的 $AOS_WS、--stack 那份、--envs AOS_FORK_DEPTH=1、我的定義）→
@@ -32,7 +32,7 @@ The fork does not get your goal, your to-do list or your tool records; it starts
 queue and mailbox. Its last message says it is a fork, gives the goal and asks for the
 conclusion only. A fork cannot fork again (depth 1 at most: DepthExceeded).
 Only for an agent-fsm body (BodyUnsupported otherwise, e.g. a claude / codex agent: use subagent).
-timeout_s is any finite positive number of seconds (default 600).
+timeout_s is any finite non-negative number of seconds (default 600; 0 = no limit).
 Use timeout_cycles (a positive integer) instead to count cycles; giving both is ArgumentsBad.
 Without AOS_CLOCK, one cycle is AOS_CLOCK_INTERVAL milliseconds (default 1000).
 To ask a kept fork more later, use aos-agent ctl start --target <fork>, then say / listen.
@@ -106,7 +106,7 @@ def agent(argv, text=None, timeout_s=STEP_S, timeout_cycles=None):
     """叫 aos-agent [--daemon <ctl who 回的 daemon>] argv…（ctl who 之前不給，daemon 由 aos-agent 照它的找法找）；退 0 回 (stdout, None)，退非 0 或逾時回 (stdout, (代號, 原因))。"""
     global child
     if running_kid is not None:
-        renew(timeout_s + 5)
+        renew(STEP_S + 5 if timeout_s is None else timeout_s + 5)
     try:
         deadline = tool_io.deadline_after(timeout_cycles) if timeout_cycles is not None else None
     except tool_io.Error as e:
@@ -117,22 +117,22 @@ def agent(argv, text=None, timeout_s=STEP_S, timeout_cycles=None):
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
     except OSError as e:
         die("LaunchFailed", "cannot start aos-agent (is it on PATH?): %s" % e)
-    end = time.monotonic() + timeout_s
+    end = None if timeout_s is None else time.monotonic() + timeout_s
     payload = None if text is None else text.encode("utf-8")
     while True:
         try:
-            out, err = child.communicate(payload, timeout=0.2 if deadline is not None else min(86400, max(0, end - time.monotonic())))
+            out, err = child.communicate(payload, timeout=0.2 if deadline is not None or end is None else min(86400, max(0, end - time.monotonic())))
             break
         except subprocess.TimeoutExpired:
             payload = None
             try:
-                waiting = not tool_io.expired(deadline) if deadline is not None else time.monotonic() < end
+                waiting = not tool_io.expired(deadline) if deadline is not None else end is None or time.monotonic() < end
             except tool_io.Error as e:
                 kill_group(child)
                 child = None
                 return "", (e.code, str(e))
             if waiting:
-                if deadline is not None and running_kid is not None:
+                if (deadline is not None or end is None) and running_kid is not None:
                     try:
                         renew(STEP_S + 5)
                     except SystemExit:
@@ -189,11 +189,11 @@ if "timeout_cycles" in args and (isinstance(timeout_cycles, bool) or not isinsta
     die("ArgumentsBad", "timeout_cycles must be a positive integer")
 timeout_s = args.get("timeout_s", TIMEOUT_DEFAULT_S)
 try:
-    valid_timeout = not isinstance(timeout_s, bool) and isinstance(timeout_s, (int, float)) and math.isfinite(timeout_s) and timeout_s > 0
+    valid_timeout = not isinstance(timeout_s, bool) and isinstance(timeout_s, (int, float)) and math.isfinite(timeout_s) and timeout_s >= 0
 except OverflowError:
     valid_timeout = False
 if not valid_timeout:
-    die("ArgumentsBad", "timeout_s must be a finite positive number")
+    die("ArgumentsBad", "timeout_s must be a finite non-negative number (0 = no limit)")
 keep = args.get("keep", False)
 if not isinstance(keep, bool):
     die("ArgumentsBad", "keep must be true or false")
@@ -405,7 +405,7 @@ if err is None:
     if timeout_cycles is not None:
         answer, err = agent(["listen", "--target", kid, "--timeout-cycles", str(timeout_cycles)], timeout_cycles=timeout_cycles + 30)
     else:
-        answer, err = agent(["listen", "--target", kid, "--timeout-s", "%g" % timeout_s], timeout_s=timeout_s + 30)
+        answer, err = agent(["listen", "--target", kid, "--timeout-s", "%g" % timeout_s], timeout_s=None if timeout_s == 0 else timeout_s + 30)
 if err:                                         # 分身答不出：先停、stack 一律留（不管 keep）
     agent(["ctl", "stop", "--target", kid])
     copy_child(stack, kid, kid_stack)

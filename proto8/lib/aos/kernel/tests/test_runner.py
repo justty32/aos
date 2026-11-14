@@ -27,6 +27,18 @@ sys.exit(ask.get("code", 0))
 '''
 
 
+class ZeroTimeout(unittest.TestCase):
+    def test_mount_omits_zero_timeout_and_exit_is_not_late(self):
+        from unittest.mock import patch
+        with patch.object(runner, 'send', return_value='letter') as send, patch.object(runner, 'write_json'):
+            runner.mount('/job', 'job', '/tool', {}, '/box', '/daemon', timeout_ms=0)
+            spec = send.call_args.args[1]['procs_added']['job']['exec']
+            self.assertNotIn('timeout_ms', spec)
+        with patch.object(runner, 'read_json', return_value={'phase': 'done', 'code': 137}):
+            result = runner.settle('/job', {'mounted_at': 0}, ({}, ''), '/box', '/daemon', timeout_ms=0)
+            self.assertEqual(result, {'kind': 'exit', 'code': 137, 'timed_out': False})
+
+
 class RunnerTest(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp(prefix="runner-test-", dir=os.environ.get("KERNEL_TEST_TMP")))

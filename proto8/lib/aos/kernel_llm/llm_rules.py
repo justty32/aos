@@ -503,7 +503,7 @@ def dispatch(ctx, name, letter, detail):
     elif declared is not None:
         priority["level"] = declared
     deadline = waiting["deadline"]
-    if cfg["timeout_ms"] is not None:
+    if cfg["timeout_ms"] not in (None, 0):
         timeout_at = mounted_at + cfg["timeout_ms"] / 1000.0
         if deadline is None or timeout_at < deadline:
             deadline = timeout_at

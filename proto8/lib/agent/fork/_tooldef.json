@@ -37,7 +37,7 @@
       "timeout_s": {
         "default": 600,
         "type": "number",
-        "description": "finite positive seconds to wait for the conclusion; default 600, no fixed upper limit; mutually exclusive with timeout_cycles"
+        "description": "finite non-negative seconds to wait for the conclusion; default 600; 0 = no limit; mutually exclusive with timeout_cycles"
       },
       "timeout_cycles": {
         "type": "integer",

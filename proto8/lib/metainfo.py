@@ -91,7 +91,7 @@ def _number(value, code):
 
 
 def timeout_ms(meta, notes=None) -> int | None:
-    """Return the declared timeout in integer milliseconds as written (0 and negatives included).
+    """Return the declared timeout in integer milliseconds as written (0 = no limit; negatives unchanged).
 
     Not written, or meta not an object = None. A value that is not an integer number = None plus a note.
     """

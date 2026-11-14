@@ -34,8 +34,9 @@ class ValidateTests(unittest.TestCase):
             ({"event": "after", "handler": "h", "condition": ["a", 1]}, "condition must be a string or an array of strings"),
             ({"event": "before", "handler": "h", "condition": "a"}, "event before takes no condition"),
             ({"event": "after", "handler": "h", "on_error": "skip"}, "on_error must be stop or continue"),
-            ({"event": "after", "handler": "h", "timeout_ms": 0}, "timeout_ms must be a positive integer"),
-            ({"event": "after", "handler": "h", "timeout_ms": True}, "timeout_ms must be a positive integer"),
+            ({"event": "after", "handler": "h", "timeout_ms": -1}, "timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)"),
+            ({"event": "after", "handler": "h", "timeout_ms": True}, "timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)"),
+            ({"event": "after", "handler": "h", "timeout_ms": 1.5}, "timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)"),
         )
         for entry, message in bad:
             with self.subTest(message=message, entry=entry):
@@ -133,6 +134,12 @@ class FireTests(unittest.TestCase):
             self.fire("after", {"body": "old"})
         self.assertEqual(str(caught.exception), "hook a_fail (event after) failed: exited 3")
         self.assertEqual(self.ran(), ["a_fail"])
+
+    def test_zero_timeout_waits_for_handler(self):
+        self.hook("slow", "after", reply={"body": "done"}, extra="sleep 1", timeout_ms=0)
+        result = self.fire("after", {"body": "old"})
+        self.assertEqual(result["data"]["body"], "done")
+        self.assertEqual(self.warned, [])
 
     def test_timeout_kills_the_group_and_follows_on_error(self):
         child = os.path.join(self.root, "child.pid")

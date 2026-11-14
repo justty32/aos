@@ -145,6 +145,8 @@ class Subagent(unittest.TestCase):
                            ({"op": "resume", "name": "kid"}, ["ctl", "resume", "--target", "kid"]),
                            ({"op": "say", "name": "kid", "text": "hi"}, ["say", "--target", "kid"]),
                            ({"op": "listen", "name": "kid"}, ["listen", "--target", "kid", "--timeout-s", "600"]),
+                           ({"op": "listen", "name": "kid", "timeout_s": 0}, ["listen", "--target", "kid", "--timeout-s", "0"]),
+                           ({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 0}, ["listen", "--target", "kid", "--timeout-s", "0"]),
                            ({"op": "listen", "name": "kid", "last": 3}, ["listen", "--target", "kid", "--last", "3"]),
                            ({"op": "listen", "name": "kid", "timeout_cycles": 7}, ["listen", "--target", "kid", "--timeout-cycles", "7"]),
                            ({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 9}, ["listen", "--target", "kid", "--timeout-s", "9"])):
@@ -262,7 +264,7 @@ class Subagent(unittest.TestCase):
     def test_forward_tool_missing(self):
         lib = self.tmp / "lib"
         (lib / "agent").mkdir(parents=True)
-        for f in ("tool_io.py", "observed_children.py", "observed.py"):
+        for f in ("tool_io.py", "observed_children.py", "observed.py", "process_group.py"):
             shutil.copy(LIB / f, lib / f)
         for f in ("agents_cmd.py", "cmd_call.py"):
             shutil.copy(TOOL.parents[1] / f, lib / "agent")

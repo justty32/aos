@@ -37,6 +37,11 @@ def parent_death_term():
     return preexec
 
 
+def timeout_seconds(timeout_ms):
+    # 0 表示不限時；缺省值仍由讀設定的呼叫者提供。
+    return None if timeout_ms == 0 else timeout_ms / 1000
+
+
 def run_cli(argv, prompt, ws, timeout_ms, handed=None, env=None):
     """起 CLI、題目從 stdin 給、等它做完；起來了就叫 handed（交出去了，11-03 aos-eca-turn 在這一刻收信）。
     env＝只加給這個 CLI 行程的環境（11-12 external-mcp：外部 server 的 bearer、憑證路徑；不動自己的 os.environ）。
@@ -50,7 +55,7 @@ def run_cli(argv, prompt, ws, timeout_ms, handed=None, env=None):
     if handed:
         handed()
     try:
-        out, err = p.communicate(prompt, timeout=timeout_ms / 1000)
+        out, err = p.communicate(prompt, timeout=timeout_seconds(timeout_ms))
     except subprocess.TimeoutExpired:
         p.kill()
         p.communicate()
@@ -75,9 +80,11 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None, env=
     p.stdin.close()
     if handed:
         handed()
-    deadline, lines = time.time() + timeout_ms / 1000, []
-    timer = threading.Timer(timeout_ms / 1000, p.kill)
-    timer.start()
+    seconds = timeout_seconds(timeout_ms)
+    deadline, lines = None if seconds is None else time.time() + seconds, []
+    timer = None if seconds is None else threading.Timer(seconds, p.kill)
+    if timer is not None:
+        timer.start()
     try:
         with open(live_path, "a", encoding="utf-8") as live:      # 10-28：只接不重寫（副產物留著）
             for line in p.stdout:
@@ -86,8 +93,9 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None, env=
                 live.flush()
         p.wait()
     finally:
-        timer.cancel()
-    if time.time() > deadline:
+        if timer is not None:
+            timer.cancel()
+    if deadline is not None and time.time() > deadline:
         cli_base.die("CliFailed", "%s did not finish within %d s" % (argv[0], timeout_ms // 1000))
     return p.returncode, lines
 

@@ -18,7 +18,7 @@
                                "long": {"type": "boolean", "description": "ls: add the health columns QUEUE RESTARTS COOLDOWN LAST ERROR"},
                                "json": {"type": "boolean", "description": "ls: every field of every subagent as JSON (wins over long)"},
                                "text": {"type": "string", "description": "say, ask: the message"},
-                               "timeout_s": {"type": "number", "description": "listen, ask: seconds to wait for the answer (default 600); add, rm, stop, start, sleep, wake: for the daemon (default 30)"},
+                               "timeout_s": {"type": "number", "description": "listen, ask: seconds to wait for the answer (default 600; 0 = no limit); add, rm, stop, start, sleep, wake: for the daemon (default 30)"},
                                "timeout_cycles": {"type": "integer", "description": "listen, ask: wait this many clock cycles instead of timeout_s"},
                                "last": {"type": "integer", "description": "listen: show the last N exchanges instead of waiting"},
                                "args": {"type": "object", "description": "tools, llm, history, hook: the arguments of self_tools, self_llm, self_history or self_hook"}},

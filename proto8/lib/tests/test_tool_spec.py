@@ -59,11 +59,19 @@ class Declaration(unittest.TestCase):
                  lambda: ts.tooldef("d", [ts.param("a", "string", "x", enum=["p"], default="q")]),
                  lambda: ts.tooldef("d", [ts.param("a", "string", "x"), ts.param("a", "string", "y")]),
                  lambda: ts.tooldef("d", [], ["not a code"]),
-                 lambda: ts.metainfo("d", {"timeout_ms": 0}),
+                 lambda: ts.metainfo("d", {"timeout_ms": -1}),
                  lambda: ts.metainfo("d", {"side_effect": "no"})]
         for i, f in enumerate(cases):
             with self.subTest(i=i):
                 self.assertRaises(ts.SpecBad, f)
+
+    def test_zero_timeout_is_valid_and_negative_is_refused(self):
+        self.assertEqual(ts.metainfo("d", {"timeout_ms": 0})["timeout_ms"], 0)
+        self.assertEqual(ts.metainfo_problems({"timeout_ms": 0}), [])
+        for value in (-1, 1.5, True):
+            with self.subTest(value=value):
+                self.assertEqual(ts.metainfo_problems({"timeout_ms": value}), [
+                    "timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit; the tool is killed after it)"])
 
     def test_problems_catch_handwritten_mistakes(self):
         self.assertTrue(ts.tooldef_problems({"description": "d", "parameters": {"type": "object", "properties": {"a": {"type": "num"}}}}))
@@ -96,6 +104,14 @@ class Runtime(unittest.TestCase):
                 self.assertEqual(r.returncode, 1)
                 self.assertTrue(r.stdout.startswith("rep: error: " + code), r.stdout)
                 self.assertEqual(r.stdout, r.stderr)
+
+    def test_zero_timeout_metadata_does_not_prevent_delayed_run(self):
+        script = SCRIPT.replace('def run(args):', 'def run(args):\n    __import__("time").sleep(1)')
+        script = script.replace('{"deterministic": True}', '{"deterministic": True, "timeout_ms": 0}')
+        (self.dir / "tool.py").write_text(script)
+        r = self.call(stdin='{"word": "hi"}')
+        self.assertEqual((r.returncode, r.stdout), (0, "HI HI\n"), r.stderr)
+        self.assertEqual(json.loads(self.call("--metainfo").stdout)["timeout_ms"], 0)
 
     def test_tooldef_flag_lists_fail_codes_and_help(self):
         td = json.loads(self.call("--tooldef").stdout)

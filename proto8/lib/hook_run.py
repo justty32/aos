@@ -61,8 +61,8 @@ def validate_entry(entry, events):
         raise HooksBad("on_error must be stop or continue")
     if "timeout_ms" in entry:
         t = entry["timeout_ms"]
-        if not isinstance(t, int) or isinstance(t, bool) or t <= 0:
-            raise HooksBad("timeout_ms must be a positive integer")
+        if not isinstance(t, int) or isinstance(t, bool) or t < 0:
+            raise HooksBad("timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)")
 
 
 def validate_name(name):
@@ -145,7 +145,7 @@ def run(name, entry, event, data, stack):
                              start_new_session=True)   # 自成一群；stderr 不攔、原樣透出
     if not wait:
         return None, ""
-    limit = entry["timeout_ms"] / 1000.0
+    limit = None if entry["timeout_ms"] == 0 else entry["timeout_ms"] / 1000.0  # 0＝不限時
     try:
         try:
             out, _ = p.communicate(timeout=limit)

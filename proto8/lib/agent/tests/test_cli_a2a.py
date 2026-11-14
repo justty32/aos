@@ -187,6 +187,39 @@ class HookNotes(Base):
 
 
 class Live(Base):
+    def test_zero_timeout_waits_for_socket_answer(self):
+        self.start_session(work=1)
+        answer = cli_ask.live(dict(self.cfg, timeout_ms=0), self.cell, "hi", parts=[("bob", "hi")])
+        self.assertEqual(answer, "answer to 1")
+        self.assertEqual(self.pasted(), [])
+
+    def test_zero_timeout_waits_for_busy_screen_and_answer(self):
+        self.cell.write("busy.txt", "busy")
+        workers = []
+
+        def finish_old_turn():
+            time.sleep(0.3)
+            os.remove(self.cell.file("busy.txt"))
+
+        def answer():
+            time.sleep(1)
+            hook(self.cell, {"hook_event_name": "Stop", "session_id": "s1", "last_assistant_message": "done"})
+
+        def on_enter():
+            worker = threading.Thread(target=answer)
+            workers.append(worker)
+            worker.start()
+
+        self.cell.on_enter = on_enter
+        old_turn = threading.Thread(target=finish_old_turn)
+        old_turn.start()
+        try:
+            self.assertEqual(cli_ask.live(dict(self.cfg, timeout_ms=0), self.cell, "hi", on_busy="answer"), "done")
+        finally:
+            old_turn.join()
+            for worker in workers:
+                worker.join()
+
     def test_delivers_signed_batch_and_returns_the_answer(self):
         self.start_session()
         handed = []

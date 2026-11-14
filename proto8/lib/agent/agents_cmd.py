@@ -56,7 +56,7 @@ def install_signals():
 
 def run(cmd, text=None, timeout_s=STEP_S, timeout_cycles=None, env=None, err_re=ERR_RE):
     """跑 cmd（cwd＝$AOS_WS）；退 0 回 (stdout, None)，退非 0 回 (stdout, (代號, 原因))：取它 stderr 裡最後一行符合 err_re 的，沒有＝CommandFailed。
-    stderr 原樣透到自己的 stderr（R10）。timeout_cycles 給了＝照兩鐘期限短輪詢；不然 timeout_s 秒（分段等，每段最多一天）。"""
+    stderr 原樣透到自己的 stderr（R10）。timeout_cycles 給了＝照兩鐘期限短輪詢；不然 timeout_s 秒（None＝不限；分段等，每段最多一天）。"""
     global child
     try:
         deadline = tool_io.deadline_after(timeout_cycles) if timeout_cycles is not None else None
@@ -70,11 +70,11 @@ def run(cmd, text=None, timeout_s=STEP_S, timeout_cycles=None, env=None, err_re=
         die("LaunchFailed", "cannot start %s (is it on PATH? proto8/install.sh puts aos-agent there): %s" % (cmd[0], e))
     what = " ".join([os.path.basename(cmd[0])] + list(cmd[1:3]))
     try:
-        end = time.monotonic() + timeout_s
+        end = None if timeout_s is None else time.monotonic() + timeout_s
         payload = None if text is None else text.encode("utf-8")
         while True:
             try:
-                out, err = child.communicate(payload, timeout=0.2 if deadline is not None else min(86400, max(0, end - time.monotonic())))
+                out, err = child.communicate(payload, timeout=0.2 if deadline is not None else None if end is None else min(86400, max(0, end - time.monotonic())))
                 break
             except subprocess.TimeoutExpired:
                 payload = None
@@ -153,12 +153,12 @@ def flag(args, key):
     return v
 
 
-def seconds(args, key="timeout_s"):
-    """有限正數秒；沒給＝None。"""
+def seconds(args, key="timeout_s", *, allow_zero=False):
+    """有限正數秒；只有等回答可 allow_zero（0＝不限），沒給＝None。"""
     v = args.get(key)
     if v is None:
         return None
-    if isinstance(v, bool) or not isinstance(v, (int, float)) or not v > 0 or not math.isfinite(v):
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or not (v >= 0 if allow_zero else v > 0) or not math.isfinite(v):
         die("ArgumentsBad", "%s must be a finite positive number of seconds" % key)
     return v
 

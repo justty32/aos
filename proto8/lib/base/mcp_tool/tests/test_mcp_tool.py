@@ -379,7 +379,7 @@ class McpToolThroughAosTools(unittest.TestCase):
     def test_bad_timeout_is_skipped_with_warning(self):
         """壞的 timeout_ms＝當沒寫：用預設 60000、stderr 一行提醒、照跑。"""
         pack = json.loads(self.pack.read_text())
-        for value in ("soon", 0, -3, True):
+        for value in ("soon", -3, True):
             pack["mcp_tools"]["echo"]["_metainfo"]["timeout_ms"] = value
             self.pack.write_text(json.dumps(pack))
             r = self.entry("--pack", "demo.json", "--tool", "echo")
@@ -388,6 +388,12 @@ class McpToolThroughAosTools(unittest.TestCase):
             self.assertIn("echo", r.stderr)
             self.assertIn("60000", r.stderr)
             self.assertNotIn("error:", r.stderr)
+
+    def test_zero_timeout_is_accepted_without_warning(self):
+        self.add_tool("sleep", timeout_ms=0)
+        r = self.call("sleep", {"seconds": .1})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stderr, "")
 
     def test_help(self):
         r = self.entry("--help")

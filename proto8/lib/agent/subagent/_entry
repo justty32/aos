@@ -24,6 +24,7 @@ usage: subagent < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the
 Your own subagents: add | rm | ls | state | stop | start | sleep | wake | pause | resume |
 say | listen | ask, and tools | llm | history | hook | system (the self_* tool's arguments, aimed at the subagent).
 Only agents started with this tool; counted against max_subagents (subagents.json; default 4).
+listen / ask timeout_s: default 600; 0 = no limit. Lifecycle timeouts remain finite positive.
 Result on stdout. On error: one line "subagent: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -160,7 +161,7 @@ elif op in ("say", "listen", "ask"):
     waits = [k for k in ("timeout_s", "timeout_cycles", "last") if k in args]
     if len(waits) > 1:
         die("ArgumentsBad", "give only one of %s (got %s)" % (", ".join(k for k in OPS[op] if k not in ("name", "text")), " and ".join(waits)))
-    cyc, sec, last = cmd.cycles(args), cmd.seconds(args), args.get("last")
+    cyc, sec, last = cmd.cycles(args), cmd.seconds(args, allow_zero=op in ("listen", "ask")), args.get("last")
     if last is not None and (isinstance(last, bool) or not isinstance(last, int) or last < 0):
         die("ArgumentsBad", "last must be a whole number (0 or more)")
     words = cmd.text(args, "text", True) if op != "listen" else None
@@ -234,8 +235,8 @@ elif op in ("say", "listen", "ask"):
             elif last is not None:
                 out = cmd.agent(["listen", "--target", name, "--last", str(last)])
             else:
-                sec = sec or cmd.LISTEN_DEFAULT_S
-                out = cmd.agent(["listen", "--target", name, "--timeout-s", "%g" % sec], timeout_s=sec + 30)
+                sec = cmd.LISTEN_DEFAULT_S if sec is None else sec
+                out = cmd.agent(["listen", "--target", name, "--timeout-s", "%g" % sec], timeout_s=None if sec == 0 else sec + 30)
         finally:
             preserve_child(name)
 else:                                           # tools／llm／history／hook／system：用子的身分跑旁邊的 self_*

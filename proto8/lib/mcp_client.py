@@ -40,6 +40,8 @@ class Session:
 
     @staticmethod
     def _remaining(deadline, timeout_code):
+        if deadline is None:
+            return None
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise Error(timeout_code, "MCP server request timed out")
@@ -48,7 +50,7 @@ class Session:
     def _wait_ready(self, selector, deadline, timeout_code):
         while True:
             remaining = self._remaining(deadline, timeout_code)
-            if selector.select(min(remaining, 0.05)):
+            if selector.select(0.05 if remaining is None else min(remaining, 0.05)):
                 return
             if self._process.poll() is not None:
                 raise Error("ServerFailed", "MCP server exited")
@@ -113,7 +115,7 @@ class Session:
             raise Error("ServerFailed", "MCP session is closed")
         self._next_id += 1
         request_id = self._next_id
-        deadline = time.monotonic() + timeout_s
+        deadline = None if timeout_s is None else time.monotonic() + timeout_s
         self._send({"jsonrpc": "2.0", "id": request_id, "method": method,
                     "params": params}, deadline, timeout_code)
         while True:
@@ -167,7 +169,7 @@ class Session:
             params = {"cursor": cursor}
 
     def call_tool(self, name, arguments, timeout_s):
-        """工具結果不做轉換，isError 也由上層決定如何處理。"""
+        """工具結果不做轉換，isError 也由上層決定如何處理；timeout_s=None＝不限。"""
         return self._request("tools/call", {"name": name, "arguments": arguments},
                              timeout_s, "CommandFailed")
 
@@ -398,7 +400,7 @@ class HttpSession(Session):
         self._next_id += 1
         return self._exchange({"jsonrpc": "2.0", "id": self._next_id,
                                "method": method, "params": params},
-                              time.monotonic() + timeout_s, timeout_code)
+                              None if timeout_s is None else time.monotonic() + timeout_s, timeout_code)
 
     def close(self):
         """DELETE 失敗不阻擋收尾；重複呼叫不再送請求。"""

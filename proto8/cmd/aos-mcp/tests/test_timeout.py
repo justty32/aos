@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 import runpy
 import subprocess
+import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -28,6 +30,20 @@ class TimeoutTests(unittest.TestCase):
             popen.return_value.returncode = 0
             MCP['call']('demo', {'reg': 'tools.json', 'max_s': None}, {}, '/tmp', '/tmp', 17)
             self.assertEqual(popen.return_value.communicate.call_args.kwargs['timeout'], 17)
+
+    def test_zero_timeout_disables_metadata_and_cli_limits(self):
+        for maximum, fallback in ((0, 1), (None, 0)):
+            with self.subTest(maximum=maximum, fallback=fallback), tempfile.TemporaryDirectory() as tmp:
+                launcher = Path(tmp) / 'aos-tools'
+                launcher.write_text('#!' + sys.executable + '\nimport time\ntime.sleep(2)\nprint("done")\n')
+                launcher.chmod(0o755)
+                with patch.dict(MCP['os'].environ, PATH=tmp + ':' + MCP['os'].environ['PATH']):
+                    code, out, _, _, _ = MCP['call']('demo', {'reg': 'tools.json', 'max_s': maximum}, {}, tmp, tmp, fallback)
+                self.assertEqual((code, out), (0, 'done\n'))
+        data = [{'name': 'demo', 'tooldef': {}, 'metainfo': {'timeout_ms': 0}}]
+        result = subprocess.CompletedProcess([], 0, json.dumps(data).encode(), b'')
+        with patch.object(MCP['subprocess'], 'run', return_value=result):
+            self.assertEqual(MCP['load_tools'](['tools.json'])['demo']['max_s'], 0)
 
     def test_bad_timeout_uses_fallback_with_warning(self):
         """壞的 timeout_ms＝當沒寫：max_s 是 None（用 --timeout-s），stderr 一行帶工具名的提醒，不是 ToolsBad。"""

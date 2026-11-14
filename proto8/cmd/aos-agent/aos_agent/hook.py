@@ -69,7 +69,7 @@ flags:
                           --async hooks never have their reply read)
       --async             start it and do not wait
       --on-error W        stop (default: the agent stops) or continue (a warning)
-      --timeout-ms N      give up waiting after N ms (default 60000)
+      --timeout-ms N      give up waiting after N ms (default 60000; 0 = no limit)
       --replace           replace a hook already listed under that name
       --path-json J       store this JSON value (path string or directive) instead of XXX
   -h, --help              show this help

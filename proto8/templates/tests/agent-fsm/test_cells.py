@@ -164,6 +164,14 @@ else:
         self.assertIn('started', message['content'])
         self.assertIn('timed out', result.stderr)
 
+    def test_zero_timeout_runs_without_limit(self):
+        self.command('aos-tools', "import json,sys,time\nif 'ls' in sys.argv: print(json.dumps([{'name':'echo','path':'/fake/echo','tooldef':{},'metainfo':{'timeout_ms':0}}]))\nelse: time.sleep(2); sys.stdout.buffer.write(sys.stdin.buffer.read())\n")
+        self.history([{'role':'assistant','tool_calls':[CALL]}])
+        result = self.run_cell('act')
+        message = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
+        self.assertEqual(message['content'], CALL['function']['arguments'])
+        self.assertNotIn('timed out', result.stderr)
+
     def test_bad_timeout_runs_without_limit(self):
         """壞的 timeout_ms＝當沒寫＝不設上限：工具照跑、stderr 一行帶工具名的提醒、退 0。"""
         self.command('aos-tools', "import json,sys\nif 'ls' in sys.argv: print(json.dumps([{'name':'echo','path':'/fake/echo','tooldef':{},'metainfo':{'timeout_ms':'soon'}}]))\nelse: sys.stdout.buffer.write(sys.stdin.buffer.read())\n")

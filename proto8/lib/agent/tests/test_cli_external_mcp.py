@@ -263,6 +263,16 @@ class ExternalMcp(unittest.TestCase):
         self.assertEqual(cli_mcp.external_servers(c, str(self.tmp), "cli.json"), [])
         self.assertEqual(cli_mcp.external_codex({"kind": "codex", "external": []}), ([], {}, None))
 
+    def test_zero_timeout_waits_for_cli_and_stream(self):
+        argv = [sys.executable, "-c", "import sys,time; sys.stdin.read(); time.sleep(1); print('done')"]
+        r = cli_print.run_cli(argv, "prompt", str(self.tmp), 0)
+        self.assertEqual((r.returncode, r.stdout), (0, "done\n"))
+        live = self.tmp / "live.jsonl"
+        with patch.object(cli_print.threading, "Timer", side_effect=AssertionError("no timer for zero")):
+            code, lines = cli_print.run_claude_stream(argv, "prompt", str(self.tmp), 0, str(live))
+        self.assertEqual((code, lines), (0, ["done\n"]))
+        self.assertEqual(live.read_text(), "done\n")
+
     def test_run_cli_env_only_child(self):
         r = cli_print.run_cli(["sh", "-c", 'cat >/dev/null; test "$SITE_TOKEN" = "$1" && echo same', "sh", self.token],
                                 "", str(self.tmp), 10000, env={"SITE_TOKEN": self.token})

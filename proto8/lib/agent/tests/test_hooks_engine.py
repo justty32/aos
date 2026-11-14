@@ -40,7 +40,7 @@ class Engine(unittest.TestCase):
     def test_common_keys_are_checked_before_the_clock_keys(self):
         """一格同時有共通鍵的錯與 on_clock 專用鍵的錯：先報共通鍵那句（使用者 11-13「4可以。」；改用引擎前先報 on_clock 那句）。"""
         cases = (
-            ({"event": "on_clock", "handler": "h", "every_ms": 0, "timeout_ms": 0}, "timeout_ms must be a positive integer"),
+            ({"event": "on_clock", "handler": "h", "every_ms": 0, "timeout_ms": -1}, "timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit)"),
             ({"event": "on_clock", "handler": "h", "on_error": "x"}, "on_error must be stop or continue"),
             ({"event": "after_tool", "handler": "h", "clock": "c", "on_error": "x"}, "on_error must be stop or continue"),
             ({"event": "on_clock", "handler": "h", "every_ms": 0}, "every_ms must be a positive integer"),

@@ -113,7 +113,7 @@ def host_ref(target, daemon):
 def mount(job, name, target, proc, box, daemon, timeout_ms=None, stdin="request.json", stdout="reply.json"):
     """寄掛信、寫 proc.json，回寫好的那份；job 是這件工作的資料夾，也是那個 proc 的 stack 與 cwd。"""
     spec = {"argv": ["aos-exec", host_ref(target, daemon)], "cwd": job, "stdin": stdin, "stdout": stdout}
-    if timeout_ms is not None:
+    if timeout_ms not in (None, 0):
         spec["timeout_ms"] = timeout_ms
     proc = dict(proc, name=name, exec=target)
     proc["mount_letter"] = send(box, {"procs_added": {name: {"exec": spec, "max": 1, "stack": job}}})
@@ -193,7 +193,7 @@ def settle(job, proc, table, box, daemon, timeout_ms=None, name=None, target_for
     mounted = proc.get("mounted_at", 0.0)
     if isinstance(mounted, bool) or not isinstance(mounted, (int, float)):
         mounted = 0.0
-    late = timeout_ms is not None and time.time() - mounted >= timeout_ms / 1000.0
+    late = timeout_ms not in (None, 0) and time.time() - mounted >= timeout_ms / 1000.0
     if phase == "done" and code in (143, 137) and late:
         return {"kind": "exit", "code": code, "timed_out": True}
     if phase == "done" and code != 0 and accept is not None and accept(code):

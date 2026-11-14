@@ -2,9 +2,26 @@
 import glob
 import json
 import os
+from pathlib import Path
+import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 
 from test_switch import Base, cooldown
+
+
+class UsageTimeout(unittest.TestCase):
+    def test_zero_timeout_waits_for_fake_claude(self):
+        proto = Path(__file__).resolve().parents[3]
+        sys.path[:0] = [str(proto / "py"), str(proto / "cmd" / "aos-eca")]
+        from aos_eca import slash
+        with tempfile.TemporaryDirectory() as root:
+            fake = Path(root) / "claude"
+            fake.write_text('#!/bin/sh\ncat >/dev/null\nsleep 1\nprintf \'{"result":"usage done"}\\n\'\n')
+            fake.chmod(0o755)
+            with patch.dict(os.environ, {"PATH": root + os.pathsep + os.environ["PATH"]}):
+                self.assertEqual(slash.slash_usage({"kind": "claude", "timeout_ms": 0}, root), "usage done")
 
 
 class ClaudeSlash(Base):

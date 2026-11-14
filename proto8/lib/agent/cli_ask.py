@@ -60,7 +60,7 @@ def live_a2a(cfg, cell, parts, path, handed, deadline, more=None):
     if handed:
         handed()
     idle_since = None
-    while time.time() < deadline:
+    while deadline is None or time.time() < deadline:
         got = cli_a2a.acked(cell, offset, ids)
         if len(got) == len(ids):
             first, last = min(got.values()), max(got.values())
@@ -99,7 +99,8 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None, parts=None, more=None)
     不貼字、不看 on_busy（more 照傳）；沒給、沒記到、連不上、沒回執＝照下面貼 prompt。
     on_busy＝yield（預設）：有人接在畫面上、或 busy.txt 在＝SessionBad；answer（10-31 eca --on-busy）：有人接著照樣貼，
     busy.txt 在就等它消失再貼——等它跟等回答共用 timeout_ms 的期限，逾時 ReplyMissing。貼上、按 Enter 之後叫 handed（交出去了，11-03）。"""
-    deadline = time.time() + cfg.get("timeout_ms", 600000) / 1000
+    milliseconds = cfg.get("timeout_ms", 600000)
+    deadline = None if milliseconds == 0 else time.time() + milliseconds / 1000  # 0＝不限時
     path = cli_a2a.socket_path(cfg, cell) if parts else None
     if path:
         trust_check(cfg, cell)
@@ -114,7 +115,7 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None, parts=None, more=None)
             cli_base.die("SessionBad", "someone is attached to the screen (%s); call again after they detach" % ", ".join(who))
         if os.path.exists(cell.file("busy.txt")):
             cli_base.die("SessionBad", "a turn is running on the screen (sent, not finished yet); call again after it finishes")
-    while os.path.exists(cell.file("busy.txt")) and time.time() < deadline:
+    while os.path.exists(cell.file("busy.txt")) and (deadline is None or time.time() < deadline):
         if not cell.alive():
             cli_base.die("CliFailed", "the screen closed before the turn finished")
         time.sleep(0.2)
@@ -131,7 +132,7 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None, parts=None, more=None)
     cell.tmux("send-keys", "-t", TMUX_SESSION, "Enter")
     if handed:
         handed()
-    while time.time() < deadline:
+    while deadline is None or time.time() < deadline:
         turns = cell.turns()
         if len(turns) > seen:
             return turns[-1].get("text") or ""

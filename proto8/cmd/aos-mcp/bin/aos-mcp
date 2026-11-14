@@ -18,7 +18,7 @@
 #   工作區＝--ws ＞ $AOS_WS；stack＝--stack ＞ $AOS_STACK ＞ $WS/.stack/。每次叫工具：
 #   AOS_WS=WS AOS_STACK=<stack> aos-tools --file REGISTRY call 名（aos-tools 算 tools/<名>/ 小格；兩支指令由 PATH 找，呼叫者放好），
 #   arguments 進 stdin、stdout 整段回去，退非 0＝isError（失敗時另附工具 stderr 的最後 STDERR_TAIL 位元組，見 tail_of）；逾時＝工具 _metainfo（資料夾的 _metainfo.json 檔／JSON 檔的 _metainfo key）的 timeout_ms，沒寫或壞了（另印一行提醒）用 --timeout-s（預設 60），
-#   到了整群 TERM、2 秒後 KILL。呼叫紀錄預設不記（11-02 使用者「默認不留」）：給 --enable-logs＝每次叫完在
+#   兩者 0 都是不設上限；到了整群 TERM、2 秒後 KILL。呼叫紀錄預設不記（11-02 使用者「默認不留」）：給 --enable-logs＝每次叫完在
 #   <stack>/aos-mcp-logs.jsonl 記一行（名字、arguments、結束碼、花多久），再加 --logs-path FILE＝記在 FILE（相對路徑從啟動時的 cwd 算）；
 #   只給 --logs-path、沒給 --enable-logs＝ArgumentsBad。
 #   --hooks DEF（11-10 hook，圖紙 thinking/2026-11/10/self-family/hook § 6 eca 縮水版）：DEF＝定義資料夾（interfaces.json 宣告 hooks），stack＝上面那個 stack；
@@ -63,7 +63,7 @@ REGISTRY: registry files (relative to the cwd at start; none = ./tools.json); se
 Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call runs
   AOS_WS=WS AOS_STACK=<stack> aos-tools --file REGISTRY call NAME (aos-tools selects tools/NAME/); arguments go to stdin, stdout goes back as the
   result, exit non-zero = isError (the last 2048 bytes of the tool's stderr are attached). Timeout = the tool's _metainfo timeout_ms,
-  otherwise --timeout-s (default 60; a bad timeout_ms = a warning and this); then TERM to the whole group, KILL 2 s later.
+  otherwise --timeout-s (default 60; a bad timeout_ms = a warning and this); 0 = no limit for either. Then TERM to the whole group, KILL 2 s later.
 --hooks DEF: DEF is the agent definition folder (its interfaces.json declares hooks.json; the stack copy goes on top). On tools/call,
   before_tool may change the arguments or block the call (the result text = the hook's stdout, or "[aos] hook: tool NAME blocked by hook HOOK.";
   not an error), after_tool may change the result text. A failing hook = that call returns isError with a HookFailed line. No --hooks = no hooks.
@@ -200,7 +200,7 @@ def call(name, tool, args, ws, stack, timeout_s, echo=True):
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
                          start_new_session=True)   # 自成一群：逾時能整群收掉（P-36）
     try:
-        out, err = p.communicate(json.dumps(args).encode(), timeout=limit)
+        out, err = p.communicate(json.dumps(args).encode(), timeout=None if limit == 0 else limit)
         code = p.returncode
     except subprocess.TimeoutExpired:
         for sig in (signal.SIGTERM, signal.SIGKILL):

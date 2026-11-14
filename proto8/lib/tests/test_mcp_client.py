@@ -97,6 +97,11 @@ class McpClientTests(unittest.TestCase):
         self.assertEqual(len(tools), 7)
         self.assertEqual([tool["name"] for tool in tools], NAMES)
 
+    def test_call_without_deadline_waits_for_delayed_reply(self):
+        session = self.open_script("time.sleep(.1)\nsend({'jsonrpc': '2.0', 'id': request['id'], 'result': {'ok': True}})")
+        self.assertEqual(session.call_tool('slow', {}, None), {'ok': True})
+        self.assertIsNone(session._remaining(None, 'CommandFailed'))
+
     def test_echo(self):
         session = self.open_fake()
         self.assertEqual(session.call_tool("echo", {"text": "hello 世界"}, 1),
@@ -377,6 +382,10 @@ class HttpWireTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, code)
         self.assertTrue(self.token not in str(caught.exception), "Error disclosed the bearer")
         return caught.exception
+
+    def test_call_without_deadline(self):
+        session = self.open()
+        self.assertEqual(session.call_tool('echo', {}, None), {'content': [{'type': 'text', 'text': 'echo'}]})
 
     def test_headers_session_notification_and_delete(self):
         session = self.open(bearer=self.token)

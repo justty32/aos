@@ -240,7 +240,7 @@ def read_cfg(spec, stack):
         if not is_count(timeout) or timeout > MAX:
             raise Error("CfgBad", "timeout_ms must be a non-negative integer (time limit for the endpoint function), "
                                   "got " + dumps(timeout))
-        cfg["timeout_ms"] = timeout
+        cfg["timeout_ms"] = timeout or None
     return cfg
 
 

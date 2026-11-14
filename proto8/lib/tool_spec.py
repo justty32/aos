@@ -149,8 +149,8 @@ def metainfo_problems(mi):
         if k in mi and (not isinstance(mi[k], str) or not mi[k]):
             out.append("%s must be a non-empty string" % k)
     t = mi.get("timeout_ms")
-    if "timeout_ms" in mi and (not isinstance(t, int) or isinstance(t, bool) or t <= 0):
-        out.append("timeout_ms must be a positive whole number of milliseconds (the tool is killed after it)")
+    if "timeout_ms" in mi and (not isinstance(t, int) or isinstance(t, bool) or t < 0):
+        out.append("timeout_ms must be a whole number of milliseconds >= 0 (0 = no limit; the tool is killed after it)")
     if "cost" in mi and not isinstance(mi["cost"], dict):
         out.append("cost must be an object like {\"time_ms\": 100}")
     return out

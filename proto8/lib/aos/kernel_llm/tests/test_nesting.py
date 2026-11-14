@@ -92,6 +92,25 @@ class NestingFixtures(unittest.TestCase):
                                                 'msg': 'endpoint function timed out (1 ms)'}})
                 self.assertEqual(self.ledger()[-1]['code'], 'EndpointFailed')
 
+    def test_zero_timeout_has_no_inst_deadline_or_late_classification(self):
+        cfg = json.loads(self.config.read_text())
+        cfg['timeout_ms'] = 0
+        self.config.write_text(json.dumps(cfg))
+        folder = self.stack / 'requests/new/zero-timeout'
+        folder.mkdir()
+        (folder / 'letter.json').write_text(json.dumps({'body': {
+            'request': {'messages': []}}}))
+        self.run_kernel()
+        folder = self.stack / 'requests/cur/zero-timeout'
+        request = json.loads((folder / 'request.json').read_text())
+        self.assertNotIn('deadline', request['priority'])
+        letters = [json.loads(p.read_text()) for p in (self.stack / 'procs_requests/new').glob('*/letter.json')]
+        spec = next(letter['body']['procs_added']['llm_zero-timeout']['exec'] for letter in letters
+                    if 'llm_zero-timeout' in letter['body'].get('procs_added', {}))
+        self.assertNotIn('timeout_ms', spec)
+        self.prepare('zero-term', {'error': {'code': 'X', 'msg': 'y'}}, code=143)
+        self.assertEqual(self.reply_body('zero-term'), {'error': {'code': 'X', 'msg': 'y'}})
+
     def test_non_timeout_term_can_forward_valid_error(self):
         self.prepare('term', {'error': {'code': 'X', 'msg': 'y'}}, code=143)
         self.assertEqual(self.reply_body('term'), {'error': {'code': 'X', 'msg': 'y'}})

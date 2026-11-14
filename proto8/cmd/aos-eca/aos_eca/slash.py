@@ -126,9 +126,11 @@ def slash_usage(cfg, ws):
     """claude：另起一次 claude -p（不存對話、不碰這隻的 session）問 /usage，原樣回它的字；codex exec 沒有對應的。"""
     if cfg["kind"] != "claude":
         return note("/usage: codex has no usage report outside its own screen; open the screen (aos-agent open) and type /usage there")
+    milliseconds = cfg.get("timeout_ms", 600000)
+    limit = None if milliseconds == 0 else milliseconds / 1000  # 0＝不限時
     try:
         r = subprocess.run(["claude", "-p", "--output-format", "json", "--no-session-persistence"], input="/usage",
-                           stdout=subprocess.PIPE, text=True, cwd=ws, timeout=cfg.get("timeout_ms", 600000) / 1000)
+                           stdout=subprocess.PIPE, text=True, cwd=ws, timeout=limit)
     except FileNotFoundError:
         raise Fail("CliMissing", "claude is not on PATH")
     except subprocess.TimeoutExpired:
