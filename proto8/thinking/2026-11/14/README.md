@@ -22,3 +22,4 @@
 | [sec-1114](sec-1114.md) | 線安 ok-sec：借 Linux uid／檔案權限讓 aos 更安全，只規劃——三圈（使用者帳號／每隻 agent 一個 subuid／外來程式進沙箱）、第 0 期免 root 實測 8 項、Argon 審過定稿；第 1 期不改用法，改用法的排在公開 demo 之後；11 題待拍板 |
 | [board](board-1114.md) | board-1114：布告欄＋分級＋頻道協議 comm/1 規劃 |
 | [release-1114](release-1114.md) | 公開 demo 發佈版（線發 ok-release）：規劃走完（fable 設計、Argon 審、計劃 v2），使用者 ★1～★5 照推薦（核心頁雙語中文先、MIT＋CC BY 4.0、同 repo、不改歷史、頂層加 docs/ 等）；草稿 v2 給使用者看（宣傳頁 A／B 待挑、README 中英、文件 11 頁，指令照字實跑過）；待答：挑版、副標、原話逐句、docker；不 push、發佈檔還沒動 |
+| [kb-1114](kb-1114.md) | 重整 aos 知識庫與 wf/（線庫 ok-kb，fable）：用各隊經驗盤點重複、過時、跟程式對不上、找不到、太長；4 隻 sol＋2 隻 Claude 蒐集中，設計與方向題未出 |

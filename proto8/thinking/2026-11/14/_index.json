@@ -23,6 +23,9 @@
  "gate-auto-1114.md": {
   "description": "gate-auto-1114：repo-aos 的 kernel_gate 先自動處理一輪請求"
  },
+ "kb-1114.md": {
+  "description": "kb-1114：重整 aos 知識庫與 wf/（線庫 ok-kb）"
+ },
  "kernel-framework-1114.md": {
   "description": "通用 kernel 框架 11-14（線框，家機）：批 5 接線做到一半、gpt 施工隊暫存樹步驟 1～6 驗過，交棒給 ok-kf；這次沒有程式進 main"
  },
