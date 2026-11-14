@@ -27,6 +27,8 @@ class QuietTest(unittest.TestCase):
         self.env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         self.env["PATH"] = os.pathsep.join([str(local), self.env["PATH"]])
         self.run_cmd("aos-post", "init", self.stack / "queue")
+        (self.stack / "quiet").mkdir()
+        (self.stack / "quiet" / "config.json").write_text(json.dumps({"urgent_senders": ["xiaosi"]}))
 
     def run_cmd(self, *argv, text=None):
         r = subprocess.run([str(a) for a in argv], input=text, capture_output=True, text=True, env=self.env)

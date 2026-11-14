@@ -1,4 +1,7 @@
 {
+ "autoreply_tick.py": {
+  "description": "on_clock hook（每 60 秒）：只看（不收）agent 自己的信箱 <stack>/mailbox/new，替來信自動回一封。"
+ },
  "check_anchors.py": {
   "description": "Check fragments in local Markdown links."
  },
@@ -59,6 +62,18 @@
  },
  "progress_post.sh": {
   "description": "Append one validated progress event to the board using a locked JSON line."
+ },
+ "quiet-README.md": {
+  "description": "quiet: a quiet time for your agent, with auto-replies"
+ },
+ "quiet.py": {
+  "description": "清淨時段的指令與共用函式：開（30m／90s／1h）、關（off）、看（status）；quiet_hook.py、quiet_tick.py 也 import 這裡。"
+ },
+ "quiet_hook.py": {
+  "description": "before_queue hook：清淨期間擋下「[aos] new_mail」「[aos] kernel_hold」兩種通知（原文附加到 quiet/deferred.jsonl、退 10 丟掉）。"
+ },
+ "quiet_tick.py": {
+  "description": "on_clock hook（每 60 秒）：清淨時段結束後，quiet/deferred.jsonl 有東西就合成一則「[aos] quiet_over: …」寄進 agent 的 queue、清空。"
  },
  "tabledb.py": {
   "description": "同質列表資料檔（.json / .csv）的統一 CRUD 與連結解析。"
