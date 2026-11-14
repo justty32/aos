@@ -2,6 +2,13 @@
 
 ← [11-14 日索引](README.md)｜規劃：[astra-kernel-plan](../13/astra-kernel-plan.md)（[04 施工與驗收](../13/astra-kernel-plan/04-施工與驗收.md)、[06 已裁 Q1～Q8](../13/astra-kernel-plan/06-待裁與衝突.md)）
 
+## 線星收線總結（ok-astra 11-14 09:50，頂層 09:47 裁示收線）
+
+- **astra 當門：能用，但沒有比 gpt 隊省。** 門鈴（sol 停自己→門留著→astra 表態→轉寄）在假腦和真腦下都通；AK14 用 `agents_ctl` 的 `no_wait` 解掉。用量：階段 2 兩張單 46／36 次，省錢 system 後 33／32 次，gpt 隊 29／31 次；lead 換 sol-high 腦也沒有比較省（見最後一節）。
+- **每隻 sol 分額度：成立。** llm-t1 的 `budget.senders` 用 sol 的 stack 當 key，帳一隻一行，超額回 `BudgetMissing`；家機不必換執行檔。
+- 省錢 system 不轉正、不再往下調；階段 4 不做（使用者「都按照推薦」）。「實作由 astra 帶 sol」要不要改由頂層問使用者。
+- 下面依時間順序：前一任的階段 0、ok-astra 的 AK14 與階段 0.5～1、階段 2、階段 3 與省錢實驗。之後接修 AK17（另寫）。
+
 ## 白話結論
 
 - 在暫存樹 `~/code/astra-1114/tree` 搭好整套：astra（`gpt-lead-k`）身上掛門、sol（`gpt-worker-k`）的 `AOS_KERNEL` 指那扇門、sol 問腦走隊站 `llm-t1`，再轉 `llm-gpt`。活樹沒碰。
@@ -157,3 +164,46 @@
 - 公司 WSL 如果仍要換：在 repo 外 `git archive <hash> proto8/impls` 解到 build 夾，build `impls/aos-llm`，只換那一支，照 aos-teams/06「停樹換檔」走。我沒有 build。
 - 換指揮那半照 Q8 不試（用量沒降）。
 - AK9（ctl 信的寄件人是工作區）跟 AK19 一樣是「寄件人怎麼定」的問題，換現有的執行檔也不會好。
+
+## 階段 3（提前做）與 astra 省錢實驗（ok-astra 11-14 09:21～09:45）
+
+頂層 09:21 裁示：階段 3「每隻 sol 分額度」提前做，在暫存樹做、驗；astra 的 system 改成「一張單不包 `do_task`、驗收只跑 Check」，當成可丟的實驗，用同樣兩張單重量；階段 4 照使用者「都按照推薦」不做。
+
+### 白話結論
+
+- **每隻 sol 分額度：成立。** llm-t1 的 `budget.senders` 用 sol 的 stack 絕對路徑當 key、各 150 次；帳上 `used.json` 和 `ledger.jsonl` 都一隻一行（`ok-astra-sol-T03`～`T06`）。另用假腦試卡關：`ok-astra-capA` 設 2 次，第 3 次回 `BudgetMissing budget.senders key ".../ok-astra-capA" (sender ...): max_calls ...`，沒列的 `capB` 照常回。家機不必換執行檔（AK3 不成立，見上一節）。
+- **省錢實驗：有省，但還沒穩定低於 gpt 隊。** 同兩張單比階段 2 少 11～28% 次數、17～30% token；知識庫那張比 gpt 隊還低，ledger_sum 那張仍高。四次成品都對（我重驗）。
+- **換指揮（lead 改用 sol-high 腦）：沒比較省。** lead 的次數和 token 跟 astra-high 幾乎一樣（24 vs 24、23 vs 25），差別來自那一輪的 sol；腦換便宜的，步數不會少。這一半照 04 驗收「收得完單；用量比 astra 那輪」：收得完，用量沒降。
+
+### 改了什麼（只在暫存樹 `~/code/astra-1114`，不進 repo）
+
+- `stage3-setup.py`：lead system 第 4 步改「不用 do_task」；第 6 步驗收改成只跑兩個指令（ticket 的 Check＋`git status --porcelain` 看檔案清單），兩個都過就不讀 diff；隊員命名改 `ok-astra-sol-T<n>`（guard 的名字規則跟著改）；兩份 system 末尾加一段 aos／wf 指路（知識庫 `_description.json`、AGENTS.md、user.md、aos-teams 與 06、07、硬規則），寫明「要用時才讀，不要一開始全讀」——全讀會把這次要量的用量蓋掉。舊 system 留成 `system.stage2.txt`。
+- `stage3b-setup.py`：lead 的 `llm.json` 改 `sol-high`（舊的留成 `llm.astra.json`）。
+- 每輪開跑前都清掉 lead 的 history（階段 2 的 run2 沒清，這次比較公平）；每張圖紙抄到新路徑（run3～run6），知識庫那張開跑前把 repo 複本的 `agents.json` 退回 run2 之前的內容。
+
+### 結果
+
+| 單 | 輪 | lead | sol | 合計 | 成品 |
+|---|---|---|---|---|---|
+| ledger_sum | 階段 2 run1（astra-high，原 system） | 30／48.1 萬 | 16／21.0 萬 | 46／69.1 萬 | 對 |
+| ledger_sum | run3（astra-high，省錢 system） | 24／39.4 萬 | 9／18.0 萬 | **33／57.4 萬** | Check 逐字對、兩個錯誤情況對、只動兩個檔 |
+| ledger_sum | run5（sol-high lead，省錢 system） | 24／39.5 萬 | 13／25.4 萬 | 37／64.9 萬 | 同上 |
+| ledger_sum | gpt 隊 real1 | | | 29／37.5 萬 | |
+| 知識庫 no_wait | 階段 2 run2 | 27／54.8 萬 | 9／11.5 萬 | 36／66.4 萬 | 對（已進 repo 6b9003309） |
+| 知識庫 no_wait | run4（astra-high，省錢 system） | 25／37.8 萬 | 7／8.6 萬 | **32／46.4 萬** | 跟 run2 成品逐位元組相同 |
+| 知識庫 no_wait | run6（sol-high lead，省錢 system） | 23／35.0 萬 | 6／7.1 萬 | 29／42.1 萬 | 跟 run2 成品逐位元組相同 |
+| 知識庫 no_wait | gpt 隊 | | | 31／52 萬 | |
+
+（次數／token；每輪都 0 次退件；考題這次沒再出。）
+
+lead 的 25 次花在哪（run4 history）：讀圖紙 2、git 1、寫工單與 status 2、開門 1、add＋say 2、巡邏 `subagent ls` 2、goal set／pause／resume／done 4、驗收 2 個指令＋讀 1、改 status 1、pass＋rm 2、寄信 1，另外 **4 次是空回覆結束回合**。幾乎每次只叫一個工具。要再省得讓它一次叫多個工具、少用 goal——這是 system 的設計題，沒再改。
+
+### 撞到的
+
+- run6 的 sol 想跑一條含 `rm` 的指令（自己多做的補充驗證）被守門擋，它在報告裡照實寫了；lead 只照工單的 Check 驗。守門照設計運作。
+- 輕驗收的風險：這四輪都沒出錯，所以「不讀 diff」沒漏抓到東西；但這也代表這次沒有驗到「sol 寫錯時只跑 Check 抓不抓得到」。
+
+### 收尾核對（09:45）
+
+- 暫存樹 `aos-daemon-ctl -d ~/code/astra-1114/tree/.stack shutdown`：`stopped (ctl seq 3)`；`pids.txt` 裡我記的 pid 全不在。活樹沒動。
+- 這一段沒有 repo 改動要進（只有本紀錄）；省錢 system 要不要變成正式定義，交頂層或使用者。
