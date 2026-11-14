@@ -33,7 +33,7 @@
 5. 看 `new/`：信封讀不懂的直接回 `LetterBad`。其餘交給骨架，信留在 `new/` 不認領。
 6. 排序：級數（含 aging）→ 期限 → 同後端黏著 → 包的速度 → 等得久 → 先寄。
 7. 逐封：新信先跑 `before_verdict`；驗信；期限已過回 `DeadlineBad`；總額到頂回 `BudgetMissing`（`spent: "wait"` 就整列停下等下一窗）；總格、保留格、包與寄件人的額度、包格、後端格都有空才放行，沒空留在 `new/`。判完跑 `after_verdict`（新信一次；排著的信離開隊時再一次）。
-8. 放行的：認領進 `cur/`、寫 `request.json`、寄掛信、寫 `proc.json`；寄不進回 `LaunchFailed`。拒的：認領、回 `{"error": {"code", "msg"}}`、整封刪。
+8. 放行的：認領進 `cur/`、寫 `request.json`、寄掛信、寫 `proc.json`；寄不進回 `LaunchFailed`。拒的：認領、回 `{"error": {"code", "msg"}}`、整封刪；`BudgetMissing`（`spent: "refuse"`）的 `error` 另帶：`scope`（`"total"`／`"endpoint"`／`"sender"`）、`window`（`"hour"`／`"day"`／`"all"`）、`since`（這一窗起點，ISO 帶時區；`all` 為 null）、`resets_at`（下一窗起點，同格式；`all` 為 null＝不會自己重置）、`limit`（`"max_calls"`／`"max_tokens"`）、`max`（那個上限的數字），endpoint 層再帶 `endpoint`（代號）、sender 層再帶 `key`（kernel.json 裡寫的那個 key）；`msg` 一字不變（`resets_at` 只是提示：時區、夏令、校時都可能讓它偏，見 [docs/04](docs/04-已知限制.md)）。
 9. 寫 `queue.json`，退 0。
 
 ## hooks

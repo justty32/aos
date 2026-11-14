@@ -201,6 +201,94 @@ sys.exit(code)
         self.assertEqual((self.stack / cooldown.NAME).read_text(), before)
         self.assertEqual(self.sends(), 0)
 
+    # ---- structured BudgetMissing (resets_at / window)
+    MSG = 'budget for this window (hour) is used up; not run'
+
+    def refuse(self, **fields):
+        """Send, then let recv answer BudgetMissing with the given extra error fields; returns (result, wall time before the call)."""
+        self.wait(10)
+        before = time.time()
+        error = dict({'code': 'BudgetMissing', 'msg': self.MSG}, **fields)
+        result = self.wait(10 if fields.get('window') != 'all' else 1, FAKE_RECV='1', FAKE_REPLY=json.dumps({'error': error}),
+                           FAKE_ERROR='aos-llm: error: BudgetMissing ' + self.MSG)
+        return result, before
+
+    def iso_at(self, t):
+        import datetime
+        return datetime.datetime.fromtimestamp(t, datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y-%m-%dT%H:%M:%S+08:00')
+
+    def test_fail_until_writes_same_record_with_given_until(self):
+        stack = str(self.stack)
+        cooldown.fail(stack, 'CliFailed', 'x', dropped=2, now=1000)
+        rec = cooldown.fail_until(stack, 'BudgetMissing', '  a\n b ', 5000, dropped=1, now=1010)
+        self.assertEqual(rec, self.record())
+        self.assertEqual((rec['failures'], rec['dropped'], rec['code'], rec['reason']), (2, 3, 'BudgetMissing', 'a b'))
+        self.assertEqual((rec['until'], rec['at']), (cooldown.iso(5000), cooldown.iso(1010)))
+        self.assertEqual(cooldown.state(stack, now=4999)[0], 'cooling')
+        self.assertEqual(cooldown.state(stack, now=5000)[0], 'due')
+        self.assertEqual([p.name for p in self.stack.iterdir() if p.name.endswith('.tmp')], [])
+        with self.assertRaises(OSError):
+            cooldown.fail_until(str(self.root / 'nope'), 'C', 'r', 1)
+
+    def test_budget_missing_resets_at_in_future_cools_until_reset_plus_5(self):
+        reset = int(time.time()) + 3600
+        result, _ = self.refuse(window='hour', resets_at=self.iso_at(reset))
+        rec = self.record()
+        self.assertEqual((rec['code'], rec['failures'], rec['dropped']), ('BudgetMissing', 1, 0))
+        self.assertEqual(cooldown.parse(rec['until']), reset + 5)
+        self.assertIn('agent-fsm: warning: BudgetMissing ' + self.MSG, result.stderr)
+        self.assertNotIn('agent-fsm: error:', result.stderr)
+        self.wait(10)                                    # still cooling: no resend
+        self.assertEqual(self.sends(), 1)
+
+    def test_budget_missing_resets_at_very_near_waits_at_least_30_s(self):
+        before = time.time()
+        self.refuse(window='hour', resets_at=self.iso_at(int(before) + 3))
+        rec = self.record()
+        self.assertGreaterEqual(cooldown.parse(rec['until']), before + 29)
+        self.assertEqual(self.gap(rec), 30)
+
+    def test_budget_missing_resets_at_just_passed_waits_30_s(self):
+        self.refuse(window='day', resets_at=self.iso_at(int(time.time()) - 20))
+        rec = self.record()
+        self.assertEqual((rec['failures'], self.gap(rec)), (1, 30))
+
+    def test_budget_missing_resets_at_old_garbage_or_missing_uses_steps(self):
+        for fields in ({'window': 'day', 'resets_at': self.iso_at(int(time.time()) - 3600)},
+                       {'window': 'day', 'resets_at': 'tomorrow noon'},
+                       {'window': 'day', 'resets_at': '2099-01-01T00:00:00'},      # no offset
+                       {'window': 'day', 'resets_at': 12345},
+                       {'window': 'day', 'resets_at': None},
+                       {}):
+            with self.subTest(fields=fields):
+                (self.stack / cooldown.NAME).unlink(missing_ok=True)
+                (self.stack / 'think/pending.txt').unlink(missing_ok=True)
+                self.refuse(**fields)
+                rec = self.record()
+                self.assertEqual((rec['failures'], self.gap(rec)), (1, 30))
+
+    def test_budget_missing_failures_keep_counting_with_resets_at(self):
+        cooldown.fail(str(self.stack), 'BudgetMissing', 'earlier')
+        self.past()
+        self.refuse(window='hour', resets_at=self.iso_at(int(time.time()) + 600))
+        self.assertEqual(self.record()['failures'], 2)
+
+    def test_budget_missing_window_all_stops_without_cooldown(self):
+        request = (self.stack / 'think/request.json').read_text()
+        observed = self.stack / 'observed.jsonl'
+        result, _ = self.refuse(window='all', resets_at=None, limit='max_calls', max=10, scope='total')
+        self.assertEqual(result.stderr.strip().splitlines()[-1],
+                         'agent-fsm: error: BudgetMissing ' + self.MSG +
+                         ' (window all: it never resets; raise the budget, then start me again)')
+        self.assertFalse((self.stack / cooldown.NAME).exists())
+        self.assertEqual((self.stack / 'think/request.json').read_text(), request)
+        self.assertFalse((self.stack / 'think/pending.txt').exists())
+        self.assertFalse(observed.exists())
+        self.wait(10)                                    # starting again resends the same request
+        self.assertEqual(self.sends(), 2)
+        sent = [json.loads(line) for line in (self.root / 'requests.jsonl').read_text().splitlines()]
+        self.assertEqual(sent, [request, request])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -260,8 +260,8 @@ def dispatch(ctx, name, letter, detail):
     return failure
 
 
-def refuse(ctx, name, letter, code, msg):
-    letters.refuse(ctx, name, letter, code, msg)
+def refuse(ctx, name, letter, code, msg, extra=None):
+    letters.refuse(ctx, name, letter, code, msg, extra)
 
 
 def finish(ctx, queued):

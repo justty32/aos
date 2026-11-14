@@ -23,8 +23,8 @@ REPLY_BAD = ('cannot understand the endpoint function\'s stdout (must be one lin
              '{"message": {...}, "usage", "model"})')
 
 
-def error_reply(code, msg):
-    return {"error": {"code": code, "msg": msg}}
+def error_reply(code, msg, extra=None):
+    return {"error": dict(extra or {}, code=code, msg=msg)}
 
 
 def reply_of(reply):
@@ -426,26 +426,34 @@ def order(ctx, incoming):
     return bad + [waiting["id"] for waiting in ranked]
 
 
+def budget_extra(ctx, scope, limit, number, **more):
+    """BudgetMissing 回信多帶的欄位：哪一層、哪個窗、窗起訖、撞到哪個額度。"""
+    window = ctx.cfg["budget"]["window"]
+    return dict(scope=scope, window=window, since=ctx.used["since"], resets_at=budget.window_next(window, time.time()),
+                limit=limit, max=number, **more)
+
+
 def over_budget(ctx, waiting):
-    """這封撞到哪個額度：回 BudgetMissing 的原因；都沒撞回 None。"""
+    """這封撞到哪個額度：回 (BudgetMissing 的原因, 回信的額外欄位)；都沒撞回 None。"""
     cfg, used, slots = ctx.cfg, ctx.used, ctx.slots
     window, pack, endpoint = cfg["budget"]["window"], waiting["pack"], waiting["endpoint"]
     if pack["max_calls"] is not None or pack["max_tokens"] is not None:
         flying = slots.packs.get(endpoint, 0)
         if budget.spent_of(used["packs"], endpoint, pack["max_calls"], pack["max_tokens"], flying):
             by_calls = budget.spent_of(used["packs"], endpoint, pack["max_calls"], None, flying)
-            which = "max_calls %d" % pack["max_calls"] if by_calls else "max_tokens %d" % pack["max_tokens"]
-            return "endpoint %s: %s reached in this window (%s); not run (no fallback: pick another endpoint name)" % (
-                endpoint, which, window)
+            name, number = ("max_calls", pack["max_calls"]) if by_calls else ("max_tokens", pack["max_tokens"])
+            return ("endpoint %s: %s %d reached in this window (%s); not run (no fallback: pick another endpoint name)" % (
+                endpoint, name, number, window), budget_extra(ctx, "endpoint", name, number, endpoint=endpoint))
     who = budget.sender_key(waiting["sender"], ctx.stack)
     limit = cfg["budget"]["senders"].get(who)
     if limit is not None and waiting["sender"]:
         mine = slots.senders.get(who, 0)
         if budget.spent_of(used["senders"], who, limit["max_calls"], limit["max_tokens"], mine):
             by_calls = budget.spent_of(used["senders"], who, limit["max_calls"], None, mine)
-            which = "max_calls %d" % limit["max_calls"] if by_calls else "max_tokens %d" % limit["max_tokens"]
-            return "budget.senders key %s (sender %s): %s reached in this window (%s); not run" % (
-                budget.dumps(limit["key"]), waiting["sender"], which, window)
+            name, number = ("max_calls", limit["max_calls"]) if by_calls else ("max_tokens", limit["max_tokens"])
+            return ("budget.senders key %s (sender %s): %s %d reached in this window (%s); not run" % (
+                budget.dumps(limit["key"]), waiting["sender"], name, number, window),
+                budget_extra(ctx, "sender", name, number, key=limit["key"]))
     return None
 
 
@@ -463,19 +471,21 @@ def admit(ctx, name, letter):
     cfg, slots = ctx.cfg, ctx.slots
     if slots.stopped:
         return "queue", name
-    if budget.spent(cfg["budget"], ctx.used, slots.total()):
+    tripped = budget.spent_limit(cfg["budget"], ctx.used, slots.total())
+    if tripped:
         if cfg["budget"]["wait"]:
             slots.stopped = True                          # 留在 new/ 等下一窗
             return "queue", name
-        return "refuse", ("BudgetMissing", "budget for this window (%s) is used up; not run" % cfg["budget"]["window"])
+        return "refuse", ("BudgetMissing", "budget for this window (%s) is used up; not run" % cfg["budget"]["window"],
+                          budget_extra(ctx, "total", *tripped))
     if slots.total() >= cfg["slots"]:
         slots.stopped = True                              # 補位到 slots 為止，其餘下一輪
         return "queue", name
     if waiting["level"] < ordering.HIGH and slots.total() >= cfg["slots"] - cfg["reserved_high"]:
         return "queue", name                              # 宣告級數才認保留格；後面可能還有 high
-    reason = over_budget(ctx, waiting)
-    if reason is not None:
-        return ("queue", name) if cfg["budget"]["wait"] else ("refuse", ("BudgetMissing", reason))
+    over = over_budget(ctx, waiting)
+    if over is not None:
+        return ("queue", name) if cfg["budget"]["wait"] else ("refuse", ("BudgetMissing",) + over)
     return ("pass", [name]) if slots.room(waiting) else ("queue", name)
 
 
@@ -539,13 +549,13 @@ def dispatch(ctx, name, letter, detail):
 
 
 @guarded
-def refuse(ctx, name, letter, code, msg):
+def refuse(ctx, name, letter, code, msg, extra=None):
     """不跑、直接回信：先認領，認領不到＝寄信的剛撤信，算了。"""
     if hasattr(ctx, "queue"):
         forget(ctx, name)
     if not move(os.path.join(ctx.requests, "new", name), os.path.join(ctx.requests, "cur", name)):
         return
-    deliver(ctx, name, error_reply(code, msg))
+    deliver(ctx, name, error_reply(code, msg, extra))
 
 
 @guarded

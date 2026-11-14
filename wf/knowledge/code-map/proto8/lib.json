@@ -241,6 +241,7 @@
      "test_kernel_hooks.py": "用真的 aos-post 與 aos-exec 驗證 kernel 三個 hook 時機和排隊時的保存。",
      "test_kernel_route.py": "用真的 aos-post 與 aos-exec 驗證 after_verdict hook 替單封信指定下一站（照規則分流）與各種邊緣。",
      "test_limits_rule.py": "驗證 kernel 站的份額與身分規則、設定錯誤及真信箱轉寄與拒信。",
+     "test_refuse_extra.py": "驗證 kernel 框架：refuse 可帶額外錯誤鍵；after_verdict 保留包的額外鍵與 hook 自己加的鍵。",
      "test_runner.py": "用真的 aos-daemon 與假的端點函數驗「自己跑」零件：掛上、收成品、逾時、重掛一次、放棄。"
     }
    },
@@ -255,6 +256,7 @@
     "tests": {
      "test_backends.py": "Verify backend limits, durable switch records, and priority-safe sticky ordering with prepared mailboxes.",
      "test_batch8_live.py": "Verify copied kernel templates nest through two real daemons and batch local packs without blocking urgent mail.",
+     "test_budget_fields.py": "Check BudgetMissing refusals carry scope/window/since/resets_at/limit/max, and window_next on fixed times.",
      "test_hooks.py": "Check the three hook moments on the llm kernel and that add letters go to AOS_KERNEL when it is set.",
      "test_ledger.py": "Verify kernel finish records fake-brain costs and tolerates ledger write failures.",
      "test_nesting.py": "Verify nested-kernel error boundaries, ledger fields, and remount invariants with prepared mailboxes.",

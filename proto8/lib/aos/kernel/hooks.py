@@ -64,7 +64,13 @@ def before_verdict(ctx, name, letter):
 def after_verdict(ctx, name, letter, verdict, detail, decided=False):
     """decided＝這封留著（或排著）的信已有人表態 pass、這次是重判：hook 再回 hold 不算數。"""
     data = request_data(name, letter)
-    data.update(verdict=verdict, error=dict(zip(("code", "msg"), detail)) if verdict == "refuse" else None)
+    first = None   # 包原本的拒因（code, 它自己帶的額外鍵）；沒有拒因時是 None。
+    error = None
+    if verdict == "refuse":
+        pack_extra = dict(detail[2]) if len(detail) > 2 and isinstance(detail[2], dict) else {}
+        error = dict(pack_extra, code=detail[0], msg=detail[1])  # code/msg 最後寫：額外鍵蓋不掉它們
+        first = (detail[0], pack_extra)
+    data.update(verdict=verdict, error=error)
     if ctx.can_hold:
         data["decision"] = "pass" if decided else None  # null＝沒人表態過。
     if ctx.check_next is not None:
@@ -95,7 +101,13 @@ def after_verdict(ctx, name, letter, verdict, detail, decided=False):
     if final == "pass" and data.get("next"):
         ctx.route[name] = data["next"]  # 只有放行才用得上；留隊的信出隊時 hook 會再跑一次。
     if final == "refuse":
-        return final, (data["error"]["code"], data["error"]["msg"])
+        error = data["error"]
+        extra = {key: value for key, value in error.items() if key not in ("code", "msg")}
+        if first is not None and error["code"] != first[0]:
+            # hook 改了 code：包原本那些額外鍵講的是舊的拒因，丟掉；hook 自己加或改過的鍵留著。
+            extra = {key: value for key, value in extra.items()
+                     if key not in first[1] or first[1][key] != value}
+        return final, (error["code"], error["msg"], extra) if extra else (error["code"], error["msg"])
     if final == "hold":
         return final, None  # 留著時給的 next 不記；有人表態 pass、重判那一次 hook 再給才算。
     return final, detail if final == verdict else None

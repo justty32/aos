@@ -291,9 +291,9 @@ def forward(ctx, name, letter, box=None):
     return None
 
 
-def refuse(ctx, name, letter, code, msg):
+def refuse(ctx, name, letter, code, msg, extra=None):
     ctx.warn("letter %s refused: %s %s" % (name, code, msg))
-    reply = {"applied": False, "error": {"code": code, "msg": msg}}
+    reply = {"applied": False, "error": dict(extra or {}, code=code, msg=msg)}
     rc, _ = post(["done", "--reply", ctx.requests, name], json.dumps(reply, ensure_ascii=False))
     if rc != 0:
         ctx.warn("letter %s: could not send the reply, letter dropped" % name)

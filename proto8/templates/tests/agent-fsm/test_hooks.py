@@ -244,6 +244,35 @@ sys.exit(code)
         self.assertEqual([(e["event"], e["hook"], e["name"], e["reason"]) for e in self.events()],
                          [("brain_failed", "budget", "BudgetMissing", msg)])
 
+    def test_brain_failed_event_carries_the_error_object(self):
+        msg = "budget for this window (hour) is used up; not run"
+        error = {"code": "BudgetMissing", "msg": msg, "window": "hour", "resets_at": None, "max": 5}
+        self.declare({"all": {"event": "brain_failed", "handler": self.hook("all")}})
+        (self.stack / "think").mkdir()
+        (self.stack / "think" / "pending.txt").write_text("letter-1\n")
+        self.run_cell("wait", code=10, FAKE_RECV="1", FAKE_REPLY=json.dumps({"error": error}))
+        (self.stack / "think" / "pending.txt").write_text("letter-1\n")
+        plain = {"code": "EndpointFailed", "msg": "boom"}
+        self.run_cell("wait", code=1, FAKE_RECV="1", FAKE_REPLY=json.dumps({"error": plain}))
+        (self.stack / "think" / "pending.txt").write_text("letter-1\n")
+        self.run_cell("wait", code=1, FAKE_RECV="1", FAKE_REPLY="nope")          # no error object parsed: no field
+        events = self.events()
+        self.assertEqual([e["name"] for e in events], ["BudgetMissing", "BrainFailed", "BrainFailed"])
+        self.assertEqual(events[0]["error"], error)
+        self.assertEqual(events[1]["error"], plain)
+        self.assertNotIn("error", events[2])
+
+    def test_brain_failed_window_all_fires_hook_then_stops(self):
+        msg = "budget for this window (all) is used up; not run"
+        self.declare({"budget": {"event": "brain_failed", "condition": ["BudgetMissing"], "handler": self.hook("budget")}})
+        (self.stack / "think").mkdir()
+        (self.stack / "think" / "pending.txt").write_text("letter-1\n")
+        error = {"code": "BudgetMissing", "msg": msg, "window": "all", "resets_at": None}
+        r = self.run_cell("wait", code=1, FAKE_RECV="1", FAKE_REPLY=json.dumps({"error": error}))
+        self.assertIn("agent-fsm: error: BudgetMissing " + msg + " (window all: it never resets", r.stderr)
+        self.assertEqual([(e["name"], e["error"]["window"]) for e in self.events()], [("BudgetMissing", "all")])
+        self.assertFalse((self.stack / "cooldown.json").exists())
+
     def test_tool_added_first_run_only_records(self):
         self.declare({"new": {"event": "tool_added", "handler": self.hook("new")}})
         self.history([{"role": "user", "content": "hi"}])

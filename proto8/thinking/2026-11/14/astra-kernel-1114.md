@@ -278,3 +278,36 @@ lead 的 25 次花在哪（run4 history）：讀圖紙 2、git 1、寫工單與 
 - 條件只寫 `BrainFailed` 的 hook，額度拒絕時不會再被觸發。repo 裡沒有別的地方依賴這一點。
 - 預算設成 `window: "all"` 時永遠不會重置：agent 每 30 分鐘重試一次，直到有人加額度或停掉它。信只寄第一封。
 - 重寄時如果 deadline 已經過了，kernel 回 `DeadlineBad`，走原本的 BrainFailed（停下）。這點寫下來，沒處理。
+
+## ADV：修 wf/advices 兩條（ok-astra 11-14 11:46～，repo-aos 來信「新工作（使用者准）：修 wf/advices 兩條」）
+
+暫存樹 `~/code/astra-1114/adv/`：`work/proto8`（A，repo 7b9f85256 的 git 複本）、`gwork/`（B，wf/public 複本）、設計 `plan.md`、事實 `facts-A.md`／`facts-B.md`、Argon 三輪 `argon-1.txt`／`argon-2.txt`／`/tmp/ok-astra-argon3/out3.txt`。
+sol-5、6、7 做事實蒐集時活樹 sol-high 每日額度用完（BrainFailed 停下，報 xiaosi；後來調到 2000），施工改用 claude 子代理（07 的退路）。
+
+### A：BudgetMissing 回結構化欄位（advices/kernel與額度.md）
+
+- kernel：`after_verdict` 接受 `(code, msg, extra)`；三個 `refuse()` 多 `extra=None`；extra 進回信的 `error`，`code`／`msg` 不會被蓋。hook 改了 code 時，包原本的額外鍵丟掉、hook 自己加的留著（Argon 1 B2）。
+- kernel_llm：每個 BudgetMissing 多帶 `scope`（total／endpoint／sender）、`window`、`since`、`resets_at`（下一窗起點，ISO 帶時區；`all` 是 null）、`limit`（max_calls／max_tokens）、`max`，endpoint 層多 `endpoint`、sender 層多 `key`。msg 一字不改。`budget.window_next`：hour＝這窗起點＋3600，夏令倒退補到比現在晚（Argon 1 B1）；day＝隔天本地午夜。
+- agent-fsm `wait.py`：`resets_at` 在未來＝`cooldown.fail_until(max(resets_at+5, now+30))`；剛過 60 秒內＝now+30；解不開、沒時區、更舊、沒有＝AK17 間隔表照舊（舊 kernel 行為不變）。`window` 是 `all`＝先 brain_failed，再 `agent-fsm: error: BudgetMissing <msg> (window all: ...)` 退 1，不記冷卻、request.json 留著。brain_failed 事件多 `error` 欄（解到的 error 物件）。
+- 文件：kernel_llm README、docs/01、03、templates/docs/02、lib/docs/03、agent-fsm README；kernel_llm docs/02 那一句等 ok-pilot 先 commit 同檔，放第二個 commit。
+- `lib/agent/cooldown.py` 只**加** `fail_until`（06 第 5 條：活樹指令會 import，既有函式不動）。
+- `brain_notify`：有 `resets_at` 標題「waiting until HH:MM」、`window all` 標題「stopped」，其他照舊。
+- knowledge `brain.json`：額度不再寫成只有「每日」，補新欄位與 all 會停。
+- 測試：新 `kernel/tests/test_refuse_extra.py`（12）、`kernel_llm/tests/test_budget_fields.py`（14），agent-fsm 的 test_cooldown／test_hooks／test_brain_notify 加測（agent-fsm 113→125）。全套在 `git archive` 乾淨複本 `adv/cleanA1` 跑：每個 tests 資料夾都 OK（log `adv/cleanA1-full.log`）。
+
+### B：guard 唯讀查詢放行（advices/fsm範本.md）
+
+- guard 在哪：不在 proto8。gpt 隊的 `~/aos-home/defs/shared/guard`（活樹）與暫存樹複本 `defs/shared-k/guard`；各定義用 4 行包裝傳 `AOS_GUARD_CFG`。
+- 新家：`wf/public/tools/fsm-guard/`（guard、README、tests/test_guard.py，34 個測試、約 250 例），`wf/public/tools/README.md` 加一列。
+- 改法：只有 `shell` 工具放寬（`run_python` 照舊嚴）。整條指令是「單純唯讀」才跳過 `shell_deny`，其餘照今天整條字面 `re.search`。單純唯讀＝自寫分詞（不用 shlex）逐字記引號狀態；指令詞在白名單（cat、rg、grep、sed -n、pgrep…41 個）；只認 `;` `|` `&&` `||` 換行；重導只認 `2>/dev/null`、`>/dev/null`、`2>&1`；沒加引號的 `$NAME`、反斜線、反引號、`$(`、`{}`、`#`、單個 `&`、非 ASCII、控制字元一律走嚴格。rg 長選項白名單、不准 `-z`；sed 只准 `sed -n 'N,Mp' FILE`；sort 只准 `-unrVhf`；printf 首參數不准 `-`；uniq、date 另有規則（見 README）。
+- 審查：Argon 第 1、2 輪審設計（各找出一批 bash 與分詞器看法不同的繞法，全收進規格與測試）；隊長審實碼抓到 `uniq IN OUT` 寫檔；Argon 第 3 輪審實碼再抓到 `uniq - OUT`、`uniq in -- -out`、`date -us`、`date MMDDhhmm`、`$IFS` 拆字，全補並加測。接受不擋：`cd` 改目錄、`sort` 大輸入寫暫存檔、`df --sync`。
+- 已知限制：沙箱（bwrap）才是寫檔邊界；嚴格路徑的舊 regex 本身沒改，`git --no-optional-locks commit`、`{rm,-f} x` 之類它本來就抓不到（README 有列）。
+
+### 換樹時要帶進活樹的檔
+
+- `proto8/lib/aos/kernel/`（hooks.py、letters.py、procs_rules.py）與 `proto8/lib/aos/kernel_llm/`（budget.py、llm_rules.py）：換了 kernel 才會回新欄位；換完要重起 llm kernel。
+- `proto8/lib/agent/cooldown.py`、`proto8/lib/agent/brain_notify/`、`proto8/templates/agent-fsm/wait.py`（連 README）。
+- `proto8/knowledge/aos/brain.json`。
+- guard：`~/aos-home/defs/shared/guard` 換成 `wf/public/tools/fsm-guard/guard`（設定檔 guard.json 不用改）。
+- 順序：agent 這邊先換、kernel 後換都可以（新 agent 遇舊 kernel＝AK17 行為；舊 agent 遇新 kernel＝多的欄位不讀）。
+- 測試和文件不用帶進活樹。

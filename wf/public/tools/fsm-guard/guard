@@ -1,0 +1,289 @@
+#!/usr/bin/env python3
+# guard - before_tool hook for agent-fsm teams: blocks writes outside allowed roots, .git, risky shell commands (a plain read-only shell command skips the deny patterns), subagent ops, clock_register boxes, kernel_gate and agents_ctl ops; reads guard.json from $AOS_GUARD_CFG or its own folder.
+import json, os, re, sys
+
+def out(msg):
+    sys.stdout.write("[aos] guard: " + msg + "\n")
+    sys.exit(10)
+
+def load_cfg():
+    # The config sits in the definition folder: $AOS_GUARD_CFG, else <this file's folder>/guard.json, else the caller definition's guard.json.
+    for p in (os.environ.get("AOS_GUARD_CFG"), os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "guard.json")):
+        if p and os.path.isfile(p):
+            with open(p, encoding="utf-8") as f:
+                return json.load(f)
+    raise SystemExit("guard: error: CfgMissing no guard.json")
+
+def under(path, roots):
+    return any(path == r or path.startswith(r.rstrip("/") + "/") for r in roots)
+
+def check_path(raw, cfg, ws):
+    if not isinstance(raw, str) or not raw:
+        out("blocked: a path argument is missing or not a string.")
+    p = raw.split("#", 1)[0] if "#" in raw else raw
+    full = p if os.path.isabs(p) else os.path.join(ws, p)
+    real = os.path.realpath(full)
+    roots = [os.path.realpath(r) for r in cfg.get("write_roots", [])]
+    if any(part in cfg.get("deny_parts", [".git"]) for part in real.split("/")):
+        out("blocked: %s is inside .git. Workers do not touch git; report to your lead instead." % raw)
+    if not under(real, roots):
+        out("blocked: %s is outside the folders you may write (%s). Stop and report this as BLOCKED." % (raw, ", ".join(cfg.get("write_roots", []))))
+
+PATH_ARGS = {"write": ["path"], "edit": ["path"], "mkdir": ["path"], "trash": ["path"], "remove": ["path"],
+             "json_set": ["path"], "json_add": ["path"], "json_del": ["path"],
+             "copy": ["to"], "move": ["from", "to"]}
+
+# ---- relaxed shell check: "plain read-only" commands skip shell_deny ----
+# Anything this tokenizer is not sure about returns None (= strict path). It knows for every
+# character whether it was quoted, so a quoted ";" or "|" is never taken for a separator.
+PLAIN_CMDS = {"cat", "head", "tail", "wc", "grep", "egrep", "fgrep", "rg", "ls", "pwd", "cd", "echo",
+              "printf", "true", "false", "test", "pgrep", "ps", "stat", "basename", "dirname", "realpath",
+              "readlink", "du", "df", "cmp", "md5sum", "sha1sum", "sha256sum", "nl", "cut", "uniq", "tr",
+              "column", "comm", "jq", "date", "id", "whoami", "uname", "which", "sort", "sed"}
+WORD_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./,:=@%+*?!~^-")
+NAME_START = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_")
+NAME_CHARS = NAME_START | set("0123456789")
+REDIRS = ("2>/dev/null", ">/dev/null", "2>&1")   # the only redirections allowed; dropped from the words
+WORD_END = set(" \t\n;|&")
+# rg long options allowed (exactly, optionally with =VALUE); every other --option goes strict
+# (rg runs programs with --pre and --hostname-bin, and decompressors with -z/--search-zip).
+RG_LONG = {"files", "no-filename", "with-filename", "line-number", "no-line-number", "ignore-case",
+           "smart-case", "case-sensitive", "fixed-strings", "word-regexp", "line-regexp", "count",
+           "count-matches", "files-with-matches", "files-without-match", "hidden", "no-ignore", "glob",
+           "iglob", "type", "type-not", "type-list", "context", "after-context", "before-context",
+           "max-count", "max-depth", "max-columns", "only-matching", "invert-match", "regexp", "json",
+           "multiline", "multiline-dotall", "no-heading", "heading", "column", "vimgrep", "null", "trim",
+           "stats", "text", "follow", "sort", "sortr", "color", "pcre2", "quiet", "passthru", "replace"}
+SED_SCRIPT = re.compile(r"(?:[0-9]+(?:,(?:[0-9]+|\$))?|\$)p")
+SORT_OPT = re.compile(r"-[unrVhf]+")
+CMD_WORD = re.compile(r"[A-Za-z0-9_-]+")
+
+def shell_words(text):
+    """Split text into simple commands of words; None if anything is not plainly understood."""
+    if any(ord(c) < 32 and c not in "\t\n" or ord(c) == 127 for c in text):
+        return None                                   # NUL, CR, other control characters
+    cmds, cur, w = [], [], None                       # w = current word: {"v", "unq", "dollar", "glob"}
+    i, n = 0, len(text)
+
+    def word():
+        return {"v": "", "unq": True, "dollar": False, "glob": False}
+
+    def dollar(j, w):
+        # text[j] == "$": only $NAME is allowed ($_ is not: it holds the last argument of the previous command)
+        k = j + 1
+        if k >= n or text[k] not in NAME_START:
+            return None
+        while k < n and text[k] in NAME_CHARS:
+            k += 1
+        if text[j + 1:k] == "_":
+            return None
+        w["v"] += text[j:k]
+        w["dollar"] = True
+        w["unq"] = False
+        return k
+
+    while i < n:
+        c = text[i]
+        if w is None and c not in " \t" and c not in WORD_END:
+            hit = next((r for r in REDIRS if text.startswith(r, i) and (i + len(r) == n or text[i + len(r)] in WORD_END)), None)
+            if hit:
+                i += len(hit)
+                continue
+        if c in " \t":
+            if w is not None:
+                cur.append(w)
+                w = None
+            i += 1
+        elif c in ";|&\n":
+            if c == "&" and not text.startswith("&&", i):
+                return None                           # background & (or &> and friends)
+            if w is not None:
+                cur.append(w)
+                w = None
+            if not cur:
+                return None                           # empty command: ;; or | newline or a leading separator
+            cmds.append(cur)
+            cur = []
+            i += 2 if text.startswith("&&", i) or text.startswith("||", i) else 1
+        elif c == "'":
+            w = w or word()
+            j = text.find("'", i + 1)
+            if j < 0:
+                return None
+            w["v"] += text[i + 1:j]
+            w["unq"] = False
+            i = j + 1
+        elif c == '"':
+            w = w or word()
+            w["unq"] = False
+            i += 1
+            while True:
+                if i >= n:
+                    return None
+                d = text[i]
+                if d == '"':
+                    i += 1
+                    break
+                if d in "\\`":
+                    return None
+                if d == "$":
+                    i = dollar(i, w)
+                    if i is None:
+                        return None
+                    continue
+                w["v"] += d
+                i += 1
+        elif c == "$":
+            return None                               # unquoted $NAME: bash splits it on IFS and globs it (Argon 3)
+        elif c in WORD_CHARS:
+            w = w or word()
+            if c in "*?":
+                w["glob"] = True
+            w["v"] += c
+            i += 1
+        else:
+            return None                               # \ ` # { } [ ] ( ) < > non-ASCII ...
+    if w is not None:
+        cur.append(w)
+    if not cur:
+        return None                                   # empty text or a trailing separator
+    cmds.append(cur)
+    return cmds
+
+def plain_cmd(words):
+    first, args = words[0], words[1:]
+    if not first["unq"] or not CMD_WORD.fullmatch(first["v"]) or first["v"] not in PLAIN_CMDS:
+        return False
+    for a in args:
+        # an unquoted glob may expand to a file name like --pre=sh: it must start with a literal, not - * ? $
+        if a["glob"] and (a["v"][:1] in ("", "-", "*", "?", "$")):
+            return False
+    name = first["v"]
+    if name in ("rg", "sed", "sort", "printf") and any(a["dollar"] for a in args):
+        return False                                  # options of these must be visible as written
+    if name == "rg":
+        for a in args:
+            v = a["v"]
+            if v.startswith("--") and v != "--":
+                if v[2:].split("=", 1)[0] not in RG_LONG:
+                    return False
+            elif v.startswith("-") and "z" in v:
+                return False
+    elif name == "sed":
+        if len(args) < 2 or args[0]["v"] != "-n" or not SED_SCRIPT.fullmatch(args[1]["v"]):
+            return False
+        if any(a["v"].startswith("-") for a in args[2:]):
+            return False                              # GNU sed would permute a later -e/-f/-i in
+    elif name == "sort":
+        if any(a["v"].startswith("-") and not SORT_OPT.fullmatch(a["v"]) for a in args):
+            return False
+    elif name == "printf":
+        if args and args[0]["v"].startswith("-"):
+            return False                              # printf -v NAME assigns a variable (PATH ...)
+    elif name == "uniq":
+        # uniq INPUT OUTPUT writes OUTPUT: at most one non-option word, no $NAME or glob that could become two
+        # "-" alone and "--" are operands / end options: then a later -X is OUTPUT (Argon 3)
+        if any(a["dollar"] or a["glob"] or a["v"] in ("-", "--") for a in args) \
+                or sum(not a["v"].startswith("-") for a in args) > 1:
+            return False
+    elif name == "date":
+        # date -s / --set / -us / MMDDhhmm set the clock: every word is +FORMAT or an option without s (Argon 3)
+        for a in args:
+            v = a["v"]
+            if a["dollar"] or a["glob"] or not v.startswith(("-", "+")) or v.startswith("--s") or v == "--" \
+                    or (v.startswith("-") and not v.startswith("--") and "s" in v):
+                return False
+    return True
+
+def plain_read_only(text):
+    """True only if every simple command is a plain read-only command (see README)."""
+    if not isinstance(text, str):
+        return False
+    cmds = shell_words(text)
+    return cmds is not None and all(plain_cmd(c) for c in cmds)
+
+STRICT_NOTE = (" (strict check: a command skips it only if every part is a plain read-only command like rg, grep, cat,"
+               " sed -n 'N,Mp', pgrep, with no substitutions or redirections; if this is a false positive,"
+               " split the command or ask your lead)")
+
+def main():
+    event = json.load(sys.stdin)
+    cfg = load_cfg()
+    name, args = event.get("name"), event.get("arguments") or {}
+    ws = os.environ.get("AOS_WS")
+    if not ws:
+        out("blocked: AOS_WS is not set in the hook, so paths cannot be checked.")
+    if name in PATH_ARGS:
+        for k in PATH_ARGS[name]:
+            check_path(args.get(k), cfg, ws)
+    elif name == "json_multi_set":
+        for it in args.get("items") or [None]:
+            check_path((it or {}).get("path") if isinstance(it, dict) else None, cfg, ws)
+    elif name in ("shell", "run_python"):
+        text = args.get("command") if name == "shell" else args.get("code")
+        if not isinstance(text, str):
+            text = json.dumps(args)
+        if name == "shell" and plain_read_only(text):
+            sys.exit(0)
+        for pat in cfg.get("shell_deny", []):
+            if re.search(pat, text):
+                out("blocked: this command matches a forbidden pattern (%s). Workers do not commit, push, reset, use the network or run aos commands from the shell; report to your lead instead." % pat
+                    + (STRICT_NOTE if name == "shell" else ""))
+    elif name == "subagent":
+        rule = cfg.get("subagent")
+        if rule is None:
+            out("blocked: you may not use subagent.")
+        op = args.get("op")
+        if op not in rule.get("ops", []):
+            out("blocked: subagent op %r is not allowed for you (allowed: %s). Do not change a worker's tools, brain, system text or hooks." % (op, ", ".join(rule.get("ops", []))))
+        if op == "add":
+            for k in ("def_json", "ws_json", "stack", "stack_json", "envs", "auto_restart", "limits"):
+                if k in args:
+                    out("blocked: subagent add may not set %s." % k)
+            d = args.get("def")
+            if not isinstance(d, str) or os.path.realpath(d if os.path.isabs(d) else os.path.join(ws, d)) != os.path.realpath(rule["def"]):
+                out("blocked: subagent add must use def %s." % rule["def"])
+            if args.get("ws") != rule.get("ws"):
+                out("blocked: subagent add must use ws %s." % rule.get("ws"))
+            if not re.fullmatch(rule.get("name", r"sol-[A-Za-z0-9-]+"), str(args.get("name", ""))):
+                out("blocked: worker names must look like sol-T01.")
+        if op == "rm" and args.get("purge"):
+            out("blocked: rm a worker without purge; its stack is kept as a record.")
+        if op == "history" and (args.get("args") or {}).get("op") not in ("ls", None):
+            out("blocked: you may only read a worker's history (op ls).")
+    elif name == "clock_register":
+        box = args.get("box")
+        if box not in (None, "") and os.path.realpath(box if os.path.isabs(box) else os.path.join(ws, box)) not in [os.path.realpath(b) for b in cfg.get("clock_boxes", [])]:
+            out("blocked: clock_register may only wake you (leave out box) or mail %s." % (", ".join(cfg.get("clock_boxes", [])) or "nobody else"))
+    elif name == "kernel_gate":
+        rule = cfg.get("kernel_gate")
+        if rule is None:
+            out("blocked: you may not use kernel_gate.")
+        if args.get("op") not in rule.get("ops", []):
+            out("blocked: kernel_gate op %r is not allowed for you (allowed: %s). Never switch the gate off." % (args.get("op"), ", ".join(rule.get("ops", []))))
+    elif name == "agents_ctl":
+        rule = cfg.get("agents_ctl")
+        if rule is None:
+            out("blocked: you may not use agents_ctl.")
+        if args.get("op") not in rule.get("ops", []):
+            out("blocked: agents_ctl op %r is not allowed for you (allowed: %s). Use it only to ring the bell: stop yourself." % (args.get("op"), ", ".join(rule.get("ops", []))))
+        if rule.get("self_only"):
+            st = os.path.normpath(os.environ.get("AOS_STACK", ""))
+            if os.path.basename(os.path.dirname(st)) == "hooks":   # a hook runs with AOS_STACK = its own cell <stack>/hooks/<hook>
+                st = os.path.dirname(os.path.dirname(st))
+            me = os.path.basename(st)
+            if not me or args.get("name") != me:
+                out("blocked: agents_ctl may only stop yourself (name %r); you asked for %r." % (me, args.get("name")))
+        t = args.get("timeout_s")
+        mx = rule.get("max_timeout_s")
+        if mx is not None and (not isinstance(t, (int, float)) or isinstance(t, bool) or t <= 0 or t > mx):
+            out("blocked: agents_ctl stop needs timeout_s between 1 and %s (got %r)." % (mx, t))
+        if args.get("no_wait") is not True:
+            out("blocked: ring the bell with \"no_wait\": true (otherwise stopping yourself waits for the end of this very step and runs into timeout_s).")
+        extra_keys = sorted(set(args) - {"op", "name", "timeout_s", "no_wait"})
+        if extra_keys:
+            out("blocked: agents_ctl stop takes only op, name, timeout_s, no_wait (got %s)." % ", ".join(extra_keys))
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()

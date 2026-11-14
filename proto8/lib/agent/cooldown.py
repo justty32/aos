@@ -80,6 +80,19 @@ def fail(stack, code, reason, dropped=0, now=None):
     return rec
 
 
+def fail_until(stack, code, reason, until, dropped=0, now=None):
+    """同 fail，但冷卻到 until（epoch 秒）而不是照間隔表：kernel 說了額度什麼時候重置。failures 照樣加 1。寫不成丟 OSError。"""
+    now = time.time() if now is None else now
+    old = read(stack) or {}
+    rec = {"failures": old.get("failures", 0) + 1, "until": iso(until), "at": iso(now),
+           "code": str(code), "reason": " ".join(str(reason).split())[:500], "dropped": old.get("dropped", 0) + dropped}
+    tmp = os.path.join(stack, ".%s.%d.tmp" % (NAME, os.getpid()))   # N-05：先寫 . 開頭的暫存檔再改名
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    os.replace(tmp, path(stack))
+    return rec
+
+
 def clear(stack):
     """成功一次：刪檔（歸零）。本來就不在不算錯；刪不掉丟 OSError。"""
     try:

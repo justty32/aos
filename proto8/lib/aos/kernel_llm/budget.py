@@ -141,17 +141,37 @@ def warn(budget, stack):
         pass                                             # 寫不成＝下一輪再印一次
 
 
+def _iso(epoch):
+    begin = time.localtime(epoch)
+    offset = abs(begin.tm_gmtoff)
+    return "%s%s%02d:%02d" % (time.strftime("%Y-%m-%dT%H:%M:%S", begin), "-" if begin.tm_gmtoff < 0 else "+",
+                              offset // 3600, offset % 3600 // 60)
+
+
+def _start(window, now):
+    local = time.localtime(now)
+    return time.mktime((local.tm_year, local.tm_mon, local.tm_mday, local.tm_hour if window == "hour" else 0,
+                        0, 0, 0, 0, -1))
+
+
 def window_since(window, now):
     """這一刻所在那一窗的起點：本地時間、帶時區；all 沒有起點。"""
     if window == "all":
         return None
+    return _iso(_start(window, now))
+
+
+def window_next(window, now):
+    """下一窗的起點（同 window_since 的格式）；all 不會換窗，回 None。只是提示，時區、夏令、校時會讓它偏。"""
+    if window == "all":
+        return None
+    if window == "hour":
+        end = _start(window, now) + 3600          # 這窗起點加一小時：夏令倒退那天也不會算回原窗
+        while end <= now:                         # 倒退那天重複的那小時，mktime 可能解到第一次；補到比現在晚
+            end += 3600
+        return _iso(end)
     local = time.localtime(now)
-    start = time.mktime((local.tm_year, local.tm_mon, local.tm_mday, local.tm_hour if window == "hour" else 0,
-                         0, 0, 0, 0, -1))
-    begin = time.localtime(start)
-    offset = abs(begin.tm_gmtoff)
-    return "%s%s%02d:%02d" % (time.strftime("%Y-%m-%dT%H:%M:%S", begin), "-" if begin.tm_gmtoff < 0 else "+",
-                              offset // 3600, offset % 3600 // 60)
+    return _iso(time.mktime((local.tm_year, local.tm_mon, local.tm_mday + 1, 0, 0, 0, 0, 0, -1)))
 
 
 def _roll(used, window):
@@ -231,6 +251,15 @@ def spent(budget, used, started):
     if budget["max_calls"] is not None and used["calls"] + started >= budget["max_calls"]:
         return True
     return budget["max_tokens"] is not None and used["tokens"] >= budget["max_tokens"]
+
+
+def spent_limit(budget, used, started):
+    """同 spent，但回撞到的是哪個額度：("max_calls", 上限) 或 ("max_tokens", 上限)；沒撞回 None。次數先看。"""
+    if budget["max_calls"] is not None and used["calls"] + started >= budget["max_calls"]:
+        return "max_calls", budget["max_calls"]
+    if budget["max_tokens"] is not None and used["tokens"] >= budget["max_tokens"]:
+        return "max_tokens", budget["max_tokens"]
+    return None
 
 
 def spent_of(cells, name, max_calls, max_tokens, started):

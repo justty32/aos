@@ -81,6 +81,35 @@ class BrainNotify(unittest.TestCase):
         self.assertEqual(json.loads(self.seen.read_text()), {"code": "BudgetMissing", "history_lines": 2})
         self.assertEqual(list(self.cell.glob("*.tmp")), [])
 
+    def test_error_with_resets_at_says_waiting_until_local_time(self):
+        import datetime
+        at = datetime.datetime(2026, 11, 14, 13, 0, 0, tzinfo=datetime.timezone(datetime.timedelta(hours=8)))
+        local = at.astimezone().strftime("%H:%M")
+        self.run_hook(event=dict(self.event, error={"code": "BudgetMissing", "window": "hour",
+                                                    "resets_at": "2026-11-14T13:00:00+08:00"}))
+        call = self.calls()[0]
+        self.assertEqual(call[call.index("--title") + 1], "worker: brain refused (BudgetMissing), waiting until " + local)
+        self.assertIn("sends the same request again by itself then", call[-1])
+        self.assertIn(self.event["reason"], call[-1])
+        self.assertEqual(json.loads(self.seen.read_text()), {"code": "BudgetMissing", "history_lines": 0})
+        self.run_hook(event=dict(self.event, error={"window": "hour", "resets_at": "2026-11-14T14:00:00+08:00"}))
+        self.assertEqual(len(self.calls()), 1)               # dedup unchanged
+
+    def test_error_window_all_says_stopped(self):
+        self.run_hook(event=dict(self.event, error={"code": "BudgetMissing", "window": "all", "resets_at": None}))
+        call = self.calls()[0]
+        self.assertEqual(call[call.index("--title") + 1], "worker: brain refused (BudgetMissing), stopped")
+        self.assertEqual(call[-1], self.event["reason"] + ". The budget never resets; raise it, then start the agent again.")
+
+    def test_error_without_usable_fields_keeps_old_text(self):
+        for i, error in enumerate(({"code": "BudgetMissing", "msg": "x"}, "text", {"resets_at": "soon"},
+                                   {"resets_at": "2026-11-14T13:00:00"}, {"resets_at": None, "window": "day"})):
+            (self.seen).unlink(missing_ok=True)
+            self.run_hook(event=dict(self.event, error=error))
+            call = self.calls()[i]
+            self.assertEqual(call[call.index("--title") + 1], "worker: brain refused (BudgetMissing), waiting")
+            self.assertTrue(call[-1].endswith("after a cooldown (30 s doubling to 30 min). Raise the budget, or stop it."))
+
     def test_missing_history_counts_zero_and_different_code_sends(self):
         self.run_hook()
         self.assertEqual(json.loads(self.seen.read_text()), {"code": "BudgetMissing", "history_lines": 0})
