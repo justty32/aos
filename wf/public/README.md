@@ -21,7 +21,7 @@
 |---|---|
 | [tools/](tools/README.md) | 小工具，一個工具一個夾：quiet（安靜時段）、waitdone（背景等 fsm 隊員答完）、doc-run（照字實跑文件、比對抄本指令）、fsm-guard（agent-fsm 的 before_tool 守門）、scan（發佈前掃個人值和金鑰） |
 | [recipes.md](recipes.md) | 任務類型→做法（一行一列） |
-| [pitfalls.md](pitfalls.md) | 踩坑與解法：建置（`_main` 目標）、隊長的 shell、試真東西別碰原件 |
+| [pitfalls.md](pitfalls.md) | 踩坑與解法：建置（`_main` 目標）、乾淨複本跑 wf/tools 測試要連 proto8 一起抄、隊長的 shell（zsh 不分詞、卡到逾時、別 pkill -f）、試真東西別碰原件 |
 | [patch-and-commit.md](patch-and-commit.md) | 暫存樹改動搬回已往前走的 main、驗收跑全套（含環境沒清的假綠）、commit-request 的坑 |
 | [sol-crew.md](sol-crew.md) | 帶 sol（agent-fsm）隊員：任務書、必讀清單、guard 誤擋、rlimit 與腦額度 |
 | [model-notes.md](model-notes.md) | 模型使用心得：Argon 一次性審查（headless 沒產出怎麼辦） |
@@ -30,7 +30,7 @@
 | [權限與沙箱.md](權限與沙箱.md) | 換 uid（免 root 的 subuid 實測）、sudo 身分層的坑、用 transient scope 測 cgroup |
 | [發佈前檢查.md](發佈前檢查.md) | 給外人看的東西交出去前自己驗：照字實跑文件、無頭瀏覽器截圖、掃個人值 |
 
-（新類別由審稿子 agent 提、頂層定；11-14 第一批審稿提了上面六份，頂層可改名或併。第三批（11-14，ok-sec、ok-limits 4 份稿）新開「權限與沙箱」收 3 份，1 份併進 patch-and-commit。第四批（11-14，ok-release 3 份稿）新開「發佈前檢查」收 3 份，其中照字實跑附的程式收成 tools/doc-run。第五批（11-14，ok-release 1 個工具夾）收成 tools/scan，「發佈前檢查」掃個人值那節改連到它。）
+（新類別由審稿子 agent 提、頂層定；11-14 第一批審稿提了上面六份，頂層可改名或併。第三批（11-14，ok-sec、ok-limits 4 份稿）新開「權限與沙箱」收 3 份，1 份併進 patch-and-commit。第四批（11-14，ok-release 3 份稿）新開「發佈前檢查」收 3 份，其中照字實跑附的程式收成 tools/doc-run。第五批（11-14，ok-release 1 個工具夾）收成 tools/scan，「發佈前檢查」掃個人值那節改連到它。第六批（11-14，ok-pilot、ok-kb、ok-limits 共 9 份稿）只有 2 份是新內容，都收進 pitfalls：新開一節「乾淨複本跑 wf/tools 測試要連 proto8 一起抄」（ok-pilot），「隊長的 shell」的 zsh 那條擴成「zsh 不分詞」（ok-kb 建議稿）；其餘 7 份（ok-limits 3 份、ok-pilot 4 份）第一到第三批已收，內容沒有新的，跳過。）
 
 ## 格式規矩（審稿時照這些整理）
 - 一個工具一個夾 `wf/public/tools/<名>/`，裡面要有 `README.md`（英文，一屏內：做什麼、怎麼用、怎麼裝／拿掉、已知限制、作者與日期）和程式本體；程式輸出一律英文。

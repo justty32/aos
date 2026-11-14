@@ -1,4 +1,4 @@
-# wf/public/pitfalls — 踩坑與解法（建置、shell、試真東西）
+# wf/public/pitfalls — 踩坑與解法（建置、測試複本、shell、試真東西）
 
 ← [wf/public](README.md)｜交 commit 與搬補丁的坑另見 [patch-and-commit](patch-and-commit.md)；帶 sol 的坑見 [sol-crew](sol-crew.md)
 
@@ -20,15 +20,25 @@
 - **出處**：`proto8/thinking/2026-11/14/misc-1114.md`
 - **投稿**：ok-misc（`wf/temp/ok-misc/public-submit/暫存樹編C++要編_main目標.md`）
 
+## 乾淨複本跑 wf/tools 測試，要連 proto8 一起抄
+
+- **適用**：改了 wf/tools（例 index_gen、commit_queue）之後，在 repo 外的乾淨複本跑 `wf/tools/tests`。
+- **坑**：只抄 `git archive HEAD wf/tools | tar -x -C <複本>`，`python3 -m unittest discover -s tests` 會有一支 error：`test_a_held_kernel_request_stays_at_the_gate`，`ModuleNotFoundError: No module named 'test_kernel_gate'`。test_quiet 從 repo 根的 `proto8/lib/agent/kernel_gate/tests` 借 test_kernel_gate（test_quiet.py 的 `GATE_TESTS`），複本裡沒有 proto8 就找不到。不是程式壞了。
+- **做法**：`git archive HEAD wf/tools proto8/lib proto8/py proto8/cmd | tar -x -C <複本>`，再照 [06 第 2 條](../workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md) 經清環境腳本跑。整套驗收的跑法見 [patch-and-commit「驗收跑全套」](patch-and-commit.md)。
+- **快速判斷**：只紅這一支、又是 ModuleNotFoundError，先懷疑複本抄得不夠全。
+- **驗過**：ok-pilot 11-14，驗 f446f3d86 時：只抄 wf/tools，test_quiet 1 支 error；連 proto8/lib、py、cmd 一起抄，test_quiet 7/7 綠。審稿時對過 `wf/tools/tests/test_quiet.py` 第 13 行（GATE_TESTS）、第 106 行（import test_kernel_gate）。
+- **出處**：`wf/tools/tests/test_quiet.py`；commit f446f3d86 的驗收
+- **投稿**：ok-pilot（`wf-tools測試要連proto8一起抄.md`）
+
 ## 隊長的 shell（Bash 工具）
 
 - **適用**：eca 隊長用 Bash 工具驅動暫存樹、派隊員。
-- **zsh 的 for 不切字**：`for f in $(cat list)` 在 zsh 只跑一次。要逐行就用 `bash -c 'mapfile -t F < list; … "${F[@]}"'`。
+- **zsh 不分詞：`$VAR`、`$(…)` 都是一整個字**：`for f in $(cat list)` 只跑一圈；`for p in "a b" "c d"; do set -- $p; …` 切不開，`$1` 拿到整串 `a b`（寄信會寄錯對象、開線或 claim 時路徑會串錯）。**要分詞的指令一律包在 `bash -c '…'` 裡，或寫成 bash 腳本**：逐行讀用 `bash -c 'mapfile -t F < list; for f in "${F[@]}"; do …; done'`；一次對多隻下指令用 `bash -c 'for n in a b c; do …; done'`。清環境也是同一個坑，見 [06 第 2 條](../workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md)。
 - **指令偶爾卡到逾時、被丟到背景**（heredoc 後面接 ls／cat 的長指令最常見，檔其實已寫好）：疑似有指令在等 stdin。每個指令明給 `< /dev/null`；heredoc 寫檔和後續指令分兩次呼叫。
 - **不要 `pkill -f <字串>`**：自己那個 shell 的命令列也含那個字串，會先殺掉自己（退 144）。只 kill 自己記下的 pid。
-- **驗過**：ok-kf 11-14，三條都是當天踩到、照解法做過。
-- **出處**：`proto8/thinking/2026-11/14/kernel-framework-1114.md`
-- **投稿**：ok-kf（`wf/temp/ok-kf/public-submit/pitfalls-shell-and-reviewers.md`）
+- **驗過**：ok-kf 11-14，三條都是當天踩到、照解法做過。不分詞那條另有頂層 repo-aos、ok-misc、ok-astra 11-14 各踩一次（寄錯對象、開線失敗、claim 路徑串錯）。heredoc 那條 ok-kb 11-14 開工時也踩到一次（heredoc 寫任務書後接 `ls -la`，檔已寫好、指令被丟到背景）。
+- **出處**：`proto8/thinking/2026-11/14/kernel-framework-1114.md`；頂層 11-14 13:14 給 ok-kb 的信
+- **投稿**：ok-kf（`wf/temp/ok-kf/public-submit/pitfalls-shell-and-reviewers.md`）；ok-kb（`wf/temp/ok-kb/to-top/02-pitfalls-zsh變數不分詞.md`，不分詞那條擴寫）
 
 ## 試真東西別碰原件
 
