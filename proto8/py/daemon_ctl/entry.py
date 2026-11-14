@@ -243,8 +243,48 @@ def typed_kept(xxx=None, ws=None, stack=None, def_dir=None):
     return kept
 
 
+# ok-devt-1114 05 定稿 1.2／1.3（第 1 期，修訂 1）：兩個登記欄在啟動單子 envs 裡的名字；aos-agent 的 REGISTERED 引用這兩個。
+PARENT_ENV = "AOS_PARENT_STACK"    # parent：發 add 請求那一隻的根 stack
+NOTIFY_ENV = "AOS_NOTIFY_BOX"      # notify_box：它該把通知寄到哪個信箱資料夾
+
+
+def registered_envs(envs, parent=None, notify_box=None, found_parent=None):
+    """第 1 期（修訂 1）：只有本來就帶 envs 的 add（或明給 parent／notify_box 的）才登記；回新的 envs dict（不帶＝{}，一個字都不加）。
+    parent／notify_box＝明給的值（--parent／--notify-box；None＝沒給），跟 envs 裡同名的值不同＝ArgumentsBad；
+    found_parent＝呼叫端查表查到的（只在沒明給時用）。兩個名字都寫進去，沒有值寫空字串（蓋掉從 daemon 繼承的同名變數）。
+    格式：空字串，或絕對路徑且不含 .. 段；不合＝ArgumentsBad 並點名旗標。不檢查存不存在、是不是真的。"""
+    envs = dict(envs or {})
+    source = {k: "--envs %s" % k for k in (PARENT_ENV, NOTIFY_ENV) if k in envs}
+    for key, flag, value in ((PARENT_ENV, "--parent", parent), (NOTIFY_ENV, "--notify-box", notify_box)):
+        if value is not None and not isinstance(value, str):
+            raise Fail("ArgumentsBad", "%s must be a string path, not %s" % (flag, json.dumps(value)))
+        if key in envs and not isinstance(envs[key], str):
+            raise Fail("ArgumentsBad", "--envs %s must be a string path, not %s" % (key, json.dumps(envs[key])))
+    for flag, key, value in (("--parent", PARENT_ENV, parent), ("--notify-box", NOTIFY_ENV, notify_box)):
+        if value is None:
+            continue
+        if key in envs and envs[key] != value:
+            raise Fail("ArgumentsBad", "%s %s and --envs %s=%s disagree; give one" % (flag, value, key, envs[key]))
+        envs[key] = value
+        source[key] = flag
+    if not envs:
+        return envs
+    if PARENT_ENV not in envs:
+        envs[PARENT_ENV] = found_parent if isinstance(found_parent, str) and found_parent.startswith("/") else ""
+        source[PARENT_ENV] = "the parent looked up from AOS_STACK"
+    envs.setdefault(NOTIFY_ENV, "")
+    for key in (PARENT_ENV, NOTIFY_ENV):
+        v = envs[key]
+        if v and (not v.startswith("/") or ".." in v.split("/")):
+            raise Fail("ArgumentsBad", "%s must be an absolute path without .. segments (or empty for none), not %s"
+                       % (source.get(key, key), json.dumps(v, ensure_ascii=False)))
+        if v:
+            envs[key] = os.path.normpath(v)   # 明給的與查表得到的一樣：/x//y/ 記成 /x/y（不含 .. 所以只去掉多餘的 /）
+    return envs
+
+
 def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limits=None, envs=None, auto_restart=False, daemon=None,
-               written=None, kept=None, dotenv_override=False):
+               written=None, kept=None, dotenv_override=False, parent=None, notify_box=None, found_parent=None):
     """判型並組成掛子信；給定的路徑從目前目錄算起。auto_restart＝True：那一列多 "auto_restart": true（daemon 的 key，
     放在列的頂層、跟 exec／ws 同層；loop 型、exec 型、帶 envs 的都一樣，two-machines 06）；False＝不寫這個 key。
     dotenv_override＝True：exec 包一張 aos-exec --dotenv-override 的單子，只有啟動定義那一跳的 .env 可蓋已有環境；
@@ -253,7 +293,8 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
     沒給＝照舊寫絕對路徑。
     kept＝使用者在命令列上寫成絕對路徑的格（"ws"、"stack"、"def"、"exec" 的集合；11-10 晚 B01，使用者選「絕對路徑原樣存」）：
     那幾格另記進列的 "as_written"，daemon 表上原樣存、不換算成相對它的 stack。由命令列那層照使用者打的字認（typed_kept）；
-    程式自己組的絕對路徑不算，預設空＝照舊（表上換算成相對 daemon 的 stack）。AsIs 的 ws／stack 照字面送。"""
+    程式自己組的絕對路徑不算，預設空＝照舊（表上換算成相對 daemon 的 stack）。AsIs 的 ws／stack 照字面送。
+    parent／notify_box／found_parent：見 registered_envs（ok-devt-1114 05 修訂 1：只有帶 envs 的 add 才登記；不帶的照舊）。"""
     kept = set(kept or ())
     if written:                      # 定義寫成指示詞（--path-json）＝exec／def 記指示詞，不記絕對
         kept -= {"exec", "def"}
@@ -289,6 +330,9 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
         spec = loop_spec(found)
     else:
         spec = {"exec": [xxx] + list(extra) if extra else xxx}
+    if envs and (not isinstance(envs, dict) or any(not isinstance(k, str) for k in envs)):
+        raise Fail("ArgumentsBad", "envs must be an object of environment names and string values")
+    envs = registered_envs(envs, parent, notify_box, found_parent)
     if envs or dotenv_override:
         if envs and (not isinstance(envs, dict) or any(not isinstance(k, str) or not k or "=" in k or "\0" in k
                                              or not isinstance(v, str) or "\0" in v for k, v in envs.items())):

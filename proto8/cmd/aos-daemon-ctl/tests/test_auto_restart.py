@@ -11,6 +11,9 @@ PROTO8 = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROTO8 / 'py'))
 import daemon_ctl as dc  # noqa: E402
 
+# an add that carries envs also gets both registered names, empty when there is no value (ok-devt-1114 05 修訂 1)
+REGISTERED = {dc.PARENT_ENV: '', dc.NOTIFY_ENV: ''}
+
 DAEMON_CTL = PROTO8 / 'cmd/aos-daemon-ctl/bin/aos-daemon-ctl'
 AOS_AGENT = PROTO8 / 'cmd/aos-agent/bin/aos-agent'
 
@@ -58,12 +61,12 @@ class AddLetter(unittest.TestCase):
         on = self.spec(self.job, envs={'K': 'v'}, auto_restart=True)
         self.assertNotIn('auto_restart', off)
         self.assertEqual(on, dict(off, auto_restart=True))
-        self.assertEqual(on['exec'], {'argv': ['aos-exec', '--', str(self.job)], 'envs': {'K': 'v'}})
+        self.assertEqual(on['exec'], {'argv': ['aos-exec', '--', str(self.job)], 'envs': {'K': 'v', **REGISTERED}})
 
     def test_loop_with_envs(self):
         on = self.spec(self.loop, envs={'K': 'v'}, auto_restart=True)
         self.assertIs(on['auto_restart'], True)
-        self.assertEqual(on['exec']['envs'], {'K': 'v'})
+        self.assertEqual(on['exec']['envs'], {'K': 'v', **REGISTERED})
         self.assertNotIn('auto_restart', on['exec'])
 
 

@@ -4,7 +4,7 @@ import daemon_ctl as dc
 import json
 import os
 import re
-from ..common import bad_args, Agent, Fail, IFACE, call_dc, daemon_path, note, row_named, via_kernel
+from ..common import bad_args, Agent, Fail, IFACE, call_dc, daemon_path, note, owner_row, row_named, table, via_kernel
 from .shared import ctl_wait, need_table, queued_opt, timeout_opt
 from ..decl import read_decl
 
@@ -13,7 +13,7 @@ from ..decl import read_decl
 
 HELP = """aos-agent ctl add - attach one agent to the daemon
 
-usage: aos-agent [--daemon D] ctl add [-n N] [-w WS | --ws-json J] [-s S | --stack-json J] [--path-json J] [--limits JSON] [--envs K=V ...] [--dotenv-override] [--auto-restart] [--timeout-s S] [--on-queued fail|ok] XXX
+usage: aos-agent [--daemon D] ctl add [-n N] [-w WS | --ws-json J] [-s S | --stack-json J] [--path-json J] [--limits JSON] [--envs K=V ...] [--parent P] [--notify-box B] [--dotenv-override] [--auto-restart] [--timeout-s S] [--on-queued fail|ok] XXX
 
 XXX is the agent folder; it must declare aos-agent in interfaces.json. The letter goes
 through $AOS_KERNEL when that is set (a warning line says so). Waits until the agent is on
@@ -41,6 +41,17 @@ flags:
                       the value is stored in plain text in procs/<name>/exec.json and shows on
                       the command line: never pass secrets here (an MCP token goes in the
                       server file's env_file, see external-mcp)
+      --parent P      who asked for this agent: a root stack, absolute, no .. ('' = none); stored as
+                      AOS_PARENT_STACK in its envs. Only an add that carries envs (--envs, --parent,
+                      --notify-box; subagent and fork always do) records a parent; without --parent it
+                      is the deepest table row holding $AOS_STACK (a tool's cell counts as its agent),
+                      '' when there is none. An add without envs records nothing (parent is null)
+      --notify-box B  the mailbox folder its notices go to (AOS_NOTIFY_BOX), absolute, no ..
+                      ('' = none); not given = none (only subagent add defaults it to its parent)
+                      --parent / --notify-box and --envs with the same name and another value = ArgumentsBad.
+                      Both are what the requester wrote, not proof; see aos-agent ctl who.
+                      Giving either one sets envs, so the row is attached like --envs: its exec
+                      column is null and ctl set-def refuses it (rm, then add)
       --dotenv-override   start the definition with aos-exec --dotenv-override: its .env may
                           override names already set, e.g. PATH=${HOME}/bin:${PATH}
                           (stored in the row's exec; only that hop)
@@ -80,7 +91,8 @@ def definition(arg, verb="add"):
 def cmd(argv):
     try:
         opts, rest = aos_flags.parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits", "--timeout-s": "timeout_s", "--on-queued": "on_queued",
-                                             "--ws-json": "ws_json", "--stack-json": "stack_json", "--path-json": "path_json"},
+                                             "--ws-json": "ws_json", "--stack-json": "stack_json", "--path-json": "path_json",
+                                             "--parent": "parent", "--notify-box": "notify_box"},
                                      switches={"--auto-restart": "auto_restart", "--dotenv-override": "dotenv_override"}, help=HELP, short=("-n", "-w", "-s"),
                                      multi={"--envs": "envs"})
     except aos_flags.Error as e:
@@ -146,6 +158,13 @@ def cmd(argv):
             raise bad_args(HELP, "--stack must not be empty")
         stack = os.path.abspath(stack)
     name = opts.get("name") or os.path.basename(xxx.rstrip("/"))
+    parent, notify_box = opts.get("parent"), opts.get("notify_box")
+    try:                                              # ok-devt-1114 05 修訂 1：只有帶 envs 的 add 才登記 parent／notify_box
+        envs = call_dc(dc.registered_envs, envs, parent, notify_box, looked_up_parent(envs, parent, notify_box))
+    except Fail as e:
+        if e.code == "ArgumentsBad":
+            raise bad_args(HELP, str(e)) from e
+        raise
     if via_kernel():
         return add_via_kernel(name, entry_target, ws, stack, def_dir, limits, envs, opts, written, kept, secs, on_queued)
     need_table()
@@ -193,6 +212,23 @@ def add_via_kernel(name, entry_target, ws, stack, def_dir, limits, envs, opts, w
         print(stack.rstrip("/") or "/")
         return
     note("%s attached; the daemon chose its stack, ask for it with: aos-agent ctl where %s" % (name, name))
+
+
+def looked_up_parent(envs, parent, notify_box):
+    """ok-devt-1114 05 修訂 1：這個 add 會帶 envs、又沒明給 parent 時，parent＝表上包住 $AOS_STACK 的最深那列的 stack（同 ctl who；
+    工具的小格 <agent stack>/tools/<名>、hooks/<名> 都認成那隻 agent；設了 AOS_KERNEL 就經 kernel 查表）。
+    不帶 envs、明給了、沒有 AOS_STACK、表讀不到、沒找到＝None。查不到不擋 add：parent 只是登記。"""
+    if parent is not None or dc.PARENT_ENV in envs or not (envs or notify_box is not None):
+        return None
+    s = os.environ.get("AOS_STACK", "")
+    if not s:
+        return None
+    try:
+        hit = owner_row(s, table())
+    except Fail:
+        return None
+    st = hit[1].get("stack") if hit else None
+    return st if isinstance(st, str) and os.path.isabs(st) else None
 
 
 def rejected(letter):

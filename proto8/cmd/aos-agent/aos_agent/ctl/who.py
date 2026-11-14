@@ -1,7 +1,7 @@
 # aos_agent/ctl/who.py - 由 stack 路徑查詢所屬 agent。
 import json
 import os
-from ..common import bad_args, Fail, daemon_path, parse, registered_of, table, under
+from ..common import bad_args, Fail, daemon_path, owner_row, parse, registered_of, table
 from .shared import query_opt
 
 
@@ -38,12 +38,7 @@ def cmd(argv):
     s = opts.get("stack") or os.environ.get("AOS_STACK", "")
     if not s:
         raise Fail("StackMissing", "no --stack and no AOS_STACK; give the stack path to look up")
-    hit = None
-    for n, r in table().items():
-        st = r.get("stack")
-        if isinstance(st, str) and st and under(s, st):
-            if hit is None or len(os.path.realpath(st)) > len(os.path.realpath(hit[1]["stack"])):
-                hit = (n, r)
+    hit = owner_row(s, table())
     if hit is None:
         raise Fail("InstanceMissing", "%s is not inside the stack of any proc on the daemon table %s" % (os.path.abspath(s), daemon_path()))
     n, r = hit

@@ -117,7 +117,18 @@ def under(path, top):
     return p == t or p.startswith(t + "/")
 
 
-REGISTERED = (("parent", "AOS_PARENT_STACK"), ("notify_box", "AOS_NOTIFY_BOX"))   # ok-devt-1114 05 定稿 1.3：表的欄、啟動單子 envs 的名字
+def owner_row(s, rows):
+    """S 落在哪一列的 stack 裡（那列的 stack 是 S 本身或 S 的上層；好幾列都包住＝取最深的）；回 (名, 列) 或 None。ctl who 與 ctl add 查 parent 共用。"""
+    hit = None
+    for n, r in rows.items():
+        st = r.get("stack")
+        if isinstance(st, str) and st and under(s, st):
+            if hit is None or len(os.path.realpath(st)) > len(os.path.realpath(hit[1]["stack"])):
+                hit = (n, r)
+    return hit
+
+
+REGISTERED = (("parent", dc.PARENT_ENV), ("notify_box", dc.NOTIFY_ENV))   # ok-devt-1114 05 定稿 1.3：表的欄、啟動單子 envs 的名字（名字定義在 daemon_ctl）
 
 
 def _launch_single(row, base):

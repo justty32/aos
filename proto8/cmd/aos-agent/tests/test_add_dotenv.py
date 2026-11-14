@@ -14,6 +14,8 @@ sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
 BIN = PROTO / "cmd" / "aos-agent" / "bin" / "aos-agent"
 sys.path[:0] = [str(PROTO / "py"), str(PROTO / "lib")]
+# an add that carries envs also gets both registered names, empty when there is no value (ok-devt-1114 05 修訂 1)
+REGISTERED = {"AOS_PARENT_STACK": "", "AOS_NOTIFY_BOX": ""}
 import daemon_ctl as dc
 from daemon_ctl.entry import daemon_ref
 
@@ -53,7 +55,7 @@ class AddLetterDotenv(unittest.TestCase):
     def test_override_and_envs_share_one_single(self):
         single = self.spec(dotenv_override=True, envs={"A": "1"})["exec"]
         self.assertEqual(single, {"argv": ["aos-exec", "--dotenv-override", "--",
-                                         daemon_ref(str(self.definition), str(self.daemon))], "envs": {"A": "1"}})
+                                         daemon_ref(str(self.definition), str(self.daemon))], "envs": {"A": "1", **REGISTERED}})
 
     def test_override_only_and_kept_absolute_target(self):
         single = self.spec(dotenv_override=True, kept={"exec"})["exec"]
@@ -62,7 +64,7 @@ class AddLetterDotenv(unittest.TestCase):
     def test_without_override_preserves_plain_and_envs_shapes(self):
         self.assertEqual(self.spec()["exec"], str(self.definition))
         self.assertEqual(self.spec(envs={"A": "1"})["exec"], {
-            "argv": ["aos-exec", "--", daemon_ref(str(self.definition), str(self.daemon))], "envs": {"A": "1"}})
+            "argv": ["aos-exec", "--", daemon_ref(str(self.definition), str(self.daemon))], "envs": {"A": "1", **REGISTERED}})
 
     def test_loop_directive_target_uses_original_exec_pointer(self):
         config = self.root / "body.json"
@@ -152,14 +154,14 @@ class AddBothRoutesSameKwargs(unittest.TestCase):
     def test_direct_route_passes_every_flag(self):
         _, kw = self.route(kernel=False)
         self.assertEqual((kw["name"], kw["envs"], kw["limits"], kw["auto_restart"], kw["dotenv_override"]),
-                         ("ann", {"A": "1", "B": "2"}, {}, True, True))
+                         ("ann", {"A": "1", "B": "2", **REGISTERED}, {}, True, True))
         self.assertEqual(kw["ws"], str(self.workspace))
         self.assertEqual(kw["kept"], {"exec", "def", "ws"})
 
     def test_kernel_route_passes_every_flag(self):
         _, kw = self.route(kernel=True)
         self.assertEqual((kw["name"], kw["envs"], kw["limits"], kw["auto_restart"], kw["dotenv_override"]),
-                         ("ann", {"A": "1", "B": "2"}, {}, True, True))
+                         ("ann", {"A": "1", "B": "2", **REGISTERED}, {}, True, True))
         self.assertEqual(kw["kept"], {"exec", "def", "ws"})
 
 class AddDotenvDaemon(unittest.TestCase):

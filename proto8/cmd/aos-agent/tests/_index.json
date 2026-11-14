@@ -2,6 +2,9 @@
  "test_add_dotenv.py": {
   "description": "Test ctl add dotenv override wrapping and definition environment precedence on an isolated daemon."
  },
+ "test_add_parent_daemon.py": {
+  "description": "Phase 1 of parent / notify_box on a real isolated daemon (ok-devt-1114 05 定稿 1.2, 1.3 and 修訂 1, ok-limits 11-14)."
+ },
  "test_ask.py": {
   "description": "Test aos-agent ask (say then wait for the latest answer, like the subagent tool's op ask): flags, stdin, timeout exit code, a fake agent's answer."
  },
