@@ -200,6 +200,14 @@
     "test_sandbox.py": "Verify aos-sandbox: a broken config runs prog unsandboxed with a warning, real errors stay errors, the deeper of ro/rw wins (T32), writes outside rw …"
    }
   },
+  "aos-share": {
+   "bin": {
+    "aos-share": "替共用夾與點名使用者的檔案套用六種 ACL 樣板。"
+   },
+   "tests": {
+    "test_share.py": "Test aos-share templates, strict subid resolution, dry runs, errors and ancestor warnings."
+   }
+  },
   "aos-sweeper": {
    "bin": {
     "aos-sweeper": "清道夫跑一輪（掛在 daemon 表上當 loop 列 `_sweeper`，每 interval_ms 一次；使用者 11-10）。"

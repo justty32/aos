@@ -41,6 +41,9 @@
  "aos-sandbox": {
   "description": "aos-sandbox：照一份設定（ro／rw 綁定、指令白名單、斷網、上限）用 bwrap／s6 把 prog 關進沙箱再跑，含範例設定與要 root 的 setup.sh"
  },
+ "aos-share": {
+  "description": "aos-share：替共用夾與點名使用者的檔案設定 ACL"
+ },
  "aos-sweeper": {
   "description": "aos-sweeper — 清道夫：一台 daemon 的 stderr 封存、封存保留期、收表外子 loop"
  },

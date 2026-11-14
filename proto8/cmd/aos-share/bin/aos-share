@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+# aos-share：替共用夾與點名使用者的檔案套用六種 ACL 樣板。
+import os
+import pwd
+import re
+import shutil
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
+import aos_flags  # noqa: E402
+
+PROG = "aos-share"
+KINDS = ("team", "read", "key", "work", "drop", "stack")
+USAGE = "(usage: aos-share [--dry-run] KIND PATH (--group G | --uid U)...)"
+HELP = """aos-share - apply an ACL template to a shared folder or a named-user file
+
+usage: aos-share [--dry-run] KIND PATH (--group G | --uid U)...
+       aos-share --help
+
+kinds:
+  team   create a shared writable folder; exactly one --group
+  read   recursively share an existing path read-only; one or more --group
+  key    share an existing regular file read-only; one or more --uid
+  work   create a shared writable sticky folder; exactly one --group
+  drop   create a sticky delivery box with tmp/new/cur; exactly one --group
+  stack  create a private stack shared with one user; exactly one --uid
+
+flags:
+  --group G   numeric real gid, or sub:N from the current user's /etc/subgid
+  --uid U     numeric real uid, or sub:N from the current user's /etc/subuid
+  --dry-run   print each command without changing or checking the target path
+  -h, --help  show this help
+sub:N uses N from 1 to 65536 within the first matching subid range. Numbers
+must not have leading zeroes, signs or whitespace. AOS_SHARE_SUBUID and
+AOS_SHARE_SUBGID override the subid files for tests only.
+After applying ACLs, warn about ancestors without search permission.
+Drop senders must create files/folders with group bits (for example 0660/0777).
+exit codes: 0 success; 1 error ("aos-share: error: CODE reason" on stderr):
+ArgumentsBad, FlagUnknown, SubidMissing, PathMissing, CommandMissing, AclFailed.
+more: proto8/cmd/aos-share/README.md
+"""
+
+
+def resolve_id(value, kind):
+    if re.fullmatch(r"0|[1-9][0-9]*", value):
+        return value
+    match = re.fullmatch(r"sub:([1-9][0-9]{0,4})", value)
+    if not match or int(match[1]) > 65536:
+        aos_flags.die(PROG, "ArgumentsBad", "invalid %s id %r" % (kind, value))
+    number = int(match[1])
+    uid = os.getuid()
+    user = pwd.getpwuid(uid).pw_name
+    filename = os.environ.get("AOS_SHARE_SUB" + kind.upper(), "/etc/sub" + kind)
+    try:
+        with open(filename, encoding="utf-8") as source:
+            for line in source:
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                fields = line.rstrip("\n").split(":")
+                if fields[0] not in (user, str(uid)):
+                    continue
+                if len(fields) != 3 or not all(re.fullmatch(r"[0-9]+", x) for x in fields[1:]):
+                    aos_flags.die(PROG, "SubidMissing", "invalid line for %s in %s" % (user, filename))
+                start, count = map(int, fields[1:])
+                if number > count:
+                    aos_flags.die(PROG, "SubidMissing", "%s exceeds range for %s in %s" % (value, user, filename))
+                return str(start + number - 1)
+    except (OSError, UnicodeError) as exc:
+        aos_flags.die(PROG, "SubidMissing", "cannot read %s: %s" % (filename, exc))
+    aos_flags.die(PROG, "SubidMissing", "no line for %s in %s" % (user, filename))
+
+
+def commands(kind, path, ids):
+    me = os.getuid()
+    target = ids[0]
+    if kind in ("team", "work"):
+        return [
+            ["mkdir", "-p", path],
+            ["chmod", "2770" if kind == "team" else "3770", path],
+            ["setfacl", "-m", "g:%s:rwx,d:g:%s:rwx,d:u:%s:rwx,m::rwx,d:m::rwx" % (target, target, me), path],
+        ]
+    if kind == "read":
+        result = []
+        for target in ids:
+            result.extend([
+                ["setfacl", "-R", "-m", "g:%s:rX" % target, path],
+                ["setfacl", "-R", "-d", "-m", "g:%s:rX" % target, path],
+            ])
+        return result + [["setfacl", "-R", "-m", "m::rwX", path]]
+    if kind == "key":
+        return [["chmod", "600", path]] + [
+            ["setfacl", "-m", "u:%s:r" % target, path] for target in ids
+        ] + [["setfacl", "-m", "m::r", path]]
+    if kind == "drop":
+        folders = [path] + [os.path.join(path, name) for name in ("tmp", "new", "cur")]
+        result = [["mkdir", "-p", *folders]]
+        for folder in folders[:3]:
+            result.extend([
+                ["chmod", "1730", folder],
+                ["setfacl", "-m", "g:%s:wx,m::wx" % target, folder],
+                ["setfacl", "-d", "-m", "u:%s:rwX,g::---,o::---,m::rwX" % me, folder],
+            ])
+        return result + [["chmod", "700", folders[3]]]
+    return [
+        ["mkdir", "-p", path],
+        ["chmod", "700", path],
+        ["setfacl", "-m", "u:%s:rwx,d:u:%s:rwx,d:u:%s:rwx,m::rwx,d:m::rwx" % (target, target, me), path],
+    ]
+
+
+def run_command(argv):
+    try:
+        result = subprocess.run(argv, capture_output=True, text=True)
+    except FileNotFoundError:
+        aos_flags.die(PROG, "CommandMissing", "%s not found on PATH" % argv[0])
+    except OSError as exc:
+        aos_flags.die(PROG, "AclFailed", "%s failed: %s" % (" ".join(argv), exc))
+    if result.returncode:
+        reason = result.stderr.splitlines()[0] if result.stderr else "exit status %s" % result.returncode
+        aos_flags.die(PROG, "AclFailed", "%s failed: %s" % (" ".join(argv), reason))
+    return result.stdout
+
+
+def warn_ancestors(path, kind, ids):
+    parent = os.path.dirname(os.path.realpath(path))
+    ancestors = []
+    while True:
+        ancestors.append(parent)
+        if parent == "/":
+            break
+        parent = os.path.dirname(parent)
+    for parent in reversed(ancestors):
+        if os.stat(parent).st_mode & 0o001:
+            continue
+        acl = run_command(["getfacl", "-n", "--omit-header", "--absolute-names", "-c", parent])
+        accessible = set()
+        for line in acl.splitlines():
+            entry, marker, effective = line.partition("#effective:")
+            fields = entry.strip().split(":")
+            if len(fields) == 3 and fields[0] == kind:
+                permissions = effective.strip() if marker else fields[2]
+                if "x" in permissions:
+                    accessible.add(fields[1])
+        for target in dict.fromkeys(ids):
+            if target not in accessible:
+                aos_flags.warn(PROG, "%s gives no x to others: uid/gid %s cannot reach %s" % (parent, target, path))
+
+
+def main():
+    aos_flags.HELP = HELP
+    try:
+        opts, rest = aos_flags.parse(sys.argv[1:], {}, switches={"--dry-run": "dry_run"},
+                                     multi={"--group": "groups", "--uid": "uids"}, anywhere=True)
+    except aos_flags.Error as exc:
+        aos_flags.die(PROG, exc.code, "%s %s" % (exc, USAGE))
+    if not rest or rest[0] not in KINDS:
+        aos_flags.die(PROG, "ArgumentsBad", "KIND must be one of %s %s" % (", ".join(KINDS), USAGE))
+    if len(rest) != 2:
+        aos_flags.die(PROG, "ArgumentsBad", "expected KIND and PATH " + USAGE)
+    kind, path = rest
+    use_uid = kind in ("key", "stack")
+    values = opts.get("uids" if use_uid else "groups", [])
+    wrong = opts.get("groups" if use_uid else "uids")
+    if wrong or not values or (kind not in ("read", "key") and len(values) != 1):
+        aos_flags.die(PROG, "ArgumentsBad", "flags do not match %s %s" % (kind, USAGE))
+    ids = [resolve_id(value, "uid" if use_uid else "gid") for value in values]
+    steps = commands(kind, path, ids)
+    if opts.get("dry_run"):
+        for step in steps:
+            print(" ".join(step))
+        return
+    if kind in ("read", "key") and not os.path.exists(path):
+        aos_flags.die(PROG, "PathMissing", "%s does not exist" % path)
+    if kind == "key" and not os.path.isfile(path):
+        aos_flags.die(PROG, "PathMissing", "%s is not a regular file" % path)
+    for command in ("setfacl", "getfacl"):
+        if not shutil.which(command):
+            aos_flags.die(PROG, "CommandMissing", "%s not found on PATH" % command)
+    for step in steps:
+        run_command(step)
+    warn_ancestors(path, "user" if use_uid else "group", ids)
+
+
+if __name__ == "__main__":
+    aos_flags.run(main)
