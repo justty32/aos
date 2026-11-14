@@ -4,7 +4,9 @@
 
 ## 結論
 
-- **釘住的 commit：`246d4aa49`**。這個 commit 含線星 ADV `313ce20ec`，是在 repo 外的乾淨複本跑過 proto8 全部 tests 夾的（結果在[預演](#預演暫存樹-codets-1114)一節）。C++ 在 repo 外 `~/code/ts-1114/src2` 編好（`BUILD_REF`＝`246d4aa49`，九支共 2 分 4 秒）。
+- **換樹條件（三項都要到才換）**：① ok-release 結束，以 head-front 的通知信為準；② 新暫存樹預演完成；③ `git diff --stat d7f2f0ae0..HEAD -- proto8/lib proto8/templates proto8/knowledge proto8/py proto8/impls proto8/cmd` 是空的，空的就用 PIN-1，不空就等 head-core 逐筆核准後補釘 PIN-2（11-14 head-core 15:27、15:43 兩封信）。B7 今天不進。
+- **現行 pin：PIN-1 `d7f2f0ae0`**（`d7f2f0ae0a9270e280a2b048ea5cdc75ac20a6f6`），是 11-14 16:00:09 收件時刻當下的 main HEAD。今天各線報來的 34 筆，逐筆 `is-ancestor` 都在裡面（見[各線清單怎麼對到](#各線清單怎麼對到步驟)）。`proto8/impls` 跟 `246d4aa49` 相同，所以照用 `src2` 的 C++，不用重編。結果見[預演 PIN-1](#pin-1d7f2f0ae0的驗證)。
+- **上一個 pin：`246d4aa49`**。這個 commit 含線星 ADV `313ce20ec`，是在 repo 外的乾淨複本跑過 proto8 全部 tests 夾的（結果在[預演](#預演暫存樹-codets-1114)一節）。C++ 在 repo 外 `~/code/ts-1114/src2` 編好（`BUILD_REF`＝`246d4aa49`，九支共 2 分 4 秒）。
   - 原本釘的是 `b8ff23ada`，之後 ADV 進來才往後移。這段期間 `proto8/impls` 只改了一份 README，但 check 是整夾比對，所以照樣重編。
   - 舊的 `src`（`d38a0d36f`）作廢，拿它 check 會 RED。
 - **換的東西**：
@@ -24,7 +26,7 @@
 
 ## 要使用者定的
 
-> 換樹前會**再釘一次** pin，把最後進來的項目帶進去（ok-onboard `3ed649b09`、ok-limits `50e7a35bc`、ok-kb 的知識庫批次、之後的 ok-pilot C／D、ok-misc 的 aos-user 等，照收到的先後排）。重釘以後照這頁再跑一次：全套、重編（impls 有變的話）、新暫存樹預演。各段時間預計跟 r4 差不多。
+> **16:00 已重釘成 PIN-1 `d7f2f0ae0`**：最後收件時刻定 16:00（head-core 同意），之後進 main 的不算今晚。重釘後照這頁重跑了全套（新版 06 第 6 條：乾淨複本不帶 repo 的 `impls/*/bin`，PATH 不含 `~/.local/bin`）和新暫存樹 r5 預演。
 
 
 | 題 | 內容 | 推薦 |
@@ -43,20 +45,22 @@
 
 ## 步驟表
 
-`PIN=246d4aa49`。下指令的人是**使用者**，在一般終端機下，不要在樹裡 agent 的殼，也不要在 cwd 落在 `~/aos-home` 底下的殼。停樹會把所有 agent 一起停掉，ok-kf 也會停，所以這張表要自己看得懂。時間是暫存樹量的；活樹 agent 多，停和起會久一些。
+`PIN=d7f2f0ae0a9270e280a2b048ea5cdc75ac20a6f6`（PIN-1；若補釘成 PIN-2，照 head-core 回信換掉）。下指令的人是**使用者**，在一般終端機下，不要在樹裡 agent 的殼，也不要在 cwd 落在 `~/aos-home` 底下的殼。停樹會把所有 agent 一起停掉，ok-kf 也會停，所以這張表要自己看得懂。時間是暫存樹量的；活樹 agent 多，停和起會久一些。
 
 | # | 做什麼 | 指令 | 暫存樹時間 | 看什麼算過 | 不過怎麼辦 |
 |---|---|---|---|---|---|
-| 0 | 換前檢查（換的當下再看一次） | `grep -rl aos-llm-kernel ~/aos-home --include=daemon.json --include=_entry --include=loop.json`、`pgrep -af aos-llm-kernel` | — | 第一條只找到 `lib/base/llm_http/_entry` 的註解（11-14 ok-kf 看過），第二條沒有輸出 | 有定義在 exec 它的話，第 10 步刪 aos-llm-kernel 那項不做 |
+| 0 | 換前檢查（換的當下再看一次） | `grep -rl aos-llm-kernel ~/aos-home --include=daemon.json --include=_entry --include=loop.json`、`pgrep -af aos-llm-kernel` | — | 第一條只找到 `lib/base/llm_http/_entry` 的註解（11-14 ok-kf 看過），第二條沒有輸出 | 有定義在 exec 它，或 `/proc` 裡有行程在用它的話，換後清單 4（刪 aos-llm-kernel）不做 |
 | 1 | 叫頂層與各線收工交棒，記下有哪些畫面開著 | `ls /run/user/1000/aos-tty-1000/` | — | 各線回覆收工 | — |
 | 2 | 停樹 | `aos-daemon-ctl -d ~/aos-home/.stack shutdown` | 0.7 s | 起樹那個視窗的 `aos-exec root` 自己結束 | — |
 | 3 | 關畫面，關樹裡其他行程 | 每個 sock 各下一次 `tmux -S /run/user/1000/aos-tty-1000/<sock> kill-server`。`aos-user serve`、全景頁若跑在樹裡，到它們的視窗按 Ctrl-C。cwd 在 `~/aos-home` 的殼要 `cd ~` | — | — | — |
 | 4 | **先 check**，看到兩個 green 為止 | `bash ~/repo/aos/proto8/extras/tree-swap/swap.sh --ref $PIN check` 和 `bash ~/repo/aos/proto8/thinking/2026-11/14/tree-swap-1114/extras.sh --ref $PIN check`，都要加 `TS_BUILD=$HOME/code/ts-1114/src2` | 0.7 s | `check: green`（兩支都要） | 出現 `RED: … still running` 就照它列的 pid 關掉再 check。其他 RED 停下，看訊息 |
 | 5 | 換四夾＋C++ 九支 | `TS_BUILD=$HOME/code/ts-1114/src2 bash …/swap.sh --ref $PIN all` | 2.8 s | `verify: green (folders and 10 bins)`，最後會印 `kept …` 清單 | 跑到一半紅燈就跑第 R 步 |
 | 6 | 換 agents／defs 的幾件 | `bash …/extras.sh --ref $PIN hooks env guard brainnotify verify`（brainnotify 是使用者 q3 定的） | 2.4 s | 印出 `guard probe gpt-lead: 0 0 0 0 10 (ok)`、`guard probe gpt-worker: 0 0 10 0 10 (ok)` 和 `verify: green`。記下它印的 `run=…` 夾（退回時要用） | 第 R 步 |
+| 6b | **頂層執行**：ok-misc T27 aos-user（頂層已准，信 `01794636467106768770.227672.2505275`） | ① 先核 sha256：`~/code/misc-1114/aos-user-copy-1114/zone.py` 要是 `6485e409c268f7f55cf5d5fc135f65f7d355c05efb7f35341fe3442cfb55faae`，`tests/test_verify_paths.py` 要是 `b09c7ee71c4a859dde6fb884304d0d504f488ea32d6621aa7c07765ff0ff7e98`。② `B=~/.aos/saves/tree-swap/run-$(date +%Y%m%d-%H%M%S)-aosuser; mkdir -p $B/tests && cp -p ~/aos-home/ws/tools/aos-user/zone.py $B/`；`test_verify_paths.py` 活樹原本沒有，在 `$B/MANIFEST` 記一行「原本沒有」。③ 把兩個檔抄進 `~/aos-home/ws/tools/aos-user/` | — | 在 aos-user 夾裡跑 `python3 -m unittest discover -s tests`，20 支全過；拿一封舊的專區回信跑 `aos-user verify <夾>`，回 `ok: matches` | 把 `$B/zone.py` 抄回去；新檔搬進 `$B`，不刪 |
+| 6c | **頂層執行**：換 repo-aos 小格裡的 triage | `B=~/.aos/saves/tree-swap/run-$(date +%Y%m%d-%H%M%S)-triage; mkdir -p $B && cp -p ~/aos-home/ws/.stack/procs/repo-aos/hooks/kernel_gate/triage $B/`，再 `cp -p ~/aos-home/lib/agent/kernel_gate/triage ~/aos-home/ws/.stack/procs/repo-aos/hooks/kernel_gate/triage`（第 5 步之後，lib 已是新版） | — | 起樹後 gate 照常放行；新版對只有 `procs_state_path` 的查詢信直接放行 | 把 `$B/triage` 抄回去 |
 | 7 | 起樹 | 原本起樹的視窗前景跑：`cd ~/aos-home && source env.sh && aos-exec root` | 0.15 s | `aos-daemon-ctl -d ~/aos-home/.stack ls`：`_clock`、`_sweeper`、`foreman` running。`aos-daemon-ctl -d ~/aos-home/ws/.stack ls`：各 agent 與 `llm-gpt` running | 停樹（第 2、3 步）後跑第 R 步 |
 | 8 | 重開畫面 | `aos-agent open -t repo-aos`，其他照第 1 步記下的開回來 | — | 畫面出得來 | — |
-| 9 | smoke | `ls ~/aos-home/lib/agent/screen_linger ~/aos-home/lib/agent/brain_notify ~/aos-home/lib/agent/mailbox_read`；`cat ~/aos-home/lib/.aos-source.json` | 0.1 s | 三夾都在；章裡 `commit` 是 `$PIN` | — |
+| 9 | smoke＋換後驗（各線報的） | `ls ~/aos-home/lib/agent/screen_linger ~/aos-home/lib/agent/brain_notify ~/aos-home/lib/agent/mailbox_read`；`cat ~/aos-home/lib/.aos-source.json`；再照[換後驗](#換後驗各線報的r5-已驗過)那張表逐條看 | 0.1 s | 三夾都在；章裡 `commit` 是 `$PIN`；換後驗逐條都過 | 只是說明檔不對的，記下來、不退回；程式檔不對就走 R |
 | 10 | 換後各線接著做（樹起來以後，各線自己做，不用停樹） | 見[換後清單](#換後清單各線自己做) | — | — | — |
 | R | **退回**（要先停樹，做第 2、3 步） | `bash …/extras-rollback.sh <第 6 步的 run 夾>`，再 `bash ~/repo/aos/proto8/extras/tree-swap/rollback.sh all`，然後照第 7 步起樹 | 1.0 s | `extras rollback: done`、`rollback tree: … identical to backup`、`rollback bin: … identical` | 不要再換，叫 ok-kf 來看 |
 
@@ -85,16 +89,19 @@
 | 同上 | `defs/shared/guard` 換成 `wf/public/tools/fsm-guard/guard`（唯讀查詢放行） | 6 的 `guard`：寫到旁邊再改名，舊檔搬進備份。換完照 ok-astra 的五條驗：worker 要 `0 0 10 0 10`；lead 要 `0 0 0 0 10`，因為 lead 的 guard.json 本來就沒有 rm 那條，第三條新舊 guard 都放行。guard 每次叫工具都重新執行，不必重起 agent |
 | [kernel-limits-1114](kernel-limits-1114.md) B1 | `lib/aos/kernel/limits_rule.py`（新）、`procs_rules.py` | 5 |
 | 同上 B4／B5 | 從 repo 原始碼重建 aos-daemon；重抄 knowledge `aos/cli/daemon.json` | 5。已經在跑的列被接回（adopt）時不重新檢查天花板，要等那一列下次重起才套用 |
-| [gate-auto-1114](gate-auto-1114.md) | `lib/agent/kernel_gate/triage` | 5。換完以後，gate 的 handler 要不要改指 `$AOS_HOME/lib/…`，由頂層決定（換後清單） |
+| [gate-auto-1114](gate-auto-1114.md) | `lib/agent/kernel_gate/triage` | 5（lib 裡那份）＋6c：頂層把 repo-aos 小格裡 08:33 抄的舊副本換成新版（頂層 14:27 定）。舊副本沒有「放行查詢信」那段（線框批 6 `c3c1877ea`） |
+| 線框批 6 `c3c1877ea`（skyrim-agent 兩題的修法，11-14 head-core 查證信） | `lib/agent/kernel_gate/{hold,triage}` 放行查詢信；`subagent`、`fork` 只設 AOS_KERNEL 也能掛子（名冊存絕對路徑） | 5（整夾）。gate 的 kernel.json 是用 `$env AOS_HOME` 指到 lib 裡的 hold，所以已開著的 gate 換完自動用新版 |
 | 線框 [kernel-framework-1114](kernel-framework-1114.md) C′ A 包（`f23cae72b`） | `lib/agent/cli_linger.py`、`screen_linger/`、範本 hooks.json 兩格 | 5（lib、templates）＋6 的 `hooks`（活樹五個 eca 定義：`eca_main fable-kernel opus-kernel repo-aos xiaosi`。這五份現在跟 `c44dac27c` 那版範本逐位元相同，所以整份換成 PIN 的範本。有人手改過的話會 RED、不動）。stack 層的 `hooks.json`（ok-pilot、ok-skyrim、repo-aos）沒有蓋這兩格 |
 | 頂層（使用者准） | `opus-kernel`、`fable-kernel`、`xiaosi` 三個定義加 `.env`：`PATH=${HOME}/repo/aos/wf/tools:${PATH}` | 6 的 `env`；要生效得配 `--dotenv-override`（D1） |
-| 頂層（使用者准） | 移掉 `~/.local/bin/commit-request` | `extras.sh links`，建議等 D1 |
-| 頂層（使用者准） | 刪 `impls/aos-llm-kernel` 夾與 `~/.local/bin/aos-llm-kernel` 連結 | 夾：換後清單（D3）；連結：`extras.sh links`（搬進備份夾）。這支不在 swap 的九支裡，連結移不移不影響換樹 |
+| 頂層（使用者准） | 移掉 `~/.local/bin/commit-request` | **頂層搬**（換後清單 3），等 D1；`extras.sh links` 是給頂層用的工具 |
+| 頂層（使用者准，頂層 13:38 再准） | 刪 `impls/aos-llm-kernel` 夾與 `~/.local/bin/aos-llm-kernel` 連結 | 夾：換後清單 4，**排在換樹當下**，由 ok-kf 交 `--rm`。ok-sec 回過「Q10 不需要」。連結：**頂層搬**到 `~/.aos/saves/tree-swap/` 底下 |
 | ok-onboard `3ed649b09`（11-14 來信） | 新增 `templates/kits/`、`templates/tests/kits/`；`templates/agent-fsm/system.txt` 從 3 句改成約 1,257 字元 | 5（整夾）。已經在跑的 agent 不受影響，只有換樹後 `agent_def new` 新建的 agent-fsm 拿到新 system。換完驗：`templates/kits/` 在；`python3 -m unittest discover -s <新樹>/templates/tests/kits` OK。**pin 要重釘到含這個 commit** |
 | ok-limits `50e7a35bc`（11-14 來信） | lib `agent/subagent/_tooldef.json`、`agent/agents_ctl/_tooldef.json`；knowledge `agents/subagent.json`（limits 說明，純文字） | 5（整夾）。換完驗：`grep -c '"files": 256' ~/aos-home/lib/agent/subagent/_tooldef.json` 是 1。同 commit 的 `py/daemon_ctl/entry.py` 走 repo，不用換。**pin 要重釘到含這個 commit** |
 | ok-kb（11-14 來信，xiaosi 也轉了） | 重抄 `proto8/knowledge`，至少含 `3274da594`（cli、tools 共 35 處），之後還有幾批 | 5（knowledge 整夾）。抄換樹當時的 pin；ok-kb 每交一批都會報，換樹前重釘就會帶到 |
-| ok-board `4d207e56c`（11-14 來信，**可選，使用者點頭才做**） | 讓 `proto8/cmd/aos-comm/bin/aos-comm` 上 PATH，`lib/agent/board_*` 五支工具靠它 | 不在 swap／extras 裡，起樹後做。甲（推薦）：照 `install.sh` 現有方式裝 cmd；乙：`~/.local/bin` 加一條連結。不做也不影響別的 |
-| ok-limits B7 stop_reason（施工中） | 會動 aos-daemon、aos-loop、hook_fire | **今晚不在 PIN 裡**。進 main 之後要重選 PIN、重編、重新預演 |
+| ok-board `4d207e56c`（11-14 來信） | `lib/aos/comm/`、`lib/agent/board_*` 五夾、`lib/packs/comm.json`（49 個新檔） | 5（整夾）。換後驗看三樣在不在 |
+| 同上，使用者 q5 答 install（verify 過） | 讓 `proto8/cmd/aos-comm/bin/aos-comm` 上 PATH | **頂層執行**：換後清單 8，照 `install.sh` 現有方式裝 cmd |
+| ok-limits B7 stop_reason | 會動 aos-daemon、aos-loop、hook_fire | **今天不交、不進**（head-core 15:27 定），留下次換樹 |
+| 16:00 前進 main 的其他各線（都在 PIN-1 裡） | ok-pilot C `246d4aa49`、D `2ef627f1b`、文件 `83f67bb4b`（aos-agent 是 repo 直跑，程式存檔就生效＝第 0 步就已生效，知識庫 `talk_settings.json` 隨 5）；ok-fsm `38271da3b`（idle.py＋goal_state.py、`lib/base/ws_write`）、`3b02a41c4`（wait.py deadline）、`c2eced25c`（ws_write 擋 .stack）、`7ce38e7cf`（kernel_llm session_key，預設關）；ok-onboard `fdfbc5515`、`cabd9fd79`、`20b65475c`（`lib/agent/guard` **只進樹不掛**，已知有洞）；ok-limits `46d399149`（limits_rule 兩鍵）、`d543a0b4d`（me.json、self_state 說明）、`bcaf76823`（三份 envs 說明）；ok-kmsg `d6a564191`（kernel hooks.py 退 10、wait.py 寫 brain_wait.json）；ok-kb＋ok-astra 知識庫 14 筆（`3274da594 e30e4e26f 1e67c58ff f1ef04ba0 b72613da3 8d7bde457 492728841 78de6dd72`、`279acf057 2cf98185f 1ca8377dc 71dffd775 92e025353 95bdc412f`） | 5（lib、templates、knowledge 整夾從 PIN 的 git archive 換，同一個 commit 裡互相依賴的檔不會錯開）。換後驗見下表 |
 | xiaosi 轉 ok-sec | **Q10 一信一檔：今晚不做（佔位）** | 要把所有信箱清空重建，proto8 不遷移，新舊版不能混用。等 ok-sec 給確切步驟。PIN 裡沒有 Q10 的半成品 |
 
 ## 換後清單（各線自己做）
@@ -104,11 +111,14 @@
    - 驗完再交 B 包：先跟 main 三方合併、跑全套對照，問頂層後 commit。
    - 收 sol：`ctl rm` sol-b5、sol-g1、ok-kf-sol-1、ok-kf-sol-2，暫存 daemon `shutdown`。
 2. **線雜（ok-misc）**：在新 main 上重套 set-def（T03），在新 daemon 下重驗再 commit，補 `--dotenv-override` 那兩句。這一步做完，各 kernel 列改用 `--dotenv-override` 重加，D1 才走得下去。
-3. **D1**：在 agent 裡 `which commit-request` 確認找到 `~/repo/aos/wf/tools/commit-request`，再跑 `bash …/extras.sh --ref $PIN links`（搬進備份夾）。要放回就跑 `extras-rollback.sh <那次 run 夾>`。
-4. **D3**：問過 ok-sec 之後，`commit-request submit --rm` 刪 `proto8/impls/aos-llm-kernel` 已進版控的檔。未進版控的 `bin/`、`build/` 搬進 `~/.aos/saves/tree-swap/llm-kernel-<時間>/`。
-5. **gate**（頂層）：要不要把 handler 改成 `{"$env": "AOS_HOME", "$path": "/lib/agent/kernel_gate/triage"}`。
+3. **D1（頂層搬）**：在 agent 裡 `which commit-request` 確認找到 `~/repo/aos/wf/tools/commit-request`，再由頂層把 `~/.local/bin/commit-request`、`~/.local/bin/aos-llm-kernel` 兩條連結搬到 `~/.aos/saves/tree-swap/` 底下（可用 `bash …/extras.sh --ref $PIN links`；放回用 `extras-rollback.sh <那次 run 夾>`）。
+4. **D3（換樹當下，ok-kf 交）**：頂層 13:38 准、ok-sec 回「Q10 不需要」。條件：① 動手前 `ls -laR ~/repo/aos/proto8/impls/aos-llm-kernel > ~/.aos/saves/tree-swap/llm-kernel-<時間>.ls.txt` 存紀錄；② 只看 `/proc` 確認沒有行程在用這支執行檔（不下指令）；③ `commit-request submit --rm` 那筆交之前先寄 head-core；④ 未進版控的 `bin/`、`build/` 搬進 `~/.aos/saves/tree-swap/llm-kernel-<時間>/`，不刪。
+5. **gate**：已改成第 6c 步「頂層換 triage」。
 6. **線星 AK3 補記**：階段 3 開工前，核對活樹的 `aos-llm` 實際指到哪一支。
 7. 備份與 `run-*` 夾留著，使用者收工時決定刪不刪。
+8. **aos-comm 上 PATH（頂層執行）**：使用者 q5 答 install，照 `install.sh` 現有方式裝 cmd。
+9. **llm-gpt session_key（頂層，看有沒有另外交代）**：`7ce38e7cf` 預設關，要生效得在活樹 llm-gpt 的 kernel.json 的 sol-high 那組加 `"session_key": "litellm_session_id"`。
+10. **ok-onboard `lib/agent/guard`**：已知有洞，不要掛；之後要接線時 ok-onboard 會先通知。
 
 ## 預演（暫存樹 `~/code/ts-1114`）
 
@@ -168,6 +178,47 @@
   - llm-gpt 正在處理的請求：停樹時中斷，起樹後由各 agent 重問。
   - `ws/.stack/procs/ok-limits-sol-5` 底下另有一台 aos-daemon，屬於 ok-limits 的 sol：它跟著樹停；起樹後要不要再起，由 ok-limits 決定。
   - 這些情況 `check` 都會列出 pid 與指令。
+
+## PIN-1（d7f2f0ae0）的驗證
+
+- **各線 commit 都在 pin 裡**：各線報來的 34 筆，逐筆跑 `git merge-base --is-ancestor <c> d7f2f0ae0`，全部退 0。
+- **C++ 照用 `src2`**：`git diff --stat 246d4aa49..d7f2f0ae0 -- proto8/impls` 是空的，所以不重編。
+- **全套測試**：用 `~/code/ts-1114/suite.sh`，TAG=-b，結果在 `verify-d7f2f0ae0-b-summary.txt`。跟 `verify-246d4aa49-summary.txt` 比：
+  - **新綠**：cmd/aos-comm 17、cmd/aos-kit 20、board_set 5、lib/agent/guard 105。
+  - **仍綠**：kernel_llm 67、lib/aos/kernel 122、lib/tests 212。
+  - **archive/\* 照舊紅**：沒有人維護。
+  - **impls/aos-llm-kernel 紅得更多**（7 failures、71 errors）：乾淨複本不帶 bin，而這支程式在第 5 步就要刪，是預期中的。
+  - **templates/tests 新紅 8 條，是真的回歸**：
+    - 8 條全在 test_daily，原因相同：`stacks/root/procs/fsm/think/brain_wait.json is None`。
+    - 來源是 d6a564191（ok-kmsg）：agent-fsm/wait.py 會寫 brain_wait.json，但 `thinking/2026-11/10/two-machines/gitignore_classes.json` 沒有給它分類。
+    - 影響：用 git 管目錄樹時，會多一個沒被 ignore 的檔。功能本身不受影響。
+    - 已寄 head-core，信 01794644164154455072.3194515.3274980。要不要帶著這 8 紅換，由 head-core 定。
+- **suite.sh 今天改了三處**（舊版留著）：
+  - 乾淨複本不帶 repo 的 `impls/*/bin`（06 第 6 條）；
+  - PATH 拿掉 `~/.local/bin`；
+  - 每支 bin 夾從 build 抄進複本。
+  - 第一次跑沒抄到 bin，那次作廢重跑。
+- **r5 預演**（暫存樹，在 PIN-1）：`rehearse-r5.log` FAIL=0。swap all 2.20 s、extras 1.83 s、rollback 0.86 s。
+- **知識庫**：在乾淨複本跑 index_check，4 個索引檔、124 條，0 個問題。
+
+## 換後驗（各線報的，r5 已驗過）
+
+r5 換好之後，逐條在暫存樹看過，12 條都過。第 9 步換活樹之後，照這張表再看一次（暫存樹路徑換成 `~/aos-home`）。
+
+| # | 看什麼 | 過的樣子 |
+|---|---|---|
+| 1 | `lib/.aos-source.json` 等章 | `commit` 是 PIN |
+| 2 | lib/agent 底下的 board、comm、packs | 三樣都在 |
+| 3 | ws_write 工具 | 有執行權限 |
+| 4 | lib/agent/guard | 夾在，沒有 `__pycache__` |
+| 5 | hooks.json | 沒有一份引用 guard（換後清單第 10 條：今天不掛） |
+| 6 | kernel 額度表 | 有 `mem_total_mb`，值是 1 |
+| 7 | hold | 有 `procs_state_path` |
+| 8 | self_state | 有 parent 和 notify_box 欄 |
+| 9 | subagent | 帶 `AOS_PARENT_STACK` |
+| 10 | knowledge 底下每個 json | `json.load` 都不報錯 |
+| 11 | templates 的 kits.json 和 cli/share.json | 都在 |
+| 12 | agent-fsm/wait.py | 有 brain_wait，跑過的 think 夾會出現 brain_wait.json |
 
 ## 檔
 
