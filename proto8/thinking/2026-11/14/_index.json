@@ -86,5 +86,11 @@
  },
  "wait-user-rewrite-1114.md": {
   "description": "WAIT_USER 舊帳 36 筆逐筆查證後怎麼改：37 個子項結案、17 個搬進使用者專區、2 件改列待派工（11-14）"
+ },
+ "wake-1114": {
+  "description": "分檔夾：wake-1114：沒開畫面時，eca claude 怎麼及時收到 aos 信（線醒 ok-wake，研究加規劃）"
+ },
+ "wake-1114.md": {
+  "description": "wake-1114：沒開畫面時，eca claude 怎麼及時收到 aos 信（線醒 ok-wake，研究加規劃）"
  }
 }
