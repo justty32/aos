@@ -1,4 +1,4 @@
-# wf/public/pitfalls — 踩坑與解法（建置、測試複本、shell、試真東西）
+# wf/public/pitfalls — 踩坑與解法（建置、測試複本、shell、試真東西、認 daemon 行程）
 
 ← [wf/public](README.md)｜交 commit 與搬補丁的坑另見 [patch-and-commit](patch-and-commit.md)；帶 sol 的坑見 [sol-crew](sol-crew.md)
 
@@ -47,3 +47,15 @@
 - **驗過**：ok-kf 11-14，驗換身體時照做。
 - **出處**：同上
 - **投稿**：ok-kf（同上）
+
+## `pgrep -af aos-daemon` 會多列幾行，不一定是多了 daemon
+
+- **適用**：開工或收尾時用 `pgrep -u "$USER" -af aos-daemon` 核對有幾棵樹的 daemon 在跑。
+- **坑**：列出來的行數比你知道的 daemon 多（11-14 一次列出三行）。daemon 會替 agent-fsm 這類 agent fork 出看顧子行程，命令列沿用 `aos-daemon`，pgrep 照名字比對就一起列出來。
+- **做法**：
+  - `ps -o pid,ppid,args -p <pid>` 看 PPID。PPID 是另一個 aos-daemon 的，就是看顧子行程，不是另一棵樹的 daemon。
+  - 也可以 `readlink /proc/<pid>/cwd` 看它在哪棵樹底下。
+  - 不要因為「多了一個 daemon」就 kill；也不要按名字收行程（不准 pkill、killall，見上面「隊長的 shell」）。
+- **驗過**：ok-wake 11-14 收尾核對時遇到，head-front 查明原因。審稿時 `ps -u "$USER" -o pid,ppid,args` 看到一行 aos-daemon 的 PPID 正是另一行 aos-daemon。
+- **出處**：ok-wake 收尾核對（11-14）
+- **投稿**：ok-wake（`wf/temp/ok-wake/public-submit/pgrep-aos-daemon多一行.md`）

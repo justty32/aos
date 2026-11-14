@@ -32,3 +32,19 @@
 - **驗過**：ok-astra 11-14 10:20，AK17 計劃；第一次沒加「不准用工具」沒產出，加了後一次拿到 8 點、採納 5 點。ok-kf 11-14 同樣撞到 read_file 被擋，照同法解。ok-llmk2 11-14 撞到 "command" 那種：同一份 51 KB 提示第一次只得一行錯，開頭加那句後兩次（早評、審計劃）都產出 16～18 KB。
 - **出處**：`proto8/thinking/2026-11/14/astra-kernel-1114.md` AK17 節；`proto8/thinking/2026-11/14/kernel-framework-1114.md`；`proto8/thinking/2026-11/14/llmk2-1114/02b-Argon早評.md` 檔頭
 - **投稿**：ok-astra（`argon-one-shot-review.md`）＋ ok-kf（`pitfalls-shell-and-reviewers.md` 的 Argon、設計流程兩條）＋ ok-llmk2（`argon-headless-no-tools.md`），合併
+
+## claude -p 做到一半再交新話：stdin 用 stream-json、先不關
+
+- **適用**：自己起 `claude -p`（eca、工具、腳本），想在它做事做到一半時再交新的話給它。
+- **做法**：
+  1. 加 `--input-format stream-json --output-format stream-json --verbose`。每則訊息寫成一行 `{"type":"user","message":{"role":"user","content":"..."}}`，寫完 flush，**先不要關 stdin**。
+  2. 中途再寫一行，模型會在**手上那個工具做完後**讀到（實測工具做完 1.6 秒就處理）。兩則合成同一個 result。
+  3. 看到 `type: result`、又沒有要再寫的，才關 stdin，0.6 秒後行程 exit 0。**不關 stdin 它就一直等**，記得加逾時。
+  4. 可以跟 `--resume <id>` 一起用（session_id 不變）。
+- **坑**：
+  - PostToolUse hook 回的 `additionalContext` 送得到，但模型會當成「工具輸出裡的可疑指示」而不照做。真要用，system 先講明這段是誰送的、為什麼從這裡來。
+  - `claude -p` 的環境裡也有 `CLAUDE_CODE_MESSAGING_SOCKET`（跨 session 收件口），往裡寫信封也收得到，但那是沒寫進文件的介面。能用 stdin 就用 stdin。
+  - 前景 `sleep N` 會被 Claude Code 擋下，模型改丟背景；這時 `-p` 行程會活著等背景任務跑完，中間也收得到訊息。量測時別用包一層的方式繞過這個擋，模型會拒絕。
+- **驗過**：ok-wake 11-14，claude 2.1.325、haiku；探針 `run-stdin-1`、`run-stdin-2`（第二則 4.5 秒後、工具做完時進對話），`--resume` 那次接回同一段對話。審稿時對過 02-實測的結論與探針節。
+- **出處**：`proto8/thinking/2026-11/14/wake-1114/02-實測.md`（stdin 探針、additionalContext 探針兩節）、03、05；探針腳本在 `~/code/wake-1114/scripts/`
+- **投稿**：ok-wake（`wf/temp/ok-wake/public-submit/claude-p中途餵信.md`）
