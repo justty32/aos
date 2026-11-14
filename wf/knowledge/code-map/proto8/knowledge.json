@@ -57,7 +57,7 @@
     "_description.json": "",
     "common.json": "設定（鍵：_description、input、files、mail、mcp）"
    },
-   "errors.json": "設定（鍵：_description、codes、common、exits）",
+   "errors.json": "設定（鍵：_description、codes、common、exits、where）",
    "kernel.json": "設定（鍵：_description、what、where_to_send、templates、gate、write_your_own）",
    "kits.json": "設定（鍵：_description、use、layers、tools、limits）",
    "mailbox.json": "設定（鍵：_description、tools、rules、check、check_hook）",
