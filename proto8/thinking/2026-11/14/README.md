@@ -23,3 +23,4 @@
 | [board](board-1114.md) | board-1114：布告欄＋分級＋頻道協議 comm/1 規劃 |
 | [release-1114](release-1114.md) | 公開 demo 發佈版（線發 ok-release）：規劃走完（fable 設計、Argon 審、計劃 v2），使用者 ★1～★5 照推薦（核心頁雙語中文先、MIT＋CC BY 4.0、同 repo、不改歷史、頂層加 docs/ 等）；草稿 v2 給使用者看（宣傳頁 A／B 待挑、README 中英、文件 11 頁，指令照字實跑過）；待答：挑版、副標、原話逐句、docker；不 push、發佈檔還沒動 |
 | [kb-1114](kb-1114.md) | 重整 aos 知識庫與 wf/（線庫 ok-kb，fable）：用各隊經驗盤點重複、過時、跟程式對不上、找不到、太長；4 隻 sol＋2 隻 Claude 蒐集中，設計與方向題未出 |
+| [tree-swap-1114](tree-swap-1114.md) | 11-14 晚換樹整合步驟表（ok-kf）：各線清單（線雜、ace14088d、AK14／AK17、限 B1／B4／B5、gate triage、C′ A、三個 .env、兩條連結、aos-llm-kernel）對到一張表；釘 `246d4aa49`（含線星 ADV；乾淨複本全套綠，C++ repo 外編好）；swap.sh＋新 extras.sh（eca 定義 hooks 補 screen_linger、.env、guard 換裝附驗法、brain_notify、連結搬開）先 check 再 all、附退回；tree-swap 三支拿掉 rm（`b8ff23ada`）；暫存樹 r1、r2、r4 15 段全綠（r3 紅在 guard 驗法對 lead 的期望、已修）、換約 4 秒、退回 1 秒逐位元同；查到 `.env` 的 PATH 要 `--dotenv-override` 才生效，連結先不移；待使用者定 D0～D3（何時換、連結、brain_notify、aos-llm-kernel 先問 ok-sec）；Q10 佔位、今晚不做 |
