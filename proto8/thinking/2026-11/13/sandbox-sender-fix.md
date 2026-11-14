@@ -48,6 +48,7 @@
 ## 沒做的
 
 - T21 改 fail-closed：與使用者 11-12 晚裁定衝突，**待使用者裁**：維持「壞了不套沙箱照跑＋warning」，還是改成「壞了報錯不跑」。
+  - **11-14 已裁**：使用者在專區答 sbx=a（照推薦）——維持 11-12 的裁定：壞了照跑、不套沙箱、stderr 一行警告；不改 fail-closed（原信 01794620885365660267，[wait-user-rewrite-1114](../14/wait-user-rewrite-1114.md)）。
 - aos-post／aos-lock 的寄件人不動（代定 1）。
 - 額度 key 收「名字樣式」（06 T26 乙）沒做。
 - 活樹的 `~/aos-home/lib` 是複本：`lib/aos/kernel_llm/budget.py` 要重抄才生效（活樹的 `llm-gpt` kernel 用的就是它）；`knowledge/` 兩份也要重抄。C++ 的 aos-llm、aos-llm-kernel 在 repo 外 `~/code/fix-1113/build` 編好、測過，**待停樹換**（`impls/aos-llm/bin/aos-llm` 是 `~/.local/bin/aos-llm` 指的那支）。aos-post、aos-lock 也重編過（只多一個欄位、行為不變），可以不換。

@@ -80,10 +80,28 @@ ok-pilot 派 4 隻 opus 子 agent 並行唯讀查證（01 前 9 筆、01 後 7 �
 | 8 | 01b/letters/09-外部MCP同步.json | decide | 外部 MCP 工具抄進 aos 之後，server 那邊改了怎麼辦（兩題，都已照現況施工） | 11-14 已寄 | 01794620885335160485.1568388.947098 |
 | 9 | 01b/letters/14-沙箱設定寫壞.json | decide | 沙箱設定寫壞時，要照跑（不套沙箱）還是拒跑？（你 11-12 選照跑，gpt 隊試驗後有人想翻） | 11-14 已寄 | 01794620885365660267.1568393.947101 |
 | 10 | 02/letters/11-sandbox-root.json | decide | 沙箱「換成別的帳號跑」要不要用 root 設一次？ | 11-14 已寄 | 01794620885396347900.1568412.947104 |
-| 11 | 02/letters/05b-two-machines-roundtrip.json | verify | 下次在公司時：/mnt/c 起一棵樹、公司↔家機經 GitHub 來回一次 | 11-14 10:50 第二批（待寄） | — |
-| 12 | 03/letters/01-試驗場收帳.json | fyi | 試驗場舊帳六條都收掉了，只剩兩句用法給你留著 | 11-14 10:50 第二批（待寄） | — |
-| 13 | 04/letters/01-舊aos-mcp殘留.json | decide（irreversible） | 家機舊 aos MCP 留下的兩個 cache 夾，要刪嗎 | 11-14 10:50 第二批（待寄） | — |
+| 11 | 02/letters/05b-two-machines-roundtrip.json | verify | 下次在公司時：/mnt/c 起一棵樹、公司↔家機經 GitHub 來回一次 | 11-14 10:50 已寄 | 01794624634355980205.3118873.1322000 |
+| 12 | 03/letters/01-試驗場收帳.json | fyi | 試驗場舊帳六條都收掉了，只剩兩句用法給你留著 | 11-14 10:50 已寄（第一次被退：fyi 的 status 不能是 NEEDS-USER，改 DONE 重寄） | 01794624639778030564.3121877.1322542 |
+| 13 | 04/letters/01-舊aos-mcp殘留.json | decide（irreversible） | 家機舊 aos MCP 留下的兩個 cache 夾，要刪嗎 | 11-14 10:50 已寄 | 01794624634417922759.3118914.1322006 |
 | 14 | 04/letters/02-公司機暫存夾刪除名單.json | decide（irreversible） | 公司 WSL ~/code 底下 11-13 的暫存夾，這份刪除名單可以嗎 | 等回公司機對過名單再寄 | — |
+| 15 | 02/letters/11b-sandbox-root-run.json | chore | 你選了「現在跑一次」沙箱 root 身分層：要 sudo，只能你本人跑，指令在這（約 5 分鐘） | 11-14 10:50 已寄（使用者對第 10 封答 run 之後補的） | 01794624634448572400.3118933.1322009 |
+
+## 使用者回覆（11-14）
+
+第一批 10 封，使用者 11-14 09:54～09:59 全部答完（via cli）。第 3 封以後的回信用 `mailbox_read keep` 留下、`aos-user verify` level 1 都通過；第 1、2 封讀時沒留，改跟專區 `done/` 的 reply.json 逐欄比對一致。
+
+| # | 題 | 答 | 照推薦 | 後續 |
+|---|---|---|---|---|
+| 1 | push | push | 是 | 頂層 repo-aos 跟使用者當面再確認（via cli、不可逆）後由頂層推 |
+| 2 | W16b 改口摺疊 | add | 是 | 已落地 `8df76207b`（proto8/knowledge tidy 加 `#/converge`） |
+| 3 | screenenv、keeplog | keep、keep | 是 | 不用動 |
+| 4 | U2、U3、U5 | allow、narrow、decl；備註「夾名這塊，改成推薦用底線，實際上愛怎麼用怎麼用。」 | U3 否 | 頂層派 ok-misc 改規範 |
+| 5 | envfile、kill、selfcont、prefix、rest | full、unify、share、no、ok | 是 | 改程式，列 WAIT_USER「待派工」 |
+| 6 | fixok、P33、appx、oldentry、small | ok、clear、keep、archive、ok | 是 | 改條文與封存，列 WAIT_USER「待派工」 |
+| 7 | E2 | keep | 是 | 不用動 |
+| 8 | g3、g4 | a、a | 是 | 不用動 |
+| 9 | sbx | a（維持 11-12：壞了照跑、stderr 警告） | 是 | 不用改程式；`13/sandbox-sender-fix.md` 那條「待使用者裁」已註記 |
+| 10 | sbroot | run | **否** | 要 sudo、只能他本人跑；ok-pilot 先乾跑（只做 4 件：s6 程式進 /usr/local/bin、aos-run 帳號、/srv/aos-run、一行 sudoers），寫成第 15 封 chore |
 
 ## 待派工（已列進 WAIT_USER「待派工」一節）
 
