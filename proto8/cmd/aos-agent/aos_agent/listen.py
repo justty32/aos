@@ -169,14 +169,24 @@ def follow(a, last, keep):
         time.sleep(POLL)
 
 
-def seconds(v):
-    """--timeout-s：有限、不小於 0 的秒數；0 或不給旗標＝不設上限（inf／1e999／nan 都擋，E1）。"""
+def seconds(v, help=HELP, hint="leave it out to wait without limit"):
+    """--timeout-s：有限、不小於 0 的秒數；0 或不給旗標＝不設上限（inf／1e999／nan 都擋，E1）。help＝錯誤行的 usage 用誰的（ask 共用）。"""
     try:
         n = float(v)
         if not math.isfinite(n) or n < 0:
             raise ValueError
     except ValueError:
-        raise bad_args(HELP, "--timeout-s needs a finite number of seconds not below 0 (leave it out to wait without limit): %s" % v)
+        raise bad_args(help, "--timeout-s needs a finite number of seconds not below 0 (%s): %s" % (hint, v))
+    return n
+
+
+def cycles(raw, help=HELP):
+    """--timeout-cycles：正的十進位整數、不超過 signed 64-bit（ask 共用）。"""
+    if not raw or any(c < "0" or c > "9" for c in raw) or len(raw.lstrip("0")) > 19:
+        raise bad_args(help, "--timeout-cycles needs a positive decimal integer within signed 64-bit range: %s" % raw)
+    n = int(raw.lstrip("0") or "0")
+    if not 0 < n <= 9223372036854775807:
+        raise bad_args(help, "--timeout-cycles needs a positive decimal integer within signed 64-bit range: %s" % raw)
     return n
 
 
@@ -195,14 +205,7 @@ def cmd(argv):
     opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout", "--timeout-cycles": "timeout_cycles", "--last": "last"}, {"--follow": "follow"}, help=HELP, short=("-t", "-f"))
     if "timeout" in opts and "timeout_cycles" in opts:
         raise bad_args(HELP, "--timeout-s and --timeout-cycles are mutually exclusive")
-    timeout_cycles = None
-    if "timeout_cycles" in opts:
-        raw = opts["timeout_cycles"]
-        if not raw or any(c < "0" or c > "9" for c in raw) or len(raw.lstrip("0")) > 19:
-            raise bad_args(HELP, "--timeout-cycles needs a positive decimal integer within signed 64-bit range: %s" % raw)
-        timeout_cycles = int(raw.lstrip("0") or "0")
-        if not 0 < timeout_cycles <= 9223372036854775807:
-            raise bad_args(HELP, "--timeout-cycles needs a positive decimal integer within signed 64-bit range: %s" % raw)
+    timeout_cycles = cycles(opts["timeout_cycles"]) if "timeout_cycles" in opts else None
     timeout = None if opts.get("timeout") is None else seconds(opts["timeout"])
     last = None if opts.get("last") is None else count(opts["last"])
     if rest:

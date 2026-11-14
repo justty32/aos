@@ -5,6 +5,7 @@
   "aos-agent": {
    "aos_agent": {
     "__init__.py": "保留頂層說明、命令派發與主入口。",
+    "ask.py": "一問一答：say 一則再等最新那則回答（跟 subagent 工具的 op ask 同語意，不配對信名）。",
     "chat.py": "逐行寄訊息並等候回答的互動迴圈。",
     "common.py": "共用分層 help、錯誤指路、旗標、找 daemon 與表上的一隻（設了 AOS_KERNEL 先問表在哪再讀；ctl 動作才用的寄信等回信在 ctl/shared.py）。",
     "ctl": {
@@ -40,6 +41,7 @@
    "stack.gitignore": "可選的 stack 排除範本：暫存、鎖、本機資料與可重建紀錄不進 git。",
    "tests": {
     "test_add_dotenv.py": "Test ctl add dotenv override wrapping and definition environment precedence on an isolated daemon.",
+    "test_ask.py": "Test aos-agent ask (say then wait for the latest answer, like the subagent tool's op ask): flags, stdin, timeout exit code, a fake agent's answer.",
     "test_chat_read_line.py": "Test chat's line input in a real pty: Chinese + Backspace, arrow keys, long lines, pastes and EOF are read whole (11-12 chat-utf8).",
     "test_daemon_down.py": "Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing.",
     "test_goal.py": "Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0…",

@@ -17,6 +17,7 @@ subcommands:
   ctl      attach, list and manage agents (ctl --help lists its actions)
   say      put one message in its queue; prints the letter name
   listen   print its answer (wait for it, or show the last N)
+  ask      say one message, then wait for and print the latest answer (not matched to it)
   chat     one line per message, waits for each answer; Ctrl-C exits
   open     attach to its screen (--detach: open only)
   close    close its screen
@@ -53,11 +54,11 @@ if os.path.isfile(os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(
 else:
     from agent.agent_files import declared_files
 
-from . import common, ctl, say, listen, chat, screen, tools, llm, history, hook, system, goal
+from . import common, ctl, say, listen, ask, chat, screen, tools, llm, history, hook, system, goal
 from .common import Fail, parse
 
 SUBS = {"ctl": ctl.cmd,
-        "say": say.cmd, "listen": listen.cmd, "chat": chat.cmd,
+        "say": say.cmd, "listen": listen.cmd, "ask": ask.cmd, "chat": chat.cmd,
         "open": screen.cmd("open"), "close": screen.cmd("close"), "watch": screen.cmd("watch"),
         "tools": tools.cmd, "llm": llm.cmd, "history": history.cmd, "hook": hook.cmd, "system": system.cmd, "goal": goal.cmd}
 
