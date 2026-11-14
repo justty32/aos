@@ -137,7 +137,7 @@ agent-fsm 範本（templates/agent-fsm）本身與它身上的工具、guard 的
 - 痛的程度：小不便（hook 印得清楚就沒事，但模型可能把擋下的訊息當成真結果）
 - 提出者與日期：ok-pilot 2026-11-14
 - 出處：wf/temp/ok-pilot/aos-advice/before_tool擋下時tool_result標is_error-false.md；wf/temp/ok-pilot/hook-eca/report.md「附帶觀察」、hk-events.jsonl
-- 狀態：未處理。整理時查：這是現行設計，不是漏做。aos-mcp 的檔頭、`--help` 和 `cmd/aos-mcp/README.md` 都寫了「攔下＝結果文字是 hook stdout（空就 `[aos] hook: tool NAME blocked by hook HOOK.`），不算 isError」。投稿說「文件沒寫」只對知識庫：`aos/me/self_hook` 只寫「you get the hook's stdout as the result」，沒說算不算錯。agent-fsm act.py 一樣把 hook stdout 當 tool 訊息，沒有錯誤標記。
+- 狀態：已解（知識庫，1e67c58ff，ok-kb 11-14）：`aos/me/self_hook.json#/answer` 補一句「被擋的呼叫不標成錯誤，結果看起來像正常回答，hook 要自己印清楚它擋了」（建議 2）。程式不改：建議 1 的 `is_error:true` 沒做，建議 3 的兩邊對齊現況本來就一致。活樹待換樹。整理時查：這是現行設計，不是漏做。aos-mcp 的檔頭、`--help` 和 `cmd/aos-mcp/README.md` 都寫了「攔下＝結果文字是 hook stdout（空就 `[aos] hook: tool NAME blocked by hook HOOK.`），不算 isError」。投稿說「文件沒寫」只對知識庫：`aos/me/self_hook` 只寫「you get the hook's stdout as the result」，沒說算不算錯。agent-fsm act.py 一樣把 hook stdout 當 tool 訊息，沒有錯誤標記。
 
 ## sol 讀完必讀後只回一句「我會照做」就結束回合，要催一次才動手
 
