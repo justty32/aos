@@ -66,6 +66,14 @@ class ReservedFlags(unittest.TestCase):
                            print_flags=["--max-budget-usd", "0.5"])
         self.assertEqual(claude["print_flags"], ["--max-budget-usd", "0.5"])
 
+    def test_screen_close_after_s(self):
+        for value in (-1, 1.5, "600", True):
+            with self.subTest(value=value):
+                self.assertIn("screen_close_after_s must be a non-negative integer",
+                              self.fails(kind="claude", screen_close_after_s=value))
+        for value in (0, 600):
+            self.assertEqual(self.load(kind="claude", screen_close_after_s=value)["screen_close_after_s"], value)
+
     def test_shipped_cli_json_files_pass(self):
         proto = LIB.parent
         for path in sorted(list(proto.glob("templates/*/cli.json")) + list(proto.glob("lib/agent/*/cli.json"))):

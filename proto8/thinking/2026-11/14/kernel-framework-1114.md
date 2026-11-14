@@ -129,3 +129,14 @@
 - 同一份試驗場複本：agent daemon 換成框架站（daemon.json 的身體是 `lib/aos/kernel`、自己的 AOS_KERNEL 指自己的 requests；kernel.json `max_running: 3`、`queue: true`、`reply_via_me: true`；_sweeper 也算一格）。eca_bob（claude haiku，tools 補 subagent 包）掛上時帶 `AOS_KERNEL=<框架站>/requests`。
 - 叫它用 subagent 工具連 add 兩隻（def＝fsm_ann）：kid1 回 `added kid1 … subagents 1/4`、表上多一列；kid2（on_queued=ok）回 `queued kid2 at position 1 …`，框架站 queue.json 有它、表上沒有。腦收到的兩個工具結果都沒有報錯。ctl stop kid1 放一格後，kid2 一秒內出隊、running。再叫它 `subagent ls`（走查詢信）：kid1 stopped、kid2 running，subagents.json 的 kid2 從 queued_letter 換成 stack。
 - codex（gpt-6-luna）那半照規則不跑。複本已 shutdown；`~/code/kf-1114/pg-b14` 留著當證據。
+
+### C′（畫面延後關，A 包＝主體）
+- 使用者規則：stop／sleep 後延後關畫面（預設 10 分鐘、可設、0＝立刻），延後期間又起來就不關，pause 不關，有人看也照關。
+- 流程：sol-g1 盤點事實（kf-check/G-cprime-facts.md）→ fable 設計（G-cprime-design.md）→ ok-kf 修 → Argon 審（wf/temp/ok-kf/cprime/argon.md：抓到 reap 先拿鎖再讀單的順序漏洞與刪單 TOCTOU 等，提案六點全收）→ 定案 wf/temp/ok-kf/cprime/final.md → ok-kf-sol-1 施工（c1tree）。
+- 做法：after_stop 的 `screen_linger_stop` 在小格原子寫到期單 `screen_close.json`（token、停下那支 loop 與畫面身分），用畫面自己那台 tmux 的 `run-shell -b -d` 排到期指令（背景化，kill-server 收不到它）；after_start 的 `screen_linger_start`（第一格）撤單。到期 reap：無鎖先驗 token → 拿小格 lock → 鎖內重驗 token、畫面身分、`state.json` 對 `/proc` 的 loop 身分 → 先 close 再按 token 刪單；鎖忙 30 秒重排、最多 10 次。秒數在定義夾 cli.json `screen_close_after_s`（預設 600），兩格 hook 設 null＝不自動關。不讀 daemon 表、不改 C++。
+- 驗：main a964f0455 的三份乾淨複本（原樣／＋A／＋A＋B）跑 proto8 全部 tests 夾，逐夾狀態相同，只多了新測試（lib/agent 135→155、templates 20→21、aos-agent 116→119）；impls 四夾與 archive 原本就紅、三份一樣。真 tmux 劇本（kf-check/cprime_real_tmux.py，自有 socket、假 claude）20～28 全過：tmux 四個前提、stop 延後關、重起撤單、sleep／wake、pause 不關、走 kernel 的 rm 不帶 purge 延後關、0 當場關、有人 attach 照關、daemon shutdown 後照關。
+- 合到 main 時 knowledge/aos/cli/eca.json 與 ok-misc 的改動衝突，按鍵合（只加 screen_linger 一鍵）。
+- **B 包（ctl stop 拿掉立刻關、set-def --restart 自己關、docs/02 第 6 條、test_stop_linger、test_rm_keep）沒進**：等今晚換樹把活樹 lib／templates 換新、核對 ~/aos-home 各 eca 定義與現有 stack 的 hooks.json 都有兩格後才進，否則活樹直連 stop 會沒人關畫面。合好的 B 包檔照原路徑存在 wf/temp/ok-kf/cprime/B/（清單 FILES.txt），是對 main a964f0455 的整檔版本。
+- 沒做：sweeper 後援（SIGKILL／OOM、停著才開的畫面不補排）。
+- 自首：驗收時 ok-kf 誤 rm -rf 了兩份自己幾分鐘前建的 main 複本（verify-cprime-base／A-a964f0455），已報 xiaosi。
+- **今晚換樹清單（頂層 11-14 准排入；換不換、何時換等使用者點頭）**：(1) 活樹 lib/agent 與 templates 換新；(2) ~/aos-home 各 eca 定義的 hooks.json 補 screen_linger_start、screen_linger_stop 兩格，並核對現有 stack 的 hooks.json 沒蓋掉；(3) 換完驗 A 包在活樹生效後，才交 B 包的 commit。

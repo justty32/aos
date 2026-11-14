@@ -19,7 +19,7 @@
     "agent.json": "設定（鍵：_description、add、ls_state、phases、where_who）",
     "clock.json": "設定（鍵：_description、clock、register）",
     "daemon.json": "設定（鍵：_description、add、lifecycle、letters、ls、shutdown…）",
-    "eca.json": "設定（鍵：_description、turn、screen、external_mcp、cli_hooks）",
+    "eca.json": "設定（鍵：_description、turn、screen、external_mcp、cli_hooks、screen_linger）",
     "errors.json": "設定（鍵：_description、codes、timeouts）",
     "feedback.json": "",
     "flags.json": "設定（鍵：_description、placement、target、text、help、short）",

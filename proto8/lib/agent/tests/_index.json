@@ -14,6 +14,9 @@
  "test_cli_hook_follow.py": {
   "description": "驗畫面 hook 跟上 CLI 的對話（11-12 eca-slash）：id 換了就改記 session.txt；claude 的 /clear（SessionStart source clear）連 aos 的 history 一起清、原文搬到旁邊；codex 取標題的旁支 thread 不記。"
  },
+ "test_cli_linger.py": {
+  "description": "驗延後關畫面的到期單、假 tmux 排程、token 與本機身分、小格鎖及 hook 事件入口。"
+ },
  "test_cli_reserved_flags.py": {
   "description": "驗 cli.json 的 flags／print_flags 不准再寫 aos 自己會加的旗標（11-13 eca_main 第 6 項：codex 的 --skip-git-repo-check 寫第二次＝codex 退 2、信被丟）：讀設定時就 CfgBad。"
  },

@@ -47,6 +47,9 @@ def load_cfg(tool_dir):
         if mine:
             hint = " (for --settings: put the settings in the settings key of cli.json; aos merges them into its own)" if "--settings" in mine else ""
             cli_base.die("CfgBad", "%s: %s has %s, which aos adds itself; remove it%s" % (path, k, ", ".join(mine), hint))
+    delay = cfg.get("screen_close_after_s", 600)
+    if not (isinstance(delay, int) and not isinstance(delay, bool) and delay >= 0):
+        cli_base.die("CfgBad", "%s: screen_close_after_s must be a non-negative integer" % path)
     rb = cfg.get("reseed_bytes", RESEED_BYTES)                     # 11-10 two-machines 05：開新對話時接在題目前的紀錄上限
     if not isinstance(rb, int) or isinstance(rb, bool) or rb < 0:
         cli_base.die("CfgBad", "%s: reseed_bytes must be a non-negative integer" % path)

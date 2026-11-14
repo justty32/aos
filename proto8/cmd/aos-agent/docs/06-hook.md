@@ -123,6 +123,12 @@ sys.exit(0)                                                  # empty stdout = no
 cat >> "$HOME/letters.jsonl"
 ```
 
+## eca 畫面延後關
+
+範本有 `screen_linger_start`／`screen_linger_stop` 兩格 after_start／after_stop handler，前者排第一撤掉舊到期單，後者寫單並交 tmux 計時（on_error continue、4000 ms）。定義 cli.json 的 screen_close_after_s 非負整數秒，預設 600，0 寫單後當場核身分關畫面。handler 用事件 stack，不是自己的 AOS_STACK；處理 claude、codex 小格。
+
+start／wake 撤單，新活 loop 或新畫面不關；鎖忙 30 秒後再試、最多 10 次。有人接著看照關；stop／sleep／rm 或 daemon shutdown 有 after_stop 都會排，pause 不排。兩格在 stack 設 null 可停用，SIGKILL／OOM 與停著才開畫面第一批不補排。舊定義與 stack hooks 覆蓋須另外核對；直連 stop 接線 B 包要等換樹後才上。
+
 ## eca（縮水版）
 
 eca 的腦是外面的 CLI，aos 只看得到經過自己手的東西（圖紙 § 6）：

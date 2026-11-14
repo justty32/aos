@@ -41,6 +41,9 @@
  "cli_hook.py": {
   "description": "cli_session 的畫面 hook（CLI 講完一輪時叫）：跟上對話 id、/clear／/compact 時同步 aos 的 history、codex 壓縮跟上"
  },
+ "cli_linger.py": {
+  "description": "eca 停下時由 tmux 計時延後關畫面，起來撤單，到期核 token、畫面與本機 loop 身分。"
+ },
  "cli_mcp.py": {
   "description": "cli_session 接 MCP：aos-mcp 那台的旗標（claude 的 mcp.json／codex 的 -c）、外部 MCP server、tools_sub 子 agent 那台與 guard hook"
  },
@@ -103,6 +106,9 @@
  },
  "mailbox_send": {
   "description": "mailbox_send 工具（信箱包）：以自己名義寄一封信，給 agent 名字或信箱路徑，狀態 REQUEST／DONE／BLOCKED 等"
+ },
+ "screen_linger": {
+  "description": "screen_linger：eca 停下後由畫面自己的 tmux 計時關閉，起來撤單。"
  },
  "self_ctl": {
   "description": "self_ctl 工具（自我管理包）：停、暫停、睡或拔掉自己（只限叫它的 agent），送出請求就回"
