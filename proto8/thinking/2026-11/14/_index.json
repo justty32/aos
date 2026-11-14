@@ -35,6 +35,12 @@
  "misc-1114.md": {
   "description": "線雜（11-14）：eca_main 來信七項與線庚剩的、T45～T48 的收尾線；做到調查、施工圖與暫存樹搭好就交棒給 ok-misc，程式一行沒改"
  },
+ "onboard-1114": {
+  "description": "分檔夾：onboard-1114：派 agent 時的配給包（system prompt、工具、功能、權限）規劃（線 ok-onboard，只規劃）"
+ },
+ "onboard-1114.md": {
+  "description": "onboard-1114：派 agent 時的配給包（system prompt、工具、功能、權限）規劃（線 ok-onboard，只規劃）"
+ },
  "proc-mental-model": {
   "description": "proc 新心智模型（線程，11-14，純發想、不定稿、不出待裁題）：opus 11 個＋fable 8 個，重疊的合起來約 14 種想法。"
  },
