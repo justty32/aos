@@ -273,9 +273,10 @@
   },
   "aos-share": {
    "bin": {
-    "aos-share": "替共用夾與點名使用者的檔案套用六種 ACL 樣板。"
+    "aos-share": "替共用夾與點名使用者的檔案套用六種 ACL 樣板，另有唯讀體檢 check 與退回 reset。"
    },
    "tests": {
+    "test_check_reset.py": "Test aos-share check (secret-open, acl-masked, acl-missing, acl-present, unreadable) and reset, red before and green after.",
     "test_share.py": "Test aos-share templates, strict subid resolution, dry runs, errors and ancestor warnings."
    }
   },

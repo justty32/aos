@@ -5,6 +5,8 @@
 ```sh
 aos-share [--dry-run] KIND PATH (--group G | --uid U)...
 aos-share team /shared/team --group sub:600
+aos-share check [-R] [--list-acl] PATH...
+aos-share reset [-R] [--dry-run] PATH...
 aos-share --help
 ```
 
@@ -25,7 +27,25 @@ aos-share --help
 
 錯誤代號：`ArgumentsBad`、`FlagUnknown`、`SubidMissing`、`PathMissing`、`CommandMissing`、`AclFailed`；stderr 一行 `aos-share: error: CODE reason`，退 1。
 
-測試：`python3 -m unittest discover -s proto8/cmd/aos-share/tests`（需 `setfacl/getfacl`；可用 `KERNEL_TEST_TMP` 指定暫存夾的父夾；無法替外部 id 設 ACL 的環境會略過真 ACL 例子）。
+## 體檢與退回：`check`、`reset`
+
+出處：[sec-1114 10 第 1 期施工 1b](../../thinking/2026-11/14/sec-1114/10-第1期施工.md)。兩個子命令要寫在**第一個字**（`aos-share check …`）；寫在旗標後面（`aos-share --dry-run check …`）照舊當 KIND 看，報 `ArgumentsBad`，六種 KIND 的用法、輸出、錯誤代號都沒變。`-R`（＝`--recursive`）兩個都收：PATH 底下每一項也算，走的時候 symlink 跳過、不跟進去（PATH 本身是 symlink 就跟過去）。
+
+`aos-share check [-R] [--list-acl] PATH...`：唯讀，一行一個問題，最後一行 `total: N`（N＝上面的行數）；N 大於 0 退 1，否則退 0。ACL 直接讀 `system.posix_acl_access`／`system.posix_acl_default`（getfacl 讀的同一份），不需要 getfacl。
+
+| 行 | 什麼時候印 |
+|---|---|
+| `secret-open PATH mode=0644` | 普通檔、檔名是 `.env`、`*.env`、`token*`、`*token*.json`、`*.key`、`exec.json`、`*secret*`（分大小寫），或被這次掃到的某個 `tools.json` 的 `tools.*.env_file` 指到（相對路徑從那份 tools.json 的夾算；指示詞物件不算），而且 group 或 other 有 r（看 mode 的 `044`） |
+| `acl-masked PATH entry=u:ID:rwx effective=r--` | 有名字的 user／group 項目被 mask 壓掉一部分；預設 ACL 的寫成 `entry=d:u:…`。一個項目一行 |
+| `acl-missing PATH (parent has default ACL)` | 父夾的預設 ACL 有命名項目或 mask，這一項卻沒有擴充 ACL（多半是 `mv` 進來的） |
+| `acl-present PATH` | 只在 `--list-acl` 時印：有擴充 ACL 或預設 ACL 的項目，給 `reset` 前後比對 |
+| `unreadable PATH ERRNO` | 看不到這一項（例 `ENOENT`、`EACCES`；列不出內容的夾、讀不到的 tools.json 也算） |
+
+`aos-share reset [-R] [--dry-run] PATH...`：把樣板退回去。每個 PATH 依序跑 `setfacl [-R] -b PATH`（清掉擴充與預設 ACL），PATH 是夾就再跑 `chmod g-s,-t PATH`；加 `-R` 時底下每個夾也各跑一次 `chmod g-s,-t`。rwx 位不動，所以 `secret-open` 要自己 `chmod 600`。`--dry-run` 每步只印 argv（空白相接），不改東西、不檢查 PATH 在不在；真的做時 PATH 不在＝`PathMissing`，沒有 setfacl＝`CommandMissing`，某一步失敗＝`AclFailed`。重跑結果不變。
+
+產權不在這裡還原。換過 uid 的 proc 寫出來的檔，退回的第二步是跑 `aos-asuser --fix --recursive PATH`（它自己開 userns，用裡面的 0 把產權改回使用者；見 [aos-asuser](../aos-asuser/README.md)）。
+
+測試：`python3 -m unittest discover -s proto8/cmd/aos-share/tests`（`test_share.py` 是六種樣板，`test_check_reset.py` 是 check／reset；需 `setfacl/getfacl`；可用 `KERNEL_TEST_TMP` 指定暫存夾的父夾；無法替外部 id 設 ACL 的環境會略過真 ACL 例子）。
 
 新指令要跑一次 `proto8/install.sh` 才會出現在 `~/.local/bin`。
 

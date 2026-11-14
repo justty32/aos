@@ -27,6 +27,7 @@ import aos_sweep_proc
 
 
 BIN = REPO / "proto8" / "cmd" / "aos-sweeper" / "bin" / "aos-sweeper"
+ASUSER = REPO / "proto8" / "cmd" / "aos-asuser" / "bin" / "aos-asuser"
 NOW = datetime.datetime(2026, 11, 10, 12, 34, 56, 789000,
                         tzinfo=datetime.timezone.utc).timestamp()
 STAMP = "2026-11-10T12-34-56.789Z"
@@ -699,6 +700,162 @@ class SweepTests(unittest.TestCase):
         self.assertFalse((cell / "ctl.json").exists())
         self.assertFalse(self.pending.exists())
         self.assertEqual(snapshot(cell), before)
+
+    # 19: environ unreadable (another uid) falls back to /proc status Uid vs D/uids.json.
+    def asuser_loop(self, number, relative="procs/orphan"):
+        """Start aos-asuser sub:N -- sleep 300 and return (cell, parent proc, sleep pid, its real uid)."""
+        try:
+            probe = subprocess.run([sys.executable, str(ASUSER), "sub:1", "--", "true"], cwd="/",
+                                   env=clean_env(), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                   text=True, timeout=10)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            self.skipTest("aos-asuser cannot run here: %s" % exc)
+        if probe.returncode != 0:
+            self.skipTest("aos-asuser sub:1 -- true failed (newuidmap or subuid missing?): %s"
+                          % probe.stderr.strip())
+        cell = self.d / relative
+        cell.mkdir(parents=True, exist_ok=True)
+        proc = self.own_process([sys.executable, str(ASUSER), "sub:%d" % number, "--", "sleep", "300"],
+                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL)
+        child, uid = None, None
+        end = time.monotonic() + 5
+        while time.monotonic() < end and uid in (None, os.getuid()):
+            time.sleep(0.05)
+            self.assertIsNone(proc.poll(), "aos-asuser exited early")
+            kids = []
+            for task in Path(f"/proc/{proc.pid}/task").iterdir():
+                kids += (task / "children").read_text().split()
+            if len(kids) != 1:
+                continue
+            child = int(kids[0])
+            status = Path(f"/proc/{child}/status").read_text()
+            if "\nName:\tsleep\n" not in "\n" + status:
+                continue
+            uid = int(next(l for l in status.splitlines() if l.startswith("Uid:")).split()[1])
+        if child is None or uid in (None, os.getuid()):
+            self.skipTest("aos-asuser child did not switch uid within 5 s")
+        try:
+            Path(f"/proc/{child}/environ").read_bytes()
+        except PermissionError:
+            pass
+        else:
+            self.skipTest("environ of a sub:N process is readable here; fallback path not reachable")
+        # Resolve sub:N against a substitute subuid file whose range starts so that sub:number == uid.
+        subuid = self.tmp / "subuid"
+        subuid.write_text("%d:%d:65536\n" % (os.getuid(), uid - number + 1), encoding="utf-8")
+        override = patch.dict(os.environ, {"AOS_SHARE_SUBUID": str(subuid)})
+        override.start()
+        self.addCleanup(override.stop)
+        self.write_state(cell, child)
+        return cell, proc, child, uid
+
+    def test_19_unreadable_environ_without_ledger_is_left_alone(self):
+        self.fast_process_checks()
+        cell, proc, child, _uid = self.asuser_loop(5)
+        self.assertFalse((self.d / "uids.json").exists())
+        for now in (NOW, NOW + 301):
+            report = self.sweep(now=now, stop_grace_s=0)
+            self.assert_uncontrolled(cell, proc)
+            matches = [row for row in report["processes"]["orphans"] if row["cell"] == "procs/orphan"]
+            self.assertEqual(matches, [{"cell": "procs/orphan", "pid": child,
+                                        "action": "alive but cannot read its environment "
+                                                  "(Permission denied); left alone"}])
+
+    def test_19_unreadable_environ_without_cell_in_ledger_is_left_alone(self):
+        self.fast_process_checks()
+        cell, proc, child, _uid = self.asuser_loop(5)
+        self.write_json(self.d / "uids.json", {"procs/other": 5})
+        report = self.sweep(stop_grace_s=0)
+        self.assert_uncontrolled(cell, proc)
+        self.assertTrue(any(row["cell"] == "procs/orphan" and row["pid"] == child
+                            and "cannot read its environment" in row["action"]
+                            for row in report["processes"]["orphans"]))
+
+    def test_19_unreadable_environ_with_matching_ledger_is_swept(self):
+        self.fast_process_checks()
+        cell, proc, child, _uid = self.asuser_loop(5)
+        self.write_json(self.d / "uids.json", {"procs/orphan": 5})
+        first = self.sweep()
+        self.assertEqual(self.read_json(cell / "ctl.json"), {"cmd": "stop", "seq": 1})
+        self.assertEqual(self.read_json(self.pending),
+                         {str(cell): {"pid": child, "ticks": start_ticks(child), "stop_at": NOW, "seq": 1}})
+        self.assertTrue(any(row["pid"] == child and "wrote stop" in row["action"]
+                            for row in first["processes"]["orphans"]))
+        second = self.sweep(now=NOW + 1, stop_grace_s=0)
+        self.assertTrue(any(row["pid"] == child and "sent SIGTERM" in row["action"]
+                            for row in second["processes"]["orphans"]))
+        self.assertEqual(proc.wait(timeout=5), 128 + signal.SIGTERM)
+        self.assertFalse(Path(f"/proc/{child}").exists())
+
+    def test_19_unreadable_environ_with_mismatching_ledger_is_left_alone(self):
+        self.fast_process_checks()
+        cell, proc, child, _uid = self.asuser_loop(5)
+        self.write_json(self.d / "uids.json", {"procs/orphan": 6})
+        for now in (NOW, NOW + 301):
+            report = self.sweep(now=now, stop_grace_s=0)
+            self.assert_uncontrolled(cell, proc)
+            matches = [row for row in report["processes"]["orphans"] if row["cell"] == "procs/orphan"]
+            self.assertEqual(matches, [{"cell": "procs/orphan", "pid": child,
+                                        "action": "alive, environment unreadable, uid mismatch "
+                                                  "with uids.json; left alone"}])
+
+    def test_19_state_window_uid_is_ignored(self):
+        self.fast_process_checks()
+        cell, proc, child, uid = self.asuser_loop(5)
+        self.write_json(self.d / "uids.json", {"procs/orphan": 6})
+        state = self.read_json(cell / "state.json")
+        state.update(uid=uid, user="sub:6")
+        self.write_json(cell / "state.json", state)
+        report = self.sweep(stop_grace_s=0)
+        self.assert_uncontrolled(cell, proc)
+        self.assertTrue(any(row["pid"] == child and "uid mismatch" in row["action"]
+                            for row in report["processes"]["orphans"]))
+
+    def test_19_bad_ledger_is_left_alone_with_the_old_message(self):
+        """A broken uids.json never leads to a stop: every shape below gives the no-ledger result."""
+        self.fast_process_checks()
+        cell, proc, child, _uid = self.asuser_loop(5)
+        ledger = self.d / "uids.json"
+        old = [{"cell": "procs/orphan", "pid": child,
+                "action": "alive but cannot read its environment (Permission denied); left alone"}]
+        cases = {
+            "not json": b"{procs/orphan: 5",
+            "empty file": b"",
+            "bad utf-8": b'{"procs/orphan": 5, "\xff\xfe": 1}',
+            "top is array": b'[["procs/orphan", 5]]',
+            "top is string": b'"procs/orphan"',
+            "top is number": b"5",
+            "top is null": b"null",
+            "value bool true": b'{"procs/orphan": true}',
+            "value string": b'{"procs/orphan": "5"}',
+            "value float": b'{"procs/orphan": 5.0}',
+            "value null": b'{"procs/orphan": null}',
+            "value list": b'{"procs/orphan": [5]}',
+            "value zero": b'{"procs/orphan": 0}',
+            "value negative": b'{"procs/orphan": -5}',
+            "value too big": b'{"procs/orphan": 65537}',
+            "value huge": b'{"procs/orphan": 100000000000000000000}',
+        }
+        for name, raw in cases.items():
+            with self.subTest(name):
+                ledger.write_bytes(raw)
+                report = self.sweep(now=NOW + 301, stop_grace_s=0)
+                self.assert_uncontrolled(cell, proc)
+                matches = [row for row in report["processes"]["orphans"] if row["cell"] == "procs/orphan"]
+                self.assertEqual(matches, old)
+        with self.subTest("unreadable file"):
+            ledger.write_text('{"procs/orphan": 5}', encoding="utf-8")
+            ledger.chmod(0)
+            self.addCleanup(ledger.chmod, 0o600)
+            if os.access(ledger, os.R_OK):
+                self.skipTest("running with read access despite mode 000 (root?)")
+            report = self.sweep(now=NOW + 301, stop_grace_s=0)
+            self.assert_uncontrolled(cell, proc)
+            matches = [row for row in report["processes"]["orphans"] if row["cell"] == "procs/orphan"]
+            self.assertEqual(matches, old)
+        self.assertIsNone(proc.poll())
+        self.assertTrue(Path(f"/proc/{child}").exists())
 
     # aos-daemon-ctl sweep runs the same code inside the command.
     def ctl(self, *args):

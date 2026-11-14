@@ -3,8 +3,11 @@
 對得上 /proc（同 daemon adopt 的 live_in_cell，但 boot_id 必須有）、/proc/<pid>/environ 的 AOS_STACK＝這格、AOS_DAEMON＝這台、活了 60 秒以上。
 daemon 不在（state 窗對不上 /proc）＝不碰任何行程：活著的子項本來就是等下一台接回的。
 讀 /proc、送訊號是 N-17「只有 daemon 碰 pid」的第二個例外（第一個是 poke）。寫過 stop 的記在 D/.sweeper_pending.json（點開頭＝不進 image）。"""
+import errno
 import json
 import os
+import pwd
+import re
 import signal
 import time
 
@@ -12,6 +15,7 @@ import aos_flags
 import daemon_ctl as dc
 
 PENDING = ".sweeper_pending.json"
+UIDS = "uids.json"          # daemon stack 裡的帳本 {"<格相對 D 的路徑>": N}＝sub:N；這期只讀（sec-1114 1d）
 STOP_GRACE_S = 300      # 寫了 stop 之後，至少這麼久、而且是之後的某一輪還在，才送訊號
 MIN_AGE_S = 60          # 剛 fork、daemon 還沒寫表的窗
 TERM_WAIT_S = 10        # SIGTERM 後等幾秒才 SIGKILL（同 daemon 收子項的 grace）
@@ -45,7 +49,7 @@ def _age_s(ticks):
 
 
 def _environ(pid):
-    """/proc/pid/environ 的 dict；讀不到（別的帳號＝EPERM）丟 OSError。"""
+    """/proc/pid/environ 的 dict；讀不到（別的帳號＝EACCES，即 PermissionError）丟 OSError。"""
     with open("/proc/%d/environ" % pid, "rb") as fh:
         raw = fh.read()
     out = {}
@@ -54,6 +58,63 @@ def _environ(pid):
         if eq:
             out[k.decode("utf-8", "replace")] = v.decode("utf-8", "replace")
     return out
+
+
+def _real_uid(pid):
+    """/proc/pid/status 那行 Uid: 的第一欄（實際 uid）；讀不到＝None。"""
+    try:
+        with open("/proc/%d/status" % pid, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if line.startswith("Uid:"):
+                    return int(line.split()[1])
+    except (OSError, ValueError, IndexError):
+        return None
+    return None
+
+
+def _subuid(number):
+    """sub:N 換真號，同 aos-share：目前使用者在 /etc/subuid（測試可用 AOS_SHARE_SUBUID）的第一筆範圍，起點＋N－1；換不出＝None。"""
+    try:
+        uid = os.getuid()
+        user = pwd.getpwuid(uid).pw_name
+    except (KeyError, OSError):
+        return None
+    filename = os.environ.get("AOS_SHARE_SUBUID", "/etc/subuid")
+    try:
+        with open(filename, encoding="utf-8") as source:
+            for line in source:
+                if not line.strip() or line.lstrip().startswith("#"):
+                    continue
+                fields = line.rstrip("\n").split(":")
+                if fields[0] not in (user, str(uid)):
+                    continue
+                if len(fields) != 3 or not all(re.fullmatch(r"[0-9]+", x) for x in fields[1:]):
+                    return None
+                numbers = [value.lstrip("0") or "0" for value in fields[1:]]
+                if any(len(value) > 10 for value in numbers):
+                    return None
+                start, count = map(int, numbers)
+                if start > 2**32 - 2 or count > 2**32 - 2 or start + count - 1 > 2**32 - 2 or number > count:
+                    return None
+                return start + number - 1
+    except (OSError, UnicodeError):
+        return None
+    return None
+
+
+def _ledger_uid(d, cell):
+    """帳本 D/uids.json 給這格的真 uid；帳本不在、讀不到、沒有這格、N 不合法或換不出真號＝None（照舊不碰）。"""
+    try:
+        with open(os.path.join(d, UIDS), encoding="utf-8") as fh:
+            ledger = json.load(fh)
+    except (OSError, ValueError, UnicodeError):
+        return None
+    if not isinstance(ledger, dict):
+        return None
+    n = ledger.get(os.path.relpath(cell, d))
+    if type(n) is not int or not 1 <= n <= 65536:
+        return None
+    return _subuid(n)
 
 
 def _same(pid, ticks):
@@ -129,9 +190,16 @@ def _orphan(prog, d, cell, loop_name, boot):
     try:
         env = _environ(pid)
     except OSError as e:
-        return None, pid, "alive but cannot read its environment (%s); left alone" % (e.strerror or e)
-    if env.get("AOS_STACK", "").rstrip("/") != cell or env.get("AOS_DAEMON", "").rstrip("/") != d:
-        return None, pid, "alive but not started by this daemon for this cell; left alone"
+        if not (isinstance(e, PermissionError) and e.errno == errno.EACCES):
+            return None, pid, "alive but cannot read its environment (%s); left alone" % (e.strerror or e)
+        want = _ledger_uid(d, cell)
+        if want is None:
+            return None, pid, "alive but cannot read its environment (%s); left alone" % (e.strerror or e)
+        if _real_uid(pid) != want:
+            return None, pid, "alive, environment unreadable, uid mismatch with uids.json; left alone"
+    else:
+        if env.get("AOS_STACK", "").rstrip("/") != cell or env.get("AOS_DAEMON", "").rstrip("/") != d:
+            return None, pid, "alive but not started by this daemon for this cell; left alone"
     if _age_s(ticks) < MIN_AGE_S:
         return None, pid, "alive and off the table but younger than %d s; looked at again next round" % MIN_AGE_S
     return pid, ticks, None
