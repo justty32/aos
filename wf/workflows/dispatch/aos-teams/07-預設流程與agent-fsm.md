@@ -27,6 +27,10 @@
 - 蒐集和寫碼優先交給 gpt，**只用 sol、不用 terra，sol 頂替 sonnet 的位置**（使用者 11-14「不要terra，盡量用sol，把sol作爲sonnet來用」），一律走本地 LiteLLM 上的 agent-fsm，**不走 codex**（使用者 11-14「不要走codex」）；走不通由 sonnet／claude 補位；設計判斷仍由 opus 和 fable 做。上面「等 agent-fsm 有雛形」的條件從 11-14 起改成「直接試」。
 - 各線有需要可以自己在暫存樹的 aos 裡掛 kernel 或 agent，不用先問（使用者 11-14「然後有需要的，可以自己掛kernel或agent。」）；自己記 pid、收尾收乾淨，活樹照舊不動。
 - **頂層也當 kernel**（使用者 11-14「善用aos體系，掛opus eca，讓他們成爲kernel，然後讓他們自己底下掛各種」「你自己也成爲kernel好了」「讓他們都掛在你底下」「他們的工作區...你可以在wf弄temp/xxx分給他們」）：repo-aos 開 `kernel_gate`，把 opus eca（定義 `~/aos-home/agents/opus-kernel`）掛在自己底下，啟動請求經過頂層的 gate；工作區放在 `wf/temp/<名字>`（已 gitignore）。這些 eca 自己也可以開 gate，在底下掛 sol 的 agent-fsm。
+- **頂層的雜務自動化**（使用者 11-14「太多的請求...你可以派一個claude subagent幫你寫程式…可以另外弄個sonnet agent，幫你當小廝，重要的事情馬上給你，普通通知每隔一段時間再給你」「commit這塊，你也可以開始想辦法，同樣，寫程式或派小廝。或是弄個fsm agent掛在你底下」「要想辦法，你可以把你的意見交給fable，讓他幫你規劃」）：
+  - 小廝 `xiaosi`（sonnet eca，定義 `~/aos-home/agents/xiaosi`）收所有 ok-* 的回報：要緊的立刻轉給頂層，其他的每 20 分鐘彙整一封再轉，靠頂層的 clock 項 `xiaosi-digest` 定時叫它。
+  - gate 自動初步處理，紀錄見 `proto8/thinking/2026-11/14/gate-auto-1114.md`。
+  - commit 排隊，先交給 fable 規劃，紀錄見 `proto8/thinking/2026-11/14/commit-queue-1114.md`。
 - **rlimit**（使用者 11-14「eca...建議不要setrlimit，你就跟他們說請他們自行收斂，但是fsm都可。」）：eca 不設 rlimit，請它們自己收斂用量；agent-fsm 可以設。家機沒有 s6，`--limits` 用不了，要設就用 `prlimit`。
 - 原本排的「fsm 真腦跑一整晚」不另外做測試，改成用 LiteLLM gpt 做實際的施工。
 
