@@ -1,0 +1,154 @@
+<!-- A self-contained Traditional Chinese aos landing draft pairing terminal commands with recorded folder changes. -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aos · 資料夾，就是函數。</title><!-- copy:H1 -->
+<style>
+:root{--paper:#f3f0e6;--ink:#223b34;--muted:#55685e;--line:#bbc4b6;--accent:#b13d20;--mint:#d8e9c4;--terminal:#192e28;--terminal-text:#e5eedc;--mono:"Iosevka","Cascadia Code","DejaVu Sans Mono",monospace;--serif:"Noto Serif TC","Source Han Serif TC","Songti TC",serif;--sans:"Noto Sans TC","Source Han Sans TC",sans-serif}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:2rem}body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.75;background-image:radial-gradient(#223b3412 .7px,transparent .7px);background-size:9px 9px}a{color:inherit;text-underline-offset:.25em}a:hover{color:var(--accent)}a:focus-visible,summary:focus-visible,pre:focus-visible{outline:3px solid var(--accent);outline-offset:5px}::selection{background:var(--mint);color:var(--ink)}.wrap{width:min(1200px,calc(100% - 64px));margin-inline:auto}header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding-block:24px;border-bottom:1px solid var(--ink)}.brand{font-family:var(--mono);font-weight:800;font-size:34px;letter-spacing:-3px;text-decoration:none}.nav{display:flex;gap:24px;font:13px var(--mono)}.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:64px;padding:78px 0 66px;align-items:end}.eyebrow{font-size:12px;letter-spacing:.1em;color:var(--accent);margin:0 0 24px}.eyebrow::before{content:"";display:inline-block;width:8px;height:8px;background:var(--accent);margin-right:10px}h1{font:600 clamp(46px,6.1vw,82px)/1.23 var(--serif);letter-spacing:-.055em;margin:0;max-width:8em;text-wrap:balance}.pitch{margin:0;font-size:17px;line-height:1.95;max-width:32em}.hero-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:25px}.button{display:inline-flex;align-items:center;gap:20px;min-height:48px;padding:10px 20px;text-decoration:none;border:1px solid var(--ink);font:14px var(--mono)}.button.primary{background:var(--ink);color:var(--paper)}.button.primary:hover{background:var(--accent);border-color:var(--accent)}.button span{font-size:20px}.workbench{border:1px solid var(--ink);box-shadow:9px 9px 0 #223b3415;background:var(--paper);animation:arrive .7s ease-out both}.bench-top{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 28px;border-bottom:1px solid var(--ink)}h2{font-family:var(--serif);font-size:clamp(25px,3vw,36px);font-weight:600;line-height:1.45;margin:0}.serial{font:12px var(--mono);letter-spacing:.08em;color:var(--muted)}.security{margin:0;padding:18px 28px;border-bottom:1px solid var(--ink);background:#f1e2d3;font-size:14px;line-height:1.8}.security::before{content:"!";font:bold 16px var(--mono);display:inline-grid;place-items:center;border:1px solid var(--accent);color:var(--accent);width:22px;height:22px;margin-right:12px}.panes{display:grid;grid-template-columns:1fr 1fr;min-width:0}.terminal{min-width:0;background:var(--terminal);color:var(--terminal-text);padding:26px 28px}.pane-heading{display:flex;align-items:center;gap:10px;font:12px var(--mono);letter-spacing:.08em;margin:0 0 24px}.lamp{width:8px;height:8px;border-radius:50%;background:#c4dfa1}.terminal pre{font-size:13px;line-height:1.85;margin:0}.terminal .output{border-top:1px solid #79948266;margin-top:25px;padding-top:20px}.terminal .output pre{color:#c4dfa1;white-space:pre-wrap;overflow-wrap:anywhere}.output .pane-heading{color:#afc3b4;margin-bottom:12px}pre{font-family:var(--mono);max-width:100%;overflow:auto;tab-size:2}code{font-family:var(--mono)}.files{min-width:0;padding:26px 28px;background:linear-gradient(135deg,#f7f5ed,#e8edde)}.folder-path{font:12px/1.7 var(--mono);margin:0 0 22px;overflow-wrap:anywhere}.folder-icon{width:28px;height:22px;flex-shrink:0}.file-comparison{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line);gap:16px}.file-column{min-width:0}.file-column h3{font:11px var(--mono);letter-spacing:.1em;margin:20px 0 16px;color:var(--muted)}.file-column pre{font-size:12px;line-height:2;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.new-file{background:var(--mint);color:var(--ink);box-shadow:3px 0 0 var(--mint),-3px 0 0 var(--mint)}.bench-foot{border-top:1px solid var(--ink);padding:0 28px}details{border-top:1px solid var(--line)}details:first-child{border-top:0}summary{cursor:pointer;padding:18px 0;font:13px/1.7 var(--mono)}summary:hover{color:var(--accent)}.bench-foot pre{background:#e9e8dc;padding:20px;font-size:12px;line-height:1.85;margin:0 0 22px}.setup-link{margin:0 0 20px;font:14px var(--mono)}.horizon{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:90px 0 70px;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}.today,.vision{padding:32px 36px 36px 0;min-width:0}.vision{padding-left:36px;padding-right:0;border-left:1px dashed var(--muted);background:repeating-linear-gradient(135deg,transparent,transparent 10px,#223b3405 10px,#223b3405 11px)}.section-label{font:12px var(--mono);color:var(--accent);margin:0 0 18px;letter-spacing:.1em}.today h2{font-size:28px}.statement{font-size:16px;margin:26px 0 0;max-width:31em}.vision h2{font-size:36px;max-width:10em}.diagram{width:100%;height:58px;margin-top:28px;color:var(--ink)}.status{display:grid;grid-template-columns:180px 1fr;gap:36px;padding-bottom:64px}.status h2{font:16px var(--mono);padding-top:6px}.status p{font-size:17px;max-width:43em;margin:0}.status .hero-links{margin-top:24px}footer{border-top:1px solid var(--ink);display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:25px 0 35px;font:12px/1.8 var(--mono)}footer p{margin:0}footer a{margin-left:20px}@keyframes arrive{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@media(min-width:1500px){.hero{padding-top:100px;padding-bottom:80px}}
+@media(max-width:850px){.wrap{width:calc(100% - 36px)}.hero{grid-template-columns:1fr;gap:28px;padding:48px 0 38px}h1{font-size:58px;max-width:10em}.pitch{max-width:38em}.panes{grid-template-columns:1fr}.terminal{border-bottom:1px solid var(--ink)}.horizon{margin-top:56px}.today,.vision{padding:26px 22px 28px 0}.vision{padding-left:22px;padding-right:0}.status{grid-template-columns:1fr;gap:16px}}
+@media(max-width:540px){.wrap{width:calc(100% - 28px)}header{padding-block:17px}.nav{gap:15px;font-size:12px}.brand{font-size:29px}h1{font-size:46px}.eyebrow{margin-bottom:18px}.pitch{font-size:16px}.bench-top,.security,.terminal,.files{padding-left:18px;padding-right:18px}.bench-top{align-items:flex-start}.bench-top h2{font-size:25px}.serial{font-size:10px;padding-top:8px}.bench-foot{padding-inline:18px}.workbench{box-shadow:5px 5px 0 #223b3415}.terminal pre{font-size:12px}.file-comparison{gap:10px}.file-column pre{font-size:11px}.horizon{grid-template-columns:1fr}.today{padding:27px 0}.vision{border-left:0;border-top:1px dashed var(--muted);padding:27px 0}.vision h2{font-size:32px;max-width:12em}.status{padding-bottom:38px}footer a{margin:0 20px 0 0}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.workbench{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<a class="brand" href="#top">aos</a>
+<nav class="nav" aria-label="Navigation"><a href="docs/zh/get-started.html">Get started ↗</a><a href="&lt;REPO_URL&gt;">GitHub ↗</a></nav>
+</header>
+<main id="top">
+<section class="hero" aria-labelledby="hero-title">
+<div>
+<!-- copy:TAG --><p class="eyebrow">原型 · demo 版</p>
+<!-- copy:H1 --><h1 id="hero-title">資料夾，就是函數。</h1>
+</div>
+<div>
+<!-- copy:P1 --><p class="pitch">aos 把 AI agent 當成一般的 Linux 行程，住在資料夾裡。每個工具、每隻 agent、每封信，都是你可以 ls、可以讀、可以設權限的資料夾或檔案。</p>
+<div class="hero-links"><a class="button primary" href="#try"><!-- copy:TRY -->不用任何模型，先試試 <span aria-hidden="true">↓</span></a></div>
+</div>
+</section>
+
+<section class="workbench" id="try" aria-labelledby="try-title">
+<div class="bench-top"><!-- copy:TRY --><h2 id="try-title">不用任何模型，先試試</h2><span class="serial">L0 / ann</span></div>
+<!-- copy:SEC --><p class="security">agent 會用你的帳號執行程式。請在拋棄式帳號、容器，或丟了也不心疼的資料夾裡試。沙箱是實驗功能。</p>
+<div class="panes">
+<div class="terminal">
+<h3 class="pane-heading"><span class="lamp" aria-hidden="true"></span>TERMINAL / INPUT</h3>
+<!-- source: ref/get-started.sh, steps 4-6. This excerpt requires setup first; setup is included in the disclosure below. -->
+<pre tabindex="0" aria-label="Commands"><code># After setup: see Get started / SETUP below.
+cd ~/aos-demo/tree
+ls stacks/root/procs/ann/
+aos-agent -d stacks/root -t ann say "hello, who are you?"
+timeout 60 aos-agent -d stacks/root -t ann listen
+ls stacks/root/procs/ann/</code></pre>
+<div class="output">
+<h3 class="pane-heading">OUTPUT / 2026-11-14</h3>
+<!-- source: ref/get-started.out.txt; verbatim answer excerpt, not a live terminal. -->
+<pre tabindex="0">FAKE ANSWER to: hello, who are you? (tool said: 2026-11-14T04:06:55Z)</pre>
+</div>
+</div>
+<div class="files">
+<h3 class="pane-heading"><svg class="folder-icon" viewBox="0 0 30 24" fill="none" aria-hidden="true"><path d="M1 5V2h10l4 4h14v17H1V5Z" fill="#d8e9c4" stroke="currentColor" stroke-width="1.5"/></svg>FILES / ann</h3>
+<!-- source: ref/get-started.out.txt, first line and before/after listings. -->
+<p class="folder-path">~/aos-demo/tree/stacks/root/procs/ann</p>
+<div class="file-comparison">
+<div class="file-column"><h3>--- before:</h3><pre>hooks
+queue
+stage.txt
+state_flux.json
+state.json
+stderr.txt</pre></div>
+<div class="file-column"><h3>--- after:</h3><pre><span class="new-file">history.jsonl</span>
+hooks
+<span class="new-file">interfaces.json</span>
+<span class="new-file">observed.jsonl</span>
+queue
+stage.txt
+state_flux.json
+state.json
+stderr.txt
+<span class="new-file">think</span></pre></div>
+</div>
+</div>
+</div>
+<div class="bench-foot">
+<details>
+<summary>Get started / SETUP → INPUT → STOP</summary>
+<p class="setup-link"><a href="docs/zh/get-started.html">Get started ↗</a></p>
+<!-- source: ref/get-started.sh, steps 1-4. Checkout/demo variables are expanded to neutral public example paths. Clone and dependencies are delegated to Get started. Not an install script and not a claim of a clean-environment test. -->
+<pre tabindex="0" aria-label="Setup commands"><code># SETUP: use a fresh shell, a checkout at ~/aos,
+# installed build dependencies, and a new ~/aos-demo.
+# See Get started for prerequisites.
+cd ~/aos/proto8/impls
+cmake -B build &amp;&amp; cmake --build build -j
+
+export AOS_HOME=$HOME/aos/proto8
+export PATH=$(ls -d "$AOS_HOME"/impls/*/bin "$AOS_HOME"/cmd/*/bin | tr '\n' ':')$PATH
+export PYTHONPATH=$AOS_HOME/py:$AOS_HOME/lib
+
+mkdir -p ~/aos-demo/llms ~/aos-demo/tree
+cd ~/aos-demo/llms
+cp -r "$AOS_HOME/kernel/llm-kernel" def
+nohup aos-exec --stack stacks/llm def &gt; llm.log 2&gt;&amp;1 &amp;
+
+cd ~/aos-demo/tree
+cp -r "$AOS_HOME/templates/daemon-root" defs
+cp -r "$AOS_HOME/templates/agent-fsm" defs/ann
+nohup aos-exec --stack stacks/root defs &gt; root.log 2&gt;&amp;1 &amp;
+sleep 2
+aos-agent -d stacks/root ctl add -w . defs/ann
+aos-daemon-ctl -d stacks/root ls
+
+# INPUT
+ls stacks/root/procs/ann/
+aos-agent -d stacks/root -t ann say "hello, who are you?"
+timeout 60 aos-agent -d stacks/root -t ann listen
+ls stacks/root/procs/ann/
+
+# STOP: stop only these demo stacks.
+aos-daemon-ctl -d "$HOME/aos-demo/tree/stacks/root" shutdown
+aos-daemon-ctl -d "$HOME/aos-demo/llms/stacks/llm" shutdown</code></pre>
+</details>
+<details>
+<summary>history.jsonl / OUTPUT</summary>
+<!-- source: ref/get-started.out.txt; these three lines are copied verbatim. -->
+<pre tabindex="0" aria-label="Recorded history output">{"role": "assistant", "content": null, "tool_calls": [{"id": "call_fake_2", "type": "function", "function": {"name": "peek_now_time", "arguments": "{}"}}]}
+{"role": "tool", "tool_call_id": "call_fake_2", "content": "2026-11-14T04:06:55Z\n"}
+{"role": "assistant", "content": "FAKE ANSWER to: hello, who are you? (tool said: 2026-11-14T04:06:55Z)"}</pre>
+</details>
+</div>
+</section>
+
+<section class="horizon" aria-label="Today and Vision">
+<div class="today">
+<p class="section-label">01 / NOW</p>
+<!-- copy:NOW --><h2>今天 clone 下來就能做的</h2>
+<!-- Decorative folder glyphs are a visual motif, not a deployment diagram. -->
+<svg class="diagram" viewBox="0 0 420 58" fill="none" aria-hidden="true"><path d="M18 29H400" stroke="currentColor" stroke-width="1"/><g fill="#d8e9c4" stroke="currentColor" stroke-width="1.5"><path d="M5 10h20l8 8h35v32H5Z"/><path d="M179 10h20l8 8h35v32h-63Z"/><path d="M352 10h20l8 8h35v32h-63Z"/></g><g fill="currentColor"><circle cx="36" cy="34" r="4"/><circle cx="210" cy="34" r="4"/><circle cx="383" cy="34" r="4"/></g></svg>
+<!-- copy:C1 --><p class="statement">資料夾＝函數。資料夾裡放一個 _entry 就能被呼叫，說明和資料就放在旁邊。</p>
+<!-- copy:C4 --><p class="statement">小零件，unix 風格。幾支各做一件事的小程式：exec、loop、daemon。</p>
+</div>
+<div class="vision">
+<p class="section-label">02 / Vision</p>
+<!-- copy:V2 --><h2>從一隻 agent 開始，最後換成一支程式。</h2>
+<svg class="diagram" viewBox="0 0 420 58" fill="none" aria-hidden="true"><path d="M18 29H395m-10-7 10 7-10 7" stroke="currentColor" stroke-dasharray="5 6"/><path d="M5 10h20l8 8h35v32H5Z" fill="#f3f0e6" stroke="currentColor" stroke-width="1.5"/><rect x="348" y="7" width="67" height="46" fill="#f3f0e6" stroke="currentColor" stroke-dasharray="4 4"/><path d="m373 20-9 9 9 9m17-18 9 9-9 9" stroke="currentColor" stroke-width="1.5"/></svg>
+<!-- copy:V1 --><p class="statement">一步一步把 agent 換成確定的程式，token 用量往零走。</p>
+</div>
+</section>
+
+<section class="status" aria-labelledby="status-title">
+<h2 id="status-title">STATUS / prototype</h2>
+<div>
+<!-- copy:S1 --><p>aos 還是原型：檔案格式和指令還會變。只支援 Linux（WSL2 可以）。一棵樹住一台機器；樹和樹之間現在還不會互相連線。</p>
+<div class="hero-links"><a class="button primary" href="docs/zh/get-started.html">Get started <span aria-hidden="true">↗</span></a><a class="button" href="&lt;REPO_URL&gt;">GitHub <span aria-hidden="true">↗</span></a></div>
+</div>
+</section>
+</main>
+<footer><!-- copy:FULL --><p>aos：akatosh operating system</p><div><a href="docs/zh/get-started.html">Get started</a><a href="&lt;REPO_URL&gt;">&lt;REPO_URL&gt;</a></div></footer>
+</div>
+</body>
+</html>

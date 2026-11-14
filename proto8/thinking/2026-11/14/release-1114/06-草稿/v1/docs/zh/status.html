@@ -1,0 +1,32 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>狀態 · aos 草稿 v1</title><style>
+body{font:16px/1.65 system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;margin:0;color:#1d232a;background:#fbfbfa}
+header{background:#1d232a;color:#fff;padding:.6em 1.2em;font-size:.9em}
+header a{color:#cfe3ff;text-decoration:none;margin-right:1em}
+main{max-width:52em;margin:0 auto;padding:1em 1.2em 4em}
+h1{font-size:1.7em;border-bottom:2px solid #e3e6ea;padding-bottom:.3em}
+h2{font-size:1.3em;margin-top:2em;border-bottom:1px solid #e3e6ea;padding-bottom:.2em}
+h3{font-size:1.1em;margin-top:1.6em}
+code{font:.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef1f4;padding:.1em .3em;border-radius:3px}
+pre{background:#1d232a;color:#e8ecef;padding:.9em 1em;border-radius:6px;overflow-x:auto;line-height:1.45}
+pre code{background:none;padding:0;color:inherit}
+table{border-collapse:collapse;margin:1em 0;display:block;overflow-x:auto}
+th,td{border:1px solid #d5dae0;padding:.35em .7em;text-align:left;vertical-align:top}
+th{background:#eef1f4}
+blockquote{margin:1em 0;padding:.2em 1em;border-left:4px solid #9fb7d6;color:#3b4652;background:#f2f6fb}
+details{margin:1em 0;padding:.5em .9em;border:1px solid #d5dae0;border-radius:6px;background:#fff}
+summary{cursor:pointer;font-weight:600}
+a{color:#0b5cad}
+.draft{background:#fff4d6;color:#5a4300;padding:.4em 1.2em;font-size:.85em}
+</style></head><body><header><a href="../../index.html">草稿入口</a></header><div class="draft">DRAFT v1: local preview only, not published</div><main><p>現在是原型：今天已能不用模型跑起樹、看到每個檔，後面的方向還沒做出來。</p>
+<h1 id="狀態">狀態</h1>
+<!-- copy:TAG -->
+<p>原型 · demo 版</p>
+<!-- copy:S1 -->
+<p>aos 還是原型：檔案格式和指令還會變。只支援 Linux（WSL2 可以）。一棵樹住一台機器；樹和樹之間現在還不會互相連線。</p>
+<!-- source: 03-計劃.md 第 2 節「demo 版明講沒有」；文案表 NOW,S1,V1-V4；08-批0實測.md #1,#7,#8 -->
+<table><thead><tr><th><!-- copy:NOW -->今天能做</th><th>還沒有</th><th>之後的方向</th></tr></thead><tbody><tr><td>不用模型起一棵樹，對假腦的 agent 說話，看 history 與資料夾（<a href="get-started.html">Get Started</a>）</td><td>兩台機器同時連線（一棵樹一次住一台，可搬到另一台接著跑）</td><td><!-- copy:V1 -->一步一步把 agent 換成確定的程式，token 用量往零走。</td></tr><tr><td>接任一 OpenAI 相容端點（端點呼叫已實測；教學頁未寫，需要自己加一包 endpoint 設定）</td><td>版本相容（檔案格式、指令會變）</td><td><!-- copy:V2 -->從一隻 agent 開始，最後換成一支程式。</td></tr><tr><td>同一棵樹裡掛多隻 agent、互相寄信</td><td>Windows、macOS 原生</td><td><!-- copy:V3 -->會改進自己的函數：先做一個幫你寫函數的函數。</td></tr><tr><td>把 Claude Code 掛進樹當一隻 agent（L2，未實跑）</td><td>套件管理器安裝</td><td><!-- copy:V4 -->像看公司一樣看全景：部門、員工、狀態。（進行中）</td></tr><tr><td>把整棵樹搬到另一台接著跑</td><td>穩定 API</td><td></td></tr><tr><td></td><td>安全隔離保證（沙箱是 L3 實驗）</td><td></td></tr></tbody></table>
+<details>
+<summary>表裡每一格的依據</summary>
+<ul><li>「今天能做」第一、二格：批 0 實測 #1、#7；第三格：agent 與信箱是現有工具（知識庫 <code>aos/mailbox.json</code>），本稿未實跑多 agent 範例；第四格：計劃 L2，未實跑；第五格：批 0 #8。</li><li>「還沒有」：計劃第 2 節「demo 版明講沒有」。</li><li>「之後的方向」是願景，不是承諾，也沒有時程。</li></ul>
+</details>
+<p>下一步：<a href="manual/security.html">安全說明</a>、<a href="faq.html">常見問題</a>。</p></main></body></html>

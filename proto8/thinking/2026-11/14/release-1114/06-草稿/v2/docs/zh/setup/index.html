@@ -1,0 +1,43 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>安裝總覽 · aos 草稿 v2</title><style>
+body{font:16px/1.65 system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;margin:0;color:#1d232a;background:#fbfbfa}
+header{background:#1d232a;color:#fff;padding:.6em 1.2em;font-size:.9em}
+header a{color:#cfe3ff;text-decoration:none;margin-right:1em}
+main{max-width:52em;margin:0 auto;padding:1em 1.2em 4em}
+h1{font-size:1.7em;border-bottom:2px solid #e3e6ea;padding-bottom:.3em}
+h2{font-size:1.3em;margin-top:2em;border-bottom:1px solid #e3e6ea;padding-bottom:.2em}
+h3{font-size:1.1em;margin-top:1.6em}
+code{font:.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef1f4;padding:.1em .3em;border-radius:3px}
+pre{background:#1d232a;color:#e8ecef;padding:.9em 1em;border-radius:6px;overflow-x:auto;line-height:1.45}
+pre code{background:none;padding:0;color:inherit}
+table{border-collapse:collapse;margin:1em 0;display:block;overflow-x:auto}
+th,td{border:1px solid #d5dae0;padding:.35em .7em;text-align:left;vertical-align:top}
+th{background:#eef1f4}
+blockquote{margin:1em 0;padding:.2em 1em;border-left:4px solid #9fb7d6;color:#3b4652;background:#f2f6fb}
+details{margin:1em 0;padding:.5em .9em;border:1px solid #d5dae0;border-radius:6px;background:#fff}
+summary{cursor:pointer;font-weight:600}
+a{color:#0b5cad}
+.draft{background:#fff4d6;color:#5a4300;padding:.4em 1.2em;font-size:.85em}
+</style></head><body><header><a href="../../../index.html">草稿入口</a></header><div class="draft">DRAFT v1: local preview only, not published</div><main><h1 id="安裝總覽">安裝總覽</h1>
+<p>安裝分四級，只想試的話 L0 就夠：Linux、git、Python、CMake 加一個 C++ 編譯器，不用任何模型帳號。</p>
+<!-- copy:TAG -->
+<p>原型 · demo 版</p>
+<!-- source: 03-計劃.md 第 3 節；08-批0實測.md #1,#2,#3,#5；proto8/install.sh -->
+<h2 id="四級一張表">四級一張表</h2>
+<table><thead><tr><th>級</th><th>必需</th><th>得到什麼</th><th>狀態</th></tr></thead><tbody><tr><td>L0</td><td>Linux（含 WSL2）、git、bash、Python 3.11 以上、CMake 3.21 以上、C++20 編譯器、nlohmann-json（vcpkg 或系統套件）</td><td>一棵樹、一隻 agent-fsm、假腦回話</td><td>已實測（vcpkg 路線，見<a href="requirements.html">需求</a>）</td></tr><tr><td>L1</td><td>再加任一 OpenAI 相容端點，和它的金鑰（放環境變數）</td><td>同一隻 agent 換成真腦、會叫工具</td><td>端點呼叫已實測；教學頁還沒寫</td></tr><tr><td>L2</td><td>再加已登入的 claude CLI、tmux</td><td>把 Claude Code 當成樹裡的一隻 agent</td><td>未實跑</td></tr><tr><td>L3（實驗）</td><td>依功能：bubblewrap、s6、newuidmap、setfacl、systemd 或 s6-supervise；<code>aos-asuser</code> 要 Python 3.12</td><td>隔離、限額、分享、監管</td><td>實驗，見<a href="../manual/security.html">安全說明</a></td></tr></tbody></table>
+<h2 id="python-零第三方套件">Python：零第三方套件</h2>
+<p><strong>沒有 pip、沒有 venv。</strong> Python 這一側只用標準庫；你只要有 <code>python3</code>（3.11 以上已實測）。C／C++ 零件另外要 nlohmann-json（建置時才要）。</p>
+<h2 id="兩條讓殼找得到指令的路">兩條讓殼找得到指令的路</h2>
+<table><thead><tr><th></th><th>三個環境變數（Get started 用的）</th><th><code>install.sh</code>（想長期裝才跑）</th></tr></thead><tbody><tr><td>做什麼</td><td>只改目前這個殼的 <code>AOS_HOME</code>、<code>PATH</code>、<code>PYTHONPATH</code></td><td>把指令 symlink 進一個 PATH 上的資料夾，並登記 Python 路徑</td></tr><tr><td>寫到哪</td><td>哪裡都不寫（關掉殼就沒了）</td><td>兩處：<code>~/.local/bin</code>（預設，可改 <code>DEST</code>）底下的 symlink；Python user site 的 <code>aos-proto8.pth</code>（兩行：repo 的 <code>py/</code>、<code>lib/</code> 絕對路徑）</td></tr><tr><td>適合</td><td>先試試看</td><td>每個新殼都想直接用</td></tr></tbody></table>
+<p>三個變數的寫法在 <a href="../get-started.html">Get Started 第 2 步</a>。</p>
+<pre><code class="language-bash"># 先看看會做什麼，什麼都不動
+~/aos/proto8/install.sh --dry-run
+# 真的裝
+~/aos/proto8/install.sh
+# 拿掉：只移除指進這份 repo 的連結，和內容完全相符的 aos-proto8.pth
+~/aos/proto8/install.sh --uninstall</code></pre>
+<ul><li>要先建置：<code>impls/*/bin</code> 一支都沒有時，<code>install.sh</code> 會報 <code>ImplsMissing</code> 並退 1。</li><li>它不改 PATH、不改任何 shell 設定檔；目的地不在 PATH 上只會印一行提醒，要自己加。</li><li>用 symlink 不是複製：repo 搬了位置要重跑；舊連結會被報「指向別處」，自己 <code>rm</code> 再跑。</li><li>同名的別的東西不會被蓋掉（印 <code>skip</code>、最後 <code>LinkFailed</code>、退 1）。</li><li>請把 repo clone 在 Linux 的檔案系統上（WSL 不要放 <code>/mnt/c</code>）。</li></ul>
+<details>
+<summary>install.sh 會連哪些指令</summary>
+<p>掃 <code>impls/*/bin/*</code>（C++ 的，例如 <code>aos-exec</code>、<code>aos-loop</code>、<code>aos-fsm</code>、<code>aos-daemon</code>）與 <code>cmd/*/bin/*</code>（Python 的，例如 <code>aos-daemon-ctl</code>、<code>aos-agent</code>、<code>aos-tools</code>），只連有執行權限的檔。完整清單與錯誤代號見 <code>proto8/install.sh</code> 檔頭說明。<code>install.sh</code> 還沒實測，以上依腳本內容整理。</p>
+</details>
+<p>下一步：<a href="requirements.html">需求清單</a>、<a href="../get-started.html">Get Started</a>。</p></main></body></html>

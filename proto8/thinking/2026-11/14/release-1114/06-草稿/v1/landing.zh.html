@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aos · 資料夾，就是函數。</title><!-- copy:H1 -->
+<style>
+:root{--bg:#fbfbf8;--ink:#14202b;--mute:#4a5866;--line:#c9d1d8;--acc:#0b5f73;--acc2:#e6f1f4;--vis:#efe9fb;--visln:#5b3fa0;--term:#10181f;--termtx:#dbe7ee;--ok:#7fd1a3;--mono:ui-monospace,"DejaVu Sans Mono",Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.75 system-ui,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+a{color:var(--acc)}
+.w{max-width:1040px;margin:0 auto;padding:0 20px}
+section{padding:56px 0;border-top:1px solid var(--line)}
+h1{font-size:clamp(34px,6vw,56px);line-height:1.15;margin:.2em 0}
+h2{font-size:clamp(22px,3.4vw,30px);margin:0 0 .6em;line-height:1.3}
+h2.sub{font-weight:500;color:var(--mute);font-size:clamp(18px,2.6vw,22px)}
+.tag{display:inline-block;font:14px var(--mono);border:1px solid var(--ink);padding:2px 10px;border-radius:99px}
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center;padding:48px 0}
+.btns{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+.btn{display:inline-block;padding:10px 22px;border-radius:8px;border:2px solid var(--ink);text-decoration:none;font-weight:700;color:var(--ink)}
+.btn.p{background:var(--ink);color:#fff}
+.btn:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+pre{margin:0;background:var(--term);color:var(--termtx);padding:16px;border-radius:10px;overflow-x:auto;font:14px/1.6 var(--mono)}
+pre .c{color:var(--ok)} pre .d{color:#8fa3b1}
+.cap{color:var(--mute);margin:.6em 0 0}
+.fig{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px}
+svg{width:100%;height:auto;display:block}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{border:1px solid var(--line);background:#fff;border-radius:12px;padding:16px 18px}
+.card b{display:block;color:var(--acc);margin-bottom:4px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.col{border-radius:12px;padding:18px 20px;border:1px solid var(--line);background:#fff}
+.col.v{background:var(--vis);border:2px dashed var(--visln)}
+.col h3{margin:.1em 0 .6em;font-size:20px}
+.col.v h3{color:var(--visln)}
+.col ul{margin:0;padding-left:1.2em}
+.col li{margin:.35em 0}
+.badge{font:13px var(--mono);background:var(--visln);color:#fff;border-radius:4px;padding:1px 8px;margin-left:8px;vertical-align:middle}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+.mini .card{background:var(--acc2)}
+.mini small,.draft{display:block;color:var(--mute);font-size:13px;margin-top:6px}
+details{margin-top:14px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:2px 14px}
+summary{cursor:pointer;padding:10px 0;font-weight:600}
+details p,details ul{margin:.3em 0 1em}
+code{font:15px var(--mono);background:var(--acc2);padding:1px 5px;border-radius:4px}
+footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--mute)}
+footer a{margin-right:18px}
+@media(max-width:760px){
+ body{font-size:16px}
+ .hero,.cols,.cards,.mini{grid-template-columns:1fr}
+ section{padding:40px 0}
+}
+</style>
+</head>
+<body>
+
+<!-- 1 主視覺 -->
+<header class="w">
+ <div class="hero">
+  <div>
+   <span class="tag">原型 · demo 版</span><!-- copy:TAG -->
+   <h1>資料夾，就是函數。</h1><!-- copy:H1 -->
+   <h2 class="sub">給 agent 的作業系統，不靠硬體，靠任意資源。</h2><!-- copy:H2 -->
+   <p>aos 把 AI agent 當成一般的 Linux 行程，住在資料夾裡。每個工具、每隻 agent、每封信，都是你可以 ls、可以讀、可以設權限的資料夾或檔案。</p><!-- copy:P1 -->
+   <div class="btns">
+    <a class="btn p" href="docs/zh/get-started.html">開始用</a>
+    <a class="btn" href="<REPO_URL>">GitHub</a>
+   </div>
+  </div>
+  <div>
+<pre aria-label="終端機實跑輸出"><span class="d"># 假腦，不需要任何模型或金鑰</span>
+<span class="c">$</span> aos-agent -d stacks/root -t ann say "hello, who are you?"
+<span class="c">$</span> aos-agent -d stacks/root -t ann listen
+FAKE ANSWER to: hello, who are you? (tool said: 2026-11-14T04:06:55Z)
+<span class="c">$</span> ls stacks/root/procs/ann/
+history.jsonl  hooks  interfaces.json  observed.jsonl
+queue  stage.txt  state_flux.json  state.json  stderr.txt  think</pre>
+   <p class="cap">上面是 Get started 腳本的真實輸出：對話本身就是 <code>history.jsonl</code> 這個檔。</p>
+  </div>
+ </div>
+</header>
+
+<main>
+
+<!-- 2 一張圖講核心 -->
+<section><div class="w">
+ <h2>一個資料夾，一次函數呼叫</h2>
+ <div class="fig">
+<svg viewBox="0 0 760 250" role="img" aria-label="左邊資料夾 summarize 裡有 _entry、README、data；右邊它被當成函數呼叫並回傳結果">
+ <defs><marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#14202b"/></marker></defs>
+ <g font-family="ui-monospace,monospace" font-size="17" fill="#14202b">
+  <path d="M30 40h110l14 18h186v168H30z" fill="#e6f1f4" stroke="#0b5f73" stroke-width="2"/>
+  <text x="44" y="58" font-weight="700">summarize/</text>
+  <text x="56" y="108" fill="#0b5f73" font-weight="700">_entry</text><text x="150" y="108" font-size="14">← 被呼叫的入口</text>
+  <text x="56" y="148">README.md</text><text x="176" y="148" font-size="14">← 說明</text>
+  <text x="56" y="188">data/</text><text x="120" y="188" font-size="14">← 資料</text>
+  <path d="M380 130h110" stroke="#14202b" stroke-width="2.5" marker-end="url(#ar)"/>
+  <text x="392" y="118" font-size="14">當函數呼叫</text>
+  <rect x="510" y="70" width="220" height="120" rx="10" fill="#fff" stroke="#14202b" stroke-width="2"/>
+  <text x="528" y="110">summarize(</text>
+  <text x="528" y="138">  {"text": …}</text>
+  <text x="528" y="166">) → 結果</text>
+ </g>
+</svg>
+ </div>
+ <p class="cap">資料夾＝函數。資料夾裡放一個 _entry 就能被呼叫，說明和資料就放在旁邊。<!-- copy:C1 --></p>
+</div></section>
+
+<!-- 3 特色卡 -->
+<section><div class="w">
+ <h2>六件事</h2>
+ <div class="cards">
+  <div class="card"><b>資料夾＝函數。</b>資料夾裡放一個 _entry 就能被呼叫，說明和資料就放在旁邊。<!-- copy:C1 --></div>
+  <div class="card"><b>模型本來就懂。</b>模型天生會讀寫檔案與資料夾，不用另學一套框架。<!-- copy:C2 --></div>
+  <div class="card"><b>站在 Linux 上。</b>權限就是檔案權限；工具用什麼語言寫都行。<!-- copy:C3 --></div>
+  <div class="card"><b>小零件，unix 風格。</b>幾支各做一件事的小程式：exec、loop、daemon。<!-- copy:C4 --></div>
+  <div class="card"><b>腦和身都自己帶。</b>先用假腦試、接任何 OpenAI 相容端點，或把你的 Claude Code 掛進樹裡當一隻 agent。<!-- copy:C5 --></div>
+  <div class="card"><b>kernel 是一扇門。</b>起行程、問模型都是寄一封信；門可以排隊、算預算、說不。<!-- copy:C6 --></div>
+ </div>
+ <details><summary>哪些是已完成、哪些還在實驗</summary>
+  <ul>
+   <li>工具用任何語言寫、exec／loop／daemon 三支小程式、假腦與 OpenAI 相容端點：已能跑。</li>
+   <li>權限隔離（沙箱）：實驗中。</li>
+   <li>門（kernel）目前只有排隊、算預算、拒絕這幾樣。</li>
+   <li>「模型天生會讀寫檔案」是設計出發點，不是量測結果，我們沒有拿它跟別的做法比準確度或速度。</li>
+  </ul>
+ </details>
+</div></section>
+
+<!-- 4 怎麼組起來 -->
+<section><div class="w">
+ <h2>怎麼組起來</h2>
+ <div class="fig">
+<svg viewBox="0 0 760 260" role="img" aria-label="三層：exec 跑一步、loop 反覆跑、daemon 讓很多個一直跑；右側 kernel 是每個請求都經過的門">
+ <g font-family="ui-monospace,monospace" font-size="18" fill="#14202b" stroke-width="2">
+  <rect x="20" y="20" width="460" height="220" rx="12" fill="#e6f1f4" stroke="#0b5f73"/>
+  <text x="36" y="48" font-weight="700">daemon</text><text x="130" y="48" font-size="14">讓很多個一直跑</text>
+  <rect x="50" y="68" width="400" height="150" rx="10" fill="#fff" stroke="#0b5f73"/>
+  <text x="66" y="96" font-weight="700">loop</text><text x="124" y="96" font-size="14">反覆跑</text>
+  <rect x="80" y="116" width="340" height="80" rx="8" fill="#fff" stroke="#0b5f73"/>
+  <text x="96" y="144" font-weight="700">exec</text><text x="152" y="144" font-size="14">跑一步</text>
+  <text x="96" y="176" font-size="14">一個資料夾 → 一次呼叫</text>
+  <path d="M480 130h50" stroke="#14202b" stroke-width="2.5"/>
+  <path d="M530 40v180" stroke="#5b3fa0" stroke-width="6"/>
+  <rect x="548" y="100" width="190" height="60" rx="8" fill="#efe9fb" stroke="#5b3fa0"/>
+  <text x="562" y="125" font-weight="700">kernel</text><text x="562" y="148" font-size="14">每個請求都要經過的門</text>
+ </g>
+</svg>
+ </div>
+ <p class="cap">exec 跑一步，loop 反覆跑，daemon 讓很多個一直跑。kernel 是每個請求都要經過的門。<!-- copy:L1 --></p>
+</div></section>
+
+<!-- 5 試試 -->
+<section><div class="w">
+ <h2>不用任何模型，先試試</h2><!-- copy:TRY -->
+<pre><span class="d"># 只設三個環境變數，不寫你的家目錄（實測不需跑 install.sh）</span>
+<span class="c">$</span> export AOS_HOME=~/aos/proto8
+<span class="c">$</span> export PATH=$(ls -d "$AOS_HOME"/impls/*/bin "$AOS_HOME"/cmd/*/bin | tr '\n' ':')$PATH
+<span class="c">$</span> export PYTHONPATH=$AOS_HOME/py:$AOS_HOME/lib
+<span class="d"># 起腦（llms）與你的 agent 樹（tree），範本照抄自 $AOS_HOME</span>
+<span class="c">$</span> aos-exec --stack stacks/llm def &amp;          <span class="d"># 在 ~/aos-demo/llms</span>
+<span class="c">$</span> aos-exec --stack stacks/root defs &amp;       <span class="d"># 在 ~/aos-demo/tree</span>
+<span class="c">$</span> aos-agent -d stacks/root ctl add -w . defs/ann
+<span class="c">$</span> aos-daemon-ctl -d stacks/root ls
+<span class="c">$</span> aos-agent -d stacks/root -t ann say "hello, who are you?"
+<span class="c">$</span> aos-agent -d stacks/root -t ann listen</pre>
+ <p class="cap">需要先建置 C／C++ 部分一次。完整步驟（含建立 demo 資料夾與收尾）在 Get started。</p>
+ <div class="mini">
+  <div class="card"><b>接真腦</b>把假腦換成 OpenAI 相容端點。<span class="draft">草稿：之後的批次</span></div>
+  <div class="card"><b>用 Claude Code</b>把它掛進樹裡當一隻 agent。<span class="draft">草稿：之後的批次</span></div>
+  <div class="card"><b>看範例</b>跑現成的範例資料夾。<span class="draft">草稿：之後的批次</span></div>
+ </div>
+ <details><summary>這一步會發生什麼</summary>
+  <p>假腦收到話，先叫一次工具 <code>peek_now_time</code>，再回 <code>FAKE ANSWER to: …</code>。整段對話（叫工具、工具回、答案）都寫在 agent 資料夾的 <code>history.jsonl</code> 裡，用 <code>tail</code> 就能看。實測起腦到回話約 6.4 秒（建置另算）。</p>
+ </details>
+</div></section>
+
+<!-- 6 NOW vs Vision -->
+<section><div class="w">
+ <div class="cols">
+  <div class="col">
+   <h3>今天 clone 下來就能做的</h3><!-- copy:NOW -->
+   <ul>
+    <li>用假腦跑完整一輪：加一隻 agent、對它說話、等答案。</li>
+    <li>對話與狀態都是資料夾裡的檔案，用 ls、tail 就看得到。</li>
+    <li>只設三個環境變數就能用，不必安裝到家目錄。</li>
+    <li>接任何 OpenAI 相容端點（實測過本機代理）。</li>
+    <li>收樹後不留殘留行程（三次實測皆如此）。</li>
+   </ul>
+  </div>
+  <div class="col v">
+   <h3>Vision<span class="badge">Vision · 還沒做</span></h3>
+   <ul>
+    <li>一步一步把 agent 換成確定的程式，token 用量往零走。<!-- copy:V1 --></li>
+    <li>從一隻 agent 開始，最後換成一支程式。<!-- copy:V2 --></li>
+    <li>會改進自己的函數：先做一個幫你寫函數的函數。<!-- copy:V3 --></li>
+    <li>像看公司一樣看全景：部門、員工、狀態。<!-- copy:V4 --></li>
+   </ul>
+  </div>
+ </div>
+</div></section>
+
+<!-- 7 範例牆 -->
+<section><div class="w">
+ <h2>範例</h2>
+ <div class="cards" style="grid-template-columns:repeat(2,1fr)">
+  <div class="card"><b>hello-tree</b>最小的一棵樹：一隻 agent，說一句話、看對話檔。<br><a href="#">看範例（連結待補）</a></div>
+  <div class="card"><b>folder-as-function</b>一個資料夾當函數呼叫。<br><a href="#">看範例（連結待補）</a></div>
+ </div>
+ <details><summary>備註</summary><p>兩張卡的說明是草稿用的描述句，不是文案表的句子，等範例實際做出來再改。</p></details>
+</div></section>
+
+<!-- 8 現況 -->
+<section><div class="w">
+ <h2>現況與邀請</h2>
+ <div class="card"><b>原型，請小心試</b>
+  aos 還是原型：檔案格式和指令還會變。只支援 Linux（WSL2 可以）。一棵樹住一台機器；樹和樹之間現在還不會互相連線。<!-- copy:S1 --></div>
+ <div class="card" style="margin-top:12px;border-color:var(--visln)"><b style="color:var(--visln)">安全提醒</b>
+  agent 會用你的帳號執行程式。請在拋棄式帳號、容器，或丟了也不心疼的資料夾裡試。沙箱是實驗功能。<!-- copy:SEC --></div>
+ <details><summary>已實測的環境</summary>
+  <ul>
+   <li>Python 3.11 以上已實測（3.14 與 3.11 皆通；3.10 沒測）。</li>
+   <li>建置走 vcpkg 路線已實測；改用系統套件的路線尚未驗證。</li>
+   <li>只在一台 Manjaro 機器上量過；其他發行版尚未實測。</li>
+  </ul>
+ </details>
+</div></section>
+
+<div class="w">
+ <details><summary>副標另一個候選</summary>
+  <p>把 unix 哲學帶進 agent 時代。<!-- copy:H2b --></p>
+ </details>
+</div>
+
+</main>
+
+<!-- 9 頁尾 -->
+<footer><div class="w">
+ <p><a href="docs/zh/get-started.html">文件</a><a href="<REPO_URL>">GitHub</a><span>授權：待定</span></p>
+ <p><a href="landing.en.html">English</a></p>
+ <p>aos：akatosh operating system<!-- copy:FULL --></p>
+</div></footer>
+
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>常見問題 · aos 草稿 v2</title><style>
+body{font:16px/1.65 system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;margin:0;color:#1d232a;background:#fbfbfa}
+header{background:#1d232a;color:#fff;padding:.6em 1.2em;font-size:.9em}
+header a{color:#cfe3ff;text-decoration:none;margin-right:1em}
+main{max-width:52em;margin:0 auto;padding:1em 1.2em 4em}
+h1{font-size:1.7em;border-bottom:2px solid #e3e6ea;padding-bottom:.3em}
+h2{font-size:1.3em;margin-top:2em;border-bottom:1px solid #e3e6ea;padding-bottom:.2em}
+h3{font-size:1.1em;margin-top:1.6em}
+code{font:.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef1f4;padding:.1em .3em;border-radius:3px}
+pre{background:#1d232a;color:#e8ecef;padding:.9em 1em;border-radius:6px;overflow-x:auto;line-height:1.45}
+pre code{background:none;padding:0;color:inherit}
+table{border-collapse:collapse;margin:1em 0;display:block;overflow-x:auto}
+th,td{border:1px solid #d5dae0;padding:.35em .7em;text-align:left;vertical-align:top}
+th{background:#eef1f4}
+blockquote{margin:1em 0;padding:.2em 1em;border-left:4px solid #9fb7d6;color:#3b4652;background:#f2f6fb}
+details{margin:1em 0;padding:.5em .9em;border:1px solid #d5dae0;border-radius:6px;background:#fff}
+summary{cursor:pointer;font-weight:600}
+a{color:#0b5cad}
+.draft{background:#fff4d6;color:#5a4300;padding:.4em 1.2em;font-size:.85em}
+</style></head><body><header><a href="../../index.html">草稿入口</a></header><div class="draft">DRAFT v1: local preview only, not published</div><main><h1 id="常見問題">常見問題</h1>
+<p>常見問題先看結論：aos 是原型，目前能不用模型跑起一棵樹；多機連線與安全隔離都還沒有。</p>
+<!-- source: 06-草稿/文案表.json P1,FULL,S1,SEC; 08-批0實測.md; 03-計劃.md 第 2 節 -->
+<p><strong>aos 是什麼？</strong></p>
+<!-- copy:P1 -->
+<p>aos 把 AI agent 當成一般的 Linux 行程，住在資料夾裡。每個工具、每隻 agent、每封信，都是你可以 ls、可以讀、可以設權限的資料夾或檔案。 名字：<!-- copy:FULL -->aos：akatosh operating system。</p>
+<p><strong>需要模型帳號嗎？</strong> 不用。L0 用假腦，只要 Linux、git、Python 3.11 以上、CMake、C++ 編譯器與 nlohmann-json。要換真腦才需要 OpenAI 相容端點與金鑰。見<a href="setup/index.html">安裝總覽</a>。</p>
+<p><strong>要裝 Python 套件嗎？</strong> 不用。Python 這一側零第三方套件，沒有 pip、沒有 venv。</p>
+<p><strong>支援 Windows 或 macOS 嗎？</strong></p>
+<!-- copy:S1 -->
+<p>只支援 Linux（WSL2 可以，但還沒實測）。Windows、macOS 原生版本目前沒有。</p>
+<p><strong>安全嗎？</strong></p>
+<!-- copy:SEC -->
+<p>agent 會用你的帳號執行程式，同帳號沒有隔離。請在拋棄式帳號、容器，或丟了也不心疼的資料夾裡試；沙箱是實驗功能。見<a href="manual/security.html">安全說明</a>。</p>
+<p><strong>可以兩台機器同時跑同一棵樹嗎？</strong> 不行。一棵樹一次住一台；可以把整棵樹搬到另一台接著跑（輪流跑）。樹與樹之間沒有內建連線。</p>
+<p><strong>檔案格式會變嗎？</strong> 會。這是原型，檔案格式和指令還會變，也沒有舊版相容。</p>
+<p><strong>出錯了怎麼辦？</strong> 先看<a href="manual/troubleshooting.html">疑難排解</a>，第一條是停樹與清殘留。</p></main></body></html>
