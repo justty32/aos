@@ -127,3 +127,9 @@ ok-pilot 派 4 隻 opus 子 agent 並行唯讀查證（01 前 9 筆、01 後 7 �
 - 01 第 7、8 筆（tidy 第三輪的兩筆）指向同一封信（第 6 封）。
 - 02 第 10 筆（reply_to 信箱權限）本身結案，要跑的話已包在第 10 封信的選項裡。
 - 03 六筆全結案，檔裡改留一句說明＋fyi 信的指向，沒有 `- **` 行。
+
+## 第二批回信（11-14）
+
+- 沙箱 root 身分層 chore（01794624634448572400.3118933.1322009）：你回「跑好了，都OK」；頂層核對 aos-run uid 951、/srv/aos-run 2770、/usr/local/bin 4 支 s6、`sudo -l` 有 `(root) NOPASSWD: /usr/local/bin/s6-setuidgid aos-run *`。wait-user/02 那行照「做完即刪」拿掉；端到端驗收歸 ok-limits，結果寫進 kernel-limits-1114.md。
+- two-machines 公司機來回（01794624634355980205.3118873.1322000）：你回「好」，等回公司機做，wait-user/02 那行留著。
+- 舊 aos-mcp 殘留（01794624634417922759.3118914.1322006）：你答整夾刪 `~/.cache/aos-mcp-aos`、arcagi 壞 tools.json 不動；頂層 11-14 准 ok-pilot 刪：刪前 `ls -laR` 留底（wf/temp/ok-pilot/wu/aos-mcp-aos-before-rm.txt），`rm -r` 只刪那一夾，wait-user/04 那行結案。
