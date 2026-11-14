@@ -115,3 +115,17 @@
 - main 0a3ffe5c4＋本批連跑兩次 8/8。N-28 那句「鏈劇本那段還沒驗」改成驗過。
 - 11-14 頂層裁乙：先交不刪的部分（範本換身體、標頭搬進 aos-llm、CMake／install／tree-swap 拿掉舊名、測試換叫 kernel_llm/_entry、兩支 live 測試搬進 kernel_llm/tests）。`impls/aos-llm-kernel` 舊夾與 `~/.local/bin/aos-llm-kernel` symlink 列進今晚換樹清單，刪檔要使用者點頭。活樹有自己一份範本，不直接讀 repo 的 kernel/llm-kernel。
 - 驗 main 0a3ffe5c4 對 main＋本批：受影響的 7 夾＋image-move-check 結果相同，只有 agent-fsm 兩支紅，兩邊一樣。其中 test_fork 是批 6 漏改：details 改成絕對路徑後，範本測試還在比相對路徑（我批 6 驗收時漏跑 templates/tests/agent-fsm），本批一併改；test_hooks 那支 ok-misc 已在 77a822e1c 修好。
+
+### 批 12（問腦條文、文件、知識庫跟上 kernel_llm）
+- 65522efd8，44 檔。跟圖紙 04 不同、照程式寫：kernel_llm 照舊讀 AOS_KERNEL、沒有 next；04 說的 kernel/llm-kernel README 不存在。
+- 留著沒改：生成的 _index.json（等佇列重生）、三處程式碼註解（llm_kernel.hpp 第 1 行、post.hpp、lib/base/llm_http/_entry），等換樹刪舊夾時一起。
+
+### 批 14（家機：問腦 live 測試＋試驗場換身體）
+- main 65522efd8 的乾淨複本（`~/code/kf-1114/verify-b14-65522efd8`，清掉 AOS_*）：`lib/aos/kernel_llm/tests` 的 test_batch8_live、test_nesting_live 共 9 例全過（真 daemon 兩層，端點是本機假程式）。
+- 試驗場：整份 `cp -a ~/code/playground` 到 `~/code/kf-1114/pg-b14`，原件沒動。複本裡 lib／py／templates／knowledge 換成上面那份 main，總機 `llm_kernel/def/daemon.json` 從 `aos-llm-kernel kernel.json` 換成範本的 `aos-exec $AOS_HOME/lib/aos/kernel_llm kernel.json`，兩個 stack 移到 `.orig` 另起；只掛 fsm_ann，腦改 `sol`（LM Studio 沒開，`stupid-fast` 用不了）。fsm_ann 用工具查時間、答一句，兩次問腦都記進 ledger：欄位跟換之前的舊列逐鍵同序，sender 是 agent stack、endpoint sol、usage 有真 token。
+- 沒做：LM Studio 兩個本機包的互斥與黏著（LM Studio 沒開）；對帳腳本照 letter → child 配對；可選的「領班加框架站」由批 13 代驗。
+
+### 批 13（真腦 eca 經框架站生 subagent）
+- 同一份試驗場複本：agent daemon 換成框架站（daemon.json 的身體是 `lib/aos/kernel`、自己的 AOS_KERNEL 指自己的 requests；kernel.json `max_running: 3`、`queue: true`、`reply_via_me: true`；_sweeper 也算一格）。eca_bob（claude haiku，tools 補 subagent 包）掛上時帶 `AOS_KERNEL=<框架站>/requests`。
+- 叫它用 subagent 工具連 add 兩隻（def＝fsm_ann）：kid1 回 `added kid1 … subagents 1/4`、表上多一列；kid2（on_queued=ok）回 `queued kid2 at position 1 …`，框架站 queue.json 有它、表上沒有。腦收到的兩個工具結果都沒有報錯。ctl stop kid1 放一格後，kid2 一秒內出隊、running。再叫它 `subagent ls`（走查詢信）：kid1 stopped、kid2 running，subagents.json 的 kid2 從 queued_letter 換成 stack。
+- codex（gpt-6-luna）那半照規則不跑。複本已 shutdown；`~/code/kf-1114/pg-b14` 留著當證據。
