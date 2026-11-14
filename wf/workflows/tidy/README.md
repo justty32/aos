@@ -5,7 +5,7 @@
 把文件層收乾淨：活文件只留現役與 open 的東西，過時的封存、雜亂的分類、指向被封存檔的連結清掉、過大的條列抽成資料檔、檔內的過往記錄刪掉只留結論。結構方法在 [STRUCTURE](../../STRUCTURE.md)；本檔記**整理怎麼跑一輪**：盤點 → 交接書 → 派工 → 核驗。
 
 **何時用**：「幫我整理 X」；一個資料夾幾十個檔扁平混放；某份表格被歷史項塞到幾十 KB；log／inbox 堆了一堆沒消化；文件自述「歷史」「已被取代」卻還被活文件連著；檔內堆著決策過程、改過幾版、作廢方案。
-**何時不用**：改程式碼結構（行為不變的搬檔／拆模組）→ refactor 工作流；只搬一兩個檔且不涉及封存或拆表 → 直接 `git mv`，不必走本流程；只是骨架版本升級（沒有封存或拆表）→ 不走本流程，照上游變動記錄手動套。
+**何時不用**：改程式碼結構（行為不變的搬檔／拆模組）→ refactor 工作流；只搬一兩個檔且不涉及封存或拆表 → 直接 `mv`（交件時舊路徑列進 commit-request 的 `--rm`、新路徑列進 `--files`；agent 的權限模式可能不讓跑帶 `--rm` 的指令，那就寄任務書指定的回報對象請它上交，可能要使用者親手跑），不必走本流程；只是骨架版本升級（沒有封存或拆表）→ 不走本流程，照上游變動記錄手動套。
 
 ## 六條原則
 
@@ -22,9 +22,9 @@
 - 目標資料夾根層只剩入口 README ＋ 語意子資料夾（或同類檔案集合），每個子資料夾有 `README.md`。
 - 每個被封存檔：`grep -rn --include='*.md' '<檔名>' <repo> | grep -v archive/` → 0 行；`archive/README.md` 有它那一列。
 - 精簡過的檔：[content-trim](content-trim.md) 的原文檢查 → 0 行 `LOST`；報告列每檔精簡前後 bytes。
-- `find <repo> -name '*.md' -not -path '*/archive/*' -size +8192c | wc -l` → 0。
+- `find <repo> -name '*.md' -not -path '*/archive/*' -size +8192c` 列出的檔逐個看過：該收斂或拆的處理掉，本質不可分的可以留著（8 KB 是觸發檢視的訊號、不是上限，導航表放寬到 16 KB，見 [STRUCTURE](../../STRUCTURE.md)）。
 - 報告附 `moves.tsv`（`舊路徑<TAB>新路徑`）。
-- 子資料夾 `README.md` ≤ 300 行、入口 `README.md` ≤ 100 行；名冊／登記表 ≤ 8192 bytes；`SESSION-LOG.md` ≤ 4096 bytes 且只列 open。
+- 推薦（不是硬條件，開發階段不設行數上限，[user/02](../common/user/02-交接與收工.md#開發階段不設行數上限2026-10-09-定)）：子資料夾 `README.md` 300 行內、入口 `README.md` 100 行內；名冊／登記表 8 KB 左右；`SESSION-LOG.md` 只列 open。
 
 ## 流程
 
@@ -42,10 +42,10 @@
    ```
    把病灶寫成編號清單，直接放進交接書；不要讓線自己找範圍。
 <!-- wf-nav -->
-2. **交接書**固定寫：分類方案（類別數 5–7，一張表列每類收什麼）、**檔名一律不改**（外部連結靠檔名對映修）、一律 `git mv`、每個子資料夾要 README、封存規則與六條原則、禁區（不 commit／不進交接書以外的範圍／不刪／不碰 kernel 檔與 `AGENTS.md` 實質內容）、**固定條數**的驗收命令、報告要附 `moves.tsv`。
-3. **線跑**：按檔案性質選 A／B 拆法（見 [common/data-files.md](../common/data-files.md)：A 法把同質大表抽成資料檔並在 md 端留摘要、對帳列數；B 法把過長散文按語意拆進同名資料夾，原路徑保留當入口）；共通：一律 `git mv`／新檔 `git add`，不留副本，不改內容實質，不重新判定任何狀態。多批可平行（各批只動自己範圍內的檔）。
+2. **交接書**固定寫：分類方案（類別數 5–7，一張表列每類收什麼）、**檔名一律不改**（外部連結靠檔名對映修）、一律搬檔不複製（`mv`，交件時舊路徑列 `--rm`、新路徑列 `--files`）、每個子資料夾要 README、封存規則與六條原則、禁區（不 commit／不進交接書以外的範圍／不刪／不碰 kernel 檔與 `AGENTS.md` 實質內容）、**固定條數**的驗收命令、報告要附 `moves.tsv`。
+3. **線跑**：按檔案性質選 A／B 拆法（見 [common/data-files.md](../common/data-files.md)：A 法把同質大表抽成資料檔並在 md 端留摘要、對帳列數；B 法把過長散文按語意拆進同名資料夾，原路徑保留當入口）；共通：一律 `git mv`／新檔 `git add`（家機 11-14 起走 `wf/tools/commit-request`、不 `git add`：搬檔用 `mv`，新路徑放 `--files`、舊路徑放 `--rm`（agent 的權限模式可能不讓跑帶 `--rm` 的指令，那就寄任務書指定的回報對象請它上交，可能要使用者親手跑），用法見 [aos-teams/07](../dispatch/aos-teams/07-預設流程與agent-fsm.md)），不留副本，不改內容實質，不重新判定任何狀態。多批可平行（各批只動自己範圍內的檔）。
    **內容精簡另開一條線**、跟搬檔拆檔分開 commit，照 [content-trim](content-trim.md) 做；它刪歷史但不改現行結論。
-4. **核驗（調度者）**：不信報告，自己跑一次 Done when 的命令；看 `git diff --cached --name-status -M` 確認是 R（rename）不是 D+A；`archive/` 與 `AGENTS.md` 若被動到，只准是連結路徑那種修改。
+4. **核驗（調度者）**：不信報告，自己跑一次 Done when 的命令；看 `git diff --cached --name-status -M` 確認是 R（rename）不是 D+A（走 commit-request 的話看 commit 後的 `git show --name-status -M <雜湊>`）；`archive/` 與 `AGENTS.md` 若被動到，只准是連結路徑那種修改。
 5. **搬檔後修連結**：用各批的 `moves.tsv` 跑 `wf/tools/fix_moved_links.py`（先 dry-run 再 `--apply`；它跳過 code fence、解析相對路徑後重算）。**指向被封存檔的連結不重寫**——照第 1 條原則拿掉。跨資料夾／跨 repo 的壞連結留給調度者收尾。
 6. **收尾**：確認 Done when 全過，commit 由使用者或調度者決定。
 
@@ -56,4 +56,4 @@
 ## 交接
 
 - 完成後 → 若整理揭露了要裁示的事，寄使用者專區（`aos-user send`，見 [common/user.md](../common/user.md)；舊條目在 [WAIT_USER](../../WAIT_USER.md)）。
-- 每輪整理的報告（含 `moves.tsv`、驗證輸出）→ [`reports/`](reports/2026-10-02-wf-tidy.md)，一輪一份、檔名用日期。
+- 每輪整理的報告（含 `moves.tsv`、驗證輸出）→ [`reports/`](reports/)，一輪一份、檔名用日期（最新一輪 [2026-11-12-收尾](reports/2026-11-12-收尾.md)）。

@@ -2,10 +2,10 @@
 
 [refactor](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)
 
-適用於檔案換位置、目錄改名與專案拆 repo；以下列出六類常見斷裂與偵測程序。
+適用於檔案換位置、目錄改名與專案拆 repo（aos 現在是獨立 repo，拆 repo 那幾條是當時拆 repo 的經驗）；以下列出六類常見斷裂與偵測程序。
 
 ```text
-Done when: <逐檔比對已落地、六類斷裂已掃、工具冒煙測試過、連結歸零、CI 實測過>
+Done when: <逐檔比對已落地、六類斷裂已掃、工具冒煙測試過、連結歸零、建置指令實跑過（本專案沒有 CI）>
 ```
 
 ## 鐵律：複製，不要搬移，直到驗證完
@@ -47,7 +47,7 @@ grep -rn '^from \|^import ' --include='test_*.py'
 
 ### 4. 相對 markdown 連結
 
-跨 repo 拆分後**原本的兄弟變成別的 repo**。`git ls-files` 走到**子 repo 的指標**就停，所以檢查器預設看不到子 repo 內部。
+跨 repo 拆分後**原本的兄弟變成別的 repo**。`git ls-files` 走到**子 repo 的指標**就停，所以檢查器預設看不到子 repo 內部。本專案現在沒有子 repo：aos 是獨立 clone，`simple_tools` 的 submodule 11-13 晚起不再是工作 repo（[dev-env](../dev-env.md)），這條留給真的要拆 repo 時。
 
 修法：拿目標的 basename 去整個工作區找實體，再算相對路徑。
 同名多候選要手工指定。
@@ -58,7 +58,7 @@ grep -rn '^from \|^import ' --include='test_*.py'
 grep -rn '<舊路徑>' .github/ *.yml *.json <agent 工具的設定檔>
 ```
 
-常見目標：CI workflow 裡跑的指令、agent 工具的 hook／設定檔。
+常見目標：CI workflow 裡跑的指令、agent 工具的 hook／設定檔。本專案沒有 CI（repo 沒有 `.github/`，驗證都由 agent 跑，見 [dev-env](../dev-env.md)），這類只剩 agent 工具的設定檔要查（例 `.claude/settings.json`）。
 
 ### 6. 執行期資料目錄
 
@@ -78,13 +78,12 @@ for f in <moved>/*.py; do python3 -c "import ast;ast.parse(open('$f').read())"; 
 python3 <tool>.py --help
 # 4. 連結檢查（可選，預設不跑；大量搬檔後擔心連結壞掉再跑），並確認檢查器涵蓋新位置
 python3 wf/tools/check_anchors.py <root>   # 或該專案的連結檢查器
-# 5. CI 指令實跑一次
+# 5. 本專案沒有 CI：改跑 testing.md 的建置指令一次
 ```
 
 ## 改名時額外注意
 
 - **名字會不會跟別的東西撞。** 例：某個設定集一度改叫 `main`，與分支名和目錄名相撞，使 `git log main` 報 ambiguous；加前綴解掉。
-- **所有分支都要改。** 只改現役分支的話，切回其他分支時目錄名就對不上了。
-  用 worktree 在別的分支上做，現役 checkout 全程不動。
+- **分支只有一個 `main`**（[common/user](../common/user.md)「分支慣例」），改名改這一個就好；交件走 `wf/tools/commit-request`。以前「所有分支都要改、用 worktree 在別的分支上做」的情境已不在。
 - **區分「同一個東西的路徑」與「當時的紀錄」。** 驗收報告、歷史 log 這類**當時的紀錄**裡的舊路徑**不要改**——那些記的是當時實際用的路徑，改了就是竄改紀錄。
   只改「還會再跑」的東西：活工具、spec、CI、現役文件。

@@ -2,6 +2,8 @@
 
 [tidy](README.md)｜通用規則在 [README](README.md) 與 [data-files](../common/data-files.md)
 
+講「母 repo／子 repo」的幾條是 aos 還是 `simple_tools` 的 submodule 時踩的；11-13 晚起 aos 是獨立 clone、沒有子 repo（[dev-env](../dev-env.md)），整理多 repo 的專案時才用得上。
+
 ## 封存與搬檔
 
 <!-- wf-nav -->
@@ -28,7 +30,7 @@
 
 <!-- wf-nav -->
 - 便宜模型的工人可能把中途追加的規則當側路訊息拒收；規則改了就開新工人、把規則寫進主交接書，不要用續訊息機制追加。
-- 工人偶爾漏 stage 改過的 md；管理線驗收要含 `git status --short | grep -v '^[MADR] '` → 0，並以明確路徑補 `git add`。
+- 工人偶爾漏 stage 改過的 md；管理線驗收要含 `git status --short | grep -v '^[MADR] '` → 0，並以明確路徑補 `git add`（家機 11-14 起走 commit-request：漏的檔補進 `submit --files`，不 `git add`）。
 - 工人的暫存要放 scratchpad 並帶批次前綴，否則會落到 repo 根或兩個工人撞同名。
 - 契約先定稿再派；中途每改一次規則，已做完的批都要回補。
 - 母 repo 的檢查工具用 `.` 會遞迴掃進所有子 repo，數字會隨別條線在動；母 repo 自己只掃自己那一份。

@@ -10,20 +10,22 @@
 ## Done when
 
 - [testing](../testing.md) 的建置指令回傳 0；行為不變靠讀碼與手跑確認。
-- [code map](../../knowledge/code-map.json) 中受影響領域的列已更新。
+- [code map](../../knowledge/code-map.json) 中受影響領域的列已更新（`code-map.json` 本檔手寫；`code-map/` 底下的逐檔表是生成物，交件時由 `wf/tools/commit-request` 排隊重生，不手改，見 AGENTS.md 鐵律 3）。
 
 ## 流程
 
 1. 先跑驗證指令記下基準；紅的先修掉，別和重構混在一起。
 2. 照 [STRUCTURE](../../STRUCTURE.md) 按職責拆／分類，不等分硬切。
 3. 一次搬一塊，搬完就跑驗證。
-4. 更新 code map 與所有指向舊路徑的連結。
+4. 更新 code map 的領域列與所有指向舊路徑的連結；逐檔表不手改，搬過或職責變了的檔改檔頭那一句就好。
 
 ## 內容
 
 | 檔案 | 內容 |
 |------|------|
 | [moving-things.md](moving-things.md) | 搬檔／改目錄名／拆 repo：六類會斷的東西與驗證程序 |
+| [reports/](reports/) | 各輪重構與審查的報告，一輪一夾 |
+| [archive/](archive/README.md) | 封存（索引在它的 README） |
 
 ## 交接
 
