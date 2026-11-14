@@ -16,10 +16,10 @@
 
 使用者重述同一條鏈，叫它「正統規劃，架構設計流程」，多了兩處：
 
-**opus 帶隊 → sonnet／gpt 蒐集 → opus 匯總給 fable → fable 設計 → opus 深化細化、出實作計劃 → Argon 審 → opus 依 Argon 改計劃 → 實作由 astra 帶 sol 做。**
+**opus 帶隊 → sonnet／gpt 蒐集 → opus 匯總給 fable → fable 設計 → opus 深化細化、出實作計劃 → Argon 審 → opus 依 Argon 改計劃 → 實作由 opus 帶 sol 做（11-14 起；原本是 astra 帶 sol）。**
 
 - **Argon 審**：opus 初步深化細化之後、交實作之前，送 Argon 跑一次（指令與 (A) 審查 (B) 提案的格式見 [05](05-同機session與Argon.md#argon-是參與者不只審稿)）；opus 逐條寫採納／不採納與理由，改後的計劃才算定稿。
-- **實作 astra 帶 sol**：照 [astra-kernel-plan](../../../../proto8/thinking/2026-11/13/astra-kernel-plan.md)（astra 指揮、sol 照圖紙寫碼；在 aos 樹裡跑 agent-fsm 身，接下一節）。這是 gpt 系優先那條的具體隊形；astra 只指揮與驗收、不改圖紙的設計，跟入口「gpt 系不參與設計決策」不衝突（圖紙由 opus 定）。施工仍要使用者另外點頭（鐵律 2）。
+- **實作改成 opus 帶 sol**（使用者 11-14 答「按照推薦」）：線星實測 astra 當門能跑，但不比 gpt 隊省，次數和 token 多 10～50%（[astra-kernel-1114](../../../../proto8/thinking/2026-11/14/astra-kernel-1114.md)），所以 astra 不當常設隊長，由各線的 opus eca 指揮 sol、驗收。以下是舊條文，留作紀錄：**實作 astra 帶 sol**：照 [astra-kernel-plan](../../../../proto8/thinking/2026-11/13/astra-kernel-plan.md)（astra 指揮、sol 照圖紙寫碼；在 aos 樹裡跑 agent-fsm 身，接下一節）。這是 gpt 系優先那條的具體隊形；astra 只指揮與驗收、不改圖紙的設計，跟入口「gpt 系不參與設計決策」不衝突（圖紙由 opus 定）。施工仍要使用者另外點頭（鐵律 2）。
 - 「sonnet／gpt 蒐集」：gpt 那半照上面「sonnet 搜集」條，等 agent-fsm 有雛形。
 
 **11-14 補（施工各線）**：使用者原話「然後每條線都讓opus作爲協調，要規劃就走正規規劃流程」「蒐集資料和實作都可以試試看交給sol等」「跑一整晚...我們現在就用本地litellm proxy，使用gpt」「作爲我們要的實作」。所以：
@@ -30,6 +30,10 @@
   - **commit 一律交給排隊指令**（11-14 起）：各線不再自己 `git commit`，改跑 `~/repo/aos/wf/tools/commit-request`。開工先 `claim --line <線名> 檔…`；交件時 `submit --line <線名> --files 檔… --msg-file 訊息檔`，trailer 自己寫在訊息檔裡。日索引、月索引、SESSION-LOG 不手改，改用 `--op`（`day_upsert`、`month_bump`、`log_upsert`、`log_delete`）。不要再 `git add`，也不要自己跑 `index_gen --apply`，排隊會在 repo 外的乾淨副本上重生生成物，再一起 commit。結果印在最後一行 JSON（雜湊或錯誤原文），exit 2 是被擋（例如別條線 claim 著），回應裡寫著是誰。直接 `git commit` 已被 `.git/hooks/pre-commit` 擋下（使用者 11-14 點頭「1.好。2.好」；人要手動 commit 加 `--no-verify`），`~/.local/bin/commit-request` 暫時連著，可以直接打 `commit-request`；這是過渡，正規作法是定義的 `.env` 寫 `PATH=${HOME}/repo/aos/wf/tools:${PATH}`，但 `.env` 預設不蓋已有的 PATH（N-59），要啟動那一跳帶 `--dotenv-override`，daemon／`ctl add` 還不能帶，已派 ok-misc；換樹後頂層補三份定義的 `.env`、重掛 eca、拔掉連結（使用者 11-14「我原本以爲你會用.env搭配PATH去做」，答「好」）。完整用法與範例見 [commit-queue-1114 § 申請者用法](../../../../proto8/thinking/2026-11/14/commit-queue-1114.md#申請者用法各線照這樣改)。
 - **頂層的雜務自動化**（使用者 11-14「太多的請求...你可以派一個claude subagent幫你寫程式…可以另外弄個sonnet agent，幫你當小廝，重要的事情馬上給你，普通通知每隔一段時間再給你」「commit這塊，你也可以開始想辦法，同樣，寫程式或派小廝。或是弄個fsm agent掛在你底下」「要想辦法，你可以把你的意見交給fable，讓他幫你規劃」）：
   - 小廝 `xiaosi`（sonnet eca，定義 `~/aos-home/agents/xiaosi`）收所有 ok-* 的回報：要緊的立刻轉給頂層，其他的每 20 分鐘彙整一封再轉，靠頂層的 clock 項 `xiaosi-digest` 定時叫它。
+  - **寄給 xiaosi 的信怎麼寫**（頂層 11-14 採用；各 ok-* 與它們底下的隊長都適用；出處 skyrim 的「領導轉發三條規矩」，見 [skyrim-agentctl 02、04](../../../../proto8/thinking/2026-11/14/skyrim-agentctl/04-wf改稿.md)）：
+    1. **標題寫你的判斷，不轉貼隊員原話**：「線 X 做完，Y 已 commit（雜湊）」「線 X 卡在 Z，已試過 A、B」；不寫「完成」「報告」「sol 回報如下」。
+    2. **標題或第一句標明你要什麼**：要使用者裁（status `NEEDS-USER`）、要頂層給資源或放行（`BLOCKED`）、只是報備（`PROGRESS`／`DONE`）。xiaosi 只看 status 與標題分輕重，寫錯就會被排進 20 分鐘彙整或被誤當急件。
+    3. **正文先寫你已經排除的可能**：卡住或出錯的信，第一段列「試過什麼、為什麼不是那個」，頂層才不用重跑一次你做過的判斷。
   - gate 自動初步處理，紀錄見 `proto8/thinking/2026-11/14/gate-auto-1114.md`。
   - commit 排隊：已啟用 `wf/tools/commit-request`，不需要常駐程式，也不用掛 hook（fable 規劃、Argon 審過），用法在上面「頂層也當 kernel」那條底下，紀錄見 `proto8/thinking/2026-11/14/commit-queue-1114.md`。
 - **命名**（使用者 11-14「掛fsm sol/astra等agent的時候，那個命名要小心別重合到」）：daemon 表上的名字整台共用；各 eca 掛的 agent 一律叫 `<eca名>-<角色>-<編號>`（例 `ok-kf-sol-1`）。
