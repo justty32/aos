@@ -28,9 +28,9 @@ All procs share lifecycle rules regardless of launch syntax: stop writes their p
 ctl and waits (no SIGTERM fallback); sleep sends SIGTERM and keeps a sleeping row.
 Natural exit 0 removes the row; known nonzero exits keep stopped with a reason
 (unless auto_restart requests a restart). Shutdown sleeps all live procs for next startup.
-Each proc may set either stuck_after_cycles (positive integer, default 10) or
-stuck_after_ms (positive signed 64-bit integer, wall-clock milliseconds). Unanswered
-control windows project phase stuck; restart_on_stuck: true restarts the proc
+Each proc may set either stuck_after_cycles (non-negative integer) or stuck_after_ms
+(non-negative signed 64-bit integer, wall-clock milliseconds); omitted or 0 = never
+judged stuck. Unanswered control windows project phase stuck; restart_on_stuck: true restarts the proc
 (unless paused), stopping after 3 consecutive stuck runs without a response.
 
 flags:

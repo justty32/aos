@@ -369,8 +369,8 @@ Json row(const Child& c, const std::string& dstack) {
     }
     if (c.stuck_after_ms) {
         r["stuck_after_ms"] = *c.stuck_after_ms;
-    } else if (c.stuck_after_cycles != 10) {
-        r["stuck_after_cycles"] = c.stuck_after_cycles;   // P7：不是預設 10 才寫，adopt 沒這欄＝10
+    } else if (c.stuck_after_cycles != 0) {
+        r["stuck_after_cycles"] = c.stuck_after_cycles;   // P7：有開才寫，adopt 沒這欄＝0（不判，11-15）
     }
     if (c.restart_on_stuck) {
         r["restart_on_stuck"] = true;

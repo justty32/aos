@@ -16,6 +16,11 @@ void Daemon::check_stuck(const std::string& name, Child& c) {
         clear();
         return;
     }
+    // 11-15（使用者「逾時這東西應該要默認爲0」「很久沒動靜算黃色，不殺掉」）：沒寫期限（或寫 0）＝不判卡住、不重起。
+    if (!c.stuck_after_ms && c.stuck_after_cycles <= 0) {
+        clear();
+        return;
+    }
     using aos::loop::CtlWindow;
     using aos::loop::StateFluxWindow;
     using aos::loop::StopCauseWindow;

@@ -559,9 +559,34 @@ time.sleep(12)
                 self.assertEqual(clock.read_text(), '5\n')
                 f.close()
 
+    def test_no_stuck_deadline_means_never_stuck(self):
+        # 11-15: omitted or 0 = never judged stuck. One cycle is 20 ms here, so the old default (10 cycles)
+        # would have marked stuck after 0.2 s; we wait 1.2 s (60 cycles) and it must stay running, same pid.
+        for i, fields in enumerate(({}, {'stuck_after_cycles': 0}, {'stuck_after_ms': 0})):
+            with self.subTest(fields=fields):
+                f = self.fixture('never_stuck_' + str(i))
+                target = f.body('script', 'stop', seconds=30)
+                write(f.config, {'interval_ms': 20, 'procs': {'job': {
+                    'exec': str(target), 'restart_on_stuck': True, **fields}}})
+                with patch.dict(ENV, AOS_CLOCK_INTERVAL='20'):
+                    f.start()
+                f.phase('running')
+                until(lambda: (f.cell / 'ready').exists())
+                first = f.row()['pid']
+                write(f.cell / 'state_flux.json', {'responded_at': None})
+                time.sleep(.03)
+                write(f.cell / 'ctl.json', {'cmd': 'pause', 'seq': 1})
+                time.sleep(1.2)
+                row = f.row()
+                self.assertEqual(row['phase'], 'running')
+                self.assertEqual(row['pid'], first)
+                self.assertNotIn('stuck_after_cycles', row)
+                self.assertNotIn('stuck_after_ms', row)
+                f.close()
+
     def test_stuck_deadline_rejects_conflicting_and_invalid_ms(self):
         bad = ({'stuck_after_cycles': 1, 'stuck_after_ms': 300},
-               {'stuck_after_ms': 0}, {'stuck_after_ms': -1},
+               {'stuck_after_cycles': -1}, {'stuck_after_ms': -1},
                {'stuck_after_ms': '300'}, {'stuck_after_ms': True},
                {'stuck_after_ms': 1.5}, {'stuck_after_ms': None},
                {'stuck_after_ms': 2**63}, {'stuck_after_ms': 2**64})

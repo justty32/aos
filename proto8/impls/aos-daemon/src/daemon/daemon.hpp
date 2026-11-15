@@ -2,7 +2,8 @@
 //
 // 11-06（no-pid P6）：通用布林 auto_restart 讓任何 proc 常駐（可 stop／sleep、收工睡／開門醒），退了同一拍重起；連 3 次起後 3 秒內退＝stopped＋reason、要 start。
 //   表上 auto_restart、restart_on_stuck 只在 true 時寫，不看子項型別。
-// 11-06（no-pid P7）：stuck_after_cycles／stuck_after_ms 每列擇一選填正整數，預設 10 cycles；同寫或寫壞＝CfgBad，非預設值寫回表供 adopt 保留。
+// 11-06（no-pid P7）：stuck_after_cycles／stuck_after_ms 每列擇一選填非負整數；同寫或寫壞＝CfgBad，非 0 值寫回表供 adopt 保留。
+// 11-15（使用者「逾時這東西應該要默認爲0，也就是不限時間」）：沒寫或寫 0＝不判卡住（以前預設 10 cycles，eca 長輪被 pause 一下就標 stuck）。
 //   任何 proc 都讀父設定的公開窗名或預設 ctl.json／state_flux.json，不認子程式身分。
 //   只判內部 running 列；任一窗缺、state_flux 非物件、窗 null＝清 stuck 與期限、不判。
 //   ctl mtime（UTC 截到毫秒）> responded_at（null 最舊），且 > 父這次起／接回基準＝刺激；首見記 deadline_after(cycles) 或牆鐘毫秒期限，expired 後標 stuck。
@@ -182,7 +183,7 @@ private:
     Child start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws = Json(),
                 const Json& kept_exec = Json(), const Json& kept_def = Json(),
                 const Json& kept_limits = Json(), const Json& kept_launch = Json(), bool kept_auto_restart = false,
-                bool kept_ros = false, long long kept_stuck_after_cycles = 10,
+                bool kept_ros = false, long long kept_stuck_after_cycles = 0,
                 std::optional<long long> kept_stuck_after_ms = std::nullopt, bool kept_procs_warned = false, bool kept_cgroup_warned = false);   // 照寫法起（spawn／spawn_exec）；spec null 用列上記的 kept_*（含入口與兩個布林）
     // 11-10 two-machines：信箱接回只留名的列再起之前，把 as_written（指示詞原形）照現在的環境再解進 ws／stack／def／exec 與入口
     // （子 loop 的入口是小格 loop.json＝改寫它的 exec）。解不開＝留 stopped＋原因（同 start 起不來）、回 false。沒有 as_written＝不動、回 true。

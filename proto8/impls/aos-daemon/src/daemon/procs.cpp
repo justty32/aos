@@ -258,15 +258,15 @@ Json read_procs(const Json& v, const aos::RefBase& base, const std::string& key,
                 if (r.value.contains("stuck_after_cycles") && r.value.contains("stuck_after_ms")) {
                     throw Error{code::CfgBad, key + "[" + name + "]: stuck_after_cycles and stuck_after_ms must not both be set"};
                 }
-                if (r.value.contains("stuck_after_cycles") && (!aos::is_count(r.value["stuck_after_cycles"]) || r.value["stuck_after_cycles"].get<long long>() <= 0)) {
-                    throw Error{code::CfgBad, key + "[" + name + "].stuck_after_cycles must be a positive integer"};
+                if (r.value.contains("stuck_after_cycles") && (!aos::is_count(r.value["stuck_after_cycles"]) || r.value["stuck_after_cycles"].get<long long>() < 0)) {
+                    throw Error{code::CfgBad, key + "[" + name + "].stuck_after_cycles must be a non-negative integer (0 = never stuck)"};
                 }
                 if (r.value.contains("stuck_after_ms")) {
                     const Json& ms = r.value["stuck_after_ms"];
-                    if (!aos::is_count(ms) || ms == Json(0) ||
+                    if (!aos::is_count(ms) ||
                         (ms.is_number_unsigned() && ms.get<unsigned long long>() >
                          static_cast<unsigned long long>(std::numeric_limits<long long>::max()))) {
-                        throw Error{code::CfgBad, key + "[" + name + "].stuck_after_ms must be a positive integer within signed 64-bit range"};
+                        throw Error{code::CfgBad, key + "[" + name + "].stuck_after_ms must be a non-negative integer within signed 64-bit range (0 = never stuck)"};
                     }
                 }
                 fix_path(r.value, name, key, "ws", "workspace");

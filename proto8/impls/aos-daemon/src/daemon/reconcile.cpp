@@ -48,12 +48,12 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
     bool once = is_once(launch_spec);
     bool auto_restart = spec.is_null() ? kept_auto_restart : auto_restart_of(spec);
     bool ros = spec.is_null() ? kept_ros : ros_of(spec);
-    long long stuck_cycles = spec.is_null() ? kept_stuck_after_cycles : spec.is_object() ? spec.value("stuck_after_cycles", 10LL) : 10;
+    long long stuck_cycles = spec.is_null() ? kept_stuck_after_cycles : spec.is_object() ? spec.value("stuck_after_cycles", 0LL) : 0;
     std::optional<long long> stuck_ms;
     if (spec.is_null()) {
         stuck_ms = kept_stuck_after_ms;
-    } else if (spec.is_object() && spec.contains("stuck_after_ms")) {
-        stuck_ms = spec["stuck_after_ms"].get<long long>();
+    } else if (spec.is_object() && spec.contains("stuck_after_ms") && spec["stuck_after_ms"].get<long long>() > 0) {
+        stuck_ms = spec["stuck_after_ms"].get<long long>();   // 0＝不判（同沒寫）
     }
     bool deep = cell != dstack_ + "procs/" + name;   // 不是預設小格＝proc 自己的 stack：不在就 mkdir -p
     if (auto live = live_in_cell(cell, names_.loop, dstack_)) {   // 11-05 第二輪：小格裡已有活著的子 loop（上一個 daemon 起了、沒記進表就死）＝接回、不再起一份
@@ -364,8 +364,8 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
             c.launch = launch_of(spec, cwd_);
             c.auto_restart = auto_restart_of(spec);
             c.restart_on_stuck = ros_of(spec);
-            c.stuck_after_cycles = spec.is_object() ? spec.value("stuck_after_cycles", 10LL) : 10;
-            if (spec.is_object() && spec.contains("stuck_after_ms")) {
+            c.stuck_after_cycles = spec.is_object() ? spec.value("stuck_after_cycles", 0LL) : 0;
+            if (spec.is_object() && spec.contains("stuck_after_ms") && spec["stuck_after_ms"].get<long long>() > 0) {
                 c.stuck_after_ms = spec["stuck_after_ms"].get<long long>();
             }
             c.stack = cell_of(n, spec);

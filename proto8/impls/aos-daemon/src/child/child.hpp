@@ -49,7 +49,7 @@ struct Child {
     Json launch;                        // 可重放的 proc 設定（通常 {exec: [目標, 參數...]}）；只供同 stack 再起，不拿起法判生命週期
     bool auto_restart = false;          // 11-06（no-pid P6）：通用常駐旗標，不看 exec／loop 型
     bool restart_on_stuck = false;      // P7：公開窗刺激逾期時重起
-    long long stuck_after_cycles = 10;
+    long long stuck_after_cycles = 0;   // 11-15（使用者「逾時這東西應該要默認爲0」）：0＝不判卡住，寫了正整數才判
     std::optional<long long> stuck_after_ms;   // 有值＝只用牆鐘毫秒，不讀樹的鐘
     bool stuck = false;                 // 表上的投影，不改生命週期 phase
     bool stuck_restart = false;         // 正在收掉卡住的一支

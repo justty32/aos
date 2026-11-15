@@ -228,7 +228,7 @@ void Daemon::adopt() {
         c.own = false;
         c.auto_restart = auto_restart_of(r);
         c.restart_on_stuck = ros_of(r);
-        Json threshold = r.value("stuck_after_cycles", Json(10));
+        Json threshold = r.value("stuck_after_cycles", Json(0));
         if (aos::is_count(threshold) && threshold.get<long long>() > 0) {
             c.stuck_after_cycles = threshold.get<long long>();
         }
