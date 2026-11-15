@@ -61,6 +61,7 @@
        "index-DRvCQ-de.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
        "index-DUP8VP5F.js": "",
        "index-DhefAmd3.js": "",
+       "index-Dso2-2Z2.js": "",
        "index-EY0xnFtw.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
        "index-LGxtEJiL.js": "",
        "index-Mir41DwB.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com"
@@ -110,7 +111,8 @@
        "layoutMap.ts": "The map's layout (P4; 02e §3, q5 a), pure so node --test can check it: \"wide rooms, people before rooms\".",
        "model.test.ts": "",
        "time.ts": "Time words (pure). The page counts \"N min ago\" itself from epoch fields, on the 10 s local tick (12.8 #7).",
-       "tree.ts": "Tree helpers (pure). A department = a node with members (children). The company = the roots that are agents,"
+       "tree.ts": "Tree helpers (pure). A department = a node with members (children). The company = the roots that are agents,",
+       "words.ts": "The back end's light reasons (\"why\") are English (program output stays English, conventions); the page shows them"
       },
       "shell": {
        "Dialogs.tsx": "Overlays: Ctrl+K search (jump to anyone), the user's board (留話), the drafts list. Esc closes the top one.",

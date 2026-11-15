@@ -196,3 +196,15 @@ test("map layout (02e §3): people before rooms, the four steps, busy never fold
   assert.equal((inside.items.find((i) => i.id === "hq-ops-m1") as { name: string }).name, "·m1");
   assert.equal(layoutMap(null, null, 600, 600).items.length, 0);
 });
+
+test("light reasons in plain Chinese (P5), unknown ones unchanged", async () => {
+  const { whyWord } = await import("./words.ts");
+  assert.equal(whyWord("1 letter(s) waiting for you"), "有 1 封信等你回");
+  assert.equal(whyWord("crashed: exited with code 1, 2 below still running"), "當掉了：exited with code 1（底下還有 2 個在跑）");
+  assert.equal(whyWord("stopped: a turn ran long and was cut by a timeout, not a crash (RunFailed: timeout after 600000 ms)"), "一輪跑太久被逾時停掉（不是當掉）");
+  assert.equal(whyWord("still in a turn, quiet for 30 min (not crashed), 2 queued (read when the turn ends)"), "還在這一輪，30 分鐘沒新輸出（沒當掉）；2 封信排著");
+  assert.equal(whyWord("running, nothing queued, last activity 90 min ago"), "閒著，1 小時前有動靜");
+  assert.equal(whyWord("running, nothing queued, last activity not recorded"), "閒著");
+  assert.equal(whyWord("something new"), "something new");
+  assert.equal(whyWord(null), "");
+});

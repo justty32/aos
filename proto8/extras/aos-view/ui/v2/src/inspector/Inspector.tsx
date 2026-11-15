@@ -16,6 +16,7 @@ import { Dot, LIGHT_WORD, SectionTitle } from "../shell/bits.tsx";
 import { readBoard, boardCounts, MODE_WORD, type BoardView } from "../model/board.ts";
 import { ago, dayTime, parseIso } from "../model/time.ts";
 import { descendants, displayName, isDept, machineIds, MACHINE, soleRoot } from "../model/tree.ts";
+import { whyWord } from "../model/words.ts";
 
 function Row({ k, children }: { k: string; children: React.ReactNode }) {
   return <div className="flex gap-2 text-sm"><span className="w-16 shrink-0 text-slate-500">{k}</span><span className="min-w-0 break-words text-slate-200">{children}</span></div>;
@@ -97,7 +98,7 @@ function Head({ n, tree }: { n: Node; tree: Tree }) {
           {dept && <button className="rounded bg-slate-800 px-2 py-0.5 text-xs hover:bg-slate-700" onClick={() => enter(n.id)}>進部門 ▸</button>}
         </span>
       </div>
-      <p className="mt-0.5 text-sm text-slate-300">{LIGHT_WORD[n.light]}：{n.why}</p>
+      <p className="mt-0.5 text-sm text-slate-300" title={n.why}>{LIGHT_WORD[n.light]}：{whyWord(n.why)}</p>
       {n.parent && tree.nodes[n.parent] && (
         <p className="text-xs text-slate-500">隸屬 <button className="hover:underline" onClick={() => jump(n.parent!, false)}>{n.parent}</button></p>
       )}
@@ -113,11 +114,11 @@ function DeptSummary({ n, tree, now }: { n: Node; tree: Tree; now: number }) {
     <>
       <SectionTitle>部門</SectionTitle>
       <Row k="底下">{n.rollup.nodes} 個（{n.children.length} 個直屬）</Row>
-      <Row k="最差">{LIGHT_WORD[n.rollup.worst]}{n.rollup.why ? `：${n.rollup.why}` : ""}</Row>
+      <Row k="最差">{LIGHT_WORD[n.rollup.worst]}{n.rollup.why ? `：${whyWord(n.rollup.why)}` : ""}</Row>
       {c && (c.red || c.blue || c.yellow) ? <Row k="燈">{c.red ? `出事 ${c.red} ` : ""}{c.blue ? `要決定 ${c.blue} ` : ""}{c.yellow ? `留意 ${c.yellow}` : ""}</Row> : null}
       {n.note && <Row k="隊長留話"><span title={n.note.on || ""}>「{n.note.text}」</span><span className="text-xs text-slate-500">（{n.note.status}，{ago(n.note.at, now)}）</span></Row>}
       {n.aide && <Row k="小助手">{n.aide.name}：{n.aide.state || "?"}，心跳 {ago(n.aide.last_beat, now)}</Row>}
-      {n.team_light && <Row k="隊燈">{LIGHT_WORD[n.team_light.light]}：{n.team_light.why}</Row>}
+      {n.team_light && <Row k="隊燈">{LIGHT_WORD[n.team_light.light]}：{whyWord(n.team_light.why)}</Row>}
       {(bc.dnd > 0 || bc.waiting > 0) && <Row k="公告欄">{bc.dnd ? `${bc.dnd} 個請勿打擾 ` : ""}{bc.waiting ? `${bc.waiting} 個在等人` : ""}</Row>}
       {bc.waitingUser.length > 0 && (
         <div className="mt-1 rounded bg-sky-950/60 p-2 text-sm">
@@ -132,7 +133,7 @@ function DeptSummary({ n, tree, now }: { n: Node; tree: Tree; now: number }) {
         {n.children.map((id) => tree.nodes[id] && (
           <li key={id}><button className="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-sm hover:bg-slate-800" onClick={() => jump(id, false)}>
             <Dot light={isDept(tree.nodes[id]) ? tree.nodes[id].rollup.worst : tree.nodes[id].light} size="sm" />
-            <span className="truncate">{id}</span><span className="ml-auto truncate text-xs text-slate-500">{tree.nodes[id].why}</span>
+            <span className="truncate">{id}</span><span className="ml-auto truncate text-xs text-slate-500" title={tree.nodes[id].why}>{whyWord(tree.nodes[id].why)}</span>
           </button></li>
         ))}
       </ul>
@@ -235,7 +236,7 @@ function Overview({ tree, focus, now }: { tree: Tree; focus: string | null; now:
         {ids.map((id) => { const n = tree.nodes[id]; return n && (
           <li key={id}><button className="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-sm hover:bg-slate-800" onClick={() => jump(id, false)}>
             <Dot light={isDept(n) ? n.rollup.worst : n.light} size="sm" /><span className="truncate">{id}</span>
-            <span className="ml-auto truncate text-xs text-slate-500">{isDept(n) ? `${n.rollup.nodes} 人` : n.why}</span>
+            <span className="ml-auto truncate text-xs text-slate-500">{isDept(n) ? `${n.rollup.nodes} 人` : whyWord(n.why)}</span>
           </button></li>); })}
       </ul>
       {focus !== MACHINE && relay.length > 0 && <>

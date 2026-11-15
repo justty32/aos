@@ -10,6 +10,7 @@ import { listDrafts, dropDraft } from "../model/drafts.ts";
 import { isDept } from "../model/tree.ts";
 import { ago } from "../model/time.ts";
 import { Dot } from "./bits.tsx";
+import { whyWord } from "../model/words.ts";
 
 function Modal({ onClose, children, title }: { onClose: () => void; children: React.ReactNode; title: string }) {
   useEffect(() => pushOverlay(onClose), [onClose]);
@@ -59,7 +60,7 @@ function Search() {
             className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm ${i === cur ? "bg-slate-700" : ""}`}>
             <Dot light={isDept(n) ? n.rollup.worst : n.light} size="sm" /><span>{n.id}</span>
             <span className="text-xs text-slate-500">{n.kind === "agent" ? (isDept(n) ? "部門" : "") : n.kind === "proc" ? "程序" : "外部"}</span>
-            <span className="ml-auto truncate text-xs text-slate-500">{n.why}</span>
+            <span className="ml-auto truncate text-xs text-slate-500" title={n.why}>{whyWord(n.why)}</span>
           </button></li>
         ))}
         {!hits.length && <li className="px-2 text-sm text-slate-500">找不到</li>}

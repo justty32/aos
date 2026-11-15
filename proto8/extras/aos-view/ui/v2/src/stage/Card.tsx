@@ -5,6 +5,7 @@ import { readBoard, boardCounts, MODE_WORD } from "../model/board.ts";
 import { ago } from "../model/time.ts";
 import { descendants, displayName, isDept, machineIds, machineRollup, MACHINE } from "../model/tree.ts";
 import { enter, jump, select } from "../state/nav.ts";
+import { whyWord } from "../model/words.ts";
 
 export interface CardProps { tree: Tree; id: string; lead: boolean; selected: boolean; dim: boolean; now: number }
 
@@ -38,7 +39,7 @@ function AlertChips({ tree, ids }: { tree: Tree; ids: string[] }) {
   return (
     <div className="flex flex-wrap gap-1">
       {ids.map((i) => tree.nodes[i] && (
-        <button key={i} data-chip onClick={() => jump(i, false)} title={tree.nodes[i].why}
+        <button key={i} data-chip onClick={() => jump(i, false)} title={whyWord(tree.nodes[i].why)}
           className="flex max-w-full items-center gap-1 rounded bg-slate-800 px-1.5 py-0.5 text-xs hover:bg-slate-700">
           <Dot light={tree.nodes[i].light} size="sm" /><span className="truncate">{i}</span>
         </button>
@@ -84,7 +85,7 @@ export function Card({ tree, id, lead, selected, dim, now }: CardProps) {
     return (
       <Shell id={id} selected={selected} dim={dim} dept>
         <div className="flex items-center gap-2">
-          <Dot light={n.rollup.worst} title={n.rollup.why} />
+          <Dot light={n.rollup.worst} title={whyWord(n.rollup.why)} />
           <button data-enter className="truncate font-semibold hover:underline" onClick={() => enter(id)}>{id} ▸</button>
           {n.aide && <span className="rounded bg-slate-800 px-1 text-[10px] text-slate-400" title={`小助手 ${n.aide.name}`}>助 {ago(n.aide.last_beat, now)}</span>}
           <span className="ml-auto text-xs text-slate-400">{n.rollup.nodes} 人</span>
@@ -104,12 +105,12 @@ export function Card({ tree, id, lead, selected, dim, now }: CardProps) {
   return (
     <Shell id={id} selected={selected} dim={dim} dept={false}>
       <div className="flex items-center gap-2">
-        <Dot light={n.light} title={n.why} />
+        <Dot light={n.light} title={whyWord(n.why)} />
         <span className="truncate font-semibold">{displayName(id)}</span>
         {kindWord && <span className="rounded bg-slate-800 px-1 text-[10px] text-slate-400">{kindWord}</span>}
         {n.queued ? <span className="ml-auto text-xs text-amber-300" title="信箱裡等著的">✉{n.queued}</span> : null}
       </div>
-      <p className="line-clamp-2 text-xs text-slate-400">{n.why}</p>
+      <p className="line-clamp-2 text-xs text-slate-400" title={n.why}>{whyWord(n.why)}</p>
       {lead && n.note && <p className="line-clamp-2 text-xs text-slate-300" title="隊長原話">留話：{n.note.text}</p>}
       {!lead && n.last_answer && <p className="line-clamp-2 text-xs text-slate-300" title="最後一句話">「{n.last_answer}」</p>}
       <BoardChip n={n} now={now} />

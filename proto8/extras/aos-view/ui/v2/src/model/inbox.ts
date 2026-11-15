@@ -2,6 +2,7 @@
 // Pure: the 10 s local tick re-runs it, so "waiting long" appears on time without new data (12.8 #7).
 import type { Ask, LetterIn, OutItem, Tree } from "../api/types.ts";
 import { boardCounts } from "./board.ts";
+import { whyWord } from "./words.ts";
 
 export type TodoKind = "ask" | "red" | "reply" | "wait";
 export interface Todo {
@@ -67,7 +68,8 @@ export function buildInbox(x: InboxInput): Todo[] {
       for (const why of reds) {
         const key = redKey(n.id, why);
         if (x.dismissed[key]) continue;
-        out.push({ key, kind: "red", title: n.id, sub: why, at: n.active_at, node: n.id, canDismiss: true });
+        out.push({ key, kind: "red", title: n.id, sub: whyWord(why),   // the key keeps the English (dismissals stay valid)
+        at: n.active_at, node: n.id, canDismiss: true });
       }
     }
   }

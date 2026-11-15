@@ -7,6 +7,7 @@ import { enter, select } from "../state/nav.ts";
 import { layoutMap, itemLight, PLATE, STEP_WORD, type MapItem } from "../model/layoutMap.ts";
 import { displayName, MACHINE } from "../model/tree.ts";
 import { LIGHT_BG, LIGHT_WORD } from "../shell/bits.tsx";
+import { whyWord } from "../model/words.ts";
 
 const FONT = "13px ui-sans-serif, system-ui, sans-serif";
 const TEXT_W = PLATE.w - 26;           // plate minus the dot and padding
@@ -74,7 +75,7 @@ function Item({ it, sel }: { it: MapItem; sel: string | null }) {
     );
   }
   const on = sel === it.id;
-  const why = n ? `${it.id} · ${LIGHT_WORD[n.light]}${n.why ? " · " + n.why : ""}` : it.id;
+  const why = n ? `${it.id} · ${LIGHT_WORD[n.light]}${n.why ? " · " + whyWord(n.why) : ""}` : it.id;
   if (it.kind === "dot") {
     return <button data-map={it.id} className={`absolute rounded-full ${LIGHT_BG[light]} opacity-70 hover:opacity-100 ${on ? "ring-2 ring-sky-300" : ""}`}
       style={pos} title={why} aria-label={it.id} onClick={() => select(it.id)} />;

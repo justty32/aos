@@ -9,6 +9,7 @@ import { trackOrder, waitReason, type Todo, type TodoKind } from "../model/inbox
 import { ago, dayTime } from "../model/time.ts";
 import { Dot, Steps } from "../shell/bits.tsx";
 import type { OutItem } from "../api/types.ts";
+import { whyWord } from "../model/words.ts";
 
 const KIND_HEAD: Record<TodoKind, string> = { ask: "🔵 要你決定", red: "🔴 出事", reply: "✉ 回了話", wait: "⏳ 等很久" };
 
@@ -68,7 +69,7 @@ function TodoList() {
         {ys.map((n) => (
           <li key={n.id}><button className="w-full rounded px-2 py-1 text-left hover:bg-slate-800" onClick={() => jump(n.id)}>
             <div className="flex items-center gap-1 text-sm"><Dot light="yellow" />{n.id}</div>
-            <div className="text-xs text-slate-400">{n.light === "yellow" ? n.why : n.team_light?.why}</div>
+            <div className="text-xs text-slate-400">{whyWord(n.light === "yellow" ? n.why : n.team_light?.why)}</div>
           </button></li>
         ))}
         {!ys.length && <li className="px-2 text-sm text-slate-500">沒有黃燈</li>}
