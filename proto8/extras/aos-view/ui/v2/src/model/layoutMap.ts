@@ -19,6 +19,35 @@ export type MapItem =
   | { kind: "fold"; id: string; x: number; y: number; w: number; h: number; name: string; count: number; busy: boolean };
 
 export interface MapLayout { items: MapItem[]; width: number; height: number; step: 0 | 1 | 2 | 3 }
+
+// ---- the user's own folds (11-15: "地圖那邊我希望可以折疊") ----
+// The unit is the room (a department, or the machine room): folded = one plate-sized cell with its name, head count and
+// worst light; open = the frame with the people inside. `all` is what the 全部折疊 / 全部展開 buttons set (null = the
+// automatic steps above decide); `ids` are single rooms the user flipped since, and win over `all`.
+export type FoldMode = "fold" | "open";
+export interface Folds { all: FoldMode | null; ids: Record<string, FoldMode> }
+export const NO_FOLDS: Folds = { all: null, ids: {} };
+/** true = the user wants it folded, false = open, null = leave it to the automatic steps */
+export function userFolded(f: Folds, id: string): boolean | null {
+  const m = f.ids[id] ?? f.all;
+  return m == null ? null : m === "fold";
+}
+/** flip one room from what the map shows now (`shownFolded`) */
+export function flipFold(f: Folds, id: string, shownFolded: boolean): Folds {
+  return { all: f.all, ids: { ...f.ids, [id]: shownFolded ? "open" : "fold" } };
+}
+export const setAllFolds = (all: FoldMode | null): Folds => ({ all, ids: {} });
+/** the stored JSON, checked field by field (anything odd = the default) */
+export function parseFolds(raw: string | null): Folds {
+  try {
+    const j = raw ? JSON.parse(raw) : null;
+    if (!j || typeof j !== "object") return { ...NO_FOLDS, ids: {} };
+    const ok = (v: unknown): v is FoldMode => v === "fold" || v === "open";
+    const ids: Record<string, FoldMode> = {};
+    if (j.ids && typeof j.ids === "object") for (const [k, v] of Object.entries(j.ids)) if (ok(v)) ids[k] = v;
+    return { all: ok(j.all) ? j.all : null, ids };
+  } catch { return { ...NO_FOLDS, ids: {} }; }
+}
 export const STEP_WORD = ["全部展開", "小組已摺起", "只顯示有事的人", "可往下捲"] as const;
 
 /** something going on: never folded, never a dot (03 §13.6 #8) */
@@ -68,7 +97,7 @@ function fold(t: Tree, id: string, name: string): Piece {
  * depth = 1 for rooms on the stage, 2 inside them; quiet rooms deeper than 2 are always folded (02d: two levels down).
  */
 function contents(t: Tree, room: string, lead: string | null, people: string[], rooms: string[], maxW: number, depth: number,
-                  step: number, parentOfLead: string | null): Box {
+                  step: number, parentOfLead: string | null, fs: Folds): Box {
   const ps: Piece[] = [];
   if (lead) ps.push(plate(t, lead, shortName(lead, parentOfLead), true));
   const ppl = step >= 2 && depth === 1 ? [...people.filter((p) => busyOf(t, p)), ...people.filter((p) => !busyOf(t, p))] : people;
@@ -80,9 +109,10 @@ function contents(t: Tree, room: string, lead: string | null, people: string[], 
   for (const r of rooms) {
     const name = shortName(r, room === MACHINE || room === "" ? null : room);
     // deeper than two levels: folded unless something is going on inside (then it opens, so the busy one is a plate)
-    const folded = !busyBelow(t, r) && (depth + 1 > 2 || (step >= 1 && depth + 1 === 2));
+    // the user's own fold / open wins over that
+    const folded = userFolded(fs, r) ?? (!busyBelow(t, r) && (depth + 1 > 2 || (step >= 1 && depth + 1 === 2)));
     if (folded) ps.push(fold(t, r, name));     // a folded room sits with the people
-    else rs.push(roomPiece(t, r, room === "" ? null : room, maxW, depth + 1, step));
+    else rs.push(roomPiece(t, r, room === "" ? null : room, maxW, depth + 1, step, fs));
   }
   const a = flow(ps, maxW);
   const b = flow(rs, maxW);
@@ -94,10 +124,10 @@ function split(t: Tree, ids: string[]): { people: string[]; rooms: string[] } {
   return { people: ids.filter((k) => !isDept(t.nodes[k])), rooms: ids.filter((k) => isDept(t.nodes[k])) };
 }
 
-function roomPiece(t: Tree, id: string, parent: string | null, avail: number, depth: number, step: number): Piece {
+function roomPiece(t: Tree, id: string, parent: string | null, avail: number, depth: number, step: number, fs: Folds): Piece {
   const kids = id === MACHINE ? machineIds(t) : t.nodes[id]?.children || [];
   const { people, rooms } = split(t, kids);
-  const inner = contents(t, id, id === MACHINE ? null : id, people, rooms, Math.max(PLATE.w, avail - FRAME_W), depth, step, parent);
+  const inner = contents(t, id, id === MACHINE ? null : id, people, rooms, Math.max(PLATE.w, avail - FRAME_W), depth, step, parent, fs);
   const title = id === MACHINE ? "機房" : shortName(id, parent);
   const count = id === MACHINE ? machineIds(t).length : t.nodes[id]?.rollup.nodes || 0;
   const w = Math.max(inner.w, 120) + FRAME_W, h = inner.h + FRAME_H;
@@ -108,32 +138,39 @@ function roomPiece(t: Tree, id: string, parent: string | null, avail: number, de
 }
 
 /** the stage itself: an unframed room. focus null = the company (loners, then rooms, then the machine room). */
-function stage(t: Tree, focus: string | null, W: number, step: number): Box {
+function stage(t: Tree, focus: string | null, W: number, step: number, fs: Folds): Box {
   if (focus === MACHINE) {
     const { people, rooms } = split(t, machineIds(t));
-    return contents(t, MACHINE, null, people, rooms, W, 1, step, null);
+    return contents(t, MACHINE, null, people, rooms, W, 1, step, null, fs);
   }
   if (focus && t.nodes[focus]) {
     const { people, rooms } = split(t, t.nodes[focus].children);
-    return contents(t, focus, focus, people, rooms, W, 1, step, t.nodes[focus].parent);
+    return contents(t, focus, focus, people, rooms, W, 1, step, t.nodes[focus].parent, fs);
   }
   const top = t.roots.filter((r) => t.nodes[r] && t.nodes[r].kind === "agent");
   const { people, rooms } = split(t, top);
   const m = machineIds(t).length ? [MACHINE] : [];
   // the top level: loners are plates on the stage; each top department and the machine room is a framed room
   const ps: Piece[] = people.map((p) => (step >= 2 && !busyOf(t, p) ? dot(p, p) : plate(t, p, p, false)));
-  const rs: Piece[] = [...rooms, ...m].map((r) => roomPiece(t, r, null, W, 1, step));
+  // a top room the user folded sits with the loners as one cell; the rest are framed rooms. When the whole company is
+  // one room, 全部折疊 leaves that one open (else the map is a single cell); folding it by hand still works.
+  const rs: Piece[] = [];
+  const only = !people.length && rooms.length + m.length === 1;
+  for (const r of [...rooms, ...m]) {
+    if (only ? fs.ids[r] === "fold" : userFolded(fs, r)) ps.push(fold(t, r, r === MACHINE ? "機房" : r));
+    else rs.push(roomPiece(t, r, null, W, 1, step, fs));
+  }
   const a = flow(ps, W), b = flow(rs, W);
   const items = [...a.items, ...b.items.map((it) => shift(it, 0, a.h + (a.h && b.h ? GAP : 0)))];
   return { w: Math.max(a.w, b.w), h: a.h + b.h + (a.h && b.h ? GAP : 0), items };
 }
 
-export function layoutMap(t: Tree | null, focus: string | null, W: number, H: number): MapLayout {
+export function layoutMap(t: Tree | null, focus: string | null, W: number, H: number, fs: Folds = NO_FOLDS): MapLayout {
   if (!t) return { items: [], width: 0, height: 0, step: 0 };
   const w = Math.max(PLATE.w + FRAME_W, Math.floor(W));
   let last: Box = { w: 0, h: 0, items: [] };
   for (const step of [0, 1, 2] as const) {
-    last = stage(t, focus, w, step);
+    last = stage(t, focus, w, step, fs);
     if (last.h <= H) return { items: last.items, width: last.w, height: last.h, step };
   }
   return { items: last.items, width: last.w, height: last.h, step: 3 };

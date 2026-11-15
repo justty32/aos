@@ -235,6 +235,70 @@ test("map arrows (02d §6 #2): nearest piece that way; every piece reachable", a
   assert.equal(seen.size, l.items.length);
 });
 
+test("map folds (11-15 地圖可以折疊): user fold / open win, all folded still walkable, stored value checked", async () => {
+  const { layoutMap, nearest, itemKey, flipFold, setAllFolds, parseFolds, userFolded, NO_FOLDS } = await import("./layoutMap.ts");
+  const kids = (p: string, n: number, o: Partial<Node> = {}) => Array.from({ length: n }, (_, i) => node(`${p}-m${i}`, { parent: p, ...o }));
+  const t = tree([
+    node("hq", { rollup: { worst: "red", why: "", nodes: 20, path: [] } }), ...kids("hq", 4),
+    node("hq-ops", { parent: "hq" }), ...kids("hq-ops", 3),
+    node("hq-ops-deep", { parent: "hq-ops" }), ...kids("hq-ops-deep", 2),
+    node("lab", { rollup: { worst: "green", why: "", nodes: 6, path: [] } }), ...kids("lab", 5, { light: "red" }),
+    node("solo"), node("solo2"),
+    node("litellm", { kind: "external" }),
+  ]);
+  const kinds = (l: { items: { id: string; kind: string }[] }, id: string) => l.items.filter((i) => i.id === id).map((i) => i.kind);
+  const auto = layoutMap(t, null, 900, 5000);
+  assert.deepEqual(kinds(auto, "hq"), ["room", "plate"]);
+  assert.deepEqual(kinds(auto, "hq-ops-deep"), ["fold"]);                 // the automatic rule: three levels down folds
+  // fold one top room: one cell, sits with the loners, nothing of it inside shows
+  const f1 = flipFold(NO_FOLDS, "hq", false);
+  const l1 = layoutMap(t, null, 900, 5000, f1);
+  assert.deepEqual(kinds(l1, "hq"), ["fold"]);
+  assert.equal(l1.items.some((i) => i.id.startsWith("hq-")), false);
+  const hqFold = l1.items.find((i) => i.id === "hq")! as { count: number; y: number };
+  assert.equal(hqFold.count, 20);                                          // the head count
+  assert.ok(hqFold.y < l1.items.find((i) => i.id === "lab")!.y + 1);
+  // a busy room folds too when the user says so (its worst light shows on the cell)
+  const l2 = layoutMap(t, null, 900, 5000, flipFold(NO_FOLDS, "lab", false));
+  assert.deepEqual(kinds(l2, "lab"), ["fold"]);
+  // 全部展開 opens what the automatic rule folded
+  const open = layoutMap(t, null, 900, 5000, setAllFolds("open"));
+  assert.deepEqual(kinds(open, "hq-ops-deep"), ["room", "plate"]);
+  // 全部折疊, then open one: a single flip wins over all
+  const all = setAllFolds("fold");
+  const lf = layoutMap(t, null, 900, 5000, all);
+  assert.deepEqual(lf.items.map((i) => i.kind).filter((k) => k === "room"), []);
+  assert.deepEqual(kinds(lf, "_machine"), ["fold"]);
+  assert.equal(userFolded(flipFold(all, "hq", true), "hq"), false);
+  const lo = layoutMap(t, null, 900, 5000, flipFold(all, "hq", true));
+  assert.deepEqual(kinds(lo, "hq"), ["room", "plate"]);
+  assert.deepEqual(kinds(lo, "hq-ops"), ["fold"]);                         // its sub-room still follows 全部折疊
+  // every cell folded: the arrows still reach every cell (company and inside a room)
+  for (const l of [lf, layoutMap(t, "hq", 600, 5000, all), lo]) {
+    const seen = new Set([itemKey(l.items[0])]);
+    const todo = [itemKey(l.items[0])];
+    while (todo.length) {
+      const c = todo.pop()!;
+      for (const d of ["left", "right", "up", "down"] as const) {
+        const n = nearest(l.items, c, d);
+        if (n && !seen.has(n)) { seen.add(n); todo.push(n); }
+      }
+    }
+    assert.equal(seen.size, l.items.length);
+  }
+  // a company that is one room: 全部折疊 keeps that room open and folds what is inside; by hand it still folds
+  const one = tree([node("co"), ...kids("co", 3), node("co-a", { parent: "co" }), ...kids("co-a", 2), node("co-b", { parent: "co" }), ...kids("co-b", 1)]);
+  const lone = layoutMap(one, null, 900, 5000, all);
+  assert.deepEqual(kinds(lone, "co"), ["room", "plate"]);
+  assert.deepEqual([kinds(lone, "co-a"), kinds(lone, "co-b")], [["fold"], ["fold"]]);
+  assert.deepEqual(kinds(layoutMap(one, null, 900, 5000, flipFold(all, "co", false)), "co"), ["fold"]);
+  // stored value: odd fields dropped, garbage = the default
+  assert.deepEqual(parseFolds('{"all":"fold","ids":{"a":"open","b":"x","c":1}}'), { all: "fold", ids: { a: "open" } });
+  assert.deepEqual(parseFolds("not json"), { all: null, ids: {} });
+  assert.deepEqual(parseFolds(null), { all: null, ids: {} });
+  assert.deepEqual(parseFolds('{"all":"sideways"}'), { all: null, ids: {} });
+});
+
 test("Ctrl+K verbs (02d §4.2) and name ranking", async () => {
   const { parseQuery, findNodes } = await import("./palette.ts");
   assert.deepEqual(parseQuery("board"), { verb: null, rest: "board" });

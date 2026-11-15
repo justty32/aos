@@ -54,8 +54,8 @@
      "VERSION": "",
      "dist": {
       "assets": {
-       "index-BMg9Wcy4.js": "",
-       "index-CtNzAz2c.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com"
+       "index-C1XyrNgn.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
+       "index-CyG4hdsr.js": ""
       },
       "index.html": ""
      },
@@ -121,6 +121,7 @@
        "app.ts": "The two stores of the page: data (what the backend said) and ui (where the user is, what is open).",
        "hooks.ts": "",
        "layout.ts": "The two sides open / closed and the tree's open departments (02f §4, q6b a): only the user changes them, by button",
+       "mapFold.ts": "The map's folds the user chose (11-15: \"地圖那邊我希望可以折疊\"), per browser like the sizes: localStorage under a",
        "nav.ts": "Moving around (02c §3.2 with 12.8 #2): click anywhere on a card = select; title / ▸ / double click / Enter = go in",
        "route.ts": "The address bar holds where you are (02c §3.1): #/<dept chain>?sel=<id>&tab=<now|thread|history>&view=<wall|map|todo>&ask=<letter>&q=<question>",
        "sizes.ts": "The user's own sizes (11-15: \"字體大小希望可以調。",
