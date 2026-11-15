@@ -41,6 +41,9 @@
  "test_cli_tools_sub.py": {
   "description": "驗 cli.json 的 tools_sub（11-12 eca-task-subagent）：只有 claude 身認、--agents 蓋掉 general-purpose 並內嵌 aos_sub、--allowedTools 多 mcp__aos_sub、guard hook 擋子 agen…"
  },
+ "test_context_wrap.py": {
+  "description": "context_use（各種腦的 context 用量讀法）與 context_wrap（on_clock handler）：讀 live.jsonl 最後答完那輪、子 agent 與壓縮前的不算、讀不到＝None；handler 過門檻寄收尾、答完且 queue 空才寄 /compact、壓完不…"
+ },
  "test_hooks_engine.py": {
   "description": "驗 lib/agent/hooks.py 用的是共用引擎 lib/hook_run.py（11-13 kernel-framework 批 1b）：類別同一個、跑與解回話沒有第二份、兩種 import 法都找得到引擎、agent 自己的檢查（on_clock 的鍵、content 的回話）還在。"
  },

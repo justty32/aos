@@ -2,4 +2,4 @@
  "flags": ["--tools", "Read,Write,Edit,Glob,Grep,Bash,Agent,Skill", "--permission-mode", "dontAsk", "--allowedTools", "Write,Edit,Bash", "--strict-mcp-config"],
  "print_flags": ["--max-budget-usd", "0.5"],
  "tools_sub": "tools_sub.json",
- "timeout_ms": 600000}
+ "timeout_ms": 0}

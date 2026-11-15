@@ -6,7 +6,7 @@
     aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] [--prompt FILE] <定義資料夾絕對路徑>
 
   旗標寫在 DEF_DIR 前後都收（aos_flags.parse anywhere，11-11 P-44 續）。定義的 loop.json 直接叫它：
-    {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000}}
+    {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 0}}
   --on-empty（10-31 取代環境變數 ECA_ON_EMPTY，不再讀它）：queue 空時 stop（沒給；退 10＝loop 收工＝射後不理）｜idle（退 0＝loop 隔 interval_ms 再來）。
   --on-busy（10-31，SessionBad 退讓的開關）：yield（沒給）＝有人佔著就這輪退讓（見下）｜answer＝照常答、不因畫面被佔而退讓
     （lock 拿不到就等、有人接在畫面上照樣貼進畫面答、busy.txt 在就等它消失再貼，期限照 cli.json 的 timeout_ms（0＝不限時），逾時 ReplyMissing）。
@@ -79,7 +79,9 @@
      不像 agent-fsm 只看 history（goal_state.progressed）：eca 的 history 只有題目與最後答案，工具來回在 CLI 自己的對話裡，aos 的 history 看不到
      （11-11 稍後使用者「就goal那邊稍微檢查一下history就好」；eca 做不到，照現況）。
   ⑭ slash 指令（11-12 thinking eca-slash，使用者「aos-say/listen我希望也能支援這些」「chat也要」；CLI 為主、aos 跟上）：這一批只有一封好信、
-     內容去頭尾空白後剛好是 /clear、/compact、/status、/usage、/exit 其中一個（多封一批、後面還帶字＝照一般題目）＝不照一般交給 CLI，
+     內容去頭尾空白後剛好是 /clear、/compact、/status、/usage、/exit 其中一個（多封一批、後面還帶字＝照一般題目；只有 /compact 收「/compact 指示」，
+     11-15 compact-1115：claude 原樣拿到指示、codex 不看指示；而且 /compact 那封一定自己一批——前面有好信就先答前面的，它跟後面的留在 cur/
+     下一輪，所以「收尾信」跟「/compact」同時在 queue 也不會被併掉）＝不照一般交給 CLI，
      aos 這層做，照一般一輪記 history（那封 user＋一則 `[aos] slash: …` 或 CLI 的原話）、收信、after_queue 照跑：
      /status＝aos 自己答（kind、model、對話 id、畫面開關、history 幾則、transcript 在哪）；/usage＝claude 另起一次 `claude -p --no-session-persistence`
      問 /usage 原樣回（不碰這隻的對話），codex 沒有對應的、回一句；/compact＝claude 照一般 --resume 交 "/compact"（claude -p 認得、同一個 id 壓縮），

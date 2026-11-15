@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+# context_wrap - on_clock 的 hook handler：agent 的 context 用量過了門檻（預設 35%）就先寄一封「整理收尾」給它，等它答完、queue 空了，再單獨寄一封 /compact；壓完前不重複。
+# 使用者 11-15：「compact，我現在都在用aos-view這東西來管理了，啊我沒辦法compact，這太蠢了，而且我覺得最好弄個hook，當context到達一定程度的時候
+#   跟agent說整理收尾，然後跑compact。」裁定「3.我們做通用的aos判斷，eca的話可以在這個基礎上接上claude hook。」「門檻用35%」；
+#   「不要耦合太深」：只用 aos 自己的介面（queue、letters.json、lib/agent/context_use），不依賴任何顯示端。
+# 介面：hook handler（lib/agent/hooks.py 用 aos-exec 起）：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、config…），$AOS_STACK＝這個 hook 自己的小格
+#   （$AGENT_STACK/hooks/<名>/），狀態記在 $AOS_STACK/state.json。格的 config（hooks.py 原樣帶來）：{"percent": 1～100 的數字}，沒寫＝35。
+# 用量：lib/agent/context_use.read(agent stack)；讀不到（不是 claude 身、還沒答過一輪、檔壞）＝什麼都不做、不報錯。
+# 狀態（phase）：
+#   idle       用量 ≥ 門檻＝往 agent queue 寄收尾信（aos-post send --ordered），記下信名 → wrapping
+#   wrapping   收尾信答完了（不在 queue 的 new/、cur/，也不在 letters.json 的 pending）而且 queue 空＝寄一封只有 "/compact" 的信 → compacting
+#   compacting /compact 那封答完了 → compacted（記下當時那份讀數的 turn）
+#   compacted  讀到「別的一輪」的讀數而且低於門檻＝回 idle（之後再過門檻才再觸發）；壓完還是高於門檻＝留在 compacted，不重複寄
+#   /compact 跟別的信撞在同一批也沒關係：aos-eca-turn 會讓 /compact 那封單獨成一批（turn.py）。
+# 錯：stderr 一行「context_wrap: error: 代號 原因」、退 1（ArgumentsBad 事件 JSON 壞或 config 不對、StackMissing、LaunchFailed、CommandFailed、WriteFailed）；
+#   範本掛它用 on_error: continue，壞了只是 agent 那邊一行 warning。需要 PATH 上有 aos-post。--help 印英文用法。
+import json, os, subprocess, sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import context_use  # noqa: E402
+
+NAME = "context_wrap"
+HELP = """usage: context_wrap < EVENT.json   (an on_clock hook handler; $AOS_STACK = this hook's own cell)
+Watch how full the agent's context is (lib/agent/context_use: the input tokens of the last call of the
+last finished turn / the context window). Brains that give no reading are left alone.
+At or over the limit (config {"percent": N} in the hook entry, default 35):
+  1. send one message to STACK/queue asking the agent to wrap up (write what it is doing and what is
+     still open into its handoff notes) and to answer "wrap-up done";
+  2. once that message is answered and the queue is empty, send one message that is only "/compact";
+  3. after /compact is answered, wait for a reading from a later turn that is under the limit before
+     watching again (no repeats while it stays over the limit).
+State: $AOS_STACK/state.json. Turn it off with self_hook rm; change the limit in config.percent of the hook entry
+(the definition's hooks.json, or a same-named entry in the stack copy).
+exit codes: 0 done (also when nothing was due); 1 error ("context_wrap: error: CODE reason").
+"""
+STEP_S = 8
+STATE = "state.json"
+DEFAULT_PERCENT = 35
+COMPACT = "/compact"
+
+
+def die(code, why):
+    sys.stderr.write("%s: error: %s %s\n" % (NAME, code, why))
+    sys.exit(1)
+
+
+def run(argv, text=None):
+    try:
+        p = subprocess.run(argv, input=text, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=STEP_S)
+    except OSError as e:
+        die("LaunchFailed", "cannot run %s (put it on PATH with proto8/install.sh): %s" % (argv[0], e))
+    except subprocess.TimeoutExpired:
+        die("CommandFailed", "%s %s took over %d s" % (argv[0], argv[-1], STEP_S))
+    if p.returncode != 0:
+        last = [x for x in p.stderr.splitlines() if x.strip()]
+        die("CommandFailed", "%s exited %d: %s" % (" ".join(argv[:3]), p.returncode, last[-1] if last else "(no message)"))
+    return p.stdout
+
+
+def letters_in(box, stage):
+    try:
+        return [n for n in os.listdir(os.path.join(box, stage)) if not n.startswith(".")]
+    except OSError:
+        return []
+
+
+def pending(stack):
+    # letters.json (aos_ws.LETTERS): letters handed to the brain that have no answer yet.
+    try:
+        with open(os.path.join(stack, "letters.json"), encoding="utf-8") as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        return []
+    p = d.get("pending") if isinstance(d, dict) else None
+    return [x for x in p if isinstance(x, str)] if isinstance(p, list) else []
+
+
+def answered(stack, box, sig):
+    return (sig not in letters_in(box, "new") and sig not in letters_in(box, "cur") and sig not in pending(stack))
+
+
+def send(stack, box, text):
+    if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
+        run(["aos-post", "init", box])
+    out = run(["aos-post", "send", "--ordered", box], json.dumps({"role": "user", "content": text}, ensure_ascii=False))
+    sig = out.strip().splitlines()[-1].strip() if out.strip() else ""
+    if not sig:
+        die("CommandFailed", "aos-post send printed no letter name")
+    return sig
+
+
+def wrap_text(u, limit, stack):
+    return ("[aos] context_wrap: your context is %d%% full (%d of %d tokens; the limit is %s%%). Wrap up now: write what you "
+            "are doing and everything still open into your handoff notes (the handoff file or session log your workspace's rules "
+            "name; if there is none, %s). Do not start new work. When it is written, answer with one line: wrap-up done. "
+            "aos then sends /compact by itself." % (int(u["percent"]), u["used"], u["window"], fmt(limit),
+                                                    os.path.join(stack, "handoff.md")))
+
+
+def fmt(n):
+    return ("%d" % n) if float(n).is_integer() else ("%s" % n)
+
+
+def main():
+    if sys.argv[1:2] in (["-h"], ["--help"]):
+        sys.stdout.write(HELP)
+        return 0
+    if sys.argv[1:]:
+        die("ArgumentsBad", "takes no arguments; the event JSON comes on stdin (usage: context_wrap < EVENT.json)")
+    try:
+        event = json.load(sys.stdin)
+    except ValueError as e:
+        die("ArgumentsBad", "the event on stdin is not JSON: %s" % e)
+    stack = event.get("stack") if isinstance(event, dict) else None
+    if not isinstance(stack, str) or not stack:
+        die("ArgumentsBad", "the event has no stack (the agent's stack folder)")
+    config = event.get("config", {})
+    if config is None:
+        config = {}
+    if not isinstance(config, dict):
+        die("ArgumentsBad", 'config must be an object like {"percent": 35}')
+    limit = config.get("percent", DEFAULT_PERCENT)
+    if isinstance(limit, bool) or not isinstance(limit, (int, float)) or not 0 < limit <= 100:
+        die("ArgumentsBad", "config percent must be a number over 0 and at most 100, got %r" % (limit,))
+    cell = os.environ.get("AOS_STACK")
+    if not cell:
+        die("StackMissing", "AOS_STACK is not set (this hook's own cell)")
+    path = os.path.join(cell, STATE)
+    try:
+        with open(path, encoding="utf-8") as f:
+            st = json.load(f)
+        if not isinstance(st, dict):
+            st = {}
+    except (OSError, ValueError):
+        st = {}
+    phase = st.get("phase") if st.get("phase") in ("idle", "wrapping", "compacting", "compacted") else "idle"
+    box = os.path.join(stack, "queue")
+    u = context_use.read(stack)
+    new = None
+    if phase == "idle":
+        if u is not None and u["percent"] >= limit:
+            sig = send(stack, box, wrap_text(u, limit, stack))
+            new = {"phase": "wrapping", "letter": sig, "percent": round(u["percent"], 1), "turn": u["turn"]}
+    elif phase == "wrapping":
+        sig = st.get("letter")
+        if not isinstance(sig, str) or answered(stack, box, sig):
+            if not letters_in(box, "new") and not letters_in(box, "cur"):   # queue 空才寄：/compact 不跟別的信同一批
+                new = {"phase": "compacting", "letter": send(stack, box, COMPACT), "turn": st.get("turn")}
+    elif phase == "compacting":
+        sig = st.get("letter")
+        if not isinstance(sig, str) or answered(stack, box, sig):
+            new = {"phase": "compacted", "turn": u["turn"] if u else st.get("turn")}
+    else:                                       # compacted
+        if u is not None and u["turn"] != st.get("turn") and u["percent"] < limit:
+            new = {"phase": "idle", "turn": u["turn"]}
+    if new is not None:
+        tmp = os.path.join(cell, ".%s.%d.tmp" % (STATE, os.getpid()))
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(json.dumps(new, ensure_ascii=False) + "\n")
+            os.replace(tmp, path)
+        except OSError as e:
+            die("WriteFailed", "cannot write %s: %s" % (path, e))
+    return 0
+
+
+sys.exit(main())

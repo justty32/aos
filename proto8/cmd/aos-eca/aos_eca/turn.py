@@ -9,7 +9,7 @@ from .common import (NAME, Fail, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown,
 from .history import SUM, append_history, history_changed, history_sum, note_sum
 from .hook import before_queue, fire, tool_added
 from .batch import SEP, goal_prompt, letter_body, note_progress, pick_one, take_all, transcript_now
-from .slash import slash_of, slash_turn
+from .slash import is_compact, slash_of, slash_turn
 from .reseed import reseed
 from .handoff import Handoff
 from .midturn import More, unnamed
@@ -54,11 +54,16 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
                 post(["done", box, sig])
                 mailbox_warning(stack, sig, why)
                 continue
+            alone = is_compact(body["content"])                     # 11-15 compact-1115：/compact 一定單獨一批（跟別封併了 ⑭ 認不出來）
+            if alone and good:
+                break                                               # 前面已有好信：這輪先答它們，/compact 跟後面的留在 cur/ 下一輪
             body = before_queue(stack, box, sig, body, template)   # hook：可改 content、可丟掉這封（整批都丟＝同整批壞信）
             if body is None:
                 continue
             bodies.append(body)
             good.append(sig)
+            if alone:
+                break                                               # /compact 自己一批：後面的留在 cur/ 下一輪
         if not good and not goal:
             return 0
     parts = [(b.get("name"), b["content"]) for b in bodies]         # 11-13：信的 name＝寄件人（aos-agent say 填；沒有＝機器通知），只給信封用

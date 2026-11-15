@@ -27,6 +27,8 @@ on_clock 專用的鍵與檢查、content 的回話要求、tool_added 的名單�
 11-11（thinking/2026-11/11/clock-hook）：事件多 after_start、after_stop（aos-loop 的 on_start／on_stop 叫 lib/agent/hook_fire 發，
 使用者「hook 要加的事件：起來與停下」）與 on_clock（使用者「hook就可以添加一個類型……去看指定的clock proc……每隔十個cycle就幹嘛，
 或是透過cycle換算，若超過十秒就幹嘛」；判斷在行程內做，到了才起 handler）。on_clock 才收的鍵＝CLOCK_KEYS。
+11-15（compact-1115）：on_clock 的格可以多寫一個 config（任意 JSON，hooks.py 不驗），原樣放進事件的 config 給 handler 自己讀
+（context_wrap 的門檻就寫在這裡；stack 那份同名蓋過＝這隻自己改）。
 """
 import json
 import os
@@ -320,6 +322,8 @@ def clock_tick(def_folder, stack, warn=None):
             continue
         data = {"clock": clock, "cycle": cycle, "interval_ms": iv, "first": first,   # first＝剛起來／沒基準／倒退的那一次
                 "last_cycle": None if first else last, "missed": 0 if first else (cycle - last) // every - 1}
+        if "config" in entry:                    # 11-15 compact-1115：格裡的 config 原樣帶給 handler（例 context_wrap 的門檻）
+            data["config"] = entry["config"]
         fire(CLOCK_EVENT, data, def_folder, stack, warn=warn, only=[name], entries=entries)
         ran.append(name)
     return ran

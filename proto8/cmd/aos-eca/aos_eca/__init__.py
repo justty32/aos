@@ -45,7 +45,9 @@ Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad 
   Slash commands: a batch of one letter that is exactly /clear, /compact, /status, /usage or /exit (spaces around allowed) is
     done by aos and answered with one "[aos] slash: ..." message (or claude's own words): /status = aos's own report;
     /usage = a separate claude -p /usage (codex: not available); /compact = handed to claude on the same conversation
-    (codex: the next message starts a new thread carrying aos's record); /clear = history.jsonl moves to history_removed.jsonl
+    (codex: the next message starts a new thread carrying aos's record); "/compact INSTRUCTIONS" is also /compact, and claude
+    gets the instructions for its summary (codex: ignored). A /compact letter is always a batch of its own: letters before it
+    are answered first, it and the letters after it wait in cur/ for the next turns; /clear = history.jsonl moves to history_removed.jsonl
     and the next message starts a new conversation; /exit = closes the screen. After claude's /compact, history.jsonl is
     replaced by claude's summary (one "[aos] summary: ..." message; the old ones move to history_removed.jsonl). With the
     screen open, /clear and /compact are typed into it (not while it is answering) and the screen hooks keep aos in step.

@@ -42,7 +42,7 @@ hook 什麼都不印＝照跑、不問人；印 `deny`＝不跑、腦收到理�
 
 **接外部 MCP server**：`cli.json` 加 `"mcp_servers": ["mcp/<名>.json"]`，一台一份 server 檔（http 或 stdio），寫法見 [eca-claude 說明的「接外部 MCP server」](../docs/01-eca-claude.md#接外部-mcp-server11-12-external-mcp)；token 放 server 檔的 `env_file`，不要用 `ctl add --envs`。
 
-`interfaces.json` 宣告畫面、工具、腦設定、history 與 hook 的位置。`_metainfo.json` 宣告估時 `cost.time_ms`（一輪約一分鐘，粗估）與 `llm` 資源，未設定逾時（一輪的上限在 `cli.json` 的 `timeout_ms` 與 `loop.json` 的 `timeout_ms`）。
+`interfaces.json` 宣告畫面、工具、腦設定、history 與 hook 的位置。`_metainfo.json` 宣告估時 `cost.time_ms`（一輪約一分鐘，粗估）與 `llm` 資源，未設定逾時（一輪的上限在 `cli.json` 的 `timeout_ms` 與 `loop.json` 的 `timeout_ms`，範本兩個都是 0＝不限時，11-15 起；一輪很久沒動靜只寫 `$AOS_STACK/quiet.json` 標記、不殺）。
 
 
 **沒開畫面時中途收信（`live_mail`，預設關）**（[wake-1114](../../thinking/2026-11/14/wake-1114.md)）：`cli.json` 寫 `"live_mail": true`，沒開畫面時 claude 照樣一輪一個 `claude -p`，但 stdin 改用 stream-json、先不關：這一輪還在跑時 queue 又來的信，一封一行寫進去，模型在下一個工具空檔就讀到（不用等整輪講完），回答併進這一輪那一則。一輪最多中途投 5 封、起來 300 秒後不再投，用 `"live_mail_cap": {"letters": N, "seconds": N}` 改；剩的留給下一輪。冷卻剛到期那一輪不投。正在跑的前景指令要等它做完，長指令請讓 CLI 用背景跑。畫面開著時照舊走收件 socket；codex 不走這條。
@@ -50,3 +50,12 @@ hook 什麼都不印＝照跑、不問人；印 `deny`＝不跑、腦收到理�
 **畫面延後關**：`screen_linger_start` 是第一格 after_start hook，撤掉舊到期單；`screen_linger_stop` 在 after_stop 排關畫面（兩格 on_error=continue、timeout_ms=4000）。定義 cli.json 的 `screen_close_after_s` 非負整數秒，預設 600，0 當場關；停下時讀一次，已排的不因改設定而變。有人正在看也照關，start／wake 撤單；兩格在 stack hooks.json 設 null＝不自動關。依本機 state.json／proc 身分保護新 loop，不需要 daemon；SIGKILL／OOM 或停著才開畫面沒有 after_stop，第一批沒有後援。舊 eca 定義與 stack 複本須補齊兩格，才可啟用直連 stop 的 B 包接線。
 
 **hook 預設**（[clock-hook](../../thinking/2026-11/11/clock-hook/README.md)）：`loop.json` 的 `on_start`／`on_stop` 叫 `lib/agent/hook_fire` 發 `after_start`／`after_stop`；`hooks.json` 帶一格 `timer`（`on_clock`、每 300000 ms、handler `lib/agent/hook_noop` 什麼都不做；每次起來、睡醒會先跑一次，之後每 5 分鐘）；另一格 `mail_notify`（`on_clock`、每 60000 ms＝每 1 分鐘、handler `lib/agent/mail_notify`：看自己的信箱，有沒通知過的新信才往 `queue/` 寄一則 `[aos] new_mail: N new letters from A, B. …`、多封合成一句、沒新信不動 history；睡醒時照已通知記錄比：睡前提醒過的不再提、睡著時新到的提醒一次；全新起來（沒有 `notified.json`，且 agent stack 的 `history.jsonl` 不在或是空的）時在等的只記成已知；跑過的 stack（有非空 history）當睡醒，在等的提醒一次；使用者「用on_clock」「預設開」「合成一句」，[mail-notify](../../thinking/2026-11/11/mail-notify.md)；間隔與起來那次：使用者「每 1 分鐘」「只提醒新到的」「睡著時新到的要提」，[backlog-rulings](../../thinking/2026-11/11/backlog-rulings.md)），history 不多任何一則。要定時叫醒腦＝同名換成往 `queue/` 寄信的 handler；不要＝`aos-agent hook -t 名 rm timer`。用法 [aos-agent docs/06](../../cmd/aos-agent/docs/06-hook.md)。
+
+**快滿了先收尾再 compact（`context_wrap`，預設開，門檻 35%）**（使用者 11-15：「最好弄個hook，當context到達一定程度的時候跟agent說整理收尾，然後跑compact。」「3.我們做通用的aos判斷，eca的話可以在這個基礎上接上claude hook。」「門檻用35%」）：`hooks.json` 的 `context_wrap` 格（`on_clock`、每 5000 ms、handler `lib/agent/context_wrap`）讀 `lib/agent/context_use` 給的用量（最後答完那輪、最後一次呼叫的三種 input token 加總 ÷ context 視窗；claude 身從小格的 `live.jsonl` 讀，讀不到的腦就不動）。到門檻：先往 `queue/` 寄一封 `[aos] context_wrap: … Wrap up now …`（叫它把手上的事與還開著的事寫進交接，沒有交接檔就寫 `<stack>/handoff.md`，寫完回一句 wrap-up done）；這封答完、queue 也空了，再寄一封只有 `/compact` 的信（aos-eca-turn 讓 `/compact` 那封一定自己一批）；壓完要等到後面某輪的讀數低於門檻才會再看。狀態在 `<stack>/hooks/context_wrap/state.json`。改門檻＝改這格的 `config.percent`（或在 stack 那份 `hooks.json` 寫同名格蓋過；`self_hook add` 不帶 config）；不要＝`aos-agent hook -t 名 rm context_wrap`。範本另附 `compact_hook`（Claude Code 自己的 hook 用）：`PreCompact` 印摘要要留什麼、`SessionStart`（matcher `compact`）壓完提醒讀回交接、有 `$AOS_STACK/handoff.md` 就附上；自動壓縮也會跑到它們。範本的 `cli.json` 預設不帶 `settings`（11-13 起範本不帶任何 CLI 設定），要用就在 `cli.json` 加：
+
+```json
+"settings": {"hooks": {"PreCompact": [{"hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/compact_hook\" pre", "timeout": 10}]}],
+                       "SessionStart": [{"matcher": "compact", "hooks": [{"type": "command", "command": "python3 \"$AOS_CLI_DEF/compact_hook\" start", "timeout": 10}]}]}}
+```
+
+手動也可以：寄一封內容只有 `/compact`（或 `/compact 指示`）的信，例 `aos-agent say -t 名 /compact`。

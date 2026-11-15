@@ -26,6 +26,8 @@ from .handoff import Handoff
 
 SLASH = ("/clear", "/compact", "/status", "/usage", "/exit")
 GOAL = "/goal"
+COMPACT = "/compact"
+# /compact 也收「後面帶指示」（11-15 compact-1115：`/compact 重點放在 X`＝claude 照 /compact [指示] 寫摘要）；交給 claude 時原樣（去頭尾空白）交出去。
 
 # codex 畫面已有 goal 時再 /goal 新目標，會跳「Replace goal?」選單（11-12 實拍 0.167.2：標題「Replace goal?」、「New objective: …」、
 # 「› 1. Replace current goal  Set the new objective and start it now」「2. Cancel  Keep the current goal」「enter select · esc back」，
@@ -66,12 +68,20 @@ def confirm_goal_replace(cell):
     return "; codex asked \"Replace goal?\" and aos chose \"1. Replace current goal\" (yes) for you"
 
 
+def is_compact(text):
+    """這段字是不是一個 /compact 指令：去頭尾空白後剛好是 /compact，或 /compact 後面接空白再接指示。"""
+    text = text.strip()
+    return text == COMPACT or (text.startswith(COMPACT) and text[len(COMPACT)].isspace())
+
+
 def slash_of(bodies, goal):
     if goal or len(bodies) != 1:
         return None
     text = bodies[0]["content"].strip()
     if text == GOAL or text.startswith(GOAL + " "):
         return GOAL
+    if is_compact(text):
+        return COMPACT
     return text if text in SLASH else None
 
 
@@ -127,7 +137,7 @@ def slash_usage(cfg, ws):
     """claude：另起一次 claude -p（不存對話、不碰這隻的 session）問 /usage，原樣回它的字；codex exec 沒有對應的。"""
     if cfg["kind"] != "claude":
         return note("/usage: codex has no usage report outside its own screen; open the screen (aos-agent open) and type /usage there")
-    milliseconds = cfg.get("timeout_ms", 600000)
+    milliseconds = cli_base.turn_timeout_ms(cfg)                 # 11-15 timeout-1115：沒寫／0＝不限時
     limit = None if milliseconds == 0 else milliseconds / 1000  # 0＝不限時
     try:
         r = subprocess.run(["claude", "-p", "--output-format", "json", "--no-session-persistence"], input="/usage",
@@ -160,7 +170,7 @@ def history_bytes(stack):
         return b""
 
 
-def on_screen(command, cfg, cell, stack):
+def on_screen(command, cfg, cell, stack, typed=None):
     """畫面開著：/clear、/compact 照人打的一樣打進畫面（使用者 Q2「幫我貼進去」）；aos 這邊靠畫面 hook 跟上（id、history）。
     claude＝等 hook 把 history 改掉（SessionStart clear／compact）再回，免得這輪接的 user／回答被 hook 一起搬走；等不到（上限 SCREEN_WAIT）照回、多說一句。
     codex＝這時沒有事件：/clear 等下一輪 notify 看到新 thread 才清；/compact 等它的 rollout 多一個 compacted（上限 SCREEN_WAIT），
@@ -182,7 +192,7 @@ def on_screen(command, cfg, cell, stack):
         if got[0] == "unrecognized":
             return note("/compact: typed into the open screen; codex compacted, but aos could not read the conversation out of it, so aos's history is left as it is")
         return note("/compact: typed into the open screen; history replaced by the conversation codex kept (%d messages moved to history_removed.jsonl)" % got[1])
-    cli_ask.type_line(cell, command)
+    cli_ask.type_line(cell, typed if typed and cfg["kind"] == "claude" else command)   # claude 畫面收 /compact 指示；codex 只打指令本身
     if cfg["kind"] != "claude":
         later = ("aos clears its history when the next answer comes from the new thread" if command == "/clear" else
                  "there is no conversation yet, so there is nothing for aos to follow")
@@ -227,13 +237,13 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
     elif command in ("/clear", "/compact") and alive:
         if os.path.exists(cell.file("busy.txt")):
             return 0                                                # 不打斷正在跑的那輪
-        text = on_screen(command, cfg, cell, stack)
+        text = on_screen(command, cfg, cell, stack, bodies[0]["content"].strip())
     elif command == "/compact" and kind == "claude":
         if not cell.read("session.txt"):
             text = note("/compact: no conversation yet, nothing to compact")
         else:
             hand = Handoff(template, stack, box, good, bodies)
-            got = hand.ask(cfg, cell, ws, "/compact", on_busy)         # claude -p --resume 認得：同一個 id 壓縮
+            got = hand.ask(cfg, cell, ws, bodies[0]["content"].strip(), on_busy)   # claude -p --resume 認得：同一個 id 壓縮（帶指示＝原樣）
             if got is None:
                 return 0                                            # SessionBad：同一般一輪，整批留 cur/，下一次再試
             sid = cell.read("session.txt")

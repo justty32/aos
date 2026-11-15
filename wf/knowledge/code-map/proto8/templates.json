@@ -28,6 +28,7 @@
   },
   "eca-claude": {
    "cli.json": "設定（鍵：kind、flags、print_flags、tools_sub、timeout_ms）",
+   "compact_hook": "Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼；SessionStart（matcher compact）壓完後提醒讀回交接，有 $AOS_STACK/handoff.md 就附上。",
    "hooks.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
    "interfaces.json": "設定（鍵：aos-agent）",
    "llm.json": "設定（鍵：model）",

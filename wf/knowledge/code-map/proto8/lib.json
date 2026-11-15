@@ -61,6 +61,10 @@
     "cli.json": "設定（鍵：kind、flags、print_flags、timeout_ms）"
    },
    "codex/": "透過 tool_io 收 JSON／旗標，再把 prompt 交給 codex CLI；對話續在工具小格（$AOS_STACK）",
+   "context_use.py": "一隻 agent 現在的 context 用了多少（給 aos 層的「快滿了先收尾再 compact」判斷，lib/agent/context_wrap）；各種腦各一個讀法，讀不到＝None。",
+   "context_wrap": {
+    "_entry": "on_clock 的 hook handler：agent 的 context 用量過了門檻（預設 35%）就先寄一封「整理收尾」給它，等它答完、queue 空了，再單獨寄一封 /compact；壓完前不重複。"
+   },
    "cooldown.py": "失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。",
    "do_task": {
     "tests": {
@@ -192,6 +196,7 @@
     "test_cli_system.py": "驗 cli_session 的 system（11-11 self-system）：宣告了才碰；stack 那份在就整份用它、否則定義那份；claude 附加檔＋snapshot off、codex developer_instructions；空＝不附加。",
     "test_cli_tools_directive.py": "驗 cli.json 的 tools：舊寫法（相對、絕對字串）照舊，指示詞（$env／$ref）每次讀才解、不寫回，解不開時錯誤行指名檔與欄。",
     "test_cli_tools_sub.py": "驗 cli.json 的 tools_sub（11-12 eca-task-subagent）：只有 claude 身認、--agents 蓋掉 general-purpose 並內嵌 aos_sub、--allowedTools 多 mcp__aos_sub、guard hook 擋子 agen…",
+    "test_context_wrap.py": "context_use（各種腦的 context 用量讀法）與 context_wrap（on_clock handler）：讀 live.jsonl 最後答完那輪、子 agent 與壓縮前的不算、讀不到＝None；handler 過門檻寄收尾、答完且 queue 空才寄 /compact、壓完不…",
     "test_hooks_engine.py": "驗 lib/agent/hooks.py 用的是共用引擎 lib/hook_run.py（11-13 kernel-framework 批 1b）：類別同一個、跑與解回話沒有第二份、兩種 import 法都找得到引擎、agent 自己的檢查（on_clock 的鍵、content 的回話）還在。",
     "test_kill_group.py": "Test shared child-group shutdown, escalation, reaping, and signal-handler delegation.",
     "test_mail_notify.py": "mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json 也沒有非空 history）只把等著的記成已知；跑過的 stack（有非空 hist…",

@@ -83,6 +83,12 @@
  "codex": {
   "description": "codex 工具（lib/agent 層，不在分包裡）：把一件事交給唯讀沙盒裡的 Codex CLI，同一段對話接著講，回它的答案"
  },
+ "context_use.py": {
+  "description": "一隻 agent 現在的 context 用了多少（給 aos 層的「快滿了先收尾再 compact」判斷，lib/agent/context_wrap）；各種腦各一個讀法，讀不到＝None。"
+ },
+ "context_wrap": {
+  "description": "context_wrap（不是給腦的工具）：on_clock 的 hook handler，context 用量過門檻（預設 35%）先寄收尾信、答完且 queue 空再單獨寄 /compact，壓完不重複"
+ },
  "cooldown.py": {
   "description": "失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。"
  },

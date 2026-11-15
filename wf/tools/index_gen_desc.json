@@ -242,6 +242,7 @@
   "proto8/lib/agent/goal": "goal 工具（目標包，eca 不掛）：自己的一句目標，分 get／set／done／pause／resume；自己停下又沒信時身體會丟 goal 提醒",
   "proto8/lib/agent/hook_fire": "hook_fire（不是給腦的工具）：範本 loop.json 的 on_start／on_stop 叫它，發 after_start／after_stop 事件給 agent 的 hook",
   "proto8/lib/agent/hook_noop": "hook_noop（不是給腦的工具）：什麼都不做的 hook handler，讀掉事件 JSON 退 0，範本 hooks.json 預設掛點",
+  "proto8/lib/agent/context_wrap": "context_wrap（不是給腦的工具）：on_clock 的 hook handler，context 用量過門檻（預設 35%）先寄收尾信、答完且 queue 空再單獨寄 /compact，壓完不重複",
   "proto8/lib/agent/mail_notify": "mail_notify（不是給腦的工具）：on_clock 的 hook handler，看自己信箱有沒有沒通知過的新信，有就往自己 queue 寄一則 [aos] new_mail",
   "proto8/lib/agent/brain_notify": "brain_notify（不是給腦的工具）：brain_failed 的 hook handler，腦被拒（範本條件 BudgetMissing）時往 AOS_NOTIFY_BOX 寄一封 BLOCKED 信，同一段拒絕只寄一次",
   "proto8/lib/agent/mailbox_peek": "mailbox_peek 工具（信箱包）：看自己信箱有幾封信、誰寄的、狀態與標題，不拿走",
