@@ -59,14 +59,18 @@ class Base(unittest.TestCase):
         with open(self.cfg_path, "w", encoding="utf-8") as f:
             json.dump(self.cfg, f)
 
-    def run_guard(self, name, arguments, stack=None, env_extra=None):
+    env_base = {}   # environment every call of a test class gets (before env_extra)
+
+    def run_guard(self, name, arguments, stack=None, env_extra=None, event=None):
         env = {k: v for k, v in os.environ.items() if not k.startswith(("AOS_", "BASH_FUNC_")) and k not in G.RISKY_ENV}
         env.update(AOS_GUARD_CFG=self.cfg_path, AOS_WS=self.ws, AOS_STACK=stack or self.stack)
         if self.allow:
             env["AOS_WRITE_ALLOW"] = os.pathsep.join(self.allow)
+        env.update(self.env_base)
         env.update(env_extra or {})
         env = {k: v for k, v in env.items() if v is not None}   # None = drop that variable
-        p = subprocess.run([sys.executable, GUARD], input=json.dumps({"name": name, "arguments": arguments}),
+        ev = dict(event or {}, name=name, arguments=arguments)   # event = more fields of the hook event (stack ...)
+        p = subprocess.run([sys.executable, GUARD], input=json.dumps(ev),
                            capture_output=True, text=True, env=env, timeout=30)
         self.last_err, self.last_out = p.stderr, p.stdout
         return p.returncode, p.stdout
@@ -569,20 +573,27 @@ class TildePaths(Base):
         self.allow = [os.path.join(self.home, "allowed")]
         self.env = {"HOME": self.home}
 
-    def test_tilde_inside_allowed(self):
-        self.allowed("write", {"path": "~/allowed/x"}, env_extra=self.env)
-        self.allowed("json_set", {"path": "~/allowed/x.json#/a"}, env_extra=self.env)
+    def test_tilde_tool_arg_blocked(self):
+        # tools take ~ literally (<ws>/~/...), so the guard does not expand it: it blocks it
+        for name, args in (("write", {"path": "~/allowed/x"}), ("json_set", {"path": "~/allowed/x.json#/a"}),
+                           ("edit", {"path": "~"}), ("move", {"from": "a", "to": "~/allowed/b"}),
+                           ("mailbox_send", {"box": "~/box"}), ("mailbox_read", {"keep": "~/allowed/k.jsonl"})):
+            with self.subTest(tool=name):
+                out = self.blocked(name, args, env_extra=self.env)
+                self.assertIn("%s" % NO_TILDE, out)
+        self.allowed("write", {"path": os.path.join(self.home, "allowed", "x")}, env_extra=self.env)
 
     def test_tilde_outside_blocked(self):
         out = self.blocked("write", {"path": "~/y"}, env_extra=self.env)
-        self.assertIn("outside the folders you may write", out)
+        self.assertIn("%s" % NO_TILDE, out)
         self.blocked("write", {"path": "~"}, env_extra=self.env)
 
     def test_tilde_not_taken_as_ws_folder(self):
-        # without expansion "~/allowed/x" would be <ws>/~/allowed/x, inside AOS_WS; only <home>/allowed is
-        # not allowed here, so a block proves the expansion
+        # "~/x" would land in <ws>/~/x, inside AOS_WS; it is blocked all the same (no-tilde), not allowed
         self.allow = []
-        self.blocked("write", {"path": "~/allowed/x"}, env_extra=self.env)
+        out = self.blocked("write", {"path": "~/allowed/x"}, env_extra=self.env)
+        self.assertIn("%s" % NO_TILDE, out)
+        self.allowed("write", {"path": "./~/allowed/x"}, env_extra=self.env)   # written out literally: inside AOS_WS
 
     def test_tilde_in_write_allow(self):
         self.allow = ["~/allowed"]
@@ -590,9 +601,11 @@ class TildePaths(Base):
         self.blocked("write", {"path": os.path.join(self.home, "x")}, env_extra=self.env)
 
     def test_tilde_clock_box(self):
+        # the config entry is expanded (~ = HOME); the tool argument is not, so "~/box" is blocked
         self.cfg["clock_boxes"] = ["~/box"]
         self.write_cfg()
-        self.allowed("clock_register", {"box": "~/box"}, env_extra=self.env)
+        out = self.blocked("clock_register", {"box": "~/box"}, env_extra=self.env)
+        self.assertIn("%s" % NO_TILDE, out)
         self.allowed("clock_register", {"box": os.path.join(self.home, "box")}, env_extra=self.env)
         self.blocked("clock_register", {"box": "~/other"}, env_extra=self.env)
 
@@ -602,8 +615,10 @@ class TildePaths(Base):
         self.cfg["subagent"]["def"] = "~/defs/w"
         self.write_cfg()
         self.allowed("subagent", {"op": "add", "def": d, "ws": "team", "name": "w-02"}, env_extra=self.env)
-        self.allowed("subagent", {"op": "add", "def": "~/defs/w", "ws": "team", "name": "w-02"}, env_extra=self.env)
+        out = self.blocked("subagent", {"op": "add", "def": "~/defs/w", "ws": "team", "name": "w-02"}, env_extra=self.env)
+        self.assertIn("%s" % NO_TILDE, out)
         self.blocked("subagent", {"op": "add", "def": "~/defs/x", "ws": "team", "name": "w-02"}, env_extra=self.env)
+        self.blocked("subagent", {"op": "add", "def": d, "ws": "~/team", "name": "w-02"}, env_extra=self.env)
 
 
 class Escapes(Base):
@@ -643,7 +658,9 @@ class Mail(Base):
                   os.path.join(t, "llm", "requests"), os.path.join(t, "noisy", "box")):
             os.makedirs(d)
         with open(os.path.join(self.daemon, "procs_state.json"), "w", encoding="utf-8") as f:
-            json.dump({"procs_requests": "ctlbox", "procs": {}}, f)
+            json.dump({"procs_requests": "ctlbox", "procs": {"bob": {"stack": "procs/bob", "def": None},
+                                                             "station": {"stack": "procs/station", "def": None}}}, f)
+        self.env_base = {"AOS_DAEMON": self.daemon}   # bob is a row of the own daemon: its mailbox may be mailed
 
     def test_ctl_mailbox_blocked(self):
         out = self.blocked("mailbox_send", {"box": os.path.join(self.daemon, "ctlbox"), "status": "REQUEST", "title": "t", "what": "w"})
@@ -660,7 +677,11 @@ class Mail(Base):
         k = os.path.join(self.tmp.name, "noisy", "box")
         self.blocked("mailbox_send", {"box": k}, env_extra={"AOS_KERNEL": k})
         self.blocked("mailbox_send", {"box": k}, env_extra={"AOS_LLM_KERNEL": os.path.join(self.tmp.name, "noisy")})
+        self.assertIn("a box must be the mailbox of a proc", self.blocked("mailbox_send", {"box": k}))   # not on the table
+        self.cfg["mail_allow_box"] = [os.path.join(self.tmp.name, "noisy")]
+        self.write_cfg()
         self.allowed("mailbox_send", {"box": k})
+        self.blocked("mailbox_send", {"box": k}, env_extra={"AOS_KERNEL": k})   # listed, but still a kernel mailbox
 
     def test_agent_mailbox_allowed(self):
         self.allowed("mailbox_send", {"box": self.agent_box, "in_reply_to": "l1", "status": "DONE", "title": "t", "what": "w"})
@@ -809,7 +830,10 @@ class DefinitionDeny(Base):
     def test_own_definition_blocked(self):
         out = self.blocked("write", {"path": os.path.join(self.mydef, "system.txt")}, env_extra=self.env)
         self.assertIn("no agent may write (%s, from definition)" % self.mydef, out)
-        self.allowed("write", {"path": os.path.join(self.otherdef, "system.txt")}, env_extra=self.env)
+        # another row's definition: blocked too (it used to be allowed)
+        out = self.blocked("write", {"path": os.path.join(self.otherdef, "system.txt")}, env_extra=self.env)
+        self.assertIn("no agent may write (%s, from daemon-table)" % self.otherdef, out)
+        self.allowed("write", {"path": os.path.join(self.root, "defs", "x")}, env_extra=self.env)
 
     def test_from_hook_cell(self):
         cell = os.path.join(self.stack, "hooks", "guard")
@@ -821,16 +845,34 @@ class DefinitionDeny(Base):
         self.table({"w-01": {"stack": "procs/w-01", "def": rel}}, shard=True)
         self.blocked("write", {"path": os.path.join(self.mydef, "x")}, env_extra=self.env)
 
-    def test_skipped_without_reliable_table(self):
+    def test_kernel_set_still_reads_table(self):
+        # AOS_KERNEL set: the table file is read all the same (it used to skip the definition deny)
         p = os.path.join(self.mydef, "x")
-        self.allowed("write", {"path": p})                                        # no AOS_DAEMON
-        self.allowed("write", {"path": p}, env_extra=dict(self.env, AOS_KERNEL=os.path.join(self.tmp.name, "k")))
-        self.allowed("write", {"path": p}, env_extra={"AOS_DAEMON": "dstack"})    # not absolute
-        self.table({"w-03": {"stack": "procs/w-03", "def": self.mydef}})
-        self.allowed("write", {"path": p}, env_extra=self.env)                    # not on the table
+        out = self.blocked("write", {"path": p}, env_extra=dict(self.env, AOS_KERNEL=os.path.join(self.tmp.name, "k")))
+        self.assertIn("from definition", out)
+        self.blocked("write", {"path": os.path.join(self.otherdef, "x")},
+                     env_extra=dict(self.env, AOS_KERNEL=os.path.join(self.tmp.name, "k")))
+
+    def test_without_table(self):
+        p = os.path.join(self.mydef, "x")
+        self.allowed("write", {"path": p})                                        # no AOS_DAEMON, no marker
+        os.symlink(self.daemon, os.path.join(self.ws, "dstack"))
+        out = self.blocked("write", {"path": p}, env_extra={"AOS_DAEMON": "dstack"})   # relative: from AOS_WS
+        self.assertIn("from definition", out)
+        self.table({"w-03": {"stack": "procs/w-03", "def": self.otherdef}})
+        self.allowed("write", {"path": p}, env_extra=self.env)                    # no row names mydef
+        self.blocked("write", {"path": os.path.join(self.otherdef, "x")}, env_extra=self.env)
         with open(os.path.join(self.daemon, "procs_state.json"), "w", encoding="utf-8") as f:
             f.write("{broken")
+        out = self.blocked("write", {"path": p}, env_extra=self.env)              # unreadable table: every write blocked
+        self.assertIn("the daemon table (procs_state.json of AOS_DAEMON) cannot be read", out)
+        self.blocked("write", {"path": os.path.join(self.ws, "x")}, env_extra=self.env)
+        os.rename(os.path.join(self.daemon, "procs_state.json"), os.path.join(self.tmp.name, "moved.json"))
+        # no table file (a real definition always has interfaces.json; here it has none on purpose: both backups missing)
         self.allowed("write", {"path": p}, env_extra=self.env)
+        open(os.path.join(self.mydef, "interfaces.json"), "w").close()
+        out = self.blocked("write", {"path": p}, env_extra=self.env)              # the marker still applies
+        self.assertIn("rule: definition-marker", out)
 
 
 class QueueMail(Base):
@@ -842,6 +884,11 @@ class QueueMail(Base):
         for d in (os.path.join(self.other, "queue", "new"), os.path.join(self.other, "mailbox"),
                   os.path.join(self.stack, "queue", "new")):
             os.makedirs(d)
+        dq = os.path.join(t, "dq")   # the own daemon: both stacks are rows of its table
+        os.makedirs(dq)
+        with open(os.path.join(dq, "procs_state.json"), "w", encoding="utf-8") as f:
+            json.dump({"procs": {"w-01": {"stack": self.stack, "def": None}, "w-02": {"stack": self.other, "def": None}}}, f)
+        self.env_base = {"AOS_DAEMON": dq}
 
     def test_foreign_queue_blocked(self):
         out = self.blocked("mailbox_send", {"box": os.path.join(self.other, "queue")})
@@ -985,6 +1032,84 @@ class NoEnvValues(Base):
         self.assertNotIn("stacksecret", out)
 
 
+class ProcStackRule(Base):
+    # rule proc-stack: a live daemon stack can sit inside the workspace; no proc's stack (a neighbour's, the
+    # daemon's own, a .stack) may be written with the file tools, and no config lifts that
+    def setUp(self):
+        super().setUp()
+        self.allow = []   # only AOS_WS
+        self.daemon = os.path.join(self.ws, "stacks", "root")
+        self.other = os.path.join(self.daemon, "procs", "other")
+        self.stack = os.path.join(self.daemon, "procs", "me")   # our own stack is a row of the same daemon
+        for d in (self.other, self.stack, os.path.join(self.daemon, "procs_requests"),
+                  os.path.join(self.ws, "src", "procs", "x")):
+            os.makedirs(d)
+        with open(os.path.join(self.daemon, "procs_state.json"), "w", encoding="utf-8") as f:
+            json.dump({"procs_requests": "procs_requests", "procs": {"me": {"stack": "procs/me"},
+                                                                     "other": {"stack": "procs/other"}}}, f)
+
+    def msg(self, st):
+        return "is inside a proc's stack (%s, rule: proc-stack). Stop and report this as BLOCKED." % st
+
+    def test_neighbour_stack_blocked(self):
+        out = self.blocked("write", {"path": os.path.join(self.other, "tools.json")})
+        self.assertIn(self.msg(self.other), out)
+        self.blocked("edit", {"path": "stacks/root/procs/other/hooks.json"})            # relative to AOS_WS
+        self.blocked("mkdir", {"path": os.path.join(self.other, "hooks", "new", "deep")})
+        self.blocked("json_set", {"path": os.path.join(self.other, "state.json") + "#/x"})
+        out = self.blocked("write", {"path": os.path.join(self.daemon, "procs", "later", "x")})   # not made yet
+        self.assertIn(self.msg(os.path.join(self.daemon, "procs", "later")), out)
+
+    def test_daemon_stack_blocked(self):
+        for p in ("procs_state.json", "procs_requests/l.json", "daemon.json", "procs", ""):
+            out = self.blocked("write", {"path": os.path.join(self.daemon, p)})
+            self.assertIn(self.msg(self.daemon.rstrip("/")), out)
+
+    def test_dot_stack_blocked(self):
+        out = self.blocked("write", {"path": "proj/.stack/history.json"})
+        self.assertIn(self.msg(os.path.join(self.ws, "proj", ".stack")), out)
+        self.blocked("mkdir", {"path": ".stack"})
+
+    def test_ordinary_procs_folder_allowed(self):
+        self.allowed("write", {"path": os.path.join(self.ws, "src", "procs", "x", "a.py")})
+        self.allowed("write", {"path": "procs/y/b.txt"})
+        self.allowed("write", {"path": "src/.stackish/a"})
+
+    def test_multi_set_copy_move_checked(self):
+        ok = os.path.join(self.ws, "a.json")
+        bad = os.path.join(self.other, "b.json")
+        self.blocked("json_multi_set", {"items": [{"path": ok, "value": 1}, {"path": bad + "#/k", "value": 1}]})
+        self.allowed("json_multi_set", {"items": [{"path": ok, "value": 1}]})
+        self.blocked("copy", {"from": ok, "to": bad})
+        self.blocked("move", {"from": ok, "to": bad})
+        self.blocked("move", {"from": bad, "to": ok})
+        self.allowed("copy", {"from": bad, "to": ok})   # reading from a stack is not this guard's job
+
+    def test_symlink_into_neighbour_blocked(self):
+        os.symlink(self.other, os.path.join(self.ws, "peek"))
+        out = self.blocked("write", {"path": "peek/tools.json"})
+        self.assertIn(self.msg(self.other), out)
+        os.symlink(os.path.join(self.other, "gone.json"), os.path.join(self.ws, "dangling"))
+        self.blocked("write", {"path": "dangling"})
+
+    def test_own_ws_allowed(self):
+        self.allowed("write", {"path": "notes.txt"})
+        self.allowed("edit", {"path": os.path.join(self.ws, "sub", "a.md")})
+        self.allowed("mkdir", {"path": os.path.join(self.ws, "stacks", "other-notes")})
+
+    def test_own_stack_still_named_by_deny(self):
+        out = self.blocked("write", {"path": os.path.join(self.stack, "x")})
+        self.assertIn("from AOS_STACK", out)
+
+    def test_config_cannot_lift(self):
+        self.cfg["deny_parts"] = []
+        self.cfg["deny_roots"] = []
+        self.write_cfg()
+        self.allow = [self.daemon, self.other]
+        self.blocked("write", {"path": os.path.join(self.other, "x")})
+        self.blocked("write", {"path": os.path.join(self.daemon, "procs_state.json")})
+
+
 class ScopeCli(Base):
     def test_entry_scope(self):
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
@@ -995,6 +1120,43 @@ class ScopeCli(Base):
         got = json.loads(p.stdout)
         self.assertEqual(got["allow"], [{"path": self.ws, "from": "AOS_WS"}, {"path": self.root, "from": "AOS_WRITE_ALLOW"}])
         self.assertEqual(got["deny"], [{"path": self.stack, "from": "AOS_STACK"}])
+        self.assertEqual([r["name"] for r in got["rules"]],
+                         ["deny_parts", "proc-stack", "definition-marker", "no-hash-outside-json", "no-tilde"])
+        self.assertEqual(got["rules"][0]["parts"], [".git"])
+        self.assertEqual(got["rules"][3]["json_tools"], ["json_set", "json_add", "json_del", "json_multi_set"])
+        self.assertEqual(got["version"], 1)
+        self.assertEqual(got["deny_parts"], [".git"])
+        self.assertEqual(sorted(got), ["allow", "deny", "deny_parts", "rules", "version"])
+
+    def test_entry_scope_deny_parts_from_config(self):
+        self.cfg["deny_parts"] = [".git", ".hg"]
+        self.write_cfg()
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        env.update(AOS_GUARD_CFG=self.cfg_path, AOS_WS=self.ws)
+        p = subprocess.run([sys.executable, GUARD, "--scope"], capture_output=True, text=True, env=env, timeout=30)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        got = json.loads(p.stdout)
+        self.assertEqual(got["deny_parts"], [".git", ".hg"])
+        self.assertEqual(got["rules"][0], {"name": "deny_parts", "parts": [".git", ".hg"]})
+
+    def test_entry_scope_lists_everything_denied(self):
+        # the daemon table's stacks and definitions, the daemon folder and the AOS_HOME folders are listed
+        d = os.path.join(self.tmp.name, "dm")
+        other_stack, other_def = os.path.join(self.tmp.name, "elsewhere", "st"), os.path.join(self.tmp.name, "od")
+        home = os.path.join(self.tmp.name, "home")
+        for p in (d, other_stack, other_def, os.path.join(home, "lib"), os.path.join(home, "knowledge")):
+            os.makedirs(p)
+        with open(os.path.join(d, "procs_state.json"), "w", encoding="utf-8") as f:
+            json.dump({"procs": {"o": {"stack": other_stack, "def": other_def}}}, f)
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        env.update(AOS_GUARD_CFG=self.cfg_path, AOS_WS=self.ws, AOS_DAEMON=d, AOS_HOME=home)
+        p = subprocess.run([sys.executable, GUARD, "--scope"], capture_output=True, text=True, env=env, timeout=30)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(json.loads(p.stdout)["deny"], [
+            {"path": other_stack, "from": "daemon-table"}, {"path": other_def, "from": "daemon-table"},
+            {"path": d, "from": "AOS_DAEMON"},
+            {"path": os.path.join(home, "lib"), "from": "AOS_HOME"},
+            {"path": os.path.join(home, "knowledge"), "from": "AOS_HOME"}])
 
     def test_entry_scope_refuses_write_roots(self):
         self.cfg["write_roots"] = [self.root]
@@ -1010,6 +1172,484 @@ class ScopeCli(Base):
         p = subprocess.run([sys.executable, GUARD, "--nope"], capture_output=True, text=True, timeout=30)
         self.assertEqual(p.returncode, 1)
         self.assertIn("guard: error: ArgumentsBad", p.stderr)
+
+
+NO_HASH = "# is not allowed in paths of this tool"
+NO_TILDE = "use an absolute path or one relative to AOS_WS"
+
+
+class HashOutsideJson(Base):
+    # item 1: only the json tools cut FILE#/POINTER; every other file tool takes # literally, so the guard blocks it
+    def setUp(self):
+        super().setUp()
+        self.allow = []   # only AOS_WS
+
+    def test_write_hash_blocked(self):
+        for p in ("#/../x", "#/../../../x/hooks.json", "a#b", "sub/#"):
+            with self.subTest(path=p):
+                out = self.blocked("write", {"path": p, "content": "x"})
+                self.assertIn(NO_HASH, out)
+
+    def test_edit_mkdir_trash_remove_blocked(self):
+        self.assertIn(NO_HASH, self.blocked("edit", {"path": "a#/../../x"}))
+        self.assertIn(NO_HASH, self.blocked("mkdir", {"path": "d#/../../x"}))
+        self.assertIn(NO_HASH, self.blocked("trash", {"path": "#/x"}))
+        self.assertIn(NO_HASH, self.blocked("remove", {"path": "#/../y"}))
+
+    def test_move_copy_blocked(self):
+        self.assertIn(NO_HASH, self.blocked("move", {"from": "#/../a", "to": "b"}))
+        self.assertIn(NO_HASH, self.blocked("move", {"from": "a", "to": "#/../../b"}))
+        self.assertIn(NO_HASH, self.blocked("copy", {"from": "a", "to": "x#/../../b"}))
+        self.assertIn(NO_HASH, self.blocked("copy", {"from": "a#/../b", "to": "b"}))   # copy.from is read: syntax rules only
+        self.assertIn(NO_TILDE, self.blocked("copy", {"from": "~/a", "to": "b"}))
+        self.allowed("copy", {"from": "a", "to": "b"})
+        self.allowed("copy", {"from": "/etc/hostname", "to": "b"})                        # reading anywhere is not the guard's business
+
+    def test_json_tools_still_split(self):
+        self.allowed("json_set", {"path": "x.json#/a"})
+        self.allowed("json_add", {"path": os.path.join(self.ws, "x.json") + "#/a/-"})
+        self.allowed("json_del", {"path": "x.json#/a"})
+        self.allowed("json_multi_set", {"items": [{"path": "x.json#/a", "value": 1}]})
+        self.blocked("json_set", {"path": "../x.json#/a"})                  # the file part is checked
+        out = self.blocked("json_set", {"path": "#/../x"})                  # no file name before #
+        self.assertIn("no file name before #", out)
+        self.blocked("json_multi_set", {"items": [{"path": "x.json#/a"}, {"path": "#/a"}]})
+
+
+class KeepFiles(Base):
+    # item 2: a keep file name is opened for append (created) by the mail tools, so it gets the write check
+    def test_mailbox_read_keep(self):
+        out = self.blocked("mailbox_read", {"keep": os.path.join(self.tmp.name, "elsewhere.jsonl")})
+        self.assertIn("outside the folders you may write", out)
+        out = self.blocked("mailbox_read", {"keep": os.path.join(self.stack, "hooks.json")})
+        self.assertIn("from AOS_STACK", out)
+        self.assertIn(NO_HASH, self.blocked("mailbox_read", {"keep": "#/../../x"}))
+        self.blocked("mailbox_read", {"keep": "../x.jsonl"})
+        self.blocked("mailbox_read", {"keep": 3})
+        os.makedirs(os.path.join(self.ws, "notes"))
+        self.allowed("mailbox_read", {"keep": "notes/x.jsonl"})
+        self.allowed("mailbox_read", {"keep": True})
+        self.allowed("mailbox_read", {"keep": False, "all": True})
+        self.allowed("mailbox_read", {})
+
+    def test_mailbox_send_keep(self):
+        base = {"to": "bob", "status": "DONE", "title": "t", "what": "w"}
+        self.blocked("mailbox_send", dict(base, keep=os.path.join(self.tmp.name, "elsewhere.jsonl")))
+        out = self.blocked("mailbox_send", dict(base, keep=os.path.join(self.stack, "x.jsonl")))
+        self.assertIn("from AOS_STACK", out)
+        self.allowed("mailbox_send", dict(base, keep="notes/x.jsonl"))
+        self.allowed("mailbox_send", dict(base, keep=False))
+        # true is not a mode of mailbox_send (its _entry would pass it on as --keep-to True)
+        self.assertIn("keep of mailbox_send is a file name", self.blocked("mailbox_send", dict(base, keep=True)))
+        self.blocked("mailbox_send", dict(base, keep=3))
+
+    def test_keep_into_neighbour_stack(self):
+        d = os.path.join(self.ws, "d")
+        os.makedirs(os.path.join(d, "procs", "bo"))
+        open(os.path.join(d, "procs_state.json"), "w").close()
+        out = self.blocked("mailbox_read", {"keep": "d/procs/bo/history.jsonl"})
+        self.assertIn("rule: proc-stack", out)
+
+
+class DaemonTable(Base):
+    # items 3+4: every row's stack and definition and the whole daemon folder are denied; the marker rules stay
+    def setUp(self):
+        super().setUp()
+        self.allow = []   # only AOS_WS; everything below is inside it on purpose
+        w = self.ws
+        self.daemon = os.path.join(w, "dm")
+        self.stack = os.path.join(self.daemon, "procs", "me")
+        self.other_stack = os.path.join(w, "custom", "bo")      # not under procs/, no .stack part
+        self.mydef = os.path.join(w, "defs", "me")
+        self.otherdef = os.path.join(w, "defs", "bo")           # no interfaces.json
+        for d in (self.stack, self.other_stack, self.mydef, self.otherdef):
+            os.makedirs(d)
+        with open(os.path.join(self.daemon, "procs_state.json"), "w", encoding="utf-8") as f:
+            json.dump({"procs": {"me": {"stack": "procs/me", "def": self.mydef},
+                                 "bo": {"stack": self.other_stack, "def": self.otherdef}}}, f)
+        self.env = {"AOS_DAEMON": self.daemon}
+
+    def test_other_rows_stack_blocked(self):
+        out = self.blocked("write", {"path": "custom/bo/hooks.json"}, env_extra=self.env)
+        self.assertIn("no agent may write (%s, from daemon-table)" % self.other_stack, out)
+        self.blocked("mkdir", {"path": "custom/bo/queue/new/x"}, env_extra=self.env)
+        self.allowed("write", {"path": "custom/notes.txt"}, env_extra=self.env)
+
+    def test_other_rows_def_blocked(self):
+        out = self.blocked("edit", {"path": "defs/bo/tools.json"}, env_extra=self.env)
+        self.assertIn("no agent may write (%s, from daemon-table)" % self.otherdef, out)
+        self.blocked("json_set", {"path": "defs/bo/hooks.json#/guard"}, env_extra=self.env)
+
+    def test_daemon_stack_file_blocked(self):
+        out = self.blocked("write", {"path": "dm/procs_ctl.json"}, env_extra=self.env)
+        self.assertIn("no agent may write (%s, from AOS_DAEMON)" % self.daemon, out)
+        # the daemon folder is denied as a whole even without its marker file
+        os.rename(os.path.join(self.daemon, "procs_state.json"), os.path.join(self.ws, "moved.json"))
+        out = self.blocked("write", {"path": "dm/procs_ctl.json"}, env_extra=self.env)
+        self.assertIn("no agent may write (%s, from AOS_DAEMON)" % self.daemon, out)
+
+    def test_shards(self):
+        with open(os.path.join(self.daemon, "procs.1.json"), "w", encoding="utf-8") as f:
+            json.dump({"bo": {"stack": self.other_stack, "def": "../defs/bo"}}, f)
+        with open(os.path.join(self.daemon, "procs_state.json"), "w", encoding="utf-8") as f:
+            json.dump({"procs": {"$ref": ["procs.1.json"]}}, f)
+        self.blocked("write", {"path": "defs/bo/x"}, env_extra=self.env)
+        self.blocked("write", {"path": "custom/bo/x"}, env_extra=self.env)
+
+    def test_table_missing_definition_marker(self):
+        # no AOS_DAEMON: the table is not read; a folder holding interfaces.json is still a definition
+        lead = os.path.join(self.ws, "team", "defs", "gather")
+        os.makedirs(os.path.join(lead, "screen"))
+        open(os.path.join(lead, "interfaces.json"), "w").close()
+        out = self.blocked("write", {"path": "team/defs/gather/tools.json"})
+        self.assertIn("is inside an agent definition (%s holds interfaces.json, rule: definition-marker)" % lead, out)
+        self.blocked("mkdir", {"path": "team/defs/gather/screen/new"})
+        self.blocked("write", {"path": "team/defs/gather/interfaces.json"})
+        self.allowed("write", {"path": "team/defs/other/tools.json"})
+        self.allowed("write", {"path": "defs/bo/x"})   # no table, no marker: an ordinary folder
+
+    def test_kernel_set_own_def_blocked(self):
+        env = dict(self.env, AOS_KERNEL=os.path.join(self.tmp.name, "k"))
+        out = self.blocked("write", {"path": "defs/me/system.txt"}, env_extra=env)
+        self.assertIn("no agent may write (%s, from definition)" % self.mydef, out)
+
+    def test_config_cannot_lift(self):
+        self.cfg["deny_roots"] = []
+        self.cfg["deny_parts"] = []
+        self.write_cfg()
+        self.allow = [self.otherdef, self.other_stack]
+        self.blocked("write", {"path": os.path.join(self.otherdef, "x")}, env_extra=self.env)
+        self.blocked("write", {"path": os.path.join(self.other_stack, "x")}, env_extra=self.env)
+
+
+class HomeFolders(Base):
+    # item 5: with AOS_HOME set, its product folders (those that exist) are denied
+    def setUp(self):
+        super().setUp()
+        self.home = os.path.join(self.tmp.name, "aoshome")
+        for p in ("lib", "cmd", "templates", "py", "knowledge", "ws"):
+            os.makedirs(os.path.join(self.home, p))
+        self.allow = [self.home]
+        self.env = {"AOS_HOME": self.home}
+
+    def test_product_folders_blocked(self):
+        for p in ("lib", "cmd", "templates", "py", "knowledge"):
+            with self.subTest(folder=p):
+                out = self.blocked("write", {"path": os.path.join(self.home, p, "x", "y.py")}, env_extra=self.env)
+                self.assertIn("no agent may write (%s, from AOS_HOME)" % os.path.join(self.home, p), out)
+        self.allowed("write", {"path": os.path.join(self.home, "ws", "x")}, env_extra=self.env)
+        self.allowed("write", {"path": os.path.join(self.home, "impls", "x")}, env_extra=self.env)   # no such folder
+        self.allowed("write", {"path": os.path.join(self.home, "lib", "x")})                         # AOS_HOME unset
+
+    def test_symlinked_home(self):
+        link = os.path.join(self.tmp.name, "h")
+        os.symlink(self.home, link)
+        self.blocked("write", {"path": os.path.join(self.home, "lib", "x")}, env_extra={"AOS_HOME": link})
+
+
+class DaemonArg(Base):
+    # item 6: mailbox_send / clock_register daemon only when absent or equal to realpath(AOS_DAEMON)
+    def setUp(self):
+        super().setUp()
+        self.own = os.path.join(self.tmp.name, "own-d")
+        self.foreign = os.path.join(self.tmp.name, "foreign-d")
+        os.makedirs(self.own)
+        os.makedirs(self.foreign)
+        self.env = {"AOS_DAEMON": self.own}
+        self.mail = {"to": "bob", "status": "REQUEST", "title": "t", "what": "w"}
+
+    def test_mailbox_send_daemon(self):
+        self.allowed("mailbox_send", self.mail, env_extra=self.env)
+        self.allowed("mailbox_send", dict(self.mail, daemon=self.own), env_extra=self.env)
+        os.symlink(self.own, os.path.join(self.ws, "d"))
+        self.allowed("mailbox_send", dict(self.mail, daemon="d"), env_extra=self.env)     # relative, via a link
+        out = self.blocked("mailbox_send", dict(self.mail, daemon=self.foreign), env_extra=self.env)
+        self.assertIn("may only use your own daemon (AOS_DAEMON)", out)
+        self.blocked("mailbox_send", dict(self.mail, daemon=self.own))                      # AOS_DAEMON unset
+        self.blocked("mailbox_send", dict(self.mail, daemon=["x"]), env_extra=self.env)
+        self.blocked("mailbox_send", dict(self.mail, daemon="~/own-d"), env_extra=self.env)
+
+    def test_clock_register_daemon(self):
+        self.allowed("clock_register", {"op": "ls"}, env_extra=self.env)
+        self.allowed("clock_register", {"op": "ls", "daemon": self.own}, env_extra=self.env)
+        out = self.blocked("clock_register", {"op": "rm", "name": "x", "daemon": self.foreign}, env_extra=self.env)
+        self.assertIn("clock_register may only use your own daemon", out)
+        self.blocked("clock_register", {"op": "ls", "daemon": self.own})
+
+
+class UnknownTools(Base):
+    # item 7: a tool name the guard has no rule for is blocked
+    def test_unknown_blocked(self):
+        for name in ("made_up_tool", "jsonx_set", "jsonx_multi_set", "read", "self_hook", "agent_def", None):
+            with self.subTest(tool=name):
+                out = self.blocked(name, {"path": "a.txt", "content": "x"})
+                self.assertIn("guard has no rule for this tool", out)
+                self.assertIn("remove it from the hook's condition or add a rule", out)
+
+    def test_known_still_allowed(self):
+        self.allowed("write", {"path": "a.txt"})
+        self.allowed("mailbox_read", {})
+
+
+class WsWrite(Base):
+    # ws_write has a rule: the same check as write.path (scope, rules, no #, no leading ~)
+    def setUp(self):
+        super().setUp()
+        self.allow = []
+
+    def test_ws_write_checked_like_write(self):
+        self.allowed("ws_write", {"path": "notes/report.md", "content": "x"})
+        out = self.blocked("ws_write", {"path": os.path.join(self.tmp.name, "elsewhere.txt"), "content": "x"})
+        self.assertIn("outside the folders you may write", out)
+        self.assertIn(NO_HASH, self.blocked("ws_write", {"path": "#/../x", "content": "x"}))
+        self.assertIn(NO_TILDE, self.blocked("ws_write", {"path": "~/x", "content": "x"}))
+        self.assertIn("from AOS_STACK", self.blocked("ws_write", {"path": os.path.join(self.stack, "x"), "content": "x"}))
+        self.blocked("ws_write", {"path": "../x", "content": "x"})
+        self.blocked("ws_write", {"content": "x"})
+
+    def test_known_tools_list(self):
+        self.assertIn("ws_write", G.KNOWN_TOOLS)
+        self.assertFalse([n for n in G.KNOWN_TOOLS if n.startswith("jsonx_")])
+
+
+class PortedRepro(Base):
+    # cases of an independent repro, ported; the guard is stricter on one point: any # outside the json tools is
+    # blocked (the repro allowed a # inside a plain file name)
+    def test_hash_is_part_of_the_path_for_file_tools(self):
+        self.blocked("write", {"path": "#/../../escaped.txt"})
+        self.blocked("write", {"path": "#/../escaped-1.txt", "content": "x"})
+        self.blocked("edit", {"path": "a#/../../escaped.txt"})
+        self.blocked("mkdir", {"path": "#/../../d"})
+        self.blocked("move", {"from": "a.txt", "to": "#/../../b.txt"})
+        self.assertIn(NO_HASH, self.blocked("write", {"path": "a#b.txt"}))   # stricter than the repro
+        self.blocked("write", {"path": os.path.join(self.tmp.name, "outside-abs.txt"), "content": "x"})   # control
+
+    def test_json_tools_still_split_at_hash(self):
+        self.allowed("json_set", {"path": "x.json#/a/../../b"})   # right of # is a JSON pointer, not a path
+        self.allowed("json_multi_set", {"items": [{"path": "x.json#/../../b"}]})
+        self.blocked("json_set", {"path": "../x.json#/a"})
+
+    def test_mail_keep_file_is_checked(self):
+        out = self.blocked("mailbox_read", {"keep": os.path.join(self.tmp.name, "elsewhere.jsonl")})
+        self.assertIn("outside the folders you may write", out)
+        self.blocked("mailbox_read", {"all": True, "keep": "../elsewhere.jsonl"})
+        self.blocked("mailbox_send", {"to": "bob", "status": "DONE", "title": "t", "what": "w", "keep": "../x.jsonl"})
+        mb = os.path.join(self.stack, "mailbox")
+        os.makedirs(mb)
+        self.blocked("mailbox_send", {"box": mb, "status": "PROGRESS", "title": "t", "what": "w",
+                                       "keep": os.path.join(self.tmp.name, "outside-keep2.jsonl")})
+
+    def test_mail_keep_inside_or_boolean_allowed(self):
+        self.allowed("mailbox_read", {})
+        self.allowed("mailbox_read", {"keep": True})
+        self.allowed("mailbox_read", {"keep": "mail/letters.jsonl"})
+        self.allowed("mailbox_send", {"to": "bob", "status": "DONE", "title": "t", "what": "w", "keep": "mail/sent.jsonl"})
+
+
+class EntryItself(Base):
+    # trash, remove, copy and move act on the entry itself, not on where a final link points: both places are checked
+    def test_link_inside_stack_pointing_to_ws(self):
+        target = os.path.join(self.ws, "t")
+        os.makedirs(target)
+        link = os.path.join(self.stack, "lnk")
+        os.symlink(target, link)
+        self.allow = [self.tmp.name]
+        out = self.blocked("remove", {"path": link})
+        self.assertIn("from AOS_STACK", out)
+        self.blocked("move", {"from": link, "to": os.path.join(self.ws, "u")})
+        self.blocked("trash", {"path": link + "/"})
+        self.allowed("remove", {"path": target})
+
+
+def mailbox(path):
+    for sub in ("tmp", "new", "cur"):
+        os.makedirs(os.path.join(path, sub))
+    return path
+
+
+class BoxOwnTree(Base):
+    # review r2, new 1: a mailbox_send box only on the own tree: a row's mailbox on the own daemon table, the agent
+    # itself, the workspace, or mail_allow_box; another tree's mailbox and the user zone are blocked by default
+    def setUp(self):
+        super().setUp()
+        t = self.tmp.name
+        self.daemon = os.path.join(t, "dm")
+        self.stack = os.path.join(self.daemon, "procs", "crew-1")
+        self.lead = os.path.join(t, "lead-stack")                     # a lead with a stack outside procs/
+        self.lead_box = mailbox(os.path.join(self.lead, "mailbox"))
+        self.own_box = mailbox(os.path.join(self.stack, "mailbox"))
+        with open(os.path.join(self.daemon, "procs_state.json"), "w", encoding="utf-8") as f:
+            json.dump({"procs": {"crew-1": {"stack": "procs/crew-1", "def": None},
+                                 "lead": {"stack": self.lead, "def": os.path.join(t, "defs", "lead")}}}, f)
+        self.foreign_d = os.path.join(t, "other-tree", "dm")             # another tree's daemon and agent
+        self.foreign_box = mailbox(os.path.join(self.foreign_d, "procs", "x", "mailbox"))
+        with open(os.path.join(self.foreign_d, "procs_state.json"), "w", encoding="utf-8") as f:
+            json.dump({"procs": {"x": {"stack": "procs/x", "def": None}}}, f)
+        self.user_zone = mailbox(os.path.join(t, "home", ".aos", "user", "inbox"))
+        self.env_base = {"AOS_DAEMON": self.daemon}
+        self.mail = {"status": "DONE", "title": "t", "what": "w"}
+
+    def to_box(self, box, **kw):
+        return dict(self.mail, box=box, **kw)
+
+    def test_crew_reports_to_lead(self):
+        # the reply_to of the lead's letter: <lead stack>/mailbox, absolute (aos-mailbox joins it to the receiving box)
+        self.allowed("mailbox_send", self.to_box(self.lead_box, in_reply_to="l1"))
+        reply_to = os.path.normpath(os.path.join(self.own_box, os.path.relpath(self.lead_box, self.own_box)))
+        self.allowed("mailbox_send", self.to_box(reply_to))
+        self.allowed("mailbox_send", self.to_box(self.lead_box + "/"))
+        self.allowed("mailbox_send", dict(self.mail, to="lead"))     # by name: always the own daemon
+
+    def test_own_mailbox_and_workspace(self):
+        self.allowed("mailbox_send", self.to_box(self.own_box))
+        self.allowed("mailbox_send", self.to_box(self.own_box), stack=os.path.join(self.stack, "hooks", "guard"))
+        mailbox(os.path.join(self.ws, "outbox"))
+        self.allowed("mailbox_send", self.to_box("outbox"))
+
+    def test_other_tree_blocked(self):
+        out = self.blocked("mailbox_send", self.to_box(self.foreign_box))
+        self.assertIn("you may not mail %s: a box must be the mailbox of a proc on your own daemon's table" % self.foreign_box, out)
+        os.symlink(self.foreign_box, os.path.join(self.ws, "fb"))     # a link in the workspace is judged by its target
+        self.blocked("mailbox_send", self.to_box("fb"))
+        self.blocked("mailbox_send", self.to_box(os.path.join(self.ws, "..", "other-tree", "dm", "procs", "x", "mailbox")))
+        # a row's stack itself, or a folder in it other than the mailbox, is no mailbox
+        self.blocked("mailbox_send", self.to_box(self.lead))
+        self.blocked("mailbox_send", self.to_box(os.path.join(self.lead, "notes")))
+        self.blocked("mailbox_send", self.to_box(os.path.join(self.lead, "mailbox-x")))
+
+    def test_user_zone_only_when_listed(self):
+        out = self.blocked("mailbox_send", self.to_box(self.user_zone))
+        self.assertIn("mail_allow_box", out)
+        self.cfg["mail_allow_box"] = ["~/.aos/user"]                   # config entries expand ~ (HOME)
+        self.write_cfg()
+        self.allowed("mailbox_send", self.to_box(self.user_zone), env_extra={"HOME": os.path.join(self.tmp.name, "home")})
+        self.cfg["mail_allow_box"] = [os.path.join(self.tmp.name, "home", ".aos", "user")]
+        self.write_cfg()
+        self.allowed("mailbox_send", self.to_box(self.user_zone))
+        self.blocked("mailbox_send", self.to_box(self.foreign_box))      # the list does not open other places
+
+    def test_without_daemon(self):
+        # no AOS_DAEMON: no table rows; only the agent itself, the workspace and mail_allow_box
+        none = {"AOS_DAEMON": None}
+        self.blocked("mailbox_send", self.to_box(self.lead_box), env_extra=none)
+        self.allowed("mailbox_send", self.to_box(self.own_box), env_extra=none)
+        os.rename(os.path.join(self.daemon, "procs_state.json"), os.path.join(self.tmp.name, "moved.json"))
+        self.blocked("mailbox_send", self.to_box(self.lead_box))           # no table file: no rows
+        self.allowed("mailbox_send", self.to_box(self.own_box))
+
+    def test_foreign_daemon_rows_do_not_count(self):
+        # the other daemon's rows count only for an agent of that daemon
+        self.allowed("mailbox_send", self.to_box(self.foreign_box), env_extra={"AOS_DAEMON": self.foreign_d})
+        self.blocked("mailbox_send", self.to_box(self.lead_box), env_extra={"AOS_DAEMON": self.foreign_d})
+
+    def test_bad_config(self):
+        for bad in ("/x", [3], [""], {"a": 1}):
+            with self.subTest(value=bad):
+                self.cfg["mail_allow_box"] = bad
+                self.write_cfg()
+                code, out = self.run_guard("mailbox_send", self.to_box(self.lead_box))
+                self.assertEqual(code, 1, out)
+                self.assertIn("guard: error: CfgBad mail_allow_box", self.last_err)
+
+    def test_event_stack_mailbox(self):
+        # the stack field of the hook event names the agent itself too
+        ev_stack = os.path.join(self.tmp.name, "ev-stack")
+        box = mailbox(os.path.join(ev_stack, "mailbox"))
+        self.blocked("mailbox_send", self.to_box(box))
+        self.allowed("mailbox_send", self.to_box(box), event={"stack": ev_stack})
+
+
+class TableBad(Base):
+    # review r2, new 3+4: a daemon table file that exists but cannot be read, or has a row without a stack string,
+    # blocks every call that needs it (exit 10, not exit 1: the agent is not stopped); no table file = no rows
+    def setUp(self):
+        super().setUp()
+        self.daemon = os.path.join(self.tmp.name, "dm")
+        self.stack = os.path.join(self.daemon, "procs", "me")
+        os.makedirs(self.stack)
+        self.env_base = {"AOS_DAEMON": self.daemon}
+
+    def table(self, text):
+        with open(os.path.join(self.daemon, "procs_state.json"), "w", encoding="utf-8") as f:
+            f.write(text if isinstance(text, str) else json.dumps(text))
+
+    def test_broken_shapes_block(self):
+        good = {"stack": "procs/me", "def": None}
+        for bad in ("{broken", "", "[]", {"procs": []}, {"x": 1},
+                    {"procs": {"me": good, "x": "junk"}},
+                    {"procs": {"me": good, "bo": {"stack": {"$env": "AOS_X", "$path": "/bo"}, "def": None}}},
+                    {"procs": {"me": good, "bo": {"def": None}}},
+                    {"procs": {"me": good, "bo": {"stack": "", "def": None}}},
+                    {"procs": {"me": good, "bo": {"stack": "procs/bo", "def": {"$env": "AOS_X"}}}},
+                    {"procs": {"$ref": ["missing-shard.json"]}}):
+            with self.subTest(table=bad):
+                self.table(bad)
+                out = self.blocked("write", {"path": "notes.md"})
+                self.assertIn("the daemon table (procs_state.json of AOS_DAEMON) cannot be read", out)
+                self.assertIn("Try once more", out)
+                self.blocked("mailbox_send", {"box": os.path.join(self.stack, "mailbox")})
+
+    def test_good_table_and_no_table(self):
+        self.table({"procs": {"me": {"stack": "procs/me", "def": None}, "bo": {"stack": "procs/bo"}}})
+        self.allowed("write", {"path": "notes.md"})
+        self.blocked("write", {"path": os.path.join(self.daemon, "procs", "bo", "x")})
+        os.rename(os.path.join(self.daemon, "procs_state.json"), os.path.join(self.tmp.name, "moved.json"))
+        self.allowed("write", {"path": "notes.md"})                    # no file = no table (procs_state off)
+
+    def test_scope_cli_refuses(self):
+        self.table("{broken")
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        env.update(AOS_GUARD_CFG=self.cfg_path, AOS_WS=self.ws, AOS_DAEMON=self.daemon)
+        p = subprocess.run([sys.executable, GUARD, "--scope"], capture_output=True, text=True, env=env, timeout=30)
+        self.assertEqual(p.returncode, 1)
+        self.assertEqual(p.stdout, "")
+        self.assertIn("scope: error: TableBad", p.stderr)
+
+
+class ArgTypes(Base):
+    # review r2, new 6: an argument of a wrong type blocks (exit 10) instead of an error (exit 1), which with
+    # on_error "stop" would stop the whole agent; a config of a wrong type is still CfgBad (exit 1)
+    def test_wrong_argument_types_block(self):
+        cases = [("json_multi_set", {"items": 5}), ("json_multi_set", {"items": True}),
+                 ("json_multi_set", {"items": "ab"}), ("write", {"path": "a\u0000b"}),
+                 ("mailbox_send", {"box": "a\u0000b"}), ("move", {"from": "a", "to": "b\u0000"}),
+                 ("subagent", {"op": "history", "args": "x"}), ("subagent", {"op": ["add"]}),
+                 ("kernel_gate", {"op": {"a": 1}}), ("agents_ctl", {"op": ["stop"]})]
+        for name, args in cases:
+            with self.subTest(tool=name, args=args):
+                code, out = self.run_guard(name, args)
+                self.assertEqual(code, 10, "expected blocked, got %d: %s %s" % (code, out, self.last_err))
+                self.assertTrue(out.startswith("[aos] guard: blocked:"), out)
+
+    def test_wrong_config_types_error(self):
+        for key, bad in (("subagent", ["add"]), ("subagent", {"ops": ["ls"]}), ("kernel_gate", "on"),
+                         ("agents_ctl", {"ops": "stop"}), ("agents_ctl", {"ops": ["stop"], "max_timeout_s": "9"}),
+                         ("clock_boxes", [3]), ("mail_deny", "/x"), ("mail_allow_to", "("), ("mail_allow_to", 3),
+                         ("shell_deny", ["("]), ("shell_deny", "rm")):
+            with self.subTest(key=key, value=bad):
+                self.cfg[key] = bad
+                self.write_cfg()
+                code, out = self.run_guard("write", {"path": "a.txt"})
+                self.assertEqual(code, 1, out)
+                self.assertIn("guard: error: CfgBad %s" % key, self.last_err)
+                self.cfg = {}
+                self.write_cfg()
+
+
+class EventStack(Base):
+    # review r2, new 7: the stack field of the hook event (written by the hook runner) is denied like AOS_STACK
+    def test_event_stack_denied(self):
+        ev = os.path.join(self.root, "tool-form", "agent")   # inside AOS_WRITE_ALLOW on purpose
+        os.makedirs(ev)
+        self.allowed("write", {"path": os.path.join(ev, "x")})
+        out = self.blocked("write", {"path": os.path.join(ev, "x")}, event={"stack": ev})
+        self.assertIn("no agent may write (%s, from event)" % ev, out)
+        out = self.blocked("write", {"path": os.path.join(ev, "x")}, event={"stack": os.path.join(ev, "hooks", "guard")})
+        self.assertIn("from event", out)                       # a cell is cut as for AOS_STACK
+        self.allowed("write", {"path": os.path.join(self.root, "y")}, event={"stack": ev})
+        for bad in (3, ["x"], "a\u0000b"):
+            with self.subTest(stack=bad):
+                self.assertIn("stack field of the hook event", self.blocked("write", {"path": "a"}, event={"stack": bad}))
 
 
 if __name__ == "__main__":

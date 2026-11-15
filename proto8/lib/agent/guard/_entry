@@ -11,8 +11,10 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 HELP = """usage: _entry < EVENT.json      (a before_tool hook handler)
        _entry --scope            (print the write scope as JSON and exit 0)
 Checks one tool call against the write scope and the guard config ($AOS_GUARD_CFG; unset = defaults).
-exit codes: 0 allowed (or --scope printed); 10 blocked ("[aos] guard: blocked: ..." on stdout);
-            1 error ("guard: error: CODE reason" on stderr: CfgMissing, CfgBad, ArgumentsBad, WsMissing).
+A tool name the guard has no rule for is blocked: mount it with a condition listing only the tools it knows.
+exit codes: 0 allowed (or --scope printed); 10 blocked ("[aos] guard: blocked: ..." on stdout; also for an
+            argument of a wrong type and an unreadable daemon table); 1 error ("guard: error: CODE reason" on
+            stderr: CfgMissing, CfgBad, ArgumentsBad, WsMissing; --scope also TableBad).
 See README.md next to this file.
 """
 
