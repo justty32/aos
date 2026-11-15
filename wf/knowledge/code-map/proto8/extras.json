@@ -8,6 +8,125 @@
    "test_copy_tree.py": "驗 copy_tree.py：在暫存夾自建小 git repo 與小樹，抄五夾、每夾有 .aos-source.json 記 commit；舊內容被換掉；--stamp-only、--dry-run、髒工作樹提醒與幾種錯。",
    "test_env_sh.py": "驗 env.sh：bash 與 zsh 都 source 得過，source 後環境裡的 AOS_* 只剩 AOS_HOME（＝env.sh 所在的資料夾），CLAUDE 那三個也清掉。"
   },
+  "aos-view": {
+   "aide-def": {
+    "act.py": "act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。",
+    "aide_tick.json": "入口：`$AOS_HOME aide-tick`",
+    "atomic_file.py": "agent-fsm 的格（idle、wait）共用的寫檔：先寫同資料夾的 .<名>.tmp 再改名（N-05），寫不成交給呼叫端的 die（WriteFailed）。",
+    "body.json": "argv：`aos-loop loop.json`",
+    "brain.py": "think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。",
+    "cell_common.py": "agent-fsm 的格共用的開頭幾步：四格的 on_clock 看時鐘（clock_tick），brain、act 的讀 history.jsonl 與決定用哪份工具登記檔。",
+    "fsm.json": "入口 `aos-fsm $AOS_CF`；鍵：start、states",
+    "hooks.json": "The aide's only hook: every 60 clock cycles (about a minute at 1000 ms a cycle) run aos-view aide-tick (aide_tick.json, next to this file). It carrie…",
+    "idle.py": "idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。",
+    "interfaces.json": "設定（鍵：aos-agent、aos-observed）",
+    "llm.json": "設定（鍵：model）",
+    "llm_settings.py": "agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。",
+    "loop.json": "Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks (lib…",
+    "subagents.json": "設定（鍵：max_subagents）",
+    "system.txt": "",
+    "tools.json": "The aide has no tools: its whole job is the on_clock hook aide_tick (hooks.json); the brain is fake and is never asked in phase 1.",
+    "wait.py": "wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。"
+   },
+   "aide-def/": "The view aide of one team: an agent-fsm with a fake brain and no tools whose on_clock hook runs aos-view aide-tick (phase 1 of view-1114: only carrie…",
+   "aos-view": "one local page that shows every agent and proc on the daemon table as a tree,",
+   "systemd": {
+    "aos-view.service": ""
+   },
+   "tests": {
+    "cdp.mjs": "drive headless Chrome over the DevTools protocol (node 24 has WebSocket built in); no puppeteer.",
+    "demo_v2.py": "a fixture company for looking at the v2 page by hand or with headless Chrome (not a unit test).",
+    "run.sh": "run the aos-view tests with every AOS_* variable unset (wf aos-teams/06 hard rule 2); temp dirs only.",
+    "test_delivery.py": "delivery() marks what the user sent as queued / read / replied / unknown.",
+    "test_phase1.py": "phase 1 of aos-view: note, decide, aide-tick, relay ingestion into a temp user zone, answer, match, lights.",
+    "test_v2.py": "the v2 backend (03 §12.3, §12.8): B1 second port, B2 pulse / rev / ETag, B3 outbox, B4 ui-state,"
+   },
+   "ui": {
+    "v1": {
+     "VERSION": "",
+     "app.js": "全景頁 frontend: plain JS, zero dependencies, no build step (API contract: ../API.md).",
+     "index.html": "",
+     "map.js": "全景頁 phase 0b map: zoomable / pannable 2D floor plan of the agent tree (zero dependencies).",
+     "style.css": "全景頁 styles: plain CSS, no framework."
+    },
+    "v2": {
+     "VERSION": "",
+     "dist": {
+      "assets": {
+       "index-CCvZ7tt8.js": "",
+       "index-EY0xnFtw.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com"
+      },
+      "index.html": ""
+     },
+     "index.html": "",
+     "package.json": "設定（鍵：name、private、version、type、scripts、devDependencies）",
+     "postcss.config.js": "",
+     "scripts": {
+      "check-dist.mjs": "build gate (02c §6): JS after compression (gzip) at most 250 KB; no inline <script> in index.html (CSP script-src 'self').",
+      "check-src.mjs": "build gate (02c §6): no dangerouslySetInnerHTML / innerHTML / eval in the sources; agent text goes through React text nodes."
+     },
+     "src": {
+      "App.tsx": "The page: header on top; three columns: inbox 340 px | stage | inspector 420 px (decision card + selection + composer).",
+      "api": {
+       "client.ts": "HTTP to the aos-view backend: 8 s timeout per call, ETag / If-None-Match, the CSRF token (header + cookie).",
+       "poll.ts": "Pulse-driven fetching (12.8 #7): only /api/pulse runs on a timer (5 s; 30 s while the tab is hidden). A kind is",
+       "types.ts": "The API contract (aos-view API.md + v2 additions B1–B5, 03 §12.3 / §12.8). Written by opus; panels only read these."
+      },
+      "app.css": "",
+      "composer": {
+       "Composer.tsx": "The composer (02c §5, 12.8 #5): always at the bottom of the right column, talking to whatever is selected."
+      },
+      "inbox": {
+       "Decision.tsx": "The decision card (02c §4.3, 12.8 #1): docked on top of the right column while route.ask is set.",
+       "Inbox.tsx": "The left column (02c §2): 待辦 (four kinds, one queue), 追蹤 (everything sent, where it is), 已處理 (answered here)."
+      },
+      "input": {
+       "keys.test.ts": "",
+       "keys.ts": "Keyboard (12.8 #4, Argon A5/A6/A9; written by opus, panels register only through here)."
+      },
+      "inspector": {
+       "Inspector.tsx": "The right column (02c §4): a decision card docked on top when one is open (12.8 #1), then the selected thing:",
+       "Thread.tsx": "往來: what you sent to one node and what came back, like a chat (oldest at the top, newest at the bottom).",
+       "useLive.ts": "A panel's own data (thread, bot card): fetched when opened, again every 15 s while the tab is visible,"
+      },
+      "main.tsx": "",
+      "model": {
+       "board.ts": "Reading an agent's board/1 (ok-board, board-1114/06 §7.3–§7.4). Pure; the page only reads, never writes for an agent.",
+       "drafts.ts": "Drafts (12.8 #5): one per target, every field kept, so switching say / mail / order never loses text.",
+       "inbox.ts": "The to-do queue (02c §2): four kinds in a fixed order, all derived from data the page already has (no model).",
+       "model.test.ts": "",
+       "time.ts": "Time words (pure). The page counts \"N min ago\" itself from epoch fields, on the 10 s local tick (12.8 #7).",
+       "tree.ts": "Tree helpers (pure). A department = a node with members (children). The company = the roots that are agents,"
+      },
+      "shell": {
+       "Dialogs.tsx": "Overlays: Ctrl+K search (jump to anyone), the user's board (留話), the drafts list. Esc closes the top one.",
+       "Header.tsx": "",
+       "bits.tsx": "Small shared pieces: the light dot, the delivery steps, a section title. Agent text always as React text."
+      },
+      "stage": {
+       "Card.tsx": "One card component for the wall (and later the map): lead desk, member, sub-department, machine room, proc, outside service.",
+       "Stage.tsx": "The middle column: the department wall (v2.0). One level at a time; the lead desk first (02c §3.3)."
+      },
+      "state": {
+       "app.ts": "The two stores of the page: data (what the backend said) and ui (where the user is, what is open).",
+       "hooks.ts": "",
+       "nav.ts": "Moving around (02c §3.2 with 12.8 #2): click anywhere on a card = select; title / ▸ / double click / Enter = go in",
+       "route.ts": "The address bar holds where you are (02c §3.1): #/<dept chain>?sel=<id>&tab=<now|thread|history>&view=<wall|map>&ask=<letter>",
+       "store.ts": "A tiny store on React 19's useSyncExternalStore (03 §12.2: instead of zustand, not on this machine)."
+      }
+     },
+     "tsconfig.json": "設定（鍵：compilerOptions、include、exclude）",
+     "vendor.sh": "fill ui/v2/node_modules from two projects already on this machine (no network; 03 §12.8 #8).",
+     "vite.config.ts": "Vite 8 turns TSX into JS with its built-in oxc (no @vitejs/plugin-react: not on this machine, 03 §12.2)."
+    }
+   },
+   "web": {
+    "app.js": "全景頁 frontend: plain JS, zero dependencies, no build step (API contract: ../API.md).",
+    "index.html": "",
+    "map.js": "全景頁 phase 0b map: zoomable / pannable 2D floor plan of the agent tree (zero dependencies).",
+    "style.css": "全景頁 styles: plain CSS, no framework."
+   }
+  },
   "fake-mcp-http": {
    "server.py": "Fake streamable-HTTP MCP server for testing external MCP (external-mcp 05/06): 127.0.0.1 only, TLS, checks Authorization: Bearer, two harmless tools …"
   },

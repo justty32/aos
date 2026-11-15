@@ -1,0 +1,62 @@
+{
+ "README.md": {
+  "description": "它做什麼"
+ },
+ "_entry": {
+  "description": "aide 定義的入口：用 aos-agent ctl add 把這個夾加進 AOS_WS"
+ },
+ "_metainfo.json": {
+  "description": "The view aide of one team: an agent-fsm with a fake brain and no tools whose on_clock hook runs aos-view aide-tick (phase 1 of view-1114: only carries facts, no model)."
+ },
+ "act.py": {
+  "description": "act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。"
+ },
+ "aide_tick.json": {
+  "description": "入口：`$AOS_HOME aide-tick`"
+ },
+ "atomic_file.py": {
+  "description": "agent-fsm 的格（idle、wait）共用的寫檔：先寫同資料夾的 .<名>.tmp 再改名（N-05），寫不成交給呼叫端的 die（WriteFailed）。"
+ },
+ "body.json": {
+  "description": "argv：`aos-loop loop.json`"
+ },
+ "brain.py": {
+  "description": "think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。"
+ },
+ "cell_common.py": {
+  "description": "agent-fsm 的格共用的開頭幾步：四格的 on_clock 看時鐘（clock_tick），brain、act 的讀 history.jsonl 與決定用哪份工具登記檔。"
+ },
+ "fsm.json": {
+  "description": "入口 `aos-fsm $AOS_CF`；鍵：start、states"
+ },
+ "hooks.json": {
+  "description": "The aide's only hook: every 60 clock cycles (about a minute at 1000 ms a cycle) run aos-view aide-tick (aide_tick.json, next to this file). It carries the team's decision files (~/.aos/view/teams/<te…"
+ },
+ "idle.py": {
+  "description": "idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。"
+ },
+ "interfaces.json": {
+  "description": "設定（鍵：aos-agent、aos-observed）"
+ },
+ "llm.json": {
+  "description": "設定（鍵：model）"
+ },
+ "llm_settings.py": {
+  "description": "agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。"
+ },
+ "loop.json": {
+  "description": "Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks (lib/agent/hook_fire)."
+ },
+ "subagents.json": {
+  "description": "設定（鍵：max_subagents）"
+ },
+ "system.txt": {
+  "description": "aide 的系統提示：說明它第 1 期不思考，每分鐘由 aide_tick hook 跑 aos-view aide-tick 搬事實"
+ },
+ "tools.json": {
+  "description": "The aide has no tools: its whole job is the on_clock hook aide_tick (hooks.json); the brain is fake and is never asked in phase 1."
+ },
+ "wait.py": {
+  "description": "wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。"
+ }
+}

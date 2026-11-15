@@ -1,0 +1,16 @@
+[Unit]
+Description=aos-view panorama page (127.0.0.1:8767)
+After=default.target
+
+[Service]
+Type=simple
+Environment=AOS_HOME=%h/aos-home
+Environment=AOS_DAEMON=%h/aos-home/ws/.stack/
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=/
+ExecStart=/usr/bin/python3 %h/aos-home/ws/tools/aos-view/aos-view serve
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

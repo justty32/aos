@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+html, body, #root { height: 100%; }
+body { margin: 0; background: #020617; color: #e2e8f0; font-family: system-ui, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+kbd { font-family: ui-monospace, monospace; }
+:focus-visible { outline: 2px solid #38bdf8; outline-offset: 1px; }

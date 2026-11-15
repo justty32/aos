@@ -1,0 +1,21 @@
+{
+  "name": "aos-view-ui-v2",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/check-src.mjs && node node_modules/typescript/bin/tsc --noEmit -p . && node node_modules/vite/bin/vite.js build && node scripts/check-dist.mjs",
+    "test": "node --test src/**/*.test.ts"
+  },
+  "devDependencies": {
+    "vite": "8.3.5",
+    "postcss": "8.5.31",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwindcss": "4.3.0",
+    "@tailwindcss/postcss": "4.3.0",
+    "typescript": "5.9.3",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3"
+  }
+}

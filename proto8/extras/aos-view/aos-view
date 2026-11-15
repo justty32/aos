@@ -1,0 +1,2632 @@
+#!/usr/bin/env python3
+"""aos-view - one local page that shows every agent and proc on the daemon table as a tree,
+the user-zone letters waiting for the user (answer them right there), and lets the user say
+one line to an agent. Phase 0 + phase 1 of proto8/thinking/2026-11/14/view-1114 (no model anywhere):
+phase 1 adds team folders, the relay mailbox (letters with body.zone "view/1") and an aide that only carries facts.
+
+usage: aos-view [--port 8767] [--home DIR] serve     run the page on 127.0.0.1 (foreground)
+       aos-view [--home DIR] snapshot                 print the tree as JSON once and exit
+       aos-view [--home DIR] init                     make the home folder (keeps what exists)
+       aos-view [--home DIR] ingest                   one pass over the relay mailbox (serve does this every poll)
+  captains (claude agents with Bash):
+       aos-view note [--team T] [--on NAME] STATUS TEXT   STATUS: start progress done blocked decision handoff ask
+       aos-view decide [--team T] FILE                a user-zone letter body -> teams/T/outbox/<id>.json; prints the id
+       aos-view match REPLY_FOLDER                    is the zone's answered letter the one the captain wrote?
+  the aide (an on_clock hook of agent <team>-aide-1; event JSON on stdin):
+       aos-view aide-tick [--team T]                  pass outbox files, a report when facts changed, a beat each 15 min
+  team default: --team, else the basename of $AOS_STACK if it is a name on the daemon table
+  (aide-tick: the aide's name without -aide-N)
+
+home: --home > $AOS_VIEW_HOME > ~/.aos/view
+  config.json   optional: {"parents": {"name": "parent"}, "parent_rules": [["ok-*", "repo-aos"]],
+                           "say_log": "path", "poll_s": 20}
+  mailbox/      the relay mailbox (aos-post layout); teams send replies here, the page only reads it
+  state/        activity.json (when each agent last changed), say.jsonl (default say log),
+                teams/<team>.json (latest report, last beat, latest post), passed/<team>/<id>.json (receipts)
+  teams/<team>/ aide.json {team, parent, leader, aide, tags}, notes.jsonl, outbox/<id>.json, outbox/sent/,
+                sent.jsonl {id, at, sha256}, send_failed, seq, aide_state.json
+  done/<YYYY-MM>/, rejected/  processed / refused view/1 letters (moved out of mailbox/, never deleted)
+  token         CSRF token (0600), made on first serve
+Only reads official interfaces: aos-agent ctl ls / ctl state / history ls, the user zone
+(through aos-user's own zone.py, read-only) and its own relay mailbox. Writes only by running
+aos-user answer/reply/ok and aos-agent say. Stdlib only.
+"""
+import fcntl
+import fnmatch
+import hashlib
+import html
+import http.server
+import importlib.util
+import json
+import os
+import re
+import secrets
+import socketserver
+import subprocess
+import sys
+import threading
+import time
+import urllib.parse
+from datetime import datetime, timezone
+
+sys.dont_write_bytecode = True  # never leave a __pycache__ next to zone.py in ~/aos-home
+
+TOOLS = os.path.expanduser("~/aos-home/ws/tools")
+AOS_USER = os.path.join(TOOLS, "aos-user", "aos-user")
+ZONE_PY = os.path.join(TOOLS, "aos-user", "zone.py")
+SAY_PREFIX = "[使用者經全景頁]"
+SAY_FROM = "user-via-view"
+CLI_LOCK = threading.Semaphore(3)
+
+# ---- small helpers -------------------------------------------------------------------
+
+SECRET_RES = [
+    re.compile(r"\b(sk-[A-Za-z0-9_\-]{12,}|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_\-]{20,}"
+               r"|xox[baprs]-[A-Za-z0-9\-]{10,})"),
+    re.compile(r"(Bearer\s+)[A-Za-z0-9._\-]{12,}"),
+    re.compile(r"\b([A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD)[A-Z0-9_]*\s*=\s*)\S+"),
+]
+
+
+def mask(s):
+    if not isinstance(s, str):
+        s = json.dumps(s, ensure_ascii=False) if s is not None else ""
+    s = SECRET_RES[0].sub("[secret hidden]", s)
+    s = SECRET_RES[1].sub(r"\1[secret hidden]", s)
+    s = SECRET_RES[2].sub(r"\1[secret hidden]", s)
+    return s
+
+
+def esc(s):
+    return html.escape(mask(s), quote=True)
+
+
+def short(s, n=160):
+    s = mask(s).replace("\n", " ").strip()
+    return s if len(s) <= n else s[: n - 1] + "…"
+
+
+def now():
+    return time.time()
+
+
+def iso(t):
+    return datetime.fromtimestamp(t, timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def ago(t):
+    if not t:
+        return "unknown"
+    d = int(now() - t)
+    if d < 60:
+        return "%ds ago" % d
+    if d < 3600:
+        return "%dm ago" % (d // 60)
+    if d < 86400:
+        return "%dh %dm ago" % (d // 3600, d % 3600 // 60)
+    return "%dd ago" % (d // 86400)
+
+
+def parse_time(s):
+    if not isinstance(s, str) or not s:
+        return None
+    try:
+        s2 = s.replace("Z", "+00:00")
+        if re.search(r"[+-]\d{4}$", s2):
+            s2 = s2[:-2] + ":" + s2[-2:]
+        return datetime.fromisoformat(s2).timestamp()
+    except ValueError:
+        return None
+
+
+def cli_env():
+    """Environment for the aos CLIs: keep the daemon, drop who-am-I (the page is not an agent)."""
+    e = dict(os.environ)
+    for k in ("AOS_STACK", "AOS_WS", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_CLOCK", "AOS_AGENT", "AOS_KERNEL"):
+        e.pop(k, None)
+    return e
+
+
+def run(args, timeout=15, stdin=None):
+    with CLI_LOCK:
+        try:
+            p = subprocess.run(args, capture_output=True, text=True, timeout=timeout, env=cli_env(),
+                               input=stdin, cwd="/")
+        except subprocess.TimeoutExpired:
+            return 124, "", "timeout after %ss" % timeout
+        except OSError as e:
+            return 127, "", str(e)
+    return p.returncode, p.stdout, p.stderr
+
+
+def run_json(args, timeout=15):
+    code, out, err = run(args, timeout)
+    if code != 0:
+        return None
+    try:
+        return json.loads(out)
+    except ValueError:
+        return None
+
+
+def write_json(path, data):
+    tmp = "%s.%d.%d.tmp" % (path, os.getpid(), threading.get_ident())
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+def load_json(path, default):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+# ---- home ----------------------------------------------------------------------------
+
+class Home:
+    def __init__(self, d):
+        self.dir = d
+        self.mailbox = os.path.join(d, "mailbox")
+        self.state = os.path.join(d, "state")
+
+    def init(self):
+        os.makedirs(self.state, exist_ok=True)
+        for sub in ("teams", "done", "rejected"):
+            os.makedirs(os.path.join(self.dir, sub), exist_ok=True)
+        if not os.path.isdir(os.path.join(self.mailbox, "new")):
+            code, out, err = run(["aos-post", "init", self.mailbox])
+            if code != 0:
+                for sub in ("tmp", "new", "cur"):
+                    os.makedirs(os.path.join(self.mailbox, sub), exist_ok=True)
+        cfg = os.path.join(self.dir, "config.json")
+        if not os.path.exists(cfg):
+            write_json(cfg, {"parents": {}, "parent_rules": [["ok-*", "repo-aos"], ["xiaosi", "repo-aos"]],
+                             "poll_s": 20})
+
+    def config(self):
+        return load_json(os.path.join(self.dir, "config.json"), {})
+
+    def token(self):
+        p = os.path.join(self.dir, "token")
+        try:
+            with open(p) as f:
+                t = f.read().strip()
+            if t:
+                return t
+        except OSError:
+            pass
+        t = secrets.token_hex(24)
+        fd = os.open(p, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(t)
+        return t
+
+    def say_log(self):
+        return self.config().get("say_log") or os.path.join(self.state, "say.jsonl")
+
+
+# ---- the tree ------------------------------------------------------------------------
+
+LIGHT_ORDER = {"red": 0, "blue": 1, "yellow": 2, "green": 3, "gray": 4}
+LIGHT_ICON = {"red": "🔴", "blue": "🔵", "yellow": "🟡", "green": "🟢", "gray": "⚪"}
+
+
+class Collector:
+    """Polls the daemon table in a thread; keeps the last tree in memory."""
+
+    def __init__(self, home):
+        self.home = home
+        self.lock = threading.Lock()
+        self.tree = None
+        self.err = None
+        self.act_path = os.path.join(home.state, "activity.json")
+        self.activity = load_json(self.act_path, {})
+        self.kinds = {}
+        self.zone = load_zone()
+        self.collect_lock = threading.Lock()
+        self.tick = {"at": None, "took_ms": None, "ok": None, "error": None}
+        self.on_tree = []        # v2: callbacks after each new tree (outbox wake-up on new relay letters)
+
+    def collect(self):
+        with self.collect_lock:
+            return self._collect()
+
+    # one pass
+    def _collect(self):
+        rows = table_rows()
+        fixture = bool(os.environ.get("VIEW_LS_FIXTURE"))
+        if not isinstance(rows, list):
+            raise RuntimeError("aos-agent ctl ls --json failed")
+        t = now()
+        nodes, workers = {}, 0
+        for r in rows:
+            name = r.get("name")
+            if not name:
+                continue
+            if name.startswith("llm_"):
+                workers += 1
+                continue
+            n = {"id": name, "state": r.get("state"), "phase": r.get("phase"), "queued": r.get("queued"),
+                 "busy": r.get("busy"), "reason": r.get("reason"), "cooldown": r.get("cooldown"),
+                 "ws": r.get("ws"), "stack": r.get("stack"), "children": [], "parent": None, "parent_by": None,
+                 "tags": list((self.home.config().get("tags") or {}).get(name) or [])}
+            st = {} if fixture else (run_json(["aos-agent", "ctl", "state", "-t", name, "state", "history",
+                                                 "subagents", "-j"]) or {})
+            hist = st.get("history") or {}
+            if st:
+                n["kind"] = "agent" if hist.get("available", True) and "messages" in hist else "proc"
+                self.kinds[name] = n["kind"]
+            else:
+                n["kind"] = self.kinds.get(name, "agent")
+            s = st.get("state") or {}
+            n["last_answer"] = mask(s.get("last_answer")) if s.get("last_answer") else None
+            n["subagents"] = [x.get("name") if isinstance(x, dict) else x
+                              for x in ((st.get("subagents") or {}).get("subagents") or [])]
+            # activity: when history size last changed (seen by this page)
+            sig = "%s/%s" % (hist.get("messages"), hist.get("bytes"))
+            a = self.activity.get(name)
+            if not a or a.get("sig") != sig:
+                self.activity[name] = {"sig": sig, "at": t if a else None}
+            n["active_at"] = self.activity[name].get("at")
+            n["messages"] = hist.get("messages")
+            n["board"] = read_board1(os.path.join(n["stack"], "board.json")) if n.get("stack") else None
+            nodes[name] = n
+        write_json(self.act_path, self.activity)
+        self.externals(nodes, t)
+        try:
+            self.ingested = ingest(self.home, self.zone, t)
+        except Exception as e:  # never let the relay break the tree
+            log_ev(self.home, "ingest_failed", error="%s: %s" % (type(e).__name__, e))
+        teams = team_info(self.home)
+        aides = {}
+        for leader, info in teams.items():
+            a = (info.get("aide") or {}).get("aide")
+            if a:
+                aides[a] = leader
+        self.parents(nodes, aides)
+        relay = self.relay_letters()
+        zone = self.zone_letters()
+        for n in nodes.values():
+            info = teams.get(n["id"])
+            n["team"] = info["team"] if info else None
+            n["note"] = info["note"] if info else None
+            n["passed"] = info["passed"] if info else 0
+            aname = ((info or {}).get("aide") or {}).get("aide") or ((info or {}).get("state") or {}).get("aide")
+            n["aide"] = {"name": aname, "last_beat": info["state"].get("last_beat"),
+                         "state": nodes[aname]["state"] if aname in nodes else None} if aname else None
+            n["reports"] = [x for x in relay if x["from"] == n["id"]][:3]
+            n["asks"] = len([z for z in zone if z.get("from") == n["id"]])
+            n["light"], n["why"] = self.light(n, nodes)
+        for n in nodes.values():
+            info = teams.get(n["id"])
+            asks_team = len([z for z in zone if z.get("from") in (n["id"], n.get("team"))])
+            tl = team_light(info, n, nodes, asks_team, t)
+            n["team_light"] = {"light": tl[0], "why": tl[1]} if tl else None
+        roots = [n["id"] for n in nodes.values() if not n["parent"]]
+        order = lambda k: (nodes[k]["kind"] != "agent", k)
+        for n in nodes.values():
+            n["children"].sort(key=order)
+        roots.sort(key=order)
+        for k in roots:
+            self.rollup(k, nodes)
+        return {"format": "view-tree/0", "generated_at": t, "nodes": nodes, "roots": roots,
+                "llm_workers": workers, "zone": zone, "relay": relay}
+
+    EXT_DEFAULT = [{"id": "LiteLLM", "url": "http://127.0.0.1:4000/health/liveliness", "port": 4000}]
+
+    def externals(self, nodes, t):
+        """Phase 2: things outside the daemon table (config "externals"): a health GET every poll (local URLs only),
+        and once a day `ss` to see which address the port listens on. Cached in state/externals.json."""
+        import urllib.request
+        path = os.path.join(self.home.state, "externals.json")
+        cache = load_json(path, {})
+        for e in self.home.config().get("externals", self.EXT_DEFAULT):
+            if not isinstance(e, dict) or not e.get("id") or e["id"] in nodes:
+                continue
+            eid, c = e["id"], cache.get(e["id"], {})
+            ok, why = None, "no health url"
+            url = e.get("url") or ""
+            if url.startswith("http://127.0.0.1") or url.startswith("http://localhost"):
+                try:
+                    with urllib.request.urlopen(url, timeout=2) as r:
+                        ok, why = 200 <= r.status < 300, "health %d" % r.status
+                except Exception as ex:
+                    ok, why = False, "health check failed: %s" % short(str(ex), 80)
+            if e.get("port") and t - (c.get("ss_at") or 0) > 86400:
+                code, out, err = run(["ss", "-ltnH", "sport = :%d" % int(e["port"])], timeout=5)
+                addrs = sorted({ln.split()[3].rsplit(":", 1)[0] for ln in out.splitlines() if len(ln.split()) > 3})
+                c.update({"ss_at": t, "listen": addrs})
+            open_all = any(a in ("0.0.0.0", "*", "[::]") for a in c.get("listen") or [])
+            light = "red" if ok is False else ("yellow" if open_all else ("green" if ok else "gray"))
+            if open_all and ok is not False:
+                why = "%s; listens on all interfaces (%s): other machines on the LAN can reach it" % (
+                    why, ", ".join(c["listen"]))
+            c.update({"checked_at": t, "ok": ok, "why": why})
+            cache[eid] = c
+            nodes[eid] = {"id": eid, "kind": "external", "state": "up" if ok else ("down" if ok is False else "?"),
+                          "phase": None, "queued": None, "busy": None, "reason": None, "cooldown": None, "ws": None,
+                          "stack": None, "children": [], "parent": None, "parent_by": None, "tags": [],
+                          "subagents": [], "last_answer": None, "active_at": c.get("checked_at"), "messages": None,
+                          "ext": {"url": url, "listen": c.get("listen"), "ss_at": c.get("ss_at")},
+                          "fixed_light": [light, why]}
+        write_json(path, cache)
+
+    def parents(self, nodes, aides=None):
+        aides = aides or {}
+        cfg = self.home.config()
+        explicit = cfg.get("parents") or {}
+        rules = cfg.get("parent_rules") or []
+        names = sorted(nodes, key=len, reverse=True)
+        for n in nodes.values():
+            p, by = None, None
+            if aides.get(n["id"]) in nodes and aides[n["id"]] != n["id"]:
+                n["parent"], n["parent_by"] = aides[n["id"]], "aide"  # §10: only in the leader's aide field
+                continue
+            if explicit.get(n["id"]) in nodes:
+                p, by = explicit[n["id"]], "config"
+            if not p:
+                for other in nodes.values():
+                    if n["id"] in other["subagents"] and other["id"] != n["id"]:
+                        p, by = other["id"], "subagent"
+                        break
+            if not p:
+                for other in names:
+                    if other != n["id"] and n["id"].startswith(other + "-"):
+                        p, by = other, "prefix"
+                        break
+            if not p:
+                for rule in rules:
+                    if not (isinstance(rule, list) and len(rule) == 2 and all(isinstance(x, str) for x in rule)):
+                        continue
+                    pat, par = rule
+                    if par in nodes and par != n["id"] and fnmatch.fnmatch(n["id"], pat):
+                        p, by = par, "rule"
+                        break
+            n["parent"], n["parent_by"] = p, by
+        # break loops: walk up; if we come back, cut the edge
+        for n in nodes.values():
+            seen, cur = set(), n["id"]
+            while cur and cur not in seen:
+                seen.add(cur)
+                cur = nodes[cur]["parent"]
+            if cur:
+                nodes[cur]["parent"], nodes[cur]["parent_by"] = None, "loop-cut"
+        for n in nodes.values():
+            if n["parent"] and n["parent_by"] != "aide":
+                nodes[n["parent"]]["children"].append(n["id"])
+
+    def light(self, n, nodes):
+        if n.get("fixed_light"):
+            return tuple(n["fixed_light"])
+        st = (n.get("state") or "").lower()
+        cd = n.get("cooldown")
+        # rules from the temp-tree fixtures (~/code/view-1114/fixtures/README.md): a crash or kill leaves a
+        # non-null reason ("exited with code 143", "... signal 9", "RunFailed ..."); a normal stop or sleep leaves none
+        if st == "sleeping":
+            return "gray", "asleep"
+        if st not in ("running", "paused"):
+            kids_up = [c for c in n["children"] if (nodes[c].get("state") or "").lower() == "running"]
+            tail = ", %d below still running" % len(kids_up) if kids_up else ""
+            if n.get("reason") or (isinstance(cd, dict) and cd.get("failures")):
+                return "red", "crashed: %s%s" % (short(n.get("reason") or (cd or {}).get("reason") or st, 80), tail)
+            if kids_up:
+                return "yellow", "stopped normally%s" % tail
+            return "gray", "stopped normally"
+        if n.get("asks"):
+            return "blue", "%d letter(s) waiting for you" % n["asks"]
+        if isinstance(cd, dict) and cd.get("failures"):
+            return "yellow", "brain failed %sx: %s" % (cd.get("failures"), short(cd.get("reason") or cd.get("code"), 80))
+        if st == "paused":
+            return "yellow", "paused by hand"
+        q = n.get("queued") or 0
+        act = n.get("active_at")
+        mins = int((time.time() - act) // 60) if act else None
+        seen = "last activity %d min ago" % mins if mins is not None else "last activity not recorded"
+        if n.get("busy"):
+            return "green", "working (%s), %s" % (n["busy"], seen) + (", %d queued" % q if q else "")
+        if q:
+            # running with letters waiting = it is inside a turn (letters go in when the turn ends);
+            # a long turn is not a crash: only a long silence gives yellow, never red
+            if mins is not None and mins >= 60:
+                return "yellow", "in a long turn, quiet for %d min; %d queued (read when the turn ends)" % (mins, q)
+            return "green", "in a turn; %d queued (read when the turn ends), %s" % (q, seen)
+        # an eca (claude/codex) body reports no busy, so "nothing queued" may still be inside a turn: say only what is known
+        return "green", "running, nothing queued, %s" % seen
+
+    def rollup(self, k, nodes):
+        n = nodes[k]
+        worst, why, cnt, path = n["light"], n["why"], 1, [k]
+        tl = n.get("team_light")
+        if tl and LIGHT_ORDER[tl["light"]] < LIGHT_ORDER[worst]:
+            worst, why = tl["light"], tl["why"]
+        for c in n["children"]:
+            self.rollup(c, nodes)
+            cr = nodes[c]["rollup"]
+            cnt += cr["nodes"]
+            if LIGHT_ORDER[cr["worst"]] < LIGHT_ORDER[worst]:
+                worst, why, path = cr["worst"], cr["why"], [k] + cr["path"]
+        # v2 (12.8 #3): how many red / yellow / blue anywhere below (self included), and the worst 3 ids
+        bad = [(LIGHT_ORDER[n["light"]], k)] if n["light"] in ("red", "yellow", "blue") else []
+        counts = {"red": 0, "yellow": 0, "blue": 0}
+        if n["light"] in counts:
+            counts[n["light"]] += 1
+        for c in n["children"]:
+            cr = nodes[c]["rollup"]
+            for col in counts:
+                counts[col] += cr["counts"][col]
+            bad += cr["_bad"]
+        bad.sort()
+        n["rollup"] = {"worst": worst, "why": why, "nodes": cnt, "path": path, "counts": counts,
+                       "worst_ids": [b[1] for b in bad[:3]], "_bad": bad[:3]}
+
+    def relay_letters(self):
+        out = []
+        for sub in ("new", "cur"):
+            d = os.path.join(self.home.mailbox, sub)
+            try:
+                names = os.listdir(d)
+            except OSError:
+                continue
+            for name in names:
+                lt = load_json(os.path.join(d, name, "letter.json"), None)
+                if not isinstance(lt, dict):
+                    continue
+                b = lt.get("body") if isinstance(lt.get("body"), dict) else {"what": lt.get("body")}
+                if b.get("zone") == VIEW_ZONE:
+                    continue  # aide letters are ingested, not shown as replies
+                frm = b.get("from") or os.path.basename(str(lt.get("sender") or "").rstrip("/")) or "?"
+                out.append({"dir": "in", "kind": "mail", "letter": name, "from": frm, "to": b.get("to") or "user",
+                            "title": mask(b.get("title") or ""), "status": b.get("status"),
+                            "what": mask(b.get("what") or ""), "sent_at": parse_time(lt.get("sent_at")),
+                            "in_reply_to": lt.get("in_reply_to") or b.get("in_reply_to")})
+        out.sort(key=lambda x: x["sent_at"] or 0, reverse=True)
+        return out[:100]
+
+    def zone_letters(self):
+        z = self.zone
+        if not z:
+            return []
+        out = []
+        try:
+            zd = z.zone_dir(None)
+            for main, same in z.waiting(zd):
+                b = main.body
+                qs = []
+                for q in main.questions():
+                    if isinstance(q, dict):
+                        q = dict(q)
+                        q["options"] = [o for o in (q.get("options") or []) if isinstance(o, dict)] \
+                            if isinstance(q.get("options"), list) else []
+                        qs.append(q)
+                out.append({"letter": main.name, "kind": main.kind, "from": b.get("from"), "title": mask(b.get("title")),
+                            "what": mask(b.get("what")), "questions": qs, "urgent": main.urgent,
+                            "risk": b.get("risk", "normal"), "deadline": b.get("deadline"),
+                            "decide": mask(b.get("decide")) if b.get("decide") else None, "sent_at": parse_time(main.sent_at), "same": len(same),
+                            "fmt": main.fmt, "unseen": main.new})
+        except Exception as e:  # zone broken: show it, do not crash the page
+            out.append({"letter": "?", "kind": "fyi", "from": "aos-view", "title": "user zone unreadable: %s" % e,
+                        "what": "", "questions": [], "error": True})
+        return out
+
+    def loop(self):
+        while True:
+            self.run_once()
+            time.sleep(max(5, int(self.home.config().get("poll_s", 20))))
+
+    def run_once(self):
+        t0 = time.time()
+        try:
+            tr = self.collect()
+            with self.lock:
+                self.tree, self.err = tr, None
+            self.tick = {"at": time.time(), "took_ms": int((time.time() - t0) * 1000), "ok": True, "error": None}
+        except Exception as e:
+            with self.lock:
+                self.err = "%s: %s" % (type(e).__name__, e)
+            self.tick = {"at": time.time(), "took_ms": int((time.time() - t0) * 1000), "ok": False, "error": self.err}
+            return
+        for f in self.on_tree:
+            try:
+                f(tr)
+            except Exception as e:
+                log_ev(self.home, "on_tree_failed", error="%s: %s" % (type(e).__name__, e))
+
+    def get(self):
+        with self.lock:
+            return self.tree, self.err
+
+    def drop_ask(self, letter):
+        with self.lock:
+            if self.tree and isinstance(self.tree.get("zone"), list):
+                self.tree = dict(self.tree)
+                self.tree["zone"] = [z for z in self.tree["zone"] if z.get("letter") != letter]
+
+
+def load_zone():
+    try:
+        spec = importlib.util.spec_from_file_location("aos_user_zone", ZONE_PY)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        return m
+    except Exception:
+        return None
+
+
+# ---- phase 1: team folders, relay letters (view/1), the aide's tick ---------------------
+# Plan: proto8/thinking/2026-11/14/view-1114/03-計劃.md §4 phase 1 + §8 + §10. No model calls anywhere.
+
+VIEW_ZONE = "view/1"
+VIEW_KINDS = ("report", "beat", "pass", "post")
+VIEW_STATUS = {"report": ("PROGRESS", "BLOCKED", "DONE"), "beat": ("PROGRESS",), "pass": ("NEEDS-USER",),
+               "post": ("DONE",)}
+NOTE_STATUSES = ("start", "progress", "done", "blocked", "decision", "handoff", "ask")
+CANON_KEYS = ("kind", "title", "what", "questions", "done_when", "risk", "urgent", "deadline",
+              "default_if_silent", "dedupe_key")
+NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$")
+AIDE_SILENT_S = 35 * 60
+NO_PROGRESS_S = 60 * 60
+BEAT_S = 15 * 60
+REPORT_GAP_S = 5 * 60
+PASS_PER_HOUR = 8
+PASS_PER_HOUR_NEAR = 10          # §8: a pass whose deadline is < 30 min away may use the zone's last 2 per hour
+NEAR_DEADLINE_S = 30 * 60
+SECRET_SCAN = [  # §8: explicit prefixes and *KEY= / *TOKEN= / *SECRET= / *PASSWORD= assignments
+    ("sk- key", re.compile(r"\bsk-[A-Za-z0-9_\-]{12,}")),
+    ("ghp_ token", re.compile(r"\bgh[po]_[A-Za-z0-9]{20,}")),
+    ("AIza key", re.compile(r"\bAIza[A-Za-z0-9_\-]{20,}")),
+    ("xox?- token", re.compile(r"\bxox[a-z]-[A-Za-z0-9\-]{10,}")),
+    ("Bearer token", re.compile(r"Bearer\s+[A-Za-z0-9._\-]{12,}")),
+    ("*KEY=/*TOKEN=/*SECRET=/*PASSWORD= assignment",
+     re.compile(r"\b[A-Za-z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD)\s*=\s*\S+", re.I)),
+]
+
+
+class Fail(Exception):
+    def __init__(self, code, msg):
+        super().__init__(msg)
+        self.code = code
+
+
+def secret_hit(text):
+    """Name of the first secret-looking pattern in text (never the value), or None."""
+    for label, rx in SECRET_SCAN:
+        if rx.search(text or ""):
+            return label
+    return None
+
+
+def need_zone_mod():
+    z = load_zone()
+    if z is None:
+        raise Fail("ToolMissing", "cannot load the user zone library %s" % ZONE_PY)
+    return z
+
+
+def canonical_sha(body, zmod):
+    """sha256 hex over the question fields (§8) of the letter as the zone will hold it.
+    zone.build_letter fills the same defaults aos-user send fills (what for decide), so the captain's file,
+    the pass letter and the zone's copy all hash the same."""
+    b = zmod.build_letter(dict(body), None)
+    c = {k: b[k] for k in CANON_KEYS if k in b}
+    s = json.dumps(c, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+def facts_sha(facts):
+    s = json.dumps(facts, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+def now_local():
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def table_rows():
+    """The daemon table (aos-agent ctl ls --json). VIEW_LS_FIXTURE=FILE reads a recorded table instead (tests)."""
+    fx = os.environ.get("VIEW_LS_FIXTURE")
+    if fx:
+        return load_json(fx, None)
+    return run_json(["aos-agent", "ctl", "ls", "--json"])
+
+
+def leader_subagents(name):
+    if os.environ.get("VIEW_LS_FIXTURE"):
+        return []
+    st = run_json(["aos-agent", "ctl", "state", "-t", name, "subagents", "-j"]) or {}
+    return [x.get("name") if isinstance(x, dict) else x for x in ((st.get("subagents") or {}).get("subagents") or [])]
+
+
+def append_line(path, rec):
+    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+    try:
+        os.write(fd, (json.dumps(rec, ensure_ascii=False) + "\n").encode("utf-8"))
+    finally:
+        os.close(fd)
+
+
+def read_lines(path, limit=None):
+    out = []
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.readlines()
+    except OSError:
+        return out
+    for ln in lines[-limit:] if limit else lines:
+        try:
+            r = json.loads(ln)
+        except ValueError:
+            continue
+        if isinstance(r, dict):
+            out.append(r)
+    return out
+
+
+class Team:
+    """~/.aos/view/teams/<team>/: aide.json, notes.jsonl, outbox/<id>.json, outbox/sent/, sent.jsonl,
+    send_failed (json), seq (+ seq.lock), aide_state.json. The team's workspace gets no files."""
+
+    def __init__(self, home, name):
+        if not isinstance(name, str) or not NAME_RE.match(name):
+            raise Fail("TeamBad", "team name %r: letters, digits, _ . - only" % (name,))
+        self.name = name
+        self.dir = os.path.join(home.dir, "teams", name)
+        self.outbox = os.path.join(self.dir, "outbox")
+        self.sent_dir = os.path.join(self.outbox, "sent")
+        self.notes_path = os.path.join(self.dir, "notes.jsonl")
+        self.sent_log = os.path.join(self.dir, "sent.jsonl")
+        self.aide_path = os.path.join(self.dir, "aide.json")
+        self.state_path = os.path.join(self.dir, "aide_state.json")
+        self.failed_path = os.path.join(self.dir, "send_failed")
+
+    def ensure(self):
+        os.makedirs(self.sent_dir, exist_ok=True)
+        return self
+
+    def aide(self):
+        a = load_json(self.aide_path, None)
+        return a if isinstance(a, dict) else None
+
+    def latest_note(self):
+        ns = read_lines(self.notes_path, 50)
+        return ns[-1] if ns else None
+
+    def pending(self):
+        try:
+            return sorted(f for f in os.listdir(self.outbox) if f.endswith(".json") and not f.startswith("."))
+        except OSError:
+            return []
+
+    def next_seq(self):
+        """One number per letter this team sends, 1, 2, 3 ... (flock on seq.lock; shared by every sender)."""
+        os.makedirs(self.dir, exist_ok=True)
+        fd = os.open(os.path.join(self.dir, "seq.lock"), os.O_RDWR | os.O_CREAT, 0o644)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            p = os.path.join(self.dir, "seq")
+            try:
+                with open(p) as f:
+                    n = int(f.read().strip() or 0)
+            except (OSError, ValueError):
+                n = 0
+            n += 1
+            with open(p + ".tmp", "w") as f:
+                f.write("%d\n" % n)
+            os.replace(p + ".tmp", p)
+            return n
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
+
+
+def all_teams(home):
+    d = os.path.join(home.dir, "teams")
+    try:
+        names = sorted(os.listdir(d))
+    except OSError:
+        return []
+    out = []
+    for n in names:
+        if NAME_RE.match(n) and os.path.isdir(os.path.join(d, n)):
+            out.append(Team(home, n))
+    return out
+
+
+def log_ev(home, ev, **kw):
+    try:
+        append_line(os.path.join(home.dir, "log.jsonl"), dict({"at": now_local(), "ev": ev}, **kw))
+    except OSError:
+        pass
+
+
+# ---- relay ingestion (the backend side) ----
+
+def _move(src, dst_dir, name):
+    os.makedirs(dst_dir, exist_ok=True)
+    dst = os.path.join(dst_dir, name)
+    if os.path.exists(dst):
+        dst = dst + "." + secrets.token_hex(3)
+    os.rename(src, dst)
+    return dst
+
+
+def relay_finish(home, name):
+    """A processed view/1 letter: mailbox/cur/<name> -> done/<YYYY-MM>/<name> (never deleted)."""
+    return _move(os.path.join(home.mailbox, "cur", name), os.path.join(home.dir, "done", time.strftime("%Y-%m")), name)
+
+
+def relay_reject(home, name, code, reason):
+    dst = _move(os.path.join(home.mailbox, "cur", name), os.path.join(home.dir, "rejected"), name)
+    with open(os.path.join(dst, "reason.txt"), "w", encoding="utf-8") as f:
+        f.write("%s %s\n" % (code, reason))
+    log_ev(home, "rejected", letter=name, code=code, reason=reason)
+    return dst
+
+
+def team_state_path(home, team):
+    return os.path.join(home.state, "teams", team + ".json")
+
+
+def passed_dir(home, team):
+    return os.path.join(home.state, "passed", team)
+
+
+def passes_last_hour(home, t):
+    n = 0
+    root = os.path.join(home.state, "passed")
+    try:
+        teams = os.listdir(root)
+    except OSError:
+        return 0
+    for tm in teams:
+        try:
+            files = os.listdir(os.path.join(root, tm))
+        except OSError:
+            continue
+        for f in files:
+            if f.endswith(".json"):
+                r = load_json(os.path.join(root, tm, f), {})
+                if isinstance(r, dict) and isinstance(r.get("sent_at_s"), (int, float)) and t - r["sent_at_s"] < 3600:
+                    n += 1
+    return n
+
+
+def _deadline_s(zmod, s):
+    d = zmod.parse_deadline(s) if s else None
+    return d.timestamp() if d else None
+
+
+def ingest(home, zmod=None, t=None):
+    """One pass over the relay mailbox. Only letters whose body.zone is view/1 are touched; plain replies stay
+    where they are. Returns counts by outcome."""
+    t = t or now()
+    zmod = zmod or load_zone()
+    out = {"stored": 0, "passed": 0, "duplicate": 0, "rejected": 0, "waiting": 0, "failed": 0}
+    new_d, cur_d = os.path.join(home.mailbox, "new"), os.path.join(home.mailbox, "cur")
+    for sub in ("new",):
+        try:
+            names = sorted(os.listdir(new_d))
+        except OSError:
+            return out
+        for name in names:
+            lt = load_json(os.path.join(new_d, name, "letter.json"), None)
+            b = lt.get("body") if isinstance(lt, dict) else None
+            if isinstance(b, dict) and b.get("zone") == VIEW_ZONE:
+                try:
+                    os.rename(os.path.join(new_d, name), os.path.join(cur_d, name))  # take (own rename)
+                except OSError:
+                    pass
+    try:
+        names = sorted(os.listdir(cur_d))
+    except OSError:
+        names = []
+    passes = []
+    for name in names:
+        lt = load_json(os.path.join(cur_d, name, "letter.json"), None)
+        b = lt.get("body") if isinstance(lt, dict) else None
+        if not (isinstance(b, dict) and b.get("zone") == VIEW_ZONE):
+            continue
+        kind, team = b.get("kind"), b.get("team")
+        if kind not in VIEW_KINDS:
+            relay_reject(home, name, "KindBad", "kind must be one of %s" % ", ".join(VIEW_KINDS)); out["rejected"] += 1
+            continue
+        if not isinstance(team, str) or not NAME_RE.match(team):
+            relay_reject(home, name, "TeamBad", "team must be a daemon-table name"); out["rejected"] += 1
+            continue
+        if b.get("status") not in VIEW_STATUS[kind]:
+            relay_reject(home, name, "StatusBad", "%s letters have status %s" % (kind, "/".join(VIEW_STATUS[kind])))
+            out["rejected"] += 1
+            continue
+        aide = Team(home, team).aide()
+        sender = os.path.basename(str(lt.get("sender") or "").rstrip("/"))
+        if aide and aide.get("aide") and kind != "post" and sender != aide.get("aide"):
+            relay_reject(home, name, "SenderBad", "sent by %s, but the team's aide is %s" % (sender or "?", aide["aide"]))
+            out["rejected"] += 1
+            continue
+        if kind == "pass":
+            passes.append((name, lt, b))
+            continue
+        p = team_state_path(home, team)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        st = load_json(p, {}) or {}
+        at = parse_time(lt.get("sent_at")) or t
+        st.update({"team": team, "aide": sender or st.get("aide"), "parent": b.get("parent"), "updated_at": t,
+                   "last_seq": b.get("seq")})
+        if kind == "beat":
+            st["last_beat"] = at
+        elif kind == "report":
+            st["report"] = {"at": at, "seq": b.get("seq"), "status": b.get("status"), "title": mask(b.get("title") or ""),
+                            "what": mask(b.get("what") or ""), "summary_by": b.get("summary_by"),
+                            "snapshot_sha256": b.get("snapshot_sha256"),
+                            "facts": json.loads(mask(json.dumps(b.get("facts"), ensure_ascii=False)))
+                            if b.get("facts") is not None else None}
+        else:
+            st["post"] = {"at": at, "seq": b.get("seq"), "title": mask(b.get("title") or ""), "what": mask(b.get("what") or "")}
+        write_json(p, st)
+        relay_finish(home, name)
+        out["stored"] += 1
+    if not passes:
+        return out
+    if zmod is None:
+        out["waiting"] += len(passes)
+        log_ev(home, "pass_waiting", reason="the user zone library cannot be loaded")
+        return out
+    ready = []
+    for name, lt, b in passes:
+        team = b["team"]
+        text = b.get("payload_text")
+        try:
+            data = json.loads(text) if isinstance(text, str) else None
+        except ValueError:
+            data = None
+        if not isinstance(data, dict):
+            relay_reject(home, name, "PayloadBad", "payload_text is not a JSON object"); out["rejected"] += 1
+            continue
+        sha = canonical_sha(data, zmod)
+        if b.get("payload_sha256") != sha:
+            relay_reject(home, name, "PayloadHashBad", "payload_sha256 %s, recomputed %s" % (b.get("payload_sha256"), sha))
+            out["rejected"] += 1
+            continue
+        pid = b.get("payload_id")
+        m = re.match(r"^([^/]+)/([^/]+)$", pid) if isinstance(pid, str) else None
+        if not m or m.group(1) != team or not NAME_RE.match(m.group(2)):
+            relay_reject(home, name, "PayloadIdBad", "payload_id must be <team>/<id>"); out["rejected"] += 1
+            continue
+        rid = m.group(2)
+        rp = os.path.join(passed_dir(home, team), rid + ".json")
+        old = load_json(rp, None)
+        if isinstance(old, dict):
+            if old.get("sha256") == sha:
+                relay_finish(home, name); out["duplicate"] += 1
+                log_ev(home, "pass_duplicate", letter=name, payload_id=pid)
+            else:
+                relay_reject(home, name, "PayloadIdReused", "%s was already passed with another hash" % pid)
+                out["rejected"] += 1
+            continue
+        hit = secret_hit(text)
+        if hit:
+            relay_reject(home, name, "SecretInPayload", "payload looks like it holds a secret (%s)" % hit)
+            out["rejected"] += 1
+            continue
+        zb = dict(data)
+        zb["from"] = team
+        zb["origin"] = "%s sha256:%s via %s" % (pid, sha, b.get("from") or os.path.basename(str(lt.get("sender") or "")))
+        try:
+            zmod.check_letter(zmod.build_letter(dict(zb), None))
+        except zmod.Fail as e:
+            relay_reject(home, name, "SchemaBad", str(e)); out["rejected"] += 1
+            continue
+        rt = b.get("reply_to_team")
+        if not (isinstance(rt, str) and os.path.isabs(rt) and os.path.isdir(rt)):
+            relay_reject(home, name, "ReplyToBad", "reply_to_team must be an existing absolute mailbox path")
+            out["rejected"] += 1
+            continue
+        dl = _deadline_s(zmod, data.get("deadline"))
+        ready.append(((data.get("urgent") is not True, dl if dl is not None else float("inf"),
+                       parse_time(lt.get("sent_at")) or 0, name), name, lt, b, zb, sha, rid, rt, dl))
+    ready.sort(key=lambda x: x[0])
+    used = passes_last_hour(home, t)
+    for _, name, lt, b, zb, sha, rid, rt, dl in ready:
+        cap = PASS_PER_HOUR_NEAR if (dl is not None and dl - t < NEAR_DEADLINE_S) else PASS_PER_HOUR
+        if used >= cap:
+            out["waiting"] += 1
+            continue
+        env = cli_env()
+        env["AOS_STACK"] = home.dir
+        args = [AOS_USER, "send", "--kind", zb.get("kind"), "--reply-to", rt]
+        try:
+            p = subprocess.run(args, input=json.dumps(zb, ensure_ascii=False), capture_output=True, text=True,
+                               timeout=30, env=env, cwd="/")
+            code, so, se = p.returncode, p.stdout, p.stderr
+        except (subprocess.TimeoutExpired, OSError) as e:
+            code, so, se = 1, "", str(e)
+        if code != 0:
+            line = (se.strip().splitlines() or ["aos-user send failed"])[-1]
+            if "SchemaBad" in line:
+                relay_reject(home, name, "SchemaBad", line); out["rejected"] += 1
+            else:
+                log_ev(home, "pass_failed", letter=name, error=short(line, 300)); out["failed"] += 1
+            continue
+        zl = so.strip().splitlines()[-1] if so.strip() else None
+        os.makedirs(passed_dir(home, b["team"]), exist_ok=True)
+        write_json(os.path.join(passed_dir(home, b["team"]), rid + ".json"),
+                   {"team": b["team"], "id": rid, "payload_id": b["payload_id"], "sha256": sha, "zone_letter": zl,
+                    "kind": zb.get("kind"), "title": mask(zb.get("title") or ""), "reply_to": rt,
+                    "aide": b.get("from"), "relay_letter": name, "sent_at": now_local(), "sent_at_s": t})
+        relay_finish(home, name)
+        log_ev(home, "passed", letter=name, payload_id=b["payload_id"], zone_letter=zl)
+        used += 1
+        out["passed"] += 1
+    return out
+
+
+def team_info(home):
+    """{leader name: {...}} for the tree: latest note, aide, last beat, passed count."""
+    out = {}
+    for tm in all_teams(home):
+        aide = tm.aide()
+        st = load_json(team_state_path(home, tm.name), {}) or {}
+        try:
+            passed = len([f for f in os.listdir(passed_dir(home, tm.name)) if f.endswith(".json")])
+        except OSError:
+            passed = 0
+        note = tm.latest_note()
+        try:
+            aide_mtime = os.path.getmtime(tm.aide_path) if aide else None
+        except OSError:
+            aide_mtime = None
+        leader = (aide or {}).get("leader") or tm.name
+        out[leader] = {"team": tm.name, "aide": aide, "aide_mtime": aide_mtime, "state": st, "passed": passed,
+                       "note": {"at": parse_time(note.get("at")), "status": note.get("status"),
+                                "text": mask(note.get("text") or ""), "on": note.get("on")} if note else None}
+    return out
+
+
+def team_light(info, n, nodes, asks_from_team, t):
+    """(light, why) from phase-1 facts, or None. Goes into rollup (§10), not into the node's own light."""
+    if not info:
+        return None
+    up = [c for c in n["children"] if (nodes[c].get("state") or "").lower() == "running"]
+    if (n.get("state") or "").lower() != "running" and not up:
+        return None  # §8: everyone stopped -> no heartbeat lights
+    if info.get("aide"):
+        lb = info["state"].get("last_beat")
+        if lb is None:
+            if info.get("aide_mtime") and t - info["aide_mtime"] >= AIDE_SILENT_S:
+                return "red", "aide silent (no beat yet)"
+        elif t - lb >= AIDE_SILENT_S:
+            return "red", "aide silent %d min" % ((t - lb) // 60)
+    note = info.get("note")
+    if note and note.get("status") != "done" and note.get("at") and t - note["at"] >= NO_PROGRESS_S \
+            and not asks_from_team:
+        return "yellow", "no progress 60 min"
+    return None
+
+
+# ---- the aide's side (aos-view aide-tick, an on_clock hook) ----
+
+def beat_offset(team):
+    return int(hashlib.sha256(team.encode("utf-8")).hexdigest()[:8], 16) % 181
+
+
+def relay_send(home, body, sender_stack):
+    if not os.path.isdir(os.path.join(home.mailbox, "new")):
+        raise Fail("RelayMissing", "no relay mailbox at %s (aos-view init)" % home.mailbox)
+    env = dict(os.environ)
+    env["AOS_STACK"] = sender_stack  # sender = the aide's own stack (the hook's AOS_STACK is its hook cell)
+    try:
+        p = subprocess.run(["aos-post", "send", "--reply-to", home.mailbox, home.mailbox],
+                           input=json.dumps(body, ensure_ascii=False), capture_output=True, text=True,
+                           timeout=20, env=env, cwd="/")
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return None, str(e)
+    if p.returncode != 0:
+        return None, (p.stderr.strip().splitlines() or ["aos-post send failed"])[-1]
+    return p.stdout.strip(), None
+
+
+def aide_tick(home, team_name=None, event=None, t=None):
+    """One run of the aide: carry outbox files as pass letters, a report when facts changed, a beat every 15 min."""
+    t = t or now()
+    event = event if isinstance(event, dict) else {}
+    stack = event.get("stack") or ""
+    if not stack:
+        hs = os.environ.get("AOS_STACK", "").rstrip("/")
+        stack = hs.split("/hooks/")[0] if "/hooks/" in hs else hs
+    stack = stack.rstrip("/")
+    if not stack:
+        raise Fail("StackMissing", "no stack: run as an on_clock hook (event field stack) or set AOS_STACK")
+    me = os.path.basename(stack)
+    if not team_name:
+        team_name = re.sub(r"-aide-\d+$", "", me)
+    tm = Team(home, team_name)
+    aide = tm.aide()
+    if not aide:
+        raise Fail("AideMissing", "no %s (the captain writes it: team, parent, leader, aide, tags)" % tm.aide_path)
+    tm.ensure()
+    leader = aide.get("leader") or tm.name
+    aide_name = aide.get("aide") or me
+    parent = aide.get("parent")
+    rows = table_rows()
+    if not isinstance(rows, list):
+        raise Fail("TableMissing", "aos-agent ctl ls --json failed; nothing sent")
+    by = {r.get("name"): r for r in rows if isinstance(r, dict)}
+    lrow = by.get(leader)
+    reply_to_team = os.path.join(lrow["stack"], "mailbox") if lrow and lrow.get("stack") else None
+    st = load_json(tm.state_path, {}) or {}
+    failed = load_json(tm.failed_path, {}) or {}
+    res = {"team": tm.name, "passed": [], "report": False, "beat": False, "errors": []}
+
+    def base(kind, status, title, what):
+        return {"zone": VIEW_ZONE, "kind": kind, "team": tm.name, "parent": parent, "seq": tm.next_seq(),
+                "from": aide_name, "to": "view", "status": status, "title": title, "what": what}
+
+    # (a) pass every outbox file not carried yet
+    for fn in tm.pending():
+        path = os.path.join(tm.outbox, fn)
+        pid = fn[:-len(".json")]
+        try:
+            with open(path, encoding="utf-8") as f:
+                text = f.read()
+            data = json.loads(text)
+            if not isinstance(data, dict):
+                raise ValueError("not an object")
+        except (OSError, ValueError) as e:
+            res["errors"].append("%s: %s" % (fn, e))
+            failed[pid] = {"count": (failed.get(pid) or {}).get("count", 0) + 1, "error": "unreadable: %s" % e}
+            continue
+        if not reply_to_team:
+            res["errors"].append("%s: leader %s is not on the daemon table" % (fn, leader))
+            failed[pid] = {"count": (failed.get(pid) or {}).get("count", 0) + 1, "error": "leader not on the table"}
+            continue
+        body = base("pass", "NEEDS-USER", "pass: %s" % short(data.get("title") or pid, 200),
+                    "a %s letter from %s for the user zone" % (data.get("kind"), tm.name))
+        body.update({"payload_id": "%s/%s" % (tm.name, pid), "payload_text": text,
+                     "payload_sha256": canonical_sha(data, need_zone_mod()), "written_by": leader,
+                     "reply_to_team": reply_to_team})
+        name, err = relay_send(home, body, stack)
+        if err:
+            res["errors"].append("%s: %s" % (fn, err))
+            failed[pid] = {"count": (failed.get(pid) or {}).get("count", 0) + 1, "error": short(err, 300)}
+            continue
+        os.replace(path, os.path.join(tm.sent_dir, fn))
+        failed.pop(pid, None)
+        res["passed"].append(pid)
+    if failed or os.path.exists(tm.failed_path):
+        write_json(tm.failed_path, failed)
+    # (b) report when the facts changed (at most one per REPORT_GAP_S)
+    def row_facts(r):
+        return {"state": r.get("state"), "busy": r.get("busy"), "queued": r.get("queued")}
+    member_names = set(leader_subagents(leader)) if lrow else set()
+    for nm in by:
+        if nm and (nm.startswith(leader + "-") or nm.startswith(tm.name + "-")):
+            member_names.add(nm)
+    member_names.discard(aide_name)
+    member_names.discard(leader)
+    members = [dict({"name": nm}, **row_facts(by[nm])) for nm in sorted(member_names)
+               if nm in by and not nm.startswith("llm_")]
+    note = tm.latest_note()
+    facts = {"leader": dict({"name": leader}, **(row_facts(lrow) if lrow else {"state": "missing", "busy": None,
+                                                                              "queued": None})),
+             "members": members, "note": note, "pending_pass": len(tm.pending())}
+    snap = facts_sha(facts)
+    if snap != st.get("snapshot_sha256") and t - (st.get("last_report_at") or 0) >= REPORT_GAP_S:
+        status = {"blocked": "BLOCKED", "done": "DONE"}.get((note or {}).get("status"), "PROGRESS")
+        what = "leader %s %s; %d member(s) running; latest note: %s" % (
+            leader, facts["leader"]["state"], len([m for m in members if m.get("state") == "running"]),
+            ("%s %s" % (note.get("status"), short(note.get("text") or "", 200))) if note else "none")
+        body = base("report", status, "%s: %s" % (tm.name, short(what, 120)), what)
+        body.update({"said": {"now": "", "next": "", "blocked": ""}, "summary_by": "none",
+                     "snapshot_sha256": snap, "facts": facts})
+        name, err = relay_send(home, body, stack)
+        if err:
+            res["errors"].append("report: %s" % err)
+        else:
+            st.update({"snapshot_sha256": snap, "last_report_at": t})
+            res["report"] = True
+    # (c) a beat every 15 min, shifted by a fixed per-team offset (0-180 s)
+    slot = int((t - beat_offset(tm.name)) // BEAT_S)
+    if st.get("beat_slot") != slot:
+        name, err = relay_send(home, base("beat", "PROGRESS", "%s: aide alive" % tm.name, "beat"), stack)
+        if err:
+            res["errors"].append("beat: %s" % err)
+        else:
+            st.update({"beat_slot": slot, "last_beat_at": t})
+            res["beat"] = True
+    write_json(tm.state_path, st)
+    return res
+
+
+# ---- page ----------------------------------------------------------------------------
+
+CSS = """
+body{font-family:system-ui,'Noto Sans CJK TC',sans-serif;margin:0;background:#f6f7f9;color:#222}
+header{background:#fff;border-bottom:1px solid #ddd;padding:10px 16px;display:flex;gap:24px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:2}
+header h1{font-size:18px;margin:0}
+.big{font-size:22px;font-weight:700}.big small{font-size:12px;font-weight:400;color:#666;display:block}
+main{padding:12px 16px;max-width:1100px}
+h2{font-size:16px;margin:18px 0 8px}
+.card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin:8px 0}
+.ask{border-left:5px solid #2b6cb0}.ask.urgent{border-left-color:#c53030}
+.q{margin:8px 0;padding:6px 8px;background:#f3f6fb;border-radius:6px}
+.q .eli5{color:#555;font-size:13px}
+.opt{display:block;margin:3px 0}
+.rec{color:#2b6cb0;font-weight:600;font-size:12px}
+details.node{margin:2px 0 2px 14px;border-left:1px dashed #ccc;padding-left:6px}
+details.node>summary{cursor:pointer;list-style:none;padding:3px 0}
+details.node>summary::-webkit-details-marker{display:none}
+.leaf{margin:2px 0 2px 14px;padding:3px 0 3px 6px;border-left:1px dashed #ccc}
+.nm{font-weight:600}.mut{color:#777;font-size:12px}.why{font-size:13px}
+.line{font-size:13px;color:#333;margin:2px 0 2px 22px}
+.body{margin:4px 0 6px 22px}
+form.say{display:flex;gap:6px;margin:4px 0}form.say input[type=text]{flex:1;padding:4px}
+button{cursor:pointer}
+pre{white-space:pre-wrap;word-break:break-word;background:#fafafa;border:1px solid #eee;padding:6px;font-size:12px;max-height:340px;overflow:auto}
+.msg{border-bottom:1px solid #eee;padding:4px 0}.role{font-weight:600;font-size:12px}
+.banner{background:#fed7d7;padding:8px 16px}.ok{background:#c6f6d5;padding:8px 16px}
+a{color:#2b6cb0}
+"""
+
+JS = """
+let dirty=false;
+document.addEventListener('input',()=>{dirty=true});
+setInterval(()=>{const a=document.activeElement;
+ if(!dirty && !(a && (a.tagName==='INPUT'||a.tagName==='TEXTAREA'))) location.replace(location.pathname+location.search.replace(/[?&]msg=[^&]*/,''));},30000);
+"""
+
+
+def page(title, body, token, refresh=True):
+    return ("<!doctype html><html lang='zh-Hant'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            "<title>%s</title><style>%s</style></head><body>%s%s</body></html>"
+            % (esc(title), CSS, body, ("<script>%s</script>" % JS) if refresh else ""))
+
+
+def hidden(token):
+    return "<input type='hidden' name='token' value='%s'>" % esc(token)
+
+
+def render_asks(zone, token):
+    if not zone:
+        return "<div class='card mut'>沒有在等你的信。</div>"
+    out = []
+    for z in zone:
+        try:
+            out.append(render_ask(z, token))
+        except Exception as e:
+            out.append("<div class='card ask'>這封信讀不懂（%s）：%s，請用 aos-user show 看</div>"
+                       % (esc(type(e).__name__), esc(z.get("title"))))
+    return "".join(out)
+
+
+def render_ask(z, token):
+    if True:
+        cls = "card ask urgent" if z.get("urgent") else "card ask"
+        h = ["<div class='%s'><div><b>%s</b> %s <span class='mut'>from %s · %s · %s%s</span></div>"
+             % (cls, "❗" if z.get("urgent") else "", esc(z.get("title")), esc(z.get("from")), esc(z.get("kind")),
+                ago(z.get("sent_at")), (" · deadline %s" % esc(z["deadline"])) if z.get("deadline") else "")]
+        if z.get("risk") == "irreversible":
+            h.append("<div class='why'>⚠️ 不可逆：每題都要親手選</div>")
+        h.append("<details><summary class='mut'>內容</summary><pre>%s</pre>%s</details>"
+                 % (esc(z.get("what")), ("<pre>%s</pre>" % esc(z["decide"])) if z.get("decide") else ""))
+        if z.get("error"):
+            return "".join(h) + "</div>"
+        h.append("<form method='post' action='/answer'>%s<input type='hidden' name='letter' value='%s'>"
+                 % (hidden(token), esc(z["letter"])))
+        qs = z.get("questions") or []
+        if qs:
+            for q in qs:
+                qid = q.get("id")
+                h.append("<div class='q'><div><b>%s</b> %s</div><div class='eli5'>%s</div>"
+                         % (esc(qid), esc(q.get("question")), esc(q.get("eli5"))))
+                for o in q.get("options") or []:
+                    k = o.get("key")
+                    rec = k == q.get("recommend")
+                    chk = " checked" if rec and z.get("risk") != "irreversible" else ""
+                    h.append("<label class='opt'><input type='radio' name='q_%s' value='%s'%s> <b>%s</b> %s%s %s</label>"
+                             % (esc(qid), esc(k), chk, esc(k), esc(o.get("label")),
+                                " <span class='rec'>推薦</span>" if rec else "",
+                                ("<span class='mut'>→ %s</span>" % esc(o.get("consequence"))) if o.get("consequence") else ""))
+                if q.get("why"):
+                    h.append("<div class='mut'>為什麼推薦：%s</div>" % esc(q.get("why")))
+                h.append("</div>")
+            h.append("<div>備註（可空）：<input type='text' name='note' style='width:70%'></div>"
+                     "<button name='do' value='answer'>送出答案</button>")
+        elif z.get("kind") == "fyi":
+            h.append("<button name='do' value='ok'>知道了，收起來</button>")
+        else:
+            h.append("<div><textarea name='text' rows='2' style='width:95%' placeholder='用你的話回'></textarea></div>"
+                     "<button name='do' value='reply'>回覆</button>")
+        h.append("</form></div>")
+        return "".join(h)
+
+
+def render_node(k, nodes, token, depth=0):
+    n = nodes[k]
+    r = n["rollup"]
+    icon = LIGHT_ICON[n["light"]]
+    sub = ""
+    if n["children"]:
+        sub = " <span class='mut'>（底下 %d 個，最差 %s）</span>" % (r["nodes"] - 1, LIGHT_ICON[r["worst"]])
+    reports = n.get("reports") or []
+    last = reports[0] if reports else None
+    head = ("%s <span class='nm'>%s</span>%s <span class='mut'>%s · %s · queue %s · 動靜 %s</span> "
+            "<span class='why'>%s</span>"
+            % (icon, esc(k), sub, esc(n["kind"]), esc(n.get("busy") or n.get("state")),
+               esc(n.get("queued") if n.get("queued") is not None else "-"), ago(n.get("active_at")), esc(n["why"])))
+    lines = []
+    if n.get("note"):
+        lines.append("<div class='line'>📝 隊長留話：<b>%s</b> %s <span class='mut'>%s</span></div>"
+                     % (esc(n["note"].get("status")), esc(short(n["note"].get("text") or "", 200)),
+                        ago(n["note"].get("at"))))
+    if n.get("team_light"):
+        lines.append("<div class='line why'>%s %s</div>" % (LIGHT_ICON[n["team_light"]["light"]],
+                                                           esc(n["team_light"]["why"])))
+    if last:
+        lines.append("<div class='line'>📮 最近回報：<b>%s</b> <span class='mut'>%s</span></div>"
+                     % (esc(last["title"]), ago(last["sent_at"])))
+    if n.get("last_answer"):
+        lines.append("<div class='line mut'>💬 最後一句：%s</div>" % esc(short(n["last_answer"], 200)))
+    body = "".join(lines)
+    tools = ""
+    if n["kind"] == "agent":
+        tools = ("<div class='body'><a href='/agent?name=%s'>看紀錄 →</a>"
+                 "<form class='say' method='post' action='/say'>%s<input type='hidden' name='name' value='%s'>"
+                 "<input type='text' name='text' placeholder='對 %s 說一句話（會加前綴「%s」）'>"
+                 "<button>說</button></form></div>"
+                 % (urllib.parse.quote(k), hidden(token), esc(k), esc(k), esc(SAY_PREFIX)))
+    kids = "".join(render_node(c, nodes, token, depth + 1) for c in n["children"])
+    open_ = " open" if (depth == 0 or r["worst"] in ("red", "blue")) else ""
+    return ("<details class='node'%s><summary>%s</summary>%s%s%s</details>" % (open_, head, body, tools, kids))
+
+
+def render_main(tree, err, token, msg=""):
+    h = ["<header><h1>全景</h1>"]
+    if tree:
+        nodes = tree["nodes"]
+        agents = [n for n in nodes.values() if n["kind"] == "agent"]
+        red = [n for n in nodes.values() if n["light"] == "red"]
+        yel = [n for n in nodes.values() if n["light"] == "yellow"]
+        h.append("<div class='big'>%d<small>要你決定</small></div>" % len(tree["zone"]))
+        h.append("<div class='big'>%d<small>🔴 出事</small></div>" % len(red))
+        h.append("<div class='big'>%d<small>🟡 要留意</small></div>" % len(yel))
+        h.append("<div class='big'>%d<small>agent 在跑（另有 proc %d、llm 工作 %d）</small></div>"
+                 % (len([a for a in agents if (a.get("state") or "").lower() == "running"]),
+                    len(nodes) - len(agents), tree["llm_workers"]))
+        h.append("<div class='mut'>更新於 %s（每 20 秒；頁面 30 秒自動重整）</div>" % ago(tree["generated_at"]))
+    h.append("</header>")
+    if err:
+        h.append("<div class='banner'>讀 daemon 表失敗：%s</div>" % esc(err))
+    if msg:
+        h.append("<div class='%s'>%s</div>" % ("banner" if msg.startswith("!") else "ok", esc(msg.lstrip("!"))))
+    h.append("<main>")
+    if not tree:
+        h.append("<p>第一次讀取中，幾秒後重整。</p></main>")
+        return page("全景", "".join(h), token)
+    h.append("<h2>🔵 要你決定（%d）</h2>" % len(tree["zone"]))
+    h.append(render_asks(tree["zone"], token))
+    h.append("<h2>🏢 部門與員工</h2><div class='mut'>🔴 出事 🔵 等你 🟡 留意 🟢 正常 ⚪ 停了。"
+             "有出事或等你的部門會自動展開。</div>")
+    nodes = tree["nodes"]
+    h.append("".join(render_node(k, nodes, token) for k in tree["roots"] if nodes[k]["kind"] == "agent"))
+    procs = [k for k in tree["roots"] if nodes[k]["kind"] != "agent"]
+    h.append("<h2>⚙️ 機房（普通 proc）</h2>")
+    h.append("".join(render_node(k, nodes, token) for k in procs))
+    h.append("<div class='leaf mut'>llm 單次工作 llm_* 現在 %d 個</div>" % tree["llm_workers"])
+    h.append("<h2>📮 隊伍回覆（中轉信箱）</h2>")
+    rel = tree["relay"][:15]
+    if not rel:
+        h.append("<div class='card mut'>還沒有。隊伍用 mailbox_send 寄到 box <code>%s</code> 就會出現在這裡。</div>"
+                 % esc(os.path.expanduser("~/.aos/view/mailbox")))
+    for x in rel:
+        h.append("<div class='card'><b>%s</b> %s <span class='mut'>from %s · %s</span>"
+                 "<details><summary class='mut'>內容</summary><pre>%s</pre></details></div>"
+                 % (esc(x["status"] or ""), esc(x["title"]), esc(x["from"]), ago(x["sent_at"]), esc(x["what"])))
+    h.append("</main>")
+    return page("全景", "".join(h), token)
+
+
+def render_agent(name, token, msg=""):
+    st = run_json(["aos-agent", "ctl", "state", "-t", name, "all", "-j"], timeout=20)
+    if st is None:
+        return page(name, "<main><p>讀不到 %s。<a href='/classic'>← 回全景</a></p></main>" % esc(name), token, False)
+    hist = run_json(["aos-agent", "history", "-t", name, "ls", "-j"], timeout=20) or []
+    s = st.get("state") or {}
+    res = st.get("resources") or {}
+    who = st.get("who") or {}
+    mb = st.get("mailbox") or {}
+    h = ["<header><h1><a href='/classic'>← 全景</a>　%s</h1></header>" % esc(name)]
+    if msg:
+        h.append("<div class='%s'>%s</div>" % ("banner" if msg.startswith("!") else "ok", esc(msg.lstrip("!"))))
+    h.append("<main>")
+    h.append("<h2>現在</h2><div class='card'>狀態 <b>%s</b> · phase %s · queue %s · pid %s · 記憶體 %s MB · 上線 %s"
+             "<div class='mut'>workspace %s</div><div class='line'>💬 最後一句：%s</div></div>"
+             % (esc(s.get("state")), esc(s.get("phase")), esc(s.get("queued")), esc(res.get("pid")),
+                esc(round((res.get("memory_bytes") or 0) / 1048576)),
+                esc(((st.get("time") or {}).get("up_seconds") or 0) // 60) + " 分",
+                esc(who.get("workspace") or who.get("ws")), esc(short(s.get("last_answer") or "", 400))))
+    h.append("<form class='say' method='post' action='/say'>%s<input type='hidden' name='name' value='%s'>"
+             "<input type='hidden' name='back' value='agent'>"
+             "<input type='text' name='text' placeholder='對 %s 說一句話'><button>說</button></form>"
+             % (hidden(token), esc(name), esc(name)))
+    letters = mb.get("letters") or []
+    h.append("<h2>信箱裡等著的（%d）</h2>" % (mb.get("waiting") or 0))
+    for x in letters[:10]:
+        h.append("<div class='card'><b>%s</b> %s <span class='mut'>from %s</span></div>"
+                 % (esc(x.get("status")), esc(x.get("title")), esc(x.get("from"))))
+    h.append("<h2>最近的紀錄（新的在上，最多 30 則）</h2>")
+    for item in list(reversed(hist))[:30]:
+        m = item.get("message") or {}
+        role = m.get("role")
+        content = m.get("content")
+        if isinstance(content, list):
+            content = " ".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
+        tc = m.get("tool_calls") or []
+        tools = ", ".join(((t.get("function") or {}).get("name") or t.get("name") or "?") for t in tc if isinstance(t, dict))
+        extra = (" 🔧 " + esc(tools)) if tools else ""
+        h.append("<div class='msg'><span class='role'>#%s %s</span>%s<div>%s</div></div>"
+                 % (esc(item.get("line")), esc(role), extra, esc(short(content or "", 600))))
+    h.append("</main>")
+    return page(name, "".join(h), token, False)
+
+
+# ---- actions -------------------------------------------------------------------------
+
+def do_answer(form, tree, home):
+    letter = form.get("letter", "")
+    what = form.get("do", "")
+    z = next((x for x in (tree or {}).get("zone", []) if x["letter"] == letter), None)
+    if not z:
+        return "!找不到這封信（可能已經回過了）"
+    if re.match(r"^[0-9]{1,5}$", letter):
+        return "!信名不對"
+    for k in ("note", "text"):
+        if form.get(k, "").strip().startswith("-"):
+            return "!備註或回覆不能用「-」開頭（會被當成指令選項），請在前面加個字"
+    if what == "answer":
+        toks = []
+        for q in z.get("questions") or []:
+            v = form.get("q_" + str(q.get("id")))
+            if not v:
+                return "!第 %s 題還沒選" % q.get("id")
+            toks.append("%s:%s%s" % (q.get("id"), v, "" if v == q.get("recommend") else "*"))
+        args = [AOS_USER, "answer", letter] + toks
+        if form.get("note", "").strip():
+            args += ["--note", form["note"].strip()]
+    elif what == "reply":
+        if not form.get("text", "").strip():
+            return "!回覆是空的"
+        args = [AOS_USER, "reply", letter, form["text"].strip()]
+    elif what == "ok":
+        args = [AOS_USER, "ok", letter]
+    else:
+        return "!不認得的操作"
+    code, out, err = run(args, timeout=30)
+    log_sent(home, {"at": datetime.now().astimezone().isoformat(timespec="seconds"), "kind": "answer", "letter": letter,
+                    "do": what, "args": args[2:], "ok": code == 0, "out": short(out or err, 300),
+                    "title": z.get("title"), "from": z.get("from"), "kind_zone": z.get("kind")})
+    if code != 0:
+        return "!送出失敗：%s" % short(err or out, 300)
+    if not re.match(r"^(answered|replied|put away|ok)", out.strip(), re.I):
+        return "!不確定有沒有送出（aos-user 回：%s），請用 aos-user ls 確認" % short(out or err, 200)
+    return "已送出：%s" % short(z.get("title"), 80)
+
+
+def link_fields(form):
+    """B5: optional batch / correction_of on say, mail, order (kept as given in sent.jsonl when well-formed)."""
+    out = {}
+    for k in ("batch", "correction_of"):
+        v = form.get(k)
+        if isinstance(v, str) and re.match(r"^[A-Za-z0-9._:-]{1,120}$", v):
+            out[k] = v
+    return out
+
+
+def do_say(form, tree, home, ret=None):
+    name = form.get("name", "")
+    text = form.get("text", "").strip()
+    nodes = (tree or {}).get("nodes", {})
+    if name not in nodes or nodes[name]["kind"] != "agent":
+        return "!不是表上的 agent：%s" % name
+    if not text:
+        return "!沒有內容"
+    if len(text) > 4000:
+        return "!太長了（上限 4000 字）"
+    msg = "%s %s\n\n（要回覆請用 mailbox_send 寄到 box %s，title 開頭寫 [view-reply]；使用者久沒回時，先跑 ~/aos-home/ws/tools/aos-view/aos-view board 看他的布告欄；這句是全景頁自動附的）" % (
+        SAY_PREFIX, text, home.mailbox)
+    code, out, err = run(["aos-agent", "say", "-t", name, "--from", SAY_FROM, "-"], timeout=20, stdin=msg)
+    rec = {"at": datetime.now().astimezone().isoformat(timespec="seconds"), "kind": "say", "to": name, "text": text,
+           "ok": code == 0, "letter": out.strip() if code == 0 else None, "error": None if code == 0 else short(err, 300)}
+    rec.update(link_fields(form))
+    log_sent(home, rec)
+    DELIVERY_CACHE.pop(name, None)
+    if ret is not None:
+        ret["letter"] = rec["letter"]
+    if code != 0:
+        return "!說不出去：%s" % short(err or out, 300)
+    return "已對 %s 說了（%s）" % (name, short(text, 60))
+
+
+def log_sent(home, rec):
+    """One line per thing the user sent: state/sent.jsonl (for threads) and the say log (audit)."""
+    line = json.dumps(rec, ensure_ascii=False) + "\n"
+    for path in {os.path.join(home.state, "sent.jsonl"), home.say_log()}:
+        try:
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(line)
+        except OSError:
+            pass
+
+
+def read_sent(home, name=None, limit=200):
+    out = []
+    try:
+        with open(os.path.join(home.state, "sent.jsonl"), encoding="utf-8") as f:
+            lines = f.readlines()[-2000:]
+    except OSError:
+        return out
+    for ln in lines:
+        try:
+            r = json.loads(ln)
+        except ValueError:
+            continue
+        if r.get("kind") not in ("say", "mail", "order") or not r.get("ok"):
+            continue
+        if name and r.get("to") != name:
+            continue
+        out.append({"dir": "out", "kind": r.get("kind"), "order": r.get("order"), "letter": r.get("letter"), "from": "user", "to": r.get("to"),
+                    "status": r.get("status"), "title": r.get("title") or "(說話)", "what": r.get("text") or "",
+                    "sent_at": parse_time(r.get("at")), "in_reply_to": None,
+                    "batch": r.get("batch"), "correction_of": r.get("correction_of")})
+    return out[-limit:]
+
+
+DELIVERY_CACHE = {}
+
+
+def msg_text(m):
+    c = (m or {}).get("content")
+    return c if isinstance(c, str) else json.dumps(c, ensure_ascii=False)
+
+
+def delivery(name, outs, ins, now=None):
+    """Delivery state of what the user sent to NAME (last 7 days), from official commands only:
+    replied = a relay letter answers it (in_reply_to), or for a say, NAME wrote to the relay after it;
+    queued / read = a mail still in / gone from `ctl state mailbox`; a say not yet / already in `history ls`.
+    Cached 15 s per agent. Sets x["delivery"] to queued|read|replied|unknown (null for older items)."""
+    now = now or time.time()
+    recent = [o for o in outs if o.get("letter") and (o.get("sent_at") or 0) > now - 7 * 86400]
+    if not recent:
+        return None
+    replied = {x.get("in_reply_to") for x in ins if x.get("in_reply_to")}
+    from_times = sorted(x.get("sent_at") or 0 for x in ins if x.get("from") == name)
+    need = [o for o in recent if o["letter"] not in replied and not (o["kind"] == "say" and any(t > (o.get("sent_at") or 0) for t in from_times))]
+    c = DELIVERY_CACHE.get(name)
+    if need and (not c or now - c["at"] > 15):
+        st = run_json(["aos-agent", "ctl", "state", "-t", name, "state", "mailbox", "history", "-j"], timeout=8) or {}
+        mb = st.get("mailbox") or {}
+        waiting = [r.get("letter") for r in mb.get("letters") or []] if "waiting" in mb else None
+        queued = (st.get("state") or {}).get("queued")
+        texts = None
+        count = (st.get("history") or {}).get("messages")
+        if isinstance(count, int) and any(o["kind"] == "say" for o in need):
+            h = run_json(["aos-agent", "history", "-t", name, "ls", "-j", "%d-" % max(1, count - 300)], timeout=8)
+            if isinstance(h, list):
+                texts = [msg_text(r.get("message")) for r in h if (r.get("message") or {}).get("role") == "user"]
+        c = DELIVERY_CACHE[name] = {"at": now, "waiting": waiting, "texts": texts, "queued": queued}
+    c = c or {"waiting": None, "texts": None, "queued": None}
+    for o in recent:
+        if o not in need:
+            o["delivery"] = "replied"
+        elif o["kind"] == "say":
+            key = (o.get("what") or "")[:80]
+            o["delivery"] = "unknown" if c["texts"] is None else (
+                "read" if any(SAY_PREFIX in t and key in t for t in c["texts"]) else "queued")
+        else:
+            o["delivery"] = "unknown" if c["waiting"] is None else ("queued" if o["letter"] in c["waiting"] else "read")
+    # queue position (approximate for a say: the queue is FIFO, so what I said later and is still queued is behind it)
+    q = c.get("queued")
+    later = 0
+    for o in sorted(recent, key=lambda x: x.get("sent_at") or 0, reverse=True):
+        if o.get("delivery") != "queued":
+            continue
+        if o["kind"] == "say" and isinstance(q, int):
+            o["queue_ahead"] = max(0, q - later - 1)
+            later += 1
+        elif o["kind"] != "say" and c["waiting"] is not None:
+            o["queue_ahead"] = c["waiting"].index(o["letter"])
+    return {"queued": q}
+
+
+def read_answered(home, hours=24):
+    """What the user answered on the page in the last HOURS (state/sent.jsonl, kind answer, ok), newest first."""
+    out, since = [], time.time() - hours * 3600
+    try:
+        with open(os.path.join(home.state, "sent.jsonl"), encoding="utf-8") as f:
+            lines = f.readlines()[-2000:]
+    except OSError:
+        return out
+    for ln in lines:
+        try:
+            r = json.loads(ln)
+        except ValueError:
+            continue
+        at = parse_time(r.get("at"))
+        if r.get("kind") != "answer" or not r.get("ok") or not at or at < since:
+            continue
+        out.append({"letter": r.get("letter"), "at": at, "do": r.get("do"), "title": r.get("title"), "from": r.get("from"),
+                    "answers": [a for a in (r.get("args") or []) if a not in ("--note", r.get("letter"))], "out": r.get("out")})
+    fix = {}
+    for o in read_sent(home, None, 2000):
+        if o.get("correction_of") and o.get("letter"):
+            fix.setdefault(o["correction_of"], []).append(o["letter"])
+    for a in out:
+        a["corrections"] = fix.get(a["letter"], [])
+    return out[::-1][:50]
+
+
+MAIL_STATUS = ("REQUEST", "DONE", "BLOCKED", "NEEDS-USER", "FAILED", "PROGRESS")
+
+
+def do_mail(form, tree, home, extra=None, kind="mail"):
+    name = form.get("name", "")
+    nodes = (tree or {}).get("nodes", {})
+    n = nodes.get(name)
+    if not n or n["kind"] != "agent" or not n.get("stack"):
+        return False, "!不是表上的 agent：%s" % name, None
+    status = form.get("status") or "REQUEST"
+    title = (form.get("title") or "").strip()
+    what = (form.get("what") or "").strip()
+    if status not in MAIL_STATUS:
+        return False, "!status 不對", None
+    if not title or not what:
+        return False, "!title 和內容都要填", None
+    if len(title) > 300 or len(what) > 20000:
+        return False, "!太長了", None
+    box = os.path.join(n["stack"], "mailbox")
+    body = {"from": "user", "to": name, "status": status, "title": title, "what": what,
+            "outputs": "none", "not_done": "none", "decide": "none", "via": "aos-view",
+            "note": "sent by the user from the panorama page; reply with mailbox_send to box %s. "
+                    "If the user does not answer for long, read the user's board: ~/aos-home/ws/tools/aos-view/aos-view board" % home.mailbox}
+    if extra:
+        body.update(extra)
+    env = cli_env()
+    env["AOS_STACK"] = home.dir
+    with CLI_LOCK:
+        try:
+            p = subprocess.run(["aos-post", "send", "--reply-to", home.mailbox, box], input=json.dumps(body, ensure_ascii=False),
+                               capture_output=True, text=True, timeout=20, env=env, cwd="/")
+            code, out, err = p.returncode, p.stdout, p.stderr
+        except (subprocess.TimeoutExpired, OSError) as e:
+            code, out, err = 1, "", str(e)
+    rec = {"at": datetime.now().astimezone().isoformat(timespec="seconds"), "kind": kind, "to": name,
+           "order": (extra or {}).get("order"), "status": status, "title": title, "text": what, "ok": code == 0,
+           "letter": out.strip() if code == 0 else None, "error": None if code == 0 else short(err, 300)}
+    rec.update(link_fields(form))
+    log_sent(home, rec)
+    DELIVERY_CACHE.pop(name, None)
+    if code != 0:
+        return False, "!寄不出去：%s" % short(err or out, 300), None
+    return True, "已寄給 %s：%s" % (name, short(title, 60)), out.strip()
+
+
+ORDER_KINDS = {
+    # kind: (default receiver; None = the target department itself, label)
+    "expand": (None, "擴充部門"),
+    "hire": ("repo-aos", "HR：增派人員"),
+    "power": ("repo-aos", "電力：llm 額度"),
+}
+ORDER_FIELDS = {"expand": ("budget",), "hire": ("role", "model", "count"), "power": ("priority", "quota")}
+
+
+def do_order(form, tree, home):
+    """A chairman's order = one REQUEST letter to whoever takes that kind of order (config orders.<kind>.to).
+    The page itself never changes the tree; the receiver does the work through its own rules (gate)."""
+    kind = form.get("kind", "")
+    target = form.get("target", "")
+    nodes = (tree or {}).get("nodes", {})
+    if kind not in ORDER_KINDS:
+        return False, "!不認得的指令種類：%s" % kind, None
+    if target not in nodes:
+        return False, "!表上沒有這個部門：%s" % target, None
+    what = (form.get("what") or "").strip()
+    if not what:
+        return False, "!要寫清楚要什麼", None
+    conf = ((home.config().get("orders") or {}).get(kind) or {})
+    to = conf.get("to") or ORDER_KINDS[kind][0] or target
+    order = {"kind": kind, "target": target}
+    for k in ORDER_FIELDS[kind]:
+        v = form.get(k)
+        if v not in (None, ""):
+            order[k] = str(v)[:200]
+    detail = "".join("\n- %s: %s" % (k, v) for k, v in order.items())
+    f = {"name": to, "status": "REQUEST", **link_fields(form),
+         "title": "[董事長指令:%s] %s：%s" % (kind, target, short(what, 80)),
+         "what": "使用者從全景頁下的指令（%s）。%s\n\n%s\n\n要掛新 agent 或動樹的，照你自己的規矩走 gate；做完或卡住請回信。"
+                 % (ORDER_KINDS[kind][1], detail, what)}
+    return do_mail(f, tree, home, extra={"order": order}, kind="order")
+
+
+def agent_json(name):
+    st = run_json(["aos-agent", "ctl", "state", "-t", name, "all", "-j"], timeout=20)
+    if st is None:
+        return None
+    hist = run_json(["aos-agent", "history", "-t", name, "ls", "-j"], timeout=20) or []
+    s = st.get("state") or {}
+    res = st.get("resources") or {}
+    who = st.get("who") or {}
+    mb = st.get("mailbox") or {}
+    items = []
+    for item in list(reversed(hist))[:30]:
+        m = item.get("message") or {}
+        content = m.get("content")
+        if isinstance(content, list):
+            content = " ".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
+        tc = m.get("tool_calls") or []
+        tools = [((t.get("function") or {}).get("name") or t.get("name") or "?") for t in tc if isinstance(t, dict)]
+        items.append({"line": item.get("line"), "role": m.get("role"), "text": short(content or "", 600), "tools": tools})
+    return {"name": name,
+            "now": {"state": s.get("state"), "phase": s.get("phase"), "queued": s.get("queued"), "busy": None,
+                    "pid": res.get("pid"), "memory_mb": round((res.get("memory_bytes") or 0) / 1048576),
+                    "up_min": ((st.get("time") or {}).get("up_seconds") or 0) // 60,
+                    "workspace": who.get("workspace") or who.get("ws"),
+                    "last_answer": mask(s.get("last_answer")) if s.get("last_answer") else None},
+            "mailbox": {"waiting": mb.get("waiting") or 0,
+                        "letters": [{"status": x.get("status"), "title": mask(x.get("title")), "from": x.get("from"),
+                                     "sent_at": parse_time(x.get("sent_at"))} for x in (mb.get("letters") or [])[:20]]},
+            "history": items}
+
+
+# ---- server --------------------------------------------------------------------------
+
+HERE_DIR = os.path.dirname(os.path.realpath(__file__))
+# the frontend served: ui/v1 (frozen 11-14, "清單版"); --ui DIR serves another one (the old web/ is kept, not served)
+WEB_DIR = os.path.join(HERE_DIR, "ui", "v1") if os.path.isdir(os.path.join(HERE_DIR, "ui", "v1")) else os.path.join(HERE_DIR, "web")
+STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/index.html": ("index.html", "text/html; charset=utf-8"),
+          "/app.js": ("app.js", "text/javascript; charset=utf-8"), "/map.js": ("map.js", "text/javascript; charset=utf-8"), "/style.css": ("style.css", "text/css; charset=utf-8")}
+CSP = ("default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; "
+       "form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+
+
+class Handler(http.server.BaseHTTPRequestHandler):
+    server_version = "aos-view/0"
+
+    def log_message(self, fmt, *a):
+        pass
+
+    def host_ok(self):
+        port = self.server.server_address[1]
+        return self.headers.get("Host", "") in ("127.0.0.1:%d" % port, "localhost:%d" % port)
+
+    def common_headers(self, ctype, length, cookie=False, csp=None):
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(length))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "same-origin")
+        if csp:
+            self.send_header("Content-Security-Policy", csp)
+        if cookie:
+            self.send_header("Set-Cookie", "aosview=%s; Path=/; HttpOnly; SameSite=Strict" % self.server.token)
+
+    def send_html(self, s, code=200, cookie=False):
+        b = s.encode("utf-8")
+        self.send_response(code)
+        self.common_headers("text/html; charset=utf-8", len(b), cookie,
+                            "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'")
+        self.end_headers()
+        self.wfile.write(b)
+
+    def send_json(self, obj, code=200, cookie=False, etag=None):
+        tick = getattr(self.server.collector, "tick", {}).get("at")
+        if etag:
+            etag = '"%s"' % etag
+            if self.headers.get("If-None-Match") == etag:
+                self.send_response(304)
+                self.send_header("ETag", etag)
+                self.send_header("Cache-Control", "no-cache")
+                if tick:
+                    self.send_header("X-Last-Tick", "%.3f" % tick)
+                self.end_headers()
+                return
+        b = json.dumps(obj, ensure_ascii=False, default=str).encode("utf-8")
+        self.send_response(code)
+        self.common_headers("application/json; charset=utf-8", len(b), cookie)
+        if etag:
+            self.send_header("ETag", etag)
+        if tick:
+            self.send_header("X-Last-Tick", "%.3f" % tick)
+        self.end_headers()
+        self.wfile.write(b)
+
+    def fail(self, code, err, message):
+        return self.send_json({"ok": False, "error": err, "message": message}, code)
+
+    def redirect(self, where):
+        self.send_response(303)
+        self.send_header("Location", where)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def static(self, path):
+        fn, ctype = STATIC[path]
+        try:
+            with open(os.path.join(WEB_DIR, fn), "rb") as f:
+                b = f.read()
+        except OSError:
+            if path in ("/", "/index.html"):
+                return self.redirect("/classic")
+            return self.fail(404, "NotFound", "no such file")
+        self.send_response(200)
+        self.common_headers(ctype, len(b), cookie=(fn == "index.html"), csp=CSP)
+        self.end_headers()
+        self.wfile.write(b)
+
+    def do_GET(self):
+        if not self.host_ok():
+            return self.send_html("bad host", 403)
+        u = urllib.parse.urlparse(self.path)
+        q = urllib.parse.parse_qs(u.query)
+        arg = lambda k: (q.get(k) or [""])[0]
+        tree, err = self.server.collector.get()
+        nodes = (tree or {}).get("nodes", {})
+        ui = getattr(self.server, "ui", None)
+        if ui and not u.path.startswith("/api/"):
+            return self.static_v2(ui, u.path)
+        if u.path in STATIC and not ui:
+            return self.static(u.path)
+        revs = revs_of(self.server, tree)
+        if u.path == "/api/session":
+            return self.send_json({"token": self.server.token, "version": "view-api/0"}, cookie=True)
+        if u.path == "/api/tree":
+            if tree:
+                t = {k: v for k, v in tree.items() if k not in ("zone", "relay")}
+                t["nodes"] = {k: public_node(v) for k, v in nodes.items()}
+            else:
+                t = None
+            return self.send_json({"tree": t, "error": err}, etag=None if err else revs["tree"])
+        if u.path == "/api/version":
+            d = ui["dir"] if ui else WEB_DIR
+            vdir = os.path.dirname(d) if os.path.basename(d) == "dist" else d
+            try:
+                with open(os.path.join(vdir, "VERSION"), encoding="utf-8") as f:
+                    uiv = f.read().strip()
+            except OSError:
+                uiv = None
+            return self.send_json({"api": "view-api/0", "ui": uiv, "ui_dir": os.path.basename(vdir)})
+        if u.path == "/api/pulse":
+            ob = self.server.ob()
+            ob.pulse_at = time.time()
+            ob.kick_if_old()
+            return self.send_json({"now": time.time(), "tick": self.server.collector.tick, "rev": revs,
+                                   "ext_checked_at": ext_checked_at(tree), "error": err})
+        if u.path == "/api/outbox":
+            ob = self.server.ob()
+            ob.kick_if_old()
+            try:
+                days = max(1, min(7, int(arg("days") or 7)))
+            except ValueError:
+                days = 7
+            items = ob.items(tree, days)
+            return self.send_json({"items": items, "checked_at": ob.checked_at}, etag=revs["outbox"] if days == 7 else None)
+        if u.path == "/api/ui-state":
+            key = arg("key")
+            if key not in UI_KEYS:
+                return self.fail(400, "KeyBad", "key must be one of %s" % ", ".join(UI_KEYS))
+            return self.send_json(ui_get(self.server.home, key))
+        if u.path == "/api/answered":
+            return self.send_json({"answered": read_answered(self.server.home)}, etag=revs["answered"])
+        if u.path == "/api/board":
+            return self.send_json({"user": board_get(self.server.home)}, etag=revs["board"])
+        if u.path == "/api/asks":
+            return self.send_json({"asks": (tree or {}).get("zone", [])}, etag=revs["asks"])
+        if u.path == "/api/orders":
+            conf = self.server.home.config().get("orders") or {}
+            return self.send_json({"kinds": [{"kind": k, "label": v[1], "to": (conf.get(k) or {}).get("to") or v[0],
+                                              "fields": list(ORDER_FIELDS[k])} for k, v in ORDER_KINDS.items()]})
+        if u.path == "/api/relay":
+            return self.send_json({"letters": (tree or {}).get("relay", [])}, etag=revs["relay"])
+        if u.path == "/api/thread":
+            name = arg("name")
+            if name not in nodes:
+                # B5: a department that left the tree still has its history; answers still go to its mailbox
+                if not NAME_RE.match(name or ""):
+                    return self.fail(404, "NodeMissing", "表上沒有 %s" % name)
+                ins = [x for x in self.server.collector.relay_letters() if x["from"] == name]
+                outs = read_sent(self.server.home, name)
+                if not ins and not outs:
+                    return self.fail(404, "NodeMissing", "表上沒有 %s" % name)
+                items = sorted(ins + outs, key=lambda x: x.get("sent_at") or 0, reverse=True)[:50]
+                return self.send_json({"name": name, "letters": items, "turn": None, "gone": True})
+            ins = [x for x in self.server.collector.relay_letters() if x["from"] == name]
+            outs = read_sent(self.server.home, name)
+            out_ids = {o["letter"] for o in outs if o.get("letter")}
+            ins += [x for x in self.server.collector.relay_letters()
+                    if x["from"] != name and x.get("in_reply_to") in out_ids]
+            n = nodes[name]
+            if n["kind"] == "agent":
+                delivery(name, outs, ins)
+            items = sorted(ins + outs, key=lambda x: x.get("sent_at") or 0, reverse=True)[:50]
+            turn = None
+            if n["kind"] == "agent" and (n.get("state") or "").lower() == "running" and (n.get("queued") or n.get("busy")):
+                turn = {"queued": n.get("queued") or 0, "busy": n.get("busy"), "active_at": n.get("active_at"), "why": n.get("why")}
+            return self.send_json({"name": name, "letters": items, "turn": turn})
+        if u.path == "/api/agent":
+            name = arg("name")
+            if name not in nodes or nodes[name]["kind"] != "agent":
+                return self.fail(404, "NodeMissing", "不是表上的 agent：%s" % name)
+            a = agent_json(name)
+            if a is None:
+                return self.fail(502, "StateFailed", "讀不到 %s 的狀態" % name)
+            a["now"]["busy"] = nodes[name].get("busy")
+            return self.send_json(a)
+        # classic server-rendered page (fallback)
+        if u.path == "/classic":
+            return self.send_html(render_main(tree, err, self.server.token, arg("msg")), cookie=True)
+        if u.path == "/agent":
+            name = arg("name")
+            if name not in nodes or nodes[name]["kind"] != "agent":
+                return self.send_html(page("?", "<main>不是表上的 agent。<a href='/classic'>← 回全景</a></main>",
+                                           self.server.token, False), 404)
+            return self.send_html(render_agent(name, self.server.token, arg("msg")), cookie=True)
+        self.fail(404, "NotFound", "no such path")
+
+    def static_v2(self, ui, path):
+        """B1: the v2 build (ui/v2/dist): index.html at / (no-store), hashed /assets/<name> (immutable)."""
+        if path in ("/", "/index.html"):
+            fn, cache, cookie = os.path.join(ui["dir"], "index.html"), "no-store", True
+        elif path.startswith("/assets/") and V2_ASSET_RE.match(path[8:]) and ".." not in path:
+            fn, cache, cookie = os.path.join(ui["dir"], "assets", path[8:]), "max-age=31536000, immutable", False
+        elif V2_ASSET_RE.match(path[1:] or "-") and ".." not in path and os.path.splitext(path)[1] in (".svg", ".png"):
+            fn, cache, cookie = os.path.join(ui["dir"], path[1:]), "no-cache", False
+        else:
+            return self.fail(404, "NotFound", "no such path")
+        ext = ".html" if fn.endswith("index.html") else os.path.splitext(fn)[1]
+        ctype = "text/html; charset=utf-8" if ext == ".html" else V2_MIME.get(ext)
+        if not ctype:
+            return self.fail(404, "NotFound", "no such file type")
+        try:
+            with open(fn, "rb") as f:
+                b = f.read()
+        except OSError:
+            return self.fail(404, "NotFound", "no such file")
+        self.send_response(200)
+        self.common_headers(ctype, len(b), cookie=cookie, csp=CSP)
+        self.send_header("Cache-Control", cache)
+        self.end_headers()
+        self.wfile.write(b)
+
+    def checked_body(self):
+        """Host, Origin, size, JSON content type, token header + cookie (same rules as POST /api/*).
+        Returns the parsed JSON object, or None after sending the error."""
+        if not self.host_ok():
+            self.send_html("bad host", 403)
+            return None
+        origin = self.headers.get("Origin")
+        port = self.server.server_address[1]
+        if origin and origin not in ("http://127.0.0.1:%d" % port, "http://localhost:%d" % port):
+            self.fail(403, "OriginBad", "bad origin")
+            return None
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            n = -1
+        if n < 0 or n > UI_MAX:
+            self.fail(413, "TooBig", "too big")
+            return None
+        raw = self.rfile.read(n).decode("utf-8", "replace")
+        if not (self.headers.get("Content-Type") or "").startswith("application/json"):
+            self.fail(415, "JsonRequired", "Content-Type must be application/json")
+            return None
+        cookie = self.headers.get("Cookie", "")
+        ck = dict(p.strip().split("=", 1) for p in cookie.split(";") if "=" in p).get("aosview") or ""
+        tb = self.server.token.encode()
+        given = self.headers.get("X-View-Token", "")
+        if not (secrets.compare_digest(str(given).encode(), tb) and ck and secrets.compare_digest(ck.encode(), tb)):
+            self.fail(403, "TokenBad", "頁面太舊了，重新整理一次")
+            return None
+        try:
+            body = json.loads(raw or "null")
+        except ValueError:
+            self.fail(400, "JsonBad", "body is not JSON")
+            return None
+        return {"body": body}
+
+    def do_PUT(self):
+        """B4: PUT /api/ui-state?key=K. seen / dismissed: body = a diff {id: epoch | null}, merged (12.8 #10);
+        seats / prefs: body = the whole value (last write wins)."""
+        u = urllib.parse.urlparse(self.path)
+        if u.path != "/api/ui-state":
+            if not self.host_ok():
+                return self.send_html("bad host", 403)
+            return self.fail(404, "NotFound", "no such path")
+        got = self.checked_body()
+        if got is None:
+            return
+        key = (urllib.parse.parse_qs(u.query).get("key") or [""])[0]
+        if key not in UI_KEYS:
+            return self.fail(400, "KeyBad", "key must be one of %s" % ", ".join(UI_KEYS))
+        ok, res = ui_put(self.server.home, key, got["body"])
+        if not ok:
+            return self.fail(400, "ValueBad", res)
+        return self.send_json(res)
+
+    def do_POST(self):
+        if not self.host_ok():
+            return self.send_html("bad host", 403)
+        origin = self.headers.get("Origin")
+        port = self.server.server_address[1]
+        if origin and origin not in ("http://127.0.0.1:%d" % port, "http://localhost:%d" % port):
+            return self.fail(403, "OriginBad", "bad origin")
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            n = -1
+        if n < 0 or n > 65536:
+            return self.fail(413, "TooBig", "too big")
+        raw = self.rfile.read(n).decode("utf-8", "replace")
+        cookie = self.headers.get("Cookie", "")
+        ck = dict(p.strip().split("=", 1) for p in cookie.split(";") if "=" in p).get("aosview") or ""
+        tb = self.server.token.encode()
+        u = urllib.parse.urlparse(self.path).path
+        is_api = u.startswith("/api/")
+        if is_api:
+            if not (self.headers.get("Content-Type") or "").startswith("application/json"):
+                return self.fail(415, "JsonRequired", "Content-Type must be application/json")
+            try:
+                form = json.loads(raw or "{}")
+                assert isinstance(form, dict)
+            except (ValueError, AssertionError):
+                return self.fail(400, "JsonBad", "body is not a JSON object")
+            given = self.headers.get("X-View-Token", "")
+        else:
+            form = {k: v[0] for k, v in urllib.parse.parse_qs(raw).items()}
+            given = form.get("token", "")
+        if not (secrets.compare_digest(str(given).encode(), tb) and ck and secrets.compare_digest(ck.encode(), tb)):
+            return self.fail(403, "TokenBad", "頁面太舊了，重新整理一次") if is_api else self.send_html("bad token (reload the page)", 403)
+        tree, _ = self.server.collector.get()
+        home = self.server.home
+        if is_api:
+            for k in ("letter", "do", "note", "text", "name", "status", "title", "what"):
+                if k in form and not isinstance(form[k], str):
+                    return self.fail(400, "ArgumentsBad", "%s must be a string" % k)
+        if u == "/api/answer":
+            f = {"letter": form.get("letter", ""), "do": form.get("do", ""), "note": form.get("note", ""),
+                 "text": form.get("text", "")}
+            ans = form.get("answers") or {}
+            if not isinstance(ans, dict):
+                return self.fail(400, "ArgumentsBad", "answers must be an object")
+            for k, v in ans.items():
+                f["q_" + str(k)] = str(v)
+            msg = do_answer(f, tree, home)
+            if not msg.startswith("!"):
+                self.server.collector.drop_ask(f["letter"])
+            threading.Thread(target=self.server.refresh, daemon=True).start()
+            return self.send_json({"ok": not msg.startswith("!"), "message": msg.lstrip("!")},
+                                  200 if not msg.startswith("!") else 400)
+        if u == "/api/say":
+            ret = {}
+            msg = do_say(form, tree, home, ret)
+            self.server.ob().sent(form.get("name"))
+            return self.send_json({"ok": not msg.startswith("!"), "message": msg.lstrip("!"), "letter": ret.get("letter")},
+                                  200 if not msg.startswith("!") else 400)
+        if u == "/api/board":
+            if "back" in form and not isinstance(form["back"], str):
+                return self.fail(400, "ArgumentsBad", "back must be a string")
+            ok, msg = do_board(form, home)
+            log_sent(home, {"at": now_local(), "kind": "board", "to": "board", "text": form.get("text", ""),
+                            "back": form.get("back"), "ok": ok, "letter": None, "error": None if ok else msg})
+            return self.send_json({"ok": ok, "message": msg.lstrip("!"), "user": board_get(home)}, 200 if ok else 400)
+        if u == "/api/mail":
+            ok, msg, letter = do_mail(form, tree, home)
+            self.server.ob().sent(form.get("name"))
+            return self.send_json({"ok": ok, "message": msg.lstrip("!"), "letter": letter}, 200 if ok else 400)
+        if u == "/api/order":
+            for k in ("kind", "target", "role", "model", "count", "priority", "quota", "budget"):
+                if k in form and not isinstance(form[k], (str, int)):
+                    return self.fail(400, "ArgumentsBad", "%s must be a string" % k)
+            ok, msg, letter = do_order(form, tree, home)
+            self.server.ob().sent(None)
+            return self.send_json({"ok": ok, "message": msg.lstrip("!"), "letter": letter}, 200 if ok else 400)
+        if u == "/answer":
+            msg = do_answer(form, tree, home)
+            threading.Thread(target=self.server.refresh, daemon=True).start()
+            return self.redirect("/classic?msg=" + urllib.parse.quote(msg))
+        if u == "/say":
+            msg = do_say(form, tree, home)
+            if form.get("back") == "agent":
+                return self.redirect("/agent?name=%s&msg=%s" % (urllib.parse.quote(form.get("name", "")),
+                                                                urllib.parse.quote(msg)))
+            return self.redirect("/classic?msg=" + urllib.parse.quote(msg))
+        self.fail(404, "NotFound", "no such path")
+
+
+class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+    ui = None
+    outbox = None
+
+    def ob(self):
+        if self.outbox is None:
+            self.outbox = Outbox(self.home, self.collector)
+        return self.outbox
+
+    def refresh(self):
+        self.collector.run_once()
+
+
+# ---- v2 (11-14, 03 §12 / §12.8) ----
+V2_ASSET_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+V2_MIME = {".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml",
+           ".woff2": "font/woff2", ".png": "image/png", ".map": "application/json; charset=utf-8"}
+UI_KEYS = ("seen", "dismissed", "seats", "prefs")
+UI_MERGE = ("seen", "dismissed")
+UI_MAX = 256 * 1024
+UI_PRUNE_S = 14 * 86400
+BOARD1_KEYS = ("format", "seq", "updated_at", "by", "mode", "text", "doing", "waiting_on", "back_at", "back_text",
+               "expires_at", "accept", "deputy")
+
+
+def read_board1(path):
+    """An agent's own board (ok-board board/1, board-1114/06 §7). No file = not posted (None); a wrong format = None.
+    Only the known keys are passed on, strings masked; the four reading steps (§7.3) are done by the page."""
+    b = load_json(path, None)
+    if not isinstance(b, dict) or b.get("format") != "board/1":
+        return None
+    out = {}
+    for k in BOARD1_KEYS:
+        v = b.get(k)
+        if v is None:
+            continue
+        if isinstance(v, str):
+            v = mask(v)[:1000]
+        elif k == "waiting_on":
+            v = [{kk: (mask(vv)[:200] if isinstance(vv, str) else vv) for kk, vv in w.items()
+                  if kk in ("who", "what", "since_at", "ref", "level", "notified_at")}
+                 for w in v[:20] if isinstance(w, dict)] if isinstance(v, list) else None
+        elif not isinstance(v, (int, float, bool)):
+            continue
+        out[k] = v
+    return out
+
+
+def public_node(v):
+    n = {k: vv for k, vv in v.items() if k not in ("stack", "subagents")}
+    if isinstance(n.get("rollup"), dict):
+        n["rollup"] = {k: vv for k, vv in n["rollup"].items() if not k.startswith("_")}
+    return n
+
+
+def rev_hash(obj):
+    return hashlib.sha1(json.dumps(obj, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")).hexdigest()[:16]
+
+
+def file_sig(*paths):
+    out = []
+    for p in paths:
+        try:
+            st = os.stat(p)
+            out.append("%d.%d" % (st.st_mtime_ns, st.st_size))
+        except OSError:
+            out.append("-")
+    return rev_hash(out)
+
+
+def tree_rev(tree):
+    """rev.tree: the tree minus what changes every round without meaning anything (12.1 #4): generated_at,
+    llm_workers, every why, an external's checked time. The page counts "N min ago" itself from active_at."""
+    if not tree:
+        return "none"
+    nodes = {}
+    for k, v in (tree.get("nodes") or {}).items():
+        n = {kk: vv for kk, vv in v.items() if kk not in ("why", "stack", "subagents", "fixed_light")}
+        if isinstance(n.get("rollup"), dict):
+            n["rollup"] = {kk: vv for kk, vv in n["rollup"].items() if kk not in ("why",) and not kk.startswith("_")}
+        if isinstance(n.get("team_light"), dict):
+            n["team_light"] = {"light": n["team_light"].get("light")}
+        if v.get("kind") == "external":
+            n.pop("active_at", None)
+            n["ext"] = {kk: vv for kk, vv in (v.get("ext") or {}).items() if kk != "ss_at"}
+            n["light"] = (v.get("fixed_light") or [None])[0]
+        nodes[k] = n
+    return rev_hash({"nodes": nodes, "roots": tree.get("roots")})
+
+
+REV_CACHE = {"key": None, "val": None}
+
+
+def revs_of(server, tree):
+    """rev for the seven kinds (B2 + 12.8 #10). Tree / asks / relay are hashed once per tree object."""
+    home = server.home
+    key = id(tree)
+    if REV_CACHE["key"] != key:
+        REV_CACHE["key"], REV_CACHE["val"] = key, {
+            "tree": tree_rev(tree), "asks": rev_hash((tree or {}).get("zone")), "relay": rev_hash((tree or {}).get("relay"))}
+    r = dict(REV_CACHE["val"])
+    sent = os.path.join(home.state, "sent.jsonl")
+    r["board"] = file_sig(os.path.join(board_dir(home), "user.json"))
+    r["answered"] = file_sig(sent)
+    r["outbox"] = server.ob().rev(tree)
+    r["ui_state"] = file_sig(*[os.path.join(home.state, "ui", k + ".json") for k in UI_KEYS])
+    return r
+
+
+def ext_checked_at(tree):
+    """12.8 #7: the last health check time of the outside services (kept out of rev.tree; the page shows it)."""
+    ts = [v.get("active_at") for v in ((tree or {}).get("nodes") or {}).values() if v.get("kind") == "external"]
+    ts = [t for t in ts if t]
+    return max(ts) if ts else None
+
+
+class Outbox:
+    """B3 + 12.8 #9: what the user sent (sent.jsonl say / mail / order) with its delivery state.
+    Replies are matched every time (cheap, from the relay letters in memory). queued / read needs `ctl state`,
+    so that runs in a background thread: on a pulse or outbox read when older than 30 s, after every collector
+    round while a v2 page polled in the last 120 s, and at once for an agent that just wrote to the relay.
+    At most 6 agents per run: under 24 h every run, 1-7 days every 6th run, older not at all ("too old to follow")."""
+    PER_RUN = 6
+    OLD_EVERY = 6
+
+    def __init__(self, home, collector):
+        self.home, self.collector = home, collector
+        self.status = {}          # letter -> {"delivery", "queue_ahead", "at"}
+        self.checked_at = None
+        self.pulse_at = 0
+        self.runs = 0
+        self.rr = 0
+        self.urgent = set()
+        self.lock = threading.Lock()
+        self.relay_seen = None
+        self.ver = 0
+        collector.on_tree.append(self.after_tree)
+
+    def sent(self, name):
+        if name:
+            DELIVERY_CACHE.pop(name, None)
+            self.urgent.add(name)
+        self.ver += 1
+        self.kick()
+
+    def after_tree(self, tree):
+        ids = {x.get("letter") for x in (tree or {}).get("relay") or []}
+        if self.relay_seen is not None:
+            for x in (tree or {}).get("relay") or []:
+                if x.get("letter") not in self.relay_seen:
+                    self.urgent.add(x.get("from"))
+        self.relay_seen = ids
+        if time.time() - self.pulse_at < 120 or self.urgent:
+            self.kick()
+
+    def kick_if_old(self):
+        if not self.checked_at or time.time() - self.checked_at > 30:
+            self.kick()
+
+    def kick(self):
+        if self.lock.locked():
+            return
+        threading.Thread(target=self.run, daemon=True).start()
+
+    def raw(self, tree, days=7):
+        since = time.time() - days * 86400
+        outs = [o for o in read_sent(self.home, None, 2000) if (o.get("sent_at") or 0) >= since and o.get("letter")]
+        return outs, self.collector.relay_letters()
+
+    def run(self):
+        if not self.lock.acquire(blocking=False):
+            return
+        try:
+            tree, _ = self.collector.get()
+            nodes = (tree or {}).get("nodes") or {}
+            outs, ins = self.raw(tree)
+            self.match(outs, ins)
+            t = time.time()
+            self.runs += 1
+            want = {}
+            for o in outs:
+                if o.get("reply") or o.get("to") not in nodes or nodes[o["to"]].get("kind") != "agent":
+                    continue
+                age = t - (o.get("sent_at") or 0)
+                if age < 86400 or self.runs % self.OLD_EVERY == 0:
+                    want.setdefault(o["to"], []).append(o)
+            names = sorted(want)
+            pick = [n for n in names if n in self.urgent]
+            rest = [n for n in names if n not in pick]
+            if rest:
+                k = self.rr % len(rest)
+                rest = rest[k:] + rest[:k]
+                self.rr += 1
+            for name in (pick + rest)[:self.PER_RUN]:
+                self.urgent.discard(name)
+                mine = [o for o in outs if o.get("to") == name]
+                delivery(name, mine, ins, t)
+                for o in mine:
+                    if o.get("delivery"):
+                        old = self.status.get(o["letter"]) or {}
+                        new = {"delivery": o["delivery"], "queue_ahead": o.get("queue_ahead"), "at": t}
+                        if (old.get("delivery"), old.get("queue_ahead")) != (new["delivery"], new["queue_ahead"]):
+                            self.ver += 1
+                        self.status[o["letter"]] = new
+            self.checked_at = t
+        except Exception as e:
+            log_ev(self.home, "outbox_failed", error="%s: %s" % (type(e).__name__, e))
+        finally:
+            self.lock.release()
+
+    @staticmethod
+    def match(outs, ins):
+        by_reply = {}
+        for x in ins:
+            if x.get("in_reply_to"):
+                by_reply.setdefault(x["in_reply_to"], x)
+        for o in outs:
+            r = by_reply.get(o.get("letter"))
+            if not r and o.get("kind") == "say":
+                later = [x for x in ins if x.get("from") == o.get("to") and (x.get("sent_at") or 0) > (o.get("sent_at") or 0)]
+                r = min(later, key=lambda x: x.get("sent_at") or 0) if later else None
+            o["reply"] = {"letter": r.get("letter"), "status": r.get("status"), "title": r.get("title"),
+                          "at": r.get("sent_at")} if r else None
+
+    def items(self, tree, days=7):
+        nodes = (tree or {}).get("nodes") or {}
+        outs, ins = self.raw(tree, days)
+        self.match(outs, ins)
+        t = time.time()
+        res = []
+        for o in sorted(outs, key=lambda x: x.get("sent_at") or 0, reverse=True)[:300]:
+            st = self.status.get(o["letter"]) or {}
+            n = nodes.get(o.get("to"))
+            if o["reply"]:
+                d, qa = "replied", None
+            elif t - (o.get("sent_at") or 0) > 7 * 86400:
+                d, qa = "unknown", None
+            else:
+                d, qa = st.get("delivery") or "unknown", st.get("queue_ahead")
+                if d == "replied":
+                    d = "read"      # a reply seen once but not matched now: do not claim it
+            turn = None
+            if n and n.get("kind") == "agent" and (n.get("state") or "").lower() == "running" and (n.get("queued") or n.get("busy")):
+                turn = {"queued": n.get("queued") or 0, "busy": n.get("busy"), "active_at": n.get("active_at")}
+            order = o.get("order") if isinstance(o.get("order"), dict) else None
+            res.append({"letter": o["letter"], "batch": o.get("batch"), "kind": o.get("kind"), "to": o.get("to"),
+                        "target": (order or {}).get("target"), "title": o.get("title"), "what": short(o.get("what") or "", 300),
+                        "status": o.get("status"), "sent_at": o.get("sent_at"), "delivery": d, "queue_ahead": qa,
+                        "checked_at": st.get("at"), "turn": turn, "reply": o["reply"], "order": order,
+                        "correction_of": o.get("correction_of"), "gone": o.get("to") not in nodes,
+                        "followed": t - (o.get("sent_at") or 0) <= 7 * 86400})
+        return res
+
+    def rev(self, tree):
+        return rev_hash([self.ver, file_sig(os.path.join(self.home.state, "sent.jsonl")),
+                         rev_hash((tree or {}).get("relay"))])
+
+
+def ui_path(home, key):
+    return os.path.join(home.state, "ui", key + ".json")
+
+
+def ui_get(home, key):
+    d = load_json(ui_path(home, key), None)
+    if not isinstance(d, dict):
+        return {"key": key, "value": None, "at": None, "rev": 0}
+    return {"key": key, "value": d.get("value"), "at": d.get("at"), "rev": d.get("rev", 0)}
+
+
+UI_LOCK = threading.Lock()
+
+
+def ui_put(home, key, body):
+    """B4. seen / dismissed: body {id: epoch | null} merged into the stored {id: epoch} (newer time wins, null
+    removes), entries older than 14 days dropped. seats / prefs: body replaces the value. Returns (ok, state)."""
+    if key in UI_MERGE:
+        if not isinstance(body, dict) or not all(isinstance(k, str) and len(k) <= 200 for k in body) or \
+                not all(v is None or isinstance(v, (int, float)) for v in body.values()):
+            return False, "%s takes {id: epoch | null}" % key
+    elif not isinstance(body, dict):
+        return False, "%s takes a JSON object" % key
+    with UI_LOCK:
+        cur = ui_get(home, key)
+        t = time.time()
+        if key in UI_MERGE:
+            val = dict(cur["value"]) if isinstance(cur["value"], dict) else {}
+            for k, v in body.items():
+                if v is None:
+                    val.pop(k, None)
+                else:
+                    val[k] = max(v, val.get(k) or 0)
+            val = {k: v for k, v in val.items() if isinstance(v, (int, float)) and v > t - UI_PRUNE_S}
+        else:
+            val = body
+        rec = {"value": val, "at": t, "rev": int(cur.get("rev") or 0) + 1}
+        if len(json.dumps(rec, ensure_ascii=False)) > UI_MAX:
+            return False, "too big (limit 256 KB)"
+        os.makedirs(os.path.dirname(ui_path(home, key)), exist_ok=True)
+        write_json(ui_path(home, key), rec)
+    return True, {"key": key, "value": val, "at": rec["at"], "rev": rec["rev"]}
+
+
+def ui_ports(home):
+    """B1: extra listeners. config "ui_ports": [{"port": 8768, "dir": "ui/v2/dist"}] (dir relative to this file);
+    default: 8768 for ui/v2/dist. A dir without index.html is not served (the port is not opened)."""
+    conf = home.config().get("ui_ports")
+    if conf is None:
+        conf = [{"port": 8768, "dir": "ui/v2/dist"}]
+    out = []
+    for e in conf if isinstance(conf, list) else []:
+        if not isinstance(e, dict) or not isinstance(e.get("port"), int):
+            continue
+        d = e.get("dir") or ""
+        d = d if os.path.isabs(d) else os.path.join(HERE_DIR, d)
+        if os.path.isfile(os.path.join(d, "index.html")):
+            out.append({"port": e["port"], "dir": d})
+    return out
+
+
+# ---- the user's board (布告欄): one line the user leaves before going away; agents read it with `aos-view board` ----
+
+def board_dir(home):
+    return os.path.join(home.dir, "board")
+
+
+def board_get(home):
+    b = load_json(os.path.join(board_dir(home), "user.json"), None)
+    if not isinstance(b, dict) or not b.get("text"):
+        return None
+    return {"at": b.get("at"), "text": mask(b.get("text") or ""), "back": mask(b.get("back") or "") or None}
+
+
+def do_board(form, home):
+    text = (form.get("text") or "").strip()
+    back = (form.get("back") or "").strip()
+    if len(text) > 1000 or len(back) > 100:
+        return False, "!太長了（布告上限 1000 字，回來時間 100 字）"
+    os.makedirs(board_dir(home), exist_ok=True)
+    rec = {"at": now_local(), "text": text, "back": back or None, "by": "user"}
+    write_json(os.path.join(board_dir(home), "user.json"), rec)
+    append_line(os.path.join(board_dir(home), "user.jsonl"), rec)
+    return True, "布告欄已更新" if text else "布告欄已清空"
+
+
+def board_text(home, all_teams=False):
+    b = board_get(home)
+    if b:
+        out = ["使用者布告欄（%s 留）：%s" % (b["at"], b["text"])]
+        if b["back"]:
+            out.append("預計回來：%s" % b["back"])
+    else:
+        out = ["使用者布告欄是空的（沒有留話）。"]
+    if all_teams:
+        root = os.path.join(home.dir, "teams")
+        for t in sorted(os.listdir(root)) if os.path.isdir(root) else []:
+            try:
+                with open(os.path.join(root, t, "notes.jsonl"), encoding="utf-8") as f:
+                    last = json.loads(f.readlines()[-1])
+            except (OSError, ValueError, IndexError):
+                continue
+            out.append("隊 %s（%s，%s）：%s" % (t, last.get("at"), last.get("status"), mask(last.get("text") or "")))
+    return "\n".join(out)
+
+
+def cmd_board(home, args):
+    if args and args[0] in ("-h", "--help"):
+        print("usage: aos-view board [--all] [--json]   read the user's board (the user writes it on the page); "
+              "--all adds every team's latest note (aos-view note)")
+        return
+    if "--json" in args:
+        print(json.dumps({"user": board_get(home)}, ensure_ascii=False))
+        return
+    print(board_text(home, "--all" in args))
+
+
+# ---- phase 1 commands: note, decide, match (captains), aide-tick (the aide's hook), ingest ----
+
+def take_opt(args, name):
+    if name in args:
+        i = args.index(name)
+        if i + 1 >= len(args):
+            raise Fail("ArgumentsBad", "%s needs a value" % name)
+        v = args[i + 1]
+        del args[i:i + 2]
+        return v
+    return None
+
+
+def resolve_team(given):
+    if given:
+        return given
+    st = os.environ.get("AOS_STACK", "").rstrip("/")
+    name = os.path.basename(st) if st else ""
+    if name:
+        rows = table_rows()
+        if isinstance(rows, list) and any(isinstance(r, dict) and r.get("name") == name for r in rows):
+            return name
+    raise Fail("TeamMissing", "give --team T ($AOS_STACK %s is not a name on the daemon table)" % (name or "is not set"))
+
+
+def cmd_note(home, args):
+    team = take_opt(args, "--team")
+    on = take_opt(args, "--on")
+    if len(args) < 2:
+        raise Fail("ArgumentsBad", "usage: aos-view note [--team T] [--on NAME] STATUS TEXT")
+    status, text = args[0], " ".join(args[1:]).strip()
+    if status not in NOTE_STATUSES:
+        raise Fail("StatusBad", "STATUS must be one of %s" % " ".join(NOTE_STATUSES))
+    if not text:
+        raise Fail("ArgumentsBad", "TEXT is empty")
+    if len(text) > 2000:
+        raise Fail("ArgumentsBad", "TEXT is longer than 2000 characters")
+    if on is not None and not NAME_RE.match(on):
+        raise Fail("ArgumentsBad", "--on NAME: letters, digits, _ . - only")
+    tm = Team(home, resolve_team(team)).ensure()
+    append_line(tm.notes_path, {"at": now_local(), "status": status, "text": text, "on": on})
+    print("ok: note %s %s" % (tm.name, status))
+
+
+def cmd_decide(home, args):
+    team = take_opt(args, "--team")
+    if len(args) != 1:
+        raise Fail("ArgumentsBad", "usage: aos-view decide [--team T] FILE")
+    try:
+        with open(args[0], "rb") as f:
+            raw = f.read()
+        text = raw.decode("utf-8")
+    except OSError as e:
+        raise Fail("FileMissing", "cannot read %s: %s" % (args[0], e))
+    except UnicodeDecodeError:
+        raise Fail("SchemaBad", "%s is not UTF-8" % args[0])
+    hit = secret_hit(text)
+    if hit:
+        raise Fail("SecretInPayload", "%s looks like it holds a secret (%s); take it out and try again" % (args[0], hit))
+    try:
+        data = json.loads(text)
+    except ValueError as e:
+        raise Fail("SchemaBad", "%s is not JSON: %s" % (args[0], e))
+    if not isinstance(data, dict):
+        raise Fail("SchemaBad", "the letter must be a JSON object")
+    zmod = need_zone_mod()
+    try:
+        zmod.check_letter(zmod.build_letter(dict(data), None))
+    except zmod.Fail as e:
+        raise Fail(e.code, str(e))
+    sha = canonical_sha(data, zmod)
+    tm = Team(home, resolve_team(team)).ensure()
+    while True:
+        rid = "%s-%s-%s" % (tm.name, time.strftime("%Y%m%d-%H%M%S"), secrets.token_hex(2))
+        dst = os.path.join(tm.outbox, rid + ".json")
+        if not os.path.exists(dst) and not os.path.exists(os.path.join(tm.sent_dir, rid + ".json")):
+            break
+    append_line(tm.sent_log, {"id": rid, "at": now_local(), "sha256": sha, "kind": data.get("kind"),
+                              "title": data.get("title")})
+    tmp = dst + ".tmp"
+    with open(tmp, "wb") as f:
+        f.write(raw)
+    os.replace(tmp, dst)
+    print(rid)
+
+
+def cmd_match(home, args):
+    if len(args) != 1:
+        raise Fail("ArgumentsBad", "usage: aos-view match REPLY_FOLDER")
+    p = os.path.abspath(args[0])
+    if p.endswith("/letter.json"):
+        p = p[:-len("/letter.json")]
+    code, out, err = run([AOS_USER, "verify", p], timeout=30)
+    if code != 0:
+        line = ((err or out).strip().splitlines() or ["aos-user verify failed"])[-1]
+        raise Fail("VerifyBad", line)
+    lt = load_json(os.path.join(p, "letter.json"), None)
+    irt = lt.get("in_reply_to") if isinstance(lt, dict) else None
+    if not irt:
+        raise Fail("LetterBad", "%s has no in_reply_to" % p)
+    zmod = need_zone_mod()
+    zd = zmod.zone_dir(None)
+    orig = None
+    droot = os.path.join(zd, "done")
+    for m in sorted(os.listdir(droot)) if os.path.isdir(droot) else []:
+        q = os.path.join(droot, m, irt, "letter.json")
+        if os.path.exists(q):
+            orig = q
+    ob = (load_json(orig, {}) or {}).get("body") if orig else None
+    if not isinstance(ob, dict):
+        raise Fail("PayloadMismatch", "the zone has no letter %s in done/" % irt)
+    mo = re.match(r"^([^/\s]+)/(\S+) sha256:([0-9a-f]{64})\b", ob.get("origin") or "")
+    if not mo:
+        raise Fail("PayloadMismatch", "letter %s was not passed by aos-view (no origin)" % irt)
+    team, rid = mo.group(1), mo.group(2)
+    sha = canonical_sha(ob, zmod)
+    rec = next((r for r in read_lines(Team(home, team).sent_log) if r.get("id") == rid), None)
+    if not rec:
+        raise Fail("PayloadMismatch", "%s/%s is not in the team's sent.jsonl" % (team, rid))
+    if rec.get("sha256") != sha:
+        raise Fail("PayloadMismatch", "%s/%s: the zone's letter hashes to %s, the captain's file to %s"
+                   % (team, rid, sha, rec.get("sha256")))
+    print("ok: match %s/%s sha256:%s" % (team, rid, sha))
+
+
+def cmd_aide_tick(home, args):
+    team = take_opt(args, "--team")
+    ev = {}
+    if not sys.stdin.isatty():
+        raw = sys.stdin.read()
+        if raw.strip():
+            try:
+                ev = json.loads(raw)
+            except ValueError:
+                raise Fail("ArgumentsBad", "stdin is not the hook's event JSON")
+    r = aide_tick(home, team, ev)
+    print("aide-tick %s: passed %d, report %s, beat %s%s" % (
+        r["team"], len(r["passed"]), "sent" if r["report"] else "-", "sent" if r["beat"] else "-",
+        ("; errors: " + " | ".join(r["errors"])) if r["errors"] else ""))
+    if r["errors"]:
+        sys.stderr.write("aos-view: warning: %s\n" % " | ".join(r["errors"]))
+
+
+def cmd_ingest(home, args):
+    print(json.dumps(ingest(home), ensure_ascii=False))
+
+
+PHASE1 = {"board": cmd_board, "note": cmd_note, "decide": cmd_decide, "match": cmd_match, "aide-tick": cmd_aide_tick, "ingest": cmd_ingest}
+
+
+def main(argv):
+    port, home_dir, args = 8767, None, []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--port":
+            port = int(argv[i + 1]); i += 2; continue
+        if a == "--ui":
+            global WEB_DIR
+            WEB_DIR = os.path.abspath(argv[i + 1]); i += 2; continue
+        if a == "--home":
+            home_dir = argv[i + 1]; i += 2; continue
+        if a in ("-h", "--help"):
+            print(__doc__); return 0
+        args.append(a); i += 1
+    home = Home(home_dir or os.environ.get("AOS_VIEW_HOME") or os.path.expanduser("~/.aos/view"))
+    cmd = args[0] if args else "serve"
+    if cmd in PHASE1:
+        try:
+            PHASE1[cmd](home, args[1:])
+            return 0
+        except Fail as e:
+            print("aos-view: error: %s %s" % (e.code, e), file=sys.stderr)
+            return 1
+    home.init()
+    if cmd == "init":
+        print(home.dir); return 0
+    c = Collector(home)
+    if cmd == "snapshot":
+        print(json.dumps(c.collect(), ensure_ascii=False, indent=1, default=str)); return 0
+    if cmd == "serve":
+        srv = Server(("127.0.0.1", port), Handler)
+        ob = Outbox(home, c)
+        srv.collector, srv.home, srv.token, srv.outbox, srv.ui = c, home, home.token(), ob, None
+        for e in ui_ports(home):
+            if e["port"] == port:
+                continue
+            try:
+                s2 = Server(("127.0.0.1", e["port"]), Handler)
+            except OSError as ex:
+                print("aos-view: warning: port %d not opened: %s" % (e["port"], ex), file=sys.stderr, flush=True)
+                continue
+            s2.collector, s2.home, s2.token, s2.outbox, s2.ui = c, home, srv.token, ob, e
+            threading.Thread(target=s2.serve_forever, daemon=True).start()
+            print("aos-view: http://127.0.0.1:%d/  (ui %s)" % (e["port"], e["dir"]), flush=True)
+        threading.Thread(target=c.loop, daemon=True).start()
+        print("aos-view: http://127.0.0.1:%d/  (home %s, pid %d)" % (port, home.dir, os.getpid()), flush=True)
+        try:
+            srv.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        return 0
+    print("aos-view: error: CommandUnknown %s" % cmd, file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
