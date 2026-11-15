@@ -31,8 +31,9 @@ class TriageTest(unittest.TestCase):
             "protect": ["eca_main", "boss", "llm-gpt", "_sweeper"],
             "names": ["ok-*", "xiaosi"],
             "defs": [str(self.agents / "opus-kernel")],
-            "def_roots": [str(self.repo / "wf" / "temp" / "ok-*"), str(self.code / "*-1114")],
-            "ws_roots": [str(self.repo / "wf" / "temp"), str(self.code / "*-1114")],
+            # 使用者 11-15「~/code要審。」：~/code 不進 def_roots／ws_roots（不自動放行）；仍在 home_roots，所以留給人審、不直接拒
+            "def_roots": [str(self.repo / "wf" / "temp" / "ok-*")],
+            "ws_roots": [str(self.repo / "wf" / "temp")],
             "deny_roots": [str(self.home / "lib"), str(self.home / "py"), str(self.home / "knowledge")],
             "home_roots": [str(self.repo), str(self.home), str(self.code)],
             "daemon": str(self.daemon),
@@ -68,13 +69,12 @@ class TriageTest(unittest.TestCase):
         t = self.repo / "wf" / "temp"
         self.assertEqual(self.judge(self.add("ok-b", self.agents / "opus-kernel", t / "ok-b"))[0], "pass")
         self.assertEqual(self.judge(self.add("sol-2", t / "ok-a" / "defs" / "sol", t / "ok-a" / "sol"))[0], "pass")
-        self.assertEqual(self.judge(self.add("w", self.code / "kf-1114" / "defs" / "w", self.code / "kf-1114" / "ws"))[0], "pass")
         # aos-agent 帶 envs 的寫法：exec 是 aos-exec 的命令列，目標是相對 AOS_DAEMON 的指示詞
         env_exec = {"argv": ["aos-exec", "--", {"$env": "TEST_HOME", "$path": "/agents/opus-kernel"}], "envs": {"A": "1"}}
         body = {"procs_added": {"ok-c": {"exec": env_exec, "def": str(self.agents / "opus-kernel"), "ws": str(t / "ok-c")}}}
         self.assertEqual(self.judge(body)[0], "pass")
         rows = self.log()
-        self.assertEqual([r["verdict"] for r in rows], ["pass"] * 4)
+        self.assertEqual([r["verdict"] for r in rows], ["pass"] * 3)
         self.assertEqual(set(rows[0]), {"at", "letter", "from", "verdict", "why", "what"})
         self.assertEqual((rows[0]["letter"], rows[0]["from"], rows[0]["what"]), ("L", "/s", "added ok-b"))
 
@@ -101,7 +101,8 @@ class TriageTest(unittest.TestCase):
         cases = [
             self.add("x", self.home / "agents" / "other", t / "x"),                  # 不認得的定義
             self.add("x", self.agents / "opus-kernel", self.repo / "proto8"),        # ws 不在 temp
-            self.add("x", self.code / "other" / "d", self.code / "other"),           # ~/code 但不是 -1114
+            self.add("w", self.code / "kf-1114" / "defs" / "w", self.code / "kf-1114" / "ws"),   # ~/code 的暫存樹也要審（11-15）
+            self.add("x", self.code / "other" / "d", self.code / "other"),           # ~/code 別的夾
             {"procs_added": {"x": {"exec": "rel/def", "ws": str(t / "x")}}},         # 相對路徑
             {"procs_added": {"x": {"exec": {"argv": ["sh", "-c", "x"]}, "ws": str(t / "x")}}},
             self.add("x", self.agents / "opus-kernel", t / "x", stack=str(self.daemon / "procs" / "ok-a")),
