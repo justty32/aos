@@ -102,6 +102,26 @@ class RealDaemon(unittest.TestCase):
         self.assertIn("subagents 1/4", self.ok(TOOL, {"op": "add", "def": str(TEMPLATE), "name": "kid2"}))
         self.ok(TOOL, {"op": "rm", "name": "kid2", "purge": True})
 
+    def test_old_format_book_is_refused_and_left_alone(self):
+        """11-15：換樹前（批 6 之前）寫的相對路徑名冊＝BookOld、名冊逐位元不動、子照樣在表上（11-14 ok-release 的例子）。"""
+        self.ok(TOOL, {"op": "add", "def": str(TEMPLATE), "name": "kid", "ws": "kid"})
+        book = Path(self.env["AOS_STACK"]) / "subagents.json"
+        kid_stack = json.loads(book.read_text())[0]["stack"]
+        book.write_text(json.dumps([{"name": "kid", "stack": os.path.relpath(kid_stack, os.path.realpath(self.dstack))}]) + "\n")
+        before = book.read_bytes()
+        for args in ({"op": "ls"}, {"op": "state", "name": "kid"}, {"op": "add", "def": str(TEMPLATE), "name": "kid2"}):
+            r = self.tool(TOOL, args)
+            self.assertEqual(r.returncode, 1, (args, r.stdout, r.stderr))
+            self.assertIn("error: BookOld", r.stdout)
+            self.assertEqual(book.read_bytes(), before)
+        names = [row["name"] for row in json.loads(self.ok(CTL_TOOL, {"op": "ls", "json": True}))]
+        self.assertIn("kid", names)
+        self.assertNotIn("kid2", names)
+        # 重建成新格式（絕對路徑）之後一切照常
+        book.write_text(json.dumps([{"name": "kid", "stack": kid_stack}]) + "\n")
+        self.assertIn("subagents 1/4", self.ok(TOOL, {"op": "ls"}))
+        self.ok(TOOL, {"op": "rm", "name": "kid", "purge": True})
+
     def test_requests_go_to_aos_kernel_without_aos_daemon(self):
         """只靠會答查詢信的框架站掛子、存絕對 stack、對帳、移除；不需要 AOS_DAEMON。"""
         from kernel_fixture import KernelFixture
