@@ -36,11 +36,11 @@
 | 主題檔 | 收什麼 | 未處理 | 已排入 | 已解 |
 |---|---|---|---|---|
 | [daemon與行程](daemon與行程.md) | daemon、aos-loop、daemon 表、--limits、認行程、帶 envs 的 add 掛法、部長唯讀看自己的線、fork 層命令列、eca 寫出 result 後 CLI 不退出 | 6 | 1 | 2 |
-| [信件與溝通](信件與溝通.md) | mailbox、aos-post 信件格式（含 reply_to、letter.json 路徑）、專區信（含授權範圍）、say／ask／listen、回答配對信名、信件交錯、信的時區、一次寄多人、長回合裡收信 | 9 | 2 | 3 |
+| [信件與溝通](信件與溝通.md) | mailbox、aos-post 信件格式（含 reply_to、letter.json 路徑）、專區信（含授權範圍）、say／ask／listen、回答配對信名、信件交錯、信的時區、一次寄多人、長回合裡收信 | 9 | 1 | 4 |
 | [kernel與額度](kernel與額度.md) | llm kernel、腦額度、找 kernel、kernel hook、kernel_gate（hold、站跟主人的鐘、hold 通知）、只設 AOS_KERNEL 的 subagent、提示快取與 session id、排腦的隊看不看得出來、帳本與 Claude 用量、kernel_llm 的 live 測試 | 6 | 2 | 6 |
 | [fsm範本](fsm範本.md) | agent-fsm 範本、工具包（含 user 包、加一整包）、system 文字（含知識庫路徑）、guard 與可寫範圍、before_tool 擋下的標法、wait 與冷卻、goal、sol 第一輪只說不做、llm_settings 註解、brain_failed 事件兩種身、eca-claude 範本（goal 提醒、dontAsk 放行、預設權限、自動記憶、cli.json 覆寫） | 14 | 2 | 5 |
 | [指令與工具](指令與工具.md) | aos-agent（含 ctl stop／rm 碰到答題中、agents_ctl 與 subagent 名冊、history set）、aos-view、建置、wf/tools（commit-request 的 claim／claims／--rm／錯誤訊息、check_anchors、換檔工具、生效方式）、工具說明（tooldef）、工具錯誤代號、--help 字樣（含 aos-daemon-ctl rm）、路徑裡的 `#` 與 keep、agent_def 複製、aos-lock、glob 掃描上限、clock_register、subagent 的 system set、wf/public/tools 的 scan | 23 | 1 | 3 |
 | [知識庫與文件](知識庫與文件.md) | 知識庫頁、元件 docs 跟程式對不上或該寫沒寫（gate 的 home_roots、stack 檔案佈局、表與 hook 事件的欄位、hook 的 AOS_STACK、Claude 子 agent）、知識頁大小上限與鍵的寫法、複本落後 repo | 9 | 0 | 1 |
 | [安全](安全.md) | 密鑰外洩面、proc 環境繼承、暫存檔與小窗檔權限、aos-share | 3 | 1 | 0 |
 
-合計 99 條：未處理 69、已排入 9、已解 21（11-15 claude-b7 逐檔數「狀態：」行重算：daemon與行程的 B7 改已解、「子 agent 不知道是誰生了它」改未處理（部分已解）；之前第十三批也是這樣重算；「部分已做／部分已解」的仍算未處理；「安全」那條只有一部分排入，照使用者指定的狀態算已排入）。第一批實際入庫 17 條，上面「16 條」是當時的筆誤，照各檔實數。
+合計 99 條：未處理 69、已排入 8、已解 22（11-15 claude-rm：信件與溝通「agent 的回答對不到是回哪封信」改已解；11-15 claude-b7 逐檔數「狀態：」行重算：daemon與行程的 B7 改已解、「子 agent 不知道是誰生了它」改未處理（部分已解）；之前第十三批也是這樣重算；「部分已做／部分已解」的仍算未處理；「安全」那條只有一部分排入，照使用者指定的狀態算已排入）。第一批實際入庫 17 條，上面「16 條」是當時的筆誤，照各檔實數。
