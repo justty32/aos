@@ -18,6 +18,7 @@ void Daemon::check_stuck(const std::string& name, Child& c) {
     }
     using aos::loop::CtlWindow;
     using aos::loop::StateFluxWindow;
+    using aos::loop::StopCauseWindow;
     Json ctl = ctl_name(c.stack, names_);
     Json flux = StateFluxWindow::default_name;
     // 父寫的設定只提供公開窗名，不據此分類。
@@ -78,7 +79,7 @@ void Daemon::check_stuck(const std::string& name, Child& c) {
         Json line = Json::object({{"at", aos::utc_now_ms()}, {"name", name}, {"phase", "stuck"},
                                   {"reason", c.stuck_restarts >= 3 ? "control window response timed out 3 times without a response; stopping" : "control window response timed out; restarting"}});
         log_line(line);
-        term(c);   // 現成 SIGTERM／10 秒 SIGKILL／settle 路徑。
+        term(name, c, StopCauseWindow::stuck);   // 現成 SIGTERM／10 秒 SIGKILL／settle 路徑。
         c.stuck_restart = true;
     }
 }

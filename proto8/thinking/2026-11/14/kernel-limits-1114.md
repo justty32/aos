@@ -322,3 +322,35 @@ sol-4 開工前回報 BLOCKED：主行程退 0 的列會從表上移除（`tend.
 - **注意**：`~/.local/bin/aos-sandbox` 是指到 repo 的符號連結，所以搬進 repo 的那一刻新版就生效了。影響只有「非 root、user 寫帳號名」這一種設定：以前直接 UserBad，現在改走 sudo。已經在申請信裡寫明。
 - commit 訊息在 `wf/temp/ok-limits/msg/b6.txt`。
 - **已 commit：1fcc33920**（頂層 11-14 准，沒有 push）。新版留著不退：使用者早上答了 (a)，要的就是這個行為。
+
+## 11-14 午：修 wf/advices 的 daemon 類小條（頂層派，使用者准）
+
+挑了三條，都在 daemon與行程.md，動手前已寄給 xiaosi：
+1. after_stop 分不出停止原因 → 圖紙 [B7](kernel-limits-1114/B7-stop-reason.md)，交 sol-5 施工（T8）。
+2. 子 agent 不知道誰生了它，只做 who 那段。我自己改：`ctl who --json` 和 `ctl state` 的 who 部分加一欄 `notify_box`，只有查自己時才照實給 `$AOS_NOTIFY_BOX`，否則 null，並註明不是身分證明。「表的列記 parent」留給 ok-astra。
+3. files／nofile，連帶 cpu_s 的說明。只改文件：subagent、agents_ctl 工具說明和知識庫 aos/agents/subagent 的 limits 例子改用 files，並寫明哪些鍵按程序計、哪些管整隻、沒有總 CPU 的鍵。不加 nofile 別名，因為 limits 鍵有三處各自驗（daemon limits.cpp、daemon_ctl、kernel limits_rule），加別名容易漏掉一處。
+
+暫存樹先同步到 repo d38a0d36f（a93b2bc）。第 2、3 條的測試：aos-agent 全套 118 項 OK（含 2 項預期失敗），新加 2 項；self_state、subagent、agents_ctl 的測試都 OK。
+
+### 第 3 條 limits 說明：已 commit 50e7a35bc（head-core 放行）
+
+- **新的回報路線**（11-14 13:2x 起）：ok-limits 歸底座部，部長是 head-core，進度、請示、commit 放行都改寄 head-core。
+- **欄位名**：ok-devt 管整套「身分與事件」設計。who 的 notify_box、B7 的 reason 等欄位名，要等兩邊定稿才 commit。
+- **拆件**：limits 這件拆出來先交。ok-devt 正式同意「nofile 照舊報錯、不收別名」。
+- **順手補 B5 漏的**：py/daemon_ctl 的 LIMIT_INTS 原本不認 mem_total_mb、procs_total，經 ctl add 或 subagent add 給這兩個鍵會被 ArgumentsBad 擋下。現在補上，新增 test_limits_keys.py，共 3 項。
+- **乾淨複本測試**：git archive f966d3fa6，經 clean.sh 跑，五夾全 OK——daemon-ctl 35、subagent 26（skip 2）、agents_ctl 4、py/tests 37、aos-agent 129（2 項預期失敗）。
+- **entry.py 進 repo 的那一刻就生效**：活樹的 aos-agent、aos-daemon-ctl 都指到 repo 的 cmd，起來後會往上找到 repo 的 proto8/py。換檔步驟：
+  1. 備份到 ~/code/limits-1114/backup/entry.py.f966d3fa6；
+  2. 新版寫成同資料夾的暫存檔，再 mv 蓋上；
+  3. 立刻 import，LIMIT_INTS 裡有兩個新鍵；
+  4. 跑 daemon-ctl 35 項，OK；
+  5. 跑 `aos-agent ctl ls`，正常。
+- **換樹**：活樹的 lib、knowledge 複本要重抄，已寄給 ok-kf。
+- **wf/advices 改「已解」**：只寫成 diff，放在 wf/temp/ok-limits/aos-advice/advices-limits-solved.diff。要由我交還是頂層交，頂層還沒定。
+
+### B7：after_stop 分得出 stop／sleep／rm（11-15 交件）
+
+- 11-14 碼已完成，頂層 15:26 定換樹凍結期間不交；ok-limits 11-15 收樹。11-15 由 Claude 線 claude-b7 接手（使用者 11-15「能做的先做」），在 git archive 的乾淨複本上套 diff、自己編 bin、`env -i` 跑全套後交件。
+- 名字照 ok-devt 定稿：`stop_cause.json`、鍵 `cause`、`AOS_LOOP_CAUSE`、事件欄 `cause`；值 `stop`／`sleep`／`remove`／`shutdown`／`stuck`／`signal`／`max`／`body_exit`／`error`。
+- 交接列的六件、真 daemon 九種情況的事件輸出、沒測到的（stuck、sudo／bwrap）都在圖紙 [B7](kernel-limits-1114/B7-stop-reason.md) 第 9 節。
+- 生效：aos-loop、aos-daemon 是 C++，進 main 不會改到活樹，要下次換樹編新的 bin；lib（hook_fire、self_hook 的說明）同樣跟換樹走。新舊混用不會壞（第 9.3 節）。

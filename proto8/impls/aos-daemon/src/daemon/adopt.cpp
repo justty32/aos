@@ -11,6 +11,7 @@
 namespace aos::daemon {
 
 using aos::loop::StateWindow;
+using aos::loop::StopCauseWindow;
 
 Json Daemon::unrel(const Json& v) const {
     if (!v.is_string() || v.get<std::string>().empty()) {
@@ -291,13 +292,13 @@ void Daemon::adopt() {
                 std::string mode = r.value("stop_mode", std::string("stop"));
                 if (mode == "sleep") {
                     c.nap = true;
-                    term(c);
+                    term(name, c, StopCauseWindow::sleep);   // 同一次啟動已寫過原因（例：stuck）就不改（tend.cpp 的 note_cause）
                 } else if (mode == "stop") {
                     c.soft = true;
                     stopped_.insert(name);
                     halt(name, c);
                 } else {
-                    term(c);
+                    term(name, c, StopCauseWindow::remove);
                 }
             }
             add(name, c);

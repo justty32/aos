@@ -4,6 +4,7 @@
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
 #include <csignal>
+#include <ctime>
 #include <filesystem>
 #include <sstream>
 #include <thread>
@@ -13,6 +14,7 @@
 namespace aos::daemon {
 
 using aos::loop::CtlWindow;
+using aos::loop::StopCauseWindow;
 
 using Clock = std::chrono::steady_clock;
 
@@ -62,7 +64,50 @@ static std::vector<pid_t> leaders_below(pid_t root) {
     return out;
 }
 
-void Daemon::term(Child& c) {
+// 現在的 CLOCK_BOOTTIME 換成 clock ticks（跟 /proc/<pid>/stat 第 22 欄同一個基準）；讀不到＝nullopt。
+static std::optional<long long> boot_ticks_now() {
+    timespec ts{};
+    long hz = sysconf(_SC_CLK_TCK);
+    if (hz <= 0 || clock_gettime(CLOCK_BOOTTIME, &ts) != 0) {
+        return std::nullopt;
+    }
+    return (long long)ts.tv_sec * hz + (long long)ts.tv_nsec / (1000000000LL / hz);
+}
+
+// 11-14 B7（圖紙 1.2、6.1、6.2）：小格有 loop 設定檔（names_.loop）才寫；pid、啟動 ticks 不知道（接回失敗那種）就不寫。
+// 舊檔的 boot_id 和 started_at_ticks 都跟這支一樣＝同一次啟動已經寫過，不再寫（第一個原因就是最後的原因）。
+// over 有給＝反過來：只有同一次啟動、而且檔裡的 cause 正是 over 時才改寫（ok-devt 定稿 2.3 唯一的例外：sleep 之後使用者明下 rm＝remove）。
+void Daemon::note_cause(const std::string& name, const Child& c, const char* cause, const char* over) {
+    if (c.pid <= 0 || !c.started_at_ticks || c.stack.empty()) {
+        return;
+    }
+    std::error_code ec;
+    if (!std::filesystem::exists(aos::join(c.stack, names_.loop), ec)) {
+        return;
+    }
+    std::string path = aos::join(c.stack, StopCauseWindow::default_name);
+    std::optional<std::string> boot = aos::boot_id();
+    std::optional<Json> old = aos::read_json(path);
+    bool same = old && old->is_object() && boot && old->value(StopCauseWindow::boot_id, Json()) == Json(*boot) &&
+                old->value(StopCauseWindow::started_at_ticks, Json()) == Json(*c.started_at_ticks);
+    if (over ? !(same && old->value(StopCauseWindow::cause, Json()) == Json(over)) : same) {
+        return;
+    }
+    std::optional<long long> now = boot_ticks_now();
+    Json doc = Json::object({{StopCauseWindow::cause, cause},
+                             {StopCauseWindow::pid, (long long)c.pid},
+                             {StopCauseWindow::started_at_ticks, *c.started_at_ticks},
+                             {StopCauseWindow::at_ticks, now ? Json(*now) : Json()},
+                             {StopCauseWindow::boot_id, boot ? Json(*boot) : Json()}});
+    try {
+        aos::loop::write_window(path, doc);
+    } catch (const Error& e) {
+        warn("cannot write the stop cause of " + name + " (" + e.code + " " + e.msg + ")");
+    }
+}
+
+void Daemon::term(const std::string& name, Child& c, const char* cause) {
+    note_cause(name, c, cause);   // 原因只是資訊：寫不了也照送 SIGTERM
     c.stuck = false;
     c.stuck_deadline.reset();
     c.phase = "stopping";
@@ -100,6 +145,7 @@ void Daemon::hold(const std::string& name, Child& c, const char* phase, const ch
     c.soft = false;
     c.nap = false;
     c.termed = false;
+    c.recaused = false;
     c.killed = false;
     c.pid = 0;
     c.started_at_ticks.reset();
@@ -265,7 +311,7 @@ void Daemon::finish() {
             }
             c.stuck_restart = false;
             if (!c.termed) {
-                term(c);
+                term(n, c, StopCauseWindow::shutdown);
             }
         }
         any = any || c.phase == "stopping";

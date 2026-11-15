@@ -11,6 +11,7 @@
 // 身體繼承同一個 stdout，混在一起由使用者自己處理。印不了（管子關了）就不印、照跑。
 // `-- 參數...`（11-02 晚）：設定檔之後的附加參數，每次接在 exec 後面（字串、陣列接在最後；單子接在 argv 最後）。
 // on_start／on_stop（11-11）：起來、要退時各跑一次（寫法同 exec），問題只 warning。
+// 11-14 B7：on_stop 多 AOS_LOOP_CAUSE（為什麼收工；daemon 送 SIGTERM 前寫的 $AOS_STACK/stop_cause.json 在這裡判讀，見 aos/loop.hpp）。
 // $AOS_STACK 有設但不在＝設定讀完後先 mkdir -p（11-11，make_stack；建不了 MkdirFailed）。
 // 自己出錯：stderr 一行「aos-loop: error: 代號 原因」、退 1（11-05 stdio-unify R1）。`--help`＝英文說明印 stdout、退 0（R3）。
 #include "aos/loop.hpp"
@@ -25,7 +26,9 @@ Each run's exit code: 0 = next run, 10 = stop (exit 0), other = stop with that c
 ARGS after -- are appended to every run's exec.
 Optional CONFIG.json keys on_start / on_stop (written like exec): run once before the first run /
 once when aos-loop is about to exit (stop, done, failure, signal; not SIGKILL). on_stop gets
-AOS_LOOP_CODE (the exit code) and AOS_LOOP_SIGNAL (signal number or empty). Each gets on_timeout_ms
+AOS_LOOP_CODE (the exit code), AOS_LOOP_SIGNAL (signal number or empty) and AOS_LOOP_CAUSE
+(stop, sleep, remove, shutdown, stuck, signal, max, body_exit or error; on SIGTERM it comes from
+$AOS_STACK/stop_cause.json when the daemon wrote one for this process). Each gets on_timeout_ms
 (integer >= 0; default 5000; 0 = no limit); a failure there is one warning line and changes nothing else.
 
 flags:
@@ -43,6 +46,7 @@ the body's code when it fails ("aos-loop: error: RunFailed ..."); 128+N on signa
 )";
 
 int main(int argc, char** argv) {
+    aos::loop::note_start();   // 11-14 B7：外層帶進來的 AOS_LOOP_CAUSE 清掉（只在 on_stop 期間才設）、記下自己的啟動 ticks 與 boot_id
     try {
         aos::loop::block_signals();
         aos::Cli cli = aos::loop::loop_cli(std::vector<std::string>(argv + 1, argv + argc), "aos-loop", HELP);

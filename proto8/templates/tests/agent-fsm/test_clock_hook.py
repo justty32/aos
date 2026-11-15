@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_hooks import CELLS, PROTO, Hooks, hooks  # noqa: E402
 
 FIRE = PROTO / "lib" / "agent" / "hook_fire" / "_entry"
+CAUSE_KEY, CAUSE_ENV = "cause", "AOS_LOOP_CAUSE"   # 11-14 B7：after_stop 的欄位名與環境變數名（同 hook_fire 的模組常數）
 
 
 class ClockHook(Hooks):
@@ -211,6 +212,23 @@ class ClockHook(Hooks):
         r = run("after_stop", str(self.defn))
         self.assertEqual(r.returncode, 1)
         self.assertIn("hook_fire: error: HookFailed", r.stderr)
+
+    def test_hook_fire_cause(self):   # 11-14 B7：after_stop 多 cause（$AOS_LOOP_CAUSE 去頭尾空白；空的、沒設＝null；值照抄）
+        self.declare({"e": {"event": "after_stop", "handler": self.hook("e")}})
+        env = {k: v for k, v in self.env.items() if k != CAUSE_ENV}
+        cases = [("sleep", "sleep"), (" sleep\n", "sleep"), ("future_x", "future_x"), ("", None), ("  \t\n", None), (None, None)]
+        for value, _ in cases:
+            e = dict(env, AOS_LOOP_CODE="143", AOS_LOOP_SIGNAL="15")
+            if value is not None:
+                e[CAUSE_ENV] = value
+            r = subprocess.run([str(FIRE), "after_stop", str(self.defn)], env=e, capture_output=True, text=True, timeout=20)
+            self.assertEqual((r.returncode, r.stderr), (0, ""))
+        got = [ev[CAUSE_KEY] for ev in self.events()]
+        self.assertEqual(got, [want for _, want in cases])
+        r = subprocess.run([str(FIRE), "after_start", str(self.defn)], env=dict(env, **{CAUSE_ENV: "sleep"}),
+                           capture_output=True, text=True, timeout=20)
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(len(self.events()), len(cases))   # after_start 沒有 hook：不多事件
 
 
 def load_tests(loader, tests, pattern):

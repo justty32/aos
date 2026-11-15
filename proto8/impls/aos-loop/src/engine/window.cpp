@@ -14,6 +14,9 @@
 //   write_window  透過 aos-util write_text 先寫同資料夾的 .名字.<pid>.tmp 再改名（N-05；暫存帶 pid，多人同寫一扇窗〔例 ctl.json〕不互踩）
 //   write_counter 開了 --enable-counters 與 state 窗，每輪把次數寫到窗同資料夾的 counter_runs.txt，先寫 .counter_runs.txt.<pid>.tmp 再改名
 //   proc_fields   pid、started_at_ticks、boot_id（11-02 原 heartbeat，時間欄拿掉）
+//   note_start    11-14 B7：main 一開頭清 AOS_LOOP_CAUSE、先算一次 proc_fields
+//   cause_file   11-14 B7：讀 $AOS_STACK/stop_cause.json，boot_id 相同、ticks 對得上（見 aos/loop.hpp 的 StopCauseWindow）才回 cause；
+//                 不在＝靜默；讀不了、壞 JSON、少欄位、cause 不是 [a-z_]{1,32}＝一行 warning「stop cause file unusable: ...」；舊的、別人的＝靜默不用
 #include "engine/engine.hpp"
 
 #include "aos/util/files.hpp"
@@ -63,6 +66,67 @@ Json proc_fields() {
         }
     }
     return me;
+}
+
+void note_start() {
+    unsetenv(cause_env);
+    proc_fields();
+}
+
+static bool cause_word(const std::string& r) {
+    if (r.empty() || r.size() > 32) {
+        return false;
+    }
+    for (char ch : r) {
+        if (!((ch >= 'a' && ch <= 'z') || ch == '_')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::optional<std::string> Loop::cause_file() {
+    if (stack_.empty()) {
+        return std::nullopt;
+    }
+    std::string path = aos::join(stack_, StopCauseWindow::default_name);
+    int err = 0;
+    std::optional<std::string> text = aos::read_file(path, err);
+    if (!text) {
+        if (err != ENOENT) {
+            warn(std::string("stop cause file unusable: cannot read ") + path + ": " + std::strerror(err));
+        }
+        return std::nullopt;
+    }
+    Json doc = Json::parse(*text, nullptr, false);
+    if (doc.is_discarded() || !doc.is_object()) {
+        warn("stop cause file unusable: " + path + " is not a JSON object");
+        return std::nullopt;
+    }
+    Json r = doc.value(StopCauseWindow::cause, Json());
+    Json st = doc.value(StopCauseWindow::started_at_ticks, Json());
+    Json at = doc.value(StopCauseWindow::at_ticks, Json());
+    Json b = doc.value(StopCauseWindow::boot_id, Json());
+    if (!r.is_string() || !cause_word(r.get<std::string>())) {
+        warn("stop cause file unusable: " + path + ": cause must be a string of 1 to 32 letters a-z or _");
+        return std::nullopt;
+    }
+    if (!st.is_number_integer() || !at.is_number_integer() || !b.is_string()) {
+        warn("stop cause file unusable: " + path + ": started_at_ticks, at_ticks and boot_id are required");
+        return std::nullopt;
+    }
+    Json me = proc_fields();
+    Json mine = me[StateWindow::started_at_ticks];
+    if (!mine.is_number_integer() || me[StateWindow::boot_id] != b) {
+        return std::nullopt;   // 別次開機寫的（或自己的 boot_id／ticks 讀不到）
+    }
+    long long self = mine.get<long long>();
+    long long started = st.get<long long>();
+    long long wrote = at.get<long long>();
+    if (started == self || (started < self && self <= wrote)) {
+        return r.get<std::string>();   // daemon 起的就是自己；或起的是外殼、檔在自己起來之後才寫
+    }
+    return std::nullopt;   // 上一輪留下的、別人的
 }
 
 void Loop::log_line(const Json& doc) {

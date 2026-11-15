@@ -65,6 +65,7 @@ struct Child {
                                         // sleeping（daemon 收工時還活著的 proc）daemon 再開時自動 wake（不在 stopped 集合＝下一圈用列上的 stack 再起）
     bool soft = false;                  // daemon 下的 stop（往它的公開 ctl 寫了 {"cmd": "stop"}，寫不了也等自行退）：退了就變 held
     bool termed = false;                // 送過 SIGTERM（有 deadline；soft 的寫 ctl 那種沒有時間上限）
+    bool recaused = false;              // 11-14 B7：收的途中被 rm、看過要不要把原因檔的 sleep 改寫成 remove 了（每次啟動只看一次）
     bool nap = false;                   // daemon 收工時收的 proc（11-03 sleep／wake）：退了列留成 sleeping，daemon 再開時用同一個 stack 自動 wake
     std::string stack;                  // 小格＝它的 stack（絕對路徑、結尾不帶 /；子行程的 AOS_STACK＝它＋/）
     Json code;                          // null 或結束碼（被訊號停掉＝128＋N）

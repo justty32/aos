@@ -18,6 +18,8 @@
 //                   state_flux 的 responded_at 只在處理新 ctl（含拒用壞指令）、收到信、起或收子項時更新；已套用過的第一道、檔不在不算
 //   write_window    透過 aos-util write_text 寫窗：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
 //   proc_fields     state 裡「這支程式是誰」的欄位 {pid, started_at_ticks, boot_id}（11-02 原 heartbeat：心跳拿掉、recorded_at 收掉）
+//   StopCauseWindow  原因檔 stop_cause.json（11-14 B7）：daemon 送 SIGTERM 前寫、loop 收工時讀，on_stop 的 AOS_LOOP_CAUSE（cause_env）
+//   note_start      aos-loop 的 main 一開頭叫：清掉外層帶進來的 AOS_LOOP_CAUSE、記下自己的啟動 ticks 與 boot_id（11-14 B7）
 //   resolve_keys    轉交 aos-directive；設定檔、ctl 的指示詞（10-23 晚：aos 讀的 JSON 都解）：整份先換一層，再把自己讀的那幾格整個解，其他 key 不碰
 //
 // 規則見 aos-loop/README.md。
@@ -73,6 +75,37 @@ struct StateFluxWindow {
     static constexpr const char* ctl_seq = "ctl_seq";
     static constexpr const char* ctl_warning = "ctl_warning";
 };
+
+// 原因檔（11-14 B7，wf/advices「after_stop 事件分不出是 stop、sleep 還是 rm」）：<stack>/stop_cause.json，名字固定、不開設定鍵。
+// daemon 送 SIGTERM 之前寫（write_window）：{"cause", "pid", "started_at_ticks"（表上那個值）, "at_ticks"（寫的那刻，CLOCK_BOOTTIME 換成 clock ticks）, "boot_id"}；
+// 同一次啟動（boot_id、started_at_ticks 都一樣）已經寫過就不再寫＝第一個原因不被覆寫；唯一的例外（ok-devt 定稿 2.3）：檔已經是 sleep，
+// 之後使用者明下 rm（reconcile 發現它不在表上）＝改寫成 remove。接回重送、daemon 收工、卡住一律不覆寫。誰都不刪，舊檔靠 ticks 判斷失效。
+// loop 收到 SIGTERM 時才讀：boot_id 相同，而且 started_at_ticks＝自己的啟動 ticks（daemon 起的就是 loop），
+// 或 started_at_ticks < 自己的啟動 ticks <= at_ticks（daemon 起的是外殼 sudo、bwrap，檔在 loop 起來後才寫）才採用。
+// cause 是 [a-z_]{1,32} 就照抄（daemon 以後加新值，舊 loop 照傳）。
+// 已知漏洞（不修）：外殼的情況下，daemon 在 loop 本身 exec 之前就寫了檔，loop 會當成 signal。
+// 名字照 ok-devt 定稿（05-定稿 2.2～2.4）：檔名 stop_cause.json、鍵 cause、環境變數 AOS_LOOP_CAUSE（cause_env），各只在這裡定一次。
+// cause 跟表上的 reason 不同：reason 是給人看的一句話，cause 是可以比對的代號。error 只是停止的分類，不是錯誤代號。
+struct StopCauseWindow {
+    static constexpr const char* default_name = "stop_cause.json";
+    static constexpr const char* cause = "cause";
+    static constexpr const char* pid = "pid";
+    static constexpr const char* started_at_ticks = "started_at_ticks";
+    static constexpr const char* at_ticks = "at_ticks";
+    static constexpr const char* boot_id = "boot_id";
+    // 值：前四個由 daemon 寫進檔（remove、sleep 與 stop_mode 同名）；後五個是 loop 自己判斷的
+    static constexpr const char* remove = "remove";       // 從表上拿掉（ctl rm、daemon.json 沒了它）
+    static constexpr const char* sleep = "sleep";         // ctl sleep
+    static constexpr const char* shutdown = "shutdown";   // daemon 收工
+    static constexpr const char* stuck = "stuck";         // 卡住重起
+    static constexpr const char* stop = "stop";           // ctl 窗的 stop（stopping_）
+    static constexpr const char* signal = "signal";       // 收到訊號、沒有可用的原因檔（人手 kill、舊檔、SIGINT…）
+    static constexpr const char* max = "max";             // 跑滿 max
+    static constexpr const char* body_exit = "body_exit"; // 身體退 10
+    static constexpr const char* error = "error";         // 身體退其他非 0、身體被訊號殺、自己的錯（撞限額沒有獨立的值，看表上的 limit_hit）
+};
+// on_stop 期間才設的環境變數：這次為什麼收工（StopCauseWindow 的值）。
+inline constexpr const char* cause_env = "AOS_LOOP_CAUSE";
 
 // 一次的結果（欄位名同 11-03 前 fsm 的 trace.jsonl 那一行，再多一個 received；aos-loop 的 log 那一行也用 code、signal、elapsed_ms，11-02）。沒有 timed_out（10-21：loop 看不到格裡有沒有逾時，C-52；
 // 單子被逾時收掉＝跑它的 aos-exec 以 128＋N 正常結束：code 143、signal 0）。
@@ -170,6 +203,10 @@ void write_window(const std::string& path, const Json& doc);
 // doc 本身換過 $ref＝那份檔的資料夾，換的是 $ref 陣列＝每個 key 來自的那份檔的）。真的解不開丟 DirectiveBad（呼叫者決定算誰的錯：設定檔＝自己的錯退 1；ctl＝整份不採用）。
 aos::Resolved resolve_keys(const Json& doc, const aos::RefBase& base_dir, const std::vector<std::string>& keys);
 
+// 11-14 B7：aos-loop 的 main 一開頭叫一次：unsetenv(cause_env)（外層帶進來的不讓 on_start、身體看到；只在 on_stop 期間才設），
+// 再算一次 proc_fields（自己的啟動 ticks、boot_id，判原因檔用；第 22 欄在 pid namespace 裡也一樣，bwrap 也能用）。
+void note_start();
+
 // 這支程式是誰：{"pid", "started_at_ticks"（/proc/<pid>/stat 第 22 欄）, "boot_id"}（N-17：判活著看這三個）。
 // 11-02 原 heartbeat：心跳拿掉（使用者「心跳這塊就直接看pid就好」）、recorded_at 收掉；窗的時間欄改成真的寫那一刻才加的 updated_at。
 Json proc_fields();
@@ -191,7 +228,8 @@ struct Defaults {
 //   on_start, on_stop  起來、要退時各跑一次的東西（11-11，使用者選「aos-loop 自己加」；寫法同 exec；沒寫＝不跑）：
 //                 on_start＝第一次之前（讀完舊 state、ctl 之前）；on_stop＝要退時（stop、跑滿、身體 10、身體失敗、訊號、自己的錯，
 //                 finish() 之後、最後一份 state 之前；SIGKILL 跑不到）。on_stop 的環境多 AOS_LOOP_CODE（要退的碼）、AOS_LOOP_SIGNAL（收到的訊號號碼，
-//                 沒有＝空字串）。退非 0、逾時、起不來＝一行 warning，不改 loop 的結束碼、不擋起跑。loop 不知道它們是什麼（C-52）
+//                 沒有＝空字串）、AOS_LOOP_CAUSE（11-14 B7，為什麼收工，見 StopCauseWindow；判斷順序：收到 SIGTERM 且原因檔可用＝檔裡的值 →
+//                 收到任何訊號＝stopping_ 時 stop、否則 signal → stopping_＝stop → 跑滿＝max → 身體 10＝body_exit → 其他＝error）。退非 0、逾時、起不來＝一行 warning，不改 loop 的結束碼、不擋起跑。loop 不知道它們是什麼（C-52）
 //   on_timeout_ms 上面兩格的期限（非負整數，0＝不限，沒寫＝5000；aos-daemon 收工只給子項 10 秒）
 //   ctl, state, state_flux 三扇窗的檔名，在 $AOS_STACK 底下（11-04 起沒寫＝ctl.json／state.json／state_flux.json、寫 null＝不開；要開卻沒設 AOS_STACK＝StackMissing）
 // log 不是 key（11-02 使用者「把log輸出到stdout」；11-02 晚「應該要改成默認不印」）：預設不印，命令列 --enable-logs 才印到 stdout；不寫任何 log 檔。
@@ -294,15 +332,18 @@ protected:
 
 private:
     int main_loop();
-    int end(int code, const std::string& phase);
     void read_ctl();              // 讀 ctl：新的指令才照做（改 paused_、stopping_、max_、interval_ms_、ctl_seq_）
     void read_old_state();       // 起來時：接回舊 state.json 的 paused 與舊 state_flux 的有效 ctl_seq（第一道去重用）
     void write_main(const std::string& phase, const Json& code, const Json& me);   // write_state 的 state 窗那份（有變才寫）
     void write_counter();         // 開旗標與 state 窗才寫 counter_runs.txt；失敗丟 StateError
     int signal_got();             // 第一個收到的訊號（記住；0＝沒有）
     void nap(double secs);        // 睡 secs 秒（最多 1 秒），收到訊號就提早醒
-    void run_side(const std::optional<Target>& t, const char* key, int code);   // 跑 on_start（code<0）／on_stop；問題只 warning
-    void stop_side(int code);     // on_stop 只跑一次（end、serve 的錯誤路徑都叫）
+    void run_side(const std::optional<Target>& t, const char* key, int code, const std::string& cause = "");   // 跑 on_start（code<0）／on_stop；問題只 warning
+    // on_stop 只跑一次（end、serve 的錯誤路徑都叫）。own＝loop 自己的原因（max、body_exit、error；訊號、stop 由 stop_cause 另判）
+    void stop_side(int code, const char* own);
+    int end(int code, const std::string& phase, const char* own);
+    std::string stop_cause(const char* own);       // 11-14 B7：照判斷順序算 AOS_LOOP_CAUSE（見上面 on_stop）
+    std::optional<std::string> cause_file();       // 原因檔可用＝檔裡的 cause；不在、舊的＝nullopt（不在不印，壞的印一行 warning）
     bool served_ = false;         // main_loop 開始了沒（沒開始＝不跑 on_stop）
     bool stop_ran_ = false;
 

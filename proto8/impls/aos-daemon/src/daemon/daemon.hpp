@@ -166,7 +166,10 @@ private:
     void flush_table();                                   // 表變了：依最近 phase 先寫 state、再 procs_state、最後 state_flux（都有變才寫）；寫不了＝state_failed（起來後還沒寫成過＝丟 StateError）
     void state_failed(const Error& e);                    // 11-05：狀態窗寫不了（寫成過＝stderr 一行、下一圈再寫；沒寫成過＝丟 StateError）
     void state_ok();                                      // 11-05：寫成了（之前寫不了＝stderr 一行 written again）
-    void term(Child& c);                  // 送 SIGTERM、phase stopping、記期限（不等）
+    // 送 SIGTERM、phase stopping、記期限（不等）。11-14 B7：送之前先寫小格的 stop_cause.json（cause＝StopCauseWindow 的 remove／sleep／shutdown／stuck；
+    // 小格有 loop 設定檔才寫，exec 列不寫；同一次啟動已寫過就不再寫＝第一個原因不被覆寫；寫不了一行 warning，SIGTERM 照送）
+    void term(const std::string& name, Child& c, const char* cause);
+    void note_cause(const std::string& name, const Child& c, const char* cause, const char* over = nullptr);   // term 裡寫原因檔那段；over＝只改寫同一次啟動、cause 是 over 的檔
     void halt(const std::string& name, Child& c);   // daemon 的 stop：往子 loop 的 ctl 寫 {"cmd": "stop", "seq": N}、phase stopping（寫不了也等自行退）
     void hold(const std::string& name, Child& c, const char* phase = "stopped", const char* log_phase = nullptr);   // 要留列的退了：印 log、列留成 phase；log_phase 可另指定
     bool settle(Child& c);                // 收的途中看一眼：退了＝phase stopped、回 true；SIGTERM 過了期限還在＝SIGKILL 整群＋底下自成一群的（只送一次）

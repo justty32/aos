@@ -8,6 +8,7 @@
 
 namespace aos::daemon {
 
+using aos::loop::StopCauseWindow;
 using Clock = std::chrono::steady_clock;
 
 static const int FLUSH_MS = 200;     // 11-05 第二輪：對表起一大批時 procs_state 最多多久寫一次
@@ -289,16 +290,22 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
             }
         } else if (c.phase == "running") {
             if (!in) {
-                term(c);         // 表上多出來的：送 SIGTERM 就往下走，不等（10-23 壓測後改）
+                term(n, c, StopCauseWindow::remove);   // 表上多出來的：送 SIGTERM 就往下走，不等（10-23 壓測後改）
             } else if (stop) {
                 halt(n, c);      // daemon 的 stop：寫子 loop 的 ctl，等它跑完這次自己退
             } else if (nap) {
                 c.nap = true;    // 11-05 sleep：同收工那套，退了列留成 sleeping
-                term(c);
+                term(n, c, StopCauseWindow::sleep);
             }
         } else if (c.phase == "stopping" && c.soft && !c.termed && (!in || slept.count(n) > 0)) {
             slept_.erase(n);     // stop 中的 sleep 只升級停止，不留下之後 start 又睡下的意圖
-            term(c);             // 等它自己退的途中收到 sleep／rm：改送 SIGTERM；soft 保留，sleep 退後仍 stopped
+            // 等它自己退的途中收到 sleep／rm：改送 SIGTERM；soft 保留，sleep 退後仍 stopped（halt 不寫原因檔，這裡才第一次寫）
+            term(n, c, !in ? StopCauseWindow::remove : StopCauseWindow::sleep);
+        } else if (c.phase == "stopping" && c.termed && !in && !c.recaused) {
+            // 11-14 B7（ok-devt 定稿 2.3 唯一的覆寫例外）：SIGTERM 送過、收的途中使用者明下 rm（不在表上了）＝原因檔是同一次啟動的 sleep 就改寫成 remove；
+            // 不重送 SIGTERM、期限照舊。stuck、shutdown、接回重送寫的不動（note_cause 的 over）。每次啟動只看一次
+            c.recaused = true;
+            note_cause(n, c, StopCauseWindow::remove, StopCauseWindow::sleep);
         }
         ++it;
     }

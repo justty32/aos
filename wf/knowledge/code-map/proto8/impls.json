@@ -128,6 +128,7 @@
     "test_stack_make.py": "Check aos-daemon creates a missing $AOS_STACK at start (11-11, make_stack) after the config checks pass.",
     "test_stale_stop.py": "Check stop → sleep → start keeps the restarted loop running instead of replaying the old stop.",
     "test_state_path.py": "Check the procs_state_path query letter (11-13, K-F27): the reply carries the absolute path of procs_state.json, null without that window, BodyBad wh…",
+    "test_stop_cause.py": "Verify the after_stop cause (B7) end to end: a real daemon writes stop_cause.json, its child aos-loop reads it, hook_fire reports it.",
     "test_two_machines.py": "Check two-machines daemon fixes: copies never adopt the original tree, and mailbox rows re-resolve directives on start."
    },
    "vcpkg.json": "aos-daemon：照一張名單把幾個 proc 各自起在小格裡、看著它們（C++）"
