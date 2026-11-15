@@ -17,4 +17,5 @@
 - **停 daemon 不會關 agent 畫面**：`aos-agent open -t <名>` 開的 tmux（含裡面的 claude、aos-mcp）是獨立行程，停樹後還活著，`check` 會 RED。換前要另外 `tmux -S /run/user/<uid>/aos-tty-<uid>/<sock> kill-server`（sock 名看 RED 列出的行程，或 `ls` 該夾）。建議順序：停樹 → 關畫面 → 先單跑 `swap.sh --ref <hash> check` 到沒 RED → `all` → 起樹 → `aos-agent open -t <名>` 重開畫面。
 - **路徑**用環境變數改：`TS_TREE`（預設 `~/aos-home`）、`TS_REPO`、`TS_BUILD`、`TS_BIN_ROOT`、`TS_BACKUP_ROOT`（預設 `~/.aos/saves/tree-swap`，`LAST` 記最近一份）。
 - **不刪任何東西**（使用者 11-14「不刪，連自己剛建的暫存也不刪」）：三支裡沒有 `rm`。`check`／`stamp`／`verify` 解出來的暫存夾、`copy` 換下來的舊夾（`old/`）、`rollback` 換下來的那份（`rb-old/`）都留在 `$TS_BACKUP_ROOT/run-<時間>-<pid>-<swap|rollback>/`；每次結束（含 RED）印 `kept ...` 列出留下哪些夾、各多大。一次 `swap.sh all` 約多留四份程式夾（活樹約 5 MB 一份）加 `backup` 那份；刪不刪由使用者收工時決定。
+- **釘 pin 時查帳的格式**：查這次要換的 commit 有沒有改到存在 stack 裡的帳或名冊的格式（例：`subagents.json`）。有的話，換樹前先收子或重建帳，並列成步驟表的一步。腳本不換 stack，所以不會替你做這件，也擋不下來。例：c3c1877ea（線框批 6）把 subagents.json 的 stack 從相對路徑改成絕對路徑，明寫「舊帳不認、不遷移，升級前先收子或重建帳」。11-14 換樹的步驟表漏了這一步，換完 ok-release 第一次呼叫 subagent，4 隻子的名冊就被清掉。子還在表上照跑，父卻管不到它們（11-14 的步驟表：[tree-swap-1114](../../thinking/2026-11/14/tree-swap-1114.md)）。
 - 換完之後 repo 的 `impls/*/build` 比執行檔舊；之後在 repo 重 build 會從已 commit 的原始碼編出等價的檔。

@@ -34,5 +34,6 @@
 - 腳本自己不含任何 kill／shutdown；每段先確認「cwd 在 `~/aos-home` 底下的 aos 行程一個都不在」才動。
 - 停 daemon 不會關 agent 畫面（`aos-agent open` 開的 tmux 與裡面的 claude、aos-mcp 是獨立行程，腳本會 RED）：換前要另外關（`tmux -S <sock> kill-server`），先單跑 `check` 到沒 RED 再 `all`，起樹後重開畫面（11-13 晚實戰栽過）。
 - 先備份再換；換檔是「先抄到旁邊再改名」。附退回腳本。
+- 釘 pin 時查這次要換的 commit 有沒有改到存在 stack 裡的帳或名冊的格式（例：`subagents.json`）；有就在換樹前收子或重建，並列成步驟表的一步（例子與做法：[tree-swap README](../../../../proto8/extras/tree-swap/README.md)）。
 - 抄的來源是一個釘住、且在乾淨複本上跑過全套的 commit，用 `git archive <hash>` 抄，不抄工作樹；C++ 事先在 repo 外編好，停樹時只換檔。
 - 有停樹時刻的日子，每條線要有一個「趕不上就還原乾淨」的時刻（[lessons 17](../lessons/03-坑14-20.md#17-有截止點的日子每條線要有趕不上就還原乾淨的時刻)）。
