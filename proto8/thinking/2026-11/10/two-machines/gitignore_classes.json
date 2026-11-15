@@ -1191,6 +1191,16 @@
    "why": "11-12 線 K 代定：叫 fork 那隻記「哪些分身是我的」（留著的 kept、失敗留下的 failed），跟分身自己的 stack（procs/<分身>/，照既有各列帶走）配對；同 G063 子項帳帶走。running 的租約是這台的牆鐘，換台後過期、下次 fork 對帳時照既有規則收。",
    "seen": [],
    "ignored_now": "對：tracked（stack.gitignore 沒擋 tools/）"
+  },
+  {
+   "id": "G100",
+   "pattern": "stacks/**/think/brain_wait.json",
+   "writer": "proto8/templates/agent-fsm/wait.py（note_brain_wait）",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "在途問腦信名加這台的 kernel 絕對路徑，只供 listen／say 提示；換台不沿用，信名對不上 pending 就不採信，下次寄出重寫。",
+   "seen": [],
+   "ignored_now": "對：ignored（cmd/aos-agent/stack.gitignore 的 **/think/brain_wait.json）"
   }
  ]
 }
