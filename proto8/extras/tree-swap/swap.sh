@@ -1,8 +1,9 @@
 #!/bin/bash
-# swap.sh - 停樹後把一棵 aos 樹的程式複本（lib／templates／knowledge／py／kernel）與十支 C++ 執行檔換成某個釘住 commit 的版本；先備份、抄到旁邊再改名，不含任何 kill／shutdown。
-# 用法：swap.sh --ref <commit> [all | check backup copy stamp bin verify ...]（all＝六段依序；stamp＝用該 commit 的 extras/aos-home/copy_tree.py --stamp-only 替每夾寫 .aos-source.json）
-# 路徑用環境變數改（預設見 common.sh）：TS_TREE TS_REPO TS_BUILD TS_BIN_ROOT TS_BACKUP_ROOT。退回用同夾的 rollback.sh。
-# 只碰：樹裡已有的 lib templates knowledge py kernel 這幾夾、$TS_BIN_ROOT/<p>/bin/<p> 十支；agents defs teams kernels ws root daemon .stack env.sh 一律不碰。
+# swap.sh - 停樹後把一棵 aos 樹的程式複本（lib／templates／knowledge／py／kernel）換成某個釘住 commit 的版本；先備份、抄到旁邊再改名，不含任何 kill／shutdown。
+# 用法：swap.sh --ref <commit> [all | check backup copy stamp verify ...]（all＝五段依序；不給段＝check；stamp＝用該 commit 的 extras/aos-home/copy_tree.py --stamp-only 替每夾寫 .aos-source.json）
+# C++ 不在這裡換（使用者 11-15「好，就這樣改。」）：樹在跑時用 build.sh --ref <commit> --install 換好；~/.local/bin/aos-* 指的就是 repo 的 impls/*/bin，裝了就生效。
+# 路徑用環境變數改（預設見 common.sh）：TS_TREE TS_REPO TS_BACKUP_ROOT。退回用同夾的 rollback.sh。
+# 只碰：樹裡已有的 lib templates knowledge py kernel 這幾夾；agents defs teams kernels ws root daemon .stack env.sh 一律不碰。
 # 不刪任何東西（使用者 11-14「不刪，連自己剛建的暫存也不刪」）：每段解出來的暫存夾與換下來的舊夾都留在 $TS_BACKUP_ROOT/run-<時間>/，結束時印出留下哪些、各多大，由使用者決定刪不刪。
 [ -n "$BASH_VERSION" ] || { echo "swap.sh: not bash, refuse" >&2; exit 2; }
 set -euo pipefail
@@ -13,21 +14,20 @@ REF=""; STEPS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --ref) REF=$2; shift 2 ;;
-    -h|--help) sed -n 2,5p "$0"; exit 0 ;;
-    all) STEPS+=(check backup copy stamp bin verify); shift ;;
-    check|backup|copy|stamp|bin|verify) STEPS+=("$1"); shift ;;
+    -h|--help) sed -n 2,6p "$0"; exit 0 ;;
+    all) STEPS+=(check backup copy stamp verify); shift ;;
+    check|backup|copy|stamp|verify) STEPS+=("$1"); shift ;;
     *) echo "swap.sh: unknown arg $1" >&2; exit 2 ;;
   esac
 done
 [ -n "$REF" ] || { echo "swap.sh: --ref <commit> is required" >&2; exit 2; }
 [ ${#STEPS[@]} -gt 0 ] || STEPS=(check)
 
-ts_refuse_agent_env
 REF=$(git -C "$TS_REPO" rev-parse --verify "$REF^{commit}") || ts_red "ref not found in $TS_REPO"
 FOLDERS=$(ts_folders)
 ts_run_dir swap
 trap ts_kept_report EXIT
-echo "tree=$TS_TREE ref=$REF folders=[$FOLDERS] bin_root=$TS_BIN_ROOT build=$TS_BUILD"
+echo "tree=$TS_TREE ref=$REF folders=[$FOLDERS]"
 
 # 把 commit 的 proto8/<夾> 解到 $1（$1/<夾>）
 extract() { mkdir -p "$1"; git -C "$TS_REPO" archive "$REF" $(for d in $FOLDERS; do echo "proto8/$d"; done) | tar -x -C "$1" --strip-components=1; }
@@ -35,30 +35,14 @@ extract() { mkdir -p "$1"; git -C "$TS_REPO" archive "$REF" $(for d in $FOLDERS;
 last_backup() {
   [ -f "$TS_BACKUP_ROOT/LAST" ] || ts_red "no backup yet (run the backup step first)"
   local b; b=$(cat "$TS_BACKUP_ROOT/LAST")
-  grep -qx "ref=$REF" "$b/META" && grep -qx "tree=$TS_TREE" "$b/META" && grep -qx "bin_root=$TS_BIN_ROOT" "$b/META" \
-    || ts_red "last backup $b was made for another ref/tree/bin_root; run backup again"
+  grep -qx "ref=$REF" "$b/META" && grep -qx "tree=$TS_TREE" "$b/META" \
+    || ts_red "last backup $b was made for another ref/tree; run backup again"
   echo "$b"
-}
-
-check_build() {
-  local bref
-  [ -f "$TS_BUILD/BUILD_REF" ] || ts_red "$TS_BUILD/BUILD_REF missing (build with build.sh)"
-  bref=$(cat "$TS_BUILD/BUILD_REF")
-  git -C "$TS_REPO" diff --quiet "$bref" "$REF" -- proto8/impls \
-    || ts_red "C++ was built from $bref but proto8/impls differs at $REF; rebuild with build.sh --ref $REF"
-  echo "ok: C++ build ref $bref has the same proto8/impls as $REF"
 }
 
 step_check() {
   ts_require_stopped
-  local p tmp d out n_ch n_new n_only
-  check_build
-  for p in $TS_BINS; do
-    [ -x "$TS_BUILD/proto8/impls/$p/bin/$p" ] || ts_red "built binary missing: $TS_BUILD/proto8/impls/$p/bin/$p"
-    [ -d "$TS_BIN_ROOT/$p/bin" ] || ts_red "target dir missing: $TS_BIN_ROOT/$p/bin"
-  done
-  n_ch=0; for p in $TS_BINS; do cmp -s "$TS_BUILD/proto8/impls/$p/bin/$p" "$TS_BIN_ROOT/$p/bin/$p" || n_ch=$((n_ch+1)); done
-  echo "bins: $n_ch of $(wc -w <<< "$TS_BINS") differ"
+  local tmp d out n_ch n_new n_only
   tmp=$(ts_keep_dir tmp-check); extract "$tmp"
   for d in $FOLDERS; do
     out=$(diff -rq -x __pycache__ -x .aos-source.json "$tmp/$d" "$TS_TREE/$d" || true)
@@ -73,17 +57,17 @@ step_check() {
   done
   git -C "$TS_REPO" cat-file -e "$REF:proto8/extras/aos-home/copy_tree.py" 2>/dev/null \
     || ts_red "$REF has no proto8/extras/aos-home/copy_tree.py (needed by the stamp step); pin a newer commit"
+  echo "C++: not swapped here; install it while the tree runs: build.sh --ref $REF --install"
   echo "check: green"
 }
 
 step_backup() {
   ts_require_stopped
-  local b d p
+  local b d
   b="$TS_BACKUP_ROOT/$(date +%Y%m%d-%H%M%S)"
-  mkdir -p "$b/tree" "$b/bin"
+  mkdir -p "$b/tree"
   for d in $FOLDERS; do cp -a "$TS_TREE/$d" "$b/tree/$d"; done
-  for p in $TS_BINS; do cp -a "$TS_BIN_ROOT/$p/bin/$p" "$b/bin/$p"; done
-  printf 'ref=%s\ntree=%s\nbin_root=%s\nfolders=%s\ntime=%s\n' "$REF" "$TS_TREE" "$TS_BIN_ROOT" "$FOLDERS" "$(date -Is)" > "$b/META"
+  printf 'ref=%s\ntree=%s\nfolders=%s\ntime=%s\n' "$REF" "$TS_TREE" "$FOLDERS" "$(date -Is)" > "$b/META"
   echo "$b" > "$TS_BACKUP_ROOT/LAST"
   echo "backup: $b ($(du -sh "$b" | cut -f1))"
 }
@@ -114,31 +98,16 @@ step_stamp() {
   echo "stamp: .aos-source.json written in $FOLDERS"
 }
 
-step_bin() {
-  ts_require_stopped
-  local b p dst
-  b=$(last_backup)
-  check_build
-  for p in $TS_BINS; do
-    dst="$TS_BIN_ROOT/$p/bin/$p"
-    cp "$TS_BUILD/proto8/impls/$p/bin/$p" "$dst.tree-swap-new"
-    chmod 755 "$dst.tree-swap-new"
-    mv -f "$dst.tree-swap-new" "$dst"
-  done
-  echo "bin: $(wc -w <<< "$TS_BINS") binaries replaced (backup $b)"
-}
-
 step_verify() {
-  local tmp d p bad=0
+  local tmp d bad=0
   tmp=$(ts_keep_dir tmp-verify); extract "$tmp"
   for d in $FOLDERS; do
     python3 -c 'import json,sys; sys.exit(0 if json.load(open(sys.argv[1]))["commit"]==sys.argv[2] else 1)' "$TS_TREE/$d/.aos-source.json" "$REF" 2>/dev/null \
       || { echo "verify $d: .aos-source.json missing or not $REF"; bad=1; }
     if diff -rq -x __pycache__ -x .aos-source.json "$tmp/$d" "$TS_TREE/$d" >/dev/null; then echo "verify $d: same as $REF"; else echo "verify $d: DIFFERS"; bad=1; fi
   done
-  for p in $TS_BINS; do cmp -s "$TS_BUILD/proto8/impls/$p/bin/$p" "$TS_BIN_ROOT/$p/bin/$p" || { echo "verify bin $p: DIFFERS"; bad=1; }; done
   [ $bad = 0 ] || ts_red "verify failed"
-  echo "verify: green (folders and $(wc -w <<< "$TS_BINS") bins)"
+  echo "verify: green ($FOLDERS)"
 }
 
 for s in "${STEPS[@]}"; do

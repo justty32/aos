@@ -30,12 +30,11 @@
 
 ## 停樹換檔的做法
 
-要重抄複本、換 C++ 執行檔時，停樹與起樹由使用者下指令；要把停的時間壓短（步驟表：[kernel-framework 開工「停樹時照做」](../../../../proto8/thinking/2026-11/13/kernel-framework-開工.md#十二下午接手線己二使用者中午的裁定與停樹)）：
+要重抄複本時，停樹與起樹由使用者下指令；C++ 不用停樹，平常就用 `build.sh --ref <commit> --install` 換（見下）。要把停的時間壓短（步驟表：[kernel-framework 開工「停樹時照做」](../../../../proto8/thinking/2026-11/13/kernel-framework-開工.md#十二下午接手線己二使用者中午的裁定與停樹)）：
 
 - 事先在暫存樹把整套腳本預演到過（含「樹還在跑時被擋下」的紅燈與退回），量好每段時間。
-- 腳本自己不含任何 kill／shutdown；每段先確認「cwd 在 `~/aos-home` 底下的 aos 行程一個都不在」才動。
-- 停 daemon 不會關 agent 畫面（`aos-agent open` 開的 tmux 與裡面的 claude、aos-mcp 是獨立行程，腳本會 RED）：換前要另外關（`tmux -S <sock> kill-server`），先單跑 `check` 到沒 RED 再 `all`，起樹後重開畫面（11-13 晚實戰栽過）。
+- 腳本自己不含任何 kill／shutdown；每段只看這棵樹的 aos daemon／loop 停了沒（各 `.stack/state.json` 的 pid 還活著沒，判法同 `aos-daemon-ctl`）。tmux 畫面、claude、wl-copy、全景頁、殼的環境變數和 cwd 都不看，換前不用關（使用者 11-15 換樹兩次被擋：「乾，好煩喔，到底爲啥要檢查這麼多啊」，同意「好，就這樣改。」）。開著的 claude 畫面還是舊的程式和設定，要新的就重開那個畫面。
 - 先備份再換；換檔是「先抄到旁邊再改名」。附退回腳本。
 - 釘 pin 時查這次要換的 commit 有沒有改到存在 stack 裡的帳或名冊的格式（例：`subagents.json`）；有就在換樹前收子或重建，並列成步驟表的一步（例子與做法：[tree-swap README](../../../../proto8/extras/tree-swap/README.md)）。
-- 抄的來源是一個釘住、且在乾淨複本上跑過全套的 commit，用 `git archive <hash>` 抄，不抄工作樹；C++ 可以換樹時當場編（[build.sh](../../../../proto8/extras/tree-swap/README.md) 編在 repo 外，約 1 分半），也可以事先在樹還在跑時用 `build.sh --ref <commit> --install` 編好換進去。樹在跑時在 repo 裡 build 也可以，風險使用者承擔；建議走這支腳本，它用 rename 換、會警告哪些正在跑（使用者 11-15「樹還在跑的時候不能在repo裏面編，我希望可以，這就是使用者自己承擔風險。或是編譯的時候走腳本，腳本會稍微檢查一下」）。
+- 抄的來源是一個釘住、且在乾淨複本上跑過全套的 commit，用 `git archive <hash>` 抄，不抄工作樹；換樹時不編 C++：平常樹在跑時用 [`build.sh --ref <commit> --install`](../../../../proto8/extras/tree-swap/README.md) 換好（編在 repo 外，約 1 分半，每支印開始／結束與秒數）；repo 的 `impls/*/bin` 就是活樹用的那份，換樹腳本不再碰它。樹在跑時在 repo 裡 build 也可以，風險使用者承擔；建議走這支腳本，它用 rename 換、會警告哪些正在跑（使用者 11-15「樹還在跑的時候不能在repo裏面編，我希望可以，這就是使用者自己承擔風險。或是編譯的時候走腳本，腳本會稍微檢查一下」）。
 - 有停樹時刻的日子，每條線要有一個「趕不上就還原乾淨」的時刻（[lessons 17](../lessons/03-坑14-20.md#17-有截止點的日子每條線要有趕不上就還原乾淨的時刻)）。

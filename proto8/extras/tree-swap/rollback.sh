@@ -1,5 +1,6 @@
 #!/bin/bash
-# rollback.sh - 把 swap.sh 換過的樹複本與十支 C++ 執行檔還原成它換之前的備份；樹要停著，不含任何 kill／shutdown。
+# rollback.sh - 把 swap.sh 換過的樹複本還原成它換之前的備份；樹要停著（只看 daemon／loop），不含任何 kill／shutdown。
+# 11-15 以前的備份裡有 bin/（那時 swap.sh 也換 C++）：遇到就連 C++ 一起還原到 META 的 bin_root；新備份沒有 bin/，C++ 要退就用 build.sh --ref <舊 commit> --install。
 # 不刪任何東西：被換下來的那份夾留在 $TS_BACKUP_ROOT/run-<時間>/rb-old/，結束時印出留下哪些、各多大。
 # 用法：rollback.sh [--backup <備份夾>] [all | tree | bin]（不給 --backup＝$TS_BACKUP_ROOT/LAST 指的那份；不給段＝all）
 [ -n "$BASH_VERSION" ] || { echo "rollback.sh: not bash, refuse" >&2; exit 2; }
@@ -12,11 +13,10 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --backup) B=$2; shift 2 ;;
     all|tree|bin) WHAT=$1; shift ;;
-    -h|--help) sed -n 2,3p "$0"; exit 0 ;;
+    -h|--help) sed -n 2,5p "$0"; exit 0 ;;
     *) echo "rollback.sh: unknown arg $1" >&2; exit 2 ;;
   esac
 done
-ts_refuse_agent_env
 [ -n "$B" ] || { [ -f "$TS_BACKUP_ROOT/LAST" ] || ts_red "no $TS_BACKUP_ROOT/LAST"; B=$(cat "$TS_BACKUP_ROOT/LAST"); }
 [ -f "$B/META" ] || ts_red "$B/META missing"
 TREE=$(sed -n 's/^tree=//p' "$B/META"); BIN_ROOT=$(sed -n 's/^bin_root=//p' "$B/META"); FOLDERS=$(sed -n 's/^folders=//p' "$B/META")
@@ -40,7 +40,7 @@ if [ "$WHAT" != bin ]; then
   for d in $FOLDERS; do diff -rq "$B/tree/$d" "$TREE/$d" >/dev/null || ts_red "after rollback $TREE/$d still differs from backup"; done
   echo "rollback tree: $FOLDERS restored and identical to backup"
 fi
-if [ "$WHAT" != tree ]; then
+if [ "$WHAT" != tree ] && [ -d "$B/bin" ]; then
   for p in $TS_BINS; do
     dst="$BIN_ROOT/$p/bin/$p"
     cp -a "$B/bin/$p" "$dst.tree-swap-rb"
