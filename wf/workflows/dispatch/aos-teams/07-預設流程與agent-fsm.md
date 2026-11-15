@@ -31,7 +31,7 @@
   - `.env` 內容是 `AOS_LLM_KERNEL=${HOME}/aos-home/ws/.stack/procs/llm-gpt`，把信指到 llm-gpt 這個 kernel。
 - **蒐集和施工不用 terra**，只用 sol；terra 只用在使用者點名的地方（例如全景頁的小幫手）。
 - **怎麼掛、怎麼驗收**：步驟在 [kits/card](../kits/card.md)，包的內容與已知限制在 [kits](../kits/README.md)，帶 sol 的心得在 [sol-crew](../../../public/sol-crew.md)。蒐集員、審稿員用「看」包，不抄別線的 system.txt（使用者 11-14「都按照推薦」，[onboard-1114](../../../../proto8/thinking/2026-11/14/onboard-1114.md)）。
-- **自己掛 kernel 或 agent 不用先問**（使用者 11-14「然後有需要的，可以自己掛kernel或agent。」）：掛在暫存樹的 aos 裡，自己記 pid、收尾收乾淨，活樹照舊不動。
+- **自己掛 kernel 或 agent 不用先問**（使用者 11-14「然後有需要的，可以自己掛kernel或agent。」）：掛在暫存樹（`~/.aos/scratch/<線名-日期>/`，使用者 11-15 裁「4.a」）的 aos 裡，自己記 pid、收尾收乾淨，活樹照舊不動。
 - **隊長的 shell 是 zsh，範例指令要分詞的一律包 `bash -c`**（11-14 ok-misc 與頂層各踩一次：ok-misc 因此把一封信寄錯對象，頂層開線失敗一次）：zsh 的 `$VAR` 不分詞，`for p in "a b"; do set -- $p; …` 切不開、`for f in $(cat list)` 只跑一圈。一次對多隻 agent 下指令、逐行讀清單這類寫法，寫成 `bash -c 'for n in a b c; do …; done'`（清單直接寫在 `in` 後面），或 `bash -c 'mapfile -t F < list; for f in "${F[@]}"; do …; done'`；清 `AOS_*` 的腳本同理要是 bash（[06 硬規則第 2 條](06-公司WSL活樹與任務書硬規則.md)）。另見 [pitfalls「隊長的 shell」的「zsh 不分詞」](../../../public/pitfalls.md#隊長的-shellbash-工具)。
 - **蒐集員的交件要先想好怎麼落地**（ok-view 11-14 踩到；[advices/fsm範本](../../../advices/fsm範本.md)）：只掛 look、gadgets、json、index 的蒐集員只有 JSON 寫入，寫不出 Markdown。任務書擇一寫明：① 「全文放在最後一則回答裡」，隊長用 `subagent listen`（`last: 1`）或 `aos-agent history -t <名字> ls -j` 取出存檔；② 先替它掛寫檔的包：定義的 `tools.json` 的 `$override` 加 `lib/packs/ws-write.json`（工具 `ws_write`：只能寫進自己的工作區，一次上限 256 KiB，不刪檔；38271da3b，換樹後活樹才有），任務書寫明交件檔名。
 - **沒掛 shell 包的 sol 沒有 shell**（看包和多數施工定義都是；掛了 shell 包的 sol 有，但有 guard 會擋，見 [sol-crew](../../../public/sol-crew.md)）：查版本、查環境、跑指令收結果這類事，派工的人自己跑好，把輸出貼進任務書或寫成檔叫它讀，不要讓 sol 靠讀檔去猜（ok-view-sol-7 為了查 `node --version` 翻了 117 步）。

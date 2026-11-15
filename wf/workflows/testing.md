@@ -48,8 +48,8 @@ repo 根沒有 CMake，要建的只有 `proto8/impls/`：頂層 `impls/CMakeList
   exec "$@"
   ```
 
-- **全套測試、要當基準的那次，在乾淨複本上跑**：`git archive <commit> | tar -x -C <repo 外的暫存夾>`，不在共用的工作樹上跑——別線改到一半的檔會讓結果只反映當下的工作樹，測試寫錯環境時也不會碰到 repo 與活樹。
-- **要起樹就起在 repo 外獨一無二的暫存夾**，tmux 用 `-S <暫存夾內 socket>`；收行程只收自己記下的（寫法在 [aos-teams/06](dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md#任務書必貼的硬規則) 第 4 條）。
+- **全套測試、要當基準的那次，在乾淨複本上跑**：`git archive <commit> | tar -x -C ~/.aos/scratch/<線名-日期>/<子夾>`，不在共用的工作樹上跑——別線改到一半的檔會讓結果只反映當下的工作樹，測試寫錯環境時也不會碰到 repo 與活樹。
+- **要起樹就起在 `~/.aos/scratch/<線名-日期>/` 這個獨一無二的暫存夾**（使用者 11-15 裁「4.a」；不放 `~/code`，那是使用者自己的空間），tmux 用 `-S <暫存夾內 socket>`；收行程只收自己記下的（寫法在 [aos-teams/06](dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md#任務書必貼的硬規則) 第 4 條）。
 - **跑完核對**：`pgrep -u "$USER" -af aos-daemon` 跟開工前一樣、活樹裡頂層那格 stack 的 `ls` 跟開工前一樣；指令與輸出貼進回報。
 - **測試程式自己也不寫 `pkill -f`**：收自己記下的 pid。
 

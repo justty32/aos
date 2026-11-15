@@ -1,6 +1,6 @@
 # aos-sandbox — 把一個函數關起來跑
 
-← [cmd](../README.md)｜設計與決定：[thinking 2026-10-24-sandbox](../../thinking/2026-10/24/sandbox/README.md)｜試驗場 `~/code/try/sandbox/`
+← [cmd](../README.md)｜設計與決定：[thinking 2026-10-24-sandbox](../../thinking/2026-10/24/sandbox/README.md)｜試驗場 `~/code/try/sandbox/`（11-15 已刪）
 
 `aos-sandbox - 照一份設定把 prog 關進沙箱再跑`（使用者 10-24「linux權限和沙箱可以開始做了，藉助s6那套」）。
 
@@ -87,6 +87,6 @@ sh proto8/cmd/aos-sandbox/root/setup.sh --me "$(id -un)" --s6-bin /tmp/pf-line5-
 
 ## 需要
 
-`bwrap`（bubblewrap）、`python3`；設定寫了上限或 `user` 才要 s6（`s6-softlimit`；root 身分層的 `s6-setuidgid`、`s6-applyuidgid` 照 PATH 找；非 root 另需 sudo 與固定 `/usr/local/bin/s6-setuidgid`）。這台 Arch 的官方庫沒有 s6，試驗場自己編了一份到 `~/code/try/sandbox/s6-root/bin`（skalibs 2.16.0.0、execline 2.10.0.0、s6 2.15.1.1，skarnet.org 原始碼）。
+`bwrap`（bubblewrap）、`python3`；設定寫了上限或 `user` 才要 s6（`s6-softlimit`；root 身分層的 `s6-setuidgid`、`s6-applyuidgid` 照 PATH 找；非 root 另需 sudo 與固定 `/usr/local/bin/s6-setuidgid`）。這台 Arch 的官方庫沒有 s6，試驗場自己編了一份到 `~/code/try/sandbox/s6-root/bin`（11-15 已刪，要用得重編）（skalibs 2.16.0.0、execline 2.10.0.0、s6 2.15.1.1，skarnet.org 原始碼）。
 
 **搬不走的那半**：帳號、sudoers、`/srv` 下的配置與 bind 的主機路徑都屬於這台機器；搬完先改 bind 路徑，再重跑 [root/setup.sh](root/setup.sh)（先乾跑，核對後 `--apply`；信箱另帶 `--mailbox`），不會因複製 image 自動重建。

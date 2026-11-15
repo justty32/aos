@@ -46,6 +46,6 @@
 - **做法**：
   - 照問腦時實際送出的樣子量工具清單（`{type, function:{name, description, parameters}}` 的 JSON 字元數），再跟帳本上後段的提示大小比。11-14：55 支約 2 萬 token，sol 做到後段提示 7～15 萬，拿掉四成工具整體只省約一成。
   - 帳本 `ledger.jsonl` 上 `cached_tokens/prompt_tokens` 常只中一個固定的小數字（共用的 system 加工具清單）、自己的對話一次都不中：不是請求內容在變，是請求沒帶固定的 session id。修法在 7ce38e7cf（pack 的 `session_key`）：帶了命中 88%、82%，不帶 18%、31%。
-  - 驗「請求開頭有沒有變」：對自己隊員的 `think/request.json` 隔一分鐘各取一次，只存各段的雜湊比對，不存內容、不讀別線的 history（`~/code/fsm-1114/cache/snap.py`）。對照實驗要兩隻同時跑、各做一樣大小的真工作。
+  - 驗「請求開頭有沒有變」：對自己隊員的 `think/request.json` 隔一分鐘各取一次，只存各段的雜湊比對，不存內容、不讀別線的 history（`~/code/fsm-1114/cache/snap.py`（11-15 已刪））。對照實驗要兩隻同時跑、各做一樣大小的真工作。
 - **驗過**：ok-fsm 11-14，暫存樹兩輪各 30 次問腦。
 - **出處**：`wf/temp/ok-fsm/wrapup-1114/經驗.md`；`proto8/thinking/2026-11/14/ok-fsm-1114/01-預設工具包-設計稿.md`「量到的事實」「另外發現」

@@ -49,7 +49,7 @@
   - 模型叫了背景任務會先回一個 result（「在跑了」）：看到 result 就關 stdin 的話，之後的信寫不進去。模型取走中途信後先答的那句不在最後的 result 裡，只看 result 會掉（修在 `lib/agent/cli_stream.py:117`、`:38`；怎麼測見 [審查與實測](審查與實測.md)）。
   - 用預設的 snapshot `--resume` 時，新加的 `--append-system-prompt` 模型看不到，要 `--system-prompt-snapshot off`（claude 2.1.325；`lib/agent/cli_cfg.py:155` 的 docstring 早有寫，`cli_print.py:141` 只補一次旗標）。
 - **驗過**：ok-wake 11-14，claude 2.1.325、haiku；探針 `run-stdin-1`、`run-stdin-2`（第二則 4.5 秒後、工具做完時進對話），`--resume` 那次接回同一段對話。審稿時對過 02-實測的結論與探針節。
-- **出處**：`proto8/thinking/2026-11/14/wake-1114/02-實測.md`（stdin 探針、additionalContext 探針兩節）、03、05；探針腳本在 `~/code/wake-1114/scripts/`
+- **出處**：`proto8/thinking/2026-11/14/wake-1114/02-實測.md`（stdin 探針、additionalContext 探針兩節）、03、05；探針腳本在 `~/code/wake-1114/scripts/`（11-15 已刪）
 - **投稿**：ok-wake（`wf/temp/ok-wake/public-submit/claude-p中途餵信.md`；後三個坑補自 `wf/temp/ok-wake/wrapup-1114/經驗.md`，探針 `real/bg-1`、`real/edit-1`、`real/hint-1`、`run-sysflags-2`）
 
 ## 用 Claude Code 本機紀錄算 token：同一則回覆會寫好幾列，要跨檔去重

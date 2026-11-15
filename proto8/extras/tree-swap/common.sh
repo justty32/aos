@@ -5,7 +5,7 @@
 
 TS_TREE=${TS_TREE:-$HOME/aos-home}
 TS_REPO=${TS_REPO:-$HOME/repo/aos}
-TS_BUILD=${TS_BUILD:-$HOME/code/swap-1113/src}          # 內有 BUILD_REF 與 proto8/impls/<p>/bin/<p>
+TS_BUILD=${TS_BUILD:-$HOME/.aos/scratch/tree-swap/src}  # 使用者 11-15 裁「4.a」從 ~/code/swap-1113/src 改到這裡；內有 BUILD_REF 與 proto8/impls/<p>/bin/<p>
 TS_BIN_ROOT=${TS_BIN_ROOT:-$TS_REPO/proto8/impls}       # ~/.local/bin/aos-* 指到 <這裡>/<p>/bin/<p>
 TS_BACKUP_ROOT=${TS_BACKUP_ROOT:-$HOME/.aos/saves/tree-swap}
 TS_FOLDERS_ALL="lib templates knowledge py kernel"      # 只換樹裡已經有的那幾夾

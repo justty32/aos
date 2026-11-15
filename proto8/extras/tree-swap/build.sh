@@ -1,6 +1,6 @@
 #!/bin/bash
 # build.sh - 在 repo 外用 git archive 把某個 commit 的 proto8 抄到 $TS_BUILD、編出 swap.sh 要的十支 C++ 執行檔，並寫 BUILD_REF；不碰 repo 工作樹、不碰樹。
-# 用法：build.sh --ref <commit>（$TS_BUILD 預設 ~/code/swap-1113/src；已存在就拒絕，要重編先自己移走）
+# 用法：build.sh --ref <commit>（$TS_BUILD 預設 ~/.aos/scratch/tree-swap/src；已存在就拒絕，要重編先自己移走）
 [ -n "$BASH_VERSION" ] || { echo "build.sh: not bash, refuse" >&2; exit 2; }
 set -euo pipefail
 HERE=$(dirname "$(realpath "$0")")

@@ -42,7 +42,7 @@
   3. 行程檢查（pgrep、ps）一律隊長做，任務書直接寫「行程檢查不用做」。
   4. 預防：開任務書時先想會不會用到含 `rm`、`kill`、`aos-` 的字面，會的話先跑好、附在任務書旁。
 - **驗過**：ok-misc 11-14，T11～T15 五隻 sol 實際遇到，照做解卡。
-- **出處**：`proto8/thinking/2026-11/14/misc-1114.md`；`~/code/misc-1114/tickets/T11-search.txt`、`T15-search.txt`
+- **出處**：`proto8/thinking/2026-11/14/misc-1114.md`；`~/code/misc-1114/tickets/T11-search.txt`（11-15 已刪）、`T15-search.txt`
 - **投稿**：ok-misc（`sol-guard-誤判與交搜尋結果.md`）
 
 ## rlimit 實測與腦額度

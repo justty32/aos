@@ -6,11 +6,11 @@
 
 ## 暫存樹編 impls 的 C++：make 目標要用 `<名字>_main`
 
-- **適用**：在暫存樹（`~/code/<線>-1114/build`，CMake 指向暫存的 `src/proto8/impls`）改了 aos-exec、aos-loop、aos-llm-kernel 這類 C++，要編好再跑 `impls/*/tests`。
+- **適用**：在暫存樹（`~/.aos/scratch/<線名-日期>/build`；使用者 11-15 裁「4.a」起不放 `~/code`，CMake 指向暫存的 `src/proto8/impls`）改了 aos-exec、aos-loop、aos-llm-kernel 這類 C++，要編好再跑 `impls/*/tests`。
 - **坑**：`make aos-exec` 只編出靜態庫 `lib/lib<名字>.a`，`impls/<名字>/bin/<名字>` 不會重編。測試把 `impls/<名字>/bin` 放在 PATH 最前面，跑到的是舊 bin，看起來像改壞了。
 - **做法**：
   ```
-  cd ~/code/<線>-1114/build
+  cd ~/.aos/scratch/<線名-日期>/build
   make help | grep <名字>      # 會看到 <名字> 和 <名字>_main 兩個目標
   make -j8 aos-exec_main aos-loop_main aos-llm-kernel_main
   ls -la ../src/proto8/impls/<名字>/bin   # 時間要是剛剛
@@ -42,7 +42,7 @@
   3. 乾淨複本不帶 `impls/*/bin`（[06 第 6 條](../workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md)）。要 bin 就用複本自己的原始碼編：另開建置夾 `cmake -S <複本>/proto8/impls -B <新夾>`，再 `make <名字>_main`；**不要從別處抄 bin 進去**（ok-limits 抄了、不符第 6 條、重來）。交件信寫明 bin 從哪來。沒編的話改前改後都會紅同一批，只看差異。
   4. PATH 不要撿到 `~/.local/bin` 的舊執行檔：寫一支 run.sh 把 PATH 換成「暫存樹各 `impls/*/bin`、`cmd/*/bin`＋`/usr/bin:/bin`」。會把 `~/.local/bin` 排最前的測試（wf 測試、test_daily）再給一個假 HOME，它的 `.local/bin` 連到暫存樹的 bin。
   5. `templates/tests` 從上層 discover 不會進 `agent-fsm` 子夾，要另外跑。
-  6. 改前、改後各一份複本，用同一支腳本逐夾跑、各出一份 SUMMARY，`diff` 兩份就知道多紅哪幾支（ok-fsm 的 `~/code/fsm-1114/runall.sh <proto8 複本> <輸出夾>`；ok-pilot 的 `~/code/ok-pilot-rm-1114/suite/run.sh`，一個 commit 動幾十個檔時只接受「測試數變多且 OK」這種差異）。
+  6. 改前、改後各一份複本，用同一支腳本逐夾跑、各出一份 SUMMARY，`diff` 兩份就知道多紅哪幾支（ok-fsm 的 `~/code/fsm-1114/runall.sh <proto8 複本> <輸出夾>`（11-15 已刪）；ok-pilot 的 `~/code/ok-pilot-rm-1114/suite/run.sh`（11-15 已刪），一個 commit 動幾十個檔時只接受「測試數變多且 OK」這種差異）。
   7. commit 訊息裡的測試數字，在「真的要交的那個 commit」的 archive 上再跑一次才寫（ok-kmsg 交完才補跑，第二筆放行卡在這個結果上）。
 - **驗過**：ok-onboard 11-14（guard 152 個測試）；ok-astra；ok-limits（`ws/who-clean-892f5e962/build.sh`、`ws/phase1/build-rehearse.sh`）；ok-sec（Q10 b1 先用到舊 aos-post、在測試信箱寫出舊格式的信，改走 run.sh 後全綠，`/tmp/ok-sec-q10-tools/run.sh`）；ok-fsm（改前改後只多紅一支）；ok-kf。
 - **出處**：`wf/temp/{ok-onboard,ok-astra,ok-limits,ok-sec,ok-fsm,ok-kf,ok-misc,ok-kmsg}/wrapup-1114/經驗.md`

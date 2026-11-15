@@ -6,7 +6,7 @@
 
 | 檔 | 做什麼 |
 |---|---|
-| [build.sh](build.sh) | `--ref <commit>`：`git archive` 該 commit 到 repo 外（預設 `~/code/swap-1113/src`），編十支 C++，寫 `BUILD_REF` |
+| [build.sh](build.sh) | `--ref <commit>`：`git archive` 該 commit 到 repo 外（預設 `~/.aos/scratch/tree-swap/src`；使用者 11-15 裁「4.a」以前是 `~/code/swap-1113/src`），編十支 C++，寫 `BUILD_REF` |
 | [swap.sh](swap.sh) | `--ref <commit> all`＝六段：`check`（樹停了？build 的 impls 跟 ref 同？樹裡有沒有「只在樹裡有」的檔會被丟掉？）→`backup`→`copy`（解到旁邊、兩次改名換上）→`stamp`（用該 commit 的 [copy_tree.py](../aos-home/copy_tree.py) `--stamp-only` 寫每夾的 `.aos-source.json`）→`bin`（十支各自 `cp` 到旁邊再 `mv`）→`verify` |
 | [rollback.sh](rollback.sh) | 還原最近一次（或 `--backup <夾>`）的備份，`all`／`tree`／`bin`；還原後逐檔比對 |
 | [common.sh](common.sh) | 預設路徑、「樹在跑」偵測、計時 |
