@@ -138,11 +138,23 @@ class Settings(unittest.TestCase):
         self.assertEqual(got["crossSessionInbound"], "accept")
         self.assertEqual(seen["def"], str(self.d))
 
-    def test_shipped_templates_have_no_settings(self):
+    def test_shipped_templates_carry_only_compact_hooks(self):
+        # 範本預設全面開放（使用者 11-13）：不帶權限之類的設定。唯一例外是 compact 前後的 hook
+        # （使用者 11-15 對「eca 範本要不要預設開 Claude 那兩個 hook」答「1.開。」）。
         proto = LIB.parent
         for path in sorted(list(proto.glob("templates/*/cli.json")) + list(proto.glob("lib/agent/*/cli.json"))):
             with self.subTest(path=str(path)):
-                self.assertNotIn("settings", json.loads(path.read_text()))             # 範本預設全面開放（使用者 11-13）
+                cfg = json.loads(path.read_text())
+                if "settings" not in cfg:
+                    continue
+                self.assertEqual(list(cfg["settings"]), ["hooks"])
+                self.assertLessEqual(set(cfg["settings"]["hooks"]), {"PreCompact", "SessionStart"})
+                for event, groups in cfg["settings"]["hooks"].items():
+                    for g in groups:
+                        if event == "SessionStart":
+                            self.assertEqual(g.get("matcher"), "compact")
+                        for h in g["hooks"]:
+                            self.assertIn("compact_hook", h["command"])
 
 
 if __name__ == "__main__":
