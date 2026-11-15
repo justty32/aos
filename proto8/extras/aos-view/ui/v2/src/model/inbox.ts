@@ -3,6 +3,7 @@
 import type { Ask, LetterIn, OutItem, Tree } from "../api/types.ts";
 import { boardCounts } from "./board.ts";
 import { whyWord } from "./words.ts";
+import { statusWord } from "./words.ts";
 
 export type TodoKind = "ask" | "red" | "reply" | "wait";
 export interface Todo {
@@ -75,7 +76,7 @@ export function buildInbox(x: InboxInput): Todo[] {
   }
   const replies = x.relay.filter((l) => l.sent_at && x.now - l.sent_at < 3 * 86400 && !x.seen["in:" + l.letter] && !x.dismissed["in:" + l.letter]);
   for (const l of replies) {
-    out.push({ key: "in:" + l.letter, kind: "reply", title: `${l.from} 回：${l.title}`, sub: l.status || "", at: l.sent_at,
+    out.push({ key: "in:" + l.letter, kind: "reply", title: `${l.from} 回：${l.title}`, sub: statusWord(l.status), at: l.sent_at,
       node: x.tree?.nodes[l.from] ? l.from : null, letter: l.letter, canDismiss: true });
   }
   // the board/1 "waiting on the user" lines (03 §12.4)
@@ -83,7 +84,7 @@ export function buildInbox(x: InboxInput): Todo[] {
     for (const w of boardCounts(Object.values(x.tree.nodes), x.now).waitingUser) {
       const key = `bw:${w.id}:${w.what.slice(0, 40)}`;
       if (x.dismissed[key]) continue;
-      out.push({ key, kind: "wait", title: `${w.id} 在等你：${w.what}`, sub: "它的布告欄寫的", at: w.since, node: w.id, canDismiss: true });
+      out.push({ key, kind: "wait", title: `${w.id} 在等你：${w.what}`, sub: "它的公告寫的", at: w.since, node: w.id, canDismiss: true });
     }
   }
   const waits = x.outbox.map((o) => ({ o, why: waitReason(o, x.tree, x.now) })).filter((w) => w.why && !x.dismissed["wait:" + w.o.letter]);

@@ -3,8 +3,10 @@
 // become dots, then scroll down; the toolbar says which step it is on. Click a person = select; click a room = enter.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useData, useUi } from "../state/hooks.ts";
-import { enter, select } from "../state/nav.ts";
-import { layoutMap, itemLight, PLATE, STEP_WORD, type MapItem } from "../model/layoutMap.ts";
+import { caretToComposer, enter, select } from "../state/nav.ts";
+import { setRight } from "../state/layout.ts";
+import { bind } from "../input/keys.ts";
+import { layoutMap, itemLight, itemKey, nearest, PLATE, STEP_WORD, type Dir, type MapItem } from "../model/layoutMap.ts";
 import { displayName, MACHINE } from "../model/tree.ts";
 import { LIGHT_BG, LIGHT_WORD } from "../shell/bits.tsx";
 import { whyWord } from "../model/words.ts";
@@ -57,7 +59,7 @@ function useSize(ref: React.RefObject<HTMLDivElement | null>) {
   return sz;
 }
 
-function Item({ it, sel }: { it: MapItem; sel: string | null }) {
+function Item({ it, sel, cur }: { it: MapItem; sel: string | null; cur: boolean }) {
   const tree = useData((s) => s.tree)!;
   const light = itemLight(tree, it);
   const pos = { left: it.x, top: it.y, width: it.w, height: it.h };
@@ -65,7 +67,7 @@ function Item({ it, sel }: { it: MapItem; sel: string | null }) {
   if (it.kind === "room") {
     return (
       <div className="absolute rounded-md border border-slate-700 bg-slate-900/50" style={pos}>
-        <button className="flex h-[26px] w-full items-center gap-1.5 rounded-t-md px-2 text-left text-xs font-semibold text-slate-300 hover:bg-slate-800"
+        <button data-key={itemKey(it)} className={`flex h-[26px] w-full items-center gap-1.5 rounded-t-md px-2 text-left text-xs font-semibold text-slate-300 hover:bg-slate-800 ${cur ? "ring-2 ring-sky-400" : ""}`}
           title={`進 ${displayName(it.id)}`} onClick={() => enter(it.id)}>
           <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${LIGHT_BG[light]}`} />
           <span className="truncate">{fitName(it.title, it.w - 60)}</span>
@@ -74,30 +76,30 @@ function Item({ it, sel }: { it: MapItem; sel: string | null }) {
       </div>
     );
   }
-  const on = sel === it.id;
+  const on = sel === it.id || cur;
   const why = n ? `${it.id} · ${LIGHT_WORD[n.light]}${n.why ? " · " + whyWord(n.why) : ""}` : it.id;
   if (it.kind === "dot") {
-    return <button data-map={it.id} className={`absolute rounded-full ${LIGHT_BG[light]} opacity-70 hover:opacity-100 ${on ? "ring-2 ring-sky-300" : ""}`}
+    return <button data-map={it.id} data-key={itemKey(it)} className={`absolute rounded-full ${LIGHT_BG[light]} opacity-70 hover:opacity-100 ${on ? "ring-2 ring-sky-300" : ""}`}
       style={pos} title={why} aria-label={it.id} onClick={() => select(it.id)} />;
   }
   if (it.kind === "fold") {
     return (
-      <button className="absolute flex items-center gap-1.5 rounded border border-dashed border-slate-600 bg-slate-900 px-2 text-left text-[13px] text-slate-300 hover:border-slate-400"
+      <button data-key={itemKey(it)} className={`absolute flex items-center gap-1.5 rounded border border-dashed border-slate-600 bg-slate-900 px-2 text-left text-[13px] text-slate-300 hover:border-slate-400 ${cur ? "ring-2 ring-sky-400" : ""}`}
         style={pos} title={`${displayName(it.id)}：${it.count} 人，點了進去`} onClick={() => enter(it.id)}>
         <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-sm ${LIGHT_BG[light]}`} />
         <span className="min-w-0 flex-1 overflow-hidden whitespace-nowrap">{fitName(it.name, TEXT_W - 18)}</span>
-        <span className="shrink-0 text-[11px] text-slate-500">{it.count}</span>
+        <span className="shrink-0 text-xs text-slate-500">{it.count}</span>
       </button>
     );
   }
   return (
-    <button data-map={it.id} className={`absolute flex items-center gap-1.5 rounded px-2 text-left text-[13px]
+    <button data-map={it.id} data-key={itemKey(it)} className={`absolute flex items-center gap-1.5 rounded px-2 text-left text-[13px]
         ${on ? "bg-slate-600 ring-2 ring-sky-400" : it.busy ? "bg-slate-700 hover:bg-slate-600" : "bg-slate-800 hover:bg-slate-700"}
         ${it.lead ? "font-semibold" : ""}`}
       style={pos} title={why} onClick={() => (it.id === MACHINE ? enter(MACHINE) : select(it.id))}>
       <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${LIGHT_BG[light]}`} />
       <span className="min-w-0 overflow-hidden whitespace-nowrap">{fitName(it.name)}</span>
-      {!!n?.asks && <span className="ml-auto shrink-0 text-[11px] text-sky-300">🔵{n.asks}</span>}
+      {!!n?.asks && <span className="ml-auto shrink-0 text-xs text-sky-300">🔵{n.asks}</span>}
     </button>
   );
 }
@@ -110,21 +112,53 @@ export function MapView() {
   const fonts = useFontsReady();
   const { w, h } = useSize(box);
   const lay = useMemo(() => (w > 0 ? layoutMap(tree, focus, w, h) : null), [tree, focus, w, h, fonts]);
+  // the keyboard cursor (02d §6 #2): a key per piece; follows the selection when that is a person on the map
+  const [cur, setCur] = useState<string | null>(null);
   useEffect(() => {
-    if (sel) box.current?.querySelector(`[data-map="${CSS.escape(sel)}"]`)?.scrollIntoView({ block: "nearest" });
+    if (!lay || !sel) return;
+    const it = lay.items.find((x) => x.id === sel && (x.kind === "plate" || x.kind === "dot"));
+    if (it && cur !== itemKey(it)) setCur(itemKey(it));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel, lay]);
+  useEffect(() => {
+    if (cur) box.current?.querySelector(`[data-key="${CSS.escape(cur)}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [cur, lay]);
+  useEffect(() => {
+    if (!lay) return;
+    const items = lay.items;
+    const pick = (k: string | null) => {
+      if (!k) return;
+      setCur(k);
+      const it = items.find((x) => itemKey(x) === k);
+      if (it && (it.kind === "plate" || it.kind === "dot") && it.id !== MACHINE) select(it.id);
+    };
+    const go = (d: Dir) => () => pick(nearest(items, items.some((x) => itemKey(x) === cur) ? cur : null, d));
+    const ent = () => {
+      const it = items.find((x) => itemKey(x) === cur);
+      if (!it) return pick(nearest(items, null, "right"));
+      if (it.kind === "room" || it.kind === "fold" || it.id === MACHINE) { setCur(null); enter(it.id); return; }
+      setRight(true); caretToComposer();
+    };
+    return bind([
+      { key: "ArrowRight", zone: "stage", run: go("right") }, { key: "l", zone: "stage", run: go("right") },
+      { key: "ArrowLeft", zone: "stage", run: go("left") }, { key: "h", zone: "stage", run: go("left") },
+      { key: "ArrowDown", zone: "stage", run: go("down") }, { key: "j", zone: "stage", run: go("down") },
+      { key: "ArrowUp", zone: "stage", run: go("up") }, { key: "k", zone: "stage", run: go("up") },
+      { key: "Enter", zone: "stage", run: ent },
+    ]);
+  }, [lay, cur]);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex h-7 shrink-0 items-center gap-3 border-b border-slate-900 px-3 text-xs text-slate-500">
         <span>{focus ? displayName(focus) : "全公司"}</span>
         {lay && <span data-map-step={lay.step}>第 {lay.step} 步：{STEP_WORD[lay.step]}</span>}
-        <span className="ml-auto">點人＝選取，點房間＝進去</span>
+        <span className="ml-auto">點人＝選取，點房間＝進去；方向鍵走、Enter 進房間或開打字區、Backspace 回上一層</span>
       </div>
       <div ref={box} className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3" tabIndex={0}>
         {!tree && <p className="text-sm text-slate-400">讀取中…</p>}
         {tree && lay && (
           <div className="relative" style={{ width: lay.width, height: lay.height }}>
-            {lay.items.map((it, i) => <Item key={it.kind + it.id + i} it={it} sel={sel} />)}
+            {lay.items.map((it, i) => <Item key={it.kind + it.id + i} it={it} sel={sel} cur={cur === itemKey(it)} />)}
           </div>
         )}
       </div>

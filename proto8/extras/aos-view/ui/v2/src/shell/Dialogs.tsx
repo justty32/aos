@@ -1,8 +1,12 @@
-// Overlays: Ctrl+K search (jump to anyone), the user's board (留話), the drafts list. Esc closes the top one.
+// Overlays: Ctrl+K search (jump to anyone), the user's board (我的公告), the drafts list. Esc closes the top one.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ui, data } from "../state/app.ts";
-import { useData, useUi } from "../state/hooks.ts";
-import { jump } from "../state/nav.ts";
+import { useData, useInbox, useUi } from "../state/hooks.ts";
+import { jump, openAsk, setView } from "../state/nav.ts";
+import { setRight } from "../state/layout.ts";
+import { findNodes, parseQuery, verbHint } from "../model/palette.ts";
+import { openTodo } from "../inbox/Inbox.tsx";
+import { kindWord } from "../model/words.ts";
 import { pushOverlay } from "../input/keys.ts";
 import { post } from "../api/client.ts";
 import { pulseSoon } from "../api/poll.ts";
@@ -30,41 +34,57 @@ const closeDrafts = () => ui.set({ draftsOpen: false });
 
 function Search() {
   const tree = useData((s) => s.tree);
+  const { todo } = useInbox();
   const [q, setQ] = useState("");
   const [cur, setCur] = useState(0);
   const inp = useRef<HTMLInputElement>(null);
   useEffect(() => { inp.current?.focus(); }, []);
-  const hits = useMemo(() => {
-    if (!tree) return [];
-    const s = q.trim().toLowerCase();
-    const all = Object.values(tree.nodes);
-    const score = (id: string) => (id.toLowerCase().startsWith(s) ? 0 : 1);
-    return all.filter((n) => !s || n.id.toLowerCase().includes(s) || (n.tags || []).some((t) => t.toLowerCase().includes(s)))
-      .sort((a, b) => score(a.id) - score(b.id) || (a.kind === "agent" ? 0 : 1) - (b.kind === "agent" ? 0 : 1) || a.id.localeCompare(b.id)).slice(0, 30);
-  }, [tree, q]);
-  const go = (id: string) => { closeSearch(); jump(id, data.get().tree?.nodes[id]?.kind === "agent"); };
+  const { verb, rest } = useMemo(() => parseQuery(q), [q]);
+  const talks = verb?.kind === "say" || verb?.kind === "mail" || verb?.kind === "order";
+  const noName = verb?.kind === "decide" || verb?.kind === "view";
+  const hits = useMemo(() => (noName ? [] : findNodes(tree, rest, talks)), [tree, rest, talks, noName]);
+  const asks = todo.filter((t) => t.kind === "ask");
+  const go = (id: string) => {
+    closeSearch();
+    const agent = data.get().tree?.nodes[id]?.kind === "agent";
+    if (agent) setRight(true);
+    if (verb?.kind === "mail" || verb?.kind === "order") {
+      ui.set({ prefill: { target: id, mode: verb.kind, ...(verb.kind === "order" ? { orderKind: verb.order } : {}), n: Date.now() } });
+      jump(id, false);
+      return;
+    }
+    jump(id, agent);
+  };
+  const run = () => {
+    if (verb?.kind === "decide") { closeSearch(); if (asks[0]) openTodo(asks[0]); else ui.set({ flash: "沒有要你決定的信" }); return; }
+    if (verb?.kind === "view") { closeSearch(); openAsk(null); setView(verb.view); return; }
+    if (hits[cur]) go(hits[cur].id);
+  };
   return (
-    <Modal onClose={closeSearch} title="找人（Enter 跳過去，游標進打字區）">
-      <input ref={inp} value={q} onChange={(e) => { setQ(e.target.value); setCur(0); }} placeholder="名字或標籤…"
+    <Modal onClose={closeSearch} title="找人・下命令（Ctrl+K）">
+      <input ref={inp} value={q} onChange={(e) => { setQ(e.target.value); setCur(0); }} placeholder="名字或標籤；開頭可加：信、加人、擴充、電力、決定、地圖、牆、待辦"
         onKeyDown={(e) => {
           if (e.nativeEvent.isComposing) return;
           if (e.key === "ArrowDown") { e.preventDefault(); setCur((c) => Math.min(c + 1, hits.length - 1)); }
           if (e.key === "ArrowUp") { e.preventDefault(); setCur((c) => Math.max(c - 1, 0)); }
-          if (e.key === "Enter" && hits[cur]) { e.preventDefault(); go(hits[cur].id); }
+          if (e.key === "Enter") { e.preventDefault(); run(); }
           if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeSearch(); }
         }}
-        className="mb-2 w-full rounded bg-slate-800 px-2 py-1.5 text-sm" />
-      <ul className="max-h-80 overflow-y-auto">
-        {hits.map((n, i) => (
-          <li key={n.id}><button onMouseEnter={() => setCur(i)} onClick={() => go(n.id)}
-            className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm ${i === cur ? "bg-slate-700" : ""}`}>
-            <Dot light={isDept(n) ? n.rollup.worst : n.light} size="sm" /><span>{n.id}</span>
-            <span className="text-xs text-slate-500">{n.kind === "agent" ? (isDept(n) ? "部門" : "") : n.kind === "proc" ? "程序" : "外部"}</span>
-            <span className="ml-auto truncate text-xs text-slate-500" title={n.why}>{whyWord(n.why)}</span>
-          </button></li>
-        ))}
-        {!hits.length && <li className="px-2 text-sm text-slate-500">找不到</li>}
-      </ul>
+        className="mb-1 w-full rounded bg-slate-800 px-2 py-1.5 text-sm" />
+      <p data-verb-hint className="mb-2 px-1 text-xs text-sky-300">{verbHint(verb)}{verb?.kind === "decide" ? `（還有 ${asks.length} 張）` : ""}</p>
+      {!noName && (
+        <ul className="max-h-80 overflow-y-auto">
+          {hits.map((n, i) => (
+            <li key={n.id}><button onMouseEnter={() => setCur(i)} onClick={() => go(n.id)}
+              className={`flex min-h-8 w-full items-center gap-2 rounded px-2 py-1 text-left text-sm ${i === cur ? "bg-slate-700" : ""}`}>
+              <Dot light={isDept(n) ? n.rollup.worst : n.light} size="sm" /><span>{n.id}</span>
+              <span className="text-xs text-slate-400">{kindWord(n)}</span>
+              <span className="ml-auto truncate text-xs text-slate-400" title={n.why}>{whyWord(n.why)}</span>
+            </button></li>
+          ))}
+          {!hits.length && <li className="px-2 text-sm text-slate-400">找不到</li>}
+        </ul>
+      )}
     </Modal>
   );
 }
@@ -87,7 +107,7 @@ function Board() {
     closeBoard();
   };
   return (
-    <Modal onClose={closeBoard} title="📌 給 agent 的留話（它們久等你時會來看）">
+    <Modal onClose={closeBoard} title="📌 我的公告（agent 久等你時會來看）">
       <div className="mb-2 flex flex-wrap gap-1">
         {PRESET.map((p) => <button key={p} className="rounded bg-slate-800 px-2 py-0.5 text-xs hover:bg-slate-700" onClick={() => setText(p)}>{p}</button>)}
       </div>
@@ -96,7 +116,7 @@ function Board() {
       {board?.at && <p className="mt-1 text-xs text-slate-500">現在掛著的是 {board.at} 寫的</p>}
       <div className="mt-2 flex items-center gap-2">
         <button disabled={busy || !text.trim()} className="rounded bg-sky-700 px-3 py-1 text-sm disabled:opacity-40" onClick={() => save(text.trim(), back.trim())}>掛上</button>
-        {board && <button disabled={busy} className="rounded bg-slate-700 px-3 py-1 text-sm" onClick={() => save("", "")}>拿掉留話</button>}
+        {board && <button disabled={busy} className="rounded bg-slate-700 px-3 py-1 text-sm" onClick={() => save("", "")}>拿掉公告</button>}
         {msg && <span className="text-sm text-red-300">{msg}</span>}
       </div>
     </Modal>

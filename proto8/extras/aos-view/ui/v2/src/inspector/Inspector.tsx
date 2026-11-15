@@ -16,7 +16,7 @@ import { Dot, LIGHT_WORD, SectionTitle } from "../shell/bits.tsx";
 import { readBoard, boardCounts, MODE_WORD, type BoardView } from "../model/board.ts";
 import { ago, dayTime, parseIso } from "../model/time.ts";
 import { descendants, displayName, isDept, machineIds, MACHINE, soleRoot } from "../model/tree.ts";
-import { whyWord } from "../model/words.ts";
+import { stateWord, statusWord, whyWord } from "../model/words.ts";
 
 function Row({ k, children }: { k: string; children: React.ReactNode }) {
   return <div className="flex gap-2 text-sm"><span className="w-16 shrink-0 text-slate-500">{k}</span><span className="min-w-0 break-words text-slate-200">{children}</span></div>;
@@ -92,7 +92,7 @@ function Head({ n, tree }: { n: Node; tree: Tree }) {
       <div className="flex items-center gap-2">
         <Dot light={n.light} />
         <h2 className="truncate text-base font-semibold">{displayName(n.id)}</h2>
-        <span className="text-xs text-slate-500">{n.kind === "agent" ? (dept ? "部門主管" : "agent") : n.kind === "proc" ? "程序" : "外部服務"}</span>
+        <span className="text-xs text-slate-500">{n.kind === "agent" ? (dept ? "部門主管" : "員工") : n.kind === "proc" ? "程序" : "外部服務"}</span>
         <span className="ml-auto flex items-center gap-1">
           <CompactButton n={n} />
           {dept && <button className="rounded bg-slate-800 px-2 py-0.5 text-xs hover:bg-slate-700" onClick={() => enter(n.id)}>進部門 ▸</button>}
@@ -116,10 +116,10 @@ function DeptSummary({ n, tree, now }: { n: Node; tree: Tree; now: number }) {
       <Row k="底下">{n.rollup.nodes} 個（{n.children.length} 個直屬）</Row>
       <Row k="最差">{LIGHT_WORD[n.rollup.worst]}{n.rollup.why ? `：${whyWord(n.rollup.why)}` : ""}</Row>
       {c && (c.red || c.blue || c.yellow) ? <Row k="燈">{c.red ? `出事 ${c.red} ` : ""}{c.blue ? `要決定 ${c.blue} ` : ""}{c.yellow ? `留意 ${c.yellow}` : ""}</Row> : null}
-      {n.note && <Row k="隊長留話"><span title={n.note.on || ""}>「{n.note.text}」</span><span className="text-xs text-slate-500">（{n.note.status}，{ago(n.note.at, now)}）</span></Row>}
+      {n.note && <Row k="主管說"><span title={n.note.on || ""}>「{n.note.text}」</span><span className="text-xs text-slate-500">（{n.note.status}，{ago(n.note.at, now)}）</span></Row>}
       {n.aide && <Row k="小助手">{n.aide.name}：{n.aide.state || "?"}，心跳 {ago(n.aide.last_beat, now)}</Row>}
       {n.team_light && <Row k="隊燈">{LIGHT_WORD[n.team_light.light]}：{whyWord(n.team_light.why)}</Row>}
-      {(bc.dnd > 0 || bc.waiting > 0) && <Row k="公告欄">{bc.dnd ? `${bc.dnd} 個請勿打擾 ` : ""}{bc.waiting ? `${bc.waiting} 個在等人` : ""}</Row>}
+      {(bc.dnd > 0 || bc.waiting > 0) && <Row k="公告欄">{bc.dnd ? `${bc.dnd} 個請勿打擾 ` : ""}{bc.waiting ? `${bc.waiting} 個在等你` : ""}</Row>}
       {bc.waitingUser.length > 0 && (
         <div className="mt-1 rounded bg-sky-950/60 p-2 text-sm">
           <div className="text-xs text-sky-300">在等你的：</div>
@@ -150,7 +150,7 @@ function AgentNow({ n, tree, now }: { n: Node; tree: Tree; now: number }) {
       {bv && <BoardFull v={bv} now={now} />}
       {isDept(n) && <DeptSummary n={n} tree={tree} now={now} />}
       <SectionTitle right={live.at ? <span className="normal-case">{ago(live.at, now)}讀的</span> : null}>它現在</SectionTitle>
-      <Row k="狀態">{n.state || "?"}{n.phase ? ` / ${n.phase}` : ""}{n.busy ? `，正在 ${n.busy}` : ""}</Row>
+      <Row k="狀態"><span title={`${n.state || "?"}${n.phase ? " / " + n.phase : ""}`}>{stateWord(n.state)}{n.phase && n.phase !== n.state ? `（${stateWord(n.phase)}）` : ""}</span>{n.busy ? `，正在 ${n.busy}` : ""}</Row>
       <Row k="信箱">{n.queued ? `排著 ${n.queued} 則` : "空"}</Row>
       <Row k="動靜">{ago(n.active_at, now)}</Row>
       {n.cooldown && <Row k="冷卻"><span className="text-amber-300">{n.cooldown.reason || n.cooldown.code || "冷卻中"}{n.cooldown.until ? `，到 ${dayTime(n.cooldown.until, now)}` : ""}</span></Row>}
@@ -169,7 +169,7 @@ function AgentNow({ n, tree, now }: { n: Node; tree: Tree; now: number }) {
         <>
           <SectionTitle>信箱裡等著的</SectionTitle>
           <ul className="space-y-0.5 text-sm">{a.mailbox.letters.map((l, i) => (
-            <li key={i}><span className="text-slate-400">{l.from}（{l.status}）：</span>{l.title}<span className="text-xs text-slate-500"> {ago(l.sent_at, now)}</span></li>
+            <li key={i}><span className="text-slate-400">{l.from}（{statusWord(l.status)}）：</span>{l.title}<span className="text-xs text-slate-500"> {ago(l.sent_at, now)}</span></li>
           ))}</ul>
         </>
       )}
@@ -177,7 +177,7 @@ function AgentNow({ n, tree, now }: { n: Node; tree: Tree; now: number }) {
         <>
           <SectionTitle>寄給上面的報告</SectionTitle>
           <ul className="space-y-0.5 text-sm">{n.reports.slice(0, 5).map((r) => (
-            <li key={r.letter}><span className="text-slate-400">{r.status}：</span>{r.title}<span className="text-xs text-slate-500"> {ago(r.sent_at, now)}</span></li>
+            <li key={r.letter}><span className="text-slate-400">{statusWord(r.status)}：</span>{r.title}<span className="text-xs text-slate-500"> {ago(r.sent_at, now)}</span></li>
           ))}</ul>
         </>
       )}
@@ -206,7 +206,7 @@ function History({ n }: { n: Node }) {
 function Plain({ n, now }: { n: Node; now: number }) {
   return (
     <div className="space-y-1 p-3">
-      <Row k="狀態">{n.state || "?"}</Row>
+      <Row k="狀態"><span title={n.state || "?"}>{stateWord(n.state)}</span></Row>
       <Row k="動靜">{ago(n.active_at, now)}</Row>
       {n.ext && <><Row k="網址"><span className="font-mono text-xs">{n.ext.url}</span></Row>
         {n.ext.listen && <Row k="聽">{n.ext.listen.join("、")}</Row>}</>}
@@ -228,8 +228,8 @@ function Overview({ tree, focus, now }: { tree: Tree; focus: string | null; now:
       <h2 className="text-base font-semibold">{focus === MACHINE ? "機房" : "公司全景"}</h2>
       {focus !== MACHINE && <>
         <Row k="規模">{all.filter((n) => n.kind === "agent").length} 個 agent，{tree.llm_workers} 個在用模型</Row>
-        <Row k="你的留話">{board ? `${board.text}${board.back ? `（${board.back} 回）` : ""}` : "沒有"}</Row>
-        {bc.waitingUser.length > 0 && <Row k="在等你">{bc.waitingUser.length} 件（公告欄寫的）</Row>}
+        <Row k="我的公告">{board ? `${board.text}${board.back ? `（${board.back} 回）` : ""}` : "沒有"}</Row>
+        {bc.waitingUser.length > 0 && <Row k="在等你">{bc.waitingUser.length} 件（它們的公告寫的）</Row>}
       </>}
       <SectionTitle>{focus === MACHINE ? "程序和外部服務" : "部門"}</SectionTitle>
       <ul className="space-y-0.5">

@@ -73,7 +73,7 @@ export function Header() {
         {btn("ask", "🔵 要決定", counts.ask, "bg-sky-900 text-sky-100", "1")}
         {btn("red", "🔴 出事", counts.red, "bg-red-900 text-red-100", "2")}
         {btn("yellow", "🟡 留意", counts.yellow, "bg-amber-900 text-amber-100", "3")}
-        {btn("reply", "✉ 等回音", counts.reply, "bg-indigo-900 text-indigo-100", "4")}
+        {btn("reply", "✉ 新回覆", counts.reply, "bg-indigo-900 text-indigo-100", "4")}
       </div>
       <div className="ml-auto flex items-center gap-3 text-sm">
         <button className="rounded bg-slate-800 px-2 py-0.5 text-slate-300 hover:bg-slate-700" onClick={() => ui.set({ searchOpen: true })}>
@@ -84,7 +84,7 @@ export function Header() {
         )}
         <button className={`max-w-64 truncate ${board ? "text-amber-200" : "text-slate-500"}`} onClick={() => ui.set({ boardOpen: true })}
           title={board ? board.text : "留一句話給 agent：睡覺、出門、開會"}>
-          📌 {board ? `${board.text}${board.back ? `，${board.back} 回` : ""}` : "留話"}
+          📌 {board ? `${board.text}${board.back ? `，${board.back} 回` : ""}` : "我的公告"}
         </button>
         <Freshness />
         <a className="text-slate-500 hover:text-slate-300" href={v1} title="v1 清單版（8767，已凍結）">舊版</a>

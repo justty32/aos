@@ -54,10 +54,12 @@
      "VERSION": "",
      "dist": {
       "assets": {
+       "index-9i7SuQ5Y.js": "",
        "index-C6BJbrWf.js": "",
        "index-CCvZ7tt8.js": "",
        "index-CMeaRHg_.js": "",
        "index-CUu5N8xK.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
+       "index-Chz9THgY.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
        "index-DRlybWJG.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
        "index-DRvCQ-de.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
        "index-DUP8VP5F.js": "",
@@ -111,12 +113,13 @@
        "inbox.ts": "The to-do queue (02c §2): four kinds in a fixed order, all derived from data the page already has (no model).",
        "layoutMap.ts": "The map's layout (P4; 02e §3, q5 a), pure so node --test can check it: \"wide rooms, people before rooms\".",
        "model.test.ts": "",
+       "palette.ts": "Ctrl+K: find someone, or say what to do first (02d §4.2 \"找人框兼做下命令\"). Pure, so node --test checks it.",
        "time.ts": "Time words (pure). The page counts \"N min ago\" itself from epoch fields, on the 10 s local tick (12.8 #7).",
        "tree.ts": "Tree helpers (pure). A department = a node with members (children). The company = the roots that are agents,",
        "words.ts": "The back end's light reasons (\"why\") are English (program output stays English, conventions); the page shows them"
       },
       "shell": {
-       "Dialogs.tsx": "Overlays: Ctrl+K search (jump to anyone), the user's board (留話), the drafts list. Esc closes the top one.",
+       "Dialogs.tsx": "Overlays: Ctrl+K search (jump to anyone), the user's board (我的公告), the drafts list. Esc closes the top one.",
        "Header.tsx": "",
        "bits.tsx": "Small shared pieces: the light dot, the delivery steps, a section title. Agent text always as React text."
       },

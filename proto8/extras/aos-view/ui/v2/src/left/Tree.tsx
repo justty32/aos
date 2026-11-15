@@ -15,7 +15,7 @@ const badge = (n: number) => (n > 99 ? "99+" : String(n));
 function Badges({ r }: { r: TreeRow }) {
   const b = r.badges;
   return (
-    <span className="ml-auto flex shrink-0 items-center gap-1 text-[11px]">
+    <span className="ml-auto flex shrink-0 items-center gap-1 text-xs">
       {b.ask > 0 && <span className="min-w-8 rounded bg-sky-900 px-1 text-center text-sky-100" title="要你決定">🔵{badge(b.ask)}</span>}
       {b.red > 0 && <span className="min-w-8 rounded bg-red-900 px-1 text-center text-red-100" title="出事">🔴{badge(b.red)}</span>}
       {b.reply > 0 && <span className="min-w-8 rounded bg-indigo-900 px-1 text-center text-indigo-100" title="新回覆">✉{badge(b.reply)}</span>}

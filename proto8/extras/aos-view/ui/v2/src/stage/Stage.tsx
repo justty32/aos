@@ -54,18 +54,22 @@ export function Stage() {
       const nx = Math.min(ids.length - 1, Math.max(0, cur < 0 ? 0 : cur + step));
       select(ids[nx] === MACHINE ? null : ids[nx]);
     };
+    // on the map tab the map has its own arrows (MapView); the wall's are not registered then
+    const wall = route.view === "map" && !route.ask ? [] : [
+      { key: "ArrowRight", zone: "stage" as const, run: () => move(1) }, { key: "l", zone: "stage" as const, run: () => move(1) },
+      { key: "ArrowLeft", zone: "stage" as const, run: () => move(-1) }, { key: "h", zone: "stage" as const, run: () => move(-1) },
+      { key: "ArrowDown", zone: "stage" as const, run: () => move(2) }, { key: "j", zone: "stage" as const, run: () => move(1) },
+      { key: "ArrowUp", zone: "stage" as const, run: () => move(-2) }, { key: "k", zone: "stage" as const, run: () => move(-1) },
+      { key: "Enter", zone: "stage" as const, run: () => { if (route.sel) enter(route.sel); } },
+    ];
     return bind([
-      { key: "ArrowRight", zone: "stage", run: () => move(1) }, { key: "l", zone: "stage", run: () => move(1) },
-      { key: "ArrowLeft", zone: "stage", run: () => move(-1) }, { key: "h", zone: "stage", run: () => move(-1) },
-      { key: "ArrowDown", zone: "stage", run: () => move(2) }, { key: "j", zone: "stage", run: () => move(1) },
-      { key: "ArrowUp", zone: "stage", run: () => move(-2) }, { key: "k", zone: "stage", run: () => move(-1) },
-      { key: "Enter", zone: "stage", run: () => route.sel && enter(route.sel) },
+      ...wall,
       { key: "Backspace", run: () => up() },
       { key: "w", run: () => setView("wall") }, { key: "m", run: () => setView("map") }, { key: "t", run: () => setView("todo") },
       { key: "n", run: () => { if (!hot) return; const list = ids.filter(hot); if (!list.length) return;
         const i = list.indexOf(route.sel || ""); const nx = list[(i + 1) % list.length]; select(nx === MACHINE ? null : nx); } },
     ]);
-  }, [ids, route.sel, hot]);
+  }, [ids, route.sel, route.view, route.ask, hot]);
 
   const tabBtn = (v: "wall" | "map" | "todo", label: string, key: string, extra?: React.ReactNode) => (
     <button className={`rounded px-2 py-0.5 ${route.view === v && !route.ask ? "bg-slate-700" : "text-slate-400 hover:bg-slate-800"}`}

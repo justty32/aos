@@ -60,7 +60,7 @@ function Strip() {
       <button className="h-7 w-10 rounded text-slate-300 hover:bg-slate-800" title="打開左欄（[）" onClick={toggleLeft}>»</button>
       {n("ask", "🔵", counts.ask, "要你決定")}
       {n("red", "🔴", counts.red, "出事")}
-      {n("reply", "✉", counts.reply, "新回覆、等回音")}
+      {n("reply", "✉", counts.reply, "新回覆")}
       {n("yellow", "🟡", counts.yellow, "留意")}
     </aside>
   );

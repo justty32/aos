@@ -11,6 +11,7 @@ import { jump } from "../state/nav.ts";
 import { isSubmit } from "../input/keys.ts";
 import { dropDraft, emptyDraft, loadDraft, saveDraft, type Draft, type Mode } from "../model/drafts.ts";
 import { displayName } from "../model/tree.ts";
+import { statusWord } from "../model/words.ts";
 
 const MAIL_STATUS = ["REQUEST", "PROGRESS", "DONE", "BLOCKED", "NEEDS-USER", "FAILED"];
 const MODELS = ["chatgpt-gpt-6.1-sol", "opus", "fable", "sonnet", "haiku"];
@@ -62,7 +63,7 @@ export function Composer() {
       if (tree?.nodes[prefill.target]) { jump(prefill.target, false); return; }   // comes back here with the new target
       ui.set({ prefill: null }); ui.set({ flash: `${prefill.target} 不在樹上了，寄不了` }); return;
     }
-    put({ mode: prefill.mode, ...(prefill.mailTitle ? { mailTitle: prefill.mailTitle } : {}), ...(prefill.mailStatus ? { mailStatus: prefill.mailStatus } : {}) });
+    put({ mode: prefill.mode, ...(prefill.orderKind ? { orderKind: prefill.orderKind } : {}), ...(prefill.mailTitle ? { mailTitle: prefill.mailTitle } : {}), ...(prefill.mailStatus ? { mailStatus: prefill.mailStatus } : {}) });
     setCorr(prefill.correctionOf || null);
     ui.set({ prefill: null });
     setTimeout(() => box.current?.focus(), 0);
@@ -124,15 +125,15 @@ export function Composer() {
           : <button className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300" onClick={() => ui.set({ searchOpen: true })}>
               {n ? `${n.id} 不收話；` : ""}對：＋點這裡或按 Ctrl+K 選對象</button>}
         {modeBtn("say", "說話")}{modeBtn("mail", "寄信")}{modeBtn("order", "指令")}
-        {corr && <span className="truncate rounded bg-amber-900 px-1.5 text-[10px] text-amber-100" title={corr}>更正 {corr}
+        {corr && <span className="truncate rounded bg-amber-900 px-1.5 text-xs text-amber-100" title={corr}>更正 {corr}
           <button className="ml-1" onClick={() => setCorr(null)}>×</button></span>}
-        <span className="ml-auto text-[10px] text-slate-500">{d.mode === "order" ? "按按鈕送出" : "Ctrl+Enter 送出"}</span>
+        <span className="ml-auto text-xs text-slate-500">{d.mode === "order" ? "按按鈕送出" : "Ctrl+Enter 送出"}</span>
       </div>
 
       {d.mode === "mail" && (
         <div className="mb-1 flex gap-1">
           <select value={d.mailStatus} onChange={(e) => put({ mailStatus: e.target.value })} className="rounded bg-slate-800 px-1 text-xs">
-            {MAIL_STATUS.map((s) => <option key={s}>{s}</option>)}
+            {MAIL_STATUS.map((s) => <option key={s} value={s}>{statusWord(s)}</option>)}
           </select>
           <input value={d.mailTitle} onChange={(e) => put({ mailTitle: e.target.value })} placeholder="標題（一行看得懂）" maxLength={300}
             onKeyDown={(e) => { if (isSubmit(e.nativeEvent)) { e.preventDefault(); send(); } }}
@@ -160,7 +161,7 @@ export function Composer() {
               ))}
             </div>
           )}
-          {target && orderTo && <p className="text-[11px] text-slate-400">這張單會寄給 {orderTo}{orderTo !== target ? `（關於 ${target}）` : ""}；頁面不直接動樹，對方照自己的規矩辦。</p>}
+          {target && orderTo && <p className="text-xs text-slate-400">這張單會寄給 {orderTo}{orderTo !== target ? `（關於 ${target}）` : ""}；頁面不直接動樹，對方照自己的規矩辦。</p>}
         </div>
       )}
       <textarea ref={box} value={d.text} onChange={(e) => put({ text: e.target.value })} rows={3} disabled={!target}

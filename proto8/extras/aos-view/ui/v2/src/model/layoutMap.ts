@@ -146,3 +146,42 @@ export function itemLight(t: Tree, it: MapItem) {
   if (!n) return "gray" as const;
   return it.kind === "room" || it.kind === "fold" ? n.rollup.worst : n.light;
 }
+
+// ---- keyboard on the map (02d §6 #2): arrows go to the nearest piece that way, by rectangles; pure and tested ----
+
+export type Dir = "left" | "right" | "up" | "down";
+/** one key per piece: a room and its lead plate share the id, so the kind is part of it */
+export const itemKey = (it: MapItem) => `${it.kind}:${it.id}`;
+/** what the arrows walk on: a room by its title bar, the rest whole */
+function hitBox(it: MapItem) {
+  return it.kind === "room" ? { x: it.x, y: it.y, w: it.w, h: 26 } : { x: it.x, y: it.y, w: it.w, h: it.h };
+}
+
+/** the piece reached from `from` (an itemKey) by one arrow; null = nothing that way. No current piece = the first. */
+export function nearest(items: MapItem[], from: string | null, dir: Dir): string | null {
+  if (!items.length) return null;
+  const a = items.find((it) => itemKey(it) === from);
+  if (!a) return itemKey(items[0]);
+  const A = hitBox(a);
+  const acx = A.x + A.w / 2, acy = A.y + A.h / 2;
+  let best: { k: string; s: number } | null = null;
+  for (const it of items) {
+    if (it === a) continue;
+    const B = hitBox(it);
+    const bcx = B.x + B.w / 2, bcy = B.y + B.h / 2;
+    // main = how far that way (must be ahead); side = how far off the line, 0 when the boxes overlap on the other axis
+    let main: number, side: number;
+    if (dir === "right" || dir === "left") {
+      main = dir === "right" ? B.x - (A.x + A.w) : A.x - (B.x + B.w);
+      if ((dir === "right" ? bcx <= acx : bcx >= acx)) continue;
+      side = Math.max(A.y, B.y) - Math.min(A.y + A.h, B.y + B.h) > 0 ? Math.abs(bcy - acy) : 0;
+    } else {
+      main = dir === "down" ? B.y - (A.y + A.h) : A.y - (B.y + B.h);
+      if ((dir === "down" ? bcy <= acy : bcy >= acy)) continue;
+      side = Math.max(A.x, B.x) - Math.min(A.x + A.w, B.x + B.w) > 0 ? Math.abs(bcx - acx) : 0;
+    }
+    const s = Math.max(0, main) + side * 3;
+    if (!best || s < best.s) best = { k: itemKey(it), s };
+  }
+  return best ? best.k : null;
+}

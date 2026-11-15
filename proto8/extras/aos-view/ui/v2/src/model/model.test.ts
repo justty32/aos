@@ -210,3 +210,55 @@ test("light reasons in plain Chinese (P5), unknown ones unchanged", async () => 
   assert.equal(whyWord("something new"), "something new");
   assert.equal(whyWord(null), "");
 });
+
+test("map arrows (02d §6 #2): nearest piece that way; every piece reachable", async () => {
+  const { layoutMap, nearest, itemKey } = await import("./layoutMap.ts");
+  const kids = (p: string, n: number) => Array.from({ length: n }, (_, i) => node(`${p}-m${i}`, { parent: p }));
+  const t = tree([node("hq"), ...kids("hq", 9), node("hq-ops", { parent: "hq" }), ...kids("hq-ops", 5), node("solo"), node("solo2")]);
+  const l = layoutMap(t, null, 700, 5000);
+  const k = (kind: string, id: string) => `${kind}:${id}`;
+  assert.equal(nearest(l.items, null, "right"), itemKey(l.items[0]));
+  assert.equal(nearest(l.items, k("plate", "solo"), "right"), k("plate", "solo2"));
+  assert.equal(nearest(l.items, k("plate", "solo"), "down"), k("room", "hq"));
+  assert.equal(nearest(l.items, k("room", "hq"), "down"), k("plate", "hq"));        // the lead plate under the title
+  assert.equal(nearest(l.items, k("plate", "solo"), "up"), null);
+  // from anywhere, the arrows reach every piece
+  const seen = new Set([itemKey(l.items[0])]);
+  const todo = [itemKey(l.items[0])];
+  while (todo.length) {
+    const c = todo.pop()!;
+    for (const d of ["left", "right", "up", "down"] as const) {
+      const n = nearest(l.items, c, d);
+      if (n && !seen.has(n)) { seen.add(n); todo.push(n); }
+    }
+  }
+  assert.equal(seen.size, l.items.length);
+});
+
+test("Ctrl+K verbs (02d §4.2) and name ranking", async () => {
+  const { parseQuery, findNodes } = await import("./palette.ts");
+  assert.deepEqual(parseQuery("board"), { verb: null, rest: "board" });
+  assert.deepEqual(parseQuery("信 board"), { verb: { kind: "mail" }, rest: "board" });
+  assert.deepEqual(parseQuery("信board"), { verb: { kind: "mail" }, rest: "board" });
+  assert.deepEqual(parseQuery("加人 view"), { verb: { kind: "order", order: "hire" }, rest: "view" });
+  assert.deepEqual(parseQuery("電力 x").verb, { kind: "order", order: "power" });
+  assert.deepEqual(parseQuery("決定"), { verb: { kind: "decide" }, rest: "" });
+  assert.deepEqual(parseQuery("地圖").verb, { kind: "view", view: "map" });
+  assert.equal(parseQuery("mailer").verb, null);                      // a name that starts like a verb stays a name
+  assert.equal(parseQuery("地圖組").verb, null);
+  const t = tree([node("ok-board"), node("ok-board-sol-1", { parent: "ok-board" }), node("ok-view"), node("litellm", { kind: "external" })]);
+  assert.deepEqual(findNodes(t, "board").map((n) => n.id), ["ok-board", "ok-board-sol-1"]);
+  assert.deepEqual(findNodes(t, "sol-1").map((n) => n.id), ["ok-board-sol-1"]);
+  assert.deepEqual(findNodes(t, "", true).map((n) => n.id).includes("litellm"), false);
+});
+
+test("words (02d §5.2): states, letter statuses, kinds", async () => {
+  const { stateWord, statusWord, kindWord } = await import("./words.ts");
+  assert.equal(stateWord("running"), "在跑");
+  assert.equal(stateWord("Weird"), "Weird");
+  assert.equal(stateWord(null), "不明");
+  assert.equal(statusWord("NEEDS-USER"), "要你出面");
+  assert.equal(statusWord("done"), "做完了");
+  assert.equal(kindWord({ kind: "external" }), "外部服務");
+  assert.equal(kindWord({ kind: "agent", children: ["x"] }), "部門");
+});

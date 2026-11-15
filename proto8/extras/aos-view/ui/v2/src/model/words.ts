@@ -36,7 +36,7 @@ const RULES: Rule[] = [
 
 function min(m: string): string {
   const n = Number(m);
-  return n < 1 ? "剛剛" : n < 60 ? `${n} 分鐘前` : n < 1440 ? `${Math.floor(n / 60)} 小時前` : `${Math.floor(n / 1440)} 天前`;
+  return n < 1 ? "剛剛" : n < 60 ? `${n} 分前` : n < 1440 ? `${Math.floor(n / 60)} 小時前` : `${Math.floor(n / 1440)} 天前`;
 }
 
 /** the page's sentence for a back-end reason; unknown ones stay as they are */
@@ -47,4 +47,42 @@ export function whyWord(why: string | null | undefined): string {
     if (m) return f(...m.slice(1).map((x) => x ?? ""));
   }
   return why;
+}
+
+// ---- 02d §5.1 / §5.2: one name per thing; states, letter statuses and node kinds in Chinese (unknown = as is) ----
+
+export const NAMES = {
+  myBoard: "我的公告",      // what the user pins for the agents (not 留話 / 布告欄)
+  board: "公告",            // what an agent pins
+  ask: "要你決定",
+  waitingYou: "等你",       // an agent's board says it waits on the user
+  reply: "新回覆",          // unread letters back (not 等回音 / 回了話)
+  longWait: "等很久沒回",   // you sent something, nothing moved
+  lead: "主管",             // the head of a department (not 隊長 / 主管桌)
+} as const;
+
+const STATE: Record<string, string> = {
+  running: "在跑", paused: "暫停", sleeping: "睡著", stopped: "停了", stuck: "很久沒動靜", starting: "啟動中",
+  stopping: "停止中", crashed: "當掉", unknown: "不明", think: "想事情", idle: "閒著",
+};
+/** a daemon state / phase word */
+export function stateWord(s: string | null | undefined): string {
+  if (!s) return "不明";
+  return STATE[s.toLowerCase()] ?? s;
+}
+
+const STATUS: Record<string, string> = {
+  REQUEST: "請求", PROGRESS: "進行中", DONE: "做完了", BLOCKED: "卡住", FAILED: "失敗", "NEEDS-USER": "要你出面",
+};
+/** a letter's status word (REQUEST / PROGRESS / ...) */
+export function statusWord(s: string | null | undefined): string {
+  if (!s) return "";
+  return STATUS[s.toUpperCase()] ?? s;
+}
+
+/** what a node is, for lists: a department / a program / an outside service; a plain agent says nothing */
+export function kindWord(n: { kind: string; children?: string[] }): string {
+  if (n.kind === "proc") return "程序";
+  if (n.kind === "external") return "外部服務";
+  return n.children && n.children.length ? "部門" : "";
 }

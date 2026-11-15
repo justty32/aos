@@ -46,7 +46,7 @@ export interface UiState {
   prefill: Prefill | null;       // the composer takes it once (更正, reply to a letter)
 }
 
-export interface Prefill { target: string; mode: "say" | "mail"; mailTitle?: string; mailStatus?: string; correctionOf?: string; n: number }
+export interface Prefill { target: string; mode: "say" | "mail" | "order"; orderKind?: string; mailTitle?: string; mailStatus?: string; correctionOf?: string; n: number }
 
 export const ui = createStore<UiState>({
   route: parseHash(typeof location === "undefined" ? "" : location.hash),

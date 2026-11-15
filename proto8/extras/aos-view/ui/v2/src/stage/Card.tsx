@@ -87,34 +87,34 @@ export function Card({ tree, id, lead, selected, dim, now }: CardProps) {
         <div className="flex items-center gap-2">
           <Dot light={n.rollup.worst} title={whyWord(n.rollup.why)} />
           <button data-enter className="truncate font-semibold hover:underline" onClick={() => enter(id)}>{id} ▸</button>
-          {n.aide && <span className="rounded bg-slate-800 px-1 text-[10px] text-slate-400" title={`小助手 ${n.aide.name}`}>助 {ago(n.aide.last_beat, now)}</span>}
+          {n.aide && <span className="rounded bg-slate-800 px-1 text-xs text-slate-400" title={`小助手 ${n.aide.name}`}>助 {ago(n.aide.last_beat, now)}</span>}
           <span className="ml-auto text-xs text-slate-400">{n.rollup.nodes} 人</span>
         </div>
         <div className="flex flex-wrap gap-1">
           {n.children.slice(0, 24).map((c) => tree.nodes[c] && <span key={c} className={`h-2 w-2 rounded-full ${LIGHT_BG[tree.nodes[c].rollup.worst]}`} title={c} />)}
         </div>
-        {n.note && <p className="line-clamp-2 text-xs text-slate-300" title="隊長原話">留話：{n.note.text}</p>}
+        {n.note && <p className="line-clamp-2 text-xs text-slate-300" title="主管自己寫的">主管說：{n.note.text}</p>}
         <div className="flex items-center gap-2"><Counts c={n.rollup.counts} />
-          {(bc.dnd > 0 || bc.waiting > 0) && <span className="text-xs text-slate-400">{bc.dnd ? `${bc.dnd} 隻請勿打擾 ` : ""}{bc.waiting ? `${bc.waiting} 隻在等人` : ""}</span>}
+          {(bc.dnd > 0 || bc.waiting > 0) && <span className="text-xs text-slate-400">{bc.dnd ? `${bc.dnd} 隻請勿打擾 ` : ""}{bc.waiting ? `${bc.waiting} 隻在等你` : ""}</span>}
         </div>
         <AlertChips tree={tree} ids={(n.rollup.worst_ids || []).filter((x) => x !== id)} />
       </Shell>
     );
   }
-  const kindWord = n.kind === "external" ? "外部服務" : n.kind === "proc" ? "程序" : lead ? "主管桌" : null;
+  const kindWord = n.kind === "external" ? "外部服務" : n.kind === "proc" ? "程序" : lead ? "主管" : null;
   return (
     <Shell id={id} selected={selected} dim={dim} dept={false}>
       <div className="flex items-center gap-2">
         <Dot light={n.light} title={whyWord(n.why)} />
         <span className="truncate font-semibold">{displayName(id)}</span>
-        {kindWord && <span className="rounded bg-slate-800 px-1 text-[10px] text-slate-400">{kindWord}</span>}
+        {kindWord && <span className="rounded bg-slate-800 px-1 text-xs text-slate-400">{kindWord}</span>}
         {n.queued ? <span className="ml-auto text-xs text-amber-300" title="信箱裡等著的">✉{n.queued}</span> : null}
       </div>
       <p className="line-clamp-2 text-xs text-slate-400" title={n.why}>{whyWord(n.why)}</p>
-      {lead && n.note && <p className="line-clamp-2 text-xs text-slate-300" title="隊長原話">留話：{n.note.text}</p>}
+      {lead && n.note && <p className="line-clamp-2 text-xs text-slate-300" title="主管自己寫的">主管說：{n.note.text}</p>}
       {!lead && n.last_answer && <p className="line-clamp-2 text-xs text-slate-300" title="最後一句話">「{n.last_answer}」</p>}
       <BoardChip n={n} now={now} />
-      <div className="mt-auto text-[11px] text-slate-500">{n.kind === "external" ? `上次檢查 ${ago(n.active_at, now)}` : `動靜 ${ago(n.active_at, now)}`}</div>
+      <div className="mt-auto text-xs text-slate-500">{n.kind === "external" ? `上次檢查 ${ago(n.active_at, now)}` : `動靜 ${ago(n.active_at, now)}`}</div>
     </Shell>
   );
 }

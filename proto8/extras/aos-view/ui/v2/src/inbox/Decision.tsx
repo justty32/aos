@@ -114,8 +114,8 @@ export function Decision({ letter }: { letter: string }) {
       {a && <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         {gone && <p className="mb-2 rounded bg-amber-950 px-2 py-1 text-xs text-amber-200">這封已經不在待辦裡了（可能在別處回過）。送出會被擋下來，不會重複。</p>}
         <div className="flex flex-wrap items-center gap-1">
-          {a.urgent && <span className="rounded bg-red-700 px-1 text-[11px]">急</span>}
-          {irreversible && <span className="rounded bg-rose-800 px-1 text-[11px]">不可逆：請一題一題看</span>}
+          {a.urgent && <span className="rounded bg-red-700 px-1 text-xs">急</span>}
+          {irreversible && <span className="rounded bg-rose-800 px-1 text-xs">不可逆：請一題一題看</span>}
           <h3 className="text-base font-semibold">{a.title}</h3>
         </div>
         <p className="text-xs text-slate-400">{a.from || "?"}｜{ago(a.sent_at, now)}{a.deadline ? `｜期限 ${a.deadline}` : ""}{a.same > 1 ? `｜同樣的問了 ${a.same} 次` : ""}</p>
@@ -148,7 +148,7 @@ export function Decision({ letter }: { letter: string }) {
                     <button key={o.key} onClick={() => pick(q.id, o.key)}
                       className={`block w-full rounded px-3 py-1.5 text-left text-sm ${on ? "bg-sky-800 text-white" : "bg-slate-800 hover:bg-slate-700"}`}>
                       <kbd className="mr-1 text-xs text-slate-400">{o.key}</kbd>{o.label}
-                      {q.recommend === o.key && <span className="ml-1 rounded bg-emerald-900 px-1 text-[11px] text-emerald-200">推薦</span>}
+                      {q.recommend === o.key && <span className="ml-1 rounded bg-emerald-900 px-1 text-xs text-emerald-200">推薦</span>}
                       {o.consequence && <span className="block text-xs text-slate-400">→ {o.consequence}</span>}
                     </button>
                   );

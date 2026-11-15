@@ -11,7 +11,7 @@ import { Dot, Steps } from "../shell/bits.tsx";
 import type { OutItem } from "../api/types.ts";
 import { whyWord } from "../model/words.ts";
 
-const KIND_HEAD: Record<TodoKind, string> = { ask: "🔵 要你決定", red: "🔴 出事", reply: "✉ 回了話", wait: "⏳ 等很久" };
+const KIND_HEAD: Record<TodoKind, string> = { ask: "🔵 要你決定", red: "🔴 出事", reply: "✉ 新回覆", wait: "⏳ 等你／等很久沒回" };
 
 export function openTodo(t: Todo) {
   if (t.kind === "ask") {
@@ -31,7 +31,7 @@ function TodoRow({ t, active, now }: { t: Todo; active: boolean; now: number }) 
     <li className={`group rounded px-2 py-1.5 ${active ? "bg-slate-700" : "hover:bg-slate-800"}`}>
       <button className="block w-full text-left" onClick={() => openTodo(t)}>
         <div className="flex items-center gap-1 text-sm">
-          {t.urgent && <span className="rounded bg-red-700 px-1 text-[10px]">急</span>}
+          {t.urgent && <span className="rounded bg-red-700 px-1 text-xs">急</span>}
           <span className="line-clamp-2">{t.title}</span>
         </div>
         <div className="text-xs text-slate-400">{t.sub}{t.sub ? "｜" : ""}{ago(t.at, now)}</div>

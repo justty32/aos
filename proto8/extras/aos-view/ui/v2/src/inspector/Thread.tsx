@@ -10,6 +10,7 @@ import { useNow } from "../state/hooks.ts";
 import { dayTime } from "../model/time.ts";
 import { PriorityMark, Steps } from "../shell/bits.tsx";
 import { ui } from "../state/app.ts";
+import { statusWord } from "../model/words.ts";
 
 let lastActivity = Date.now();
 if (typeof window !== "undefined") {
@@ -66,7 +67,7 @@ export function Thread({ name }: { name: string }) {
           <div key={(x.letter || "") + i} className={`rounded-lg px-2.5 py-1.5 text-sm ${x.dir === "out" ? "ml-6 bg-sky-950" : "mr-6 bg-slate-800"}`}>
             <div className="mb-0.5 flex items-center gap-1 text-xs text-slate-400">
               <PriorityMark p={x.priority} />
-              <span>{x.dir === "out" ? `你${x.kind === "say" ? "說" : x.kind === "order" ? "下指令" : "寄信"}` : `${x.from}${x.status ? `（${x.status}）` : ""}`}</span>
+              <span>{x.dir === "out" ? `你${x.kind === "say" ? "說" : x.kind === "order" ? "下指令" : "寄信"}` : `${x.from}${x.status ? `（${statusWord(x.status)}）` : ""}`}</span>
               <span className="ml-auto">{dayTime(x.sent_at, now)}</span>
             </div>
             {x.kind !== "say" && x.title && <div className="font-medium">{x.title}</div>}
