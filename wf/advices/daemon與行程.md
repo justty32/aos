@@ -13,7 +13,7 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 痛的程度：拖慢（設計 hook 要繞路）
 - 提出者與日期：ok-kf 2026-11-14
 - 出處：wf/temp/ok-kf/aos-advice/after-stop-no-reason.md；wf/temp/ok-kf/cprime/final.md；kf-1114 暫存樹 kf-check/G-cprime-facts.md 第 1 節
-- 狀態：已排入（ok-limits；設計 ok-devt）。B7：daemon 送 SIGTERM 前寫小格的 stop_cause.json，after_stop 帶 `cause`（定稿 proto8/thinking/2026-11/14/ok-devt-1114/05-定稿.md 2.3），暫存樹施工中，還沒 commit。
+- 狀態：已解（75a6ca81e，11-15 Claude 線 claude-b7 接手 ok-limits 交件；設計 ok-devt）。B7：daemon 送 SIGTERM 前寫小格的 stop_cause.json，after_stop 帶 `cause`（stop、sleep、remove、shutdown、stuck、signal、max、body_exit、error；定稿 proto8/thinking/2026-11/14/ok-devt-1114/05-定稿.md 2.3），值表在 aos-loop docs/01。aos-loop、aos-daemon 是 C++，活樹要等換樹編新的 bin 才有。
 
 ## 子 agent 不知道是誰生了它
 
@@ -28,7 +28,7 @@ aos-daemon、aos-loop、daemon 表、行程限額（--limits）的意見。
 - 提出者與日期（第十三批併入）：ok-devt 2026-11-14（第 1 期只補得到一半）
 - 出處（第十三批併入）：wf/temp/ok-devt/wrapup-1114/建議.md「『誰掛了我』第 1 期只補得到一半，表上應該有這一欄」（引 `proto8/thinking/2026-11/14/ok-devt-1114/05-定稿.md` 第五節、`06-第2期施工清單.md`、commit 83fd2fd39、bcaf76823）
 - 第十三批補：第 1 期能做的只有「把 parent 寫進啟動單子的 envs」，而帶 envs 的 add 走的是另一條啟動路（見本檔「帶 --envs 的 add 換了掛法」）。所以不帶 envs 的 add（頂層掛各線的方式）第 1 期查不到 parent。ok-devt 的建議：照 06-第2期施工清單，把 `parent`、`notify_box` 做成列上的兩欄，由 daemon 設環境變數。
-- 狀態：已排入（ok-limits；設計 ok-devt）。定稿 05 的 1.3／1.4 與第五節：who 加 parent、notify_box（讀表上那列、再讀啟動單子的 envs）；本來就帶 envs 的 add 補 AOS_PARENT_STACK；第 2 期兩格放到列上。第十三批改：第 1 期的 add 那部分已進 main（bcaf76823：帶 envs 的 add 登記 parent 與 notify_box，定稿 1.2、1.7 與修訂 1）；定稿其餘各項進了沒有，整理時沒逐項對；第 2 期（兩格放到列上）還沒施工。
+- 狀態：未處理（部分已解）。設計 ok-devt；定稿 05 的 1.3／1.4 與第五節：who 加 parent、notify_box（讀表上那列、再讀啟動單子的 envs）；本來就帶 envs 的 add 補 AOS_PARENT_STACK；第 2 期兩格放到列上。第十三批改：第 1 期的 add 那部分已進 main（bcaf76823：帶 envs 的 add 登記 parent 與 notify_box，定稿 1.2、1.7 與修訂 1）；定稿其餘各項進了沒有，整理時沒逐項對；第 2 期（兩格放到列上）還沒施工。11-15 改：ok-limits 收樹，狀態由「已排入」改「未處理（部分已解）」——帶 envs 的 add（subagent、fork）查得到 parent；不帶 envs 的 add 要等第 2 期，第 2 期沒有線接。
 
 ## --limits 的 cpu_s 按程序計，擋不住整隻 agent 的總 CPU
 

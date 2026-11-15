@@ -62,6 +62,7 @@ aos-agent [--daemon D] goal [--target 名字] [get [-j]|set [-n N] 文字...（�
   - parent：`--parent` 或 `--envs AOS_PARENT_STACK=…` 明給的優先；沒給＝表上包住 `$AOS_STACK` 的最深那列的 stack（同 `ctl who`；從工具的小格 `tools/<名>`、hook 的小格 `hooks/<名>` 呼叫也是那隻 agent）；設了 `AOS_KERNEL` 就經 kernel 查表；沒有 `$AOS_STACK`、查不到＝空字串，不擋 add。
   - notify_box：只認明給的（`--notify-box` 或 `--envs AOS_NOTIFY_BOX=…`），沒給就沒有；只有 subagent 工具沒明給時填父的 `<stack>/mailbox`。現在寄到這裡的只有 brain_notify 的「腦拒絕了請求」（BLOCKED）。
   - 兩格都是空字串，或絕對路徑且不含 `..` 段；不合＝`ArgumentsBad` 並點名是哪個旗標；旗標和 `--envs` 同名不同值＝`ArgumentsBad`。不檢查存不存在、是不是真的：是請求方寫的登記，不是證明。
+  - 小地方（ok-devt 11-14 查到）：旗標和 `--envs` 同名時照原字串比、比完才正規化，所以 `--parent /x/` 配 `--envs AOS_PARENT_STACK=/x` 算不同值、回 `ArgumentsBad`。寫進 envs 的值用 `os.path.normpath` 去掉多餘的 `/`（`/x//y/` 記成 `/x/y`），但開頭剛好兩條斜線的 `//x` 照 POSIX 保留成 `//x`（三條以上才併成一條）。
   - 明給 `--parent`／`--notify-box` 就是帶 envs，掛法跟 `--envs` 一樣：表上 exec 欄是 null、`ctl set-def` 拒收（要改就 rm、再用同一個 stack add）。
   - 例：`aos-agent ctl add -n kid --notify-box /home/…/procs/head-core/mailbox defs/kid`；事後改：`aos-agent ctl rm kid`（stack 留著）再 `ctl add -n kid -s <同一個 stack> --notify-box <新信箱> defs/kid`。
   - `aos-daemon-ctl add` 沒有 `--envs`，不登記。名字定義在 `py/daemon_ctl`（`PARENT_ENV`、`NOTIFY_ENV`）。
