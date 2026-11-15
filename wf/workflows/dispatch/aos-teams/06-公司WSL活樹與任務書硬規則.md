@@ -19,7 +19,7 @@
 2. 先清環境：你的 Bash 帶著活樹的 AOS_STACK、AOS_DAEMON、AOS_HOME、AOS_WS 等。起任何 aos 行程、跑任何測試或 aos 指令，一律經一支 bash 腳本：開頭「不是 bash 就拒絕」、逐一 unset 所有 AOS_*、「還有殘留就拒絕」，再 exec 你的指令。不在 zsh 裡 source 環境檔、不用 `env -u $VARS`（在 zsh 都等於沒清）。其他要靠分詞的寫法也一樣（隊長的 shell 是 zsh，`$VAR` 不分詞）：多字迴圈、`set -- $p`、`for f in $(cat list)` 一律包在 `bash -c '…'` 或寫成 bash 腳本。
 3. 暫存樹：要起樹，起在 ~/.aos/scratch/<線名-日期>/ 這個獨一無二的暫存夾；不放 ~/code（那是使用者自己的空間）。tmux 只用 `tmux -S <暫存夾內的 socket>`。
 4. 收行程只准兩種：(a) `aos-daemon-ctl -d <自己暫存樹 stack 的絕對路徑> shutdown`，下之前 echo 那個路徑、確認在自己的暫存夾下；(b) kill 起的時候自己記下的 pid，kill 前 `readlink /proc/<pid>/cwd` 確認在自己的暫存夾裡。禁止 pkill、killall、`kill $(pgrep …)` 與任何按名字或命令列字串收行程的寫法。
-5. 改 repo＝改活樹：proto8/cmd、proto8/py、被指令直接 import 的 proto8/lib/agent/*.py，存檔當下活樹就在用。新碼先放新檔／新函式、測到綠；接到既有路徑的那一步放在最後一個 commit，動手前先回報調度者、等放行。改既有檔：先寫暫存檔再改名，存完立刻 import 驗一次。不在 repo 裡 build C++（執行檔寫回 impls/*/bin＝換掉活樹的 daemon）；要編就把原始碼抄到自己暫存夾（第 3 條）裡的 build 夾。
+5. 改 repo＝改活樹：proto8/cmd、proto8/py、被指令直接 import 的 proto8/lib/agent/*.py，存檔當下活樹就在用。新碼先放新檔／新函式、測到綠；接到既有路徑的那一步放在最後一個 commit，動手前先回報調度者、等放行。改既有檔：先寫暫存檔再改名，存完立刻 import 驗一次。要編 C++ 一律走 `proto8/extras/tree-swap/build.sh --ref <commit> --install`（編在 repo 外、成功才 rename 換進 impls/*/bin、會警告哪些正在跑）；不要直接在 repo 裡 make／cmake（執行檔寫回 impls/*/bin＝換掉活樹的 daemon）。只想試編不換，就把原始碼抄到自己暫存夾（第 3 條）裡的 build 夾（使用者 11-15 經全景頁答「可以」放寬本條）。
 6. 測試：全套測試在 `git archive <commit>` 抄到自己暫存夾（第 3 條）裡的乾淨複本上跑（乾淨複本不帶 impls/*/bin）；定向測試也先照第 2 條清環境。
 7. git：家機 11-14 起改用 `~/repo/aos/wf/tools/commit-request`（開工 `claim`，交件 `submit --line <線名> --files 檔… --msg-file 訊息檔`；共用索引檔走 `--op`，不手改、不自己跑 index_gen；用法見 [07](07-預設流程與agent-fsm.md)）；沒有 commit-request 的機器才用 `git commit -F <訊息檔> -- <逐一點名的檔>`。一律不 `git add -A`、不 `git add .`；commit 前 `git diff -- <那些檔>` 確認裡面只有自己寫的字。只動領地清單上的檔：<領地>。
 8. 叫真模型測試時只給它真的小工作；不編理由、不繞它講明的限制。
