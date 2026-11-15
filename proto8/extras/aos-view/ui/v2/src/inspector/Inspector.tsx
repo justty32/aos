@@ -1,7 +1,11 @@
 // The right column (02c §4): a decision card docked on top when one is open (12.8 #1), then the selected thing:
 // nothing = the company (or the machine room) at a glance; a department = its lead and what is below;
 // an agent = tabs 現在 / 往來 / 做過・說過; a proc or outside service = what the tree knows.
+import { useState } from "react";
 import type { AgentCard, Node, Tree } from "../api/types.ts";
+import { post } from "../api/client.ts";
+import { pulseSoon } from "../api/poll.ts";
+import { ui } from "../state/app.ts";
 import { useData, useNow, useUi } from "../state/hooks.ts";
 import { enter, jump, setTab } from "../state/nav.ts";
 import type { Tab } from "../state/route.ts";
@@ -58,6 +62,28 @@ function Tabs({ tab, has }: { tab: Tab; has: Tab[] }) {
   );
 }
 
+/** 11-15: a bare /compact (no prefix, no tail) for a claude / codex agent; refused while letters wait (they would batch). */
+function CompactButton({ n }: { n: Node }) {
+  const [busy, setBusy] = useState(false);
+  if (n.kind !== "agent" || !n.live?.cli) return null;
+  const waiting = n.queued || 0;
+  const click = async () => {
+    if (!confirm(`叫 ${n.id} 壓縮對話（/compact）？`)) return;
+    setBusy(true);
+    const r = await post("/api/compact", { name: n.id });
+    setBusy(false);
+    ui.set({ flash: r.ok ? r.message || "已送出" : `壓縮送不出去：${r.message}` });
+    pulseSoon();
+  };
+  return (
+    <button className="rounded bg-slate-800 px-2 py-0.5 text-xs hover:bg-slate-700 disabled:opacity-40" onClick={click}
+      disabled={busy || waiting > 0}
+      title={waiting > 0 ? `信箱還排著 ${waiting} 封，/compact 會跟它們併成一批而失效；等它讀完再按` : "送一句裸的 /compact，叫它壓縮對話"}>
+      {busy ? "送出中…" : "🗜 壓縮"}
+    </button>
+  );
+}
+
 function Head({ n, tree }: { n: Node; tree: Tree }) {
   const dept = isDept(n);
   return (
@@ -66,7 +92,10 @@ function Head({ n, tree }: { n: Node; tree: Tree }) {
         <Dot light={n.light} />
         <h2 className="truncate text-base font-semibold">{displayName(n.id)}</h2>
         <span className="text-xs text-slate-500">{n.kind === "agent" ? (dept ? "部門主管" : "agent") : n.kind === "proc" ? "程序" : "外部服務"}</span>
-        {dept && <button className="ml-auto rounded bg-slate-800 px-2 py-0.5 text-xs hover:bg-slate-700" onClick={() => enter(n.id)}>進部門 ▸</button>}
+        <span className="ml-auto flex items-center gap-1">
+          <CompactButton n={n} />
+          {dept && <button className="rounded bg-slate-800 px-2 py-0.5 text-xs hover:bg-slate-700" onClick={() => enter(n.id)}>進部門 ▸</button>}
+        </span>
       </div>
       <p className="mt-0.5 text-sm text-slate-300">{LIGHT_WORD[n.light]}：{n.why}</p>
       {n.parent && tree.nodes[n.parent] && (

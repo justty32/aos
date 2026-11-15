@@ -136,7 +136,9 @@ function renderHeader() {
   const red = nodes.filter((n) => n.light === 'red').length;
   const yellow = nodes.filter((n) => n.light === 'yellow').length;
   $('#hdr').replaceChildren(
-    el('h1', {}, '全景 ', el('small', { class: 'mut', text: 'v1 清單版' })),
+    el('h1', {}, '全景 ', el('small', { class: 'mut', text: 'v1 清單版' }), ' ',
+      el('small', {}, el('a', { class: 'mut', href: location.protocol + '//' + location.hostname + ':8768/', text: '新版在 8768 →',
+        title: 'v2 新版（部門樹、地圖分頁）' }))),
     bigNum(S.asks.length, '要你決定', 'ask' + (S.asks.length ? ' hot' : ''), '#asks-sec'),
     bigNum(red, '🔴 出事', red ? 'hot' : ''),
     bigNum(yellow, '🟡 要留意', yellow ? 'warn' : ''),
@@ -585,7 +587,19 @@ function renderHistory(box, hist) {
 function sayForm(name, msg) {
   const input = el('input', { type: 'text', placeholder: '對 ' + name + ' 說一句話（會自動加前綴、附上怎麼回）' });
   const btn = el('button', { class: 'primary', text: '說' });
-  const f = el('form', { class: 'form-row' }, el('b', { text: '💬 說一句話' }), input, btn);
+  // 11-15: a bare /compact (no prefix, no tail) so a claude/codex agent compacts its conversation
+  const cbtn = el('button', { type: 'button', text: '🗜 壓縮對話', title: '送一句裸的 /compact（不加前綴）；它信箱要是空的' });
+  cbtn.addEventListener('click', async () => {
+    if (!confirm('叫 ' + name + ' 壓縮對話（/compact）？')) return;
+    cbtn.disabled = true; show(msg, '送出中…');
+    try {
+      const r = await api('/api/compact', { name });
+      show(msg, '✅ ' + (r.message || '已送出'), true);
+      if (Panel.name === name) loadThread(name);
+    } catch (e) { show(msg, '送不出去：' + e.message, false); }
+    cbtn.disabled = false;
+  });
+  const f = el('form', { class: 'form-row' }, el('b', { text: '💬 說一句話' }), input, btn, cbtn);
   f.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const text = input.value.trim();
@@ -755,7 +769,13 @@ async function refresh() {
 async function start() {
   try { await getSession(); } catch (e) { S.failMsg = e.message; tickFresh(); }
   window.addEventListener('hashchange', route);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && Panel.name) closePanel(); });
+  // q7 a (11-14): Esc in a box that has text only leaves the box; it never closes the panel and loses what was typed
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || e.isComposing || e.keyCode === 229 || !Panel.name) return;
+    const a = document.activeElement;
+    if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') && a.value) { a.blur(); return; }
+    closePanel();
+  });
   await refresh();
   loadAnswered();
   route();

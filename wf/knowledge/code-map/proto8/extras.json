@@ -37,6 +37,7 @@
     "cdp.mjs": "drive headless Chrome over the DevTools protocol (node 24 has WebSocket built in); no puppeteer.",
     "demo_v2.py": "a fixture company for looking at the v2 page by hand or with headless Chrome (not a unit test).",
     "run.sh": "run the aos-view tests with every AOS_* variable unset (wf aos-teams/06 hard rule 2); temp dirs only.",
+    "test_compact_quiet.py": "the compact button's API (/api/compact: a bare \"/compact\", alone) and the quiet-turn light",
     "test_delivery.py": "delivery() marks what the user sent as queued / read / replied / unknown.",
     "test_phase1.py": "phase 1 of aos-view: note, decide, aide-tick, relay ingestion into a temp user zone, answer, match, lights.",
     "test_v2.py": "the v2 backend (03 §12.3, §12.8): B1 second port, B2 pulse / rev / ETag, B3 outbox, B4 ui-state,"
@@ -54,7 +55,9 @@
      "dist": {
       "assets": {
        "index-CCvZ7tt8.js": "",
-       "index-EY0xnFtw.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com"
+       "index-DRvCQ-de.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
+       "index-EY0xnFtw.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
+       "index-LGxtEJiL.js": ""
       },
       "index.html": ""
      },

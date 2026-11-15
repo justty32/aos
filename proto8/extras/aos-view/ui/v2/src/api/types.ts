@@ -39,6 +39,7 @@ export interface Node {
   passed: number; team_light: { light: Light; why: string } | null;
   ext?: { url: string; listen: string[] | null; ss_at: Epoch | null };
   board?: Board1 | null;
+  live?: { cli: string; at: Epoch | null; in_turn: boolean } | null;   // the CLI's live stream (claude / codex agents only)
 }
 
 export interface Tree {
