@@ -1,4 +1,4 @@
-// The right column (02c §4): a decision card docked on top when one is open (12.8 #1), then the selected thing:
+// The right column (02c §4): the selected thing (the answer page moved to the center, P3; the asker shows here):
 // nothing = the company (or the machine room) at a glance; a department = its lead and what is below;
 // an agent = tabs 現在 / 往來 / 做過・說過; a proc or outside service = what the tree knows.
 import { useState } from "react";
@@ -12,7 +12,6 @@ import { enter, jump, setTab } from "../state/nav.ts";
 import type { Tab } from "../state/route.ts";
 import { useLive } from "./useLive.ts";
 import { Thread } from "./Thread.tsx";
-import { Decision } from "../inbox/Decision.tsx";
 import { Dot, LIGHT_WORD, SectionTitle } from "../shell/bits.tsx";
 import { readBoard, boardCounts, MODE_WORD, type BoardView } from "../model/board.ts";
 import { ago, dayTime, parseIso } from "../model/time.ts";
@@ -281,7 +280,6 @@ export function Inspector() {
     <section data-zone="inspector" tabIndex={-1} className="relative flex min-h-0 flex-1 flex-col border-l border-slate-800 bg-slate-900/60 focus-within:ring-1 focus-within:ring-sky-700">
       <button className="absolute right-1 top-1 z-10 rounded px-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-100" title="收起右欄（]）；打的字留著"
         onClick={() => setRight(false)}>»</button>
-      {route.ask && <Decision letter={route.ask} />}
       <div className="flex min-h-0 flex-1 flex-col">{body}</div>
     </section>
   );

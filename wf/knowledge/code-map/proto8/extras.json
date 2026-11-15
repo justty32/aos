@@ -55,6 +55,8 @@
      "dist": {
       "assets": {
        "index-CCvZ7tt8.js": "",
+       "index-CMeaRHg_.js": "",
+       "index-DRlybWJG.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
        "index-DRvCQ-de.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
        "index-DhefAmd3.js": "",
        "index-EY0xnFtw.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
@@ -82,7 +84,7 @@
        "Composer.tsx": "The composer (02c §5, 12.8 #5): always at the bottom of the right column, talking to whatever is selected."
       },
       "inbox": {
-       "Decision.tsx": "The decision card (02c §4.3, 12.8 #1): docked on top of the right column while route.ask is set.",
+       "Decision.tsx": "The answer page (P3; q1 a, q2 a, q3 a): the center 作答 tab while route.ask is set (it was docked on the right).",
        "Inbox.tsx": "The center 待辦 tab (02f §1.2; was the left column in 02c §2): 待辦 (four kinds, one queue), 追蹤 (everything sent, where it is), 已處理 (answered here)."
       },
       "input": {
@@ -90,7 +92,7 @@
        "keys.ts": "Keyboard (12.8 #4, Argon A5/A6/A9; written by opus, panels register only through here)."
       },
       "inspector": {
-       "Inspector.tsx": "The right column (02c §4): a decision card docked on top when one is open (12.8 #1), then the selected thing:",
+       "Inspector.tsx": "The right column (02c §4): the selected thing (the answer page moved to the center, P3; the asker shows here):",
        "Thread.tsx": "往來: what you sent to one node and what came back, like a chat (oldest at the top, newest at the bottom).",
        "useLive.ts": "A panel's own data (thread, bot card): fetched when opened, again every 15 s while the tab is visible,"
       },

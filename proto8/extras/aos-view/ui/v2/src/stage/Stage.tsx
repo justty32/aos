@@ -2,13 +2,14 @@
 // The wall shows one level at a time, the lead desk first (02c §3.3). The tree moved to the left column (02f §2).
 import { useEffect, useMemo, useRef } from "react";
 import { useData, useInbox, useNow, useUi } from "../state/hooks.ts";
-import { enter, select, setView, up } from "../state/nav.ts";
+import { enter, openAsk, select, setView, up } from "../state/nav.ts";
 import { bind } from "../input/keys.ts";
 import { Card } from "./Card.tsx";
 import { MACHINE, membersOf, displayName, machineIds, descendants, leadOf } from "../model/tree.ts";
 import { rightOpen, setRight } from "../state/layout.ts";
 import { Inbox } from "../inbox/Inbox.tsx";
 import { MapView } from "./MapView.tsx";
+import { Decision } from "../inbox/Decision.tsx";
 
 export function Stage() {
   const tree = useData((s) => s.tree);
@@ -67,7 +68,8 @@ export function Stage() {
   }, [ids, route.sel, hot]);
 
   const tabBtn = (v: "wall" | "map" | "todo", label: string, key: string, extra?: React.ReactNode) => (
-    <button className={`rounded px-2 py-0.5 ${route.view === v ? "bg-slate-700" : "text-slate-400 hover:bg-slate-800"}`} onClick={() => setView(v)}>
+    <button className={`rounded px-2 py-0.5 ${route.view === v && !route.ask ? "bg-slate-700" : "text-slate-400 hover:bg-slate-800"}`}
+      onClick={() => { if (route.ask) openAsk(null); setView(v); }}>
       {label}{extra} <kbd className="text-xs text-slate-500">{key}</kbd>
     </button>
   );
@@ -78,15 +80,16 @@ export function Stage() {
         {tabBtn("wall", "部門牆", "w")}
         {tabBtn("map", "地圖", "m")}
         {tabBtn("todo", "待辦", "t", <b className="ml-1">{todo.length}</b>)}
-        {route.focus && route.view !== "todo" && <button className="rounded px-2 py-0.5 text-slate-300 hover:bg-slate-800" onClick={up} title="Backspace">⬑ 上一層</button>}
+        {route.ask && <span className="rounded bg-sky-800 px-2 py-0.5 text-white">作答</span>}
+        {route.focus && route.view !== "todo" && !route.ask && <button className="rounded px-2 py-0.5 text-slate-300 hover:bg-slate-800" onClick={up} title="Backspace">⬑ 上一層</button>}
         <span className="ml-auto truncate text-xs text-slate-500">
-          {route.view === "todo" ? "點藍色那張就作答；點別張選中那個人" : route.focus ? `${displayName(route.focus)}：${ids.length} 格` : lead ? `公司（${lead} 底下）：${ids.length} 格` : `公司：${ids.length} 個部門`}
+          {route.ask ? "一次一題，選了跳下一題，最後總覽再送" : route.view === "todo" ? "點藍色那張就作答；點別張選中那個人" : route.focus ? `${displayName(route.focus)}：${ids.length} 格` : lead ? `公司（${lead} 底下）：${ids.length} 格` : `公司：${ids.length} 個部門`}
         </span>
         {selName && !rightOpen(prefs) && (
           <button className="shrink-0 rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-200 hover:bg-slate-700" onClick={() => setRight(true)} title="打開右欄（]）">‹ {displayName(selName)}</button>
         )}
       </div>
-      {route.view === "todo" ? <Inbox /> : route.view === "map" ? <MapView /> : (
+      {route.ask ? <Decision letter={route.ask} /> : route.view === "todo" ? <Inbox /> : route.view === "map" ? <MapView /> : (
         <div ref={wallRef} className="min-h-0 flex-1 overflow-y-auto p-3" tabIndex={0}>
           {!loaded && <p className="text-slate-400">讀取中…</p>}
           {loaded && !tree && <p className="text-red-300">讀不到部門樹：{treeErr || "後端還沒有第一次採樣"}</p>}

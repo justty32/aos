@@ -19,9 +19,8 @@ const FILTERS: Filter[] = ["ask", "red", "yellow", "reply"];
 export function App() {
   const prefs = useData((s) => s.prefs);
   const sel = useUi((s) => s.route.sel);
-  const ask = useUi((s) => s.route.ask);
   const L = leftOpen(prefs);
-  const R = rightOpen(prefs) && (!!sel || !!ask);
+  const R = rightOpen(prefs) && !!sel;
   useEffect(() => bind([
     { key: "/", run: caretToComposer },
     { key: "mod+k", inInput: true, run: () => ui.set({ searchOpen: true }) },
