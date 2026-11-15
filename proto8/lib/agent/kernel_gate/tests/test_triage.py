@@ -31,11 +31,11 @@ class TriageTest(unittest.TestCase):
             "protect": ["eca_main", "boss", "llm-gpt", "_sweeper"],
             "names": ["ok-*", "xiaosi"],
             "defs": [str(self.agents / "opus-kernel")],
-            # 使用者 11-15「~/code要審。」：~/code 不進 def_roots／ws_roots（不自動放行）；仍在 home_roots，所以留給人審、不直接拒
+            # 使用者 11-15「~/code要審。」接著裁「拒絕」：~/code 不進 def_roots／ws_roots，也不進 home_roots，所以 ~/code 的定義或工作區直接拒
             "def_roots": [str(self.repo / "wf" / "temp" / "ok-*")],
             "ws_roots": [str(self.repo / "wf" / "temp")],
             "deny_roots": [str(self.home / "lib"), str(self.home / "py"), str(self.home / "knowledge")],
-            "home_roots": [str(self.repo), str(self.home), str(self.code)],
+            "home_roots": [str(self.repo), str(self.home)],
             "daemon": str(self.daemon),
         }
         (self.cell / "triage.json").write_text(json.dumps(self.rules))
@@ -87,6 +87,8 @@ class TriageTest(unittest.TestCase):
             self.add("x", self.agents / "opus-kernel", t / "x", as_written={"def": str(self.home / "py")}),
             self.add("eca_main", self.agents / "opus-kernel", t / "x"),              # 受保護的名字
             self.add("x", self.agents / "opus-kernel", t / "x", stack=str(self.root / "tmp" / "s")),
+            self.add("w", self.code / "kf-1114" / "defs" / "w", self.code / "kf-1114" / "ws"),   # ~/code 的暫存樹直接拒（11-15「拒絕」）
+            self.add("x", self.code / "other" / "d", self.code / "other"),           # ~/code 別的夾也拒
         ]
         for body in cases:
             verdict, out = self.judge(body)
@@ -101,8 +103,6 @@ class TriageTest(unittest.TestCase):
         cases = [
             self.add("x", self.home / "agents" / "other", t / "x"),                  # 不認得的定義
             self.add("x", self.agents / "opus-kernel", self.repo / "proto8"),        # ws 不在 temp
-            self.add("w", self.code / "kf-1114" / "defs" / "w", self.code / "kf-1114" / "ws"),   # ~/code 的暫存樹也要審（11-15）
-            self.add("x", self.code / "other" / "d", self.code / "other"),           # ~/code 別的夾
             {"procs_added": {"x": {"exec": "rel/def", "ws": str(t / "x")}}},         # 相對路徑
             {"procs_added": {"x": {"exec": {"argv": ["sh", "-c", "x"]}, "ws": str(t / "x")}}},
             self.add("x", self.agents / "opus-kernel", t / "x", stack=str(self.daemon / "procs" / "ok-a")),
