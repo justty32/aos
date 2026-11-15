@@ -55,11 +55,13 @@
      "dist": {
       "assets": {
        "index-9i7SuQ5Y.js": "",
+       "index-BMg9Wcy4.js": "",
        "index-C6BJbrWf.js": "",
        "index-CCvZ7tt8.js": "",
        "index-CMeaRHg_.js": "",
        "index-CUu5N8xK.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
        "index-Chz9THgY.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
+       "index-CtNzAz2c.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
        "index-DRlybWJG.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
        "index-DRvCQ-de.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
        "index-DUP8VP5F.js": "",
@@ -79,7 +81,7 @@
       "check-src.mjs": "build gate (02c §6): no dangerouslySetInnerHTML / innerHTML / eval in the sources; agent text goes through React text nodes."
      },
      "src": {
-      "App.tsx": "The page: header on top; three columns: left tree 280 (48 closed) | center tabs | right 400 (0 closed) with the",
+      "App.tsx": "The page: header on top; three columns: left tree (48 closed) | center tabs | right (0 closed) with the selection",
       "api": {
        "client.ts": "HTTP to the aos-view backend: 8 s timeout per call, ETag / If-None-Match, the CSRF token (header + cookie).",
        "poll.ts": "Pulse-driven fetching (12.8 #7): only /api/pulse runs on a timer (5 s; 30 s while the tab is hidden). A kind is",
@@ -121,6 +123,7 @@
       "shell": {
        "Dialogs.tsx": "Overlays: Ctrl+K search (jump to anyone), the user's board (我的公告), the drafts list. Esc closes the top one.",
        "Header.tsx": "",
+       "Splitter.tsx": "A drag bar between two panes (11-15 \"各版面大小希望也可以拉調整\"). Drag = resize (live, saved on release);",
        "bits.tsx": "Small shared pieces: the light dot, the delivery steps, a section title. Agent text always as React text."
       },
       "stage": {
@@ -134,6 +137,7 @@
        "layout.ts": "The two sides open / closed and the tree's open departments (02f §4, q6b a): only the user changes them, by button",
        "nav.ts": "Moving around (02c §3.2 with 12.8 #2): click anywhere on a card = select; title / ▸ / double click / Enter = go in",
        "route.ts": "The address bar holds where you are (02c §3.1): #/<dept chain>?sel=<id>&tab=<now|thread|history>&view=<wall|map|todo>&ask=<letter>&q=<question>",
+       "sizes.ts": "The user's own sizes (11-15: \"字體大小希望可以調。",
        "store.ts": "A tiny store on React 19's useSyncExternalStore (03 §12.2: instead of zustand, not on this machine)."
       }
      },

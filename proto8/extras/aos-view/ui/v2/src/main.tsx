@@ -6,7 +6,9 @@ import { installHash } from "./state/nav.ts";
 import { start } from "./api/poll.ts";
 import { data } from "./state/app.ts";
 import { pruneDrafts } from "./model/drafts.ts";
+import { applySizes } from "./state/sizes.ts";
 
+applySizes();                  // the user's font step and widths before the first paint
 install();
 installHash();
 createRoot(document.getElementById("root")!).render(<App />);

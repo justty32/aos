@@ -1,6 +1,6 @@
 // cdp.mjs - drive headless Chrome over the DevTools protocol (node 24 has WebSocket built in); no puppeteer.
 // Use: node tests/cdp.mjs <url> <outdir> <steps.mjs>   steps.mjs exports default async (page) => {...}
-// page: eval(js), click(sel), type(text), key(key, mods), shot(name), wait(ms), until(js, ms), errors[]
+// page: eval(js), click(sel), drag(sel, dx, dy), type(text), key(key, mods), shot(name), wait(ms), until(js, ms), errors[]
 // Chrome runs with its own new profile under outdir (never the user's profile).
 // READ-ONLY GUARD: every request to the live ports 8767 / 8768 that is not GET/HEAD is failed in the browser
 // (no say, mail, order, answer, board, ui-state write can reach the live tree). READONLY=1 does the same for every port.
@@ -69,6 +69,13 @@ const page = {
   async dbl(sel) {
     const [x, y] = await page.eval(`(()=>{const r=document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect(); return [r.x+r.width/2,r.y+r.height/2];})()`);
     for (const c of [1, 2]) for (const type of ["mousePressed", "mouseReleased"]) await send("Input.dispatchMouseEvent", { type, x, y, button: "left", clickCount: c });
+    await sleep(300);
+  },
+  async drag(sel, dx, dy) {          // press in the middle of sel, move in 8 steps, release
+    const [x, y] = await page.eval(`(()=>{const r=document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect(); return [r.x+r.width/2,r.y+r.height/2];})()`);
+    await send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+    for (let i = 1; i <= 8; i++) await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: x + dx * i / 8, y: y + dy * i / 8, button: "left", buttons: 1 });
+    await send("Input.dispatchMouseEvent", { type: "mouseReleased", x: x + dx, y: y + dy, button: "left", clickCount: 1 });
     await sleep(300);
   },
   async clickText(text, scope = "button") {

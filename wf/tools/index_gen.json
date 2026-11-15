@@ -106,7 +106,8 @@
  ],
  "skip_dirs": [
   "wf/inbox",
-  "proto8/lib/packs"
+  "proto8/lib/packs",
+  "proto8/extras/aos-view/ui/v2/dist/assets"
  ],
  "usual_dirs": {
   "tests": "{parent} 的測試",

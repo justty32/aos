@@ -58,14 +58,14 @@ export function Thread({ name }: { name: string }) {
       {live.data?.turn && (
         <p className="mb-1 rounded bg-slate-800 px-2 py-1 text-xs text-amber-200">它正在一輪裡，信箱排著 {live.data.turn.queued} 則；這一輪結束才會讀。</p>
       )}
-      <div ref={box} className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1"
+      <div ref={box} className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto pr-1"
         onScroll={() => { if (fresh.length && atBottom()) showFresh(); }}>
         {live.error && <p className="text-xs text-red-300">讀不到往來：{live.error}</p>}
         {!live.data && !live.error && <p className="text-xs text-slate-400">讀取中…</p>}
         {live.data && !items.length && <p className="text-xs text-slate-500">還沒有往來。在下面打字就是對它說話。</p>}
         {items.map((x, i) => (
-          <div key={(x.letter || "") + i} className={`rounded-lg px-2.5 py-1.5 text-sm ${x.dir === "out" ? "ml-6 bg-sky-950" : "mr-6 bg-slate-800"}`}>
-            <div className="mb-0.5 flex items-center gap-1 text-xs text-slate-400">
+          <div key={(x.letter || "") + i} className={`w-fit max-w-[85%] rounded-lg px-3 py-2 text-[0.9375rem] leading-6 ${x.dir === "out" ? "ml-auto bg-sky-950" : "bg-slate-800"}`}>
+            <div className="mb-1 flex items-center gap-2 text-xs text-slate-400">
               <PriorityMark p={x.priority} />
               <span>{x.dir === "out" ? `你${x.kind === "say" ? "說" : x.kind === "order" ? "下指令" : "寄信"}` : `${x.from}${x.status ? `（${statusWord(x.status)}）` : ""}`}</span>
               <span className="ml-auto">{dayTime(x.sent_at, now)}</span>

@@ -2,7 +2,9 @@
 // Modes: 說話 (say, lands in its conversation), 寄信 (mail, in its mailbox), 指令 (an order letter to whoever handles it).
 // One draft per target with every field, saved 0.3 s after typing; switching mode or target never loses text.
 // Ctrl+Enter sends say and mail from inside this form only; an order is sent with its button.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useStore } from "../state/store.ts";
+import { sizes } from "../state/sizes.ts";
 import { post } from "../api/client.ts";
 import { pulseSoon } from "../api/poll.ts";
 import { ui } from "../state/app.ts";
@@ -31,6 +33,8 @@ export function Composer() {
   const [err, setErr] = useState<string | null>(null);
   const [corr, setCorr] = useState<string | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
+  // dragged to a height (state/sizes.ts): the box fills it; otherwise the box grows with the text up to 40 % of the window
+  const fixed = useStore(sizes, (s) => s.composer != null);
   const saveT = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tgtRef = useRef(target);
   const dRef = useRef(d);
@@ -55,6 +59,12 @@ export function Composer() {
   };
 
   useEffect(() => { if (focusN) box.current?.focus(); }, [focusN]);
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = "";
+    if (!fixed) el.style.height = `${el.scrollHeight + 2}px`;     // max-h-[40vh] caps it, then it scrolls
+  }, [d.text, fixed, d.mode]);
 
   // 更正 / 回這封: taken once
   useEffect(() => {
@@ -114,12 +124,12 @@ export function Composer() {
 
   const modeBtn = (m: Mode, label: string) => (
     <button onClick={() => put({ mode: m })} disabled={!target}
-      className={`rounded px-2 py-0.5 text-xs ${d.mode === m ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-300 hover:bg-slate-700"} disabled:opacity-40`}>{label}</button>
+      className={`rounded px-2.5 py-1 text-xs ${d.mode === m ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-300 hover:bg-slate-700"} disabled:opacity-40`}>{label}</button>
   );
 
   return (
-    <div className="shrink-0 border-t border-slate-800 bg-slate-900 p-2" data-composer>
-      <div className="mb-1 flex items-center gap-1.5">
+    <div className="flex min-h-0 flex-1 flex-col border-t border-slate-800 bg-slate-900 p-3" data-composer>
+      <div className="mb-2 flex shrink-0 flex-wrap items-center gap-2">
         {target
           ? <span className="max-w-48 truncate rounded bg-sky-900 px-2 py-0.5 text-xs text-sky-100" title={target}>對：{displayName(target)}</span>
           : <button className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300" onClick={() => ui.set({ searchOpen: true })}>
@@ -127,11 +137,10 @@ export function Composer() {
         {modeBtn("say", "說話")}{modeBtn("mail", "寄信")}{modeBtn("order", "指令")}
         {corr && <span className="truncate rounded bg-amber-900 px-1.5 text-xs text-amber-100" title={corr}>更正 {corr}
           <button className="ml-1" onClick={() => setCorr(null)}>×</button></span>}
-        <span className="ml-auto text-xs text-slate-500">{d.mode === "order" ? "按按鈕送出" : "Ctrl+Enter 送出"}</span>
       </div>
 
       {d.mode === "mail" && (
-        <div className="mb-1 flex gap-1">
+        <div className="mb-2 flex shrink-0 gap-1">
           <select value={d.mailStatus} onChange={(e) => put({ mailStatus: e.target.value })} className="rounded bg-slate-800 px-1 text-xs">
             {MAIL_STATUS.map((s) => <option key={s} value={s}>{statusWord(s)}</option>)}
           </select>
@@ -141,7 +150,7 @@ export function Composer() {
         </div>
       )}
       {d.mode === "order" && (
-        <div className="mb-1 space-y-1">
+        <div className="mb-2 shrink-0 space-y-1">
           <div className="flex flex-wrap gap-1">
             {orders.map((o) => (
               <button key={o.kind} onClick={() => put({ orderKind: o.kind })}
@@ -164,15 +173,16 @@ export function Composer() {
           {target && orderTo && <p className="text-xs text-slate-400">這張單會寄給 {orderTo}{orderTo !== target ? `（關於 ${target}）` : ""}；頁面不直接動樹，對方照自己的規矩辦。</p>}
         </div>
       )}
-      <textarea ref={box} value={d.text} onChange={(e) => put({ text: e.target.value })} rows={3} disabled={!target}
+      <textarea ref={box} value={d.text} onChange={(e) => put({ text: e.target.value })} rows={2} disabled={!target}
         placeholder={!target ? "先選一個 agent" : d.mode === "say" ? `對 ${target} 說…（進它的對話）` : d.mode === "mail" ? "信的內容…（進它的信箱）" : "要什麼、為什麼…"}
         onKeyDown={(e) => { if (d.mode !== "order" && isSubmit(e.nativeEvent)) { e.preventDefault(); send(); } }}
-        className="max-h-60 min-h-11 w-full resize-y overflow-y-auto rounded bg-slate-800 p-1.5 text-sm disabled:opacity-40" />
-      <div className="flex items-center gap-2">
+        className={`w-full overflow-y-auto rounded bg-slate-800 p-2.5 text-[0.9375rem] leading-6 disabled:opacity-40 ${fixed ? "min-h-0 flex-1 resize-none" : "max-h-[40vh] min-h-11 resize-none"}`} />
+      <div className="mt-2 flex shrink-0 items-center gap-2">
         <button onClick={send} disabled={!target || busy}
-          className={`rounded px-3 py-1 text-sm font-medium disabled:opacity-40 ${d.mode === "order" ? "bg-amber-700 hover:bg-amber-600" : "bg-sky-700 hover:bg-sky-600"}`}>
+          className={`rounded px-4 py-1.5 text-sm font-medium disabled:opacity-40 ${d.mode === "order" ? "bg-amber-700 hover:bg-amber-600" : "bg-sky-700 hover:bg-sky-600"}`}>
           {busy ? "送出中…" : d.mode === "say" ? "說" : d.mode === "mail" ? "寄出" : "下指令"}
         </button>
+        <span className="text-xs text-slate-500">{d.mode === "order" ? "按按鈕送出" : "Ctrl+Enter 送出"}</span>
         {(d.text || d.mailTitle) && <button className="text-xs text-slate-500 hover:text-slate-200" onClick={throwAway}>丟掉草稿</button>}
         <span className={`ml-auto truncate text-xs ${err ? "text-red-300" : "text-emerald-300"}`} title={err || flash || ""}>{err || flash || ""}</span>
       </div>

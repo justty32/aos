@@ -57,7 +57,7 @@ function Tabs({ tab, has }: { tab: Tab; has: Tab[] }) {
     <div className="flex shrink-0 border-b border-slate-800">
       {has.map((t) => (
         <button key={t} onClick={() => setTab(t)}
-          className={`flex-1 border-b-2 py-1.5 text-sm ${tab === t ? "border-sky-400 text-slate-100" : "border-transparent text-slate-400 hover:text-slate-200"}`}>{word[t]}</button>
+          className={`flex-1 border-b-2 py-2 text-sm ${tab === t ? "border-sky-400 text-slate-100" : "border-transparent text-slate-400 hover:text-slate-200"}`}>{word[t]}</button>
       ))}
     </div>
   );
@@ -85,12 +85,12 @@ function CompactButton({ n }: { n: Node }) {
   );
 }
 
-function Head({ n, tree }: { n: Node; tree: Tree }) {
+function Head({ n, tree, slim = false }: { n: Node; tree: Tree; slim?: boolean }) {
   const dept = isDept(n);
   return (
     <div className="shrink-0 border-b border-slate-800 py-2 pl-3 pr-8">
       <div className="flex items-center gap-2">
-        <Dot light={n.light} />
+        <Dot light={n.light} title={`${LIGHT_WORD[n.light]}：${whyWord(n.why)}`} />
         <h2 className="truncate text-base font-semibold">{displayName(n.id)}</h2>
         <span className="text-xs text-slate-500">{n.kind === "agent" ? (dept ? "部門主管" : "員工") : n.kind === "proc" ? "程序" : "外部服務"}</span>
         <span className="ml-auto flex items-center gap-1">
@@ -98,8 +98,9 @@ function Head({ n, tree }: { n: Node; tree: Tree }) {
           {dept && <button className="rounded bg-slate-800 px-2 py-0.5 text-xs hover:bg-slate-700" onClick={() => enter(n.id)}>進部門 ▸</button>}
         </span>
       </div>
-      <p className="mt-0.5 text-sm text-slate-300" title={n.why}>{LIGHT_WORD[n.light]}：{whyWord(n.why)}</p>
-      {n.parent && tree.nodes[n.parent] && (
+      {/* on the 往來 tab the head is one line: the thread gets the room (Fable 11-15 #4) */}
+      {!slim && <p className="mt-0.5 text-sm text-slate-300" title={n.why}>{LIGHT_WORD[n.light]}：{whyWord(n.why)}</p>}
+      {!slim && n.parent && tree.nodes[n.parent] && (
         <p className="text-xs text-slate-500">隸屬 <button className="hover:underline" onClick={() => jump(n.parent!, false)}>{n.parent}</button></p>
       )}
     </div>
@@ -268,7 +269,7 @@ export function Inspector() {
   else if (n.kind !== "agent") body = <><Head n={n} tree={tree} /><Plain n={n} now={now} /></>;
   else body = (
     <>
-      <Head n={n} tree={tree} />
+      <Head n={n} tree={tree} slim={route.tab === "thread"} />
       <Tabs tab={route.tab} has={["now", "thread", "history"]} />
       <div className={`flex min-h-0 flex-1 flex-col p-3 ${route.tab === "thread" ? "" : "overflow-y-auto"}`}>
         {route.tab === "now" && <AgentNow key={n.id} n={n} tree={tree} now={now} />}

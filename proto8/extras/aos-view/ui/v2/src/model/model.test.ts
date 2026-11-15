@@ -262,3 +262,22 @@ test("words (02d §5.2): states, letter statuses, kinds", async () => {
   assert.equal(kindWord({ kind: "external" }), "外部服務");
   assert.equal(kindWord({ kind: "agent", children: ["x"] }), "部門");
 });
+
+test("sizes (11-15): font steps, drag limits, stored values checked", async () => {
+  const { clampLeft, clampRight, clampComposer, parseSizes, rootPx, clampStep, FONT_STEPS, DEFAULTS } = await import("../state/sizes.ts");
+  assert.ok(FONT_STEPS.length >= 4 && FONT_STEPS[0] <= 13 && FONT_STEPS[FONT_STEPS.length - 1] >= 18);
+  assert.equal(rootPx(1), 16);                                  // the default = the browser's 16 px root
+  assert.equal(clampStep(99), FONT_STEPS.length - 1);
+  assert.equal(clampStep(NaN), 1);
+  assert.equal(clampLeft(100, 1920, 400), 200);
+  assert.equal(clampLeft(900, 1920, 400), 480);
+  assert.equal(clampLeft(450, 1100, 400), 300);                 // the center keeps 400
+  assert.equal(clampRight(1000, 1920, 280), 800);
+  assert.equal(clampRight(100, 1920, 280), 320);
+  assert.equal(clampRight(700, 1200, 280), 520);
+  assert.equal(clampComposer(50, 700), 120);
+  assert.equal(clampComposer(650, 700), 580);                   // the thread keeps 120
+  assert.deepEqual(parseSizes(null), DEFAULTS);
+  assert.deepEqual(parseSizes("not json"), DEFAULTS);
+  assert.deepEqual(parseSizes('{"font":9,"left":"x","right":5000,"composer":10}'), { font: FONT_STEPS.length - 1, left: 280, right: 800, composer: 120 });
+});

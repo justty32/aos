@@ -5,6 +5,8 @@ import { goTo, setView } from "../state/nav.ts";
 import { chainOf, displayName, soleRoot } from "../model/tree.ts";
 import { hhmm } from "../model/time.ts";
 import { listDrafts } from "../model/drafts.ts";
+import { useStore } from "../state/store.ts";
+import { FONT_DEFAULT, FONT_STEPS, fontBigger, fontSmaller, setSizes, sizes } from "../state/sizes.ts";
 
 const STALE_S = 35;   // a collector round is poll_s (20) + its own time; 35 s without a new one = the data stopped
 
@@ -86,9 +88,24 @@ export function Header() {
           title={board ? board.text : "留一句話給 agent：睡覺、出門、開會"}>
           📌 {board ? `${board.text}${board.back ? `，${board.back} 回` : ""}` : "我的公告"}
         </button>
+        <FontSize />
         <Freshness />
         <a className="text-slate-500 hover:text-slate-300" href={v1} title="v1 清單版（8767，已凍結）">舊版</a>
       </div>
     </header>
+  );
+}
+
+/** A− / A＋: the whole page's text size (11-15 "字體大小希望可以調"); not Ctrl+= / Ctrl+-, those are the browser's zoom */
+function FontSize() {
+  const step = useStore(sizes, (s) => s.font);
+  const b = "h-7 min-w-7 rounded px-1.5 text-slate-300 hover:bg-slate-800 disabled:opacity-30";
+  return (
+    <span className="flex items-center" role="group" aria-label="字級">
+      <button className={b} onClick={fontSmaller} disabled={step <= 0} title="字小一點" aria-label="字小一點">A−</button>
+      <button className="min-w-8 text-center text-xs text-slate-400 hover:text-slate-200" onClick={() => setSizes({ font: FONT_DEFAULT })}
+        title="字級（點一下回預設）" data-font-px={FONT_STEPS[step]}>{FONT_STEPS[step]}</button>
+      <button className={b} onClick={fontBigger} disabled={step >= FONT_STEPS.length - 1} title="字大一點" aria-label="字大一點">A＋</button>
+    </span>
   );
 }

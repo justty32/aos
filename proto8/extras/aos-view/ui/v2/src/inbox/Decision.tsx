@@ -103,7 +103,7 @@ export function Decision({ letter }: { letter: string }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 px-4 py-1.5 text-xs text-slate-400">
+      <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 px-4 py-2 text-sm text-slate-400">
         <span className="font-semibold text-sky-300">🔵 要你決定</span>
         {order.length > 1 && <span>這是第 {idx + 1} 封，共 {order.length} 封</span>}
         <button className="rounded px-1.5 hover:bg-slate-800 hover:text-slate-100" onClick={() => go(-1)}>‹ 上一封</button>
@@ -111,12 +111,12 @@ export function Decision({ letter }: { letter: string }) {
         <button className="ml-auto rounded px-1.5 hover:bg-slate-800 hover:text-slate-100" onClick={() => openAsk(null)}>✕ 收起 Esc</button>
       </div>
       {!a && <p className="p-4 text-sm text-slate-400">這封信不在待辦裡（可能已經回過了）。</p>}
-      {a && <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+      {a && <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5"><div className="mx-auto w-full max-w-[720px]">
         {gone && <p className="mb-2 rounded bg-amber-950 px-2 py-1 text-xs text-amber-200">這封已經不在待辦裡了（可能在別處回過）。送出會被擋下來，不會重複。</p>}
         <div className="flex flex-wrap items-center gap-1">
           {a.urgent && <span className="rounded bg-red-700 px-1 text-xs">急</span>}
           {irreversible && <span className="rounded bg-rose-800 px-1 text-xs">不可逆：請一題一題看</span>}
-          <h3 className="text-base font-semibold">{a.title}</h3>
+          <h3 className="text-lg font-semibold">{a.title}</h3>
         </div>
         <p className="text-xs text-slate-400">{a.from || "?"}｜{ago(a.sent_at, now)}{a.deadline ? `｜期限 ${a.deadline}` : ""}{a.same > 1 ? `｜同樣的問了 ${a.same} 次` : ""}</p>
         {a.what && <>
@@ -129,24 +129,24 @@ export function Decision({ letter }: { letter: string }) {
           <div className="mt-3 flex flex-wrap items-center gap-1">
             {qs.map((x, i) => (
               <button key={x.id} onClick={() => setCur(i)} title={x.question}
-                className={`h-7 min-w-8 rounded px-2 text-xs ${i === cur ? "bg-sky-700 text-white" : d.answers[x.id] ? "bg-slate-700 text-slate-100" : "bg-slate-800 text-slate-400"}`}>
+                className={`h-8 min-w-9 rounded px-2.5 text-sm ${i === cur ? "bg-sky-700 text-white" : d.answers[x.id] ? "bg-slate-700 text-slate-100" : "bg-slate-800 text-slate-400"}`}>
                 {i + 1}{d.answers[x.id] ? ` ${d.answers[x.id]}` : ""}
               </button>
             ))}
             <button onClick={() => setCur(qs.length)}
-              className={`h-7 rounded px-2 text-xs ${atOverview ? "bg-sky-700 text-white" : "bg-slate-800 text-slate-300"}`}>總覽{unanswered ? `（還有 ${unanswered} 題）` : " ✓"}</button>
+              className={`h-8 rounded px-2.5 text-sm ${atOverview ? "bg-sky-700 text-white" : "bg-slate-800 text-slate-300"}`}>總覽{unanswered ? `（還有 ${unanswered} 題）` : " ✓"}</button>
           </div>
           {!atOverview && q && (
-            <div className="mt-3 rounded-lg border border-sky-800 p-3">
+            <div className="mt-3 rounded-lg border border-sky-800 p-4">
               <div className="text-xs text-slate-500">第 {cur + 1} 題，共 {qs.length} 題</div>
-              <div className="text-base font-medium">{q.question}</div>
+              <div className="text-lg font-medium">{q.question}</div>
               {q.eli5 && <div className="mt-1 text-sm text-slate-300">白話：{q.eli5}</div>}
-              <div className="mt-2 space-y-1">
+              <div className="mt-3 space-y-2">
                 {q.options.map((o) => {
                   const on = d.answers[q.id] === o.key;
                   return (
                     <button key={o.key} onClick={() => pick(q.id, o.key)}
-                      className={`block w-full rounded px-3 py-1.5 text-left text-sm ${on ? "bg-sky-800 text-white" : "bg-slate-800 hover:bg-slate-700"}`}>
+                      className={`block w-full rounded px-4 py-2.5 text-left text-[0.9375rem] ${on ? "bg-sky-800 text-white" : "bg-slate-800 hover:bg-slate-700"}`}>
                       <kbd className="mr-1 text-xs text-slate-400">{o.key}</kbd>{o.label}
                       {q.recommend === o.key && <span className="ml-1 rounded bg-emerald-900 px-1 text-xs text-emerald-200">推薦</span>}
                       {o.consequence && <span className="block text-xs text-slate-400">→ {o.consequence}</span>}
@@ -158,12 +158,12 @@ export function Decision({ letter }: { letter: string }) {
             </div>
           )}
           {atOverview && (
-            <div className="mt-3 space-y-1">
+            <div className="mt-3 space-y-2">
               {qs.map((x, i) => {
                 const k = d.answers[x.id];
                 const o = x.options.find((y) => y.key === k);
                 return (
-                  <button key={x.id} onClick={() => setCur(i)} className="block w-full rounded bg-slate-900 px-3 py-1.5 text-left text-sm hover:bg-slate-800">
+                  <button key={x.id} onClick={() => setCur(i)} className="block w-full rounded bg-slate-900 px-4 py-2.5 text-left text-[0.9375rem] hover:bg-slate-800">
                     <span className="text-slate-400">{i + 1}. {x.question}</span>
                     <span className={`block ${k ? "text-slate-100" : "text-amber-300"}`}>{k ? `${k}　${o?.label || ""}` : "還沒選（點這裡回去選）"}</span>
                   </button>
@@ -171,37 +171,37 @@ export function Decision({ letter }: { letter: string }) {
               })}
               <textarea value={d.note} onChange={(e) => put({ note: e.target.value })} rows={2} placeholder="備註（選填）"
                 onKeyDown={(e) => { if (!irreversible && isSubmit(e.nativeEvent)) { e.preventDefault(); if (!unanswered) send("answer"); } }}
-                className="w-full rounded bg-slate-800 p-1.5 text-sm" />
+                className="w-full rounded bg-slate-800 p-2.5 text-[0.9375rem] leading-6" />
             </div>
           )}
         </>}
 
         {(!qs.length || mode === "reply") && (
-          <div className="mt-3 space-y-1">
+          <div className="mt-3 space-y-2">
             <textarea value={d.text} onChange={(e) => put({ text: e.target.value })} rows={4} placeholder="回一段話給它"
               onKeyDown={(e) => { if (!irreversible && isSubmit(e.nativeEvent)) { e.preventDefault(); if (d.text.trim()) send("reply"); } }}
-              className="w-full rounded bg-slate-800 p-1.5 text-sm" />
+              className="w-full rounded bg-slate-800 p-2.5 text-[0.9375rem] leading-6" />
           </div>
         )}
-      </div>}
+      </div></div>}
       {a && (
-        <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-slate-800 bg-slate-900 px-4 py-2">
+        <div className="shrink-0 border-t border-slate-800 bg-slate-900 px-6 py-3"><div className="mx-auto flex w-full max-w-[720px] flex-wrap items-center gap-2">
           {qs.length > 0 && mode === "answer" ? <>
             {!irreversible && qs.some((x) => x.recommend) && (
-              <button className="rounded bg-emerald-800 px-2 py-1 text-sm hover:bg-emerald-700" onClick={allRecommended}>全照推薦</button>
+              <button className="rounded bg-emerald-800 px-4 py-1.5 text-sm hover:bg-emerald-700" onClick={allRecommended}>全照推薦</button>
             )}
             <button disabled={busy || unanswered > 0} onClick={() => send("answer")}
-              className="rounded bg-sky-700 px-3 py-1 text-sm font-medium hover:bg-sky-600 disabled:opacity-40">
+              className="rounded bg-sky-700 px-4 py-1.5 text-sm font-medium hover:bg-sky-600 disabled:opacity-40">
               {busy ? "送出中…" : unanswered ? `還有 ${unanswered} 題` : irreversible ? "確定送出（不可逆）" : "送出"}
             </button>
             <button className="text-xs text-slate-400 hover:text-slate-100" onClick={() => setMode("reply")}>改用一段話回</button>
           </> : <>
-            <button disabled={busy || !d.text.trim()} onClick={() => send("reply")} className="rounded bg-sky-700 px-3 py-1 text-sm hover:bg-sky-600 disabled:opacity-40">回覆</button>
-            {!qs.length && <button disabled={busy} onClick={() => send("ok")} className="rounded bg-slate-700 px-3 py-1 text-sm hover:bg-slate-600">知道了</button>}
+            <button disabled={busy || !d.text.trim()} onClick={() => send("reply")} className="rounded bg-sky-700 px-4 py-1.5 text-sm hover:bg-sky-600 disabled:opacity-40">回覆</button>
+            {!qs.length && <button disabled={busy} onClick={() => send("ok")} className="rounded bg-slate-700 px-4 py-1.5 text-sm hover:bg-slate-600">知道了</button>}
             {qs.length > 0 && <button className="text-xs text-slate-400 hover:text-slate-100" onClick={() => setMode("answer")}>回去選答案</button>}
           </>}
           {msg && <span className={`text-sm ${msg.ok ? "text-emerald-300" : "text-red-300"}`}>{msg.text}</span>}
-        </div>
+        </div></div>
       )}
     </div>
   );

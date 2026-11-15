@@ -72,7 +72,7 @@ export function Stage() {
   }, [ids, route.sel, route.view, route.ask, hot]);
 
   const tabBtn = (v: "wall" | "map" | "todo", label: string, key: string, extra?: React.ReactNode) => (
-    <button className={`rounded px-2 py-0.5 ${route.view === v && !route.ask ? "bg-slate-700" : "text-slate-400 hover:bg-slate-800"}`}
+    <button className={`shrink-0 whitespace-nowrap rounded px-2 py-0.5 ${route.view === v && !route.ask ? "bg-slate-700" : "text-slate-400 hover:bg-slate-800"}`}
       onClick={() => { if (route.ask) openAsk(null); setView(v); }}>
       {label}{extra} <kbd className="text-xs text-slate-500">{key}</kbd>
     </button>
@@ -84,9 +84,9 @@ export function Stage() {
         {tabBtn("wall", "部門牆", "w")}
         {tabBtn("map", "地圖", "m")}
         {tabBtn("todo", "待辦", "t", <b className="ml-1">{todo.length}</b>)}
-        {route.ask && <span className="rounded bg-sky-800 px-2 py-0.5 text-white">作答</span>}
-        {route.focus && route.view !== "todo" && !route.ask && <button className="rounded px-2 py-0.5 text-slate-300 hover:bg-slate-800" onClick={up} title="Backspace">⬑ 上一層</button>}
-        <span className="ml-auto truncate text-xs text-slate-500">
+        {route.ask && <span className="shrink-0 whitespace-nowrap rounded bg-sky-800 px-2 py-0.5 text-white">作答</span>}
+        {route.focus && route.view !== "todo" && !route.ask && <button className="shrink-0 whitespace-nowrap rounded px-2 py-0.5 text-slate-300 hover:bg-slate-800" onClick={up} title="Backspace">⬑ 上一層</button>}
+        <span className="ml-auto min-w-0 truncate text-xs text-slate-500">
           {route.ask ? "一次一題，選了跳下一題，最後總覽再送" : route.view === "todo" ? "點藍色那張就作答；點別張選中那個人" : route.focus ? `${displayName(route.focus)}：${ids.length} 格` : lead ? `公司（${lead} 底下）：${ids.length} 格` : `公司：${ids.length} 個部門`}
         </span>
         {selName && !rightOpen(prefs) && (
