@@ -81,6 +81,13 @@ try:
         import hooks  # noqa: E402
     else:
         from agent import hooks  # noqa: E402
+    try:                                         # 「很久沒動靜」標記（11-15）；舊的定義副本沒帶 quiet.py 也照跑，只是不標
+        if (Path(__file__).resolve().parent / "quiet.py").is_file():
+            import quiet  # noqa: E402
+        else:
+            from agent import quiet  # noqa: E402
+    except ImportError:
+        quiet = None
 except (ModuleNotFoundError, ImportError) as _error:
     if _error.name not in ("aos_flags", "aos_ws", "tool_io", "agent_files", "agent", "agent.agent_files", "observed", "observed_children",
                            "cooldown", "agent.cooldown", "hooks", "agent.hooks"):
@@ -201,6 +208,21 @@ def forget_warned():
         pass
     except OSError as e:
         aos_flags.warn("agent-fsm", "cannot remove %s: %s" % (warned_path, e))
+    if quiet is not None:                        # 這封了結或換新的一封：「很久沒動靜」標記一起收掉
+        try:
+            quiet.clear(stack)
+        except OSError as e:
+            aos_flags.warn("agent-fsm", "cannot remove %s: %s" % (quiet.path(stack), e))
+
+
+def loop_pid():
+    """stack 的 state.json 記的 aos-loop pid（quiet.json 用它判這份還算不算數）；讀不到＝0（寫成 null）。"""
+    try:
+        with open(os.path.join(stack, "state.json"), encoding="utf-8") as f:
+            pid = json.load(f).get("pid")
+    except (OSError, ValueError, AttributeError):
+        return 0
+    return pid if isinstance(pid, int) and not isinstance(pid, bool) and pid > 0 else 0
 
 
 def brain_failed(code, reason, error=None):
@@ -298,6 +320,11 @@ def warn_slow(letter, step):
         waited_s = step * WARN_EVERY_S
     aos_flags.warn("agent-fsm", "no reply from the brain for %d minutes to letter %s: %s; still waiting"
                    % (waited_s // 60, letter, slow_reason(letter)))
+    if quiet is not None:                        # 11-15（使用者「很久沒動靜算黃色，不殺掉」）：只標記 $AOS_STACK/quiet.json，照樣等
+        try:
+            quiet.mark(stack, "brain_reply", time.time() - waited_s, pid=loop_pid())
+        except OSError:
+            pass
 
 
 def slow_reason(letter):

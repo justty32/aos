@@ -13,7 +13,7 @@ from cmd_call import ERR_RE, kill_group   # 先 TERM 整群、5 秒後 KILL（fo
 
 STEP_S = 90                    # 一般步驟的子行程保險；等 daemon 的動作另取 max(STEP_S, timeout_s + 30)
 CTL_DEFAULT_S = 30             # aos-agent ctl 的 --timeout-s 預設（只用來算保險，不替下層填值）
-LISTEN_DEFAULT_S = 600         # listen／ask 什麼期限都沒給時等幾秒
+LISTEN_DEFAULT_S = 0           # listen／ask 什麼期限都沒給時等幾秒；0＝不限（11-15，以前 600）
 MAX_CYCLES = 9223372036854775807 - 30
 TOOL_WORDS = {"InstanceExists": 'give another "name", or remove that agent first with {"op": "rm", "name": ...}'}
 # 下層成功句／錯誤句裡教 CLI 的寫法 → 工具參數的寫法（腦手上沒有 CLI；11-10 驗收怪處 3）

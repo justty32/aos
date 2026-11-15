@@ -128,6 +128,9 @@
  "mailbox_send": {
   "description": "mailbox_send 工具（信箱包）：以自己名義寄一封信，給 agent 名字或信箱路徑，狀態 REQUEST／DONE／BLOCKED 等"
  },
+ "quiet.py": {
+  "description": "「很久沒動靜」的共用讀寫：$AOS_STACK/quiet.json（不進 git）；aos-eca-turn（一輪 CLI 在跑）與 agent-fsm 的 wait.py（等腦回信）寫，誰都能讀。"
+ },
  "screen_linger": {
   "description": "screen_linger：eca 停下後由畫面自己的 tmux 計時關閉，起來撤單。"
  },

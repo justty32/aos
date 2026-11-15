@@ -115,7 +115,7 @@ class Ask(unittest.TestCase):
         self.assertIn("0 = no limit", str(e.exception))
 
     def test_timeouts_passed_to_wait(self):
-        for argv, want in ((["hi"], (600, None)), (["--timeout-s", "0", "hi"], (None, None)),
+        for argv, want in ((["hi"], (None, None)), (["--timeout-s", "0", "hi"], (None, None)),
                            (["--timeout-s", "2.5", "hi"], (2.5, None)), (["--timeout-cycles", "7", "hi"], (None, 7))):
             with self.subTest(argv=argv), contextlib.ExitStack() as st:
                 for p in self.patches():

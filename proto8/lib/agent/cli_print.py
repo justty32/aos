@@ -150,10 +150,10 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None, more=None)
         if handed:
             handed()
     if live:
-        code, lines = run_claude_stream_mid(argv, prompt, ws, timeout_seconds(cfg.get("timeout_ms", 600000)),
+        code, lines = run_claude_stream_mid(argv, prompt, ws, timeout_seconds(cli_base.turn_timeout_ms(cfg)),
                                             cell.file("live.jsonl"), given, env, more, cap, parent_death_term())
     else:
-        code, lines = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"), given, env)
+        code, lines = run_claude_stream(argv, prompt, ws, cli_base.turn_timeout_ms(cfg), cell.file("live.jsonl"), given, env)
     out = None
     for line in lines:
         try:
@@ -199,7 +199,7 @@ def print_codex(cfg, cell, ws, stack, prompt, handed=None, sid=None):
     argv += ["--skip-git-repo-check", "--json", "-o", last, "-"]     # 題目從 stdin 進（"-"）
     if os.path.exists(last):
         os.remove(last)
-    r = run_cli(argv, prompt, ws, cfg.get("timeout_ms", 600000), handed, env)
+    r = run_cli(argv, prompt, ws, cli_base.turn_timeout_ms(cfg), handed, env)
     try:                                         # 10-28：--json 的事件（中間訊息、跑過的指令）也接進 live.jsonl 留著
         with open(cell.file("live.jsonl"), "a", encoding="utf-8") as live:
             live.write(r.stdout if not r.stdout or r.stdout.endswith("\n") else r.stdout + "\n")

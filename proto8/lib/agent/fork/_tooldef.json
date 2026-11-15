@@ -35,9 +35,9 @@
         "description": "at most this many characters come back; default 600 (longer ones end with [truncated])"
       },
       "timeout_s": {
-        "default": 600,
+        "default": 0,
         "type": "number",
-        "description": "finite non-negative seconds to wait for the conclusion; default 600; 0 = no limit; mutually exclusive with timeout_cycles"
+        "description": "finite non-negative seconds to wait for the conclusion; default 0 = no limit; mutually exclusive with timeout_cycles"
       },
       "timeout_cycles": {
         "type": "integer",

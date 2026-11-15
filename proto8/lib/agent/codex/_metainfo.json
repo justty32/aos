@@ -12,5 +12,5 @@
   "cost": {
     "time_ms": 30000
   },
-  "timeout_ms": 600000
+  "timeout_ms": 0
 }

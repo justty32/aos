@@ -5,7 +5,7 @@
 #   施工記錄與代定：proto8/thinking/2026-11/11/fork-and-do-task/01-fork.md。開小幫手、等結論、抄帳、收掉這套程式照搬 do_task（原 thought）11-11 那版。
 #   之後使用者「eca不給fork。」：只給 agent-fsm 的身體；history 裡找不到叫到一半的 tool call（eca）＝BodyUnsupported、叫它改用 subagent（判法同 do_task）。
 # 介面（lib/docs/01 的契約）：stdin 一份 {"goal", "max_chars"?, "timeout_s"?, "timeout_cycles"?, "keep"?}，沒有 op；別的鍵＝ArgumentsBad（tool_io）。
-#   goal 必要（要做什麼、要帶回什麼）；max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、有限非負數，0＝不限；keep 預設 false。
+#   goal 必要（要做什麼、要帶回什麼）；max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 0＝不限（11-15 起，以前 600）、有限非負數；keep 預設 false。
 # 一次叫＝aos-agent 的幾步（查表與寄信都經 kernel，不帶 --daemon）：ctl who（我是誰、我的定義與 stack）→ 抄 stack（fork_copy：定義宣告的 history＋覆蓋檔，
 #   history 尾巴沒回的工具呼叫補 tool 訊息）到自己 stack 的隔壁 <分身名>/ →
 #   ctl add（--name f-<父名前32字>-<UTC毫秒>-<4位hex>、--ws 我的 $AOS_WS、--stack 那份、--envs AOS_FORK_DEPTH=1、我的定義）→
@@ -32,7 +32,7 @@ The fork does not get your goal, your to-do list or your tool records; it starts
 queue and mailbox. Its last message says it is a fork, gives the goal and asks for the
 conclusion only. A fork cannot fork again (depth 1 at most: DepthExceeded).
 Only for an agent-fsm body (BodyUnsupported otherwise, e.g. a claude / codex agent: use subagent).
-timeout_s is any finite non-negative number of seconds (default 600; 0 = no limit).
+timeout_s is any finite non-negative number of seconds (default 0 = no limit).
 Use timeout_cycles (a positive integer) instead to count cycles; giving both is ArgumentsBad.
 Without AOS_CLOCK, one cycle is AOS_CLOCK_INTERVAL milliseconds (default 1000).
 To ask a kept fork more later, use aos-agent ctl start --target <fork>, then say / listen.
@@ -71,7 +71,7 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
 NAME = "fork"
 tool_io.start(NAME, HELP)
 die = tool_io.die
-MAX_CHARS_DEFAULT, TIMEOUT_DEFAULT_S = 600, 600
+MAX_CHARS_DEFAULT, TIMEOUT_DEFAULT_S = 600, 0   # 11-15：等結論預設不限時（使用者「逾時這東西應該要默認爲0」）
 MAX_DEPTH = 1                  # 父 0 → 分身 1；分身再叫＝DepthExceeded（代定：分身的分身只是同一段對話再抄一次）
 FAILED_KEEP = 3                # 失敗留下的分身 stack 最多留幾隻（gc，照 do_task）
 STEP_S = 90                    # 其他每一步的逾時（ctl add 自己最多等 30 秒）

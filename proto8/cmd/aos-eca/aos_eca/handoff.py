@@ -2,7 +2,7 @@
 import aos_flags
 import aos_ws
 
-from .common import NAME, Fail, cli_ask, cooldown, letters_drop, letters_take, must_post
+from .common import NAME, Fail, cli_ask, cooldown, letters_drop, letters_take, must_post, quiet
 from .history import append_history, history_sum
 from .hook import fire
 
@@ -59,8 +59,12 @@ class Handoff:
     def ask(self, cfg, cell, ws, prompt, on_busy, reseed=None, parts=None, more=None):
         """cli_ask.ask → 回答文字；None＝SessionBad（只有 --on-busy yield 會丟，一定在交出去之前：整批留 cur/，下一次再試）。
         parts＝[(寄件人名字或 None, 內文)]，一封一項（11-13：畫面開著的 claude 身一封一個署名信封）；more＝等回答時又來的信（midturn.More）。"""
+        # 11-15（使用者「很久沒動靜算黃色，不殺掉」）：一輪 CLI 在跑、小格的紀錄檔滿 10 分鐘都沒變＝寫 $AOS_STACK/quiet.json（只標記），
+        # 又有動靜或這輪結束就收掉；預設不限時，所以「慢」不再算失敗。
+        watch = quiet.Watch(self.stack, "cli_turn", [cell.file(n) for n in ("live.jsonl", "turns.jsonl", "busy.txt", "transcripts")])
         try:
-            text = cli_ask.ask(cfg, cell, self.template, ws, self.stack, prompt, on_busy, self.handed, reseed, parts, more)
+            with watch:
+                text = cli_ask.ask(cfg, cell, self.template, ws, self.stack, prompt, on_busy, self.handed, reseed, parts, more)
         except Fail as e:
             if e.code == "SessionBad":
                 return None

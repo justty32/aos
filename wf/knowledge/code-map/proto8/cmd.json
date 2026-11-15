@@ -145,6 +145,7 @@
     "test_kernel_watch.py": "驗證 watch 經 kernel 重問表檔、缺欄容錯、空表退出與五秒節流，直連行為不變。",
     "test_letter_name.py": "Test that a letter's sender (body \"name\", set by aos-agent say for an eca) reaches the CLI side as parts and never enters history, and that letters a…",
     "test_live_mail.py": "驗沒開畫面、cli.json 寫 \"live_mail\": true 的一整輪（wake-1114 主案 S）：aos-eca-turn 起 claude 之後 queue 又來的信，",
+    "test_long_turn.py": "Test that an eca turn longer than the old 600 s limit (scaled down) is not failed when cli.json has no timeout_ms (11-15: 0 or omitted = no limit), t…",
     "test_reply_match.py": "Test reply matching on the eca side (reply-match-1114): user rows carry aos.letter, the final answer carries aos.answer_to, and <stack>/letters.json …",
     "test_slash.py": "Test aos-eca-turn's slash commands (11-12 eca-slash): one letter that is exactly /clear, /compact, /status, /usage or /exit is done by aos (or handed…",
     "test_switch.py": "Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs."

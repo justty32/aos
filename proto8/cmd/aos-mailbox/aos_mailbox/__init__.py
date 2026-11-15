@@ -96,7 +96,7 @@ flags:
 WHAT is the main part (for REQUEST: what the receiver should do); - reads it from stdin.
 Flags go before WHAT (from WHAT on everything is text).
 Replies go to my mailbox (STACK/mailbox). Prints the sent letter's name.
-Rules: when a task ends send DONE, BLOCKED, NEEDS-USER or FAILED; stuck over 10 minutes = send BLOCKED.""",
+Rules: when a task ends send DONE, BLOCKED, NEEDS-USER or FAILED; really stuck (waiting on someone, missing a permission, needs a decision) = send BLOCKED; taking long is not stuck, there is no time limit.""",
 }
 
 

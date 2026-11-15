@@ -30,3 +30,10 @@ def warn(sentence):
 
 def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds")
+
+
+def turn_timeout_ms(cfg):
+    """cli.json 的 timeout_ms（一輪的上限，毫秒）：沒寫、null、0 或不是正整數＝0＝不限時；寫了正整數才有上限。
+    11-15 使用者：「AI一輪跑個二三十分鐘都很正常……逾時這東西應該要默認爲0，也就是不限時間，除非是一些有特殊需求的。」以前預設 600000。"""
+    v = cfg.get("timeout_ms") if isinstance(cfg, dict) else None
+    return v if isinstance(v, int) and not isinstance(v, bool) and v > 0 else 0

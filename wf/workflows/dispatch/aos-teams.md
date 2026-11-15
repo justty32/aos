@@ -55,7 +55,7 @@
 
 ### 4. 等隊員：不要卡在同一回合
 
-`subagent say` 之後就結束這一回合；用 `clock_register {"op":"add","name":"…","at":"+10m","text":"…"}` 叫醒自己再看，或等它寄來的信。`subagent listen` 預設會等 600 秒，別讓它等那麼久：帶 `"timeout_s": 60`，或用 `"last": 1` 只看最後一則不等。
+`subagent say` 之後就結束這一回合；用 `clock_register {"op":"add","name":"…","at":"+10m","text":"…"}` 叫醒自己再看，或等它寄來的信。`subagent listen` 預設不限時一直等（11-15 起，以前 600 秒），別讓它卡著這一回合：帶 `"timeout_s": 60`，或用 `"last": 1` 只看最後一則不等。
 
 ### 5. 活樹旁邊：`~/aos-home` 有使用者正在用的樹
 

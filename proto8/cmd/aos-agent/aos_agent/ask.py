@@ -15,7 +15,7 @@ the old way, with a warning on stderr: the latest answer, not necessarily the on
 flags:
   -t, --target NAME   which agent (default: $AOS_AGENT)
   --from WHO          the sender's name (same as aos-agent say --from)
-  --timeout-s SECS    give up after SECS seconds (AnswerMissing); default 600; 0 = no limit
+  --timeout-s SECS    give up after SECS seconds (AnswerMissing); 0 or omitted = no limit
   --timeout-cycles N  give up after N cycles (positive integer); exclusive with --timeout-s
   -h, --help          show this help
 
@@ -29,7 +29,7 @@ from .listen import cycles, seconds, wait_latest
 from .say import message
 from . import sender
 
-DEFAULT_S = 600                                 # 對齊 subagent 工具的 op ask（lib/agent/agents_cmd.py 的 LISTEN_DEFAULT_S）
+DEFAULT_S = 0                                   # 0＝不限（11-15，以前 600）；對齊 subagent 工具的 op ask（lib/agent/agents_cmd.py 的 LISTEN_DEFAULT_S）
 
 
 def send(a, text, who):

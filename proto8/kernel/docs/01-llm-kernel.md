@@ -11,7 +11,7 @@
 llm-kernel/
   _entry       ["aos-daemon", "--enable-logs", "daemon.json"]
   daemon.json  {"exec": {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/aos/kernel_llm"}, {"$env": "AOS_CD", "$path": "kernel.json"}]}, "interval_ms": 300, "procs": {"_sweeper": {…}}}（身體＝kernel；procs 只帶清道夫一列（見 cmd/aos-sweeper；不要就刪）、不帶鐘列，聽外層的 `AOS_CLOCK`）
-  kernel.json  slots 2、reserved＝{"high": 1}（使用者裁定 sol 審查 #7）、timeout_ms 120000、exec＝預設 endpoint 函數 `{"$env": "AOS_HOME", "$path": "/lib/base/llm_http"}`、endpoint＝預設代號 fake、
+  kernel.json  slots 2、reserved＝{"high": 1}（使用者裁定 sol 審查 #7）、timeout_ms 0〔不限時，11-15 起；以前 120000〕、exec＝預設 endpoint 函數 `{"$env": "AOS_HOME", "$path": "/lib/base/llm_http"}`、endpoint＝預設代號 fake、
                不設 budget（使用者選「從範本拿掉」；要限寄件人就自己加 budget.senders，例子在 03 件 5）、
                endpoints＝能力包表（下表）
   fake_slow/   demo 用的慢假腦 endpoint 函數：睡 endpoint.delay_s 秒，再把同一份 stdin 交給 lib/base/llm_fake（03 件 3）
@@ -66,7 +66,7 @@ aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 
 
 [`llm-team/`](../llm-team/) 與 `llm-kernel/` 各複製成並排 stack 的 `def/`。兩份 `_entry` 都起自己的 daemon；隊 kernel 用 `lib/aos/llm_forward`，預設 fake，另有 sol、luna、local（轉主 kernel 的 stupid-fast）。每包的 `kernel` 用 `{"$env":"AOS_STACK","$path":"../llm-kernel"}`，解完仍保留 `..` 字串，轉交函數照原字串記 child。不用改 daemon 的 AOS_LLM_KERNEL；寄信方只把它指向隊 stack。
 
-相對 lib 路徑和主範本相同：若 stack 放 repo 外，可在兩個 stack 的共同上一層放 `lib` 捷徑指向這份 proto8/lib（保留範本原檔），或在自己的定義副本把 exec 改成絕對路徑。隊 timeout 180000 ms，主 timeout 120000 ms；隊 budget 每天 3000 次、不帶寄件人那格，要限寄件人自己加 `budget.senders`。
+相對 lib 路徑和主範本相同：若 stack 放 repo 外，可在兩個 stack 的共同上一層放 `lib` 捷徑指向這份 proto8/lib（保留範本原檔），或在自己的定義副本把 exec 改成絕對路徑。隊與主的 timeout_ms 都是 0＝不限時（11-15 起，以前隊 180000、主 120000；使用者「逾時這東西應該要默認爲0」）；隊 budget 每天 3000 次、不帶寄件人那格，要限寄件人自己加 `budget.senders`。
 
 兩個定義都有 `interfaces.json` 的 `aos-ledger` 宣告（`ledger.jsonl` 相對 stack）。成功的上層 ledger 用 `child.kernel` 與 `child.letter` 指到下層帳，寄信方只拿這一層的 letter；usage 不重複加總，只加一層。下層合格錯誤原樣穿過，上層不再包一層 EndpointFailed；轉交函數自己的錯才走 EndpointFailed。
 

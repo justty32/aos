@@ -8,7 +8,7 @@ claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是�
 {"kind": "codex",
  "flags": ["-c", "sandbox_mode=\"workspace-write\"", "-c", "approval_policy=\"never\""],
  "print_flags": [],
- "timeout_ms": 600000}
+ "timeout_ms": 0}
 ```
 
 **aos 自己會加的旗標，`flags`／`print_flags` 不要再寫**——寫了＝讀設定時 `CfgBad …: print_flags has --skip-git-repo-check, which aos adds itself; remove it`，這隻停下、信留在 queue（不進冷卻、不掉信），把那個旗標拿掉再 `aos-agent ctl start` 就接著答：
@@ -25,7 +25,7 @@ claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是�
 ```
 eca-claude/
   _entry      ["aos-loop", "loop.json"]（JSON 入口）
-  loop.json   {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000},
+  loop.json   {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 0},
                "interval_ms": 300, "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；三扇窗落在 $AOS_STACK）
   cli.json    怎麼叫 CLI（kind、flags、print_flags、tools_sub、timeout_ms〔0＝不限時〕）：--tools Read,Write,Edit,Glob,Grep,Bash,Agent,Skill、--permission-mode dontAsk、--allowedTools Write,Edit,Bash、--strict-mcp-config；
               tools_sub＝子 agent 那台的登記檔（見下「子 agent 與 skill」）
@@ -79,7 +79,7 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 
 hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停的，信留在 `queue/cur/`、history 不動，修好照問；aos-mcp 裡停的＝那次工具呼叫回錯（isError）給 CLI，不整支死。
 
-**長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 預設 600000（10 分鐘），限制 CLI 呼叫；`loop.json.exec.timeout_ms` 預設 900000（15 分鐘），限制整次 aos-eca-turn，要留得比 CLI 那層長，讓它有時間收尾。長任務要同時檢查這兩層，增加額度不會延長逾時。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
+**長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 與 `loop.json.exec.timeout_ms` 範本都是 0＝不限時（11-15 起；以前 600000／900000。使用者 11-15：「AI一輪跑個二三十分鐘都很正常，eca也是可能長時間不回應，逾時這東西應該要默認爲0，也就是不限時間，除非是一些有特殊需求的。」；cli.json 沒寫 `timeout_ms` 也是不限時）。要上限才寫正整數毫秒：`cli.json` 那層限制 CLI 呼叫，`loop.json` 那層限制整次 aos-eca-turn，兩層都寫時外層要比內層長，讓它有時間收尾。不限時的時候一輪很久沒動靜（`live.jsonl`、`turns.jsonl`、`busy.txt`、對話 transcript 都沒在變）滿 10 分鐘就在 stack 寫 `quiet.json`（lib/agent/quiet.py；只標記、不殺不丟信），一有動靜或這輪結束就收掉。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
 
 ## 子 agent 與 skill（11-12 晚 eca-task-subagent）
 

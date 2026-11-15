@@ -122,6 +122,7 @@
     }
    },
    "mailbox_send/": "aos-mailbox send 的包裝，寄件人＝叫我的那隻自己：照 inbox 協議寄一封給 agent（to 名字＋daemon）或信箱（box 路徑）。",
+   "quiet.py": "「很久沒動靜」的共用讀寫：$AOS_STACK/quiet.json（不進 git）；aos-eca-turn（一輪 CLI 在跑）與 agent-fsm 的 wait.py（等腦回信）寫，誰都能讀。",
    "screen_linger/": "after_start 撤單、after_stop 排延後關畫面，或由 tmux 呼叫 reap 核對到期單。",
    "self_ctl": {
     "tests": {
@@ -195,6 +196,7 @@
     "test_kill_group.py": "Test shared child-group shutdown, escalation, reaping, and signal-handler delegation.",
     "test_mail_notify.py": "mail_notify（on_clock 的 hook handler）：沒信箱、沒新信安靜；新信合成一句寄進 queue、只帶封數與寄件人；通知過的不重複；全新起來（first、沒有 notified.json 也沒有非空 history）只把等著的記成已知；跑過的 stack（有非空 hist…",
     "test_on_clock_kernel.py": "驗 on_clock 只靠 kernel 查 proc 鐘、記路徑、鐘讀不到才重查一次，且不直接讀 daemon 表。",
+    "test_quiet.py": "驗 11-15 逾時改 0：cli.json 沒寫 timeout_ms＝不限時（比舊上限久的假輪不會被殺、不會 CliFailed），寫了正整數才有上限；",
     "test_user_zone_guard.py": "user_zone_guard（before_tool 的 hook handler）：參數路徑落在專區、不在 mailbox/、工具不是唯讀＝退 10 擋；mailbox/ 裡、專區外、唯讀工具、相對路徑接 $AOS_WS、~ 展開、JSON 指標、巢狀參數、捷徑都照算；壞事件退 1。"
    },
    "todo": {

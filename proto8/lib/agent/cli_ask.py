@@ -91,7 +91,7 @@ def live_a2a(cfg, cell, parts, path, handed, deadline, more=None):
                 more.sent()
         time.sleep(0.2)
     cli_base.die("ReplyMissing", "no answer %d s after sending (may be stuck on a permission or trust prompt; attach to look)"
-        % (cfg.get("timeout_ms", 600000) // 1000))
+        % (cli_base.turn_timeout_ms(cfg) // 1000))
 
 
 def live(cfg, cell, prompt, on_busy="yield", handed=None, parts=None, more=None):
@@ -99,7 +99,7 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None, parts=None, more=None)
     不貼字、不看 on_busy（more 照傳）；沒給、沒記到、連不上、沒回執＝照下面貼 prompt。
     on_busy＝yield（預設）：有人接在畫面上、或 busy.txt 在＝SessionBad；answer（10-31 eca --on-busy）：有人接著照樣貼，
     busy.txt 在就等它消失再貼——等它跟等回答共用 timeout_ms 的期限，逾時 ReplyMissing。貼上、按 Enter 之後叫 handed（交出去了，11-03）。"""
-    milliseconds = cfg.get("timeout_ms", 600000)
+    milliseconds = cli_base.turn_timeout_ms(cfg)
     deadline = None if milliseconds == 0 else time.time() + milliseconds / 1000  # 0＝不限時
     path = cli_a2a.socket_path(cfg, cell) if parts else None
     if path:
@@ -120,7 +120,7 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None, parts=None, more=None)
             cli_base.die("CliFailed", "the screen closed before the turn finished")
         time.sleep(0.2)
     if os.path.exists(cell.file("busy.txt")):                # 等到期限還在跑：不貼，免得逾時了還打進畫面
-        cli_base.die("ReplyMissing", "the turn on the screen did not finish within %d s; not sent (attach to look)" % (cfg.get("timeout_ms", 600000) // 1000))
+        cli_base.die("ReplyMissing", "the turn on the screen did not finish within %d s; not sent (attach to look)" % (cli_base.turn_timeout_ms(cfg) // 1000))
     trust_check(cfg, cell)
     seen = len(cell.turns())
     r = cell.tmux("load-buffer", "-b", "aos", "-", input=prompt)
@@ -140,7 +140,7 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None, parts=None, more=None)
             cli_base.die("CliFailed", "the screen closed before the turn finished")
         time.sleep(0.2)
     cli_base.die("ReplyMissing", "no answer %d s after sending (may be stuck on a permission or trust prompt; attach to look)"
-        % (cfg.get("timeout_ms", 600000) // 1000))
+        % (cli_base.turn_timeout_ms(cfg) // 1000))
 
 
 def type_line(cell, text):

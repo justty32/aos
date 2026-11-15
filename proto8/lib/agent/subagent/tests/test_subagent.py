@@ -199,11 +199,11 @@ class Subagent(unittest.TestCase):
                            ({"op": "pause", "name": "kid"}, ["ctl", "pause", "--target", "kid"]),
                            ({"op": "resume", "name": "kid"}, ["ctl", "resume", "--target", "kid"]),
                            ({"op": "say", "name": "kid", "text": "hi"}, ["say", "--target", "kid"]),
-                           ({"op": "listen", "name": "kid"}, ["listen", "--target", "kid", "--timeout-s", "600"]),
+                           ({"op": "listen", "name": "kid"}, ["listen", "--target", "kid", "--timeout-s", "0"]),
                            ({"op": "listen", "name": "kid", "timeout_s": 0}, ["listen", "--target", "kid", "--timeout-s", "0"]),
                            ({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 0}, ["ask", "--target", "kid", "--timeout-s", "0"]),
                            ({"op": "ask", "name": "kid", "text": "hi", "timeout_cycles": 5}, ["ask", "--target", "kid", "--timeout-cycles", "5"]),
-                           ({"op": "listen", "name": "kid", "letter": "000000000003.q"}, ["listen", "--target", "kid", "--letter", "000000000003.q", "--timeout-s", "600"]),
+                           ({"op": "listen", "name": "kid", "letter": "000000000003.q"}, ["listen", "--target", "kid", "--letter", "000000000003.q", "--timeout-s", "0"]),
                            ({"op": "listen", "name": "kid", "last": 3}, ["listen", "--target", "kid", "--last", "3"]),
                            ({"op": "listen", "name": "kid", "timeout_cycles": 7}, ["listen", "--target", "kid", "--timeout-cycles", "7"]),
                            ({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 9}, ["ask", "--target", "kid", "--timeout-s", "9"])):

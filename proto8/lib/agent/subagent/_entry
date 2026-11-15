@@ -12,7 +12,7 @@
 #        long: true＝每行多 ctl ls -l 的四欄 QUEUE RESTARTS COOLDOWN LAST ERROR（照抄 ctl ls -l 那行；排隊中的四欄都是 -）；
 #        json: true＝{"subagents": [表上我生的那幾列（ctl ls --json 的整列）；排隊中的＝{name, queued_letter}], "max_subagents": N}；long 和 json 同給＝json
 #        （11-10 深夜使用者選「改短版」；之後「1.好」：口徑跟 agents_ctl 一樣，long＝多幾欄文字、json 才是 JSON）
-#   say {name, text}＝say --target（話走 stdin）；listen {name, letter?, timeout_s | timeout_cycles | last}＝listen --target [--letter]（都沒給＝等 600 秒；letter 不能配 last）；
+#   say {name, text}＝say --target（話走 stdin）；listen {name, letter?, timeout_s | timeout_cycles | last}＝listen --target [--letter]（都沒給＝不限時等，11-15 起；letter 不能配 last）；
 #        ask {name, text, timeout_s | timeout_cycles}＝aos-agent ask --target（話走 stdin；配這封信名的回答，reply-match-1114：原本 say 接 listen 中間的空窗沒了）
 #   tools／llm／history／hook／system {name, args}：跑旁邊 self_tools／self_llm／self_history／self_hook／self_system（11-11）的 _entry，stdin＝args、AOS_STACK＝<子的 stack>/tools/<那支>/
 #        （那支靠 ctl who 認自己＝變成改子的）；stdout 原樣（「your」改成子的名字）；它的錯誤代號與原因接成自己的；旁邊沒那支＝ToolMissing；子還在排隊＝SubagentQueued。
@@ -26,7 +26,7 @@ usage: subagent < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the
 Your own subagents: add | rm | ls | state | stop | start | sleep | wake | pause | resume |
 say | listen | ask, and tools | llm | history | hook | system (the self_* tool's arguments, aimed at the subagent).
 Only agents started with this tool; counted against max_subagents (subagents.json; default 4).
-listen / ask timeout_s: default 600; 0 = no limit. Lifecycle timeouts remain finite positive.
+listen / ask timeout_s: default 0 = no limit. Lifecycle timeouts remain finite positive.
 Result on stdout. On error: one line "subagent: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
