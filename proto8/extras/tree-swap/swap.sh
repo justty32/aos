@@ -58,7 +58,7 @@ step_check() {
     [ -d "$TS_BIN_ROOT/$p/bin" ] || ts_red "target dir missing: $TS_BIN_ROOT/$p/bin"
   done
   n_ch=0; for p in $TS_BINS; do cmp -s "$TS_BUILD/proto8/impls/$p/bin/$p" "$TS_BIN_ROOT/$p/bin/$p" || n_ch=$((n_ch+1)); done
-  echo "bins: $n_ch of 10 differ"
+  echo "bins: $n_ch of $(wc -w <<< "$TS_BINS") differ"
   tmp=$(ts_keep_dir tmp-check); extract "$tmp"
   for d in $FOLDERS; do
     out=$(diff -rq -x __pycache__ -x .aos-source.json "$tmp/$d" "$TS_TREE/$d" || true)
@@ -125,7 +125,7 @@ step_bin() {
     chmod 755 "$dst.tree-swap-new"
     mv -f "$dst.tree-swap-new" "$dst"
   done
-  echo "bin: 10 binaries replaced (backup $b)"
+  echo "bin: $(wc -w <<< "$TS_BINS") binaries replaced (backup $b)"
 }
 
 step_verify() {
@@ -138,7 +138,7 @@ step_verify() {
   done
   for p in $TS_BINS; do cmp -s "$TS_BUILD/proto8/impls/$p/bin/$p" "$TS_BIN_ROOT/$p/bin/$p" || { echo "verify bin $p: DIFFERS"; bad=1; }; done
   [ $bad = 0 ] || ts_red "verify failed"
-  echo "verify: green (folders and 10 bins)"
+  echo "verify: green (folders and $(wc -w <<< "$TS_BINS") bins)"
 }
 
 for s in "${STEPS[@]}"; do

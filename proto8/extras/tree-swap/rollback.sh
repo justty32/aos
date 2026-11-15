@@ -47,6 +47,6 @@ if [ "$WHAT" != tree ]; then
     mv -f "$dst.tree-swap-rb" "$dst"
     cmp -s "$B/bin/$p" "$dst" || ts_red "after rollback $dst differs from backup"
   done
-  echo "rollback bin: 10 binaries restored and identical to backup"
+  echo "rollback bin: $(wc -w <<< "$TS_BINS") binaries restored and identical to backup"
 fi
 ts_t1 rollback

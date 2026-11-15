@@ -37,5 +37,5 @@
 - 停 daemon 不會關 agent 畫面（`aos-agent open` 開的 tmux 與裡面的 claude、aos-mcp 是獨立行程，腳本會 RED）：換前要另外關（`tmux -S <sock> kill-server`），先單跑 `check` 到沒 RED 再 `all`，起樹後重開畫面（11-13 晚實戰栽過）。
 - 先備份再換；換檔是「先抄到旁邊再改名」。附退回腳本。
 - 釘 pin 時查這次要換的 commit 有沒有改到存在 stack 裡的帳或名冊的格式（例：`subagents.json`）；有就在換樹前收子或重建，並列成步驟表的一步（例子與做法：[tree-swap README](../../../../proto8/extras/tree-swap/README.md)）。
-- 抄的來源是一個釘住、且在乾淨複本上跑過全套的 commit，用 `git archive <hash>` 抄，不抄工作樹；C++ 事先在 `~/.aos/scratch/<線名-日期>/` 底下編好（換樹腳本預設 `~/.aos/scratch/tree-swap/src`），停樹時只換檔。
+- 抄的來源是一個釘住、且在乾淨複本上跑過全套的 commit，用 `git archive <hash>` 抄，不抄工作樹；C++ 可以換樹時當場編（[build.sh](../../../../proto8/extras/tree-swap/README.md) 編在 repo 外，約 1 分半），也可以事先在樹還在跑時用 `build.sh --ref <commit> --install` 編好換進去。樹在跑時在 repo 裡 build 也可以，風險使用者承擔；建議走這支腳本，它用 rename 換、會警告哪些正在跑（使用者 11-15「樹還在跑的時候不能在repo裏面編，我希望可以，這就是使用者自己承擔風險。或是編譯的時候走腳本，腳本會稍微檢查一下」）。
 - 有停樹時刻的日子，每條線要有一個「趕不上就還原乾淨」的時刻（[lessons 17](../lessons/03-坑14-20.md#17-有截止點的日子每條線要有趕不上就還原乾淨的時刻)）。

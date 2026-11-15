@@ -1,16 +1,27 @@
 #!/bin/bash
-# build.sh - 在 repo 外用 git archive 把某個 commit 的 proto8 抄到 $TS_BUILD、編出 swap.sh 要的十支 C++ 執行檔，並寫 BUILD_REF；不碰 repo 工作樹、不碰樹。
-# 用法：build.sh --ref <commit>（$TS_BUILD 預設 ~/.aos/scratch/tree-swap/src；已存在就拒絕，要重編先自己移走）
+# build.sh - 用 git archive 把某個 commit 的 proto8 抄到 repo 外的 $TS_BUILD、編出九支 C++ 執行檔並寫 BUILD_REF；加 --install 就把編好的每支用 rename 換進 $TS_BIN_ROOT/<p>/bin/<p>（樹在跑也行）。
+# 用法：build.sh --ref <commit> [--install]
+#   不加 --install：只編，給 swap.sh 用（$TS_BUILD 預設 ~/.aos/scratch/tree-swap/src；已存在就拒絕，要重編先自己移走）。
+#   --install：使用者 11-15「樹還在跑的時候不能在repo裏面編，我希望可以，這就是使用者自己承擔風險。或是編譯的時候走腳本，腳本會稍微檢查一下」——
+#     九支全部編成功才換；每支先抄成 <bin>.build-new 再 mv（rename），跑著的行程留在舊的 inode 上照跑、下次起來才用新版，也不會撞到 text file busy；
+#     換之前看 /proc/*/exe，有行程正在用那支就印一行 warning（只警告、不擋、不殺）。編失敗＝什麼都不換。沒給 TS_BUILD 時編到 ~/.aos/scratch/tree-swap/build-<時間>-<pid>/（不刪，留著）。
 [ -n "$BASH_VERSION" ] || { echo "build.sh: not bash, refuse" >&2; exit 2; }
 set -euo pipefail
 HERE=$(dirname "$(realpath "$0")")
+GIVEN_BUILD=${TS_BUILD:-}
 . "$HERE/common.sh"
-REF=""
+REF=""; INSTALL=0
 while [ $# -gt 0 ]; do
-  case "$1" in --ref) REF=$2; shift 2 ;; -h|--help) sed -n 2,3p "$0"; exit 0 ;; *) echo "build.sh: unknown arg $1" >&2; exit 2 ;; esac
+  case "$1" in
+    --ref) REF=$2; shift 2 ;;
+    --install) INSTALL=1; shift ;;
+    -h|--help) sed -n 2,7p "$0"; exit 0 ;;
+    *) echo "build.sh: unknown arg $1" >&2; exit 2 ;;
+  esac
 done
 [ -n "$REF" ] || { echo "build.sh: --ref <commit> is required" >&2; exit 2; }
 REF=$(git -C "$TS_REPO" rev-parse --verify "$REF^{commit}")
+[ $INSTALL = 1 ] && [ -z "$GIVEN_BUILD" ] && TS_BUILD="$HOME/.aos/scratch/tree-swap/build-$(date +%Y%m%d-%H%M%S)-$$"
 [ -e "$TS_BUILD" ] && ts_red "$TS_BUILD exists; move it away first"
 case "$(realpath -m "$TS_BUILD")/" in "$(realpath "$TS_REPO")"/*) ts_red "TS_BUILD is inside the repo; build outside it" ;; esac
 mkdir -p "$TS_BUILD"
@@ -23,4 +34,30 @@ for p in $TS_BINS; do
   ts_t1 "$p"
 done
 echo "$REF" > "$TS_BUILD/BUILD_REF"
-echo "build: 10 binaries from $REF in $TS_BUILD"
+echo "build: $(wc -w <<< "$TS_BINS") binaries from $REF in $TS_BUILD"
+[ $INSTALL = 1 ] || exit 0
+
+# --install：九支都編好了才走到這裡；逐支警告正在跑的、寫旁邊再 rename
+in_use() {   # 印出正在用 $1 這支執行檔的 pid（看自己的行程的 /proc/*/exe）
+  local want d e
+  want=$(realpath "$1")
+  for d in /proc/[0-9]*; do
+    e=$(readlink "$d/exe" 2>/dev/null) || continue
+    [ "$e" = "$want" ] && printf ' %s' "${d#/proc/}"
+  done
+  return 0
+}
+n=0
+for p in $TS_BINS; do
+  dst="$TS_BIN_ROOT/$p/bin/$p"
+  [ -d "$TS_BIN_ROOT/$p/bin" ] || ts_red "target dir missing: $TS_BIN_ROOT/$p/bin (nothing more replaced; $n done)"
+  if cmp -s "$TS_BUILD/proto8/impls/$p/bin/$p" "$dst"; then echo "install $p: same as before"; continue; fi
+  if [ -e "$dst" ]; then
+    pids=$(in_use "$dst")
+    [ -n "$pids" ] && echo "warning: $p is running (pid$pids); those keep the old version until they restart"
+  fi
+  cp "$TS_BUILD/proto8/impls/$p/bin/$p" "$dst.build-new"; chmod 755 "$dst.build-new"
+  mv -f "$dst.build-new" "$dst"
+  n=$((n+1)); echo "install $p: replaced"
+done
+echo "install: $n binaries replaced in $TS_BIN_ROOT (built in $TS_BUILD, kept)"
