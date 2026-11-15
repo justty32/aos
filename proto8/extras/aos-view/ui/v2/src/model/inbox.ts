@@ -110,3 +110,18 @@ export function trackOrder(items: OutItem[], tree: Tree | null, now: number): Ou
   const rank = (o: OutItem) => (waitReason(o, tree, now) ? 0 : o.reply ? 3 : o.delivery === "queued" ? 1 : 2);
   return [...items].sort((a, b) => rank(a) - rank(b) || (b.sent_at || 0) - (a.sent_at || 0));
 }
+
+/** "等你處理" under the tree (02f §1.3): one of each non-empty group first (ask, red, waiting on you), then fill up
+ *  in the order ask → red → waiting on you → reply → long wait. Pure. */
+export interface WaitRow { key: string; group: "ask" | "red" | "you" | "reply" | "wait"; title: string; node: string | null; todo: Todo }
+export function pickWaiting(todo: Todo[], limit: number): WaitRow[] {
+  const groups: Record<WaitRow["group"], WaitRow[]> = { ask: [], red: [], you: [], reply: [], wait: [] };
+  for (const t of todo) {
+    const g = t.kind === "wait" && t.key.startsWith("bw:") ? "you" : t.kind;   // bw: = an agent's board says it waits on you
+    groups[g].push({ key: t.key, group: g, title: t.title, node: t.node, todo: t });
+  }
+  const out: WaitRow[] = [];
+  for (const g of ["ask", "red", "you"] as const) if (groups[g].length && out.length < limit) out.push(groups[g].shift()!);
+  for (const g of ["ask", "red", "you", "reply", "wait"] as const) while (groups[g].length && out.length < limit) out.push(groups[g].shift()!);
+  return out;
+}

@@ -89,3 +89,80 @@ export function descendants(t: Tree, id: string): string[] {
 export function displayName(id: string): string {
   return id === MACHINE ? "機房" : id;
 }
+
+// ---- the left tree (02f §2; P2): rows of what is visible, pure so node --test can check it ----
+
+export interface Badges { ask: number; red: number; reply: number }
+export interface TreeRow {
+  id: string;            // a node id, or MACHINE
+  depth: number;
+  dept: boolean;         // has members (an arrow)
+  open: boolean;
+  name: string;          // shown name: the parent's prefix cut to "·" (02e §3.1)
+  light: Light;          // closed department = worst below; open department or person = its own
+  badges: Badges;        // closed department = summed below; otherwise its own
+  members: number;       // a department's head count (rollup.nodes); 0 for a person
+}
+
+/** "repo-aos-sol-7" under "repo-aos" shows as "·sol-7"; the top level keeps the full name. */
+export function shortName(id: string, parent: string | null): string {
+  if (id === MACHINE) return "機房";
+  return parent && id.startsWith(parent + "-") && id.length > parent.length + 1 ? "·" + id.slice(parent.length + 1) : id;
+}
+
+/** the departments open by default: the sole top department (else one closed row is all you see). */
+export function defaultOpen(t: Tree | null): string[] {
+  const one = soleRoot(t);
+  return one ? [one] : [];
+}
+
+/** order inside a department: sub-departments first, then people (02f §2.2), each in the tree's own order. */
+function kidsOf(t: Tree, id: string): string[] {
+  if (id === MACHINE) return machineIds(t);
+  const c = t.nodes[id]?.children || [];
+  return [...c.filter((k) => isDept(t.nodes[k])), ...c.filter((k) => !isDept(t.nodes[k]))];
+}
+
+/** top level: departments, then the loners, then one "machine room" row. */
+export function topRows(t: Tree): string[] {
+  const top = t.roots.filter((r) => t.nodes[r] && t.nodes[r].kind === "agent");
+  const m = machineIds(t).length ? [MACHINE] : [];
+  return [...top.filter((r) => isDept(t.nodes[r])), ...top.filter((r) => !isDept(t.nodes[r])), ...m];
+}
+
+export function treeRows(t: Tree | null, open: Set<string>, replies: Record<string, number> = {}): TreeRow[] {
+  if (!t) return [];
+  const own = (id: string): Badges => {
+    const n = t.nodes[id];
+    return { ask: n?.asks || 0, red: n?.light === "red" ? 1 : 0, reply: replies[id] || 0 };
+  };
+  const sum = (id: string): Badges => {
+    const ids = id === MACHINE ? [...machineIds(t), ...machineIds(t).flatMap((m) => descendants(t, m))] : [id, ...descendants(t, id)];
+    const b = { ask: 0, red: 0, reply: 0 };
+    for (const k of ids) { const o = own(k); b.ask += o.ask; b.red += o.red; b.reply += o.reply; }
+    return b;
+  };
+  const out: TreeRow[] = [];
+  const walk = (id: string, depth: number, parent: string | null) => {
+    const n = t.nodes[id];
+    if (id !== MACHINE && !n) return;
+    const dept = id === MACHINE || isDept(n);
+    const isOpen = dept && open.has(id);
+    const worst = id === MACHINE ? machineRollup(t).worst : n.rollup.worst;
+    out.push({
+      id, depth, dept, open: isOpen, name: shortName(id, parent),
+      light: dept && !isOpen ? worst : id === MACHINE ? worst : n.light,
+      badges: dept && !isOpen ? sum(id) : id === MACHINE ? { ask: 0, red: 0, reply: 0 } : own(id),
+      members: id === MACHINE ? machineIds(t).length : dept ? n.rollup.nodes : 0,
+    });
+    if (isOpen) for (const k of kidsOf(t, id)) walk(k, depth + 1, id === MACHINE ? null : id);
+  };
+  for (const r of topRows(t)) walk(r, 0, null);
+  return out;
+}
+
+/** the departments to open so id's row is visible (its chain above it; the machine room for procs). */
+export function openFor(t: Tree | null, id: string): string[] {
+  const chain = chainOf(t, id);
+  return chain.slice(0, -1);
+}

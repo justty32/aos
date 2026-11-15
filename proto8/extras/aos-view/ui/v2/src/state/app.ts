@@ -1,9 +1,14 @@
 // The two stores of the page: data (what the backend said) and ui (where the user is, what is open).
 import type { Answered, Ask, LetterIn, OrderKind, OutItem, Pulse, Tree, UserBoard } from "../api/types.ts";
 import { createStore } from "./store.ts";
-import { parseHash, type Route } from "./route.ts";
+import { parseHash, type Route, type View } from "./route.ts";
 
-export interface Prefs { view?: "wall" | "map" }
+/** kept in the backend's ui-state drawer (this machine only): the page opens the way it was left (q6b a, 02f §4) */
+export interface Prefs {
+  view?: View;
+  left_open?: boolean; right_open?: boolean;   // only the user opens / closes the sides (q6b a); missing = open
+  tree_open?: string[];                        // departments open in the left tree; missing = the default (02f §2.2)
+}
 
 export interface DataState {
   tree: Tree | null; treeError: string | null;

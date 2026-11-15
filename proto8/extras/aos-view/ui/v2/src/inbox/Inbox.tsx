@@ -1,4 +1,4 @@
-// The left column (02c §2): 待辦 (four kinds, one queue), 追蹤 (everything sent, where it is), 已處理 (answered here).
+// The center 待辦 tab (02f §1.2; was the left column in 02c §2): 待辦 (four kinds, one queue), 追蹤 (everything sent, where it is), 已處理 (answered here).
 import { useEffect, useMemo, useState } from "react";
 import { data, ui } from "../state/app.ts";
 import { useData, useInbox, useNow, useUi } from "../state/hooks.ts";
@@ -170,11 +170,11 @@ export function Inbox() {
   );
   const tracking = outbox.filter((o) => o.followed && !(o.reply && seen["in:" + o.reply.letter])).length;
   return (
-    <aside data-zone="inbox" tabIndex={-1} className="flex min-h-0 flex-col border-r border-slate-800 bg-slate-900/60 focus-within:ring-1 focus-within:ring-sky-700">
+    <div data-zone="inbox" tabIndex={-1} className="flex min-h-0 flex-1 flex-col focus-within:ring-1 focus-within:ring-sky-700">
       <div className="flex shrink-0">{tabBtn("todo", "待辦", todo.length)}{tabBtn("track", "追蹤", tracking)}{tabBtn("done", "已處理", answered.length)}</div>
       <div className="min-h-0 flex-1 overflow-y-auto p-1" tabIndex={0}>
         {tab === "todo" ? <TodoList /> : tab === "track" ? <Track /> : <Done />}
       </div>
-    </aside>
+    </div>
   );
 }

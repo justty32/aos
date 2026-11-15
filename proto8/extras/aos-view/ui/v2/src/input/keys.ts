@@ -2,11 +2,11 @@
 // - Every key goes through the IME guard first: while composing (注音 / 倉頡 picking a word) nothing is ours.
 // - In an input: only Escape (= blur, never close or clear) and bindings marked inInput (Ctrl+K) work.
 //   Ctrl+Enter is not here: each form handles its own, so it only acts on the form that has the caret.
-// - Outside inputs: three zones (inbox / stage / inspector), Tab moves between them; arrows and j/k act on the
+// - Outside inputs: zones (tree / inbox = the to-do tab / stage / inspector), Tab moves between them; arrows and j/k act on the
 //   zone that has focus (stage when none); the inspector keeps native scrolling.
 // - Escape closes only the top layer (overlay stack), then clears the selection.
 
-export type Zone = "inbox" | "stage" | "inspector";
+export type Zone = "tree" | "inbox" | "stage" | "inspector";
 export interface KeyLike {
   key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; shiftKey: boolean;
   isComposing?: boolean; keyCode?: number; code?: string;
@@ -71,7 +71,7 @@ function isInput(el: Element | null): boolean {
 
 export function zoneOf(el: Element | null): Zone | null {
   const z = el?.closest?.("[data-zone]")?.getAttribute("data-zone");
-  return z === "inbox" || z === "stage" || z === "inspector" ? z : null;
+  return z === "tree" || z === "inbox" || z === "stage" || z === "inspector" ? z : null;
 }
 
 export function install(): () => void {

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { ui, type Filter } from "../state/app.ts";
 import { useData, useInbox, useNow, useUi } from "../state/hooks.ts";
-import { goTo } from "../state/nav.ts";
+import { goTo, setView } from "../state/nav.ts";
 import { chainOf, displayName, soleRoot } from "../model/tree.ts";
 import { hhmm } from "../model/time.ts";
 import { listDrafts } from "../model/drafts.ts";
@@ -9,7 +9,9 @@ import { listDrafts } from "../model/drafts.ts";
 const STALE_S = 35;   // a collector round is poll_s (20) + its own time; 35 s without a new one = the data stopped
 
 function toggle(f: Filter) {
-  ui.set({ filter: ui.get().filter === f ? null : f, inboxTab: "todo" });
+  const on = ui.get().filter === f ? null : f;
+  ui.set({ filter: on, inboxTab: "todo" });
+  if (on) setView("todo");          // a header number opens the center to-do list with only that group (02f §1.2)
 }
 
 export function Freshness() {
@@ -57,7 +59,7 @@ export function Header() {
   const v1 = `http://${location.hostname}:8767/`;
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900 px-3">
+    <header className="flex h-11 shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-900 px-3">
       <nav className="flex min-w-0 items-center gap-1 text-sm" aria-label="所在位置">
         <button className="font-bold text-slate-100 hover:underline" onClick={() => goTo(null)}>全景</button>
         {chain.map((id) => (

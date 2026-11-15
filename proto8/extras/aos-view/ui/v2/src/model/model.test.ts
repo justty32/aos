@@ -88,9 +88,9 @@ test("inbox: order, answered-here hidden, dismissed and seen", () => {
 
 test("route: hash round trip", () => {
   const r = parseHash("#/boss/boss-a?sel=boss-a-x&tab=thread&ask=L.1");
-  assert.deepEqual(r, { focus: "boss-a", sel: "boss-a-x", tab: "thread", view: "wall", ask: "L.1" });
+  assert.deepEqual(r, { focus: "boss-a", sel: "boss-a-x", tab: "thread", view: "wall", ask: "L.1", q: 0 });
   assert.equal(toHash(r, ["boss", "boss-a"]), "#/boss/boss-a?sel=boss-a-x&tab=thread&ask=L.1");
-  assert.deepEqual(parseHash("#/../<x>?sel=<b>&tab=evil"), { focus: null, sel: null, tab: "now", view: "wall", ask: null });
+  assert.deepEqual(parseHash("#/../<x>?sel=<b>&tab=evil"), { focus: null, sel: null, tab: "now", view: "wall", ask: null, q: 0 });
   assert.equal(parseHash("#/_machine").focus, "_machine");
 });
 
@@ -114,4 +114,42 @@ test("ago", () => {
   assert.equal(ago(NOW - 10, NOW), "剛剛");
   assert.equal(ago(NOW - 600, NOW), "10 分前");
   assert.equal(ago(null, NOW), "沒有紀錄");
+});
+
+test("tree rows (02f §2): order, closed sums, default open, short names", async () => {
+  const { treeRows, defaultOpen, shortName, openFor } = await import("./tree.ts");
+  const t = tree([
+    node("boss", { rollup: { worst: "red", why: "x", nodes: 5, path: [] } }),
+    node("boss-sol-1", { parent: "boss", light: "red", asks: 0 }),
+    node("boss-team", { parent: "boss", rollup: { worst: "blue", why: "", nodes: 2, path: [] } }),
+    node("boss-team-a", { parent: "boss-team", asks: 2, light: "blue" }),
+    node("loner"),
+    node("litellm", { kind: "external" }),
+  ]);
+  assert.deepEqual(defaultOpen(t), []);                                          // two top rows: all closed
+  assert.deepEqual(defaultOpen(tree([node("x"), node("x-a", { parent: "x" })])), ["x"]);   // one department: open
+  const rows = treeRows(t, new Set(["boss"]), { "boss-team-a": 1 });
+  assert.deepEqual(rows.map((r) => r.id), ["boss", "boss-team", "boss-sol-1", "loner", MACHINE]);  // sub-departments first
+  const team = rows.find((r) => r.id === "boss-team")!;
+  assert.equal(team.name, "·team");
+  assert.equal(team.open, false);
+  assert.deepEqual(team.badges, { ask: 2, red: 0, reply: 1 });                                    // closed = summed below
+  assert.equal(team.light, "blue");                                                                // closed = worst below
+  const closed = treeRows(t, new Set());
+  assert.deepEqual(closed.map((r) => r.id), ["boss", "loner", MACHINE]);
+  assert.deepEqual(closed[0].badges, { ask: 2, red: 1, reply: 0 });
+  assert.equal(shortName("loner", null), "loner");
+  assert.deepEqual(openFor(t, "boss-team-a"), ["boss", "boss-team"]);
+  assert.deepEqual(openFor(t, "litellm"), [MACHINE]);
+  const all = treeRows(t, new Set(["boss", "boss-team", MACHINE]));
+  assert.deepEqual(all.map((r) => [r.id, r.depth]), [["boss", 0], ["boss-team", 1], ["boss-team-a", 2], ["boss-sol-1", 1], ["loner", 0], [MACHINE, 0], ["litellm", 1]]);
+});
+
+test("waiting rows (02f §1.3): one of each first, then by order", async () => {
+  const { pickWaiting } = await import("./inbox.ts");
+  const td = (key: string, kind: "ask" | "red" | "reply" | "wait") => ({ key, kind, title: key, sub: "", at: null, node: null, canDismiss: false });
+  const rows = pickWaiting([td("a1", "ask"), td("a2", "ask"), td("a3", "ask"), td("r1", "red"), td("p1", "reply"), td("w1", "wait"), td("bw:x:pick", "wait")], 4);
+  assert.deepEqual(rows.map((r) => r.key), ["a1", "r1", "bw:x:pick", "a2"]);
+  assert.equal(rows[2].group, "you");
+  assert.equal(pickWaiting([], 3).length, 0);
 });

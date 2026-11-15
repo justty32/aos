@@ -51,7 +51,7 @@ from datetime import datetime, timezone
 
 sys.dont_write_bytecode = True  # never leave a __pycache__ next to zone.py in ~/aos-home
 
-TOOLS = os.path.expanduser("~/aos-home/ws/tools")
+TOOLS = os.environ.get("VIEW_TOOLS") or os.path.expanduser("~/aos-home/ws/tools")   # VIEW_TOOLS: tests / demos with stub tools
 AOS_USER = os.path.join(TOOLS, "aos-user", "aos-user")
 ZONE_PY = os.path.join(TOOLS, "aos-user", "zone.py")
 SAY_PREFIX = "[使用者經全景頁]"
@@ -231,7 +231,7 @@ class Collector:
         self.act_path = os.path.join(home.state, "activity.json")
         self.activity = load_json(self.act_path, {})
         self.kinds = {}
-        self.zone = load_zone()
+        self.zone = None if os.environ.get("VIEW_ASKS_FIXTURE") else load_zone()
         self.collect_lock = threading.Lock()
         self.tick = {"at": None, "took_ms": None, "ok": None, "error": None}
         self.on_tree = []        # v2: callbacks after each new tree (outbox wake-up on new relay letters)
@@ -506,6 +506,9 @@ class Collector:
         return out[:100]
 
     def zone_letters(self):
+        fx = os.environ.get("VIEW_ASKS_FIXTURE")      # tests / demos: recorded letters instead of the user zone
+        if fx:
+            return load_json(fx, [])
         z = self.zone
         if not z:
             return []

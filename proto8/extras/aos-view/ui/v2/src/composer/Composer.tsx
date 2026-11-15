@@ -166,7 +166,7 @@ export function Composer() {
       <textarea ref={box} value={d.text} onChange={(e) => put({ text: e.target.value })} rows={3} disabled={!target}
         placeholder={!target ? "先選一個 agent" : d.mode === "say" ? `對 ${target} 說…（進它的對話）` : d.mode === "mail" ? "信的內容…（進它的信箱）" : "要什麼、為什麼…"}
         onKeyDown={(e) => { if (d.mode !== "order" && isSubmit(e.nativeEvent)) { e.preventDefault(); send(); } }}
-        className="w-full resize-y rounded bg-slate-800 p-1.5 text-sm disabled:opacity-40" />
+        className="max-h-60 min-h-11 w-full resize-y overflow-y-auto rounded bg-slate-800 p-1.5 text-sm disabled:opacity-40" />
       <div className="flex items-center gap-2">
         <button onClick={send} disabled={!target || busy}
           className={`rounded px-3 py-1 text-sm font-medium disabled:opacity-40 ${d.mode === "order" ? "bg-amber-700 hover:bg-amber-600" : "bg-sky-700 hover:bg-sky-600"}`}>

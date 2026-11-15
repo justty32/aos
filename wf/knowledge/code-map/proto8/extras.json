@@ -56,8 +56,10 @@
       "assets": {
        "index-CCvZ7tt8.js": "",
        "index-DRvCQ-de.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
+       "index-DhefAmd3.js": "",
        "index-EY0xnFtw.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
-       "index-LGxtEJiL.js": ""
+       "index-LGxtEJiL.js": "",
+       "index-Mir41DwB.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com"
       },
       "index.html": ""
      },
@@ -69,7 +71,7 @@
       "check-src.mjs": "build gate (02c §6): no dangerouslySetInnerHTML / innerHTML / eval in the sources; agent text goes through React text nodes."
      },
      "src": {
-      "App.tsx": "The page: header on top; three columns: inbox 340 px | stage | inspector 420 px (decision card + selection + composer).",
+      "App.tsx": "The page: header on top; three columns: left tree 280 (48 closed) | center tabs | right 400 (0 closed) with the",
       "api": {
        "client.ts": "HTTP to the aos-view backend: 8 s timeout per call, ETag / If-None-Match, the CSRF token (header + cookie).",
        "poll.ts": "Pulse-driven fetching (12.8 #7): only /api/pulse runs on a timer (5 s; 30 s while the tab is hidden). A kind is",
@@ -81,7 +83,7 @@
       },
       "inbox": {
        "Decision.tsx": "The decision card (02c §4.3, 12.8 #1): docked on top of the right column while route.ask is set.",
-       "Inbox.tsx": "The left column (02c §2): 待辦 (four kinds, one queue), 追蹤 (everything sent, where it is), 已處理 (answered here)."
+       "Inbox.tsx": "The center 待辦 tab (02f §1.2; was the left column in 02c §2): 待辦 (four kinds, one queue), 追蹤 (everything sent, where it is), 已處理 (answered here)."
       },
       "input": {
        "keys.test.ts": "",
@@ -91,6 +93,10 @@
        "Inspector.tsx": "The right column (02c §4): a decision card docked on top when one is open (12.8 #1), then the selected thing:",
        "Thread.tsx": "往來: what you sent to one node and what came back, like a chat (oldest at the top, newest at the bottom).",
        "useLive.ts": "A panel's own data (thread, bot card): fetched when opened, again every 15 s while the tab is visible,"
+      },
+      "left": {
+       "Left.tsx": "The left column (02f §1, §4): the tree on top (it scrolls), \"等你處理\" pinned below (3–4 signposts, the full list is",
+       "Tree.tsx": "The left department tree (02f §2, q9 a, q10 a): NERDTree-like layout without the TUI look. Rows of 28 px, 14 px per"
       },
       "main.tsx": "",
       "model": {
@@ -108,13 +114,15 @@
       },
       "stage": {
        "Card.tsx": "One card component for the wall (and later the map): lead desk, member, sub-department, machine room, proc, outside service.",
-       "Stage.tsx": "The middle column: the department wall (v2.0). One level at a time; the lead desk first (02c §3.3)."
+       "MapView.tsx": "The center 地圖 tab (P4, 02e §3, q5 a). Placeholder until the layout model lands.",
+       "Stage.tsx": "The middle column (02f §1.2, the user's note \"地圖也要可以折疊，或是tab\"): tabs 部門牆 | 地圖 | 待辦."
       },
       "state": {
        "app.ts": "The two stores of the page: data (what the backend said) and ui (where the user is, what is open).",
        "hooks.ts": "",
+       "layout.ts": "The two sides open / closed and the tree's open departments (02f §4, q6b a): only the user changes them, by button",
        "nav.ts": "Moving around (02c §3.2 with 12.8 #2): click anywhere on a card = select; title / ▸ / double click / Enter = go in",
-       "route.ts": "The address bar holds where you are (02c §3.1): #/<dept chain>?sel=<id>&tab=<now|thread|history>&view=<wall|map>&ask=<letter>",
+       "route.ts": "The address bar holds where you are (02c §3.1): #/<dept chain>?sel=<id>&tab=<now|thread|history>&view=<wall|map|todo>&ask=<letter>&q=<question>",
        "store.ts": "A tiny store on React 19's useSyncExternalStore (03 §12.2: instead of zustand, not on this machine)."
       }
      },

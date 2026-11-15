@@ -86,7 +86,7 @@ export function Decision({ letter }: { letter: string }) {
     if (!a) return;
     const q = qs[cur];
     const list = (q?.options || []).filter((o) => /^[a-z]$/.test(o.key)).map((o) => ({ key: o.key, zone: "global" as const, run: () => pick(q.id, o.key) }));
-    return bind([...list, { key: "[", run: () => go(-1) }, { key: "]", run: () => go(1) }]);
+    return bind(list);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [a, cur, d.answers, order, letter]);
 
@@ -98,8 +98,8 @@ export function Decision({ letter }: { letter: string }) {
       <div className="mb-1 flex items-center gap-2 text-xs text-slate-400">
         <span className="font-semibold text-sky-300">🔵 要你決定</span>
         {order.length > 1 && <span>{idx + 1}/{order.length}</span>}
-        <button className="hover:text-slate-100" onClick={() => go(-1)} title="上一張 [">‹</button>
-        <button className="hover:text-slate-100" onClick={() => go(1)} title="下一張 ]">›</button>
+        <button className="hover:text-slate-100" onClick={() => go(-1)} title="上一張">‹</button>
+        <button className="hover:text-slate-100" onClick={() => go(1)} title="下一張">›</button>
         <button className="ml-auto hover:text-slate-100" onClick={() => openAsk(null)}>收起 Esc</button>
       </div>
       {!a && <p className="text-sm text-slate-400">這封信不在待辦裡（可能已經回過了）。</p>}

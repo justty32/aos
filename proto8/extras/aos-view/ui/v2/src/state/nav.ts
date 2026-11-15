@@ -2,7 +2,8 @@
 // (then the department itself is selected); Backspace / breadcrumb = up. The route is mirrored in the address bar:
 // a new department is a history entry (Back works), a new selection or tab only replaces the entry.
 import { data, ui } from "./app.ts";
-import { parseHash, toHash, type Route, type Tab } from "./route.ts";
+import { parseHash, toHash, type Route, type Tab, type View } from "./route.ts";
+import { savePrefs } from "../api/poll.ts";
 import { chainOf, isDept, MACHINE, soleRoot, standFor } from "../model/tree.ts";
 
 function setRoute(p: Partial<Route>, push: boolean) {
@@ -48,8 +49,13 @@ export function jump(id: string, caret = true) {
 }
 
 export function setTab(tab: Tab) { setRoute({ tab }, false); }
-export function setView(view: "wall" | "map") { setRoute({ view }, false); }
-export function openAsk(letter: string | null) { setRoute({ ask: letter }, false); }
+export function setView(view: View) {
+  setRoute({ view }, false);
+  const p = data.get().prefs;
+  if (p.view !== view) savePrefs({ ...p, view });
+}
+export function openAsk(letter: string | null, q = 0) { setRoute({ ask: letter, q: letter ? q : 0 }, false); }
+export function setQuestion(q: number) { setRoute({ q }, false); }
 
 export function installHash(): () => void {
   const h = () => ui.set({ route: parseHash(location.hash) });
