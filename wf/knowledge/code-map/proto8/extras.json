@@ -54,22 +54,8 @@
      "VERSION": "",
      "dist": {
       "assets": {
-       "index-9i7SuQ5Y.js": "",
        "index-BMg9Wcy4.js": "",
-       "index-C6BJbrWf.js": "",
-       "index-CCvZ7tt8.js": "",
-       "index-CMeaRHg_.js": "",
-       "index-CUu5N8xK.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
-       "index-Chz9THgY.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
-       "index-CtNzAz2c.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
-       "index-DRlybWJG.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
-       "index-DRvCQ-de.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
-       "index-DUP8VP5F.js": "",
-       "index-DhefAmd3.js": "",
-       "index-Dso2-2Z2.js": "",
-       "index-EY0xnFtw.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
-       "index-LGxtEJiL.js": "",
-       "index-Mir41DwB.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com"
+       "index-CtNzAz2c.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com"
       },
       "index.html": ""
      },
