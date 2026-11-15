@@ -98,7 +98,7 @@
  "lookup": [
   {"want": "錯誤行／提醒行、stdin 讀 JSON、stdout 印一行（C++）", "where": "proto8/impls/aos-util/include/aos/util/io.hpp；旗標 parse_cli 在 aos/util/cli.hpp"},
   {"want": "Python 命令列的旗標與錯誤行", "where": "proto8/py/aos_flags.py（人打的指令共用）；lib 工具與 lib/agent/cli_session.py 共用 proto8/lib/tool_io.py"},
-  {"want": "Python 共用模組怎麼找到、repo 外的複本怎麼 import", "where": "自己的資料夾 → 自己 realpath 往上找 repo py/／lib/ → 標準 sys.path（install.sh 的 user site aos-proto8.pth 或 PYTHONPATH）；說明在 proto8/py/README.md"},
+  {"want": "Python 共用模組怎麼找到、repo 外的複本怎麼 import", "where": "自己的資料夾 → 自己 realpath 往上找 repo py/／lib/ → 標準 sys.path（PYTHONPATH；install.sh 11-15 起不再寫 user site 的 aos-proto8.pth）；說明在 proto8/py/README.md"},
   {"want": "claude／codex 對話、tools／llm 宣告檔位置", "where": "proto8/lib/agent/cli_session.py、proto8/lib/agent/agent_files.py（cmd 與範本可共用）"},
   {"want": "某支人打的指令", "where": "proto8/cmd/<名>/bin/<名>，說明在 proto8/cmd/README.md"},
   {"want": "agent 範本、問腦的 kernel、通用 kernel 的站（框架站）", "where": "proto8/templates/、proto8/kernel/（框架站的程式本身在 proto8/lib/aos/kernel）"},

@@ -2,7 +2,7 @@
 
 ← [proto8](../README.md)｜用它的：[cmd](../cmd/README.md)、[templates](../templates/README.md)、[kernel](../kernel/README.md)
 
-不是指令、不進 PATH。共用模組依序從自己的資料夾、自己的 `realpath(__file__)` 往上找到的 repo `py/`／`lib/`、標準 `sys.path` 找；最後可由 `install.sh` 寫的 user site `aos-proto8.pth` 或 `PYTHONPATH` 提供，不從 PATH 上 `aos-tools` 的真位置推。
+不是指令、不進 PATH。共用模組依序從自己的資料夾、自己的 `realpath(__file__)` 往上找到的 repo `py/`／`lib/`、標準 `sys.path` 找；最後可由 `PYTHONPATH` 提供（`install.sh` 11-15 起不再寫 user site 的 `aos-proto8.pth`），不從 PATH 上 `aos-tools` 的真位置推。
 
 依賴單向：`py` 可以 import `lib`，`lib` 不 import `py`。CLI 對話與介面宣告的共用模組在 [lib/agent](../lib/docs/03-索引-agent等.md)：`cli_session.py` 與 `cli_*.py`、`agent_files.py`（K-5）。
 

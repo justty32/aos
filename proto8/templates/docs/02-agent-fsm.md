@@ -23,7 +23,7 @@ cp -r $AOS_HOME/templates/agent-fsm bob
 
 換台不用跑任何重建指令：備好 `AOS_HOME` 就直接起。`aos-agent tools add` 照使用者給的寫法存（絕對存絕對、相對存相對覆蓋層），要寫環境變數指示詞用 `aos-tools add --path-json`（[aos-tools](../../cmd/aos-tools/README.md)）。[`templates/tests/test_paths_move.py`](../tests/test_paths_move.py) 在 /tmp 跑三種給法各一輪「`cp -r` 起→問一題→shutdown→git 搬到另一個 HOME 與前綴（A 的 proto8 刪掉）→B 直接起→接著答」，加一輪同機改 `AOS_HOME`。
 
-四支格找共用模組依序看自己的資料夾、自己的 realpath 往上找到的 repo `py/`／`lib/`、標準 `sys.path`（K-5），抄出 repo 後靠第三條：先跑過 `install.sh`，讓 user site 的 `aos-proto8.pth` 帶入這份 repo 的兩個絕對路徑，或明給 `PYTHONPATH`（換了 `HOME` 就沒有 user site，要靠 `PYTHONPATH`）；介面宣告讀法共用 `lib/agent/agent_files.py`。範本的 `tests/`、`README.md` 會一起抄過去，`tests/` 可以刪。
+四支格找共用模組依序看自己的資料夾、自己的 realpath 往上找到的 repo `py/`／`lib/`、標準 `sys.path`（K-5），抄出 repo 後靠第三條：明給 `PYTHONPATH`＝這份 repo 的 `proto8/py`、`proto8/lib`（`install.sh` 11-15 起不再寫 user site 的 `aos-proto8.pth`）；介面宣告讀法共用 `lib/agent/agent_files.py`。範本的 `tests/`、`README.md` 會一起抄過去，`tests/` 可以刪。
 
 改完整包（定義＋工作區＋llm kernel）`cp -a`／git 到別處照樣起得來：daemon 表存相對路徑、指到 proto8 的照 `AOS_HOME` 解，`AOS_LLM_KERNEL` 照根 `.env` 的預設（`${AOS_WS}/../llms/stacks/llm`）或在殼裡換成新位置。
 

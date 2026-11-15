@@ -22,7 +22,7 @@
 | [impls/](impls/README.md) | aos-exec、aos-loop、aos-fsm、aos-daemon 等 C++ 專案（各自 CMake；`build/`、`bin/`、`lib/` 是建置產物、不進 git） |
 | [cmd/](cmd/README.md) | Python 指令：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca（turn、screen）、aos-mcp、aos-mcp-launch（起外部 stdio MCP server）、aos-mcp-import（把外部 MCP 的工具凍結成一包）、aos-sandbox、aos-grow |
 | [py/](py/README.md) | cmd 共用模組：`aos_flags.py`、`aos_ws.py`、`daemon_ctl/`（CLI 對話與介面宣告共用模組在 `lib/agent/`） |
-| [install.sh](install.sh) | 把 `impls/*/bin/*` 與 `cmd/*/bin/*` symlink 進 `~/.local/bin`，並在 Python user site 寫兩行 repo `py`／`lib` 絕對路徑的 `aos-proto8.pth`（參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉；用法在 [cmd/README](cmd/README.md)） |
+| [install.sh](install.sh) | 把 `impls/*/bin/*` 與 `cmd/*/bin/*` symlink 進 `~/.local/bin`（11-15 起不再寫 Python user site 的 `aos-proto8.pth`，`--uninstall` 會拿掉舊的；參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉；用法在 [cmd/README](cmd/README.md)） |
 | [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），templates 用相對捷徑引用 |
 | [cases/](cases/README.md) | measure 的共用考題、固定答案與比對器契約；smoke 用 math 的兩題驗門與自洽 |
 | [kernel/](kernel/README.md) | llm-kernel（問腦的那台）、daemon-kernel、procs-kernel（通用 kernel 的站的兩種掛法） |

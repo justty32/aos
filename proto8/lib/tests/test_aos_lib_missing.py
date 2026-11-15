@@ -24,7 +24,7 @@ class LibMissing(unittest.TestCase):
                 with self.subTest(tool=tool):
                     dest = Path(tmp) / tool
                     shutil.copytree(AOS / tool, dest, ignore=shutil.ignore_patterns('tests', '__pycache__'))
-                    # -s：不讀 user site，install.sh 寫的 aos-proto8.pth 不算數
+                    # -s：不讀 user site，以前 install.sh 寫的 aos-proto8.pth 若還在也不算數
                     run = subprocess.run([sys.executable, '-s', '-B', str(dest / '_entry')], cwd=tmp, env=env,
                                          stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=30)
                     self.assertEqual(run.returncode, 1)
