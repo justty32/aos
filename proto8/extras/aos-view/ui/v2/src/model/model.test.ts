@@ -153,3 +153,46 @@ test("waiting rows (02f §1.3): one of each first, then by order", async () => {
   assert.equal(rows[2].group, "you");
   assert.equal(pickWaiting([], 3).length, 0);
 });
+
+test("map layout (02e §3): people before rooms, the four steps, busy never folds", async () => {
+  const { layoutMap, PLATE } = await import("./layoutMap.ts");
+  const kids = (p: string, n: number, o: Partial<Node> = {}) => Array.from({ length: n }, (_, i) => node(`${p}-m${i}`, { parent: p, ...o }));
+  const t = tree([
+    node("hq", { rollup: { worst: "red", why: "", nodes: 30, path: [] } }),
+    ...kids("hq", 6),
+    node("hq-ops", { parent: "hq" }), ...kids("hq-ops", 8),
+    node("hq-ops-red", { parent: "hq-ops" }), ...kids("hq-ops-red", 3), node("hq-ops-red-x", { parent: "hq-ops-red", light: "red" }),
+    node("hq-ops-calm", { parent: "hq-ops" }), ...kids("hq-ops-calm", 4),
+    node("hq-quiet", { parent: "hq" }), ...kids("hq-quiet", 5),
+    node("solo", { asks: 1, light: "blue" }),
+    node("litellm", { kind: "external" }),
+  ]);
+  const big = layoutMap(t, null, 900, 5000);
+  assert.equal(big.step, 0);
+  const at = (l: typeof big, id: string) => l.items.find((i) => i.id === id)!;
+  assert.equal(at(big, "solo").kind, "plate");
+  assert.ok(at(big, "solo").y < at(big, "hq").y);                         // loners, then rooms
+  assert.ok(at(big, "hq").y < at(big, "_machine").y || at(big, "hq").x < at(big, "_machine").x);  // the machine room last
+  const hq = at(big, "hq");
+  assert.equal(hq.kind, "room");
+  const lead = big.items.find((i) => i.kind === "plate" && i.id === "hq")!;
+  assert.ok(lead.y < at(big, "hq-ops").y);                                 // lead, then people, then sub-rooms
+  assert.equal(at(big, "hq-m0").w, PLATE.w);
+  assert.ok(big.items.every((i) => i.x + i.w <= 900));                     // never wider than the stage
+  const kinds = (l: typeof big, id: string) => l.items.filter((i) => i.id === id).map((i) => i.kind);
+  const s1 = layoutMap(t, null, 900, big.height - 1);
+  assert.ok(s1.step >= 1);
+  assert.deepEqual(kinds(big, "hq-ops-calm"), ["fold"]);                  // quiet and three levels down: folded
+  assert.deepEqual(kinds(big, "hq-quiet"), ["room", "plate"]);             // step 0: all open
+  assert.deepEqual(kinds(s1, "hq-quiet"), ["fold"]);                      // step 1: a quiet second-level room folds
+  assert.ok(kinds(s1, "hq-ops-red").includes("room"));                     // a busy one stays open
+  const s3 = layoutMap(t, null, 900, 10);
+  assert.equal(s3.step, 3);
+  assert.equal(at(s3, "hq-m0").kind, "dot");
+  assert.equal(at(s3, "solo").kind, "plate");                              // busy: never a dot
+  assert.equal(at(s3, "hq-ops-red-x").kind, "plate");
+  const inside = layoutMap(t, "hq-ops", 600, 5000);
+  assert.equal(inside.items.find((i) => i.id === "hq-ops")!.kind, "plate"); // standing in a room: its lead is a plate
+  assert.equal((inside.items.find((i) => i.id === "hq-ops-m1") as { name: string }).name, "·m1");
+  assert.equal(layoutMap(null, null, 600, 600).items.length, 0);
+});

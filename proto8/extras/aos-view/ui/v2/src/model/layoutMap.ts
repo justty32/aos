@@ -1,0 +1,148 @@
+// The map's layout (P4; 02e §3, q5 a), pure so node --test can check it: "wide rooms, people before rooms".
+// Name plates are 116×28 (D1), 4 px apart; a room's frame adds 18 to the width and 44 to the height (title 26).
+// When it does not fit the height, try in order and keep the first that fits; never scroll sideways:
+//   0 everything open → 1 second-level rooms fold into room plates → 2 quiet people in first-level rooms become
+//   dots → 3 the same as 2, and the stage scrolls down. Someone with something going on (red / yellow light, a letter
+//   for you, a board that waits on you) is never folded and never a dot.
+import type { Tree } from "../api/types.ts";
+import { isDept, machineIds, machineRollup, MACHINE, shortName } from "./tree.ts";
+
+export const PLATE = { w: 116, h: 28 };
+export const DOT = 14;
+export const GAP = 4;
+const FRAME_W = 18, FRAME_H = 44, PAD = 9, TITLE_TOP = 35;
+
+export type MapItem =
+  | { kind: "room"; id: string; x: number; y: number; w: number; h: number; title: string; count: number; depth: number }
+  | { kind: "plate"; id: string; x: number; y: number; w: number; h: number; name: string; lead: boolean; busy: boolean }
+  | { kind: "dot"; id: string; x: number; y: number; w: number; h: number; name: string }
+  | { kind: "fold"; id: string; x: number; y: number; w: number; h: number; name: string; count: number; busy: boolean };
+
+export interface MapLayout { items: MapItem[]; width: number; height: number; step: 0 | 1 | 2 | 3 }
+export const STEP_WORD = ["全部展開", "小組已摺起", "只顯示有事的人", "可往下捲"] as const;
+
+/** something going on: never folded, never a dot (03 §13.6 #8) */
+export function busyOf(t: Tree, id: string): boolean {
+  const n = t.nodes[id];
+  if (!n) return false;
+  return n.light === "red" || n.light === "yellow" || n.asks > 0 || !!n.board?.waiting_on?.some((w) => w.who === "user");
+}
+function busyBelow(t: Tree, id: string): boolean {
+  if (busyOf(t, id)) return true;
+  return (t.nodes[id]?.children || []).some((c) => busyBelow(t, c));
+}
+
+interface Box { w: number; h: number; items: MapItem[] }      // items relative to the box's top-left
+type Piece = { w: number; h: number; place: (x: number, y: number) => MapItem[] };
+
+/** left to right, wrap when the next one does not fit; a row is as tall as its tallest piece; tops aligned. */
+function flow(pieces: Piece[], maxW: number): Box {
+  const items: MapItem[] = [];
+  let x = 0, y = 0, rowH = 0, w = 0;
+  for (const p of pieces) {
+    if (x > 0 && x + p.w > maxW) { x = 0; y += rowH + GAP; rowH = 0; }
+    items.push(...p.place(x, y));
+    x += p.w + GAP;
+    rowH = Math.max(rowH, p.h);
+    w = Math.max(w, x - GAP);
+  }
+  return { w, h: pieces.length ? y + rowH : 0, items };
+}
+const shift = (it: MapItem, dx: number, dy: number): MapItem => ({ ...it, x: it.x + dx, y: it.y + dy });
+
+function plate(t: Tree, id: string, name: string, lead: boolean): Piece {
+  const busy = busyOf(t, id);
+  return { ...PLATE, place: (x, y) => [{ kind: "plate", id, x, y, ...PLATE, name, lead, busy }] };
+}
+function dot(id: string, name: string): Piece {
+  return { w: DOT, h: DOT, place: (x, y) => [{ kind: "dot", id, x, y: y + (PLATE.h - DOT) / 2, w: DOT, h: DOT, name }] };
+}
+function fold(t: Tree, id: string, name: string): Piece {
+  const count = id === MACHINE ? machineIds(t).length : t.nodes[id]?.rollup.nodes || 0;
+  const busy = id === MACHINE ? machineIds(t).some((m) => busyBelow(t, m)) : busyBelow(t, id);
+  return { ...PLATE, place: (x, y) => [{ kind: "fold", id, x, y, ...PLATE, name, count, busy }] };
+}
+
+/**
+ * A room's contents: its lead plate (if it has one), its people, then its sub-rooms on new rows.
+ * depth = 1 for rooms on the stage, 2 inside them; quiet rooms deeper than 2 are always folded (02d: two levels down).
+ */
+function contents(t: Tree, room: string, lead: string | null, people: string[], rooms: string[], maxW: number, depth: number,
+                  step: number, parentOfLead: string | null): Box {
+  const ps: Piece[] = [];
+  if (lead) ps.push(plate(t, lead, shortName(lead, parentOfLead), true));
+  const ppl = step >= 2 && depth === 1 ? [...people.filter((p) => busyOf(t, p)), ...people.filter((p) => !busyOf(t, p))] : people;
+  for (const p of ppl) {
+    const name = shortName(p, room === MACHINE ? null : room);
+    ps.push(step >= 2 && depth === 1 && !busyOf(t, p) ? dot(p, name) : plate(t, p, name, false));
+  }
+  const rs: Piece[] = [];
+  for (const r of rooms) {
+    const name = shortName(r, room === MACHINE || room === "" ? null : room);
+    // deeper than two levels: folded unless something is going on inside (then it opens, so the busy one is a plate)
+    const folded = !busyBelow(t, r) && (depth + 1 > 2 || (step >= 1 && depth + 1 === 2));
+    if (folded) ps.push(fold(t, r, name));     // a folded room sits with the people
+    else rs.push(roomPiece(t, r, room === "" ? null : room, maxW, depth + 1, step));
+  }
+  const a = flow(ps, maxW);
+  const b = flow(rs, maxW);
+  const items = [...a.items, ...b.items.map((it) => shift(it, 0, a.h + (a.h && b.h ? GAP : 0)))];
+  return { w: Math.max(a.w, b.w), h: a.h + b.h + (a.h && b.h ? GAP : 0), items };
+}
+
+function split(t: Tree, ids: string[]): { people: string[]; rooms: string[] } {
+  return { people: ids.filter((k) => !isDept(t.nodes[k])), rooms: ids.filter((k) => isDept(t.nodes[k])) };
+}
+
+function roomPiece(t: Tree, id: string, parent: string | null, avail: number, depth: number, step: number): Piece {
+  const kids = id === MACHINE ? machineIds(t) : t.nodes[id]?.children || [];
+  const { people, rooms } = split(t, kids);
+  const inner = contents(t, id, id === MACHINE ? null : id, people, rooms, Math.max(PLATE.w, avail - FRAME_W), depth, step, parent);
+  const title = id === MACHINE ? "機房" : shortName(id, parent);
+  const count = id === MACHINE ? machineIds(t).length : t.nodes[id]?.rollup.nodes || 0;
+  const w = Math.max(inner.w, 120) + FRAME_W, h = inner.h + FRAME_H;
+  return {
+    w, h,
+    place: (x, y) => [{ kind: "room", id, x, y, w, h, title, count, depth }, ...inner.items.map((it) => shift(it, x + PAD, y + TITLE_TOP))],
+  };
+}
+
+/** the stage itself: an unframed room. focus null = the company (loners, then rooms, then the machine room). */
+function stage(t: Tree, focus: string | null, W: number, step: number): Box {
+  if (focus === MACHINE) {
+    const { people, rooms } = split(t, machineIds(t));
+    return contents(t, MACHINE, null, people, rooms, W, 1, step, null);
+  }
+  if (focus && t.nodes[focus]) {
+    const { people, rooms } = split(t, t.nodes[focus].children);
+    return contents(t, focus, focus, people, rooms, W, 1, step, t.nodes[focus].parent);
+  }
+  const top = t.roots.filter((r) => t.nodes[r] && t.nodes[r].kind === "agent");
+  const { people, rooms } = split(t, top);
+  const m = machineIds(t).length ? [MACHINE] : [];
+  // the top level: loners are plates on the stage; each top department and the machine room is a framed room
+  const ps: Piece[] = people.map((p) => (step >= 2 && !busyOf(t, p) ? dot(p, p) : plate(t, p, p, false)));
+  const rs: Piece[] = [...rooms, ...m].map((r) => roomPiece(t, r, null, W, 1, step));
+  const a = flow(ps, W), b = flow(rs, W);
+  const items = [...a.items, ...b.items.map((it) => shift(it, 0, a.h + (a.h && b.h ? GAP : 0)))];
+  return { w: Math.max(a.w, b.w), h: a.h + b.h + (a.h && b.h ? GAP : 0), items };
+}
+
+export function layoutMap(t: Tree | null, focus: string | null, W: number, H: number): MapLayout {
+  if (!t) return { items: [], width: 0, height: 0, step: 0 };
+  const w = Math.max(PLATE.w + FRAME_W, Math.floor(W));
+  let last: Box = { w: 0, h: 0, items: [] };
+  for (const step of [0, 1, 2] as const) {
+    last = stage(t, focus, w, step);
+    if (last.h <= H) return { items: last.items, width: last.w, height: last.h, step };
+  }
+  return { items: last.items, width: last.w, height: last.h, step: 3 };
+}
+
+/** the light a map item shows: a person its own, a room or folded room the worst inside */
+export function itemLight(t: Tree, it: MapItem) {
+  if (it.id === MACHINE) return machineRollup(t).worst;
+  const n = t.nodes[it.id];
+  if (!n) return "gray" as const;
+  return it.kind === "room" || it.kind === "fold" ? n.rollup.worst : n.light;
+}
