@@ -205,6 +205,8 @@ test("light reasons in plain Chinese (P5), unknown ones unchanged", async () => 
   assert.equal(whyWord("still in a turn, quiet for 30 min (not crashed), 2 queued (read when the turn ends)"), "還在這一輪，30 分鐘沒新輸出（沒當掉）；2 封信排著");
   assert.equal(whyWord("running, nothing queued, last activity 90 min ago"), "閒著，1 小時前有動靜");
   assert.equal(whyWord("running, nothing queued, last activity not recorded"), "閒著");
+  assert.equal(whyWord("long quiet, not dead: waiting on a CLI turn, quiet for 12 min, 2 queued"), "很久沒動靜，不是掛了：在等一輪 CLI 跑完，12 分鐘沒動靜；2 封信排著");
+  assert.equal(whyWord("long quiet, not dead (daemon says stuck)"), "很久沒動靜，不是掛了（daemon 標 stuck）");
   assert.equal(whyWord("something new"), "something new");
   assert.equal(whyWord(null), "");
 });

@@ -3,9 +3,13 @@
 // Unknown sentences pass through unchanged. Pure: node --test checks it.
 
 type Rule = [RegExp, (...m: string[]) => string];
+const WAIT_ON: Record<string, string> = { "a CLI turn": "一輪 CLI 跑完", "the brain's reply": "模型回信", something: "某件事" };
 
 const RULES: Rule[] = [
   [/^asleep$/, () => "睡著"],
+  [/^long quiet, not dead \(daemon says stuck\)$/, () => "很久沒動靜，不是掛了（daemon 標 stuck）"],
+  [/^long quiet, not dead: waiting on (.*?)(?:, quiet for (\d+) min)?(?:, (\d+) queued)?$/,
+    (w, m, q) => `很久沒動靜，不是掛了：在等${WAIT_ON[w] ?? w}${m ? `，${m} 分鐘沒動靜` : ""}${q ? `；${q} 封信排著` : ""}`],
   [/^stopped normally$/, () => "正常停了"],
   [/^stopped normally, (\d+) below still running$/, (n) => `正常停了，底下還有 ${n} 個在跑`],
   [/^stopped: a turn ran long and was cut by a timeout, not a crash \((.*)\)(?:, (\d+) below still running)?$/,

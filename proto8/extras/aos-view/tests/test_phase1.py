@@ -15,7 +15,12 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 VIEW = os.path.join(os.path.dirname(HERE), "aos-view")
-AOS_USER = os.path.expanduser("~/aos-home/ws/tools/aos-user/aos-user")
+# an integration test against the real aos-user (its zone.py) and aos-post: they live in the installed tools, not in this
+# folder. VIEW_TOOLS points at another tools folder; without them (a clean copy) the class is skipped, not failed.
+TOOLS = os.environ.get("VIEW_TOOLS") or os.path.expanduser("~/aos-home/ws/tools")
+AOS_USER = os.path.join(TOOLS, "aos-user", "aos-user")
+MISSING = [x for x, ok in (("aos-user (%s)" % AOS_USER, os.access(AOS_USER, os.X_OK)),
+                           ("aos-post on PATH", shutil.which("aos-post"))) if not ok]
 KEYS = ("kind", "title", "what", "questions", "done_when", "risk", "urgent", "deadline", "default_if_silent", "dedupe_key")
 
 if any(k.startswith("AOS_") for k in os.environ):
@@ -34,6 +39,7 @@ LETTER = {"kind": "decide", "title": "Pick the map renderer", "what": "Two ways 
           "deadline": "2026-12-31"}
 
 
+@unittest.skipIf(MISSING, "needs the installed tools: missing " + ", ".join(MISSING))
 class Phase1(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="view-p1-", dir="/tmp")

@@ -280,6 +280,7 @@ class Collector:
             n["messages"] = hist.get("messages")
             n["board"] = read_board1(os.path.join(n["stack"], "board.json")) if n.get("stack") else None
             n["live"] = live_of(n.get("stack"))
+            n["quiet"] = quiet_of(n.get("stack"))
             nodes[name] = n
         write_json(self.act_path, self.activity)
         self.externals(nodes, t)
@@ -414,6 +415,9 @@ class Collector:
         # non-null reason ("exited with code 143", "... signal 9", "RunFailed ..."); a normal stop or sleep leaves none
         if st == "sleeping":
             return "gray", "asleep"
+        if st == "stuck" or (n.get("phase") or "").lower() == "stuck":
+            # 11-15: the daemon's "stuck" = slow, not dead (the user: long quiet is yellow, never killed)
+            return "yellow", "long quiet, not dead (daemon says stuck)"
         if st not in ("running", "paused"):
             kids_up = [c for c in n["children"] if (nodes[c].get("state") or "").lower() == "running"]
             tail = ", %d below still running" % len(kids_up) if kids_up else ""
@@ -436,6 +440,13 @@ class Collector:
         act = n.get("active_at")
         mins = int((time.time() - act) // 60) if act else None
         seen = "last activity %d min ago" % mins if mins is not None else "last activity not recorded"
+        qt = n.get("quiet")
+        if qt:
+            # the shared mark (quiet.json): the authoritative source; the live.jsonl guess below is the fallback
+            mq = qt["quiet_s"] // 60 if qt.get("quiet_s") is not None else None
+            what = {"cli_turn": "a CLI turn", "brain_reply": "the brain's reply"}.get(qt["what"], qt["what"] or "something")
+            return "yellow", "long quiet, not dead: waiting on %s%s%s" % (
+                what, ", quiet for %d min" % mq if mq is not None else "", ", %d queued" % q if q else "")
         lv = n.get("live") or {}
         if lv.get("in_turn"):
             # the CLI's live stream says a turn is open: how long since its last line (or the history grew)
@@ -1504,6 +1515,34 @@ def cli_kind(stack):
         if stack and os.path.isdir(os.path.join(stack, k)):
             return k
     return None
+
+
+def quiet_of(stack):
+    """<stack>/quiet.json, the shared "long quiet, not dead" mark (timeout-1115; writer and format: proto8/lib/agent/quiet.py).
+    No file = nothing. Counts only while its pid is alive (pid null = not checked); a stale file from a killed writer is
+    ignored. Read here, not imported, because this tool is deployed apart from the repo."""
+    if not stack:
+        return None
+    try:
+        with open(os.path.join(stack, "quiet.json"), encoding="utf-8") as f:
+            rec = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(rec, dict) or rec.get("quiet") is not True:
+        return None
+    pid = rec.get("pid")
+    if pid is not None:
+        if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
+            return None
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return None
+        except PermissionError:
+            pass
+    qs = rec.get("quiet_s")
+    return {"what": str(rec.get("what") or ""), "since": rec.get("since"), "at": rec.get("at"),
+            "quiet_s": qs if isinstance(qs, int) and not isinstance(qs, bool) else None}
 
 
 def live_of(stack):

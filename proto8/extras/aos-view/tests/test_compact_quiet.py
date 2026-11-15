@@ -25,6 +25,12 @@ exit 1
 """
 
 
+def dead_pid():
+    p = subprocess.Popen(["true"])
+    p.wait()
+    return p.pid
+
+
 def free_port():
     s = socket.socket()
     s.bind(("127.0.0.1", 0))
@@ -54,7 +60,10 @@ class CompactQuiet(unittest.TestCase):
                 ("c-queued", "running", 2, None, ("result", 30)),
                 ("plain", "running", 0, None, None),
                 ("c-timeout", "stopped", 0, "RunFailed: timeout after 600000 ms", ("assistant", 700)),
-                ("c-crash", "stopped", 0, "exited with code 1", ("assistant", 700))]
+                ("c-crash", "stopped", 0, "exited with code 1", ("assistant", 700)),
+                ("q-mark", "running", 0, None, ("result", 30)),
+                ("q-stale", "running", 0, None, ("result", 30)),
+                ("q-stuck", "running", 0, None, None)]
         rows = []
         for n, st, q, reason, live in spec:
             stack = os.path.join(procs, n)
@@ -65,7 +74,13 @@ class CompactQuiet(unittest.TestCase):
                 with open(p, "w") as f:
                     f.write(json.dumps({"type": "system"}) + "\n" + json.dumps({"type": live[0]}) + "\n")
                 os.utime(p, (now - live[1], now - live[1]))
-            rows.append({"name": n, "state": st, "phase": st, "ws": t, "stack": stack, "queued": q, "reason": reason,
+            # the shared quiet mark (timeout-1115, lib/agent/quiet.py): a live pid counts, a dead one is ignored
+            if n in ("q-mark", "q-stale"):
+                pid = os.getpid() if n == "q-mark" else dead_pid()
+                with open(os.path.join(stack, "quiet.json"), "w") as f:
+                    json.dump({"quiet": True, "what": "cli_turn", "since": "2026-11-15T08:00:00Z",
+                               "at": "2026-11-15T08:12:30Z", "quiet_s": 750, "pid": pid}, f)
+            rows.append({"name": n, "state": st, "phase": "stuck" if n == "q-stuck" else st, "ws": t, "stack": stack, "queued": q, "reason": reason,
                          "auto_restart": False, "queue": 0, "cooldown": None, "busy": None})
         cls.fixture = os.path.join(t, "ls.json")
         with open(cls.fixture, "w") as f:
@@ -133,6 +148,10 @@ class CompactQuiet(unittest.TestCase):
         self.assertEqual(n["c-crash"]["light"], "red")
         self.assertIsNone(n["plain"]["live"])
         self.assertTrue(n["c-quiet"]["live"]["in_turn"])
+        self.assertEqual(n["q-mark"]["light"], "yellow")                       # quiet.json wins over the live stream
+        self.assertIn("long quiet, not dead: waiting on a CLI turn, quiet for 12 min", n["q-mark"]["why"])
+        self.assertEqual((n["q-stale"]["light"], n["q-stale"]["quiet"]), ("green", None))   # writer gone: ignored
+        self.assertEqual(n["q-stuck"]["light"], "yellow")                      # daemon "stuck" = slow, not red
 
     def test_compact(self):
         st, r = self.compact("c-idle")

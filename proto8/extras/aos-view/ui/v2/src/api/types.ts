@@ -40,6 +40,7 @@ export interface Node {
   ext?: { url: string; listen: string[] | null; ss_at: Epoch | null };
   board?: Board1 | null;
   live?: { cli: string; at: Epoch | null; in_turn: boolean } | null;   // the CLI's live stream (claude / codex agents only)
+  quiet?: { what: string; since: string | null; at: string | null; quiet_s: number | null } | null;   // <stack>/quiet.json (writer alive)
 }
 
 export interface Tree {
