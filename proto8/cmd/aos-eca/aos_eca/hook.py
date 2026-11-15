@@ -5,7 +5,7 @@ import subprocess
 
 import aos_flags
 
-from .common import NAME, Fail, hooks, post, write_atomic
+from .common import NAME, Fail, hooks, letters_drop, post, write_atomic
 
 
 # ---- hook（lib/agent/hooks.py；圖紙 thinking/2026-11/10/self-family/hook § 6 eca 縮水版）----
@@ -22,6 +22,7 @@ def before_queue(stack, box, sig, body, template):
     """好信交出去之前跑 before_queue：回（可能改過 content 的）body；被攔下＝aos-post done 收掉、mailbox_warning 一行、回 None。"""
     r = fire("before_queue", {"letter": sig, "content": body["content"]}, template, stack)
     if r["blocked"]:
+        letters_drop(stack, [sig], "blocked")                       # 回答配對：done 之前記進 dropped
         post(["done", box, sig])
         write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s dropped by hook %s\n" % (sig, r["hook"]))
         return None

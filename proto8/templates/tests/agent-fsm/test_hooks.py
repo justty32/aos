@@ -86,10 +86,15 @@ sys.exit(code)
         return r
 
     def letter(self, content):
+        """寄一封進 queue；回信名（aos-post send 印的；回答配對 aos.letter 記的就是它）。"""
         box = self.stack / "queue"
         subprocess.run(["aos-post", "init", str(box)], env=self.env, check=True, capture_output=True)
-        subprocess.run(["aos-post", "send", "--ordered", str(box)], env=self.env, check=True, capture_output=True,
-                       input=json.dumps({"role": "user", "content": content}), text=True)
+        return subprocess.run(["aos-post", "send", "--ordered", str(box)], env=self.env, check=True, capture_output=True,
+                              input=json.dumps({"role": "user", "content": content}), text=True).stdout.strip()
+
+    def letters(self):
+        path = self.stack / "letters.json"
+        return json.loads(path.read_text()) if path.exists() else None
 
     def history(self, messages=None):
         path = self.stack / "history.jsonl"
@@ -106,9 +111,10 @@ sys.exit(code)
 
                                "handler": self.hook("up", 'print(json.dumps({"content": ev["content"].upper()}))')},
                       "b_after": {"event": "after_queue", "handler": self.hook("after")}})
-        self.letter("hello")
+        name = self.letter("hello")
         self.run_cell("idle")
-        self.assertEqual(self.history(), [{"role": "user", "content": "HELLO"}])
+        self.assertEqual(self.history(), [{"role": "user", "content": "HELLO", "aos": {"letter": name}}])
+        self.assertEqual(self.letters()["pending"], [name])
         before, after = self.events()
         self.assertEqual((before["event"], before["hook"], before["content"]), ("before_queue", "a_up", "hello"))
         self.assertEqual(before["stack"], str(self.stack))
@@ -118,38 +124,42 @@ sys.exit(code)
     def test_queue_before_drops_letter(self):
         self.declare({"drop": {"event": "before_queue", "intercept": True, "handler": self.hook("drop", "sys.exit(10)")},
                       "z": {"event": "after_queue", "handler": self.hook("z")}})
-        self.letter("spam")
+        name = self.letter("spam")
         self.run_cell("idle", code=10)
         self.assertEqual(self.history(), [])
+        self.assertEqual(self.letters()["pending"], [])
+        self.assertEqual([(x["letter"], x["reason"]) for x in self.letters()["dropped"]], [(name, "blocked")])
         self.assertEqual(os.listdir(self.stack / "queue" / "cur"), [])
         self.assertIn("dropped by hook drop", (self.stack / "mailbox_warning.txt").read_text())
         self.assertEqual([e["event"] for e in self.events()], ["before_queue"])
 
     def test_without_change_stdout_and_10_do_nothing(self):
         self.declare({"n": {"event": "before_queue", "intercept": False, "handler": self.hook("n", 'print(json.dumps({"content": "X"})); sys.exit(10)')}})
-        self.letter("keep")
+        name = self.letter("keep")
         self.run_cell("idle")
-        self.assertEqual(self.history(), [{"role": "user", "content": "keep"}])
+        self.assertEqual(self.history(), [{"role": "user", "content": "keep", "aos": {"letter": name}}])
 
     # ---- on_fail、逾時、wait false
     def test_on_fail_stop_keeps_letter_in_cur(self):
         self.declare({"bad": {"event": "before_queue", "handler": self.hook("bad", "sys.exit(3)")}})
-        self.letter("again")
+        name = self.letter("again")
         r = self.run_cell("idle", code=1)
         self.assertIn("agent-fsm: error: HookFailed hook bad (event before_queue) failed: exited 3", r.stderr)
         self.assertEqual(self.history(), [])
+        self.assertIsNone(self.letters())                                     # hook 停下：還沒交出、pending 不記
         self.assertEqual(len(os.listdir(self.stack / "queue" / "cur")), 1)   # P-12：下次重跑再接
         self.declare({})
         self.run_cell("idle")
-        self.assertEqual(self.history(), [{"role": "user", "content": "again"}])
+        self.assertEqual(self.history(), [{"role": "user", "content": "again", "aos": {"letter": name}}])
+        self.assertEqual(self.letters(), {"pending": [name], "dropped": []})
 
     def test_on_fail_continue_warns_and_goes_on(self):
         self.declare({"bad": {"event": "before_queue", "on_error": "continue", "intercept": True,
                               "handler": self.hook("bad", 'print("not json")')}})
-        self.letter("go")
+        name = self.letter("go")
         r = self.run_cell("idle")
         self.assertIn("agent-fsm: warning: hook bad (event before_queue) failed: stdout is not JSON", r.stderr)
-        self.assertEqual(self.history(), [{"role": "user", "content": "go"}])
+        self.assertEqual(self.history(), [{"role": "user", "content": "go", "aos": {"letter": name}}])
 
     def test_timeout_kills_and_fails(self):
         self.declare({"slow": {"event": "after_queue", "timeout_ms": 300, "handler": self.hook("slow", "time.sleep(30)")}})
@@ -329,9 +339,9 @@ sys.exit(code)
 
     def test_change_on_unchangeable_event_ignores_stdout(self):
         self.declare({"talk": {"event": "after_queue", "handler": self.hook("talk", 'print("not json at all")')}})
-        self.letter("hi")
+        name = self.letter("hi")
         self.run_cell("idle")
-        self.assertEqual(self.history(), [{"role": "user", "content": "hi"}])
+        self.assertEqual(self.history(), [{"role": "user", "content": "hi", "aos": {"letter": name}}])
 
     def test_nothing_declared_starts_nothing(self):
         (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {}}))

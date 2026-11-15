@@ -170,6 +170,7 @@
     "tests": {
      "kernel_fixture.py": "起一台以框架站為身體的暫存 daemon，讓測試只靠 AOS_KERNEL 查表與掛子，並以 shutdown 收尾。",
      "test_daemon.py": "Test subagent and agents_ctl on a real aos-daemon: tools/llm changes land on the subagent (not the parent), and a subagent removed with agents_ctl is…",
+     "test_reply_match.py": "Test subagent op ask / op listen letter against the real aos-agent and simulated bodies (reply-match-1114): each asker gets its own answer, bodies no…",
      "test_subagent.py": "Test subagent against a fake aos-agent with a table: argv per op, the record and its reconciliation, quota, rm without purge, subagent account copies…",
      "test_wait.py": "Test the shared runner in agents_cmd waits in bounded segments, cleans up on expiry, polls short on the clock, and that subagent checks wait argument…"
     }

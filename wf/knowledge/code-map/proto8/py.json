@@ -20,6 +20,7 @@
    "table.py": "daemon_ctl 名單：尋找 daemon、解析狀態表、自檢子項與篩選已有 stack 的久未修改列。"
   },
   "tests": {
+   "test_aos_ws_reply_match.py": "Check aos_ws reply matching (reply-match-1114): answer_for's order queue -> history -> history_removed -> letters.json, the letters.json helpers, mar…",
    "test_clock_when.py": "Test aos_clock_when: at parsing (HH:MM, ISO, +N), 5-field cron parsing and next time, the late text (no files, no clock).",
    "test_flags_anywhere.py": "Check aos_flags.parse(anywhere=True) and the one-layer commands moved to it (P-44 continued, 11-11 \"全部改\").",
    "test_state_path.py": "Check daemon_ctl.state_path: ask AOS_KERNEL for the table file with a query letter (a fake kernel answers), KernelFailed when nobody answers, and rea…",

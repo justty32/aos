@@ -1,7 +1,7 @@
 # aos_eca/batch.py - 一批信的認領與讀信（開場白、冷卻時只拿一封、take-all）與 goal 提醒的題目與進展。
 import json
 
-from .common import NOT_FOUND, Fail, cli_cell, goal_state, mailbox_warning, must_post, names, post
+from .common import NOT_FOUND, Fail, cli_cell, goal_state, letters_drop, mailbox_warning, must_post, names, post
 from .history import history_rows
 from .hook import before_queue
 
@@ -60,6 +60,7 @@ def pick_one(stack, box, prompt, template):
                     return [sig], [body], dropped
                 dropped += 1
                 continue
+            letters_drop(stack, [sig], "bad")
             post(["done", box, sig])
             mailbox_warning(stack, sig, why)
             dropped += 1

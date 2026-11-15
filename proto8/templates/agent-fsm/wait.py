@@ -50,6 +50,9 @@
 #   LlmKernelMissing（寄之前 AOS_LLM_KERNEL 沒設或空白）、SendFailed（aos-llm 起不來、或 send 退 0 卻沒印信件名稱）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
 # hook（lib/agent/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：BudgetMissing、BrainFailed、SendFailed（send 退非 0、或退 0 沒印信名）、ReplyBad
 #   照原本行為退出／記冷卻之前觸發 brain_failed（name＝代號、reason＝這格那行的原因）；hook 停下＝HookFailed／HooksBad 退 1（冷卻不記）。
+# 回答配對（thinking/2026-11/14/reply-match-1114/03 §1）：端點回的 message 自帶的 aos 鍵一律拿掉；最終回答（沒有 tool_calls）帶
+#   "aos": {"answer_to": $AOS_STACK/letters.json 的 pending}（沒有 pending＝不帶），接進 history 之後才清 pending；腦失敗、還沒最終回答＝pending 留著，
+#   算進下一則最終回答。比對 request.json 是否過期時，history 最後一則先剝 aos 鍵再比（送端點的 messages 本來就剝過）。
 # --help 印英文用法；Ctrl-C 退 130。
 # on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick（經 cell_common.clock_tick）——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 import datetime, json, math, os, signal, subprocess, sys, time
@@ -64,6 +67,7 @@ for _parent in Path(__file__).resolve().parents:
 sys.path[:0] = _import_paths
 try:
     import aos_flags  # noqa: E402
+    import aos_ws  # noqa: E402  （回答配對：for_endpoint、mark_answer、letters_pending／letters_answered）
     from observed import append as append_observed  # noqa: E402
     if (Path(__file__).resolve().parent / "agent_files.py").is_file():
         from agent_files import declared_files  # noqa: E402
@@ -78,7 +82,7 @@ try:
     else:
         from agent import hooks  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
-    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "observed", "observed_children",
+    if _error.name not in ("aos_flags", "aos_ws", "tool_io", "agent_files", "agent", "agent.agent_files", "observed", "observed_children",
                            "cooldown", "agent.cooldown", "hooks", "agent.hooks"):
         raise
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
@@ -364,7 +368,7 @@ def stale_request(body):
     except ValueError:
         return False                             # history 壞了交給 brain 報 HistoryBad
     norm = lambda m: json.dumps(m, sort_keys=True, ensure_ascii=False)
-    if norm(messages[-1]) != norm(last):
+    if norm(messages[-1]) != norm(aos_ws.for_endpoint(last)):   # 送出的 messages 剝過 aos 鍵（brain.py），history 這列也剝了再比
         return True
     try:                                         # 最後一則一樣、但 history 在請求之後被改過（aos-agent history 改了中間幾行；11-10 晚 self-family）
         return os.stat(history_path).st_mtime_ns > os.stat(request).st_mtime_ns
@@ -551,11 +555,18 @@ if not isinstance(message, dict) or message.get("role") != "assistant":
     brain_failed("ReplyBad", "message in the reply is not an assistant message: %s" % r.stdout.strip()[:200])
     die("ReplyBad", "message in the reply is not an assistant message: %s" % r.stdout.strip()[:200])
 observe(reply)
+answer = aos_ws.is_answer(message)               # 最終回答＝沒有 tool_calls 的 assistant：answer_to＝還沒答的信（pending，照收信順序）
+message = aos_ws.mark_answer(message, aos_ws.letters_pending(stack)) if answer else aos_ws.for_endpoint(message)   # 端點自帶的 aos 鍵一律拿掉
 try:
     with open(history_path, "a", encoding="utf-8") as f:   # 一次寫一整行，只附加（P-41）
         f.write(json.dumps(message, ensure_ascii=False) + "\n")
 except OSError as e:
     die("WriteFailed", "cannot append to history.jsonl: %s" % e)
+if answer:                                       # 寫進 history 之後才清 pending（讀的一方先查 history、再查 letters.json，不會有空窗）
+    try:
+        aos_ws.letters_answered(stack)
+    except OSError as e:
+        aos_flags.warn("agent-fsm", "cannot write %s: %s" % (os.path.join(stack, aos_ws.LETTERS), e))
 try:                                             # 好的回信：冷卻歸零
     cooldown.clear(stack)
 except OSError as e:

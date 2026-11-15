@@ -1,7 +1,8 @@
 # aos_eca/handoff.py - 一批信交給 CLI 的前後（一般一輪與 slash 交給 claude 的那幾條共用）：交出去那刻收信、交出去後失敗記冷卻、成功收尾。
 import aos_flags
+import aos_ws
 
-from .common import NAME, Fail, cli_ask, cooldown, must_post
+from .common import NAME, Fail, cli_ask, cooldown, letters_drop, letters_take, must_post
 from .history import append_history, history_sum
 from .hook import fire
 
@@ -13,16 +14,20 @@ class Handoff:
     def __init__(self, template, stack, box, good, bodies, first=None):
         self.template, self.stack, self.box, self.good, self.bodies, self.first = template, stack, box, good, bodies, first
         self.given, self.mid, self.late, self.after = False, None, None, None
+        self.left = []                                              # 已經 done（離開 queue）的信名：失敗時只把這些記成 dropped failed
 
     def handed(self):                                               # ④ 交出去就算完成（11-03）：user 接進 history、收信
         self.given = True
         try:
             if self.first:
                 self.first()
-            for body in self.bodies:
-                append_history(self.stack, body)
+            letters_take(self.stack, self.good)                     # 回答配對：先記 pending，再接 history（帶 aos.letter）、再收信
+            lead = len(self.bodies) - len(self.good)                # 前面不是信的（goal 題目）不帶 aos
+            for i, body in enumerate(self.bodies):
+                append_history(self.stack, aos_ws.mark_letter(body, self.good[i - lead]) if i >= lead else body)
             for sig in self.good:
                 must_post(["done", self.box, sig])
+                self.left.append(sig)
             self.mid = history_sum(self.stack)                      # ⑩ 交出去那刻的 history
         except Fail as e:
             self.late = e                                           # CLI 已經在跑，等它答完再報
@@ -36,8 +41,10 @@ class Handoff:
     def extra(self, sig, body):
         """等回答時又交出去的一封（11-13 馬上送）：同 handed 那幾步——接進 history、收信、after_queue；出錯一樣留到最後報。"""
         try:
-            append_history(self.stack, body)
+            letters_take(self.stack, [sig])
+            append_history(self.stack, aos_ws.mark_letter(body, sig))
             must_post(["done", self.box, sig])
+            self.left.append(sig)
             self.mid = history_sum(self.stack)
         except Fail as e:
             self.late = self.late or e
@@ -58,6 +65,7 @@ class Handoff:
             if e.code == "SessionBad":
                 return None
             if self.given and e.code in ("CliFailed", "ReplyMissing"):   # ⑨ 交出去之後的失敗：記冷卻（這批掉了）
+                letters_drop(self.stack, self.left, "failed")       # 回答配對：已收掉的信不會有回答了（還在 cur/ 的下一輪再交）
                 fire("brain_failed", {"name": e.code, "reason": str(e)}, self.template, self.stack)   # hook 停下＝HookFailed，冷卻不記（同 agent-fsm wait）
                 try:
                     cooldown.fail(self.stack, e.code, e, dropped=len(self.good))

@@ -22,8 +22,10 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, re
     if handed:
         handed()
     for body in json.loads(os.environ.get("SPY_LATE", "[]")):          # 等回答時又來的信
-        subprocess.run(["aos-post", "send", "--ordered", os.path.join(stack, "queue")], input=json.dumps(body), text=True,
-                       check=True, capture_output=True)
+        sent = subprocess.run(["aos-post", "send", "--ordered", os.path.join(stack, "queue")], input=json.dumps(body), text=True,
+                              check=True, capture_output=True)
+        with open(os.environ["SPY_LOG"] + ".sigs", "a") as f:             # 信名（回答配對的斷言用）
+            f.write(sent.stdout.strip() + "\\n")
         got = more.take() if more else None
         row["late"].append(got)
         if got:
@@ -70,43 +72,60 @@ class LetterName(unittest.TestCase):
         return sorted(n for n in os.listdir(self.stack / "queue" / stage) if not n.startswith("."))
 
     def send(self, body):
-        subprocess.run(["aos-post", "send", "--ordered", str(self.stack / "queue")], check=True, capture_output=True,
-                       input=json.dumps(body), env=self.env(), text=True)
+        r = subprocess.run(["aos-post", "send", "--ordered", str(self.stack / "queue")], check=True, capture_output=True,
+                           input=json.dumps(body), env=self.env(), text=True)
+        return r.stdout.strip()
+
+    def late_sigs(self):
+        p = Path(str(self.log) + ".sigs")
+        return p.read_text().split() if p.exists() else []
+
+    def letters(self):
+        return json.loads((self.stack / "letters.json").read_text())
 
     def test_name_goes_to_parts_not_history(self):
-        self.send({"role": "user", "name": "bob", "content": "hello"})
-        self.send({"role": "user", "content": "[aos] new_mail: 1 new letter from amy."})
+        a = self.send({"role": "user", "name": "bob", "content": "hello"})
+        b = self.send({"role": "user", "content": "[aos] new_mail: 1 new letter from amy."})
         seen = self.turn()
         self.assertEqual(seen, [{"prompt": "hello\n\n[aos] new_mail: 1 new letter from amy.", "late": [],
                                  "parts": [["bob", "hello"], [None, "[aos] new_mail: 1 new letter from amy."]]}])
-        self.assertEqual(self.history(), [{"role": "user", "content": "hello"},
-                                          {"role": "user", "content": "[aos] new_mail: 1 new letter from amy."},
-                                          {"role": "assistant", "content": "spy answer"}])
+        self.assertEqual(self.history(), [{"role": "user", "content": "hello", "aos": {"letter": a}},
+                                          {"role": "user", "content": "[aos] new_mail: 1 new letter from amy.", "aos": {"letter": b}},
+                                          {"role": "assistant", "content": "spy answer", "aos": {"answer_to": [a, b]}}])
 
     def test_letters_arriving_mid_turn_are_handed_over_at_once(self):
         """11-13「馬上送」：等回答時又來的信一封一封認領、交出去就接進 history、收掉；壞信照舊丟。"""
-        self.send({"role": "user", "content": "first"})
+        first = self.send({"role": "user", "content": "first"})
         late = [{"role": "user", "name": "amy", "content": "second"}, {"role": "tool", "content": "bad letter"},
                 {"role": "user", "content": "third"}]
         seen = self.turn(SPY_LATE=json.dumps(late))
+        second, bad, third = self.late_sigs()
         self.assertEqual(seen[0]["late"], [[["amy", "second"]], [], [[None, "third"]]])
-        self.assertEqual(self.history(), [{"role": "user", "content": "first"}, {"role": "user", "content": "second"},
-                                          {"role": "user", "content": "third"}, {"role": "assistant", "content": "spy answer"}])
+        self.assertEqual(self.history(), [{"role": "user", "content": "first", "aos": {"letter": first}},
+                                          {"role": "user", "content": "second", "aos": {"letter": second}},
+                                          {"role": "user", "content": "third", "aos": {"letter": third}},
+                                          {"role": "assistant", "content": "spy answer", "aos": {"answer_to": [first, second, third]}}])
+        got = self.letters()
+        self.assertEqual(got["pending"], [])
+        self.assertEqual([(x["letter"], x["reason"]) for x in got["dropped"]], [(bad, "bad")])   # 中途的壞信也記 dropped
         self.assertEqual((self.box("new"), self.box("cur")), ([], []))
         self.assertIn("rejected", (self.stack / "mailbox_warning.txt").read_text())
 
     def test_a_slash_command_mid_turn_waits_for_the_next_turn(self):
-        self.send({"role": "user", "content": "first"})
+        first = self.send({"role": "user", "content": "first"})
         seen = self.turn(SPY_LATE=json.dumps([{"role": "user", "content": "/clear"}, {"role": "user", "content": "after"}]))
         self.assertEqual(seen[0]["late"], [[], []])                              # 遇到 slash 就停手，後面的也不拿
-        self.assertEqual(self.history(), [{"role": "user", "content": "first"}, {"role": "assistant", "content": "spy answer"}])
+        self.assertEqual(self.history(), [{"role": "user", "content": "first", "aos": {"letter": first}},
+                                          {"role": "assistant", "content": "spy answer", "aos": {"answer_to": [first]}}])
         self.assertEqual((len(self.box("new")), len(self.box("cur"))), (1, 1))
 
     def test_a_late_letter_that_was_not_delivered_stays(self):
-        self.send({"role": "user", "content": "first"})
+        first = self.send({"role": "user", "content": "first"})
         seen = self.turn(SPY_LATE=json.dumps([{"role": "user", "content": "second"}, {"role": "user", "content": "third"}]), SPY_DELIVER="0")
         self.assertEqual(seen[0]["late"], [[[None, "second"]], []])
-        self.assertEqual(self.history(), [{"role": "user", "content": "first"}, {"role": "assistant", "content": "spy answer"}])
+        self.assertEqual(self.history(), [{"role": "user", "content": "first", "aos": {"letter": first}},
+                                          {"role": "assistant", "content": "spy answer", "aos": {"answer_to": [first]}}])
+        self.assertEqual(self.letters()["pending"], [])                         # 沒投出去的那封沒記進 pending
         self.assertEqual((len(self.box("new")), len(self.box("cur"))), (1, 1))
 
 if __name__ == "__main__":

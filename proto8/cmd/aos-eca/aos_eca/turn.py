@@ -2,8 +2,10 @@
 import os
 
 import aos_flags
+import aos_ws
 
-from .common import NAME, Fail, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown, hooks, goal_state, mailbox_warning, must_post, names, post
+from .common import (NAME, Fail, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown, hooks, goal_state, letters_answered, letters_drop,
+                     mailbox_warning, must_post, names, post)
 from .history import SUM, append_history, history_changed, history_sum, note_sum
 from .hook import before_queue, fire, tool_added
 from .batch import SEP, goal_prompt, letter_body, note_progress, pick_one, take_all, transcript_now
@@ -48,6 +50,7 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
         for sig in batch:                                           # ② 照順序讀信
             body, why = letter_body(box, sig)
             if body is None:                                        # 壞信一律丟（N-16、決定 27 不通知寄信人）
+                letters_drop(stack, [sig], "bad")                   # 回答配對：done 之前記進 dropped
                 post(["done", box, sig])
                 mailbox_warning(stack, sig, why)
                 continue
@@ -81,7 +84,8 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
         return 0                                                    # SessionBad：整批留 cur/，下一次再試
     synced = had_sum and not os.path.exists(cell.file(SUM))         # 這一輪中間是畫面 hook 跟著 CLI 改的（codex 的 /clear、/compact 在 notify 時才跟上）
     edited = hand.mid is not None and history_sum(stack) != hand.mid and not synced   # ⑩ 這一輪中間被改了（腦叫了 self_history）；跟上 CLI 的不算
-    append_history(stack, {"role": "assistant", "content": text[:-1] if text.endswith("\n") else text})
+    append_history(stack, aos_ws.mark_answer({"role": "assistant", "content": text[:-1] if text.endswith("\n") else text}, hand.good))
+    letters_answered(stack, hand.good)                              # 回答配對：answer_to＝這輪交出去的全部（含中途信），接進 history 之後從 pending 拿掉
     note_sum(stack, cell, edited)
     note_progress(cfg, cell, stack, before)                         # ⑬ 這輪叫了工具＝goal 計數歸零
     hand.done()                                                     # ⑨ 成功一次＝冷卻歸零；after_queue 停下的最後才報

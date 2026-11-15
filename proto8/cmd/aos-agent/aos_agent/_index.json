@@ -3,10 +3,10 @@
   "description": "aos_agent/__init__.py - 保留頂層說明、命令派發與主入口。"
  },
  "ask.py": {
-  "description": "aos_agent/ask.py - 一問一答：say 一則再等最新那則回答（跟 subagent 工具的 op ask 同語意，不配對信名）。"
+  "description": "aos_agent/ask.py - 一問一答：say 一則再等配到這封信名的回答（subagent 工具的 op ask 也叫這支；舊身體退回等最新那則）。"
  },
  "chat.py": {
-  "description": "aos_agent/chat.py - 逐行寄訊息並等候回答的互動迴圈。"
+  "description": "aos_agent/chat.py - 逐行寄訊息並等候回答的互動迴圈（每句配自己的信名，同 ask）。"
  },
  "common.py": {
   "description": "aos_agent/common.py - 共用分層 help、錯誤指路、旗標、找 daemon 與表上的一隻（設了 AOS_KERNEL 先問表在哪再讀；ctl 動作才用的寄信等回信在 ctl/shared.py）。"
@@ -30,7 +30,7 @@
   "description": "aos_agent/hook.py - 管 agent 自己那份 hooks 清單（疊在定義那份上，同名蓋過、null 關掉）：ls、get、add、rm、reset。"
  },
  "listen.py": {
-  "description": "aos_agent/listen.py - 以秒或 cycle 等待回答，或列出與追蹤歷史對話。"
+  "description": "aos_agent/listen.py - 以秒或 cycle 等待回答（給信名就配那封），或列出與追蹤歷史對話。"
  },
  "llm.py": {
   "description": "aos_agent/llm.py - 分層解析腦設定命令（ls／set／rm／reset）並管理 agent 的覆蓋鍵與重設確認。"

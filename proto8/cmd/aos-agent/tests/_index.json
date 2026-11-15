@@ -1,4 +1,7 @@
 {
+ "reply_fixture.py": {
+  "description": "回答配對測試的共用零件（reply-match-1114）：假 aos-post、假 daemon 表、模擬寫的一方（新身體／舊身體，fsm 形／eca 形），不跑真 agent。"
+ },
  "test_add_dotenv.py": {
   "description": "Test ctl add dotenv override wrapping and definition environment precedence on an isolated daemon."
  },
@@ -6,7 +9,7 @@
   "description": "Phase 1 of parent / notify_box on a real isolated daemon (ok-devt-1114 05 定稿 1.2, 1.3 and 修訂 1, ok-limits 11-14)."
  },
  "test_ask.py": {
-  "description": "Test aos-agent ask (say then wait for the latest answer, like the subagent tool's op ask): flags, stdin, timeout exit code, a fake agent's answer."
+  "description": "Test aos-agent ask (say then wait for the answer to that letter; the subagent tool's op ask runs it): flags, stdin, timeout exit code, a fake agent's…"
  },
  "test_brain_hint.py": {
   "description": "驗證問腦記錄與 llm kernel 停機時 listen／say 的一次提示及安靜失敗。"
@@ -40,6 +43,9 @@
  },
  "test_ls_health.py": {
   "description": "Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table."
+ },
+ "test_reply_match.py": {
+  "description": "Test reply matching on the reading side (reply-match-1114): ask / chat / listen --letter get the answer to their own letter from upgraded bodies, fal…"
  },
  "test_rm_keep.py": {
   "description": "Test aos-agent ctl rm keeps the stack by default and deletes it only with --purge (cli-sweep Q3), on a real aos-daemon."

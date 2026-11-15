@@ -84,10 +84,12 @@ class EcaHooks(unittest.TestCase):
                              "intercept": True},
                       "seen": {"event": "after_queue", "handler": self.hook("seen")}})
         self.say("hello")
+        sig = self.queue("new")
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.read_lines(self.cli_log)[-1]["stdin"], "HELLO")
-        self.assertEqual(self.history(), [{"role": "user", "content": "HELLO"}, {"role": "assistant", "content": "FAKE: HELLO"}])
+        self.assertEqual(self.history(), [{"role": "user", "content": "HELLO", "aos": {"letter": sig[0]}},
+                                          {"role": "assistant", "content": "FAKE: HELLO", "aos": {"answer_to": sig}}])
         ev = self.read_lines(self.log)
         self.assertEqual([(e["event"], e["content"]) for e in ev], [("before_queue", "hello"), ("after_queue", "HELLO")])
         self.assertEqual(ev[0]["stack"], str(self.stack))

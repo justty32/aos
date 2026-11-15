@@ -3,7 +3,7 @@
 queue 又來信就不等這輪講完——一次認領一封、照樣過 before_queue、投進 CLI（它手上那步工具做完就讀到），投出去才接進 history、收信、
 跑 after_queue（Handoff.extra）。停手不再拿的情況（那封留在 cur/，下一輪照一般流程處理）：來的是 slash 指令（那是操作 CLI，要等這輪
 講完由 aos 這層做）、hook 或 aos-post 出錯（下一輪在一般流程報）、投不出去。貼字與非互動那兩條路不叫這裡。"""
-from .common import NOT_FOUND, Fail, mailbox_warning, must_post, names, post
+from .common import NOT_FOUND, Fail, letters_drop, mailbox_warning, must_post, names, post
 from .batch import letter_body
 from .hook import before_queue
 from .slash import slash_of
@@ -34,6 +34,7 @@ class More:
                     continue
                 body, why = letter_body(self.box, sig)
                 if body is None:
+                    letters_drop(self.stack, [sig], "bad")
                     post(["done", self.box, sig])
                     mailbox_warning(self.stack, sig, why)
                     continue

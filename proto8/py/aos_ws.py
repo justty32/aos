@@ -160,3 +160,150 @@ def exchanges(stack):
             out.append((asked, text_of(m)))
             asked = []
     return out
+
+
+# ---- 回答配對（reply-match-1114，使用者 11-14 go: yes、land: one）----
+# history 的列多一個 "aos" 物件鍵：收信的 user 列 {"aos": {"letter": 信名}}；最終回答 {"aos": {"answer_to": [信名…]}}。
+# <stack>/letters.json＝{"pending": [交出去還沒答的信名…], "dropped": [{"letter", "reason", "at"}…，最多 50 筆]}，
+# 只有 agent 的身體（fsm 的 idle／wait、aos-eca-turn）寫；aos-agent ask／listen 只讀。reason：bad（壞信）、blocked（hook 擋）、failed（交出去後腦失敗）。
+# 寫的順序（讀的一方照信流向查，才不會有空窗）：收信＝先 letters_take、再附加 history（帶 aos.letter）、最後 done；
+# 回答＝先附加 history（帶 aos.answer_to）、再 letters_answered 清 pending。aos 鍵送模型端點前一定要剝掉（for_endpoint）。
+LETTERS = "letters.json"
+REMOVED = "history_removed.jsonl"   # 同 lib/agent/cli_hook.py、aos_agent/history.py
+DROPPED_MAX = 50
+DROP_REASONS = ("bad", "blocked", "failed")
+
+
+def letters(stack):
+    """letters.json 的內容；沒有或壞了＝空的那份（不報錯：讀的一方要能面對還沒升級的身體）。"""
+    try:
+        d = json.loads(read(os.path.join(stack, LETTERS), "") or "{}")
+    except ValueError:
+        d = {}
+    if not isinstance(d, dict):
+        d = {}
+    pending, dropped = d.get("pending"), d.get("dropped")
+    pending = [n for n in pending if isinstance(n, str)] if isinstance(pending, list) else []
+    dropped = [x for x in dropped if isinstance(x, dict) and isinstance(x.get("letter"), str)] if isinstance(dropped, list) else []
+    return {"pending": pending, "dropped": dropped}
+
+
+def _save_letters(stack, d):
+    path = os.path.join(stack, LETTERS)
+    tmp = os.path.join(stack, ".%s.%d.tmp" % (LETTERS, os.getpid()))   # 點開頭：stack.gitignore 擋得到、寫到一半也不進 git
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(d, f, ensure_ascii=False)
+        f.write("\n")
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+def letters_take(stack, names_):
+    """這幾封信要交給腦了：加進 pending（照序、不重複）。在附加 history 之前叫。"""
+    names_ = [n for n in names_ if isinstance(n, str) and n]
+    if not names_:
+        return
+    d = letters(stack)
+    for n in names_:
+        if n not in d["pending"]:
+            d["pending"].append(n)
+    d["dropped"] = [x for x in d["dropped"] if x["letter"] not in names_]   # 又交出去了（例：記成 failed 後還在 cur/ 重交）＝不再算被丟
+    _save_letters(stack, d)
+
+
+def letters_answered(stack, names_=None):
+    """最終回答寫進 history 之後叫：把這則回答的 answer_to（names_）從 pending 拿掉；names_ 是 None＝清空整個 pending（fsm：
+    answer_to 本來就是寫之前用 letters_pending 拿的整份）。eca 給 Handoff.good，別輪留下的信不會被順手清掉。"""
+    d = letters(stack)
+    keep = [] if names_ is None else [n for n in d["pending"] if n not in names_]
+    if keep != d["pending"]:
+        d["pending"] = keep
+        _save_letters(stack, d)
+
+
+def letters_pending(stack):
+    return letters(stack)["pending"]
+
+
+def letters_drop(stack, names_, reason):
+    """這幾封信不會有回答了：從 pending 拿掉，記進 dropped（帶原因與 UTC 時刻），只留最後 DROPPED_MAX 筆。"""
+    import datetime
+    names_ = [n for n in names_ if isinstance(n, str) and n]
+    if not names_:
+        return
+    if reason not in DROP_REASONS:
+        raise ValueError("reason must be one of %s" % (DROP_REASONS,))
+    at = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+    d = letters(stack)
+    d["pending"] = [n for n in d["pending"] if n not in names_]
+    d["dropped"] = (d["dropped"] + [{"letter": n, "reason": reason, "at": at} for n in names_])[-DROPPED_MAX:]
+    _save_letters(stack, d)
+
+
+def mark_letter(m, name):
+    """收信的 user 列：拷貝一份，aos 鍵換成 {"letter": name}（信裡自帶的 aos 鍵一律蓋掉，不能偽造）。"""
+    m = dict(m)
+    m.pop("aos", None)
+    if name:
+        m["aos"] = {"letter": name}
+    return m
+
+
+def mark_answer(m, names_):
+    """最終回答：拷貝一份，aos 鍵換成 {"answer_to": [...]}（端點回的 aos 鍵一律蓋掉）；names_ 空＝不帶 aos 鍵。"""
+    m = dict(m)
+    m.pop("aos", None)
+    names_ = [n for n in names_ or [] if isinstance(n, str) and n]
+    if names_:
+        m["aos"] = {"answer_to": names_}
+    return m
+
+
+def for_endpoint(m):
+    """送模型端點前：拷貝一份、拿掉 aos 鍵，其他鍵照留。"""
+    if isinstance(m, dict) and "aos" in m:
+        m = dict(m)
+        m.pop("aos")
+    return m
+
+
+def _aos(m):
+    a = m.get("aos") if isinstance(m, dict) else None
+    return a if isinstance(a, dict) else {}
+
+
+def _removed(stack):
+    out = []
+    for line in (read(os.path.join(stack, REMOVED), "") or "").splitlines():
+        try:
+            r = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(r, dict) and isinstance(r.get("message"), dict):
+            out.append(r["message"])
+    return out
+
+
+def answer_for(stack, name):
+    """這封信的回答到哪了。回 (狀態, 文字)：
+    waiting＝還在 queue（new／cur）；answered＝history 裡有則回答的 aos.answer_to 含它（文字＝那則回答）；answered_removed＝同上、但那則在 history_removed；
+    dropped＝letters.json 記它被丟（文字＝原因）；handed＝已交給腦、還沒答；unknown＝哪裡都沒有它的紀錄（舊身體，或信名寫錯）。
+    查的順序照信流動的方向（queue → history → history_removed → letters.json），配合寫的一方的順序就不會有空窗。"""
+    if where(stack, name) and set(where(stack, name)) & {"new", "cur"}:
+        return ("waiting", "")
+    handed = False
+    for removed, rows in ((False, history(stack)), (True, _removed(stack))):
+        for m in rows:
+            a = _aos(m)
+            if is_answer(m) and name in (a.get("answer_to") or []):
+                return ("answered", text_of(m)) if not removed else ("answered_removed", text_of(m))
+            if a.get("letter") == name:
+                handed = True
+    d = letters(stack)
+    for x in reversed(d["dropped"]):
+        if x["letter"] == name:
+            return ("dropped", str(x.get("reason") or ""))
+    if handed or name in d["pending"]:
+        return ("handed", "")
+    return ("unknown", "")

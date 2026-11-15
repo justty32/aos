@@ -5,8 +5,8 @@
   "aos-agent": {
    "aos_agent": {
     "__init__.py": "保留頂層說明、命令派發與主入口。",
-    "ask.py": "一問一答：say 一則再等最新那則回答（跟 subagent 工具的 op ask 同語意，不配對信名）。",
-    "chat.py": "逐行寄訊息並等候回答的互動迴圈。",
+    "ask.py": "一問一答：say 一則再等配到這封信名的回答（subagent 工具的 op ask 也叫這支；舊身體退回等最新那則）。",
+    "chat.py": "逐行寄訊息並等候回答的互動迴圈（每句配自己的信名，同 ask）。",
     "common.py": "共用分層 help、錯誤指路、旗標、找 daemon 與表上的一隻（設了 AOS_KERNEL 先問表在哪再讀；ctl 動作才用的寄信等回信在 ctl/shared.py）。",
     "ctl": {
      "__init__.py": "顯式派發 agent 的掛上與管理命令。",
@@ -25,7 +25,7 @@
     "hints.py": "讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。",
     "history.py": "看與改 agent 的對話紀錄（宣告的 history 檔，一行一則訊息）：ls、rm 一段、summarize 一段換成一則、set 任一行；改掉的原文預設搬到旁邊。",
     "hook.py": "管 agent 自己那份 hooks 清單（疊在定義那份上，同名蓋過、null 關掉）：ls、get、add、rm、reset。",
-    "listen.py": "以秒或 cycle 等待回答，或列出與追蹤歷史對話。",
+    "listen.py": "以秒或 cycle 等待回答（給信名就配那封），或列出與追蹤歷史對話。",
     "llm.py": "分層解析腦設定命令（ls／set／rm／reset）並管理 agent 的覆蓋鍵與重設確認。",
     "read_line.py": "chat 讀一行輸入：終端機上用 readline 行編輯（中文 Backspace、方向鍵），管線照舊按行讀。",
     "say.py": "寄一則訊息到 agent 的 queue。",
@@ -40,9 +40,10 @@
    "stack.gitattributes": "把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件）",
    "stack.gitignore": "可選的 stack 排除範本：暫存、鎖、本機資料與可重建紀錄不進 git。",
    "tests": {
+    "reply_fixture.py": "回答配對測試的共用零件（reply-match-1114）：假 aos-post、假 daemon 表、模擬寫的一方（新身體／舊身體，fsm 形／eca 形），不跑真 agent。",
     "test_add_dotenv.py": "Test ctl add dotenv override wrapping and definition environment precedence on an isolated daemon.",
     "test_add_parent_daemon.py": "Phase 1 of parent / notify_box on a real isolated daemon (ok-devt-1114 05 定稿 1.2, 1.3 and 修訂 1, ok-limits 11-14).",
-    "test_ask.py": "Test aos-agent ask (say then wait for the latest answer, like the subagent tool's op ask): flags, stdin, timeout exit code, a fake agent's answer.",
+    "test_ask.py": "Test aos-agent ask (say then wait for the answer to that letter; the subagent tool's op ask runs it): flags, stdin, timeout exit code, a fake agent's…",
     "test_brain_hint.py": "驗證問腦記錄與 llm kernel 停機時 listen／say 的一次提示及安靜失敗。",
     "test_chat_read_line.py": "Test chat's line input in a real pty: Chinese + Backspace, arrow keys, long lines, pastes and EOF are read whole (11-12 chat-utf8).",
     "test_daemon_down.py": "Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing.",
@@ -54,6 +55,7 @@
     "test_listen_timeout.py": "Verify zero-second listen waits without a deadline and still rejects invalid timeout combinations.",
     "test_llm.py": "Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and…",
     "test_ls_health.py": "Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table.",
+    "test_reply_match.py": "Test reply matching on the reading side (reply-match-1114): ask / chat / listen --letter get the answer to their own letter from upgraded bodies, fal…",
     "test_rm_keep.py": "Test aos-agent ctl rm keeps the stack by default and deletes it only with --purge (cli-sweep Q3), on a real aos-daemon.",
     "test_say_from.py": "Test the sender of aos-agent say / chat (11-13 a2a): --from > the listed agent whose stack holds $AOS_STACK > login name; only an eca's letter carrie…",
     "test_set_def.py": "Test aos-agent ctl set-def on a real aos-daemon: the row keeps its stack, workspace and auto_restart, the new definition runs from the next start, --…",
@@ -119,7 +121,7 @@
    "aos_eca": {
     "__init__.py": "aos-eca-turn 的英文說明、旗標檢查與主入口（main）。",
     "batch.py": "一批信的認領與讀信（開場白、冷卻時只拿一封、take-all）與 goal 提醒的題目與進展。",
-    "common.py": "共用的名字、錯誤（Fail）、lib 模組的載入、aos-post 介面與 mailbox_warning。",
+    "common.py": "共用的名字、錯誤（Fail）、lib 模組的載入、aos-post 介面、mailbox_warning 與 letters.json（回答配對）。",
     "handoff.py": "一批信交給 CLI 的前後（一般一輪與 slash 交給 claude 的那幾條共用）：交出去那刻收信、交出去後失敗記冷卻、成功收尾。",
     "history.py": "$AOS_STACK/history.jsonl 的讀、附加，與 .history_sum（⑩ history 被改過＝開新對話）。",
     "hook.py": "這支跑的 hook（before_queue、tool_added；fire 把 hook 停下換成 Fail）。",
@@ -143,6 +145,7 @@
     "test_kernel_watch.py": "驗證 watch 經 kernel 重問表檔、缺欄容錯、空表退出與五秒節流，直連行為不變。",
     "test_letter_name.py": "Test that a letter's sender (body \"name\", set by aos-agent say for an eca) reaches the CLI side as parts and never enters history, and that letters a…",
     "test_live_mail.py": "驗沒開畫面、cli.json 寫 \"live_mail\": true 的一整輪（wake-1114 主案 S）：aos-eca-turn 起 claude 之後 queue 又來的信，",
+    "test_reply_match.py": "Test reply matching on the eca side (reply-match-1114): user rows carry aos.letter, the final answer carries aos.answer_to, and <stack>/letters.json …",
     "test_slash.py": "Test aos-eca-turn's slash commands (11-12 eca-slash): one letter that is exactly /clear, /compact, /status, /usage or /exit is done by aos (or handed…",
     "test_switch.py": "Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs."
    }

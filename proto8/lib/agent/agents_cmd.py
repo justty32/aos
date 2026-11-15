@@ -93,7 +93,7 @@ def run(cmd, text=None, timeout_s=STEP_S, timeout_cycles=None, env=None, err_re=
     if err:
         sys.stderr.write(err if err.endswith("\n") else err + "\n")
         sys.stderr.flush()
-    if "listen" not in cmd:                       # 子的回答原樣，不換字
+    if "listen" not in cmd and "ask" not in cmd:  # 子的回答原樣，不換字（listen；11-14 起 op ask 也是一支 aos-agent ask）
         out = tool_words(out)
     if p.returncode == 0:
         return out, None

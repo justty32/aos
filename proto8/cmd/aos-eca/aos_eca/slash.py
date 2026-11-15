@@ -7,8 +7,9 @@ import subprocess
 import time
 
 import aos_flags
+import aos_ws
 
-from .common import Fail, cli_ask, cli_base, cli_cell, cli_hook, must_post
+from .common import Fail, cli_ask, cli_base, cli_cell, cli_hook, letters_answered, letters_take, must_post
 from .history import append_history, history_rows, note_sum
 from .hook import fire
 from .handoff import Handoff
@@ -271,19 +272,22 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
                     raise Fail("WriteFailed", "cannot clear history.jsonl: %s" % e)
                 cli_cell.drop_session(cell)
                 text = note("/clear: %d messages moved to history_removed.jsonl; the next message starts a new %s conversation" % (cleared, kind))
-    if hand:                                                        # 交出去那刻已接進 history、收信、after_queue 跑過
-        append_history(stack, {"role": "assistant", "content": text})
+    if hand:                                                        # 交出去那刻已接進 history（帶 aos.letter）、記 pending、收信、after_queue 跑過
+        append_history(stack, aos_ws.mark_answer({"role": "assistant", "content": text}, hand.good))
+        letters_answered(stack, hand.good)
         note_sum(stack, cell, False)
         hand.done()
         return 0
-    for body in bodies:
-        append_history(stack, body)
+    letters_take(stack, good)                                       # 回答配對：同 Handoff.handed——先記 pending、再接 history、再收信
+    for sig, body in zip(good, bodies):                             # slash 一定是一封信（slash_of），good 跟 bodies 一對一
+        append_history(stack, aos_ws.mark_letter(body, sig))
     for sig in good:
         must_post(["done", box, sig])
     try:
         for sig, body in zip(good, bodies):
             fire("after_queue", {"letter": sig, "content": body["content"]}, template, stack)
     finally:
-        append_history(stack, {"role": "assistant", "content": text})
+        append_history(stack, aos_ws.mark_answer({"role": "assistant", "content": text}, good))
+        letters_answered(stack, good)
         note_sum(stack, cell, False)
     return 0

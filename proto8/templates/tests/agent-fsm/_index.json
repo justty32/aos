@@ -47,6 +47,9 @@
  "test_own_tools.py": {
   "description": "Test that brain and act use the agent's own tools registry in its stack (\"$override\" of the definition's; 11-10 aos-tools-cli step 4), and fall back …"
  },
+ "test_reply_match.py": {
+  "description": "回答配對（thinking/2026-11/14/reply-match-1114/03）的 agent-fsm 寫的一方：idle 記 aos.letter／pending／dropped，wait 記 aos.answer_to、清 pending，brain／stale_request 剝 …"
+ },
  "test_same_turn_tools.py": {
   "description": "Pin when a tool added in the middle of a turn works in agent-fsm (11-10 tools-def, user \"3.同一輪就生效\"): brain and act re-read the registry on every step…"
  },

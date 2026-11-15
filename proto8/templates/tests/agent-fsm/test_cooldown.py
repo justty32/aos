@@ -72,15 +72,27 @@ sys.exit(code)
     def gap(self, rec):
         return cooldown.parse(rec['until']) - cooldown.parse(rec['at'])
 
+    def lettered(self):
+        """回答配對：history 那則 user 是信 L1 交進來的（帶 aos.letter、在 pending）；request.json 照舊是剝過 aos 的那則。"""
+        (self.stack / 'history.jsonl').write_text(json.dumps({'role': 'user', 'content': 'hi', 'aos': {'letter': 'L1'}}) + '\n')
+        (self.stack / 'letters.json').write_text(json.dumps({'pending': ['L1'], 'dropped': []}))
+        request = self.stack / 'think/request.json'
+        request.write_text(request.read_text())          # 請求在 history 之後寫（不然 mtime 就判過期）
+
+    def letters(self):
+        return json.loads((self.stack / 'letters.json').read_text())
+
     def past(self):
         rec = self.record()
         rec['until'] = cooldown.iso(time.time() - 5)
         (self.stack / cooldown.NAME).write_text(json.dumps(rec))
 
     def test_brain_failed_cools_then_retries_and_clears(self):
-        self.wait(10)                                    # 寄出
+        self.lettered()
+        self.wait(10)                                    # 寄出（history 最後一則剝掉 aos 才跟 request 比：不算過期）
         result = self.wait(1, FAKE_RECV='1')             # kernel 回錯
         self.assertIn('agent-fsm: error: BrainFailed', result.stderr)
+        self.assertEqual(self.letters()['pending'], ['L1'])   # 腦失敗：pending 留著（head-tools 裁 5a）
         rec = self.record()
         self.assertEqual((rec['failures'], rec['code'], rec['dropped']), (1, 'BrainFailed', 0))
         self.assertEqual(self.gap(rec), 30)
@@ -102,7 +114,8 @@ sys.exit(code)
         self.wait(0)                                     # 好的回信
         self.assertFalse((self.stack / cooldown.NAME).exists())
         last = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
-        self.assertEqual(last, {'role': 'assistant', 'content': 'ok'})
+        self.assertEqual(last, {'role': 'assistant', 'content': 'ok', 'aos': {'answer_to': ['L1']}})   # 失敗前交出的信算進這則
+        self.assertEqual(self.letters()['pending'], [])
 
     def test_budget_missing_cools_then_retries_same_request_and_clears(self):
         msg = 'budget for this window (day) is used up; not run'
@@ -111,6 +124,8 @@ sys.exit(code)
         observed = self.stack / 'observed.jsonl'
         observed.write_text(json.dumps({'kind': 'think', 'letter': 'previous'}) + '\n')
         before = observed.read_text()
+        self.lettered()
+        history = (self.stack / 'history.jsonl').read_text()
         self.wait(10)
         result = self.wait(10, FAKE_RECV='1',
                            FAKE_REPLY=json.dumps({'error': {'code': 'BudgetMissing', 'msg': msg}}),
@@ -136,7 +151,8 @@ sys.exit(code)
         self.wait(0)
         self.assertFalse((self.stack / cooldown.NAME).exists())
         last = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
-        self.assertEqual(last, {'role': 'assistant', 'content': 'ok'})
+        self.assertEqual(last, {'role': 'assistant', 'content': 'ok', 'aos': {'answer_to': ['L1']}})
+        self.assertEqual(self.letters()['pending'], [])
         self.assertEqual(len(observed.read_text().splitlines()), 2)
 
     def priority_request(self, priority):

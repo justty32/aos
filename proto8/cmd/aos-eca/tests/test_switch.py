@@ -226,6 +226,7 @@ class ClaudeSwitch(Base):
         self.assertFalse(self.sid())                             # TS 9: the CLI saved nothing, so the new id is dropped
         # cooling: nothing is taken
         self.say("b1", "b2", "b3")
+        b1, b2, b3 = self.queue()
         before = (self.queue(), self.history())
         self.ok_turn()
         self.assertEqual((self.queue(), self.history()), before)
@@ -243,8 +244,8 @@ class ClaudeSwitch(Base):
         self.ok_turn()
         self.assertFalse(os.path.exists(cooldown.path(str(self.stack))))
         self.assertEqual(len(self.queue()), 1)
-        self.assertEqual(self.history()[-2:], [{"role": "user", "content": "b2"},
-                                               {"role": "assistant", "content": "FAKE: b2"}])
+        self.assertEqual(self.history()[-2:], [{"role": "user", "content": "b2", "aos": {"letter": b2}},
+                                               {"role": "assistant", "content": "FAKE: b2", "aos": {"answer_to": [b2]}}])
         # back to batches
         self.say("c1")
         self.ok_turn()
@@ -262,10 +263,13 @@ class ClaudeSwitch(Base):
                            env=self.env(), capture_output=True, text=True)
         self.assertEqual(r.returncode, 0)
         self.say("good1", "good2")
+        bad, good1, good2 = self.queue()
         self.ok_turn()
         self.assertTrue((self.stack / "mailbox_warning.txt").exists())
-        self.assertEqual(self.history()[-2:], [{"role": "user", "content": "good1"},
-                                               {"role": "assistant", "content": "FAKE: good1"}])
+        self.assertEqual(self.history()[-2:], [{"role": "user", "content": "good1", "aos": {"letter": good1}},
+                                               {"role": "assistant", "content": "FAKE: good1", "aos": {"answer_to": [good1]}}])
+        dropped = json.loads((self.stack / "letters.json").read_text())["dropped"]
+        self.assertEqual([(x["letter"], x["reason"]) for x in dropped][-1], (bad, "bad"))   # due 那輪跳過的壞信也記 dropped
         self.assertEqual(len(self.queue()), 1)
 
     def test_9_tool_form_warns(self):
@@ -304,12 +308,13 @@ class ClaudeSwitch(Base):
         self.assertFalse((self.cell / ".session_home").exists())
         self.make_due()
         self.say("y")
+        y = self.queue()
         self.ok_turn()
         self.assertEqual(len(self.calls()), 2)                   # no wasted --resume of a conversation that never existed
         last = self.calls()[-1]["argv"]
         self.assertNotIn("--resume", last)
         self.assertNotEqual(last[last.index("--session-id") + 1], failed[failed.index("--session-id") + 1])
-        self.assertEqual(self.history()[-1], {"role": "assistant", "content": "FAKE: y"})
+        self.assertEqual(self.history()[-1], {"role": "assistant", "content": "FAKE: y", "aos": {"answer_to": y}})
         self.assertFalse(os.path.exists(cooldown.path(str(self.stack))))
 
     def test_ts8_other_machine_new_with_record(self):

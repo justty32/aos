@@ -16,6 +16,7 @@
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1（P-20）。--help 印英文用法；Ctrl-C 退 130。
 # on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick（經 cell_common.clock_tick）——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 # 讀 history、決定用哪份工具登記檔跟 act.py 同一套，在 cell_common.py。
+# 回答配對（thinking/2026-11/14/reply-match-1114/03 §4）：messages 每列先過 aos_ws.for_endpoint（拷貝、只拿掉 aos 鍵），history 本身不動。
 import json, os, signal, subprocess, sys
 from pathlib import Path
 
@@ -28,6 +29,7 @@ for _parent in Path(__file__).resolve().parents:
 sys.path[:0] = _import_paths
 try:
     import aos_flags  # noqa: E402
+    import aos_ws  # noqa: E402  （回答配對：for_endpoint，py/ 跟 aos_flags 同一夾）
     if (Path(__file__).resolve().parent / "agent_files.py").is_file():
         from agent_files import declared_files  # noqa: E402
     else:
@@ -37,7 +39,7 @@ try:
     else:
         from agent import hooks  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
-    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "hooks", "agent.hooks"):
+    if _error.name not in ("aos_flags", "aos_ws", "tool_io", "agent_files", "agent", "agent.agent_files", "hooks", "agent.hooks"):
         raise
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
           file=sys.stderr)
@@ -188,7 +190,7 @@ if "llm" in files:
     cfg.update(read_cfg(os.path.join(stack, files["llm"])))   # stack 那份有的鍵蓋過定義（aos-agent llm set，每格重讀）
 sys.dont_write_bytecode = True                             # 定義資料夾不留 __pycache__（P-15：定義不被寫）
 import llm_settings  # noqa: E402  （範本資料夾在 sys.path 最前面）
-request = {"messages": system + history}
+request = {"messages": system + [aos_ws.for_endpoint(m) for m in history]}   # history 列的 aos 鍵（回答配對）只給 aos 自己看，不送端點；其他鍵照留
 if tools and (max_tool_calls is None or tool_call_count < max_tool_calls):
     request["tools"] = tools
 body = {"request": request}

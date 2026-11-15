@@ -1201,6 +1201,16 @@
    "why": "在途問腦信名加這台的 kernel 絕對路徑，只供 listen／say 提示；換台不沿用，信名對不上 pending 就不採信，下次寄出重寫。",
    "seen": [],
    "ignored_now": "對：ignored（cmd/aos-agent/stack.gitignore 的 **/think/brain_wait.json）"
+  },
+  {
+   "id": "G101",
+   "pattern": "stacks/**/letters.json",
+   "writer": "proto8/py/aos_ws.py（letters_take／letters_answered／letters_drop；呼叫者 templates/agent-fsm/idle.py、wait.py 與 cmd/aos-eca/aos_eca/handoff.py、turn.py 等）",
+   "class": "carry",
+   "in_git": "進",
+   "why": "11-15 reply-match-1114：交給腦還沒答的信名（pending）與丟掉的信（dropped，最多 50 筆）；跟 history 的 aos.letter／answer_to 一起讓 aos-agent ask／listen 配到是回哪封信，同 G066 在途信名帶走。寫入暫存檔是點開頭的 .letters.json.<pid>.tmp（**/.* 擋）。",
+   "seen": [],
+   "ignored_now": "對：tracked（stack.gitignore 沒擋 letters.json）"
   }
  ]
 }

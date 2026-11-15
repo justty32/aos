@@ -2,6 +2,8 @@
 # 結束碼（fsm.json 照碼分岔，N-36）：0＝收到至少一封好信、或丟了 goal 提醒（→ think）；10＝沒信（表上接住＝停著等，改成字串 next＝收工）。
 # 一次收全部、照處理順序（有序在前照名字＝寄的順序、無序在後照名字；同 aos_ws.letter_key）；cur/ 有上次認領了還沒接完的先接（P-12）。
 # 壞信（body 不是 {"role": "user", "content": 非空字串}）：aos-post done 丟掉、$AOS_STACK/mailbox_warning.txt 覆寫一行（N-16；同 aos-eca-turn）。
+# 回答配對（thinking/2026-11/14/reply-match-1114/03 §1）：好信照序 aos_ws.letters_take（加進 $AOS_STACK/letters.json 的 pending）→ history 的 user 列帶
+#   "aos": {"letter": 信名}（信裡自帶的 aos 鍵蓋掉）→ done；壞信、被 before_queue 擋的信在 done 之前記進 dropped（reason bad／blocked）。goal 提醒不經 queue、不帶 aos。
 # --prompt FILE＝開場白（相對路徑從範本資料夾＝AOS_CD 算）：history 空、queue 也沒好信時投一次進 queue 再收；沒給＝沒有開場白。
 # hook（lib/agent/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：好信接進 history 之前 before_queue（可改 content；攔下＝aos-post done 丟掉、
 #   不進 history、不算好信、mailbox_warning.txt 寫一行是哪個 hook 丟的），接進去並 done 之後 after_queue。hook 停下（HookFailed／HooksBad）時
@@ -27,6 +29,7 @@ for _parent in Path(__file__).resolve().parents:
 sys.path[:0] = _import_paths
 try:
     import aos_flags  # noqa: E402
+    import aos_ws  # noqa: E402  （回答配對：letters_take／letters_drop／mark_letter，py/ 跟 aos_flags 同一夾）
     if (Path(__file__).resolve().parent / "hooks.py").is_file():
         import hooks  # noqa: E402
     else:
@@ -36,7 +39,7 @@ try:
     else:
         from agent import goal_state  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
-    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "hooks", "agent.hooks",
+    if _error.name not in ("aos_flags", "aos_ws", "tool_io", "agent_files", "agent", "agent.agent_files", "hooks", "agent.hooks",
                            "goal_state", "agent.goal_state"):
         raise
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
@@ -154,25 +157,40 @@ def take():
     for sig in names("cur"):
         body, why = body_of(sig)
         if body is None:                         # 壞信一律丟，不通知寄信人（N-16）
+            drop(sig, "bad")
             post(["done", box, sig])
             write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s rejected: %s\n" % (sig, why.replace("\n", " ")), die)
             continue
         content = body["content"]
         r = fire("before_queue", {"letter": sig, "content": content})
         if r["blocked"]:                         # hook 丟掉這封：收掉、不進 history、不算好信
+            drop(sig, "blocked")
             post(["done", box, sig])
             write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s dropped by hook %s\n" % (sig, r["hook"]), die)
             continue
         content = r["data"]["content"]
+        try:                                     # 回答配對：先記 pending、再接 history（帶 aos.letter）、最後 done（讀的一方照這個方向查）
+            aos_ws.letters_take(stack, [sig])
+        except OSError as e:
+            die("WriteFailed", "cannot write %s: %s" % (os.path.join(stack, aos_ws.LETTERS), e))
+        row = aos_ws.mark_letter({"role": "user", "content": content}, sig)
         try:
             with open(history_path, "a", encoding="utf-8") as f:     # 一次寫一整行，只附加（P-41）
-                f.write(json.dumps({"role": "user", "content": content}, ensure_ascii=False) + "\n")
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
         except OSError as e:
             die("WriteFailed", "cannot append to history.jsonl: %s" % e)
         post(["done", box, sig])                 # 接進 history 就算收到（使用者 11-04「接進對話紀錄就收」）
         good += 1
         fire("after_queue", {"letter": sig, "content": content})
     return good
+
+
+def drop(sig, reason):
+    """這封不會進 history：在 done 之前記進 letters.json 的 dropped（ask 立刻報 LetterDropped）；寫不成只 warning（ask 最壞等到逾時）。"""
+    try:
+        aos_ws.letters_drop(stack, [sig], reason)
+    except OSError as e:
+        aos_flags.warn("agent-fsm", "cannot write %s: %s" % (os.path.join(stack, aos_ws.LETTERS), e))
 
 
 def fire(event, data):

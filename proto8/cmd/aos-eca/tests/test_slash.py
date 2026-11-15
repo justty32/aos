@@ -133,11 +133,12 @@ class ClaudeSlash(Base):
         self.first_turn()
         for i, text in enumerate(("/compact", "/goal say ok"), 1):     # /compact first: a failed turn starts a new conversation next time
             self.say(text)
+            sig = self.queue()
             r = self.turn(FAKE_CLI_FAIL="1")
             self.assertEqual(r.returncode, 1)
             self.assertIn("aos-eca-turn: error: CliFailed", r.stderr)
             self.assertEqual(self.queue(), [])                          # not retried every turn
-            self.assertEqual(self.history()[-1], {"role": "user", "content": text})
+            self.assertEqual(self.history()[-1], {"role": "user", "content": text, "aos": {"letter": sig[0]}})
             rec = cooldown.read(str(self.stack))
             self.assertEqual((rec["failures"], rec["dropped"], rec["code"]), (i, i, "CliFailed"))
             self.make_due()

@@ -1,4 +1,4 @@
-# aos_agent/chat.py - 逐行寄訊息並等候回答的互動迴圈。
+# aos_agent/chat.py - 逐行寄訊息並等候回答的互動迴圈（每句配自己的信名，同 ask）。
 HELP = """aos-agent chat - send one line per message and wait for each answer
 
 usage: aos-agent [--daemon D] chat [-t NAME] [--from WHO]
@@ -14,14 +14,13 @@ arrow keys move, Up recalls earlier lines; a multi-line paste is one message).
 Empty lines are ignored. An error about one message returns to the prompt.
 End of stdin exits 0, or 1 if a message failed; Ctrl-C exits 130.
 
-exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, AnswerMissing...); 130 Ctrl-C."""
+exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, AnswerMissing, LetterDropped...); 130 Ctrl-C."""
 
 from . import PROG
 import aos_flags
-import aos_ws
 import sys
 from .common import Fail, bad_args, find, note, parse, target
-from .listen import wait_latest
+from .ask import send, wait_sent
 from .read_line import read_line
 from . import sender
 
@@ -54,20 +53,19 @@ def cmd(argv):
             if not line.strip():
                 continue
             a = find(a.name)            # 11-05 edge-agent：聊到一半被 ctl rm --purge＝原本照寄、把刪掉的 stack 建回來、然後一直等
-            before = len(aos_ws.answers(a.stack))
-            sender.put(a, line, who)
+            s = send(a, line, who)
             sent = True
             try:
-                wait_latest(a, None, before)
+                wait_sent(a, s, None)
             except Fail as e:
-                if e.code not in ("QuestionUnknown", "AnswerMissing"):
+                if e.code not in ("QuestionUnknown", "AnswerMissing", "LetterDropped"):
                     raise
                 print(aos_flags.error_line(PROG, e.code, e), file=sys.stderr, flush=True)   # 印一行、不退出，回提示符
                 failed = True
     except KeyboardInterrupt:
         if sent:
             sys.stderr.write("\n")
-            note("that message was sent; read the answer later with aos-agent listen --target %s" % a.name)
+            note("that message was sent; read the answer later with aos-agent listen --target %s --letter %s" % (a.name, s[0]))
         else:
             sys.stderr.write("\n")
         sys.exit(130)

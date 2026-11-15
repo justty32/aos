@@ -1,4 +1,5 @@
-"""Test aos-agent ask (say then wait for the latest answer, like the subagent tool's op ask): flags, stdin, timeout exit code, a fake agent's answer."""
+"""Test aos-agent ask (say then wait for the answer to that letter; the subagent tool's op ask runs it): flags, stdin, timeout exit code, a fake agent's answer.
+The fake agent here is a body not upgraded yet (no aos keys): the answer comes by the old matching, with a warning (reply-match-1114; upgraded bodies in test_reply_match)."""
 import contextlib
 import io
 import json
@@ -124,6 +125,7 @@ class Ask(unittest.TestCase):
                 args, kw = wait.call_args
                 self.assertEqual((args[1], kw["timeout_cycles"]), want)
                 self.assertEqual(args[2], 0)                                         # answers counted before sending
+                self.assertEqual((kw["letter"], kw["before_rows"]), ("%012d.letter" % len(self.sent), 0))   # the letter put returned; history rows before sending
 
     def test_words_after_first_are_the_message(self):
         with contextlib.ExitStack() as st:
@@ -165,6 +167,7 @@ class Ask(unittest.TestCase):
         self.fake_agent("it is noon")
         code, out, err = self.run_main("--timeout-s", "10", "what", "time?")
         self.assertEqual((code, out), (0, "it is noon\n"), err)
+        self.assertIn("kid's body is not upgraded yet", err)
         self.assertEqual([t for t, _ in self.sent], ["what time?"])
 
     def test_old_answer_is_not_taken_for_the_new_one(self):
@@ -173,11 +176,13 @@ class Ask(unittest.TestCase):
         self.fake_agent("new answer", delay=0.5)
         code, out, err = self.run_main("--timeout-s", "10", "again")
         self.assertEqual((code, out), (0, "new answer\n"), err)
+        self.assertIn("not upgraded yet", err)
 
     def test_stdin_question_gets_answer(self):
         self.fake_agent("42")
         code, out, err = self.run_main("--timeout-s", "10", "-", stdin=Stdin(b"meaning of life?\n"))
         self.assertEqual((code, out), (0, "42\n"), err)
+        self.assertIn("not upgraded yet", err)
         self.assertEqual([t for t, _ in self.sent], ["meaning of life?"])
 
 

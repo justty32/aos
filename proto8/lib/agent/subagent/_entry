@@ -12,7 +12,8 @@
 #        long: true＝每行多 ctl ls -l 的四欄 QUEUE RESTARTS COOLDOWN LAST ERROR（照抄 ctl ls -l 那行；排隊中的四欄都是 -）；
 #        json: true＝{"subagents": [表上我生的那幾列（ctl ls --json 的整列）；排隊中的＝{name, queued_letter}], "max_subagents": N}；long 和 json 同給＝json
 #        （11-10 深夜使用者選「改短版」；之後「1.好」：口徑跟 agents_ctl 一樣，long＝多幾欄文字、json 才是 JSON）
-#   say {name, text}＝say --target（話走 stdin）；listen {name, timeout_s | timeout_cycles | last}＝listen --target（都沒給＝等 600 秒）；ask {name, text, timeout_s | timeout_cycles}＝say 接 listen
+#   say {name, text}＝say --target（話走 stdin）；listen {name, letter?, timeout_s | timeout_cycles | last}＝listen --target [--letter]（都沒給＝等 600 秒；letter 不能配 last）；
+#        ask {name, text, timeout_s | timeout_cycles}＝aos-agent ask --target（話走 stdin；配這封信名的回答，reply-match-1114：原本 say 接 listen 中間的空窗沒了）
 #   tools／llm／history／hook／system {name, args}：跑旁邊 self_tools／self_llm／self_history／self_hook／self_system（11-11）的 _entry，stdin＝args、AOS_STACK＝<子的 stack>/tools/<那支>/
 #        （那支靠 ctl who 認自己＝變成改子的）；stdout 原樣（「your」改成子的名字）；它的錯誤代號與原因接成自己的；旁邊沒那支＝ToolMissing；子還在排隊＝SubagentQueued。
 #   每個帶 name 的動作先對帳：不是我生的＝SubagentUnknown；記過但不在表上＝SubagentMissing（之後就忘掉）。ask／listen／rm 抄公開子帳（observed_children.copy_child）。
@@ -56,7 +57,7 @@ die = tool_io.die
 MAX_SUBAGENTS_DEFAULT = 4
 CFG = "subagents.json"          # 配額設定檔（定義與 stack 裡），跟記帳檔同名、不同處
 FORWARD = {"tools": "self_tools", "llm": "self_llm", "history": "self_history", "hook": "self_hook", "system": "self_system"}
-OPS = dict({"add": cmd.ADD_KEYS, "ls": ("long", "json"), "say": ("name", "text"), "listen": ("name", "timeout_s", "timeout_cycles", "last"),
+OPS = dict({"add": cmd.ADD_KEYS, "ls": ("long", "json"), "say": ("name", "text"), "listen": ("name", "letter", "timeout_s", "timeout_cycles", "last"),
             "ask": ("name", "text", "timeout_s", "timeout_cycles")},
            **cmd.LIFE_OPS, **{op: ("name", "args") for op in FORWARD})
 
@@ -160,11 +161,14 @@ if op in cmd.LIFE_OPS:
 elif op in ("say", "listen", "ask"):
     waits = [k for k in ("timeout_s", "timeout_cycles", "last") if k in args]
     if len(waits) > 1:
-        die("ArgumentsBad", "give only one of %s (got %s)" % (", ".join(k for k in OPS[op] if k not in ("name", "text")), " and ".join(waits)))
+        die("ArgumentsBad", "give only one of %s (got %s)" % (", ".join(k for k in OPS[op] if k not in ("name", "text", "letter")), " and ".join(waits)))
     cyc, sec, last = cmd.cycles(args), cmd.seconds(args, allow_zero=op in ("listen", "ask")), args.get("last")
     if last is not None and (isinstance(last, bool) or not isinstance(last, int) or last < 0):
         die("ArgumentsBad", "last must be a whole number (0 or more)")
     words = cmd.text(args, "text", True) if op != "listen" else None
+    letter = cmd.text(args, "letter") if op == "listen" else None
+    if letter is not None and last is not None:
+        die("ArgumentsBad", "letter waits for one answer; it does not go with last")
 elif op in FORWARD:
     sub = FORWARD[op]
     entry = os.path.join(os.path.dirname(HERE), sub, "_entry")
@@ -232,20 +236,21 @@ if op in cmd.LIFE_OPS:
     out = cmd.agent(argv, timeout_s=cmd.life_guard(op, args))
     if op == "rm":
         write_book([k for k in load_json(book_path, []) if k.get("name") != name])
-elif op in ("say", "listen", "ask"):
-    if op != "listen":
-        out = cmd.agent(["say", "--target", name], text=words)
-    if op != "say":
-        try:
-            if cyc is not None:
-                out = cmd.agent(["listen", "--target", name, "--timeout-cycles", str(cyc)], timeout_cycles=cyc + 30)
-            elif last is not None:
-                out = cmd.agent(["listen", "--target", name, "--last", str(last)])
-            else:
-                sec = cmd.LISTEN_DEFAULT_S if sec is None else sec
-                out = cmd.agent(["listen", "--target", name, "--timeout-s", "%g" % sec], timeout_s=None if sec == 0 else sec + 30)
-        finally:
-            preserve_child(name)
+elif op == "say":
+    out = cmd.agent(["say", "--target", name], text=words)
+elif op in ("listen", "ask"):
+    # ask＝一支 aos-agent ask（寄、記信名、等那封的回答）；listen 給了 letter＝等那封。話走 stdin（同 say）。
+    base = ["ask", "--target", name] if op == "ask" else ["listen", "--target", name] + (["--letter", letter] if letter else [])
+    try:
+        if cyc is not None:
+            out = cmd.agent(base + ["--timeout-cycles", str(cyc)], text=words, timeout_cycles=cyc + 30)
+        elif last is not None:
+            out = cmd.agent(base + ["--last", str(last)])
+        else:
+            sec = cmd.LISTEN_DEFAULT_S if sec is None else sec
+            out = cmd.agent(base + ["--timeout-s", "%g" % sec], text=words, timeout_s=None if sec == 0 else sec + 30)
+    finally:
+        preserve_child(name)
 else:                                           # tools／llm／history／hook／system：用子的身分跑旁邊的 self_*
     if not isinstance(kid.get("stack"), str):
         die("SubagentQueued", "%s is still queued (letter %s) and has no stack yet; try again when op ls shows it on the table" % (name, kid.get("queued_letter")))

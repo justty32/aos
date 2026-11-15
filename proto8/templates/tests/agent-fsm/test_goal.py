@@ -96,8 +96,8 @@ class Base(unittest.TestCase):
         box = self.stack / "queue"
         if not box.exists():
             subprocess.run(["aos-post", "init", str(box)], env=self.env, check=True, capture_output=True)
-        subprocess.run(["aos-post", "send", "--ordered", str(self.stack / "queue")], input=json.dumps({"role": "user", "content": text}),
-                       env=self.env, check=True, capture_output=True, text=True)
+        return subprocess.run(["aos-post", "send", "--ordered", str(self.stack / "queue")], input=json.dumps({"role": "user", "content": text}),
+                              env=self.env, check=True, capture_output=True, text=True).stdout.strip()   # 信名（回答配對的 aos.letter）
 
 
 class IdleCell(Base):
@@ -172,7 +172,7 @@ class IdleCell(Base):
         self.add(answer("Thanks."))
         self.idle(0)
         note = goal_state.paused_note(self.rec())
-        self.assertEqual(self.history()[-1], {"role": "user", "content": note})
+        self.assertEqual(self.history()[-1], {"role": "user", "content": note})   # 不經 queue 的提示不帶 aos 鍵（整列相等也斷言了這點）
         self.assertEqual(self.notes(), [note])
         self.assertEqual((self.rec()["status"], self.rec()["reminded"]), ("paused", 2))
         self.assertEqual((self.stack / "goal.json").read_bytes(), before)
@@ -248,9 +248,9 @@ class IdleCell(Base):
     def test_letters_come_first(self):
         self.write_history({"role": "user", "content": "hi"}, answer("Hello."))
         self.goal("set", "Fix the bug.")
-        self.say("a new letter")
+        name = self.say("a new letter")
         self.idle(0)
-        self.assertEqual(self.history()[-1], {"role": "user", "content": "a new letter"})
+        self.assertEqual(self.history()[-1], {"role": "user", "content": "a new letter", "aos": {"letter": name}})
         self.assertEqual((self.notes(), self.rec()["reminded"]), ([], 0))
 
     def test_outside_set_and_clear(self):
@@ -294,7 +294,10 @@ class IdleCell(Base):
         (self.defn / "prompt.txt").write_text("Start here.\n")
         self.goal("set", "Write the report.")
         self.idle(0, "--prompt", "prompt.txt")
-        self.assertEqual(self.history(), [{"role": "user", "content": "Start here."}])
+        opening = json.loads((self.stack / "letters.json").read_text())["pending"]   # 開場白也走 queue：一樣帶 aos.letter、記進 pending
+        self.assertEqual(len(opening), 1)
+        self.assertRegex(opening[0], r"^[0-9]{12}\.")                          # 有序信的名字（aos-post send --ordered）
+        self.assertEqual(self.history(), [{"role": "user", "content": "Start here.", "aos": {"letter": opening[0]}}])
         self.assertEqual(self.rec()["reminded"], 0)
 
     def set_reminded(self, n):

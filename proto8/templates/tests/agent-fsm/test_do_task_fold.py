@@ -114,7 +114,7 @@ class DoTaskFold(unittest.TestCase):
         return Path(self.agent('ctl', 'where', '--target', name).strip())
 
     def ask(self, name, text):
-        self.agent('say', '--target', name, text)
+        self.sent = self.agent('say', '--target', name, text).strip().splitlines()[-1]   # say 印信名（回答配對的 aos.letter）
         return self.agent('listen', '--target', name, '--timeout-s', '100')
 
     def history(self, stack):
@@ -159,23 +159,28 @@ class DoTaskFold(unittest.TestCase):
         self.assertIn('Waiting for bob.', self.ask('mail', 'Go.'))      # 任務中自己答了一句、停下來等
         self.assertEqual(len(self.tasks(stack)), 1)
         self.assertIn('Done.', self.ask('mail', 'From bob: the answer is 42.'))
+        bob = self.sent
         h = self.history(stack)
         self.assertEqual(self.roles(h), ['user', 'assistant', 'tool', 'user', 'assistant', 'tool', 'assistant'])
         self.assertEqual(h[3]['content'], '[aos] summary: lines 4-5, 2 messages. Task "Wait for bob" ended: Bob said 42.')
         self.assertIn('2 messages (lines 4-5) are now one summary at line 4', h[5]['content'])
         self.assertIn('1 of them came from others during the task (letters, reminders) and was folded too', h[5]['content'])
         folded = [r['message'] for r in self.removed(stack)]
-        self.assertEqual(folded[1], {'role': 'user', 'content': 'From bob: the answer is 42.'})   # 信的原文留檔
+        self.assertEqual(folded[1], {'role': 'user', 'content': 'From bob: the answer is 42.', 'aos': {'letter': bob}})   # 信的原文留檔（帶 aos.letter）
+        self.assertEqual(h[-1], {'role': 'assistant', 'content': 'Done.', 'aos': {'answer_to': [bob]}})   # 信的列被摺掉了，回答照樣配到（靠 pending）
+        self.assertEqual(json.loads((stack / 'letters.json').read_text())['pending'], [])
 
     def test_letter_during_the_task_stays_with_keep_others(self):
         stack = self.begin('mail_keep')
         self.assertIn('Waiting for bob.', self.ask('mail_keep', 'Go.'))
         self.assertIn('Done.', self.ask('mail_keep', 'From bob: the answer is 42.'))
+        bob = self.sent
         h = self.history(stack)
         self.assertEqual(self.roles(h), ['user', 'assistant', 'tool', 'user', 'user', 'assistant', 'tool', 'assistant'])
         self.assertEqual(h[3]['content'], '[aos] summary: line 4, 1 message. Task "Wait for bob" ended: Bob said 42.')
         self.assertIn('1 message (lines 4-5) is now one summary at line 4', h[6]['content'])
-        self.assertEqual(h[4], {'role': 'user', 'content': 'From bob: the answer is 42.'})   # 信沒被摺
+        self.assertEqual(h[4], {'role': 'user', 'content': 'From bob: the answer is 42.', 'aos': {'letter': bob}})   # 信沒被摺
+        self.assertEqual(h[-1], {'role': 'assistant', 'content': 'Done.', 'aos': {'answer_to': [bob]}})
         self.assertIn('1 message from others during the task is kept after the summary', h[6]['content'])
 
     def test_stop_and_start_keeps_the_mark(self):
@@ -191,7 +196,8 @@ class DoTaskFold(unittest.TestCase):
         statuses = [r['message']['content'] for r in self.removed(stack) if r['message'].get('role') == 'tool']
         self.assertTrue(any(s.startswith('In 1 task (outermost first):\n1. "Long job" started ') for s in statuses), statuses)
         self.assertEqual(self.roles(h), ['user', 'assistant', 'tool', 'user', 'assistant', 'tool', 'assistant'])
-        self.assertNotIn({'role': 'user', 'content': 'Go on.'}, h)       # 任務中別人說的話預設一起摺
+        self.assertNotIn({'role': 'user', 'content': 'Go on.', 'aos': {'letter': self.sent}}, h)   # 任務中別人說的話預設一起摺
+        self.assertNotIn('Go on.', [m.get('content') for m in h])
         self.assertEqual(self.tasks(stack), [])
 
 

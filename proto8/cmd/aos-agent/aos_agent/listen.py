@@ -1,22 +1,28 @@
-# aos_agent/listen.py - 以秒或 cycle 等待回答，或列出與追蹤歷史對話。
+# aos_agent/listen.py - 以秒或 cycle 等待回答（給信名就配那封），或列出與追蹤歷史對話。
 HELP = """aos-agent listen - print the agent's answer
 
-usage: aos-agent [--daemon D] listen [--target NAME] [--timeout-s SECS | --timeout-cycles N | --last N [--follow] | --follow]
+usage: aos-agent [--daemon D] listen [--target NAME] [--letter NAME] [--timeout-s SECS | --timeout-cycles N | --last N [--follow] | --follow]
 
-Without --last or --follow: wait for the latest answer and print only its text.
+Without --last or --follow: wait for an answer and print only its text.
+--letter NAME waits for the answer to that letter (the name aos-agent say printed). Without it:
+the newest letter still in the queue, else the last letter the agent took and has not answered
+(letters.json), else the latest answer (waiting for it if the agent is still answering).
+An agent whose body does not record letter names yet (no aos.letter in its history) is matched
+the old way: the latest answer, with a warning on stderr.
 --last N prints the last N exchanges as blocks: "== #N", question lines prefixed "> ",
 then the answer. --follow prints new exchanges; add --last N to show history first.
 Ctrl-C leaves follow mode with exit 0; reminders go to stderr.
 
 flags:
   -t, --target NAME   which agent (default: $AOS_AGENT)
+  --letter NAME       wait for the answer to this letter (not with --last / --follow)
   --timeout-s SECS    give up after SECS seconds (AnswerMissing); 0 = no limit; omitted = no limit
   --timeout-cycles N  give up after N cycles (positive integer); exclusive with --timeout-s
   --last N            show the last N exchanges (a whole number) instead of waiting
   -f, --follow        follow new exchanges (also with --last)
   -h, --help          show this help
 
-exit codes: 0 printed; 1 error (AnswerMissing, QuestionUnknown...); 130 Ctrl-C while waiting."""
+exit codes: 0 printed; 1 error (AnswerMissing, LetterDropped, QuestionUnknown...); 130 Ctrl-C while waiting."""
 
 import aos_ws
 import math
@@ -61,23 +67,58 @@ def handed_unanswered(a, before):
     return last_user > last_answer
 
 
-def wait_latest(a, timeout, before=None, *, timeout_cycles=None):
-    """等最新那封的回答（before＝寄之前的回答數；chat 給，listen 開始時才數）。"""
+DROP_WHY = {"bad": "it was not a valid message", "blocked": "a before_queue hook blocked it",
+            "failed": "the agent failed after it was handed over"}
+
+
+def plain_user(m):
+    """舊身體寫的信列：user、沒有 aos 鍵、不是 aos 自己寫的（[aos] 開頭）。"""
+    return m.get("role") == "user" and "aos" not in m and not aos_ws.text_of(m).startswith("[aos] ")
+
+
+def old_body(a, before_rows):
+    """退路的判定（reply-match 03 §5）：history[before_rows:] 有舊身體的信列＝收這封的身體還沒升級（不寫 aos.letter）。"""
+    return any(plain_user(m) for m in aos_ws.history(a.stack)[before_rows:])
+
+
+def print_text(text):
+    sys.stdout.write(text if text.endswith("\n") else text + "\n")
+    sys.stdout.flush()
+
+
+def wait_latest(a, timeout, before=None, *, timeout_cycles=None, letter=None, before_rows=None):
+    """等一封信的回答（before＝寄之前的回答數；ask／chat 給，listen 開始時才數；reply-match-1114 03 §2、§5）。
+    letter 給了（ask、chat、listen --letter）＝只認 aos_ws.answer_for 配到這封的回答；離開 queue 後查無紀錄（unknown）時，
+    history[before_rows:] 有舊身體的信列才退回舊配法（還在答就等、回答數比 before 多才印最新那則），stderr 說一句；
+    before_rows＝寄之前 history 的列數，沒給＝信還在 queue 就現在數，不然從頭找（此時不要求回答變多，同現行 listen）。
+    letter 沒給（listen）＝等 queue 最新那封，queue 空就等 letters.json pending 最後那封，都配信名；查無紀錄＝照舊配法、不另說；
+    都沒有＝現行規則（還在答就等新回答，不然印最新那則）。"""
     deadline = aos_ws.deadline_after(timeout_cycles) if timeout_cycles is not None else None
     duration = "%d cycles" % timeout_cycles if deadline is not None else "%g s" % timeout if timeout is not None else ""
 
     def timed_out():
         return aos_ws.expired(deadline) if deadline is not None else timeout is not None and time.monotonic() - start >= timeout
 
-    sig = latest(a)
+    strict = letter is not None
+    sig = letter if strict else latest(a)
+    if sig is None:
+        pending = aos_ws.letters_pending(a.stack)
+        sig = pending[-1] if pending else None
     if before is None:
         before = len(aos_ws.answers(a.stack))
+    late = False
+    if strict and before_rows is None:
+        if set(aos_ws.where(a.stack, sig)) & {"new", "cur"}:
+            before_rows = len(aos_ws.history(a.stack))
+        else:
+            before_rows, late = 0, True
     if sig is None and not handed_unanswered(a, before):   # 答案已經到了（或根本沒寄過）：立刻印最新那則回答
         return print_answer(a, None)
     start, warned, paused_said, next_check = time.monotonic(), False, False, 0.0
     new_warned = False
     brain_warned = False
     what = sig or "the latest letter"
+    state, old = None, False                          # state＝answer_for 最後看到的；old＝這封已退回舊配法
 
     def say_brain():
         nonlocal brain_warned
@@ -97,17 +138,42 @@ def wait_latest(a, timeout, before=None, *, timeout_cycles=None):
             note("%s is paused and will not answer until resumed: aos-agent ctl resume --target %s. Still waiting, Ctrl-C to leave" % (a.name, a.name))
             paused_said = True
 
+    def matched():
+        """配信名：回 True＝已印回答；LetterDropped 直接丟；否則更新 state／old、回 False（還要等）。"""
+        nonlocal state, old
+        state, text = aos_ws.answer_for(a.stack, sig)
+        if state in ("answered", "answered_removed"):
+            if state == "answered_removed":
+                note("this answer to %s was moved out of history (found in %s)" % (sig, aos_ws.REMOVED))
+            print_text(text)
+            return True
+        if state == "dropped":
+            raise Fail("LetterDropped", "%s will not be answered: %s dropped it (%s: %s); say it again for a new answer"
+                       % (sig, a.name, text, DROP_WHY.get(text, "no reason given")))
+        if state == "unknown" and not old and (not strict or old_body(a, before_rows)):
+            old = True
+            if strict:
+                note("%s's body is not upgraded yet (no aos.letter), so this time the answer is matched the old way: "
+                     "it is the latest answer, not necessarily the one to %s" % (a.name, sig))
+        if state == "unknown" and old and not handed_unanswered(a, before) and (not strict or late or len(aos_ws.answers(a.stack)) > before):
+            print_answer(a, sig)
+            return True
+        return False
+
     while True:
         stages = [s for s in aos_ws.where(a.stack, sig) if s in ("new", "cur")] if sig else []
         if not stages:
-            if not handed_unanswered(a, before):
-                return print_answer(a, sig)
+            if sig is None:
+                if not handed_unanswered(a, before):
+                    return print_answer(a, sig)
+            elif matched():
+                return
             if time.monotonic() >= next_check:
                 next_check = time.monotonic() + 1.0
                 if on_table(a):
                     say_paused()
                     say_brain()
-                elif handed_unanswered(a, before):
+                elif sig is not None or handed_unanswered(a, before):
                     if not os.path.isdir(a.stack):
                         raise Fail("InstanceMissing", "%s was removed (stack %s is gone); %s will never be answered" % (a.name, a.stack, what))
                     gone = off_table(a)
@@ -121,7 +187,14 @@ def wait_latest(a, timeout, before=None, *, timeout_cycles=None):
                         raise Fail("AnswerMissing", "%s was handed over (not in the queue) but history has no answer and nothing is running %s"
                                    " (a batch cut off midway is not answered again by itself; say it again for a new answer)" % (what, a.name))
             if timed_out():
-                raise Fail("AnswerMissing", timeout_reason("waited %s; %s was handed over and is not answered yet" % (duration, what)))
+                if strict and state == "unknown" and not old:
+                    reason = ("waited %s; %s has left the queue but has no record in history or letters.json (last state: unknown;"
+                              " %s's body may not be upgraded yet, or the letter name is wrong)" % (duration, what, a.name))
+                else:
+                    reason = "waited %s; %s was handed over and is not answered yet" % (duration, what)
+                    if strict:
+                        reason += " (last state: %s)" % ("unknown, matched the old way" if old else state)
+                raise Fail("AnswerMissing", timeout_reason(reason))
             time.sleep(POLL)
             continue
         now = time.monotonic()
@@ -217,21 +290,27 @@ def count(v):
 
 
 def cmd(argv):
-    opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout", "--timeout-cycles": "timeout_cycles", "--last": "last"}, {"--follow": "follow"}, help=HELP, short=("-t", "-f"))
+    opts, rest = parse(argv, {"--target": "target", "--letter": "letter", "--timeout-s": "timeout", "--timeout-cycles": "timeout_cycles", "--last": "last"},
+                       {"--follow": "follow"}, help=HELP, short=("-t", "-f"))
     if "timeout" in opts and "timeout_cycles" in opts:
         raise bad_args(HELP, "--timeout-s and --timeout-cycles are mutually exclusive")
     timeout_cycles = cycles(opts["timeout_cycles"]) if "timeout_cycles" in opts else None
     timeout = None if opts.get("timeout") is None else seconds(opts["timeout"])
     last = None if opts.get("last") is None else count(opts["last"])
     if rest:
-        raise bad_args(HELP, "listen takes no positional arguments: %s (it always waits for the latest letter)" % rest[0])
+        raise bad_args(HELP, "listen takes no positional arguments: %s (to wait for one letter use --letter NAME)" % rest[0])
     waits = last is None and not opts.get("follow")
     if not waits and ("timeout" in opts or timeout_cycles is not None):
-        raise bad_args(HELP, "--timeout-s / --timeout-cycles are only for waiting on the latest letter, not with --last / --follow")
+        raise bad_args(HELP, "--timeout-s / --timeout-cycles are only for waiting on a letter, not with --last / --follow")
+    letter = opts.get("letter")
+    if letter is not None and not waits:
+        raise bad_args(HELP, "--letter is only for waiting on a letter, not with --last / --follow")
+    if letter is not None and (not letter or "/" in letter or letter.startswith(".")):
+        raise bad_args(HELP, "--letter needs a letter name as aos-agent say printed it (no / and not starting with .): %s" % letter)
     a = target(opts)
     try:
         if waits:
-            wait_latest(a, None if timeout == 0 else timeout, timeout_cycles=timeout_cycles)
+            wait_latest(a, None if timeout == 0 else timeout, timeout_cycles=timeout_cycles, letter=letter)
         else:
             follow(a, last or 0, bool(opts.get("follow")))
     except KeyboardInterrupt:

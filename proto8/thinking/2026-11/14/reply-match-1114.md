@@ -24,3 +24,5 @@
 - 11-14 14:19 Argon 審完。採納 A1～A3、A6～A15，改回 02 的 `letters.json`，落地改成「寫的一方先進」。03 v2 送 head-tools，第 6 節方向問題請轉專區。
 - 11-14 14:22 使用者專區答 go: yes、land: one（一個 commit，不是推薦的分兩次）；head-tools 裁的 2a、3a、5a 照舊。03 改成 v3：§5 改成「一個 commit、換樹當晚最後 submit」，保留舊身體退路，附換樹當晚清單。送 head-tools 看 §5。
 - 11-14 14:26 head-tools 同意 §5 v3、准開工。§5 補兩點：commit 要在 ok-kf pin 的收件截止前進 main、排最後一個，空窗內退路是主路；「新 eca 寫、舊 lib 讀」放進測試矩陣。§2 補上 ok-kmsg 在 listen.py 的保留點。
+- 11-14 15:10 施工（暫存樹，Claude 子 agent 四隻：fsm、讀的一方、eca、文件）做完，受影響五套全綠；§1 的寫入順序照施工結果改成「先 pending、再 history、再 done」，回答只清自己那幾封（eca）、重交時從 dropped 拿掉。全套對照進行中，交件先寄 head-tools。
+- 11-15 Claude 線 claude-rm 接手（ok-pilot 收樹退場，使用者 11-15「能做的先做」）：patch 重套到 086a7cafe，subagent 兩個 JSON 跟 398f71711 的 BookOld 手合；test_daily 抓到 letters.json 沒有 gitignore 分類，補 G101（carry、進 git）與 05-gitignore 指南一格；aos-agent 的「回答被移出 history」那條測試有時序競爭，改成移完再 listen 時斷言。全套對照沒有新紅，一個 commit 進 main；templates／lib 要等下次換樹。

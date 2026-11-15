@@ -258,21 +258,21 @@
    "path": "$AOS_STACK/history.jsonl",
    "lifetime": "持久",
    "writer": "templates/agent-fsm（idle、wait、act）、aos-eca-turn",
-   "reader": "templates/agent-fsm（brain、act、idle）、py/aos_ws（aos-agent listen）、aos-eca-turn",
+   "reader": "templates/agent-fsm（brain、act、idle）、py/aos_ws（aos-agent listen；answer_for 給 ask／chat／listen --letter 配回答）、aos-eca-turn",
    "image": "進",
-   "on_bad": "brain／act 遇壞行＝HistoryBad 退 1；aos_ws 壞行提醒一次後跳過；不在＝空",
-   "note": "只往後加但要帶（醒來接著用），不是 ⑩ 的 log",
-   "evidence": "proto8/templates/agent-fsm/brain.py（history_path）、proto8/py/aos_ws.py（history）、proto8/cmd/aos-eca/aos_eca/history.py（append_history）"
+   "on_bad": "brain／act 遇壞行＝HistoryBad 退 1；aos_ws 壞行提醒一次後跳過；不在＝空；aos 鍵不是物件＝當成沒有",
+   "note": "只往後加但要帶（醒來接著用），不是 ⑩ 的 log。列可以多一個 aos 物件鍵（reply-match-1114）：收信那列 {\"letter\": 信名}、最終回答 {\"answer_to\": [信名…]}；寫的時候蓋掉信或端點自帶的 aos 鍵，agent-fsm 送端點前每列剝掉（for_endpoint）。舊列沒有 aos 鍵＝讀的一方退回「等最新那則」。多一個鍵，不用重建",
+   "evidence": "proto8/templates/agent-fsm/brain.py（history_path、for_endpoint）、proto8/py/aos_ws.py（history、mark_letter、mark_answer、answer_for）、proto8/cmd/aos-eca/aos_eca/history.py（append_history）"
   },
   {
    "path": "$AOS_STACK/history_removed.jsonl（<history 檔名>_removed.jsonl）",
    "lifetime": "持久",
    "writer": "aos-agent history rm／summarize／set（self_history 再包它；--keep 換位置、--no-keep 不寫）",
-   "reader": "人",
+   "reader": "人、py/aos_ws（answer_for：回答被移出 history 時從這裡找）",
    "image": "進",
-   "on_bad": "沒有程式讀；寫不進＝WriteFailed，history 不改",
+   "on_bad": "aos_ws 讀到壞行跳過；寫不進＝WriteFailed，history 不改",
    "note": "11-10 晚 self-family：改掉的原文每則一行 {removed_at, op, line, message|raw}，只往後加；stack.gitignore 明寫要留（two-machines 分類 G089 帶走）。新檔，不用重建",
-   "evidence": "proto8/cmd/aos-agent/aos_agent/history.py（keep_target）、proto8/cmd/aos-agent/stack.gitignore"
+   "evidence": "proto8/cmd/aos-agent/aos_agent/history.py（keep_target）、proto8/cmd/aos-agent/stack.gitignore、proto8/py/aos_ws.py（_removed）"
   },
   {
    "path": "<信箱>/{new,cur}/<信名>/letter.json（queue/、procs_requests/、kernel requests/、think/reply/、<stack>/mailbox/）",
@@ -693,6 +693,16 @@
    "on_bad": "下次 fork 時對帳：未到期的 running 不碰；不在 daemon 表上＝刪掉紀錄；kept 不碰；過期 running 與 failed 先 ctl stop、running 改記 failed，failed 超過上限的最舊的 ctl rm --purge；剛 mkdir、state 還沒寫的那一瞬不碰；讀不了＝當成沒有租約",
    "note": "11-11 fork 新增（fork-and-do-task/01）：一行 running <租約到期 UTC 到秒 Z>／kept／failed；分身收掉時整個資料夾刪掉。11-12 線 K 補列（之前漏列），分類代定進 git。新檔，不用重建",
    "evidence": "proto8/lib/agent/fork/_entry"
+  },
+  {
+   "path": "$AOS_STACK/letters.json",
+   "lifetime": "持久",
+   "writer": "templates/agent-fsm（idle 收信、wait 寫最終回答）、aos-eca-turn（handoff、turn、slash、midturn、batch、hook）；都經 py/aos_ws（letters_take、letters_answered、letters_drop）",
+   "reader": "py/aos_ws（answer_for：aos-agent ask／chat／listen、subagent 的 op ask／listen）",
+   "image": "進（stack.gitignore 沒擋）",
+   "on_bad": "不在、不是 JSON、不是物件＝當成空的（pending、dropped 都空），不報錯；pending／dropped 裡型別不對的項跳過。eca 收信時寫不進＝WriteFailed，丟信或清 pending 時寫不進＝一行 warning",
+   "note": "11-14 reply-match-1114 新增：{\"pending\": [交出去還沒答的信名…], \"dropped\": [{\"letter\", \"reason\", \"at\"}…]}；reason 只有 bad（壞信）、blocked（before_queue hook 擋）、failed（eca 交出去後 CLI 失敗）；dropped 只留最近 50 筆；先寫 letters.json.<pid>.tmp 再 os.replace。只有身體寫，aos-agent 只讀；fork 不抄（fork_copy 只抄 history 與覆蓋檔）。新檔，不用重建",
+   "evidence": "proto8/py/aos_ws.py（letters、letters_take、letters_answered、letters_drop、answer_for）、proto8/templates/agent-fsm/idle.py、proto8/templates/agent-fsm/wait.py、proto8/cmd/aos-eca/aos_eca/common.py、proto8/cmd/aos-eca/aos_eca/handoff.py"
   }
  ]
 }

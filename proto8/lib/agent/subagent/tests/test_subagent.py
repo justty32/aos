@@ -60,6 +60,9 @@ elif argv[:1] == ["say"]:
     print("letter-1")
 elif argv[:1] == ["listen"]:
     print("the answer")
+elif argv[:1] == ["ask"]:
+    sys.stdin.read()
+    print("the answer")
 else:
     print("ok " + " ".join(argv))
 '''
@@ -198,14 +201,16 @@ class Subagent(unittest.TestCase):
                            ({"op": "say", "name": "kid", "text": "hi"}, ["say", "--target", "kid"]),
                            ({"op": "listen", "name": "kid"}, ["listen", "--target", "kid", "--timeout-s", "600"]),
                            ({"op": "listen", "name": "kid", "timeout_s": 0}, ["listen", "--target", "kid", "--timeout-s", "0"]),
-                           ({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 0}, ["listen", "--target", "kid", "--timeout-s", "0"]),
+                           ({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 0}, ["ask", "--target", "kid", "--timeout-s", "0"]),
+                           ({"op": "ask", "name": "kid", "text": "hi", "timeout_cycles": 5}, ["ask", "--target", "kid", "--timeout-cycles", "5"]),
+                           ({"op": "listen", "name": "kid", "letter": "000000000003.q"}, ["listen", "--target", "kid", "--letter", "000000000003.q", "--timeout-s", "600"]),
                            ({"op": "listen", "name": "kid", "last": 3}, ["listen", "--target", "kid", "--last", "3"]),
                            ({"op": "listen", "name": "kid", "timeout_cycles": 7}, ["listen", "--target", "kid", "--timeout-cycles", "7"]),
-                           ({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 9}, ["listen", "--target", "kid", "--timeout-s", "9"])):
+                           ({"op": "ask", "name": "kid", "text": "hi", "timeout_s": 9}, ["ask", "--target", "kid", "--timeout-s", "9"])):
             out = self.ok(args)
             self.assertEqual(self.calls()[-1], want, args)
         self.assertEqual(out, "the answer\n")
-        self.assertEqual(self.calls("say")[-1], ["say", "--target", "kid"])
+        self.assertEqual(self.calls("say"), [["say", "--target", "kid"]])        # op ask is one aos-agent ask, no say before it (reply-match-1114)
 
     def test_rm_keeps_stack_unless_purge(self):
         self.ok({"op": "add", "def": "d", "name": "kid"})
@@ -266,6 +271,9 @@ class Subagent(unittest.TestCase):
                            ({"op": "say", "name": "k"}, "text needs"),
                            ({"op": "ask", "name": "k", "text": "x", "timeout_s": 5, "timeout_cycles": 5}, "only one of"),
                            ({"op": "listen", "name": "k", "last": -1}, "last must be"),
+                           ({"op": "listen", "name": "k", "letter": "x", "last": 1}, "does not go with last"),
+                           ({"op": "listen", "name": "k", "letter": ""}, "letter must be"),
+                           ({"op": "ask", "name": "k", "text": "x", "letter": "y"}, "op ask does not take letter"),
                            ({"op": "add", "def_json": {"$env": "X"}}, "needs name"),
                            ({"op": "tools", "name": "k", "args": "ls"}, "args must be object"),
                            ({"op": "where", "name": "k"}, "OpUnknown")):
