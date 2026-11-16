@@ -276,6 +276,126 @@ class BrainNotify(unittest.TestCase):
                           "on_error": "continue", "timeout_ms": 10000})
         self.assertIn("AOS_NOTIFY_BOX", hooks["description"])
 
+    def test_eca_retry_series_arms_then_notifies_once_and_rearms(self):
+        for name in ('CliFailed', 'ReplyMissing'):
+            with self.subTest(name=name):
+                before = len(self.calls())
+                event = dict(self.event, name=name, code=name, retry=True, attempt=1,
+                             reason='claude exited 1', status=529, cause='api_529', dropped=0,
+                             error={'msg': 'must not replace the eca reason'})
+                for attempt in (1, 2):
+                    r = self.run_hook(dict(event, attempt=attempt))
+                    self.assertEqual((r.stdout, r.stderr), ('', ''))
+                    self.assertEqual(len(self.calls()), before)
+                    self.assertEqual(json.loads(self.seen.read_text()), {'kind': 'retrying', 'armed': True})
+                self.run_hook(dict(event, attempt=3))
+                self.assertEqual(len(self.calls()), before + 1)
+                call = self.calls()[-1]
+                self.assertEqual(call[call.index('--status') + 1], 'BLOCKED')
+                self.assertEqual(call[call.index('--title') + 1],
+                                 'worker: brain failed (%s), retrying by itself' % name)
+                self.assertEqual(call[-1], '%s: claude exited 1; status 529; cause api_529. '
+                                 'It has tried 3 times and keeps retrying by itself after each cooldown; '
+                                 'the unanswered turn is continued in the same conversation. '
+                                 'No action is needed. To stop it, use stop.' % name)
+                self.assertEqual(json.loads(self.seen.read_text()), {'kind': 'retrying', 'armed': False})
+                for attempt in (3, 4, 10):
+                    self.run_hook(dict(event, attempt=attempt))
+                    self.assertEqual(len(self.calls()), before + 1)
+                for attempt in (1, 3):
+                    self.run_hook(dict(event, attempt=attempt))
+                self.assertEqual(len(self.calls()), before + 2)
+
+    def test_eca_stopped_uses_reason_status_cause_and_dropped_count(self):
+        for name in ('CliFailed', 'ReplyMissing'):
+            with self.subTest(name=name):
+                event = dict(self.event, name=name, code=name, retry=False, attempt=4,
+                             reason='claude exited 1', status=401, cause='api_401', dropped=2,
+                             error={'msg': 'must not replace the eca reason'})
+                before = len(self.calls())
+                r = self.run_hook(event)
+                self.assertEqual((r.stdout, r.stderr), ('', ''))
+                self.assertEqual(len(self.calls()), before + 1)
+                call = self.calls()[-1]
+                self.assertEqual(call[call.index('--title') + 1], 'worker: brain failed (%s), stopped' % name)
+                self.assertEqual(call[-1], '%s: claude exited 1; status 401; cause api_401. '
+                                 'Fix the cause, then start the agent again; after start it first waits out its '
+                                 'cooldown (30 s doubling to 30 min). 2 letter(s) handed over in that turn '
+                                 'got no answer and are not retried.' % name)
+                self.assertEqual(json.loads(self.seen.read_text()),
+                                 {'kind': 'stopped', 'code': name, 'history_lines': 0, 'attempt': 4})
+                self.run_hook(event)
+                self.assertEqual(len(self.calls()), before + 1)
+                self.run_hook(dict(event, attempt=5))
+                self.assertEqual(len(self.calls()), before + 2)
+
+    def test_eca_stopped_without_dropped_letters_omits_last_sentence(self):
+        for name in ('CliFailed', 'ReplyMissing'):
+            with self.subTest(name=name):
+                self.run_hook(dict(self.event, name=name, retry=False, attempt=1,
+                                   reason='the screen closed', dropped=0))
+                self.assertEqual(self.calls()[-1][-1], '%s: the screen closed. Fix the cause, then start the '
+                                 'agent again; after start it first waits out its cooldown '
+                                 '(30 s doubling to 30 min).' % name)
+                self.assertNotIn('llm.json', self.calls()[-1][-1])
+                self.assertNotIn('letter(s)', self.calls()[-1][-1])
+
+    def test_eca_without_boolean_retry_is_silent_without_recording(self):
+        no_box_or_cell = dict(self.env)
+        no_box_or_cell.pop('AOS_NOTIFY_BOX')
+        no_box_or_cell.pop('AOS_STACK')
+        for name in ('CliFailed', 'ReplyMissing'):
+            for retry in ('missing', None, 0, 1, 'true', 'false'):
+                for env in (self.env, no_box_or_cell):
+                    with self.subTest(name=name, retry=retry, box='AOS_NOTIFY_BOX' in env):
+                        event = dict(self.event, name=name)
+                        if retry != 'missing':
+                            event['retry'] = retry
+                        r = self.run_hook(event, env=env)
+                        self.assertEqual((r.stdout, r.stderr), ('', ''))
+                        self.assertEqual(self.calls(), [])
+                        self.assertFalse(self.seen.exists())
+
+    def test_eca_ignored_codex_event_preserves_existing_record(self):
+        original = '{"kind": "retrying", "armed": true}\n'
+        self.seen.write_text(original)
+        for name in ('CliFailed', 'ReplyMissing'):
+            r = self.run_hook(dict(self.event, name=name))
+            self.assertEqual((r.stdout, r.stderr), ('', ''))
+            self.assertEqual(self.calls(), [])
+            self.assertEqual(self.seen.read_text(), original)
+
+    def test_eca_dropped_must_be_integer_not_boolean(self):
+        for attempt, dropped in enumerate((None, '2', True, 0.0), 1):
+            with self.subTest(dropped=dropped):
+                self.run_hook(dict(self.event, name='CliFailed', retry=False, attempt=attempt,
+                                   reason='claude exited 1', dropped=dropped))
+                self.assertEqual(self.calls()[-1][-1], 'CliFailed: claude exited 1. Fix the cause, then start '
+                                 'the agent again; after start it first waits out its cooldown '
+                                 '(30 s doubling to 30 min; changing llm.json clears it).')
+
+    def test_brain_failed_without_dropped_keeps_exact_text(self):
+        self.run_hook(self.failed(attempt=3))
+        call = self.calls()[-1]
+        self.assertEqual(call[call.index('--title') + 1], 'worker: brain failed (ReplyBad), retrying by itself')
+        self.assertEqual(call[-1], 'ReplyBad: no choices; status 200. It has tried 3 times and keeps retrying '
+                         'by itself; no action is needed. To stop it, use stop.')
+        self.run_hook(self.failed(retry=False, attempt=4))
+        call = self.calls()[-1]
+        self.assertEqual(call[call.index('--title') + 1], 'worker: brain failed (ReplyBad), stopped')
+        self.assertEqual(call[-1], 'ReplyBad: no choices; status 200. Fix the cause, then start the agent again; '
+                         'after start it first waits out its cooldown '
+                         '(30 s doubling to 30 min; changing llm.json clears it).')
+
+    def test_eca_template_mount(self):
+        hooks = json.loads((PROTO / 'templates' / 'eca-claude' / 'hooks.json').read_text())
+        self.assertEqual(hooks['hooks']['brain_notify'],
+                         {'event': 'brain_failed', 'condition': ['CliFailed', 'ReplyMissing'],
+                          'handler': {'$env': 'AOS_HOME', '$path': '/lib/agent/brain_notify'},
+                          'on_error': 'continue', 'timeout_ms': 10000})
+        self.assertIn('AOS_NOTIFY_BOX', hooks['description'])
+        self.assertIn('codex events are ignored', hooks['description'])
+
 
 if __name__ == "__main__":
     unittest.main()

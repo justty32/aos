@@ -32,7 +32,7 @@
    "board_set/": "aos-comm board set 的包裝，目標＝叫我的那隻 agent 的根（05 A2：工具小格 <root>/tools/board_set 認回 <root>，aos-comm 照 $AOS_STACK 認）：整張換掉自己的布告欄。",
    "board_wait/": "aos-comm board wait 的包裝，目標＝叫我的那隻 agent 的根（05 A2）：在自己布告欄的 waiting_on 加一筆「在等誰、等什麼」，done 拿掉那人的。",
    "brain_notify": {
-    "_entry": "brain_failed 的 hook handler：把腦拒絕、連續重試與停下的原因寄到 AOS_NOTIFY_BOX。"
+    "_entry": "brain_failed 的 hook handler：把腦拒絕、claude eca／fsm 連續重試與停下的原因寄到 AOS_NOTIFY_BOX。"
    },
    "claude": {
     "cli.json": "設定（鍵：kind、flags、print_flags、timeout_ms）"

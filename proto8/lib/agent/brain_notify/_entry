@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# brain_notify - brain_failed 的 hook handler：把腦拒絕、連續重試與停下的原因寄到 AOS_NOTIFY_BOX。
+# brain_notify - brain_failed 的 hook handler：把腦拒絕、claude eca／fsm 連續重試與停下的原因寄到 AOS_NOTIFY_BOX。
 # 介面：stdin＝事件 JSON（event、hook、stack＝agent 的絕對 stack、name＝錯誤代號、reason）；$AOS_STACK＝hook 自己的小格。
 # 記帳：BudgetMissing 用 {code, history_lines}；BrainFailed 重試首輪 armed、第三次起寄一次，停下用 {kind, code, history_lines, attempt}。
 # 寄信：aos-mailbox --stack <agent stack> send --from <agent 名> --box <box> --status BLOCKED --title ... -- <原因與重試說明>。
@@ -21,6 +21,11 @@ It records {kind: retrying, armed: false} after sending; attempts 2 and later re
 BrainFailed without retry true sends a stopped notice, deduplicated by {kind: stopped, code, history_lines, attempt}.
 Its reason uses error.msg when available and includes status; the stopped notice says that after a start the
 agent first waits out its cooldown. Records live in $AOS_STACK/notified.json.
+Claude eca CliFailed / ReplyMissing events with a boolean retry use the same retry and stop bookkeeping.
+Those events without a boolean retry (codex) are silently ignored, without sending or recording anything.
+An integer dropped selects eca wording: retries continue the unanswered turn in the same conversation;
+stopped notices omit llm.json and report how many handed-over letters got no answer when dropped is nonzero.
+Eca detail uses code and reason, plus status and cause when supplied.
 An unset or blank AOS_NOTIFY_BOX only prints a warning; subagent add defaults it to the parent's mailbox.
 Needs aos-mailbox on PATH. All errors print one warning and exit 0; the agent is never failed.
 exit codes: 0 done (also on any error).
@@ -81,6 +86,8 @@ def main():
     if not isinstance(event, dict) or event.get("event") != "brain_failed":
         die("ArgumentsBad", "the event must be a brain_failed JSON object")
     stack, name, reason = (event.get(k) for k in ("stack", "name", "reason"))
+    if name in ("CliFailed", "ReplyMissing") and not isinstance(event.get("retry"), bool):
+        return 0
     code = event.get("code") or name
     if not isinstance(stack, str) or not os.path.isabs(stack):
         die("ArgumentsBad", "the event needs stack (the agent's absolute stack folder)")
@@ -112,15 +119,18 @@ def main():
         seen = None
     except OSError as e:
         die("ReadFailed", "cannot read %s: %s" % (path, e))
-    if name == "BrainFailed":
+    if name in ("BrainFailed", "CliFailed", "ReplyMissing"):
+        eca = type(event.get("dropped")) is int
         error = event.get("error")
         error = error if isinstance(error, dict) else {}
-        msg = error.get("msg") or reason
+        msg = reason if eca else (error.get("msg") or reason)
         detail = "%s: %s" % (code, msg)
         if "status" in event:
             detail += "; status %s" % event["status"]
-        elif "status" in error:
+        elif not eca and "status" in error:
             detail += "; status %s" % error["status"]
+        if eca and "cause" in event:
+            detail += "; cause %s" % event["cause"]
         attempt = event.get("attempt", 0)
         if event.get("retry") is True:
             if attempt == 1:
@@ -130,15 +140,27 @@ def main():
                 return 0
             keep = {"kind": "retrying", "armed": False}
             title = "%s: brain failed (%s), retrying by itself" % (agent, code)
-            what = ("%s. It has tried %s times and keeps retrying by itself; no action is needed. "
-                    "To stop it, use stop." % (detail, attempt))
+            if eca:
+                what = ("%s. It has tried %s times and keeps retrying by itself after each cooldown; "
+                        "the unanswered turn is continued in the same conversation. No action is needed. "
+                        "To stop it, use stop." % (detail, attempt))
+            else:
+                what = ("%s. It has tried %s times and keeps retrying by itself; no action is needed. "
+                        "To stop it, use stop." % (detail, attempt))
         else:
             keep = {"kind": "stopped", "code": code, "history_lines": lines, "attempt": attempt}
             if seen == keep:
                 return 0
             title = "%s: brain failed (%s), stopped" % (agent, code)
-            what = ("%s. Fix the cause, then start the agent again; after start it first waits out its cooldown "
-                    "(30 s doubling to 30 min; changing llm.json clears it)." % detail)
+            if eca:
+                what = ("%s. Fix the cause, then start the agent again; after start it first waits out its cooldown "
+                        "(30 s doubling to 30 min)." % detail)
+                if event["dropped"] != 0:
+                    what += (" %s letter(s) handed over in that turn got no answer and are not retried."
+                             % event["dropped"])
+            else:
+                what = ("%s. Fix the cause, then start the agent again; after start it first waits out its cooldown "
+                        "(30 s doubling to 30 min; changing llm.json clears it)." % detail)
         run(["aos-mailbox", "--stack", stack, "send", "--from", agent, "--box", box, "--status", "BLOCKED", "--title", title, "--", what])
         save(path, keep)
         return 0
