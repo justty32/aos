@@ -77,6 +77,155 @@ class ContextUse(unittest.TestCase):
         self.assertIsNone(context_use.read(str(self.stack)))
 
 
+class FsmContextUse(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.stack = Path(self.tmp.name) / "stack"
+        self.stack.mkdir()
+        self.kernel = Path(self.tmp.name) / "kernel"
+        self.kernel.mkdir()
+        (self.stack / "think").mkdir()
+        (self.stack / "think" / "brain_wait.json").write_text(json.dumps({"kernel": str(self.kernel)}))
+        self.packs({"sol-high": {"context": 1000}})
+
+    def packs(self, doc):
+        (self.kernel / "endpoints.json").write_text(json.dumps(doc))
+
+    def observed(self, usage, letter="turn-1", kind="think", endpoint="sol-high"):
+        with open(self.stack / "observed.jsonl", "a") as f:
+            f.write(json.dumps({"kind": kind, "letter": letter, "endpoint": endpoint, "usage": usage}) + "\n")
+
+    def test_last_think_reading(self):
+        self.observed({"prompt_tokens": 350, "completion_tokens": 999})
+        got = context_use.read(str(self.stack))
+        self.assertEqual(got, {"used": 350, "window": 1000, "percent": 35.0, "turn": "fsm:turn-1",
+                               "source": str(self.stack / "observed.jsonl")})
+        self.assertEqual(context_use.PROVIDERS[-1], context_use.from_fsm_observed)
+        self.assertIn("35.0% (350 of 1000 tokens), turn fsm:turn-1", context_use.explain(str(self.stack)))
+
+    def test_failed_and_compact_rows_do_not_change_reading(self):
+        self.observed({"prompt_tokens": 350})
+        self.observed(None, letter="failed")
+        self.observed({"prompt_tokens": 1}, letter="summary", kind="compact")
+        self.assertEqual(context_use.read(str(self.stack))["turn"], "fsm:turn-1")
+
+    def test_anthropic_input_sum_and_prompt_priority(self):
+        self.observed({"input_tokens": 100, "cache_read_input_tokens": 200, "cache_creation_input_tokens": 50})
+        self.assertEqual(context_use.read(str(self.stack))["used"], 350)
+        self.observed({"cache_read_input_tokens": 12})
+        self.assertEqual(context_use.read(str(self.stack))["used"], 12)
+        self.observed({"prompt_tokens": 5, "input_tokens": 1000})
+        self.assertEqual(context_use.read(str(self.stack))["used"], 5)
+        self.observed({"prompt_tokens": 0})
+        self.assertEqual(context_use.read(str(self.stack))["used"], 0)
+
+    def test_invalid_usage_and_letter_are_skipped(self):
+        self.observed({"prompt_tokens": 350})
+        for usage in ({}, {"completion_tokens": 1}, {"prompt_tokens": True}, {"prompt_tokens": -1},
+                      {"prompt_tokens": "350"}, {"prompt_tokens": 1.5}, {"input_tokens": False},
+                      {"input_tokens": -1}, {"prompt_tokens": None, "input_tokens": 999}):
+            with self.subTest(usage=usage):
+                self.observed(usage, letter="bad")
+                self.assertEqual(context_use.read(str(self.stack))["turn"], "fsm:turn-1")
+        for letter in (None, "", 3):
+            self.observed({"prompt_tokens": 999}, letter=letter)
+            self.assertEqual(context_use.read(str(self.stack))["turn"], "fsm:turn-1")
+
+    def test_window_override_and_missing_pack_context(self):
+        self.observed({"prompt_tokens": 350})
+        self.assertEqual(context_use.read(str(self.stack), window=2000)["window"], 2000)
+        for doc in ({"sol-high": {}}, {}, {"sol-high": {"context": True}},
+                    {"sol-high": {"context": 0}}, {"sol-high": {"context": "1000"}}):
+            with self.subTest(doc=doc):
+                self.packs(doc)
+                self.assertIsNone(context_use.read(str(self.stack)))
+                why = context_use.explain(str(self.stack))
+                self.assertIn("no reading: fsm: pack", why)
+                self.assertIn("config.window", why)
+                self.assertEqual(context_use.read(str(self.stack), window=2000)["window"], 2000)
+        for window in (True, 0, -1, "1000", 1.5):
+            self.assertIsNone(context_use.read(str(self.stack), window=window))
+
+    def test_missing_wait_and_bad_rows_explain(self):
+        self.assertEqual(context_use.explain(str(self.stack)), "no reading: no provider knows this stack")
+        self.observed({"prompt_tokens": 5}, kind="compact")
+        with open(self.stack / "observed.jsonl", "a") as f:
+            f.write("broken json\n[]\n")
+        self.assertIsNone(context_use.read(str(self.stack)))
+        self.assertIn("no valid think row", context_use.explain(str(self.stack)))
+        self.observed({"prompt_tokens": 350})
+        (self.stack / "think" / "brain_wait.json").write_text("broken json")
+        self.assertIsNone(context_use.read(str(self.stack)))
+        self.assertIn("brain_wait.json", context_use.explain(str(self.stack)))
+        self.assertEqual(context_use.read(str(self.stack), window=2000)["window"], 2000)
+
+    def test_fsm_generic_and_claude_readers_still_win(self):
+        self.observed({"prompt_tokens": 350})
+        (self.stack / "claude").mkdir()
+        (self.stack / "claude" / "live.jsonl").write_text(
+            json.dumps(assistant(100)) + "\n" + json.dumps(result()) + "\n")
+        self.assertTrue(context_use.read(str(self.stack), window=2000)["turn"].startswith("claude:"))
+        (self.stack / "context_usage.json").write_text(json.dumps({"used": 30, "window": 100, "turn": "generic"}))
+        got = context_use.read(str(self.stack), window=2000)
+        self.assertEqual((got["used"], got["window"], got["turn"]), (30, 100, "generic"))
+
+    def test_tail_skips_partial_first_line_but_keeps_small_first_line(self):
+        self.observed({"prompt_tokens": 350})
+        with open(self.stack / "observed.jsonl", "a") as f:
+            f.write("x" * (context_use.OBSERVED_TAIL + 10) + "\n")
+        self.assertIsNone(context_use.read(str(self.stack)))
+        self.observed({"prompt_tokens": 450}, letter="tail")
+        with open(self.stack / "observed.jsonl", "a") as f:
+            f.write("bad final line\n")
+        got = context_use.read(str(self.stack))
+        self.assertEqual((got["used"], got["turn"]), (450, "fsm:tail"))
+
+
+class ContextReading(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.stack = Path(self.tmp.name)
+
+    def reading(self, *args):
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        return subprocess.run([str(ENTRY), *args], env=env, text=True, capture_output=True, timeout=30)
+
+    def test_reading_without_stack_env_or_state(self):
+        (self.stack / "context_usage.json").write_text(json.dumps({"used": 350, "window": 1000, "turn": "t"}))
+        before = sorted(str(p) for p in self.stack.rglob("*"))
+        r = self.reading("--reading", str(self.stack))
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(len(r.stdout.splitlines()), 1)
+        self.assertIn("35.0% (350 of 1000 tokens), turn t", r.stdout)
+        self.assertEqual(before, sorted(str(p) for p in self.stack.rglob("*")))
+        r = self.reading("--reading", str(self.stack / "absent"))
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(r.stdout, "no reading: no provider knows this stack\n")
+
+    def test_reading_fsm_window_override(self):
+        (self.stack / "observed.jsonl").write_text(json.dumps(
+            {"kind": "think", "letter": "t", "usage": {"prompt_tokens": 350}}) + "\n")
+        r = self.reading("--reading", str(self.stack), "--window", "2000")
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertIn("17.5% (350 of 2000 tokens), turn fsm:t", r.stdout)
+        self.assertFalse((self.stack / "state.json").exists())
+
+    def test_reading_arguments_bad(self):
+        for args in (("--reading",), ("--reading", "--window"), ("--reading", str(self.stack), "extra"),
+                     ("--reading", str(self.stack), "--other", "10"),
+                     ("--reading", str(self.stack), "--window", "0"),
+                     ("--reading", str(self.stack), "--window", "true"),
+                     ("--reading", str(self.stack), "--window", "1.5"),
+                     ("--reading", str(self.stack), "--window", "-1"),
+                     ("--reading", str(self.stack), "--window", "10", "extra")):
+            with self.subTest(args=args):
+                r = self.reading(*args)
+                self.assertEqual((r.returncode, r.stdout), (1, ""))
+                self.assertTrue(r.stderr.startswith("context_wrap: error: ArgumentsBad"), r.stderr)
+
+
 @unittest.skipUnless(shutil.which("aos-post"), "aos-post not on PATH")
 class ContextWrap(unittest.TestCase):
     def setUp(self):
@@ -184,6 +333,45 @@ class ContextWrap(unittest.TestCase):
         r = subprocess.run([str(ENTRY), "--help"], capture_output=True, text=True)
         self.assertEqual(r.returncode, 0)
         self.assertIn("/compact", r.stdout)
+
+    def test_no_wrap_sends_only_compact_with_busy_queue(self):
+        self.turn(500)
+        subprocess.run(["aos-post", "init", str(self.stack / "queue")], check=True, capture_output=True)
+        subprocess.run(["aos-post", "send", "--ordered", str(self.stack / "queue")],
+                       input=json.dumps({"role": "user", "content": "busy"}),
+                       text=True, check=True, capture_output=True)
+        self.fire({"wrap": False})
+        self.assertEqual(self.contents(), ["busy", "/compact"])
+        self.assertEqual(self.phase(), "compacting")
+        self.fire({"wrap": False})
+        self.assertEqual(self.contents(), ["busy", "/compact"])
+        self.answer_all()
+        self.fire({"wrap": False})
+        self.assertEqual(self.phase(), "compacted")
+        self.turn(100)
+        self.fire({"wrap": False})
+        self.assertEqual(self.phase(), "idle")
+        self.turn(400)
+        self.fire({"wrap": False})
+        self.assertEqual(self.contents(), ["/compact"])
+
+    def test_fsm_handler_window_override(self):
+        (self.stack / "observed.jsonl").write_text(json.dumps(
+            {"kind": "think", "letter": "t1", "usage": {"prompt_tokens": 350}}) + "\n")
+        self.fire({"wrap": False})
+        self.assertEqual(self.contents(), [])
+        self.fire({"wrap": False, "window": 1000})
+        self.assertEqual(self.contents(), ["/compact"])
+        self.assertEqual(self.phase(), "compacting")
+
+    def test_invalid_wrap_and_window(self):
+        for bad in ({"wrap": "no"}, {"wrap": 0}, {"wrap": None}, {"window": 0}, {"window": True},
+                    {"window": -1}, {"window": "1000"}, {"window": 1.5}, {"window": None}):
+            with self.subTest(config=bad):
+                r = self.fire(bad, ok=False)
+                self.assertEqual((r.returncode, r.stdout), (1, ""))
+                self.assertTrue(r.stderr.startswith("context_wrap: error: ArgumentsBad"), r.stderr)
+                self.assertFalse((self.cell / "state.json").exists())
 
 
 if __name__ == "__main__":

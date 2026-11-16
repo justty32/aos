@@ -4,7 +4,8 @@
 #   跟agent說整理收尾，然後跑compact。」裁定「3.我們做通用的aos判斷，eca的話可以在這個基礎上接上claude hook。」「門檻用35%」；
 #   「不要耦合太深」：只用 aos 自己的介面（queue、letters.json、lib/agent/context_use），不依賴任何顯示端。
 # 介面：hook handler（lib/agent/hooks.py 用 aos-exec 起）：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、config…），$AOS_STACK＝這個 hook 自己的小格
-#   （$AGENT_STACK/hooks/<名>/），狀態記在 $AOS_STACK/state.json。格的 config（hooks.py 原樣帶來）：{"percent": 1～100 的數字}，沒寫＝35。
+#   （$AGENT_STACK/hooks/<名>/），狀態記在 $AOS_STACK/state.json。config：percent（1～100，預設35）、wrap（bool，預設true）、window（正整數，選填）。
+#   wrap=false 過門檻直接寄 /compact，不等 queue 空。--reading STACK [--window N] 只印讀數，不需要 $AOS_STACK、不寫 state。
 # 用量：lib/agent/context_use.read(agent stack)；讀不到（不是 claude 身、還沒答過一輪、檔壞）＝什麼都不做、不報錯。
 # 狀態（phase）：
 #   idle       用量 ≥ 門檻＝往 agent queue 寄收尾信（aos-post send --ordered），記下信名 → wrapping
@@ -23,6 +24,10 @@ NAME = "context_wrap"
 HELP = """usage: context_wrap < EVENT.json   (an on_clock hook handler; $AOS_STACK = this hook's own cell)
 Watch how full the agent's context is (lib/agent/context_use: the input tokens of the last call of the
 last finished turn / the context window). Brains that give no reading are left alone.
+usage: context_wrap --reading STACK [--window N]
+  Print one reading (or why none is available), without $AOS_STACK or state changes.
+Config: wrap must be a bool (default true); window must be a positive integer and overrides the fsm pack context.
+With wrap false, send only /compact immediately at the limit, even when the queue is not empty.
 At or over the limit (config {"percent": N} in the hook entry, default 35):
   1. send one message to STACK/queue asking the agent to wrap up (write what it is doing and what is
      still open into its handoff notes) and to answer "wrap-up done";
@@ -102,6 +107,22 @@ def fmt(n):
 
 
 def main():
+    args = sys.argv[1:]
+    if args[:1] == ["--reading"]:
+        if len(args) not in (2, 4) or not args[1] or args[1].startswith("--"):
+            die("ArgumentsBad", "expected --reading STACK [--window N]")
+        window = None
+        if len(args) == 4:
+            if args[2] != "--window":
+                die("ArgumentsBad", "expected --reading STACK [--window N]")
+            try:
+                window = int(args[3])
+            except ValueError:
+                die("ArgumentsBad", "window must be a positive integer")
+            if window <= 0:
+                die("ArgumentsBad", "window must be a positive integer")
+        sys.stdout.write(context_use.explain(args[1], window=window) + "\n")
+        return 0
     if sys.argv[1:2] in (["-h"], ["--help"]):
         sys.stdout.write(HELP)
         return 0
@@ -122,6 +143,12 @@ def main():
     limit = config.get("percent", DEFAULT_PERCENT)
     if isinstance(limit, bool) or not isinstance(limit, (int, float)) or not 0 < limit <= 100:
         die("ArgumentsBad", "config percent must be a number over 0 and at most 100, got %r" % (limit,))
+    wrap = config.get("wrap", True)
+    if not isinstance(wrap, bool):
+        die("ArgumentsBad", "config wrap must be a bool, got %r" % (wrap,))
+    window = config.get("window")
+    if "window" in config and (isinstance(window, bool) or not isinstance(window, int) or window <= 0):
+        die("ArgumentsBad", "config window must be a positive integer, got %r" % (window,))
     cell = os.environ.get("AOS_STACK")
     if not cell:
         die("StackMissing", "AOS_STACK is not set (this hook's own cell)")
@@ -135,12 +162,13 @@ def main():
         st = {}
     phase = st.get("phase") if st.get("phase") in ("idle", "wrapping", "compacting", "compacted") else "idle"
     box = os.path.join(stack, "queue")
-    u = context_use.read(stack)
+    u = context_use.read(stack, window=window)
     new = None
     if phase == "idle":
         if u is not None and u["percent"] >= limit:
-            sig = send(stack, box, wrap_text(u, limit, stack))
-            new = {"phase": "wrapping", "letter": sig, "percent": round(u["percent"], 1), "turn": u["turn"]}
+            sig = send(stack, box, wrap_text(u, limit, stack) if wrap else COMPACT)
+            new = {"phase": "wrapping" if wrap else "compacting", "letter": sig,
+                   "percent": round(u["percent"], 1), "turn": u["turn"]}
     elif phase == "wrapping":
         sig = st.get("letter")
         if not isinstance(sig, str) or answered(stack, box, sig):
