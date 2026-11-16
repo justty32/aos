@@ -75,6 +75,12 @@ def is_compact(text):
     return text == COMPACT or (text.startswith(COMPACT) and text[len(COMPACT)].isspace())
 
 
+def is_alone(text):
+    """這封信是不是一個 slash 指令（slash_of 會認的任何一個）：是＝一定單獨一批（11-16 ok-pano-b，把 compact-1115 的規則擴到全部；
+    頁面在對方回合中連送的 /usage、/context 不會再被併進一般信、交給模型）。"""
+    return slash_of([{"content": text}], None) is not None
+
+
 def slash_of(bodies, goal):
     if goal or len(bodies) != 1:
         return None

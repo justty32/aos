@@ -59,9 +59,6 @@ class CompactAlone(Base):
         self.say("/compactly", "z")
         self.ok_turn()
         self.assertEqual(self.calls()[-1]["stdin"], "/compactly\n\nz")
-        self.say("/clear", "hello")                                    # other slash commands keep the old rule
-        self.ok_turn()
-        self.assertEqual(self.calls()[-1]["stdin"], "/clear\n\nhello")
 
 
 class WrapThenCompact(Base):

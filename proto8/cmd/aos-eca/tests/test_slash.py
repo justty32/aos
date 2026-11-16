@@ -109,11 +109,32 @@ class ClaudeSlash(Base):
         self.ok_turn()
         self.assertIn("no screen is open", self.answer())
 
-    def test_mixed_batch_is_plain_text(self):
+    def test_slash_in_a_batch_goes_alone(self):
+        self.first_turn()                                           # 11-16 ok-pano-b: every slash letter is a batch of its own
         self.say("/clear", "hello")
         self.ok_turn()
-        self.assertEqual(self.calls()[-1]["stdin"], "/clear\n\nhello")
-        self.assertFalse((self.stack / "history_removed.jsonl").exists())
+        self.assertEqual(len(self.calls()), 1)                     # /clear is done by aos, the CLI is not asked
+        self.assertTrue((self.stack / "history_removed.jsonl").exists())
+        self.assertEqual(len(self.queue()), 1)                     # hello waits in cur/
+        self.ok_turn()
+        self.assertEqual(self.calls()[-1]["stdin"].splitlines()[-1], "hello")   # a new conversation: aos's note may come first
+
+    def test_repeated_usage_between_letters_never_reaches_the_model(self):
+        self.first_turn()                                           # what the page did 11-16: /usage x2 and /context queued during a turn
+        self.say("a", "/usage", "/usage", "b")
+        self.ok_turn()
+        self.assertEqual(self.calls()[-1]["stdin"], "a")
+        for _ in range(2):
+            self.ok_turn()
+            last = self.calls()[-1]
+            self.assertEqual(last["stdin"], "/usage")
+            self.assertIn("--no-session-persistence", last["argv"])
+            self.assertEqual(self.answer(), "FAKE: /usage")
+        self.ok_turn()
+        self.assertEqual(self.calls()[-1]["stdin"], "b")
+        self.assertEqual(self.queue(), [])
+        handed = [c["stdin"] for c in self.calls() if "--no-session-persistence" not in c["argv"]]
+        self.assertFalse(any("/usage" in h for h in handed))       # no /usage was ever handed to the conversation
 
     def test_goal_goes_to_claude_as_typed(self):
         old = self.first_turn()
