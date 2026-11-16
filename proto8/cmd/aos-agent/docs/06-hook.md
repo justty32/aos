@@ -72,6 +72,7 @@
 | `timeout_ms`（`--timeout-ms`） | 等它的上限，0＝不限時；到了整群收掉、算失敗 | 60000 |
 | `every_cycles`／`every_ms`（`--every-cycles`／`--every-ms`） | `on_clock` 的條件，二擇一 | — |
 | `clock`（`--clock`） | `on_clock` 看哪個時鐘：proc 名稱或路徑 | `$AOS_CLOCK` |
+| `config`（`--config JSON`） | `on_clock` 才收：任意 JSON，原樣放進事件的 `config` 給 handler 讀（例 context_wrap 的 `{"percent": 50}`；11-16 ok-small，以前只能手寫格） | 不帶 |
 
 queue 事件給 `--condition`＝`add` 直接 `ArgumentsBad`（由 `hooks.validate_entry` 說原因）。不能改的事件（`after_queue`、`brain_failed`、`tool_added`）或 `--async` 的 hook 寫 `intercept: true`＝不報錯、自然不看回話。
 

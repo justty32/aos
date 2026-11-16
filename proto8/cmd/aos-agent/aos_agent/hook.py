@@ -39,7 +39,7 @@ exit codes: 0 printed; 1 error (HookMissing, HooksMissing...).
 """,
     "add": """aos-agent hook add - add a hook for this agent only
 
-usage: aos-agent [--daemon D] hook [--target NAME] add --event EVENT [-n N] [--condition M]... [--every-cycles N | --every-ms N] [--clock C] [--no-intercept] [--async] [--on-error stop|continue] [--timeout-ms N] [--replace] (XXX | --path-json JSON)
+usage: aos-agent [--daemon D] hook [--target NAME] add --event EVENT [-n N] [--condition M]... [--every-cycles N | --every-ms N] [--clock C] [--config JSON] [--no-intercept] [--async] [--on-error stop|continue] [--timeout-ms N] [--replace] (XXX | --path-json JSON)
        aos-agent hook add --help
 
 Run XXX (anything aos-exec runs: a tool folder, a JSON file, an executable) when
@@ -63,6 +63,9 @@ flags:
       --clock C           on_clock: which clock: a proc name on the daemon table (its stack
                           has a clock file), or the path of a clock file or of a folder with
                           one (relative = from the agent's stack); default $AOS_CLOCK
+      --config JSON       on_clock: any JSON value kept in the entry as config; the handler
+                          gets it as the event's config field (e.g. context_wrap's
+                          '{"percent": 50, "wrap": true, "window": 200000}')
       --no-intercept      do not read its reply (by default it is read: exit 0 + JSON on
                           stdout changes the event, exit 10 blocks it; only for
                           before_queue, before_tool, after_tool; other events and
@@ -167,7 +170,9 @@ def ls(entries, folder, stack, own, long, as_json):
         m = e.get("condition")
         m = "-" if m is None else m if isinstance(m, str) else ",".join(m)
         if e["event"] == hooks.CLOCK_EVENT:          # 11-11：on_clock 的條件寫在 CONDITION 欄
-            m = ",".join("%s=%s" % (k, e[k]) for k in hooks.CLOCK_KEYS if k in e)
+            m = ",".join(["%s=%s" % (k, e[k]) for k in hooks.CLOCK_KEYS if k in e]
+                         + (["config=" + json.dumps(e["config"], ensure_ascii=False, separators=(",", ":"))]
+                            if "config" in e else []))       # 一律 JSON：字串保留引號、\t \n 跳脫，不弄壞 TAB 欄
         print("\t".join((n, e["event"], compact(e["handler"]), m, json.dumps(e["async"]), e["on_error"],
                          json.dumps(e["intercept"]), str(e["timeout_ms"]), e["from"])))
     if long:
@@ -180,6 +185,18 @@ def loaded_nulled(folder, stack):
         return hooks.nulled(folder, stack)
     except hooks.HooksBad as e:
         raise Fail("HooksBad", str(e)) from e
+
+
+def config_value(help, event, text):
+    """--config 的字 → JSON 值；只有 on_clock 的 handler 拿得到 config（hooks.clock_tick），別的事件給了＝ArgumentsBad。"""
+    if event != hooks.CLOCK_EVENT:
+        raise bad_args(help, "--config is only for event %s (only its handler gets the config)" % hooks.CLOCK_EVENT)
+    def no_nan(word):
+        raise ValueError("%s is not standard JSON" % word)
+    try:
+        return json.loads(text, parse_constant=no_nan)
+    except ValueError as e:
+        raise bad_args(help, "--config is not JSON: %s" % e) from e
 
 
 def build(topts, args, own, help):
@@ -227,6 +244,8 @@ def build(topts, args, own, help):
         hooks.validate_entry(entry)
     except hooks.HooksBad as e:
         raise bad_args(help, str(e)) from e
+    if "config" in topts:                         # 11-16 ok-small：重加 context_wrap 時帶得回門檻（hooks.py 原樣交給 on_clock handler）；
+        entry["config"] = config_value(help, topts["event"], topts["config"])   # 事件本身的錯先報
     return name, entry
 
 
@@ -237,7 +256,7 @@ def cmd(argv):
         raise Fail("CommandUnknown", "hook: unknown subcommand %s (ls, get, add, rm, reset; see aos-agent hook --help)" % act)
     flags = {"add": {"--event": "event", "--name": "name", "--on-error": "on_error", "--timeout-ms": "timeout_ms",
                      "--path-json": "path_json", "--every-cycles": "every_cycles", "--every-ms": "every_ms",
-                     "--clock": "clock"}}.get(act, {})
+                     "--clock": "clock", "--config": "config"}}.get(act, {})
     switches = {"ls": {"--json": "json", "--long": "long"},
                 "add": {"--no-intercept": "no_intercept", "--async": "async", "--replace": "replace"},
                 "reset": {"--yes": "yes"}}.get(act, {})

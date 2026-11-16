@@ -88,6 +88,28 @@ class Hook(unittest.TestCase):
         self.fails("ArgumentsBad", "add", "--event", "on_clock", "--every-ms", "0", "-n", "x", "h/guard")
         self.fails("ArgumentsBad", "add", "--event", "after_tool", "--every-ms", "5", "-n", "x", "h/guard")
 
+    def test_add_on_clock_config(self):   # 11-16 ok-small：--config 原樣寫進格（任意 JSON），ls -l 的 CONDITION 欄看得到，只收 on_clock
+        cfg = {"percent": 50, "wrap": True, "window": 200000}
+        self.agent("add", "--event", "on_clock", "--every-ms", "5000", "--config", json.dumps(cfg), "-n", "cw", "h/guard")
+        self.assertEqual(self.own_hooks()["cw"]["config"], cfg)
+        self.agent("add", "--event", "on_clock", "--every-ms", "5000", "--config", "[1, \"a\"]", "--replace", "-n", "cw", "h/guard")
+        self.assertEqual(self.own_hooks()["cw"]["config"], [1, "a"])
+        rows = {l.split("\t")[0]: l.split("\t") for l in self.agent("ls", "-l").stdout.splitlines()}
+        self.assertEqual(rows["cw"][3], 'every_ms=5000,config=[1,"a"]')
+        self.agent("add", "--event", "on_clock", "--every-ms", "5000", "--replace", "-n", "cw", "h/guard")
+        self.assertNotIn("config", self.own_hooks()["cw"])                                            # 沒給＝不帶（replace 不留舊的）
+        self.assertIn("not JSON", self.fails("ArgumentsBad", "add", "--event", "on_clock", "--every-ms", "5", "--config", "{x",
+                                             "-n", "x", "h/guard").stderr)
+        self.assertIn("only for event on_clock", self.fails("ArgumentsBad", "add", "--event", "after_tool", "--config", "{}",
+                                                            "-n", "x", "h/guard").stderr)
+        self.assertIn("not standard JSON", self.fails("ArgumentsBad", "add", "--event", "on_clock", "--every-ms", "5", "--config", "NaN",
+                                                      "-n", "x", "h/guard").stderr)
+        self.agent("add", "--event", "on_clock", "--every-ms", "5", "--config", "-1", "-n", "neg", "h/guard")
+        self.assertEqual(self.own_hooks()["neg"]["config"], -1)
+        self.agent("add", "--event", "on_clock", "--every-ms", "5", "--config", json.dumps("a\tb"), "-n", "s", "h/guard")
+        rows = {l.split("\t")[0]: l.split("\t") for l in self.agent("ls", "-l").stdout.splitlines()}
+        self.assertEqual(rows["s"][3], 'every_ms=5,config="a\\tb"')                                   # quoted, tab escaped
+
     def test_path_json(self):
         d = {"$env": "AOS_HOME", "$path": "/lib/x"}
         self.agent("add", "--event", "tool_added", "--name", "pj", "--path-json", json.dumps(d))
