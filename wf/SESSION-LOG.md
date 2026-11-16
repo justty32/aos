@@ -56,7 +56,7 @@
 - **open｜11-16 llm_http 遇到非 OpenAI 格式回覆就讓 agent 停掉**：ok-pano-1116-sol-3 02:11Z 停在 RunFailed（`llm_http: error: ReplyBad reply is not OpenAI-shaped (KeyError: 'choices')` → `agent-fsm: error: BrainFailed`），proxy 127.0.0.1:4000 回了沒有 choices 的回覆，沒重試、沒冷卻，一次就停；隊長用同 stack `subagent start` 救回。對照：BudgetMissing 是冷卻後重試不停。**使用者 11-16：「剛剛ok-pano有跟你說東西，那個也是等一下要開線做的。」**→ 等 ok-pano-1116 做完後開線（與 codex 回合中收信那條一起排）：ReplyBad／暫時性 proxy 錯誤改成重試一兩次或進冷卻；順便看 proxy log 那次回了什麼。
 - **open｜11-16 之後開線：pi coding agent**：使用者 11-16：「對了，之後還要開線做pi coding agent」。排在 ok-pano-1116 之後。家機已裝 `pi`（`~/.local/share/fnm/node-versions/v24.14.1/installation/bin/pi`）；前情：10-24 仿 pi 做了 read／bash／edit／write 工具（`proto8/thinking/2026-10/24/pi-tools/`），aos-mcp README 已把 pi 列為可叫 aos 工具的外部 agent。範圍待使用者確認（頂層讀法：把 pi 做成 eca 的第三種身，與 claude、codex 並列）。
 - **open｜11-16 agent-fsm 也要一套 context 收尾／壓縮**：使用者 11-16：「agent-fsm那個得做一套。」eca 有 context_wrap（35% 先收尾再 /compact），agent-fsm 範本沒有，history 只會長（ok-pano-1116-sol-3 停時 390 KB）。待開線：照正規流程設計 fsm 版（可能用 do_task 摺疊／history summarize），排在 ok-pano 之後，可與路徑規劃一起看。
-- **open｜11-16 push 授權**：使用者 11-16「允許push main。」已推 `3e1df5136..0dc86091e`（240 個 commit；推前掃過 diff，只有測試用假 key）。給 ok-release 上 GitHub Pages 用。
+- **open｜11-16 push 授權**：使用者 11-16「允許push main。」已推到 `07145aac4`；GitHub Pages 已開（main `/docs`，built，https://justty32.github.io/aos/ 回 200）。頁是 ok-release 照 `~/aos-home/ws/user/草稿.md` 改的試上線版：**正式發佈前要拿掉 `noindex` 與「試上線版」提示帶**；5 個方向題（Q2、U1～U4）已寄使用者專區，頁面先照推薦做；repo 沒有 LICENSE。
 - 導覽：[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/docs/CONCEPTS.md)、[NORMS](../proto8/docs/NORMS.md)；停在半路的見 [restart](../proto8/thinking/2026-10/11/restart/README.md) §4
 
 ## 各工作流 session-log
