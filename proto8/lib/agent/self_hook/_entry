@@ -5,8 +5,8 @@
 # 介面（lib/README 的契約）：stdin 收 {"op": "ls"|"get"|"add"|"rm"|"reset", …}；別的鍵＝ArgumentsBad：
 #   ls {long?}                   ＝hook ls --json（long: true＝ls -l 的文字，含被設成 null 的格）
 #   get {name}                   ＝hook get NAME
-#   add {event, path | path_json, name?, condition?（字串或字串陣列）, every_cycles?, every_ms?, clock?（11-11 on_clock）, intercept?（false＝--no-intercept；預設開）, async?（true＝--async）, on_error?, timeout_ms?, replace?}
-#                                ＝hook add --event E [--name] [--condition M]… [--every-cycles N] [--every-ms N] [--clock C] [--no-intercept] [--async] [--on-error] [--timeout-ms] [--replace] (XXX | --path-json)
+#   add {event, path | path_json, name?, condition?（字串或字串陣列）, every_cycles?, every_ms?, clock?（11-11 on_clock）, config?（11-16 on_clock 的 config，任意 JSON）, intercept?（false＝--no-intercept；預設開）, async?（true＝--async）, on_error?, timeout_ms?, replace?}
+#                                ＝hook add --event E [--name] [--condition M]… [--every-cycles N] [--every-ms N] [--clock C] [--config JSON] [--no-intercept] [--async] [--on-error] [--timeout-ms] [--replace] (XXX | --path-json)
 #                                （鍵名 11-10 深夜改，使用者「hook這塊，主要走A, 但filter改condition。」）
 #   rm {name}                    ＝hook rm NAME
 #   reset {}                     ＝hook reset -y（腦叫了就算確認過）
@@ -61,7 +61,7 @@ def agent(*args):
 cmd_call.catch_signals()                       # TERM 與 Ctrl-C：先收掉正在跑的那一群，退 128＋N（Ctrl-C 130、不吐 traceback，R12）
 args = arguments()
 OPS = {"ls": ("long",), "get": ("name",),
-       "add": ("event", "path", "path_json", "name", "condition", "every_cycles", "every_ms", "clock", "intercept", "async",
+       "add": ("event", "path", "path_json", "name", "condition", "every_cycles", "every_ms", "clock", "config", "intercept", "async",
                "on_error", "timeout_ms", "replace"),
        "rm": ("name",), "reset": ()}
 op = args.get("op")
@@ -116,6 +116,8 @@ else:
             every += ["--" + key.replace("_", "-"), str(v)]
     clock = text("clock")
     every += ["--clock", clock] if clock else []
+    if args.get("config") is not None:           # 11-16 ok-small：任意 JSON 原樣轉成 --config（只收 on_clock 由 aos-agent hook 說）；null＝沒給
+        every += ["--config", json.dumps(args["config"], ensure_ascii=False)]
     on, name, on_fail = text("event", True), text("name"), text("on_error")
     cmd += ["--event", on] + (["--name", name] if name else []) + [x for m in match for x in ("--condition", m)] \
         + ([] if flag("intercept", True) else ["--no-intercept"]) + (["--async"] if flag("async") else []) \

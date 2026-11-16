@@ -66,6 +66,22 @@ class SelfHook(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("self_hook: error: ArgumentsBad every_cycles must be integer", r.stderr)
 
+    def test_add_config(self):   # 11-16 ok-small：config（任意 JSON）原樣轉成 --config
+        cfg = {"percent": 50, "wrap": True}
+        r = self.run_tool({"op": "add", "event": "on_clock", "path": "hooks/guard", "every_ms": 5000, "config": cfg})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        call = self.calls()[-1]
+        self.assertEqual(call[call.index("--config") + 1], json.dumps(cfg))
+        self.run_tool({"op": "add", "event": "on_clock", "path": "hooks/guard", "every_ms": 5000, "config": 7})
+        call = self.calls()[-1]
+        self.assertEqual(call[call.index("--config") + 1], "7")
+        self.run_tool({"op": "add", "event": "on_clock", "path": "hooks/guard", "every_ms": 5000})
+        self.assertNotIn("--config", self.calls()[-1])
+        self.run_tool({"op": "add", "event": "on_clock", "path": "hooks/guard", "every_ms": 5000, "config": None})
+        self.assertNotIn("--config", self.calls()[-1])                                                   # null = not given
+        r = self.run_tool({"op": "ls", "config": {}})
+        self.assertIn("self_hook: error: ArgumentsBad op ls does not take config", r.stderr)
+
     def test_each_op(self):
         d = {"$env": "AOS_HOME", "$path": "/lib/x"}
         for args, want in (({"op": "ls"}, ["ls", "--json"]),
