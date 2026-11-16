@@ -5,6 +5,8 @@
 # The live daemon and ~/aos-home are never read or written.
 # Run through the task clean.sh wrapper (no AOS_*): python3 tests/demo_v2.py [PORT1 PORT2]
 # VIEW_DEMO_SLASH_DELAY=SECONDS (default 0): a slash sent from the page is answered only after that long (to see the queued state).
+# VIEW_DEMO_PEEK_DELAY=SECONDS (default 2): `aos-agent peek` (/status, /usage) answers after that long, never touching history.
+# VIEW_DEMO_TMP=DIR (default ~/.aos/scratch/ok-pano-1116): where the new view-demo-* folder goes.
 # Prints "READY <tmp> <p1> <p2>" and keeps serving until killed.
 import json
 import os
@@ -64,6 +66,14 @@ if args[0] == "say":
         pending.write_text(json.dumps(waiting))
         settle()
     print(letter)
+elif args[0] == "peek":
+    # read-only: logged with how=peek, answered on stdout, history and pending untouched
+    text = args[-1]
+    with (root / "said.jsonl").open("a") as f:
+        f.write(json.dumps({"name": name, "text": text, "how": "peek"}) + "\n")
+    time.sleep(float(os.environ.get("VIEW_DEMO_PEEK_DELAY", "2")))
+    print(text + " for " + name + " (peek, not queued):")
+    print("\n".join("Peek row %02d: model, session, limits." % i for i in range(12)))
 elif args[0] == "ctl":
     hist_rows = settle()
     rows = json.loads((root / "ls.json").read_text())
@@ -93,7 +103,7 @@ def iso(t):
 def main():
     p1 = int(sys.argv[1]) if len(sys.argv) > 1 else 18767
     p2 = int(sys.argv[2]) if len(sys.argv) > 2 else 18768
-    t = tempfile.mkdtemp(prefix="view-demo-", dir=os.path.expanduser("~/.aos/scratch/ok-pano-1116"))
+    t = tempfile.mkdtemp(prefix="view-demo-", dir=os.environ.get("VIEW_DEMO_TMP") or os.path.expanduser("~/.aos/scratch/ok-pano-1116"))
     home, procs, zone, bindir = (os.path.join(t, x) for x in ("view", "procs", "user", "bin"))
     os.makedirs(bindir)
     with open(os.path.join(bindir, "aos-agent"), "w") as f:
@@ -149,16 +159,18 @@ def main():
     os.chmod(os.path.join(tools, "aos-user", "aos-user"), 0o755)
     asks = os.path.join(t, "asks.json")
     slash_fixture = os.path.join(t, "slash.json")
-    commands = [{"name": name, "args": args, "confirm": confirm, "how": "turn", "cli": ["claude", "codex"]}
-                for name, args, confirm in (("compact", "optional", False), ("status", "none", False),
-                    ("usage", "none", False), ("goal", "optional", False), ("clear", "none", True), ("exit", "none", True))]
+    commands = [{"name": name, "args": args, "confirm": confirm, "how": how, "cli": ["claude", "codex"]}
+                for name, args, confirm, how in (("compact", "optional", False, "turn"), ("status", "none", False, "peek"),
+                    ("usage", "none", False, "peek"), ("goal", "optional", False, "turn"), ("clear", "none", True, "turn"),
+                    ("exit", "none", True, "turn"))]
     commands.append({"name": "context", "args": "none", "confirm": False, "how": "screen", "cli": ["claude"]})
     with open(slash_fixture, "w") as f:
         json.dump(commands, f)
     env = {"PATH": bindir + ":" + os.environ["PATH"], "HOME": os.environ["HOME"], "LANG": "C.UTF-8",
            "PYTHONDONTWRITEBYTECODE": "1", "VIEW_LS_FIXTURE": os.path.join(t, "ls.json"), "AOS_USER_ZONE": zone,
            "VIEW_TOOLS": tools, "VIEW_ASKS_FIXTURE": asks, "VIEW_SLASH_FIXTURE": slash_fixture, "VIEW_DEMO_ROOT": t,
-           "VIEW_DEMO_SLASH_DELAY": os.environ.get("VIEW_DEMO_SLASH_DELAY", "0")}
+           "VIEW_DEMO_SLASH_DELAY": os.environ.get("VIEW_DEMO_SLASH_DELAY", "0"),
+           "VIEW_DEMO_PEEK_DELAY": os.environ.get("VIEW_DEMO_PEEK_DELAY", "2")}
     subprocess.run([VIEW, "--home", home, "init"], env=env, check=True, capture_output=True)
     cfgp = os.path.join(home, "config.json")
     with open(cfgp) as f:

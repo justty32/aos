@@ -24,7 +24,7 @@ loader.exec_module(v)
 
 class Slash(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix="slash-", dir=str(Path.home() / ".aos/scratch/ok-pano-b"))
+        self.tmp = tempfile.mkdtemp(prefix="slash-", dir=os.environ.get("VIEW_TEST_TMP") or str(Path.home() / ".aos/scratch/ok-pano-b"))
         self.home = v.Home(self.tmp)
         Path(self.home.state).mkdir()
         self.node = {"kind": "agent", "state": "running", "queued": 0,
@@ -33,12 +33,18 @@ class Slash(unittest.TestCase):
         self.run = patch.object(v, "run", return_value=(0, "L-slash\n", "")).start()
         self.run_json = patch.object(v, "run_json", return_value=None).start()
         v.SLASH_CACHE.clear()
+        v.PEEK.clear()
+        # A peek never runs a real aos-agent here: the thread is captured, subprocess.run is a mock.
+        self.peeks = []
+        patch.object(v, "start_peek", side_effect=self.peeks.append).start()
+        self.sub = patch.object(v.subprocess, "Popen").start()
+        self.killpg = patch.object(v.os, "killpg").start()
         self.addCleanup(patch.stopall)
         self.env = patch.dict(os.environ)
         self.env.start()
         os.environ.pop("VIEW_SLASH_FIXTURE", None)
 
-    def send(self, text="/status", name="board"):
+    def send(self, text="/goal", name="board"):
         return v.do_slash({"name": name, "text": text}, self.tree, self.home)
 
     def fixture(self, commands):
@@ -112,27 +118,27 @@ class Slash(unittest.TestCase):
 
     def record(self, age=0, **fields):
         rec = {"at": datetime.fromtimestamp(v.time.time() - age, timezone.utc).isoformat(),
-               "kind": "slash", "to": "board", "text": "/status", "ok": True, "letter": "L-old"}
+               "kind": "slash", "to": "board", "text": "/goal", "ok": True, "letter": "L-old"}
         rec.update(fields)
         v.log_sent(self.home, rec)
         return rec
 
     def test_duplicate_and_resend_after_answer(self):
         ret = {}
-        self.assertFalse(v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, ret).startswith("!"))
+        self.assertFalse(v.do_slash({"name": "board", "text": "/goal"}, self.tree, self.home, ret).startswith("!"))
         self.assertFalse(ret["dup"])
         v.SLASH_CACHE["board"] = {"at": v.time.time(), "rows": [{"message": {
             "role": "assistant", "content": "stale answer", "aos": {"answer_to": ["L-slash"]}}}]}
         self.run_json.side_effect = [{"history": {"messages": 0}}]
-        result = v.do_slash({"name": "board", "text": "  /status  "}, self.tree, self.home, ret)
-        self.assertEqual(result, "/status 已在排隊（還沒回），不重送")
+        result = v.do_slash({"name": "board", "text": "  /goal  "}, self.tree, self.home, ret)
+        self.assertEqual(result, "/goal 已在排隊（還沒回），不重送")
         self.assertEqual(ret, {"dup": True, "letter": "L-slash"})
         self.run.assert_called_once()
         self.assertEqual(len((Path(self.home.state) / "sent.jsonl").read_text().splitlines()), 1)
         self.run_json.side_effect = [{"history": {"messages": 1}}, [{"message": {
             "role": "assistant", "content": "done", "aos": {"answer_to": ["L-slash"]}}}]]
         self.run.return_value = (0, "L-next\n", "")
-        self.assertFalse(v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, ret).startswith("!"))
+        self.assertFalse(v.do_slash({"name": "board", "text": "/goal"}, self.tree, self.home, ret).startswith("!"))
         self.assertEqual(ret, {"dup": False, "letter": "L-next"})
         self.assertEqual(self.run.call_count, 2)
 
@@ -152,7 +158,7 @@ class Slash(unittest.TestCase):
             try:
                 if i == 1:
                     second_started.set()
-                results.append(v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, returns[i]))
+                results.append(v.do_slash({"name": "board", "text": "/goal"}, self.tree, self.home, returns[i]))
             except Exception as exc:
                 errors.append(exc)
 
@@ -179,24 +185,24 @@ class Slash(unittest.TestCase):
 
     def test_old_or_different_requests_do_not_deduplicate(self):
         self.record(age=1801)
-        self.record(text="/usage")
+        self.record(text="/clear")
         self.record(to="other")
         self.record(ok=False)
         self.record(letter=None)
         self.record(kind="compact")
         ret = {}
-        v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, ret)
+        v.do_slash({"name": "board", "text": "/goal"}, self.tree, self.home, ret)
         self.assertEqual(ret, {"dup": False, "letter": "L-slash"})
         self.run.assert_called_once()
         self.run_json.assert_not_called()
 
     def test_latest_matching_request_controls_deduplication(self):
-        older = self.record(age=5, letter="L-older", text="  /status  ")
+        older = self.record(age=5, letter="L-older", text="  /goal  ")
         self.record(at=older["at"], letter="L-newer")
         self.run_json.side_effect = [{"history": {"messages": 1}}, [{"message": {
             "role": "assistant", "content": "done", "aos": {"answer_to": ["L-older"]}}}]]
         ret = {}
-        v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, ret)
+        v.do_slash({"name": "board", "text": "/goal"}, self.tree, self.home, ret)
         self.assertEqual(ret, {"dup": True, "letter": "L-newer"})
         self.run.assert_not_called()
 
@@ -254,7 +260,7 @@ class Slash(unittest.TestCase):
                 patch.object(v, "slash_rows", return_value=[]):
             self.assertIsNone(v.slash_results(self.home, "board", self.node)["items"][0]["at"])
         self.assertEqual((got["items"][0]["command"], got["items"][0]["state"], got["items"][0]["text"]),
-                         ("/status", "waiting", ""))
+                         ("/goal", "waiting", ""))
 
     def test_delivery_failure(self):
         self.run.return_value = (1, "", "delivery failed")
@@ -297,7 +303,7 @@ class Slash(unittest.TestCase):
                     c.close()
                     return result
                 h = {"Content-Type": "application/json", "X-View-Token": "test-token", "Cookie": "aosview=test-token"}
-                payload = json.dumps({"name": "board", "text": "/status"})
+                payload = json.dumps({"name": "board", "text": "/goal"})
                 self.assertEqual(json.loads(req("GET")[1]), {"commands": v.SLASH_CMDS})
                 p = self.fixture([])
                 self.assertEqual(json.loads(req("GET")[1]), {"commands": []})
@@ -316,7 +322,7 @@ class Slash(unittest.TestCase):
                 self.run.assert_called_once()
                 path = "/api/slash_results?name=board"
                 self.assertEqual(json.loads(req("GET", path=path)[1]), {"items": [{
-                    "letter": "L-slash", "command": "/status", "at": v.parse_time(json.loads(
+                    "letter": "L-slash", "command": "/goal", "at": v.parse_time(json.loads(
                         (Path(self.home.state) / "sent.jsonl").read_text())["at"]), "state": "unknown", "text": ""}],
                     "in_turn": False})
                 self.assertEqual(req("GET", headers={"Host": "bad"}, path=path)[0], 403)
@@ -394,6 +400,105 @@ class Slash(unittest.TestCase):
         self.assertNotIn("slash", ordinary)
         self.assertNotIn("slash", v.history_item(row(content, "user")))
         self.assertEqual(v.last_full([row([{"type": "text", "text": "first\nsecond"}])]), ("first\nsecond", False))
+
+
+
+class Peek(unittest.TestCase):
+    """/status and /usage go through `aos-agent peek`: no queue, no history, answered while in a turn."""
+
+    setUp = Slash.setUp
+
+    def answer(self, code=0, out="", err="", timeout=False):
+        proc = self.sub.return_value
+        proc.pid, proc.returncode = 4321, code
+        proc.communicate.side_effect = ([v.subprocess.TimeoutExpired("aos-agent", 300), ("", "")] if timeout else
+                                        [(out, err)])
+        self.peeks.pop(0)()
+
+    def items(self):
+        return v.slash_results(self.home, "board", self.node)["items"]
+
+    def test_peek_in_turn_with_queue(self):
+        self.node.update(queued=3, live={"cli": "claude", "in_turn": True})
+        ret = {}
+        result = v.do_slash({"name": "board", "text": "/usage"}, self.tree, self.home, ret)
+        self.assertFalse(result.startswith("!"), result)
+        self.assertIn("不用排隊", result)
+        self.run.assert_not_called()
+        self.run_json.assert_not_called()
+        self.assertFalse(ret["dup"])
+        self.assertTrue(ret["letter"].startswith("peek-"))
+        sent = [json.loads(x) for x in Path(self.home.state, "sent.jsonl").read_text().splitlines()]
+        self.assertEqual([(r["how"], r["text"], r["letter"]) for r in sent], [("peek", "/usage", ret["letter"])])
+        self.assertEqual([(i["command"], i["state"]) for i in self.items()], [("/usage", "doing")])
+        self.answer(out="Current session: 12% used\n")
+        argv = self.sub.call_args.args[0]
+        self.assertEqual(argv, ["aos-agent", "peek", "-t", "board", "/usage"])
+        self.assertIs(self.sub.call_args.kwargs["stdin"], v.subprocess.DEVNULL)
+        self.assertTrue(self.sub.call_args.kwargs["start_new_session"])
+        self.killpg.assert_not_called()
+        self.assertEqual([(i["state"], i["text"]) for i in self.items()], [("answered", "Current session: 12% used")])
+        self.run.assert_not_called()
+
+    def test_peek_dedup_only_while_doing(self):
+        ret = {}
+        v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, ret)
+        first = ret["letter"]
+        again = {}
+        self.assertIn("還在做", v.do_slash({"name": "board", "text": " /status "}, self.tree, self.home, again))
+        self.assertEqual(again, {"dup": True, "letter": first})
+        self.assertEqual(len(self.peeks), 1)
+        other = {}
+        v.do_slash({"name": "board", "text": "/usage"}, self.tree, self.home, other)
+        self.assertFalse(other["dup"])
+        self.answer(out="ok")
+        later = {}
+        v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, later)
+        self.assertFalse(later["dup"])
+        self.assertNotEqual(later["letter"], first)
+
+    def test_peek_failure_and_timeout(self):
+        v.do_slash({"name": "board", "text": "/usage"}, self.tree, self.home, {})
+        self.answer(code=2, err="aos-agent: CliFailed usage failed\n")
+        v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, {})
+        self.answer(timeout=True)
+        self.killpg.assert_called_once_with(4321, v.signal.SIGKILL)       # the whole group, not only aos-agent
+        got = {i["command"]: (i["state"], i["text"]) for i in self.items()}
+        self.assertEqual(got["/usage"], ("answered", "（沒做成）aos-agent: CliFailed usage failed"))
+        self.assertEqual(got["/status"], ("answered", "（沒做成）timeout after 300s"))
+        v.do_slash({"name": "board", "text": "/usage"}, self.tree, self.home, {})
+        self.sub.side_effect = ValueError("boom")
+        self.peeks.pop(0)()
+        self.assertEqual(self.items()[0]["text"], "（沒做成）ValueError: boom")    # never stuck in "doing"
+        self.assertFalse(v.do_slash({"name": "board", "text": "/usage"}, self.tree, self.home, {}).startswith("!"))
+
+    def test_only_newest_peek_rows_keep_queued_ones_visible(self):
+        self.node["live"]["in_turn"] = True
+        v.do_slash({"name": "board", "text": "/goal"}, self.tree, self.home, {})
+        for _ in range(12):
+            v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, {})
+            self.answer(out="ok")
+        with patch.object(v, "slash_rows", return_value=[]):
+            got = [i["command"] for i in self.items()]
+        self.assertEqual(sorted(got), ["/goal", "/status"])
+
+    def test_peek_result_survives_restart(self):
+        v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, {})
+        self.answer(out="Model: x\nsk-ant-api03-" + "a" * 40)
+        v.PEEK.clear()
+        (state, text), = [(i["state"], i["text"]) for i in self.items()]
+        self.assertEqual(state, "answered")
+        self.assertTrue(text.startswith("Model: x\n"))
+        self.assertNotIn("a" * 40, text)
+        v.do_slash({"name": "board", "text": "/usage"}, self.tree, self.home, {})
+        v.PEEK.clear()
+        self.assertEqual(self.items()[0]["state"], "unknown")
+
+    def test_peek_keeps_gates(self):
+        self.assertTrue(v.do_slash({"name": "board", "text": "/usage now"}, self.tree, self.home).startswith("!"))
+        self.node["state"] = "stopped"
+        self.assertTrue(v.do_slash({"name": "board", "text": "/usage"}, self.tree, self.home).startswith("!"))
+        self.assertEqual(self.peeks, [])
 
 
 if __name__ == "__main__":

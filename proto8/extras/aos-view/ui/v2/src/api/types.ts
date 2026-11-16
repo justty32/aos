@@ -91,7 +91,7 @@ export interface AgentCard {
   history: { line: number; role: string; text: string; tools: string[]; slash?: string }[];
 }
 
-export interface SlashCmd { name: string; args: "none" | "optional" | "required"; confirm: boolean; how: "turn" | "screen"; cli: string[] }
+export interface SlashCmd { name: string; args: "none" | "optional" | "required"; confirm: boolean; how: "turn" | "screen" | "peek"; cli: string[] }
 
 export interface SlashResult { letter: string; command: string; at: Epoch | null; state: "waiting" | "doing" | "answered" | "unknown"; text?: string }
 export interface SlashResults { items: SlashResult[]; in_turn: boolean }

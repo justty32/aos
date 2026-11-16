@@ -43,6 +43,7 @@ import json
 import os
 import re
 import secrets
+import signal
 import socketserver
 import subprocess
 import sys
@@ -1492,11 +1493,13 @@ def do_say(form, tree, home, ret=None):
 
 
 SLASH_CMDS = [
-    {"name": name, "args": args, "confirm": confirm, "how": "turn", "cli": ["claude", "codex"]}
-    for name, args, confirm in (("compact", "optional", False), ("status", "none", False),
-                                ("usage", "none", False), ("goal", "optional", False),
-                                ("clear", "none", True), ("exit", "none", True))
+    {"name": name, "args": args, "confirm": confirm, "how": how, "cli": ["claude", "codex"]}
+    for name, args, confirm, how in (("compact", "optional", False, "turn"), ("status", "none", False, "peek"),
+                                     ("usage", "none", False, "peek"), ("goal", "optional", False, "turn"),
+                                     ("clear", "none", True, "turn"), ("exit", "none", True, "turn"))
 ]
+# how "peek" (11-16 ok-small): answered at once by `aos-agent peek` (the definition's screen entry), not through the queue:
+# no letter, nothing in history, nothing typed into the screen, so it also answers while the agent is in a turn.
 SLASH_CMDS.append({"name": "context", "args": "none", "confirm": False, "how": "screen", "cli": ["claude"]})   # aos-eca screen_slash.SCREEN_ONLY
 
 
@@ -1539,6 +1542,8 @@ def _send_slash(form, tree, home, kind, ret=None):
     cli = (n.get("live") or {}).get("cli") or cli_kind(n.get("stack"))
     if not cli or cli not in spec["cli"]:
         return "!%s 不是這個指令支援的 CLI agent，%s 對它沒用" % (name, command)
+    if kind == "slash" and spec.get("how") == "peek":
+        return _peek_slash(name, text, home, ret)
     if kind == "compact" and n.get("queued"):
         return "!%s 信箱還排著 %d 封：%s 會跟它們併成一批而失效，等它讀完再按" % (name, n["queued"], command)
     with SLASH_LOCK if kind == "slash" else nullcontext():
@@ -1572,6 +1577,96 @@ def _send_slash(form, tree, home, kind, ret=None):
 
 SLASH_LOCK = threading.Lock()
 SLASH_CACHE = {}
+PEEK_LOCK = threading.Lock()
+PEEK = {}                     # letter -> {"state": "doing" | "answered" | "failed", "text": str}; finished ones also in state/peek.jsonl
+PEEK_TIMEOUT = 300            # seconds; /usage is a separate claude -p run
+
+
+def start_peek(fn):
+    threading.Thread(target=fn, daemon=True).start()
+
+
+def peek_file(home):
+    return os.path.join(home.state, "peek.jsonl")
+
+
+def _peek_slash(name, text, home, ret=None):
+    """Answer /status or /usage with `aos-agent peek` in the background; the result shows in slash_results, not in history."""
+    with PEEK_LOCK:
+        for r in slash_sent(home, name, 1800):
+            if r.get("how") == "peek" and r["text"].strip() == text and PEEK.get(r["letter"], {}).get("state") == "doing":
+                if ret is not None:
+                    ret.update(dup=True, letter=r["letter"])
+                return "%s 還在做（還沒回），不重送" % text
+        letter = "peek-%s-%s" % (datetime.now().strftime("%Y%m%d%H%M%S"), secrets.token_hex(4))
+        PEEK[letter] = {"state": "doing", "text": ""}
+        log_sent(home, {"at": now_local(), "kind": "slash", "how": "peek", "to": name, "text": text, "ok": True,
+                        "letter": letter, "error": None})
+    if ret is not None:
+        ret.update(dup=False, letter=letter)
+
+    def work():
+        # Not run(): it holds CLI_LOCK for the whole call, and /usage can take many seconds.
+        # Own process group: on timeout the whole chain (aos-agent, the screen entry, claude -p) goes, not only aos-agent.
+        try:
+            p = subprocess.Popen(["aos-agent", "peek", "-t", name, text], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 stdin=subprocess.DEVNULL, text=True, errors="replace", env=cli_env(), cwd="/",
+                                 start_new_session=True)
+            try:
+                out, err = p.communicate(timeout=PEEK_TIMEOUT)
+                code = p.returncode
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(p.pid, signal.SIGKILL)       # the group this call started (pgid = its pid)
+                except OSError:
+                    pass
+                p.communicate()
+                code, out, err = 124, "", "timeout after %ss" % PEEK_TIMEOUT
+        except OSError as e:
+            code, out, err = 127, "", str(e)
+        except Exception as e:                            # never leave the request "doing" (it would block a resend)
+            code, out, err = 1, "", "%s: %s" % (type(e).__name__, e)
+        try:
+            body = mask((out if code == 0 else (err or out)).strip() or "(no output)")
+        except Exception as e:
+            code, body = 1, "%s: %s" % (type(e).__name__, e)
+        row = {"letter": letter, "state": "answered" if code == 0 else "failed",
+               "text": body if len(body) <= 4000 else body[:3999] + "…"}
+        with PEEK_LOCK:
+            PEEK[letter] = row
+            try:
+                with open(peek_file(home), "a", encoding="utf-8") as f:
+                    f.write(json.dumps(dict(row, at=now_local()), ensure_ascii=False) + "\n")
+            except OSError:
+                pass
+    start_peek(work)
+    return "%s 不用排隊，已在做；結果會出現在『指令結果』" % text
+
+
+def peek_state(home, letter):
+    """A peek request's state: in memory while this page runs, else the line in state/peek.jsonl, else unknown (page restarted mid-way)."""
+    with PEEK_LOCK:
+        row = PEEK.get(letter)
+    if row is None:
+        row = {"state": "unknown", "text": ""}
+        try:
+            with open(peek_file(home), encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        r = json.loads(line)
+                    except ValueError:
+                        continue
+                    if isinstance(r, dict) and r.get("letter") == letter:
+                        row = r
+        except OSError:
+            pass
+        with PEEK_LOCK:
+            row = PEEK.setdefault(letter, row)            # read the file once per letter, then from memory
+    state = row.get("state")
+    text = row.get("text") if isinstance(row.get("text"), str) else ""
+    if state == "failed":
+        return "answered", "（沒做成）" + text
+    return (state if state in ("doing", "answered") else "unknown"), text
 
 
 def slash_rows(name):
@@ -1631,11 +1726,18 @@ def slash_sent(home, name, seconds):
 
 def slash_results(home, name, node):
     """The ten most recent slash requests, with their current history reply state."""
-    sent = slash_sent(home, name, 86400)[:10]
-    rows = slash_rows(name) if sent else None
+    sent, peeked = [], set()
+    for r in slash_sent(home, name, 86400):             # only the newest /status and /usage: they must not push queued ones out
+        if r.get("how") == "peek":
+            if r["text"].strip() in peeked:
+                continue
+            peeked.add(r["text"].strip())
+        sent.append(r)
+    sent = sent[:10]
+    rows = slash_rows(name) if any(r.get("how") != "peek" for r in sent) else None
     items = []
     for r in sent:
-        state, text = slash_state(rows, r["letter"])
+        state, text = peek_state(home, r["letter"]) if r.get("how") == "peek" else slash_state(rows, r["letter"])
         items.append({"letter": r["letter"], "command": r["text"], "at": parse_time(r["at"]), "state": state, "text": text})
     return {"items": items, "in_turn": bool((node.get("live") or {}).get("in_turn"))}
 
