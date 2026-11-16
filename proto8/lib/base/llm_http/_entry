@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # llm_http - endpoint 函數：從自己的環境讀金鑰，把請求 POST 到 OpenAI 相容端點，印剪過的回覆
 # 介面（lib/README 的契約）：stdin 一份 {"endpoint": {"url", "model", "fixed"?}, "request": {"messages", ...}}；
-#   送出的 body＝request 先、endpoint.fixed（那組釘死的欄位，例 temperature）蓋上，model 一律用 endpoint.model（11-05 件 2 代定 2；不留舊 body 名）；
-#   --key-env NAME 有才從自己的環境讀 NAME 帶 Bearer；NAME 沒設或空＝不帶 Authorization 照打（11-10 夜使用者「改成變數沒設就不帶金鑰照打」），
-#   端點回 401／403 時訊息才提 NAME 沒設；值含標頭放不下的字（非 ASCII、空白、控制字）＝KeyBad、送出前擋、不印值；endpoint.key 一律拒絕。stdout 一行 {"message": choices[0].message 只留 role／content／tool_calls, "usage", "model"}、退 0。
-# 錯：stderr 與 stdout 各一行「llm_http: error: 代號 原因」、退 1：ArgumentsBad（stdin 不是這形狀）、KeyBad（金鑰值有壞字）、EndpointFailed（連不上、HTTP 非 2xx）、
-#   ReplyBad（不是 OpenAI 形狀）。沒有自己的逾時旗標（包它的單子守，10-15 KISS）；平常由 aos-llm-kernel 經 aos-exec 跑（kernel.json 的 exec）。
-# 來源：templates/agent-fsm/brain.py 的 ask()（11-04 晚搬過來，brain.py 改成只組請求）。
-import http.client, json, os, sys, urllib.parse
+#   送出的 body＝request 先、endpoint.fixed 蓋上，model 一律用 endpoint.model（11-05 件 2 代定 2）；--key-env NAME 沒設或空＝不帶 Authorization 照打
+#   （11-10 夜使用者「改成變數沒設就不帶金鑰照打」）。重打與 retry 分類：11-16 ok-replybad（wf/temp/ok-replybad-1116/實作計劃.md 第 9 節）。
+#   金鑰含非 ASCII、空白、控制字＝KeyBad、送出前擋、不印值；endpoint.key 一律拒絕。成功 stdout 一行 {"message", "usage", "model"}、退 0。
+# 錯：stderr 一行「llm_http: error: 代號 原因」、stdout 一行 {"error": {"code", "msg", "retry", "tries", "status"?, "retry_after_s"?}}、退 1。
+#   ArgumentsBad／KeyBad 不重試；EndpointFailed 依階段與狀態分類；ReplyBad 與讀回應的連線例外隔 1 秒重打一次，成功多帶 tries:2。
+# 沒有讀取逾時，歸包它的單子；平常由 llm kernel 經 aos-exec 跑。來源：templates/agent-fsm/brain.py 的 ask()。
+import email.utils, http.client, json, math, os, sys, time, urllib.parse
 HELP = """\
 usage: llm_http [--key-env NAME] < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Endpoint function: POST the request to an OpenAI-compatible {url}/chat/completions
@@ -17,7 +17,8 @@ if NAME is unset or empty, or without --key-env, send no Authorization header
 (an HTTP 401/403 reply then says the key variable is unset). A key with characters
 an HTTP header cannot carry (non-ASCII, space, control) is KeyBad before sending.
 endpoint.key is not accepted.
-Result on stdout. On error: one line "llm_http: error: CODE reason" on stderr and stdout, exit 1.
+Result on stdout. On error: one JSON object {"error": {"code", "msg", "retry", "tries", ...}}
+on one stdout line, one "llm_http: error: CODE reason" line on stderr, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
@@ -39,24 +40,40 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.exit(1)
 
 NAME = "llm_http"
-tool_io.start(NAME, HELP)
+tool_io.start(NAME, HELP, echo=False)
 
 
-die = tool_io.die
+def one_line(text):
+    return "".join(c for c in " ".join(str(text).split()) if c.isprintable())
 
 
-args = tool_io.arguments()
+def fail(code, msg, retry, **extra):
+    msg = one_line(msg)
+    print(tool_io.error_line(code, msg), file=sys.stderr)
+    print(json.dumps({"error": {"code": code, "msg": msg, "retry": retry,
+                                "tries": 0, **extra}}, ensure_ascii=False))
+    sys.exit(1)
+
+
+try:
+    args = tool_io.arguments()
+except SystemExit as e:
+    if e.code == 1:
+        print(json.dumps({"error": {"code": "ArgumentsBad",
+                                   "msg": "the arguments on stdin are bad (reason on stderr)",
+                                   "retry": False, "tries": 0}}))
+    raise
 endpoint, request = args["endpoint"], args["request"]
 if "key" in endpoint:
-    die("ArgumentsBad", "endpoint.key is not accepted; give the endpoint function --key-env NAME")
+    fail("ArgumentsBad", "endpoint.key is not accepted; give the endpoint function --key-env NAME", False)
 url = endpoint.get("url")
 if not isinstance(url, str) or not url:
-    die("ArgumentsBad", "endpoint.url must be a string")
+    fail("ArgumentsBad", "endpoint.url must be a string", False)
 fixed = endpoint.get("fixed", {})
 if not isinstance(fixed, dict):
-    die("ArgumentsBad", "endpoint.fixed must be an object")
+    fail("ArgumentsBad", "endpoint.fixed must be an object", False)
 if not isinstance(request.get("messages"), list):
-    die("ArgumentsBad", "request.messages must be an array")
+    fail("ArgumentsBad", "request.messages must be an array", False)
 body = dict(request)
 body.update(fixed)
 model = endpoint.get("model")
@@ -69,56 +86,107 @@ key_env, key = None, ""
 if "key_env" in args:
     key_env = args["key_env"]
     if not isinstance(key_env, str):
-        die("ArgumentsBad", "key_env must be a string")
+        fail("ArgumentsBad", "key_env must be a string", False)
     key = os.environ.get(key_env) or ""                    # 沒設或空＝不帶金鑰照打（11-10 夜）
     if key:
         if not all(0x21 <= ord(c) <= 0x7e for c in key):   # 標頭只放得下可見 ASCII；不印值
-            die("KeyBad", "environment variable %s (--key-env) has characters an HTTP header cannot carry "
-                "(non-ASCII, space or control); value not shown" % key_env)
+            fail("KeyBad", "environment variable %s (--key-env) has characters an HTTP header cannot carry "
+                 "(non-ASCII, space or control); value not shown" % key_env, False)
         headers["Authorization"] = "Bearer " + key
 target = url.rstrip("/") + "/chat/completions"
 payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
-CONNECT_TIMEOUT = 10                                       # 只管連線（SYN 被丟時不必等到外層 timeout_ms）；讀回應不設限，歸包它的單子
-try:
-    parts = urllib.parse.urlsplit(target)
-    if parts.scheme not in ("http", "https") or not parts.hostname:
-        raise ValueError("url must be http(s)://host...")
-    cls = http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
-    conn = cls(parts.hostname, parts.port, timeout=CONNECT_TIMEOUT)
-    conn.connect()
-    conn.sock.settimeout(None)
-    conn.request("POST", parts.path + ("?" + parts.query if parts.query else ""), payload, headers)
-    r = conn.getresponse()
-    raw = r.read()
-    conn.close()
-    if not 200 <= r.status < 300:
-        refused = ""
-        if r.status in (401, 403):                         # 端點拒絕：只在這時提金鑰
-            if key:
-                refused = " (the endpoint refused the key from %s)" % key_env
-            elif key_env:
-                refused = " (the endpoint refused the request and may need a key: environment variable %s (--key-env) is not set)" % key_env
-            else:
-                refused = " (the endpoint refused the request and may need a key: give --key-env NAME)"
-        die("EndpointFailed", "HTTP %d%s: %s" % (r.status, refused, raw[:200].decode("utf-8", "replace")))
-except ValueError as e:
-    die("EndpointFailed", "bad url %s: %s" % (url, e))
-except OSError as e:
-    die("EndpointFailed", "cannot connect to %s: %s" % (url, e))
-except http.client.HTTPException as e:                     # 回到一半斷線（IncompleteRead）、狀態列壞掉等
-    die("EndpointFailed", "incomplete reply from %s: %s %s" % (url, type(e).__name__, e))
-try:
-    reply = json.loads(raw)
-    message = reply["choices"][0]["message"]
-except (ValueError, KeyError, IndexError, TypeError) as e:
-    die("ReplyBad", "reply is not OpenAI-shaped (%s: %s)" % (type(e).__name__, e))
-if not isinstance(message, dict):
-    die("ReplyBad", "choices[0].message is not an object")
-out = {"role": "assistant", "content": message.get("content")}
-calls = message.get("tool_calls")
-if calls:
-    if not isinstance(calls, list) or not all(isinstance(c, dict) for c in calls):
-        die("ReplyBad", "tool_calls is not an array of objects")
-    out["tool_calls"] = [{k: c[k] for k in ("id", "type", "function") if k in c} for c in calls]
-usage = reply.get("usage") if isinstance(reply.get("usage"), dict) else None
-print(json.dumps({"message": out, "usage": usage, "model": reply.get("model") or model}, ensure_ascii=False))
+CONNECT_TIMEOUT = 10                                       # 只管連線；讀回應不設限，歸包它的單子
+RETRY_DELAY_S = 1
+
+
+def retry_after(value):
+    if value is None:
+        return {}
+    try:
+        seconds = float(value)
+    except ValueError:
+        try:
+            seconds = email.utils.parsedate_to_datetime(value).timestamp() - time.time()
+            seconds = max(0, seconds)
+        except (ValueError, TypeError, OverflowError):
+            return {}
+    if not math.isfinite(seconds) or seconds < 0:
+        return {}
+    return {"retry_after_s": math.ceil(seconds)}
+
+
+def attempt():
+    conn, status, after = None, {}, {}
+    try:
+        try:
+            parts = urllib.parse.urlsplit(target)
+            if parts.scheme not in ("http", "https") or not parts.hostname:
+                raise ValueError("url must be http(s)://host...")
+            cls = http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
+            conn = cls(parts.hostname, parts.port, timeout=CONNECT_TIMEOUT)
+            conn.connect()
+            conn.sock.settimeout(None)
+            conn.request("POST", parts.path + ("?" + parts.query if parts.query else ""), payload, headers)
+        except (ValueError, http.client.InvalidURL) as e:
+            return None, {"code": "EndpointFailed", "msg": "bad url %s: %s" % (url, e),
+                          "retry": False, "tries": 0}, False
+        except (OSError, http.client.HTTPException) as e:
+            return None, {"code": "EndpointFailed", "msg": "cannot connect to %s: %s" % (url, e),
+                          "retry": True, "tries": 1}, False
+        try:
+            r = conn.getresponse()
+            status = {"status": r.status}
+            retry = r.status in (408, 429) or 500 <= r.status < 600
+            after = retry_after(r.getheader("Retry-After"))
+            raw = r.read()
+            text = raw.decode("utf-8", "replace")
+            if not 200 <= r.status < 300:
+                refused = ""
+                if r.status in (401, 403):                 # 端點拒絕：只在這時提金鑰
+                    if key:
+                        refused = " (the endpoint refused the key from %s)" % key_env
+                    elif key_env:
+                        refused = " (the endpoint refused the request and may need a key: environment variable %s (--key-env) is not set)" % key_env
+                    else:
+                        refused = " (the endpoint refused the request and may need a key: give --key-env NAME)"
+                return None, {"code": "EndpointFailed", "msg": "HTTP %d%s: %s" % (r.status, refused, one_line(text)[:200]),
+                              "retry": retry, "tries": 1, **status, **(after if retry else {})}, False
+            try:
+                reply = json.loads(raw)
+                message = reply["choices"][0]["message"]
+                if not isinstance(message, dict):
+                    raise ValueError("choices[0].message is not an object")
+                out = {"role": "assistant", "content": message.get("content")}
+                calls = message.get("tool_calls")
+                if calls is not None:
+                    if not isinstance(calls, list) or not all(isinstance(c, dict) for c in calls):
+                        raise ValueError("tool_calls is not an array of objects")
+                    if calls:
+                        out["tool_calls"] = [{k: c[k] for k in ("id", "type", "function") if k in c} for c in calls]
+                usage = reply.get("usage") if isinstance(reply.get("usage"), dict) else None
+                return {"message": out, "usage": usage, "model": reply.get("model") or model}, None, False
+            except (ValueError, KeyError, IndexError, TypeError, UnicodeError) as e:
+                return None, {"code": "ReplyBad", "msg": "reply is not OpenAI-shaped (%s: %s): %s" %
+                              (type(e).__name__, e, one_line(text)[:200]),
+                              "retry": True, "tries": 1, **status, **after}, True
+        except (OSError, http.client.HTTPException) as e:
+            return None, {"code": "EndpointFailed", "msg": "incomplete reply from %s: %s %s" % (url, type(e).__name__, e),
+                          "retry": True, "tries": 1, **status, **after}, True
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+result, error, again = attempt()
+if again:
+    first = error
+    time.sleep(RETRY_DELAY_S)
+    result, error, _ = attempt()
+    if error is not None:
+        error["tries"] += first["tries"]
+    else:
+        result["tries"] = 2
+        tool_io.warn("retried once after %s: %s" % (first["code"], one_line(first["msg"])))
+if error is not None:
+    fail(**error)
+print(json.dumps(result, ensure_ascii=False))
