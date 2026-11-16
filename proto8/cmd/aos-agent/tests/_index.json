@@ -44,6 +44,9 @@
  "test_ls_health.py": {
   "description": "Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table."
  },
+ "test_peek.py": {
+  "description": "Test aos-agent peek on a fake daemon table (11-16 ok-small): it runs the definition's screen entry with peek COMMAND and passes its output and errors…"
+ },
  "test_reply_match.py": {
   "description": "Test reply matching on the reading side (reply-match-1114): ask / chat / listen --letter get the answer to their own letter from upgraded bodies, fal…"
  },

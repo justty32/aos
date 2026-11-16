@@ -36,11 +36,35 @@ flags:
 Runs the definition's screen watch action and passes its output through.
 The definition must declare the aos-agent/screen interface.
 
-exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, ScreenMissing, ScreenBad...)."""
+exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, ScreenMissing, ScreenBad...).""",
+    'peek': """aos-agent peek - answer /status or /usage at once, without the queue
+
+usage: aos-agent [--daemon D] peek [-t NAME] /status|/usage
+
+flags:
+  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -h, --help          show this help
+
+Runs the definition's screen peek action and prints its answer: no letter, nothing in
+history, nothing typed into the screen, so it also answers while the agent is in a turn.
+The definition must declare the aos-agent/screen interface (eca does).
+
+exit codes: 0 printed; 1 error (TargetMissing, InstanceMissing, ScreenMissing, ScreenBad...)."""
 }
 
 from .common import Fail, bad_args, parse, target
 from .decl import pass_err, run_entry, screen_entry
+
+
+def peek(argv):
+    """11-16 ok-small：唯讀 slash 當場回＝screen 入口的 peek 動作（使用者 11-16「/usage、/status 在 agent 忙的時候也直接回，不用排隊」）。"""
+    opts, rest = parse(argv, {"--target": "target"}, help=HELP["peek"], short=("-t",))
+    if len(rest) != 1:
+        raise bad_args(HELP["peek"], "peek takes one command (what the body answers, eca: /status or /usage), got %d arguments" % len(rest))
+    a = target(opts)
+    _, entry = screen_entry(a)
+    rc, err = run_entry(a, entry, ["peek", rest[0]])
+    pass_err(rc, err)
 
 
 def cmd(action):

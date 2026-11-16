@@ -5,6 +5,10 @@
     aos-eca-screen --eca ECA_DIR close             收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）；cli.json 無效也能關（一行提醒）
     aos-eca-screen --eca ECA_DIR watch             跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走；
                                                    daemon 表上那隻不再 running 或列已移除也走；找不到 daemon／讀不到表照等
+    aos-eca-screen --eca ECA_DIR peek /status|/usage  11-16 ok-small：唯讀的 slash 當場回、印 stdout（不經 queue、不寫 history、不拿格的 lock、
+                                                   不打字進畫面；agent 正在答題也能回）。字跟 queue 那條一樣（aos_eca.slash 的 slash_status、
+                                                   slash_usage：/usage 另起一次 claude -p --no-session-persistence，不碰這隻的對話）。
+                                                   使用者 11-16：「全景頁的 /usage、/status 在 agent 忙的時候也直接回，不用排隊」。
 
 命令列（11-05 stdio-unify R6；11-05 隊長代定 D6 把 ECA_DIR 改成子命令前的旗標）：`aos-eca-screen --eca ECA_DIR 子命令 [--detach]`（--eca 必給），
 aos_flags.parse（P-44：長旗標與共用短名 -h；子命令前不認得的旗標＝FlagUnknown、子命令不認得＝CommandUnknown、沒給 --eca 或多給位置參數＝ArgumentsBad）。
@@ -34,6 +38,12 @@ sys.path[:0] = _import_paths
 try:
     import aos_flags  # noqa: E402
     from agent import cli_base, cli_cell, cli_cfg, cli_screen  # noqa: E402
+    sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..")))
+    try:
+        from aos_eca.slash import slash_status, slash_usage  # noqa: E402  peek 用（11-16 ok-small）
+        from aos_eca.common import Fail as EcaFail  # noqa: E402
+    finally:
+        sys.path.pop(0)
     import daemon_ctl as dc  # noqa: E402
 finally:
     for _path in _import_paths:
@@ -50,9 +60,10 @@ subcommands:
   open    open the screen and attach, or only open with --detach
   close   close the screen while keeping the conversation
   watch   follow the non-interactive run until one answer ends
+  peek    answer /status or /usage at once, also while the agent is answering
 
 The screen entry supplies --eca before the action; people normally use aos-agent
-open / close / watch. Reads AOS_STACK for the agent's stack and AOS_WS for its workspace.
+open / close / watch / peek. Reads AOS_STACK for the agent's stack and AOS_WS for its workspace.
 Screen output goes to the terminal; watch reads live.jsonl from the cell.
 
 flags:
@@ -107,6 +118,23 @@ flags:
 exit codes: 0 finished / stopped waiting / Ctrl-C; 1 error.
 """,
 }
+HELPS["peek"] = """aos-eca-screen peek - answer a read-only slash command at once
+
+usage: aos-eca-screen --eca ECA_DIR peek /status|/usage
+
+Prints what the queue would answer for /status or /usage, without the queue: no letter,
+nothing in history, no lock on the cell, nothing typed into the screen, so it also works
+while the agent is answering. /usage runs a separate claude -p --no-session-persistence
+(the agent's conversation is not touched); codex has no usage report outside its screen.
+Reads AOS_STACK and AOS_WS.
+
+flags:
+      --eca ECA_DIR   definition folder containing cli.json (before or after peek; required)
+  -h, --help          show this help
+
+exit codes: 0 printed; 1 error (CliMissing, CliFailed...).
+"""
+PEEK = ("/status", "/usage")
 aos_flags.HELP = HELP
 
 
@@ -302,7 +330,19 @@ def cmd_watch(eca, opts):
         pass
 
 
-CMDS = {"open": cmd_open, "close": cmd_close, "watch": cmd_watch}
+def cmd_peek(eca, opts, command):
+    """唯讀的 slash 當場回（11-16 ok-small）：只讀 cli.json、小格的檔與 history 的則數；/usage 另起一次不存對話的 claude -p。"""
+    cell, stack = cell_of(eca)
+    cfg = cli_cfg.load_cfg(eca)
+    ws = os.path.abspath(os.environ.get("AOS_WS") or ".")
+    try:
+        text = slash_status(cfg, cell, stack) if command == "/status" else slash_usage(cfg, ws)
+    except EcaFail as e:
+        die(e.code, str(e))
+    sys.stdout.write(text if text.endswith("\n") else text + "\n")
+
+
+CMDS = {"open": cmd_open, "close": cmd_close, "watch": cmd_watch, "peek": cmd_peek}
 SWITCHES = {"open": {"--detach": "detach"}}
 
 
@@ -324,15 +364,21 @@ def main():
         reason = ("%s (see %s %s --help)" % (e, PROG, sub) if e.code == "FlagUnknown"
                   else sub_reason(sub, e.code, e))
         die(e.code, reason)
-    if args:
-        die("ArgumentsBad", sub_reason(sub, "ArgumentsBad", "unexpected argument %s" % args[0]))
+    want = 1 if sub == "peek" else 0
+    if len(args) > want:
+        die("ArgumentsBad", sub_reason(sub, "ArgumentsBad", "unexpected argument %s" % args[want]))
+    if sub == "peek" and (not args or args[0].strip() not in PEEK):
+        die("ArgumentsBad", sub_reason(sub, "ArgumentsBad", "peek takes one of %s, got %s" % (", ".join(PEEK), args[0] if args else "nothing")))
     if not top.get("eca"):
         die("ArgumentsBad", sub_reason(sub, "ArgumentsBad", "missing --eca ECA_DIR"))
     eca = os.path.realpath(top["eca"])
     if sub != "close" and not os.path.isfile(os.path.join(eca, "cli.json")):
         die("ArgumentsBad", sub_reason(sub, "ArgumentsBad",
                                        "%s is not an eca dir (no cli.json)" % top["eca"]))
-    CMDS[sub](eca, opts)
+    if sub == "peek":
+        CMDS[sub](eca, opts, args[0].strip())
+    else:
+        CMDS[sub](eca, opts)
 
 
 if __name__ == "__main__":

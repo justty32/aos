@@ -22,6 +22,7 @@ subcommands:
   open     attach to its screen (--detach: open only)
   close    close its screen
   watch    follow its screen until one answer ends
+  peek     answer /status or /usage at once (no queue, no history; also mid-turn)
   tools    its toolbox: ls, get, add, rm, reset
   llm      its brain settings: ls, set, rm, reset
   history  its conversation: ls, rm, summarize, set
@@ -59,7 +60,7 @@ from .common import Fail, parse
 
 SUBS = {"ctl": ctl.cmd,
         "say": say.cmd, "listen": listen.cmd, "ask": ask.cmd, "chat": chat.cmd,
-        "open": screen.cmd("open"), "close": screen.cmd("close"), "watch": screen.cmd("watch"),
+        "open": screen.cmd("open"), "close": screen.cmd("close"), "watch": screen.cmd("watch"), "peek": screen.peek,
         "tools": tools.cmd, "llm": llm.cmd, "history": history.cmd, "hook": hook.cmd, "system": system.cmd, "goal": goal.cmd}
 
 
