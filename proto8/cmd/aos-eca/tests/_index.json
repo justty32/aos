@@ -44,6 +44,9 @@
  "test_reply_match.py": {
   "description": "Test reply matching on the eca side (reply-match-1114): user rows carry aos.letter, the final answer carries aos.answer_to, and <stack>/letters.json …"
  },
+ "test_retry.py": {
+  "description": "Test claude temporary-error continuation, failure accounting and unchanged codex turns with fake CLIs."
+ },
  "test_retry_file.py": {
   "description": "驗證 retry.json 的讀寫清除、累加去重、壞檔容錯與續做提示。"
  },

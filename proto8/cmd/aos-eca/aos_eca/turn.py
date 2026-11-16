@@ -6,6 +6,7 @@ import aos_ws
 
 from .common import (NAME, Fail, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown, hooks, goal_state, letters_answered, letters_drop,
                      mailbox_warning, must_post, names, post)
+from . import retry
 from .history import SUM, append_history, history_changed, history_sum, note_sum
 from .hook import before_queue, fire, tool_added
 from .batch import SEP, goal_prompt, letter_body, note_progress, pick_one, take_all, transcript_now
@@ -29,6 +30,9 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
     cool, _ = cooldown.state(stack)                                # ⑨ 認領信之前看冷卻（06）
     if cool == "cooling":
         return 0                                                    # 一封都不認領：new/、cur/、history 都不動
+    rec = retry.read(stack) if cfg["kind"] == "claude" else None
+    if rec is not None:
+        return redo_turn(template, stack, ws, box, cfg, cell, on_busy, rec)
     goal = None                                                     # ⑬ 這輪是 goal 提醒＝(題目, 交出去那刻寫的 goal)
     if cool == "due":
         good, bodies, dropped = pick_one(stack, box, prompt, template)       # 冷卻到了：只試最舊的一封
@@ -79,18 +83,41 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
             goal_state.write(stack, goal[1])
         except OSError as w:
             aos_flags.warn(NAME, "cannot write %s: %s" % (goal_state.path(stack), w))
-    hand = Handoff(template, stack, box, good, bodies, count_goal if goal else None)
+    hand = Handoff(template, stack, box, good, bodies, count_goal if goal else None, redo=True)
     before = transcript_now(cfg, cell)                              # ⑬ 進展：交出去之前對話檔多大
     had_sum = os.path.exists(cell.file(SUM))                        # ⑭ 畫面 hook 跟上 CLI 改 history 時會刪掉它（cli_hook.replace_history）
     text = hand.ask(cfg, cell, ws, SEP.join(b["content"] for b in bodies), on_busy,
                     lambda limit: reseed(stack, ws, limit), parts,  # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
                     None if cool == "due" else More(hand, template, stack, box))   # 等回答時又來的信馬上投（冷卻剛到的那輪只試一封，不加）
     if text is None:
-        return 0                                                    # SessionBad：整批留 cur/，下一次再試
+        return 0                                                    # SessionBad 留 cur/；claude 暫時失敗已記冷卻與續做欠帳
+    return finish(stack, cell, cfg, hand, text, had_sum, before)
+
+
+def redo_turn(template, stack, ws, box, cfg, cell, on_busy, rec):
+    body = {"role": "user", "content": retry.prompt(rec)}
+    tool_added(cfg, template, stack)
+    history_changed(stack, cell)
+    hand = Handoff(template, stack, box, [], [body], owed=rec["letters"], redo=True)
+    before = transcript_now(cfg, cell)
+    had_sum = os.path.exists(cell.file(SUM))
+    text = hand.ask(cfg, cell, ws, body["content"], on_busy,
+                    lambda limit: reseed(stack, ws, limit), [(None, body["content"])], None)
+    if text is None:
+        return 0
+    return finish(stack, cell, cfg, hand, text, had_sum, before)
+
+
+def finish(stack, cell, cfg, hand, text, had_sum, before):
     synced = had_sum and not os.path.exists(cell.file(SUM))         # 這一輪中間是畫面 hook 跟著 CLI 改的（codex 的 /clear、/compact 在 notify 時才跟上）
     edited = hand.mid is not None and history_sum(stack) != hand.mid and not synced   # ⑩ 這一輪中間被改了（腦叫了 self_history）；跟上 CLI 的不算
-    append_history(stack, aos_ws.mark_answer({"role": "assistant", "content": text[:-1] if text.endswith("\n") else text}, hand.good))
-    letters_answered(stack, hand.good)                              # 回答配對：answer_to＝這輪交出去的全部（含中途信），接進 history 之後從 pending 拿掉
+    append_history(stack, aos_ws.mark_answer({"role": "assistant", "content": text[:-1] if text.endswith("\n") else text}, hand.answer_to()))
+    if hand.retrying:
+        try:
+            retry.clear(stack)
+        except OSError as w:
+            aos_flags.warn(NAME, "cannot remove %s: %s" % (retry.path(stack), w))
+    letters_answered(stack, hand.answer_to())                              # 回答配對：answer_to＝這輪交出去的全部（含中途信），接進 history 之後從 pending 拿掉
     note_sum(stack, cell, edited)
     note_progress(cfg, cell, stack, before)                         # ⑬ 這輪叫了工具＝goal 計數歸零
     hand.done()                                                     # ⑨ 成功一次＝冷卻歸零；after_queue 停下的最後才報

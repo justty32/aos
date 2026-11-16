@@ -171,6 +171,21 @@ class EcaHooks(unittest.TestCase):
         self.assertIn(ev["reason"], r.stderr)
         self.assertTrue((self.stack / "cooldown.json").exists())
 
+    def test_claude_temporary_brain_failed_fields(self):
+        (self.bin / "claude").unlink()
+        (self.bin / "claude").symlink_to(HERE / "fake_claude_api")
+        self.declare({"bf": {"event": "brain_failed", "handler": self.hook("bf")}})
+        self.say("hello")
+        r = self.turn(FAKE_CLI_API_ERROR="529")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        (ev,) = self.read_lines(self.log)
+        self.assertEqual({k: ev[k] for k in ("name", "code", "retry", "attempt", "dropped", "wait_s", "status", "cause")},
+                         {"name": "CliFailed", "code": "CliFailed", "retry": True, "attempt": 1,
+                          "dropped": 0, "wait_s": 30, "status": 529, "cause": "api_529"})
+        self.assertEqual(ev["event"], "brain_failed")
+        self.assertIn("API Error: 529", ev["reason"])
+        self.assertTrue((self.stack / "retry.json").exists())
+
     def test_brain_failed_on_slash_goal(self):
         self.declare({"bf": {"event": "brain_failed", "handler": self.hook("bf")}})
         self.say("/goal say ok")

@@ -153,6 +153,7 @@
     "test_long_turn.py": "Test that an eca turn longer than the old 600 s limit (scaled down) is not failed when cli.json has no timeout_ms (11-15: 0 or omitted = no limit), t…",
     "test_peek.py": "Test aos-eca-screen peek (11-16 ok-small): /status and /usage answer at once, also mid-turn, without the queue, history, lock or screen.",
     "test_reply_match.py": "Test reply matching on the eca side (reply-match-1114): user rows carry aos.letter, the final answer carries aos.answer_to, and <stack>/letters.json …",
+    "test_retry.py": "Test claude temporary-error continuation, failure accounting and unchanged codex turns with fake CLIs.",
     "test_retry_file.py": "驗證 retry.json 的讀寫清除、累加去重、壞檔容錯與續做提示。",
     "test_screen_hook.py": "test_screen_hook checks that slash_of routes screen-only commands to slash_turn and leaves look-alikes as plain text.",
     "test_screen_slash.py": "test_screen_slash checks screen-only commands with a fake cell, clock and tmux output, never a real screen.",

@@ -2,13 +2,13 @@
 import json, os, signal, subprocess, sys, threading, time, uuid
 
 if __package__:
-    from . import cli_base
+    from . import cli_base, cli_fault
     from .cli_cell import codex_main_thread, drop_session, mark_session, transcripts
     from .cli_cfg import system_argv
     from .cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv, settings_argv, settings_env
     from .cli_stream import CAP, LIVE_HINT, MID_FLAGS, answer_text, run_claude_stream_mid
 else:
-    import cli_base
+    import cli_base, cli_fault
     from cli_cell import codex_main_thread, drop_session, mark_session, transcripts
     from cli_cfg import system_argv
     from cli_mcp import external_claude, external_codex, guard_hooks, mcp_argv, settings_argv, settings_env
@@ -122,6 +122,17 @@ def live_cap(cfg):
     return dict(CAP, **cap)
 
 
+def _fail(code, reason, info):
+    try:
+        cli_base.die(code, reason)
+    except Exception as e:
+        try:
+            e.info = info
+        except Exception:
+            pass
+        raise
+
+
 def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None, more=None):
     """sid＝要接的對話（ask 已認過是這台的）；空＝開新對話：我們產 id、--session-id 給，交出去那一刻先寫 session.txt 與
     記號檔再叫呼叫者的 handed（第一輪就失敗也不留孤兒，05）。沒給 sid（None）＝照舊讀 session.txt。
@@ -171,10 +182,15 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None, sid=None, more=None)
         elif new and not transcripts("claude", new):        # 新對話第一輪就失敗、CLI 沒建出來：清掉，下一輪直接開新的（TS 9）
             drop_session(cell)
     if out is None:
-        cli_base.die("CliFailed", "claude exited %d with no result in its output: %s" % (code, tail(stdout)))
+        _fail("CliFailed", "claude exited %d with no result in its output: %s" % (code, tail(stdout)),
+              cli_fault.classify_claude(out, code, False, lines))
     if code != 0 or out.get("is_error"):   # result 行自己帶原因（例 模型不存在）就印它；stdout 尾巴會切在 JSON 中間
         why = out.get("result") if isinstance(out.get("result"), str) and out.get("result") else tail(stdout)
-        cli_base.die("CliFailed", "claude exited %d: %s" % (code, tail(why)))
+        _fail("CliFailed", "claude exited %d: %s" % (code, tail(why)),
+              cli_fault.classify_claude(out, code, False, lines))
+    res = out.get("result")
+    if res is not None and not isinstance(res, str):
+        _fail("CliFailed", "claude's result is not text (%s)" % type(res).__name__, None)
     got = out.get("session_id")
     if new and isinstance(got, str) and got and (got != new or cell.read("session.txt") != new):
         mark_session("claude", cell, ws, got)              # result 帶了不同的 id（或交出去時沒寫成）：以它為準

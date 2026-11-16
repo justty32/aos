@@ -5,6 +5,7 @@ import os
 
 
 NAME = "retry.json"
+MAX_FAILURES = 10          # 同一筆欠帳連續第 10 次暫時錯＝當永久錯（repo-aos 11-16：要有上限，免得冷卻、續做繞不出來）
 
 
 def path(stack):
