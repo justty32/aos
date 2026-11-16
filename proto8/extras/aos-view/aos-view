@@ -1483,30 +1483,98 @@ def do_say(form, tree, home, ret=None):
     return "已對 %s 說了（%s）" % (name, short(text, 60))
 
 
+SLASH_CMDS = [
+    {"name": name, "args": args, "confirm": confirm, "how": "turn", "cli": ["claude", "codex"]}
+    for name, args, confirm in (("compact", "optional", False), ("status", "none", False),
+                                ("usage", "none", False), ("goal", "optional", False),
+                                ("clear", "none", True), ("exit", "none", True))
+]
+
+
+def slash_commands():
+    """Read the optional demo/test command list on every request, never cache it."""
+    fx = os.environ.get("VIEW_SLASH_FIXTURE")
+    return load_json(fx, []) if fx else SLASH_CMDS
+
+
+def do_slash(form, tree, home, ret=None):
+    return _send_slash(form, tree, home, "slash", ret)
+
+
 def do_compact(form, tree, home):
-    """Send a bare /compact to a claude/codex agent (inv-compact §7): no prefix, no tail, alone in its queue,
-    so aos-eca's slash check (one letter whose whole text is /compact) takes it as the CLI's own command."""
+    return _send_slash({"name": form.get("name", ""), "text": "/compact"}, tree, home, "compact")
+
+
+def _send_slash(form, tree, home, kind, ret=None):
+    """Validate once and send a bare command; compact keeps its original audit and UI contract."""
     name = form.get("name", "")
     nodes = (tree or {}).get("nodes", {})
     n = nodes.get(name)
     if not n or n["kind"] != "agent":
         return "!不是表上的 agent：%s" % name
+    text = form.get("text", "").strip()
+    if not text.startswith("/") or len(text.splitlines()) != 1 or len(text) > 1000:
+        return "!指令要以 / 開頭、只有一行，上限 1000 字"
+    words = text.split(maxsplit=1)
+    command = words[0]
+    spec = next((c for c in slash_commands() if c["name"] == command[1:]), None)
+    if spec is None:
+        return "!%s 目前送不進去" % command
+    has_args = len(words) > 1
+    if spec["args"] == "none" and has_args:
+        return "!%s 後面不能有字" % command
+    if spec["args"] == "required" and not has_args:
+        return "!%s 後面要有內容" % command
     if (n.get("state") or "").lower() != "running":
-        return "!%s 沒在跑（%s），壓縮不了" % (name, n.get("state") or "?")
+        return "!%s 沒在跑（%s），送不進去" % (name, n.get("state") or "?")
     cli = (n.get("live") or {}).get("cli") or cli_kind(n.get("stack"))
-    if not cli:
-        return "!%s 不是 claude／codex 那種 agent（找不到它的對話小格），/compact 對它沒用" % name
+    if not cli or cli not in spec["cli"]:
+        return "!%s 不是這個指令支援的 CLI agent，%s 對它沒用" % (name, command)
     if n.get("queued"):
-        return "!%s 信箱還排著 %d 封：/compact 會跟它們併成一批而失效，等它讀完再按" % (name, n["queued"])
-    code, out, err = run(["aos-agent", "say", "-t", name, "--from", PAGE_FROM, "-"], timeout=20, stdin="/compact")
-    rec = {"at": now_local(), "kind": "compact", "to": name, "text": "/compact", "ok": code == 0,
+        return "!%s 信箱還排著 %d 封：%s 會跟它們併成一批而失效，等它讀完再按" % (name, n["queued"], command)
+    code, out, err = run(["aos-agent", "say", "-t", name, "--from", PAGE_FROM, "-"], timeout=20, stdin=text)
+    rec = {"at": now_local(), "kind": kind, "to": name, "text": text, "ok": code == 0,
            "letter": out.strip() if code == 0 else None, "error": None if code == 0 else short(err, 300)}
     log_sent(home, rec)
     DELIVERY_CACHE.pop(name, None)
+    if ret is not None:
+        ret["letter"] = rec["letter"]
     if code != 0:
         return "!送不出去：%s" % short(err or out, 300)
-    later = "；它正在一輪裡，這一輪結束才會壓，這段時間別再對它說話" if (n.get("live") or {}).get("in_turn") else ""
-    return "已叫 %s 壓縮對話（/compact）%s" % (name, later)
+    verb = "壓" if kind == "compact" else "做"
+    later = "；它正在一輪裡，這一輪結束才會%s，這段時間別再對它說話" % verb if (n.get("live") or {}).get("in_turn") else ""
+    if kind == "compact":
+        return "已叫 %s 壓縮對話（/compact）%s" % (name, later)
+    return "已把 %s 送進 %s 的畫面%s" % (command, name, later)
+
+
+def history_item(item):
+    m = item.get("message") or {}
+    content = m.get("content")
+    if isinstance(content, list):
+        content = " ".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
+    content = mask(content or "")
+    tc = m.get("tool_calls") or []
+    tools = [((t.get("function") or {}).get("name") or t.get("name") or "?") for t in tc if isinstance(t, dict)]
+    result = {"line": item.get("line"), "role": m.get("role"), "text": short(content, 600), "tools": tools}
+    if m.get("role") == "assistant" and content.startswith("[aos] slash: /"):
+        result["slash"] = content[len("[aos] slash: "):].split()[0].rstrip(":")
+        result["text"] = content if len(content) <= 4000 else content[:3999] + "…"
+    return result
+
+
+def last_full(rows):
+    """The most recent assistant text before the normal 600-character history preview."""
+    for item in reversed(rows):
+        m = item.get("message") or {}
+        if m.get("role") == "assistant":
+            content = m.get("content")
+            if isinstance(content, list):
+                content = " ".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
+            text = mask(content or "")
+            cut = len(text) > 4000
+            return (text[:3999] + "…" if cut else text), cut
+    return None, False
 
 
 def cli_kind(stack):
@@ -1781,21 +1849,15 @@ def agent_json(name):
     res = st.get("resources") or {}
     who = st.get("who") or {}
     mb = st.get("mailbox") or {}
-    items = []
-    for item in list(reversed(hist))[:30]:
-        m = item.get("message") or {}
-        content = m.get("content")
-        if isinstance(content, list):
-            content = " ".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
-        tc = m.get("tool_calls") or []
-        tools = [((t.get("function") or {}).get("name") or t.get("name") or "?") for t in tc if isinstance(t, dict)]
-        items.append({"line": item.get("line"), "role": m.get("role"), "text": short(content or "", 600), "tools": tools})
+    items = [history_item(item) for item in list(reversed(hist))[:30]]
+    full, cut = last_full(hist)
     return {"name": name,
             "now": {"state": s.get("state"), "phase": s.get("phase"), "queued": s.get("queued"), "busy": None,
                     "pid": res.get("pid"), "memory_mb": round((res.get("memory_bytes") or 0) / 1048576),
                     "up_min": ((st.get("time") or {}).get("up_seconds") or 0) // 60,
                     "workspace": who.get("workspace") or who.get("ws"),
-                    "last_answer": mask(s.get("last_answer")) if s.get("last_answer") else None},
+                    "last_answer": mask(s.get("last_answer")) if s.get("last_answer") else None,
+                    "last_answer_full": full, "last_answer_cut": cut},
             "mailbox": {"waiting": mb.get("waiting") or 0,
                         "letters": [{"status": x.get("status"), "title": mask(x.get("title")), "from": x.get("from"),
                                      "sent_at": parse_time(x.get("sent_at"))} for x in (mb.get("letters") or [])[:20]]},
@@ -1946,6 +2008,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self.send_json({"user": board_get(self.server.home)}, etag=revs["board"])
         if u.path == "/api/asks":
             return self.send_json({"asks": (tree or {}).get("zone", [])}, etag=revs["asks"])
+        if u.path == "/api/slash":
+            return self.send_json({"commands": slash_commands()})
         if u.path == "/api/orders":
             conf = self.server.home.config().get("orders") or {}
             return self.send_json({"kinds": [{"kind": k, "label": v[1], "to": (conf.get(k) or {}).get("to") or v[0],
@@ -2133,6 +2197,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if u == "/api/say":
             ret = {}
             msg = do_say(form, tree, home, ret)
+            self.server.ob().sent(form.get("name"))
+            return self.send_json({"ok": not msg.startswith("!"), "message": msg.lstrip("!"), "letter": ret.get("letter")},
+                                  200 if not msg.startswith("!") else 400)
+        if u == "/api/slash":
+            ret = {}
+            msg = do_slash(form, tree, home, ret)
             self.server.ob().sent(form.get("name"))
             return self.send_json({"ok": not msg.startswith("!"), "message": msg.lstrip("!"), "letter": ret.get("letter")},
                                   200 if not msg.startswith("!") else 400)

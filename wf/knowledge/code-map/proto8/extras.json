@@ -40,6 +40,7 @@
     "test_compact_quiet.py": "the compact button's API (/api/compact: a bare \"/compact\", alone) and the quiet-turn light",
     "test_delivery.py": "delivery() marks what the user sent as queued / read / replied / unknown.",
     "test_phase1.py": "phase 1 of aos-view: note, decide, aide-tick, relay ingestion into a temp user zone, answer, match, lights.",
+    "test_slash.py": "test_slash verifies command validation, bare delivery, fixture reloads and masked multiline history.",
     "test_v2.py": "the v2 backend (03 §12.3, §12.8): B1 second port, B2 pulse / rev / ETag, B3 outbox, B4 ui-state,"
    },
    "ui": {

@@ -1,0 +1,50 @@
+{
+ "fake_claude": {
+  "description": "stand-in for the claude CLI in aos-eca tests: -p with --session-id/--resume, keeps conversations as files, never calls a model"
+ },
+ "fake_claude_stream": {
+  "description": "stand-in for claude -p --input-format stream-json in tests: reads user lines from stdin, answers each round, never calls a model"
+ },
+ "fake_codex": {
+  "description": "stand-in for the codex CLI in aos-eca tests: exec / exec resume ID with --json and -o, keeps threads as files, never calls a model"
+ },
+ "test_compact_wrap.py": {
+  "description": "Test the wrap-up-then-compact path end to end with fake claude (11-15 compact-1115): context_wrap (on_clock) reads live.jsonl, sends a wrap-up letter…"
+ },
+ "test_goal.py": {
+  "description": "Test the goal in aos-eca-turn (11-11 goal/02) with fake claude / codex CLIs: queue empty + last turn answered + goal active = the reminder is the pro…"
+ },
+ "test_goal_replace.py": {
+  "description": "Test aos-eca-turn's recognition of codex's \"Replace goal?\" menu (11-12 eca-slash /goal): only that menu with the cursor on \"1. Replace current goal\" …"
+ },
+ "test_history_edit.py": {
+  "description": "Test aos-eca-turn's shrunk history edit (11-10 self-family): history.jsonl changed between turns or during one = the next turn starts a new conversat…"
+ },
+ "test_hooks.py": {
+  "description": "Test the hooks of aos-eca-turn (eca's reduced set: before_queue, after_queue, brain_failed, tool_added) with a fake claude CLI."
+ },
+ "test_kernel_watch.py": {
+  "description": "驗證 watch 經 kernel 重問表檔、缺欄容錯、空表退出與五秒節流，直連行為不變。"
+ },
+ "test_letter_name.py": {
+  "description": "Test that a letter's sender (body \"name\", set by aos-agent say for an eca) reaches the CLI side as parts and never enters history, and that letters a…"
+ },
+ "test_live_mail.py": {
+  "description": "驗沒開畫面、cli.json 寫 \"live_mail\": true 的一整輪（wake-1114 主案 S）：aos-eca-turn 起 claude 之後 queue 又來的信，"
+ },
+ "test_long_turn.py": {
+  "description": "Test that an eca turn longer than the old 600 s limit (scaled down) is not failed when cli.json has no timeout_ms (11-15: 0 or omitted = no limit), t…"
+ },
+ "test_reply_match.py": {
+  "description": "Test reply matching on the eca side (reply-match-1114): user rows carry aos.letter, the final answer carries aos.answer_to, and <stack>/letters.json …"
+ },
+ "test_screen_slash.py": {
+  "description": "test_screen_slash checks screen-only commands with a fake cell, clock and tmux output, never a real screen."
+ },
+ "test_slash.py": {
+  "description": "Test aos-eca-turn's slash commands (11-12 eca-slash): one letter that is exactly /clear, /compact, /status, /usage or /exit is done by aos (or handed…"
+ },
+ "test_switch.py": {
+  "description": "Test aos-eca-turn switching machines (new conversation + reseed record, no lost letter) and its failure cooldown, with fake CLIs."
+ }
+}

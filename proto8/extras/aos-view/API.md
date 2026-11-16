@@ -31,7 +31,7 @@ Errors: HTTP 4xx/5xx with `{"ok": false, "error": "Code", "message": "human text
   - Out items of the last 7 days to an agent also carry `delivery`: `queued` (a mail still in its mailbox / a say not yet in its history), `read` (the mail left its mailbox / the say is in its history), `replied` (a relay letter has `in_reply_to` = this letter; for a say: the agent wrote to the relay after it), `unknown` (`ctl state` / `history ls` could not be read). Only official commands are used (Q7 a), cached 15 s per agent (cleared when the user sends to it). A `queued` item also has `queue_ahead`: for a mail its place in the mailbox, for a say `queued - (my later says still queued) - 1` (the queue is FIFO; approximate).
   - The reply also has `turn`: null, or `{queued, busy, active_at, why}` when the agent is running with letters queued (or busy) = it is inside a turn and reads them when the turn ends.
 - `GET /api/relay` → `{"letters": [ITEM...]}` newest first, max 100, all `dir: "in"` (every reply in the relay mailbox).
-- `GET /api/agent?name=ID` (agents only) → `{"name", "now": {"state","phase","queued","busy","pid","memory_mb","up_min","workspace","last_answer"}, "mailbox": {"waiting": int, "letters": [{"status","title","from","sent_at"}]}, "history": [{"line": int, "role", "text", "tools": [str]}]}` (history newest first, max 30, text cut at 600 chars). Slow (CLI calls, ~0.3 s): fetch only when the user opens that agent.
+- `GET /api/agent?name=ID` (agents only) → `{"name", "now": {"state","phase","queued","busy","pid","memory_mb","up_min","workspace","last_answer","last_answer_full","last_answer_cut"}, "mailbox": {"waiting": int, "letters": [{"status","title","from","sent_at"}]}, "history": [{"line": int, "role", "text", "tools": [str]}]}` (history newest first, max 30, ordinary text cut at 600 chars). Assistant content starting with `[aos] slash: /` also has `slash: "/command"`; its masked text preserves newlines up to 4000 characters (trailing `…` when cut). `now.last_answer_full` is the last assistant's masked text, preserving newlines up to 4000 characters, or null if absent; `now.last_answer_cut` says whether that text was cut. Slow (CLI calls, ~0.3 s): fetch only when the user opens that agent.
 
 ## Write (POST, JSON body)
 
@@ -91,7 +91,7 @@ One line the user leaves before going away (sleep, out), so an agent that waits 
 
 - `GET /api/version` → `{"api": "view-api/0", "ui": "<the served UI's VERSION line>", "ui_dir": "v1"}`. v1 (`ui/v1/`) is frozen: bug fixes only; new APIs may be added for the new UI, but fields and behavior v1 uses do not change.
 
-## v2 additions (全景 v2.0, 11-14; 03 §12.3 B1–B5, §12.8)
+## v2 additions (全景 v2.0, 11-14; 03 §12.3 B1–B6, §12.8)
 
 Nothing v1 uses changed; every item below is new.
 
@@ -103,3 +103,10 @@ Nothing v1 uses changed; every item below is new.
 - **Agent boards (ok-board board/1, read only).** Each agent node gains `board`: the stack's `board.json` when its `format` is `board/1` (known keys only, strings masked), else `null`. The page reads it in ok-board's four steps (not posted / clock fix / expiry 24 h → grey / a sleeping or stopped proc = away).
 - **Rollup** gains `counts {red, yellow, blue}` (self and everything below) and `worst_ids` (the worst 3 below).
 - **UI** `ui/v2/dist` (built from `ui/v2/` in the dev copy: React 19, Tailwind 4, Vite 8; `VERSION`). Only the build is installed, no `node_modules`.
+
+### B6 畫面指令
+
+- `GET /api/slash` → `{"commands": [{"name":"compact","args":"optional","confirm":false,"how":"turn","cli":["claude","codex"]}, ...]}`。`name` 不帶 `/`，`args` 為 `none|optional|required`，`how` 為 `turn|screen`。預設六個指令：compact、status、usage、goal、clear、exit；compact／goal 可帶參數，其他不能，clear／exit 要前端確認。只有設定 `VIEW_SLASH_FIXTURE=FILE` 才從 JSON 陣列讀名單，每次 GET／POST 都重讀，供 demo 驗證尚未掛接的指令。
+- `POST /api/slash` `{"name":"agent-id","text":"/compact keep the plan"}` → `{"ok","message","letter"}`。沿用 Host、Origin、token＋cookie、大小與 JSON／字串檢查；只收表上的 agent，去頭尾空白後須 `/` 開頭、單行、最多 1000 字，指令與參數符合名單，agent 正在 running、CLI 種類支援、queued 為 0。失敗 HTTP 400；成功 stdin 原樣送給 `aos-agent say -t NAME --from user-via-page -`，不加開頭或尾巴，逾時 20 秒。
+- 送出後清 delivery cache，`log_sent` 記 `kind:"slash"`、to、text、ok、letter／error；只稽核留底，不進 outbox／thread。成功訊息「已把 /compact 送進 board 的畫面」；在一輪裡會提示「這一輪結束才會做，這段時間別再對它說話」。
+- `/api/compact` 為相容保留，共用檢查與送出函式，但紀錄的 `kind` 仍是 `compact`，訊息仍用「這一輪結束才會壓」。
