@@ -57,6 +57,7 @@
 - **open｜11-16 之後開線：pi coding agent**：使用者 11-16：「對了，之後還要開線做pi coding agent」。排在 ok-pano-1116 之後。家機已裝 `pi`（`~/.local/share/fnm/node-versions/v24.14.1/installation/bin/pi`）；前情：10-24 仿 pi 做了 read／bash／edit／write 工具（`proto8/thinking/2026-10/24/pi-tools/`），aos-mcp README 已把 pi 列為可叫 aos 工具的外部 agent。範圍待使用者確認（頂層讀法：把 pi 做成 eca 的第三種身，與 claude、codex 並列）。
 - **open｜11-16 agent-fsm 也要一套 context 收尾／壓縮**：11-16 開線 **ok-fsmwrap**（opus 隊長，工作區 `wf/temp/ok-fsmwrap-1116/`，正規流程），使用者「agent-fsm那個得做一套」「都按照建議，去做吧」。codex 回合中收信、pi coding agent 排在這兩條之後。
 - **open｜11-16 push 授權**：使用者 11-16「允許push main。」已推到 `07145aac4`；GitHub Pages 已開（main `/docs`，built，https://justty32.github.io/aos/ 回 200）。頁是 ok-release 照 `~/aos-home/ws/user/草稿.md` 改的試上線版：**正式發佈前要拿掉 `noindex` 與「試上線版」提示帶**；5 個方向題（Q2、U1～U4）已寄使用者專區，頁面先照推薦做；repo 沒有 LICENSE。
+- **open｜11-16 全景頁 slash 鈕對畫面開著的 repo-aos 沒走 slash**：使用者 11-16 在新版全景頁按「📊 用量」「🧠 上下文」（/usage ×4、/context ×1），到 repo-aos 都變成 a2a 的普通訊息（寄件人 user-via-page，內容就是 `/usage`），沒有被 aos 當 slash 執行、也沒打進畫面。待查：`/api/slash` 寫進 queue 的信、aos-eca 開畫面＋a2a（`midturn.py` 遇 slash 應停手留 cur/）與 live_mail 那條路是不是把 slash 當一般信投了。repo-aos 當時在回合中。交給下一條全景頁線或 ok-pano 交接（`wf/temp/ok-pano-1116/notes/handoff.md`）。
 - 導覽：[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/docs/CONCEPTS.md)、[NORMS](../proto8/docs/NORMS.md)；停在半路的見 [restart](../proto8/thinking/2026-10/11/restart/README.md) §4
 
 ## 各工作流 session-log
