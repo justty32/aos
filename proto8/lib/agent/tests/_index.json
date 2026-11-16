@@ -11,6 +11,9 @@
  "test_cli_external_mcp.py": {
   "description": "驗 cli.json 的 mcp_servers（11-12 external-mcp 步 1）：server 檔讀取與形狀、codex 的 -c、bearer 只進 CLI 行程的環境、壞的那台 warning 跳過、畫面啟動器。"
  },
+ "test_cli_fault.py": {
+  "description": "驗證 claude API 失敗分類表的優先順序、壞型別容錯與工具計數。"
+ },
  "test_cli_hook_follow.py": {
   "description": "驗畫面 hook 跟上 CLI 的對話（11-12 eca-slash）：id 換了就改記 session.txt；claude 的 /clear（SessionStart source clear）連 aos 的 history 一起清、原文搬到旁邊；codex 取標題的旁支 thread 不記。"
  },

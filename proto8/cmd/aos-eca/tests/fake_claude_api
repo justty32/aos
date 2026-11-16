@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+# fake_claude_api - fake_claude plus API-error switches for the retry tests, never calls a model.
+"""Usage: fake_claude_api -p [--output-format stream-json] [--verbose] [--session-id ID | --resume ID] [other flags ignored] < prompt
+       fake_claude_api --version
+
+Conversations live in ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects/<realpath of cwd with every non-alphanumeric character -> ->/<id>.jsonl (like the real CLI).
+--resume ID with no such file: one stderr line, a result line with is_error true, exit 1.
+Success: stdin appended to the conversation file; stdout a system line then a result line "FAKE: <last stdin line>".
+FAKE_CLI_FAIL=1: always an error result ("usage limit reached"), exit 1.
+FAKE_CLI_FAIL_SAVED=1 (with FAKE_CLI_FAIL=1): the conversation file is created before failing (the CLI saved it).
+FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": "..."} as one JSON line per call.
+FAKE_CLI_DROP_FIRST=FILE: before answering, delete the first line of FILE (stands for the model calling self_history).
+FAKE_CLI_TOOL=NAME: the conversation file and stream also get one assistant line with a tool_use of NAME.
+FAKE_CLI_MCP=JSON: the first event is an init event whose mcp_servers is that JSON array (e.g. [{"name": "demo", "status": "failed"}]).
+FAKE_CLI_USAGE=USED/WINDOW: an assistant event whose usage adds up to USED input tokens comes before the result, and the result's
+  modelUsage gives contextWindow WINDOW (like the real stream-json). A prompt that is a /compact gets a compact_boundary event and no assistant.
+FAKE_CLI_API_ERROR=STATUS|connection_failed: save the user message and a synthetic API error, emit an API-error result, exit 1.
+FAKE_CLI_NO_SAVE=1: with an API error, do not create or write the session transcript for this call.
+FAKE_CLI_API_RETRY=N: emit N system api_retry lines before the result.
+FAKE_CLI_RESULT_JSON=JSON: on success use this JSON value as result instead of text.
+FAKE_CLI_FAIL_ONCE=FILE: create FILE and fail once with FAKE_CLI_API_ERROR (default 529); succeed when FILE exists."""
+import re
+import json, os, sys, uuid
+
+argv = sys.argv[1:]
+if "--version" in argv:
+    print("2.1.0 (fake)")
+    sys.exit(0)
+if "--help" in argv or "-h" in argv:
+    print(__doc__)
+    sys.exit(0)
+VALUED = {"--output-format", "--session-id", "--resume", "--model", "--tools", "--permission-mode",
+          "--max-budget-usd", "--mcp-config", "--allowedTools", "--settings"}
+opts, it = {}, iter(argv)
+for a in it:
+    if a in VALUED:
+        opts[a] = next(it, "")
+    else:
+        opts[a] = True
+prompt = sys.stdin.read()
+log = os.environ.get("FAKE_CLI_LOG")
+if log:
+    with open(log, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"argv": sys.argv, "stdin": prompt}, ensure_ascii=False) + "\n")
+
+
+def out(ev):
+    print(json.dumps(ev), flush=True)
+
+
+home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.environ.get("HOME", "/"), ".claude")
+folder = os.path.join(home, "projects", re.sub(r"[^A-Za-z0-9]", "-", os.path.realpath(os.getcwd())))
+sid = opts.get("--resume") or opts.get("--session-id") or str(uuid.uuid4())
+conv = os.path.join(folder, sid + ".jsonl")
+if os.environ.get("FAKE_CLI_FAIL") == "1":
+    if os.environ.get("FAKE_CLI_FAIL_SAVED") == "1":
+        os.makedirs(folder, exist_ok=True)
+        open(conv, "a").close()
+    sys.stderr.write("fake_claude: usage limit reached\n")
+    out({"type": "result", "is_error": True, "session_id": sid, "result": "usage limit reached"})
+    sys.exit(1)
+if "--resume" in opts and not os.path.isfile(conv):
+    sys.stderr.write("No conversation found with session ID: %s\n" % sid)
+    out({"type": "result", "is_error": True, "result": "No conversation found with session ID: %s" % sid})
+    sys.exit(1)
+drop = os.environ.get("FAKE_CLI_DROP_FIRST")
+if drop:
+    with open(drop, encoding="utf-8") as f:
+        rest = f.readlines()[1:]
+    with open(drop, "w", encoding="utf-8") as f:
+        f.writelines(rest)
+api_error = os.environ.get("FAKE_CLI_API_ERROR")
+marker = os.environ.get("FAKE_CLI_FAIL_ONCE")
+if marker:
+    if os.path.exists(marker):
+        api_error = None
+    else:
+        with open(marker, "w", encoding="utf-8") as f:
+            f.write("failed once\n")
+        api_error = api_error or "529"
+no_save = bool(api_error) and os.environ.get("FAKE_CLI_NO_SAVE") == "1"
+if not no_save:
+    os.makedirs(folder, exist_ok=True)
+    with open(conv, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"type": "user", "message": {"content": prompt}}, ensure_ascii=False) + "\n")
+        if os.environ.get("FAKE_CLI_TOOL"):
+            f.write(json.dumps({"type": "assistant", "message": {"content": [
+                {"type": "tool_use", "id": "toolu_1", "name": os.environ["FAKE_CLI_TOOL"], "input": {}}]}}) + "\n")
+lines = prompt.rstrip("\n").split("\n")
+if os.environ.get("FAKE_CLI_MCP"):
+    out({"type": "system", "subtype": "init", "session_id": sid, "mcp_servers": json.loads(os.environ["FAKE_CLI_MCP"])})
+out({"type": "system", "session_id": sid})
+if os.environ.get("FAKE_CLI_TOOL"):
+    out({"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "id": "toolu_1", "name": os.environ["FAKE_CLI_TOOL"], "input": {}}]}})
+retries = int(os.environ.get("FAKE_CLI_API_RETRY", "0"))
+for attempt in range(1, retries + 1):
+    out({"type": "system", "subtype": "api_retry", "attempt": attempt, "max_retries": retries,
+         "retry_delay_ms": 0, "error_status": None, "error": "unknown"})
+if api_error:
+    result = {"type": "result", "subtype": "success", "is_error": True, "session_id": sid,
+              "terminal_reason": "api_error"}
+    if api_error == "connection_failed":
+        result.update(api_error_status=None, api_error="connection_failed",
+                      result="API Error: Connection refused")
+    else:
+        status = int(api_error)
+        kind = {400: "invalid_request_error", 401: "authentication_error", 403: "permission_error",
+                404: "not_found_error", 408: "timeout_error", 413: "request_too_large",
+                422: "invalid_request_error", 429: "rate_limit_error", 529: "overloaded_error"}.get(status, "api_error")
+        result.update(api_error_status=status, api_error_type=kind, result="API Error: %d %s" % (status, kind))
+    if not no_save:
+        with open(conv, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"type": "assistant", "isApiErrorMessage": True, "message": {
+                "model": "<synthetic>", "content": [{"type": "text", "text": result["result"]}]}}) + "\n")
+    sys.stderr.write("fake_claude_api: %s\n" % result["result"])
+    out(result)
+    sys.exit(1)
+result = {"type": "result", "is_error": False, "session_id": sid, "result": "FAKE: " + lines[-1]}
+if "FAKE_CLI_RESULT_JSON" in os.environ:
+    result["result"] = json.loads(os.environ["FAKE_CLI_RESULT_JSON"])
+if os.environ.get("FAKE_CLI_USAGE"):
+    used, window = (int(x) for x in os.environ["FAKE_CLI_USAGE"].split("/"))
+    usage = {"input_tokens": 3, "cache_creation_input_tokens": 7, "cache_read_input_tokens": used - 10, "output_tokens": 5}
+    compacting = prompt.strip() == "/compact" or prompt.strip().startswith("/compact ")
+    if compacting:
+        out({"type": "system", "subtype": "compact_boundary", "session_id": sid})
+    else:
+        out({"type": "assistant", "parent_tool_use_id": None, "session_id": sid, "message": {"model": "fake-model", "usage": usage}})
+    with open(conv, "a", encoding="utf-8") as f:   # 11-16 ok-small：真的 CLI 也把這些寫進自己的 transcript（2.1.325 實測的形狀）
+        f.write(json.dumps({"type": "system", "subtype": "compact_boundary", "isSidechain": False} if compacting else
+                           {"type": "assistant", "isSidechain": False, "message": {
+                               "id": "msg_" + os.urandom(6).hex(), "model": "fake-model",
+                               "stop_reason": "end_turn", "usage": usage}}) + "\n")
+    result["modelUsage"] = {"fake-model": {"contextWindow": window}}
+out(result)

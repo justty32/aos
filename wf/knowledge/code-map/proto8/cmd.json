@@ -128,6 +128,7 @@
     "hook.py": "這支跑的 hook（before_queue、tool_added；fire 把 hook 停下換成 Fail）。",
     "midturn.py": "等 CLI 回答的這段時間又來的信：馬上認領、過 hook、交給 cli_ask 投進 CLI（More）；信的寄件人欄（unnamed）。",
     "reseed.py": "⑧ 換台開新對話時接在題目前面的開場白（從 history 組「整理過的紀錄」）。",
+    "retry.py": "暫時錯後欠著的信存於 retry.json，提供原子讀寫、清除與續做提示。",
     "screen_slash.py": "screen_slash sends allowlisted commands to an open CLI screen and returns masked output without opening a screen.",
     "slash.py": "⑭ slash 指令（/clear、/compact、/status、/usage、/exit、/goal）在 aos 這層怎麼做。",
     "turn.py": "平級形的一輪（one_turn）：認領一批、hook、slash 分流、交給 cli_session、回答接進 history、冷卻。"
@@ -138,6 +139,7 @@
    },
    "tests": {
     "fake_claude": "stand-in for the claude CLI in aos-eca tests: -p with --session-id/--resume, keeps conversations as files, never calls a model",
+    "fake_claude_api": "fake_claude plus API-error switches for the retry tests, never calls a model.",
     "fake_claude_stream": "stand-in for claude -p --input-format stream-json in tests: reads user lines from stdin, answers each round, never calls a model",
     "fake_codex": "stand-in for the codex CLI in aos-eca tests: exec / exec resume ID with --json and -o, keeps threads as files, never calls a model",
     "test_compact_wrap.py": "Test the wrap-up-then-compact path end to end with fake claude (11-15 compact-1115): context_wrap (on_clock) reads live.jsonl, sends a wrap-up letter…",
@@ -151,6 +153,7 @@
     "test_long_turn.py": "Test that an eca turn longer than the old 600 s limit (scaled down) is not failed when cli.json has no timeout_ms (11-15: 0 or omitted = no limit), t…",
     "test_peek.py": "Test aos-eca-screen peek (11-16 ok-small): /status and /usage answer at once, also mid-turn, without the queue, history, lock or screen.",
     "test_reply_match.py": "Test reply matching on the eca side (reply-match-1114): user rows carry aos.letter, the final answer carries aos.answer_to, and <stack>/letters.json …",
+    "test_retry_file.py": "驗證 retry.json 的讀寫清除、累加去重、壞檔容錯與續做提示。",
     "test_screen_hook.py": "test_screen_hook checks that slash_of routes screen-only commands to slash_turn and leaves look-alikes as plain text.",
     "test_screen_slash.py": "test_screen_slash checks screen-only commands with a fake cell, clock and tmux output, never a real screen.",
     "test_slash.py": "Test aos-eca-turn's slash commands (11-12 eca-slash): one letter that is exactly /clear, /compact, /status, /usage or /exit is done by aos (or handed…",

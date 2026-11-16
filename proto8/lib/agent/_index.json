@@ -53,6 +53,9 @@
  "cli_cfg.py": {
   "description": "cli_session 的設定：讀與驗工具資料夾的 cli.json、llm.json 疊 model、system 附加旗標、tools／tools_sub 登記檔"
  },
+ "cli_fault.py": {
+  "description": "claude -p 失敗時從 result 行與 stream 判斷暫時或永久，並計算這輪工具呼叫數。"
+ },
  "cli_hook.py": {
   "description": "cli_session 的畫面 hook（CLI 講完一輪時叫）：跟上對話 id、/clear／/compact 時同步 aos 的 history、codex 壓縮跟上"
  },

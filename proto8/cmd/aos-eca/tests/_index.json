@@ -2,6 +2,9 @@
  "fake_claude": {
   "description": "stand-in for the claude CLI in aos-eca tests: -p with --session-id/--resume, keeps conversations as files, never calls a model"
  },
+ "fake_claude_api": {
+  "description": "fake_claude plus API-error switches for the retry tests, never calls a model."
+ },
  "fake_claude_stream": {
   "description": "stand-in for claude -p --input-format stream-json in tests: reads user lines from stdin, answers each round, never calls a model"
  },
@@ -40,6 +43,9 @@
  },
  "test_reply_match.py": {
   "description": "Test reply matching on the eca side (reply-match-1114): user rows carry aos.letter, the final answer carries aos.answer_to, and <stack>/letters.json …"
+ },
+ "test_retry_file.py": {
+  "description": "驗證 retry.json 的讀寫清除、累加去重、壞檔容錯與續做提示。"
  },
  "test_screen_hook.py": {
   "description": "test_screen_hook checks that slash_of routes screen-only commands to slash_turn and leaves look-alikes as plain text."
