@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 PROTO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROTO / "lib" / "agent"))
@@ -75,6 +76,134 @@ class ContextUse(unittest.TestCase):
         (self.stack / "codex").mkdir()
         (self.stack / "codex" / "live.jsonl").write_text(json.dumps({"type": "turn.completed", "usage": {"input_tokens": 5}}) + "\n")
         self.assertIsNone(context_use.read(str(self.stack)))
+
+
+SID = "7d13c9a4-19e5-47bf-bde9-c20e0b6defb6"
+
+
+def said(used, stop="end_turn", model="m", side=False, mid=None):
+    """One assistant row of claude's own transcript (shape seen in claude 2.1.325)."""
+    return {"type": "assistant", "isSidechain": side, "uuid": "u-%d" % used, "message": {
+        "id": mid or "msg_%d" % used, "model": model, "stop_reason": stop, "usage": {
+            "input_tokens": 1, "cache_creation_input_tokens": 2, "cache_read_input_tokens": used - 3, "output_tokens": 9}}}
+
+
+BOUNDARY = {"type": "system", "subtype": "compact_boundary", "isSidechain": False}
+
+
+class ClaudeTranscript(unittest.TestCase):   # 11-16 ok-small：畫面開著（互動 claude）不寫 live.jsonl，讀 claude 自己的 transcript
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.stack = Path(self.tmp.name) / "st"
+        self.cell = self.stack / "claude"
+        self.cell.mkdir(parents=True)
+        self.home = Path(self.tmp.name) / "claude-home"
+        self.env = mock_env(CLAUDE_CONFIG_DIR=str(self.home))
+        self.env.start()
+        self.addCleanup(self.env.stop)
+
+    def session(self, sid=SID):
+        (self.cell / "session.txt").write_text(sid + "\n")
+
+    def transcript(self, *events, linked=False):
+        if linked:
+            path = self.cell / "transcripts" / ("claude-%s.jsonl" % SID)
+        else:
+            path = self.home / "projects" / "-x-ws" / (SID + ".jsonl")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a") as f:
+            for ev in events:
+                f.write((ev if isinstance(ev, str) else json.dumps(ev)) + "\n")
+        return path
+
+    def live(self, *events):
+        with open(self.cell / "live.jsonl", "a") as f:
+            for ev in events:
+                f.write(json.dumps(ev) + "\n")
+
+    def read(self, window=None):
+        return context_use.read(str(self.stack), window=window)
+
+    def test_last_finished_turn_from_the_transcript(self):
+        self.session()
+        path = self.transcript({"type": "user"}, said(300), said(400, stop="tool_use"), said(900, side=True), said(500),
+                               said(700, stop="tool_use"), said(800, stop=None), linked=True)
+        u = self.read(window=1000)
+        self.assertEqual((u["used"], u["percent"], u["turn"], u["source"]), (500, 50.0, "claude-transcript:msg_500", str(path)))
+        self.assertEqual(self.read(window=1000)["turn"], u["turn"])          # same turn read twice = same id
+
+    def test_window_from_old_live_results_and_the_account_folder(self):
+        self.session()
+        self.transcript(said(400, model="big"))                               # found under CLAUDE_CONFIG_DIR/projects/*/
+        self.assertIsNone(self.read())                                        # no window known yet
+        self.assertIn("set config.window", context_use.explain(str(self.stack)))
+        self.live({"type": "result", "modelUsage": {"small": {"contextWindow": 500}, "big": {"contextWindow": 2000}}})
+        self.assertEqual(self.read()["window"], 2000)
+        self.assertEqual(self.read(window=800)["percent"], 50.0)              # config.window wins
+
+    def test_compacted_means_none_and_no_fallback_to_live(self):
+        self.session()
+        self.live(assistant(900), result(n=1))                                # the old -p turn: 90%
+        self.transcript(said(900), BOUNDARY, {"type": "user", "isCompactSummary": True})
+        self.assertIsNone(self.read(window=1000))                             # not the 90% from before the compaction
+        self.assertIn("no finished turn with usage since the last compaction", context_use.explain(str(self.stack), window=1000))
+        self.transcript(said(120))
+        self.assertEqual(self.read(window=1000)["used"], 120)
+
+    def test_no_transcript_falls_back_to_live(self):
+        self.live(assistant(350), result(n=1))
+        self.assertTrue(self.read()["turn"].startswith("claude:"))           # no session.txt
+        self.session()
+        self.assertEqual(self.read()["used"], 350)                            # session.txt but no transcript file
+        self.session("../../*")
+        self.transcript(said(100))
+        self.assertEqual(self.read()["used"], 350)                            # an id that is not a uuid is not globbed
+
+    def test_bad_rows_are_skipped(self):
+        self.session()
+        bad = said(600)
+        bad["message"]["usage"]["input_tokens"] = "x"
+        empty = said(650)
+        empty["message"]["usage"] = {"output_tokens": 5}
+        self.transcript("not json", said(200), {"type": "assistant", "message": "x"}, bad, empty)
+        self.assertEqual(self.read(window=1000)["used"], 200)                 # broken / empty usage rows skipped, the older one counts
+        self.transcript(said(300))
+        self.assertEqual(self.read(window=1000)["used"], 300)
+        self.transcript(BOUNDARY, bad)
+        self.assertIsNone(self.read(window=1000))                             # a bad row after a compaction is still nothing
+
+    def test_sidechain_compaction_does_not_reset(self):
+        self.session()
+        self.transcript(said(400), dict(BOUNDARY, isSidechain=True))
+        self.assertEqual(self.read(window=1000)["used"], 400)
+
+    def test_reads_back_past_big_rows_and_block_edges(self):
+        self.session()
+        blob = json.dumps({"type": "api-request-blob", "body": "b" * 5000})
+        self.transcript(said(100), BOUNDARY, said(420), *([blob] * 40))       # ~200 KB of rows after the finished turn
+        with mock.patch.object(context_use, "TRANSCRIPT_BLOCK", 4096):        # rows cut by block edges
+            self.assertEqual(self.read(window=1000)["used"], 420)
+            with mock.patch.object(context_use, "TRANSCRIPT_SCAN", 8192):     # read-back cap reached = nothing
+                self.assertIsNone(self.read(window=1000))
+                self.assertIn("read back at most", context_use.explain(str(self.stack), window=1000))
+
+    def test_unknown_model_takes_the_smallest_window_and_newest_file(self):
+        self.session()
+        self.transcript(said(400, model="other"))
+        self.live({"type": "result", "modelUsage": {"small": {"contextWindow": 500}, "big": {"contextWindow": 2000}}})
+        self.assertEqual(self.read()["window"], 500)                          # earlier rather than too late
+        newer = self.home / "projects" / "-y-ws" / (SID + ".jsonl")
+        newer.parent.mkdir(parents=True)
+        newer.write_text(json.dumps(said(250, model="big")) + "\n")
+        old = self.home / "projects" / "-x-ws" / (SID + ".jsonl")
+        os.utime(old, (1, 1))
+        self.assertEqual((self.read()["used"], self.read()["source"]), (250, str(newer)))
+
+
+def mock_env(**values):
+    from unittest import mock
+    return mock.patch.dict(os.environ, values)
 
 
 class FsmContextUse(unittest.TestCase):
@@ -307,6 +436,39 @@ class ContextWrap(unittest.TestCase):
         self.turn(400)
         self.fire()
         self.assertEqual(len(self.contents()), 1)
+
+    def test_round_from_the_transcript_with_config_window(self):   # 11-16 ok-small：畫面開著＝只有 transcript；視窗從 config.window
+        (self.stack / "claude").mkdir(exist_ok=True)
+        (self.stack / "claude" / "session.txt").write_text(SID + "\n")
+        path = self.stack / "claude" / "transcripts" / ("claude-%s.jsonl" % SID)
+        path.parent.mkdir()
+
+        def said_turn(*events):
+            with open(path, "a") as f:
+                for ev in events:
+                    f.write(json.dumps(ev) + "\n")
+        cfg = {"percent": 50, "window": 1000}
+        said_turn(said(400))
+        self.fire(cfg)
+        self.assertEqual(self.queued(), [])
+        said_turn(said(600, stop="tool_use"))
+        self.fire(cfg)
+        self.assertEqual(self.queued(), [])                            # mid-turn rows do not count
+        said_turn(said(650))
+        self.fire(cfg)
+        self.assertEqual(len(self.contents()), 1)
+        self.answer_all()
+        self.fire(cfg)
+        self.assertEqual(self.contents(), ["/compact"])
+        self.answer_all()
+        said_turn(BOUNDARY)                                            # the screen compacted: no finished turn since
+        self.fire(cfg)
+        self.assertEqual(self.phase(), "compacted")
+        self.fire(cfg)
+        self.assertEqual((self.queued(), self.phase()), ([], "compacted"))
+        said_turn(said(200))
+        self.fire(cfg)
+        self.assertEqual(self.phase(), "idle")
 
     def test_compact_waits_for_an_empty_queue(self):
         self.turn(500)

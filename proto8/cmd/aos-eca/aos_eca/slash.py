@@ -13,7 +13,7 @@ from .common import Fail, cli_ask, cli_base, cli_cell, cli_hook, letters_answere
 from .history import append_history, history_rows, note_sum
 from .hook import fire
 from .handoff import Handoff
-from .screen_slash import SCREEN_ONLY, screen_slash
+from .screen_slash import SCREEN_ONLY, input_clear, screen_slash, typed_warning
 
 
 # ---- ⑭ slash 指令（11-12 thinking eca-slash；使用者「aos-say/listen我希望也能支援這些」「chat也要」）----
@@ -225,6 +225,9 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
         if alive:
             if os.path.exists(cell.file("busy.txt")):
                 return 0                                            # 不打斷正在跑的那輪
+            if kind == "claude" and not input_clear(cell):          # 輸入框有人打到一半（或看不出來）：不打、信留 cur/（repo-aos 11-16）
+                typed_warning(GOAL)
+                return 0
             cli_ask.type_line(cell, full)
             text = note("/goal: typed into the open screen; the CLI's own answer shows there (a goal it runs on is also kept in turns.jsonl)%s"
                         % (confirm_goal_replace(cell) if kind == "codex" and full != GOAL else ""))
@@ -248,6 +251,9 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
     elif command in ("/clear", "/compact") and alive:
         if os.path.exists(cell.file("busy.txt")):
             return 0                                                # 不打斷正在跑的那輪
+        if kind == "claude" and not input_clear(cell):              # 輸入框有人打到一半（或看不出來）：不打、信留 cur/，下一輪再試；不用 C-u 清（會吃掉人的字）
+            typed_warning(command)
+            return 0
         text = on_screen(command, cfg, cell, stack, bodies[0]["content"].strip())
     elif command == "/compact" and kind == "claude":
         if not cell.read("session.txt"):

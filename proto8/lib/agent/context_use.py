@@ -6,7 +6,7 @@
 對外：
     read(stack, window=None) -> {"used": 本輪最後一次呼叫的輸入 token, "window": context 視窗, "percent": used/window*100,
                     "turn": 這份讀數屬於哪一輪（字串；同一輪讀幾次都一樣）, "source": 從哪讀的} | None
-    PROVIDERS：照順序試，第一個回非 None 的算數。要讓別種腦也提供用量，往這裡加一個函式 (stack) -> 同上 | None。
+    PROVIDERS：照順序試（claude 身是 from_claude：2a 找得到 transcript 就用它，否則 2），第一個回非 None 的算數。要讓別種腦也提供用量，往這裡加一個函式 (stack) -> 同上 | None（要收 hook 的 config.window 就寫成 (stack, window=None) 並列進 TAKES_WINDOW）。
 
 讀法（照順序）：
   1. 通用檔 <stack>/context_usage.json：任何腦都可以在每輪結束時寫 {"used": 整數, "window": 整數, "turn": 字串}（turn 選填，沒寫＝用檔的 mtime）。
@@ -15,7 +15,17 @@
      input_tokens＋cache_read_input_tokens＋cache_creation_input_tokens＝那一刻的 context 大小（跟 statusline 的算法一樣）；
      視窗＝那個 result 的 modelUsage.<model>.contextWindow（取 assistant 那則的 model，找不到取最大的）。
      那段裡有 compact_boundary 事件，它前面的 usage 不算（壓過了）；那段沒有 assistant（例：/compact 那一輪）＝None。
-     畫面開著時（tmux 裡的互動 claude）不寫 live.jsonl，讀到的是上一次 -p 那輪的數字（舊的）；呼叫方靠 turn 認新舊。
+     畫面開著時（tmux 裡的互動 claude）不寫 live.jsonl，所以 claude 身先讀 2a。
+  2a. claude 的 transcript（11-16 ok-small；from_claude）：<stack>/claude/session.txt 的 id → 小格的 transcripts/claude-<id>.jsonl，
+     或 CLAUDE_CONFIG_DIR（預設 ~/.claude）/projects/*/<id>.jsonl。畫面開著（互動）與 -p 的每一輪 claude 都寫進這份。最後一則主對話
+     （isSidechain 不是 true）、stop_reason 是講完一輪（end_turn 等，不含 tool_use）、usage 完整的 assistant 的 message.usage，算法同 2；
+     從檔尾往前讀（最多 64 MiB），先碰到 compact_boundary＝前面的不算。transcript 沒有 contextWindow：視窗＝window 參數（hook 的 config.window），
+     沒給＝live.jsonl 舊 result 記的 contextWindow（同 model，找不到取最小的），都沒有＝None（explain 說要設 config.window）。
+     transcript 找得到就以它為準：它讀不到＝None，不退回 live（免得壓完讀到壓之前的數字又觸發）；找不到才讀 2 的 live.jsonl。
+     實測 claude 2.1.325（11-16）：transcript 的 assistant 行有 usage（數字同 stream）、stop_reason；-p /compact 那輪沒有 assistant。
+     畫面開著時 context_wrap 寄的 /compact 怎麼進畫面（aos_eca/slash.py slash_turn→on_screen）：畫面正在答（busy.txt）＝不打、信留 cur/ 下一輪再試；
+     claude 的輸入框有人打了字或看不出來（screen_slash.input_clear）＝也不打、信留著（不用 C-u 清，會吃掉人的字）；
+     否則 tmux send-keys 打字、0.5 秒後 Enter，等畫面的 hook 換掉 history（上限 120 秒）才回信，等不到只在回信裡說一句、不重打。
   3. fsm 腦：<stack>/observed.jsonl 最後 256 KiB 裡最後一則有用量的 think；視窗用 window 參數，或 think/brain_wait.json 指的 kernel 公開的 endpoints.json。
   explain(stack, window=None) 回一行英文讀數或讀不到的原因，不印東西。codex 身目前沒有讀法＝None。
 """
@@ -305,13 +315,14 @@ def from_fsm_observed(stack, window=None):
     return _fsm_reading(stack, window)[0]
 
 
-PROVIDERS = [from_file, from_claude_live, from_fsm_observed]
+PROVIDERS = [from_file, from_claude, from_fsm_observed]
+TAKES_WINDOW = (from_claude, from_fsm_observed)          # 這幾個收 window（hook 的 config.window）
 
 
 def read(stack, window=None):
     for provider in PROVIDERS:
         try:
-            got = provider(stack, window=window) if provider is from_fsm_observed else provider(stack)
+            got = provider(stack, window=window) if provider in TAKES_WINDOW else provider(stack)
         except Exception:                        # 讀法本身出錯也當讀不到（介面約定：不報錯）
             got = None
         if got is not None:
@@ -324,8 +335,12 @@ def explain(stack, window=None):
     if got is not None:
         return "%.1f%% (%d of %d tokens), turn %s, from %s" % (
             got["percent"], got["used"], got["window"], got["turn"], got["source"])
-    try:
-        reason = _fsm_reading(stack, window)[1]
-    except Exception:
-        reason = None
+    reason = None
+    for why in (lambda: _transcript_reading(stack, window)[2], lambda: _fsm_reading(stack, window)[1]):
+        try:
+            reason = why()
+        except Exception:
+            reason = None
+        if reason:
+            break
     return "no reading: " + (reason or "no provider knows this stack")
