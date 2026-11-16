@@ -57,7 +57,7 @@
 - **open｜11-16 之後開線：pi coding agent**：使用者 11-16：「對了，之後還要開線做pi coding agent」。排在 ok-pano-1116 之後。家機已裝 `pi`（`~/.local/share/fnm/node-versions/v24.14.1/installation/bin/pi`）；前情：10-24 仿 pi 做了 read／bash／edit／write 工具（`proto8/thinking/2026-10/24/pi-tools/`），aos-mcp README 已把 pi 列為可叫 aos 工具的外部 agent。範圍待使用者確認（頂層讀法：把 pi 做成 eca 的第三種身，與 claude、codex 並列）。
 - **open｜11-16 agent-fsm 也要一套 context 收尾／壓縮**：11-16 開線 **ok-fsmwrap**（opus 隊長，工作區 `wf/temp/ok-fsmwrap-1116/`，正規流程），使用者「agent-fsm那個得做一套」「都按照建議，去做吧」。codex 回合中收信、pi coding agent 排在這兩條之後。
 - **open｜11-16 push 授權**：使用者 11-16「允許push main。」已推到 `07145aac4`；GitHub Pages 已開（main `/docs`，built，https://justty32.github.io/aos/ 回 200）。頁是 ok-release 照 `~/aos-home/ws/user/草稿.md` 改的試上線版：**正式發佈前要拿掉 `noindex` 與「試上線版」提示帶**；5 個方向題（Q2、U1～U4）已寄使用者專區，頁面先照推薦做；repo 沒有 LICENSE。
-- **open｜11-16 全景頁 slash 鈕對畫面開著的 repo-aos 沒走 slash**：使用者按「📊 用量」「🧠 上下文」，repo-aos 收到 4 次 `/usage`、1 次 `/context`，都是 a2a 普通訊息（寄件人 user-via-page），沒被當 slash 做、結果沒回頁上。使用者：「這些都是不應該的，我應該要在aos-view中，不管是輸入指令還是按鈕，都要是一次，並且是直接在aos-view中看到。派線去想辦法解決」→ 11-16 開線 **ok-pano-b**（工作區 `wf/temp/ok-pano-1116b/`）：只送一次、slash 不經模型、結果直接顯示在頁上。
+- **done｜11-16 全景頁 slash 鈕對畫面開著的 repo-aos 沒走 slash**：ok-pano-b 修好三層（頁面連按、後端看舊快取放行、eca 併批後認不出 slash）。使用者答「改」：slash 信一律單獨一批，翻掉 11-12 的混批規則。commit d3753828b（aos-eca，存檔即生效）、5ea82effb（後端＋前端 v2），65c5d3a13 清舊 dist。astra 10/10 PASS。使用者「1.好。2.好。舊的備份也可以清掉」→ 換進活樹、重啟 aos-view，8767/8768 200、載 index-CiFlI67e.js；刪了 aos-view.bak-1115、bak-1116，留 bak-1116b。ok-pano-b 已 rm（stack 保留）。可選後續：回合中途就做 /usage、/status。
 - 導覽：[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/docs/CONCEPTS.md)、[NORMS](../proto8/docs/NORMS.md)；停在半路的見 [restart](../proto8/thinking/2026-10/11/restart/README.md) §4
 
 ## 各工作流 session-log
