@@ -17,6 +17,7 @@
 # on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick（經 cell_common.clock_tick）——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
 # 讀 history、決定用哪份工具登記檔跟 act.py 同一套，在 cell_common.py。
 # 回答配對（thinking/2026-11/14/reply-match-1114/03 §4）：messages 每列先過 aos_ws.for_endpoint（拷貝、只拿掉 aos 鍵），history 本身不動。
+# Mid-turn /compact requests use full history without tools; task history retains the latest applicable compact summary.
 import json, os, signal, subprocess, sys
 from pathlib import Path
 
@@ -56,6 +57,8 @@ tools) and write $AOS_STACK/think/request.json. Exit 0 = written (go wait); 10 =
 this agent's own copy in $AOS_STACK when it has one); --tools FILE: the aos-tools registry;
 --history full|task: include all history (default), or only messages from the last user.
 --max-tool-calls N: omit tools after N calls in the current task (non-negative integer).
+/compact can interrupt a turn only after all tool results arrive and four messages can be
+folded. That request sends full history without tools; task mode keeps the summary afterward.
 Hooks: with a tool_added hook, each tool name new since the last run (hook_tools_seen.json;
 the first run only records) fires it once. A failing hook = HookFailed, exit 1.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
@@ -119,14 +122,62 @@ tools_file = cell_common.tools_file(opts, files, stack, die)   # --tools，否�
 # 對話：一行一則 OpenAI message（C-46、P-41），只附加
 history_path = os.path.join(stack, "history.jsonl")
 history = cell_common.read_history(history_path, die)
+import compact
+
+
+def post(args, ok=(0,)):
+    try:
+        result = subprocess.run(["aos-post"] + args, stdout=subprocess.PIPE, text=True)
+    except OSError as e:
+        die("PostFailed", "aos-post cannot start: %s" % e)
+    if result.returncode not in ok:
+        die("PostFailed", "aos-post %s exited %d" % (args[0], result.returncode))
+    return result.returncode, result.stdout
+
+
+box = os.path.join(stack, "queue")
+if (not compact.asking(stack, history) and compact.turn_open(history)
+        and compact.foldable(stack, history, aos_ws) >= compact.MIN_ROWS
+        and compact.waiting_letters(box)):
+    _, taken = post(["take-all", box], ok=(0, 10))
+    letters, extra = [], ""
+    for name in taken.splitlines():
+        _, out = post(["see", box, name])
+        try:
+            body = json.loads(out).get("body")
+        except (ValueError, AttributeError):
+            continue
+        if isinstance(body, dict) and body.get("role") == "user":
+            yes, instructions = compact.is_compact(body.get("content"))
+            if yes:
+                letters.append(name)
+                if len(letters) == 1:
+                    extra = instructions
+    if letters:
+        try:
+            aos_ws.letters_take(stack, letters)
+        except OSError as e:
+            die("WriteFailed", "cannot take compact letters: %s" % e)
+        compact.ask(stack, history_path, letters, extra, aos_ws, die, mid_turn=True)
+        for name in letters:
+            post(["done", box, name])
+        history = cell_common.read_history(history_path, die)
+compacting = compact.asking(stack, history)
 if not history or history[-1].get("role") not in ("user", "tool"):
     sys.exit(10)                                 # 沒有要答的：回 idle 等信
 
 task_start = max((i for i, m in enumerate(history) if m.get("role") == "user"), default=0)
+for i in range(task_start - 1, -1, -1):
+    row = history[i]
+    if (row.get("role") == "user" and str(row.get("content", "")).startswith("[aos] summary:")
+            and all(isinstance(m.get("aos"), dict) and m["aos"].get("compact") is True
+                    for m in history[i + 1:task_start] if m.get("role") == "assistant")):
+        task_start = i
+        break
 task_history = history[task_start:]
 tool_call_count = sum(len(m.get("tool_calls") or []) for m in task_history
                       if m.get("role") == "assistant")
-if history_mode == "task":
+if history_mode == "task" and not compacting:
     history = task_history
 
 # tools：登記檔裡的工具（aos-tools ls --json；登記檔不在＝沒有工具），說明取工具定義的 description／parameters
@@ -191,7 +242,7 @@ if "llm" in files:
 sys.dont_write_bytecode = True                             # 定義資料夾不留 __pycache__（P-15：定義不被寫）
 import llm_settings  # noqa: E402  （範本資料夾在 sys.path 最前面）
 request = {"messages": system + [aos_ws.for_endpoint(m) for m in history]}   # history 列的 aos 鍵（回答配對）只給 aos 自己看，不送端點；其他鍵照留
-if tools and (max_tool_calls is None or tool_call_count < max_tool_calls):
+if tools and not compacting and (max_tool_calls is None or tool_call_count < max_tool_calls):
     request["tools"] = tools
 body = {"request": request}
 try:

@@ -3,7 +3,7 @@
   "description": "Finding your own name, what is in your stack, and what you are allowed to change."
  },
  "me": {
-  "description": "Long sections of aos/me.json kept as their own files (self_tools, self_llm, self_system, self_history, do_task, self_hook); aos/me.json points to each with $ref."
+  "description": "Long sections of aos/me.json kept as their own files (self_tools, self_llm, self_system, self_history, do_task, compact, self_hook); aos/me.json points to each with $ref."
  },
  "errors.json": {
   "description": "How to read a failed call: the `error:` line, `warning:` lines, and exit codes; `#/where` says which page explains a Code (PhaseBad, BudgetMissing ...)."

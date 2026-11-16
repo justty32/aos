@@ -66,6 +66,7 @@
    "mailbox.json": "設定（鍵：_description、tools、rules、check、check_hook）",
    "me": {
     "_description.json": "",
+    "compact.json": "設定（鍵：_description、rules）",
     "do_task.json": "設定（鍵：_description、rules）",
     "self_history.json": "設定（鍵：_description、rules）",
     "self_hook.json": "設定（鍵：_description、events、clock、daily、answer、handler…）",

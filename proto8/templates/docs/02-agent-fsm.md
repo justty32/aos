@@ -82,7 +82,7 @@ aos-agent ctl resume         # ctl 下也有 stop／start、sleep／wake（同�
 
 - **停著等 vs 射後不理**寫在表上：範本 idle 的 `next` 接住 10＝queue 空就停著等（loop 隔 `interval_ms` 再看）。射後不理＝複製一份，idle 的 `next` 改成字串 `"think"`（10 到 loop＝收工）；`loop.json` 的 `interval_ms` 要留著（wait 靠它一拍一拍看回信，拿掉＝空轉）；要開場白就在 idle 的 argv 加 `"--prompt", "prompt.txt"`（相對這個資料夾；history 空、queue 沒好信時投一次）。
 - **goal**（[thinking goal](../../thinking/2026-11/11/goal/README.md)，使用者「當agent自己停下來時(在沒有新user prompt的情況下，自己不再呼叫工具)，自動丟goal給他」）：`$AOS_STACK/goal.json` 是 active、idle 收不到信、history 最後一則是沒有 `tool_calls` 的 assistant＝idle 直接接一則 user `[aos] goal: <目標> (reminder N of LIMIT. …)` 進 history、退 0 去 think（不走 queue、不觸發 before_queue／after_queue；信永遠優先）。上次提醒之後腦叫過 `goal` 以外的工具＝計數歸零；連續 LIMIT 次（預設 10）沒進展＝最後丟一則 `[aos] goal: reminder limit N reached; goal paused …`、goal 改 paused。腦自己用工具 `goal`（get／set／done／pause／resume），人與父 agent 用 `aos-agent goal`；暫停中來信不自動 resume；只有 agent 自己暫停、history 最後 262144 bytes 仍找得到最近的 goal 工具呼叫且之後有新訊息、答完又停下時，idle 才補一次 `[aos] goal: paused …` 提示讓腦選 resume／done／繼續等，碰到既有 goal 提醒或 summary 就不補，外面或 aos 設的暫停與 goal.json 都不動。
-- **思考中來的信**留在 `queue/new/`，答完回 idle 才收、跟那批一起答（使用者 11-04「等答完回 idle 再收」）。
+- **思考中來的信**答完回 idle 才收、跟那批一起答（使用者 11-04「等答完回 idle 再收」）；一般信通常留在 `queue/new/`，輪中收 `/compact` 時可能一起認領到 `cur/`，但不交給腦，仍等 idle。`/compact` 是例外：工具結果齊了就能在輪中壓縮，見「context 快滿與 /compact」。
 - **暫停時改 history**：`pause` 之後用 `aos-agent history -t 名字 ls／rm／summarize／set` 改（self-family；原文搬到 stack 裡 `history_removed.jsonl`；直接改 `history.jsonl` 也行），要它重答就把 `stage.txt` 寫成 `think` 再 `resume`；不 pause 也能改：還沒寄出去的請求，wait 看到 history 比 request 新就退 11 重組；已經寄出去的不追，回信照樣接在改過的 history 後面。agent 自己改用 `self_history`（正在進行的這一步鎖著）；brain 每次從頭讀，改了就生效（寫新請求時順手刪 `think/pending.txt`，wait 重寄）。最後一則已是答案時 brain 不組請求、退 10 回 idle。
 - **hook**（[self-family/hook](../../thinking/2026-11/10/self-family/hook/README.md)）：`interfaces.json` 宣告 `"hooks": "hooks.json"`，定義那份疊 stack 那份（同名蓋過、null 關掉），每次事件重讀。四格的觸發點：idle＝`before_queue`（好信進 history 之前，可改 `content`／攔下丟掉）、`after_queue`；think（brain）＝`tool_added`（工具清單多了名字）；act＝`before_tool`（可改 `arguments`／攔下不跑）、`after_tool`（可改 `content`）；wait＝`brain_failed`（`BrainFailed`／`SendFailed`／`ReplyBad`／`BudgetMissing`）。時鐘（[clock-hook](../../thinking/2026-11/11/clock-hook/README.md)）：每格最開頭 `hooks.clock_tick` 判 `on_clock`（時鐘走到了才起 handler）；起來／停下＝loop.json 的 `on_start`／`on_stop` 叫 `lib/agent/hook_fire` 發 `after_start`／`after_stop`；after_stop 帶 `code`、`signal`、`cause`（為什麼停：`stop`／`sleep`／`remove`／`shutdown`／`stuck`／`signal`／`max`／`body_exit`／`error`，舊版 aos-loop 沒給＝null；`cause` 跟表上的 `reason` 不同，`reason` 是給人看的一句話；撞限額沒有獨立的值，看表上的 `limit_hit`；`error` 只是停止的分類，不是錯誤代號；值表見 [aos-loop 01](../../impls/aos-loop/docs/01-用法.md)）。`hooks.json` 預設一格 `timer`（`on_clock`、`every_ms` 300000、handler `lib/agent/hook_noop` 什麼都不做、`on_error: continue`）當掛點，另一格 `mail_notify`（`every_ms` 60000＝每 1 分鐘、handler `lib/agent/mail_notify`：有沒通知過的新信才往 queue 寄一則 `[aos] new_mail: …`；起來那次〔`first`〕照已通知記錄比：睡著時新到的提醒一次、全新起來〔沒有 `notified.json`，且 agent stack 的 `history.jsonl` 不在或是空的〕只記成已知；跑過的 stack〔有非空 history〕當睡醒，在等的提醒一次，[backlog-rulings](../../thinking/2026-11/11/backlog-rulings.md)；`on_error: continue`、`timeout_ms` 10000〔0＝不限時〕）：history 不多任何一則，要叫腦就換成往 `queue/` 寄信的 handler（同名蓋過）；不要就 `aos-agent hook rm timer`。hook 失敗而 `on_error: stop`＝那格 `agent-fsm: error: HookFailed …` 退 1、停下等人；清單壞＝`HooksBad`。人用 `aos-agent hook`、agent 自己用 `self_hook`；全文 [aos-agent docs/06](../../cmd/aos-agent/docs/06-hook.md)。
 - **image 醒在 wait 格**：有 `think/pending.txt` 就繼續收原回信，即使 `think/request.json` 不在也不重寄；沒 pending 且 request 不在＝wait 退 11，沿既有 FSM 轉移回 think，brain 從 history＋目前定義／覆蓋層重組，再到 wait 寄出。image 可以擋 `think/request.json`；`pending.txt`、`think/reply/new/`／`cur/` 仍必須帶走。
@@ -95,10 +95,82 @@ aos-agent ctl resume         # ctl 下也有 stop／start、sleep／wake（同�
 - **失敗後冷卻**（[two-machines 06](../../thinking/2026-11/10/two-machines/06-長跑自動重起.md)，使用者裁「失敗後冷卻」）：wait 遇到外面服務的錯——`BrainFailed`（kernel 回錯）、`SendFailed`（`aos-llm send` 退非 0）——先寫 `$AOS_STACK/cooldown.json`（`lib/agent/cooldown.py`；`failures`、`until`、`at`、`code`、`reason`，`dropped` 一直是 0：重寄同一份請求、不掉信；間隔 30 秒、1、2、4、8、15、30 分鐘，之後固定 30 分鐘，用牆上時鐘），再看是哪一種：`BrainFailed` 退 1；`SendFailed`（TS，使用者「如果llms那邊我沒開aos daemon，那就是我自己的問題，但我也希望他不要搞壞」）印一行 `agent-fsm: warning: aos-llm send exited N (its reason is above); the request stays and is sent again …`、**退 10 留在 wait、不停**——**這是 P-20 在這個情況的例外：kernel 不在＝等它來，不停下**，有沒有 `--auto-restart` 都一樣。寫冷卻時 `AOS_LLM_KERNEL` 解不到資料夾，`reason` 尾巴記 `(llm kernel folder not found)`；之後冷卻中而 `AOS_LLM_KERNEL` 已解得到資料夾＝當作到了、立刻寄（不用等滿 30 分鐘）。冷卻寫不成只多一行 `agent-fsm: warning`、結果不變。下一次走到「沒 pending、`request.json` 在、endpoint 對得上、正要寄」時：冷卻中＝不寄、退 10 留在 wait（每拍再看）；到了或沒有＝照寄。好的回信接進 history 後刪 `cooldown.json`。`ReplyBad`、`WriteFailed` 這類不是外面服務的錯，不寫冷卻。`BrainFailed` 時，用 [`aos-agent ctl add --auto-restart`](../../cmd/aos-agent/README.md) 掛的：退 1 → daemon 重起 → 在冷卻裡活過 3 秒，不會被三次判停，冷卻到了自己重寄（端點修好就恢復）。沒開的：退 1、表上 `stopped` 停著等人，只是多一個 `cooldown.json` 說明原因；人修好後 `ctl start`，若還在冷卻中，它會在 wait 等到冷卻到期才寄（急的話刪掉 `cooldown.json`）。
 - **錯**：stderr 一行 `agent-fsm: error: 代號 原因`、退 1、loop 停下等人（P-20；四格的開頭都是 agent 名 `agent-fsm`，stdio-unify R15）——`SendFailed`（aos-llm 起不來、或 send 退 0 卻沒印信件名稱；send 退非 0＝warning＋等，見上一條）、`BrainFailed`（kernel 回錯）、`ReplyBad`、`CfgBad`（`llm.json` 讀不懂）、`HistoryBad`、`ToolsBad`、`ToolFailed`、`PostFailed`、`StackMissing`、`WriteFailed`、`ArgumentsBad`、`FlagUnknown`，旗標指的檔不在＝`PromptMissing`／`SystemMissing`／`ToolsMissing`。修好再起從停的那格接著做：直接跑的＝`aos-exec` 同一個工作區；掛 daemon 的＝那隻退 1 時留在表上 `stopped`＋`reason`（使用者裁「留表標 stopped (Recommended)」）；修好後 `aos-agent llm reset`／`tools reset`（或直接改 stack 裡那份）再 `aos-agent ctl start`，同一個 stack 從停的那格接著做；不要了 `aos-agent ctl rm`（`ctl ls`／`ctl state` 看得到原因）。壞信（body 不是 `{"role": "user", "content": 非空字串}`）丟掉、`$AOS_STACK/mailbox_warning.txt` 一行。idle／brain／wait 的下層 stderr 原樣透出；act 接住工具的 stderr、叫完後原樣轉印，只有失敗時另附尾巴給腦（上述例外）。工具退非 0 不是錯：act 把結果回給腦、stderr 多一行提醒 `agent-fsm: warning: tool <名> exit code N (passed back to the brain)`、照樣退 0。四格的旗標都走 `aos_flags.parse(help=HELP)`：`--help`／`-h` 印英文用法；帶值旗標可寫 `--x V` 或 `--x=V`，空值／缺值＝`ArgumentsBad`，未知旗標＝`agent-fsm: error: FlagUnknown unknown flag --bogus`。`--` 結束旗標，四格不收位置參數，所以其後還有字＝`ArgumentsBad`；help 也只在旗標位置生效。重複旗標取末值，但任一次空值仍報錯。Ctrl-C 退 130；act 收到 Ctrl-C／TERM（退 143）也先整群 TERM、2 秒後 KILL 並回收工具，不留下半則 tool 訊息。
 
-**任務上下文與工具煞車**（P4）：brain 的 `--history full|task` 預設 `full`＝帶完整 history；`task` 只帶最後一封 user 起的訊息，system 照常放最前面，磁碟 history 不裁切。沒有 user 時帶目前全部訊息。`--max-tool-calls N` 接非負整數，按最後一封 user 起的 assistant `tool_calls` 條目總數計算；滿 N 次後，下一次 request 不提供 tools。`0` 從第一個 request 就不提供 tools；未給不限制；同一批多個呼叫照常執行，這個選項只控制下一次請求。兩個旗標互相獨立，在 `fsm.json` 的 brain argv 加上即可。
+**任務上下文與工具煞車**（P4）：brain 的 `--history full|task` 預設 `full`＝帶完整 history；`task` 只帶最後一封 user 起的訊息，system 照常放最前面，磁碟 history 不裁切；壓縮那次改送完整 history，壓完會保留適用的摘要，規則見「context 快滿與 /compact」。沒有 user 時帶目前全部訊息。`--max-tool-calls N` 接非負整數，按最後一封 user 起的 assistant `tool_calls` 條目總數計算；滿 N 次後，下一次 request 不提供 tools。`0` 從第一個 request 就不提供 tools；未給不限制；同一批多個呼叫照常執行，這個選項只控制下一次請求。兩個旗標互相獨立，在 `fsm.json` 的 brain argv 加上即可。
 
-**實際成本觀測**（P5）：wait 用 `aos-llm recv --full` 收完整回信，只把原有 `message` 接入 history，額外欄位不混進對話。每次收到成功或失敗回覆，往 `$AOS_STACK/observed.jsonl` 追加 `{kind: "think", letter, endpoint, model, usage, elapsed_ms}`；`letter` 是寄出時 `aos-llm send` 回的信件名（保存在 `think/pending.txt`），與接收該請求的 kernel `ledger.jsonl` 的 `id` 為同一個字串，可直接對帳。`think/sent.json` 記寄出前的時間與 endpoint，耗時包含排隊與逐拍收信等待。endpoint 優先用回信欄位、否則用寄出時保存的請求代號；請求未指定且回信沒帶時為 null，不猜 kernel 預設。失敗回覆或未提供的 model／usage 為 null。舊 pending 沒有時間檔時耗時為 null 並提醒。act 每次實際啟動工具追加 `{kind: "tool", name, def, stack, child?, code, elapsed_ms, in_bytes, out_bytes}`，bytes 是原始 UTF-8 stdin 與 stdout，不含 stderr／附加錯誤說明；code 是子程序原始結束碼（訊號為負數）。重跑時已回覆的工具不重記，未啟動的錯誤（未登記／arguments 壞）沒有實際呼叫觀測。這些觀測寫失敗只印英文 warning，不改格的結果。
+**實際成本觀測**（P5）：wait 用 `aos-llm recv --full` 收完整回信，只把原有 `message` 接入 history，額外欄位不混進對話。每次收到成功或失敗回覆，往 `$AOS_STACK/observed.jsonl` 追加 `{kind: "think", letter, endpoint, model, usage, elapsed_ms}`（壓縮那次記 `kind: "compact"`，不當成一般 think 的用量讀數）；`letter` 是寄出時 `aos-llm send` 回的信件名（保存在 `think/pending.txt`），與接收該請求的 kernel `ledger.jsonl` 的 `id` 為同一個字串，可直接對帳。`think/sent.json` 記寄出前的時間與 endpoint，耗時包含排隊與逐拍收信等待。endpoint 優先用回信欄位、否則用寄出時保存的請求代號；請求未指定且回信沒帶時為 null，不猜 kernel 預設。失敗回覆或未提供的 model／usage 為 null。舊 pending 沒有時間檔時耗時為 null 並提醒。act 每次實際啟動工具追加 `{kind: "tool", name, def, stack, child?, code, elapsed_ms, in_bytes, out_bytes}`，bytes 是原始 UTF-8 stdin 與 stdout，不含 stderr／附加錯誤說明；code 是子程序原始結束碼（訊號為負數）。重跑時已回覆的工具不重記，未啟動的錯誤（未登記／arguments 壞）沒有實際呼叫觀測。這些觀測寫失敗只印英文 warning，不改格的結果。
 
 共用記帳由 `lib/observed.py` 處理：首寫先補 `self` 行，含 `def`（`AOS_CD`）、`ws`（`AOS_WS`）、UTC 毫秒 `started_at`，設了 `AOS_LLM_KERNEL` 才帶 `llm_kernel`；同時合併 stack 的 `aos-observed` 宣告。工具行的 `def` 是登記路徑的絕對值、`stack` 是相對本 stack 的小格；有子帳時 `child` 指向收子前保存的帳本，相對本 stack。do_task／subagent 只照子 stack 的公開介面抄整棵帳，不猜帳名。
 
-**長跑**：長時間接不同任務的 fsm，在 `fsm.json` 的 think 格、`brain.py` 的 argv 加 `"--history", "task"`，每次只把最後一封 user 起的任務帶給腦，避免舊任務一直累積進請求；磁碟 history 仍完整保留。
+**長跑**：長時間接不同任務的 fsm，在 `fsm.json` 的 think 格、`brain.py` 的 argv 加 `"--history", "task"`，每次只把最後一封 user 起的任務帶給腦（壓縮後也帶適用的摘要），避免舊任務一直累積進請求；這個旗標不裁切磁碟 history。
+
+## context 快滿與 /compact
+
+**預設 35%，收尾與壓縮一起做**。新範本掛 `context_wrap`：`on_clock`、每 5000 ms 檢查一次、`config {"percent": 35, "wrap": false}`；到門檻直接往 agent 的 queue 寄 `/compact`，不另寄收尾信、不等 queue 空。腦用當時的完整對話寫交接摘要，body 同時存進 history 與 `<stack>/handoff.md`，不是先要求它結束手上任務。
+
+### 讀數、門檻與關法
+
+fsm 讀數取 `<stack>/observed.jsonl` 最後 256 KiB 中最近一則有有效 usage 的 `think`：`used` 是 `usage.prompt_tokens`（已含快取），沒有此鍵才加總 `input_tokens`、`cache_read_input_tokens`、`cache_creation_input_tokens`（至少一鍵存在，缺項當 0），不加 completion。失敗或用量無效的列略過。壓縮那次記 `kind: "compact"`，不把拿掉 tools 後的讀數當成真的降下來，避免反覆觸發。
+
+比例是 `used ÷ window × 100`；視窗讀 `think/brain_wait.json` 指的 kernel 公開 `endpoints.json` 裡該 pack 的 `context`，hook 的 `config.window`（正整數）可蓋過它。兩邊都沒有、沒有效用量或讀不到檔，就安靜不觸發，不用 history 位元組數猜。共用讀法仍依序先看 `context_usage.json`、Claude 讀法，最後才看 fsm observed。
+
+- 改門檻：改定義或 stack 的 `hooks.json` 同名格裡的 `config.percent`（1～100）。`self_hook add` 帶不了 config，要用 JSON 工具寫整格。
+- 關掉自動壓縮：`self_hook` `{"op":"rm","name":"context_wrap"}`（即 `self_hook rm context_wrap`），或在 stack 的 `hooks.json#/hooks/context_wrap` 寫 `null`。`self_hook` 屬選掛 events 包，範本預設沒有這支工具。
+- 看讀數：`context_wrap --reading <stack>`；可加 `--window 272000` 核對指定視窗，印一行讀數或讀不到的原因，不改 state。
+
+hook 格如下（pack 沒有 `context` 時可在 config 補 `"window": 272000`）：
+
+```json
+"context_wrap": {
+  "event": "on_clock",
+  "every_ms": 5000,
+  "config": {"percent": 35, "wrap": false},
+  "handler": {"$env": "AOS_HOME", "$path": "/lib/agent/context_wrap"},
+  "on_error": "continue",
+  "timeout_ms": 20000
+}
+```
+
+### 寄 /compact 會怎樣
+
+對 agent 寄 `/compact`（或 `/compact` 後接空白與摘要重點）即可手動要求壓縮；不必等過門檻。這是 body 指令，不跑 `before_queue`／`after_queue`。`/clear` 不在這個功能裡，仍是普通文字。
+
+1. idle 把同一批一般信照常收完，批內的 `/compact` 合成一次壓縮要求；做到一半則由 brain 在下一步組請求前認信，僅在 history 尾端是 user，或最後一組工具結果已齊時插入要求，不切斷工具配對。一般信不因而在輪中交給腦。
+2. body 接一則 `[aos] compact:` user，要求只回摘要；那次送完整 history、**不帶 tools**。摘要要寫全接著做需要的資訊：誰要什麼、信名與回信處、已做與做到哪、下一步、所有未結事項、重要路徑、規則與決定、todo／goal。
+3. 收到有效摘要，之前的對話換成一則 `[aos] summary:` user，接一則 `compact done: …` assistant（只答 `/compact` 那幾封），再接留下的 user 列。**沒答的信原文保留**；緊貼要求前的連續 user 提醒也保留，舊 summary 除外。摺掉的原文先接進 `<stack>/history_removed.jsonl`，摘要再接進 `<stack>/handoff.md`。
+4. 做到一半插的要求帶 `mid_turn: true`，壓完尾端多一則 user：`[aos] compact: done. Go on with the work in progress described in the summary above; letters you have not answered yet are above.`。所以不經 idle，直接接著做；idle 發起的則沒有這列，有沒答的信就接著想，沒有就回 idle。
+
+壓縮進行中 idle 不再收信，來信等壓完再收。同批多封 `/compact` 一起處理；可摺列數是「要求之前的列數扣掉會原文留下的列」，**不到 4 則就不叫腦、不寫 history**，該信 drop（reason `failed`），`mailbox_warning.txt` 記 `letter <name> not compacted: only N messages to fold`。ask／listen 會見到 `LetterDropped`；這裡的 `failed` 表示「沒壓」，可能沒東西可摺，也可能摘要失敗，不是已壓成功。
+
+摘要空白、帶 tool_calls、要求列不見或 history 無法安全摺時，放棄該次，移除要求列、信 drop `failed`、記 warning，不接入那份無效回答；改寫 history 遇到持續變動、連移除要求都重試 3 次失敗時，停在 `WriteFailed`，保留 asked 供重起接續。腦呼叫本身失敗則沿用原本冷卻／停下規則，保留壓縮要求。handler 不會在讀數仍高時一直重寄；要重試可以再手動寄 `/compact`。
+
+### 資料格式
+
+| 位置 | 誰寫 | 格式與用途 |
+|---|---|---|
+| `<stack>/observed.jsonl` | wait | `{kind: "think"｜"compact", letter, endpoint, model, usage, elapsed_ms}`；只有有效 think 供用量讀數 |
+| `<kernel>/endpoints.json` | kernel | `{pack: {speed, context?, …}}`；公開 pack 視窗 |
+| hook 格 `config` | 人 | `{percent: 1～100, wrap: bool, window: 正整數}`；都選填，預設 percent 35、wrap true；fsm 格明寫 wrap false |
+| `<stack>/hooks/context_wrap/state.json` | handler | `{phase, letter, turn, percent}`；phase 為 idle／wrapping／compacting／compacted |
+| `<stack>/compact.json` | body | asked：`{phase: "asked", letters: [信名…], asked_at, mid_turn: bool}`；done：`{phase: "done", letters, done_at, replaced, kept, summary_chars}`；failed：`{phase: "failed", letters, failed_at, reason}` |
+| history 的 compact done 列 | body | `{role: "assistant", content: "compact done: …", aos: {answer_to: [壓縮信名…], compact: true}}`；`aos.compact` 供 task 模式辨識，送端點前剝掉 aos |
+| `<stack>/history_removed.jsonl` | body | `{removed_at, op: "compact"｜"compact_failed", line, message}`；UTC 毫秒 Z、原行號與原訊息，只接不刪 |
+| `<stack>/handoff.md` | body | 每次接一節 `## compact <UTC> (<n> messages)` 與摘要；不是工作區的 notes.md |
+
+### goal、do_task 與 task history
+
+- `goal.json`、todo 清單不動。輪中壓縮有尾端 continue user，直接續做，不經 idle，也不多記 goal 沒進展；idle 壓縮若沒有待答信，以 compact done 結尾，goal 提醒照常來，壓後第一次提醒可能因舊工具呼叫已摺掉而多算一次沒進展，有工具進展後歸零。
+- 開著的 `do_task` 起點可能被摺掉，`tasks.json` 不改；之後 `do_task end` 回 `MarkerMissing`、關任務而不再摺，是正常結果。摘要要先保存還需要的資訊。
+- `--history task` 壓縮那次仍送全份。壓完下一步從最後 user 往前找 summary，若 summary 到起點間的 assistant 都是 `aos.compact: true` 的 compact done，起點改成該 summary，避免任務原文或 continue 把摘要切掉；之後有真正回答則不沿用這條延伸規則。
+
+### 舊 agent 怎麼換上
+
+由管理該 agent 的人操作，不用重掛：先 pause（或確認 idle），把新範本的 `compact.py`、`idle.py`、`brain.py`、`wait.py` **四檔換進定義夾**；若那份定義改過這些檔，先比對。同一定義的其他 agent 也會一起換上。再把上面的 hook 格加到該 agent stack 的 `hooks.json#/hooks/context_wrap`（希望整份定義都有才改定義 hooks.json），pack 尚無 context 時在 config 補 window，最後 resume，用 `context_wrap --reading <stack>` 核對。**先換檔、後掛 hook**：舊 body 會把 `/compact` 當普通文字。
+
+repo 的這些更新不會自行換掉既有樹；共用 `context_use`／`context_wrap`、範本、docs、知識庫要先抄進該樹才生效，kernel 的 pack 也要有 context 或另給 window。活樹換檔須由有權管理的人取得同意後做，不是 agent 自己改別人的 stack。
+
+### 已知限制
+
+- act 跑長工具時不檢查（格還沒結束，不跑 on_clock）；下一步才查，一步之內 context 不會再漲。
+- 單次工具結果把用量從 30% 推到 100% 救不了，要另處理工具輸出上限。
+- 摘要品質靠模型；保底是未答信原文、`history_removed.jsonl` 全文與累積摘要的 `handoff.md`。
+- 壓完仍高於門檻會留在 compacted，不重寄；等下一次真正 think 的新讀數低於門檻才回 idle。用 `--reading` 查數字，必要時調 percent。

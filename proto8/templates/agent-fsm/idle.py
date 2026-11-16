@@ -17,6 +17,7 @@
 #   「[aos] goal: reminder limit N reached; goal paused …」、goal 改 paused（之後不丟）。先寫 goal.json 再接 history（寫不成＝warning、不丟）。
 #   自己暫停後來了訊息、答完又停下＝只讀 history 最後 262144 bytes，找到 goal 呼叫且未碰到提醒或 summary 才加一次 paused 提示；
 #   不改 goal.json、不自動 resume；外面或 aos 設的暫停不提示。goal.json 壞了＝安靜當沒有（每 300 ms 一拍，不洗 log；aos-agent goal get 報 GoalBad）。讀寫走 lib/agent/goal_state.py。
+# /compact bypasses queue hooks, batches one summary request after ordinary letters, and resumes an existing request without taking mail.
 import json, os, re, signal, subprocess, sys
 from pathlib import Path
 
@@ -61,6 +62,9 @@ one paused note asking it to decide whether to resume; the goal stays unchanged.
 Hooks (hooks.json declared in interfaces.json): before_queue runs before a good letter goes
 into history (it may change content, or drop the letter: done, not in history, one line in
 mailbox_warning.txt); after_queue runs after it went in. A failing hook = HookFailed, exit 1.
+/compact bypasses queue hooks and requests a summary after taking the entire batch. With
+fewer than four foldable messages it is dropped as failed without changing history.
+While a summary is already requested, take no mail and return to think.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
@@ -151,9 +155,16 @@ def body_of(sig):
 
 def take():
     """這一批＝cur/ 全部（上次認領了還沒接完的）＋ new/ 全部（aos-post take-all）；照處理順序。回接進 history 的封數。"""
+    import compact
+    if compact.state(stack).get("phase") == "asked":
+        history = cell_common.read_history(history_path, die)
+        if compact.asking(stack, history):
+            return 1
     if names("new"):
         post(["take-all", box], ok=(0, NOT_FOUND))
     good = 0
+    compact_letters = []
+    compact_extra = ""
     for sig in names("cur"):
         body, why = body_of(sig)
         if body is None:                         # 壞信一律丟，不通知寄信人（N-16）
@@ -162,6 +173,12 @@ def take():
             write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s rejected: %s\n" % (sig, why.replace("\n", " ")), die)
             continue
         content = body["content"]
+        is_c, extra = compact.is_compact(content)
+        if is_c:
+            compact_letters.append(sig)
+            if len(compact_letters) == 1:
+                compact_extra = extra
+            continue
         r = fire("before_queue", {"letter": sig, "content": content})
         if r["blocked"]:                         # hook 丟掉這封：收掉、不進 history、不算好信
             drop(sig, "blocked")
@@ -182,6 +199,24 @@ def take():
         post(["done", box, sig])                 # 接進 history 就算收到（使用者 11-04「接進對話紀錄就收」）
         good += 1
         fire("after_queue", {"letter": sig, "content": content})
+    if compact_letters:
+        history = cell_common.read_history(history_path, die)
+        count = compact.foldable(stack, history, aos_ws)
+        if count >= compact.MIN_ROWS:
+            try:
+                aos_ws.letters_take(stack, compact_letters)
+            except OSError as e:
+                die("WriteFailed", "cannot take compact letters: %s" % e)
+            compact.ask(stack, history_path, compact_letters, compact_extra, aos_ws, die)
+        else:
+            for sig in compact_letters:
+                drop(sig, "failed")
+                write_atomic(os.path.join(stack, "mailbox_warning.txt"),
+                             "letter %s not compacted: only %d messages to fold\n" % (sig, count), die)
+        for sig in compact_letters:
+            post(["done", box, sig])
+        if count >= compact.MIN_ROWS:
+            return good + 1
     return good
 
 

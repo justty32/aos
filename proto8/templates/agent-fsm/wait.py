@@ -57,6 +57,7 @@
 #   算進下一則最終回答。比對 request.json 是否過期時，history 最後一則先剝 aos 鍵再比（送端點的 messages 本來就剝過）。
 # --help 印英文用法；Ctrl-C 退 130。
 # on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick（經 cell_common.clock_tick）——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
+# Compact replies are observed as kind compact, folded instead of answering pending tasks, then return to think with exit 11.
 import datetime, json, math, os, signal, subprocess, sys, time
 from pathlib import Path
 
@@ -119,6 +120,8 @@ Lost letter: when aos-llm recv says "not yet" and $AOS_LLM_KERNEL resolves to a 
 requests/new/ nor requests/cur/ there, the cell receives once more; still nothing = it
 forgets the letter (deletes think/pending.txt), prints one warning and sends again next tick.
 Append think letter, endpoint, model, usage and elapsed_ms to observed.jsonl (best effort).
+A /compact reply uses kind compact, replaces history with its summary while preserving
+unanswered letters, and exits 11 to resume think rather than answering the pending task.
 Cooldown after a failure of the outside service, recorded in $AOS_STACK/cooldown.json
 (30 s, then 1, 2, 4, 8, 15, 30 minutes, then every 30 minutes):
   SendFailed (aos-llm send exited nonzero, e.g. the llm kernel folder is missing): one
@@ -170,6 +173,7 @@ def die(code, reason):
 sys.dont_write_bytecode = True                   # 定義資料夾不留 __pycache__（P-15）
 from atomic_file import write_atomic  # noqa: E402  （範本資料夾在 sys.path 最前面）
 import cell_common  # noqa: E402
+import compact  # noqa: E402
 
 
 def read_obj(path):
@@ -542,8 +546,8 @@ except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
     aos_flags.warn("agent-fsm", "cannot read think timing: %s" % e)
 
 
-def observe(reply):
-    append_observed(stack, {"kind": "think",
+def observe(reply, kind="think"):
+    append_observed(stack, {"kind": kind,
                             "letter": name,
                             "endpoint": reply.get("endpoint", sent_endpoint),
                             "model": reply.get("model"), "usage": reply.get("usage"),
@@ -620,7 +624,16 @@ except ValueError as e:
 if not isinstance(message, dict) or message.get("role") != "assistant":
     brain_failed("ReplyBad", "message in the reply is not an assistant message: %s" % r.stdout.strip()[:200])
     die("ReplyBad", "message in the reply is not an assistant message: %s" % r.stdout.strip()[:200])
-observe(reply)
+compacting = compact.asking(stack, cell_common.read_history(history_path, die))
+observe(reply, "compact" if compacting else "think")
+if compacting:
+    compact.fold(stack, history_path, message, aos_ws,
+                 lambda line: aos_flags.warn("agent-fsm", line), die)
+    try:
+        cooldown.clear(stack)
+    except OSError as e:
+        aos_flags.warn("agent-fsm", "cannot remove %s: %s" % (cooldown.path(stack), e))
+    sys.exit(REBUILD)
 answer = aos_ws.is_answer(message)               # 最終回答＝沒有 tool_calls 的 assistant：answer_to＝還沒答的信（pending，照收信順序）
 message = aos_ws.mark_answer(message, aos_ws.letters_pending(stack)) if answer else aos_ws.for_endpoint(message)   # 端點自帶的 aos 鍵一律拿掉
 try:

@@ -17,6 +17,9 @@
  "test_clock_hook_daemon.py": {
   "description": "Acceptance on a real root daemon (no brain needed): after_start / after_stop on start, stop, sleep, wake, kill -9 + auto_restart, rm; on_clock with t…"
  },
+ "test_compact.py": {
+  "description": "Verify compact requests, history folding, reply matching, and continued work with fake commands."
+ },
  "test_cooldown.py": {
   "description": "Verify the wait cell's cooldown after outside failures (two-machines 06) with a fake aos-llm on PATH."
  },
