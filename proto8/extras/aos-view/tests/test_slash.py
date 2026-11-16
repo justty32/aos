@@ -166,6 +166,43 @@ class Slash(unittest.TestCase):
                 thread.join()
                 srv.server_close()
 
+    def test_long_light_reason_keeps_masked_full_text(self):
+        collector = v.Collector(self.home)
+        secret = "sk-" + "a" * 24
+        reason = "failure detail; " * 35 + secret + " final detail"
+        node = {"state": "stopped", "reason": reason, "children": []}
+        self.assertEqual(collector.light(node, {})[1], "crashed: " + v.short(reason, 80))
+        self.assertEqual(len(collector.light(node, {})[1][len("crashed: "):]), 80)
+        self.assertEqual(collector.why_full(node, {}), "crashed: " + v.mask(reason))
+        self.assertNotIn(secret, collector.why_full(node, {}))
+        self.assertTrue(collector.why_full(node, {}).endswith(" final detail"))
+        node["reason"] = "timeout: " + reason
+        self.assertEqual(collector.why_full(node, {}),
+                         "stopped: a turn ran long and was cut by a timeout, not a crash (%s)" % v.mask(node["reason"]))
+        node.update(state="running", reason=None, cooldown={"failures": 3, "reason": reason})
+        self.assertEqual(collector.why_full(node, {}), "brain failed 3x: " + v.mask(reason))
+        node["cooldown"]["reason"] = "detail " * 500
+        self.assertEqual(len(collector.why_full(node, {})), 2000)
+        self.assertTrue(collector.why_full(node, {}).endswith("…"))
+        node.update(state="sleeping", cooldown=None)
+        self.assertEqual(collector.why_full(node, {}), collector.light(node, {})[1])
+
+    def test_tree_exposes_why_full_for_all_nodes(self):
+        secret = "sk-" + "b" * 24
+        reason = "long failure " * 30 + secret + " end"
+        rows = [{"name": name, "state": "stopped", "reason": reason, "stack": None, "queued": 0}
+                for name in ("boss", "boss-child")]
+        v.write_json(Path(self.home.dir) / "config.json", {"externals": []})
+        collector = v.Collector(self.home)
+        with patch.dict(os.environ, VIEW_LS_FIXTURE="unused", VIEW_ASKS_FIXTURE="unused"), \
+                patch.object(v, "table_rows", return_value=rows), patch.object(v, "ingest", return_value={}):
+            tree = collector._collect()
+        self.assertEqual(set(tree["nodes"]), {"boss", "boss-child"})
+        for node in tree["nodes"].values():
+            self.assertEqual(node["why_full"], "crashed: " + v.mask(reason))
+            self.assertEqual(node["why"], "crashed: " + v.short(reason, 80))
+            self.assertNotIn(secret, node["why_full"])
+
     def test_history_and_full_masking(self):
         secret = "sk-" + "abcdef0123456789" * 2
         content = "[aos] slash: /context: printed:\n" + ("row content " * 12 + "\n") * 18 + secret

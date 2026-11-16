@@ -308,6 +308,7 @@ class Collector:
             n["reports"] = [x for x in relay if x["from"] == n["id"]][:3]
             n["asks"] = len([z for z in zone if z.get("from") == n["id"]])
             n["light"], n["why"] = self.light(n, nodes)
+            n["why_full"] = self.why_full(n, nodes)
         for n in nodes.values():
             info = teams.get(n["id"])
             asks_team = len([z for z in zone if z.get("from") in (n["id"], n.get("team"))])
@@ -406,7 +407,12 @@ class Collector:
             if n["parent"] and n["parent_by"] != "aide":
                 nodes[n["parent"]]["children"].append(n["id"])
 
-    def light(self, n, nodes):
+    def why_full(self, n, nodes):
+        text = mask(self.light(n, nodes, full=True)[1])
+        return text if len(text) <= 2000 else text[:1999] + "…"
+
+    def light(self, n, nodes, full=False):
+        reason_text = lambda value: mask(value) if full else short(value, 80)
         if n.get("fixed_light"):
             return tuple(n["fixed_light"])
         st = (n.get("state") or "").lower()
@@ -424,16 +430,16 @@ class Collector:
             why = n.get("reason") or (cd.get("reason") if isinstance(cd, dict) else None)
             if why and TIMEOUT_RE.search(str(why)):
                 # 11-15: a turn cut for taking long is not a crash (the user: slow is not dead)
-                return "yellow", "stopped: a turn ran long and was cut by a timeout, not a crash (%s)%s" % (short(why, 80), tail)
+                return "yellow", "stopped: a turn ran long and was cut by a timeout, not a crash (%s)%s" % (reason_text(why), tail)
             if n.get("reason") or (isinstance(cd, dict) and cd.get("failures")):
-                return "red", "crashed: %s%s" % (short(n.get("reason") or (cd or {}).get("reason") or st, 80), tail)
+                return "red", "crashed: %s%s" % (reason_text(n.get("reason") or (cd or {}).get("reason") or st), tail)
             if kids_up:
                 return "yellow", "stopped normally%s" % tail
             return "gray", "stopped normally"
         if n.get("asks"):
             return "blue", "%d letter(s) waiting for you" % n["asks"]
         if isinstance(cd, dict) and cd.get("failures"):
-            return "yellow", "brain failed %sx: %s" % (cd.get("failures"), short(cd.get("reason") or cd.get("code"), 80))
+            return "yellow", "brain failed %sx: %s" % (cd.get("failures"), reason_text(cd.get("reason") or cd.get("code")))
         if st == "paused":
             return "yellow", "paused by hand"
         q = n.get("queued") or 0

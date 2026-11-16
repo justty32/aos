@@ -47,7 +47,7 @@ elif args[0] == "ctl":
     rows = json.loads((root / "ls.json").read_text())
     row = next(r for r in rows if r["name"] == name)
     print(json.dumps({"state": {"state": row["state"], "phase": "idle", "queued": row["queued"],
-                                "last_answer": "Context preview (upstream shortened)"},
+                                "last_answer": "好。" if name == "ok-green-sol-1" else "Context preview (upstream shortened)"},
                       "resources": {"pid": 4242, "memory_bytes": 125829120}, "time": {"up_seconds": 3600},
                       "who": {"workspace": str(root)}, "mailbox": {"waiting": row["queued"], "letters": []}}))
 elif args[0] == "history":
@@ -79,7 +79,7 @@ def main():
     now = time.time()
     long_text = "\n".join("第 %02d 行：目前計畫、使用量、工具與工作區的詳細內容，保留換行方便展開閱讀。" % i for i in range(55))
     spec = [("repo-aos", "running", None, None), ("ok-view", "running", "think", None), ("ok-view-sol-1", "running", None, None),
-            ("ok-board", "running", None, None), ("ok-board-sol-1", "stopped", None, "exited with code 1: " + "failure detail; " * 50),
+            ("ok-board", "running", None, None), ("ok-board-sol-1", "stopped", None, "exited with code 1: " + "failure detail; " * 50 + "sk-demo_fake_key_1234567890 final error detail"),
             ("ok-board-sol-2", "running", None, None), ("ok-release", "sleeping", None, None),
             ("xiaosi", "running", None, None), ("ok-view-sol-2", "running", None, None), ("ok-view-astra-1", "running", None, None),
             ("ok-board-sol-3", "stopped", None, "RunFailed: timeout after 600000 ms"),
@@ -108,6 +108,8 @@ def main():
         history = [{"line": i + 1, "message": {"role": "user" if i % 2 == 0 else "assistant",
                     "content": "Demo history row %02d" % (i + 1)}} for i in range(29)]
         history.append({"line": 30, "message": {"role": "assistant", "content": "[aos] slash: /context: screen output:\n" + long_text}})
+        if n == "ok-green-sol-1":
+            history[-1]["message"]["content"] = "好。"
         with open(os.path.join(t, "history-" + n + ".json"), "w") as f:
             json.dump(history, f)
     with open(os.path.join(t, "ls.json"), "w") as f:
@@ -148,7 +150,8 @@ def main():
     os.makedirs(team, exist_ok=True)
     with open(os.path.join(team, "aide.json"), "w") as f:
         json.dump({"team": "ok-view", "parent": "repo-aos", "leader": "ok-view", "aide": "ok-view-sol-1", "tags": ["view"]}, f)
-    subprocess.run([VIEW, "--home", home, "note", "--team", "ok-view", "progress", "v2", long_text], env=env, capture_output=True)
+    subprocess.run([VIEW, "--home", home, "note", "--team", "ok-view", "--on", "v2", "progress", long_text[:1800]],
+                   env=env, check=True, capture_output=True)
     qs = [{"id": "q1", "question": "SVG 還是 canvas？", "eli5": "SVG 簡單，canvas 快。",
            "options": [{"key": "a", "label": "SVG", "consequence": "改起來快"}, {"key": "b", "label": "canvas"}, {"key": "c", "label": "HTML", "consequence": "直接排版"}], "recommend": "a", "why": "格子不多"},
           {"id": "q2", "question": "要不要動畫？", "eli5": "動畫好看但比較吃電。", "options": [{"key": "a", "label": "要"}, {"key": "b", "label": "不要"}], "recommend": "b"},
