@@ -1,0 +1,85 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><title>接真腦：把 ann 換成真的模型 · aos 草稿（預覽）</title><style>
+body{font:16px/1.65 system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;margin:0;color:#1d232a;background:#fbfbfa}
+header{background:#1d232a;color:#fff;padding:.6em 1.2em;font-size:.9em}
+header a{color:#cfe3ff;text-decoration:none;margin-right:1em}
+main{max-width:52em;margin:0 auto;padding:1em 1.2em 4em}
+h1{font-size:1.7em;border-bottom:2px solid #e3e6ea;padding-bottom:.3em}
+h2{font-size:1.3em;margin-top:2em;border-bottom:1px solid #e3e6ea;padding-bottom:.2em}
+h3{font-size:1.1em;margin-top:1.6em}
+code{font:.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef1f4;padding:.1em .3em;border-radius:3px}
+pre{background:#1d232a;color:#e8ecef;padding:.9em 1em;border-radius:6px;overflow-x:auto;line-height:1.45}
+pre code{background:none;padding:0;color:inherit}
+table{border-collapse:collapse;margin:1em 0;display:block;overflow-x:auto}
+th,td{border:1px solid #d5dae0;padding:.35em .7em;text-align:left;vertical-align:top}
+th{background:#eef1f4}
+blockquote{margin:1em 0;padding:.2em 1em;border-left:4px solid #9fb7d6;color:#3b4652;background:#f2f6fb}
+details{margin:1em 0;padding:.5em .9em;border:1px solid #d5dae0;border-radius:6px;background:#fff}
+summary{cursor:pointer;font-weight:600}
+a{color:#0b5cad}
+.draft{background:#fff4d6;color:#5a4300;padding:.4em 1.2em;font-size:.85em}
+</style></head><body><header><a href="../../index.html">草稿入口</a></header><div class="draft">DRAFT v3: local preview only, not published</div><main><h1 id="接真腦把-ann-換成真的模型">接真腦：把 ann 換成真的模型</h1>
+<p>「開始用」裡的 ann 用的是假腦。這頁把它換成真的模型：先加一個你自己的端點，讓模型回一個字；再讓 ann 用它叫工具、回答。</p>
+<!-- copy:TAG -->
+<p>原型 · demo 版</p>
+<!-- verified 11-14 15:38 (key path): release-1114/08-示範.md G; a test key typed via read -rsp was sent as Bearer (seen by a local listener that logs only presence and length); the local proxy does not check keys; a cloud service with a real key was not run -->
+<!-- verified 11-14 (v3, again after the read -s key change: logs/l1-page-doc-2.log, empty key typed via stdin) -->
+<!-- verified 11-14 (v3): run verbatim on a fresh home after get-started step 8 (scripts/l1-page.sh, logs/l1-page-1.log; then the page blocks themselves via run-doc.py: scripts/l1-page-doc.sh, logs/l1-page-doc-1.log, also ran llm rm model); only substitution: MY_MODEL = the local proxy's model name, no key (that proxy needs none); pong came back, ann called peek_now_time and answered; no processes left. Not tested: a hosted endpoint with a real key. -->
+<p><strong>先決條件：</strong></p>
+<ul><li>你已經照<a href="../get-started.html">開始用</a>做完第 8 步，<code>~/aos-demo/llms</code> 和 <code>~/aos-demo/tree</code> 都在，而且都停著。</li><li>你還在同一個殼（終端機視窗）裡，第 2 步的三個環境變數都還在。</li><li>你有一個 OpenAI 相容端點：網址（以 <code>/v1</code> 結尾）、模型名；端點要的話，還有金鑰（API key）。</li></ul>
+<p><strong>要花錢：</strong> 下面每叫一次真模型，端點那邊就照它的價錢算。這頁總共叫三次左右。</p>
+<h2 id="1-做一個端點函數">1. 做一個端點函數</h2>
+<p>端點也是一個函數資料夾。它的 <code>_entry</code> 只說一件事：叫 aos 內建的 <code>llm_http</code>，金鑰從環境變數 <code>MY_API_KEY</code> 讀。</p>
+<pre><code class="language-bash">mkdir -p ~/aos-demo/llms/def/endpoints/mine
+cat &gt; ~/aos-demo/llms/def/endpoints/mine/_entry &lt;&lt;&#x27;EOF&#x27;
+{&quot;description&quot;: &quot;my OpenAI-compatible endpoint; the key comes from MY_API_KEY&quot;,
+ &quot;argv&quot;: [&quot;aos-exec&quot;, {&quot;$env&quot;: &quot;AOS_HOME&quot;, &quot;$path&quot;: &quot;/lib/base/llm_http&quot;}, &quot;--key-env&quot;, &quot;MY_API_KEY&quot;]}
+EOF</code></pre>
+<p>金鑰不寫進 aos 的任何設定檔，只放在環境變數裡。<code>MY_API_KEY</code> 沒設或是空的，請求就不帶金鑰送出。本機不用金鑰的代理，可以這樣用。</p>
+<h2 id="2-把它登記成一個腦">2. 把它登記成一個腦</h2>
+<p>在腦的設定 <code>~/aos-demo/llms/def/kernel.json</code> 裡，加一個叫 <code>mine</code> 的端點。先把下面前兩行改成你的端點網址和模型名：</p>
+<pre><code class="language-bash">export MY_URL=http://localhost:4000/v1
+export MY_MODEL=&lt;你的模型名&gt;
+python3 - &lt;&lt;&#x27;EOF&#x27;
+import json, os
+p = os.path.expanduser(&#x27;~/aos-demo/llms/def/kernel.json&#x27;)
+k = json.load(open(p))
+k[&#x27;endpoints&#x27;][&#x27;mine&#x27;] = {&quot;exec&quot;: &quot;endpoints/mine&quot;, &quot;url&quot;: os.environ[&#x27;MY_URL&#x27;],
+                          &quot;model&quot;: os.environ[&#x27;MY_MODEL&#x27;], &quot;summary&quot;: &quot;my own endpoint&quot;}
+json.dump(k, open(p, &#x27;w&#x27;), indent=1, ensure_ascii=False)
+EOF</code></pre>
+<p>出廠的 <code>kernel.json</code> 裡還有好幾個別的端點。那些是作者本機代理上的名字，你用不到，留著也不影響。</p>
+<h2 id="3-啟動腦先讓它回一個字">3. 啟動腦，先讓它回一個字</h2>
+<p>金鑰要在啟動腦<strong>之前</strong>，在同一個殼裡設好。腦只讀它啟動那一刻的環境變數，之後再設它看不到。第一行會等你貼上金鑰（畫面上不顯示），端點不用金鑰就直接按 Enter；這樣金鑰也不會留在 shell 的指令歷史裡。</p>
+<pre><code class="language-bash">read -rsp &#x27;API key (just Enter = none): &#x27; MY_API_KEY; echo
+export MY_API_KEY
+cd ~/aos-demo/llms
+nohup aos-exec --stack stacks/llm def &gt; llm.log 2&gt;&amp;1 &amp;
+export AOS_LLM_KERNEL=~/aos-demo/llms/stacks/llm
+aos-llm ls | grep mine
+echo &#x27;{&quot;endpoint&quot;: &quot;mine&quot;, &quot;request&quot;: {&quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Reply with exactly: pong&quot;}]}}&#x27; | timeout 120 aos-llm ask</code></pre>
+<p>剛啟動腦就打 <code>aos-llm ls</code>，可能先看到一行 <code>llm daemon is not running</code> 的 warning：那是腦還在啟動，等一兩秒再打就好，後面的 ask 不受影響。</p>
+<p>應該看到下面兩行。第一行的 <code>-</code> 是 mine 沒填的欄位，這頁用不到。</p>
+<pre><code class="language-text">mine	normal	-	-	-	-	my own endpoint
+{&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;pong&quot;}</code></pre>
+<p>沒回 pong 的話先看 <code>~/aos-demo/llms/llm.log</code>。看到 401 或 403，通常是啟動腦之前沒設好金鑰。連不上的話，檢查網址。</p>
+<h2 id="4-讓-ann-換腦">4. 讓 ann 換腦</h2>
+<p>把樹重新啟動（ann 會自己醒來）。只改 ann 一隻的腦，再跟它說一句要用到工具的話：</p>
+<pre><code class="language-bash">cd ~/aos-demo/tree
+nohup aos-exec --stack stacks/root defs &gt; root.log 2&gt;&amp;1 &amp;
+aos-agent -d stacks/root -t ann llm set model=mine
+aos-agent -d stacks/root -t ann say &quot;What time is it? Use your tool, then answer in one short sentence.&quot;
+timeout 120 aos-agent -d stacks/root -t ann listen
+tail -n 3 stacks/root/procs/ann/history.jsonl</code></pre>
+<p><code>llm set</code> 會在 ann 的資料夾裡多寫一個 <code>llm.json</code>，裡面只記你改的那一個鍵。</p>
+<p>模型每次回答的字不一樣。<code>history.jsonl</code> 最後三行大概像這樣，id 和時間會不同：</p>
+<pre><code class="language-text">{&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: null, &quot;tool_calls&quot;: [{&quot;id&quot;: &quot;call_…&quot;, &quot;type&quot;: &quot;function&quot;, &quot;function&quot;: {&quot;arguments&quot;: &quot;{}&quot;, &quot;name&quot;: &quot;peek_now_time&quot;}}]}
+{&quot;role&quot;: &quot;tool&quot;, &quot;tool_call_id&quot;: &quot;call_…&quot;, &quot;content&quot;: &quot;2026-11-14T05:09:00Z\n&quot;}
+{&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;It’s 05:09 UTC on November 14, 2026.&quot;}</code></pre>
+<p>跟假腦那次一樣是三行：叫工具、工具回、回答。差別是這次決定叫工具、寫回答的是真的模型。</p>
+<p>想換回假腦：<code>aos-agent -d stacks/root -t ann llm rm model</code>。改過的鍵都拿掉後，ann 資料夾裡那個 <code>llm.json</code> 也會跟著消失，回到出廠設定（假腦）。</p>
+<h2 id="5-停掉">5. 停掉</h2>
+<pre><code class="language-bash">aos-daemon-ctl -d ~/aos-demo/tree/stacks/root shutdown
+aos-daemon-ctl -d ~/aos-demo/llms/stacks/llm shutdown</code></pre>
+<h2 id="這頁沒驗到的">這頁沒驗到的</h2>
+<ul><li>只經本機代理照字跑過。帶金鑰的設定也照字走過：測試用的金鑰確實以 Bearer 送出，但那個代理不驗金鑰。連到雲端服務、用真金鑰的那條路還沒驗。</li><li>別的模型會不會照樣叫工具，要看那個模型本身支不支援 tool calls。</li></ul>
+<p>下一步：<a href="../manual/security.html">安全說明</a>。換成真腦以後，agent 可能真的去執行它想做的事，先讀這頁。</p></main></body></html>

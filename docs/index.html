@@ -1,12 +1,8 @@
-<!doctype html>
-<html lang="zh-Hant">
-<head>
-<meta charset="utf-8">
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="robots" content="noindex, nofollow">
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AOS：Akatosh Operating System</title>
-<meta name="description" content="過度遵從UNIX哲學的奇異AI Agent框架。">
-<meta name="robots" content="noindex">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23223b34' d='M16 2 30 28H2Z'/%3E%3C/svg%3E">
+<title>aos · 新時代的軟體技術棧</title><!-- copy:TITLE5 draft, user ok 11-14 -->
 <style>
 :root{--paper:#f3f0e6;--ink:#223b34;--muted:#55685e;--line:#bbc4b6;--accent:#b13d20;--mint:#d8e9c4;--terminal:#192e28;--terminal-text:#e5eedc;--mono:"Iosevka","Cascadia Code","DejaVu Sans Mono",monospace;--serif:"Noto Serif TC","Source Han Serif TC","Songti TC",serif;--sans:"Noto Sans TC","Source Han Sans TC",sans-serif}
 *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:2rem}body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.75;background-image:radial-gradient(#223b3412 .7px,transparent .7px);background-size:9px 9px}a{color:inherit;text-underline-offset:.25em}a:hover{color:var(--accent)}a:focus-visible,summary:focus-visible,pre:focus-visible{outline:3px solid var(--accent);outline-offset:5px}::selection{background:var(--mint);color:var(--ink)}.wrap{width:min(1200px,calc(100% - 64px));margin-inline:auto}header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding-block:24px;border-bottom:1px solid var(--ink)}.brand{font-family:var(--mono);font-weight:800;font-size:34px;letter-spacing:-3px;text-decoration:none}.nav{display:flex;gap:24px;font:13px var(--mono)}.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:64px;padding:78px 0 66px;align-items:end}.eyebrow{font-size:12px;letter-spacing:.1em;color:var(--accent);margin:0 0 24px}.eyebrow::before{content:"";display:inline-block;width:8px;height:8px;background:var(--accent);margin-right:10px}h1{font:600 clamp(46px,6.1vw,82px)/1.23 var(--serif);letter-spacing:-.055em;margin:0;max-width:8em;text-wrap:balance}.pitch{margin:0;font-size:17px;line-height:1.95;max-width:32em}.hero-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:25px}.button{display:inline-flex;align-items:center;gap:20px;min-height:48px;padding:10px 20px;text-decoration:none;border:1px solid var(--ink);font:14px var(--mono)}.button.primary{background:var(--ink);color:var(--paper)}.button.primary:hover{background:var(--accent);border-color:var(--accent)}.button span{font-size:20px}.workbench{border:1px solid var(--ink);box-shadow:9px 9px 0 #223b3415;background:var(--paper);animation:arrive .7s ease-out both}.bench-top{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 28px;border-bottom:1px solid var(--ink)}h2{font-family:var(--serif);font-size:clamp(25px,3vw,36px);font-weight:600;line-height:1.45;margin:0}.serial{font:12px var(--mono);letter-spacing:.08em;color:var(--muted)}.security{margin:0;padding:18px 28px;border-bottom:1px solid var(--ink);background:#f1e2d3;font-size:14px;line-height:1.8}.security::before{content:"!";font:bold 16px var(--mono);display:inline-grid;place-items:center;border:1px solid var(--accent);color:var(--accent);width:22px;height:22px;margin-right:12px}.panes{display:grid;grid-template-columns:1fr 1fr;min-width:0}.terminal{min-width:0;background:var(--terminal);color:var(--terminal-text);padding:26px 28px}.pane-heading{display:flex;align-items:center;gap:10px;font:12px var(--mono);letter-spacing:.08em;margin:0 0 24px}.lamp{width:8px;height:8px;border-radius:50%;background:#c4dfa1}.terminal pre{font-size:13px;line-height:1.85;margin:0}.terminal .output{border-top:1px solid #79948266;margin-top:25px;padding-top:20px}.terminal .output pre{color:#c4dfa1;white-space:pre-wrap;overflow-wrap:anywhere}.output .pane-heading{color:#afc3b4;margin-bottom:12px}pre{font-family:var(--mono);max-width:100%;overflow:auto;tab-size:2}code{font-family:var(--mono)}.files{min-width:0;padding:26px 28px;background:linear-gradient(135deg,#f7f5ed,#e8edde)}.folder-path{font:12px/1.7 var(--mono);margin:0 0 22px;overflow-wrap:anywhere}.folder-icon{width:28px;height:22px;flex-shrink:0}.file-comparison{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line);gap:16px}.file-column{min-width:0}.file-column h3{font:11px var(--mono);letter-spacing:.1em;margin:20px 0 16px;color:var(--muted)}.file-column pre{font-size:12px;line-height:2;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.new-file{background:var(--mint);color:var(--ink);box-shadow:3px 0 0 var(--mint),-3px 0 0 var(--mint)}.bench-foot{border-top:1px solid var(--ink);padding:0 28px}details{border-top:1px solid var(--line)}details:first-child{border-top:0}summary{cursor:pointer;padding:18px 0;font:13px/1.7 var(--mono)}summary:hover{color:var(--accent)}.bench-foot pre{background:#e9e8dc;padding:20px;font-size:12px;line-height:1.85;margin:0 0 22px}.setup-link{margin:0 0 20px;font:14px var(--mono)}.horizon{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:90px 0 70px;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}.today,.vision{padding:32px 36px 36px 0;min-width:0}.vision{padding-left:36px;padding-right:0;border-left:1px dashed var(--muted);background:repeating-linear-gradient(135deg,transparent,transparent 10px,#223b3405 10px,#223b3405 11px)}.section-label{font:12px var(--mono);color:var(--accent);margin:0 0 18px;letter-spacing:.1em}.today h2{font-size:28px}.statement{font-size:16px;margin:26px 0 0;max-width:31em}.vision h2{font-size:36px;max-width:10em}.diagram{width:100%;height:58px;margin-top:28px;color:var(--ink)}.status{display:grid;grid-template-columns:180px 1fr;gap:36px;padding-bottom:64px}.status h2{font:16px var(--mono);padding-top:6px}.status p{font-size:17px;max-width:43em;margin:0}.status .hero-links{margin-top:24px}footer{border-top:1px solid var(--ink);display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:25px 0 35px;font:12px/1.8 var(--mono)}footer p{margin:0}footer a{margin-left:20px}@keyframes arrive{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -26,20 +22,22 @@
 @media(max-width:540px){.terminal pre,.bench-foot pre{white-space:pre-wrap;overflow-wrap:anywhere}.bench-top{flex-direction:column;gap:6px;padding-block:18px}.serial{padding-top:0}.figs{margin-top:48px;gap:20px}.fig{padding:16px}.fig .fig-wide{display:none}.fig .fig-narrow{display:block}.history{padding-inline:18px}}
 .hero{grid-template-columns:1fr;gap:0;align-items:start}.hero .hero-links{margin-top:34px}.adv{margin:24px 0 0;padding-top:40px;border-top:1px solid var(--ink)}.adv-row{display:grid;grid-template-columns:repeat(4,1fr);margin-top:28px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)}.adv-item{padding:22px 22px 24px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);min-width:0}.adv-item h3{font:600 30px/1.3 var(--serif);margin:0 0 12px;letter-spacing:-.02em}.adv-item p{margin:0;font-size:15px}
 .tag{display:block;margin-top:12px;font:12px/1.6 var(--sans);color:var(--muted)}.tag a{color:inherit}.intro-text p .tag{margin-top:4px}
-.intro{margin:80px 0 80px}.intro-lead{margin:22px 0 10px!important;max-width:40em!important}.intro-row{display:grid;grid-template-columns:.9fr 1.1fr;gap:40px;align-items:start;padding:34px 0;border-bottom:1px solid var(--line)}.intro-row:last-child{border-bottom:0}.intro-solo{grid-template-columns:1fr}.intro-text h3{font:600 24px/1.4 var(--serif);margin:0 0 12px}.intro-text p{margin:0 0 10px;font-size:16px;max-width:34em}.intro .fig{margin:0}.intro-big{padding:40px 0 18px;border-bottom:1px solid var(--line)}.intro-big:last-of-type{border-bottom:0}.intro-big>h3{font:600 30px/1.3 var(--serif);margin:0 0 8px}.intro-big>.intro-sum{font-size:18px;color:var(--muted);margin:0 0 6px;max-width:34em}.intro-big .intro-row{padding:18px 0;border-bottom:0}.intro-sub{margin:0 0 26px}.intro-sub h4{font:600 20px/1.4 var(--serif);margin:0 0 8px}.intro-flow>p{line-height:1.85}.intro-flow>p:not(.now-line) b{font-family:var(--serif);font-size:17px}.intro-flow .now-line{margin-top:16px}.intro-text .ref-line{color:var(--muted);font-size:15px}.fig-small{max-width:340px;margin:14px 0 4px!important;padding:14px 16px!important}.intro-text .fig-small .section-label{font-size:12px!important;margin:0 0 6px!important}.intro-text>p+.intro-sub{margin-top:22px}.proof{background:var(--terminal);color:#e8efe6;padding:18px 20px;margin:4px 0 18px;border-left:4px solid #c4dfa1}.proof pre{margin:0;font-size:12.5px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}.proof-out{color:#c4dfa1;border-top:1px solid #79948266;margin:8px 0 14px!important;padding-top:8px}.proof-cap{font-size:14px!important;color:#e8efe6;margin:0!important;max-width:none!important}.proof-cap code{color:#c4dfa1}.proof-cap b{color:#fff}@media(min-width:851px){.intro-row>.intro-figs{order:2}}.intro-figs>.fig-pu-d{margin-top:20px!important}.intro-figs>.fig-pu-d svg{max-width:420px;display:block;margin:0 auto}@media(min-width:851px){.fig-pu-m{display:none}}@media(max-width:850px){.fig-pu-d{display:none}}@media(min-width:851px){.intro-big .intro-row>.fig{position:sticky;top:20px}}.why-link a{white-space:nowrap}
+.intro{margin:80px 0 80px}.intro-lead{margin:22px 0 10px!important;max-width:40em!important}.intro-row{display:grid;grid-template-columns:.9fr 1.1fr;gap:40px;align-items:start;padding:34px 0;border-bottom:1px solid var(--line)}.intro-row:last-child{border-bottom:0}.intro-solo{grid-template-columns:1fr}.intro-text h3{font:600 24px/1.4 var(--serif);margin:0 0 12px}.intro-text p{margin:0 0 10px;font-size:16px;max-width:34em}.intro .fig{margin:0}.intro-big{padding:40px 0 18px;border-bottom:1px solid var(--line)}.intro-big:last-of-type{border-bottom:0}.intro-big>h3{font:600 30px/1.3 var(--serif);margin:0 0 8px}.intro-big>.intro-sum{font-size:18px;color:var(--muted);margin:0 0 6px;max-width:34em}.intro-big .intro-row{padding:18px 0;border-bottom:0}.intro-sub{margin:0 0 26px}.intro-sub h4{font:600 20px/1.4 var(--serif);margin:0 0 8px}.intro-flow>p{line-height:1.85}.intro-flow>p:not(.now-line) b{font-family:var(--serif);font-size:17px}.intro-flow .now-line{margin-top:16px}.intro-text .ref-line{color:var(--muted);font-size:15px}.fig-small{max-width:340px;margin:14px 0 4px!important;padding:14px 16px!important}.intro-text .fig-small .section-label{font-size:12px!important;margin:0 0 6px!important}.intro-text>p+.intro-sub{margin-top:22px}.intro-figs>.fig-pu-d{margin-top:20px!important}.intro-figs>.fig-pu-d svg{max-width:420px;display:block;margin:0 auto}@media(min-width:851px){.fig-pu-m{display:none}}@media(max-width:850px){.fig-pu-d{display:none}}@media(min-width:851px){.intro-big .intro-row>.fig{position:sticky;top:20px}}.why-link a{white-space:nowrap}
 @media(max-width:850px){.adv-row{grid-template-columns:1fr 1fr}.intro-row{grid-template-columns:1fr;gap:20px}}
-@media(max-width:540px){.adv-row{grid-template-columns:1fr}.adv-item{padding:16px 14px 18px}.adv-item h3{font-size:22px}.adv-item p{font-size:14px}}
+@media(max-width:540px){.adv-item{padding:16px 14px 18px}.adv-item h3{font-size:22px}.adv-item p{font-size:14px}}
 .tag-ok::before,.tag-demo::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px}.tag-ok::before{background:var(--muted)}.tag-demo::before{border:1px dashed var(--muted)}.tag+.tag{margin-top:4px}.tag[title]{cursor:help}.evidence{display:block;margin-top:6px;font-size:12px;line-height:1.6;color:var(--muted)}.evidence a{color:inherit}
 .now-line{font-size:14px!important;color:var(--muted);border-left:2px solid var(--line);padding-left:10px}.now-line b{font-weight:600;color:var(--ink)}.why-link{font:13px var(--mono);margin-top:12px!important}
 .intro .fig svg{max-width:420px;margin-inline:auto}.cost-code{font-size:22px;margin:6px 0 14px;padding:12px 16px;background:#fff;border:1px solid var(--line)}.cost-table{border-collapse:collapse;width:100%;font-size:15px}.cost-table td{padding:7px 10px;border-top:1px solid var(--line)}.cost-table td:first-child{font-family:var(--mono);white-space:nowrap;width:6em}.cost-table tr.old td{color:var(--muted)}.cost-table tr:not(.old) td:first-child{color:var(--accent)}
 .kicker{font:600 clamp(28px,3.4vw,40px)/1.3 var(--serif);margin:0 0 22px;letter-spacing:-.03em}
 .horizon-solo{grid-template-columns:1fr;margin-bottom:0}.horizon-solo .today{padding-right:0}.vision-sec{margin:0 0 70px;border-bottom:1px solid var(--ink)}.vision-sec .vision{border-left:0;padding:32px 0 36px}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.workbench{animation:none}}
+/* demo-sim (W9): illustrated click-through demos; dashed frame + cool background so it never looks like the real workbench */
 .sim{margin:0 0 80px;padding:30px 32px 28px;border:2px dashed var(--muted);background:#e9edee;background-image:linear-gradient(#55685e0d 1px,transparent 1px),linear-gradient(90deg,#55685e0d 1px,transparent 1px);background-size:18px 18px}.sim .section-label{margin-bottom:10px}.sim [hidden]{display:none!important}.sim-defs{position:absolute;width:0;height:0;overflow:hidden}
 .sim-note{display:inline-block;margin:14px 0 0;padding:4px 12px;font:13px/1.6 var(--mono);color:var(--accent);border:1px dashed var(--accent);background:#f7f5ed}.sim-end{margin:18px 0 0;font-size:14px;color:var(--muted)}
 .sim-sets{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:22px}.sim-set{min-width:0;background:#f6f7f4;border:1px dashed var(--line);padding:18px 20px 16px}.sim-title{font:600 19px/1.45 var(--serif);margin:0 0 6px}
 .sim-steps{list-style:none;margin:0;padding:0}.sim-step{position:relative;padding:14px 0 10px;border-top:1px dashed var(--line)}.sim-js .sim-step{border-top:0}
 .sim-st{position:absolute;right:0;top:12px;font:12px/1.5 var(--sans);padding:1px 9px;border-radius:999px;background:#f6f7f4;cursor:help}.sim-st-ok{border:1px solid var(--ink);color:var(--ink)}.sim-st-ok::before{content:"●";font-size:9px;margin-right:5px;vertical-align:1px}.sim-st-no{border:1px dashed var(--muted);color:var(--muted)}.sim-st-no::before{content:"○";font-size:9px;margin-right:5px;vertical-align:1px}.sim-st-gen{border:1px dotted var(--muted);color:var(--muted)}
+/* W16: "部分能跑" tag, between ok (ink, solid) and no (muted, dashed); ready, not used on the page yet */
 .sim-st-part{border:1px solid #7d8f84;color:#46594f}.sim-st-part::before{content:"◐";font-size:9px;margin-right:5px;vertical-align:1px}.sim-part-note{margin:0 0 6px;padding-right:2px;min-height:22px;text-align:right;padding-top:24px;font-size:12px;line-height:1.5;color:var(--muted)}
 .sim-frames{padding-top:22px}.sim-frame+.sim-frame{margin-top:10px;padding-top:10px;border-top:1px dotted var(--line)}.sim-js .sim-frame+.sim-frame{margin-top:0;padding-top:0;border-top:0}
 .sim-stage{display:flex;gap:16px;align-items:center}.sim-pic{flex:2.2 1 0;min-width:0;width:100%;height:auto;display:block}.sim-meter{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}.sim-meter-track{display:block;height:12px;border:1px solid var(--ink);background:#fff}.sim-meter-fill{display:block;height:100%;background:var(--accent);transition:width .5s ease}.sim-meter-note{font-size:11px}.sim-meter-off{visibility:hidden}.sim-meter-zero .sim-meter-note{color:var(--ink);font-weight:600}
@@ -49,449 +47,393 @@
 .sim-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.sim-set{position:relative}
 .sim-cta{margin-top:24px}.sv-badge{font:bold 10px var(--sans);fill:#fff}.sim-extra{margin:4px 0 0!important;font-size:13px!important;color:var(--accent)}.sim-set .sim-end{margin:6px 0 0;font-size:13px}
 .cost-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}.cost-col{border:1px solid var(--line);background:#fff;padding:12px 14px}.cost-col ul{list-style:none;margin:0;padding:0}.cost-col li{padding:6px 0;border-top:1px solid var(--line);font-size:15px}.cost-head{font:12px var(--mono);letter-spacing:.06em;margin:0 0 6px;color:var(--muted)}.cost-old li{color:var(--muted)}.cost-new{border-color:var(--accent)}.cost-new .cost-head{color:var(--accent)}.cost-new li{color:var(--ink)}.cost-more{letter-spacing:.2em;color:var(--muted)!important}
-.fig1-wrap{display:flex;align-items:flex-start;gap:14px;justify-content:center}.fig1-wrap>svg{flex:1 1 auto;min-width:0;margin:6px 0 14px!important}.pu-col{flex:0 0 96px;margin-top:6px;padding:8px 6px 8px 0;border-right:1px dashed var(--muted);position:relative}.pu-col::after{content:"";position:absolute;right:-6px;top:50%;margin-top:-5px;border:5px solid transparent;border-left-color:var(--muted)}.pu-icons{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}.pu-icons li{display:flex;flex-direction:column;align-items:center;font:11px/1.3 var(--sans);color:var(--ink)}.pu-icons svg{width:26px;height:26px;color:var(--ink)}.pu-cap{margin:8px 0 0!important;font:11px/1.5 var(--sans)!important;color:var(--accent);text-align:center}@media(max-width:540px){.fig1-wrap{flex-direction:column;align-items:stretch;gap:0}.pu-col{order:-1;flex:none;border-right:0;border-bottom:1px dashed var(--muted);padding:0 0 10px;margin:0 0 10px}.pu-col::after{display:none}.pu-icons{flex-direction:row;justify-content:space-around}}
+.fig1-wrap{display:flex;align-items:flex-start;gap:14px;justify-content:center}.fig1-wrap>svg{flex:1 1 auto;min-width:0;margin:6px 0 14px!important}.pu-col{flex:0 0 96px;margin-top:6px;padding:8px 6px 8px 0;border-right:1px dashed var(--muted);position:relative}.pu-col::after{content:"";position:absolute;right:-6px;top:50%;margin-top:-5px;border:5px solid transparent;border-left-color:var(--muted)}.pu-icons{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}.pu-icons li{display:flex;flex-direction:column;align-items:center;font:11px/1.3 var(--sans);color:var(--ink)}.pu-icons svg{width:26px;height:26px;color:var(--ink)}.pu-cap{margin:8px 0 0!important;font:11px/1.5 var(--sans)!important;color:var(--accent);text-align:center}@media(max-width:540px){.fig1-wrap{flex-direction:column;align-items:stretch;gap:0}.pu-col{order:2;flex:none;border-right:0;border-top:1px dashed var(--muted);padding:10px 0 0;margin:0}.pu-col::after{display:none}.pu-icons{flex-direction:row;justify-content:space-around}}
 @media(max-width:850px){.sim-sets{grid-template-columns:1fr}}
 @media(max-width:540px){.sim{padding:20px 14px 20px}.sim-set{padding:14px 12px}.sim-stage{flex-direction:column;align-items:stretch;gap:8px}.sim-pic,.sim-meter{flex:none}.sim-meter-off{display:none}.sim-reset{margin-left:0}}
 @media(prefers-reduced-motion:reduce){.sim-meter-fill{transition:none}}
-.sim-meter>p{margin:0!important;max-width:none!important}.sim-rep[data-t]::after{content:attr(data-t)}
-.adv-item p.tag,.adv-item p.evidence{margin-bottom:0}.sub-line{margin:14px 0 0;font-size:15px;line-height:1.8;color:var(--muted);max-width:34em}
-.sim-why{margin:10px 0 0;font-size:15px;line-height:1.8;max-width:40em}
-.badge{display:inline-block;vertical-align:middle;margin-left:.45em;padding:2px 9px;border:1px solid currentColor;border-radius:999px;font:12px/1.7 var(--sans);white-space:nowrap}.badge.badge-lead{margin-left:0;margin-right:.5em}.badge-tested{color:#286339;background:#e6efdf}.badge-built{color:#216a73;background:#e2eff0}.badge-part{color:#865714;background:#f4e8cc}.badge-vision{color:#706779;background:#ebe8ef;border-style:dashed}.legend{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:20px 0;border-block:1px solid var(--line);margin-bottom:42px}.legend .badge{margin:0}.legend p{font-size:13px;color:var(--muted);margin:0}.pair-card{border:1px solid var(--ink);margin:0 0 28px;background:#f7f5ed}.pair-head{padding:24px 28px;border-bottom:1px solid var(--ink)}.pair-head h2{font-size:28px}.pair-head p{margin:10px 0 0}.pair-grid,.scale-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.pair-side,.scale-cell{padding:24px 28px;min-width:0}.pair-side+.pair-side,.scale-cell+.scale-cell{border-left:1px solid var(--line)}.pair-side h3{font:600 20px/1.5 var(--serif);margin:0 0 16px}.pair-side p{margin:0 0 16px}.pair-side .evidence{margin:-10px 0 22px;font-size:13px}.pair-side p:last-child{margin-bottom:0}.scale-grid{border-bottom:1px solid var(--ink)}.scale-cell p{margin:0 0 12px}.scale-cell p:last-child{margin:0}.scale-cell h3{margin:0 0 12px;font:600 22px/1.5 var(--serif)}.aurbis-group{background:#e8edde;padding:10px 28px 40px;margin:70px -28px}.content-section{padding:44px 0;border-bottom:1px solid var(--line);min-width:0}.content-section h2{margin-bottom:20px}.content-section>p{max-width:56em}.content-section>.evidence{font-size:13px;margin-top:-10px}.transition .dream{font:600 clamp(32px,5vw,56px)/1.4 var(--serif);margin:32px 0}.section-note{font-size:13px;color:var(--muted)}.editorial-note{font-size:15px;border-left:3px solid var(--muted);padding:0 0 0 24px;margin:30px 0 0}.editorial-note .fig{max-width:600px;margin:24px 0}.editorial-note .fig-pu-m{max-width:340px}.editorial-note figcaption{font-size:14px}.asset-row{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;margin-top:28px}.asset-row>*{min-width:0}.asset-row .fig{margin:0}.asset-row .proof{margin:0}.asset-row .fig svg{max-width:420px;margin-inline:auto}.sim-sets{grid-template-columns:1fr}.sim{margin:28px 0;padding:24px}.sim-set{padding:22px}.hero h1{font-size:clamp(64px,9vw,112px);max-width:none;letter-spacing:-.04em}.hero .subtitle{max-width:none;overflow-wrap:normal}.hero .hero-copy{font:500 clamp(19px,2.5vw,28px)/1.6 var(--serif);margin:24px 0 0}.hero .hero-copy+p{margin-top:8px}.hero .sub-line{max-width:55em}.facts .badge{margin-right:.6em}.facts time{font:12px var(--mono);color:var(--muted)}.status{margin-top:60px}.proof pre{white-space:pre;overflow-wrap:normal;overflow-x:auto}.content-section details{margin-top:28px}.content-section details .fig{margin-bottom:20px}.content-section details>p{font-size:15px}.sim-btn{min-height:44px}.content-section:target{scroll-margin-top:24px}
-@media(max-width:850px){.pair-grid,.scale-grid,.asset-row{grid-template-columns:1fr}.pair-side+.pair-side,.scale-cell+.scale-cell{border-left:0;border-top:1px solid var(--line)}.aurbis-group{margin-inline:-18px;padding-inline:18px}.pair-head,.pair-side,.scale-cell{padding:20px}.editorial-note{padding-left:16px}.hero .subtitle{font-size:clamp(16px,4.5vw,27px)}}
-@media(max-width:540px){.aurbis-group{margin-inline:-14px;padding-inline:14px}.sim{padding:16px 10px}.sim-set{padding:14px 12px}.hero .hero-copy{font-size:19px}.pair-head h2{font-size:23px}.scale-cell h3{font-size:20px}}
 </style>
 </head>
 <body>
-<p class="draftbar">試上線版：作者還在改，內容會變。</p>
+<!-- v3 (11-14): user picked Argon's mix = B layout + A's two figures; subtitle H2b; WHO/BIG1/BIG2 not placed; quotes not yet confirmed (user: ask before going live); tested only on Manjaro. Fixes 3-19, 3-20, 3-26, A line 157. -->
+<!-- DRAFT-ONLY: remove this bar before going live -->
+<p class="draftbar">草稿預覽，還沒發佈；字已經作者確認</p>
 <div class="wrap">
 <header>
-<a class="brand" href="#top">AOS</a>
-<nav class="nav" aria-label="導覽"><a href="https://github.com/justty32/aos">GitHub ↗</a></nav>
+<a class="brand" href="#top">aos</a>
+<nav class="nav" aria-label="導覽"><a href="zh/get-started.html">開始用 ↗</a><a href="https://github.com/justty32/aos">GitHub ↗</a></nav>
 </header>
-<main>
-<section class="hero" id="top" aria-labelledby="hero-title">
+<main id="top">
+<section class="hero" aria-labelledby="hero-title">
 <div>
-<h1 id="hero-title">AOS</h1>
-<p class="subtitle">Akatosh Operating System</p>
-<p class="hero-copy">過度遵從UNIX哲學的奇異AI Agent框架。</p>
-<p class="hero-copy">一套新的軟體開發範式。</p>
-<p class="sub-line">每個 agent 是一個 Linux 行程；它的狀態、設定、信件全是資料夾裡的檔案。</p>
-<div class="hero-links"><a class="button primary" href="https://github.com/justty32/aos">GitHub ↗</a><a class="button" href="#kernel">看演示 ↓</a></div>
+<!-- copy:TAG --><p class="eyebrow">原型 · demo 版</p>
+<!-- copy:TITLE5 draft, user ok 11-14 --><h1 id="hero-title">新時代的軟體技術棧</h1>
+<!-- copy:SUB5 draft, user ok 11-14 --><p class="subtitle">讓unix哲學再次偉大。</p>
 </div>
-</section>
-<section class="legend" id="legend" aria-label="記號說明">
-<span class="badge badge-tested">● 已實測</span><span class="badge badge-built">◆ 已實作</span><span class="badge badge-part">◐ 部分</span><span class="badge badge-vision">○ 願景</span>
-<p>沒有記號的句子是我們的看法。</p>
-</section>
-
-<section class="pair-card" id="compact" aria-labelledby="compact-title">
-<div class="pair-head"><h2 id="compact-title">精簡，小巧。</h2></div>
-<div class="pair-grid">
-<div class="pair-side">
-<p>核心程式庫僅7.5k行。<span class="badge badge-part">◐ 部分</span></p>
-<p class="evidence">三支核心程式 aos-exec、aos-loop、aos-daemon 的 C++ 原始碼：11-14 量 7,487 行，11-16 量 7,687 行（含註解與空行）；全部 C／C++ 16,750 行。</p>
-<p>使用時僅需記住少許cli指令。<span class="badge badge-part">◐ 部分</span></p>
-<p class="evidence">總入口是 aos-agent；給人打的 aos-* 指令一共 20 個（不算底層程式）。</p>
-</div>
-<div class="pair-side"><h3>缺點</h3><p>大多功能需要自己做，或是另外找。不過aos本來就鼓勵自己發展適合自己的系統。</p></div>
-</div>
-</section>
-<section class="pair-card" id="portable" aria-labelledby="portable-title">
-<div class="pair-head"><h2 id="portable-title">高度可攜，可理解。</h2></div>
-<div class="pair-grid">
-<div class="pair-side">
-<p>全部都是檔案，停止核心行程後，可以直接打包成.zip帶著走，損失接近沒有且高度可控。<span class="badge badge-part">◐ 部分</span></p>
-<p class="evidence">實測過：同一台機器停下、整個資料夾複製、在新位置起來接著答。還沒驗：跨機器、zip 來回。搬的當下正在跑的模型請求，可能要重花一次。</p>
-<p>大多檔案都是.json，不管是人看，或是配合AI，都容易掌握狀況進行除錯。<span class="badge badge-part">◐ 部分</span></p>
-<p class="evidence">設定大多是 JSON、對話紀錄是 JSONL；沒量過比例。</p>
-</div>
-<div class="pair-side"><h3>缺點</h3>
-<p>效能上會有無法忽視的損失。<span class="badge badge-part">◐ 部分</span></p>
-<p class="evidence">每一輪多起幾個子行程，比較慢；還沒量化。</p>
-<p>不過aos的核心概念之一就是LLM的呼叫才是核心瓶頸，這點檔案IO與其相比就是可以容許的，並且相比運行速度，可用性才是aos追求的。除此之外aos也鼓勵混合多種技術棧，自行權衡哪些東西要放在檔案系統。</p>
-</div>
-</div>
-</section>
-<section class="pair-card" id="linux" aria-labelledby="linux-title">
-<div class="pair-head"><h2 id="linux-title">大量利用Linux介面</h2></div>
-<div class="pair-grid">
-<div class="pair-side">
-<p>無需另外學習一套，並且可以與現有的一整套Linux技術棧相容。<span class="badge badge-part">◐ 部分</span></p>
-<p class="evidence">行程、訊號、檔案、權限都是 Linux 原生的；aos 自己的指令與慣例還是要學。</p>
-</div>
-<div class="pair-side"><h3>缺點</h3>
-<p>脫離不了Linux。<span class="badge badge-built">◆ 已實作</span></p>
-<p class="evidence">只有 Linux 實作（WSL2 可以）。</p>
-</div>
-</div>
-</section>
-<section class="pair-card" id="agents" aria-labelledby="agents-title">
-<div class="pair-head"><h2 id="agents-title">允許在僅有少數endpoint的情況下，同時運行千萬個agent。</h2>
-<p class="section-note">endpoint：模型的 API 入口。kernel：所有模型呼叫都先經過的排隊處。</p></div>
-<div class="scale-grid">
-<div class="scale-cell"><h3>千萬個agent<span class="badge badge-vision">○ 願景</span></h3><p>ps.尚未實測，並且這建立在大部份agent處於待命狀態的情況下。</p></div>
-<div class="scale-cell"><h3>今天實測<span class="badge badge-tested">● 已實測</span></h3><p>100 隻 agent 共用一個同時只能跑 2 個呼叫的端點：200 次呼叫 0 錯，最久排隊 68.5 秒。用的是假模型；量的是排隊，不是速度。</p></div>
-</div>
-<div class="pair-grid">
-<div class="pair-side">
-<p>並且可以奇蹟般地高度自定endpoint使用排程。<span class="badge badge-part">◐ 部分</span></p>
-<p class="evidence">格數、優先序、每個寄件人的額度都能改。實測：加一行「這個寄件人一天 2 次」，第三次就被拒。還沒有：搶占、自動降級。</p>
-<p>將agent拆解為一個個被定期喚醒的Linux proc，在待機狀態下mem/cpu占用極少。<span class="badge badge-part">◐ 部分</span></p>
-<p class="evidence">每隻 agent 就是一個 aos-loop 行程，跑一格、睡一下；待機的記憶體與 CPU 還沒量出數字。</p>
-<p>這就牽扯到aos的kernel機制，關於如何對endpoint這類資源進行管理。<span class="badge badge-tested">● 已實測</span></p>
-<p class="evidence">kernel 管模型呼叫：排隊、每個寄件人每天幾次、逐封記帳。</p>
-</div>
-<div class="pair-side"><h3>缺點</h3>
-<p>相比市面上現有的agent框架來說，aos agent確實少了些靈活性與即時性。但這是aos為了可用性而做的取捨。</p>
-<p>不過aos也在Linux介面的基礎上，為常見的coding agent如claude/codex提供了接口，可以將其作為aos agent來使用，後續也會支援更多。<span class="badge badge-part">◐ 部分</span></p>
-<p class="evidence">程式裡有 claude、codex 兩條；出廠範本只有 claude 那條，我們自己每天用的也是它。</p>
-</div>
+<div>
+<div class="hero-links"><a class="button primary" href="#sim"><!-- copy:DEMO-HEAD -->看它怎麼走 <span aria-hidden="true">↓</span></a><a class="button" href="zh/get-started.html">開始用 <span aria-hidden="true">↗</span></a></div>
 </div>
 </section>
 
-<div class="aurbis-group">
-<section class="content-section transition" id="aurbis">
-<p>面對愈來愈貴的token，我們這群已經離不開LLM的軟體工程師該何去何從？</p>
-<p>我們建議在aos的基礎上，來試試看一套新的軟體開發範式。</p>
-<p>喔，你可能很有錢，token自由看不上這套。那如果我說，我們能解決LLM的本質缺陷，並且帶著他前往更高更遠的地方呢？<span class="badge badge-vision">○ 願景</span></p>
-<p>我要來隆重介紹：Aurbis Development Pattern。<span class="badge badge-vision">○ 願景</span></p>
-<p class="dream">和agent一起做夢吧。</p>
-<p class="section-note">這個名字第一次出現在這頁；下面四段是它現在的樣子，有的已經能跑，有的只是方向。</p>
+<section class="adv" aria-labelledby="adv-title">
+<p class="section-label">01 / 核心優勢</p>
+<h2 id="adv-title">四個核心優勢</h2>
+<!-- four words: user 11-14 13:36; sentences and ids: team/copy/landing-v5-text.md -->
+<div class="adv-row">
+<div class="adv-item"><h3>精簡</h3><!-- copy:ADV-LEAN draft, user ok 11-14 --><p>核心三支程式，約 7500 行；八個詞講完整套概念。</p></div>
+<div class="adv-item"><h3>完全可遷移</h3><!-- copy:ADV-PORT draft, user ok 11-14 --><p>整套東西都是資料夾，可以整個搬走。</p><span class="tag tag-ok">已實測（同一台機器）</span><span class="evidence"><a href="zh/demos.html#a-%E6%90%AC%E6%A8%B9">停下來，把整個資料夾複製到新位置，再起來，對話接著走。</a>換一台機器還沒驗。</span></div>
+<div class="adv-item"><h3>超高可併發</h3><!-- copy:ADV-CONC draft, user ok 11-14 --><p>很多 agent 排隊，共用少少幾個模型端點。</p><span class="tag tag-ok">已實測（100 隻）</span><span class="evidence"><a href="zh/demos.html#b-%E5%BE%88%E5%A4%9A-agent-%E6%8E%92%E9%9A%8A%E5%85%B1%E7%94%A8%E4%B8%80%E5%80%8B%E7%AB%AF%E9%BB%9E">100 隻 agent 排隊共用 2 個模型位子，全部答完，沒有掉一個請求。</a></span><span class="evidence">完整說明：<a href="zh/why.html#%E5%9B%9B%E4%B8%80%E5%80%8B%E4%BE%8B%E5%AD%90%E4%BA%8C%E5%8D%81%E5%80%8B%E7%AB%AF%E9%BB%9E%E4%B8%8A%E5%8D%83%E5%80%8B-agent">為什麼做 aos ↗</a></span></div>
+<div class="adv-item"><h3>可全自由定義</h3><!-- copy:ADV-FREE draft, user ok 11-14 --><p>工具、要接哪個模型、誰先誰後的規則，都由你自己定。</p><span class="tag tag-ok">已實測（工具、端點、排程規則）</span><span class="evidence"><a href="zh/get-started.html#7-%E5%B7%A5%E5%85%B7%E4%B9%9F%E6%98%AF%E8%B3%87%E6%96%99%E5%A4%BE%E8%87%AA%E5%B7%B1%E5%8F%AB%E4%B8%80%E6%AC%A1">自己做一個工具</a>、<a href="zh/setup/real-brain.html">自己接一個模型端點</a>、<a href="zh/demos.html#c-%E6%8F%9B%E4%B8%80%E6%A2%9D%E6%8E%92%E9%9A%8A%E8%A6%8F%E5%89%87">改一行排程規則</a>，都照文件跑過。</span></div>
+</div>
 </section>
-<section class="content-section" id="kernel" aria-labelledby="kernel-title">
-<h2 id="kernel-title">aos kernel體系</h2>
-<p>如此之多的需要用到LLM的地方，那該如何確定？</p>
-<p>還可以套用到更多樣的部分。<span class="badge badge-vision">○ 願景</span></p>
-<p><span class="badge badge-tested badge-lead">● 已實測</span>今天 kernel 管的是模型呼叫這一種：排隊、每人每天幾次、逐封記帳，額度分總額／端點／寄件人三層。其餘種類的成本還沒有 kernel 在管。</p>
-<div class="sim">
-<p class="sim-note">示意演示：照設計畫的，不是實跑紀錄</p>
-<svg class="sim-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs><marker id="sim-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#223b34"/></marker></defs></svg>
-<div class="sim-sets">
-<div class="sim-set" id="sim2" data-sim>
-<h3 class="sim-title">一大堆呼叫、少少幾個端點、一扇會學的門</h3>
-<ol class="sim-steps">
-<li class="sim-step" data-step="1">
-<span class="sim-st sim-st-gen" title="一般情況的示意，不是 aos 的量測">沒有排隊時</span>
-<div class="sim-frames">
-<div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="一大群呼叫同時衝向端點，多的被退回、變紅"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">一個端點</text><rect x="276" y="27" width="48" height="66" fill="none" stroke="#223b34" stroke-dasharray="3 2"/><text x="300" y="108" text-anchor="middle" class="sv-t sv-s">2 個位子</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><circle cx="21" cy="24" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="44" cy="22" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="61" cy="30" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="83" cy="27" r="7" fill="#fff" stroke="#9aa5a0" stroke-width="1.5" stroke-dasharray="3 2"/><circle cx="104" cy="30" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="129" cy="22" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="17" cy="58" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="44" cy="53" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="63" cy="53" r="7" fill="#fff" stroke="#9aa5a0" stroke-width="1.5" stroke-dasharray="3 2"/><circle cx="90" cy="58" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="104" cy="53" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="129" cy="52" r="7" fill="#fff" stroke="#9aa5a0" stroke-width="1.5" stroke-dasharray="3 2"/><circle cx="22" cy="82" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="41" cy="82" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="68" cy="84" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="86" cy="88" r="7" fill="#fff" stroke="#9aa5a0" stroke-width="1.5" stroke-dasharray="3 2"/><circle cx="106" cy="90" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="127" cy="86" r="7" fill="#fff" stroke="#9aa5a0" stroke-width="1.5" stroke-dasharray="3 2"/><circle cx="24" cy="114" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="39" cy="115" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="65" cy="113" r="7" fill="#fff" stroke="#9aa5a0" stroke-width="1.5" stroke-dasharray="3 2"/><circle cx="90" cy="113" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="104" cy="115" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="133" cy="120" r="7" fill="#fff" stroke="#9aa5a0" stroke-width="1.5" stroke-dasharray="3 2"/><circle cx="22" cy="147" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="45" cy="149" r="7" fill="#fff" stroke="#9aa5a0" stroke-width="1.5" stroke-dasharray="3 2"/><line x1="150" y1="40" x2="274" y2="38" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><line x1="150" y1="75" x2="274" y2="73" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><line x1="150" y1="110" x2="274" y2="108" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><path d="M270 130 q-40 18 -110 12" fill="none" stroke="#b13d20" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M270 155 q-40 18 -110 37" fill="none" stroke="#b13d20" stroke-width="1.5" stroke-dasharray="4 3"/><text x="215" y="196" text-anchor="middle" class="sv-t sv-s sv-red">擠不進去 → 被退回</text></svg>
-<div class="sim-meter sim-meter-off" aria-hidden="true"></div>
-</div></div>
+
+<section class="intro" aria-labelledby="intro-title">
+<p class="section-label">02 / 介紹</p>
+<h2 id="intro-title">介紹</h2>
+<!-- W17: intro = three big sections with sub-sections (structure-v13 a, user 15:20); built by team/web/fig-pu/build-intro.py -->
+<div class="intro-big" id="intro-a">
+<!-- copy:INTRO-A-H draft, user ok 11-14 --><h3>重造計算模型</h3>
+<!-- copy:INTRO-A draft, user ok 11-14 --><p class="intro-sum">aos 把 Linux 當成硬體，在上面重新分一次：誰是 CPU、誰是板子、什麼可以拿來算。</p>
+<div class="intro-row">
+<div class="intro-text intro-flow">
+<!-- copy:INTRO-A-TEXT draft, user unseen (new) (paragraph 1/4) --><p><b>以 Linux 做硬體。</b> 一隻 agent，說穿了是一個一直在跑的迴圈：問模型、用工具、再問模型。這跟 CPU 做的事很像，所以我們乾脆把它當成一顆 CPU。CPU 一多，就要有地方插，於是有一支專門管它們的程式，那就是板子。而整套東西底下的硬體，就是 Linux：行程、檔案、權限，它早就做好了，我們直接站上去。</p>
+<!-- copy:INTRO-A-TEXT-P2 draft, user unseen (C20, fable intro-text-v2) --><p>有了 CPU 和板子，下一步，就是作業系統了。作業系統是什麼？就是硬體上權限最高的那支程式，它的工作是幫人把硬體用得更好：排程其他程式、分配資源、管權限。aos 的核心 kernel 做的是同一件事，只是它底下的「硬體」不是一台電腦，而是 Linux，加上 agent 要用到的各種東西。</p>
+<!-- copy:INTRO-A-TEXT draft, user unseen (new) (paragraph 3/4) --><p><b>什麼都可以是處理單元。</b> 既然 agent 可以是一顆 CPU，那會算東西的就不必只是程式。好比一位畫家：畫畫沒辦法直接變成一道指令，但可以拆成三件普通的事：把需求寄給他、等他回信、把畫歸檔。這樣包起來，他對 aos 來說就是一個處理單元（PU），跟一張 GPU、一個外部的模型服務是同一類，照樣排程。</p>
+<figure class="fig fig-small fig-pu-m"><p class="section-label">圖 2 / 包成處理單元</p>
+<!-- W17: painter as a processing unit (structure-v12 A2, pu-v1): send work -> painter -> reply -> archive; GPU and an outside model service wrapped the same way. Label 「都包成同樣幾步」 from ok-release W17 brief. -->
+<svg viewBox="0 0 360 290" role="img" aria-label="一位畫家當處理單元：aos 把工作寄給畫家，等他回信，再把結果歸檔；GPU 和外部的模型服務，也都包成同樣幾步">
+ <defs><marker id="pu-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#223b34"></path></marker></defs>
+ <g font-family="'Noto Sans TC','Noto Sans CJK TC',sans-serif" font-size="13" fill="#223b34" stroke="#223b34" stroke-width="1.6">
+  <!-- aos side: a folder -->
+  <path d="M18 74 h22 l6 7 h34 v42 h-62 z" fill="#d8e9c4"></path>
+  <text x="49" y="106" stroke="none" text-anchor="middle" font-family="Iosevka,'DejaVu Sans Mono',monospace" font-weight="700" font-size="15">aos</text>
+  <!-- painter: person + canvas -->
+  <circle cx="282" cy="72" r="11" fill="#fff"></circle>
+  <path d="M262 122 q0 -32 20 -32 q20 0 20 32" fill="#fff"></path>
+  <rect x="308" y="80" width="34" height="42" fill="#f1e2d3" stroke="#b13d20"></rect>
+  <path d="M313 114 l8 -12 l6 7 l5 -6 l6 11" fill="none" stroke="#b13d20" stroke-width="1.3"></path>
+  <text x="300" y="144" stroke="none" text-anchor="middle" font-weight="700" font-size="14">畫家</text>
+  <!-- 1 send work: top arc with an envelope -->
+  <path d="M84 72 Q170 18 256 66" fill="none" marker-end="url(#pu-ah)"></path>
+  <rect x="155" y="31" width="30" height="20" fill="#fff"></rect><path d="M155 31 l15 11 l15 -11" fill="none"></path>
+  <text x="170" y="22" stroke="none" text-anchor="middle">① 寄工作</text>
+  <!-- 2 wait for reply: bottom arc back -->
+  <path d="M258 128 Q170 178 86 126" fill="none" marker-end="url(#pu-ah)"></path>
+  <rect x="155" y="142" width="30" height="20" fill="#fff"></rect><path d="M155 142 l15 11 l15 -11" fill="none"></path>
+  <text x="170" y="182" stroke="none" text-anchor="middle">② 等回信</text>
+  <!-- 3 archive -->
+  <text x="49" y="146" stroke="none" text-anchor="middle">③ 歸檔</text>
+  <!-- others wrapped the same way -->
+  <line x1="10" y1="204" x2="350" y2="204" stroke="#55685e" stroke-dasharray="4 4" stroke-width="1"></line>
+  <g transform="translate(28 222)"><rect x="4" y="4" width="28" height="28" fill="#fff"></rect><rect x="11" y="11" width="14" height="14" fill="#223b34"></rect><path d="M10 0 v4 M18 0 v4 M26 0 v4 M10 32 v4 M18 32 v4 M26 32 v4 M0 10 h4 M0 18 h4 M0 26 h4 M32 10 h4 M32 18 h4 M32 26 h4" stroke-width="1.3"></path></g>
+  <text x="46" y="276" stroke="none" text-anchor="middle">GPU</text>
+  <g transform="translate(108 220)"><rect x="0" y="2" width="52" height="14" fill="#fff"></rect><rect x="0" y="20" width="52" height="14" fill="#fff"></rect><circle cx="8" cy="9" r="2" fill="#223b34" stroke="none"></circle><circle cx="8" cy="27" r="2" fill="#223b34" stroke="none"></circle></g>
+  <text x="134" y="276" stroke="none" text-anchor="middle">外部的模型服務</text>
+  <path d="M190 240 h22" fill="none" marker-end="url(#pu-ah)"></path>
+  <text x="222" y="244" stroke="none" fill="#b13d20" font-weight="700" font-size="14">都包成同樣幾步</text>
+ </g>
+</svg>
+</figure>
+<!-- copy:INTRO-A-TEXT draft, user unseen (new) (paragraph 4/4) --><p><b>可以嵌套。</b> 還有一點：這一層可以再套一層。kernel 上面分兩塊，一塊是做事的 agent，一塊是另一個 kernel；那個 kernel 上面，又可以再分一次。</p>
+<!-- copy:INTRO-A-NOW draft, user unseen (new) --><p class="now-line"><b>今天做到哪</b>：一層套一層，照字跑過；把外部的模型服務包成一個資料夾來叫，跑過；把人或 GPU 包成處理單元，還沒有示範。</p>
+<!-- copy:INTRO-A-LINK draft, user unseen (new) --><p class="why-link">完整說明：<a href="zh/why.html#%E4%B8%80%E9%87%8D%E9%80%A0%E8%A8%88%E7%AE%97%E6%A8%A1%E5%9E%8B">為什麼做 aos ↗</a>；示範：<a href="zh/demos.html#d-%E4%B8%80%E5%B1%A4%E5%A5%97%E4%B8%80%E5%B1%A4">一層套一層 ↗</a>；照字跑過的：<a href="zh/setup/real-brain.html">接一個模型服務 ↗</a></p>
 </div>
-<p class="sim-cap"><span class="sim-k">1／7</span>一大堆模型呼叫一起擠向一個端點：擠不進去的，就被退回。</p>
-</li>
-<li class="sim-step" data-step="2">
-<span class="sim-st sim-st-ok" title="今天能跑（已實測：100 個 agent 共用 2 個位子，全部答完；量的是排隊，不是速度）">今天能跑</span>
-<div class="sim-frames">
-<div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="中間出現一扇門，呼叫排成一隊一個一個進去"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">一個端點</text><rect x="276" y="27" width="48" height="66" fill="none" stroke="#223b34" stroke-dasharray="3 2"/><text x="300" y="108" text-anchor="middle" class="sv-t sv-s">2 個位子</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="196" y="24" width="10" height="150" fill="#223b34"/><text x="201" y="192" text-anchor="middle" class="sv-t sv-s">門</text><circle cx="166" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="144" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="122" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="100" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="78" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="56" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="34" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><line x1="176" y1="100" x2="192" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><line x1="210" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/></svg>
-<div class="sim-meter sim-meter-off" aria-hidden="true"></div>
-</div></div>
+<div class="intro-figs">
+<figure class="fig"><p class="section-label">圖 1 / 疊起來的樣子</p>
+<!-- W10: drawn from team/fable/structure-v10.md (user 14:33): hardware, Linux, aos kernel; above it agent | kernel -->
+<div class="fig1-wrap">
+<!-- W15: processing-unit row next to the agent block (fable pu-v1, user 15:02); labels set by ok-release, copy-1 may override -->
+<div class="pu-col"><ul class="pu-icons" aria-label="程式、模型、GPU、人"><li><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="5" width="22" height="18" stroke="currentColor" stroke-width="1.6" fill="none"></rect><path d="M11 10 l-3 4 3 4 M17 10 l3 4 -3 4" stroke="currentColor" stroke-width="1.6" fill="none"></path></svg><span>程式</span></li><li><svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="7" cy="8" r="3" stroke="currentColor" stroke-width="1.6" fill="none"></circle><circle cx="7" cy="20" r="3" stroke="currentColor" stroke-width="1.6" fill="none"></circle><circle cx="21" cy="14" r="3" stroke="currentColor" stroke-width="1.6" fill="none"></circle><path d="M10 8 L18 13 M10 20 L18 15" stroke="currentColor" stroke-width="1.6" fill="none"></path></svg><span>模型</span></li><li><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="6" y="6" width="16" height="16" stroke="currentColor" stroke-width="1.6" fill="none"></rect><rect x="10" y="10" width="8" height="8" fill="currentColor"></rect><path d="M10 2v4M14 2v4M18 2v4M10 22v4M14 22v4M18 22v4M2 10h4M2 14h4M2 18h4M22 10h4M22 14h4M22 18h4" stroke="currentColor" stroke-width="1.6" fill="none"></path></svg><span>GPU</span></li><li><svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="9" r="5" stroke="currentColor" stroke-width="1.6" fill="none"></circle><path d="M4 26 c0-7 4-10 10-10 s10 3 10 10" stroke="currentColor" stroke-width="1.6" fill="none"></path></svg><span>人</span></li></ul><p class="pu-cap">都可以是處理單元</p></div>
+<svg viewBox="0 0 360 330" role="img" aria-label="疊層：最下面是硬體，上面是 Linux，再上面是 aos kernel；aos kernel 上方分左右兩塊，左邊是做事的 agent，右邊是管事的 kernel；右邊那塊上方還能再分一次">
+ <g font-family="Iosevka,'DejaVu Sans Mono',monospace" font-size="17" fill="#223b34" stroke-width="2">
+  <rect x="10" y="10" width="120" height="130" fill="#fff" stroke="#223b34"></rect>
+  <text x="26" y="40" font-weight="700">agent</text><text x="26" y="62" font-size="14">做事的</text>
+  <!-- fig1 nest layer: user to confirm (fable's addition). To remove: delete this <g> and set the kernel rect below to y="10" height="130" -->
+  <g class="fig1-nest">
+   <rect x="140" y="10" width="100" height="58" fill="#fff" stroke="#223b34" stroke-dasharray="6 5"></rect>
+   <text x="152" y="36" font-size="15">agent</text>
+   <rect x="250" y="10" width="100" height="58" fill="#d8e9c4" stroke="#223b34" stroke-dasharray="6 5"></rect>
+   <text x="262" y="36" font-size="15">kernel</text>
+   <text x="152" y="58" font-size="12" fill="#55685e">還能再分一次</text>
+  </g>
+  <rect x="140" y="78" width="210" height="62" fill="#d8e9c4" stroke="#223b34"></rect>
+  <text x="156" y="106" font-weight="700">kernel</text><text x="156" y="128" font-size="14">管事的</text>
+  <rect x="10" y="150" width="340" height="50" fill="#d8e9c4" stroke="#223b34"></rect>
+  <text x="26" y="181" font-weight="700">aos kernel</text>
+  <rect x="10" y="210" width="340" height="50" fill="#f7f5ed" stroke="#223b34"></rect>
+  <text x="26" y="241" font-weight="700">Linux</text><text x="100" y="241" font-size="14">當作硬體板子</text>
+  <rect x="10" y="270" width="340" height="50" fill="#f1e2d3" stroke="#b13d20"></rect>
+  <text x="26" y="301" font-weight="700">硬體</text><text x="100" y="301" font-size="14">CPU、記憶體、磁碟</text>
+ </g>
+</svg>
 </div>
-<p class="sim-cap"><span class="sim-k">2／7</span>aos 接手：所有呼叫先經過 kernel（下面叫它門），排隊進去。照文件一步步跑過：100 個 agent 共用 2 個位子（同時只能跑 2 個呼叫），全部答完。用的是假模型。</p>
-</li>
-<li class="sim-step" data-step="3">
-<span class="sim-st sim-st-no" title="還沒做（請求可以多帶欄位；拿來排先後沒做）">還沒做</span>
-<div class="sim-frames">
-<div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="排隊的呼叫頭上各有一句話"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">一個端點</text><rect x="276" y="27" width="48" height="66" fill="none" stroke="#223b34" stroke-dasharray="3 2"/><text x="300" y="108" text-anchor="middle" class="sv-t sv-s">2 個位子</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="196" y="24" width="10" height="150" fill="#223b34"/><text x="201" y="192" text-anchor="middle" class="sv-t sv-s">門</text><circle cx="166" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="144" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="122" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="100" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="78" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"/><circle cx="56" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="34" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><line x1="176" y1="100" x2="192" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><line x1="210" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><line x1="78" y1="91" x2="78" y2="64" stroke="#b13d20" stroke-width="1"/><rect x="16" y="42" width="160" height="22" rx="11" fill="#fff" stroke="#55685e" stroke-dasharray="3 2"/><text x="96.0" y="57" text-anchor="middle" class="sv-t sv-s">我在做最後一關的驗證</text><line x1="144" y1="109" x2="144" y2="136" stroke="#55685e" stroke-width="1"/><rect x="104" y="136" width="110" height="22" rx="11" fill="#fff" stroke="#55685e" stroke-dasharray="3 2"/><text x="159.0" y="151" text-anchor="middle" class="sv-t sv-s">我在試一個點子</text></svg>
-<div class="sim-meter sim-meter-off" aria-hidden="true"></div>
-</div></div>
-</div>
-<p class="sim-cap"><span class="sim-k">3／7</span>每個呼叫附上一句，說自己在做什麼。</p>
-</li>
-<li class="sim-step" data-step="4">
-<span class="sim-st sim-st-no" title="還沒做（門留了掛判斷程式的位子；讓 agent 當判斷者沒做）">還沒做</span>
-<div class="sim-frames">
-<div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="門變成一隻 agent，把最後一關那個拉到前面"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">一個端點</text><rect x="276" y="27" width="48" height="66" fill="none" stroke="#223b34" stroke-dasharray="3 2"/><text x="300" y="108" text-anchor="middle" class="sv-t sv-s">2 個位子</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="196" y="24" width="10" height="150" fill="#223b34" opacity=".25"/><path d="M176 76.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="201.0" y="121.0" text-anchor="middle" class="sv-t">門</text><circle cx="201" cy="93" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="197.85" cy="91.65" r="1.4" fill="#223b34"/><circle cx="204.15" cy="91.65" r="1.4" fill="#223b34"/><path d="M197.4 96.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><circle cx="146" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"/><circle cx="124" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="102" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="80" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="58" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="36" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="14" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><line x1="156" y1="100" x2="172" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><line x1="230" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><line x1="146" y1="91" x2="146" y2="64" stroke="#b13d20" stroke-width="1"/><rect x="84" y="42" width="160" height="22" rx="11" fill="#fff" stroke="#55685e" stroke-dasharray="3 2"/><text x="164.0" y="57" text-anchor="middle" class="sv-t sv-s">我在做最後一關的驗證</text><line x1="102" y1="109" x2="102" y2="136" stroke="#55685e" stroke-width="1"/><rect x="62" y="136" width="110" height="22" rx="11" fill="#fff" stroke="#55685e" stroke-dasharray="3 2"/><text x="117.0" y="151" text-anchor="middle" class="sv-t sv-s">我在試一個點子</text></svg>
-<div class="sim-meter" aria-label="門自己用了多少模型：長條長度示意"><p class="sim-meter-label">門自己用了多少模型</p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:100%"></span></span><p class="sim-meter-note">長度只是示意，沒有量過</p></div>
-</div></div>
-</div>
-<p class="sim-cap"><span class="sim-k">4／7</span>這種話很難用公式算。設計上，讓門自己也是一隻 agent，由它讀了決定誰先。</p>
-</li>
-<li class="sim-step" data-step="5">
-<span class="sim-st sim-st-no" title="還沒做">還沒做</span>
-<div class="sim-frames">
-<div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="攤開判斷結果，人回一句改進你自己"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">一個端點</text><rect x="276" y="27" width="48" height="66" fill="none" stroke="#223b34" stroke-dasharray="3 2"/><text x="300" y="108" text-anchor="middle" class="sv-t sv-s">2 個位子</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="196" y="24" width="10" height="150" fill="#223b34" opacity=".25"/><path d="M176 76.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="201.0" y="121.0" text-anchor="middle" class="sv-t">門</text><circle cx="201" cy="93" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="197.85" cy="91.65" r="1.4" fill="#223b34"/><circle cx="204.15" cy="91.65" r="1.4" fill="#223b34"/><path d="M197.4 96.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><circle cx="146" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"/><circle cx="124" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="102" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="80" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="58" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="36" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="14" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><line x1="156" y1="100" x2="172" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><line x1="230" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><rect x="226" y="128" width="70" height="52" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="234" y="143" class="sv-t sv-s">✓</text><line x1="246" y1="140" x2="288" y2="140" stroke="#55685e" stroke-width="1.2"/><text x="234" y="153" class="sv-t sv-s">✓</text><line x1="246" y1="150" x2="288" y2="150" stroke="#55685e" stroke-width="1.2"/><text x="234" y="163" class="sv-t sv-s">?</text><line x1="246" y1="160" x2="288" y2="160" stroke="#55685e" stroke-width="1.2"/><text x="261.0" y="194" text-anchor="middle" class="sv-t sv-s">判斷結果</text><rect x="16" y="176" width="76" height="22" rx="11" fill="#fff" stroke="#55685e" stroke-dasharray="3 2"/><text x="54.0" y="191" text-anchor="middle" class="sv-t sv-s">改進你自己</text></svg>
-<div class="sim-meter" aria-label="門自己用了多少模型：長條長度示意"><p class="sim-meter-label sim-rep" data-t="門自己用了多少模型" aria-hidden="true"></p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:100%"></span></span><p class="sim-meter-note sim-rep" data-t="長度只是示意，沒有量過" aria-hidden="true"></p></div>
-</div></div>
-</div>
-<p class="sim-cap"><span class="sim-k">5／7</span>看看它排得怎樣。門自己也在用模型：叫它改進自己。</p>
-</li>
-<li class="sim-step" data-step="6">
-<span class="sim-st sim-st-no" title="還沒做">還沒做</span>
-<div class="sim-frames">
-<div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="門的資料夾長出一條規則，用量變短"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">一個端點</text><rect x="276" y="27" width="48" height="66" fill="none" stroke="#223b34" stroke-dasharray="3 2"/><text x="300" y="108" text-anchor="middle" class="sv-t sv-s">2 個位子</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="196" y="24" width="10" height="150" fill="#223b34" opacity=".25"/><path d="M176 76.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="201.0" y="121.0" text-anchor="middle" class="sv-t">門</text><circle cx="201" cy="93" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="197.85" cy="91.65" r="1.4" fill="#223b34"/><circle cx="204.15" cy="91.65" r="1.4" fill="#223b34"/><path d="M197.4 96.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M170 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"/><text x="180.0" y="169.4" text-anchor="middle" class="sv-t">規則</text><circle cx="146" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"/><circle cx="124" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="102" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="80" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="58" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="36" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="14" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><line x1="156" y1="100" x2="172" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><line x1="230" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/></svg>
-<div class="sim-meter" aria-label="門自己用了多少模型：長條長度示意"><p class="sim-meter-label sim-rep" data-t="門自己用了多少模型" aria-hidden="true"></p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:70%"></span></span><p class="sim-meter-note sim-rep" data-t="長度只是示意，沒有量過" aria-hidden="true"></p></div>
-</div></div>
-<div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="再長一條，用量再短"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">一個端點</text><rect x="276" y="27" width="48" height="66" fill="none" stroke="#223b34" stroke-dasharray="3 2"/><text x="300" y="108" text-anchor="middle" class="sv-t sv-s">2 個位子</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="196" y="24" width="10" height="150" fill="#223b34" opacity=".25"/><path d="M176 76.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="201.0" y="121.0" text-anchor="middle" class="sv-t">門</text><circle cx="201" cy="93" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="197.85" cy="91.65" r="1.4" fill="#223b34"/><circle cx="204.15" cy="91.65" r="1.4" fill="#223b34"/><path d="M197.4 96.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M170 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="180.0" y="169.4" text-anchor="middle" class="sv-t">規則</text><path d="M192 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"/><circle cx="146" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"/><circle cx="124" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="102" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="80" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="58" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="36" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="14" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><line x1="156" y1="100" x2="172" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><line x1="230" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/></svg>
-<div class="sim-meter" aria-label="門自己用了多少模型：長條長度示意"><p class="sim-meter-label sim-rep" data-t="門自己用了多少模型" aria-hidden="true"></p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:45%"></span></span><p class="sim-meter-note sim-rep" data-t="長度只是示意，沒有量過" aria-hidden="true"></p></div>
-</div></div>
-<div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="又長一條，用量更短"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">一個端點</text><rect x="276" y="27" width="48" height="66" fill="none" stroke="#223b34" stroke-dasharray="3 2"/><text x="300" y="108" text-anchor="middle" class="sv-t sv-s">2 個位子</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="196" y="24" width="10" height="150" fill="#223b34" opacity=".25"/><path d="M176 76.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="201.0" y="121.0" text-anchor="middle" class="sv-t">門</text><circle cx="201" cy="93" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="197.85" cy="91.65" r="1.4" fill="#223b34"/><circle cx="204.15" cy="91.65" r="1.4" fill="#223b34"/><path d="M197.4 96.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M170 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="180.0" y="169.4" text-anchor="middle" class="sv-t">規則</text><path d="M192 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M214 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"/><circle cx="146" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"/><circle cx="124" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="102" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="80" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="58" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="36" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="14" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><line x1="156" y1="100" x2="172" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><line x1="230" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/></svg>
-<div class="sim-meter" aria-label="門自己用了多少模型：長條長度示意"><p class="sim-meter-label sim-rep" data-t="門自己用了多少模型" aria-hidden="true"></p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:20%"></span></span><p class="sim-meter-note sim-rep" data-t="長度只是示意，沒有量過" aria-hidden="true"></p></div>
-</div></div>
-</div>
-<p class="sim-cap"><span class="sim-k">6／7</span>它替自己加了判斷的工具和規則：常見的情況，直接照規則走。按「再跑一次」，規則就多一條。</p>
-</li>
-<li class="sim-step" data-step="7">
-<span class="sim-st sim-st-no" title="還沒做（方向）">還沒做</span>
-<div class="sim-frames">
-<div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="門還是一隻 agent，常見的照規則走，難判的還在問模型，用量留最後一小截"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">一個端點</text><rect x="276" y="27" width="48" height="66" fill="none" stroke="#223b34" stroke-dasharray="3 2"/><text x="300" y="108" text-anchor="middle" class="sv-t sv-s">2 個位子</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"/><rect x="196" y="24" width="10" height="150" fill="#223b34" opacity=".25"/><path d="M176 76.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="201.0" y="121.0" text-anchor="middle" class="sv-t">門</text><circle cx="201" cy="93" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="197.85" cy="91.65" r="1.4" fill="#223b34"/><circle cx="204.15" cy="91.65" r="1.4" fill="#223b34"/><path d="M197.4 96.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M170 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="180.0" y="169.4" text-anchor="middle" class="sv-t">規則</text><path d="M192 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M214 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="146" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"/><circle cx="124" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="102" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="80" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="58" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="36" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="14" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><line x1="156" y1="100" x2="172" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><line x1="230" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/></svg>
-<div class="sim-meter" aria-label="門自己用了多少模型：長條長度示意"><p class="sim-meter-label sim-rep" data-t="門自己用了多少模型" aria-hidden="true"></p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:10%"></span></span><p class="sim-meter-note sim-rep" data-t="長度只是示意，沒有量過" aria-hidden="true"></p></div>
-</div></div>
-</div>
-<p class="sim-cap"><span class="sim-k">7／7</span>常見的情況，門已經照規則走；難判的還在問模型。讓這扇門最後完全是程式，是方向，還沒做。</p>
-<p class="sim-end">後半段是 aos 要去的方向，還沒做出來。</p>
-</li>
-</ol></div>
+</figure>
+<figure class="fig fig-pu-d"><p class="section-label">圖 2 / 包成處理單元</p>
+<!-- W17: painter as a processing unit (structure-v12 A2, pu-v1): send work -> painter -> reply -> archive; GPU and an outside model service wrapped the same way. Label 「都包成同樣幾步」 from ok-release W17 brief. -->
+<svg viewBox="0 0 360 290" role="img" aria-label="一位畫家當處理單元：aos 把工作寄給畫家，等他回信，再把結果歸檔；GPU 和外部的模型服務，也都包成同樣幾步">
+ <defs><marker id="pu-ah-d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#223b34"></path></marker></defs>
+ <g font-family="'Noto Sans TC','Noto Sans CJK TC',sans-serif" font-size="13" fill="#223b34" stroke="#223b34" stroke-width="1.6">
+  <!-- aos side: a folder -->
+  <path d="M18 74 h22 l6 7 h34 v42 h-62 z" fill="#d8e9c4"></path>
+  <text x="49" y="106" stroke="none" text-anchor="middle" font-family="Iosevka,'DejaVu Sans Mono',monospace" font-weight="700" font-size="15">aos</text>
+  <!-- painter: person + canvas -->
+  <circle cx="282" cy="72" r="11" fill="#fff"></circle>
+  <path d="M262 122 q0 -32 20 -32 q20 0 20 32" fill="#fff"></path>
+  <rect x="308" y="80" width="34" height="42" fill="#f1e2d3" stroke="#b13d20"></rect>
+  <path d="M313 114 l8 -12 l6 7 l5 -6 l6 11" fill="none" stroke="#b13d20" stroke-width="1.3"></path>
+  <text x="300" y="144" stroke="none" text-anchor="middle" font-weight="700" font-size="14">畫家</text>
+  <!-- 1 send work: top arc with an envelope -->
+  <path d="M84 72 Q170 18 256 66" fill="none" marker-end="url(#pu-ah-d)"></path>
+  <rect x="155" y="31" width="30" height="20" fill="#fff"></rect><path d="M155 31 l15 11 l15 -11" fill="none"></path>
+  <text x="170" y="22" stroke="none" text-anchor="middle">① 寄工作</text>
+  <!-- 2 wait for reply: bottom arc back -->
+  <path d="M258 128 Q170 178 86 126" fill="none" marker-end="url(#pu-ah-d)"></path>
+  <rect x="155" y="142" width="30" height="20" fill="#fff"></rect><path d="M155 142 l15 11 l15 -11" fill="none"></path>
+  <text x="170" y="182" stroke="none" text-anchor="middle">② 等回信</text>
+  <!-- 3 archive -->
+  <text x="49" y="146" stroke="none" text-anchor="middle">③ 歸檔</text>
+  <!-- others wrapped the same way -->
+  <line x1="10" y1="204" x2="350" y2="204" stroke="#55685e" stroke-dasharray="4 4" stroke-width="1"></line>
+  <g transform="translate(28 222)"><rect x="4" y="4" width="28" height="28" fill="#fff"></rect><rect x="11" y="11" width="14" height="14" fill="#223b34"></rect><path d="M10 0 v4 M18 0 v4 M26 0 v4 M10 32 v4 M18 32 v4 M26 32 v4 M0 10 h4 M0 18 h4 M0 26 h4 M32 10 h4 M32 18 h4 M32 26 h4" stroke-width="1.3"></path></g>
+  <text x="46" y="276" stroke="none" text-anchor="middle">GPU</text>
+  <g transform="translate(108 220)"><rect x="0" y="2" width="52" height="14" fill="#fff"></rect><rect x="0" y="20" width="52" height="14" fill="#fff"></rect><circle cx="8" cy="9" r="2" fill="#223b34" stroke="none"></circle><circle cx="8" cy="27" r="2" fill="#223b34" stroke="none"></circle></g>
+  <text x="134" y="276" stroke="none" text-anchor="middle">外部的模型服務</text>
+  <path d="M190 240 h22" fill="none" marker-end="url(#pu-ah-d)"></path>
+  <text x="222" y="244" stroke="none" fill="#b13d20" font-weight="700" font-size="14">都包成同樣幾步</text>
+ </g>
+</svg>
+</figure>
 </div>
 </div>
-<details><summary>更多樣的部分是指什麼</summary>
+</div>
+<div class="intro-big" id="intro-b">
+<!-- copy:INTRO-B-H draft, user ok 11-14 --><h3>以往沒考慮過的成本</h3>
+<!-- copy:INTRO-B draft, user ok 11-14 --><p class="intro-sum">程式的成本，不只時間和記憶體。</p>
+<div class="intro-row">
+<div class="intro-text intro-flow">
+<!-- copy:INTRO-B-TEXT draft, user unseen (new) (paragraph 1/3) --><p><b>一行 a=1+2。</b> 有了這個計算模型，再回頭看一行最普通的程式：a=1+2。它佔一點記憶體，跑一下子，一般算到這裡就結束了。那除此之外呢？人看懂它要多久？原始碼佔多少地方？a 這個名字會不會蓋掉別人的？這些其實都是成本。</p>
+<!-- copy:INTRO-B-TEXT draft, user unseen (new) (paragraph 2/3) --><p>對 a=1+2 來說，這些當然可以忽略不計。但換成更大、更特別的程式，就不能不算了，種類恐怕還不只這幾種；用了 AI，還要再加上 token。上面那位畫家也一樣：他擅長什麼、一週能畫幾張，全是要算的。</p>
+<!-- copy:INTRO-B-TEXT draft, user unseen (new) (paragraph 3/3) --><p><b>為這些成本設計的 kernel。</b> 現在常見的 kernel，優化的多半是 CPU、記憶體、時間這些常見的資源。aos 的 kernel 就是為剩下的那些成本設計的：每個請求都先經過它，要優化什麼，由你來定。很多 agent 搶少少幾個模型的時候它怎麼排，下面第二套演示會走一遍。</p>
+<!-- copy:INTRO-B-NOW draft, user unseen (new) --><p class="now-line"><b>今天做到哪</b>：這扇門今天管過的是模型呼叫：100 隻 agent 排隊共用 2 個位子（假模型）、每個寄件人一天最多幾次，都照字跑過。看懂要多久、名字會不會撞這類成本，還沒有 kernel 在管。</p>
+<!-- copy:INTRO-B-LINK draft, user unseen (new) --><p class="why-link">完整說明：<a href="zh/why.html#%E4%BA%8C%E4%BB%A5%E5%BE%80%E6%B2%92%E8%80%83%E6%85%AE%E9%81%8E%E7%9A%84%E6%88%90%E6%9C%AC">為什麼做 aos ↗</a>；示範（假模型）：<a href="zh/demos.html#b-%E5%BE%88%E5%A4%9A-agent-%E6%8E%92%E9%9A%8A%E5%85%B1%E7%94%A8%E4%B8%80%E5%80%8B%E7%AB%AF%E9%BB%9E">很多 agent 排隊 ↗</a>、<a href="zh/demos.html#c-%E6%8F%9B%E4%B8%80%E6%A2%9D%E6%8E%92%E9%9A%8A%E8%A6%8F%E5%89%87">換一條排隊規則 ↗</a></p>
+</div>
 <figure class="fig cost cost2"><p class="section-label">例 / 一行程式的成本</p>
+<!-- W14: picture per team/fable/cost-v1.md (user 14:59); labels set by ok-release, copy-1 may override -->
 <pre class="cost-code">a = 1 + 2</pre>
 <div class="cost-cols">
 <div class="cost-col cost-old"><p class="cost-head">一般 kernel 看的</p><ul><li>CPU</li><li>記憶體</li><li>時間</li></ul></div>
 <div class="cost-col cost-new"><p class="cost-head">還有這些</p><ul><li>看懂要多久</li><li>原始碼大小</li><li>名字相撞</li><li>token</li><li class="cost-more" aria-label="不止這些">……</li></ul></div>
 </div>
 </figure>
-<p>寫一行 a=1+2，一般只算它佔多少記憶體、跑多久；可是人要花多久看懂它？a 這個名字會不會蓋掉別的？這麼簡單常見的程式，這些成本都可以不管；換成更大、更特別的程式就不能不管了，種類可能還不只這幾種，用 AI 還要多算 token。</p>
-</details>
-<p class="section-note">這一段還在寫。</p>
-</section>
-<section class="content-section" id="base" aria-labelledby="base-title">
-<h2 id="base-title">基礎架構：檔案系統、json、Linux。<span class="badge badge-built">◆ 已實作</span></h2>
-<p class="evidence">狀態、設定、信件都是資料夾裡的檔案；設定用 JSON；行程與訊號用 Linux 的。</p>
-<p>統一路徑：filesystem to json，減少agent心智負擔。<span class="badge badge-built">◆ 已實作</span></p>
-<p class="evidence">檔案和 JSON 裡的位置用同一種寫法：cfg.json#/states/think/next。（實作：<a href="https://github.com/justty32/aos/blob/main/proto8/lib/aos_json.py">aos_json.py ↗</a>）</p>
-<p>適用各種輪子，無需重造。任何複雜的軟體最終都會變成作業系統，那為何不一開始就讓作業系統成為你軟體的基石呢？</p>
-<div class="asset-row">
-<figure class="fig"><p class="section-label">圖 1 / 疊起來的樣子</p>
-<div class="fig1-wrap">
-<div class="pu-col"><ul class="pu-icons" aria-label="程式、模型、GPU、人"><li><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="5" width="22" height="18" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M11 10 l-3 4 3 4 M17 10 l3 4 -3 4" stroke="currentColor" stroke-width="1.6" fill="none"/></svg><span>程式</span></li><li><svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="7" cy="8" r="3" stroke="currentColor" stroke-width="1.6" fill="none"/><circle cx="7" cy="20" r="3" stroke="currentColor" stroke-width="1.6" fill="none"/><circle cx="21" cy="14" r="3" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M10 8 L18 13 M10 20 L18 15" stroke="currentColor" stroke-width="1.6" fill="none"/></svg><span>模型</span></li><li><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="6" y="6" width="16" height="16" stroke="currentColor" stroke-width="1.6" fill="none"/><rect x="10" y="10" width="8" height="8" fill="currentColor"/><path d="M10 2v4M14 2v4M18 2v4M10 22v4M14 22v4M18 22v4M2 10h4M2 14h4M2 18h4M22 10h4M22 14h4M22 18h4" stroke="currentColor" stroke-width="1.6" fill="none"/></svg><span>GPU</span></li><li><svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="9" r="5" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M4 26 c0-7 4-10 10-10 s10 3 10 10" stroke="currentColor" stroke-width="1.6" fill="none"/></svg><span>人</span></li></ul><p class="pu-cap">都可以是處理單元</p></div>
-<svg viewBox="0 0 360 330" role="img" aria-label="疊層：最下面是硬體，上面是 Linux，再上面是 aos kernel；aos kernel 上方分左右兩塊，左邊是做事的 agent，右邊是管事的 kernel；右邊那塊上方還能再分一次">
- <g font-family="Iosevka,'DejaVu Sans Mono',monospace" font-size="17" fill="#223b34" stroke-width="2">
-  <rect x="10" y="10" width="120" height="130" fill="#fff" stroke="#223b34"/>
-  <text x="26" y="40" font-weight="700">agent</text><text x="26" y="62" font-size="14">做事的</text>
-  <g class="fig1-nest">
-   <rect x="140" y="10" width="100" height="58" fill="#fff" stroke="#223b34" stroke-dasharray="6 5"/>
-   <text x="152" y="36" font-size="15">agent</text>
-   <rect x="250" y="10" width="100" height="58" fill="#d8e9c4" stroke="#223b34" stroke-dasharray="6 5"/>
-   <text x="262" y="36" font-size="15">kernel</text>
-   <text x="152" y="58" font-size="12" fill="#55685e">還能再分一次</text>
-  </g>
-  <rect x="140" y="78" width="210" height="62" fill="#d8e9c4" stroke="#223b34"/>
-  <text x="156" y="106" font-weight="700">kernel</text><text x="156" y="128" font-size="14">管事的</text>
-  <rect x="10" y="150" width="340" height="50" fill="#d8e9c4" stroke="#223b34"/>
-  <text x="26" y="181" font-weight="700">aos kernel</text>
-  <rect x="10" y="210" width="340" height="50" fill="#f7f5ed" stroke="#223b34"/>
-  <text x="26" y="241" font-weight="700">Linux</text><text x="100" y="241" font-size="14">當作硬體</text>
-  <rect x="10" y="270" width="340" height="50" fill="#f1e2d3" stroke="#b13d20"/>
-  <text x="26" y="301" font-weight="700">硬體</text><text x="100" y="301" font-size="14">CPU、記憶體、磁碟</text>
- </g>
-</svg>
 </div>
-<figcaption>最底下是 aos 的 kernel，上面分兩塊：做事的 agent，和管事的 kernel；管事的那塊上面，還能再分一次。</figcaption>
+</div>
+<div class="intro-big" id="intro-c">
+<!-- copy:INTRO-C-H draft, user ok 11-14 --><h3>新的軟體開發範式</h3>
+<!-- copy:INTRO-C draft, user ok 11-14 --><p class="intro-sum">先讓 agent 把事做到，再一塊一塊換成程式。</p>
+<div class="intro-row">
+<div class="intro-text intro-flow">
+<!-- copy:INTRO-C-TEXT draft, user unseen (new) (paragraph 1/4) --><p>工具有了，下一步，是拿它怎麼寫軟體。</p>
+<!-- copy:INTRO-C-TEXT-P2 draft, user unseen (C21) --><p><b>檔案系統當語言。</b> 最好的寫程式方式，Lisp 早就示範過：程式就是資料，程式可以寫程式，也可以改自己。那為什麼大家不用？不好除錯，也碰不到底層。但現在有了 LLM，事情不一樣了：站在更高的層面看，Lisp 這一套反而變得有優勢，因為寫程式、改程式的，可以是模型自己。剩下的問題是：拿什麼當這個語言，模型用得順，人也看得到？我們的答案是檔案系統：一個資料夾就是一個函數，裡面用什麼語言寫都行，權限直接用 Linux 的，出了問題打開來看就知道。最重要的是，模型本來就會讀寫資料夾，不用另外教。</p>
+<!-- copy:INTRO-C-TEXT draft, user unseen (new) (paragraph 3/4) --><p><b>agent 也是一個函數。</b> 前面把 agent 當成一顆 CPU；換個角度看，它也只是一個函數：一個迴圈，裡面問模型、用工具。這個函數哪裡不確定、哪裡花 token？都出在問模型那一步。</p>
+<!-- copy:INTRO-C-TEXT draft, user unseen (new) (paragraph 4/4) --><p><b>一塊一塊換成程式。</b> 所以開發就變成這樣：先放一隻什麼都能做的 agent，把事情做到；再把它拆成幾個小步驟，把要問模型的那幾步，一個一個換成程式。這件事可以叫 agent 自己來：跟它說「這個資料夾就是你，替自己加一個新工具」，它在自己的資料夾裡加一個資料夾就行了。模型也只是一種處理單元，換掉它，就是換一個處理單元。我們的目標，是這樣來回下去，讓 token 一路往零走。</p>
+<!-- copy:INTRO-C-NOW draft, user unseen (new) --><p class="now-line"><b>今天做到哪</b>：把資料夾當函數來叫，照字跑過；agent 替自己加工具，程式裡有，這版還沒驗；一路換到不用模型，還沒做，是我們要去的方向。</p>
+<!-- copy:INTRO-C-LINK draft, user unseen (new) --><p class="why-link">完整說明：<a href="zh/why.html#%E4%B8%89%E6%96%B0%E7%9A%84%E8%BB%9F%E9%AB%94%E9%96%8B%E7%99%BC%E7%AF%84%E5%BC%8F">為什麼做 aos ↗</a></p>
+</div>
+<figure class="fig"><p class="section-label">圖 3 / 一塊一塊換成程式</p>
+<!-- C12: same picture as demo set 1 step 4 (an agent opened into five small steps; each 問模型 block becomes 程式; the hardest one last) -->
+<svg viewBox="0 0 360 290" role="img" aria-label="一隻 agent 攤開成五個小步驟：讀檔名、照類型分、判斷內容在講什麼、改名、寫目錄；每一步原本都問模型，一塊一塊換成程式，判斷內容在講什麼最後才換">
+<defs><marker id="f3-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#223b34"></path></marker></defs>
+<g font-family="Iosevka,'DejaVu Sans Mono',monospace" fill="#223b34">
+<rect x="10" y="8" width="120" height="34" fill="#d8e9c4" stroke="#223b34" stroke-width="2"></rect><text x="24" y="31" font-size="16" font-weight="700">一隻 agent</text>
+<path d="M70 42 V50" stroke="#223b34" stroke-width="1.5" fill="none"></path>
+<rect x="10" y="58" width="160" height="32" fill="#fff" stroke="#223b34" stroke-width="1.5"></rect><text x="20" y="79" font-size="14">讀檔名</text><rect x="178" y="64" width="56" height="20" fill="#fff" stroke="#b13d20" stroke-dasharray="4 3"></rect><text x="206" y="79" font-size="12" fill="#b13d20" text-anchor="middle">問模型</text><line x1="240" y1="74" x2="272" y2="74" stroke="#223b34" stroke-width="1.5" marker-end="url(#f3-arrow)"></line><rect x="280" y="64" width="56" height="20" fill="#223b34"></rect><text x="308" y="79" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">程式</text>
+<rect x="10" y="102" width="160" height="32" fill="#fff" stroke="#223b34" stroke-width="1.5"></rect><text x="20" y="123" font-size="14">照類型分</text><rect x="178" y="108" width="56" height="20" fill="#fff" stroke="#b13d20" stroke-dasharray="4 3"></rect><text x="206" y="123" font-size="12" fill="#b13d20" text-anchor="middle">問模型</text><line x1="240" y1="118" x2="272" y2="118" stroke="#223b34" stroke-width="1.5" marker-end="url(#f3-arrow)"></line><rect x="280" y="108" width="56" height="20" fill="#223b34"></rect><text x="308" y="123" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">程式</text>
+<rect x="10" y="146" width="160" height="32" fill="#fff" stroke="#223b34" stroke-width="1.5"></rect><text x="20" y="167" font-size="14">判斷內容在講什麼</text><rect x="178" y="152" width="56" height="20" fill="#fff" stroke="#b13d20" stroke-dasharray="4 3"></rect><text x="206" y="167" font-size="12" fill="#b13d20" text-anchor="middle">問模型</text><line x1="240" y1="162" x2="272" y2="162" stroke="#223b34" stroke-width="1.5" marker-end="url(#f3-arrow)"></line><rect x="280" y="152" width="80" height="20" fill="#d8e9c4" stroke="#223b34" stroke-dasharray="4 3"></rect><text x="320" y="167" font-size="12" text-anchor="middle">程式（最後）</text>
+<rect x="10" y="190" width="160" height="32" fill="#fff" stroke="#223b34" stroke-width="1.5"></rect><text x="20" y="211" font-size="14">改名</text><rect x="178" y="196" width="56" height="20" fill="#fff" stroke="#b13d20" stroke-dasharray="4 3"></rect><text x="206" y="211" font-size="12" fill="#b13d20" text-anchor="middle">問模型</text><line x1="240" y1="206" x2="272" y2="206" stroke="#223b34" stroke-width="1.5" marker-end="url(#f3-arrow)"></line><rect x="280" y="196" width="56" height="20" fill="#223b34"></rect><text x="308" y="211" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">程式</text>
+<rect x="10" y="234" width="160" height="32" fill="#fff" stroke="#223b34" stroke-width="1.5"></rect><text x="20" y="255" font-size="14">寫目錄</text><rect x="178" y="240" width="56" height="20" fill="#fff" stroke="#b13d20" stroke-dasharray="4 3"></rect><text x="206" y="255" font-size="12" fill="#b13d20" text-anchor="middle">問模型</text><line x1="240" y1="250" x2="272" y2="250" stroke="#223b34" stroke-width="1.5" marker-end="url(#f3-arrow)"></line><rect x="280" y="240" width="56" height="20" fill="#223b34"></rect><text x="308" y="255" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">程式</text>
+</g>
+</svg>
 </figure>
-<div>
-<p><span class="badge badge-tested badge-lead">● 已實測</span>資料夾就是函數</p>
-<aside class="proof" aria-label="照文件跑過的指令與輸出">
-<pre class="proof-cmd"><code>ls $AOS_HOME/lib/base/peek_now_time/
-echo &#x27;{}&#x27; | aos-exec $AOS_HOME/lib/base/peek_now_time
-echo &#x27;{&quot;expr&quot;: &quot;17*23&quot;}&#x27; | aos-exec $AOS_HOME/lib/base/math</code></pre>
-<pre class="proof-out">_entry  _metainfo.json  tests  _tooldef.json
-2026-11-14T04:48:07Z
-391</pre>
-<pre class="proof-cmd"><code>mkdir -p ~/aos-demo/greet
-cat &gt; ~/aos-demo/greet/_entry &lt;&lt;&#x27;EOF&#x27;
-#!/usr/bin/env bash
-read -r input
-echo &quot;hello from a folder; you sent: $input&quot;
-EOF
-chmod +x ~/aos-demo/greet/_entry
-echo &#x27;{&quot;name&quot;: &quot;ann&quot;}&#x27; | aos-exec ~/aos-demo/greet</code></pre>
-<pre class="proof-out">hello from a folder; you sent: {&quot;name&quot;: &quot;ann&quot;}</pre>
-</aside>
-<p>一個工具就是一個資料夾：裡面放一支叫 _entry 的可執行檔，輸入從 stdin 進，結果從 stdout 出。這兩段指令 2026-11-16 在乾淨環境重跑過，輸出相同（時間那行會不同）。</p>
 </div>
 </div>
 </section>
-<section class="content-section" id="engineer" aria-labelledby="engineer-title">
-<h2 class="kicker" id="engineer-title">你是工程師，不是碼農。</h2>
-<p>你要解決的問題不只是寫程式，也包括程式以外的，比如需求比如維護。</p>
-<p>這些以前比較難以用技術解決，現在因為有AI，所以我們可以試著think big。</p>
-<p>你的這些需求，將其化為json，不精確也沒關係，然後讓AI幫你處理。<span class="badge badge-part">◐ 部分</span></p>
-<p>一個經典的例子是資源分配，也就是讓kernel用你的奇妙需求去排程。<span class="badge badge-part">◐ 部分</span></p>
-<p class="evidence">現在做得到：一隻 agent 當門，讀附在請求上的話，自己判斷放行或拒絕。還沒有：一個別人照著做得出來的範例。</p>
-<p>讓agent成為你的kernel，就是如此。<span class="badge badge-built">◆ 已實作</span></p>
-<p class="evidence">kernel_gate 這個工具讓一隻 agent 當門；做這一頁的 agent 自己就掛在另一隻 agent 的門底下。</p>
-<p class="section-note"><a href="#kernel">（上面演示第 4 步：門自己也是一隻 agent。）</a></p>
-</section>
-<section class="content-section editorial-note" id="scheduling" aria-label="排程邊註">
-<p>ps.為何是排程？一個任務，其本質就是時間線上，對不同可能性的塑形。</p>
-<p>所謂處理，就是塑造一個時間段，使當前狀態有機會抵達我們想要的狀態，這需要時間之輪前進，而cpu，或者說任意pu，他們就是所謂的時間之輪，是我們塑形時所使用的基本素材。</p>
-<p>而kernel，就是管理素材的核心。</p>
-<figure class="fig fig-pu-d"><p class="section-label">圖 2 / 包成處理單元</p>
-<svg viewBox="0 0 360 290" role="img" aria-label="一位畫家當處理單元：aos 把工作寄給畫家，等他回信，再把結果歸檔；GPU 和外部的模型服務，也都包成同樣幾步">
- <defs><marker id="pu-ah-d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#223b34"/></marker></defs>
- <g font-family="'Noto Sans TC','Noto Sans CJK TC',sans-serif" font-size="13" fill="#223b34" stroke="#223b34" stroke-width="1.6">
-  <path d="M18 74 h22 l6 7 h34 v42 h-62 z" fill="#d8e9c4"/>
-  <text x="49" y="106" stroke="none" text-anchor="middle" font-family="Iosevka,'DejaVu Sans Mono',monospace" font-weight="700" font-size="15">aos</text>
-  <circle cx="282" cy="72" r="11" fill="#fff"/>
-  <path d="M262 122 q0 -32 20 -32 q20 0 20 32" fill="#fff"/>
-  <rect x="308" y="80" width="34" height="42" fill="#f1e2d3" stroke="#b13d20"/>
-  <path d="M313 114 l8 -12 l6 7 l5 -6 l6 11" fill="none" stroke="#b13d20" stroke-width="1.3"/>
-  <text x="300" y="144" stroke="none" text-anchor="middle" font-weight="700" font-size="14">畫家</text>
-  <path d="M84 72 Q170 18 256 66" fill="none" marker-end="url(#pu-ah-d)"/>
-  <rect x="155" y="31" width="30" height="20" fill="#fff"/><path d="M155 31 l15 11 l15 -11" fill="none"/>
-  <text x="170" y="22" stroke="none" text-anchor="middle">① 寄工作</text>
-  <path d="M258 128 Q170 178 86 126" fill="none" marker-end="url(#pu-ah-d)"/>
-  <rect x="155" y="142" width="30" height="20" fill="#fff"/><path d="M155 142 l15 11 l15 -11" fill="none"/>
-  <text x="170" y="182" stroke="none" text-anchor="middle">② 等回信</text>
-  <text x="49" y="146" stroke="none" text-anchor="middle">③ 歸檔</text>
-  <line x1="10" y1="204" x2="350" y2="204" stroke="#55685e" stroke-dasharray="4 4" stroke-width="1"/>
-  <g transform="translate(28 222)"><rect x="4" y="4" width="28" height="28" fill="#fff"/><rect x="11" y="11" width="14" height="14" fill="#223b34"/><path d="M10 0 v4 M18 0 v4 M26 0 v4 M10 32 v4 M18 32 v4 M26 32 v4 M0 10 h4 M0 18 h4 M0 26 h4 M32 10 h4 M32 18 h4 M32 26 h4" stroke-width="1.3"/></g>
-  <text x="46" y="276" stroke="none" text-anchor="middle">GPU</text>
-  <g transform="translate(108 220)"><rect x="0" y="2" width="52" height="14" fill="#fff"/><rect x="0" y="20" width="52" height="14" fill="#fff"/><circle cx="8" cy="9" r="2" fill="#223b34" stroke="none"/><circle cx="8" cy="27" r="2" fill="#223b34" stroke="none"/></g>
-  <text x="134" y="276" stroke="none" text-anchor="middle">外部的模型服務</text>
-  <path d="M190 240 h22" fill="none" marker-end="url(#pu-ah-d)"/>
-  <text x="222" y="244" stroke="none" fill="#b13d20" font-weight="700" font-size="14">都包成同樣幾步</text>
- </g>
-</svg>
-<figcaption>在 aos 裡，會算東西的不只是程式。一張 GPU、一個外部的模型服務，甚至一位畫家，只要把工作寄給他、等他回信、再把結果歸檔，就可以當成一個處理單元（PU），照樣排程。</figcaption>
-</figure>
-<figure class="fig fig-small fig-pu-m"><p class="section-label">圖 2 / 包成處理單元</p>
-<svg viewBox="0 0 360 290" role="img" aria-label="一位畫家當處理單元：aos 把工作寄給畫家，等他回信，再把結果歸檔；GPU 和外部的模型服務，也都包成同樣幾步">
- <defs><marker id="pu-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#223b34"/></marker></defs>
- <g font-family="'Noto Sans TC','Noto Sans CJK TC',sans-serif" font-size="13" fill="#223b34" stroke="#223b34" stroke-width="1.6">
-  <path d="M18 74 h22 l6 7 h34 v42 h-62 z" fill="#d8e9c4"/>
-  <text x="49" y="106" stroke="none" text-anchor="middle" font-family="Iosevka,'DejaVu Sans Mono',monospace" font-weight="700" font-size="15">aos</text>
-  <circle cx="282" cy="72" r="11" fill="#fff"/>
-  <path d="M262 122 q0 -32 20 -32 q20 0 20 32" fill="#fff"/>
-  <rect x="308" y="80" width="34" height="42" fill="#f1e2d3" stroke="#b13d20"/>
-  <path d="M313 114 l8 -12 l6 7 l5 -6 l6 11" fill="none" stroke="#b13d20" stroke-width="1.3"/>
-  <text x="300" y="144" stroke="none" text-anchor="middle" font-weight="700" font-size="14">畫家</text>
-  <path d="M84 72 Q170 18 256 66" fill="none" marker-end="url(#pu-ah)"/>
-  <rect x="155" y="31" width="30" height="20" fill="#fff"/><path d="M155 31 l15 11 l15 -11" fill="none"/>
-  <text x="170" y="22" stroke="none" text-anchor="middle">① 寄工作</text>
-  <path d="M258 128 Q170 178 86 126" fill="none" marker-end="url(#pu-ah)"/>
-  <rect x="155" y="142" width="30" height="20" fill="#fff"/><path d="M155 142 l15 11 l15 -11" fill="none"/>
-  <text x="170" y="182" stroke="none" text-anchor="middle">② 等回信</text>
-  <text x="49" y="146" stroke="none" text-anchor="middle">③ 歸檔</text>
-  <line x1="10" y1="204" x2="350" y2="204" stroke="#55685e" stroke-dasharray="4 4" stroke-width="1"/>
-  <g transform="translate(28 222)"><rect x="4" y="4" width="28" height="28" fill="#fff"/><rect x="11" y="11" width="14" height="14" fill="#223b34"/><path d="M10 0 v4 M18 0 v4 M26 0 v4 M10 32 v4 M18 32 v4 M26 32 v4 M0 10 h4 M0 18 h4 M0 26 h4 M32 10 h4 M32 18 h4 M32 26 h4" stroke-width="1.3"/></g>
-  <text x="46" y="276" stroke="none" text-anchor="middle">GPU</text>
-  <g transform="translate(108 220)"><rect x="0" y="2" width="52" height="14" fill="#fff"/><rect x="0" y="20" width="52" height="14" fill="#fff"/><circle cx="8" cy="9" r="2" fill="#223b34" stroke="none"/><circle cx="8" cy="27" r="2" fill="#223b34" stroke="none"/></g>
-  <text x="134" y="276" stroke="none" text-anchor="middle">外部的模型服務</text>
-  <path d="M190 240 h22" fill="none" marker-end="url(#pu-ah)"/>
-  <text x="222" y="244" stroke="none" fill="#b13d20" font-weight="700" font-size="14">都包成同樣幾步</text>
- </g>
-</svg>
-<figcaption>在 aos 裡，會算東西的不只是程式。一張 GPU、一個外部的模型服務，甚至一位畫家，只要把工作寄給他、等他回信、再把結果歸檔，就可以當成一個處理單元（PU），照樣排程。</figcaption>
-</figure>
-</section>
-<section class="content-section" id="meta" aria-labelledby="meta-title">
-<p>太多的agent會讓你的錢包快速乾癟，所以你要學會利用ReAct方式。<span class="badge badge-part">◐ 部分</span></p>
-<p class="evidence">內建的 agent 就是想→做→看結果的迴圈；因此省下多少錢，還沒量。</p>
-<h2 id="meta-title">元程式開發。LLM的使用縮減。<span class="badge badge-vision">○ 願景</span></h2>
-<p class="evidence">有設計方向，還沒有前後對照的數字。</p>
-<div class="sim">
-<p class="sim-note">示意演示：照設計畫的，不是實跑紀錄</p>
+
+<!-- demo-sim: on the landing (user 14:31); words team/copy/demo-text.md; storyboard team/fable/demo-storyboard-v1.md). Self-contained: CSS in .sim-* rules, JS at the end. Without JS all steps show as a static list. -->
+<section class="sim" id="sim" aria-labelledby="sim-title">
+<p class="section-label">03 / 示意演示</p>
+<!-- copy:DEMO-HEAD draft (team/copy/demo-text.md), user ok 11-14 --><h2 id="sim-title">看它怎麼走</h2>
+<!-- copy:DEMO-NOTE draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-note">示意演示：照設計畫的，不是實跑紀錄</p>
+<svg class="sim-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs><marker id="sim-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#223b34"></path></marker></defs></svg>
 <div class="sim-sets">
-<div class="sim-set" id="sim1" data-sim>
-<h3 class="sim-title">一個函數，從 agent 變成程式</h3>
+<div class="sim-set sim-js" id="sim1" data-sim="">
+<!-- copy:DEMO1-TITLE draft (team/copy/demo-text.md), user ok 11-14 --><h3 class="sim-title">一個函數，從 agent 變成程式</h3>
 <ol class="sim-steps">
 <li class="sim-step" data-step="1">
 <span class="sim-st sim-st-ok" title="今天能跑">今天能跑</span>
 <div class="sim-frames">
 <div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="aos 開機，只有一個資料夾"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"/><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"/><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/></svg>
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="aos 開機，只有一個資料夾"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"></circle><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"></circle><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path></svg>
 <div class="sim-meter sim-meter-off" aria-hidden="true"></div>
 </div></div>
 </div>
-<p class="sim-cap"><span class="sim-k">1／7</span>aos 開機：其實就是幾個資料夾。</p>
+<!-- copy:DEMO1-1 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">1／7</span>aos 開機：其實就是幾個資料夾。</p>
 </li>
-<li class="sim-step" data-step="2">
+<li class="sim-step" data-step="2" hidden="">
 <span class="sim-st sim-st-ok" title="今天能跑">今天能跑</span>
 <div class="sim-frames">
 <div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="樹上多一個資料夾，裡面是一隻 agent"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"/><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"/><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"/><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/></svg>
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="樹上多一個資料夾，裡面是一隻 agent"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"></path><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"></circle><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"></circle><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path></svg>
 <div class="sim-meter sim-meter-off" aria-hidden="true"></div>
 </div></div>
 </div>
-<p class="sim-cap"><span class="sim-k">2／7</span>第一個程式是一隻 agent，它也是一個資料夾。</p>
+<!-- copy:DEMO1-2 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">2／7</span>第一個程式是一隻 agent，它也是一個資料夾。</p>
 </li>
-<li class="sim-step" data-step="3">
+<li class="sim-step" data-step="3" hidden="">
 <span class="sim-st sim-st-part" title="部分能跑（agent 接真模型叫工具照文件跑過；「整理文件」本身沒跑過，是示意）">部分能跑</span>
-<p class="sim-part-note">接真模型叫工具已跑過；整理文件是示意</p>
+<!-- copy:DEMO1-3-TAG draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-part-note">接真模型叫工具已跑過；整理文件是示意</p>
 <div class="sim-frames">
 <div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="一封信寄進 agent，吐出一個結果"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"/><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"/><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><rect x="250" y="14" width="40" height="24.8" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M250 14 l20.0 13.640000000000002 l20.0 -13.640000000000002" fill="none" stroke="#223b34" stroke-width="1.2"/><text x="270.0" y="52.8" text-anchor="middle" class="sv-t sv-s">第一個需求</text><line x1="246" y1="34" x2="114" y2="84" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/><rect x="240" y="110" width="64" height="52" fill="#fff" stroke="#223b34" stroke-width="1.5"/><line x1="248" y1="122" x2="296" y2="122" stroke="#55685e" stroke-width="1.2"/><line x1="248" y1="132" x2="296" y2="132" stroke="#55685e" stroke-width="1.2"/><line x1="248" y1="142" x2="296" y2="142" stroke="#55685e" stroke-width="1.2"/><text x="272.0" y="176" text-anchor="middle" class="sv-t sv-s">結果</text><line x1="112" y1="100" x2="236" y2="132" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"/></svg>
-<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><p class="sim-meter-label">用了多少模型</p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:100%"></span></span><p class="sim-meter-note">長度只是示意，沒有量過</p></div>
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="一封信寄進 agent，吐出一個結果"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"></circle><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"></circle><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path><rect x="250" y="14" width="40" height="24.8" fill="#fff" stroke="#223b34" stroke-width="1.5"></rect><path d="M250 14 l20.0 13.640000000000002 l20.0 -13.640000000000002" fill="none" stroke="#223b34" stroke-width="1.2"></path><text x="270.0" y="52.8" text-anchor="middle" class="sv-t sv-s">第一個需求</text><line x1="246" y1="34" x2="114" y2="84" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><rect x="240" y="110" width="64" height="52" fill="#fff" stroke="#223b34" stroke-width="1.5"></rect><line x1="248" y1="122" x2="296" y2="122" stroke="#55685e" stroke-width="1.2"></line><line x1="248" y1="132" x2="296" y2="132" stroke="#55685e" stroke-width="1.2"></line><line x1="248" y1="142" x2="296" y2="142" stroke="#55685e" stroke-width="1.2"></line><text x="272.0" y="176" text-anchor="middle" class="sv-t sv-s">結果</text><line x1="112" y1="100" x2="236" y2="132" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line></svg>
+<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><span class="sim-meter-label">用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:100%"></span></span><span class="sim-meter-note">長度只是示意，沒有量過</span></div>
 </div></div>
 </div>
-<p class="sim-cap"><span class="sim-k">3／7</span>把第一個需求交給它：「這個資料夾的文件亂放，幫我分類、改名，再做一份目錄。」它每一步都去問模型。</p>
+<!-- copy:DEMO1-3 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">3／7</span>把第一個需求交給它：「這個資料夾的文件亂放，幫我分類、改名，再做一份目錄。」它每一步都去問模型。</p>
 </li>
-<li class="sim-step" data-step="4">
+<li class="sim-step" data-step="4" hidden="">
 <span class="sim-st sim-st-no" title="還沒做">還沒做</span>
 <div class="sim-frames">
 <div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="結果不滿意；agent 攤開成五個小步驟，每一步都標著問模型"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"/><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"/><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M114 88 H132 M132 22 V170 M132 22 H146 M132 170 H146" fill="none" stroke="#55685e" stroke-width="1" stroke-dasharray="3 2"/><rect x="150" y="10" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="27" class="sv-t">讀檔名</text><rect x="280" y="15" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="27" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="44" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="61" class="sv-t">照類型分</text><rect x="280" y="49" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="61" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="78" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="95" class="sv-t">判斷內容在講什麼</text><rect x="280" y="83" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="95" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="112" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="129" class="sv-t">改名</text><rect x="280" y="117" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="129" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="146" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="163" class="sv-t">寫目錄</text><rect x="280" y="151" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="163" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><g transform="rotate(-8 36.0 184)"><rect x="8" y="172" width="56" height="26" fill="none" stroke="#b13d20" stroke-width="2"/><text x="36.0" y="190" text-anchor="middle" class="sv-stamp">不滿意</text></g></svg>
-<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><p class="sim-meter-label sim-rep" data-t="用了多少模型" aria-hidden="true"></p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:100%"></span></span><p class="sim-meter-note sim-rep" data-t="長度只是示意，沒有量過" aria-hidden="true"></p></div>
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="結果不滿意；agent 攤開成五個小步驟，每一步都標著問模型"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"></circle><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"></circle><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M114 88 H132 M132 22 V170 M132 22 H146 M132 170 H146" fill="none" stroke="#55685e" stroke-width="1" stroke-dasharray="3 2"></path><rect x="150" y="10" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="27" class="sv-t">讀檔名</text><rect x="280" y="15" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="27" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="44" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="61" class="sv-t">照類型分</text><rect x="280" y="49" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="61" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="78" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="95" class="sv-t">判斷內容在講什麼</text><rect x="280" y="83" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="95" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="112" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="129" class="sv-t">改名</text><rect x="280" y="117" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="129" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="146" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="163" class="sv-t">寫目錄</text><rect x="280" y="151" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="163" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><g transform="rotate(-8 36.0 184)"><rect x="8" y="172" width="56" height="26" fill="none" stroke="#b13d20" stroke-width="2"></rect><text x="36.0" y="190" text-anchor="middle" class="sv-stamp">不滿意</text></g></svg>
+<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><span class="sim-meter-label">用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:100%"></span></span><span class="sim-meter-note">長度只是示意，沒有量過</span></div>
 </div></div>
 </div>
-<p class="sim-cap"><span class="sim-k">4／7</span>結果不太滿意。打開來看：它其實是五個小步驟：讀檔名、照類型分、判斷內容在講什麼、改名、寫目錄。每一步都在問模型。</p>
+<!-- copy:DEMO1-4 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">4／7</span>結果不太滿意。打開來看：它其實是五個小步驟：讀檔名、照類型分、判斷內容在講什麼、改名、寫目錄。每一步都在問模型。</p>
 </li>
-<li class="sim-step" data-step="5">
+<li class="sim-step" data-step="5" hidden="">
 <span class="sim-st sim-st-no" title="還沒做（agent 替自己加工具：程式裡有，這版沒驗）">還沒做</span>
 <div class="sim-frames">
 <div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="照類型分那一塊翻成程式，agent 的資料夾裡多一個小資料夾，用量短一截"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"/><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"/><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M70 120 V138 H69" fill="none" stroke="#55685e" stroke-width="1"/><path d="M62 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"/><path d="M114 88 H132 M132 22 V170 M132 22 H146 M132 170 H146" fill="none" stroke="#55685e" stroke-width="1" stroke-dasharray="3 2"/><rect x="150" y="10" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="27" class="sv-t">讀檔名</text><rect x="280" y="15" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="27" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="44" width="182" height="26" fill="#d8e9c4" stroke="#223b34" stroke-width="1.2"/><text x="158" y="61" class="sv-t">照類型分</text><rect x="286" y="49" width="40" height="16" fill="#223b34"/><text x="306" y="61" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="78" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="95" class="sv-t">判斷內容在講什麼</text><rect x="280" y="83" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="95" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="112" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="129" class="sv-t">改名</text><rect x="280" y="117" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="129" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="146" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="163" class="sv-t">寫目錄</text><rect x="280" y="151" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="163" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="10" y="176" width="64" height="22" rx="11" fill="#fff" stroke="#55685e" stroke-dasharray="3 2"/><text x="42.0" y="191" text-anchor="middle" class="sv-t sv-s">改你自己</text></svg>
-<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><p class="sim-meter-label sim-rep" data-t="用了多少模型" aria-hidden="true"></p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:80%"></span></span><p class="sim-meter-note sim-rep" data-t="長度只是示意，沒有量過" aria-hidden="true"></p></div>
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="照類型分那一塊翻成程式，agent 的資料夾裡多一個小資料夾，用量短一截"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"></circle><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"></circle><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M70 120 V138 H69" fill="none" stroke="#55685e" stroke-width="1"></path><path d="M62 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"></path><path d="M114 88 H132 M132 22 V170 M132 22 H146 M132 170 H146" fill="none" stroke="#55685e" stroke-width="1" stroke-dasharray="3 2"></path><rect x="150" y="10" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="27" class="sv-t">讀檔名</text><rect x="280" y="15" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="27" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="44" width="182" height="26" fill="#d8e9c4" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="61" class="sv-t">照類型分</text><rect x="286" y="49" width="40" height="16" fill="#223b34"></rect><text x="306" y="61" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="78" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="95" class="sv-t">判斷內容在講什麼</text><rect x="280" y="83" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="95" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="112" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="129" class="sv-t">改名</text><rect x="280" y="117" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="129" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="146" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="163" class="sv-t">寫目錄</text><rect x="280" y="151" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="163" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="10" y="176" width="64" height="22" rx="11" fill="#fff" stroke="#55685e" stroke-dasharray="3 2"></rect><text x="42.0" y="191" text-anchor="middle" class="sv-t sv-s">改你自己</text></svg>
+<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><span class="sim-meter-label">用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:80%"></span></span><span class="sim-meter-note">長度只是示意，沒有量過</span></div>
 </div></div>
 </div>
-<p class="sim-cap"><span class="sim-k">5／7</span>叫它改自己：「照類型分」不需要模型，它替自己寫了一段程式來做，並把那一步改成直接叫這段程式，不再問模型。改自己，就是在自己的資料夾裡加一個資料夾。</p>
+<!-- copy:DEMO1-5 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">5／7</span>叫它改自己：「照類型分」不需要模型，它替自己寫了一段程式來做。改自己，就是在自己的資料夾裡加一個資料夾。</p>
 </li>
-<li class="sim-step" data-step="6">
+<li class="sim-step" data-step="6" hidden="">
 <span class="sim-st sim-st-no" title="還沒做">還沒做</span>
 <div class="sim-frames">
 <div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="又一塊翻成程式：讀檔名，用量再短"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"/><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"/><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M70 120 V138 H86" fill="none" stroke="#55685e" stroke-width="1"/><path d="M62 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M79 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"/><path d="M114 88 H132 M132 22 V170 M132 22 H146 M132 170 H146" fill="none" stroke="#55685e" stroke-width="1" stroke-dasharray="3 2"/><rect x="150" y="10" width="182" height="26" fill="#d8e9c4" stroke="#223b34" stroke-width="1.2"/><text x="158" y="27" class="sv-t">讀檔名</text><rect x="286" y="15" width="40" height="16" fill="#223b34"/><text x="306" y="27" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="44" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="61" class="sv-t">照類型分</text><rect x="286" y="49" width="40" height="16" fill="#223b34"/><text x="306" y="61" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="78" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="95" class="sv-t">判斷內容在講什麼</text><rect x="280" y="83" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="95" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="112" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="129" class="sv-t">改名</text><rect x="280" y="117" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="129" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="146" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="163" class="sv-t">寫目錄</text><rect x="280" y="151" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="163" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text></svg>
-<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><p class="sim-meter-label sim-rep" data-t="用了多少模型" aria-hidden="true"></p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:60%"></span></span><p class="sim-meter-note sim-rep" data-t="長度只是示意，沒有量過" aria-hidden="true"></p></div>
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="又一塊翻成程式：讀檔名，用量再短"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"></circle><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"></circle><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M70 120 V138 H86" fill="none" stroke="#55685e" stroke-width="1"></path><path d="M62 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><path d="M79 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"></path><path d="M114 88 H132 M132 22 V170 M132 22 H146 M132 170 H146" fill="none" stroke="#55685e" stroke-width="1" stroke-dasharray="3 2"></path><rect x="150" y="10" width="182" height="26" fill="#d8e9c4" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="27" class="sv-t">讀檔名</text><rect x="286" y="15" width="40" height="16" fill="#223b34"></rect><text x="306" y="27" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="44" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="61" class="sv-t">照類型分</text><rect x="286" y="49" width="40" height="16" fill="#223b34"></rect><text x="306" y="61" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="78" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="95" class="sv-t">判斷內容在講什麼</text><rect x="280" y="83" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="95" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="112" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="129" class="sv-t">改名</text><rect x="280" y="117" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="129" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="146" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="163" class="sv-t">寫目錄</text><rect x="280" y="151" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="163" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text></svg>
+<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><span class="sim-meter-label">用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:60%"></span></span><span class="sim-meter-note">長度只是示意，沒有量過</span></div>
 </div></div>
 <div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="又一塊翻成程式：改名，用量再短"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"/><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"/><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M70 120 V138 H103" fill="none" stroke="#55685e" stroke-width="1"/><path d="M62 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M79 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M96 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"/><path d="M114 88 H132 M132 22 V170 M132 22 H146 M132 170 H146" fill="none" stroke="#55685e" stroke-width="1" stroke-dasharray="3 2"/><rect x="150" y="10" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="27" class="sv-t">讀檔名</text><rect x="286" y="15" width="40" height="16" fill="#223b34"/><text x="306" y="27" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="44" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="61" class="sv-t">照類型分</text><rect x="286" y="49" width="40" height="16" fill="#223b34"/><text x="306" y="61" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="78" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="95" class="sv-t">判斷內容在講什麼</text><rect x="280" y="83" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="95" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="112" width="182" height="26" fill="#d8e9c4" stroke="#223b34" stroke-width="1.2"/><text x="158" y="129" class="sv-t">改名</text><rect x="286" y="117" width="40" height="16" fill="#223b34"/><text x="306" y="129" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="146" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="163" class="sv-t">寫目錄</text><rect x="280" y="151" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="163" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text></svg>
-<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><p class="sim-meter-label sim-rep" data-t="用了多少模型" aria-hidden="true"></p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:40%"></span></span><p class="sim-meter-note sim-rep" data-t="長度只是示意，沒有量過" aria-hidden="true"></p></div>
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="又一塊翻成程式：改名，用量再短"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"></circle><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"></circle><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M70 120 V138 H103" fill="none" stroke="#55685e" stroke-width="1"></path><path d="M62 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><path d="M79 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><path d="M96 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"></path><path d="M114 88 H132 M132 22 V170 M132 22 H146 M132 170 H146" fill="none" stroke="#55685e" stroke-width="1" stroke-dasharray="3 2"></path><rect x="150" y="10" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="27" class="sv-t">讀檔名</text><rect x="286" y="15" width="40" height="16" fill="#223b34"></rect><text x="306" y="27" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="44" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="61" class="sv-t">照類型分</text><rect x="286" y="49" width="40" height="16" fill="#223b34"></rect><text x="306" y="61" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="78" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="95" class="sv-t">判斷內容在講什麼</text><rect x="280" y="83" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="95" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="112" width="182" height="26" fill="#d8e9c4" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="129" class="sv-t">改名</text><rect x="286" y="117" width="40" height="16" fill="#223b34"></rect><text x="306" y="129" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="146" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="163" class="sv-t">寫目錄</text><rect x="280" y="151" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="163" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text></svg>
+<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><span class="sim-meter-label">用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:40%"></span></span><span class="sim-meter-note">長度只是示意，沒有量過</span></div>
 </div></div>
 <div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="又一塊翻成程式：寫目錄，用量再短"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"/><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"/><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M70 120 V138 H120" fill="none" stroke="#55685e" stroke-width="1"/><path d="M62 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M79 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M96 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M113 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"/><path d="M114 88 H132 M132 22 V170 M132 22 H146 M132 170 H146" fill="none" stroke="#55685e" stroke-width="1" stroke-dasharray="3 2"/><rect x="150" y="10" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="27" class="sv-t">讀檔名</text><rect x="286" y="15" width="40" height="16" fill="#223b34"/><text x="306" y="27" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="44" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="61" class="sv-t">照類型分</text><rect x="286" y="49" width="40" height="16" fill="#223b34"/><text x="306" y="61" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="78" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="95" class="sv-t">判斷內容在講什麼</text><rect x="280" y="83" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="95" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="112" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="129" class="sv-t">改名</text><rect x="286" y="117" width="40" height="16" fill="#223b34"/><text x="306" y="129" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="146" width="182" height="26" fill="#d8e9c4" stroke="#223b34" stroke-width="1.2"/><text x="158" y="163" class="sv-t">寫目錄</text><rect x="286" y="151" width="40" height="16" fill="#223b34"/><text x="306" y="163" text-anchor="middle" class="sv-badge">程式</text></svg>
-<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><p class="sim-meter-label sim-rep" data-t="用了多少模型" aria-hidden="true"></p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:20%"></span></span><p class="sim-meter-note sim-rep" data-t="長度只是示意，沒有量過" aria-hidden="true"></p></div>
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="又一塊翻成程式：寫目錄，用量再短"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"></circle><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"></circle><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M70 120 V138 H120" fill="none" stroke="#55685e" stroke-width="1"></path><path d="M62 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><path d="M79 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><path d="M96 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><path d="M113 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"></path><path d="M114 88 H132 M132 22 V170 M132 22 H146 M132 170 H146" fill="none" stroke="#55685e" stroke-width="1" stroke-dasharray="3 2"></path><rect x="150" y="10" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="27" class="sv-t">讀檔名</text><rect x="286" y="15" width="40" height="16" fill="#223b34"></rect><text x="306" y="27" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="44" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="61" class="sv-t">照類型分</text><rect x="286" y="49" width="40" height="16" fill="#223b34"></rect><text x="306" y="61" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="78" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="95" class="sv-t">判斷內容在講什麼</text><rect x="280" y="83" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"></rect><text x="303" y="95" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="112" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="129" class="sv-t">改名</text><rect x="286" y="117" width="40" height="16" fill="#223b34"></rect><text x="306" y="129" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="146" width="182" height="26" fill="#d8e9c4" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="163" class="sv-t">寫目錄</text><rect x="286" y="151" width="40" height="16" fill="#223b34"></rect><text x="306" y="163" text-anchor="middle" class="sv-badge">程式</text></svg>
+<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><span class="sim-meter-label">用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:20%"></span></span><span class="sim-meter-note">長度只是示意，沒有量過</span></div>
 </div></div>
 </div>
-<p class="sim-cap"><span class="sim-k">6／7</span>再跑、再改，來回幾次：讀檔名、改名、寫目錄，也要一個一個換成程式。按「再跑一次」，就再換掉一塊。</p>
+<!-- copy:DEMO1-6 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">6／7</span>再跑、再改，來回幾次：讀檔名、改名、寫目錄，也一個一個換成程式。可以一直按。</p>
 </li>
-<li class="sim-step" data-step="7">
+<li class="sim-step" data-step="7" hidden="">
 <span class="sim-st sim-st-no" title="還沒做（方向）">還沒做</span>
 <div class="sim-frames">
 <div class="sim-frame"><div class="sim-stage">
-<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="其他四塊都是程式了，判斷內容在講什麼還在問模型，用量留最後一小截"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><circle cx="85" cy="90" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"/><circle cx="81.85" cy="88.65" r="1.4" fill="#223b34"/><circle cx="88.15" cy="88.65" r="1.4" fill="#223b34"/><path d="M81.4 93.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"/><path d="M70 120 V138 H120" fill="none" stroke="#55685e" stroke-width="1"/><path d="M62 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M79 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M96 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M113 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"/><path d="M114 88 H132 M132 22 V170 M132 22 H146 M132 170 H146" fill="none" stroke="#55685e" stroke-width="1" stroke-dasharray="3 2"/><rect x="150" y="10" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="27" class="sv-t">讀檔名</text><rect x="286" y="15" width="40" height="16" fill="#223b34"/><text x="306" y="27" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="44" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="61" class="sv-t">照類型分</text><rect x="286" y="49" width="40" height="16" fill="#223b34"/><text x="306" y="61" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="78" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="95" class="sv-t">判斷內容在講什麼</text><rect x="280" y="83" width="46" height="16" fill="#fff" stroke="#b13d20" stroke-dasharray="3 2"/><text x="303" y="95" text-anchor="middle" class="sv-t sv-s sv-red">問模型</text><rect x="150" y="112" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="129" class="sv-t">改名</text><rect x="286" y="117" width="40" height="16" fill="#223b34"/><text x="306" y="129" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="146" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"/><text x="158" y="163" class="sv-t">寫目錄</text><rect x="286" y="151" width="40" height="16" fill="#223b34"/><text x="306" y="163" text-anchor="middle" class="sv-badge">程式</text></svg>
-<div class="sim-meter" aria-label="用了多少模型：長條長度示意"><p class="sim-meter-label sim-rep" data-t="用了多少模型" aria-hidden="true"></p><span class="sim-meter-track"><span class="sim-meter-fill" style="width:10%"></span></span><p class="sim-meter-note sim-rep" data-t="長度只是示意，沒有量過" aria-hidden="true"></p></div>
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="最後一塊判斷內容在講什麼也翻成程式，用量歸零，圖示換成程式"><path d="M14 21.183999999999997 h16.8 l3.2 -5.183999999999999 h20.0 v28.799999999999997 h-40 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="34.0" y="59.8" text-anchor="middle" class="sv-t">aos</text><path d="M34 46 V84 H58" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M60 74.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="85.0" y="119.0" text-anchor="middle" class="sv-t">一個函數</text><rect x="76" y="81" width="18" height="18" fill="#223b34"></rect><text x="85" y="94" text-anchor="middle" class="sv-code">{}</text><path d="M70 120 V138 H137" fill="none" stroke="#55685e" stroke-width="1"></path><path d="M62 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><path d="M79 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><path d="M96 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><path d="M113 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><path d="M130 133.8144 h5.88 l1.12 -1.8144 h7.000000000000001 v10.08 h-14 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"></path><path d="M114 88 H132 M132 22 V170 M132 22 H146 M132 170 H146" fill="none" stroke="#55685e" stroke-width="1" stroke-dasharray="3 2"></path><rect x="150" y="10" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="27" class="sv-t">讀檔名</text><rect x="286" y="15" width="40" height="16" fill="#223b34"></rect><text x="306" y="27" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="44" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="61" class="sv-t">照類型分</text><rect x="286" y="49" width="40" height="16" fill="#223b34"></rect><text x="306" y="61" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="78" width="182" height="26" fill="#d8e9c4" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="95" class="sv-t">判斷內容在講什麼</text><rect x="286" y="83" width="40" height="16" fill="#223b34"></rect><text x="306" y="95" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="112" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="129" class="sv-t">改名</text><rect x="286" y="117" width="40" height="16" fill="#223b34"></rect><text x="306" y="129" text-anchor="middle" class="sv-badge">程式</text><rect x="150" y="146" width="182" height="26" fill="#fff" stroke="#223b34" stroke-width="1.2"></rect><text x="158" y="163" class="sv-t">寫目錄</text><rect x="286" y="151" width="40" height="16" fill="#223b34"></rect><text x="306" y="163" text-anchor="middle" class="sv-badge">程式</text></svg>
+<div class="sim-meter sim-meter-zero" aria-label="用了多少模型：沒有"><span class="sim-meter-label">用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:0%"></span></span><span class="sim-meter-note">不再問模型</span></div>
 </div></div>
 </div>
-<p class="sim-cap"><span class="sim-k">7／7</span>還剩「判斷內容在講什麼」這一塊在問模型。它最難：能不能換掉、換掉以後結果還對不對，今天沒有答案，是我們要去的方向。</p>
-<p class="sim-end">後半段是 aos 要去的方向，還沒做出來。</p>
+<!-- copy:DEMO1-7 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">7／7</span>最後剩「判斷內容在講什麼」：這一步最難，是 aos 要去的方向。換掉以後，這個函數不再問模型，它是一支程式。</p>
+<!-- copy:DEMO-END draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-end">後半段是 aos 要去的方向，還沒做出來。</p>
 </li>
-</ol></div>
+</ol><div class="sim-ctl"><button type="button" class="sim-btn" disabled="">← 上一步</button><button type="button" class="sim-btn sim-again" hidden="" disabled="">再跑一次 ↻</button><button type="button" class="sim-btn sim-next">下一步 →</button><button type="button" class="sim-btn sim-reset">重來</button></div><p class="sim-live" aria-live="polite">1／7aos 開機：其實就是幾個資料夾。</p></div>
+<div class="sim-set sim-js" id="sim2" data-sim="">
+<!-- copy:DEMO2-TITLE draft (team/copy/demo-text.md), user ok 11-14 --><h3 class="sim-title">一大堆呼叫、少少幾個端點、一扇會學的門</h3>
+<ol class="sim-steps">
+<li class="sim-step" data-step="1">
+<span class="sim-st sim-st-gen" title="一般情況的示意，不是 aos 的量測">沒有 aos 時</span>
+<div class="sim-frames">
+<div class="sim-frame"><div class="sim-stage">
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="一大群呼叫同時衝向端點，多的被退回、變紅"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">模型端點</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="100" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><circle cx="21" cy="24" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="44" cy="22" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="61" cy="30" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="83" cy="27" r="7" fill="#f3d2c7" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="104" cy="30" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="129" cy="22" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="17" cy="58" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="44" cy="53" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="63" cy="53" r="7" fill="#f3d2c7" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="90" cy="58" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="104" cy="53" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="129" cy="52" r="7" fill="#f3d2c7" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="22" cy="82" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="41" cy="82" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="68" cy="84" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="86" cy="88" r="7" fill="#f3d2c7" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="106" cy="90" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="127" cy="86" r="7" fill="#f3d2c7" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="24" cy="114" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="39" cy="115" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="65" cy="113" r="7" fill="#f3d2c7" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="90" cy="113" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="104" cy="115" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="133" cy="120" r="7" fill="#f3d2c7" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="22" cy="147" r="7" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="45" cy="149" r="7" fill="#f3d2c7" stroke="#b13d20" stroke-width="1.5"></circle><line x1="150" y1="40" x2="274" y2="38" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><line x1="150" y1="75" x2="274" y2="73" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><line x1="150" y1="110" x2="274" y2="108" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><path d="M270 130 q-40 18 -110 12" fill="none" stroke="#b13d20" stroke-width="1.5" stroke-dasharray="4 3"></path><path d="M270 155 q-40 18 -110 37" fill="none" stroke="#b13d20" stroke-width="1.5" stroke-dasharray="4 3"></path><text x="215" y="196" text-anchor="middle" class="sv-t sv-s sv-red">擠不進去 → 被退回</text></svg>
+<div class="sim-meter sim-meter-off" aria-hidden="true"></div>
+</div></div>
 </div>
+<!-- copy:DEMO2-1 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">1／7</span>一大堆模型呼叫一起擠向一個端點：擠不進去的，就被退回。</p>
+</li>
+<li class="sim-step" data-step="2" hidden="">
+<span class="sim-st sim-st-ok" title="今天能跑（已實測：100 個 agent 共用 2 個位子，全部答完；量的是排隊，不是速度）">今天能跑</span>
+<div class="sim-frames">
+<div class="sim-frame"><div class="sim-stage">
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="中間出現一扇門，呼叫排成一隊一個一個進去"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">模型端點</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="100" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="196" y="24" width="10" height="150" fill="#223b34"></rect><text x="201" y="192" text-anchor="middle" class="sv-t sv-s">門</text><circle cx="166" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="144" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="122" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="100" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="78" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="56" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="34" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><line x1="176" y1="100" x2="192" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><line x1="210" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line></svg>
+<div class="sim-meter sim-meter-off" aria-hidden="true"></div>
+</div></div>
 </div>
-<p class="section-note">這一段還在寫。</p>
+<!-- copy:DEMO2-2 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">2／7</span>aos 接手：所有呼叫先經過一扇門，排隊進去。實測過：100 個 agent 共用 2 個位子，全部答完。</p>
+</li>
+<li class="sim-step" data-step="3" hidden="">
+<span class="sim-st sim-st-no" title="還沒做（請求可以多帶欄位；拿來排先後沒做）">還沒做</span>
+<div class="sim-frames">
+<div class="sim-frame"><div class="sim-stage">
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="排隊的呼叫頭上各有一句話"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">模型端點</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="100" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="196" y="24" width="10" height="150" fill="#223b34"></rect><text x="201" y="192" text-anchor="middle" class="sv-t sv-s">門</text><circle cx="166" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="144" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="122" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="100" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="78" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="56" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="34" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><line x1="176" y1="100" x2="192" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><line x1="210" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><line x1="78" y1="91" x2="78" y2="64" stroke="#b13d20" stroke-width="1"></line><rect x="16" y="42" width="160" height="22" rx="11" fill="#fff" stroke="#55685e" stroke-dasharray="3 2"></rect><text x="96.0" y="57" text-anchor="middle" class="sv-t sv-s">我在做最後一關的驗證</text><line x1="144" y1="109" x2="144" y2="136" stroke="#55685e" stroke-width="1"></line><rect x="104" y="136" width="110" height="22" rx="11" fill="#fff" stroke="#55685e" stroke-dasharray="3 2"></rect><text x="159.0" y="151" text-anchor="middle" class="sv-t sv-s">我在試一個點子</text></svg>
+<div class="sim-meter sim-meter-off" aria-hidden="true"></div>
+</div></div>
+</div>
+<!-- copy:DEMO2-3 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">3／7</span>每個呼叫附上一句，說自己在做什麼。</p>
+</li>
+<li class="sim-step" data-step="4" hidden="">
+<span class="sim-st sim-st-no" title="還沒做（門留了掛判斷程式的位子；讓 agent 當判斷者沒做）">還沒做</span>
+<div class="sim-frames">
+<div class="sim-frame"><div class="sim-stage">
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="門變成一隻 agent，把最後一關那個拉到前面"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">模型端點</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="100" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><path d="M176 76.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="201.0" y="121.0" text-anchor="middle" class="sv-t">門</text><circle cx="201" cy="93" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="197.85" cy="91.65" r="1.4" fill="#223b34"></circle><circle cx="204.15" cy="91.65" r="1.4" fill="#223b34"></circle><path d="M197.4 96.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path><circle cx="146" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="124" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="102" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="80" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="58" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="36" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="14" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><line x1="156" y1="100" x2="172" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><line x1="230" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><line x1="146" y1="91" x2="146" y2="64" stroke="#b13d20" stroke-width="1"></line><rect x="84" y="42" width="160" height="22" rx="11" fill="#fff" stroke="#55685e" stroke-dasharray="3 2"></rect><text x="164.0" y="57" text-anchor="middle" class="sv-t sv-s">我在做最後一關的驗證</text><line x1="102" y1="109" x2="102" y2="136" stroke="#55685e" stroke-width="1"></line><rect x="62" y="136" width="110" height="22" rx="11" fill="#fff" stroke="#55685e" stroke-dasharray="3 2"></rect><text x="117.0" y="151" text-anchor="middle" class="sv-t sv-s">我在試一個點子</text></svg>
+<div class="sim-meter" aria-label="門自己用了多少模型：長條長度示意"><span class="sim-meter-label">門自己用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:100%"></span></span><span class="sim-meter-note">長度只是示意，沒有量過</span></div>
+</div></div>
+</div>
+<!-- copy:DEMO2-4 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">4／7</span>這種話很難用公式算。設計上，讓門自己也是一隻 agent，由它讀了決定誰先。</p>
+</li>
+<li class="sim-step" data-step="5" hidden="">
+<span class="sim-st sim-st-no" title="還沒做">還沒做</span>
+<div class="sim-frames">
+<div class="sim-frame"><div class="sim-stage">
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="攤開判斷結果，人回一句改進你自己"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">模型端點</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="100" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><path d="M176 76.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="201.0" y="121.0" text-anchor="middle" class="sv-t">門</text><circle cx="201" cy="93" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="197.85" cy="91.65" r="1.4" fill="#223b34"></circle><circle cx="204.15" cy="91.65" r="1.4" fill="#223b34"></circle><path d="M197.4 96.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path><circle cx="146" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="124" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="102" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="80" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="58" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="36" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="14" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><line x1="156" y1="100" x2="172" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><line x1="230" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><rect x="226" y="128" width="70" height="52" fill="#fff" stroke="#223b34" stroke-width="1.5"></rect><text x="234" y="143" class="sv-t sv-s">✓</text><line x1="246" y1="140" x2="288" y2="140" stroke="#55685e" stroke-width="1.2"></line><text x="234" y="153" class="sv-t sv-s">✓</text><line x1="246" y1="150" x2="288" y2="150" stroke="#55685e" stroke-width="1.2"></line><text x="234" y="163" class="sv-t sv-s">?</text><line x1="246" y1="160" x2="288" y2="160" stroke="#55685e" stroke-width="1.2"></line><text x="261.0" y="194" text-anchor="middle" class="sv-t sv-s">判斷結果</text><rect x="16" y="176" width="76" height="22" rx="11" fill="#fff" stroke="#55685e" stroke-dasharray="3 2"></rect><text x="54.0" y="191" text-anchor="middle" class="sv-t sv-s">改進你自己</text></svg>
+<div class="sim-meter" aria-label="門自己用了多少模型：長條長度示意"><span class="sim-meter-label">門自己用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:100%"></span></span><span class="sim-meter-note">長度只是示意，沒有量過</span></div>
+</div></div>
+</div>
+<!-- copy:DEMO2-5 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">5／7</span>看看它排得怎樣。門自己也在用模型：叫它改進自己。</p>
+</li>
+<li class="sim-step" data-step="6" hidden="">
+<span class="sim-st sim-st-no" title="還沒做">還沒做</span>
+<div class="sim-frames">
+<div class="sim-frame"><div class="sim-stage">
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="門的資料夾長出一條規則，用量變短"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">模型端點</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="100" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><path d="M176 76.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="201.0" y="121.0" text-anchor="middle" class="sv-t">門</text><circle cx="201" cy="93" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="197.85" cy="91.65" r="1.4" fill="#223b34"></circle><circle cx="204.15" cy="91.65" r="1.4" fill="#223b34"></circle><path d="M197.4 96.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M170 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"></path><text x="180.0" y="169.4" text-anchor="middle" class="sv-t">規則</text><circle cx="146" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="124" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="102" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="80" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="58" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="36" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="14" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><line x1="156" y1="100" x2="172" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><line x1="230" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line></svg>
+<div class="sim-meter" aria-label="門自己用了多少模型：長條長度示意"><span class="sim-meter-label">門自己用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:70%"></span></span><span class="sim-meter-note">長度只是示意，沒有量過</span></div>
+</div></div>
+<div class="sim-frame"><div class="sim-stage">
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="再長一條，用量再短"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">模型端點</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="100" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><path d="M176 76.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="201.0" y="121.0" text-anchor="middle" class="sv-t">門</text><circle cx="201" cy="93" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="197.85" cy="91.65" r="1.4" fill="#223b34"></circle><circle cx="204.15" cy="91.65" r="1.4" fill="#223b34"></circle><path d="M197.4 96.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M170 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="180.0" y="169.4" text-anchor="middle" class="sv-t">規則</text><path d="M192 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"></path><circle cx="146" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="124" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="102" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="80" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="58" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="36" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="14" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><line x1="156" y1="100" x2="172" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><line x1="230" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line></svg>
+<div class="sim-meter" aria-label="門自己用了多少模型：長條長度示意"><span class="sim-meter-label">門自己用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:45%"></span></span><span class="sim-meter-note">長度只是示意，沒有量過</span></div>
+</div></div>
+<div class="sim-frame"><div class="sim-stage">
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="又長一條，用量更短"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">模型端點</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="100" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><path d="M176 76.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="201.0" y="121.0" text-anchor="middle" class="sv-t">門</text><circle cx="201" cy="93" r="9" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="197.85" cy="91.65" r="1.4" fill="#223b34"></circle><circle cx="204.15" cy="91.65" r="1.4" fill="#223b34"></circle><path d="M197.4 96.15 q3.6 2.6999999999999997 7.2 0" fill="none" stroke="#223b34" stroke-width="1.2"></path><path d="M170 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="180.0" y="169.4" text-anchor="middle" class="sv-t">規則</text><path d="M192 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><path d="M214 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#d8e9c4" stroke="#223b34" stroke-width="1.5"></path><circle cx="146" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="124" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="102" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="80" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="58" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="36" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="14" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><line x1="156" y1="100" x2="172" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><line x1="230" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line></svg>
+<div class="sim-meter" aria-label="門自己用了多少模型：長條長度示意"><span class="sim-meter-label">門自己用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:20%"></span></span><span class="sim-meter-note">長度只是示意，沒有量過</span></div>
+</div></div>
+</div>
+<!-- copy:DEMO2-6 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">6／7</span>它替自己加了判斷的工具和規則：常見的情況，直接照規則走。可以一直按。</p>
+</li>
+<li class="sim-step" data-step="7" hidden="">
+<span class="sim-st sim-st-no" title="還沒做（方向）">還沒做</span>
+<div class="sim-frames">
+<div class="sim-frame"><div class="sim-stage">
+<svg class="sim-pic" viewBox="0 0 340 210" role="img" aria-label="門的圖示換成程式，用量歸零，隊伍照樣有先後"><text x="300" y="20" text-anchor="middle" class="sv-t sv-s">模型端點</text><rect x="282" y="32" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="66" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><rect x="282" y="100" width="36" height="26" fill="#223b34" stroke="#223b34" stroke-width="1.5"></rect><path d="M176 76.48 h21.0 l4.0 -6.4799999999999995 h25.0 v36.0 h-50 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="201.0" y="121.0" text-anchor="middle" class="sv-t">門</text><rect x="192" y="84" width="18" height="18" fill="#223b34"></rect><text x="201" y="97" text-anchor="middle" class="sv-code">{}</text><path d="M170 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><text x="180.0" y="169.4" text-anchor="middle" class="sv-t">規則</text><path d="M192 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><path d="M214 142.592 h8.4 l1.6 -2.5919999999999996 h10.0 v14.399999999999999 h-20 z" fill="#fff" stroke="#223b34" stroke-width="1.5"></path><circle cx="146" cy="100" r="8" fill="#fbe9d8" stroke="#b13d20" stroke-width="1.5"></circle><circle cx="124" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="102" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="80" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="58" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="36" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><circle cx="14" cy="100" r="8" fill="#fff" stroke="#223b34" stroke-width="1.5"></circle><line x1="156" y1="100" x2="172" y2="100" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line><line x1="230" y1="86" x2="278" y2="50" stroke="#223b34" stroke-width="1.5" marker-end="url(#sim-arrow)"></line></svg>
+<div class="sim-meter sim-meter-zero" aria-label="門自己用了多少模型：沒有"><span class="sim-meter-label">門自己用了多少模型</span><span class="sim-meter-track"><span class="sim-meter-fill" style="width:0%"></span></span><span class="sim-meter-note">不再問模型</span></div>
+</div></div>
+</div>
+<!-- copy:DEMO2-7 draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-cap"><span class="sim-k">7／7</span>最後，這扇門也變成一支程式了，隊伍照樣有先後。</p>
+<!-- copy:DEMO-END draft (team/copy/demo-text.md), user ok 11-14 --><p class="sim-end">後半段是 aos 要去的方向，還沒做出來。</p>
+</li>
+</ol><div class="sim-ctl"><button type="button" class="sim-btn" disabled="">← 上一步</button><button type="button" class="sim-btn sim-again" hidden="" disabled="">再跑一次 ↻</button><button type="button" class="sim-btn sim-next">下一步 →</button><button type="button" class="sim-btn sim-reset">重來</button></div><p class="sim-live" aria-live="polite">1／7一大堆模型呼叫一起擠向一個端點：擠不進去的，就被退回。</p></div>
+</div>
+<div class="sim-cta"><!-- copy:DEMO-CTA draft (team/copy/demo-text.md), user ok 11-14 --><a class="button primary" href="zh/get-started.html">真的跑一次（不用模型）→ 開始用</a></div>
 </section>
-</div>
 <script>
 (function(){
   document.querySelectorAll('[data-sim]').forEach(function(set){
@@ -521,32 +463,37 @@ echo &#x27;{&quot;name&quot;: &quot;ann&quot;}&#x27; | aos-exec ~/aos-demo/greet
   });
 })();
 </script>
-<section class="horizon horizon-solo" id="now" aria-labelledby="now-title">
+<!-- /demo-sim -->
+
+
+<section class="horizon horizon-solo" aria-label="今天能做">
 <div class="today">
-<h2 id="now-title">今天 clone 下來就能做的</h2>
+<p class="section-label">04 / NOW</p>
+<!-- copy:NOW --><h2>今天 clone 下來就能做的</h2>
+<!-- source: docs/zh/status.md「今天能做（已實測）」, same four items -->
 <ul class="facts">
-<li>不接模型，起一套 aos（文件裡叫它一棵「樹」：放 agent 的那個資料夾），對一隻接假模型的 agent 說話，看對話檔與資料夾。<span class="badge badge-tested">● 已實測</span><time datetime="2026-11-14">2026-11-14</time></li>
-<li>同一棵樹掛兩隻 agent，各自對話。<span class="badge badge-tested">● 已實測</span><time datetime="2026-11-14">2026-11-14</time></li>
-<li>把一個資料夾當函數呼叫。<span class="badge badge-tested">● 已實測</span><time datetime="2026-11-16">2026-11-16</time></li>
-<li>接一個支援工具呼叫的 OpenAI 相容端點，讓 agent 用真模型叫工具。<span class="badge badge-tested">● 已實測</span><time datetime="2026-11-14">2026-11-14</time></li>
+<li>不用模型起一棵樹，對假腦的 agent 說話，看對話檔與資料夾。</li>
+<li>同一棵樹掛兩隻 agent，各自對話（<a href="zh/tutorials/first-tree.html">教學</a>）。</li>
+<li>把一個資料夾當函數呼叫。</li>
+<li>接一個支援工具呼叫的 OpenAI 相容端點，讓 agent 用真模型叫工具（<a href="zh/setup/real-brain.html">接真腦</a>）。</li>
 </ul>
-<p class="section-note">第 3 項 2026-11-16 重跑過；其他三項是 2026-11-14 照文件跑過的紀錄，之後程式有改，這一版沒重跑。</p>
-<p>怎麼建置、怎麼起第一棵樹：見 GitHub 上的 <a href="https://github.com/justty32/aos/blob/main/proto8/README.md">proto8/README.md</a>。</p>
 </div>
 </section>
 
 
-<section class="status" id="status" aria-labelledby="status-title">
+<section class="status" aria-labelledby="status-title">
 <h2 id="status-title">現況</h2>
 <div>
-<p>aos 還是原型：檔案格式和指令還會變。只支援 Linux（WSL2 可以）。一棵樹住一台機器；樹和樹之間現在還不會互相連線。</p>
-<p class="security">agent 會用你的帳號執行程式：你的帳號碰得到的檔案，它都碰得到。請在拋棄式帳號、虛擬機或容器裡試；換一個資料夾並不能隔離。沙箱是實驗功能。</p>
-<p class="tested">實測環境：只在一台 Manjaro 機器上照文件一步步跑過；Python 3.11 與 3.14 都通；建置走 vcpkg。其他發行版、不用 vcpkg 的建置還沒驗。</p>
-<div class="hero-links"><a class="button primary" href="https://github.com/justty32/aos">GitHub ↗</a></div>
+<!-- copy:S1 --><p>aos 還是原型：檔案格式和指令還會變。只支援 Linux（WSL2 可以）。一棵樹住一台機器；樹和樹之間現在還不會互相連線。</p>
+<!-- copy:SEC --><p class="security">agent 會用你的帳號執行程式：你的帳號碰得到的檔案，它都碰得到。請在拋棄式帳號、虛擬機或容器裡試；換一個資料夾並不能隔離。沙箱是實驗功能。</p>
+<!-- source: release-1114 batch 0 + v2 runs; user 11-14: docker later, so say Manjaro only -->
+<p class="tested">實測環境：只在一台 Manjaro 機器上照字跑過；Python 3.11 與 3.14 都通；建置走 vcpkg。其他發行版、不用 vcpkg 的建置還沒驗。</p>
+<div class="hero-links"><a class="button primary" href="zh/get-started.html">開始用 <span aria-hidden="true">↗</span></a><a class="button" href="zh/status.html">完整現況 <span aria-hidden="true">↗</span></a><a class="button" href="https://github.com/justty32/aos">GitHub <span aria-hidden="true">↗</span></a></div>
 </div>
 </section>
 </main>
-<footer id="footer"><p>AOS：Akatosh Operating System</p><div><a href="https://github.com/justty32/aos">GitHub ↗</a></div></footer>
+<footer><!-- copy:FULL --><p>aos：akatosh operating system</p><div><a href="zh/get-started.html">開始用</a><a href="https://github.com/justty32/aos">GitHub</a><span class="lic">授權：MIT（程式）、CC BY 4.0（文件）</span></div></footer>
 </div>
-</body>
-</html>
+<script>(function(){var b=null;setInterval(function(){fetch("/__build").then(function(r){return r.text()}).then(function(t){if(b===null)b=t;else if(t!==b)location.reload()}).catch(function(){})},1000)})()</script>
+
+</body></html>

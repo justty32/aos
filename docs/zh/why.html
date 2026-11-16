@@ -1,0 +1,209 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><title>為什麼做 aos · aos 草稿（預覽）</title><style>
+body{font:16px/1.65 system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;margin:0;color:#1d232a;background:#fbfbfa}
+header{background:#1d232a;color:#fff;padding:.6em 1.2em;font-size:.9em}
+header a{color:#cfe3ff;text-decoration:none;margin-right:1em}
+main{max-width:52em;margin:0 auto;padding:1em 1.2em 4em}
+h1{font-size:1.7em;border-bottom:2px solid #e3e6ea;padding-bottom:.3em}
+h2{font-size:1.3em;margin-top:2em;border-bottom:1px solid #e3e6ea;padding-bottom:.2em}
+h3{font-size:1.1em;margin-top:1.6em}
+code{font:.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef1f4;padding:.1em .3em;border-radius:3px}
+pre{background:#1d232a;color:#e8ecef;padding:.9em 1em;border-radius:6px;overflow-x:auto;line-height:1.45}
+pre code{background:none;padding:0;color:inherit}
+table{border-collapse:collapse;margin:1em 0;display:block;overflow-x:auto}
+th,td{border:1px solid #d5dae0;padding:.35em .7em;text-align:left;vertical-align:top}
+th{background:#eef1f4}
+blockquote{margin:1em 0;padding:.2em 1em;border-left:4px solid #9fb7d6;color:#3b4652;background:#f2f6fb}
+details{margin:1em 0;padding:.5em .9em;border:1px solid #d5dae0;border-radius:6px;background:#fff}
+summary{cursor:pointer;font-weight:600}
+a{color:#0b5cad}
+.draft{background:#fff4d6;color:#5a4300;padding:.4em 1.2em;font-size:.85em}
+</style></head><body><header><a href="../index.html">草稿入口</a></header><div class="draft">DRAFT v3: local preview only, not published</div><main><h1 id="為什麼做-aos">為什麼做 aos</h1>
+<p>aos 想做的是一套新時代的軟體技術棧。這頁分三大段說為什麼：重造計算模型、以往沒算進去的成本、新的寫軟體方式，最後用一個例子把前面串起來。</p>
+<!-- copy:TAG -->
+<p>原型 · demo 版</p>
+<!-- source: team/fable/structure-v5.md, structure-v11.md, paradigm-v1.md (skeleton of the four sections); user 11-14 13:36/14:06/14:09/14:11/14:23/14:35/14:36 via overview page (14:23 quoted from team/fable/structure-v7.md); proto8/user-advice/20261106.md, 20261113.md (line numbers below). Not verified: nothing on this page was run for it; "today" lines point to pages that were run. Demo lines (nesting, same-machine move, kernel rule, 100 agents) come from release-1114/08-示範.md (fake brain, HEAD 46d399149); scope kept within its 細節與限制 section. -->
+<p>引文是作者（aos 的使用者兼設計者）的原話，一字不改，後面標出處：<code>user-advice/檔名:行</code>，或對話的時間。有些引文只取一行裡的一段。引文外的字是整理，不是原話。原話預設收起來，點「使用者原話」那一行就能打開。</p>
+<p><strong>頁上分三種話：</strong></p>
+<ul><li><strong>今天做到</strong>：照字跑過，有紀錄（照抄的頁面，或示範頁的實跑結果）。</li><li><strong>程式裡有、這版還沒實測</strong>：寫好了，還沒照字跑過。</li><li><strong>願景</strong>：方向，還沒做，也沒有時程。</li></ul>
+<h2 id="一重造計算模型">一、重造計算模型</h2>
+<h3 id="a1-以-linux-做硬體">A1 以 Linux 做硬體</h3>
+<details>
+<summary>使用者原話（20261113 第 5 行）</summary>
+<blockquote><p>這塊我記得先前有講過，就是拿linux系統當硬體去模擬 ——<code>user-advice/20261113.md:5</code></p></blockquote>
+</details>
+<p>一般的作業系統坐在硬體上。aos 坐在 Linux 上：對 aos 來說，Linux 就是它跑在上面的硬體。</p>
+<!-- copy:P1 -->
+<p>aos 把 AI agent 當成一般的 Linux 行程，住在資料夾裡。每個工具、每隻 agent、每封信，都是你可以 ls、可以讀、可以設權限的資料夾或檔案。</p>
+<p><strong>照電腦來分。</strong> 作者先把一隻 agent 拆成「一個一直轉的迴圈」加「一台記著現在做到哪的狀態機」，再拿電腦來比：</p>
+<details>
+<summary>使用者原話（20261106 第 29 行）</summary>
+<blockquote><p>後續的比喻就不多說了，總之在這個比喻下，我們有了aos-exec/loop/daemon，分別對應cpu指令/cpu/硬體板子。 ——<code>user-advice/20261106.md:29</code></p></blockquote>
+</details>
+<table><thead><tr><th>aos 裡的東西</th><th>做什麼</th><th>比作</th></tr></thead><tbody><tr><td><code>aos-exec</code></td><td>執行一個資料夾（一個函數）</td><td>一條 CPU 指令</td></tr><tr><td><code>aos-loop</code></td><td>一直轉的迴圈，跑一隻 agent 的狀態機</td><td>一顆 CPU</td></tr><tr><td><code>aos-daemon</code></td><td>管很多個迴圈，可以加減</td><td>插著這些 CPU 的板子</td></tr></tbody></table>
+<p>所以有兩層講法：Linux 是 aos 跑在上面的硬體；在 aos 裡面，daemon 扮演機器，也就是那塊板子。</p>
+<p><strong>板子上的一號行程，就是 kernel。</strong></p>
+<details>
+<summary>使用者原話（20261106 第 31、33、36 行）</summary>
+<blockquote><p>在我的想象中，作業系統就是硬體上的一號行程，具備最高權限。而其作用，或者說目標，就是輔助人類更好的使用硬體 ——<code>user-advice/20261106.md:31</code></p></blockquote>
+<blockquote><p>這裏說的硬體，並非是物理世界中的電腦，而是aos exec/loop所仰賴的各種東西，首先看到的就是linux系統，除此之外還有一些抽象的概念。 ——<code>user-advice/20261106.md:33</code></p></blockquote>
+<blockquote><p>任何管理行程與資源的行程，都可以用kernel做稱呼 ——<code>user-advice/20261106.md:36</code></p></blockquote>
+</details>
+<p>在這塊板子上，aos 重做了一套計算模型：</p>
+<ul><li>行程是住在資料夾裡的 proc。</li><li>函數是放了 <code>_entry</code> 的資料夾。</li><li>請求是寄給 kernel 的一封信。</li><li>資源用 JSON 表示。</li></ul>
+<p>最後一點是重點。JSON 的鍵可以隨意加，粗細也可以隨意調：</p>
+<details>
+<summary>使用者原話（20261113 第 5 行）</summary>
+<blockquote><p>比如一個資源cost，他的表示可能是cost:{token:10,time:1s}，要粗化，那就是cost:7，這可能是透過某種公式轉的，公式定義可以隨意，要細化，那可以是cost:{token:{in:6,out:4},time:1s} ——<code>user-advice/20261113.md:5</code></p></blockquote>
+</details>
+<p>以前這種自由很難用，因為每種格式都要人先定好規範。現在有模型可以讀寫 JSON，自由才變得可行。這是設計的出發點，沒有量過模型讀得多準。</p>
+<p><strong>今天做到哪：</strong></p>
+<ul><li>今天做到：起一棵樹、掛 agent、問模型是寄信（<a href="get-started.html">開始用</a>、<a href="setup/real-brain.html">接真腦</a>）。</li><li>今天做到：同一台機器上搬樹。停樹、整個資料夾複製到新位置，新位置起來後 agent 接著答，之前的對話都在。跨機器、容器還沒驗。見<a href="demos.html#a-搬樹">示範 A</a>。</li><li>概念對照：圖上的「aos kernel」就是最上層那個 daemon：daemon 本身就是最簡單的 kernel（見<a href="concepts/index.html">概念</a>）。</li></ul>
+<h3 id="a2-什麼都可以是處理單元">A2 什麼都可以是處理單元</h3>
+<p>對 aos 來說，什麼都可以是一個處理單元（processing unit，PU）：一顆 CPU、一張 GPU、一個外部的模型服務，甚至一位畫家。條件只有一個：它能間接變成 aos 裡的一個行程。</p>
+<p>拿畫家來說。「畫一張畫」沒辦法直接變成一個系統呼叫，但可以拆成幾個普通的步驟：把工作寄給畫家、等他回信、把畫歸檔。寄信、收信、歸檔，是普通的程式在做（像 CPU）；畫畫這一步，畫家本身就是那個處理單元，跟 GPU、NPU 這類外部設備是同一個概念。</p>
+<details>
+<summary>使用者原話（11-14 15:02，經全景頁；restart/03 的 3c、3d，10-11；20261113 第 5 行）</summary>
+<blockquote><p>好。對了，看要不要再找個地方塞個外部PU環節。也就是說，對於aos而言任何東西都可以是processing unit，只要他能夠間接成爲aos proc，那aos就能處理。去找過去，我記得在thinking那邊吧，關於畫家,pu的比喻。這個可能要開sub agent去找，找不到沒關係。 ——作者 11-14 15:02（經全景頁）</p></blockquote>
+<blockquote><p>像是人手畫，這類任務沒辦法直接轉成 POSIX 呼叫，所以更接近<strong>間接抽象化</strong>：由多個任務組成——寄信給畫家、收信、畫歸檔——這樣就能讓他成為計算任務。 ——<code>thinking/2026-10/11/restart/03-補充與第二輪口述.md</code> 3c（10-11）</p></blockquote>
+<blockquote><p>關於 cpu 概念這塊，像這種畫畫任務，寄信收信就是普通 cpu，但是畫畫，畫師本身也是一種 pu，可以跟 gpu、npu 這類外部設備的概念靠攏。說到外部設備，資料庫／硬碟／快取／記憶體／雲端那塊，也可以被納入所謂空間的定義中，好比 Plan 9。 ——<code>thinking/2026-10/11/restart/03-補充與第二輪口述.md</code> 3d（10-11）</p></blockquote>
+<blockquote><p>aos他的資源可以是任意的東西，只要最後能夠影響到linux proc/aos proc就算 ——<code>user-advice/20261113.md:5</code></p></blockquote>
+</details>
+<p>畫家擅長什麼、一週畫幾張，這些也是成本；畫家怎麼分單，見下面 B1。</p>
+<p><strong>今天做到哪：</strong></p>
+<ul><li>今天做到：把一個外部的模型服務包成一個函數資料夾來叫，照字跑過（<a href="setup/real-brain.html">接真腦</a>第 1 步）。這是「外部的東西間接變成 aos 的一部分」的一個實例。</li><li>把 Claude Code 這種外部程式掛進樹，當一隻 agent：部分實測：掛得起來、能對話、樹裡有什麼答得出；照範本讀樹外的知識庫被拒，完整上手流程沒通。</li><li>還沒做：把人、GPU 包成處理單元來排程，沒有示範。</li></ul>
+<h3 id="a3-可以嵌套">A3 可以嵌套</h3>
+<p>疊起來是這樣：最底下是硬體，上面是 Linux，再上面是 aos kernel。aos kernel 上面分兩塊：左邊是做事的 agent，右邊是管事的 kernel。右邊那塊上面還能再分一次左右，這就是「可以嵌套」。</p>
+<p><strong>今天做到哪：</strong></p>
+<ul><li>今天做到：嵌套一層。在樹底下再起一個 daemon（右邊那塊管事的 kernel），把 agent 掛在它底下，照常對答；停掉外層，裡面那層和它的 agent 一起停。只試過套一層，用的是假腦。見<a href="demos.html#d-一層套一層">示範 D</a>。</li></ul>
+<h2 id="二以往沒考慮過的成本">二、以往沒考慮過的成本</h2>
+<p>這一段分四步走。</p>
+<h3 id="b1-一行最簡單的程式">B1 一行最簡單的程式</h3>
+<p><strong>1. 看一行最簡單的程式。</strong> 寫一行 <code>a=1+2</code>，一般只算它佔多少記憶體、跑多久。除此之外呢？人要花多久看懂它、原始碼佔多少地方、<code>a</code> 這個名字會不會蓋掉別的變數。這些也是成本。</p>
+<details>
+<summary>使用者原話（20261113 第 27 行）</summary>
+<blockquote><p>比如我們寫一個普通的a=1+2函數，表面上看，他的功能就這樣，沒啥好說的，那我們有考慮到他占用了多少資源嗎？當然，他占用了一些bytes，跑起來需要極短的時間。那除此之外呢？人類理解他需要多久？他的原始碼會佔用多少空間？他的其他額外影響，比如a這個變數的命名是否會覆蓋掉其他變數？這些都是資源，作業系統只管他的mem/cpu，沒有管其他這些，而aos可以管。 ——<code>user-advice/20261113.md:27</code></p></blockquote>
+</details>
+<p><strong>2. 對這麼簡單的程式，這些成本可以不管。</strong> <code>a=1+2</code> 很簡單也很常見，上面說的成本都小到可以忽略。</p>
+<details>
+<summary>使用者原話（11-14 14:59，經全景頁）</summary>
+<blockquote><p>對了，a=1+2那塊，幫我補一些：a=1+2是很簡單也很常見的例子，我們所說的這些成本都可以忽略不計，但如果將目標換成更大更特別的程式...甚至可能不止這些成本種類了。 ——作者 11-14 14:59（經全景頁）</p></blockquote>
+</details>
+<p><strong>3. 換成更大、更特別的程式，就不能不管了。</strong> 程式越大、越特別，這些成本越不能忽略，而且成本的種類可能還不只這幾種。用 AI 做事以後，又多了 token 用量這一種。管得越多，能做的軟體越大；軟體越大，要管的也越多。</p>
+<p>再舉一個不是程式的例子：畫家。一位畫家擅長畫人物、不擅長畫風景，一週能畫三四張，畫了幾張就想休息；他也有「快取」，就是手邊的靈感，沒靈感就要花時間去找。手上有十張人物、五張風景的單，另一位風景畫家很忙、一週只接一次單：這週要怎麼分？「擅長什麼」「一週幾張」「要不要休息」，都是一般 kernel 不會算的成本，但都是排程要看的東西。（這段是 10-10 晚上的想法、10-11 當天口述的整理，不是逐字：<code>thinking/2026-10/11/restart/01-今天與河堤前段.md</code> 2.3。）</p>
+<details>
+<summary>使用者原話（20261113 第 27 行）</summary>
+<blockquote><p>可能是互相成就吧，我們優化管理了這些，就能開發更大更神奇的軟體，而爲了開發更大更神奇的軟體，我們也就有了更多樣的優化管理需求，如此螺旋上升。 ——<code>user-advice/20261113.md:27</code></p></blockquote>
+</details>
+<h3 id="b2-為這些成本設計的-kernel">B2 為這些成本設計的 kernel</h3>
+<p><strong>4. aos 的 kernel，就是設計來管這些成本的。</strong> 現在常見的 kernel，多半是用來優化常見的資源和成本：CPU、記憶體、時間。aos 的 kernel 設計來優化的，是上面這些以往沒算進去的成本，而且要優化哪一種，由你定。</p>
+<details>
+<summary>使用者原話（11-14 14:59，經全景頁）</summary>
+<blockquote><p>還有，我們的kernel就是設計用來優化這些成本的。因爲現在電腦科學中常見的kernel大多用來優化那些常見的資源與成本如cpu/mem/時間等。 ——作者 11-14 14:59（經全景頁）</p></blockquote>
+</details>
+<details>
+<summary>使用者原話（20261106 第 34 行）</summary>
+<blockquote><p>linux等普通作業系統，其優化目標以時間，資源消耗最小化爲主。但在agent時代，還有其他目標如token用量，人類可理解性，易操作性等等。所以aos系統的目標就是優化任意目標。 ——<code>user-advice/20261106.md:34</code></p></blockquote>
+</details>
+<p>在 aos 裡，每個請求都經過一扇門，就是 kernel。這扇門照什麼規則放行、要算哪些成本，寫在設定和 JSON 裡，可以自己加（見 A1）。這是設計目的；今天實際管到哪，見下面。</p>
+<p><strong>函數的性質，也是一種要管的東西。</strong> 想讓一隻 agent 照你的意思做事，就是想讓這個函數的某些性質達到目標。檔案有大小這種固定的性質；函數的性質是跑起來才看得到的，例如多久跑完、結果有多不確定。這些性質的基準可以是人的感覺，值也不一定是數字。</p>
+<details>
+<summary>使用者原話（20261106 第 48、50、52 行）</summary>
+<blockquote><p>我想讓agent完全隨我心意去做，等同於我想讓這個函數的一些屬性達到一個目標。 ——<code>user-advice/20261106.md:48</code></p></blockquote>
+<blockquote><p>這個函數屬性，他是相對於檔案屬性的，一個是動態一個是靜態。 ——<code>user-advice/20261106.md:50</code></p></blockquote>
+<blockquote><p>並且也不一定要是值，甚至可以是一個字串或json物件，比如"缺乏靈活性"、{"pretty":12, "good":true}。 ——<code>user-advice/20261106.md:52</code></p></blockquote>
+</details>
+<p><strong>今天做到哪：</strong></p>
+<ul><li>今天做到：這扇門管模型呼叫：同時幾個請求、排隊、額度用完就回拒。留位子給急件的優先順序程式裡有，這版沒有專門驗。<a href="get-started.html">開始用</a>與<a href="setup/real-brain.html">接真腦</a>裡的模型請求，都經過這扇門。</li><li>今天做到：排隊共用。100 隻 agent 共用 2 個位子，全部答完（假腦）。見<a href="demos.html#b-很多-agent-排隊共用一個端點">示範 B</a>。</li><li>今天做到：每個寄件人的次數上限。多加一行「這個寄件人一天最多 2 次」，第三個請求就被拒。見<a href="demos.html#c-換一條排隊規則">示範 C</a>。</li><li>還沒做：看懂要多久、名字會不會撞、主觀的函數性質，今天還沒有任何 kernel 在管。</li></ul>
+<h2 id="三新的軟體開發範式">三、新的軟體開發範式</h2>
+<p>這一段是一條論證，分五步走。</p>
+<details>
+<summary>使用者原話（20261106 第 3 行）</summary>
+<blockquote><p>我認爲這是the new age of programming。 ——<code>user-advice/20261106.md:3</code></p></blockquote>
+</details>
+<h3 id="c1-檔案系統當語言">C1 檔案系統當語言</h3>
+<p><strong>1. Lisp 的理想，和它的難處。</strong> Lisp 早就示範過一種很強的寫法：程式就是資料，程式可以寫程式，也可以改自己（這叫元編程，meta programming）。難在不好除錯，也碰不到機器底層。</p>
+<details>
+<summary>使用者原話（20261106 第 4～5 行）</summary>
+<blockquote><p>lisp仍是最終最好的抽象，那爲啥大家都不用？我不知道，但是對我而言，就是debug不方便，並且沒辦法控制底層 ——<code>user-advice/20261106.md:4</code></p></blockquote>
+<blockquote><p>OK，那我覺得我這套體系能解決這個問題。 ——<code>user-advice/20261106.md:5</code></p></blockquote>
+</details>
+<p><strong>2. aos 拿檔案系統當這種語言。</strong> 一個資料夾只要有 <code>_entry</code> 就能執行，就是一個函數。好處是現成的 Linux 權限、什麼語言寫都行；最重要的是，模型本來就會操作資料夾。</p>
+<details>
+<summary>使用者原話（20261106 第 6 行）</summary>
+<blockquote><p>我們把filesystem作爲lua來使用，一個簡單的手段就是準備一個程式aos-exec，這個程式可以把資料夾當做檔案來執行，只需要資料夾內有一個_entry檔案即可。第一個好處就是能夠白嫖linux的檔案權限機制，其次就是能夠跨程式語言實作功能。不過最重要的，是agent原生就有操控資料夾的能力。 ——<code>user-advice/20261106.md:6</code></p></blockquote>
+</details>
+<p>所以「agent 改自己」不用另外教它一套語言，改自己就是改資料夾：</p>
+<details>
+<summary>使用者原話（20261106 第 8 行）</summary>
+<blockquote><p>不如直接把一個資料夾跟幾個python程式和json檔案交給agent，跟他說這就是你，請你新增一個資料夾，裏面弄一個新工具，然後給你自己做擴充。這其實agent更好懂，並且也能輕鬆完成。 ——<code>user-advice/20261106.md:8</code></p></blockquote>
+</details>
+<p>資料夾和 JSON 是同一個形狀（同像性），所以同一個東西可以是一棵資料夾，也可以是一個 JSON，也可以用程式寫出來：</p>
+<details>
+<summary>使用者原話（20261113 第 23 行）</summary>
+<blockquote><p>然後aos體系中，json和檔案系統有同像性，所以也可以是化爲json。 ——<code>user-advice/20261113.md:23</code></p></blockquote>
+<blockquote><p>重點是讓人能夠透過寫程式的方式去規劃(或理解)一些復雜的aos系統 ——<code>user-advice/20261113.md:23</code></p></blockquote>
+</details>
+<h3 id="c2-agent-也是一個函數">C2 agent 也是一個函數</h3>
+<p><strong>3. agent 也是一個函數。</strong> 作者寫的 pseudo code：</p>
+<details>
+<summary>使用者原話的 pseudo code（20261106 第 13～18 行）</summary>
+<pre><code class="language-text">func agent(llm, prompts, tools):
+    while 1:
+        if has_tool_call:
+            do_tool &amp; break
+        elif has_prompt:
+            add_prompt &amp; break</code></pre>
+<p>（<code>user-advice/20261106.md:13</code>～<code>18</code>，原文照抄。）</p>
+</details>
+<p>一個迴圈，裡面問模型、用工具。</p>
+<details>
+<summary>使用者原話（20261106 第 19 行）</summary>
+<blockquote><p>但有了tools，那根據丟給他的東西，這個函數就可以做到任何事。 ——<code>user-advice/20261106.md:19</code></p></blockquote>
+</details>
+<h3 id="c3-一塊一塊換成程式">C3 一塊一塊換成程式</h3>
+<p><strong>4. 怎麼把它變好：拆開，換掉問模型的那幾塊。</strong> 不確定和 token，都出在問模型那一步。</p>
+<details>
+<summary>使用者原話（20261106 第 55～56 行）</summary>
+<blockquote><p>一個函數可以拆分爲多個子函數，這個函數的屬性自然由這些子函數決定。所以假如這個函數是機率性的，自然只要將其具備子函數中具備幾率性的，給替換掉即可。 ——<code>user-advice/20261106.md:55</code></p></blockquote>
+<blockquote><p>換到agent中，從pseudo code中可以看到，不確定性來自於那個llm呼叫。要降低這個函數的不確定性，自然就是減少llm呼叫，盡量讓工作都堆積到tools。 ——<code>user-advice/20261106.md:56</code></p></blockquote>
+</details>
+<p>這件事可以交給 agent 自己做：先放一隻能幫你寫函數的 agent，再改進它。</p>
+<details>
+<summary>使用者原話（20261113 第 19 行）</summary>
+<blockquote><p>你先從一個能幫你開發函數的函數開始，然後改進這個函數，使其變得能更好的開發函數，如此下去，直到他開發的函數達到你的預期。對，這個第一個開發函數的函數，就是一個agent，然後你逐步給他擴充工具，子agent...等，直到他的功能符合你的需求。 ——<code>user-advice/20261113.md:19</code></p></blockquote>
+</details>
+<p><strong>5. 走到最後。</strong> agent 做的事，最後由一支確定的程式來做；token 用量往零走。作者把這種「自己改進自己」叫 RSI（recursive self-improvement，遞迴自我改進）。</p>
+<details>
+<summary>使用者原話（20261113 第 13 行；20261106 第 45 行）</summary>
+<blockquote><p>簡單說我的目標，就是把一個agent，逐步替換掉成純粹的，沒有幾率性可言的程式函數。 ——<code>user-advice/20261113.md:13</code></p></blockquote>
+<blockquote><p>在aos體系的幫助下，實現以RSI方式，持續降低token消耗直至0，並且提升AI智商的路途。 ——<code>user-advice/20261106.md:45</code></p></blockquote>
+</details>
+<p><strong>今天做到哪：</strong></p>
+<ul><li>今天做到：資料夾當函數來叫、自己做一個函數資料夾、自己加一個端點（<a href="get-started.html">開始用</a>第 7 步、<a href="setup/real-brain.html">接真腦</a>）。</li><li>程式裡有、這版還沒實測：agent 用工具替自己加一個新工具、改自己的設定；工具寫在 JSON 裡而不是資料夾裡。</li><li>概念頁有寫、這版沒有專門實測：工具用任何語言寫都行（開始用第 7 步的例子是 bash）。</li><li>願景：把 agent 拆成小步驟、一塊一塊換成程式、token 到零。這部分還沒做，是方向。</li></ul>
+<h2 id="四一個例子二十個端點上千個-agent">四、一個例子：二十個端點、上千個 agent</h2>
+<p>這個例子用到前兩段：第二段的「門要省什麼由你定」，和第三段的「一塊一塊換成程式」。作者自己出的題目，一問一答。</p>
+<details>
+<summary>使用者原話（11-14 14:23，經全景頁）</summary>
+<blockquote><p>若同時間只有二十個endpoint可用，如何讓上千個agent共享這些endpoint？當然我們可以用精妙的演算法來處理，但也可以用aos kernel，aos kernel允許你自定排程算法與其所依賴的資源，agent在向aos kernel寄送請求時，附上一些描述自己任務的敘述，比如自己在處理驗証，並且是最後一關，而aos kernel就會判斷讓他先跑LLM endpoint的收益較大，而將其放行到實際的LLM endpoint。 ——作者 11-14 14:23（經全景頁）</p></blockquote>
+</details>
+<p><strong>問：如果只有二十個模型端點，卻有上千個 agent 要用，怎麼分？</strong></p>
+<p>答：在 aos 裡，每個請求都經過一扇門，就是 kernel。先後的規則由你寫，不是寫死在程式裡。這是一道假設的題目，「二十個、上千個」不是量到的數字。</p>
+<p><strong>問：規則要看什麼？</strong></p>
+<p>答：設計上，不只看排隊的先後。agent 寄請求時可以附一句話，說自己在做什麼，例如「我在做最後一關的驗證」。門看了這句話，判斷先放誰比較划算。</p>
+<p><strong>問：這種難量化的話，誰來判斷？</strong></p>
+<details>
+<summary>使用者原話（11-14 14:23，經全景頁）</summary>
+<blockquote><p>那麼那個aos kernel如何判斷這種難以量化的敘述呢？很簡單，讓他成爲agent，讓LLM判斷這種敘述。 ——作者 11-14 14:23</p></blockquote>
+</details>
+<p>答：設計上，可以讓門自己也是一隻 agent。</p>
+<p><strong>問：連門都是 agent，token 不是用更多？</strong></p>
+<details>
+<summary>使用者原話（11-14 14:23，經全景頁）</summary>
+<blockquote><p>然後肯定有人會問說：啊，你連kernel都要作爲agent，那你的token消耗量不是超多嗎？所以這才要引入aos軟體開發範式。後續就是講述一個函數，如何從萬用的agent，逐步變成不依靠LLM的純程式。 ——作者 11-14 14:23</p></blockquote>
+</details>
+<p>答：門也是一個函數，所以照第三段的做法：先讓它是 agent，再把常見的判斷一塊一塊換成規則和程式，最後門也是一支程式。</p>
+<p><strong>今天做到哪：</strong></p>
+<ul><li>今天做到：排隊不掉請求。100 隻 agent 共用一個一次只能處理 2 個的端點，全部答完，沒有一次出錯（假腦；量的是排隊，不是速度）。見<a href="demos.html#b-很多-agent-排隊共用一個端點">示範 B</a>。</li><li>設計如此，這版還沒做：這扇門留了掛判斷程式的位子；讓一隻 agent 來當判斷者、讀附上的那句話決定先後，還沒做，也沒有現成的例子。</li><li>願景：門自己改進自己，最後換成程式。</li></ul>
+<h2 id="這頁沒驗到的">這頁沒驗到的</h2>
+<ul><li>這頁沒有自己的指令，也沒有為它跑過什麼。「今天做到」那幾條，以連過去那幾頁的實測為準。</li><li>套一層、同機搬樹、換規則、100 隻排隊：照字跑過（假腦），摘要在<a href="demos.html">示範</a>，這頁沒有放步驟；跨機器、容器、套很多層、上千上萬隻都沒跑。</li><li>agent 替自己加工具：程式裡有，這版還沒照字跑過。</li><li>「模型讀寫 JSON 很順」是設計的出發點，沒有量過。</li><li>第四段的「二十個端點、上千個 agent」是假設的題目，不是量到的數字；讓 agent 當門還沒做。</li><li>第二到第四段的大部分是願景，不是承諾，也沒有時程。</li></ul>
+<p>下一步：<a href="concepts/index.html">概念</a>、<a href="status.html">狀態</a>。</p></main></body></html>
