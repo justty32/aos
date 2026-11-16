@@ -7,6 +7,7 @@ import { useData, useNow, useUi } from "../state/hooks.ts";
 import { enter, jump, setTab } from "../state/nav.ts";
 import type { Tab } from "../state/route.ts";
 import { ReadButtons } from "./ReadButtons.tsx";
+import { SlashResults } from "./SlashResults.tsx";
 import { MultiPanel } from "./MultiPanel.tsx";
 import { Thread } from "./Thread.tsx";
 import { AgentNow } from "./AgentNow.tsx";
@@ -86,6 +87,7 @@ export function Inspector() {
   else body = (
     <>
       <Head n={n} tree={tree} slim={route.tab === "thread"} />
+      <SlashResults key={n.id} n={n} />
       <Tabs tab={route.tab} has={["now", "thread", "history"]} />
       <div data-scroll={route.tab === "now" ? "now" : undefined} className={`flex min-h-0 flex-1 flex-col p-3 ${route.tab === "now" ? "overflow-y-auto" : ""}`}>
         {route.tab === "now" && <AgentNow key={n.id} n={n} tree={tree} now={now} />}

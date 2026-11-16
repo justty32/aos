@@ -30,7 +30,9 @@ home: --home > $AOS_VIEW_HOME > ~/.aos/view
 Only reads official interfaces: aos-agent ctl ls / ctl state / history ls, the user zone
 (through aos-user's own zone.py, read-only) and its own relay mailbox. Writes only by running
 aos-user answer/reply/ok and aos-agent say. Stdlib only.
+GET /api/slash_results?name=NAME returns recent page slash commands and their reply states.
 """
+from contextlib import nullcontext
 import fcntl
 import fnmatch
 import hashlib
@@ -1537,13 +1539,26 @@ def _send_slash(form, tree, home, kind, ret=None):
     cli = (n.get("live") or {}).get("cli") or cli_kind(n.get("stack"))
     if not cli or cli not in spec["cli"]:
         return "!%s 不是這個指令支援的 CLI agent，%s 對它沒用" % (name, command)
-    if n.get("queued"):
+    if kind == "compact" and n.get("queued"):
         return "!%s 信箱還排著 %d 封：%s 會跟它們併成一批而失效，等它讀完再按" % (name, n["queued"], command)
-    code, out, err = run(["aos-agent", "say", "-t", name, "--from", PAGE_FROM, "-"], timeout=20, stdin=text)
-    rec = {"at": now_local(), "kind": kind, "to": name, "text": text, "ok": code == 0,
-           "letter": out.strip() if code == 0 else None, "error": None if code == 0 else short(err, 300)}
-    log_sent(home, rec)
+    with SLASH_LOCK if kind == "slash" else nullcontext():
+        if kind == "slash":
+            if ret is not None:
+                ret["dup"] = False
+            previous = next((r for r in slash_sent(home, name, 1800) if r["text"].strip() == text), None)
+            if previous:
+                # Sending must check fresh history, not the polling cache or the tree snapshot.
+                SLASH_CACHE.pop(name, None)
+                if slash_state(slash_rows(name), previous["letter"])[0] != "answered":
+                    if ret is not None:
+                        ret.update(dup=True, letter=previous["letter"])
+                    return "%s 已在排隊（還沒回），不重送" % command
+        code, out, err = run(["aos-agent", "say", "-t", name, "--from", PAGE_FROM, "-"], timeout=20, stdin=text)
+        rec = {"at": now_local(), "kind": kind, "to": name, "text": text, "ok": code == 0,
+               "letter": out.strip() if code == 0 else None, "error": None if code == 0 else short(err, 300)}
+        log_sent(home, rec)
     DELIVERY_CACHE.pop(name, None)
+    SLASH_CACHE.pop(name, None)
     if ret is not None:
         ret["letter"] = rec["letter"]
     if code != 0:
@@ -1553,6 +1568,76 @@ def _send_slash(form, tree, home, kind, ret=None):
     if kind == "compact":
         return "已叫 %s 壓縮對話（/compact）%s" % (name, later)
     return "已把 %s 送進 %s 的畫面%s" % (command, name, later)
+
+
+SLASH_LOCK = threading.Lock()
+SLASH_CACHE = {}
+
+
+def slash_rows(name):
+    """Read at most the last 300 history messages; cache each agent for two seconds."""
+    t = time.time()
+    c = SLASH_CACHE.get(name)
+    if c and t - c["at"] < 2:
+        return c["rows"]
+    st = run_json(["aos-agent", "ctl", "state", "-t", name, "history", "-j"], timeout=8) or {}
+    count = (st.get("history") or {}).get("messages")
+    rows = None
+    if isinstance(count, int) and not isinstance(count, bool) and count >= 0:
+        rows = [] if count == 0 else run_json(
+            ["aos-agent", "history", "-t", name, "ls", "-j", "%d-" % max(1, count - 299)], timeout=8)
+        rows = rows[-300:] if isinstance(rows, list) else None
+    SLASH_CACHE[name] = {"at": t, "rows": rows}
+    return rows
+
+
+def slash_state(rows, letter):
+    """Match the official history letter metadata to a slash request and its answer."""
+    if rows is None:
+        return "unknown", ""
+    doing = False
+    for item in reversed(rows):
+        m = item.get("message") or {}
+        aos = m.get("aos") or {}
+        if m.get("role") == "assistant" and letter in (aos.get("answer_to") or []):
+            content = m.get("content")
+            if isinstance(content, list):
+                content = " ".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content)
+            text = mask(content or "")
+            return "answered", text if len(text) <= 4000 else text[:3999] + "…"
+        if m.get("role") == "user" and aos.get("letter") == letter:
+            doing = True
+    return ("doing" if doing else "waiting"), ""
+
+
+def slash_sent(home, name, seconds):
+    """Successful page slash requests in the time window, newest first."""
+    out, since = [], time.time() - seconds
+    try:
+        with open(os.path.join(home.state, "sent.jsonl"), encoding="utf-8") as f:
+            for line in f:
+                try:
+                    r = json.loads(line)
+                except ValueError:
+                    continue
+                if (isinstance(r, dict) and r.get("kind") == "slash" and r.get("to") == name
+                        and r.get("ok") and r.get("letter") and isinstance(r.get("text"), str)
+                        and (parse_time(r.get("at")) or 0) >= since):
+                    out.append(r)
+    except OSError:
+        pass
+    return sorted(reversed(out), key=lambda r: parse_time(r["at"]), reverse=True)
+
+
+def slash_results(home, name, node):
+    """The ten most recent slash requests, with their current history reply state."""
+    sent = slash_sent(home, name, 86400)[:10]
+    rows = slash_rows(name) if sent else None
+    items = []
+    for r in sent:
+        state, text = slash_state(rows, r["letter"])
+        items.append({"letter": r["letter"], "command": r["text"], "at": parse_time(r["at"]), "state": state, "text": text})
+    return {"items": items, "in_turn": bool((node.get("live") or {}).get("in_turn"))}
 
 
 def history_item(item):
@@ -2017,6 +2102,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self.send_json({"asks": (tree or {}).get("zone", [])}, etag=revs["asks"])
         if u.path == "/api/slash":
             return self.send_json({"commands": slash_commands()})
+        if u.path == "/api/slash_results":
+            name = arg("name")
+            node = nodes.get(name)
+            if not node or node.get("kind") != "agent":
+                return self.fail(400, "NodeMissing", "不是表上的 agent：%s" % name)
+            return self.send_json(slash_results(self.server.home, name, node))
         if u.path == "/api/orders":
             conf = self.server.home.config().get("orders") or {}
             return self.send_json({"kinds": [{"kind": k, "label": v[1], "to": (conf.get(k) or {}).get("to") or v[0],
@@ -2211,7 +2302,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             ret = {}
             msg = do_slash(form, tree, home, ret)
             self.server.ob().sent(form.get("name"))
-            return self.send_json({"ok": not msg.startswith("!"), "message": msg.lstrip("!"), "letter": ret.get("letter")},
+            return self.send_json({"ok": not msg.startswith("!"), "message": msg.lstrip("!"), "letter": ret.get("letter"),
+                                   "dup": ret.get("dup", False)},
                                   200 if not msg.startswith("!") else 400)
         if u == "/api/compact":
             msg = do_compact(form, tree, home)

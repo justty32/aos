@@ -1,0 +1,50 @@
+{
+ "app.ts": {
+  "description": "The two stores of the page: data (what the backend said) and ui (where the user is, what is open)."
+ },
+ "hooks.ts": {
+  "description": "React hooks over the page stores: useData, useUi, useNow, and the inbox view (useInbox)."
+ },
+ "layout.ts": {
+  "description": "The two sides open / closed and the tree's open departments (02f §4, q6b a): only the user changes them, by button"
+ },
+ "mapFold.ts": {
+  "description": "The map's folds the user chose (11-15: \"地圖那邊我希望可以折疊\"), per browser like the sizes: localStorage under a"
+ },
+ "mapOpts.ts": {
+  "description": "Map options persist per browser and remain usable when storage is unavailable."
+ },
+ "memo.test.ts": {
+  "description": "Tests cover LRU capacity, access order, replacement, and expiration."
+ },
+ "memo.ts": {
+  "description": "Small in-memory LRU stores optionally expire entries after a fixed number of seconds."
+ },
+ "multi.test.ts": {
+  "description": "Multi-selection actions are exercised with a fake route, tree, and browser history."
+ },
+ "multi.ts": {
+  "description": "Agent-only selection actions keep a primary target and an ordered multi-selection in memory."
+ },
+ "nav.ts": {
+  "description": "Moving around (02c §3.2 with 12.8 #2): click anywhere on a card = select; title / ▸ / double click / Enter = go in"
+ },
+ "route.ts": {
+  "description": "The address bar holds where you are (02c §3.1): #/<dept chain>?sel=<id>&tab=<now\\|thread\\|history>&view=<wall\\|map\\|todo>&ask=<letter>&q=<question>"
+ },
+ "sizes.ts": {
+  "description": "The user's own sizes (11-15: \"字體大小希望可以調。"
+ },
+ "slashResults.test.ts": {
+  "description": "Slash result tests cover status wording, exact-command pending detection, refreshes, and inspector polling."
+ },
+ "slashResults.ts": {
+  "description": "Per-agent slash results keep pending commands visible and poll only while their inspector is open."
+ },
+ "store.ts": {
+  "description": "A tiny store on React 19's useSyncExternalStore (03 §12.2: instead of zustand, not on this machine)."
+ },
+ "wallDetail.ts": {
+  "description": "Persist wall-card detail settings per browser while tolerating unavailable localStorage."
+ }
+}

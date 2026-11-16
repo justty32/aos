@@ -10,15 +10,22 @@ import type { Node, OrderKind } from "../api/types.ts";
 import { cliProblem, parseLine, resolve, type Command } from "../model/commands.ts";
 import { recordCommand } from "../model/cmdHistory.ts";
 import { pageCommand } from "./commandActions.ts";
+import { pendingOf, refreshSlash } from "../state/slashResults.ts";
 
 export async function sendSlash(n: Node, cmd: Command, text: string, batch?: string) {
   const problem = cliProblem(n, data.get().slash.find((s) => s.name === cmd.name));
   if (problem) return { ok: false, message: problem };
+  if (pendingOf(n.id, text)) {
+    const message = `${text} 已在排隊，等結果`;
+    ui.set({ flash: message, flashTarget: n.id, flashGo: null });
+    return { ok: true, message };
+  }
   const r = await post("/api/slash", { name: n.id, text, ...(batch ? { batch } : {}) });
   if (r.ok) {
     const result = cmd.name === "status" || cmd.name === "usage" || cmd.how === "screen";
-    ui.set({ flash: result ? `${n.live?.in_turn ? "它正在一輪裡，這一輪結束才會做；" : ""}已送進 ${n.id} 的畫面。結果會是『做過・說過』最新的一則` : r.message,
-      flashTarget: n.id, flashGo: result ? "history" : null, ...(result ? { slashAt: Date.now() } : {}) });
+    ui.set({ flash: r.dup ? r.message : `已送出 ${text}，結果會出現在 ${n.id} 的『指令結果』`,
+      flashTarget: n.id, flashGo: null, ...(result ? { slashAt: Date.now() } : {}) });
+    await refreshSlash(n.id);
   }
   return r;
 }

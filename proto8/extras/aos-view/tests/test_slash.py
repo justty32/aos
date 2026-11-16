@@ -1,4 +1,4 @@
-# test_slash verifies command validation, bare delivery, fixture reloads and masked multiline history.
+# test_slash verifies slash validation, deduplication, reply states and masked multiline history.
 import copy
 import http.client
 import importlib.machinery
@@ -6,6 +6,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+from datetime import datetime, timezone
 import tempfile
 import threading
 import unittest
@@ -23,13 +24,15 @@ loader.exec_module(v)
 
 class Slash(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix="slash-", dir=str(Path.home() / ".aos/scratch/ok-pano-1116"))
+        self.tmp = tempfile.mkdtemp(prefix="slash-", dir=str(Path.home() / ".aos/scratch/ok-pano-b"))
         self.home = v.Home(self.tmp)
         Path(self.home.state).mkdir()
         self.node = {"kind": "agent", "state": "running", "queued": 0,
                      "live": {"cli": "claude", "in_turn": False}}
         self.tree = {"nodes": {"board": self.node}}
         self.run = patch.object(v, "run", return_value=(0, "L-slash\n", "")).start()
+        self.run_json = patch.object(v, "run_json", return_value=None).start()
+        v.SLASH_CACHE.clear()
         self.addCleanup(patch.stopall)
         self.env = patch.dict(os.environ)
         self.env.start()
@@ -86,8 +89,10 @@ class Slash(unittest.TestCase):
 
     def test_queue_gate(self):
         self.node["queued"] = 1
-        self.assertIn("併成一批", self.send())
-        self.run.assert_not_called()
+        self.assertFalse(self.send().startswith("!"))
+        self.run.assert_called_once()
+        self.assertIn("併成一批", v.do_compact({"name": "board"}, self.tree, self.home))
+        self.run.assert_called_once()
 
     def test_success_bare_stdin_audit_and_cache(self):
         ret = {}
@@ -99,11 +104,157 @@ class Slash(unittest.TestCase):
         self.assertIn("這一輪結束才會做", result)
         self.run.assert_called_once_with(["aos-agent", "say", "-t", "board", "--from", v.PAGE_FROM, "-"],
                                          timeout=20, stdin=text)
-        self.assertEqual(ret, {"letter": "L-slash"})
+        self.assertEqual(ret, {"letter": "L-slash", "dup": False})
         self.assertNotIn("board", v.DELIVERY_CACHE)
         rec = json.loads((Path(self.home.state) / "sent.jsonl").read_text())
         self.assertEqual((rec["kind"], rec["text"], rec["to"], rec["ok"]), ("slash", text, "board", True))
         self.assertEqual(v.read_sent(self.home), [])
+
+    def record(self, age=0, **fields):
+        rec = {"at": datetime.fromtimestamp(v.time.time() - age, timezone.utc).isoformat(),
+               "kind": "slash", "to": "board", "text": "/status", "ok": True, "letter": "L-old"}
+        rec.update(fields)
+        v.log_sent(self.home, rec)
+        return rec
+
+    def test_duplicate_and_resend_after_answer(self):
+        ret = {}
+        self.assertFalse(v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, ret).startswith("!"))
+        self.assertFalse(ret["dup"])
+        v.SLASH_CACHE["board"] = {"at": v.time.time(), "rows": [{"message": {
+            "role": "assistant", "content": "stale answer", "aos": {"answer_to": ["L-slash"]}}}]}
+        self.run_json.side_effect = [{"history": {"messages": 0}}]
+        result = v.do_slash({"name": "board", "text": "  /status  "}, self.tree, self.home, ret)
+        self.assertEqual(result, "/status 已在排隊（還沒回），不重送")
+        self.assertEqual(ret, {"dup": True, "letter": "L-slash"})
+        self.run.assert_called_once()
+        self.assertEqual(len((Path(self.home.state) / "sent.jsonl").read_text().splitlines()), 1)
+        self.run_json.side_effect = [{"history": {"messages": 1}}, [{"message": {
+            "role": "assistant", "content": "done", "aos": {"answer_to": ["L-slash"]}}}]]
+        self.run.return_value = (0, "L-next\n", "")
+        self.assertFalse(v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, ret).startswith("!"))
+        self.assertEqual(ret, {"dup": False, "letter": "L-next"})
+        self.assertEqual(self.run.call_count, 2)
+
+    def test_concurrent_requests_send_only_once(self):
+        started, release, second_started, second_say = (threading.Event() for _ in range(4))
+        results, errors, returns = [], [], [{}, {}]
+
+        def slow_run(*args, **kwargs):
+            if started.is_set():
+                second_say.set()
+            started.set()
+            if not release.wait(5):
+                raise RuntimeError("timed out waiting to finish send")
+            return 0, "L-slash\n", ""
+
+        def send(i):
+            try:
+                if i == 1:
+                    second_started.set()
+                results.append(v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, returns[i]))
+            except Exception as exc:
+                errors.append(exc)
+
+        self.run.side_effect = slow_run
+        threads = [threading.Thread(target=send, args=(i,)) for i in range(2)]
+        threads[0].start()
+        try:
+            self.assertTrue(started.wait(2))
+            threads[1].start()
+            self.assertTrue(second_started.wait(2))
+            self.assertFalse(second_say.wait(0.2))
+        finally:
+            release.set()
+            for thread in threads:
+                if thread.ident is not None:
+                    thread.join(5)
+        self.assertFalse(any(thread.is_alive() for thread in threads))
+        self.assertEqual(errors, [])
+        self.assertEqual(len(results), 2)
+        self.assertTrue(all(not result.startswith("!") for result in results))
+        self.assertEqual(returns, [{"dup": False, "letter": "L-slash"}, {"dup": True, "letter": "L-slash"}])
+        self.run.assert_called_once()
+        self.assertEqual(len((Path(self.home.state) / "sent.jsonl").read_text().splitlines()), 1)
+
+    def test_old_or_different_requests_do_not_deduplicate(self):
+        self.record(age=1801)
+        self.record(text="/usage")
+        self.record(to="other")
+        self.record(ok=False)
+        self.record(letter=None)
+        self.record(kind="compact")
+        ret = {}
+        v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, ret)
+        self.assertEqual(ret, {"dup": False, "letter": "L-slash"})
+        self.run.assert_called_once()
+        self.run_json.assert_not_called()
+
+    def test_latest_matching_request_controls_deduplication(self):
+        older = self.record(age=5, letter="L-older", text="  /status  ")
+        self.record(at=older["at"], letter="L-newer")
+        self.run_json.side_effect = [{"history": {"messages": 1}}, [{"message": {
+            "role": "assistant", "content": "done", "aos": {"answer_to": ["L-older"]}}}]]
+        ret = {}
+        v.do_slash({"name": "board", "text": "/status"}, self.tree, self.home, ret)
+        self.assertEqual(ret, {"dup": True, "letter": "L-newer"})
+        self.run.assert_not_called()
+
+    def test_slash_rows_range_cache_and_unknown(self):
+        rows = [{"message": {"role": "user", "content": str(i)}} for i in range(300)]
+        self.run_json.side_effect = [{"history": {"messages": 900}}, rows]
+        with patch.object(v.time, "time", return_value=100):
+            self.assertEqual(v.slash_rows("board"), rows)
+            self.assertEqual(v.slash_rows("board"), rows)
+        self.assertEqual(self.run_json.call_count, 2)
+        self.run_json.assert_any_call(["aos-agent", "ctl", "state", "-t", "board", "history", "-j"], timeout=8)
+        self.run_json.assert_called_with(["aos-agent", "history", "-t", "board", "ls", "-j", "601-"], timeout=8)
+        self.run_json.side_effect = [None, {"history": {"messages": 1}}, None,
+                                     {"history": {"messages": 1}}, rows[:1]]
+        with patch.object(v.time, "time", return_value=103):
+            self.assertIsNone(v.slash_rows("board"))
+            self.assertIsNone(v.slash_rows("other"))
+            self.assertEqual(v.slash_rows("third"), rows[:1])
+        self.run_json.assert_called_with(["aos-agent", "history", "-t", "third", "ls", "-j", "1-"], timeout=8)
+
+    def test_slash_state(self):
+        user = {"message": {"role": "user", "content": "/status", "aos": {"letter": "L-one"}}}
+        answer = {"message": {"role": "assistant", "content": "first\nsecond", "aos": {"answer_to": ["L-other", "L-one"]}}}
+        self.assertEqual(v.slash_state(None, "L-one"), ("unknown", ""))
+        self.assertEqual(v.slash_state([], "L-one"), ("waiting", ""))
+        self.assertEqual(v.slash_state([user], "L-one"), ("doing", ""))
+        self.assertEqual(v.slash_state([user, answer], "L-one"), ("answered", "first\nsecond"))
+        self.assertEqual(v.slash_state([user, answer], "missing"), ("waiting", ""))
+        secret = "sk-" + "a" * 24
+        answer["message"]["content"] = [{"type": "text", "text": secret + "\n" + "x" * 4100}]
+        state, text = v.slash_state([answer], "L-one")
+        self.assertEqual(state, "answered")
+        self.assertEqual(len(text), 4000)
+        self.assertTrue(text.endswith("…"))
+        self.assertNotIn(secret, text)
+        self.assertIn("\n", text)
+
+    def test_slash_results_window_filters_and_limit(self):
+        self.record(age=86401, letter="L-expired")
+        for fields in ({"kind": "compact"}, {"ok": False}, {"letter": None}, {"to": "other"}):
+            self.record(**fields)
+        with (Path(self.home.state) / "sent.jsonl").open("a") as f:
+            f.write("not json\n[]\n")
+        self.assertEqual(v.slash_results(self.home, "board", self.node), {"items": [], "in_turn": False})
+        for i in range(12):
+            self.record(age=20 - i, letter="L-%d" % i)
+        self.node["live"]["in_turn"] = True
+        with patch.object(v, "slash_rows", return_value=[]):
+            got = v.slash_results(self.home, "board", self.node)
+        self.assertTrue(got["in_turn"])
+        self.assertEqual([r["letter"] for r in got["items"]], ["L-%d" % i for i in range(11, 1, -1)])
+        self.assertEqual(set(got["items"][0]), {"letter", "command", "at", "state", "text"})
+        self.assertIsInstance(got["items"][0]["at"], (int, float))
+        with patch.object(v, "slash_sent", return_value=[{"letter": "L-bad-time", "text": "/status", "at": "bad"}]), \
+                patch.object(v, "slash_rows", return_value=[]):
+            self.assertIsNone(v.slash_results(self.home, "board", self.node)["items"][0]["at"])
+        self.assertEqual((got["items"][0]["command"], got["items"][0]["state"], got["items"][0]["text"]),
+                         ("/status", "waiting", ""))
 
     def test_delivery_failure(self):
         self.run.return_value = (1, "", "delivery failed")
@@ -159,7 +310,19 @@ class Slash(unittest.TestCase):
                     with self.subTest(status=status, body=body[:40]):
                         self.assertEqual(req("POST", body, headers)[0], status)
                 status, body = req("POST", payload, h)
-                self.assertEqual((status, json.loads(body)["letter"]), (200, "L-slash"))
+                self.assertEqual((status, json.loads(body)["letter"], json.loads(body)["dup"]), (200, "L-slash", False))
+                status, body = req("POST", payload, h)
+                self.assertEqual((status, json.loads(body)["letter"], json.loads(body)["dup"]), (200, "L-slash", True))
+                self.run.assert_called_once()
+                path = "/api/slash_results?name=board"
+                self.assertEqual(json.loads(req("GET", path=path)[1]), {"items": [{
+                    "letter": "L-slash", "command": "/status", "at": v.parse_time(json.loads(
+                        (Path(self.home.state) / "sent.jsonl").read_text())["at"]), "state": "unknown", "text": ""}],
+                    "in_turn": False})
+                self.assertEqual(req("GET", headers={"Host": "bad"}, path=path)[0], 403)
+                for name in ("", "missing", "proc"):
+                    self.tree["nodes"]["proc"] = {"kind": "proc"}
+                    self.assertEqual(req("GET", path="/api/slash_results?name=" + name)[0], 400)
                 self.assertEqual(req("POST", json.dumps({"name": "board"}), h, "/api/compact")[0], 200)
             finally:
                 srv.shutdown()

@@ -39,6 +39,6 @@ export function cliProblem(n: Node | undefined, cmd: SlashCmd | undefined): stri
   if (!cmd) return "這個指令目前送不進去";
   if (!n.live?.cli || !cmd.cli.includes(n.live.cli)) return `${n.id} 不是 claude／codex 的畫面，收不了這個指令`;
   if (n.state !== "running") return `${n.id} 沒在跑`;
-  if (n.queued) return `${n.id} 信箱還排著 ${n.queued} 封，指令會跟它們併成一批而失效；等它讀完再送`;
+  if (n.queued && cmd.name === "compact") return `${n.id} 信箱還排著 ${n.queued} 封，指令會跟它們併成一批而失效；等它讀完再送`;
   return null;
 }

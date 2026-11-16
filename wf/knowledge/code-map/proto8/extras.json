@@ -40,7 +40,7 @@
     "test_compact_quiet.py": "the compact button's API (/api/compact: a bare \"/compact\", alone) and the quiet-turn light",
     "test_delivery.py": "delivery() marks what the user sent as queued / read / replied / unknown.",
     "test_phase1.py": "phase 1 of aos-view: note, decide, aide-tick, relay ingestion into a temp user zone, answer, match, lights.",
-    "test_slash.py": "test_slash verifies command validation, bare delivery, fixture reloads and masked multiline history.",
+    "test_slash.py": "test_slash verifies slash validation, deduplication, reply states and masked multiline history.",
     "test_v2.py": "the v2 backend (03 §12.3, §12.8): B1 second port, B2 pulse / rev / ETag, B3 outbox, B4 ui-state,"
    },
    "ui": {
@@ -56,7 +56,9 @@
      "dist": {
       "assets": {
        "index-6VunWsOy.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com",
-       "index-tKToQxmL.js": ""
+       "index-CiFlI67e.js": "",
+       "index-tKToQxmL.js": "",
+       "index-utDwwBDI.css": "! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com"
       },
       "index.html": ""
      },
@@ -100,6 +102,7 @@
        "MultiPanel.tsx": "The multi-selection inspector lists each agent and lets the user remove or select one target.",
        "Overview.tsx": "Company overview and details for non-agent nodes.",
        "ReadButtons.tsx": "Read-only CLI buttons use the same slash submission path as the composer.",
+       "SlashResults.tsx": "The inspector shows collapsible slash command status and plain-text results above its tabs.",
        "Thread.tsx": "往來: what you sent to one node and what came back, like a chat (oldest at the top, newest at the bottom).",
        "historyScroll.test.ts": "Regression tests retain bottom-follow through a 48px layout shift and respect upward user scrolling.",
        "historyScroll.ts": "History follows layout growth without mistaking a resize-generated scroll event for user scrolling.",
@@ -156,7 +159,7 @@
       },
       "state": {
        "app.ts": "The two stores of the page: data (what the backend said) and ui (where the user is, what is open).",
-       "hooks.ts": "",
+       "hooks.ts": "React hooks over the page stores: useData, useUi, useNow, and the inbox view (useInbox).",
        "layout.ts": "The two sides open / closed and the tree's open departments (02f §4, q6b a): only the user changes them, by button",
        "mapFold.ts": "The map's folds the user chose (11-15: \"地圖那邊我希望可以折疊\"), per browser like the sizes: localStorage under a",
        "mapOpts.ts": "Map options persist per browser and remain usable when storage is unavailable.",
@@ -167,6 +170,8 @@
        "nav.ts": "Moving around (02c §3.2 with 12.8 #2): click anywhere on a card = select; title / ▸ / double click / Enter = go in",
        "route.ts": "The address bar holds where you are (02c §3.1): #/<dept chain>?sel=<id>&tab=<now|thread|history>&view=<wall|map|todo>&ask=<letter>&q=<question>",
        "sizes.ts": "The user's own sizes (11-15: \"字體大小希望可以調。",
+       "slashResults.test.ts": "Slash result tests cover status wording, exact-command pending detection, refreshes, and inspector polling.",
+       "slashResults.ts": "Per-agent slash results keep pending commands visible and poll only while their inspector is open.",
        "store.ts": "A tiny store on React 19's useSyncExternalStore (03 §12.2: instead of zustand, not on this machine).",
        "wallDetail.ts": "Persist wall-card detail settings per browser while tolerating unavailable localStorage."
       }

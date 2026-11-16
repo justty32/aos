@@ -93,6 +93,9 @@ export interface AgentCard {
 
 export interface SlashCmd { name: string; args: "none" | "optional" | "required"; confirm: boolean; how: "turn" | "screen"; cli: string[] }
 
+export interface SlashResult { letter: string; command: string; at: Epoch | null; state: "waiting" | "doing" | "answered" | "unknown"; text?: string }
+export interface SlashResults { items: SlashResult[]; in_turn: boolean }
+
 export interface OrderKind { kind: "expand" | "hire" | "power"; label: string; to: string | null; fields: string[] }
 
 export type RevKey = "tree" | "asks" | "relay" | "outbox" | "board" | "answered" | "ui_state";

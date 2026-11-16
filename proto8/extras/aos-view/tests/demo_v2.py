@@ -4,6 +4,7 @@
 # fixture letters for the user (VIEW_ASKS_FIXTURE), stub aos-user (VIEW_TOOLS), temp view home.
 # The live daemon and ~/aos-home are never read or written.
 # Run through the task clean.sh wrapper (no AOS_*): python3 tests/demo_v2.py [PORT1 PORT2]
+# VIEW_DEMO_SLASH_DELAY=SECONDS (default 0): a slash sent from the page is answered only after that long (to see the queued state).
 # Prints "READY <tmp> <p1> <p2>" and keeps serving until killed.
 import json
 import os
@@ -31,27 +32,49 @@ root = Path(os.environ["VIEW_DEMO_ROOT"])
 args = sys.argv[1:]
 name = args[args.index("-t") + 1] if "-t" in args else "unknown"
 history = root / ("history-" + name + ".json")
+pending = root / ("pending-" + name + ".json")
+DELAY = float(os.environ.get("VIEW_DEMO_SLASH_DELAY", "0"))   # seconds a slash waits "for the turn to end" before it is answered
+
+
+def settle():
+    # answer the slash letters whose delay is over: a user row with aos.letter, then the answer with aos.answer_to
+    rows = json.loads(history.read_text()) if history.exists() else []
+    waiting = json.loads(pending.read_text()) if pending.exists() else []
+    due = [p for p in waiting if p["due"] <= time.time()]
+    for p in due:
+        command = p["text"].split()[0]
+        content = "[aos] slash: " + command + ": typed into the open screen; it printed:\n"
+        content += "\n".join("Context row %02d: tokens, workspace, tools and the current plan." % i for i in range(35))
+        rows.append({"line": len(rows) + 1, "message": {"role": "user", "content": p["text"], "aos": {"letter": p["letter"]}}})
+        rows.append({"line": len(rows) + 1, "message": {"role": "assistant", "content": content, "aos": {"answer_to": [p["letter"]]}}})
+    if due:
+        history.write_text(json.dumps(rows))
+        pending.write_text(json.dumps([p for p in waiting if p not in due]))
+    return rows
+
+
 if args[0] == "say":
     text = sys.stdin.read()
     with (root / "said.jsonl").open("a") as f:
         f.write(json.dumps({"name": name, "text": text}) + "\n")
-    rows = json.loads(history.read_text()) if history.exists() else []
+    letter = "L-say-" + str(time.time_ns())
     if text.startswith("/"):
-        command = text.split()[0]
-        content = "[aos] slash: " + command + ": typed into the open screen; it printed:\n"
-        content += "\n".join("Context row %02d: tokens, workspace, tools and the current plan." % i for i in range(35))
-        rows.append({"line": len(rows) + 1, "message": {"role": "assistant", "content": content}})
-        history.write_text(json.dumps(rows))
-    print("L-say-" + str(time.time_ns()))
+        waiting = json.loads(pending.read_text()) if pending.exists() else []
+        waiting.append({"letter": letter, "text": text, "due": time.time() + DELAY})
+        pending.write_text(json.dumps(waiting))
+        settle()
+    print(letter)
 elif args[0] == "ctl":
+    hist_rows = settle()
     rows = json.loads((root / "ls.json").read_text())
     row = next(r for r in rows if r["name"] == name)
     print(json.dumps({"state": {"state": row["state"], "phase": "idle", "queued": row["queued"],
                                 "last_answer": "好。" if name == "ok-green-sol-1" else "Context preview (upstream shortened)"},
                       "resources": {"pid": 4242, "memory_bytes": 125829120}, "time": {"up_seconds": 3600},
-                      "who": {"workspace": str(root)}, "mailbox": {"waiting": row["queued"], "letters": []}}))
+                      "who": {"workspace": str(root)}, "mailbox": {"waiting": row["queued"], "letters": []},
+                      "history": {"messages": len(hist_rows)}}))
 elif args[0] == "history":
-    print(history.read_text() if history.exists() else "[]")
+    print(json.dumps(settle()))
 else:
     sys.exit(1)
 """
@@ -134,7 +157,8 @@ def main():
         json.dump(commands, f)
     env = {"PATH": bindir + ":" + os.environ["PATH"], "HOME": os.environ["HOME"], "LANG": "C.UTF-8",
            "PYTHONDONTWRITEBYTECODE": "1", "VIEW_LS_FIXTURE": os.path.join(t, "ls.json"), "AOS_USER_ZONE": zone,
-           "VIEW_TOOLS": tools, "VIEW_ASKS_FIXTURE": asks, "VIEW_SLASH_FIXTURE": slash_fixture, "VIEW_DEMO_ROOT": t}
+           "VIEW_TOOLS": tools, "VIEW_ASKS_FIXTURE": asks, "VIEW_SLASH_FIXTURE": slash_fixture, "VIEW_DEMO_ROOT": t,
+           "VIEW_DEMO_SLASH_DELAY": os.environ.get("VIEW_DEMO_SLASH_DELAY", "0")}
     subprocess.run([VIEW, "--home", home, "init"], env=env, check=True, capture_output=True)
     cfgp = os.path.join(home, "config.json")
     with open(cfgp) as f:

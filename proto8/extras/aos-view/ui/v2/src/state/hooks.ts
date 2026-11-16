@@ -1,3 +1,4 @@
+// React hooks over the page stores: useData, useUi, useNow, and the inbox view (useInbox).
 import { useMemo } from "react";
 import { data, ui, serverNow, type DataState, type UiState } from "./app.ts";
 import { useStore } from "./store.ts";

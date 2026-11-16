@@ -18,10 +18,13 @@ test("resolve rejects unknown, non-CLI, multi irreversible commands and invalid 
   assert.equal("cmd" in resolve("/地圖", { ...ctx, target: null }), true);
   assert.equal("cmd" in resolve("/說 /literal", ctx), true);
 });
-test("CLI preflight rejects stopped, queued, and unsupported targets", () => {
+test("CLI preflight rejects stopped and unsupported targets, and blocks queued compact but not usage", () => {
   const n = { id: "a", kind: "agent", state: "running", queued: 0, live: { cli: "claude" } } as Node;
   assert.equal(cliProblem(n, ctx.slash[0]), null);
-  assert.ok(cliProblem({ ...n, queued: 2 }, ctx.slash[0])?.includes("還排著"));
+  const compact = ctx.slash.find((cmd) => cmd.name === "compact")!;
+  const usage = { ...compact, name: "usage", args: "none" as const };
+  assert.ok(cliProblem({ ...n, queued: 2 }, compact)?.includes("還排著"));
+  assert.equal(cliProblem({ ...n, queued: 2 }, usage), null);
   assert.ok(cliProblem({ ...n, state: "stopped" }, ctx.slash[0])); assert.ok(cliProblem(n, undefined));
 });
 test("command history deduplicates, caps at fifty, and ignores normal text", () => {
