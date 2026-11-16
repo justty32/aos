@@ -1,0 +1,68 @@
+{
+ "board.ts": {
+  "description": "Reading an agent's board/1 (ok-board, board-1114/06 §7.3–§7.4). Pure; the page only reads, never writes for an agent."
+ },
+ "cmdHistory.ts": {
+  "description": "Command history and pins use injected key-value storage and bounded, deduplicated lists."
+ },
+ "commands.test.ts": {
+  "description": "Command tests cover parsing, aliases, backend-only availability, safety rules, history, and pins."
+ },
+ "commands.ts": {
+  "description": "Slash commands combine page actions with the backend-owned CLI command list."
+ },
+ "drafts.ts": {
+  "description": "Drafts (12.8 #5): one per target, every field kept, so switching say / mail / order never loses text."
+ },
+ "inbox.ts": {
+  "description": "The to-do queue (02c §2): four kinds in a fixed order, all derived from data the page already has (no model)."
+ },
+ "keyHelp.test.ts": {
+  "description": "The help reference must keep all eight areas and nonempty shortcut descriptions."
+ },
+ "keyHelp.ts": {
+  "description": "The shortcut reference lists only controls currently available on the page."
+ },
+ "layoutMap.ts": {
+  "description": "The map's layout (P4; 02e §3, q5 a), pure so node --test can check it: \"wide rooms, people before rooms\"."
+ },
+ "lights.test.ts": {
+  "description": "Light tests distinguish own status, descendants, whole rooms, and missing rollup counts."
+ },
+ "lights.ts": {
+  "description": "Separate a node's own light from the warning counts below it or inside a room."
+ },
+ "mapOpts.test.ts": {
+  "description": "Map option tests verify safe parsing, plate sizes, and layout propagation."
+ },
+ "mapOpts.ts": {
+  "description": "Map display options parse persisted values and determine plate dimensions."
+ },
+ "model.test.ts": {
+  "description": "Pure model tests: board, inbox, route, tree rows, palette and map layout (node --test)."
+ },
+ "multi.test.ts": {
+  "description": "Selection tests cover toggles, both range directions, rectangle overlap, and normalization."
+ },
+ "multi.ts": {
+  "description": "Pure selection helpers toggle agents, select ordered ranges, and hit-test map rectangles."
+ },
+ "palette.ts": {
+  "description": "Ctrl+K: find someone, or say what to do first (02d §4.2 \"找人框兼做下命令\"). Pure, so node --test checks it."
+ },
+ "time.ts": {
+  "description": "Time words (pure). The page counts \"N min ago\" itself from epoch fields, on the 10 s local tick (12.8 #7)."
+ },
+ "tree.ts": {
+  "description": "Tree helpers (pure). A department = a node with members (children). The company = the roots that are agents,"
+ },
+ "wallDetail.test.ts": {
+  "description": "Wall detail tests cover parsing, stepping, cycling, overrides, machine limits, and stale ids."
+ },
+ "wallDetail.ts": {
+  "description": "Pure wall-card detail settings support per-node overrides and whole-wall defaults."
+ },
+ "words.ts": {
+  "description": "The back end's light reasons (\"why\") are English (program output stays English, conventions); the page shows them"
+ }
+}

@@ -1,12 +1,12 @@
 // The left department tree (02f §2, q9 a, q10 a): NERDTree-like layout without the TUI look. Rows of 28 px, 14 px per
 // level, arrow / light / short name / head count / up to three badges. Closed departments show the summed badges and
-// the worst light. Clicks and keys as in 02f §2.3–2.4; the selection's departments open and its row scrolls into view.
+// separate below marks. Clicks and keys as in 02f §2.3–2.4; the selection's departments open and its row scrolls into view.
 import { useEffect, useMemo, useRef } from "react";
 import { useData, useInbox, useUi } from "../state/hooks.ts";
 import { caretToComposer, enter, goTo, jump, select } from "../state/nav.ts";
 import { setRight, setTreeOpen, toggleDept, treeOpenSet } from "../state/layout.ts";
 import { bind } from "../input/keys.ts";
-import { Dot } from "../shell/bits.tsx";
+import { BelowMark, Dot } from "../shell/bits.tsx";
 import { MACHINE, openFor, treeRows, type TreeRow } from "../model/tree.ts";
 import { ui } from "../state/app.ts";
 
@@ -17,7 +17,6 @@ function Badges({ r }: { r: TreeRow }) {
   return (
     <span className="ml-auto flex shrink-0 items-center gap-1 text-xs">
       {b.ask > 0 && <span className="min-w-8 rounded bg-sky-900 px-1 text-center text-sky-100" title="要你決定">🔵{badge(b.ask)}</span>}
-      {b.red > 0 && <span className="min-w-8 rounded bg-red-900 px-1 text-center text-red-100" title="出事">🔴{badge(b.red)}</span>}
       {b.reply > 0 && <span className="min-w-8 rounded bg-indigo-900 px-1 text-center text-indigo-100" title="新回覆">✉{badge(b.reply)}</span>}
     </span>
   );
@@ -36,6 +35,7 @@ export function Tree() {
   const tree = useData((s) => s.tree);
   const prefs = useData((s) => s.prefs);
   const sel = useUi((s) => s.route.sel);
+  const ask = useUi((s) => s.route.ask);
   const focus = useUi((s) => s.route.focus);
   const { todo } = useInbox();
   const open = useMemo(() => treeOpenSet(prefs), [prefs, tree]);
@@ -57,6 +57,7 @@ export function Tree() {
   }, [sel, tree, open]);
 
   useEffect(() => {
+    if (ask) return;
     const at = () => rows.findIndex((r) => r.id === cur);
     const move = (d: number) => {
       if (!rows.length) return;
@@ -88,11 +89,11 @@ export function Tree() {
       { key: "h", zone: "tree", run: left }, { key: "ArrowLeft", zone: "tree", run: left },
       { key: "Enter", zone: "tree", run: ent },
     ]);
-  }, [rows, cur]);
+  }, [rows, cur, ask]);
 
   if (!tree) return <div className="min-h-0 flex-1 p-2 text-sm text-slate-500">讀取中…</div>;
   return (
-    <div ref={box} className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1" tabIndex={0} role="tree" aria-label="部門樹">
+    <div ref={box} className="min-h-0 flex-1 overflow-y-scroll px-1.5 py-1" tabIndex={0} role="tree" aria-label="部門樹">
       {rows.map((r) => {
         const on = r.id === cur;
         return (
@@ -106,8 +107,9 @@ export function Tree() {
               ? <button className="flex h-7 w-4 shrink-0 items-center justify-center text-slate-400 hover:text-slate-100" aria-label={r.open ? "收起" : "打開"}
                   onClick={(e) => { e.stopPropagation(); toggleDept(r.id); }}>{r.open ? "▾" : "▸"}</button>
               : <span className="w-4 shrink-0" />}
-            <Dot light={r.light} />
+            {r.id !== MACHINE && <Dot light={r.light} />}
             <span className={`min-w-0 truncate ${r.dept ? "font-semibold" : ""}`}>{r.name}</span>
+            {r.dept && <BelowMark below={r.below} names={tree.nodes[r.id]?.rollup.worst_ids?.filter((id) => id !== r.id)} />}
             {r.dept && <span className="shrink-0 text-xs text-slate-500">{r.members}</span>}
             <Badges r={r} />
           </div>

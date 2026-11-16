@@ -92,7 +92,8 @@ export function Decision({ letter }: { letter: string }) {
     if (!a) return;
     const q = qs[cur];
     const list = (q?.options || []).filter((o) => /^[a-z]$/.test(o.key)).map((o) => ({ key: o.key, zone: "global" as const, run: () => pick(q.id, o.key) }));
-    return bind(list);
+    const numbers = (q?.options || []).slice(0, 9).map((o, i) => ({ key: String(i + 1), zone: "global" as const, run: () => pick(q.id, o.key) }));
+    return bind([...list, ...numbers]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [a, cur, d.answers, order, letter]);
 
@@ -142,12 +143,12 @@ export function Decision({ letter }: { letter: string }) {
               <div className="text-lg font-medium">{q.question}</div>
               {q.eli5 && <div className="mt-1 text-sm text-slate-300">白話：{q.eli5}</div>}
               <div className="mt-3 space-y-2">
-                {q.options.map((o) => {
+                {q.options.map((o, i) => {
                   const on = d.answers[q.id] === o.key;
                   return (
                     <button key={o.key} onClick={() => pick(q.id, o.key)}
                       className={`block w-full rounded px-4 py-2.5 text-left text-[0.9375rem] ${on ? "bg-sky-800 text-white" : "bg-slate-800 hover:bg-slate-700"}`}>
-                      <kbd className="mr-1 text-xs text-slate-400">{o.key}</kbd>{o.label}
+                      {i < 9 && <kbd data-opt-n={i + 1} className="mr-1 text-xs text-sky-300">{i + 1}</kbd>}<kbd className="mr-1 text-xs text-slate-400">{o.key}</kbd>{o.label}
                       {q.recommend === o.key && <span className="ml-1 rounded bg-emerald-900 px-1 text-xs text-emerald-200">推薦</span>}
                       {o.consequence && <span className="block text-xs text-slate-400">→ {o.consequence}</span>}
                     </button>

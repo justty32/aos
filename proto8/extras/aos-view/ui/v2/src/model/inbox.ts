@@ -52,14 +52,14 @@ export function redKey(id: string, why: string): string {
   return `red:${id}:${why.slice(0, 40)}`;
 }
 
-export function buildInbox(x: InboxInput): Todo[] {
+export function buildInbox(x: InboxInput): { todo: Todo[]; hidden: Todo[] } {
   const out: Todo[] = [];
   for (const a of [...x.asks].sort(askOrder)) {
     if (x.answeredHere.has(a.letter) || a.error) continue;
     const nq = a.questions?.length || 0;
     out.push({ key: "ask:" + a.letter, kind: "ask", title: `${a.from || "?"}：${a.title}`, letter: a.letter,
       sub: [a.urgent ? "急" : "", a.risk === "irreversible" ? "不可逆" : "", nq ? `${nq} 題` : a.kind, a.deadline ? `期限 ${a.deadline}` : ""].filter(Boolean).join("｜"),
-      at: a.sent_at, node: a.from && x.tree?.nodes[a.from] ? a.from : null, urgent: a.urgent, canDismiss: false });
+      at: a.sent_at, node: a.from && x.tree?.nodes[a.from] ? a.from : null, urgent: a.urgent, canDismiss: true });
   }
   if (x.tree) {
     for (const n of Object.values(x.tree.nodes)) {
@@ -68,13 +68,12 @@ export function buildInbox(x: InboxInput): Todo[] {
       if (n.team_light?.light === "red") reds.push(n.team_light.why);
       for (const why of reds) {
         const key = redKey(n.id, why);
-        if (x.dismissed[key]) continue;
         out.push({ key, kind: "red", title: n.id, sub: whyWord(why),   // the key keeps the English (dismissals stay valid)
         at: n.active_at, node: n.id, canDismiss: true });
       }
     }
   }
-  const replies = x.relay.filter((l) => l.sent_at && x.now - l.sent_at < 3 * 86400 && !x.seen["in:" + l.letter] && !x.dismissed["in:" + l.letter]);
+  const replies = x.relay.filter((l) => l.sent_at && x.now - l.sent_at < 3 * 86400 && !x.seen["in:" + l.letter]);
   for (const l of replies) {
     out.push({ key: "in:" + l.letter, kind: "reply", title: `${l.from} 回：${l.title}`, sub: statusWord(l.status), at: l.sent_at,
       node: x.tree?.nodes[l.from] ? l.from : null, letter: l.letter, canDismiss: true });
@@ -83,17 +82,21 @@ export function buildInbox(x: InboxInput): Todo[] {
   if (x.tree) {
     for (const w of boardCounts(Object.values(x.tree.nodes), x.now).waitingUser) {
       const key = `bw:${w.id}:${w.what.slice(0, 40)}`;
-      if (x.dismissed[key]) continue;
       out.push({ key, kind: "wait", title: `${w.id} 在等你：${w.what}`, sub: "它的公告寫的", at: w.since, node: w.id, canDismiss: true });
     }
   }
-  const waits = x.outbox.map((o) => ({ o, why: waitReason(o, x.tree, x.now) })).filter((w) => w.why && !x.dismissed["wait:" + w.o.letter]);
+  const waits = x.outbox.map((o) => ({ o, why: waitReason(o, x.tree, x.now) })).filter((w) => w.why);
   waits.sort((a, b) => (a.o.sent_at || 0) - (b.o.sent_at || 0));
   for (const { o, why } of waits) {
     out.push({ key: "wait:" + o.letter, kind: "wait", title: `給 ${o.to} 的${o.kind === "say" ? "話" : o.kind === "order" ? "指令" : "信"}：${o.title}`,
       sub: why!, at: o.sent_at, node: x.tree?.nodes[o.to] ? o.to : null, letter: o.letter, canDismiss: true });
   }
-  return out;
+  return { todo: out.filter((t) => !x.dismissed[t.key]), hidden: out.filter((t) => !!x.dismissed[t.key]) };
+}
+
+/** One shared definition of open tracking rows for both the list and its count. */
+export function trackOpen(outbox: OutItem[], seen: Record<string, number>, dismissed: Record<string, number>): OutItem[] {
+  return outbox.filter((o) => o.followed && !(o.reply && seen["in:" + o.reply.letter]) && !dismissed["wait:" + o.letter]);
 }
 
 export interface Counts { ask: number; red: number; yellow: number; reply: number }

@@ -1,5 +1,6 @@
 // Tree helpers (pure). A department = a node with members (children). The company = the roots that are agents,
 // plus one "machine room" cell holding the procs and outside services (02c §11: drawn as one department cell).
+import { belowOf, roomOf, type Below } from "./lights.ts";
 import type { Light, Node, Tree } from "../api/types.ts";
 
 export const MACHINE = "_machine";
@@ -99,7 +100,8 @@ export interface TreeRow {
   dept: boolean;         // has members (an arrow)
   open: boolean;
   name: string;          // shown name: the parent's prefix cut to "·" (02e §3.1)
-  light: Light;          // closed department = worst below; open department or person = its own
+  light: Light;          // always the node itself; the machine room has no own dot
+  below: Below;
   badges: Badges;        // closed department = summed below; otherwise its own
   members: number;       // a department's head count (rollup.nodes); 0 for a person
 }
@@ -148,10 +150,10 @@ export function treeRows(t: Tree | null, open: Set<string>, replies: Record<stri
     if (id !== MACHINE && !n) return;
     const dept = id === MACHINE || isDept(n);
     const isOpen = dept && open.has(id);
-    const worst = id === MACHINE ? machineRollup(t).worst : n.rollup.worst;
     out.push({
       id, depth, dept, open: isOpen, name: shortName(id, parent),
-      light: dept && !isOpen ? worst : id === MACHINE ? worst : n.light,
+      light: id === MACHINE ? "gray" : n.light,
+      below: id === MACHINE ? roomOf({ rollup: machineRollup(t) }) : belowOf(n),
       badges: dept && !isOpen ? sum(id) : id === MACHINE ? { ask: 0, red: 0, reply: 0 } : own(id),
       members: id === MACHINE ? machineIds(t).length : dept ? n.rollup.nodes : 0,
     });
@@ -165,4 +167,9 @@ export function treeRows(t: Tree | null, open: Set<string>, replies: Record<stri
 export function openFor(t: Tree | null, id: string): string[] {
   const chain = chainOf(t, id);
   return chain.slice(0, -1);
+}
+
+/** Department ids under a node, including that node when it is itself a department. */
+export function deptsUnder(t: Tree, id: string): string[] {
+  return [id, ...descendants(t, id)].filter((k) => isDept(t.nodes[k]));
 }

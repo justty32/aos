@@ -1,6 +1,8 @@
 // The map's folds the user chose (11-15: "地圖那邊我希望可以折疊"), per browser like the sizes: localStorage under a
 // neutral key, every read and write in try/catch (a private window = this session only). The rules are pure in
 // model/layoutMap.ts (userFolded / flipFold / setAllFolds / parseFolds).
+import type { Tree } from "../api/types.ts";
+import { deptsUnder } from "../model/tree.ts";
 import { createStore } from "./store.ts";
 import { flipFold, NO_FOLDS, parseFolds, setAllFolds, type FoldMode, type Folds } from "../model/layoutMap.ts";
 
@@ -19,3 +21,11 @@ function save(f: Folds): void {
 export const toggleFold = (id: string, shownFolded: boolean) => save(flipFold(mapFolds.get().f, id, shownFolded));
 /** 全部折疊 / 全部展開 / back to the automatic steps (null) */
 export const foldAll = (m: FoldMode | null) => save(setAllFolds(m));
+
+/** Apply one explicit fold mode to this department's descendants and optionally itself. */
+export function setFoldsUnder(tree: Tree, room: string, mode: FoldMode, self: boolean): void {
+  const f = mapFolds.get().f;
+  const ids = { ...f.ids };
+  for (const id of deptsUnder(tree, room)) if (self || id !== room) ids[id] = mode;
+  save({ ...f, ids });
+}

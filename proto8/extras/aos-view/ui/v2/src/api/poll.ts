@@ -2,7 +2,7 @@
 // fetched again only when its rev changed (with If-None-Match as a second guard). A 10 s local tick moves the clock
 // so "N min ago" and "waiting long" change on time without new data.
 import { getJson, putUi, session } from "./client.ts";
-import type { Answered, Ask, LetterIn, OrderKind, OutItem, Pulse, RevKey, Tree, UiState, UserBoard } from "./types.ts";
+import type { Answered, Ask, LetterIn, OrderKind, OutItem, Pulse, RevKey, SlashCmd, Tree, UiState, UserBoard } from "./types.ts";
 import { data, type Prefs } from "../state/app.ts";
 
 const last: Partial<Record<RevKey, string>> = {};
@@ -100,6 +100,7 @@ export function onChange(f: (changed: RevKey[]) => void): () => void {
 export async function start(): Promise<void> {
   try { await session(); } catch { /* pulse shows the error */ }
   getJson<{ kinds: OrderKind[] }>("/api/orders").then(({ body }) => data.set({ orders: body.kinds })).catch(() => {});
+  getJson<{ commands: SlashCmd[] }>("/api/slash").then(({ body }) => data.set({ slash: body.commands })).catch(() => data.set({ slash: [] }));
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pulseSoon(50); });
   setInterval(() => data.set({ clock: Date.now() / 1000 }), 10000);
   await pulse();

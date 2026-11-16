@@ -16,14 +16,13 @@ function setRoute(p: Partial<Route>, push: boolean) {
 }
 
 export function select(id: string | null, tab?: Tab) {
-  const r = ui.get().route;
-  setRoute({ sel: id, tab: tab ?? (id === r.sel ? r.tab : "now") }, false);
+  setRoute({ sel: id, ...(tab ? { tab } : {}) }, false);
 }
 
 export function enter(id: string) {
   const t = data.get().tree;
   if (id !== MACHINE && !isDept(t?.nodes[id])) { select(id); return; }
-  setRoute({ focus: id, sel: id === MACHINE ? null : id, tab: "now" }, true);
+  setRoute({ focus: id, sel: id === MACHINE ? null : id }, true);
 }
 
 export function up() {
@@ -32,11 +31,11 @@ export function up() {
   const t = data.get().tree;
   const parent = r.focus === MACHINE ? null : standFor(t, r.focus);
   // (standFor gives null for a child of the sole top department: up goes to the company view)
-  setRoute({ focus: parent, sel: r.focus === MACHINE ? null : r.focus, tab: "now" }, true);
+  setRoute({ focus: parent, sel: r.focus === MACHINE ? null : r.focus }, true);
 }
 
 export function goTo(focus: string | null) {
-  setRoute({ focus, sel: focus && focus !== MACHINE ? focus : null, tab: "now" }, true);
+  setRoute({ focus, sel: focus && focus !== MACHINE ? focus : null }, true);
 }
 
 /** Ctrl+K: stand where id can be seen, select it, caret into the composer. */
@@ -44,7 +43,7 @@ export function jump(id: string, caret = true) {
   const t = data.get().tree;
   const n = t?.nodes[id];
   const focus = n && isDept(n) ? id : standFor(t, id);
-  setRoute({ focus, sel: id, tab: "now" }, true);
+  setRoute({ focus, sel: id }, true);
   if (caret) ui.set({ focusComposer: ui.get().focusComposer + 1 });
 }
 

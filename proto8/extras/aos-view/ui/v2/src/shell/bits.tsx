@@ -1,4 +1,5 @@
 // Small shared pieces: the light dot, the delivery steps, a section title. Agent text always as React text.
+import type { Below } from "../model/lights.ts";
 import type { Delivery, Light, OutItem, ThreadItem } from "../api/types.ts";
 import { hhmm } from "../model/time.ts";
 import { statusWord } from "../model/words.ts";
@@ -10,7 +11,19 @@ export const LIGHT_WORD: Record<Light, string> = { red: "出事", blue: "要你�
 
 export function Dot({ light, title, size = "md" }: { light: Light; title?: string; size?: "sm" | "md" }) {
   const s = size === "sm" ? "h-2 w-2" : "h-2.5 w-2.5";
-  return <span title={title || LIGHT_WORD[light]} className={`inline-block shrink-0 rounded-full ${s} ${LIGHT_BG[light]}`} />;
+  return <span data-own-light={light} title={`自己：${title || LIGHT_WORD[light]}`} className={`inline-block shrink-0 rounded-full ${s} ${LIGHT_BG[light]}`} />;
+}
+
+const BELOW_COLOR = { red: "border-red-500 text-red-400", blue: "border-sky-400 text-sky-300", yellow: "border-amber-400 text-amber-300" };
+
+export function BelowMark({ below, size = "mini", names = [] }: { below: Below; size?: "mini" | "full"; names?: string[] }) {
+  if (!below.worst) return null;
+  const colors = size === "mini" ? [below.worst] : (["red", "blue", "yellow"] as const).filter((c) => below[c] > 0 || c === below.worst);
+  return <span className="inline-flex shrink-0 items-center gap-1 text-xs">
+    {size === "full" && "底下："}
+    {colors.map((c) => <span key={c} data-below={c} className={`inline-flex min-h-3 min-w-3 items-center justify-center rounded-sm border px-0.5 leading-none ${BELOW_COLOR[c]}`}
+      title={`底下 ${below[c] || ""} 個${LIGHT_WORD[c]}${names.length ? `：${names.join("、")}` : ""}`}>{below[c] || ""}</span>)}
+  </span>;
 }
 
 const STEP_WORD: Record<Delivery, string> = { queued: "排隊中", read: "已讀（推定）", replied: "已回", unknown: "狀態不明" };

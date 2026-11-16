@@ -33,13 +33,13 @@ export interface LetterIn {
 export interface Node {
   id: string; kind: "agent" | "proc" | "external"; state: string | null; phase: string | null;
   busy: string | null; queued: number | null; reason: string | null; cooldown: Cooldown | null;
-  light: Light; why: string; parent: string | null; parent_by: string | null; children: string[];
+  light: Light; why: string; why_full?: string; parent: string | null; parent_by: string | null; children: string[];
   rollup: Rollup; active_at: Epoch | null; last_answer: string | null; messages: number | null;
   asks: number; reports: LetterIn[]; tags: string[]; team: string | null; note: Note | null; aide: Aide | null;
   passed: number; team_light: { light: Light; why: string } | null;
   ext?: { url: string; listen: string[] | null; ss_at: Epoch | null };
   board?: Board1 | null;
-  live?: { cli: string; at: Epoch | null; in_turn: boolean } | null;   // the CLI's live stream (claude / codex agents only)
+  live?: { cli: string; at: Epoch | null; in_turn: boolean; screen?: boolean } | null;   // the CLI's live stream (claude / codex agents only)
   quiet?: { what: string; since: string | null; at: string | null; quiet_s: number | null } | null;   // <stack>/quiet.json (writer alive)
 }
 
@@ -85,10 +85,13 @@ export interface UserBoard { at: string | null; text: string; back: string | nul
 export interface AgentCard {
   name: string;
   now: { state: string; phase: string; queued: number | null; busy: string | null; pid: number | null;
-         memory_mb: number | null; up_min: number | null; workspace: string | null; last_answer: string | null };
+         memory_mb: number | null; up_min: number | null; workspace: string | null; last_answer: string | null;
+         last_answer_full?: string | null; last_answer_cut?: boolean };
   mailbox: { waiting: number; letters: { status: string; title: string; from: string; sent_at: Epoch | null }[] };
-  history: { line: number; role: string; text: string; tools: string[] }[];
+  history: { line: number; role: string; text: string; tools: string[]; slash?: string }[];
 }
+
+export interface SlashCmd { name: string; args: "none" | "optional" | "required"; confirm: boolean; how: "turn" | "screen"; cli: string[] }
 
 export interface OrderKind { kind: "expand" | "hire" | "power"; label: string; to: string | null; fields: string[] }
 

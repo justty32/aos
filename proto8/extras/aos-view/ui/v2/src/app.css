@@ -4,3 +4,13 @@ html, body, #root { height: 100%; }
 body { margin: 0; background: #020617; color: #e2e8f0; font-family: system-ui, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
 kbd { font-family: ui-monospace, monospace; }
 :focus-visible { outline: 2px solid #38bdf8; outline-offset: 1px; }
+
+/* Keep scrollbars visible against the dark surfaces throughout the page. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background-color: #475569; border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background-color: #64748b; }
+::-webkit-scrollbar-corner { background: transparent; }
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: #475569 transparent; }
+}

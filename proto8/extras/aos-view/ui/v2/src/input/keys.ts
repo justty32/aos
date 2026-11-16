@@ -11,7 +11,7 @@ export interface KeyLike {
   key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; shiftKey: boolean;
   isComposing?: boolean; keyCode?: number; code?: string;
 }
-export interface Binding { key: string; zone?: Zone | "global"; inInput?: boolean; run: () => void }
+export interface Binding { key: string; zone?: Zone | "global"; inInput?: boolean; when?: (e: KeyboardEvent) => boolean; run: () => void }
 export interface Ctx { inInput: boolean; zone: Zone | null; overlays: number }
 export type Action = { type: "none" } | { type: "blur" } | { type: "overlay" } | { type: "run"; b: Binding };
 
@@ -26,9 +26,9 @@ export function normalize(e: KeyLike): string {
   if (e.altKey) parts.push("alt");
   let k = e.key;
   if (e.altKey && e.code && /^Digit[0-9]$/.test(e.code)) k = e.code.slice(5);   // Alt+1 is "¡" on some layouts
-  if (k.length === 1 && /[A-Z]/.test(k)) {
+  if ((k.length === 1 && /[a-z]/i.test(k)) || k === "Tab") {
     if (e.shiftKey) parts.push("shift");
-    k = k.toLowerCase();
+    if (k !== "Tab") k = k.toLowerCase();
   }
   parts.push(k);
   return parts.join("+");
@@ -37,14 +37,15 @@ export function normalize(e: KeyLike): string {
 export function decide(e: KeyLike, ctx: Ctx, bindings: Binding[]): Action {
   if (composing(e)) return { type: "none" };
   const k = normalize(e);
+  const allowed = (x: Binding) => !x.when || x.when(e as KeyboardEvent);
   if (ctx.inInput) {
     if (k === "Escape") return { type: "blur" };
-    const b = bindings.find((x) => x.key === k && x.inInput);
+    const b = bindings.find((x) => x.key === k && x.inInput && allowed(x));
     return b ? { type: "run", b } : { type: "none" };
   }
   if (k === "Escape" && ctx.overlays > 0) return { type: "overlay" };
   const zone = ctx.zone || "stage";
-  const b = bindings.find((x) => x.key === k && (x.zone === zone)) || bindings.find((x) => x.key === k && (!x.zone || x.zone === "global"));
+  const b = bindings.find((x) => x.key === k && (x.zone === zone) && allowed(x)) || bindings.find((x) => x.key === k && (!x.zone || x.zone === "global") && allowed(x));
   return b ? { type: "run", b } : { type: "none" };
 }
 

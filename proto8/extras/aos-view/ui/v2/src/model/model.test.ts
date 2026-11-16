@@ -1,3 +1,4 @@
+// Pure model tests: board, inbox, route, tree rows, palette and map layout (node --test).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readBoard, boardCounts } from "./board.ts";
@@ -81,9 +82,9 @@ test("inbox: order, answered-here hidden, dismissed and seen", () => {
       risk: "normal" as const, deadline: null, sent_at: NOW - 5, unseen: true, same: 0 }];
   const relay = [{ dir: "in" as const, kind: "mail" as const, letter: "r1", from: "b", to: "user", title: "hi", status: "DONE", what: "", sent_at: NOW - 30, in_reply_to: null }];
   const base = { tree: t, asks, relay, outbox: [], seen: {}, dismissed: {}, answeredHere: new Set<string>(), now: NOW };
-  assert.deepEqual(buildInbox(base).map((x) => x.key), ["ask:q2", "ask:q1", "red:a:crashed: x", "in:r1"]);
+  assert.deepEqual(buildInbox(base).todo.map((x) => x.key), ["ask:q2", "ask:q1", "red:a:crashed: x", "in:r1"]);
   assert.deepEqual(buildInbox({ ...base, answeredHere: new Set(["q2"]), seen: { "in:r1": NOW }, dismissed: { "red:a:crashed: x": NOW } })
-    .map((x) => x.key), ["ask:q1"]);
+    .todo.map((x) => x.key), ["ask:q1"]);
 });
 
 test("route: hash round trip", () => {
@@ -134,7 +135,8 @@ test("tree rows (02f §2): order, closed sums, default open, short names", async
   assert.equal(team.name, "·team");
   assert.equal(team.open, false);
   assert.deepEqual(team.badges, { ask: 2, red: 0, reply: 1 });                                    // closed = summed below
-  assert.equal(team.light, "blue");                                                                // closed = worst below
+  assert.equal(team.light, "green");                                                               // own light even when closed
+  assert.equal(team.below.worst, "blue");
   const closed = treeRows(t, new Set());
   assert.deepEqual(closed.map((r) => r.id), ["boss", "loner", MACHINE]);
   assert.deepEqual(closed[0].badges, { ask: 2, red: 1, reply: 0 });
@@ -344,4 +346,42 @@ test("sizes (11-15): font steps, drag limits, stored values checked", async () =
   assert.deepEqual(parseSizes(null), DEFAULTS);
   assert.deepEqual(parseSizes("not json"), DEFAULTS);
   assert.deepEqual(parseSizes('{"font":9,"left":"x","right":5000,"composer":10}'), { font: FONT_STEPS.length - 1, left: 280, right: 800, composer: 120 });
+});
+
+test("inbox dismissal partitions all four kinds, and restoration returns them to todo", () => {
+  const t = tree([node("a", { light: "red", why: "failed", board: { updated_at: iso(NOW), mode: "here", waiting_on: [{ who: "user", what: "choose", since_at: iso(NOW - 60) }] } })]);
+  const asks = [{ letter: "q", kind: "decide" as const, from: "a", title: "pick", what: "", decide: null, questions: [], urgent: false,
+    risk: "normal" as const, deadline: null, sent_at: NOW - 10, unseen: true, same: 1 }];
+  const relay = [{ dir: "in" as const, kind: "mail" as const, letter: "r", from: "a", to: "user", title: "hi", status: "DONE", what: "", sent_at: NOW - 20, in_reply_to: null }];
+  const base = { tree: t, asks, relay, outbox: [], seen: {}, dismissed: {}, answeredHere: new Set<string>(), now: NOW };
+  const initial = buildInbox(base);
+  assert.deepEqual(initial.todo.map((x) => x.kind), ["ask", "red", "reply", "wait"]);
+  assert.ok(initial.todo.every((x) => x.canDismiss));
+  const dismissed = Object.fromEntries(initial.todo.map((x) => [x.key, NOW]));
+  const hidden = buildInbox({ ...base, dismissed });
+  assert.deepEqual(hidden.todo, []);
+  assert.deepEqual(hidden.hidden, initial.todo);
+  delete dismissed["ask:q"];
+  const restored = buildInbox({ ...base, dismissed });
+  assert.deepEqual(restored.todo.map((x) => x.key), ["ask:q"]);
+  assert.equal(restored.hidden.length, 3);
+  const resolved = buildInbox({ ...base, dismissed, answeredHere: new Set(["q"]), seen: { "in:r": NOW }, tree: tree([node("a")]) });
+  assert.deepEqual(resolved, { todo: [], hidden: [] });
+});
+
+test("trackOpen shares followed, seen reply, and dismissal rules", async () => {
+  const { trackOpen } = await import("./inbox.ts");
+  const make = (letter: string, patch: Partial<OutItem> = {}): OutItem => ({ letter, batch: null, kind: "mail", to: "a", target: null,
+    title: "t", what: "", status: null, sent_at: NOW - 1200, delivery: "queued", queue_ahead: 0, checked_at: null, turn: null,
+    reply: null, order: null, correction_of: null, gone: false, followed: true, ...patch });
+  const rows = [make("open"), make("not-followed", { followed: false }), make("dismissed"),
+    make("seen", { reply: { letter: "reply-seen", status: "DONE", title: "t", at: NOW } }),
+    make("unseen", { reply: { letter: "reply-unseen", status: "DONE", title: "t", at: NOW } })];
+  const seen = { "in:reply-seen": NOW }, dismissed = { "wait:dismissed": NOW };
+  assert.deepEqual(trackOpen(rows, seen, dismissed).map((x) => x.letter), ["open", "unseen"]);
+  assert.deepEqual(trackOpen(rows, seen, {}).map((x) => x.letter), ["open", "dismissed", "unseen"]);
+  const t = tree([node("a")]);
+  const longWait = buildInbox({ tree: t, asks: [], relay: [], outbox: [make("dismissed")], seen: {}, dismissed, answeredHere: new Set(), now: NOW });
+  assert.deepEqual(longWait.todo, []);
+  assert.equal(longWait.hidden[0].key, "wait:dismissed");
 });

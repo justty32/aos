@@ -86,3 +86,13 @@ export function kindWord(n: { kind: string; children?: string[] }): string {
   if (n.kind === "external") return "外部服務";
   return n.children && n.children.length ? "部門" : "";
 }
+
+export const COMMAND_WORDS: Record<string, { label: string; aliases: string[] }> = {
+  say: { label: "說話", aliases: ["說"] }, mail: { label: "寄信", aliases: ["信", "寄信"] },
+  wall: { label: "部門牆", aliases: ["牆"] }, map: { label: "地圖", aliases: ["地圖"] }, todo: { label: "待辦", aliases: ["待辦"] },
+  up: { label: "上一層", aliases: ["上一層"] }, decide: { label: "下一張要你決定", aliases: ["決定"] }, find: { label: "找人", aliases: ["找"] },
+  help: { label: "操作說明", aliases: ["?", "說明"] }, cmds: { label: "指令面板", aliases: ["指令"] },
+  compact: { label: "壓縮", aliases: ["壓縮"] }, status: { label: "狀態", aliases: ["狀態"] }, usage: { label: "用量", aliases: ["用量"] },
+  goal: { label: "目標", aliases: ["目標"] }, clear: { label: "清空", aliases: ["清空"] }, exit: { label: "關畫面", aliases: ["關畫面"] },
+  context: { label: "上下文", aliases: ["上下文"] },
+};

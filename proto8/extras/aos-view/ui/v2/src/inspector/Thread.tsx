@@ -58,7 +58,7 @@ export function Thread({ name }: { name: string }) {
       {live.data?.turn && (
         <p className="mb-1 rounded bg-slate-800 px-2 py-1 text-xs text-amber-200">它正在一輪裡，信箱排著 {live.data.turn.queued} 則；這一輪結束才會讀。</p>
       )}
-      <div ref={box} className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto pr-1"
+      <div ref={box} data-scroll="thread" className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto pr-1"
         onScroll={() => { if (fresh.length && atBottom()) showFresh(); }}>
         {live.error && <p className="text-xs text-red-300">讀不到往來：{live.error}</p>}
         {!live.data && !live.error && <p className="text-xs text-slate-400">讀取中…</p>}

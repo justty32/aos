@@ -11,11 +11,12 @@ import { Stage } from "./stage/Stage.tsx";
 import { Inspector } from "./inspector/Inspector.tsx";
 import { Composer } from "./composer/Composer.tsx";
 import { Dialogs } from "./shell/Dialogs.tsx";
+import { clearMulti } from "./state/multi.ts";
 import { ui, type Filter } from "./state/app.ts";
 import { useData, useUi } from "./state/hooks.ts";
 import { bind } from "./input/keys.ts";
 import { caretToComposer, select, setView } from "./state/nav.ts";
-import { leftOpen, rightOpen, toggleLeft, toggleRight } from "./state/layout.ts";
+import { leftOpen, rightOpen, setRight, toggleLeft, toggleRight } from "./state/layout.ts";
 
 const FILTERS: Filter[] = ["ask", "red", "yellow", "reply"];
 
@@ -23,10 +24,14 @@ export function App() {
   const prefs = useData((s) => s.prefs);
   const sel = useUi((s) => s.route.sel);
   const L = leftOpen(prefs);
-  const R = rightOpen(prefs) && !!sel;
+  const multi = useUi((s) => s.multi);
+  const focusComposer = useUi((s) => s.focusComposer);
+  const R = rightOpen(prefs) && (!!sel || multi.length >= 2 || focusComposer > 0);
   useEffect(() => bind([
-    { key: "/", run: caretToComposer },
-    { key: "mod+k", inInput: true, run: () => ui.set({ searchOpen: true }) },
+    { key: "/", run: () => { setRight(true); caretToComposer(); } },
+    { key: "?", run: () => ui.set({ helpOpen: true }) },
+    { key: "mod+/", inInput: true, run: () => ui.set({ panelOpen: true }) },
+    { key: "mod+k", inInput: true, run: () => ui.set({ searchOpen: true, searchText: "" }) },
     ...FILTERS.map((f, i) => ({ key: `alt+${i + 1}`, run: () => {
       const on = ui.get().filter === f ? null : f;
       ui.set({ filter: on, inboxTab: "todo" as const });
@@ -34,7 +39,7 @@ export function App() {
     } })),
     { key: "[", run: toggleLeft },
     { key: "]", run: toggleRight },
-    { key: "Escape", run: () => { if (ui.get().filter) ui.set({ filter: null }); else select(null); } },
+    { key: "Escape", run: () => { if (ui.get().multi.length) clearMulti(); else if (ui.get().filter) ui.set({ filter: null }); else select(null); } },
   ]), []);
   const col = useRef<HTMLDivElement>(null);
   const comp = useRef<HTMLDivElement>(null);

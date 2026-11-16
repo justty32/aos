@@ -3,9 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { data, ui } from "../state/app.ts";
 import { useData, useInbox, useNow, useUi } from "../state/hooks.ts";
 import { jump, openAsk, select } from "../state/nav.ts";
-import { dismiss, markSeen } from "../api/poll.ts";
+import { dismiss, markSeen, undismiss } from "../api/poll.ts";
 import { bind } from "../input/keys.ts";
-import { trackOrder, waitReason, type Todo, type TodoKind } from "../model/inbox.ts";
+import { trackOpen, trackOrder, waitReason, type Todo, type TodoKind } from "../model/inbox.ts";
 import { ago, dayTime } from "../model/time.ts";
 import { Dot, Steps } from "../shell/bits.tsx";
 import type { OutItem } from "../api/types.ts";
@@ -26,10 +26,11 @@ export function openTodo(t: Todo) {
   }
 }
 
-function TodoRow({ t, active, now }: { t: Todo; active: boolean; now: number }) {
+function TodoRow({ t, active, now, onFocus }: { t: Todo; active: boolean; now: number; onFocus: () => void }) {
+  const tip = t.kind === "ask" ? "先收起（不算回答，對方還在等）" : t.kind === "wait" ? "不等了" : "知道了，從待辦拿掉";
   return (
-    <li className={`group rounded px-2 py-1.5 ${active ? "bg-slate-700" : "hover:bg-slate-800"}`}>
-      <button className="block w-full text-left" onClick={() => openTodo(t)}>
+    <li onFocus={onFocus} className={`flex items-start gap-1 rounded px-2 py-1.5 ${active ? "bg-slate-700" : "hover:bg-slate-800"}`}>
+      <button className="min-w-0 flex-1 text-left" onClick={() => openTodo(t)}>
         <div className="flex items-center gap-1 text-sm">
           {t.urgent && <span className="rounded bg-red-700 px-1 text-xs">急</span>}
           <span className="line-clamp-2">{t.title}</span>
@@ -37,8 +38,8 @@ function TodoRow({ t, active, now }: { t: Todo; active: boolean; now: number }) 
         <div className="text-xs text-slate-400">{t.sub}{t.sub ? "｜" : ""}{ago(t.at, now)}</div>
       </button>
       {t.canDismiss && (
-        <button className="hidden text-xs text-slate-400 hover:text-slate-100 group-hover:inline"
-          onClick={() => dismiss(t.key)}>{t.kind === "wait" ? "不等了" : "知道了"}</button>
+        <button data-x className="w-6 shrink-0 rounded text-slate-400 hover:bg-slate-700 hover:text-slate-100" title={tip} aria-label={tip}
+          onClick={() => dismiss(t.key)}>×</button>
       )}
     </li>
   );
@@ -46,6 +47,7 @@ function TodoRow({ t, active, now }: { t: Todo; active: boolean; now: number }) 
 
 function TodoList() {
   const { todo } = useInbox();
+  const ask = useUi((s) => s.route.ask);
   const filter = useUi((s) => s.filter);
   const tree = useData((s) => s.tree);
   const now = useNow();
@@ -53,13 +55,16 @@ function TodoList() {
   const shown = useMemo(() => todo.filter((t) =>
     !filter || (filter === "ask" && t.kind === "ask") || (filter === "red" && t.kind === "red") ||
     (filter === "reply" && (t.kind === "reply" || t.kind === "wait"))), [todo, filter]);
-  useEffect(() => bind([
+  useEffect(() => { setCur((c) => Math.max(0, Math.min(c, shown.length - 1))); }, [shown.length]);
+  useEffect(() => ask ? undefined : bind([
     { key: "ArrowDown", zone: "inbox", run: () => setCur((c) => Math.min(c + 1, shown.length - 1)) },
     { key: "j", zone: "inbox", run: () => setCur((c) => Math.min(c + 1, shown.length - 1)) },
     { key: "ArrowUp", zone: "inbox", run: () => setCur((c) => Math.max(c - 1, 0)) },
     { key: "k", zone: "inbox", run: () => setCur((c) => Math.max(c - 1, 0)) },
     { key: "Enter", zone: "inbox", run: () => shown[cur] && openTodo(shown[cur]) },
-  ]), [shown, cur]);
+    { key: "x", zone: "inbox", run: () => shown[cur]?.canDismiss && dismiss(shown[cur].key) },
+    { key: "Delete", zone: "inbox", run: () => shown[cur]?.canDismiss && dismiss(shown[cur].key) },
+  ]), [shown, cur, ask]);
 
   if (filter === "yellow") {
     const ys = tree ? Object.values(tree.nodes).filter((n) => n.light === "yellow" || n.team_light?.light === "yellow") : [];
@@ -89,7 +94,7 @@ function TodoList() {
               <button className="ml-auto font-normal text-slate-500 hover:text-slate-200"
                 onClick={() => markSeen(shown.filter((x) => x.kind === "reply").map((x) => x.key))}>全部看過</button>
             )}</li>,
-          <TodoRow key={t.key} t={t} active={i === cur} now={now} />,
+          <TodoRow key={t.key} t={t} active={i === cur} now={now} onFocus={() => setCur(i)} />,
         ];
       })}
     </ul>
@@ -100,8 +105,8 @@ function TrackRow({ o, now }: { o: OutItem; now: number }) {
   const tree = useData((s) => s.tree);
   const why = waitReason(o, tree, now);
   return (
-    <li className="group rounded px-2 py-1.5 hover:bg-slate-800">
-      <button className="block w-full text-left" onClick={() => tree?.nodes[o.to] && (jump(o.to), select(o.to, "thread"))}>
+    <li className="flex items-start gap-1 rounded px-2 py-1.5 hover:bg-slate-800">
+      <button className="min-w-0 flex-1 text-left" onClick={() => tree?.nodes[o.to] && (jump(o.to), select(o.to, "thread"))}>
         <div className="text-sm">
           <span className="text-slate-400">給 {o.to}{o.kind === "order" ? "（指令）" : o.kind === "say" ? "（說話）" : ""}：</span>
           <span className="line-clamp-1">{o.title}</span>
@@ -111,7 +116,7 @@ function TrackRow({ o, now }: { o: OutItem; now: number }) {
         {o.correction_of && <div className="text-xs text-slate-400">更正 {o.correction_of}</div>}
         <div className="text-xs text-slate-500">{dayTime(o.sent_at, now)}{o.batch ? `｜一批 ${o.batch}` : ""}{o.gone ? "｜對方已收隊" : ""}</div>
       </button>
-      {!o.reply && <button className="hidden text-xs text-slate-400 hover:text-slate-100 group-hover:inline" onClick={() => dismiss("wait:" + o.letter)}>不等了</button>}
+      <button data-x className="w-6 shrink-0 rounded text-slate-400 hover:bg-slate-700 hover:text-slate-100" title="不等了" aria-label="不等了" onClick={() => dismiss("wait:" + o.letter)}>×</button>
     </li>
   );
 }
@@ -124,7 +129,7 @@ function Track() {
   const checked = useData((s) => s.outboxChecked);
   const now = useNow();
   // closed = replied and the reply seen, or "不等了"
-  const open = trackOrder(outbox.filter((o) => !(o.reply && seen["in:" + o.reply.letter]) && !dismissed["wait:" + o.letter] && o.followed), tree, now);
+  const open = trackOrder(trackOpen(outbox, seen, dismissed), tree, now);
   return (
     <div>
       <p className="px-2 pb-1 text-xs text-slate-500">送出後 7 天內、還沒結案的。狀態上次查：{checked ? ago(checked, now) : "還沒查"}</p>
@@ -136,9 +141,13 @@ function Track() {
 
 function Done() {
   const answered = useData((s) => s.answered);
+  const dismissed = useData((s) => s.dismissed);
+  const { hidden } = useInbox();
   const now = useNow();
   return (
-    <ul className="space-y-1">
+    <div>
+      <h3 className="px-2 py-1 text-xs font-semibold text-slate-400">回答過的</h3>
+      <ul className="space-y-1">
       {answered.map((a) => (
         <li key={a.letter + a.at} className="rounded px-2 py-1.5 hover:bg-slate-800">
           <div className="text-sm">{a.from || "?"}：{a.title || a.letter}</div>
@@ -152,14 +161,23 @@ function Done() {
           )}
         </li>
       ))}
-      {!answered.length && <p className="px-2 py-6 text-center text-sm text-slate-500">24 小時內沒有在這一頁回答過</p>}
-    </ul>
+      {!answered.length && <li className="px-2 py-6 text-center text-sm text-slate-500">24 小時內沒有在這一頁回答過</li>}
+      </ul>
+      {hidden.length > 0 && <>
+        <h3 className="px-2 pb-1 pt-3 text-xs font-semibold text-slate-400">從待辦拿掉的（14 天內）</h3>
+        <ul className="space-y-1">{hidden.map((t) => <li key={t.key} className="flex items-start gap-2 rounded px-2 py-1.5 hover:bg-slate-800">
+          <div className="min-w-0 flex-1"><div className="break-words text-sm">{t.title}</div><div className="text-xs text-slate-400">{KIND_HEAD[t.kind]}｜{ago(dismissed[t.key], now)}拿掉的</div></div>
+          <button className="shrink-0 text-xs text-sky-300 hover:underline" onClick={() => undismiss(t.key)}>放回去</button>
+        </li>)}</ul>
+      </>}
+    </div>
   );
 }
 
 export function Inbox() {
   const tab = useUi((s) => s.inboxTab);
-  const { todo } = useInbox();
+  const { todo, hidden } = useInbox();
+  const dismissed = useData((s) => s.dismissed);
   const outbox = useData((s) => s.outbox);
   const answered = useData((s) => s.answered);
   const seen = useData((s) => s.seen);
@@ -169,10 +187,10 @@ export function Inbox() {
       {label} {n}
     </button>
   );
-  const tracking = outbox.filter((o) => o.followed && !(o.reply && seen["in:" + o.reply.letter])).length;
+  const tracking = trackOpen(outbox, seen, dismissed).length;
   return (
     <div data-zone="inbox" tabIndex={-1} className="flex min-h-0 flex-1 flex-col focus-within:ring-1 focus-within:ring-sky-700">
-      <div className="flex shrink-0">{tabBtn("todo", "待辦", todo.length)}{tabBtn("track", "追蹤", tracking)}{tabBtn("done", "已處理", answered.length)}</div>
+      <div className="flex shrink-0">{tabBtn("todo", "待辦", todo.length)}{tabBtn("track", "追蹤", tracking)}{tabBtn("done", "已處理", answered.length + hidden.length)}</div>
       <div className="min-h-0 flex-1 overflow-y-auto p-1" tabIndex={0}>
         {tab === "todo" ? <TodoList /> : tab === "track" ? <Track /> : <Done />}
       </div>

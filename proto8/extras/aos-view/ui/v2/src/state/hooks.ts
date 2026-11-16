@@ -10,7 +10,7 @@ export const useNow = (): number => useStore(data, serverNow);
 /** asks answered on this page: hidden at once, before the backend's next tree (v1 0.8 lesson). */
 export const answeredHere = new Set<string>();
 
-export function useInbox(): { todo: Todo[]; counts: ReturnType<typeof headCounts> } {
+export function useInbox(): { todo: Todo[]; hidden: Todo[]; counts: ReturnType<typeof headCounts> } {
   const tree = useData((s) => s.tree);
   const asks = useData((s) => s.asks);
   const relay = useData((s) => s.relay);
@@ -21,7 +21,7 @@ export function useInbox(): { todo: Todo[]; counts: ReturnType<typeof headCounts
   const now = useNow();
   return useMemo(() => {
     const done = new Set([...answeredHere, ...answered.map((a) => a.letter)]);
-    const todo = buildInbox({ tree, asks, relay, outbox, seen, dismissed, answeredHere: done, now });
-    return { todo, counts: headCounts(todo, tree) };
+    const { todo, hidden } = buildInbox({ tree, asks, relay, outbox, seen, dismissed, answeredHere: done, now });
+    return { todo, hidden, counts: headCounts(todo, tree) };
   }, [tree, asks, relay, outbox, seen, dismissed, answered, now]);
 }

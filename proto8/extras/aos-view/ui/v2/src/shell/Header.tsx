@@ -78,9 +78,10 @@ export function Header() {
         {btn("reply", "✉ 新回覆", counts.reply, "bg-indigo-900 text-indigo-100", "4")}
       </div>
       <div className="ml-auto flex items-center gap-3 text-sm">
-        <button className="rounded bg-slate-800 px-2 py-0.5 text-slate-300 hover:bg-slate-700" onClick={() => ui.set({ searchOpen: true })}>
+        <button className="rounded bg-slate-800 px-2 py-0.5 text-slate-300 hover:bg-slate-700" onClick={() => ui.set({ searchOpen: true, searchText: "" })}>
           🔍 找人 <kbd className="text-xs text-slate-500">Ctrl+K</kbd>
         </button>
+        <button className="rounded bg-slate-800 px-2 py-0.5 text-slate-300" onClick={() => ui.set({ panelOpen: true })}>指令 <kbd className="text-xs text-slate-500">Ctrl+/</kbd></button>
         {drafts > 0 && (
           <button className="text-slate-300 hover:underline" onClick={() => ui.set({ draftsOpen: true })}>草稿 {drafts}</button>
         )}

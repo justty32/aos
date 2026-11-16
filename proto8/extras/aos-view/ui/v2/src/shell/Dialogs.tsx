@@ -11,8 +11,9 @@ import { pushOverlay } from "../input/keys.ts";
 import { post } from "../api/client.ts";
 import { pulseSoon } from "../api/poll.ts";
 import { listDrafts, dropDraft } from "../model/drafts.ts";
-import { isDept } from "../model/tree.ts";
 import { ago } from "../model/time.ts";
+import { CommandPanel } from "./CommandPanel.tsx";
+import { HelpDialog } from "./HelpDialog.tsx";
 import { Dot } from "./bits.tsx";
 import { whyWord } from "../model/words.ts";
 
@@ -35,7 +36,7 @@ const closeDrafts = () => ui.set({ draftsOpen: false });
 function Search() {
   const tree = useData((s) => s.tree);
   const { todo } = useInbox();
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(() => ui.get().searchText);
   const [cur, setCur] = useState(0);
   const inp = useRef<HTMLInputElement>(null);
   useEffect(() => { inp.current?.focus(); }, []);
@@ -77,7 +78,7 @@ function Search() {
           {hits.map((n, i) => (
             <li key={n.id}><button onMouseEnter={() => setCur(i)} onClick={() => go(n.id)}
               className={`flex min-h-8 w-full items-center gap-2 rounded px-2 py-1 text-left text-sm ${i === cur ? "bg-slate-700" : ""}`}>
-              <Dot light={isDept(n) ? n.rollup.worst : n.light} size="sm" /><span>{n.id}</span>
+              <Dot light={n.light} size="sm" /><span>{n.id}</span>
               <span className="text-xs text-slate-400">{kindWord(n)}</span>
               <span className="ml-auto truncate text-xs text-slate-400" title={n.why}>{whyWord(n.why)}</span>
             </button></li>
@@ -149,6 +150,8 @@ function Drafts() {
 export function Dialogs() {
   const s = useUi((x) => x.searchOpen);
   const b = useUi((x) => x.boardOpen);
+  const p = useUi((x) => x.panelOpen);
+  const h = useUi((x) => x.helpOpen);
   const d = useUi((x) => x.draftsOpen);
-  return <>{s && <Search />}{b && <Board />}{d && <Drafts />}</>;
+  return <>{s && <Search />}{b && <Board />}{d && <Drafts />}{h && <HelpDialog />}{p && <CommandPanel />}</>;
 }

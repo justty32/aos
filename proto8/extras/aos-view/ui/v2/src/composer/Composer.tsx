@@ -5,23 +5,34 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useStore } from "../state/store.ts";
 import { sizes } from "../state/sizes.ts";
-import { post } from "../api/client.ts";
-import { pulseSoon } from "../api/poll.ts";
 import { ui } from "../state/app.ts";
 import { useData, useUi } from "../state/hooks.ts";
-import { jump } from "../state/nav.ts";
+import { jump, setTab } from "../state/nav.ts";
 import { isSubmit } from "../input/keys.ts";
-import { dropDraft, emptyDraft, loadDraft, saveDraft, type Draft, type Mode } from "../model/drafts.ts";
+import { dropDraft, emptyDraft, loadDraft, saveDraft, type Draft } from "../model/drafts.ts";
 import { displayName } from "../model/tree.ts";
-import { statusWord } from "../model/words.ts";
-
-const MAIL_STATUS = ["REQUEST", "PROGRESS", "DONE", "BLOCKED", "NEEDS-USER", "FAILED"];
-const MODELS = ["chatgpt-gpt-6.1-sol", "opus", "fable", "sonnet", "haiku"];
-const FIELD_WORD: Record<string, string> = { budget: "預算", role: "角色", model: "模型", count: "人數", priority: "優先", quota: "額度" };
+import { ModeFields } from "./ModeFields.tsx";
+import { SlashMenu } from "./SlashMenu.tsx";
+import { CmdSide } from "./CmdSide.tsx";
+import { listCommands, complete, parseLine, type Command } from "../model/commands.ts";
+import { resetHistory } from "../inspector/History.tsx";
+import { readHistory, recordCommand } from "../model/cmdHistory.ts";
+import { pageCommand } from "./commandActions.ts";
+import { useSend } from "./useSend.ts";
 
 export function Composer() {
   const tree = useData((s) => s.tree);
+  const slash = useData((s) => s.slash);
+  const fill = useUi((s) => s.fill);
+  const sendRequest = useUi((s) => s.sendRequest);
+  const flashGo = useUi((s) => s.flashGo);
+  const [menuOff, setMenuOff] = useState(false);
+  const [menuCur, setMenuCur] = useState(0);
+  const [historyAt, setHistoryAt] = useState(-1);
+  const [called, setCalled] = useState("");
+  const [copyText, setCopyText] = useState<string | null>(null);
   const orders = useData((s) => s.orders);
+  const multi = useUi((s) => s.multi);
   const sel = useUi((s) => s.route.sel);
   const focusN = useUi((s) => s.focusComposer);
   const prefill = useUi((s) => s.prefill);
@@ -80,39 +91,16 @@ export function Composer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefill, target]);
 
+  useEffect(() => { if (fill) { put({ text: fill.text }); ui.set({ fill: null }); setMenuOff(true); box.current?.focus(); } }, [fill]);
   const kind = orders.find((o) => o.kind === d.orderKind) || orders[0];
   const orderTo = kind ? kind.to || target : null;
 
-  const send = async () => {
-    if (!target || busy) return;
-    setErr(null);
-    const link = corr ? { correction_of: corr } : {};
-    let r;
-    if (d.mode === "say") {
-      if (!d.text.trim()) return;
-      setBusy(true);
-      r = await post("/api/say", { name: target, text: d.text, ...link });
-    } else if (d.mode === "mail") {
-      if (!d.mailTitle.trim() || !d.text.trim()) { setErr("標題和內容都要填"); return; }
-      setBusy(true);
-      r = await post("/api/mail", { name: target, status: d.mailStatus, title: d.mailTitle, what: d.text, ...link });
-    } else {
-      if (!kind) { setErr("後端沒有給指令種類"); return; }
-      if (!d.text.trim()) { setErr("要寫清楚要什麼"); return; }
-      setBusy(true);
-      const f: Record<string, string> = {};
-      for (const k of kind.fields) if (d.fields[k]?.trim()) f[k] = d.fields[k].trim();
-      r = await post("/api/order", { kind: kind.kind, target, what: d.text, ...f, ...link });
-    }
-    setBusy(false);
-    if (!r.ok) { setErr(r.message || "送不出去"); return; }
+  const sending = useSend({ target, busy, multi, d, corr, kind, setErr, setBusy, put, success: () => {
     if (saveT.current) { clearTimeout(saveT.current); saveT.current = null; }
     dropDraft(localStorage, target);
     setD({ ...emptyDraft(), mode: d.mode, mailStatus: d.mailStatus, orderKind: d.orderKind });
     setCorr(null);
-    ui.set({ flash: r.message || "已送出" });
-    pulseSoon();
-  };
+  } });
 
   const throwAway = () => {
     if (!confirm("丟掉這份草稿？")) return;
@@ -122,68 +110,80 @@ export function Composer() {
     setCorr(null);
   };
 
-  const modeBtn = (m: Mode, label: string) => (
-    <button onClick={() => put({ mode: m })} disabled={!target}
-      className={`rounded px-2.5 py-1 text-xs ${d.mode === m ? "bg-slate-200 text-slate-900" : "bg-slate-800 text-slate-300 hover:bg-slate-700"} disabled:opacity-40`}>{label}</button>
-  );
+  const send = sending.send;
+  useEffect(() => { if (sendRequest) { ui.set({ sendRequest: 0 }); send(); } }, [sendRequest]);
+  const parsed = parseLine(d.text);
+  const cmds = listCommands({ orders, slash, cli: n?.live?.cli ?? null, multi: multi.length, target });
+  const matches = complete(d.text, cmds);
+  const menu = !menuOff && /^\/\S*$/.test(d.text);
+  const choose = (c: Command) => {
+    setMenuOff(true);
+    if (c.group === "page" && c.args === "none") { pageCommand(c.name); recordCommand(localStorage, "/" + c.name, target, Date.now() / 1000); ui.set({ cmdRev: ui.get().cmdRev + 1 }); put({ text: "" }); }
+    else if (c.group === "talk") { if (!target) { setErr("先選一個 agent"); return; } put({ mode: c.name === "mail" ? "mail" : "say", text: "" }); recordCommand(localStorage, "/" + c.name, target, Date.now() / 1000); ui.set({ cmdRev: ui.get().cmdRev + 1 }); }
+    else put({ text: "/" + c.name + " " });
+    box.current?.focus();
+  };
+  const copyOpen = async () => {
+    const line = `aos-agent open --target ${target}`;
+    try { await navigator.clipboard.writeText(line); ui.set({ flash: `已複製：${line}，貼到你的終端機`, flashGo: null }); }
+    catch { setCopyText(line); }
+  };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col border-t border-slate-800 bg-slate-900 p-3" data-composer>
+    <div className="@container flex min-h-0 flex-1 flex-col border-t border-slate-800 bg-slate-900 p-3" data-composer onKeyDownCapture={(e) => {
+      if (!sending.confirm || e.nativeEvent.isComposing || !["Enter", "Escape"].includes(e.key)) return;
+      e.preventDefault(); e.stopPropagation(); if (e.key === "Escape") sending.cancel(); else send();
+    }}>
       <div className="mb-2 flex shrink-0 flex-wrap items-center gap-2">
         {target
-          ? <span className="max-w-48 truncate rounded bg-sky-900 px-2 py-0.5 text-xs text-sky-100" title={target}>對：{displayName(target)}</span>
-          : <button className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300" onClick={() => ui.set({ searchOpen: true })}>
+          ? <span className="max-w-48 truncate rounded bg-sky-900 px-2 py-0.5 text-xs text-sky-100" title={multi.length >= 2 ? multi.join("、") : target}>對：{multi.length >= 2 ? `${multi.length} 個` : displayName(target)}</span>
+          : <button className="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-300" onClick={() => ui.set({ searchOpen: true, searchText: "" })}>
               {n ? `${n.id} 不收話；` : ""}對：＋點這裡或按 Ctrl+K 選對象</button>}
-        {modeBtn("say", "說話")}{modeBtn("mail", "寄信")}{modeBtn("order", "指令")}
+        <button data-mode className="rounded bg-slate-800 px-2 py-1 text-xs" title="/say 切說話，/mail 切寄信；董事長令從指令面板切換" onClick={() => ui.set({ panelOpen: true })}>{d.mode === "say" ? "說話" : d.mode === "mail" ? "寄信" : `董事長令：${kind?.label || ""}`} ▾</button>
+        {d.mode !== "say" && <button title="回說話" onClick={() => put({ mode: "say" })}>×</button>}
+        {n?.live?.cli && <button className="text-xs text-sky-300" onClick={copyOpen}>⧉ 開畫面</button>}
         {corr && <span className="truncate rounded bg-amber-900 px-1.5 text-xs text-amber-100" title={corr}>更正 {corr}
           <button className="ml-1" onClick={() => setCorr(null)}>×</button></span>}
       </div>
 
-      {d.mode === "mail" && (
-        <div className="mb-2 flex shrink-0 gap-1">
-          <select value={d.mailStatus} onChange={(e) => put({ mailStatus: e.target.value })} className="rounded bg-slate-800 px-1 text-xs">
-            {MAIL_STATUS.map((s) => <option key={s} value={s}>{statusWord(s)}</option>)}
-          </select>
-          <input value={d.mailTitle} onChange={(e) => put({ mailTitle: e.target.value })} placeholder="標題（一行看得懂）" maxLength={300}
-            onKeyDown={(e) => { if (isSubmit(e.nativeEvent)) { e.preventDefault(); send(); } }}
-            className="min-w-0 flex-1 rounded bg-slate-800 px-1.5 py-0.5 text-sm" />
+      {copyText && <input readOnly autoFocus onFocus={(e) => e.currentTarget.select()} value={copyText} className="mb-1 w-full rounded bg-slate-800 p-1 text-xs" />}
+      <ModeFields d={d} put={put} send={send} orders={orders} kind={kind} target={target} orderTo={orderTo} />
+      {sending.confirm && <div data-confirm className="mb-1 rounded bg-red-950 p-2 text-xs text-red-200">{sending.confirm}</div>}
+      <div className={`flex min-h-0 flex-col gap-2 @[520px]:flex-row ${fixed ? "flex-1" : ""}`}>
+        <div className="relative min-w-0 flex-1">
+          {menu && <SlashMenu commands={matches} current={menuCur} choose={choose} />}
+          <textarea ref={box} value={d.text} onChange={(e) => { put({ text: e.target.value }); setMenuOff(false); setMenuCur(0); setHistoryAt(-1); sending.cancel(); }} rows={2}
+            placeholder={!target ? "可用 /map、/find；說話先選 agent" : d.mode === "say" ? `對 ${target} 說…` : d.mode === "mail" ? "信的內容…" : "要什麼、為什麼…"}
+            onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+              if (sending.confirm && (e.key === "Enter" || e.key === "Escape")) { e.preventDefault(); e.stopPropagation(); if (e.key === "Escape") sending.cancel(); else send(); return; }
+              if (menu && !e.ctrlKey && !e.metaKey && !e.shiftKey && ["ArrowUp", "ArrowDown", "Tab", "Enter", "Escape"].includes(e.key)) {
+                e.preventDefault(); e.stopPropagation();
+                if (e.key === "Escape") setMenuOff(true);
+                else if (e.key === "ArrowUp" || e.key === "ArrowDown") setMenuCur((v) => Math.max(0, Math.min(matches.length - 1, v + (e.key === "ArrowUp" ? -1 : 1))));
+                else if (matches[menuCur]) { if (e.key === "Enter" && d.text === "/" + matches[menuCur].name && matches[menuCur].group === "cli") send(); else choose(matches[menuCur]); }
+                else if (e.key === "Enter") send();
+                return;
+              }
+              if ((e.key === "ArrowUp" || e.key === "ArrowDown") && (!d.text || d.text === called)) {
+                const rows = readHistory(localStorage); const i = Math.min(rows.length - 1, Math.max(-1, historyAt + (e.key === "ArrowUp" ? 1 : -1))); const text = rows[i]?.line || "";
+                e.preventDefault(); setHistoryAt(i); setCalled(text); put({ text }); setMenuOff(true); return;
+              }
+              if (isSubmit(e.nativeEvent) || (parsed && !d.text.includes("\n") && e.key === "Enter" && !e.shiftKey)) { e.preventDefault(); send(); }
+            }}
+            className={`w-full overflow-y-auto rounded bg-slate-800 p-2.5 text-[0.9375rem] leading-6 ${fixed ? "h-full min-h-0 resize-none" : "max-h-[40vh] min-h-11 resize-none"}`} />
         </div>
-      )}
-      {d.mode === "order" && (
-        <div className="mb-2 shrink-0 space-y-1">
-          <div className="flex flex-wrap gap-1">
-            {orders.map((o) => (
-              <button key={o.kind} onClick={() => put({ orderKind: o.kind })}
-                className={`rounded px-2 py-0.5 text-xs ${kind?.kind === o.kind ? "bg-amber-700 text-white" : "bg-slate-800 text-slate-300"}`}>{o.label}</button>
-            ))}
-          </div>
-          {kind && (
-            <div className="flex flex-wrap gap-1">
-              {kind.fields.map((k) => k === "model" ? (
-                <select key={k} value={d.fields[k] || ""} onChange={(e) => put({ fields: { ...d.fields, [k]: e.target.value } })} className="rounded bg-slate-800 px-1 text-xs">
-                  <option value="">模型（不指定）</option>{MODELS.map((m) => <option key={m}>{m}</option>)}
-                </select>
-              ) : (
-                <input key={k} type={k === "count" ? "number" : "text"} min={k === "count" ? 1 : undefined} max={k === "count" ? 20 : undefined}
-                  value={d.fields[k] || ""} onChange={(e) => put({ fields: { ...d.fields, [k]: e.target.value } })}
-                  placeholder={FIELD_WORD[k] || k} className="w-24 rounded bg-slate-800 px-1.5 py-0.5 text-xs" />
-              ))}
-            </div>
-          )}
-          {target && orderTo && <p className="text-xs text-slate-400">這張單會寄給 {orderTo}{orderTo !== target ? `（關於 ${target}）` : ""}；頁面不直接動樹，對方照自己的規矩辦。</p>}
-        </div>
-      )}
-      <textarea ref={box} value={d.text} onChange={(e) => put({ text: e.target.value })} rows={2} disabled={!target}
-        placeholder={!target ? "先選一個 agent" : d.mode === "say" ? `對 ${target} 說…（進它的對話）` : d.mode === "mail" ? "信的內容…（進它的信箱）" : "要什麼、為什麼…"}
-        onKeyDown={(e) => { if (d.mode !== "order" && isSubmit(e.nativeEvent)) { e.preventDefault(); send(); } }}
-        className={`w-full overflow-y-auto rounded bg-slate-800 p-2.5 text-[0.9375rem] leading-6 disabled:opacity-40 ${fixed ? "min-h-0 flex-1 resize-none" : "max-h-[40vh] min-h-11 resize-none"}`} />
+        <CmdSide />
+      </div>
+      {parsed && <p className="mt-1 truncate text-xs text-slate-500">{cmds.find((c) => c.name === parsed.name)?.group === "cli" ? `/${parsed.name}：原樣送進 ${target} 的畫面，不加「使用者經全景頁」的開頭` : `/${parsed.name}：執行這一頁的指令`}</p>}
       <div className="mt-2 flex shrink-0 items-center gap-2">
-        <button onClick={send} disabled={!target || busy}
+        <button onClick={send} disabled={busy}
           className={`rounded px-4 py-1.5 text-sm font-medium disabled:opacity-40 ${d.mode === "order" ? "bg-amber-700 hover:bg-amber-600" : "bg-sky-700 hover:bg-sky-600"}`}>
-          {busy ? "送出中…" : d.mode === "say" ? "說" : d.mode === "mail" ? "寄出" : "下指令"}
+          {busy ? (flash?.startsWith("送出中") ? flash : "送出中…") : parsed ? (cmds.find((c) => c.name === parsed.name)?.group === "cli" ? "送進畫面" : "執行") : multi.length >= 2 ? "群發" : d.mode === "say" ? "說" : d.mode === "mail" ? "寄出" : "下指令"}
         </button>
-        <span className="text-xs text-slate-500">{d.mode === "order" ? "按按鈕送出" : "Ctrl+Enter 送出"}</span>
+        <span className="text-xs text-slate-500">{parsed ? "Enter 執行，Shift+Enter 換行" : d.mode === "order" ? "按按鈕送出" : "Ctrl+Enter 送出"}</span>
         {(d.text || d.mailTitle) && <button className="text-xs text-slate-500 hover:text-slate-200" onClick={throwAway}>丟掉草稿</button>}
+        {flashGo && <button data-flash-go className="text-xs text-sky-300" onClick={() => { const id = ui.get().flashTarget || target; if (id) { resetHistory(id); jump(id, false); } ui.set({ historyJump: Date.now() }); setTab("history"); }}>去看 ▸</button>}
         <span className={`ml-auto truncate text-xs ${err ? "text-red-300" : "text-emerald-300"}`} title={err || flash || ""}>{err || flash || ""}</span>
       </div>
     </div>
