@@ -19,6 +19,7 @@
   3. fsm 腦：<stack>/observed.jsonl 最後 256 KiB 裡最後一則有用量的 think；視窗用 window 參數，或 think/brain_wait.json 指的 kernel 公開的 endpoints.json。
   explain(stack, window=None) 回一行英文讀數或讀不到的原因，不印東西。codex 身目前沒有讀法＝None。
 """
+import glob
 import hashlib
 import json
 import os
@@ -112,6 +113,124 @@ def from_claude_live(stack):
     window = windows.get(model) or max(windows.values())
     turn = "claude:" + hashlib.sha256(evs[last][0]).hexdigest()[:16]
     return _row(used, window, turn, path)
+
+
+TRANSCRIPT_DONE = ("end_turn", "stop_sequence", "max_tokens", "pause_turn", "refusal")   # 講完一輪的 stop_reason（不含 tool_use 與 None）
+SID_CHARS = set("0123456789abcdefABCDEF-")
+
+
+def _transcript_path(cell):
+    """claude 的 session id（cell/session.txt）指的 transcript：先找小格的 transcripts/claude-<id>.jsonl symlink（cli_cell.link_transcript），
+    再找 CLI 自己的帳號資料夾（CLAUDE_CONFIG_DIR 或 ~/.claude）的 projects/*/<id>.jsonl。找不到＝None。"""
+    try:
+        with open(os.path.join(cell, "session.txt"), encoding="utf-8") as f:
+            sid = f.read().strip()
+    except (OSError, UnicodeDecodeError):
+        return None
+    if not sid or not set(sid) <= SID_CHARS:            # 只認 uuid 形狀：不讓 session.txt 的字變成 glob
+        return None
+    link = os.path.join(cell, "transcripts", "claude-%s.jsonl" % sid)
+    if os.path.isfile(link):
+        return link
+    base = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    found = [p for p in glob.glob(os.path.join(glob.escape(base), "projects", "*", sid + ".jsonl")) if os.path.isfile(p)]
+    return max(found, key=os.path.getmtime) if found else None    # 同一個 id 在兩個專案夾：取最新寫的
+
+
+def _live_windows(stack):
+    """live.jsonl（-p 那幾輪）的 result 裡記過的 contextWindow：{model: window}，後面的蓋前面的。"""
+    windows = {}
+    for _, ev in _events(os.path.join(stack, "claude", "live.jsonl")):
+        mu = ev.get("modelUsage") if ev.get("type") == "result" else None
+        if isinstance(mu, dict):
+            for name, row in mu.items():
+                if isinstance(row, dict) and _whole(row.get("contextWindow")) and row["contextWindow"] > 0:
+                    windows[name] = row["contextWindow"]
+    return windows
+
+
+TRANSCRIPT_BLOCK = 1024 * 1024
+TRANSCRIPT_SCAN = 64 * 1024 * 1024    # 倒著讀最多這麼多：transcript 很大（含整份 request 的 api-request-blob），一輪的工具呼叫可以好幾 MiB
+
+
+def _transcript_rows(path):
+    """transcript 的行，從檔尾往前（新的先）；只 parse 看起來像 assistant 或 compact_boundary 的行。讀到檔頭或 TRANSCRIPT_SCAN 為止。"""
+    try:
+        f = open(path, "rb")
+    except OSError:
+        return
+    with f:
+        f.seek(0, os.SEEK_END)
+        pos = f.tell()
+        rest, read = b"", 0
+        while pos > 0 and read < TRANSCRIPT_SCAN:
+            step = min(TRANSCRIPT_BLOCK, pos)
+            pos -= step
+            read += step
+            f.seek(pos)
+            lines = (f.read(step) + rest).split(b"\n")
+            rest = lines.pop(0) if pos > 0 else b""          # 最前面那段可能被切半，留給下一塊
+            for line in reversed(lines):
+                if b'"assistant"' not in line and b"compact_boundary" not in line:
+                    continue
+                try:
+                    ev = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(ev, dict):
+                    yield ev
+
+
+def _turn_usage(ev):
+    """一則講完一輪的主對話 assistant 的 (usage, model, id)；不是或 usage 不完整＝None。"""
+    msg = ev.get("message")
+    if not isinstance(msg, dict) or msg.get("stop_reason") not in TRANSCRIPT_DONE:
+        return None
+    u = msg.get("usage")
+    if not isinstance(u, dict) or not any(k in u for k in INPUT_KEYS) or not all(_whole(u.get(k, 0)) for k in INPUT_KEYS):
+        return None
+    mid = next((x for x in (msg.get("id"), ev.get("uuid")) if isinstance(x, str) and x), None)
+    return u, msg.get("model"), mid
+
+
+def _transcript_reading(stack, window=None):
+    """(有沒有 transcript, 讀數或 None, 讀不到的原因)。transcript＝claude 自己存的對話檔，畫面開著（互動）跟 -p 的每一輪都寫在裡面；
+    從檔尾往前找最後一則主對話（isSidechain 不是 true）、stop_reason 是講完一輪、usage 完整的 assistant 的 message.usage（算法同 live）；
+    先碰到主對話的 compact_boundary＝壓完還沒講完一輪＝None。transcript 沒有 contextWindow：
+    視窗＝window 參數（hook 的 config.window），沒給＝live.jsonl 舊 result 記的（同 model，找不到取最小的），都沒有＝None。"""
+    path = _transcript_path(os.path.join(stack, "claude"))
+    if path is None:
+        return False, None, None
+    hit = None
+    for ev in _transcript_rows(path):                    # 新的先：第一個主對話的 compact_boundary 或講完一輪的 assistant 定案
+        if ev.get("isSidechain") is True:
+            continue
+        if ev.get("type") == "system" and ev.get("subtype") == "compact_boundary":
+            break                                         # 壓過了、壓完還沒講完一輪
+        if ev.get("type") == "assistant":
+            hit = _turn_usage(ev)                         # usage 壞掉的那則略過，看更早的
+            if hit is not None:
+                break
+    if hit is None:
+        return True, None, ("claude transcript: no finished turn with usage since the last compaction "
+                            "(read back at most %d MiB) in %s" % (TRANSCRIPT_SCAN // 1048576, path))
+    usage, model, mid = hit
+    if window is None:
+        windows = _live_windows(stack)
+        window = (windows.get(model) or min(windows.values())) if windows else None   # 不知道 model：取小的，寧早勿晚
+        if window is None:
+            return True, None, ("claude transcript: no context window known (claude/live.jsonl has no result with "
+                                "contextWindow yet); set config.window in the hook entry")
+    turn = "claude-transcript:%s" % (mid or hashlib.sha256(json.dumps(usage, sort_keys=True).encode()).hexdigest()[:16])
+    got = _row(sum(usage.get(k, 0) for k in INPUT_KEYS), window, turn, path)
+    return True, got, None if got is not None else "claude transcript: window must be a positive integer"
+
+
+def from_claude(stack, window=None):
+    """claude 身：transcript 找得到就以它為準（畫面開著也讀得到；它讀不到＝None，不退回 live，免得壓完讀到壓之前的數字），
+    找不到（還沒有 session、--no-session-persistence、檔被 CLI 清掉）才讀 live.jsonl。"""
+    has, got, _ = _transcript_reading(stack, window)
+    return got if has else from_claude_live(stack)
 
 
 OBSERVED = "observed.jsonl"

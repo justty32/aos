@@ -77,10 +77,16 @@ out({"type": "system", "session_id": sid})
 result = {"type": "result", "is_error": False, "session_id": sid, "result": "FAKE: " + lines[-1]}
 if os.environ.get("FAKE_CLI_USAGE"):
     used, window = (int(x) for x in os.environ["FAKE_CLI_USAGE"].split("/"))
-    if prompt.strip() == "/compact" or prompt.strip().startswith("/compact "):
+    usage = {"input_tokens": 3, "cache_creation_input_tokens": 7, "cache_read_input_tokens": used - 10, "output_tokens": 5}
+    compacting = prompt.strip() == "/compact" or prompt.strip().startswith("/compact ")
+    if compacting:
         out({"type": "system", "subtype": "compact_boundary", "session_id": sid})
     else:
-        out({"type": "assistant", "parent_tool_use_id": None, "session_id": sid, "message": {"model": "fake-model", "usage": {
-            "input_tokens": 3, "cache_creation_input_tokens": 7, "cache_read_input_tokens": used - 10, "output_tokens": 5}}})
+        out({"type": "assistant", "parent_tool_use_id": None, "session_id": sid, "message": {"model": "fake-model", "usage": usage}})
+    with open(conv, "a", encoding="utf-8") as f:   # 11-16 ok-small：真的 CLI 也把這些寫進自己的 transcript（2.1.325 實測的形狀）
+        f.write(json.dumps({"type": "system", "subtype": "compact_boundary", "isSidechain": False} if compacting else
+                           {"type": "assistant", "isSidechain": False, "message": {
+                               "id": "msg_" + os.urandom(6).hex(), "model": "fake-model",
+                               "stop_reason": "end_turn", "usage": usage}}) + "\n")
     result["modelUsage"] = {"fake-model": {"contextWindow": window}}
 out(result)
