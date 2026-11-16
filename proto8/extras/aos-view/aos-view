@@ -1489,6 +1489,7 @@ SLASH_CMDS = [
                                 ("usage", "none", False), ("goal", "optional", False),
                                 ("clear", "none", True), ("exit", "none", True))
 ]
+SLASH_CMDS.append({"name": "context", "args": "none", "confirm": False, "how": "screen", "cli": ["claude"]})   # aos-eca screen_slash.SCREEN_ONLY
 
 
 def slash_commands():

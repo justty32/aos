@@ -57,7 +57,7 @@ class Slash(unittest.TestCase):
         self.run.assert_not_called()
 
     def test_known_command_gate(self):
-        self.assertIn("目前送不進去", self.send("/context"))
+        self.assertIn("目前送不進去", self.send("/unknown"))
         self.run.assert_not_called()
 
     def test_argument_gate(self):
@@ -126,7 +126,7 @@ class Slash(unittest.TestCase):
         self.assertTrue(self.send("/context").startswith("!"))
         self.node["live"]["cli"] = "claude"
         p.write_text(json.dumps(v.SLASH_CMDS))
-        self.assertIn("目前送不進去", self.send("/context"))
+        self.assertIn("目前送不進去", self.send("/unknown"))
 
     def test_http_gates_and_get_shape(self):
         collector = type("Collector", (), {"get": lambda _: (self.tree, None)})()
@@ -151,7 +151,7 @@ class Slash(unittest.TestCase):
                 p = self.fixture([])
                 self.assertEqual(json.loads(req("GET")[1]), {"commands": []})
                 p.write_text(json.dumps(v.SLASH_CMDS))
-                self.assertEqual(len(json.loads(req("GET")[1])["commands"]), 6)
+                self.assertEqual(len(json.loads(req("GET")[1])["commands"]), 7)
                 for headers, body, status in (({}, payload, 415), (dict(h, Host="bad"), payload, 403),
                     (dict(h, Origin="http://bad"), payload, 403), (dict(h, Cookie="aosview=bad"), payload, 403),
                     (dict(h, **{"X-View-Token": "bad"}), payload, 403), (h, "{", 400),

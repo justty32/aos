@@ -13,6 +13,7 @@ from .common import Fail, cli_ask, cli_base, cli_cell, cli_hook, letters_answere
 from .history import append_history, history_rows, note_sum
 from .hook import fire
 from .handoff import Handoff
+from .screen_slash import SCREEN_ONLY, screen_slash
 
 
 # ---- ⑭ slash 指令（11-12 thinking eca-slash；使用者「aos-say/listen我希望也能支援這些」「chat也要」）----
@@ -82,7 +83,7 @@ def slash_of(bodies, goal):
         return GOAL
     if is_compact(text):
         return COMPACT
-    return text if text in SLASH else None
+    return text if text in SLASH or text in SCREEN_ONLY else None
 
 
 def cli_goal(kind, transcript):
@@ -230,6 +231,10 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
         else:
             text = note("/goal: codex has /goal only on its screen (codex exec would read it as a plain question); "
                         "open the screen (aos-agent open) and send it again")
+    elif command in SCREEN_ONLY:                                    # 只打進畫面的指令（全景頁第 13 條 B 段）：busy＝None＝信留著
+        text = screen_slash(command, cfg, cell, stack)
+        if text is None:
+            return 0
     elif command == "/status":
         text = slash_status(cfg, cell, stack)
     elif command == "/usage":
