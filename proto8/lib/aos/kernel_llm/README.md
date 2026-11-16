@@ -69,6 +69,8 @@ exit 10
 
 回信裡的代號（一封信的錯不是總機的錯，一輪照樣退 0）：`LetterBad`、`RequestBad`、`EndpointMissing`、`EndpointUnknown`、`DirectiveBad`、`CfgBad`、`DeadlineBad`、`BudgetMissing`、`LaunchFailed`、`EndpointFailed`、`ReplyBad`、`HookRejected`，以及端點函數自己回的錯誤物件。
 
+收成品時，總機自己產生的掛載失敗、重掛兩次仍沒結果、停太久、逾時、非 0 退出的普通文字與看不懂的成功輸出，錯誤物件另帶 `retry: true`；`WriteFailed` 與總機拒絕請求的錯誤不帶。端點函數非 0 退出時送來的合格單行錯誤物件原樣轉交，`retry`、`status` 等欄位與型別都不改。
+
 ## 跟 C++ 那支的差別
 
 歷史對照，給讀舊紀錄的人：

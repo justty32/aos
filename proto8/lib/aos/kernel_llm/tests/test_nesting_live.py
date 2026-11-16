@@ -195,7 +195,7 @@ print(json.dumps(reply))
     def test_nonzero_structured_and_plain_errors(self):
         self.start()
         for mode, expected in (('error', ERROR), ('text', {'error': {'code': 'EndpointFailed',
-                    'msg': 'endpoint function exited with code 1: plain failure'}})):
+                    'msg': 'endpoint function exited with code 1: plain failure', 'retry': True}})):
             with self.subTest(mode=mode):
                 name, folder, _, proc = self.send(endpoint=mode)
                 result, body, row = self.receive(name, folder)

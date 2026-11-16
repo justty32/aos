@@ -89,7 +89,7 @@ class NestingFixtures(unittest.TestCase):
                 self.prepare(name, {'error': {'code': 'X', 'msg': 'y'}}, code=code)
                 body = self.reply_body(name)
                 self.assertEqual(body, {'error': {'code': 'EndpointFailed',
-                                                'msg': 'endpoint function timed out (1 ms)'}})
+                                                'msg': 'endpoint function timed out (1 ms)', 'retry': True}})
                 self.assertEqual(self.ledger()[-1]['code'], 'EndpointFailed')
 
     def test_zero_timeout_has_no_inst_deadline_or_late_classification(self):

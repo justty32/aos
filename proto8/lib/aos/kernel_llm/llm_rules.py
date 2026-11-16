@@ -274,26 +274,31 @@ def outcome(ctx, name, folder, result):
     """runner 交出的結果解讀成回信。"""
     kind = result["kind"]
     if kind == "launch":
-        return error_reply("LaunchFailed", result["msg"])
+        return error_reply("LaunchFailed", result["msg"], extra={"retry": True})
     if kind == "twice":
-        return error_reply("EndpointFailed", "the brain call ran twice without a result (stopped or died midway)")
+        return error_reply("EndpointFailed", "the brain call ran twice without a result (stopped or died midway)",
+                           extra={"retry": True})
     if kind == "stopped":
         return error_reply("EndpointFailed", "the brain call %s was stopped on the daemon and not started again "
-                                             "within %d s; gave up on it" % (result["name"], result["seconds"]))
+                                             "within %d s; gave up on it" % (result["name"], result["seconds"]),
+                           extra={"retry": True})
     if kind == "write":
         return error_reply("WriteFailed", result["msg"])
     code = result["code"]
     stdout = os.path.join(folder, "reply.json")
     if code == 0:
         got = reply_of(read_any(stdout))
-        return got if got is not None and "error" not in got else error_reply("ReplyBad", REPLY_BAD)
+        return got if got is not None and "error" not in got else error_reply("ReplyBad", REPLY_BAD,
+                                                                             extra={"retry": True})
     if result["timed_out"]:
-        return error_reply("EndpointFailed", "endpoint function timed out (%d ms)" % ctx.cfg["timeout_ms"])
+        return error_reply("EndpointFailed", "endpoint function timed out (%d ms)" % ctx.cfg["timeout_ms"],
+                           extra={"retry": True})
     error = read_error(stdout)
     if error is not None:
         return error
     line = first_line(stdout) or first_line(os.path.join(folder, "stderr.txt"))
-    return error_reply("EndpointFailed", "endpoint function exited with code %d" % code + (": " + line if line else ""))
+    return error_reply("EndpointFailed", "endpoint function exited with code %d" % code + (": " + line if line else ""),
+                       extra={"retry": True})
 
 
 @guarded
