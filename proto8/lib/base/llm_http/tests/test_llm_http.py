@@ -1,4 +1,4 @@
-"""Test llm_http key handling, structured failures, HTTP classification and one local retry."""
+"""Test llm_http key handling, structured failures, HTTP classification, one local retry and timeouts."""
 
 import email.utils
 import http.server
@@ -34,6 +34,39 @@ class FakeEndpoint(http.server.BaseHTTPRequestHandler):
         self.server.seen.append(dict(self.headers))
         spec = self.server.replies.pop(0) if self.server.replies else {}
         mode = spec.get("mode")
+        if mode == "silent":                               # 連上、收了請求，一直不回
+            self.server.release.wait(20)
+            return
+        if mode == "trickle_headers":                      # 表頭一點一點滴：socket 逾時管不到，靠期限的保底
+            try:
+                self.wfile.write(b"HTTP/1.1 200 OK\r\n")
+                while not self.server.release.wait(0.2):
+                    self.wfile.write(b"X-Slow: 1\r\n")
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            self.close_connection = True
+            return
+        if mode in ("stall_body", "trickle", "slow_ok"):
+            body = json.dumps(REPLY).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body) if mode == "slow_ok" else 100000))
+            self.end_headers()
+            try:
+                if mode == "stall_body":                   # 回到一半停住
+                    self.wfile.write(body[:10])
+                    self.server.release.wait(20)
+                elif mode == "trickle":                    # 一點一點滴，永遠滴不完
+                    while not self.server.release.wait(0.2):
+                        self.wfile.write(b" ")
+                else:                                      # 正常但慢：每段間隔比閒置限短，總時間比它長
+                    for i in range(0, len(body), 12):
+                        self.wfile.write(body[i:i + 12])
+                        time.sleep(0.3)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            self.close_connection = True
+            return
         if mode == "disconnect":
             self.close_connection = True
             return
@@ -63,13 +96,16 @@ class FakeEndpoint(http.server.BaseHTTPRequestHandler):
 
 class LlmHttpTest(unittest.TestCase):
     def setUp(self):
-        self.server = http.server.HTTPServer(("127.0.0.1", 0), FakeEndpoint)
+        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), FakeEndpoint)
+        self.server.daemon_threads = True
         self.server.seen, self.server.status, self.server.replies = [], 200, []
+        self.server.release = threading.Event()
         self.thread = threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
         self.thread.start()
         self.url = "http://127.0.0.1:%d/v1" % self.server.server_address[1]
 
     def tearDown(self):
+        self.server.release.set()
         self.server.shutdown()
         self.server.server_close()
         self.thread.join()
@@ -77,6 +113,16 @@ class LlmHttpTest(unittest.TestCase):
     def arguments(self):
         return {"endpoint": {"url": self.url, "model": "m"},
                 "request": {"messages": [{"role": "user", "content": "hi"}]}}
+
+    def timed(self, **kw):
+        started = time.monotonic()
+        result = self.call(**kw)
+        return result, time.monotonic() - started
+
+    def with_endpoint(self, **settings):
+        args = self.arguments()
+        args["endpoint"].update(settings)
+        return args
 
     def call(self, key=None, key_env=True, args=None, raw=None, flags=None, runner=RUNNER):
         env = {k: v for k, v in os.environ.items() if k != VAR}
@@ -337,6 +383,118 @@ class LlmHttpTest(unittest.TestCase):
         self.assertEqual(reply["message"]["tool_calls"][0]["function"]["name"], "test")
         self.assertNotIn("extra", reply["message"]["tool_calls"][0])
         self.assertNotIn("tries", reply)
+
+    def test_silent_endpoint_times_out_without_local_retry(self):
+        self.server.replies = [{"mode": "silent"}, {}]
+        result, took = self.timed(args=self.with_endpoint(read_timeout_s=1))
+        error = self.failure(result, "EndpointFailed", True, 1)
+        self.assertIn("timed out waiting for the reply from", error["msg"])
+        self.assertIn("nothing for 1 s (read_timeout_s)", error["msg"])
+        self.assertLess(took, 5)
+        self.assertEqual(len(self.server.seen), 1)
+
+    def test_body_stalled_halfway_times_out_with_status(self):
+        self.server.replies = [{"mode": "stall_body"}, {}]
+        result, took = self.timed(args=self.with_endpoint(read_timeout_s=1))
+        error = self.failure(result, "EndpointFailed", True, 1, 200)
+        self.assertIn("timed out reading the reply from", error["msg"])
+        self.assertLess(took, 5)
+        self.assertEqual(len(self.server.seen), 1)
+
+    def test_slow_reply_with_short_gaps_is_not_a_timeout(self):
+        self.server.replies = [{"mode": "slow_ok"}]
+        args = self.with_endpoint(read_timeout_s=1)
+        args["priority"] = {"deadline": time.time() + 30}
+        (code, out, err), took = self.timed(args=args)
+        self.assertEqual((code, err), (0, ""), out)
+        self.assertEqual(json.loads(out)["message"]["content"], "hi")
+        self.assertGreater(took, 1.5)
+
+    def test_trickle_stops_at_kernel_deadline(self):
+        self.server.replies = [{"mode": "trickle"}, {}]
+        args = self.arguments()
+        args["priority"] = {"level": "normal", "deadline": time.time() + 3}
+        result, took = self.timed(args=args)
+        error = self.failure(result, "EndpointFailed", True, 1, 200)
+        self.assertIn("at the llm kernel deadline (priority.deadline)", error["msg"])
+        self.assertGreater(took, 1.5)
+        self.assertLess(took, 3.5)
+        self.assertEqual(len(self.server.seen), 1)
+
+    def test_silent_endpoint_stops_at_kernel_deadline_before_read_limit(self):
+        self.server.replies = [{"mode": "silent"}]
+        args = self.with_endpoint(read_timeout_s=60)
+        args["priority"] = {"deadline": time.time() + 2.5}
+        result, took = self.timed(args=args)
+        error = self.failure(result, "EndpointFailed", True, 1)
+        self.assertIn("priority.deadline", error["msg"])
+        self.assertLess(took, 3)
+
+    def test_trickling_headers_stop_at_kernel_deadline(self):
+        self.server.replies = [{"mode": "trickle_headers"}, {}]
+        args = self.with_endpoint(read_timeout_s=60)
+        args["priority"] = {"deadline": time.time() + 3}
+        result, took = self.timed(args=args)
+        error = self.failure(result, "EndpointFailed", True, 1)
+        self.assertIn("priority.deadline", error["msg"])
+        self.assertLess(took, 3.5)
+        self.assertEqual(len(self.server.seen), 1)
+
+    def test_system_timeout_with_no_limit_still_prints_structured_error(self):
+        runner = RUNNER.replace("with patch('time.sleep') as sleep:",
+                                "import socket\nwith patch('socket.create_connection', side_effect=TimeoutError('timed out')), patch('time.sleep') as sleep:")
+        error = self.failure(self.call(args=self.with_endpoint(connect_timeout_s=0), runner=runner),
+                             "EndpointFailed", True, 1)
+        self.assertIn("system timeout; connect_timeout_s is 0 = no limit", error["msg"])
+
+    def test_passed_deadline_is_not_sent(self):
+        for offset in (-10, 0.5):
+            with self.subTest(offset=offset):
+                args = self.arguments()
+                args["priority"] = {"deadline": time.time() + offset}
+                error = self.failure(self.call(args=args), "EndpointFailed", True, 0)
+                self.assertIn("has passed; not sent", error["msg"])
+        self.assertEqual(self.server.seen, [])
+
+    def test_no_local_retry_close_to_deadline(self):
+        self.server.replies = [{"body": {}}, {}]
+        args = self.arguments()
+        args["priority"] = {"deadline": time.time() + 2.5}
+        self.failure(self.call(args=args), "ReplyBad", True, 1, 200)
+        self.assertEqual(len(self.server.seen), 1)
+
+    def test_unusable_deadline_is_ignored(self):
+        for deadline in ("2026-01-01T00:00:00Z", True, None, float("nan")):
+            with self.subTest(deadline=deadline):
+                args = self.arguments()
+                args["priority"] = {"deadline": deadline}
+                raw = json.dumps(args)
+                code, out, err = self.call(raw=raw)
+                self.assertEqual((code, err), (0, ""), out)
+
+    def test_connect_timeout_uses_setting_and_is_temporary(self):
+        runner = RUNNER.replace("with patch('time.sleep') as sleep:",
+                                "import socket\nseen = []\n"
+                                "def stuck(address, timeout=None, *a, **k):\n"
+                                "    seen.append(timeout)\n"
+                                "    raise TimeoutError('timed out')\n"
+                                "with patch('socket.create_connection', side_effect=stuck), patch('time.sleep') as sleep:")
+        runner = runner.replace("    finally:\n", "    finally:\n        assert seen == [2.5], seen\n")
+        error = self.failure(self.call(args=self.with_endpoint(connect_timeout_s=2.5), runner=runner),
+                             "EndpointFailed", True, 1)
+        self.assertIn("timed out connecting to", error["msg"])
+        self.assertIn("nothing for 2.5 s (connect_timeout_s)", error["msg"])
+        self.assertEqual(self.server.seen, [])
+
+    def test_zero_means_no_limit_and_bad_settings_are_refused(self):
+        code, out, err = self.call(args=self.with_endpoint(connect_timeout_s=0, read_timeout_s=0))
+        self.assertEqual((code, err), (0, ""), out)
+        for name in ("connect_timeout_s", "read_timeout_s"):
+            for bad in (-1, "10", True, None, [1]):
+                with self.subTest(name=name, bad=bad):
+                    error = self.failure(self.call(args=self.with_endpoint(**{name: bad})), "ArgumentsBad", False, 0)
+                    self.assertIn("endpoint.%s" % name, error["msg"])
+        self.assertEqual(len(self.server.seen), 1)
 
 
 if __name__ == "__main__":

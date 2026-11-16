@@ -406,7 +406,7 @@
    "llm_fake/": "假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4）",
    "llm_http": {
     "tests": {
-     "test_llm_http.py": "Test llm_http key handling, structured failures, HTTP classification and one local retry."
+     "test_llm_http.py": "Test llm_http key handling, structured failures, HTTP classification, one local retry and timeouts."
     }
    },
    "llm_http/": "endpoint 函數：從自己的環境讀金鑰，把請求 POST 到 OpenAI 相容端點，印剪過的回覆",

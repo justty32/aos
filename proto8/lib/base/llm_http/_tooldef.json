@@ -1,7 +1,8 @@
 {"description": "Send one OpenAI chat completions request to a compatible endpoint, reading an optional Bearer key from --key-env NAME in this process; returns the assistant message, usage and the model that answered. Errors: ArgumentsBad, KeyBad, EndpointFailed, ReplyBad. Agents normally do not call this: their brain goes through the llm kernel.",
  "parameters": {"type": "object", "additionalProperties": true,
   "properties": {"key_env": {"type": "string", "description": "environment variable name to read the Bearer key from in this process; optional; if omitted, unset or empty, no Authorization header is sent (an HTTP 401/403 reply then names the unset variable); a value with non-ASCII, space or control characters is KeyBad"},
-                 "endpoint": {"type": "object", "description": "one endpoint: url (up to /v1), model, fixed (optional fields that override the request); model always comes from here; key is not accepted"},
-                 "request": {"type": "object", "description": "an OpenAI chat completions body without the endpoint: messages required; tools, temperature, model optional"}},
+                 "endpoint": {"type": "object", "description": "one endpoint: url (up to /v1), model, fixed (optional fields that override the request); model always comes from here; key is not accepted; optional connect_timeout_s (connect, TLS and sending, default 10) and read_timeout_s (longest wait with no reply data, default 900), seconds, 0 = no limit"},
+                 "request": {"type": "object", "description": "an OpenAI chat completions body without the endpoint: messages required; tools, temperature, model optional"},
+                 "priority": {"type": "object", "description": "set by the llm kernel; if priority.deadline (epoch seconds) is given, every wait ends 1 s before it; a timeout is EndpointFailed with retry true"}},
   "required": ["endpoint", "request"]},
  "errors": ["ArgumentsBad", "KeyBad", "EndpointFailed", "ReplyBad"]}
