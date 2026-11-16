@@ -117,8 +117,90 @@ class BrainNotify(unittest.TestCase):
         self.assertEqual(len(self.calls()), 1)
         self.run_hook(event=dict(self.event, name="BrainFailed", reason="endpoint unavailable"))
         self.assertEqual(len(self.calls()), 2)
-        self.assertEqual(json.loads(self.seen.read_text()), {"code": "BrainFailed", "history_lines": 0})
-        self.assertEqual(self.calls()[-1][-3], "worker: brain refused (BrainFailed), waiting")
+        self.assertEqual(json.loads(self.seen.read_text()), {"kind": "stopped", "code": "BrainFailed", "history_lines": 0, "attempt": 0})
+        self.assertEqual(self.calls()[-1][-3], "worker: brain failed (BrainFailed), stopped")
+
+    def failed(self, **fields):
+        event = dict(self.event, name='BrainFailed', code='ReplyBad', retry=True, attempt=1,
+                     status=200, error={'msg': 'no choices'}, reason='aos-llm recv exited 1')
+        event.update(fields)
+        return event
+
+    def test_retrying_first_two_silent_third_notifies_once_then_rearms(self):
+        for attempt in (1, 2):
+            r = self.run_hook(self.failed(attempt=attempt))
+            self.assertEqual((r.stdout, r.stderr), ('', ''))
+            self.assertEqual(self.calls(), [])
+            self.assertEqual(json.loads(self.seen.read_text()), {'kind': 'retrying', 'armed': True})
+        self.run_hook(self.failed(attempt=3))
+        call = self.calls()[0]
+        self.assertEqual(call[call.index('--status') + 1], 'BLOCKED')
+        self.assertEqual(call[call.index('--title') + 1], 'worker: brain failed (ReplyBad), retrying by itself')
+        for text in ('no choices', 'status 200', 'tried 3 times', 'keeps retrying by itself', 'use stop'):
+            self.assertIn(text, call[-1])
+        self.assertEqual(json.loads(self.seen.read_text()), {'kind': 'retrying', 'armed': False})
+        for attempt in (3, 4, 10):
+            self.run_hook(self.failed(attempt=attempt))
+            self.assertEqual(len(self.calls()), 1)
+        for attempt in (1, 2, 3):
+            self.run_hook(self.failed(attempt=attempt))
+        self.assertEqual(len(self.calls()), 2)
+
+    def test_attempt_over_three_without_record_still_notifies(self):
+        self.run_hook(self.failed(attempt=4))
+        self.assertEqual(len(self.calls()), 1)
+        self.run_hook(self.failed(attempt=5))
+        self.assertEqual(len(self.calls()), 1)
+
+    def test_same_history_retrying_then_stopped_still_sends_and_deduplicates_attempt(self):
+        for attempt in (1, 3):
+            self.run_hook(self.failed(attempt=attempt))
+        stopped = self.failed(retry=False, attempt=4, status=401, code='EndpointFailed', error={'msg': 'unauthorized'})
+        self.run_hook(stopped)
+        self.assertEqual(len(self.calls()), 2)
+        call = self.calls()[-1]
+        self.assertEqual(call[call.index('--title') + 1], 'worker: brain failed (EndpointFailed), stopped')
+        self.assertIn('unauthorized', call[-1])
+        self.assertIn('status 401', call[-1])
+        self.assertIn('start the agent again', call[-1])
+        self.assertNotIn('until', call[-1])
+        self.assertEqual(json.loads(self.seen.read_text()),
+                         {'kind': 'stopped', 'code': 'EndpointFailed', 'history_lines': 0, 'attempt': 4})
+        self.run_hook(stopped)
+        self.assertEqual(len(self.calls()), 2)
+        self.run_hook(dict(stopped, attempt=5))
+        self.assertEqual(len(self.calls()), 3)
+
+    def test_stopped_without_code_uses_name_and_reason(self):
+        event = self.failed(retry=False)
+        for field in ('code', 'error', 'status', 'attempt'):
+            event.pop(field)
+        self.run_hook(event)
+        call = self.calls()[0]
+        self.assertEqual(call[call.index('--title') + 1], 'worker: brain failed (BrainFailed), stopped')
+        self.assertIn(event['reason'], call[-1])
+        self.assertNotIn('status', call[-1])
+
+    def test_retry_not_boolean_true_sends_stopped(self):
+        for attempt, retry in enumerate(('true', 1, None), 1):
+            self.run_hook(self.failed(retry=retry, attempt=attempt))
+            self.assertTrue(self.calls()[-1][-3].endswith(', stopped'))
+        self.assertEqual(len(self.calls()), 3)
+
+    def test_stopped_says_start_waits_out_the_cooldown(self):
+        (self.agent / 'cooldown.json').write_text(json.dumps({'until': '2026-11-16T09:45:00Z'}))
+        self.run_hook(self.failed(retry=False))
+        text = self.calls()[-1][-1]
+        self.assertIn('after start it first waits out its cooldown', text)
+        self.assertNotIn('09:45', text)
+
+    def test_retrying_failed_send_does_not_disarm_and_can_retry(self):
+        self.run_hook(self.failed(attempt=1))
+        self.warning(self.run_hook(self.failed(attempt=3), env=dict(self.env, FAKE_FAIL='1')), 'CommandFailed')
+        self.assertEqual(json.loads(self.seen.read_text()), {'kind': 'retrying', 'armed': True})
+        self.run_hook(self.failed(attempt=4))
+        self.assertEqual(len(self.calls()), 2)
+        self.assertEqual(json.loads(self.seen.read_text()), {'kind': 'retrying', 'armed': False})
 
     def test_corrupt_record_sends_once_and_rewrites(self):
         self.seen.write_text('{"code":')
@@ -189,7 +271,7 @@ class BrainNotify(unittest.TestCase):
     def test_template_mount(self):
         hooks = json.loads((PROTO / "templates" / "agent-fsm" / "hooks.json").read_text())
         self.assertEqual(hooks["hooks"]["brain_notify"],
-                         {"event": "brain_failed", "condition": ["BudgetMissing"],
+                         {"event": "brain_failed", "condition": ["BudgetMissing", "BrainFailed"],
                           "handler": {"$env": "AOS_HOME", "$path": "/lib/agent/brain_notify"},
                           "on_error": "continue", "timeout_ms": 10000})
         self.assertIn("AOS_NOTIFY_BOX", hooks["description"])

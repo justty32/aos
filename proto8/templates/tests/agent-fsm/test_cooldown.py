@@ -90,7 +90,12 @@ sys.exit(code)
     def test_brain_failed_cools_then_retries_and_clears(self):
         self.lettered()
         self.wait(10)                                    # 寄出（history 最後一則剝掉 aos 才跟 request 比：不算過期）
-        result = self.wait(1, FAKE_RECV='1')             # kernel 回錯
+        self.capture_failures()
+        permanent = json.dumps({'error': {'code': 'EndpointFailed', 'msg': 'unauthorized', 'retry': False, 'status': 401}})
+        result = self.wait(1, FAKE_RECV='1', FAKE_REPLY=permanent)  # kernel 永久錯誤
+        self.assertIs(self.events()[-1]['retry'], False)
+        self.assertEqual((self.events()[-1]['code'], self.events()[-1]['status'], self.events()[-1]['attempt']),
+                         ('EndpointFailed', 401, 1))
         self.assertIn('agent-fsm: error: BrainFailed', result.stderr)
         self.assertEqual(self.letters()['pending'], ['L1'])   # 腦失敗：pending 留著（head-tools 裁 5a）
         rec = self.record()
@@ -103,7 +108,8 @@ sys.exit(code)
         self.past()
         self.wait(10)                                    # 到了：重寄同一份
         self.assertEqual(self.sends(), 2)
-        self.wait(1, FAKE_RECV='1')
+        self.wait(1, FAKE_RECV='1', FAKE_REPLY=permanent)
+        self.assertEqual(self.events()[-1]['attempt'], 2)
         rec = self.record()
         self.assertEqual(rec['failures'], 2)
         self.assertEqual(self.gap(rec), 60)
@@ -116,6 +122,137 @@ sys.exit(code)
         last = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
         self.assertEqual(last, {'role': 'assistant', 'content': 'ok', 'aos': {'answer_to': ['L1']}})   # 失敗前交出的信算進這則
         self.assertEqual(self.letters()['pending'], [])
+
+    def capture_failures(self):
+        self.event_log = self.root / 'events.jsonl'
+        self.command('capture', '''import json, os, sys
+with open(os.environ['EVENT_LOG'], 'a') as f:
+    f.write(json.dumps(json.load(sys.stdin)) + '\\n')
+''')
+        self.env['EVENT_LOG'] = str(self.event_log)
+        path = self.definition / 'interfaces.json'
+        files = json.loads(path.read_text())
+        files['aos-agent']['hooks'] = 'hooks.json'
+        path.write_text(json.dumps(files))
+        (self.definition / 'hooks.json').write_text(json.dumps({'hooks': {
+            'capture': {'event': 'brain_failed', 'handler': str(self.root / 'capture')}
+        }}))
+
+    def events(self):
+        return [json.loads(line) for line in self.event_log.read_text().splitlines()]
+
+    def temporary(self, **fields):
+        error = dict(code='ReplyBad', msg='no choices', retry=True, status=200)
+        error.update(fields)
+        return self.wait(10, FAKE_RECV='1', FAKE_REPLY=json.dumps({'error': error}))
+
+    def test_temporary_retries_same_request_without_history_change_then_clears(self):
+        self.capture_failures()
+        request = (self.stack / 'think/request.json').read_bytes()
+        history = (self.stack / 'history.jsonl').read_bytes()
+        for attempt, gap in enumerate((30, 60, 120), 1):
+            self.wait(10)
+            result = self.temporary()
+            self.assertNotIn('agent-fsm: error:', result.stderr)
+            self.assertIn('attempt %d' % attempt, result.stderr)
+            rec = self.record()
+            self.assertEqual((rec['failures'], rec['code'], rec['dropped'], self.gap(rec)),
+                             (attempt, 'BrainFailed', 0, gap))
+            event = self.events()[-1]
+            self.assertEqual((event['name'], event['code'], event['retry'], event['attempt'], event['wait_s'], event['status']),
+                             ('BrainFailed', 'ReplyBad', True, attempt, gap, 200))
+            self.assertEqual(event['error']['msg'], 'no choices')
+            self.assertEqual((self.stack / 'history.jsonl').read_bytes(), history)
+            self.assertEqual((self.stack / 'think/request.json').read_bytes(), request)
+            self.wait(10)
+            self.assertEqual(self.sends(), attempt)
+            self.past()
+        self.wait(10)
+        sent = [json.loads(line).encode() for line in (self.root / 'requests.jsonl').read_text().splitlines()]
+        self.assertEqual(sent, [request] * 4)
+        self.wait(0)
+        self.assertFalse((self.stack / cooldown.NAME).exists())
+        rows = [json.loads(line) for line in (self.stack / 'observed.jsonl').read_text().splitlines()]
+        self.assertEqual(sum(row['kind'] == 'think' for row in rows), 4)
+
+    def test_temporary_has_no_attempt_limit(self):
+        self.capture_failures()
+        for _ in range(20):
+            cooldown.fail(str(self.stack), 'BrainFailed', 'earlier failure')
+        self.past()
+        self.wait(10)
+        self.temporary()
+        self.assertEqual((self.record()['failures'], self.gap(self.record())), (21, 1800))
+        self.assertEqual(self.events()[-1]['attempt'], 21)
+
+    def test_retry_after_bounds_types_and_repeated_count(self):
+        self.capture_failures()
+        cases = [(100, 100), (5, 30), (99999, 1800), (100.5, 100.5),
+                 (True, 30), (False, 30), (-5, 30), ('100', 30), (None, 30), ([], 30)]
+        for value, gap in cases:
+            with self.subTest(value=value):
+                cooldown.clear(str(self.stack))
+                self.wait(10)
+                self.temporary(retry_after_s=value)
+                self.assertAlmostEqual(self.gap(self.record()), gap, delta=1)
+                self.assertEqual(self.events()[-1]['wait_s'], gap)
+        cooldown.clear(str(self.stack))
+        for attempt in (1, 2):
+            self.wait(10)
+            self.temporary(retry_after_s=100)
+            self.assertEqual((self.record()['failures'], self.gap(self.record())), (attempt, 100))
+            self.assertEqual(self.events()[-1]['attempt'], attempt)
+            self.past()
+
+    def test_other_cooldown_codes_reset_temporary_attempt(self):
+        self.capture_failures()
+        for code in ('BudgetMissing', 'SendFailed'):
+            with self.subTest(code=code):
+                cooldown.clear(str(self.stack))
+                for _ in range(3):
+                    cooldown.fail(str(self.stack), code, 'earlier failure')
+                self.past()
+                self.wait(10)
+                self.temporary()
+                self.assertEqual((self.record()['failures'], self.gap(self.record())), (1, 30))
+                self.assertEqual(self.events()[-1]['attempt'], 1)
+
+    def test_retry_requires_boolean_true_and_missing_retry_stops(self):
+        self.capture_failures()
+        for fields in ({'retry': 'true'}, {'retry': 1}, {'retry': None}, {}):
+            with self.subTest(fields=fields):
+                cooldown.clear(str(self.stack))
+                self.wait(10)
+                error = dict(code='RequestBad', msg='invalid request', **fields)
+                self.wait(1, FAKE_RECV='1', FAKE_REPLY=json.dumps({'error': error}))
+                event = self.events()[-1]
+                self.assertIs(event['retry'], False)
+                self.assertEqual(event['attempt'], 1)
+                self.assertNotIn('wait_s', event)
+                self.assertNotIn('status', event)
+
+    def test_endpoint_and_tuning_changes_clear_brain_failed_cooldown(self):
+        self.capture_failures()
+        for cfg in ({'model': 'other'}, {'model': 'local', 'temperature': 0.5}):
+            with self.subTest(cfg=cfg):
+                (self.definition / 'llm.json').write_text('{"model":"local"}')
+                self.wait(10)
+                self.temporary()
+                (self.definition / 'llm.json').write_text(json.dumps(cfg))
+                self.wait(11)
+                self.assertFalse((self.stack / cooldown.NAME).exists())
+                body = json.loads((self.stack / 'think/request.json').read_text())
+                body['endpoint'] = cfg['model']
+                if 'temperature' in cfg:
+                    body['request']['temperature'] = cfg['temperature']
+                (self.stack / 'think/request.json').write_text(json.dumps(body))
+                sends = self.sends()
+                self.wait(10)
+                self.assertEqual(self.sends(), sends + 1)
+                self.wait(0)
+                (self.stack / 'history.jsonl').write_text('{"role":"user","content":"hi"}\n')
+                (self.stack / 'think/request.json').write_text(json.dumps(
+                    {'endpoint': 'local', 'request': {'messages': [{'role': 'user', 'content': 'hi'}]}}))
 
     def test_budget_missing_cools_then_retries_same_request_and_clears(self):
         msg = 'budget for this window (day) is used up; not run'
@@ -315,7 +452,7 @@ sys.exit(code)
         self.assertIn('agent-fsm: warning: aos-llm send exited 2', result.stderr)
 
     def test_endpoint_mismatch_still_rebuilds_while_cooling(self):
-        cooldown.fail(str(self.stack), 'BrainFailed', 'x')
+        cooldown.fail(str(self.stack), 'SendFailed', 'x')
         (self.definition / 'llm.json').write_text('{"model":"other"}')
         before = (self.stack / cooldown.NAME).read_text()
         self.wait(11)
