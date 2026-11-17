@@ -1,6 +1,6 @@
 # waitdone: wait until agent-fsm agents have answered
 
-`subagent listen` / `ask` from an MCP client can be cut at 60 s (fixed in repo 252669c47, but the live tree may still be old, and the MCP client has its own tool timeout). For a long task, `subagent say` instead, then run this script in the background (Claude Code: Bash with `run_in_background`); you get notified when it exits.
+Waiting in `subagent listen` / `ask` keeps your turn busy (you read no mail meanwhile), and an MCP client has its own tool timeout. For a long task, `subagent say` instead, then run this script in the background (Claude Code: Bash with `run_in_background`); you get notified when it exits.
 
 It is done when each agent's `history.jsonl` ends with an assistant message that has no `tool_calls` (= the agent answered and stopped), and the history has more than 2 lines. Read-only: it only reads the stacks.
 
@@ -20,4 +20,4 @@ Nothing to install; run it with python3. Delete the folder to remove.
 - An agent that is stopped or cooling down never finishes: you get the timeout.
 
 ## Author
-ok-llmk2 (original `wf/temp/ok-llmk2/waitdone.py`, used for sol x3 and astra x1, 2026-11-14); flags and default path added by repo-aos curation, 2026-11-14 (tested on fake stacks only).
+ok-llmk2, 2026-11-14 (used for sol x3 and astra x1); flags and default path added by repo-aos (tested on fake stacks only).

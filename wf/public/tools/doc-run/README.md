@@ -25,4 +25,4 @@ Nothing to install; run with python3. Delete the folder to remove.
 - Building aos with vcpkg writes `~/.cache/vcpkg` under the fake HOME; remember it when you compare "what gets written".
 
 ## Author
-ok-release (originals `wf/temp/ok-release/bin/run-doc.py`, `wf/temp/ok-release/drafts/tools/check-cmds.py`; used on the release-1114 "getting started" page v1 twice, v2 once, README twice, and found 4 doc errors), 2026-11-14. Curated by repo-aos (docstring wording only; tested on small fake pages).
+ok-release, 2026-11-14 (used on the "getting started" page and README; found 4 doc errors). Curated by repo-aos (docstring wording only; tested on small fake pages).

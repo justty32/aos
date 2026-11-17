@@ -30,4 +30,4 @@ Nothing to install. Delete the folder to remove. It never changes the files it r
 - Not tested: real images from an editor or camera (only hand-made headers), `zTXt`/`iTXt`/`eXIf` chunks, very large files or trees, symlinks, non-Linux systems, false-positive rate on real code beyond the one version-string case.
 
 ## Author
-ok-release (original `wf/temp/ok-release/drafts/tools/scan.py`), 2026-11-14. Curated by repo-aos (README rewritten; `scan.py` unchanged).
+ok-release, 2026-11-14. Curated by repo-aos (README rewritten; `scan.py` unchanged).
