@@ -38,6 +38,14 @@
 | Q8 | 照推薦 A：拿掉 `install.sh --uninstall` 清舊 `.pth` 那段 |
 | Q9 | **要清掉** NORMS 附錄 1～3（不照推薦） |
 
+### 使用者追加：條文精簡（11-17）
+
+原話（逐字）：「對了，現有的concept, norms也需要tidy了，要去精簡，去除掉各種有的沒的例子，或是說把栗子跟純概念拆開。就是說，我希望一兩個8kb以下的檔案就可以把概念瀏覽完，而norm這塊可以放寬到三四個」「convention也要」
+
+- CONCEPTS：一兩個 8 KB 以下的檔瀏覽完（線 concepts-1117，11-17 開工）。
+- NORMS：放寬到三四個檔；等封存線清完附錄後開。
+- CONVENTION：也要；檔數使用者沒講，頂層先照 CONCEPTS 的一兩個檔做，裝不下再問。
+
 ## 查了沒問題的
 
 - 單向分層：impls 沒人 include 別專案 `src/`；lib 沒有 import `py/`。
