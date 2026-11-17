@@ -22,15 +22,12 @@ import json, os, re, signal, subprocess, sys
 from pathlib import Path
 
 _import_paths = [str(Path(__file__).resolve().parent)]
-for _parent in Path(__file__).resolve().parents:
-    for _layer, _module in (("py", "aos_flags.py"), ("lib", "agent/agent_files.py")):
-        _root = _parent / _layer
-        if (_root / _module).is_file() and str(_root) not in _import_paths:
-            _import_paths.append(str(_root))
+if os.environ.get("AOS_HOME"):  # 家外的格只經 AOS_HOME 找 lib（路徑規則一：不往上找旁邊的夾、不猜）
+    _import_paths.append(os.path.join(os.environ["AOS_HOME"], "lib"))
 sys.path[:0] = _import_paths
 try:
     import aos_flags  # noqa: E402
-    import aos_ws  # noqa: E402  （回答配對：letters_take／letters_drop／mark_letter，py/ 跟 aos_flags 同一夾）
+    import aos_ws  # noqa: E402  （回答配對：letters_take／letters_drop／mark_letter，lib/ 跟 aos_flags 同一夾）
     if (Path(__file__).resolve().parent / "hooks.py").is_file():
         import hooks  # noqa: E402
     else:
@@ -43,6 +40,10 @@ except (ModuleNotFoundError, ImportError) as _error:
     if _error.name not in ("aos_flags", "aos_ws", "tool_io", "agent_files", "agent", "agent.agent_files", "hooks", "agent.hooks",
                            "goal_state", "agent.goal_state"):
         raise
+    if not os.environ.get("AOS_HOME"):
+        print("agent-fsm: error: HomeMissing AOS_HOME is not set (it names the proto8 folder that holds lib)",
+              file=sys.stderr)
+        sys.exit(1)
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
           file=sys.stderr)
     sys.exit(1)

@@ -47,7 +47,7 @@ def call(prog, args, ok=(0,), text=None, shown=3, fix=None):
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True,
                                  cwd=tool_io.workspace())
     except OSError as e:
-        tool_io.die("LaunchFailed", "cannot run %s (put it on PATH with proto8/install.sh): %s" % (prog, e))
+        tool_io.die("LaunchFailed", "cannot run %s (source proto8/env.sh to put it on PATH): %s" % (prog, e))
     try:
         out, err = child.communicate(text, timeout=TIMEOUT_S)
     except subprocess.TimeoutExpired:

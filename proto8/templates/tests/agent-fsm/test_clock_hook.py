@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import sys
 import unittest
+os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_hooks import CELLS, PROTO, Hooks, hooks  # noqa: E402

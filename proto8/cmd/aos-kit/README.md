@@ -71,7 +71,7 @@ Output is English. Errors are one line on stderr, `aos-kit: error: CODE reason`,
 
 ## Layout and tests
 
-- `bin/aos-kit`: thin launcher; finds `py/aos_flags.py` in a parent folder.
+- `bin/aos-kit`: thin launcher; finds `lib/aos_flags.py` via `../../../lib` (the same home's `lib/`).
 - `aos_kit/__init__.py`: flags, dispatch, printing. `aos_kit/recipe.py`: kits.json, make block, assembling, check. `aos_kit/add.py`: laying a kit over a definition.
 - Python 3 standard library only.
 - Tests: `python3 -m unittest discover -s proto8/cmd/aos-kit/tests -v`. They use `tests/fixtures/kits` (a copy of `templates/kits` with make blocks added; a test keeps it equal to the shipped files apart from the make blocks) and `tests/fixtures/kits-stale` (a kit whose system text is out of date). Temporary folders are kept; set `TMPDIR` to choose where they go.

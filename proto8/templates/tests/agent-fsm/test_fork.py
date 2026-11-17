@@ -48,7 +48,7 @@ class Fork(unittest.TestCase):
             env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
             bins = [str(p) for p in (PROTO / 'impls').glob('*/bin')] + [str(p) for p in (PROTO / 'cmd').glob('*/bin')]
             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
-            env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib'), str(PROTO / 'py')])
+            env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib')])
             env.update(AOS_STACK=str(daemon_stack), AOS_CD=str(root), AOS_WS=str(root), AOS_HOME=str(PROTO),
                        AOS_DAEMON=str(daemon_stack), AOS_LLM_KERNEL=str(kernel_stack))
             defs = {}

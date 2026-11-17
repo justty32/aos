@@ -141,7 +141,7 @@ class ResolveBoxAt(unittest.TestCase):
     """11-13 線址二：box 的指示詞照它在表裡的位置 /letters/<名>/box 解，#./、#../ 從那裡算。"""
     @classmethod
     def setUpClass(cls):
-        sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "py"))
+        sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "lib"))
         try:
             import aos_clock_register
         finally:

@@ -144,7 +144,7 @@ class CheckPointerAt(unittest.TestCase):
     """11-13 線址二：$override 陣列裡的指示詞照它的位置 /$override/i 解，#./、#../ 從所在物件算。"""
     @classmethod
     def setUpClass(cls):
-        paths = [str(REPO / "proto8" / "cmd" / "aos-agent"), str(REPO / "proto8" / "py"), str(REPO / "proto8" / "lib")]
+        paths = [str(REPO / "proto8" / "cmd" / "aos-agent"), str(REPO / "proto8" / "lib")]
         sys.path[:0] = paths
         try:
             from aos_agent import tools

@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 PROTO = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(PROTO / "py"), str(PROTO / "lib")]
+sys.path[:0] = [str(PROTO / "lib")]
 import daemon_ctl as dc  # noqa: E402
 
 

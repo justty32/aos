@@ -1,6 +1,6 @@
 # aos-sweeper — 清道夫：一台 daemon 的 stderr 封存、封存保留期、收表外子 loop
 
-← [cmd](../README.md)｜本體 [py/aos_sweep.py](../../py/README.md)（`aos-daemon-ctl sweep` 跑同一套）｜設計 [thinking 11-10 sweeper](../../thinking/2026-11/10/sweeper/README.md)
+← [cmd](../README.md)｜本體 [lib/aos_sweep.py](../../lib/aos_sweep.py)（`aos-daemon-ctl sweep` 跑同一套）｜設計 [thinking 11-10 sweeper](../../thinking/2026-11/10/sweeper/README.md)
 
 `bin/aos-sweeper`（Python）跑**一輪**就結束；要它每 10 分鐘跑，就在 daemon 表上掛一列 loop 型的 `_sweeper`，節奏交給 aos-loop（跟 `_clock`／`aos-clock` 同一個樣子，daemon 程式完全不認它）。
 
@@ -13,7 +13,7 @@ daemon.json 的 `procs` 加一列（範本 daemon 預設都帶，不要就刪掉
              "interval_ms": 600000, "auto_restart": true, "stuck_after_ms": 600000}
 ```
 
-- 不用給 `--daemon`：daemon 給子項的環境本來就有 `AOS_DAEMON`。`aos-sweeper` 靠 PATH 找（install.sh 放好），列上沒有任何機器位置，搬家、經 git 換機照用。
+- 不用給 `--daemon`：daemon 給子項的環境本來就有 `AOS_DAEMON`。`aos-sweeper` 靠 PATH 找（`source proto8/env.sh` 放好；或選配的 `proto8/cmd/install.sh`），列上沒有任何機器位置，搬家、經 git 換機照用。
 - `interval_ms: 600000`＝牆鐘 10 分鐘；`pause _clock` 停時間時清道夫照跑（磁碟照樣在長）。改頻率改這個數。daemon 起來第一圈立刻跑一輪。
 - `stuck_after_ms: 600000`：一輪可能要壓縮幾百 MB（實測 293 MB 約 2.5 秒）或等殭屍 10 秒，期限要寬；沒寫（11-15 起）＝不判卡住，寫了才在清道夫被凍住時標 stuck（只標、不加 `restart_on_stuck`）。
 - **每台 daemon 自己掛、只管自己**（使用者 11-10）：清道夫只碰它那台表上的列與那台的預設小格 `D/procs/*/`，**不往子 daemon 底下走**。子 daemon 那一列本身的 stderr（它在父表上是一列）歸父的清道夫；子 daemon 自己表上的零件歸子 daemon 自己的清道夫。**沒掛清道夫的 daemon 就沒人清**。

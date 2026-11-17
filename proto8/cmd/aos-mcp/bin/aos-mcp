@@ -36,9 +36,8 @@
 import json, os, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
-import aos_flags  # noqa: E402  proto8/py/aos_flags.py：P-44 的解析
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
+import aos_flags  # noqa: E402  proto8/lib/aos_flags.py：P-44 的解析
 import metainfo  # noqa: E402
 import process_group  # noqa: E402  lib/process_group.py：逾時收整群（TERM→等→KILL）
 from agent import hooks  # noqa: E402  lib/agent/hooks.py：before_tool／after_tool（--hooks DEF）

@@ -61,7 +61,7 @@ class FakeAgentMeasure(unittest.TestCase):
             bins = [str(path) for group in ('impls', 'cmd') for path in (PROTO / group).glob('*/bin')]
             env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
-            env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib'), str(PROTO / 'py')])
+            env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib')])
             env.update(AOS_STACK=str(daemon_stack), AOS_DAEMON=str(daemon_stack),
                        AOS_LLM_KERNEL=str(kernel_stack), AOS_CD=str(root), AOS_WS=str(root))
 

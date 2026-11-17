@@ -8,7 +8,7 @@ C／C++ 的基礎層與標準庫（aos-exec、aos-loop、aos-fsm、aos-daemon、
 
 需要 CMake、支援 C++20 的編譯器，以及 [vcpkg](https://vcpkg.io)（裝在 `~/dev/vcpkg` 的話什麼都不用設）。
 `proto8/impls/` 每個專案一夾、各自建；照依賴順序全建一次的指令在 [testing「proto8」](wf/workflows/testing.md#proto8)。
-建好後 `proto8/install.sh` 把指令 symlink 進 `~/.local/bin`（`--dry-run` 只印、`--uninstall` 拿掉）。
+建好後每個視窗先 `source proto8/env.sh`（清掉 `AOS_*`、設 `AOS_HOME`、把 proto8 的指令放到 PATH 最前）；想連進 `~/.local/bin` 才跑選配的 `proto8/cmd/install.sh`（`--dry-run` 只印、`--uninstall` 拿掉）。
 
 repo 根沒有 CMake：08～09 月那一代單一執行檔 `aos`（根目錄 CMake、`core/`、`modules/`、`docs/`…）
 11-05 整組封存在 [archive/](archive/README.md) 的 `aos-v1/`，不再建。

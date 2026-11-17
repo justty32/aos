@@ -572,7 +572,7 @@ class HttpTlsTests(unittest.TestCase):
         with socket.socket() as listener:
             listener.bind(("127.0.0.1", 0))
             port = listener.getsockname()[1]
-        server = Path(__file__).resolve().parents[2] / "extras/fake-mcp-http/server.py"
+        server = Path(__file__).resolve().parent / "fake-mcp-http" / "server.py"
         cls.process = subprocess.Popen([sys.executable, str(server), str(port),
             str(cls.root / "cert.pem"), str(cls.root / "key.pem"),
             str(cls.root / "server.env"), str(cls.root / "server.log")],

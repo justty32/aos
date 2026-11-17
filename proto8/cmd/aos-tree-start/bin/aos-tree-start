@@ -8,7 +8,7 @@ import sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
-sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
 import aos_flags  # noqa: E402
 
 PROG = "aos-tree-start"
@@ -23,8 +23,9 @@ tree as before); for the usual tree `aos-tree-start root` = `aos-exec root`. Bef
 other than AOS_HOME (AOS_STACK, AOS_DAEMON, AOS_WS, AOS_CLOCK ...) means this shell was started by
 another tree or an agent in one, and the new root would take that tree's stack or daemon as its own.
 Then it refuses and names the variables (never their values).
-Usual start:  cd ~/aos-home && source env.sh && aos-tree-start root
-(env.sh clears every AOS_* and sets AOS_HOME; from an agent's shell source it with bash, not zsh).
+Usual start:  source PROTO8/env.sh && cd ~/aos-home && aos-tree-start root
+(env.sh clears every AOS_*, sets AOS_HOME to that proto8 and puts its commands on PATH;
+from an agent's shell source it with bash, not zsh).
 
 flags:
   --force     start anyway with the inherited variables (one warning line naming them)
@@ -52,14 +53,14 @@ def main():
     if names and not opts.get("force"):
         aos_flags.die(PROG, "EnvBad", "%s set in this shell (inherited from another tree or an agent's shell?): "
                       "the root would use them; clear every AOS_* except AOS_HOME first "
-                      "(cd TREE && source env.sh, in bash), or pass --force" % ", ".join(names))
+                      "(source PROTO8/env.sh, in bash), or pass --force" % ", ".join(names))
     if names:
         aos_flags.warn(PROG, "starting with inherited %s (--force)" % ", ".join(names))
     argv = ["aos-exec"] + rest
     try:
         os.execvp(argv[0], argv)
     except OSError as e:
-        aos_flags.die(PROG, "CommandMissing", "cannot run aos-exec: %s (run proto8/install.sh once)" % e.strerror)
+        aos_flags.die(PROG, "CommandMissing", "cannot run aos-exec: %s (source proto8/env.sh first)" % e.strerror)
 
 
 if __name__ == "__main__":

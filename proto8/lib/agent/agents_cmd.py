@@ -67,7 +67,7 @@ def run(cmd, text=None, timeout_s=STEP_S, timeout_cycles=None, env=None, err_re=
         child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL, stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE, start_new_session=True, cwd=cwd, env=env)
     except OSError as e:
-        die("LaunchFailed", "cannot start %s (is it on PATH? proto8/install.sh puts aos-agent there): %s" % (cmd[0], e))
+        die("LaunchFailed", "cannot start %s (is it on PATH? source proto8/env.sh): %s" % (cmd[0], e))
     what = " ".join([os.path.basename(cmd[0])] + list(cmd[1:3]))
     try:
         end = None if timeout_s is None else time.monotonic() + timeout_s

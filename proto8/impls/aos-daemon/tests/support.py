@@ -15,7 +15,7 @@ ENV = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
 ENV['PATH'] = ':'.join(str(p) for p in sorted((PROTO / 'impls').glob('*/bin'))) + ':' + ':'.join(
     str(p) for p in sorted((PROTO / 'cmd').glob('*/bin'))) + ':' + ENV['PATH']
 EVIDENCE = []
-sys.path.insert(0, str(PROTO / 'py'))
+sys.path.insert(0, str(PROTO / 'lib'))
 import daemon_ctl as dc
 
 

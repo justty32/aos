@@ -59,4 +59,4 @@ Check it, and try it once: `tools_def` with `{"op": "check", "path": "my_tools/m
 - Wrong type, missing required key, unknown key, value not in `enum`: the tool answers `mul: error: ArgumentsBad ...` without calling `run`.
 - If `run` crashes, the answer is `mul: error: RunFailed run() raised ZeroDivisionError: division by zero (tool.py line 33)`.
 - `python3 tool.py --tooldef` / `--metainfo` print the generated JSON; `python3 tool.py --write-defs` writes the two files (this is what `check` runs).
-- The lines above `# ---- your tool` find `tool_spec.py`: next to `tool.py`, then in a `lib/` above this folder, then in `$AOS_HOME/lib`. So the folder works anywhere when `AOS_HOME` is set.
+- The lines above `# ---- your tool` find `tool_spec.py`: next to `tool.py`, then in `$AOS_HOME/lib` (it no longer looks for a `lib/` above this folder). So the folder works anywhere when `AOS_HOME` is set; without it you get `HomeMissing`.

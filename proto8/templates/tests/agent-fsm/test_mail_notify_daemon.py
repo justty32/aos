@@ -25,7 +25,7 @@ class MailNotifyDaemon(unittest.TestCase):
         kernel = self.root / "kernel"
         kernel.mkdir()
         self.env = dict(env, AOS_HOME=str(PROTO), PATH=os.pathsep.join(bins + [env["PATH"]]), AOS_LLM_KERNEL=str(kernel),
-                        PYTHONPATH=os.pathsep.join([str(PROTO / "py"), str(PROTO / "lib")]), PYTHONDONTWRITEBYTECODE="1")
+                        PYTHONPATH=os.pathsep.join([str(PROTO / "lib")]), PYTHONDONTWRITEBYTECODE="1")
         (self.root / "kernel.json").write_text(json.dumps({"exec": str(PROTO / "lib/base/llm_fake"), "endpoint": "fake",
                                                            "endpoints": {"fake": {}}}))
         (self.root / "kernel_daemon.json").write_text(json.dumps({"interval_ms": 10, "exec": {"argv": [

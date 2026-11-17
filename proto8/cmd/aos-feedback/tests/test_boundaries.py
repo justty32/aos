@@ -77,7 +77,7 @@ class FeedbackBoundaries(FeedbackFixture):
         env.pop('AOS_FEEDBACK')
         env['PYTHONDONTWRITEBYTECODE'] = '1'
         script = ('import sys; sys.path[:0] = ' + repr([
-            str(ROOT / 'cmd/aos-feedback'), str(ROOT / 'py')]) +
+            str(ROOT / 'cmd/aos-feedback'), str(ROOT / 'lib')]) +
             '; from aos_feedback.storage import directory; print(directory())')
         result = subprocess.run([sys.executable, '-B', '-c', script], env=env,
                                 text=True, capture_output=True, cwd=self.work, timeout=15)

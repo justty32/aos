@@ -49,7 +49,7 @@ exit codes: 0 printed; 1 error ("scope: error: CODE reason": WsMissing, CfgMissi
 SCOPE_VERSION = 1                  # the shape of the --scope JSON; a reader refuses versions it does not know
 STACK_CELLS = ("hooks", "tools")   # a hook or tool runs with AOS_STACK = <stack>/<cell kind>/<name>
 JSON_TOOLS = ("json_set", "json_add", "json_del", "json_multi_set")   # the only write tools that cut FILE#/POINTER
-HOME_PARTS = ("lib", "cmd", "templates", "py", "knowledge", "impls")   # product folders under AOS_HOME
+HOME_PARTS = ("lib", "cmd", "templates", "knowledge", "impls")   # product folders under AOS_HOME
 DEF_MARKER = "interfaces.json"     # a folder holding this file is an agent definition (rule definition-marker)
 
 # Where stacks sit (proto8 knowledge):

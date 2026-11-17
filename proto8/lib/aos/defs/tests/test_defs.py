@@ -117,7 +117,7 @@ class DefinitionsTest(unittest.TestCase):
         result, data = self.call('check', path=str(empty))
         self.assertEqual(result.returncode, 1)
         self.assertEqual([p['path'] for p in data['problems']], ['a'])
-        self.assertIn('aos-tools is not on PATH (put it there with proto8/install.sh)', data['problems'][0]['reason'])
+        self.assertIn('aos-tools is not on PATH (source proto8/env.sh)', data['problems'][0]['reason'])
         self.assertIn('defs: error: DefBad 1 definition problems found', result.stderr)
 
     def test_discovery_stops_at_definition_and_skips_hidden(self):

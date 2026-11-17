@@ -8,6 +8,7 @@ import sys
 import tempfile
 import time
 import unittest
+os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
 
 CELLS = Path(__file__).resolve().parents[2] / "agent-fsm"   # 範本本身
 PROTO = CELLS.parents[1]
@@ -38,7 +39,7 @@ class ReplyMatch(unittest.TestCase):
         (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"tools": "tools.json", "llm": "llm.json"}}))
         (self.defn / "tools.json").write_text("{}")
         (self.defn / "llm.json").write_text('{"model":"local"}')
-        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") or k == "AOS_HOME"}
         local = Path.home() / ".local" / "bin"
         self.env = dict(env, AOS_STACK=str(self.stack), AOS_CD=str(self.defn), AOS_LLM_KERNEL=str(self.root / "missing-kernel"),
                         FAKE_SENT=str(self.root / "sent.json"), FAKE_MESSAGE=json.dumps({"role": "assistant", "content": "ok"}),

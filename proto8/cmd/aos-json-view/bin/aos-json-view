@@ -18,7 +18,7 @@ import sys
 import unicodedata
 
 HERE = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
 import aos_flags
 
 PROG = "aos-json-view"

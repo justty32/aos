@@ -49,7 +49,7 @@ class LongTurn(unittest.TestCase):
         (self.bin / "claude").write_text(FAKE % {"python": sys.executable})
         (self.bin / "claude").chmod(0o755)
         self.spy = self.t / "spy_turn.py"
-        self.spy.write_text(SPY % {"turn": str(TURN), "py": str(PROTO / "py"), "lib": str(PROTO / "lib"), "eca": str(PROTO / "cmd" / "aos-eca")})
+        self.spy.write_text(SPY % {"turn": str(TURN), "py": str(PROTO / "lib"), "lib": str(PROTO / "lib"), "eca": str(PROTO / "cmd" / "aos-eca")})
         self.seen = self.t / "seen.json"
         subprocess.run(["aos-post", "init", str(self.stack / "queue")], env=self.env(), check=True, capture_output=True)
 

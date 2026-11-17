@@ -16,7 +16,7 @@ from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(PROTO / "cmd" / "aos-agent"), str(PROTO / "py"), str(PROTO / "lib")]
+sys.path[:0] = [str(PROTO / "cmd" / "aos-agent"), str(PROTO / "lib")]
 import aos_agent  # noqa: E402
 from aos_agent import ask, common, listen  # noqa: E402
 

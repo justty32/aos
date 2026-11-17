@@ -8,6 +8,7 @@ import sys
 import tempfile
 import time
 import unittest
+os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
 from unittest import mock
 
 CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
@@ -35,7 +36,7 @@ class Hooks(unittest.TestCase):
         (self.defn / "tools.json").write_text("{}")
         (self.defn / "llm.json").write_text('{"model":"local"}')
         self.log = self.root / "log.jsonl"
-        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") or k == "AOS_HOME"}
         local = Path.home() / ".local" / "bin"
         self.env = dict(env, AOS_STACK=str(self.stack), AOS_CD=str(self.defn), HOOKDIR=str(self.defn),
                         PATH=os.pathsep.join([str(self.bin), str(local)] + [str(p) for p in PROTO.glob("impls/*/bin")]

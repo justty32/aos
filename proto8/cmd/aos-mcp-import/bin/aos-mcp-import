@@ -22,9 +22,8 @@ import sys
 import tempfile
 
 HERE = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
-import aos_flags  # noqa: E402
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
+import aos_flags  # noqa: E402
 import tool_io  # noqa: E402
 import mcp_client  # noqa: E402
 import mcp_freeze  # noqa: E402

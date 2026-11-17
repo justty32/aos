@@ -13,7 +13,7 @@ sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
 REG = PROTO / "cmd" / "aos-clock-register" / "bin" / "aos-clock-register"
 CLOCK = PROTO / "cmd" / "aos-clock" / "bin" / "aos-clock"
-sys.path.insert(0, str(PROTO / "py"))
+sys.path.insert(0, str(PROTO / "lib"))
 import aos_clock_register as reg  # noqa: E402
 
 

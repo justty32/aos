@@ -47,7 +47,7 @@ def run(argv):
     try:
         p = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=STEP_S)
     except OSError as e:
-        die("LaunchFailed", "cannot run %s (put it on PATH with proto8/install.sh): %s" % (argv[0], e))
+        die("LaunchFailed", "cannot run %s (source proto8/env.sh to put it on PATH): %s" % (argv[0], e))
     except subprocess.TimeoutExpired:
         die("CommandFailed", "%s send took over %d s" % (argv[0], STEP_S))
     if p.returncode != 0:

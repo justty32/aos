@@ -30,7 +30,7 @@ class Daemon(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         bins = [str(p) for p in sorted(PROTO.glob("impls/*/bin"))] + [str(p) for p in sorted(PROTO.glob("cmd/*/bin"))]
         self.env = dict(env, AOS_HOME=str(PROTO), PATH=os.pathsep.join(bins + [env["PATH"]]),
-                        PYTHONPATH=os.pathsep.join([str(PROTO / "py"), str(PROTO / "lib")]), PYTHONDONTWRITEBYTECODE="1")
+                        PYTHONPATH=os.pathsep.join([str(PROTO / "lib")]), PYTHONDONTWRITEBYTECODE="1")
         self.log = self.root / "events.jsonl"
         shutil.copytree(PROTO / "templates" / "daemon-root", self.root / "defs")
         ann = self.root / "defs" / "ann"

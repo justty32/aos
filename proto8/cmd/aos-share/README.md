@@ -47,6 +47,6 @@ aos-share --help
 
 測試：`python3 -m unittest discover -s proto8/cmd/aos-share/tests`（`test_share.py` 是六種樣板，`test_check_reset.py` 是 check／reset；需 `setfacl/getfacl`；可用 `KERNEL_TEST_TMP` 指定暫存夾的父夾；無法替外部 id 設 ACL 的環境會略過真 ACL 例子）。
 
-新指令要跑一次 `proto8/install.sh` 才會出現在 `~/.local/bin`。
+新指令重新 `source proto8/env.sh` 就在 PATH 上；若用選配的 `proto8/cmd/install.sh`，要再跑一次才會出現在 `~/.local/bin`。
 
 daemon 起換了 uid 的 proc 前會自己替它的 stack 設 G6 那組 ACL（daemon 段 3，C++，還沒做）；這支給手動與共用夾用。

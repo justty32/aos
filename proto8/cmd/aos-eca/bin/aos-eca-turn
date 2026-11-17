@@ -129,7 +129,7 @@ from pathlib import Path
 
 _import_paths = [os.path.normpath(os.path.join(HERE, ".."))]
 for _parent in Path(__file__).resolve().parents:
-    for _layer, _module in (("py", "aos_flags.py"), ("lib", "agent/__init__.py")):
+    for _layer, _module in (("lib", "aos_flags.py"), ("lib", "agent/__init__.py")):
         _root = _parent / _layer
         if (_root / _module).is_file() and str(_root) not in _import_paths:
             _import_paths.append(str(_root))

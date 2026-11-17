@@ -36,17 +36,7 @@
    "stage": 2
   },
   {
-   "path": "proto8/py",
-   "deep": true,
-   "stage": 2
-  },
-  {
    "path": "proto8/impls",
-   "deep": true,
-   "stage": 2
-  },
-  {
-   "path": "proto8/extras",
    "deep": true,
    "stage": 2
   },
@@ -65,11 +55,16 @@
    "stage": 2
   },
   {
-   "path": "proto8/kernel",
+   "path": "proto8/templates/kernel",
    "stage": 2
   },
   {
-   "path": "proto8/kernel/docs",
+   "path": "proto8/templates/kernel/docs",
+   "deep": true,
+   "stage": 2
+  },
+  {
+   "path": "proto8/templates/kernel/tests",
    "deep": true,
    "stage": 2
   }
@@ -87,7 +82,7 @@
  "skip_dirs": [
   "wf/inbox",
   "proto8/lib/packs",
-  "proto8/extras/aos-view/ui/v2/dist/assets"
+  "proto8/cmd/aos-view/ui/v2/dist/assets"
  ],
  "usual_dirs": {
   "tests": "{parent} 的測試",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 py/aos_sweep）；說明在 cmd/docs/03、04。
+# aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 lib/aos_sweep）；說明在 cmd/docs/03、04。
 HELP = """aos-daemon-ctl - attach procs to an aos-daemon and start / stop / sleep / wake / pause them
 
 usage: aos-daemon-ctl [--daemon D] SUBCOMMAND [FLAGS...] [ARGS...]
@@ -375,7 +375,7 @@ import re
 import sys
 import time
 HERE = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
 import aos_flags
 import aos_sweep
 import daemon_ctl as dc
@@ -666,7 +666,7 @@ SWEEP_FLAGS = dict(TIMEOUT, **{"--retention-days": "retention", "--min-bytes": "
 
 
 def cmd_sweep(opts, args):
-    """sweep（11-10 清道夫）：在這個行程裡跑一輪 py/aos_sweep（跟常駐 _sweeper 同一套、flock 錯開）；--purge 刪這台所有封存。
+    """sweep（11-10 清道夫）：在這個行程裡跑一輪 lib/aos_sweep（跟常駐 _sweeper 同一套、flock 錯開）；--purge 刪這台所有封存。
     保留期只有明帶 --retention-days 才刪（常駐列可能設了 none，人叫一次不照預設偷刪；thinking 11-10 sweeper 代定 3）。"""
     o, rest = aos_flags.parse(args, SWEEP_FLAGS, {"--purge": "purge", "--dry-run": "dry_run", "--yes": "yes", "--json": "json"},
                               help=HELPS["sweep"], short=("-y", "-j"))

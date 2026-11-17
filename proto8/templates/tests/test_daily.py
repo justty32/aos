@@ -27,7 +27,7 @@ BIN = Path.home() / ".local" / "bin"
 FAKE_CLAUDE = REPO / "cmd" / "aos-eca" / "tests" / "fake_claude"
 GITIGNORE = REPO / "cmd" / "aos-agent" / "stack.gitignore"
 CLASSES = REPO / "thinking" / "2026-11" / "10" / "two-machines" / "gitignore_classes.json"
-PARTS = ("lib", "py", "templates", "kernel", "knowledge")
+PARTS = ("lib", "templates", "knowledge")
 MNTC_BASE = os.environ.get("AOS_TEST_MNTC_DIR")      # /mnt/c 上放試驗資料夾的地方（例：Windows 的 Temp），不寫死在檔裡
 if "--mntc" in sys.argv:
     sys.argv.remove("--mntc")
@@ -177,10 +177,10 @@ class Machine:
         self.env.update(extra or {})
 
     def use_proto(self, proto):
-        """換了 HOME 就沒有 user site 的 aos-proto8.pth：照 py/README 的退路改給 PYTHONPATH，指這台那份 proto8。"""
+        """換了 HOME 就沒有 user site 的 aos-proto8.pth：改給 PYTHONPATH，指這台那份 proto8。"""
         self.proto = proto
         self.env["AOS_HOME"] = str(proto)
-        self.env["PYTHONPATH"] = os.pathsep.join([str(proto / "py"), str(proto / "lib")])
+        self.env["PYTHONPATH"] = os.pathsep.join([str(proto / "lib")])
 
     def run(self, *args, cwd, check=True, timeout=120):
         r = subprocess.run([str(a) for a in args], cwd=cwd, env=self.env, text=True, capture_output=True,
@@ -192,8 +192,8 @@ class Machine:
         return r
 
     def cp_template(self, name, dest, cwd):
-        """照 README 的用法：cp -r $AOS_HOME/templates/名（kernel/名＝$AOS_HOME/kernel/名）目的地。"""
-        src = self.proto / name if name.startswith("kernel/") else self.proto / "templates" / name
+        """照 README 的用法：cp -r $AOS_HOME/templates/名 目的地（kernel 範本＝templates/kernel/名）。"""
+        src = self.proto / "templates" / name
         return self.run("cp", "-r", src, dest, cwd=cwd)
 
     def start(self, stack, defs, cwd, label):

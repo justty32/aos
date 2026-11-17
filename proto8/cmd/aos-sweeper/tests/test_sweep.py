@@ -21,7 +21,7 @@ from unittest.mock import patch
 # Imports and CLI runs must not create bytecode files in the shared checkout.
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(REPO / "proto8" / "py"))
+sys.path.insert(0, str(REPO / "proto8" / "lib"))
 import aos_sweep
 import aos_sweep_proc
 

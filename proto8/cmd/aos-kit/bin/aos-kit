@@ -7,8 +7,8 @@ sys.dont_write_bytecode = True                  # leave no __pycache__ in the re
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 for parent in HERE.parents:
-    if (parent / 'py' / 'aos_flags.py').is_file():
-        sys.path.insert(0, str(parent / 'py'))
+    if (parent / 'lib' / 'aos_flags.py').is_file():
+        sys.path.insert(0, str(parent / 'lib'))
         break
 import aos_flags  # noqa: E402
 from aos_kit import main  # noqa: E402

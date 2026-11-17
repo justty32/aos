@@ -9,7 +9,7 @@
 #   pass／refuse  寫 <小格>/decisions/<信名>.json，當場叫站跑一輪，回報結果（站那一輪的拒信行轉成自己的話）。
 #   off   先跑一輪、把留著的全部回拒（HoldRefused）、再拿掉 on_clock hook；kernel.json 與信箱留著。
 # 介面（lib/README 的契約）：stdin 收 {"op": …}；結果印 stdout；錯＝stderr 與 stdout 各一行「kernel_gate: error: 代號 原因」、退 1。
-# 需要 PATH 上有 aos-agent、aos-post、aos-exec、aos-directive（proto8/install.sh）。
+# 需要 PATH 上有 aos-agent、aos-post、aos-exec、aos-directive（source proto8/env.sh）。
 import json, os, sys, time
 HELP = """\
 usage: kernel_gate < ARGUMENTS.json   (a tool: run it with aos-exec)

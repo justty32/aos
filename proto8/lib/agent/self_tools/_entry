@@ -18,7 +18,7 @@
 #   沒那行才是 CommandFailed＋結束碼。op 沒給＝ArgumentsBad、不認得＝OpUnknown（R11）。
 #   沒掛在 daemon 下跑的 agent（aos-exec body.json）不支援：ctl who 失敗＝aos-agent 的 DaemonMissing／InstanceMissing。
 #   --help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉 aos-agent，退 130）。
-# 需要 PATH 上有 aos-agent（proto8/install.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
+# 需要 PATH 上有 aos-agent（source proto8/env.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
 import json, os, sys
 HELP = """\
 usage: self_tools < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)

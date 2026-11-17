@@ -56,7 +56,7 @@ def warn_missing_clock(path, prog=None):
 
 
 def now_cycle(prog=None):
-    """沒設 AOS_CLOCK＝None；缺檔 warning 每行程每路徑一次且當 0；空檔＝0；壞檔＝ClockBad。prog＝提醒行開頭（None＝NAME；py/aos_ws 傳 argv[0] 檔名）。"""
+    """沒設 AOS_CLOCK＝None；缺檔 warning 每行程每路徑一次且當 0；空檔＝0；壞檔＝ClockBad。prog＝提醒行開頭（None＝NAME；lib/aos_ws 傳 argv[0] 檔名）。"""
     path = os.environ.get("AOS_CLOCK")
     if not path:
         return None

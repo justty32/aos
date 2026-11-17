@@ -14,7 +14,7 @@ from test_switch import Base, cooldown
 class UsageTimeout(unittest.TestCase):
     def test_zero_timeout_waits_for_fake_claude(self):
         proto = Path(__file__).resolve().parents[3]
-        sys.path[:0] = [str(proto / "py"), str(proto / "cmd" / "aos-eca")]
+        sys.path[:0] = [str(proto / "lib"), str(proto / "cmd" / "aos-eca")]
         from aos_eca import slash
         with tempfile.TemporaryDirectory() as root:
             fake = Path(root) / "claude"

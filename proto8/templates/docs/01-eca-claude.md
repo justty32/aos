@@ -2,7 +2,7 @@
 
 ## 外部 coding agent 範本（eca-claude）
 
-claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../../cmd/README.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。CLI 對話共用 [lib/agent/cli_session.py](../../lib/agent/cli_session.py)，介面宣告共用 [lib/agent/agent_files.py](../../lib/agent/agent_files.py)（K-5）；兩者都在 `lib`，不 import 上層 `py`。設計：[thinking 2026-10-30 eca](../../thinking/2026-10/30/eca/README.md)；條文草稿 P-43。（沒有 codex 版範本，只差 `cli.json`：要就複製一份、`cli.json` 換成下面這份；**沙盒是 `workspace-write`**，codex 用自己的指令在工作區讀寫（11-12 使用者「codex拿掉唯讀沙盒」；不是 `danger-full-access`，隊長代定、使用者「可以先定這樣」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）。不要照抄 lib/agent/codex 那支工具的 `cli.json`：那是給腦叫的 codex 工具，沙盒唯讀。）
+claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../../cmd/README.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。CLI 對話共用 [lib/agent/cli_session.py](../../lib/agent/cli_session.py)，介面宣告共用 [lib/agent/agent_files.py](../../lib/agent/agent_files.py)（K-5）；兩者都在 `lib/agent/`，不 import lib 頂層的 `aos_flags` 系列。設計：[thinking 2026-10-30 eca](../../thinking/2026-10/30/eca/README.md)；條文草稿 P-43。（沒有 codex 版範本，只差 `cli.json`：要就複製一份、`cli.json` 換成下面這份；**沙盒是 `workspace-write`**，codex 用自己的指令在工作區讀寫（11-12 使用者「codex拿掉唯讀沙盒」；不是 `danger-full-access`，隊長代定、使用者「可以先定這樣」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）。不要照抄 lib/agent/codex 那支工具的 `cli.json`：那是給腦叫的 codex 工具，沙盒唯讀。）
 
 ```json
 {"kind": "codex",
@@ -46,7 +46,7 @@ eca-claude/
 
 ```sh
 # PATH 要有 impls 的 aos-exec／aos-loop／aos-post／aos-daemon、proto8/cmd/*/bin 的 aos-eca-turn、aos-eca-screen、aos-tools、aos-daemon-ctl、
-# aos-mcp、aos-agent（跑過 proto8/install.sh 就都在），還有 claude；AOS_DAEMON＝跑著的 daemon 的 $AOS_STACK
+# aos-mcp、aos-agent（source 過 proto8/env.sh 就都在），還有 claude；AOS_DAEMON＝跑著的 daemon 的 $AOS_STACK
 aos-agent ctl add --ws ~/code/myproj --name myproj proto8/templates/eca-claude
 aos-agent say --target myproj 看一下 README 在講什麼 && aos-agent listen --target myproj
 aos-agent ctl pause --target myproj  # 暫停：不餵下一則（新信留 queue/new/），粒度＝一則訊息
@@ -124,7 +124,7 @@ token 檔一行 `TEAMSITE_TOKEN=<值>`、權限 600，放定義與工作區以�
 
 `command` 與 `args` 的相對路徑都從 server 檔所在的資料夾算（server 就在那裡起；要工作區的路徑寫 `{"$env": "AOS_WS", "$path": "…"}`），經 aos 那條同一條規則。server 拿到起它那個行程的全部環境變數（claude 身與經 aos＝起樹那個殼的整份，殼裡的 API key 也在；codex 只帶 aos 給的幾個），使用者 11-12 裁不做白名單、風險自負。
 
-腦看到的工具名＝`mcp__<名字>__<工具名>`。**秘密不要用 `aos-agent ctl add --envs` 給**（值明文寫進 `procs/<名>/exec.json`）。`aos-mcp-launch` 要在 PATH（`proto8/install.sh` 重跑一次）。
+腦看到的工具名＝`mcp__<名字>__<工具名>`。**秘密不要用 `aos-agent ctl add --envs` 給**（值明文寫進 `procs/<名>/exec.json`）。`aos-mcp-launch` 要在 PATH（`source proto8/env.sh` 重 source 一次；用選配 `proto8/cmd/install.sh` 的重跑它）。
 
 **經 aos（凍結成一包工具）**：同一份 server 檔也可以先跑一次 `aos-mcp-import mcp/teamsite.json`（[README](../../cmd/aos-mcp-import/README.md)），把工具凍結進檔裡，再疊進定義的 `tools.json`：`{"$override": [<原本的包…>, "mcp/teamsite.json"], "tools": {}}`。腦看到的是 aos 的工具 `teamsite_<工具名>`（eca 經 aos-mcp＝`mcp__aos__teamsite_<工具名>`；agent-fsm 也用得到，這條路不限 eca）。**先放好 server 檔、匯入過再疊**：`$override` 指到不在的檔＝整份登記讀不了（`PathMissing`）；還沒匯入的檔疊上去＝那一層沒有工具、不報錯。
 

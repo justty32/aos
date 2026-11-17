@@ -163,7 +163,7 @@ class TodoTool(unittest.TestCase):
 
     def test_through_aos_tools_call(self):
         if not (shutil.which("aos-tools") and shutil.which("aos-exec")):
-            self.skipTest("aos-tools / aos-exec not on PATH (put them there with proto8/install.sh)")
+            self.skipTest("aos-tools / aos-exec not on PATH (source proto8/env.sh)")
         reg = self.tmp / "tools.json"
         reg.write_text(json.dumps({"tools": {"todo": {"path": str(TOOL.parent)}}}))
         stack = self.tmp / "agent"
@@ -187,7 +187,7 @@ class TodoTool(unittest.TestCase):
         """11-13 fx-2：經 aos-tools 叫時錯誤行裡的存檔路徑要從叫方（腦）的 stack 算——照字面把 $AOS_STACK 換成叫方的 stack 找得到那個檔；
         原本印小格裡的 $AOS_STACK/todo.json，腦在自己的 stack 找不到。不印絕對路徑。"""
         if not (shutil.which("aos-tools") and shutil.which("aos-exec")):
-            self.skipTest("aos-tools / aos-exec not on PATH (put them there with proto8/install.sh)")
+            self.skipTest("aos-tools / aos-exec not on PATH (source proto8/env.sh)")
         reg = self.tmp / "tools.json"
         reg.write_text(json.dumps({"tools": {"todo": {"path": str(TOOL.parent)}}}))
         stack = self.tmp / "agent"

@@ -9,7 +9,7 @@
 status＝active｜paused｜done｜abandoned；reminded＝連續沒進展被丟了幾次（有進展歸零、set／resume 歸零）；limit＝上限（預設 10）；
 set_by／updated_by＝agent（這隻自己，經工具）｜outside（人、父 agent）｜aos（到上限自動暫停）。時間 UTC、ISO 8601 到秒、結尾 Z。
 寫法：先寫 . 開頭的暫存檔再改名（N-05）。檔不在＝沒有 goal；壞了（不是 JSON 物件、欄位型別不對）＝read 丟 GoalBad。
-提醒文字照 `[aos] goal: …`（py/aos_flags.py 的 NOTE_KINDS 登記 goal；lib 不 import py，這裡自己拼同一個格式，同 mail_notify）。純標準庫。"""
+提醒文字照 `[aos] goal: …`（lib/aos_flags.py 的 NOTE_KINDS 登記 goal；lib/agent 不 import aos_flags，這裡自己拼同一個格式，同 mail_notify）。純標準庫。"""
 import datetime
 import json
 import os

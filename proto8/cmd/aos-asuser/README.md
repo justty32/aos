@@ -32,4 +32,4 @@ aos-sandbox 只換主群組（G＝N）；`limits.groups` 的多群組由 daemon 
 
 測試：`python3 -m unittest discover -s proto8/cmd/aos-asuser/tests`；真跑例子先試 `aos-asuser sub:1 -- true`，不支援就 skip，需在 ns 外重跑。一般測試暫存夾可用 `KERNEL_TEST_TMP` 指定父夾；跨 uid 例子依圖紙用 `/tmp`。
 
-新指令要跑一次 `proto8/install.sh` 才會出現在 `~/.local/bin`。
+新指令重新 `source proto8/env.sh` 就在 PATH 上；若用選配的 `proto8/cmd/install.sh`，要再跑一次才會出現在 `~/.local/bin`。

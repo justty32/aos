@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
 
 CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
 PROTO = CELLS.parents[1]
@@ -26,7 +27,7 @@ class OwnTools(unittest.TestCase):
         self.own = self.stack / "tools.json"
         self.own.write_text(json.dumps({"$override": "../def/tools.json",
                                         "tools": {"peek_now_time": None, "clock2": {"path": str(CLOCK)}}}))
-        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") or k == "AOS_HOME"}
         bins = [str(p) for p in (PROTO / "impls").glob("*/bin")] + [str(PROTO / "cmd" / "aos-tools" / "bin")]
         env["PATH"] = os.pathsep.join(bins + [env["PATH"]])
         env.update(AOS_STACK=str(self.stack), AOS_CD=str(self.defn), AOS_WS=str(self.root),

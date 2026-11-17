@@ -9,7 +9,7 @@ from unittest import mock
 
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(PROTO / "py"), str(PROTO / "lib"), str(PROTO / "cmd/aos-agent")]
+sys.path[:0] = [str(PROTO / "lib"), str(PROTO / "cmd/aos-agent")]
 from aos_agent import common, decl
 from aos_agent.ctl import phase, rm
 

@@ -10,7 +10,7 @@ import unittest
 
 sys.dont_write_bytecode = True
 PROTO8 = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROTO8 / 'py'))
+sys.path.insert(0, str(PROTO8 / 'lib'))
 import daemon_ctl as dc  # noqa: E402
 
 # an add that carries envs also gets both registered names, empty when there is no value (ok-devt-1114 05 修訂 1)

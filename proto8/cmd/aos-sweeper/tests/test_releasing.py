@@ -9,7 +9,7 @@ import unittest
 
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(REPO / "proto8" / "py"))
+sys.path.insert(0, str(REPO / "proto8" / "lib"))
 import aos_sweep  # noqa: E402
 
 

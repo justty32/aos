@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import time
 import unittest
+os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
 from unittest import mock
 
 import test_reply_match as reply_tests
@@ -15,7 +16,7 @@ import test_reply_match as reply_tests
 CELLS = reply_tests.CELLS
 PROTO = reply_tests.PROTO
 sys.dont_write_bytecode = True
-sys.path[:0] = [str(CELLS), str(PROTO / "py")]
+sys.path[:0] = [str(CELLS), str(PROTO / "lib")]
 import compact
 import aos_ws
 
@@ -364,10 +365,10 @@ print(json.dumps({'message':message,'usage':{'prompt_tokens':used,'completion_to
             "exec": {"argv": ["aos-clock", str(daemon / "clock")]}, "interval_ms": 10}}})
         write(root / "kernel_daemon.json", {"interval_ms": 10, "exec": {"argv": [
             str(PROTO / "lib/aos/kernel_llm/_entry"), str(root / "kernel.json")]}})
-        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+        env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") or k == "AOS_HOME"}
         bins = [str(p) for p in PROTO.glob("impls/*/bin")] + [str(p) for p in PROTO.glob("cmd/*/bin")]
         env.update(PATH=os.pathsep.join(bins + [env["PATH"]]),
-                   PYTHONPATH=os.pathsep.join([str(PROTO / "py"), str(PROTO / "lib")]),
+                   PYTHONPATH=os.pathsep.join([str(PROTO / "lib")]),
                    PYTHONDONTWRITEBYTECODE="1", AOS_HOME=str(PROTO), AOS_STACK=str(daemon),
                    AOS_CD=str(root), AOS_WS=str(root), AOS_DAEMON=str(daemon), AOS_CLOCK=str(daemon / "clock"),
                    AOS_LLM_KERNEL=str(kernel))

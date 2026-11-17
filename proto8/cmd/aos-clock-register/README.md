@@ -50,6 +50,6 @@ aos-clock-register rm ann-wake
 - **時鐘自己清**（使用者「時鐘本身會每隔一定的cycle檢查自身。」）：新數字 % `check_every`（登記表頂層鍵，正整數，沒寫或壞＝100）== 0 時，箱子資料夾**已經不在**的格從表裡拿掉，各印一行 `aos-clock: warning: clock register: removed entry NAME (added by BY): its box BOX no longer exists`。資料夾還在、只是暫時寄不到（不是信箱、不可寫）的不算；指示詞解不開的判不了、不動。寫回前重讀一次表、只拿掉那幾格；寫不回只 warning。`check_every` 手改登記表設；`add`／`rm` 會照留。
 - `add` 時箱子還不是信箱（沒有 `tmp/ new/ cur/`）＝warning、照加。同名＝`EntryExists`（`--replace` 換掉）；`rm` 沒有那格＝`EntryMissing`；表讀不懂＝`RegisterBad`；寫不了＝`WriteFailed`。錯一律 `aos-clock-register: error: 代號 原因`、退 1。
 - 同時兩個人改表不管（後寫的整份蓋過先寫的）。
-- 測試：`python3 cmd/aos-clock-register/tests/test_clock_register.py`、`python3 cmd/aos-clock-register/tests/test_clock_once_cron.py`、`python3 py/tests/test_clock_when.py`、`python3 lib/agent/clock_register/tests/test_clock_register_tool.py`。
+- 測試：`python3 cmd/aos-clock-register/tests/test_clock_register.py`、`python3 cmd/aos-clock-register/tests/test_clock_once_cron.py`、`python3 lib/tests/test_clock_when.py`、`python3 lib/agent/clock_register/tests/test_clock_register_tool.py`。
 
 </details>

@@ -10,7 +10,7 @@ import threading
 import time
 
 PROTO = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(PROTO / "py"), str(PROTO / "lib")]
+sys.path[:0] = [str(PROTO / "lib")]
 import aos_ws  # noqa: E402
 
 AGENT_BIN = PROTO / "cmd" / "aos-agent" / "bin" / "aos-agent"

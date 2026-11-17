@@ -7,8 +7,8 @@ sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pyc
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 for parent in HERE.parents:
-    if (parent / 'py' / 'aos_flags.py').is_file():
-        sys.path.insert(0, str(parent / 'py'))
+    if (parent / 'lib' / 'aos_flags.py').is_file():
+        sys.path.insert(0, str(parent / 'lib'))
         break
 for parent in HERE.parents:                     # lib/aos/comm（comm/1 的共用庫；工具、hook 也用它）
     if (parent / 'lib' / 'aos' / 'comm' / '__init__.py').is_file():

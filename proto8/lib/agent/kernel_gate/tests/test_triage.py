@@ -34,7 +34,7 @@ class TriageTest(unittest.TestCase):
             # 使用者 11-15「~/code要審。」接著裁「拒絕」：~/code 不進 def_roots／ws_roots，也不進 home_roots，所以 ~/code 的定義或工作區直接拒
             "def_roots": [str(self.repo / "wf" / "temp" / "ok-*")],
             "ws_roots": [str(self.repo / "wf" / "temp")],
-            "deny_roots": [str(self.home / "lib"), str(self.home / "py"), str(self.home / "knowledge")],
+            "deny_roots": [str(self.home / "lib"), str(self.home / "knowledge")],
             "home_roots": [str(self.repo), str(self.home)],
             "daemon": str(self.daemon),
         }
@@ -84,7 +84,7 @@ class TriageTest(unittest.TestCase):
             self.add("x", self.home / "lib" / "x", t / "x"),                         # def 在 aos-home/lib
             self.add("x", self.agents / "opus-kernel", self.home / "knowledge"),     # ws 在 knowledge
             self.add("x", self.root / "tmp" / "evil", t / "x"),                      # repo 外的怪地方
-            self.add("x", self.agents / "opus-kernel", t / "x", as_written={"def": str(self.home / "py")}),
+            self.add("x", self.agents / "opus-kernel", t / "x", as_written={"def": str(self.home / "lib")}),
             self.add("eca_main", self.agents / "opus-kernel", t / "x"),              # 受保護的名字
             self.add("x", self.agents / "opus-kernel", t / "x", stack=str(self.root / "tmp" / "s")),
             self.add("w", self.code / "kf-1114" / "defs" / "w", self.code / "kf-1114" / "ws"),   # ~/code 的暫存樹直接拒（11-15「拒絕」）

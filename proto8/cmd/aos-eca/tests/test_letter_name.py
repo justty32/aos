@@ -49,7 +49,7 @@ class LetterName(unittest.TestCase):
         (self.defn / "cli.json").write_text(json.dumps({"kind": "claude", "timeout_ms": 30000}))
         self.log = self.t / "spy.jsonl"
         self.spy = self.t / "spy_turn.py"
-        self.spy.write_text(SPY % {"turn": str(TURN), "py": str(PROTO / "py"), "lib": str(PROTO / "lib"), "eca": str(PROTO / "cmd" / "aos-eca")})
+        self.spy.write_text(SPY % {"turn": str(TURN), "py": str(PROTO / "lib"), "lib": str(PROTO / "lib"), "eca": str(PROTO / "cmd" / "aos-eca")})
         subprocess.run(["aos-post", "init", str(self.stack / "queue")], env=self.env(), check=True, capture_output=True)
 
     def env(self, **more):

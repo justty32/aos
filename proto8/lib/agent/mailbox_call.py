@@ -3,7 +3,7 @@
 三支都是 aos-mailbox 的純包裝、目標＝叫我的那隻自己（同 self_tools、self_history）。錯：下層最後一行錯誤行的代號與原因接上（C-52 例外 ⑤），
 沒那行＝CommandFailed；stderr 與 stdout 各一行「名: error: 代號 原因」、退 1（lib 契約）。每次叫下層最多 60 秒；被 TERM 先收掉它再走。
 叫下層那段在 cmd_call.py（mailbox_send、clock_register 也直接叫 cmd_call.call）。
-需要 PATH 上有 aos-agent、aos-mailbox、aos-post（proto8/install.sh）。"""
+需要 PATH 上有 aos-agent、aos-mailbox、aos-post（source proto8/env.sh）。"""
 import json
 import signal
 

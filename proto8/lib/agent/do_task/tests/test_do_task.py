@@ -17,7 +17,7 @@ FAKE = r'''#!/usr/bin/env python3
 import json, os, sys
 from types import SimpleNamespace
 P = os.environ["FAKE_PROTO"]
-sys.path[:0] = [P + "/cmd/aos-agent", P + "/py", P + "/lib"]
+sys.path[:0] = [P + "/cmd/aos-agent", P + "/lib"]
 import aos_flags
 from aos_agent import history
 from aos_agent.common import Fail

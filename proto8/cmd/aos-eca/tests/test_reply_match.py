@@ -170,7 +170,7 @@ class Helpers(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        for p in (str(PROTO / "py"), str(PROTO / "lib"), str(PROTO / "cmd" / "aos-eca")):
+        for p in (str(PROTO / "lib"), str(PROTO / "cmd" / "aos-eca")):
             if p not in sys.path:
                 sys.path.insert(0, p)
 

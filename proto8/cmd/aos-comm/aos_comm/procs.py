@@ -17,7 +17,7 @@ def _agent(args, daemon=None):
     try:
         p = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=TIMEOUT_S)
     except OSError as e:
-        raise Fail("LaunchFailed", "cannot run aos-agent (put it on PATH with proto8/install.sh): %s" % (e.strerror or e))
+        raise Fail("LaunchFailed", "cannot run aos-agent (source proto8/env.sh to put it on PATH): %s" % (e.strerror or e))
     except subprocess.TimeoutExpired:
         raise Fail("CommandFailed", "aos-agent %s took over %d s" % (" ".join(args[:2]), TIMEOUT_S))
     if p.returncode != 0:

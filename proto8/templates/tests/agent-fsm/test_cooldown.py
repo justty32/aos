@@ -8,6 +8,7 @@ import sys
 import tempfile
 import time
 import unittest
+os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
 
 CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
 sys.path.insert(0, str(CELLS.parents[1] / 'lib'))
@@ -26,7 +27,7 @@ class Cooldown(unittest.TestCase):
         (self.definition / 'interfaces.json').write_text(json.dumps({'aos-agent': {'llm': 'llm.json'}}))
         (self.definition / 'llm.json').write_text('{"model":"local"}')
         self.calls = self.root / 'calls.txt'
-        self.env = dict({k: v for k, v in os.environ.items() if not k.startswith('AOS_')}, AOS_STACK=str(self.stack), AOS_CD=str(self.definition),
+        self.env = dict({k: v for k, v in os.environ.items() if not k.startswith('AOS_') or k == 'AOS_HOME'}, AOS_STACK=str(self.stack), AOS_CD=str(self.definition),
                         AOS_LLM_KERNEL=str(self.root / 'missing-kernel'),
                         FAKE_CALLS=str(self.calls), FAKE_REQUESTS=str(self.root / 'requests.jsonl'),
                         FAKE_SEND='0', FAKE_RECV='0',

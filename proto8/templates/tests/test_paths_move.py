@@ -20,7 +20,7 @@ import unittest
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[2]            # 這份 proto8（複本從它抄）
 BIN = Path.home() / ".local" / "bin"
-PARTS = ("lib", "py", "templates", "kernel", "knowledge")
+PARTS = ("lib", "templates", "knowledge")
 T0 = time.monotonic()
 # 只給人看的歷史紀錄（記當時的路徑，不拿來解路徑）：log、llm kernel 的帳 ledger.jsonl、觀測帳 observed.jsonl
 LOGS = (".log", "/ledger.jsonl", "/observed.jsonl")
@@ -50,9 +50,9 @@ class Machine:
         home.mkdir(parents=True, exist_ok=True)
 
     def use_proto(self, proto):
-        """換了 HOME 就沒有 user site 的 aos-proto8.pth：照 py/README 的退路改給 PYTHONPATH，指這台那份 proto8。"""
+        """換了 HOME 就沒有 user site 的 aos-proto8.pth：改給 PYTHONPATH，指這台那份 proto8。"""
         self.proto = proto
-        self.env["PYTHONPATH"] = os.pathsep.join([str(proto / "py"), str(proto / "lib")])
+        self.env["PYTHONPATH"] = os.pathsep.join([str(proto / "lib")])
 
     def run(self, *args, cwd, check=True, timeout=90):
         r = subprocess.run([str(a) for a in args], cwd=cwd, env=self.env, text=True, capture_output=True,
@@ -162,7 +162,7 @@ class PathsMove(unittest.TestCase):
         m.cp_template("templates/daemon-root", "defs", cwd=proj)
         m.cp_template("templates/agent-fsm", "defs/ann", cwd=proj)
         (proj / "defs" / "ann" / "llm.json").write_text('{"model": "fake"}\n')
-        m.cp_template("kernel/llm-kernel", "def", cwd=llms)
+        m.cp_template("templates/kernel/llm-kernel", "def", cwd=llms)
         if mode != "env":                              # 不 export：把範本 .env 那行註解換成自己的值（README 教的寫法）
             value = {"absolute": str(m.proto),
                      "relative": "${AOS_WS}/" + os.path.relpath(m.proto, proj)}[mode]

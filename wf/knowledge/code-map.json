@@ -23,30 +23,16 @@
    "per_file": "wf/knowledge/code-map/proto8/cmd.json"
   },
   {
-   "domain": "命令列共用模組",
-   "files": "proto8/py/*",
-   "role": "人打的指令共用的 Python 模組（旗標、找 daemon、掃描…）；怎麼被找到看 proto8/py/README.md。",
-   "tests": "proto8/py/tests/",
-   "per_file": "wf/knowledge/code-map/proto8/py.json"
-  },
-  {
    "domain": "腦叫的工具與共用程式庫",
    "files": "proto8/lib/*",
-   "role": "腦叫的工具（`_entry`＋`_tooldef.json`＋`_metainfo.json`）；CLI 對話與介面宣告共用模組在 `lib/agent/`（`cli_session.py`、`agent_files.py`）；機讀的協議定義（JSON Schema）在 `lib/schema/`（不是工具）；`lib` 不 import `py`。契約看 proto8/lib/README.md。",
-   "tests": "各工具夾的 tests/",
+   "role": "腦叫的工具（`_entry`＋`_tooldef.json`＋`_metainfo.json`）；CLI 對話與介面宣告共用模組在 `lib/agent/`（`cli_session.py`、`agent_files.py`）；機讀的協議定義（JSON Schema）在 `lib/schema/`（不是工具）；lib 頂層另有人打的指令與範本共用的 Python 模組（旗標 aos_flags、aos_ws、daemon_ctl/、掃描 aos_sweep*…；11-17 前在 proto8/py/，說明看 proto8/lib/docs/04-共用模組.md），lib 的工具不 import aos_flags。契約看 proto8/lib/README.md。",
+   "tests": "各工具夾的 tests/；頂層共用模組的測試在 proto8/lib/tests/",
    "per_file": "wf/knowledge/code-map/proto8/lib.json"
   },
   {
-   "domain": "掛在 daemon 上的管理元件",
-   "files": "proto8/kernel/*",
-   "role": "問腦的 kernel 等；通用 kernel 的站（框架站）的程式本身在 `lib/aos/kernel`。",
-   "tests": "",
-   "per_file": "wf/knowledge/code-map/proto8/kernel.json"
-  },
-  {
-   "domain": "agent 範本",
+   "domain": "agent 範本與 kernel 範本",
    "files": "proto8/templates/*",
-   "role": "agent 範本（定義夾會被整夾抄走）。",
+   "role": "agent 範本（定義夾會被整夾抄走）；掛在 daemon 上的 kernel 範本在 `templates/kernel/`（問腦的 llm-kernel 等，11-17 從 proto8 頂層併進來），通用 kernel 的站（框架站）的程式本身在 `lib/aos/kernel`。",
    "tests": "proto8/templates/tests/",
    "per_file": "wf/knowledge/code-map/proto8/templates.json"
   },
@@ -58,15 +44,15 @@
    "per_file": "wf/knowledge/code-map/proto8/knowledge.json"
   },
   {
-   "domain": "還沒定位的嘗試",
-   "files": "proto8/extras/*",
-   "role": "判準看 proto8/README.md「頂層一覽」。",
+   "domain": "封存",
+   "files": "proto8/archive/*",
+   "role": "不再維護、留著參考的東西（langs、tree-swap、aos-home）；不測、連結壞了不修。extras 11-17 解散（aos-view 進 cmd/，其餘進 lib/tests、templates/tests、templates/kernel/tests 或 archive）。",
    "tests": "",
-   "per_file": "wf/knowledge/code-map/proto8/extras.json"
+   "per_file": ""
   },
   {
    "domain": "proto8 頂層單檔",
-   "files": "proto8/*（install.sh 等）",
+   "files": "proto8/*（env.sh 等；install.sh 11-17 起在 proto8/cmd/）",
    "role": "安裝腳本等頂層單檔。",
    "tests": "",
    "per_file": "wf/knowledge/code-map/proto8/proto8.json"
@@ -83,14 +69,14 @@
  ],
  "lookup": [
   {"want": "錯誤行／提醒行、stdin 讀 JSON、stdout 印一行（C++）", "where": "proto8/impls/aos-util/include/aos/util/io.hpp；旗標 parse_cli 在 aos/util/cli.hpp"},
-  {"want": "Python 命令列的旗標與錯誤行", "where": "proto8/py/aos_flags.py（人打的指令共用）；lib 工具與 lib/agent/cli_session.py 共用 proto8/lib/tool_io.py"},
-  {"want": "Python 共用模組怎麼找到、repo 外的複本怎麼 import", "where": "自己的資料夾 → 自己 realpath 往上找 repo py/／lib/ → 標準 sys.path（PYTHONPATH；install.sh 11-15 起不再寫 user site 的 aos-proto8.pth）；說明在 proto8/py/README.md"},
+  {"want": "Python 命令列的旗標與錯誤行", "where": "proto8/lib/aos_flags.py（人打的指令共用）；lib 工具與 lib/agent/cli_session.py 共用 proto8/lib/tool_io.py"},
+  {"want": "Python 共用模組怎麼找到、repo 外的複本怎麼 import", "where": "指令用 ../../../lib 找；家外的程式只經 $AOS_HOME/lib、沒設報 HomeMissing（proto8/cmd/install.sh 11-15 起不再寫 user site 的 aos-proto8.pth）；說明在 proto8/lib/docs/04-共用模組.md"},
   {"want": "claude／codex 對話、tools／llm 宣告檔位置", "where": "proto8/lib/agent/cli_session.py、proto8/lib/agent/agent_files.py（cmd 與範本可共用）"},
   {"want": "某支人打的指令", "where": "proto8/cmd/<名>/bin/<名>，說明在 proto8/cmd/README.md"},
-  {"want": "agent 範本、問腦的 kernel、通用 kernel 的站（框架站）", "where": "proto8/templates/、proto8/kernel/（框架站的程式本身在 proto8/lib/aos/kernel）"},
+  {"want": "agent 範本、問腦的 kernel、通用 kernel 的站（框架站）", "where": "proto8/templates/（kernel 範本在 proto8/templates/kernel/；框架站的程式本身在 proto8/lib/aos/kernel）"},
   {"want": "誰連誰（C++）", "where": "wf/knowledge/code-map/proto8/impls.json#/deps"},
   {"want": "一個資料夾程式怎麼被找到、怎麼起", "where": "proto8/impls/aos-exec（條文在 proto8 NORMS N-57～N-62）"},
-  {"want": "Python 找 daemon、讀表／prune 自檢、寄信等回信（ping）、共用回信信箱", "where": "proto8/py/daemon_ctl/（aos-daemon-ctl 是薄殼；aos-agent、aos-eca-screen import 它；prune 自檢只看檔案，行程存活由 daemon 判斷）"},
+  {"want": "Python 找 daemon、讀表／prune 自檢、寄信等回信（ping）、共用回信信箱", "where": "proto8/lib/daemon_ctl/（aos-daemon-ctl 是薄殼；aos-agent、aos-eca-screen import 它；prune 自檢只看檔案，行程存活由 daemon 判斷）"},
   {"want": "信箱（寄、認領、處理完、撤回）與鎖", "where": "proto8/impls/aos-post、proto8/impls/aos-lock"},
   {"want": "$ref 與 index 的路徑字串怎麼算（# 左邊檔案系統、右邊 json 內部）", "where": "Python：proto8/lib/aos_refpath.py；C++：proto8/impls/aos-directive/src/ref.cpp；共用測試表 proto8/lib/tests/ref_path_cases.json"},
   {"want": "腦的工具長怎樣、契約", "where": "proto8/lib/README.md；逐支一句話在 wf/knowledge/code-map/proto8/lib.json"}

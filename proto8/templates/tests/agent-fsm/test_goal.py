@@ -49,7 +49,7 @@ class Base(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         bins = [str(p) for p in sorted(PROTO.glob("impls/*/bin"))] + [str(p) for p in sorted(PROTO.glob("cmd/*/bin"))]
         self.env = dict(env, PATH=os.pathsep.join(bins + [env["PATH"]]), AOS_HOME=str(PROTO),
-                        PYTHONPATH=os.pathsep.join([str(PROTO / "py"), str(PROTO / "lib")]), PYTHONDONTWRITEBYTECODE="1",
+                        PYTHONPATH=os.pathsep.join([str(PROTO / "lib")]), PYTHONDONTWRITEBYTECODE="1",
                         AOS_STACK=str(self.stack), AOS_CD=str(self.defn), AOS_WS=str(self.ws), AOS_DAEMON=str(self.d),
                         AOS_LLM_KERNEL=str(self.kernel))
         self.hist = self.stack / "history.jsonl"

@@ -10,12 +10,22 @@ import time
 
 sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
-for parent in HERE.parents:
-    if (parent / 'lib/tool_io.py').is_file():
-        sys.path.insert(0, str(parent / 'lib'))
-        break
-import tool_io
-import observed
+# 路徑規則一：先看自己旁邊（sys.path[0]），再看 $AOS_HOME/lib；不往上找旁邊的夾、沒設 AOS_HOME 就明講
+if os.environ.get('AOS_HOME'):
+    sys.path.insert(1, os.path.join(os.environ['AOS_HOME'], 'lib'))
+try:
+    import tool_io
+    import observed
+except ModuleNotFoundError as _error:
+    if _error.name not in ('tool_io', 'observed'):
+        raise
+    if os.environ.get('AOS_HOME'):
+        _line = 'judge-llm: error: ModuleMissing %s.py not found under $AOS_HOME/lib\n' % _error.name
+    else:
+        _line = 'judge-llm: error: HomeMissing AOS_HOME is not set (it names the proto8 folder that holds lib)\n'
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
 
 
 def truncate(data, limit):

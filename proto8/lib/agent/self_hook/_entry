@@ -14,7 +14,7 @@
 #   結果：下層 stdout 原樣（add／rm／reset 多一句「下一個事件起生效」）。錯：同 self_tools（stderr 與 stdout 各一行「self_hook: error: 代號 原因」、退 1；
 #   下層 stderr 原樣透出，它退非 0＝把最後一行錯誤行的代號與原因接上，沒那行＝CommandFailed）。op 沒給＝ArgumentsBad、不認得＝OpUnknown。
 #   --help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉 aos-agent，退 130）。
-# 需要 PATH 上有 aos-agent（proto8/install.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
+# 需要 PATH 上有 aos-agent（source proto8/env.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
 import json, os, sys
 HELP = """\
 usage: self_hook < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)

@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 PROTO = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(PROTO / 'cmd/aos-agent'), str(PROTO / 'py'), str(PROTO / 'lib')]
+sys.path[:0] = [str(PROTO / 'cmd/aos-agent'), str(PROTO / 'lib')]
 from aos_agent import listen
 
 

@@ -25,10 +25,9 @@ down：反過來縮一級：NAME/（裡面只剩 _entry）→ NAME.json；NAME.j
 import difflib, json, os, re, shutil, sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
-import aos_flags  # noqa: E402  proto8/py/aos_flags.py：P-44 的解析
-from daemon_ctl.entry import is_program  # noqa: E402  看內容判程式（11-10：/mnt/c 每個檔都 +x）
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
+import aos_flags  # noqa: E402  proto8/lib/aos_flags.py：P-44 的解析
+from daemon_ctl.entry import is_program  # noqa: E402  看內容判程式（11-10：/mnt/c 每個檔都 +x）
 import aos_refpath  # noqa: E402  proto8/lib/aos_refpath.py：$ref／index 共用的路徑規則（11-13）
 
 PROG = "aos-grow"

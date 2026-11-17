@@ -10,7 +10,7 @@ flowchart LR
 
 這是同步比對函數；`measure` 的 `check.json` 指向它，裁判成本進 `check.cost`。複製本夾、改 `judge.json` 的 `endpoint` 即可換模型。
 
-預設的 `"endpoint": "judge"` 在出廠的 [`kernel/llm-kernel/kernel.json`](../../kernel/llm-kernel/kernel.json) 有登記，設定跟 `smart-high` 同一組（LiteLLM 的 claude haiku），兩個範本直接搭就能跑。裁判要換模型，改 kernel.json 裡 `judge` 那格。
+預設的 `"endpoint": "judge"` 在出廠的 [`templates/kernel/llm-kernel/kernel.json`](../kernel/llm-kernel/kernel.json) 有登記，設定跟 `smart-high` 同一組（LiteLLM 的 claude haiku），兩個範本直接搭就能跑。裁判要換模型，改 kernel.json 裡 `judge` 那格。
 
 ```sh
 printf '%s' '{"expect":"/abs/expect","got":"/abs/got","input":"/abs/case"}' | aos-exec /abs/judge-llm
@@ -19,7 +19,7 @@ printf '%s' '{"expect":"/abs/expect","got":"/abs/got","input":"/abs/case"}' | ao
 <details>
 <summary>設定、輸出與錯誤</summary>
 
-先設 `AOS_LLM_KERNEL`；設 `AOS_STACK` 時會透過共用 `observed.append` 留 `think` 帳。共用模組從 repo 的 `lib/` 找，複製到 repo 外則依安裝的 Python 路徑或 `PYTHONPATH` 找。
+先設 `AOS_LLM_KERNEL`；設 `AOS_STACK` 時會透過共用 `observed.append` 留 `think` 帳。共用模組先看自己旁邊、再看 `$AOS_HOME/lib`；沒設 `AOS_HOME` 又缺模組＝`HomeMissing`、退 1（11-17 路徑規則一）。
 
 `judge.json` 的 `max_bytes` 預設 60000，expect、got、input 三段各自按 bytes 截斷，尾加 `[truncated]`。兩夾遞迴讀取所有檔，按相對路徑排序，每檔用 `== relative/path ==` 標題；input 帶現有的 `stdin.json` 與 `say.txt`。文字以 UTF-8 解碼，壞 bytes 顯示替代字元，截斷處略過不完整字元。三段以同名 JSON 字串欄位送給腦，檔案內文視為資料。
 

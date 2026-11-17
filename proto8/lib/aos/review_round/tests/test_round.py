@@ -41,7 +41,7 @@ class ReviewRound(unittest.TestCase):
         bins = [str(path) for group in ('impls', 'cmd')
                 for path in (PROTO / group).glob('*/bin')]
         self.env.update(PATH=os.pathsep.join(bins + [self.env['PATH']]),
-                        PYTHONPATH=os.pathsep.join([str(PROTO / 'lib'), str(PROTO / 'py')]),
+                        PYTHONPATH=os.pathsep.join([str(PROTO / 'lib')]),
                         PYTHONDONTWRITEBYTECODE='1',
                         AOS_DAEMON=str(self.daemon), AOS_LLM_KERNEL=str(self.kernel),
                         AOS_STACK=str(self.stack), AOS_WS=str(self.ws), AOS_CD=str(self.root))

@@ -4,12 +4,7 @@
 import os, sys
 sys.dont_write_bytecode = True
 _d = os.path.dirname(os.path.realpath(__file__))
-_found, _up = [_d], _d
-while _up != os.path.dirname(_up):
-    _up = os.path.dirname(_up)
-    if os.path.isfile(os.path.join(_up, "lib", "tool_spec.py")):
-        _found.append(os.path.join(_up, "lib"))
-        break
+_found = [_d]
 if os.environ.get("AOS_HOME"):
     _found.append(os.path.join(os.environ["AOS_HOME"], "lib"))
 sys.path[:0] = _found
@@ -18,7 +13,10 @@ try:
 except ModuleNotFoundError as _e:
     if _e.name not in ("tool_spec", "tool_io"):
         raise
-    _line = "%s: error: ModuleMissing %s.py not found (set AOS_HOME, or copy it next to tool.py)\n" % (os.path.basename(_found[0]), _e.name)
+    if os.environ.get("AOS_HOME"):
+        _line = "%s: error: ModuleMissing %s.py not found (under $AOS_HOME/lib, or next to tool.py)\n" % (os.path.basename(_found[0]), _e.name)
+    else:
+        _line = "%s: error: HomeMissing AOS_HOME is not set (set it, or copy %s.py next to tool.py)\n" % (os.path.basename(_found[0]), _e.name)
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)

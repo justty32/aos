@@ -34,7 +34,7 @@ aos-daemon-ctl -d stacks/root ls        # _clock、_sweeper、ann 都是 running
 
 子項的 stack 預設在 `stacks/root/procs/<名>/`（例 `stacks/root/procs/ann/`）。
 
-- **llm kernel** 是另外一個專案、自己起停（`cp -r $AOS_HOME/kernel/llm-kernel <那邊的定義>` 抄一份，再 `aos-exec --stack <那邊的 stack> <那邊的定義>`）；`AOS_LLM_KERNEL` 指它的 stack，`.env` 預設是 `${AOS_WS}/../llms/stacks/llm`。它沒開時 agent 只是一直等、不會壞。現在 `aos-agent listen`／`say` 會印一行說 llm kernel 沒在跑。
+- **llm kernel** 是另外一個專案、自己起停（`cp -r $AOS_HOME/templates/kernel/llm-kernel <那邊的定義>` 抄一份，再 `aos-exec --stack <那邊的 stack> <那邊的定義>`）；`AOS_LLM_KERNEL` 指它的 stack，`.env` 預設是 `${AOS_WS}/../llms/stacks/llm`。它沒開時 agent 只是一直等、不會壞。現在 `aos-agent listen`／`say` 會印一行說 llm kernel 沒在跑。
 - **下班**：`aos-daemon-ctl -d stacks/root shutdown`（子項全睡下、記在表上），再 `git` 推。
 - **換台**：`git` 拉過去、照上面設好環境變數後直接 `aos-exec --stack stacks/root defs`，睡下的 `ann` 自己醒、接著跑，不用其他指令。
 - **指到 proto8 的路徑**：範本一律寫成 `{"$env": "AOS_HOME", "$path": …}`，每台設一次 `AOS_HOME=<這台 proto8 的絕對路徑>`即可；也可在 `defs/.env` 寫 `AOS_HOME=/絕對路徑`（兩台同位置）或 `AOS_HOME=${AOS_WS}/../aos/proto8`（兩台同樣相對擺法），換台都不用跑額外指令。本範本自己沒有指進 repo 的路徑。

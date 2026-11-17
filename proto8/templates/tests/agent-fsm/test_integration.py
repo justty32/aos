@@ -7,6 +7,7 @@ import sys
 import tempfile
 import time
 import unittest
+os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 路徑規則一（11-17）：範本的格只經 AOS_HOME 找 lib，測試給它這份 proto8
 
 CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
 PROTO = CELLS.parents[1]
@@ -34,7 +35,7 @@ class KernelIntegration(unittest.TestCase):
             daemon_config = root / 'daemon.json'
             daemon_config.write_text(json.dumps({'interval_ms':10, 'exec':{
                 'argv':[str(PROTO / 'lib/aos/kernel_llm/_entry'), str(config)]}}))
-            env = {k:v for k,v in os.environ.items() if not k.startswith('AOS_')}
+            env = {k:v for k,v in os.environ.items() if not k.startswith('AOS_') or k == 'AOS_HOME'}
             bins = [str(path) for path in (PROTO / 'impls').glob('*/bin')]
             env['PATH'] = os.pathsep.join(bins + [str(PROTO / 'cmd/aos-tools/bin'), env['PATH']])
             env.update(AOS_STACK=str(kernel_stack), AOS_CD=str(root), AOS_WS=str(root))
