@@ -1,6 +1,6 @@
 # STRUCTURE — 結構整理參考（被動 / 按需取用）
 
-[INDEX](INDEX.md)｜派發 [WORKFLOWS](WORKFLOWS.md)
+派發 [WORKFLOWS](WORKFLOWS.md)
 
 **被動參考**：只在你要**重構 / 整理結構**（拆大檔、分類雜亂資料夾、長出新工作流、封存過時文檔）時取用。本檔是專案組織原則的**唯一出處**，其他檔只連過來、不重述；always-on 鐵律在 AGENTS.md。
 
@@ -10,13 +10,15 @@
 
 1. **分層樹**：整個專案文檔是一棵樹，每層**只指向下一層、不存下層細節**：
    ```
-   AGENTS.md（最頂，薄路由器）→ WORKFLOWS.md（依意圖派發）/ INDEX.md（結構地圖）
+   AGENTS.md（最頂，薄路由器）→ WORKFLOWS.md（依意圖派發；INDEX.md 11-17 退場）
      → 各工作流入口（README 或單檔）→ 工作流內容 → 子工作流…
    ```
    往下走才找細節；下層檔**不向上連 AGENTS.md**。
 2. **檔名語意**：**README**＝初入一個資料夾先讀的入口／導引；**INDEX**＝描述該資料夾頂層結構的索引。小資料夾兩者合一，大了才分出獨立 INDEX。
 3. **durable 知識歸層**：每份長期知識歸到它所屬的那個工作流／那一層，**絕不往上堆**——AGENTS.md 因此永遠很薄。
-4. **活狀態只列 open**：進度記 `SESSION-LOG.md`、等使用者的記 `WAIT_USER.md`，**完成即刪**；「改了什麼」交給 git log，決定記 `workflows/decisions.json`；檔內只留現行結論（[tidy 原則 5](workflows/tidy/content-trim.md)）。兩者膨脹就分別拆 `session_logs/`／`wait-user/`，hub 只留導航表；日誌寫法與月摘要見 [user/02](workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)。
+4. **活狀態只列 open**：進度記 `SESSION-LOG.md`、等使用者的記 `WAIT_USER.md`，**完成即刪**；「改了什麼」交給 git log，決定記 `workflows/decisions.json`；檔內只留現行結論（[tidy 原則 5](workflows/tidy/content-trim.md)）。兩者膨脹就分別拆 `session_logs/`／`wait-user/`，hub 只留導航表；日誌寫法與月摘要見 [user/02](workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)（日誌 11-17 起停寫凍結）。
+6. **`wf/` 跟 proto8 的分工線**（使用者 11-17 待裁網頁 wf-5 選 a）：`wf/` 只放在這個 repo 做事的規矩、還沒完的事（進度、交接、樹外的信）、做事用的腳本、各隊共用的做法與坑（`public/`）、對 aos 的意見（`advices/`）；所有「哪天討論、決定、規劃、調查、實測、盤點了什麼」的紀錄寫 `proto8/thinking/`；出廠給樹裡 agent 讀的寫 `proto8/knowledge/`；條文寫 `proto8/docs/`。附帶兩件：每日日誌 `session_logs/` 停寫凍結（wf-5i a）；新的整理與審查報告寫當天的 thinking，`tidy/reports/`、`refactor/reports/` 凍結（wf-5ii a）。舊的都不搬。
+7. **三軸每軸一處**（使用者 11-17 待裁網頁 wf-2 a）：信＝aos 信箱（樹外才看 `wf/inbox/`）、進度＝一個檔、待使用者＝使用者專區（`WAIT_USER.md` 與 `wait-user/` 剩的條目寄進專區後退場）。進度檔先在 md 裡瘦身（11-17 已做），等當天在跑的線收完再轉 json，檔名 `wf/progress.json`（wf-3、wf-3b a；轉的那個 commit 同時改 `wf/tools/commit_queue.py` 的 `SESSION_LOG` 與 `log_upsert`／`log_delete`、`compact_reload.sh`）。
 5. **鐵律極少而 always-on**：3–5 條任何時刻都適用的規矩常駐 AGENTS.md，其餘一切按需取用。
 
 ## 結構整理原則（膨脹即拆 / 雜亂即分類）
@@ -66,7 +68,7 @@
 
 1. **單檔**：一個 `.md`，**檔名即其意義**（如 `testing.md`），導引、結構、內容揉在一起。多數工作流停在這。
 2. **資料夾＋單 README**：膨脹到要拆 → 變資料夾，裡面**只有 `README.md`**，仍一肩扛導引＋細則＋結構。
-3. **資料夾內不只 README**：README 再膨脹 → 拆出獨立檔各司其職：`INDEX.md`（結構）、`session-log.md`（本工作流 open 進度）、`gotchas.md`、內容檔…，README 退回只做「先讀我」。
+3. **資料夾內不只 README**：README 再膨脹 → 拆出獨立檔各司其職：`INDEX.md`（結構）、`session-log.md`（本工作流 open 進度）、內容檔…（坑不在工作流裡另開檔，一律寫進 `wf/public/`，使用者 11-17 待裁網頁 wf-7 a），README 退回只做「先讀我」。
 4. **資料夾內有子工作流**：內部再開巢狀工作流，各子工作流自己又從第 1 級開始長。
 
 走到哪一級由「是否膨脹 / 雜亂」決定，不預先過度設計。**降級也成立**：子項消失就往回併級。同一套成長規則也用在 JSON 值上（純值不夠用就長成物件、key 不變），見 proto8 [C-55](../proto8/docs/CONCEPTS/01-設計理念/05-布局成長與檔案權限.md#布局成長10-15-使用者說原文)。
@@ -75,11 +77,12 @@
 
 - **入口檔段落**固定，照 [workflows/TEMPLATE.workflow.md](workflows/TEMPLATE.workflow.md)：何時用 ↔ 何時不用 / `Done when:` / 流程 / 交接。既有工作流的入口檔下次動到時再補齊，不為了補而改。
 - **`Done when:` 只准三類可觀察條件**：檔案存在、指令回傳、表格填滿（✗「功能做好」這種不可觀察的）。
-- **資料夾型**：入口 `README.md` ＋視需要的 `archive/`、`gotchas.md`、`session-log.md`；**單檔型**：一個 `.md` 同時是入口與內容，撐大了照上面四級成長升級成資料夾型。有哪些工作流看派發表。
+- **資料夾型**：入口 `README.md` ＋視需要的 `archive/`、`session-log.md`；**單檔型**：一個 `.md` 同時是入口與內容，撐大了照上面四級成長升級成資料夾型。有哪些工作流看派發表。
 
 ## archive 規則
 
 - 過時 / 被取代的文檔搬進**所屬工作流**的 `archive/`（共享的進 `common/archive/`），**不刪**、不在維護鏈。
+- **例外：已封存工作流的空入口集中搬、不留指標頁**（使用者 11-17 待裁網頁 wf-4 選 a）：收進 `wf/workflows/archive/`（頂層的 `salvage/` 進 `advices/archive/`，停用的 `progress_board`、`decide_page` 進 `tools/archive/`，wf-4b a），交件帶 `--rm`、要使用者親跑或點頭。
 - **預設留指標頁，不移除舊路徑**（頂層 2026-11-14 定）：全文抄成 `archive/` 底下的新檔，原路徑改成幾行的指標頁（為什麼停用、現在怎麼做、全文在哪；別處連進來的錨點在指標頁補 `<a id>`）。這樣交件不帶 `commit-request --rm`、不用使用者親手跑，也合使用者「不刪」的偏好。只有使用者明說要移除舊路徑時才真的搬走（`mv` 後 `--files` 新路徑加 `--rm` 舊路徑），那種要預先排使用者跑：agent 的權限模式不讓跑帶 `--rm` 的指令。出處：10a75ac53（封存 hackathon、workshop，卡在 `--rm`、最後使用者親跑）、`dispatch/aos-teams/04-進度回報.md`（指標頁做法）。
 - 檔名保留原名（放進別層的 `archive/` 會撞名或看不出來源時，可加來源前綴）；檔頭第一行加 `> 封存 YYYY-MM-DD，由 <取代它的路徑> 取代`（沒有取代者就寫原因）。
 - **指向被封存檔的連結從活文件拿掉**（改純文字或刪句），**當它不存在**；不改指到 `archive/` 路徑。

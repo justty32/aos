@@ -13,7 +13,7 @@
 - **「簡單工作」的界線**（使用者 11-06 確認：「1.對。2.是。」）：雜活、純文字小改、查找盤點、跑指令收結果才算簡單，才給 sonnet（補位時）。**碰程式碼邏輯、改寫使用者的概念／規範條文不算簡單**，不給 sonnet（使用者 09-30「不要 sonnet」「就 opus」；見 [common/user「子 agent 模型」](../common/user.md)）。
 - **一般 agent 再派子 agent，模型隨意**（使用者 11-06 第 1 句）；sol 隊員一張單只做一件事，要多人由線多掛幾隻。
 - **要規劃就走正統流程**：sol 蒐集 → opus 匯總 → fable 設計 → opus 細化成計劃 → Argon 審 → 採納表 → sol 施工。需求還不清楚時先發想、不急著規劃。細節 [07](aos-teams/07-預設流程與agent-fsm.md)。
-- **讀規矩**（使用者 11-06 第 1、5 句、11-13）：派出去的 agent 做事前先讀知識庫入口 `~/aos-home/knowledge/aos/_description.json`，再通讀 wf/ 規矩（`AGENTS.md`、`WORKFLOWS.md`、`common/user.md`、`common/conventions.md` 等）；**簡單工作與雜活例外**（可免讀），對子 agent 一樣成立。任務書開頭寫明，往下派時也寫進子任務書。用配給包的蒐集員、審稿員照包裡的分級：只讀知識庫入口加站台層（[kits](kits/README.md)）。
+- **讀規矩**（使用者 11-06 第 1、5 句、11-13）：派出去的 agent 做事前先讀知識庫入口 `~/aos-home/knowledge/aos/_description.json`，再讀[規矩卡](../common/rules-card.md)（使用者 11-17 待裁網頁 wf-6 選 a，取代通讀 wf/ 規矩；碰程式再讀 conventions，當線隊長、要派隊員再讀本卡）；**簡單工作與雜活例外**（可免讀），對子 agent 一樣成立。任務書開頭寫明，往下派時也寫進子任務書。用配給包的蒐集員、審稿員照包裡的分級：只讀知識庫入口加站台層（[kits](kits/README.md)）。
 - **開隊前先把打算講給使用者聽**，等他回應或糾正再派；他可能在手機上、回得慢，問題與選項照發、附預設建議。問他的題目寄專區（下面第 2 件）。
 - **權限邊界**：agent 不加全繞過沙箱／權限的旗標，要開由使用者親自開。eca 不設 rlimit、自己收斂；agent-fsm 帶 `limits`。
 - **命名**：daemon 表上的名字整台共用，掛的 agent 一律 `<eca 名>-<角色>-<編號>`（例 `ok-kf-sol-1`）。
@@ -32,7 +32,7 @@
 - `--files`／`--rm` 的路徑從 repo 根算，`--msg-file` 從你所在的資料夾算；結果看 stdout 最後一行 JSON（`DONE` 加雜湊，或錯誤原文）；先 `--dry-run` 看會交什麼。
 - 日索引（`proto8/thinking/<年-月>/<日>/README.md`）、月索引（`proto8/thinking/<年-月>/README.md`）、`wf/SESSION-LOG.md` 不交整檔，用 `--op`（`day_upsert`、`month_bump`、`month_set`、`log_upsert`、`log_delete`）。生成的 `_index.json`、code map 由排隊重生，不要列進 `--files`（`proto8/knowledge/` 底下手寫的 `_index.json` 例外，照一般檔交）。
 - 交之前 `git diff -- 檔` 確認只有自己的字；**不 push**。
-- **誰放行**：照你的任務書。11-14 起線的 commit 由你那一部的部長放行，每批先寄它：檔案清單、`git diff --stat`、怎麼驗的。它放行的前提：在乾淨複本（`git archive`）測過並附結果；動到活樹正在用的 `proto8/cmd`、`py`、`lib` 時先寫暫存檔再改名、立刻 import 並跑定向測試、原檔有備份；用 commit-request（共用索引加 `--op`）；不撞別線 claim 的檔。帶 `--rm`（搬檔後移除舊路徑）、跟鐵律有出入的，部長會上交頂層。更多：[07「commit」](aos-teams/07-預設流程與agent-fsm.md)、[patch-and-commit](../../public/patch-and-commit.md)。
+- **誰放行**：照你的任務書。11-14 起線的 commit 由你那一部的部長放行，每批先寄它：檔案清單、`git diff --stat`、怎麼驗的。它放行的前提：在乾淨複本（`git archive`）測過並附結果；動到活樹正在用的 `proto8/cmd`、`lib` 時先寫暫存檔再改名、立刻 import 並跑定向測試、原檔有備份；用 commit-request（共用索引加 `--op`）；不撞別線 claim 的檔。帶 `--rm`（搬檔後移除舊路徑）、跟鐵律有出入的，部長會上交頂層。更多：[07「commit」](aos-teams/07-預設流程與agent-fsm.md)、[patch-and-commit](../../public/patch-and-commit.md)。
 
 ### 2. 問使用者：寄專區，題目會出現在全景頁
 
@@ -63,8 +63,8 @@
 - 你的 shell 帶著活樹的 `AOS_*`：跑任何 aos 指令或測試，一律經一支 bash 腳本（不是 bash 就拒絕 → 逐一 unset `AOS_*` → 還有殘留就拒絕 → exec）。shell 是 zsh，要分詞的寫法包 `bash -c`。
 - 不把整份環境變數寫進檔、log 或信（`env`、`printenv`、`/proc/*/environ` 都不行，裡面有 API key）；要看只列變數名或只列 `AOS_*`。
 - 不刪檔（連自己的暫存也不刪）。收行程只准兩種（06 第 4 條）：`aos-daemon-ctl -d <自己暫存樹 stack 的絕對路徑> shutdown`，或 kill 自己記下的 pid（kill 前 `readlink /proc/<pid>/cwd`）；禁 `pkill`、`killall` 與任何按名字收行程的寫法。
-- 改 `proto8/cmd`、`proto8/py`、`lib/agent/*.py` 存檔當下活樹就在用；`proto8/knowledge`、`lib`、`templates` 要換樹重抄才生效。
-- 任務書必貼的九條硬規則全文：[06](aos-teams/06-公司WSL活樹與任務書硬規則.md)；踩過的坑：[gotchas/05](../common/gotchas/05-在跑著的樹旁邊做事.md)、[pitfalls](../../public/pitfalls.md)。
+- 改 `proto8/cmd`、`lib/agent/*.py` 存檔當下活樹就在用；`proto8/knowledge`、`lib`、`templates` 要換樹重抄才生效。
+- 任務書必貼的九條硬規則全文：[06](aos-teams/06-公司WSL活樹與任務書硬規則.md)；踩過的坑：[活樹旁邊](../../public/活樹旁邊.md)、[行程與環境](../../public/行程與環境.md)、[pitfalls](../../public/pitfalls.md)。
 
 ## 回報、經驗、意見
 
@@ -91,5 +91,5 @@
 
 ## 交接
 
-- 派線流程、領地表、收線 → [dispatch](README.md)；任務書 checklist → [lessons](lessons.md)；配給包 → [kits](kits/README.md)。
+- 派線流程、領地表、收線 → [dispatch](README.md)；任務書 checklist → [派線與任務書](../../public/派線與任務書.md)；配給包 → [kits](kits/README.md)。
 - 各層派哪級模型 → [team-model](../team-model.md)；隊伍會撞的資源 → [resources](../resources.md)；模型端點 → [dev-env](../dev-env.md)。

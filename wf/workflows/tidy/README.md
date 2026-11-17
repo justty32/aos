@@ -1,6 +1,6 @@
 # tidy — 文件整理（封存過時、分類雜亂、抽資料檔、內容精簡）
 
-[WORKFLOWS](../../WORKFLOWS.md)｜[INDEX](../../INDEX.md)
+[WORKFLOWS](../../WORKFLOWS.md)
 
 把文件層收乾淨：活文件只留現役與 open 的東西，過時的封存、雜亂的分類、指向被封存檔的連結清掉、過大的條列抽成資料檔、檔內的過往記錄刪掉只留結論。結構方法在 [STRUCTURE](../../STRUCTURE.md)；本檔記**整理怎麼跑一輪**：盤點 → 交接書 → 派工 → 核驗。
 
@@ -51,9 +51,9 @@
 
 ## 踩過的坑
 
-整理與拆檔實際踩過的坑集中在 [gotchas.md](gotchas.md)；動手前先讀一遍。
+整理與拆檔實際踩過的坑集中在 public 的 [整理與拆檔](../../public/整理與拆檔.md)（坑只留 public 一處，使用者 11-17 待裁網頁 wf-7 a）；動手前先讀一遍。
 
 ## 交接
 
 - 完成後 → 若整理揭露了要裁示的事，寄使用者專區（`aos-user send`，見 [common/user.md](../common/user.md)；舊條目在 [WAIT_USER](../../WAIT_USER.md)）。
-- 每輪整理的報告（含 `moves.tsv`、驗證輸出）→ [`reports/`](reports/)，一輪一份、檔名用日期（最新一輪 [2026-11-12-收尾](reports/2026-11-12-收尾.md)）。
+- 每輪整理的報告（含 `moves.tsv`、驗證輸出）→ 11-17 起寫進當天的 `proto8/thinking/<月>/<日>/`，[`reports/`](reports/) 凍結、不再加新的（使用者 11-17 待裁網頁 wf-5ii 選 a；舊報告不搬）。

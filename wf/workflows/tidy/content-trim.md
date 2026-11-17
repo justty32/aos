@@ -51,11 +51,11 @@
 
 ## 哪些檔適用
 
-適用：規矩與流程檔（`wf/` 的 workflows、STRUCTURE、WORKFLOWS、INDEX、手寫的 `code-map.json`（`code-map/` 逐檔表是生成物，不在此列）、common/user 偏好、各 gotchas）、`proto*/` 的概念／規範／README，以及 hackathon、workshop 的場次紀錄（`records/`：只留裁決、收穫的坑／好處／壞處、成形的方向、待決問題與使用者原文，刪各輪過程與被後續推翻的提案；兩夾的 `records/` 11-03 已封存進各自的 `archive/`，兩個工作流 11-14 也停用，現在凍結不改）。`proto*/thinking/` 是同一條規則，寫的時候就照做，細則在 [user/03](../common/user/03-討論紀錄與規劃.md)。
+適用：規矩與流程檔（`wf/` 的 workflows、STRUCTURE、WORKFLOWS、INDEX、手寫的 `code-map.json`（`code-map/` 逐檔表是生成物，不在此列）、common/user 偏好、`wf/public/` 的坑頁）、`proto*/` 的概念／規範／README，以及 hackathon、workshop 的場次紀錄（`records/`：只留裁決、收穫的坑／好處／壞處、成形的方向、待決問題與使用者原文，刪各輪過程與被後續推翻的提案；兩夾的 `records/` 11-03 已封存進各自的 `archive/`，兩個工作流 11-14 也停用，現在凍結不改）。`proto*/thinking/` 是同一條規則，寫的時候就照做，細則在 [user/03](../common/user/03-討論紀錄與規劃.md)。
 
 不適用（本來就是紀錄，價值在時間順序）：
 
-- 日誌與報告：`wf/session_logs/` 的每日檔（月結時收成月摘要，照 [user/02 日誌怎麼寫](../common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)，判準與原文檢查用本檔）、`wf/HANDOFF.md`、`tidy/reports/`、`refactor/reports/`、`wf/inbox/` 的信。
+- 日誌與報告：`wf/session_logs/` 的每日檔（11-17 起停寫凍結；凍結前月結時收成月摘要，照 [user/02 日誌怎麼寫](../common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)，判準與原文檢查用本檔）、`wf/HANDOFF.md`、`tidy/reports/`、`refactor/reports/`、`wf/inbox/` 的信。
 - `archive/`：凍結，不改。
 - `wf/SESSION-LOG.md`、`wf/WAIT_USER.md`：本來就只列 open、完成即刪，不另精簡。
 

@@ -1,6 +1,8 @@
 # session_logs — 日誌
 
-[SESSION-LOG](../SESSION-LOG.md)｜[INDEX](../INDEX.md)
+[SESSION-LOG](../SESSION-LOG.md)｜[WORKFLOWS](../WORKFLOWS.md)
+
+> **11-17 起停寫、整夾凍結**（使用者 11-17 待裁網頁 wf-5i 選 a）：不再加新的日檔、總目錄列與月摘要；之後「哪天做了什麼」看 `proto8/thinking/<月>/<日>/README.md` 的日索引。下面是凍結時的樣子。
 
 日誌：當月每天一個檔 `<月>/<日期>.md`，已結束的月份收成月摘要 `<月>.md`（原檔封存在 `archive/`）；每天一句「這天定下了什麼」的索引按月放在下表各月的每日索引（9 月以前的直接列在本檔），點進去看當天動了什麼、結論連到哪。寫法見 [user/02](../workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)。
 
