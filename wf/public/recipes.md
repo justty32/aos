@@ -32,7 +32,7 @@
 | 交 commit | `commit-request claim`／`submit --files … --msg-file …`，共用索引用 `--op`；不 `git add`。[aos-teams 第 1 件](../workflows/dispatch/aos-teams.md)、[07「commit」](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md#commit) |
 | `DescMissing`、中文檔名、claim | `index_gen_desc.json` 加一行；清單用 `git -c core.quotepath=off`；claim 檔不 claim 夾。[patch-and-commit「commit-request 的坑」](patch-and-commit.md) |
 | 回報 | `mailbox_send` 寄任務書指定的對象；status 用 `NEEDS-USER`／`BLOCKED`／`PROGRESS`／`DONE`。[07「寄信怎麼寫」](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md#寄信怎麼寫) |
-| 暫存樹改了 C++ 要跑測試 | `make <名字>_main`；跑前看 bin 修改時間。[pitfalls](pitfalls.md) |
+| 暫存樹改了 C++ 要跑測試 | `python3 install.py`（或 `make -C proto8/cpp BINDIR=$AOS_HOME/bin aos-<名字>`）；跑前看 `proto8/bin` 修改時間。[pitfalls](pitfalls.md) |
 | 殺自己起的行程 | 只 kill 自己記下的 pid；不 `pkill -f`。[pitfalls「隊長的 shell」](pitfalls.md#隊長的-shellbash-工具)、[行程與環境](行程與環境.md) |
 | 暫存樹的改動交回 main | 先 `git log <舊base>..HEAD -- <檔>`；衝突少 `patch -p1`，多就小 git 三方合併；整套測試再交。[patch-and-commit](patch-and-commit.md) |
 | 改了共用契約要驗收 | 每個 `tests` 夾都跑，改前改後各一次只看新紅；經 clean.sh 跑免得假綠。[patch-and-commit「驗收跑全套」](patch-and-commit.md) |

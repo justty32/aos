@@ -25,7 +25,7 @@ class WatchAcceptance(unittest.TestCase):
             (base / 'd').mkdir(parents=True)
             (base / 'd/data.bin').write_bytes(data)
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
-        bins = [str(p) for group in ('impls', 'cmd') for p in (PROTO / group).glob('*/bin')]
+        bins = [str(p) for p in [PROTO / 'bin'] + sorted((PROTO / 'cmd').glob('*/bin'))]
         self.env['PATH'] = os.pathsep.join(bins + [self.env['PATH']])
         self.env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib')])
         self.env.update(AOS_WS=str(self.root), AOS_STACK=str(self.root / 'stack'))

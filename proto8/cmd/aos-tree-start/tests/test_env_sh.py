@@ -1,4 +1,4 @@
-"""test_env_sh - 驗 proto8/env.sh：bash 與 zsh 都 source 得過，source 後 AOS_* 只剩 AOS_HOME（＝env.sh 所在的 proto8），CLAUDE 那三個清掉，這個家的 cmd/*/bin、impls/*/bin 排在 PATH 最前。只 source、不起任何行程。"""
+"""test_env_sh - 驗 proto8/env.sh：bash 與 zsh 都 source 得過，source 後 AOS_* 只剩 AOS_HOME（＝env.sh 所在的 proto8），CLAUDE 那三個清掉，這個家的 cmd/*/bin 與安裝產物 bin/ 排在 PATH 最前。只 source、不起任何行程。"""
 import os
 from pathlib import Path
 import shutil
@@ -44,7 +44,7 @@ class EnvShTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="aos-env-sh-")
         self.home = os.path.join(os.path.realpath(self.tmp), "proto8")
-        for d in ("cmd/aos-a/bin", "cmd/aos-a/tests", "impls/aos-exec/bin", "impls/aos-nobin/src"):
+        for d in ("cmd/aos-a/bin", "cmd/aos-a/tests", "bin", "cpp/aos-exec/src"):
             os.makedirs(os.path.join(self.home, d))
         shutil.copy(ENV_SH, os.path.join(self.home, "env.sh"))
 
@@ -54,7 +54,7 @@ class EnvShTest(unittest.TestCase):
     def check(self, shell, argv, built=True):
         if shutil.which(shell, path="/usr/bin:/bin") is None:
             self.skipTest("%s not installed" % shell)
-        exe = os.path.join(self.home, "impls/aos-exec/bin/aos-exec")
+        exe = os.path.join(self.home, "bin/aos-exec")
         if built:
             with open(exe, "w") as f:
                 f.write("#!/bin/sh\n")
@@ -65,13 +65,13 @@ class EnvShTest(unittest.TestCase):
                 self.assertEqual(code, 0)
                 path = left.pop("PATH").split(":")
                 self.assertEqual(left, {"AOS_HOME": self.home})
-                want = sorted([os.path.join(self.home, "cmd/aos-a/bin"), os.path.join(self.home, "impls/aos-exec/bin")])
+                want = sorted([os.path.join(self.home, "cmd/aos-a/bin"), os.path.join(self.home, "bin")])
                 self.assertEqual(sorted(path[:2]), want)           # 這個家的指令排最前，source 兩次也不重複
                 self.assertEqual(path[2:], ["/usr/bin", "/bin"])
                 if built:
                     self.assertEqual(err, "")
                 else:
-                    self.assertIn("not built yet", err)
+                    self.assertIn("not installed yet", err)
 
     def test_bash(self):
         self.check("bash", ["--noprofile", "--norc"])

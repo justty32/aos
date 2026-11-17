@@ -1,6 +1,6 @@
 # aos — AI agent 專案備忘
 
-aos = **「資料夾＝程式」的 AI agent 體系**，本體是 **[`proto8/`](proto8/README.md)**（第八版原型；使用者 11-05「我們在proto8內……畢竟是prototype-8」）：C／C++ 的基礎層與標準庫在 `proto8/impls/`（每個專案一夾、各自 CMake＋vcpkg、C++20），給人打的指令、腦叫的工具、agent 範本是 Python／sh，概念／規範／慣例條文在 `proto8/docs/`；各夾一覽看 proto8/README。repo 根只放入口、[`wf/`](wf/) 與 [`archive/`](archive/README.md)（另有 [`impl_cpp/`](impl_cpp/README.md)＝使用者 11-09 起手寫重寫的 C++ 實作）——08～09 月那一代單一執行檔 `aos`（根目錄 CMake）11-05 整組封存在 `archive/aos-v1/`，不再建、不再維護。
+aos = **「資料夾＝程式」的 AI agent 體系**，本體是 **[`proto8/`](proto8/README.md)**（第八版原型；使用者 11-05「我們在proto8內……畢竟是prototype-8」）：C／C++ 的基礎層與標準庫在 `proto8/cpp/`（每個專案一夾、C++20；`cpp/Makefile` 一份編全家，nlohmann json 是收進 repo 的單檔，不用 CMake、vcpkg；在 proto8 跑 `python3 install.py` 建好、裝進 `proto8/bin/`），給人打的指令、腦叫的工具、agent 範本是 Python／sh，概念／規範／慣例條文在 `proto8/docs/`；各夾一覽看 proto8/README。repo 根只放入口、[`wf/`](wf/) 與 [`archive/`](archive/README.md)（另有 [`impl_cpp/`](impl_cpp/README.md)＝使用者 11-09 起手寫重寫的 C++ 實作）——08～09 月那一代單一執行檔 `aos`（根目錄 CMake）11-05 整組封存在 `archive/aos-v1/`，不再建、不再維護。
 
 本檔是**最頂層路由器**：只指向下一層，**durable 細節一律不寫這裡**（分層原則與結構整理見 [wf/STRUCTURE.md](wf/STRUCTURE.md)，被動參考、整理結構時才取用）。
 
@@ -44,7 +44,7 @@ AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md → 各工作流入口 → 工
 
 ## 開發環境
 
-家機（Manjaro）與公司 WSL（Ubuntu）兩台輪流開發，repo 都在 `~/repo/aos`；公司 WSL 的樹住 `~/aos-home`、頂層 session 是樹裡的 `repo-aos`。開場先確認在哪台，各台的細節見 [dev-env/01](wf/workflows/dev-env/01-跨機與外部工具.md)。vcpkg 在 `~/dev/vcpkg`、`proto8/impls/cmake/settings.cmake` 會自動找到；細節、指令表與外部工具見 [wf/workflows/dev-env.md](wf/workflows/dev-env.md)，驗證（11-04 起只剩 build 得過）見 [wf/workflows/testing.md](wf/workflows/testing.md)。
+家機（Manjaro）與公司 WSL（Ubuntu）兩台輪流開發，repo 都在 `~/repo/aos`；公司 WSL 的樹住 `~/aos-home`、頂層 session 是樹裡的 `repo-aos`。開場先確認在哪台，各台的細節見 [dev-env/01](wf/workflows/dev-env/01-跨機與外部工具.md)。C++ 在 proto8 跑 `python3 install.py` 就建好（先查相依：g++ ≥ 10、gcc、make、ar）；細節、指令表與外部工具見 [wf/workflows/dev-env.md](wf/workflows/dev-env.md)，驗證（11-04 起只剩 build 得過）見 [wf/workflows/testing.md](wf/workflows/testing.md)。
 
 ## 主工作流（活狀態：進度 / 待測 / 信件）
 

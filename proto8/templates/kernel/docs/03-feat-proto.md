@@ -4,7 +4,7 @@
 
 使用者 11-05 午：「讓agent給自己改tool，把endpoint打包成smart-high, stupid-fast, ...這類，並且附上各種屬性(各種temperature也固定)，讓kernel能根據信件中額外附送的priority之類資訊做排程，讓agent利用aos指令產出另一個agent」「啊，還有，會想要限制特定aos proc所占用的資源。以及daemon/kernel自己本身被限制占用資源，並且會分配份額給proc」。設計：[thinking feat-proto](../../../thinking/2026-11/05/feat-proto/README.md)。
 
-下面四段都是假腦（[01](01-llm-kernel.md) 的 `fake-demo-*` 包照劇本回答），零成本、可重跑；每段從空的 `/tmp/feat-s9-*` 起、各起自己的 llm daemon（背景，`K=$!`／`D=$!` 記 pid），跑完 `kill` 收工。PATH 放 `proto8/impls/*/bin`、`proto8/cmd/*/bin`（或 `source proto8/env.sh`；或跑過選配的 `proto8/cmd/install.sh`）；`P` 換成你的 repo。
+下面四段都是假腦（[01](01-llm-kernel.md) 的 `fake-demo-*` 包照劇本回答），零成本、可重跑；每段從空的 `/tmp/feat-s9-*` 起、各起自己的 llm daemon（背景，`K=$!`／`D=$!` 記 pid），跑完 `kill` 收工。PATH 放 `proto8/cpp/*/bin`、`proto8/cmd/*/bin`（或 `source proto8/env.sh`；或跑過選配的 `proto8/cmd/install.sh`）；`P` 換成你的 repo。
 
 ### 件 1：agent 給自己加工具（`self_tools`）
 
@@ -109,7 +109,7 @@ aos-agent ctl ls                          # hog、big、big2 stopped＋reason；
 kill $D
 ```
 
-- **daemon 包子項**（使用者「讓daemon偷偷給底下的proc包s6」）：表那列的 `limits`（定義宣告的，或 `ctl add --limits` 蓋過的）由 daemon 在子行程裡 `setrlimit`（等同 s6-softlimit；proc 自己不知道）——hog 宣告 `mem_mb: 256`、要 300 MB＝Python `MemoryError`、退 1、表上留 `stopped`＋`reason`；`--limits '{"mem_mb": 1024}'` 的 hog2 照常吃完、下表。規則見 [aos-daemon docs/09](../../../impls/aos-daemon/docs/09-份額.md)。
+- **daemon 包子項**（使用者「讓daemon偷偷給底下的proc包s6」）：表那列的 `limits`（定義宣告的，或 `ctl add --limits` 蓋過的）由 daemon 在子行程裡 `setrlimit`（等同 s6-softlimit；proc 自己不知道）——hog 宣告 `mem_mb: 256`、要 300 MB＝Python `MemoryError`、退 1、表上留 `stopped`＋`reason`；`--limits '{"mem_mb": 1024}'` 的 hog2 照常吃完、下表。規則見 [aos-daemon docs/09](../../../cpp/aos-daemon/docs/09-份額.md)。
 - **daemon 自己被限**：起它的人包（這裡 `prlimit --as`），rlimit 繼承——big 寫 `mem_mb: 4096` 比 daemon 的 2 GB 寬＝不自動夾，那隻起不來（`LimitBad`）；big2 自己不限（`{}`），要 3 GB 照樣撞 daemon 的 2 GB＝`MemoryError`。
 - **天然差異**：份額是每個行程各自的上限、不從 daemon 總額扣（三隻各 1024 加起來可以超過 daemon 的 2 GB）。
 - **llm kernel 的份額**＝包的 `budget`＋每個寄件人的 `budget.senders`。範本不設預算（使用者選「從範本拿掉」），要限就在自己那份 `kernel.json` 加。下面抄一份範本、加一格寄件人每天 1 次（先建 `/tmp/aos-demo-sender`：key 解出來不是資料夾會印一行 warning；帳記在 kernel 的 `used.json`，`senders` key 相對 kernel stack；新 stack 沒帳才從 0 算，整包搬家且相對位置相同就沿用）：

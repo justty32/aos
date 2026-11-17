@@ -1,5 +1,5 @@
 """範本預設的 mail_notify hook 實跑（真 root daemon＋時鐘、假腦）：寄一封＝間隔內收到一則 [aos] new_mail；連寄三封只多一則；self_hook 改間隔照新間隔；self_hook rm＝不再收到。"""
-# 11-11 mail-notify（使用者「用on_clock」「預設開」「合成一句」）。用這份 clone 的 impls／cmd（PATH 最前）、py／lib（PYTHONPATH）。
+# 11-11 mail-notify（使用者「用on_clock」「預設開」「合成一句」）。用這份 clone 的 cpp／cmd（PATH 最前）、py／lib（PYTHONPATH）。
 # 跑法：python3 test_mail_notify_daemon.py [-v]；KEEP=1 留下試驗資料夾。約一分鐘（範本間隔 11-11 翻案起是 60 秒，這裡把抄來的 hooks.json 改成 10 秒；根的時鐘 1 秒一格）。
 import json
 import os
@@ -21,7 +21,7 @@ class MailNotifyDaemon(unittest.TestCase):
         if not os.environ.get("KEEP"):
             self.addCleanup(shutil.rmtree, self.root, True)
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-        bins = [str(p) for p in sorted(PROTO.glob("impls/*/bin"))] + [str(p) for p in sorted(PROTO.glob("cmd/*/bin"))]
+        bins = [str(PROTO / "bin")] + [str(p) for p in sorted(PROTO.glob("cmd/*/bin"))]
         kernel = self.root / "kernel"
         kernel.mkdir()
         self.env = dict(env, AOS_HOME=str(PROTO), PATH=os.pathsep.join(bins + [env["PATH"]]), AOS_LLM_KERNEL=str(kernel),

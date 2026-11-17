@@ -33,22 +33,24 @@ eca 的工作區是 `wf/temp/<線>`，必讀檔在 repo 別處；Claude 子 agen
 - 隊員只要保證「自己沒起、沒寫活樹」；sol 的任務書直接寫「行程檢查不用做」，由隊長核。
 - 不因為「多了一個 daemon」就 kill；不按名字收行程（不准 pkill、killall）。
 
-## 暫存樹編 impls 的 C++：make 目標要用 `<名字>_main`
+## 暫存樹編 cpp 的 C++：make 目標要用 `<名字>_main`
 
-在暫存樹的 build 夾（`~/.aos/scratch/<線名-日期>/build`，使用者 11-15 裁「4.a」起不放 `~/code`；CMake 指向暫存的 `src/proto8/impls`）改了 aos-exec、aos-loop、aos-llm 這類 C++、要編好再跑 `impls/*/tests` 時：`make aos-exec` 只編出靜態庫 `lib/lib<名字>.a`，`impls/<名字>/bin/<名字>` 不會重編；測試把那個 bin 放在 PATH 最前面，跑到舊的，看起來像改壞了。
+**11-17 起改 Makefile，`_main` 這條不再適用**：CMake 那時 `make aos-exec` 只編靜態庫、`_main` 才出執行檔；現在頂層 `proto8/cpp/Makefile` 的目標名就是執行檔名，`make aos-exec` 會連帶重編它要的庫、出執行檔。
+
+還要注意的是**執行檔落在哪**：不給 `BINDIR` 時在 `cpp/build/bin/`，C++ 測試卻到 `proto8/bin/` 找，跑到的是舊的，看起來像改壞了。在暫存樹（`~/.aos/scratch/<線名-日期>/`，使用者 11-15 裁「4.a」起不放 `~/code`）改了 aos-exec、aos-loop、aos-llm 這類 C++、要再跑 `cpp/*/tests` 時：
 
 ```
-cd ~/.aos/scratch/<線名-日期>/build
-make help | grep <名字>      # 會看到 <名字> 和 <名字>_main 兩個目標
-make -j8 aos-exec_main aos-loop_main aos-llm_main
-ls -la ../src/proto8/impls/<名字>/bin   # 時間要是剛剛
+cd ~/.aos/scratch/<線名-日期>/src/proto8
+python3 install.py                       # 或只重編幾支：
+make -C cpp -j8 BINDIR=$PWD/bin aos-exec aos-loop aos-llm
+ls -la bin                               # 時間要是剛剛
 ```
 
-測試紅了、錯誤訊息卻還是改之前的字，先看 bin 的修改時間。這是試編；要換進活樹的 C++ 照 [06 第 5 條](../workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md) 走 `build.sh`。
+測試紅了、錯誤訊息卻還是改之前的字，先看 `proto8/bin` 的修改時間；改過 CXXFLAGS（例如 sanitizer）要先 `make -C cpp clean`。這是試編；要換進活樹的 C++ 照 [06 第 5 條](../workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md)。
 
-## 乾淨複本要帶齊依賴：wf/tools 測試連 proto8 一起抄，impls 測試連 lib 一起抄
+## 乾淨複本要帶齊依賴：wf/tools 測試連 proto8 一起抄，cpp 測試連 lib 一起抄
 
-在 repo 外的乾淨複本跑測試，只紅一兩支、又是 ModuleNotFoundError 或找不到檔，先懷疑複本抄得不夠全：只抄 `wf/tools` 時 test_quiet 借不到 `proto8/lib/agent/kernel_gate/tests` 的 test_kernel_gate；只抄 `impls` 和 `knowledge` 時 aos-llm 的 test_full 找不到 `proto8/lib/base/llm_fake`。wf/tools 的測試用 `git archive HEAD wf/tools proto8/lib proto8/cmd | tar -x -C <複本>`；impls 的測試整個 `proto8` 一起抄；再經清環境腳本跑（06 第 2 條）。
+在 repo 外的乾淨複本跑測試，只紅一兩支、又是 ModuleNotFoundError 或找不到檔，先懷疑複本抄得不夠全：只抄 `wf/tools` 時 test_quiet 借不到 `proto8/lib/agent/kernel_gate/tests` 的 test_kernel_gate；只抄 `cpp` 和 `knowledge` 時 aos-llm 的 test_full 找不到 `proto8/lib/base/llm_fake`。wf/tools 的測試用 `git archive HEAD wf/tools proto8/lib proto8/cmd | tar -x -C <複本>`；cpp 的測試整個 `proto8` 一起抄；再經清環境腳本跑（06 第 2 條）。
 
 ## 乾淨複本的標準跑法：git archive＋疊檔、執行檔自己編、PATH 不撿到活樹的
 
@@ -56,8 +58,8 @@ ls -la ../src/proto8/impls/<名字>/bin   # 時間要是剛剛
 
 1. `git archive HEAD proto8 | tar -x -C <新夾>`，再只把要交的檔 cp 上去；別人沒交的改動不會混進來。
 2. `env -i PATH=/usr/bin:/bin HOME=$HOME PYTHONDONTWRITEBYTECODE=1 TMPDIR=<新夾>/tmp python3 -m unittest discover -s <tests>`，或經自己的 clean.sh（它會換 cwd，`-s`、`-t` 一律給絕對路徑）。
-3. 乾淨複本不帶 `impls/*/bin`（06 第 6 條）。要 bin 就用複本自己的原始碼編：`cmake -S <複本>/proto8/impls -B <新夾>`，再 `make <名字>_main`；**不從別處抄 bin 進去**，交件信寫明 bin 從哪來。沒編的話改前改後都紅同一批，只看差異。
-4. PATH 不撿到 `~/.local/bin` 的舊執行檔：run.sh 把 PATH 換成「暫存樹各 `impls/*/bin`、`cmd/*/bin`＋`/usr/bin:/bin`」；會把 `~/.local/bin` 排最前的測試（wf 測試、test_daily）再給一個假 HOME，它的 `.local/bin` 連到暫存樹的 bin。
+3. 乾淨複本不帶 `proto8/bin`（06 第 6 條）。要 bin 就用複本自己的原始碼編：在 `<複本>/proto8` 跑 `python3 install.py`（只寫複本自己的 `bin/`、`include/`、`cpp/build/`）；**不從別處抄 bin 進去**，交件信寫明 bin 從哪來。沒編的話改前改後都紅同一批，只看差異。
+4. PATH 不撿到 `~/.local/bin` 的舊執行檔：run.sh 把 PATH 換成「暫存樹的 `proto8/bin`、各 `cmd/*/bin`＋`/usr/bin:/bin`」（或在 bash 裡 `source <複本>/proto8/env.sh`）；會把 `~/.local/bin` 排最前的測試（wf 測試、test_daily）再給一個假 HOME，它的 `.local/bin` 連到暫存樹的 bin。
 5. `templates/tests` 從上層 discover 不會進 `agent-fsm` 子夾，要另外跑。
 6. 改前、改後各一份複本，用同一支腳本逐夾跑、各出一份 SUMMARY，`diff` 兩份看多紅哪幾支；一個 commit 動幾十個檔時只接受「測試數變多且 OK」這種差異。
 7. commit 訊息裡的測試數字，在「真的要交的那個 commit」的 archive 上再跑一次才寫。

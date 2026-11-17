@@ -2,7 +2,7 @@
 
 ## aos-llm
 
-`aos-llm` 是寄請求信、收回信的那支 C++ 基礎工具 [impls/aos-llm](../../impls/aos-llm/README.md)（`send`／`recv`／`ask`／`regret`）：使用者 11-04 晚「aos llm,tool這兩個，我希望他們的定位是跟aos post一樣，作為基礎工具」（[think-as-function 衝突 1 (a)](../../thinking/2026-11/04/think-as-function/05-衝突與方向題.md)）。
+`aos-llm` 是寄請求信、收回信的那支 C++ 基礎工具 [cpp/aos-llm](../../cpp/aos-llm/README.md)（`send`／`recv`／`ask`／`regret`）：使用者 11-04 晚「aos llm,tool這兩個，我希望他們的定位是跟aos post一樣，作為基礎工具」（[think-as-function 衝突 1 (a)](../../thinking/2026-11/04/think-as-function/05-衝突與方向題.md)）。
 改定義裡的腦設定＝人直接改 `llm.json`（例 `aos-json set <定義>/llm.json#/endpoint sol`），跟 aos-tools 改定義一樣是人的事。
 
 ## aos-eca-screen - eca 的 screen 子介面身體

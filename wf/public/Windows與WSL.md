@@ -14,7 +14,7 @@
 
 ## 中文檔名：清單一律用 `git -c core.quotepath=false` 產，照抄跳脫字串會漏檔
 
-預設 `core.quotepath=true`，`git status` 把中文路徑印成 `"proto8/NORMS/10-\345\237\272…"`，拿這份清單去 add（或 claim、`--files`）對不上、漏檔。看清單用 `git -c core.quotepath=false status --short`。沒有 commit-request 的機器 add 用 `git -c core.quotepath=false -c core.ignorecase=false add -- <檔>`，或 `git add -u -- proto8 wf`（只加已追蹤的修改；未追蹤的 `proto8/impls/` 本來就不會被加）；add 完再看一次 `git status --short`，確認沒有剩下前面是空格的 ` M`（＝改了沒 add）。走 commit-request 的見 [patch-and-commit「commit-request 的坑」](patch-and-commit.md#commit-request-的坑)。
+預設 `core.quotepath=true`，`git status` 把中文路徑印成 `"proto8/NORMS/10-\345\237\272…"`，拿這份清單去 add（或 claim、`--files`）對不上、漏檔。看清單用 `git -c core.quotepath=false status --short`。沒有 commit-request 的機器 add 用 `git -c core.quotepath=false -c core.ignorecase=false add -- <檔>`，或 `git add -u -- proto8 wf`（只加已追蹤的修改；未追蹤的 `proto8/cpp/` 本來就不會被加）；add 完再看一次 `git status --short`，確認沒有剩下前面是空格的 ` M`（＝改了沒 add）。走 commit-request 的見 [patch-and-commit「commit-request 的坑」](patch-and-commit.md#commit-request-的坑)。
 
 ## WSL 看 `/mnt/c` 底下全是 `+x`：proto8 的測試與 demo 先抄到 WSL 自己的檔案系統
 

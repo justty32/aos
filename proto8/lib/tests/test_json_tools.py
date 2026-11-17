@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 LIB = Path(__file__).resolve().parents[1]
-IMPLS = LIB.parent / "impls"
+BIN = LIB.parent / "bin"
 
 
 class JsonToolsTest(unittest.TestCase):
@@ -18,7 +18,7 @@ class JsonToolsTest(unittest.TestCase):
         self.env = dict(os.environ, AOS_WS=str(self.ws))
         self.env.pop("AOS_JSON_MAX_BYTES", None)
         self.env.pop("AOS_JSON_MAX_ITEMS", None)
-        self.env["PATH"] = "%s:%s:%s" % (IMPLS / "aos-json/bin", IMPLS / "aos-directive/bin", self.env.get("PATH", ""))
+        self.env["PATH"] = "%s:%s" % (BIN, self.env.get("PATH", ""))
         self.write("cfg.json", {"name": "bob", "max": 20,
                                 "states": {"think": {"exec": "think.py", "next": "act"}, "act": {"exec": "act.py", "next": "idle"}},
                                 "tags": ["a", "b"], "r": {"$ref": "o.json#/x"}})

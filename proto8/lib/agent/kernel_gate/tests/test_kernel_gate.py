@@ -9,7 +9,7 @@ import unittest
 
 GATE = Path(__file__).resolve().parents[1]
 PROTO8 = GATE.parents[2]
-BINS = [PROTO8 / "impls" / name / "bin" for name in ("aos-post", "aos-exec", "aos-directive")]
+BINS = [PROTO8 / "bin"]
 FAKE_AGENT = """#!%s
 # 暫存的假 aos-agent：ctl who 回測試的 agent，hook 指令只記下來。
 import json, os, sys

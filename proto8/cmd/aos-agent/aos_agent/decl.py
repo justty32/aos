@@ -101,7 +101,7 @@ def run_entry(a, entry, args, capture_err=True, ws=None):
         r = subprocess.run(argv, stderr=subprocess.PIPE if capture_err else None, text=True,
                            env=env)
     except OSError as e:
-        raise Fail("CommandMissing", "cannot run aos-exec (proto8/impls/aos-exec/bin must be on PATH): %s" % e)
+        raise Fail("CommandMissing", "cannot run aos-exec (proto8/bin must be on PATH): %s" % e)
     return r.returncode, (r.stderr or "")
 
 

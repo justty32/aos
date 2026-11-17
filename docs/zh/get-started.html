@@ -30,7 +30,7 @@ a{color:#0b5cad}
 <h2 id="1-抓原始碼建置">1. 抓原始碼、建置</h2>
 <pre><code class="language-bash">git clone https://github.com/justty32/aos ~/aos
 # vcpkg 不在 ~/dev/vcpkg 的話，先：export VCPKG_ROOT=&lt;vcpkg 的位置&gt;
-cd ~/aos/proto8/impls &amp;&amp; cmake -B build &amp;&amp; cmake --build build -j</code></pre>
+cd ~/aos/proto8/cpp &amp;&amp; cmake -B build &amp;&amp; cmake --build build -j</code></pre>
 <p>建置會用 vcpkg 抓 C++ 需要的 JSON 函式庫。vcpkg 裝在 <code>~/dev/vcpkg</code> 就什麼都不用設；裝在別處，照區塊裡的註解先設 <code>VCPKG_ROOT</code>。</p>
 <details>
 <summary>不想用 vcpkg？（待驗）</summary>
@@ -38,7 +38,7 @@ cd ~/aos/proto8/impls &amp;&amp; cmake -B build &amp;&amp; cmake --build build -
 </details>
 <h2 id="2-讓這個殼找得到指令">2. 讓這個殼找得到指令</h2>
 <pre><code class="language-bash">export AOS_HOME=~/aos/proto8
-export PATH=$(ls -d $AOS_HOME/impls/*/bin $AOS_HOME/cmd/*/bin | tr &#x27;\n&#x27; &#x27;:&#x27;)$PATH
+export PATH=$(ls -d $AOS_HOME/cpp/*/bin $AOS_HOME/cmd/*/bin | tr &#x27;\n&#x27; &#x27;:&#x27;)$PATH
 export PYTHONPATH=$AOS_HOME/py:$AOS_HOME/lib</code></pre>
 <p>只改這個殼，關掉就沒了。想長期裝，看<a href="setup/index.html">安裝</a>的 <code>install.sh</code>。</p>
 <h2 id="3-起兩個資料夾腦和你的樹">3. 起兩個資料夾：腦，和你的樹</h2>

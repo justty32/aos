@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # install.sh [--dry-run] [--uninstall] [DEST] - symlink the aos commands onto PATH (default ~/.local/bin); writes nothing into the Python user site.
 # Optional: the usual way is `source proto8/env.sh`, which puts this home's commands first on PATH without touching ~/.local/bin.
-# It lives in proto8/cmd/ (11-17) and links impls/*/bin/*, cmd/*/bin/* and frontend/bin/* (aos-frontend) of the proto8 folder above it.
+# It lives in proto8/cmd/ (11-17) and links bin/*, cmd/*/bin/* and frontend/bin/* (aos-frontend) of the proto8 folder above it.
 #
 # What gets linked (scanned by folder; only executables):
-#   impls/*/bin/*            the C++ ones (aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-json, aos-llm...; build them first)
+#   bin/*                    the C++ ones (aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-json, aos-llm...; run python3 install.py first)
 #   cmd/*/bin/*              the Python commands (aos-daemon-ctl, aos-tools, aos-clock, aos-clock-register, aos-mailbox, aos-sweeper, aos-feedback, aos-eca-turn, aos-eca-screen, aos-agent, aos-mcp, aos-mcp-launch, aos-mcp-import, aos-sandbox, aos-grow)
 # It no longer writes aos-proto8.pth into the Python user site (removed 2026-11-15); copies outside the repo use PYTHONPATH.
 #   An old aos-proto8.pth of this repo found there = one warning line (not removed).
@@ -17,15 +17,15 @@
 # Another command with the same name earlier on PATH = one warning line; installs anyway.
 # Does not change PATH or shell rc files: warns if DEST is not on PATH. Use on a Linux / WSL file system only (not /mnt/c).
 # stderr: warnings are `install.sh: warning: SENTENCE`; errors are `install.sh: error: CODE reason` and mean exit 1:
-#   ArgumentsBad, FlagUnknown, DestBad, CommandMissing, ImplsMissing (no impls built), LinkFailed (some names were skipped or
+#   ArgumentsBad, FlagUnknown, DestBad, CommandMissing, BinMissing (bin/ is empty), LinkFailed (some names were skipped or
 #   could not be installed; the last stderr line says how many).
 #
 # ---- 中文說明（--help 只印上面英文那段，到 stdout、退 0；11-05 stdio-unify R3、R13）----
 # install.sh [--dry-run] [--uninstall] [目的地] - 把 aos 的指令 symlink 進一個 PATH 裡的資料夾（預設 ~/.local/bin），之後每個殼都找得到、不用 source env.sh。
-# 選配（11-17 路徑規則一、路徑-4 A）：平常用 `source proto8/env.sh` 把這個家的指令放進 PATH，不往 ~/.local/bin 放東西；這支 11-17 從 proto8 頂層搬進 cmd/（八夾-1 B），照舊裝上一層 proto8 的 impls、cmd，加上 frontend（選配的網頁外掛 aos-frontend，11-17 從 cmd/ 搬到 proto8 頂層、改了名）。
+# 選配（11-17 路徑規則一、路徑-4 A）：平常用 `source proto8/env.sh` 把這個家的指令放進 PATH，不往 ~/.local/bin 放東西；這支 11-17 從 proto8 頂層搬進 cmd/（八夾-1 B），照舊裝上一層 proto8 的 bin、cmd，加上 frontend（選配的網頁外掛 aos-frontend，11-17 從 cmd/ 搬到 proto8 頂層、改了名）。
 #
 # 裝哪些（照資料夾掃，有就裝、執行檔才算）：
-#   impls/*/bin/*            C++ 的（aos-exec、aos-loop、aos-fsm、aos-daemon、aos-post、aos-json、aos-llm…；要先建，見 wf/workflows/testing.md「proto8」）
+#   bin/*                    C++ 的（aos-exec、aos-loop、aos-fsm、aos-daemon、aos-post、aos-json、aos-llm…；要先在 proto8 跑 python3 install.py 編好放進 bin/）
 #   cmd/*/bin/*              Python 的指令（aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca-turn、aos-eca-screen、aos-agent、aos-mcp、aos-mcp-launch、aos-mcp-import、aos-sandbox、aos-grow）
 # 不再在 Python user site 寫 aos-proto8.pth（使用者 11-15 對自編規則盤點的裁定「6.拿掉。」）；抄出 repo 的程式改給 PYTHONPATH。
 #   user site 裡還有這份 repo 的舊 aos-proto8.pth＝印一行提醒（不刪）。
@@ -36,7 +36,7 @@
 #   最後 stderr 補一行錯誤行 `install.sh: error: LinkFailed N names already taken by something else`、退 1（11-05 D3：使用者要的名字沒裝上＝沒做成）。
 #   目的地裡指進這份 repo 但目標已不在的連結（指令改名或刪了）＝提醒行「broken」，不自己刪。
 # stderr 只有兩種行（11-05 R1、R13）：提醒 `install.sh: warning: 句子`（PATH 上同名的排前面、目的地不在 PATH、repo 在 /mnt、斷掉的連結）、
-#   錯誤 `install.sh: error: 代號 原因`（有它就退 1）：ArgumentsBad、FlagUnknown、DestBad、CommandMissing、ImplsMissing（impls 一支都沒建）、LinkFailed。
+#   錯誤 `install.sh: error: 代號 原因`（有它就退 1）：ArgumentsBad、FlagUnknown、DestBad、CommandMissing、BinMissing（bin/ 一支都沒有）、LinkFailed。
 # --dry-run：只印會做什麼、不動。每一行都印出做了什麼；最後一行是統計。
 # --uninstall：拿掉目的地裡指進這份 repo 的連結（含斷了的），別的不碰（11-05 B 線；清舊 aos-proto8.pth 那段 11-17 拿掉，當沒有舊版）。
 # PATH 上同名的另一支排在前面（例 /usr/local/bin/aos-exec）＝印一行 warning，裝照裝（11-05 B 線）。
@@ -110,16 +110,13 @@ link_one() {   # $1＝repo 裡那支的絕對路徑
 }
 
 found=0
-for src in "$here"/impls/*/bin/* "$here"/cmd/*/bin/* "$here"/frontend/bin/*; do
+for src in "$here"/bin/* "$here"/cmd/*/bin/* "$here"/frontend/bin/*; do   # bin/ 是 install.py 放的 C++ 成品（11-17 S2：不再有 cpp/<專案>/bin/）
   [ -f "$src" ] && [ -x "$src" ] || continue
-  case "$src" in "$here"/impls/*/bin/*)   # 只裝現役的 impls（有 CMakeLists.txt 的）；改名前留下的舊 build 產物（aos-llm-send 之類）不裝
-    [ -f "${src%/bin/*}/CMakeLists.txt" ] || continue ;;
-  esac
   found=1
   link_one "$src"
 done
 [ $found = 1 ] || die "CommandMissing no command found ($here does not look like proto8?)"
-ls "$here"/impls/*/bin/* >/dev/null 2>&1 || n_none=1   # 錯誤行最後補（ImplsMissing）
+ls "$here"/bin/* >/dev/null 2>&1 || n_none=1   # 錯誤行最後補（BinMissing）
 
 if [ -n "$pth" ] && pth_matches; then
   warn "old $pth of this repo is still there; install.sh no longer writes it; move it away yourself"
@@ -144,7 +141,7 @@ verb=linked; [ $dry = 1 ] && verb="would link"
 echo "done: $verb $n_new, already $n_same, skipped $n_skip (dest $dest)"
 rc=0
 if [ $n_none = 1 ]; then
-  echo "install.sh: error: ImplsMissing no impls built (impls/*/bin is empty): build them first (wf/workflows/testing.md, proto8) and run again" >&2; rc=1
+  echo "install.sh: error: BinMissing no C++ command installed ($here/bin is empty): run python3 install.py in $here first and run again" >&2; rc=1
 fi
 if [ $n_skip != 0 ] || [ $n_fail != 0 ]; then
   if [ $n_fail = 0 ]; then why="$n_skip names already taken by something else"

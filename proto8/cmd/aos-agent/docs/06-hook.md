@@ -24,7 +24,7 @@
 
 ## 起來與停下
 
-使用者 11-11 選「起來與停下」、掛哪層選「aos-loop 自己加」、sleep 算停下（「算。然後hook這邊可以細分出更多細類。目前就先這樣就好。」；[thinking clock-hook](../../../thinking/2026-11/11/clock-hook/README.md)）。aos-loop 只認通用的 `on_start`／`on_stop` 鍵（[aos-loop 01](../../../impls/aos-loop/docs/01-用法.md)），範本的 loop.json 把它們指到 [`lib/agent/hook_fire`](../../../lib/agent/hook_fire/_entry)（`hook_fire after_start|after_stop 定義資料夾`），由它照 hooks.json 發事件。
+使用者 11-11 選「起來與停下」、掛哪層選「aos-loop 自己加」、sleep 算停下（「算。然後hook這邊可以細分出更多細類。目前就先這樣就好。」；[thinking clock-hook](../../../thinking/2026-11/11/clock-hook/README.md)）。aos-loop 只認通用的 `on_start`／`on_stop` 鍵（[aos-loop 01](../../../cpp/aos-loop/docs/01-用法.md)），範本的 loop.json 把它們指到 [`lib/agent/hook_fire`](../../../lib/agent/hook_fire/_entry)（`hook_fire after_start|after_stop 定義資料夾`），由它照 hooks.json 發事件。
 
 - 跑得到：起來（`ctl add`／`start`、開門 wake、auto_restart 重起都是新起一支）；停下（`ctl stop`＝`code` 0、`sleep`／`rm`／daemon 收工＝SIGTERM `code` 143 `signal` 15、身體失敗＝那個碼）。
 - 跑不到：kill -9（之後 auto_restart 重起會有一次 `after_start`、中間沒有 `after_stop`）；daemon 被 kill -9 後 adopt 接回的 loop 沒重起，不會再跑 `after_start`。pause 不算停下（loop 還活著）。

@@ -24,7 +24,7 @@ sys.path.pop(0)
 T11 = "cd /work/src && cat src/ctl/set_def.py && cat src/ctl/rm.py && sed -n '135,205p' src/ctl/add.py && sed -n '90,180p' src/ctl/shared.py && rg -n 'def test_|set-def|rm accepted|set_def' src/tests/test_kernel* && sed -n '17,24p' src/README.md"
 T14 = "cd /work/src && rg -n 'import process_group|from process_group|import cmd_call|from cmd_call' lib && rg -n 'ModuleMissing|tool_io.py|isolat|kill|signal' lib/a/tests lib/b/tests lib/c/tests && ls -la lib/tests && rg --files /work | rg 'clean|check|\\.sh$'"
 T15 = "cd /work/src && rg -n 'from daemon_ctl import|import daemon_ctl|\\bdaemon_ctl\\.[A-Za-z_]+|getattr\\(dc|patch.object\\(dc' src -g '!*.html' -g '!*.md' -g '!*.csv' -g '!*.json' -g '!src/daemon_ctl/**' && printf '\\nAll package attribute names used outside package:\\n' && rg -o --no-filename '\\b(dc|daemon_ctl)\\.[A-Za-z_]+' src -g '!src/daemon_ctl/**' -g '!*.html' -g '!*.md' -g '!*.csv' -g '!*.json' | sort -u && printf '\\nInitial daemon process list:\\n' && pgrep -u \"$USER\" -af aos-daemon"
-CPP_RG = "rg -n -A 75 -B 18 'def sender_key_warnings|relative keys count from|test_missing_sender_folder_warns_once' src/a.py impls/aos-x/src/b.cpp tests/test_a.py impls/aos-x/tests/test_b.py"
+CPP_RG = "rg -n -A 75 -B 18 'def sender_key_warnings|relative keys count from|test_missing_sender_folder_warns_once' src/a.py cpp/aos-x/src/b.cpp tests/test_a.py cpp/aos-x/tests/test_b.py"
 CPP = "cd /work/src && git --no-optional-locks status --short && " + CPP_RG
 
 
@@ -1338,7 +1338,7 @@ class HomeFolders(Base):
                 out = self.blocked("write", {"path": os.path.join(self.home, p, "x", "y.py")}, env_extra=self.env)
                 self.assertIn("no agent may write (%s, from AOS_HOME)" % os.path.join(self.home, p), out)
         self.allowed("write", {"path": os.path.join(self.home, "ws", "x")}, env_extra=self.env)
-        self.allowed("write", {"path": os.path.join(self.home, "impls", "x")}, env_extra=self.env)   # no such folder
+        self.allowed("write", {"path": os.path.join(self.home, "cpp", "x")}, env_extra=self.env)   # no such folder
         self.allowed("write", {"path": os.path.join(self.home, "lib", "x")})                         # AOS_HOME unset
 
     def test_symlinked_home(self):

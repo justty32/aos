@@ -41,7 +41,7 @@
    "stage": 2
   },
   {
-   "path": "proto8/impls",
+   "path": "proto8/cpp",
    "deep": true,
    "stage": 2
   },

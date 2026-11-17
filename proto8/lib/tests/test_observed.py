@@ -44,7 +44,7 @@ class Observed(unittest.TestCase):
 
     def test_real_exec_preserves_two_level_ledgers_and_raw_bytes(self):
         lib = Path(__file__).resolve().parents[1]
-        binary = lib.parent / 'impls/aos-exec/bin/aos-exec'
+        binary = lib.parent / 'bin/aos-exec'
         self.assertTrue(binary.is_file(), 'build aos-exec before running this integration test')
         root = Path(self.tmp.name)
         child = root / 'child.py'

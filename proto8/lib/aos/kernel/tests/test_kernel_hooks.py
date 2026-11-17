@@ -23,7 +23,7 @@ class KernelHooksTest(unittest.TestCase):
 
     def fresh(self):
         self.fixture()
-        executable = test_kernel.PROTO8 / "impls/aos-exec/bin"
+        executable = test_kernel.PROTO8 / "bin"
         self.env["PATH"] = str(executable) + os.pathsep + self.env["PATH"]
 
     def handler(self, name, script):

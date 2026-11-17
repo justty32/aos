@@ -55,7 +55,7 @@ class LongTurn(unittest.TestCase):
 
     def env(self):
         env = {k: v for k, v in os.environ.items() if not k.startswith(("AOS_", "CLAUDE"))}
-        bins = [str(self.bin)] + sorted(str(p) for p in (PROTO / "impls").glob("*/bin")) + sorted(str(p) for p in (PROTO / "cmd").glob("*/bin"))
+        bins = [str(self.bin)] + [str(PROTO / "bin")] + sorted(str(p) for p in (PROTO / "cmd").glob("*/bin"))
         env.update(PATH=":".join(bins + [env.get("PATH", "")]), HOME=str(self.home), AOS_STACK=str(self.stack),
                    AOS_WS=str(self.ws), FAKE_SEEN=str(self.seen), PYTHONDONTWRITEBYTECODE="1")
         return env

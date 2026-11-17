@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 LIB = Path(__file__).resolve().parents[1]
-IMPLS = LIB.parent / "impls"
+BIN = LIB.parent / "bin"
 TOOL = LIB / "base" / "index_view" / "_entry"
 
 
@@ -19,7 +19,7 @@ class IndexExtraKeysTest(unittest.TestCase):
         self.ws = Path(self.tmp.name)
         self.env = dict(os.environ, AOS_WS=str(self.ws))
         self.env.pop("AOS_JSON_MAX_ITEMS", None)
-        self.env["PATH"] = "%s:%s" % (IMPLS / "aos-json/bin", self.env.get("PATH", ""))
+        self.env["PATH"] = "%s:%s" % (BIN, self.env.get("PATH", ""))
 
     def view(self, **args):
         r = subprocess.run([str(TOOL)], input=json.dumps(args), text=True, capture_output=True, env=self.env)

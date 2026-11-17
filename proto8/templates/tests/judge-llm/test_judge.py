@@ -80,7 +80,7 @@ class Judge(unittest.TestCase):
             root = Path(temp)
             kernel = root / 'kernel'
             kernel.mkdir()
-            bins = [str(p) for group in ('impls', 'cmd') for p in (PROTO / group).glob('*/bin')]
+            bins = [str(p) for p in [PROTO / 'bin'] + sorted((PROTO / 'cmd').glob('*/bin'))]
             env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
             env.update(PATH=os.pathsep.join(bins + [env['PATH']]),
                        PYTHONPATH=os.pathsep.join([str(PROTO / 'lib')]),

@@ -1,0 +1,41 @@
+# aos-llm
+
+`aos-llm - 寄請求信進 LLM kernel 的信箱、收回信`（NAME，C-54 R1）
+
+**一句話：`aos-llm send|recv|ask|regret|ls`——問腦的基礎工具：把一份請求（OpenAI 形狀的 messages／tools＋代號）寫成一封信丟進 llm kernel 的信箱 `$AOS_LLM_KERNEL/requests/`（`AOS_LLM_KERNEL`＝llm kernel 的 stack），由 kernel（問腦總機 [`lib/aos/kernel_llm`](../../lib/aos/kernel_llm/README.md)）排隊、請 daemon 掛去跑它自己的 endpoint 函數、照信封的 `reply_to` 寄回信；這支預設把回信的 `message` 印出來，`ask`／`recv` 加 `--full` 則印整個回覆物件（含原有的 `usage`、`model`，並加 `letter`＝原請求信名）；錯誤回信也印一行完整 body，stderr 與退出碼維持原樣。**
+定位同 [aos-post](../aos-post/README.md)：基礎工具、IPC 的語法糖，跟 aos proc 關聯不深，proc 自己拿它組（使用者 11-04 晚「aos llm,tool這兩個，我希望他們的定位是跟aos post一樣，作為基礎工具」）。aos-post 管「一封信怎麼寄、怎麼認領」，aos-llm 只多知道「請求信的 body 長怎樣、回信怎麼認、錯怎麼印」。
+一個 lib（`lib/libaos-llm.a`，公開標頭 `aos/llm.hpp`：LLM 信件協定 `parse_priority`／`hold_sender`／`reply_of`）加一支薄命令列（`bin/aos-llm`）。連 aos-util（共用工具與訊號）、aos-post（信箱型別、寄送與認領 API）的庫。全家慣例見 [cpp/README.md](../README.md)。
+
+像寄信問醫生：`send` 是把問題寫好丟進郵筒、留個回郵地址就走（之後再來看信箱）；`recv` 是去信箱看回信到了沒；`ask` 是站在郵筒旁邊等回條；`regret` 是信還在郵筒裡就抽回來。找哪位醫生只寫代號，醫生的地址、電話只有櫃台（kernel）知道。
+
+```sh
+export AOS_LLM_KERNEL=~/llm_kernel                         # llm kernel 的 stack（N-63 ②；信寄進 ~/llm_kernel/requests/）
+B='{"endpoint": "fake", "request": {"messages": [{"role": "user", "content": "hi"}]}}'
+N=$(echo "$B" | aos-llm send --reply-to $AOS_STACK/llm_box) # 非同步：寄完馬上回，印信件名稱
+aos-llm recv $AOS_STACK/llm_box $N; echo $?               # 還沒到：10
+aos-llm recv $AOS_STACK/llm_box $N                        # 到了：{"role": "assistant", "content": "FAKE ANSWER to: hi"}
+echo "$B" | aos-llm ask --priority high                   # 同步：寄、等、印 message
+aos-llm ls                                                # 列 kernel 的能力包：代號 speed cost context slots backend summary
+aos-llm ls --kernel llm-local                             # 指定 AOS_DAEMON 表上的列名
+aos-llm ls --kernel ./stacks/brain                         # 含 / 的值＝kernel stack 路徑（相對 cwd）
+```
+
+**只列能力包不必先設 `AOS_LLM_KERNEL`**：`ls` 定位順序是 `--kernel NAME|PATH` ＞ `AOS_LLM_KERNEL` ＞ `$AOS_DAEMON` 表上唯一的 llm kernel 列。列名取那列的 stack；含 `/` 的旗標值是 stack 路徑、相對 cwd。自動辨識只看列的 stack：夾裡同時有 `endpoints.json` 檔與 `requests/` 資料夾才算候選，stack 的相對路徑以 daemon stack 真實位置為準；不猜 exec、argv 或 def 名字。零個或多個候選都報 `LlmKernelMissing`，多個時列名字、請用 `--kernel` 選。不猜固定列名、不查程序死活；`send`／`ask`／`regret` 仍只用 `AOS_LLM_KERNEL`。
+
+**stdin 是整份 body**（隊長定案：設計稿寫「stdin＝request.json」，[03 § 1](../../thinking/2026-11/04/think-as-function/03-呼叫端.md) think 寫的 `request.json` 就是 body 的形狀）：`{"endpoint"?: 代號, "request": {"messages": [...], "tools"?, ...}, "priority"?}`——代號、請求、優先度都由呼叫端自己組，aos-llm 原樣當信的 `body` 寄出（只有 `--priority` 有給時蓋掉 `priority`）。
+
+設計與決定見 [thinking 2026-11-04 think-as-function](../../thinking/2026-11/04/think-as-function/README.md)（§ 5 在 [02/01](../../thinking/2026-11/04/think-as-function/02-設計-信與kernel/01-endpoint函數-aos-llm-kernel形態.md)）。
+
+## 分檔目錄
+
+> 超過 8 KB，依 [STRUCTURE](../../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。
+
+| 分檔 | 涵蓋的段 |
+|---|---|
+| [01-用法等](docs/01-用法等.md) | 用法；元素；錯誤代號；建置與測試；已知限制 |
+
+<a id="用法"></a>
+<a id="元素"></a>
+<a id="錯誤代號"></a>
+<a id="建置與測試"></a>
+<a id="已知限制"></a>

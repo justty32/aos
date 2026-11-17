@@ -32,7 +32,7 @@ class Batch3Integration(unittest.TestCase):
             kernel_stack = root / 'kernel'
             kernel_stack.mkdir()
             env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
-            bins = [str(path) for path in (PROTO / 'impls').glob('*/bin')]
+            bins = [str(PROTO / 'bin')]
             bins += [str(path) for path in (PROTO / 'cmd').glob('*/bin')]
             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
             env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib')])

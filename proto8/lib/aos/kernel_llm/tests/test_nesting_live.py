@@ -26,7 +26,7 @@ class LiveNesting(unittest.TestCase):
         self.stack.mkdir()
         self.box = self.root / 'replies'
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
-        bins = [str(p) for p in (PROTO / 'impls').glob('*/bin')]
+        bins = [str(PROTO / 'bin')]
         self.env['PATH'] = os.pathsep.join(bins + [self.env['PATH']])
         self.env.update(AOS_STACK=str(self.stack), AOS_WS=str(self.root),
                         AOS_CD=str(self.root), AOS_LLM_KERNEL=str(self.stack))

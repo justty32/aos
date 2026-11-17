@@ -17,7 +17,7 @@ sys.path[:0] = [str(PROTO / "lib")]
 import daemon_ctl as dc  # noqa: E402
 sp = importlib.import_module("daemon_ctl.state_path")   # the module: once wired, the package attribute state_path is the function
 
-BINS = ":".join(str(p) for p in sorted((PROTO / "impls").glob("*/bin")))
+BINS = str(PROTO / "bin")
 
 
 class FakeKernel(threading.Thread):

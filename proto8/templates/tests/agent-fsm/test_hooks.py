@@ -39,7 +39,7 @@ class Hooks(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") or k == "AOS_HOME"}
         local = Path.home() / ".local" / "bin"
         self.env = dict(env, AOS_STACK=str(self.stack), AOS_CD=str(self.defn), HOOKDIR=str(self.defn),
-                        PATH=os.pathsep.join([str(self.bin), str(local)] + [str(p) for p in PROTO.glob("impls/*/bin")]
+                        PATH=os.pathsep.join([str(self.bin), str(local)] + [str(PROTO / "bin")]
                                              + [env["PATH"]]))
         self.tools(["echo"])
         self.command("aos-llm", """import json, os, sys

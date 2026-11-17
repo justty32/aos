@@ -1,9 +1,0 @@
-{
-  "name": "aos-loop",
-  "version": "0.1.0",
-  "description": "aos-loop：一次次跑 run（aos-exec 的目標），看結束碼決定下一步",
-  "builtin-baseline": "b781af668027bbf77f2f827f47b5c6cd8d825c08",
-  "dependencies": [
-    "nlohmann-json"
-  ]
-}

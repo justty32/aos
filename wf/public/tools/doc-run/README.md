@@ -20,9 +20,9 @@ Files: `run-doc.py`, `check-cmds.py` (python3 only, no other dependency).
 Nothing to install; run with python3. Delete the folder to remove.
 
 ## Known limits
-- check-cmds only counts lines that start with a known command word (`aos-`, `cd`, `cp`, `mkdir`, `nohup`, `export`, `git`, `cmake`, `tail`, `ls`, `timeout`, `sleep`, `echo`, `chmod`, `cat`, `for`); add yours to the `cmd` regex. It checks copy -> master only, not the other way.
+- check-cmds only counts lines that start with a known command word (`aos-`, `cd`, `cp`, `mkdir`, `nohup`, `export`, `git`, `cmake`, `tail`, `ls`, `timeout`, `sleep`, `echo`, `chmod`, `cat`, `for`); add yours to the `cmd` regex. `python3` and `make` are not in the list, so since 11-17 (aos builds with `python3 install.py`, no more cmake) the build line is not checked unless you add them. It checks copy -> master only, not the other way.
 - run-doc does not check its arguments (wrong count = Python traceback) and does not run anything itself.
-- Building aos with vcpkg writes `~/.cache/vcpkg` under the fake HOME; remember it when you compare "what gets written".
+- Until 11-17, building aos with vcpkg wrote `~/.cache/vcpkg` under the fake HOME. Since 11-17 aos builds with `python3 install.py` (no vcpkg), which writes only inside the proto8 folder; still compare "what gets written" after a real run.
 
 ## Author
 ok-release, 2026-11-14 (used on the "getting started" page and README; found 4 doc errors). Curated by repo-aos (docstring wording only; tested on small fake pages).

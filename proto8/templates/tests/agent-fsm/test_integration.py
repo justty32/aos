@@ -36,7 +36,7 @@ class KernelIntegration(unittest.TestCase):
             daemon_config.write_text(json.dumps({'interval_ms':10, 'exec':{
                 'argv':[str(PROTO / 'lib/aos/kernel_llm/_entry'), str(config)]}}))
             env = {k:v for k,v in os.environ.items() if not k.startswith('AOS_') or k == 'AOS_HOME'}
-            bins = [str(path) for path in (PROTO / 'impls').glob('*/bin')]
+            bins = [str(PROTO / 'bin')]
             env['PATH'] = os.pathsep.join(bins + [str(PROTO / 'cmd/aos-tools/bin'), env['PATH']])
             env.update(AOS_STACK=str(kernel_stack), AOS_CD=str(root), AOS_WS=str(root))
             with open(root / 'daemon.log', 'w+') as log:

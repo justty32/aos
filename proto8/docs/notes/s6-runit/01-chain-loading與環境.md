@@ -4,7 +4,7 @@
 
 **s6／runit 怎麼做。** execline 的一支腳本就是一條 argv，裡面是一串程式：每支只做自己那件事（改環境、換使用者、cd、動 fd），做完就 `exec` 成「argv 剩下的部分」，沒有常駐的 shell。skarnet 的文件說這叫 chain loading，也有人叫 Bernstein chaining（[execline grammar](https://skarnet.org/software/execline/grammar.html)）。runit 的 `run` 腳本通常是一行 `exec chpst -e ./env -u app ./daemon`：chpst 換使用者、設環境、上資源限制、拿鎖，然後 exec 成那支程式；它自己出錯退 100／111，否則結束碼就是那支程式的（[chpst(8)](https://smarden.org/runit/chpst.8)）。s6 那邊同樣的事拆成好幾支小程式接起來，例如 `s6-envdir ./env chpst -u app ./daemon`（[s6-envdir](https://skarnet.org/software/s6/s6-envdir.html)）。
 
-**aos 怎麼做。** `aos-exec` 一支做完 N-59 那幾件：找入口、export `AOS_*`、cd 到 `AOS_CD`、讀 `.env`，然後 exec 入口（或行程內跑單子）。字串轉向＝交給「全新的一次 aos-exec」；`$AOS_ENTRY` 指到資料夾就走進去、一路往下，沿路每層的 `.env` 都讀。argv 陣列入口本身就是一條小鏈：`["aos-loop", {"$env": "AOS_CF"}]` 就是 aos-exec 做完自己的事、exec 成 aos-loop。aos-daemon 起子項時特別寫明「exec 成 aos-loop、pid 與啟動時間不變」——它認回子 loop（`adopt`）靠的正是 exec 不換 pid（[impls/aos-daemon](../../../impls/aos-daemon/README.md)）。
+**aos 怎麼做。** `aos-exec` 一支做完 N-59 那幾件：找入口、export `AOS_*`、cd 到 `AOS_CD`、讀 `.env`，然後 exec 入口（或行程內跑單子）。字串轉向＝交給「全新的一次 aos-exec」；`$AOS_ENTRY` 指到資料夾就走進去、一路往下，沿路每層的 `.env` 都讀。argv 陣列入口本身就是一條小鏈：`["aos-loop", {"$env": "AOS_CF"}]` 就是 aos-exec 做完自己的事、exec 成 aos-loop。aos-daemon 起子項時特別寫明「exec 成 aos-loop、pid 與啟動時間不變」——它認回子 loop（`adopt`）靠的正是 exec 不換 pid（[cpp/aos-daemon](../../../cpp/aos-daemon/README.md)）。
 
 **兩邊一樣的地方。** 都是 exec、不 fork，所以 pid 從頭到尾是同一個，監工看到的就是真正在跑的程式；結束碼都是透明轉交（aos 的 N-43「透明轉交」對上 chpst 的「否則就是程式自己的碼」）；都不靠 sh 拼字串（對上使用者「少用 sh」）。
 

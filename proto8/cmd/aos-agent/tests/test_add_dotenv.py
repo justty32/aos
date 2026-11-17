@@ -20,7 +20,7 @@ import daemon_ctl as dc
 from daemon_ctl.entry import daemon_ref
 
 ENV = {key: value for key, value in os.environ.items() if not key.startswith("AOS_")}
-ENV["PATH"] = os.pathsep.join(str(path) for path in sorted((PROTO / "impls").glob("*/bin"))) + os.pathsep + os.pathsep.join(
+ENV["PATH"] = str(PROTO / "bin") + os.pathsep + os.pathsep.join(
     str(path) for path in sorted((PROTO / "cmd").glob("*/bin"))) + os.pathsep + ENV["PATH"]
 ENV["PYTHONDONTWRITEBYTECODE"] = "1"
 

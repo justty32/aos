@@ -58,7 +58,7 @@ class FakeAgentMeasure(unittest.TestCase):
                 stack.mkdir()
             defs = root / 'defs'
             defs.mkdir()
-            bins = [str(path) for group in ('impls', 'cmd') for path in (PROTO / group).glob('*/bin')]
+            bins = [str(path) for path in [PROTO / 'bin'] + sorted((PROTO / 'cmd').glob('*/bin'))]
             env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
             env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib')])

@@ -45,7 +45,7 @@ eca-claude/
 **實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`（掛 daemon 的在 daemon 給的 proc 的 stack），裡面長 `queue/`、`history.jsonl`、`ctl.json`、`state.json` 與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）。這隻自己改過的還有 tools 與 llm 覆蓋層（只存差異；路徑依 `interfaces.json` 的同名欄位，此範本是 `tools.json`、`llm.json`，K-6）（`aos-agent tools`／`llm`；`aos-agent llm --target myproj set model=haiku`＝下一題起 `--model haiku`，`reset` 回定義的 sonnet）。換定義的模型＝`aos-json set --str proto8/templates/eca-claude/llm.json#/model opus`。eca 的腦是 CLI 自己，不經 llm kernel（think-as-function 03 § 2）。
 
 ```sh
-# PATH 要有 impls 的 aos-exec／aos-loop／aos-post／aos-daemon、proto8/cmd/*/bin 的 aos-eca-turn、aos-eca-screen、aos-tools、aos-daemon-ctl、
+# PATH 要有 cpp 的 aos-exec／aos-loop／aos-post／aos-daemon、proto8/cmd/*/bin 的 aos-eca-turn、aos-eca-screen、aos-tools、aos-daemon-ctl、
 # aos-mcp、aos-agent（source 過 proto8/env.sh 就都在），還有 claude；AOS_DAEMON＝跑著的 daemon 的 $AOS_STACK
 aos-agent ctl add --ws ~/code/myproj --name myproj proto8/templates/eca-claude
 aos-agent say --target myproj 看一下 README 在講什麼 && aos-agent listen --target myproj

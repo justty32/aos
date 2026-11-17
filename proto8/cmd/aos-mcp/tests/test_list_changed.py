@@ -30,7 +30,7 @@ class ListChanged(unittest.TestCase):
         (grow / '_tooldef.json').write_text(json.dumps({'description': 'Add clock2 to the list.'}))
         self.reg.write_text(json.dumps({'tools': {'grow': {'path': str(grow)}, 'peek_now_time': {'path': str(CLOCK)}}}))
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
-        bins = [str(p) for p in (PROTO / 'impls').glob('*/bin')] + [str(PROTO / 'cmd' / 'aos-tools' / 'bin')]
+        bins = [str(PROTO / 'bin')] + [str(PROTO / 'cmd' / 'aos-tools' / 'bin')]
         self.env['PATH'] = os.pathsep.join(bins + [os.path.expanduser('~/.local/bin'), self.env['PATH']])
         self.env['PYTHONDONTWRITEBYTECODE'] = '1'
 

@@ -15,7 +15,7 @@ GATE = Path(__file__).resolve().parents[1]
 PROTO8 = GATE.parents[2]
 KERNEL = PROTO8 / "lib" / "aos" / "kernel" / "_entry"
 AGENT = PROTO8 / "cmd" / "aos-agent" / "bin" / "aos-agent"
-BINS = [str(p) for p in sorted((PROTO8 / "impls").glob("*/bin"))]
+BINS = [str(PROTO8 / "bin")]
 
 
 class QueryDaemonTest(unittest.TestCase):
@@ -32,7 +32,7 @@ class QueryDaemonTest(unittest.TestCase):
         definition.write_text(json.dumps({"interval_ms": 20, "procs": {"fixture": {"exec": {"argv": ["/bin/false"]}}}}))
         self.log = open(self.root / "daemon.log", "w")
         self.addCleanup(self.log.close)
-        self.daemon = subprocess.Popen([str(PROTO8 / "impls/aos-daemon/bin/aos-daemon"), str(definition)],
+        self.daemon = subprocess.Popen([str(PROTO8 / "bin/aos-daemon"), str(definition)],
                                        cwd=self.root, env=dict(self.env, AOS_STACK=str(self.stack)),
                                        stdout=self.log, stderr=self.log)
         self.addCleanup(self.stop_daemon)

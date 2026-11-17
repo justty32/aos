@@ -2,20 +2,20 @@
 
 ← [WORKFLOWS](../WORKFLOWS.md)
 
-這台機器上要能開發需要什麼、怎麼裝、跑什麼指令；外部工具與 env var 也收在這裡。要建的只有 `proto8/impls/`（C／C++）；各專案的細節在 [proto8/impls/README](../../proto8/impls/README.md)，本檔是 agent 照著做的清單。
+這台機器上要能開發需要什麼、怎麼裝、跑什麼指令；外部工具與 env var 也收在這裡。要建的只有 `proto8/cpp/`（C／C++，在 proto8 跑 `python3 install.py`）；各專案的細節在 [proto8/cpp/README](../../proto8/cpp/README.md)，本檔是 agent 照著做的清單。
 
 **何時用**：fresh clone、換機器、裝不起來、忘了指令、要加一個外部工具或環境變數。
 **何時不用**：驗證／測試怎麼跑 → [testing](testing.md)；程式碼慣例 → [common/conventions](common/conventions.md)。
 
 ## Done when
 
-- 照「流程」走完，[testing「proto8」](testing.md#proto8)的建置指令回傳 0，`proto8/impls/*/bin/` 底下有各專案的執行檔。
+- 照「流程」走完，[testing「proto8」](testing.md#proto8)的建置指令（`python3 install.py`）回傳 0，`proto8/bin/` 底下有 9 支 C++ 執行檔。
 - 要使用者親自做的（帳號、授權、金鑰）各寄一封到使用者專區（`aos-user send`，見 [common/user.md](common/user.md)；舊條目在 [WAIT_USER](../WAIT_USER.md)）。
 
 ## 流程（fresh clone 後）
 
-1. **vcpkg**：本機裝在 `~/dev/vcpkg`，`proto8/impls/cmake/settings.cmake` 會自動找到，不用設 `VCPKG_ROOT`；要用別的路徑就設 `VCPKG_ROOT` 環境變數（或 configure 時給 `-DCMAKE_TOOLCHAIN_FILE`）。`git clone --depth 1` 的 vcpkg 會缺各專案 `vcpkg.json` 指定的 baseline commit，要 `git fetch --depth 1 origin <sha>` 補，不必 unshallow。
-2. 照 [testing「proto8」](testing.md#proto8)把 `proto8/impls/` 建一次（repo 根沒有 CMake）。
+1. **相依**：在 proto8 跑 `python3 install.py --check`（Python ≥ 3.11、只用標準庫）：必需 g++ ≥ 10、gcc、make、ar，缺了退 1；選配工具（git、tmux、bwrap、s6…）只列表、不擋。11-17 起不用 CMake、vcpkg（nlohmann json 是收進 repo 的單檔 `proto8/cpp/third_party/nlohmann/json.hpp`）。Python 選用模組清單在 `proto8/lib/requirements-optional.txt`（現在只有 jsonschema；install.py 只檢查、不 pip）。
+2. 在 proto8 跑 `python3 install.py` 建一次（見 [testing「proto8」](testing.md#proto8)）：填 `proto8/bin/`（9 支 C++ 執行檔）與 `proto8/include/`，都不進 git。
 3. 每個視窗先 `source proto8/env.sh` 把指令放進 PATH（見下表；想連進 `~/.local/bin` 才跑選配的 `proto8/cmd/install.sh`）。
 4. 內容 json 的 diff：跑一次 `python3 wf/tools/json_text.py --setup`（Windows 可能叫 `python`；重跑無妨，`--setup --check` 只看；`--help`／`--setup` 由同夾的 `json_text_cli.py` 做，抄到別的 repo 要兩支一起抄）——在這個 clone 的 `.git/config` 設 `diff.json_text.textconv`，`git diff`／`show`／`log -p` 碰到 `.gitattributes` 點名的知識庫與 `_index.json`／`_description.json` 就展開成逐行文字再比；沒設照原檔比。`--stat`／`--numstat`／`--shortstat` 不吃這個設定，數的是原檔的行（要看展開後改了幾行就數 `git diff` 本身的 +／- 行）。`git blame` 預設也吃這個設定（要原檔行號加 `--no-textconv`）；要做成 patch 給 `git apply` 用時加 `--no-textconv` 或用 `format-patch`。
 
@@ -23,8 +23,8 @@
 
 | 做什麼 | 指令 | 備註 |
 |--------|------|------|
-| 建 proto8 的 C++ 實作 | 照 [testing「proto8」](testing.md#proto8)，在 `proto8/impls/` 建 | proto8 的 aos-exec／loop／fsm／daemon 只有 C++ 版，手跑前要先建；各專案獨立 CMake、也能單獨 `cd <專案> && cmake -B build && cmake --build build`；重運算，派給隊員時 `nice -n 19`（見 [resources](resources.md)）|
-| 把 proto8 的指令放進 PATH | `source proto8/env.sh`（11-17 新：每個視窗先 source；清掉 `AOS_*`、設 `AOS_HOME`＝那個 proto8、把它的 `cmd/*/bin`、`impls/*/bin` 放到 PATH 最前，不往 `~/.local/bin` 放東西）。選配：`proto8/cmd/install.sh`（WSL clone 裡跑；預設 symlink 進 `~/.local/bin`，給參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉）| 不再寫 Python user site 的 `aos-proto8.pth`（使用者 11-15 對自編規則盤點的裁定「6.拿掉。」；家機那份已搬到 `~/.aos/saves/pth-removed-1115/`）；抄出 repo 的程式要 import 共用模組就設 `AOS_HOME`（共用模組只經 `$AOS_HOME/lib` 找，沒設報 `HomeMissing`）；還有舊的 `.pth` 時印 warning，舊的要自己移走，`--uninstall` 只拿掉連結、不碰它。impls 先建好；冪等、同名的別的東西不蓋；repo 換位置要重跑（指選配的 install.sh）。開新 agent 不用指令：`cp -r $AOS_HOME/templates/名 目的資料夾`（範本都寫 `{"$env": "AOS_HOME", …}`，每台設一次 `AOS_HOME`；[templates/docs/02](../../proto8/templates/docs/02-agent-fsm.md)）。用 `source proto8/env.sh` 就不用 install.sh |
+| 建 proto8 的 C++ 實作 | 在 proto8 跑 `python3 install.py`（`--check` 只查相依；見 [testing「proto8」](testing.md#proto8)） | proto8 的 aos-exec／loop／fsm／daemon 只有 C++ 版，手跑前要先建；重跑＝全新安裝，C++ 沒改時幾秒；log 在 `proto8/cpp/build/build.log`；開發時只重編一支：`make -C proto8/cpp -j8 BINDIR=$AOS_HOME/bin aos-exec`；重運算，派給隊員時 `nice -n 19`（見 [resources](resources.md)）|
+| 把 proto8 的指令放進 PATH | `source proto8/env.sh`（11-17 新：每個視窗先 source；清掉 `AOS_*`、設 `AOS_HOME`＝那個 proto8、把它的 `bin/`（第一）、`cmd/*/bin`、`frontend/bin` 放到 PATH 最前，不往 `~/.local/bin` 放東西；`aos-exec` 不在時提示 `python3 $AOS_HOME/install.py`）。選配：`proto8/cmd/install.sh`（WSL clone 裡跑；預設 symlink 進 `~/.local/bin`，給參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉）| 不再寫 Python user site 的 `aos-proto8.pth`（使用者 11-15 對自編規則盤點的裁定「6.拿掉。」；家機那份已搬到 `~/.aos/saves/pth-removed-1115/`）；抄出 repo 的程式要 import 共用模組就設 `AOS_HOME`（共用模組只經 `$AOS_HOME/lib` 找，沒設報 `HomeMissing`）；還有舊的 `.pth` 時印 warning，舊的要自己移走，`--uninstall` 只拿掉連結、不碰它。先跑過 `python3 install.py`（install.sh 連 `bin/*`，`bin/` 不在報 `BinMissing`）；冪等、同名的別的東西不蓋；repo 換位置要重跑（指選配的 install.sh）。開新 agent 不用指令：`cp -r $AOS_HOME/templates/名 目的資料夾`（範本都寫 `{"$env": "AOS_HOME", …}`，每台設一次 `AOS_HOME`；[templates/docs/02](../../proto8/templates/docs/02-agent-fsm.md)）。用 `source proto8/env.sh` 就不用 install.sh |
 | 查 md 連結／錨點 | `python3 wf/tools/check_anchors.py` | 想查才跑（大量搬檔後）；不是 commit 前必跑（使用者 11-13 晚，見 [user](common/user.md)）|
 | 查 `_index.json` 跟樹對不對得上 | `python3 wf/tools/index_check.py` | 同上，想查才跑；生成器 `index_gen.py --apply` 由 `commit-request` 排隊跑，自己不用跑（鐵律 3，11-14 改）|
 

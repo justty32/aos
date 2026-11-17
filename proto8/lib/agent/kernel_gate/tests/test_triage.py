@@ -9,7 +9,7 @@ import unittest
 
 GATE = Path(__file__).resolve().parents[1]
 PROTO8 = GATE.parents[2]
-BINS = [PROTO8 / "impls" / name / "bin" for name in ("aos-post", "aos-exec", "aos-directive")]
+BINS = [PROTO8 / "bin"]
 
 
 class TriageTest(unittest.TestCase):

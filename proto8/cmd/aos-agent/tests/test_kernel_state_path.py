@@ -17,7 +17,7 @@ PROTO = Path(__file__).resolve().parents[3]
 BIN = PROTO / "cmd" / "aos-agent" / "bin" / "aos-agent"
 DAEMON = os.environ.get("AOS_TEST_DAEMON_BIN", "aos-daemon")     # another aos-daemon build to test against (optional)
 ENV = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-ENV["PATH"] = ":".join(str(p) for p in sorted((PROTO / "impls").glob("*/bin"))) + ":" + ":".join(
+ENV["PATH"] = str(PROTO / "bin") + ":" + ":".join(
     str(p) for p in sorted((PROTO / "cmd").glob("*/bin"))) + ":" + ENV["PATH"]
 ENV["PYTHONDONTWRITEBYTECODE"] = "1"
 

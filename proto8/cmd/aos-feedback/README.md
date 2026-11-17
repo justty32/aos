@@ -55,6 +55,6 @@ flowchart LR
 
 `python3 -m unittest discover -s proto8/cmd/aos-feedback/tests -v`
 
-測試全部用 `AOS_FEEDBACK` 指向暫存夾，並將起始模型規則複製到那裡；包含實際 `aos-exec` 呼叫薄工具，需先有 `proto8/impls/aos-exec/bin/aos-exec`。
+測試全部用 `AOS_FEEDBACK` 指向暫存夾，並將起始模型規則複製到那裡；包含實際 `aos-exec` 呼叫薄工具，需先在 proto8 跑過 `python3 install.py`、有 `proto8/bin/aos-exec`。
 
 </details>

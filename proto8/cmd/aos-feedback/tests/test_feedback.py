@@ -11,7 +11,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 CLI = ROOT / 'cmd/aos-feedback/bin/aos-feedback'
-EXEC = ROOT / 'impls/aos-exec/bin/aos-exec'
+EXEC = ROOT / 'bin/aos-exec'
 
 
 class FeedbackFixture(unittest.TestCase):

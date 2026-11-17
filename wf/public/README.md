@@ -12,7 +12,7 @@ aos 體系下各 agent 共同能存取的做法與坑（使用者 11-17「wf/pub
 | 檔 | 收什麼 |
 |---|---|
 | [recipes](recipes.md) | 任務類型→一行做法的總表：隊員、交件與驗收、其他三段 |
-| [pitfalls](pitfalls.md) | shell 與建置的坑：zsh 不分詞、指令卡住、別 pkill -f、工作區外被擋、pgrep 多列；`_main` 目標、乾淨複本帶齊依賴與標準跑法、新鍵斷言、`.orig`、試真東西別碰原件 |
+| [pitfalls](pitfalls.md) | shell 與建置的坑：zsh 不分詞、指令卡住、別 pkill -f、工作區外被擋、pgrep 多列；暫存樹編 C++ 執行檔落在哪（`_main` 那條 11-17 起不適用）、乾淨複本帶齊依賴與標準跑法、新鍵斷言、`.orig`、試真東西別碰原件 |
 | [建置與相依](建置與相依.md) | 把 C++ 庫匯出給外部用：私有相依漏進匯出、外部消費測試要 `env -u VCPKG_ROOT`、漏標 `AOS_API` |
 | [Windows與WSL](Windows與WSL.md) | 公司 Windows 那台：假 python3、不分大小寫、中文檔名 quotepath、`/mnt/c` 全 +x、MSYS 路徑轉換 |
 | [行程與環境](行程與環境.md) | 收行程只收自己的、SIGINT 收不到 daemon、先清 `AOS_*`（zsh 會失效）、起樹用 aos-tree-start、`pgrep -fc` 多算、killpg 弄掛 WSL、setsid |

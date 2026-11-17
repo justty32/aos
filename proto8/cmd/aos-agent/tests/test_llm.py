@@ -12,7 +12,7 @@ import unittest
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[4]
 BIN = REPO / "proto8" / "cmd" / "aos-agent" / "bin" / "aos-agent"
-JSON_BIN = REPO / "proto8" / "impls" / "aos-json" / "bin"
+JSON_BIN = REPO / "proto8" / "bin"
 
 
 def clean_env(**extra):

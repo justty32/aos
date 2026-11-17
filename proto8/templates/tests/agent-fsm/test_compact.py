@@ -366,7 +366,7 @@ print(json.dumps({'message':message,'usage':{'prompt_tokens':used,'completion_to
         write(root / "kernel_daemon.json", {"interval_ms": 10, "exec": {"argv": [
             str(PROTO / "lib/aos/kernel_llm/_entry"), str(root / "kernel.json")]}})
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") or k == "AOS_HOME"}
-        bins = [str(p) for p in PROTO.glob("impls/*/bin")] + [str(p) for p in PROTO.glob("cmd/*/bin")]
+        bins = [str(PROTO / "bin")] + [str(p) for p in PROTO.glob("cmd/*/bin")]
         env.update(PATH=os.pathsep.join(bins + [env["PATH"]]),
                    PYTHONPATH=os.pathsep.join([str(PROTO / "lib")]),
                    PYTHONDONTWRITEBYTECODE="1", AOS_HOME=str(PROTO), AOS_STACK=str(daemon),

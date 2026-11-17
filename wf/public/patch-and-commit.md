@@ -16,9 +16,9 @@
 
 ## 驗收跑全套，不能只跑你改的那幾夾
 
-改了共用程式的契約（函式改名、讀表換入口、輸出格式變了），紅的常在**別的資料夾**：mock 舊函式或比對舊字串的測試（改 `cmd/aos-agent` 紅在 `impls/aos-daemon/tests`；改 lib 的路徑格式紅在 `templates/tests`）。
+改了共用程式的契約（函式改名、讀表換入口、輸出格式變了），紅的常在**別的資料夾**：mock 舊函式或比對舊字串的測試（改 `cmd/aos-agent` 紅在 `cpp/aos-daemon/tests`；改 lib 的路徑格式紅在 `templates/tests`）。
 
-1. 在 repo 外的乾淨複本（`git archive HEAD | tar -x`，impls 的 bin 照 [pitfalls「標準跑法」](pitfalls.md) 用複本自己的原始碼編）把 proto8 底下**每一個** `tests` 夾都跑（`find proto8 -type d -name tests`），跑前清掉全部 `AOS_*`。
+1. 在 repo 外的乾淨複本（`git archive HEAD | tar -x`，cpp 的 bin 照 [pitfalls「標準跑法」](pitfalls.md) 用複本自己的原始碼編）把 proto8 底下**每一個** `tests` 夾都跑（`find proto8 -type d -name tests`），跑前清掉全部 `AOS_*`。
 2. 同一支腳本跑「main 原樣」與「main＋你的改動」兩次，逐夾比，只看**新出現的紅**；原本就紅的另列。
 3. 改了被 mock 的函式，先 `grep -rn "'舊函式名'" proto8 --include=*.py` 找出所有 patch 它的測試一起改。
 4. 想快可先跑受影響的幾夾，**送 commit 前一定全套對照一次**。

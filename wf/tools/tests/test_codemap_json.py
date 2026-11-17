@@ -26,8 +26,8 @@ class CodemapJsonTests(unittest.TestCase):
                           ('proto8/cmd/tool/_entry', '#!/bin/sh\n# tool - runs the tool.\n'),
                           ('proto8/cmd/tool/_tooldef.json', '{"description": "def"}'),
                           ('proto8/cmd/tool/tests/t.py', '# t - tests tool.\n'),
-                          ('proto8/impls/foo/CMakeLists.txt', '# foo build.\ntarget_link_libraries(foo PUBLIC bar PRIVATE baz)\n'),
-                          ('proto8/impls/foo/src/f.cpp', '// f.cpp - foo body.\n'),
+                          ('proto8/cpp/foo/CMakeLists.txt', '# foo build.\ntarget_link_libraries(foo PUBLIC bar PRIVATE baz)\n'),
+                          ('proto8/cpp/foo/src/f.cpp', '// f.cpp - foo body.\n'),
                           ('proto8/thinking/skip.md', '# skipped\n'),
                           ('proto8/lib/README.md', '# not listed\n')]:
             path = self.root / rel
@@ -58,7 +58,7 @@ class CodemapJsonTests(unittest.TestCase):
     def test_shape_and_counts(self):
         self.assertEqual(self.run_gen('--apply'), 0)
         names = sorted(p.name for p in (self.root / OUT).iterdir())
-        self.assertEqual(names, ['cmd.json', 'impls.json', 'lib.json', 'proto8.json'])
+        self.assertEqual(names, ['cmd.json', 'cpp.json', 'lib.json', 'proto8.json'])
         lib = self.read('lib.json')
         self.assertEqual(lib['generated_by'], 'wf/tools/index_gen.py')
         self.assertEqual(lib['tree']['a.py'], 'does a.')
@@ -68,7 +68,7 @@ class CodemapJsonTests(unittest.TestCase):
         self.assertNotIn('README.md', lib['tree'])
         self.assertEqual(self.read('cmd.json')['tree']['tool/'], 'runs the tool.')   # 工具夾三個契約檔併一格
         self.assertEqual(self.read('cmd.json')['tree']['tool']['tests']['t.py'], 'tests tool.')
-        self.assertEqual(self.read('impls.json')['deps'], {'foo': {'public': ['bar'], 'private': ['baz']}})
+        self.assertEqual(self.read('cpp.json')['deps'], {'foo': {'public': ['bar'], 'private': ['baz']}})
         self.assertEqual(self.read('proto8.json')['tree'], {'x.py': 'top file.'})
         # 葉子數＝掃到的列數（工具夾三檔併一列）
         proto = str(self.root / 'proto8')

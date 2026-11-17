@@ -44,7 +44,7 @@ cat /proc/loadavg; grep MemAvailable /proc/meminfo; pgrep -fc '(^|/)claude -p'
 
 - **使用者在做事：最多 3 個；不確定有沒有在忙，也用 3 個。**依 09:48～14:30 混合工作窗：3～4 個的 79 筆樣本，load p95 7.93、Windows CPU p95 87.91%；0 個時 load 也曾 11.15。3 是保守暫定，不能把公司工作的高載怪給 agent。
 - **使用者明說閒著：最多 8 個（11-07 使用者裁定 sol 審查 #32）。**15:48:25～15:54:34 的 6 個共 7 筆，load 最高 2.44；15:49:57～15:58:40 的 7～8 個共 14 筆，load 中位／p95／最高 2.52／2.98／3.02、Windows CPU 最高 56.90%，WSL／Windows 可用最低 11.80／3.42 GiB。14 筆全是 codex，其中 15:55 後只有 8 筆；長時間與 claude 大量並開未驗證。**超過 8 個不訂上限：資料不足**。每 CLI 約 300 MiB 是粗估，不能據此推上限。
-- **有 C++ 建置：CLI 暫定最多 2 個，建置一次一個、`-j2`。**用 `flock /tmp/aos-build.lock nice -n 15 cmake --build … -j2`。11:23～11:28、11:32～11:37 疑似建置窗共 20 筆，load p95／最高 8.55／8.71、Windows CPU p95／最高 93.44／98.35%。CSV 無命令起迄；2 個加建置的餘裕未獨立驗證。在哪裡編照 [06](06-公司WSL活樹與任務書硬規則.md) 硬規則第 5 條（不在 repo 裡 build）。
+- **有 C++ 建置：CLI 暫定最多 2 個，建置一次一個、`-j2`。**用 `flock /tmp/aos-build.lock nice -n 15 python3 install.py -j 2`（只重編一支：`flock /tmp/aos-build.lock nice -n 15 make -C <proto8>/cpp -j2 BINDIR=<proto8>/bin aos-exec`）。11:23～11:28、11:32～11:37 疑似建置窗共 20 筆，load p95／最高 8.55／8.71、Windows CPU p95／最高 93.44／98.35%。CSV 無命令起迄；2 個加建置的餘裕未獨立驗證。在哪裡編照 [06](06-公司WSL活樹與任務書硬規則.md) 硬規則第 5 條（不在 repo 裡 build）。
 - **`git gc`、全庫大正則搜尋也當重操作：`nice -n 15`、一次一個，與建置共用同一把鎖，不能重疊；搜尋先限路徑、範圍。**14:33～14:44 只有 2～4 個 CLI，load 仍曾 9.34、Windows CPU 在 14:30～15:55 最高 98.52%；CSV 只能確認高載，不能認定命令。重操作併發資料不足，暫定 1。
 
 **警報與處理（保守暫定，不是實測失速點）：**

@@ -18,7 +18,7 @@
 ```
 讀 code map 找到相關領域（只讀清單裡的檔）
   → 增量修改（守 conventions）
-  → build 得過（proto8 照 testing 建 impls）
+  → build 得過（proto8 照 testing 建 cpp）
   → 交使用者驗證（若需實機/實環境）→ 回報問題 → 修 → 重複
   → 全數通過後：檔頭一句話 → 補文檔 → commit-request submit（排隊跑 index_gen）
 ```
@@ -31,9 +31,9 @@
 
   | 改了什麼 | 要跟著改 |
   |---|---|
-  | 某個 impls 專案的內部行為 | 該專案的 `README.md`（如 `proto8/impls/aos-loop/README.md`）＋ [code map](../../knowledge/code-map.json) |
-  | 建置、CMake、相依管理、新增一個 impls 專案 | [proto8/impls/docs/04 新專案清單](../../../proto8/impls/docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md)、[impls/docs/01 依賴](../../../proto8/impls/docs/01-現況與地圖與依賴.md)、[testing「proto8」](../testing.md#proto8) |
-  | 命令列、旗標、錯誤代號、退出碼 | 該程式的 README 與 `--help`；全家共通的在 [impls/docs/03 錯誤](../../../proto8/impls/docs/03-錯誤.md)、[04](../../../proto8/impls/docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md) |
+  | 某個 cpp 專案的內部行為 | 該專案的 `README.md`（如 `proto8/cpp/aos-loop/README.md`）＋ [code map](../../knowledge/code-map.json) |
+  | 建置（`cpp/Makefile`、`proto8/install.py`）、相依管理、新增一個 cpp 專案 | [proto8/cpp/docs/04 新專案清單](../../../proto8/cpp/docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md)、[cpp/docs/01 依賴](../../../proto8/cpp/docs/01-現況與地圖與依賴.md)、[testing「proto8」](../testing.md#proto8) |
+  | 命令列、旗標、錯誤代號、退出碼 | 該程式的 README 與 `--help`；全家共通的在 [cpp/docs/03 錯誤](../../../proto8/cpp/docs/03-錯誤.md)、[04](../../../proto8/cpp/docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md) |
   | 資料夾版面、回合模型、交接協定 | proto8 的 [CONCEPTS](../../../proto8/docs/CONCEPTS.md)／[NORMS](../../../proto8/docs/NORMS.md)／[CONVENTION](../../../proto8/docs/CONVENTION.md)|
   | 頂層結構（多／少了目錄）| [AGENTS.md](../../../AGENTS.md) 第一段、[proto8/README](../../../proto8/README.md) |
 

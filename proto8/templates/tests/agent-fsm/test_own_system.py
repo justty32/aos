@@ -31,7 +31,7 @@ class OwnSystem(unittest.TestCase):
             {"procs": {"bob": {"phase": "running", "stack": "procs/bob", "ws": "../ws", "def": str(self.defn)}}}))
         (self.stack / "history.jsonl").write_text('{"role":"user","content":"hi"}\n')
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") or k == "AOS_HOME"}
-        bins = [str(p) for p in (PROTO / "impls").glob("*/bin")] + [str(PROTO / "cmd" / n / "bin") for n in ("aos-tools", "aos-agent")]
+        bins = [str(PROTO / "bin")] + [str(PROTO / "cmd" / n / "bin") for n in ("aos-tools", "aos-agent")]
         env["PATH"] = os.pathsep.join(bins + [env["PATH"]])
         env.update(AOS_STACK=str(self.stack), AOS_CD=str(self.defn), AOS_WS=str(self.ws), AOS_DAEMON=str(self.d),
                    AOS_LLM_KERNEL=str(kernel), PYTHONDONTWRITEBYTECODE="1")

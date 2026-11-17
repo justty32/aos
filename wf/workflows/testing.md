@@ -16,7 +16,7 @@
 
 | 驗證 | 指令 | 誰跑 |
 |------|------|------|
-| **proto8 impls（改完必跑）** | 見下面「proto8」 | agent |
+| **proto8 cpp（改完必跑）** | 見下面「proto8」 | agent |
 | 要真模型、外部 CLI agent、跨機的 | 照該實驗檔的步驟 | 使用者 → 新題寄使用者專區（`aos-user send`），舊條目在 [WAIT_USER](../WAIT_USER.md)；本機 LM Studio 跑得動的部分我自己跑 |
 
 「誰跑」只有兩種值：**agent**（本機跑得動）、**使用者**（要實機、外部服務、帳號、付費、目視；新題寄使用者專區 `aos-user send`，舊條目在 WAIT_USER）。判不準就當後者。
@@ -26,13 +26,17 @@
 
 ## proto8
 
-repo 根沒有 CMake，要建的只有 `proto8/impls/`：頂層 `impls/CMakeLists.txt` 一次建全部（各專案也可單獨 `cmake -B build`，兩種擇一、不要同時跑，見 impls/docs/04；`bin/`、`build/` 不進 git）：
+要建的只有 `proto8/cpp/`，11-17 起不用 CMake、vcpkg：在 proto8 跑 install.py，它先查相依、再用頂層 `cpp/Makefile` 編全家，清空再填 `proto8/bin/`（9 支執行檔）與 `proto8/include/`（`bin/`、`include/`、`cpp/build/` 不進 git；log 在 `cpp/build/build.log`；細節見 cpp/docs/04）：
 
 ```sh
-(cd proto8/impls && cmake -B build && cmake --build build)
+(cd proto8 && python3 install.py)
 ```
 
-`proto8/cmd/`（指令）、`proto8/lib/`（含頂層的共用模組，11-17 前在 `proto8/py/`）、`proto8/templates/`（含 kernel 範本 `templates/kernel/`） 是 Python／sh，沒有建置步驟；要確認就手跑（用法在各自的 README）。aos 的程式都不動 PATH，手跑時把 `proto8/impls/<名>/bin/`、`proto8/cmd/<名>/bin/` 放進 PATH（`source proto8/env.sh` 一次放好；選配 `proto8/cmd/install.sh` 連進 `~/.local/bin`）。
+開發時只重編一支：`make -C proto8/cpp -j8 BINDIR=$AOS_HOME/bin aos-exec`（或直接重跑 install.py，C++ 沒改時幾秒）。
+
+- **跑測試前**：C++ 專案的測試到 `proto8/bin/` 找執行檔，先跑過 `python3 install.py`；很多 Python 測試靠 PATH 上有 C++ 指令，先 `source proto8/env.sh`（在 bash 裡）。乾淨複本（`git archive`）不帶 `bin/`，要在複本的 proto8 自己跑一次 install.py。
+
+`proto8/cmd/`（指令）、`proto8/lib/`（含頂層的共用模組，11-17 前在 `proto8/py/`）、`proto8/templates/`（含 kernel 範本 `templates/kernel/`） 是 Python／sh，沒有建置步驟；要確認就手跑（用法在各自的 README）。aos 的程式都不動 PATH，手跑時把 `proto8/bin/`、`proto8/cmd/<名>/bin/` 放進 PATH（`source proto8/env.sh` 一次放好；選配 `proto8/cmd/install.sh` 連進 `~/.local/bin`）。
 
 ## 不碰跑著的樹
 

@@ -17,7 +17,7 @@ class AcceptanceTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.env = {key: value for key, value in os.environ.items() if not key.startswith('AOS_')}
-        bins = [str(p) for group in ('impls', 'cmd') for p in (PROTO / group).glob('*/bin')]
+        bins = [str(p) for p in [PROTO / 'bin'] + sorted((PROTO / 'cmd').glob('*/bin'))]
         self.env.update(PATH=os.pathsep.join(bins + [self.env['PATH']]),
                         PYTHONPATH=str(PROTO / 'lib'), AOS_WS=str(self.root),
                         AOS_STACK=str(self.root / 'stack'))

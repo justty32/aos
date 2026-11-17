@@ -19,4 +19,4 @@ source ~/repo/aos/proto8/env.sh && cd ~/aos-home && aos-tree-start root      # �
 
 **為什麼擋在這支、不擋在 aos-exec／aos-daemon**：樹裡的巢狀呼叫（daemon 起子項、單子裡再叫 aos-exec）本來就帶 `AOS_STACK`、`AOS_DAEMON`，從環境分不出「這次是在起一棵新樹」；只有明說要起樹的這支知道。所以直接打 `aos-exec root` 照舊不擋，起樹請用這支（或照舊先 `source proto8/env.sh`）。
 
-測試：`python3 -m unittest discover -s proto8/cmd/aos-tree-start/tests`（PATH 上放假的 `aos-exec`，不起任何行程）。同夾的 `test_env_sh.py` 驗 [`proto8/env.sh`](../../env.sh)：bash、zsh 各 source 兩次，只剩 `AOS_HOME`、這個家的 `cmd/*/bin`、`impls/*/bin` 排在 PATH 最前且不重複。新指令重新 `source proto8/env.sh` 就在 PATH 上；若用選配的 `proto8/cmd/install.sh`，要再跑一次才會出現在 `~/.local/bin`。
+測試：`python3 -m unittest discover -s proto8/cmd/aos-tree-start/tests`（PATH 上放假的 `aos-exec`，不起任何行程）。同夾的 `test_env_sh.py` 驗 [`proto8/env.sh`](../../env.sh)：bash、zsh 各 source 兩次，只剩 `AOS_HOME`、這個家的 `bin/`（第一）、`cmd/*/bin` 排在 PATH 最前且不重複（`bin/` 是 `python3 install.py` 填的）。新指令重新 `source proto8/env.sh` 就在 PATH 上；若用選配的 `proto8/cmd/install.sh`，要再跑一次才會出現在 `~/.local/bin`。

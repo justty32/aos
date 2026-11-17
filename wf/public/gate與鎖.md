@@ -17,4 +17,4 @@
 - 命令列 `aos-lock acquire` 拿完就退出，名牌不寫 flock，不做死亡回收；只能靠 release 或 `--lease-cycles` 的租約。租約一到就換人，原持有人起的遊戲行程可能還在跑。
 - 名牌只記一個身分（有 `AOS_WS` 就只記 WS），同一個工作區的另一隻 agent 也 release 得掉。
 
-做法：由主導點名給鎖：下屬寄 REQUEST 要用，等主導回信點名才取；底層照舊用隊伍自己的鎖。主導收回時自己確認原持有人的行程已經收掉。持有者死活的細節見 `proto8/impls/aos-lock/README.md`。
+做法：由主導點名給鎖：下屬寄 REQUEST 要用，等主導回信點名才取；底層照舊用隊伍自己的鎖。主導收回時自己確認原持有人的行程已經收掉。持有者死活的細節見 `proto8/cpp/aos-lock/README.md`。

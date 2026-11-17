@@ -298,11 +298,11 @@ class Round1(unittest.TestCase):
 
     def test_home_folders_that_exist(self):
         home = os.path.join(self.t, "aos")
-        for p in ("lib", "impls", "ws"):
+        for p in ("lib", "cpp", "bin", "include", "ws"):
             os.makedirs(os.path.join(home, p))
         self.env["AOS_HOME"] = home
-        self.assertEqual(scope.write_scope(self.env)["deny"], [{"path": os.path.join(home, "lib"), "from": "AOS_HOME"},
-                                                               {"path": os.path.join(home, "impls"), "from": "AOS_HOME"}])
+        self.assertEqual(scope.write_scope(self.env)["deny"], [{"path": os.path.join(home, p), "from": "AOS_HOME"}
+                                                               for p in ("lib", "cpp", "bin", "include")])
 
     def test_resolve_home_flag(self):
         self.assertEqual(scope.resolve("~/x", self.ws, self.env), os.path.join(self.t, "home", "x"))

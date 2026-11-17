@@ -6,10 +6,10 @@
 
 ## 頂層一覽
 
-頂層九夾（11-17 使用者裁「八夾-0 A」，同天下午加 `frontend`）：`impls cmd frontend lib templates knowledge docs thinking archive`，另有 `README.md`、`_index.json`、`env.sh` 三個檔。程式按角色分夾：
+頂層九夾（11-17 使用者裁「八夾-0 A」，同天下午加 `frontend`）：`cpp cmd frontend lib templates knowledge docs thinking archive`，另有 `README.md`、`_index.json`、`env.sh`、`install.py` 四個檔；`bin/`、`include/` 是 `python3 install.py` 產的、不進 git。程式按角色分夾：
 
-- **impls**＝aos-exec 跑得動的基礎與標準庫（C／C++）。
-- **cmd**＝人在終端打的指令：一支一夾、夾名＝指令名、執行檔在 `<名>/bin/<名>`，跟 impls 同形（aos-eca 兩支同夾）。
+- **cpp**＝aos-exec 跑得動的基礎與標準庫（C／C++）。
+- **cmd**＝人在終端打的指令：一支一夾、夾名＝指令名、執行檔在 `<名>/bin/<名>`，跟 cpp 同形（aos-eca 兩支同夾）。
 - **frontend**＝選配的網頁外掛：全景頁 `aos-frontend`（看整棵樹、回使用者專區的信、給 agent 寫一行），執行檔在 `frontend/bin/aos-frontend`；不用它，aos 照樣跑。後端只要 Python，網頁 v2 的 `dist/` 不進 git，要在有 Node 的機器自己建（11-17 下午使用者「aos-view確實應該是選配的網頁外掛」「那就改名為aos-frontend吧」，從 `cmd/aos-view` 搬來）。
 - **lib**＝腦叫的工具（三件套），頂層另有 cmd 與範本共用的 Python 模組（`aos_flags.py`、`tool_io.py`、`daemon_ctl/`…；11-17 `py/` 併進來）。
 - **templates**＝複製出去用的 agent 範本，與掛在 daemon 上的 kernel 範本（`templates/kernel/`，11-17 從頂層 `kernel/` 併進來）。
@@ -20,9 +20,10 @@
 | 資料夾 | 收什麼 |
 |---|---|
 | [docs/](docs/README.md) | 使用者條文：[CONCEPTS](docs/CONCEPTS.md)（概念）、[NORMS](docs/NORMS.md)（規範）、[CONVENTION](docs/CONVENTION.md)（agent 慣例）；另有 [notes/](docs/notes/README.md)＝AI 寫的參考筆記（不算數） |
-| [impls/](impls/README.md) | aos-exec、aos-loop、aos-fsm、aos-daemon 等 C++ 專案（各自 CMake；`build/`、`bin/`、`lib/` 是建置產物、不進 git） |
+| [cpp/](cpp/README.md) | aos-exec、aos-loop、aos-fsm、aos-daemon 等 C++ 專案（`cpp/Makefile` 一份編全家，nlohmann json 是收進 repo 的單檔 `cpp/third_party/nlohmann/json.hpp`；中間檔與 `.a`／`.so` 在 `cpp/build/`、不進 git） |
+| [install.py](install.py) | 安裝：在 proto8 跑 `python3 install.py`（只用標準庫、Python ≥ 3.11）：先查相依（必需 g++ ≥ 10、gcc、make、ar；選配工具只列表不擋），清空再填 `bin/`（9 支 C++ 執行檔）與 `include/`（公開標頭），log 在 `cpp/build/build.log`，另產 `cpp/compile_commands.json` 給 clangd；`--check` 只查相依。重跑＝全新安裝，C++ 沒改時幾秒 |
 | [cmd/](cmd/README.md) | Python 指令：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca（turn、screen）、aos-mcp、aos-mcp-launch（起外部 stdio MCP server）、aos-mcp-import（把外部 MCP 的工具凍結成一包）、aos-sandbox、aos-grow；`install.sh`（選配，把指令連進 `~/.local/bin`）也在這裡 |
-| [env.sh](env.sh) | 每個視窗先 `source` 它：清掉 `AOS_*`、設 `AOS_HOME`、把這個家的 `cmd/*/bin`、`impls/*/bin`、`frontend/bin` 放到 PATH 最前 |
+| [env.sh](env.sh) | 每個視窗先 `source` 它：清掉 `AOS_*`、設 `AOS_HOME`、把這個家的 `bin/`（第一）、`cmd/*/bin`、`frontend/bin` 放到 PATH 最前；`aos-exec` 不在時提示先跑 `python3 $AOS_HOME/install.py` |
 | [frontend/](frontend/API.md) | 選配的網頁外掛：全景頁 `aos-frontend`（後端 Python 標準庫；v2 網頁原始碼在 `ui/v2/`，`dist/` 不進 git，要 Node 才建得出來，見 [ui/v2/README](frontend/ui/v2/README.md)）；aide 定義的差異檔 `aide-def/`、systemd 範例、測試也在這夾 |
 | [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），templates 用相對捷徑引用；機讀的協議定義在 [lib/schema/](lib/schema/README.md)；lib 頂層另有 cmd 共用模組 `aos_flags.py`、`aos_ws.py`、`daemon_ctl/` 等（11-17 前在 `py/`，說明在 [lib/docs/04](lib/docs/04-共用模組.md)） |
 | [templates/](templates/README.md) | agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent）等；kernel 範本在 [templates/kernel/](templates/kernel/README.md)：llm-kernel（問腦的那台）、daemon-kernel、procs-kernel（通用 kernel 的站的兩種掛法） |
@@ -35,8 +36,8 @@
 ## 現況
 
 - **資料夾＝程式**（使用者 10-19 定）：aos 只訂六個環境變數和一支 `aos-exec [--ws WS] XXX [args...]`；入口四種、`XXX` 的找法、`#/` 尋址、`+x` 但沒 `#!` 的檔用 `/bin/sh` 跑（§ 21「不擋」、§ 22「乙」）都在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62）。巢狀由程式自己訂子 stack；這次要做啥隨意。10-16 那套作廢；原話與裁定在 [thinking/2026-10/19/ideas/README.md](thinking/2026-10/19/ideas/README.md)（使用者：「那是帶著鐐銬跳舞跳得很棒，終究不如我們現在直接把鐐銬拿掉」）。
-- **實作**：[impls/](impls/README.md) 是唯一實作（C／C++；使用者 10-23「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也用 C++、時鐘先留 Python，[cmd/](cmd/README.md) 是 Python 的 aos-clock 等），命令列有 aos-exec、aos-loop、aos-fsm、aos-daemon 等（全表見它的 README）；刻意沒有 aos-inst 命令列。loop／daemon／fsm 格「要跑什麼」那一格叫 `exec`（使用者「exec，loop／daemon 的 run 也一起改 exec」，[thinking](thinking/2026-10/23/naming.md)）。
-- **kernel** 已有 [templates/kernel/](templates/kernel/README.md) 的 llm-kernel（問腦）、daemon-kernel 與 procs-kernel（通用 kernel 的站的兩種掛法）；底層用 impls 的 `aos-daemon`／`aos-loop`。tasks 仍無實作，待照新做法重寫（[NORMS 待定](docs/NORMS/08-待定.md)）；時鐘是 `cmd/aos-clock`，腦的工具呼叫範本是 `templates/agent-fsm`、慣例 [P-41](docs/CONVENTION.md)。
+- **實作**：[cpp/](cpp/README.md) 是唯一實作（C／C++；使用者 10-23「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也用 C++、時鐘先留 Python，[cmd/](cmd/README.md) 是 Python 的 aos-clock 等），命令列有 aos-exec、aos-loop、aos-fsm、aos-daemon 等（全表見它的 README）；刻意沒有 aos-inst 命令列。loop／daemon／fsm 格「要跑什麼」那一格叫 `exec`（使用者「exec，loop／daemon 的 run 也一起改 exec」，[thinking](thinking/2026-10/23/naming.md)）。
+- **kernel** 已有 [templates/kernel/](templates/kernel/README.md) 的 llm-kernel（問腦）、daemon-kernel 與 procs-kernel（通用 kernel 的站的兩種掛法）；底層用 cpp 的 `aos-daemon`／`aos-loop`。tasks 仍無實作，待照新做法重寫（[NORMS 待定](docs/NORMS/08-待定.md)）；時鐘是 `cmd/aos-clock`，腦的工具呼叫範本是 `templates/agent-fsm`、慣例 [P-41](docs/CONVENTION.md)。
 
 ## 入口
 

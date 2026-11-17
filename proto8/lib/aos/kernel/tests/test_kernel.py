@@ -10,8 +10,8 @@ import unittest
 
 ENTRY = Path(__file__).resolve().parents[1] / "_entry"
 PROTO8 = ENTRY.parents[3]
-POST = PROTO8 / "impls/aos-post/bin/aos-post"
-DIRECTIVE = PROTO8 / "impls/aos-directive/bin"
+POST = PROTO8 / "bin/aos-post"
+DIRECTIVE = PROTO8 / "bin"
 
 
 class KernelTest(unittest.TestCase):

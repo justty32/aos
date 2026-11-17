@@ -20,7 +20,7 @@ a{color:#0b5cad}
 </style></head><body><header><a href="../../index.html">草稿入口</a></header><div class="draft">DRAFT v3: local preview only, not published</div><main><h1 id="疑難排解">疑難排解</h1>
 <!-- verified: 11-14 v2, section 1 (shutdown both, cd ~, /proc loop prints nothing) and the restart line were run literally -->
 <p>先停樹、確認沒有殘留；其他問題都是「症狀、原因、一行解法」。</p>
-<!-- source: 以上三種表現依 templates/agent-fsm/README.md 整理，未重現；ref/get-started.sh step 7; 03-計劃.md 4.1; 08-批0實測.md #3,#13; proto8/templates/daemon-root/README.md、.env; proto8/templates/agent-fsm/README.md; proto8/impls/cmake/settings.cmake -->
+<!-- source: 以上三種表現依 templates/agent-fsm/README.md 整理，未重現；ref/get-started.sh step 7; 03-計劃.md 4.1; 08-批0實測.md #3,#13; proto8/templates/daemon-root/README.md、.env; proto8/templates/agent-fsm/README.md; proto8/cpp/cmake/settings.cmake -->
 <p>標「待驗」的條目是依程式與文件整理，還沒有實際重現過，歡迎回報。</p>
 <h2 id="1-停樹與清殘留">1. 停樹與清殘留</h2>
 <p><strong>症狀</strong>：試完不確定樹有沒有關乾淨；或想重來。 <strong>為什麼</strong>：根 daemon 與 llm kernel 是兩個獨立的 daemon，各自起停，兩個都要收。 <strong>解法</strong>：</p>
@@ -32,7 +32,7 @@ for p in /proc/[0-9]*; do c=$(readlink &quot;$p/cwd&quot; 2&gt;/dev/null); case 
 <p>什麼都沒印，代表示範夾底下沒有行程了。有印的話，先用 <code>aos-daemon-ctl -d &lt;那個 stack 的絕對路徑&gt; shutdown</code> 收它。</p>
 <ul><li>接著玩：在同一個示範夾把開始用第 3 步的兩行 <code>nohup aos-exec …</code> 再跑一次，樹和 ann 會接著醒來。</li><li>重來：停樹後換一個新的示範夾，不必刪舊的；<code>stacks/</code> 只是檔案。</li><li>殘留了而 <code>shutdown</code> 打不通：用上面那段指令找出 pid，確認該行程的 cwd 在你的示範夾裡再收它；不要用按名字殺（<code>pkill</code>、<code>killall</code>），以免誤傷別棵樹。</li><li>lock 檔的殘留處理：待驗，還沒實測。</li></ul>
 <h2 id="2-command-not-foundaos-execaos-agent">2. command not found（aos-exec、aos-agent…）</h2>
-<p><strong>症狀</strong>：<code>aos-exec: command not found</code>，或 <code>No module named aos_...</code>。 <strong>為什麼</strong>：「開始用」第 2 步只改「當下那個殼」的 <code>PATH</code> 與 <code>PYTHONPATH</code>；開新的殼就沒了；或還沒建置，<code>impls/*/bin</code> 是空的。 <strong>解法</strong>：在同一個殼重貼第 2 步三行 export；要每個殼都有就跑 <code>install.sh</code>（見<a href="../setup/index.html">安裝總覽</a>）。</p>
+<p><strong>症狀</strong>：<code>aos-exec: command not found</code>，或 <code>No module named aos_...</code>。 <strong>為什麼</strong>：「開始用」第 2 步只改「當下那個殼」的 <code>PATH</code> 與 <code>PYTHONPATH</code>；開新的殼就沒了；或還沒建置，<code>cpp/*/bin</code> 是空的。 <strong>解法</strong>：在同一個殼重貼第 2 步三行 export；要每個殼都有就跑 <code>install.sh</code>（見<a href="../setup/index.html">安裝總覽</a>）。</p>
 <h2 id="3-找不到-nlohmann-json待驗">3. 找不到 nlohmann-json（待驗）</h2>
 <p><strong>症狀</strong>：cmake 設定階段說找不到 nlohmann_json（確切字樣未重現）。 <strong>為什麼</strong>：建置依序找 <code>CMAKE_TOOLCHAIN_FILE</code>、<code>VCPKG_ROOT</code>、<code>~/dev/vcpkg</code>；三個都沒有就不設 vcpkg，之後要靠系統套件。 <strong>解法</strong>：指定 vcpkg：<code>export VCPKG_ROOT=&lt;你的 vcpkg 位置&gt;</code> 後重跑 cmake；或裝發行版的 nlohmann-json 開發套件（這條路線未實跑）。</p>
 <h2 id="4-static-連結失敗待驗">4. static 連結失敗（待驗）</h2>

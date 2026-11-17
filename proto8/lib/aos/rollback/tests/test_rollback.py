@@ -17,7 +17,7 @@ class RollbackAcceptance(unittest.TestCase):
             payload = b'original\x00\xff\n'
             (root / 'd/data').write_bytes(payload)
             env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
-            env['PATH'] = str(PROTO / 'impls/aos-exec/bin') + os.pathsep + env['PATH']
+            env['PATH'] = str(PROTO / 'bin') + os.pathsep + env['PATH']
             env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib')])
             result = subprocess.run(['aos-exec', str(PROTO / 'lib/aos/rollback')],
                                     input=json.dumps({'defs': str(root), 'target': 'd'}),

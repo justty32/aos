@@ -18,7 +18,7 @@ class OutsideTest(unittest.TestCase):
         self.ws.mkdir()
         self.out.mkdir()
         self.env = dict(os.environ, AOS_WS=str(self.ws))
-        aos_json = BASE.parents[1] / "impls/aos-json/bin"
+        aos_json = BASE.parents[1] / "bin"
         self.env["PATH"] = "%s:%s" % (aos_json, self.env.get("PATH", ""))
 
     def tearDown(self):

@@ -31,8 +31,7 @@ class ReviewerIntegration(unittest.TestCase):
             kernel_stack.mkdir()
             env = {key: value for key, value in os.environ.items()
                    if not key.startswith('AOS_')}
-            bins = [str(path) for group in ('impls', 'cmd')
-                    for path in (PROTO / group).glob('*/bin')]
+            bins = [str(path) for path in [PROTO / 'bin'] + sorted((PROTO / 'cmd').glob('*/bin'))]
             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
             env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib')])
             env['PYTHONDONTWRITEBYTECODE'] = '1'

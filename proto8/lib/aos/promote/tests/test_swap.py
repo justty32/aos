@@ -29,7 +29,7 @@ class SwapAcceptance(unittest.TestCase):
             (base / 'd' / 'data.bin').write_bytes(content)
             (base / 'd' / 'nested' / 'second').write_bytes(content[::-1])
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
-        bins = [str(p) for group in ('impls', 'cmd') for p in (PROTO / group).glob('*/bin')]
+        bins = [str(p) for p in [PROTO / 'bin'] + sorted((PROTO / 'cmd').glob('*/bin'))]
         self.env['PATH'] = os.pathsep.join(bins + [self.env['PATH']])
         self.env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib')])
         (self.root / 'tools').mkdir()

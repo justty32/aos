@@ -2,7 +2,7 @@
 
 ← [notes](README.md)｜[proto8](../../README.md)｜2026-10-22，AI 寫（使用者 10-21 晚：「關於s6/runit的對照，納進之後要做的事情中吧」）
 
-**這份只是對照與「可借鏡的點」，不是規範**：條文以 [CONCEPTS](../CONCEPTS.md)、[NORMS](../NORMS.md) 為準，要借哪一點由使用者決定（鐵律 5）。s6／runit 的事實都附原始文件連結（skarnet.org、smarden.org）；aos 這邊以條文與 [impls](../../impls/README.md) 為準。
+**這份只是對照與「可借鏡的點」，不是規範**：條文以 [CONCEPTS](../CONCEPTS.md)、[NORMS](../NORMS.md) 為準，要借哪一點由使用者決定（鐵律 5）。s6／runit 的事實都附原始文件連結（skarnet.org、smarden.org）；aos 這邊以條文與 [cpp](../../cpp/README.md) 為準。
 
 一句話的背景：s6（skarnet.org）和 runit（smarden.org）都是 daemontools 一脈的「服務監管」工具——一支監工盯一個長壽程式，死了就重起；設定就是一個資料夾，裡面放 `run` 等小檔。這跟 aos 的「資料夾＝程式」、loop／daemon 是同一個家族的想法，所以對照起來特別有用。
 

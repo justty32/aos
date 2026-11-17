@@ -4,7 +4,7 @@
 
 `aos-grow - 把一個函數往上長一級或縮回一級，呼叫方跟著改、跑起來一樣`
 
-嘗試性質（使用者 10-24「我隨便說，你隨便做，反正只是嘗試」）。Python、只用標準庫，不進 impls。
+嘗試性質（使用者 10-24「我隨便說，你隨便做，反正只是嘗試」）。Python、只用標準庫，不進 cpp。
 
 ```
 aos-grow [--dry-run] up --to file|dir [-n NAME] [--take PATH]... CALLER

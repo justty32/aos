@@ -41,7 +41,7 @@ Read from the environment:
                    definition folder, all denied (the definition of the row holding AOS_STACK is "definition").
                    No procs_state.json = no rows. A procs_state.json that cannot be read (also after one more
                    try) or has a row without a stack string = error TableBad: nothing is printed
-  AOS_HOME         the product tree: its lib, cmd, templates, py, knowledge and impls folders are denied
+  AOS_HOME         the product tree: its lib, cmd, templates, knowledge, cpp, bin and include folders are denied
   AOS_GUARD_CFG    the guard config (JSON); its deny_roots are denied. A config with write_roots is refused.
 exit codes: 0 printed; 1 error ("scope: error: CODE reason": WsMissing, CfgMissing, CfgBad, TableBad).
 """
@@ -49,7 +49,7 @@ exit codes: 0 printed; 1 error ("scope: error: CODE reason": WsMissing, CfgMissi
 SCOPE_VERSION = 1                  # the shape of the --scope JSON; a reader refuses versions it does not know
 STACK_CELLS = ("hooks", "tools")   # a hook or tool runs with AOS_STACK = <stack>/<cell kind>/<name>
 JSON_TOOLS = ("json_set", "json_add", "json_del", "json_multi_set")   # the only write tools that cut FILE#/POINTER
-HOME_PARTS = ("lib", "cmd", "templates", "knowledge", "impls")   # product folders under AOS_HOME
+HOME_PARTS = ("lib", "cmd", "templates", "knowledge", "cpp", "bin", "include")   # product folders under AOS_HOME
 DEF_MARKER = "interfaces.json"     # a folder holding this file is an agent definition (rule definition-marker)
 
 # Where stacks sit (proto8 knowledge):

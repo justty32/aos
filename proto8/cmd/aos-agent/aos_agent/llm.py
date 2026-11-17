@@ -211,7 +211,7 @@ def cmd(argv):
             try:
                 r = subprocess.run(["aos-json", "set", "--str", "%s#/%s" % (copy, k), v])   # aos-json 的錯原樣（C-53）
             except OSError as e:
-                raise Fail("CommandMissing", "cannot run aos-json (proto8/impls/aos-json/bin must be on PATH): %s" % e)
+                raise Fail("CommandMissing", "cannot run aos-json (proto8/bin must be on PATH): %s" % e)
             if r.returncode != 0:
                 sys.exit(1)
         warn_shared(a, folder)

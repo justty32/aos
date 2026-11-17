@@ -25,7 +25,7 @@ class Acceptance(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.env = {key: value for key, value in os.environ.items() if not key.startswith('AOS_')}
-        bins = [str(path) for group in ('impls', 'cmd') for path in (ROOT / group).glob('*/bin')]
+        bins = [str(path) for path in [ROOT / 'bin'] + sorted((ROOT / 'cmd').glob('*/bin'))]
         s6 = Path.home() / 'code/try/sandbox/s6-root/bin'
         self.env['PATH'] = os.pathsep.join(bins + [str(s6), self.env['PATH']])
         self.env['PYTHONPATH'] = str(ROOT / 'lib')
