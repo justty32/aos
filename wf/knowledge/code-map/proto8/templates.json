@@ -47,6 +47,47 @@
    "prompt.txt": ""
   },
   "judge-llm/": "Compare artifacts with one LLM request and public think accounting.",
+  "kernel": {
+   "daemon-kernel": {
+    ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
+    "_entry": "入口：`aos-daemon --enable-logs daemon.json`",
+    "daemon.json": "設定（鍵：exec、interval_ms、procs）",
+    "kernel.json": "設定（鍵：allowed、max_running、queue、keep_ordered）"
+   },
+   "llm-kernel": {
+    ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
+    "_entry": "入口：`aos-daemon --enable-logs daemon.json`",
+    "daemon.json": "設定（鍵：exec、interval_ms、procs）",
+    "endpoints": {
+     "litellm": {
+      "_entry": "Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable (unset or empty: no key is sent)."
+     }
+    },
+    "fake_slow": {
+     "_entry": "demo 用的慢假腦 endpoint 函數：先睡 endpoint.delay_s 秒，再把同一份 stdin 交給 lib/base/llm_fake、它的 stdout／結束碼原樣交回"
+    },
+    "interfaces.json": "Declare the stack ledger interface",
+    "kernel.json": "Main llm kernel with backend limits for local models"
+   },
+   "llm-team": {
+    ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
+    "_entry": "Start the team llm daemon with stdout logs",
+    "daemon.json": "Run the team llm kernel",
+    "interfaces.json": "Declare the stack ledger interface",
+    "kernel.json": "Forward team requests to the adjacent main llm kernel"
+   },
+   "procs-kernel": {
+    ".env": "AOS_HOME is the proto8 folder these files point into; export it, or uncomment the next line and set it here.",
+    "_entry": "入口：`aos-loop loop.json`",
+    "kernel.json": "設定（鍵：allowed、max_running）",
+    "loop.json": "設定（鍵：exec、interval_ms）"
+   },
+   "tests": {
+    "kernel-chain-check": {
+     "check.py": "在獨立暫存樹驗證只靠 kernel 的掛子、刪減表、排隊、hook、重啟、ping、分流與表態，並核對清理範圍。"
+    }
+   }
+  },
   "kits": {
    "gather": {
     "system.txt": "",
@@ -86,6 +127,7 @@
     "test_do_task_fold.py": "do_task save／load（11-11 fork-and-do-task/02）：真 daemon＋真 llm kernel＋假腦劇本——start→叫工具→end 後 history 只剩紀錄點＋總結、原文留檔；巢狀；任務中等信（預設信一起摺、keep_others 信留著）；停掉再起來…",
     "test_fork.py": "fork（11-11 fork-and-do-task/01）：真 daemon＋真 llm kernel＋假腦劇本——父先聽到暗號、叫 fork，分身帶著整段對話答出暗號、再叫 fork＝DepthExceeded；結論回到父那則 tool、父 history 沒有分身的過程；分身收掉（keep…",
     "test_goal.py": "agent-fsm 的 goal（11-11 goal/02）：idle 格單跑（停下被丟、done 後不丟、上限停、pause／resume、信優先、外面設／清、有叫工具歸零、",
+    "test_home_rule.py": "Path rule one (11-17): template programs copied out of the home find lib only through AOS_HOME, and say HomeMissing when it is unset.",
     "test_hook_retry_later.py": "驗證只有 hook 拒因與重置時間的 BudgetMissing 回信會讓 wait 格冷卻後再試。",
     "test_hooks.py": "Test the hooks of agent-fsm (lib/agent/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added.",
     "test_integration.py": "Verify agent cells through the real local kernel, llm_fake endpoint, and peek_now_time tool (which leaves no tool cell, 11-11).",
@@ -95,6 +137,9 @@
     "test_reply_match.py": "回答配對（thinking/2026-11/14/reply-match-1114/03）的 agent-fsm 寫的一方：idle 記 aos.letter／pending／dropped，wait 記 aos.answer_to、清 pending，brain／stale_request 剝 …",
     "test_same_turn_tools.py": "Pin when a tool added in the middle of a turn works in agent-fsm (11-10 tools-def, user \"3.同一輪就生效\"): brain and act re-read the registry on every step…",
     "test_selfheal.py": "Verify the wait/think cells heal leftovers (reply box, lost letter, stale request, missing kernel) with fake aos-llm/aos-post/aos-tools."
+   },
+   "image-move-check": {
+    "check.py": "Verify a sleeping fake-brain daemon tree survives copying and a local git clone."
    },
    "judge-llm": {
     "endpoint.py": "Return deterministic semantic-comparison replies with nonzero fake token usage.",

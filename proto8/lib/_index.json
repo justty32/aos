@@ -10,6 +10,15 @@
   "description": "中層工具：動 aos 自己東西的工具，jsonx_*、量測與換版（measure、promote、rollback、watch、review_round）、框架站 kernel、kernel_llm、llm_forward",
   "index": "aos/_index.json"
  },
+ "aos_clock_register.py": {
+  "description": "時鐘檔旁的 <時鐘檔名>_register.json，每格「何時往某個 aos-post 箱子寄一封信」（每 N cycle、某 cycle 一次、牆鐘某時刻一次、cron）；aos-clock 寄、aos-clock-register 改（11-10 晚 clock-letters；11-13 …"
+ },
+ "aos_clock_when.py": {
+  "description": "解析 at（HH:MM、YYYY-MM-DD HH:MM、+N[smhd]）與五欄 cron、算 cron 的下一次（本機時區；11-13 線鐘 wake-timer）。"
+ },
+ "aos_flags.py": {
+  "description": "命令列旗標解析（含各支自定短名）、互動確認、公開狀態窗讀取與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 l…"
+ },
  "aos_index.py": {
   "description": "index_view：透過 index（視角）看節點，一行一項「鍵 TAB description」；index 放哪只寫在 spot() 一處。"
  },
@@ -22,9 +31,24 @@
  "aos_refpath.py": {
   "description": "`$ref` 與 index 共用的「路徑字串 → (檔, 指標)」：`#` 左邊一律檔案系統、右邊一律 json 內部（使用者 11-13 晚定，thinking 2026-11/13/ref-path-rules）。"
  },
+ "aos_sweep.py": {
+  "description": "一輪（封存、保留期、封存總量、行程）與 purge 的流程、鎖、找列、報告；檔案細節在 aos_sweep_files、行程在 aos_sweep_proc；aos-sweeper 與 aos-daemon-ctl sweep 共用。"
+ },
+ "aos_sweep_files.py": {
+  "description": "stderr 的 copytruncate 封存（gzip）、封存檔名的 UTC 時間戳、保留期刪除、purge、.bad- 計數、放鎖殘骸；aos_sweep 叫它。"
+ },
+ "aos_sweep_proc.py": {
+  "description": "認出這台 daemon 預設小格裡「表上沒有、但還活著、確定是這台生的」子 loop，先寫它的 ctl stop，過寬限還在才 TERM／10 秒後 KILL；真 zombie 只報。"
+ },
+ "aos_ws.py": {
+  "description": "「放一則訊息、等答案、讀 stack」與兩鐘期限的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。"
+ },
  "base": {
   "description": "底層原語工具：檔案與資料夾（read、write、edit、ls…）、json_*、shell、run_python、小工具（math、peek_*）、llm_http／llm_fake 端點函數",
   "index": "base/_index.json"
+ },
+ "daemon_ctl": {
+  "description": "aos-daemon-ctl 的共用本體（aos-agent 也 import）：找 daemon 與讀狀態表、掛子信、寄信等回信、控制與停 daemon、poke 門鈴、問表檔位址"
  },
  "declared_files.py": {
   "description": "依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。"
@@ -70,6 +94,9 @@
  },
  "process_group.py": {
   "description": "收掉自己起的那一群子行程：先 TERM 整群、等一下、還在就 KILL；外面來的 TERM／Ctrl-C 變成例外，讓呼叫處先收拾再走。"
+ },
+ "schema": {
+  "description": "機讀的協議定義（JSON Schema）：各協議一夾、一版一夾，例如 comm/1；普通 proc 照它讀寫，工具拿它驗。"
  },
  "shell_observed.py": {
   "description": "Reserve a writable shell ledger before execution and record the completed command."

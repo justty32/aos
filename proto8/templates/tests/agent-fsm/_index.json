@@ -32,6 +32,9 @@
  "test_goal.py": {
   "description": "agent-fsm 的 goal（11-11 goal/02）：idle 格單跑（停下被丟、done 後不丟、上限停、pause／resume、信優先、外面設／清、有叫工具歸零、"
  },
+ "test_home_rule.py": {
+  "description": "Path rule one (11-17): template programs copied out of the home find lib only through AOS_HOME, and say HomeMissing when it is unset."
+ },
  "test_hook_retry_later.py": {
   "description": "驗證只有 hook 拒因與重置時間的 BudgetMissing 回信會讓 wait 格冷卻後再試。"
  },

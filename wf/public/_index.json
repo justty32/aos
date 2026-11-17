@@ -2,6 +2,9 @@
  "README.md": {
   "description": "wf/public — 公用知識庫"
  },
+ "Windows與WSL.md": {
+  "description": "wf/public/Windows與WSL — 公司 Windows 那台的坑：假 python3、不分大小寫、中文檔名、/mnt/c 全 +x、MSYS 路徑轉換"
+ },
  "claude子agent.md": {
   "description": "wf/public/claude子agent — 派 Claude 子 agent（Agent 工具）時的坑"
  },
@@ -12,34 +15,16 @@
   "description": "wf/public/model-notes — 模型使用心得"
  },
  "patch-and-commit.md": {
-  "description": "wf/public/patch-and-commit — 把暫存樹的改動搬回 main、交 commit-request 的坑"
- },
- "pitfalls-shell.md": {
-  "description": "wf/public/pitfalls-shell — 隊長的 shell、被擋的工具、認 daemon 行程"
- },
- "pitfalls-建置與複本.md": {
-  "description": "wf/public/pitfalls-建置與複本 — 暫存樹建置、乾淨複本跑測試、試真東西別碰原件"
+  "description": "wf/public/patch-and-commit — 搬回 main、驗收全套、commit-request 的坑、放行與封存"
  },
  "pitfalls.md": {
-  "description": "wf/public/pitfalls — 踩坑與解法（總頁）"
- },
- "recipes-交件與驗收.md": {
-  "description": "wf/public/recipes-交件與驗收 — 交 commit、回報、搬回 main、驗收、放行、活樹旁邊換檔（任務類型→做法）"
- },
- "recipes-其他.md": {
-  "description": "wf/public/recipes-其他 — 第二意見、專區信、舊帳、權限測法、改文件、查證（任務類型→做法）"
- },
- "recipes-隊員.md": {
-  "description": "wf/public/recipes-隊員 — 掛隊員、等隊員、收隊、給 sol 寫任務書（任務類型→做法）"
+  "description": "wf/public/pitfalls — 踩坑與解法：隊長的 shell、建置與乾淨複本"
  },
  "recipes.md": {
   "description": "wf/public/recipes — 要做某件事時該用哪支、照哪一節（任務類型→做法，各線摸出來的）"
  },
  "sol-crew.md": {
-  "description": "wf/public/sol-crew — 帶 sol（agent-fsm、gpt）隊員的心得"
- },
- "sol-排隊與額度.md": {
-  "description": "wf/public/sol-排隊與額度 — sol 名額全體共用：排隊慢時怎麼辦、日額用光、掛法的幾個坑"
+  "description": "wf/public/sol-crew — 帶 sol（agent-fsm、gpt）隊員：任務書、guard、資源、排隊與額度"
  },
  "team-patterns.md": {
   "description": "wf/public/team-patterns — 隊形與流程心得"
@@ -50,11 +35,11 @@
  "user-zone-mail.md": {
   "description": "wf/public/user-zone-mail — 經使用者專區寄信、讀回信、照授權動手"
  },
- "交件與放行.md": {
-  "description": "wf/public/交件與放行 — claim、交件、部長放行、封存搬檔"
- },
  "入庫紀錄.md": {
-  "description": "wf/public/入庫紀錄 — 各批審稿收了什麼、併到哪、跳過什麼"
+  "description": "wf/public/入庫紀錄 — 已封存（指標頁）"
+ },
+ "共用工作樹與git.md": {
+  "description": "wf/public/共用工作樹與git — 好幾條線同一棵工作樹：同檔只給一條線、別 autostash、整檔改寫不拆刪加、合併後才刪分支、worktree 起點"
  },
  "定義與換定義.md": {
   "description": "wf/public/定義與換定義 — 自己寫 agent 定義時的三件事：關 eca 的自動記憶、換定義用 set-def、複製後重寫 README"
@@ -62,8 +47,14 @@
  "審查與實測.md": {
   "description": "wf/public/審查與實測 — 獨立審稿員怎麼問、哪些東西要拿真的來跑"
  },
+ "建置與相依.md": {
+  "description": "wf/public/建置與相依 — 把 C++ 庫匯出給外部用時的三個坑：私有相依、vcpkg 補洞、漏標 AOS_API"
+ },
  "改文件與知識庫.md": {
   "description": "wf/public/改文件與知識庫 — 改寫必讀規矩檔、請新人照索引走、知識庫頁對程式"
+ },
+ "整理與拆檔.md": {
+  "description": "wf/public/整理與拆檔 — 封存搬檔、拆檔、資料檔、多 repo 連結檢查的坑"
  },
  "權限與沙箱.md": {
   "description": "wf/public/權限與沙箱 — 換 uid、sudo 身分層、cgroup 的測法與坑"
@@ -71,11 +62,17 @@
  "活樹旁邊.md": {
   "description": "wf/public/活樹旁邊 — 存檔即生效的檔怎麼換、唯讀查看的界線、換樹當晚"
  },
+ "派線與任務書.md": {
+  "description": "wf/public/派線與任務書 — 派線前預掃、任務書要明講的事、禁區寫成唯一准用的做法、截止點、舊東西怎麼用、codex 年代的坑"
+ },
  "發佈前檢查.md": {
   "description": "wf/public/發佈前檢查 — 要給外人看的東西，交出去前怎麼自己驗"
  },
  "等隊員與讀信.md": {
   "description": "wf/public/等隊員與讀信 — 等隊員要帶逾時、長回合讀不到信、信交錯、記時刻"
+ },
+ "行程與環境.md": {
+  "description": "wf/public/行程與環境 — 收行程只收自己的、先清 AOS_*、起樹用 aos-tree-start、數行程與程序群組的坑"
  },
  "設計與查證.md": {
   "description": "wf/public/設計與查證 — 動手前先查、先量、先問；設計線與施工線怎麼分"

@@ -8,9 +8,6 @@
  "common": {
   "description": "跨工作流共用的東西：共通踩坑 gotchas、使用者偏好 user、資料檔契約 data-files、程式碼慣例 conventions（code map 11-13 搬到 wf/knowledge/code-map.json）；使用者說「記／查踩坑」「我的偏好是…」時走這裡"
  },
- "decide-page.md": {
-  "description": "decide-page：離線互動頁已停用（2026-11-14）"
- },
  "decisions.json": {
   "description": "decisions：記決定（本 repo 的版本＝通用版＋本地差異；使用者說「記個決定」「為什麼選 A 不選 B」時讀）"
  },
@@ -20,32 +17,14 @@
  "dev-env.md": {
   "description": "dev-env — 開發環境、指令、外部工具"
  },
- "digest": {
-  "description": "digest 工作流：把看不動的 thinking 與紀錄濃縮成使用者半小時讀得完的白話版，只讀不產；使用者說「濃縮給我看」「我只有半小時」時走它，各批一個日期夾"
- },
  "dispatch": {
   "description": "dispatch 工作流：把大工作切成幾條線派給別的 agent、寫交接書、劃領地、收線驗收，含本專案隊形 aos-teams 與派線踩坑 lessons；使用者說「切成幾條線派出去」「開一隊」「收線」時走它"
- },
- "experiments": {
-  "description": "experiments 工作流：拿一個明確假設到真環境實跑、要是／否的實測紀錄（T5 agent loop、Claude 訂閱 OAuth 調查）；使用者說「直接去試試看」「跑個實驗」時走它"
  },
  "feature-dev": {
   "description": "feature-dev 工作流入口：新增或修改 aos 功能、修 bug，從動手到驗證綠燈再 commit；使用者說「我想開發／修改某個功能」「修 bug」時走它"
  },
- "hackathon": {
-  "description": "hackathon 工作流已封存（使用者 11-14 專區答 q3:both，kb-1114）：腳本是 codex CLI 與 /mnt/c 那代、11-03 後沒有新場次；原入口與任務書搬進本夾 archive/，這裡只留一份封存說明 README；要再辦得照現在的隊形重寫"
- },
- "ideas": {
-  "description": "ideas 工作流已封存（使用者 11-14 專區答 oldentry:archive）：整夾搬到 common/archive/ideas/，這裡只留一份轉址 README；使用者說「我有個 idea」時現行落點在 proto8/docs/CONCEPTS.md 與 proto8/thinking"
- },
  "inbox.json": {
   "description": "inbox：跟別的 agent 收發信（本 repo 的版本；使用者說「看看信箱」「寄信給 X」「回 arcagi 的信」「回報做完了」時讀）"
- },
- "investigation.md": {
-  "description": "investigation — 調查 / 解讀外部系統 / 可行性"
- },
- "investigations": {
-  "description": "investigation 工作流（入口在 investigation.md）留下的調查報告：proto5 宿主機 root daemon 第二道牆、Linux 外牆三條路線的可行性與小實驗；只讀不改、回答窄問題"
  },
  "planning.md": {
   "description": "planning — 想法成熟管線（本專案的落點：proto8 thinking → CONCEPTS／NORMS）"
@@ -55,9 +34,6 @@
  },
  "resources.md": {
   "description": "resources — 獨佔資源的鎖（螢幕、鍵鼠、主工作樹、裝置）"
- },
- "spec": {
-  "description": "spec 工作流已封存（使用者 11-14 專區答 oldentry:archive）：整夾搬到 common/archive/spec/，這裡只留一份轉址 README；使用者說「寫 spec」時現行落點在 proto8/docs/NORMS.md 與 CONVENTION.md"
  },
  "team-model": {
   "description": "team-model.md 的分檔：context 管理五條規則、聰明度分級與 token 消耗速度、方案與時間軸（訂閱方案現況）、執行速度與逐模型心得、codex 試水溫紀錄 probe json"
@@ -70,8 +46,5 @@
  },
  "tidy": {
   "description": "tidy 工作流：文件層整理（封存過時、分類雜亂、抽資料檔、刪過往記錄只留結論），含內容精簡規則與歷次整理報告；使用者說「整理 X」「封存過時的」「太大要拆」「只留結論」時走它"
- },
- "workshop": {
-  "description": "workshop 工作流已封存（使用者 11-14 專區答 q3:both，kb-1114）：全流程是 codex exec 那代、11-03 後沒有新場次；原入口、指令、任務書搬進本夾 archive/，這裡只留一份封存說明 README；要多方發想時先照 user/03「需求不清時先發想」"
  }
 }

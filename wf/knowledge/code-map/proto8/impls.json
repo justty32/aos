@@ -280,15 +280,15 @@
    "CMakeLists.txt": "`aos-llm send|recv|ask|regret|ls`——寄請求信進 LLM kernel 的信箱（$AOS_LLM_KERNEL）、收回信的基礎工具（11-04 由 aos-llm-send 改名）。",
    "include": {
     "aos": {
-     "llm_kernel.hpp": "aos-llm-kernel 的公開介面——LLM kernel 的信箱與信（aos-llm 寄信收信、aos-llm-kernel 收信回信都用這組）。"
+     "llm.hpp": "aos-llm 的公開介面——寄給 LLM kernel 的信與回信的協定（寄信人的鎖、priority、回信格式、錯誤代號）；kernel 那頭是 Python 的問腦總機 lib/aos/kernel_llm，照同一套。"
     }
    },
    "src": {
     "common": {
-     "common.hpp": "aos-llm 好幾個元素都用到的：型別別名、錯誤代號（信箱型別用 aos-post、LLM 信件協定用本專案的 aos/llm_kernel.hpp）。"
+     "common.hpp": "aos-llm 好幾個元素都用到的：型別別名、錯誤代號（信箱型別用 aos-post、LLM 信件協定用本專案的 aos/llm.hpp）。"
     },
     "letter": {
-     "letter.cpp": "寄信人的鎖（sender.flock）、priority 與回信格式（說明見 aos/llm_kernel.hpp）。"
+     "letter.cpp": "寄信人的鎖（sender.flock）、priority 與回信格式（說明見 aos/llm.hpp）。"
     },
     "ls": {
      "ls.cpp": "定位指定或表上唯一的 llm kernel、讀含 backend 的能力包窗並印表（說明見 ls.hpp）。",
