@@ -1,6 +1,6 @@
 # WAIT_USER — 等待使用者的事
 
-← [AGENTS.md](../AGENTS.md)｜[INDEX](INDEX.md)
+← [AGENTS.md](../AGENTS.md)
 
 需要**使用者親自做 / 驗證 / 拍板**才能繼續的事——例如：實機/實環境測試、外部服務登入、環境變數設定、權限操作、需要帳號的下載、**催/開/fork 另一個 agent 處理急件**（見 [inbox](workflows/inbox.json)：寄了信但很急、對方可能沒開）。Claude 能做結構性驗證＋打包到極限；跨不過去的那一關記這裡等使用者。
 

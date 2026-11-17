@@ -1,6 +1,6 @@
 # SESSION-LOG — 進度（hub）
 
-← [AGENTS.md](../AGENTS.md)｜[INDEX](INDEX.md)
+← [AGENTS.md](../AGENTS.md)
 
 **只放「還沒完成」的活狀態，完成即刪**（完成的記[日誌](session_logs/README.md)，寫法見 [user/02](workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)）；待使用者親自驗、做的另見 [WAIT_USER.md](WAIT_USER.md)。每條一行 open 狀態＋細節連結。11-17 瘦身前的全文在[留底](../proto8/thinking/2026-11/17/session-log-瘦身留底.md)（下面「留底 N」＝其中第 N 條）。
 

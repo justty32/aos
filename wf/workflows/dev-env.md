@@ -1,6 +1,6 @@
 # dev-env — 開發環境、指令、外部工具
 
-← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
+← [WORKFLOWS](../WORKFLOWS.md)
 
 這台機器上要能開發需要什麼、怎麼裝、跑什麼指令；外部工具與 env var 也收在這裡。要建的只有 `proto8/impls/`（C／C++）；各專案的細節在 [proto8/impls/README](../../proto8/impls/README.md)，本檔是 agent 照著做的清單。
 
