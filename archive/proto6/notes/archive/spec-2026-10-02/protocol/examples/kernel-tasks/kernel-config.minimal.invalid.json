@@ -1,8 +1,0 @@
-{
-  "version": 1,
-  "daemon_socket": "/run/user/1000/aos.sock",
-  "scan_interval_ms": 60000,
-  "scan_batch_limit": 0,
-  "usage_max_age_ms": 60000,
-  "max_active_members": 64
-}

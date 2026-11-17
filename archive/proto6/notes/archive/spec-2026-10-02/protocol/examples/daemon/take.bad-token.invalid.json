@@ -1,8 +1,0 @@
-{
-  "jsonrpc": "2.0",
-  "id": "req-6",
-  "method": "node.take",
-  "params": {
-    "token": "NOT-A-TOKEN"
-  }
-}

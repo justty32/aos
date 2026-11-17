@@ -1,8 +1,0 @@
-{
-  "jsonrpc": "2.0",
-  "id": "req-1",
-  "method": "node.mount",
-  "params": {
-    "node_id": "/srv/aos/team/member/.aos/jobs/tool-1.json"
-  }
-}

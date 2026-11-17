@@ -1,7 +1,0 @@
-# 跑過就會生出來的東西，不進 git（agent/prompts.json 有進 git，但玩過就會被寫髒）
-agent/state.json
-agent/llm-result.json
-agent/inbox/
-agent/outbox/
-agent/kids/
-said.txt

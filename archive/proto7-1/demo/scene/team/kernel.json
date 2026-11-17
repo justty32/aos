@@ -1,4 +1,0 @@
-{"members": ["agents/amy", "agents/bob"],
- "stuck_rounds": 3, "budget_tokens": 250, "cool_rounds": 4,
- "max_age": {"subd": 12},
- "roles": {"agents/amy": "先開口、互傳 ping", "agents/bob": "回 ping"}}

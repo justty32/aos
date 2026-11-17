@@ -1,9 +1,0 @@
-{
-  "demo_rc": 0,
-  "test_rc": 0,
-  "live_processes": [],
-  "roots_removed": [
-    "/tmp/astra2-baseline-demo",
-    "/tmp/astra2-baseline-tests"
-  ]
-}

@@ -1,7 +1,0 @@
-{
-  "take": "b.json",
-  "from": [
-    "a.json",
-    "c.json"
-  ]
-}

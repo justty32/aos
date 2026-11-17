@@ -1,1 +1,0 @@
-{"name": "subd", "argv": ["aos7-daemon", "$AOS7_TASK/mnt/sub"], "mounts": {"sub": "team/sub"}}

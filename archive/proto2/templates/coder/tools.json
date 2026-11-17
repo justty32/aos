@@ -1,4 +1,0 @@
-{
-  "packs": ["mailbox", "fs", "code", "self", "jobs", "toolsmith"],
-  "tools": []
-}

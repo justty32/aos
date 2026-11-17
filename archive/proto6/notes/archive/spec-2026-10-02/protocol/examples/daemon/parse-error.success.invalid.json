@@ -1,7 +1,0 @@
-{
-  "jsonrpc": "2.0",
-  "id": null,
-  "result": {
-    "node_id": "/srv/aos/team"
-  }
-}

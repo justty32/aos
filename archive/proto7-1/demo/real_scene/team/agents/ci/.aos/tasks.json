@@ -1,4 +1,0 @@
-{"mount_allow": ["team/agents/"],
- "tasks": [
- {"name": "ci", "mode": "keep", "argv": ["python3", "ci.py"]}
-]}

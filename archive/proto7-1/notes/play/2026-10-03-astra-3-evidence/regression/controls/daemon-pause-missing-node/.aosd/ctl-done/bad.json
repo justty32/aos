@@ -1,9 +1,0 @@
-{
- "op": "pause",
- "node": "ghost",
- "result": {
-  "ok": true,
-  "msg": "pause ghost",
-  "at": "2026-10-03T14:26:50.395"
- }
-}

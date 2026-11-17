@@ -1,1 +1,0 @@
-echo "no shebang, tick=$1" > ran.txt

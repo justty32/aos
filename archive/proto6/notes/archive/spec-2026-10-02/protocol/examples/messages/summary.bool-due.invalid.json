@@ -1,8 +1,0 @@
-{
-  "version": 1,
-  "node_id": "/srv/aos/a",
-  "observed_seq": 1234,
-  "ready": false,
-  "due_after_ticks": false,
-  "status": "idle"
-}
