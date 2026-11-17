@@ -17,7 +17,7 @@
 #   tools／llm／history／hook／system {name, args}：跑旁邊 self_tools／self_llm／self_history／self_hook／self_system（11-11）的 _entry，stdin＝args、AOS_STACK＝<子的 stack>/tools/<那支>/
 #        （那支靠 ctl who 認自己＝變成改子的）；stdout 原樣（「your」改成子的名字）；它的錯誤代號與原因接成自己的；旁邊沒那支＝ToolMissing；子還在排隊＝SubagentQueued。
 #   每個帶 name 的動作先對帳：不是我生的＝SubagentUnknown；記過但不在表上＝SubagentMissing（之後就忘掉）。ask／listen／rm 抄公開子帳（observed_children.copy_child）。
-# 記帳：$AOS_STACK/subagents.json（$AOS_STACK＝我 stack 裡這支的小格 tools/subagent/）＝[{name, stack（絕對路徑；舊帳的相對路徑不認，升級前先收子或重建帳；名冊裡有相對路徑＝每個 op 都回 BookOld、名冊原樣不動，11-15）} | {name, queued_letter}]；對帳＝名字與 stack 都對得上 ctl ls --json 那列才算還在。
+# 記帳：$AOS_STACK/subagents.json（$AOS_STACK＝我 stack 裡這支的小格 tools/subagent/）＝[{name, stack（絕對路徑；不是絕對路徑的那筆對不上表，當不在、忘掉）} | {name, queued_letter}]；對帳＝名字與 stack 都對得上 ctl ls --json 那列才算還在。
 # 配額：max_subagents 從 subagents.json 讀——我的定義那份疊我的 stack 那份（ctl who --json 的 def 與 stack；只放改過的鍵）；都沒有＝4。
 # 錯：stderr 與 stdout 各一行「subagent: error: 代號 原因」、退 1；下層 stderr 原樣透出；下層最後一行錯誤行接成自己的（C-52 例外 ⑤）。
 import json, os, re, sys
@@ -88,13 +88,6 @@ def reconcile():
     kids = load_json(book_path, [])
     if not isinstance(kids, list) or not all(isinstance(k, dict) and isinstance(k.get("name"), str) for k in kids):
         die("ReadFailed", "%s is not a JSON array of {name, stack}" % tool_io.place(book_path))
-    old = [k["name"] for k in kids if isinstance(k.get("stack"), str) and not os.path.isabs(k["stack"])]
-    if old:                                   # 11-15 頂層裁：舊格式（相對路徑）整個擋、名冊一個位元都不改；不認、不拼、不遷移
-        die("BookOld", "%s was written in the old format (stack relative to the daemon, before 11-14) for: %s. "
-            "Your subagents are still on the daemon table and were not touched; this record was left as it is. "
-            "Manage them with agents_ctl, or ask a person to rebuild the record as "
-            '[{"name": ..., "stack": absolute path}] (aos-agent ctl where NAME prints the path)'
-            % (tool_io.place(book_path), ", ".join(old)))
     rows = json.loads(cmd.agent(["ctl", "ls", "--json"]) or "[]")
     rows = [r for r in rows if isinstance(r, dict) and isinstance(r.get("stack"), str)] if isinstance(rows, list) else []
     on_table = {(r.get("name"), os.path.normpath(r["stack"])) for r in rows}

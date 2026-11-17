@@ -138,41 +138,11 @@ class Subagent(unittest.TestCase):
                          "kid\trunning\t-\t-\t-\t2\t0\t-\t-\nkid2\trunning\t-\t-\t-\t2\t0\t-\t-\nsubagents 2/4\n")
         self.assertEqual(json.loads(self.ok({"op": "ls", "long": True, "json": True}))["max_subagents"], 4)   # json wins
 
-    def old_book(self, kids):
-        """11-15：舊格式（相對路徑）名冊＝每個 op 回 BookOld、名冊逐位元不動、什麼都不寄。"""
-        book = self.cell / "subagents.json"
-        book.write_text(json.dumps(kids))
-        before = book.read_bytes()
-        return book, before
-
-    def assert_book_old(self, args, book, before, names):
-        sent = len(self.calls())
-        r = self.run_tool(args)
-        self.assertEqual(r.returncode, 1, (args, r.stdout, r.stderr))
-        self.assertIn("error: BookOld", r.stdout)
-        self.assertIn(names, r.stdout)
-        self.assertIn("subagents.json", r.stdout)
-        self.assertIn("agents_ctl", r.stdout)
-        self.assertEqual(book.read_bytes(), before)
-        self.assertFalse([c for c in self.calls()[sent:] if c[:2] != ["ctl", "who"]], "only ctl who may be asked")
-
-    def test_relative_stack_records_are_refused_untouched(self):
+    def test_relative_stack_records_are_not_recognized(self):
         self.ok({"op": "add", "def": "d", "name": "kid"})
-        book, before = self.old_book([{"name": "kid", "stack": "procs/kid"}])
-        for args in ({"op": "ls"}, {"op": "state", "name": "kid"}, {"op": "rm", "name": "kid"}, {"op": "ask", "name": "kid", "text": "hi"}):
-            self.assert_book_old(args, book, before, "kid")
-
-    def test_old_book_blocks_add(self):
-        book, before = self.old_book([{"name": "kid", "stack": "procs/kid"}])
-        self.assert_book_old({"op": "add", "def": "d", "name": "kid2", "ws": "kid2"}, book, before, "kid")
-        self.assertFalse((self.ws / "kid2").exists())
-
-    def test_mixed_book_is_refused_whole(self):
-        self.ok({"op": "add", "def": "d", "name": "kid"})
-        kids = self.record() + [{"name": "old1", "stack": "procs/old1"}, {"name": "old2", "stack": "../x/old2"}]
-        book, before = self.old_book(kids)
-        self.assert_book_old({"op": "ls"}, book, before, "old1, old2")
-        self.assert_book_old({"op": "state", "name": "kid"}, book, before, "old1, old2")
+        (self.cell / "subagents.json").write_text(json.dumps([{"name": "kid", "stack": "procs/kid"}]))
+        self.assertEqual(self.ok({"op": "ls"}), "subagents 0/4\n")
+        self.assertEqual(self.record(), [])
 
     def test_add_keeps_explicit_notify_box(self):
         for i, box in enumerate(("/x", "")):
