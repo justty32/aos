@@ -11,8 +11,9 @@
 import os, signal, sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
-sys.path[:0] = [os.path.dirname(HERE)]          # lib/agent：hooks.py、agent_files.py
+sys.path[:0] = [os.path.dirname(HERE), os.path.dirname(os.path.dirname(HERE))]   # lib/agent：hooks.py、agent_files.py；lib：tool_io.py
 import hooks  # noqa: E402
+import tool_io  # noqa: E402
 
 NAME = "hook_fire"
 HELP = """usage: hook_fire EVENT DEF_DIR   (EVENT: after_start | after_stop; $AOS_STACK = the agent's stack)
@@ -29,8 +30,11 @@ CAUSE_ENV = "AOS_LOOP_CAUSE"   # aos-loop 給的環境變數（同 aos/loop.hpp 
 
 
 def die(code, why):
-    sys.stderr.write("%s: error: %s %s\n" % (NAME, code, why))
-    sys.exit(1)
+    tool_io.die(code, why, prog=NAME, echo=False)   # hook：錯誤行只在 stderr（stdout 是給 hook 引擎解回話的）
+
+
+def warn(line):
+    tool_io.warn(line, prog=NAME)
 
 
 def number(key):
@@ -58,10 +62,10 @@ def main():
         try:
             hooks.clock_restart(stack)
         except OSError as e:
-            sys.stderr.write("%s: warning: cannot reset the on_clock state in %s: %s\n" % (NAME, stack, e))
+            warn("cannot reset the on_clock state in %s: %s" % (stack, e))
     data = {} if args[0] == "after_start" else {"code": number("AOS_LOOP_CODE"), "signal": number("AOS_LOOP_SIGNAL"), CAUSE_KEY: cause()}
     try:
-        hooks.fire(args[0], data, args[1], stack, warn=lambda line: sys.stderr.write("%s: warning: %s\n" % (NAME, line)))
+        hooks.fire(args[0], data, args[1], stack, warn=warn)
     except (hooks.HookFailed, hooks.HooksBad) as e:
         die(type(e).__name__, str(e))
     return 0

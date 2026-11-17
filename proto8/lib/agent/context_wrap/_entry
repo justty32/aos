@@ -17,8 +17,10 @@
 #   範本掛它用 on_error: continue，壞了只是 agent 那邊一行 warning。需要 PATH 上有 aos-post。--help 印英文用法。
 import json, os, subprocess, sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path[:0] = [os.path.dirname(os.path.dirname(os.path.realpath(__file__))),               # lib/agent：context_use.py
+                os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))]   # lib：tool_io.py
 import context_use  # noqa: E402
+import tool_io  # noqa: E402
 
 NAME = "context_wrap"
 HELP = """usage: context_wrap < EVENT.json   (an on_clock hook handler; $AOS_STACK = this hook's own cell)
@@ -45,8 +47,7 @@ COMPACT = "/compact"
 
 
 def die(code, why):
-    sys.stderr.write("%s: error: %s %s\n" % (NAME, code, why))
-    sys.exit(1)
+    tool_io.die(code, why, prog=NAME, echo=False)   # hook：錯誤行只在 stderr（--reading 的 stdout 只放讀數）
 
 
 def run(argv, text=None):

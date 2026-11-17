@@ -16,6 +16,9 @@
 #   範本掛它用 on_error: continue，壞了只是 agent 那邊一行 warning、不停 agent。需要 PATH 上有 aos-mailbox、aos-post。--help 印英文用法。
 import json, os, subprocess, sys
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))   # lib：tool_io.py
+import tool_io  # noqa: E402
+
 NAME = "mail_notify"
 HELP = """usage: mail_notify < EVENT.json   (an on_clock hook handler; $AOS_STACK = this hook's own cell)
 Look at the agent's own mailbox (the "stack" of the event: STACK/mailbox, not the queue).
@@ -36,8 +39,7 @@ MAX_NAMES = 5                                    # 寄件人最多列幾個，�
 
 
 def die(code, why):
-    sys.stderr.write("%s: error: %s %s\n" % (NAME, code, why))
-    sys.exit(1)
+    tool_io.die(code, why, prog=NAME, echo=False)   # hook：錯誤行只在 stderr（stdout 是給 hook 引擎解回話的）
 
 
 def run(argv, text=None):
