@@ -2,7 +2,7 @@
 
 ← [proto8](../README.md)｜[（二）窗](NORMS/00-規範-2-窗.md)｜[（三）指示詞、組合子、kernel、命名](NORMS/00-規範-3-指示詞-組合子-kernel.md)｜[（四）資料夾程式與執行、待定](NORMS/00-規範-4-資料夾程式與執行.md)｜概念 [CONCEPTS.md](CONCEPTS.md)｜慣例 [CONVENTION.md](CONVENTION.md)
 
-**只收使用者親口定下的（條號 N-）。** 這四份只放規範本體；例子、原話、出處、細則在每組標題連的分檔，一兩句寫不完的限定條件照分檔全文做。四層見 [主題續](NORMS/主題-續-四層與收什麼.md)、主題見 [主題](NORMS/主題.md)。條號不重編；（草稿）（定稿）（已定）（暫定）（代定、可翻案）、「現無實作」照原文標；「待定」不算數。
+**只收使用者親口定下的（條號 N-）。** 這四份只放規範本體；例子、原話、出處、細則在每組標題連的分檔；這裡一兩句是摘要，條文以分檔全文為準（待裁網頁 條文-N7 選 A）。四層見 [主題續](NORMS/主題-續-四層與收什麼.md)、主題見 [主題](NORMS/主題.md)。條號不重編；（草稿）（定稿）（已定）（暫定）（代定、可翻案）、「現無實作」照原文標；「待定」不算數。
 
 ## 總則
 
@@ -37,8 +37,8 @@
 **[基礎設施／loop、daemon](NORMS/04-基礎設施-loop與daemon.md)**（[N-10](NORMS/04-基礎設施-loop與daemon/01-N-10.md)、[N-28](NORMS/04-基礎設施-loop與daemon/02-N-28.md)、[N-54](NORMS/04-基礎設施-loop與daemon/03-N-54.md)）
 - （無條號）loop＝`aos-loop [FLAGS] loop.json`：身體叫 `exec`、跑幾次叫 `max`，子程式退 10 就停；選填 `on_start`／`on_stop` 起停各跑一次（期限 `on_timeout_ms`，出問題只印 warning、不擋起停、不改結束碼；代定、可翻案）。
 - （無條號）loop／daemon 不管、使用者自行承擔：每次沒有時間上限、兩個共用同一份 state 檔、state 寫不了＝`WriteFailed` 退 1（daemon 照樣先收子項）、跑途中改 `.env` 不生效。
-- **N-10**（已刪，條號留作錨點）沒有指令式控制資料夾：daemon 表上有誰由 ctl 宣告（N-54），控制子 loop＝寫它的 ctl。
+- **N-10**（已刪，條號留作錨點）沒有指令式控制資料夾：表上有誰、子 loop 的暫停與停掉，現行見 N-54。
 - **N-28** daemon.json 是 loop.json 的嚴格超集：同名 key 同義、預設值可以不同，一份合法的 loop.json 直接丟給 aos-daemon 也要能跑；多的 key 只有 `procs`、`adopt`、`procs_ctl`、`procs_state`、`procs_requests`、`procs_loop`、`procs_exec`、`procs_stderr`、`limits`、`limits_max`、`cgroup`；認不得的 key 當沒看到。
 - **N-28** 名單 `procs`＝`{名字: proc}`，看寫法決定起 loop 型或 exec 型；小格預設 `$AOS_STACK/procs/<名字>/`；兩個手把（`ctl.json` 管自身、`procs_ctl.json` 管名單）、兩扇狀態窗（`state.json`、`procs_state.json`；後者就是 save 檔，表上的路徑相對 daemon 的 stack）。
 - **N-28** `adopt` 預設 `true`＝重起時接回還活著的子項；daemon 開著時子項不自動重起，自然退 0 就下表，出錯結束留 `stopped`＋`reason`（列可選 `auto_restart`）；收工時還活著的收掉、留 `sleeping`，開門時 wake；同一個 stack 已有 daemon 在跑＝`DaemonExists` 退 1；daemon 不認時鐘（沒有 `clock` key、不設 `AOS_CLOCK`）；直接 `aos-exec` 跑的東西歸 Linux 管。
-- **N-54** daemon 表上有誰，寫在管轄手把 `procs_ctl.json`：宣告的名單、不是指令（`procs`＋`procs_added`－`procs_removed`，停／起寫 `procs_stopped`／`procs_started`，`seq` 回音）；多人要改靠 Linux 權限或名單信箱 `procs_requests`；子項的 stack 歸 daemon、不放工作區。
+- **N-54** daemon 表上有誰，寫在管轄手把 `procs_ctl.json`：宣告的名單、不是指令（`procs`＋`procs_added`－`procs_removed`，停／起寫 `procs_stopped`／`procs_started`，睡／醒寫 `procs_slept`／`procs_woken`〔新舊打架，N-28 11-05 較晚〕，`seq` 回音）；掛在 daemon 下的子 loop 暫停、改節奏直接寫它的 ctl，停掉要走 daemon（繞過＝下表、叫不回；新舊打架，N-54 11-03 較晚）；多人要改靠 Linux 權限或名單信箱 `procs_requests`；子項的 stack 歸 daemon、不放工作區。
