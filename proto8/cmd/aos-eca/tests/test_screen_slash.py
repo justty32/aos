@@ -212,7 +212,7 @@ class InputBox(unittest.TestCase):
         self.root = Path(tmp.name)
         self.cell = Cell(self.root, ["before", "> /context\nreport"])
         self.type_line = patch.object(s.cli_ask, "type_line").start()
-        self.err = patch.object(s.sys, "stderr").start()
+        self.err = patch.object(sys, "stderr").start()   # the warning goes through aos_flags.warn
         self.addCleanup(patch.stopall)
 
     def test_context_waits_while_someone_typed(self):
@@ -220,7 +220,7 @@ class InputBox(unittest.TestCase):
         self.assertIsNone(s.screen_slash("/context", {"kind": "claude"}, self.cell, str(self.root)))
         self.type_line.assert_not_called()
         self.assertFalse(any("send-keys" in c for c in self.cell.calls))   # nothing cleared
-        self.assertIn("input box has text", self.err.write.call_args.args[0])
+        self.assertIn("input box has text", "".join(c.args[0] for c in self.err.write.call_args_list))
         failed = SimpleNamespace(stdout="", returncode=1)
         with patch.object(self.cell, "tmux", side_effect=lambda *a: failed if "-e" in a else Cell.tmux(self.cell, *a)):
             self.assertFalse(s.input_clear(self.cell))

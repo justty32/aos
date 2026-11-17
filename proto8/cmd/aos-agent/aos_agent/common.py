@@ -44,9 +44,11 @@ def note(msg):
 
 
 def usage_of(help):
-    """HELP 的第一個 usage 是錯誤行與群組導航的唯一來源。"""
-    return next(line.removeprefix("usage: ") for line in help.splitlines()
-                if line.startswith("usage: "))
+    """HELP 的第一個 usage 是錯誤行與群組導航的唯一來源（接成一行的規則在 aos_flags.usage_of）。"""
+    return aos_flags.usage_of(help, USAGE_STOP)
+
+
+USAGE_STOP = ("aos-agent ", "...")   # help 裡第二種寫法的開頭（`aos-agent X --help`、`... | aos-agent …`）：usage 接到這裡停
 
 
 def bad_args(help, reason):

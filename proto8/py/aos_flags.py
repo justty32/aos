@@ -99,6 +99,29 @@ def warn(prog, sentence):
     print("%s: warning: %s" % (prog, _one(sentence)), file=sys.stderr, flush=True)
 
 
+def usage_of(help, stop=()):
+    """HELP 裡第一種 usage 接成一行（錯誤行 `原因 (usage: …)` 用；11-17 從 aos-tools、aos-grow、aos-eca-screen、aos-agent
+    四份收來，aos-daemon-ctl 那份遇 ` | ` 就截斷、收過來會改輸出，待裁先留著）：第一個 `usage:` 起頭的行，接著往下的續行；遇到空行、`|` 起頭的行（另一種寫法），
+    或去掉縮排後以 stop 裡任一個字起頭的行（例 aos-tools 的第二種寫法 `aos-tools …`）就停；空白壓成一個。"""
+    lines = help.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith("usage:"))
+    parts = [lines[start][len("usage:"):]]
+    for line in lines[start + 1:]:
+        tail = line.strip()
+        if not tail or tail.startswith("|") or tail.startswith(tuple(stop)):
+            break
+        parts.append(line)
+    return " ".join(" ".join(parts).split())
+
+
+def with_usage(help, code, reason, stop=()):
+    """ArgumentsBad 的原因補上 ` (usage: …)`（已經有就不補）；其他代號原樣。"""
+    reason = str(reason)
+    if code == "ArgumentsBad" and "(usage:" not in reason:
+        return "%s (usage: %s)" % (reason, usage_of(help, stop))
+    return reason
+
+
 # aos 自己塞進對話、會被腦當內容讀到的話（不是 stderr 的錯誤行／提醒行）一律 `[aos] 種類: 內容`
 # （使用者 11-10 深夜：「history summary那塊，或許可以稍微美化一下？…[aos] warning: ....，或是[aos] summary: ...」「2.好，統一。」）。
 # 種類一個小寫詞，現有：summary（history 摘要）、session（eca 換新對話的開場）、clock（時鐘信）、hook（hook 攔下工具）、

@@ -271,17 +271,12 @@ exit codes: 0 written; 1 error (RegistryBad when F already lists tools of its ow
 aos_flags.HELP = HELP
 
 
+USAGE_STOP = ("aos-tools ", "echo ")   # help 裡第二種寫法的開頭：usage 接到這裡停
+
+
 def usage(sub):
-    """從子命令 help 的第一種 usage 取一行，續行合併並壓掉空白（空行或第二種寫法起頭就停；
-    11-10 aos-tools-cli 甲2：以前遇到含 " | " 的續行就停，把 (XXX | --path-json JSON) 截掉）。"""
-    lines = HELPS[sub].splitlines()
-    start = next(i for i, line in enumerate(lines) if line.startswith("usage:"))
-    parts = [lines[start].partition("usage:")[2]]
-    for line in lines[start + 1:]:
-        if not line.strip() or line.lstrip().startswith(("aos-tools ", "echo ")):
-            break
-        parts.append(line)
-    return " ".join(" ".join(parts).split())
+    """子命令 help 的第一種 usage 接成一行（規則在 aos_flags.usage_of）。"""
+    return aos_flags.usage_of(HELPS[sub], USAGE_STOP)
 
 
 class Fail(Exception):
@@ -1160,9 +1155,8 @@ def main():
             raise Fail(e.code, "%s (usage: %s)" % (e, usage(sub)))
     except Fail as e:
         reason = str(e)
-        if sub is not None and e.code == "ArgumentsBad":
-            if "(usage:" not in reason:
-                reason += " (usage: %s)" % usage(sub)
+        if sub is not None:
+            reason = aos_flags.with_usage(HELPS[sub], e.code, reason, USAGE_STOP)
         aos_flags.die(NAME, e.code, reason)
 
 

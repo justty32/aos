@@ -1,7 +1,6 @@
 # screen_slash sends allowlisted commands to an open CLI screen and returns masked output without opening a screen.
 import os
 import re
-import sys
 import time
 
 import aos_flags
@@ -89,8 +88,8 @@ def input_clear(cell):
 
 
 def typed_warning(command):
-    sys.stderr.write("aos-eca: warning: %s not typed into the open screen: its input box has text (or cannot be read); "
-                     "the letter stays queued and is tried again next round\n" % command)
+    aos_flags.warn("aos-eca", "%s not typed into the open screen: its input box has text (or cannot be read); "
+                   "the letter stays queued and is tried again next round" % command)
 
 
 def screen_output(screen, command):

@@ -91,21 +91,9 @@ exit codes: 0 done / plan printed; 1 error; 130 interrupted.
 aos_flags.HELP = HELP
 
 
-def usage(sub):
-    """從子命令 help 取第一種 usage，續行合成一行。"""
-    lines = HELPS[sub].split("usage:", 1)[1].split("\n\n", 1)[0].splitlines()
-    first = []
-    for line in lines:
-        if line.lstrip().startswith("|"):
-            break
-        first.append(line)
-    return " ".join(" ".join(first).split())
-
-
 def sub_reason(sub, code, reason):
-    if code == "ArgumentsBad" and "(usage:" not in str(reason):
-        return "%s (usage: %s)" % (reason, usage(sub))
-    return str(reason)
+    """ArgumentsBad 補上子命令的 usage（規則在 aos_flags.with_usage／usage_of）。"""
+    return aos_flags.with_usage(HELPS[sub], code, reason)
 
 
 

@@ -33,13 +33,14 @@
 #   工具與 aos-tools 的 stderr：aos-mcp 接住後原樣轉印到自己的 stderr（MCP 用戶端的 log）；失敗時最後一段另附給外部 agent
 #   （11-05 使用者選「附 stderr 尾巴（推薦）」，edge-basics 題 1；C-52 的明文例外：出口是給外部 agent 看原因，11-05 R10 照舊）。成功時不附。
 #   命令列形狀照 CONVENTION P-44（11-04）：旗標都在 REGISTRY 前面、`--` 結束旗標、`--x V`／`--x=V`；不認得的旗標＝FlagUnknown。
-import json, os, signal, subprocess, sys, time
+import json, os, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
 import aos_flags  # noqa: E402  proto8/py/aos_flags.py：P-44 的解析
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
 import metainfo  # noqa: E402
+import process_group  # noqa: E402  lib/process_group.py：逾時收整群（TERM→等→KILL）
 from agent import hooks  # noqa: E402  lib/agent/hooks.py：before_tool／after_tool（--hooks DEF）
 
 NAME = "aos-mcp"
@@ -203,16 +204,7 @@ def call(name, tool, args, ws, stack, timeout_s, echo=True):
         out, err = p.communicate(json.dumps(args).encode(), timeout=None if limit == 0 else limit)
         code = p.returncode
     except subprocess.TimeoutExpired:
-        for sig in (signal.SIGTERM, signal.SIGKILL):
-            try:
-                os.killpg(p.pid, sig)
-            except ProcessLookupError:
-                break
-            try:
-                p.wait(timeout=2)
-                break
-            except subprocess.TimeoutExpired:
-                pass
+        process_group.stop(p, 2, 2)              # TERM 整群、等 2 秒；還在就 KILL、再等 2 秒（lib/process_group.py）
         try:
             out, err = p.communicate(timeout=2)  # 整群收掉了：管子另一頭多半都關了
         except subprocess.TimeoutExpired:        # 有逃出群組的還拿著管子：不等了
