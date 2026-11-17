@@ -5,11 +5,11 @@
 只讀不改，查清楚「這怎麼運作／可不可行／為什麼壞」，產出可歸檔的筆記。
 
 **何時用**：看懂外部系統或別人的碼、評估可行性、查 bug 成因、對照前作。
-**何時不用**：已知道怎麼改 → [feature-dev](feature-dev/README.md)；只搬結構 → [refactor](refactor/README.md)；有一個明確假設要**動手跑**才知道是／否 → [experiments](experiments/README.md)；要多方發想 → 先發想不急著規劃（[user/03](common/user/03-討論紀錄與規劃.md)；舊的 workshop 工作流 11-14 已封存）。
+**何時不用**：已知道怎麼改 → [feature-dev](feature-dev/README.md)；只搬結構 → [refactor](refactor/README.md)；有一個明確假設要**動手跑**才知道是／否 → 直接跑、紀錄寫進 proto8/thinking（舊的 experiments 工作流 11-17 已封存）；要多方發想 → 先發想不急著規劃（[user/03](common/user/03-討論紀錄與規劃.md)；舊的 workshop 工作流 11-14 已封存）。
 
 ## Done when
 
-- 筆記存在，且下列五段非空：proto8 年代寫在 [proto8/thinking/](../../proto8/thinking/README.md) 的 `<日期>/` 底下（一天一夾，例 [wake-1114](../../proto8/thinking/2026-11/14/wake-1114.md)），或寫成本資料夾的 `investigations/<主題>.md`（第一份出現時才建；現有的只是 proto5 的兩份），兩種都算。
+- 筆記存在，且下列五段非空：proto8 年代寫在 [proto8/thinking/](../../proto8/thinking/README.md) 的 `<日期>/` 底下（一天一夾，例 [wake-1114](../../proto8/thinking/2026-11/14/wake-1114.md)），或寫成本資料夾的 `investigations/<主題>.md`，兩種都算（proto5 的兩份舊調查 11-17 已封存，見 [investigations/archive](investigations/archive/README.md)）。
 - 結論是「要動手」→ [SESSION-LOG](../SESSION-LOG.md) 有接手列。
 
 ## 流程

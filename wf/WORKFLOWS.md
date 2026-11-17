@@ -20,23 +20,14 @@
 | 「**接下來做什麼**」「照進度表推進」「動工前該讀什麼」 | **roadmap** | 現行落點：[SESSION-LOG.md](SESSION-LOG.md)（open 進度與下一步） |
 | 「**開個研討會討論 X**」「找幾個 agent 一起腦力激盪」「給我一些靈感」 | **workshop**（已封存 2026-11-14） | [workflows/workshop/README.md](workflows/workshop/README.md)（只剩封存說明，指到封存索引；要再辦得照現在的隊形重寫）|
 | 「**辦個黑客松**」「找幾個 agent **各自去試做** X」「別再討論了，讓他們隨便做做看」 | **hackathon**（已封存 2026-11-14） | [workflows/hackathon/README.md](workflows/hackathon/README.md)（只剩封存說明，指到封存索引；要再辦得照現在的隊形重寫）|
-| 「**直接去試試看**」「跑個實驗看會怎樣」「別再想了，做一次」 | **experiments** | [workflows/experiments/README.md](workflows/experiments/README.md) |
+| 「**直接去試試看**」「跑個實驗看會怎樣」「別再想了，做一次」 | **experiments**（已封存 2026-11-17） | [workflows/experiments/README.md](workflows/experiments/README.md)（只剩封存說明；要驗假設就直接跑、紀錄寫進 proto8/thinking）|
 | 「查清楚這是怎麼運作的」「這樣做可不可行」「這個 bug 是為什麼」（只讀不改）| **investigation** | [workflows/investigation.md](workflows/investigation.md) |
 | 「跑測試 / 驗證」「這樣改有沒有壞」 | **testing** | [workflows/testing.md](workflows/testing.md) |
 | 「重構 / 拆檔 / 整理程式結構」（行為不變）| **refactor** | [workflows/refactor/README.md](workflows/refactor/README.md) |
 | 「搬檔案 / 改目錄名 / 拆 repo」 | **refactor**（搬移專章）| [workflows/refactor/moving-things.md](workflows/refactor/moving-things.md) |
 | 「環境怎麼裝」「fresh clone 後要做什麼」「指令是什麼」 | **dev-env** | [workflows/dev-env.md](workflows/dev-env.md) |
 | 「這段程式在哪 / 哪個檔負責什麼」 | **code map** | [wf/knowledge/code-map.json](knowledge/code-map.json) |
-| 「**把這些東西濃縮給我看**」「我只有半小時」「寫個我看得懂的版本」 | **digest** | [workflows/digest/README.md](workflows/digest/README.md) |
-
-> **digest 跟其他工作流的分界**：其他工作流**產生**東西，digest **只讀不產**——
-> 把已經寫完的紀錄濃縮成使用者本人讀得動的精簡版。它不做判斷、不下結論，
-> 只負責讓人在有限時間內掌握狀況。
-
-> **研討會／黑客松／實驗／調查怎麼分**：同一件事的四種強度——**workshop** 唯讀、只發想；
-> **hackathon** 多個 agent 各自**動手做同一題**，只收坑／好處／壞處；
-> **experiments** 我自己拿**一個明確假設**去驗，要的是是／否；
-> **investigation** 只讀不改，回答一個窄問題（怎麼運作、可不可行、為什麼壞）。
+| 「**把這些東西濃縮給我看**」「我只有半小時」「寫個我看得懂的版本」 | **digest**（已封存 2026-11-17） | [workflows/digest/README.md](workflows/digest/README.md)（只剩封存說明，寫作規範在封存的舊入口）|
 
 ### kernel 內建
 
@@ -49,7 +40,7 @@
 | 「我的偏好是…」「以後直接做 / 先問」 | **user** | [workflows/common/user.md](workflows/common/user.md) |
 | 「**這批題要我裁**」「做成待你裁的頁」「我回好了（貼一串 `id:代號`）」 | **decide-page**（已停用 2026-11-14） | 題目寄使用者專區，見 [dispatch/aos-teams](workflows/dispatch/aos-teams.md) 第 2 件；[workflows/decide-page.md](workflows/decide-page.md) 只剩停用說明 |
 | 「這件事有沒有現成做法」「查別隊踩過的坑」「投稿一個做法」 | **public**（公用知識庫） | [public/README.md](public/README.md) |
-| 「對 aos 本身有改進意見」「這個 aos 設計不好用」 | **advices**（對 aos 的意見庫） | [advices/README.md](advices/README.md) |
+| 「對 aos 本身有改進意見」「這個 aos 設計不好用」 | **advices**（對 aos 的意見，精簡成三個小檔） | [advices/README.md](advices/README.md) |
 | 「派 fsm 隊員要配什麼 system、工具、權限」 | **kits**（配給包） | [workflows/dispatch/kits/README.md](workflows/dispatch/kits/README.md)（隊長流程 [card](workflows/dispatch/kits/card.md)） |
 | 「交件」「commit」 | **commit-request**（交件排隊，鐵律 3） | [aos-teams/07](workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)（`wf/tools/commit-request` 的 claim／submit） |
 | 「要問使用者」「這題要他拍板」 | **使用者專區**（`aos-user send --kind decide`） | [common/user.md](workflows/common/user.md)「回覆風格」 |

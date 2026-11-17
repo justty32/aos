@@ -12,9 +12,9 @@
 | `wf/` | **本工作流系統**（就是你現在在讀的這包）。入口見 [WORKFLOWS.md](../WORKFLOWS.md)；共享區 [workflows/common/](../workflows/common/README.md) |
 | `wf/inbox/` | agent 之間的**信件**收件匣：頂層＝未處理、`done/`＝已處理（樹外專案的放信處，保持乾淨；使用方式見 [workflows/inbox.json](../workflows/inbox.json)）|
 | `wf/tools/` | wf 的工具腳本：`index_gen.py`（重生 `_index.json` 與 code map 逐檔表，鐵律 3）、`commit-request`（交件排隊，見 [aos-teams/07](../workflows/dispatch/aos-teams/07-預設流程與agent-fsm.md)）、`tabledb.py`（資料檔 CRUD／連結）、`find_big_lists.py`、`fix_moved_links.py`、`check_anchors.py`（inbox 收發腳本 11-13 刪掉，改走 aos 信箱，見 [inbox.json](../workflows/inbox.json)）；`compact_reload.sh`（compact 後 SessionStart hook 印 user.md＋[HANDOFF](../HANDOFF.md) 最新一條）。資料檔契約見 [common/data-files](../workflows/common/data-files.md) |
-| `wf/salvage/` | **`roadmap-run` 打撈包**（2026-08-29）：那條分支跑完 M0→M2 後被凍結、系統要重新架構，這裡是抽出來的教訓與已驗證結論——六篇，給「從零重寫這套系統的人」讀。入口見 [salvage/README](../salvage/README.md) |
+| `wf/salvage/` | `roadmap-run` 打撈包，已封存（2026-11-17）；入口 [salvage/README](../salvage/README.md) 只剩封存說明 |
 | `wf/public/` | **公用知識庫**：做法與坑，所有 agent 可讀可投稿，頂層管；`tools/` 放公用小工具。入口 [public/README](../public/README.md) |
-| `wf/advices/` | **對 aos 本身的意見庫**：各隊做事時冒出的改進意見，按主題歸檔。入口 [advices/README](../advices/README.md) |
+| `wf/advices/` | **對 aos 本身的意見**：還成立、還沒做的改進意見精簡成三個小檔，加投稿流程。入口 [advices/README](../advices/README.md) |
 | `wf/knowledge/` | wf 的機讀知識：[code map](../knowledge/code-map.json) 與它的逐檔表 `code-map/` |
 | `wf/session_logs/` | 每日工作日誌，入口 [session_logs/README](../session_logs/README.md) |
 | `wf/wait-user/` | WAIT_USER 的舊分類檔四份；新題改寄使用者專區（見 [common/user.md](../workflows/common/user.md)）|
