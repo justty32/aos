@@ -5,7 +5,7 @@
 新增／修改 aos 功能的工作流：加一個功能、修一個 bug，從動手到 commit。這是本工作流的**入口**：先讀本檔，再往下深入。always-on 鐵律見 [AGENTS.md](../../../AGENTS.md)；碰原始碼前先讀 [common/conventions](../common/conventions.md)（程式碼慣例 + code map 維護鏈）與 [code map](../../knowledge/code-map.json)；要整理結構時參考 [STRUCTURE](../../STRUCTURE.md)（被動）。
 
 **何時用**：使用者說「我想開發／修改某個功能」「這裡壞了，修一下」——**修 bug 也走這條**，產出一樣是「行為改變＋驗證綠燈」。
-**何時不用**：只是要查清楚原因、還不動碼 → [investigation](../investigation.md)；行為不變、只重排結構 → [refactor](../refactor/README.md)；還在討論要不要做、方案長怎樣 → [planning](../planning.md)（proto8/thinking／SESSION-LOG）；動工前先看 thinking 的決定與 NORMS。
+**何時不用**：只是要查清楚原因、還不動碼 → 只讀直接查、筆記寫進當天的 proto8/thinking（舊的 investigation 工作流 11-17 已封存）；行為不變、只重排結構 → [refactor](../refactor/README.md)；還在討論要不要做、方案長怎樣 → [planning](../planning.md)（proto8/thinking／SESSION-LOG）；動工前先看 thinking 的決定與 NORMS。
 
 ## Done when
 

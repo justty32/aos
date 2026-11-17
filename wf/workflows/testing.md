@@ -5,7 +5,7 @@
 改完怎麼確認沒壞。**沒有統一的自動測試**：使用者「感覺proto8/test已經成為我們的負擔了，能夠精簡嗎？我希望能大刪特刪」「激進版，不用說，甚至我希望整個刪掉也OK。」「ctest也可以刪掉吧」「這個鐵律刪掉，不用ctest」——不設 ctest、沒有整批的 `proto8/tests`（盤點：[thinking 11-04 tests-trim](../../proto8/thinking/2026-11/04/tests-trim.md)）。統一必跑的只有「**build 得過**」；各處有一些定向測試，改到哪就挑那處既有的定向測試跑（[prefix-fixes 坑-55](../../proto8/thinking/2026-11/04/tests-trim.md)）；其餘行為對不對靠手跑。
 
 **何時用**：改完程式要確認沒壞、重構前要記基準。
-**何時不用**：環境還沒裝好、不知道指令哪來 → [dev-env](dev-env.md)；build 紅了要查成因 → [investigation](investigation.md)。
+**何時不用**：環境還沒裝好、不知道指令哪來 → [dev-env](dev-env.md)；build 紅了要查成因 → 只讀直接查、筆記寫進當天的 proto8/thinking（舊的 investigation 工作流 11-17 已封存）。
 
 ## Done when
 

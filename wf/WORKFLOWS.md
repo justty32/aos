@@ -21,7 +21,7 @@
 | 「**開個研討會討論 X**」「找幾個 agent 一起腦力激盪」「給我一些靈感」 | **workshop**（已封存 2026-11-14） | [workflows/workshop/README.md](workflows/workshop/README.md)（只剩封存說明，指到封存索引；要再辦得照現在的隊形重寫）|
 | 「**辦個黑客松**」「找幾個 agent **各自去試做** X」「別再討論了，讓他們隨便做做看」 | **hackathon**（已封存 2026-11-14） | [workflows/hackathon/README.md](workflows/hackathon/README.md)（只剩封存說明，指到封存索引；要再辦得照現在的隊形重寫）|
 | 「**直接去試試看**」「跑個實驗看會怎樣」「別再想了，做一次」 | **experiments**（已封存 2026-11-17） | [workflows/experiments/README.md](workflows/experiments/README.md)（只剩封存說明；要驗假設就直接跑、紀錄寫進 proto8/thinking）|
-| 「查清楚這是怎麼運作的」「這樣做可不可行」「這個 bug 是為什麼」（只讀不改）| **investigation** | [workflows/investigation.md](workflows/investigation.md) |
+| 「查清楚這是怎麼運作的」「這樣做可不可行」「這個 bug 是為什麼」（只讀不改）| **investigation**（已封存 2026-11-17） | [workflows/investigation.md](workflows/investigation.md)（只剩封存說明；只讀直接查、筆記寫進 proto8/thinking）|
 | 「跑測試 / 驗證」「這樣改有沒有壞」 | **testing** | [workflows/testing.md](workflows/testing.md) |
 | 「重構 / 拆檔 / 整理程式結構」（行為不變）| **refactor** | [workflows/refactor/README.md](workflows/refactor/README.md) |
 | 「搬檔案 / 改目錄名 / 拆 repo」 | **refactor**（搬移專章）| [workflows/refactor/moving-things.md](workflows/refactor/moving-things.md) |
