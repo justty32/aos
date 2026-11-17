@@ -1,6 +1,6 @@
 # planning — 想法成熟管線（本專案的落點：proto8 thinking → CONCEPTS／NORMS）
 
-← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
+← [WORKFLOWS](../WORKFLOWS.md)
 
 kernel 的 planning 管線（idea → roadmap → 詳規 → 執行）在本專案**早已長成自己的工作流**，本檔只做路由、不另存表格：
 

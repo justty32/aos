@@ -1,5 +1,7 @@
 # INDEX — aos 專案地圖
 
+> **退場中**（使用者 11-17 待裁網頁 wf-8 a：INDEX 現在退）：內容在 [AGENTS.md](../AGENTS.md) 第一段、[proto8/README](../proto8/README.md)、[`_index.json`](_index.json)、[WORKFLOWS.md](WORKFLOWS.md) 都有了，本檔不再更新；還連著本檔的幾個活狀態檔改完麵包屑就整夾收走。
+
 整個專案的頂層導航。aos = **「資料夾＝程式」的 AI agent 體系，本體是 [proto8/](../proto8/README.md)**（各夾一覽在它的 README）；repo 根只放入口、`wf/` 與 `archive/`（另有 [`impl_cpp/`](../impl_cpp/README.md)＝使用者手寫重寫的 C++ 實作；08～09 月那一代單一執行檔 `aos` 封存在 `archive/aos-v1/`）。[AGENTS.md](../AGENTS.md) 只放主工作流 + 指向本檔；細節從這裡分流出去。
 
 ---
@@ -34,9 +36,7 @@
 | [knowledge/](knowledge/code-map.json) | wf 的機讀知識：code map（proto8 程式地圖冊）等 json |
 | [tools/](tools/_index.json) | wf 的腳本：`index_gen.py`（生成器）、`commit-request`（交件排隊）、`tabledb.py`、連結修補等 |
 | [INDEX/](INDEX/README.md) | 本頁的分檔（repo 版面細表 [01-repo-layout](INDEX/01-repo-layout.md)）|
-| [WORKFLOWS-parts/](WORKFLOWS-parts/README.md) | [WORKFLOWS.md](WORKFLOWS.md) 的分檔（multi-agent flavor 派發表、工作流的統一形式）|
 | [_index.json](_index.json) | wf 頂層各檔與夾的一句話索引（機讀）|
-| [salvage/](salvage/README.md) | `roadmap-run` 打撈包（已封存 2026-11-17，只剩封存說明；還有用的幾條在 advices）|
 | `temp/` | 各線的工作區 `temp/<線名>/`（已 gitignore，不進版控）|
 
 ## 通用（跨工作流共享）
@@ -46,11 +46,10 @@
 | [common/README](workflows/common/README.md) | 跨工作流共通的入口 |
 | [code map](knowledge/code-map.json) | **程式碼結構導航圖**（本 flavor 的導航中樞）＋ 真相層優先序 |
 | [common/conventions](workflows/common/conventions.md) | 程式碼慣例 + code map 維護鏈 |
-| [common/gotchas](workflows/common/gotchas.md) | 跨工作流共通踩坑 |
+| [public/](public/README.md#主題) | 坑與做法（11-17 起坑只留這一處，使用者 11-17 待裁網頁 wf-7 a）|
 | [common/user](workflows/common/user.md) | 使用者偏好、確認邊界、時區 |
 | [common/data-files](workflows/common/data-files.md) | 資料檔契約 `wf-table/1`（>1 KB 同質記錄表抽 `.json`／`.csv`）|
 | [tidy/](workflows/tidy/README.md) | 文件層整理：封存／分類／合併小檔／抽資料檔／拆大檔 |
-| [digest/](workflows/digest/README.md) | 精簡版給人讀（已封存 2026-11-17，只剩封存說明）|
 
 ## 活狀態（只列還沒完成的）
 

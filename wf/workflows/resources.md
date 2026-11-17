@@ -1,6 +1,6 @@
 # resources — 獨佔資源的鎖（螢幕、鍵鼠、主工作樹、裝置）
 
-← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
+← [WORKFLOWS](../WORKFLOWS.md)
 
 實體／獨佔資源的使用權由**頂層 agent（調度者）分配**，其他 agent 要用先申請鎖。搶資源**不會報錯**，只會讓兩邊的觀測都不可信——所以鎖是**強制的，不是禮貌**。
 

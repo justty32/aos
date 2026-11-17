@@ -1,6 +1,6 @@
 # 功能開發（feature-dev）— 工作流入口
 
-← [INDEX](../../INDEX.md)｜[AGENTS.md](../../../AGENTS.md)
+← [WORKFLOWS](../../WORKFLOWS.md)｜[AGENTS.md](../../../AGENTS.md)
 
 新增／修改 aos 功能的工作流：加一個功能、修一個 bug，從動手到 commit。這是本工作流的**入口**：先讀本檔，再往下深入。always-on 鐵律見 [AGENTS.md](../../../AGENTS.md)；碰原始碼前先讀 [common/conventions](../common/conventions.md)（程式碼慣例 + code map 維護鏈）與 [code map](../../knowledge/code-map.json)；要整理結構時參考 [STRUCTURE](../../STRUCTURE.md)（被動）。
 
@@ -35,7 +35,7 @@
   | 建置、CMake、相依管理、新增一個 impls 專案 | [proto8/impls/docs/04 新專案清單](../../../proto8/impls/docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md)、[impls/docs/01 依賴](../../../proto8/impls/docs/01-現況與地圖與依賴.md)、[testing「proto8」](../testing.md#proto8) |
   | 命令列、旗標、錯誤代號、退出碼 | 該程式的 README 與 `--help`；全家共通的在 [impls/docs/03 錯誤](../../../proto8/impls/docs/03-錯誤.md)、[04](../../../proto8/impls/docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md) |
   | 資料夾版面、回合模型、交接協定 | proto8 的 [CONCEPTS](../../../proto8/docs/CONCEPTS.md)／[NORMS](../../../proto8/docs/NORMS.md)／[CONVENTION](../../../proto8/docs/CONVENTION.md)|
-  | 頂層結構（多／少了目錄）| [INDEX](../../INDEX.md)、根 `README.md` |
+  | 頂層結構（多／少了目錄）| [AGENTS.md](../../../AGENTS.md) 第一段、[proto8/README](../../../proto8/README.md) |
 
   **文件裡寫的每一條指令與輸出都要真的跑過再寫上去**，不要照推論寫。
 - 實作中被迫下的新裁決＝正式裁決：記回那次討論的 thinking 檔「決定」段（見 [decisions](../decisions.json)）。
@@ -46,7 +46,7 @@
 | 檔案 | 內容 |
 |------|------|
 | `landed/`（長出來才建）| 已落地功能目錄（時間序；功能在哪、實作細節指標）|
-| `gotchas.md`（長出來才建）| 本工作流專屬踩坑（共通的在 [common/gotchas](../common/gotchas.md)）|
+| （不另建坑檔）| 本工作流踩到的坑也寫進 [wf/public](../../public/README.md#主題) |
 | `session-log.md`（長出來才建）| 本工作流 open / in-flight 進度（hub 在 [SESSION-LOG](../../SESSION-LOG.md)）|
 | `archive/`（長出來才建）| 過時／被取代的文檔封存（保留歷史、不污染現役；規則見 [STRUCTURE](../../STRUCTURE.md)）|
 

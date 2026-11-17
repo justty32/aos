@@ -1,6 +1,6 @@
 # team-model — 誰來做：角色三層、聰明度分級、選人判準
 
-← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
+← [WORKFLOWS](../WORKFLOWS.md)
 
 本檔記**誰來做**——分幾層角色、每層派哪一級的模型、按什麼順序選人（分級與速度是使用者定的、跨專案共通，源頭是 `~/repo/moddings/skyrim/agentctl/docs/team-model.md`，兩邊要一起改；aos 這份 2026-11-14 照現行隊形改過一次（kb-1114），那邊還沒對過）。**怎麼做**在別處：切線與交接書見 [dispatch](dispatch/README.md)（含本專案的隊形），資源鎖見 [resources](resources.md)，通訊見 [inbox](inbox.json)。
 

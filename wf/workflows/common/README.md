@@ -1,13 +1,13 @@
 # common — 跨工作流共享（入口）
 
-← [INDEX](../../INDEX.md)｜[AGENTS.md](../../../AGENTS.md)
+← [WORKFLOWS](../../WORKFLOWS.md)｜[AGENTS.md](../../../AGENTS.md)
 
 不專屬任一工作流、各工作流共用的東西。這是本區的**入口**。
 
 <!-- wf-nav -->
 | 路徑 | 內容 | 來源 |
 |------|------|------|
-| [gotchas.md](gotchas.md) | 跨工作流共通踩坑（工作流專屬的坑在各自的 `gotchas.md`，那裡有導流表）| kernel |
+| [wf/public](../../public/README.md#主題) | 坑（跨工作流與各工作流的都在這裡；`gotchas.md` 只剩指標頁）| kernel |
 | [user.md](user.md) | 使用者偏好、確認邊界、分支慣例、時區、工作模式 | kernel |
 | [data-files.md](data-files.md) | 資料檔契約 `wf-table/1`：給 AI 消化的條列 >1 KB 抽 `.json`／`.csv`、`tabledb.py` 讀寫；給人導航的連結表留 md | kernel |
 | [data-files-fmt.md](data-files-fmt.md) | json 值裡跨層路徑用 `$fmt` 代號展開，省 `../../../` | kernel |

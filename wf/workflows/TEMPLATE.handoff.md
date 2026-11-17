@@ -20,7 +20,7 @@
 - **可拿的鎖**：`<資源鎖清單；一個都不給就寫「不取任何鎖」>`（規則見 [resources](resources.md)）。
 - **不 push**；commit 走 `wf/tools/commit-request`（`claim`／`submit --line <線名> …`，只有 `main`；沒有 commit-request 的機器才 `git commit -F <訊息檔> -- <逐一點名的檔>`），push 等使用者確認（守鐵律 2：授權來源）。
 - **暫存與丟棄物放哪**：`<大檔丟 /tmp/<線名>-trash/、KB 級文字丟 <交接書目錄>/<線名>/trash/>`；**不要 `rm`**。
-- **整檔改寫用單一 Update 操作**，不要拆成 Delete＋Add（理由見 [dispatch/lessons](dispatch/lessons.md)）。
+- **整檔改寫用單一 Update 操作**，不要拆成 Delete＋Add（理由見 [共用工作樹與git](../public/共用工作樹與git.md#整檔改寫用單一-update-操作不要拆成-deleteadd)）。
 - **子 agent 上限**：`<這條線總共最多再掛幾隻（含它們再往下掛的）；填數字、0 或「不限」>`。往下派時把這個數字寫進子任務書。
 - <其他：不得動的設定檔、不得啟動的程式、額度上限…>
 

@@ -1,6 +1,6 @@
 # <名稱> — <一句話：做什麼>
 
-[WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
+[WORKFLOWS](../WORKFLOWS.md)
 
 > 複製本檔改寫成 `workflows/<名稱>.md`（單檔型）或 `workflows/<名稱>/README.md`（資料夾型，連結多一層 `../`）。段落順序固定，用不到的刪掉；改完在 WORKFLOWS.md 加一列。
 

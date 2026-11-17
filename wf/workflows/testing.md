@@ -1,6 +1,6 @@
 # testing — 驗證（單檔工作流）
 
-← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
+← [WORKFLOWS](../WORKFLOWS.md)
 
 改完怎麼確認沒壞。**沒有統一的自動測試**：使用者「感覺proto8/test已經成為我們的負擔了，能夠精簡嗎？我希望能大刪特刪」「激進版，不用說，甚至我希望整個刪掉也OK。」「ctest也可以刪掉吧」「這個鐵律刪掉，不用ctest」——不設 ctest、沒有整批的 `proto8/tests`（盤點：[thinking 11-04 tests-trim](../../proto8/thinking/2026-11/04/tests-trim.md)）。統一必跑的只有「**build 得過**」；各處有一些定向測試，改到哪就挑那處既有的定向測試跑（[prefix-fixes 坑-55](../../proto8/thinking/2026-11/04/tests-trim.md)）；其餘行為對不對靠手跑。
 
@@ -32,11 +32,11 @@ repo 根沒有 CMake，要建的只有 `proto8/impls/`：頂層 `impls/CMakeList
 (cd proto8/impls && cmake -B build && cmake --build build)
 ```
 
-`proto8/cmd/`（指令）、`proto8/py/`（共用模組）、`proto8/lib/`、`proto8/kernel/`、`proto8/templates/` 是 Python／sh，沒有建置步驟；要確認就手跑（用法在各自的 README）。aos 的程式都不動 PATH，手跑時把 `proto8/impls/<名>/bin/`、`proto8/cmd/<名>/bin/` 放進 PATH（`proto8/install.sh` 一次放進 `~/.local/bin`）。
+`proto8/cmd/`（指令）、`proto8/lib/`（含頂層的共用模組，11-17 前在 `proto8/py/`）、`proto8/templates/`（含 kernel 範本 `templates/kernel/`） 是 Python／sh，沒有建置步驟；要確認就手跑（用法在各自的 README）。aos 的程式都不動 PATH，手跑時把 `proto8/impls/<名>/bin/`、`proto8/cmd/<名>/bin/` 放進 PATH（`source proto8/env.sh` 一次放好；選配 `proto8/cmd/install.sh` 連進 `~/.local/bin`）。
 
 ## 不碰跑著的樹
 
-家機與公司 WSL 兩台的 `~/aos-home` 都有使用者在用的樹，agent 的 Bash 帶著它的 `AOS_*`（[gotchas/05](common/gotchas/05-在跑著的樹旁邊做事.md)）；在這台跑任何測試、手跑任何 aos 指令：
+家機與公司 WSL 兩台的 `~/aos-home` 都有使用者在用的樹，agent 的 Bash 帶著它的 `AOS_*`（[行程與環境](../public/行程與環境.md#agent-的-bash-帶著活樹的-aos_跑測試或-aos-指令前先清清的寫法在-zsh-裡會靜靜失效)）；在這台跑任何測試、手跑任何 aos 指令：
 
 - **先清環境，用 bash 腳本、不在 zsh 裡清**：把下面存成暫存夾裡的 `clean-env.sh`，一律 `bash clean-env.sh <指令…>` 跑（不 `source`）。zsh 的 `env -u $VARS`、在 zsh `source` bash 寫法的環境檔都等於沒清（11-13 線寅、線申各中一次，檔寫進活樹頂層那格 stack）。
 
@@ -60,4 +60,4 @@ repo 根沒有 CMake，要建的只有 `proto8/impls/`：頂層 `impls/CMakeList
 ## 交接
 
 - build 過了回 [feature-dev](feature-dev/README.md) 接完剩下的步驟（code map → 文檔 → commit）。
-- 同一個紅燈第二次撞到 → [common/gotchas](common/gotchas.md)。
+- 同一個紅燈第二次撞到 → 記進 [wf/public](../public/README.md#主題)。

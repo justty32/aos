@@ -1,6 +1,6 @@
 # 程式碼慣例 + 導航 index 維護鏈（碼相關工作流共用）
 
-← [common/README](README.md)｜[INDEX](../../INDEX.md)
+← [common/README](README.md)
 
 碰原始碼的工作流（feature-dev / refactor / specs / plans…）共用這套規矩。純文檔/調查類工作流用不到。結構整理原則（被動、按需取用）在 [STRUCTURE](../../STRUCTURE.md)；always-on 鐵律在 [AGENTS.md](../../../AGENTS.md)。
 
