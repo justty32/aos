@@ -48,4 +48,4 @@ stack 樹就是呼叫樹：工具的小格在 `.stack/tools/<登記名>/`，工�
 
 被叫的沒給工作區就沿用呼叫方的 `AOS_WS`，要另放才明給 `--ws`（使用者「移除P-32」）。
 
-**時鐘**只放在**根** daemon——根的 daemon.json `procs` 帶一列跑 `aos-clock` 的普通 proc（範本名 `_clock`）＋根定義資料夾 `.env` 一行 `AOS_CLOCK=${AOS_STACK}/clock`；`kernel/*` 等子 daemon 範本預設不帶，照繼承聽外層的鐘，有特殊需求的由人手動加。aos-daemon 程式不認時鐘、沒有 `clock` key。使用者 11-09「預設聽外層。然後開clock這個選項，daemon設定檔預設是不開。大家也通常只在root daemon才開，除非有特殊需求。」（[thinking clock-decouple](../../../thinking/2026-11/09/clock-decouple/README.md)；寫法見 [aos-daemon docs/02](../../../impls/aos-daemon/docs/02-看寫法決定怎麼起.md#時鐘普通一列)）。
+**時鐘**只放在**根** daemon——根的 daemon.json `procs` 帶一列跑 `aos-clock` 的普通 proc（範本名 `_clock`）＋根定義資料夾 `.env` 一行 `AOS_CLOCK=${AOS_STACK}/clock`；`kernel/*` 等子 daemon 範本預設不帶，照繼承聽外層的鐘，有特殊需求的由人手動加。aos-daemon 程式不認時鐘、沒有 `clock` key。使用者 11-09「預設聽外層。然後開clock這個選項，daemon設定檔預設是不開。大家也通常只在root daemon才開，除非有特殊需求。」（[thinking clock-decouple](../../../thinking/2026-11/09/clock-decouple/README.md)；寫法見 [aos-daemon docs/02](../../../cpp/aos-daemon/docs/02-看寫法決定怎麼起.md#時鐘普通一列)）。

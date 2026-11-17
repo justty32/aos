@@ -2,7 +2,7 @@
 
 ## inst
 
-實作：[inst](../../../impls/aos-inst/README.md)：C lib、不提供命令列，單子由 aos-exec 行程內跑（[ideas § 20](../../../thinking/2026-10/19/ideas/README.md)）。C-36 的層層遞進從 inst 起，條文放在下面 loop 與 daemon。
+實作：[inst](../../../cpp/aos-inst/README.md)：C lib、不提供命令列，單子由 aos-exec 行程內跑（[ideas § 20](../../../thinking/2026-10/19/ideas/README.md)）。C-36 的層層遞進從 inst 起，條文放在下面 loop 與 daemon。
 
 - **C-08** 計算任務＝一個 POSIX 行程，不是 thread；不必再往下分種類。（2.7）
 - **C-34** 求值＝放開讓它算、過一段時間看狀態變化的結果；求值的定義就是空間狀態的變化。對資料夾求值＝執行這個資料夾；求值還回來的是一個正在變動的資料夾，不是一個值。（3h、3f.1、3f.3）
@@ -10,7 +10,7 @@
 
 ## loop 與 daemon
 
-實作：loop＝[aos-loop](../../../impls/aos-loop/README.md)；daemon＝[aos-daemon](../../../impls/aos-daemon/README.md)。
+實作：loop＝[aos-loop](../../../cpp/aos-loop/README.md)；daemon＝[aos-daemon](../../../cpp/aos-daemon/README.md)。
 
 > **daemon 兩義**：①[C-04](../01-設計理念/01-C-01～C-48.md) 說的 daemon＝aos 與 Linux 之間的借階層（Linux 那邊的事全在這層）；②這裡的 daemon＝管一群 loop 的程式（`aos-daemon`，C-36）。[名詞表](../附錄1-名詞.md)兩列都留。
 
@@ -35,7 +35,7 @@ C-36 的落實：inst＝單子＝入口的一種、由 aos-exec 行程內跑（�
 
 ## fsm
 
-使用者 10-15：「把 fsm 也跟 tasks 放一起」——fsm 是組合子、同為 stdlib 地位；[agent](../05-agent.md) 是用 fsm 組出來的（一個定義資料夾，C-50）。規範：[NORMS 組合子 § fsm](../../NORMS/07-基礎設施-組合子/01-N-20～N-36.md#fsm)（N-20、N-36、N-38、N-39、N-41）；慣例：[CONVENTION](../../CONVENTION.md) P-07～P-10；實作：[aos-fsm](../../../impls/aos-fsm/README.md)。
+使用者 10-15：「把 fsm 也跟 tasks 放一起」——fsm 是組合子、同為 stdlib 地位；[agent](../05-agent.md) 是用 fsm 組出來的（一個定義資料夾，C-50）。規範：[NORMS 組合子 § fsm](../../NORMS/07-基礎設施-組合子/01-N-20～N-36.md#fsm)（N-20、N-36、N-38、N-39、N-41）；慣例：[CONVENTION](../../CONVENTION.md) P-07～P-10；實作：[aos-fsm](../../../cpp/aos-fsm/README.md)。
 
 - **C-18** agent 是狀態機、是函式、也是計算任務；直接接進核心，不特別處理。（2.13、2.14）〔這裡的「核心」是 aos 作業系統核心（[名詞表](../附錄1-名詞.md)「核心」列）；C-74 分層裡的「核心」指 aos-exec，同詞兩義（使用者 11-17 選項框「改回「核心」」；待裁網頁 條文-1a 選 B）〕
 - **C-25** 大操作（問模型、跑久的工具）丟到另一個資料夾讓另一個行程處理；agent 自己每次 eval 短促。（9/19）aos 的 agent 每次被叫只走一次、由外面的 loop 驅動（C-62、[N-53](../../NORMS/10-基礎設施-定義與工作區/06-N-50～N-53.md)；做法是 P-07 一次一格）。

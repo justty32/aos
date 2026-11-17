@@ -19,8 +19,8 @@
 - **cpp／py 改名與「Linux 標準安裝包」形狀（施工到一半）**：規劃與 15 題裁定在 [cpp-py-改名](../proto8/thinking/2026-11/17/cpp-py-改名.md)（施工單 `07`、裁定在 `08` 文末）；外部依賴 6 題裁定在 [外部依賴](../proto8/thinking/2026-11/17/外部依賴.md)（`06` 文末）。
   - **做完 S1、S2**（`2ba0546f6`）：`impls`→`cpp`；一份頂層 `cpp/Makefile`；nlohmann `json.hpp` 收進 `cpp/third_party/nlohmann/`；CMake 與 vcpkg 檔全刪；`proto8/install.py`（編 C++、成品進 `proto8/bin/`、`proto8/include/`，兩夾不進 git）；`env.sh` 把 `$AOS_HOME/bin` 放上 PATH。**新流程：clone → `python3 proto8/install.py` → `source proto8/env.sh`。** 驗證是施工線在 WSL 快照跑的（全部測試不比基準紅、假腦起樹走通），頂層沒重跑、家機沒驗。
   - **還沒做 S3～S7**：`lib`→`py` 換手（現在 `lib/` 仍是原始碼、還沒有 `py/`，`cmd/*/bin` 的 Python 入口也還沒進 `bin/`）、樹裡 `env.sh` 轉去 `source "$AOS_HOME/env.sh"`（L-7 C）、起手範本（L-10 A）等。施工線的分步紀錄在公司 WSL `~/.aos/scratch/build-1117/groups.md`（repo 外）。
-  - **傍晚補問四題已答**（逐字在 [08-要裁的題](../proto8/thinking/2026-11/17/cpp-py-改名/08-要裁的題.md) 文末）：code map 依賴表變空「先放著」；`docs/zh/*.html` 舊安裝法「先不動」；公司機 `proto8/cpp/*/{bin,build,lib}` 舊編譯產物已刪；`install.py`「完全不管」前端。還沒問：aos-teams/06 硬規則第 5、6 條還寫 `cmake --build`。
-  - **已知斷的**：`proto8/docs` 條文裡指向 `../impls/` 的連結沒改（條文先放著）。
+  - **傍晚補問四題已答**（逐字在 [08-要裁的題](../proto8/thinking/2026-11/17/cpp-py-改名/08-要裁的題.md) 文末）：code map 依賴表變空「先放著」；`docs/zh/*.html` 舊安裝法「先不動」；公司機 `proto8/cpp/*/{bin,build,lib}` 舊編譯產物已刪；`install.py`「完全不管」前端。下班前再問兩題也已答、已做：條文裡 `impls/` 的路徑只改路徑成 `cpp`；aos-teams/06 硬規則第 5、6 條的指令換成 `install.py`。
+  - **條文裡還留著的**：句子裡單獨的「impls」字樣沒動（條文先放著）。
 - **aos-view → aos-frontend**（`5c951ee8e`）：改名、整夾搬到 `proto8/frontend/`，是選配的網頁外掛；舊前端 `web/`、`ui/v1/` 已刪（`934c7482e`）。`AOS_VIEW_HOME`、`~/.aos/view` 沒改名；`API.md` 還講 v1；使用者說之後會整個大修。小助手 hook 的新路徑沒被測試跑到。
 - **今天其他做完的**：八夾、路徑規則、重建樹的[步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)（**還寫舊流程，沒有 `install.py` 那步，重建前要對一下**）、條文 33 題落完（使用者：「條文這東西以後我會大修，現在不用這麼急」）、wf 整理（規矩卡 `wf/workflows/common/rules-card.md`）。使用者答的題全文：[待裁網頁-答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)。
 - **在跑的線**：沒有。

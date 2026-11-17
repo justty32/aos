@@ -22,7 +22,7 @@
    "image": "看情況：定義＝原始碼、不算 image（C-79）；定義放在 ws 裡就跟 ws 走",
    "on_bad": "JSON 壞、型別錯＝CfgBad 退 1；不認得或舊的 key（loops、tick、clock）安靜忽略；aos-daemon-ctl 讀不到就用預設窗名",
    "note": "11-09 起 clock key 也拿掉了，留著寫＝安靜沒鐘",
-   "evidence": "proto8/impls/aos-daemon/src/main.cpp（main）、proto8/impls/aos-daemon/src/daemon/daemon.cpp（Daemon::Daemon）、proto8/py/daemon_ctl/table.py（mailbox_warning）、proto8/py/daemon_ctl/poke.py（read_state）"
+   "evidence": "proto8/cpp/aos-daemon/src/main.cpp（main）、proto8/cpp/aos-daemon/src/daemon/daemon.cpp（Daemon::Daemon）、proto8/py/daemon_ctl/table.py（mailbox_warning）、proto8/py/daemon_ctl/poke.py（read_state）"
   },
   {
    "path": "<定義資料夾>/loop.json",
@@ -32,7 +32,7 @@
    "image": "看情況：定義＝原始碼、不算 image（C-79）；定義放在 ws 裡就跟 ws 走",
    "on_bad": "不是物件、exec 形狀錯＝CfgBad 退 1；不認得的 key 忽略（stuck_after_ticks 這種舊名＝用預設）",
    "note": "11-11 clock-hook 加選填 on_start、on_stop（寫法同 exec，起來、要退時各跑一次）與 on_timeout_ms（非負整數，0＝不限，預設 5000；壞＝CfgBad）；agent 範本兩格指到 lib/agent/hook_fire。加法、不用重建",
-   "evidence": "proto8/impls/aos-loop/src/engine/config.cpp（parse_target、Loop::Loop）"
+   "evidence": "proto8/cpp/aos-loop/src/engine/config.cpp（parse_target、Loop::Loop）"
   },
   {
    "path": "<定義資料夾>/fsm.json",
@@ -42,7 +42,7 @@
    "image": "看情況：定義＝原始碼、不算 image（C-79）；定義放在 ws 裡就跟 ws 走",
    "on_bad": "形狀不對＝CfgBad 退 1；格裡其他 key 忽略",
    "note": "",
-   "evidence": "proto8/impls/aos-fsm/src/table/table.cpp（read_table）、proto8/impls/aos-fsm/src/table/table.hpp"
+   "evidence": "proto8/cpp/aos-fsm/src/table/table.cpp（read_table）、proto8/cpp/aos-fsm/src/table/table.hpp"
   },
   {
    "path": "<定義資料夾>/_entry",
@@ -52,7 +52,7 @@
    "image": "看情況：定義＝原始碼、不算 image（C-79）；定義放在 ws 裡就跟 ws 走",
    "on_bad": "讀不了、不是 JSON、不是單子／argv／路徑＝EntryBad 退 1；單子裡不認得的 key 忽略（01 #4：timeout_ticks 被忽略＝沒逾時）",
    "note": "程式只認 _entry（不帶 .json）；_entry.json 只出現在 lib/base/ls、stat 的標記清單",
-   "evidence": "proto8/impls/aos-exec/src/find/find.cpp（entry_name）、proto8/impls/aos-exec/src/find/classify.cpp（read_doc）、proto8/lib/file_summary.py（AOS_MARKS）"
+   "evidence": "proto8/cpp/aos-exec/src/find/find.cpp（entry_name）、proto8/cpp/aos-exec/src/find/classify.cpp（read_doc）、proto8/lib/file_summary.py（AOS_MARKS）"
   },
   {
    "path": "<定義資料夾>/.env",
@@ -62,7 +62,7 @@
    "image": "看情況：定義＝原始碼不算 image；根的 .env（AOS_CLOCK 那行）屬 root 例外，搬家照食譜重建（N-67 ⑤）",
    "on_bad": "讀不了或不是 UTF-8＝DotenvBad 退 1；不在＝沒有",
    "note": "11-09 起根 .env 給 AOS_CLOCK=${AOS_STACK}/clock",
-   "evidence": "proto8/impls/aos-exec/src/env/dotenv.cpp（load_env）"
+   "evidence": "proto8/cpp/aos-exec/src/env/dotenv.cpp（load_env）"
   },
   {
    "path": "<kernel 定義>/kernel.json",
@@ -72,7 +72,7 @@
    "image": "看情況：定義＝原始碼、不算 image（C-79）",
    "on_bad": "形狀錯＝CfgBad；kernel 是 daemon 的身體，失敗＝daemon 印 warning 下一圈再跑；舊名（aging_ticks）安靜忽略",
    "note": "",
-   "evidence": "proto8/lib/aos/kernel_llm/packs.py（read_cfg）、proto8/lib/aos/kernel_llm/_entry（load）、proto8/impls/aos-daemon/src/daemon/body.cpp（Daemon::run_body）"
+   "evidence": "proto8/lib/aos/kernel_llm/packs.py（read_cfg）、proto8/lib/aos/kernel_llm/_entry（load）、proto8/cpp/aos-daemon/src/daemon/body.cpp（Daemon::run_body）"
   },
   {
    "path": "<框架站定義>/kernel.json",
@@ -172,7 +172,7 @@
    "image": "進",
    "on_bad": "daemon：不在＝第一次安靜；整份壞＝改名 .bad-<時間>＋warning＋照定義開空表；壞幾列＝複製留證、跳過那列；原因進 state_flux adopt_warning。ctl 讀壞＝StateBad",
    "note": "11-09 必修 1 已改；分檔夾名＝主檔名去副檔名＋_procs；11-10 列多選填 as_written（ctl add 經信箱加的列裡 ws／stack／exec／def 的指示詞原形，每次起照當下環境重解；原本的欄照舊放解好的字串；加法，舊表照讀，不用重建；11-10 前加的列要 rm 再 add 才有原形）；11-10 晚 B01 後半：as_written 也可放使用者打成絕對路徑的 ws／stack／def／exec（字串，表上原樣存、不換算），加法、不用重建",
-   "evidence": "proto8/impls/aos-daemon/src/daemon/adopt.cpp（Daemon::adopt、Daemon::adopt_warn、Daemon::adopt_bad）、proto8/impls/aos-daemon/src/daemon/daemon.cpp（Daemon::Daemon）、proto8/py/daemon_ctl/table.py（state）、proto8/lib/aos/kernel_llm/llm_rules.py（find_host）、proto8/lib/aos/kernel/runner.py（read_table）、proto8/impls/aos-daemon/src/daemon/procs.cpp（written_of）、proto8/impls/aos-daemon/src/daemon/reconcile.cpp（refresh）"
+   "evidence": "proto8/cpp/aos-daemon/src/daemon/adopt.cpp（Daemon::adopt、Daemon::adopt_warn、Daemon::adopt_bad）、proto8/cpp/aos-daemon/src/daemon/daemon.cpp（Daemon::Daemon）、proto8/py/daemon_ctl/table.py（state）、proto8/lib/aos/kernel_llm/llm_rules.py（find_host）、proto8/lib/aos/kernel/runner.py（read_table）、proto8/cpp/aos-daemon/src/daemon/procs.cpp（written_of）、proto8/cpp/aos-daemon/src/daemon/reconcile.cpp（refresh）"
   },
   {
    "path": "$AOS_STACK/procs_ctl.json",
@@ -182,7 +182,7 @@
    "image": "進",
    "on_bad": "壞＝整份不採用、原因進 state_flux procs_ctl_warning；不在＝不動（照上一份好的）",
    "note": "程式沒人寫它（程式改名單走 procs_requests 的信）",
-   "evidence": "proto8/impls/aos-daemon/src/daemon/windows.cpp（Daemon::read_procs_ctl）"
+   "evidence": "proto8/cpp/aos-daemon/src/daemon/windows.cpp（Daemon::read_procs_ctl）"
   },
   {
    "path": "$AOS_STACK/state.json",
@@ -192,7 +192,7 @@
    "image": "進",
    "on_bad": "aos-loop 起來讀不了＝改名 .bad-*＋warning、從頭開始（11-09 S3，N-09「state／state_flux 讀不了要說話」）；其他讀者 read_window 提醒一次當沒有；poke＝StateBad",
    "note": "讀回的寫法在 window.cpp read_old_window（11-09 S3）",
-   "evidence": "proto8/impls/aos-loop/src/engine/window.cpp（read_old_window、Loop::read_old_state）、proto8/impls/aos-daemon/src/daemon/adopt.cpp（cell_state）、proto8/py/daemon_ctl/poke.py（read_state）、proto8/impls/aos-llm/src/send/send.cpp（idle_reason）"
+   "evidence": "proto8/cpp/aos-loop/src/engine/window.cpp（read_old_window、Loop::read_old_state）、proto8/cpp/aos-daemon/src/daemon/adopt.cpp（cell_state）、proto8/py/daemon_ctl/poke.py（read_state）、proto8/cpp/aos-llm/src/send/send.cpp（idle_reason）"
   },
   {
    "path": "$AOS_STACK/state_flux.json",
@@ -202,7 +202,7 @@
    "image": "進",
    "on_bad": "aos-loop 起來讀不了＝改名 .bad-*＋warning（11-09 S3，N-09「state／state_flux 讀不了要說話」）；daemon 判卡住讀不到＝不判；其他讀者提醒一次當沒有",
    "note": "11-09 拆分前的 stack 沒有這份＝01 #6b 舊 stop 重做",
-   "evidence": "proto8/impls/aos-loop/src/engine/window.cpp（Loop::read_old_state）、proto8/impls/aos-daemon/src/daemon/stuck.cpp（Daemon::check_stuck）、proto8/py/daemon_ctl/ctl.py（wait_applied）、proto8/lib/aos/kernel/runner.py（read_table）"
+   "evidence": "proto8/cpp/aos-loop/src/engine/window.cpp（Loop::read_old_state）、proto8/cpp/aos-daemon/src/daemon/stuck.cpp（Daemon::check_stuck）、proto8/py/daemon_ctl/ctl.py（wait_applied）、proto8/lib/aos/kernel/runner.py（read_table）"
   },
   {
    "path": "$AOS_STACK/ctl.json",
@@ -212,7 +212,7 @@
    "image": "進",
    "on_bad": "壞＝不採用、原因進 state_flux ctl_warning；不在＝沒新指令；舊形 {stopped:true} 沒 cmd＝安靜照跑（01 #5）",
    "note": "",
-   "evidence": "proto8/impls/aos-loop/src/engine/window.cpp（Loop::read_ctl）、proto8/py/daemon_ctl/ctl.py（write_ctl、put_ctl）、proto8/impls/aos-daemon/src/daemon/tend.cpp（Daemon::halt）"
+   "evidence": "proto8/cpp/aos-loop/src/engine/window.cpp（Loop::read_ctl）、proto8/py/daemon_ctl/ctl.py（write_ctl、put_ctl）、proto8/cpp/aos-daemon/src/daemon/tend.cpp（Daemon::halt）"
   },
   {
    "path": "$AOS_STACK/procs/<名>/（小格：loop.json、exec.json）",
@@ -222,7 +222,7 @@
    "image": "進",
    "on_bad": "daemon 讀不到窗名＝用預設名、或不判卡住；起時重寫所以壞了下次起就好",
    "note": "小格本身是子項的 stack，裡面還有子項自己的持久檔",
-   "evidence": "proto8/impls/aos-daemon/src/child/child.cpp（spawn、ctl_name）、proto8/impls/aos-daemon/src/daemon/stuck.cpp（Daemon::check_stuck）"
+   "evidence": "proto8/cpp/aos-daemon/src/child/child.cpp（spawn、ctl_name）、proto8/cpp/aos-daemon/src/daemon/stuck.cpp（Daemon::check_stuck）"
   },
   {
    "path": "<根 daemon stack>/clock（$AOS_CLOCK 指的時鐘檔）",
@@ -232,7 +232,7 @@
    "image": "進",
    "on_bad": "不在＝warning 一次、當 0；壞＝ClockBad（aos-clock 也 ClockBad 不動檔）",
    "note": "image 醒來從這裡接著數",
-   "evidence": "proto8/impls/aos-util/src/clock.cpp（warn_missing_clock、now_cycle）、proto8/cmd/aos-clock/bin/aos-clock（main）"
+   "evidence": "proto8/cpp/aos-util/src/clock.cpp（warn_missing_clock、now_cycle）、proto8/cmd/aos-clock/bin/aos-clock（main）"
   },
   {
    "path": "<根 daemon stack>/clock_register.json（時鐘檔旁的 <時鐘檔名>_register.json）",
@@ -252,7 +252,7 @@
    "image": "進",
    "on_bad": "不在或空＝從 start；讀不了、不是 UTF-8＝StateBad；名字不在表上＝StateUnknown 退 1",
    "note": "",
-   "evidence": "proto8/impls/aos-fsm/src/state/state.cpp（read_state）、proto8/impls/aos-fsm/src/table/table.cpp（pick）"
+   "evidence": "proto8/cpp/aos-fsm/src/state/state.cpp（read_state）、proto8/cpp/aos-fsm/src/table/table.cpp（pick）"
   },
   {
    "path": "$AOS_STACK/history.jsonl",
@@ -282,7 +282,7 @@
    "image": "進",
    "on_bad": "壞信＝收掉：daemon 記 mailbox_warning，body 壞（含 ping／procs_state_path 不是 true）且有 reply_to 回 {\"applied\": false, \"error\": {\"code\": \"BodyBad\"}}（信封壞或沒 reply_to 不回）；idle 寫 mailbox_warning.txt；kernel 回 LetterBad",
    "note": "cur/ 殘骸 daemon 起來會重做。11-10 晚 mailbox：每個 stack（agent 的，或人的 ~/.aos/stack〔11-11 前是 ~/.stack〕、$AOS_LINUX_USER_STACK）多一個 mailbox/ 箱子，跟 queue/ 分開、信不進 history；用名字寄時替收件人建、用路徑寄時不建。新檔，不用重建。11-13 daemon 多認查詢信 {\"procs_state_path\": true}：回信多帶自己那份 procs_state.json 的絕對路徑（沒開窗＝null）；信的形狀是加法，不用重建",
-   "evidence": "proto8/impls/aos-post/src/send/send.cpp（send）、proto8/impls/aos-post/src/take/take.cpp（see）、proto8/impls/aos-daemon/src/daemon/mailbox.cpp（done_letters）、proto8/templates/agent-fsm/idle.py（body_of）、proto8/lib/aos/kernel_llm/llm_rules.py（check、post_reply）、proto8/cmd/aos-mailbox/aos_mailbox/__init__.py（my_stack、cmd_peek、target_box）"
+   "evidence": "proto8/cpp/aos-post/src/send/send.cpp（send）、proto8/cpp/aos-post/src/take/take.cpp（see）、proto8/cpp/aos-daemon/src/daemon/mailbox.cpp（done_letters）、proto8/templates/agent-fsm/idle.py（body_of）、proto8/lib/aos/kernel_llm/llm_rules.py（check、post_reply）、proto8/cmd/aos-mailbox/aos_mailbox/__init__.py（my_stack、cmd_peek、target_box）"
   },
   {
    "path": "<信箱>/archive/",
@@ -292,7 +292,7 @@
    "image": "進",
    "on_bad": "沒有程式讀",
    "note": "N-67 ⑩ 11-07 裁定歸檔跟 image 走。mailbox/archive/ 是讀完留著的信，peek 不列",
-   "evidence": "proto8/impls/aos-post/src/take/take.cpp（done）、proto8/impls/aos-post/src/mailbox/mailbox.cpp（Mailbox::archive）、proto8/cmd/aos-mailbox/aos_mailbox/__init__.py（cmd_read）"
+   "evidence": "proto8/cpp/aos-post/src/take/take.cpp（done）、proto8/cpp/aos-post/src/mailbox/mailbox.cpp（Mailbox::archive）、proto8/cmd/aos-mailbox/aos_mailbox/__init__.py（cmd_read）"
   },
   {
    "path": "<被鎖資料夾>/.lock/holder.json（＋holder.flock）",
@@ -302,7 +302,7 @@
    "image": "看情況：在 stack 是點開頭＝stack.gitignore 擋；在 ws 跟 ws 走",
    "on_bad": "aos-lock：解不開＝鎖資料夾過 STALE_MS 才收",
    "note": "正常放鎖就刪；當機才留。N-67 ④ 鎖不是真相。",
-   "evidence": "proto8/impls/aos-lock/src/holder/holder.cpp（look、reapable）"
+   "evidence": "proto8/cpp/aos-lock/src/holder/holder.cpp（look、reapable）"
   },
   {
    "path": "<kernel stack>/used.json",
@@ -422,7 +422,7 @@
    "image": "不進（stack.gitignore 的 **/*.bad-* 擋；11-09 使用者裁）",
    "on_bad": "沒有程式讀",
    "note": "不自動清（11-09 使用者裁：擋掉，不自動清）；只留原機",
-   "evidence": "proto8/impls/aos-util/src/files.cpp（keep_bad）、proto8/impls/aos-daemon/src/daemon/adopt.cpp（Daemon::adopt_bad）、proto8/impls/aos-loop/src/engine/window.cpp（read_old_window）"
+   "evidence": "proto8/cpp/aos-util/src/files.cpp（keep_bad）、proto8/cpp/aos-daemon/src/daemon/adopt.cpp（Daemon::adopt_bad）、proto8/cpp/aos-loop/src/engine/window.cpp（read_old_window）"
   },
   {
    "path": "$AOS_STACK/procs/<名>/stderr.txt",
@@ -432,7 +432,7 @@
    "image": "不進",
    "on_bad": "讀不到＝原因空",
    "note": "⑩ 11-07 裁定只留原機",
-   "evidence": "proto8/impls/aos-daemon/src/child/child.hpp（CellNames）、proto8/impls/aos-daemon/src/daemon/failure.cpp（Daemon::fail_reason）、proto8/lib/aos/kernel_llm/llm_rules.py（outcome）"
+   "evidence": "proto8/cpp/aos-daemon/src/child/child.hpp（CellNames）、proto8/cpp/aos-daemon/src/daemon/failure.cpp（Daemon::fail_reason）、proto8/lib/aos/kernel_llm/llm_rules.py（outcome）"
   },
   {
    "path": "<proc 的 stack>/stderr_archives/<UTC>.txt.gz",
@@ -482,7 +482,7 @@
    "image": "不進",
    "on_bad": "當機留下的沒人清，也沒人讀",
    "note": "stack.gitignore 的 **/.* 擋",
-   "evidence": "proto8/impls/aos-loop/src/engine/window.cpp（write_window）、proto8/cmd/aos-clock/bin/aos-clock（main）、proto8/impls/aos-lock/src/lock/lock.cpp（write_holder）、proto8/py/daemon_ctl/ctl.py（put_ctl）、proto8/py/aos_clock_register.py（save）"
+   "evidence": "proto8/cpp/aos-loop/src/engine/window.cpp（write_window）、proto8/cmd/aos-clock/bin/aos-clock（main）、proto8/cpp/aos-lock/src/lock/lock.cpp（write_holder）、proto8/py/daemon_ctl/ctl.py（put_ctl）、proto8/py/aos_clock_register.py（save）"
   },
   {
    "path": "$AOS_STACK/counter_runs.txt、<kernel stack>/counter_kernel_runs.txt",
@@ -492,7 +492,7 @@
    "image": "不進",
    "on_bad": "沒有程式讀",
    "note": "",
-   "evidence": "proto8/impls/aos-loop/src/engine/window.cpp（Loop::write_counter）、proto8/lib/aos/kernel_llm/llm_rules.py（count_run）"
+   "evidence": "proto8/cpp/aos-loop/src/engine/window.cpp（Loop::write_counter）、proto8/lib/aos/kernel_llm/llm_rules.py（count_run）"
   },
   {
    "path": "$AOS_STACK/think/request.json",
@@ -522,7 +522,7 @@
    "image": "不進",
    "on_bad": "醒來重寫",
    "note": "",
-   "evidence": "proto8/lib/aos/kernel_llm/packs.py（write_window）、proto8/impls/aos-llm/src/ls/ls.cpp（ls_window）"
+   "evidence": "proto8/lib/aos/kernel_llm/packs.py（write_window）、proto8/cpp/aos-llm/src/ls/ls.cpp（ls_window）"
   },
   {
    "path": "<eca 小格>/live.jsonl、turns.jsonl、transcripts/、busy.txt；$AOS_STACK/mailbox_warning.txt；aos-mcp-logs.jsonl",
