@@ -12,16 +12,17 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-11-17 下午 公司 Windows 機（收工前）
+## 2026-11-17 收工 公司 Windows 機
 
-- **授權與做法**：頂層只當調度者；普通工作 opus、雜活 sonnet、規劃 fable；各線不 commit，頂層分件交。要使用者裁的一律跳選項（「有需要我裁，都跳選項」）；題多就做成桌面網頁。push 要先問（使用者「我今天五點下班，下班前再統一push」）。這台改檔在 Windows repo，測試在 WSL 暫存複本；生成器用 `wsl` 在 `/mnt/c/...` 跑 `python3 wf/tools/index_gen.py --apply`。
-- **今天做完的大事**（都已 commit）：
-  - proto8 頂層收成八夾 `impls cmd lib templates knowledge docs thinking archive`＋`README.md`、`env.sh`（`ad98142b2`、`3976babff`）；路徑規則一「只認一個家」：全靠 `AOS_HOME`，`source proto8/env.sh`；`py` 併進 `lib`、`kernel` 進 `templates/kernel`、`extras` 解散、aos-view 進 `cmd`。
-  - 重建樹的步驟單：[重建步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)（暫存樹用假腦實跑過第 1～12 步）。使用者要自己重建 `~/aos-home`。
-  - 條文：三份入口純條文、分檔拆到約 8 KB、33 題裁定落完（`bb06c0607`、`94f173920`、`cf19fc43f`）。使用者：「條文這東西以後我會大修，現在不用這麼急」——新冒出的 17 題、N-63 `AOS_HOME` 那格、條文裡 `py/`／`kernel/` 舊路徑字樣都先放著。
-  - wf 整理：坑併進 `wf/public`、規矩卡 `wf/workflows/common/rules-card.md`（被派的 agent 改讀它）、每日日誌停寫凍結、新報告寫 thinking、死入口與三個 archive 夾已刪、`wf/INDEX*` 已刪。
-  - 程式小件：aide-def 只放差異、dist 不進 git、BookOld 拿掉、hook 收進 tool_io、`llm.hpp` 改名等（`164a9664b`～`402149650`）。
-  - 使用者答的題全文：[待裁網頁-答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)。
-- **在跑的線**：`viewbin-1117`（aos-view 執行檔搬進 `cmd/aos-view/bin/`，使用者選「搬進 bin/」）。回來後核對、交、重跑生成器。
-- **桌面成品（repo 外）**：`aos-待裁-1117.html`（已答完）、`aos-全景-1117\index.html`（aos 全景，使用者要的「兩者的架構」＝他的七塊對現在八夾；做的線沒親眼看過畫面）。
-- **還沒做**：`wf/WAIT_USER.md`＋`wait-user/` 退場（剩的條目要寄進專區）；進度檔轉 `wf/progress.json`（今天不轉）；`common/gotchas.md` 的兩行指標頁等 `dev-env.md` 第 56 行改連結後收；沙箱只唯讀綁 `<家>/lib`（規劃是整個家）；`install.sh` 的舊 `.pth` 提醒、兩支 helper 的 `read_json` 要不要收；aos-teams/06 硬規則第 5 條被小工改成「要編 C++ 先回報調度者」待使用者確認；wf 裡幾處還寫 `~/aos-home/knowledge`；公司 WSL 的 `~/repo/aos` 還停在早上的版本、`~/aos-home` 停著等重建。
+- **授權與做法**：頂層只當調度者；普通工作 opus、雜活 sonnet、規劃 fable；各線不 commit，頂層分件交。要使用者裁的一律跳選項（「有需要我裁，都跳選項」）；題多就做成桌面網頁。push 要先問。這台改檔在 Windows repo，測試在 WSL 暫存複本；生成器用 `wsl` 在 `/mnt/c/...` 跑 `python3 wf/tools/index_gen.py --apply`。每日日誌停寫。
+- **proto8 現在的樣子**：頂層 `cpp cmd lib templates knowledge docs thinking archive frontend`＋`README.md`、`env.sh`、`install.py`。路徑規則一「只認一個家」：全靠 `AOS_HOME`，`source proto8/env.sh`。
+- **cpp／py 改名與「Linux 標準安裝包」形狀（施工到一半）**：規劃與 15 題裁定在 [cpp-py-改名](../proto8/thinking/2026-11/17/cpp-py-改名.md)（施工單 `07`、裁定在 `08` 文末）；外部依賴 6 題裁定在 [外部依賴](../proto8/thinking/2026-11/17/外部依賴.md)（`06` 文末）。
+  - **做完 S1、S2**（`2ba0546f6`）：`impls`→`cpp`；一份頂層 `cpp/Makefile`；nlohmann `json.hpp` 收進 `cpp/third_party/nlohmann/`；CMake 與 vcpkg 檔全刪；`proto8/install.py`（編 C++、成品進 `proto8/bin/`、`proto8/include/`，兩夾不進 git）；`env.sh` 把 `$AOS_HOME/bin` 放上 PATH。**新流程：clone → `python3 proto8/install.py` → `source proto8/env.sh`。** 驗證是施工線在 WSL 快照跑的（全部測試不比基準紅、假腦起樹走通），頂層沒重跑、家機沒驗。
+  - **還沒做 S3～S7**：`lib`→`py` 換手（現在 `lib/` 仍是原始碼、還沒有 `py/`，`cmd/*/bin` 的 Python 入口也還沒進 `bin/`）、樹裡 `env.sh` 轉去 `source "$AOS_HOME/env.sh"`（L-7 C）、起手範本（L-10 A）等。施工線的分步紀錄在公司 WSL `~/.aos/scratch/build-1117/groups.md`（repo 外）。
+  - **要使用者裁的（施工線提的，還沒問）**：① code map 的專案依賴表變空了（生成器讀 CMakeLists）：讓生成器改讀 Makefile 的 `DEPS_*`，或不要這張表；② repo 根 `docs/zh/*.html` 還寫 cmake、vcpkg、`ImplsMissing`，改不改；③ aos-teams/06 硬規則第 5、6 條還寫 `cmake --build`；④ 公司 Windows repo 裡 `proto8/cpp/*/{bin,build,lib}` 舊編譯產物（git 已忽略）刪不刪；⑤ `install.py` 要不要順便建前端（要 Node）。
+  - **已知斷的**：`proto8/docs` 條文裡指向 `../impls/` 的連結沒改（條文先放著）。
+- **aos-view → aos-frontend**（`5c951ee8e`）：改名、整夾搬到 `proto8/frontend/`，是選配的網頁外掛；舊前端 `web/`、`ui/v1/` 已刪（`934c7482e`）。`AOS_VIEW_HOME`、`~/.aos/view` 沒改名；`API.md` 還講 v1；使用者說之後會整個大修。小助手 hook 的新路徑沒被測試跑到。
+- **今天其他做完的**：八夾、路徑規則、重建樹的[步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)（**還寫舊流程，沒有 `install.py` 那步，重建前要對一下**）、條文 33 題落完（使用者：「條文這東西以後我會大修，現在不用這麼急」）、wf 整理（規矩卡 `wf/workflows/common/rules-card.md`）。使用者答的題全文：[待裁網頁-答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)。
+- **在跑的線**：沒有。
+- **桌面成品（repo 外）**：`aos-待裁-1117.html`、`aos-待裁-1117-改名.html`（都已答完）、`aos-全景-1117\index.html`（畫的是改名前的八夾）。
+- **還沒做的舊尾巴**：`wf/WAIT_USER.md`＋`wait-user/` 退場；進度檔轉 `wf/progress.json`；`common/gotchas.md` 指標頁；沙箱只唯讀綁 `<家>/lib`；`install.sh` 的舊 `.pth` 提醒、兩支 helper 的 `read_json`；wf 裡幾處還寫 `~/aos-home/knowledge`；`aos-user` 不在 repo；公司 WSL 的 `~/repo/aos` 還停在早上的版本、`~/aos-home` 停著等重建。
