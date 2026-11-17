@@ -5,7 +5,7 @@ import time
 
 import aos_flags
 
-from .common import cli_ask, cli_base
+from .common import NAME, cli_ask, cli_base
 
 SCREEN_ONLY = {"/context": ("claude",)}
 SHELLS = {"bash", "zsh", "sh", "fish", "dash"}
@@ -88,7 +88,7 @@ def input_clear(cell):
 
 
 def typed_warning(command):
-    aos_flags.warn("aos-eca", "%s not typed into the open screen: its input box has text (or cannot be read); "
+    aos_flags.warn(NAME, "%s not typed into the open screen: its input box has text (or cannot be read); "
                    "the letter stays queued and is tried again next round" % command)
 
 

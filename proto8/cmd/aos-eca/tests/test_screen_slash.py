@@ -220,7 +220,9 @@ class InputBox(unittest.TestCase):
         self.assertIsNone(s.screen_slash("/context", {"kind": "claude"}, self.cell, str(self.root)))
         self.type_line.assert_not_called()
         self.assertFalse(any("send-keys" in c for c in self.cell.calls))   # nothing cleared
-        self.assertIn("input box has text", "".join(c.args[0] for c in self.err.write.call_args_list))
+        warned = "".join(c.args[0] for c in self.err.write.call_args_list)
+        self.assertIn("input box has text", warned)
+        self.assertTrue(warned.startswith("aos-eca-turn: warning: /context not typed"), warned)   # the program that runs it
         failed = SimpleNamespace(stdout="", returncode=1)
         with patch.object(self.cell, "tmux", side_effect=lambda *a: failed if "-e" in a else Cell.tmux(self.cell, *a)):
             self.assertFalse(s.input_clear(self.cell))
