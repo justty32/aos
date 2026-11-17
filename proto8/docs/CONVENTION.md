@@ -1,34 +1,45 @@
-# aos agent 慣例
+# aos agent 慣例（上）：保證的底、入口與 loop／fsm、題目與答案、stack——一條一兩句
 
-← [proto8](../README.md)｜原話與拍板：[thinking/ideas](../thinking/2026-10/19/ideas/README.md)｜跟 proto8 原則相撞的七條，使用者已全部裁定：[ideas § 9](../thinking/2026-10/19/ideas/README.md)｜proto8 原則：[CONCEPTS](CONCEPTS.md)、[NORMS](NORMS.md)｜程式：[impls](../impls/README.md)（C++ 是唯一實作；aos-clock 等 Python 工具在 [cmd](../cmd/README.md)）、[templates](../templates/README.md)
+← [proto8](../README.md)｜下半：[慣例（下）](CONVENTION/00-慣例-下.md)（停與錯、腦與工具、shell 版與 inst 版、巢狀、命令列、不管的）｜proto8 原則：[CONCEPTS](CONCEPTS.md)、[NORMS](NORMS.md)｜程式：[impls](../impls/README.md)、[templates](../templates/README.md)
 
-**aos 本身只保證六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`；§ 19）和一支 `aos-exec`**（使用者 § 4；已升成規範 [N-57～N-62](NORMS/10-基礎設施-定義與工作區.md)）。其餘全是慣例（P-05～P-48，P-46 空號）：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**標準＝[templates/agent-fsm](../templates/README.md#agent-fsm) 現在的樣子（走 queue；佈局見第二節、P-27），stack 裡面自由**（拍板點 1；拿 agent-fsm 當標準＝使用者 11-13「t2d-U1:A」，[裁定落地-1113](../thinking/2026-11/13/裁定落地-1113.md)）。
+**aos 本身只保證六個環境變數和一支 `aos-exec`（已升成規範 N-57～N-62），其餘全是慣例**：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂，不要求別人守。**標準＝[templates/agent-fsm](../templates/README.md#agent-fsm) 現在的樣子（走 queue），stack 裡面自由。** 這兩份只放條文本體；例子、細節、原話、出處在每組標題連的分檔（入口原有的前言、依據寫法、實作說明、命名原文在 [00-前言-命名-實作](CONVENTION/00-前言-命名-實作.md)）。條號不重編。
 
-每條後面括號是依據：§ 幾＝[ideas](../thinking/2026-10/19/ideas/README.md) 裡使用者原話的段號；拍板點 1～3＝ideas § 8；C-xx／N-xx＝proto8 的概念與規範；引不到的、這份自己定的，標「本稿定」。
+## 保證的底、佈局、命名
 
-> **實作**：只有 C++ 的 [impls](../impls/README.md)（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」）；fsm 也是 C++，時鐘 aos-clock 是 Python、在 [cmd](../cmd/README.md)。impls 提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 等命令列（loop／fsm 照 [ideas § 23](../thinking/2026-10/19/ideas/README.md)；全表見 impls README）；inst 是 C lib、沒有 `aos-inst` 命令列（§ 20；使用者 10-22「對於python版，aos-inst指令可以刪掉了，跟C++版一樣做成lib就好。」），單子交給 aos-exec 公開 API 的 `run_inst`。aos-exec 收旗標、讀入口資料夾的 `.env`（[N-58、N-59](NORMS/10-基礎設施-定義與工作區.md)，[ideas 10-21](../thinking/2026-10/21/ideas/02-4-aos-exec-支援-env.md#4-aos-exec-支援-env10-21)）。
+**[一、aos 保證的；二、佈局](CONVENTION/01-保證佈局入口/01-一-aos-保證的與二-佈局.md)**（[命名](CONVENTION/00-前言-命名-實作.md)）
+- **P-01～P-04** aos 保證的底（六個環境變數、`aos-exec` 命令列、它只做的那幾件事、退 1 的情形）已升成規範：P-01＝N-57、P-02＝N-58、P-03＝N-59、P-04＝N-60；找入口（N-61）、`#/`（N-62）沒有 P 號。條號只留給別處引用。
+- **佈局** 一個 agent＝一個定義資料夾：狀態表一律寫在 `fsm.json`，每格是一張單子、叫範本裡的一支程式；執行中的東西都在 stack（預設 `$AOS_WS/.stack/`：`stage.txt` 記 fsm 停在哪格、`queue/`、`history.jsonl`、`think/`、工具小格 `tools/<登記名>/`），stack 樹就是呼叫樹；fsm 不寫 trace。
+- **時鐘** 只放在根 daemon（daemon.json 的 `procs` 一列跑 `aos-clock`，根的 `.env` 設 `AOS_CLOCK`）；子 daemon 範本預設不帶、聽外層的鐘，aos-daemon 程式不認時鐘。
+- **命名** 要跑的東西一律叫 `exec`；時間點叫 `<發生了什麼>_at`，計數說「次」；純文字檔帶 `.txt`；指示詞的檔內位置寫在 `#` 右邊；入口預設名 `_entry`，不認得的 key 一律忽略，`_` 開頭沒有特別意思。
 
-**命名**（[thinking 2026-10-23-naming](../thinking/2026-10/23/naming.md)，使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」；條文裡的使用者原話不動）：
+## 入口、loop、fsm
 
-- loop.json 與 fsm 格要跑的東西都叫 `exec`（使用者：「fsm.json，現在是用val，幫我改成exec」；「exec，loop／daemon 的 run 也一起改 exec」）。
-- fsm 不寫 trace（使用者 11-03「整個拿掉」，[thinking 11-03 trace](../thinking/2026-11/03/trace.md)，N-39）。時間點＝C-54 命名方法 R6「時間點＝`<發生了什麼>_at`」（使用者 10-25「state.json中，runs改counter，at改成recorded_at」，回頂層兩題「都好」，頂層代定、可翻案）；其他 JSON 的命名見 [NORMS.md](NORMS.md)。
-- 指示詞的檔內位置寫在 `#` 右邊（`#/`、`#./`、`#../`）。計數說「次」（使用者「我們都是說"次"」）。
-- 純文字檔帶 `.txt`（fsm 的 `stage.txt`、daemon 小格的 `stderr.txt`、agent-fsm 的 `system.txt`／`think/pending.txt`／`mailbox_warning.txt`）；`AOS_STACK` 預設 `$AOS_WS/.stack/`；agent 的輸入是 `$AOS_STACK/queue/`（P-11、P-42）。
-- 入口預設名 `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者「改。然後_開頭=附註這個概念刪掉。」，原話裡的 `_exec` 照留）；不認得的 key 一律忽略（「不認得的key就是忽略」，C-48），`_` 開頭沒有特別意思。
+**[三、入口、loop、fsm](CONVENTION/01-保證佈局入口/02-三-入口-loop-fsm.md)**
+- **P-05** 標準範本的入口 `_entry` 是沒 `+x` 的 JSON 單子，叫 `aos-agent ctl add <這個資料夾>`（cwd＝`AOS_WS`）：`aos-exec` 這個資料夾＝把這隻掛上 daemon、掛好就回來；身體的入口是 `body.json`＝`["aos-loop", "loop.json"]`。JSON 入口不寫 shebang、不設 `+x`；也可以把入口寫成帶 shebang 的可執行檔，不經 daemon、直接 `exec aos-loop loop.json`。
+- **P-06** `loop.json` 認八個 key：`exec`、`max`（沒寫＝不限）、`interval_ms`、`ctl`／`state`／`state_flux`（三個窗的檔名，沒寫有預設名、`null`＝不開）、`on_start`、`on_stop`；其他 key loop 不看、給 aos-exec 用。`exec` 三種寫法：字串＝aos-exec 的目標、陣列＝目標加參數、單子物件＝在自己行程內跑；loop 看每次的結束碼決定下一步。
+- **P-07** fsm 一次只跑一格：讀 `$AOS_STACK/stage.txt`（沒有＝`start`）跑那格，0 才寫下一個狀態、退 0，非 0 就不換狀態、以原碼退。標準＝`aos-fsm fsm.json`，表長 `{"start","states":{名:{"exec","next"}}}`，`exec` 同 P-06 三種，不寫 trace；shell 版 fsm 用同一個 `stage.txt`、可互換。
+- **P-08** 標準四格 `idle → think → wait → act`（act 執行工具後回 think、交答案後回 idle）；加狀態＝`fsm.json` 加一格，表一定明寫。`idle` 是起點也是終點；叫工具還是交答案由腦決定、act 照做，不另加格；`wait` 是為了非同步收腦的回信。
+- **P-09** 每一格是一個資料夾程式或一張單子（字串 `exec` 經 aos-exec 跑，單子物件由 fsm 行程內跑）；fsm 只看格的結束碼，不讀格的 stderr、不管格裡面怎麼做。
+- **P-10** 格之間要傳的東西寫成 stack 裡的檔，不走 stdout。
+- **入口檔不在資料夾頂層**：一律 cd 到入口檔（解開捷徑後）所在的資料夾＝`AOS_CD`（照預設定，[十一](CONVENTION/05-不管落實待決.md)）。
 
-**腦的工具呼叫**＝**P-41**（第七節；[thinking 2026-10-23-tool-calls](../thinking/2026-10/23/tool-calls/README.md)，使用者「litellm我開了，去做吧。」「盡量都用gpt的」）：工具資料夾裡的 `_tooldef.json`（清單由 agent 資料夾的 `tools.json` 登記，[aos-tools](../cmd/README.md)）給模型看、`arguments` 從 stdin 進、stdout 出、對話落在 `$AOS_STACK/history.jsonl`、四格 idle → think → wait → act、錯怎麼報都寫在 P-41。
+## 題目與答案
 
-## 分檔
+**[四、題目與答案](CONVENTION/02-題目stack停錯腦/01-P-11～P-14.md)**
+- **P-11** aos agent 的輸入是 queue：`$AOS_STACK/queue/`，有順序的信箱，一封信＝一則 OpenAI message；接進 `history.jsonl` 那刻就把信收掉。回答就是 history 裡的 assistant（回哪封信看它的 `aos.answer_to`），檔案成品落在工作區，沒有別的回答通道。
+- **P-12** 一次收一批（queue 裡現有的全部、照順序），答完才收下一批；`cur/` 裡認領了還沒接進 history 的先接，思考中來的信等回 idle 再收。外部 coding agent 例外：信交給 CLI 就算完成、當場收，中途掛掉不自動重答。
+- **P-13** 要附檔就放信資料夾的其他檔；標準範本只讀 `body`、不讀附檔，要給它檔案就放工作區、在信裡寫路徑。
+- **P-14** agent 自己的各格只寫 `$AOS_STACK`；腦經工具動哪些檔由掛了哪些工具決定（範本預設四包全開，想收緊自己從 `tools.json` 拿掉）。queue 要留紀錄的信進 `archive/`、只進不出，清理是人的事。
 
-<!-- wf-nav -->
-| 分檔 | 涵蓋的段 |
-|---|---|
-| [01-保證佈局入口.md](CONVENTION/01-保證佈局入口.md) | 一、aos 保證的（不是慣例，是底）；二、佈局（每檔一句）；三、入口、loop、fsm |
-| [02-題目stack停錯腦.md](CONVENTION/02-題目stack停錯腦.md) | 四、題目與答案（含 P-11 輸入是 queue、P-42 agent 對話協議〔外部 coding agent 也只碰這三樣〕、P-43 外部 coding agent〔eca〕的定義）；五、stack；六、停與錯（P-20：用物件 `next` 的表，表上沒接住那個碼時才是預設停）；七、腦與工具（含 P-41 腦的工具呼叫）；十三、命令列（P-44 aos 自己程式的命令列形狀） |
-| [08-P-45.md](CONVENTION/02-題目stack停錯腦/08-P-45.md) | 十三、命令列：P-45 純 aos 函數的旗標映射 |
-| [09-P-47.md](CONVENTION/02-題目stack停錯腦/09-P-47.md) | 七、腦與工具（續）：P-47 外部 MCP server |
-| [10-P-48.md](CONVENTION/02-題目stack停錯腦/10-P-48.md) | 四、題目與答案（續）：P-48 agent 之間的信箱（mailbox） |
-| [03-shell版與inst版.md](CONVENTION/03-shell版與inst版.md) | 八、shell 版與 inst 版 |
-| [04-範例三種寫法.md](CONVENTION/04-範例三種寫法.md) | 八之「範例：同一隻 agent 的三種寫法」 |
-| [05-不管落實待決.md](CONVENTION/05-不管落實待決.md) | 九、慣例不管的；十、程式對這份的落實（只有 impls 的 C++ 版，aos-clock 例外）；十一、要使用者決定的 |
-| [06-巢狀.md](CONVENTION/06-巢狀.md) | 十二、巢狀：層層疊疊（P-35：物件 `next` 接住的 10 到不了 loop） |
+**[P-42](CONVENTION/02-題目stack停錯腦/02-P-42.md)、[P-43](CONVENTION/02-題目stack停錯腦/03-P-43-本文.md)（[續：aos-agent 介面](CONVENTION/02-題目stack停錯腦/03-P-43續-11-04-aos-agent.md)）、[P-48](CONVENTION/02-題目stack停錯腦/10-P-48.md)**
+- **P-42** 對話協議：人或程式對跑著的 agent 說話、看、停，只碰它 stack 裡的三樣——queue、history、ctl／state 窗；agent 本身仍是函數、沒有 ctl。人經 `aos-agent say`／`listen`／`chat`（只限掛在 daemon 上的）；aos-agent 只認定義的 `interfaces.json` 宣告、不驗內容；跑完要不要結束寫在定義裡；外部 coding agent 也只碰這三樣。
+- **P-43** 外部 coding agent（eca：claude code、codex）包成跟 aos agent 範本同形的資料夾程式（`loop.json` 叫 `aos-eca-turn`，`cli.json` 寫 `kind` 與旗標，範本 `templates/eca-claude`）；它是平級的另一隻 agent、內部黑盒，aos 只碰它 stack 的三樣與它的 session 檔。aos-eca-turn 一次替它答一批，交給 CLI 就算完成。
+- **P-48** agent 之間的往來走信箱 `<stack>/mailbox/`（aos-post 箱子，跟 queue 分開、不自己進 history）；信是 JSON、STATUS 六種，人用 `aos-mailbox`、腦用 `mailbox_*` 工具，自己決定何時看；範本預設每 1 分鐘提醒一次新信。a2a 協議不原生支援，頂多做中轉。
+
+## stack
+
+**[五、stack](CONVENTION/02-題目stack停錯腦/04-五-stack與六-停與錯.md)**（[P-15](CONVENTION/02-題目stack停錯腦/04-五-stack續-P-15.md)）
+- **P-15** 執行中的一切只寫 `$AOS_STACK`，定義資料夾不被寫，所以同一個 agent 可以同時被兩個工作區跑；`aos-agent tools`／`llm`／`system` 改的是那一隻 stack 裡的那份（改過的不跟定義變，`reset` 刪掉），改定義是人有意的事。實例只指向定義，我們的工具、範本不主動存定義副本。
+- **P-16** agent 自己的格共用同一個 `$AOS_STACK`；stack 裡放什麼、叫什麼，agent 自訂。
+- **P-17** 叫別的資料夾程式時給它自己的小格 `$AOS_STACK/tools/<登記名>/`（`tools` 是 stack 頂層的保留名），被叫的只看到自己的 stack；小格等工具真的寫東西才建，叫完不自動收。
+- **P-18** 一個工作區同時跑兩個 agent，由呼叫方給不同的 `AOS_STACK`；掛上 daemon 的 stack 預設在 `<daemon 的 stack>/procs/<名字>/`。
