@@ -12,13 +12,12 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-11-13 23:30 家機收工、換樹前
+## 2026-11-17 下午 公司 Windows 機，compact 前
 
-1. **授權與工作方式**：家機（Manjaro）。使用者原話：「事情盡量交給agent做，普通工作交給opus，簡單工作交給sonnet。agent做事前要讀過wf/規矩，簡單工作除外。」fable 照 user.md「盡量少用」。新題寄使用者專區（`aos-user send`／`user_send`），不再加進 WAIT_USER。頂層是樹外的 Claude Code 或樹裡的 `repo-aos`，看起樹了沒。
-2. **現役線**：無（`aos-json-view` 上色那條線若還在跑，先看它有沒有 commit，別碰 `proto8/cmd/aos-json-view/`）。
-3. **push**：未 push（使用者說「晚上十一點睡覺前再push。」；數量看 `git log origin/main..main`，若使用者已推，下個 session 會看到 origin/main 跟上）。
-4. **換樹**：使用者今晚照桌面手冊換（釘 `54789088d`，預演第六輪 12 段全綠；備份預設在 `~/.aos/saves/tree-swap`）。換後收尾清單在手冊與 [tree-swap-1113](../proto8/thinking/2026-11/13/tree-swap-1113.md)。
-5. **下一步**：新 session 先確認樹起來了（沒起就問使用者，起樹由他下）→ 做換後收尾（含專區段 2 的計時器、notify on、door 重建）→ 派線接 5 處 Python `--at`（`directive_value.py`、`cmd/aos-agent/aos_agent/tools.py`、`py/aos_clock_register.py`、`lib/mcp_server_file.py`、`lib/hook_run.py`）→ 接完再換一次樹（連同 `user_verify` 與之後的 lib 改動）。
-6. **明天開工**：astra 當 kernel 施工（[astra-kernel-plan](../proto8/thinking/2026-11/13/astra-kernel-plan.md)，Q1～Q8 已裁）、kernel 限資源施工（[kernel-limits-plan](../proto8/thinking/2026-11/13/kernel-limits-plan.md)，K1～K18 已裁）、kernel 框架批 5、6、10 重做（公司補丁不用了）與批 12～14（家機用真腦）。
-7. **wf 搬遷剩**：段 2b SESSION-LOG 轉 json、段 9 收尾（見 [SESSION-LOG](SESSION-LOG.md)）。
-8. **段 0 驗**：這次 compact／新 session 讀到這條就算 `compact_reload.sh` 補驗過（驗完補 user/02 那句，見 SESSION-LOG「主 session 接 aos」）。
+1. **授權與工作方式**：公司 Windows 機（repo `C:\code\mine\simple_tools\aos`；WSL 另有 `~/repo/aos`，停在 `ff7f74725`，沒跟上）。使用者早上原話：「事情盡量都交給agent做，普通工作交給opus，簡單工作或雜活交給sonnet。agent做事前都要讀過wf/規矩，簡單工作或雜活除外。agent可以再派子agent，模型隨意。我今天五點下班，下班前再統一push。」規劃派 fable。**push：五點前統一推，推之前再問一次。**「有需要我裁，都跳選項」——要他裁的一律用選項框問。8 KB＝「8192, 但就大概就好。」
+2. **這台怎麼做事**：頂層沒有 aos 工具，直接讀檔。各線改 Windows 這份 repo，測試在 WSL 暫存複本 `~/.aos/scratch/<線名>-1117/` 跑（rsync 過去）；各線不 commit，回報後頂層照檔案清單分件 commit。生成器（`index_gen.py --apply`）今天一次都還沒跑：收工前要在 WSL 從 Windows 這份拉過去跑一次、交生成物。
+3. **使用者今天新講的大事**：「好，不用考慮活樹，因為我之後要重建~/aos-home，對，整個重來，我要掌握整個流程」（搬夾、整理不用顧現有的樹；之後要給他一份從零重建的步驟單）；「先不急著修改，現在先讓wf/和aos並行」（wf 規矩的形狀先不改，只做不改規矩內容的清理）；「archive內的東西都可以刪掉了」（根 `archive/`、wf 各 `archive/` 已刪 `c97d6ade8`；**`proto8/archive/` 還沒刪，等 NORMS 對讀線回來再刪**，連結都不改）；「cases裡面的東西應該用不到了？刪掉」（已轉給八夾線）。
+4. **還在跑、還沒收的線**（回報後要核對並 commit）：`code2-1117`（盤點裁題 Q3 aide-def 只放差異＋dist 不進 git、Q4 拿掉 BookOld、Q5 hook 收進 tool_io、Q8 install.sh；追加三題「1.收。2.好。3.改。」＝daemon-ctl usage 收進共用、`llm_kernel.hpp` 改名 `aos/llm.hpp`、aos-eca 提醒的程式名）；`eight-1117`（proto8 八夾第一步 17→11，cases 改成刪；`.gitignore` 的 bin 那行要頂層補）；NORMS 對讀線（對讀＋照原文修四份純規範，報告 `tidy/reports/2026-11-17-norms對讀.md`）；路徑規則規劃（fable，`proto8/thinking/2026-11/17/路徑規則.md`，含八夾第二、三步施工單與重建步驟單草稿）。
+5. **已交、沒 push**（`git log origin/main..main`，約 24 個）：公司 WSL 清理與換樹紀錄、盤點報告、aos-llm-kernel 殘渣（文件＋程式）、壞連結、C++／Python 收重複、advices 等封存精簡、NORMS 附錄、草稿 v1、CONCEPTS／CONVENTION／NORMS 純條文、條文對讀修正、public 精簡與併檔、investigation 封存、SESSION-LOG 瘦身、兩份規劃（八夾、wf 整理）、刪 archive。
+6. **等使用者裁（用選項框）**：條文原文互相打架的剩約十題與已答五題的落地（`tidy/reports/2026-11-17-條文對讀/04-…md`；「改回核心」落條文時要再問 C-74 怎麼分）；NORMS 三題（待定第一項對 N-42、N-45 待確認、檔頭新增句）；八夾方案其餘小題與第二、三步（等路徑規則回來）；wf 整理規劃 8 題（先不急）；public 留的兩題（投稿通知寄誰、新投稿格式）；公司樹 `AOS_NOTIFY_BOX`（因重建可不管）；WSL 測試對話紀錄刪不刪。
+7. **排著還沒派**：三份條文「分檔內文精簡」（連同已答的裁題一起落、做完再對讀）；thinking 11-13 之後的提取與精簡（盤點 Q1）；文件裡提到 `aos/llm_kernel.hpp` 的幾處等改名後改；`wf/tools/index_gen_desc.json` 裡被搬／被刪路徑的描述；`wf/WAIT_USER.md` 數字過時；收工前寫日誌（thinking 11-17 日索引）。
