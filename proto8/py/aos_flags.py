@@ -101,7 +101,7 @@ def warn(prog, sentence):
 
 def usage_of(help, stop=()):
     """HELP 裡第一種 usage 接成一行（錯誤行 `原因 (usage: …)` 用；11-17 從 aos-tools、aos-grow、aos-eca-screen、aos-agent
-    四份收來，aos-daemon-ctl 那份遇 ` | ` 就截斷、收過來會改輸出，待裁先留著）：第一個 `usage:` 起頭的行，接著往下的續行；遇到空行、`|` 起頭的行（另一種寫法），
+    四份收來；aos-daemon-ctl 那份遇 ` | ` 就截斷，11-17 使用者「1.收。」也收過來，輸出改成完整的 usage）：第一個 `usage:` 起頭的行，接著往下的續行；遇到空行、`|` 起頭的行（另一種寫法），
     或去掉縮排後以 stop 裡任一個字起頭的行（例 aos-tools 的第二種寫法 `aos-tools …`）就停；空白壓成一個。"""
     lines = help.splitlines()
     start = next(i for i, line in enumerate(lines) if line.startswith("usage:"))

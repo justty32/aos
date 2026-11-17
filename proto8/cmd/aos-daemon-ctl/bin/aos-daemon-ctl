@@ -383,20 +383,8 @@ import daemon_ctl as dc
 Fail = dc.Fail
 NAME = "aos-daemon-ctl"
 def usage(cmd):
-    """從子命令 help 取第一種 usage，續行接成一行。"""
-    lines = HELPS[cmd].splitlines()
-    parts = []
-    for i, line in enumerate(lines):
-        if line.startswith("usage:"):
-            first = line.partition(":")[2].strip()
-            if first:
-                parts.append(first)
-            for tail in lines[i + 1:]:
-                if not tail.strip() or " | " in tail:
-                    break
-                parts.append(tail.strip())
-            break
-    return " ".join(" ".join(parts).split())
+    """子命令 help 的第一種 usage 接成一行（共用 aos_flags.usage_of；11-17 使用者「1.收。」：原本自己那份遇 ` | ` 就截斷）。"""
+    return aos_flags.usage_of(HELPS[cmd])
 
 
 def name_arg(cmd, args, flags=None):
@@ -757,9 +745,7 @@ def main():
     except dc.Already as e:          # 11-10 cli-sweep Q4＝A：已在那個狀態＝印一句、退 0
         print(e, flush=True)
     except Fail as e:
-        reason = str(e)
-        if cmd is not None and e.code == "ArgumentsBad" and "(usage:" not in reason:
-            reason += " (usage: %s)" % usage(cmd)
+        reason = str(e) if cmd is None else aos_flags.with_usage(HELPS[cmd], e.code, e)
         aos_flags.die(NAME, e.code, reason)
 
 
