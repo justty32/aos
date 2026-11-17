@@ -1,6 +1,6 @@
 // aos/post.hpp：aos-post 的公開介面——投遞（NORMS N-16）：寄信、認領、讀信、處理完、撤回。
 // aos-post＝IPC 的語法糖、基底工具（thinking 11-03 aos-post）：跟 aos proc 的關聯不深，proc 自己拿它組出想要的效果。
-// aos-post 命令列用這組；aos-daemon 的信箱模式、aos-llm-kernel 的回信、aos-llm 的寄信與回信信箱直接連這個庫。
+// aos-post 命令列用這組；aos-daemon 的信箱模式、aos-llm 的寄信與回信信箱直接連這個庫（問腦總機是 Python 的 lib/aos/kernel_llm，不連）。
 //
 //   信箱＝一個資料夾，底下的格（各函式只驗自己用到的格，少了丟 MailboxMissing，不替人建——init、take、done keep 例外）：
 //     tmp/<信件名稱>/      寄信人正在寫、或正在撤回／丟掉的信；處理者永遠不看這格
@@ -43,7 +43,7 @@
 //                 不在 cur/ 丟 LetterMissing
 //   regret        撤回：rename new→tmp 再刪；回 true。不在 new/（已被認領、或本來就沒有）回 false
 //   reply_to_rel  信封要存的 reply_to：回信信箱（絕對）相對 mb 的根（字串算）；沒有共同的第一層＝原樣絕對；同一個＝"."
-//   reply_to_abs  信封讀到的 reply_to → 絕對：相對的從 mb 的根拼（abspath 收掉 ..）、絕對的照用（reply、aos-llm-kernel 回信／撤回用）
+//   reply_to_abs  信封讀到的 reply_to → 絕對：相對的從 mb 的根拼（abspath 收掉 ..）、絕對的照用（reply 用）
 //   check_name    信件名稱是不是一個單純的名字：不空、不含 /、不以 . 開頭；不是丟 ArgumentsBad
 //   is_ordered    名字是不是有序名（^[0-9]{12}\.）
 //   sort_letters  照處理順序排
@@ -89,7 +89,7 @@ struct SendOpts {
     std::optional<std::string> sender;        // 信封的 sender；不給＝aos::identity()（aos-llm 給 aos::stack_identity()，11-13 線修 T31）
     bool ordered = false;                     // 有順序的投遞（order.lock/＋order.json）；拿不到鎖就一直等
     // 信裡另放的檔（N-16「其他檔隨意」）：{信裡的名字, 來源檔路徑}，在寫 letter.json 之前複製進去；複製不了丟 WriteFailed。
-    // 名字要是單純的檔名、不能叫 letter.json（ArgumentsBad）。aos-llm-kernel 的回信 10-30～11-04 用它附 stdout.txt、stderr.txt（11-04 起不附）
+    // 名字要是單純的檔名、不能叫 letter.json（ArgumentsBad）。
     std::vector<std::pair<std::string, std::string>> files;
 };
 

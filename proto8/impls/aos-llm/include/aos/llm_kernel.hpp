@@ -1,4 +1,4 @@
-// aos/llm_kernel.hpp：aos-llm-kernel 的公開介面——LLM kernel 的信箱與信（aos-llm 寄信收信、aos-llm-kernel 收信回信都用這組）。
+// aos/llm_kernel.hpp：aos-llm 的公開介面——寄給 LLM kernel 的信與回信的協定（寄信人的鎖、priority、回信格式、錯誤代號）；kernel 那頭是 Python 的問腦總機 lib/aos/kernel_llm，照同一套。
 //
 //   信箱（N-16 資料夾式，Maildir）：一個資料夾，底下三格、一封信＝一個資料夾（名字＝信件名稱，下面寫 id）：
 //     tmp/<id>/、tmp/.<id>/   寄信的正在寫（aos-post 寫 tmp/<id>；aos-llm ask 寫 tmp/.<id>）；撤信、丟信先改名回這裡再刪
@@ -19,16 +19,13 @@
 //
 //   信件名稱＝aos-util 的 aos::unique_id()：<UTC 奈秒 20 位>.<pid>.<started_at_ticks>——照字典序排＝照寄的先後
 //   hold_sender    寄信的：開 <信>/sender.flock（0666，權限照信箱的 umask／ACL）、flock 住；回 fd，一直開著到行程結束。失敗丟 WriteFailed
-//   has_sender     <信>/sender.flock 在不在（不在＝非同步的信，kernel 不判存活）
-//   sender_alive   寄這封信的還在不在：<信>/sender.flock 有人鎖著＝在；檔不在、開不了、鎖得到＝不在
-//                  （flock 跟著檔走，不看 pid，所以沙箱〔別的 pid、mount namespace〕裡的寄信人也認得）
+//                  （kernel 看 sender.flock 有沒有人鎖著判寄信人在不在；flock 跟著檔走，不看 pid，所以沙箱裡的寄信人也認得）
 //   parse_priority 信裡的 priority（10-15 LLM kernel 稿）：沒寫＝normal；"low"／"normal"／"high"；數字看正負；
 //                  物件 {"level", "deadline", 其他 key 忽略}；deadline＝ISO 8601（要帶時區）或 epoch 秒。壞了丟 PriorityBad
 //                  跨樹信的期限＝牆鐘（N-65 ③）；kernel 自己的 aging 才用自己樹的鐘，不讀信裡任何時鐘值欄。
-//   priority_of    一封信的排隊依據＝parse_priority(letter["body"]["priority"])（11-04 起 `_metainfo` 的兩個依據拿掉：信裡沒單子）
 //   reply_of       回信的內容合不合（{"message": 物件, …} 或 {"error": {"code": 字串, "msg": 字串}}）：合＝原樣、不合＝nullopt
-//   read_reply     讀 reply.json、照 reply_of 驗；壞了回 nullopt
 //
+// 信箱型別用 aos-post 的 aos::post::Mailbox（本檔不另定）。
 // 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/util/error.hpp）。
 #pragma once
 
@@ -60,19 +57,9 @@ inline constexpr const char* EndpointFailed = "EndpointFailed";   // 回信：en
 inline constexpr const char* RequestBad = "RequestBad";           // 回信／aos-llm：request 不是物件、messages 不是陣列、stream 真（串流不做）
 }  // namespace code
 
-// 信箱三格的路徑。
-struct Mailbox {
-    std::string root;
-    std::string tmp() const;
-    std::string fresh() const;   // new/（new 是 C++ 關鍵字）
-    std::string cur() const;
-};
-
 inline constexpr const char* SENDER_FLOCK = "sender.flock";   // 10-29 原叫 sender.lock（.lock 留給 N-15 的資料夾鎖）
 
 int hold_sender(const std::string& letter_dir);
-bool sender_alive(const std::string& letter_dir);
-bool has_sender(const std::string& letter_dir);
 
 struct Priority {
     int level = 0;                    // -1 low、0 normal、1 high
@@ -80,10 +67,6 @@ struct Priority {
 };
 Priority parse_priority(const Json& v);
 
-// 一封信的排隊依據——kernel 只從這裡讀：parse_priority(letter["body"]["priority"])（壞了丟 PriorityBad）。
-Priority priority_of(const Json& letter);
-
 std::optional<Json> reply_of(const Json& r);
-std::optional<Json> read_reply(const std::string& path);
 
 }  // namespace aos::llm_kernel
