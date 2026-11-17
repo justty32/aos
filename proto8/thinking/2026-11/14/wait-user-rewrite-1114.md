@@ -18,7 +18,7 @@
 
 ## 做法
 
-ok-pilot 派 4 隻 opus 子 agent 並行唯讀查證（01 前 9 筆、01 後 7 筆、02、03＋04），每筆拆成子項、分 A／B／C、附證據（commit 雜湊、檔案＋節），B／C 寫成專區信；ok-pilot 驗格式、抽讀、修稿。逐筆原表在 [`wf/temp/ok-pilot/wu/`](../../../../wf/temp/ok-pilot/wu/SUMMARY.md) 各夾的 `status.md`。之後照表改 `wf/wait-user/01～04`：整筆 A 的拿掉，含 B／C 的整行換成一行指標，再改 WAIT_USER 類別表的數字、加「待派工」一節。
+ok-pilot 派 4 隻 opus 子 agent 並行唯讀查證（01 前 9 筆、01 後 7 筆、02、03＋04），每筆拆成子項、分 A／B／C、附證據（commit 雜湊、檔案＋節），B／C 寫成專區信；ok-pilot 驗格式、抽讀、修稿。逐筆原表在 `wf/temp/ok-pilot/wu/`（暫存區、不進版控） 各夾的 `status.md`。之後照表改 `wf/wait-user/01～04`：整筆 A 的拿掉，含 B／C 的整行換成一行指標，再改 WAIT_USER 類別表的數字、加「待派工」一節。
 
 ## 結案清單（37 個 A 子項）
 

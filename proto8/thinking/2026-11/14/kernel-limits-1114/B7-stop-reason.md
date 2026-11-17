@@ -176,7 +176,7 @@ loop 收工時，照這個順序判斷，第一條成立就停：
 
 ## 9. 11-15 交件（Claude 線 claude-b7 接手 ok-limits，使用者 11-15「能做的先做」）
 
-11-14 碼已完成，只因換樹凍結沒交；ok-limits 收樹時留下六件待補（[wrapup-1114 交接](../../../../../wf/temp/ok-limits/wrapup-1114/交接.md)）。本節是六件的結果。
+11-14 碼已完成，只因換樹凍結沒交；ok-limits 收樹時留下六件待補（wrapup-1114 交接（`wf/temp/ok-limits/wrapup-1114/交接.md`，暫存區、不進版控））。本節是六件的結果。
 
 - **乾淨複本**：`~/code/claude-b7-1115/`。先在 `src/`（main 7f50a8b7c 的 git archive）套 `~/code/limits-1114/ws/claude-b7-2/b7.diff`（21 檔）。lib/docs/03 與 templates/docs/02 的上下文在 main 動過（mailbox_read、goal 那幾列），改的那一行本身沒變，照原樣換掉；templates/agent-fsm/README 在 b1f72a0a6 多了兩行，同樣只換那一行。交件前 main 又進了幾筆（guard、subagent、gitignore，都沒動到 B7 的檔），再開一份 `final/`（main b8f8e7335 的 git archive 加 B7 的 21 檔），重編、重跑，下面的數字是 `final/` 的。impls 用複本自己的原始碼 `cmake -B build -G Ninja && cmake --build build` 編，bin 只在複本裡，沒裝進 `~/.local/bin`、沒碰活樹。
 - **測試**（`env -i`，PATH 只有複本的 `impls/*/bin`、`cmd/*/bin` 與系統目錄，前景跑）：aos-loop 33、aos-daemon 114（skip 1）、self_hook 5、hooks_engine 5、test_clock_hook 13、test_clock_hook_daemon 1、tool_spec 10、tool_io_metainfo 6、tool_io_keys 7、templates/tests/agent-fsm 153（含新加的 test_hook_fire_cause），全部 OK。

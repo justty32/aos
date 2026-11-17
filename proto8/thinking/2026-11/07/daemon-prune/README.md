@@ -33,7 +33,7 @@
 - 共用模組：[table.py](../../../../py/daemon_ctl/table.py)、[__init__.py](../../../../py/daemon_ctl/__init__.py)。
 - 測試：[test_ctl.py](../../../../impls/aos-daemon/tests/test_ctl.py)，新增九項。
 - 文件：[cmd README](../../../../cmd/README.md)、[指令 README](../../../../cmd/aos-daemon-ctl/README.md)、[04](../../../../cmd/docs/04-aos-daemon-ctl續.md)、[py README](../../../../py/README.md)、[建置與測試](../../../../impls/aos-daemon/docs/07-建置與測試.md)。
-- 導航：[手寫 code map](../../../../../wf/workflows/common/code-map.md)；[生成冊](../../../../../wf/workflows/common/code-map/proto8/README.md) 的 README.md、cmd.md、impls.md、py.md。
+- 導航：手寫 code map（`wf/workflows/common/code-map.md`，已於 `a03d38739` 移除）；生成冊（`wf/workflows/common/code-map/proto8/README.md`，已於 `a03d38739` 移除）的 README.md、cmd.md、impls.md、py.md。
 - 紀錄：本 README、[當日索引](../README.md)、[日誌](../../../../../wf/session_logs/2026-11/2026-11-07.md)。沒有新增未完待辦。
 
 ## 測試與建置

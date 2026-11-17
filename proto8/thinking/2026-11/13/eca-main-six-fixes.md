@@ -50,7 +50,7 @@ agent_def: error: DefBad 1 definition problems found
 
 **根因**：`lib/aos/defs/catalog.py` 第 83 行 `AOS_TOOLS = Path(__file__).resolve().parents[3] / 'cmd' / 'aos-tools' / 'bin' / 'aos-tools'`，`stacked()`（tools.json 有 `$override` 時）用它。不是讀 `$AOS_HOME`，是「這份 lib 的上一層」；在 aos-home 剛好等於 `$AOS_HOME`，那裡沒有 `cmd/`。範本的 tools.json 都疊 `$override`，所以每份定義都中。同類寫法 lib 裡還有一處：`lib/aos/box_check/_entry` 第 36 行找 `cmd/aos-sandbox/examples/...`（box_check 本來就是既有的紅，不在這次範圍）。
 
-**為什麼算 bug**：lib 被抄到 repo 外是有寫的用法（[code-map 常查表](../../../../wf/workflows/common/code-map.md#常查的東西在哪)「repo 外的複本怎麼 import」、[py/README](../../../py/README.md)）；同一支工具的細動作 `def_edit.py` 叫 `aos-tools` 是從 PATH 找、找不到說「put it on PATH with proto8/install.sh」，`cli_mcp.py` 找 aos-mcp 也一樣。只有 catalog 例外。
+**為什麼算 bug**：lib 被抄到 repo 外是有寫的用法（code-map 常查表（`wf/workflows/common/code-map.md`，已於 `a03d38739` 移除）「repo 外的複本怎麼 import」、[py/README](../../../py/README.md)）；同一支工具的細動作 `def_edit.py` 叫 `aos-tools` 是從 PATH 找、找不到說「put it on PATH with proto8/install.sh」，`cli_mcp.py` 找 aos-mcp 也一樣。只有 catalog 例外。
 
 **AOS_HOME 到底指什麼——矛盾在哪**：
 

@@ -22,6 +22,22 @@
 - **Q8 `install.sh --uninstall` 會去拿掉舊的 `aos-proto8.pth`**：這是替舊版留的清理。A 拿掉這段（照「當沒有舊版」，推薦——家機、公司 11-15 後都沒 pth 了才行，沒核）；B 留著當一次性清理。
 - **Q9 NORMS 附錄 1～3（條號表、各批出處、舊名對照）**：A 照「沿革只留結論」清；B 留當出處表與舊名表（推薦 B，它們本身就是出處／對照，清了就沒用了）。（上次報告也列了這題。）
 
+### 使用者裁定（11-17）
+
+原話（逐字）：「要我裁的那九題，wf/advices是蒐集AI對aos的意見，可以封存，只提取精簡。salvage,digest,experiments,investigations通通封存，只提取精簡後的一點點東西，放到wf/advices。精簡後的東西，wf/advices希望只剩下兩三個小於8kb的檔案。9.要清掉。4.現在就拿掉。3.建置成品不進git，現有的都清掉。盛夏都按照推薦」（「盛夏」頂層讀作「剩下」）
+
+| 題 | 裁定 |
+|---|---|
+| Q1 | 照推薦 A：先跑 thinking→docs 提取再分批精簡 |
+| Q2 | 照推薦 A：刪 `release-1114/06-草稿/v1` 整夾 |
+| Q3 | `aide-def` 照推薦 A（只放差異、其餘從範本抄）；`ui/v2/dist` **不進 git，現有的都清掉**（不照推薦） |
+| Q4 | **現在就拿掉** BookOld（不照推薦） |
+| Q5 | 照推薦 A：hook 算工具，收進 `tool_io` |
+| Q6 | `wf/advices/` 是蒐集 AI 對 aos 的意見：**封存，只提取精簡**；精簡後 `wf/advices` 只剩兩三個小於 8 KB 的檔 |
+| Q7 | `salvage`、`digest`、`experiments`、`investigations` **通通封存**，只提取精簡後的一點點放進 `wf/advices`（不照推薦） |
+| Q8 | 照推薦 A：拿掉 `install.sh --uninstall` 清舊 `.pth` 那段 |
+| Q9 | **要清掉** NORMS 附錄 1～3（不照推薦） |
+
 ## 查了沒問題的
 
 - 單向分層：impls 沒人 include 別專案 `src/`；lib 沒有 import `py/`。
