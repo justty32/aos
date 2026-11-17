@@ -7,7 +7,7 @@
 ## 最新進度
 
 - **open｜重建 `~/aos-home`**：使用者自己照步驟單重建（程式只有 repo 一份、`source proto8/env.sh`）；以前「換樹時帶／換樹後驗」的尾巴都等重建後再驗；公司 WSL 的樹停著、`~/repo/aos` 還沒拉 → [重建步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)、[留底](../proto8/thinking/2026-11/17/session-log-瘦身留底/07-第49到54條與重建.md#rebuild)
-- **open｜cpp／py 改名與安裝包（施工到一半）**：S1、S2 已進 main（`impls`→`cpp`、頂層 Makefile、`install.py`、成品進 `proto8/bin`）；剩 S3～S7（`lib`→`py` 換手、樹裡 `env.sh`、起手範本）；五題待裁（code map 依賴表、`docs/zh` 網頁、aos-teams/06 第 5、6 條、舊編譯產物、`install.py` 建不建前端）；條文裡 `../impls/` 連結斷著；家機沒驗 → [HANDOFF](HANDOFF.md)、[cpp-py-改名](../proto8/thinking/2026-11/17/cpp-py-改名.md)、[外部依賴](../proto8/thinking/2026-11/17/外部依賴.md)
+- **open｜cpp／py 改名與安裝包（施工到一半）**：S1、S2 已進 main（`impls`→`cpp`、頂層 Makefile、`install.py`、成品進 `proto8/bin`）；剩 S3～S7（`lib`→`py` 換手、樹裡 `env.sh`、起手範本）；先放著的：code map 依賴表是空的、`docs/zh` 網頁還寫舊安裝法；待問：aos-teams/06 第 5、6 條；條文裡 `../impls/` 連結斷著；家機沒驗 → [HANDOFF](HANDOFF.md)、[cpp-py-改名](../proto8/thinking/2026-11/17/cpp-py-改名.md)、[外部依賴](../proto8/thinking/2026-11/17/外部依賴.md)
 - **open｜路徑規則與八夾的尾巴**：八夾與規則一已進 main；剩沙箱只綁 `<家>/lib`（規劃是整個家）、`install.sh` 舊 `.pth` 提醒要不要拿、wf 幾處還寫 `~/aos-home/knowledge`、重建步驟單要補 `install.py` 那步 → [待裁網頁-答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)、[路徑規則](../proto8/thinking/2026-11/17/路徑規則.md)
 - **open｜重構與 tidy 盤點剩的**：九題與追加三題都已交；剩拆 aos-frontend／aos-tools 大檔、測試共用 helper、thinking 11-13 起先提取再精簡（Q1）、舊退路清理、兩支 helper 自寫的 `read_json` → [盤點](workflows/tidy/reports/2026-11-17-重構與tidy盤點.md)
 - **等使用者｜條文**：分檔已拆到約 8 KB、33 題裁定已落；使用者 11-17「條文這東西以後我會大修，現在不用這麼急」——新冒出 17 題、N-63 `AOS_HOME` 那格、條文裡 `py/`／`kernel/` 舊路徑字樣、三處沒精簡的內文都放著 → [新的待裁](workflows/tidy/reports/2026-11-17-分檔精簡與裁定落實/02-新的待裁.md)
