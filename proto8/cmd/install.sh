@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # install.sh [--dry-run] [--uninstall] [DEST] - symlink the aos commands onto PATH (default ~/.local/bin); writes nothing into the Python user site.
 # Optional: the usual way is `source proto8/env.sh`, which puts this home's commands first on PATH without touching ~/.local/bin.
-# It lives in proto8/cmd/ (11-17) and links impls/*/bin/* and cmd/*/bin/* of the proto8 folder above it.
+# It lives in proto8/cmd/ (11-17) and links impls/*/bin/*, cmd/*/bin/* and frontend/bin/* (aos-frontend) of the proto8 folder above it.
 #
 # What gets linked (scanned by folder; only executables):
 #   impls/*/bin/*            the C++ ones (aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-json, aos-llm...; build them first)
@@ -22,7 +22,7 @@
 #
 # ---- 中文說明（--help 只印上面英文那段，到 stdout、退 0；11-05 stdio-unify R3、R13）----
 # install.sh [--dry-run] [--uninstall] [目的地] - 把 aos 的指令 symlink 進一個 PATH 裡的資料夾（預設 ~/.local/bin），之後每個殼都找得到、不用 source env.sh。
-# 選配（11-17 路徑規則一、路徑-4 A）：平常用 `source proto8/env.sh` 把這個家的指令放進 PATH，不往 ~/.local/bin 放東西；這支 11-17 從 proto8 頂層搬進 cmd/（八夾-1 B），照舊裝上一層 proto8 的 impls、cmd。
+# 選配（11-17 路徑規則一、路徑-4 A）：平常用 `source proto8/env.sh` 把這個家的指令放進 PATH，不往 ~/.local/bin 放東西；這支 11-17 從 proto8 頂層搬進 cmd/（八夾-1 B），照舊裝上一層 proto8 的 impls、cmd，加上 frontend（選配的網頁外掛 aos-frontend，11-17 從 cmd/ 搬到 proto8 頂層、改了名）。
 #
 # 裝哪些（照資料夾掃，有就裝、執行檔才算）：
 #   impls/*/bin/*            C++ 的（aos-exec、aos-loop、aos-fsm、aos-daemon、aos-post、aos-json、aos-llm…；要先建，見 wf/workflows/testing.md「proto8」）
@@ -110,7 +110,7 @@ link_one() {   # $1＝repo 裡那支的絕對路徑
 }
 
 found=0
-for src in "$here"/impls/*/bin/* "$here"/cmd/*/bin/*; do
+for src in "$here"/impls/*/bin/* "$here"/cmd/*/bin/* "$here"/frontend/bin/*; do
   [ -f "$src" ] && [ -x "$src" ] || continue
   case "$src" in "$here"/impls/*/bin/*)   # 只裝現役的 impls（有 CMakeLists.txt 的）；改名前留下的舊 build 產物（aos-llm-send 之類）不裝
     [ -f "${src%/bin/*}/CMakeLists.txt" ] || continue ;;

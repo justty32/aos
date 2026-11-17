@@ -1,4 +1,4 @@
-# test_phase1 - phase 1 of aos-view: note, decide, aide-tick, relay ingestion into a temp user zone, answer, match, lights.
+# test_phase1 - phase 1 of aos-frontend: note, decide, aide-tick, relay ingestion into a temp user zone, answer, match, lights.
 # Run through tests/run.sh (unsets every AOS_*). Temp dirs only: temp view home, temp user zone, temp relay mailbox,
 # a fixture daemon table (VIEW_LS_FIXTURE); the live daemon, ~/aos-home and ~/.aos are never written.
 import glob
@@ -14,7 +14,7 @@ import time
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VIEW = os.path.join(os.path.dirname(HERE), "bin", "aos-view")
+VIEW = os.path.join(os.path.dirname(HERE), "bin", "aos-frontend")
 # an integration test against the real aos-user (its zone.py) and aos-post: they live in the installed tools, not in this
 # folder. VIEW_TOOLS points at another tools folder; without them (a clean copy) the class is skipped, not failed.
 TOOLS = os.environ.get("VIEW_TOOLS") or os.path.expanduser("~/aos-home/ws/tools")
@@ -127,7 +127,7 @@ class Phase1(unittest.TestCase):
         self.assertTrue(re.match(r"^\d{4}-\d\d-\d\dT", ns[0]["at"]))
         p = self.view("note", "--team", "ok-t", "busy", "x")
         self.assertEqual(p.returncode, 1)
-        self.assertIn("aos-view: error: StatusBad", p.stderr)
+        self.assertIn("aos-frontend: error: StatusBad", p.stderr)
         p = self.view("note", "start", "x", env={"AOS_STACK": os.path.join(self.procs, "nobody")})
         self.assertIn("error: TeamMissing", p.stderr)
 
@@ -223,7 +223,7 @@ class Phase1(unittest.TestCase):
             f.write("".join(json.dumps(r) + "\n" for r in recs))
         p = self.view("match", replies[0])
         self.assertEqual(p.returncode, 1)
-        self.assertIn("aos-view: error: PayloadMismatch", p.stderr)
+        self.assertIn("aos-frontend: error: PayloadMismatch", p.stderr)
 
     def pass_letter(self, letter=LETTER, rid="ok-t-20261114-100000-abcd", sha=None, sender=None):
         text = json.dumps(letter, ensure_ascii=False)
@@ -266,8 +266,8 @@ class Phase1(unittest.TestCase):
     def test_hook_handler_file(self):
         """The template's handler (aide-def/aide_tick.json) through aos-exec, as hooks.py would run it."""
         fake_home = os.path.join(self.tmp, "aoshome")
-        os.makedirs(os.path.join(fake_home, "cmd", "aos-view", "bin"))
-        os.symlink(VIEW, os.path.join(fake_home, "cmd", "aos-view", "bin", "aos-view"))
+        os.makedirs(os.path.join(fake_home, "frontend", "bin"))
+        os.symlink(VIEW, os.path.join(fake_home, "frontend", "bin", "aos-frontend"))
         cell = os.path.join(self.aide, "hooks", "aide_tick") + "/"
         ev = {"event": "on_clock", "hook": "aide_tick", "stack": self.aide, "first": True, "missed": 0}
         handler = os.path.join(os.path.dirname(HERE), "aide-def", "aide_tick.json")
@@ -325,9 +325,9 @@ class Phase1(unittest.TestCase):
 
 
 class AideDef(unittest.TestCase):
-    """aos-view aide-def (11-17 Q3): the agent-fsm template copied, the files of aide-def/ laid over it."""
+    """aos-frontend aide-def (11-17 Q3): the agent-fsm template copied, the files of aide-def/ laid over it."""
     AIDE = os.path.join(os.path.dirname(HERE), "aide-def")
-    TEMPLATE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(HERE))), "templates", "agent-fsm")
+    TEMPLATE = os.path.join(os.path.dirname(os.path.dirname(HERE)), "templates", "agent-fsm")
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="view-aidedef-", dir="/tmp")
@@ -368,14 +368,14 @@ class AideDef(unittest.TestCase):
         self.assertFalse([f for f in os.listdir(os.path.join(ws, "defs")) if f.startswith(".")])   # no temp folder left
         again = self.run_view(["defs/t-aide"], AOS_WS=ws, AOS_HOME=os.path.dirname(os.path.dirname(self.TEMPLATE)))
         self.assertEqual(again.returncode, 1)
-        self.assertIn("aos-view: error: DefExists", again.stderr)
+        self.assertIn("aos-frontend: error: DefExists", again.stderr)
 
     def test_template_missing(self):
         r = self.run_view([os.path.join(self.tmp, "x")])
         self.assertEqual(r.returncode, 1)
-        self.assertIn("aos-view: error: TemplateMissing AOS_HOME is not set", r.stderr)
+        self.assertIn("aos-frontend: error: TemplateMissing AOS_HOME is not set", r.stderr)
         r = self.run_view(["--template", self.tmp, os.path.join(self.tmp, "x")])
-        self.assertIn("aos-view: error: TemplateMissing", r.stderr)
+        self.assertIn("aos-frontend: error: TemplateMissing", r.stderr)
         self.assertFalse(os.path.exists(os.path.join(self.tmp, "x")))
         r = self.run_view(["--template", self.TEMPLATE, os.path.join(self.tmp, "y")])
         self.assertEqual(r.returncode, 0, r.stderr)

@@ -16,7 +16,7 @@ import tempfile
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VIEW = os.path.join(os.path.dirname(HERE), "bin", "aos-view")
+VIEW = os.path.join(os.path.dirname(HERE), "bin", "aos-frontend")
 DIST = os.path.join(os.path.dirname(HERE), "ui", "v2", "dist")
 
 if any(k.startswith("AOS_") for k in os.environ):

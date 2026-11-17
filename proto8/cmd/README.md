@@ -22,14 +22,13 @@
 | [aos-grow](aos-grow/README.md) | 把一個函數往上長一級或縮回一級（原型） |
 | [aos-json-view](aos-json-view/README.md) | 只讀：把 json（或 `#/指標` 那段）印成人好讀的樣子：`鍵: 值`、短的擠一行、`\n` 真的換行、字串陣列接成段落、`--depth N` 摺深層 |
 | [aos-tree-start](aos-tree-start/README.md) | 起樹（`aos-tree-start root`＝`aos-exec root`）；殼裡帶著 `AOS_HOME` 以外的 `AOS_*`（從別棵樹繼承來的）就拒絕，`--force` 照起 |
-| [aos-view](aos-view/API.md) | 全景頁（127.0.0.1 的網頁，看整棵樹、給 agent 寫一行）；11-17 從 `extras/` 搬來、沒改名，執行檔在 `aos-view/bin/aos-view`（跟其他指令一樣，`source env.sh` 之後直接打 `aos-view`）；全景頁 v2 的 `dist/` 不在 git，要在有 node 的機器照 [ui/v2/README](aos-view/ui/v2/README.md) 建 |
 
 > **C++（[proto8/impls](../impls/README.md)）是唯一實作**（使用者 10-23：「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；fsm 和時鐘，使用者選「fsm 也改用 C++、tick 先留 Python」）：
 > `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 的說明在各自的 README：[aos-exec](../impls/aos-exec/README.md)、[aos-loop](../impls/aos-loop/README.md)、[aos-fsm](../impls/aos-fsm/README.md)、[aos-daemon](../impls/aos-daemon/README.md)；inst 是 C lib [inst](../impls/aos-inst/README.md)。
 > 這裡的 Python 支都用 `aos_flags.py` 的旗標解析 `parse`；完整說明在各支的檔頭 docstring。
 
 aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<名>/bin/` 與 `proto8/cmd/<名>/bin/` 放進 PATH。
-要一次放好：每個視窗先 `source proto8/env.sh`（清掉 `AOS_*`、設 `AOS_HOME`＝那個 proto8、把它的 `cmd/*/bin`、`impls/*/bin` 放到 PATH 最前，不往 `~/.local/bin` 放東西）。想連進 `~/.local/bin` 才（選配）在 impls 建完後跑 `proto8/cmd/install.sh`，把 `impls/*/bin/*` 與 `cmd/*/bin/*` 全部 symlink 進 `~/.local/bin`（給參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉指進這份 repo 的連結；PATH 上同名的別支排在前面會印提醒行 `install.sh: warning: …`（stderr）；目的地是檔案＝`DestBad`）；不再在 Python user site 寫 `aos-proto8.pth`（使用者 11-15 裁「6.拿掉。」），複製出 repo 的程式要 import 共用模組，就設 `AOS_HOME`（共用模組只經 `$AOS_HOME/lib` 找）；user site 裡還留著本 repo 的舊 `.pth` 時印一行 warning，舊的要自己移走，`--uninstall` 只拿掉連結、不碰它。Python 支也可從自己的 `realpath(__file__)` 往上找 repo；已有同名的別的東西不蓋、印 `skip`，最後 stderr 補 `install.sh: error: LinkFailed N names already taken by something else`、退 1；repo 換位置要重跑。
+要一次放好：每個視窗先 `source proto8/env.sh`（清掉 `AOS_*`、設 `AOS_HOME`＝那個 proto8、把它的 `cmd/*/bin`、`impls/*/bin` 與 `frontend/bin`（選配的網頁外掛 aos-frontend，在 [proto8/frontend](../frontend/API.md)）放到 PATH 最前，不往 `~/.local/bin` 放東西）。想連進 `~/.local/bin` 才（選配）在 impls 建完後跑 `proto8/cmd/install.sh`，把 `impls/*/bin/*`、`cmd/*/bin/*` 與 `frontend/bin/*` 全部 symlink 進 `~/.local/bin`（給參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉指進這份 repo 的連結；PATH 上同名的別支排在前面會印提醒行 `install.sh: warning: …`（stderr）；目的地是檔案＝`DestBad`）；不再在 Python user site 寫 `aos-proto8.pth`（使用者 11-15 裁「6.拿掉。」），複製出 repo 的程式要 import 共用模組，就設 `AOS_HOME`（共用模組只經 `$AOS_HOME/lib` 找）；user site 裡還留著本 repo 的舊 `.pth` 時印一行 warning，舊的要自己移走，`--uninstall` 只拿掉連結、不碰它。Python 支也可從自己的 `realpath(__file__)` 往上找 repo；已有同名的別的東西不蓋、印 `skip`，最後 stderr 補 `install.sh: error: LinkFailed N names already taken by something else`、退 1；repo 換位置要重跑。
 
 三扇門（[stdio-unify](../thinking/2026-11/05/stdio-unify/README.md)）：這裡每支的錯誤行是 `程式: error: 代號 原因`（退 1）、提醒行是 `程式: warning: 句子`；`--help`＝英文說明到 stdout、退 0；不給參數／子命令＝`ArgumentsBad`；Ctrl-C 退 130、不吐 traceback；stdout 被對面先關（`| head -1`）退 141、不吐 traceback（用 `aos_flags.run` 包 main 的支；aos-sandbox 沒包，它除了 --dry-run 那行就直接 exec）（共用小函式在 `aos_flags.py`，見 [docs/02](docs/02-aos-clock與已定值.md)）。
 

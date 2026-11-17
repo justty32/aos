@@ -12,7 +12,7 @@ SHELLS = {"bash", "zsh", "sh", "fish", "dash"}
 SCREEN_LIMIT = 3800
 SCREEN_WAIT = 8
 
-# Copied from cmd/aos-view/aos-view SECRET_RES, with the reviewed AWS access-key addition.
+# Copied from frontend/bin/aos-frontend SECRET_RES, with the reviewed AWS access-key addition.
 SECRET_RES = [
     re.compile(r"\b(sk-[A-Za-z0-9_\-]{12,}|ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_\-]{20,}"
                r"|xox[baprs]-[A-Za-z0-9\-]{10,}|AKIA[0-9A-Z]{16})"),

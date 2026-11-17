@@ -1,4 +1,4 @@
-小助手（aide）的定義範本：一隻 agent-fsm，腦是 `fake`、沒有工具，唯一的事是 on_clock hook 每 60 格跑一次 `aos-view aide-tick`（view-1114 第 1 期：只搬事實、不叫模型）。
+小助手（aide）的定義範本：一隻 agent-fsm，腦是 `fake`、沒有工具，唯一的事是 on_clock hook 每 60 格跑一次 `aos-frontend aide-tick`（view-1114 第 1 期：只搬事實、不叫模型）。
 
 **這個夾只放 aide 跟 agent-fsm 範本不一樣的檔**（使用者 11-17 裁 Q3「只放差異、其餘從範本抄」；以前整份複製一份範本的格，跟範本走樣了）：`hooks.json`（只掛 aide_tick）、`aide_tick.json`（那個 hook 的 handler）、`llm.json`（`fake`）、`tools.json`（沒有工具）、`system.txt`、`_metainfo.json`，還有本檔。其餘（`fsm.json`、`loop.json`、`interfaces.json`、各格的 `.py`…）都在做定義時從 `templates/agent-fsm` 現抄，所以範本改了、下次做的 aide 就跟著新。這個夾本身**不是**一份能跑的定義，不要拿 `agent_def` 的 `from` 直接複製它。
 
@@ -14,10 +14,10 @@ history 不會多任何一則，也不叫腦。範本刻意拿掉了 `timer` 和
 
 ## 隊長照做的步驟（`<隊>` 換成你在 daemon 表上的名字，例 `ok-kf`）
 
-1. **做定義**（shell；抄 `$AOS_HOME/templates/agent-fsm`，再把本夾的檔蓋上去；相對路徑從 `$AOS_WS` 算，跟 `agent_def` 一樣；`source $AOS_HOME/env.sh` 過的 shell 直接打 `aos-view` 也行）：
+1. **做定義**（shell；抄 `$AOS_HOME/templates/agent-fsm`，再把本夾的檔蓋上去；相對路徑從 `$AOS_WS` 算，跟 `agent_def` 一樣；`source $AOS_HOME/env.sh` 過的 shell 直接打 `aos-frontend` 也行）：
 
    ```sh
-   $AOS_HOME/cmd/aos-view/bin/aos-view aide-def defs/<隊>-aide
+   $AOS_HOME/frontend/bin/aos-frontend aide-def defs/<隊>-aide
    ```
 
    印 `wrote aide definition ...` 就成了；路徑已經在＝`DefExists`，沒設 `AOS_HOME`＝`TemplateMissing`（加 `--template <agent-fsm 範本夾>`）。`_metainfo.json` 的 lineage 記 `{"from": 範本夾, "overlay": 本夾}`。然後 aos 工具 `agent_def` `{"op": "check", "path": "defs/<隊>-aide"}`，`problems` 是空的才往下。定義裡的檔都不用改。
@@ -29,7 +29,7 @@ history 不會多任何一則，也不叫腦。範本刻意拿掉了 `timer` 和
    ```
 
    - `team`＝資料夾名；`leader`＝隊長在 daemon 表上的名字（通常跟 `team` 一樣）；`aide`＝下一步的名字，一字不差（中轉信箱只收這個名字寄來的信）；`parent`＝上層隊伍（頂層底下寫 `repo-aos`）；`tags`＝部門標籤，可空。
-   - 這是隊伍資料夾裡唯一要手寫的檔；其他檔都由 `aos-view` 指令寫，不要手改。
+   - 這是隊伍資料夾裡唯一要手寫的檔；其他檔都由 `aos-frontend` 指令寫，不要手改。
 
 3. **聘小助手**（aos 工具 `subagent`，這樣它算你的，親子查得到）：
 
@@ -44,7 +44,7 @@ history 不會多任何一則，也不叫腦。範本刻意拿掉了 `timer` 和
 ## 隊長平常用的三個指令（shell）
 
 ```sh
-A=$AOS_HOME/cmd/aos-view/bin/aos-view
+A=$AOS_HOME/frontend/bin/aos-frontend
 $A note progress "B2 圖紙改完，等 build"          # 留話：start progress done blocked decision handoff ask；--on NAME 標是哪個成員的事
 $A decide letter.json                             # 決策單（專區信的 body，格式同 aos-user send）→ 印出單號；含 key／token 的會被拒（SecretInPayload）
 $A match <回信資料夾>                              # 使用者回了之後：印 ok: match 才代表專區那封就是你寫的那張

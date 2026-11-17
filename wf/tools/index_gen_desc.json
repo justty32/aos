@@ -8,7 +8,7 @@
   "CLAUDE.md": "Claude Code 的入口，只有一句：去讀 AGENTS.md",
   "README.md": "給人讀的專案總覽：aos 是什麼、怎麼建置與安裝、各資料夾放什麼",
   "impl_cpp": "使用者 11-09 起親手重寫 aos 核心的 C++23 實作（一個零件一夾在 core/）；核心程式由使用者自己寫，agent 只動開發環境，怎麼建、跑、測、除錯看它的 README",
-  "proto8": "現役本體（第八版原型）：C／C++ 基礎層 impls、人打的指令 cmd、腦叫的工具 lib、agent 範本 templates、kernel、出廠內容 knowledge、條文 docs、討論紀錄 thinking；要找程式、條文或某次討論從這裡往下走",
+  "proto8": "現役本體（第八版原型）：C／C++ 基礎層 impls、人打的指令 cmd、選配的網頁外掛 frontend、腦叫的工具 lib、agent 範本 templates、kernel、出廠內容 knowledge、條文 docs、討論紀錄 thinking；要找程式、條文或某次討論從這裡往下走",
   "proto8/archive": "封存：不再維護、留著參考的東西（langs、tree-swap、aos-home）；不測、連結壞了不修",
   "proto8/cmd": "人在終端打的 Python 指令，一支一夾（執行檔在 <名>/bin/）：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-eca、aos-mcp 等；要用或改這些指令時進去",
   "proto8/cmd/aos-agent": "aos-agent：給人用的 agent 介面，ctl add／rm／起停睡醒、say／listen／chat、畫面、tools／llm／system／goal／hook 覆蓋層與搬家說明；要改人操作 agent 的指令時進去",
@@ -98,7 +98,7 @@
   "proto8/docs/NORMS/10-基礎設施-定義與工作區/07-hub-型環境變數與父子交代": "N-63 hub 型環境變數（10-28）的分檔夾：三件事與實例（AOS_STACK、AOS_LLM_KERNEL、AOS_KERNEL、AOS_DAEMON）、沒有 AOS_HUB、AOS_ 變數四種性質",
   "proto8/docs/NORMS/10-基礎設施-定義與工作區/08-父子交代.md": "資料夾程式規範分檔 N-64 父子交代（10-29）：上一代給什麼、下一代留什麼、以 $AOS_WS 自報身分、用 hub 型變數找信箱",
   "proto8/docs/NORMS/附錄4-持久檔.md": "持久檔與暫時檔盤點：哪些檔跨版本長期活著、誰寫誰讀、進不進 image，正式版與 format 版本標記的規矩；資料在附錄4-持久檔.json",
-  "proto8/cmd/aos-view/aide-def/system.txt": "aide 的系統提示：說明它第 1 期不思考，每分鐘由 aide_tick hook 跑 aos-view aide-tick 搬事實",
+  "proto8/frontend/aide-def/system.txt": "aide 的系統提示：說明它第 1 期不思考，每分鐘由 aide_tick hook 跑 aos-frontend aide-tick 搬事實",
   "proto8/archive/langs": "用別的語言寫 aos 程式：把 Janet 或 Lua 寫的一段編成 aos 的資料夾＋JSON（_entry、loop.json、fsm.json），兩種都是嘗試性質",
   "proto8/archive/langs/janet": "aos-janet：把一份 Janet 寫的 aos 程式編成資料夾（_entry、loop.json、fsm.json、短腳本），含編譯器各段與例子；嘗試性質",
   "proto8/archive/langs/janet/examples": "aos-janet 的例子：count.janet（loop＋fsm，葉子加一到 3 停）、steps.janet（seq／par／if 三個組合子）",
@@ -696,7 +696,7 @@
   "wf/knowledge": "wf 的機讀知識：code map（proto8 程式地圖冊）等生成或手寫的 json",
   "wf/public": "公用知識庫：所有 agent 可讀可投稿，頂層管；tools/ 放公用小工具",
   "wf/advices": "對 aos 本身的意見庫：各隊做事時對 aos 的改進意見，頂層派 Claude 子 agent 審與整理、按主題歸檔建索引；之後改進 aos 從這裡找參考",
-  "proto8/cmd/aos-view": "全景頁 aos-view：把一棵樹的 agent、信、看板做成網頁給使用者看與回覆；含後端、v2 前端原始碼（dist 不進 git，要在有 node 的機器建）、aide 定義的差異檔與測試；11-17 從 extras 搬來，沒改名；執行檔在 bin/aos-view，source env.sh 後直接打 aos-view",
+  "proto8/frontend": "選配的網頁外掛：全景頁 aos-frontend，把一棵樹的 agent、信、看板做成網頁給使用者看與回覆；含後端、v2 前端原始碼（dist 不進 git，要在有 Node 的機器建）、aide 定義的差異檔、systemd 範例與測試；11-17 從 cmd/aos-view 搬來改名；執行檔在 bin/aos-frontend，source env.sh 後直接打 aos-frontend",
   "proto8/thinking/2026-11/17": "11-17 的討論與規劃：公司樹換版、proto8 收成八夾、路徑規則（只認一個家）、wf 整理規劃、待裁網頁的題號對照與答案、重建步驟單、SESSION-LOG 瘦身留底"
  }
 }

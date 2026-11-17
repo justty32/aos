@@ -1,5 +1,5 @@
 #!/bin/bash
-# run.sh - run the aos-view tests with every AOS_* variable unset (wf aos-teams/06 hard rule 2); temp dirs only.
+# run.sh - run the aos-frontend tests with every AOS_* variable unset (wf aos-teams/06 hard rule 2); temp dirs only.
 if [ -z "$BASH_VERSION" ]; then echo "run.sh: not bash" >&2; exit 1; fi
 for v in $(compgen -e | grep '^AOS_'); do unset "$v"; done
 if compgen -e | grep -q '^AOS_'; then echo "run.sh: AOS_* still set" >&2; exit 1; fi

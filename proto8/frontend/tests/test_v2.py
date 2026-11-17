@@ -1,6 +1,6 @@
 # test_v2 - the v2 backend (03 §12.3, §12.8): B1 second port, B2 pulse / rev / ETag, B3 outbox, B4 ui-state,
 # B5 batch / correction_of / gone, per-agent board/1, rollup counts. Run through tests/run.sh (unsets every AOS_*).
-# One temp `aos-view serve` on two free ports; the daemon table is a fixture (VIEW_LS_FIXTURE) and aos-agent is a stub
+# One temp `aos-frontend serve` on two free ports; the daemon table is a fixture (VIEW_LS_FIXTURE) and aos-agent is a stub
 # on PATH, so the live daemon, ~/aos-home and ~/.aos are never read or written.
 import http.client
 import json
@@ -14,7 +14,7 @@ import time
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VIEW = os.path.join(os.path.dirname(HERE), "bin", "aos-view")
+VIEW = os.path.join(os.path.dirname(HERE), "bin", "aos-frontend")
 
 if any(k.startswith("AOS_") for k in os.environ):
     sys.exit("test_v2: AOS_* variables are set; run through tests/run.sh")
@@ -293,7 +293,7 @@ class NoBuild(unittest.TestCase):
                             break
                     except OSError:
                         time.sleep(0.1)
-                self.assertEqual(line.strip(), "aos-view: warning: port %d not opened: %s has no index.html (the page is not "
+                self.assertEqual(line.strip(), "aos-frontend: warning: port %d not opened: %s has no index.html (the page is not "
                                  "built; build it first: see %s)" % (p2, dist, os.path.join(tmp, "v2", "README.md")))
                 self.assertEqual(V2.get(p1, "/api/session")[0], 200)
                 with self.assertRaises(OSError):

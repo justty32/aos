@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""aos-view - one local page that shows every agent and proc on the daemon table as a tree,
+"""aos-frontend - one local page that shows every agent and proc on the daemon table as a tree,
 the user-zone letters waiting for the user (answer them right there), and lets the user say
 one line to an agent. Phase 0 + phase 1 of proto8/thinking/2026-11/14/view-1114 (no model anywhere):
 phase 1 adds team folders, the relay mailbox (letters with body.zone "view/1") and an aide that only carries facts.
 
-usage: aos-view [--port 8767] [--home DIR] serve     run the page on 127.0.0.1 (foreground)
-       aos-view [--home DIR] snapshot                 print the tree as JSON once and exit
-       aos-view [--home DIR] init                     make the home folder (keeps what exists)
-       aos-view [--home DIR] ingest                   one pass over the relay mailbox (serve does this every poll)
+usage: aos-frontend [--port 8767] [--home DIR] serve     run the page on 127.0.0.1 (foreground)
+       aos-frontend [--home DIR] snapshot                 print the tree as JSON once and exit
+       aos-frontend [--home DIR] init                     make the home folder (keeps what exists)
+       aos-frontend [--home DIR] ingest                   one pass over the relay mailbox (serve does this every poll)
   captains (claude agents with Bash):
-       aos-view note [--team T] [--on NAME] STATUS TEXT   STATUS: start progress done blocked decision handoff ask
-       aos-view decide [--team T] FILE                a user-zone letter body -> teams/T/outbox/<id>.json; prints the id
-       aos-view match REPLY_FOLDER                    is the zone's answered letter the one the captain wrote?
-       aos-view aide-def [--template DIR] PATH        make the team's aide definition PATH: copy the agent-fsm template
+       aos-frontend note [--team T] [--on NAME] STATUS TEXT   STATUS: start progress done blocked decision handoff ask
+       aos-frontend decide [--team T] FILE                a user-zone letter body -> teams/T/outbox/<id>.json; prints the id
+       aos-frontend match REPLY_FOLDER                    is the zone's answered letter the one the captain wrote?
+       aos-frontend aide-def [--template DIR] PATH        make the team's aide definition PATH: copy the agent-fsm template
                                                       (--template, else $AOS_HOME/templates/agent-fsm), then lay every
                                                       file of aide-def/ over it (not _index.json); a relative PATH starts
                                                       at $AOS_WS when set, else here; lineage {from, overlay}
   the aide (an on_clock hook of agent <team>-aide-1; event JSON on stdin):
-       aos-view aide-tick [--team T]                  pass outbox files, a report when facts changed, a beat each 15 min
+       aos-frontend aide-tick [--team T]                  pass outbox files, a report when facts changed, a beat each 15 min
   team default: --team, else the basename of $AOS_STACK if it is a name on the daemon table
   (aide-tick: the aide's name without -aide-N)
 
@@ -66,7 +66,7 @@ SAY_FROM = "user-via-view"
 # The page's own name, kept in one place (the user 11-15: it will be renamed). New code reads APP_NAME, never the
 # literal; the frontend gets it from /api/version. PAGE_FROM is the neutral sender for new kinds of sends (compact).
 APP_NAME = os.path.basename(os.path.realpath(__file__))    # follows the file name: rename the file, the name follows
-# Path rule one (11-17): find the neighbours from this file's own place. The executable is <view>/bin/aos-view;
+# Path rule one (11-17): find the neighbours from this file's own place. The executable is <view>/bin/aos-frontend;
 # ui/, aide-def/ and the rest live in <view>, one level up. SELF is the absolute path agents are told to run.
 SELF = os.path.realpath(__file__)
 VIEW_DIR = os.path.dirname(os.path.dirname(SELF))
@@ -558,7 +558,7 @@ class Collector:
                             "decide": mask(b.get("decide")) if b.get("decide") else None, "sent_at": parse_time(main.sent_at), "same": len(same),
                             "fmt": main.fmt, "unseen": main.new})
         except Exception as e:  # zone broken: show it, do not crash the page
-            out.append({"letter": "?", "kind": "fyi", "from": "aos-view", "title": "user zone unreadable: %s" % e,
+            out.append({"letter": "?", "kind": "fyi", "from": "aos-frontend", "title": "user zone unreadable: %s" % e,
                         "what": "", "questions": [], "error": True})
         return out
 
@@ -1056,7 +1056,7 @@ def team_light(info, n, nodes, asks_from_team, t):
     return None
 
 
-# ---- the aide's side (aos-view aide-tick, an on_clock hook) ----
+# ---- the aide's side (aos-frontend aide-tick, an on_clock hook) ----
 
 def beat_offset(team):
     return int(hashlib.sha256(team.encode("utf-8")).hexdigest()[:8], 16) % 181
@@ -1064,7 +1064,7 @@ def beat_offset(team):
 
 def relay_send(home, body, sender_stack):
     if not os.path.isdir(os.path.join(home.mailbox, "new")):
-        raise Fail("RelayMissing", "no relay mailbox at %s (aos-view init)" % home.mailbox)
+        raise Fail("RelayMissing", "no relay mailbox at %s (aos-frontend init)" % home.mailbox)
     env = dict(os.environ)
     env["AOS_STACK"] = sender_stack  # sender = the aide's own stack (the hook's AOS_STACK is its hook cell)
     try:
@@ -1980,7 +1980,7 @@ def do_mail(form, tree, home, extra=None, kind="mail"):
         return False, "!太長了", None
     box = os.path.join(n["stack"], "mailbox")
     body = {"from": "user", "to": name, "status": status, "title": title, "what": what,
-            "outputs": "none", "not_done": "none", "decide": "none", "via": "aos-view",
+            "outputs": "none", "not_done": "none", "decide": "none", "via": "aos-frontend",
             "note": "sent by the user from the panorama page; reply with mailbox_send to box %s. "
                     "If the user does not answer for long, read the user's board: %s board" % (home.mailbox, SELF)}
     if extra:
@@ -2068,7 +2068,7 @@ def agent_json(name):
 
 # ---- server --------------------------------------------------------------------------
 
-HERE_DIR = VIEW_DIR   # the aos-view folder (bin/ is one level below it)
+HERE_DIR = VIEW_DIR   # the frontend folder (bin/ is one level below it)
 # the frontend served: ui/v1 (frozen 11-14, "清單版"); --ui DIR serves another one (the old web/ is kept, not served)
 WEB_DIR = os.path.join(HERE_DIR, "ui", "v1") if os.path.isdir(os.path.join(HERE_DIR, "ui", "v1")) else os.path.join(HERE_DIR, "web")
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/index.html": ("index.html", "text/html; charset=utf-8"),
@@ -2757,7 +2757,7 @@ def ui_put(home, key, body):
 
 
 def ui_ports(home):
-    """B1: extra listeners. config "ui_ports": [{"port": 8768, "dir": "ui/v2/dist"}] (dir relative to the aos-view folder, VIEW_DIR);
+    """B1: extra listeners. config "ui_ports": [{"port": 8768, "dir": "ui/v2/dist"}] (dir relative to the frontend folder, VIEW_DIR);
     default: 8768 for ui/v2/dist. A dir without index.html is not served (the port is not opened).
     -> (served [{port, dir}], missing [{port, dir}]); serve prints one warning per missing dir (ui/v2/dist is not in git:
     it has to be built locally, ui/v2/README.md)."""
@@ -2778,11 +2778,11 @@ def ui_missing_line(e):
     """The warning for a ui dir without index.html (the v2 page is not built here)."""
     hint = ("build it first: see %s" % os.path.join(os.path.dirname(e["dir"]), "README.md")
             if os.path.basename(os.path.normpath(e["dir"])) == "dist" else "point ui_ports at a built page")
-    return ("aos-view: warning: port %d not opened: %s has no index.html (the page is not built; %s)"
+    return ("aos-frontend: warning: port %d not opened: %s has no index.html (the page is not built; %s)"
             % (e["port"], e["dir"], hint))
 
 
-# ---- the user's board (布告欄): one line the user leaves before going away; agents read it with `aos-view board` ----
+# ---- the user's board (布告欄): one line the user leaves before going away; agents read it with `aos-frontend board` ----
 
 def board_dir(home):
     return os.path.join(home.dir, "board")
@@ -2829,8 +2829,8 @@ def board_text(home, all_teams=False):
 
 def cmd_board(home, args):
     if args and args[0] in ("-h", "--help"):
-        print("usage: aos-view board [--all] [--json]   read the user's board (the user writes it on the page); "
-              "--all adds every team's latest note (aos-view note)")
+        print("usage: aos-frontend board [--all] [--json]   read the user's board (the user writes it on the page); "
+              "--all adds every team's latest note (aos-frontend note)")
         return
     if "--json" in args:
         print(json.dumps({"user": board_get(home)}, ensure_ascii=False))
@@ -2867,7 +2867,7 @@ def cmd_note(home, args):
     team = take_opt(args, "--team")
     on = take_opt(args, "--on")
     if len(args) < 2:
-        raise Fail("ArgumentsBad", "usage: aos-view note [--team T] [--on NAME] STATUS TEXT")
+        raise Fail("ArgumentsBad", "usage: aos-frontend note [--team T] [--on NAME] STATUS TEXT")
     status, text = args[0], " ".join(args[1:]).strip()
     if status not in NOTE_STATUSES:
         raise Fail("StatusBad", "STATUS must be one of %s" % " ".join(NOTE_STATUSES))
@@ -2885,7 +2885,7 @@ def cmd_note(home, args):
 def cmd_decide(home, args):
     team = take_opt(args, "--team")
     if len(args) != 1:
-        raise Fail("ArgumentsBad", "usage: aos-view decide [--team T] FILE")
+        raise Fail("ArgumentsBad", "usage: aos-frontend decide [--team T] FILE")
     try:
         with open(args[0], "rb") as f:
             raw = f.read()
@@ -2926,7 +2926,7 @@ def cmd_decide(home, args):
 
 def cmd_match(home, args):
     if len(args) != 1:
-        raise Fail("ArgumentsBad", "usage: aos-view match REPLY_FOLDER")
+        raise Fail("ArgumentsBad", "usage: aos-frontend match REPLY_FOLDER")
     p = os.path.abspath(args[0])
     if p.endswith("/letter.json"):
         p = p[:-len("/letter.json")]
@@ -2951,7 +2951,7 @@ def cmd_match(home, args):
         raise Fail("PayloadMismatch", "the zone has no letter %s in done/" % irt)
     mo = re.match(r"^([^/\s]+)/(\S+) sha256:([0-9a-f]{64})\b", ob.get("origin") or "")
     if not mo:
-        raise Fail("PayloadMismatch", "letter %s was not passed by aos-view (no origin)" % irt)
+        raise Fail("PayloadMismatch", "letter %s was not passed by aos-frontend (no origin)" % irt)
     team, rid = mo.group(1), mo.group(2)
     sha = canonical_sha(ob, zmod)
     rec = next((r for r in read_lines(Team(home, team).sent_log) if r.get("id") == rid), None)
@@ -2978,7 +2978,7 @@ def cmd_aide_tick(home, args):
         r["team"], len(r["passed"]), "sent" if r["report"] else "-", "sent" if r["beat"] else "-",
         ("; errors: " + " | ".join(r["errors"])) if r["errors"] else ""))
     if r["errors"]:
-        sys.stderr.write("aos-view: warning: %s\n" % " | ".join(r["errors"]))
+        sys.stderr.write("aos-frontend: warning: %s\n" % " | ".join(r["errors"]))
 
 
 def cmd_ingest(home, args):
@@ -2993,7 +2993,7 @@ def cmd_aide_def(home, args):
     """A team's aide definition = a fresh copy of the agent-fsm template with the files in aide-def/ laid over it."""
     tpl = take_opt(args, "--template")
     if len(args) != 1:
-        raise Fail("ArgumentsBad", "usage: aos-view aide-def [--template DIR] PATH")
+        raise Fail("ArgumentsBad", "usage: aos-frontend aide-def [--template DIR] PATH")
     if tpl is None:
         ah = os.environ.get("AOS_HOME")
         if not ah:
@@ -3066,7 +3066,7 @@ def main(argv):
             PHASE1[cmd](home, args[1:])
             return 0
         except Fail as e:
-            print("aos-view: error: %s %s" % (e.code, e), file=sys.stderr)
+            print("aos-frontend: error: %s %s" % (e.code, e), file=sys.stderr)
             return 1
     home.init()
     if cmd == "init":
@@ -3087,19 +3087,19 @@ def main(argv):
             try:
                 s2 = Server(("127.0.0.1", e["port"]), Handler)
             except OSError as ex:
-                print("aos-view: warning: port %d not opened: %s" % (e["port"], ex), file=sys.stderr, flush=True)
+                print("aos-frontend: warning: port %d not opened: %s" % (e["port"], ex), file=sys.stderr, flush=True)
                 continue
             s2.collector, s2.home, s2.token, s2.outbox, s2.ui = c, home, srv.token, ob, e
             threading.Thread(target=s2.serve_forever, daemon=True).start()
-            print("aos-view: http://127.0.0.1:%d/  (ui %s)" % (e["port"], e["dir"]), flush=True)
+            print("aos-frontend: http://127.0.0.1:%d/  (ui %s)" % (e["port"], e["dir"]), flush=True)
         threading.Thread(target=c.loop, daemon=True).start()
-        print("aos-view: http://127.0.0.1:%d/  (home %s, pid %d)" % (port, home.dir, os.getpid()), flush=True)
+        print("aos-frontend: http://127.0.0.1:%d/  (home %s, pid %d)" % (port, home.dir, os.getpid()), flush=True)
         try:
             srv.serve_forever()
         except KeyboardInterrupt:
             pass
         return 0
-    print("aos-view: error: CommandUnknown %s" % cmd, file=sys.stderr)
+    print("aos-frontend: error: CommandUnknown %s" % cmd, file=sys.stderr)
     return 1
 
 

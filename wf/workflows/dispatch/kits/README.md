@@ -20,7 +20,7 @@
 
 **通用層和角色層以產品版為準**：general.A.txt、roles/*.txt 和 proto8/templates/kits/ 的同名檔必須一字不差，改完用 `cmp` 對（例：`cmp general.A.txt ../../../../proto8/templates/kits/general.A.txt`，沒輸出＝相同）。站台層（site.txt、site.gpt.txt、site.json）只在 wf。
 
-**今晚換樹之後**：comm 包（board_read、board_wait）可用，site.json 的 BOARD 值可以改成 `board_read {"who":"user"}`，不再讀檔或跑 aos-view。
+**今晚換樹之後**：comm 包（board_read、board_wait）可用，site.json 的 BOARD 值可以改成 `board_read {"who":"user"}`，不再讀檔或跑 aos-frontend。
 
 ## 「看」包（gather/）
 

@@ -23,6 +23,13 @@
    "per_file": "wf/knowledge/code-map/proto8/cmd.json"
   },
   {
+   "domain": "選配的網頁外掛",
+   "files": "proto8/frontend/*",
+   "role": "全景頁 aos-frontend（11-17 從 cmd/aos-view 搬來改名）：後端是一支 Python 標準庫程式 `frontend/bin/aos-frontend`，從自己的位置往上一層找 `ui/`、`aide-def/`；v2 網頁原始碼在 `ui/v2/`（dist 不進 git，要 Node 才建得出來）；不用它 aos 照樣跑。說明在 proto8/frontend/API.md。",
+   "tests": "proto8/frontend/tests/",
+   "per_file": "wf/knowledge/code-map/proto8/frontend.json"
+  },
+  {
    "domain": "腦叫的工具與共用程式庫",
    "files": "proto8/lib/*",
    "role": "腦叫的工具（`_entry`＋`_tooldef.json`＋`_metainfo.json`）；CLI 對話與介面宣告共用模組在 `lib/agent/`（`cli_session.py`、`agent_files.py`）；機讀的協議定義（JSON Schema）在 `lib/schema/`（不是工具）；lib 頂層另有人打的指令與範本共用的 Python 模組（旗標 aos_flags、aos_ws、daemon_ctl/、掃描 aos_sweep*…；11-17 前在 proto8/py/，說明看 proto8/lib/docs/04-共用模組.md），lib 的工具不 import aos_flags。契約看 proto8/lib/README.md。",
@@ -46,7 +53,7 @@
   {
    "domain": "封存",
    "files": "proto8/archive/*",
-   "role": "不再維護、留著參考的東西（langs、tree-swap、aos-home）；不測、連結壞了不修。extras 11-17 解散（aos-view 進 cmd/，其餘進 lib/tests、templates/tests、templates/kernel/tests 或 archive）。",
+   "role": "不再維護、留著參考的東西（langs、tree-swap、aos-home）；不測、連結壞了不修。extras 11-17 解散（全景頁進 cmd/、同天下午再搬到 frontend/，其餘進 lib/tests、templates/tests、templates/kernel/tests 或 archive）。",
    "tests": "",
    "per_file": ""
   },

@@ -3,7 +3,7 @@
  "KNOWLEDGE": "/home/lorkhan/aos-home/knowledge",
  "BOARD": {
   "no_shell": "read /home/lorkhan/.aos/view/board/user.json (no file = no notice)",
-  "shell": "~/aos-home/ws/tools/aos-view/aos-view board (--all adds each team's latest note)",
+  "shell": "aos-frontend board (--all adds each team's latest note)",
   "later": "board {\"op\":\"get\",\"who\":\"user\"} once the board tool exists (ok-view, board/1)"
  },
  "OWN_BOARD": "",

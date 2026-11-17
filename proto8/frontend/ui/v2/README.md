@@ -19,10 +19,10 @@ React + Tailwind，build 成 `dist/`，由同一支後端程式在第二個 port
 
 ## 建置與測試
 
-**`dist/` 不進 git**（使用者 11-17「建置成品不進git，現有的都清掉」；`.gitignore` 擋著）：repo 裡只有原始碼，要看 v2 頁就得自己在當地建一次。沒建的話 `aos-view serve` 照樣起、第一個 port（舊頁）照常，第二個 port 不開，stderr 印一行：
+**`dist/` 不進 git**（使用者 11-17「建置成品不進git，現有的都清掉」；`.gitignore` 擋著）：repo 裡只有原始碼，要看 v2 頁就得自己在當地建一次。沒建的話 `aos-frontend serve` 照樣起、第一個 port（舊頁）照常，第二個 port 不開，stderr 印一行：
 
 ```
-aos-view: warning: port 8768 not opened: <...>/ui/v2/dist has no index.html (the page is not built; build it first: see <...>/ui/v2/README.md)
+aos-frontend: warning: port 8768 not opened: <...>/ui/v2/dist has no index.html (the page is not built; build it first: see <...>/ui/v2/README.md)
 ```
 
 要什麼：**Node 24**（家機建的那版是 24.19.0；vite 8 至少要 20.19，`node --test` 直接跑 `.ts` 要靠 Node 的型別剝除，22.18 起才不用旗標），不用 npm 帳號。套件版本寫死在 `package.json`（vite 8.3.5、react 19.2.4、tailwindcss 4.3.0、typescript 5.9.3 …）。
@@ -30,13 +30,13 @@ aos-view: warning: port 8768 not opened: <...>/ui/v2/dist has no index.html (the
 步驟（不要在活樹建；在 repo 的工作樹或暫存複本都行，`node_modules/` 也不進 git）：
 
 ```sh
-cd proto8/cmd/aos-view/ui/v2
+cd proto8/frontend/ui/v2
 npm install          # 有網路時；沒網路的機器用 ./vendor.sh 從本機兩個專案抄 node_modules（路徑寫在 vendor.sh 開頭）
 npm test             # node --test src/**/*.test.ts
 npm run build        # check-src → tsc --noEmit → vite build（寫 dist/，先清空）→ check-dist（JS gzip ≤ 250 KB、index.html 不能有 inline script）
 ```
 
-建在暫存複本時，把複本的 `dist/` 整夾抄到要用的那份 aos-view 夾裡（`<aos-view 夾>/ui/v2/dist/`，`<aos-view 夾>` 是 `bin/aos-view` 上一層；樹用的是 `$AOS_HOME/cmd/aos-view/ui/v2/dist/`），或在 aos-view 的 `config.json` 用 `ui_ports` 指過去（`[{"port": 8768, "dir": "<dist 的絕對路徑>"}]`）。換了原始碼要重建一次；`aos-view` 不會自己建。
+建在暫存複本時，把複本的 `dist/` 整夾抄到要用的那份 frontend 夾裡（`<frontend 夾>/ui/v2/dist/`，`<frontend 夾>` 是 `bin/aos-frontend` 上一層；樹用的是 `$AOS_HOME/frontend/ui/v2/dist/`），或在 aos-frontend 的 `config.json` 用 `ui_ports` 指過去（`[{"port": 8768, "dir": "<dist 的絕對路徑>"}]`）。換了原始碼要重建一次；`aos-frontend` 不會自己建。
 
 （11-17 拿掉追蹤時這台公司 WSL 沒有 node，上面的指令照 `package.json` 寫、**沒在這台實建過**。）
 

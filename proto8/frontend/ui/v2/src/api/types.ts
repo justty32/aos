@@ -1,4 +1,4 @@
-// The API contract (aos-view API.md + v2 additions B1–B5, 03 §12.3 / §12.8). Written by opus; panels only read these.
+// The API contract (aos-frontend API.md + v2 additions B1–B5, 03 §12.3 / §12.8). Written by opus; panels only read these.
 // Every string that comes from an agent is already secret-masked by the backend; render it as React text only.
 
 export type Light = "red" | "blue" | "yellow" | "green" | "gray";

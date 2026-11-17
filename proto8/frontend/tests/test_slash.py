@@ -15,7 +15,7 @@ from unittest.mock import patch
 if any(k.startswith("AOS_") for k in os.environ):
     raise SystemExit("test_slash: run through tests/run.sh")
 
-VIEW = Path(__file__).resolve().parents[1] / "bin" / "aos-view"
+VIEW = Path(__file__).resolve().parents[1] / "bin" / "aos-frontend"
 loader = importlib.machinery.SourceFileLoader("view_slash_test", str(VIEW))
 spec = importlib.util.spec_from_loader(loader.name, loader)
 v = importlib.util.module_from_spec(spec)

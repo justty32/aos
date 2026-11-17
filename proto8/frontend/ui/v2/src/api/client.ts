@@ -1,4 +1,4 @@
-// HTTP to the aos-view backend: 8 s timeout per call, ETag / If-None-Match, the CSRF token (header + cookie).
+// HTTP to the aos-frontend backend: 8 s timeout per call, ETag / If-None-Match, the CSRF token (header + cookie).
 import type { SendResult, UiKey, UiState } from "./types.ts";
 
 const TIMEOUT_MS = 8000;

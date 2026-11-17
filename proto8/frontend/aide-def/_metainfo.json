@@ -1,0 +1,7 @@
+{
+  "summary": "The view aide of one team: an agent-fsm with a fake brain and no tools whose on_clock hook runs aos-frontend aide-tick (phase 1 of view-1114: only carries facts, no model).",
+  "cost": {
+    "time_ms": 30000
+  },
+  "resource": []
+}
