@@ -343,9 +343,8 @@
     "system.txt": "",
     "tools.json": "The aide has no tools: its whole job is the on_clock hook aide_tick (hooks.json); the brain is fake and is never asked in phase 1."
    },
-   "aos-view": "one local page that shows every agent and proc on the daemon table as a tree,",
    "systemd": {
-    "aos-view.service": ""
+    "aos-view.service": "Example user unit for the aos-view page. Path rule one (11-17): AOS_HOME is the proto8 folder; here it is"
    },
    "tests": {
     "cdp.mjs": "drive headless Chrome over the DevTools protocol (node 24 has WebSocket built in); no puppeteer.",

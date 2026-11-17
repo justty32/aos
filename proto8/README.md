@@ -20,7 +20,7 @@
 |---|---|
 | [docs/](docs/README.md) | 使用者條文：[CONCEPTS](docs/CONCEPTS.md)（概念）、[NORMS](docs/NORMS.md)（規範）、[CONVENTION](docs/CONVENTION.md)（agent 慣例）；另有 [notes/](docs/notes/README.md)＝AI 寫的參考筆記（不算數） |
 | [impls/](impls/README.md) | aos-exec、aos-loop、aos-fsm、aos-daemon 等 C++ 專案（各自 CMake；`build/`、`bin/`、`lib/` 是建置產物、不進 git） |
-| [cmd/](cmd/README.md) | Python 指令：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca（turn、screen）、aos-mcp、aos-mcp-launch（起外部 stdio MCP server）、aos-mcp-import（把外部 MCP 的工具凍結成一包）、aos-sandbox、aos-grow、aos-view（全景頁；11-17 從 extras 搬來，執行檔在 `aos-view/aos-view`）；`install.sh`（選配，把指令連進 `~/.local/bin`）也在這裡 |
+| [cmd/](cmd/README.md) | Python 指令：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca（turn、screen）、aos-mcp、aos-mcp-launch（起外部 stdio MCP server）、aos-mcp-import（把外部 MCP 的工具凍結成一包）、aos-sandbox、aos-grow、aos-view（全景頁；11-17 從 extras 搬來，執行檔在 `aos-view/bin/aos-view`）；`install.sh`（選配，把指令連進 `~/.local/bin`）也在這裡 |
 | [env.sh](env.sh) | 每個視窗先 `source` 它：清掉 `AOS_*`、設 `AOS_HOME`、把這個家的 `cmd/*/bin`、`impls/*/bin` 放到 PATH 最前 |
 | [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），templates 用相對捷徑引用；機讀的協議定義在 [lib/schema/](lib/schema/README.md)；lib 頂層另有 cmd 共用模組 `aos_flags.py`、`aos_ws.py`、`daemon_ctl/` 等（11-17 前在 `py/`，說明在 [lib/docs/04](lib/docs/04-共用模組.md)） |
 | [templates/](templates/README.md) | agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent）等；kernel 範本在 [templates/kernel/](templates/kernel/README.md)：llm-kernel（問腦的那台）、daemon-kernel、procs-kernel（通用 kernel 的站的兩種掛法） |

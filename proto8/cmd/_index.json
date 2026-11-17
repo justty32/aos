@@ -63,7 +63,7 @@
   "description": "aos-tree-start：起樹前先看殼裡有沒有別棵樹的 AOS_*"
  },
  "aos-view": {
-  "description": "全景頁 aos-view：把一棵樹的 agent、信、看板做成網頁給使用者看與回覆；含後端、v2 前端原始碼（dist 不進 git，要在有 node 的機器建）、aide 定義的差異檔與測試；11-17 從 extras 搬來，沒改名"
+  "description": "全景頁 aos-view：把一棵樹的 agent、信、看板做成網頁給使用者看與回覆；含後端、v2 前端原始碼（dist 不進 git，要在有 node 的機器建）、aide 定義的差異檔與測試；11-17 從 extras 搬來，沒改名；執行檔在 bin/aos-view，source env.sh 後直接打 aos-view"
  },
  "docs": {
   "description": "cmd 的說明文件"

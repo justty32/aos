@@ -14,7 +14,7 @@ import time
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VIEW = os.path.join(os.path.dirname(HERE), "aos-view")
+VIEW = os.path.join(os.path.dirname(HERE), "bin", "aos-view")
 
 if any(k.startswith("AOS_") for k in os.environ):
     sys.exit("test_v2: AOS_* variables are set; run through tests/run.sh")

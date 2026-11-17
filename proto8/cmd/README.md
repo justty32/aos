@@ -22,7 +22,7 @@
 | [aos-grow](aos-grow/README.md) | 把一個函數往上長一級或縮回一級（原型） |
 | [aos-json-view](aos-json-view/README.md) | 只讀：把 json（或 `#/指標` 那段）印成人好讀的樣子：`鍵: 值`、短的擠一行、`\n` 真的換行、字串陣列接成段落、`--depth N` 摺深層 |
 | [aos-tree-start](aos-tree-start/README.md) | 起樹（`aos-tree-start root`＝`aos-exec root`）；殼裡帶著 `AOS_HOME` 以外的 `AOS_*`（從別棵樹繼承來的）就拒絕，`--force` 照起 |
-| [aos-view](aos-view/API.md) | 全景頁（127.0.0.1 的網頁，看整棵樹、給 agent 寫一行）；11-17 從 `extras/` 搬來、沒改名，執行檔在 `aos-view/aos-view`（不在 `bin/`，所以 `env.sh` 不會把它放上 PATH，用絕對路徑跑）；全景頁 v2 的 `dist/` 不在 git，要在有 node 的機器照 [ui/v2/README](aos-view/ui/v2/README.md) 建 |
+| [aos-view](aos-view/API.md) | 全景頁（127.0.0.1 的網頁，看整棵樹、給 agent 寫一行）；11-17 從 `extras/` 搬來、沒改名，執行檔在 `aos-view/bin/aos-view`（跟其他指令一樣，`source env.sh` 之後直接打 `aos-view`）；全景頁 v2 的 `dist/` 不在 git，要在有 node 的機器照 [ui/v2/README](aos-view/ui/v2/README.md) 建 |
 
 > **C++（[proto8/impls](../impls/README.md)）是唯一實作**（使用者 10-23：「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；fsm 和時鐘，使用者選「fsm 也改用 C++、tick 先留 Python」）：
 > `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 的說明在各自的 README：[aos-exec](../impls/aos-exec/README.md)、[aos-loop](../impls/aos-loop/README.md)、[aos-fsm](../impls/aos-fsm/README.md)、[aos-daemon](../impls/aos-daemon/README.md)；inst 是 C lib [inst](../impls/aos-inst/README.md)。

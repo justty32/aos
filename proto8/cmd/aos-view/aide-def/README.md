@@ -14,10 +14,10 @@ history 不會多任何一則，也不叫腦。範本刻意拿掉了 `timer` 和
 
 ## 隊長照做的步驟（`<隊>` 換成你在 daemon 表上的名字，例 `ok-kf`）
 
-1. **做定義**（shell；抄 `$AOS_HOME/templates/agent-fsm`，再把本夾的檔蓋上去；相對路徑從 `$AOS_WS` 算，跟 `agent_def` 一樣）：
+1. **做定義**（shell；抄 `$AOS_HOME/templates/agent-fsm`，再把本夾的檔蓋上去；相對路徑從 `$AOS_WS` 算，跟 `agent_def` 一樣；`source $AOS_HOME/env.sh` 過的 shell 直接打 `aos-view` 也行）：
 
    ```sh
-   ~/aos-home/ws/tools/aos-view/aos-view aide-def defs/<隊>-aide
+   $AOS_HOME/cmd/aos-view/bin/aos-view aide-def defs/<隊>-aide
    ```
 
    印 `wrote aide definition ...` 就成了；路徑已經在＝`DefExists`，沒設 `AOS_HOME`＝`TemplateMissing`（加 `--template <agent-fsm 範本夾>`）。`_metainfo.json` 的 lineage 記 `{"from": 範本夾, "overlay": 本夾}`。然後 aos 工具 `agent_def` `{"op": "check", "path": "defs/<隊>-aide"}`，`problems` 是空的才往下。定義裡的檔都不用改。
@@ -44,7 +44,7 @@ history 不會多任何一則，也不叫腦。範本刻意拿掉了 `timer` 和
 ## 隊長平常用的三個指令（shell）
 
 ```sh
-A=~/aos-home/ws/tools/aos-view/aos-view
+A=$AOS_HOME/cmd/aos-view/bin/aos-view
 $A note progress "B2 圖紙改完，等 build"          # 留話：start progress done blocked decision handoff ask；--on NAME 標是哪個成員的事
 $A decide letter.json                             # 決策單（專區信的 body，格式同 aos-user send）→ 印出單號；含 key／token 的會被拒（SecretInPayload）
 $A match <回信資料夾>                              # 使用者回了之後：印 ok: match 才代表專區那封就是你寫的那張

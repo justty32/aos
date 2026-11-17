@@ -66,6 +66,10 @@ SAY_FROM = "user-via-view"
 # The page's own name, kept in one place (the user 11-15: it will be renamed). New code reads APP_NAME, never the
 # literal; the frontend gets it from /api/version. PAGE_FROM is the neutral sender for new kinds of sends (compact).
 APP_NAME = os.path.basename(os.path.realpath(__file__))    # follows the file name: rename the file, the name follows
+# Path rule one (11-17): find the neighbours from this file's own place. The executable is <view>/bin/aos-view;
+# ui/, aide-def/ and the rest live in <view>, one level up. SELF is the absolute path agents are told to run.
+SELF = os.path.realpath(__file__)
+VIEW_DIR = os.path.dirname(os.path.dirname(SELF))
 PAGE_FROM = "user-via-page"
 TIMEOUT_RE = re.compile(r"time ?out|timed out|TimeoutExpired|code 124\b", re.I)
 QUIET_MIN = 15           # in a turn with no new line in the CLI's live stream for this long = yellow "quiet", never red
@@ -1481,8 +1485,8 @@ def do_say(form, tree, home, ret=None):
         return "!沒有內容"
     if len(text) > 4000:
         return "!太長了（上限 4000 字）"
-    msg = "%s %s\n\n（要回覆請用 mailbox_send 寄到 box %s，title 開頭寫 [view-reply]；使用者久沒回時，先跑 ~/aos-home/ws/tools/aos-view/aos-view board 看他的布告欄；這句是全景頁自動附的）" % (
-        SAY_PREFIX, text, home.mailbox)
+    msg = "%s %s\n\n（要回覆請用 mailbox_send 寄到 box %s，title 開頭寫 [view-reply]；使用者久沒回時，先跑 %s board 看他的布告欄；這句是全景頁自動附的）" % (
+        SAY_PREFIX, text, home.mailbox, SELF)
     code, out, err = run(["aos-agent", "say", "-t", name, "--from", SAY_FROM, "-"], timeout=20, stdin=msg)
     rec = {"at": datetime.now().astimezone().isoformat(timespec="seconds"), "kind": "say", "to": name, "text": text,
            "ok": code == 0, "letter": out.strip() if code == 0 else None, "error": None if code == 0 else short(err, 300)}
@@ -1978,7 +1982,7 @@ def do_mail(form, tree, home, extra=None, kind="mail"):
     body = {"from": "user", "to": name, "status": status, "title": title, "what": what,
             "outputs": "none", "not_done": "none", "decide": "none", "via": "aos-view",
             "note": "sent by the user from the panorama page; reply with mailbox_send to box %s. "
-                    "If the user does not answer for long, read the user's board: ~/aos-home/ws/tools/aos-view/aos-view board" % home.mailbox}
+                    "If the user does not answer for long, read the user's board: %s board" % (home.mailbox, SELF)}
     if extra:
         body.update(extra)
     env = cli_env()
@@ -2064,7 +2068,7 @@ def agent_json(name):
 
 # ---- server --------------------------------------------------------------------------
 
-HERE_DIR = os.path.dirname(os.path.realpath(__file__))
+HERE_DIR = VIEW_DIR   # the aos-view folder (bin/ is one level below it)
 # the frontend served: ui/v1 (frozen 11-14, "清單版"); --ui DIR serves another one (the old web/ is kept, not served)
 WEB_DIR = os.path.join(HERE_DIR, "ui", "v1") if os.path.isdir(os.path.join(HERE_DIR, "ui", "v1")) else os.path.join(HERE_DIR, "web")
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/index.html": ("index.html", "text/html; charset=utf-8"),
@@ -2753,7 +2757,7 @@ def ui_put(home, key, body):
 
 
 def ui_ports(home):
-    """B1: extra listeners. config "ui_ports": [{"port": 8768, "dir": "ui/v2/dist"}] (dir relative to this file);
+    """B1: extra listeners. config "ui_ports": [{"port": 8768, "dir": "ui/v2/dist"}] (dir relative to the aos-view folder, VIEW_DIR);
     default: 8768 for ui/v2/dist. A dir without index.html is not served (the port is not opened).
     -> (served [{port, dir}], missing [{port, dir}]); serve prints one warning per missing dir (ui/v2/dist is not in git:
     it has to be built locally, ui/v2/README.md)."""
@@ -2981,7 +2985,7 @@ def cmd_ingest(home, args):
     print(json.dumps(ingest(home), ensure_ascii=False))
 
 
-AIDE_DEF = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aide-def")   # only the aide's own files (Q3 11-17)
+AIDE_DEF = os.path.join(VIEW_DIR, "aide-def")   # only the aide's own files (Q3 11-17)
 AIDE_SKIP = ("_index.json",)                     # generated listing of aide-def itself, not part of a definition
 
 

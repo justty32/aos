@@ -36,7 +36,7 @@ npm test             # node --test src/**/*.test.ts
 npm run build        # check-src → tsc --noEmit → vite build（寫 dist/，先清空）→ check-dist（JS gzip ≤ 250 KB、index.html 不能有 inline script）
 ```
 
-建在暫存複本時，把複本的 `dist/` 整夾抄到要用的那份 aos-view 旁邊（`<aos-view 所在夾>/ui/v2/dist/`；裝在樹裡的是 `~/aos-home/ws/tools/aos-view/ui/v2/dist/`），或在 aos-view 的 `config.json` 用 `ui_ports` 指過去（`[{"port": 8768, "dir": "<dist 的絕對路徑>"}]`）。換了原始碼要重建一次；`aos-view` 不會自己建。
+建在暫存複本時，把複本的 `dist/` 整夾抄到要用的那份 aos-view 夾裡（`<aos-view 夾>/ui/v2/dist/`，`<aos-view 夾>` 是 `bin/aos-view` 上一層；樹用的是 `$AOS_HOME/cmd/aos-view/ui/v2/dist/`），或在 aos-view 的 `config.json` 用 `ui_ports` 指過去（`[{"port": 8768, "dir": "<dist 的絕對路徑>"}]`）。換了原始碼要重建一次；`aos-view` 不會自己建。
 
 （11-17 拿掉追蹤時這台公司 WSL 沒有 node，上面的指令照 `package.json` 寫、**沒在這台實建過**。）
 

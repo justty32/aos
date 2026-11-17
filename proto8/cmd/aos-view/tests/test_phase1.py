@@ -14,7 +14,7 @@ import time
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VIEW = os.path.join(os.path.dirname(HERE), "aos-view")
+VIEW = os.path.join(os.path.dirname(HERE), "bin", "aos-view")
 # an integration test against the real aos-user (its zone.py) and aos-post: they live in the installed tools, not in this
 # folder. VIEW_TOOLS points at another tools folder; without them (a clean copy) the class is skipped, not failed.
 TOOLS = os.environ.get("VIEW_TOOLS") or os.path.expanduser("~/aos-home/ws/tools")
@@ -266,8 +266,8 @@ class Phase1(unittest.TestCase):
     def test_hook_handler_file(self):
         """The template's handler (aide-def/aide_tick.json) through aos-exec, as hooks.py would run it."""
         fake_home = os.path.join(self.tmp, "aoshome")
-        os.makedirs(os.path.join(fake_home, "ws", "tools", "aos-view"))
-        os.symlink(VIEW, os.path.join(fake_home, "ws", "tools", "aos-view", "aos-view"))
+        os.makedirs(os.path.join(fake_home, "cmd", "aos-view", "bin"))
+        os.symlink(VIEW, os.path.join(fake_home, "cmd", "aos-view", "bin", "aos-view"))
         cell = os.path.join(self.aide, "hooks", "aide_tick") + "/"
         ev = {"event": "on_clock", "hook": "aide_tick", "stack": self.aide, "first": True, "missed": 0}
         handler = os.path.join(os.path.dirname(HERE), "aide-def", "aide_tick.json")

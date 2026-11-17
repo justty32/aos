@@ -1,1 +1,1 @@
-{"argv": [{"$env": "AOS_HOME", "$path": "/ws/tools/aos-view/aos-view"}, "aide-tick"]}
+{"argv": [{"$env": "AOS_HOME", "$path": "/cmd/aos-view/bin/aos-view"}, "aide-tick"]}
