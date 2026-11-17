@@ -1,3 +1,5 @@
+> 封存 2026-11-17，由 wf/public（README 主題表） 取代（使用者 11-17 待裁網頁 wf-7 選 a）
+
 # 派線踩過的坑
 
 [dispatch](README.md)｜[WORKFLOWS](../../WORKFLOWS.md)

@@ -1,3 +1,5 @@
+> 封存 2026-11-17，由 wf/public/Windows與WSL.md、行程與環境.md、共用工作樹與git.md、改文件與知識庫.md、model-notes.md、pitfalls.md、派線與任務書.md 取代（使用者 11-17 待裁網頁 wf-7 選 a）
+
 ← [入口](../gotchas.md)｜涵蓋：使用 aos、改文件、公司 Windows 這台｜下一份 [05-在跑著的樹旁邊做事](05-在跑著的樹旁邊做事.md)
 
 ## 使用 aos

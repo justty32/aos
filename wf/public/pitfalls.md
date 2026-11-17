@@ -8,7 +8,7 @@ eca 隊長用 Bash 工具（實際是 zsh）驅動暫存樹、派隊員時：
 
 - **zsh 不分詞：`$VAR`、`$(…)` 都是一整個字**。`for f in $(cat list)` 只跑一圈；`for p in "a b" "c d"; do set -- $p; …` 切不開，`$1` 拿到整串 `a b`；`F="a b"; git status -- $F`、`commit-request claim … $F`、`submit --files $F` 都把整串當一個檔名（寄錯對象、claim 成怪檔名要 release 重做、submit 回 `RequestBad`／`does not exist`）。**要分詞的一律包在 `bash -c '…'` 裡，或寫成 bash 腳本**；留在 zsh 就用陣列 `F=(a b)`。逐行讀用 `bash -c 'mapfile -t F < list; for f in "${F[@]}"; do …; done'`。清環境也是同一個坑（[06 第 2 條](../workflows/dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md)）。
 - **指令偶爾卡到逾時、被丟到背景**（檔其實已寫好）：
-  - 最常見是 heredoc 後面接 `ls`／`cat` 的長指令。這台的 `ls` 是別名（eza）、`cat` 是 bat：結尾不放裸的 `ls`，列檔用 `/usr/bin/ls`、`/usr/bin/stat`、`ls 路徑 | head` 或 `find`；要原樣內容寫 `command cat`。
+  - 最常見是 heredoc 後面接 `ls`／`cat` 的長指令。這台的 `ls` 是別名（eza，沒 tty 會掛住，易誤判成 `claude -p` 超時）、`cat` 是 bat：結尾不放裸的 `ls`，列檔用 `/usr/bin/ls`、`/usr/bin/stat`、`ls 路徑 | head` 或 `find`；要原樣內容寫 `command cat`。
   - 每個指令明給 `< /dev/null`；heredoc 寫檔和後續指令分兩次呼叫；一條指令只做一兩件事並帶 timeout（一條串 cat、迴圈、ls、grep 的會撞 120 秒）。
   - 卡住後先用另一條短指令確認檔在不在，**不要重跑整條**（`>>` 的內容會接兩次）。
 - **不要 `pkill -f <字串>`**：自己那個 shell 的命令列也含那個字串，會先殺掉自己（退 144）。只 kill 自己記下的 pid。
@@ -48,7 +48,7 @@ ls -la ../src/proto8/impls/<名字>/bin   # 時間要是剛剛
 
 ## 乾淨複本要帶齊依賴：wf/tools 測試連 proto8 一起抄，impls 測試連 lib 一起抄
 
-在 repo 外的乾淨複本跑測試，只紅一兩支、又是 ModuleNotFoundError 或找不到檔，先懷疑複本抄得不夠全：只抄 `wf/tools` 時 test_quiet 借不到 `proto8/lib/agent/kernel_gate/tests` 的 test_kernel_gate；只抄 `impls` 和 `knowledge` 時 aos-llm 的 test_full 找不到 `proto8/lib/base/llm_fake`。wf/tools 的測試用 `git archive HEAD wf/tools proto8/lib proto8/py proto8/cmd | tar -x -C <複本>`；impls 的測試整個 `proto8` 一起抄；再經清環境腳本跑（06 第 2 條）。
+在 repo 外的乾淨複本跑測試，只紅一兩支、又是 ModuleNotFoundError 或找不到檔，先懷疑複本抄得不夠全：只抄 `wf/tools` 時 test_quiet 借不到 `proto8/lib/agent/kernel_gate/tests` 的 test_kernel_gate；只抄 `impls` 和 `knowledge` 時 aos-llm 的 test_full 找不到 `proto8/lib/base/llm_fake`。wf/tools 的測試用 `git archive HEAD wf/tools proto8/lib proto8/cmd | tar -x -C <複本>`；impls 的測試整個 `proto8` 一起抄；再經清環境腳本跑（06 第 2 條）。
 
 ## 乾淨複本的標準跑法：git archive＋疊檔、執行檔自己編、PATH 不撿到活樹的
 

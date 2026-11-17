@@ -95,5 +95,5 @@ sleep 5
 
 ## 交接
 
-- 派線流程與領地表 → [dispatch](README.md)；踩過的坑 → [lessons](lessons.md)。
+- 派線流程與領地表 → [dispatch](README.md)；踩過的坑 → [wf/public 派線與任務書](../../public/派線與任務書.md)。
 - 鎖與限流 → [resources](../resources.md)；通訊契約 → [inbox.json](../inbox.json)。

@@ -1,6 +1,6 @@
 # wf/public — 公用知識庫
 
-← [wf/INDEX](../INDEX.md)
+← [WORKFLOWS](../WORKFLOWS.md)
 
 aos 體系下各 agent 共同能存取的做法與坑（使用者 11-17「wf/public也需要整理精簡，這裡是aos體系下，各agent共同能存取的地方」）：頂層、各 ok-* eca、它們掛的 sol／astra 等 fsm 都能讀、都能投稿；由頂層 repo-aos 管理（使用者 11-14「大家如果自己有弄出好工具，也可以分享出來。你這邊也稍微掌管一下wf/public公用知識庫，wf/public/tools之類」）。
 
@@ -13,15 +13,21 @@ aos 體系下各 agent 共同能存取的做法與坑（使用者 11-17「wf/pub
 |---|---|
 | [recipes](recipes.md) | 任務類型→一行做法的總表：隊員、交件與驗收、其他三段 |
 | [pitfalls](pitfalls.md) | shell 與建置的坑：zsh 不分詞、指令卡住、別 pkill -f、工作區外被擋、pgrep 多列；`_main` 目標、乾淨複本帶齊依賴與標準跑法、新鍵斷言、`.orig`、試真東西別碰原件 |
+| [建置與相依](建置與相依.md) | 把 C++ 庫匯出給外部用：私有相依漏進匯出、外部消費測試要 `env -u VCPKG_ROOT`、漏標 `AOS_API` |
+| [Windows與WSL](Windows與WSL.md) | 公司 Windows 那台：假 python3、不分大小寫、中文檔名 quotepath、`/mnt/c` 全 +x、MSYS 路徑轉換 |
+| [行程與環境](行程與環境.md) | 收行程只收自己的、SIGINT 收不到 daemon、先清 `AOS_*`（zsh 會失效）、起樹用 aos-tree-start、`pgrep -fc` 多算、killpg 弄掛 WSL、setsid |
+| [共用工作樹與git](共用工作樹與git.md) | 同檔只給一條線、別人的 commit 帶走你的字、生成器掃整棵樹、別 autostash、整檔改寫不拆刪加、合併後才刪分支、worktree 起點舊 |
 | [patch-and-commit](patch-and-commit.md) | 暫存樹改動搬回往前走的 main、驗收跑全套（含沒清環境的假綠）、commit-request 與 claim 的坑、先交一個小修、檔放回 repo、放行看三樣、共用計數重算、封存搬檔留指標頁 |
-| [活樹旁邊](活樹旁邊.md) | 查哪些檔存檔就生效、換這類檔的順序、唯讀查看也要點名、查祕密不落地、換樹當晚的 pin |
-| [審查與實測](審查與實測.md) | 獨立審稿員怎麼問、讀 daemon 表要用真的列、真模型跑一輪、改前改後逐位元對照、守門程式、瀏覽器層唯讀守門 |
-| [設計與查證](設計與查證.md) | 派小修前查 main、先問介面、查別人的 bug、蓋到使用者舊裁定、算式先模擬、UX 先量、設計線配施工線、fable 帶原型、搬信改 reply_to |
-| [改文件與知識庫](改文件與知識庫.md) | 改寫必讀規矩檔、換全場共用工具、請新人照索引走、知識庫頁對程式、改文件的小坑 |
+| [活樹旁邊](活樹旁邊.md) | 查哪些檔存檔就生效（11-17 起不抄樹）、換這類檔的順序、在 repo 編 C++＝換執行檔、唯讀查看也要點名、查祕密不落地、換樹當晚的 pin |
+| [審查與實測](審查與實測.md) | 獨立審稿員怎麼問、讀 daemon 表要用真的列、真模型跑一輪（不騙模型）、故意改壞的快取、外包 diff 逐行審、改前改後逐位元對照、守門程式、瀏覽器層唯讀守門 |
+| [設計與查證](設計與查證.md) | 派小修前查 main、先問介面、查別人的 bug、蓋到使用者舊裁定、備註有兩種讀法照小的做、算式先模擬、UX 先量、設計線配施工線、fable 帶原型、搬信改 reply_to |
+| [派線與任務書](派線與任務書.md) | 預掃涵蓋全部組別、線推翻交接書、背景與步驟矛盾、禁區寫成唯一准用的做法、任務書 checklist、「檢查過」要附輸出、截止點還原乾淨、舊東西怎麼用、8 核一條線、codex 年代的坑 |
+| [改文件與知識庫](改文件與知識庫.md) | 改寫必讀規矩檔、換全場共用工具、請新人照索引走、知識庫頁對程式、改文件的小坑（非貪婪正則、`\b`、fix_moved_links 別重跑） |
+| [整理與拆檔](整理與拆檔.md) | 拆檔先 grep 錨點、目錄改名殘留、跳過 code fence、archive 准動什麼、表格類活檔、8192 邊緣、`link_columns`、空行躲門檻、`grep -c` 假通過、多 repo 檢查 |
 | [等隊員與讀信](等隊員與讀信.md) | 等隊員要帶逾時、別一直催、信交錯與「截至哪裡」、記時刻先對時鐘、回報寫讀了什麼沒做什麼 |
 | [sol-crew](sol-crew.md) | 帶 sol（agent-fsm）：任務書、施工員五句、必讀清單、guard 誤擋、掛法的坑、rlimit 實測與腦額度、暫存 kernel 日額、排隊慢時改派、縮工具與提示快取 |
 | [claude子agent](claude子agent.md) | 派 Claude 子 agent：前景跑加進度檔、寫最終回答前收齊背景工作、可寫路徑寫死、被權限擋會乾等、交回的事實要核、system set 是取代 |
-| [model-notes](model-notes.md) | Argon 一次性審查、`claude -p` 做到一半再交新話、用本機紀錄算 Claude token |
+| [model-notes](model-notes.md) | Argon 一次性審查、管線叫 `claude -p` 給 `</dev/null`、`claude -p` 做到一半再交新話、用本機紀錄算 Claude token |
 | [user-zone-mail](user-zone-mail.md) | 經使用者專區寄信、題目怎麼寫、讀回信與驗、照授權刪檔 |
 | [team-patterns](team-patterns.md) | 大批舊帳逐筆清、隊員定義的硬規則照授權來源分級 |
 | [權限與沙箱](權限與沙箱.md) | 免 root 換 uid（subuid）、sudo 身分層的坑、用 transient scope 測 cgroup |

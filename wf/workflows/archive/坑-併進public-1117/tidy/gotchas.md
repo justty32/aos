@@ -1,3 +1,5 @@
+> 封存 2026-11-17，由 wf/public/整理與拆檔.md、派線與任務書.md、共用工作樹與git.md 取代（使用者 11-17 待裁網頁 wf-7 選 a）
+
 # tidy／gotchas — 整理與拆檔踩過的坑
 
 [tidy](README.md)｜通用規則在 [README](README.md) 與 [data-files](../common/data-files.md)
