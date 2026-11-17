@@ -343,6 +343,9 @@
     "system.txt": "",
     "tools.json": "The aide has no tools: its whole job is the on_clock hook aide_tick (hooks.json); the brain is fake and is never asked in phase 1."
    },
+   "bin": {
+    "aos-view": "one local page that shows every agent and proc on the daemon table as a tree,"
+   },
    "systemd": {
     "aos-view.service": "Example user unit for the aos-view page. Path rule one (11-17): AOS_HOME is the proto8 folder; here it is"
    },
@@ -357,13 +360,6 @@
     "test_v2.py": "the v2 backend (03 §12.3, §12.8): B1 second port, B2 pulse / rev / ETag, B3 outbox, B4 ui-state,"
    },
    "ui": {
-    "v1": {
-     "VERSION": "",
-     "app.js": "全景頁 frontend: plain JS, zero dependencies, no build step (API contract: ../API.md).",
-     "index.html": "",
-     "map.js": "全景頁 phase 0b map: zoomable / pannable 2D floor plan of the agent tree (zero dependencies).",
-     "style.css": "全景頁 styles: plain CSS, no framework."
-    },
     "v2": {
      "VERSION": "",
      "index.html": "",
@@ -484,12 +480,6 @@
      "vendor.sh": "fill ui/v2/node_modules from two projects already on this machine (no network; 03 §12.8 #8).",
      "vite.config.ts": "Vite 8 turns TSX into JS with its built-in oxc (no @vitejs/plugin-react: not on this machine, 03 §12.2)."
     }
-   },
-   "web": {
-    "app.js": "全景頁 frontend: plain JS, zero dependencies, no build step (API contract: ../API.md).",
-    "index.html": "",
-    "map.js": "全景頁 phase 0b map: zoomable / pannable 2D floor plan of the agent tree (zero dependencies).",
-    "style.css": "全景頁 styles: plain CSS, no framework."
    }
   },
   "install.sh": "symlink the aos commands onto PATH (default ~/.local/bin); writes nothing into the Python user site."
