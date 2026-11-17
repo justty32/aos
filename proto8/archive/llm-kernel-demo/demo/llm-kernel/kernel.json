@@ -1,2 +1,0 @@
-{"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1,
- "budget": {"max_calls": 100, "max_tokens": 100000, "window": "day"}}
