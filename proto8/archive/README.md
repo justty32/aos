@@ -14,3 +14,4 @@
 | [resident-bob/](resident-bob/README.md) | 2026-11-04 | 原 `proto8/thinking/2026-11/02/resident-bob/`（常駐版 bob：一個 exec＋一個 loop 掛在 daemon 底下）；使用者 11-03「B5.封存吧，eca是他的全面強化版，真的沒必要了。」、11-04 晚「封存」。整份 AI 產出的 03、07、08、09、11、12、13 同晚先刪 |
 | [aos-schema/](aos-schema/README.md) | 2026-11-06 | 原 `proto8/impls/aos-schema`（用 JSON Schema 驗 JSON 的 C++ 庫與命令列）；沒人連。C-51 說之後驗 LLM 回話可能用到，所以封存不刪。頂層 `impls/CMakeLists.txt`、`impls/vcpkg.json` 同時拿掉它。授權：arch-refactor 方向題 6「死碼與殘渣一次授權照推薦」（[thinking](../thinking/2026-11/05/arch-refactor/README.md)） |
 | [pyfix-check-inbox/](pyfix-check-inbox/README.md) | 2026-11-06 | 原 `proto8/lib/agent/pyfix`（把改 Python 的事交給子 agent）與 `proto8/lib/aos/check_inbox`（看信箱）；沒有範本、knowledge、試驗場掛它們。夾裡的 `agent_tool.py` 是封存當下的副本（pyfix 要它的 `run_agent`）；lib 那份只剩 claude、codex 用的 `ask_cli`。授權同上 |
+| [norms-附錄1-3/](norms-附錄1-3/README.md) | 2026-11-17 | 原 `proto8/docs/NORMS/` 的附錄 1 條號表、附錄 2 各批出處、附錄 3 舊名對照（含分檔夾）；使用者 11-17「9.要清掉」，照 content-trim「沿革只留結論」 |
