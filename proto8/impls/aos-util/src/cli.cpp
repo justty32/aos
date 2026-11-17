@@ -126,6 +126,20 @@ Error usage_error(const std::string& code, const std::string& reason, const std:
     return Error{code, reason + " (usage: " + usage + ")"};
 }
 
+Cli parse_sub_cli(const std::string& prog, const std::string& sub, const std::string& usage,
+                  const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
+                  const std::map<std::string, std::string>& switches, const std::string& help,
+                  const std::vector<std::string>& short_flags, size_t keep) {
+    try {
+        return parse_cli(argv, flags, switches, help, short_flags, {}, keep);
+    } catch (const Error& e) {
+        if (e.code == code::FlagUnknown) {
+            throw Error{e.code, e.msg + " (see " + prog + " " + sub + " --help)"};
+        }
+        throw usage_error(e.code, e.msg, usage);
+    }
+}
+
 static Json read_json_at(const std::string& path, const std::string& pointer) {
     int err = 0;
     std::optional<std::string> text = read_file(path, err);

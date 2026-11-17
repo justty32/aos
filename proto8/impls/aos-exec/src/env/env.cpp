@@ -2,6 +2,7 @@
 #include "env/env.hpp"
 
 #include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 
 #include <cstdlib>
 #include <filesystem>
@@ -37,10 +38,9 @@ std::string check_ws(const std::string& ws_flag) {
 std::string setup_stack(const std::string& ws, const std::string& stack_flag, bool lazy) {
     std::string stack = stack_flag;
     if (stack.empty() || stack == "-") {
-        stack = join(ws, ".stack");
-        const char* s = std::getenv("AOS_STACK");
-        if (s != nullptr && s[0] != '\0') {
-            stack = s;
+        stack = env_or_empty("AOS_STACK");   // 空字串＝沒設
+        if (stack.empty()) {
+            stack = join(ws, ".stack");
         }
     }
     std::string abs = abspath(stack);

@@ -1,6 +1,7 @@
 // pointer.cpp：【doc】`檔#/指標` 的尋址（N-62：第一個 # 就切、# 後一定要 /、指標照 RFC 6901）。
 #include "doc/doc.hpp"
 
+#include "aos/directive.hpp"
 #include "aos/util/files.hpp"
 
 #include <filesystem>
@@ -40,16 +41,7 @@ std::vector<std::string> split_pointer(const std::string& ptr) {
 std::string pointer_of(const std::vector<std::string>& toks) {
     std::string out;
     for (const std::string& t : toks) {
-        out += "/";
-        for (char c : t) {
-            if (c == '~') {
-                out += "~0";
-            } else if (c == '/') {
-                out += "~1";
-            } else {
-                out += c;
-            }
-        }
+        out += "/" + aos::token_of(t);   // 跳脫只有 aos-directive 那一份
     }
     return out;
 }

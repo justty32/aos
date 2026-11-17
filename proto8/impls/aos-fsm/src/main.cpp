@@ -61,11 +61,10 @@ int main(int argc, char** argv) {
             }
             throw aos::usage_error(fsm::code::ArgumentsBad, why, USAGE);
         }
-        const char* s = std::getenv("AOS_STACK");
-        if (s == nullptr || s[0] == '\0') {
+        std::string stack = aos::env_or_empty("AOS_STACK");   // 空字串＝沒設
+        if (stack.empty()) {
             throw aos::Error{fsm::code::StackMissing, "AOS_STACK is not set"};
         }
-        std::string stack = s;
         fsm::Table table = fsm::read_table(cli.rest[0]);
         std::map<std::string, fsm::Cell> cells = fsm::check(table);   // 10-22：開跑時查整張表，哪一格壞都不跑
         aos::loop::make_stack();   // 11-11：表查過才建；$AOS_STACK 有設但不在＝mkdir -p（建不了 MkdirFailed）

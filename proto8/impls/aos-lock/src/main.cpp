@@ -97,15 +97,7 @@ int fail(const std::string& code, const std::string& msg) {
 aos::Cli parse(const Args& args, const std::map<std::string, std::string>& flags,
                const std::map<std::string, std::string>& switches = {}) {
     const std::string& usage = SUB_USAGE.at(sub_cmd);
-    aos::Cli cli;
-    try {
-        cli = aos::parse_cli(args, flags, switches, SUB_HELP.at(sub_cmd));
-    } catch (const aos::Error& e) {
-        if (e.code == l::code::FlagUnknown) {
-            throw aos::Error{e.code, e.msg + " (see aos-lock " + sub_cmd + " --help)"};
-        }
-        throw aos::usage_error(e.code, e.msg, usage);
-    }
+    aos::Cli cli = aos::parse_sub_cli("aos-lock", sub_cmd, usage, args, flags, switches, SUB_HELP.at(sub_cmd));
     if (cli.rest.size() != 1) {
         throw aos::usage_error(l::code::ArgumentsBad, "need exactly one TARGET", usage);
     }

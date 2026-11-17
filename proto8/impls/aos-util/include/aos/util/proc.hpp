@@ -35,6 +35,9 @@ std::string utc_ms_at(long long ns);
 std::string unique_id();
 std::string unique_id(long long ns);
 
+// 環境變數的值；沒設與空字串一律回空字串（11-17：讀 $AOS_STACK 的五處收成這一支，空字串＝沒設）。
+std::string env_or_empty(const char* name);
+
 // 自己的身分（路徑）：$AOS_WS ＞ $AOS_STACK ＞ $AOS_CF ＞ cwd，空字串算沒設，一律轉絕對路徑。
 // aos-post 信封的 sender、aos-lock 名牌的 holder 都用這個（N-15 ③「跟信封 sender 同一條」；11-03 拿掉 $HOME）。
 // cwd 拿不到（被刪了）丟 Error{Internal}。

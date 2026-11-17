@@ -32,15 +32,24 @@ std::vector<std::string> names_in(const std::string& dir, bool directories_only 
 bool move(const std::string& from, const std::string& to);
 void remove_tree(const std::string& path);
 
-// 寫入失敗的機制階段；close 失敗歸 write，number 是當時的 errno。
-enum class TextWriteOperation { open, write, rename };
+// 寫入失敗的機制階段；fsync、close 失敗歸 write，number 是當時的 errno。
+enum class TextWriteOperation { open, chmod, write, rename };
 struct TextWriteError {
     TextWriteOperation operation;
     int number;
 };
-// tmp 由呼叫者指定，不建目錄；成功回 nullopt，任一步失敗都嘗試刪除 tmp。
+// 「暫存再改名」只有 write_text 這一份（11-17 從 write_json、aos-json save_file 收來）；三處要的不同，用選項說：
+//   fsync      改名前 fsync 暫存檔（窗不 fsync：N-13 寫「fsync 不強制」；write_json、aos-json 寫回要）
+//   exclusive  暫存檔用 O_EXCL 開（已有＝open 失敗、不刪它；aos-json 寫回用）
+//   mode       有值＝暫存檔先以 0600 開、再 fchmod 成這個權限（aos-json 照原檔權限）；沒值＝0666 照 umask
+struct WriteOptions {
+    bool fsync = false;
+    bool exclusive = false;
+    std::optional<unsigned> mode;
+};
+// tmp 由呼叫者指定，不建目錄；成功回 nullopt。失敗都嘗試刪除 tmp（exclusive 時 open 失敗例外：那份不是自己建的）。
 std::optional<TextWriteError> write_text(const std::string& path, const std::string& text,
-                                        const std::string& tmp);
+                                        const std::string& tmp, const WriteOptions& options = {});
 
 // 讀整個檔。讀不了回 nullopt，errno_out＝原因（ENOENT＝不存在）。
 std::optional<std::string> read_file(const std::string& path, int& errno_out);
@@ -54,7 +63,7 @@ std::optional<Json> read_window(const std::string& prog, const std::string& path
 // 壞檔改名（copy=false）或複製留證，禁止覆蓋、撞名加尾碼；回 basename，失敗丟 WriteFailed。
 std::string keep_bad(const std::string& path, bool copy);
 
-// 原子寫入：先寫同資料夾的 `.名字.<pid>.tmp`、fsync、再改名蓋過去；所在的資料夾沒有就建。
+// 原子寫入：先寫同資料夾的 `.名字.<pid>.tmp`、fsync、再改名蓋過去（走 write_text）；所在的資料夾沒有就建。
 // 成功回 nullopt；失敗回原因（白話），暫存檔清掉。排版同 Python json.dump(indent=2)。
 std::optional<std::string> write_json(const std::string& path, const Json& doc);
 

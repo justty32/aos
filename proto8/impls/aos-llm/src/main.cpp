@@ -149,15 +149,7 @@ static aos::Cli parse(const std::vector<std::string>& argv, const std::map<std::
                       const std::vector<std::string>& short_flags = {}) {
     namespace g = aos::llm;
     const std::string& usage = SUB_USAGE.at(command);
-    aos::Cli cli;
-    try {
-        cli = aos::parse_cli(argv, flags, switches, SUB_HELP.at(command), short_flags);
-    } catch (const aos::Error& e) {
-        if (e.code == g::code::FlagUnknown) {
-            throw aos::Error{e.code, e.msg + " (see aos-llm " + command + " --help)"};
-        }
-        throw aos::usage_error(e.code, e.msg, usage);
-    }
+    aos::Cli cli = aos::parse_sub_cli("aos-llm", command, usage, argv, flags, switches, SUB_HELP.at(command), short_flags);
     if (cli.rest.size() != want) {
         throw aos::usage_error(g::code::ArgumentsBad, what, usage);
     }

@@ -153,9 +153,6 @@ void place_inline(Target& t, const std::string& spec, const std::string& sub, co
 // 原本 $ref 起點不解捷徑、AOS_CF 解，捷徑設定檔兩個相對基準不一樣。
 std::string config_file(const std::string& spec);
 
-// JSON 指標的一段：~ → ~0、/ → ~1（RFC 6901）。
-std::string pointer_escape(const std::string& key);
-
 // 跑一次。
 // 目標＝`aos-exec -- 目標 參數...`（`--` 讓 - 開頭的目標不被當旗標；相對路徑照 cwd，loop 不轉）：fork 一個子行程，
 // 子行程裡用 restore_signals 還原成阻擋前的訊號遮罩、呼叫 aos::exec::run_cli（可執行檔／argv 陣列 exec 掉；單子在那個子行程裡跑、它當監工；

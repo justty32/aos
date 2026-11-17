@@ -127,39 +127,20 @@ void save_file(const File& f) {
     std::string dir = aos::dirname(f.real);
     std::string name = f.real.substr(f.real.rfind('/') + 1);
     std::string tmp = aos::join(dir, "." + name + "." + std::to_string(::getpid()) + ".tmp");
-    int fd = ::open(tmp.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
-    if (fd < 0) {
-        throw Error{code::WriteFailed, "cannot write " + tmp + ": " + std::strerror(errno)};
+    // 寫暫存→改名走 aos-util 的 write_text（O_EXCL 開、照原檔權限、fsync；失敗它清掉暫存檔）
+    aos::WriteOptions options{.fsync = true, .exclusive = true, .mode = f.exists ? f.mode : new_file_mode()};
+    std::optional<aos::TextWriteError> error = aos::write_text(f.real, text, tmp, options);
+    if (!error) {
+        return;
     }
-    std::string why;
-    if (::fchmod(fd, f.exists ? f.mode : new_file_mode()) != 0) {
-        why = std::string("chmod: ") + std::strerror(errno);
+    if (error->operation == aos::TextWriteOperation::open) {
+        throw Error{code::WriteFailed, "cannot write " + tmp + ": " + std::strerror(error->number)};
     }
-    size_t done = 0;
-    while (why.empty() && done < text.size()) {
-        ssize_t n = ::write(fd, text.data() + done, text.size() - done);
-        if (n < 0 && errno == EINTR) {
-            continue;
-        }
-        if (n < 0) {
-            why = std::strerror(errno);
-            break;
-        }
-        done += (size_t)n;
+    std::string why = std::strerror(error->number);
+    if (error->operation == aos::TextWriteOperation::chmod) {
+        why = "chmod: " + why;
     }
-    if (why.empty() && ::fsync(fd) != 0) {
-        why = std::strerror(errno);
-    }
-    if (::close(fd) != 0 && why.empty()) {
-        why = std::strerror(errno);
-    }
-    if (why.empty() && ::rename(tmp.c_str(), f.real.c_str()) != 0) {
-        why = std::strerror(errno);
-    }
-    if (!why.empty()) {
-        ::unlink(tmp.c_str());
-        throw Error{code::WriteFailed, "cannot write " + f.real + ": " + why};
-    }
+    throw Error{code::WriteFailed, "cannot write " + f.real + ": " + why};
 }
 
 File& Docs::open(const std::string& path, bool allow_missing) {

@@ -14,6 +14,7 @@
 //               `--help`（11-05 stdio-unify R3，內建開關）：在旗標的位置給了＝把 help（英文說明）印到 stdout、退 0（std::exit，不回來）；
 //               help 是空的＝當成不認得的旗標。子命令程式：子命令前一次（全程式的說明）、子命令後各一次（那個子命令的說明）。
 //   usage_error 錯誤行的 usage 位置（R5）：「原因 (usage: …)」——Error{code, reason + " (usage: " + usage + ")"}。
+//   parse_sub_cli 子命令程式的子命令那層：parse_cli＋錯誤行補「(see 程式 子命令 --help)」或 usage（下面宣告處）。
 //   load_cfg    設定檔（aos-loop、aos-fsm、aos-daemon 的唯一位置參數）：`檔` 或 `檔#/指標`，回那個位置的值（不驗是不是物件）。
 //               檔不在 CfgMissing、其他讀不了或不是 JSON CfgBad、`#` 後不是 `/` CfgBad、`#/` 指不到 CfgMissing（10-23 命名統合）。第一行 `#!` 跳過。
 //
@@ -45,6 +46,13 @@ Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, 
               const std::map<std::string, std::string>& custom_short = {}, size_t keep = 0);
 
 Error usage_error(const std::string& code, const std::string& reason, const std::string& usage);
+
+// 子命令那層的 parse_cli（aos-llm、aos-post、aos-lock、aos-json 共用，11-17 從四份收來）：help＝那個子命令的說明；
+// 錯誤行統一：不認得的旗標＝「原因 (see PROG SUB --help)」，其餘（ArgumentsBad）＝usage_error(…, usage)。位置參數幾個由呼叫者自己判斷。
+Cli parse_sub_cli(const std::string& prog, const std::string& sub, const std::string& usage,
+                  const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
+                  const std::map<std::string, std::string>& switches, const std::string& help,
+                  const std::vector<std::string>& short_flags = {}, size_t keep = 0);
 
 Json load_cfg(const std::string& spec);
 

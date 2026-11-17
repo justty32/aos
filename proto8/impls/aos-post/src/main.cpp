@@ -63,15 +63,7 @@ int fail(const std::string& code, const std::string& msg) {
 aos::Cli parse(const Args& args, size_t lo, size_t hi, const std::map<std::string, std::string>& flags,
                const std::map<std::string, std::string>& switches = {}) {
     const std::string& usage = p::cli_usage(sub_cmd);
-    aos::Cli cli;
-    try {
-        cli = aos::parse_cli(args, flags, switches, p::cli_help(sub_cmd));
-    } catch (const aos::Error& e) {
-        if (e.code == p::code::FlagUnknown) {
-            throw aos::Error{e.code, e.msg + " (see aos-post " + sub_cmd + " --help)"};
-        }
-        throw aos::usage_error(e.code, e.msg, usage);
-    }
+    aos::Cli cli = aos::parse_sub_cli("aos-post", sub_cmd, usage, args, flags, switches, p::cli_help(sub_cmd));
     if (cli.rest.size() < lo || cli.rest.size() > hi) {
         std::string want = hi == 1 ? "expects one mailbox" : lo == 2 ? "expects a mailbox and a letter name" : "expects a mailbox (letter name optional)";
         throw aos::usage_error(p::code::ArgumentsBad, want, usage);

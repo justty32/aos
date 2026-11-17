@@ -101,12 +101,17 @@ std::string identity() {
     return abspath(get_cwd());
 }
 
+std::string env_or_empty(const char* name) {
+    const char* v = std::getenv(name);
+    return v == nullptr ? std::string() : std::string(v);
+}
+
 std::string stack_identity() {
-    const char* v = std::getenv("AOS_STACK");
-    if (v != nullptr && v[0] != '\0' && v[0] == '/') {
+    std::string v = env_or_empty("AOS_STACK");
+    if (v.starts_with('/')) {
         return abspath(v);
     }
-    if (v != nullptr && v[0] != '\0') {
+    if (!v.empty()) {
         std::vector<char> buf(4096);
         while (getcwd(buf.data(), buf.size()) == nullptr) {
             if (errno != ERANGE) {

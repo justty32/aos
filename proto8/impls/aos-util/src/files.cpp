@@ -5,6 +5,7 @@
 // rename 在同一個檔案系統裡是原子的，讀的人只會看到「整份舊的」或「整份新的」，不會看到一半。
 // 暫存檔放在同一個資料夾，才保證在同一個檔案系統上（跨檔案系統的 rename 會失敗）。
 // 暫存名：write_json 用 .名字.<pid>.tmp（帶 pid，多人同寫一個檔不互踩；改名前 fsync）；write_text 由呼叫的人給。
+// 「寫暫存→改名」只有 write_text 一份：write_json 與 aos-json 的寫回（save_file）都叫它，差別寫在 WriteOptions。
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
 
@@ -18,6 +19,7 @@
 #include <utility>
 
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <linux/fs.h>
 #include <sys/syscall.h>
@@ -76,30 +78,49 @@ std::string join(const std::string& a, const std::string& b) {
     return a + "/" + b;
 }
 
-std::optional<TextWriteError> write_text(const std::string& path, const std::string& text,
-                                        const std::string& tmp) {
-    int fd = open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);
-    if (fd < 0) {
-        int saved = errno;
-        unlink(tmp.c_str());
-        return TextWriteError{TextWriteOperation::open, saved};
-    }
+// 把 text 整份寫進 fd；成功回 0，失敗回 errno（write 回 0 算 EIO）。
+static int write_all(int fd, const std::string& text) {
     size_t done = 0;
     while (done < text.size()) {
         ssize_t n = write(fd, text.data() + done, text.size() - done);
         if (n < 0 && errno == EINTR) {
             continue;
         }
-        if (n <= 0) {
-            int saved = EIO;
-            if (n < 0) {
-                saved = errno;
-            }
-            close(fd);
-            unlink(tmp.c_str());
-            return TextWriteError{TextWriteOperation::write, saved};
+        if (n < 0) {
+            return errno;
+        }
+        if (n == 0) {
+            return EIO;
         }
         done += static_cast<size_t>(n);
+    }
+    return 0;
+}
+
+std::optional<TextWriteError> write_text(const std::string& path, const std::string& text,
+                                        const std::string& tmp, const WriteOptions& options) {
+    int flags = O_WRONLY | O_CREAT | O_CLOEXEC | (options.exclusive ? O_EXCL : O_TRUNC);
+    int fd = open(tmp.c_str(), flags, options.mode ? 0600 : 0666);
+    if (fd < 0) {
+        int saved = errno;
+        if (!options.exclusive) {
+            unlink(tmp.c_str());
+        }
+        return TextWriteError{TextWriteOperation::open, saved};
+    }
+    auto give_up = [&](TextWriteOperation operation, int saved) {
+        close(fd);
+        unlink(tmp.c_str());
+        return TextWriteError{operation, saved};
+    };
+    if (options.mode && fchmod(fd, static_cast<mode_t>(*options.mode)) != 0) {
+        return give_up(TextWriteOperation::chmod, errno);
+    }
+    if (int saved = write_all(fd, text); saved != 0) {
+        return give_up(TextWriteOperation::write, saved);
+    }
+    if (options.fsync && fsync(fd) != 0) {
+        return give_up(TextWriteOperation::write, errno);
     }
     if (close(fd) != 0) {
         int saved = errno;
@@ -224,22 +245,6 @@ Spec split_hash(const std::string& spec) {
     return Spec{spec.substr(0, hash), pointer};
 }
 
-// 把 text 整份寫進 fd；失敗回 false（errno 留著）。
-static bool write_all(int fd, const std::string& text) {
-    size_t done = 0;
-    while (done < text.size()) {
-        ssize_t n = write(fd, text.data() + done, text.size() - done);
-        if (n < 0 && errno == EINTR) {
-            continue;
-        }
-        if (n < 0) {
-            return false;
-        }
-        done += (size_t)n;
-    }
-    return true;
-}
-
 std::optional<std::string> write_json(const std::string& path, const Json& doc) {
     std::string dir = dirname(path);
     std::string name = path.substr(path.rfind('/') + 1);
@@ -253,31 +258,18 @@ std::optional<std::string> write_json(const std::string& path, const Json& doc) 
             return "cannot create directory " + dir + ": " + ec.message();
         }
     }
-    // 2. 寫暫存檔（.名.<pid>.tmp，多人同寫不互踩），改名前 fsync（照 aos-json save_file；不 fsync 資料夾）
+    // 2～3. 寫暫存檔（.名.<pid>.tmp，多人同寫不互踩）、改名前 fsync（不 fsync 資料夾）、改名蓋過去；失敗 write_text 清掉暫存檔
     std::string text = doc.dump(2, ' ', false, Json::error_handler_t::replace);
-    int fd = open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);
-    if (fd < 0) {
-        return "cannot open " + tmp + ": " + std::strerror(errno);
-    }
-    bool ok = write_all(fd, text);
-    int saved = errno;
-    if (ok && fsync(fd) != 0) {
-        ok = false;
-        saved = errno;
-    }
-    if (close(fd) != 0 && ok) {
-        ok = false;
-        saved = errno;
-    }
-    // 3. 改名蓋過去（原子）；任何一步失敗都清掉暫存檔
-    if (ok && rename(tmp.c_str(), path.c_str()) == 0) {
+    WriteOptions options;
+    options.fsync = true;
+    std::optional<TextWriteError> error = write_text(path, text, tmp, options);
+    if (!error) {
         return std::nullopt;
     }
-    if (ok) {
-        saved = errno;
+    if (error->operation == TextWriteOperation::open) {
+        return "cannot open " + tmp + ": " + std::strerror(error->number);
     }
-    unlink(tmp.c_str());
-    return "cannot write " + path + ": " + std::strerror(saved);
+    return "cannot write " + path + ": " + std::strerror(error->number);
 }
 
 }  // namespace aos

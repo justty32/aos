@@ -5,6 +5,7 @@
 #include "engine/engine.hpp"
 
 #include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 
 #include <cerrno>
 #include <climits>
@@ -61,20 +62,6 @@ std::string Target::label() const {
         return s.empty() ? target : s;
     }
     return cf.substr(cf.rfind('/') + 1) + "#" + co;
-}
-
-std::string pointer_escape(const std::string& key) {
-    std::string out;
-    for (char c : key) {
-        if (c == '~') {
-            out += "~0";
-        } else if (c == '/') {
-            out += "~1";
-        } else {
-            out += c;
-        }
-    }
-    return out;
 }
 
 aos::Resolved resolve_exec(const Json& v, const aos::RefBase& base_dir) {
@@ -262,10 +249,7 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
         }
         interval_ms_ = as_ll(cfg_["interval_ms"]);
     }
-    const char* s = std::getenv("AOS_STACK");
-    if (s != nullptr) {
-        stack_ = s;
-    }
+    stack_ = aos::env_or_empty("AOS_STACK");   // 空字串＝沒設
     // 11-04（使用者題 5「留 key、沒寫時預設就是這組名」）：沒寫＝ctl.json／state.json／state_flux.json；寫 null＝不開
     const char* keys[3] = {CtlWindow::config_key, StateWindow::config_key, StateFluxWindow::config_key};
     const char* default_names[3] = {CtlWindow::default_name, StateWindow::default_name, StateFluxWindow::default_name};

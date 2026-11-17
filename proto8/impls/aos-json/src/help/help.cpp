@@ -280,7 +280,7 @@ Cli parse_args(const std::vector<std::string>& args,
     // 11-11 P-44 續：旗標寫在位置參數前後都收。set／append／merge／add 照舊規則（keep＝1，旗標只在 FILE 前）：
     // 它們的值什麼字都可以（--str 時 -x、--check 也是合法的值），FILE 後再認旗標會把值吃掉
     size_t keep = command == "set" || command == "append" || command == "merge" || command == "add" ? 1 : 0;
-    return aos::parse_cli(args, flags, switches, cli_help(command), {}, {}, keep);
+    return aos::parse_sub_cli("aos-json", command, cli_usage(command), args, flags, switches, cli_help(command), {}, keep);
 }
 
 }  // namespace aos::json

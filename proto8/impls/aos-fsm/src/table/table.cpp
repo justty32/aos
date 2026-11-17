@@ -116,7 +116,7 @@ std::map<std::string, Cell> check(const Table& t) {
         }
         cell.exec = aos::loop::parse_target(c["exec"], "state " + name + " exec");
         auto base = t.exec_bases.find(name);
-        aos::loop::place_inline(cell.exec, t.spec, "/states/" + aos::loop::pointer_escape(name) + "/exec",
+        aos::loop::place_inline(cell.exec, t.spec, "/states/" + aos::token_of(name) + "/exec",
                                 base == t.exec_bases.end() ? aos::RefBase{} : base->second);
         cells[name] = cell;
     }

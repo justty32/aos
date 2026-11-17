@@ -21,21 +21,6 @@
 
 namespace aos::exec {
 
-// JSON pointer 的一段：~ → ~0、/ → ~1（RFC 6901）
-static std::string escape(const std::string& key) {
-    std::string out;
-    for (char c : key) {
-        if (c == '~') {
-            out += "~0";
-        } else if (c == '/') {
-            out += "~1";
-        } else {
-            out += c;
-        }
-    }
-    return out;
-}
-
 bool is_program(const std::string& file) {
     if (access(file.c_str(), X_OK) != 0) {
         return false;
@@ -137,7 +122,7 @@ Classified classify(const std::string& file, const std::string& pointer, Chain& 
         }
         Json next = doc[name];
         doc = next;
-        out.at += "/" + escape(name);
+        out.at += "/" + aos::token_of(name);   // JSON pointer 的一段（~ → ~0、/ → ~1；aos-directive）
     }
     if (doc.is_string()) {
         out.kind = Kind::Redirect;

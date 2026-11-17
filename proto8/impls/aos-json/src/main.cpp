@@ -75,9 +75,7 @@ int main(int argc, char** argv) {
         sub_cmd = cli.rest[0];
         return it->second(Args(cli.rest.begin() + 1, cli.rest.end()));
     } catch (const aos::Error& e) {
-        if (!sub_cmd.empty() && e.code == code::FlagUnknown) {
-            return fail(aos::Error{e.code, e.msg + " (see aos-json " + sub_cmd + " --help)"});
-        }
+        // 子命令那層的旗標錯（FlagUnknown 的 see、ArgumentsBad 的 usage）parse_args 已經補好；這裡補子命令本體丟的 ArgumentsBad
         if (!sub_cmd.empty() && e.code == code::ArgumentsBad && e.msg.find(" (usage: ") == std::string::npos) {
             return fail(aos::usage_error(e.code, e.msg, cli_usage(sub_cmd)));
         }
