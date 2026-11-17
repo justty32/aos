@@ -5,13 +5,13 @@
 #   impls/*/bin/*            the C++ ones (aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-json, aos-llm...; build them first)
 #   cmd/*/bin/*              the Python commands (aos-daemon-ctl, aos-tools, aos-clock, aos-clock-register, aos-mailbox, aos-sweeper, aos-feedback, aos-eca-turn, aos-eca-screen, aos-agent, aos-mcp, aos-mcp-launch, aos-mcp-import, aos-sandbox, aos-grow)
 # It no longer writes aos-proto8.pth into the Python user site (removed 2026-11-15); copies outside the repo use PYTHONPATH.
-#   An old aos-proto8.pth of this repo found there = one warning line; --uninstall removes it.
+#   An old aos-proto8.pth of this repo found there = one warning line (not removed).
 # Symlinks, not copies: the Python commands find their neighbour files through realpath(__file__). If the repo moves, run this again
 #   (old links are reported as pointing elsewhere; rm them and rerun).
 # Idempotent: a link to the same file = "already", left alone; something else with the same name in DEST = "skip" (not overwritten).
 #   Links in DEST into this repo whose target is gone = a warning ("broken"), not removed.
 # --dry-run: only print what would be done. Every stdout line says what was done; the last line is a summary.
-# --uninstall: remove links into this repo (broken ones too) and an old aos-proto8.pth only when its entire content matches this repo.
+# --uninstall: remove links into this repo (broken ones too); nothing else.
 # Another command with the same name earlier on PATH = one warning line; installs anyway.
 # Does not change PATH or shell rc files: warns if DEST is not on PATH. Use on a Linux / WSL file system only (not /mnt/c).
 # stderr: warnings are `install.sh: warning: SENTENCE`; errors are `install.sh: error: CODE reason` and mean exit 1:
@@ -25,7 +25,7 @@
 #   impls/*/bin/*            C++ 的（aos-exec、aos-loop、aos-fsm、aos-daemon、aos-post、aos-json、aos-llm…；要先建，見 wf/workflows/testing.md「proto8」）
 #   cmd/*/bin/*              Python 的指令（aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca-turn、aos-eca-screen、aos-agent、aos-mcp、aos-mcp-launch、aos-mcp-import、aos-sandbox、aos-grow）
 # 不再在 Python user site 寫 aos-proto8.pth（使用者 11-15 對自編規則盤點的裁定「6.拿掉。」）；抄出 repo 的程式改給 PYTHONPATH。
-#   user site 裡還有這份 repo 的舊 aos-proto8.pth＝印一行提醒；--uninstall 會拿掉它。
+#   user site 裡還有這份 repo 的舊 aos-proto8.pth＝印一行提醒（不刪）。
 # 為什麼 symlink 不 cp：Python 那幾支靠 realpath(__file__) 找旁邊的檔（aos_flags.py、using-aos-agent.sh、py/aos_ws.py…），
 #   單檔 cp 過去會斷；symlink 解得回 repo 裡的原位。所以 repo 搬了位置要重跑一次（舊的連結會被報「指向別處」，自己 rm 再跑）。
 #
@@ -35,7 +35,7 @@
 # stderr 只有兩種行（11-05 R1、R13）：提醒 `install.sh: warning: 句子`（PATH 上同名的排前面、目的地不在 PATH、repo 在 /mnt、斷掉的連結）、
 #   錯誤 `install.sh: error: 代號 原因`（有它就退 1）：ArgumentsBad、FlagUnknown、DestBad、CommandMissing、ImplsMissing（impls 一支都沒建）、LinkFailed。
 # --dry-run：只印會做什麼、不動。每一行都印出做了什麼；最後一行是統計。
-# --uninstall：拿掉目的地裡指進這份 repo 的連結（含斷了的），也刪以前裝的、內容完全相符的 aos-proto8.pth，別的不碰（11-05 B 線）。
+# --uninstall：拿掉目的地裡指進這份 repo 的連結（含斷了的），別的不碰（11-05 B 線；清舊 aos-proto8.pth 那段 11-17 拿掉，當沒有舊版）。
 # PATH 上同名的另一支排在前面（例 /usr/local/bin/aos-exec）＝印一行 warning，裝照裝（11-05 B 線）。
 # 不改 PATH、不寫殼的設定檔：目的地不在 PATH 上就印一句提醒。只在 Linux／WSL 的檔案系統上用（/mnt/c 底下每個檔都 +x，見 dev-env）。
 set -u
@@ -64,7 +64,7 @@ if [ -e "$dest" ] && [ ! -d "$dest" ]; then
   die "DestBad $dest exists and is not a directory"
 fi
 
-pth=""   # 以前裝的 aos-proto8.pth（11-15 起不寫），只給 --uninstall 拿掉與提醒用
+pth=""   # 以前裝的 aos-proto8.pth（11-15 起不寫），只給裝的時候提醒用
 if user_site=$(python3 -m site --user-site 2>/dev/null) && [ -n "$user_site" ]; then
   pth="$user_site/aos-proto8.pth"
 fi
@@ -79,11 +79,6 @@ if [ $un = 1 ]; then   # 11-05 B 線：拿掉指進這份 repo 的連結
       n=$((n+1)) ;;
     esac
   done
-  if [ -n "$pth" ] && pth_matches; then
-    if [ $dry = 1 ]; then echo "would remove $pth"
-    elif rm -f "$pth" 2>/dev/null; then echo "removed $pth"
-    else die "LinkFailed cannot remove $pth"; fi
-  fi
   echo "done: removed $n link(s) pointing into $here (dest $dest)"
   exit 0
 fi
@@ -124,7 +119,7 @@ done
 ls "$here"/impls/*/bin/* >/dev/null 2>&1 || n_none=1   # 錯誤行最後補（ImplsMissing）
 
 if [ -n "$pth" ] && pth_matches; then
-  warn "old $pth of this repo is still there; install.sh no longer writes it; move it away (--uninstall also removes it, together with the links)"
+  warn "old $pth of this repo is still there; install.sh no longer writes it; move it away yourself"
 fi
 
 # 目的地裡指進這份 repo、目標已不在的連結：只報不刪
