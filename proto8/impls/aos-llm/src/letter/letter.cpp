@@ -1,5 +1,5 @@
-// letter.cpp：【letter】寄信人的鎖（sender.flock）、priority 與回信格式（說明見 aos/llm_kernel.hpp）。
-#include "aos/llm_kernel.hpp"
+// letter.cpp：【letter】寄信人的鎖（sender.flock）、priority 與回信格式（說明見 aos/llm.hpp）。
+#include "aos/llm.hpp"
 
 #include "aos/util/files.hpp"
 
@@ -13,7 +13,7 @@
 #include <sys/file.h>
 #include <unistd.h>
 
-namespace aos::llm_kernel {
+namespace aos::llm {
 
 int hold_sender(const std::string& letter_dir) {
     std::string path = aos::join(letter_dir, SENDER_FLOCK);
@@ -165,4 +165,4 @@ std::optional<Json> reply_of(const Json& r) {
     return std::optional<Json>(std::in_place, r);
 }
 
-}  // namespace aos::llm_kernel
+}  // namespace aos::llm

@@ -49,7 +49,7 @@ static int deliver(const aos::post::Mailbox& rb, const std::string& n, const std
     std::optional<Json> l = aos::read_json(aos::join(dir, "letter.json"));
     std::optional<Json> reply;
     if (l && l->is_object() && l->contains("body")) {
-        reply = aos::llm_kernel::reply_of((*l)["body"]);
+        reply = reply_of((*l)["body"]);
     }
     try {
         aos::post::done(rb, n, false);

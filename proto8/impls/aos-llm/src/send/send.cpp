@@ -96,7 +96,7 @@ Json read_body(const std::optional<std::string>& priority) {
         body["priority"] = priority_value(*priority);
     }
     if (body.contains("priority")) {
-        aos::llm_kernel::parse_priority(body["priority"]);   // 壞＝PriorityBad
+        parse_priority(body["priority"]);   // 壞＝PriorityBad
     }
     return body;
 }
@@ -111,11 +111,6 @@ std::string send(const Mailbox& mb, const Json& body, const std::string& reply_t
     return aos::post::send(aos::post::open(mb.root), body, opts);
 }
 
-// sender.flock 拿到行程結束；不關閉 hold_sender 回傳的 fd。
-static void hold_sender(const std::string& tmp) {
-    aos::llm_kernel::hold_sender(tmp);
-}
-
 std::string send_held(const Mailbox& mb, const Json& body) {
     aos::post::init(reply_box(mb));   // 建不了丟 MkdirFailed
     Json letter = Json::object();
@@ -124,7 +119,8 @@ std::string send_held(const Mailbox& mb, const Json& body) {
     letter["reply_to"] = aos::post::reply_to_rel(mb, reply_box(mb));   // 相對信箱根＝"reply"（11-05，同 aos-post send）
     letter["body"] = body;
 
-    return aos::post::send_prepared(mb, letter, hold_sender);
+    // sender.flock 拿到行程結束；不關閉 hold_sender 回傳的 fd（aos-post 收的是 void 的函式指標，包一層不帶狀態的 lambda）。
+    return aos::post::send_prepared(mb, letter, [](const std::string& tmp) { hold_sender(tmp); });
 }
 
 void regret(const Mailbox& mb, const std::string& name) {
