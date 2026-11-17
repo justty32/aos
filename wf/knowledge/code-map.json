@@ -11,7 +11,7 @@
   {
    "domain": "C／C++ 基礎層與標準庫",
    "files": "proto8/impls/*",
-   "role": "CMake 專案家族（aos-inst 是 C 函式庫，其餘 C++）。由下往上：aos-inst → aos-exec → aos-loop → aos-fsm／aos-daemon；aos-llm 連 aos-llm-kernel；aos-util 全家共用；aos-post（連 aos-lock）是信箱。誰連誰看 per_file 那份的 `deps`。",
+   "role": "CMake 專案家族（aos-inst 是 C 函式庫，其餘 C++）。由下往上：aos-inst → aos-exec → aos-loop → aos-fsm／aos-daemon；aos-llm（寄信收信的命令列，自帶 LLM 信件協定）連 aos-util、aos-post；問腦總機不在這裡，是 Python 的 `proto8/lib/aos/kernel_llm`；aos-util 全家共用；aos-post（連 aos-lock）是信箱。誰連誰看 per_file 那份的 `deps`。",
    "tests": "proto8/impls/<專案>/tests/",
    "per_file": "wf/knowledge/code-map/proto8/impls.json"
   },

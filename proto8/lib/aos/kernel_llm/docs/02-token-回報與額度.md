@@ -73,4 +73,4 @@ endpoint 函數的契約（stdin `{"endpoint", "request", "priority"}` → stdou
 
 ### 訊號
 
-這支不擋訊號：收到 SIGINT／SIGTERM 當場結束（11-14 前 C++ 那支是擋著、做完這一輪才以 128＋N 結束）。在途的狀態都在 stack 裡（`cur/` 的 `proc.json`、`queue.json`、`used.json`），下一輪接手；認領了還沒掛就停的信，下一輪改名回 `new/` 重排。已經掛出去的問腦 proc 歸 daemon 管：daemon 收工時它們被收掉、列留 `sleeping`，daemon 再起來自己醒、從頭跑一次，kernel 下一次照樣收。
+這支不擋訊號：收到 SIGINT／SIGTERM 當場結束。在途的狀態都在 stack 裡（`cur/` 的 `proc.json`、`queue.json`、`used.json`），下一輪接手；認領了還沒掛就停的信，下一輪改名回 `new/` 重排。已經掛出去的問腦 proc 歸 daemon 管：daemon 收工時它們被收掉、列留 `sleeping`，daemon 再起來自己醒、從頭跑一次，kernel 下一次照樣收。

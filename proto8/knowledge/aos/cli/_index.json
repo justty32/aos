@@ -63,7 +63,7 @@
   "description": "Use aos-feedback to record what was hard about a command or tool and to score how comfortable it is for AIs."
  },
  "parts": {
-  "description": "Low-level programs the other commands are built from: aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-lock, aos-json, aos-directive, aos-llm, and the llm kernel (the tool folder lib/aos/kernel_llm; before 2026-11-14 the program aos-llm-kernel)."
+  "description": "Low-level programs the other commands are built from: aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-lock, aos-json, aos-directive, aos-llm, and the llm kernel (the tool folder lib/aos/kernel_llm)."
  },
  "json_view.json": {
   "description": "aos-json-view prints a JSON file, or one part of it, in a compact layout for a person to read; read only, the output is not JSON."

@@ -43,7 +43,7 @@ image/
 AOS_CLOCK=${AOS_STACK}/clock
 ```
 
-`llm_def/daemon.json` 沿用 kernel daemon 定義，另加 `"procs_requests":"procs_requests"` 才能用下方 ping 確認總機；其 `exec` 身體跑問腦總機（`aos-exec` 跑 `lib/aos/kernel_llm`；11-14 前是 C++ 的 aos-llm-kernel）。
+`llm_def/daemon.json` 沿用 kernel daemon 定義，另加 `"procs_requests":"procs_requests"` 才能用下方 ping 確認總機；其 `exec` 身體跑問腦總機（`aos-exec` 跑 `lib/aos/kernel_llm`）。
 
 `foreman_def/daemon.json`：
 

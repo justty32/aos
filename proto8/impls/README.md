@@ -17,8 +17,6 @@
 
 所以要重編 bin 得下 `make aos-exec_main aos-loop_main …`（或 `cmake --build build --target aos-exec_main aos-loop_main`）；下 `make aos-exec` 只重編、重連靜態庫，`bin/` 還是舊的（ok-misc 11-14 踩過：測試紅、錯誤訊息是改之前的字）。`aos-util`、`aos-inst` 只有庫、沒有 `_main`（`aos-inst` 是 .so，靜態版的目標叫 `aos-inst-static`）。
 
-`aos-llm-kernel` 已退出建置（ae5ac0980，問腦總機改成 Python 的 `lib/aos/kernel_llm`；夾待換樹時刪），頂層 [`CMakeLists.txt`](CMakeLists.txt) 的專案表沒有它；舊的 `build/` 夾裡若還看得到 `aos-llm-kernel_main`，那是改表之前 configure 留下的。
-
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。

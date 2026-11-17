@@ -2,7 +2,7 @@
 
 # 件 2：endpoint 代號打包成能力包（fable 照原則定，可翻案）
 
-使用者原文（11-05 午，逐字）：「把endpoint打包成smart-high, stupid-fast, ...這類，並且附上各種屬性(各種temperature也固定)」。前情：11-04 晚「各種llm設定也可以包裝，這樣寄信的時候只要寫簡單的代號就可以」已落成 `kernel.json` 的 `endpoints`（代號 → `url`／`model`／`key`／`body`／`exec`，[aos-llm-kernel docs/01](../../../../impls/aos-llm-kernel/docs/01-用法.md)）；`body` 現在是**預設**、信裡寫的蓋過它（`lib/base/llm_http`）。
+使用者原文（11-05 午，逐字）：「把endpoint打包成smart-high, stupid-fast, ...這類，並且附上各種屬性(各種temperature也固定)」。前情：11-04 晚「各種llm設定也可以包裝，這樣寄信的時候只要寫簡單的代號就可以」已落成 `kernel.json` 的 `endpoints`（代號 → `url`／`model`／`key`／`body`／`exec`，aos-llm-kernel docs/01（`impls/aos-llm-kernel/docs/01-用法.md`，已於 `726f73952` 移除））；`body` 現在是**預設**、信裡寫的蓋過它（`lib/base/llm_http`）。
 
 ## 已定（照原則推得出）
 

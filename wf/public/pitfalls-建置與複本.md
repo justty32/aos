@@ -6,13 +6,13 @@
 
 ## 暫存樹編 impls 的 C++：make 目標要用 `<名字>_main`
 
-- **適用**：在暫存樹（`~/.aos/scratch/<線名-日期>/build`；使用者 11-15 裁「4.a」起不放 `~/code`，CMake 指向暫存的 `src/proto8/impls`）改了 aos-exec、aos-loop、aos-llm-kernel 這類 C++，要編好再跑 `impls/*/tests`。
+- **適用**：在暫存樹（`~/.aos/scratch/<線名-日期>/build`；使用者 11-15 裁「4.a」起不放 `~/code`，CMake 指向暫存的 `src/proto8/impls`）改了 aos-exec、aos-loop、aos-llm 這類 C++，要編好再跑 `impls/*/tests`。
 - **坑**：`make aos-exec` 只編出靜態庫 `lib/lib<名字>.a`，`impls/<名字>/bin/<名字>` 不會重編。測試把 `impls/<名字>/bin` 放在 PATH 最前面，跑到的是舊 bin，看起來像改壞了。
 - **做法**：
   ```
   cd ~/.aos/scratch/<線名-日期>/build
   make help | grep <名字>      # 會看到 <名字> 和 <名字>_main 兩個目標
-  make -j8 aos-exec_main aos-loop_main aos-llm-kernel_main
+  make -j8 aos-exec_main aos-loop_main aos-llm_main
   ls -la ../src/proto8/impls/<名字>/bin   # 時間要是剛剛
   ```
 - **快速判斷**：測試紅了、錯誤訊息卻還是改之前的字，先看 bin 的修改時間。

@@ -15,7 +15,7 @@
 ## 定下的（照原則）
 
 1. **「小 proc 的定義」在哪：小 proc 自己的定義資料夾，不在 kernel.json 那包裡**
-   - 例：`kernel/llm-kernel/endpoints/litellm/_entry`＝`{"argv": ["aos-exec", "../../../../lib/base/llm_http", "--key-env", "LITELLM_KEY"]}`；kernel.json 的 `smart-high`、`luna`、`sol` 三包都寫 `"exec": "endpoints/litellm"`（包本來就能各自指 `exec`，[aos-llm-kernel docs/01](../../../../impls/aos-llm-kernel/docs/01-用法.md)）。
+   - 例：`kernel/llm-kernel/endpoints/litellm/_entry`＝`{"argv": ["aos-exec", "../../../../lib/base/llm_http", "--key-env", "LITELLM_KEY"]}`；kernel.json 的 `smart-high`、`luna`、`sol` 三包都寫 `"exec": "endpoints/litellm"`（包本來就能各自指 `exec`，aos-llm-kernel docs/01（`impls/aos-llm-kernel/docs/01-用法.md`，已於 `726f73952` 移除））。
    - 為什麼不是 kernel.json 那包加一個 `key_env`：那包是 kernel 的設定，kernel 會「整個原樣」把它寫進 `request.json`——就是使用者說的 kernel 經手。C-52「不碰子層」：kernel 只知道「這包交給哪個函數」，不知道函數要什麼。
    - 為什麼不是 `lib/base/llm_http` 自己的 `.env` 或 `_tooldef.json`：lib 是好幾包共用的（LiteLLM 要金鑰、LM Studio 不要），變數名是「這個端點」的事、不是 `llm_http` 的事；寫進 lib＝每個人都得用同一個名字。
    - 為什麼不用 `.env` 設一個旋鈕變數（例 `LLM_KEY_ENV=…`）：四種性質 ④「旋鈕原則上不走環境變數」；argv 就是定義，寫什麼做什麼（C-56）。

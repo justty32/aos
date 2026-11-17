@@ -1,6 +1,6 @@
 # 2026-11-05 llm kernel 改掛 daemon 之後的邊緣狀況實測（A 線）
 
-← [thinking README](../../../README.md)｜日 [2026-11-05](../README.md)｜依據：[kernel-daemon 08 實作結果](../kernel-daemon/08-實作結果.md)、[04 邊緣狀況](../kernel-daemon/04-邊緣狀況.md)；昨天測過的不重測：[think-as-function 08](../../04/think-as-function/08-邊緣狀況實測.md)｜程式：[aos-llm-kernel](../../../../impls/aos-llm-kernel/README.md)、[aos-llm](../../../../impls/aos-llm/README.md)
+← [thinking README](../../../README.md)｜日 [2026-11-05](../README.md)｜依據：[kernel-daemon 08 實作結果](../kernel-daemon/08-實作結果.md)、[04 邊緣狀況](../kernel-daemon/04-邊緣狀況.md)；昨天測過的不重測：[think-as-function 08](../../04/think-as-function/08-邊緣狀況實測.md)｜程式：aos-llm-kernel（`impls/aos-llm-kernel/README.md`，已於 `726f73952` 移除）、[aos-llm](../../../../impls/aos-llm/README.md)
 
 使用者 11-05：「你先自己多測試測試各種邊緣狀況，有問題就修。當然，我會時不時回來看一下，有事可以問我。」——他不在線上，照推薦代定。判準：會壞資料、卡死、誤導的錯誤訊息、文件與行為不符就修；使用者自己亂用、成本高的寫一句文件。
 

@@ -2,7 +2,7 @@
 
 # 件 3：kernel 依信件附帶資訊排程（fable 照原則定，可翻案）
 
-使用者原文（11-05 午，逐字）：「讓kernel能根據信件中額外附送的priority之類資訊做排程」。現況（[aos-llm-kernel docs/02](../../../../impls/aos-llm-kernel/docs/02-token-回報與額度.md)「一次」第 5 步）：信 body 的 `priority`＝`low`／`normal`／`high`、數字、或 `{"level", "deadline"}`；排隊＝**級數＋等了幾次÷10（aging）大的先 → deadline 近的先 → 等得久的先 → 先寄的先**；同時在飛不超過 kernel 的 `slots`；deadline 已過回 `DeadlineMissed`；額度到頂回 `BudgetMissing`（或 `spent: wait` 等下一窗）。11-05 早起 kernel 不自己跑、每封請 daemon 掛成 proc、一拍收成品再補位。
+使用者原文（11-05 午，逐字）：「讓kernel能根據信件中額外附送的priority之類資訊做排程」。現況（aos-llm-kernel docs/02（`impls/aos-llm-kernel/docs/02-token-回報與額度.md`，已於 `726f73952` 移除）「一次」第 5 步）：信 body 的 `priority`＝`low`／`normal`／`high`、數字、或 `{"level", "deadline"}`；排隊＝**級數＋等了幾次÷10（aging）大的先 → deadline 近的先 → 等得久的先 → 先寄的先**；同時在飛不超過 kernel 的 `slots`；deadline 已過回 `DeadlineMissed`；額度到頂回 `BudgetMissing`（或 `spent: wait` 等下一窗）。11-05 早起 kernel 不自己跑、每封請 daemon 掛成 proc、一拍收成品再補位。
 
 ## 已定（照原則推得出）
 
