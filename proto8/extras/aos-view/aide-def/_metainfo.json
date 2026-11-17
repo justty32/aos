@@ -3,8 +3,5 @@
   "cost": {
     "time_ms": 30000
   },
-  "resource": [],
-  "lineage": {
-    "from": "/home/lorkhan/repo/aos/wf/temp/ok-view/defs/sol"
-  }
+  "resource": []
 }

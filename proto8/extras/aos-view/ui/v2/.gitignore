@@ -1,1 +1,3 @@
 node_modules/
+# the build (vite build -> dist/) is not committed (the user 11-17: "建置成品不進git"); build it locally, see README.md
+dist/

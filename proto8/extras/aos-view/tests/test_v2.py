@@ -264,5 +264,50 @@ class V2(unittest.TestCase):
         self.assertEqual(self.get(self.p2, "/api/thread?name=..%2Fx")[0], 404)
 
 
+class NoBuild(unittest.TestCase):
+    """ui/v2/dist is not in git (11-17): a ui dir without index.html = one warning on stderr, the first port still serves."""
+
+    def test_missing_dist_warns(self):
+        tmp = tempfile.mkdtemp(prefix="view-v2-nobuild-", dir="/tmp")
+        try:
+            home, dist = os.path.join(tmp, "view"), os.path.join(tmp, "v2", "dist")
+            env = {"PATH": os.environ["PATH"], "HOME": os.environ["HOME"], "LANG": "C.UTF-8", "PYTHONDONTWRITEBYTECODE": "1",
+                   "VIEW_LS_FIXTURE": os.path.join(tmp, "ls.json"), "AOS_USER_ZONE": os.path.join(tmp, "user")}
+            with open(env["VIEW_LS_FIXTURE"], "w") as f:
+                f.write("[]")
+            subprocess.run([VIEW, "--home", home, "init"], env=env, check=True, capture_output=True)
+            p1, p2 = free_port(), free_port()
+            cfgp = os.path.join(home, "config.json")
+            with open(cfgp) as f:
+                cfg = json.load(f)
+            cfg.update(ui_ports=[{"port": p2, "dir": dist}], externals=[], poll_s=5)
+            with open(cfgp, "w") as f:
+                json.dump(cfg, f)
+            srv = subprocess.Popen([VIEW, "--home", home, "--port", str(p1), "serve"], env=env,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+            try:
+                line = srv.stderr.readline()
+                for _ in range(100):
+                    try:
+                        if V2.get(p1, "/api/session")[0] == 200:
+                            break
+                    except OSError:
+                        time.sleep(0.1)
+                self.assertEqual(line.strip(), "aos-view: warning: port %d not opened: %s has no index.html (the page is not "
+                                 "built; build it first: see %s)" % (p2, dist, os.path.join(tmp, "v2", "README.md")))
+                self.assertEqual(V2.get(p1, "/api/session")[0], 200)
+                with self.assertRaises(OSError):
+                    V2.get(p2, "/api/session")
+            finally:
+                srv.terminate()
+                try:
+                    srv.wait(5)
+                except subprocess.TimeoutExpired:
+                    srv.kill()
+                srv.stderr.close()
+        finally:
+            shutil.rmtree(tmp)
+
+
 if __name__ == "__main__":
     unittest.main()

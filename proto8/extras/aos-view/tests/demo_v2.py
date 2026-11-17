@@ -21,6 +21,8 @@ DIST = os.path.join(os.path.dirname(HERE), "ui", "v2", "dist")
 
 if any(k.startswith("AOS_") for k in os.environ):
     sys.exit("demo_v2: AOS_* variables are set; unset them first")
+if not os.path.isfile(os.path.join(DIST, "index.html")):   # dist/ is not in git (11-17): build it first
+    sys.exit("demo_v2: %s has no index.html; build the v2 page first (see ui/v2/README.md)" % DIST)
 
 STUB = r"""#!/usr/bin/env python3
 # The fixture agent records bare stdin and serves per-agent state and history without a daemon.

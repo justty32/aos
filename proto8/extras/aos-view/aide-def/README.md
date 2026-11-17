@@ -1,5 +1,7 @@
 小助手（aide）的定義範本：一隻 agent-fsm，腦是 `fake`、沒有工具，唯一的事是 on_clock hook 每 60 格跑一次 `aos-view aide-tick`（view-1114 第 1 期：只搬事實、不叫模型）。
 
+**這個夾只放 aide 跟 agent-fsm 範本不一樣的檔**（使用者 11-17 裁 Q3「只放差異、其餘從範本抄」；以前整份複製一份範本的格，跟範本走樣了）：`hooks.json`（只掛 aide_tick）、`aide_tick.json`（那個 hook 的 handler）、`llm.json`（`fake`）、`tools.json`（沒有工具）、`system.txt`、`_metainfo.json`，還有本檔。其餘（`fsm.json`、`loop.json`、`interfaces.json`、各格的 `.py`…）都在做定義時從 `templates/agent-fsm` 現抄，所以範本改了、下次做的 aide 就跟著新。這個夾本身**不是**一份能跑的定義，不要拿 `agent_def` 的 `from` 直接複製它。
+
 ## 它做什麼
 
 每分鐘一次（`hooks.json` 的 `aide_tick`，`every_cycles: 60`，時鐘 1000 ms 一格）：
@@ -12,13 +14,13 @@ history 不會多任何一則，也不叫腦。範本刻意拿掉了 `timer` 和
 
 ## 隊長照做的步驟（`<隊>` 換成你在 daemon 表上的名字，例 `ok-kf`）
 
-1. **複製定義**（aos 工具 `agent_def`；來源寫本資料夾的絕對路徑，裝好後是 `~/aos-home/ws/tools/aos-view/aide-def`）：
+1. **做定義**（shell；抄 `$AOS_HOME/templates/agent-fsm`，再把本夾的檔蓋上去；相對路徑從 `$AOS_WS` 算，跟 `agent_def` 一樣）：
 
-   ```json
-   {"op": "new", "from": "/home/lorkhan/aos-home/ws/tools/aos-view/aide-def", "path": "defs/<隊>-aide"}
+   ```sh
+   ~/aos-home/ws/tools/aos-view/aos-view aide-def defs/<隊>-aide
    ```
 
-   然後 `{"op": "check", "path": "defs/<隊>-aide"}`，`problems` 是空的才往下。定義裡的檔都不用改。
+   印 `wrote aide definition ...` 就成了；路徑已經在＝`DefExists`，沒設 `AOS_HOME`＝`TemplateMissing`（加 `--template <agent-fsm 範本夾>`）。`_metainfo.json` 的 lineage 記 `{"from": 範本夾, "overlay": 本夾}`。然後 aos 工具 `agent_def` `{"op": "check", "path": "defs/<隊>-aide"}`，`problems` 是空的才往下。定義裡的檔都不用改。
 
 2. **寫 aide.json**：建 `~/.aos/view/teams/<隊>/aide.json`（資料夾沒有就 `mkdir -p`），內容：
 

@@ -12,6 +12,10 @@ usage: aos-view [--port 8767] [--home DIR] serve     run the page on 127.0.0.1 (
        aos-view note [--team T] [--on NAME] STATUS TEXT   STATUS: start progress done blocked decision handoff ask
        aos-view decide [--team T] FILE                a user-zone letter body -> teams/T/outbox/<id>.json; prints the id
        aos-view match REPLY_FOLDER                    is the zone's answered letter the one the captain wrote?
+       aos-view aide-def [--template DIR] PATH        make the team's aide definition PATH: copy the agent-fsm template
+                                                      (--template, else $AOS_HOME/templates/agent-fsm), then lay every
+                                                      file of aide-def/ over it (not _index.json); a relative PATH starts
+                                                      at $AOS_WS when set, else here; lineage {from, overlay}
   the aide (an on_clock hook of agent <team>-aide-1; event JSON on stdin):
        aos-view aide-tick [--team T]                  pass outbox files, a report when facts changed, a beat each 15 min
   team default: --team, else the basename of $AOS_STACK if it is a name on the daemon table
@@ -2750,19 +2754,28 @@ def ui_put(home, key, body):
 
 def ui_ports(home):
     """B1: extra listeners. config "ui_ports": [{"port": 8768, "dir": "ui/v2/dist"}] (dir relative to this file);
-    default: 8768 for ui/v2/dist. A dir without index.html is not served (the port is not opened)."""
+    default: 8768 for ui/v2/dist. A dir without index.html is not served (the port is not opened).
+    -> (served [{port, dir}], missing [{port, dir}]); serve prints one warning per missing dir (ui/v2/dist is not in git:
+    it has to be built locally, ui/v2/README.md)."""
     conf = home.config().get("ui_ports")
     if conf is None:
         conf = [{"port": 8768, "dir": "ui/v2/dist"}]
-    out = []
+    out, missing = [], []
     for e in conf if isinstance(conf, list) else []:
         if not isinstance(e, dict) or not isinstance(e.get("port"), int):
             continue
         d = e.get("dir") or ""
         d = d if os.path.isabs(d) else os.path.join(HERE_DIR, d)
-        if os.path.isfile(os.path.join(d, "index.html")):
-            out.append({"port": e["port"], "dir": d})
-    return out
+        (out if os.path.isfile(os.path.join(d, "index.html")) else missing).append({"port": e["port"], "dir": d})
+    return out, missing
+
+
+def ui_missing_line(e):
+    """The warning for a ui dir without index.html (the v2 page is not built here)."""
+    hint = ("build it first: see %s" % os.path.join(os.path.dirname(e["dir"]), "README.md")
+            if os.path.basename(os.path.normpath(e["dir"])) == "dist" else "point ui_ports at a built page")
+    return ("aos-view: warning: port %d not opened: %s has no index.html (the page is not built; %s)"
+            % (e["port"], e["dir"], hint))
 
 
 # ---- the user's board (布告欄): one line the user leaves before going away; agents read it with `aos-view board` ----
@@ -2968,7 +2981,63 @@ def cmd_ingest(home, args):
     print(json.dumps(ingest(home), ensure_ascii=False))
 
 
-PHASE1 = {"board": cmd_board, "note": cmd_note, "decide": cmd_decide, "match": cmd_match, "aide-tick": cmd_aide_tick, "ingest": cmd_ingest}
+AIDE_DEF = os.path.join(os.path.dirname(os.path.realpath(__file__)), "aide-def")   # only the aide's own files (Q3 11-17)
+AIDE_SKIP = ("_index.json",)                     # generated listing of aide-def itself, not part of a definition
+
+
+def cmd_aide_def(home, args):
+    """A team's aide definition = a fresh copy of the agent-fsm template with the files in aide-def/ laid over it."""
+    tpl = take_opt(args, "--template")
+    if len(args) != 1:
+        raise Fail("ArgumentsBad", "usage: aos-view aide-def [--template DIR] PATH")
+    if tpl is None:
+        ah = os.environ.get("AOS_HOME")
+        if not ah:
+            raise Fail("TemplateMissing", "AOS_HOME is not set; give --template DIR (the agent-fsm template folder)")
+        tpl = os.path.join(ah, "templates", "agent-fsm")
+    tpl = os.path.abspath(tpl)
+    if not os.path.isfile(os.path.join(tpl, "interfaces.json")):
+        raise Fail("TemplateMissing", "%s is not an agent definition (no interfaces.json)" % tpl)
+    if not os.path.isdir(AIDE_DEF):
+        raise Fail("TemplateMissing", "%s is not a folder" % AIDE_DEF)
+    ws = os.environ.get("AOS_WS")
+    dest = os.path.abspath(os.path.join(ws, args[0]) if ws and not os.path.isabs(args[0]) else args[0])
+    if os.path.lexists(dest):
+        raise Fail("DefExists", "%s already exists (pick a new folder)" % dest)
+    parent = os.path.dirname(dest)
+    os.makedirs(parent, exist_ok=True)
+    tmp = os.path.join(parent, ".%s.new-%d" % (os.path.basename(dest), os.getpid()))
+    import shutil
+    try:
+        shutil.copytree(tpl, tmp, symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
+        laid = []
+        for name in sorted(os.listdir(AIDE_DEF)):
+            src = os.path.join(AIDE_DEF, name)
+            if name in AIDE_SKIP or not os.path.isfile(src):
+                continue
+            if os.path.lexists(os.path.join(tmp, name)):
+                os.remove(os.path.join(tmp, name))
+            shutil.copy2(src, os.path.join(tmp, name))
+            laid.append(name)
+        meta_path = os.path.join(tmp, "_metainfo.json")
+        meta = load_json(meta_path, {}) if os.path.exists(meta_path) else {}
+        if not isinstance(meta, dict):
+            raise Fail("DefBad", "%s/_metainfo.json is not a JSON object" % AIDE_DEF)
+        meta["lineage"] = {"from": tpl, "overlay": AIDE_DEF}
+        with open(meta_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(meta, ensure_ascii=False, indent=2) + "\n")
+        os.rename(tmp, dest)
+    except OSError as e:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise Fail("WriteFailed", "cannot make %s: %s" % (dest, e))
+    except BaseException:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
+    print("wrote aide definition %s (template %s, laid over: %s)" % (dest, tpl, " ".join(laid)))
+
+
+PHASE1 = {"board": cmd_board, "note": cmd_note, "decide": cmd_decide, "match": cmd_match, "aide-tick": cmd_aide_tick, "ingest": cmd_ingest,
+          "aide-def": cmd_aide_def}
 
 
 def main(argv):
@@ -3005,7 +3074,10 @@ def main(argv):
         srv = Server(("127.0.0.1", port), Handler)
         ob = Outbox(home, c)
         srv.collector, srv.home, srv.token, srv.outbox, srv.ui = c, home, home.token(), ob, None
-        for e in ui_ports(home):
+        served, missing = ui_ports(home)
+        for e in missing:
+            print(ui_missing_line(e), file=sys.stderr, flush=True)
+        for e in served:
             if e["port"] == port:
                 continue
             try:

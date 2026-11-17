@@ -324,5 +324,62 @@ class Phase1(unittest.TestCase):
         self.assertIsNone(self.snapshot()["ok-t"]["team_light"])
 
 
+class AideDef(unittest.TestCase):
+    """aos-view aide-def (11-17 Q3): the agent-fsm template copied, the files of aide-def/ laid over it."""
+    AIDE = os.path.join(os.path.dirname(HERE), "aide-def")
+    TEMPLATE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(HERE))), "templates", "agent-fsm")
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="view-aidedef-", dir="/tmp")
+        self.env = {"PATH": os.environ["PATH"], "HOME": self.tmp, "LANG": "C.UTF-8", "PYTHONDONTWRITEBYTECODE": "1"}
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp)
+
+    def run_view(self, args, **env):
+        return subprocess.run([VIEW, "aide-def"] + args, env=dict(self.env, **env), capture_output=True, text=True, timeout=30)
+
+    @staticmethod
+    def files(d):
+        return sorted(os.path.relpath(os.path.join(r, f), d) for r, ds, fs in os.walk(d) for f in fs if "__pycache__" not in r)
+
+    def read(self, p):
+        with open(p, "rb") as f:
+            return f.read()
+
+    def test_template_plus_overlay(self):
+        ws = os.path.join(self.tmp, "ws")
+        os.makedirs(os.path.join(ws, "defs"))
+        r = self.run_view(["defs/t-aide"], AOS_WS=ws, AOS_HOME=os.path.dirname(os.path.dirname(self.TEMPLATE)))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        dest = os.path.join(ws, "defs", "t-aide")
+        self.assertIn("wrote aide definition %s" % dest, r.stdout)
+        overlay = [f for f in os.listdir(self.AIDE) if f != "_index.json"]
+        self.assertEqual(self.files(dest), sorted(set(self.files(self.TEMPLATE)) | set(overlay)))
+        for f in self.files(dest):
+            if f == "_metainfo.json":
+                continue
+            src = os.path.join(self.AIDE if f in overlay else self.TEMPLATE, f)
+            self.assertEqual(self.read(os.path.join(dest, f)), self.read(src), f)
+        meta = json.loads(self.read(os.path.join(dest, "_metainfo.json")))
+        self.assertEqual(meta.pop("lineage"), {"from": os.path.abspath(self.TEMPLATE), "overlay": os.path.realpath(self.AIDE)})
+        self.assertEqual(meta, json.loads(self.read(os.path.join(self.AIDE, "_metainfo.json"))))
+        self.assertEqual(json.loads(self.read(os.path.join(dest, "hooks.json")))["hooks"].keys(), {"aide_tick"})
+        self.assertFalse([f for f in os.listdir(os.path.join(ws, "defs")) if f.startswith(".")])   # no temp folder left
+        again = self.run_view(["defs/t-aide"], AOS_WS=ws, AOS_HOME=os.path.dirname(os.path.dirname(self.TEMPLATE)))
+        self.assertEqual(again.returncode, 1)
+        self.assertIn("aos-view: error: DefExists", again.stderr)
+
+    def test_template_missing(self):
+        r = self.run_view([os.path.join(self.tmp, "x")])
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("aos-view: error: TemplateMissing AOS_HOME is not set", r.stderr)
+        r = self.run_view(["--template", self.tmp, os.path.join(self.tmp, "x")])
+        self.assertIn("aos-view: error: TemplateMissing", r.stderr)
+        self.assertFalse(os.path.exists(os.path.join(self.tmp, "x")))
+        r = self.run_view(["--template", self.TEMPLATE, os.path.join(self.tmp, "y")])
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
