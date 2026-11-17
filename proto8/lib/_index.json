@@ -95,6 +95,9 @@
  "process_group.py": {
   "description": "收掉自己起的那一群子行程：先 TERM 整群、等一下、還在就 KILL；外面來的 TERM／Ctrl-C 變成例外，讓呼叫處先收拾再走。"
  },
+ "requirements-optional.txt": {
+  "description": "選用的 Python 模組清單（現在只有 jsonschema）：install.py 只檢查有沒有、不 pip，沒有也能跑"
+ },
  "schema": {
   "description": "機讀的協議定義（JSON Schema）：各協議一夾、一版一夾，例如 comm/1；普通 proc 照它讀寫，工具拿它驗。"
  },

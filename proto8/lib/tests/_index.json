@@ -41,6 +41,9 @@
  "test_index_view.py": {
   "description": "index_view（lib/aos_index.py，thinking 2026-11/12/index-tools）的定向測試：實跑 _entry，驗三種給法（只 path、只 index、兩個疊著）、key、分頁、沒有 index、壞掉的 index。"
  },
+ "test_install.py": {
+  "description": "proto8/install.py in a throwaway home with a fake make: fills bin/ and include/, a rerun gives the same result, missing make is one error line."
+ },
  "test_json_tools.py": {
   "description": "json 工具一族（lib/aos_json.py；簡單組 json_*、複雜組 jsonx_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。"
  },
