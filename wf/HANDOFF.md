@@ -22,7 +22,7 @@
   - **傍晚補問四題已答**（逐字在 [08-要裁的題](../proto8/thinking/2026-11/17/cpp-py-改名/08-要裁的題.md) 文末）：code map 依賴表變空「先放著」；`docs/zh/*.html` 舊安裝法「先不動」；公司機 `proto8/cpp/*/{bin,build,lib}` 舊編譯產物已刪；`install.py`「完全不管」前端。下班前再問兩題也已答、已做：條文裡 `impls/` 的路徑只改路徑成 `cpp`；aos-teams/06 硬規則第 5、6 條的指令換成 `install.py`。
   - **條文裡還留著的**：句子裡單獨的「impls」字樣沒動（條文先放著）。
 - **aos-view → aos-frontend**（`5c951ee8e`）：改名、整夾搬到 `proto8/frontend/`，是選配的網頁外掛；舊前端 `web/`、`ui/v1/` 已刪（`934c7482e`）。`AOS_VIEW_HOME`、`~/.aos/view` 沒改名；`API.md` 還講 v1；使用者說之後會整個大修。小助手 hook 的新路徑沒被測試跑到。
-- **今天其他做完的**：八夾、路徑規則、重建樹的[步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)（**還寫舊流程，沒有 `install.py` 那步，重建前要對一下**）、條文 33 題落完（使用者：「條文這東西以後我會大修，現在不用這麼急」）、wf 整理（規矩卡 `wf/workflows/common/rules-card.md`）。使用者答的題全文：[待裁網頁-答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)。
+- **今天其他做完的**：八夾、路徑規則、重建樹的[步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)（已改成 `install.py` 新流程，第 1～12 步在乾淨 clone＋暫存樹用假腦實跑過；已知偶紅：aos-daemon `test_bad_letter` 一支在整夾一起跑時紅過一次、單獨跑 3 次都過）、條文 33 題落完（使用者：「條文這東西以後我會大修，現在不用這麼急」）、wf 整理（規矩卡 `wf/workflows/common/rules-card.md`）。使用者答的題全文：[待裁網頁-答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)。
 - **在跑的線**：沒有。
 - **桌面成品（repo 外）**：`aos-待裁-1117.html`、`aos-待裁-1117-改名.html`（都已答完）、`aos-全景-1117\index.html`（畫的是改名前的八夾）。
 - **還沒做的舊尾巴**：`wf/WAIT_USER.md`＋`wait-user/` 退場；進度檔轉 `wf/progress.json`；`common/gotchas.md` 指標頁；沙箱只唯讀綁 `<家>/lib`；`install.sh` 的舊 `.pth` 提醒、兩支 helper 的 `read_json`；wf 裡幾處還寫 `~/aos-home/knowledge`；`aos-user` 不在 repo；公司 WSL 的 `~/repo/aos` 還停在早上的版本、`~/aos-home` 停著等重建。
