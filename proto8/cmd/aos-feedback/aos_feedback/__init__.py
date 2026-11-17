@@ -29,7 +29,7 @@ flags:
   -j, --json    machine-readable output (also accepted after arguments)
   -h, --help    show help
 
-The store is $AOS_FEEDBACK, or proto8/feedback relative to this script.
+The store is $AOS_FEEDBACK, or wf/advices/feedback beside the proto8 above this script.
 Model classification uses that store's raters.json, first substring match wins.
 Exit codes: 0 printed or recorded; 1 error; 130 interrupted; 141 closed stdout.
 '''

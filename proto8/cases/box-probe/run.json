@@ -1,1 +1,0 @@
-{"description": "Probe the declared shell sandbox boundary.", "exec": "tools/shell", "stdin": "stdin.json"}

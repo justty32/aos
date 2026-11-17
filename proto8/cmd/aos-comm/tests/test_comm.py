@@ -13,7 +13,7 @@ import unittest
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
 BIN = PROTO / "cmd" / "aos-comm" / "bin" / "aos-comm"
-SAMPLES = PROTO / "schema" / "comm" / "1" / "samples"
+SAMPLES = PROTO / "lib" / "schema" / "comm" / "1" / "samples"
 UTC = datetime.timezone.utc
 
 

@@ -23,7 +23,7 @@ def directory():
         return Path(os.environ['AOS_FEEDBACK']).absolute()
     for parent in Path(__file__).resolve().parents:
         if parent.name == 'proto8':
-            return parent / 'feedback'
+            return parent.parent / 'wf' / 'advices' / 'feedback'
     fail('PathMissing', 'cannot find proto8; set AOS_FEEDBACK')
 
 

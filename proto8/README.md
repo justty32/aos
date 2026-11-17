@@ -18,22 +18,18 @@
 
 | 資料夾 | 收什麼 |
 |---|---|
-| [docs/](docs/README.md) | 使用者條文：[CONCEPTS](docs/CONCEPTS.md)（概念）、[NORMS](docs/NORMS.md)（規範）、[CONVENTION](docs/CONVENTION.md)（agent 慣例） |
+| [docs/](docs/README.md) | 使用者條文：[CONCEPTS](docs/CONCEPTS.md)（概念）、[NORMS](docs/NORMS.md)（規範）、[CONVENTION](docs/CONVENTION.md)（agent 慣例）；另有 [notes/](docs/notes/README.md)＝AI 寫的參考筆記（不算數） |
 | [impls/](impls/README.md) | aos-exec、aos-loop、aos-fsm、aos-daemon 等 C++ 專案（各自 CMake；`build/`、`bin/`、`lib/` 是建置產物、不進 git） |
 | [cmd/](cmd/README.md) | Python 指令：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca（turn、screen）、aos-mcp、aos-mcp-launch（起外部 stdio MCP server）、aos-mcp-import（把外部 MCP 的工具凍結成一包）、aos-sandbox、aos-grow |
 | [py/](py/README.md) | cmd 共用模組：`aos_flags.py`、`aos_ws.py`、`daemon_ctl/`（CLI 對話與介面宣告共用模組在 `lib/agent/`） |
 | [install.sh](install.sh) | 把 `impls/*/bin/*` 與 `cmd/*/bin/*` symlink 進 `~/.local/bin`（11-15 起不再寫 Python user site 的 `aos-proto8.pth`，`--uninstall` 會拿掉舊的；參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉；用法在 [cmd/README](cmd/README.md)） |
-| [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），templates 用相對捷徑引用 |
-| [cases/](cases/README.md) | measure 的共用考題、固定答案與比對器契約；smoke 用 math 的兩題驗門與自洽 |
+| [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），templates 用相對捷徑引用；機讀的協議定義在 [lib/schema/](lib/schema/README.md) |
 | [kernel/](kernel/README.md) | llm-kernel（問腦的那台）、daemon-kernel、procs-kernel（通用 kernel 的站的兩種掛法） |
 | [templates/](templates/README.md) | 兩個 agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent） |
 | [knowledge/](knowledge/README.md) | 出廠內容樹：普通資料夾＋`.json`，用一般檔案／json 工具讀；第一本是 `aos/`——給小模型的 aos 體系說明（英文） |
 | [extras/](extras/README.md) | langs：Janet／Lua 寫 aos |
 | [archive/](archive/README.md) | 封存（llm-kernel 示範、self-improve、nvim 外掛、Lua／Janet agent_dan、aos-chat；清單在它的 README） |
-| [feedback/](feedback/README.md) | aos 指令與函數的使用意見（每個 key 一份只追加的 `.jsonl`，進 git）與評分者辨識規則 `raters.json` |
-| [thinking/](thinking/README.md) | 討論紀錄（使用者原文、決定、結論） |
-| [notes/](notes/README.md) | AI 寫的參考筆記（不算數） |
-| `user-advice/` | 使用者自己的意見稿 |
+| [thinking/](thinking/README.md) | 討論紀錄（使用者原文、決定、結論）；使用者自己的意見稿在 `thinking/user-advice/` |
 
 **以 [CONCEPTS.md](docs/CONCEPTS.md) 為準**（概念層：名詞、規則 C-01～C-92，作廢的號只留在表上；只收使用者說過的）。圖解兩頁（10-20 的狀態）：概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm （HTML 源在 scratchpad/pages/proto8-concepts.html、proto8-impl.html）。實作上的想法在 [restart §3g](thinking/2026-10/11/restart/README.md)（10-11 晚口述：inst→loop→daemon→tick-tock→kernel→agent→閉環）。
 
@@ -52,9 +48,9 @@
 - **[kernel/](kernel/README.md)**：llm-kernel 的啟動與問腦用法、daemon-kernel／procs-kernel 的框架站接法。
 - **10-24 一天的嘗試**（使用者「我隨便說，你隨便做，反正只是嘗試」；代定都可翻案，一覽在 [session log 10-24](../wf/session_logs/2026-10-parts/12-10-24.md#2026-10-24)）：[lib/](lib/README.md)（工具＝函式庫）、給人用的 say／listen（在 [aos-agent](cmd/aos-agent/README.md) 裡）、[aos-mcp](cmd/aos-mcp/README.md)、[aos-grow](cmd/aos-grow/README.md)（函數成長）、[langs/](extras/langs/README.md)（Janet、Lua 寫 aos）、[aos-sandbox](cmd/aos-sandbox/README.md)（Linux 權限與沙箱）。
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
-- **[notes/](notes/README.md)**：AI 寫的參考筆記（不是規範、不算數）：拿外面現成的東西跟 aos 對照，例如 [跟 s6、runit 的對照](notes/s6-runit.md)。
+- **[docs/notes/](docs/notes/README.md)**：AI 寫的參考筆記（不是規範、不算數）：拿外面現成的東西跟 aos 對照，例如 [跟 s6、runit 的對照](docs/notes/s6-runit.md)。
 - 之前乾淨的兩個時刻，要回頭看的：九月初 [ideas 13 章](../wf/workflows/ideas/README.md)、十月初 proto7 核心 spec 與 設計原則。
-- 使用者自己的草稿：[user-advice/2026-09/](user-advice/2026-09/)（2026-09-19～24）。
+- 使用者自己的草稿：[thinking/user-advice/2026-09/](thinking/user-advice/2026-09/)（2026-09-19～24）。
 - 這兩個月做過什麼、每一代長什麼樣：[thinking/2026-10/11/restart/README.md](thinking/2026-10/11/restart/README.md) 第一節。
 
 ## 規矩（使用者 10-11 定）

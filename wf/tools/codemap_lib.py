@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """codemap_lib — 檔頭一句話的認法（函式庫，給 index_gen.py 寫逐檔 code map 用；沒有命令列）。
 
-掃哪些檔：`git ls-files proto8`，去掉 thinking／archive／notes／user-advice／docs 夾、任何一層叫 archive／docs／
+掃哪些檔：`git ls-files proto8`，去掉 thinking／archive／docs 夾、任何一層叫 archive／docs／
 __pycache__ 的夾、.md（knowledge/ 除外）、.gitignore／.gitattributes、`_index.json`（資料夾的 index）、.vscode/（這份清單寫在 index_gen.json 的
 codemap 段）。一個 proto8 頂層夾一份 json（照實際夾名），頂層單檔進 proto8.json；怎麼寫在 index_gen.codemap_tables。
 

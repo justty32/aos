@@ -1,1 +1,0 @@
-{"description": "Run the fixed multiplication question through the math tool.", "exec": "lib/base/math", "stdin": "stdin.json"}

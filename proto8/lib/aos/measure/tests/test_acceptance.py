@@ -2,7 +2,6 @@
 import json
 import os
 from pathlib import Path
-import shutil
 import statistics
 import subprocess
 import tempfile
@@ -39,6 +38,17 @@ class AcceptanceTests(unittest.TestCase):
         entry.chmod(0o755)
         return target
 
+    def smoke_suite(self, smoke):
+        """Write the two-question math suite (17+25=42, 17*23=391) that used to live in proto8/cases/smoke."""
+        for name, expr, answer in (('addition', '17+25', '42'), ('multiplication', '17*23', '391')):
+            one = smoke / name
+            (one / 'expect').mkdir(parents=True)
+            (one / 'run.json').write_text(json.dumps({'exec': 'lib/base/math', 'stdin': 'stdin.json'}) + '\n')
+            (one / 'stdin.json').write_text(json.dumps({'expr': expr}) + '\n')
+            (one / 'check.json').write_text(json.dumps({'min_score': 1.0}) + '\n')
+            (one / 'expect/stdout.json').write_text(answer + '\n')
+        return smoke
+
     def case(self, target):
         case = self.root / 'case'
         case.mkdir()
@@ -48,7 +58,7 @@ class AcceptanceTests(unittest.TestCase):
 
     def test_smoke_suite_and_wrong_answer(self):
         smoke = self.root / 'smoke'
-        shutil.copytree(PROTO / 'cases/smoke', smoke)
+        self.smoke_suite(smoke)
         result = self.measure(smoke)
         self.assertTrue(result['check']['pass'])
         self.assertEqual(result['consistency'], {'scores': [1.0, 1.0], 'pass': True})
@@ -74,7 +84,7 @@ class AcceptanceTests(unittest.TestCase):
             'observed.append_strict(os.environ["AOS_STACK"], {"kind":"think",'
             '"endpoint":"fake-account", "usage":{"prompt_tokens":5,"completion_tokens":2}})\n'
             'print(json.dumps({"score":0.5,"diff":["stdout.json"],"why":"Fixed fixture score."}))\n')
-        result = self.measure(PROTO / 'cases/smoke/addition',
+        result = self.measure(self.smoke_suite(self.root / 'one') / 'addition',
                               check={'compare': str(comparator), 'min_score': 0.6})
         self.assertFalse(result['check']['pass'])
         self.assertEqual(result['check']['scores'], [0.5, 0.5, 0.5])

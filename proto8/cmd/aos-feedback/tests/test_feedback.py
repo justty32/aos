@@ -21,7 +21,7 @@ class FeedbackFixture(unittest.TestCase):
         self.work = Path(self.temp.name)
         self.feedback = self.work / 'feedback'
         self.feedback.mkdir()
-        shutil.copyfile(ROOT / 'feedback/raters.json', self.feedback / 'raters.json')
+        shutil.copyfile(ROOT.parent / 'wf/advices/feedback/raters.json', self.feedback / 'raters.json')
         self.env = os.environ.copy()
         for key in ('AOS_CD', 'AOS_STACK', 'AOS_WS', 'AOS_DAEMON', 'AOS_KERNEL'):
             self.env.pop(key, None)

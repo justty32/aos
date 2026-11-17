@@ -1,4 +1,4 @@
-"""check - 拿 proto8/schema/comm/1/ 的四份 schema 驗一個值：有 Python jsonschema 就用它，沒有就用這裡只認這四份用到的關鍵字的小驗證器。
+"""check - 拿 proto8/lib/schema/comm/1/ 的四份 schema 驗一個值：有 Python jsonschema 就用它，沒有就用這裡只認這四份用到的關鍵字的小驗證器。
 
 兩邊都把 format: date-time 當真檢查（照 times.parse：ISO 8601、要帶時區），jsonschema 預設不查 format，這裡另給 FormatChecker。
 小驗證器認的關鍵字：$ref（只認 #/$defs/…）、type、const、enum、required、properties、additionalProperties、items、maxItems、
@@ -17,7 +17,7 @@ _KNOWN = _IGNORED | {"$ref", "type", "const", "enum", "required", "properties", 
 
 
 def schema_dir(start=None):
-    """往上找 schema/comm/1/（從這支的真實位置起；repo 裡＝proto8/schema/comm/1）。找不到＝SchemaMissing。"""
+    """往上找 schema/comm/1/（從這支的真實位置起；repo 裡＝proto8/lib/schema/comm/1，活樹裡＝$AOS_HOME/lib/schema/comm/1）。找不到＝SchemaMissing。"""
     here = os.path.dirname(os.path.realpath(start or __file__))
     while True:
         d = os.path.join(here, "schema", "comm", "1")

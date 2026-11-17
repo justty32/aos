@@ -10,6 +10,8 @@
 
 給 AI 寫新工具用 [`tool_spec.py`](tool_spec.py)（[tools-def](../thinking/2026-11/10/tools-def/README.md)）：一支 Python 裡宣告說明、參數（`ts.param`）、特性（`META`）和 `run(args)`，它產 `_tooldef`／`_metainfo`（資料夾的兩個檔，或 JSON 物件的兩個鍵）、執行時接 `tool_io` 驗參數；骨架在 [`templates/tool-python`](../templates/tool-python/README.md)，腦用 [`tools_def`](agent/tools_def/) 的 `new`／`check`。現有工具不必遷移。
 
+機讀的協議定義（JSON Schema，例如 comm/1）在 [`schema/`](schema/README.md)，不是工具；`aos/comm` 的 check 從自己的位置往上找它（11-17 從 proto8 頂層的 `schema/` 搬進來，活樹也跟著有了）。
+
 跨 kernel 的問腦轉交用 [`aos/llm_forward`](aos/llm_forward/README.md)：下一層位置寫在包的 `kernel`，成功用 `child` 串起兩本帳，失敗透明轉交。
 
 ## 分檔目錄

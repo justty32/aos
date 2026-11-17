@@ -32,7 +32,7 @@
   {
    "domain": "腦叫的工具與共用程式庫",
    "files": "proto8/lib/*",
-   "role": "腦叫的工具（`_entry`＋`_tooldef.json`＋`_metainfo.json`）；CLI 對話與介面宣告共用模組在 `lib/agent/`（`cli_session.py`、`agent_files.py`）；`lib` 不 import `py`。契約看 proto8/lib/README.md。",
+   "role": "腦叫的工具（`_entry`＋`_tooldef.json`＋`_metainfo.json`）；CLI 對話與介面宣告共用模組在 `lib/agent/`（`cli_session.py`、`agent_files.py`）；機讀的協議定義（JSON Schema）在 `lib/schema/`（不是工具）；`lib` 不 import `py`。契約看 proto8/lib/README.md。",
    "tests": "各工具夾的 tests/",
    "per_file": "wf/knowledge/code-map/proto8/lib.json"
   },
@@ -65,20 +65,6 @@
    "per_file": "wf/knowledge/code-map/proto8/extras.json"
   },
   {
-   "domain": "案例",
-   "files": "proto8/cases/*",
-   "role": "跑起來對答案的案例（expect／ws）。",
-   "tests": "",
-   "per_file": "wf/knowledge/code-map/proto8/cases.json"
-  },
-  {
-   "domain": "回饋紀錄",
-   "files": "proto8/feedback/*",
-   "role": "各工具的回饋紀錄檔。",
-   "tests": "",
-   "per_file": "wf/knowledge/code-map/proto8/feedback.json"
-  },
-  {
    "domain": "proto8 頂層單檔",
    "files": "proto8/*（install.sh 等）",
    "role": "安裝腳本等頂層單檔。",
@@ -86,7 +72,7 @@
    "per_file": "wf/knowledge/code-map/proto8/proto8.json"
   }
  ],
- "not_code": "`proto8/docs/`（條文）、`thinking/`、`notes/`、`user-advice/`、`archive/` 不是程式，不進 code map。",
+ "not_code": "`proto8/docs/`（條文，含 AI 參考筆記 `docs/notes/`）、`thinking/`（含使用者意見稿 `thinking/user-advice/`）、`archive/` 不是程式，不進 code map；aos-feedback 的意見資料在 repo 根的 `wf/advices/feedback/`。",
  "headline_rule": [
   "**哪個檔負責什麼不手寫**：`python3 wf/tools/index_gen.py --apply` 從每個檔的檔頭一句話生成逐檔表，一個 proto8 頂層夾一份 `wf/knowledge/code-map/proto8/<夾>.json`（頂層單檔進 `proto8.json`）。`tree` 照資料夾巢狀：字串＝檔、物件＝夾；工具夾三個契約檔併成一格「名/」。",
   "一句話寫在哪：C／C++ 第一行 `// 檔名：一句話`；腳本與 `_entry` 跳過 shebang 後第一行 `# 名 - 一句話`（Python 也可以是 docstring 第一行）；CMake 第一行註解；JSON 用 `description`（工具夾的 `_tooldef.json`）、`summary`、`$comment` 或 `title`；knowledge 的 md 用第一個標題。",

@@ -12,7 +12,7 @@ wf/advices 入口：AI 對 aos 本身的意見精簡版的導航、怎麼投新�
 
 ## 有什麼
 
-本夾只放這三個檔，每個小於 8 KB。每條一兩句，括號是出處。做掉一條就刪那條。原本 99 條的全文與各批整理紀錄在 [archive/](archive/README.md)。
+本夾頂層只放這三個檔，每個小於 8 KB（子夾 `feedback/` 是 aos-feedback 的資料）。每條一兩句，括號是出處。做掉一條就刪那條。原本 99 條的全文與各批整理紀錄在 [archive/](archive/README.md)。
 
 | 檔 | 收什麼 |
 |---|---|
@@ -20,7 +20,7 @@ wf/advices 入口：AI 對 aos 本身的意見精簡版的導航、怎麼投新�
 | [02-範本工具知識庫](02-範本工具知識庫.md) | agent-fsm 與 sol、eca 範本、commit-request、工具說明、知識庫 |
 | 本檔下半 | 舊打撈包、實驗、調查留下的坑與未解問題 |
 
-agent 用 `aos-feedback add` 送的單筆指令意見不在這裡，在 `proto8/feedback/`（程式預設的存放處），看法是 `aos-feedback ls`、`show KEY`。
+agent 用 `aos-feedback add` 送的單筆指令意見在子夾 [feedback/](feedback/README.md)（程式預設的存放處，11-17 從 `proto8/feedback/` 搬來），看法是 `aos-feedback ls`、`show KEY`。
 
 ## 投新意見
 

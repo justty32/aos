@@ -8,6 +8,9 @@
 
 > **改名**：舊紀錄照舊名，連到資料夾的連結改指新路徑。
 > 11-06 proto8 按角色重劃夾（[arch-refactor](2026-11/05/arch-refactor/README.md) S5），舊紀錄的路徑照這張換：`bin/<指令>` → `cmd/<指令>/bin/<指令>`（`aos-eca-turn`、`aos-eca-screen` 在 `cmd/aos-eca/bin/`）、`bin/aos_flags.py`、`lib/aos/aos_ws.py`、`lib/agent/cli_session.py` → `py/`、`bin/docs/` → `cmd/docs/`、`extras/agent` → `cmd/aos-agent`、`extras/ai_tools` → `cmd/aos-mcp`、`extras/sandbox` → `cmd/aos-sandbox`、`extras/grow` → `cmd/aos-grow`、`lib/base/judge` → `lib/aos/judge`、`demo/{llm-kernel,daemon-judge,procs-kernel}` → `kernel/`、`demo/{agent-fsm,eca-claude}` → `templates/`、`demo/docs/01、02` → `templates/docs/01、02`、`demo/docs/03～05` → `kernel/docs/01～03`。
+> 11-17 proto8 頂層收夾第一步（[proto8-八夾](2026-11/17/proto8-八夾.md)），舊紀錄的路徑照這張換：`schema/` → `lib/schema/`、`notes/` → `docs/notes/`、`user-advice/` → `thinking/user-advice/`（本夾底下，跟月份夾並列）、`feedback/` → repo 根的 `wf/advices/feedback/`；空的 `bin/` 刪掉（裡面的東西 11-06 已照上一段搬走）；`cases/`（measure 的考題 smoke、box-probe）2026-11-17 已刪（使用者「cases裡面的東西應該用不到了？刪掉」），考題格式看 [measure README](../lib/aos/measure/README.md)，兩份考題的內容改由 measure、box_check 的測試自己寫出。這次舊紀錄裡指到這幾個舊位置的連結沒改，點下去是壞的，照這張換著看。
+
+使用者自己的意見稿（非 AI 產出，原文不動）在 [user-advice/](user-advice/)：9 月的草稿在 `user-advice/2026-09/`，之後一天一份 `user-advice/<年月日>.md`。
 
 | 月份 | 份數 | 範圍 |
 |---|---|---|

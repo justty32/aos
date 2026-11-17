@@ -8,8 +8,15 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[4]
 BOXED = ROOT / 'cmd/aos-sandbox/examples/shell-boxed'
-CASE = ROOT / 'cases/box-probe'
 CHECK = ROOT / 'lib/aos/box_check'
+# The box-probe case that used to live in proto8/cases/box-probe: five escape probes run through tools/shell.
+PROBE = '\n'.join([
+    r'echo x > /tmp/aos-box-probe; printf "R1 %s\n" "$?"',
+    r'(exec 3<>/dev/tcp/127.0.0.1/4000); printf "R2 %s\n" "$?"',
+    r'printf "H %s\n" "$HOME"/*; printf "R3 %s\n" "$?"',
+    r'printf "B %s\n" /usr/bin/*; printf "R4 %s\n" "$?"',
+    r'printf "P5 %s\n" "$AOS_STACK/../../history.jsonl"',
+    r'(echo x > "$AOS_STACK/../../history.jsonl"); printf "R5 %s\n" "$?"'])
 
 
 class Acceptance(unittest.TestCase):
@@ -26,6 +33,11 @@ class Acceptance(unittest.TestCase):
         self.env['AOS_STACK'] = str(self.root / 'stack/tools/shell')
         Path(self.env['AOS_WS']).mkdir()
         Path(self.env['AOS_STACK']).mkdir(parents=True)
+        self.case = self.root / 'box-probe'
+        self.case.mkdir()
+        (self.case / 'run.json').write_text(json.dumps({'exec': 'tools/shell', 'stdin': 'stdin.json'}) + '\n')
+        (self.case / 'stdin.json').write_text(json.dumps({'command': PROBE}) + '\n')
+        (self.case / 'check.json').write_text(json.dumps({'min_score': 1.0}) + '\n')
 
     def call(self, target, args):
         return subprocess.run(['aos-exec', str(target)], input=json.dumps(args),
@@ -50,7 +62,7 @@ class Acceptance(unittest.TestCase):
         defs = self.root / 'defs'
         (defs / 'tools').mkdir(parents=True)
         (defs / 'tools/shell').symlink_to(tool, target_is_directory=True)
-        result = self.call(ROOT / 'lib/aos/measure', {'case': str(CASE), 'defs': str(defs), 'check': {'compare': str(CHECK)}})
+        result = self.call(ROOT / 'lib/aos/measure', {'case': str(self.case), 'defs': str(defs), 'check': {'compare': str(CHECK)}})
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout)
 
@@ -75,12 +87,12 @@ class Acceptance(unittest.TestCase):
         got.mkdir()
         for text, score in ((output, 1), (output.replace('R2 1\n', ''), 0), (output + 'B /usr/bin/curl\n', 0), (output.replace('R5 1', 'R5 0'), 1), (output.replace('P5 ' + probe_path + '\n', ''), 0), (output + 'P5 ' + probe_path + '\n', 0)):
             (got / 'stdout.json').write_text(text)
-            result = self.call(CHECK, {'expect': str(got), 'got': str(got), 'input': str(CASE)})
+            result = self.call(CHECK, {'expect': str(got), 'got': str(got), 'input': str(self.case)})
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads(result.stdout)['score'], score)
         history.write_text('escaped\n')
         (got / 'stdout.json').write_text(output)
-        result = self.call(CHECK, {'expect': str(got), 'got': str(got), 'input': str(CASE)})
+        result = self.call(CHECK, {'expect': str(got), 'got': str(got), 'input': str(self.case)})
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)['score'], 0)
         self.assertFalse(history.exists())

@@ -11,7 +11,7 @@ flowchart LR
 每次執行都在本工具的 stack 內建立獨立工作區與 stack。結果只印一份 JSON 到 stdout，由呼叫者決定存在哪裡。
 
 ```sh
-aos-exec proto8/lib/aos/measure --case "$PWD/proto8/cases/smoke" --defs "$PWD/proto8" --repeat 3
+aos-exec proto8/lib/aos/measure --case "$PWD/my-case" --defs "$PWD/proto8" --repeat 3
 ```
 
 <details><summary>輸入契約與記帳方式</summary>

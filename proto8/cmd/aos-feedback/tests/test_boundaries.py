@@ -82,7 +82,7 @@ class FeedbackBoundaries(FeedbackFixture):
         result = subprocess.run([sys.executable, '-B', '-c', script], env=env,
                                 text=True, capture_output=True, cwd=self.work, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.strip(), str(ROOT / 'feedback'))
+        self.assertEqual(result.stdout.strip(), str(ROOT.parent / 'wf/advices/feedback'))
         self.assertEqual(result.stderr, '')
 
     def test_thin_tool_explicit_by_and_downstream_failure(self):

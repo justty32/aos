@@ -1,6 +1,6 @@
 # aos-feedback — 收集指令與函數的使用意見，從評分與觀測帳計算 AI 舒適度。
 
-← [cmd](../README.md)｜資料：[feedback](../../feedback/README.md)｜腦的入口：[feedback 工具](../../lib/aos/feedback/README.md)
+← [cmd](../README.md)｜資料：[feedback](../../../wf/advices/feedback/README.md)｜腦的入口：[feedback 工具](../../lib/aos/feedback/README.md)
 
 ```mermaid
 flowchart LR
@@ -10,7 +10,7 @@ flowchart LR
     C --> E[只印結果]
 ```
 
-最常用：`aos-feedback add aos-agent "ctl add usage unclear" "show an example" --kind help --by codex-sol`。意見進 `$AOS_FEEDBACK/<key>.jsonl`；沒設環境變數時用本 repo 的 `proto8/feedback/`。`score` 只讀意見與帳，不回寫目標的 `_metainfo.json`。
+最常用：`aos-feedback add aos-agent "ctl add usage unclear" "show an example" --kind help --by codex-sol`。意見進 `$AOS_FEEDBACK/<key>.jsonl`；沒設環境變數時用本 repo 的 `wf/advices/feedback/`（從這支往上找到 `proto8`，再取它旁邊的 `wf/advices/feedback`）。`score` 只讀意見與帳，不回寫目標的 `_metainfo.json`。
 
 <details>
 <summary>送意見、看意見與 JSON 輸出</summary>
