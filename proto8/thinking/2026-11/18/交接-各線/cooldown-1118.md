@@ -60,7 +60,7 @@ cooldown-1118 交接：腦出錯原因寫進 cooldown.json（件 A）、獨立�
   - judge-llm／kits／reviewer／tool-python 共 15
   - wf/tools/tests 61
   - cpp/aos-daemon/tests 124
-- 改後：作廢（原因見上），在 `res-after`。
+- 改後：作廢（原因見上），在 `res-after`。但不經 aos-agent 的幾支看得出結果：agent-fsm 的 `test_cooldown` 含新加 5 支都過、daemon 改過的 `test_never_started_stopped_row_starts_after_daemon_restart` 過；wf-tools 61 支全過；judge-llm／kits／tool-python 全過。listen 新加的 4 支是 import 錯（cli_a2a），不算數。
 
 ## 沒驗的
 - 新增的 12 支測試與改過的 daemon 測試，一支都還沒真的跑過；只在 Windows 過了語法檢查。
