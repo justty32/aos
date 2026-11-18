@@ -1,6 +1,6 @@
 eca-claude 小試驗教學的目錄：使用者 11-18 陸續提的疑問，一題一份，每題都在公司 WSL 實跑過再寫成照打教學；新題往後加編號。
 
-← [2026-11-18](../README.md)｜線 `eca-lab-1118`（隊長自己做 01～05，06～11 派給隊員）；HEAD `71df48e88` 的乾淨 clone，模型用 haiku
+← [2026-11-18](../README.md)｜線 `eca-lab-1118`（隊長自己做 01～05，06～11 派給隊員）；HEAD `71df48e88` 的乾淨 clone，模型用 haiku。13、14、17、19 在家機（HEAD `01458f544` 的暫存 clone）實跑，其餘在公司 WSL
 
 使用者原話（11-18）：「對了，幫我再去多做幾個小試驗，就用eca claude，並依此做教學，這樣我之後可以一步一步照著做」「claude額度不用省，反正haiku基本不花錢。然後我接著會說更多，這些都是我的一些有疑問的地方，都麻煩你試驗過，弄成教學」
 
@@ -20,6 +20,13 @@ eca-claude 小試驗教學的目錄：使用者 11-18 陸續提的疑問，一�
 | [10](10-aos-asuser.md) | 試 aos-asuser（不行就寫缺什麼、模擬假設） | 參數檢查都實跑過了。真換身分缺 `newuidmap`，要使用者自己 `sudo apt install uidmap`。裝好之後的步驟標成「預期，未實測」 |
 | [11](11-aos-share.md) | aos-share 也試試看 | 檔案系統支援 ACL，`check` 能用。真的分享、收回缺 `setfacl`，要使用者自己 `sudo apt install acl uidmap`。裝好之後的步驟標成「預期，未實測」 |
 | [12](12-沙箱asuser-share要裝什麼與WSL限制.md) | 沙箱、asuser、share 各要額外裝什麼、WSL 上有什麼限制（總覽） | 沒有新實測，整理自 09～11 與實機檢查。bwrap 有；要補 `s6`（沙箱上限、`aos-run`）、`uidmap`（asuser）、`acl`（share），sudo 要自己跑。不裝的替代路是 `--limits`、`systemd-run`＋`taskset` |
+| [13](13-aos-loop控制停止與繼續.md) | 用 aos-loop 控制 eca-claude 的停止與繼續 | `aos-loop` 沒有子指令，靠 stack 裡的 `ctl.json`（`pause`／`resume`／`stop`）和訊號；日常用 `aos-agent ctl pause／resume／stop／start／sleep／wake`。pause、stop 都等這輪做完才生效，sleep 才馬上停 |
+| [14](14-停著時say.md) | 停著的時候 aos-say（正確名字是 `aos-agent say`） | 還在表上就寄得進去，信留在 `queue/new/`，stderr 一行 warning 說為什麼沒人答；`resume`／`start`／`wake` 之後照答。不在表上報 `InstanceMissing` |
+| [15](15-aos-tools加新工具.md) | 用 aos-tool（正確名字是 `aos-tools`）給它加新工具 | 工具夾只要 `_entry`（可執行）和 `_tooldef.json`。用 `aos-agent tools add` 加進這隻自己的 `tools.json`，下一句就看得到，名字是 `mcp__aos__<名>`，不用重起也不用 set-def |
+| [16](16-手動讓eca-claude當kernel.md) | 手動讓 eca-claude 成為 kernel | 掛一個 hook 跑框架站，把請求留下來交給 claude 判，再讓 `AOS_KERNEL` 指到它的收件信箱。add、stop 會先到它，被拒的一方看到 `AddRejected … NotNow`。每封要 7～11 秒，它停著或在忙時整棵樹都掛不了 proc |
+| [17](17-手動看agent狀態.md) | 手動確認狀態（aos json view、信箱、queue…） | `ctl state` 一句話看十一類；`ctl ls -l` 看表與冷卻；`aos-json-view 檔#/指標` 看 stack 裡的 JSON（JSONL 不行，用 `history ls`）；一輪進行中看 `letters.json` 的 `pending` |
+| [18](18-agent出錯怎麼手動除錯.md) | agent 出錯時怎麼手動除錯（大概講） | 照六步查：表 → `ctl ls -l` → `stderr.txt` 結尾 → `queue/`、`letters.json` → `cooldown.json` → 畫面。表上的原因常常只寫「起不來」，真正的原因在 `stderr.txt` |
+| [19](19-手動compact.md) | 手動幫它 compact | `aos-agent say -t ann /compact`，對話編號不變、紀錄換成一則摘要、原文在 `history_removed.jsonl`；`/compact 指示` 會照指示丟東西。替代：`ctl pause` 後 `history summarize／rm`。自動 compact 未實測 |
 
 ## 共同準備
 
@@ -32,7 +39,7 @@ cp -r $AOS_HOME/templates/start-eca ~/aos-home && echo '{"model": "haiku"}' > ~/
 範本的模型是 sonnet，這行把它改成 haiku。視窗 A：
 
 ```sh
-cd ~/aos-home && source env.sh && aos-tree-start root
+cd ~/aos-home && source env.sh && aos-exec root
 ```
 
 視窗 C：

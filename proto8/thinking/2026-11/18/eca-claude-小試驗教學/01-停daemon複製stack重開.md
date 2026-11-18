@@ -14,7 +14,7 @@
 
 ## 先準備
 
-照 [README 的「共同準備」](README.md#共同準備)起一棵 eca 樹（`~/aos-home`，模型用 haiku）。視窗 A 跑 `aos-tree-start root`；視窗 C 已經 `ctl add` 過 `ann`。先讓它記一個字，等一下才驗得出接不接得上：
+照 [README 的「共同準備」](README.md#共同準備)起一棵 eca 樹（`~/aos-home`，模型用 haiku）。視窗 A 跑 `aos-exec root`；視窗 C 已經 `ctl add` 過 `ann`。先讓它記一個字，等一下才驗得出接不接得上：
 
 ```sh
 aos-agent -d .stack --target ann say "Remember the word: pineapple. Reply with just OK." && aos-agent -d .stack --target ann listen --timeout-s 120
@@ -24,7 +24,7 @@ aos-agent -d .stack --target ann say "Remember the word: pineapple. Reply with j
 
 ## 停法一：在視窗 A 按 Ctrl+C
 
-在跑著 `aos-tree-start root` 的視窗 A 按 **Ctrl+C**。我是 AI 沒有鍵盤，用 `tmux send-keys C-c` 對那個視窗送了一次 Ctrl+C，效果等於你按 Ctrl+C（行程收到 SIGINT）。
+在跑著 `aos-exec root` 的視窗 A 按 **Ctrl+C**。我是 AI 沒有鍵盤，用 `tmux send-keys C-c` 對那個視窗送了一次 Ctrl+C，效果等於你按 Ctrl+C（行程收到 SIGINT）。
 
 會看到視窗 A 冒出 `^C` 和三行 sleeping，然後回到提示字元：
 
@@ -56,7 +56,7 @@ ann	sleeping	-	143	/home/你/aos-home	-
 視窗 A：
 
 ```sh
-aos-tree-start root
+aos-exec root
 ```
 
 會看到三行 `running`，其中有 `ann`，不用再 add。視窗 C 問它：
@@ -96,7 +96,7 @@ cp -a ~/aos-home ~/aos-home2
 ```
 
 ```sh
-cd ~/aos-home2 && source env.sh && aos-tree-start root
+cd ~/aos-home2 && source env.sh && aos-exec root
 ```
 
 會看到 `ann` 是 `running`，`ws` 欄已經是新位置 `/home/你/aos-home2`。視窗 C 先 `cd ~/aos-home2 && source env.sh`，再：

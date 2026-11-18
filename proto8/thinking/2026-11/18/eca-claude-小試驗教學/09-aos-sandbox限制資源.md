@@ -54,6 +54,8 @@ cp agents/ann/_entry agents/ann/_entry.orig
 echo '["aos-sandbox", "sandbox.json", "aos-loop", "loop.json"]' > agents/ann/_entry
 ```
 
+> 提醒（11-18 晚另一條線發現）：這裡包的是 `_entry`，是 eca-claude 這種範本的入口。agent-fsm 範本的入口不是這樣寫，它要包的是 `body.json`（那份 JSON 就是它的啟動命令），不要照抄成 `_entry`。這份只用 eca-claude 實測過，agent-fsm 沒試。
+
 **4. 起根**（視窗 A，前景）
 
 ```sh

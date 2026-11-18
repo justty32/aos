@@ -1,0 +1,62 @@
+{
+ "01-停daemon複製stack重開.md": {
+  "description": "結論"
+ },
+ "02-預設stack與站在agent夾裡.md": {
+  "description": "結論（預設規則一句話）"
+ },
+ "03-自訂定義掛上去.md": {
+  "description": "結論"
+ },
+ "04-aos-post丟信.md": {
+  "description": "結論"
+ },
+ "05-aos-lock鎖信箱.md": {
+  "description": "結論"
+ },
+ "06-不用aos-tree-start起daemon.md": {
+  "description": "試驗 06：不用 aos-tree-start 起回停著的 daemon"
+ },
+ "07-aos-mailbox寄信收信.md": {
+  "description": "試驗 07：用 aos-mailbox 寄信給 agent，並收信"
+ },
+ "08-不用aos-kit.md": {
+  "description": "試驗 08：不用 aos-kit 達成 aos-kit 的功能"
+ },
+ "09-aos-sandbox限制資源.md": {
+  "description": "結論"
+ },
+ "10-aos-asuser.md": {
+  "description": "結論"
+ },
+ "11-aos-share.md": {
+  "description": "結論"
+ },
+ "12-沙箱asuser-share要裝什麼與WSL限制.md": {
+  "description": "結論"
+ },
+ "13-aos-loop控制停止與繼續.md": {
+  "description": "結論"
+ },
+ "14-停著時say.md": {
+  "description": "結論"
+ },
+ "15-aos-tools加新工具.md": {
+  "description": "結論"
+ },
+ "16-手動讓eca-claude當kernel.md": {
+  "description": "結論"
+ },
+ "17-手動看agent狀態.md": {
+  "description": "結論"
+ },
+ "18-agent出錯怎麼手動除錯.md": {
+  "description": "結論"
+ },
+ "19-手動compact.md": {
+  "description": "結論"
+ },
+ "README.md": {
+  "description": "目錄"
+ }
+}
