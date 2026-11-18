@@ -1,6 +1,6 @@
 # aos_agent/ctl/add.py - 宣告檢查、掛上 agent 並等待 daemon 上表。
-import aos_flags
-import daemon_ctl as dc
+from aos import flags as aos_flags
+from aos import daemon_ctl as dc
 import json
 import os
 import re

@@ -18,7 +18,7 @@ PROTO = reply_tests.PROTO
 sys.dont_write_bytecode = True
 sys.path[:0] = [str(CELLS), str(PROTO / "py")]
 import compact
-import aos_ws
+from aos import ws as aos_ws
 
 CALL = reply_tests.CALL
 OLD = [{"role": "user", "content": "old question"},

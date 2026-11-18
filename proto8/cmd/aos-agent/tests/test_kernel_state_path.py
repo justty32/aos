@@ -22,7 +22,7 @@ ENV["PATH"] = str(PROTO / "bin") + ":" + ":".join(
 ENV["PYTHONDONTWRITEBYTECODE"] = "1"
 
 sys.path[:0] = [str(PROTO / "py")]
-import daemon_ctl as dc  # noqa: E402
+from aos import daemon_ctl as dc  # noqa: E402
 WIRED = callable(getattr(dc, "state_path", None))   # aos-agent uses daemon_ctl.state_path only once the wiring is in
 
 

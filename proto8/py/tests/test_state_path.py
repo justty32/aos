@@ -14,8 +14,8 @@ import unittest
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(PROTO / "py")]
-import daemon_ctl as dc  # noqa: E402
-sp = importlib.import_module("daemon_ctl.state_path")   # the module: once wired, the package attribute state_path is the function
+from aos import daemon_ctl as dc  # noqa: E402
+sp = importlib.import_module("aos.daemon_ctl.state_path")   # the module: once wired, the package attribute state_path is the function
 
 BINS = str(PROTO / "bin")
 

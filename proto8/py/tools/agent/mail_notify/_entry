@@ -2,7 +2,7 @@
 # mail_notify - on_clock 的 hook handler：看這隻 agent 自己的信箱（<stack>/mailbox，不是 queue）有沒有還沒通知過的新信，有就往自己 queue 寄一則「[aos] new_mail: …」。
 # 使用者 11-11：「我們可以透過hook，當有新信來的時候執行一次aos-say "[aos] new_mail: you got a new mail from xxx"這樣。當然，具體這是可調整的，
 #   agent自身也可以調整hook，類似免打擾」；選項框：怎麼做「用on_clock」、範本「預設開」、多封新信「合成一句」（thinking/2026-11/11/mail-notify.md）。
-# 介面：hook handler（py/hooks.py 用 aos-exec 起）：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、first…），$AOS_STACK＝這個 hook 自己的小格
+# 介面：hook handler（py/aos/agentlib/hooks.py 用 aos-exec 起）：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、first…），$AOS_STACK＝這個 hook 自己的小格
 #   （$AGENT_STACK/hooks/<名>/），已通知過的信名記在 $AOS_STACK/notified.json。
 # 做法：aos-mailbox --stack <agent stack> peek -j 列還在 new/ 的信 → 沒通知過的＝新信 → 合成一句（只帶封數與寄件人，不帶內文）
 #   用 aos-post send --ordered <agent stack>/queue 寄一則 {"role": "user", "content": …}（同 aos-agent say；queue 沒有就先 aos-post init）→ 寄成了才記 notified。
@@ -16,8 +16,8 @@
 #   範本掛它用 on_error: continue，壞了只是 agent 那邊一行 warning、不停 agent。需要 PATH 上有 aos-mailbox、aos-post。--help 印英文用法。
 import json, os, subprocess, sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))   # py/（或裝好的 lib/）：tool_io.py
-import tool_io  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))   # 放 aos 套件的那層：py/（或裝好的 lib/）
+from aos import tool_io  # noqa: E402
 
 NAME = "mail_notify"
 HELP = """usage: mail_notify < EVENT.json   (an on_clock hook handler; $AOS_STACK = this hook's own cell)

@@ -4,7 +4,7 @@ import math
 import time
 from pathlib import Path
 
-import observed
+from aos import observed
 from ledger import empty_cost, fold
 
 

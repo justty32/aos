@@ -7,9 +7,9 @@ import os
 import re
 
 import runner
-import tool_io
+from aos import tool_io
 from budget import MAX, dumps, is_count
-from tool_io import Error
+from aos.tool_io import Error
 
 ISO = re.compile(r"^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(\.\d+)?(?:[Zz]|([+-])(\d{2}):(\d{2}))$")
 HIGH = 1

@@ -3,7 +3,7 @@ import json
 import os
 import time
 
-import tool_io
+from aos import tool_io
 
 
 def append(stack, name, proc, reply):

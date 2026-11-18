@@ -7,8 +7,8 @@ from types import SimpleNamespace
 import letters
 import hold
 import hooks
-import hook_run
-import tool_io
+from aos import hook_run
+from aos import tool_io
 
 
 class CfgBad(ValueError):

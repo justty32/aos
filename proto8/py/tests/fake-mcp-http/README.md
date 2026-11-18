@@ -21,7 +21,7 @@ mkdir -m 700 cfg && (umask 077; echo "TEAMSITE_TOKEN=FAKE-$(openssl rand -hex 12
 setsid -f python3 /path/to/proto8/py/tests/fake-mcp-http/server.py 18444 cert.pem key.pem cfg/teamsite.env server.log < /dev/null > server.out 2>&1
 ```
 
-CA 的 `keyUsage` 與 leaf 的兩個 `KeyIdentifier` 不能省：Python 3.13 起 `ssl` 預設嚴格驗證（`VERIFY_X509_STRICT`），少了這些，aos 自己的 http client（`py/mcp_client.py`，經 aos 那條與 `aos-mcp-import` 用的）會驗不過；codex／claude 不受影響。
+CA 的 `keyUsage` 與 leaf 的兩個 `KeyIdentifier` 不能省：Python 3.13 起 `ssl` 預設嚴格驗證（`VERIFY_X509_STRICT`），少了這些，aos 自己的 http client（`py/aos/mcp_client.py`，經 aos 那條與 `aos-mcp-import` 用的）會驗不過；codex／claude 不受影響。
 
 token 檔只認第一行 `名字=值` 的值（`TEAMSITE_TOKEN=` 以外的名字也行）。停＝`pkill -f fake-mcp-http/server.py`。
 

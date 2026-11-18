@@ -143,7 +143,7 @@ class ResolveBoxAt(unittest.TestCase):
     def setUpClass(cls):
         sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "py"))
         try:
-            import aos_clock_register
+            from aos import clock_register as aos_clock_register
         finally:
             sys.path.pop(0)
         cls.m = aos_clock_register

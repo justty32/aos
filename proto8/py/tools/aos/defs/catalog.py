@@ -6,7 +6,7 @@ import re
 import shutil
 import subprocess
 
-from tool_io import Error
+from aos.tool_io import Error
 
 
 def read(path):

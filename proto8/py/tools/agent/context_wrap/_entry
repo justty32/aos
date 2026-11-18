@@ -3,7 +3,7 @@
 # 使用者 11-15：「compact，我現在都在用aos-view這東西來管理了，啊我沒辦法compact，這太蠢了，而且我覺得最好弄個hook，當context到達一定程度的時候
 #   跟agent說整理收尾，然後跑compact。」裁定「3.我們做通用的aos判斷，eca的話可以在這個基礎上接上claude hook。」「門檻用35%」；
 #   「不要耦合太深」：只用 aos 自己的介面（queue、letters.json、py/context_use），不依賴任何顯示端。
-# 介面：hook handler（py/hooks.py 用 aos-exec 起）：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、config…），$AOS_STACK＝這個 hook 自己的小格
+# 介面：hook handler（py/aos/agentlib/hooks.py 用 aos-exec 起）：stdin＝事件 JSON（event、hook、stack＝agent 的 stack、config…），$AOS_STACK＝這個 hook 自己的小格
 #   （$AGENT_STACK/hooks/<名>/），狀態記在 $AOS_STACK/state.json。config：percent（1～100，預設35）、wrap（bool，預設true）、window（正整數，選填）。
 #   wrap=false 過門檻直接寄 /compact，不等 queue 空。--reading STACK [--window N] 只印讀數，不需要 $AOS_STACK、不寫 state。
 # 用量：py/context_use.read(agent stack)；讀不到（不是 claude 身、還沒答過一輪、檔壞）＝什麼都不做、不報錯。
@@ -17,9 +17,9 @@
 #   範本掛它用 on_error: continue，壞了只是 agent 那邊一行 warning。需要 PATH 上有 aos-post。--help 印英文用法。
 import json, os, subprocess, sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))   # py/（或裝好的 lib/）：context_use.py、tool_io.py
-import context_use  # noqa: E402
-import tool_io  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))   # 放 aos 套件的那層：py/（或裝好的 lib/）
+from aos.agentlib import context_use  # noqa: E402
+from aos import tool_io  # noqa: E402
 
 NAME = "context_wrap"
 HELP = """usage: context_wrap < EVENT.json   (an on_clock hook handler; $AOS_STACK = this hook's own cell)

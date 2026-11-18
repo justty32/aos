@@ -1,5 +1,5 @@
 # aos_agent/ctl/state.py - 顯示單隻 agent 的狀態：總覽（每類一行）或點菜（某幾類的細節）；只給數字與事實、不給建議（11-10 self-family self_state）。
-import aos_ws
+from aos import ws as aos_ws
 import json
 import os
 import subprocess

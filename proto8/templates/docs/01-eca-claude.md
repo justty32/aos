@@ -2,7 +2,7 @@
 
 ## 外部 coding agent 範本（eca-claude）
 
-claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../../cmd/README.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。CLI 對話共用 [py/cli_session.py](../../py/cli_session.py)，介面宣告共用 [py/agent_files.py](../../py/agent_files.py)（K-5）；兩者都在 `lib/agent/`，不 import lib 頂層的 `aos_flags` 系列。設計：[thinking 2026-10-30 eca](../../thinking/2026-10/30/eca/README.md)；條文草稿 P-43。（沒有 codex 版範本，只差 `cli.json`：要就複製一份、`cli.json` 換成下面這份；**沙盒是 `workspace-write`**，codex 用自己的指令在工作區讀寫（11-12 使用者「codex拿掉唯讀沙盒」；不是 `danger-full-access`，隊長代定、使用者「可以先定這樣」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）。不要照抄 py/tools/agent/codex 那支工具的 `cli.json`：那是給腦叫的 codex 工具，沙盒唯讀。）
+claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../../cmd/README.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。CLI 對話共用 [py/aos/agentlib/cli_session.py](../../py/aos/agentlib/cli_session.py)，介面宣告共用 [py/aos/agentlib/agent_files.py](../../py/aos/agentlib/agent_files.py)（K-5）；兩者都在 `lib/agent/`，不 import lib 頂層的 `aos_flags` 系列。設計：[thinking 2026-10-30 eca](../../thinking/2026-10/30/eca/README.md)；條文草稿 P-43。（沒有 codex 版範本，只差 `cli.json`：要就複製一份、`cli.json` 換成下面這份；**沙盒是 `workspace-write`**，codex 用自己的指令在工作區讀寫（11-12 使用者「codex拿掉唯讀沙盒」；不是 `danger-full-access`，隊長代定、使用者「可以先定這樣」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）。不要照抄 py/tools/agent/codex 那支工具的 `cli.json`：那是給腦叫的 codex 工具，沙盒唯讀。）
 
 ```json
 {"kind": "codex",
@@ -79,7 +79,7 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 
 hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停的，信留在 `queue/cur/`、history 不動，修好照問；aos-mcp 裡停的＝那次工具呼叫回錯（isError）給 CLI，不整支死。
 
-**長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 與 `loop.json.exec.timeout_ms` 範本都是 0＝不限時（11-15 起；以前 600000／900000。使用者 11-15：「AI一輪跑個二三十分鐘都很正常，eca也是可能長時間不回應，逾時這東西應該要默認爲0，也就是不限時間，除非是一些有特殊需求的。」；cli.json 沒寫 `timeout_ms` 也是不限時）。要上限才寫正整數毫秒：`cli.json` 那層限制 CLI 呼叫，`loop.json` 那層限制整次 aos-eca-turn，兩層都寫時外層要比內層長，讓它有時間收尾。不限時的時候一輪很久沒動靜（`live.jsonl`、`turns.jsonl`、`busy.txt`、對話 transcript 都沒在變）滿 10 分鐘就在 stack 寫 `quiet.json`（py/quiet.py；只標記、不殺不丟信），一有動靜或這輪結束就收掉。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
+**長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 與 `loop.json.exec.timeout_ms` 範本都是 0＝不限時（11-15 起；以前 600000／900000。使用者 11-15：「AI一輪跑個二三十分鐘都很正常，eca也是可能長時間不回應，逾時這東西應該要默認爲0，也就是不限時間，除非是一些有特殊需求的。」；cli.json 沒寫 `timeout_ms` 也是不限時）。要上限才寫正整數毫秒：`cli.json` 那層限制 CLI 呼叫，`loop.json` 那層限制整次 aos-eca-turn，兩層都寫時外層要比內層長，讓它有時間收尾。不限時的時候一輪很久沒動靜（`live.jsonl`、`turns.jsonl`、`busy.txt`、對話 transcript 都沒在變）滿 10 分鐘就在 stack 寫 `quiet.json`（py/aos/agentlib/quiet.py；只標記、不殺不丟信），一有動靜或這輪結束就收掉。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
 
 ## 子 agent 與 skill（11-12 晚 eca-task-subagent）
 
@@ -100,7 +100,7 @@ hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停�
 
 兩條路：**CLI 自己接**（本節前半）與**經 aos**（本節最後一段，凍結成一包 aos 工具）。一台選一條。
 
-定義資料夾放一份 **server 檔**（一台一份，例 `mcp/teamsite.json`），`cli.json` 加 `"mcp_servers": ["mcp/teamsite.json"]`（相對從 `cli.json` 的資料夾算，也可寫指示詞；可列好幾份）。claude、codex 兩身都吃；CLI 自己連、自己列工具（不凍結說明），列了的那台整台免核准，`only`／`except` 挑工具。某一份壞了＝`cli_session: warning: external MCP server … skipped: …`，其他照接；stdio 的每次起 CLI 前還會先看指令找不找得到、能不能執行，不行＝同一種 warning（`… skipped: CommandMissing its command is not found or cannot be run: …`）跳過那台。claude 非互動那條若 CLI 開場回報某台沒連上，stderr 多一行 `warning: external MCP server X was not connected when claude started (status failed)`（回合照走；codex 沒有這種回報，起來之後才壞的看不到）。設計：[external-mcp 02](../../thinking/2026-11/12/external-mcp/02-設計.md)；程式：`py/mcp_server_file.py`、`cmd/aos-mcp-launch`。
+定義資料夾放一份 **server 檔**（一台一份，例 `mcp/teamsite.json`），`cli.json` 加 `"mcp_servers": ["mcp/teamsite.json"]`（相對從 `cli.json` 的資料夾算，也可寫指示詞；可列好幾份）。claude、codex 兩身都吃；CLI 自己連、自己列工具（不凍結說明），列了的那台整台免核准，`only`／`except` 挑工具。某一份壞了＝`cli_session: warning: external MCP server … skipped: …`，其他照接；stdio 的每次起 CLI 前還會先看指令找不找得到、能不能執行，不行＝同一種 warning（`… skipped: CommandMissing its command is not found or cannot be run: …`）跳過那台。claude 非互動那條若 CLI 開場回報某台沒連上，stderr 多一行 `warning: external MCP server X was not connected when claude started (status failed)`（回合照走；codex 沒有這種回報，起來之後才壞的看不到）。設計：[external-mcp 02](../../thinking/2026-11/12/external-mcp/02-設計.md)；程式：`py/aos/mcp_server_file.py`、`cmd/aos-mcp-launch`。
 
 **http（Bearer＋自簽 CA）**：
 

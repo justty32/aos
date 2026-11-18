@@ -1,6 +1,6 @@
 # aos_agent/ctl/phase.py - 起停、睡醒與暫停恢復 agent（走 AOS_KERNEL 時 start／stop／sleep／wake 只看回信）。
-import aos_ws
-import daemon_ctl as dc
+from aos import ws as aos_ws
+from aos import daemon_ctl as dc
 from ..common import call_dc, find, note, parse, row_named, table_ref, target, target_name, via_kernel
 from .shared import ctl_wait, name_last, need_table, phase_body, queued_opt, send_only, timeout_opt, wait_for
 from ..decl import close_screen_if_any

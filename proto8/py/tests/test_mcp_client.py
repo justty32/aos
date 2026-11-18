@@ -21,9 +21,9 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import mcp_client
-import mcp_server_file
-from tool_io import Error
+from aos import mcp_client
+from aos import mcp_server_file
+from aos.tool_io import Error
 
 
 FAKE = Path(__file__).with_name("fake_mcp_stdio.py")

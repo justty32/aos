@@ -2,8 +2,8 @@
 import json
 import os
 import time
-import aos_ws
-import cooldown
+from aos import ws as aos_ws
+from aos.agentlib import cooldown
 from ..common import bad_args, Agent, parse, table
 from ..hints import label, queued
 from .shared import query_opt

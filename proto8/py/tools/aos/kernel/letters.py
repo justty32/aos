@@ -4,7 +4,7 @@ import os
 import re
 import subprocess
 
-import tool_io
+from aos import tool_io
 
 NOT_FOUND = 10
 ORDERED = re.compile(r"^[0-9]{12}\.")

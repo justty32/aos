@@ -57,7 +57,7 @@ class Control(unittest.TestCase):
                 self.assertEqual(got.exception.code, 'PhaseBad')
 
     def test_pause_resume_default_ctl_without_parent_config(self):
-        import daemon_ctl.ctl as ctl
+        from aos.daemon_ctl import ctl
         row = {'phase': 'running', 'stack': str(self.root)}
         with patch.object(ctl, 'row_of', return_value=row), patch.object(ctl, 'wait_applied'):
             for cmd in ('pause', 'resume'):

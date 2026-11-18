@@ -75,10 +75,10 @@ add 時工具定義 env 陣列列的 hub 若不在當下環境與這次 env-file
 import json, os, re, shutil, signal, subprocess, sys, tempfile
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
-import aos_flags
-from daemon_ctl.entry import is_program   # 11-10 two-machines：看內容判型（/mnt/c 每檔 0777），同 aos-exec
-import directive_value   # 指示詞交給 aos-directive 解的共用版（tool_io 已由 aos_flags 載入）
-from env_file import Error as EnvFileError, read_env_file
+from aos import flags as aos_flags
+from aos.daemon_ctl.entry import is_program   # 11-10 two-machines：看內容判型（/mnt/c 每檔 0777），同 aos-exec
+from aos import directive_value   # 指示詞交給 aos-directive 解的共用版（tool_io 已由 aos_flags 載入）
+from aos.env_file import Error as EnvFileError, read_env_file
 sys.path.pop(0)
 
 NAME = "aos-tools"

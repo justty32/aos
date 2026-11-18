@@ -9,7 +9,7 @@ from pathlib import Path
 
 PROTO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(PROTO / "py")]
-import daemon_ctl as dc  # noqa: E402
+from aos import daemon_ctl as dc  # noqa: E402
 
 CTL = PROTO / "cmd" / "aos-daemon-ctl" / "bin" / "aos-daemon-ctl"
 AGENT = PROTO / "cmd" / "aos-agent" / "bin" / "aos-agent"

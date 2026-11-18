@@ -16,7 +16,7 @@ LOCAL_BIN = os.path.expanduser("~/.local/bin")
 SPY = """import json, os, runpy, subprocess, sys
 sys.argv[0] = %(turn)r
 sys.path[:0] = [%(py)r, %(lib)r, %(eca)r]
-import cli_ask
+from aos.agentlib import cli_ask
 def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, reseed=None, parts=None, more=None):
     row = {"prompt": prompt, "parts": parts, "late": []}
     if handed:

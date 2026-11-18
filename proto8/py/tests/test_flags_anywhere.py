@@ -9,7 +9,7 @@ import unittest
 
 PROTO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(PROTO / 'py')]
-import aos_flags  # noqa: E402
+from aos import flags as aos_flags  # noqa: E402
 
 BASE = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
 

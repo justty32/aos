@@ -2,7 +2,7 @@
 import json
 import sys
 
-import aos_flags
+from aos import flags as aos_flags
 from . import storage
 from .comfort import score
 

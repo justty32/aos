@@ -14,9 +14,9 @@ import order as ordering
 import packs
 import runner
 import session
-import tool_io
+from aos import tool_io
 from slots import Slots
-from tool_io import Error
+from aos.tool_io import Error
 
 LETTER_BAD = ('cannot understand the letter: letter.json must be an N-16 letter with body = '
               '{"endpoint"?: name, "request": {...}, "priority"?}')

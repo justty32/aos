@@ -11,7 +11,7 @@
 #   都不在、或沒宣告＝沒有 system；給了 --system＝照它、不看 stack（同 --tools）。文字空＝不送 system 訊息。
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝不給工具）；腦看到的工具名＝登記名。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝改用這隻自己那份（aos-agent tools add／rm 寫的，只存差異、"$override" 指回定義那份，11-10）。
-# hook（py/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：有 tool_added hook 時，工具清單比上次（$AOS_STACK/hook_tools_seen.json）
+# hook（py/aos/agentlib/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：有 tool_added hook 時，工具清單比上次（$AOS_STACK/hook_tools_seen.json）
 #   多出來的名字一個觸發一次（第一次只記不觸發；沒有這種 hook＝刪那份檔）。hook 停下＝HookFailed／HooksBad 退 1。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1（P-20）。--help 印英文用法；Ctrl-C 退 130。
 # on_clock（11-11 thinking/2026-11/11/clock-hook）：這格一開頭先 hooks.clock_tick（經 cell_common.clock_tick）——時鐘走到了的 on_clock hook 才跑（handler 預設什麼都不做、history 不多東西）；沒有這種 hook＝只讀清單。
@@ -26,18 +26,12 @@ if os.environ.get("AOS_HOME"):  # 家外的格只經 AOS_HOME 找 lib（路徑�
     _import_paths.append(os.path.join(os.environ["AOS_HOME"], "lib"))
 sys.path[:0] = _import_paths
 try:
-    import aos_flags  # noqa: E402
-    import aos_ws  # noqa: E402  （回答配對：for_endpoint，lib/ 跟 aos_flags 同一夾）
-    if (Path(__file__).resolve().parent / "agent_files.py").is_file():
-        from agent_files import declared_files  # noqa: E402
-    else:
-        from agent_files import declared_files  # noqa: E402
-    if (Path(__file__).resolve().parent / "hooks.py").is_file():
-        import hooks  # noqa: E402
-    else:
-        import hooks  # noqa: E402
+    from aos import flags as aos_flags  # noqa: E402
+    from aos import ws as aos_ws  # noqa: E402  （回答配對：for_endpoint）
+    from aos.agentlib.agent_files import declared_files  # noqa: E402
+    from aos.agentlib import hooks  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
-    if _error.name not in ("aos_flags", "aos_ws", "tool_io", "agent_files", "hooks"):
+    if _error.name not in ("aos", "aos.agentlib"):
         raise
     if not os.environ.get("AOS_HOME"):
         print("agent-fsm: error: HomeMissing AOS_HOME is not set (it names the proto8 folder that holds lib)",

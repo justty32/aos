@@ -101,7 +101,7 @@ class DefinitionsTest(unittest.TestCase):
         skip = shutil.ignore_patterns('tests', '__pycache__')
         for part in ('tools/aos/defs', 'packs', 'tools/base'):
             shutil.copytree(PROTO / 'py' / part, home / 'lib' / part, ignore=skip)
-        shutil.copy(PROTO / 'py' / 'tool_io.py', home / 'lib' / 'tool_io.py')
+        shutil.copytree(PROTO / 'py' / 'aos', home / 'lib' / 'aos', ignore=skip)
         self.assertFalse((home / 'cmd').exists())
         result, data = self.call('check', entry=home / 'lib' / 'tools' / 'aos' / 'defs' / '_entry')
         self.assertEqual(data, {'problems': []}, result.stderr)

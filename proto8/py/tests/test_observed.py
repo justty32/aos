@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import observed
+from aos import observed
 
 
 class Observed(unittest.TestCase):
@@ -50,7 +50,8 @@ class Observed(unittest.TestCase):
         child = root / 'child.py'
         child.write_text('#!' + sys.executable + '\n'
                          '# Record a child observation and return raw output with a failure code.\n'
-                         'import os, sys, observed\n'
+                         'import os, sys\n'
+                         'from aos import observed\n'
                          'payload = sys.stdin.buffer.read()\n'
                          'observed.append_strict(os.environ["AOS_STACK"], {"kind":"cmd", "exit":7})\n'
                          'sys.stdout.buffer.write(payload + b"\\x00out")\n'
@@ -60,7 +61,8 @@ class Observed(unittest.TestCase):
         parent = root / 'parent.py'
         parent.write_text('#!' + sys.executable + '\n'
                           '# Call the child through the shared observation API and forward its result.\n'
-                          'import sys, observed\n'
+                          'import sys\n'
+                          'from aos import observed\n'
                           'code, out, err = observed.call("child", sys.argv[1], sys.stdin.buffer.read())\n'
                           'sys.stdout.buffer.write(out)\n'
                           'sys.stderr.buffer.write(err)\n'
@@ -83,7 +85,7 @@ class Observed(unittest.TestCase):
         self.assertEqual(child_rows[-1]['exit'], 7)
 
     def test_relative_stack_is_absolute_in_child_environment(self):
-        with patch('observed.subprocess.run') as run:
+        with patch('aos.observed.subprocess.run') as run:
             run.return_value.returncode = 0
             run.return_value.stdout = b''
             run.return_value.stderr = b''

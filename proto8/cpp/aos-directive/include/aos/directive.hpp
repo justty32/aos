@@ -3,7 +3,7 @@
 //
 // 解 JSON 時找出所有帶 $ref 或 $env 的物件，整個物件換成它指到的值；物件裡其餘東西不管（10-20 ideas D12）。
 // $ref 的路徑（11-13 晚使用者「他應該是以#作爲json內部尋址的標示」，thinking 2026-11/13/ref-path-rules；index 路徑同一套、
-// Python 那份是 py/aos_refpath.py，兩邊跑同一張 py/tests/ref_path_cases.json）：# 左邊一律檔案系統、右邊一律 json 內部。
+// Python 那份是 py/aos/refpath.py，兩邊跑同一張 py/tests/ref_path_cases.json）：# 左邊一律檔案系統、右邊一律 json 內部。
 //   {"$ref": "x.json"}、"./x.json"、"../x.json"、"sub/x.json"   檔案系統，從寫著它的那份檔所在的資料夾算（RefBase::dir）；整份內容（第一行 #! 跳過），換進來的值接著解
 //   {"$ref": "#/a/b"}               本檔根起算（RFC 6901，~1＝/、~0＝~；.. 不特別、是 key 名）；本檔＝RefBase::file
 //   {"$ref": "#./b"}、"#../c"       從所在物件起算／所在物件的上一層（../.. 可連用，超出根＝DirectiveBad）；#.／#./＝所在物件、#..／#../＝上一層整個。
@@ -61,7 +61,7 @@ struct RefBase {
 
 // 「字串→位置」：$ref 裡寫的一個字串 → 哪份檔（接上起點、整理過；還沒解開捷徑）的哪個指標（RFC 6901，空＝整份）。只看字面、不讀檔。
 // base.at＝這個 {"$ref": …} 在檔裡的位置（所在物件＝它的上一層）。寫法不合＝丟 DirectiveBad；算不出來（不知道檔／位置）＝nullopt。
-// aos-directive 自己與 aos-json 的 --follow、ref --move 都用這一支；Python（py/aos_refpath.py，$ref 與 index 共用）跑同一張表。
+// aos-directive 自己與 aos-json 的 --follow、ref --move 都用這一支；Python（py/aos/refpath.py，$ref 與 index 共用）跑同一張表。
 struct RefSpot {
     std::string file;
     std::string pointer;

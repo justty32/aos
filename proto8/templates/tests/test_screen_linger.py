@@ -7,7 +7,7 @@ import unittest
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROTO / "py"))
-import hooks
+from aos.agentlib import hooks
 
 
 class ScreenLinger(unittest.TestCase):

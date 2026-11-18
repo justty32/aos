@@ -29,7 +29,7 @@
 #   cmd/*/bin/*              Python 的指令（aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca-turn、aos-eca-screen、aos-agent、aos-mcp、aos-mcp-launch、aos-mcp-import、aos-sandbox、aos-grow）
 # 不再在 Python user site 寫 aos-proto8.pth（使用者 11-15 對自編規則盤點的裁定「6.拿掉。」）；抄出 repo 的程式改給 PYTHONPATH。
 #   user site 裡還有這份 repo 的舊 aos-proto8.pth＝印一行提醒（不刪）。
-# 為什麼 symlink 不 cp：Python 那幾支靠 realpath(__file__) 找旁邊的檔（aos_flags.py、using-aos-agent.sh、py/aos_ws.py…），
+# 為什麼 symlink 不 cp：Python 那幾支靠 realpath(__file__) 找旁邊的檔（aos_flags.py、using-aos-agent.sh、py/aos/ws.py…），
 #   單檔 cp 過去會斷；symlink 解得回 repo 裡的原位。所以 repo 搬了位置要重跑一次（舊的連結會被報「指向別處」，自己 rm 再跑）。
 #
 # 冪等：已經是指向同一支的連結＝「已裝」、不動；目的地已有同名的別的東西（指向別處的連結、一般檔）＝印一行「跳過」、不蓋，

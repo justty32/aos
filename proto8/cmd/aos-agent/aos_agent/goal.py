@@ -1,22 +1,22 @@
 # aos_agent/goal.py - 管 agent 的 goal（<stack>/goal.json）：get、set、done、pause、resume、clear；腦自己停下來時由身體（agent-fsm idle、aos-eca-turn）丟提醒。
 # 使用者 11-11：「然後自動給agent看的，可能要做goal工具。預期是當agent自己停下來時(在沒有新user prompt的情況下，自己不再呼叫工具)，自動丟goal給他，」
 #   裁定「agent 自己和外面都行」：agent 用工具 goal（py/tools/agent/goal，包這支、目標＝自己）；人和父 agent 用這支（照 aos-agent system 的寫法）。
-#   讀寫一律走 py/goal_state.py（格式、提醒文字、上限都在那裡）。thinking 2026-11/11/goal/02。
+#   讀寫一律走 py/aos/agentlib/goal_state.py（格式、提醒文字、上限都在那裡）。thinking 2026-11/11/goal/02。
 # 誰改的（set_by／updated_by）：叫這支的 $AOS_STACK 在目標的 stack 裡面＝agent（它自己的工具）；否則 outside（人、父 agent）。
 # set 的 TEXT 起原樣收、不解旗標（旗標寫在文字前面；11-11 稍後使用者「比照 say 原樣收」，做法同 say、history set 的 keep）。
 # **對應關係**：工具 goal 的 op 與這裡的動作一對一（clear 除外：工具不給，agent 用 done）；這裡加了動作或旗標，工具要跟著加。
 import json
 import os
 import sys
-import aos_flags
-import daemon_ctl as dc
+from aos import flags as aos_flags
+from aos import daemon_ctl as dc
 from . import PROG
 from .common import Fail, actions, bad_args, in_stack, parse, target, under
 
 try:
-    import goal_state
+    from aos.agentlib import goal_state
 except ImportError:                              # bin 旁邊跟著帶的（同 agent_files）
-    import goal_state
+    from aos.agentlib import goal_state
 
 
 HELPS = {

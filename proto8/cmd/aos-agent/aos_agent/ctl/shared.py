@@ -2,7 +2,7 @@
 import math
 import os
 import time
-import daemon_ctl as dc
+from aos import daemon_ctl as dc
 from .. import common
 from ..common import Fail, bad_args, call_dc, daemon_path, kernel_box, note, queue_position, table_ref, via_kernel
 

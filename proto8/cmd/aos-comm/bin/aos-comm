@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# aos-comm - the comm/1 protocol on the command line: boards (set, clear, wait, show, ls) and check (thin launcher; the body is aos_comm/, the library py/tools/aos/comm/).
+# aos-comm - the comm/1 protocol on the command line: boards (set, clear, wait, show, ls) and check (thin launcher; the body is aos_comm/, the library aos.comm in py/aos/comm/).
 from pathlib import Path
 import sys
 
@@ -7,14 +7,10 @@ sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pyc
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 for parent in HERE.parents:
-    if (parent / 'lib' / 'aos_flags.py').is_file():
+    if (parent / 'lib' / 'aos' / '__init__.py').is_file():
         sys.path.insert(0, str(parent / 'lib'))
         break
-for parent in HERE.parents:                     # lib/tools/aos/comm（comm/1 的共用庫，原始碼在 py/tools/aos/comm；工具、hook 也用它）
-    if (parent / 'lib' / 'tools' / 'aos' / 'comm' / '__init__.py').is_file():
-        sys.path.insert(0, str(parent / 'lib' / 'tools' / 'aos'))
-        break
-import aos_flags  # noqa: E402
+from aos import flags as aos_flags  # noqa: E402
 from aos_comm import main  # noqa: E402
 
 aos_flags.run(main)

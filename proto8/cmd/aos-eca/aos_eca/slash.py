@@ -6,8 +6,8 @@ import re
 import subprocess
 import time
 
-import aos_flags
-import aos_ws
+from aos import flags as aos_flags
+from aos import ws as aos_ws
 
 from .common import Fail, cli_ask, cli_base, cli_cell, cli_hook, letters_answered, letters_take, must_post
 from .history import append_history, history_rows, note_sum

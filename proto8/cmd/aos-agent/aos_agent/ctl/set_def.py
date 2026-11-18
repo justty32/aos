@@ -1,7 +1,7 @@
 # aos_agent/ctl/set_def.py - 換掉表上一隻 agent 的定義：stack、工作區、limits、auto_restart 照舊，下一次起來才用新的。
 # 已知缺口（aos-daemon）：同名 procs_added 換的設定只活在跑著的 daemon 裡，那隻還沒重起、daemon 自己先重啟＝表上回到舊定義（test_set_def 兩支 expectedFailure）。
 import os
-import daemon_ctl as dc
+from aos import daemon_ctl as dc
 from ..common import Fail, bad_args, call_dc, find, note, parse, row_named, table_ref, via_kernel
 from ..decl import read_decl
 from ..common import IFACE

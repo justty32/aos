@@ -23,13 +23,13 @@ exit codes: 0 printed; 1 error (TargetMissing, InstanceMissing, AnswerMissing, L
   (the message was sent; read the answer later with aos-agent listen --letter, as the warning says)."""
 
 import sys
-import aos_ws
+from aos import ws as aos_ws
 from .common import bad_args, note, parse, target
 from .listen import cycles, seconds, wait_latest
 from .say import message
 from . import sender
 
-DEFAULT_S = 0                                   # 0＝不限（11-15，以前 600）；對齊 subagent 工具的 op ask（py/agents_cmd.py 的 LISTEN_DEFAULT_S）
+DEFAULT_S = 0                                   # 0＝不限（11-15，以前 600）；對齊 subagent 工具的 op ask（py/aos/agentlib/agents_cmd.py 的 LISTEN_DEFAULT_S）
 
 
 def send(a, text, who):

@@ -1,11 +1,11 @@
 # aos_eca/common.py - 共用的名字、錯誤（Fail）、lib 模組的載入、aos-post 介面、mailbox_warning 與 letters.json（回答配對）。
 import os
 
-import aos_flags
-import aos_ws
+from aos import flags as aos_flags
+from aos import ws as aos_ws
 
-# lib/agent 的共用模組（bin 入口已把 lib 放進 sys.path）；問 CLI 那段在 cli_*.py 分檔。
-import cli_ask, cli_base, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown, goal_state, hooks, quiet  # noqa: E402,F401
+# aos.agentlib 的共用模組（bin 入口已把 lib 放進 sys.path）；問 CLI 那段在 cli_*.py 分檔。
+from aos.agentlib import cli_ask, cli_base, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown, goal_state, hooks, quiet  # noqa: E402,F401
 
 NAME = "aos-eca-turn"
 NOT_FOUND = 10

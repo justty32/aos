@@ -14,13 +14,13 @@ HERE = Path(__file__).resolve().parent
 if os.environ.get('AOS_HOME'):
     sys.path.insert(1, os.path.join(os.environ['AOS_HOME'], 'lib'))
 try:
-    import tool_io
-    import observed
+    from aos import tool_io
+    from aos import observed
 except ModuleNotFoundError as _error:
-    if _error.name not in ('tool_io', 'observed'):
+    if _error.name != 'aos':
         raise
     if os.environ.get('AOS_HOME'):
-        _line = 'judge-llm: error: ModuleMissing %s.py not found under $AOS_HOME/lib\n' % _error.name
+        _line = 'judge-llm: error: ModuleMissing %s not found under $AOS_HOME/lib\n' % _error.name
     else:
         _line = 'judge-llm: error: HomeMissing AOS_HOME is not set (it names the proto8 folder that holds lib)\n'
     sys.stderr.write(_line)

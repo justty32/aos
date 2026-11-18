@@ -5,7 +5,7 @@ import os
 import re
 import subprocess
 
-from comm import Fail
+from aos.comm import Fail
 
 TIMEOUT_S = 30
 ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")

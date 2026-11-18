@@ -6,8 +6,8 @@ from pathlib import Path
 import re
 import tempfile
 
-import observed
-from tool_io import Error
+from aos import observed
+from aos.tool_io import Error
 
 ROLLBACK = Path(__file__).resolve().parent.parent / 'rollback'
 FIELDS = ('target', 'defs', 'round', 'promoted_at', 'metric', 'baseline', 'window', 'tolerance')

@@ -7,10 +7,10 @@ sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pyc
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 for parent in HERE.parents:
-    if (parent / 'lib' / 'aos_flags.py').is_file():
+    if (parent / 'lib' / 'aos' / '__init__.py').is_file():
         sys.path.insert(0, str(parent / 'lib'))
         break
-import aos_flags  # noqa: E402
+from aos import flags as aos_flags  # noqa: E402
 from aos_mailbox import main  # noqa: E402
 
 aos_flags.run(main)

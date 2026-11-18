@@ -4,8 +4,8 @@ import os
 import time
 
 import runner
-import tool_io
-from tool_io import Error
+from aos import tool_io
+from aos.tool_io import Error
 
 MAX = 2 ** 63 - 1
 USED_SHAPE = ('{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens", '

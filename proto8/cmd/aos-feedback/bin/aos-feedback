@@ -7,10 +7,10 @@ sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 for parent in HERE.parents:
-    if (parent / 'lib' / 'aos_flags.py').is_file():
+    if (parent / 'lib' / 'aos' / '__init__.py').is_file():
         sys.path.insert(0, str(parent / 'lib'))
         break
-import aos_flags
+from aos import flags as aos_flags
 from aos_feedback import main
 
 aos_flags.run(main)

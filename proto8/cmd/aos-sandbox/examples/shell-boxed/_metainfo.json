@@ -13,9 +13,7 @@
     ],
     "ro": [
       "inner",
-      "../../../../lib/tool_io.py",
-      "../../../../lib/shell_observed.py",
-      "../../../../lib/observed.py",
+      "../../../../lib/aos",
       "/usr/bin/env",
       "/usr/bin/bash",
       "/usr/bin/python3",

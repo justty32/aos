@@ -6,7 +6,7 @@ import unittest
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), ".."))
-import aos_clock_when as w  # noqa: E402
+from aos import clock_when as w  # noqa: E402
 
 
 def local(*a):

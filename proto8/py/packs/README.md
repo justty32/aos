@@ -25,7 +25,7 @@
 | json（簡單組） | [json.json](json.json) | json_get、json_ls、json_search、json_len、json_set、json_add、json_del，一次多格的 json_multi_get、json_multi_set——路徑一整串 `檔#/指標`、值照字面、`$ref`／`$env` 當普通物件；agent-fsm、eca-claude 兩個範本都掛 |
 | jsonx（複雜組） | [jsonx.json](jsonx.json) | jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del，一次多格的 jsonx_multi_get、jsonx_multi_set——多 `follow`、`resolve`、`text`、`from`、`check`；eca-claude 範本掛，agent-fsm 範本 11-14 起不掛（選掛，見上；使用者 11-13「eca-1:A*」＝範本掛 jsonx，[eca-tidy-review](../../thinking/2026-11/12/eca-tidy-review.md)；eca 子 agent 的唯讀精簡組 `tools_sub.json` 不掛） |
 
-十七支的程式都在 [`py/aos_json.py`](../aos_json.py)（multi 四支在 [`py/aos_json_multi.py`](../aos_json_multi.py)），各夾只是殼；圖紙 [01-規劃](../../thinking/2026-11/12/json-tools/01-規劃.md)。
+十七支的程式都在 [`py/aos/json.py`](../aos/json.py)（multi 四支在 [`py/aos/json_multi.py`](../aos/json_multi.py)），各夾只是殼；圖紙 [01-規劃](../../thinking/2026-11/12/json-tools/01-規劃.md)。
 
 ## index 包（使用者 11-12「index工具那塊，主要做視角就好，修改這塊應該不用做，因為他就是json，直接用json工具就好」，[thinking 11-12 index-tools](../../thinking/2026-11/12/index-tools/README.md)）
 
@@ -33,7 +33,7 @@
 |---|---|---|
 | index | [index.json](index.json) | index_view（透過 index 看節點：`path` 看天然那份、`index` 看指定的那份、兩個都給＝疊著看、同名鍵以指定那份為準；只看不改，改 index 用 json 包）——agent-fsm、eca-claude 兩個範本都掛，reviewer 不掛 |
 
-程式在 [`py/aos_index.py`](../aos_index.py)，「index 放哪」只寫在它的 `spot()`。天然那份有兩處（[metainfo](../../thinking/2026-11/12/metainfo/README.md)，使用者「index_view也要認_metainfo。」）：`_metainfo` 裡的 `index` 為底、疊上獨立的 `_index.json`／`_index`，同名項整項以獨立那份為準；只有獨立那份時就只看那份（[N-69](../../docs/NORMS/10-基礎設施-定義與工作區/11-N-69.md)）。
+程式在 [`py/aos/index.py`](../aos/index.py)，「index 放哪」只寫在它的 `spot()`。天然那份有兩處（[metainfo](../../thinking/2026-11/12/metainfo/README.md)，使用者「index_view也要認_metainfo。」）：`_metainfo` 裡的 `index` 為底、疊上獨立的 `_index.json`／`_index`，同名項整項以獨立那份為準；只有獨立那份時就只看那份（[N-69](../../docs/NORMS/10-基礎設施-定義與工作區/11-N-69.md)）。
 
 ## 其他八包（agent-fsm 預設開 gadgets、todo、self、mailbox、goal；events、subagent、def 11-14 起選掛，見上）
 

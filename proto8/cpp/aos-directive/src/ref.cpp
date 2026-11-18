@@ -3,7 +3,7 @@
 // 1. 寫法（ref_spot，「字串→位置」，只看字面；11-13 晚使用者「他應該是以#作爲json內部尋址的標示」，thinking 2026-11/13/ref-path-rules）：
 //    # 左邊一律檔案系統（從 base.dir 算）、右邊一律 json 內部：#/＝本檔根、#./＝所在物件、#../＝上一層；#、#/＝整份。
 //    寫法不合（#aaa、y.json#./、超出根…）＝DirectiveBad；$ref 不是字串、陣列空的或有一個元素不是字串、不知道檔或位置＝nullopt（原封不動，D15）。
-//    Python 那份（py/aos_refpath.py，index 路徑也用）跑同一張表 py/tests/ref_path_cases.json。
+//    Python 那份（py/aos/refpath.py，index 路徑也用）跑同一張表 py/tests/ref_path_cases.json。
 // 2. 被 $ref 進來的檔＝它解開捷徑後所在的資料夾、位置＝取的那個指標
 // 3. 同一個（檔＋指標）已經在鏈上＝繞圈
 // 4. 讀檔（第一行 #! 跳過）、解 JSON（讀不到、不是 JSON＝錯）、照指標取值（指不到＝錯），推上鏈、接著往下解

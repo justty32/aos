@@ -16,7 +16,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[3]
 TURN = REPO / "proto8" / "cmd" / "aos-eca" / "bin" / "aos-eca-turn"
 sys.path.insert(0, str(REPO / "proto8" / "py"))
-import cli_ask, cli_base, cli_cell, cli_screen, cooldown  # noqa: E402
+from aos.agentlib import cli_ask, cli_base, cli_cell, cli_screen, cooldown  # noqa: E402
 
 LOCAL_BIN = os.path.expanduser("~/.local/bin")
 
@@ -726,7 +726,7 @@ class Screen(unittest.TestCase):
     def test_hook_writes_marker(self):
         self.cell.write("ws.txt", os.path.relpath(self.ws, self.cell.path) + "\n")
         payload = json.dumps({"hook_event_name": "Stop", "session_id": "hook-id", "last_assistant_message": "hi"})
-        r = subprocess.run([sys.executable, str(REPO / "proto8" / "py" / "cli_session.py"), "hook", "claude",
+        r = subprocess.run([sys.executable, str(REPO / "proto8" / "py" / "aos" / "agentlib" / "cli_session.py"), "hook", "claude",
                             self.cell.path], input=payload, capture_output=True, text=True,
                            env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
         self.assertEqual(r.returncode, 0, r.stderr)

@@ -2,7 +2,7 @@
 import json
 import os
 
-import aos_flags
+from aos import flags as aos_flags
 
 from .history import history_rows
 

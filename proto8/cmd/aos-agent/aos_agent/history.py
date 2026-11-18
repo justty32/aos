@@ -13,7 +13,7 @@ import datetime
 import json
 import os
 import sys
-import aos_flags
+from aos import flags as aos_flags
 from . import PROG
 from .common import Fail, actions, bad_args, in_stack, parse, target
 from .decl import agent_decl

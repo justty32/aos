@@ -11,7 +11,7 @@ import subprocess
 import time
 import uuid
 
-import observed
+from aos import observed
 from compare import compare
 from ledger import add_costs, fold
 

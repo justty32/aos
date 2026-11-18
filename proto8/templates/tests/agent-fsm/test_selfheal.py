@@ -12,7 +12,7 @@ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 
 CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
 PROTO = CELLS.parents[1]
 sys.path.insert(0, str(PROTO / 'py'))
-import cooldown  # noqa: E402
+from aos.agentlib import cooldown  # noqa: E402
 
 USER = {'role': 'user', 'content': 'hi'}
 

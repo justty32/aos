@@ -1,6 +1,6 @@
 // list.cpp：【cmd】ls（列一格底下的孩子，--long 附型別與大小、--depth 往下幾層）、search（找 key／value，往下或往上）——json 工具 json_ls／json_search 搬下來（11-12）。
 //
-// 輸出照 py/aos_json.py 的 do_ls／do_search（給腦看的文字，一行一項、欄位 TAB）：
+// 輸出照 py/aos/json.py 的 do_ls／do_search（給腦看的文字，一行一項、欄位 TAB）：
 //   型別名同 JSON（object、array、string、number、boolean、null）；大小＝物件 N keys、陣列 N items、字串 N chars（code point 數），
 //   單數不加 s，純值直接是緊湊 JSON；--long／search 的容器與字串再多一欄 `N bytes`（緊湊 JSON 的 UTF-8 bytes）。
 //   沒列完最後一行 `[more] A to B of N shown; …`；search 沒中＝`[no match]`（都退 0：是結果不是錯）。

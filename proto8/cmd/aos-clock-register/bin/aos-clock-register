@@ -8,7 +8,7 @@
 #   rm NAME        沒有那格＝EntryMissing
 #   ls [-j]        一行一格 NAME TAB EVERY TAB BOX TAB TEXT；-j＝{"file", "letters"}；沒登記表＝沒輸出退 0
 # 誰都能登記、拿掉（寫得到登記表就行，不另外擋）；寄不到由 aos-clock 印 warning；箱子資料夾不在了的格，aos-clock 每 check_every 個 cycle（預設 100）自己拿掉（11-10 深夜）。
-# 同時兩個人改表不管（後寫的整份蓋過先寫的）。錯：stderr 一行「aos-clock-register: error: 代號 原因」、退 1。本體寄信的部分在 py/aos_clock_register.py。
+# 同時兩個人改表不管（後寫的整份蓋過先寫的）。錯：stderr 一行「aos-clock-register: error: 代號 原因」、退 1。本體寄信的部分在 py/aos/clock_register.py。
 import json
 import os
 import sys
@@ -16,9 +16,9 @@ import sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
-import aos_flags  # noqa: E402
-import aos_clock_register as reg  # noqa: E402
-import aos_clock_when as when_  # noqa: E402
+from aos import flags as aos_flags  # noqa: E402
+from aos import clock_register as reg  # noqa: E402
+from aos import clock_when as when_  # noqa: E402
 
 PROG = "aos-clock-register"
 SHORT = {"-c": "--clock", "-d": "--daemon"}

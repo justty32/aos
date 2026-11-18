@@ -11,7 +11,7 @@ comm/1 協議的四份 JSON Schema（2020-12）與樣本：布告欄、信件的
 | [channel.json](channel.json) | `comm/1/channel` | `<頻道 stack>/channel.json`，`format` 是 `channel/1` | 之後的批（頻道） |
 | [channel-members.json](channel-members.json) | `comm/1/channel-members` | `<頻道 stack>/members.json`，`format` 是 `channel-members/1`；鍵＝成員 stack 絕對路徑 | 之後的批（頻道） |
 
-共通：`additionalProperties: true`——**不認得的鍵，讀的人忽略、寫的人保留**；時間一律 `#/$defs/time`（ISO 8601 帶時區，寫的人用 UTC 到毫秒，同信封 `sent_at`）。schema 只管形狀；「怎麼算現在算數的狀態」（讀失敗重試、時鐘校正、過期、phase 併入）是讀的規則，寫在 06 §7.3 與 `py/tools/aos/comm/board.py`，不在 schema 裡。
+共通：`additionalProperties: true`——**不認得的鍵，讀的人忽略、寫的人保留**；時間一律 `#/$defs/time`（ISO 8601 帶時區，寫的人用 UTC 到毫秒，同信封 `sent_at`）。schema 只管形狀；「怎麼算現在算數的狀態」（讀失敗重試、時鐘校正、過期、phase 併入）是讀的規則，寫在 06 §7.3 與 `py/aos/comm/board.py`，不在 schema 裡。
 
 ## 驗
 
@@ -21,7 +21,7 @@ aos-comm check FILE --schema letter-comm     # 指定哪份（board、letter-com
 aos-comm check FILE --builtin                # 不用 Python jsonschema，用內建小驗證器
 ```
 
-有裝 Python `jsonschema` 就用它（另給 date-time 的 format 檢查，因為它預設不查）；沒裝或給 `--builtin` 就用 `py/tools/aos/comm/check.py` 的小驗證器——它只認這四份用到的關鍵字（`$ref` 本檔內、`type`、`const`、`enum`、`required`、`properties`、`additionalProperties`、`items`、`maxItems`、`minLength`、`maxLength`、`minimum`、`if`／`then`、`format`），碰到別的關鍵字報 `SchemaBad`，不默默放過。改 schema 加新關鍵字時要一起改它。
+有裝 Python `jsonschema` 就用它（另給 date-time 的 format 檢查，因為它預設不查）；沒裝或給 `--builtin` 就用 `py/aos/comm/check.py` 的小驗證器——它只認這四份用到的關鍵字（`$ref` 本檔內、`type`、`const`、`enum`、`required`、`properties`、`additionalProperties`、`items`、`maxItems`、`minLength`、`maxLength`、`minimum`、`if`／`then`、`format`），碰到別的關鍵字報 `SchemaBad`，不默默放過。改 schema 加新關鍵字時要一起改它。
 
 ## samples/
 

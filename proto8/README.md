@@ -11,7 +11,7 @@
 - **cpp**＝aos-exec 跑得動的基礎與標準庫（C／C++）。
 - **cmd**＝人在終端打的指令：一支一夾、夾名＝指令名、執行檔在 `<名>/bin/<名>`，跟 cpp 同形（aos-eca 兩支同夾）。
 - **frontend**＝選配的網頁外掛：全景頁 `aos-frontend`（看整棵樹、回使用者專區的信、給 agent 寫一行），執行檔在 `frontend/bin/aos-frontend`；不用它，aos 照樣跑。後端只要 Python，網頁 v2 的 `dist/` 不進 git，要在有 Node 的機器自己建（11-17 下午使用者「aos-view確實應該是選配的網頁外掛」「那就改名為aos-frontend吧」，從 `cmd/aos-view` 搬來）。
-- **py**＝Python 原始碼：頂層是 cmd 與範本共用的模組（`aos_flags.py`、`tool_io.py`、`daemon_ctl/`、agent 共用的 `cli_*.py`、`hooks.py`…，先平鋪），腦叫的工具（三件套）在 `py/tools/{base,aos,agent}`；`install.py` 把它抄成 `lib/`（不含測試與 `py/docs`），定義的指示詞寫 `/lib/tools/…`。
+- **py**＝Python 原始碼：cmd、工具與範本共用的模組收成一個套件 `py/aos/`（`from aos import flags, tool_io`、`aos.daemon_ctl`；agent 共用的 `cli_*.py`、`hooks.py`… 在 `aos.agentlib`），腦叫的工具（三件套）在 `py/tools/{base,aos,agent}`；`install.py` 把它抄成 `lib/`（不含測試與 `py/docs`），定義的指示詞寫 `/lib/tools/…`。
 - **templates**＝複製出去用的 agent 範本，與掛在 daemon 上的 kernel 範本（`templates/kernel/`，11-17 從頂層 `kernel/` 併進來）。
 - **archive**＝不再維護、留著參考的東西（11-17 extras 解散時建）。
 
@@ -25,7 +25,7 @@
 | [cmd/](cmd/README.md) | Python 指令：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca（turn、screen）、aos-mcp、aos-mcp-launch（起外部 stdio MCP server）、aos-mcp-import（把外部 MCP 的工具凍結成一包）、aos-sandbox、aos-grow；`install.sh`（選配，把指令連進 `~/.local/bin`）也在這裡 |
 | [env.sh](env.sh) | 每個視窗先 `source` 它：清掉 `AOS_*`、設 `AOS_HOME`、把這個家的 `bin/`（第一）、`cmd/*/bin`、`frontend/bin` 放到 PATH 最前；`aos-exec` 不在時提示先跑 `python3 $AOS_HOME/install.py` |
 | [frontend/](frontend/API.md) | 選配的網頁外掛：全景頁 `aos-frontend`（後端 Python 標準庫；v2 網頁原始碼在 `ui/v2/`，`dist/` 不進 git，要 Node 才建得出來，見 [ui/v2/README](frontend/ui/v2/README.md)）；aide 定義的差異檔 `aide-def/`、systemd 範例、測試也在這夾 |
-| [py/](py/README.md) | Python 原始碼（11-18 S3 前叫 `lib/`）：agent 用的工具在 `py/tools/`（底層原語 → 動 aos 的 → 整隻 agent）；機讀的協議定義在 [py/schema/](py/schema/README.md)；頂層是 cmd 共用模組 `aos_flags.py`、`aos_ws.py`、`daemon_ctl/` 等（說明在 [py/docs/04](py/docs/04-共用模組.md)）。安裝後的抄本在 `lib/`（不進 git，執行期認它） |
+| [py/](py/README.md) | Python 原始碼（11-18 S3 前叫 `lib/`）：agent 用的工具在 `py/tools/`（底層原語 → 動 aos 的 → 整隻 agent）；機讀的協議定義在 [py/schema/](py/schema/README.md)；共用模組在一個套件 [py/aos/](py/aos/)（`aos.flags`、`aos.ws`、`aos.daemon_ctl` 等，說明在 [py/docs/04](py/docs/04-共用模組.md)）。安裝後的抄本在 `lib/`（不進 git，執行期認它） |
 | [templates/](templates/README.md) | agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent）等；kernel 範本在 [templates/kernel/](templates/kernel/README.md)：llm-kernel（問腦的那台）、daemon-kernel、procs-kernel（通用 kernel 的站的兩種掛法） |
 | [knowledge/](knowledge/README.md) | 出廠內容樹：普通資料夾＋`.json`，用一般檔案／json 工具讀；第一本是 `aos/`——給小模型的 aos 體系說明（英文） |
 | [archive/](archive/README.md) | 封存（11-17 重建：langs、tree-swap、aos-home；清單在它的 README） |

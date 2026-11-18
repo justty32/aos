@@ -2,7 +2,7 @@
 import json
 import os
 
-import hook_run
+from aos import hook_run
 
 
 EVENTS = {

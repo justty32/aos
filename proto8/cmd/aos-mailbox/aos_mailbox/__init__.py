@@ -7,8 +7,8 @@ import re
 import subprocess
 import sys
 
-import aos_flags
-import daemon_ctl as dc
+from aos import flags as aos_flags
+from aos import daemon_ctl as dc
 
 PROG = "aos-mailbox"
 STATUSES = ("REQUEST", "DONE", "BLOCKED", "NEEDS-USER", "FAILED", "PROGRESS")

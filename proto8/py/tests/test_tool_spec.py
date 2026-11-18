@@ -1,4 +1,4 @@
-"""Test py/tool_spec.py: declaration to _tooldef/_metainfo, SpecBad, write_defs into a folder and a JSON pointer, and main() at run time."""
+"""Test py/aos/tool_spec.py: declaration to _tooldef/_metainfo, SpecBad, write_defs into a folder and a JSON pointer, and main() at run time."""
 import json
 import os
 from pathlib import Path
@@ -11,12 +11,12 @@ import unittest
 sys.dont_write_bytecode = True
 LIB = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(LIB))
-import tool_spec as ts  # noqa: E402
+from aos import tool_spec as ts  # noqa: E402
 
 SCRIPT = '''\
 import sys
 sys.path.insert(0, %r)
-import tool_spec as ts
+from aos import tool_spec as ts
 P = [ts.param("word", "string", "a word"),
      ts.param("times", "integer", "how many", default=2),
      ts.param("mode", "string", "how", enum=["up", "low"], default="up")]

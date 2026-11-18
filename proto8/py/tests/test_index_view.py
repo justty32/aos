@@ -1,4 +1,4 @@
-"""index_view（py/aos_index.py，thinking 2026-11/12/index-tools）的定向測試：實跑 _entry，驗三種給法（只 path、只 index、兩個疊著）、key、分頁、沒有 index、壞掉的 index。"""
+"""index_view（py/aos/index.py，thinking 2026-11/12/index-tools）的定向測試：實跑 _entry，驗三種給法（只 path、只 index、兩個疊著）、key、分頁、沒有 index、壞掉的 index。"""
 
 import json
 import os

@@ -9,7 +9,7 @@ import sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
-import aos_flags  # noqa: E402
+from aos import flags as aos_flags  # noqa: E402
 
 PROG = "aos-tree-start"
 ALLOWED = ("AOS_HOME",)

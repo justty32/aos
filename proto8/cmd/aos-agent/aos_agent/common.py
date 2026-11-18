@@ -3,8 +3,8 @@ import json
 import os
 import textwrap
 from . import PROG
-import aos_flags
-import daemon_ctl as dc
+from aos import flags as aos_flags
+from aos import daemon_ctl as dc
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", "..", ".."))           # proto8/

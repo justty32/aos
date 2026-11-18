@@ -17,7 +17,7 @@ ENV['PATH'] = str(PROTO / 'bin') + ':' + ':'.join(
 os.environ['PATH'] = ENV['PATH']   # daemon_ctl runs aos-post in this process too (aos_ws), not only in children
 EVIDENCE = []
 sys.path.insert(0, str(PROTO / 'py'))
-import daemon_ctl as dc
+from aos import daemon_ctl as dc
 
 
 def write(path, value):

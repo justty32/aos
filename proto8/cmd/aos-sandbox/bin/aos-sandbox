@@ -30,12 +30,12 @@
 # 錯：stderr 一行「aos-sandbox: error: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、CfgMissing、PathMissing、CommandMissing、UserBad；11-05 stdio-unify R1）。
 # 之後的結束碼都是 prog 的（bwrap 透明轉交；被訊號停＝128＋N）。R8：退非 0 時 stderr 有 `aos-sandbox: error:` 這行＝這支錯；沒有＝下層（s6／bwrap／prog）的碼。
 # --help＝英文說明到 stdout、退 0（R3）。
-# 命令列形狀照 CONVENTION P-44（11-04）：用 proto8/py/aos_flags.py 解（`--dry-run=x`＝ArgumentsBad、不認得＝FlagUnknown）。
+# 命令列形狀照 CONVENTION P-44（11-04）：用 proto8/py/aos/flags.py 解（`--dry-run=x`＝ArgumentsBad、不認得＝FlagUnknown）。
 import json, os, pwd, re, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
-import aos_flags  # noqa: E402
+from aos import flags as aos_flags  # noqa: E402
 
 BASE = ["/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc"]
 SUDO_SETUIDGID = "/usr/local/bin/s6-setuidgid"

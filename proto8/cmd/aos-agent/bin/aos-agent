@@ -9,13 +9,13 @@ from pathlib import Path
 
 _import_paths = [HERE, os.path.normpath(os.path.join(HERE, ".."))]
 for _parent in Path(__file__).resolve().parents:
-    for _layer, _module in (("lib", "aos_flags.py"),):
+    for _layer, _module in (("lib", "aos/__init__.py"),):
         _root = _parent / _layer
         if (_root / _module).is_file() and str(_root) not in _import_paths:
             _import_paths.append(str(_root))
 sys.path[:0] = _import_paths
 try:
-    import aos_flags  # noqa: E402
+    from aos import flags as aos_flags  # noqa: E402
     from aos_agent import main  # noqa: E402
 finally:
     for _path in _import_paths:

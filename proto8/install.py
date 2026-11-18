@@ -3,7 +3,7 @@
 #
 # Run it in the proto8 folder of a cloned repo (python3 install.py). It only writes inside this folder:
 #   bin/        the commands (C++ executables for now)
-#   lib/        a copy of py/ without tests/ folders, py/docs and __pycache__ (what runs: modules, tools/, packs/, schema/),
+#   lib/        a copy of py/ without tests/ folders, py/docs and __pycache__ (what runs: the aos package, tools/, packs/, schema/),
 #               plus the C++ libraries (libaos-*.a, libaos-inst.so)
 #   include/    public C++ headers, copied from cpp/aos-*/include
 #   cpp/build/  objects and build.log (kept, so a rerun only rebuilds what changed)
@@ -164,7 +164,7 @@ def main(argv):
         return 1
     if only_check:
         return 0
-    for src in (CPP / "Makefile", PY / "tool_io.py"):
+    for src in (CPP / "Makefile", PY / "aos" / "__init__.py"):
         if not src.is_file():
             die("SourceMissing", "%s not found" % src)
     for d in (BIN, LIB, INC):

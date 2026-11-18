@@ -17,7 +17,7 @@ End of stdin exits 0, or 1 if a message failed; Ctrl-C exits 130.
 exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, AnswerMissing, LetterDropped...); 130 Ctrl-C."""
 
 from . import PROG
-import aos_flags
+from aos import flags as aos_flags
 import sys
 from .common import Fail, bad_args, find, note, parse, target
 from .ask import send, wait_sent

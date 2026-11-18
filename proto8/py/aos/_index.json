@@ -1,0 +1,93 @@
+{
+ "agentlib": {
+  "description": "aos 套件裡 agent 層的共用模組（hooks、cooldown、quiet、goal_state、claude／codex 對話的 cli_*、cmd_call、agents_cmd、agent_files…）；S3 前在 lib/agent",
+  "index": "agentlib/_index.json"
+ },
+ "clock_register.py": {
+  "description": "aos_clock_register 時鐘登記表：時鐘檔旁的 <時鐘檔名>_register.json，每格「何時往某個 aos-post 箱子寄一封信」（每 N cycle、某 cycle 一次、牆鐘某時刻一次、cron）；aos-clock 寄、aos-clock-register 改（11-…"
+ },
+ "clock_when.py": {
+  "description": "aos_clock_when 時鐘登記表的牆鐘排法：解析 at（HH:MM、YYYY-MM-DD HH:MM、+N[smhd]）與五欄 cron、算 cron 的下一次（本機時區；11-13 線鐘 wake-timer）。"
+ },
+ "comm": {
+  "description": "comm/1 協議的共用庫：布告欄讀寫與四步算法、時間、找 stack、走表（aos-comm 與 board_* 工具共用）。"
+ },
+ "daemon_ctl": {
+  "description": "aos-daemon-ctl 的共用本體（aos-agent 也 import）：找 daemon 與讀狀態表、掛子信、寄信等回信、控制與停 daemon、poke 門鈴、問表檔位址"
+ },
+ "declared_files.py": {
+  "description": "依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。"
+ },
+ "directive_value.py": {
+  "description": "把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。"
+ },
+ "env_file.py": {
+  "description": "Read the shared dotenv subset without changing the process environment."
+ },
+ "file_summary.py": {
+  "description": "ls、stat、view 共用的檔案摘要小件：資料夾裡有哪些 aos 標記檔、檔案時間寫成 ISO、一個 JSON 值的一句摘要。"
+ },
+ "file_walk.py": {
+  "description": "grep 與 glob 共用的走樹：隱藏名、.gitignore（問 git）、資料夾捷徑不跟進、只把一般檔當檔、掃描預算與計數；另含兩支共用的檔名樣式（* ? [..] **）。"
+ },
+ "flags.py": {
+  "description": "aos_flags：命令列旗標解析（含各支自定短名）、互動確認、公開狀態窗讀取與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 …"
+ },
+ "hook_run.py": {
+  "description": "hook 的共用引擎：事件表由呼叫的人給，這裡只管驗格的共通鍵、比 condition、寫 event.json、用 aos-exec 跑 handler、解回話、on_error。"
+ },
+ "index.py": {
+  "description": "aos_index - index_view：透過 index（視角）看節點，一行一項「鍵 TAB description」；index 放哪只寫在 spot() 一處。"
+ },
+ "json.py": {
+  "description": "aos_json - 腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／len／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set、jsonx_mu…"
+ },
+ "json_multi.py": {
+  "description": "aos_json_multi - json_multi_get／set、jsonx_multi_get／set：一次多格，逐格照 json_get／json_set（jsonx 那兩支照 jsonx_get／jsonx_set）做、照順序、一格一行「路徑 TAB 結果」，不回滾。"
+ },
+ "mcp_client.py": {
+  "description": "MCP client 的 stdio／HTTP 傳輸：握手、列工具、呼叫工具與關閉 session。"
+ },
+ "mcp_freeze.py": {
+  "description": "把一支外部 MCP 工具凍結成包檔 mcp_tools 的一格（登記名、$ref 展開、說明前綴與截斷、_metainfo）與兩份 mcp_tools 的差異；純函式（external-mcp 07 步 4）"
+ },
+ "mcp_server_file.py": {
+  "description": "外部 MCP 的 server 檔：讀一份、驗形狀、讀金鑰檔；給 cli_session 翻成 codex 的 -c 與只給 CLI 行程的環境（11-12 external-mcp 02／03 步 1）"
+ },
+ "metainfo.py": {
+  "description": "Read optional definition metadata and evaluate numeric cost declarations safely."
+ },
+ "observed.py": {
+  "description": "Record public stack observations and measured downstream calls."
+ },
+ "observed_children.py": {
+  "description": "Preserve declared child observation trees and hand their location to the caller."
+ },
+ "process_group.py": {
+  "description": "收掉自己起的那一群子行程：先 TERM 整群、等一下、還在就 KILL；外面來的 TERM／Ctrl-C 變成例外，讓呼叫處先收拾再走。"
+ },
+ "refpath.py": {
+  "description": "aos_refpath - `$ref` 與 index 共用的「路徑字串 → (檔, 指標)」：`#` 左邊一律檔案系統、右邊一律 json 內部（使用者 11-13 晚定，thinking 2026-11/13/ref-path-rules）。"
+ },
+ "shell_observed.py": {
+  "description": "Reserve a writable shell ledger before execution and record the completed command."
+ },
+ "sweep.py": {
+  "description": "aos_sweep 清道夫本體：一輪（封存、保留期、封存總量、行程）與 purge 的流程、鎖、找列、報告；檔案細節在 aos_sweep_files、行程在 aos_sweep_proc；aos-sweeper 與 aos-daemon-ctl sweep 共用。"
+ },
+ "sweep_files.py": {
+  "description": "aos_sweep_files 清道夫的檔案那半：stderr 的 copytruncate 封存（gzip）、封存檔名的 UTC 時間戳、保留期刪除、purge、.bad- 計數、放鎖殘骸；aos_sweep 叫它。"
+ },
+ "sweep_proc.py": {
+  "description": "aos_sweep_proc 清道夫的行程那半：認出這台 daemon 預設小格裡「表上沒有、但還活著、確定是這台生的」子 loop，先寫它的 ctl stop，過寬限還在才 TERM／10 秒後 KILL；真 zombie 只報。"
+ },
+ "tool_io.py": {
+  "description": "lib 工具共用的開頭：schema 生成旗標位置的 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區與檔案工具的路徑、訊息裡怎麼寫路徑（place、os_reason）、兩鐘期限。"
+ },
+ "tool_spec.py": {
+  "description": "給 AI 寫工具的輔助：在一支 Python 裡宣告說明、參數、特性，就產出 _tooldef／_metainfo（資料夾的兩個檔或 JSON 物件的兩個鍵），執行時照宣告驗參數再叫 run(args)。"
+ },
+ "ws.py": {
+  "description": "aos_ws - 「放一則訊息、等答案、讀 stack」與兩鐘期限的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。"
+ }
+}

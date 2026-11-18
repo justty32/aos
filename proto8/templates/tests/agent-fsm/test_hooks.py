@@ -1,4 +1,4 @@
-"""Test the hooks of agent-fsm (py/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added."""
+"""Test the hooks of agent-fsm (py/aos/agentlib/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added."""
 import json
 import os
 from pathlib import Path
@@ -14,7 +14,7 @@ from unittest import mock
 CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
 PROTO = CELLS.parents[1]
 sys.path.insert(0, str(PROTO / "py"))
-import hooks  # noqa: E402
+from aos.agentlib import hooks  # noqa: E402
 
 CALL = {"id": "c1", "type": "function", "function": {"name": "echo", "arguments": '{"text":"snow"}'}}
 PRELUDE = """import json, os, sys, time

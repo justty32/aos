@@ -9,7 +9,7 @@
 #       from（範本資料夾；字串路徑，或指示詞 {"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}）整份複製到 path：
 #       symlinks 照搬、略過 __pycache__；path 哪裡都行（能不能寫交給 Linux 權限）、已經在＝DefExists；from 不是資料夾＝DefMissing。
 #       相對路徑從 $AOS_WS 算。from 用字面路徑、不解開捷徑（同舊 agents 11-10 TC）；path 解開捷徑（同舊 agents 的 write_path）。
-#       指示詞：act／aos-tools call／aos-exec 都把 arguments 原樣交給工具（11-10 實測），所以這裡自己經 py/directive_value.py（aos-directive）解，
+#       指示詞：act／aos-tools call／aos-exec 都把 arguments 原樣交給工具（11-10 實測），所以這裡自己經 py/aos/directive_value.py（aos-directive）解，
 #       相對 $ref 從工作區算；解出相對路徑也從工作區算；$env 指的變數沒設＝DirectiveBad（先看、不叫 aos-directive）。
 #       先寫同層暫存夾 .<名>.new-<pid> 再改名；失敗（含被 TERM）把暫存夾清掉。定義 interfaces.json 的 aos-agent 宣告了 tools 檔：
 #       裡面相對的 path／env_file／$override 原本從範本那份算，換算成從新位置走回同一個目標（舊 agents 的 rebase_tools）；絕對的、指示詞照抄；
@@ -39,20 +39,20 @@ shaped like self_tools / self_llm / self_system (no reset: the definition is the
 Result on stdout. On error: one line "%s: error: CODE reason" on stderr and stdout, exit 1.
 """ % (NAME, NAME)
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-# 只找自己的工具夾、realpath 祖先裡有 tool_io.py 的那層（py/ 或裝好的 lib/；含 cmd_call），再交給標準 Python 路徑。
+# 只找自己的工具夾、realpath 祖先裡有 aos 套件（aos/__init__.py）的那層（py/ 或裝好的 lib/），再交給標準 Python 路徑。
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
-    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+    if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")):
         break
     _lib = os.path.dirname(_lib)
-sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")) else [])
 try:
-    import tool_io  # noqa: E402
-    from cmd_call import kill_group
+    from aos import tool_io  # noqa: E402
+    from aos.agentlib.cmd_call import kill_group
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
-    if error.name not in ("tool_io", "cmd_call", "process_group"):
+    if error.name not in ("aos", "aos.agentlib"):
         raise
-    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % (NAME, error.name)
+    _line = "%s: error: ModuleMissing %s not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % (NAME, error.name)
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)
@@ -102,7 +102,7 @@ def source_path():
         env = v.get("$env")
         if isinstance(env, str) and env and not os.environ.get(env):   # 先看：沒設就不叫 aos-directive
             die("DirectiveBad", "from %s: environment variable %s is not set" % (written, env))
-        import directive_value                  # 用到才載
+        from aos import directive_value                  # 用到才載
         try:
             got = directive_value.resolve(v, tool_io.workspace())
         except tool_io.Error as e:

@@ -3,11 +3,11 @@ import json
 import os
 import subprocess
 
-import aos_refpath
+from aos import refpath as aos_refpath
 import budget
 import runner
 from budget import MAX, dumps, is_count
-from tool_io import Error
+from aos.tool_io import Error
 
 TOP_KEYS = ("slots", "reserved", "aging_cycles", "budget", "exec", "endpoint", "timeout_ms", "backends", "hooks")
 PACK_KEYS = ("exec", "slots", "budget", "speed", "backend", "session_key")   # kernel 看的，不交給端點函數

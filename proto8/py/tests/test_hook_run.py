@@ -9,7 +9,7 @@ import time
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import hook_run
+from aos import hook_run
 
 EVENTS = {
     "before": {"condition": None, "intercept": ("body",), "block": True},

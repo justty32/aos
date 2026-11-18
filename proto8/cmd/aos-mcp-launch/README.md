@@ -8,7 +8,7 @@ aos-mcp-launch --help
 ```
 
 - 平常不用自己打：eca 定義的 `cli.json` 在 `mcp_servers` 列了一份 stdio 的 server 檔，cli_session 就替 claude／codex 寫成 `command＝aos-mcp-launch`（PATH 找到的絕對路徑）、`args＝[server 檔絕對路徑]`。CLI 的設定、命令列、環境都只有路徑，沒有金鑰。
-- server 檔形狀（讀與驗在 [`py/mcp_server_file.py`](../../py/mcp_server_file.py)）：
+- server 檔形狀（讀與驗在 [`py/aos/mcp_server_file.py`](../../py/aos/mcp_server_file.py)）：
 
   ```json
   {"description": "<一句話>",
@@ -20,4 +20,4 @@ aos-mcp-launch --help
 - server 拿到**起它的那個行程的全部環境變數**（再加 `env`、`env_file`）：claude 身與經 aos 那條＝起樹那個殼的整份，殼裡放著的 API key 它也看得到（codex 不替 server 帶父行程環境，只有 aos 給的那幾個）。使用者 11-12 裁不做白名單、風險自己承擔；不信任的 server 就別在帶著金鑰的殼裡起。
 - `env_file` 現在與 aos-tools 的 env 檔同讀法：dotenv 子集，一行一個 `KEY=VALUE`，可有 `export`、`${X}` 展開、行內 `#` 註解與嚴格成對引號；例如 `A=x # note` 讀成 `x`，接著 `B=${A}y` 讀成 `xy`。整份進 server 的環境。
 - 錯：stderr 一行 `aos-mcp-launch: error: 代號 原因`、退 1。`ArgumentsBad`（沒給或多給）、`PackMissing`／`PackBad`（檔不在、形狀不對、是 http 的檔）、`PathMissing`（`env_file` 不在、進不了 server 檔的資料夾）、`DotenvBad`、`CommandMissing`。錯誤句只講變數名與檔的位置，不講值。
-- 測試在 [`py/tools/agent/tests/test_cli_external_mcp.py`](../../py/tools/agent/tests/test_cli_external_mcp.py)。
+- 測試在 [`py/tests/test_cli_external_mcp.py`](../../py/tests/test_cli_external_mcp.py)。

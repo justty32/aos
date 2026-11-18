@@ -1,5 +1,5 @@
 # aos_agent/ctl/where.py - 顯示 agent 的 stack 或工作區路徑。
-import daemon_ctl as dc
+from aos import daemon_ctl as dc
 from ..common import bad_args, Fail, call_dc, find, parse, table_ref, target, target_name
 from .shared import name_last, query_opt
 

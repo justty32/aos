@@ -9,7 +9,7 @@ from unittest import mock
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import tool_io  # noqa: E402
+from aos import tool_io  # noqa: E402
 
 
 class Place(unittest.TestCase):

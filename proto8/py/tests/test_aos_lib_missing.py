@@ -30,7 +30,7 @@ class LibMissing(unittest.TestCase):
                     self.assertEqual(run.returncode, 1)
                     lines = run.stderr.splitlines()
                     self.assertEqual(len(lines), 1, run.stderr)
-                    self.assertRegex(lines[0], r'^%s: error: ModuleMissing \w+\.py not in the tool folder' % NAME.get(tool, tool))
+                    self.assertRegex(lines[0], r'^%s: error: ModuleMissing aos not in the tool folder' % NAME.get(tool, tool))
                     self.assertEqual(run.stdout, '' if tool in STDERR_ONLY else run.stderr)
 
 

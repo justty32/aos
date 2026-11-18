@@ -1,6 +1,6 @@
 # aos_agent/ctl/rm.py - 拔掉 agent（預設留 stack；--purge 確認後才刪，並保護不能刪除的 stack 路徑）。
 import os
-import aos_flags
+from aos import flags as aos_flags
 from .. import PROG
 import shutil
 from ..common import bad_args, daemon_path, find, parse, row_named, table, table_ref, via_kernel
@@ -99,7 +99,7 @@ def cmd(argv):
 WAITER = r"""
 import os, shutil, sys, time
 sys.path[:0] = sys.argv[5:]
-import daemon_ctl as dc
+from aos import daemon_ctl as dc
 d, name, stack, secs = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
 end = time.monotonic() + secs
 while time.monotonic() < end:

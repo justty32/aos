@@ -1,11 +1,10 @@
 # aos_agent/__init__.py - 保留頂層說明、命令派發與主入口。
-import os
 import signal
 import sys
 
-import aos_flags
-import aos_ws
-import daemon_ctl as dc
+from aos import flags as aos_flags
+from aos import ws as aos_ws
+from aos import daemon_ctl as dc
 
 PROG = "aos-agent"
 HELP = """aos-agent - talk to and manage one agent hosted on an aos-daemon
@@ -48,12 +47,7 @@ output: results on stdout only (one line per item, TAB-separated; --json where l
 exit codes: 0 ok; 1 error ("aos-agent: error: CODE reason" on stderr); 130 on Ctrl-C.
 more: proto8/cmd/aos-agent/README.md (rules, codes, examples)"""
 
-# bin 入口把自己的資料夾放在最前；有跟著帶的模組就用那份。
-if os.path.isfile(os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-                               "bin", "agent_files.py")):
-    from agent_files import declared_files
-else:
-    from agent_files import declared_files
+from aos.agentlib.agent_files import declared_files   # bin 入口已把放 aos 套件的 lib/ 放上 sys.path
 
 from . import common, ctl, say, listen, ask, chat, screen, tools, llm, history, hook, system, goal
 from .common import Fail, parse

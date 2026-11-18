@@ -15,7 +15,7 @@ BIN = PROTO / "cmd" / "aos-mcp-import" / "bin" / "aos-mcp-import"
 TOOLS_BIN = PROTO / "cmd" / "aos-tools" / "bin" / "aos-tools"
 FAKE = PROTO / "py" / "tests" / "fake_mcp_stdio.py"
 sys.path.insert(0, str(PROTO / "py"))
-import mcp_server_file  # noqa: E402
+from aos import mcp_server_file  # noqa: E402
 
 FAKE_NAMES = ["echo", "fail", "image", "sleep", "big", "refschema", "show_env"]
 # 換工具表的小殼：FAKE_TOOLS（JSON）蓋掉假 server 的 TOOLS，其餘行為照舊（撞名、超過 20 支用）。

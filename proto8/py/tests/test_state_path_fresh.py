@@ -8,7 +8,7 @@ from unittest import mock
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sp = importlib.import_module("daemon_ctl.state_path")
+sp = importlib.import_module("aos.daemon_ctl.state_path")
 
 
 class FreshStatePath(unittest.TestCase):
@@ -33,7 +33,7 @@ class FreshStatePath(unittest.TestCase):
 
     def test_direct_fresh_never_queries_kernel(self):
         with mock.patch.dict(os.environ, {"AOS_KERNEL": "/kernel"}, clear=True), \
-                mock.patch("daemon_ctl.table.find_daemon", return_value="/daemon"), \
+                mock.patch("aos.daemon_ctl.table.find_daemon", return_value="/daemon"), \
                 mock.patch.object(sp, "_ask_kernel", side_effect=AssertionError("unexpected query")):
             self.assertEqual(sp.state_path("/daemon", fresh=True), "/daemon/procs_state.json")
 

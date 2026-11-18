@@ -15,7 +15,7 @@
 
 **PATH 由呼叫的人放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），定義裡寫的 `aos-loop`、`aos-exec`、`aos-eca-turn` 要呼叫端事先放進 PATH：C++ 的 `proto8/cpp/<名>/bin/`（要先建，見 [testing](../../wf/workflows/testing.md#proto8)）與 Python 的 `proto8/cmd/<名>/bin/`（`source proto8/env.sh` 一次放好；選配 `proto8/cmd/install.sh` 連進 `~/.local/bin`）。
 
-[`tool-python`](tool-python/README.md) 不是 agent 範本，是**一支工具的骨架**（[tools-def](../thinking/2026-11/10/tools-def/README.md)）：`_entry.json`（`python3 tool.py`）＋`tool.py`（用 [`py/tool_spec.py`](../py/tool_spec.py) 寫的加法）＋產出來的 `_tooldef.json`、`_metainfo.json`＋給 AI 看的英文 README。腦用 `tools_def new` 複製它、只改 `tool.py` 的下半段；人可以直接 `cp -r`，改完跑 `python3 tool.py --write-defs`。測試在 `tests/tool-python/`。
+[`tool-python`](tool-python/README.md) 不是 agent 範本，是**一支工具的骨架**（[tools-def](../thinking/2026-11/10/tools-def/README.md)）：`_entry.json`（`python3 tool.py`）＋`tool.py`（用 [`py/aos/tool_spec.py`](../py/aos/tool_spec.py) 寫的加法）＋產出來的 `_tooldef.json`、`_metainfo.json`＋給 AI 看的英文 README。腦用 `tools_def new` 複製它、只改 `tool.py` 的下半段；人可以直接 `cp -r`，改完跑 `python3 tool.py --write-defs`。測試在 `tests/tool-python/`。
 
 [`judge-llm`](judge-llm/README.md) 是同步呼叫 llm kernel 的裁判比對器，供 measure 的 `compare` 使用；複製後改 `judge.json` 與 `prompt.txt` 就能換模型與規則。
 

@@ -62,7 +62,7 @@ class SayFrom(unittest.TestCase):
         self.assertEqual([c[0] for c in put.call_args_list], [("/s1", "hi", "bob"), ("/s2", "hi", None)])
 
     def test_put_writes_name_into_the_body(self):
-        import aos_ws
+        from aos import ws as aos_ws
         with patch.object(aos_ws, "post", return_value="sig") as post, patch.object(aos_ws.os.path, "isdir", return_value=True):
             aos_ws.put("/s", "hi\n", "bob")
             aos_ws.put("/s", "hi\n")

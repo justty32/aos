@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import re
 
-import aos_flags
+from aos import flags as aos_flags
 
 KINDS = ('usage', 'help', 'errors', 'args')
 

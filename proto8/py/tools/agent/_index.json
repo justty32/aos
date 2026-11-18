@@ -99,8 +99,7 @@
   "description": "subagent 工具（子 agent 包）：生自己的子 agent，跟它說話、調它的工具／腦／對話、停起與收掉，算配額 max_subagents"
  },
  "tests": {
-  "description": "agent 的測試",
-  "index": "tests/_index.json"
+  "description": "agent 的測試"
  },
  "todo": {
   "description": "todo 工具（待辦包，eca 不掛）：自己的待辦清單 ls／set／add／mark，存在小格裡、對話被摘要後還在"

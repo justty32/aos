@@ -1,8 +1,8 @@
 # aos_eca/turn.py - 平級形的一輪（one_turn）：認領一批、hook、slash 分流、交給 cli_session、回答接進 history、冷卻。
 import os
 
-import aos_flags
-import aos_ws
+from aos import flags as aos_flags
+from aos import ws as aos_ws
 
 from .common import (NAME, Fail, cli_cell, cli_cfg, cli_hook, cli_mcp, cooldown, hooks, goal_state, letters_answered, letters_drop,
                      mailbox_warning, must_post, names, post)

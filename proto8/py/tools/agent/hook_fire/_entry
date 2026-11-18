@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # hook_fire - 發 after_start／after_stop 事件：agent 範本 loop.json 的 on_start／on_stop 叫它（hook_fire EVENT DEF_DIR，$AOS_STACK＝agent 的 stack）。
-# 使用者 11-11：hook 要加的事件選「起來與停下」、掛哪層選「aos-loop 自己加」——aos-loop 只跑被指定的東西（C-52），這支才認得 hook（py/hooks.py）。
+# 使用者 11-11：hook 要加的事件選「起來與停下」、掛哪層選「aos-loop 自己加」——aos-loop 只跑被指定的東西（C-52），這支才認得 hook（py/aos/agentlib/hooks.py）。
 # after_start 之前先 hooks.clock_restart（清掉 on_clock 的狀態檔：起來後第一次看時鐘就跑一次，使用者 11-11「起來就先觸發一次」）。
 # after_stop 的事件 JSON 多 code（$AOS_LOOP_CODE，aos-loop 給的要退的碼）、signal（$AOS_LOOP_SIGNAL，沒有＝null）、
 # cause（11-14 B7，ok-devt 定稿 2.3：$AOS_LOOP_CAUSE 去掉頭尾空白，空的或沒設＝null〔舊版 aos-loop〕；值不檢查、照抄：stop、sleep、remove、shutdown、
@@ -11,9 +11,9 @@
 import os, signal, sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(HERE))))   # py/（或裝好的 lib/）：hooks.py、agent_files.py、tool_io.py
-import hooks  # noqa: E402
-import tool_io  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(HERE))))   # 放 aos 套件的那層：py/（或裝好的 lib/）
+from aos.agentlib import hooks  # noqa: E402
+from aos import tool_io  # noqa: E402
 
 NAME = "hook_fire"
 HELP = """usage: hook_fire EVENT DEF_DIR   (EVENT: after_start | after_stop; $AOS_STACK = the agent's stack)

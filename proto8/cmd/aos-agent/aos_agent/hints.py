@@ -1,7 +1,7 @@
 # aos_agent/hints.py - 讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。
-import aos_flags
-import aos_ws
-import daemon_ctl as dc
+from aos import flags as aos_flags
+from aos import ws as aos_ws
+from aos import daemon_ctl as dc
 import json
 import os
 from .common import call_dc, daemon_path, row_named, table_ref
@@ -38,7 +38,7 @@ def label(a):
 def brain_hint(a):
     """只讀問腦記錄；確認 llm kernel 沒在跑才給提示，任何錯都不影響原本操作。"""
     try:
-        import cooldown
+        from aos.agentlib import cooldown
 
         if a.phase != "running" or label(a) != "running":
             return None

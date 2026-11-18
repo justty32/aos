@@ -9,7 +9,7 @@ from unittest.mock import patch
 HERE = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(HERE), str(HERE.parents[2])]
 import swap
-import tool_io
+from aos import tool_io
 
 
 class SwapRecovery(unittest.TestCase):

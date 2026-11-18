@@ -11,7 +11,7 @@ import unittest
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(PROTO / "py"), str(PROTO / "cmd" / "aos-agent" / "tests")]
-import aos_ws  # noqa: E402
+from aos import ws as aos_ws  # noqa: E402
 
 L1, L2 = "000000000001.q", "000000000002.q"
 
@@ -160,7 +160,7 @@ class Stack(unittest.TestCase):
         import reply_fixture as rf
         base = rf.base_tree(self, "lib")
         plain, marked = self.two_stacks()
-        code = ("import json, sys; sys.path[:0] = [sys.argv[1] + '/lib']; import aos_ws; "
+        code = ("import json, sys; sys.path[:0] = [sys.argv[1] + '/lib']; from aos import ws as aos_ws; "
                 "print(json.dumps([[aos_ws.answers(s), aos_ws.exchanges(s)] for s in sys.argv[2:]]))")
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         r = subprocess.run([sys.executable, "-c", code, str(base), plain, marked], capture_output=True, text=True, env=env, timeout=30)

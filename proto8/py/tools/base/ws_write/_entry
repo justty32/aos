@@ -16,16 +16,16 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
-    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+    if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")):
         break
     _lib = os.path.dirname(_lib)
-sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")) else [])
 try:
-    import tool_io
+    from aos import tool_io
 except ModuleNotFoundError as error:
-    if error.name != "tool_io":
+    if error.name != "aos":
         raise
-    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % os.path.basename(HERE)
+    _line = "%s: error: ModuleMissing aos not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % os.path.basename(HERE)
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)

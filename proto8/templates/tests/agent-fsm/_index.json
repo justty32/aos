@@ -39,7 +39,7 @@
   "description": "驗證只有 hook 拒因與重置時間的 BudgetMissing 回信會讓 wait 格冷卻後再試。"
  },
  "test_hooks.py": {
-  "description": "Test the hooks of agent-fsm (py/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added."
+  "description": "Test the hooks of agent-fsm (py/aos/agentlib/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_add…"
  },
  "test_integration.py": {
   "description": "Verify agent cells through the real local kernel, llm_fake endpoint, and peek_now_time tool (which leaves no tool cell, 11-11)."

@@ -10,8 +10,8 @@ from unittest import mock
 sys.dont_write_bytecode = True
 TOOL = Path(__file__).resolve().parents[1] / "_entry"
 sys.path[:0] = [str(TOOL.parents[1]), str(TOOL.parents[3])]
-import agents_cmd  # noqa: E402
-import tool_io  # noqa: E402
+from aos.agentlib import agents_cmd  # noqa: E402
+from aos import tool_io  # noqa: E402
 
 
 class Raised(Exception):

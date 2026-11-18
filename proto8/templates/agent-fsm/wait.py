@@ -26,7 +26,7 @@
 #   平常每拍帶 recv --quiet（不印「為什麼還沒回」那行，免得每 300 ms 一行刷屏，I3 C1）；只有要印 10 分鐘提醒的那一拍不帶，
 #   讓 aos-llm 自己把原因印在這格那行前面（不讀它的 stderr）。
 # 失敗後冷卻（two-machines 06，使用者 11-10 裁「失敗後冷卻」）：BrainFailed、SendFailed（send 退非 0）是外面服務的錯，
-#   先用 py/cooldown.py 記一筆 $AOS_STACK/cooldown.json（30 秒起、加倍到 30 分鐘；dropped 一直是 0——重寄同一份請求、不掉信）；
+#   先用 py/aos/agentlib/cooldown.py 記一筆 $AOS_STACK/cooldown.json（30 秒起、加倍到 30 分鐘；dropped 一直是 0——重寄同一份請求、不掉信）；
 #   寫不成只 warning 一行、不改原本的結果。寄之前（沒 pending、request.json 在、endpoint 對得上）冷卻中＝不寄、退 10 留在 wait；
 #   冷卻到了（due）或沒有＝照寄。好的回信接進 history 之後刪 cooldown.json（刪不掉＝warning）。ReplyBad、WriteFailed 等不寫冷卻。
 #   BudgetMissing（kernel 額度拒絕）：brain_failed 的 name＝BudgetMissing、reason＝kernel 的 msg，記同代號冷卻、warning、退 10；
@@ -50,7 +50,7 @@
 #   11-14：正要寄時 AOS_LLM_KERNEL 沒設或去空白後為空＝先 brain_failed，再 LlmKernelMissing 退 1、不記冷卻，request.json 留著；環境不會自己補上，要重掛。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1——StackMissing、BrainFailed（kernel 回錯且 retry 非 true）、BudgetMissing（只有 window all）、
 #   LlmKernelMissing（寄之前 AOS_LLM_KERNEL 沒設或空白）、SendFailed（aos-llm 起不來、或 send 退 0 卻沒印信件名稱）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
-# hook（py/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：BudgetMissing、BrainFailed、SendFailed（send 退非 0、或退 0 沒印信名）、ReplyBad
+# hook（py/aos/agentlib/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：BudgetMissing、BrainFailed、SendFailed（send 退非 0、或退 0 沒印信名）、ReplyBad
 #   照原本行為退出／記冷卻之前觸發 brain_failed（name＝代號、reason＝這格那行的原因）；hook 停下＝HookFailed／HooksBad 退 1（冷卻不記）。
 # 回答配對（thinking/2026-11/14/reply-match-1114/03 §1）：端點回的 message 自帶的 aos 鍵一律拿掉；最終回答（沒有 tool_calls）帶
 #   "aos": {"answer_to": $AOS_STACK/letters.json 的 pending}（沒有 pending＝不帶），接進 history 之後才清 pending；腦失敗、還沒最終回答＝pending 留著，
@@ -66,31 +66,18 @@ if os.environ.get("AOS_HOME"):  # 家外的格只經 AOS_HOME 找 lib（路徑�
     _import_paths.append(os.path.join(os.environ["AOS_HOME"], "lib"))
 sys.path[:0] = _import_paths
 try:
-    import aos_flags  # noqa: E402
-    import aos_ws  # noqa: E402  （回答配對：for_endpoint、mark_answer、letters_pending／letters_answered）
-    from observed import append as append_observed  # noqa: E402
-    if (Path(__file__).resolve().parent / "agent_files.py").is_file():
-        from agent_files import declared_files  # noqa: E402
-    else:
-        from agent_files import declared_files  # noqa: E402
-    if (Path(__file__).resolve().parent / "cooldown.py").is_file():
-        import cooldown  # noqa: E402
-    else:
-        import cooldown  # noqa: E402
-    if (Path(__file__).resolve().parent / "hooks.py").is_file():
-        import hooks  # noqa: E402
-    else:
-        import hooks  # noqa: E402
+    from aos import flags as aos_flags  # noqa: E402
+    from aos import ws as aos_ws  # noqa: E402  （回答配對：for_endpoint、mark_answer、letters_pending／letters_answered）
+    from aos.observed import append as append_observed  # noqa: E402
+    from aos.agentlib.agent_files import declared_files  # noqa: E402
+    from aos.agentlib import cooldown  # noqa: E402
+    from aos.agentlib import hooks  # noqa: E402
     try:                                         # 「很久沒動靜」標記（11-15）；舊的定義副本沒帶 quiet.py 也照跑，只是不標
-        if (Path(__file__).resolve().parent / "quiet.py").is_file():
-            import quiet  # noqa: E402
-        else:
-            import quiet  # noqa: E402
+        from aos.agentlib import quiet  # noqa: E402
     except ImportError:
         quiet = None
 except (ModuleNotFoundError, ImportError) as _error:
-    if _error.name not in ("aos_flags", "aos_ws", "tool_io", "agent_files", "observed", "observed_children",
-                           "cooldown", "hooks"):
+    if _error.name not in ("aos", "aos.agentlib"):
         raise
     if not os.environ.get("AOS_HOME"):
         print("agent-fsm: error: HomeMissing AOS_HOME is not set (it names the proto8 folder that holds lib)",

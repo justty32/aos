@@ -5,7 +5,7 @@ from pathlib import Path
 
 PROTO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(PROTO / "py")]
-import daemon_ctl as dc  # noqa: E402
+from aos import daemon_ctl as dc  # noqa: E402
 
 
 class LimitsKeys(unittest.TestCase):

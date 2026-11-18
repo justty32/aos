@@ -7,7 +7,7 @@
 import json
 import os
 import sys
-import aos_flags
+from aos import flags as aos_flags
 from . import PROG
 from .common import Fail, actions, bad_args, in_stack, note, parse, target
 from .decl import agent_decl, warn_shared
@@ -126,7 +126,7 @@ def screen_open(folder, stack):
     if kind is None:
         return False
     try:
-        import cli_base, cli_cell
+        from aos.agentlib import cli_base, cli_cell
         cell = os.path.join(stack, kind)
         sock = cli_cell.tty_socket(cell)
         if not os.path.exists(sock):

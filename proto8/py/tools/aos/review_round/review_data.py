@@ -5,8 +5,8 @@ import math
 from pathlib import Path
 import sys
 
-import observed
-from tool_io import Error
+from aos import observed
+from aos.tool_io import Error
 
 
 def read(path):

@@ -11,7 +11,7 @@
 #   history 裡沒有 assistant、aos-tools 起不來。
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝改用這隻自己那份（aos-agent tools add／rm 寫的，只存差異、"$override" 指回定義那份，11-10）。
-# hook（py/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：確認登記過、arguments 是 JSON 之後 before_tool（可改 arguments；
+# hook（py/aos/agentlib/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：確認登記過、arguments 是 JSON 之後 before_tool（可改 arguments；
 #   攔下＝不跑，tool 訊息＝hook 的 stdout，空就「[aos] hook: tool NAME blocked by hook HOOK.」，不記 observed、不觸發 after_tool）；
 #   跑完、content 組好（含失敗尾巴）之後、接進 history 之前 after_tool（可改 content）。history 裡 assistant 的 tool_calls 不動。
 #   hook 停下＝HookFailed／HooksBad 退 1（這個 id 還沒有 tool 訊息，重跑會再跑一次）。
@@ -25,21 +25,14 @@ if os.environ.get("AOS_HOME"):  # 家外的格只經 AOS_HOME 找 lib（路徑�
     _import_paths.append(os.path.join(os.environ["AOS_HOME"], "lib"))
 sys.path[:0] = _import_paths
 try:
-    import aos_flags  # noqa: E402
-    from observed import append as append_observed  # noqa: E402
-    from observed_children import clear_child, take_child  # noqa: E402
-    import metainfo  # noqa: E402
-    if (Path(__file__).resolve().parent / "agent_files.py").is_file():
-        from agent_files import declared_files  # noqa: E402
-    else:
-        from agent_files import declared_files  # noqa: E402
-    if (Path(__file__).resolve().parent / "hooks.py").is_file():
-        import hooks  # noqa: E402
-    else:
-        import hooks  # noqa: E402
+    from aos import flags as aos_flags  # noqa: E402
+    from aos.observed import append as append_observed  # noqa: E402
+    from aos.observed_children import clear_child, take_child  # noqa: E402
+    from aos import metainfo  # noqa: E402
+    from aos.agentlib.agent_files import declared_files  # noqa: E402
+    from aos.agentlib import hooks  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
-    if _error.name not in ("aos_flags", "tool_io", "agent_files", "metainfo", "observed", "observed_children",
-                           "hooks"):
+    if _error.name not in ("aos", "aos.agentlib"):
         raise
     if not os.environ.get("AOS_HOME"):
         print("agent-fsm: error: HomeMissing AOS_HOME is not set (it names the proto8 folder that holds lib)",

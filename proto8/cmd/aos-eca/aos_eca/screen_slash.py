@@ -3,7 +3,7 @@ import os
 import re
 import time
 
-import aos_flags
+from aos import flags as aos_flags
 
 from .common import NAME, cli_ask, cli_base
 

@@ -7,7 +7,7 @@ import unittest
 
 LIB = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(LIB))
-from observed_children import clear_child, copy_child, take_child
+from aos.observed_children import clear_child, copy_child, take_child
 
 
 class ChildrenTests(unittest.TestCase):

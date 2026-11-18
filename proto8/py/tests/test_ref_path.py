@@ -7,7 +7,7 @@ import unittest
 
 LIB = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, LIB)
-import aos_refpath  # noqa: E402
+from aos import refpath as aos_refpath  # noqa: E402
 
 CASES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ref_path_cases.json")
 

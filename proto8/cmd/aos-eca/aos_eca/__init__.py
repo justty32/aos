@@ -2,7 +2,7 @@
 import os
 import sys
 
-import aos_flags
+from aos import flags as aos_flags
 
 from .common import NAME, NOT_FOUND, Fail
 from .common import cli_ask, cli_base

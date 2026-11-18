@@ -1,6 +1,6 @@
 # Check the $ref path rule (11-13 ref-path-rules): left of # is the file system (from the folder of the file), right of # is
 # inside JSON (#/ root, #./ the object the $ref is in, #../ one level up; # and #/ the whole file). The table
-# py/tests/ref_path_cases.json is shared with py/aos_refpath.py (index paths use the same rule and parser).
+# py/tests/ref_path_cases.json is shared with py/aos/refpath.py (index paths use the same rule and parser).
 import json
 import os
 from pathlib import Path

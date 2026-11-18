@@ -11,7 +11,7 @@ import time
 
 PROTO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(PROTO / "py")]
-import aos_ws  # noqa: E402
+from aos import ws as aos_ws  # noqa: E402
 
 AGENT_BIN = PROTO / "cmd" / "aos-agent" / "bin" / "aos-agent"
 BASE_COMMIT = "158816ad0eaebf2776a87cbf58b9bf9c7db6fce1"   # reply-match 施工前的 main（暫存樹 git archive 的那個）

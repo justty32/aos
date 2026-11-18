@@ -1,5 +1,5 @@
 # aos_agent/ctl/__init__.py - 顯式派發 agent 的掛上與管理命令。
-import aos_flags
+from aos import flags as aos_flags
 
 from .. import common
 from ..common import Fail, actions, parse

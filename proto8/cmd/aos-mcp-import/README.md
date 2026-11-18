@@ -8,7 +8,7 @@ aos-mcp-import sync [--yes] [--timeout-s N] SERVER_FILE
 aos-mcp-import --help
 ```
 
-- SERVER_FILE 是人先寫好的 server 檔（`description`＋`mcp_server`，跟 eca 原生掛那條同一份，形狀與讀法在 [`py/mcp_server_file.py`](../../py/mcp_server_file.py)）。匯入起那台 server、列工具、每支用 [`py/mcp_freeze.py`](../../py/mcp_freeze.py) 凍結，原子寫回同一份檔（暫存檔＋rename），多三個頂層鍵：
+- SERVER_FILE 是人先寫好的 server 檔（`description`＋`mcp_server`，跟 eca 原生掛那條同一份，形狀與讀法在 [`py/aos/mcp_server_file.py`](../../py/aos/mcp_server_file.py)）。匯入起那台 server、列工具、每支用 [`py/aos/mcp_freeze.py`](../../py/aos/mcp_freeze.py) 凍結，原子寫回同一份檔（暫存檔＋rename），多三個頂層鍵：
   - `mcp_import`：`imported_at`、`protocol_version`、`server_tools`（server 當時總共幾支）
   - `mcp_tools`：鍵是外部原名，每格 `_entry`（叫 `py/tools/base/mcp_tool/_entry --pack <檔名> --tool <原名>`）、`_tooldef`、`_metainfo`
   - `tools`：登記名 `<server 名>_<工具名>` → `"<檔名>#/mcp_tools/<原名>"`（原名的 `~`、`/` 跳脫成 `~0`、`~1`；只寫檔名，整夾 `cp -r` 帶走仍通）

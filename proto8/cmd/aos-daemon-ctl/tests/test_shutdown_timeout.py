@@ -8,8 +8,8 @@ from unittest import mock
 
 PROTO = Path(__file__).resolve().parents[3]
 sys.path[:0] = [str(PROTO / "py")]
-import daemon_ctl as dc  # noqa: E402
-from daemon_ctl import ctl  # noqa: E402
+from aos import daemon_ctl as dc  # noqa: E402
+from aos.daemon_ctl import ctl  # noqa: E402
 
 
 class ShutdownTimeout(unittest.TestCase):

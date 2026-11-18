@@ -3,7 +3,7 @@ import hashlib
 import json
 import os
 
-import aos_flags
+from aos import flags as aos_flags
 
 from .common import NAME, Fail, cli_cell
 

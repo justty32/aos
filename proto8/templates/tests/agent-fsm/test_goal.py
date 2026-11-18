@@ -15,7 +15,7 @@ CELLS = Path(__file__).resolve().parents[2] / "agent-fsm"   # 範本本身
 PROTO = CELLS.parents[1]
 GOAL_TOOL = PROTO / "py" / "tools" / "agent" / "goal"
 NOTE = "[aos] goal: "
-_spec = importlib.util.spec_from_file_location("goal_state", PROTO / "py" / "goal_state.py")
+_spec = importlib.util.spec_from_file_location("goal_state", PROTO / "py" / "aos" / "agentlib" / "goal_state.py")
 goal_state = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(goal_state)
 

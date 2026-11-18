@@ -12,8 +12,8 @@ BIN = PROTO / 'bin'
 ENV = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
 ENV['PATH'] = str(BIN) + ':' + ENV['PATH']
 sys.path.insert(0, str(PROTO / 'py'))
-import daemon_ctl as dc  # noqa: E402
-from daemon_ctl.entry import is_program  # noqa: E402
+from aos import daemon_ctl as dc  # noqa: E402
+from aos.daemon_ctl.entry import is_program  # noqa: E402
 
 
 def run(*argv, cwd):

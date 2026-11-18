@@ -78,7 +78,8 @@ class AcceptanceTests(unittest.TestCase):
 
     def test_custom_comparator_cost_is_separate(self):
         comparator = self.tool('compare_half',
-            'import json, os, observed\n'
+            'import json, os\n'
+            'from aos import observed\n'
             'args=json.load(__import__("sys").stdin)\n'
             'assert all(os.path.isabs(args[k]) for k in ("expect", "got", "input"))\n'
             'observed.append_strict(os.environ["AOS_STACK"], {"kind":"think",'
@@ -111,7 +112,8 @@ class AcceptanceTests(unittest.TestCase):
 
     def test_measure_input_bytes_reach_metadata_formula(self):
         target = self.tool('claimed',
-            'import os, observed\n'
+            'import os\n'
+            'from aos import observed\n'
             'observed.append_strict(os.environ["AOS_STACK"], {"kind":"think",'
             '"endpoint":"fake-account", "usage":{"prompt_tokens":3,"completion_tokens":0}})\n'
             'print("fixed")\n')

@@ -325,7 +325,7 @@ class Helpers(unittest.TestCase):
     def test_fix_continues_after_failure(self):
         with mock.patch.object(os, "lchown", side_effect=[PermissionError(1, "denied"), None]) as chown, \
                 mock.patch.object(os, "lstat", return_value=mock.Mock(st_mode=0o100400)), \
-                mock.patch.object(os, "chmod"), mock.patch("aos_flags.warn") as warn:
+                mock.patch.object(os, "chmod"), mock.patch("aos.flags.warn") as warn:
             self.assertEqual(self.module["fix_paths"](["first", "second"], False), 1)
             self.assertEqual(chown.call_count, 2)
             self.assertIn("cannot fix first", warn.call_args.args[1])

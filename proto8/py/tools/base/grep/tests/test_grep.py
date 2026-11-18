@@ -16,7 +16,7 @@ from unittest import mock
 sys.dont_write_bytecode = True                        # 不在 lib 留 __pycache__
 ENTRY = Path(__file__).resolve().parents[1] / "_entry"
 sys.path.insert(0, str(ENTRY.parents[3]))           # py：file_walk、tool_io
-import file_walk  # noqa: E402
+from aos import file_walk  # noqa: E402
 
 
 class GrepTest(unittest.TestCase):

@@ -3,7 +3,7 @@ import json
 import os
 import sys
 
-import aos_flags
+from aos import flags as aos_flags
 
 from . import add as add_mod
 from . import recipe

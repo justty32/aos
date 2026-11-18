@@ -1,33 +1,26 @@
 #!/usr/bin/env python3
 # claude - 透過 tool_io 收 JSON／旗標，再把 prompt 交給 claude CLI；對話續在工具小格（$AOS_STACK）
 # 介面（py/README 的契約）：stdin 收 {"prompt"}；錯：stderr 與 stdout 各一行「claude: error: 代號 原因」、退 1（ArgumentsBad、CliMissing、CliFailed、SessionBad…）。
-# 怎麼叫 CLI（旗標、逾時 timeout_ms）在同資料夾的 cli.json；做法在 proto8/py/cli_session.py 與同層 cli_*.py（claude、codex 共用）。
+# 怎麼叫 CLI（旗標、逾時 timeout_ms）在同資料夾的 cli.json；做法在 proto8/py/aos/agentlib/cli_session.py 與同層 cli_*.py（claude、codex 共用）。
 # 工具形開頭走 agent_tool.ask_cli 的 tool_io；aos-eca-turn --one 照舊用 cli_ask.call_main，兩者共用 cli_ask.ask。
-# 共用模組先找工具自己，再找 lib/agent（標準 Python 路徑也可提供 lib）。
+# 共用模組在 aos 套件（aos.agentlib）：先找工具自己，再找祖先裡放 aos 套件的那層（標準 Python 路徑也可提供）。
 import os, sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
-# 只找自己的工具夾、realpath 祖先裡有 tool_io.py 的那層（py/ 或裝好的 lib/），再交給標準 Python 路徑。
+# 只找自己的工具夾、realpath 祖先裡有 aos 套件（aos/__init__.py）的那層（py/ 或裝好的 lib/），再交給標準 Python 路徑。
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
-    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+    if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")):
         break
     _lib = os.path.dirname(_lib)
-sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")) else [])
 try:
-    import tool_io  # noqa: E402
-    try:
-        import agent_tool
-    except ModuleNotFoundError as error:
-        if error.name != "agent_tool":
-            raise
-        import agent.agent_tool as agent_tool
+    from aos import tool_io  # noqa: E402
+    from aos.agentlib import agent_tool  # noqa: E402
 except ModuleNotFoundError as error:   # 共用模組找不到：照此工具的錯誤通道退 1
-    _shared = ("agent_tool", "agent_files", "cli_base", "cli_cfg", "cli_mcp", "cli_cell", "cli_print", "cli_ask", "cli_hook", "cli_screen")
-    if error.name not in {"tool_io", "agent", *_shared, *("agent." + n for n in _shared)}:
+    if error.name not in ("aos", "aos.agentlib"):
         raise
-    _module = "agent_tool" if error.name == "agent" else (error.name or "shared module").rsplit(".", 1)[-1]
-    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % (os.path.basename(HERE), _module)
+    _line = "%s: error: ModuleMissing %s not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % (os.path.basename(HERE), error.name)
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)

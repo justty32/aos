@@ -27,7 +27,7 @@
 
 包提供 `collect(ctx, before_reply=None)`、`check(ctx)`、`order(ctx, letters)`、`admit(ctx, name, letter)`、`dispatch(ctx, name, letter, detail)`，以及 `load(cfg, cfg_dir)`、`refuse(ctx, name, letter, code, msg)`、`finish(ctx, queued)`。設定不對丟 `round.CfgBad`。包另外提供 `read(path)` 時，骨架改叫它讀設定、不走下面「整份先過 aos-directive」的讀法，hooks 也由包自己交給 `hooks.load` 驗（問腦那一包用：每組端點的指示詞用到才解）。骨架給的 `ctx` 有 `cfg`、`stack`、`requests`、`name`、`die`、`warn`、`previous`（上一輪的排隊列）與 `queued`（這輪已確定留隊的列）；包需要的輪內狀態自己加。
 
-`admit` 回 `(verdict, detail)`：`pass` 的 detail 是新名字清單、`refuse` 是 `(code, msg)`、`queue` 是窗的一列。hook 從拒或排改成 pass 時，交給 `dispatch` 的 detail 是 None；包從 body 數實際轉出的名字，不回頭驗規則。`dispatch` 成功回 `None`，失敗回 `(code, msg)` 交骨架拒信。包的 `collect(ctx, before_reply=None)` 可傳代回前的回呼；每封對得上表的回信會以 `(原信記錄, 回信信封)` 呼叫，回傳要代回的 body。骨架在這個回呼派發 `before_reply`，三個時機都交給共用的 `py/hook_run.py` 執行。
+`admit` 回 `(verdict, detail)`：`pass` 的 detail 是新名字清單、`refuse` 是 `(code, msg)`、`queue` 是窗的一列。hook 從拒或排改成 pass 時，交給 `dispatch` 的 detail 是 None；包從 body 數實際轉出的名字，不回頭驗規則。`dispatch` 成功回 `None`，失敗回 `(code, msg)` 交骨架拒信。包的 `collect(ctx, before_reply=None)` 可傳代回前的回呼；每封對得上表的回信會以 `(原信記錄, 回信信封)` 呼叫，回傳要代回的 body。骨架在這個回呼派發 `before_reply`，三個時機都交給共用的 `py/aos/hook_run.py` 執行。
 
 包另外提供 `check_next(ctx, box)` 時，骨架才收 `after_verdict` hook 替單封信指定的下一站：hook 給了就先叫它驗（設定配不上由包 `ctx.die`，這個值不能用丟 `ValueError`、算 hook 自己失敗），放行時路徑放在 `ctx.route[信名]`，包在 `dispatch` 取走。沒有這個口的包（問腦那一包，放行＝自己掛去跑、不轉寄）遇到 hook 給 `next` 算 hook 自己失敗。
 

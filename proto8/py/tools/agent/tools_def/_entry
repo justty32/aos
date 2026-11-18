@@ -35,17 +35,17 @@ Result on stdout, one line per item. On error: one line "%s: error: CODE reason"
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
-    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+    if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")):
         break
     _lib = os.path.dirname(_lib)
-sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")) else [])
 try:
-    import tool_io  # noqa: E402
-    import tool_spec  # noqa: E402
+    from aos import tool_io  # noqa: E402
+    from aos import tool_spec  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
-    if error.name not in ("tool_io", "tool_spec"):
+    if error.name != "aos":
         raise
-    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % (NAME, error.name)
+    _line = "%s: error: ModuleMissing %s not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % (NAME, error.name)
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)

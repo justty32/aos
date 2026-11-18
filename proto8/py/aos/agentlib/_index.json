@@ -1,0 +1,71 @@
+{
+ "agent_files.py": {
+  "description": "匯出共用的定義檔與 stack 覆蓋檔宣告讀取器。"
+ },
+ "agent_tool.py": {
+  "description": "claude、codex 共用的工具形入口 ask_cli。"
+ },
+ "agents_cmd.py": {
+  "description": "subagent 與 agents_ctl 共用：查鍵、組 aos-agent ctl 各動作的旗標、跑 aos-agent（或旁邊的 self_*）並把下層錯翻成自己的。"
+ },
+ "cli_a2a.py": {
+  "description": "cli_session 往開著的 claude 畫面投署名訊息（Claude Code 的 cross-session messaging socket）：記 socket、包信封、投遞、等 hook 回執"
+ },
+ "cli_ask.py": {
+  "description": "cli_session 問一輪：畫面開著往 CLI 的收件 socket 投署名訊息（live_a2a）或從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main"
+ },
+ "cli_base.py": {
+  "description": "cli_session 各分檔共用的底：錯誤行與提醒行（PROG／ECHO 決定開頭與要不要也印 stdout）、時間、共用常數、找 lib 的 tool_io"
+ },
+ "cli_cell.py": {
+  "description": "cli_session 的小格：Cell（檔、鎖、畫面 tmux）、畫面 socket 位置、session.txt 與記號檔、認是不是這台的對話、transcripts symlink"
+ },
+ "cli_cfg.py": {
+  "description": "cli_session 的設定：讀與驗工具資料夾的 cli.json、llm.json 疊 model、system 附加旗標、tools／tools_sub 登記檔"
+ },
+ "cli_fault.py": {
+  "description": "claude -p 失敗時從 result 行與 stream 判斷暫時或永久，並計算這輪工具呼叫數。"
+ },
+ "cli_hook.py": {
+  "description": "cli_session 的畫面 hook（CLI 講完一輪時叫）：跟上對話 id、/clear／/compact 時同步 aos 的 history、codex 壓縮跟上"
+ },
+ "cli_linger.py": {
+  "description": "eca 停下時由 tmux 計時延後關畫面，起來撤單，到期核 token、畫面與本機 loop 身分。"
+ },
+ "cli_mcp.py": {
+  "description": "cli_session 接 MCP：aos-mcp 那台的旗標（claude 的 mcp.json／codex 的 -c）、外部 MCP server、tools_sub 子 agent 那台與 guard hook"
+ },
+ "cli_print.py": {
+  "description": "cli_session 的非互動那條路（畫面沒開）：claude -p／codex exec 起 CLI、等回答、記 session"
+ },
+ "cli_screen.py": {
+  "description": "cli_session 開畫面：tmux 裡起互動的 claude／codex（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供"
+ },
+ "cli_session.py": {
+  "description": "把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 aos-agent attach／open 接進或開啟互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字"
+ },
+ "cli_stream.py": {
+  "description": "非互動那條路的「中途收信」版：claude -p --input-format stream-json，stdin 先不關，回答途中把新信一行一行投進去"
+ },
+ "cmd_call.py": {
+  "description": "給腦用的工具叫下層指令的共用版：在工作區跑一支指令、stderr 原樣往上、退出碼不對＝它最後一行錯誤行的代號與原因當自己的錯；被 TERM／Ctrl-C 先收掉正在跑的那一群。"
+ },
+ "context_use.py": {
+  "description": "一隻 agent 現在的 context 用了多少（給 aos 層的「快滿了先收尾再 compact」判斷，py/tools/agent/context_wrap）；各種腦各一個讀法，讀不到＝None。"
+ },
+ "cooldown.py": {
+  "description": "失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。"
+ },
+ "goal_state.py": {
+  "description": "agent 的 goal 共用讀寫與判斷：<agent stack>/goal.json；aos-agent goal 寫、agent-fsm idle.py 與 aos-eca-turn 讀寫（丟提醒、記數）。"
+ },
+ "hooks.py": {
+  "description": "agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、on_clock 的檢查、tool_added 的名單；挑出符合事件的 hook、用 aos-exec 跑、解回話交給共用引擎 py/aos/hook_run.py。"
+ },
+ "mailbox_call.py": {
+  "description": "mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。"
+ },
+ "quiet.py": {
+  "description": "「很久沒動靜」的共用讀寫：$AOS_STACK/quiet.json（不進 git）；aos-eca-turn（一輪 CLI 在跑）與 agent-fsm 的 wait.py（等腦回信）寫，誰都能讀。"
+ }
+}

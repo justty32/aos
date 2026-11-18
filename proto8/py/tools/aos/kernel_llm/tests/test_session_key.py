@@ -9,7 +9,7 @@ for folder in ('py', 'py/tools/aos/kernel', 'py/tools/aos/kernel_llm'):
     sys.path.insert(0, str(test_ledger.PROTO / folder))
 import packs  # noqa: E402
 import session  # noqa: E402
-from tool_io import Error  # noqa: E402
+from aos.tool_io import Error  # noqa: E402
 
 SENDER = '/tmp/tree/.stack/procs/bob'
 

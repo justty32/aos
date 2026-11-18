@@ -3,7 +3,7 @@
 #
 # 用法：aos-mcp-import [--only A,B | --except C,D] [--timeout-s N] SERVER_FILE
 #       aos-mcp-import sync [--yes] [--timeout-s N] SERVER_FILE
-#   SERVER_FILE 是人先寫好的 server 檔（description＋mcp_server，跟 eca 那條同一份；形狀見 py/mcp_server_file.py）。
+#   SERVER_FILE 是人先寫好的 server 檔（description＋mcp_server，跟 eca 那條同一份；形狀見 py/aos/mcp_server_file.py）。
 #   流程：load → 已匯入過（有 mcp_tools／mcp_import／tools）＝PackExists → mcp_client.open_session → list_tools → 照 only／except 挑
 #   → 每支 mcp_freeze.freeze_tool → 原子寫回同一份檔（暫存檔＋rename；description 與 mcp_server 的值不動，只可能補上 only／except）→ close。
 #   --only／--except 給了＝寫進 mcp_server.only／except；檔裡已有且不同（或寫的是另一個）＝ArgumentsBad。兩個都沒有＝看檔裡的（F8），
@@ -23,11 +23,11 @@ import tempfile
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
-import aos_flags  # noqa: E402
-import tool_io  # noqa: E402
-import mcp_client  # noqa: E402
-import mcp_freeze  # noqa: E402
-import mcp_server_file  # noqa: E402
+from aos import flags as aos_flags  # noqa: E402
+from aos import tool_io  # noqa: E402
+from aos import mcp_client  # noqa: E402
+from aos import mcp_freeze  # noqa: E402
+from aos import mcp_server_file  # noqa: E402
 
 PROG = "aos-mcp-import"
 MANY = 20

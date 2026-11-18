@@ -246,7 +246,7 @@ class Share(unittest.TestCase):
 
         with mock.patch.object(os, "stat", side_effect=stat_or_fail), \
                 mock.patch("subprocess.run", return_value=mock.Mock(returncode=0, stdout="", stderr="")), \
-                mock.patch("aos_flags.warn") as warn:
+                mock.patch("aos.flags.warn") as warn:
             module["warn_ancestors"](str(parent / "B"), "group", ["200599"])
         messages = [call.args[1] for call in warn.call_args_list]
         self.assertIn("cannot check %s: denied" % self.tmp, messages)

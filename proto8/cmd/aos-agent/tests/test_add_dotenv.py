@@ -16,8 +16,8 @@ BIN = PROTO / "cmd" / "aos-agent" / "bin" / "aos-agent"
 sys.path[:0] = [str(PROTO / "py")]
 # an add that carries envs also gets both registered names, empty when there is no value (ok-devt-1114 05 修訂 1)
 REGISTERED = {"AOS_PARENT_STACK": "", "AOS_NOTIFY_BOX": ""}
-import daemon_ctl as dc
-from daemon_ctl.entry import daemon_ref
+from aos import daemon_ctl as dc
+from aos.daemon_ctl.entry import daemon_ref
 
 ENV = {key: value for key, value in os.environ.items() if not key.startswith("AOS_")}
 ENV["PATH"] = str(PROTO / "bin") + os.pathsep + os.pathsep.join(

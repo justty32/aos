@@ -5,7 +5,7 @@ import os
 
 import letters
 import queue_fifo
-import tool_io
+from aos import tool_io
 
 REFUSED = ("HoldRefused", "refused by the decision for this letter")
 

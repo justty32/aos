@@ -24,7 +24,7 @@ flags:
 
 exit codes: 0 printed; 1 error (AnswerMissing, LetterDropped, QuestionUnknown...); 130 Ctrl-C while waiting."""
 
-import aos_ws
+from aos import ws as aos_ws
 import math
 import os
 import sys

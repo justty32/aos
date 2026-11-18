@@ -26,9 +26,9 @@ import difflib, json, os, re, shutil, sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
-import aos_flags  # noqa: E402  proto8/py/aos_flags.py：P-44 的解析
-from daemon_ctl.entry import is_program  # noqa: E402  看內容判程式（11-10：/mnt/c 每個檔都 +x）
-import aos_refpath  # noqa: E402  proto8/py/aos_refpath.py：$ref／index 共用的路徑規則（11-13）
+from aos import flags as aos_flags  # noqa: E402  proto8/py/aos/flags.py：P-44 的解析
+from aos.daemon_ctl.entry import is_program  # noqa: E402  看內容判程式（11-10：/mnt/c 每個檔都 +x）
+from aos import refpath as aos_refpath  # noqa: E402  proto8/py/aos/refpath.py：$ref／index 共用的路徑規則（11-13）
 
 PROG = "aos-grow"
 ENTRY = os.environ.get("AOS_ENTRY") or "_entry"

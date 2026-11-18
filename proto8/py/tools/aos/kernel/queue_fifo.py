@@ -3,7 +3,7 @@ import datetime
 import json
 
 import letters
-import tool_io
+from aos import tool_io
 
 
 def utc_ms(text):

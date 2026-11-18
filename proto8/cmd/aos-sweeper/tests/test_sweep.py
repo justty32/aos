@@ -22,8 +22,8 @@ from unittest.mock import patch
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(REPO / "proto8" / "py"))
-import aos_sweep
-import aos_sweep_proc
+from aos import sweep as aos_sweep
+from aos import sweep_proc as aos_sweep_proc
 
 
 BIN = REPO / "proto8" / "cmd" / "aos-sweeper" / "bin" / "aos-sweeper"

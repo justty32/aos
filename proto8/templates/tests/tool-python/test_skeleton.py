@@ -1,4 +1,4 @@
-"""Test the tool-python skeleton: its generated _tooldef.json/_metainfo.json match tool.py, and a copy outside the repo runs with only AOS_HOME or with tool_spec.py/tool_io.py next to it."""
+"""Test the tool-python skeleton: its generated _tooldef.json/_metainfo.json match tool.py, and a copy outside the repo runs with only AOS_HOME or with a copy of the aos package next to it."""
 import json
 import os
 from pathlib import Path
@@ -46,8 +46,7 @@ class Skeleton(unittest.TestCase):
     def test_copy_runs_with_modules_next_to_it(self):
         dest = self.root / "add2"
         shutil.copytree(SKEL, dest)
-        for m in ("tool_spec.py", "tool_io.py"):
-            shutil.copy(PROTO / "py" / m, dest / m)
+        shutil.copytree(PROTO / "py" / "aos", dest / "aos")
         r = self.exec(dest, '{"a": 2, "b": 0.5}')
         self.assertEqual((r.returncode, r.stdout), (0, "2.5\n"), r.stderr)
 

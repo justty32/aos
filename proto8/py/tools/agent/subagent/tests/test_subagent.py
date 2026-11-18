@@ -294,8 +294,10 @@ class Subagent(unittest.TestCase):
     def test_forward_tool_missing(self):
         lib = self.tmp / "lib"
         (lib / "tools" / "agent").mkdir(parents=True)
-        for f in ("tool_io.py", "observed_children.py", "observed.py", "process_group.py", "agents_cmd.py", "cmd_call.py"):
-            shutil.copy(LIB / f, lib / f)
+        for f in ("__init__.py", "tool_io.py", "observed_children.py", "observed.py", "process_group.py",
+                  "agentlib/__init__.py", "agentlib/agents_cmd.py", "agentlib/cmd_call.py"):
+            (lib / "aos" / f).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(LIB / "aos" / f, lib / "aos" / f)
         shutil.copytree(TOOL.parent, lib / "tools" / "agent" / NAME, ignore=shutil.ignore_patterns("tests", "__pycache__"))
         self.ok({"op": "add", "def": "d", "name": "kid"})
         r = self.run_tool({"op": "hook", "name": "kid", "args": {"op": "ls"}}, tool=lib / "tools" / "agent" / NAME / "_entry")

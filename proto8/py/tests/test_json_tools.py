@@ -1,4 +1,4 @@
-"""json 工具一族（py/aos_json.py；簡單組 json_*、複雜組 jsonx_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。"""
+"""json 工具一族（py/aos/json.py；簡單組 json_*、複雜組 jsonx_*，thinking 2026-11/12/json-tools）的定向測試：每支實跑 _entry，驗輸出與檔案內容。"""
 
 import json
 import os

@@ -1,9 +1,9 @@
 # aos_agent/hook.py - 管 agent 自己那份 hooks 清單（疊在定義那份上，同名蓋過、null 關掉）：ls、get、add、rm、reset。
-# 圖紙：proto8/thinking/2026-11/10/self-family/hook/01-圖紙.md § 4、§ 5。讀清單、驗格一律用 py/hooks.py，這裡只管命令列與寫 stack 那份。
+# 圖紙：proto8/thinking/2026-11/10/self-family/hook/01-圖紙.md § 4、§ 5。讀清單、驗格一律用 py/aos/agentlib/hooks.py，這裡只管命令列與寫 stack 那份。
 import json
 import os
-import aos_flags
-import hooks
+from aos import flags as aos_flags
+from aos.agentlib import hooks
 from . import PROG
 from .common import Fail, actions, bad_args, note, parse, target
 from .decl import agent_decl, warn_shared

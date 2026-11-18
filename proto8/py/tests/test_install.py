@@ -1,4 +1,4 @@
-"""test_install - proto8/install.py in a throwaway home with a fake make: fills bin/, lib/ (py/ copy + C++ libraries) and include/, a rerun gives the same result, missing make is one error line."""
+"""test_install - proto8/install.py in a throwaway home with a fake make: fills bin/, lib/ (py/ copy + C++ libraries) and include/, a rerun gives the same result, missing make is one error line, the aos package imports only from lib/."""
 import os
 import shutil
 import subprocess
@@ -16,9 +16,11 @@ if [ -n "$dry" ]; then echo "g++ -O3 -c aos-x/src/a.cpp -o build/obj/aos-x/src/a
 [ -n "$FAKE_MAKE_FAIL" ] && { echo boom; exit 2; }
 mkdir -p "$bindir" "$libdir" && printf '#!/bin/sh\\n' > "$bindir/aos-x" && chmod +x "$bindir/aos-x" && : > "$libdir/libaos-x.a"
 """
-# a small py/: shared modules, one tool with its own tests, the package tests and docs (those two are not installed)
-PY_FILES = ("tool_io.py", "tools/base/t/_entry", "tools/base/t/tests/test_t.py", "packs/p.json", "tests/test_m.py", "docs/d.md")
-LIB_FILES = ["libaos-x.a", "packs/p.json", "tool_io.py", "tools/base/t/_entry"]
+# a small py/: the aos package, one tool with its own tests, the package tests and docs (those two are not installed)
+PY_FILES = ("aos/__init__.py", "aos/tool_io.py", "aos/agentlib/__init__.py", "aos/agentlib/hooks.py", "tools/base/t/_entry",
+            "tools/base/t/tests/test_t.py", "packs/p.json", "tests/test_m.py", "docs/d.md")
+LIB_FILES = ["aos/__init__.py", "aos/agentlib/__init__.py", "aos/agentlib/hooks.py", "aos/tool_io.py", "libaos-x.a", "packs/p.json",
+             "tools/base/t/_entry"]
 
 
 class InstallTest(unittest.TestCase):
@@ -30,7 +32,7 @@ class InstallTest(unittest.TestCase):
         (self.home / "cpp" / "Makefile").write_text("all:\n")
         for name in PY_FILES:
             (self.home / "py" / name).parent.mkdir(parents=True, exist_ok=True)
-            (self.home / "py" / name).write_text("x\n")
+            (self.home / "py" / name).write_text("x = 1\n")
         (self.home / "py" / "tools/base/t/_entry").chmod(0o755)
         shutil.copy(INSTALL, self.home / "install.py")
         self.tools = self.tmp / "tools"
@@ -63,15 +65,27 @@ class InstallTest(unittest.TestCase):
         self.assertTrue(os.access(self.home / "lib" / "tools/base/t/_entry", os.X_OK))
         (self.home / "bin" / "stale").write_text("old\n")          # something a later version no longer builds
         (self.home / "include" / "stale.hpp").write_text("old\n")
-        (self.home / "lib" / "stale.py").write_text("old\n")       # a module py/ no longer has
-        (self.home / "py" / "tool_io.py").write_text("new\n")      # a change in py/ shows up only after the next install
-        self.assertEqual((self.home / "lib" / "tool_io.py").read_text(), "x\n")
+        (self.home / "lib" / "aos" / "stale.py").write_text("old\n")   # a module py/ no longer has
+        (self.home / "py" / "aos" / "tool_io.py").write_text("x = 2\n")  # a change in py/ shows up only after the next install
+        self.assertEqual((self.home / "lib" / "aos" / "tool_io.py").read_text(), "x = 1\n")
         r = self.run_install()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(sorted(p.name for p in (self.home / "bin").iterdir()), ["aos-x"])
         self.assertFalse((self.home / "include" / "stale.hpp").exists())
         self.assertEqual(self.lib_files(), LIB_FILES)
-        self.assertEqual((self.home / "lib" / "tool_io.py").read_text(), "new\n")
+        self.assertEqual((self.home / "lib" / "aos" / "tool_io.py").read_text(), "x = 2\n")
+
+    def test_aos_package_only_from_lib(self):
+        """S4: the shared modules are one package aos (py/aos, installed as lib/aos); it imports with lib/ on the path, and
+        outside the home nothing else puts an aos on the path (no .pth, no site-packages)."""
+        self.assertEqual(self.run_install().returncode, 0)
+        env = {"PATH": "/usr/bin:/bin", "HOME": str(self.tmp), "PYTHONNOUSERSITE": "1"}
+        code = "import aos.tool_io, aos.agentlib.hooks; print(aos.tool_io.__file__)"
+        r = subprocess.run([sys.executable, "-c", code], cwd=self.home / "lib", env=env, capture_output=True, text=True, timeout=30)
+        self.assertEqual((r.returncode, r.stdout), (0, "%s\n" % (self.home / "lib" / "aos" / "tool_io.py")), r.stderr)
+        r = subprocess.run([sys.executable, "-c", "import aos"], cwd=self.tmp, env=env, capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("ModuleNotFoundError: No module named 'aos'", r.stderr)
 
     def lib_files(self):
         lib = self.home / "lib"
@@ -81,7 +95,7 @@ class InstallTest(unittest.TestCase):
         shutil.rmtree(self.home / "py")
         r = self.run_install()
         self.assertEqual(r.returncode, 1)
-        self.assertIn("install.py: error: SourceMissing %s not found" % (self.home / "py" / "tool_io.py"), r.stderr)
+        self.assertIn("install.py: error: SourceMissing %s not found" % (self.home / "py" / "aos" / "__init__.py"), r.stderr)
         self.assertFalse((self.home / "lib").exists())
 
     def test_missing_make(self):

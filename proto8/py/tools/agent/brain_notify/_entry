@@ -6,8 +6,8 @@
 # AOS_NOTIFY_BOX 沒設＝warning、不寄；所有錯誤都只印一行英文 warning、退 0，不能讓 agent 因通知失敗而停下。
 import datetime, json, os, subprocess, sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))   # py/（或裝好的 lib/）：tool_io.py
-import tool_io  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))   # 放 aos 套件的那層：py/（或裝好的 lib/）
+from aos import tool_io  # noqa: E402
 
 NAME = "brain_notify"
 HELP = """usage: brain_notify < EVENT.json   (a brain_failed hook handler; $AOS_STACK = this hook's own cell)

@@ -1,6 +1,6 @@
 # aos_eca/handoff.py - 一批信交給 CLI 的前後（一般一輪與 slash 交給 claude 的那幾條共用）：交出去那刻收信、交出去後失敗記冷卻、成功收尾。
-import aos_flags
-import aos_ws
+from aos import flags as aos_flags
+from aos import ws as aos_ws
 
 from .common import NAME, Fail, cli_ask, cooldown, letters_drop, letters_take, must_post, quiet
 from . import retry

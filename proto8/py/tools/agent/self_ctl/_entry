@@ -18,20 +18,20 @@ Result on stdout. On error: one line "self_ctl: error: CODE reason" on stderr an
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-# 只找自己的工具夾、realpath 祖先裡有 tool_io.py 的那層（py/ 或裝好的 lib/；含 cmd_call），再交給標準 Python 路徑。
+# 只找自己的工具夾、realpath 祖先裡有 aos 套件（aos/__init__.py）的那層（py/ 或裝好的 lib/），再交給標準 Python 路徑。
 _lib = os.path.dirname(HERE)
 while _lib != os.path.dirname(_lib):
-    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+    if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")):
         break
     _lib = os.path.dirname(_lib)
-sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")) else [])
 try:
-    import tool_io  # noqa: E402
-    import cmd_call  # noqa: E402
+    from aos import tool_io  # noqa: E402
+    from aos.agentlib import cmd_call  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
-    if error.name not in ("tool_io", "cmd_call", "process_group"):
+    if error.name not in ("aos", "aos.agentlib"):
         raise
-    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % (os.path.basename(HERE), error.name)
+    _line = "%s: error: ModuleMissing %s not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % (os.path.basename(HERE), error.name)
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)

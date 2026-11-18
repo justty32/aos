@@ -48,16 +48,17 @@ class ShellReportTest(unittest.TestCase):
         write(definition / 'cfg/tools.json', {'tools': tools})
         return definition
 
-    def test_import_with_no_agent_package(self):
+    def test_import_with_no_agentlib(self):
         isolated = self.root / 'lib'
-        isolated.mkdir()
+        (isolated / 'aos').mkdir(parents=True)
         lib = HERE.parents[2]
-        (isolated / 'declared_files.py').write_bytes((lib / 'declared_files.py').read_bytes())
+        for name in ('__init__.py', 'declared_files.py'):
+            (isolated / 'aos' / name).write_bytes((lib / 'aos' / name).read_bytes())
         code = ("import importlib.util, sys; sys.dont_write_bytecode = True; sys.path.insert(0, %r); "
-                "assert importlib.util.find_spec('agent') is None; "
+                "assert importlib.util.find_spec('aos.agentlib') is None; "
                 "spec = importlib.util.spec_from_file_location('report', %r); "
                 "module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module); "
-                "assert module.declared_files(%r) == {}; assert 'agent' not in sys.modules"
+                "assert module.declared_files(%r) == {}; assert 'aos.agentlib' not in sys.modules"
                 % (str(isolated), str(HERE / 'report.py'), str(self.root)))
         env = {key: value for key, value in os.environ.items() if key != 'PYTHONPATH'}
         result = subprocess.run([sys.executable, '-I', '-S', '-c', code], cwd=self.root,

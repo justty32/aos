@@ -14,7 +14,7 @@ import os
 def _place(p):
     """錯誤訊息裡程式自己算的路徑走 tool_io.place（11-12 線 errpath；fork 工具跑時已載入）；單獨 import 這支（測試）沒有 tool_io＝照原樣。"""
     try:
-        import tool_io
+        from aos import tool_io
     except ImportError:
         return p
     return tool_io.place(p)

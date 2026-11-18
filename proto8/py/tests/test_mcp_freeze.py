@@ -1,12 +1,12 @@
-"""Test py/mcp_freeze.py: registry names, $ref expansion and $-key removal, description truncation, _metainfo hints, and diff lines."""
+"""Test py/aos/mcp_freeze.py: registry names, $ref expansion and $-key removal, description truncation, _metainfo hints, and diff lines."""
 import sys
 import unittest
 from pathlib import Path
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import mcp_freeze as mf  # noqa: E402
-from tool_io import Error  # noqa: E402
+from aos import mcp_freeze as mf  # noqa: E402
+from aos.tool_io import Error  # noqa: E402
 
 # Copy of the fake stdio server's tool list (fake_mcp_stdio.py), kept here so the two steps do not wait on each other.
 OBJ = {"type": "object", "properties": {}}

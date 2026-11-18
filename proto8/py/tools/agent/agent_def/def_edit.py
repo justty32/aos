@@ -2,19 +2,14 @@
 
 使用者 11-12「Q09:b-都做，除了移除子(兩者不要耦合)」（Q09＝thinking 2026-11/10/agents-split「之後可加」的細的定義動作）。
 args 的形狀照 self_tools／self_llm／self_system（同一份參數，目標換成定義）；定義沒有「疊在上面的那份」，所以沒有 reset、llm／system 沒有 long。
-宣告的檔位置照 aos-agent（interfaces.json 的 aos-agent.tools／llm／system，py/agent_files.py）。
+宣告的檔位置照 aos-agent（interfaces.json 的 aos-agent.tools／llm／system，py/aos/agentlib/agent_files.py）。
 相對路徑（add 的 path、env_file）從 $AOS_WS 算：下層都在工作區跑。下層 stderr 原樣透出，它退非 0＝最後一行錯誤行接成自己的（C-52 例外 ⑤，同 agent_def check）。
 """
 import json, os
 
-import tool_io
+from aos import tool_io
 
-try:
-    from agent_files import declared_files
-except ModuleNotFoundError as error:
-    if error.name != "agent_files":
-        raise
-    from agent_files import declared_files
+from aos.agentlib.agent_files import declared_files
 
 die = tool_io.die
 ARGS = {"tools": {"ls": ("long",), "get": ("name",), "add": ("path", "path_json", "name", "replace", "envs", "env_file", "no_cache"),

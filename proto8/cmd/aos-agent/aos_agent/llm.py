@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 import sys
-import aos_flags
+from aos import flags as aos_flags
 from . import PROG
 from .common import Fail, actions, bad_args, note, parse, target
 from .decl import agent_decl, warn_shared

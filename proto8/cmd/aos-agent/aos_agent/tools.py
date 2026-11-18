@@ -3,8 +3,8 @@ import json
 import os
 import subprocess
 import sys
-import aos_flags
-import directive_value
+from aos import flags as aos_flags
+from aos import directive_value
 from . import declared_files
 from . import PROG
 from .common import Fail, TOOLS, actions, bad_args, note, parse, target

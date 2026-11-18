@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import tool_io
+from aos import tool_io
 
 P_IN = {"type": "object", "properties": {"a": {"type": "number"}}}
 P_OUT = {"type": "object", "properties": {"b": {"type": "number"}}}
