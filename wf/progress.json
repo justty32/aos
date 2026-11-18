@@ -302,11 +302,11 @@
       "since": "2026-11-18"
     },
     "default-stack": {
-      "title": "預設 stack：走丁（agent 的 stack 放路標）＋乙，之後再做",
-      "status": "open",
+      "title": "預設 stack：暫定丁（路標）＋乙、可能改戊（往上層找），先留著",
+      "status": "暫停",
       "flow": "",
-      "what": "使用者 11-18 晚裁：走丁（agent 的 stack 裡加一個路標，表示在哪個 daemon 底下）、路標由 daemon 寫（不是 ctl add）、丁順便帶乙（改錯誤訊息）；之後再做，尚未派線。丁要改 N-63 一列、為 AOS_AGENT 開退路，daemon 寫路標要改 C++ daemon",
-      "next": "使用者說開工時派線",
+      "what": "使用者 11-18 晚裁：暫定走丁（agent 的 stack 裡加路標，表示在哪個 daemon 底下）、路標由 daemon 寫、丁順便帶乙（改錯誤訊息）；之後再做、尚未派線。他又補：「不過老實說，stack這塊說不定我之後會改主意，改成往上層資料夾找，先留着。」→ 可能改成戊，先留著。丁要改 N-63 一列、為 AOS_AGENT 開退路，daemon 寫路標要改 C++ daemon",
+      "next": "等使用者定丁還是戊，再派線",
       "see": [
         "[04-使用者裁定](../proto8/thinking/2026-11/18/default-stack-1118/04-使用者裁定.md)",
         "[調查入口](../proto8/thinking/2026-11/18/default-stack-1118/README.md)"
