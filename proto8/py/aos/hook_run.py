@@ -114,7 +114,7 @@ def target(entry, name=None):
     交給 aos-directive --at，#./、#../ 從那一格算（11-13 線址二）；沒給＝照舊包成 {"v": …}（不知道位置）。"""
     t = entry["handler"]
     if isinstance(t, dict):
-        try:                                     # #/… ＝ 這格所在的那份清單；aos-directive 自己的錯誤行吞掉（stderr 丟 DEVNULL；原因由 directive_value 的字樣說）
+        try:                                     # #/… ＝ 這格所在的那份清單；aos-directive 自己的錯誤行吞掉（stderr 丟 DEVNULL；原因由 directive_value 的字樣說，退非 0 那句去掉指向 stderr 的括號）
             if name is None:
                 got = directive_value.resolve({"v": t}, entry["base"], entry["from"], stderr=subprocess.DEVNULL)
                 t = got.get("v") if isinstance(got, dict) else None
@@ -122,7 +122,8 @@ def target(entry, name=None):
                 t = directive_value.resolve(t, entry["base"], entry["from"],
                                             stderr=subprocess.DEVNULL, at=directive_value.pointer("hooks", name, "handler"))
         except directive_value.Error as e:
-            raise OSError("cannot resolve handler directive: %s" % e) from None
+            why = "aos-directive exited %d" % e.returncode if e.returncode is not None else e   # 它的錯誤行已吞，不寫「error line is above」
+            raise OSError("cannot resolve handler directive: %s" % why) from None
         if not isinstance(t, str) or not t:
             raise OSError("handler directive did not resolve to a non-empty path")
     return t if os.path.isabs(t) else os.path.join(entry["base"], t)

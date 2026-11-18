@@ -261,7 +261,7 @@ class TargetAt(unittest.TestCase):
         """沒給名字＝照舊包成 {"v": …}：#./path 從根算，根沒有 path＝解不開。"""
         with self.assertRaises(OSError) as cm:
             hook_run.target(self.entry("a"))
-        self.assertRegex(str(cm.exception), r"^cannot resolve handler directive: aos-directive exited \d+ \(its error line is above\)$")
+        self.assertRegex(str(cm.exception), r"^cannot resolve handler directive: aos-directive exited \d+$")
 
     def test_directive_error_line_is_swallowed(self):
         """aos-directive 自己的錯誤行不照轉到 stderr（11-18 使用者「改回去」）；原因仍由 OSError 帶。"""
@@ -287,7 +287,7 @@ class TargetAt(unittest.TestCase):
             json.dump(self.doc, f)
         with self.assertRaises(OSError) as cm:
             hook_run.target(self.entry("c"), "c")
-        self.assertRegex(str(cm.exception), r"^cannot resolve handler directive: aos-directive exited \d+ \(its error line is above\)$")
+        self.assertRegex(str(cm.exception), r"^cannot resolve handler directive: aos-directive exited \d+$")
         with self.assertRaises(OSError) as cm:
             hook_run.target(self.entry("d"), "d")
         self.assertEqual(str(cm.exception), "handler directive did not resolve to a non-empty path")
