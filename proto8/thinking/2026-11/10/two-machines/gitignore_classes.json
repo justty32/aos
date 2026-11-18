@@ -1211,6 +1211,16 @@
    "why": "11-15 reply-match-1114：交給腦還沒答的信名（pending）與丟掉的信（dropped，最多 50 筆）；跟 history 的 aos.letter／answer_to 一起讓 aos-agent ask／listen 配到是回哪封信，同 G066 在途信名帶走。寫入暫存檔是點開頭的 .letters.json.<pid>.tmp（**/.* 擋）。",
    "seen": [],
    "ignored_now": "對：tracked（stack.gitignore 沒擋 letters.json）"
+  },
+  {
+   "id": "G102",
+   "pattern": "stacks/**/stop_cause.json",
+   "writer": "proto8/cpp/aos-daemon（送 SIGTERM 前寫）；proto8/cpp/aos-loop/include/aos/loop.hpp StopCauseWindow",
+   "class": "runtime",
+   "in_git": "不進",
+   "why": "停止原因含 pid、boot_id 與這台的時刻，只對當下這台有意義；11-18 使用者裁不進 git。",
+   "seen": [],
+   "ignored_now": "對：ignored（stack.gitignore **/stop_cause.json）"
   }
  ]
 }

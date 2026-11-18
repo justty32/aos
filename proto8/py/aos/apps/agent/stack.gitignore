@@ -76,6 +76,8 @@
 **/stderr_archives/
 **/sweeper_report.json
 **/.sweeper.lock
+# daemon 送 SIGTERM 前寫的停止原因（pid、boot_id、時刻只對當下這台有意義；11-18 使用者裁：不進 git）
+**/stop_cause.json
 
 # Public observation ledgers and retained child ledgers
 **/observed.jsonl

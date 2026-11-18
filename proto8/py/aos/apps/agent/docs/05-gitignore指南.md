@@ -19,7 +19,7 @@
 | 留本機 `local` | `.session_home` | 辨認這台的對話環境；換台不應沿用舊值 |
 | 擋執行期檔 `runtime` | 鎖、socket、`cooldown.json`、`think/wait_warned.txt`、hook 的小格 `hooks/`、`hook_tools_seen.json`、ctl 呼叫者的回信箱 | 舊行程、舊等待者或這台牆上時間才有意義；帶過去無助於接續 |
 | 擋可重建檔與暫存 `runtime`／`temp` | `think/request.json`、`think/sent.json`、`think/brain_wait.json`、stack 的 `endpoints.json` 觀測窗、MCP 設定、可執行檔工具的定義快取 `tooldef_cache.json`、`tmp/` 半封信、點開頭的原子寫入暫存、Python 快取 | 由仍保留的進度、設定或下一次操作重建；半封信尚未完成投遞 |
-| 擋觀測與留證 `runtime` | `stderr.txt`、`stderr_archives/`、`sweeper_report.json`、`observed/`、`live.jsonl`、`turns.jsonl`、計數器、`*.bad-*` | 只留原機供人查看，避免每次存進一批無助接續的紀錄 |
+| 擋觀測與留證 `runtime` | `stderr.txt`、`stderr_archives/`、`sweeper_report.json`、`stop_cause.json`、`observed/`、`live.jsonl`、`turns.jsonl`、計數器、`*.bad-*` | 只留原機供人查看，避免每次存進一批無助接續的紀錄 |
 
 不擋這些本機檔，常見結果是多出 log 與暫存的 diff、把舊絕對路徑帶到新機，或錯帶 `.session_home`。反過來，擋掉 history、在途信、pending 或帳本，會讓搬過去的進度不完整。`.gitignore` 不檢查檔案內容：定義、history、工具輸出、信與帳本裡若含金鑰或本機絕對路徑，仍可能被 commit；請把本機值與金鑰留在你自己選定的外部設定或環境變數。
 
@@ -89,6 +89,7 @@ cp "$P/lib/aos/apps/agent/stack.gitignore" "$STACK/.gitignore"
 **/*.bad-*
 **/stderr_archives/
 **/sweeper_report.json
+**/stop_cause.json
 **/observed.jsonl
 **/observed/
 ```
