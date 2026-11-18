@@ -245,15 +245,6 @@
       ],
       "since": "2026-11-18"
     },
-    "impls-old-builds": {
-      "title": "刪 `proto8/impls` 舊編譯產物（等家機重建後）",
-      "status": "暫停",
-      "flow": "",
-      "what": "使用者 11-18 晚裁「刪掉」。`proto8/impls/`（11-17 改名 `cpp/` 後留下的舊編譯產物，未追蹤、不在 git）頂層判斷家機活樹還沒重建、可能還在用（舊 `cmd/install.sh` 的連結指進 `impls/`），先不刪；等家機 `~/aos-home` 重建（rebuild-aos-home）後再刪",
-      "next": "家機重建完再刪",
-      "see": [],
-      "since": "2026-11-18"
-    },
     "default-stack": {
       "title": "預設 stack：暫定丁（路標）＋乙、可能改戊（往上層找），先留著",
       "status": "暫停",
