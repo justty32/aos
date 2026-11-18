@@ -1,0 +1,9 @@
+{
+ "summary": "Run the pi coding agent as an aos agent: one pi --mode json run per queue batch, answers appended to history.",
+ "cost": {
+  "time_ms": 60000
+ },
+ "resource": [
+  "llm"
+ ]
+}

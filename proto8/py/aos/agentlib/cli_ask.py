@@ -182,6 +182,9 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, re
                 prompt = reseed(limit) + prompt
             if cfg["kind"] == "claude":
                 text = print_claude(cfg, cell, ws, stack, prompt, handed, sid, more)   # live_mail 開了才看 more（wake-1114）
+            elif cfg["kind"] == "pi":                     # 11-18 eca-pi 甲案：一問一答，沒有畫面、沒有中途收信
+                from aos.agentlib.cli_pi import print_pi
+                text = print_pi(cfg, cell, ws, stack, prompt, handed, sid)
             else:
                 text = print_codex(cfg, cell, ws, stack, prompt, handed, sid)
         link_transcript(cell, cfg["kind"])               # 工具形也留（方向題 3）

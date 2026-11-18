@@ -92,7 +92,7 @@ def goal_prompt(stack):
 def transcript_now(cfg, cell):
     """(session id, 對話檔, 大小)：交出去之前記下，答完再比（⑬ 進展）。"""
     sid = cell.read("session.txt")
-    found = cli_cell.transcripts(cfg["kind"], sid)
+    found = cli_cell.transcripts(cfg["kind"], sid, cell.path)
     return sid, (found[0] if found else None), goal_state.size(found[0] if found else None)
 
 
@@ -100,7 +100,7 @@ def note_progress(cfg, cell, stack, before):
     """⑬ 這輪 CLI 叫了 goal 以外的工具＝goal 計數歸零。同一段對話只看新長出來的那段。"""
     sid, file, size = before
     now = cell.read("session.txt")
-    found = cli_cell.transcripts(cfg["kind"], now)
+    found = cli_cell.transcripts(cfg["kind"], now, cell.path)
     if not found:
         return
     if goal_state.transcript_calls(found[0], size if now == sid and found[0] == file else 0):

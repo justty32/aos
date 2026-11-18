@@ -24,6 +24,8 @@ from .screen_slash import SCREEN_ONLY, input_clear, screen_slash, typed_warning
 # /goal（11-12 晚，使用者「eca還有一個slash command我很常用：/goal」「包括/goal clear」）只有它放寬成「以 /goal 開頭」（後面帶目標或 clear 等）；
 # 實測 claude -p 認 /goal（`/goal 條件`＝設了就照跑一輪、`/goal clear`、`/goal` 查看；目標只活在那一次 claude -p 裡，下一次查看＝No goal set），
 # codex exec 不認（當成題目），codex 畫面認 `/goal [<objective>|clear|edit|pause|resume]`。
+# pi（11-18 eca-pi，實測 1.5.2）：pi --mode json 一個都不認（當成題目）。/compact＝起一次 pi --mode rpc 送 compact（cli_pi.compact）、
+# history 換成它的摘要；/clear 同 codex（刪 session.txt、清 history）；/goal、/usage 回一句不支援；沒有畫面。
 
 SLASH = ("/clear", "/compact", "/status", "/usage", "/exit")
 GOAL = "/goal"
@@ -132,7 +134,7 @@ def model_of(cfg):
 
 def slash_status(cfg, cell, stack):
     sid = cell.read("session.txt")
-    found = cli_cell.transcripts(cfg["kind"], sid)
+    found = cli_cell.transcripts(cfg["kind"], sid, cell.path)
     goal = cli_goal(cfg["kind"], found[0]) if found else None
     return note("/status: %s, model %s; conversation %s; screen %s; history %d messages; transcript %s%s" % (
         cfg["kind"], model_of(cfg), sid or "(none yet: the next message starts one)",
@@ -142,6 +144,8 @@ def slash_status(cfg, cell, stack):
 
 def slash_usage(cfg, ws):
     """claude：另起一次 claude -p（不存對話、不碰這隻的 session）問 /usage，原樣回它的字；codex exec 沒有對應的。"""
+    if cfg["kind"] == "pi":
+        return note("/usage: pi has no usage report aos can ask for; each answer's token counts are in the cell's live.jsonl (message_end usage)")
     if cfg["kind"] != "claude":
         return note("/usage: codex has no usage report outside its own screen; open the screen (aos-agent open) and type /usage there")
     milliseconds = cli_base.turn_timeout_ms(cfg)                 # 11-15 timeout-1115：沒寫／0＝不限時
@@ -214,6 +218,21 @@ def on_screen(command, cfg, cell, stack, typed=None):
     return note("%s: typed into the open screen; %s; conversation %s" % (command, done, cell.read("session.txt")))
 
 
+def pi_compact(cfg, cell, ws, stack, typed):
+    """pi 身沒畫面時的 /compact（帶指示＝customInstructions）：成功＝history 換成 pi 的摘要一則（原文搬到 history_removed.jsonl，同 claude）；
+    失敗（例 pi 說對話太短沒得壓）＝history 不動，回它的原因。"""
+    from aos.agentlib import cli_pi
+    ok, got = cli_pi.compact(cfg, cell, ws, stack, typed[len(COMPACT):].strip() or None)
+    if not ok:
+        return note("/compact: %s; history left as it is" % got)
+    try:
+        moved = cli_hook.replace_history(cell, "compact", got, stack)
+    except OSError as e:
+        raise Fail("WriteFailed", "cannot rewrite history.jsonl: %s" % e)
+    return note("/compact: pi compacted conversation %s (same id); history replaced by its summary (%d messages moved to history_removed.jsonl)"
+                % (cell.read("session.txt"), moved))
+
+
 def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_busy):
     """⑭ 做這個指令、照一般一輪記 history（user 那封＋一則回答；/clear、/compact 先改 history 再記），信收掉、after_queue 照跑。
     沒畫面、交給 claude -p 的 /goal、/compact 整段照一般一輪（Handoff：交出去那刻收信、失敗記冷卻與 brain_failed、成功冷卻歸零；11-12 晚）。
@@ -237,6 +256,8 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
             if got is None:
                 return 0                                            # SessionBad：同一般一輪，信留 cur/
             text = got.strip() or note("/goal: claude printed nothing")
+        elif kind == "pi":
+            text = note("/goal: pi has no /goal (it would read it as a plain question); nothing was sent")
         else:
             text = note("/goal: codex has /goal only on its screen (codex exec would read it as a plain question); "
                         "open the screen (aos-agent open) and send it again")
@@ -288,6 +309,8 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
                 else:
                     cli_cell.close(cell)
                     text = note("/exit: closed the screen; the conversation stays and the next message goes on without a screen")
+            elif command == "/compact" and kind == "pi":            # 11-18 eca-pi：json 模式不認，起一次 pi --mode rpc 送 compact
+                text = pi_compact(cfg, cell, ws, stack, bodies[0]["content"].strip())
             elif command == "/compact":                             # codex exec 不認 /compact：換新 thread、帶 aos 的紀錄過去（同 ⑧）
                 cli_cell.drop_session(cell)
                 text = note("/compact: codex cannot compact outside its screen; the next message starts a new codex thread "

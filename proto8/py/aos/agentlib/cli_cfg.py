@@ -10,10 +10,14 @@ from aos.agentlib.cli_mcp import external_servers
 # aos 每次起 CLI 自己會加、cli.json 的 flags／print_flags 不准再寫的旗標（寫了＝CfgBad：在認領信之前就停，信留在 queue、不進冷卻）。
 # codex exec 的這幾個不准重複（寫第二次 codex 退 2：cannot be used multiple times）；claude 的是輸出格式與接哪段對話，重寫會解不開輸出或接錯對話。
 # 有宣告才加的（--mcp-config、--allowedTools、--append-system-prompt-file、--agents、codex 的 -c …）可重複，不擋。
+# pi（11-18 eca-pi 甲案）：aos 自己帶 --mode json、--session-dir（小格的 pi-sessions/）、--session-id、--no-approve，接哪段對話與信不信任工作區的旗標也都歸 aos。
 # claude 的 --settings 不能重複（11-13 實測：命令列上兩個 --settings 只有最後一個算數，前一個整個不見、沒有提醒；aos 自己那個接在後面），
 # 所以也擋；要帶 CLI 自己的設定（hooks、permissions…）寫 cli.json 的 settings 鍵，aos 併進它那一個（cli_settings、cli_mcp.settings_argv）。
 AOS_FLAGS = {"codex": ("--skip-git-repo-check", "--json", "-o", "--output-last-message"),
-             "claude": ("-p", "--print", "--output-format", "--session-id", "--resume", "-r", "--continue", "-c", "--settings")}
+             "claude": ("-p", "--print", "--output-format", "--session-id", "--resume", "-r", "--continue", "-c", "--settings"),
+             "pi": ("--mode", "-p", "--print", "--session", "--session-id", "--session-dir", "--no-session", "--fork",
+                    "--continue", "-c", "--resume", "-r", "--approve", "-a", "--no-approve", "-na")}
+KINDS = tuple(AOS_FLAGS)
 
 
 def reserved_flags(kind, flags):
@@ -31,8 +35,10 @@ def load_cfg(tool_dir):
         cli_base.die("CfgMissing", path)
     except (OSError, ValueError) as e:
         cli_base.die("CfgBad", "%s: %s" % (tool_io.place(path), tool_io.os_reason(e)))
-    if not isinstance(cfg, dict) or cfg.get("kind") not in ("claude", "codex"):
-        cli_base.die("CfgBad", "%s: kind must be claude or codex" % path)
+    if not isinstance(cfg, dict) or cfg.get("kind") not in KINDS:
+        cli_base.die("CfgBad", "%s: kind must be claude, codex or pi" % path)
+    if cfg["kind"] == "pi" and "mcp_servers" in cfg:                # 外部 MCP 還沒接 pi（只接 aos 那台）
+        cli_base.die("CfgBad", "%s: mcp_servers is not supported for kind pi yet" % path)
     for k in ("flags", "print_flags", "tools_flags"):
         if not isinstance(cfg.get(k, []), list) or not all(isinstance(a, str) for a in cfg.get(k, [])):
             cli_base.die("CfgBad", "%s: %s must be an array of strings" % (path, k))
@@ -148,7 +154,8 @@ def system_argv(cfg):
     """把生效的 system 文字附加給 CLI（不用整份取代的 --system-prompt）：
     claude＝--append-system-prompt-file 檔；宣告了就一律加 --system-prompt-snapshot off（claude 預設把第一輪的 system 記下來、--resume 時照舊送，
     off 才會每輪重讀，改了、reset 了下一輪都跟著變；代價是 claude 自己的動態段落〔日期等〕變了也會讓快取失效）。
-    codex＝-c developer_instructions=文字（附加成 developer 訊息；值照 TOML 寫，JSON 字串是合法的 TOML 字串）。沒宣告＝[]。"""
+    codex＝-c developer_instructions=文字（附加成 developer 訊息；值照 TOML 寫，JSON 字串是合法的 TOML 字串）。
+    pi＝--append-system-prompt 檔（pi 一輪一個行程，每輪重讀）。沒宣告＝[]。"""
     sysd = cfg.get("system")
     if sysd is None:
         return []
@@ -157,6 +164,8 @@ def system_argv(cfg):
         return ["--system-prompt-snapshot", "off"] + (["--append-system-prompt-file", path] if path else [])
     if not path:
         return []
+    if cfg["kind"] == "pi":
+        return ["--append-system-prompt", path]
     try:
         with open(path, encoding="utf-8") as f:
             text = f.read()

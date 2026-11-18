@@ -1,4 +1,4 @@
-# cli_mcp.py - cli_session 接 MCP：aos-mcp 那台的旗標（claude 的 mcp.json／codex 的 -c）、外部 MCP server、tools_sub 子 agent 那台與 guard hook
+# cli_mcp.py - cli_session 接 MCP：aos-mcp 那台的旗標（claude 的 mcp.json／codex 的 -c；pi 用同一份參數，見 cli_pi）、外部 MCP server、tools_sub 子 agent 那台與 guard hook
 import json, os, shlex, shutil, sys
 
 from aos.agentlib import cli_base
@@ -245,17 +245,23 @@ def guard_main():
                                                  "permissionDecisionReason": GUARD_REASON}}))
 
 
-def _aos_server(cfg, ws, stack, reg):
-    """aos 自己那台：codex＝-c 旗標的串列；claude＝mcp.json 裡 aos 那格（{"aos": …}）。"""
+def _aos_server_args(cfg, ws, stack, reg=None):
+    """aos-mcp 那台的參數（三身共用；pi 身的外掛也用，cli_pi.extension_argv）。登記檔不在、aos-mcp 不在 PATH＝die。"""
+    reg = reg or cfg["registry"]
     if cfg.get("own_registry"):                       # aos-mcp 自己挑：--own 那份在就用它，不在（reset 刪了）＝回定義那份
         reg = cfg["def_registry"]
     if not os.path.isfile(reg):                       # load_cfg 之後才被刪掉
         cli_base.die("ToolsMissing", "registry file not found: %s" % reg)
     if shutil.which("aos-mcp") is None:
         cli_base.die("CliMissing", "aos-mcp is not on PATH (tools are attached; add proto8/bin to PATH)")
-    args = ["--ws", ws, "--stack", stack] + (["--hooks", cfg["hooks_def"]] if cfg.get("hooks_def") else []) \
+    return ["--ws", ws, "--stack", stack] + (["--hooks", cfg["hooks_def"]] if cfg.get("hooks_def") else []) \
         + (["--own", os.path.abspath(cfg["own_registry"])] if cfg.get("own_registry") else []) \
         + cfg.get("tools_flags", []) + [reg]
+
+
+def _aos_server(cfg, ws, stack, reg):
+    """aos 自己那台：codex＝-c 旗標的串列；claude＝mcp.json 裡 aos 那格（{"aos": …}）。"""
+    args = _aos_server_args(cfg, ws, stack, reg)
     if cfg["kind"] == "codex":                           # JSON 字串與字串陣列同時是合法的 TOML（-c 的值照 TOML 解）
         return ["-c", "mcp_servers.aos.command=" + json.dumps("aos-mcp"), "-c", "mcp_servers.aos.args=" + json.dumps(args),
                 "-c", "mcp_servers.aos.env=" + _server_mod().toml_table(mcp_env(ws, stack)),

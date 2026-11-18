@@ -45,6 +45,9 @@ def start(cfg, cell, ws, stack):
 
 
 def _start(cfg, cell, ws, stack):
+    if cfg["kind"] == "pi":                              # 11-18 eca-pi：pi 身先只做一問一答（甲案），畫面那條還沒接
+        cli_base.die("ScreenBad", "kind pi has no screen yet: aos only runs pi --mode json (one answer per message); "
+                                  "to look at its conversation read the cell's pi-sessions/ or live.jsonl")
     sid = cell.read("session.txt")
     if sid and not session_here(cfg, cell, ws, sid):     # 不是這台的（換台、搬位置、換帳號資料夾）：清掉、開新的（05）
         drop_session(cell)

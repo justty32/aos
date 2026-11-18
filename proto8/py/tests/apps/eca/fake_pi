@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+# fake_pi - stand-in for the pi coding agent CLI in aos-eca tests: --mode json / --mode rpc compact, sessions as files, never calls a model
+"""Usage: fake_pi --mode json --session-dir DIR --session-id ID [flags] < prompt
+       fake_pi --mode rpc --session-dir DIR --session-id ID [flags]   (stdin: one {"type": "compact"} line)
+       fake_pi --version
+
+Shapes follow pi 1.5.2 as measured on 11-18: the session file is DIR/<time>_<ID>.jsonl; json mode prints a session line,
+agent_start, message_end (user), message_end (assistant, usage), agent_end, agent_settled; the prompt is stdin.
+A second run with the same ID appends to the same file (continues). The answer is "FAKE PI: <prompt>" (turn N in the file).
+FAKE_CLI_FAIL=1: the assistant message ends with stopReason "error" and errorMessage "connect timeout", exit 0 (pi does that).
+FAKE_CLI_FAIL_SAVED=1 (with FAKE_CLI_FAIL=1): the session file is still created.
+FAKE_CLI_EXIT=N: print nothing on stdout, one stderr line, exit N.
+FAKE_CLI_COMPACT_FAIL=1: rpc compact answers success false, "Nothing to compact (session too small)".
+FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": "..."} as one JSON line per call."""
+import json, os, sys, time
+
+argv = sys.argv[1:]
+if "--version" in argv:
+    print("1.5.2")
+    sys.exit(0)
+if "--help" in argv or "-h" in argv:
+    print(__doc__)
+    sys.exit(0)
+VALUED = {"--mode", "--session-dir", "--session-id", "--model", "-e", "--append-system-prompt", "--provider"}
+opts, it = {}, iter(argv)
+for a in it:
+    if a in VALUED:
+        opts.setdefault(a, []).append(next(it, ""))
+    else:
+        opts[a] = [True]
+
+
+def one(k):
+    return (opts.get(k) or [None])[-1]
+
+
+mode, sdir, sid = one("--mode"), one("--session-dir"), one("--session-id")
+if mode not in ("json", "rpc") or not sdir or not sid:
+    sys.stderr.write("fake_pi: needs --mode json|rpc --session-dir DIR --session-id ID\n")
+    sys.exit(2)
+log = os.environ.get("FAKE_CLI_LOG")
+if os.environ.get("FAKE_CLI_EXIT"):
+    if log:
+        with open(log, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"argv": sys.argv, "stdin": ""}, ensure_ascii=False) + "\n")
+    sys.stderr.write("fake_pi: failing on purpose\n")
+    sys.exit(int(os.environ["FAKE_CLI_EXIT"]))
+os.makedirs(sdir, exist_ok=True)
+found = [n for n in os.listdir(sdir) if n.endswith("_%s.jsonl" % sid)]
+path = os.path.join(sdir, found[0] if found else "2026-11-18T00-00-00-000Z_%s.jsonl" % sid)
+
+
+def emit(ev):
+    sys.stdout.write(json.dumps(ev) + "\n")
+    sys.stdout.flush()
+
+
+def entries():
+    if not os.path.exists(path):
+        return []
+    with open(path, encoding="utf-8") as f:
+        return [json.loads(l) for l in f if l.strip()]
+
+
+def save(row):
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(row) + "\n")
+
+
+if mode == "rpc":
+    line = sys.stdin.readline()
+    if log:
+        with open(log, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"argv": sys.argv, "stdin": line}, ensure_ascii=False) + "\n")
+    cmd = json.loads(line)
+    emit({"type": "compaction_start", "reason": "manual"})
+    if os.environ.get("FAKE_CLI_COMPACT_FAIL"):
+        emit({"id": cmd.get("id"), "type": "response", "command": "compact", "success": False,
+              "error": "Nothing to compact (session too small)"})
+    else:
+        summary = "FAKE SUMMARY of %d entries" % len(entries())
+        save({"type": "compaction", "summary": summary})
+        emit({"type": "compaction_end", "reason": "manual", "result": {"summary": summary}, "aborted": False, "willRetry": False})
+        emit({"id": cmd.get("id"), "type": "response", "command": "compact", "success": True,
+              "data": {"summary": summary, "tokensBefore": 1000}})
+    sys.stdin.read()                                    # pi stops when stdin closes
+    sys.exit(0)
+
+prompt = sys.stdin.read()
+if log:
+    with open(log, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"argv": sys.argv, "stdin": prompt}, ensure_ascii=False) + "\n")
+fail = bool(os.environ.get("FAKE_CLI_FAIL"))
+if not found:
+    sys.stderr.write("Warning: No project session found with id '%s'; creating a new session with that id.\n" % sid)
+    if not fail or os.environ.get("FAKE_CLI_FAIL_SAVED"):
+        save({"type": "session", "id": sid, "cwd": os.getcwd()})
+turn = sum(1 for e in entries() if e.get("type") == "message") + 1
+emit({"type": "session", "version": 3, "id": sid, "timestamp": "2026-11-18T00:00:00.000Z", "cwd": os.getcwd()})
+emit({"type": "agent_start"})
+user = {"role": "user", "content": [{"type": "text", "text": prompt}], "timestamp": int(time.time() * 1000)}
+emit({"type": "message_end", "message": user})
+usage = {"input": 1000 + 10 * turn, "output": 7, "cacheRead": 50, "cacheWrite": 0, "totalTokens": 1057 + 10 * turn}
+if fail:
+    msg = {"role": "assistant", "content": [], "usage": usage, "stopReason": "error", "errorMessage": "connect timeout"}
+else:
+    msg = {"role": "assistant", "content": [{"type": "text", "text": "FAKE PI: %s" % prompt}], "usage": usage, "stopReason": "stop"}
+    save({"type": "message", "message": user})
+    save({"type": "message", "message": msg})
+emit({"type": "message_end", "message": msg})
+emit({"type": "agent_end", "messages": [user, msg], "willRetry": False})
+emit({"type": "agent_settled", "aborted": False})

@@ -1,4 +1,4 @@
-# cli_session.py - 把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 aos-agent attach／open 接進或開啟互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字
+# cli_session.py - 把 claude／codex／pi 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 aos-agent attach／open 接進或開啟互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字
 #
 # 一個工具的小格（$AOS_STACK，act 給的是 $AOS_STACK/tools/<工具名>/，11-02 起）裡放：
 #   session.txt   這段對話的 id（claude 的 session id／codex 的 thread id）：claude 新對話在交出去那一刻就寫（id 是我們產的）；
@@ -102,6 +102,13 @@
 # 父死子跟著死（11-10 坑-52，Linux）：非互動起的 CLI 設 PR_SET_PDEATHSIG＝SIGTERM——起它的這支（aos-eca-turn、claude／codex 工具）
 #   被 kill -9／OOM，CLI 收 SIGTERM 收掉，不留孤兒拿著同一段對話跟下一輪的 --resume 撞；非 Linux 或載不到 libc 就不設。畫面（tmux）不在此列。
 #
+# pi 身（11-18 eca-pi 甲案，使用者「1.做成第三種。2.甲。3.先全開。」；本體 cli_pi）：只有非互動那條。每輪 pi --mode json --no-approve
+#   --session-dir <小格>/pi-sessions --session-id <id>，題目從 stdin 進，第一輪 aos 產 id（同 claude，交出去那刻寫 session.txt），之後同一個 id＝續；
+#   回答＝最後一則 assistant 的 message_end（stopReason error／aborted＝CliFailed，pi 這時照樣退 0）；事件接進 live.jsonl。
+#   aos 工具：pi 沒有「這次用這份 MCP 設定」的旗標，aos 每輪在小格寫 pi-aos-mcp.mjs（一行 pi.registerMcpServer("aos", …)）、-e 帶進去。
+#   /compact＝另起一次 pi --mode rpc 送 compact。沒有畫面（範本不宣告 screen＝open 回 ScreenMissing；硬開＝cli_screen 的 ScreenBad）、沒有中途收信、失敗不分暫時或永久（同 codex）。
+#   權限照 pi 原樣全開（pi 不問、沒沙盒）；--no-approve 只擋工作區 .pi/ 的設定與外掛。帳號資料夾＝PI_CODING_AGENT_DIR 或 ~/.pi/agent。
+#
 # 放哪：proto8/py/aos/agentlib/cli_session.py；claude、codex 經 agent_tool.py 的 ask_cli 共用 ask，call_main 只給 aos-eca-turn --one；
 # attach／open 入口由 aos-agent 提供，不由本檔解析；工具資料夾自帶一份覆寫時，
 # 要連同全部 cli_*.py（與 aos/declared_files.py）一起帶（分檔彼此同層 import）。工具資料夾（cli.json 在裡面）由工具入口傳進來，
@@ -110,7 +117,7 @@
 # 分檔（11-12 晚 R3 重構拆檔，行為不變）：本檔只留上面的說明與 hook／guard 的執行入口（hook 指令一直指著本檔，不能搬不能改名），
 #   本體在同層：cli_base（錯誤行、PROG／ECHO、共用常數）、cli_cfg（cli.json、llm、system）、cli_mcp（aos 與外部 MCP、tools_sub、guard）、
 #   cli_cell（小格、畫面 socket、session 記號）、cli_print（非互動）、cli_ask（畫面投信或送字、ask、call_main）、cli_hook（hook、history 同步）、
-#   cli_screen（開畫面、open_cell 叫回畫面）、cli_a2a（claude 畫面的收件 socket、署名信封、回執；11-13 加）。呼叫者直接 import 要用的分檔（例 cli_ask.ask、cli_cell.Cell）；執行期會被換掉或設定的只有
+#   cli_screen（開畫面、open_cell 叫回畫面）、cli_pi（pi 身，11-18）、cli_a2a（claude 畫面的收件 socket、署名信封、回執；11-13 加）。呼叫者直接 import 要用的分檔（例 cli_ask.ask、cli_cell.Cell）；執行期會被換掉或設定的只有
 #   cli_base 的 die、warn、PROG、ECHO——各分檔一律寫 cli_base.die(…)，所以設 cli_base.X 一處就全部生效（agent_tool 設 PROG／ECHO、
 #   aos-eca 換 die；測試 patch 定義那份，例 cli_ask.live、cli_cell.open）。
 import os, sys

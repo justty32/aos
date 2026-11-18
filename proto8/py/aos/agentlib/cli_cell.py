@@ -166,18 +166,27 @@ def close(cell):
     return True
 
 
+PI_SESSIONS = "pi-sessions"                              # pi 身的對話檔放小格的這一夾（--session-dir，11-18 eca-pi）
+
+
 def account_dir(kind):
-    """CLI 的帳號資料夾（對話存在它底下）：claude＝CLAUDE_CONFIG_DIR 或 ~/.claude；codex＝CODEX_HOME 或 ~/.codex。"""
+    """CLI 的帳號資料夾：claude＝CLAUDE_CONFIG_DIR 或 ~/.claude；codex＝CODEX_HOME 或 ~/.codex；
+    pi＝PI_CODING_AGENT_DIR 或 ~/.pi/agent（登入與模型設定在這裡；對話檔不在這裡，在小格的 pi-sessions/）。"""
     if kind == "claude":
         return os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
+    if kind == "pi":
+        return os.environ.get("PI_CODING_AGENT_DIR") or os.path.expanduser("~/.pi/agent")
     return os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex")
 
 
-def transcripts(kind, sid):
+def transcripts(kind, sid, cell_path=None):
     """CLI 自己存的這段對話（含中間訊息、工具呼叫等副產物）放在哪：claude ~/.claude/projects/*/<id>.jsonl、
-    codex ~/.codex/sessions/年/月/日/rollout-*-<id>.jsonl。小格的 transcripts/ symlink 指到這裡（10-30；10-28 是 stop 時才拷）。"""
+    codex ~/.codex/sessions/年/月/日/rollout-*-<id>.jsonl、pi＝小格的 pi-sessions/<時間>_<id>.jsonl（要給 cell_path；沒給＝[]，
+    11-18 實測 pi 1.5.2：--session-dir 下不分資料夾、檔名是建立時間加 id）。小格的 transcripts/ symlink 指到這裡（10-30；10-28 是 stop 時才拷）。"""
     if not sid:
         return []
+    if kind == "pi":
+        return sorted(glob.glob(os.path.join(cell_path, PI_SESSIONS, "*_%s.jsonl" % glob.escape(sid)))) if cell_path else []
     base = account_dir(kind)
     if kind == "claude":
         return sorted(glob.glob(os.path.join(base, "projects", "*", sid + ".jsonl")))
@@ -240,7 +249,7 @@ def drop_session(cell):
 
 
 def session_here(cfg, cell, ws, sid):
-    """sid 這段對話是不是在這台（這個帳號資料夾、claude 再加這個工作區）開的（11-10 two-machines 05）：看記號檔，
+    """sid 這段對話是不是在這台（這個帳號資料夾、claude、pi 再加這個工作區）開的（11-10 two-machines 05）：看記號檔，
     session 與 home 一樣、claude 的 ws 也一樣＝True；記號檔有 machine＝再比 machine_id()（11-10 TS 8；舊記號檔沒有＝不比，
     免得已在跑的全部開新對話）。記號檔不在或讀不懂、但 transcripts() 找得到＝功能上線前就在跑的，
     當這台的、補寫記號檔（過渡補丁）。不讀 CLI 的任何檔內容、不靠它的錯誤訊息。"""
@@ -252,16 +261,16 @@ def session_here(cfg, cell, ws, sid):
         mark = None
     if isinstance(mark, dict) and isinstance(mark.get("session"), str) and isinstance(mark.get("home"), str):
         return (mark["session"] == sid and mark["home"] == os.path.realpath(account_dir(kind))
-                and (kind != "claude" or mark.get("ws") == os.path.realpath(ws))
+                and (kind not in ("claude", "pi") or mark.get("ws") == os.path.realpath(ws))
                 and ("machine" not in mark or mark["machine"] == machine_id())
-                and stored_here(cfg, ws, sid))
-    if stored_here(cfg, ws, sid):
+                and stored_here(cfg, ws, sid, cell.path))
+    if stored_here(cfg, ws, sid, cell.path):
         mark_session(kind, cell, ws, sid)
         return True
     return False
 
 
-def stored_here(cfg, ws, sid):
+def stored_here(cfg, ws, sid, cell_path=None):
     """CLI 自己存的這段對話在這台、這個工作區找得到嗎（11-10 TA 實跑：shutdown 打斷第一輪、claude 還沒建檔就被殺，
     記號檔相符卻 resume 不到＝下一封白掉；同帳號資料夾、專案換了路徑時過渡補丁會認錯）。只看檔在不在、不讀內容：
     claude＝<帳號資料夾>/projects/<工作區真實路徑把非英數字元換成 -（照 CLI 的命名，未經真機驗證）>/<id>.jsonl；
@@ -269,7 +278,7 @@ def stored_here(cfg, ws, sid):
     flags = list(cfg.get("flags", [])) + list(cfg.get("print_flags", []))
     if "--no-session-persistence" in flags:
         return True
-    found = transcripts(cfg["kind"], sid)
+    found = transcripts(cfg["kind"], sid, cell_path)
     if cfg["kind"] != "claude":
         return bool(found)
     want = re.sub(r"[^A-Za-z0-9]", "-", os.path.realpath(ws))
@@ -291,7 +300,7 @@ def link_transcript(cell, kind):
     try:
         if os.path.lexists(link):
             return
-        found = transcripts(kind, sid)
+        found = transcripts(kind, sid, cell.path)
         if not found:
             return
         os.makedirs(os.path.dirname(link), exist_ok=True)

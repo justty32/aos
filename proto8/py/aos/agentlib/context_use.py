@@ -27,6 +27,9 @@
      claude 的輸入框有人打了字或看不出來（screen_slash.input_clear）＝也不打、信留著（不用 C-u 清，會吃掉人的字）；
      否則 tmux send-keys 打字、0.5 秒後 Enter，等畫面的 hook 換掉 history（上限 120 秒）才回信，等不到只在回信裡說一句、不重打。
   3. fsm 腦：<stack>/observed.jsonl 最後 256 KiB 裡最後一則有用量的 think；視窗用 window 參數，或 think/brain_wait.json 指的 kernel 公開的 endpoints.json。
+  2b. pi 身（11-18 eca-pi；from_pi，排在 3 前面）：<stack>/pi/live.jsonl（pi --mode json 的事件，只接不重寫）最後一則 stopReason 不是 error／aborted 的
+     assistant message_end 的 message.usage：input＋cacheRead＋cacheWrite＝那一刻的 context 大小；之後有成功的 compaction_end＝前面的不算。
+     pi 的事件沒有 context 視窗：視窗＝window 參數（hook 的 config.window），沒給＝None（explain 說要設 config.window）。
   explain(stack, window=None) 回一行英文讀數或讀不到的原因，不印東西。codex 身目前沒有讀法＝None。
 """
 import glob
@@ -315,8 +318,37 @@ def from_fsm_observed(stack, window=None):
     return _fsm_reading(stack, window)[0]
 
 
-PROVIDERS = [from_file, from_claude, from_fsm_observed]
-TAKES_WINDOW = (from_claude, from_fsm_observed)          # 這幾個收 window（hook 的 config.window）
+PI_KEYS = ("input", "cacheRead", "cacheWrite")
+
+
+def _pi_reading(stack, window=None):
+    path = os.path.join(stack, "pi", "live.jsonl")
+    evs = _events(path)
+    if not evs:
+        return None, None
+    usage, line = None, None
+    for raw, ev in evs:
+        if ev.get("type") == "compaction_end" and isinstance(ev.get("result"), dict):
+            usage, line = None, None                 # 壓過了：前面的數字不算
+        elif ev.get("type") == "message_end":
+            msg = ev.get("message")
+            if (isinstance(msg, dict) and msg.get("role") == "assistant" and msg.get("stopReason") not in ("error", "aborted")
+                    and isinstance(msg.get("usage"), dict)):
+                usage, line = msg["usage"], raw
+    if usage is None or not all(_whole(usage.get(k, 0)) for k in PI_KEYS):
+        return None, "pi: no finished answer with usage since the last compaction in %s" % path
+    if window is None:
+        return None, "pi: its events carry no context window; set config.window in the hook entry"
+    got = _row(sum(usage.get(k, 0) for k in PI_KEYS), window, "pi:" + hashlib.sha256(line).hexdigest()[:16], path)
+    return got, None if got is not None else "pi: window must be a positive integer"
+
+
+def from_pi(stack, window=None):
+    return _pi_reading(stack, window)[0]
+
+
+PROVIDERS = [from_file, from_claude, from_pi, from_fsm_observed]
+TAKES_WINDOW = (from_claude, from_pi, from_fsm_observed)  # 這幾個收 window（hook 的 config.window）
 
 
 def read(stack, window=None):
@@ -336,7 +368,8 @@ def explain(stack, window=None):
         return "%.1f%% (%d of %d tokens), turn %s, from %s" % (
             got["percent"], got["used"], got["window"], got["turn"], got["source"])
     reason = None
-    for why in (lambda: _transcript_reading(stack, window)[2], lambda: _fsm_reading(stack, window)[1]):
+    for why in (lambda: _transcript_reading(stack, window)[2], lambda: _pi_reading(stack, window)[1],
+                lambda: _fsm_reading(stack, window)[1]):
         try:
             reason = why()
         except Exception:

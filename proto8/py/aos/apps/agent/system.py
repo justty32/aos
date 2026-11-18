@@ -111,13 +111,13 @@ def effective(orig, copy, a=None):
 
 
 def eca_kind(folder):
-    """定義有 cli.json＝eca：回 claude／codex；不是 eca 或讀不懂＝None（只用來決定提醒，不擋）。"""
+    """定義有 cli.json＝eca：回 claude／codex／pi；不是 eca 或讀不懂＝None（只用來決定提醒，不擋）。"""
     try:
         with open(os.path.join(folder, "cli.json"), encoding="utf-8") as f:
             kind = json.load(f).get("kind")
     except (OSError, ValueError, AttributeError):
         return None
-    return kind if kind in ("claude", "codex") else None
+    return kind if kind in ("claude", "codex", "pi") else None
 
 
 def screen_open(folder, stack):
