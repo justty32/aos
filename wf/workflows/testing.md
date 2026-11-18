@@ -36,6 +36,9 @@
 
 - **跑測試前**：測試跑的是安裝產物（`bin/`、`lib/`），先在要測的那份 proto8 跑過 `python3 install.py`（改了 `py/` 或 `cpp/` 都要重跑才生效；11-18 S3 起沒有「存檔即生效」）；很多 Python 測試靠 PATH 上有指令，先 `export AOS_HOME=<那份 proto8> && source $AOS_HOME/env.sh`（在 bash 裡；11-18 S6 起 `env.sh` 不替你設 `AOS_HOME`，沒設報 `EnvBad`）。乾淨複本（`git archive`）不帶 `bin/ lib/ include/`，要在複本的 proto8 自己跑一次 install.py。
 - **測試夾在哪、怎麼跑**：共用模組與 install 的測試在 `proto8/py/tests/`（`python3 -m unittest discover -s proto8/py/tests`）；指令的測試在 `proto8/py/tests/apps/<名>/`，**不是套件、要逐夾跑**（`for d in proto8/py/tests/apps/*/; do python3 -m unittest discover -s "$d" -t "$d"; done`）；工具的測試在各工具夾的 `tests/`（`proto8/py/tools/…/<工具>/tests`）；C++ 的在 `proto8/cpp/<專案>/tests`；範本的在 `proto8/templates/tests/`（子夾名有 `-`，逐夾跑）。
+- **frontend 測試**：走 `proto8/frontend/tests/run.sh`（它要求環境沒有 `AOS_*`）。`test_slash` 把暫存夾寫死成 `~/.aos/scratch/ok-pano-b`，夾不在會有 28 個 FileNotFoundError；先設 `VIEW_TEST_TMP=<自己的暫存夾>` 再跑就全綠（50 支、跳過 7 支）。
+- **`wf/tools/tests`**：`python3 -m unittest` 跑 53 支。`test_commit_queue.sh` 不在 unittest 裡，另外跑：`bash wf/tools/tests/test_commit_queue.sh <來源 repo> <暫存夾>`；要有當天的 `proto8/thinking/<年-月>/<日>/README.md`（沒有就 SKIP、退 1），git 身分要寫在 `.gitconfig`（它不吃 `GIT_AUTHOR_*` 環境變數）。
+- **`check.py` 腳本**：`templates/tests/image-move-check`、`templates/kernel/tests/kernel-chain-check` 不是 unittest，discover 會顯示 0 支；直接跑 `python3 proto8/templates/tests/image-move-check/check.py`、`python3 proto8/templates/kernel/tests/kernel-chain-check/check.py`（成功退 0；用已裝的 aos 指令，不 build、不安裝）。
 
 Python 的原始碼在 `proto8/py/`（套件 `py/aos/`、指令本體 `py/aos/apps/<名>/`、工具 `py/tools/{base,aos,agent}/`；11-18 S3～S5 從 `lib/`、`cmd/` 搬來），`install.py` 把它抄成 `proto8/lib/`、照 `py/entries.json` 在 `proto8/bin/` 生指令入口；`proto8/templates/`（含 kernel 範本 `templates/kernel/`）不用裝、原地就是成品。要確認就手跑（用法在各自的 README）。aos 的程式都不動 PATH，手跑時把 `proto8/bin/` 放進 PATH（`source $AOS_HOME/env.sh` 一次放好；舊的 `cmd/install.sh` 11-18 S5 收掉了）。
 
