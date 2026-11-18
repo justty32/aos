@@ -55,5 +55,5 @@
 
 ## 交接
 
-- 完成後 → 若整理揭露了要裁示的事，寄使用者專區（`aos-user send`，見 [common/user.md](../common/user.md)；舊條目在 [WAIT_USER](../../WAIT_USER.md)）。
+- 完成後 → 若整理揭露了要裁示的事，寄使用者專區（`aos-user send`，見 [common/user.md](../common/user.md)；進度記在 [SESSION-LOG](../../SESSION-LOG.md)、標「等使用者」）。
 - 每輪整理的報告（含 `moves.tsv`、驗證輸出）→ 11-17 起寫進當天的 `proto8/thinking/<月>/<日>/`，[`reports/`](reports/) 凍結、不再加新的（使用者 11-17 待裁網頁 wf-5ii 選 a；舊報告不搬）。

@@ -38,4 +38,4 @@ else
     [ -f "$log" ] && first_section "$log" "## 最新進度"
 fi
 echo
-echo "提醒：設計題先讀相關 NORMS／CONCEPTS 再回答；說「已寫進」前先查。開場三軸（inbox、SESSION-LOG、WAIT_USER）照 AGENTS.md。"
+echo "提醒：設計題先讀相關 NORMS／CONCEPTS 再回答；說「已寫進」前先查。開場兩軸（inbox、SESSION-LOG）照 AGENTS.md。"

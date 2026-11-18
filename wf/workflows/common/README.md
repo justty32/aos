@@ -7,7 +7,7 @@
 <!-- wf-nav -->
 | 路徑 | 內容 | 來源 |
 |------|------|------|
-| [wf/public](../../public/README.md#主題) | 坑（跨工作流與各工作流的都在這裡；`gotchas.md` 只剩指標頁）| kernel |
+| [wf/public](../../public/README.md#主題) | 坑（跨工作流與各工作流的都在這裡）| kernel |
 | [user.md](user.md) | 使用者偏好、確認邊界、分支慣例、時區、工作模式 | kernel |
 | [data-files.md](data-files.md) | 資料檔契約 `wf-table/1`：給 AI 消化的條列 >1 KB 抽 `.json`／`.csv`、`tabledb.py` 讀寫；給人導航的連結表留 md | kernel |
 | [data-files-fmt.md](data-files-fmt.md) | json 值裡跨層路徑用 `$fmt` 代號展開，省 `../../../` | kernel |

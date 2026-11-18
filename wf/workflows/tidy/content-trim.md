@@ -57,7 +57,7 @@
 
 - 日誌與報告：`wf/session_logs/` 的每日檔（11-17 起停寫凍結；凍結前月結時收成月摘要，照 [user/02 日誌怎麼寫](../common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)，判準與原文檢查用本檔）、`wf/HANDOFF.md`、`tidy/reports/`、`refactor/reports/`、`wf/inbox/` 的信。
 - `archive/`：凍結，不改。
-- `wf/SESSION-LOG.md`、`wf/WAIT_USER.md`：本來就只列 open、完成即刪，不另精簡。
+- `wf/SESSION-LOG.md`：本來就只列 open、完成即刪，不另精簡。
 
 ## 怎麼做
 

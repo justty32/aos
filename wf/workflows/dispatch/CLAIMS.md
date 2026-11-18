@@ -12,7 +12,7 @@
 
 | 目錄 | 理由 |
 |------|------|
-| `AGENTS.md`、`wf/` 的 hub 檔（`INDEX`／`WORKFLOWS`／`SESSION-LOG`／`WAIT_USER`）| 多條線同時動會互相打架，收線時由調度者統一更新 |
+| `AGENTS.md`、`wf/` 的 hub 檔（`INDEX`／`WORKFLOWS`／`SESSION-LOG`）| 多條線同時動會互相打架，收線時由調度者統一更新 |
 | 主工作樹的 commit 權 | 同一時間只有一隊在主工作樹 commit；其他隊用 worktree（見 [resources](../resources.md)）|
 | 本表既有內容、交接書目錄 | 線只能追加自己那一格 |
 

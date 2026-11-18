@@ -2,7 +2,7 @@
 
 ← [AGENTS.md](../AGENTS.md)
 
-**只放「還沒完成」的活狀態，完成即刪**（每日日誌 11-17 起停寫；哪天做了什麼看 thinking 的日索引）；待使用者親自驗、做的另見 [WAIT_USER.md](WAIT_USER.md)。每條一行 open 狀態＋細節連結。11-17 瘦身前的全文在[留底](../proto8/thinking/2026-11/17/session-log-瘦身留底.md)（下面「留底 N」＝其中第 N 條）。
+**只放「還沒完成」的活狀態，完成即刪**（每日日誌 11-17 起停寫；哪天做了什麼看 thinking 的日索引）；等使用者親自驗、做、裁的也記在這裡，標題標「等使用者」（有使用者專區的機器，新題照舊寄專區）。每條一行 open 狀態＋細節連結。11-17 瘦身前的全文在[留底](../proto8/thinking/2026-11/17/session-log-瘦身留底.md)（下面「留底 N」＝其中第 N 條）。
 
 ## 最新進度
 
@@ -11,7 +11,7 @@
 - **open｜路徑規則與八夾的尾巴**：八夾與規則一已進 main；剩沙箱只綁 `<家>/lib`（規劃是整個家）、`install.sh` 舊 `.pth` 提醒要不要拿、wf 幾處還寫 `~/aos-home/knowledge`、重建步驟單要補 `install.py` 那步 → [待裁網頁-答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)、[路徑規則](../proto8/thinking/2026-11/17/路徑規則.md)
 - **open｜重構與 tidy 盤點剩的**：九題與追加三題都已交；剩拆 aos-frontend／aos-tools 大檔、測試共用 helper、thinking 11-13 起先提取再精簡（Q1）、舊退路清理、兩支 helper 自寫的 `read_json` → [盤點](workflows/tidy/reports/2026-11-17-重構與tidy盤點.md)
 - **等使用者｜條文**：分檔已拆到約 8 KB、33 題裁定已落；使用者 11-17「條文這東西以後我會大修，現在不用這麼急」——新冒出 17 題、N-63 `AOS_HOME` 那格、條文裡 `py/`／`kernel/` 舊路徑字樣、三處沒精簡的內文都放著 → [新的待裁](workflows/tidy/reports/2026-11-17-分檔精簡與裁定落實/02-新的待裁.md)
-- **open｜wf/ 整理剩的**：12 題照各題 a 已落（坑併 public、規矩卡、日誌停寫、死入口與 INDEX 已刪）；剩 `WAIT_USER`＋`wait-user/` 退場（條目寄專區）、進度檔轉 `wf/progress.json`（同一個 commit 改 `commit_queue.py`、`compact_reload.sh`）、`common/gotchas.md` 指標頁收掉、STRUCTURE 超過 8 KB（等段 9） → [wf-整理規劃](../proto8/thinking/2026-11/17/wf-整理規劃.md)
+- **open｜wf/ 整理剩的**：12 題照各題 a 已落（坑併 public、規矩卡、日誌停寫、死入口與 INDEX 已刪）；剩進度檔轉 `wf/progress.json`（同一個 commit 改 `commit_queue.py`、`compact_reload.sh`）、STRUCTURE 超過 8 KB（等段 9） → [wf-整理規劃](../proto8/thinking/2026-11/17/wf-整理規劃.md)
 - **open｜kernel 框架與限資源**：11-14 批 5～14、限資源 B1～B7 多已進；剩 C′ B 包、11-13 留的雜項（`letters.py`、tests 偶紅、骨架三處、`max_running`）（狀態沒核到） → [留底 16](../proto8/thinking/2026-11/17/session-log-瘦身留底/02-第12到20條.md#t16)、[留底 2](../proto8/thinking/2026-11/17/session-log-瘦身留底/01-第1到11條.md#t2)
 - **open｜set-def 新做法（fx-1）與改名兩步（em-Q4）**：沒進 main（`test_set_def` 仍兩支 expectedFailure），照施工圖重做 → [misc-1114](../proto8/thinking/2026-11/14/misc-1114.md#1-fx-1set-def-改成停拔同一個-stack-掛回)
 - **open｜11-15 收尾剩的**：guard 仍「審查中」、接線前實測四件；回答配對待決五點；`test_two_machines` 留孤兒 `body_a.py` → [留底 37](../proto8/thinking/2026-11/17/session-log-瘦身留底/04-第35到38條.md#t37)
@@ -20,8 +20,13 @@
 - **等使用者｜11-15 意見裡「之後再說」的**：stack 遷移、aos-frontend 大修（使用者 11-17：之後整個大修大重構；環境變數名、`API.md` 還沒跟著改名）、systemd 規則、全景頁為何常掛 → [留底 39](../proto8/thinking/2026-11/17/session-log-瘦身留底/05-第39到42條.md#t39)、[40](../proto8/thinking/2026-11/17/session-log-瘦身留底/05-第39到42條.md#t40)
 - **等使用者｜pi coding agent**：範圍待確認 → [留底 47](../proto8/thinking/2026-11/17/session-log-瘦身留底/06-第43到48條.md#t47)
 - **等使用者｜其他小題**：Pages 正式發佈（拿 noindex、LICENSE）、eca-claude Read 權限、A② gate、compact_hook 開不開、aos-teams/06 第 5 條、fsm 角色說明補知識庫 → [留底 49](../proto8/thinking/2026-11/17/session-log-瘦身留底/07-第49到54條與重建.md#t49)、[35](../proto8/thinking/2026-11/17/session-log-瘦身留底/04-第35到38條.md#t35)
+- **等使用者｜two-machines T7 第 8、9 步（公司機）**：11-14 10:50 已寄專區「下次在公司時：/mnt/c 起一棵樹、公司↔家機經 GitHub 來回一次」（01794624634355980205.3118873.1322000），使用者 11-14 回「好」，等他回公司機做；第 1～7 步見下一條 → [14-真機驗證](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md)、[wait-user-rewrite-1114](../proto8/thinking/2026-11/14/wait-user-rewrite-1114.md)
+- **open｜two-machines T7 第 1～7 步（待派工）**：真 claude／codex 找不到對話時的反應（A02～A07）、eca 換台、memory 那題，agent 可在家機暫存樹自己跑（步驟 11-10 寫的，先對到現況）；第 8、9 步見上一條 → [14-真機驗證](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md)
+- **等使用者｜公司 WSL Codex 設定檔的舊信任紀錄**：11-13 測試夾在 Codex 設定檔裡的舊信任紀錄還沒查（11-17：`~/code/` 暫存夾、`~/.claude.json` 舊信任紀錄、`~/.claude/projects/` 10 個測試子夾、`~/.codex/sessions/2026/11/13/` 都已刪——最後兩樣是使用者在待裁網頁 WSL-1 選 A；備份 `~/.claude.json.bak-20261117`） → [待裁網頁答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)
+- **open｜程式碼整理 5 題落地（待派工）**：使用者 11-14 專區全照推薦——兩份 `read_env_file` 統一用 aos-tools 那份完整讀法、收下層 TERM／KILL 統一（不理就強制關）、範本照舊可用共用程式、`py/` 前綴不改、小五件照推薦；改 proto8 程式照 aos-teams/06 第 5 條 → [wait-user-rewrite-1114 § 使用者回覆](../proto8/thinking/2026-11/14/wait-user-rewrite-1114.md#使用者回覆11-14)
+- **open｜正規的工作區與 stack 分配機制（待派工）**：使用者 11-14：「現在先這樣，勉強夠用，等有空的時候可以派fable去規劃更正規的工作區，乃至stack的分配機制，可以和我們的權限系統有關聯。」有空時派 fable 規劃；現況是各線 `wf/temp/<線>/`、隊員在其下 `sol-N/`、暫存樹 `~/code/<題>-1114/`，已知不一致：ok-limits 的 sol 共用一格、工作區在 repo 內怕 `git clean`；要跟 ok-sec（uid 權限）與 ok-onboard（開場建工作區）對上 → [user-advice 20261114 第九段](../proto8/thinking/user-advice/20261114.md)
 - **open｜家目錄清理（家機）**：scratch 用完收規則、`~/.claude/projects` 1.8G、`~/.cache/aos-*`、`~/.stack` 舊信箱；兩個常駐服務使用者自己處理 → [留底 38](../proto8/thinking/2026-11/17/session-log-瘦身留底/04-第35到38條.md#t38)
-- **open｜公司機 W6、W8**：Codex 設定檔 1 處沒查；測試對話紀錄見 [wait-user/04](wait-user/04-雜事.md) → [留底 4](../proto8/thinking/2026-11/17/session-log-瘦身留底/01-第1到11條.md#t4)
+- **open｜公司機 W6、W8**：Codex 設定檔 1 處沒查（見上面「等使用者｜公司 WSL Codex 設定檔的舊信任紀錄」）；測試對話紀錄 11-17 已刪 → [留底 4](../proto8/thinking/2026-11/17/session-log-瘦身留底/01-第1到11條.md#t4)
 - **open｜11-13 前開的設計尾巴**：外部 MCP（CLI 自接 server 壞了看不到、沒驗三項、P1）、ops-agent（yes/no hook、索引檢查）、index 三題、eca 子 agent codex 身、Codex 兩隻待核、team-model 沒同步、compact_reload 補驗 → [留底 12](../proto8/thinking/2026-11/17/session-log-瘦身留底/02-第12到20條.md#t12)、[留底 01](../proto8/thinking/2026-11/17/session-log-瘦身留底/01-第1到11條.md)、[03](../proto8/thinking/2026-11/17/session-log-瘦身留底/03-第21到34條.md#t21)
 - **open｜11-12 前的舊線**：two-machines、大修材料 56 列、node-pool、special-cases K-1、apply-ideas、LLM kernel 第二步、11-10／11-11 補驗；小尾巴（eca_tidy SUMMARY、repo index、11-12 tidy、11-13 文件沒對齊、`StateBad` 沒測試格） → [留底 03](../proto8/thinking/2026-11/17/session-log-瘦身留底/03-第21到34條.md)
 - **暫停｜arcagi**：等 aos 大修完 → [留底 33](../proto8/thinking/2026-11/17/session-log-瘦身留底/03-第21到34條.md#t33)

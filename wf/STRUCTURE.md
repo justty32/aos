@@ -16,9 +16,9 @@
    往下走才找細節；下層檔**不向上連 AGENTS.md**。
 2. **檔名語意**：**README**＝初入一個資料夾先讀的入口／導引；**INDEX**＝描述該資料夾頂層結構的索引。小資料夾兩者合一，大了才分出獨立 INDEX。
 3. **durable 知識歸層**：每份長期知識歸到它所屬的那個工作流／那一層，**絕不往上堆**——AGENTS.md 因此永遠很薄。
-4. **活狀態只列 open**：進度記 `SESSION-LOG.md`、等使用者的記 `WAIT_USER.md`，**完成即刪**；「改了什麼」交給 git log，決定記 `workflows/decisions.json`；檔內只留現行結論（[tidy 原則 5](workflows/tidy/content-trim.md)）。兩者膨脹就分別拆 `session_logs/`／`wait-user/`，hub 只留導航表；日誌寫法與月摘要見 [user/02](workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)（日誌 11-17 起停寫凍結）。
+4. **活狀態只列 open**：進度記 `SESSION-LOG.md`（等使用者的也記這裡、標「等使用者」），**完成即刪**；「改了什麼」交給 git log，決定記 `workflows/decisions.json`；檔內只留現行結論（[tidy 原則 5](workflows/tidy/content-trim.md)）。膨脹就拆，hub 只留導航表；日誌寫法與月摘要見 [user/02](workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)（日誌 11-17 起停寫凍結）。
 6. **`wf/` 跟 proto8 的分工線**（使用者 11-17 待裁網頁 wf-5 選 a）：`wf/` 只放在這個 repo 做事的規矩、還沒完的事（進度、交接、樹外的信）、做事用的腳本、各隊共用的做法與坑（`public/`）、對 aos 的意見（`advices/`）；所有「哪天討論、決定、規劃、調查、實測、盤點了什麼」的紀錄寫 `proto8/thinking/`；出廠給樹裡 agent 讀的寫 `proto8/knowledge/`；條文寫 `proto8/docs/`。附帶兩件：每日日誌 `session_logs/` 停寫凍結（wf-5i a）；新的整理與審查報告寫當天的 thinking，`tidy/reports/`、`refactor/reports/` 凍結（wf-5ii a）。舊的都不搬。
-7. **三軸每軸一處**（使用者 11-17 待裁網頁 wf-2 a）：信＝aos 信箱（樹外才看 `wf/inbox/`）、進度＝一個檔、待使用者＝使用者專區（`WAIT_USER.md` 與 `wait-user/` 剩的條目寄進專區後退場）。進度檔先在 md 裡瘦身（11-17 已做），等當天在跑的線收完再轉 json，檔名 `wf/progress.json`（wf-3、wf-3b a；轉的那個 commit 同時改 `wf/tools/commit_queue.py` 的 `SESSION_LOG` 與 `log_upsert`／`log_delete`、`compact_reload.sh`）。
+7. **兩軸每軸一處**（使用者 11-17 待裁網頁 wf-2 a 定每軸一處；11-18 選項框「併進進度檔後退場 (Recommended)」把待使用者併進進度）：信＝aos 信箱（樹外才看 `wf/inbox/`）、進度＝一個檔（等使用者的也記這裡、標「等使用者」；有使用者專區的機器，新題照舊寄專區）。`WAIT_USER.md` 與 `wait-user/` 11-18 退場。進度檔先在 md 裡瘦身（11-17 已做），等當天在跑的線收完再轉 json，檔名 `wf/progress.json`（wf-3、wf-3b a；轉的那個 commit 同時改 `wf/tools/commit_queue.py` 的 `SESSION_LOG` 與 `log_upsert`／`log_delete`、`compact_reload.sh`）。
 5. **鐵律極少而 always-on**：3–5 條任何時刻都適用的規矩常駐 AGENTS.md，其餘一切按需取用。
 
 ## 結構整理原則（膨脹即拆 / 雜亂即分類）

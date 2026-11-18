@@ -61,10 +61,10 @@
 
 ## 跨工作流的活狀態（只列 open，完成即刪）
 
-三軸照舊、每軸一處（使用者 11-17 待裁網頁 wf-2 a）：
+兩軸：信、進度（使用者 11-18 選項框「併進進度檔後退場 (Recommended)」，待使用者併進進度；每軸一處是 11-17 待裁網頁 wf-2 a）：
 
 | 在等誰 | 記哪裡 |
 |--------|--------|
-| 等**使用者**做 / 驗證 / 決定 | 使用者專區（`aos-user send`，見 [common/user.md](workflows/common/user.md)）；[WAIT_USER.md](WAIT_USER.md) 剩的舊條目寄進專區後整檔退場 |
+| 等**使用者**做 / 驗證 / 決定 | [SESSION-LOG.md](SESSION-LOG.md) 一行、標題標「等使用者」；有使用者專區的機器，新題照舊寄專區（`aos-user send`，見 [common/user.md](workflows/common/user.md)） |
 | 等**同 repo 另一個 session / fork**、或我自己還沒做完的 | [SESSION-LOG.md](SESSION-LOG.md) 一行 open（等今天在跑的線收完再轉成 `wf/progress.json`，使用者 11-17 待裁網頁 wf-3、wf-3b a） |
 | 等**別資料夾的 agent** | 信件軸：樹內走 aos 信箱，樹外專案的放信處 [`wf/inbox/`](inbox/)，使用方式 [workflows/inbox.json](workflows/inbox.json) |

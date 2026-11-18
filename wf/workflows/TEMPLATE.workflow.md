@@ -27,4 +27,4 @@
 
 ## 交接
 
-- 完成後 → 接 <哪個工作流>；卡在使用者 → 新題寄使用者專區（`aos-user send`，見 [common/user.md](common/user.md)；舊條目在 [WAIT_USER](../WAIT_USER.md)），跨 session → [SESSION-LOG](../SESSION-LOG.md) 一行，為什麼這樣選 → [decisions](decisions.json)。
+- 完成後 → 接 <哪個工作流>；卡在使用者 → 新題寄使用者專區（`aos-user send`，見 [common/user.md](common/user.md)；進度記在 [SESSION-LOG](../SESSION-LOG.md)、標「等使用者」），跨 session → [SESSION-LOG](../SESSION-LOG.md) 一行，為什麼這樣選 → [decisions](decisions.json)。
