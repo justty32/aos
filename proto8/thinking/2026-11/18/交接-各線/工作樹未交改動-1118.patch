@@ -3791,10 +3791,10 @@ index 000000000..1a2eaaf8d
 +3. **畫面那條的提示會誤導**：旗標錯時 `open` 說 `wrong session id?`，其實跟對話編號無關。
 +4. 第一封碰上錯的信直接被丟（`failed`），不會留著等冷卻後重試，要自己重寄。`stderr.txt` 最後一行常是 `RunFailed` 或 `brain_notify: warning`，真的錯在前一兩行。
 diff --git "a/proto8/thinking/2026-11/18/eca-claude-\345\260\217\350\251\246\351\251\227\346\225\231\345\255\270/README.md" "b/proto8/thinking/2026-11/18/eca-claude-\345\260\217\350\251\246\351\251\227\346\225\231\345\255\270/README.md"
-index aac2f3825..ccb082aef 100644
+index aac2f3825..e1dcbd0f9 100644
 --- "a/proto8/thinking/2026-11/18/eca-claude-\345\260\217\350\251\246\351\251\227\346\225\231\345\255\270/README.md"
 +++ "b/proto8/thinking/2026-11/18/eca-claude-\345\260\217\350\251\246\351\251\227\346\225\231\345\255\270/README.md"
-@@ -13,7 +13,7 @@ eca-claude 小試驗教學的目錄：使用者 11-18 陸續提的疑問，一
+@@ -13,13 +13,20 @@ eca-claude 小試驗教學的目錄：使用者 11-18 陸續提的疑問，一
  | [03](03-自訂定義掛上去.md) | 自己複製一份 template 設定、改過、掛上去 | 沒有一定要改的檔，常改 `llm.json`、`system.txt`、`cli.json`。改 `system.txt` 下一句就生效。`set-def` 換夾約 1 秒。`cli.json` 寫錯掛的當下不擋，起來才倒 |
  | [04](04-aos-post丟信.md) | 用 aos-post 往信箱丟信 | `echo JSON \| aos-post send <信箱>`。往 `procs/<名>/queue` 丟 `{"role":"user","content":…}`，agent 就會答。`say` 就是包了它，再加上檢查與提醒 |
  | [05](05-aos-lock鎖信箱.md) | 用 aos-lock 鎖信箱、試 aos-post、解鎖 | 鎖信箱夾本身擋不住。aos-post 只認 `<信箱>/order.lock`，而且只在 `--ordered` 時。鎖住時 say 無聲一直等，解鎖後自己寄進去。命令列拿的鎖不會自己放 |
@@ -3803,6 +3803,19 @@ index aac2f3825..ccb082aef 100644
  | [07](07-aos-mailbox寄信收信.md) | 用 aos-mailbox 寄信給 agent、收信 | 寄進的是 agent 的 `mailbox/`，不是 `queue/`。agent 要等 `mail_notify` 每分鐘巡一次才看到。回信用 `in_reply_to` 對上，收信要自己輪詢 |
  | [08](08-不用aos-kit.md) | 不用 aos-kit 做出 aos-kit 的功能 | aos-kit 只換定義裡的 `system.txt`、`tools.json`，並另存 `.before-kit`。手動 cp 的結果逐檔相同。出廠的 kit 現在裝不起來（`MakeMissing`），也不支援 eca-claude |
  | [09](09-aos-sandbox限制資源.md) | 用 aos-sandbox 限制 CPU%、核心數、資料夾、網路、記憶體 | 資料夾、網路由沙箱本身擋。記憶體、CPU 時間這台要走 daemon 的 `--limits`。CPU%、核心數沒有欄位，要在外面包 `systemd-run --user`＋`taskset` |
+ | [10](10-aos-asuser.md) | 試 aos-asuser（不行就寫缺什麼、模擬假設） | 參數檢查都實跑過了。真換身分缺 `newuidmap`，要使用者自己 `sudo apt install uidmap`。裝好之後的步驟標成「預期，未實測」 |
+ | [11](11-aos-share.md) | aos-share 也試試看 | 檔案系統支援 ACL，`check` 能用。真的分享、收回缺 `setfacl`，要使用者自己 `sudo apt install acl uidmap`。裝好之後的步驟標成「預期，未實測」 |
+ | [12](12-沙箱asuser-share要裝什麼與WSL限制.md) | 沙箱、asuser、share 各要額外裝什麼、WSL 上有什麼限制（總覽） | 沒有新實測，整理自 09～11 與實機檢查。bwrap 有；要補 `s6`（沙箱上限、`aos-run`）、`uidmap`（asuser）、`acl`（share），sudo 要自己跑。不裝的替代路是 `--limits`、`systemd-run`＋`taskset` |
++| 13 | 用 aos-loop 控制 eca-claude 的停止與繼續 | **未完成**：做到一半，收手時被打斷，還沒有檔 |
++| 14 | 停著的時候 aos-say（正確名字是 `aos-agent say`） | **未完成**：做到一半，收手時被打斷，還沒有檔 |
++| [15](15-aos-tools加新工具.md) | 用 aos-tool（正確名字是 `aos-tools`）給它加新工具 | 工具夾只要 `_entry`（可執行）和 `_tooldef.json`。用 `aos-agent tools add` 加進這隻自己的 `tools.json`，下一句就看得到，名字是 `mcp__aos__<名>`，不用重起也不用 set-def |
++| [16](16-手動讓eca-claude當kernel.md) | 手動讓 eca-claude 成為 kernel | 掛一個 hook 跑框架站，把請求留下來交給 claude 判，再讓 `AOS_KERNEL` 指到它的收件信箱。add、stop 會先到它，被拒的一方看到 `AddRejected … NotNow`。每封要 7～11 秒，它停著或在忙時整棵樹都掛不了 proc |
++| 17 | 手動確認狀態（aos json view、信箱、queue…） | **未完成**：做到一半，收手時被打斷，還沒有檔 |
++| [18](18-agent出錯怎麼手動除錯.md) | agent 出錯時怎麼手動除錯（大概講） | 照六步查：表 → `ctl ls -l` → `stderr.txt` 結尾 → `queue/`、`letters.json` → `cooldown.json` → 畫面。表上的原因常常只寫「起不來」，真正的原因在 `stderr.txt` |
++| 19 | 手動幫它 compact | **未完成**：做到一半，收手時被打斷，還沒有檔 |
+ 
+ ## 共同準備
+ 
 diff --git "a/proto8/thinking/2026-11/18/eca-pi/04-\346\216\245\346\263\225\351\201\270\351\240\205\350\210\207\345\276\205\350\243\201.md" "b/proto8/thinking/2026-11/18/eca-pi/04-\346\216\245\346\263\225\351\201\270\351\240\205\350\210\207\345\276\205\350\243\201.md"
 index 6fb606df7..1352f0464 100644
 --- "a/proto8/thinking/2026-11/18/eca-pi/04-\346\216\245\346\263\225\351\201\270\351\240\205\350\210\207\345\276\205\350\243\201.md"

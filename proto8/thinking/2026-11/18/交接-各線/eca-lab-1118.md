@@ -18,14 +18,20 @@
 
 ## 還沒做的收尾
 
-- **目錄沒補**：教學夾的 `README.md` 還沒加 13～19 的列。只該補已經存在的 15、16、18，13、14、17、19 標「未完成」。
 - **README 的「共同準備」還寫著 `aos-tree-start`**（今天被使用者裁定刪除），要改成 `cd ~/aos-home && source env.sh && aos-exec root`。01、02、03 內文也有 `aos-tree-start`，一起換。
 - **沒 commit**：這條線所有教學檔、日索引那一列（`18/README.md`）、這份交接檔都還沒交。
 - **WSL 上的殘留**：被打斷的三位隊員（13/14、17、19）的 tmux（`tmux -L ecalab13`／`ecalab17`／`ecalab19`）和它們起的 daemon，收手時還開著，我接著收（見下一節）。暫存夾 `~/.aos/scratch/eca-lab-1118/` 全部留著，沒刪。
 
 ## 收手時收掉的行程
 
-照順序：先對 t13、t17、t19 各自的 `.stack` 跑 `aos-daemon-ctl -d <那個 stack> shutdown`，再對三個 tmux socket 各跑 `tmux -L <socket> kill-server`。結果記在本線的回報裡。
+已經收完：
+- 對 t13、t17、t19 各自的 `.stack` 跑了 `aos-daemon-ctl -d <那個 stack> shutdown`，三台都回「3 procs asleep」。
+- 對三個 tmux socket 各跑了 `tmux -L <socket> kill-server`。
+- t13 那隻開著的畫面，用 `aos-agent -t ann close` 關掉了。
+
+`/run/user/1000/aos-tty-1000/` 底下還剩一個 socket（`0390c8a5…`），對不上這條線的任何樹，沒去動它。
+
+另外，目錄 README 已經補了 13～19 的列，13、14、17、19 標成未完成。
 
 ## 18 的隊員提到的一件事
 
