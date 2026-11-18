@@ -48,6 +48,9 @@
  "公司WSL-重建試跑紀錄.md": {
   "description": "先講結論"
  },
+ "家機-重建紀錄.md": {
+  "description": "先講結論"
+ },
  "沙箱隔離-實機檢查.md": {
   "description": "沙箱隔離實機檢查（不用模型的那一半，公司 WSL，HEAD `71df48e88`）"
  }
