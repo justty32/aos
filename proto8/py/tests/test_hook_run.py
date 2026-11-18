@@ -263,6 +263,21 @@ class TargetAt(unittest.TestCase):
             hook_run.target(self.entry("a"))
         self.assertRegex(str(cm.exception), r"^cannot resolve handler directive: aos-directive exited \d+ \(its error line is above\)$")
 
+    def test_directive_error_line_is_swallowed(self):
+        """aos-directive 自己的錯誤行不照轉到 stderr（11-18 使用者「改回去」）；原因仍由 OSError 帶。"""
+        import tempfile
+        with tempfile.TemporaryFile() as tmp:
+            saved = os.dup(2)
+            os.dup2(tmp.fileno(), 2)
+            try:
+                with self.assertRaises(OSError):
+                    hook_run.target(self.entry("a"))
+            finally:
+                os.dup2(saved, 2)
+                os.close(saved)
+            tmp.seek(0)
+            self.assertEqual(tmp.read(), b"")
+
     def test_reasons_come_from_directive_value(self):
         """解不開的原因照共用的 directive_value 說（11-18 換成共用版）；解出來不是非空字串的那句是 hook_run 自己的。"""
         self.doc["hooks"]["c"] = {"event": "before", "handler": {"$ref": "#./nowhere"}}
