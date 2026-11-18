@@ -11,6 +11,8 @@ The letter name is not printed. Others talking to the same agent at the same tim
 own answers; one answer to several letters at once is printed to each asker.
 An agent whose body does not record letter names yet (no aos.letter in its history) is matched
 the old way, with a warning on stderr: the latest answer, not necessarily the one to yours.
+A failed brain call is reported as in aos-agent listen: if the agent stopped on that error,
+ask ends at once with AnswerMissing and the error lines from the agent's stderr file.
 
 flags:
   -t, --target NAME   which agent (default: $AOS_AGENT)

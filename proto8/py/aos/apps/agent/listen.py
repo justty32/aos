@@ -9,6 +9,9 @@ the newest letter still in the queue, else the last letter the agent took and ha
 (letters.json), else the latest answer (waiting for it if the agent is still answering).
 An agent whose body does not record letter names yet (no aos.letter in its history) is matched
 the old way: the latest answer, with a warning on stderr.
+While a handed-over letter waits, a failed brain call (the stack's cooldown.json) is said once on
+stderr with the error lines from the agent's stderr file; if the agent stopped on that error,
+listen ends at once with AnswerMissing and those lines instead of waiting for the timeout.
 --last N prints the last N exchanges as blocks: "== #N", question lines prefixed "> ",
 then the answer. --follow prints new exchanges; add --last N to show history first.
 Ctrl-C leaves follow mode with exit 0; reminders go to stderr.
@@ -30,7 +33,7 @@ import os
 import sys
 import time
 from .common import Fail, bad_args, POLL, daemon_path, note, parse, target, via_kernel
-from .hints import brain_hint, daemon_held, label, off_table, on_table, run_hint, stuck_hint
+from .hints import brain_failure, brain_hint, daemon_held, failure_text, label, off_table, on_table, run_hint, stuck_hint
 
 
 # ---------------------------------------------------------------- 等回答（搬自 extras/human/bin/aos-listen）
@@ -130,7 +133,33 @@ def wait_latest(a, timeout, before=None, *, timeout_cycles=None, letter=None, be
 
     def timeout_reason(reason):
         h = brain_hint(a)
-        return reason + ("; " + h if h else "")
+        f = brain_failure(a)                          # small-1118：逾時的錯誤行帶上最後一次問腦失敗的原話
+        return reason + ("; " + h if h else "") + ("; %s's last brain call failed: %s" % (a.name, failure_text(f)) if f else "")
+
+    failure_said = False
+
+    def check_failure():
+        """small-1118（使用者 11-18 小題一包「listen 出錯時把理由帶出來」）：信交出去還沒答時看問腦失敗紀錄（hints.brain_failure）。
+        身體停在這個錯上（例：端點回 400，fsm 記冷卻後退 1）＝現在就結束，AnswerMissing 帶原因，不乾等到逾時；
+        只是冷卻中、會自己重送的（retry true 等）＝提醒一次、照等。"""
+        nonlocal failure_said
+        if not (state == "handed" or old or sig is None):
+            return
+        f = brain_failure(a)
+        if not f:
+            return
+        if f["stopped"]:
+            if a.row.get("auto_restart") is True:
+                nxt = "the daemon restarts %s and it sends the same request again after the cooldown" % a.name
+            else:
+                nxt = "fix the cause, then start it again: aos-agent ctl start --target %s" % a.name
+            later = "; read the answer later with aos-agent listen --target %s --letter %s" % (a.name, sig) if sig else ""
+            raise Fail("AnswerMissing", "%s was handed over, but %s stopped on an error before answering: %s; %s%s"
+                       % (what, a.name, failure_text(f), nxt, later))
+        if not failure_said:
+            note("%s's last brain call failed: %s; it sends the request again by itself when the cooldown ends. Still waiting, Ctrl-C to leave"
+                 % (a.name, failure_text(f)))
+            failure_said = True
 
     def say_paused():                                 # 11-05 edge-agent：暫停中原本一聲不吭地等
         nonlocal paused_said
@@ -170,6 +199,7 @@ def wait_latest(a, timeout, before=None, *, timeout_cycles=None, letter=None, be
                 return
             if time.monotonic() >= next_check:
                 next_check = time.monotonic() + 1.0
+                check_failure()
                 if on_table(a):
                     say_paused()
                     say_brain()

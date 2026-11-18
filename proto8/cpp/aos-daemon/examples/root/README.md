@@ -8,7 +8,7 @@ flowchart LR
     E --> D[普通根 daemon]
 ```
 
-先改範例中的執行檔、PATH、工作區、image 與定義路徑；PATH 要包含所有子項需要的 aos 指令。根在前台跑，`_entry` 用 argv 直接起 aos-daemon；不可自行放背景。選一種即可，不要兩邊同時管同一個 stack。
+先改範例中的執行檔、PATH、工作區、image 與定義路徑；PATH 要包含所有子項需要的 aos 指令。aos 指令在 `$AOS_HOME/bin`（`AOS_HOME`＝你 clone 的 `proto8`，`python3 install.py` 填好；不往 `~/.local/bin` 放），範例寫 `~/repo/aos/proto8`：s6 的 `run` 改 `export AOS_HOME=` 那一行；systemd 的 unit 不展開 shell 變數，要改 `Environment=AOS_HOME=`、`Environment=PATH=`、`ExecStart=` 三行裡的 `%h/repo/aos/proto8`。兩份都不 source `env.sh`（它會清掉 `AOS_HOME` 以外的 `AOS_*`，`root.env` 給的 `AOS_LLM_KERNEL`、`AOS_KERNEL` 就沒了）。根在前台跑，`_entry` 用 argv 直接起 aos-daemon；不可自行放背景。選一種即可，不要兩邊同時管同一個 stack。
 
 | 選項 | 好處 | 代價 |
 |---|---|---|

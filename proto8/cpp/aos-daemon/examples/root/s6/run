@@ -1,7 +1,10 @@
 #!/bin/sh
 # Run an ordinary root daemon as an optional s6 supervised service.
 set -eu
-export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
+# AOS_HOME is the proto8 folder (python3 install.py filled its bin/ and lib/); a supervisor does not read ~/.bashrc, so set it here.
+# Change this line to yours. env.sh is not sourced: it clears every AOS_* but AOS_HOME (AOS_LLM_KERNEL, AOS_KERNEL you export here would go).
+export AOS_HOME="$HOME/repo/aos/proto8"
+export PATH="$AOS_HOME/bin:/usr/local/bin:/usr/bin:/bin"
 unset AOS_DAEMON
 cd "$HOME/aos"
-exec "$HOME/.local/bin/aos-exec" --stack "$HOME/aos/image" "$HOME/aos/root_definition"
+exec "$AOS_HOME/bin/aos-exec" --stack "$HOME/aos/image" "$HOME/aos/root_definition"

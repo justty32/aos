@@ -1,4 +1,8 @@
 # Run an ordinary root daemon under an optional systemd user service.
+# AOS_HOME is the proto8 folder (python3 install.py filled its bin/ and lib/); here it is %h/repo/aos/proto8.
+# systemd does not expand shell variables in Environment= or in the program path, so that folder is written out three times:
+# the AOS_HOME line, the PATH line and the ExecStart line. Change all three to yours. Nothing goes into ~/.local/bin.
+# env.sh is not sourced here: it clears every AOS_* but AOS_HOME, which would drop AOS_LLM_KERNEL / AOS_KERNEL from root.env.
 [Unit]
 Description=aos root daemon
 StartLimitIntervalSec=60
@@ -7,10 +11,11 @@ StartLimitBurst=5
 [Service]
 Type=simple
 EnvironmentFile=%h/.config/aos/root.env
-Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=AOS_HOME=%h/repo/aos/proto8
+Environment=PATH=%h/repo/aos/proto8/bin:/usr/local/bin:/usr/bin:/bin
 UnsetEnvironment=AOS_DAEMON
 WorkingDirectory=%h/aos
-ExecStart=%h/.local/bin/aos-exec --stack %h/aos/image %h/aos/root_definition
+ExecStart=%h/repo/aos/proto8/bin/aos-exec --stack %h/aos/image %h/aos/root_definition
 Restart=always
 RestartSec=2
 KillMode=mixed

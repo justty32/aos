@@ -1,9 +1,11 @@
-# aos/apps/agent/hints.py - 讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。
+# aos/apps/agent/hints.py - 讀 agent 狀態（含仍活著的 stuck）、queue 數量、問腦失敗紀錄與接續操作提示。
 from aos import flags as aos_flags
 from aos import ws as aos_ws
 from aos import daemon_ctl as dc
 import json
 import os
+import re
+import time
 from .common import call_dc, daemon_path, row_named, table_ref
 
 
@@ -90,6 +92,67 @@ def brain_hint(a):
                 % (a.name, kernel, why, a.name))
     except Exception:
         return None
+
+
+ERROR_LINE = re.compile(r"^\S+: error: (\S+)")
+
+
+def stderr_tail(a, size=8192):
+    """agent 的 stderr 檔（procs_stderr）最後幾行（去空白行）；讀不到＝[]。"""
+    try:
+        path = os.path.join(a.stack, call_dc(dc.names_of, table_ref())["procs_stderr"])
+        with open(path, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            f.seek(max(0, f.tell() - size))
+            text = f.read().decode("utf-8", "replace")
+    except Exception:
+        return []
+    return [l.strip() for l in text.splitlines() if l.strip()][-20:]
+
+
+def brain_failure(a):
+    """問腦失敗的紀錄（small-1118，使用者 11-18 小題一包「listen 出錯時把理由帶出來」）：只讀，任何錯都當沒有＝None。
+    cooldown.json（成功一次就刪，所以在＝最後一次問腦沒成）給代號、原因、第幾次、冷卻到幾點；stderr 檔結尾的錯誤行給下層原話
+    （fsm 只把「aos-llm recv exited 1」寫進冷卻，端點回的原因只在 stderr）。stopped＝身體停在這個錯上：stderr 裡最後一行
+    「名: error: 同代號 …」之後，同一支沒再印 warning，而且沒有正在問的腦（think/pending.txt 不在）；只印 warning 繼續重送的
+    （retry true、BudgetMissing）不算。
+    回 {code, reason, failures, until, lines, stopped}。"""
+    try:
+        from aos.agentlib import cooldown
+
+        rec = cooldown.read(a.stack)
+        if not rec:
+            return None
+        code = str(rec.get("code") or "")
+        tail = stderr_tail(a)
+        # 身體停下的那行＝最後一行「名: error: 冷卻代號 …」；它之後同一支印過 warning（例：retry 的「sent again in 30 s」）＝又接著重送了，不算停。
+        # 它之後別支的行照常會有（aos-loop 的 RunFailed、brain_notify 的 warning；11-18 small-1118 實跑看到的）。
+        at = max((i for i, l in enumerate(tail) if (ERROR_LINE.match(l) or [None, None])[1] == code), default=-1)
+        prog = tail[at].split(":", 1)[0] if at >= 0 else ""
+        stopped = at >= 0 and not any(l.startswith(prog + ": warning: ") for l in tail[at + 1:]) \
+            and not os.path.exists(os.path.join(a.stack, "think", "pending.txt"))
+        lines = []
+        if stopped:                               # 停下那行往上連著的 error 行（跳過 warning），例：aos-llm 的 EndpointFailed 那行＋fsm 的 BrainFailed 那行
+            for l in reversed(tail[:at + 1]):
+                if ERROR_LINE.match(l):
+                    lines.insert(0, l)
+                    if len(lines) == 3:
+                        break
+                elif not re.match(r"^\S+: warning: ", l):
+                    break
+        else:                                     # 會自己重送的：最後一行 error（例：aos-llm 的 EndpointFailed timed out connecting …）
+            lines = [l for l in tail if ERROR_LINE.match(l)][-1:]
+        until = time.strftime("%H:%M:%S", time.localtime(cooldown.parse(rec["until"])))
+        return {"code": str(rec.get("code") or "?"), "reason": str(rec.get("reason") or ""), "failures": rec.get("failures", 0),
+                "until": until, "lines": [" ".join(l.split())[:300] for l in lines], "stopped": stopped}
+    except Exception:
+        return None
+
+
+def failure_text(f):
+    """brain_failure 的一句：stderr 有錯誤行就用原話，不然用冷卻的代號＋原因；後面接冷卻到幾點、第幾次。"""
+    said = " / ".join(f["lines"]) if f["lines"] else "%s %s" % (f["code"], f["reason"])
+    return "%s (failure %s in a row; cooldown until %s)" % (said, f["failures"], f["until"])
 
 
 def queued(a):
