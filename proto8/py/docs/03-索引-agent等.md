@@ -37,7 +37,7 @@
 - [cmd_call.py](../aos/agentlib/cmd_call.py)：叫下層 aos 指令、把它最後一行錯誤轉成自己的錯——`call(prog, args, ok, text, shown, fix)`、`catch_signals()`、`kill_group(p)`；`self_*`、`do_task`、`goal`、mailbox 三支、`clock_register` 共用，`agents_cmd.py`、`fork` 只共用 `kill_group` 與 `ERR_RE`。工具夾複製出去時連它一起帶。
 - [goal_state.py](../aos/agentlib/goal_state.py)：goal 的狀態檔 `<agent stack>/goal.json` 讀寫與判斷（要不要丟提醒、計數、歸零），aos-agent goal、agent-fsm idle.py、aos-eca-turn 共用。
 
-- [agent_files.py](../aos/agentlib/agent_files.py)：按 `interfaces.json` 的 `aos-agent.tools`／`llm` 公開宣告取定義與 stack 覆蓋檔的相對位置；cmd、範本與 cli_session 共用 `declared_files`，未宣告＝沒有該介面（K-5）。
+- [declared_files.py](../aos/declared_files.py)（在 `aos` 頂層）：按 `interfaces.json` 的 `aos-agent.tools`／`llm` 公開宣告取定義與 stack 覆蓋檔的相對位置；cmd、範本與 cli_session 共用 `declared_files`，未宣告＝沒有該介面（K-5）。
 
 <a id="外部-agent-的格eca不是工具"></a>
 ## 外部 agent 的一輪（eca）

@@ -5,6 +5,9 @@
  "check_anchors.py": {
   "description": "Check fragments in local Markdown links."
  },
+ "codemap_deps.py": {
+  "description": "code map 的三張依賴表（C++ 誰連誰、Python 誰 import 誰、bin/ 每支指令對到哪個原始碼）的認法；給 index_gen.py 用，沒有命令列。"
+ },
  "codemap_lib.py": {
   "description": "檔頭一句話的認法（函式庫，給 index_gen.py 寫逐檔 code map 用；沒有命令列）。"
  },

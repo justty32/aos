@@ -17,7 +17,7 @@ TOOL = REPO / "proto8" / "py" / "tools" / "base" / "peek_now_time"
 
 
 def clean_env(**extra):
-    return env_helper.clean_env(drop=("TC_",), path=(env_helper.LOCAL_BIN,), **extra)
+    return env_helper.clean_env(drop=("TC_",), **extra)
 
 
 class ToolsOverride(unittest.TestCase):

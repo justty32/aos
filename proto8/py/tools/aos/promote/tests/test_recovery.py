@@ -7,9 +7,8 @@ import unittest
 from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parents[1]
-sys.path[:0] = [str(HERE), str(HERE.parents[2])]
-import swap
-from aos import tool_io
+sys.path[:0] = [str(HERE.parents[2])]
+from aos import swap, tool_io
 
 
 class SwapRecovery(unittest.TestCase):

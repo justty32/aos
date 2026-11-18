@@ -47,7 +47,7 @@ output: results on stdout only (one line per item, TAB-separated; --json where l
 exit codes: 0 ok; 1 error ("aos-agent: error: CODE reason" on stderr); 130 on Ctrl-C.
 more: proto8/py/aos/apps/agent/README.md (rules, codes, examples)"""
 
-from aos.agentlib.agent_files import declared_files   # bin/aos-agent（install.py 生的入口）已把放 aos 套件的 lib/ 放上 sys.path
+from aos.declared_files import declared_files   # bin/aos-agent（install.py 生的入口）已把放 aos 套件的 lib/ 放上 sys.path
 
 from . import common, ctl, say, listen, ask, chat, screen, tools, llm, history, hook, system, goal
 from .common import Fail, parse

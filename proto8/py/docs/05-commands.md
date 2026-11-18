@@ -2,7 +2,7 @@
 
 ← [proto8](../../README.md)｜慣例：[CONVENTION](../../docs/CONVENTION.md)｜共用模組：[lib 頂層](04-共用模組.md)｜C++ 實作：[cpp](../../cpp/README.md)
 
-一支指令一夾，本體在 `py/aos/apps/<名>/`（夾名＝指令名去掉 `aos-`、`-` 換 `_`，例 `aos-clock-register`→`clock_register`；aos-eca 兩支同夾），測試在 `py/tests/apps/<名>/`。入口不手寫：`py/entries.json` 一行一支（指令名→模組），`install.py` 照它在 `bin/` 生幾行的 Python 入口（把同一個家的 `lib/` 放上 `sys.path`，再把那個模組當 `__main__` 跑），跟 C++ 的執行檔同一夾；改了 `py/` 要重跑 `install.py` 才生效。命令列共用模組（`aos.flags`、`aos.ws`、`aos.daemon_ctl`）在 aos 套件，原始碼 `proto8/py/aos/`，`install.py` 裝到 `proto8/lib/aos/`（說明在 [py/docs/04](04-共用模組.md)）；CLI 對話與介面宣告的共用模組（`cli_*.py`〔說明在 `cli_session.py`〕、`agent_files`）在 `aos.agentlib`（[索引](03-索引-agent等.md)）。家外的程式找 lib 只經 `$AOS_HOME/lib`，沒設 `AOS_HOME` 就報 `HomeMissing`。
+一支指令一夾，本體在 `py/aos/apps/<名>/`（夾名＝指令名去掉 `aos-`、`-` 換 `_`，例 `aos-clock-register`→`clock_register`；aos-eca 兩支同夾），測試在 `py/tests/apps/<名>/`。入口不手寫：`py/entries.json` 一行一支（指令名→模組），`install.py` 照它在 `bin/` 生幾行的 Python 入口（把同一個家的 `lib/` 放上 `sys.path`，再把那個模組當 `__main__` 跑），跟 C++ 的執行檔同一夾；改了 `py/` 要重跑 `install.py` 才生效。命令列共用模組（`aos.flags`、`aos.ws`、`aos.daemon_ctl`）在 aos 套件，原始碼 `proto8/py/aos/`，`install.py` 裝到 `proto8/lib/aos/`（說明在 [py/docs/04](04-共用模組.md)）；CLI 對話的共用模組（`cli_*.py`〔說明在 `cli_session.py`〕）在 `aos.agentlib`、介面宣告讀法 `aos.declared_files` 在 aos 頂層（[索引](03-索引-agent等.md)）。家外的程式找 lib 只經 `$AOS_HOME/lib`，沒設 `AOS_HOME` 就報 `HomeMissing`。
 
 | 指令夾 | 是什麼 |
 |---|---|

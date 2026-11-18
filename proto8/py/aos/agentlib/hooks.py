@@ -35,7 +35,7 @@ import os
 import subprocess
 import sys
 
-from aos.agentlib.agent_files import declared_files
+from aos.declared_files import declared_files
 
 from aos import hook_run   # 共用引擎（11-13 kernel-framework 批 1b）
 

@@ -7,7 +7,7 @@
 #   → shutdown → git status 只有 carry 類變動、專案檔與歷史沒動 → commit、push（不 force）。主劇本再從 B 回 A 一輪。
 # 變體：名字改掉、stack 在專案外、defs 在專案外、同一台改指環境變數、llms 沒起（含下班時有一題在途）、
 #   shutdown 打斷 fsm／eca 的一輪、/mnt/c（AOS_TEST_MNTC=1 或 --mntc，再加 AOS_TEST_MNTC_DIR=/mnt/c 上的暫存夾）。AOS_TEST_BEATS=FILE 把每拍延遲寫成 JSON。
-# 跑法：python3 -W ignore test_daily.py [-v] [--mntc]；KEEP=1 留下試驗資料夾。用 ~/.local/bin 的 aos 指令，不碰 ~/code、/mnt/c/code。
+# 跑法：python3 -W ignore test_daily.py [-v] [--mntc]；KEEP=1 留下試驗資料夾。aos 指令用 PATH 上的（env.sh 排在最前的 $AOS_HOME/bin），不碰 ~/code、/mnt/c/code。
 import json
 import os
 from pathlib import Path
@@ -23,7 +23,6 @@ import unittest
 
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[2]            # 這份 proto8（複本從它抄）
-BIN = Path.home() / ".local" / "bin"
 FAKE_CLAUDE = REPO / "py" / "tests" / "apps" / "eca" / "fake_claude"
 GITIGNORE = REPO / "py" / "aos" / "apps" / "agent" / "stack.gitignore"
 CLASSES = REPO / "thinking" / "2026-11" / "10" / "two-machines" / "gitignore_classes.json"
@@ -171,7 +170,7 @@ class Machine:
         (fake / "claude").symlink_to(FAKE_CLAUDE)          # PATH 最前面：假的 claude
         self.env = {k: v for k, v in os.environ.items()
                     if not k.startswith(("AOS_", "CLAUDE_", "GIT_", "FAKE_CLI_", "PYTHONDONTWRITEBYTECODE"))}
-        self.env.update(PATH=os.pathsep.join([str(fake), str(BIN), os.environ["PATH"]]), HOME=str(home),
+        self.env.update(PATH=os.pathsep.join([str(fake), os.environ["PATH"]]), HOME=str(home),
                         FAKE_CLI_LOG=str(home / "fake-cli.jsonl"), **GIT_ID)
         self.use_proto(proto)
         self.env.update(extra or {})

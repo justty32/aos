@@ -29,7 +29,7 @@ try:
     from aos.observed import append as append_observed  # noqa: E402
     from aos.observed_children import clear_child, take_child  # noqa: E402
     from aos import metainfo  # noqa: E402
-    from aos.agentlib.agent_files import declared_files  # noqa: E402
+    from aos.declared_files import declared_files  # noqa: E402
     from aos.agentlib import hooks  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
     if _error.name not in ("aos", "aos.agentlib"):

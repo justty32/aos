@@ -2,8 +2,6 @@
 import os
 import time
 
-LOCAL_BIN = os.path.expanduser("~/.local/bin")   # 有些測試照舊把它排在 PATH 前面（跟搬來前一樣）
-
 
 def clean_env(*, drop=(), path=(), **extra):
     """os.environ 拿掉 AOS_* 與 drop 列的前綴；path＝要排在 PATH 最前面的夾（照順序）；extra 最後蓋上去。"""

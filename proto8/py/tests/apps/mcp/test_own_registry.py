@@ -23,8 +23,7 @@ class OwnRegistry(unittest.TestCase):
         self.own.write_text(json.dumps({'$override': '../def/tools.json',
                                         'tools': {'peek_now_time': None, 'clock2': {'path': str(CLOCK)}}}))
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
-        self.env['PATH'] = os.pathsep.join([str(PROTO / 'bin'), os.path.expanduser('~/.local/bin'),
-                                            self.env['PATH']])
+        self.env['PATH'] = os.pathsep.join([str(PROTO / 'bin'), self.env['PATH']])
 
     def tearDown(self):
         shutil.rmtree(self.root, ignore_errors=True)

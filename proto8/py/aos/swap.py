@@ -1,4 +1,4 @@
-"""Swap stopped definitions with retained versions after checking public daemon listings."""
+"""swap - promote 與 rollback 兩支工具共用的換版：查過各 daemon 的公開清單、確認定義沒在用，再換上候選版或退回保留的前版。"""
 from datetime import datetime, timedelta, timezone
 import json
 import os

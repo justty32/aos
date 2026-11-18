@@ -2,7 +2,7 @@
 
 ← [lib](../../../README.md)｜退回工具 [rollback](../rollback/README.md)
 
-stdin 收 `{"defs":"/abs/defs","target":"d","from":"/abs/candidates"}`；成功 stdout 收 `{"target":"d","promoted_at":"2026-11-07T10:41:00.000Z","prev":"/abs/defs/.prev/d/2026-11-07T10-41-00.000Z"}`。旗標與 JSON 同源，`--help` 可查。
+stdin 收 `{"defs":"/abs/defs","target":"d","from":"/abs/candidates"}`；成功 stdout 收 `{"target":"d","promoted_at":"2026-11-07T10:41:00.000Z","prev":"/abs/defs/.prev/d/2026-11-07T10-41-00.000Z"}`。旗標與 JSON 同源，`--help` 可查。換版本體在 aos 套件的 [`aos/swap.py`](../../../aos/swap.py)，跟 [rollback](../rollback/README.md) 共用。
 
 先透過 PATH 上的 `aos-daemon-ctl --daemon D ls --json` 查各 daemon；任何非 `stopped` 的 proc，其 `def` 的 realpath 等於目標或在目標底下，都回 `DefBusy`，不動檔。`daemons` 未給時用 `$AOS_DAEMON`，環境也未設就不查；可給多個 daemon 或空陣列。
 

@@ -12,9 +12,6 @@
  "ref_path_cases.json": {
   "description": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per rule, run by py/tests/test_ref_path.py."
  },
- "test_agent_files.py": {
-  "description": "Test declared file validation and the shared imports from the aos package (with or without aos.agentlib)."
- },
  "test_aos_lib_missing.py": {
   "description": "lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。"
  },
@@ -68,6 +65,9 @@
  },
  "test_context_wrap.py": {
   "description": "context_use（各種腦的 context 用量讀法）與 context_wrap（on_clock handler）：讀 live.jsonl 最後答完那輪、子 agent 與壓縮前的不算、讀不到＝None；handler 過門檻寄收尾、答完且 queue 空才寄 /compact、壓完不…"
+ },
+ "test_declared_files.py": {
+  "description": "Test declared file validation in aos.declared_files and that it imports alone (without aos.agentlib, without touching sys.path)."
  },
  "test_directive_value.py": {
   "description": "驗 directive_value：給了 file＝{\"$ref\": \"#/…\"} 取那份檔自己；沒給＝原封不動（11-12 ref-hash R1）；resolve_path 一律給設定檔。"

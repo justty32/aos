@@ -20,8 +20,7 @@ class BrokenEntry(unittest.TestCase):
         self.reg.write_text(json.dumps({'tools': {'clock': {'path': str(CLOCK)},
                                                   'aos_cache': {'path': str(self.root / 'tools' / 'aos_cache')}}}))
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
-        self.env['PATH'] = os.pathsep.join([str(PROTO / 'bin'), os.path.expanduser('~/.local/bin'),
-                                            self.env['PATH']])
+        self.env['PATH'] = os.pathsep.join([str(PROTO / 'bin'), self.env['PATH']])
 
     def tearDown(self):
         shutil.rmtree(self.root, ignore_errors=True)

@@ -7,6 +7,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from aos import hook_run
@@ -258,8 +259,29 @@ class TargetAt(unittest.TestCase):
 
     def test_no_name_is_unchanged(self):
         """沒給名字＝照舊包成 {"v": …}：#./path 從根算，根沒有 path＝解不開。"""
-        with self.assertRaises(OSError):
+        with self.assertRaises(OSError) as cm:
             hook_run.target(self.entry("a"))
+        self.assertRegex(str(cm.exception), r"^cannot resolve handler directive: aos-directive exited \d+ \(its error line is above\)$")
+
+    def test_reasons_come_from_directive_value(self):
+        """解不開的原因照共用的 directive_value 說（11-18 換成共用版）；解出來不是非空字串的那句是 hook_run 自己的。"""
+        self.doc["hooks"]["c"] = {"event": "before", "handler": {"$ref": "#./nowhere"}}
+        self.doc["count"] = 5
+        self.doc["hooks"]["d"] = {"event": "before", "handler": {"$ref": "#/count"}}
+        with open(self.path, "w") as f:
+            json.dump(self.doc, f)
+        with self.assertRaises(OSError) as cm:
+            hook_run.target(self.entry("c"), "c")
+        self.assertRegex(str(cm.exception), r"^cannot resolve handler directive: aos-directive exited \d+ \(its error line is above\)$")
+        with self.assertRaises(OSError) as cm:
+            hook_run.target(self.entry("d"), "d")
+        self.assertEqual(str(cm.exception), "handler directive did not resolve to a non-empty path")
+        empty = os.path.join(self.root, "empty-bin")
+        os.mkdir(empty)
+        with mock.patch.dict(os.environ, {"PATH": empty}), self.assertRaises(OSError) as cm:
+            hook_run.target(self.entry("a"), "a")
+        self.assertTrue(str(cm.exception).startswith(
+            "cannot resolve handler directive: aos-directive failed to start (must be on PATH): "), cm.exception)
 
 
 if __name__ == "__main__":

@@ -69,7 +69,7 @@ try:
     from aos import flags as aos_flags  # noqa: E402
     from aos import ws as aos_ws  # noqa: E402  （回答配對：for_endpoint、mark_answer、letters_pending／letters_answered）
     from aos.observed import append as append_observed  # noqa: E402
-    from aos.agentlib.agent_files import declared_files  # noqa: E402
+    from aos.declared_files import declared_files  # noqa: E402
     from aos.agentlib import cooldown  # noqa: E402
     from aos.agentlib import hooks  # noqa: E402
     try:                                         # 「很久沒動靜」標記（11-15）；舊的定義副本沒帶 quiet.py 也照跑，只是不標

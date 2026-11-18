@@ -12,7 +12,7 @@ while _lib != os.path.dirname(_lib):
     if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")):
         break
     _lib = os.path.dirname(_lib)
-sys.path[:0] = [HERE, os.path.join(os.path.dirname(HERE), "promote")] + ([_lib] if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")) else [])
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")) else [])
 try:
     from aos import tool_io  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
@@ -22,7 +22,7 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)
-from swap import rollback
+from aos.swap import rollback  # noqa: E402
 
 tool_io.start('rollback')
 args = tool_io.arguments('defs', 'target')

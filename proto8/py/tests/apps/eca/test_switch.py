@@ -19,7 +19,6 @@ TURN_SRC = REPO / "proto8" / "py" / "aos" / "apps" / "eca" / "main_turn.py"
 sys.path.insert(0, str(REPO / "proto8" / "py"))
 from aos.agentlib import cli_ask, cli_base, cli_cell, cli_screen, cooldown  # noqa: E402
 
-LOCAL_BIN = os.path.expanduser("~/.local/bin")
 
 
 class Base(unittest.TestCase):
@@ -59,7 +58,7 @@ class Base(unittest.TestCase):
     def env(self, **more):
         env = {k: v for k, v in os.environ.items()
                if not k.startswith(("AOS_", "FAKE_CLI_")) and k not in ("CLAUDE_CONFIG_DIR", "CODEX_HOME")}
-        env.update(PATH="%s:%s:%s" % (self.bin, LOCAL_BIN, env.get("PATH", "")), HOME=str(self.home),
+        env.update(PATH="%s:%s" % (self.bin, env.get("PATH", "")), HOME=str(self.home),
                    AOS_STACK=str(self.stack), AOS_WS=str(self.ws), FAKE_CLI_LOG=str(self.log),
                    PYTHONDONTWRITEBYTECODE="1")
         env.update(self.extra)

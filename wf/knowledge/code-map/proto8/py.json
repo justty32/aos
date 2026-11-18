@@ -6,7 +6,6 @@
    "__init__.py": "aos - aos 唯一的 Python 套件：指令、工具、範本格共用的模組（from aos import flags, tool_io …）；agent 層的在 aos.agentlib（11-18 S4 收成套件）。",
    "agentlib": {
     "__init__.py": "aos.agentlib - agent 層的共用模組（hooks、cooldown、claude／codex 對話的 cli_*、cmd_call …；S3 前在 lib/agent）。",
-    "agent_files.py": "匯出共用的定義檔與 stack 覆蓋檔宣告讀取器。",
     "agent_tool.py": "claude、codex 共用的工具形入口 ask_cli。",
     "agents_cmd.py": "subagent 與 agents_ctl 共用：查鍵、組 aos-agent ctl 各動作的旗標、跑 aos-agent（或旁邊的 self_*）並把下層錯翻成自己的。",
     "cli_a2a.py": "cli_session 往開著的 claude 畫面投署名訊息（Claude Code 的 cross-session messaging socket）：記 socket、包信封、投遞、等 hook 回執",
@@ -160,7 +159,11 @@
      "main.py": "aos-sweeper [旗標] — 清道夫跑一輪（掛在 daemon 表上當 loop 列 `_sweeper`，每 interval_ms 一次；使用者 11-10）。"
     },
     "tools": {
-     "main.py": "aos-tools [--file F] add|rm|ls|get|call|override … — 管理工具登記（可 $override 另一份只記差異）、環境與小格，三種工具一律經 aos-exec 從 stdin 呼叫。"
+     "common.py": "aos-tools 各段共用的小零件：名字、錯誤型別 Fail、名字與變數名的規則、讀登記檔類 JSON（有指示詞交 aos-json 解）、檔#/指標的拆與接。",
+     "helps.py": "aos-tools 的英文說明：頂層 HELP 與各子命令的 HELPS（--help 印的、錯誤行 usage 取的都是這裡）。",
+     "main.py": "aos-tools [--file F] add|rm|ls|get|call|override … — 管理工具登記（可 $override 另一份只記差異）、環境與小格，三種工具一律經 aos-exec 從 stdin 呼叫。",
+     "registry.py": "aos-tools 的登記檔：讀一份（解指示詞）、照 $override 一層層疊成用的那份、列被 null 關掉的名字、找名字或路徑、寫回（aos-json 或新建）。",
+     "tooldef.py": "aos-tools 讀工具定義：判種類（dir／json／exe）、讀 _tooldef 與 _metainfo（兩處淺合併）、可執行檔問 --tooldef 與 $AOS_STACK 裡的快取。"
     },
     "tree_start": {
      "main.py": "aos-tree-start - 起一棵樹的根（aos-tree-start root＝aos-exec root）；殼裡帶著 AOS_HOME 以外的 AOS_*（從別棵樹或 agent 的殼繼承來的）就拒絕，除非 --force（11-13 線瑣，agents-feedback T07）。"
@@ -205,6 +208,7 @@
    "process_group.py": "收掉自己起的那一群子行程：先 TERM 整群、等一下、還在就 KILL；外面來的 TERM／Ctrl-C 變成例外，讓呼叫處先收拾再走。",
    "refpath.py": "aos_refpath - `$ref` 與 index 共用的「路徑字串 → (檔, 指標)」：`#` 左邊一律檔案系統、右邊一律 json 內部（使用者 11-13 晚定，thinking 2026-11/13/ref-path-rules）。",
    "shell_observed.py": "Reserve a writable shell ledger before execution and record the completed command.",
+   "swap.py": "promote 與 rollback 兩支工具共用的換版：查過各 daemon 的公開清單、確認定義沒在用，再換上候選版或退回保留的前版。",
    "sweep.py": "aos_sweep 清道夫本體：一輪（封存、保留期、封存總量、行程）與 purge 的流程、鎖、找列、報告；檔案細節在 aos_sweep_files、行程在 aos_sweep_proc；aos-sweeper 與 aos-daemon-ctl sweep 共用。",
    "sweep_files.py": "aos_sweep_files 清道夫的檔案那半：stderr 的 copytruncate 封存（gzip）、封存檔名的 UTC 時間戳、保留期刪除、purge、.bad- 計數、放鎖殘骸；aos_sweep 叫它。",
    "sweep_proc.py": "aos_sweep_proc 清道夫的行程那半：認出這台 daemon 預設小格裡「表上沒有、但還活著、確定是這台生的」子 loop，先寫它的 ctl stop，過寬限還在才 TERM／10 秒後 KILL；真 zombie 只報。",
@@ -261,6 +265,7 @@
   "tests": {
    "apps": {
     "agent": {
+     "env_helper.py": "aos-agent 測試共用的小零件：乾淨的子行程環境（拿掉 AOS_* 等前綴、不留 .pyc）、輪詢等條件成立。",
      "reply_fixture.py": "回答配對測試的共用零件（reply-match-1114）：假 aos-post、假 daemon 表、模擬寫的一方（新身體／舊身體，fsm 形／eca 形），不跑真 agent。",
      "test_add_dotenv.py": "Test ctl add dotenv override wrapping and definition environment precedence on an isolated daemon.",
      "test_add_parent_daemon.py": "Phase 1 of parent / notify_box on a real isolated daemon (ok-devt-1114 05 定稿 1.2, 1.3 and 修訂 1, ok-limits 11-14).",
@@ -282,6 +287,7 @@
      "test_say_from.py": "Test the sender of aos-agent say / chat (11-13 a2a): --from > the listed agent whose stack holds $AOS_STACK > login name; only an eca's letter carrie…",
      "test_set_def.py": "Test aos-agent ctl set-def on a real aos-daemon: stop, detach and attach again on the same stack; workspace and auto_restart stay, the table shows th…",
      "test_state_parts.py": "Test aos-agent ctl state (11-10 self-family self_state): the overview (one line per part), picked parts, all, --json, and parts that are not availabl…",
+     "test_stop_linger.py": "Test that aos-agent ctl stop leaves an eca screen to the definition's after_stop hook (C′ B), while ctl rm and ctl set-def still close it themselves,…",
      "test_system.py": "Test aos-agent system on a fake daemon table (11-11 self-system): get / get -l / get --json, set from stdin and from a file, empty text, reset, missi…",
      "test_tools_override.py": "Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with \"$override\" (N2 poin…",
      "test_who_registered_daemon.py": "ctl who reads parent / notify_box of a row attached with --envs on a real isolated daemon (ok-devt-1114 05 定稿 1.3, ok-limits 11-14)."
@@ -392,6 +398,7 @@
      "test_sweep.py": "Test aos-sweeper and aos-daemon-ctl sweep (tasks 1–18) with isolated files, real locks, and owned child processes."
     },
     "tools": {
+     "env_helper.py": "aos-tools 測試共用的乾淨子行程環境：拿掉 AOS_* 等前綴、不留 .pyc；aos 指令靠 PATH 上的 $AOS_HOME/bin。",
      "test_broken_entry.py": "Test one broken registry entry (path gone, definition missing or bad) is skipped by ls with a warning while the others list and call as usual, and ge…",
      "test_cache.py": "Test where aos-tools caches executable tool definitions (11-10 aos-tools-cli step 2): $AOS_STACK/tooldef_cache.json, never the registry.",
      "test_cell_lazy.py": "Test that aos-tools call does not create the tool cell beforehand (11-11 tool-cells-lazy): a read-only tool leaves no folder, a writing tool makes it…",
@@ -413,7 +420,6 @@
    },
    "fake_mcp_stdio.py": "Provide a standard-library MCP stdio server with tools and failure modes for client tests.",
    "ref_path_cases.json": "Shared table for the $ref / index path rule (left of # = file system, right of # = inside the json; thinking 2026-11/13/ref-path-rules): one row per …",
-   "test_agent_files.py": "Test declared file validation and the shared imports from the aos package (with or without aos.agentlib).",
    "test_aos_lib_missing.py": "lib/aos 的工具抄到找不到 lib 的地方時，一律印一行 ModuleMissing、退 1（cl-9 對齊成標準樣板，不再是 traceback）。",
    "test_aos_ws_reply_match.py": "Check aos_ws reply matching (reply-match-1114): answer_for's order queue -> history -> history_removed -> letters.json, the letters.json helpers, mar…",
    "test_cli_a2a.py": "驗畫面開著的 claude 身往 CLI 的收件 socket 投署名訊息（11-13 cli_a2a）：信封與署名、hook 記 socket 與回執、投遞、等回答；",
@@ -432,6 +438,7 @@
    "test_cli_tools_sub.py": "驗 cli.json 的 tools_sub（11-12 eca-task-subagent）：只有 claude 身認、--agents 蓋掉 general-purpose 並內嵌 aos_sub、--allowedTools 多 mcp__aos_sub、guard hook 擋子 agen…",
    "test_clock_when.py": "Test aos_clock_when: at parsing (HH:MM, ISO, +N), 5-field cron parsing and next time, the late text (no files, no clock).",
    "test_context_wrap.py": "context_use（各種腦的 context 用量讀法）與 context_wrap（on_clock handler）：讀 live.jsonl 最後答完那輪、子 agent 與壓縮前的不算、讀不到＝None；handler 過門檻寄收尾、答完且 queue 空才寄 /compact、壓完不…",
+   "test_declared_files.py": "Test declared file validation in aos.declared_files and that it imports alone (without aos.agentlib, without touching sys.path).",
    "test_directive_value.py": "驗 directive_value：給了 file＝{\"$ref\": \"#/…\"} 取那份檔自己；沒給＝原封不動（11-12 ref-hash R1）；resolve_path 一律給設定檔。",
    "test_env_file.py": "Test the shared dotenv parser directly, including expansion and strict failures.",
    "test_file_tools_paths.py": "檔案工具拿掉工作區限制（11-10 tool-packs，使用者「3.對」）：相對從 $AOS_WS、絕對照用，工作區外也能讀寫改搬。",
@@ -671,6 +678,7 @@
     "jsonx_search/": "json_search 加料版：follow 穿過 $ref、resolve 在解開 $ref／$env 後的值裡找（都預設關；這兩個不能配 up）",
     "jsonx_set/": "json_set 加料版：值可由 text 解析或 from 另一格複製、resolve 解開指示詞再存、follow 穿過 $ref、check 驗設定（都預設關）",
     "kernel": {
+     "forwarding.py": "轉寄對照表 forwarded.json：讀寫、防重、寄到一半的待定列，與靠它做的轉寄、代回。",
      "hold.py": "「先留著等表態」：hold.json 記留著的信，decisions/<信名>.json 是別人對某一封的表態（pass／refuse）。",
      "hooks.py": "kernel 的三個 hook 時機：設定、事件欄位與判決回話，執行一律交給共用引擎。",
      "letters.py": "包 aos-post 的信件本身：認領、看信、收信、拒信與排隊 body；轉寄、代回與轉寄對照表在 forwarding.py。",
@@ -742,7 +750,6 @@
     },
     "metainfo_check/": "Compare declared definition costs with observed median cost ratios without writing files.",
     "promote": {
-     "swap.py": "Swap stopped definitions with retained versions after checking public daemon listings.",
      "tests": {
       "test_recovery.py": "Verify swap failures restore the live definition and never consume retained history.",
       "test_swap.py": "Verify definition swaps, byte recovery, and busy guards through real aos tools."

@@ -34,7 +34,7 @@ class McpHooks(unittest.TestCase):
                         % (sys.executable, str(self.calls)))
         fake.chmod(0o755)
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
-        self.env['PATH'] = os.pathsep.join([str(self.bin), os.path.expanduser('~/.local/bin'), self.env['PATH']])
+        self.env['PATH'] = os.pathsep.join([str(self.bin), self.env['PATH']])
 
     def hook(self, name, body=''):
         path = self.defn / (name + '.py')

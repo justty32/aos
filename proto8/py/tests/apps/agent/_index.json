@@ -1,4 +1,7 @@
 {
+ "env_helper.py": {
+  "description": "aos-agent 測試共用的小零件：乾淨的子行程環境（拿掉 AOS_* 等前綴、不留 .pyc）、輪詢等條件成立。"
+ },
  "reply_fixture.py": {
   "description": "回答配對測試的共用零件（reply-match-1114）：假 aos-post、假 daemon 表、模擬寫的一方（新身體／舊身體，fsm 形／eca 形），不跑真 agent。"
  },
@@ -61,6 +64,9 @@
  },
  "test_state_parts.py": {
   "description": "Test aos-agent ctl state (11-10 self-family self_state): the overview (one line per part), picked parts, all, --json, and parts that are not availabl…"
+ },
+ "test_stop_linger.py": {
+  "description": "Test that aos-agent ctl stop leaves an eca screen to the definition's after_stop hook (C′ B), while ctl rm and ctl set-def still close it themselves,…"
  },
  "test_system.py": {
   "description": "Test aos-agent system on a fake daemon table (11-11 self-system): get / get -l / get --json, set from stdin and from a file, empty text, reset, missi…"

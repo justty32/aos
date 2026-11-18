@@ -1,6 +1,6 @@
 """Acceptance on a real root daemon (no brain needed): after_start / after_stop on start, stop, sleep, wake, kill -9 + auto_restart, rm; on_clock with the root clock; history stays empty."""
 # 11-11 clock-hook：範本 loop.json 的 on_start／on_stop（aos-loop）→ py/tools/agent/hook_fire → hooks.json 的 after_start／after_stop；
-# 每格開頭 hooks.clock_tick → on_clock。用這份 clone 的 cpp／cmd（PATH 最前）、py／lib（PYTHONPATH），不碰 ~/.local/bin 指的那份。
+# 每格開頭 hooks.clock_tick → on_clock。用這份 proto8 的 bin（PATH 最前）、py（PYTHONPATH）。
 # 跑法：python3 test_clock_hook_daemon.py [-v]；KEEP=1 留下試驗資料夾。
 import json
 import os

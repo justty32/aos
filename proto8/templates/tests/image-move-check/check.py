@@ -25,7 +25,6 @@ class Check:
         self.repo = Path(__file__).resolve().parents[3]
         self.env = {k: v for k, v in os.environ.items()
                     if not k.startswith("AOS_")}
-        self.env["PATH"] = str(Path.home() / ".local/bin") + os.pathsep + os.environ["PATH"]
         self.owned = {}
         self.process = None
         self.log = None

@@ -22,7 +22,6 @@ LINE = "mcp_tool: error: "
 
 def clean_env(**extra):
     env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") and k != "FAKE_MODE"}
-    env["PATH"] = os.path.expanduser("~/.local/bin") + os.pathsep + env.get("PATH", "")
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env["AOS_HOME"] = str(PROTO)
     env.update(extra)

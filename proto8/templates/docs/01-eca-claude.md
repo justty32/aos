@@ -2,7 +2,7 @@
 
 ## 外部 coding agent 範本（eca-claude）
 
-claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../../py/docs/05-commands.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。CLI 對話共用 [py/aos/agentlib/cli_session.py](../../py/aos/agentlib/cli_session.py)，介面宣告共用 [py/aos/agentlib/agent_files.py](../../py/aos/agentlib/agent_files.py)（K-5）；兩者都在 `aos.agentlib`（裝好在 `lib/aos/agentlib/`），不 import 命令列那套 `aos.flags`。設計：[thinking 2026-10-30 eca](../../thinking/2026-10/30/eca/README.md)；條文草稿 P-43。（沒有 codex 版範本，只差 `cli.json`：要就複製一份、`cli.json` 換成下面這份；**沙盒是 `workspace-write`**，codex 用自己的指令在工作區讀寫（11-12 使用者「codex拿掉唯讀沙盒」；不是 `danger-full-access`，隊長代定、使用者「可以先定這樣」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）。不要照抄 py/tools/agent/codex 那支工具的 `cli.json`：那是給腦叫的 codex 工具，沙盒唯讀。）
+claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../../py/docs/05-commands.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。CLI 對話共用 [py/aos/agentlib/cli_session.py](../../py/aos/agentlib/cli_session.py)，介面宣告共用 [py/aos/declared_files.py](../../py/aos/declared_files.py)（K-5）；前者在 `aos.agentlib`、後者在 `aos` 頂層（裝好在 `lib/aos/`），不 import 命令列那套 `aos.flags`。設計：[thinking 2026-10-30 eca](../../thinking/2026-10/30/eca/README.md)；條文草稿 P-43。（沒有 codex 版範本，只差 `cli.json`：要就複製一份、`cli.json` 換成下面這份；**沙盒是 `workspace-write`**，codex 用自己的指令在工作區讀寫（11-12 使用者「codex拿掉唯讀沙盒」；不是 `danger-full-access`，隊長代定、使用者「可以先定這樣」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）。不要照抄 py/tools/agent/codex 那支工具的 `cli.json`：那是給腦叫的 codex 工具，沙盒唯讀。）
 
 ```json
 {"kind": "codex",

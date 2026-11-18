@@ -28,7 +28,7 @@ sys.path[:0] = _import_paths
 try:
     from aos import flags as aos_flags  # noqa: E402
     from aos import ws as aos_ws  # noqa: E402  （回答配對：for_endpoint）
-    from aos.agentlib.agent_files import declared_files  # noqa: E402
+    from aos.declared_files import declared_files  # noqa: E402
     from aos.agentlib import hooks  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
     if _error.name not in ("aos", "aos.agentlib"):

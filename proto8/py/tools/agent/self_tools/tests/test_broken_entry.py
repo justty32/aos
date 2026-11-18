@@ -27,8 +27,7 @@ class BrokenEntry(unittest.TestCase):
         (d / "procs_state.json").write_text(json.dumps({"procs": {"bob": {
             "phase": "running", "stack": "procs/bob", "ws": "../ws", "def": str(defn)}}}))
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-        env["PATH"] = os.pathsep.join([str(PROTO / "bin"), str(PROTO / "bin"),
-                                       os.path.expanduser("~/.local/bin"), env["PATH"]])
+        env["PATH"] = os.pathsep.join([str(PROTO / "bin"), env["PATH"]])
         self.env = dict(env, AOS_DAEMON=str(d), AOS_WS=str(self.ws),
                         AOS_STACK=str(d / "procs" / "bob" / "tools" / "self_tools") + "/", PYTHONDONTWRITEBYTECODE="1")
         self.ok({"op": "add", "path": "tools/aos_cache"})

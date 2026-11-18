@@ -1,4 +1,4 @@
-"""Test declared file validation and the shared imports from the aos package (with or without aos.agentlib)."""
+"""Test declared file validation in aos.declared_files and that it imports alone (without aos.agentlib, without touching sys.path)."""
 import json
 import os
 from pathlib import Path
@@ -10,11 +10,10 @@ import unittest
 sys.dont_write_bytecode = True
 LIB = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(LIB))
-from aos.agentlib.agent_files import declared_files
-from aos.declared_files import declared_files as shared_declared_files
+from aos.declared_files import declared_files
 
 
-class AgentFiles(unittest.TestCase):
+class DeclaredFiles(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="declared-files-")
         self.addCleanup(self.tmp.cleanup)
@@ -32,7 +31,6 @@ class AgentFiles(unittest.TestCase):
     def test_only_known_declarations_are_returned(self):
         files = {key: "cfg/%s.json" % key for key in ("tools", "llm", "hooks", "system")}
         self.assertEqual(self.declare({"aos-agent": dict(files, other="ignored")}), files)
-        self.assertIs(declared_files, shared_declared_files)
 
     def test_bad_shapes(self):
         for value, message in (([], "%s must be a JSON object" % self.path),
@@ -81,8 +79,8 @@ class AgentFiles(unittest.TestCase):
 
     def test_import_leaves_the_path_alone(self):
         self.run_import("import sys; sys.dont_write_bytecode = True; sys.path.insert(0, %r); "
-                        "before = list(sys.path); from aos.agentlib import agent_files; "
-                        "assert sys.path == before; assert agent_files.declared_files(%r) == {}"
+                        "before = list(sys.path); from aos import declared_files; "
+                        "assert sys.path == before; assert declared_files.declared_files(%r) == {}"
                         % (str(LIB), str(self.folder)))
 
 

@@ -15,7 +15,7 @@ PARTS = ["who", "state", "tools", "llm", "system", "hooks", "history", "mailbox"
 
 
 def clean_env(**extra):
-    return env_helper.clean_env(path=(env_helper.LOCAL_BIN,), **extra)
+    return env_helper.clean_env(**extra)
 
 
 class State(unittest.TestCase):

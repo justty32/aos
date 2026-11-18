@@ -4,7 +4,7 @@
 
 stdin 收 `{"defs":"/abs/defs","target":"d"}`，成功 stdout 收 `{"target":"d","restored":"2026-11-07T10-41-00.000Z"}`。旗標與 JSON 同源，`--help` 可查。
 
-與 promote 共用 `../promote/swap.py`：相同路徑限制、相同 `daemons` 參數與 `$AOS_DAEMON` 預設、同樣只透過 `aos-daemon-ctl ls --json` 查非 `stopped` 的 proc；正被使用即 `DefBusy`，檔案不動。
+與 promote 共用 aos 套件的換版模組 [`aos/swap.py`](../../../aos/swap.py)：相同路徑限制、相同 `daemons` 參數與 `$AOS_DAEMON` 預設、同樣只透過 `aos-daemon-ctl ls --json` 查非 `stopped` 的 proc；正被使用即 `DefBusy`，檔案不動。
 
 從 `<defs>/.prev/<target>/` 取符合 `YYYY-MM-DDTHH-MM-SS.sssZ` 格式、名稱最新的一份目錄，其他子目錄保留。現版先移到 `.prev/.tmp-<時間>/`，前版 rename 回目標後刪現版暫存；若搬前版失敗，先把現版搬回。成功後已用的時間目錄消失；`<target>` 歷史目錄空了就刪，較舊歷史保留。清理失敗回 `SwapFailed`，必要時在錯誤中指出保留的暫存。
 

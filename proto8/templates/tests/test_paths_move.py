@@ -4,7 +4,7 @@
 #   A 起 → 問一題 → aos-daemon-ctl -d stacks/root shutdown → git 搬到另一個 HOME、另一個前綴（A 的 proto8 複本與整個 A 刪掉）
 #   → B aos-exec --stack stacks/root defs → 不用其他指令就接著答；
 # 加一輪同一台：env 跑通 → 停 → AOS_HOME 改指另一份 proto8 複本（舊的刪掉）→ 再起 → 照樣答、檔裡沒殘留舊值。
-# 跑法：python3 test_paths_move.py [-v]（每輪約 20～40 秒）；KEEP=1 留下試驗資料夾。用 ~/.local/bin 的 aos 指令，不碰 ~/code。
+# 跑法：python3 test_paths_move.py [-v]（每輪約 20～40 秒）；KEEP=1 留下試驗資料夾。aos 指令用 PATH 上的（env.sh 排在最前的 $AOS_HOME/bin），不碰 ~/code。
 import json
 import os
 from pathlib import Path
@@ -19,7 +19,6 @@ import unittest
 
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[2]            # 這份 proto8（複本從它抄）
-BIN = Path.home() / ".local" / "bin"
 PARTS = ("lib", "templates", "knowledge")
 T0 = time.monotonic()
 # 只給人看的歷史紀錄（記當時的路徑，不拿來解路徑）：log、llm kernel 的帳 ledger.jsonl、觀測帳 observed.jsonl
@@ -44,7 +43,7 @@ class Machine:
     def __init__(self, work, home, proto, extra=None):
         self.work, self.proto, self.procs = work, proto, []
         self.env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-        self.env.update(PATH=str(BIN) + os.pathsep + os.environ["PATH"], HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
+        self.env.update(HOME=str(home), PYTHONDONTWRITEBYTECODE="1")
         self.use_proto(proto)
         self.env.update(extra or {})
         home.mkdir(parents=True, exist_ok=True)

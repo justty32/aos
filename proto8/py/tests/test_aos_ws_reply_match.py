@@ -158,9 +158,9 @@ class Stack(unittest.TestCase):
 
     def test_pre_change_aos_ws_reads_the_same(self):
         import reply_fixture as rf
-        base = rf.base_tree(self, "lib")
+        base = rf.base_tree(self, "py", "lib")       # the old commit: aos_ws.py flat in py/ (with aos_flags.py), tool_io.py in lib/
         plain, marked = self.two_stacks()
-        code = ("import json, sys; sys.path[:0] = [sys.argv[1] + '/lib']; from aos import ws as aos_ws; "
+        code = ("import json, sys; sys.path[:0] = [sys.argv[1] + '/py']; import aos_ws; "
                 "print(json.dumps([[aos_ws.answers(s), aos_ws.exchanges(s)] for s in sys.argv[2:]]))")
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         r = subprocess.run([sys.executable, "-c", code, str(base), plain, marked], capture_output=True, text=True, env=env, timeout=30)

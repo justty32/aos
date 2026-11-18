@@ -1,7 +1,7 @@
 """hook_run - hook 的共用引擎：事件表由呼叫的人給，這裡只管驗格的共通鍵、比 condition、寫 event.json、用 aos-exec 跑 handler、解回話、on_error。
 
 圖紙：proto8/thinking/2026-11/12/kernel-framework（K-F22；01-框架零件「hook 三個時機」）。從 py/aos/agentlib/hooks.py 抽出來，行為逐項相同；
-agent 的 hooks.py 與通用 kernel 框架都用這份。放 lib 最底層：純標準庫，不 import lib/agent、不 import py。
+agent 的 hooks.py 與通用 kernel 框架都用這份。放 lib 最底層：標準庫加 aos.directive_value（解 handler 的指示詞），不 import aos.agentlib、不 import py。
 不印東西、不 sys.exit：錯丟 HooksBad（格的形狀不對）／HookFailed（on_error stop 的 hook 自己失敗），由呼叫方說自己那一行。
 清單從哪讀、幾份疊、事件專用的鍵（例如 agent 的 on_clock 那幾個）都是呼叫方自己的事，這裡不管。
 
@@ -13,7 +13,7 @@ agent 的 hooks.py 與通用 kernel 框架都用這份。放 lib 最底層：純
     validate_name(name) -> None；不對丟 HooksBad（原因不含名字與檔路徑，呼叫方自己加）
     complete(entry, path) -> 格＝原格的鍵＋DEFAULTS 補齊＋"from"（來自哪份檔）＋"base"（解 handler 相對路徑的資料夾）
     matches(entry, events, data) -> 這格的 condition 合不合這次的 data
-    target(entry, name=None) -> handler 解成 aos-exec 的目標路徑；解不開丟 OSError
+    target(entry, name=None) -> handler 解成 aos-exec 的目標路徑；解不開丟 OSError（指示詞交給共用的 directive_value，原因照它的字樣）
     run(name, entry, event, data, stack) -> (結束碼, stdout 字串)；async true＝(None, "")；自己失敗丟 OSError／TimeoutError
     fire(event, data, entries, stack, events, warn=None, only=None, check=None) -> {"data": 改過的 data（新 dict）,
                     "changed": [改過的鍵], "blocked": bool, "hook": 攔下的 hook 名或 None, "text": 攔下那個 hook 的 stdout 或 ""}
@@ -24,6 +24,8 @@ import os
 import signal
 import subprocess
 import time
+
+from aos import directive_value
 
 DEFAULTS = {"intercept": True, "async": False, "on_error": "stop", "timeout_ms": 60000}
 BLOCK = 10                                       # 攔下（N-43：10＝「不要」，不是錯）
@@ -112,17 +114,15 @@ def target(entry, name=None):
     交給 aos-directive --at，#./、#../ 從那一格算（11-13 線址二）；沒給＝照舊包成 {"v": …}（不知道位置）。"""
     t = entry["handler"]
     if isinstance(t, dict):
-        if name is None:
-            argv, doc, unwrap = ["aos-directive", "--file", entry["from"]], {"v": t}, True
-        else:
-            at = "".join("/" + k.replace("~", "~0").replace("/", "~1") for k in ("hooks", name, "handler"))
-            argv, doc, unwrap = ["aos-directive", "--file", entry["from"], "--at", at], t, False
-        try:
-            r = subprocess.run(argv, input=json.dumps(doc), stdout=subprocess.PIPE,
-                               stderr=subprocess.DEVNULL, text=True, cwd=entry["base"])   # #/… ＝ 這格所在的那份清單
-            t = (json.loads(r.stdout).get("v") if unwrap else json.loads(r.stdout)) if r.returncode == 0 else None
-        except (OSError, ValueError, AttributeError) as e:
-            raise OSError("cannot resolve handler directive: %s" % e) from e
+        try:                                     # #/… ＝ 這格所在的那份清單；aos-directive 的 stderr 照轉（它自己說哪裡解不開）
+            if name is None:
+                got = directive_value.resolve({"v": t}, entry["base"], entry["from"])
+                t = got.get("v") if isinstance(got, dict) else None
+            else:
+                t = directive_value.resolve(t, entry["base"], entry["from"],
+                                            at=directive_value.pointer("hooks", name, "handler"))
+        except directive_value.Error as e:
+            raise OSError("cannot resolve handler directive: %s" % e) from None
         if not isinstance(t, str) or not t:
             raise OSError("handler directive did not resolve to a non-empty path")
     return t if os.path.isabs(t) else os.path.join(entry["base"], t)

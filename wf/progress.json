@@ -14,10 +14,11 @@
       "title": "重建 `~/aos-home`",
       "status": "等使用者",
       "flow": "",
-      "what": "使用者自己照步驟單的安裝六步重建（`AOS_HOME` 一台設一次、`cp -r` 起手範本 `templates/start-api`、樹裡 `source env.sh`；程式只有 repo 一份）；以前「換樹時帶／換樹後驗」的尾巴都等重建後再驗；公司 WSL 的樹停著、`~/repo/aos` 還沒拉",
+      "what": "使用者自己照步驟單的安裝六步重建（`AOS_HOME` 一台設一次、`cp -r` 起手範本 `templates/start-api`、樹裡 `source env.sh`；程式只有 repo 一份）；以前「換樹時帶／換樹後驗」的尾巴都等重建後再驗。公司 WSL：agent 11-18 已清掉→照步驟單重建→試跑→再整個清掉（`b05e59368`，現在 WSL 沒有 aos），教學本是 11-18 的公司WSL-重建試跑紀錄，使用者之後單開 session 照著一步一步做；步驟單 11-18 晚照紀錄文末卡點補了六處（線 wrap-1118）。剩：公司 WSL 由使用者自己重建；家機重建沒做；真模型（API 端點）另一條線 litellm-1118 在弄",
       "next": "",
       "see": [
         "[重建步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)",
+        "[公司WSL-重建試跑紀錄](../proto8/thinking/2026-11/18/公司WSL-重建試跑紀錄.md)",
         "[留底](../proto8/thinking/2026-11/17/session-log-瘦身留底/07-第49到54條與重建.md#rebuild)"
       ],
       "since": "2026-11-17"
@@ -26,7 +27,7 @@
       "title": "cpp／py 改名與安裝包（七步做完，剩尾巴）",
       "status": "open",
       "flow": "",
-      "what": "S1～S7 都做完（S6：`env.sh` 不再設 `AOS_HOME`、沒設報錯，樹裡一份薄 `env.sh` 轉去家裡那份，起手範本 `templates/start-api`、`start-eca`；S7：wf／README 文字跟上、重建步驟單改成安裝六步＋更新五步、乾淨 clone 照著走過）；`frontend/bin` 那段 PATH（F-1）使用者 11-18 選項框「照留，等前端大修 (Recommended)」，照留到前端大修；殘檔 `py/tools/agent/__init__.py` 已刪（「都刪 (Recommended)」）；先放著的：code map 依賴表是空的、`docs/zh` 網頁還寫舊安裝法、條文裡的舊路徑字樣；家機沒驗",
+      "what": "S1～S7 都做完（S6：`env.sh` 不再設 `AOS_HOME`、沒設報錯，樹裡一份薄 `env.sh` 轉去家裡那份，起手範本 `templates/start-api`、`start-eca`；S7：wf／README 文字跟上、重建步驟單改成安裝六步＋更新五步、乾淨 clone 照著走過）；`frontend/bin` 那段 PATH（F-1）使用者 11-18 選項框「照留，等前端大修 (Recommended)」，照留到前端大修；殘檔 `py/tools/agent/__init__.py` 已刪（「都刪 (Recommended)」）；code map 依賴表 11-18 晚重建（`b5ccbd6e1`，`wf/knowledge/code-map/deps/` 三張）；先放著的：`docs/zh` 網頁還寫舊安裝法（11-17 裁「先不動」）、條文裡的舊路徑字樣；家機沒驗",
       "next": "",
       "see": [
         "[HANDOFF](HANDOFF.md)",
@@ -39,7 +40,7 @@
       "title": "路徑規則與八夾的尾巴",
       "status": "open",
       "flow": "",
-      "what": "八夾、規則一、`install.py` 新流程都已進 main（`install.sh` 與舊 `.pth` 提醒 11-18 S5 收掉、wf 已不寫 `~/aos-home/knowledge`）；剩 `aos-sandbox` 只綁 `<家>/lib`（`py/aos/apps/sandbox/main.py` 約第 310 行，11-18 核過），規劃是綁整個家",
+      "what": "八夾、規則一、`install.py` 新流程都已進 main（`install.sh` 與舊 `.pth` 提醒 11-18 S5 收掉、wf 已不寫 `~/aos-home/knowledge`）；`aos-sandbox` 改成 aos 命令把整個家唯讀帶進去、家先認 `AOS_HOME`（使用者 11-18 裁「AOS_HOME 有設就用它」、整個家唯讀可見「接受」），已交 `43a07ea85`。剩：完整的沙箱隔離檢查沒做（只驗了 dry-run、單元測試與真開一次看家可見、唯讀）",
       "next": "",
       "see": [
         "[待裁網頁-答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)",
@@ -51,10 +52,11 @@
       "title": "重構與 tidy 盤點剩的",
       "status": "open",
       "flow": "tidy",
-      "what": "九題與追加三題都已交；剩拆 aos-frontend／aos-tools 大檔、測試共用 helper、thinking 11-13 起先提取再精簡（Q1）、舊退路清理、兩支 helper 自寫的 `read_json`",
+      "what": "九題與追加三題都已交；code-tidy-1118 做完的（aos-tools 拆成 main／common／helps／registry／tooldef 五支、兩支自寫的 `read_json` 收進 `tool_io.read_json`、測試共用 `env_helper`、舊名註解）已交 `43a07ea85`；它列的七題使用者 11-18 晚已裁（測試 PATH 拿掉 `~/.local/bin`、拿掉 `agentlib/agent_files.py` 轉接、`hook_run` 改用 `directive_value`、`swap` 搬進 `py/aos/` 四題由線 wrap-1118 做完；listen／ask 舊退路、`self_*` 測試的 `run_tool`、測試起真 daemon 三題「不動」）。剩：拆 aos-frontend（前端先不動，等大修）、thinking 11-13 起先提取再精簡（Q1）",
       "next": "",
       "see": [
-        "[盤點](workflows/tidy/reports/2026-11-17-重構與tidy盤點.md)"
+        "[盤點](workflows/tidy/reports/2026-11-17-重構與tidy盤點.md)",
+        "[11-18 晚裁定](../proto8/thinking/2026-11/17/cpp-py-改名/08-要裁的題.md#11-18-施工當天的題選項框逐字)"
       ],
       "since": "2026-11-17"
     },
@@ -84,7 +86,7 @@
       "title": "kernel 框架與限資源",
       "status": "open",
       "flow": "",
-      "what": "11-14 批 5～14、限資源 B1～B7 已進（B7＝`75a6ca81e`）；剩：C′ B 包沒進（`ctl stop` 拿掉立刻關、`set-def --restart` 自己關、docs/02 第 6 條、`test_stop_linger`；repo 裡沒有 `test_stop_linger`；合好的整檔版在家機 `wf/temp/ok-kf/cprime/B/`、對的是 `a964f0455` 的舊路徑，要重套；原本卡在等換樹讓活樹 eca 定義先有兩格 hook）；11-13 留的：`py/tools/aos/kernel/letters.py` 仍 300 行沒拆、骨架三處不順（`round.py` 11-14 後只有搬家）、範本 `templates/kernel/daemon-kernel`、`procs-kernel` 的 `kernel.json` 仍只寫 `max_running` 沒配 `count_daemon`；kernel tests 偶紅核不到（11-18 新複本 `py/tools/aos/kernel/tests` 連跑 3 次 122 例都綠、沒重現）",
+      "what": "11-14 批 5～14、限資源 B1～B7 已進（B7＝`75a6ca81e`）；C′ B 包 11-18 已交 `43a07ea85`（`ctl stop` 不再當場關畫面、交給 after_stop hook 延後關，`set-def` 自己關，新增 `test_stop_linger`）；`py/tools/aos/kernel/letters.py` 300 行已拆出 `forwarding.py`（同一筆）；範本 `kernel.json` 補 `count_daemon` 使用者 11-18 晚裁「不動」，維持只寫說明（`templates/kernel/README`，`96ae93b81`）。剩：真 eca／真 tmux 畫面的延後關沒實測；骨架三處不順（`round.py` 11-14 後只有搬家，修了會改行為，原文「等有需要再動」）；kernel tests 偶紅核不到（11-18 新複本 `py/tools/aos/kernel/tests` 連跑 3 次 122 例都綠、沒重現）",
       "next": "",
       "see": [
         "[留底 16](../proto8/thinking/2026-11/17/session-log-瘦身留底/02-第12到20條.md#t16)",
@@ -96,7 +98,7 @@
       "title": "set-def 新做法（fx-1）與改名兩步（em-Q4）",
       "status": "open",
       "flow": "",
-      "what": "沒進 main（`py/tests/apps/agent/test_set_def.py` 仍兩支 expectedFailure，11-18 新複本實跑 6 例、expected failures=2），照施工圖重做",
+      "what": "已交 `43a07ea85`：set-def＝關畫面→停→從表上拔→同名同 stack 掛回新定義（表馬上換、daemon 重啟不掉），`--restart` 拿掉（傳了報 `FlagUnknown`），改名兩步寫進 README 與知識庫，`test_set_def` 兩支 expectedFailure 轉綠。剩：真 eca 畫面、走 kernel 排隊時的 set-def 沒實測",
       "next": "",
       "see": [
         "[misc-1114](../proto8/thinking/2026-11/14/misc-1114.md#1-fx-1set-def-改成停拔同一個-stack-掛回)"
@@ -107,7 +109,7 @@
       "title": "11-15 收尾剩的",
       "status": "open",
       "flow": "",
-      "what": "guard（`py/tools/agent/guard`）README 仍標「under review」、沒接進任何定義，接線前實測四件沒做；回答配對交件.md 待決五點核不到：那份在家機 `wf/temp`，repo 裡沒有；`cpp/aos-daemon/tests/test_two_machines.py` 仍留孤兒 `body_a.py`（11-18 新複本實跑 9 例 OK，跑完多一支 `body_a.py` 沒收）",
+      "what": "guard（`py/tools/agent/guard`）README 仍標「under review」、沒接進任何定義，接線前實測四件沒做；回答配對交件.md 待決五點核不到：那份在家機 `wf/temp`，repo 裡沒有；`test_two_machines.py` 的孤兒 `body_a.py` 11-18 已修（`96ae93b81`）",
       "next": "",
       "see": [
         "[留底 37](../proto8/thinking/2026-11/17/session-log-瘦身留底/04-第35到38條.md#t37)"
@@ -208,17 +210,6 @@
       ],
       "since": "2026-11-18"
     },
-    "code-tidy-5": {
-      "title": "程式碼整理 5 題落地（待派工）",
-      "status": "open",
-      "flow": "",
-      "what": "使用者 11-14 專區全照推薦——兩份 `read_env_file` 統一用 aos-tools 那份完整讀法、收下層 TERM／KILL 統一（不理就強制關）、範本照舊可用共用程式、`py/` 前綴不改、小五件照推薦；改 proto8 程式照 aos-teams/06 第 5 條",
-      "next": "",
-      "see": [
-        "[wait-user-rewrite-1114 § 使用者回覆](../proto8/thinking/2026-11/14/wait-user-rewrite-1114.md#使用者回覆11-14)"
-      ],
-      "since": "2026-11-18"
-    },
     "workspace-stack-alloc": {
       "title": "正規的工作區與 stack 分配機制（待派工）",
       "status": "open",
@@ -241,17 +232,6 @@
       ],
       "since": "2026-11-17"
     },
-    "company-w6-w8": {
-      "title": "公司機 W6、W8",
-      "status": "open",
-      "flow": "",
-      "what": "Codex 設定檔 1 處沒查（見上面「等使用者｜公司 WSL Codex 設定檔的舊信任紀錄」，兩條是同一件）；測試對話紀錄 11-17 已刪",
-      "next": "",
-      "see": [
-        "[留底 4](../proto8/thinking/2026-11/17/session-log-瘦身留底/01-第1到11條.md#t4)"
-      ],
-      "since": "2026-11-18"
-    },
     "design-tails-1113": {
       "title": "11-13 前開的設計尾巴",
       "status": "open",
@@ -269,7 +249,7 @@
       "title": "11-12 前的舊線",
       "status": "open",
       "flow": "",
-      "what": "two-machines B14、B16、B20、B21 留大修、B22 整理階段；大修材料 56 列待裁；node-pool 第五輪 N2～N10（沒開工）；apply-ideas 序 5 條文日那批文件句子、序 6 aos-serve（沒做）；LLM kernel `_metainfo` 第二步（`llm_tokens` 預估額度、閘門帶 `from` 按函數統計；程式裡沒有 `llm_tokens`）；補驗要真模型：11-10 gemma 五項、eca haiku 整項、MCP tools/list 字元數，11-11 claude haiku new_mail 一輪；i18n 只記想法；小尾巴：do_task「計畫對不上」的 `StateBad` 沒測試格（現有那格是讀不到 tasks.json）、eca_tidy 產出的 SUMMARY 核不到（產出在家機；11-14 已判那次試跑過時、十條都收）",
+      "what": "two-machines B14、B16、B20、B21 留大修、B22 整理階段；大修材料 56 列待裁；node-pool 第五輪 N2～N10（沒開工）；apply-ideas 序 5 條文日那批文件句子、序 6 aos-serve（沒做）；LLM kernel `_metainfo` 第二步（`llm_tokens` 預估額度、閘門帶 `from` 按函數統計；程式裡沒有 `llm_tokens`）；補驗要真模型：11-10 gemma 五項、eca haiku 整項、MCP tools/list 字元數，11-11 claude haiku new_mail 一輪；i18n 只記想法；小尾巴：eca_tidy 產出的 SUMMARY 核不到（產出在家機；11-14 已判那次試跑過時、十條都收）",
       "next": "",
       "see": [
         "[留底 03](../proto8/thinking/2026-11/17/session-log-瘦身留底/03-第21到34條.md)"

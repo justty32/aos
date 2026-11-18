@@ -23,7 +23,7 @@ MSGS = [{"role": "user", "content": "what time is it?"},
 
 
 def clean_env(**extra):
-    return env_helper.clean_env(path=(env_helper.LOCAL_BIN,), **extra)
+    return env_helper.clean_env(**extra)
 
 
 class History(unittest.TestCase):

@@ -24,7 +24,7 @@
   {
    "domain": "Python：人打的指令、共用模組、腦叫的工具",
    "files": "proto8/py/*",
-   "role": "一個套件 `py/aos/`：指令本體一支一夾在 `py/aos/apps/<名>/`（夾名＝指令名去掉 aos-、- 換 _；入口由 install.py 照 `py/entries.json` 生進 `bin/`，對照看 `deps.bin`）；共用模組 `aos.flags`、`aos.ws`、`aos.tool_io`、`aos.daemon_ctl`、`aos.comm`…，agent 層共用（cli_*、hooks、agent_files…）在 `aos.agentlib`。腦叫的工具（`_entry`＋`_tooldef.json`＋`_metainfo.json`）在 `py/tools/{base,aos,agent}`；機讀協議定義（JSON Schema）在 `py/schema/`；工具包在 `py/packs/`。install.py 把 `py/` 抄成 `lib/`（執行期只認 `lib/`）。誰 import 誰看 `deps.py`；契約看 proto8/py/README.md，共用模組說明 proto8/py/docs/04-共用模組.md，指令總說明 proto8/py/docs/05-commands.md。",
+   "role": "一個套件 `py/aos/`：指令本體一支一夾在 `py/aos/apps/<名>/`（夾名＝指令名去掉 aos-、- 換 _；入口由 install.py 照 `py/entries.json` 生進 `bin/`，對照看 `deps.bin`）；大的一支在夾裡再拆檔，例 aos-tools（`py/aos/apps/tools/`）拆成 `main`（入口與子命令）、`common`（共用小零件）、`helps`（英文說明）、`registry`（登記檔讀寫與 $override 疊法）、`tooldef`（讀工具定義）五支；共用模組 `aos.flags`、`aos.ws`、`aos.tool_io`、`aos.daemon_ctl`、`aos.comm`…，agent 層共用（cli_*、hooks…）在 `aos.agentlib`。腦叫的工具（`_entry`＋`_tooldef.json`＋`_metainfo.json`）在 `py/tools/{base,aos,agent}`；機讀協議定義（JSON Schema）在 `py/schema/`；工具包在 `py/packs/`。install.py 把 `py/` 抄成 `lib/`（執行期只認 `lib/`）。誰 import 誰看 `deps.py`；契約看 proto8/py/README.md，共用模組說明 proto8/py/docs/04-共用模組.md，指令總說明 proto8/py/docs/05-commands.md。",
    "tests": "共用模組的測試在 proto8/py/tests/；指令的在 proto8/py/tests/apps/<名>/（不是套件，逐夾跑）；工具的在各工具夾的 tests/",
    "per_file": "wf/knowledge/code-map/proto8/py.json"
   },
@@ -78,7 +78,7 @@
   {"want": "錯誤行／提醒行、stdin 讀 JSON、stdout 印一行（C++）", "where": "proto8/cpp/aos-util/include/aos/util/io.hpp；旗標 parse_cli 在 aos/util/cli.hpp"},
   {"want": "Python 命令列的旗標與錯誤行", "where": "proto8/py/aos/flags.py（指令共用，慣用 `from aos import flags as aos_flags`）；工具與 aos.agentlib.cli_session 共用 proto8/py/aos/tool_io.py"},
   {"want": "Python 共用模組怎麼找到、repo 外的複本怎麼 import", "where": "一律 `from aos import …`；bin/ 的入口把同家的 lib/ 放上 sys.path，工具往上找祖先夾裡有 aos/__init__.py 的那層（找不到印 ModuleMissing aos …）；家外的程式只經 $AOS_HOME/lib、沒設報 HomeMissing；說明在 proto8/py/docs/04-共用模組.md"},
-  {"want": "claude／codex 對話、tools／llm 宣告檔位置", "where": "proto8/py/aos/agentlib/cli_session.py、proto8/py/aos/agentlib/agent_files.py（指令與範本共用）"},
+  {"want": "claude／codex 對話、tools／llm 宣告檔位置", "where": "proto8/py/aos/agentlib/cli_session.py、proto8/py/aos/declared_files.py（指令與範本共用）"},
   {"want": "某支 bin/ 指令的原始碼", "where": "wf/knowledge/code-map/deps/bin.json（Python 的本體在 proto8/py/aos/apps/<名>/，說明在 proto8/py/docs/05-commands.md；C++ 的在 proto8/cpp/aos-<名>/src/main.cpp）"},
   {"want": "agent 範本、問腦的 kernel、通用 kernel 的站（框架站）", "where": "proto8/templates/（kernel 範本在 proto8/templates/kernel/；框架站的程式本身在 proto8/py/tools/aos/kernel，問腦總機在 proto8/py/tools/aos/kernel_llm）"},
   {"want": "誰連誰（C++）", "where": "wf/knowledge/code-map/deps/cpp.json（例 `tabledb.py wf/knowledge/code-map/deps/cpp.json find project=aos-daemon`）"},

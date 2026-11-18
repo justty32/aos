@@ -9,7 +9,6 @@ import unittest
 HERE = Path(__file__).resolve().parent
 PROTO = HERE.parents[3]
 TURN = PROTO / "bin" / "aos-eca-turn"
-LOCAL_BIN = os.path.expanduser("~/.local/bin")
 NOTE = "[aos] goal: "
 
 
@@ -31,7 +30,7 @@ class EcaGoal(unittest.TestCase):
     def env(self, **more):
         env = {k: v for k, v in os.environ.items()
                if not k.startswith(("AOS_", "FAKE_CLI_")) and k not in ("CLAUDE_CONFIG_DIR", "CODEX_HOME")}
-        env.update(PATH="%s:%s:%s" % (self.bin, LOCAL_BIN, env.get("PATH", "")), HOME=str(self.home),
+        env.update(PATH="%s:%s" % (self.bin, env.get("PATH", "")), HOME=str(self.home),
                    AOS_STACK=str(self.stack), AOS_WS=str(self.ws), FAKE_CLI_LOG=str(self.cli_log), PYTHONDONTWRITEBYTECODE="1")
         env.update(more)
         return env

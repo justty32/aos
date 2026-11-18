@@ -16,7 +16,7 @@ JSON_BIN = REPO / "proto8" / "bin"
 
 
 def clean_env(**extra):
-    return env_helper.clean_env(path=(JSON_BIN, env_helper.LOCAL_BIN), **extra)
+    return env_helper.clean_env(path=(JSON_BIN,), **extra)
 
 
 class Llm(unittest.TestCase):

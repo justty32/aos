@@ -104,7 +104,7 @@
 #
 # 放哪：proto8/py/aos/agentlib/cli_session.py；claude、codex 經 agent_tool.py 的 ask_cli 共用 ask，call_main 只給 aos-eca-turn --one；
 # attach／open 入口由 aos-agent 提供，不由本檔解析；工具資料夾自帶一份覆寫時，
-# 要連同全部 cli_*.py（與 agent_files.py）一起帶（分檔彼此同層 import）。工具資料夾（cli.json 在裡面）由工具入口傳進來，
+# 要連同全部 cli_*.py（與 aos/declared_files.py）一起帶（分檔彼此同層 import）。工具資料夾（cli.json 在裡面）由工具入口傳進來，
 # 這支不假設自己放在哪隻 agent 底下。
 #
 # 分檔（11-12 晚 R3 重構拆檔，行為不變）：本檔只留上面的說明與 hook／guard 的執行入口（hook 指令一直指著本檔，不能搬不能改名），

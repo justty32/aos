@@ -88,11 +88,11 @@
    "path": "<定義資料夾>/interfaces.json",
    "lifetime": "持久",
    "writer": "人手寫；stack 那份由 py/aos/observed.py 補 aos-observed 宣告",
-   "reader": "aos-agent、lib/agent/agent_files、templates/agent-fsm（brain、wait）、py/tools/agent/agent_def（new 找 tools 宣告）、py/tools/aos/measure",
+   "reader": "aos-agent、aos/declared_files、templates/agent-fsm（brain、wait）、py/tools/agent/agent_def（new 找 tools 宣告）、py/tools/aos/measure",
    "image": "看情況：定義那份不算 image；$AOS_STACK/interfaces.json 進",
    "on_bad": "讀不了、不是物件＝報錯（ValueError→各呼叫者的錯誤行）；不在＝沒宣告",
    "note": "01 盤點沒列這份。11-10 aos-agent 那格多三個選填鍵：history（self-family）、hooks（hook）、llm_keys（self-tools 05，身體認的 llm 鍵名）；舊定義沒寫＝沒有那項，不用重建",
-   "evidence": "proto8/py/aos/agentlib/agent_files.py（declared_files）、proto8/py/aos/observed.py（prepare_strict）、proto8/py/tools/aos/measure/ledger.py（_records）、proto8/py/tools/agent/agent_def/_entry（tools_file）"
+   "evidence": "proto8/py/aos/declared_files.py（declared_files）、proto8/py/aos/observed.py（prepare_strict）、proto8/py/tools/aos/measure/ledger.py（_records）、proto8/py/tools/agent/agent_def/_entry（tools_file）"
   },
   {
    "path": "<定義資料夾>/tools.json",
@@ -332,7 +332,7 @@
    "image": "進",
    "on_bad": "壞＝StateBad 退 1；不在＝{}",
    "note": "01 盤點沒列",
-   "evidence": "proto8/py/tools/aos/kernel/letters.py（read_forwarded、write_forwarded）"
+   "evidence": "proto8/py/tools/aos/kernel/forwarding.py（read_forwarded、write_forwarded）"
   },
   {
    "path": "$AOS_STACK/tools/subagent/subagents.json（誰是我生的）",

@@ -1,7 +1,7 @@
 # cli_cfg.py - cli_session 的設定：讀與驗工具資料夾的 cli.json、llm.json 疊 model、system 附加旗標、tools／tools_sub 登記檔
 import json, os, sys
 
-from aos.agentlib.agent_files import declared_files
+from aos.declared_files import declared_files
 from aos.agentlib import cli_base
 from aos.agentlib.cli_base import RESEED_BYTES, tool_io
 from aos.agentlib.cli_mcp import external_servers

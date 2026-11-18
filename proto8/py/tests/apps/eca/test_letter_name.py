@@ -11,7 +11,6 @@ sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
 PROTO = HERE.parents[3]
 TURN = PROTO / "bin" / "aos-eca-turn"
-LOCAL_BIN = os.path.expanduser("~/.local/bin")
 # 換掉 cli_ask.ask 的啟動檔：把收到的 prompt 與 parts 記下來、叫 handed、回固定答案（不起 CLI）
 SPY = """import json, os, runpy, subprocess, sys
 sys.argv[0] = %(turn)r
@@ -54,7 +53,7 @@ class LetterName(unittest.TestCase):
 
     def env(self, **more):
         env = {k: v for k, v in os.environ.items() if not k.startswith(("AOS_", "CLAUDE"))}
-        env.update(PATH="%s:%s" % (LOCAL_BIN, env.get("PATH", "")), HOME=str(self.home), AOS_STACK=str(self.stack),
+        env.update(HOME=str(self.home), AOS_STACK=str(self.stack),
                    AOS_WS=str(self.ws), SPY_LOG=str(self.log), PYTHONDONTWRITEBYTECODE="1")
         env.update(more)
         return env

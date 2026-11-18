@@ -48,13 +48,13 @@
   "description": "metainfo_check 工具（tools/aos 層）：拿實測中位數核對定義 _metainfo 自稱的時間與 token 估值，只報告不寫檔"
  },
  "promote": {
-  "description": "promote 工具（tools/aos 層，換版）：查 daemon 表確認定義沒在用後換上副本，前版留在 .prev/ 可退回"
+  "description": "promote 工具（tools/aos 層，換版）：查 daemon 表確認定義沒在用後換上副本，前版留在 .prev/ 可退回；換版本體在 aos 套件的 swap.py（跟 rollback 共用）"
  },
  "review_round": {
   "description": "review_round 工具（tools/aos 層）：跑一輪七步審視，量測、挑目標、試降級、換上並記錄只記不做的成長建議"
  },
  "rollback": {
-  "description": "rollback 工具（tools/aos 層，換版）：確認定義沒在用後換回最新前版，消耗那份歷史；與 promote 共用 swap.py"
+  "description": "rollback 工具（tools/aos 層，換版）：確認定義沒在用後換回最新前版，消耗那份歷史；換版本體跟 promote 共用 aos 套件的 swap.py"
  },
  "shell_report": {
   "description": "shell_report 工具（tools/aos 層）：唯讀彙整公開 shell 帳，依有效工具推權限階段並歸納指令形狀"

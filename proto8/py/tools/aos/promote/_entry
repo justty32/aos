@@ -22,7 +22,7 @@ except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)
-from swap import promote
+from aos.swap import promote  # noqa: E402
 
 tool_io.start('promote')
 args = tool_io.arguments('defs', 'target', 'from')

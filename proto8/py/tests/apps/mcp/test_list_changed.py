@@ -31,7 +31,7 @@ class ListChanged(unittest.TestCase):
         self.reg.write_text(json.dumps({'tools': {'grow': {'path': str(grow)}, 'peek_now_time': {'path': str(CLOCK)}}}))
         self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
         bins = [str(PROTO / 'bin')] + [str(PROTO / 'bin')]
-        self.env['PATH'] = os.pathsep.join(bins + [os.path.expanduser('~/.local/bin'), self.env['PATH']])
+        self.env['PATH'] = os.pathsep.join(bins + [self.env['PATH']])
         self.env['PYTHONDONTWRITEBYTECODE'] = '1'
 
     def tearDown(self):

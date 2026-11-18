@@ -22,7 +22,7 @@ print(json.dumps({"argv": sys.argv[1:], "stack": os.environ.get("AOS_STACK"), "w
 
 
 def clean_env(**extra):
-    return env_helper.clean_env(drop=("TC_",), path=(env_helper.LOCAL_BIN,), **extra)
+    return env_helper.clean_env(drop=("TC_",), **extra)
 
 
 class Peek(unittest.TestCase):

@@ -15,7 +15,7 @@ from .common import Fail, actions, bad_args, in_stack, parse, target, under
 
 try:
     from aos.agentlib import goal_state
-except ImportError:                              # bin 旁邊跟著帶的（同 agent_files）
+except ImportError:                              # bin 旁邊跟著帶的
     from aos.agentlib import goal_state
 
 

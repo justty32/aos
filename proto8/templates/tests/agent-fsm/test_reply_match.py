@@ -40,10 +40,9 @@ class ReplyMatch(unittest.TestCase):
         (self.defn / "tools.json").write_text("{}")
         (self.defn / "llm.json").write_text('{"model":"local"}')
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") or k == "AOS_HOME"}
-        local = Path.home() / ".local" / "bin"
         self.env = dict(env, AOS_STACK=str(self.stack), AOS_CD=str(self.defn), AOS_LLM_KERNEL=str(self.root / "missing-kernel"),
                         FAKE_SENT=str(self.root / "sent.json"), FAKE_MESSAGE=json.dumps({"role": "assistant", "content": "ok"}),
-                        PATH=os.pathsep.join([str(self.bin), str(local)] + [str(PROTO / "bin")] + [env["PATH"]]))
+                        PATH=os.pathsep.join([str(self.bin), str(PROTO / "bin")] + [env["PATH"]]))
         self.command("aos-llm", FAKE_LLM)
         self.command("aos-tools", "import json, sys\nif 'ls' in sys.argv: print('[]')\n")
 

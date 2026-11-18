@@ -3,7 +3,7 @@
   "description": "aos - aos 唯一的 Python 套件：指令、工具、範本格共用的模組（from aos import flags, tool_io …）；agent 層的在 aos.agentlib（11-18 S4 收成套件）。"
  },
  "agentlib": {
-  "description": "aos 套件裡 agent 層的共用模組（hooks、cooldown、quiet、goal_state、claude／codex 對話的 cli_*、cmd_call、agents_cmd、agent_files…）；S3 前在 lib/agent",
+  "description": "aos 套件裡 agent 層的共用模組（hooks、cooldown、quiet、goal_state、claude／codex 對話的 cli_*、cmd_call、agents_cmd…）；S3 前在 lib/agent",
   "index": "agentlib/_index.json"
  },
  "apps": {
@@ -78,6 +78,9 @@
  },
  "shell_observed.py": {
   "description": "Reserve a writable shell ledger before execution and record the completed command."
+ },
+ "swap.py": {
+  "description": "promote 與 rollback 兩支工具共用的換版：查過各 daemon 的公開清單、確認定義沒在用，再換上候選版或退回保留的前版。"
  },
  "sweep.py": {
   "description": "aos_sweep 清道夫本體：一輪（封存、保留期、封存總量、行程）與 purge 的流程、鎖、找列、報告；檔案細節在 aos_sweep_files、行程在 aos_sweep_proc；aos-sweeper 與 aos-daemon-ctl sweep 共用。"

@@ -219,7 +219,7 @@ class OldReaderNewWriter(unittest.TestCase):
     """The pre-change aos-agent (listen, ask = say + latest answer) reads histories with aos keys and letters.json the same way."""
 
     def test_old_listen_same_with_and_without_aos(self):
-        base = rf.base_tree(self, "cmd/aos-agent", "lib")       # the old commit still has cmd/
+        base = rf.base_tree(self, "cmd/aos-agent", "py", "lib")   # the old commit still has cmd/; its aos-agent imports aos_flags from py/
         old_bin = base / "cmd" / "aos-agent" / "bin" / "aos-agent"
         outs = {}
         for upgraded in (True, False):
