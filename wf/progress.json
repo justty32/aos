@@ -50,10 +50,11 @@
       "title": "set-def 新做法（fx-1）與改名兩步（em-Q4）",
       "status": "open",
       "flow": "",
-      "what": "已交 `43a07ea85`：set-def＝關畫面→停→從表上拔→同名同 stack 掛回新定義（表馬上換、daemon 重啟不掉），`--restart` 拿掉（傳了報 `FlagUnknown`），改名兩步寫進 README 與知識庫，`test_set_def` 兩支 expectedFailure 轉綠。剩：真 eca 畫面、走 kernel 排隊時的 set-def 沒實測",
+      "what": "已交 `43a07ea85`：set-def＝關畫面→停→從表上拔→同名同 stack 掛回新定義（表馬上換、daemon 重啟不掉），`--restart` 拿掉（傳了報 `FlagUnknown`），改名兩步寫進 README 與知識庫，`test_set_def` 兩支 expectedFailure 轉綠。真 eca 畫面 11-18 下午驗過；走 kernel 排隊的 11-18 晚驗過（verify-night-1118）：有空格時跑著／停著／睡著都照說明，工作區欄變 `-`、到期單殘留兩個小毛病已被 `2b4320644` 修好、這條路徑也沒出現；**格滿會出事**：站把掛回那封 `procs_added` 當要一格（停著／睡著的也算），信進隊、set-def 逾時報 `DaemonFailed`、agent 不在表上，之後信才套上，還會把照提示手動掛回的那隻停掉；名字不在 `allowed` 時先拔才被拒，錯誤行的手動掛回提示沒帶 `-d`、照抄會再被同一站擋。剩：這題甲／乙／丙等使用者裁",
       "next": "",
       "see": [
-        "[misc-1114](../proto8/thinking/2026-11/14/misc-1114.md#1-fx-1set-def-改成停拔同一個-stack-掛回)"
+        "[misc-1114](../proto8/thinking/2026-11/14/misc-1114.md#1-fx-1set-def-改成停拔同一個-stack-掛回)",
+        "[verify-night-1118](../proto8/thinking/2026-11/18/verify-night-1118.md#要你裁的)"
       ],
       "since": "2026-11-17"
     },
@@ -178,12 +179,13 @@
       "title": "11-13 前開的設計尾巴",
       "status": "open",
       "flow": "",
-      "what": "外部 MCP：CLI 自己接的 server 起來後才壞 aos 看不到（P3）、沒驗三項（claude `except`→`--disallowedTools`、CLI 自接的一起來就退／中途死、經 aos 的 server 卡住不回）、P1 `--envs` 改成指 env 檔沒做（文件那半已寫在 `aos-agent ctl add --help`）；ops-agent：yes/no 時由 hook 接住寄信（使用者說之後再做）；index 三題（同一節點多處 index 聽誰的、過時、專屬工具長怎樣；`index_view` 已有）等使用者；eca 子 agent codex 身（使用者 11-13「以後再想辦法處理，不急。」）；team-model 跟 skyrim 那份同步，核不到：要家機的 `~/repo/moddings`；compact_reload 補驗，核不到：要真 Claude Code compact 一次（驗完才補 user/02 那句）（11-18 晚作廢：Codex 兩隻 `gpt-price`／`gpt-soap` 跟盤點對不對得上、ops-agent 索引檢查出廠工具，原本都要公司活樹核，那棵已清掉）",
+      "what": "外部 MCP：CLI 自己接的 server 起來後才壞 aos 看不到（P3）、三項 11-18 晚驗過（verify-night-1118，真 claude haiku＋假 server）：`except`→`--disallowedTools` 有效（那支整支不在清單）、CLI 自接的一起來就退＝stack `stderr.txt` 一行 warning、回合照走，中途死＝腦拿到 `Connection closed`、claude 自己重起 server、aos 看不到，經 aos 的卡住不回＝60 秒收掉行程群、腦照走下一步；P1 `--envs` 改成指 env 檔沒做（文件那半已寫在 `aos-agent ctl add --help`）；ops-agent：yes/no 時由 hook 接住寄信（使用者說之後再做）；index 三題（同一節點多處 index 聽誰的、過時、專屬工具長怎樣；`index_view` 已有）等使用者；eca 子 agent codex 身（使用者 11-13「以後再想辦法處理，不急。」）；team-model 跟 skyrim 那份同步，核不到：要家機的 `~/repo/moddings`；compact_reload 補驗，核不到：要真 Claude Code compact 一次（驗完才補 user/02 那句）（11-18 晚作廢：Codex 兩隻 `gpt-price`／`gpt-soap` 跟盤點對不對得上、ops-agent 索引檢查出廠工具，原本都要公司活樹核，那棵已清掉）",
       "next": "",
       "see": [
         "[留底 12](../proto8/thinking/2026-11/17/session-log-瘦身留底/02-第12到20條.md#t12)",
         "[留底 01](../proto8/thinking/2026-11/17/session-log-瘦身留底/01-第1到11條.md)",
-        "[03](../proto8/thinking/2026-11/17/session-log-瘦身留底/03-第21到34條.md#t21)"
+        "[03](../proto8/thinking/2026-11/17/session-log-瘦身留底/03-第21到34條.md#t21)",
+        "[verify-night-1118](../proto8/thinking/2026-11/18/verify-night-1118.md#件-2外部-mcp-沒驗的三項)"
       ],
       "since": "2026-11-17"
     },
