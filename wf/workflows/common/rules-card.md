@@ -32,7 +32,7 @@
 
 ## 交件（[aos-teams 第 1 件](../dispatch/aos-teams.md#五件常做的事)、[07「commit」](../dispatch/aos-teams/07-預設流程與agent-fsm.md#commit)）
 
-`~/repo/aos/wf/tools/commit-request claim --line <線名> 檔…`，交件 `submit --line <線名> --files 檔… --msg-file 訊息檔`；日索引、月索引、SESSION-LOG 用 `--op`，不交整檔；交之前 `git diff -- 檔` 確認只有自己的字；**不 push**。誰放行照任務書（11-14 起是部長）。
+`~/repo/aos/wf/tools/commit-request claim --line <線名> 檔…`，交件 `submit --line <線名> --files 檔… --msg-file 訊息檔`；日索引、月索引、`wf/progress.json` 用 `--op`，不交整檔；交之前 `git diff -- 檔` 確認只有自己的字；**不 push**。誰放行照任務書（11-14 起是部長）。
 
 ## 活樹旁九條硬規則（[06](../dispatch/aos-teams/06-公司WSL活樹與任務書硬規則.md#任務書必貼的硬規則)，全文照貼進任務書；純改文件的線貼第 1、7 條）
 

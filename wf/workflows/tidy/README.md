@@ -24,7 +24,7 @@
 - 精簡過的檔：[content-trim](content-trim.md) 的原文檢查 → 0 行 `LOST`；報告列每檔精簡前後 bytes。
 - `find <repo> -name '*.md' -not -path '*/archive/*' -size +8192c` 列出的檔逐個看過：該收斂或拆的處理掉，本質不可分的可以留著（8 KB 是觸發檢視的訊號、不是上限，導航表放寬到 16 KB，見 [STRUCTURE](../../STRUCTURE.md)）。
 - 報告附 `moves.tsv`（`舊路徑<TAB>新路徑`）。
-- 推薦（不是硬條件，開發階段不設行數上限，[user/02](../common/user/02-交接與收工.md#開發階段不設行數上限2026-10-09-定)）：子資料夾 `README.md` 300 行內、入口 `README.md` 100 行內；名冊／登記表 8 KB 左右；`SESSION-LOG.md` 只列 open。
+- 推薦（不是硬條件，開發階段不設行數上限，[user/02](../common/user/02-交接與收工.md#開發階段不設行數上限2026-10-09-定)）：子資料夾 `README.md` 300 行內、入口 `README.md` 100 行內；名冊／登記表 8 KB 左右；`wf/progress.json` 只列 open。
 
 ## 流程
 
@@ -55,5 +55,5 @@
 
 ## 交接
 
-- 完成後 → 若整理揭露了要裁示的事，寄使用者專區（`aos-user send`，見 [common/user.md](../common/user.md)；進度記在 [SESSION-LOG](../../SESSION-LOG.md)、標「等使用者」）。
+- 完成後 → 若整理揭露了要裁示的事，寄使用者專區（`aos-user send`，見 [common/user.md](../common/user.md)；進度記在 [progress.json](../../progress.json)、標「等使用者」）。
 - 每輪整理的報告（含 `moves.tsv`、驗證輸出）→ 11-17 起寫進當天的 `proto8/thinking/<月>/<日>/`，[`reports/`](reports/) 凍結、不再加新的（使用者 11-17 待裁網頁 wf-5ii 選 a；舊報告不搬）。

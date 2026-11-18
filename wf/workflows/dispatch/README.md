@@ -63,7 +63,7 @@
 只要還有一條現役線，管理者就不能休息或宣告收工。
 
 1. 列出還活著的線（子 agent 清單、`git worktree list`）必須為空。
-2. 交棒要寫 state 檔（或 [SESSION-LOG](../../SESSION-LOG.md) 一行）：誰在跑、卡在哪、下一步、誰監看。
+2. 交棒要寫 state 檔（或 [progress.json](../../progress.json) 一條）：誰在跑、卡在哪、下一步、誰監看。
 3. **只有現役線為零時**才能回報「工作全部收完」。
 
 ## 領地登記
@@ -83,5 +83,5 @@
 
 - 交接書目錄分三層：本層＝現役、`done/`＝已完成附證據、`superseded/`＝被後續決定推翻（不刪，見 [STRUCTURE](../../STRUCTURE.md) 的 archive 規則）。
 - 線要用獨佔資源 → 在交接書指名可拿哪個鎖（[resources](../resources.md)）。
-- 線回報與催件 → [inbox](../inbox.json)；卡在使用者 → 題目寄使用者專區（做法見 [aos-teams](aos-teams.md)「2. 問使用者」）；進度記在 [SESSION-LOG](../../SESSION-LOG.md)、標「等使用者」。
+- 線回報與催件 → [inbox](../inbox.json)；卡在使用者 → 題目寄使用者專區（做法見 [aos-teams](aos-teams.md)「2. 問使用者」）；進度記在 [progress.json](../../progress.json)、標「等使用者」。
 - 為什麼這樣切線 → [decisions](../decisions.json)。

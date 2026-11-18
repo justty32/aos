@@ -51,12 +51,12 @@
 **只有一條路：`~/repo/aos/wf/tools/commit-request`**（鐵律 3；使用者 11-14 專區「q1:fix」）。各線不自己 `git commit`、不 `git add`、不自己跑 `index_gen --apply`。兩行指令在[入口第 1 件](../aos-teams.md)，這裡是它沒寫的：
 
 - **開工 `claim`、交件 `submit`**：`claim --line <線名> 檔…` 宣告在改哪些檔；`submit --line <線名> --files 檔… --msg-file 訊息檔` 交件。trailer 自己寫在訊息檔裡，排隊不改訊息。
-- **日索引、月索引、SESSION-LOG 不手改，用 `--op`**：`day_upsert`、`month_bump`、`log_upsert`、`log_delete`；月索引那天的份數要直接設成某個數時用 `month_set`（份數＝日索引的列數）。
+- **日索引、月索引、`wf/progress.json` 不手改，用 `--op`**：`day_upsert`、`month_bump`、`progress_upsert`、`progress_delete`；月索引那天的份數要直接設成某個數時用 `month_set`（份數＝日索引的列數）。
 - **生成物由排隊重生**：它在 repo 外的乾淨副本上跑 `index_gen`，生成物跟你的檔同一個 commit。
 - **看結果**：stdout 最後一行是 JSON（雜湊或錯誤原文）。exit 0 是做完；exit 2 是被擋（例如別條線 claim 著那個檔），回應裡寫著是誰，去信協調。
 - **直接 `git commit` 會被 `.git/hooks/pre-commit` 擋下**（使用者 11-14「1.好。2.好」）；人要手動 commit 時加 `--no-verify`。
 - **指令在哪**：任務書與範例一律寫全路徑。家機 2026-11-14 暫時有一個連結 `~/.local/bin/commit-request` 指到 `wf/tools/commit-request`，直接打 `commit-request` 也找得到；這是過渡，之後會拔掉，所以別依賴它。
-- 完整用法、其他 exit 碼、`--dry-run`、`--rm`、`doctor`：[commit-queue-1114「申請者用法」](../../../../proto8/thinking/2026-11/14/commit-queue-1114.md#申請者用法各線照這樣改)；新資料夾、中文檔名、共用的 SESSION-LOG 行這些坑：[patch-and-commit](../../../public/patch-and-commit.md)。
+- 完整用法、其他 exit 碼、`--dry-run`、`--rm`、`doctor`：[commit-queue-1114「申請者用法」](../../../../proto8/thinking/2026-11/14/commit-queue-1114.md#申請者用法各線照這樣改)；新資料夾、中文檔名、共用的 progress.json 條目這些坑：[patch-and-commit](../../../public/patch-and-commit.md)。
 
 ## 回報
 

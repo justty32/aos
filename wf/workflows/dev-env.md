@@ -10,7 +10,7 @@
 ## Done when
 
 - 照「流程」走完，[testing「proto8」](testing.md#proto8)的建置指令（`python3 install.py`）回傳 0，`proto8/bin/` 底下有 9 支 C++ 執行檔。
-- 要使用者親自做的（帳號、授權、金鑰）各寄一封到使用者專區（`aos-user send`，見 [common/user.md](common/user.md)；進度記在 [SESSION-LOG](../SESSION-LOG.md)、標「等使用者」）。
+- 要使用者親自做的（帳號、授權、金鑰）各寄一封到使用者專區（`aos-user send`，見 [common/user.md](common/user.md)；進度記在 [progress.json](../progress.json)、標「等使用者」）。
 
 ## 流程（fresh clone 後）
 

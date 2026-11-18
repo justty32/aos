@@ -1,5 +1,5 @@
 #!/bin/bash
-# test_commit_queue.sh — 在 repo 外的暫存 clone 上測 commit_queue.py（兩線同時、別人 staged、索引列合併、claim 擋下、生成器失敗、CAS、半途被殺、生成物、month_set）；不碰來源 repo
+# test_commit_queue.sh — 在 repo 外的暫存 clone 上測 commit_queue.py（兩線同時、別人 staged、索引列合併、claim 擋下、生成器失敗、CAS、半途被殺、生成物、month_set、進度檔 progress.json 的兩個 op）；不碰來源 repo
 # 用法：test_commit_queue.sh <來源 repo> <repo 外的暫存夾>   每次在暫存夾下開一個新的 run-<時間> 子夾，不刪任何東西
 set -u
 [ -n "${BASH_VERSION:-}" ] || { echo "not bash" >&2; exit 1; }
@@ -28,6 +28,16 @@ check() { local d="$1"; shift; if "$@"; then ok "$d"; else bad "$d"; fi; }
 msg() { printf '%s\n\nCo-Authored-By: test <t@example.invalid>\n' "$1" > "$RUN/$2"; echo "$RUN/$2"; }
 head_() { git rev-parse main; }
 in_commit() { git show --name-only --format= "$1" | grep -qxF "$2"; }
+# pj open.<鍵>.<欄>｜keys｜fields.<鍵>：讀 main 上的 wf/progress.json
+pj() { git show main:wf/progress.json | python3 -c '
+import json, sys
+d = json.load(sys.stdin)["open"]; q = sys.argv[1]
+if q == "keys": print("\n".join(d))
+elif q.startswith("fields."): print(" ".join(d[q[7:]]))
+else:
+    _, k, f = q.split(".", 2); v = d.get(k, {}).get(f, "")
+    print(" ".join(v) if isinstance(v, list) else v)' "$1"; }
+export -f pj
 
 echo "== T1 two lines submit at the same time"
 B0=$(head_)
@@ -36,7 +46,7 @@ printf '#!/usr/bin/env python3\n"""t1b — 測試檔一句話。"""\n' > wf/tool
 cq submit --line ok-a --files "$DAYDIR/t1a.md" --msg-file "$(msg 't1a' m1a)" \
    --op "{\"op\":\"day_upsert\",\"date\":\"$DAY\",\"name\":\"t1a\",\"link\":\"t1a.md\",\"summary\":\"甲線\"}" > "$RUN/t1a.out" 2> "$RUN/t1a.err" & P1=$!
 cq submit --line ok-b --files wf/tools/t1b_test.py --msg-file "$(msg 't1b' m1b)" \
-   --op "{\"op\":\"log_upsert\",\"key\":\"- **open｜t1b\",\"text\":\"- **open｜t1b**：乙線\"}" > "$RUN/t1b.out" 2> "$RUN/t1b.err" & P2=$!
+   --op '{"op":"progress_upsert","key":"t1b","entry":{"title":"t1b","status":"open","what":"乙線"}}' > "$RUN/t1b.out" 2> "$RUN/t1b.err" & P2=$!
 wait $P1; E1=$?; wait $P2; E2=$?
 check "both exit 0 ($E1,$E2)" [ "$E1" = 0 -a "$E2" = 0 ]
 check "main moved 2 commits" [ "$(git rev-list --count "$B0"..main)" = 2 ]
@@ -44,8 +54,9 @@ CA=$(python3 -c 'import json,sys;print(json.loads(open(sys.argv[1]).read().split
 CB=$(python3 -c 'import json,sys;print(json.loads(open(sys.argv[1]).read().splitlines()[-1])["commit"])' "$RUN/t1b.out")
 check "a's commit has a's file, not b's" bash -c "git show --name-only --format= $CA | grep -qx '$DAYDIR/t1a.md' && ! git show --name-only --format= $CA | grep -q t1b_test"
 check "b's commit has b's file and wf/tools/_index.json" bash -c "git show --name-only --format= $CB | grep -qx wf/tools/t1b_test.py && git show --name-only --format= $CB | grep -qx wf/tools/_index.json"
-check "HEAD day index has t1a row, SESSION-LOG has t1b line" bash -c "git show main:$DAYDIR/README.md | grep -qF '| [t1a](t1a.md) | 甲線 |' && git show main:wf/SESSION-LOG.md | grep -qF -- '- **open｜t1b**：乙線'"
-check "working tree clean for those paths" [ -z "$(git status --porcelain -- "$DAYDIR/t1a.md" wf/tools/t1b_test.py wf/tools/_index.json "$DAYDIR/README.md" wf/SESSION-LOG.md)" ]
+check "HEAD day index has t1a row, progress.json has t1b entry" bash -c "git show main:$DAYDIR/README.md | grep -qF '| [t1a](t1a.md) | 甲線 |' && [ \"\$(pj open.t1b.what)\" = 乙線 ]"
+check "new entry: last key, all fields, since is today" bash -c "[ \"\$(pj keys | tail -1)\" = t1b ] && [ \"\$(pj fields.t1b)\" = 'title status flow what next see since' ] && [ \"\$(pj open.t1b.since)\" = $DAY ]"
+check "working tree clean for those paths" [ -z "$(git status --porcelain -- "$DAYDIR/t1a.md" wf/tools/t1b_test.py wf/tools/_index.json "$DAYDIR/README.md" wf/progress.json)" ]
 check "message kept as written (trailer)" bash -c "git log -1 --format=%B $CA | grep -qx 'Co-Authored-By: test <t@example.invalid>'"
 
 echo "== T2 someone else's staged file stays out"
@@ -63,7 +74,7 @@ printf '# t3 檔\n' > "$DAYDIR/t3.md"
 cat > "$RUN/ops3.json" <<EOF
 [{"op":"day_upsert","date":"$DAY","name":"t3","link":"t3.md","summary":"丙線"},
  {"op":"month_bump","date":"$DAY","segment":"丙線一段"},
- {"op":"log_upsert","key":"- **open｜t1b","text":"- **open｜t1b**：乙線改過"}]
+ {"op":"progress_upsert","key":"t1b","entry":{"title":"t1b","status":"等使用者","what":"乙線改過","see":["[x](x.md)"],"since":"2000-01-01"}}]
 EOF
 CNT0=$(git show main:proto8/thinking/$YM/README.md | grep -F "| [$DAY]($DD/README.md) |" | awk -F'|' '{print $3+0}')
 cq submit --line ok-c --files "$DAYDIR/t3.md" --msg-file "$(msg t3 m3)" --ops-file "$RUN/ops3.json" > "$RUN/t3.out" 2>&1; E=$?
@@ -73,7 +84,7 @@ check "shared index holds HEAD's day index (hand row not staged)" [ -z "$(git di
 check "working tree day index has hand row and t3 row" bash -c "grep -qF hand.md $DAYDIR/README.md && grep -qF '[t3](t3.md)' $DAYDIR/README.md"
 CNT1=$(git show main:proto8/thinking/$YM/README.md | grep -F "| [$DAY]($DD/README.md) |" | awk -F'|' '{print $3+0}')
 check "month count +1 ($CNT0 -> $CNT1) and segment there" bash -c "[ $CNT1 = $((CNT0+1)) ] && git show main:proto8/thinking/$YM/README.md | grep -F '[$DAY]' | grep -qF '；丙線一段 |'"
-check "SESSION-LOG line replaced, only once" [ "$(git show main:wf/SESSION-LOG.md | grep -c -- '- \*\*open｜t1b')" = 1 ]
+check "progress entry replaced in place, only once" bash -c "[ \"\$(pj open.t1b.what)\" = 乙線改過 ] && [ \"\$(pj open.t1b.status)\" = 等使用者 ] && [ \"\$(pj open.t1b.since)\" = 2000-01-01 ] && [ \"\$(pj keys | grep -cx t1b)\" = 1 ] && [ \"\$(pj keys | tail -1)\" = t1b ]"
 cq submit --line ok-c --files "$DAYDIR/t3.md" --msg-file "$(msg t3b m3b)" --op "{\"op\":\"month_bump\",\"date\":\"$DAY\",\"segment\":\"丙線一段\"}" > "$RUN/t3b.out" 2>&1; E=$?
 check "same month segment again → nothing to commit (BLOCKED $E)" [ $E = 2 ]
 
@@ -196,6 +207,37 @@ check "proto8 code _index.json still refused as generated ($E)" bash -c "[ $E = 
 git checkout -q -- "$OI"
 cq submit --line ok-a --files wf/tools/_index.json --msg-file "$(msg t12c m12c)" > "$RUN/t12c.out" 2>&1; E=$?
 check "wf _index.json still refused as generated ($E)" bash -c "[ $E = 3 ] && grep -q 'generated file' $RUN/t12c.out"
+
+echo "== T13 progress.json: since kept on update, same entry again is a no-op, delete, refusals"
+cq submit --line ok-a --msg-file "$(msg t13 m13)" --op '{"op":"progress_upsert","key":"t1b","entry":{"title":"t1b","status":"open","what":"乙線三改"}}' > "$RUN/t13.out" 2>&1; E=$?
+check "update without since ($E): since kept, see cleared" bash -c "[ $E = 0 ] && [ \"\$(pj open.t1b.since)\" = 2000-01-01 ] && [ -z \"\$(pj open.t1b.see)\" ] && [ \"\$(pj open.t1b.what)\" = 乙線三改 ]"
+check "file stays indent-2 JSON ending in a newline" bash -c "git show main:wf/progress.json | python3 -c 'import json,sys;t=sys.stdin.read();sys.exit(0 if t==json.dumps(json.loads(t),ensure_ascii=False,indent=2)+chr(10) else 1)'"
+B=$(head_)
+cq submit --line ok-a --msg-file "$(msg t13b m13b)" --op '{"op":"progress_upsert","key":"t1b","entry":{"title":"t1b","status":"open","what":"乙線三改","since":"2000-01-01"}}' > "$RUN/t13b.out" 2>&1; E=$?
+check "same entry again → nothing to commit (BLOCKED $E), main unchanged" bash -c "[ $E = 2 ] && [ $(head_) = $B ]"
+N0=$(pj keys | wc -l)
+cq submit --line ok-a --msg-file "$(msg t13c m13c)" --op '{"op":"progress_delete","key":"t1b"}' > "$RUN/t13c.out" 2>&1; E=$?
+check "delete ($E): key gone, one entry fewer" bash -c "[ $E = 0 ] && ! pj keys | grep -qx t1b && [ \$(pj keys | wc -l) = $((N0-1)) ]"
+check "working tree progress.json clean" [ -z "$(git status --porcelain -- wf/progress.json)" ]
+printf '# t13d\n' > "$DAYDIR/t13d.md"
+cq submit --line ok-a --files "$DAYDIR/t13d.md" --msg-file "$(msg t13d m13d)" --op '{"op":"progress_delete","key":"t1b"}' > "$RUN/t13d.out" 2>&1; E=$?
+check "delete a missing key → warning, rest committed ($E)" bash -c "[ $E = 0 ] && grep -q \"progress_delete: no key 't1b'\" $RUN/t13d.out"
+B=$(head_)
+cq submit --line ok-a --msg-file "$(msg t13e m13e)" --op '{"op":"progress_upsert","key":"T 1","entry":{"title":"x","status":"open","what":"x"}}' > "$RUN/t13e.out" 2>&1; E=$?
+check "bad key → refused ($E)" [ $E = 3 ]
+cq submit --line ok-a --msg-file "$(msg t13f m13f)" --op '{"op":"progress_upsert","key":"t13f","entry":{"title":"x","status":"done","what":"x"}}' > "$RUN/t13f.out" 2>&1; E=$?
+check "bad status → refused ($E)" [ $E = 3 ]
+cq submit --line ok-a --msg-file "$(msg t13g m13g)" --op '{"op":"progress_upsert","key":"t13g","entry":{"title":"x","status":"open"}}' > "$RUN/t13g.out" 2>&1; E=$?
+check "missing what → refused ($E)" [ $E = 3 ]
+cq submit --line ok-a --msg-file "$(msg t13h m13h)" --op '{"op":"progress_upsert","key":"t13h","entry":{"title":"x","status":"open","what":"x","owner":"me"}}' > "$RUN/t13h.out" 2>&1; E=$?
+check "unknown field → refused ($E)" [ $E = 3 ]
+cq submit --line ok-a --msg-file "$(msg t13i m13i)" --op '{"op":"log_upsert","key":"- **open｜x","text":"- **open｜x**：y"}' > "$RUN/t13i.out" 2>&1; E=$?
+check "old log_upsert op → refused ($E)" [ $E = 3 ]
+printf ' ' >> wf/progress.json
+cq submit --line ok-a --files wf/progress.json --msg-file "$(msg t13j m13j)" > "$RUN/t13j.out" 2>&1; E=$?
+check "progress.json in --files → refused ($E)" bash -c "[ $E = 3 ] && grep -q 'shared index file' $RUN/t13j.out"
+git checkout -q -- wf/progress.json
+check "main unchanged by the refusals" [ "$(head_)" = "$B" ]
 
 check "end: nothing staged except the foreign file" [ "$(git diff --cached --name-only)" = proto8/foreign_staged.md ]
 

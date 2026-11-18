@@ -12,8 +12,10 @@
   {"op": "day_upsert", "date": "2026-11-14", "name": "x", "link": "x.md", "summary": "…"}   日索引表，以連結 link 認列，有就換、沒有加表尾；那天還沒有日索引就用範本開一份
   {"op": "month_bump", "date": "2026-11-14", "segment": "…"}   月索引那天的列：摘要（以；切段）沒有完全相同的這段才「份數加一、尾加；segment」；沒有那天的列就照日期插入
   {"op": "month_set", "date": "2026-11-14", "count": 10}   月索引那天的列：份數直接設成 count（非負整數；份數＝那天日索引的列數），摘要不動；已經是這個數就什麼都不改；沒有那天的列＝套不上
-  {"op": "log_upsert", "key": "- **open｜主題", "text": "整行"}   wf/SESSION-LOG.md「## 最新進度」段，行首等於 key 的那行換掉，沒有就加段尾
-  {"op": "log_delete", "key": "- **open｜主題"}                  刪那一行
+  {"op": "progress_upsert", "key": "short-name", "entry": {"title": "…", "status": "open", "what": "…", "see": ["[x](x.md)"]}}
+      wf/progress.json 的 open 那一鍵整條換掉，沒有就加在最後；key 小寫英數與 -；title、status、what 必填，
+      status 是 open｜等使用者｜暫停｜凍結；flow、next、see、since 可省（since 省了就沿用舊的，新條用今天）
+  {"op": "progress_delete", "key": "short-name"}                 刪那一鍵（沒有這鍵只警告）
 路徑：--files／--rm 的相對路徑從 repo 根算（不管 cwd）；--msg-file、--ops-file 從 cwd 算。
 結果：stderr 給人看，stdout 最後一行 JSON {"status": DONE|BLOCKED|FAILED, "code", "commit", "files", "generated", "warnings", "hint"}。
 exit：0 DONE、1 內部錯誤、2 BLOCKED、3 申請不合格、4 生成器失敗、5 忙碌（等鎖逾時）、6 repo 狀態異常。
@@ -36,8 +38,10 @@ REF = "refs/heads/main"
 GEN_PREFIX = "wf/knowledge/code-map/"
 GEN_NAME = "_index.json"
 HAND_PREFIX = "proto8/knowledge/"   # 知識庫的 _index.json 是手寫的（index_gen.json：knowledge 不在範圍），佇列不重生，當一般檔收
-LOG_SECTION = "## 最新進度"
-SESSION_LOG = "wf/SESSION-LOG.md"
+PROGRESS = "wf/progress.json"
+PROGRESS_FIELDS = ("title", "status", "flow", "what", "next", "see", "since")   # 條目欄位與寫回的順序
+PROGRESS_STATUS = ("open", "等使用者", "暫停", "凍結")
+PROGRESS_KEY_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
 SHARED_RE = re.compile(r"proto8/thinking/\d{4}-\d\d/(\d\d/)?README\.md")
 STALE_MIN = 120          # claim 超過這麼多分鐘，擋下時標 stale
 DAY_TEMPLATE = """# proto8 討論紀錄：{date}
@@ -146,9 +150,10 @@ def month_path(date):
 def check_op(op):
     kind = op.get("op")
     need = {"day_upsert": ("date", "name", "link", "summary"), "month_bump": ("date", "segment"), "month_set": ("date",),
-            "log_upsert": ("key", "text"), "log_delete": ("key",)}
+            "progress_upsert": ("key",), "progress_delete": ("key",)}
     if kind not in need:
-        raise Stop("FAILED", "OpBad", EXIT["invalid"], f"unknown op {kind!r} (day_upsert, month_bump, month_set, log_upsert, log_delete)")
+        raise Stop("FAILED", "OpBad", EXIT["invalid"],
+                   f"unknown op {kind!r} (day_upsert, month_bump, month_set, progress_upsert, progress_delete)")
     if kind == "month_set" and (isinstance(op.get("count"), bool) or not isinstance(op.get("count"), int) or op["count"] < 0):
         raise Stop("FAILED", "OpBad", EXIT["invalid"], "month_set: count must be a non-negative integer")
     for k in need[kind]:
@@ -159,16 +164,65 @@ def check_op(op):
     for k in ("name", "link", "summary", "segment"):
         if k in op and ("|" in op[k] or "\n" in op[k]):
             raise Stop("FAILED", "OpBad", EXIT["invalid"], f"{kind}: {k} must not contain '|' or a newline (use ｜)")
-    for k in ("key", "text"):
-        if k in op and "\n" in op[k]:
-            raise Stop("FAILED", "OpBad", EXIT["invalid"], f"{kind}: {k} must be one line")
-    if kind == "log_upsert" and not op["text"].startswith(op["key"]):
-        raise Stop("FAILED", "OpBad", EXIT["invalid"], "log_upsert: text must start with key")
+    if kind.startswith("progress_") and not PROGRESS_KEY_RE.fullmatch(op["key"]):
+        raise Stop("FAILED", "OpBad", EXIT["invalid"], f"{kind}: key must be lowercase letters, digits and '-' ({op['key']!r})")
+    if kind == "progress_upsert":
+        check_progress_entry(op.get("entry"))
     return kind
 
 
+def check_progress_entry(e):
+    def bad(msg):
+        raise Stop("FAILED", "OpBad", EXIT["invalid"], f"progress_upsert: {msg}")
+    if not isinstance(e, dict):
+        bad("entry must be a JSON object")
+    extra = sorted(set(e) - set(PROGRESS_FIELDS))
+    if extra:
+        bad(f"unknown fields {extra} (allowed: {', '.join(PROGRESS_FIELDS)})")
+    for k in ("title", "status", "what"):
+        if not isinstance(e.get(k), str) or not e[k].strip():
+            bad(f"entry.{k} missing or empty")
+    for k in ("flow", "next", "since"):
+        if k in e and not isinstance(e[k], str):
+            bad(f"entry.{k} must be a string")
+    if "\n" in e["title"]:
+        bad("entry.title must be one line")
+    if e["status"] not in PROGRESS_STATUS:
+        bad(f"entry.status must be one of {', '.join(PROGRESS_STATUS)}")
+    if e.get("since") and not re.fullmatch(r"\d{4}-\d\d-\d\d", e["since"]):
+        bad("entry.since must be YYYY-MM-DD")
+    if "see" in e and (not isinstance(e["see"], list) or not all(isinstance(x, str) and x.strip() for x in e["see"])):
+        bad("entry.see must be a list of non-empty strings")
+
+
 def op_target(op):
-    return SESSION_LOG if op["op"].startswith("log_") else (day_path(op["date"]) if op["op"] == "day_upsert" else month_path(op["date"]))
+    if op["op"].startswith("progress_"):
+        return PROGRESS
+    return day_path(op["date"]) if op["op"] == "day_upsert" else month_path(op["date"])
+
+
+def apply_progress(text, op):
+    """progress.json 的兩個 op：只動 open 底下那一鍵，其餘鍵與順序照舊；寫回固定 indent=2。"""
+    try:
+        doc = json.loads(text)
+    except ValueError as e:
+        raise ValueError(f"{PROGRESS} is not JSON: {e}")
+    if not isinstance(doc, dict) or not isinstance(doc.get("open"), dict):
+        raise ValueError(f"no 'open' object in {PROGRESS}")
+    open_ = doc["open"]
+    key = op["key"]
+    if op["op"] == "progress_delete":
+        if key not in open_:
+            return text, f"progress_delete: no key {key!r}"
+        del open_[key]
+    else:
+        e = op["entry"]
+        old = open_.get(key) if isinstance(open_.get(key), dict) else {}
+        since = e.get("since") or old.get("since") or datetime.date.today().isoformat()
+        open_[key] = {k: (since if k == "since" else e.get(k, [] if k == "see" else "")) for k in PROGRESS_FIELDS}
+    if json.loads(text) == doc:          # 內容沒變（同一條再交一次）：原文不動
+        return text, None
+    return json.dumps(doc, ensure_ascii=False, indent=2) + "\n", None
 
 
 def apply_op(text, op):
@@ -227,27 +281,7 @@ def apply_op(text, op):
             return text, None
         lines[hit[0]] = f"{key} {op['count']} | {cells[2].strip()} |"
         return "\n".join(lines), None
-    # log_upsert / log_delete
-    try:
-        start = lines.index(LOG_SECTION)
-    except ValueError:
-        raise ValueError(f"no '{LOG_SECTION}' section in {SESSION_LOG}")
-    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
-    hit = [i for i in range(start + 1, end) if lines[i].startswith(op["key"])]
-    if len(hit) > 1:
-        raise ValueError(f"{len(hit)} lines start with {op['key']!r}")
-    if kind == "log_delete":
-        if not hit:
-            return text, f"log_delete: no line starts with {op['key']!r}"
-        del lines[hit[0]]
-        return "\n".join(lines), None
-    if hit:
-        lines[hit[0]] = op["text"]
-    else:
-        bullets = [i for i in range(start + 1, end) if lines[i].startswith("- **")]
-        at = (bullets[-1] + 1) if bullets else start + 1
-        lines.insert(at, op["text"])
-    return "\n".join(lines), None
+    return apply_progress(text, op)
 
 
 def apply_ops(text, ops):
@@ -512,7 +546,7 @@ class Queue:
                 bad.append(f"{p}: is a folder; list files one by one")
             elif is_generated(p):
                 bad.append(f"{p}: generated file; the queue regenerates it")
-            elif p == SESSION_LOG or SHARED_RE.fullmatch(p):
+            elif p == PROGRESS or SHARED_RE.fullmatch(p):
                 bad.append(f"{p}: shared index file; send --op instead of the file")
         if bad:
             raise Stop("FAILED", "RequestBad", EXIT["invalid"], "; ".join(bad))
@@ -729,7 +763,7 @@ class Queue:
         rep = {"cache": self.cache, "holder": read_json(os.path.join(self.cache, "holder.json"), {}),
                "journal": read_json(self.journal, None), "claims": self.claims()}
         rep["staged_in_shared_index"] = [p for p in g.out(["diff", "--cached", "--name-only", "-z", REF]).split("\0") if p]
-        shared = [SESSION_LOG] + [p for p in g.out(["ls-files", "-z", "--", "proto8/thinking/*/README.md",
+        shared = [PROGRESS] + [p for p in g.out(["ls-files", "-z", "--", "proto8/thinking/*/README.md",
                                                      "proto8/thinking/*/*/README.md"]).split("\0") if p]
         rep["shared_files_dirty"] = [p for p in g.out(["diff", "--name-only", "-z", REF, "--"] + shared).split("\0") if p]
         if repair:

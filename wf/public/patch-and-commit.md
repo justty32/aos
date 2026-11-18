@@ -34,7 +34,7 @@
 - **claim 檔案本身，不要 claim 資料夾**：claim 資料夾 submit 照樣成功，但出 `not claimed` 警告。submit 後 claim 就用掉了，同一檔下一批要重新 claim；交完資料夾的 claim 可能還在：`commit-request claims` 查，再 `release`。
 - **新檔也要 claim**：沒 claim 只給 warning、不擋，但別條線不知道你在改。
 - **中文路徑一律用 `git -c core.quotepath=off` 產**（`status`、`diff --name-only`）：直接從 `git status` 抄的是轉義字串，claim 蓋不到真檔，`--files` 也對不上。claim 後看一眼 `commit-request claims`。
-- **日索引、月索引、SESSION-LOG 只能用 `--op`**（`day_upsert`、`month_bump`、`log_upsert`…，寫在 `--ops-file ops.json`）；日索引的 README 放進 `--files` 會 `RequestBad`。SESSION-LOG 同一行可能好幾條線共用：`log_upsert` 整行換掉，先用程式讀出現在那一行，只換自己那段。
+- **日索引、月索引、`wf/progress.json` 只能用 `--op`**（`day_upsert`、`month_bump`、`progress_upsert`…，寫在 `--ops-file ops.json`）；日索引的 README、`progress.json` 放進 `--files` 會 `RequestBad`。progress.json 同一條可能好幾條線共用：`progress_upsert` 整條換掉，先讀出現在那一條（`json_get wf/progress.json#/open/<鍵>`），只換自己那段。
 - **檔名叫 `_index.json` 的**：知識庫以外的是生成物，不收、由排隊重生；`proto8/knowledge/` 底下手寫的照一般檔交。
 - **設計階段不先 claim 程式檔**：任務書寫「施工開始才 claim」，否則會擋住同一批檔上正在施工的線。claim 著沒改就放掉。
 - **「會動某檔」不等於「claim 了某檔」**：轉述給別部或使用者之前，自己跑 `commit-request claims`；回別部時直接貼線報的 claim 清單。

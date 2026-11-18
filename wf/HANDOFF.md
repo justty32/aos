@@ -10,7 +10,7 @@
 2. **正在討論的設計**：題目、已定的、未定的（附 thinking／NORMS 位置）。
 3. **當晚新定的規範條目編號**（C-幾、N-幾）與還在跑的子 agent。
 
-本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
+本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
 ## 2026-11-17 收工 公司 Windows 機
 

@@ -1,11 +1,32 @@
 #!/bin/sh
 # compact 後重讀：Claude Code SessionStart（matcher=compact）hook 呼叫，stdout 會進 compact 後的上下文。
 # 輸出：使用者偏好全文（wf/workflows/common/user.md 入口＋user/ 底下所有分檔）＋最新一條 compact 交接（wf/HANDOFF.md 第一個「## 」段）＋提醒。
-# HANDOFF.md 沒有條目時，改印 SESSION-LOG 的「## 最新進度」段。從任何 cwd 都能跑。
+# HANDOFF.md 沒有條目時，改印 wf/progress.json 的 open 條目（一條兩行：狀態｜標題：現況，下一行細節連結）。從任何 cwd 都能跑。
 root="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 user="$root/wf/workflows/common/user.md"
 handoff="$root/wf/HANDOFF.md"
-log="$root/wf/SESSION-LOG.md"
+progress="$root/wf/progress.json"
+
+# progress.json 的 open 條目印成人讀的幾行；沒有 python3 就整份照印
+print_progress() {
+    if command -v python3 >/dev/null 2>&1; then
+        python3 - "$1" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1], encoding="utf-8")).get("open", {})
+if not d:
+    print("(no open entries)")
+for k, e in d.items():
+    flow = f" [{e['flow']}]" if e.get("flow") else ""
+    print(f"- {e.get('status', '')}｜{e.get('title', k)}{flow}：{e.get('what', '')}")
+    if e.get("next"):
+        print(f"  next: {e['next']}")
+    if e.get("see"):
+        print(f"  see: {'、'.join(e['see'])}")
+PY
+    else
+        cat "$1"
+    fi
+}
 
 # 印第一個「## 」標題起、到下一個「## 」之前的段落；$2 有給就只找標題等於它的那段
 first_section() {
@@ -34,8 +55,8 @@ if [ -n "$entry" ]; then
     echo "===== 最新 compact 交接（wf/HANDOFF.md 第一條）====="
     printf '%s\n' "$entry"
 else
-    echo "===== wf/HANDOFF.md 沒有交接條目，改看 SESSION-LOG 最新進度 ====="
-    [ -f "$log" ] && first_section "$log" "## 最新進度"
+    echo "===== wf/HANDOFF.md 沒有交接條目，改看 wf/progress.json 的 open 條目 ====="
+    if [ -f "$progress" ]; then print_progress "$progress"; else echo "（找不到 $progress）"; fi
 fi
 echo
-echo "提醒：設計題先讀相關 NORMS／CONCEPTS 再回答；說「已寫進」前先查。開場兩軸（inbox、SESSION-LOG）照 AGENTS.md。"
+echo "提醒：設計題先讀相關 NORMS／CONCEPTS 再回答；說「已寫進」前先查。開場兩軸（inbox、progress.json）照 AGENTS.md。"

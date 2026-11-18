@@ -23,7 +23,7 @@
 
 **已封存、沒有入口的**（舊入口 11-17 集中收進 `wf/workflows/archive/`，不留指標頁，使用者 11-17 待裁網頁 wf-4 a）：
 - ideas、spec（使用者 11-14 專區答「oldentry:archive」，reply cee70afc742361ba）→ 構想寫 [proto8/docs/CONCEPTS.md](../proto8/docs/CONCEPTS.md)，規格寫 [NORMS](../proto8/docs/NORMS.md)／[CONVENTION](../proto8/docs/CONVENTION.md)，討論紀錄寫 [proto8/thinking/](../proto8/thinking/README.md)。
-- roadmap →「接下來做什麼」看 [SESSION-LOG.md](SESSION-LOG.md)（open 進度與下一步）。
+- roadmap →「接下來做什麼」看 [progress.json](progress.json)（open 進度與下一步）。
 - workshop、hackathon（11-14 封存）→ 要再辦得照現在的隊形（[dispatch](workflows/dispatch/README.md)）重寫。
 - experiments、investigation、digest（11-17 封存）→ 要驗假設就直接跑、只讀就直接查，紀錄與筆記寫進 proto8/thinking。
 - decide-page（11-14 停用）→ 要使用者裁的題寄使用者專區，見 [dispatch/aos-teams](workflows/dispatch/aos-teams.md) 第 2 件。
@@ -34,7 +34,7 @@
 |--------------|--------|--------|
 | 「**記 / 查踩坑**」「這件事有沒有現成做法」「投稿一個做法」 | **public**（公用知識庫；坑只留這一處，使用者 11-17 待裁網頁 wf-7 a） | [public/README.md](public/README.md#主題) |
 | 「整理 X」「封存過時的」「檔案太多／太雜」「太大要拆」「只留結論」（文件層）| **tidy** | [workflows/tidy/README.md](workflows/tidy/README.md) |
-| 「記個想法」「以後要做」「排進 roadmap」「幫我規劃」 | **planning** → 本專案落點是 [proto8/docs/CONCEPTS](../proto8/docs/CONCEPTS.md)／[proto8/thinking](../proto8/thinking/README.md)／[SESSION-LOG](SESSION-LOG.md) | [workflows/planning.md](workflows/planning.md) |
+| 「記個想法」「以後要做」「排進 roadmap」「幫我規劃」 | **planning** → 本專案落點是 [proto8/docs/CONCEPTS](../proto8/docs/CONCEPTS.md)／[proto8/thinking](../proto8/thinking/README.md)／[progress.json](progress.json) | [workflows/planning.md](workflows/planning.md) |
 | 「記個決定」「為什麼選 A 不選 B」 | **decisions** → 本專案落點是 [proto8/thinking](../proto8/thinking/README.md) 的決定與結論 | [workflows/decisions.json](workflows/decisions.json)（json 節點：通用版＋本地差異，可用 `index_view`／`json_get` 讀） |
 | 「我的偏好是…」「以後直接做 / 先問」 | **user** | [workflows/common/user.md](workflows/common/user.md) |
 | 「對 aos 本身有改進意見」「這個 aos 設計不好用」 | **advices**（對 aos 的意見，精簡成三個小檔） | [advices/README.md](advices/README.md) |
@@ -65,6 +65,8 @@
 
 | 在等誰 | 記哪裡 |
 |--------|--------|
-| 等**使用者**做 / 驗證 / 決定 | [SESSION-LOG.md](SESSION-LOG.md) 一行、標題標「等使用者」；有使用者專區的機器，新題照舊寄專區（`aos-user send`，見 [common/user.md](workflows/common/user.md)） |
-| 等**同 repo 另一個 session / fork**、或我自己還沒做完的 | [SESSION-LOG.md](SESSION-LOG.md) 一行 open（等今天在跑的線收完再轉成 `wf/progress.json`，使用者 11-17 待裁網頁 wf-3、wf-3b a） |
+| 等**使用者**做 / 驗證 / 決定 | [progress.json](progress.json) 一條、status 寫「等使用者」；有使用者專區的機器，新題照舊寄專區（`aos-user send`，見 [common/user.md](workflows/common/user.md)） |
+| 等**同 repo 另一個 session / fork**、或我自己還沒做完的 | [progress.json](progress.json) 一條 open（11-18 從 `SESSION-LOG.md` 轉成 json，使用者 11-17 待裁網頁 wf-3、wf-3b a） |
 | 等**別資料夾的 agent** | 信件軸：樹內走 aos 信箱，樹外專案的放信處 [`wf/inbox/`](inbox/)，使用方式 [workflows/inbox.json](workflows/inbox.json) |
+
+導覽：[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/docs/CONCEPTS.md)、[NORMS](../proto8/docs/NORMS.md)；停在半路的見 [restart](../proto8/thinking/2026-10/11/restart/README.md) §4（原在進度檔末，11-18 搬來）。

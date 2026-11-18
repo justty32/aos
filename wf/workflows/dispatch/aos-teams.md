@@ -30,7 +30,7 @@
 ```
 
 - `--files`／`--rm` 的路徑從 repo 根算，`--msg-file` 從你所在的資料夾算；結果看 stdout 最後一行 JSON（`DONE` 加雜湊，或錯誤原文）；先 `--dry-run` 看會交什麼。
-- 日索引（`proto8/thinking/<年-月>/<日>/README.md`）、月索引（`proto8/thinking/<年-月>/README.md`）、`wf/SESSION-LOG.md` 不交整檔，用 `--op`（`day_upsert`、`month_bump`、`month_set`、`log_upsert`、`log_delete`）。生成的 `_index.json`、code map 由排隊重生，不要列進 `--files`（`proto8/knowledge/` 底下手寫的 `_index.json` 例外，照一般檔交）。
+- 日索引（`proto8/thinking/<年-月>/<日>/README.md`）、月索引（`proto8/thinking/<年-月>/README.md`）、`wf/progress.json` 不交整檔，用 `--op`（`day_upsert`、`month_bump`、`month_set`、`progress_upsert`、`progress_delete`）。生成的 `_index.json`、code map 由排隊重生，不要列進 `--files`（`proto8/knowledge/` 底下手寫的 `_index.json` 例外，照一般檔交）。
 - 交之前 `git diff -- 檔` 確認只有自己的字；**不 push**。
 - **誰放行**：照你的任務書。11-14 起線的 commit 由你那一部的部長放行，每批先寄它：檔案清單、`git diff --stat`、怎麼驗的。它放行的前提：在乾淨複本（`git archive`）測過並附結果；動到活樹正在用的 `proto8/cmd`、`lib` 時先寫暫存檔再改名、立刻 import 並跑定向測試、原檔有備份；用 commit-request（共用索引加 `--op`）；不撞別線 claim 的檔。帶 `--rm`（搬檔後移除舊路徑）、跟鐵律有出入的，部長會上交頂層。更多：[07「commit」](aos-teams/07-預設流程與agent-fsm.md)、[patch-and-commit](../../public/patch-and-commit.md)。
 
