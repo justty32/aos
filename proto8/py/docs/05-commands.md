@@ -21,7 +21,6 @@
 | [aos-sandbox](../aos/apps/sandbox/README.md) | 照一份設定把 prog 關進沙箱再跑 |
 | [aos-grow](../aos/apps/grow/README.md) | 把一個函數往上長一級或縮回一級（原型） |
 | [aos-json-view](../aos/apps/json_view/README.md) | 只讀：把 json（或 `#/指標` 那段）印成人好讀的樣子：`鍵: 值`、短的擠一行、`\n` 真的換行、字串陣列接成段落、`--depth N` 摺深層 |
-| [aos-tree-start](../aos/apps/tree_start/README.md) | 起樹（`aos-tree-start root`＝`aos-exec root`）；殼裡帶著 `AOS_HOME` 以外的 `AOS_*`（從別棵樹繼承來的）就拒絕，`--force` 照起 |
 
 > **C++（[proto8/cpp](../../cpp/README.md)）是唯一實作**（使用者 10-23：「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；fsm 和時鐘，使用者選「fsm 也改用 C++、tick 先留 Python」）：
 > `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 的說明在各自的 README：[aos-exec](../../cpp/aos-exec/README.md)、[aos-loop](../../cpp/aos-loop/README.md)、[aos-fsm](../../cpp/aos-fsm/README.md)、[aos-daemon](../../cpp/aos-daemon/README.md)；inst 是 C lib [inst](../../cpp/aos-inst/README.md)。

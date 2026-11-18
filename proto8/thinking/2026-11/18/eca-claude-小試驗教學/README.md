@@ -13,7 +13,7 @@ eca-claude 小試驗教學的目錄：使用者 11-18 陸續提的疑問，一�
 | [03](03-自訂定義掛上去.md) | 自己複製一份 template 設定、改過、掛上去 | 沒有一定要改的檔，常改 `llm.json`、`system.txt`、`cli.json`。改 `system.txt` 下一句就生效。`set-def` 換夾約 1 秒。`cli.json` 寫錯掛的當下不擋，起來才倒 |
 | [04](04-aos-post丟信.md) | 用 aos-post 往信箱丟信 | `echo JSON \| aos-post send <信箱>`。往 `procs/<名>/queue` 丟 `{"role":"user","content":…}`，agent 就會答。`say` 就是包了它，再加上檢查與提醒 |
 | [05](05-aos-lock鎖信箱.md) | 用 aos-lock 鎖信箱、試 aos-post、解鎖 | 鎖信箱夾本身擋不住。aos-post 只認 `<信箱>/order.lock`，而且只在 `--ordered` 時。鎖住時 say 無聲一直等，解鎖後自己寄進去。命令列拿的鎖不會自己放 |
-| [06](06-不用aos-tree-start起daemon.md) | 不用 aos-tree-start 啟動停著、有掛 proc 的 daemon | `aos-tree-start` 只是檢查環境再叫 `aos-exec`。`cd ~/aos-home && source env.sh && aos-exec root` 結果一樣。running／sleeping 的自己醒，stopped 的要 `start` |
+| [06](06-不用aos-tree-start起daemon.md) | 不用 aos-tree-start 啟動停著、有掛 proc 的 daemon | `aos-tree-start` 只是檢查環境再叫 `aos-exec`。`cd ~/aos-home && source env.sh && aos-exec root` 結果一樣。running／sleeping 的自己醒，stopped 的要 `start`。aos-tree-start 已於 11-18 移除，直接用 aos-exec |
 | [07](07-aos-mailbox寄信收信.md) | 用 aos-mailbox 寄信給 agent、收信 | 寄進的是 agent 的 `mailbox/`，不是 `queue/`。agent 要等 `mail_notify` 每分鐘巡一次才看到。回信用 `in_reply_to` 對上，收信要自己輪詢 |
 | [08](08-不用aos-kit.md) | 不用 aos-kit 做出 aos-kit 的功能 | aos-kit 只換定義裡的 `system.txt`、`tools.json`，並另存 `.before-kit`。手動 cp 的結果逐檔相同。出廠的 kit 現在裝不起來（`MakeMissing`），也不支援 eca-claude |
 | [09](09-aos-sandbox限制資源.md) | 用 aos-sandbox 限制 CPU%、核心數、資料夾、網路、記憶體 | 資料夾、網路由沙箱本身擋。記憶體、CPU 時間這台要走 daemon 的 `--limits`。CPU%、核心數沒有欄位，要在外面包 `systemd-run --user`＋`taskset` |

@@ -8,4 +8,4 @@ if [ ! -f "$AOS_HOME/install.py" ] || [ ! -f "$AOS_HOME/env.sh" ]; then
   return 1 2>/dev/null || exit 1
 fi
 . "$AOS_HOME/env.sh" || { return 1 2>/dev/null || exit 1; }
-# This tree's own additions go below (plain export lines; not AOS_*: aos-tree-start refuses those).
+# This tree's own additions go below (plain export lines; not AOS_*: those belong to aos, which sets them for each proc).

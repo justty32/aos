@@ -11,7 +11,7 @@
 ```sh
 cp -r $AOS_HOME/templates/start-eca ~/aos-home            # 一行抄好整棵樹（位置自己挑）
 cd ~/aos-home && source env.sh                             # 每個視窗先做這行
-aos-tree-start root                                        # 視窗 A：起根（前景；Ctrl-C＝整棵停）
+aos-exec root                                              # 視窗 A：起根（前景；Ctrl-C＝整棵停）
 aos-agent -d .stack ctl add --auto-restart -w . agents/ann # 視窗 C（先做上面那行 source）：把 agent 掛到根上
 aos-daemon-ctl -d .stack ls                                # _clock、_sweeper、ann 都是 running
 aos-agent -d .stack --target ann say hello && aos-agent -d .stack --target ann listen --timeout-s 120   # 真的叫 claude，會花額度

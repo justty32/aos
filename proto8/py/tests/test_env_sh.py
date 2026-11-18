@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import unittest
 
-PROTO = Path(__file__).resolve().parents[4]
+PROTO = Path(__file__).resolve().parents[2]
 ENV_SH = PROTO / "env.sh"
 TREE_ENV_SH = PROTO / "templates" / "start-api" / "env.sh"
 BASE_PATH = "/usr/bin:/bin"

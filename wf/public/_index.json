@@ -72,7 +72,7 @@
   "description": "wf/public/等隊員與讀信 — 等隊員要帶逾時、長回合讀不到信、信交錯、記時刻"
  },
  "行程與環境.md": {
-  "description": "wf/public/行程與環境 — 收行程只收自己的、先清 AOS_*、起樹用 aos-tree-start、數行程與程序群組的坑"
+  "description": "wf/public/行程與環境 — 收行程只收自己的、先清 AOS_*、起樹前先 source env.sh、數行程與程序群組的坑"
  },
  "設計與查證.md": {
   "description": "wf/public/設計與查證 — 動手前先查、先量、先問；設計線與施工線怎麼分"

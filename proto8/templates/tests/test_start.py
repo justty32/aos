@@ -1,7 +1,7 @@
 """test_start - the two starter templates (start-api, start-eca) stay verbatim copies of the templates they were made from, except the few files their README names, and carry the same thin env.sh."""
 # 起手範本（使用者 11-17 L-10 A）裡的 root/、llms/def/、agents/ann/ 是 daemon-root、kernel/llm-kernel、agent-fsm、eca-claude 的抄本：
 # 原範本改了沒同步抄過來，這支就紅（逐檔比內容與執行位）。樹裡 env.sh 的行為（AOS_HOME 沒設報錯、轉去家裡那份）在
-# py/tests/apps/tree_start/test_env_sh.py 驗。只讀檔、不起任何行程。
+# py/tests/test_env_sh.py 驗。只讀檔、不起任何行程。
 import filecmp
 import os
 from pathlib import Path

@@ -75,6 +75,9 @@
  "test_env_file.py": {
   "description": "Test the shared dotenv parser directly, including expansion and strict failures."
  },
+ "test_env_sh.py": {
+  "description": "驗 proto8/env.sh 與起手範本裡那份薄 env.sh（11-18 S6）：AOS_HOME 由人設、env.sh 不設它，沒設就報一行錯、什麼都不改；有設時 bash 與 zsh 都 source 得過，AOS_* 只剩 AOS_HOME，CLAUDE 那三個清掉，$AOS_HOME/…"
+ },
  "test_file_tools_paths.py": {
   "description": "檔案工具拿掉工作區限制（11-10 tool-packs，使用者「3.對」）：相對從 $AOS_WS、絕對照用，工作區外也能讀寫改搬。"
  },

@@ -410,9 +410,6 @@
      "test_paths.py": "Test aos-tools path forms: directives in an overriding registry (path and env), add keeping the user's form, --path-json, and the PathMissing line.",
      "test_pointer.py": "Test aos-tools with FILE.json#/POINTER locations: add (stored form, default name), ls -l, get, call through aos-exec, rm by path, and the errors.",
      "test_stack_in_caller.py": "Test that aos-tools call tells the tool where its cell sits in the caller's stack (AOS_STACK_IN_CALLER=tools/NAME), and drops a stale one when there …"
-    },
-    "tree_start": {
-     "test_env_sh.py": "驗 proto8/env.sh 與起手範本裡那份薄 env.sh（11-18 S6）：AOS_HOME 由人設、env.sh 不設它，沒設就報一行錯、什麼都不改；有設時 bash 與 zsh 都 source 得過，AOS_* 只剩 AOS_HOME，CLAUDE 那三個清掉，$AOS_HOME/…"
     }
    },
    "fake-mcp-http": {
@@ -441,6 +438,7 @@
    "test_declared_files.py": "Test declared file validation in aos.declared_files and that it imports alone (without aos.agentlib, without touching sys.path).",
    "test_directive_value.py": "驗 directive_value：給了 file＝{\"$ref\": \"#/…\"} 取那份檔自己；沒給＝原封不動（11-12 ref-hash R1）；resolve_path 一律給設定檔。",
    "test_env_file.py": "Test the shared dotenv parser directly, including expansion and strict failures.",
+   "test_env_sh.py": "驗 proto8/env.sh 與起手範本裡那份薄 env.sh（11-18 S6）：AOS_HOME 由人設、env.sh 不設它，沒設就報一行錯、什麼都不改；有設時 bash 與 zsh 都 source 得過，AOS_* 只剩 AOS_HOME，CLAUDE 那三個清掉，$AOS_HOME/…",
    "test_file_tools_paths.py": "檔案工具拿掉工作區限制（11-10 tool-packs，使用者「3.對」）：相對從 $AOS_WS、絕對照用，工作區外也能讀寫改搬。",
    "test_flags_anywhere.py": "Check aos_flags.parse(anywhere=True) and the one-layer commands moved to it (P-44 continued, 11-11 \"全部改\").",
    "test_hook_run.py": "Verify the shared hook engine: entry validation, running handlers through aos-exec, replies, blocking, on_error, timeouts, ordering and conditions.",

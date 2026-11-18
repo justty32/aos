@@ -11,7 +11,7 @@
 ```sh
 cp -r $AOS_HOME/templates/start-api ~/aos-home            # 一行抄好整棵樹（位置自己挑）
 cd ~/aos-home && source env.sh                             # 每個視窗先做這行
-aos-tree-start root                                        # 視窗 A：起根（前景；Ctrl-C＝整棵停）
+aos-exec root                                              # 視窗 A：起根（前景；Ctrl-C＝整棵停）
 cd llms && aos-exec --stack stacks/llm def                 # 視窗 B（先做上面那行 source）：起 llm kernel
 aos-agent -d .stack ctl add --auto-restart -w . agents/ann # 視窗 C（同上）：把 agent 掛到根上
 aos-daemon-ctl -d .stack ls                                # _clock、_sweeper、ann 都是 running

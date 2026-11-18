@@ -48,8 +48,5 @@
  },
  "tools": {
   "description": "aos-tools 的測試（本體在 py/aos/apps/tools；多半經 bin/ 的入口當子行程跑）"
- },
- "tree_start": {
-  "description": "aos-tree-start 的測試（本體在 py/aos/apps/tree_start；多半經 bin/ 的入口當子行程跑）"
  }
 }

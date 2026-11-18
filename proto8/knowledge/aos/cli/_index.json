@@ -71,9 +71,6 @@
  "share.json": {
   "description": "Use aos-share to set ACLs on a shared folder or a file for a group or user id (team, read, key, work, drop, stack); preview with --dry-run."
  },
- "tree_start.json": {
-  "description": "aos-tree-start starts the root of a tree like aos-exec, but refuses (EnvBad) when the shell carries another tree's AOS_* variables."
- },
  "sandbox.json#/config": {
   "description": "Pointer. aos-asuser: runs a program as one of your sub-ids without root; aos-sandbox uses it for `user: sub:N`. No page of its own: the `user` key in aos/cli/sandbox.json#/config, then `aos-asuser --help`."
  },

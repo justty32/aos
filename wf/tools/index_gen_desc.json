@@ -28,7 +28,6 @@
   "proto8/py/tests/apps/share": "aos-share 的測試（本體在 py/aos/apps/share；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/tests/apps/sweeper": "aos-sweeper 的測試（本體在 py/aos/apps/sweeper；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/tests/apps/tools": "aos-tools 的測試（本體在 py/aos/apps/tools；多半經 bin/ 的入口當子行程跑）",
-  "proto8/py/tests/apps/tree_start": "aos-tree-start 的測試（本體在 py/aos/apps/tree_start；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/aos/apps/agent": "aos-agent：給人用的 agent 介面，ctl add／rm／起停睡醒、say／listen／chat、畫面、tools／llm／system／goal／hook 覆蓋層與搬家說明；要改人操作 agent 的指令時進去",
   "proto8/py/aos/apps/agent/ctl": "aos-agent ctl 的各動作：add 掛上、rm 拔掉、起停睡醒暫停、ls 列表、state 看單隻狀態、where／who 找 stack、set-def 換定義與共用的寄控制信等回信",
   "proto8/py/aos/apps/agent/docs/01-用法例子.md": "aos-agent 的用法例子：在 WSL 逐條實跑的 ctl add／ls／say／listen／state／chat 範例輸出、stdin 與 stdout、短名與確認、判官排隊與叫醒收件者",

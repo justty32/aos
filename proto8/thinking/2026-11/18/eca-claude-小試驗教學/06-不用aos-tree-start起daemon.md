@@ -1,4 +1,4 @@
-這份教你不叫 `aos-tree-start`，手動把一棵「stack 還在、表上掛著 proc、daemon 沒在跑」的樹起回來（試驗 06，11-18 在公司 WSL 實跑過）。
+這份教你不叫 `aos-tree-start`，手動把一棵「stack 還在、表上掛著 proc、daemon 沒在跑」的樹起回來（試驗 06，11-18 在公司 WSL 實跑過）。aos-tree-start 已於 11-18 移除，直接用 aos-exec。
 ← [目錄](README.md)
 
 # 試驗 06：不用 aos-tree-start 起回停著的 daemon
