@@ -46,6 +46,6 @@
  ],
  "handoff": [
   "- 可行功能或缺口 → `wf/workflows/planning.json`；可獨立套用的修改 → `wf/workflows/patch.json`。",
-  "- 窄問題 → `wf/workflows/investigation.json`；需使用者驗證 → 工作區的 `wf/WAIT_USER.md`。"
+  "- 窄問題 → `wf/workflows/investigation.json`；需使用者驗證 → 工作區的 `wf/progress.json` 一條、status 寫「等使用者」。"
  ]
 }

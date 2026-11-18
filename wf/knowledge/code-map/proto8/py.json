@@ -464,7 +464,6 @@
   },
   "tools": {
    "agent": {
-    "__init__.py": "agent - agent 層工具的資料夾（不是被 import 的套件；S3 起共用模組平鋪在 py/ 頂層，這個檔可刪）。",
     "agent_def": {
      "def_edit.py": "agent_def 的細的定義動作：tools（ls／get／add／rm，轉 aos-tools --file 定義那份）、llm（ls／set／rm，轉 aos-json）、system（get／set）；改的是定義本身，不碰任何 stack。",
      "tests": {

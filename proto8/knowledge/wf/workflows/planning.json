@@ -46,7 +46,7 @@
  ],
  "handoff": [
   "定下的決定 → `wf/workflows/decisions.json`。",
-  "卡在使用者 → 工作區的 `wf/WAIT_USER.md` 記一行（寫法見 `wf/knowledge/live-lists.json#/wait_user`）。",
-  "跨 session → 工作區的 `wf/SESSION-LOG.md` 記一行（寫法見 `wf/knowledge/live-lists.json#/session_log`）。"
+  "卡在使用者 → 工作區的 `wf/progress.json` 記一條、status 寫「等使用者」（寫法見 `wf/knowledge/live-lists.json#/progress`）。",
+  "跨 session → 工作區的 `wf/progress.json` 記一條（寫法見 `wf/knowledge/live-lists.json#/progress`）。"
  ]
 }

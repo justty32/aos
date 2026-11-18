@@ -12,17 +12,18 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-17 收工 公司 Windows 機
+## 2026-11-18 傍晚 公司 Windows 機
 
-- **授權與做法**：頂層只當調度者；普通工作 opus、雜活 sonnet、規劃 fable；各線不 commit，頂層分件交。要使用者裁的一律跳選項（「有需要我裁，都跳選項」）；題多就做成桌面網頁。push 要先問。這台改檔在 Windows repo，測試在 WSL 暫存複本；生成器用 `wsl` 在 `/mnt/c/...` 跑 `python3 wf/tools/index_gen.py --apply`。每日日誌停寫。
-- **proto8 現在的樣子**：頂層 `cpp cmd lib templates knowledge docs thinking archive frontend`＋`README.md`、`env.sh`、`install.py`。路徑規則一「只認一個家」：全靠 `AOS_HOME`，`source proto8/env.sh`。
-- **cpp／py 改名與「Linux 標準安裝包」形狀（施工到一半）**：規劃與 15 題裁定在 [cpp-py-改名](../proto8/thinking/2026-11/17/cpp-py-改名.md)（施工單 `07`、裁定在 `08` 文末）；外部依賴 6 題裁定在 [外部依賴](../proto8/thinking/2026-11/17/外部依賴.md)（`06` 文末）。
-  - **做完 S1、S2**（`2ba0546f6`）：`impls`→`cpp`；一份頂層 `cpp/Makefile`；nlohmann `json.hpp` 收進 `cpp/third_party/nlohmann/`；CMake 與 vcpkg 檔全刪；`proto8/install.py`（編 C++、成品進 `proto8/bin/`、`proto8/include/`，兩夾不進 git）；`env.sh` 把 `$AOS_HOME/bin` 放上 PATH。**新流程：clone → `python3 proto8/install.py` → `source proto8/env.sh`。** 驗證是施工線在 WSL 快照跑的（全部測試不比基準紅、假腦起樹走通），頂層沒重跑、家機沒驗。
-  - **還沒做 S3～S7**：`lib`→`py` 換手（現在 `lib/` 仍是原始碼、還沒有 `py/`，`cmd/*/bin` 的 Python 入口也還沒進 `bin/`）、樹裡 `env.sh` 轉去 `source "$AOS_HOME/env.sh"`（L-7 C）、起手範本（L-10 A）等。施工線的分步紀錄在公司 WSL `~/.aos/scratch/build-1117/groups.md`（repo 外）。
-  - **傍晚補問四題已答**（逐字在 [08-要裁的題](../proto8/thinking/2026-11/17/cpp-py-改名/08-要裁的題.md) 文末）：code map 依賴表變空「先放著」；`docs/zh/*.html` 舊安裝法「先不動」；公司機 `proto8/cpp/*/{bin,build,lib}` 舊編譯產物已刪；`install.py`「完全不管」前端。下班前再問兩題也已答、已做：條文裡 `impls/` 的路徑只改路徑成 `cpp`；aos-teams/06 硬規則第 5、6 條的指令換成 `install.py`。
-  - **條文裡還留著的**：句子裡單獨的「impls」字樣沒動（條文先放著）。
-- **aos-view → aos-frontend**（`5c951ee8e`）：改名、整夾搬到 `proto8/frontend/`，是選配的網頁外掛；舊前端 `web/`、`ui/v1/` 已刪（`934c7482e`）。`AOS_VIEW_HOME`、`~/.aos/view` 沒改名；`API.md` 還講 v1；使用者說之後會整個大修。小助手 hook 的新路徑沒被測試跑到。
-- **今天其他做完的**：八夾、路徑規則、重建樹的[步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)（已改成 `install.py` 新流程，第 1～12 步在乾淨 clone＋暫存樹用假腦實跑過；已知偶紅：aos-daemon `test_bad_letter` 一支在整夾一起跑時紅過一次、單獨跑 3 次都過）、條文 33 題落完（使用者：「條文這東西以後我會大修，現在不用這麼急」）、wf 整理（規矩卡 `wf/workflows/common/rules-card.md`）。使用者答的題全文：[待裁網頁-答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)。
+- **授權與做法**：頂層只當調度者；普通工作 opus、簡單工作與雜活 sonnet、規劃 fable；派出去的 agent（雜活除外）先讀規矩卡；各線不 commit，頂層分件交。要使用者裁的一律跳選項。push：使用者 11-18 開工說「下班前一次推。」、下午說「可以推」，今天的都已推；新 session 要重問。這台改檔在 Windows repo，測試在 WSL 暫存複本；生成器用 `wsl` 在 `/mnt/c/...` 跑 `python3 wf/tools/index_gen.py --apply`。
+- **cpp／py 改名與安裝包形狀：S1～S7 全做完、已推**（S3 `fc7430adf`、S4 `521036a64`、S5 `269cca6bf`、S6＋S7 `96b3e2e8c`）。proto8 頂層進 git 的：`cpp py templates knowledge docs thinking archive frontend`＋`README.md`、`env.sh`、`install.py`；安裝產物（不進 git）：`bin lib include`。
+  - 原始碼：C++ 在 `cpp/`；Python 在 `py/`（套件 `py/aos/`、`py/aos/agentlib/`、各指令本體 `py/aos/apps/<名>/main.py`、工具 `py/tools/{base,aos,agent}/`、測試 `py/tests/` 與 `py/tests/apps/<名>/`，後者要逐夾跑）。`cmd/` 整夾收掉了。
+  - `python3 proto8/install.py`：編 C++、把 `py/` 抄成 `lib/`、照 `py/entries.json` 在 `bin/` 生入口（共 30 支）。**改了 `py/`、`cpp/` 要重跑 install.py 才生效**（「改 repo＝改活樹」不成立了）。
+  - `env.sh` 不再自己設 `AOS_HOME`，沒設報一行 `EnvBad`；`~/.bashrc` 要先寫好 `AOS_HOME`。PATH 是 `bin/`＋`frontend/bin`（使用者 11-18：「照留，等前端大修 (Recommended)」）。
+  - 起手範本 `templates/start-api`、`start-eca`（逐字抄本，`templates/tests/test_start.py` 守同步）。
+  - [重建步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)＝第 0 步＋安裝六步＋更新五步。獨立驗證線（verify-1118）在 HEAD `96b3e2e8c` 的乾淨 clone＋假 HOME＋假腦逐字走過，每步對得上；全部測試紅的都在已知清單（清單在 `8514d5e3b` 的 commit 訊息）。沒驗：第 0 步、start-eca、真模型、家機。
+  - 裁定逐字：[08-要裁的題](../proto8/thinking/2026-11/17/cpp-py-改名/08-要裁的題.md) 文末「11-18 施工當天的題」（含施工線代定、可翻案的三點）。
+- **wf 整理今天做完的**：`WAIT_USER.md`、`wait-user/`、`gotchas.md` 退場（`3256c6cae`），三軸變兩軸（信、進度）；進度檔 `SESSION-LOG.md` 轉成 [`wf/progress.json`](progress.json)（`d1a0dbb8d`；交件工具的 op 改叫 `progress_upsert`／`progress_delete`）；出廠範本 `proto8/knowledge/wf` 跟著改成兩軸。逐字在 [wf-整理規劃/05](../proto8/thinking/2026-11/17/wf-整理規劃/05-要裁的題.md) 文末。
+- **等使用者自己做**（使用者 11-18：「你自己照步驟單做 (Recommended)」，agent 不碰）：公司 WSL 的第 0 步（移走舊 `aos-proto8.pth`、刪 `~/.local/bin` 舊 `aos-*` 連結、`~/.bashrc` 加 `AOS_HOME`）、`~/repo/aos` 拉新版後跑 `install.py`、重建 `~/aos-home`。家機同理，`git pull` 後舊的 `proto8/impls/`、`proto8/cmd/` 殘留夾可整夾刪。
 - **在跑的線**：沒有。
-- **桌面成品（repo 外）**：`aos-待裁-1117.html`、`aos-待裁-1117-改名.html`（都已答完）、`aos-全景-1117\index.html`（畫的是改名前的八夾）。
-- **還沒做的舊尾巴**：進度檔轉 `wf/progress.json`；沙箱只唯讀綁 `<家>/lib`；`install.sh` 的舊 `.pth` 提醒、兩支 helper 的 `read_json`；wf 裡幾處還寫 `~/aos-home/knowledge`；`aos-user` 不在 repo；公司 WSL 的 `~/repo/aos` 還停在早上的版本、`~/aos-home` 停著等重建。
+- **還留著的尾巴**（細節在 progress.json）：`proto8/docs` 條文句子裡的舊字樣約 67 處與 `docs/zh/*.html` 舊安裝法（已裁先不動）；約 37 個檔還寫 `source proto8/env.sh`（`AOS_HOME` 有設就能用）；code map 專案依賴表是空的（先放著）；前端測試 `test_slash` 把暫存夾寫死（跑法寫在 testing.md，前端等大修）；`STRUCTURE.md` 超過 8 KB；`aos-user` 不在 repo；`wf-整理規劃.md` 主檔標題還寫「還沒裁」。
+- **暫存（repo 外，沒刪）**：WSL `~/.aos/scratch/{s3,s4,s5,s67,verify,tail2,progress-json}-1118/`；桌面 `aos-全景-1117\index.html` 畫的是改名前的樣子。

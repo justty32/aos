@@ -111,7 +111,7 @@
     "template/AGENTS.md"
    ],
    "prep_commit": "ef0b1412a86d62804daab7fd53eb7a0650bbc80d",
-   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`which` 第三列的信件軸改成「同樹走 mailbox、樹外照工作區自己的做法」（multi-agent 包不併，W21）；`aos_note` 改寫成使用者 W11 的裁定（現在不改，照寫檔案）；`which` 照備料是物件陣列（W18＝A）"
+   "changed": "路徑改成本庫落點（`kernel/…`、`dev/…` → `wf/workflows/`、`wf/skeletons/`、`wf/knowledge/`；「aos 知識庫的」幾個字拿掉）；`source` 鍵拿掉、收進這裡；`which` 第三列的信件軸改成「同樹走 mailbox、樹外照工作區自己的做法」（multi-agent 包不併，W21）；`aos_note` 改寫成使用者 W11 的裁定（現在不改，照寫檔案）；`which` 照備料是物件陣列（W18＝A）；11-18 使用者選項框「跟著改 (Recommended)」：兩份清單併成一份 `wf/progress.json`（兩軸：信、進度），`session_log`、`wait_user` 併成 `progress`，加 `skeleton`，`session_start`、`which`、`aos_note` 跟著改"
   },
   {
    "here": "wf/knowledge/iron-rules.json",

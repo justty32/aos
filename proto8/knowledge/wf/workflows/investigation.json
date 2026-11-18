@@ -12,7 +12,7 @@
   "1. **收集事實**：只讀不改，一條一則，附出處。",
   "2. **對照現有能力**：這件事現在能不能做、靠什麼做。",
   "3. **分類**：可直接做／有缺口／不值得做／需使用者驗證。",
-  "4. **產出 finding**：照 `wf/skeletons/notes.json#/skeleton` 寫成工作區的 `wf/knowledge/notes/<主題>.json`（筆記夾還沒有 → 用到才建，入口寫法見 `wf/skeletons/notes.json#/index`）；缺口進 `wf/workflows/planning.json`，踩到的坑進 `wf/workflows/gotchas.json`，需使用者驗證的進工作區的 `wf/WAIT_USER.md`。",
+  "4. **產出 finding**：照 `wf/skeletons/notes.json#/skeleton` 寫成工作區的 `wf/knowledge/notes/<主題>.json`（筆記夾還沒有 → 用到才建，入口寫法見 `wf/skeletons/notes.json#/index`）；缺口進 `wf/workflows/planning.json`，踩到的坑進 `wf/workflows/gotchas.json`，需使用者驗證的進工作區的 `wf/progress.json`（status 寫「等使用者」）。",
   "",
   "**不把未驗證的猜測寫成結論**——不確定就寫「缺什麼證據」，不要補完。"
  ],

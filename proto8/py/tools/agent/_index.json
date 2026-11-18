@@ -1,7 +1,4 @@
 {
- "__init__.py": {
-  "description": "agent - agent 層工具的資料夾（不是被 import 的套件；S3 起共用模組平鋪在 py/ 頂層，這個檔可刪）。"
- },
  "agent_def": {
   "description": "agent_def 工具（定義包）：從範本複製出新 agent 定義、檢查定義夾，或改定義的工具、腦設定與 system 文字並記血統"
  },

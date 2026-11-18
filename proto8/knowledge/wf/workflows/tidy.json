@@ -11,13 +11,13 @@
  },
  "done_when": [
   "目標資料夾根層只剩入口 ＋ 語意子資料夾（或同類檔案集合），每個子資料夾有入口：json 形態是 `_description.json`（東西多再加 `_index.json`，見 `wf/tidying.json#/split_method`），md 形態是 `README.md`。",
-  "每個被封存檔：`grep -rn '<檔名>' <repo> | grep -v archive/` → 0 行（對**整個 repo** 查，範圍外的活文件還連著也算；md 形態時加 `--include='*.md'`，json 形態時加 `--include='*.json' --include='*.md'`，`wf/SESSION-LOG.md`、`AGENTS.md` 裡的引用也要清）；所屬 `archive/` 的索引有它那一列（json 形態 `archive/_index.json`、md 形態 `<資料夾>/archive/README.md`）。",
+  "每個被封存檔：`grep -rn '<檔名>' <repo> | grep -v archive/` → 0 行（對**整個 repo** 查，範圍外的活文件還連著也算；md 形態時加 `--include='*.md'`，json 形態時加 `--include='*.json' --include='*.md'`，`wf/progress.json`、`AGENTS.md` 裡的引用也要清）；所屬 `archive/` 的索引有它那一列（json 形態 `archive/_index.json`、md 形態 `<資料夾>/archive/README.md`）。",
   "範圍裡有 `_index.json` 時：每份 index 跟實際的樹對得上（列了的都在、在的都列了）。工作區有 index 檢查工具就跑它、回傳 0；沒有就用 `index_view` 與 `ls` 逐夾對。",
   "md 形態且工作區有連結檢查工具時：對**交接書指定的整理範圍**跑（不對整個 repo：會連帶算進範圍外的東西），沒有壞連結。",
   "交接書列出要拆的檔都拆了；超過門檻而不拆的，報告裡每個寫理由（門檻見 `wf/tidying.json#/split`：都是觸發檢視的訊號；`.md` 約 8 KB 是推薦值）。",
   "精簡過的檔：`#/content_trim` 的原文檢查 → 0 行 `LOST`（被推翻而刪的列進報告）；報告列每檔精簡前後 bytes。",
   "報告附 `moves.tsv`（`舊路徑<TAB>新路徑`）。",
-  "`wf/SESSION-LOG.md` 只列 open。"
+  "`wf/progress.json` 只列 open。"
  ],
  "roles": "**調度者**只盤點、寫交接書、核驗、修跨資料夾／跨 repo 的連結；**實作線**（一個或多個工人）分類、切批、逐批驗收。線**不得**進交接書範圍以外的資料夾或 repo。線可以再分一層：一個範圍一條**管理線**，管理線再派**工人**（簡報範本 `wf/workflows/tidy-manager-brief.json`）。",
  "steps": [
@@ -45,5 +45,5 @@
   "$ref": "tidy/content-trim.json#/converge"
  },
  "gotchas": "整理與拆檔實際踩過的坑集中在 `wf/knowledge/gotchas.json` 的 `tidy_` 開頭各段（封存與搬檔、拆檔、派線與工人、執行環境）；動手前先讀一遍。",
- "handoff": "完成後 → 若整理揭露了要裁示的事，`wf/WAIT_USER.md` 一行。"
+ "handoff": "完成後 → 若整理揭露了要裁示的事，`wf/progress.json` 一條、status 寫「等使用者」。"
 }

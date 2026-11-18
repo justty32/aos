@@ -133,7 +133,7 @@
     "gotchas.json": "設定（鍵：_description、tidy_archive_move、tidy_split、tidy_dispatch、tidy_env）",
     "green-is-not-checked.json": "設定（鍵：_description、rule、corollaries）",
     "iron-rules.json": "設定（鍵：_description、rules、adopt、agents_md_entry）",
-    "live-lists.json": "設定（鍵：_description、which、session_start、session_log、wait_user、aos_note）",
+    "live-lists.json": "設定（鍵：_description、which、session_start、progress、skeleton、aos_note）",
     "workflow-template.json": "設定（鍵：_description、skeleton、fields、paths）"
    },
    "layers.json": "設定（鍵：_description、layers、skills_vs_memory、private_index、logs）",

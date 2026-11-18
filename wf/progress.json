@@ -12,7 +12,7 @@
   "open": {
     "rebuild-aos-home": {
       "title": "重建 `~/aos-home`",
-      "status": "open",
+      "status": "等使用者",
       "flow": "",
       "what": "使用者自己照步驟單的安裝六步重建（`AOS_HOME` 一台設一次、`cp -r` 起手範本 `templates/start-api`、樹裡 `source env.sh`；程式只有 repo 一份）；以前「換樹時帶／換樹後驗」的尾巴都等重建後再驗；公司 WSL 的樹停著、`~/repo/aos` 還沒拉",
       "next": "",
@@ -26,14 +26,14 @@
       "title": "cpp／py 改名與安裝包（七步做完，剩尾巴）",
       "status": "open",
       "flow": "",
-      "what": "S1～S7 都做完（S6：`env.sh` 不再設 `AOS_HOME`、沒設報錯，樹裡一份薄 `env.sh` 轉去家裡那份，起手範本 `templates/start-api`、`start-eca`；S7：wf／README 文字跟上、重建步驟單改成安裝六步＋更新五步、乾淨 clone 照著走過）；剩：`frontend/bin` 那段 PATH 留不留（施工單寫 PATH 剩一段，現在選配外掛那段照留）待使用者裁；先放著的：code map 依賴表是空的、`docs/zh` 網頁還寫舊安裝法、條文裡的舊路徑字樣；家機沒驗",
+      "what": "S1～S7 都做完（S6：`env.sh` 不再設 `AOS_HOME`、沒設報錯，樹裡一份薄 `env.sh` 轉去家裡那份，起手範本 `templates/start-api`、`start-eca`；S7：wf／README 文字跟上、重建步驟單改成安裝六步＋更新五步、乾淨 clone 照著走過）；`frontend/bin` 那段 PATH（F-1）使用者 11-18 選項框「照留，等前端大修 (Recommended)」，照留到前端大修；殘檔 `py/tools/agent/__init__.py` 已刪（「都刪 (Recommended)」）；先放著的：code map 依賴表是空的、`docs/zh` 網頁還寫舊安裝法、條文裡的舊路徑字樣；家機沒驗",
       "next": "",
       "see": [
         "[HANDOFF](HANDOFF.md)",
         "[cpp-py-改名](../proto8/thinking/2026-11/17/cpp-py-改名.md)",
         "[外部依賴](../proto8/thinking/2026-11/17/外部依賴.md)"
       ],
-      "since": "2026-11-17"
+      "since": "2026-11-18"
     },
     "path-rules-tail": {
       "title": "路徑規則與八夾的尾巴",
@@ -73,7 +73,7 @@
       "title": "wf/ 整理剩的",
       "status": "open",
       "flow": "tidy",
-      "what": "12 題照各題 a 已落（坑併 public、規矩卡、日誌停寫、死入口與 INDEX 已刪、進度檔已轉 `wf/progress.json`）；剩 STRUCTURE 超過 8 KB（等段 9）",
+      "what": "12 題照各題 a 已落（坑併 public、規矩卡、日誌停寫、死入口與 INDEX 已刪、進度檔已轉 `wf/progress.json`；出廠範本 `proto8/knowledge/wf` 也改成兩軸＋`progress.json`，使用者 11-18 選項框「跟著改 (Recommended)」）；剩 STRUCTURE 超過 8 KB（等段 9）",
       "next": "",
       "see": [
         "[wf-整理規劃](../proto8/thinking/2026-11/17/wf-整理規劃.md)"
