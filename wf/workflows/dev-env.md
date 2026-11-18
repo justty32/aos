@@ -53,4 +53,4 @@
 ## 交接
 
 - 環境就緒要開工 → [feature-dev](feature-dev/README.md)；先確認驗證跑得動 → [testing](testing.md)。
-- 同一個裝機坑第二次撞到 → [common/gotchas](common/gotchas.md)。
+- 同一個裝機坑第二次撞到 → [wf/public 坑的主題表](../public/README.md#主題)。
