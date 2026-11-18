@@ -290,6 +290,18 @@
         "[調查入口](../proto8/thinking/2026-11/18/default-stack-1118/README.md)"
       ],
       "since": "2026-11-18"
+    },
+    "aos-compile": {
+      "title": "aos-compile：用 Python 寫、編譯成 aos 夾",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-18 晚裁定：庚（agent 版 tool_spec，一支 agent.py 宣告 SYSTEM／TOOLS／LLM／FSM 重生 json）先做、己（從樹濃縮一頁總覽，只看不必精細）後做；除錯以 loop 那層為主（缺一頁攤開資源的畫面、這一步對到原始碼哪一行）；11-19 正式開始",
+      "next": "11-19 開工：先定庚的 agent_def check 打架規則",
+      "see": [
+        "[07-使用者裁定](../proto8/thinking/2026-11/18/aos-compile-1118/07-使用者裁定.md)",
+        "[README](../proto8/thinking/2026-11/18/aos-compile-1118/README.md)"
+      ],
+      "since": "2026-11-18"
     }
   }
 }
