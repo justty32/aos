@@ -77,6 +77,8 @@
 | daemon 底下一個 loop proc | `loop.json` 的 `exec` 寫框架站，掛到一台普通 daemon 上 | `<那個 proc 的 stack>/requests` | `procs-kernel/` |
 | 鏈的中間站 | 上面兩種任一種，`kernel.json` 多寫 `next` 指到別的站（或站的環境 `AOS_KERNEL` 指到別的站） | 同上 | 沒有現成範本，例子在 [02](docs/02-kernel-modes.md) |
 
+`daemon-kernel/`、`procs-kernel/` 兩份範本原樣只能當**最後一站**用：它們的 `kernel.json` 寫了 `max_running`、沒寫 `next` 與 `count_daemon`，所以站的環境裡 `AOS_KERNEL` 要嘛沒設、要嘛指到這一站自己的 `requests/`（跳過，轉給 `$AOS_DAEMON` 那台、也在那台的表上數）。繼承到指向**別站**的 `AOS_KERNEL` 時，每一輪都是 `CfgBad`（站不猜要去哪台數）。要改當鏈的中間站，自己在 `kernel.json` 補上 `count_daemon`（或寫 `next` 連同 `count_daemon`），或在起那一站的殼 `unset AOS_KERNEL`。範本沒有預先寫 `count_daemon`：寫死某一台就等於替你猜了要數哪台。
+
 手跑的指令、鏈的例子、hook 的例子、已知限制都在 [02-kernel-modes](docs/02-kernel-modes.md)。
 
 ## 分檔目錄

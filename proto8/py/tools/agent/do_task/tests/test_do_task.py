@@ -303,6 +303,30 @@ class DoTask(unittest.TestCase):
         self.assertIn("Already folded", r.stdout)
         self.assertEqual(self.read(), once)
 
+    def test_keep_others_cut_then_history_changed(self):
+        """挪到一半被砍、重跑前 history 行數變了：小格記的 moving 對不上＝StateBad，不重放、不摺，任務照開。"""
+        self.step("c1", {"op": "start", "task": "t"})
+        self.other("c2")
+        self.write(self.read() + [{"role": "assistant", "content": "Waiting for bob."}, self.LETTER])
+        self.other("c3")
+        self.write(self.read() + [{"role": "assistant", "content": "Hm."}, self.GOAL])
+        self.other("c4")
+        args = {"op": "end", "summary": "bob said 42", "keep_others": True}
+        self.write(self.read() + [asks("c5", args)])
+        self.log.unlink()
+        cut = self.run_tool(args, FAKE_FAIL="set", FAKE_FAIL_NTH="2")   # 第一則挪完、第二則前死掉
+        self.assertEqual(cut.returncode, 1, cut.stdout)
+        state = json.loads((self.cell / "tasks.json").read_text())
+        self.assertEqual(state["moving"]["call"], "c5")
+        self.write([{"role": "user", "content": "Earlier."}] + self.read())   # 重跑前 history 多了一行（行數、範圍都變）
+        before = self.read()
+        r = self.run_tool(args)
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertEqual(r.stdout.strip(), "do_task: error: StateBad $AOS_STACK/tasks.json has an unfinished end of this "
+                         "call (it was cut while moving messages from others), but your history changed since; nothing was folded")
+        self.assertEqual(self.read(), before)                                 # 沒摺、沒挪
+        self.assertEqual(json.loads((self.cell / "tasks.json").read_text()), state)   # 小格照舊：任務開著、moving 還在
+
     def test_restart_keeps_the_mark(self):
         self.step("c1", {"op": "start", "task": "long job"})
         self.other("c2")

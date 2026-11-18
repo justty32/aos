@@ -88,12 +88,36 @@ class Tree:
         self.proc = None
 
     def kill_all(self):
+        # 收尾（含失敗、例外）：SIGKILL daemon 後，表上的 pid 只是子 loop；字串目標的單子由 aos-inst 起、自成 session，
+        # killpg 子 loop 那群打不到它（daemon 自己收工時會掃 /proc 收，被 SIGKILL 就沒人收）。所以再照 /proc 找
+        # AOS_STACK 在這棵樹底下的行程，逐個確切 pid 收掉。
         self.stop(signal.SIGKILL)
         for pid in self.pids:
             try:
                 os.killpg(pid, signal.SIGKILL)
             except OSError:
                 pass
+        for pid in below(self.root):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+
+
+def below(root):
+    """Pids (of this user) whose AOS_STACK is inside root: the children a SIGKILLed daemon leaves behind."""
+    prefix = str(root) + '/'
+    out = []
+    for n in os.listdir('/proc'):
+        if not n.isdigit() or int(n) == os.getpid():
+            continue
+        try:
+            stack = environ(int(n)).get('AOS_STACK', '')
+        except (OSError, UnicodeDecodeError, ValueError):
+            continue
+        if (stack + '/').startswith(prefix):
+            out.append(int(n))
+    return out
 
 
 class TwoMachines(unittest.TestCase):
