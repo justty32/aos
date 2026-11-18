@@ -33,4 +33,5 @@ a{color:#0b5cad}
 <p>這只改 ann 自己那份（第一次會印一行 warning，說它在 ann 的 stack 建了自己的 <code>tools.json</code>），定義不動；<code>aos-agent -d stacks/root -t ann tools reset</code> 可以回到定義。</p>
 <h2 id="沙箱是-l3-實驗">沙箱是 L3 實驗</h2>
 <p>專案裡有沙箱與限額相關的零件（<code>aos-sandbox</code>、<code>aos-asuser</code>；需要 bubblewrap 等外部工具），<strong>屬於實驗功能，還沒實測，不是安全保證</strong>。demo 版明講沒有「安全隔離保證」。</p>
+<p>用 <code>-w .</code> 掛 agent（工作區＝整棵樹）時，就算把它的工具關進沙箱，它還是碰得到整棵樹的控制台：daemon 的信箱、kernel 與各隻的定義，甚至能叫 daemon 在沙箱外再開一隻 agent。這是使用者自己承擔的風險；要隔得乾淨，就給它專用的工作夾（例如 <code>-w work</code>）。</p>
 <p>下一步：<a href="../status.html">狀態</a>、<a href="troubleshooting.html">疑難排解</a>。</p></main></body></html>

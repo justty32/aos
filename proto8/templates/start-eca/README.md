@@ -18,6 +18,8 @@ aos-agent -d .stack --target ann say hello && aos-agent -d .stack --target ann l
 aos-daemon-ctl -d .stack shutdown                          # 關樹；再起＝視窗 A 那行，睡下的自己醒
 ```
 
+**要把工具關進沙箱（[aos-sandbox](../../py/aos/apps/sandbox/README.md)）的話**：上面 `-w .` 讓 agent 的工作區＝整棵樹，樹的控制台（根的 `.stack/` 信箱、llm kernel 與各隻的定義）都在裡面，沙箱裡的 agent 碰得到它們、還能叫 daemon 在沙箱外再開一隻——這是使用者自己承擔的風險（使用者 11-18 晚：「好，沙箱這個基本上是使用者要自己承擔的風險吧。」）。要隔得乾淨就給它專用的工作夾：`mkdir work && aos-agent -d .stack ctl add --auto-restart -w work agents/ann`。
+
 ## 裡面有什麼
 
 | 夾／檔 | 是什麼 | 從哪抄的 | 跟原範本不一樣的地方 |

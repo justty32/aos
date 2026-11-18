@@ -74,6 +74,7 @@ bwrap 在這個 user ns 裡照開（[06 X28](../../../../thinking/2026-11/13/ker
 **要碰 daemon 的工具（subagent、agents_ctl、self_tools、self_history、do_task）綁這兩樣**：`AOS_DAEMON`（rw；模式 2 改成 `AOS_KERNEL` 的 `requests/`＋daemon stack 唯讀，再加 rw 它的 `procs/`——子的 stack 要寫得進去）（[no-pid P5](../../../../thinking/2026-11/05/no-pid/13-P5實作結果.md)）。另外兩件要注意：
 - **叫它的那隻 agent 的定義資料夾也要 ro 綁**：self_tools 會讀父的定義（父的 `interfaces.json`、宣告的 llm 設定檔），看不到時報 `InterfaceMissing`；self_history、do_task 經 `aos-agent history` 也要讀它的 `interfaces.json`（找 history 檔；do_task 不讀 llm 設定、不生子）。定義放哪沒有環境變數可指，範例沒寫，自己在 `ro` 加上。
 - **daemon 的 stack 放在工作區裡（例 `ws/.stack`）時，綁 `AOS_WS` 就已經把整台 daemon 綁進去了**——連 shell-boxed 這種葉工具也寫得到 ctl 信箱。要真的關住，daemon 的 stack 別放在工作區裡。
+- **照起手範本用 `-w .` 掛 agent（工作區＝整棵樹）時，沙箱關不住樹的控制台，這是使用者自己承擔的風險**（使用者 11-18 晚：「好，沙箱這個基本上是使用者要自己承擔的風險吧。」，[sbx-fix-1118](../../../../thinking/2026-11/18/sbx-fix-1118.md)）：樹裡的根 stack（daemon 信箱）、llm kernel 的 stack 與定義、各隻的定義都在工作區裡，綁 `AOS_WS` 就一起可寫——沙箱裡的工具看得到 daemon 的表、能對別隻說話、改得到 kernel 與自己的定義，還能 `ctl add` 叫 daemon 在**沙箱外**再開一隻（11-18 家機實測）。要隔得乾淨就給它專用的工作夾（例 `mkdir work && aos-agent -d .stack ctl add -w work agents/ann`），或放樹外的專案夾。
 
 ## 要 root 的那半
 
