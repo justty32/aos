@@ -212,13 +212,6 @@
    "lang": "Python",
    "module": "aos.apps.tools.main",
    "source": "proto8/py/aos/apps/tools/main.py"
-  },
-  {
-   "command": "aos-tree-start",
-   "from": "proto8/py/entries.json",
-   "lang": "Python",
-   "module": "aos.apps.tree_start.main",
-   "source": "proto8/py/aos/apps/tree_start/main.py"
   }
  ],
  "source": "proto8/py/entries.json"

@@ -33,7 +33,10 @@
   "description": "eca 停下時由 tmux 計時延後關畫面，起來撤單，到期核 token、畫面與本機 loop 身分。"
  },
  "cli_mcp.py": {
-  "description": "cli_session 接 MCP：aos-mcp 那台的旗標（claude 的 mcp.json／codex 的 -c）、外部 MCP server、tools_sub 子 agent 那台與 guard hook"
+  "description": "cli_session 接 MCP：aos-mcp 那台的旗標（claude 的 mcp.json／codex 的 -c；pi 用同一份參數，見 cli_pi）、外部 MCP server、tools_sub 子 agent 那台與 guard hook"
+ },
+ "cli_pi.py": {
+  "description": "cli_session 的 pi 身（pi coding agent，11-18 eca-pi 甲案）：pi --mode json 一問一答、對話檔進小格、aos-mcp 經生成的外掛、/compact 走一次 pi --mode rpc"
  },
  "cli_print.py": {
   "description": "cli_session 的非互動那條路（畫面沒開）：claude -p／codex exec 起 CLI、等回答、記 session"
@@ -42,7 +45,7 @@
   "description": "cli_session 開畫面：tmux 裡起互動的 claude／codex（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供"
  },
  "cli_session.py": {
-  "description": "把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 aos-agent attach／open 接進或開啟互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字"
+  "description": "把 claude／codex／pi 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 aos-agent attach／open 接進或開啟互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字"
  },
  "cli_stream.py": {
   "description": "非互動那條路的「中途收信」版：claude -p --input-format stream-json，stdin 先不關，回答途中把新信一行一行投進去"

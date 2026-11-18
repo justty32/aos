@@ -27,7 +27,7 @@
   "description": "aos/apps/agent/goal.py - 管 agent 的 goal（<stack>/goal.json）：get、set、done、pause、resume、clear；腦自己停下來時由身體（agent-fsm idle、aos-eca-turn）丟提醒。"
  },
  "hints.py": {
-  "description": "aos/apps/agent/hints.py - 讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。"
+  "description": "aos/apps/agent/hints.py - 讀 agent 狀態（含仍活著的 stuck）、queue 數量、問腦失敗紀錄與接續操作提示。"
  },
  "history.py": {
   "description": "aos/apps/agent/history.py - 看與改 agent 的對話紀錄（宣告的 history 檔，一行一則訊息）：ls、rm 一段、summarize 一段換成一則、set 任一行；改掉的原文預設搬到旁邊。"
@@ -54,7 +54,7 @@
   "description": "aos/apps/agent/screen.py - 開啟、關閉與追蹤 agent 的畫面子介面。"
  },
  "sender.py": {
-  "description": "11-13 使用者裁「a2a這個按照建議」「say/chat被當成不是使用者打的，我覺得可以」：對 eca 說的話補上真正的寄件人——誰下的指令寫誰。"
+  "description": "aos/apps/agent/sender.py - say／chat 的寄件人：--from ＞ $AOS_STACK 落在表上哪一隻的 stack ＞ 登入名；只有外部 coding agent（eca）的信帶寄件人。"
  },
  "stack.gitattributes": {
   "description": "把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件）"

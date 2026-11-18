@@ -127,7 +127,7 @@ def text_desc(text, path):
         s = ln.strip()
         if i == 0 and s.startswith("#!"):
             continue
-        if not s or s.startswith("cmake_minimum_required") or "coding" in s and s.startswith("#"):
+        if not s or s.startswith("cmake_minimum_required") or re.match(r"#.*?coding[:=]", s):    # 只跳 PEP 263 的編碼宣告；「pi coding agent」這種一句話照收
             continue
         m = COMMENT.match(ln)
         if not m:

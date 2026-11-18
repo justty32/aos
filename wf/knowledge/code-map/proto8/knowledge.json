@@ -51,8 +51,7 @@
     "talk_settings.json": "Messages, screens and agent settings",
     "tool_env.json": "Hub variables in tool registrations",
     "tool_flags.json": "Flags for lib tools",
-    "tools.json": "Registering and calling tools",
-    "tree_start.json": "aos-tree-start: start the root of a tree, refusing another tree's environment"
+    "tools.json": "Registering and calling tools"
    },
    "clock.json": "Timers: clock letters to your queue (tool clock_register: every N cycles, once after N cycles, once at a wall-clock time, or cron), or a program on a…",
    "definition.json": "What is in a definition folder",

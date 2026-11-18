@@ -11,6 +11,9 @@
  "fake_codex": {
   "description": "stand-in for the codex CLI in aos-eca tests: exec / exec resume ID with --json and -o, keeps threads as files, never calls a model"
  },
+ "fake_pi": {
+  "description": "stand-in for the pi coding agent CLI in aos-eca tests: --mode json / --mode rpc compact, sessions as files, never calls a model"
+ },
  "test_compact_wrap.py": {
   "description": "Test the wrap-up-then-compact path end to end with fake claude (11-15 compact-1115): context_wrap (on_clock) reads live.jsonl, sends a wrap-up letter…"
  },
@@ -40,6 +43,9 @@
  },
  "test_peek.py": {
   "description": "Test aos-eca-screen peek (11-16 ok-small): /status and /usage answer at once, also mid-turn, without the queue, history, lock or screen."
+ },
+ "test_pi.py": {
+  "description": "Test the pi kind of aos-eca-turn (11-18 eca-pi, plan A: pi --mode json one answer per message) with a fake pi CLI."
  },
  "test_reply_match.py": {
   "description": "Test reply matching on the eca side (reply-match-1114): user rows carry aos.letter, the final answer carries aos.answer_to, and <stack>/letters.json …"

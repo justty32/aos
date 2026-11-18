@@ -42,6 +42,15 @@
    "tools_sub.json": "Registry of the reduced aos tool set for subagents the claude CLI spawns with its Agent tool (cli.json tools_sub): read-only tools only - peek_clock,…"
   },
   "eca-claude/": "Run Claude Code as an aos agent: one turn per queue batch, answers appended to history.",
+  "eca-pi": {
+   "cli.json": "設定（鍵：kind、flags、timeout_ms）",
+   "hooks.json": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added…",
+   "interfaces.json": "設定（鍵：aos-agent）",
+   "llm.json": "",
+   "loop.json": "Schedule the pi agent turn and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks …",
+   "tools.json": "設定（鍵：$override、tools）"
+  },
+  "eca-pi/": "Run the pi coding agent as an aos agent: one pi --mode json run per queue batch, answers appended to history.",
   "judge-llm": {
    "judge.json": "Configure the comparator endpoint and per-section byte limit",
    "prompt.txt": "給腦的提示詞（純文字，整份交給腦，不加檔頭）"
@@ -225,6 +234,7 @@
     "test_reviewer.py": "Verify real reviewer, review scripts and shared FSM cells through local fake endpoints."
    },
    "test_daily.py": "Acceptance (/tmp, fake brain, fake claude): the user's daily routine across two machines - git clone/pull, one aos-exec line, work, aos-daemon-ctl sh…",
+   "test_eca_pi.py": "驗 eca-pi 範本（11-18）：cli.json 讀得過、kind pi、沒有畫面子介面、工具登記檔跟 eca-claude 同一份、hook 格都驗得過。",
    "test_paths_move.py": "Integration (/tmp, fake brain): a project (defs/ from daemon-root + one agent-fsm, copied with cp -r) and an llm kernel project move by git to anothe…",
    "test_screen_linger.py": "驗 eca 範本的延後關畫面 hook 兩格存在、驗格成功且啟動撤單排第一。",
    "test_start.py": "the two starter templates (start-api, start-eca) stay verbatim copies of the templates they were made from, except the few files their README names, …",

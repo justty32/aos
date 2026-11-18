@@ -71,7 +71,7 @@
    "module": "aos.apps.eca",
    "unit": "proto8/py/aos/apps/eca",
    "used_by": "",
-   "uses": "aos.agentlib.cli_ask aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_cfg aos.agentlib.cli_hook aos.agentlib.cli_mcp aos.agentlib.cli_screen aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.agentlib.quiet aos.daemon_ctl aos.flags aos.ws"
+   "uses": "aos.agentlib.cli_ask aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_cfg aos.agentlib.cli_hook aos.agentlib.cli_mcp aos.agentlib.cli_pi aos.agentlib.cli_screen aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.agentlib.quiet aos.daemon_ctl aos.flags aos.ws"
   },
   {
    "kind": "app",
@@ -158,13 +158,6 @@
    "uses": "aos.daemon_ctl.entry aos.directive_value aos.env_file aos.flags"
   },
   {
-   "kind": "app",
-   "module": "aos.apps.tree_start",
-   "unit": "proto8/py/aos/apps/tree_start",
-   "used_by": "",
-   "uses": "aos.flags"
-  },
-  {
    "kind": "lib",
    "module": "aos.clock_register",
    "unit": "proto8/py/aos/clock_register.py",
@@ -231,7 +224,7 @@
    "kind": "lib",
    "module": "aos.flags",
    "unit": "proto8/py/aos/flags.py",
-   "used_by": "proto8/py/aos/apps/agent proto8/py/aos/apps/asuser proto8/py/aos/apps/clock proto8/py/aos/apps/clock_register proto8/py/aos/apps/comm proto8/py/aos/apps/daemon_ctl proto8/py/aos/apps/eca proto8/py/aos/apps/feedback proto8/py/aos/apps/grow proto8/py/aos/apps/json_view proto8/py/aos/apps/kit proto8/py/aos/apps/mailbox proto8/py/aos/apps/mcp proto8/py/aos/apps/mcp_import proto8/py/aos/apps/sandbox proto8/py/aos/apps/share proto8/py/aos/apps/sweeper proto8/py/aos/apps/tools proto8/py/aos/apps/tree_start proto8/py/aos/clock_register.py proto8/py/aos/daemon_ctl proto8/py/aos/sweep.py proto8/py/aos/sweep_proc.py proto8/py/aos/ws.py proto8/templates/agent-fsm proto8/templates/kernel/llm-kernel proto8/templates/start-api",
+   "used_by": "proto8/py/aos/apps/agent proto8/py/aos/apps/asuser proto8/py/aos/apps/clock proto8/py/aos/apps/clock_register proto8/py/aos/apps/comm proto8/py/aos/apps/daemon_ctl proto8/py/aos/apps/eca proto8/py/aos/apps/feedback proto8/py/aos/apps/grow proto8/py/aos/apps/json_view proto8/py/aos/apps/kit proto8/py/aos/apps/mailbox proto8/py/aos/apps/mcp proto8/py/aos/apps/mcp_import proto8/py/aos/apps/sandbox proto8/py/aos/apps/share proto8/py/aos/apps/sweeper proto8/py/aos/apps/tools proto8/py/aos/clock_register.py proto8/py/aos/daemon_ctl proto8/py/aos/sweep.py proto8/py/aos/sweep_proc.py proto8/py/aos/ws.py proto8/templates/agent-fsm proto8/templates/kernel/llm-kernel proto8/templates/start-api",
    "uses": "aos.tool_io"
   },
   {

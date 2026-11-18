@@ -20,7 +20,6 @@
   "aos-sandbox": "aos.apps.sandbox.main",
   "aos-share": "aos.apps.share.main",
   "aos-sweeper": "aos.apps.sweeper.main",
-  "aos-tools": "aos.apps.tools.main",
-  "aos-tree-start": "aos.apps.tree_start.main"
+  "aos-tools": "aos.apps.tools.main"
  }
 }

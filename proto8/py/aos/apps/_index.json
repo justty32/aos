@@ -59,8 +59,5 @@
  },
  "tools": {
   "description": "aos-tools — 一個 agent 資料夾一份工具註冊檔"
- },
- "tree_start": {
-  "description": "aos-tree-start：起樹前先看殼裡有沒有別棵樹的 AOS_*"
  }
 }

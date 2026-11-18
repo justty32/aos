@@ -38,6 +38,9 @@
  "test_kernel_state_path.py": {
   "description": "Test aos-agent ctl with AOS_KERNEL set: table commands ask it where the table is (query letter) and read that file, letter commands read only their o…"
  },
+ "test_listen_brain_failure.py": {
+  "description": "驗證 listen 等交出去的信時讀問腦失敗紀錄（cooldown.json＋stderr.txt）：身體停在錯上就馬上帶原因結束，會自己重送的只提醒（small-1118）。"
+ },
  "test_listen_timeout.py": {
   "description": "Verify zero-second listen waits without a deadline and still rejects invalid timeout combinations."
  },
