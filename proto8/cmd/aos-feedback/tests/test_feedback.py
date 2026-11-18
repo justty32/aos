@@ -232,7 +232,7 @@ class FeedbackAcceptance(FeedbackFixture):
     def test_real_aos_exec_thin_tool(self):
         payload = {'command': 'lib/base/read', 'pain': 'unclear', 'suggest': 'example',
                    'kind': 'args', 'score': .7}
-        result = subprocess.run([str(EXEC), str(ROOT / 'lib/aos/feedback')],
+        result = subprocess.run([str(EXEC), str(ROOT / 'py/tools/aos/feedback')],
                                 input=json.dumps(payload), text=True, capture_output=True,
                                 cwd=self.work, env=self.env, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)

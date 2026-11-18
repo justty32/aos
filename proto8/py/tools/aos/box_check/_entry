@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+# box_check - Verify probe markers, executable visibility and host probe paths.
+import json
+import os
+from pathlib import Path
+import re
+import sys
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先裡有 tool_io.py 的那層（py/ 或裝好的 lib/），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+tool_io.start('box_check')
+args = tool_io.arguments('expect', 'got', 'input')
+try:
+    text = (Path(args['got']) / 'stdout.json').read_text()
+    failures = []
+    markers = re.findall(r'^R([1-5]) ([0-9]+)$', text, re.M)
+    results = {int(k): int(v) for k, v in markers}
+    if len(markers) != 5 or set(results) != set(range(1, 6)):
+        failures.append('missing or duplicate probe markers')
+    if results.get(1) != 0:
+        failures.append('private temporary write failed')
+    if not results.get(2):
+        failures.append('boundary R2 allowed access')
+    for number in (3, 4):
+        if results.get(number) != 0:
+            failures.append('visibility probe R%d failed' % number)
+    paths = re.findall(r'^P5 (.+)$', text, re.M)
+    if len(paths) != 1:
+        failures.append('missing or duplicate P5 path')
+    for path in paths:
+        host = Path(path)
+        if host.exists() or host.is_symlink():
+            host.unlink()
+            failures.append('host stack history file escaped')
+    binaries = set(re.findall(r'^B (.+)$', text, re.M))
+    metadata = Path(__file__).resolve().parents[4] / 'cmd/aos-sandbox/examples/shell-boxed/_metainfo.json'
+    sandbox = json.loads(metadata.read_text())['sandbox']
+    allowed = {path for path in sandbox['ro'] if path.startswith('/usr/bin/')}
+    allowed.update(str(Path(path).resolve()) for path in list(allowed))
+    if binaries != allowed:
+        failures.append('executable whitelist differs')
+    homes = re.findall(r'^H (.+)$', text, re.M)
+    if not homes or any(path.startswith(str(Path.home()) + '/') for path in homes):
+        failures.append('host home is visible')
+    host = Path('/tmp/aos-box-probe')
+    if host.exists() or host.is_symlink():
+        host.unlink()
+        failures.append('host temporary file escaped')
+    print(json.dumps({'score': 0 if failures else 1, 'diff': ['stdout.json'] if failures else [],
+                      'why': '; '.join(failures) if failures else 'All sandbox probes passed.'}))
+except (OSError, ValueError) as error:
+    tool_io.die('ProbeBad', str(error))

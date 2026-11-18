@@ -12,7 +12,7 @@ import unittest
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
 BIN = PROTO / "cmd" / "aos-tools" / "bin" / "aos-tools"
-TOOL = PROTO / "lib" / "base" / "peek_now_time"
+TOOL = PROTO / "lib" / "tools" / "base" / "peek_now_time"   # the installed copy: the directives below say /lib/tools/...
 
 
 def clean_env(**extra):
@@ -57,15 +57,15 @@ class PathForms(unittest.TestCase):
     # ---- 1. directives in a file that overrides another ----
 
     def test_overlay_env_path_resolved_each_time_and_not_written_back(self):
-        self.over_with({"wc": {"path": {"$env": "TC_ROOT", "$path": "/lib/base/peek_now_time"}}})
+        self.over_with({"wc": {"path": {"$env": "TC_ROOT", "$path": "/lib/tools/base/peek_now_time"}}})
         before = self.over.read_text()
         r = self.ok("--file", self.over, "ls", "-l", TC_ROOT=str(PROTO))
         self.assertIn("wc\tdir\t%s" % TOOL, r.stdout)
         # 換一份「proto8」：值跟著換（每次用到才解）
         other = self.tmp / "other"
-        shutil.copytree(TOOL, other / "lib" / "base" / "peek_now_time")
+        shutil.copytree(TOOL, other / "lib" / "tools" / "base" / "peek_now_time")
         r = self.ok("--file", self.over, "ls", "-l", TC_ROOT=str(other))
-        self.assertIn(str(other / "lib" / "base" / "peek_now_time"), r.stdout)
+        self.assertIn(str(other / "lib" / "tools" / "base" / "peek_now_time"), r.stdout)
         self.assertEqual(self.over.read_text(), before)
 
     def test_override_ref_hash_takes_the_file_itself(self):
@@ -80,7 +80,7 @@ class PathForms(unittest.TestCase):
         self.ok("--file", self.over, "ls", TC_KB="/x/kb")
 
     def test_overlay_env_unset_names_file(self):
-        self.over_with({"wc": {"path": {"$env": "TC_ROOT", "$path": "/lib/base/peek_now_time"}}})
+        self.over_with({"wc": {"path": {"$env": "TC_ROOT", "$path": "/lib/tools/base/peek_now_time"}}})
         r = self.run_tools("--file", self.over, "ls")
         self.assertEqual(r.returncode, 1)
         self.assertIn("DirectiveBad", r.stderr)
@@ -99,9 +99,9 @@ class PathForms(unittest.TestCase):
         self.assertIn("/tmp/none-such/nowhere", r.stderr)
 
     def test_overlay_write_keeps_other_directives(self):
-        self.over_with({"a": {"path": {"$env": "TC_ROOT", "$path": "/lib/base/peek_now_time"}}})
+        self.over_with({"a": {"path": {"$env": "TC_ROOT", "$path": "/lib/tools/base/peek_now_time"}}})
         self.ok("--file", self.over, "add", "-n", "b", TOOL, TC_ROOT=str(PROTO))
-        self.assertEqual(self.stored(self.over, "tools", "a", "path"), {"$env": "TC_ROOT", "$path": "/lib/base/peek_now_time"})
+        self.assertEqual(self.stored(self.over, "tools", "a", "path"), {"$env": "TC_ROOT", "$path": "/lib/tools/base/peek_now_time"})
         self.assertEqual(self.stored(self.over, "tools", "b", "path"), str(TOOL))
 
     def test_overlay_plain_unchanged(self):
@@ -128,7 +128,7 @@ class PathForms(unittest.TestCase):
         self.assertEqual(self.stored(self.over, "tools", "peek_now_time", "path"), os.path.relpath(TOOL, self.over.parent))
 
     def test_add_path_json_stored_as_given(self):
-        value = {"$env": "TC_ROOT", "$path": "/lib/base/peek_now_time"}
+        value = {"$env": "TC_ROOT", "$path": "/lib/tools/base/peek_now_time"}
         r = self.ok("--file", self.reg, "add", "--path-json", json.dumps(value), TC_ROOT=str(PROTO))
         self.assertIn("added peek_now_time -> %s" % TOOL, r.stdout)
         self.assertEqual(self.stored(self.reg, "tools", "peek_now_time", "path"), value)

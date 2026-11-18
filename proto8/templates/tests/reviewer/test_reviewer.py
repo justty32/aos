@@ -33,7 +33,7 @@ class ReviewerIntegration(unittest.TestCase):
                    if not key.startswith('AOS_')}
             bins = [str(path) for path in [PROTO / 'bin'] + sorted((PROTO / 'cmd').glob('*/bin'))]
             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
-            env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib')])
+            env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'py')])
             env['PYTHONDONTWRITEBYTECODE'] = '1'
             env.update(AOS_STACK=str(daemon_stack), AOS_DAEMON=str(daemon_stack),
                        AOS_LLM_KERNEL=str(kernel_stack), AOS_CD=str(root), AOS_WS=str(root),
@@ -87,7 +87,7 @@ class ReviewerIntegration(unittest.TestCase):
             daemon_config, kernel_config = root / 'daemon.json', root / 'kernel_daemon.json'
             write(daemon_config, {'interval_ms': 10, 'procs': {}})
             write(kernel_config, {'interval_ms': 10, 'exec': {'argv': [
-                str(PROTO / 'lib/aos/kernel_llm/_entry'), str(config)]}})
+                str(PROTO / 'py/tools/aos/kernel_llm/_entry'), str(config)]}})
 
             def agent(*args):
                 result = subprocess.run(['aos-agent', '--daemon', str(daemon_stack), *args],

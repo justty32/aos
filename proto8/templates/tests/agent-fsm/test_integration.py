@@ -27,14 +27,14 @@ class KernelIntegration(unittest.TestCase):
                 'llm':'llm.json', 'tools':'tools.json'}}))
             (definition / 'llm.json').write_text('{"model":"fake"}')
             (definition / 'tools.json').write_text(json.dumps({'tools':{
-                'peek_now_time':{'path':str(PROTO / 'lib/base/peek_now_time')}}}))
+                'peek_now_time':{'path':str(PROTO / 'py/tools/base/peek_now_time')}}}))
             (agent_stack / 'history.jsonl').write_text('{"role":"user","content":"local test"}\n')
             config = root / 'kernel.json'
-            config.write_text(json.dumps({'exec':str(PROTO / 'lib/base/llm_fake'),
+            config.write_text(json.dumps({'exec':str(PROTO / 'py/tools/base/llm_fake'),
                                           'endpoint':'fake', 'endpoints':{'fake':{}}}))
             daemon_config = root / 'daemon.json'
             daemon_config.write_text(json.dumps({'interval_ms':10, 'exec':{
-                'argv':[str(PROTO / 'lib/aos/kernel_llm/_entry'), str(config)]}}))
+                'argv':[str(PROTO / 'py/tools/aos/kernel_llm/_entry'), str(config)]}}))
             env = {k:v for k,v in os.environ.items() if not k.startswith('AOS_') or k == 'AOS_HOME'}
             bins = [str(PROTO / 'bin')]
             env['PATH'] = os.pathsep.join(bins + [str(PROTO / 'cmd/aos-tools/bin'), env['PATH']])

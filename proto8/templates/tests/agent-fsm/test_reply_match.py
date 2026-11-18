@@ -12,8 +12,8 @@ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 
 
 CELLS = Path(__file__).resolve().parents[2] / "agent-fsm"   # 範本本身
 PROTO = CELLS.parents[1]
-sys.path.insert(0, str(PROTO / "lib"))
-from agent import cooldown  # noqa: E402
+sys.path.insert(0, str(PROTO / "py"))
+import cooldown  # noqa: E402
 CALL = {"id": "c1", "type": "function", "function": {"name": "echo", "arguments": "{}"}}
 FAKE_LLM = """import json, os, sys
 if sys.argv[1] == 'send':

@@ -1,6 +1,6 @@
 # aos-feedback — 收集指令與函數的使用意見，從評分與觀測帳計算 AI 舒適度。
 
-← [cmd](../README.md)｜資料：[feedback](../../../wf/advices/feedback/README.md)｜腦的入口：[feedback 工具](../../lib/aos/feedback/README.md)
+← [cmd](../README.md)｜資料：[feedback](../../../wf/advices/feedback/README.md)｜腦的入口：[feedback 工具](../../py/tools/aos/feedback/README.md)
 
 ```mermaid
 flowchart LR

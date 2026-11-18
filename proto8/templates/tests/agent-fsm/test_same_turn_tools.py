@@ -11,7 +11,7 @@ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 
 
 CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'
 PROTO = CELLS.parents[1]
-CLOCK = PROTO / "lib" / "base" / "peek_now_time"
+CLOCK = PROTO / "py" / "tools" / "base" / "peek_now_time"
 GROW = '''import json, sys
 reg = sys.argv[1]
 data = json.load(open(reg))

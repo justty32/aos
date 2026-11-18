@@ -35,7 +35,7 @@ class Batch3Integration(unittest.TestCase):
             bins = [str(PROTO / 'bin')]
             bins += [str(path) for path in (PROTO / 'cmd').glob('*/bin')]
             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
-            env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib')])
+            env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'py')])
             env.update(AOS_STACK=str(daemon_stack), AOS_CD=str(root), AOS_WS=str(root),
                        AOS_DAEMON=str(daemon_stack), AOS_LLM_KERNEL=str(kernel_stack))
 
@@ -49,13 +49,13 @@ class Batch3Integration(unittest.TestCase):
                                              'state_flux': 'state_flux.json'})
                 return target
 
-            bash = PROTO / 'lib/base/shell'
+            bash = PROTO / 'py/tools/base/shell'
             child_def = definition('child_def', 'child', {'shell': {'path': str(bash)}})
             parent_def = definition('parent_def', 'parent', {
                 'shell': {'path': str(bash)},
-                'subagent': {'path': str(PROTO / 'lib/agent/subagent')}})
+                'subagent': {'path': str(PROTO / 'py/tools/agent/subagent')}})
             kernel_config = root / 'kernel.json'
-            write(kernel_config, {'exec': str(PROTO / 'lib/base/llm_fake'), 'endpoint': 'parent',
+            write(kernel_config, {'exec': str(PROTO / 'py/tools/base/llm_fake'), 'endpoint': 'parent',
                 'endpoints': {
                     'parent': {'script': [
                         {'tool_calls': [{'name': 'shell', 'arguments': {'command': 'printf parent; exit 7'}}]},
@@ -83,7 +83,7 @@ class Batch3Integration(unittest.TestCase):
                 kernel_env = dict(env, AOS_STACK=str(kernel_stack))
                 kernel_daemon_config = root / 'kernel_daemon.json'
                 write(kernel_daemon_config, {'interval_ms': 10, 'exec': {'argv': [
-                    str(PROTO / 'lib/aos/kernel_llm/_entry'), str(kernel_config)]}})
+                    str(PROTO / 'py/tools/aos/kernel_llm/_entry'), str(kernel_config)]}})
                 kernel = subprocess.Popen(['aos-daemon', str(kernel_daemon_config)], cwd=root,
                                           env=kernel_env, stdout=log, stderr=log)
                 try:

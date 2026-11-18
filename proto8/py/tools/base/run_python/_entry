@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+# run_python - 用 python3 跑一段程式，回結束碼與輸出（stdout＋stderr 合在一起）
+# 介面（py/README 的契約）：stdin 收 {"code", "timeout_s"?}；stdout 是輸出、最後一行 [exit code N]（太長留頭 3000 字＋尾 3000 字）。
+# 程式寫進這個工具的小格（$AOS_STACK/main.py，P-17）再跑；沒 stack 時用暫存小格、不記帳。cwd＝工作區 $AOS_WS（同 shell；沒設或不是資料夾＝WsMissing；
+#   11-11 使用者裁「改程式，在工作區跑」，原本 cwd 是那個小格）；-I：不看使用者的 site、PYTHON* 環境變數、不把 main.py 所在夾放進 sys.path。
+# 不是沙盒：能碰到的跟這台機器的使用者一樣多。程式本身退非 0 是結果、不是錯（最後一行寫結束碼）。
+# 逾時（預設 60 秒、上限 300）＝整群先 TERM、2 秒後 KILL、算 CommandFailed（已經印出來的照樣給）；這個工具被外面 TERM 時也先停掉那一群。
+# 錯：stderr 與 stdout 各一行「run_python: error: 代號 原因」、退 1。來源：demo/agent-gus/tools/run_python（10-24；遷移時錯誤照 lib 契約：
+# 以前「模型的錯、逾時」印「錯誤：…」退 0，現在一律退 1，回不回給腦由叫它的 agent 決定——agent-gus 回給腦；demo/agent-gus 11-04 刪了）。
+import os, signal, subprocess, sys, tempfile, time
+HELP = """\
+usage: run_python < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Run a piece of Python with python3 -I in the workspace ($AOS_WS; the program itself is saved
+as main.py in this tool's stack cell); print its stdout+stderr combined. The last line is always [exit code N]; the program exiting
+non-zero is a result, not an error of this tool. Over timeout_s: CommandFailed.
+Result on stdout. On error: one line "run_python: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先裡有 tool_io.py 的那層（py/ 或裝好的 lib/），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+import process_group
+import shell_observed
+
+NAME = "run_python"
+tool_io.start(NAME, HELP)
+TIMEOUT_DEFAULT, TIMEOUT_MAX = 60, 300      # 秒
+GRACE = 2                                   # TERM 之後等幾秒再 KILL
+OUT_MAX, OUT_HEAD = 8000, 3000
+
+
+die = tool_io.die
+arguments = tool_io.arguments
+
+
+def clip(out):
+    if len(out) > OUT_MAX:
+        return out[:OUT_HEAD] + "\n... (%d chars omitted) ...\n" % (len(out) - 2 * OUT_HEAD) + out[-OUT_HEAD:]
+    return out
+
+
+stack = os.environ.get("AOS_STACK")
+args = arguments()
+code, limit = args.get("code"), args.get("timeout_s", TIMEOUT_DEFAULT)
+if not isinstance(code, str) or not code.strip():
+    die("ArgumentsBad", "missing code (a string of Python code)")
+if type(limit) not in (int, float) or not 0 < limit <= TIMEOUT_MAX:
+    die("ArgumentsBad", "timeout_s must be seconds between 0 and %d" % TIMEOUT_MAX)
+root = tool_io.workspace()                    # 先看工作區（WsMissing），沒工作區就不寫 main.py、不記帳
+ledger = shell_observed.prepare()
+_temp_stack = tempfile.TemporaryDirectory() if not stack else None
+stack = stack or _temp_stack.name
+os.makedirs(stack, exist_ok=True)
+with open(os.path.join(stack, "main.py"), "w", encoding="utf-8") as f:
+    f.write(code)
+started = time.monotonic()
+try:
+    p = subprocess.Popen(["python3", "-I", os.path.join(os.path.abspath(stack), "main.py")], cwd=root, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, start_new_session=True)
+except OSError as e:
+    die("LaunchFailed", "python3 failed to start: %s" % e.strerror)
+
+
+signal.signal(signal.SIGTERM, process_group.raise_interrupted)
+signal.signal(signal.SIGINT, process_group.raise_interrupted)
+timed_out = False
+interrupted = None
+try:
+    out, _ = p.communicate(timeout=limit)
+except (subprocess.TimeoutExpired, process_group.Interrupted) as error:
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    interrupted = error.signum if isinstance(error, process_group.Interrupted) else None
+    timed_out = interrupted is None
+    process_group.stop(p, GRACE)
+    # The interrupted communicate has unwound; resume its buffered pipe read here.
+    out, _ = p.communicate()
+shell_observed.finish(ledger, args["code"], limit, p.returncode, started, len(out))
+if _temp_stack is not None:
+    _temp_stack.cleanup()
+if interrupted is not None:
+    sys.exit(128 + interrupted)
+out = out.decode("utf-8", "replace")
+if timed_out:
+    die("CommandFailed", "ran over %g s; stopped the whole process group" % limit, clip(out) + ("\n" if out and not out.endswith("\n") else ""))
+code = 128 - p.returncode if p.returncode < 0 else p.returncode   # 被訊號殺＝128＋N（R12）
+text = clip(out)
+print(text + ("" if not text or text.endswith("\n") else "\n") + "[exit code %d]" % code)   # 結束碼一律最後一行（stdio-unify R2，同 shell）

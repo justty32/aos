@@ -1,6 +1,6 @@
 # Check the $ref path rule (11-13 ref-path-rules): left of # is the file system (from the folder of the file), right of # is
 # inside JSON (#/ root, #./ the object the $ref is in, #../ one level up; # and #/ the whole file). The table
-# lib/tests/ref_path_cases.json is shared with lib/aos_refpath.py (index paths use the same rule and parser).
+# py/tests/ref_path_cases.json is shared with py/aos_refpath.py (index paths use the same rule and parser).
 import json
 import os
 from pathlib import Path
@@ -11,7 +11,7 @@ import unittest
 HERE = Path(__file__).resolve().parent
 BIN = HERE.parents[2] / 'bin' / 'aos-directive'
 ENV = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
-CASES = json.loads((HERE.parent.parent.parent / 'lib' / 'tests' / 'ref_path_cases.json').read_text())['cases']
+CASES = json.loads((HERE.parent.parent.parent / 'py' / 'tests' / 'ref_path_cases.json').read_text())['cases']
 
 
 def nest(toks, leaf):

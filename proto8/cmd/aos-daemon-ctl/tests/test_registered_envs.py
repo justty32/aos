@@ -7,7 +7,7 @@ import unittest
 
 sys.dont_write_bytecode = True
 PROTO8 = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROTO8 / 'lib'))
+sys.path.insert(0, str(PROTO8 / 'py'))
 import daemon_ctl as dc  # noqa: E402
 
 P, N = dc.PARENT_ENV, dc.NOTIFY_ENV

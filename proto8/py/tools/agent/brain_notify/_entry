@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+# brain_notify - brain_failed 的 hook handler：把腦拒絕、claude eca／fsm 連續重試與停下的原因寄到 AOS_NOTIFY_BOX。
+# 介面：stdin＝事件 JSON（event、hook、stack＝agent 的絕對 stack、name＝錯誤代號、reason）；$AOS_STACK＝hook 自己的小格。
+# 記帳：BudgetMissing 用 {code, history_lines}；BrainFailed 重試首輪 armed、第三次起寄一次，停下用 {kind, code, history_lines, attempt}。
+# 寄信：aos-mailbox --stack <agent stack> send --from <agent 名> --box <box> --status BLOCKED --title ... -- <原因與重試說明>。
+# AOS_NOTIFY_BOX 沒設＝warning、不寄；所有錯誤都只印一行英文 warning、退 0，不能讓 agent 因通知失敗而停下。
+import datetime, json, os, subprocess, sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))))   # py/（或裝好的 lib/）：tool_io.py
+import tool_io  # noqa: E402
+
+NAME = "brain_notify"
+HELP = """usage: brain_notify < EVENT.json   (a brain_failed hook handler; $AOS_STACK = this hook's own cell)
+Send a BLOCKED letter to $AOS_NOTIFY_BOX about refused, retrying, or stopped brain requests.
+The event supplies stack (the agent's absolute stack), name (error code), and reason,
+and may supply error (the kernel's error object, a dict).
+If error.window is "all" the title says "stopped" and the body says the budget never resets: raise it, then start the
+agent again. Else if error.resets_at (ISO 8601 with offset) parses, the title says "waiting until HH:MM" (local time)
+and the body says it retries by itself then. Without those fields the text is as before.
+The letter says that the same request is sent again after a cooldown (30 s doubling to 30 min).
+BudgetMissing sends once for the same code and history line count, recording {code, history_lines}.
+BrainFailed with retry true arms a new series at attempt 1 without sending, then sends once at attempt >= 3.
+It records {kind: retrying, armed: false} after sending; attempts 2 and later repeats do not send.
+BrainFailed without retry true sends a stopped notice, deduplicated by {kind: stopped, code, history_lines, attempt}.
+Its reason uses error.msg when available and includes status; the stopped notice says that after a start the
+agent first waits out its cooldown. Records live in $AOS_STACK/notified.json.
+Claude eca CliFailed / ReplyMissing events with a boolean retry use the same retry and stop bookkeeping.
+Those events without a boolean retry (codex) are silently ignored, without sending or recording anything.
+An integer dropped selects eca wording: retries continue the unanswered turn in the same conversation;
+stopped notices omit llm.json and report how many handed-over letters got no answer when dropped is nonzero.
+Eca detail uses code and reason, plus status and cause when supplied.
+An unset or blank AOS_NOTIFY_BOX only prints a warning; subagent add defaults it to the parent's mailbox.
+Needs aos-mailbox on PATH. All errors print one warning and exit 0; the agent is never failed.
+exit codes: 0 done (also on any error).
+"""
+STEP_S = 8                                      # 範本 timeout_ms 10000，留餘裕
+SEEN = "notified.json"
+
+
+def die(code, why):
+    """這支的錯只當提醒（代號接在句子開頭）、退 0：通知失敗不能讓 agent 停下。"""
+    tool_io.warn("%s %s" % (code, " ".join(str(why).split())), prog=NAME)
+    sys.exit(0)
+
+
+def run(argv):
+    try:
+        p = subprocess.run(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=STEP_S)
+    except OSError as e:
+        die("LaunchFailed", "cannot run %s (source proto8/env.sh to put it on PATH): %s" % (argv[0], e))
+    except subprocess.TimeoutExpired:
+        die("CommandFailed", "%s send took over %d s" % (argv[0], STEP_S))
+    if p.returncode != 0:
+        last = [x for x in p.stderr.splitlines() if x.strip()]
+        die("CommandFailed", "%s exited %d: %s" % (argv[0], p.returncode, last[-1] if last else "(no message)"))
+
+
+def local_time(raw):
+    """resets_at（ISO 8601 帶時區）→ 本機 HH:MM；不是字串、解不開、沒帶時區＝None。"""
+    if not isinstance(raw, str):
+        return None
+    try:
+        when = datetime.datetime.fromisoformat(raw.strip().replace("Z", "+00:00"))
+        return when.astimezone().strftime("%H:%M") if when.tzinfo else None
+    except (ValueError, OverflowError, OSError):
+        return None
+
+
+def save(path, keep):
+    """原子記下通知狀態；寫不成只提醒。"""
+    tmp = os.path.join(os.path.dirname(path), ".%s.%d.tmp" % (SEEN, os.getpid()))
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(keep) + "\n")
+        os.replace(tmp, path)
+    except OSError as e:
+        die("WriteFailed", "cannot write %s: %s" % (path, e))
+
+
+def main():
+    if sys.argv[1:2] in (["-h"], ["--help"]):
+        sys.stdout.write(HELP)
+        return 0
+    if sys.argv[1:]:
+        die("ArgumentsBad", "takes no arguments; the event JSON comes on stdin (usage: brain_notify < EVENT.json)")
+    try:
+        event = json.load(sys.stdin)
+    except ValueError as e:
+        die("ArgumentsBad", "the event on stdin is not JSON: %s" % e)
+    if not isinstance(event, dict) or event.get("event") != "brain_failed":
+        die("ArgumentsBad", "the event must be a brain_failed JSON object")
+    stack, name, reason = (event.get(k) for k in ("stack", "name", "reason"))
+    if name in ("CliFailed", "ReplyMissing") and not isinstance(event.get("retry"), bool):
+        return 0
+    code = event.get("code") or name
+    if not isinstance(stack, str) or not os.path.isabs(stack):
+        die("ArgumentsBad", "the event needs stack (the agent's absolute stack folder)")
+    if not isinstance(code, str) or not code.strip() or not isinstance(reason, str):
+        die("ArgumentsBad", "the event needs name (an error code) and reason (a string)")
+    agent = os.path.basename(os.path.normpath(stack))
+    box = os.environ.get("AOS_NOTIFY_BOX", "").strip()
+    if not box:
+        tool_io.warn("AOS_NOTIFY_BOX is not set; nobody is told that %s got %s"
+                     % (" ".join(agent.split()), " ".join(code.split())), prog=NAME)
+        return 0
+    cell = os.environ.get("AOS_STACK")
+    if not cell:
+        die("StackMissing", "AOS_STACK is not set (this hook's own cell)")
+    history = os.path.join(stack, "history.jsonl")
+    try:
+        with open(history, "rb") as f:
+            lines = sum(1 for _ in f)
+    except FileNotFoundError:
+        lines = 0
+    except OSError as e:
+        die("ReadFailed", "cannot read %s: %s" % (history, e))
+    keep = {"code": code, "history_lines": lines}
+    path = os.path.join(cell, SEEN)
+    try:
+        with open(path, encoding="utf-8") as f:
+            seen = json.load(f)
+    except (FileNotFoundError, ValueError):
+        seen = None
+    except OSError as e:
+        die("ReadFailed", "cannot read %s: %s" % (path, e))
+    if name in ("BrainFailed", "CliFailed", "ReplyMissing"):
+        eca = type(event.get("dropped")) is int
+        error = event.get("error")
+        error = error if isinstance(error, dict) else {}
+        msg = reason if eca else (error.get("msg") or reason)
+        detail = "%s: %s" % (code, msg)
+        if "status" in event:
+            detail += "; status %s" % event["status"]
+        elif not eca and "status" in error:
+            detail += "; status %s" % error["status"]
+        if eca and "cause" in event:
+            detail += "; cause %s" % event["cause"]
+        attempt = event.get("attempt", 0)
+        if event.get("retry") is True:
+            if attempt == 1:
+                save(path, {"kind": "retrying", "armed": True})
+                return 0
+            if attempt < 3 or (isinstance(seen, dict) and seen.get("kind") == "retrying" and seen.get("armed") is False):
+                return 0
+            keep = {"kind": "retrying", "armed": False}
+            title = "%s: brain failed (%s), retrying by itself" % (agent, code)
+            if eca:
+                what = ("%s. It has tried %s times and keeps retrying by itself after each cooldown; "
+                        "the unanswered turn is continued in the same conversation. No action is needed. "
+                        "To stop it, use stop." % (detail, attempt))
+            else:
+                what = ("%s. It has tried %s times and keeps retrying by itself; no action is needed. "
+                        "To stop it, use stop." % (detail, attempt))
+        else:
+            keep = {"kind": "stopped", "code": code, "history_lines": lines, "attempt": attempt}
+            if seen == keep:
+                return 0
+            title = "%s: brain failed (%s), stopped" % (agent, code)
+            if eca:
+                what = ("%s. Fix the cause, then start the agent again; after start it first waits out its cooldown "
+                        "(30 s doubling to 30 min)." % detail)
+                if event["dropped"] != 0:
+                    what += (" %s letter(s) handed over in that turn got no answer and are not retried."
+                             % event["dropped"])
+            else:
+                what = ("%s. Fix the cause, then start the agent again; after start it first waits out its cooldown "
+                        "(30 s doubling to 30 min; changing llm.json clears it)." % detail)
+        run(["aos-mailbox", "--stack", stack, "send", "--from", agent, "--box", box, "--status", "BLOCKED", "--title", title, "--", what])
+        save(path, keep)
+        return 0
+    if isinstance(seen, dict) and seen.get("code") == code and seen.get("history_lines") == lines:
+        return 0
+    title = "%s: brain refused (%s), waiting" % (agent, code)
+    what = ("%s. It sends the same request again by itself after a cooldown (30 s doubling to 30 min). "
+            "Raise the budget, or stop it." % reason)
+    error = event.get("error")
+    if isinstance(error, dict):
+        if error.get("window") == "all":
+            title = "%s: brain refused (%s), stopped" % (agent, code)
+            what = "%s. The budget never resets; raise it, then start the agent again." % reason
+        else:
+            until = local_time(error.get("resets_at"))
+            if until:
+                title = "%s: brain refused (%s), waiting until %s" % (agent, code, until)
+                what = ("%s. The budget window resets at %s; the agent sends the same request again by itself then. "
+                        "Raise the budget to go on sooner, or stop it." % (reason, until))
+    run(["aos-mailbox", "--stack", stack, "send", "--from", agent, "--box", box, "--status", "BLOCKED", "--title", title, "--", what])
+    save(path, keep)
+    return 0
+
+
+try:
+    sys.exit(main())
+except Exception as e:
+    die("NotifyFailed", str(e))

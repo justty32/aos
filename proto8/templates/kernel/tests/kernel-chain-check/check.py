@@ -144,7 +144,7 @@ class Check:
                         XDG_CONFIG_HOME=str(self.work / "home/.config"),
                         XDG_CACHE_HOME=str(self.work / "home/.cache"),
                         PYTHONDONTWRITEBYTECODE="1",
-                        PYTHONPATH=os.pathsep.join([str(PROTO / "lib")]),
+                        PYTHONPATH=os.pathsep.join([str(PROTO / "py")]),
                         AOS_HOME=str(PROTO))
         self.agent_env = dict(self.env, AOS_KERNEL=str(self.a / "requests"), AOS_AGENT="agent",
                               AOS_WS=str(self.work), AOS_STACK=str(self.agent / "tools/subagent"))
@@ -247,24 +247,24 @@ class Check:
                                   "interval_ms": 150})
         shutil.copytree(PROTO / "templates/agent-fsm", self.defs / "agent",
                         symlinks=True, ignore=shutil.ignore_patterns("__pycache__", "tests"))
-        save(self.defs / "agent/tools.json", {"tools": {"subagent": {"path": str(PROTO / "lib/agent/subagent")}}})
+        save(self.defs / "agent/tools.json", {"tools": {"subagent": {"path": str(PROTO / "py/tools/agent/subagent")}}})
         save(self.defs / "agent/llm.json", {"model": "fake"})
         # 工具的頂層 Popen 留在暫存 cwd，逾時才能依硬規則核對後收它。
         for name, tool in (("fake_call", "base/llm_fake"), ("subagent_call", "agent/subagent")):
             save(self.defs / (name + ".json"),
-                 {"argv": [str(PROTO / "lib" / tool / "_entry")], "cwd": str(self.work)})
+                 {"argv": [str(PROTO / "py" / "tools" / tool / "_entry")], "cwd": str(self.work)})
         shutil.copytree(PROTO / "templates/kernel/procs-kernel", self.defs / "station_a")
         shutil.copytree(PROTO / "templates/kernel/daemon-kernel", self.defs / "foreman")
         # 兩站都不寫 next、都拿到指向領班信箱的 AOS_KERNEL：A 照它轉；領班發現指到自己就跳過、照 AOS_DAEMON 轉。
         for name, config in (("station_a", "loop.json"), ("foreman", "daemon.json")):
             save(self.defs / name / config,
-                 {"exec": {"argv": ["aos-exec", str(PROTO / "lib/aos/kernel"),
+                 {"exec": {"argv": ["aos-exec", str(PROTO / "py/tools/aos/kernel"),
                                     str(self.defs / name / "kernel.json")],
                            "envs": {"AOS_KERNEL": str(self.foreman / "requests")}}, "interval_ms": 150})
         # 旁站 B：不給 AOS_KERNEL、不寫 next，放行的信進根 daemon 的 ctl 信箱。只有 A 的分流 hook 會把信指到它。
         shutil.copytree(PROTO / "templates/kernel/procs-kernel", self.defs / "station_b")
         save(self.defs / "station_b/loop.json",
-             {"exec": {"argv": ["aos-exec", str(PROTO / "lib/aos/kernel"),
+             {"exec": {"argv": ["aos-exec", str(PROTO / "py/tools/aos/kernel"),
                                 str(self.defs / "station_b/kernel.json")]}, "interval_ms": 150})
         self.kernel(self.defs / "station_b", {})
         self.kernel(self.defs / "station_a", {}, route={

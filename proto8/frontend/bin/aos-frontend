@@ -1788,7 +1788,7 @@ def cli_kind(stack):
 
 
 def quiet_of(stack):
-    """<stack>/quiet.json, the shared "long quiet, not dead" mark (timeout-1115; writer and format: proto8/lib/agent/quiet.py).
+    """<stack>/quiet.json, the shared "long quiet, not dead" mark (timeout-1115; writer and format: proto8/py/quiet.py).
     No file = nothing. Counts only while its pid is alive (pid null = not checked); a stale file from a killed writer is
     ignored. Read here, not imported, because this tool is deployed apart from the repo."""
     if not stack:

@@ -10,7 +10,7 @@ import unittest
 
 CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'
 PROTO = CELLS.parents[1]
-DO, PEEK = str(PROTO / 'lib/agent/do_task'), str(PROTO / 'lib/base/peek_now_time')
+DO, PEEK = str(PROTO / 'py/tools/agent/do_task'), str(PROTO / 'py/tools/base/peek_now_time')
 
 
 def calls(*items):
@@ -58,7 +58,7 @@ class DoTaskFold(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
         bins = [str(PROTO / 'bin')] + [str(p) for p in (PROTO / 'cmd').glob('*/bin')]
         env['PATH'] = os.pathsep.join(bins + [env['PATH']])
-        env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib')])
+        env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'py')])
         env.update(AOS_STACK=str(cls.daemon_stack), AOS_CD=str(root), AOS_WS=str(root), AOS_HOME=str(PROTO),
                    AOS_DAEMON=str(cls.daemon_stack), AOS_LLM_KERNEL=str(kernel_stack))
         cls.env = env
@@ -70,11 +70,11 @@ class DoTaskFold(unittest.TestCase):
             write(d / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10, 'ctl': 'ctl.json', 'state': 'state.json',
                                     'state_flux': 'state_flux.json'})
         kernel_config = root / 'kernel.json'
-        write(kernel_config, {'exec': str(PROTO / 'lib/base/llm_fake'), 'endpoint': 'fold',
+        write(kernel_config, {'exec': str(PROTO / 'py/tools/base/llm_fake'), 'endpoint': 'fold',
                               'endpoints': {n: {'script': s} for n, s in SCRIPTS.items()}})
         write(root / 'daemon.json', {'interval_ms': 10, 'procs': {}})
         write(root / 'kernel_daemon.json', {'interval_ms': 10, 'exec': {'argv': [
-            str(PROTO / 'lib/aos/kernel_llm/_entry'), str(kernel_config)]}})
+            str(PROTO / 'py/tools/aos/kernel_llm/_entry'), str(kernel_config)]}})
         cls.log = (root / 'daemon.log').open('w+')
         cls.daemons = [subprocess.Popen(['aos-daemon', str(root / 'daemon.json')], cwd=root, env=env, stdout=cls.log, stderr=cls.log),
                        subprocess.Popen(['aos-daemon', str(root / 'kernel_daemon.json')], cwd=root,

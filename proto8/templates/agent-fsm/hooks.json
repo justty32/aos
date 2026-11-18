@@ -7,7 +7,7 @@
    "config": {"percent": 35, "wrap": false},
    "handler": {
     "$env": "AOS_HOME",
-    "$path": "/lib/agent/context_wrap"
+    "$path": "/lib/tools/agent/context_wrap"
    },
    "on_error": "continue",
    "timeout_ms": 20000
@@ -17,7 +17,7 @@
    "every_ms": 300000,
    "handler": {
     "$env": "AOS_HOME",
-    "$path": "/lib/agent/hook_noop"
+    "$path": "/lib/tools/agent/hook_noop"
    },
    "on_error": "continue",
    "timeout_ms": 5000
@@ -27,7 +27,7 @@
    "condition": ["BudgetMissing", "BrainFailed"],
    "handler": {
     "$env": "AOS_HOME",
-    "$path": "/lib/agent/brain_notify"
+    "$path": "/lib/tools/agent/brain_notify"
    },
    "on_error": "continue",
    "timeout_ms": 10000
@@ -37,7 +37,7 @@
    "every_ms": 60000,
    "handler": {
     "$env": "AOS_HOME",
-    "$path": "/lib/agent/mail_notify"
+    "$path": "/lib/tools/agent/mail_notify"
    },
    "on_error": "continue",
    "timeout_ms": 10000

@@ -34,5 +34,5 @@
 aos-json get --str knowledge/aos/_index.json#/rules.json/description   # aos/ 的 index 說 rules.json 是什麼
 aos-json get knowledge/aos/me.json#/self_tools                 # {"$ref": "me/self_tools.json"}
 aos-json get --follow --str knowledge/aos/me.json#/self_tools/add
-echo '{"path":"knowledge/aos/packs.json#/_index"}' | AOS_WS=$PWD python3 lib/base/json_get/_entry   # 腦用的 json_get 也行
+echo '{"path":"knowledge/aos/packs.json#/_index"}' | AOS_WS=$PWD python3 lib/tools/base/json_get/_entry   # 腦用的 json_get 也行
 ```

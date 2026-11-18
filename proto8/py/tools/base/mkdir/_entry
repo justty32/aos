@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+# mkdir - 建資料夾（上層一起建；已經有＝沒事）
+# 介面（py/README 的契約）：stdin 收 {"path"}；stdout 一份 JSON {"path", "created"}。路徑：相對從 $AOS_WS 算、絕對照用（11-10 tool-packs 不限工作區）。
+# 錯：stderr 與 stdout 各一行「mkdir: error: 代號 原因」、退 1。來源：demo/file-tools/mkdir（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
+import json, os, sys
+HELP = """\
+usage: mkdir < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Create a folder (relative paths start at $AOS_WS; parents too; already there is fine).
+Result on stdout. On error: one line "mkdir: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先裡有 tool_io.py 的那層（py/ 或裝好的 lib/），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "mkdir"
+tool_io.start(NAME, HELP)
+
+
+die = tool_io.die
+
+
+def out(obj):
+    print(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
+
+
+arguments = tool_io.arguments
+
+
+a = arguments("path")
+p = tool_io.ws_path(a["path"])
+shown = tool_io.shown_path(p)
+if os.path.isdir(p):
+    out({"path": shown, "created": False})
+    sys.exit(0)
+if os.path.lexists(p):
+    die("FileBad", "%s is already a file" % a["path"])
+try:
+    os.makedirs(p)
+except OSError as e:
+    die("MkdirFailed", "%s: %s" % (a["path"], e.strerror))
+out({"path": shown, "created": True})

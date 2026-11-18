@@ -15,7 +15,7 @@ TURN = PROTO / "cmd" / "aos-eca" / "bin" / "aos-eca-turn"
 SPY = """import runpy, sys
 sys.argv[0] = %(turn)r
 sys.path[:0] = [%(py)r, %(lib)r, %(eca)r]
-from agent import quiet
+import quiet
 quiet.AFTER_S, quiet.POLL_S, quiet.REFRESH_S = 0.3, 0.05, 0.1
 runpy.run_path(%(turn)r, run_name="__main__")
 """
@@ -49,7 +49,7 @@ class LongTurn(unittest.TestCase):
         (self.bin / "claude").write_text(FAKE % {"python": sys.executable})
         (self.bin / "claude").chmod(0o755)
         self.spy = self.t / "spy_turn.py"
-        self.spy.write_text(SPY % {"turn": str(TURN), "py": str(PROTO / "lib"), "lib": str(PROTO / "lib"), "eca": str(PROTO / "cmd" / "aos-eca")})
+        self.spy.write_text(SPY % {"turn": str(TURN), "py": str(PROTO / "py"), "lib": str(PROTO / "py"), "eca": str(PROTO / "cmd" / "aos-eca")})
         self.seen = self.t / "seen.json"
         subprocess.run(["aos-post", "init", str(self.stack / "queue")], env=self.env(), check=True, capture_output=True)
 

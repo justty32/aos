@@ -2,7 +2,7 @@
 # aos-mcp-launch - 起一台外部 stdio MCP server：讀它的 server 檔、讀 env_file（金鑰）放進環境，再 exec 成那支 server（金鑰只活在 server 行程）
 #
 # 用法：aos-mcp-launch SERVER_FILE（11-12 external-mcp 02／03 步 4）。cli_session 替 cli.json 的 mcp_servers 裡每台 stdio server
-#   寫成 command＝這支、args＝[server 檔絕對路徑]，所以 CLI 的設定、命令列、環境都只有路徑。server 檔形狀見 lib/mcp_server_file.py。
+#   寫成 command＝這支、args＝[server 檔絕對路徑]，所以 CLI 的設定、命令列、環境都只有路徑。server 檔形狀見 py/mcp_server_file.py。
 #   command／args 的指示詞這一刻才解（要 aos-directive 在 PATH、AOS_HOME 之類照指示詞要的設）；先 cd 到 server 檔的資料夾再 exec，
 #   所以 command 與 args 的相對路徑都從 server 檔的資料夾算（11-12 Q2 代定 G13，跟 mcp_tool 那條同一條規則）。
 # 錯：stderr 一行「aos-mcp-launch: error: 代號 原因」、退 1——ArgumentsBad（沒給或多給）、PackMissing／PackBad（檔不在、形狀不對、是 http 的檔）、

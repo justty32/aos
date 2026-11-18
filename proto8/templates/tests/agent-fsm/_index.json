@@ -12,7 +12,7 @@
   "description": "Verify task context, tool limits, and best-effort observations with local fake commands."
  },
  "test_clock_hook.py": {
-  "description": "Test the 11-11 hook events: on_clock (hooks.clock_tick in the cells), after_start / after_stop (lib/agent/hook_fire)."
+  "description": "Test the 11-11 hook events: on_clock (hooks.clock_tick in the cells), after_start / after_stop (py/tools/agent/hook_fire)."
  },
  "test_clock_hook_daemon.py": {
   "description": "Acceptance on a real root daemon (no brain needed): after_start / after_stop on start, stop, sleep, wake, kill -9 + auto_restart, rm; on_clock with t…"
@@ -39,7 +39,7 @@
   "description": "驗證只有 hook 拒因與重置時間的 BudgetMissing 回信會讓 wait 格冷卻後再試。"
  },
  "test_hooks.py": {
-  "description": "Test the hooks of agent-fsm (lib/agent/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added."
+  "description": "Test the hooks of agent-fsm (py/hooks.py and the four cells): six events, changes, blocking, on_fail, timeout, match, layering, tool_added."
  },
  "test_integration.py": {
   "description": "Verify agent cells through the real local kernel, llm_fake endpoint, and peek_now_time tool (which leaves no tool cell, 11-11)."

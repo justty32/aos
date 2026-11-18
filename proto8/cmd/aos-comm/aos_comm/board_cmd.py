@@ -1,4 +1,4 @@
-# aos_comm/board_cmd.py - aos-comm board 的五個動作（set、clear、wait、show、ls）：解旗標、找誰的布告欄、叫 lib/aos/comm 讀寫、印一行一項或 --json。
+# aos_comm/board_cmd.py - aos-comm board 的五個動作（set、clear、wait、show、ls）：解旗標、找誰的布告欄、叫 py/tools/aos/comm 讀寫、印一行一項或 --json。
 # 圖紙：proto8/thinking/2026-11/14/board-1114/ 02 §2、§5.2；05 A2、A7、A13、A14。讀寫與四步全在 comm.board，這裡不重算。
 import json
 import os

@@ -6,7 +6,7 @@
 
 **一句話：請求寄到哪，那裡對寄件人就是 kernel**（資源管理＋排程；要不要處理、什麼時候執行由收件那邊說了算，啥都不管也是一種管理）。一般 proc 只寄 `$AOS_KERNEL`、不管背後信會去哪；收件的 proc 不必知道自己是 kernel。
 
-掛 proc 最後都是一封 `procs_added` 信進某台 daemon 的 ctl 信箱（`procs_requests/`）。差別只在「寄進 ctl 信箱之前有沒有人先看一眼」。沒人看，就是直接寄給 daemon（daemon 來者不拒，是最基礎的 kernel）。有人看，看的那支程式就是**框架站**（通用 kernel 的站）：[`lib/aos/kernel`](../../../lib/aos/kernel/README.md)，零件表與 `kernel.json` 的鍵在[入口](../README.md)，每個鍵的細節與錯誤代號在它自己的 README。
+掛 proc 最後都是一封 `procs_added` 信進某台 daemon 的 ctl 信箱（`procs_requests/`）。差別只在「寄進 ctl 信箱之前有沒有人先看一眼」。沒人看，就是直接寄給 daemon（daemon 來者不拒，是最基礎的 kernel）。有人看，看的那支程式就是**框架站**（通用 kernel 的站）：[`py/tools/aos/kernel`](../../../py/tools/aos/kernel/README.md)，零件表與 `kernel.json` 的鍵在[入口](../README.md)，每個鍵的細節與錯誤代號在它自己的 README。
 
 ### 三種擺法
 
@@ -69,7 +69,7 @@ T=$(mktemp -d)
 mkdir -p $T/m1 $T/me && cd $T/m1
 aos-exec --stack $T/m1/st $P/kernel/daemon-kernel &             # 一台 daemon；身體每 300 ms 跑一輪框架站
 aos-post init $T/me/box                                          # 收回信的信箱
-echo "{\"procs_added\": {\"peek_now_time\": {\"exec\": \"$P/lib/base/peek_now_time\", \"interval_ms\": 1000}}}" \
+echo "{\"procs_added\": {\"peek_now_time\": {\"exec\": \"$P/lib/tools/base/peek_now_time\", \"interval_ms\": 1000}}}" \
   | aos-post send --reply-to $T/me/box $T/m1/st/requests
 echo '{"procs_added": {"evil": {"exec": "/bin/true"}}}' \
   | aos-post send --reply-to $T/me/box $T/m1/st/requests
@@ -120,7 +120,7 @@ echo '{"interval_ms": 200}' > daemon.json
 AOS_STACK=$T/m2/st/ aos-daemon daemon.json &
 aos-daemon-ctl -d $T/m2/st add $P/kernel/procs-kernel            # 表上多一列 procs-kernel  running
 aos-post init $T/me/box2
-echo "{\"procs_added\": {\"peek_now_time\": {\"exec\": \"$P/lib/base/peek_now_time\", \"interval_ms\": 1000}}}" \
+echo "{\"procs_added\": {\"peek_now_time\": {\"exec\": \"$P/lib/tools/base/peek_now_time\", \"interval_ms\": 1000}}}" \
   | aos-post send --reply-to $T/me/box2 $T/m2/st/procs/procs-kernel/requests
 aos-daemon-ctl -d $T/m2/st ls                                    # procs-kernel、peek_now_time 兩列 running；回信 {"applied": true}
 ```
@@ -131,16 +131,16 @@ aos-daemon-ctl -d $T/m2/st ls                                    # procs-kernel�
 
 ```sh
 mkdir -p $T/hand/st && echo '{}' > $T/hand/kernel.json
-AOS_STACK=$T/hand/st AOS_DAEMON=$T/m2/st aos-exec $P/lib/aos/kernel $T/hand/kernel.json   # 沒信也退 0，建好 st/requests/
-AOS_STACK=$T/hand/st aos-exec $P/lib/aos/kernel $T/hand/kernel.json
+AOS_STACK=$T/hand/st AOS_DAEMON=$T/m2/st aos-exec $P/lib/tools/aos/kernel $T/hand/kernel.json   # 沒信也退 0，建好 st/requests/
+AOS_STACK=$T/hand/st aos-exec $P/lib/tools/aos/kernel $T/hand/kernel.json
 # kernel: error: DaemonMissing no next station: next is not configured, AOS_KERNEL is not set or points to this station, and AOS_DAEMON is not set or not a directory: (empty)      （退 1）
-AOS_STACK=$T/hand/st AOS_KERNEL=$T/hand/st/requests aos-exec $P/lib/aos/kernel $T/hand/kernel.json   # AOS_KERNEL 指到自己＝跳過，同一句 DaemonMissing（退 1）
-AOS_STACK=$T/hand/st AOS_KERNEL=$T/me/box aos-exec $P/lib/aos/kernel $T/hand/kernel.json   # 退 0：沒寫 next，下一站＝AOS_KERNEL 指的信箱，不需要 AOS_DAEMON
+AOS_STACK=$T/hand/st AOS_KERNEL=$T/hand/st/requests aos-exec $P/lib/tools/aos/kernel $T/hand/kernel.json   # AOS_KERNEL 指到自己＝跳過，同一句 DaemonMissing（退 1）
+AOS_STACK=$T/hand/st AOS_KERNEL=$T/me/box aos-exec $P/lib/tools/aos/kernel $T/hand/kernel.json   # 退 0：沒寫 next，下一站＝AOS_KERNEL 指的信箱，不需要 AOS_DAEMON
 echo '{"max_running": 1}' > $T/hand/kernel.json
-AOS_STACK=$T/hand/st AOS_KERNEL=$T/me/box aos-exec $P/lib/aos/kernel $T/hand/kernel.json
+AOS_STACK=$T/hand/st AOS_KERNEL=$T/me/box aos-exec $P/lib/tools/aos/kernel $T/hand/kernel.json
 # kernel: error: CfgBad AOS_KERNEL as the next station with max_running requires count_daemon   （退 1）
 echo '{"next": "x", "max_running": 1}' > $T/hand/kernel.json
-AOS_STACK=$T/hand/st aos-exec $P/lib/aos/kernel $T/hand/kernel.json
+AOS_STACK=$T/hand/st aos-exec $P/lib/tools/aos/kernel $T/hand/kernel.json
 # kernel: error: CfgBad next with max_running requires count_daemon                   （退 1）
 ```
 
@@ -154,7 +154,7 @@ aos-exec --stack $T/back/st $P/kernel/daemon-kernel &            # 後站
 
 mkdir -p $T/front-def $T/front && cd $T/front                    # 前站的定義
 echo '["aos-daemon", "daemon.json"]' > $T/front-def/_entry
-echo '{"exec": {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/aos/kernel"}, {"$env": "AOS_CD", "$path": "kernel.json"}]}, "interval_ms": 300}' > $T/front-def/daemon.json
+echo '{"exec": {"argv": ["aos-exec", {"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel"}, {"$env": "AOS_CD", "$path": "kernel.json"}]}, "interval_ms": 300}' > $T/front-def/daemon.json
 echo "{\"next\": \"$T/back/st/requests\", \"reply_via_me\": true}" > $T/front-def/kernel.json
 aos-exec --stack $T/front/st $T/front-def &                      # 前站
 
@@ -168,7 +168,7 @@ cat $T/me/box3/new/*/letter.json
 
 ### hook 的例子：前站多管兩件事
 
-hook 是站在三個時機叫的小程式（設定寫在 `kernel.json` 的 `hooks`，契約跟 agent 的 hook 一樣，細節在 [lib/aos/kernel README「hooks」](../../../lib/aos/kernel/README.md#hooks)）：
+hook 是站在三個時機叫的小程式（設定寫在 `kernel.json` 的 `hooks`，契約跟 agent 的 hook 一樣，細節在 [py/tools/aos/kernel README「hooks」](../../../py/tools/aos/kernel/README.md#hooks)）：
 
 | 事件 | 什麼時候 | 能改什麼 |
 |---|---|---|
@@ -231,7 +231,7 @@ aos-daemon-ctl -d $T/back/st ls                                  # kid3 掛在�
 cat $T/me/box4/new/*/letter.json                                 # 兩封都是 {"applied": true}
 ```
 
-兩封回信都經前站代回，`in_reply_to` 是各自的原信名：不管信去了哪一站，下游都回到前站的 `replies/`。`condition: "pass"` 讓 hook 只在信放行時被叫。要記得的幾件事（細節在 [lib/aos/kernel README「分流」](../../../lib/aos/kernel/README.md#分流hook-替這一封指定下一站)）：
+兩封回信都經前站代回，`in_reply_to` 是各自的原信名：不管信去了哪一站，下游都回到前站的 `replies/`。`condition: "pass"` 讓 hook 只在信放行時被叫。要記得的幾件事（細節在 [py/tools/aos/kernel README「分流」](../../../py/tools/aos/kernel/README.md#分流hook-替這一封指定下一站)）：
 
 - 只有 `after_verdict` 收 `next`；值要是絕對路徑，寫錯或指到自己＝hook 自己失敗（預設這輪退 1、信留著）。指的信箱寄不進去＝這封拒 `ForwardFailed`。
 - 前站如果設了 `max_running`，一定要寫 `count_daemon`，而且不管信去哪一站都算進同一個上限；各站各自的上限在各站自己設。
@@ -247,14 +247,14 @@ cat $T/me/box4/new/*/letter.json                                 # 兩封都是 
 一隻普通的 eca 兩次工具呼叫就成為門（真 haiku 實跑過，通知、工具呼叫、回信原文在 [thinking 11-13 eca-as-kernel 02](../../../thinking/2026-11/13/eca-as-kernel/02-正式版實跑.md)）：
 
 ```text
-self_tools  {"op": "add", "path": "<AOS_HOME>/lib/agent/kernel_gate"}
+self_tools  {"op": "add", "path": "<AOS_HOME>/lib/tools/agent/kernel_gate"}
 kernel_gate {"op": "on"}        印出收件信箱 <它的 stack>/hooks/kernel_gate/requests；寄件人把 AOS_KERNEL 設成它
 ```
 
 之後有請求被留下，它收到一則 `[aos] kernel_hold: …`（每封列信名、寄件人、request、期限、寄件人多寫的其他鍵原樣），用 `kernel_gate {"op": "pass", "letter": …}` 或 `{"op": "refuse", "letter": …, "reason": …}` 表態；`{"op": "off"}` 收掉。
 
 - 站就是同一支框架站，stack 是 agent 的 `<stack>/hooks/kernel_gate/`，由它身上一支 `on_clock` hook 每個時鐘週期叫一輪；`kernel.json` 在那個夾裡，agent 自己可以加 `allowed`、`max_running`、`next`、別的 hook。
-- 機器先照 `kernel.json` 的規則判，規則拒的直接拒；規則放行的才留給 agent（預設那支 hook 的 `condition` 是 `pass`）。只想看其中一部分，把 hook 換成自己的（例子在 [lib/aos/kernel README「先留著等表態」](../../../lib/aos/kernel/README.md)）。
+- 機器先照 `kernel.json` 的規則判，規則拒的直接拒；規則放行的才留給 agent（預設那支 hook 的 `condition` 是 `pass`）。只想看其中一部分，把 hook 換成自己的（例子在 [py/tools/aos/kernel README「先留著等表態」](../../../py/tools/aos/kernel/README.md)）。
 - agent 表態 pass 蓋不過規則與寄件人的期限：站會重判一次，期限過了就拒 `SlotMissing`。`aos-agent ctl add` 預設只等 30 秒，要讓腦來得及判，寄件人加 `--timeout-s`。
 - agent 自己在一輪裡（等模型回答）或睡著時，它身上的 hook 不跑，站也就不跑：信躺在信箱裡沒被認領，帶期限的寄件人到期自己撤信。
 - 請求信裡多帶什麼鍵都可以（使用者 11-13：「反正json，不認得的key，只要沒設限制，就能過」）：站原樣給 agent 看、原樣轉寄，不過濾；寫的內容會進 agent 的對話，風險由當門的那一站自己承擔（使用者 11-13：「提示注入這塊就是風險自己承擔」）。
@@ -262,9 +262,9 @@ kernel_gate {"op": "on"}        印出收件信箱 <它的 stack>/hooks/kernel_g
 
 ### 改成自己的
 
-複製範本資料夾、改 `kernel.json`。範本裡框架站的路徑寫成 `{"$env": "AOS_HOME", "$path": "/lib/aos/kernel"}`（`AOS_HOME`＝這台 proto8 資料夾的絕對路徑），搬到 repo 外不用改；設定檔用 `{"$env": "AOS_CD", "$path": "kernel.json"}` 指定義資料夾裡那份（aos-exec 會 cd 進框架站自己的資料夾，相對路徑會算錯）。
+複製範本資料夾、改 `kernel.json`。範本裡框架站的路徑寫成 `{"$env": "AOS_HOME", "$path": "/lib/tools/aos/kernel"}`（`AOS_HOME`＝這台 proto8 資料夾的絕對路徑），搬到 repo 外不用改；設定檔用 `{"$env": "AOS_CD", "$path": "kernel.json"}` 指定義資料夾裡那份（aos-exec 會 cd 進框架站自己的資料夾，相對路徑會算錯）。
 
-內建的規則只看得懂 `procs_*` 這一類。別種 body 要判，寫 `before_verdict` hook。要優先序、額度這種排程器，自己寫一個 kernel 身體（llm kernel 是範例）；可以照樣寫五個口交給骨架 `round.run()`，也可以只拿 `letters.py` 幾個零件自己組（[lib/aos/kernel README](../../../lib/aos/kernel/README.md)）。
+內建的規則只看得懂 `procs_*` 這一類。別種 body 要判，寫 `before_verdict` hook。要優先序、額度這種排程器，自己寫一個 kernel 身體（llm kernel 是範例）；可以照樣寫五個口交給骨架 `round.run()`，也可以只拿 `letters.py` 幾個零件自己組（[py/tools/aos/kernel README](../../../py/tools/aos/kernel/README.md)）。
 
 ### 已知限制
 

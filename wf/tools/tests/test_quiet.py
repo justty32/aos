@@ -10,7 +10,7 @@ import time
 import unittest
 
 TOOLS = Path(__file__).resolve().parents[1]
-GATE_TESTS = TOOLS.parents[1] / "proto8" / "lib" / "agent" / "kernel_gate" / "tests"
+GATE_TESTS = TOOLS.parents[1] / "proto8" / "py" / "tools" / "agent" / "kernel_gate" / "tests"
 sys.path.insert(0, str(TOOLS))
 import quiet  # noqa: E402
 

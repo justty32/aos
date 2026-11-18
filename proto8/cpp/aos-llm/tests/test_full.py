@@ -11,7 +11,7 @@ import unittest
 
 
 BIN = Path(__file__).resolve().parents[3] / 'bin' / 'aos-llm'
-FAKE = Path(__file__).resolve().parents[3] / 'lib/base/llm_fake/_entry'
+FAKE = Path(__file__).resolve().parents[3] / 'py/tools/base/llm_fake/_entry'
 
 
 class FullReply(unittest.TestCase):

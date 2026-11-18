@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(PROTO / "lib"), str(PROTO / "cmd/aos-eca")]
+sys.path[:0] = [str(PROTO / "py"), str(PROTO / "cmd/aos-eca")]
 from aos_eca import screen_slash as s
 from aos_eca import slash as sl
 

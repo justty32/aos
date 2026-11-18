@@ -25,7 +25,7 @@ if endpoint.get('role') == 'reviewer':
         {'tool_calls': [{'name': 'review_round', 'arguments': endpoint['round_args']}]},
         {'tool_calls': [{'name': 'json_set', 'arguments': edit}]},
         {'content': 'Review complete; one split prescription is ready.'}]
-result = subprocess.run([sys.executable, str(PROTO / 'lib/base/llm_fake/_entry')],
+result = subprocess.run([sys.executable, str(PROTO / 'py/tools/base/llm_fake/_entry')],
                         input=json.dumps(payload), capture_output=True, text=True)
 sys.stderr.write(result.stderr)
 if result.returncode:

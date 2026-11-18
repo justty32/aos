@@ -53,7 +53,7 @@ if os.path.isfile(os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(
                                "bin", "agent_files.py")):
     from agent_files import declared_files
 else:
-    from agent.agent_files import declared_files
+    from agent_files import declared_files
 
 from . import common, ctl, say, listen, ask, chat, screen, tools, llm, history, hook, system, goal
 from .common import Fail, parse

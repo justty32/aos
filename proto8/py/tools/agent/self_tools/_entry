@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+# self_tools - aos-agent tools 的包裝，目標改成叫我的那隻自己：ls、get、add、rm、reset；改的是那隻 stack 裡自己那份登記檔，定義不動
+# 使用者 11-05 午：「讓agent給自己改tool」；11-10 晚：「我原本想說，這支工具就是aos-agent tools的包裝，只是目標改自己」、路徑限制「A，拿掉限制」。
+# **對應關係**：aos-agent tools 加了動作或旗標，這支要跟著加（參數一對一，不多給、不多擋）。
+# 介面（py/README 的契約）：stdin 收 {"op": "ls"|"get"|"add"|"rm"|"reset", …}；別的鍵＝ArgumentsBad：
+#   ls {long?}                   ＝tools ls（預設短版：一行一支「名字 TAB 說明第一句」；11-10 使用者「好，有需要的再自己去看細項」、深夜「默認是給出短板」）
+#                                 long: true＝ls -l 的文字（含被設成 null 的格）；細項（整份說明與參數）用 get
+#   get {name}                   ＝tools get NAME_OR_PATH
+#   add {path | path_json, name?, replace?, envs?, env_file?, no_cache?}
+#                                ＝tools add [--name] [--replace] [--envs K=V]… [--env-file] [--no-cache] (XXX | --path-json)
+#   rm {name}                    ＝tools rm XXX（名字，不然路徑）
+#   reset {}                     ＝tools reset -y（腦叫了就算確認過）
+#   先 aos-agent ctl who（拿 $AOS_STACK＝<agent stack>/tools/self_tools/ 查 daemon 表，C-52 經機制看上層、不爬路徑）認出是哪隻。
+#   aos-agent 在 $AOS_WS 跑：相對路徑（path、env_file、rm／get 的路徑）從工作區算；不另設門（能不能用交給 Linux 權限與下層報錯）。
+#   結果：下層 stdout 原樣（add／rm／reset 多一句「下一題起生效」）。下一格 brain 重讀就看到新清單。
+#   錯：stderr 與 stdout 各一行「self_tools: error: 代號 原因」、退 1；aos-agent（與它轉的 aos-tools）的 stderr 原樣透到 stderr；
+#   它退非 0＝把它 stderr 裡最後一行錯誤行 `aos-…: error: 代號 原因` 的代號與原因接在 `self_tools: error: ` 後面給腦（C-52 例外 ⑤，同 agents），
+#   沒那行才是 CommandFailed＋結束碼。op 沒給＝ArgumentsBad、不認得＝OpUnknown（R11）。
+#   沒掛在 daemon 下跑的 agent（aos-exec body.json）不支援：ctl who 失敗＝aos-agent 的 DaemonMissing／InstanceMissing。
+#   --help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉 aos-agent，退 130）。
+# 需要 PATH 上有 aos-agent（source proto8/env.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
+import json, os, sys
+HELP = """\
+usage: self_tools < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Change the tool box of the agent that calls me (its overlay, not its definition):
+op ls | get | add | rm | reset (aos-agent tools with the target = me). Changes work at once: from your next reply in this turn.
+Result on stdout. On error: one line "self_tools: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先裡有 tool_io.py 的那層（py/ 或裝好的 lib/；含 cmd_call），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+try:
+    import tool_io  # noqa: E402
+    import cmd_call  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name not in ("tool_io", "cmd_call", "process_group"):
+        raise
+    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % (os.path.basename(HERE), error.name)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "self_tools"
+tool_io.start(NAME, HELP)
+die = tool_io.die
+
+
+arguments = tool_io.arguments
+
+
+def agent(*args):
+    """aos-agent args…：stderr 原樣往上；退非 0＝它最後一行錯誤行的代號與原因當自己的錯（沒有＝CommandFailed）。回 stdout。"""
+    # 下層撞名那句教 CLI 旗標（add --replace）：腦手上只有工具參數，換成 "replace": true（11-10 整合驗收）
+    _, out, _ = cmd_call.call("aos-agent", args, shown=2,
+                               fix=lambda code, reason: reason.replace("add --replace to replace it", 'add "replace": true to replace it'))
+    return out
+
+
+cmd_call.catch_signals()                       # TERM 與 Ctrl-C：先收掉正在跑的那一群，退 128＋N（Ctrl-C 130、不吐 traceback，R12）
+args = arguments()
+OPS = {"ls": ("long",), "get": ("name",), "add": ("path", "path_json", "name", "replace", "envs", "env_file", "no_cache"),
+       "rm": ("name",), "reset": ()}
+op = args.get("op")
+if op is None:
+    die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
+if op not in OPS:
+    die("OpUnknown", "op must be one of %s (got %r)" % (", ".join(OPS), op))
+extra = sorted(k for k in args if k != "op" and k not in OPS[op])
+if extra:
+    die("ArgumentsBad", "op %s does not take %s (it takes %s)" % (op, ", ".join(extra), ", ".join(OPS[op]) or "nothing else"))
+
+
+def text(key, need=False):
+    v = args.get(key)
+    if v is None and not need:
+        return None
+    if not isinstance(v, str) or not v:
+        die("ArgumentsBad", "%s %s a non-empty string" % (key, "needs" if v is None else "must be"))
+    return v
+
+
+def flag(key):
+    v = args.get(key, False)
+    if not isinstance(v, bool):
+        die("ArgumentsBad", "%s must be true or false" % key)
+    return v
+
+
+cmd = ["tools", "--target", None, op]
+if op == "ls":
+    cmd += ["-l"] if flag("long") else []
+elif op in ("get", "rm"):
+    cmd += [text("name", True)]
+elif op == "reset":
+    cmd += ["-y"]
+else:
+    envs = args.get("envs", {})
+    if not isinstance(envs, dict) or not all(isinstance(k, str) and k and "=" not in k and isinstance(v, str) for k, v in envs.items()):
+        die("ArgumentsBad", "envs must be an object of strings, like {\"LANG\": \"C.UTF-8\"}")
+    if ("path" in args) == ("path_json" in args):
+        die("ArgumentsBad", "add needs path (a tool folder, JSON file or executable) or path_json, not both")
+    name, env_file = text("name"), text("env_file")
+    cmd += (["--name", name] if name else []) + (["--replace"] if flag("replace") else []) \
+        + [x for k in sorted(envs) for x in ("--envs", "%s=%s" % (k, envs[k]))] \
+        + (["--env-file", env_file] if env_file else []) + (["--no-cache"] if flag("no_cache") else [])
+    if "path_json" in args:
+        pj = args["path_json"]
+        if not isinstance(pj, dict) or not pj:
+            die("ArgumentsBad", "path_json must be a directive object like {\"$env\": \"AOS_HOME\", \"$path\": \"/lib/tools/base/math\"}")
+        cmd += ["--path-json", json.dumps(pj, ensure_ascii=False)]
+    else:
+        cmd += [text("path", True)]
+
+cmd[2] = agent("ctl", "who").strip()
+out = agent(*cmd)
+sys.stdout.write(out if not out or out.endswith("\n") else out + "\n")
+if op in ("add", "rm", "reset"):
+    print("(works at once: from your next reply in this turn; call a new tool directly by its name, not in the reply that added it)")

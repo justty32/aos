@@ -12,7 +12,7 @@ import unittest
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[4]
 BIN = REPO / "proto8" / "cmd" / "aos-agent" / "bin" / "aos-agent"
-TOOL = REPO / "proto8" / "lib" / "base" / "peek_now_time"
+TOOL = REPO / "proto8" / "py" / "tools" / "base" / "peek_now_time"
 
 
 def clean_env(**extra):
@@ -144,7 +144,7 @@ class CheckPointerAt(unittest.TestCase):
     """11-13 線址二：$override 陣列裡的指示詞照它的位置 /$override/i 解，#./、#../ 從所在物件算。"""
     @classmethod
     def setUpClass(cls):
-        paths = [str(REPO / "proto8" / "cmd" / "aos-agent"), str(REPO / "proto8" / "lib")]
+        paths = [str(REPO / "proto8" / "cmd" / "aos-agent"), str(REPO / "proto8" / "py")]
         sys.path[:0] = paths
         try:
             from aos_agent import tools

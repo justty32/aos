@@ -180,7 +180,7 @@ class Machine:
         """換了 HOME 就沒有 user site 的 aos-proto8.pth：改給 PYTHONPATH，指這台那份 proto8。"""
         self.proto = proto
         self.env["AOS_HOME"] = str(proto)
-        self.env["PYTHONPATH"] = os.pathsep.join([str(proto / "lib")])
+        self.env["PYTHONPATH"] = os.pathsep.join([str(proto / "py")])
 
     def run(self, *args, cwd, check=True, timeout=120):
         r = subprocess.run([str(a) for a in args], cwd=cwd, env=self.env, text=True, capture_output=True,

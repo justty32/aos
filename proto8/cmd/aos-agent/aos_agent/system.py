@@ -126,7 +126,7 @@ def screen_open(folder, stack):
     if kind is None:
         return False
     try:
-        from agent import cli_base, cli_cell
+        import cli_base, cli_cell
         cell = os.path.join(stack, kind)
         sock = cli_cell.tty_socket(cell)
         if not os.path.exists(sock):

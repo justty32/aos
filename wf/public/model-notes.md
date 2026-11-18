@@ -49,7 +49,7 @@ stdin 開著又沒東西時，它會一直等 stdin、卡住（容易被誤判�
 - PostToolUse hook 回的 `additionalContext` 送得到，但模型會當成「工具輸出裡的可疑指示」而不照做。真要用，system 先講明這段是誰送的、為什麼從這裡來。
 - `claude -p` 的環境裡也有 `CLAUDE_CODE_MESSAGING_SOCKET`（跨 session 收件口），往裡寫信封也收得到，但那是沒寫進文件的介面。能用 stdin 就用 stdin。
 - 前景 `sleep N` 會被 Claude Code 擋下，模型改丟背景；這時 `-p` 行程會活著等背景任務跑完，中間也收得到訊息。量測時別用包一層的方式繞過這個擋，模型會拒絕；要量長指令改用忙迴圈。`-p` 模式沒有 Monitor，給它的提示別叫它用 Monitor。
-- 用預設的 snapshot `--resume` 時，新加的 `--append-system-prompt` 模型看不到，要 `--system-prompt-snapshot off`（aos 的 `proto8/lib/agent/cli_cfg.py` 宣告了 system 就自動加）。
+- 用預設的 snapshot `--resume` 時，新加的 `--append-system-prompt` 模型看不到，要 `--system-prompt-snapshot off`（aos 的 `proto8/py/cli_cfg.py` 宣告了 system 就自動加）。
 
 ## 用 Claude Code 本機紀錄算 token：同一則回覆會寫好幾列，要跨檔去重
 

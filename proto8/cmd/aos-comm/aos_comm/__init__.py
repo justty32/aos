@@ -1,4 +1,4 @@
-# aos_comm/__init__.py - aos-comm 本體：comm/1 協議的命令列（board-1114 批 1：board 五個動作與 check）；讀寫與算法全在 lib/aos/comm，這裡只派發與印。
+# aos_comm/__init__.py - aos-comm 本體：comm/1 協議的命令列（board-1114 批 1：board 五個動作與 check）；讀寫與算法全在 py/tools/aos/comm，這裡只派發與印。
 # 圖紙：proto8/thinking/2026-11/14/board-1114/（02 稿＋03 計劃＋05 採納表；衝突時 05 優先）。信件分級、頻道是之後的批，這版沒有。
 import json
 import os

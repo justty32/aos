@@ -65,7 +65,7 @@ std::optional<TextWriteError> write_text(const std::string& path, const std::str
 - `AOS_CLOCK` 沒設或空＝沒有時鐘（`nullopt`）；有設而檔案不存在＝印一行英文 warning（每行程每路徑一次），仍當 0、不建檔；空白檔當 0、不提醒。有時鐘的期限只數格，凍住不過期。
 - 沒時鐘時，用 `AOS_CLOCK_INTERVAL`（正整數毫秒，沒設或空＝1000）換成 UTC epoch 毫秒期限；能寫檔供跨行程比較。
 - 時鐘內容不是非負 ASCII 十進位整數、讀不了、間隔非正整數或期限超出 signed 64-bit，丟通用 `ClockBad`，照一般錯誤退 1。
-- Python 的工具版 `proto8/lib/tool_io.py` 與命令列版 `proto8/lib/aos_ws.py` 提供同名函數，期限回 `(on_clock, at)`。
+- Python 的工具版 `proto8/py/tool_io.py` 與命令列版 `proto8/py/aos_ws.py` 提供同名函數，期限回 `(on_clock, at)`。
 
 ## 建置與測試
 
@@ -73,7 +73,7 @@ std::optional<TextWriteError> write_text(const std::string& path, const std::str
 python3 install.py        # 在 proto8 跑，編全家
 ```
 
-- 只有庫、沒有執行檔（`cpp/build/lib/libaos-util.a`）。別的專案怎麼連、產物：見 [cpp/docs/04「建置」](../docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md#建置)。
+- 只有庫、沒有執行檔（`install.py` 裝到 `proto8/lib/libaos-util.a`）。別的專案怎麼連、產物：見 [cpp/docs/04「建置」](../docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md#建置)。
 
 ## 已知限制
 

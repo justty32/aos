@@ -38,7 +38,7 @@ def label(a):
 def brain_hint(a):
     """只讀問腦記錄；確認 llm kernel 沒在跑才給提示，任何錯都不影響原本操作。"""
     try:
-        from agent import cooldown
+        import cooldown
 
         if a.phase != "running" or label(a) != "running":
             return None

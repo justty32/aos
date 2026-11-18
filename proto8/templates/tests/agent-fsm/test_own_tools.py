@@ -11,7 +11,7 @@ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 
 
 CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身（測試 11-10 起搬到 templates/tests/<範本名>/）
 PROTO = CELLS.parents[1]
-CLOCK = PROTO / "lib" / "base" / "peek_now_time"
+CLOCK = PROTO / "py" / "tools" / "base" / "peek_now_time"
 
 
 class OwnTools(unittest.TestCase):

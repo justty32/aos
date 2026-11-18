@@ -8,7 +8,7 @@ flowchart LR
   J --> D[已降級或沒有目標：結束]
 ```
 
-審視者重用相鄰 `agent-fsm/` 的格；算術、試跑、換上與盯梢都交給 [`review_round`](../../lib/aos/review_round/README.md)。agent 只在 `prescribe` 時用 `json_set` 把一到三條處方寫進 `review.json#/prescriptions`；工具清單登記 review_round、watch、promote、rollback、measure 與 `json_get`、`json_ls`、`json_set`、`json_del`、read、ls（11-12 json-tools D21）。
+審視者重用相鄰 `agent-fsm/` 的格；算術、試跑、換上與盯梢都交給 [`review_round`](../../py/tools/aos/review_round/README.md)。agent 只在 `prescribe` 時用 `json_set` 把一到三條處方寫進 `review.json#/prescriptions`；工具清單登記 review_round、watch、promote、rollback、measure 與 `json_get`、`json_ls`、`json_set`、`json_del`、read、ls（11-12 json-tools D21）。
 
 ```sh
 python3 -m unittest discover -s proto8/templates/tests/reviewer -p 'test_*.py'

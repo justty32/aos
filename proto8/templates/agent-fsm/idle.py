@@ -5,7 +5,7 @@
 # 回答配對（thinking/2026-11/14/reply-match-1114/03 §1）：好信照序 aos_ws.letters_take（加進 $AOS_STACK/letters.json 的 pending）→ history 的 user 列帶
 #   "aos": {"letter": 信名}（信裡自帶的 aos 鍵蓋掉）→ done；壞信、被 before_queue 擋的信在 done 之前記進 dropped（reason bad／blocked）。goal 提醒不經 queue、不帶 aos。
 # --prompt FILE＝開場白（相對路徑從範本資料夾＝AOS_CD 算）：history 空、queue 也沒好信時投一次進 queue 再收；沒給＝沒有開場白。
-# hook（lib/agent/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：好信接進 history 之前 before_queue（可改 content；攔下＝aos-post done 丟掉、
+# hook（py/hooks.py，圖紙 thinking/2026-11/10/self-family/hook）：好信接進 history 之前 before_queue（可改 content；攔下＝aos-post done 丟掉、
 #   不進 history、不算好信、mailbox_warning.txt 寫一行是哪個 hook 丟的），接進去並 done 之後 after_queue。hook 停下（HookFailed／HooksBad）時
 #   還沒 done 的信留在 cur/、下次重跑再接（P-12）。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）。aos-post 的 stderr 不攔、原樣透出（stdio-unify R10）。--help 印英文用法；Ctrl-C 退 130。設計：proto8/thinking/2026-11/04/loop-fsm-agent/01-設計.md § 3。
@@ -16,7 +16,7 @@
 #   上次提醒之後腦叫過 goal 以外的工具（只看 history：goal_state.progressed；do_task 摺過也算得到）＝計數先歸零；連續到上限那次丟
 #   「[aos] goal: reminder limit N reached; goal paused …」、goal 改 paused（之後不丟）。先寫 goal.json 再接 history（寫不成＝warning、不丟）。
 #   自己暫停後來了訊息、答完又停下＝只讀 history 最後 262144 bytes，找到 goal 呼叫且未碰到提醒或 summary 才加一次 paused 提示；
-#   不改 goal.json、不自動 resume；外面或 aos 設的暫停不提示。goal.json 壞了＝安靜當沒有（每 300 ms 一拍，不洗 log；aos-agent goal get 報 GoalBad）。讀寫走 lib/agent/goal_state.py。
+#   不改 goal.json、不自動 resume；外面或 aos 設的暫停不提示。goal.json 壞了＝安靜當沒有（每 300 ms 一拍，不洗 log；aos-agent goal get 報 GoalBad）。讀寫走 py/goal_state.py。
 # /compact bypasses queue hooks, batches one summary request after ordinary letters, and resumes an existing request without taking mail.
 import json, os, re, signal, subprocess, sys
 from pathlib import Path
@@ -31,14 +31,14 @@ try:
     if (Path(__file__).resolve().parent / "hooks.py").is_file():
         import hooks  # noqa: E402
     else:
-        from agent import hooks  # noqa: E402
+        import hooks  # noqa: E402
     if (Path(__file__).resolve().parent / "goal_state.py").is_file():
         import goal_state  # noqa: E402
     else:
-        from agent import goal_state  # noqa: E402
+        import goal_state  # noqa: E402
 except (ModuleNotFoundError, ImportError) as _error:
-    if _error.name not in ("aos_flags", "aos_ws", "tool_io", "agent_files", "agent", "agent.agent_files", "hooks", "agent.hooks",
-                           "goal_state", "agent.goal_state"):
+    if _error.name not in ("aos_flags", "aos_ws", "tool_io", "agent_files", "hooks",
+                           "goal_state"):
         raise
     if not os.environ.get("AOS_HOME"):
         print("agent-fsm: error: HomeMissing AOS_HOME is not set (it names the proto8 folder that holds lib)",

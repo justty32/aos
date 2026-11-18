@@ -16,7 +16,7 @@ import test_reply_match as reply_tests
 CELLS = reply_tests.CELLS
 PROTO = reply_tests.PROTO
 sys.dont_write_bytecode = True
-sys.path[:0] = [str(CELLS), str(PROTO / "lib")]
+sys.path[:0] = [str(CELLS), str(PROTO / "py")]
 import compact
 import aos_ws
 
@@ -206,7 +206,7 @@ class Compact(unittest.TestCase):
         end_call = {"id": "end", "type": "function", "function": {"name": "do_task", "arguments": "{}"}}
         self.history(self.history() + [{"role": "assistant", "tool_calls": [end_call]}])
         self.command("aos-agent", "import json,os,sys\nfrom pathlib import Path\nif 'who' in sys.argv: print('fake')\nelse: print(json.dumps([{'message':json.loads(l)} for l in Path(os.environ['HISTORY']).read_text().splitlines()]))\n")
-        r = subprocess.run([sys.executable, str(PROTO / "lib/agent/do_task/_entry")],
+        r = subprocess.run([sys.executable, str(PROTO / "py/tools/agent/do_task/_entry")],
                            input=json.dumps({"op": "end", "summary": "Finished"}),
                            env=dict(self.env, AOS_STACK=str(task_cell), AOS_WS=str(self.root), HISTORY=str(self.stack / "history.jsonl")),
                            capture_output=True, text=True, timeout=20)
@@ -322,10 +322,10 @@ class CompactDaemon(unittest.TestCase):
             path.write_text(json.dumps(value), encoding="utf-8")
 
         write(definition / "llm.json", {"model": "growing"})
-        write(definition / "tools.json", {"tools": {"peek_now_time": {"path": str(PROTO / "lib/base/peek_now_time")}}})
+        write(definition / "tools.json", {"tools": {"peek_now_time": {"path": str(PROTO / "py/tools/base/peek_now_time")}}})
         write(definition / "hooks.json", {"hooks": {"context_wrap": {
             "event": "on_clock", "every_cycles": 1, "config": {"percent": 35, "wrap": False},
-            "handler": str(PROTO / "lib/agent/context_wrap"), "on_error": "stop", "timeout_ms": 20000}}})
+            "handler": str(PROTO / "py/tools/agent/context_wrap"), "on_error": "stop", "timeout_ms": 20000}}})
         write(definition / "loop.json", {"exec": "fsm.json", "interval_ms": 10,
                                         "ctl": "ctl.json", "state": "state.json", "state_flux": "state_flux.json"})
         endpoint = root / "endpoint.py"
@@ -364,11 +364,11 @@ print(json.dumps({'message':message,'usage':{'prompt_tokens':used,'completion_to
         write(root / "daemon.json", {"interval_ms": 10, "procs": {"_clock": {
             "exec": {"argv": ["aos-clock", str(daemon / "clock")]}, "interval_ms": 10}}})
         write(root / "kernel_daemon.json", {"interval_ms": 10, "exec": {"argv": [
-            str(PROTO / "lib/aos/kernel_llm/_entry"), str(root / "kernel.json")]}})
+            str(PROTO / "py/tools/aos/kernel_llm/_entry"), str(root / "kernel.json")]}})
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") or k == "AOS_HOME"}
         bins = [str(PROTO / "bin")] + [str(p) for p in PROTO.glob("cmd/*/bin")]
         env.update(PATH=os.pathsep.join(bins + [env["PATH"]]),
-                   PYTHONPATH=os.pathsep.join([str(PROTO / "lib")]),
+                   PYTHONPATH=os.pathsep.join([str(PROTO / "py")]),
                    PYTHONDONTWRITEBYTECODE="1", AOS_HOME=str(PROTO), AOS_STACK=str(daemon),
                    AOS_CD=str(root), AOS_WS=str(root), AOS_DAEMON=str(daemon), AOS_CLOCK=str(daemon / "clock"),
                    AOS_LLM_KERNEL=str(kernel))

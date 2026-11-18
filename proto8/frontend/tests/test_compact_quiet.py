@@ -74,7 +74,7 @@ class CompactQuiet(unittest.TestCase):
                 with open(p, "w") as f:
                     f.write(json.dumps({"type": "system"}) + "\n" + json.dumps({"type": live[0]}) + "\n")
                 os.utime(p, (now - live[1], now - live[1]))
-            # the shared quiet mark (timeout-1115, lib/agent/quiet.py): a live pid counts, a dead one is ignored
+            # the shared quiet mark (timeout-1115, py/quiet.py): a live pid counts, a dead one is ignored
             if n in ("q-mark", "q-stale"):
                 pid = os.getpid() if n == "q-mark" else dead_pid()
                 with open(os.path.join(stack, "quiet.json"), "w") as f:

@@ -1,0 +1,3 @@
+{"description": "Pack ws-write: write text files only inside the agent's own workspace - ws_write.",
+ "tools": {
+           "ws_write": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/ws_write"}}}}

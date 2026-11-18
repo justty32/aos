@@ -83,7 +83,7 @@ class Judge(unittest.TestCase):
             bins = [str(p) for p in [PROTO / 'bin'] + sorted((PROTO / 'cmd').glob('*/bin'))]
             env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
             env.update(PATH=os.pathsep.join(bins + [env['PATH']]),
-                       PYTHONPATH=os.pathsep.join([str(PROTO / 'lib')]),
+                       PYTHONPATH=os.pathsep.join([str(PROTO / 'py')]),
                        AOS_STACK=str(root / 'stack'), AOS_WS=str(root), AOS_CD=str(HERE))
             args = {'expect': str(root), 'got': str(root), 'input': str(root)}
 
@@ -100,11 +100,11 @@ class Judge(unittest.TestCase):
             shutil.copytree(HERE, judge, ignore=shutil.ignore_patterns('tests', '__pycache__'))
             config = root / 'kernel.json'
             write(config, {'exec': str(Path(__file__).resolve().parent / 'endpoint.py'), 'endpoint': 'judge',
-                'endpoints': {'judge': {}, 'bad': {'exec': str(PROTO / 'lib/base/llm_fake'),
+                'endpoints': {'judge': {}, 'bad': {'exec': str(PROTO / 'py/tools/base/llm_fake'),
                     'script': [{'content': 'not JSON'}]}}})
             daemon_config = root / 'daemon.json'
             write(daemon_config, {'interval_ms': 10, 'exec': {'argv': [
-                str(PROTO / 'lib/aos/kernel_llm/_entry'), str(config)]}})
+                str(PROTO / 'py/tools/aos/kernel_llm/_entry'), str(config)]}})
             env['AOS_LLM_KERNEL'] = str(kernel)
             with (root / 'daemon.log').open('w+') as log:
                 process = subprocess.Popen(['aos-daemon', str(daemon_config)], cwd=root,
@@ -119,11 +119,11 @@ class Judge(unittest.TestCase):
                     for name, expected in [('correct', '3\n'), ('wrong', '999\n')]:
                         item = case / name
                         (item / 'expect').mkdir(parents=True)
-                        write(item / 'run.json', {'exec': 'lib/base/math', 'stdin': 'stdin.json'})
+                        write(item / 'run.json', {'exec': 'py/tools/base/math', 'stdin': 'stdin.json'})
                         write(item / 'stdin.json', {'expr': '1+2'})
                         (item / 'expect/stdout.json').write_text(expected)
                         write(item / 'check.json', {'compare': str(judge), 'min_score': .9})
-                    result = run(PROTO / 'lib/aos/measure', {'case': str(case), 'defs': str(PROTO)}, 'measure')
+                    result = run(PROTO / 'py/tools/aos/measure', {'case': str(case), 'defs': str(PROTO)}, 'measure')
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     output = json.loads(result.stdout)
                     checks = [c['samples'][0]['check'] for c in output['cases']]

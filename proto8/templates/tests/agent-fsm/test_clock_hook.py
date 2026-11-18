@@ -1,4 +1,4 @@
-"""Test the 11-11 hook events: on_clock (hooks.clock_tick in the cells), after_start / after_stop (lib/agent/hook_fire)."""
+"""Test the 11-11 hook events: on_clock (hooks.clock_tick in the cells), after_start / after_stop (py/tools/agent/hook_fire)."""
 import json
 import os
 from pathlib import Path
@@ -10,7 +10,7 @@ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_hooks import CELLS, PROTO, Hooks, hooks  # noqa: E402
 
-FIRE = PROTO / "lib" / "agent" / "hook_fire" / "_entry"
+FIRE = PROTO / "py" / "tools" / "agent" / "hook_fire" / "_entry"
 CAUSE_KEY, CAUSE_ENV = "cause", "AOS_LOOP_CAUSE"   # 11-14 B7：after_stop 的欄位名與環境變數名（同 hook_fire 的模組常數）
 
 

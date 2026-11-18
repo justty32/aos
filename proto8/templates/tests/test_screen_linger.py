@@ -6,8 +6,8 @@ import unittest
 
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROTO / "lib"))
-from agent import hooks
+sys.path.insert(0, str(PROTO / "py"))
+import hooks
 
 
 class ScreenLinger(unittest.TestCase):
@@ -20,7 +20,7 @@ class ScreenLinger(unittest.TestCase):
             self.assertEqual(table[name]["event"], event)
             self.assertEqual(table[name]["on_error"], "continue")
             self.assertEqual(table[name]["timeout_ms"], 4000)
-            self.assertEqual(table[name]["handler"]["$path"], "/lib/agent/screen_linger")
+            self.assertEqual(table[name]["handler"]["$path"], "/lib/tools/agent/screen_linger")
 
 
 if __name__ == "__main__":

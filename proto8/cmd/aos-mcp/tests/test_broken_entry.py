@@ -9,7 +9,7 @@ import unittest
 
 PROTO = Path(__file__).resolve().parents[3]
 MCP = PROTO / 'cmd' / 'aos-mcp' / 'bin' / 'aos-mcp'
-CLOCK = PROTO / 'lib' / 'base' / 'peek_now_time'
+CLOCK = PROTO / 'py' / 'tools' / 'base' / 'peek_now_time'
 
 
 class BrokenEntry(unittest.TestCase):

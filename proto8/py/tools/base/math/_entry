@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+# math - 算一個算術式子：只認數字、+ - * / // % **、括號、正負號（不用 eval）
+# 介面（py/README 的契約）：stdin 收 {"expr": "17*23"}；stdout 印算出來的結果。不碰檔案、不用 $AOS_WS。
+# 錯：stderr 與 stdout 各一行「math: error: 代號 原因」、退 1——stdin 不對＝ArgumentsBad，式子讀不懂、除以零、算不出來＝ExprBad。
+# 來源：demo/agent-dan/tools/math（10-23；10-24 遷移：hal、kai、talk 的複本改掛這一份，錯誤行照 lib 契約）。
+import ast, operator, os, sys
+HELP = """\
+usage: math < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Evaluate an arithmetic expression (numbers, + - * / // % **, parentheses, signs).
+Result on stdout. On error: one line "math: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先裡有 tool_io.py 的那層（py/ 或裝好的 lib/），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "math"
+tool_io.start(NAME, HELP)
+BIN = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv,
+       ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod, ast.Pow: operator.pow}
+UNARY = {ast.UAdd: operator.pos, ast.USub: operator.neg}
+POW_MAX = 1000          # 指數上限：9**9**9 這種會把機器算死
+
+
+die = tool_io.die
+
+
+def value(node):
+    if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+        return node.value
+    if isinstance(node, ast.BinOp) and type(node.op) in BIN:
+        left, right = value(node.left), value(node.right)
+        if isinstance(node.op, ast.Pow) and abs(right) > POW_MAX:
+            die("ExprBad", "exponent too large (limit %d)" % POW_MAX)
+        return BIN[type(node.op)](left, right)
+    if isinstance(node, ast.UnaryOp) and type(node.op) in UNARY:
+        return UNARY[type(node.op)](value(node.operand))
+    die("ExprBad", "unsupported syntax: " + type(node).__name__)
+
+
+args = tool_io.arguments()
+try:
+    tree = ast.parse(args["expr"], mode="eval")
+except SyntaxError as e:
+    die("ExprBad", "cannot parse expression: %s" % e.msg)
+try:
+    print(value(tree.body))
+except ZeroDivisionError:
+    die("ExprBad", "division by zero")
+except (OverflowError, ValueError) as e:
+    die("ExprBad", "cannot evaluate: %s" % e)

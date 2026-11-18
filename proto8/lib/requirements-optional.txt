@@ -1,2 +1,0 @@
-# Optional Python modules: install.py only checks them (never pip installs); aos works without them.
-jsonschema  # aos-comm (lib/aos/comm/check.py): full JSON Schema check; without it a built-in check is used

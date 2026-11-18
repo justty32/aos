@@ -13,8 +13,8 @@ sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
 BIN = PROTO / "cmd" / "aos-mcp-import" / "bin" / "aos-mcp-import"
 TOOLS_BIN = PROTO / "cmd" / "aos-tools" / "bin" / "aos-tools"
-FAKE = PROTO / "lib" / "tests" / "fake_mcp_stdio.py"
-sys.path.insert(0, str(PROTO / "lib"))
+FAKE = PROTO / "py" / "tests" / "fake_mcp_stdio.py"
+sys.path.insert(0, str(PROTO / "py"))
 import mcp_server_file  # noqa: E402
 
 FAKE_NAMES = ["echo", "fail", "image", "sleep", "big", "refschema", "show_env"]
@@ -107,7 +107,7 @@ class Import(Base):
         self.assertEqual(imp["server_tools"], 7)
         self.assertRegex(imp["imported_at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$")
         echo = doc["mcp_tools"]["echo"]
-        self.assertEqual(echo["_entry"], ["python3", {"$env": "AOS_HOME", "$path": "/lib/base/mcp_tool/_entry"},
+        self.assertEqual(echo["_entry"], ["python3", {"$env": "AOS_HOME", "$path": "/lib/tools/base/mcp_tool/_entry"},
                                           "--pack", "fake.json", "--tool", "echo"])
         self.assertEqual(echo["_tooldef"]["description"], "[MCP server fake] Return the supplied text.")
         self.assertNotIn("$defs", json.dumps(doc["mcp_tools"]["refschema"]["_tooldef"]))

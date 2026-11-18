@@ -28,7 +28,7 @@ class State(unittest.TestCase):
         self.defn = self.tmp / "defs" / "bob"
         self.defn.mkdir(parents=True)
         (self.defn / "interfaces.json").write_text(json.dumps({"aos-agent": {"tools": "tools.json", "llm": "llm.json", "history": "history.jsonl"}}))
-        (self.defn / "tools.json").write_text(json.dumps({"tools": {"clock": {"path": str(REPO / "proto8" / "lib" / "base" / "peek_now_time")}}}))
+        (self.defn / "tools.json").write_text(json.dumps({"tools": {"clock": {"path": str(REPO / "proto8" / "py" / "tools" / "base" / "peek_now_time")}}}))
         (self.defn / "llm.json").write_text(json.dumps({"model": "m1"}))
         (self.defn / "subagents.json").write_text(json.dumps({"max_subagents": 2}))
         (self.tmp / "ws").mkdir()

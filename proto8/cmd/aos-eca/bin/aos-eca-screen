@@ -30,14 +30,14 @@ from pathlib import Path
 
 _import_paths = []
 for _parent in Path(__file__).resolve().parents:
-    for _layer, _module in (("lib", "aos_flags.py"), ("lib", "agent/__init__.py")):
+    for _layer, _module in (("lib", "aos_flags.py"),):
         _root = _parent / _layer
         if (_root / _module).is_file() and str(_root) not in _import_paths:
             _import_paths.append(str(_root))
 sys.path[:0] = _import_paths
 try:
     import aos_flags  # noqa: E402
-    from agent import cli_base, cli_cell, cli_cfg, cli_screen  # noqa: E402
+    import cli_base, cli_cell, cli_cfg, cli_screen  # noqa: E402
     sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..")))
     try:
         from aos_eca.slash import slash_status, slash_usage  # noqa: E402  peek 用（11-16 ok-small）

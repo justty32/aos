@@ -6,12 +6,12 @@
 
 ## 頂層一覽
 
-頂層九夾（11-17 使用者裁「八夾-0 A」，同天下午加 `frontend`）：`cpp cmd frontend lib templates knowledge docs thinking archive`，另有 `README.md`、`_index.json`、`env.sh`、`install.py` 四個檔；`bin/`、`include/` 是 `python3 install.py` 產的、不進 git。程式按角色分夾：
+頂層九夾（11-17 使用者裁「八夾-0 A」，同天下午加 `frontend`；11-18 S3 `lib` 原始碼改名 `py`）：`cpp cmd frontend py templates knowledge docs thinking archive`，另有 `README.md`、`_index.json`、`env.sh`、`install.py` 四個檔；`bin/`、`lib/`、`include/` 是 `python3 install.py` 產的、不進 git，**執行期只認這三夾**（改了 `py/` 要重跑 `install.py` 才生效）。程式按角色分夾：
 
 - **cpp**＝aos-exec 跑得動的基礎與標準庫（C／C++）。
 - **cmd**＝人在終端打的指令：一支一夾、夾名＝指令名、執行檔在 `<名>/bin/<名>`，跟 cpp 同形（aos-eca 兩支同夾）。
 - **frontend**＝選配的網頁外掛：全景頁 `aos-frontend`（看整棵樹、回使用者專區的信、給 agent 寫一行），執行檔在 `frontend/bin/aos-frontend`；不用它，aos 照樣跑。後端只要 Python，網頁 v2 的 `dist/` 不進 git，要在有 Node 的機器自己建（11-17 下午使用者「aos-view確實應該是選配的網頁外掛」「那就改名為aos-frontend吧」，從 `cmd/aos-view` 搬來）。
-- **lib**＝腦叫的工具（三件套），頂層另有 cmd 與範本共用的 Python 模組（`aos_flags.py`、`tool_io.py`、`daemon_ctl/`…；11-17 `py/` 併進來）。
+- **py**＝Python 原始碼：頂層是 cmd 與範本共用的模組（`aos_flags.py`、`tool_io.py`、`daemon_ctl/`、agent 共用的 `cli_*.py`、`hooks.py`…，先平鋪），腦叫的工具（三件套）在 `py/tools/{base,aos,agent}`；`install.py` 把它抄成 `lib/`（不含測試與 `py/docs`），定義的指示詞寫 `/lib/tools/…`。
 - **templates**＝複製出去用的 agent 範本，與掛在 daemon 上的 kernel 範本（`templates/kernel/`，11-17 從頂層 `kernel/` 併進來）。
 - **archive**＝不再維護、留著參考的東西（11-17 extras 解散時建）。
 
@@ -20,12 +20,12 @@
 | 資料夾 | 收什麼 |
 |---|---|
 | [docs/](docs/README.md) | 使用者條文：[CONCEPTS](docs/CONCEPTS.md)（概念）、[NORMS](docs/NORMS.md)（規範）、[CONVENTION](docs/CONVENTION.md)（agent 慣例）；另有 [notes/](docs/notes/README.md)＝AI 寫的參考筆記（不算數） |
-| [cpp/](cpp/README.md) | aos-exec、aos-loop、aos-fsm、aos-daemon 等 C++ 專案（`cpp/Makefile` 一份編全家，nlohmann json 是收進 repo 的單檔 `cpp/third_party/nlohmann/json.hpp`；中間檔與 `.a`／`.so` 在 `cpp/build/`、不進 git） |
-| [install.py](install.py) | 安裝：在 proto8 跑 `python3 install.py`（只用標準庫、Python ≥ 3.11）：先查相依（必需 g++ ≥ 10、gcc、make、ar；選配工具只列表不擋），清空再填 `bin/`（9 支 C++ 執行檔）與 `include/`（公開標頭），log 在 `cpp/build/build.log`，另產 `cpp/compile_commands.json` 給 clangd；`--check` 只查相依。重跑＝全新安裝，C++ 沒改時幾秒 |
+| [cpp/](cpp/README.md) | aos-exec、aos-loop、aos-fsm、aos-daemon 等 C++ 專案（`cpp/Makefile` 一份編全家，nlohmann json 是收進 repo 的單檔 `cpp/third_party/nlohmann/json.hpp`；中間檔在 `cpp/build/`、`.a`／`.so` 裝進 `lib/`，都不進 git） |
+| [install.py](install.py) | 安裝：在 proto8 跑 `python3 install.py`（只用標準庫、Python ≥ 3.11）：先查相依（必需 g++ ≥ 10、gcc、make、ar；選配工具只列表不擋），清空再填 `bin/`（9 支 C++ 執行檔）、`lib/`（`py/` 的抄本加 C++ 函式庫）與 `include/`（公開標頭），log 在 `cpp/build/build.log`，另產 `cpp/compile_commands.json` 給 clangd；`--check` 只查相依。重跑＝全新安裝，C++ 沒改時幾秒 |
 | [cmd/](cmd/README.md) | Python 指令：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca（turn、screen）、aos-mcp、aos-mcp-launch（起外部 stdio MCP server）、aos-mcp-import（把外部 MCP 的工具凍結成一包）、aos-sandbox、aos-grow；`install.sh`（選配，把指令連進 `~/.local/bin`）也在這裡 |
 | [env.sh](env.sh) | 每個視窗先 `source` 它：清掉 `AOS_*`、設 `AOS_HOME`、把這個家的 `bin/`（第一）、`cmd/*/bin`、`frontend/bin` 放到 PATH 最前；`aos-exec` 不在時提示先跑 `python3 $AOS_HOME/install.py` |
 | [frontend/](frontend/API.md) | 選配的網頁外掛：全景頁 `aos-frontend`（後端 Python 標準庫；v2 網頁原始碼在 `ui/v2/`，`dist/` 不進 git，要 Node 才建得出來，見 [ui/v2/README](frontend/ui/v2/README.md)）；aide 定義的差異檔 `aide-def/`、systemd 範例、測試也在這夾 |
-| [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），templates 用相對捷徑引用；機讀的協議定義在 [lib/schema/](lib/schema/README.md)；lib 頂層另有 cmd 共用模組 `aos_flags.py`、`aos_ws.py`、`daemon_ctl/` 等（11-17 前在 `py/`，說明在 [lib/docs/04](lib/docs/04-共用模組.md)） |
+| [py/](py/README.md) | Python 原始碼（11-18 S3 前叫 `lib/`）：agent 用的工具在 `py/tools/`（底層原語 → 動 aos 的 → 整隻 agent）；機讀的協議定義在 [py/schema/](py/schema/README.md)；頂層是 cmd 共用模組 `aos_flags.py`、`aos_ws.py`、`daemon_ctl/` 等（說明在 [py/docs/04](py/docs/04-共用模組.md)）。安裝後的抄本在 `lib/`（不進 git，執行期認它） |
 | [templates/](templates/README.md) | agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent）等；kernel 範本在 [templates/kernel/](templates/kernel/README.md)：llm-kernel（問腦的那台）、daemon-kernel、procs-kernel（通用 kernel 的站的兩種掛法） |
 | [knowledge/](knowledge/README.md) | 出廠內容樹：普通資料夾＋`.json`，用一般檔案／json 工具讀；第一本是 `aos/`——給小模型的 aos 體系說明（英文） |
 | [archive/](archive/README.md) | 封存（11-17 重建：langs、tree-swap、aos-home；清單在它的 README） |
@@ -46,7 +46,7 @@
 - **[CONVENTION.md](docs/CONVENTION.md)**：aos agent 慣例（P-05～P-48）——我們自己人寫 agent 時照抄的標準形狀，不要求別人守。
 - **[templates/](templates/README.md)**：`eca-claude`（外部 coding agent 範本）與 `agent-fsm`（aos 自己的 loop／fsm agent 範本，idle／think／wait／act 四格），都用 `aos-agent ctl add` 掛（宣告在 `interfaces.json`）；`agent-fsm` 的 think 組請求、wait 經 [templates/kernel/](templates/kernel/README.md) 的 llm-kernel 寄信與收回信。
 - **[templates/kernel/](templates/kernel/README.md)**：llm-kernel 的啟動與問腦用法、daemon-kernel／procs-kernel 的框架站接法。
-- **10-24 一天的嘗試**（使用者「我隨便說，你隨便做，反正只是嘗試」；代定都可翻案，一覽在 [session log 10-24](../wf/session_logs/2026-10-parts/12-10-24.md#2026-10-24)）：[lib/](lib/README.md)（工具＝函式庫）、給人用的 say／listen（在 [aos-agent](cmd/aos-agent/README.md) 裡）、[aos-mcp](cmd/aos-mcp/README.md)、[aos-grow](cmd/aos-grow/README.md)（函數成長）、[langs/](archive/langs/README.md)（Janet、Lua 寫 aos；11-17 封存）、[aos-sandbox](cmd/aos-sandbox/README.md)（Linux 權限與沙箱）。
+- **10-24 一天的嘗試**（使用者「我隨便說，你隨便做，反正只是嘗試」；代定都可翻案，一覽在 [session log 10-24](../wf/session_logs/2026-10-parts/12-10-24.md#2026-10-24)）：[lib/](py/README.md)（工具＝函式庫）、給人用的 say／listen（在 [aos-agent](cmd/aos-agent/README.md) 裡）、[aos-mcp](cmd/aos-mcp/README.md)、[aos-grow](cmd/aos-grow/README.md)（函數成長）、[langs/](archive/langs/README.md)（Janet、Lua 寫 aos；11-17 封存）、[aos-sandbox](cmd/aos-sandbox/README.md)（Linux 權限與沙箱）。
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
 - **[docs/notes/](docs/notes/README.md)**：AI 寫的參考筆記（不是規範、不算數）：拿外面現成的東西跟 aos 對照，例如 [跟 s6、runit 的對照](docs/notes/s6-runit.md)。
 - 之前乾淨的兩個時刻，要回頭看的：九月初 ideas 13 章（舊入口已封存，看 git 歷史）、十月初 proto7 核心 spec 與 設計原則。

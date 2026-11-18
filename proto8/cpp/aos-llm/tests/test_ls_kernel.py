@@ -75,7 +75,7 @@ class KernelSelection(unittest.TestCase):
         definition.mkdir(parents=True)
         (definition / '_entry').write_text('["aos-loop", "loop.json"]')
         (definition / 'loop.json').write_text(json.dumps({'exec': {'argv': [
-            'aos-exec', {'$env': 'AOS_HOME', '$path': '/lib/aos/kernel_llm'}]}}))
+            'aos-exec', {'$env': 'AOS_HOME', '$path': '/lib/tools/aos/kernel_llm'}]}}))
         self.table({'llm-sol': self.row(exec=os.path.relpath(definition, self.daemon))})
         self.listed()
 

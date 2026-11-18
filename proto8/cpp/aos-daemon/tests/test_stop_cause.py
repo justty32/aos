@@ -11,7 +11,7 @@ import unittest
 from support import ENV, PROTO, Fixture, dc, read, until, write
 
 CAUSE_FILE = 'stop_cause.json'   # 同 aos/loop.hpp 的 StopCauseWindow::default_name（測試另寫一份，不 import C++）
-FIRE = PROTO / 'lib' / 'agent' / 'hook_fire' / '_entry'
+FIRE = PROTO / 'py' / 'tools' / 'agent' / 'hook_fire' / '_entry'
 BODY = '''#!/usr/bin/env python3
 # Test body: write ready, sleep; on SIGTERM wait SLOW seconds before exiting 0 (so the daemon is still "stopping").
 import os, pathlib, signal, sys, time

@@ -13,9 +13,9 @@ import unittest
 
 CELLS = Path(__file__).resolve().parents[2] / "agent-fsm"   # 範本本身
 PROTO = CELLS.parents[1]
-GOAL_TOOL = PROTO / "lib" / "agent" / "goal"
+GOAL_TOOL = PROTO / "py" / "tools" / "agent" / "goal"
 NOTE = "[aos] goal: "
-_spec = importlib.util.spec_from_file_location("goal_state", PROTO / "lib" / "agent" / "goal_state.py")
+_spec = importlib.util.spec_from_file_location("goal_state", PROTO / "py" / "goal_state.py")
 goal_state = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(goal_state)
 
@@ -39,7 +39,7 @@ class Base(unittest.TestCase):
         (self.defn / "hooks.json").write_text('{"hooks": {}}')         # 不要範本的 on_clock 鉤子攪局
         (self.defn / "llm.json").write_text('{"model": "fake"}')
         (self.defn / "tools.json").write_text(json.dumps({"tools": {
-            "peek_now_time": {"path": str(PROTO / "lib/base/peek_now_time")}, "goal": {"path": str(GOAL_TOOL)}}}))
+            "peek_now_time": {"path": str(PROTO / "py/tools/base/peek_now_time")}, "goal": {"path": str(GOAL_TOOL)}}}))
         for x in (self.ws, self.kernel):
             x.mkdir()
         self.stack = self.d / "procs" / "bob"
@@ -49,7 +49,7 @@ class Base(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
         bins = [str(PROTO / "bin")] + [str(p) for p in sorted(PROTO.glob("cmd/*/bin"))]
         self.env = dict(env, PATH=os.pathsep.join(bins + [env["PATH"]]), AOS_HOME=str(PROTO),
-                        PYTHONPATH=os.pathsep.join([str(PROTO / "lib")]), PYTHONDONTWRITEBYTECODE="1",
+                        PYTHONPATH=os.pathsep.join([str(PROTO / "py")]), PYTHONDONTWRITEBYTECODE="1",
                         AOS_STACK=str(self.stack), AOS_CD=str(self.defn), AOS_WS=str(self.ws), AOS_DAEMON=str(self.d),
                         AOS_LLM_KERNEL=str(self.kernel))
         self.hist = self.stack / "history.jsonl"
@@ -401,10 +401,10 @@ class FakeBrainRun(Base):
     """真 aos-fsm 一步一步走四格，腦＝真 llm kernel＋llm_fake 劇本。"""
 
     def kernel_up(self, endpoint):
-        (self.root / "kernel.json").write_text(json.dumps({"exec": str(PROTO / "lib/base/llm_fake"), "endpoint": "fake",
+        (self.root / "kernel.json").write_text(json.dumps({"exec": str(PROTO / "py/tools/base/llm_fake"), "endpoint": "fake",
                                                            "endpoints": {"fake": endpoint}}))
         (self.root / "kernel_daemon.json").write_text(json.dumps({"interval_ms": 10, "exec": {"argv": [
-            str(PROTO / "lib/aos/kernel_llm/_entry"), str(self.root / "kernel.json")]}}))
+            str(PROTO / "py/tools/aos/kernel_llm/_entry"), str(self.root / "kernel.json")]}}))
         log = open(self.root / "kernel.log", "w")
         self.addCleanup(log.close)
         p = subprocess.Popen(["aos-daemon", str(self.root / "kernel_daemon.json")], cwd=self.root,

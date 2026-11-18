@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 PROTO = Path(__file__).resolve().parents[3]
-ENTRY = PROTO / "lib" / "agent" / "brain_notify" / "_entry"
+ENTRY = PROTO / "py" / "tools" / "agent" / "brain_notify" / "_entry"
 FAKE = r'''#!/usr/bin/env python3
 import json, os, sys
 with open(os.environ["FAKE_LOG"], "a") as f:
@@ -272,7 +272,7 @@ class BrainNotify(unittest.TestCase):
         hooks = json.loads((PROTO / "templates" / "agent-fsm" / "hooks.json").read_text())
         self.assertEqual(hooks["hooks"]["brain_notify"],
                          {"event": "brain_failed", "condition": ["BudgetMissing", "BrainFailed"],
-                          "handler": {"$env": "AOS_HOME", "$path": "/lib/agent/brain_notify"},
+                          "handler": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/brain_notify"},
                           "on_error": "continue", "timeout_ms": 10000})
         self.assertIn("AOS_NOTIFY_BOX", hooks["description"])
 
@@ -391,7 +391,7 @@ class BrainNotify(unittest.TestCase):
         hooks = json.loads((PROTO / 'templates' / 'eca-claude' / 'hooks.json').read_text())
         self.assertEqual(hooks['hooks']['brain_notify'],
                          {'event': 'brain_failed', 'condition': ['CliFailed', 'ReplyMissing'],
-                          'handler': {'$env': 'AOS_HOME', '$path': '/lib/agent/brain_notify'},
+                          'handler': {'$env': 'AOS_HOME', '$path': '/lib/tools/agent/brain_notify'},
                           'on_error': 'continue', 'timeout_ms': 10000})
         self.assertIn('AOS_NOTIFY_BOX', hooks['description'])
         self.assertIn('codex events are ignored', hooks['description'])

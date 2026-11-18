@@ -82,7 +82,7 @@ def md_desc(text):
 
 
 def lines(v):
-    """一段文字：字串，或字串陣列（一行一個元素，用換行接起來）；其他形狀或接起來是空的＝""。同 proto8/lib/aos_index.py 的 text()。"""
+    """一段文字：字串，或字串陣列（一行一個元素，用換行接起來）；其他形狀或接起來是空的＝""。同 proto8/py/aos_index.py 的 text()。"""
     if isinstance(v, list) and v and all(isinstance(x, str) for x in v):
         v = "\n".join(v)
     return v if isinstance(v, str) and v.strip() else ""

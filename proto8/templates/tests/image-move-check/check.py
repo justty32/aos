@@ -129,7 +129,7 @@ class Check:
                 "foreman": {"exec": "../foreman", "auto_restart": True}}},
             "foreman": {"interval_ms": 100, "procs": {"_sweeper": SWEEPER}},
             "kernel": {"interval_ms": 100, "procs": {"_sweeper": SWEEPER},
-                       "exec": {"argv": ["../../lib/aos/kernel_llm/_entry", "--enable-counters", "kernel.json"]}},
+                       "exec": {"argv": ["../../lib/tools/aos/kernel_llm/_entry", "--enable-counters", "kernel.json"]}},
         }
         for name, config in configs.items():
             folder = defs / name
@@ -140,8 +140,8 @@ class Check:
         (defs / "root/.env").write_text("AOS_CLOCK=${AOS_STACK}/clock\n")
         (defs / "kernel/kernel.json").write_text(json.dumps({
             "slots": 2, "timeout_ms": 10000, "endpoint": "fake",
-            "exec": "../../lib/base/llm_fake", "endpoints": {
-                "fake": {"exec": "../../lib/base/llm_fake"}}}) + "\n")
+            "exec": "../../lib/tools/base/llm_fake", "endpoints": {
+                "fake": {"exec": "../../lib/tools/base/llm_fake"}}}) + "\n")
         (defs / "agent/tools.json").write_text('{"tools": {}}\n')
         (defs / "agent/llm.json").write_text('{"model": "fake"}\n')
         (defs / "agent/body.json").write_text('["aos-loop", "--enable-counters", "loop.json"]\n')

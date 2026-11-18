@@ -2,7 +2,7 @@
 
 `guard` is a before_tool hook handler (python3, stdlib only). It reads the tool call on stdin (`{"name": ..., "arguments": {...}}`) and exits 0 (allowed) or 10 with `[aos] guard: blocked: ...` on stdout. It checks: file-tool paths (inside `write_roots`, never a `.git` part), shell commands (`shell_deny` regexes, with the relaxed check below), `subagent` ops, `clock_register` boxes, `kernel_gate` ops, `agents_ctl` (ring the bell: stop yourself only). The kernel_gate / agents_ctl branches only matter if hooks.json lists those tools.
 
-A neutral copy with more checks (mail, path rules, one write scope) lives in the repo as `proto8/lib/agent/guard/` (derived from this guard at commit 313ce20ec); read its README for its status before choosing it.
+A neutral copy with more checks (mail, path rules, one write scope) lives in the repo as `proto8/py/tools/agent/guard/` (derived from this guard at commit 313ce20ec); read its README for its status before choosing it.
 
 ## Mount it on a definition
 Put `guard` in `defs/shared/`; in each definition a 4-line wrapper `guard` (aos-exec runs a symlink by its real path, so pass the config explicitly):

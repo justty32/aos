@@ -34,5 +34,6 @@ wf/workflows/dispatch/trial/archive/sandbox/**/.aos/agents/*/say/
 wf/temp/
 # proto8/frontend 的 bin/ 是手寫的啟動檔（11-17 aos-view 改名 aos-frontend、搬到頂層）
 !proto8/frontend/bin/
-# proto8 的安裝產物（install.py 產生，不進版控；proto8/bin/ 已被上面的 bin/ 擋掉）
+# proto8 的安裝產物（install.py 產生，不進版控；proto8/bin/ 已被上面的 bin/ 擋掉；lib/ 是 py/ 的抄本加 C++ 函式庫，11-18 S3 起）
 /proto8/include/
+/proto8/lib/

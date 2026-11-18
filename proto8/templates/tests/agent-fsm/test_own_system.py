@@ -11,7 +11,7 @@ os.environ.setdefault("AOS_HOME", str(Path(__file__).resolve().parents[3]))   # 
 
 CELLS = Path(__file__).resolve().parents[2] / 'agent-fsm'   # 範本本身
 PROTO = CELLS.parents[1]
-TOOL = PROTO / "lib" / "agent" / "self_system" / "_entry"
+TOOL = PROTO / "py" / "tools" / "agent" / "self_system" / "_entry"
 
 
 class OwnSystem(unittest.TestCase):

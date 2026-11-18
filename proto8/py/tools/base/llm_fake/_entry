@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+# llm_fake - 假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4）
+# 介面：stdin {"endpoint": {...}（不看）, "request": {"messages", "tools"?}}；最後一則是 user 而且有 tools＝先叫第一個工具（arguments "{}"）；
+#   否則答一句「FAKE ANSWER to: <最後一則 user>」（最後一則是 tool 就附「（tool said: …）」）。
+#   stdout 一行 {"message", "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}, "model": "fake"}、退 0。
+#   endpoint.script（陣列，劇本）有就照劇本：已在 messages 裡的 assistant 則數 n，這次回 script[n]；一項是 {"content": "..."} 或
+#   {"tool_calls": [{"name": "...", "arguments": {...}}]}（arguments 給物件，這裡轉成 JSON 字串；補 id／type）；n 超過劇本長度＝照上面原本的行為。
+#   一項帶 "when": "字"（11-11 do_task 摺疊：history 被摺短了，assistant 則數會倒退）＝不按順序：最後一則的 content 含那個字就回它（照劇本順序第一個對上的），
+#   比按順序的先看；按順序的 n 只數沒帶 when 的那幾項。when 項的 id 是 call_when_<messages 則數>_<i>。
+#   endpoint.tool（字串，11-05 E 線）＝先叫的那個工具名：request 的 tools 裡有它就叫它、沒有＝照舊叫第一個（範本 11-05 起內建 agents、
+#   self_tools，按名字排在 peek_now_time 前面；demo 的 fake 包寫 "tool": "peek_now_time"）。
+# 錯：stderr 與 stdout 各一行「llm_fake: error: ArgumentsBad 原因」、退 1。
+# 用法：kernel.json 的 endpoints 登記一組 "fake": {"exec": "<到這個資料夾的路徑>"}，信寫 "endpoint": "fake"（或設成預設）。
+# 來源：templates/agent-fsm/brain.py 的 fake()（11-04 晚搬過來；不再用「URL 沒設＝假腦」的暗規則，C-56）。
+import json, os, sys
+HELP = """\
+usage: llm_fake < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Fake brain endpoint function (same stdin/stdout as llm_http, no network): answers
+"FAKE ANSWER to: ..." or calls a tool first (endpoint.tool if offered, else the first one);
+endpoint.script gives scripted replies.
+Prints {"message", "usage", "model"}.
+Result on stdout. On error: one line "llm_fake: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先裡有 tool_io.py 的那層（py/ 或裝好的 lib/），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "llm_fake"
+tool_io.start(NAME, HELP)
+
+
+die = tool_io.die
+
+
+args = tool_io.arguments()
+request = args.get("request")
+if not isinstance(request.get("messages"), list) or not request["messages"]:
+    die("ArgumentsBad", "stdin must be {\"endpoint\": {...}, \"request\": {\"messages\": [at least one]}}")
+messages, tools = request["messages"], request.get("tools") or []
+if not isinstance(tools, list):
+    die("ArgumentsBad", "request.tools must be an array")
+script = args["endpoint"].get("script") if isinstance(args.get("endpoint"), dict) else None
+if script is not None and not isinstance(script, list):
+    die("ArgumentsBad", "endpoint.script must be an array")
+last = messages[-1] if isinstance(messages[-1], dict) else {}
+n = sum(1 for m in messages if isinstance(m, dict) and m.get("role") == "assistant")
+for k, item in enumerate(script or []):
+    if not isinstance(item, dict) or not (isinstance(item.get("tool_calls"), list) or "content" in item) or (
+            "when" in item and not isinstance(item["when"], str)):
+        die("ArgumentsBad", "endpoint.script[%d] must be {\"content\": ...} or {\"tool_calls\": [...]} (with an optional string \"when\")" % k)
+said_text = last.get("content") if isinstance(last.get("content"), str) else ""
+hit = next((it for it in script or [] if "when" in it and it["when"] in said_text), None)
+ordered = [it for it in script or [] if "when" not in it]
+if hit is not None or n < len(ordered):
+    item = hit if hit is not None else ordered[n]
+    tag = "when_%d" % len(messages) if hit is not None else "script_%d" % n
+    said = {"role": "assistant", "content": item.get("content")}
+    if item.get("tool_calls"):
+        said["tool_calls"] = []
+        for i, c in enumerate(item["tool_calls"]):
+            if not isinstance(c, dict) or not isinstance(c.get("name"), str):
+                die("ArgumentsBad", "endpoint.script[%d].tool_calls[%d] needs a string name" % (next(k for k, it in enumerate(script) if it is item), i))
+            a = c.get("arguments", {})
+            said["tool_calls"].append({"id": "call_%s_%d" % (tag, i), "type": "function",
+                                       "function": {"name": c["name"], "arguments": a if isinstance(a, str) else json.dumps(a, ensure_ascii=False)}})
+elif last.get("role") == "user" and tools:
+    names = [(t.get("function") or {}).get("name") if isinstance(t, dict) else None for t in tools]
+    want = args["endpoint"].get("tool") if isinstance(args.get("endpoint"), dict) else None
+    name = want if want is not None and want in names else names[0]
+    said = {"role": "assistant", "content": None,
+            "tool_calls": [{"id": "call_fake_%d" % len(messages), "type": "function",
+                            "function": {"name": name or "unknown", "arguments": "{}"}}]}
+else:
+    question = next((m.get("content") or "" for m in reversed(messages)
+                     if isinstance(m, dict) and m.get("role") == "user"), "")
+    content = "FAKE ANSWER to: " + str(question).rstrip("\n")
+    if last.get("role") == "tool":
+        content += " (tool said: %s)" % str(last.get("content") or "").rstrip("\n")
+    said = {"role": "assistant", "content": content}
+print(json.dumps({"message": said, "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                  "model": "fake"}, ensure_ascii=False))

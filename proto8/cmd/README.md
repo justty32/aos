@@ -1,8 +1,8 @@
 # cmd — 人在終端打的指令（Python）
 
-← [proto8](../README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)｜共用模組：[lib 頂層](../lib/docs/04-共用模組.md)｜C++ 實作：[cpp](../cpp/README.md)
+← [proto8](../README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)｜共用模組：[lib 頂層](../py/docs/04-共用模組.md)｜C++ 實作：[cpp](../cpp/README.md)
 
-一支指令一夾，夾名＝指令名，執行檔在 `<名>/bin/<名>`（跟 cpp 同形；aos-eca 兩支同夾）。命令列共用模組（`aos_flags`、`aos_ws`、`daemon_ctl`）在 `proto8/lib/` 頂層（11-17 前在 `py/`，說明在 [lib/docs/04](../lib/docs/04-共用模組.md)）；CLI 對話與介面宣告的共用模組（`cli_*.py`〔說明在 `cli_session.py`〕、`agent_files`）在 [lib/agent](../lib/docs/03-索引-agent等.md)。指令用 `../../../lib` 找共用模組；家外的程式找 lib 只經 `$AOS_HOME/lib`，沒設 `AOS_HOME` 就報 `HomeMissing`。
+一支指令一夾，夾名＝指令名，執行檔在 `<名>/bin/<名>`（跟 cpp 同形；aos-eca 兩支同夾）。命令列共用模組（`aos_flags`、`aos_ws`、`daemon_ctl`）的原始碼在 `proto8/py/` 頂層，`install.py` 裝到 `proto8/lib/`（說明在 [py/docs/04](../py/docs/04-共用模組.md)）；CLI 對話與介面宣告的共用模組（`cli_*.py`〔說明在 `cli_session.py`〕、`agent_files`）也在 py/ 頂層（[索引](../py/docs/03-索引-agent等.md)；S3 前在 `lib/agent`）。指令用 `../../../lib` 找共用模組（裝好的那份，改了 `py/` 要重跑 `install.py`）；家外的程式找 lib 只經 `$AOS_HOME/lib`，沒設 `AOS_HOME` 就報 `HomeMissing`。
 
 | 指令夾 | 是什麼 |
 |---|---|

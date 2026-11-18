@@ -1,0 +1,177 @@
+{
+ "README.md": {
+  "description": "proto8/py — aos agent 的函式庫的原始碼（腦可以叫的工具，收成一份、被引用）"
+ },
+ "agent_files.py": {
+  "description": "匯出共用的定義檔與 stack 覆蓋檔宣告讀取器。"
+ },
+ "agent_tool.py": {
+  "description": "claude、codex 共用的工具形入口 ask_cli。"
+ },
+ "agents_cmd.py": {
+  "description": "subagent 與 agents_ctl 共用：查鍵、組 aos-agent ctl 各動作的旗標、跑 aos-agent（或旁邊的 self_*）並把下層錯翻成自己的。"
+ },
+ "aos_clock_register.py": {
+  "description": "時鐘檔旁的 <時鐘檔名>_register.json，每格「何時往某個 aos-post 箱子寄一封信」（每 N cycle、某 cycle 一次、牆鐘某時刻一次、cron）；aos-clock 寄、aos-clock-register 改（11-10 晚 clock-letters；11-13 …"
+ },
+ "aos_clock_when.py": {
+  "description": "解析 at（HH:MM、YYYY-MM-DD HH:MM、+N[smhd]）與五欄 cron、算 cron 的下一次（本機時區；11-13 線鐘 wake-timer）。"
+ },
+ "aos_flags.py": {
+  "description": "命令列旗標解析（含各支自定短名）、互動確認、公開狀態窗讀取與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 p…"
+ },
+ "aos_index.py": {
+  "description": "index_view：透過 index（視角）看節點，一行一項「鍵 TAB description」；index 放哪只寫在 spot() 一處。"
+ },
+ "aos_json.py": {
+  "description": "腦用的 json 工具一族共用的程式：簡單組 json_get／ls／search／len／set／add／del、複雜組 jsonx_get／ls／search／set／add／del 的殼都叫這裡的 main(op)（json_multi_get／set、jsonx_multi_get／set…"
+ },
+ "aos_json_multi.py": {
+  "description": "json_multi_get／set、jsonx_multi_get／set：一次多格，逐格照 json_get／json_set（jsonx 那兩支照 jsonx_get／jsonx_set）做、照順序、一格一行「路徑 TAB 結果」，不回滾。"
+ },
+ "aos_refpath.py": {
+  "description": "`$ref` 與 index 共用的「路徑字串 → (檔, 指標)」：`#` 左邊一律檔案系統、右邊一律 json 內部（使用者 11-13 晚定，thinking 2026-11/13/ref-path-rules）。"
+ },
+ "aos_sweep.py": {
+  "description": "一輪（封存、保留期、封存總量、行程）與 purge 的流程、鎖、找列、報告；檔案細節在 aos_sweep_files、行程在 aos_sweep_proc；aos-sweeper 與 aos-daemon-ctl sweep 共用。"
+ },
+ "aos_sweep_files.py": {
+  "description": "stderr 的 copytruncate 封存（gzip）、封存檔名的 UTC 時間戳、保留期刪除、purge、.bad- 計數、放鎖殘骸；aos_sweep 叫它。"
+ },
+ "aos_sweep_proc.py": {
+  "description": "認出這台 daemon 預設小格裡「表上沒有、但還活著、確定是這台生的」子 loop，先寫它的 ctl stop，過寬限還在才 TERM／10 秒後 KILL；真 zombie 只報。"
+ },
+ "aos_ws.py": {
+  "description": "「放一則訊息、等答案、讀 stack」與兩鐘期限的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。"
+ },
+ "cli_a2a.py": {
+  "description": "cli_session 往開著的 claude 畫面投署名訊息（Claude Code 的 cross-session messaging socket）：記 socket、包信封、投遞、等 hook 回執"
+ },
+ "cli_ask.py": {
+  "description": "cli_session 問一輪：畫面開著往 CLI 的收件 socket 投署名訊息（live_a2a）或從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main"
+ },
+ "cli_base.py": {
+  "description": "cli_session 各分檔共用的底：錯誤行與提醒行（PROG／ECHO 決定開頭與要不要也印 stdout）、時間、共用常數、找 lib 的 tool_io"
+ },
+ "cli_cell.py": {
+  "description": "cli_session 的小格：Cell（檔、鎖、畫面 tmux）、畫面 socket 位置、session.txt 與記號檔、認是不是這台的對話、transcripts symlink"
+ },
+ "cli_cfg.py": {
+  "description": "cli_session 的設定：讀與驗工具資料夾的 cli.json、llm.json 疊 model、system 附加旗標、tools／tools_sub 登記檔"
+ },
+ "cli_fault.py": {
+  "description": "claude -p 失敗時從 result 行與 stream 判斷暫時或永久，並計算這輪工具呼叫數。"
+ },
+ "cli_hook.py": {
+  "description": "cli_session 的畫面 hook（CLI 講完一輪時叫）：跟上對話 id、/clear／/compact 時同步 aos 的 history、codex 壓縮跟上"
+ },
+ "cli_linger.py": {
+  "description": "eca 停下時由 tmux 計時延後關畫面，起來撤單，到期核 token、畫面與本機 loop 身分。"
+ },
+ "cli_mcp.py": {
+  "description": "cli_session 接 MCP：aos-mcp 那台的旗標（claude 的 mcp.json／codex 的 -c）、外部 MCP server、tools_sub 子 agent 那台與 guard hook"
+ },
+ "cli_print.py": {
+  "description": "cli_session 的非互動那條路（畫面沒開）：claude -p／codex exec 起 CLI、等回答、記 session"
+ },
+ "cli_screen.py": {
+  "description": "cli_session 開畫面：tmux 裡起互動的 claude／codex（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供"
+ },
+ "cli_session.py": {
+  "description": "把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 aos-agent attach／open 接進或開啟互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字"
+ },
+ "cli_stream.py": {
+  "description": "非互動那條路的「中途收信」版：claude -p --input-format stream-json，stdin 先不關，回答途中把新信一行一行投進去"
+ },
+ "cmd_call.py": {
+  "description": "給腦用的工具叫下層指令的共用版：在工作區跑一支指令、stderr 原樣往上、退出碼不對＝它最後一行錯誤行的代號與原因當自己的錯；被 TERM／Ctrl-C 先收掉正在跑的那一群。"
+ },
+ "context_use.py": {
+  "description": "一隻 agent 現在的 context 用了多少（給 aos 層的「快滿了先收尾再 compact」判斷，py/tools/agent/context_wrap）；各種腦各一個讀法，讀不到＝None。"
+ },
+ "cooldown.py": {
+  "description": "失敗後冷卻的共用讀寫：$AOS_STACK/cooldown.json（不進 git）；aos-eca-turn 與 agent-fsm 的 wait.py 寫、aos-image status 讀。"
+ },
+ "daemon_ctl": {
+  "description": "aos-daemon-ctl 的共用本體（aos-agent 也 import）：找 daemon 與讀狀態表、掛子信、寄信等回信、控制與停 daemon、poke 門鈴、問表檔位址"
+ },
+ "declared_files.py": {
+  "description": "依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。"
+ },
+ "directive_value.py": {
+  "description": "把設定檔裡一格寫成指示詞（$env／$ref，N-45）的值交給 aos-directive 解開、回解完的值；每次用到才解，不寫回任何檔。"
+ },
+ "docs": {
+  "description": "py 的說明文件"
+ },
+ "env_file.py": {
+  "description": "Read the shared dotenv subset without changing the process environment."
+ },
+ "file_summary.py": {
+  "description": "ls、stat、view 共用的檔案摘要小件：資料夾裡有哪些 aos 標記檔、檔案時間寫成 ISO、一個 JSON 值的一句摘要。"
+ },
+ "file_walk.py": {
+  "description": "grep 與 glob 共用的走樹：隱藏名、.gitignore（問 git）、資料夾捷徑不跟進、只把一般檔當檔、掃描預算與計數；另含兩支共用的檔名樣式（* ? [..] **）。"
+ },
+ "goal_state.py": {
+  "description": "agent 的 goal 共用讀寫與判斷：<agent stack>/goal.json；aos-agent goal 寫、agent-fsm idle.py 與 aos-eca-turn 讀寫（丟提醒、記數）。"
+ },
+ "hook_run.py": {
+  "description": "hook 的共用引擎：事件表由呼叫的人給，這裡只管驗格的共通鍵、比 condition、寫 event.json、用 aos-exec 跑 handler、解回話、on_error。"
+ },
+ "hooks.py": {
+  "description": "agent 的 hook 共用模組：讀 hooks 清單（定義那份疊 stack 那份、驗形狀）、on_clock 的檢查、tool_added 的名單；挑出符合事件的 hook、用 aos-exec 跑、解回話交給共用引擎 py/hook_run.py。"
+ },
+ "mailbox_call.py": {
+  "description": "mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。"
+ },
+ "mcp_client.py": {
+  "description": "MCP client 的 stdio／HTTP 傳輸：握手、列工具、呼叫工具與關閉 session。"
+ },
+ "mcp_freeze.py": {
+  "description": "把一支外部 MCP 工具凍結成包檔 mcp_tools 的一格（登記名、$ref 展開、說明前綴與截斷、_metainfo）與兩份 mcp_tools 的差異；純函式（external-mcp 07 步 4）"
+ },
+ "mcp_server_file.py": {
+  "description": "外部 MCP 的 server 檔：讀一份、驗形狀、讀金鑰檔；給 cli_session 翻成 codex 的 -c 與只給 CLI 行程的環境（11-12 external-mcp 02／03 步 1）"
+ },
+ "metainfo.py": {
+  "description": "Read optional definition metadata and evaluate numeric cost declarations safely."
+ },
+ "observed.py": {
+  "description": "Record public stack observations and measured downstream calls."
+ },
+ "observed_children.py": {
+  "description": "Preserve declared child observation trees and hand their location to the caller."
+ },
+ "packs": {
+  "description": "工具分包清單：每包一份 JSON（look、change、delete、shell、json、jsonx、index、gadgets、self、subagent、mailbox…），範本用 $override 疊；要開關一整包時看"
+ },
+ "process_group.py": {
+  "description": "收掉自己起的那一群子行程：先 TERM 整群、等一下、還在就 KILL；外面來的 TERM／Ctrl-C 變成例外，讓呼叫處先收拾再走。"
+ },
+ "quiet.py": {
+  "description": "「很久沒動靜」的共用讀寫：$AOS_STACK/quiet.json（不進 git）；aos-eca-turn（一輪 CLI 在跑）與 agent-fsm 的 wait.py（等腦回信）寫，誰都能讀。"
+ },
+ "requirements-optional.txt": {
+  "description": "選用的 Python 模組清單（現在只有 jsonschema）：install.py 只檢查有沒有、不 pip，沒有也能跑"
+ },
+ "schema": {
+  "description": "機讀的協議定義（JSON Schema）：各協議一夾、一版一夾，例如 comm/1；普通 proc 照它讀寫，工具拿它驗。"
+ },
+ "shell_observed.py": {
+  "description": "Reserve a writable shell ledger before execution and record the completed command."
+ },
+ "tests": {
+  "description": "py 的測試",
+  "index": "tests/_index.json"
+ },
+ "tool_io.py": {
+  "description": "lib 工具共用的開頭：schema 生成旗標位置的 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區與檔案工具的路徑、訊息裡怎麼寫路徑（place、os_reason）、兩鐘期限。"
+ },
+ "tool_spec.py": {
+  "description": "給 AI 寫工具的輔助：在一支 Python 裡宣告說明、參數、特性，就產出 _tooldef／_metainfo（資料夾的兩個檔或 JSON 物件的兩個鍵），執行時照宣告驗參數再叫 run(args)。"
+ },
+ "tools": {
+  "description": "「資料夾＝程式」的工具（S3 起從共用模組分出來）：base 底層原語、aos 動 aos 的、agent 整隻 agent 的；裝到 lib/tools/，定義的指示詞寫 /lib/tools/…"
+ }
+}

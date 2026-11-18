@@ -6,7 +6,7 @@ import getpass
 import os
 
 import aos_ws
-from agent import cli_a2a
+import cli_a2a
 from .common import Fail, bad_args, table, under
 from .system import eca_kind
 

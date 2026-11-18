@@ -4,7 +4,7 @@ import sys
 import unittest
 
 PROTO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../.."))
-sys.path[:0] = [os.path.join(PROTO, "lib"), os.path.join(PROTO, "cmd/aos-eca")]
+sys.path[:0] = [os.path.join(PROTO, "py"), os.path.join(PROTO, "cmd/aos-eca")]
 from aos_eca.slash import slash_of  # noqa: E402
 
 

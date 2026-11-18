@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+# ws_write writes UTF-8 text only to files inside the agent's own workspace.
+import os
+import sys
+import tempfile
+
+HELP = """\
+usage: ws_write < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Write text only inside $AOS_WS: create (default), append, or replace.
+Paths inside $AOS_STACK or $AOS_CD, inside the folder that holds $AOS_STACK (other agents' stacks),
+or inside any .stack folder are refused even when they are inside the workspace.
+Content is limited to 262144 UTF-8 bytes; missing parent folders are created.
+Result on stdout. On error: one line "ws_write: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+try:
+    import tool_io
+except ModuleNotFoundError as error:
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "ws_write"
+tool_io.start(NAME, HELP)
+die = tool_io.die
+args = tool_io.arguments("path")
+mode = args.get("mode", "create")
+if mode not in ("create", "append", "replace"):
+    die("ArgumentsBad", "mode must be create, append, or replace")
+ws = tool_io.workspace()
+try:
+    path = os.path.realpath(os.path.join(ws, args["path"]))
+except (OSError, ValueError) as error:
+    die("PathBad", "%s: %s" % (args["path"], error))
+if path == ws or not path.startswith(ws.rstrip(os.sep) + os.sep):
+    die("PathBad", "%s is outside the workspace" % args["path"])
+for _var in ("AOS_STACK", "AOS_CD"):                # the workspace may contain the agent's own stack or definition: never write there
+    _own = os.environ.get(_var)
+    if _own:
+        _own = os.path.realpath(_own)
+        if path == _own or path.startswith(_own.rstrip(os.sep) + os.sep):
+            die("PathBad", "%s is inside $%s (the agent's own stack or definition)" % (args["path"], _var))
+_stack = os.environ.get("AOS_STACK")               # other agents' stacks: the folder that holds the own stack, and any .stack folder
+if _stack:
+    _procs = os.path.dirname(os.path.realpath(_stack))
+    if path == _procs or path.startswith(_procs.rstrip(os.sep) + os.sep):
+        die("PathBad", "%s is inside the folder of agent stacks (%s)" % (args["path"], os.path.relpath(_procs, ws)))
+if ".stack" in os.path.relpath(path, ws).split(os.sep):
+    die("PathBad", "%s is inside a .stack folder (agent and daemon state)" % args["path"])
+if os.path.isdir(path):
+    die("FileBad", "%s is a directory" % args["path"])
+try:
+    data = args["content"].encode("utf-8")
+except UnicodeError:
+    die("ArgumentsBad", "content must be valid UTF-8 text")
+LIMIT = 262144
+if len(data) > LIMIT:
+    die("TextTooBig", "content is %d bytes; limit is %d bytes" % (len(data), LIMIT))
+if mode == "create" and os.path.lexists(path):
+    die("PathExists", "%s already exists" % args["path"])
+if mode == "replace" and not os.path.exists(path):
+    die("PathMissing", "%s does not exist" % args["path"])
+try:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+except OSError as error:
+    die("MkdirFailed", "%s: %s" % (os.path.dirname(args["path"]) or ".", tool_io.os_reason(error)))
+
+tmp = None
+try:
+    if mode == "append":
+        with open(path, "ab") as stream:
+            stream.write(data)
+    else:
+        with tempfile.NamedTemporaryFile(mode="wb", prefix="." + os.path.basename(path) + ".",
+                                         suffix=".tmp", dir=os.path.dirname(path), delete=False) as stream:
+            tmp = stream.name
+            stream.write(data)
+        if mode == "replace":
+            os.chmod(tmp, os.stat(path).st_mode & 0o7777)
+            os.replace(tmp, path)
+            tmp = None
+        else:
+            # Linking publishes the complete file without overwriting a concurrent creator.
+            os.link(tmp, path)
+except FileExistsError as error:
+    if mode == "create":
+        die("PathExists", "%s already exists" % args["path"])
+    die("WriteFailed", "%s: %s" % (args["path"], tool_io.os_reason(error)))
+except FileNotFoundError as error:
+    if mode == "replace" and not os.path.exists(path):
+        die("PathMissing", "%s does not exist" % args["path"])
+    die("WriteFailed", "%s: %s" % (args["path"], tool_io.os_reason(error)))
+except (OSError, ValueError) as error:
+    die("WriteFailed", "%s: %s" % (args["path"], tool_io.os_reason(error)))
+finally:
+    if tmp is not None:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+print("%s %d bytes to %s" % ("appended" if mode == "append" else "wrote", len(data), os.path.relpath(path, ws)))

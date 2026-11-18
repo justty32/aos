@@ -3,7 +3,7 @@ import json
 import os
 import time
 import aos_ws
-from agent import cooldown
+import cooldown
 from ..common import bad_args, Agent, parse, table
 from ..hints import label, queued
 from .shared import query_opt
@@ -46,7 +46,7 @@ def new_count(a):
 
 
 def cooling(a):
-    """cooldown.json → None 或 {failures, until, code, reason, dropped, state}；讀寫格式只經 lib/agent/cooldown。"""
+    """cooldown.json → None 或 {failures, until, code, reason, dropped, state}；讀寫格式只經 py/cooldown。"""
     st, rec = cooldown.state(a.stack)
     if rec is None:
         return None

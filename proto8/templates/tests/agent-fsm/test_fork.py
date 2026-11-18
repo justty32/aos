@@ -48,7 +48,7 @@ class Fork(unittest.TestCase):
             env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
             bins = [str(PROTO / 'bin')] + [str(p) for p in (PROTO / 'cmd').glob('*/bin')]
             env['PATH'] = os.pathsep.join(bins + [env['PATH']])
-            env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'lib')])
+            env['PYTHONPATH'] = os.pathsep.join([str(PROTO / 'py')])
             env.update(AOS_STACK=str(daemon_stack), AOS_CD=str(root), AOS_WS=str(root), AOS_HOME=str(PROTO),
                        AOS_DAEMON=str(daemon_stack), AOS_LLM_KERNEL=str(kernel_stack))
             defs = {}
@@ -56,16 +56,16 @@ class Fork(unittest.TestCase):
                 own = root / ('def_' + model)
                 shutil.copytree(CELLS, own, ignore=shutil.ignore_patterns('tests', '__pycache__'))
                 write(own / 'llm.json', {'model': model})
-                write(own / 'tools.json', {'tools': {'fork': {'path': str(PROTO / 'lib/agent/fork')}}})
+                write(own / 'tools.json', {'tools': {'fork': {'path': str(PROTO / 'py/tools/agent/fork')}}})
                 write(own / 'loop.json', {'exec': 'fsm.json', 'interval_ms': 10, 'ctl': 'ctl.json', 'state': 'state.json',
                                           'state_flux': 'state_flux.json'})
                 defs[model] = own
             kernel_config = root / 'kernel.json'
-            write(kernel_config, {'exec': str(PROTO / 'lib/base/llm_fake'), 'endpoint': 'plain', 'endpoints': {
+            write(kernel_config, {'exec': str(PROTO / 'py/tools/base/llm_fake'), 'endpoint': 'plain', 'endpoints': {
                 'plain': {'script': script(False)}, 'kept': {'script': script(True)}}})
             write(root / 'daemon.json', {'interval_ms': 10, 'procs': {}})
             write(root / 'kernel_daemon.json', {'interval_ms': 10, 'exec': {'argv': [
-                str(PROTO / 'lib/aos/kernel_llm/_entry'), str(kernel_config)]}})
+                str(PROTO / 'py/tools/aos/kernel_llm/_entry'), str(kernel_config)]}})
 
             def logs():                                 # 失敗時附上各隻的 stderr.txt（daemon 寫在 proc 的 stack）
                 return ''.join('\n== %s\n%s' % (p, p.read_text()[-3000:])

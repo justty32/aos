@@ -4,7 +4,7 @@
 
 **一句話**：在 agent 身上掛「某件事發生時跑這支」——信要進對話、工具要跑／跑完、腦叫失敗、多了工具、起來／停下、時鐘走到了；被跑的那支從 stdin 收到一份事件 JSON，想的話還能改掉或攔下那件事。
 
-使用者 11-10 晚：「還有self_hook，用於在有東西進到queue，或是一些事件發生，比如呼叫了某特定工具，比如brain呼叫失敗，或是新增了某些特定工具之類時，執行指定aos函數。」設計在 [圖紙](../../../thinking/2026-11/10/self-family/hook/01-圖紙.md)；讀清單、挑、跑、解回話全從 [lib/agent/hooks.py](../../../lib/agent/hooks.py) 進去，四個格、aos-eca-turn、aos-mcp、`aos-agent hook` 共用它；挑、跑、解回話那段是共用引擎 [lib/hook_run.py](../../../lib/hook_run.py)（框架站的 hook 也用同一份），`hooks.py` 自己管清單怎麼讀怎麼疊、`on_clock`、`tool_added`。
+使用者 11-10 晚：「還有self_hook，用於在有東西進到queue，或是一些事件發生，比如呼叫了某特定工具，比如brain呼叫失敗，或是新增了某些特定工具之類時，執行指定aos函數。」設計在 [圖紙](../../../thinking/2026-11/10/self-family/hook/01-圖紙.md)；讀清單、挑、跑、解回話全從 [py/hooks.py](../../../py/hooks.py) 進去，四個格、aos-eca-turn、aos-mcp、`aos-agent hook` 共用它；挑、跑、解回話那段是共用引擎 [py/hook_run.py](../../../py/hook_run.py)（框架站的 hook 也用同一份），`hooks.py` 自己管清單怎麼讀怎麼疊、`on_clock`、`tool_added`。
 
 ## 事件
 
@@ -16,7 +16,7 @@
 | `after_tool` | act：工具跑完、結果進 history 之前（被攔下的不觸發） | 上面三個＋`content`、`code`（逾時＝null）、`timed_out` | 工具名 | 改 `content` |
 | `brain_failed` | wait：`BrainFailed`／`SendFailed`／`ReplyBad`／`BudgetMissing`（額度拒絕，11-14 AK17）那一刻 | `name`（代號）、`reason` | 代號 | 不能 |
 | `tool_added` | think：工具清單多了名字（一個名字一次；第一次只記不觸發） | `name`、`path` | 工具名 | 不能 |
-| `after_start` | loop 起來、第一次之前（loop.json 的 `on_start` → `lib/agent/hook_fire`） | — | 不收 condition | 不能 |
+| `after_start` | loop 起來、第一次之前（loop.json 的 `on_start` → `py/tools/agent/hook_fire`） | — | 不收 condition | 不能 |
 | `after_stop` | loop 要退時（`on_stop`：stop、sleep、rm、daemon 收工、出錯停；kill -9 不跑） | `code`（要退的碼）、`signal`（收到的訊號，沒有＝null） | 不收 condition | 不能 |
 | `on_clock` | 每格開頭（idle、think、wait、act）看一次時鐘，條件到了才跑（見下面「時鐘」） | `clock`、`cycle`、`interval_ms`、`first`、`last_cycle`、`missed` | 不收 condition（條件寫 `every_cycles`／`every_ms`） | 不能 |
 
@@ -24,7 +24,7 @@
 
 ## 起來與停下
 
-使用者 11-11 選「起來與停下」、掛哪層選「aos-loop 自己加」、sleep 算停下（「算。然後hook這邊可以細分出更多細類。目前就先這樣就好。」；[thinking clock-hook](../../../thinking/2026-11/11/clock-hook/README.md)）。aos-loop 只認通用的 `on_start`／`on_stop` 鍵（[aos-loop 01](../../../cpp/aos-loop/docs/01-用法.md)），範本的 loop.json 把它們指到 [`lib/agent/hook_fire`](../../../lib/agent/hook_fire/_entry)（`hook_fire after_start|after_stop 定義資料夾`），由它照 hooks.json 發事件。
+使用者 11-11 選「起來與停下」、掛哪層選「aos-loop 自己加」、sleep 算停下（「算。然後hook這邊可以細分出更多細類。目前就先這樣就好。」；[thinking clock-hook](../../../thinking/2026-11/11/clock-hook/README.md)）。aos-loop 只認通用的 `on_start`／`on_stop` 鍵（[aos-loop 01](../../../cpp/aos-loop/docs/01-用法.md)），範本的 loop.json 把它們指到 [`py/tools/agent/hook_fire`](../../../py/tools/agent/hook_fire/_entry)（`hook_fire after_start|after_stop 定義資料夾`），由它照 hooks.json 發事件。
 
 - 跑得到：起來（`ctl add`／`start`、開門 wake、auto_restart 重起都是新起一支）；停下（`ctl stop`＝`code` 0、`sleep`／`rm`／daemon 收工＝SIGTERM `code` 143 `signal` 15、身體失敗＝那個碼）。
 - 跑不到：kill -9（之後 auto_restart 重起會有一次 `after_start`、中間沒有 `after_stop`）；daemon 被 kill -9 後 adopt 接回的 loop 沒重起，不會再跑 `after_start`。pause 不算停下（loop 還活著）。
@@ -35,7 +35,7 @@
 使用者 11-11：「就是說，因為現在hook本來就綁在loop上，所以hook就可以添加一個類型，就是loop每次exec前和exec後。然後這個exec前觸發的，就可以添加一個aos函數，使其去看指定的clock proc……每隔十個cycle就幹嘛，或是透過cycle換算，若超過十秒就幹嘛」；「時間到了沒」選「hook 格裡寫條件」。
 
 ```json
-{"event": "on_clock", "every_ms": 300000, "handler": {"$env": "AOS_HOME", "$path": "/lib/agent/hook_noop"}, "on_error": "continue", "timeout_ms": 5000}
+{"event": "on_clock", "every_ms": 300000, "handler": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/hook_noop"}, "on_error": "continue", "timeout_ms": 5000}
 ```
 
 - **條件**二擇一：`every_cycles`（正整數）＝時鐘從上次跑到現在走了 N 格；`every_ms`＝同上，毫秒換成格數 `ceil(every_ms ÷ AOS_CLOCK_INTERVAL)`（沒設＝1000 ms 一格；看時鐘的格數、不看牆鐘）。只有 `on_clock` 收這三個鍵（別的事件寫了＝`HooksBad`）。
@@ -45,7 +45,7 @@
 - **第一次立刻跑**（使用者 11-11 選「起來就先觸發一次」：「一起來立刻跑一次，之後照間隔。每次睡醒、重起也都會先跑一次。」）：沒有狀態檔、時鐘換了、cycle 倒退（根重起、換台）＝馬上跑一次並記基準，事件 `first: true`、`last_cycle: null`、`missed: 0`。loop 每次起來（`hook_fire after_start`：ctl add／start、開門 wake、auto_restart，含 kill -9 之後的重起）先把各 hook 的狀態檔清掉，所以起來後第一次看時鐘一定跑一次；loop.json 沒有 `on_start` 的定義只有第一次與倒退會。範本的 `timer` 因此每次起來都跑一次 hook_noop（什麼都不做，無害）。
 - **時鐘不在**（`AOS_CLOCK` 沒設、檔不在、內容壞、proc 不在表上）＝不跑、不讓 agent 停；warning 只在原因變了時印一次（記在狀態檔）。
 - handler 不讓腦看到任何東西（history 不多一則）；要叫腦就自己往事件 `stack` 的 `queue` 寄信（`aos-post send STACK/queue`，body `{"role": "user", "content": "…"}`）。沒有回話可看（`intercept` 不讀）；`async`、`on_error`、`timeout_ms` 照通用語意。先記再跑：handler 失敗也不會每拍重跑。
-- 兩個 hook 看同一個時鐘＝各記各的狀態檔。範本 agent-fsm、eca-claude 預設帶一格 `timer`（每 300000 ms、[hook_noop](../../../lib/agent/hook_noop/_entry) 什麼都不做）當掛點，用同名蓋過去就換成自己的；另帶一格 `mail_notify`（每 60000 ms＝每 1 分鐘、[mail_notify](../../../lib/agent/mail_notify/_entry)：有還沒通知過的新信才往 queue 寄一則 `[aos] new_mail: …`；`first`（起來、睡醒、重起那次）照 `notified.json` 比：睡前提醒過的不再提、睡著時新到的提醒一次，全新起來（沒有 `notified.json`，且 agent stack 的 `history.jsonl` 不在或是空的）＝只把信箱裡已經在等的記成已知；跑過的 stack（有非空 history）當睡醒，在等的提醒一次；[mail-notify](../../../thinking/2026-11/11/mail-notify.md)，間隔與 `first` 照使用者 11-11「每 1 分鐘」「只提醒新到的」「睡著時新到的要提」，[backlog-rulings](../../../thinking/2026-11/11/backlog-rulings.md)）。同一隻掛幾個 on_clock 都行，各自的間隔、各自的狀態檔（daemon 的時鐘是基礎間隔，每個 hook 各自除頻）；`hook rm mail_notify`＝免打擾、`hook add --replace -n mail_notify --event on_clock --every-ms N …`＝改間隔。
+- 兩個 hook 看同一個時鐘＝各記各的狀態檔。範本 agent-fsm、eca-claude 預設帶一格 `timer`（每 300000 ms、[hook_noop](../../../py/tools/agent/hook_noop/_entry) 什麼都不做）當掛點，用同名蓋過去就換成自己的；另帶一格 `mail_notify`（每 60000 ms＝每 1 分鐘、[mail_notify](../../../py/tools/agent/mail_notify/_entry)：有還沒通知過的新信才往 queue 寄一則 `[aos] new_mail: …`；`first`（起來、睡醒、重起那次）照 `notified.json` 比：睡前提醒過的不再提、睡著時新到的提醒一次，全新起來（沒有 `notified.json`，且 agent stack 的 `history.jsonl` 不在或是空的）＝只把信箱裡已經在等的記成已知；跑過的 stack（有非空 history）當睡醒，在等的提醒一次；[mail-notify](../../../thinking/2026-11/11/mail-notify.md)，間隔與 `first` 照使用者 11-11「每 1 分鐘」「只提醒新到的」「睡著時新到的要提」，[backlog-rulings](../../../thinking/2026-11/11/backlog-rulings.md)）。同一隻掛幾個 on_clock 都行，各自的間隔、各自的狀態檔（daemon 的時鐘是基礎間隔，每個 hook 各自除頻）；`hook rm mail_notify`＝免打擾、`hook add --replace -n mail_notify --event on_clock --every-ms N …`＝改間隔。
 
 ## 回話協定
 
@@ -99,7 +99,7 @@ aos-agent hook -t bob reset -y              # 刪自己那份，回到定義的
 - 名字預設＝XXX 的檔名／夾名；`--path-json` 時一定要 `--name`。名字不能空、不能有 `/`、不能 `.` 開頭（`NameBad`）。
 - XXX 相對目前資料夾、不存在＝`PathMissing`；存法：絕對存絕對、相對存成「相對 stack 那份檔的資料夾」。
 - 同名已在生效清單裡＝`HookExists`（加 `--replace`）；`rm`／`get` 沒這個名字＝`HookMissing`；清單壞＝`HooksBad`。
-- agent 自己改用工具 [self_hook](../../../lib/agent/self_hook/_entry)（`aos-agent hook --target 自己` 的純包裝）。
+- agent 自己改用工具 [self_hook](../../../py/tools/agent/self_hook/_entry)（`aos-agent hook --target 自己` 的純包裝）。
 
 ## 最小 hook 範例
 

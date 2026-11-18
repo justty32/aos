@@ -2,6 +2,6 @@
 
 ← [wf/advices](../README.md)
 
-人用的入口是 [aos-feedback](../../../proto8/cmd/aos-feedback/README.md)，agent 可用 [feedback 工具](../../../proto8/lib/aos/feedback/README.md)。每個指令 key 一份只追加的 `<key>.jsonl`，意見檔進 git。沒設 `AOS_FEEDBACK` 時 aos-feedback 就寫這裡（11-17 從 `proto8/feedback/` 搬來）。
+人用的入口是 [aos-feedback](../../../proto8/cmd/aos-feedback/README.md)，agent 可用 [feedback 工具](../../../proto8/py/tools/aos/feedback/README.md)。每個指令 key 一份只追加的 `<key>.jsonl`，意見檔進 git。沒設 `AOS_FEEDBACK` 時 aos-feedback 就寫這裡（11-17 從 `proto8/feedback/` 搬來）。
 
 `raters.json` 的 `rules` 依順序比對模型名子字串，第一條命中即採用；家族與階位可自由增列。測試一律設 `AOS_FEEDBACK` 指向暫存夾，不在這裡留下測試意見。

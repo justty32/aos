@@ -77,7 +77,7 @@ class FeedbackBoundaries(FeedbackFixture):
         env.pop('AOS_FEEDBACK')
         env['PYTHONDONTWRITEBYTECODE'] = '1'
         script = ('import sys; sys.path[:0] = ' + repr([
-            str(ROOT / 'cmd/aos-feedback'), str(ROOT / 'lib')]) +
+            str(ROOT / 'cmd/aos-feedback'), str(ROOT / 'py')]) +
             '; from aos_feedback.storage import directory; print(directory())')
         result = subprocess.run([sys.executable, '-B', '-c', script], env=env,
                                 text=True, capture_output=True, cwd=self.work, timeout=15)
@@ -87,14 +87,14 @@ class FeedbackBoundaries(FeedbackFixture):
 
     def test_thin_tool_explicit_by_and_downstream_failure(self):
         payload = dict(command='explicit', pain='pain', by='named-reviewer')
-        result = subprocess.run([str(EXEC), str(ROOT / 'lib/aos/feedback')],
+        result = subprocess.run([str(EXEC), str(ROOT / 'py/tools/aos/feedback')],
                                 input=json.dumps(payload), text=True, capture_output=True,
                                 cwd=self.work, env=self.env, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(self.run_cli('show', 'explicit', '--json').stdout)[0]['by'],
                          'named-reviewer')
         payload['score'] = 2
-        result = subprocess.run([str(EXEC), str(ROOT / 'lib/aos/feedback')],
+        result = subprocess.run([str(EXEC), str(ROOT / 'py/tools/aos/feedback')],
                                 input=json.dumps(payload), text=True, capture_output=True,
                                 cwd=self.work, env=self.env, timeout=15)
         self.assertNotEqual(result.returncode, 0)
@@ -107,7 +107,7 @@ class FeedbackBoundaries(FeedbackFixture):
         payload = dict(command='nullable', pain='pain', by=None, suggest=None,
                        kind=None, score=None)
         def run(value):
-            return subprocess.run([str(EXEC), str(ROOT / 'lib/aos/feedback')],
+            return subprocess.run([str(EXEC), str(ROOT / 'py/tools/aos/feedback')],
                                   input=json.dumps(value), text=True, capture_output=True,
                                   cwd=self.work, env=self.env, timeout=15)
         result = run(payload)

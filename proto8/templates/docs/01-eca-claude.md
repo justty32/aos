@@ -2,7 +2,7 @@
 
 ## 外部 coding agent 範本（eca-claude）
 
-claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../../cmd/README.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。CLI 對話共用 [lib/agent/cli_session.py](../../lib/agent/cli_session.py)，介面宣告共用 [lib/agent/agent_files.py](../../lib/agent/agent_files.py)（K-5）；兩者都在 `lib/agent/`，不 import lib 頂層的 `aos_flags` 系列。設計：[thinking 2026-10-30 eca](../../thinking/2026-10/30/eca/README.md)；條文草稿 P-43。（沒有 codex 版範本，只差 `cli.json`：要就複製一份、`cli.json` 換成下面這份；**沙盒是 `workspace-write`**，codex 用自己的指令在工作區讀寫（11-12 使用者「codex拿掉唯讀沙盒」；不是 `danger-full-access`，隊長代定、使用者「可以先定這樣」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）。不要照抄 lib/agent/codex 那支工具的 `cli.json`：那是給腦叫的 codex 工具，沙盒唯讀。）
+claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../../cmd/README.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。CLI 對話共用 [py/cli_session.py](../../py/cli_session.py)，介面宣告共用 [py/agent_files.py](../../py/agent_files.py)（K-5）；兩者都在 `lib/agent/`，不 import lib 頂層的 `aos_flags` 系列。設計：[thinking 2026-10-30 eca](../../thinking/2026-10/30/eca/README.md)；條文草稿 P-43。（沒有 codex 版範本，只差 `cli.json`：要就複製一份、`cli.json` 換成下面這份；**沙盒是 `workspace-write`**，codex 用自己的指令在工作區讀寫（11-12 使用者「codex拿掉唯讀沙盒」；不是 `danger-full-access`，隊長代定、使用者「可以先定這樣」，[thinking 11-12 eca-file-tools](../../thinking/2026-11/12/eca-file-tools.md)）。不要照抄 py/tools/agent/codex 那支工具的 `cli.json`：那是給腦叫的 codex 工具，沙盒唯讀。）
 
 ```json
 {"kind": "codex",
@@ -33,11 +33,11 @@ eca-claude/
   llm.json    腦設定：{"model": "sonnet"}（cli_session 每題依 interfaces.json 的 llm 宣告讀定義並疊 stack 下同一相對路徑的覆蓋層，補成 --model）；只認 model（claude CLI 沒有 temperature 等取樣旗標，與快取無關的調整鍵這邊沒有對應）
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
-  tools.json  aos-tools 的登記檔：`"$override"` 一串 [lib/packs](../../lib/packs/README.md) 八包（gadgets、events、self、def、mailbox、json〔json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set〕、jsonx〔jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del、jsonx_multi_get、jsonx_multi_set〕、index〔index_view〕），共 34 支；不掛通用四包 look、change、delete（含 trash）、shell（11-11 晚使用者「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「可以先定這樣，然後trash也拿掉。」）與 subagent、goal、todo（原話與代定見範本 README）；do_task 只給 agent-fsm，寫 `"do_task": null`；
+  tools.json  aos-tools 的登記檔：`"$override"` 一串 [py/packs](../../py/packs/README.md) 八包（gadgets、events、self、def、mailbox、json〔json_get、json_ls、json_search、json_len、json_set、json_add、json_del、json_multi_get、json_multi_set〕、jsonx〔jsonx_get、jsonx_ls、jsonx_search、jsonx_set、jsonx_add、jsonx_del、jsonx_multi_get、jsonx_multi_set〕、index〔index_view〕），共 34 支；不掛通用四包 look、change、delete（含 trash）、shell（11-11 晚使用者「然後eca通常都有自己的基礎工具如read/write/ls，那對它們更順手，也不用給」、11-12「可以先定這樣，然後trash也拿掉。」）與 subagent、goal、todo（原話與代定見範本 README）；do_task 只給 agent-fsm，寫 `"do_task": null`；
               cli.json 沒寫 tools＝照 interfaces.json 的 tools 宣告用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__peek_now_time…；帶 `--own <stack>/tools.json`，self_tools 加減工具後 aos-mcp 送 list_changed，同一輪就叫得到，使用者「3.同一輪就生效」）；不要工具就刪掉它
   tools_sub.json  子 agent 那台的登記檔：gadgets、json、index 三包裡不改東西的九支（peek_clock、peek_now_time、math、json_get、json_ls、json_search、json_len、json_multi_get、index_view）
   interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model"], "history": "history.jsonl", "hooks": "hooks.json", "system": "system.txt"}}（history 鍵給 aos-agent history 找檔；llm_keys：aos-agent llm set 不在上面的鍵照存＋warning；aos-agent ctl add 只看這個宣告）
-  hooks.json  hook 清單（預設一格 timer：on_clock 每 300000 ms、handler lib/agent/hook_noop 什麼都不做；另一格 mail_notify：on_clock 每 60000 ms（使用者「每 1 分鐘」）、handler lib/agent/mail_notify，有新信才往 queue 寄一則 `[aos] new_mail: …`；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
+  hooks.json  hook 清單（預設一格 timer：on_clock 每 300000 ms、handler py/tools/agent/hook_noop 什麼都不做；另一格 mail_notify：on_clock 每 60000 ms（使用者「每 1 分鐘」）、handler py/tools/agent/mail_notify，有新信才往 queue 寄一則 `[aos] new_mail: …`；stack 那份同名蓋過、null 關掉；`aos-agent hook` 管，見下「eca 的 hook」）
   screen/     子介面：_entry＝["aos-eca-screen", "--eca", ".."]（aos-agent open／close／watch 叫它；動作接在最後）
   README.md、_metainfo.json  首行一句話與 summary 一致；估時 cost.time_ms 60000、resource ["llm"]，沒有頂層 timeout_ms（讓 agent_def check 過）
 ```
@@ -73,13 +73,13 @@ aos-agent ctl rm myproj              # 拔掉、stack 留著（加 --purge 才�
 | `before_tool`（可改 arguments、可攔）／`after_tool`（可改結果） | 只有經 aos-mcp 叫的 aos 工具 | aos-mcp 的 tools/call（cli_session 起它時帶 `--hooks <定義>`） |
 | `brain_failed` | 有（`name`＝`CliFailed`／`ReplyMissing`，交出去之後才算） | aos-eca-turn |
 | `tool_added` | 有（看這隻生效的 aos 登記檔，交出去之前比一次） | aos-eca-turn |
-| `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop` → `lib/agent/hook_fire` |
+| `after_start`／`after_stop` | 有 | loop.json 的 `on_start`／`on_stop` → `py/tools/agent/hook_fire` |
 | `on_clock`（[clock-hook](../../thinking/2026-11/11/clock-hook/README.md)） | 有（每輪最開頭判，冷卻中、退讓的那輪也判；到了才起 handler） | aos-eca-turn |
 | CLI 自帶工具（Read、Bash…）、人在畫面上自己打的話 | 沒有 | 沒經過 aos |
 
 hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停的，信留在 `queue/cur/`、history 不動，修好照問；aos-mcp 裡停的＝那次工具呼叫回錯（isError）給 CLI，不整支死。
 
-**長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 與 `loop.json.exec.timeout_ms` 範本都是 0＝不限時（11-15 起；以前 600000／900000。使用者 11-15：「AI一輪跑個二三十分鐘都很正常，eca也是可能長時間不回應，逾時這東西應該要默認爲0，也就是不限時間，除非是一些有特殊需求的。」；cli.json 沒寫 `timeout_ms` 也是不限時）。要上限才寫正整數毫秒：`cli.json` 那層限制 CLI 呼叫，`loop.json` 那層限制整次 aos-eca-turn，兩層都寫時外層要比內層長，讓它有時間收尾。不限時的時候一輪很久沒動靜（`live.jsonl`、`turns.jsonl`、`busy.txt`、對話 transcript 都沒在變）滿 10 分鐘就在 stack 寫 `quiet.json`（lib/agent/quiet.py；只標記、不殺不丟信），一有動靜或這輪結束就收掉。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
+**長跑怎麼調**：`cli.json` 的 `print_flags` 預設 `--max-budget-usd 0.5`，是每次非互動 CLI 呼叫的美元上限；任務常因額度不足停下時再提高，想限制單次成本就降低。`cli.json.timeout_ms` 與 `loop.json.exec.timeout_ms` 範本都是 0＝不限時（11-15 起；以前 600000／900000。使用者 11-15：「AI一輪跑個二三十分鐘都很正常，eca也是可能長時間不回應，逾時這東西應該要默認爲0，也就是不限時間，除非是一些有特殊需求的。」；cli.json 沒寫 `timeout_ms` 也是不限時）。要上限才寫正整數毫秒：`cli.json` 那層限制 CLI 呼叫，`loop.json` 那層限制整次 aos-eca-turn，兩層都寫時外層要比內層長，讓它有時間收尾。不限時的時候一輪很久沒動靜（`live.jsonl`、`turns.jsonl`、`busy.txt`、對話 transcript 都沒在變）滿 10 分鐘就在 stack 寫 `quiet.json`（py/quiet.py；只標記、不殺不丟信），一有動靜或這輪結束就收掉。`loop.json.interval_ms` 預設 300，是每輪結束後等多久再看 queue；調大可減少空轉、但收信會較慢，調小則較快回應，不會增加同時跑的輪數。
 
 ## 子 agent 與 skill（11-12 晚 eca-task-subagent）
 
@@ -100,7 +100,7 @@ hook 停下＝`aos-eca-turn: error: HookFailed …` 退 1：交出去之前停�
 
 兩條路：**CLI 自己接**（本節前半）與**經 aos**（本節最後一段，凍結成一包 aos 工具）。一台選一條。
 
-定義資料夾放一份 **server 檔**（一台一份，例 `mcp/teamsite.json`），`cli.json` 加 `"mcp_servers": ["mcp/teamsite.json"]`（相對從 `cli.json` 的資料夾算，也可寫指示詞；可列好幾份）。claude、codex 兩身都吃；CLI 自己連、自己列工具（不凍結說明），列了的那台整台免核准，`only`／`except` 挑工具。某一份壞了＝`cli_session: warning: external MCP server … skipped: …`，其他照接；stdio 的每次起 CLI 前還會先看指令找不找得到、能不能執行，不行＝同一種 warning（`… skipped: CommandMissing its command is not found or cannot be run: …`）跳過那台。claude 非互動那條若 CLI 開場回報某台沒連上，stderr 多一行 `warning: external MCP server X was not connected when claude started (status failed)`（回合照走；codex 沒有這種回報，起來之後才壞的看不到）。設計：[external-mcp 02](../../thinking/2026-11/12/external-mcp/02-設計.md)；程式：`lib/mcp_server_file.py`、`cmd/aos-mcp-launch`。
+定義資料夾放一份 **server 檔**（一台一份，例 `mcp/teamsite.json`），`cli.json` 加 `"mcp_servers": ["mcp/teamsite.json"]`（相對從 `cli.json` 的資料夾算，也可寫指示詞；可列好幾份）。claude、codex 兩身都吃；CLI 自己連、自己列工具（不凍結說明），列了的那台整台免核准，`only`／`except` 挑工具。某一份壞了＝`cli_session: warning: external MCP server … skipped: …`，其他照接；stdio 的每次起 CLI 前還會先看指令找不找得到、能不能執行，不行＝同一種 warning（`… skipped: CommandMissing its command is not found or cannot be run: …`）跳過那台。claude 非互動那條若 CLI 開場回報某台沒連上，stderr 多一行 `warning: external MCP server X was not connected when claude started (status failed)`（回合照走；codex 沒有這種回報，起來之後才壞的看不到）。設計：[external-mcp 02](../../thinking/2026-11/12/external-mcp/02-設計.md)；程式：`py/mcp_server_file.py`、`cmd/aos-mcp-launch`。
 
 **http（Bearer＋自簽 CA）**：
 

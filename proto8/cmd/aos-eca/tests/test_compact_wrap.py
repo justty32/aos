@@ -10,7 +10,7 @@ import unittest
 from test_switch import Base
 
 PROTO = Path(__file__).resolve().parents[3]
-HANDLER = PROTO / "lib" / "agent" / "context_wrap"
+HANDLER = PROTO / "py" / "tools" / "agent" / "context_wrap"
 WRAP = "[aos] context_wrap:"
 
 

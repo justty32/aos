@@ -13,7 +13,7 @@ import unittest
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
 BIN = PROTO / "cmd" / "aos-agent" / "bin" / "aos-agent"
-sys.path[:0] = [str(PROTO / "lib")]
+sys.path[:0] = [str(PROTO / "py")]
 # an add that carries envs also gets both registered names, empty when there is no value (ok-devt-1114 05 修訂 1)
 REGISTERED = {"AOS_PARENT_STACK": "", "AOS_NOTIFY_BOX": ""}
 import daemon_ctl as dc

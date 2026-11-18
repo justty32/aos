@@ -26,7 +26,7 @@ aos-agent ctl state --target fsm1         # tools   overlay: 1 added, 0 removed 
 kill $K $D                                # 收工（daemon 把它掛的收掉）
 ```
 
-劇本三步：叫 `self_tools {"op": "add", "name": "math", "path": "<repo>/proto8/lib/base/math"}`（工具裡 `aos-agent ctl who` 查 daemon 表認出「我是 fsm1」，再 `aos-agent tools --target fsm1 add`）→ 下一格 brain 重讀就看到 math、叫 `math {"expr": "17*23"}` 得 `391` → 答一句。history 裡看得到兩則 tool 結果（`added math (…) to your tools; available from your next turn`、`391`）。定義資料夾沒動；`aos-agent tools --target fsm1 reset` 一刀回定義。
+劇本三步：叫 `self_tools {"op": "add", "name": "math", "path": "<repo>/proto8/py/tools/base/math"}`（工具裡 `aos-agent ctl who` 查 daemon 表認出「我是 fsm1」，再 `aos-agent tools --target fsm1 add`）→ 下一格 brain 重讀就看到 math、叫 `math {"expr": "17*23"}` 得 `391` → 答一句。history 裡看得到兩則 tool 結果（`added math (…) to your tools; available from your next turn`、`391`）。定義資料夾沒動；`aos-agent tools --target fsm1 reset` 一刀回定義。
 
 ### 件 2、3：能力包與排程（包的 `slots` 補位、`speed` 先後）
 
@@ -129,4 +129,4 @@ kill $K
 
 ### 真腦（使用者試）
 
-把件 1、件 4 的 `llm set model=…` 換成真腦就是同一件事、腦自己決定怎麼叫工具：`stupid-fast`（LM Studio 開在 `localhost:1234`、載 `qwen3-1.7b`）或 `smart-high`（LiteLLM `localhost:4000` 的 claude haiku，整輪遠低於 0.5 美金；model 真名以 `curl localhost:4000/v1/models` 為準，對不上改 kernel.json）。真腦不保證照劇本走：工具描述在 `lib/agent/self_tools`、`lib/agent/subagent`、`lib/agent/agent_def` 的 `_tooldef.json`。
+把件 1、件 4 的 `llm set model=…` 換成真腦就是同一件事、腦自己決定怎麼叫工具：`stupid-fast`（LM Studio 開在 `localhost:1234`、載 `qwen3-1.7b`）或 `smart-high`（LiteLLM `localhost:4000` 的 claude haiku，整輪遠低於 0.5 美金；model 真名以 `curl localhost:4000/v1/models` 為準，對不上改 kernel.json）。真腦不保證照劇本走：工具描述在 `py/tools/agent/self_tools`、`py/tools/agent/subagent`、`py/tools/agent/agent_def` 的 `_tooldef.json`。

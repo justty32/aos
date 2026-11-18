@@ -12,7 +12,7 @@ from unittest import mock
 
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(PROTO / "lib")]
+sys.path[:0] = [str(PROTO / "py")]
 loader = importlib.machinery.SourceFileLoader("kernel_watch_screen", str(PROTO / "cmd/aos-eca/bin/aos-eca-screen"))
 spec = importlib.util.spec_from_loader(loader.name, loader)
 screen = importlib.util.module_from_spec(spec)

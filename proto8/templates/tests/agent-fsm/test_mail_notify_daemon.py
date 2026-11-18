@@ -25,11 +25,11 @@ class MailNotifyDaemon(unittest.TestCase):
         kernel = self.root / "kernel"
         kernel.mkdir()
         self.env = dict(env, AOS_HOME=str(PROTO), PATH=os.pathsep.join(bins + [env["PATH"]]), AOS_LLM_KERNEL=str(kernel),
-                        PYTHONPATH=os.pathsep.join([str(PROTO / "lib")]), PYTHONDONTWRITEBYTECODE="1")
-        (self.root / "kernel.json").write_text(json.dumps({"exec": str(PROTO / "lib/base/llm_fake"), "endpoint": "fake",
+                        PYTHONPATH=os.pathsep.join([str(PROTO / "py")]), PYTHONDONTWRITEBYTECODE="1")
+        (self.root / "kernel.json").write_text(json.dumps({"exec": str(PROTO / "py/tools/base/llm_fake"), "endpoint": "fake",
                                                            "endpoints": {"fake": {}}}))
         (self.root / "kernel_daemon.json").write_text(json.dumps({"interval_ms": 10, "exec": {"argv": [
-            str(PROTO / "lib/aos/kernel_llm/_entry"), str(self.root / "kernel.json")]}}))
+            str(PROTO / "py/tools/aos/kernel_llm/_entry"), str(self.root / "kernel.json")]}}))
         shutil.copytree(PROTO / "templates" / "daemon-root", self.root / "defs")
         bob = self.root / "defs" / "bob"
         shutil.copytree(PROTO / "templates" / "agent-fsm", bob, ignore=shutil.ignore_patterns("__pycache__"))
@@ -92,7 +92,7 @@ class MailNotifyDaemon(unittest.TestCase):
         """bob 自己的 self_hook 工具（同腦叫：aos-exec 起、$AOS_STACK＝它的工具小格、$AOS_DAEMON＝根）。"""
         cell = self.root / "stacks" / "root" / "procs" / "bob" / "tools" / "self_hook"
         env = dict(self.env, AOS_DAEMON=str(self.root / "stacks" / "root"), AOS_WS=str(self.root))
-        return self.run_ok(["aos-exec", "--stack", str(cell) + "/", str(PROTO / "lib/agent/self_hook")], json.dumps(args), env)
+        return self.run_ok(["aos-exec", "--stack", str(cell) + "/", str(PROTO / "py/tools/agent/self_hook")], json.dumps(args), env)
 
     def test_notify_batch_interval_and_off(self):
         self.run_ok(["aos-agent", "-d", "stacks/root", "ctl", "add", "-w", ".", "defs/bob"])
@@ -112,7 +112,7 @@ class MailNotifyDaemon(unittest.TestCase):
         self.assertTrue(self.notes()[1].startswith("[aos] new_mail: 3 new letters from cody."), self.notes())
         # 改間隔（免打擾的反面：改快）：self_hook add replace 同名
         self.self_hook({"op": "add", "name": "mail_notify", "event": "on_clock", "every_ms": 2000, "replace": True,
-                        "path_json": {"$env": "AOS_HOME", "$path": "/lib/agent/mail_notify"}, "on_error": "continue",
+                        "path_json": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/mail_notify"}, "on_error": "continue",
                         "timeout_ms": 10000})
         time.sleep(3)
         self.send("dan")

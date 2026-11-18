@@ -47,7 +47,7 @@ class Skeleton(unittest.TestCase):
         dest = self.root / "add2"
         shutil.copytree(SKEL, dest)
         for m in ("tool_spec.py", "tool_io.py"):
-            shutil.copy(PROTO / "lib" / m, dest / m)
+            shutil.copy(PROTO / "py" / m, dest / m)
         r = self.exec(dest, '{"a": 2, "b": 0.5}')
         self.assertEqual((r.returncode, r.stdout), (0, "2.5\n"), r.stderr)
 

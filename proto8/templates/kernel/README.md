@@ -13,7 +13,7 @@
 
 ## 框架站是什麼
 
-框架站是一支 Python 資料夾程式，在 [lib/aos/kernel](../../lib/aos/kernel/README.md)。它每跑一次只做一輪：收信、照設定檔 `kernel.json` 判斷、放行的轉寄給下一站、不放行的回一封拒信、沒格的排隊。它自己不常駐，要有人一次次叫它（daemon 每一圈叫一次，或一個 loop proc 每一拍叫一次）。
+框架站是一支 Python 資料夾程式，在 [py/tools/aos/kernel](../../py/tools/aos/kernel/README.md)。它每跑一次只做一輪：收信、照設定檔 `kernel.json` 判斷、放行的轉寄給下一站、不放行的回一封拒信、沒格的排隊。它自己不常駐，要有人一次次叫它（daemon 每一圈叫一次，或一個 loop proc 每一拍叫一次）。
 
 框架只是一包方便的零件，不是概念。自己手寫一支收信的程式，一樣算 kernel。
 
@@ -57,7 +57,7 @@
 
 三段都用不上＝`DaemonMissing`。
 
-`next` 只能寫一個信箱。要照規則把不同的信轉給不同的下一站（一封信只去一處），分流規則寫在 hook 裡（使用者 11-13：「按照規則分流吧。就用hook」）：`after_verdict` hook 回 `{"next": "<信箱的絕對路徑>"}`，這一封就寄去那裡；沒回的照上面三段。例子在 [02「分流的例子」](docs/02-kernel-modes.md#分流的例子照規則把信分到兩個下一站)，限制在 [lib/aos/kernel README「分流」](../../lib/aos/kernel/README.md#分流hook-替這一封指定下一站)。
+`next` 只能寫一個信箱。要照規則把不同的信轉給不同的下一站（一封信只去一處），分流規則寫在 hook 裡（使用者 11-13：「按照規則分流吧。就用hook」）：`after_verdict` hook 回 `{"next": "<信箱的絕對路徑>"}`，這一封就寄去那裡；沒回的照上面三段。例子在 [02「分流的例子」](docs/02-kernel-modes.md#分流的例子照規則把信分到兩個下一站)，限制在 [py/tools/aos/kernel README「分流」](../../py/tools/aos/kernel/README.md#分流hook-替這一封指定下一站)。
 
 整棵樹 export `AOS_KERNEL` 時，沒寫 `next` 的站也會繼承到它：指到自己才跳過，指到別站就把信轉給那一站。不想要就在起那一站的殼 `unset AOS_KERNEL`，或明寫 `next`。
 

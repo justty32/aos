@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+# board_read - aos-comm board show 的包裝：讀一隻的布告欄（名字、user、me＝叫我的那隻 agent 的根），併 daemon 表的 phase、busy，標 stale／overdue／clock_odd／asleep。
+# 圖紙：proto8/thinking/2026-11/14/board-1114/ 02 §2.4、§5.1、05 A7、A14；純包裝。介面：stdin {who?}（不給＝me）。結果：一行 JSON；沒貼＝board 是 null，不是錯。
+import json, os, signal, sys
+NAME = "board_read"
+HELP = """\
+usage: board_read < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Read a board (aos-comm board show): who = an agent's name, user, or me (default). No board is not an error.
+Result on stdout. On error: one line "board_read: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先裡有 tool_io.py 的那層（py/ 或裝好的 lib/；含 cmd_call），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+tool_io.start(NAME, HELP)
+signal.signal(signal.SIGINT, lambda s, f: sys.exit(130))
+import cmd_call  # noqa: E402
+
+cmd_call.catch_signals((signal.SIGTERM,))
+args = tool_io.arguments()
+who = (args.get("who") or "me").strip() or "me"
+_, out, _ = cmd_call.call("aos-comm", ["board", "show", "-j", "--", who])
+r = json.loads(out)
+r.pop("stack", None)                             # 給腦看的不放這台機器的絕對路徑
+print(json.dumps(r, ensure_ascii=False))

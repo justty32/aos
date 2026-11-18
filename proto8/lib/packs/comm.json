@@ -1,7 +1,0 @@
-{"description": "Pack comm: boards (comm/1, batch 1) - board_set, board_clear, board_wait, board_read, board_ls.",
- "tools": {
-           "board_set": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/board_set"}},
-           "board_clear": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/board_clear"}},
-           "board_wait": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/board_wait"}},
-           "board_read": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/board_read"}},
-           "board_ls": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/board_ls"}}}}

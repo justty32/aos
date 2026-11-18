@@ -8,7 +8,7 @@ import aos_flags
 from .common import NAME, Fail, hooks, letters_drop, post, write_atomic
 
 
-# ---- hook（lib/agent/hooks.py；圖紙 thinking/2026-11/10/self-family/hook § 6 eca 縮水版）----
+# ---- hook（py/hooks.py；圖紙 thinking/2026-11/10/self-family/hook § 6 eca 縮水版）----
 
 def fire(event, data, template, stack):
     """跑 hook；hook 停下＝這支的錯（HookFailed／HooksBad）。"""

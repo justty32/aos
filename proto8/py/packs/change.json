@@ -1,0 +1,7 @@
+{"description": "Pack 2 (change): tools that create or change files - write, edit, copy, move, mkdir.",
+ "tools": {
+           "write": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/write"}},
+           "edit": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/edit"}},
+           "copy": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/copy"}},
+           "move": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/move"}},
+           "mkdir": {"path": {"$env": "AOS_HOME", "$path": "/lib/tools/base/mkdir"}}}}

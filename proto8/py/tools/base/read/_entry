@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+# read - 讀一個文字檔，太長從頭截、告訴你從第幾行接著讀
+# 介面（py/README 的契約）：stdin 收 {"path", "offset"?, "max_lines"?}；stdout 印內容（不加行號）；
+# 路徑：相對從 $AOS_WS 算、絕對照用，不限在工作區裡（11-10 tool-packs，能不能讀看 Linux 權限）；錯：stderr 與 stdout 各一行「read: error: 代號 原因」、退 1。
+# 來源：demo/pi-tools/read（10-24，照 pi 的 read：2000 行或 50KB 先到先算）。
+import os, sys
+HELP = """\
+usage: read < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Read a text file (relative paths start at $AOS_WS; at most 2000 lines or 50KB per call; the end
+of the output says which offset to continue from).
+Result on stdout. On error: one line "read: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先裡有 tool_io.py 的那層（py/ 或裝好的 lib/），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "read"
+tool_io.start(NAME, HELP)
+MAX_LINES, MAX_BYTES = 2000, 50 * 1024
+
+
+die = tool_io.die
+arguments = tool_io.arguments
+
+
+args = arguments("path")
+offset, max_lines = args.get("offset"), args.get("max_lines")   # 上限一律 max_*（10-25 前叫 limit）
+for k, v in (("offset", offset), ("max_lines", max_lines)):
+    if v is not None and (type(v) is not int or v < 1):
+        die("ArgumentsBad", "%s must be a positive integer" % k)
+
+path = tool_io.ws_path(args["path"])
+if not os.path.exists(path):
+    die("FileMissing", args["path"])
+if os.path.isdir(path):
+    die("FileBad", "%s is a directory; use ls for directories" % args["path"])
+try:
+    with open(path, "rb") as f:
+        data = f.read()
+except OSError as e:
+    die("ReadFailed", "%s: %s" % (args["path"], e.strerror))
+if b"\0" in data[:8192]:
+    die("FileBad", "%s looks like a binary file; not reading it" % args["path"])
+text = data.decode("utf-8", "replace")
+
+lines = text.split("\n")
+if text.endswith("\n"):
+    lines.pop()                                 # 檔尾換行不算一行
+total = len(lines)
+if total == 0:
+    print("(empty file)")
+    sys.exit(0)
+start = (offset or 1) - 1
+if start >= total:
+    die("ArgumentsBad", "offset %d is past the end of the file (%d lines)" % (offset, total))
+end = total if max_lines is None else min(start + max_lines, total)
+out, size = [], 0
+for line in lines[start:end]:
+    n = len(line.encode("utf-8")) + 1
+    if len(out) >= MAX_LINES or size + n > MAX_BYTES:
+        break
+    out.append(line)
+    size += n
+first = start + 1
+if not out:                                     # 第一行就超過 50KB
+    die("FileBad", "line %d is over %dKB; use shell: sed -n '%dp' %s | head -c %d"
+        % (first, MAX_BYTES // 1024, first, args["path"], MAX_BYTES))
+print("\n".join(out))
+shown_end = start + len(out)
+if shown_end < end:                             # 被 2000 行／50KB 截掉
+    print("\n[lines %d-%d of %d. Use offset=%d to continue.]" % (first, shown_end, total, shown_end + 1))
+elif end < total:                               # max_lines 停在檔尾之前
+    print("\n[%d more lines in the file. Use offset=%d to continue.]" % (total - end, end + 1))

@@ -1,3 +1,0 @@
-{"description": "Pack todo: your own to-do list for a long task - todo (ls, set, add, mark); kept outside your history, call ls to see it again.",
- "tools": {
-           "todo": {"path": {"$env": "AOS_HOME", "$path": "/lib/agent/todo"}}}}

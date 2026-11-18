@@ -23,7 +23,7 @@ root daemon
 
 兩站的 `kernel.json` 都不寫 `next`，下一站靠三段裡的後兩段：`station_a` 的 `loop.json` 與領班的 `daemon.json` 都在站那支程式的 `exec.envs` 給 `AOS_KERNEL`＝領班的 `requests/`。A 照它轉給領班（A 沒設 `max_running`，不需要 `count_daemon`）；領班發現它指到自己就跳過、照 `AOS_DAEMON` 轉進自己的 ctl 信箱。hook 把自己看到的 `AOS_KERNEL` 記進事件，劇本逐封核對兩站都真的帶著這個值在跑。
 
-- 第 1 段用現成 `llm_fake` 的 `script/tool_calls` 產生 `subagent add`，劇本手動跑這一輪的真 `lib/agent/subagent` 工具；工具內部走 `aos-agent ctl add`。agent-fsm 保持 idle，不另起問腦總機，也不假稱完整 FSM 問腦回合。另寄一封同型掛子信，保留最終信封，核對兩站代回後的 `in_reply_to`。
+- 第 1 段用現成 `llm_fake` 的 `script/tool_calls` 產生 `subagent add`，劇本手動跑這一輪的真 `py/tools/agent/subagent` 工具；工具內部走 `aos-agent ctl add`。agent-fsm 保持 idle，不另起問腦總機，也不假稱完整 FSM 問腦回合。另寄一封同型掛子信，保留最終信封，核對兩站代回後的 `in_reply_to`。
 - 第 2、4、5、6、7、8 段，以及第 1 段的信封探針，由劇本帶 agent 的環境直接呼叫 `aos-post send/take-all/see/done`，走真 kernel 與 daemon。使用公開的 `procs_added`／`ping` body，沒有模擬框架的回信。每封探針有獨立的 agent 工具回信箱。
 - 第 2 段先填滿四格，再確認額外信件留在領班 `queue.json` 且未掛上。測試 loop 讀到自己 stack 的 `finish` 標記後自然退非零，daemon 留下 stopped 列；空格釋放後驗證出隊、上表與代回。
 - 第 3 段用 agent 環境跑真正的 `aos-agent ctl ls --json` 與 `ctl who --json`，每支各寄一次查詢信，經 A → 領班 → daemon 回信。A 的 `before_reply` hook `trim_table` 按原 `sender` 查暫存政策，解析 daemon 表與 agent 的 subagents.json，只留下 agent 與其帳上子 kid_tool；各列 stack／ws／exec／def 轉成絕對路徑，先寫暫存檔再改名到 A 的 views/，把回信 procs_state_path 換成新檔。驗原表仍有 other、新表正好 agent 與 kid_tool、兩站各處理一次查詢與回信、who 的 stack／def 正確且 daemon 欄是 A 的 views/。這是測試用視圖，不宣稱 Linux 權限隔離。

@@ -1,5 +1,5 @@
 # aos_eca/midturn.py - 等 CLI 回答的這段時間又來的信：馬上認領、過 hook、交給 cli_ask 投進 CLI（More）；信的寄件人欄（unnamed）。
-"""11-13 使用者裁「馬上送，eca他會自己處理」：畫面開著的 claude 身走收件 socket 時（lib/agent/cli_ask.live_a2a），這一輪還在等回答，
+"""11-13 使用者裁「馬上送，eca他會自己處理」：畫面開著的 claude 身走收件 socket 時（py/cli_ask.live_a2a），這一輪還在等回答，
 queue 又來信就不等這輪講完——一次認領一封、照樣過 before_queue、投進 CLI（它手上那步工具做完就讀到），投出去才接進 history、收信、
 跑 after_queue（Handoff.extra）。停手不再拿的情況（那封留在 cur/，下一輪照一般流程處理）：來的是 slash 指令（那是操作 CLI，要等這輪
 講完由 aos 這層做）、hook 或 aos-post 出錯（下一輪在一般流程報）、投不出去。貼字與非互動那兩條路不叫這裡。"""

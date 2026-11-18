@@ -37,10 +37,10 @@ import json, os, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
-import aos_flags  # noqa: E402  proto8/lib/aos_flags.py：P-44 的解析
+import aos_flags  # noqa: E402  proto8/py/aos_flags.py：P-44 的解析
 import metainfo  # noqa: E402
-import process_group  # noqa: E402  lib/process_group.py：逾時收整群（TERM→等→KILL）
-from agent import hooks  # noqa: E402  lib/agent/hooks.py：before_tool／after_tool（--hooks DEF）
+import process_group  # noqa: E402  py/process_group.py：逾時收整群（TERM→等→KILL）
+import hooks  # noqa: E402  py/hooks.py：before_tool／after_tool（--hooks DEF）
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
@@ -203,7 +203,7 @@ def call(name, tool, args, ws, stack, timeout_s, echo=True):
         out, err = p.communicate(json.dumps(args).encode(), timeout=None if limit == 0 else limit)
         code = p.returncode
     except subprocess.TimeoutExpired:
-        process_group.stop(p, 2, 2)              # TERM 整群、等 2 秒；還在就 KILL、再等 2 秒（lib/process_group.py）
+        process_group.stop(p, 2, 2)              # TERM 整群、等 2 秒；還在就 KILL、再等 2 秒（py/process_group.py）
         try:
             out, err = p.communicate(timeout=2)  # 整群收掉了：管子另一頭多半都關了
         except subprocess.TimeoutExpired:        # 有逃出群組的還拿著管子：不等了

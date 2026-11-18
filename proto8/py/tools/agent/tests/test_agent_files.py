@@ -1,0 +1,90 @@
+"""Test declared file validation and shared imports with or without agent on sys.path."""
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+
+sys.dont_write_bytecode = True
+LIB = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(LIB))
+from agent_files import declared_files
+from declared_files import declared_files as shared_declared_files
+
+
+class AgentFiles(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix="declared-files-")
+        self.addCleanup(self.tmp.cleanup)
+        self.folder = Path(self.tmp.name)
+        self.path = self.folder / "interfaces.json"
+
+    def declare(self, value):
+        self.path.write_text(json.dumps(value), encoding="utf-8")
+        return declared_files(self.folder)
+
+    def test_missing_or_undeclared_interface(self):
+        self.assertEqual(declared_files(self.folder), {})
+        self.assertEqual(self.declare({"another-interface": {"tools": "ignored.json"}}), {})
+
+    def test_only_known_declarations_are_returned(self):
+        files = {key: "cfg/%s.json" % key for key in ("tools", "llm", "hooks", "system")}
+        self.assertEqual(self.declare({"aos-agent": dict(files, other="ignored")}), files)
+        self.assertIs(declared_files, shared_declared_files)
+
+    def test_bad_shapes(self):
+        for value, message in (([], "%s must be a JSON object" % self.path),
+                               ({"aos-agent": []}, "aos-agent in %s must be a JSON object" % self.path)):
+            with self.subTest(value=value), self.assertRaises(ValueError) as cm:
+                self.declare(value)
+            self.assertEqual(str(cm.exception), message)
+
+    def test_bad_relative_paths(self):
+        (self.folder / "directory").mkdir()
+        for key in ("tools", "llm", "hooks", "system"):
+            for value in (None, 1, "", "/absolute.json", "../outside.json", "cfg/../outside.json", "directory"):
+                with self.subTest(key=key, value=value), self.assertRaises(ValueError) as cm:
+                    self.declare({"aos-agent": {key: value}})
+                self.assertEqual(str(cm.exception),
+                                 "%s in %s must name a file by a relative path inside the definition" % (key, self.path))
+
+    def test_invalid_json_and_unreadable_interface(self):
+        self.path.write_text("not JSON", encoding="utf-8")
+        with self.assertRaises(ValueError) as cm:
+            declared_files(self.folder)
+        self.assertTrue(str(cm.exception).startswith("cannot read %s: " % self.path))
+        other = self.folder / "other"
+        (other / "interfaces.json").mkdir(parents=True)
+        with self.assertRaises(ValueError) as cm:
+            declared_files(other)
+        self.assertTrue(str(cm.exception).startswith("cannot read %s: " % (other / "interfaces.json")))
+
+    def run_import(self, code):
+        env = {key: value for key, value in os.environ.items() if key != "PYTHONPATH"}
+        result = subprocess.run([sys.executable, "-I", "-S", "-c", code],
+                                cwd=self.folder, env=env, capture_output=True, text=True)
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (0, "", ""))
+
+    def test_shared_module_imports_without_agent(self):
+        # Copy only the shared module, so no agent package can satisfy an import.
+        isolated = self.folder / "lib"
+        isolated.mkdir()
+        (isolated / "declared_files.py").write_bytes((LIB / "declared_files.py").read_bytes())
+        self.run_import("import importlib.util, sys; sys.dont_write_bytecode = True; "
+                        "sys.path.insert(0, %r); assert importlib.util.find_spec('agent') is None; "
+                        "from declared_files import declared_files; "
+                        "assert declared_files(%r) == {}; assert 'agent' not in sys.modules"
+                        % (str(isolated), str(self.folder)))
+
+    def test_legacy_direct_import_restores_path(self):
+        self.run_import("import sys; sys.dont_write_bytecode = True; sys.path.insert(0, %r); "
+                        "before = list(sys.path); import agent_files; "
+                        "assert sys.path == before; assert agent_files.declared_files(%r) == {}; "
+                        "assert 'agent' not in sys.modules"
+                        % (str(LIB), str(self.folder)))
+
+
+if __name__ == "__main__":
+    unittest.main()

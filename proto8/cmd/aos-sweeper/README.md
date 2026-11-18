@@ -1,6 +1,6 @@
 # aos-sweeper — 清道夫：一台 daemon 的 stderr 封存、封存保留期、收表外子 loop
 
-← [cmd](../README.md)｜本體 [lib/aos_sweep.py](../../lib/aos_sweep.py)（`aos-daemon-ctl sweep` 跑同一套）｜設計 [thinking 11-10 sweeper](../../thinking/2026-11/10/sweeper/README.md)
+← [cmd](../README.md)｜本體 [py/aos_sweep.py](../../py/aos_sweep.py)（`aos-daemon-ctl sweep` 跑同一套）｜設計 [thinking 11-10 sweeper](../../thinking/2026-11/10/sweeper/README.md)
 
 `bin/aos-sweeper`（Python）跑**一輪**就結束；要它每 10 分鐘跑，就在 daemon 表上掛一列 loop 型的 `_sweeper`，節奏交給 aos-loop（跟 `_clock`／`aos-clock` 同一個樣子，daemon 程式完全不認它）。
 

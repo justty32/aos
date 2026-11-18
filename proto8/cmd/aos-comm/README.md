@@ -2,9 +2,9 @@ aos-comm 是 comm/1 協議的命令列；本批（board-1114 批 1）只有布�
 
 # proto8/cmd/aos-comm — aos-comm：布告欄（comm/1）
 
-← [cmd](../README.md)｜圖紙：[board-1114](../../thinking/2026-11/14/board-1114/)（02 稿 §一、§2、§5.2、§5.3、§7；03 計劃；05 採納表 A2、A7、A13、A14、A16、P1；衝突時 05 優先）｜格式：[schema/comm/1](../../lib/schema/comm/1/README.md)
+← [cmd](../README.md)｜圖紙：[board-1114](../../thinking/2026-11/14/board-1114/)（02 稿 §一、§2、§5.2、§5.3、§7；03 計劃；05 採納表 A2、A7、A13、A14、A16、P1；衝突時 05 優先）｜格式：[schema/comm/1](../../py/schema/comm/1/README.md)
 
-每隻 proc 在自己的 stack 貼一張布告欄 `<stack>/board.json`（`format: board/1`）：在忙什麼、能不能打擾、在等誰。讀寫與算法都在 [`lib/aos/comm`](../../lib/aos/comm/__init__.py)，這支只派發與印；給腦用的是 `board_set`、`board_clear`、`board_wait`、`board_read`、`board_ls`（[`lib/agent/board_*`](../../lib/agent/board_set/_entry)，包 [`lib/packs/comm.json`](../../lib/packs/comm.json)），都是這支的純包裝。信件分級、頻道、`comm_tick` 是之後的批。
+每隻 proc 在自己的 stack 貼一張布告欄 `<stack>/board.json`（`format: board/1`）：在忙什麼、能不能打擾、在等誰。讀寫與算法都在 [`py/tools/aos/comm`](../../py/tools/aos/comm/__init__.py)，這支只派發與印；給腦用的是 `board_set`、`board_clear`、`board_wait`、`board_read`、`board_ls`（[`py/tools/agent/board_*`](../../py/tools/agent/board_set/_entry)，包 [`py/packs/comm.json`](../../py/packs/comm.json)），都是這支的純包裝。信件分級、頻道、`comm_tick` 是之後的批。
 
 ```
 aos-comm [-s STACK] board set MODE [TEXT...] [--doing S] [--back WHEN] [--back-text S] [--for WHEN]
@@ -38,8 +38,8 @@ aos-comm check ~/aos/procs/bob/board.json
   - **未知鍵**（含 `ext`）寫的時候一律照搬。
 - **讀**（show、ls）照 06 §7.3 四步（05 A14）：1. 沒檔＝沒貼（常態，不是錯）；讀不了、JSON 壞、`format` 不是 `board/1`＝重試一次，還不行就當沒貼、stderr 提醒一行。2. `updated_at` 比現在晚超過 5 分鐘＝當成現在、標 `clock_odd`。3. 過了 `expires_at`，或沒 `expires_at` 而過了 `updated_at`＋24h＝`stale`（**不分 mode**，05 A7）：文字照顯示，mode 算 `here`，`waiting_on` 不算數。4. daemon 表上 phase 是 `sleeping`／`stopped`＝`asleep`，mode 算 `away`。另外 `back_at` 已過＝`overdue`。`show` 併表上那一列的 `live: {phase, busy}`；查不到表就不併、不報錯。未知鍵讀的時候忽略。
 - **ls**：`aos-agent ctl ls --json` 那張表逐隻讀，一行 `NAME TAB MODE TAB DOING TAB WAITING FOR TAB BACK`（沒有＝`-`；MODE 後註 `(stale)`、`(asleep)`、`(no board)`），最後一行計數（幾隻、幾隻 dnd、away、在等人、在等使用者）。`--deep`（02 §2.5）：哪一列的 stack 自己有 `procs_state.json`（跟 aos-agent ctl 認 daemon stack 同一條）就用 `aos-agent --daemon <那個 stack> ctl ls --json` 再列它那張，名字寫成 `上層/名`；廣度優先、記走過的 stack 防繞圈、最深 5 層、最多 500 隻，超過標 `truncated`；下層那張列不了＝stderr 提醒、照走別的。
-- **check**：哪份 schema 照 `--schema`；不然是信（資料夾裡的 `letter.json`，或檔名 `letter.json`）就驗 `body.comm`（沒有 comm＝普通信，算過）；再不然照檔的 `format`。有 Python `jsonschema` 就用它（另查 date-time），沒有或 `--builtin` 用內建小驗證器（只認這四份 schema 用到的關鍵字，見 [schema README](../../lib/schema/comm/1/README.md)）。過＝印 `ok …`、退 0；不過＝一行一個 `指標: 原因`，再 `CheckFailed`。
+- **check**：哪份 schema 照 `--schema`；不然是信（資料夾裡的 `letter.json`，或檔名 `letter.json`）就驗 `body.comm`（沒有 comm＝普通信，算過）；再不然照檔的 `format`。有 Python `jsonschema` 就用它（另查 date-time），沒有或 `--builtin` 用內建小驗證器（只認這四份 schema 用到的關鍵字，見 [schema README](../../py/schema/comm/1/README.md)）。過＝印 `ok …`、退 0；不過＝一行一個 `指標: 原因`，再 `CheckFailed`。
 - **輸出**：英文，預設一行一項（show 是 `key: value`），`-j/--json` 給程式（show 是一個物件 `{who, stack, board, mode, posted, stale, clock_odd, overdue, asleep, waiting_on, live}`；ls 是 `{rows, count, truncated, skipped}`）。
 - **錯**：stderr 一行 `aos-comm: error: 代號 原因`、退 1；沒東西（`wait --done`）退 10（同 aos-mailbox）。代號：`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`StackMissing`、`BoardFull`、`BoardTooBig`、`WriteFailed`、`FileMissing`、`ReadFailed`、`JsonBad`、`SchemaMissing`、`SchemaBad`、`CheckFailed`、`LaunchFailed`、`CommandFailed`；aos-agent 的錯（`InstanceMissing`、`DaemonMissing`…）原樣轉。
-- 需要 PATH 上有 aos-agent（`show NAME`、`ls`、`show` 併 live 才用到）。純標準庫（`jsonschema` 選用）；import `lib/aos_flags`、`lib/aos/comm`。
-- 測試：`python3 proto8/cmd/aos-comm/tests/test_comm.py`（四步：缺檔、壞檔、過期含 here、時鐘怪、sleeping 併入；set 保留 waiting_on；併發寫用 flock；agent 根認 `tools/<名>`；`--deep`；check 樣本兩種驗證器都對）；五支工具：`python3 proto8/lib/agent/board_set/tests/test_board_tools.py`。測試的暫存夾不刪（使用者 11-14 不刪規則），用 `TMPDIR` 指到要放的地方。
+- 需要 PATH 上有 aos-agent（`show NAME`、`ls`、`show` 併 live 才用到）。純標準庫（`jsonschema` 選用）；import `lib/aos_flags`、`py/tools/aos/comm`。
+- 測試：`python3 proto8/cmd/aos-comm/tests/test_comm.py`（四步：缺檔、壞檔、過期含 here、時鐘怪、sleeping 併入；set 保留 waiting_on；併發寫用 flock；agent 根認 `tools/<名>`；`--deep`；check 樣本兩種驗證器都對）；五支工具：`python3 proto8/py/tools/agent/board_set/tests/test_board_tools.py`。測試的暫存夾不刪（使用者 11-14 不刪規則），用 `TMPDIR` 指到要放的地方。

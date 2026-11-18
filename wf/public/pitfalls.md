@@ -50,7 +50,7 @@ ls -la bin                               # 時間要是剛剛
 
 ## 乾淨複本要帶齊依賴：wf/tools 測試連 proto8 一起抄，cpp 測試連 lib 一起抄
 
-在 repo 外的乾淨複本跑測試，只紅一兩支、又是 ModuleNotFoundError 或找不到檔，先懷疑複本抄得不夠全：只抄 `wf/tools` 時 test_quiet 借不到 `proto8/lib/agent/kernel_gate/tests` 的 test_kernel_gate；只抄 `cpp` 和 `knowledge` 時 aos-llm 的 test_full 找不到 `proto8/lib/base/llm_fake`。wf/tools 的測試用 `git archive HEAD wf/tools proto8/lib proto8/cmd | tar -x -C <複本>`；cpp 的測試整個 `proto8` 一起抄；再經清環境腳本跑（06 第 2 條）。
+在 repo 外的乾淨複本跑測試，只紅一兩支、又是 ModuleNotFoundError 或找不到檔，先懷疑複本抄得不夠全：只抄 `wf/tools` 時 test_quiet 借不到 `proto8/py/tools/agent/kernel_gate/tests` 的 test_kernel_gate；只抄 `cpp` 和 `knowledge` 時 aos-llm 的 test_full 找不到 `proto8/py/tools/base/llm_fake`。wf/tools 的測試用 `git archive HEAD wf/tools proto8/py proto8/cmd | tar -x -C <複本>`；cpp 的測試整個 `proto8` 一起抄；再經清環境腳本跑（06 第 2 條）。
 
 ## 乾淨複本的標準跑法：git archive＋疊檔、執行檔自己編、PATH 不撿到活樹的
 

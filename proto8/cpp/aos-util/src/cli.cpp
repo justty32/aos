@@ -1,5 +1,5 @@
 // cli.cpp：【aos-util】命令列旗標（含各支自定短名）與設定檔讀取（規則見 include/aos/util/cli.hpp）。
-// 對應 proto8/lib/aos_flags.py 的 parse、load_cfg。
+// 對應 proto8/py/aos_flags.py 的 parse、load_cfg。
 #include "aos/util/cli.hpp"
 
 #include "aos/util/error.hpp"

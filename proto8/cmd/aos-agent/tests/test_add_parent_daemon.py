@@ -17,9 +17,9 @@ import unittest
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
 BIN = PROTO / "cmd" / "aos-agent" / "bin" / "aos-agent"
-SUBAGENT = PROTO / "lib" / "agent" / "subagent" / "_entry"
-AGENTS_CTL = PROTO / "lib" / "agent" / "agents_ctl" / "_entry"
-FORK = PROTO / "lib" / "agent" / "fork" / "_entry"
+SUBAGENT = PROTO / "py" / "tools" / "agent" / "subagent" / "_entry"
+AGENTS_CTL = PROTO / "py" / "tools" / "agent" / "agents_ctl" / "_entry"
+FORK = PROTO / "py" / "tools" / "agent" / "fork" / "_entry"
 ENV = {key: value for key, value in os.environ.items() if not key.startswith("AOS_")}
 ENV["PATH"] = str(PROTO / "bin") + os.pathsep + os.pathsep.join(
     str(path) for path in sorted((PROTO / "cmd").glob("*/bin"))) + os.pathsep + ENV["PATH"]
@@ -233,7 +233,7 @@ class ForkAndSubagentThroughKernel(unittest.TestCase):
     """only AOS_KERNEL (no AOS_DAEMON): the parent is looked up through the kernel's table too"""
 
     def setUp(self):
-        sys.path.insert(0, str(PROTO / "lib" / "agent" / "subagent" / "tests"))
+        sys.path.insert(0, str(PROTO / "py" / "tools" / "agent" / "subagent" / "tests"))
         from kernel_fixture import KernelFixture
         self.fixture = KernelFixture()
         self.addCleanup(self.fixture.close)

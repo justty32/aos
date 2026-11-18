@@ -12,7 +12,7 @@ import unittest
 sys.dont_write_bytecode = True
 PROTO = Path(__file__).resolve().parents[3]
 BIN = PROTO / "cmd" / "aos-tools" / "bin" / "aos-tools"
-TOOL = PROTO / "lib" / "base" / "peek_now_time"
+TOOL = PROTO / "lib" / "tools" / "base" / "peek_now_time"   # the installed copy: the directives below say /lib/tools/...
 
 ECHO = """#!/usr/bin/env python3
 import json, os, sys
@@ -156,7 +156,7 @@ class SuccessLines(Base):
         self.assertEqual(r.stdout, "added peek_now_time -> %s (../tools.json: %s)\n" % (TOOL, json.dumps(stored)))
 
     def test_added_path_json(self):
-        value = {"$env": "TC_ROOT", "$path": "/lib/base/peek_now_time"}
+        value = {"$env": "TC_ROOT", "$path": "/lib/tools/base/peek_now_time"}
         r = self.ok("--file", self.reg, "add", "--path-json", json.dumps(value), TC_ROOT=str(PROTO))
         self.assertEqual(r.stdout, "added peek_now_time -> %s (%s: %s)\n" % (TOOL, self.reg, json.dumps(value)))
 
@@ -177,7 +177,7 @@ class LongListing(Base):
         self.assertNotIn("hunter2", self.ok("--file", self.reg, "ls", "--json").stdout)
 
     def test_ls_long_without_env_and_directive_stored(self):
-        value = {"$env": "TC_ROOT", "$path": "/lib/base/peek_now_time"}
+        value = {"$env": "TC_ROOT", "$path": "/lib/tools/base/peek_now_time"}
         self.ok("--file", self.reg, "add", "--path-json", json.dumps(value), TC_ROOT=str(PROTO))
         cols = self.ok("--file", self.reg, "ls", "--long", TC_ROOT=str(PROTO)).stdout.rstrip("\n").split("\t")
         self.assertEqual(cols[4], json.dumps(value))

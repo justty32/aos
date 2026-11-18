@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # compact_hook - Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼；SessionStart（matcher compact）壓完後提醒讀回交接，有 $AOS_STACK/handoff.md 就附上。
-# 使用者 11-15 裁定「我們做通用的aos判斷，eca的話可以在這個基礎上接上claude hook」：通用那段是 lib/agent/context_wrap（過門檻先叫它收尾、再寄 /compact），
+# 使用者 11-15 裁定「我們做通用的aos判斷，eca的話可以在這個基礎上接上claude hook」：通用那段是 py/tools/agent/context_wrap（過門檻先叫它收尾、再寄 /compact），
 #   這支只管 Claude Code 壓縮那一刻的前後；自動壓縮（不經 aos）也會跑到它。參考 repo 的 wf/tools/compact_reload.sh（壓完重讀偏好與交接）。
 # 用法：python3 "$AOS_CLI_DEF/compact_hook" pre|start（stdin＝Claude Code 給的 hook JSON，不看）。stdout：PreCompact＝摘要的指示、SessionStart＝注入壓縮後的上下文。
 # 什麼錯都不擋 Claude：讀不到檔就少印那段，一律退 0。

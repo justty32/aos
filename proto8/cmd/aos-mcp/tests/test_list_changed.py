@@ -9,7 +9,7 @@ import unittest
 
 PROTO = Path(__file__).resolve().parents[3]
 MCP = PROTO / 'cmd' / 'aos-mcp' / 'bin' / 'aos-mcp'
-CLOCK = PROTO / 'lib' / 'base' / 'peek_now_time'
+CLOCK = PROTO / 'py' / 'tools' / 'base' / 'peek_now_time'
 GROW = '''import json, os, sys
 reg, base = sys.argv[1], sys.argv[3] if len(sys.argv) > 3 else None
 data = json.load(open(reg)) if os.path.exists(reg) else {"$override": base, "tools": {}}

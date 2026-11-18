@@ -1,0 +1,294 @@
+#!/usr/bin/env python3
+# llm_http - endpoint 函數：從自己的環境讀金鑰，把請求 POST 到 OpenAI 相容端點，印剪過的回覆
+# 介面（py/README 的契約）：stdin 一份 {"endpoint": {"url", "model", "fixed"?}, "request": {"messages", ...}}；
+#   送出的 body＝request 先、endpoint.fixed 蓋上，model 一律用 endpoint.model（11-05 件 2 代定 2）；--key-env NAME 沒設或空＝不帶 Authorization 照打
+#   （11-10 夜使用者「改成變數沒設就不帶金鑰照打」）。重打與 retry 分類：11-16 ok-replybad（wf/temp/ok-replybad-1116/實作計劃.md 第 9 節）。
+#   金鑰含非 ASCII、空白、控制字＝KeyBad、送出前擋、不印值；endpoint.key 一律拒絕。成功 stdout 一行 {"message", "usage", "model"}、退 0。
+# 錯：stderr 一行「llm_http: error: 代號 原因」、stdout 一行 {"error": {"code", "msg", "retry", "tries", "status"?, "retry_after_s"?}}、退 1。
+#   ArgumentsBad／KeyBad 不重試；EndpointFailed 依階段與狀態分類；ReplyBad 與讀回應的連線例外隔 1 秒重打一次，成功多帶 tries:2。
+# 逾時（11-16 ok-timeout，wf/temp/ok-timeout-1116/計劃.md）：連線＋TLS＋送出 connect_timeout_s（預設 10）、讀回應閒置 read_timeout_s（預設 900，
+#   多久沒收到任何位元組；非串流的長回答只是表頭晚到，所以寬），兩者可由 endpoint 包調、0＝不限；有 priority.deadline 時每次等待收在期限前 1 秒。
+#   逾時＝EndpointFailed retry:true、不當場重打。平常由 llm kernel 經 aos-exec 跑。來源：templates/agent-fsm/brain.py 的 ask()。
+import email.utils, http.client, json, math, os, signal, sys, time, urllib.parse
+HELP = """\
+usage: llm_http [--key-env NAME] < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Endpoint function: POST the request to an OpenAI-compatible {url}/chat/completions
+and print {"message", "usage", "model"} trimmed from the reply.
+With --key-env NAME, read the Bearer key from this process's environment variable NAME;
+if NAME is unset or empty, or without --key-env, send no Authorization header
+(an HTTP 401/403 reply then says the key variable is unset). A key with characters
+an HTTP header cannot carry (non-ASCII, space, control) is KeyBad before sending.
+endpoint.key is not accepted.
+Timeouts: endpoint.connect_timeout_s (connect, TLS and sending; default 10) and
+endpoint.read_timeout_s (longest wait with no reply data at all; default 900);
+0 = no limit. With priority.deadline (epoch seconds, set by the llm kernel) every wait
+ends 1 s before it. A timeout is EndpointFailed with retry true and is not retried here.
+Result on stdout. On error: one JSON object {"error": {"code", "msg", "retry", "tries", ...}}
+on one stdout line, one "llm_http: error: CODE reason" line on stderr, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+# 只找自己的工具夾、realpath 祖先裡有 tool_io.py 的那層（py/ 或裝好的 lib/），再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "tool_io.py")) else [])
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "llm_http"
+tool_io.start(NAME, HELP, echo=False)
+
+
+def one_line(text):
+    return "".join(c for c in " ".join(str(text).split()) if c.isprintable())
+
+
+def fail(code, msg, retry, **extra):
+    msg = one_line(msg)
+    print(tool_io.error_line(code, msg), file=sys.stderr)
+    print(json.dumps({"error": {"code": code, "msg": msg, "retry": retry,
+                                "tries": 0, **extra}}, ensure_ascii=False))
+    sys.exit(1)
+
+
+try:
+    args = tool_io.arguments()
+except SystemExit as e:
+    if e.code == 1:
+        print(json.dumps({"error": {"code": "ArgumentsBad",
+                                   "msg": "the arguments on stdin are bad (reason on stderr)",
+                                   "retry": False, "tries": 0}}))
+    raise
+endpoint, request = args["endpoint"], args["request"]
+if "key" in endpoint:
+    fail("ArgumentsBad", "endpoint.key is not accepted; give the endpoint function --key-env NAME", False)
+url = endpoint.get("url")
+if not isinstance(url, str) or not url:
+    fail("ArgumentsBad", "endpoint.url must be a string", False)
+fixed = endpoint.get("fixed", {})
+if not isinstance(fixed, dict):
+    fail("ArgumentsBad", "endpoint.fixed must be an object", False)
+if not isinstance(request.get("messages"), list):
+    fail("ArgumentsBad", "request.messages must be an array", False)
+body = dict(request)
+body.update(fixed)
+model = endpoint.get("model")
+if model:
+    body["model"] = model
+else:
+    body.pop("model", None)
+headers = {"Content-Type": "application/json"}
+key_env, key = None, ""
+if "key_env" in args:
+    key_env = args["key_env"]
+    if not isinstance(key_env, str):
+        fail("ArgumentsBad", "key_env must be a string", False)
+    key = os.environ.get(key_env) or ""                    # 沒設或空＝不帶金鑰照打（11-10 夜）
+    if key:
+        if not all(0x21 <= ord(c) <= 0x7e for c in key):   # 標頭只放得下可見 ASCII；不印值
+            fail("KeyBad", "environment variable %s (--key-env) has characters an HTTP header cannot carry "
+                 "(non-ASCII, space or control); value not shown" % key_env, False)
+        headers["Authorization"] = "Bearer " + key
+target = url.rstrip("/") + "/chat/completions"
+payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
+CONNECT_TIMEOUT_S = 10                                     # 連線、TLS、送出請求
+READ_TIMEOUT_S = 900                                       # 讀回應時多久沒收到任何位元組；長回答只是表頭晚到，寧寬
+DEADLINE_MARGIN_S = 1                                      # 比 kernel 期限早退，自己印結構化錯誤，不被 daemon 整群收
+RETRY_DELAY_S = 1
+
+
+def seconds_setting(name, default):
+    value = endpoint.get(name, default)
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+        fail("ArgumentsBad", "endpoint.%s must be a non-negative number of seconds (0 = no limit)" % name, False)
+    return value or None
+
+
+CONNECT_LIMIT = seconds_setting("connect_timeout_s", CONNECT_TIMEOUT_S)
+READ_LIMIT = seconds_setting("read_timeout_s", READ_TIMEOUT_S)
+END = None                                                 # 期限（monotonic）；kernel 給的 priority.deadline 是 epoch 秒
+_deadline = args.get("priority", {}).get("deadline") if isinstance(args.get("priority"), dict) else None
+if not isinstance(_deadline, bool) and isinstance(_deadline, (int, float)) and math.isfinite(_deadline):
+    END = time.monotonic() + (_deadline - time.time()) - DEADLINE_MARGIN_S
+
+
+def left():
+    return None if END is None else END - time.monotonic()
+
+
+class Waits:
+    """每次等網路前算上限：閒置限（連線段是剩下的連線預算）與期限取小；記下在等什麼，逾時訊息用。"""
+
+    def __init__(self):
+        self.what, self.setting, self.by_deadline = "", None, False
+
+    def arm(self, what, setting, idle, sock=None):
+        self.what, self.setting, self.by_deadline = what, setting, False
+        limit, rest = idle, left()
+        if rest is not None and (limit is None or rest < limit):
+            limit, self.by_deadline = rest, True
+        if limit is not None and limit <= 0:               # settimeout(0) 是非阻塞，不能交出去
+            raise TimeoutError("limit reached")
+        if sock is not None:
+            sock.settimeout(limit)
+        return limit
+
+    def message(self):
+        rest = left()
+        if self.by_deadline or (rest is not None and rest <= 0):
+            return "timed out %s %s at the llm kernel deadline (priority.deadline)" % (self.what, url)
+        if self.setting is None:                           # 設 0＝不限，仍可能碰到系統自己的逾時（ETIMEDOUT）
+            return "timed out %s %s (system timeout; %s is 0 = no limit)" % (self.what, url, self.name())
+        return "timed out %s %s: nothing for %g s (%s)" % (self.what, url, self.setting, self.name())
+
+    def name(self):
+        return "connect_timeout_s" if self.what in ("connecting to", "sending to") else "read_timeout_s"
+
+
+def on_deadline(signum, frame):
+    """期限的硬保底：DNS、TLS 多輪、表頭或 chunk 標頭一點一點滴，socket 逾時都管不到。"""
+    raise TimeoutError("llm kernel deadline reached")
+
+
+def retry_after(value):
+    if value is None:
+        return {}
+    try:
+        seconds = float(value)
+    except ValueError:
+        try:
+            seconds = email.utils.parsedate_to_datetime(value).timestamp() - time.time()
+            seconds = max(0, seconds)
+        except (ValueError, TypeError, OverflowError):
+            return {}
+    if not math.isfinite(seconds) or seconds < 0:
+        return {}
+    return {"retry_after_s": math.ceil(seconds)}
+
+
+STARTED = []                                               # 開打過幾次；保底在 attempt 外響時算 tries 用
+
+
+def attempt():
+    conn, status, after = None, {}, {}
+    STARTED.append(1)
+    waits = Waits()
+    try:
+        try:
+            parts = urllib.parse.urlsplit(target)
+            if parts.scheme not in ("http", "https") or not parts.hostname:
+                raise ValueError("url must be http(s)://host...")
+            cls = http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
+            connect_end = None if CONNECT_LIMIT is None else time.monotonic() + CONNECT_LIMIT
+            conn = cls(parts.hostname, parts.port, timeout=waits.arm("connecting to", CONNECT_LIMIT, CONNECT_LIMIT))
+            conn.connect()
+            sock = conn.sock                               # Connection: close 時 getresponse 會把 conn.sock 清成 None
+            waits.arm("sending to", CONNECT_LIMIT,         # 連線、TLS、送出共用一份連線預算
+                      None if connect_end is None else connect_end - time.monotonic(), sock)
+            conn.request("POST", parts.path + ("?" + parts.query if parts.query else ""), payload, headers)
+        except (ValueError, http.client.InvalidURL) as e:
+            return None, {"code": "EndpointFailed", "msg": "bad url %s: %s" % (url, e),
+                          "retry": False, "tries": 0}, False
+        except TimeoutError:
+            return None, {"code": "EndpointFailed", "msg": waits.message(), "retry": True, "tries": 1}, False
+        except (OSError, http.client.HTTPException) as e:
+            return None, {"code": "EndpointFailed", "msg": "cannot connect to %s: %s" % (url, e),
+                          "retry": True, "tries": 1}, False
+        try:
+            waits.arm("waiting for the reply from", READ_LIMIT, READ_LIMIT, sock)
+            r = conn.getresponse()
+            status = {"status": r.status}
+            retry = r.status in (408, 429) or 500 <= r.status < 600
+            after = retry_after(r.getheader("Retry-After"))
+            chunks = []
+            while not r.isclosed():                        # 一次一個 recv：對方一點一點滴也逃不過期限；讀完 r 自己關線
+                waits.arm("reading the reply from", READ_LIMIT, READ_LIMIT, sock)
+                chunk = r.read1(65536)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            raw = b"".join(chunks)
+            if r.length:                                   # read1 碰到提早關線只回空，不丟 IncompleteRead
+                raise http.client.IncompleteRead(raw, r.length)
+            text = raw.decode("utf-8", "replace")
+            if not 200 <= r.status < 300:
+                refused = ""
+                if r.status in (401, 403):                 # 端點拒絕：只在這時提金鑰
+                    if key:
+                        refused = " (the endpoint refused the key from %s)" % key_env
+                    elif key_env:
+                        refused = " (the endpoint refused the request and may need a key: environment variable %s (--key-env) is not set)" % key_env
+                    else:
+                        refused = " (the endpoint refused the request and may need a key: give --key-env NAME)"
+                return None, {"code": "EndpointFailed", "msg": "HTTP %d%s: %s" % (r.status, refused, one_line(text)[:200]),
+                              "retry": retry, "tries": 1, **status, **(after if retry else {})}, False
+            try:
+                reply = json.loads(raw)
+                message = reply["choices"][0]["message"]
+                if not isinstance(message, dict):
+                    raise ValueError("choices[0].message is not an object")
+                out = {"role": "assistant", "content": message.get("content")}
+                calls = message.get("tool_calls")
+                if calls is not None:
+                    if not isinstance(calls, list) or not all(isinstance(c, dict) for c in calls):
+                        raise ValueError("tool_calls is not an array of objects")
+                    if calls:
+                        out["tool_calls"] = [{k: c[k] for k in ("id", "type", "function") if k in c} for c in calls]
+                usage = reply.get("usage") if isinstance(reply.get("usage"), dict) else None
+                return {"message": out, "usage": usage, "model": reply.get("model") or model}, None, False
+            except (ValueError, KeyError, IndexError, TypeError, UnicodeError) as e:
+                return None, {"code": "ReplyBad", "msg": "reply is not OpenAI-shaped (%s: %s): %s" %
+                              (type(e).__name__, e, one_line(text)[:200]),
+                              "retry": True, "tries": 1, **status, **after}, True
+        except TimeoutError:
+            return None, {"code": "EndpointFailed", "msg": waits.message(),
+                          "retry": True, "tries": 1, **status, **after}, False
+        except (OSError, http.client.HTTPException) as e:
+            return None, {"code": "EndpointFailed", "msg": "incomplete reply from %s: %s %s" % (url, type(e).__name__, e),
+                          "retry": True, "tries": 1, **status, **after}, True
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+def main():
+    rest = left()
+    if rest is not None and rest <= 0:
+        fail("EndpointFailed", "the llm kernel deadline (priority.deadline) has passed; not sent", True)
+    if rest is not None:
+        signal.signal(signal.SIGALRM, on_deadline)
+        signal.setitimer(signal.ITIMER_REAL, rest)
+    try:
+        result, error, again = attempt()
+        rest = left()
+        if again and (rest is None or rest > RETRY_DELAY_S + 1):  # 睡 1 秒後還要留 1 秒給第二次：期限前不到 3 秒就不重打
+            first = error
+            time.sleep(RETRY_DELAY_S)
+            rest = left()
+            result, error, _ = attempt() if rest is None or rest > 0 else (None, dict(first, tries=0), False)
+            if error is not None:
+                error["tries"] += first["tries"]
+            else:
+                result["tries"] = 2
+                tool_io.warn("retried once after %s: %s" % (first["code"], one_line(first["msg"])))
+    except TimeoutError:                                   # 保底在 attempt 的 try 之外響（睡覺、關線時）
+        result, error = None, {"code": "EndpointFailed", "retry": True, "tries": len(STARTED),
+                               "msg": "timed out at the llm kernel deadline (priority.deadline) talking to %s" % url}
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+    if error is not None:
+        fail(**error)
+    print(json.dumps(result, ensure_ascii=False))
+
+
+main()
