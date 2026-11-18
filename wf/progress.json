@@ -233,18 +233,6 @@
       ],
       "since": "2026-11-16"
     },
-    "kit-merge-1118": {
-      "title": "aos-kit 併進 aos-agent ctl --kit（kit-merge-1118，沒做完）",
-      "status": "open",
-      "flow": "",
-      "what": "使用者 11-18「aos-kit也不用了，刪掉，功能整合進現有的。」選「併進 aos-agent ctl (Recommended)」。程式（ctl/kit.py、add／set-def 的 --kit、kits/review/tools.json、test_ctl_kit 8 支、test_kits +2）寫完，家機暫存複本全套測過；沒交，改動留在家機工作樹＋交接夾 kit-merge-1118-未交.patch（含 aos-kit 19 檔刪除；aos-kit 本體 dc4218e8a 先拿回讓 main 能裝）。剩：設計稿 18/aos-kit-併進ctl.md、試驗 08 與教學目錄註記、裁定記進 cpp-py-改名/08、日索引、假腦實操、grep aos-kit；三題待裁見 lines-1118-decide",
-      "next": "",
-      "see": [
-        "[交接](../proto8/thinking/2026-11/18/交接-各線/kit-merge-1118.md)",
-        "[交接-各線](../proto8/thinking/2026-11/18/交接-各線/README.md)"
-      ],
-      "since": "2026-11-18"
-    },
     "eca-pi-bc-1118": {
       "title": "pi 身乙案（rpc、回答途中收信）＋丙案（畫面）（eca-pi-bc-1118，沒做完）",
       "status": "open",
@@ -273,7 +261,7 @@
       "title": "11-18 被打斷那幾條線留下的待裁題",
       "status": "等使用者",
       "flow": "",
-      "what": "cooldown-1118（已交 2b4320644）：listen 的字少了 aos-llm: error: 前綴、SendFailed 少了 aos-llm 原話可不可以；關畫面順手清到期單（set-def、ctl rm、aos-agent close 都清）要不要只限 set-def。——兩小題已裁：使用者 11-18 晚選項框「前綴補回、清單只限 set-def (Recommended)」，另一條線改程式。rm-treestart-1118（已交 93e0acc0c）：跳過 source env.sh 直接打 aos-exec root 沒人擋殼裡別棵樹的 AOS_*——已裁：使用者 11-18 晚「不補」（甲）。kit-merge-1118（沒交）：寫進 stack（現做法）還是像舊 aos-kit 就地改定義夾；eca 定義要不要也能套；換包要不要允許直接蓋（現在要先 reset）；套 kit 後 tools ls 那行誤導的提醒要不要修",
+      "what": "cooldown-1118（已交 2b4320644）：listen 的字少了 aos-llm: error: 前綴、SendFailed 少了 aos-llm 原話可不可以；關畫面順手清到期單（set-def、ctl rm、aos-agent close 都清）要不要只限 set-def。——兩小題已裁：使用者 11-18 晚選項框「前綴補回、清單只限 set-def (Recommended)」，另一條線改程式。rm-treestart-1118（已交 93e0acc0c）：跳過 source env.sh 直接打 aos-exec root 沒人擋殼裡別棵樹的 AOS_*——已裁：使用者 11-18 晚「不補」（甲）。kit-merge-1118（已交）：寫到哪、eca 能不能套、換包能不能直接蓋——已裁：使用者 11-18 晚選項框「寫進 stack (Recommended)」、「eca 定義也能套 kit」要、「換包可以直接蓋」要，都已做進程式。還沒問：套 kit 後 tools ls 那行誤導的提醒要不要修",
       "next": "",
       "see": [
         "[cooldown 交接](../proto8/thinking/2026-11/18/交接-各線/cooldown-1118.md)",

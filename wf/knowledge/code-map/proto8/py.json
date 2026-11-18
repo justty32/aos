@@ -40,6 +40,7 @@
      "ctl": {
       "__init__.py": "aos/apps/agent/ctl/__init__.py - 顯式派發 agent 的掛上與管理命令。",
       "add.py": "aos/apps/agent/ctl/add.py - 宣告檢查、掛上 agent 並等待 daemon 上表。",
+      "kit.py": "aos/apps/agent/ctl/kit.py - ctl add／set-def 的 --kit：把 kit 夾的 system.txt、tools.json 寫成這隻 agent 在 stack 裡自己那份（定義不動；已有的直接蓋），退回＝system reset、tools reset。",
       "ls.py": "aos/apps/agent/ctl/ls.py - 列出 daemon 表上的 proc 與狀態。",
       "phase.py": "aos/apps/agent/ctl/phase.py - 起停、睡醒與暫停恢復 agent（走 AOS_KERNEL 時 start／stop／sleep／wake 只看回信）。",
       "rm.py": "aos/apps/agent/ctl/rm.py - 拔掉 agent（預設留 stack；--purge 確認後才刪，並保護不能刪除的 stack 路徑）。",
@@ -113,12 +114,6 @@
     },
     "json_view": {
      "main.py": "aos-json-view [旗標] FILE[#/指標] — 只讀：把一份 json（或其中一段）印成人好讀的樣子，不改任何檔。"
-    },
-    "kit": {
-     "__init__.py": "aos/apps/kit/__init__.py - aos-kit body: parse flags, dispatch ls / make / check / add, print. Recipe logic is in recipe.py, writing a definition in …",
-     "add.py": "aos/apps/kit/add.py - lay a kit over an agent-fsm definition: system.txt (assembled) and tools.json (copied); old files are kept as *.before-kit.",
-     "main.py": "aos-kit - list kits, assemble a kit's system text from its layers, check the shipped text, lay a kit over an agent-fsm definition; run by bin/aos-kit…",
-     "recipe.py": "aos/apps/kit/recipe.py - read kits.json and a kit's make block, assemble the system text from its layers, check a kit."
     },
     "mailbox": {
      "__init__.py": "aos/apps/mailbox/__init__.py - aos-mailbox 本體：找我的 stack、四個子命令（where、peek、read、send）、叫 aos-post 命令列。",
@@ -270,6 +265,7 @@
      "test_ask.py": "Test aos-agent ask (say then wait for the answer to that letter; the subagent tool's op ask runs it): flags, stdin, timeout exit code, a fake agent's…",
      "test_brain_hint.py": "驗證問腦記錄與 llm kernel 停機時 listen／say 的一次提示及安靜失敗。",
      "test_chat_read_line.py": "Test chat's line input in a real pty: Chinese + Backspace, arrow keys, long lines, pastes and EOF are read whole (11-12 chat-utf8).",
+     "test_ctl_kit.py": "Test aos-agent ctl add / set-def --kit on a real aos-daemon: the kit's system.txt and tools.json become the agent's own copies in its stack (replacin…",
      "test_daemon_down.py": "Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing.",
      "test_goal.py": "Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0…",
      "test_history.py": "Test aos-agent history on a fake daemon table (11-10 self-family): ls, rm, summarize, set, the kept originals (default, --keep, --no-keep), ranges an…",
@@ -342,37 +338,6 @@
     },
     "json_view": {
      "test_json_view.py": "Test aos-json-view: indent guides (| per level, colour by depth), colours by type, text blocks (newlines and string arrays), compact inline objects/a…"
-    },
-    "kit": {
-     "fixtures": {
-      "kits": {
-       "gather": {
-        "system.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
-        "tools.json": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only…"
-       },
-       "general.A.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
-       "kits.json": "Index of the kits in this folder: for each kit its role, folder, system text, tool set, model tiers it was written for, and whether it has a shell.",
-       "review": {
-        "system.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）"
-       },
-       "roles": {
-        "gather.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
-        "review.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）"
-       }
-      },
-      "kits-stale": {
-       "gather": {
-        "system.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
-        "tools.json": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only…"
-       },
-       "general.A.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
-       "kits.json": "Test fixture: kit gather whose shipped system.txt is stale (assembled before the OWN_BOARD line was filled).",
-       "roles": {
-        "gather.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）"
-       }
-      }
-     },
-     "test_kit.py": "Test aos-kit ls / make / check / add against fixture kit folders (a copy of templates/kits with make blocks) and a scratch copy of the agent-fsm temp…"
     },
     "mailbox": {
      "test_mailbox.py": "Test aos-mailbox where / peek / read / send against real aos-post boxes and a hand-written daemon table."

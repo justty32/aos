@@ -8,11 +8,12 @@ from ..decl import close_screen_if_any, read_decl
 from ..common import IFACE
 from .shared import ctl_wait, need_table, timeout_opt, wait_for
 from . import add, phase
+from . import kit as kit_mod
 
 
 HELP = """aos-agent ctl set-def - give an agent another definition; its stack and workspace stay
 
-usage: aos-agent [--daemon D] ctl set-def [--timeout-s S] NAME DEF
+usage: aos-agent [--daemon D] ctl set-def [--kit KIT] [--timeout-s S] NAME DEF
 
 DEF is the new agent folder (checked like ctl add: it must declare aos-agent in interfaces.json).
 set-def closes NAME's screen (an answering screen = SessionBad, nothing changed), stops it
@@ -36,19 +37,26 @@ An agent attached with ctl add --envs cannot be changed this way (ArgumentsBad):
 then ctl add --envs ... --stack ITS-STACK DEF. An agent cannot run set-def on itself (the
 stop waits for this very round; ArgumentsBad): run it from outside.
 
+With --kit, the kit is written into NAME's stack after it is detached and before it is
+attached again (all checks first, so a bad kit changes nothing). To swap one kit for
+another, run set-def --kit again with the other kit: it replaces the own copies (put back
+as they were if NAME cannot be attached again).
+
 flags:
+""" + kit_mod.HELP_FLAG + """
       --timeout-s S   seconds to wait for the daemon at each step (default 30)
   -h, --help          show this help
 
 exit codes: 0 set; 1 error (InstanceMissing, PathMissing, InterfaceMissing, InterfaceBad,
-  ArgumentsBad, CtlRejected, AddRejected, SessionBad, WaitFailed, DaemonMissing...).
+  ArgumentsBad, CtlRejected, AddRejected, SessionBad, WaitFailed, DaemonMissing,
+  KitMissing, KitBad...).
 """
 
 KEEP_STOPPED = {"stopped", "stopping"}                # 原本停著或正在停的：掛回後還是停著（stopping＝已經有人要它停，代定照停）
 
 
 def cmd(argv):
-    opts, rest = parse(argv, {"--timeout-s": "timeout_s"}, help=HELP)
+    opts, rest = parse(argv, {"--timeout-s": "timeout_s", "--kit": "kit"}, help=HELP)
     secs = timeout_opt(opts, HELP)
     if len(rest) != 2:
         raise bad_args(HELP, "set-def takes NAME and the new agent folder DEF")
@@ -61,6 +69,7 @@ def cmd(argv):
                        "aos-agent ctl rm %s, then ctl add ... --stack %s %s" % (a.name, a.name, a.stack, rest[1]))
     if os.environ.get("AOS_STACK") and os.path.realpath(os.environ["AOS_STACK"]) == os.path.realpath(a.stack):
         raise bad_args(HELP, "set-def cannot be used by %s on itself (the stop waits for this very round); run it from outside" % a.name)
+    kit_steps = kit_mod.plan(opts["kit"], xxx, a.stack, a.name) if opts.get("kit") is not None else None   # --kit：先全查，壞了什麼都還沒動
     written = row.get("as_written") if isinstance(row.get("as_written"), dict) else {}
     kept = {k for k in ("ws", "stack") if isinstance(written.get(k), str)}   # 當初打成絕對路徑的格照樣原樣存
     if os.path.isabs(rest[1]):
@@ -83,15 +92,21 @@ def cmd(argv):
         with contextlib.redirect_stdout(io.StringIO()):
             phase.cmd_stop(["--timeout-s", str(secs), a.name], look=True)
     detach(a, secs, kernel)
+    made = []
     try:
+        if kit_steps is not None:                     # 拔掉之後、掛回之前寫進 stack：掛回來的第一格就用 kit
+            made = kit_mod.write(kit_steps)
+            note(kit_mod.said(kit_steps, opts["kit"], a.name, xxx))
         ctl_wait("set-def", request, lambda letter: row_named(a.name) or (None if kernel else add.rejected(letter)),
                  "the daemon has not put %s back on the table yet" % a.name, "AddRejected", secs=secs, replied=kernel)
         if kernel:
             wait_for(lambda: row_named(a.name), "the daemon has not put %s back on the table yet" % a.name, secs)
     except Fail as e:
+        kit_mod.undo(made, e)                         # 掛不回去＝收回剛寫的 kit、蓋掉的寫回（逾時說不準：留著）
         raise Fail(e.code, "%s; %s was detached and is not on the table now; attach it again by hand: aos-agent ctl add -n %s -s %s -w %s%s %s"
                    % (e, a.name, a.name, a.stack, a.ws, " --auto-restart" if row.get("auto_restart") else "", old_def or "OLD-DEF")) from e
-    warn_own_tools(a, old_def, xxx)
+    if kit_steps is None:                             # 套了 kit＝stack 那份就是 kit 的，不是疊在舊定義上
+        warn_own_tools(a, old_def, xxx)
     now = (row_named(a.name) or {}).get("def") or xxx
     tail = {"sleeping": "it stays asleep; ctl wake (or a daemon restart) runs it",
             "stopped": "it stays stopped; ctl start runs it",

@@ -7,13 +7,14 @@ import re
 from ..common import bad_args, Agent, Fail, IFACE, call_dc, daemon_path, note, owner_row, row_named, table, via_kernel
 from .shared import ctl_wait, need_table, queued_opt, timeout_opt
 from ..decl import read_decl
+from . import kit as kit_mod
 
 
 # ---------------------------------------------------------------- 子命令：動它的（步 5）
 
 HELP = """aos-agent ctl add - attach one agent to the daemon
 
-usage: aos-agent [--daemon D] ctl add [-n N] [-w WS | --ws-json J] [-s S | --stack-json J] [--path-json J] [--limits JSON] [--envs K=V ...] [--parent P] [--notify-box B] [--dotenv-override] [--auto-restart] [--timeout-s S] [--on-queued fail|ok] XXX
+usage: aos-agent [--daemon D] ctl add [-n N] [-w WS | --ws-json J] [-s S | --stack-json J] [--path-json J] [--limits JSON] [--envs K=V ...] [--parent P] [--notify-box B] [--dotenv-override] [--auto-restart] [--kit KIT] [--timeout-s S] [--on-queued fail|ok] XXX
 
 XXX is the agent folder; it must declare aos-agent in interfaces.json. The letter goes
 through $AOS_KERNEL when that is set (a warning line says so). Waits until the agent is on
@@ -61,11 +62,16 @@ flags:
                       --on-empty stop) would end, restart and end again until the daemon
                       stops it after 3 quick exits. To turn it on later: aos-agent ctl rm N
                       (keeps the stack unless --purge), then ctl add --auto-restart
+""" + kit_mod.HELP_FLAG + """
+                      The files are written before the add letter goes out (taken back if the
+                      daemon refuses it); so ctl add must know the stack: with $AOS_KERNEL set,
+                      or with --stack-json, give -s too (else ArgumentsBad)
       --timeout-s S   seconds to wait for the daemon (default 30)
       --on-queued MODE  fail or ok when still queued (default fail)
   -h, --help          show this help
 
-exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, DaemonMissing, DaemonFailed...).
+exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, DaemonMissing, DaemonFailed,
+  KitMissing, KitBad...).
 """
 
 def definition(arg, verb="add"):
@@ -92,7 +98,7 @@ def cmd(argv):
     try:
         opts, rest = aos_flags.parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits", "--timeout-s": "timeout_s", "--on-queued": "on_queued",
                                              "--ws-json": "ws_json", "--stack-json": "stack_json", "--path-json": "path_json",
-                                             "--parent": "parent", "--notify-box": "notify_box"},
+                                             "--parent": "parent", "--notify-box": "notify_box", "--kit": "kit"},
                                      switches={"--auto-restart": "auto_restart", "--dotenv-override": "dotenv_override"}, help=HELP, short=("-n", "-w", "-s"),
                                      multi={"--envs": "envs"})
     except aos_flags.Error as e:
@@ -166,13 +172,19 @@ def cmd(argv):
             raise bad_args(HELP, str(e)) from e
         raise
     if via_kernel():
-        return add_via_kernel(name, entry_target, ws, stack, def_dir, limits, envs, opts, written, kept, secs, on_queued)
+        made = lay_kit(opts, xxx, stack, name, None)
+        try:
+            return add_via_kernel(name, entry_target, ws, stack, def_dir, limits, envs, opts, written, kept, secs, on_queued)
+        except Fail as e:
+            kit_mod.undo(made, e)
+            raise
     need_table()
     row = row_named(name)
     if row is not None:
         hint = {"stopped": "; it is stopped, to carry on: aos-agent ctl start --target %s" % name,
                 "sleeping": "; it is asleep, to carry on: aos-agent ctl wake --target %s" % name}.get(row.get("phase"), "")
         raise Fail("InstanceExists", "%s is already on the daemon; pick another name (--name), or first aos-agent ctl rm %s%s" % (name, name, hint))
+    made = lay_kit(opts, xxx, stack, name, daemon_path())
     try:
         _, request = call_dc(dc.add_letter, entry_target, daemon=daemon_path(),   # 11-10：--envs 的目標寫成相對 daemon stack 的指示詞，搬家照樣起
                              **add_kwargs(name, ws, stack, def_dir, limits, envs, opts, written, kept))
@@ -182,8 +194,28 @@ def cmd(argv):
     except KeyboardInterrupt:                         # 11-04 夜邊緣實測：信已寄出，Ctrl-C 不撤；原本安靜退 130，人以為沒掛上
         note("the add letter was sent, the daemon will still attach %s; if you do not want it, aos-agent ctl rm %s (check with aos-agent ctl ls)" % (name, name))
         raise
+    except Fail as e:
+        kit_mod.undo(made, e)                         # --kit：確定沒掛上＝收回剛寫進 stack 的（逾時說不準、排隊中 --on-queued ok：留著）
+        raise
     if row is not None:
         print(Agent(name, row).stack)
+
+
+def lay_kit(opts, xxx, stack, name, daemon):
+    """--kit（11-18 aos-kit 併進 ctl）：寄 add 信之前把 kit 寫進它的 stack（agent 一起來就用得到）。stack 要拿得到：
+    -s 給的，或沒走 kernel 時 daemon 的預設 <daemon stack>/procs/<name>；--stack-json、走 kernel 又沒 -s＝ArgumentsBad。回寫了的路徑。"""
+    if opts.get("kit") is None:
+        return []
+    if isinstance(stack, str) and not isinstance(stack, dc.AsIs):
+        where = stack
+    elif stack is None and daemon:
+        where = os.path.join(daemon, "procs", name)
+    else:
+        raise bad_args(HELP, "--kit needs to know the stack: give -s STACK (with --stack-json, or through $AOS_KERNEL, ctl add cannot tell where it is)")
+    steps = kit_mod.plan(opts["kit"], xxx, where, name)
+    made = kit_mod.write(steps)
+    note(kit_mod.said(steps, opts["kit"], name, xxx))
+    return made
 
 
 def add_kwargs(name, ws, stack, def_dir, limits, envs, opts, written, kept):

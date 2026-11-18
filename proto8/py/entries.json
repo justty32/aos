@@ -12,7 +12,6 @@
   "aos-feedback": "aos.apps.feedback.main",
   "aos-grow": "aos.apps.grow.main",
   "aos-json-view": "aos.apps.json_view.main",
-  "aos-kit": "aos.apps.kit.main",
   "aos-mailbox": "aos.apps.mailbox.main",
   "aos-mcp": "aos.apps.mcp.main",
   "aos-mcp-import": "aos.apps.mcp_import.main",

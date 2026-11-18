@@ -1,7 +1,7 @@
 # kits
 
 This folder holds kits: ready-made system texts and tool sets for one agent role, laid over the agent-fsm template.
-A kit is not a template of its own; you copy its files over a new agent-fsm definition.
+A kit is not a template of its own: it is a folder with a `system.txt` and a `tools.json`, laid over an agent-fsm definition.
 
 ## What a kit is
 
@@ -10,7 +10,7 @@ A kit is the system text plus the tool set (and, later, hooks and brain settings
 | kit | role | system | tools |
 |---|---|---|---|
 | gather | gatherer: finds facts with sources, does not design | [gather/system.txt](gather/system.txt) | [gather/tools.json](gather/tools.json) |
-| review | reviewer: checks work against a brief, points out, does not fix | [review/system.txt](review/system.txt) | [gather/tools.json](gather/tools.json) (same) |
+| review | reviewer: checks work against a brief, points out, does not fix | [review/system.txt](review/system.txt) | [review/tools.json](review/tools.json) (the same file as gather's) |
 
 [kits.json](kits.json) lists the same in machine-readable form.
 
@@ -35,13 +35,31 @@ The shipped `gather/system.txt` and `review/system.txt` are general.A.txt with t
 
 ## How to use
 
+A person, from a shell: give the kit folder to `aos-agent ctl add` or `ctl set-def` with `--kit`.
+
+```
+aos-agent ctl add --kit $AOS_HOME/templates/kits/gather -n gat -w . agents/ann
+aos-agent ctl set-def --kit $AOS_HOME/templates/kits/review ann agents/ann
+```
+
+The kit's two files are written into the agent's stack as its own copies (the layer that `aos-agent system set` and `aos-agent tools add` write); the definition folder is not changed, so several agents can share one definition with different kits. agent-fsm reads them on every brain call. Own copies already in the stack (an earlier kit, `system set`, `tools add`) are replaced, so to swap kits just give `--kit` again. An eca definition (with `cli.json`) takes a kit too: the system text is appended to the CLI's own and the tools replace the aos tools, but the CLI's built-in tools (Bash, Read...) stay, so the kit's tool limits do not hold there (a `cli.json` that names its own `tools` is refused, `KitBad`). To drop a kit:
+
+```
+aos-agent -t ann system reset -y
+aos-agent -t ann tools reset -y
+```
+
+An agent, with its tools: make a definition and copy the kit's files over it.
+
 ```
 agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}
 ```
 
 Then copy `kits/gather/system.txt` and `kits/gather/tools.json` over the new definition's `system.txt` and `tools.json`, set the brain in its `llm.json` yourself, and run `agent_def check`.
 
-For a reviewer, do the same but take `system.txt` from `kits/review/`; the tools are the same as gather.
+For a reviewer, do the same with `kits/review/`.
+
+A kit of your own is any folder with these two files. `tools.json` must name its packs with `{"$env": "AOS_HOME"}` or absolute paths (as the shipped ones do), not paths relative to the kit, because it is copied into the stack.
 
 ## Why tools are cut
 

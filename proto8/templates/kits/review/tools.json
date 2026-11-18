@@ -1,5 +1,5 @@
 {
- "description": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only board_read and board_wait; no shell, delete, events, subagent, def, jsonx or kernel_gate; self keeps only self_state, so the agent cannot lift its own limits.",
+ "description": "Tool set of the gather and review kits (gather/tools.json and review/tools.json are the same file, kept in step by tests/kits): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only board_read and board_wait; no shell, delete, events, subagent, def, jsonx or kernel_gate; self keeps only self_state, so the agent cannot lift its own limits.",
  "$override": [
   {
    "$env": "AOS_HOME",

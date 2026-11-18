@@ -1,5 +1,5 @@
 {
- "description": "Index of the kits in this folder: for each kit its role, folder, system text, tool set, model tiers it was written for, and whether it has a shell.",
+ "description": "Index of the kits in this folder: for each kit its role, folder (give it to aos-agent ctl add / set-def --kit), system text, tool set, model tiers it was written for, and whether it has a shell.",
  "kits": {
   "gather": {
    "role": "gatherer",
@@ -13,7 +13,7 @@
    "role": "reviewer",
    "dir": "review",
    "system": "review/system.txt",
-   "tools": "gather/tools.json",
+   "tools": "review/tools.json",
    "tiers": ["A"],
    "shell": false
   }

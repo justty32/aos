@@ -20,7 +20,6 @@
   "proto8/py/tests/apps/eca": "aos-eca-turn、aos-eca-screen 的測試（本體在 py/aos/apps/eca；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/tests/apps/feedback": "aos-feedback 的測試（本體在 py/aos/apps/feedback；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/tests/apps/json_view": "aos-json-view 的測試（本體在 py/aos/apps/json_view；多半經 bin/ 的入口當子行程跑）",
-  "proto8/py/tests/apps/kit": "aos-kit 的測試（本體在 py/aos/apps/kit；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/tests/apps/mailbox": "aos-mailbox 的測試（本體在 py/aos/apps/mailbox；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/tests/apps/mcp": "aos-mcp 的測試（本體在 py/aos/apps/mcp；多半經 bin/ 的入口當子行程跑）",
   "proto8/py/tests/apps/mcp_import": "aos-mcp-import 的測試（本體在 py/aos/apps/mcp_import；多半經 bin/ 的入口當子行程跑）",

@@ -1,4 +1,4 @@
-"""Check the public kits folder (templates/kits): English only, no site-specific wording, valid JSON with a description first, and each kit's system.txt equal to its assembled layers."""
+"""Check the public kits folder (templates/kits): English only, no site-specific wording, valid JSON with a description first, each kit folder holding system.txt and tools.json (for ctl --kit), and each kit's system.txt equal to its assembled layers."""
 import json
 import re
 import unittest
@@ -79,6 +79,22 @@ class TestKits(unittest.TestCase):
             for tier in kit['tiers']:
                 self.assertIn(tier, data['tiers'], name)
                 self.assertTrue((KITS / f'general.{tier}.txt').is_file(), tier)
+
+    def test_kit_folders_hold_both_files(self):
+        """aos-agent ctl add / set-def --kit takes a kit folder: system.txt and tools.json in it, named so in kits.json."""
+        data = json.loads((KITS / 'kits.json').read_text(encoding='utf-8'))
+        for name, kit in data['kits'].items():
+            self.assertEqual(kit['system'], kit['dir'] + '/system.txt', name)
+            self.assertEqual(kit['tools'], kit['dir'] + '/tools.json', name)
+        self.assertEqual((KITS / 'review' / 'tools.json').read_bytes(), (KITS / 'gather' / 'tools.json').read_bytes())
+
+    def test_tools_name_packs_by_env(self):
+        """The tools file is copied into a stack, so it must not point relative to the kit folder."""
+        for p in KITS.glob('*/tools.json'):
+            data = json.loads(p.read_text(encoding='utf-8'))
+            for item in data['$override']:
+                self.assertIsInstance(item, dict, str(p))
+                self.assertEqual(item.get('$env'), 'AOS_HOME', str(p))
 
     def test_systems_are_assembled(self):
         general = (KITS / 'general.A.txt').read_text(encoding='utf-8')

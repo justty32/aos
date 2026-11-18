@@ -99,17 +99,18 @@
   },
   "kits": {
    "gather": {
-    "system.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
-    "tools.json": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only…"
+    "system.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
+    "tools.json": "Tool set of the gather and review kits (gather/tools.json and review/tools.json are the same file, kept in step by tests/kits): read, write (only in …"
    },
-   "general.A.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
-   "kits.json": "Index of the kits in this folder: for each kit its role, folder, system text, tool set, model tiers it was written for, and whether it has a shell.",
+   "general.A.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
+   "kits.json": "Index of the kits in this folder: for each kit its role, folder (give it to aos-agent ctl add / set-def --kit), system text, tool set, model tiers it…",
    "review": {
-    "system.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）"
+    "system.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
+    "tools.json": "Tool set of the gather and review kits (gather/tools.json and review/tools.json are the same file, kept in step by tests/kits): read, write (only in …"
    },
    "roles": {
-    "gather.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
-    "review.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）"
+    "gather.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
+    "review.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）"
    }
   },
   "reviewer": {
@@ -227,7 +228,7 @@
     "test_judge.py": "Verify judge reply normalization, truncation, kernel failures, and measured check costs."
    },
    "kits": {
-    "test_kits.py": "Check the public kits folder (templates/kits): English only, no site-specific wording, valid JSON with a description first, and each kit's system.txt…"
+    "test_kits.py": "Check the public kits folder (templates/kits): English only, no site-specific wording, valid JSON with a description first, each kit folder holding s…"
    },
    "reviewer": {
     "endpoint.py": "Return fake reviewer tool calls using the actual previous review_round result.",

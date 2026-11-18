@@ -106,7 +106,7 @@
   "out": "wf/knowledge/code-map/proto8",
   "deps_out": "wf/knowledge/code-map/deps",
   "data_files": {
-   "*kits*/*.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
+   "*kits*/*.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
    "*system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
    "*prompt.txt": "給腦的提示詞（純文字，整份交給腦，不加檔頭）",
    "*VERSION": "版本號與來源（一行純文字）",

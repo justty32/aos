@@ -123,13 +123,6 @@
    "source": "proto8/py/aos/apps/json_view/main.py"
   },
   {
-   "command": "aos-kit",
-   "from": "proto8/py/entries.json",
-   "lang": "Python",
-   "module": "aos.apps.kit.main",
-   "source": "proto8/py/aos/apps/kit/main.py"
-  },
-  {
    "command": "aos-llm",
    "from": "proto8/cpp/Makefile",
    "lang": "C++",

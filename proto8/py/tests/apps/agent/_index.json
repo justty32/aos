@@ -20,6 +20,9 @@
  "test_chat_read_line.py": {
   "description": "Test chat's line input in a real pty: Chinese + Backspace, arrow keys, long lines, pastes and EOF are read whole (11-12 chat-utf8)."
  },
+ "test_ctl_kit.py": {
+  "description": "Test aos-agent ctl add / set-def --kit on a real aos-daemon: the kit's system.txt and tools.json become the agent's own copies in its stack (replacin…"
+ },
  "test_daemon_down.py": {
   "description": "Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing."
  },

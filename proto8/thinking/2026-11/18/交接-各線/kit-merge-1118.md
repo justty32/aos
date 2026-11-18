@@ -61,3 +61,13 @@ kit-merge-1118 線 11-18 16:5x 收手時的交接：aos-kit 併進 aos-agent ctl
 - WSL 暫存在 `~/.aos/scratch/kit-merge-1118/`：`base/`（git archive HEAD，已裝好）、`after/`（rsync 工作樹之後裝）。腳本有 `setup.sh base|after`、`tests.sh base|after`、`one.sh 夾 模組`。
 - 改前基準 `tests.sh base` 已在背景跑（pid 記在 `tests-base.pid`），結果寫在 `logs-base/summary.txt`、`fails.txt`。收手時要停掉。
 - 改後：`setup.sh after` 加 `one.sh … test_ctl_kit` 跑到一半，沒看到結果。明天的做法：重跑 `setup.sh after`，再跑 `tests.sh after`，然後拿 `fails.txt` 跟 base 那份逐支比對。
+
+## 11-18 晚家機收尾（這條線做完）
+
+使用者 11-18 晚選項框裁了三題（逐字記在 [08-要裁的題](../../17/cpp-py-改名/08-要裁的題.md) 與 [設計稿](../aos-kit-併進ctl.md)）：寫到哪「寫進 stack (Recommended)」；「eca 定義也能套 kit」要；「換包可以直接蓋」要。
+
+- 程式：`ctl/kit.py` 拿掉 eca 一律拒收（只剩 `cli.json` 自己寫了 `tools` 鍵＝`KitBad`）、拿掉 `CopyExists`（已有自己那份就蓋，stderr 寫 `replaced`），收回時蓋掉的寫回原內容；套在 eca 上 stderr 多一句「CLI 自帶的工具還在」。add／set-def 的說明、agent README、kits README、知識庫 `aos/kits.json` 跟著改。
+- 測試：`test_ctl_kit` 從 8 支變 10 支（eca 照收、eca cli.json 寫 tools＝KitBad、蓋掉已有那份、收回時寫回、set-def 直接換包再 reset）。全套（暫存複本 install 後跑）2758 支，只紅 image-move-check（每份都紅、跟這條線無關）。
+- 假腦實操：家機暫存 `~/.aos/scratch/kit-merge-home-1118/`（clone HEAD＋這條線的檔＋git rm 19 檔、install.py、照起手範本 start-api 起樹）：agent-fsm 的 ann `ctl add --kit gather` → 問答正常 → `set-def --kit review` 直接換（system 蓋、tools 一樣留著）→ reset 兩支回定義；eca-claude（假 claude）`ctl add --kit gather` → 假 claude 收到 `--append-system-prompt-file <stack>/system.txt`、aos-mcp 帶 `--own <stack>/tools.json`，`tools ls` 26 支（gather 那組）→ `set-def --kit review` 直接換 → reset 後回 34 支。兩台 daemon 都用自己的 stack shutdown 收了。
+- 撞檔沒交的兩處：`proto8/templates/README.md` 的 kits 那列（同檔還有 eca-pi-bc-1118 的 eca-pi 那列）、教學目錄 `eca-claude-小試驗教學/README.md` 的 08 那列（eca-lab-1118 在改同一檔，這列沒加註）。兩處的字都還在工作樹（後者沒寫）；前者等 eca-pi-bc-1118 交那檔時一起帶走，交的人要知道裡面有 kit 那列。
+- 還留著的一題：套 kit 後 `tools ls` 那行誤導的提醒要不要修（沒問過使用者）。

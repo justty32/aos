@@ -6,6 +6,8 @@
 
 使用者原話：「8.不使用aos-kit來達成aos-kit的功能」
 
+> **aos-kit 已於 11-18 移除**，功能併進 `aos-agent ctl add --kit`／`ctl set-def --kit`（寫成 stack 裡自己那份、定義夾不動；eca 定義也能套；換包直接蓋），見 [aos-kit-併進ctl](../aos-kit-併進ctl.md)。下面是移除前的實測，指令照當時留著。
+
 ## 結論
 
 - **`aos-kit` 只動兩個檔**：定義夾裡的 `system.txt`、`tools.json`。被換掉的舊檔先另存一份 `檔名.before-kit`。它不碰 `llm.json`、`hooks.json`，不叫別的 aos 指令，也不重起 agent。
