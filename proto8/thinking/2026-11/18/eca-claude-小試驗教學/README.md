@@ -19,6 +19,7 @@ eca-claude 小試驗教學的目錄：使用者 11-18 陸續提的疑問，一�
 | [09](09-aos-sandbox限制資源.md) | 用 aos-sandbox 限制 CPU%、核心數、資料夾、網路、記憶體 | 資料夾、網路由沙箱本身擋。記憶體、CPU 時間這台要走 daemon 的 `--limits`。CPU%、核心數沒有欄位，要在外面包 `systemd-run --user`＋`taskset` |
 | [10](10-aos-asuser.md) | 試 aos-asuser（不行就寫缺什麼、模擬假設） | 參數檢查都實跑過了。真換身分缺 `newuidmap`，要使用者自己 `sudo apt install uidmap`。裝好之後的步驟標成「預期，未實測」 |
 | [11](11-aos-share.md) | aos-share 也試試看 | 檔案系統支援 ACL，`check` 能用。真的分享、收回缺 `setfacl`，要使用者自己 `sudo apt install acl uidmap`。裝好之後的步驟標成「預期，未實測」 |
+| [12](12-沙箱asuser-share要裝什麼與WSL限制.md) | 沙箱、asuser、share 各要額外裝什麼、WSL 上有什麼限制（總覽） | 沒有新實測，整理自 09～11 與實機檢查。bwrap 有；要補 `s6`（沙箱上限、`aos-run`）、`uidmap`（asuser）、`acl`（share），sudo 要自己跑。不裝的替代路是 `--limits`、`systemd-run`＋`taskset` |
 
 ## 共同準備
 
