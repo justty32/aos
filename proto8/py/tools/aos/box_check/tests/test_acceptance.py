@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -39,12 +40,19 @@ class Acceptance(unittest.TestCase):
         (self.case / 'stdin.json').write_text(json.dumps({'command': PROBE}) + '\n')
         (self.case / 'check.json').write_text(json.dumps({'min_score': 1.0}) + '\n')
 
+    def require_box(self):
+        """A real boxed run needs bwrap and s6-softlimit (the shell-boxed example sets limits)."""
+        for tool in ('bwrap', 's6-softlimit'):
+            if not shutil.which(tool, path=self.env['PATH']):
+                self.skipTest('%s is not installed; a real boxed run needs it' % tool)
+
     def call(self, target, args):
         return subprocess.run(['aos-exec', str(target)], input=json.dumps(args),
                               text=True, capture_output=True, env=self.env, timeout=40)
 
     def test_real_boxed_whitelist_and_writes(self):
-        rg = self.call(BOXED, {'command': 'rg --version'})
+        self.require_box()
+        rg =self.call(BOXED, {'command': 'rg --version'})
         self.assertEqual(rg.returncode, 0, rg.stderr)
         self.assertIn('ripgrep', rg.stdout)
         self.assertTrue(rg.stdout.rstrip().endswith('[exit code 0]'), rg.stdout)
@@ -67,6 +75,7 @@ class Acceptance(unittest.TestCase):
         return json.loads(result.stdout)
 
     def test_measure_boxed_passes(self):
+        self.require_box()
         result = self.measure(BOXED)
         self.assertTrue(result['check']['pass'], result)
         self.assertFalse(Path('/tmp/aos-box-probe').exists())

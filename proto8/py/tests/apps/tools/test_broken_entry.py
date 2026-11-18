@@ -20,6 +20,7 @@ class BrokenEntry(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp(prefix="aos-tools-broken-"))
         shutil.copytree(TOOL, self.tmp / "tools" / "clock")
         shutil.copytree(TOOL, self.tmp / "tools" / "aos_cache")
+        (self.tmp / "aos").symlink_to(PROTO / "lib" / "aos", target_is_directory=True)   # 抄出去的工具往祖先找 aos 套件（同裝好的 lib/）
         (self.tmp / "tools" / "empty").mkdir()            # 一個沒有 _tooldef 的資料夾（ToolDefMissing）
         self.reg = self.tmp / "tools.json"
         self.reg.write_text(json.dumps({"tools": {"clock": {"path": "tools/clock"},

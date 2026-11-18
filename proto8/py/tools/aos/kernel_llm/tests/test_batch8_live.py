@@ -135,7 +135,7 @@ class Batch8Live(unittest.TestCase):
         line = 'llm_forward: error: CfgBad endpoint pack has no "kernel"'
         self.assertEqual(missing.returncode,1)
         self.assertEqual(json.loads(missing.stdout), {'error':{'code':'EndpointFailed',
-                         'msg':'endpoint function exited with code 1: '+line}})
+                         'msg':'endpoint function exited with code 1: '+line, 'retry':True}})
         unknown = self.llm(upper,['ask','--full'], {'endpoint':'unknown-backend','request':REQUEST})
         self.assertEqual(unknown.returncode,1)
         self.assertEqual(json.loads(unknown.stdout)['error']['code'],'CfgBad')

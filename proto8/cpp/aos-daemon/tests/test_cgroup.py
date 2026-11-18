@@ -1,4 +1,5 @@
 # 此檔以獨立 transient scope 驗證 daemon 的可選 cgroup 份額與整格回收。
+import errno
 import os
 from pathlib import Path
 import signal
@@ -57,7 +58,11 @@ class ScopedDaemon(Fixture):
             except subprocess.TimeoutExpired:
                 pass
         if self.scope is not None and (self.scope / 'cgroup.kill').exists():
-            (self.scope / 'cgroup.kill').write_text('1')
+            try:
+                (self.scope / 'cgroup.kill').write_text('1')
+            except OSError as e:     # the scope emptied and is being removed between exists() and write: ENODEV/ENOENT
+                if e.errno not in (errno.ENODEV, errno.ENOENT):
+                    raise
         subprocess.run(['systemctl', '--user', 'stop', self.unit], env=ENV, capture_output=True)
         subprocess.run(['systemctl', '--user', 'reset-failed', self.unit], env=ENV, capture_output=True)
         if self.proc is not None:

@@ -56,7 +56,8 @@ def problems(value, schema, use=None):
         import jsonschema
         fc = jsonschema.FormatChecker(formats=())
         fc.checks("date-time")(lambda v: not isinstance(v, str) or times.is_time(v))
-        v = jsonschema.Draft202012Validator(schema, format_checker=fc)
+        # 頂層的相對 $id（如 comm/1/board）不給 jsonschema：舊版（Ubuntu 24.04 的 4.10）拿它當基底，把 #/$defs/… 解成 comm/1/comm/1/board、丟 RefResolutionError；四份只用本檔的 #/$defs/…，拿掉不影響結果
+        v = jsonschema.Draft202012Validator({k: x for k, x in schema.items() if k != "$id"}, format_checker=fc)
         out = [("/" + "/".join(str(p) for p in e.absolute_path), e.message) for e in v.iter_errors(value)]
     else:
         out = []

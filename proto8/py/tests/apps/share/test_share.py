@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import pwd
 import runpy
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -37,6 +38,9 @@ class Share(unittest.TestCase):
         return result.stdout
 
     def require_acls(self):
+        for tool in ("setfacl", "getfacl"):
+            if not shutil.which(tool):
+                self.skipTest("%s is not installed (package acl)" % tool)
         probe = self.tmp / "probe"
         probe.touch()
         result = subprocess.run(["setfacl", "-m", "g:200599:r", str(probe)],

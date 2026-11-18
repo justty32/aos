@@ -188,9 +188,9 @@ else:
     def test_timeout_kills_grandchild_after_leader_exits(self):
         self.command('aos-tools', """import json,os,signal,sys,time
 if 'ls' in sys.argv:
-    print(json.dumps([{'name':'echo','path':'/fake/echo','tooldef':{},'metainfo':{'timeout_ms':100}}]))
+    print(json.dumps([{'name':'echo','path':'/fake/echo','tooldef':{},'metainfo':{'timeout_ms':1000}}]))
 else:
-    if os.fork() == 0:
+    if os.fork() == 0:   # timeout 1000 ms, not 100: under load python may not reach this fork in 100 ms (no grandchild, no 2 s grace)
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         print('grandchild ready', flush=True)
         time.sleep(30)

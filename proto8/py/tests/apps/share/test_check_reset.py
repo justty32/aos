@@ -17,6 +17,9 @@ class CheckReset(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(dir=os.environ.get("KERNEL_TEST_TMP")))
         self.env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+        for tool in ("setfacl", "getfacl"):
+            if not shutil.which(tool):
+                self.skipTest("%s is not installed (package acl)" % tool)
         probe = self.tmp / "probe"
         probe.touch()
         if subprocess.run(["setfacl", "-m", "u:%s:rw" % ME, str(probe)], capture_output=True).returncode:

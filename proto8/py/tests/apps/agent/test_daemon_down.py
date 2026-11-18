@@ -1,5 +1,6 @@
 """Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing."""
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -21,6 +22,16 @@ def dead_pid():
     return p.pid
 
 
+def nested_pid_ns():
+    """Same rule as aos-agent's daemon_up: not in the kernel's first pid namespace = it does not check the daemon."""
+    try:
+        return os.readlink("/proc/self/ns/pid") != "pid:[4026531836]"
+    except OSError:
+        return True
+
+
+@unittest.skipIf(nested_pid_ns(), "this process is not in the initial pid namespace (WSL2, containers); "
+                                  "aos-agent skips the daemon liveness check there and waits --timeout-s instead")
 class DaemonDown(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="daemon-down-"))
