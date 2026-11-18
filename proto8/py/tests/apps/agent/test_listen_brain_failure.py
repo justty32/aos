@@ -126,46 +126,6 @@ class ListenBrainFailure(unittest.TestCase):
         self.assertIn('waited 1 s; %s was handed over and is not answered yet (last state: handed)' % SIG, line)
         self.assertNotIn('brain call failed', line)
 
-    # ---- cooldown-1118：冷卻檔有 retry／error 欄（fsm、eca 寫的）＝只讀欄位，不看 stderr 的格式
-    def fail_fields(self, retry, error=None, stderr='', code='BrainFailed', reason='aos-llm recv exited 1'):
-        self.fail(stderr, code, reason)
-        rec = json.loads((self.stack / 'cooldown.json').read_text())
-        rec['retry'] = retry
-        if error:
-            rec['error'] = error
-        (self.stack / 'cooldown.json').write_text(json.dumps(rec))
-
-    def test_fields_retry_false_ends_at_once_without_any_stderr(self):
-        self.fail_fields(False, {'code': 'EndpointFailed', 'msg': 'HTTP 400: model not supported'})
-        r, took = self.listen()
-        line = self.error_line(r)
-        self.assertLess(took, 10, r.stderr)
-        self.assertIn('stopped on an error before answering: EndpointFailed HTTP 400: model not supported / '
-                      'BrainFailed aos-llm recv exited 1 (failure 1 in a row', line)
-        self.assertIn('ctl start --target kid', line)
-
-    def test_fields_win_over_the_stderr_lines(self):
-        self.fail_fields(True, {'code': 'EndpointFailed', 'msg': 'HTTP 503: unavailable'}, stderr=FSM_STOP)
-        r, took = self.listen('1.5')
-        self.assertGreaterEqual(took, 1)
-        line = self.error_line(r)
-        self.assertNotIn('stopped on an error', line)
-        self.assertIn("kid's last brain call failed: EndpointFailed HTTP 503: unavailable (failure 1", line)
-        warns = [l for l in r.stderr.splitlines() if 'warning:' in l and 'last brain call failed' in l]
-        self.assertEqual(len(warns), 1, r.stderr)
-
-    def test_fields_retry_false_while_asking_again_is_not_stopped(self):
-        self.fail_fields(False, {'code': 'EndpointFailed', 'msg': 'HTTP 400: x'})
-        (self.stack / 'think/pending.txt').write_text('brain-letter\n')
-        r, took = self.listen('1.5')
-        self.assertGreaterEqual(took, 1)
-        self.assertNotIn('stopped on an error', self.error_line(r))
-
-    def test_fields_without_error_use_code_and_reason(self):
-        self.fail_fields(False, code='CliFailed', reason='claude exited 1: usage limit reached')
-        line = self.error_line(self.listen()[0])
-        self.assertIn('stopped on an error before answering: CliFailed claude exited 1: usage limit reached (failure 1', line)
-
     def test_answered_letter_still_prints_the_answer(self):
         self.fail(FSM_STOP)
         with open(self.stack / 'history.jsonl', 'a') as f:

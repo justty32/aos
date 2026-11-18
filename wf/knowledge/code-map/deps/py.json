@@ -29,7 +29,7 @@
    "module": "aos.apps.agent",
    "unit": "proto8/py/aos/apps/agent",
    "used_by": "",
-   "uses": "aos.agentlib.cli_a2a aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.daemon_ctl aos.declared_files aos.directive_value aos.flags aos.ws"
+   "uses": "aos.agentlib.cli_a2a aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_linger aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.daemon_ctl aos.declared_files aos.directive_value aos.flags aos.ws"
   },
   {
    "kind": "app",
@@ -71,7 +71,7 @@
    "module": "aos.apps.eca",
    "unit": "proto8/py/aos/apps/eca",
    "used_by": "",
-   "uses": "aos.agentlib.cli_ask aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_cfg aos.agentlib.cli_hook aos.agentlib.cli_linger aos.agentlib.cli_mcp aos.agentlib.cli_pi aos.agentlib.cli_screen aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.agentlib.quiet aos.daemon_ctl aos.flags aos.ws"
+   "uses": "aos.agentlib.cli_ask aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_cfg aos.agentlib.cli_hook aos.agentlib.cli_mcp aos.agentlib.cli_pi aos.agentlib.cli_screen aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.agentlib.quiet aos.daemon_ctl aos.flags aos.ws"
   },
   {
    "kind": "app",

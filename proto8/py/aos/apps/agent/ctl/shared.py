@@ -41,7 +41,7 @@ def need_table():
 
 def kernel_hint():
     """只指向 AOS_KERNEL 公開介面，不辨識收件者身份。"""
-    k = kernel_box()
+    k = kernel_box() if via_kernel() else None
     return "; letter was sent first to AOS_KERNEL=%s; no reply from there; inspect adjacent %s" % (k, os.path.join(os.path.dirname(k), "queue.json")) if k else ""
 
 
@@ -92,11 +92,13 @@ def send_only(body):
         return call_dc(dc.send, None, body)
     d = daemon_path()
     daemon_up(d)
-    return call_dc(dc.send, d, body)
+    return call_dc(dc.send, d, body, direct=True)     # 明給 --daemon＝寄那台自己的 ctl 信箱，AOS_KERNEL 設著也不經它
 
 
 def ctl_wait(cmd, body, cond, what, refused, secs=WAIT_S, on_queued="fail", name=None, replied=False):
     """等自己的回信與公開表；排隊可成功返回，逾時先撤未領取的信。replied＝收到 daemon 的回信（applied）就算數、不看表。
+    要一格的信（add／start／wake，與帶 procs_added 的，例：set-def 掛回那封）on_queued fail 時帶 queue_wait_ms＝S 秒：
+    排在 kernel 隊裡等不到格，期限一到 kernel 就拒、不會晚到才套上（setdef-night-1118，使用者 11-18 裁「信帶等待期限」）。
     走 kernel（kernel-framework 03）＝信寄 AOS_KERNEL、回信信箱照 kernel_reply_box、不核 daemon 活不活；只看回信的指令呼叫時給 replied。"""
     kernel = via_kernel()
     if kernel:
@@ -106,13 +108,14 @@ def ctl_wait(cmd, body, cond, what, refused, secs=WAIT_S, on_queued="fail", name
         d = daemon_path()
         daemon_up(d)
         box = call_dc(dc.reply_box, d)
-    recipient = call_dc(dc.mailbox_of, d)
-    if kernel_box():
+    recipient = call_dc(dc.mailbox_of, d, direct=not kernel)   # 明給 --daemon（AOS_KERNEL 設著也一樣）＝寄那台自己的 ctl 信箱
+    if kernel:
         note("routing via AOS_KERNEL=%s" % kernel_box())
-    if cmd in {"add", "start", "wake"} and on_queued == "fail":
+    slot = cmd in {"add", "start", "wake"} or "procs_added" in body   # 要一格的信（set-def 掛回那封也是 procs_added）
+    if slot and on_queued == "fail":
         millis = secs * 1000
         body = dict(body, queue_wait_ms=int(millis) if math.isfinite(millis) else int(secs) * 1000)
-    letter = call_dc(dc.send, d, body, reply_to=box)
+    letter = call_dc(dc.send, d, body, reply_to=box, direct=not kernel)
     got, done_at = None, None
     end = time.monotonic() + secs
 
@@ -146,7 +149,7 @@ def ctl_wait(cmd, body, cond, what, refused, secs=WAIT_S, on_queued="fail", name
     if got is not None:
         raise Fail("WaitFailed", "waited %g s, %s" % (secs, what))
     position = queue_position(letter)
-    if position is not None and cmd in {"add", "start", "wake"}:
+    if position is not None and slot:
         if on_queued == "ok":
             print("queued %s at position %d (letter %s; applied when a slot frees)" % (name, position, letter))
             return None

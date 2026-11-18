@@ -3,7 +3,8 @@ import contextlib
 import io
 import os
 from aos import daemon_ctl as dc
-from ..common import Fail, bad_args, call_dc, find, note, parse, row_named, table_ref, via_kernel
+from aos.agentlib import cli_cell, cli_linger
+from ..common import Fail, bad_args, call_dc, daemon_path, find, note, parse, row_named, table_ref, via_kernel
 from ..decl import close_screen_if_any, read_decl
 from ..common import IFACE
 from .shared import ctl_wait, need_table, timeout_opt, wait_for
@@ -28,8 +29,11 @@ once and keeps it when the daemon restarts.
 
 For a moment NAME is not on the daemon table: a letter sent to it then is refused.
 If the stop fails or times out nothing else is changed (only its screen is closed). If
-attaching it again fails after it was detached, the error says how to attach it by hand:
-  aos-agent ctl add -n NAME -s STACK -w WS [--auto-restart] OLD-DEF
+attaching it again fails after it was detached, the error says how to attach it by hand,
+straight to the daemon (-d), so a kernel that refused it is not asked again:
+  aos-agent -d DAEMON ctl add -n NAME -s STACK -w WS [--auto-restart] OLD-DEF
+Through AOS_KERNEL the attach letter waits for a slot at most --timeout-s seconds: a kernel
+that queues it refuses it when that time is up (SlotMissing), so it is never applied later.
 
 Its own tools file in the stack (made by aos-agent tools add / rm) still overrides the old
 definition's; a warning says so: look with aos-agent tools ls, or aos-agent tools reset.
@@ -78,6 +82,7 @@ def cmd(argv):
     stack = written["stack"] if isinstance(written.get("stack"), dict) else a.stack
     old_def = row.get("def")
     kernel = via_kernel()
+    daemon = daemon_path()                            # 掛不回去時的手動指令帶 -d：走 kernel 照抄會再被同一站擋（verify-night-1118 1b、1c）
     # 先組好掛回那封信（路徑、limits 有錯＝什麼都還沒動）
     _, request = call_dc(dc.add_letter, entry_target, daemon=None if kernel else table_ref(),
                          **add.add_kwargs(a.name, ws, stack, def_dir, row.get("limits"), None,
@@ -92,6 +97,7 @@ def cmd(argv):
         with contextlib.redirect_stdout(io.StringIO()):
             phase.cmd_stop(["--timeout-s", str(secs), a.name], look=True)
     detach(a, secs, kernel)
+    drop_close_orders(a)
     made = []
     try:
         if kit_steps is not None:                     # 拔掉之後、掛回之前寫進 stack：掛回來的第一格就用 kit
@@ -103,8 +109,8 @@ def cmd(argv):
             wait_for(lambda: row_named(a.name), "the daemon has not put %s back on the table yet" % a.name, secs)
     except Fail as e:
         kit_mod.undo(made, e)                         # 掛不回去＝收回剛寫的 kit、蓋掉的寫回（逾時說不準：留著）
-        raise Fail(e.code, "%s; %s was detached and is not on the table now; attach it again by hand: aos-agent ctl add -n %s -s %s -w %s%s %s"
-                   % (e, a.name, a.name, a.stack, a.ws, " --auto-restart" if row.get("auto_restart") else "", old_def or "OLD-DEF")) from e
+        raise Fail(e.code, "%s; %s was detached and is not on the table now; attach it again by hand: aos-agent -d %s ctl add -n %s -s %s -w %s%s %s"
+                   % (e, a.name, daemon, a.name, a.stack, a.ws, " --auto-restart" if row.get("auto_restart") else "", old_def or "OLD-DEF")) from e
     if kit_steps is None:                             # 套了 kit＝stack 那份就是 kit 的，不是疊在舊定義上
         warn_own_tools(a, old_def, xxx)
     now = (row_named(a.name) or {}).get("def") or xxx
@@ -121,6 +127,16 @@ def detach(a, secs, kernel):
              secs=secs, replied=kernel)
     if kernel:
         wait_for(lambda: gone(None), "the daemon has not removed %s yet" % a.name, secs)
+
+
+def drop_close_orders(a):
+    """eca 的 ctl stop（after_stop hook）在 stack 小格留的延後關畫面到期單（screen_close.json）：畫面 set-def 一開頭就關了，
+    單子留著＝之後才到期、去關掛回來那隻的新畫面。拔掉之後、掛回之前收掉（cooldown-1118 發現；使用者 11-18 裁「清單只限 set-def」，
+    所以 aos-eca-screen close 不清、ctl rm 與 aos-agent close 留著照舊）。沒有那個小格或那份單子＝不做事。"""
+    for kind in cli_linger.KINDS:
+        cell = cli_cell.Cell(os.path.join(a.stack, kind), make=False)
+        if os.path.isdir(cell.path):
+            cli_linger.drop(cell)
 
 
 def warn_own_tools(a, old_def, new_def):

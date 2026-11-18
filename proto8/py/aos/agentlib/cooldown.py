@@ -9,7 +9,7 @@ BrainFailed／SendFailed）記一筆，間隔 30 秒、1、2、4、8、15、30 �
 
 failures＝這一串連續失敗幾次；until＝冷卻到幾點；at＝最後一次失敗的時間；code、reason＝最後一次的代號與原因；
 dropped＝這一串掉了幾封信（eca 才加，fsm 重寄同一份請求、不掉信，一直是 0）。
-選配兩欄（cooldown-1118，使用者 11-18 裁「寫進狀態檔」：listen 直接讀欄位，不用認錯誤輸出的格式；只加欄、上面幾欄不動）：
+選配兩欄（cooldown-1118，使用者 11-18 裁「寫進狀態檔」；只加欄、上面幾欄不動；aos-agent ctl ls 讀來顯示，listen 不看這兩欄、照舊認 stderr 結尾的錯誤行，使用者 11-18 裁「前綴補回」）：
     "retry": true|false   寫的那支（身體）接下來會不會自己重送：true＝冷卻到了自己再試（fsm 的 SendFailed、BudgetMissing、
                           retry true 的 BrainFailed；eca claude 的暫時錯）；false＝停在這個錯上、退 1 等人（或 auto_restart 重起後冷卻完才重寄）。
     "error": {"code", "msg"}  下層說的錯誤代號與原話一行（fsm＝llm kernel 回信的 error.code／msg，也就是 aos-llm 那行

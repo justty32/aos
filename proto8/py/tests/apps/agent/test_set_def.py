@@ -21,6 +21,8 @@ ENV["PYTHONDONTWRITEBYTECODE"] = "1"
 
 
 class SetDef(unittest.TestCase):
+    DAEMON_ENV = {}
+
     def setUp(self):
         self.tmp = Path(os.path.realpath(tempfile.mkdtemp(prefix="set-def-")))
         self.d = self.tmp / "stack"
@@ -30,8 +32,8 @@ class SetDef(unittest.TestCase):
         (self.tmp / "daemon.json").write_text('{"interval_ms": 20, "procs": {}}\n')
         self.old, self.new = self.definition("old"), self.definition("new")
         self.err = open(self.tmp / "daemon.err", "w")
-        self.p = subprocess.Popen(["aos-daemon", str(self.tmp / "daemon.json")], cwd=self.tmp, env=dict(ENV, AOS_STACK=str(self.d)),
-                                  stdout=subprocess.DEVNULL, stderr=self.err)
+        self.p = subprocess.Popen(["aos-daemon", str(self.tmp / "daemon.json")], cwd=self.tmp,
+                                  env=dict(ENV, AOS_STACK=str(self.d), **self.DAEMON_ENV), stdout=subprocess.DEVNULL, stderr=self.err)
         until(lambda: (self.d / "state.json").exists())
         r = self.agent("ctl", "add", "-n", "ann", "--auto-restart", "-w", str(self.ws), "old")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -242,6 +244,77 @@ class SetDef(unittest.TestCase):
         self.agent("ctl", "stop", "ann")
         self.agent("ctl", "start", "ann")
         until(lambda: self.ran() == ["old", "old"])            # none of the refused calls changed the definition
+
+
+class SetDefThroughAFullKernel(SetDef):
+    """setdef-night-1118 (user 11-18: the letter carries a wait deadline): through AOS_KERNEL, a station with max_running full
+    and queue on. The attach letter used to wait in the queue and be applied later, stopping an agent attached again by hand."""
+    DAEMON_ENV = {"AOS_HOME": str(PROTO)}                       # the station's loop.json points into $AOS_HOME
+
+    def setUp(self):
+        super().setUp()
+        shutil.copytree(PROTO / "templates" / "kernel" / "procs-kernel", self.tmp / "kern")
+        (self.tmp / "kern" / "kernel.json").write_text('{"queue": true}\n')
+        r = subprocess.run(["aos-daemon-ctl", "-d", str(self.d), "add", str(self.tmp / "kern")], env=ENV, capture_output=True,
+                           text=True, cwd=self.tmp)                  # not an aos-agent definition: the daemon's own add
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.agent("ctl", "add", "-n", "bob", "-w", str(self.ws), "old").returncode, 0)
+        until(lambda: self.row("kern").get("phase") == "running" and self.row("bob").get("phase") == "running")
+        self.box = self.d / "procs" / "kern" / "requests"
+        until(lambda: self.via("ctl", "ls").returncode == 0)       # the station answers table questions
+
+    def via(self, *args):
+        return subprocess.run([sys.executable, str(BIN), *args], capture_output=True, text=True, timeout=90, cwd=self.tmp,
+                              env=dict(ENV, AOS_KERNEL=str(self.box), AOS_DAEMON=str(self.d)), stdin=subprocess.DEVNULL)
+
+    def full(self, less=0):
+        """max_running = the rows running now (counted the way the station counts them) less LESS, so a letter that adds one queues.
+        A running ann frees its own slot when set-def stops it: LESS 1 stands for someone else taking that slot first."""
+        rows = json.loads((self.d / "procs_state.json").read_text())["procs"]
+        n = sum(1 for r in rows.values() if r.get("phase") in ("running", "stuck")) - less
+        (self.tmp / "kern" / "kernel.json").write_text(json.dumps({"max_running": n, "queue": True}) + "\n")
+
+    def check(self, phase):
+        if phase == "stopped":
+            self.assertEqual(self.agent("ctl", "stop", "ann").returncode, 0)
+        elif phase == "sleeping":
+            self.assertEqual(self.agent("ctl", "sleep", "ann").returncode, 0)
+        self.full(1 if phase == "running" else 0)
+        r = self.via("ctl", "set-def", "--timeout-s", "2", "ann", "new")
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("aos-agent: error: SlotMissing ", r.stderr)          # the station refused it when the deadline passed
+        self.assertIn("ann was detached and is not on the table now; attach it again by hand: aos-agent -d %s ctl add -n ann " % self.d,
+                      r.stderr)
+        self.assertEqual(self.row(), {})
+        self.assertEqual(json.loads((self.box.parent / "queue.json").read_text())["queued"], [])
+        hint = r.stderr.rsplit("attach it again by hand: ", 1)[1].split()
+        self.assertEqual(hint[:2], ["aos-agent", "-d"])
+        back = self.via(*hint[1:])                                       # copied as it is, in the same shell (AOS_KERNEL still set)
+        self.assertEqual(back.returncode, 0, back.stderr)
+        until(lambda: self.row().get("phase") == "running")
+        self.assertEqual(self.agent("ctl", "stop", "bob").returncode, 0)  # slots free: nothing late may come
+        (self.tmp / "kern" / "kernel.json").write_text('{"queue": true}\n')
+        time.sleep(1.5)
+        self.assertEqual(self.row().get("phase"), "running")
+        self.assertEqual(os.path.normpath(self.d / self.row()["def"]), str(self.old))
+
+    def test_running_agent_with_no_slot_fails_and_nothing_comes_late(self):
+        self.check("running")
+
+    def test_stopped_agent_with_no_slot_fails_and_nothing_comes_late(self):
+        self.check("stopped")
+
+    def test_sleeping_agent_with_no_slot_fails_and_nothing_comes_late(self):
+        self.check("sleeping")
+
+    def test_with_a_free_slot_it_goes_through(self):
+        r = self.via("ctl", "set-def", "ann", "new")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        until(lambda: self.ran() == ["old", "new"])
+
+
+for _name in [n for n in vars(SetDef) if n.startswith("test_")]:
+    setattr(SetDefThroughAFullKernel, _name, None)               # the plain set-def tests run once, in SetDef
 
 
 if __name__ == "__main__":

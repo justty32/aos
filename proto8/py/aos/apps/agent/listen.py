@@ -10,10 +10,8 @@ the newest letter still in the queue, else the last letter the agent took and ha
 An agent whose body does not record letter names yet (no aos.letter in its history) is matched
 the old way: the latest answer, with a warning on stderr.
 While a handed-over letter waits, a failed brain call (the stack's cooldown.json) is said once on
-stderr with the lower layer's error recorded there (its "error" field); if the agent stopped on
-that error (its "retry" field is false), listen ends at once with AnswerMissing and that error
-instead of waiting for the timeout. A cooldown.json without "retry" (a body that does not write
-it) is judged from the error lines at the end of the agent's stderr file instead.
+stderr with the error lines from the agent's stderr file; if the agent stopped on that error,
+listen ends at once with AnswerMissing and those lines instead of waiting for the timeout.
 --last N prints the last N exchanges as blocks: "== #N", question lines prefixed "> ",
 then the answer. --follow prints new exchanges; add --last N to show history first.
 Ctrl-C leaves follow mode with exit 0; reminders go to stderr.
