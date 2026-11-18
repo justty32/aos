@@ -1,4 +1,4 @@
-# Verify index_gen writes the per-file code map json (wf/knowledge/code-map/proto8/<top>.json) from file headers: one leaf per scanned unit, stable on re-run, stale check on header change.
+# Verify index_gen writes the per-file code map json (wf/knowledge/code-map/proto8/<top>.json) from file headers: one leaf per scanned unit, knowledge and data-file descriptions, stable on re-run, stale check on header change.
 import json
 import subprocess
 import sys
@@ -26,7 +26,12 @@ class CodemapJsonTests(unittest.TestCase):
                           ('proto8/cmd/tool/_entry', '#!/bin/sh\n# tool - runs the tool.\n'),
                           ('proto8/cmd/tool/_tooldef.json', '{"description": "def"}'),
                           ('proto8/cmd/tool/tests/t.py', '# t - tests tool.\n'),
-                          ('proto8/cpp/foo/CMakeLists.txt', '# foo build.\ntarget_link_libraries(foo PUBLIC bar PRIVATE baz)\n'),
+                          ('proto8/cpp/Makefile', '# builds foo.\nLIBS := foo\nBINS := foo\nDEPS_foo := bar\n'),
+                          ('proto8/cpp/third_party/x/VERSION', 'x 1.0\n'),
+                          ('proto8/knowledge/node.json', json.dumps({'_description': '# A node\n\nbody', 'k': 'v'})),
+                          ('proto8/knowledge/_description.json', json.dumps(['# The tree', '', 'text'])),
+                          ('proto8/knowledge/rules.json', json.dumps('# Rules\n\nnever')),
+                          ('proto8/lib/page.html', '<html><head><title>Page</title></head></html>\n'),
                           ('proto8/cpp/foo/src/f.cpp', '// f.cpp - foo body.\n'),
                           ('proto8/thinking/skip.md', '# skipped\n'),
                           ('proto8/lib/README.md', '# not listed\n')]:
@@ -58,7 +63,7 @@ class CodemapJsonTests(unittest.TestCase):
     def test_shape_and_counts(self):
         self.assertEqual(self.run_gen('--apply'), 0)
         names = sorted(p.name for p in (self.root / OUT).iterdir())
-        self.assertEqual(names, ['cmd.json', 'cpp.json', 'lib.json', 'proto8.json'])
+        self.assertEqual(names, ['cmd.json', 'cpp.json', 'knowledge.json', 'lib.json', 'proto8.json'])
         lib = self.read('lib.json')
         self.assertEqual(lib['generated_by'], 'wf/tools/index_gen.py')
         self.assertEqual(lib['tree']['a.py'], 'does a.')
@@ -68,7 +73,14 @@ class CodemapJsonTests(unittest.TestCase):
         self.assertNotIn('README.md', lib['tree'])
         self.assertEqual(self.read('cmd.json')['tree']['tool/'], 'runs the tool.')   # 工具夾三個契約檔併一格
         self.assertEqual(self.read('cmd.json')['tree']['tool']['tests']['t.py'], 'tests tool.')
-        self.assertEqual(self.read('cpp.json')['deps'], {'foo': {'public': ['bar'], 'private': ['baz']}})
+        self.assertNotIn('deps', self.read('cpp.json'))                   # 依賴表另出到 deps/，逐檔表只有 tree
+        self.assertEqual(self.read('cpp.json')['tree']['Makefile'], 'builds foo.')
+        self.assertEqual(self.read('cpp.json')['tree']['third_party']['x']['VERSION'], '版本號與來源（一行純文字）')   # codemap.data_files
+        know = self.read('knowledge.json')['tree']
+        self.assertEqual(know['node.json'], 'A node')                    # _description 那段 md 的標題
+        self.assertEqual(know['_description.json'], 'The tree')          # 整份是字串陣列的 md
+        self.assertEqual(know['rules.json'], 'Rules')                    # 整份是一個字串的 md
+        self.assertEqual(lib['tree']['page.html'], 'Page')
         self.assertEqual(self.read('proto8.json')['tree'], {'x.py': 'top file.'})
         # 葉子數＝掃到的列數（工具夾三檔併一列）
         proto = str(self.root / 'proto8')

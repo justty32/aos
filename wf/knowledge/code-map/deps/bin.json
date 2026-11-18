@@ -1,0 +1,225 @@
+{
+ "columns": [
+  "command",
+  "lang",
+  "source",
+  "module",
+  "from"
+ ],
+ "contract": "wf-table/1",
+ "description": "install.py 往 $AOS_HOME/bin/ 放的每支指令對到哪個原始碼：Python 的照 proto8/py/entries.json（module＝bin/ 入口當 __main__ 跑的模組），C++ 的照 proto8/cpp/Makefile 的 BINS（source＝該專案的 src/main.cpp，連哪些庫看 cpp.json）。前端外掛的 frontend/bin/aos-frontend 不在 bin/，不列。生成物，別手改；要改去改 Makefile／import 行／entries.json，再跑 python3 wf/tools/index_gen.py --apply。多個值用空白隔開。",
+ "generated_by": "wf/tools/index_gen.py",
+ "rows": [
+  {
+   "command": "aos-agent",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.agent.main",
+   "source": "proto8/py/aos/apps/agent/main.py"
+  },
+  {
+   "command": "aos-asuser",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.asuser.main",
+   "source": "proto8/py/aos/apps/asuser/main.py"
+  },
+  {
+   "command": "aos-clock",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.clock.main",
+   "source": "proto8/py/aos/apps/clock/main.py"
+  },
+  {
+   "command": "aos-clock-register",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.clock_register.main",
+   "source": "proto8/py/aos/apps/clock_register/main.py"
+  },
+  {
+   "command": "aos-comm",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.comm.main",
+   "source": "proto8/py/aos/apps/comm/main.py"
+  },
+  {
+   "command": "aos-daemon",
+   "from": "proto8/cpp/Makefile",
+   "lang": "C++",
+   "module": "",
+   "source": "proto8/cpp/aos-daemon/src/main.cpp"
+  },
+  {
+   "command": "aos-daemon-ctl",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.daemon_ctl.main",
+   "source": "proto8/py/aos/apps/daemon_ctl/main.py"
+  },
+  {
+   "command": "aos-directive",
+   "from": "proto8/cpp/Makefile",
+   "lang": "C++",
+   "module": "",
+   "source": "proto8/cpp/aos-directive/src/main.cpp"
+  },
+  {
+   "command": "aos-eca-screen",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.eca.main_screen",
+   "source": "proto8/py/aos/apps/eca/main_screen.py"
+  },
+  {
+   "command": "aos-eca-turn",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.eca.main_turn",
+   "source": "proto8/py/aos/apps/eca/main_turn.py"
+  },
+  {
+   "command": "aos-exec",
+   "from": "proto8/cpp/Makefile",
+   "lang": "C++",
+   "module": "",
+   "source": "proto8/cpp/aos-exec/src/main.cpp"
+  },
+  {
+   "command": "aos-feedback",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.feedback.main",
+   "source": "proto8/py/aos/apps/feedback/main.py"
+  },
+  {
+   "command": "aos-fsm",
+   "from": "proto8/cpp/Makefile",
+   "lang": "C++",
+   "module": "",
+   "source": "proto8/cpp/aos-fsm/src/main.cpp"
+  },
+  {
+   "command": "aos-grow",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.grow.main",
+   "source": "proto8/py/aos/apps/grow/main.py"
+  },
+  {
+   "command": "aos-json",
+   "from": "proto8/cpp/Makefile",
+   "lang": "C++",
+   "module": "",
+   "source": "proto8/cpp/aos-json/src/main.cpp"
+  },
+  {
+   "command": "aos-json-view",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.json_view.main",
+   "source": "proto8/py/aos/apps/json_view/main.py"
+  },
+  {
+   "command": "aos-kit",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.kit.main",
+   "source": "proto8/py/aos/apps/kit/main.py"
+  },
+  {
+   "command": "aos-llm",
+   "from": "proto8/cpp/Makefile",
+   "lang": "C++",
+   "module": "",
+   "source": "proto8/cpp/aos-llm/src/main.cpp"
+  },
+  {
+   "command": "aos-lock",
+   "from": "proto8/cpp/Makefile",
+   "lang": "C++",
+   "module": "",
+   "source": "proto8/cpp/aos-lock/src/main.cpp"
+  },
+  {
+   "command": "aos-loop",
+   "from": "proto8/cpp/Makefile",
+   "lang": "C++",
+   "module": "",
+   "source": "proto8/cpp/aos-loop/src/main.cpp"
+  },
+  {
+   "command": "aos-mailbox",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.mailbox.main",
+   "source": "proto8/py/aos/apps/mailbox/main.py"
+  },
+  {
+   "command": "aos-mcp",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.mcp.main",
+   "source": "proto8/py/aos/apps/mcp/main.py"
+  },
+  {
+   "command": "aos-mcp-import",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.mcp_import.main",
+   "source": "proto8/py/aos/apps/mcp_import/main.py"
+  },
+  {
+   "command": "aos-mcp-launch",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.mcp_launch.main",
+   "source": "proto8/py/aos/apps/mcp_launch/main.py"
+  },
+  {
+   "command": "aos-post",
+   "from": "proto8/cpp/Makefile",
+   "lang": "C++",
+   "module": "",
+   "source": "proto8/cpp/aos-post/src/main.cpp"
+  },
+  {
+   "command": "aos-sandbox",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.sandbox.main",
+   "source": "proto8/py/aos/apps/sandbox/main.py"
+  },
+  {
+   "command": "aos-share",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.share.main",
+   "source": "proto8/py/aos/apps/share/main.py"
+  },
+  {
+   "command": "aos-sweeper",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.sweeper.main",
+   "source": "proto8/py/aos/apps/sweeper/main.py"
+  },
+  {
+   "command": "aos-tools",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.tools.main",
+   "source": "proto8/py/aos/apps/tools/main.py"
+  },
+  {
+   "command": "aos-tree-start",
+   "from": "proto8/py/entries.json",
+   "lang": "Python",
+   "module": "aos.apps.tree_start.main",
+   "source": "proto8/py/aos/apps/tree_start/main.py"
+  }
+ ],
+ "source": "proto8/py/entries.json"
+}

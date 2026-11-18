@@ -6,15 +6,18 @@ __pycache__ 的夾、.md（knowledge/ 除外）、.gitignore／.gitattributes、
 codemap 段）。一個 proto8 頂層夾一份 json（照實際夾名），頂層單檔進 proto8.json；怎麼寫在 index_gen.codemap_tables。
 
 一句話怎麼認（使用者 11-05 裁「逐檔表改生成」，thinking 2026-11-05 arch-refactor 03 § 4）：
-  C/C++ 第一行註解；腳本（含 _entry）跳過 shebang 後第一行註解或 docstring；CMake 第一行註解；
-  JSON 取 description／summary／$comment／title，`_entry` 形狀（argv）印成「入口：…」；knowledge 的 md 取第一個標題；
-  捷徑印「→ 目標」。開頭若是檔名（或夾名）接 ` - `／` — `／`：`，連檔名一起去掉；`【模組】` 去掉；取到第一個句號。
+  C/C++ 第一行註解；腳本（含 _entry）跳過 shebang 後第一行註解或 docstring；Makefile 第一行註解；
+  JSON 取 description／summary／$comment／title，再來是 `_description`（knowledge 的節點）或整份就是一段 md（字串或字串陣列：
+  knowledge 的 `_description.json`、aos/rules.json 這類）的第一個標題；`_entry` 形狀（argv）印成「入口：…」；knowledge 的 md 取第一個標題；
+  捷徑印「→ 目標」（看 git 記的 mode 120000，core.symlinks=false 的 Windows 複本也一樣）。
+  開頭若是檔名（或夾名）接 ` - `／` — `／`：`，連檔名一起去掉；`【模組】` 去掉；取到第一個句號。
   工具夾（有 _entry 又有 _tooldef.json 或 _metainfo.json）三個契約檔併成一列 `名/`。
-依賴圖：各 `<夾>/<專案>/CMakeLists.txt` 的 target_link_libraries（略過 *_main）。
+依賴表（C++ 誰連誰、Python 誰 import 誰、bin 指令對原始碼）不在這裡，在 codemap_deps.py。
 純標準庫；只讀檔頭，不跑任何程式。
 """
 import json
 import os
+import posixpath
 import re
 import subprocess
 import sys
@@ -27,6 +30,8 @@ SKIP_NAMES = set(CFG["skip_names"])   # _index.json＝index_gen.py 生成的資�
 MD_DIRS = set(CFG["md_dirs"])         # 這些頂層夾的 .md 也列（出廠內容樹的說明）
 TOOL_PARTS = ("_entry", "_tooldef.json", "_metainfo.json")
 PROG = "codemap_lib"
+LINKS = {}                            # proto 路徑 → git 記成捷徑（mode 120000）的相對路徑集合；tracked() 填
+TRACKED = {}                          # proto 路徑 → git ls-files 的全部相對路徑（捷徑只跟進到這裡面的檔）；tracked() 填
 
 
 def warn(msg):
@@ -34,12 +39,16 @@ def warn(msg):
 
 
 def tracked(proto):
-    out = subprocess.run(["git", "-C", proto, "ls-files", "-z", "--", "."],
+    out = subprocess.run(["git", "-C", proto, "ls-files", "-s", "-z", "--", "."],
                          capture_output=True, check=True).stdout.decode()
-    files = []
-    for p in out.split("\0"):
-        if not p:
+    files, links, every = [], set(), set()
+    for ent in out.split("\0"):
+        if "\t" not in ent:
             continue
+        mode, p = ent.split(" ", 1)[0], ent.split("\t", 1)[1]
+        every.add(p)
+        if mode == "120000":
+            links.add(p)
         parts = p.split("/")
         if len(parts) > 1 and parts[0] in SKIP_TOP:
             continue
@@ -53,6 +62,7 @@ def tracked(proto):
         if not os.path.lexists(os.path.join(proto, p)):
             continue
         files.append(p)
+    LINKS[proto], TRACKED[proto] = links, every
     return sorted(files)
 
 
@@ -68,17 +78,32 @@ def argv_text(argv):
     return " ".join(out)
 
 
+def md_title(v):
+    """一段 md（字串，或一行一個元素的字串陣列）的第一個標題；沒有標題取第一行有字的；不是這種形狀回 ""。"""
+    if isinstance(v, list) and v and all(isinstance(x, str) for x in v):
+        v = "\n".join(v)
+    if not isinstance(v, str):
+        return ""
+    rows = [ln.strip() for ln in v.splitlines() if ln.strip()]
+    return next((ln.lstrip("#").strip() for ln in rows if ln.startswith("#")), rows[0] if rows else "")
+
+
 def json_desc(text, entry=False):
     try:
         d = json.loads(text)
     except ValueError:
         return ""
+    if isinstance(d, str) or (not entry and isinstance(d, list) and d and all(isinstance(x, str) for x in d)
+                              and any(x.startswith("#") for x in d)):
+        return md_title(d)                              # 整份就是一段 md（knowledge 的正文檔）
     if isinstance(d, list) and d:
         return ("入口：`" if entry else "argv：`") + argv_text(d) + "`"
     if isinstance(d, dict):
         for k in ("description", "summary", "$comment", "title"):
             if isinstance(d.get(k), str) and d[k].strip():
                 return d[k]
+        if md_title(d.get("_description")):            # knowledge 的節點：_description 是一段 md
+            return md_title(d["_description"])
         if isinstance(d.get("argv"), list):
             return "入口：`" + argv_text(d["argv"]) + "`"
         if isinstance(d.get("_entry"), list):
@@ -134,11 +159,24 @@ def clean(desc, names):
 
 def describe(proto, rel, follow=False, comment_only=False):
     full = os.path.join(proto, rel)
-    if os.path.islink(full) and not follow:
-        return "→ `" + os.readlink(full) + "`", False
+    if os.path.islink(full) or rel in LINKS.get(proto, ()):
+        try:
+            if os.path.islink(full):
+                target = os.readlink(full)
+            else:                                       # git 記成捷徑、複本抄成「內容＝目標」的小檔（Windows）
+                with open(full, encoding="utf-8") as f:
+                    target = f.read().strip()
+        except (OSError, UnicodeDecodeError):
+            return "", True
+        if not follow:
+            return "→ `" + target + "`", False
+        dest = posixpath.normpath(posixpath.join(posixpath.dirname(rel), target))
+        if proto in TRACKED and dest not in TRACKED[proto]:
+            return "", True                             # 指到樹外（如裝好的 lib/）：不跟，免得有沒有跑過 install.py 結果不同
+        full = os.path.join(proto, dest)
     try:
         with open(full, encoding="utf-8", errors="replace") as f:
-            text = f.read(16384)
+            text = f.read() if full.endswith(".json") else f.read(16384)   # json 要整份才解得開
     except OSError:
         return "", True
     base = os.path.basename(rel)
@@ -154,6 +192,9 @@ def describe(proto, rel, follow=False, comment_only=False):
         d = json_desc(text, base == "_entry")
     elif base.endswith(".txt") and base != "CMakeLists.txt":
         d = ""
+    elif base.endswith((".html", ".htm")):
+        m = re.search(r"<title>(.*?)</title>", text, re.S | re.I)
+        d = m.group(1).strip() if m else ""
     else:
         d = text_desc(text, rel)
     d = clean(d, names)
@@ -162,50 +203,24 @@ def describe(proto, rel, follow=False, comment_only=False):
 
 
 def units(proto, files):
-    """回傳 [(rel 路徑或 'x/'、涵蓋的檔)]；工具夾三個契約檔併一列。"""
+    """回傳 [(rel 路徑或 'x/'、涵蓋的檔)]；工具夾三個契約檔併一列（git 的路徑一律 /，Windows 上也用 posixpath 接）。"""
     fs = set(files)
     tooldirs = set()
     for f in files:
-        dname, base = os.path.split(f)
-        if base == "_entry" and (os.path.join(dname, "_tooldef.json") in fs or os.path.join(dname, "_metainfo.json") in fs):
+        dname, base = posixpath.split(f)
+        if base == "_entry" and (posixpath.join(dname, "_tooldef.json") in fs or posixpath.join(dname, "_metainfo.json") in fs):
             tooldirs.add(dname)
     out, seen = [], set()
     for f in files:
-        dname, base = os.path.split(f)
+        dname, base = posixpath.split(f)
         if dname in tooldirs and base in TOOL_PARTS:
             if dname not in seen:
                 seen.add(dname)
-                cov = [os.path.join(dname, p) for p in TOOL_PARTS if os.path.join(dname, p) in fs]
+                cov = [posixpath.join(dname, p) for p in TOOL_PARTS if posixpath.join(dname, p) in fs]
                 out.append((dname + "/", cov))
         else:
             out.append((f, [f]))
     return out
-
-
-def deps(proto, top, files):
-    rows = []
-    for f in files:
-        parts = f.split("/")
-        if len(parts) != 3 or parts[0] != top or parts[2] != "CMakeLists.txt":
-            continue
-        with open(os.path.join(proto, f), encoding="utf-8", errors="replace") as fh:
-            text = re.sub(r"#[^\n]*", "", fh.read())
-        pub, priv = [], []
-        for m in re.finditer(r"target_link_libraries\s*\(([^)]*)\)", text):
-            toks = m.group(1).split()
-            if not toks or toks[0].endswith("_main"):
-                continue
-            mode = pub
-            for t in toks[1:]:
-                if t in ("PUBLIC", "INTERFACE"):
-                    mode = pub
-                elif t == "PRIVATE":
-                    mode = priv
-                elif t not in mode and not t.startswith("$"):
-                    mode.append(t)
-        if pub or priv:
-            rows.append((parts[1], pub, priv))
-    return rows
 
 
 def unit_desc(proto, rel, cov):

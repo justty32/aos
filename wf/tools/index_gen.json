@@ -102,8 +102,19 @@
   "CMakePresets.json": "{parent} 的 CMake 預設組"
  },
  "codemap": {
-  "description": "逐檔 code map 的範圍（原本寫死在舊的 code map 生成器）：掃 `git ls-files proto8`，去掉 skip_top 的頂層夾、任何一層叫 skip_any_dir 的夾、skip_names 的檔、.md（md_dirs 的頂層夾除外）。out＝逐檔表 json 寫在哪（repo 根相對），一個 proto8 頂層夾一檔、頂層單檔進 proto8.json。",
+  "description": "逐檔 code map 的範圍（原本寫死在舊的 code map 生成器）：掃 `git ls-files proto8`，去掉 skip_top 的頂層夾、任何一層叫 skip_any_dir 的夾、skip_names 的檔、.md（md_dirs 的頂層夾除外）。out＝逐檔表 json 寫在哪（repo 根相對），一個 proto8 頂層夾一檔、頂層單檔進 proto8.json；deps_out＝三張依賴表（cpp、py、bin，讀 proto8/cpp/Makefile、import 行、proto8/py/entries.json）寫在哪。data_files＝沒有檔頭、也不該加的資料檔與第三方檔（提示詞、版本號、授權條款、照抄的 json.hpp…）：proto8 相對路徑的 glob（* 跨夾）→ 一句話，照順序第一個對上的算，對上就不看檔頭（只放確定不是自己寫的程式的檔）。",
   "out": "wf/knowledge/code-map/proto8",
+  "deps_out": "wf/knowledge/code-map/deps",
+  "data_files": {
+   "*kits*/*.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
+   "*system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
+   "*prompt.txt": "給腦的提示詞（純文字，整份交給腦，不加檔頭）",
+   "*VERSION": "版本號與來源（一行純文字）",
+   "*LICENSE*": "第三方套件的授權條款原文（照抄，不加檔頭）",
+   "cpp/third_party/nlohmann/json.hpp": "nlohmann/json 的單檔版（第三方，照官方 release 原樣收進 repo、不改；版本看同夾 VERSION）",
+   "*requirements*.txt": "選配的 Python 套件清單（install.py 只檢查、不安裝；每行註解寫誰用到）",
+   "templates/agent-fsm/llm.json": "agent-fsm 的腦設定，出廠是空的 {}（照 kernel 的預設端點；起手範本 start-api 那份改成假腦）"
+  },
   "skip_top": [
    "thinking",
    "archive",

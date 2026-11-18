@@ -1,5 +1,5 @@
 {
- "description": "proto8/templates 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "description": "proto8/templates 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。誰連誰、誰 import 誰、bin/ 指令對哪個檔看 wf/knowledge/code-map/deps/。",
  "generated_by": "wf/tools/index_gen.py",
  "tree": {
   "agent-fsm": {
@@ -13,11 +13,11 @@
    "hooks.json": "Hooks of this agent: aos functions run when an event happens (before_queue, after_queue, before_tool, after_tool, brain_failed, tool_added, after_sta…",
    "idle.py": "idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。",
    "interfaces.json": "設定（鍵：aos-agent、aos-observed）",
-   "llm.json": "",
+   "llm.json": "agent-fsm 的腦設定，出廠是空的 {}（照 kernel 的預設端點；起手範本 start-api 那份改成假腦）",
    "llm_settings.py": "agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。",
    "loop.json": "Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks (lib…",
    "subagents.json": "設定（鍵：max_subagents）",
-   "system.txt": "",
+   "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
    "tools.json": "設定（鍵：$override）",
    "wait.py": "wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。"
   },
@@ -44,7 +44,7 @@
   "eca-claude/": "Run Claude Code as an aos agent: one turn per queue batch, answers appended to history.",
   "judge-llm": {
    "judge.json": "Configure the comparator endpoint and per-section byte limit",
-   "prompt.txt": ""
+   "prompt.txt": "給腦的提示詞（純文字，整份交給腦，不加檔頭）"
   },
   "judge-llm/": "Compare artifacts with one LLM request and public think accounting.",
   "kernel": {
@@ -90,17 +90,17 @@
   },
   "kits": {
    "gather": {
-    "system.txt": "",
+    "system.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
     "tools.json": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only…"
    },
-   "general.A.txt": "",
+   "general.A.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
    "kits.json": "Index of the kits in this folder: for each kit its role, folder, system text, tool set, model tiers it was written for, and whether it has a shell.",
    "review": {
-    "system.txt": ""
+    "system.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）"
    },
    "roles": {
-    "gather.txt": "",
-    "review.txt": ""
+    "gather.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
+    "review.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）"
    }
   },
   "reviewer": {
@@ -110,7 +110,7 @@
    "ladder.json": "Configure model downgrade trials, quality gates, and post-promotion watching.",
    "llm.json": "Use the caller's default kernel endpoint unless model names one.",
    "loop.json": "Schedule the reviewer FSM and expose public control and state files.",
-   "system.txt": "",
+   "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
    "tools.json": "Offer review scripts and workspace readers without arbitrary execution tools."
   },
   "reviewer/": "Review measured definition costs and prescribe a fix or split when model downgrades fail.",
@@ -131,7 +131,7 @@
      "llm_settings.py": "agent-fsm 的腦設定（llm.json 疊 stack 那份）怎麼變成 kernel 請求信的 body：model 填 endpoint 欄、與快取無關的調整鍵放進 request。",
      "loop.json": "Schedule the agent FSM and expose public control, stable state, and state flux files; on_start / on_stop fire the after_start / after_stop hooks (lib…",
      "subagents.json": "設定（鍵：max_subagents）",
-     "system.txt": "",
+     "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
      "tools.json": "設定（鍵：$override）",
      "wait.py": "wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。"
     },

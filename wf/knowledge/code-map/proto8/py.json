@@ -1,5 +1,5 @@
 {
- "description": "proto8/py 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "description": "proto8/py 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。誰連誰、誰 import 誰、bin/ 指令對哪個檔看 wf/knowledge/code-map/deps/。",
  "generated_by": "wf/tools/index_gen.py",
  "tree": {
   "aos": {
@@ -43,7 +43,7 @@
       "ls.py": "aos/apps/agent/ctl/ls.py - 列出 daemon 表上的 proc 與狀態。",
       "phase.py": "aos/apps/agent/ctl/phase.py - 起停、睡醒與暫停恢復 agent（走 AOS_KERNEL 時 start／stop／sleep／wake 只看回信）。",
       "rm.py": "aos/apps/agent/ctl/rm.py - 拔掉 agent（預設留 stack；--purge 確認後才刪，並保護不能刪除的 stack 路徑）。",
-      "set_def.py": "aos/apps/agent/ctl/set_def.py - 換掉表上一隻 agent 的定義：stack、工作區、limits、auto_restart 照舊，下一次起來才用新的。",
+      "set_def.py": "aos/apps/agent/ctl/set_def.py - 換掉表上一隻 agent 的定義：停、拔、用同一個 stack 掛回（工作區、limits、auto_restart 照舊），表馬上換。",
       "shared.py": "aos/apps/agent/ctl/shared.py - ctl 動作才用的共用零件：--timeout-s／--on-queued／名字放最後、寄控制信給 daemon（或 AOS_KERNEL）並等回信與公開表。",
       "state.py": "aos/apps/agent/ctl/state.py - 顯示單隻 agent 的狀態：總覽（每類一行）或點菜（某幾類的細節）；只給數字與事實、不給建議（11-10 self-family self_state）。",
       "where.py": "aos/apps/agent/ctl/where.py - 顯示 agent 的 stack 或工作區路徑。",
@@ -84,7 +84,7 @@
      "procs.py": "aos/apps/comm/procs.py - aos-comm 問 daemon 表的那幾件事：誰的 stack（aos-agent ctl where）、列一張表（aos-agent ctl ls --json）、一列的機器事實（phase、busy）。"
     },
     "daemon_ctl": {
-     "main.py": "aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 lib/aos_sweep）；說明在 py/docs/05-commands/03、04。"
+     "main.py": "aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 aos.sweep）；說明在 py/docs/05-commands/03、04。"
     },
     "eca": {
      "__init__.py": "aos/apps/eca/__init__.py - aos-eca-turn 的英文說明、旗標檢查與主入口（main）。",
@@ -138,11 +138,11 @@
       "agent.json": "設定（鍵：commands、ro、rw、env、net、mem_mb…）",
       "cli-tool.json": "設定（鍵：commands、ro、rw、env、net）",
       "shell-boxed": {
-       "inner": ""
+       "inner": "→ `../../../../../../lib/tools/base/shell`"
       },
       "shell-boxed/": "Run bash with workspace-only writes and no network.",
       "subagent-boxed": {
-       "inner": "",
+       "inner": "→ `../../../../../../lib/tools/agent/subagent`",
        "sandbox-kernel.json": "Sandbox (mode 2, kernel station in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm lette…",
        "sandbox.json": "Sandbox (mode 1, no kernel station) for a tool that talks to the daemon (subagent; agents_ctl and self_tools the same way): rw the daemon stack AOS_D…"
       },
@@ -233,7 +233,7 @@
    "todo.json": "Pack todo: your own to-do list for a long task - todo (ls, set, add, mark); kept outside your history, call ls to see it again.",
    "ws-write.json": "Pack ws-write: write text files only inside the agent's own workspace - ws_write."
   },
-  "requirements-optional.txt": "",
+  "requirements-optional.txt": "選配的 Python 套件清單（install.py 只檢查、不安裝；每行註解寫誰用到）",
   "schema": {
    "comm": {
     "1": {
@@ -280,7 +280,7 @@
      "test_reply_match.py": "Test reply matching on the reading side (reply-match-1114): ask / chat / listen --letter get the answer to their own letter from upgraded bodies, fal…",
      "test_rm_keep.py": "Test aos-agent ctl rm keeps the stack by default and deletes it only with --purge (cli-sweep Q3), on a real aos-daemon.",
      "test_say_from.py": "Test the sender of aos-agent say / chat (11-13 a2a): --from > the listed agent whose stack holds $AOS_STACK > login name; only an eca's letter carrie…",
-     "test_set_def.py": "Test aos-agent ctl set-def on a real aos-daemon: the row keeps its stack, workspace and auto_restart, the new definition runs from the next start, --…",
+     "test_set_def.py": "Test aos-agent ctl set-def on a real aos-daemon: stop, detach and attach again on the same stack; workspace and auto_restart stay, the table shows th…",
      "test_state_parts.py": "Test aos-agent ctl state (11-10 self-family self_state): the overview (one line per part), picked parts, all, --json, and parts that are not availabl…",
      "test_system.py": "Test aos-agent system on a fake daemon table (11-11 self-system): get / get -l / get --json, set from stdin and from a file, empty text, reset, missi…",
      "test_tools_override.py": "Test aos-agent tools on a fake daemon table (11-10 aos-tools-cli step 4): the first add/rm creates the agent's own registry with \"$override\" (N2 poin…",
@@ -340,28 +340,28 @@
      "fixtures": {
       "kits": {
        "gather": {
-        "system.txt": "",
+        "system.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
         "tools.json": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only…"
        },
-       "general.A.txt": "",
+       "general.A.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
        "kits.json": "Index of the kits in this folder: for each kit its role, folder, system text, tool set, model tiers it was written for, and whether it has a shell.",
        "review": {
-        "system.txt": ""
+        "system.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）"
        },
        "roles": {
-        "gather.txt": "",
-        "review.txt": ""
+        "gather.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
+        "review.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）"
        }
       },
       "kits-stale": {
        "gather": {
-        "system.txt": "",
+        "system.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
         "tools.json": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only…"
        },
-       "general.A.txt": "",
+       "general.A.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
        "kits.json": "Test fixture: kit gather whose shipped system.txt is stale (assembled before the OWN_BOARD line was filled).",
        "roles": {
-        "gather.txt": ""
+        "gather.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）"
        }
       }
      },
@@ -543,7 +543,7 @@
      "_entry": "什麼都不做的 hook handler：讀掉 stdin 的事件 JSON、退 0（範本 hooks.json 預設那格 on_clock 的掛點；使用者「預設就是收到信後啥也不做。"
     },
     "kernel_gate": {
-     "gate_lib.py": "kernel_gate 工具與它兩支 hook 共用：站在哪、跑一輪、留著的信怎麼列、通知怎麼寄。",
+     "gate_lib.py": "kernel_gate 工具與它兩支 hook 共用：站在哪、跑一輪、留著的信怎麼列、通知怎麼寄；讀 JSON 走 aos 套件的 tool_io。",
      "hold": "框架站的 after_verdict hook handler：只有有效狀態查詢直接放行，其他信留給 agent 表態。",
      "tests": {
       "test_kernel_gate.py": "用真的 aos-post、aos-exec 與框架站驗證 kernel_gate 工具與它的 tick／hold 兩支 hook；aos-agent 用暫存的假指令頂替（只答 who、記下 hook 指令）。",
@@ -673,7 +673,7 @@
     "kernel": {
      "hold.py": "「先留著等表態」：hold.json 記留著的信，decisions/<信名>.json 是別人對某一封的表態（pass／refuse）。",
      "hooks.py": "kernel 的三個 hook 時機：設定、事件欄位與判決回話，執行一律交給共用引擎。",
-     "letters.py": "包 aos-post 的收信、轉寄、拒信、代回、轉寄對照表與排隊 body。",
+     "letters.py": "包 aos-post 的信件本身：認領、看信、收信、拒信與排隊 body；轉寄、代回與轉寄對照表在 forwarding.py。",
      "limits_rule.py": "驗證 kernel 站的份額與身分設定，並在轉寄前套用到新 proc。",
      "procs_rules.py": "掛 proc 那一包：收下游答案、驗信、先來先掛與白名單及 running 上限。",
      "queue_fifo.py": "掛 proc 的先來先掛排隊窗與寄件人期限。",

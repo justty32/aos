@@ -1,5 +1,5 @@
 {
- "description": "proto8/frontend 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "description": "proto8/frontend 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。誰連誰、誰 import 誰、bin/ 指令對哪個檔看 wf/knowledge/code-map/deps/。",
  "generated_by": "wf/tools/index_gen.py",
  "tree": {
   "aide-def": {
@@ -7,7 +7,7 @@
    "aide_tick.json": "入口：`$AOS_HOME aide-tick`",
    "hooks.json": "The aide's only hook: every 60 clock cycles (about a minute at 1000 ms a cycle) run aos-frontend aide-tick (aide_tick.json, next to this file). It ca…",
    "llm.json": "設定（鍵：model）",
-   "system.txt": "",
+   "system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
    "tools.json": "The aide has no tools: its whole job is the on_clock hook aide_tick (hooks.json); the brain is fake and is never asked in phase 1."
   },
   "bin": {
@@ -28,8 +28,8 @@
   },
   "ui": {
    "v2": {
-    "VERSION": "",
-    "index.html": "",
+    "VERSION": "版本號與來源（一行純文字）",
+    "index.html": "全景",
     "package.json": "設定（鍵：name、private、version、type、scripts、devDependencies）",
     "postcss.config.js": "",
     "scripts": {

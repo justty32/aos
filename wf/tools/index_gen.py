@@ -19,11 +19,14 @@
 夾沒有 README.md／INDEX.md 時取它的 `_description.json`；
 wf-table 資料檔寫出處與欄位；程式檔照 codemap_lib 的認法；html 取 <title>。連結語法、粗體去掉，只留字。
 同一次也寫逐檔 code map：proto8 每個頂層夾一份 wf/knowledge/code-map/proto8/<夾>.json（tree 巢狀、葉子＝檔頭一句話；範圍在 index_gen.json 的 codemap 段；
-跟檔頭對不上＝CodemapStale、退 1；舊的 md 冊 11-13 刪了；
-認法函式在 `codemap_lib.py`；規劃 proto8/thinking/2026-11/13/wf-into-aos-plan/08-fable-codemap規劃.md）。
+沒檔頭也不該有的資料檔照 codemap.data_files 補說明；跟檔頭對不上＝CodemapStale、退 1；
+認法函式在 `codemap_lib.py`；規劃 proto8/thinking/2026-11/13/wf-into-aos-plan/08-fable-codemap規劃.md），
+與三張依賴表 wf/knowledge/code-map/deps/<名>.json（wf-table/1：cpp.json＝proto8/cpp/Makefile 的誰連誰、py.json＝Python 誰 import 哪些 aos 模組、
+bin.json＝bin/ 每支指令對到哪個原始碼；認法在 `codemap_deps.py`；11-18 換 Makefile 後重建，原本讀 CMakeLists）。
 格式出處：proto8/thinking/2026-11/12/index.md、index-link.md；規格與代定：proto8/thinking/2026-11/13/index-build.md。查對用 index_check.py。
-純標準庫；只讀檔頭，不跑任何程式。
+純標準庫；只讀檔頭、Makefile 與 import 行的文字，不跑任何程式。
 """
+import fnmatch
 import json
 import os
 import re
@@ -32,6 +35,7 @@ import sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, HERE)
+import codemap_deps  # noqa: E402  依賴表（Makefile、import 行、entries.json）的認法
 import codemap_lib  # noqa: E402  共用檔頭一句話的認法
 
 PROG = "index_gen"
@@ -254,14 +258,21 @@ def dump(table):
 GEN_BY = "wf/tools/index_gen.py"
 
 
+def codemap_cfg(cfg):
+    return cfg.get("codemap") or load("index_gen.json")["codemap"]   # --config 試範圍的那份沒有 codemap 段：用預設那份
+
+
 def codemap_tables(root, cfg):
     """逐檔 code map：proto8 每個頂層夾一份 `<夾>.json`（頂層單檔進 proto8.json），回 ({檔名: 表}, 取不到一句話的列)。
     形狀（11-13 線遷 code map，proto8/thinking/2026-11/13/wf-into-aos-plan/08-fable-codemap規劃.md §1.2）：
-    `tree` 照資料夾巢狀，字串＝檔、物件＝夾，值＝檔頭一句話（取不到＝""）；工具夾三個契約檔併成一格 `名/`；
-    有 CMake 專案的夾多一個 `deps`＝{專案: {public, private}}。掃描範圍與認法照 codemap_lib（同一份設定、同一次掃描）。"""
+    `tree` 照資料夾巢狀，字串＝檔、物件＝夾，值＝檔頭一句話（取不到＝""）；工具夾三個契約檔併成一格 `名/`。
+    沒有檔頭、也不該加的資料檔與第三方檔（提示詞 .txt、VERSION、LICENSE、json.hpp…）照設定 codemap.data_files
+    （proto8 相對路徑的 glob → 一句話，手寫的優先於檔頭）給說明、不算缺。
+    掃描範圍與認法照 codemap_lib（同一份設定、同一次掃描）；依賴表另出，見 deps_tables。"""
     proto = os.path.join(root, "proto8")
     if not os.path.isdir(proto):
         return {}, []
+    data_files = codemap_cfg(cfg).get("data_files", {})
     groups = {}
     for f in codemap_lib.tracked(proto):
         groups.setdefault(f.split("/")[0] if "/" in f else "", []).append(f)
@@ -269,7 +280,8 @@ def codemap_tables(root, cfg):
     for top in sorted(groups):
         tree = {}
         for rel, cov in codemap_lib.units(proto, groups[top]):
-            d, bad = codemap_lib.unit_desc(proto, rel, cov)
+            pat = next((p for p in data_files if fnmatch.fnmatchcase(rel, p)), None)
+            d, bad = (data_files[pat], False) if pat else codemap_lib.unit_desc(proto, rel, cov)
             if bad:
                 warns.append(rel)
             parts = (rel[len(top) + 1:] if top else rel).rstrip("/").split("/")
@@ -280,32 +292,33 @@ def codemap_tables(root, cfg):
         what = "proto8/" + top if top else "proto8 頂層單檔"
         table = {"description": f"{what} 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；"
                                 "工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 "
-                                "python3 wf/tools/index_gen.py --apply。",
+                                "python3 wf/tools/index_gen.py --apply。誰連誰、誰 import 誰、bin/ 指令對哪個檔看 wf/knowledge/code-map/deps/。",
                  "generated_by": GEN_BY, "tree": tree}
-        dep = codemap_lib.deps(proto, top, groups[top]) if top else []
-        if dep:
-            table["description"] += "deps＝各專案 CMakeLists.txt 的 target_link_libraries（略過 *_main）。"
-            table["deps"] = {p: {"public": pub, "private": priv} for p, pub, priv in dep}
         out[(top or "proto8") + ".json"] = table
     return out, warns
+
+
+def deps_tables(root):
+    """依賴表：wf/knowledge/code-map/deps/ 的 cpp.json（Makefile 的誰連誰）、py.json（import 行）、bin.json（bin/ 指令對原始碼），回 {檔名: 表}。"""
+    proto = os.path.join(root, "proto8")
+    if not os.path.isdir(proto):
+        return {}
+    return codemap_deps.tables(proto, codemap_lib.tracked(proto), GEN_BY)
 
 
 def codemap_dump(table):
     return json.dumps(table, ensure_ascii=False, indent=1, sort_keys=True) + "\n"
 
 
-def codemap_sync(root, cfg, apply, out_dir):
-    """寫／查逐檔表 json；回 stale 數（--apply 或 --out 時恆 0）。"""
-    rel_dir = (cfg.get("codemap") or load("index_gen.json")["codemap"])["out"]   # --config 試範圍的那份沒有 codemap 段：用預設那份
-    want, warns = codemap_tables(root, cfg)
-    want = {n: codemap_dump(t) for n, t in want.items()}
+def sync_dir(root, rel_dir, want, apply, out_dir):
+    """一個生成物夾：寫或查 want（{檔名: 文字}）；回 stale 數（--apply 或 --out 時恆 0）。只管帶 generated_by 的檔，手寫的不碰。"""
     if out_dir:
         dst = os.path.join(out_dir, rel_dir)
         os.makedirs(dst, exist_ok=True)
         for n, text in want.items():
             with open(os.path.join(dst, n), "w", encoding="utf-8") as f:
                 f.write(text)
-        return 0, len(want), len(warns)
+        return 0
     outdir = os.path.join(root, rel_dir)
     have = {}
     if os.path.isdir(outdir):
@@ -319,7 +332,8 @@ def codemap_sync(root, cfg, apply, out_dir):
     diff = sorted(n for n in want if have.get(n) != want[n])
     stale = sorted(n for n in have if n not in want)
     if apply:
-        os.makedirs(outdir, exist_ok=True)
+        if want:
+            os.makedirs(outdir, exist_ok=True)
         for n in diff:
             tmp = os.path.join(outdir, n + ".tmp")
             with open(tmp, "w", encoding="utf-8") as f:
@@ -327,12 +341,23 @@ def codemap_sync(root, cfg, apply, out_dir):
             os.replace(tmp, os.path.join(outdir, n))
         for n in stale:
             os.remove(os.path.join(outdir, n))
-        return 0, len(want), len(warns)
+        return 0
     for n in diff:
-        fail("CodemapStale", "%s/%s %s (run index_gen.py --apply)" % (rel_dir, n, "is missing" if n not in have else "differs from the file headers"))
+        fail("CodemapStale", "%s/%s %s (run index_gen.py --apply)" % (rel_dir, n, "is missing" if n not in have else "differs from the sources"))
     for n in stale:
         fail("CodemapStale", "%s/%s no longer generated (run index_gen.py --apply)" % (rel_dir, n))
-    return len(diff) + len(stale), len(want), len(warns)
+    return len(diff) + len(stale)
+
+
+def codemap_sync(root, cfg, apply, out_dir):
+    """寫／查逐檔表與依賴表 json；回 (stale 數, 逐檔表冊數, 缺一句話的列數, 依賴表 {檔名: 列數})。"""
+    ccfg = codemap_cfg(cfg)
+    books, warns = codemap_tables(root, cfg)
+    deps = deps_tables(root)
+    stale = sync_dir(root, ccfg["out"], {n: codemap_dump(t) for n, t in books.items()}, apply, out_dir)
+    if ccfg.get("deps_out"):
+        stale += sync_dir(root, ccfg["deps_out"], {n: codemap_dump(t) for n, t in deps.items()}, apply, out_dir)
+    return stale, len(books), len(warns), {n: len(t["rows"]) for n, t in deps.items()}
 
 
 def main(argv):
@@ -395,13 +420,14 @@ def main(argv):
             else:
                 bad += 1
                 fail("IndexStale", "%s no longer matches any folder with entries (run index_gen.py --apply)" % rel)
-    cstale, cbooks, cwarn = codemap_sync(root, load(config or "index_gen.json"), apply, out_dir)
+    cstale, cbooks, cwarn, deps = codemap_sync(root, load(config or "index_gen.json"), apply, out_dir)
     bad += cstale
     if not quiet:
         print("%s: %d index files, %d entries, %d without a description%s" % (
             PROG, len(tables), sum(len(t) for t in tables.values()), len(missing),
             "" if not out_dir else ", written under " + out_dir))
         print("%s: code map %d books, %d stale, %d units without a one-line header" % (PROG, cbooks, cstale, cwarn))
+        print("%s: dependency tables %s" % (PROG, ", ".join("%s %d rows" % kv for kv in sorted(deps.items())) or "none"))
     return 1 if bad or missing else 0
 
 

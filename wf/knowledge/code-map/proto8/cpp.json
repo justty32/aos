@@ -1,5 +1,5 @@
 {
- "description": "proto8/cpp 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。",
+ "description": "proto8/cpp 逐檔表（生成物，別手改）：tree 照資料夾巢狀，字串＝檔、物件＝夾，值＝那個檔檔頭的一句話；工具夾的 _entry／_tooldef.json／_metainfo.json 併成一格「名/」。要改說明去改檔頭，再跑 python3 wf/tools/index_gen.py --apply。誰連誰、誰 import 誰、bin/ 指令對哪個檔看 wf/knowledge/code-map/deps/。",
  "generated_by": "wf/tools/index_gen.py",
  "tree": {
   "Makefile": "Builds every aos C/C++ project (11 libraries, 9 executables) with plain make; replaces the old CMake files.",
@@ -341,9 +341,9 @@
   },
   "third_party": {
    "nlohmann": {
-    "LICENSE.MIT": "",
-    "VERSION": "",
-    "json.hpp": "__ _____ _____ _____"
+    "LICENSE.MIT": "第三方套件的授權條款原文（照抄，不加檔頭）",
+    "VERSION": "版本號與來源（一行純文字）",
+    "json.hpp": "nlohmann/json 的單檔版（第三方，照官方 release 原樣收進 repo、不改；版本看同夾 VERSION）"
    }
   }
  }

@@ -1,0 +1,1016 @@
+{
+ "columns": [
+  "unit",
+  "kind",
+  "module",
+  "uses",
+  "used_by"
+ ],
+ "contract": "wf-table/1",
+ "description": "Python 誰用到 aos 套件的哪些模組：靜態掃 import 行（不跑程式）。一列一個單位——kind app＝py/aos/apps/<名>（每支都列）、lib＝py/aos 的子套件或模組（每個都列）、tool＝py/tools 的工具夾、template＝templates 的範本夾（這兩種只列用到 aos 的）；tests 不掃。uses＝它 import 的 aos 模組（自己單位裡的不算）；used_by＝反過來哪些單位 import 它（只有 app、lib 有）。生成物，別手改；要改去改 Makefile／import 行／entries.json，再跑 python3 wf/tools/index_gen.py --apply。多個值用空白隔開。",
+ "generated_by": "wf/tools/index_gen.py",
+ "rows": [
+  {
+   "kind": "lib",
+   "module": "aos",
+   "unit": "proto8/py/aos/__init__.py",
+   "used_by": "",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.agentlib",
+   "unit": "proto8/py/aos/agentlib",
+   "used_by": "proto8/py/aos/apps/agent proto8/py/aos/apps/eca proto8/py/aos/apps/mcp proto8/py/tools/agent/agent_def proto8/py/tools/agent/agents_ctl proto8/py/tools/agent/board_clear proto8/py/tools/agent/board_ls proto8/py/tools/agent/board_read proto8/py/tools/agent/board_set proto8/py/tools/agent/board_wait proto8/py/tools/agent/claude proto8/py/tools/agent/clock_register proto8/py/tools/agent/codex proto8/py/tools/agent/context_wrap proto8/py/tools/agent/do_task proto8/py/tools/agent/fork proto8/py/tools/agent/goal proto8/py/tools/agent/hook_fire proto8/py/tools/agent/kernel_gate proto8/py/tools/agent/mailbox_peek proto8/py/tools/agent/mailbox_read proto8/py/tools/agent/mailbox_send proto8/py/tools/agent/screen_linger proto8/py/tools/agent/self_ctl proto8/py/tools/agent/self_history proto8/py/tools/agent/self_hook proto8/py/tools/agent/self_llm proto8/py/tools/agent/self_state proto8/py/tools/agent/self_system proto8/py/tools/agent/self_tools proto8/py/tools/agent/subagent proto8/py/tools/agent/user_send proto8/py/tools/agent/user_verify proto8/templates/agent-fsm proto8/templates/start-api",
+   "uses": "aos.declared_files aos.directive_value aos.hook_run aos.mcp_server_file aos.process_group aos.tool_io"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.agent",
+   "unit": "proto8/py/aos/apps/agent",
+   "used_by": "",
+   "uses": "aos.agentlib.agent_files aos.agentlib.cli_a2a aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.daemon_ctl aos.directive_value aos.flags aos.ws"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.asuser",
+   "unit": "proto8/py/aos/apps/asuser",
+   "used_by": "",
+   "uses": "aos.flags"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.clock",
+   "unit": "proto8/py/aos/apps/clock",
+   "used_by": "",
+   "uses": "aos.clock_register aos.flags"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.clock_register",
+   "unit": "proto8/py/aos/apps/clock_register",
+   "used_by": "",
+   "uses": "aos.clock_register aos.clock_when aos.flags"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.comm",
+   "unit": "proto8/py/aos/apps/comm",
+   "used_by": "",
+   "uses": "aos.comm aos.comm.board aos.comm.check aos.comm.root aos.comm.times aos.comm.walk aos.flags"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.daemon_ctl",
+   "unit": "proto8/py/aos/apps/daemon_ctl",
+   "used_by": "",
+   "uses": "aos.daemon_ctl aos.flags aos.sweep"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.eca",
+   "unit": "proto8/py/aos/apps/eca",
+   "used_by": "",
+   "uses": "aos.agentlib.cli_ask aos.agentlib.cli_base aos.agentlib.cli_cell aos.agentlib.cli_cfg aos.agentlib.cli_hook aos.agentlib.cli_mcp aos.agentlib.cli_screen aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.agentlib.quiet aos.daemon_ctl aos.flags aos.ws"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.feedback",
+   "unit": "proto8/py/aos/apps/feedback",
+   "used_by": "",
+   "uses": "aos.flags"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.grow",
+   "unit": "proto8/py/aos/apps/grow",
+   "used_by": "",
+   "uses": "aos.daemon_ctl.entry aos.flags aos.refpath"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.json_view",
+   "unit": "proto8/py/aos/apps/json_view",
+   "used_by": "",
+   "uses": "aos.flags"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.kit",
+   "unit": "proto8/py/aos/apps/kit",
+   "used_by": "",
+   "uses": "aos.flags"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.mailbox",
+   "unit": "proto8/py/aos/apps/mailbox",
+   "used_by": "",
+   "uses": "aos.daemon_ctl aos.flags"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.mcp",
+   "unit": "proto8/py/aos/apps/mcp",
+   "used_by": "",
+   "uses": "aos.agentlib.hooks aos.flags aos.metainfo aos.process_group"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.mcp_import",
+   "unit": "proto8/py/aos/apps/mcp_import",
+   "used_by": "",
+   "uses": "aos.flags aos.mcp_client aos.mcp_freeze aos.mcp_server_file aos.tool_io"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.mcp_launch",
+   "unit": "proto8/py/aos/apps/mcp_launch",
+   "used_by": "",
+   "uses": "aos.mcp_server_file aos.tool_io"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.sandbox",
+   "unit": "proto8/py/aos/apps/sandbox",
+   "used_by": "",
+   "uses": "aos.flags"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.share",
+   "unit": "proto8/py/aos/apps/share",
+   "used_by": "",
+   "uses": "aos.flags"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.sweeper",
+   "unit": "proto8/py/aos/apps/sweeper",
+   "used_by": "",
+   "uses": "aos.daemon_ctl aos.flags aos.sweep aos.sweep_proc"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.tools",
+   "unit": "proto8/py/aos/apps/tools",
+   "used_by": "",
+   "uses": "aos.env_file aos.flags"
+  },
+  {
+   "kind": "app",
+   "module": "aos.apps.tree_start",
+   "unit": "proto8/py/aos/apps/tree_start",
+   "used_by": "",
+   "uses": "aos.flags"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.clock_register",
+   "unit": "proto8/py/aos/clock_register.py",
+   "used_by": "proto8/py/aos/apps/clock proto8/py/aos/apps/clock_register",
+   "uses": "aos.clock_when aos.directive_value aos.flags"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.clock_when",
+   "unit": "proto8/py/aos/clock_when.py",
+   "used_by": "proto8/py/aos/apps/clock_register proto8/py/aos/clock_register.py",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.comm",
+   "unit": "proto8/py/aos/comm",
+   "used_by": "proto8/py/aos/apps/comm",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.daemon_ctl",
+   "unit": "proto8/py/aos/daemon_ctl",
+   "used_by": "proto8/py/aos/apps/agent proto8/py/aos/apps/daemon_ctl proto8/py/aos/apps/eca proto8/py/aos/apps/grow proto8/py/aos/apps/mailbox proto8/py/aos/apps/sweeper proto8/py/aos/sweep.py proto8/py/aos/sweep_proc.py",
+   "uses": "aos.directive_value aos.flags aos.ws"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.declared_files",
+   "unit": "proto8/py/aos/declared_files.py",
+   "used_by": "proto8/py/aos/agentlib proto8/py/tools/aos/shell_report",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.directive_value",
+   "unit": "proto8/py/aos/directive_value.py",
+   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/agent proto8/py/aos/clock_register.py proto8/py/aos/daemon_ctl proto8/py/aos/mcp_server_file.py proto8/py/tools/agent/agent_def",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.env_file",
+   "unit": "proto8/py/aos/env_file.py",
+   "used_by": "proto8/py/aos/apps/tools proto8/py/aos/mcp_server_file.py",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.file_summary",
+   "unit": "proto8/py/aos/file_summary.py",
+   "used_by": "proto8/py/tools/base/ls proto8/py/tools/base/stat proto8/py/tools/base/view",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.file_walk",
+   "unit": "proto8/py/aos/file_walk.py",
+   "used_by": "proto8/py/tools/base/glob proto8/py/tools/base/grep",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.flags",
+   "unit": "proto8/py/aos/flags.py",
+   "used_by": "proto8/py/aos/apps/agent proto8/py/aos/apps/asuser proto8/py/aos/apps/clock proto8/py/aos/apps/clock_register proto8/py/aos/apps/comm proto8/py/aos/apps/daemon_ctl proto8/py/aos/apps/eca proto8/py/aos/apps/feedback proto8/py/aos/apps/grow proto8/py/aos/apps/json_view proto8/py/aos/apps/kit proto8/py/aos/apps/mailbox proto8/py/aos/apps/mcp proto8/py/aos/apps/mcp_import proto8/py/aos/apps/sandbox proto8/py/aos/apps/share proto8/py/aos/apps/sweeper proto8/py/aos/apps/tools proto8/py/aos/apps/tree_start proto8/py/aos/clock_register.py proto8/py/aos/daemon_ctl proto8/py/aos/sweep.py proto8/py/aos/sweep_proc.py proto8/py/aos/ws.py proto8/templates/agent-fsm proto8/templates/kernel/llm-kernel proto8/templates/start-api",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.hook_run",
+   "unit": "proto8/py/aos/hook_run.py",
+   "used_by": "proto8/py/aos/agentlib proto8/py/tools/aos/kernel",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.index",
+   "unit": "proto8/py/aos/index.py",
+   "used_by": "proto8/py/tools/base/index_view",
+   "uses": "aos.json aos.refpath aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.json",
+   "unit": "proto8/py/aos/json.py",
+   "used_by": "proto8/py/aos/index.py proto8/py/aos/json_multi.py proto8/py/tools/aos/jsonx_add proto8/py/tools/aos/jsonx_del proto8/py/tools/aos/jsonx_get proto8/py/tools/aos/jsonx_ls proto8/py/tools/aos/jsonx_multi_get proto8/py/tools/aos/jsonx_multi_set proto8/py/tools/aos/jsonx_search proto8/py/tools/aos/jsonx_set proto8/py/tools/base/json_add proto8/py/tools/base/json_del proto8/py/tools/base/json_get proto8/py/tools/base/json_len proto8/py/tools/base/json_ls proto8/py/tools/base/json_multi_get proto8/py/tools/base/json_multi_set proto8/py/tools/base/json_search proto8/py/tools/base/json_set",
+   "uses": "aos.json_multi aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.json_multi",
+   "unit": "proto8/py/aos/json_multi.py",
+   "used_by": "proto8/py/aos/json.py",
+   "uses": "aos.json aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.mcp_client",
+   "unit": "proto8/py/aos/mcp_client.py",
+   "used_by": "proto8/py/aos/apps/mcp_import proto8/py/tools/base/mcp_tool",
+   "uses": "aos.mcp_server_file aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.mcp_freeze",
+   "unit": "proto8/py/aos/mcp_freeze.py",
+   "used_by": "proto8/py/aos/apps/mcp_import",
+   "uses": "aos.mcp_server_file aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.mcp_server_file",
+   "unit": "proto8/py/aos/mcp_server_file.py",
+   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/mcp_import proto8/py/aos/apps/mcp_launch proto8/py/aos/mcp_client.py proto8/py/aos/mcp_freeze.py proto8/py/tools/base/mcp_tool",
+   "uses": "aos.directive_value aos.env_file aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.metainfo",
+   "unit": "proto8/py/aos/metainfo.py",
+   "used_by": "proto8/py/aos/apps/mcp proto8/py/tools/aos/metainfo_check proto8/templates/agent-fsm proto8/templates/start-api",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.observed",
+   "unit": "proto8/py/aos/observed.py",
+   "used_by": "proto8/py/aos/observed_children.py proto8/py/aos/shell_observed.py proto8/py/tools/aos/measure proto8/py/tools/aos/review_round proto8/py/tools/aos/watch proto8/templates/agent-fsm proto8/templates/judge-llm proto8/templates/start-api",
+   "uses": "aos.observed_children aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.observed_children",
+   "unit": "proto8/py/aos/observed_children.py",
+   "used_by": "proto8/py/aos/observed.py proto8/py/tools/agent/fork proto8/py/tools/agent/subagent proto8/templates/agent-fsm proto8/templates/start-api",
+   "uses": "aos.observed aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.process_group",
+   "unit": "proto8/py/aos/process_group.py",
+   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/mcp proto8/py/tools/base/run_python",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.refpath",
+   "unit": "proto8/py/aos/refpath.py",
+   "used_by": "proto8/py/aos/apps/grow proto8/py/aos/index.py proto8/py/tools/aos/kernel_llm",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.shell_observed",
+   "unit": "proto8/py/aos/shell_observed.py",
+   "used_by": "proto8/py/tools/base/run_python proto8/py/tools/base/shell",
+   "uses": "aos.observed aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.sweep",
+   "unit": "proto8/py/aos/sweep.py",
+   "used_by": "proto8/py/aos/apps/daemon_ctl proto8/py/aos/apps/sweeper",
+   "uses": "aos.daemon_ctl aos.flags aos.sweep_files aos.sweep_proc"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.sweep_files",
+   "unit": "proto8/py/aos/sweep_files.py",
+   "used_by": "proto8/py/aos/sweep.py",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.sweep_proc",
+   "unit": "proto8/py/aos/sweep_proc.py",
+   "used_by": "proto8/py/aos/apps/sweeper proto8/py/aos/sweep.py",
+   "uses": "aos.daemon_ctl aos.flags"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.tool_io",
+   "unit": "proto8/py/aos/tool_io.py",
+   "used_by": "proto8/py/aos/agentlib proto8/py/aos/apps/mcp_import proto8/py/aos/apps/mcp_launch proto8/py/aos/directive_value.py proto8/py/aos/flags.py proto8/py/aos/index.py proto8/py/aos/json.py proto8/py/aos/json_multi.py proto8/py/aos/mcp_client.py proto8/py/aos/mcp_freeze.py proto8/py/aos/mcp_server_file.py proto8/py/aos/observed.py proto8/py/aos/observed_children.py proto8/py/aos/shell_observed.py proto8/py/aos/tool_spec.py proto8/py/tools/agent/agent_def proto8/py/tools/agent/agents_ctl proto8/py/tools/agent/board_clear proto8/py/tools/agent/board_ls proto8/py/tools/agent/board_read proto8/py/tools/agent/board_set proto8/py/tools/agent/board_wait proto8/py/tools/agent/brain_notify proto8/py/tools/agent/claude proto8/py/tools/agent/clock_register proto8/py/tools/agent/codex proto8/py/tools/agent/context_wrap proto8/py/tools/agent/do_task proto8/py/tools/agent/fork proto8/py/tools/agent/goal proto8/py/tools/agent/hook_fire proto8/py/tools/agent/kernel_gate proto8/py/tools/agent/mail_notify proto8/py/tools/agent/mailbox_peek proto8/py/tools/agent/mailbox_read proto8/py/tools/agent/mailbox_send proto8/py/tools/agent/self_ctl proto8/py/tools/agent/self_history proto8/py/tools/agent/self_hook proto8/py/tools/agent/self_llm proto8/py/tools/agent/self_state proto8/py/tools/agent/self_system proto8/py/tools/agent/self_tools proto8/py/tools/agent/subagent proto8/py/tools/agent/todo proto8/py/tools/agent/tools_def proto8/py/tools/agent/user_send proto8/py/tools/agent/user_verify proto8/py/tools/aos/box_check proto8/py/tools/aos/defs proto8/py/tools/aos/feedback proto8/py/tools/aos/kernel proto8/py/tools/aos/kernel_llm proto8/py/tools/aos/llm_forward proto8/py/tools/aos/measure proto8/py/tools/aos/metainfo_check proto8/py/tools/aos/promote proto8/py/tools/aos/review_round proto8/py/tools/aos/rollback proto8/py/tools/aos/shell_report proto8/py/tools/aos/watch proto8/py/tools/base/copy proto8/py/tools/base/edit proto8/py/tools/base/glob proto8/py/tools/base/grep proto8/py/tools/base/llm_fake proto8/py/tools/base/llm_http proto8/py/tools/base/ls proto8/py/tools/base/math proto8/py/tools/base/mcp_tool proto8/py/tools/base/mkdir proto8/py/tools/base/move proto8/py/tools/base/peek_clock proto8/py/tools/base/peek_now_time proto8/py/tools/base/read proto8/py/tools/base/remove proto8/py/tools/base/run_python proto8/py/tools/base/shell proto8/py/tools/base/stat proto8/py/tools/base/trash proto8/py/tools/base/view proto8/py/tools/base/write proto8/py/tools/base/ws_write proto8/templates/judge-llm proto8/templates/kernel/llm-kernel proto8/templates/start-api",
+   "uses": ""
+  },
+  {
+   "kind": "lib",
+   "module": "aos.tool_spec",
+   "unit": "proto8/py/aos/tool_spec.py",
+   "used_by": "proto8/py/tools/agent/tools_def proto8/templates/tool-python",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "lib",
+   "module": "aos.ws",
+   "unit": "proto8/py/aos/ws.py",
+   "used_by": "proto8/py/aos/apps/agent proto8/py/aos/apps/eca proto8/py/aos/daemon_ctl proto8/templates/agent-fsm proto8/templates/start-api",
+   "uses": "aos.flags"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/agent_def",
+   "used_by": "",
+   "uses": "aos.agentlib.agent_files aos.agentlib.cmd_call aos.directive_value aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/agents_ctl",
+   "used_by": "",
+   "uses": "aos.agentlib.agents_cmd aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/board_clear",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/board_ls",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/board_read",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/board_set",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/board_wait",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/brain_notify",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/claude",
+   "used_by": "",
+   "uses": "aos.agentlib.agent_tool aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/clock_register",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.agentlib.mailbox_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/codex",
+   "used_by": "",
+   "uses": "aos.agentlib.agent_tool aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/context_wrap",
+   "used_by": "",
+   "uses": "aos.agentlib.context_use aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/do_task",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/fork",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.observed_children aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/goal",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/hook_fire",
+   "used_by": "",
+   "uses": "aos.agentlib.hooks aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/kernel_gate",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/mail_notify",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/mailbox_peek",
+   "used_by": "",
+   "uses": "aos.agentlib.mailbox_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/mailbox_read",
+   "used_by": "",
+   "uses": "aos.agentlib.mailbox_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/mailbox_send",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.agentlib.mailbox_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/screen_linger",
+   "used_by": "",
+   "uses": "aos.agentlib.cli_linger"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/self_ctl",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/self_history",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/self_hook",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/self_llm",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/self_state",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/self_system",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/self_tools",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/subagent",
+   "used_by": "",
+   "uses": "aos.agentlib.agents_cmd aos.observed_children aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/todo",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/tools_def",
+   "used_by": "",
+   "uses": "aos.tool_io aos.tool_spec"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/user_send",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.agentlib.mailbox_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/agent/user_verify",
+   "used_by": "",
+   "uses": "aos.agentlib.cmd_call aos.agentlib.mailbox_call aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/box_check",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/defs",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/feedback",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/jsonx_add",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/jsonx_del",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/jsonx_get",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/jsonx_ls",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/jsonx_multi_get",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/jsonx_multi_set",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/jsonx_search",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/jsonx_set",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/kernel",
+   "used_by": "",
+   "uses": "aos.hook_run aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/kernel_llm",
+   "used_by": "",
+   "uses": "aos.refpath aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/llm_forward",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/measure",
+   "used_by": "",
+   "uses": "aos.observed aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/metainfo_check",
+   "used_by": "",
+   "uses": "aos.metainfo aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/promote",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/review_round",
+   "used_by": "",
+   "uses": "aos.observed aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/rollback",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/shell_report",
+   "used_by": "",
+   "uses": "aos.declared_files aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/aos/watch",
+   "used_by": "",
+   "uses": "aos.observed aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/copy",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/edit",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/glob",
+   "used_by": "",
+   "uses": "aos.file_walk aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/grep",
+   "used_by": "",
+   "uses": "aos.file_walk aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/index_view",
+   "used_by": "",
+   "uses": "aos.index"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/json_add",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/json_del",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/json_get",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/json_len",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/json_ls",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/json_multi_get",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/json_multi_set",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/json_search",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/json_set",
+   "used_by": "",
+   "uses": "aos.json"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/llm_fake",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/llm_http",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/ls",
+   "used_by": "",
+   "uses": "aos.file_summary aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/math",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/mcp_tool",
+   "used_by": "",
+   "uses": "aos.mcp_client aos.mcp_server_file aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/mkdir",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/move",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/peek_clock",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/peek_now_time",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/read",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/remove",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/run_python",
+   "used_by": "",
+   "uses": "aos.process_group aos.shell_observed aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/shell",
+   "used_by": "",
+   "uses": "aos.shell_observed aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/stat",
+   "used_by": "",
+   "uses": "aos.file_summary aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/trash",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/view",
+   "used_by": "",
+   "uses": "aos.file_summary aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/write",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "tool",
+   "module": "",
+   "unit": "proto8/py/tools/base/ws_write",
+   "used_by": "",
+   "uses": "aos.tool_io"
+  },
+  {
+   "kind": "template",
+   "module": "",
+   "unit": "proto8/templates/agent-fsm",
+   "used_by": "",
+   "uses": "aos.agentlib.agent_files aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.agentlib.quiet aos.flags aos.metainfo aos.observed aos.observed_children aos.ws"
+  },
+  {
+   "kind": "template",
+   "module": "",
+   "unit": "proto8/templates/judge-llm",
+   "used_by": "",
+   "uses": "aos.observed aos.tool_io"
+  },
+  {
+   "kind": "template",
+   "module": "",
+   "unit": "proto8/templates/kernel/llm-kernel",
+   "used_by": "",
+   "uses": "aos.flags aos.tool_io"
+  },
+  {
+   "kind": "template",
+   "module": "",
+   "unit": "proto8/templates/start-api",
+   "used_by": "",
+   "uses": "aos.agentlib.agent_files aos.agentlib.cooldown aos.agentlib.goal_state aos.agentlib.hooks aos.agentlib.quiet aos.flags aos.metainfo aos.observed aos.observed_children aos.tool_io aos.ws"
+  },
+  {
+   "kind": "template",
+   "module": "",
+   "unit": "proto8/templates/tool-python",
+   "used_by": "",
+   "uses": "aos.tool_spec"
+  }
+ ],
+ "source": "proto8/py"
+}

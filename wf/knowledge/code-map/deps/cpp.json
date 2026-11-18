@@ -1,0 +1,104 @@
+{
+ "columns": [
+  "project",
+  "lang",
+  "products",
+  "links",
+  "used_by",
+  "dir"
+ ],
+ "contract": "wf-table/1",
+ "description": "C／C++ 專案誰連誰：一個專案一列，讀 proto8/cpp/Makefile 的 LIBS、BINS、DEPS_<專案>（不跑 make）。products＝它產出的函式庫與 bin/ 執行檔；links＝連結時要的全部 aos 函式庫（照連結順序，已含間接的；include 路徑也照這張）；used_by＝反過來誰要它。生成物，別手改；要改去改 Makefile／import 行／entries.json，再跑 python3 wf/tools/index_gen.py --apply。多個值用空白隔開。",
+ "generated_by": "wf/tools/index_gen.py",
+ "rows": [
+  {
+   "dir": "proto8/cpp/aos-daemon",
+   "lang": "C++",
+   "links": "aos-loop aos-post aos-lock aos-exec aos-directive aos-util aos-inst",
+   "products": "libaos-daemon.a bin/aos-daemon",
+   "project": "aos-daemon",
+   "used_by": ""
+  },
+  {
+   "dir": "proto8/cpp/aos-directive",
+   "lang": "C++",
+   "links": "aos-util",
+   "products": "libaos-directive.a bin/aos-directive",
+   "project": "aos-directive",
+   "used_by": "aos-daemon aos-exec aos-fsm aos-json aos-loop"
+  },
+  {
+   "dir": "proto8/cpp/aos-exec",
+   "lang": "C++",
+   "links": "aos-directive aos-util aos-inst",
+   "products": "libaos-exec.a bin/aos-exec",
+   "project": "aos-exec",
+   "used_by": "aos-daemon aos-fsm aos-loop"
+  },
+  {
+   "dir": "proto8/cpp/aos-fsm",
+   "lang": "C++",
+   "links": "aos-loop aos-exec aos-directive aos-util aos-inst",
+   "products": "libaos-fsm.a bin/aos-fsm",
+   "project": "aos-fsm",
+   "used_by": ""
+  },
+  {
+   "dir": "proto8/cpp/aos-inst",
+   "lang": "C",
+   "links": "",
+   "products": "libaos-inst.a libaos-inst.so",
+   "project": "aos-inst",
+   "used_by": "aos-daemon aos-exec aos-fsm aos-loop"
+  },
+  {
+   "dir": "proto8/cpp/aos-json",
+   "lang": "C++",
+   "links": "aos-directive aos-util",
+   "products": "libaos-json.a bin/aos-json",
+   "project": "aos-json",
+   "used_by": ""
+  },
+  {
+   "dir": "proto8/cpp/aos-llm",
+   "lang": "C++",
+   "links": "aos-post aos-lock aos-util",
+   "products": "libaos-llm.a bin/aos-llm",
+   "project": "aos-llm",
+   "used_by": ""
+  },
+  {
+   "dir": "proto8/cpp/aos-lock",
+   "lang": "C++",
+   "links": "aos-util",
+   "products": "libaos-lock.a bin/aos-lock",
+   "project": "aos-lock",
+   "used_by": "aos-daemon aos-llm aos-post"
+  },
+  {
+   "dir": "proto8/cpp/aos-loop",
+   "lang": "C++",
+   "links": "aos-exec aos-directive aos-util aos-inst",
+   "products": "libaos-loop.a bin/aos-loop",
+   "project": "aos-loop",
+   "used_by": "aos-daemon aos-fsm"
+  },
+  {
+   "dir": "proto8/cpp/aos-post",
+   "lang": "C++",
+   "links": "aos-lock aos-util",
+   "products": "libaos-post.a bin/aos-post",
+   "project": "aos-post",
+   "used_by": "aos-daemon aos-llm"
+  },
+  {
+   "dir": "proto8/cpp/aos-util",
+   "lang": "C++",
+   "links": "",
+   "products": "libaos-util.a",
+   "project": "aos-util",
+   "used_by": "aos-daemon aos-directive aos-exec aos-fsm aos-json aos-llm aos-lock aos-loop aos-post"
+  }
+ ],
+ "source": "proto8/cpp/Makefile"
+}
