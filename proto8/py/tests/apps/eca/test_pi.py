@@ -1,10 +1,11 @@
-"""Test the pi kind of aos-eca-turn (11-18 eca-pi, plan A: pi --mode json one answer per message) with a fake pi CLI."""
+"""Test the pi kind of aos-eca-turn (11-18 eca-pi, plan B: one pi --mode rpc per batch, letters that come meanwhile steered in) with a fake pi CLI."""
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 sys.dont_write_bytecode = True
@@ -12,7 +13,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[4]
 TURN = REPO / "proto8" / "bin" / "aos-eca-turn"                       # the entry install.py writes
 sys.path.insert(0, str(REPO / "proto8" / "py"))
-from aos.agentlib import cli_cell, context_use  # noqa: E402
+from aos.agentlib import cli_cell, cli_pi, context_use  # noqa: E402
 
 
 class PiBase(unittest.TestCase):
@@ -95,11 +96,11 @@ class PiTurn(PiBase):
         self.assertEqual(self.sid(), first)
         c1, c2 = self.calls()
         for c in (c1, c2):
-            self.assertEqual(self.flag(c, "--mode"), "json")
+            self.assertEqual(self.flag(c, "--mode"), "rpc")
             self.assertIn("--no-approve", c["argv"])
             self.assertEqual(self.flag(c, "--session-dir"), str(self.cell / "pi-sessions"))
             self.assertEqual(self.flag(c, "--session-id"), first)
-        self.assertEqual(c2["stdin"], "again")
+        self.assertEqual(json.loads(c2["stdin"][0]), {"type": "prompt", "message": "again", "id": "aos-1"})
         self.assertEqual([m["content"] for m in self.history()], ["hello", "FAKE PI: hello", "again", "FAKE PI: again"])
         mark = json.loads((self.cell / ".session_home").read_text())
         self.assertEqual(mark["home"], os.path.realpath(self.home / ".pi" / "agent"))
@@ -155,7 +156,7 @@ class PiTurn(PiBase):
         self.ok_turn()
         rpc = self.calls()[-1]
         self.assertEqual(self.flag(rpc, "--mode"), "rpc")
-        self.assertEqual(json.loads(rpc["stdin"]), {"type": "compact", "id": "aos-compact", "customInstructions": "keep the names"})
+        self.assertEqual(json.loads(rpc["stdin"][0]), {"type": "compact", "id": "aos-compact", "customInstructions": "keep the names"})
         self.assertEqual(self.sid(), sid)
         rows = self.history()
         self.assertIn("FAKE SUMMARY", rows[0]["content"])
@@ -179,6 +180,44 @@ class PiTurn(PiBase):
         self.say("again")
         self.ok_turn()
         self.assertTrue(self.sid() and self.sid() != first)
+
+    def test_9_letter_during_the_answer_is_steered_in(self):
+        self.say("hello")
+        p = subprocess.Popen([str(TURN), "--on-empty", "idle", str(self.defn)], env=self.env(FAKE_PI_DELAY="2"),
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        time.sleep(0.8)
+        self.say("second")
+        out, err = p.communicate(timeout=60)
+        self.assertEqual(p.returncode, 0, err)
+        self.assertEqual([m["content"] for m in self.history()], ["hello", "second", "FAKE PI: hello\n\nFAKE PI: second"])
+        (call,) = self.calls()
+        sent = [json.loads(l) for l in call["stdin"]]
+        self.assertEqual([c["type"] for c in sent], ["prompt", "steer"])
+        self.assertEqual(sent[1]["message"], "second")
+        self.assertEqual(list((self.stack / "queue" / "new").iterdir()), [])
+
+    def test_10_live_mail_false_waits_for_the_next_turn(self):
+        self.write_cfg({"live_mail": False})
+        self.say("hello")
+        p = subprocess.Popen([str(TURN), "--on-empty", "idle", str(self.defn)], env=self.env(FAKE_PI_DELAY="1.5"),
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        time.sleep(0.6)
+        self.say("second")
+        p.communicate(timeout=60)
+        self.assertEqual([m["content"] for m in self.history()], ["hello", "FAKE PI: hello"])
+        self.ok_turn()
+        self.assertEqual([m["content"] for m in self.history()][2:], ["second", "FAKE PI: second"])
+
+
+class PiAnswer(unittest.TestCase):
+    def test_segments(self):
+        a = lambda text, stop="stop": {"role": "assistant", "stopReason": stop, "text": text}
+        u = {"role": "user", "text": "q"}
+        self.assertEqual(cli_pi.answer_of([u, a("", "toolUse"), a("one"), u, a("let me look", "toolUse"), a("two")]), "one\n\ntwo")
+        self.assertEqual(cli_pi.answer_of([u, a("x", "toolUse"), u, a("both")]), "both")       # steered in before it said anything
+        self.assertEqual(cli_pi.answer_of([u, a("half", "error")]), "")
+        full = {"role": "assistant", "stopReason": "stop", "content": [{"type": "thinking"}, {"type": "text", "text": "hi"}]}
+        self.assertEqual(cli_pi.answer_of([u, full]), "hi")
 
 
 class PiCfg(PiBase):

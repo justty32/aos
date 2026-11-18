@@ -11,7 +11,7 @@ import time
 from aos.agentlib import cli_cell
 
 ORDER = "screen_close.json"
-KINDS = ("claude", "codex")
+KINDS = ("claude", "codex", "pi")
 ENTRY = str(Path(__file__).resolve().parents[2] / "tools/agent/screen_linger/_entry")
 
 
@@ -144,7 +144,7 @@ def reap(stack, kind, token):
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
     if kind not in KINDS:
-        raise ValueError("kind must be claude or codex")
+        raise ValueError("kind must be claude, codex or pi")
     cell = cli_cell.Cell(os.path.join(stack, kind), make=False)
     doc = read(cell.file(ORDER))
     if doc.get("token") != token:

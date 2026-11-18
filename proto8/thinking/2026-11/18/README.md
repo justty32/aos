@@ -17,3 +17,4 @@
 | [sbx-fix-1118](sbx-fix-1118.md) | 沙箱碰得到 daemon（檢查紀錄 A）家機重現：照範本 `-w .`，關進沙箱的工具仍看得到 daemon 表、改得到 kernel 與自己的定義、還能 ctl add 一隻在沙箱外跑的 agent；根因是 agent 工作區＝整棵樹（控制台在裡面）；四個修法（專用工作夾／搬 stack／沙箱自動遮／警告），推薦專用工作夾＋警告，待使用者裁 |
 | [two-machines 真機驗證（家機）](../10/two-machines/14-真機驗證.md) | 線 t7-home-1118 在家機用真 claude（haiku）跑 T7 第 1～4、6、7 步：resume 不存在的 id 退 1、換帳號夾接不回、eca 換台（兩棵暫存樹）答得出 kiwi、A15 專案夾名猜對都過；claude 2.1.327 換資料夾也接得回（aos 比它嚴、沒改）；eca 的 claude 用 Claude Code 自己的自動記憶、存在樹外，要不要關待使用者裁；codex 那步跳過 |
 | [aos-kit-併進ctl](aos-kit-併進ctl.md) | 使用者「aos-kit也不用了，刪掉，功能整合進現有的。」：aos-kit 刪掉，改用 `aos-agent ctl add --kit`／`ctl set-def --kit`，kit 的 system 與 tools 寫成那隻在 stack 裡自己那份、定義夾不動、拿掉用 reset；11-18 晚三題裁定（寫進 stack、eca 也能套、換包直接蓋）都已做；套 kit 後 `tools ls` 的誤導提醒沒修、沒問 |
+| [eca-pi-bc-1118](交接-各線/eca-pi-bc-1118.md) | pi 身乙案（rpc、回答途中收信）＋丙案（tmux 畫面＋aos 的 pi 外掛）做完：家機真 pi 1.5.2 整樹實跑（問、續問、中途寄信、aos 工具、畫面回報與收信、slash、ctl stop／set-def）都對；文件 templates/docs/03、knowledge eca.json 改成現況、寫了已知限制 |

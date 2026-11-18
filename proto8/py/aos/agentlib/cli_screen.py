@@ -1,4 +1,4 @@
-# cli_screen.py - cli_session 開畫面：tmux 裡起互動的 claude／codex（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供
+# cli_screen.py - cli_session 開畫面：tmux 裡起互動的 claude／codex／pi（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供
 import fcntl, json, os, shlex, sys, time
 
 from aos.agentlib import cli_a2a, cli_base
@@ -22,6 +22,8 @@ set -g status-left ''
 set -g status-right ' Ctrl-] detach (the screen stays) | /exit or /quit inside to end '
 set -g status-right-length 80
 """
+PI_TMUX = "set -g extended-keys on\nset -gq extended-keys-format csi-u\n"   # pi 開場會提醒沒開這兩個（Shift+Enter 換行要它；11-18 實測 tmux 3.4）；
+                                                      # 後者 tmux 3.5 起才有（家機 3.7c 上 pi 會提醒），-q＝舊版不認也不報錯
 
 
 def hook_cmd(kind, cell):
@@ -45,9 +47,6 @@ def start(cfg, cell, ws, stack):
 
 
 def _start(cfg, cell, ws, stack):
-    if cfg["kind"] == "pi":                              # 11-18 eca-pi：pi 身先只做一問一答（甲案），畫面那條還沒接
-        cli_base.die("ScreenBad", "kind pi has no screen yet: aos only runs pi --mode json (one answer per message); "
-                                  "to look at its conversation read the cell's pi-sessions/ or live.jsonl")
     sid = cell.read("session.txt")
     if sid and not session_here(cfg, cell, ws, sid):     # 不是這台的（換台、搬位置、換帳號資料夾）：清掉、開新的（05）
         drop_session(cell)
@@ -64,6 +63,10 @@ def _start(cfg, cell, ws, stack):
         argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack, ext) + system_argv(cfg) + settings_argv(cfg, hooks)
         argv += ["--resume", sid] if sid else []
         argv = exec_wrap(argv, spec)
+    elif cfg["kind"] == "pi":                            # 11-18 eca-pi 丙案：同一段對話（同 --session-dir／--session-id），aos 的畫面外掛回報每輪
+        from aos.agentlib.cli_pi import pi_argv, screen_extension_argv
+        argv = pi_argv(cfg, cell, ws, stack, sid, mode=None) + screen_extension_argv(cell, SELF)
+        argv += [] if "--tui-mode" in argv else ["--tui-mode", "regular"]   # 一般捲動：跳出再接回、tmux 往上捲都看得到前面的字
     else:
         if sid:
             codex_note_compacts(cell, sid)                   # Q5：畫面開起來那刻壓過幾次＝基準，之後多出來的才跟上
@@ -72,7 +75,7 @@ def _start(cfg, cell, ws, stack):
         argv += ["-c", "notify=" + json.dumps(hook_cmd("codex", cell))]
         argv = exec_wrap(argv, spec)
     with open(cell.file("tmux.conf"), "w", encoding="utf-8") as f:
-        f.write(TMUX_CONF)
+        f.write(TMUX_CONF + (PI_TMUX if cfg["kind"] == "pi" else ""))
     for name in ("busy.txt",):
         if os.path.exists(cell.file(name)):
             os.remove(cell.file(name))

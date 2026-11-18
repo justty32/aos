@@ -229,6 +229,31 @@ def codex_turns(sid):
     return n
 
 
+def pi_hook(cell, p):
+    """pi 畫面外掛（pi_aos_screen.mjs）的回報（11-18 eca-pi 丙案）。回 (sid, 這輪的回答) 給 hook_main 照 Stop 記 turns；不是講完一輪＝None。
+    session_start：記收件夾（cli_a2a.note_inbox）；reason new（畫面打 /new）＝換 id、清 history；resume／fork＝只跟 id；startup＝等第一輪。
+    agent_start＝跟 id、寫 busy.txt；compact＝history 換成 pi 的摘要一則；ack＝記收件回執。"""
+    from aos.agentlib.cli_pi import INBOX, answer_of
+    event, sid = p.get("event"), p.get("session_id")
+    if event == "session_start":
+        cli_a2a.note_inbox(cell, cell.file(INBOX))
+        if p.get("reason") in ("new", "resume", "fork"):
+            follow_session("pi", cell, sid)
+        if p.get("reason") == "new":
+            clear_history(cell)
+    elif event == "agent_start":
+        follow_session("pi", cell, sid)
+        cell.write("busy.txt", now() + "\n")
+    elif event == "compact" and isinstance(p.get("summary"), str) and p["summary"].strip():
+        replace_history(cell, "compact", p["summary"].strip())
+    elif event == "ack":
+        cli_a2a.note_acks(cell, p.get("ids"))
+    elif event == "agent_settled":
+        msgs = p.get("messages")
+        return sid, answer_of([m for m in msgs if isinstance(m, dict)] if isinstance(msgs, list) else [])
+    return None
+
+
 def hook_main(kind, cell_path, payload_arg=None):
     """claude：stdin 一份 hook JSON（SessionStart／UserPromptSubmit／Stop）；codex：notify 把 JSON 放在最後一個參數。
     對話 id 跟 session.txt 不同就改記（follow_session）；claude 的 SessionStart source clear＝clear_history（11-12 eca-slash）。
@@ -239,7 +264,12 @@ def hook_main(kind, cell_path, payload_arg=None):
         cell = Cell(cell_path)
         raw = payload_arg if kind == "codex" else sys.stdin.read()
         p = json.loads(raw)
-        if kind == "claude":
+        if kind == "pi":
+            done = pi_hook(cell, p)
+            if done is None:
+                return
+            sid, text = done
+        elif kind == "claude":
             event, sid = p.get("hook_event_name"), p.get("session_id")
             a2a = payload_arg == cli_a2a.HOOK_MARK
             if event == "SessionStart":                    # 11-12 eca-slash：開畫面、/clear、/compact、/resume 都會叫；/clear＝aos 的 history 跟著清

@@ -1,4 +1,4 @@
-# 驗 eca-pi 範本（11-18）：cli.json 讀得過、kind pi、沒有畫面子介面、工具登記檔跟 eca-claude 同一份、hook 格都驗得過。
+# 驗 eca-pi 範本（11-18）：cli.json 讀得過、kind pi、畫面子介面同 eca-claude、工具登記檔跟 eca-claude 同一份、hook 格都驗得過。
 import json
 import os
 from pathlib import Path
@@ -26,16 +26,20 @@ class EcaPiTemplate(unittest.TestCase):
         self.assertNotIn("--model", cfg.get("flags", []))          # llm.json {} = pi's own default model
         self.assertTrue(cfg["registry"].endswith("tools.json"))
 
-    def test_no_screen_and_same_tools_as_eca_claude(self):
+    def test_screen_and_tools_same_as_eca_claude(self):
         decl = json.loads((PI / "interfaces.json").read_text())["aos-agent"]
-        self.assertNotIn("screen", decl)
-        self.assertFalse((PI / "screen").exists())
+        self.assertEqual(decl["screen"], "screen")                 # 11-18 丙案：aos-agent open 開 pi 的畫面
+        for name in ("_entry", "interfaces.json"):
+            self.assertEqual((PI / "screen" / name).read_text(), (PROTO / "templates/eca-claude/screen" / name).read_text())
         self.assertEqual((PI / "tools.json").read_text(), (PROTO / "templates/eca-claude/tools.json").read_text())
         self.assertEqual((PI / "_entry").read_text(), (PROTO / "templates/eca-claude/_entry").read_text())
 
     def test_hooks_validate(self):
         table = json.loads((PI / "hooks.json").read_text())["hooks"]
-        self.assertEqual(sorted(table), ["mail_notify", "timer"])
+        self.assertEqual(sorted(table), ["mail_notify", "screen_linger_start", "screen_linger_stop", "timer"])
+        claude = json.loads((PROTO / "templates/eca-claude/hooks.json").read_text())["hooks"]
+        for name in ("screen_linger_start", "screen_linger_stop"):
+            self.assertEqual(table[name], claude[name])
         for entry in table.values():
             hooks.validate_entry(entry)
 

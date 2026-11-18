@@ -24,8 +24,9 @@ from .screen_slash import SCREEN_ONLY, input_clear, screen_slash, typed_warning
 # /goal（11-12 晚，使用者「eca還有一個slash command我很常用：/goal」「包括/goal clear」）只有它放寬成「以 /goal 開頭」（後面帶目標或 clear 等）；
 # 實測 claude -p 認 /goal（`/goal 條件`＝設了就照跑一輪、`/goal clear`、`/goal` 查看；目標只活在那一次 claude -p 裡，下一次查看＝No goal set），
 # codex exec 不認（當成題目），codex 畫面認 `/goal [<objective>|clear|edit|pause|resume]`。
-# pi（11-18 eca-pi，實測 1.5.2）：pi --mode json 一個都不認（當成題目）。/compact＝起一次 pi --mode rpc 送 compact（cli_pi.compact）、
-# history 換成它的摘要；/clear 同 codex（刪 session.txt、清 history）；/goal、/usage 回一句不支援；沒有畫面。
+# pi（11-18 eca-pi，實測 1.5.2）：非互動那條（rpc 的 prompt）不認 slash。/compact＝起一次 pi --mode rpc 送 compact（cli_pi.compact）、
+# history 換成它的摘要；/clear 同 codex（刪 session.txt、清 history）；/goal、/usage 回一句不支援。畫面開著：/compact 照打、/clear 打成 pi 的 /new，
+# aos 這邊靠畫面外掛跟上（session_compact、session_start new；同 claude 等 history 改完）。
 
 SLASH = ("/clear", "/compact", "/status", "/usage", "/exit")
 GOAL = "/goal"
@@ -188,7 +189,7 @@ def on_screen(command, cfg, cell, stack, typed=None):
     再 cli_hook.codex_sync_compact（history 換成從 replacement_history 撈出的對話；撈不到＝不動、回一句，Q5）。"""
     before = history_bytes(stack)
     sid = cell.read("session.txt")
-    if cfg["kind"] != "claude" and command == "/compact" and sid:
+    if cfg["kind"] == "codex" and command == "/compact" and sid:
         n0 = cli_hook.codex_note_compacts(cell, sid)            # Q5：打之前壓過幾次＝基準
         cli_ask.type_line(cell, command)
         deadline = time.time() + SCREEN_WAIT
@@ -203,8 +204,11 @@ def on_screen(command, cfg, cell, stack, typed=None):
         if got[0] == "unrecognized":
             return note("/compact: typed into the open screen; codex compacted, but aos could not read the conversation out of it, so aos's history is left as it is")
         return note("/compact: typed into the open screen; history replaced by the conversation codex kept (%d messages moved to history_removed.jsonl)" % got[1])
-    cli_ask.type_line(cell, typed if typed and cfg["kind"] == "claude" else command)   # claude 畫面收 /compact 指示；codex 只打指令本身
-    if cfg["kind"] != "claude":
+    if cfg["kind"] == "pi":                                  # pi 畫面：/compact 收指示；清對話的指令叫 /new
+        cli_ask.type_line(cell, "/new" if command == "/clear" else typed or command)
+    else:
+        cli_ask.type_line(cell, typed if typed and cfg["kind"] == "claude" else command)   # claude 畫面收 /compact 指示；codex 只打指令本身
+    if cfg["kind"] == "codex":
         later = ("aos clears its history when the next answer comes from the new thread" if command == "/clear" else
                  "there is no conversation yet, so there is nothing for aos to follow")
         return note("%s: typed into the open screen; %s" % (command, later))
@@ -214,7 +218,7 @@ def on_screen(command, cfg, cell, stack, typed=None):
     if history_bytes(stack) == before:
         return note("%s: typed into the open screen; aos's history did not change within %d s (check the screen: aos-agent open)"
                     % (command, SCREEN_WAIT))
-    done = "history moved to history_removed.jsonl" if command == "/clear" else "history replaced by claude's summary (the old messages are in history_removed.jsonl)"
+    done = "history moved to history_removed.jsonl" if command == "/clear" else "history replaced by %s's summary (the old messages are in history_removed.jsonl)" % cfg["kind"]
     return note("%s: typed into the open screen; %s; conversation %s" % (command, done, cell.read("session.txt")))
 
 
@@ -241,7 +245,9 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
     cleared, hand = None, None
     if command == GOAL:                                             # /goal …：CLI 自己的 goal，aos 只負責交到它手上
         full = bodies[0]["content"].strip()
-        if alive:
+        if kind == "pi":
+            text = note("/goal: pi has no /goal (it would read it as a plain question); nothing was sent")
+        elif alive:
             if os.path.exists(cell.file("busy.txt")):
                 return 0                                            # 不打斷正在跑的那輪
             if kind == "claude" and not input_clear(cell):          # 輸入框有人打到一半（或看不出來）：不打、信留 cur/（repo-aos 11-16）
@@ -256,8 +262,6 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
             if got is None:
                 return 0                                            # SessionBad：同一般一輪，信留 cur/
             text = got.strip() or note("/goal: claude printed nothing")
-        elif kind == "pi":
-            text = note("/goal: pi has no /goal (it would read it as a plain question); nothing was sent")
         else:
             text = note("/goal: codex has /goal only on its screen (codex exec would read it as a plain question); "
                         "open the screen (aos-agent open) and send it again")
@@ -309,7 +313,7 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
                 else:
                     cli_cell.close(cell)
                     text = note("/exit: closed the screen; the conversation stays and the next message goes on without a screen")
-            elif command == "/compact" and kind == "pi":            # 11-18 eca-pi：json 模式不認，起一次 pi --mode rpc 送 compact
+            elif command == "/compact" and kind == "pi":            # 11-18 eca-pi：rpc 的 prompt 不認 slash，另起一次 pi --mode rpc 送 compact
                 text = pi_compact(cfg, cell, ws, stack, bodies[0]["content"].strip())
             elif command == "/compact":                             # codex exec 不認 /compact：換新 thread、帶 aos 的紀錄過去（同 ⑧）
                 cli_cell.drop_session(cell)

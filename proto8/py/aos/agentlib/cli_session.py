@@ -102,11 +102,16 @@
 # 父死子跟著死（11-10 坑-52，Linux）：非互動起的 CLI 設 PR_SET_PDEATHSIG＝SIGTERM——起它的這支（aos-eca-turn、claude／codex 工具）
 #   被 kill -9／OOM，CLI 收 SIGTERM 收掉，不留孤兒拿著同一段對話跟下一輪的 --resume 撞；非 Linux 或載不到 libc 就不設。畫面（tmux）不在此列。
 #
-# pi 身（11-18 eca-pi 甲案，使用者「1.做成第三種。2.甲。3.先全開。」；本體 cli_pi）：只有非互動那條。每輪 pi --mode json --no-approve
-#   --session-dir <小格>/pi-sessions --session-id <id>，題目從 stdin 進，第一輪 aos 產 id（同 claude，交出去那刻寫 session.txt），之後同一個 id＝續；
-#   回答＝最後一則 assistant 的 message_end（stopReason error／aborted＝CliFailed，pi 這時照樣退 0）；事件接進 live.jsonl。
+# pi 身（11-18 eca-pi，使用者「1.做成第三種。2.甲。3.先全開。」，下午「接著做乙丙吧」；本體 cli_pi、cli_pi_rpc、pi_aos_screen.mjs）：
+#   非互動（乙案，取代甲案的 --mode json）：每輪 pi --mode rpc --no-approve --session-dir <小格>/pi-sessions --session-id <id>，題目一則 prompt，
+#   第一輪 aos 產 id（同 claude，交出去那刻寫 session.txt），之後同一個 id＝續；等回答時又來的信一封一則 steer（cli.json "live_mail": false 關），
+#   agent_settled 又沒新信才關 stdin；回答＝每段（題目、每封中途的信）最後講完的 assistant（stopReason error／aborted＝CliFailed，pi 這時照樣退 0）；
+#   事件接進 live.jsonl。/compact＝另起一次 rpc 送 compact。失敗不分暫時或永久（同 codex）。
 #   aos 工具：pi 沒有「這次用這份 MCP 設定」的旗標，aos 每輪在小格寫 pi-aos-mcp.mjs（一行 pi.registerMcpServer("aos", …)）、-e 帶進去。
-#   /compact＝另起一次 pi --mode rpc 送 compact。沒有畫面（範本不宣告 screen＝open 回 ScreenMissing；硬開＝cli_screen 的 ScreenBad）、沒有中途收信、失敗不分暫時或永久（同 codex）。
+#   畫面（丙案）：tmux 裡起互動的 pi（同 --session-dir、有對話就同 --session-id、--tui-mode regular），多帶一行外掛 pi-aos-screen.mjs（叫 lib 的
+#   pi_aos_screen.mjs）：session_start／agent_start／agent_settled／session_compact 叫 cli_session.py hook pi <小格>（cli_hook.pi_hook：跟 id、busy.txt、
+#   turns.jsonl、/new 清 history、壓縮換摘要）；畫面開著時 aos 的信寫進小格 pi_inbox/，外掛收了用 pi.sendUserMessage 送進對話（答題中＝steer）、
+#   記回執（cli_a2a 的 pi 分岔，同 claude 的收件口：不看有沒有人接著）；沒回執退回貼字。
 #   權限照 pi 原樣全開（pi 不問、沒沙盒）；--no-approve 只擋工作區 .pi/ 的設定與外掛。帳號資料夾＝PI_CODING_AGENT_DIR 或 ~/.pi/agent。
 #
 # 放哪：proto8/py/aos/agentlib/cli_session.py；claude、codex 經 agent_tool.py 的 ask_cli 共用 ask，call_main 只給 aos-eca-turn --one；
@@ -131,7 +136,7 @@ from aos.agentlib.cli_mcp import guard_main
 
 if __name__ == "__main__":
     if "--help" in sys.argv[1:2]:
-        print("usage: cli_session.py hook claude|codex CELL [PAYLOAD]\n"
+        print("usage: cli_session.py hook claude|codex|pi CELL [PAYLOAD]\n"
               "       cli_session.py guard\n"
               "The hook the CLI's interactive screen calls after each turn (appends to CELL/turns.jsonl; never fails).\n"
               "guard: claude PreToolUse hook (hook JSON on stdin); denies a subagent's call to the main agent's aos tools.\n"
@@ -141,4 +146,4 @@ if __name__ == "__main__":
     elif len(sys.argv) >= 4 and sys.argv[1] == "hook":
         hook_main(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else None)
     else:
-        die("ArgumentsBad", "expected hook claude|codex CELL [PAYLOAD] (usage: cli_session.py hook claude|codex CELL [PAYLOAD]; see --help)")
+        die("ArgumentsBad", "expected hook claude|codex|pi CELL [PAYLOAD] (usage: cli_session.py hook claude|codex|pi CELL [PAYLOAD]; see --help)")

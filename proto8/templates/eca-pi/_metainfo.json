@@ -1,5 +1,5 @@
 {
- "summary": "Run the pi coding agent as an aos agent: one pi --mode json run per queue batch, answers appended to history.",
+ "summary": "Run the pi coding agent as an aos agent: one pi --mode rpc run per queue batch (letters that come meanwhile are steered in), answers appended to history; aos-agent open shows pi's own screen.",
  "cost": {
   "time_ms": 60000
  },

@@ -2,7 +2,16 @@
 
 ← [eca-pi 研究](../eca-pi/README.md)｜任務：pi 非互動改 rpc（回答途中收信）＋pi 畫面（tmux＋aos 的 pi 外掛）
 
-## 先講結論
+## 11-18 晚家機收尾（接手線，opus）
+
+- **真 pi 整樹實跑過了**（家機 pi 1.5.2、tmux 3.7c、ChatGPT 訂閱 `openai-codex/gpt-6.1-sol`；暫存夾 `~/.aos/scratch/eca-pi-home-1118/`：本機 HEAD `01458f544` 的 clone 套本線補丁、`install.py`、start-eca 換掛一隻 eca-pi）。問、續問、回答途中再寄一封（同一則回答答兩封）、aos 工具、`/compact`（太短不壓）、`aos-agent open`（`pi_aos_screen.mjs` 在真 pi 上回報每輪、`turns.jsonl` 有字）、畫面開著寄信（經 `pi_inbox/` 進畫面、listen 拿到）、畫面正在答時寄信（steer 進同一則）、畫面開著的 `/compact`／`/clear`／`/goal`／`/status`、close 後一問一答再開畫面、`ctl stop` 延後關、`ctl set-def` 都對；逐步結果寫在 [templates/docs/03](../../../../templates/docs/03-eca-pi.md#11-18-實跑)。`ctl rm` 沒跑（這輪的權限設定擋了含 rm 字樣的指令）。
+- 實跑順手修：pi 新版在 tmux 3.5+ 開場提醒 `extended-keys-format csi-u`，`cli_screen.PI_TMUX` 加 `set -gq extended-keys-format csi-u`（`-q`＝公司 3.4 不認也不報錯），`test_pi_screen` 跟著多驗一行；`slash.py` 一句過時註解（「json 模式不認」）改掉。
+- 文件補完：`templates/docs/03-eca-pi.md` 整份改成乙＋丙、已知限制；knowledge `cli/eca.json` 的 `pi`；`apps/eca/README.md` 第 12 行。
+- 踩到的環境坑（不是程式）：家機 pi 的預設供應商是 deepseek（沒登入）、又留著過期的 anthropic 登入，`llm.json` 是 `{}` 時第一輪 `CliFailed`；寫明 `{"model": "openai-codex/gpt-6.1-sol"}` 就好（03「登入」那條寫了）。另：家機 `~/.tmux.conf` 有 resurrect／continuum，開私人 tmux 伺服器要 `-f /dev/null`（aos 的畫面本來就用小格自己的 tmux.conf，不受影響）。
+- 測試（同一份 clone，install 後）：apps/eca 223、apps/agent 202、py/tests 527、templates/tests 28 支（略過 2、預期失敗 2）全綠。這條線交了，progress.json 那條拿掉；上面「還沒做」1、3、4 都做了，2 只跑了這四夾。
+- 觀察到、沒改的：畫面開著打 `/compact` 而 pi 不壓時沒有事件，aos 等滿 120 秒才回；畫面 `/new` 後沒講話就關畫面，下一次一問一答開新對話（那段是空的）。都寫進 03 的已知限制。
+
+## 先講結論（11-18 16:5x 公司機收手時）
 
 - **程式部分乙、丙都寫完了，單元測試 21 支（test_pi＋test_pi_screen）在 WSL 暫存複本全綠**；全套測試改後還沒跑、真模型的整樹實跑還沒做、說明文件只改了一半。沒 commit。
 - 甲案（`--mode json`）**沒留**：乙完全涵蓋甲（同樣的事件、多了 steer 與 compact），照「proto8 當沒有舊版」只留 rpc 一套。

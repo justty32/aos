@@ -233,18 +233,6 @@
       ],
       "since": "2026-11-16"
     },
-    "eca-pi-bc-1118": {
-      "title": "pi 身乙案（rpc、回答途中收信）＋丙案（畫面）（eca-pi-bc-1118，沒做完）",
-      "status": "open",
-      "flow": "",
-      "what": "使用者 11-18「codex身留下，pi coding agent要做畫面，去吧。每輪生一行外掛，目前就先這樣。…接著做乙丙吧。」程式與測試（test_pi、test_pi_screen、test_eca_pi）寫完，家機暫存複本全套測過；沒交，改動留在家機工作樹＋交接夾 eca-pi-bc-1118-未交.patch。剩：templates/docs/03-eca-pi.md 整份（還是甲案）、knowledge cli/eca.json 的 #/pi、apps/eca/README 第 12 行、真 pi 整樹實跑（pi_aos_screen.mjs 沒在真 pi 上跑過）、已知限制",
-      "next": "",
-      "see": [
-        "[交接](../proto8/thinking/2026-11/18/交接-各線/eca-pi-bc-1118.md)",
-        "[交接-各線](../proto8/thinking/2026-11/18/交接-各線/README.md)"
-      ],
-      "since": "2026-11-18"
-    },
     "eca-lab-1118": {
       "title": "eca-claude 小試驗教學 13～19（eca-lab-1118，沒做完）",
       "status": "open",

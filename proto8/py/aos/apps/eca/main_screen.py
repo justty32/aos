@@ -218,6 +218,17 @@ def describe(ev):
         return "  %s %s" % (item.get("type") or item.get("item_type"), (item.get("text") or item.get("command") or "")[:120])
     if t == "turn.completed":
         return "── end"
+    msg = ev.get("message") if t == "message_end" and isinstance(ev.get("message"), dict) else None   # pi（11-18 eca-pi）
+    if msg and msg.get("role") == "assistant":
+        text = "".join(c.get("text", "") for c in msg.get("content") or [] if isinstance(c, dict) and c.get("type") == "text")
+        return text.strip() or ("── error: %s" % msg.get("errorMessage") if msg.get("stopReason") == "error" else None)
+    if msg and msg.get("role") == "user":
+        text = "".join(c.get("text", "") for c in msg.get("content") or [] if isinstance(c, dict) and c.get("type") == "text")
+        return "  ✉ %s" % text.replace("\n", " ")[:120] if text.strip() else None
+    if t == "tool_execution_start":
+        return "  ▶ %s %s" % (ev.get("toolName"), json.dumps(ev.get("args"), ensure_ascii=False)[:120])
+    if t == "agent_settled":
+        return "── end"
     return None
 
 
@@ -290,7 +301,7 @@ def cmd_watch(eca, opts):
                 s = describe(ev) if isinstance(ev, dict) else None
                 if s:
                     print(s, flush=True)
-                if isinstance(ev, dict) and ev.get("type") in ("result", "turn.completed"):
+                if isinstance(ev, dict) and ev.get("type") in ("result", "turn.completed", "agent_settled"):
                     return
             why = None if end else gone(eca, stack, watch)   # 這一拍沒有新的整行才看
             if why:

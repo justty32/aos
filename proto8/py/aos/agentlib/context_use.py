@@ -27,7 +27,7 @@
      claude 的輸入框有人打了字或看不出來（screen_slash.input_clear）＝也不打、信留著（不用 C-u 清，會吃掉人的字）；
      否則 tmux send-keys 打字、0.5 秒後 Enter，等畫面的 hook 換掉 history（上限 120 秒）才回信，等不到只在回信裡說一句、不重打。
   3. fsm 腦：<stack>/observed.jsonl 最後 256 KiB 裡最後一則有用量的 think；視窗用 window 參數，或 think/brain_wait.json 指的 kernel 公開的 endpoints.json。
-  2b. pi 身（11-18 eca-pi；from_pi，排在 3 前面）：<stack>/pi/live.jsonl（pi --mode json 的事件，只接不重寫）最後一則 stopReason 不是 error／aborted 的
+  2b. pi 身（11-18 eca-pi；from_pi，排在 3 前面）：<stack>/pi/live.jsonl（非互動那條 pi --mode rpc 的事件，只接不重寫；畫面那條不寫這份）最後一則 stopReason 不是 error／aborted 的
      assistant message_end 的 message.usage：input＋cacheRead＋cacheWrite＝那一刻的 context 大小；之後有成功的 compaction_end＝前面的不算。
      pi 的事件沒有 context 視窗：視窗＝window 參數（hook 的 config.window），沒給＝None（explain 說要設 config.window）。
   explain(stack, window=None) 回一行英文讀數或讀不到的原因，不印東西。codex 身目前沒有讀法＝None。

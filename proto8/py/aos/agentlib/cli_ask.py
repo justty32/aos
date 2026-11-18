@@ -1,4 +1,4 @@
-# cli_ask.py - cli_session 問一輪：畫面開著往 CLI 的收件 socket 投署名訊息（live_a2a）或從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main
+# cli_ask.py - cli_session 問一輪：畫面開著往 CLI 的收件口（claude 的 socket、pi 外掛的收件夾）投信（live_a2a）或從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main
 import fcntl, json, os, re, shlex, signal, sys, time
 
 from aos.agentlib import cli_a2a, cli_base
@@ -43,9 +43,8 @@ def live_a2a(cfg, cell, parts, path, handed, deadline, more=None):
     回答＝全部回執都到之後講完的那一輪；CLI 忙時信在手上那步工具做完才讀到，回答就是正在跑的那一輪的。中途加投的信若趕不上
     那一輪、CLI 另開一輪答，第一則回執之後講完的各輪照順序用一個空行接成一段。"""
     seen, offset = len(cell.turns()), cli_a2a.acks_size(cell)
-    ids, data = cli_a2a.wire(parts)
     try:
-        cli_a2a.deliver(path, data)
+        ids = cli_a2a.post(cfg, path, parts)
     except cli_a2a.Undelivered as e:
         cli_base.warn("cannot deliver to the CLI's message socket (%s); typing into the screen instead" % e)
         return "unsent", None
@@ -72,9 +71,8 @@ def live_a2a(cfg, cell, parts, path, handed, deadline, more=None):
             cli_base.die("CliFailed", "the screen closed before the turn finished")
         late = more.take() if more and got else []           # 第一批有回執了才加投（沒回執要退回貼字時，不會有信只投了沒貼）
         if late:
-            new_ids, data = cli_a2a.wire(late)
             try:
-                cli_a2a.deliver(path, data)
+                new_ids = cli_a2a.post(cfg, path, late)
             except cli_a2a.Undelivered as e:
                 cli_base.warn("cannot deliver to the CLI's message socket (%s); those letters wait for the next turn" % e)
                 more.unsent()
@@ -182,9 +180,9 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, re
                 prompt = reseed(limit) + prompt
             if cfg["kind"] == "claude":
                 text = print_claude(cfg, cell, ws, stack, prompt, handed, sid, more)   # live_mail 開了才看 more（wake-1114）
-            elif cfg["kind"] == "pi":                     # 11-18 eca-pi 甲案：一問一答，沒有畫面、沒有中途收信
+            elif cfg["kind"] == "pi":                     # 11-18 eca-pi 乙案：pi --mode rpc，等回答時又來的信 steer 進去（cli.json "live_mail": false 關）
                 from aos.agentlib.cli_pi import print_pi
-                text = print_pi(cfg, cell, ws, stack, prompt, handed, sid)
+                text = print_pi(cfg, cell, ws, stack, prompt, handed, sid, more)
             else:
                 text = print_codex(cfg, cell, ws, stack, prompt, handed, sid)
         link_transcript(cell, cfg["kind"])               # 工具形也留（方向題 3）

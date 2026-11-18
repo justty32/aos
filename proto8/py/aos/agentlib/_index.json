@@ -12,7 +12,7 @@
   "description": "cli_session 往開著的 claude 畫面投署名訊息（Claude Code 的 cross-session messaging socket）：記 socket、包信封、投遞、等 hook 回執"
  },
  "cli_ask.py": {
-  "description": "cli_session 問一輪：畫面開著往 CLI 的收件 socket 投署名訊息（live_a2a）或從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main"
+  "description": "cli_session 問一輪：畫面開著往 CLI 的收件口（claude 的 socket、pi 外掛的收件夾）投信（live_a2a）或從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main"
  },
  "cli_base.py": {
   "description": "cli_session 各分檔共用的底：錯誤行與提醒行（PROG／ECHO 決定開頭與要不要也印 stdout）、時間、共用常數、找 lib 的 tool_io"
@@ -36,13 +36,16 @@
   "description": "cli_session 接 MCP：aos-mcp 那台的旗標（claude 的 mcp.json／codex 的 -c；pi 用同一份參數，見 cli_pi）、外部 MCP server、tools_sub 子 agent 那台與 guard hook"
  },
  "cli_pi.py": {
-  "description": "cli_session 的 pi 身（pi coding agent，11-18 eca-pi 甲案）：pi --mode json 一問一答、對話檔進小格、aos-mcp 經生成的外掛、/compact 走一次 pi --mode rpc"
+  "description": "cli_session 的 pi 身（pi coding agent，11-18 eca-pi）：起 pi 的整串、小格的兩支外掛、從事件讀回答；非互動一輪與 /compact 都走 pi --mode rpc（cli_pi_rpc）"
+ },
+ "cli_pi_rpc.py": {
+  "description": "pi 身非互動那條的 rpc 行程（11-18 eca-pi 乙案）：送題目、等回答時又來的信 steer 進去、agent_settled 之後收工；/compact 那一問一答"
  },
  "cli_print.py": {
   "description": "cli_session 的非互動那條路（畫面沒開）：claude -p／codex exec 起 CLI、等回答、記 session"
  },
  "cli_screen.py": {
-  "description": "cli_session 開畫面：tmux 裡起互動的 claude／codex（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供"
+  "description": "cli_session 開畫面：tmux 裡起互動的 claude／codex／pi（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供"
  },
  "cli_session.py": {
   "description": "把 claude／codex／pi 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 aos-agent attach／open 接進或開啟互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字"
@@ -67,6 +70,9 @@
  },
  "mailbox_call.py": {
   "description": "mailbox_peek／mailbox_read／mailbox_send 共用：認出叫我的那隻（aos-agent ctl who --json），再叫 aos-mailbox --stack 它的 stack（11-10 晚 mailbox）。"
+ },
+ "pi_aos_screen.mjs": {
+  "description": "aos's extension for pi's interactive screen: reports turns to aos's hook and hands aos's letters to pi (11-18 eca-pi plan C)"
  },
  "quiet.py": {
   "description": "「很久沒動靜」的共用讀寫：$AOS_STACK/quiet.json（不進 git）；aos-eca-turn（一輪 CLI 在跑）與 agent-fsm 的 wait.py（等腦回信）寫，誰都能讀。"

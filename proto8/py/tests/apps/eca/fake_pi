@@ -1,27 +1,28 @@
 #!/usr/bin/env python3
-# fake_pi - stand-in for the pi coding agent CLI in aos-eca tests: --mode json / --mode rpc compact, sessions as files, never calls a model
-"""Usage: fake_pi --mode json --session-dir DIR --session-id ID [flags] < prompt
-       fake_pi --mode rpc --session-dir DIR --session-id ID [flags]   (stdin: one {"type": "compact"} line)
+# fake_pi - stand-in for the pi coding agent CLI in aos-eca tests: --mode rpc (prompt, steer, clear_queue, compact, get_state) and the interactive screen with aos's screen extension
+"""Usage: fake_pi --mode rpc --session-dir DIR [--session-id ID] [flags]   (stdin: JSONL commands)
+       fake_pi --session-dir DIR [--session-id ID] [-e .../pi-aos-screen.mjs] [flags]   (interactive: one line typed = one prompt)
        fake_pi --version
 
-Shapes follow pi 1.5.2 as measured on 11-18: the session file is DIR/<time>_<ID>.jsonl; json mode prints a session line,
-agent_start, message_end (user), message_end (assistant, usage), agent_end, agent_settled; the prompt is stdin.
-A second run with the same ID appends to the same file (continues). The answer is "FAKE PI: <prompt>" (turn N in the file).
-FAKE_CLI_FAIL=1: the assistant message ends with stopReason "error" and errorMessage "connect timeout", exit 0 (pi does that).
+Shapes follow pi 1.5.2 as measured on 11-18: the session file is DIR/<time>_<ID>.jsonl; a second run with the same ID continues it.
+rpc: prompt -> response {disposition started}, agent_start, message_end user, (FAKE_PI_DELAY seconds; steers queued meanwhile are
+delivered one by one as message_end user, each answered by its own assistant message), message_end assistant, agent_end, agent_settled.
+prompt while running -> response success false "Agent is already processing...". The answer is "FAKE PI: <text>".
+Interactive: without -e of aos's screen extension it only echoes; with it, it does what pi_aos_screen.mjs does: session_start,
+agent_start, agent_settled (messages), compact (/compact), session_start new (/new) through `python cli_session.py hook pi CELL`, and every
+0.2 s takes the inbox files (sent as one prompt when idle, delivered at the end of the running turn otherwise) and reports ack.
+FAKE_CLI_FAIL=1: the assistant message ends with stopReason "error" and errorMessage "connect timeout" (pi still exits 0).
 FAKE_CLI_FAIL_SAVED=1 (with FAKE_CLI_FAIL=1): the session file is still created.
 FAKE_CLI_EXIT=N: print nothing on stdout, one stderr line, exit N.
 FAKE_CLI_COMPACT_FAIL=1: rpc compact answers success false, "Nothing to compact (session too small)".
-FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": "..."} as one JSON line per call."""
-import json, os, sys, time
+FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": [lines]} as one JSON line per run (written when the run ends)."""
+import json, os, re, select, subprocess, sys, time, uuid
 
 argv = sys.argv[1:]
 if "--version" in argv:
     print("1.5.2")
     sys.exit(0)
-if "--help" in argv or "-h" in argv:
-    print(__doc__)
-    sys.exit(0)
-VALUED = {"--mode", "--session-dir", "--session-id", "--model", "-e", "--append-system-prompt", "--provider"}
+VALUED = {"--mode", "--session-dir", "--session-id", "--model", "-e", "--append-system-prompt", "--provider", "--tui-mode"}
 opts, it = {}, iter(argv)
 for a in it:
     if a in VALUED:
@@ -34,25 +35,45 @@ def one(k):
     return (opts.get(k) or [None])[-1]
 
 
-mode, sdir, sid = one("--mode"), one("--session-dir"), one("--session-id")
-if mode not in ("json", "rpc") or not sdir or not sid:
-    sys.stderr.write("fake_pi: needs --mode json|rpc --session-dir DIR --session-id ID\n")
-    sys.exit(2)
-log = os.environ.get("FAKE_CLI_LOG")
-if os.environ.get("FAKE_CLI_EXIT"):
+mode, sdir = one("--mode"), one("--session-dir")
+sid = one("--session-id") or str(uuid.uuid4())
+log, got_in = os.environ.get("FAKE_CLI_LOG"), []
+
+
+def write_log():
     if log:
         with open(log, "a", encoding="utf-8") as f:
-            f.write(json.dumps({"argv": sys.argv, "stdin": ""}, ensure_ascii=False) + "\n")
+            f.write(json.dumps({"argv": sys.argv, "stdin": got_in}, ensure_ascii=False) + "\n")
+
+
+if mode not in ("rpc", None) or not sdir:
+    sys.stderr.write("fake_pi: needs [--mode rpc] --session-dir DIR\n")
+    sys.exit(2)
+if os.environ.get("FAKE_CLI_EXIT"):
+    write_log()
     sys.stderr.write("fake_pi: failing on purpose\n")
     sys.exit(int(os.environ["FAKE_CLI_EXIT"]))
 os.makedirs(sdir, exist_ok=True)
-found = [n for n in os.listdir(sdir) if n.endswith("_%s.jsonl" % sid)]
-path = os.path.join(sdir, found[0] if found else "2026-11-18T00-00-00-000Z_%s.jsonl" % sid)
 
 
-def emit(ev):
-    sys.stdout.write(json.dumps(ev) + "\n")
-    sys.stdout.flush()
+def session_path(ident):
+    found = [n for n in os.listdir(sdir) if n.endswith("_%s.jsonl" % ident)]
+    return os.path.join(sdir, found[0] if found else "2026-11-18T00-00-00-000Z_%s.jsonl" % ident)
+
+
+path = session_path(sid)
+fail = bool(os.environ.get("FAKE_CLI_FAIL"))
+if not os.path.exists(path):
+    sys.stderr.write("Warning: No project session found with id '%s'; creating a new session with that id.\n" % sid)
+    if not fail or os.environ.get("FAKE_CLI_FAIL_SAVED"):
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"type": "session", "id": sid, "cwd": os.getcwd()}) + "\n")
+
+
+def save(row):
+    if os.path.exists(path):
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(row) + "\n")
 
 
 def entries():
@@ -62,51 +83,182 @@ def entries():
         return [json.loads(l) for l in f if l.strip()]
 
 
-def save(row):
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(row) + "\n")
+def user(text):
+    return {"role": "user", "content": [{"type": "text", "text": text}]}
 
 
-if mode == "rpc":
-    line = sys.stdin.readline()
-    if log:
-        with open(log, "a", encoding="utf-8") as f:
-            f.write(json.dumps({"argv": sys.argv, "stdin": line}, ensure_ascii=False) + "\n")
-    cmd = json.loads(line)
-    emit({"type": "compaction_start", "reason": "manual"})
-    if os.environ.get("FAKE_CLI_COMPACT_FAIL"):
-        emit({"id": cmd.get("id"), "type": "response", "command": "compact", "success": False,
-              "error": "Nothing to compact (session too small)"})
-    else:
-        summary = "FAKE SUMMARY of %d entries" % len(entries())
-        save({"type": "compaction", "summary": summary})
-        emit({"type": "compaction_end", "reason": "manual", "result": {"summary": summary}, "aborted": False, "willRetry": False})
-        emit({"id": cmd.get("id"), "type": "response", "command": "compact", "success": True,
-              "data": {"summary": summary, "tokensBefore": 1000}})
-    sys.stdin.read()                                    # pi stops when stdin closes
-    sys.exit(0)
+def assistant(text):
+    turn = sum(1 for e in entries() if e.get("type") == "message") + 1
+    usage = {"input": 1000 + 10 * turn, "output": 7, "cacheRead": 50, "cacheWrite": 0, "totalTokens": 1057 + 10 * turn}
+    if fail:
+        return {"role": "assistant", "content": [], "usage": usage, "stopReason": "error", "errorMessage": "connect timeout"}
+    return {"role": "assistant", "content": [{"type": "text", "text": "FAKE PI: %s" % text}], "usage": usage, "stopReason": "stop"}
 
-prompt = sys.stdin.read()
-if log:
-    with open(log, "a", encoding="utf-8") as f:
-        f.write(json.dumps({"argv": sys.argv, "stdin": prompt}, ensure_ascii=False) + "\n")
-fail = bool(os.environ.get("FAKE_CLI_FAIL"))
-if not found:
-    sys.stderr.write("Warning: No project session found with id '%s'; creating a new session with that id.\n" % sid)
-    if not fail or os.environ.get("FAKE_CLI_FAIL_SAVED"):
-        save({"type": "session", "id": sid, "cwd": os.getcwd()})
-turn = sum(1 for e in entries() if e.get("type") == "message") + 1
-emit({"type": "session", "version": 3, "id": sid, "timestamp": "2026-11-18T00:00:00.000Z", "cwd": os.getcwd()})
-emit({"type": "agent_start"})
-user = {"role": "user", "content": [{"type": "text", "text": prompt}], "timestamp": int(time.time() * 1000)}
-emit({"type": "message_end", "message": user})
-usage = {"input": 1000 + 10 * turn, "output": 7, "cacheRead": 50, "cacheWrite": 0, "totalTokens": 1057 + 10 * turn}
-if fail:
-    msg = {"role": "assistant", "content": [], "usage": usage, "stopReason": "error", "errorMessage": "connect timeout"}
-else:
-    msg = {"role": "assistant", "content": [{"type": "text", "text": "FAKE PI: %s" % prompt}], "usage": usage, "stopReason": "stop"}
-    save({"type": "message", "message": user})
-    save({"type": "message", "message": msg})
-emit({"type": "message_end", "message": msg})
-emit({"type": "agent_end", "messages": [user, msg], "willRetry": False})
-emit({"type": "agent_settled", "aborted": False})
+
+def emit(ev):
+    sys.stdout.write(json.dumps(ev) + "\n")
+    sys.stdout.flush()
+
+
+BUF = {"data": b"", "eof": False}
+
+
+def read_line(wait):
+    """one stdin line (raw fd, own buffer: select on a buffered sys.stdin misses lines already read in); None = none within wait; "" = EOF."""
+    end = None if wait is None else time.time() + wait
+    while b"\n" not in BUF["data"] and not BUF["eof"]:
+        left = None if end is None else max(0, end - time.time())
+        if not select.select([0], [], [], left)[0]:
+            return None
+        chunk = os.read(0, 65536)
+        BUF["data"] += chunk
+        BUF["eof"] = not chunk
+    if b"\n" not in BUF["data"]:
+        line, BUF["data"] = BUF["data"], b""
+        return line.decode("utf-8", "replace")
+    line, BUF["data"] = BUF["data"].split(b"\n", 1)
+    return line.decode("utf-8", "replace") + "\n"
+
+
+def lines_until(deadline):
+    """stdin lines that come before deadline (None = one line, waiting as long as it takes); returns (lines, eof)."""
+    out = []
+    while True:
+        line = read_line(None if deadline is None else max(0, deadline - time.time()))
+        if line is None:
+            return out, False
+        if not line:
+            return out, True
+        got_in.append(line)
+        out.append(line)
+        if deadline is None:
+            return out, False
+
+
+def rpc():
+    queue, closed = [], False
+    delay = float(os.environ.get("FAKE_PI_DELAY", "0"))
+
+    def answer(text, messages):
+        msg = assistant(text)
+        save({"type": "message", "message": user(text)})
+        save({"type": "message", "message": msg})
+        emit({"type": "message_end", "message": msg})
+        messages += [user(text), msg]
+
+    def handle(cmd, running):
+        kind = cmd.get("type")
+        if kind == "prompt" and running:
+            emit({"id": cmd.get("id"), "type": "response", "command": "prompt", "success": False,
+                  "error": "Agent is already processing. Specify streamingBehavior ('steer' or 'followUp') to queue the message."})
+        elif kind in ("steer", "follow_up"):
+            queue.append(cmd.get("message", ""))
+            emit({"type": "queue_update", "steering": list(queue), "followUp": []})
+            emit({"id": cmd.get("id"), "type": "response", "command": kind, "success": True, "data": {"disposition": "queued"}})
+        elif kind == "clear_queue":
+            emit({"id": cmd.get("id"), "type": "response", "command": "clear_queue", "success": True,
+                  "data": {"steering": list(queue), "followUp": []}})
+            queue.clear()
+        elif kind == "get_state":
+            emit({"id": cmd.get("id"), "type": "response", "command": "get_state", "success": True,
+                  "data": {"sessionId": sid, "sessionFile": path, "isStreaming": running, "pendingMessageCount": len(queue)}})
+        elif kind == "compact":
+            emit({"type": "compaction_start", "reason": "manual"})
+            if os.environ.get("FAKE_CLI_COMPACT_FAIL"):
+                emit({"id": cmd.get("id"), "type": "response", "command": "compact", "success": False,
+                      "error": "Nothing to compact (session too small)"})
+            else:
+                summary = "FAKE SUMMARY of %d entries" % len(entries())
+                save({"type": "compaction", "summary": summary})
+                emit({"type": "compaction_end", "reason": "manual", "result": {"summary": summary}, "aborted": False, "willRetry": False})
+                emit({"id": cmd.get("id"), "type": "response", "command": "compact", "success": True,
+                      "data": {"summary": summary, "tokensBefore": 1000}})
+        elif kind == "prompt":
+            return cmd
+        return None
+
+    while not closed:
+        got, closed = lines_until(None)
+        for line in got:
+            cmd = handle(json.loads(line), False)
+            if not cmd:
+                continue
+            emit({"id": cmd.get("id"), "type": "response", "command": "prompt", "success": True, "data": {"disposition": "started"}})
+            emit({"type": "agent_start"})
+            emit({"type": "message_end", "message": user(cmd["message"])})
+            messages = []
+            later, closed = lines_until(time.time() + delay)
+            for l2 in later:
+                handle(json.loads(l2), True)
+            answer(cmd["message"], messages)
+            while queue and not fail:
+                text = queue.pop(0)
+                emit({"type": "queue_update", "steering": list(queue), "followUp": []})
+                emit({"type": "message_end", "message": user(text)})
+                answer(text, messages)
+            emit({"type": "agent_end", "messages": messages, "willRetry": False})
+            emit({"type": "agent_settled", "aborted": False})
+    write_log()
+
+
+def screen():
+    conf = None
+    for e in opts.get("-e") or []:
+        if e.endswith("pi-aos-screen.mjs"):
+            m = re.search(r"run\(pi, (\{.*\})\);", open(e, encoding="utf-8").read())
+            conf = json.loads(m.group(1)) if m else None
+    state = {"sid": sid, "busy": False}
+
+    def hook(payload):
+        if conf:
+            subprocess.run([conf["python"], conf["hook"], "hook", "pi", conf["cell"]], input=json.dumps(payload), text=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def turn(text):
+        hook({"event": "agent_start", "session_id": state["sid"]})
+        time.sleep(float(os.environ.get("FAKE_PI_DELAY", "0")))
+        msg = assistant(text)
+        save({"type": "message", "message": user(text)})
+        save({"type": "message", "message": msg})
+        print("FAKE PI: %s" % text, flush=True)
+        slim = [{"role": "user", "stopReason": None, "text": text},
+                {"role": "assistant", "stopReason": msg["stopReason"], "text": "".join(c["text"] for c in msg["content"])}]
+        hook({"event": "agent_settled", "session_id": state["sid"], "aborted": False, "messages": slim})
+
+    hook({"event": "session_start", "reason": "startup", "session_id": sid})
+    print("fake pi screen, session %s" % sid, flush=True)
+    while True:
+        line = read_line(0.2)
+        if line == "":
+            break
+        if line is not None:
+            text = line.strip().replace("\x1b[200~", "").replace("\x1b[201~", "")
+            got_in.append(text)
+            if text == "/quit":
+                break
+            if text.startswith("/compact"):
+                save({"type": "compaction", "summary": "FAKE SCREEN SUMMARY"})
+                hook({"event": "compact", "session_id": state["sid"], "summary": "FAKE SCREEN SUMMARY"})
+            elif text == "/new":
+                global path
+                state["sid"] = str(uuid.uuid4())
+                path = session_path(state["sid"])
+                hook({"event": "session_start", "reason": "new", "session_id": state["sid"]})
+            elif text:
+                turn(text)
+        inbox = conf and conf.get("inbox")
+        names = sorted(n for n in os.listdir(inbox) if n.endswith(".json")) if inbox and os.path.isdir(inbox) else []
+        if names:
+            docs = []
+            for n in names:
+                with open(os.path.join(inbox, n), encoding="utf-8") as f:
+                    docs.append(json.load(f))
+                os.remove(os.path.join(inbox, n))
+            text = "\n\n".join(d["text"] for d in docs)
+            got_in.append(text)
+            hook({"event": "ack", "ids": [d["id"] for d in docs]})
+            turn(text)
+    write_log()
+
+
+rpc() if mode == "rpc" else screen()

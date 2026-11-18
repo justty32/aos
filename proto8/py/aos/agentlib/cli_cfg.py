@@ -10,7 +10,7 @@ from aos.agentlib.cli_mcp import external_servers
 # aos 每次起 CLI 自己會加、cli.json 的 flags／print_flags 不准再寫的旗標（寫了＝CfgBad：在認領信之前就停，信留在 queue、不進冷卻）。
 # codex exec 的這幾個不准重複（寫第二次 codex 退 2：cannot be used multiple times）；claude 的是輸出格式與接哪段對話，重寫會解不開輸出或接錯對話。
 # 有宣告才加的（--mcp-config、--allowedTools、--append-system-prompt-file、--agents、codex 的 -c …）可重複，不擋。
-# pi（11-18 eca-pi 甲案）：aos 自己帶 --mode json、--session-dir（小格的 pi-sessions/）、--session-id、--no-approve，接哪段對話與信不信任工作區的旗標也都歸 aos。
+# pi（11-18 eca-pi）：aos 自己帶 --mode rpc（畫面不帶）、--session-dir（小格的 pi-sessions/）、--session-id、--no-approve，接哪段對話與信不信任工作區的旗標也都歸 aos。
 # claude 的 --settings 不能重複（11-13 實測：命令列上兩個 --settings 只有最後一個算數，前一個整個不見、沒有提醒；aos 自己那個接在後面），
 # 所以也擋；要帶 CLI 自己的設定（hooks、permissions…）寫 cli.json 的 settings 鍵，aos 併進它那一個（cli_settings、cli_mcp.settings_argv）。
 AOS_FLAGS = {"codex": ("--skip-git-repo-check", "--json", "-o", "--output-last-message"),

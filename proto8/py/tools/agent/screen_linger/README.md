@@ -1,6 +1,6 @@
 # screen_linger：eca 停下後由畫面自己的 tmux 計時關閉，起來撤單。
 
-由 after_start／after_stop hook 呼叫，stdin 的事件 stack 是 agent stack；不是 handler 的 AOS_STACK。claude、codex 兩種小格都處理。tmux 需要支援 run-shell -d（3.2 以上）。
+由 after_start／after_stop hook 呼叫，stdin 的事件 stack 是 agent stack；不是 handler 的 AOS_STACK。claude、codex、pi 三種小格都處理。tmux 需要支援 run-shell -d（3.2 以上）。
 
 定義 cli.json 的 screen_close_after_s 是非負整數秒，預設 600，0 寫單後當場 reap；設定在停下時讀一次。讀不了設定就 warning 並用 600。stack hooks.json 把 screen_linger_start／screen_linger_stop 都設 null 可完全停用自動關畫面。
 
