@@ -18,7 +18,7 @@
 
 **今晚（家機）做完的**（細節 `git log --since="2026-11-18 20:00"`）：五條被打斷的線全交；前端跟上新流程；沙箱只寫 README（使用者：風險使用者自負）；三份調查（預設 stack、Linux 當硬體、aos-compile）；**家機 `~/aos-home` 照重建步驟單重建好**（紀錄 [家機-重建紀錄](../proto8/thinking/2026-11/18/家機-重建紀錄.md)，`1548bd455`，含真模型 luna 試跑要點）；使用者裁「舊樹都可以刪掉」→ 已刪 `~/aos-home-old-1118`（含其 agents／defs／backups／aos-user／aos-view）、`proto8/impls/`、`~/.zshrc.bak-1118`、三份 aos 備份（`.claude.json.bak-1113-aos-mcp`、`aos-proto8.pth.bak-1113-simple_tools`、tag `home-local-abed65ecd-1118`）。
 
-**家機現況（明天回家才相關）**：新 daemon（根＋llm kernel）用 setsid 跑著，`ann` 假腦；`~/.zshrc` 第 92～93 行已改成 `AOS_HOME=~/repo/aos/proto8`，要重開 session 才生效。**全景頁 aos-view 與使用者專區 aos-user 壞著**（使用者裁「先壞著」；aos-user 原本只存在舊樹、已隨舊樹刪掉，要用得從公司機或 git 歷史找回／重寫；`aos-user-tick.timer` 每分鐘失敗）。所以問使用者的題目暫時**直接在終端問**，不走 `aos-user send`。`~/.local/bin` 28 個舊 `aos-*` 斷連結已照使用者「也都可以刪了」刪掉（含 `aos-mcp`，所以 Claude Code 設定裡的 aos MCP 伺服器連不上，要改指新 bin 才會好）。aos-user 的資料 `~/.aos/user/` 還在（信箱 3 封），只是程式沒了；頂層建議明天開線照 `thinking/2026-11/13/user-zone-plan/` 重做 aos-user 並放進 repo、全景頁 unit 改指 repo 的 frontend，**待使用者點頭**。
+**家機現況（明天回家才相關）**：新 daemon（根＋llm kernel）用 setsid 跑著，`ann` 假腦；`~/.zshrc` 第 92～93 行已改成 `AOS_HOME=~/repo/aos/proto8`，要重開 session 才生效。**全景頁 aos-view 與使用者專區 aos-user 壞著**（使用者裁「先壞著」；aos-user 原本只存在舊樹、已隨舊樹刪掉，要用得從公司機或 git 歷史找回／重寫；`aos-user-tick.timer` 每分鐘失敗）。所以問使用者的題目暫時**直接在終端問**，不走 `aos-user send`。`~/.local/bin` 28 個舊 `aos-*` 斷連結已照使用者「也都可以刪了」刪掉（含 `aos-mcp`，所以 Claude Code 設定裡的 aos MCP 伺服器連不上，要改指新 bin 才會好）。aos-user 的資料 `~/.aos/user/` 還在（信箱 3 封），只是程式沒了；頂層建議明天開線照 `thinking/2026-11/13/user-zone-plan/` 重做 aos-user 並放進 repo、全景頁 unit 改指 repo 的 frontend，使用者 22:45「推，但可能是後天的事情了」——**明天不做，後天（11-20）再看**。
 
 **預設 stack**：使用者 22:00 選「還是先擱著」（丁、戊都不做），progress `default-stack` 照掛。
 
