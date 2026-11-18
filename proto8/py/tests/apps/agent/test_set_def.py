@@ -253,6 +253,13 @@ class SetDefThroughAFullKernel(SetDef):
 
     def setUp(self):
         super().setUp()
+        try:
+            self.station()
+        except BaseException:
+            self.tearDown()                                      # unittest skips tearDown when setUp fails: do not leave the daemon running
+            raise
+
+    def station(self):
         shutil.copytree(PROTO / "templates" / "kernel" / "procs-kernel", self.tmp / "kern")
         (self.tmp / "kern" / "kernel.json").write_text('{"queue": true}\n')
         r = subprocess.run(["aos-daemon-ctl", "-d", str(self.d), "add", str(self.tmp / "kern")], env=ENV, capture_output=True,
