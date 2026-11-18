@@ -18,6 +18,8 @@
 
 **今天下半場已交**：`43a07ea85`（proto8 五條線合交：env.sh 字樣、letters 拆 forwarding、沙箱帶整個家且家先認 `AOS_HOME`、aos-tools 拆五支、set-def 新做法與 `ctl stop` 延後關）、`b5ccbd6e1`（code map 依賴表、STRUCTURE 拆檔）、`e83c78d47`（litellm 說明兩份）、`2114a5171`（收尾線：測試 PATH 拿掉 `~/.local/bin`、`agent_files.py` 拿掉、hook_run 用 directive_value、swap 搬 `py/aos/`、兩支舊版對照測試修好、步驟單補六處、進度檔刪兩條改八條）。裁定逐字在 `proto8/thinking/2026-11/17/cpp-py-改名/08-要裁的題.md` 文末。工作樹乾淨，沒有線在跑。
 
+**11-18 傍晚使用者改口**（原話：「我在家裡有個litellm proxy，那都不用跑這個...等我回家把那個推回來公司再說吧，要等明天了」）：不用催他跑 `login.sh`；等他把家裡那套帶來公司再接真模型，公司 `~/litellm-proxy/` 先原樣留著、不起。下面三件順延。
+
 **卡在使用者**：公司 WSL 的 litellm proxy 已裝好（`~/litellm-proxy/`，1.109.1，`127.0.0.1:4000`，說明見 `proto8/thinking/2026-11/18/litellm-proxy-接gpt帳號.md`），要他親手 `cd ~/litellm-proxy && ./login.sh` 走 ChatGPT 裝置碼登入。登完後要做（使用者原話「真沙箱隔離這塊等API真模型端點好了就來試試看。…重建試跑記錄也可以接真API」）：
 1. 真模型試跑：`./start.sh`、llm kernel 視窗 `export LITELLM_KEY="$(cat ~/litellm-proxy/master.key)"`（不印值）、`llm set model=luna`，問一句；再試工具呼叫、terra／sol。
 2. 真沙箱隔離完整檢查（box_check 那套；目前只真開過一次確認家可見、唯讀）。
