@@ -155,7 +155,7 @@ def post(*args, body=None, ok=(0,)):
         p = subprocess.run(["aos-post"] + list(args), input=body if body is not None else "", capture_output=True,
                            text=True, env=env, timeout=TIMEOUT_S)
     except OSError as e:
-        raise Fail("LaunchFailed", "cannot run aos-post (source proto8/env.sh to put it on PATH): %s" % e)
+        raise Fail("LaunchFailed", "cannot run aos-post (source $AOS_HOME/env.sh to put it on PATH): %s" % e)
     except subprocess.TimeoutExpired:
         raise Fail("LaunchFailed", "aos-post %s took over %d s" % (args[0], TIMEOUT_S))
     if p.returncode not in ok:

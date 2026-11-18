@@ -14,7 +14,7 @@
 //               $AOS_STACK 不在＝MkdirFailed；11-11 起 daemon 起來時已建過，只剩途中被刪）
 //               alive：自己生的看 waitpid（結束就記 code／signal）；接回來的看 /proc 的 started_at_ticks 還對不對
 //               row：寫進 procs_state 的那一列
-//               ws：設定寫了 ws＝子行程的環境多設 AOS_WS＝它；沒寫＝照舊繼承 daemon 的。AOS_DAEMON 一律設成 daemon 的 stack（dstack：絕對、結尾 /；11-04 晚改名，舊名不認）
+//               ws：設定寫了 ws＝子行程的環境多設 AOS_WS＝它；沒寫＝照舊繼承 daemon 的。AOS_DAEMON 一律設成 daemon 的 stack（dstack：絕對、結尾 /）
 //               limits（11-05 feat-proto 件 5）：生效的份額（列的，或 daemon.json 頂層的預設；null＝不限）——子行程在 run_cli 之前照它 setrlimit／換身分
 //               （limits.cpp；等同 s6-softlimit／s6-setuidgid），失敗＝小格 stderr.txt 一行 LimitBad、退 1
 #pragma once
@@ -99,7 +99,7 @@ struct Child {
 // spec 有 ws（read_procs 已轉絕對）＝子行程設 AOS_WS＝它；ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_cycles、stuck_after_ms 都不寫進 loop.json（daemon 的 key，不是 loop 的）。
 // 小格建不了 MkdirFailed、loop.json 寫不了 WriteFailed、stderr 開不了／fork 失敗 LaunchFailed。
 // aos-exec 自己的錯（PATH 上沒有 aos-loop…）寫在小格的 stderr.txt、子 loop 以 1 結束（phase done、code 1）。
-// dstack＝daemon 的 stack（絕對、結尾 /）：子行程設成 AOS_DAEMON（11-02；11-04 晚改名，舊名不認）。spawn_exec 同。
+// dstack＝daemon 的 stack（絕對、結尾 /）：子行程設成 AOS_DAEMON（11-02）。spawn_exec 同。
 // names＝小格裡三個檔名（CellNames）。11-04 起不再替設定補 ctl／state（aos-loop 自己沒寫＝ctl.json／state.json，four-elements 07 步 4）。
 // limits＝生效的份額（null＝不限；check_limits 驗過的物件），子行程照它做（limits.hpp）。spec 裡的 limits 不寫進 loop.json（daemon 的 key）。
 Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,

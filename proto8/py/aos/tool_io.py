@@ -297,6 +297,15 @@ def os_reason(e):
     return getattr(e, "strerror", None) or str(e)
 
 
+def read_json(path, default=None):
+    """讀一份 UTF-8 的 JSON 檔、回解出的值；不在、讀不了、不是 JSON＝回 default（給「沒有就當預設」的狀態檔；要報錯的自己讀）。"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
 def tokenize_flags(argv, kind, anywhere=False, keep=None):
     """順序呼叫 kind；第一個位置參數起（或 -- 後）不再解旗標。
     anywhere＝位置參數後的旗標也解（11-10 cli-sweep Q1，aos_flags 動作那層用）：位置參數照順序收進 rest；

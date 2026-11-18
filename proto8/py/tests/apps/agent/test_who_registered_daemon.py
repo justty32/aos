@@ -9,8 +9,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
 import unittest
+import env_helper  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
@@ -22,13 +22,7 @@ ENV["PYTHONDONTWRITEBYTECODE"] = "1"
 
 
 def until(condition, timeout=20):
-    end = time.monotonic() + timeout
-    while time.monotonic() < end:
-        result = condition()
-        if result:
-            return result
-        time.sleep(0.05)
-    raise AssertionError("timed out")
+    return env_helper.until(condition, timeout)
 
 
 @unittest.skipUnless(shutil.which("aos-daemon", path=ENV["PATH"]) and shutil.which("aos-post", path=ENV["PATH"]),

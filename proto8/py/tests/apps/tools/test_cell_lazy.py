@@ -1,12 +1,12 @@
 """Test that aos-tools call does not create the tool cell beforehand (11-11 tool-cells-lazy): a read-only tool leaves no folder, a writing tool makes its own."""
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from env_helper import clean_env  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
@@ -35,14 +35,6 @@ with open(os.path.join(cell, "note.txt"), "w") as f:
     f.write("hi")
 print("wrote")
 """
-
-
-def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    env["PATH"] = os.path.expanduser("~/.local/bin") + os.pathsep + env.get("PATH", "")
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    env.update(extra)
-    return env
 
 
 class CellLazy(unittest.TestCase):

@@ -57,7 +57,7 @@
   "description": "Test the sender of aos-agent say / chat (11-13 a2a): --from > the listed agent whose stack holds $AOS_STACK > login name; only an eca's letter carrie…"
  },
  "test_set_def.py": {
-  "description": "Test aos-agent ctl set-def on a real aos-daemon: the row keeps its stack, workspace and auto_restart, the new definition runs from the next start, --…"
+  "description": "Test aos-agent ctl set-def on a real aos-daemon: stop, detach and attach again on the same stack; workspace and auto_restart stay, the table shows th…"
  },
  "test_state_parts.py": {
   "description": "Test aos-agent ctl state (11-10 self-family self_state): the overview (one line per part), picked parts, all, --json, and parts that are not availabl…"

@@ -1,4 +1,4 @@
-# Verify aos-sandbox: a broken config runs prog unsandboxed with a warning, real errors stay errors, the deeper of ro/rw wins (T32), writes outside rw fail (T36) and the config's folder is visible (T34).
+# Verify aos-sandbox: a broken config runs prog unsandboxed with a warning, real errors stay errors, the deeper of ro/rw wins (T32), writes outside rw fail (T36), the config's folder is visible (T34) and aos commands bring the whole home read-only (path rule 7; the home is AOS_HOME when set, a non-home there is EnvBad).
 import importlib.machinery
 import importlib.util
 import json
@@ -401,6 +401,124 @@ class SandboxTests(unittest.TestCase):
         result = subprocess.run([str(SANDBOX), '_metainfo.json#/sandbox', 'cat', 'inner'], capture_output=True, text=True,
                                 env=self.env, cwd=tool, timeout=60)
         self.assertEqual((result.returncode, result.stdout, result.stderr), (0, 'hello\n', ''))
+
+    def fake_home(self, name='home', package=True):
+        home = self.dir / name
+        (home / 'bin').mkdir(parents=True)
+        for command in ('aos-fake-a', 'aos-fake-b'):
+            (home / 'bin' / command).write_text('#!/bin/sh\nexit 0\n', encoding='utf-8')
+            (home / 'bin' / command).chmod(0o755)
+        if package:
+            (home / 'lib/aos').mkdir(parents=True)
+            (home / 'lib/aos/__init__.py').write_text('', encoding='utf-8')
+        return home
+
+    @staticmethod
+    def ro_binds(argv):
+        return [argv[i + 1] for i, arg in enumerate(argv[:-2]) if arg == '--ro-bind' and argv[i + 1] == argv[i + 2]]
+
+    def test_aos_commands_bind_the_whole_home_once(self):
+        # 路徑規則路-7：命令真位置在 <家>/bin、旁邊有 <家>/lib/aos＝整個家唯讀綁一次，不再只綁 <家>/lib、也不另綁 <家>/bin。
+        home = self.fake_home()
+        self.env['PATH'] = str(home / 'bin') + os.pathsep + self.env.get('PATH', os.defpath)
+        result = self.run_box('--dry-run', self.cfg({'commands': ['aos-fake-a', 'aos-fake-b']}), 'echo', 'ran')
+        self.assertEqual((result.returncode, result.stderr), (0, ''))
+        binds = self.ro_binds(json.loads(result.stdout))
+        self.assertEqual(binds.count(str(home)), 1, binds)
+        self.assertNotIn(str(home / 'lib'), binds)
+        self.assertNotIn(str(home / 'bin'), binds)
+
+    def test_linked_aos_command_binds_the_link_folder_and_the_home(self):
+        home = self.fake_home()
+        links = self.dir / 'links'
+        links.mkdir()
+        (links / 'aos-fake-a').symlink_to(home / 'bin/aos-fake-a')
+        self.env['PATH'] = str(links) + os.pathsep + self.env.get('PATH', os.defpath)
+        result = self.run_box('--dry-run', self.cfg({'commands': ['aos-fake-a']}), 'echo', 'ran')
+        self.assertEqual((result.returncode, result.stderr), (0, ''))
+        binds = self.ro_binds(json.loads(result.stdout))
+        self.assertEqual((binds.count(str(links)), binds.count(str(home))), (1, 1), binds)
+        self.assertNotIn(str(home / 'bin'), binds)
+
+    def test_command_outside_a_home_binds_only_its_folder(self):
+        home = self.fake_home('plain', package=False)
+        self.env['PATH'] = str(home / 'bin') + os.pathsep + self.env.get('PATH', os.defpath)
+        result = self.run_box('--dry-run', self.cfg({'commands': ['aos-fake-a']}), 'echo', 'ran')
+        self.assertEqual((result.returncode, result.stderr), (0, ''))
+        binds = self.ro_binds(json.loads(result.stdout))
+        self.assertIn(str(home / 'bin'), binds)
+        self.assertNotIn(str(home), binds)
+
+    def real_home(self, name):
+        home = self.fake_home(name)
+        (home / 'install.py').write_text('', encoding='utf-8')
+        return home
+
+    def test_aos_home_set_is_the_home_that_gets_bound(self):
+        # 使用者 11-18 選項框「AOS_HOME 有設就用它」：命令在 AOS_HOME 的 bin＝綁 AOS_HOME 一次、不另綁 bin、沒有警告。
+        home = self.real_home('set')
+        self.env['AOS_HOME'] = str(home)
+        self.env['PATH'] = str(home / 'bin') + os.pathsep + self.env.get('PATH', os.defpath)
+        result = self.run_box('--dry-run', self.cfg({'commands': ['aos-fake-a', 'aos-fake-b']}), 'echo', 'ran')
+        self.assertEqual((result.returncode, result.stderr), (0, ''))
+        binds = self.ro_binds(json.loads(result.stdout))
+        self.assertEqual(binds.count(str(home)), 1, binds)
+        self.assertNotIn(str(home / 'bin'), binds)
+
+    def test_aos_home_set_wins_over_the_command_location(self):
+        # 命令來自另一個家：綁 AOS_HOME、只綁那個命令自己的資料夾（不綁它的家），stderr 一行警告。
+        home, other = self.real_home('set'), self.real_home('other')
+        self.env['AOS_HOME'] = str(home)
+        self.env['PATH'] = str(other / 'bin') + os.pathsep + self.env.get('PATH', os.defpath)
+        result = self.run_box('--dry-run', self.cfg({'commands': ['aos-fake-a']}), 'echo', 'ran')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        binds = self.ro_binds(json.loads(result.stdout))
+        self.assertEqual((binds.count(str(home)), binds.count(str(other / 'bin'))), (1, 1), binds)
+        self.assertNotIn(str(other), binds)
+        lines = result.stderr.splitlines()
+        self.assertEqual(len(lines), 1, result.stderr)
+        self.assertTrue(lines[0].startswith('aos-sandbox: warning: aos-fake-a is from the aos home '), lines[0])
+
+    def test_aos_home_unset_falls_back_to_the_command_location(self):
+        home = self.real_home('unset')
+        self.assertNotIn('AOS_HOME', self.env)
+        self.env['PATH'] = str(home / 'bin') + os.pathsep + self.env.get('PATH', os.defpath)
+        result = self.run_box('--dry-run', self.cfg({'commands': ['aos-fake-a']}), 'echo', 'ran')
+        self.assertEqual((result.returncode, result.stderr), (0, ''))
+        self.assertEqual(self.ro_binds(json.loads(result.stdout)).count(str(home)), 1)
+
+    def test_aos_home_set_to_a_non_home_is_env_bad(self):
+        # 不像家（沒 install.py、或沒 bin/；判準比照 env.sh）＝EnvBad 一行、退 1，不默默退回認命令位置。
+        home = self.real_home('good')
+        self.env['PATH'] = str(home / 'bin') + os.pathsep + self.env.get('PATH', os.defpath)
+        no_install = self.dir / 'no-install'
+        (no_install / 'bin').mkdir(parents=True)
+        no_bin = self.dir / 'no-bin'
+        no_bin.mkdir()
+        (no_bin / 'install.py').write_text('', encoding='utf-8')
+        spec = self.cfg({'commands': ['aos-fake-a']})
+        for bad in (no_install, no_bin, self.dir / 'missing'):
+            with self.subTest(bad=bad.name):
+                self.env['AOS_HOME'] = str(bad)
+                for args in (('--dry-run', spec), (spec,)):
+                    result = self.run_box(*args, 'echo', 'ran')
+                    self.assertEqual((result.returncode, result.stdout), (1, ''), result.stderr)
+                    lines = result.stderr.splitlines()
+                    self.assertEqual(len(lines), 1, result.stderr)
+                    self.assertTrue(lines[0].startswith('aos-sandbox: error: EnvBad AOS_HOME=%s is not an aos home' % bad),
+                                    lines[0])
+        # 沒列 aos 的命令＝不綁家、也不檢查 AOS_HOME。
+        self.env['AOS_HOME'] = str(no_install)
+        result = self.run_box('--dry-run', self.cfg({'commands': []}, 'plain.json'), 'echo', 'ran')
+        self.assertEqual((result.returncode, result.stderr), (0, ''))
+
+    def test_default_env_passes_aos_home_and_an_env_list_replaces_it(self):
+        self.env['AOS_HOME'] = str(self.dir)
+        argv = json.loads(self.run_box('--dry-run', self.cfg({}), 'echo', 'ran').stdout)
+        i = argv.index('AOS_HOME')
+        self.assertEqual((argv[i - 1], argv[i + 1]), ('--setenv', str(self.dir)))
+        argv = json.loads(self.run_box('--dry-run', self.cfg({'env': ['PATH']}), 'echo', 'ran').stdout)
+        self.assertNotIn('AOS_HOME', argv)
 
 
 if __name__ == '__main__':

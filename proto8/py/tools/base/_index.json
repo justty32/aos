@@ -42,10 +42,10 @@
   "description": "json_set 工具（json 包）：把 JSON 檔一格換成給的值（沒有就加），/- 結尾加在陣列尾、只給檔＝整份換"
  },
  "llm_fake": {
-  "description": "llm_fake（lib/base 的端點函數，測試用）：假腦，形狀同 llm_http、不碰網路，有工具就叫、否則答 FAKE ANSWER"
+  "description": "llm_fake（tools/base 的端點函數，測試用）：假腦，形狀同 llm_http、不碰網路，有工具就叫、否則答 FAKE ANSWER"
  },
  "llm_http": {
-  "description": "llm_http（lib/base 的端點函數）：把一份 OpenAI chat completions 請求送到相容端點，回助手訊息、用量與模型"
+  "description": "llm_http（tools/base 的端點函數）：把一份 OpenAI chat completions 請求送到相容端點，回助手訊息、用量與模型"
  },
  "ls": {
   "description": "ls 工具（看包）：列一個資料夾，預設一行一項 名字＋類型，long 多大小、時間與 aos 記號"
@@ -54,7 +54,7 @@
   "description": "math 工具（小工具包）：算一個算術式子（只有數字與 + - * / // % **），不改任何東西"
  },
  "mcp_tool": {
-  "description": "mcp_tool 工具（lib/base 層，不在分包裡）：照 MCP 包檔叫外部 MCP 伺服器上的一個工具"
+  "description": "mcp_tool 工具（tools/base 層，不在分包裡）：照 MCP 包檔叫外部 MCP 伺服器上的一個工具"
  },
  "mkdir": {
   "description": "mkdir 工具（改包）：建資料夾、上層一起建，已有就沒事"

@@ -24,13 +24,13 @@
   "description": "brain_notify（不是給腦的工具）：brain_failed 的 hook handler，腦被拒（範本條件 BudgetMissing）時往 AOS_NOTIFY_BOX 寄一封 BLOCKED 信，同一段拒絕只寄一次"
  },
  "claude": {
-  "description": "claude 工具（lib/agent 層，不在分包裡）：把一件事交給工作區裡只能讀檔的 Claude Code CLI，同一段對話接著講，回它的答案"
+  "description": "claude 工具（tools/agent 層，不在分包裡）：把一件事交給工作區裡只能讀檔的 Claude Code CLI，同一段對話接著講，回它的答案"
  },
  "clock_register": {
   "description": "clock_register 工具（事件包）：時鐘登記表，每隔 N 個 cycle 寄一段固定文字到信箱，不給 box＝寄自己 queue、定時叫醒自己"
  },
  "codex": {
-  "description": "codex 工具（lib/agent 層，不在分包裡）：把一件事交給唯讀沙盒裡的 Codex CLI，同一段對話接著講，回它的答案"
+  "description": "codex 工具（tools/agent 層，不在分包裡）：把一件事交給唯讀沙盒裡的 Codex CLI，同一段對話接著講，回它的答案"
  },
  "context_wrap": {
   "description": "context_wrap（不是給腦的工具）：on_clock 的 hook handler，context 用量過門檻（預設 35%）先寄收尾信、答完且 queue 空再單獨寄 /compact，壓完不重複"

@@ -12,6 +12,7 @@ import sys
 import tempfile
 import time
 import unittest
+import env_helper  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
@@ -30,13 +31,7 @@ BODY = '#!/bin/sh\naos-agent ctl who --json > "$AOS_WS/who.json" 2> "$AOS_WS/who
 
 
 def until(condition, timeout=20):
-    end = time.monotonic() + timeout
-    while time.monotonic() < end:
-        result = condition()
-        if result:
-            return result
-        time.sleep(0.05)
-    raise AssertionError("timed out")
+    return env_helper.until(condition, timeout)
 
 
 @unittest.skipUnless(shutil.which("aos-daemon", path=ENV["PATH"]) and shutil.which("aos-post", path=ENV["PATH"]),
@@ -145,7 +140,7 @@ class AddParentDaemon(unittest.TestCase):
 
     def test_set_def_still_works_on_a_row_without_envs(self):
         """guard rail (head-core 11-14): ctl set-def on a row added without envs (from a tool cell, so a parent could be found)
-        is accepted, the row stays unwrapped, and --restart runs the new definition"""
+        is accepted, the row stays unwrapped, and the new definition runs"""
         def body(folder, text):
             folder.mkdir()
             (folder / "interfaces.json").write_text('{"aos-agent": {}}\n')
@@ -163,7 +158,7 @@ class AddParentDaemon(unittest.TestCase):
         p = self.run_agent("add", "-n", "sd", "-w", str(ws), str(old), stack=tool)
         self.assertEqual(p.returncode, 0, p.stderr)
         until(lambda: (ws / "ran.txt").exists())
-        p = self.run_agent("set-def", "--restart", "sd", str(new), stack=tool)
+        p = self.run_agent("set-def", "sd", str(new), stack=tool)
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertIn("definition of sd is now %s" % new, p.stdout)
         until(lambda: (ws / "ran.txt").read_text().split() == ["old", "new"])

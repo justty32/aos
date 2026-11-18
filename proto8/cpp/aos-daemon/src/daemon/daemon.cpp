@@ -73,7 +73,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     if (stack_.empty()) {
         throw Error{code::StackMissing, "AOS_STACK is not set"};
     }
-    try {   // 指示詞（10-23 晚）：起點＝設定檔的資料夾（cfg_dirs_）。舊名 loops／execs／loops_* 不認（C-48，11-03「當沒看到」）
+    try {   // 指示詞（10-23 晚）：起點＝設定檔的資料夾（cfg_dirs_）
         if (cfg_.contains("procs")) {
             procs_ = read_procs(drop_bad_refs(cfg_["procs"], cfg_dirs_.dir_of("procs"), bad_refs_), cfg_dirs_.dir_of("procs"), "procs", &bad_rows_);
         }
@@ -169,7 +169,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     // 建不了 MkdirFailed）。放在算 dstack_、上鎖（check_running）、adopt、開信箱之前，它們都要 stack 已經在。
     aos::loop::make_stack();
     cwd_ = std::filesystem::current_path().string();
-    // 給子項的 AOS_DAEMON（11-02，resident-bob 衝突 2；11-04 晚改名，舊名不認）：stack_ 轉絕對、結尾 /，跟 aos-exec 給的 AOS_STACK 同形；預設小格也從它拼（列上的 stack 一律絕對）
+    // 給子項的 AOS_DAEMON（11-02，resident-bob 衝突 2）：stack_ 轉絕對、結尾 /，跟 aos-exec 給的 AOS_STACK 同形；預設小格也從它拼（列上的 stack 一律絕對）
     dstack_ = aos::abspath(stack_);
     // 11-05 B 線：解開捷徑。子項拼 `$AOS_DAEMON/../../定義` 時 `..` 是 OS 照實體走的；stack 是捷徑（ws/.stack -> 別處）時字面算的 `..`
     // 會走到別處（實測：小格起不來 EntryMissing）。基準點是真實路徑，往上的 `..` 就跟字面一樣；往下穿過捷徑（定義是捷徑）本來就沒事，所以目標照字面

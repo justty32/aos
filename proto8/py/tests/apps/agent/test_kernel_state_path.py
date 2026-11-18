@@ -22,17 +22,8 @@ ENV["PYTHONDONTWRITEBYTECODE"] = "1"
 
 sys.path[:0] = [str(PROTO / "py")]
 from aos import daemon_ctl as dc  # noqa: E402
+from env_helper import until  # noqa: E402  同夾的共用零件
 WIRED = callable(getattr(dc, "state_path", None))   # aos-agent uses daemon_ctl.state_path only once the wiring is in
-
-
-def until(cond, timeout=10):
-    end = time.monotonic() + timeout
-    while time.monotonic() < end:
-        v = cond()
-        if v:
-            return v
-        time.sleep(0.05)
-    raise AssertionError("timed out")
 
 
 class FakeKernel(threading.Thread):
@@ -254,13 +245,10 @@ class KernelStatePath(unittest.TestCase):
         env = dict(AOS_KERNEL=str(self.box))
         new = self.tmp / "new"
         shutil.copytree(self.body, new)
-        r = self.agent("ctl", "set-def", "ann", str(new), **env)
+        r = self.agent("ctl", "set-def", "ann", str(new), **env)            # stop, detach, attach again: one call does it
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("definition of ann set to %s for its next start" % new, r.stdout)
-        self.assertEqual(self.rows()["ann"]["def"], os.path.relpath(self.body, self.d))        # still the old one until it starts again
-        r = self.agent("ctl", "set-def", "--restart", "ann", str(new), **env)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("definition of ann is now %s" % new, r.stdout)
+        self.assertIn("definition of ann is now %s; it runs it now" % new, r.stdout)
+        until(lambda: self.rows()["ann"].get("phase") == "running")
         self.assertEqual((self.rows()["ann"]["phase"], os.path.normpath(os.path.join(self.d, self.rows()["ann"]["def"]))), ("running", str(new)))
 
     def test_without_AOS_KERNEL_nothing_is_asked(self):

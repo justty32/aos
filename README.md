@@ -8,7 +8,7 @@ C／C++ 的基礎層與標準庫（aos-exec、aos-loop、aos-fsm、aos-daemon、
 
 需要 Python 3.11 以上、支援 C++20 的 g++（10 以上）與 make；不用 CMake、不用 vcpkg（nlohmann json 已收進 `proto8/cpp/third_party/`）。
 在 `proto8/` 跑 `python3 install.py`：查相依、編 `proto8/cpp/`、把指令放進 `proto8/bin/`、標頭放進 `proto8/include/`（兩夾不進 git）；重跑＝重新安裝。
-裝好後每個視窗先 `source proto8/env.sh`（清掉 `AOS_*`、設 `AOS_HOME`、把 proto8 的指令放到 PATH 最前）。
+裝好後先 `export AOS_HOME=<repo>/proto8`（每台一次，例如寫進 `~/.bashrc`），每個視窗再 `source "$AOS_HOME/env.sh"`（清掉 `AOS_HOME` 以外的 `AOS_*`、把 `$AOS_HOME/bin` 放到 PATH 最前；`AOS_HOME` 沒設就報 `EnvBad`、什麼都不改）。
 
 repo 根沒有 CMake：08～09 月那一代單一執行檔 `aos`（根目錄 CMake、`core/`、`modules/`、`docs/`…）
 11-05 整組封存在 [archive/](archive/README.md) 的 `aos-v1/`，不再建。

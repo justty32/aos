@@ -1,21 +1,15 @@
 """Test aos-agent goal on a fake daemon table (11-11 goal): get with none, set (words, stdin, --limit), done / abandoned, pause, resume (count back to 0), clear, who is recorded (agent vs outside), flags only before the words (set keeps TEXT as it is), and errors."""
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 import unittest
+from env_helper import clean_env  # noqa: E402  同夾的共用零件
 
 
 REPO = Path(__file__).resolve().parents[5]
 BIN = REPO / "proto8" / "bin" / "aos-agent"
-
-
-def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    env.update(PYTHONDONTWRITEBYTECODE="1", **extra)
-    return env
 
 
 class Goal(unittest.TestCase):

@@ -97,9 +97,9 @@ class PurgeScreen(unittest.TestCase):
             rm.cmd(["ann"])
         with mock.patch.object(phase, "via_kernel", return_value=True), mock.patch.object(phase, "by_letter", return_value="ann"), \
                 mock.patch.object(phase, "need_table", side_effect=AssertionError("unexpected lookup")), \
-                mock.patch.object(phase, "close_screen_if_any", side_effect=AssertionError("unexpected close")), \
+                mock.patch.object(decl, "close_screen_if_any", side_effect=AssertionError("unexpected close")), \
                 contextlib.redirect_stdout(io.StringIO()):
-            phase.cmd_stop(["ann"])
+            phase.cmd_stop(["ann"])                    # C′ B: stop never closes a screen (phase does not even import the closer)
 
 
 if __name__ == "__main__":

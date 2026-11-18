@@ -6,7 +6,7 @@
 
 使用者 11-13：「就是說我們做的是框架，最底層就是最簡單的hook+判斷。你說的上限這塊，是在框架之上的通用基礎包，所以可以隨意，可以簡單並通用一些。」
 
-- **骨架**（`round.py`、`hooks.py`、`hold.py`、`letters.py`）是框架本身：收信、叫 hook、照判決放行／拒／排隊／留著、轉寄與代回。它不認得任何一種請求，也沒有任何規則。
+- **骨架**（`round.py`、`hooks.py`、`hold.py`、`letters.py`、`forwarding.py`）是框架本身：收信、叫 hook、照判決放行／拒／排隊／留著、轉寄與代回。它不認得任何一種請求，也沒有任何規則。
 - **掛 proc 那一包**（`procs_rules.py`、`queue_fifo.py`）是蓋在骨架上的通用基礎包：白名單、數量上限（`max_running`、`count_daemon`）、先來先掛的排隊、寄件人的期限，都是這一包的做法，不是框架的規定。它故意做得簡單、通用：例如分流之後所有下一站合算一個上限，要分開管就在各下一站自己的設定各設各的（使用者 11-13 對「分流後數量上限怎麼算」選「甲」＝維持現況）。
 - 要別種規則：寫 hook，或另寫一包交給骨架（問腦那一包 [`py/tools/aos/kernel_llm`](../kernel_llm/README.md) 就是）。
 
@@ -18,7 +18,8 @@
 |---|---|
 | `_entry` | 英文 help、參數、共用模組入口，呼叫骨架 |
 | `round.py` | 讀設定、鎖 `requests/.flock`、派發三個 hook 時機、逐封套用判決 |
-| `letters.py` | 包 aos-post：認領、看信、收信、轉寄、拒信、代回、轉寄對照與排隊 body |
+| `letters.py` | 包 aos-post 的信件本身：認領、看信、收信、拒信與排隊 body |
+| `forwarding.py` | 轉寄對照 `forwarded.json`（防重、寄到一半的待定列）與靠它做的轉寄、代回 |
 | `hooks.py` | 三個事件的設定與回話規則，執行交給共用 hook_run |
 | `hold.py` | 「先留著等表態」：留著的信的窗 `hold.json`、表態檔 `decisions/<信名>.json` |
 | `procs_rules.py` | 掛 proc 的五個口、設定檢查、白名單與 running 上限 |

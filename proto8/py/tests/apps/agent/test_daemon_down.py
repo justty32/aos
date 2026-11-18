@@ -1,6 +1,5 @@
 """Test aos-agent ctl add/stop fail at once with DaemonMissing when the daemon's state window names a dead pid (cli-sweep 甲6), sending nothing."""
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -8,17 +7,12 @@ import sys
 import tempfile
 import time
 import unittest
+from env_helper import clean_env  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[5]
 BIN = REPO / "proto8" / "bin" / "aos-agent"
-
-
-def clean_env():
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    env.update(PYTHONDONTWRITEBYTECODE="1")
-    return env
 
 
 def dead_pid():

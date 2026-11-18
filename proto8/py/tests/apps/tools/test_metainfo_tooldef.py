@@ -1,12 +1,12 @@
 """Test aos-tools reading the tool definition from _metainfo's tooldef as well as the separate _tooldef (11-12 metainfo, N-69): merged one level deep, outside wins."""
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from env_helper import clean_env  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
@@ -17,14 +17,6 @@ SCHEMA_IN = {"type": "object", "properties": {"a": {"type": "number"}, "b": {"ty
 SCHEMA_OUT = {"type": "object", "properties": {"a": {"type": "number"}}}
 INSIDE = {"description": "inside", "parameters": SCHEMA_IN, "errors": ["InsideOnly"]}
 OUTSIDE = {"description": "outside", "parameters": SCHEMA_OUT}
-
-
-def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    env["PATH"] = os.path.expanduser("~/.local/bin") + os.pathsep + env.get("PATH", "")
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    env.update(extra)
-    return env
 
 
 class Base(unittest.TestCase):

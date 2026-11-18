@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import env_helper  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
@@ -24,11 +25,7 @@ print(json.dumps({k: os.environ.get(k) for k in ("TC_KEY", "TC_OTHER", "TC_BOTH"
 
 
 def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") and not k.startswith("TC_")}
-    env["PATH"] = os.path.expanduser("~/.local/bin") + os.pathsep + env.get("PATH", "")
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    env.update(extra)
-    return env
+    return env_helper.clean_env(drop=("TC_",), **extra)
 
 
 class EnvFile(unittest.TestCase):

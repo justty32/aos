@@ -13,7 +13,6 @@
     ],
     "ro": [
       "inner",
-      "../../../../../../lib/aos",
       "/usr/bin/env",
       "/usr/bin/bash",
       "/usr/bin/python3",

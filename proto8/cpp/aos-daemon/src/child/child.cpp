@@ -12,7 +12,7 @@
 // 10-30 eca（thinking 2026-10-30-eca 衝突 1，使用者「都照建議」；N-55 工作區由呼叫方設，daemon 是呼叫方）：子項寫了 ws＝run_child 多設 AOS_WS；
 // 沒寫＝不碰（繼承 daemon 的）。
 // 11-02（resident-bob 衝突 2、daemon-env 方向題 2，使用者「照建議走」）：兩種子項一律多設 AOS_DAEMON＝daemon 的 stack（絕對、結尾 /；
-// 11-04 晚改名，舊名不認，使用者要「直接簡化成AOS_DAEMON」），
+// 使用者要「直接簡化成AOS_DAEMON」），
 // 兄弟（控制器與 bob）靠它找到共同的 stack；只設這一個（定義資料夾、ws 那兩名不設）。
 #include "child/child.hpp"
 #include "child/limits.hpp"
@@ -42,7 +42,7 @@ namespace aos::daemon {
 // 子行程：自成 session、接好三個串流、設 AOS_STACK、cd 到 daemon 的 cwd，呼叫 aos-exec 的 run_cli(argv)。不回來。
 // argv：子 loop＝{"--", 小格/loop.json#/_entry}；exec 型子項＝{"--", 目標, 參數...}（10-30）。fork 之前就備好。
 // ws：空＝AOS_WS 不碰（繼承 daemon 的）；不空＝設成它（eca 10-30）。
-// dstack：daemon 的 stack（絕對、結尾 /），一律設成 AOS_DAEMON（11-02，resident-bob 衝突 2：兄弟要共用位置；只設這一個；11-04 晚改名）。
+// dstack：daemon 的 stack（絕對、結尾 /），一律設成 AOS_DAEMON（11-02，resident-bob 衝突 2：兄弟要共用位置；只設這一個）。
 // lim：份額（fork 之前 prep_limits 備好）；接好 stderr 之後、run_cli 之前照做（11-05 feat-proto 件 5，失敗＝stderr.txt 一行 LimitBad、退 1）。
 [[noreturn]] static void run_child(const std::string& cell, const std::string& cwd, int err_fd,
                                    const std::vector<std::string>& argv, const std::string& ws, const std::string& dstack,

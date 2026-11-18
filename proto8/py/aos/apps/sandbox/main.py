@@ -8,13 +8,14 @@
 # 設定（全選填；不認得的 key 忽略，C-48）：
 #   user     帳號名：root 用 s6-setuidgid，非 root 自動接 sudo -n -k /usr/local/bin/s6-setuidgid（拒絕＝UserBad）；uid:gid 要 root；sub:N 用 aos-asuser；沒寫＝不換身分
 #   base     路徑陣列：系統唯讀底（預設 /usr /bin /sbin /lib /lib64 /etc 裡存在的）
-#   commands 指令名陣列：照 PATH 找到它，所在資料夾唯讀看得到（例 aos-exec）
+#   commands 指令名陣列：照 PATH 找到它，所在資料夾唯讀看得到（例 aos-exec）；真位置在 <家>/bin/、旁邊有 <家>/lib/aos/ 的＝整個家唯讀看得到（路-7）；
+#            家＝AOS_HOME 有設就用它（不像家＝EnvBad），沒設才認命令的真位置（使用者 11-18 選項框）
 #   ro、rw   路徑陣列：唯讀／可寫看得到（相對的從 cwd 算）。ro、rw 混在一起照路徑深淺排、淺的先綁＝**深的那條說了算**
 #            （11-13 線修 T32：rw [repo]＋ro [repo/.git]＝repo 可寫、.git 唯讀；反過來也行；同一條路徑兩邊都列＝rw）
 #            rw 裡的 $AOS_STACK 不在＝先建（11-11 tool-cells-lazy：aos-tools call 不先建工具小格）；其他路徑不在照舊 PathMissing
 #   net      布林：能不能連網（預設 false：只有自己的 loopback）
 #   mem_mb、cpu_s、procs、file_mb、files  正整數 → s6-softlimit 的 -a＋-d、-t、-p、-f、-o
-#   env      環境變數名陣列：只帶這幾個進去（外面有設的才帶；bwrap --clearenv＋--setenv）；沒寫＝ENV_BASE 那幾個（PATH、語系、aos 的六個、hub 型的 AOS_DAEMON／AOS_LLM_KERNEL／AOS_KERNEL／AOS_CLOCK）；
+#   env      環境變數名陣列：只帶這幾個進去（外面有設的才帶；bwrap --clearenv＋--setenv）；沒寫＝ENV_BASE 那幾個（PATH、語系、aos 的六個、hub 型的 AOS_DAEMON／AOS_LLM_KERNEL／AOS_KERNEL／AOS_CLOCK、AOS_HOME）；
 #            寫了＝整份取代 ENV_BASE，不是往預設上加（要預設那幾個就自己列）
 #   沒列到的路徑一律看不到；/proc、/dev、/tmp（空的、可寫、跑完就沒了）一定有。
 #   設定檔所在的資料夾（工具夾）沒被 ro／rw 蓋到＝自動唯讀綁（11-13 線修 T34：_entry 用相對路徑叫 inner，看不到工具夾就找不到）。
@@ -26,7 +27,7 @@
 # 設定壞了（讀不了、不是 JSON、不是物件、某格型別不對、$ref、$env 沒設）＝當沒寫：不套沙箱、直接跑 prog，
 #   stderr 一行「aos-sandbox: warning: sandbox config ignored, running unsandboxed: 原因」（使用者 11-12 晚「甲，出事自己負責」；--dry-run 印的就只有 prog 那條）。
 #   設定不在（檔不在、#/ 指不到）與環境做不到（路徑不在、bwrap／s6／commands 列的指令不在、不是 root）照舊是錯。
-# 錯：stderr 一行「aos-sandbox: error: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、CfgMissing、PathMissing、CommandMissing、UserBad；11-05 stdio-unify R1）。
+# 錯：stderr 一行「aos-sandbox: error: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、CfgMissing、PathMissing、CommandMissing、UserBad、EnvBad；11-05 stdio-unify R1）。
 # 之後的結束碼都是 prog 的（bwrap 透明轉交；被訊號停＝128＋N）。R8：退非 0 時 stderr 有 `aos-sandbox: error:` 這行＝這支錯；沒有＝下層（s6／bwrap／prog）的碼。
 # --help＝英文說明到 stdout、退 0（R3）。
 # 命令列形狀照 CONVENTION P-44（11-04）：用 proto8/py/aos/flags.py 解（`--dry-run=x`＝ArgumentsBad、不認得＝FlagUnknown）。
@@ -40,7 +41,8 @@ SUDO_SETUIDGID = "/usr/local/bin/s6-setuidgid"
 ENV_BASE = ["PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "PYTHONDONTWRITEBYTECODE", "PYTHONIOENCODING",
             "AOS_ENTRY", "AOS_WS", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO",
             "AOS_DAEMON", "AOS_LLM_KERNEL",   # hub 型（N-63）也帶：子 process 預設繼承（11-04 四元素審查）
-            "AOS_KERNEL", "AOS_CLOCK"]   # 其餘 hub 型（N-63 ③ 字面；使用者 11-06 選項框「預設補上」）
+            "AOS_KERNEL", "AOS_CLOCK",   # 其餘 hub 型（N-63 ③ 字面；使用者 11-06 選項框「預設補上」）
+            "AOS_HOME"]   # 家（路徑規則路-7：唯讀綁家、放行這一個變數；範本的工具路徑寫 {"$env": "AOS_HOME", …}）
 # mem_mb 只設 -a（位址空間）與 -d（資料），不用 -m：-m 連堆疊上限也設成同一個數，glibc 開執行緒照堆疊上限配，
 # 一開執行緒就超過位址空間上限（aos-exec 退 1「Resource temporarily unavailable」；10-24 真腦實測 self-improve 撞到）
 LIMITS = [("mem_mb", ("-a", "-d"), 1024 * 1024), ("cpu_s", ("-t",), 1), ("procs", ("-p",), 1),
@@ -58,7 +60,10 @@ It builds one chain-loading argv, [s6-softlimit LIMITS...] [s6-setuidgid USER] b
 Config keys (all optional; unknown keys are ignored): user (account or uid:gid; sub:N = a subuid through aos-asuser, no root), base, commands, ro, rw (path arrays),
   net (boolean, default false), mem_mb, cpu_s, procs, file_mb, files (positive integers), env (variable names to pass in;
   default PATH, locale, TZ, PYTHON*, the six AOS_ run variables and the hub ones AOS_DAEMON, AOS_LLM_KERNEL, AOS_KERNEL,
-  AOS_CLOCK; an env list replaces that default as a whole, it does not add to it).
+  AOS_CLOCK, and AOS_HOME; an env list replaces that default as a whole, it does not add to it).
+An aos command (its real file is in X/bin with X/lib/aos next to it) makes the whole aos home visible (read-only).
+  The home is AOS_HOME when that is set (it must hold install.py and bin/, else EnvBad); unset, it is X.
+  An aos command from another home than AOS_HOME gets only its own folder bound, with a warning.
 For user, not root: an account name goes through `sudo -n -k /usr/local/bin/s6-setuidgid USER`
   (the NOPASSWD sudoers rule from root/setup.sh); refused = UserBad. uid:gid needs root;
   sudo refuses accounts with uid or gid 0. Account names use lowercase letters, digits, _, - and an optional final $.
@@ -70,7 +75,7 @@ A broken CONFIG (unreadable, not JSON, not an object, a key of the wrong type, $
   A CONFIG that is not there (no file, the pointer points at nothing) and things the machine lacks (a listed path,
   bwrap, s6, a listed command, sudo permission for user) stay errors.
 Errors: one stderr line `aos-sandbox: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, CfgMissing, PathMissing,
-  CommandMissing, UserBad. After the exec every exit code is prog's (killed by signal N = 128+N): exiting non-zero with an
+  CommandMissing, UserBad, EnvBad. After the exec every exit code is prog's (killed by signal N = 128+N): exiting non-zero with an
   `aos-sandbox: error:` line on stderr means aos-sandbox failed; without it the code comes from below."""
 
 
@@ -194,6 +199,22 @@ def bind(opts, flag, path, dry):
     opts += [flag, path, path]
 
 
+def aos_home():
+    """AOS_HOME 指的家（判準比照 env.sh 的 EnvBad：要有 install.py，另外要有 bin/）；不像家＝EnvBad。"""
+    raw = os.environ["AOS_HOME"]
+    home = os.path.abspath(raw)
+    if not os.path.isfile(os.path.join(home, "install.py")) or not os.path.isdir(os.path.join(home, "bin")):
+        die("EnvBad", "AOS_HOME=%s is not an aos home (it needs install.py and bin/; it should be the proto8 folder "
+            "of your aos clone; unset AOS_HOME to use the home the aos commands come from)" % raw)
+    return home
+
+
+def inside(p, top):
+    """p 是 top 本身或在它底下（照實際位置比）。"""
+    p, top = os.path.realpath(p), os.path.realpath(top).rstrip("/") or "/"
+    return p == top or p.startswith(top.rstrip("/") + "/")
+
+
 def depth(p):
     """路徑有幾層（照實際位置：是符號連結的看它指到的地方，那才是掛載點）。"""
     real = os.path.realpath(p) if os.path.lexists(p) else p
@@ -301,16 +322,31 @@ def build(cfg, prog, dry, cfg_dir=None):
     cmds = cfg.get("commands", [])
     if not isinstance(cmds, list) or not all(isinstance(c, str) and c for c in cmds):
         raise CfgBad("commands must be an array of non-empty strings")
+    # 真位置在 <家>/bin/、旁邊有 <家>/lib/aos/ 的命令＝aos 的命令：整個家唯讀綁（路徑規則路-7：bin、lib、include、
+    # templates、knowledge… 都在裡面；範本的工具路徑寫 {"$env": "AOS_HOME", …}）。家是哪個（使用者 11-18 選項框
+    # 「AOS_HOME 有設就用它」）：AOS_HOME 有設＝就是它（不像家＝EnvBad，不默默退回）；沒設＝認命令的真位置。
+    # 只在 commands 真有 aos 的命令時才看 AOS_HOME（沒列 aos 命令就不綁家，AOS_HOME 只是照 env 帶進去的變數）。
+    env_home = None
+    homes = []
     for c in cmds:
         found = which(c, dry)
         real_dir = os.path.dirname(os.path.realpath(found))
+        home = os.path.dirname(real_dir)
+        if not (os.path.basename(real_dir) == "bin" and os.path.isfile(os.path.join(home, "lib", "aos", "__init__.py"))):
+            home = None
+        if home and env_home is None and os.environ.get("AOS_HOME"):
+            env_home = aos_home()
+        if home and env_home and not inside(real_dir, env_home):
+            aos_flags.warn("aos-sandbox", "%s is from the aos home %s, not AOS_HOME=%s; only its folder is bound" %
+                           (c, home, env_home))
+        if home and env_home:
+            home = env_home
         for d in dict.fromkeys([os.path.dirname(found), real_dir]):
-            if d:
+            if d and not (home and inside(d, home)):
                 bind(opts, "--ro-bind", d, dry)
-        # <家>/bin/ 的 Python 命令跑同一個家 lib/ 裡的 aos 套件（入口是 install.py 生的，11-18 S5），整夾唯讀綁。
-        lib_dir = os.path.join(os.path.dirname(real_dir), "lib")
-        if os.path.basename(real_dir) == "bin" and os.path.isfile(os.path.join(lib_dir, "aos", "__init__.py")):
-            bind(opts, "--ro-bind", lib_dir, dry)
+        if home and home not in homes:
+            homes.append(home)
+            bind(opts, "--ro-bind", home, dry)
     ro, rw = paths(cfg, "ro"), paths(cfg, "rw")
     stack = os.environ.get("AOS_STACK")
     for p in rw:

@@ -10,7 +10,7 @@ import time
 import unittest
 
 KERNEL = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(KERNEL))
+sys.path[:0] = [str(KERNEL), str(KERNEL.parents[2])]   # runner 自己、放 aos 套件的 py/
 import runner  # noqa: E402
 
 FUNCTION = '''#!/usr/bin/env python3

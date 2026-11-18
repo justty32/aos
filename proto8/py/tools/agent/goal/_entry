@@ -13,7 +13,7 @@
 #   aos-agent goal 看 $AOS_STACK 在目標 stack 裡＝記 set_by／updated_by＝agent。
 #   錯：同 self_system（stderr 與 stdout 各一行「goal: error: 代號 原因」、退 1；下層最後一行錯誤行的代號與原因接上，C-52 例外 ⑤；
 #   沒那行才是 CommandFailed）。只在 daemon 下跑的 agent 能用。
-# 需要 PATH 上有 aos-agent（source proto8/env.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
+# 需要 PATH 上有 aos-agent（source $AOS_HOME/env.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
 import os, re, sys
 HELP = """\
 usage: goal < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)

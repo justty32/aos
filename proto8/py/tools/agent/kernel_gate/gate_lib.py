@@ -1,5 +1,7 @@
-"""gate_lib - kernel_gate 工具與它兩支 hook 共用：站在哪、跑一輪、留著的信怎麼列、通知怎麼寄。純標準庫。"""
+"""gate_lib - kernel_gate 工具與它兩支 hook 共用：站在哪、跑一輪、留著的信怎麼列、通知怎麼寄；讀 JSON 走 aos 套件的 tool_io。"""
 import json, os, subprocess, sys
+
+from aos import tool_io
 
 HOOK = "kernel_gate"                    # agent 身上那支 on_clock hook 的名字；它的小格就是站的 stack
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -24,7 +26,7 @@ def run(argv, text=None, env=None):
         p = subprocess.run(argv, input=text, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                            timeout=STEP_S, env=env)
     except OSError as e:
-        raise Failed("LaunchFailed", "cannot run %s (source proto8/env.sh to put it on PATH): %s" % (argv[0], e)) from None
+        raise Failed("LaunchFailed", "cannot run %s (source $AOS_HOME/env.sh to put it on PATH): %s" % (argv[0], e)) from None
     except subprocess.TimeoutExpired:
         raise Failed("CommandFailed", "%s took over %d s" % (" ".join(argv[:2]), STEP_S)) from None
     return p.returncode, p.stdout, p.stderr
@@ -39,14 +41,6 @@ def handler_ref(name):
         if not rel.startswith(".."):
             return {"$env": "AOS_HOME", "$path": "/" + rel}
     return path
-
-
-def read_json(path, default=None):
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return default
 
 
 def write_json(path, value):
@@ -77,19 +71,19 @@ def refusal(err, name):
 
 def held(cell):
     """留著的信：[(信名, 列, 信)]；信讀不到的略過。body 被站的 before_verdict 改過就用改過的那份。"""
-    window = read_json(os.path.join(cell, "hold.json"), {})
+    window = tool_io.read_json(os.path.join(cell, "hold.json"), {})
     rows = window.get("held") if isinstance(window, dict) else None
     found = []
     for row in rows if isinstance(rows, list) else []:
         name = row.get("letter") if isinstance(row, dict) else None
         if not isinstance(name, str):
             continue
-        letter = read_json(os.path.join(cell, "requests", "cur", name, "letter.json"))
+        letter = tool_io.read_json(os.path.join(cell, "requests", "cur", name, "letter.json"))
         if not isinstance(letter, dict):
             continue
         changed = os.path.join(cell, "bodies", name + ".json")
         if os.path.exists(changed):
-            letter["body"] = read_json(changed, letter.get("body"))
+            letter["body"] = tool_io.read_json(changed, letter.get("body"))
         found.append((name, row, letter))
     return found
 

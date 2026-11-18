@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from env_helper import clean_env  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
@@ -21,14 +22,6 @@ if sys.argv[1:] == ["--tooldef"]:
 sys.stdin.read()
 print(json.dumps({"stack": os.environ.get("AOS_STACK"), "in_caller": os.environ.get("AOS_STACK_IN_CALLER")}))
 """
-
-
-def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    env["PATH"] = os.path.expanduser("~/.local/bin") + os.pathsep + env.get("PATH", "")
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    env.update(extra)
-    return env
 
 
 class StackInCaller(unittest.TestCase):

@@ -2,6 +2,7 @@
 import json
 import os
 
+import forwarding
 import letters
 import limits_rule
 import queue_fifo
@@ -118,7 +119,7 @@ def collect(ctx, before_reply=None):
     if count_daemon is not None and not os.path.isdir(count_daemon):
         ctx.die("DaemonMissing", "count_daemon is not a directory: %s" % count_daemon)
     ctx.forwarded_path = os.path.join(ctx.stack, "forwarded.json")
-    ctx.forwarded = letters.read_forwarded(ctx.forwarded_path, ctx.die)
+    ctx.forwarded = forwarding.read_forwarded(ctx.forwarded_path, ctx.die)
     ctx.replies = os.path.join(ctx.stack, "replies")
     ctx.window = os.path.join(ctx.stack, "queue.json")
     ctx.previous = queue_fifo.queue_view(ctx.window, ctx.warn)
@@ -127,10 +128,10 @@ def collect(ctx, before_reply=None):
     ctx.daemon, ctx.count_daemon = daemon, count_daemon
     prepare_targets(ctx, bool(names))
     ctx.admitted = set()
-    letters.settle_pending(ctx)
+    forwarding.settle_pending(ctx)
     for name in names:
-        if letters.already_forwarded(ctx, name):
-            letters.finish_forwarded(ctx, name)
+        if forwarding.already_forwarded(ctx, name):
+            forwarding.finish_forwarded(ctx, name)
     # 原信收掉後才中斷的情況，不等回信的防重列也要收乾淨。
     stale = [key for key, row in ctx.forwarded.items()
              if row["reply_to"] is None and not os.path.exists(
@@ -138,9 +139,9 @@ def collect(ctx, before_reply=None):
     for key in stale:
         del ctx.forwarded[key]
     if stale:
-        letters.write_forwarded(ctx)
+        forwarding.write_forwarded(ctx)
     if cfg.get("reply_via_me", False) or ctx.forwarded or os.path.isdir(ctx.replies):
-        letters.relay_replies(ctx, before_reply)
+        forwarding.relay_replies(ctx, before_reply)
 
 
 def check(ctx):
@@ -150,8 +151,8 @@ def check(ctx):
     if names and not ctx.targets_loaded:
         prepare_targets(ctx, True)
     for name in names:
-        if letters.already_forwarded(ctx, name):
-            letters.finish_forwarded(ctx, name)
+        if forwarding.already_forwarded(ctx, name):
+            forwarding.finish_forwarded(ctx, name)
             continue
         letter = letters.see(ctx.requests, name, ctx)
         if letter is not None:
@@ -245,7 +246,7 @@ def dispatch(ctx, name, letter, detail):
         return bad
     if body is not letter.get("body"):
         letter = dict(letter, body=body)
-    failure = letters.forward(ctx, name, letter, ctx.route.pop(name, None))
+    failure = forwarding.forward(ctx, name, letter, ctx.route.pop(name, None))
     if failure is None:
         # hook 能把拒或排改成放行；此處只數實際轉出的名字，不再驗規則。
         body = letter.get("body")

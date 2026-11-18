@@ -12,7 +12,7 @@ flowchart LR
 
 `aos-exec proto8/py/aos/apps/sandbox/examples/shell-boxed` 從 stdin 收 `{"command":"rg --version"}`；需要 `AOS_WS`、工具自己的 `AOS_STACK`、bubblewrap 與 s6-softlimit。
 
-工具夾本身（`_metainfo.json` 所在）由 aos-sandbox 自動唯讀綁，`ro` 全改絕對路徑也找得到 `inner`；`inner` 指到的庫的 shell 照舊要列（11-13 線修 T34）。`inner` 與 `_tooldef.json` 指向庫的 shell 工具；唯讀掛入它 import 的 aos 套件（`lib/aos`，裡面有 `tool_io`、`shell_observed`、`observed`）。`commands` 只列 aos-exec，避免把整個 `/usr/bin` 掛進去。Python 是執行期必備，因此指令白名單只是盡量限制；寫入位置與網路仍受沙箱控制。daemon stack 必須放在工作區外。
+工具夾本身（`_metainfo.json` 所在）由 aos-sandbox 自動唯讀綁，`ro` 全改絕對路徑也找得到 `inner`；`inner` 指到的庫的 shell 照舊要列（11-13 線修 T34）。`inner` 與 `_tooldef.json` 指向庫的 shell 工具；它 import 的 aos 套件（`lib/aos`，裡面有 `tool_io`、`shell_observed`、`observed`）不另列：`commands` 的 aos-exec 在家的 `bin/`，aos-sandbox 就把整個家唯讀綁進來（路徑規則路-7）。`commands` 只列 aos-exec，避免把整個 `/usr/bin` 掛進去。Python 是執行期必備，因此指令白名單只是盡量限制；寫入位置與網路仍受沙箱控制。daemon stack 必須放在工作區外。
 
 實際關箱驗證見 [box_check 的測試](../../../../../tools/aos/box_check/README.md)（box-probe 探測；原本的 `proto8/cases/box-probe/` 11-17 刪掉）；主機禁止建立網路命名空間時，bwrap 會直接失敗，不能當作通過。
 

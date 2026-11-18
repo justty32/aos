@@ -1,4 +1,4 @@
-# aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 lib/aos_sweep）；說明在 py/docs/05-commands/03、04。
+# aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢、清理舊列、門鈴、停 daemon 本身與叫清道夫跑一輪（sweep，本體 aos.sweep）；說明在 py/docs/05-commands/03、04。
 HELP = """aos-daemon-ctl - attach procs to an aos-daemon and start / stop / sleep / wake / pause them
 
 usage: aos-daemon-ctl [--daemon D] SUBCOMMAND [FLAGS...] [ARGS...]

@@ -120,7 +120,7 @@ def screen_entry(a):
 
 
 def close_screen_if_any(a):
-    """rm／stop 前：宣告了 screen 就先 close（正在答＝入口報 SessionBad，原樣轉、不往下做）。沒宣告就略過。
+    """rm／set-def 前（ctl stop 不關，交給定義的 after_stop hook）：宣告了 screen 就先 close（正在答＝入口報 SessionBad，原樣轉、不往下做）。沒宣告就略過。
     工作區已經不在（aos-exec 會報 WsMissing，rm／stop 不該被它擋）：close 只用 stack 裡的小格，改拿 stack 當 aos-exec 的工作區去關、
     提醒一行；stack 也不在＝沒有畫面可關，略過。"""
     try:

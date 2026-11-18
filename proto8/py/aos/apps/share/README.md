@@ -47,6 +47,6 @@ aos-share --help
 
 測試：`python3 -m unittest discover -s proto8/py/tests/apps/share`（`test_share.py` 是六種樣板，`test_check_reset.py` 是 check／reset；需 `setfacl/getfacl`；可用 `KERNEL_TEST_TMP` 指定暫存夾的父夾；無法替外部 id 設 ACL 的環境會略過真 ACL 例子）。
 
-新指令重新 `source proto8/env.sh` 就在 PATH 上。
+新指令重新 `source "$AOS_HOME/env.sh"` 就在 PATH 上。
 
 daemon 起換了 uid 的 proc 前會自己替它的 stack 設 G6 那組 ACL（daemon 段 3，C++，還沒做）；這支給手動與共用夾用。

@@ -6,7 +6,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
 import unittest
 
 
@@ -18,20 +17,11 @@ sys.path[:0] = [str(PROTO / "py")]
 REGISTERED = {"AOS_PARENT_STACK": "", "AOS_NOTIFY_BOX": ""}
 from aos import daemon_ctl as dc
 from aos.daemon_ctl.entry import daemon_ref
+from env_helper import until  # noqa: E402  同夾的共用零件
 
 ENV = {key: value for key, value in os.environ.items() if not key.startswith("AOS_")}
 ENV["PATH"] = str(PROTO / "bin") + os.pathsep + ENV["PATH"]
 ENV["PYTHONDONTWRITEBYTECODE"] = "1"
-
-
-def until(condition, timeout=10):
-    end = time.monotonic() + timeout
-    while time.monotonic() < end:
-        result = condition()
-        if result:
-            return result
-        time.sleep(0.05)
-    raise AssertionError("timed out")
 
 
 class AddLetterDotenv(unittest.TestCase):
@@ -95,7 +85,6 @@ class AddViaKernelDotenv(unittest.TestCase):
         finally:
             add_mod.call_dc, add_mod.ctl_wait = old
         self.assertIs(seen.get("dotenv_override"), True)
-
 
 
 class AddBothRoutesSameKwargs(unittest.TestCase):

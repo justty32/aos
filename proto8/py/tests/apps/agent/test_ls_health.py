@@ -1,12 +1,12 @@
 """Test aos-agent ctl ls health fields (--json keys auto_restart/queue/cooldown/busy, -l columns) on a fake daemon table."""
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+import env_helper  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
@@ -19,9 +19,7 @@ DUE = dict(COOL, failures=2, until="2000-01-01T00:00:00Z", code="BrainFailed",
 
 
 def clean_env():
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    env.update(PYTHONDONTWRITEBYTECODE="1", TZ="UTC")
-    return env
+    return env_helper.clean_env(TZ="UTC")
 
 
 class LsHealth(unittest.TestCase):

@@ -24,7 +24,7 @@
 // （ctl、state 寫 null＝不開）；多幾個 key——procs＝{名字: proc}（拆檔＝{"$ref": [檔, …]}）、adopt（布林，沒寫＝true）、
 // procs_ctl、procs_state（在 $AOS_STACK 底下的檔名；沒寫＝procs_ctl.json、procs_state.json，null＝不開）、procs_requests（11-04 起沒寫＝procs_requests、null＝不開）、
 // procs_loop、procs_exec、procs_stderr（11-04：小格裡 daemon 寫的三個檔名，沒寫＝loop.json、exec.json、stderr.txt；見 child.hpp 的 CellNames）。
-// 舊名 loops、execs、loops_ctl、loops_state、loops_ctl_mailbox 不認（C-48，使用者 11-03「當沒看到」）。命令列 `-- 參數...` 只接在 daemon 自己的 exec。
+// 命令列 `-- 參數...` 只接在 daemon 自己的 exec。
 // 每個 proc 怎麼起看寫法（沒有 kind，procs § 2）：字串、陣列、或 key 只有 exec（＋ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_cycles、stuck_after_ms）的物件＝exec 型（aos-exec 一次）；其他物件＝loop 型（包成子 aos-loop）。
 // 物件的 stack（procs § 2b）：proc 的 stack（從 daemon 的 cwd 轉絕對、不在就 mkdir -p、不查不擋）；沒寫＝$AOS_STACK/procs/<名字>/。ws＝子行程的 AOS_WS。
 // 物件的 def（11-04，aos-agent，使用者「那就b。」）：定義資料夾（從 daemon 的 cwd 轉絕對；不驗、只記進表的 def 欄，不灌進 loop.json）。

@@ -1,12 +1,12 @@
 """Test aos-agent llm on a fake daemon table (11-10 晚使用者「換」「跳warinig就好」): ls / ls -l / ls --json, set (unread key = warning, stored), rm KEY, reset, and show gone."""
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+import env_helper  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
@@ -16,10 +16,7 @@ JSON_BIN = REPO / "proto8" / "bin"
 
 
 def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    env["PATH"] = str(JSON_BIN) + os.pathsep + os.path.expanduser("~/.local/bin") + os.pathsep + env.get("PATH", "")
-    env.update(PYTHONDONTWRITEBYTECODE="1", **extra)
-    return env
+    return env_helper.clean_env(path=(JSON_BIN, env_helper.LOCAL_BIN), **extra)
 
 
 class Llm(unittest.TestCase):

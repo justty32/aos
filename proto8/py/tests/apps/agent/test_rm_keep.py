@@ -7,8 +7,8 @@ import signal
 import subprocess
 import sys
 import tempfile
-import time
 import unittest
+from env_helper import until  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
@@ -17,16 +17,6 @@ BIN = PROTO / "bin" / "aos-agent"
 ENV = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
 ENV["PATH"] = str(PROTO / "bin") + ":" + ENV["PATH"]
 ENV["PYTHONDONTWRITEBYTECODE"] = "1"
-
-
-def until(cond, timeout=10):
-    end = time.monotonic() + timeout
-    while time.monotonic() < end:
-        v = cond()
-        if v:
-            return v
-        time.sleep(0.05)
-    raise AssertionError("timed out")
 
 
 class RmKeep(unittest.TestCase):
@@ -103,7 +93,8 @@ class RmKeep(unittest.TestCase):
         self.assertEqual(self.row("bob"), {})
 
     def test_rm_and_stop_when_workspace_is_gone(self):
-        """11-13: a workspace that is gone must not block rm / stop (closing the screen only needs the stack)."""
+        """11-13: a workspace that is gone must not block rm / stop (closing the screen only needs the stack).
+        C′ B: stop does not close the screen at all (the eca's after_stop hook does, later), so only the rms run its close."""
         defn = self.tmp / "defn"
         (defn / "screen").mkdir(parents=True)
         (defn / "interfaces.json").write_text('{"aos-agent": {"screen": "screen"}}\n')
@@ -122,19 +113,22 @@ class RmKeep(unittest.TestCase):
             ws.rmdir()
         r = self.agent("-t", "cat", "ctl", "stop")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("aos-agent: warning: the workspace of cat is gone (%s); closing its screen from its stack instead" % (self.tmp / "ws-cat"), r.stderr)
+        self.assertNotIn("closing its screen", r.stderr)
         self.assertNotIn("WsMissing", r.stderr)
         self.assertEqual(self.row("cat").get("phase"), "stopped")
+        self.assertFalse(closed.exists())                      # stop left the screen alone
         r = self.agent("ctl", "rm", "dan")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("the workspace of dan is gone", r.stderr)
         self.assertIn("removed dan; stack %s kept" % (self.d / "procs" / "dan"), r.stdout)
         self.assertEqual(self.row("dan"), {})
         self.assertTrue((self.d / "procs" / "dan").is_dir())
-        self.assertEqual([l.split()[0] for l in closed.read_text().splitlines()], ["close", "close"])   # the screen entry still ran
+        self.assertEqual([l.split()[0] for l in closed.read_text().splitlines()], ["close"])   # the screen entry still ran
         r = self.agent("ctl", "rm", "cat")                      # stopped, workspace gone: still removable
         self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("aos-agent: warning: the workspace of cat is gone (%s); closing its screen from its stack instead" % (self.tmp / "ws-cat"), r.stderr)
         self.assertEqual(self.row("cat"), {})
+        self.assertEqual([l.split()[0] for l in closed.read_text().splitlines()], ["close", "close"])
 
     def test_rm_with_invalid_cli_json_keeps_stack(self):
         defn = self.tmp / "invalid-eca"

@@ -1,12 +1,12 @@
 """Test aos-agent ctl state (11-10 self-family self_state): the overview (one line per part), picked parts, all, --json, and parts that are not available."""
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+import env_helper  # noqa: E402  同夾的共用零件
 
 sys.dont_write_bytecode = True
 REPO = Path(__file__).resolve().parents[5]
@@ -15,10 +15,7 @@ PARTS = ["who", "state", "tools", "llm", "system", "hooks", "history", "mailbox"
 
 
 def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    env["PATH"] = os.path.expanduser("~/.local/bin") + os.pathsep + env.get("PATH", "")
-    env.update(PYTHONDONTWRITEBYTECODE="1", **extra)
-    return env
+    return env_helper.clean_env(path=(env_helper.LOCAL_BIN,), **extra)
 
 
 class State(unittest.TestCase):

@@ -54,7 +54,7 @@ aos 不驗寄件人是誰，安全的保底是 Linux 本身（使用者、權限
 
 ### 跑法
 
-先準備（PATH 放 `proto8/bin`（`python3 proto8/install.py` 裝好的），或 `source proto8/env.sh`）。下面每一段都在同一個暫存夾裡做，每台 daemon 用完就用 `aos-daemon-ctl -d <它的 stack> shutdown` 收掉。
+先準備（PATH 放 `proto8/bin`（`python3 proto8/install.py` 裝好的），或 `source "$AOS_HOME/env.sh"`）。下面每一段都在同一個暫存夾裡做，每台 daemon 用完就用 `aos-daemon-ctl -d <它的 stack> shutdown` 收掉。
 
 ```sh
 P=<repo>/proto8

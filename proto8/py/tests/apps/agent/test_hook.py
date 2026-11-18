@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import env_helper  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
@@ -15,10 +16,7 @@ BIN = REPO / "proto8" / "bin" / "aos-agent"
 
 
 def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_") and not k.startswith("TC_")}
-    env["PATH"] = os.path.expanduser("~/.local/bin") + os.pathsep + env.get("PATH", "")
-    env.update(PYTHONDONTWRITEBYTECODE="1", **extra)
-    return env
+    return env_helper.clean_env(drop=("TC_",), path=(env_helper.LOCAL_BIN,), **extra)
 
 
 class Hook(unittest.TestCase):

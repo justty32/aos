@@ -12,6 +12,7 @@ import time
 PROTO = Path(__file__).resolve().parents[4]
 sys.path[:0] = [str(PROTO / "py")]
 from aos import ws as aos_ws  # noqa: E402
+from env_helper import clean_env  # noqa: E402  同夾的共用零件
 
 AGENT_BIN = PROTO / "bin" / "aos-agent"
 BASE_COMMIT = "158816ad0eaebf2776a87cbf58b9bf9c7db6fce1"   # reply-match 施工前的 main（暫存樹 git archive 的那個）
@@ -45,12 +46,6 @@ if a[:2] == ["send", "--ordered"]:
 sys.stderr.write("aos-post: error: ArgumentsBad fake aos-post: %r\n" % a)
 sys.exit(2)
 '''
-
-
-def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    env.update(PYTHONDONTWRITEBYTECODE="1", **extra)
-    return env
 
 
 class Daemon:

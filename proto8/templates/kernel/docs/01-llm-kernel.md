@@ -30,7 +30,7 @@ llm-kernel/
 
 **包怎麼讀**（全文在 [kernel_llm docs/01](../../../py/tools/aos/kernel_llm/docs/01-用法.md)）：信與 agent 的 `llm.json` 只寫代號；kernel 自己看 `exec`／`slots`／`budget`／`speed` 與 `backend` 五個（拿掉後才交給 endpoint 函數），其餘（`url`、`model`、`fixed`、`script`、`delay_s`…）原樣交給函數。金鑰由端點小 proc 自己讀環境，kernel 不讀、不寫、不轉交。**`fixed` 是釘死的**：信的 `request` 寫了 `fixed` 裡的 key、或那包有 `model` 而信寫了 `model`＝那封回 `RequestBad`；換溫度、換模型＝換代號（多登記一包）。`cost`／`context`／`summary` 只給人與腦挑代號用，kernel 每拍寫進窗 `$AOS_STACK/endpoints.json`，`aos-llm ls` 印它。
 
-**起來**（PATH 放 `proto8/bin`（`python3 proto8/install.py` 裝好的），或 `source proto8/env.sh`）：
+**起來**（PATH 放 `proto8/bin`（`python3 proto8/install.py` 裝好的），或 `source "$AOS_HOME/env.sh"`）：
 
 ```sh
 mkdir ~/llm_kernel && cd ~/llm_kernel

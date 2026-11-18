@@ -1,7 +1,7 @@
 // windows.cpp：【daemon】管轄手把 procs_ctl 與有變才寫的 procs_state 狀態窗（說明見 daemon.hpp）。
 //
 //   read_procs_ctl  每圈讀一次（tend 開頭）。同 aos-loop 的 read_ctl 的不採用規則（N-06～N-08）：認 procs、procs_added、procs_removed、procs_stopped、procs_started、seq，
-//                   其他 key 忽略（舊名 loops*／execs* 也是，C-48）；讀到壞的（讀不了、不是 JSON 物件、seq 不是非負整數、名單壞、指示詞解不開、
+//                   其他 key 忽略；讀到壞的（讀不了、不是 JSON 物件、seq 不是非負整數、名單壞、指示詞解不開、
 //                   ）整份不採用、維持上一份好的，原因記 pctl_warning_（state_flux 的 procs_ctl_warning）；
 //                   讀到好的清回 null，跟上一份好的不同才更新 state_flux 的 responded_at；檔不在＝回初始值、不算問題
 //   check_lists     procs、procs_added（read_procs）、procs_removed／procs_stopped／procs_started（名字的陣列）；信也用

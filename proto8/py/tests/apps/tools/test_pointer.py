@@ -1,12 +1,12 @@
 """Test aos-tools with FILE.json#/POINTER locations: add (stored form, default name), ls -l, get, call through aos-exec, rm by path, and the errors."""
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from env_helper import clean_env  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
@@ -14,14 +14,6 @@ PROTO = Path(__file__).resolve().parents[4]
 BIN = PROTO / "bin" / "aos-tools"
 MUL = 'import json, sys\na = json.load(sys.stdin)\nprint(a["a"] * a["b"])\n'
 SCHEMA = {"type": "object", "properties": {"a": {"type": "number"}, "b": {"type": "number"}}}
-
-
-def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    env["PATH"] = os.path.expanduser("~/.local/bin") + os.pathsep + env.get("PATH", "")
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    env.update(extra)
-    return env
 
 
 class PointerLocations(unittest.TestCase):

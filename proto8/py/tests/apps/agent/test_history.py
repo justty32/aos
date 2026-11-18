@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import env_helper  # noqa: E402  同夾的共用零件
 
 
 sys.dont_write_bytecode = True
@@ -22,10 +23,7 @@ MSGS = [{"role": "user", "content": "what time is it?"},
 
 
 def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    env["PATH"] = os.path.expanduser("~/.local/bin") + os.pathsep + env.get("PATH", "")
-    env.update(PYTHONDONTWRITEBYTECODE="1", **extra)
-    return env
+    return env_helper.clean_env(path=(env_helper.LOCAL_BIN,), **extra)
 
 
 class History(unittest.TestCase):

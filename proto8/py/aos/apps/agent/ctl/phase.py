@@ -3,7 +3,6 @@ from aos import ws as aos_ws
 from aos import daemon_ctl as dc
 from ..common import call_dc, find, note, parse, row_named, table_ref, target, target_name, via_kernel
 from .shared import ctl_wait, name_last, need_table, phase_body, queued_opt, send_only, timeout_opt, wait_for
-from ..decl import close_screen_if_any
 from ..hints import comes_back_paused, label, queued
 
 
@@ -35,7 +34,9 @@ flags:
   -h, --help          show this help
 
 Stops when this round ends. --no-wait waits only for the daemon to accept the letter.
-Closes its screen first; a workspace that is gone does not block it (one warning line).
+It does not close its screen: an eca closes it from its after_stop hook screen_linger_stop
+after cli.json screen_close_after_s seconds (default 600; 0 = at once), and starting it again
+before then keeps the screen. aos-agent close --target NAME closes it now.
 Prints one result line on stdout; state already reached is a successful no-op.
 With $AOS_KERNEL set (and no --daemon) it reads only the reply to its own letter (no table
 lookup, no phase check first, no wait for the table): "stop accepted for NAME".
@@ -115,7 +116,7 @@ def name_only(opts):
 
 
 def by_letter(cmd, opts, secs, on_queued="fail"):
-    """走 kernel 的 start／stop／sleep／wake（kernel-framework 03）：只寄那封信、只看它的回信；不讀表、不核 phase、不關畫面、不等表。"""
+    """走 kernel 的 start／stop／sleep／wake（kernel-framework 03）：只寄那封信、只看它的回信；不讀表、不核 phase、不等表。"""
     name = name_only(opts)
     if ctl_wait(cmd, phase_body(cmd, name, look=False), lambda _: True, "the %s letter for %s has no reply yet" % (cmd, name),
                 "CtlRejected", secs=secs, on_queued=on_queued, name=name, replied=True) is None:
@@ -124,7 +125,7 @@ def by_letter(cmd, opts, secs, on_queued="fail"):
 
 
 def cmd_start(argv, look=None):
-    """look＝讀表核 phase、等表上起來（沒走 kernel 一律如此；set-def --restart 走 kernel 時也明給）；None＝走 kernel 就只看回信。"""
+    """look＝讀表核 phase、等表上起來（沒走 kernel 一律如此；呼叫者也可明給）；None＝走 kernel 就只看回信。"""
     opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout_s", "--on-queued": "on_queued"}, help=HELP["start"], short=("-t",))
     secs = timeout_opt(opts, HELP["start"])
     on_queued = queued_opt(opts, HELP["start"])
@@ -156,6 +157,8 @@ def paused_tail(a, held):
 
 
 def cmd_stop(argv, look=None):
+    """look 同 cmd_start（set-def 走 kernel 時明給 True：要等它真的停好才拔）。不關畫面（C′ B 包，使用者 11-14 C′ 規則：
+    stop／sleep 後延後關，由 eca 定義的 after_stop hook screen_linger_stop 排；這裡當場關會蓋掉「延後期間又起來就不關」）。"""
     opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout_s"}, {"--no-wait": "no_wait"}, help=HELP["stop"], short=("-t",))
     secs = timeout_opt(opts, HELP["stop"])
     name_last(opts, rest, HELP["stop"])
@@ -175,7 +178,6 @@ def cmd_stop(argv, look=None):
             ctl_wait("stop", phase_body("stop", a.name), lambda _: True, "the daemon has not accepted the stop for %s" % a.name, "CtlRejected", secs=secs, replied=True)
         print("stop accepted; %s stops when this round ends, stack kept (%s); aos-agent ctl start --target %s to carry on" % (a.name, a.stack, a.name))
         return
-    close_screen_if_any(a)
     stopped = lambda _: (row_named(a.name) or {"phase": "stopped"}).get("phase") == "stopped"
     if a.phase != "stopping":
         ctl_wait("stop", phase_body("stop", a.name), stopped, "the daemon has not finished stopping %s" % a.name, "CtlRejected", secs=secs)

@@ -4,9 +4,22 @@
 # 小格裡沒有 kernel.json（沒開過 kernel_gate on）＝什麼都不做。通知過的信名記在 $AOS_STACK/notified.json（只留還留著的）。
 # 錯：stderr 一行「kernel_gate: error: 代號 原因」、退 1；站那一輪自己的錯誤行原樣在上面。掛它用 on_error: continue。
 import json, os, sys, time
+HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
-sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-import gate_lib as g
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.isfile(os.path.join(_lib, "aos", "__init__.py")) else [])
+try:
+    from aos import tool_io  # noqa: E402
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "aos":
+        raise
+    sys.stderr.write("kernel_gate: error: ModuleMissing %s not in the tool folder, not in py/ or lib/ above it, not on the Python path\n" % error.name)
+    sys.exit(1)
+import gate_lib as g  # noqa: E402
 
 HELP = """usage: tick < EVENT.json   (an on_clock hook handler; $AOS_STACK = this hook's cell = the station's stack)
 Run one round of the kernel station in $AOS_STACK (kernel.json there), then tell the agent once about
@@ -38,7 +51,7 @@ def main():
         code, _ = g.round_once(cell)
         rows = g.held(cell)
         seen_path = os.path.join(cell, "notified.json")
-        seen = g.read_json(seen_path, [])
+        seen = tool_io.read_json(seen_path, [])
         seen = set(x for x in seen if isinstance(x, str)) if isinstance(seen, list) else set()
         new = [r for r in rows if r[0] not in seen]
         if new:

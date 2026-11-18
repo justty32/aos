@@ -5,6 +5,8 @@ import subprocess
 import sys
 import time
 
+from aos import tool_io
+
 PROC_JSON = "proc.json"
 GIVE_UP_S = 300          # 列被人 stop 後等多久才放棄（從第一次看到它停著起算）
 
@@ -18,12 +20,8 @@ class Failed(Exception):
 
 
 def read_json(path):
-    """讀一份 JSON 物件；不在、讀不懂、不是物件都回 None。"""
-    try:
-        with open(path, encoding="utf-8") as stream:
-            doc = json.load(stream)
-    except (OSError, ValueError, UnicodeError):
-        return None
+    """讀一份 JSON 物件；不在、讀不懂、不是物件都回 None（讀檔走 tool_io.read_json）。"""
+    doc = tool_io.read_json(path)
     return doc if isinstance(doc, dict) else None
 
 

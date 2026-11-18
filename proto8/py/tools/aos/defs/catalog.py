@@ -92,7 +92,7 @@ def stacked(table):
     env.setdefault('AOS_HOME', str(HOME_OF_LIB))
     tools = shutil.which('aos-tools')
     if not tools:
-        raise ValueError('cannot merge %s: aos-tools is not on PATH (source proto8/env.sh)' % table)
+        raise ValueError('cannot merge %s: aos-tools is not on PATH (source $AOS_HOME/env.sh)' % table)
     try:
         r = subprocess.run([tools, '--file', str(table), 'ls', '-l'], stdin=subprocess.DEVNULL,
                            capture_output=True, text=True, env=env, timeout=60)
