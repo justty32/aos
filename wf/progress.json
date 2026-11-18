@@ -23,31 +23,6 @@
       ],
       "since": "2026-11-17"
     },
-    "cpp-py-rename": {
-      "title": "cpp／py 改名與安裝包（七步做完，剩尾巴）",
-      "status": "open",
-      "flow": "",
-      "what": "S1～S7 都做完（S6：`env.sh` 不再設 `AOS_HOME`、沒設報錯，樹裡一份薄 `env.sh` 轉去家裡那份，起手範本 `templates/start-api`、`start-eca`；S7：wf／README 文字跟上、重建步驟單改成安裝六步＋更新五步、乾淨 clone 照著走過）；`frontend/bin` 那段 PATH（F-1）使用者 11-18 選項框「照留，等前端大修 (Recommended)」，照留到前端大修；殘檔 `py/tools/agent/__init__.py` 已刪（「都刪 (Recommended)」）；code map 依賴表 11-18 晚重建（`b5ccbd6e1`，`wf/knowledge/code-map/deps/` 三張）；先放著的：`docs/zh` 網頁還寫舊安裝法（11-17 裁「先不動」）、條文裡的舊路徑字樣；家機沒驗",
-      "next": "",
-      "see": [
-        "[HANDOFF](HANDOFF.md)",
-        "[cpp-py-改名](../proto8/thinking/2026-11/17/cpp-py-改名.md)",
-        "[外部依賴](../proto8/thinking/2026-11/17/外部依賴.md)"
-      ],
-      "since": "2026-11-18"
-    },
-    "path-rules-tail": {
-      "title": "路徑規則與八夾的尾巴",
-      "status": "open",
-      "flow": "",
-      "what": "八夾、規則一、`install.py` 新流程都已進 main（`install.sh` 與舊 `.pth` 提醒 11-18 S5 收掉、wf 已不寫 `~/aos-home/knowledge`）；`aos-sandbox` 改成 aos 命令把整個家唯讀帶進去、家先認 `AOS_HOME`（使用者 11-18 裁「AOS_HOME 有設就用它」、整個家唯讀可見「接受」），已交 `43a07ea85`。剩：完整的沙箱隔離檢查沒做（只驗了 dry-run、單元測試與真開一次看家可見、唯讀）",
-      "next": "",
-      "see": [
-        "[待裁網頁-答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)",
-        "[路徑規則](../proto8/thinking/2026-11/17/路徑規則.md)"
-      ],
-      "since": "2026-11-17"
-    },
     "refactor-tidy-inventory": {
       "title": "重構與 tidy 盤點剩的",
       "status": "open",
@@ -64,33 +39,10 @@
       "title": "條文",
       "status": "等使用者",
       "flow": "",
-      "what": "分檔已拆到約 8 KB、33 題裁定已落；使用者 11-17「條文這東西以後我會大修，現在不用這麼急」——新冒出 17 題、N-63 `AOS_HOME` 那格、條文裡 `py/`／`kernel/` 舊路徑字樣、三處沒精簡的內文都放著",
+      "what": "分檔已拆到約 8 KB、33 題裁定已落；使用者 11-17「條文這東西以後我會大修，現在不用這麼急」——新冒出 17 題、N-63 `AOS_HOME` 那格、條文裡 `py/`／`kernel/` 舊路徑字樣、三處沒精簡的內文都放著；回答配對交件待決第 4 點的三句還寫「回答是最新那則」（`docs/CONVENTION/05-不管落實待決.md:21`、`docs/NORMS/08-待定/01-待定之一.md:5`、`templates/docs/02-agent-fsm.md:59`），一起等大修",
       "next": "",
       "see": [
         "[新的待裁](workflows/tidy/reports/2026-11-17-分檔精簡與裁定落實/02-新的待裁.md)"
-      ],
-      "since": "2026-11-17"
-    },
-    "wf-tidy-rest": {
-      "title": "wf/ 整理剩的",
-      "status": "open",
-      "flow": "tidy",
-      "what": "12 題照各題 a 已落（坑併 public、規矩卡、日誌停寫、死入口與 INDEX 已刪、進度檔已轉 `wf/progress.json`；出廠範本 `proto8/knowledge/wf` 也改成兩軸＋`progress.json`，使用者 11-18 選項框「跟著改 (Recommended)」）；剩 STRUCTURE 超過 8 KB（等段 9）",
-      "next": "",
-      "see": [
-        "[wf-整理規劃](../proto8/thinking/2026-11/17/wf-整理規劃.md)"
-      ],
-      "since": "2026-11-18"
-    },
-    "kernel-limits": {
-      "title": "kernel 框架與限資源",
-      "status": "open",
-      "flow": "",
-      "what": "11-14 批 5～14、限資源 B1～B7 已進（B7＝`75a6ca81e`）；C′ B 包 11-18 已交 `43a07ea85`（`ctl stop` 不再當場關畫面、交給 after_stop hook 延後關，`set-def` 自己關，新增 `test_stop_linger`）；`py/tools/aos/kernel/letters.py` 300 行已拆出 `forwarding.py`（同一筆）；範本 `kernel.json` 補 `count_daemon` 使用者 11-18 晚裁「不動」，維持只寫說明（`templates/kernel/README`，`96ae93b81`）。剩：真 eca／真 tmux 畫面的延後關沒實測；骨架三處不順（`round.py` 11-14 後只有搬家，修了會改行為，原文「等有需要再動」）；kernel tests 偶紅核不到（11-18 新複本 `py/tools/aos/kernel/tests` 連跑 3 次 122 例都綠、沒重現）",
-      "next": "",
-      "see": [
-        "[留底 16](../proto8/thinking/2026-11/17/session-log-瘦身留底/02-第12到20條.md#t16)",
-        "[留底 2](../proto8/thinking/2026-11/17/session-log-瘦身留底/01-第1到11條.md#t2)"
       ],
       "since": "2026-11-17"
     },
@@ -107,12 +59,13 @@
     },
     "wrapup-1115": {
       "title": "11-15 收尾剩的",
-      "status": "open",
+      "status": "暫停",
       "flow": "",
-      "what": "guard（`py/tools/agent/guard`）README 仍標「under review」、沒接進任何定義，接線前實測四件沒做；回答配對交件.md 待決五點核不到：那份在家機 `wf/temp`，repo 裡沒有；`test_two_machines.py` 的孤兒 `body_a.py` 11-18 已修（`96ae93b81`）",
+      "what": "guard（`py/tools/agent/guard`）README 仍標「under review」、沒接進任何定義，接線前實測四件沒做——要不要做下去，使用者 11-18 晚選項框裁「先擱著」，暫停。回答配對交件.md（家機 `wf/temp/ok-pilot/reply-match/交件.md`，`wf/temp/` 不進 git）待決五點：第 1～3、5 點是 agent 自定處置，照通則關；第 4 點三句舊說法併進 norms-text；`test_two_machines.py` 的孤兒 `body_a.py` 11-18 已修（`96ae93b81`）",
       "next": "",
       "see": [
-        "[留底 37](../proto8/thinking/2026-11/17/session-log-瘦身留底/04-第35到38條.md#t37)"
+        "[留底 37](../proto8/thinking/2026-11/17/session-log-瘦身留底/04-第35到38條.md#t37)",
+        "[回答配對交件](temp/ok-pilot/reply-match/交件.md)"
       ],
       "since": "2026-11-17"
     },
@@ -132,7 +85,7 @@
       "title": "eca 剩的",
       "status": "open",
       "flow": "",
-      "what": "a2a 的 codex 身沒接、三項實測（帳號端關掉跨 session 傳訊、父對子說話的署名、確認框等人時訊息擠進來）沒做；codex 身回合中收信的研究沒開（11-16 起沒有相關 commit）；live_mail 回合中併信、`context_wrap` 的 `config.window`（從沒跑過 -p 的 agent 要設）隨重建後再驗；fsm「先更新交接檔再壓」待定（要先決定思考中途收不收一般信）；daemon 子行程增減核不到：要家機那棵樹當時的現象",
+      "what": "a2a 的 codex 身沒接、三項實測（帳號端關掉跨 session 傳訊、父對子說話的署名、確認框等人時訊息擠進來）沒做；codex 身回合中收信的研究沒開（11-16 起沒有相關 commit）；live_mail 回合中併信、`context_wrap` 的 `config.window`（從沒跑過 -p 的 agent 要設）隨重建後再驗；fsm「先更新交接檔再壓」待定（要先決定思考中途收不收一般信）；daemon 子行程增減 11-18 晚作廢（現象已沒了）；codex 身沒做的幾項（a2a 實測、回合中收信研究、子 agent 用 codex 身）使用者 11-18 晚選項框「先留著」",
       "next": "",
       "see": [
         "[留底 19](../proto8/thinking/2026-11/17/session-log-瘦身留底/02-第12到20條.md#t19)",
@@ -153,22 +106,11 @@
       ],
       "since": "2026-11-17"
     },
-    "pi-coding-agent": {
-      "title": "pi coding agent",
-      "status": "等使用者",
-      "flow": "",
-      "what": "範圍待確認",
-      "next": "",
-      "see": [
-        "[留底 47](../proto8/thinking/2026-11/17/session-log-瘦身留底/06-第43到48條.md#t47)"
-      ],
-      "since": "2026-11-17"
-    },
     "small-questions": {
       "title": "其他小題",
       "status": "等使用者",
       "flow": "",
-      "what": "Pages 正式發佈（拿 `noindex`、補 LICENSE；11-18 查 `docs/index.html` 等仍有 noindex、repo 根沒有 LICENSE）、eca-claude 範本 Read 不在 allowedTools（`templates/eca-claude/cli.json` 仍是 `Write,Edit,Bash`）、A② gate",
+      "what": "eca-claude 範本 Read 不在 allowedTools（`templates/eca-claude/cli.json` 仍是 `Write,Edit,Bash`）、A② gate（Pages 正式發佈那項 11-18 晚併進 pages-trial-1116）",
       "next": "",
       "see": [
         "[留底 49](../proto8/thinking/2026-11/17/session-log-瘦身留底/07-第49到54條與重建.md#t49)",
@@ -225,7 +167,7 @@
       "title": "家目錄清理（家機）",
       "status": "open",
       "flow": "",
-      "what": "核不到：要家機——`~/.claude/projects` 1.8G、`~/.cache/aos-*` 四夾、`~/.stack` 舊信箱；`~/.aos/scratch` 用完怎麼收使用者 11-15 說之後自己定（aos-teams/06）；兩個常駐服務使用者自己處理",
+      "what": "核不到：要家機——`~/.claude/projects` 1.8G、`~/.cache/aos-*` 四夾、`~/.stack` 舊信箱；`~/.aos/scratch` 用完怎麼收使用者 11-15 說之後自己定（aos-teams/06）；兩個常駐服務使用者自己處理；`~/.aos/scratch`（9.1 GB）與 `~/.claude/projects`（2.5 GB）要不要清：使用者 11-18 晚選項框「先不清」",
       "next": "",
       "see": [
         "[留底 38](../proto8/thinking/2026-11/17/session-log-瘦身留底/04-第35到38條.md#t38)"
@@ -236,7 +178,7 @@
       "title": "11-13 前開的設計尾巴",
       "status": "open",
       "flow": "",
-      "what": "外部 MCP：CLI 自己接的 server 起來後才壞 aos 看不到（P3）、沒驗三項（claude `except`→`--disallowedTools`、CLI 自接的一起來就退／中途死、經 aos 的 server 卡住不回）、P1 `--envs` 改成指 env 檔沒做（文件那半已寫在 `aos-agent ctl add --help`）；ops-agent：yes/no 時由 hook 接住寄信（使用者說之後再做）、索引檢查出廠工具（等 ops-agent 先寫一版，核不到：ops-agent 在公司活樹）；index 三題（同一節點多處 index 聽誰的、過時、專屬工具長怎樣；`index_view` 已有）等使用者；eca 子 agent codex 身（使用者 11-13「以後再想辦法處理，不急。」）；Codex 兩隻（`gpt-price`、`gpt-soap`）跟盤點對不對得上，核不到：要公司活樹；team-model 跟 skyrim 那份同步，核不到：要家機的 `~/repo/moddings`；compact_reload 補驗，核不到：要真 Claude Code compact 一次（驗完才補 user/02 那句）",
+      "what": "外部 MCP：CLI 自己接的 server 起來後才壞 aos 看不到（P3）、沒驗三項（claude `except`→`--disallowedTools`、CLI 自接的一起來就退／中途死、經 aos 的 server 卡住不回）、P1 `--envs` 改成指 env 檔沒做（文件那半已寫在 `aos-agent ctl add --help`）；ops-agent：yes/no 時由 hook 接住寄信（使用者說之後再做）；index 三題（同一節點多處 index 聽誰的、過時、專屬工具長怎樣；`index_view` 已有）等使用者；eca 子 agent codex 身（使用者 11-13「以後再想辦法處理，不急。」）；team-model 跟 skyrim 那份同步，核不到：要家機的 `~/repo/moddings`；compact_reload 補驗，核不到：要真 Claude Code compact 一次（驗完才補 user/02 那句）（11-18 晚作廢：Codex 兩隻 `gpt-price`／`gpt-soap` 跟盤點對不對得上、ops-agent 索引檢查出廠工具，原本都要公司活樹核，那棵已清掉）",
       "next": "",
       "see": [
         "[留底 12](../proto8/thinking/2026-11/17/session-log-瘦身留底/02-第12到20條.md#t12)",
@@ -282,7 +224,7 @@
       "title": "GitHub Pages 試上線版的剩項（11-16 晚換新頁）",
       "status": "等使用者",
       "flow": "",
-      "what": "使用者給桌面「aos · 新時代的軟體技術棧.html」（11-14 另存網頁），首頁＋docs/zh 14 個子頁上線，試上線版（使用者「先不要用正式版，不要讓搜索引擎收錄」：每頁 noindex、草稿條保留；9211e9c58、69dd79ea2、d5f47c890）。正式發佈時要做：拿掉 noindex 與草稿條、首頁原始碼註解「quotes not yet confirmed」、子頁「草稿入口」字樣、zh/examples 與 zh/reference 沒有入口、repo 無 LICENSE；其他段互動只看了 03。另：使用者放的 proto8/templates/tests/kits/_index.json 一直沒進 git（commit-request 當生成物不收、生成器又不產它）。家機裸開 Claude Code 掛了 aos MCP（local scope，~/.cache/aos-mcp-repo/，12 支唯讀工具）",
+      "what": "使用者給桌面「aos · 新時代的軟體技術棧.html」（11-14 另存網頁），首頁＋docs/zh 14 個子頁上線，試上線版（使用者「先不要用正式版，不要讓搜索引擎收錄」：每頁 noindex、草稿條保留；9211e9c58、69dd79ea2、d5f47c890）。正式發佈時要做：拿掉 noindex 與草稿條、首頁原始碼註解「quotes not yet confirmed」、子頁「草稿入口」字樣、zh/examples 與 zh/reference 沒有入口、repo 無 LICENSE（small-questions 原本的「Pages 正式發佈：拿 noindex、補 LICENSE」11-18 晚併進這條；11-18 查 `docs/index.html` 等仍有 noindex、repo 根沒有 LICENSE）；其他段互動只看了 03。另：使用者放的 proto8/templates/tests/kits/_index.json 一直沒進 git（commit-request 當生成物不收、生成器又不產它）。家機裸開 Claude Code 掛了 aos MCP（local scope，~/.cache/aos-mcp-repo/，12 支唯讀工具）",
       "next": "等使用者說正式發佈",
       "see": [
         "[首頁](../docs/index.html)"
@@ -329,13 +271,34 @@
       "title": "11-18 被打斷那幾條線留下的待裁題",
       "status": "等使用者",
       "flow": "",
-      "what": "cooldown-1118（已交 2b4320644）：listen 的字少了 aos-llm: error: 前綴、SendFailed 少了 aos-llm 原話可不可以；關畫面順手清到期單（set-def、ctl rm、aos-agent close 都清）要不要只限 set-def。rm-treestart-1118（已交 93e0acc0c）：跳過 source env.sh 直接打 aos-exec root 沒人擋殼裡別棵樹的 AOS_*——甲不補／乙補在 daemon-root 範本／丙補在 aos-exec。kit-merge-1118（沒交）：寫進 stack（現做法）還是像舊 aos-kit 就地改定義夾；eca 定義要不要也能套；換包要不要允許直接蓋（現在要先 reset）；套 kit 後 tools ls 那行誤導的提醒要不要修",
+      "what": "cooldown-1118（已交 2b4320644）：listen 的字少了 aos-llm: error: 前綴、SendFailed 少了 aos-llm 原話可不可以；關畫面順手清到期單（set-def、ctl rm、aos-agent close 都清）要不要只限 set-def。——兩小題已裁：使用者 11-18 晚選項框「前綴補回、清單只限 set-def (Recommended)」，另一條線改程式。rm-treestart-1118（已交 93e0acc0c）：跳過 source env.sh 直接打 aos-exec root 沒人擋殼裡別棵樹的 AOS_*——已裁：使用者 11-18 晚「不補」（甲）。kit-merge-1118（沒交）：寫進 stack（現做法）還是像舊 aos-kit 就地改定義夾；eca 定義要不要也能套；換包要不要允許直接蓋（現在要先 reset）；套 kit 後 tools ls 那行誤導的提醒要不要修",
       "next": "",
       "see": [
         "[cooldown 交接](../proto8/thinking/2026-11/18/交接-各線/cooldown-1118.md)",
         "[rm-treestart 交接](../proto8/thinking/2026-11/18/交接-各線/rm-treestart-1118.md)",
         "[kit-merge 交接](../proto8/thinking/2026-11/18/交接-各線/kit-merge-1118.md)"
       ],
+      "since": "2026-11-18"
+    },
+    "decisions-1118-night": {
+      "title": "11-18 晚使用者的裁定（逐字）",
+      "status": "等使用者",
+      "flow": "",
+      "what": "aos-llm 丁案（Python 函式庫＋同名薄指令）：「順延，這個不是大問題」；家機 pi：「我已經更新了」；家機 proxy master key：「先不加」；litellm 兩台版本：「先不統一，明天再看」；公司 litellm：「我確實想要讓那邊有litellm，那個等一下再說」；家機 `~/aos-home` 重建：「要等一下」；rm-treestart 的 AOS_* 檢查：「不補」（已記進 lines-1118-decide）；選項框四項——eca codex 身沒做的幾項：「先留著」（eca-rest）；guard 要不要做下去：「先擱著」（wrapup-1115）；cooldown 兩個小改：「前綴補回、清單只限 set-def (Recommended)」（lines-1118-decide）；家機 `~/.aos/scratch`（9.1 GB）與 `~/.claude/projects`（2.5 GB）要不要清：「先不清」（home-cleanup）；proto8/impls 舊編譯產物：「刪掉」（先不刪，見 impls-old-builds）。還等的：litellm 兩台版本（明天）、公司 litellm、家機重建",
+      "next": "",
+      "see": [
+        "[aos-llm 去留調查](../proto8/thinking/2026-11/18/aos-llm-去留調查/README.md)",
+        "[重建步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)"
+      ],
+      "since": "2026-11-18"
+    },
+    "impls-old-builds": {
+      "title": "刪 `proto8/impls` 舊編譯產物（等家機重建後）",
+      "status": "暫停",
+      "flow": "",
+      "what": "使用者 11-18 晚裁「刪掉」。`proto8/impls/`（11-17 改名 `cpp/` 後留下的舊編譯產物，未追蹤、不在 git）頂層判斷家機活樹還沒重建、可能還在用（舊 `cmd/install.sh` 的連結指進 `impls/`），先不刪；等家機 `~/aos-home` 重建（rebuild-aos-home）後再刪",
+      "next": "家機重建完再刪",
+      "see": [],
       "since": "2026-11-18"
     }
   }
