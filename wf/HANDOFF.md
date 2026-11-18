@@ -12,19 +12,18 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-18 21:50（家機）——五條被打斷的線全交完；今晚各線都收了，沒有在跑的
+## 2026-11-18 22:30（家機收工）——家機重建完、全推上去；明天在公司機接著做
 
-**授權**：頂層只調度（普通 opus、雜活 sonnet），agent 開工前讀 wf/ 規矩與 `proto8/knowledge/aos/_description.json`。push：使用者「睡前十一點一次性push。」——23:00 推一次（session 內排程），之後的 commit **不自動推、要再問**。在家。
+**授權**：頂層只調度（普通 opus、雜活 sonnet），agent 開工前讀 wf/ 規矩與 `proto8/knowledge/aos/_description.json`。push：使用者 22:30「可以推了，確保我明天在另一臺電腦上可以繼續」——這次已推；**之後的 commit 不自動推、要再問**。明天在公司。
 
-**今晚做完的**（細節 `git log --since="2026-11-18 20:00"`）：家機同步（本機舊 commit 備份成 tag `home-local-abed65ecd-1118`、改寫成 progress `pages-trial-1116`）；修 main 裝不起來（`dc4218e8a`）；五條線：rm-treestart、cooldown、kit-merge（`62940fb7c`）、eca-pi 乙丙（`ce2e875eb`，真 pi 實跑成）、教學 13～19（`fbce69eae`）；家機 litellm 真模型試跑成（紀錄在 `~/.aos/scratch/realmodel-home-1118/realmodel-home-1118.md`，**還沒收進 repo**，可補進重建試跑紀錄「真 API 一節」）；前端跟上新流程（`8e0cf5caa`）；沙箱落差（`sbx-fix-1118.md`；使用者裁「先不修，只寫 README」「沙箱這個基本上是使用者要自己承擔的風險吧」）；hook_run 吞回 stderr；T7 1～7 步（`790ca0359`）；只驗包（`97dcef448`）；set-def 名額滿帶期限＋cooldown 兩小改＋tools ls 提醒（`20ee2dc56`、`2ac96ed8a`）；progress 清帳（`dd5981dc7`）。
+**今晚（家機）做完的**（細節 `git log --since="2026-11-18 20:00"`）：五條被打斷的線全交；前端跟上新流程；沙箱只寫 README（使用者：風險使用者自負）；三份調查（預設 stack、Linux 當硬體、aos-compile）；**家機 `~/aos-home` 照重建步驟單重建好**（紀錄 [家機-重建紀錄](../proto8/thinking/2026-11/18/家機-重建紀錄.md)，`1548bd455`，含真模型 luna 試跑要點）；使用者裁「舊樹都可以刪掉」→ 已刪 `~/aos-home-old-1118`（含其 agents／defs／backups／aos-user／aos-view）、`proto8/impls/`、`~/.zshrc.bak-1118`、三份 aos 備份（`.claude.json.bak-1113-aos-mcp`、`aos-proto8.pth.bak-1113-simple_tools`、tag `home-local-abed65ecd-1118`）。
 
-**三份調查（只調查沒動程式），使用者的回應**：
-- 預設 stack `thinking/2026-11/18/default-stack-1118/`：暫定丁（daemon 寫路標＋乙）、「說不定我之後會改主意，改成往上層資料夾找，先留着」→ **下次 compact 完再討論**。
-- Linux 當硬體 `linux-as-hw-1118/`：權限「先做防呆就好，先考慮單人使用，模型可信」；子帳號那一哩「明天在公司再說」。
-- Python 編譯成 aos 夾 `aos-compile-1118/`（07 有裁定）：初期做庚（agent 版 tool_spec：一支 agent.py 宣告、agent_def check 重生 json）、後期做己（濃縮總覽）、除錯以 loop 為主 →「明天再正式開始」。
+**家機現況（明天回家才相關）**：新 daemon（根＋llm kernel）用 setsid 跑著，`ann` 假腦；`~/.zshrc` 第 92～93 行已改成 `AOS_HOME=~/repo/aos/proto8`，要重開 session 才生效。**全景頁 aos-view 與使用者專區 aos-user 壞著**（使用者裁「先壞著」；aos-user 原本只存在舊樹、已隨舊樹刪掉，要用得從公司機或 git 歷史找回／重寫；`aos-user-tick.timer` 每分鐘失敗）。所以問使用者的題目暫時**直接在終端問**，不走 `aos-user send`。`~/.local/bin` 28 個舊 `aos-*` 連結全斷著，問過要不要刪、使用者沒答，**沒動**。
 
-**compact 完要做的**：① 跟使用者討論預設 stack（丁或往上層找）；② 開始重建家機 `~/aos-home`（使用者「也順便開始重建家機aos-home」；照重建步驟單安裝六步；重建後才刪 `proto8/impls/`——使用者裁「刪掉」，617 檔 58 MB 未進 git，progress `impls-old-builds`）；③ 11-19 開工 aos-compile（庚）。
+**預設 stack**：使用者 22:00 選「還是先擱著」（丁、戊都不做），progress `default-stack` 照掛。
 
-**先拖著／之後再說**：thinking 11-13／11-14 精簡範圍、eca-claude 範本預設權限；aos-llm 丁案「順延」；pi context 壓縮；guard「先擱著」；codex 身剩項「先留著」；家機 proxy 不加 key；litellm 版本明天在公司實測 1.109.1 再定；公司 litellm「等一下再說」；`~/.aos/scratch`（9 GB+）先不清；前端三小毛病先留著；自動記憶「我們管不着」。
+**明天（公司機）要做的**：① 11-19 開工 aos-compile 庚（agent 版 tool_spec，見 `proto8/thinking/2026-11/18/aos-compile-1118/07-使用者裁定.md`）；② 子帳號（linux-as-hw 那一哩）；③ litellm 1.109.1 實測、兩台版本統一、公司 litellm；④ T7 第 8、9 步（先改頁面上的舊指令）；⑤ 重建步驟單照家機紀錄修七處（zsh、systemd 先查、28 支、常駐起法、`&&` 串等），還沒改。公司機開工先 `git pull`。
 
-**坑**：家機 `~/.tmux.conf` 開新伺服器會自動復原使用者存的 session——私人 tmux 一律 `-f /dev/null`。家機 pi 預設是 deepseek（沒登入），範本要寫明 `openai-codex/gpt-6.1-sol`。工作樹剩兩個未追蹤：`proto8/impls/`（等重建後刪）、`proto8/templates/tests/kits/_index.json`（使用者放的，origin 沒有、生成器不收，照留）。
+**先拖著／之後再說**：thinking 11-13／11-14 精簡範圍、eca-claude 範本預設權限；aos-llm 丁案；pi context 壓縮；guard；codex 身剩項；家機 proxy 不加 key；`~/.aos/scratch` 先不清；前端三小毛病；自動記憶「我們管不着」；aos-view／aos-user 怎麼救。
+
+**坑**：家機 `~/.tmux.conf` 開新伺服器會自動復原使用者的 session——私人 tmux 一律 `-f /dev/null`。家機 pi 預設 deepseek，範本寫明 `openai-codex/gpt-6.1-sol`。工作樹未追蹤只剩 `proto8/templates/tests/kits/_index.json`（使用者放的，照留）。
