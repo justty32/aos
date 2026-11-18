@@ -32,7 +32,7 @@
 - `--files`／`--rm` 的路徑從 repo 根算，`--msg-file` 從你所在的資料夾算；結果看 stdout 最後一行 JSON（`DONE` 加雜湊，或錯誤原文）；先 `--dry-run` 看會交什麼。
 - 日索引（`proto8/thinking/<年-月>/<日>/README.md`）、月索引（`proto8/thinking/<年-月>/README.md`）、`wf/progress.json` 不交整檔，用 `--op`（`day_upsert`、`month_bump`、`month_set`、`progress_upsert`、`progress_delete`）。生成的 `_index.json`、code map 由排隊重生，不要列進 `--files`（`proto8/knowledge/` 底下手寫的 `_index.json` 例外，照一般檔交）。
 - 交之前 `git diff -- 檔` 確認只有自己的字；**不 push**。
-- **誰放行**：照你的任務書。11-14 起線的 commit 由你那一部的部長放行，每批先寄它：檔案清單、`git diff --stat`、怎麼驗的。它放行的前提：在乾淨複本（`git archive`）測過並附結果；動到活樹正在用的 `proto8/cmd`、`lib` 時先寫暫存檔再改名、立刻 import 並跑定向測試、原檔有備份；用 commit-request（共用索引加 `--op`）；不撞別線 claim 的檔。帶 `--rm`（搬檔後移除舊路徑）、跟鐵律有出入的，部長會上交頂層。更多：[07「commit」](aos-teams/07-預設流程與agent-fsm.md)、[patch-and-commit](../../public/patch-and-commit.md)。
+- **誰放行**：照你的任務書。11-14 起線的 commit 由你那一部的部長放行，每批先寄它：檔案清單、`git diff --stat`、怎麼驗的。它放行的前提：在乾淨複本（`git archive`）測過並附結果；要在 repo 裡跑 `install.py`（＝換掉活樹正在用的 `bin/`、`lib/`）或動到活樹直接讀的 `proto8/knowledge`、`frontend` 時先寫暫存檔再改名、跑定向測試、原檔有備份；用 commit-request（共用索引加 `--op`）；不撞別線 claim 的檔。帶 `--rm`（搬檔後移除舊路徑）、跟鐵律有出入的，部長會上交頂層。更多：[07「commit」](aos-teams/07-預設流程與agent-fsm.md)、[patch-and-commit](../../public/patch-and-commit.md)。
 
 ### 2. 問使用者：寄專區，題目會出現在全景頁
 
@@ -63,7 +63,7 @@
 - 你的 shell 帶著活樹的 `AOS_*`：跑任何 aos 指令或測試，一律經一支 bash 腳本（不是 bash 就拒絕 → 逐一 unset `AOS_*` → 還有殘留就拒絕 → exec）。shell 是 zsh，要分詞的寫法包 `bash -c`。
 - 不把整份環境變數寫進檔、log 或信（`env`、`printenv`、`/proc/*/environ` 都不行，裡面有 API key）；要看只列變數名或只列 `AOS_*`。
 - 不刪檔（連自己的暫存也不刪）。收行程只准兩種（06 第 4 條）：`aos-daemon-ctl -d <自己暫存樹 stack 的絕對路徑> shutdown`，或 kill 自己記下的 pid（kill 前 `readlink /proc/<pid>/cwd`）；禁 `pkill`、`killall` 與任何按名字收行程的寫法。
-- 改 `proto8/cmd`、`lib/agent/*.py` 存檔當下活樹就在用；`proto8/knowledge`、`lib`、`templates` 要換樹重抄才生效。
+- 改 `proto8/py/`、`cpp/` 存檔不會動到活樹，要在 repo 裡跑 `install.py` 才換（那一步先回報，06 第 5 條）；`proto8/knowledge`、`frontend` 存檔當下活樹就在用；`templates` 要重抄進樹才生效。
 - 任務書必貼的九條硬規則全文：[06](aos-teams/06-公司WSL活樹與任務書硬規則.md)；踩過的坑：[活樹旁邊](../../public/活樹旁邊.md)、[行程與環境](../../public/行程與環境.md)、[pitfalls](../../public/pitfalls.md)。
 
 ## 回報、經驗、意見

@@ -17,7 +17,7 @@
 
 ## prune：自檢與清理舊列
 
-（stderr 的封存與刪封存不在 prune：見 [03 的 sweep](03-aos-daemon-ctl.md)、[cmd/aos-sweeper](../../aos/apps/sweeper/README.md)。）
+（stderr 的封存與刪封存不在 prune：見 [03 的 sweep](03-aos-daemon-ctl.md)、[aos-sweeper](../../aos/apps/sweeper/README.md)。）
 
 `aos-daemon-ctl [--daemon D] prune [--older-than DUR] [--apply]`：每次先自檢，一列一行 `NAME: PHASE: PROBLEM`。檢查 stack 不在、存在的公開 ctl 不是 JSON 物件、以及 stopped 的 reason；不讀 `/proc` 或自行比對行程身分；同列問題用分號接，正常列不印，發現問題仍退 0。ctl 沿用 stop 的選法，不解讀子項私有檔案。
 

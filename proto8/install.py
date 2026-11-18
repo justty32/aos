@@ -12,6 +12,8 @@
 #   cpp/compile_commands.json   for clangd
 # bin/, lib/ and include/ are emptied first, so a rerun gives the same result as a fresh install.
 # Programs run only from bin/ and lib/: a change in py/ shows up after the next install.py.
+# At the end it prints the next steps: set AOS_HOME once (it is never set for you; a warning when it points at another home),
+# then copy a starter template (templates/start-api or start-eca) to a tree and source that tree's env.sh.
 # --check only checks dependencies (required ones missing -> exit 1; optional ones are listed, never block).
 # Errors are one line: "install.py: error: <Code> <reason>", exit 1.
 # Standard library only. Written in old syntax on purpose, so an old python can still print the version error.
@@ -220,8 +222,22 @@ def main(argv):
     nlib = sum(1 for p in LIB.iterdir() if p.name.startswith("libaos-"))
     print("installed %d commands into %s (%d C++, %d Python entries), %d files from py/ and %d C++ libraries into %s, %d headers into %s, "
           "%d entries in cpp/compile_commands.json" % (ncpp + nent, BIN, ncpp, nent, npy, nlib, LIB, nh, INC, nc))
-    print("next: export AOS_HOME=%s   (once per machine, e.g. in ~/.bashrc), then source $AOS_HOME/env.sh" % HOME)
+    print_next()
     return 0
+
+
+def print_next():
+    """The next steps: AOS_HOME is the user's to set (env.sh never sets it, 11-18 S6); say whether it already points here."""
+    have = os.environ.get("AOS_HOME", "")
+    if not have:
+        print("next: export AOS_HOME=%s   (once per machine, e.g. in ~/.bashrc, then open a new window)" % HOME)
+    elif os.path.realpath(have) == str(HOME):
+        print("AOS_HOME already points at this home")
+    else:
+        sys.stderr.write("%s: warning: AOS_HOME is %s, not this home %s; env.sh and the trees follow AOS_HOME, "
+                         "so change it (e.g. in ~/.bashrc) if this home is the one you want\n" % (PROG, have, HOME))
+    print("then: cp -r $AOS_HOME/templates/start-api ~/aos-home   (or start-eca; see templates/start-api/README.md), "
+          "and in every window: cd ~/aos-home && source env.sh")
 
 
 if __name__ == "__main__":

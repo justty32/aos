@@ -1,0 +1,5 @@
+{
+  "summary": "Run an aos agent with loop and FSM cells.",
+  "cost": {"time_ms": 30000},
+  "resource": ["llm"]
+}

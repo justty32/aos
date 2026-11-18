@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+# compact_hook - Claude Code 自己的 hook（cli.json 的 settings 掛）：PreCompact 印摘要要留什麼；SessionStart（matcher compact）壓完後提醒讀回交接，有 $AOS_STACK/handoff.md 就附上。
+# 使用者 11-15 裁定「我們做通用的aos判斷，eca的話可以在這個基礎上接上claude hook」：通用那段是 py/tools/agent/context_wrap（過門檻先叫它收尾、再寄 /compact），
+#   這支只管 Claude Code 壓縮那一刻的前後；自動壓縮（不經 aos）也會跑到它。參考 repo 的 wf/tools/compact_reload.sh（壓完重讀偏好與交接）。
+# 用法：python3 "$AOS_CLI_DEF/compact_hook" pre|start（stdin＝Claude Code 給的 hook JSON，不看）。stdout：PreCompact＝摘要的指示、SessionStart＝注入壓縮後的上下文。
+# 什麼錯都不擋 Claude：讀不到檔就少印那段，一律退 0。
+import os
+import sys
+
+LIMIT = 8000                                       # handoff.md 最多附這麼多字（太長只留尾巴，最新的通常在後面）
+
+PRE = """When you write the summary, keep:
+- the task you are working on and who asked for it (quote their words when they decided something);
+- what is done, and every item still open, with the next step for each;
+- the paths of files you wrote or changed, and of your handoff notes;
+- letters you still owe an answer to (who, about what).
+Leave out long tool output and file contents that can be read again."""
+
+START = """[aos] compact: this conversation was just compacted. Before you go on, read your handoff notes again \
+(the handoff file or session log your workspace's rules name%s) and carry on from the open items there."""
+
+
+def main():
+    what = sys.argv[1] if len(sys.argv) > 1 else ""
+    try:
+        sys.stdin.read()
+    except OSError:
+        pass
+    if what == "pre":
+        print(PRE)
+        return 0
+    if what != "start":
+        return 0
+    stack = os.environ.get("AOS_STACK", "")
+    path = os.path.join(stack, "handoff.md") if stack else ""
+    text = ""
+    if path:
+        try:
+            with open(path, encoding="utf-8") as f:
+                text = f.read()
+        except (OSError, UnicodeDecodeError):
+            text = ""
+    print(START % ((", or %s" % path) if path else ""))
+    if text.strip():
+        if len(text) > LIMIT:
+            text = "[... %d earlier characters left out ...]\n" % (len(text) - LIMIT) + text[-LIMIT:]
+        print("\n===== %s =====\n%s" % (path, text.rstrip("\n")))
+    return 0
+
+
+sys.exit(main())

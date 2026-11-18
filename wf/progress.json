@@ -14,7 +14,7 @@
       "title": "重建 `~/aos-home`",
       "status": "open",
       "flow": "",
-      "what": "使用者自己照步驟單重建（程式只有 repo 一份、`source proto8/env.sh`）；以前「換樹時帶／換樹後驗」的尾巴都等重建後再驗；公司 WSL 的樹停著、`~/repo/aos` 還沒拉",
+      "what": "使用者自己照步驟單的安裝六步重建（`AOS_HOME` 一台設一次、`cp -r` 起手範本 `templates/start-api`、樹裡 `source env.sh`；程式只有 repo 一份）；以前「換樹時帶／換樹後驗」的尾巴都等重建後再驗；公司 WSL 的樹停著、`~/repo/aos` 還沒拉",
       "next": "",
       "see": [
         "[重建步驟單](../proto8/thinking/2026-11/17/重建步驟單.md)",
@@ -23,10 +23,10 @@
       "since": "2026-11-17"
     },
     "cpp-py-rename": {
-      "title": "cpp／py 改名與安裝包（施工到一半）",
+      "title": "cpp／py 改名與安裝包（七步做完，剩尾巴）",
       "status": "open",
       "flow": "",
-      "what": "S1、S2 已進 main（`impls`→`cpp`、頂層 Makefile、`install.py`、成品進 `proto8/bin`）；剩 S3～S7（`lib`→`py` 換手、樹裡 `env.sh`、起手範本）；先放著的：code map 依賴表是空的、`docs/zh` 網頁還寫舊安裝法；家機沒驗",
+      "what": "S1～S7 都做完（S6：`env.sh` 不再設 `AOS_HOME`、沒設報錯，樹裡一份薄 `env.sh` 轉去家裡那份，起手範本 `templates/start-api`、`start-eca`；S7：wf／README 文字跟上、重建步驟單改成安裝六步＋更新五步、乾淨 clone 照著走過）；剩：`frontend/bin` 那段 PATH 留不留（施工單寫 PATH 剩一段，現在選配外掛那段照留）待使用者裁；先放著的：code map 依賴表是空的、`docs/zh` 網頁還寫舊安裝法、條文裡的舊路徑字樣；家機沒驗",
       "next": "",
       "see": [
         "[HANDOFF](HANDOFF.md)",
@@ -39,7 +39,7 @@
       "title": "路徑規則與八夾的尾巴",
       "status": "open",
       "flow": "",
-      "what": "八夾與規則一已進 main；剩沙箱只綁 `<家>/lib`（規劃是整個家）、`install.sh` 舊 `.pth` 提醒要不要拿、wf 幾處還寫 `~/aos-home/knowledge`、重建步驟單要補 `install.py` 那步",
+      "what": "八夾與規則一已進 main；`install.sh` 與它的舊 `.pth` 提醒 11-18 S5 一起收掉、重建步驟單已改成 `install.py` 新流程、wf 已不寫 `~/aos-home/knowledge`；剩沙箱只綁 `<家>/lib`（規劃是整個家）",
       "next": "",
       "see": [
         "[待裁網頁-答案](../proto8/thinking/2026-11/17/待裁網頁-答案.md)",

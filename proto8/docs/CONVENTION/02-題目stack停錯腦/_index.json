@@ -6,10 +6,10 @@
   "description": "- P-42 agent 對話協議（使用者 10-30「都照建議」，thinking 10-30 agent-lifecycle 條文草稿、衝突 1、6；10-29 agent-bob 決定 33～36）：人或程式要對一隻跑著的 aos agent 說話、看它說什麼、停它，只碰它 stack 裡的三樣東西：① queue＝`$AOS_STACK/queue/`（N-16 有順序投遞，也收無序的信…"
  },
  "03-P-43-本文": {
-  "description": "分檔夾：- P-43 外部 coding agent（eca）的定義（使用者 10-30「都照建議」，thinking 10-30 eca B 結論 1、2、5、條文草稿、衝突 5、方向題 2、3；10-29 agent-bob 決定 33～35；照實作寫，cmd/aos-eca/bin/aos-eca-turn）：claude code、codex 這類外部 coding agent 要進 a…"
+  "description": "分檔夾：- P-43 外部 coding agent（eca）的定義（使用者 10-30「都照建議」，thinking 10-30 eca B 結論 1、2、5、條文草稿、衝突 5、方向題 2、3；10-29 agent-bob 決定 33～35；照實作寫，bin/aos-eca-turn）：claude code、codex 這類外部 coding agent 要進 aos，包成一個資料夾程式…"
  },
  "03-P-43-本文.md": {
-  "description": "- P-43 外部 coding agent（eca）的定義（使用者 10-30「都照建議」，thinking 10-30 eca B 結論 1、2、5、條文草稿、衝突 5、方向題 2、3；10-29 agent-bob 決定 33～35；照實作寫，cmd/aos-eca/bin/aos-eca-turn）：claude code、codex 這類外部 coding agent 要進 aos，包…"
+  "description": "- P-43 外部 coding agent（eca）的定義（使用者 10-30「都照建議」，thinking 10-30 eca B 結論 1、2、5、條文草稿、衝突 5、方向題 2、3；10-29 agent-bob 決定 33～35；照實作寫，bin/aos-eca-turn）：claude code、codex 這類外部 coding agent 要進 aos，包成一個資料夾程式：`_e…"
  },
  "03-P-43.md": {
   "description": "P-43 全文見 03-P-43-本文。"

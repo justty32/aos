@@ -1,4 +1,4 @@
-"""test_install - proto8/install.py in a throwaway home with a fake make: fills bin/ (C++ + the Python entries of py/entries.json), lib/ (py/ copy + C++ libraries) and include/, a rerun gives the same result and drops old entries, a bad entries.json is one error line, the aos package imports only from lib/."""
+"""test_install - proto8/install.py in a throwaway home with a fake make: fills bin/ (C++ + the Python entries of py/entries.json), lib/ (py/ copy + C++ libraries) and include/, a rerun gives the same result and drops old entries, a bad entries.json is one error line, the aos package imports only from lib/, the last lines follow AOS_HOME."""
 import os
 import shutil
 import subprocess
@@ -114,6 +114,23 @@ class InstallTest(unittest.TestCase):
         for exe in (entry, link / "aos-y"):
             r = subprocess.run([sys.executable, str(exe), "a", "--b"], cwd=self.tmp, env=env, capture_output=True, text=True, timeout=30)
             self.assertEqual((r.returncode, r.stdout), (3, "from-lib ['a', '--b'] main.py __main__\n"), r.stderr)
+
+    def test_next_steps_follow_aos_home(self):
+        """S6: AOS_HOME is the user's to set; the last lines say to set it (unset), that it is fine (here), or warn (another home)."""
+        cases = ((None, "next: export AOS_HOME=%s" % self.home, ""),
+                 (str(self.home) + "/", "AOS_HOME already points at this home", ""),
+                 (str(self.tmp), "", "install.py: warning: AOS_HOME is %s, not this home %s" % (self.tmp, self.home)))
+        for value, out, err in cases:
+            with self.subTest(aos_home=value):
+                r = self.run_install(env={} if value is None else {"AOS_HOME": value})
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assertIn(out, r.stdout)
+                self.assertIn("then: cp -r $AOS_HOME/templates/start-api ~/aos-home", r.stdout)
+                if err:
+                    self.assertIn(err, r.stderr)
+                    self.assertNotIn("export AOS_HOME", r.stdout)
+                else:
+                    self.assertEqual(r.stderr, "")
 
     def test_entries_rerun_drops_old(self):
         self.assertEqual(self.run_install().returncode, 0)

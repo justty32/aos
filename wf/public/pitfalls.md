@@ -50,7 +50,7 @@ ls -la bin                               # 時間要是剛剛
 
 ## 乾淨複本要帶齊依賴：wf/tools 測試連 proto8 一起抄，cpp 測試連 lib 一起抄
 
-在 repo 外的乾淨複本跑測試，只紅一兩支、又是 ModuleNotFoundError 或找不到檔，先懷疑複本抄得不夠全：只抄 `wf/tools` 時 test_quiet 借不到 `proto8/py/tools/agent/kernel_gate/tests` 的 test_kernel_gate；只抄 `cpp` 和 `knowledge` 時 aos-llm 的 test_full 找不到 `proto8/py/tools/base/llm_fake`。wf/tools 的測試用 `git archive HEAD wf/tools proto8/py proto8/cmd | tar -x -C <複本>`；cpp 的測試整個 `proto8` 一起抄；再經清環境腳本跑（06 第 2 條）。
+在 repo 外的乾淨複本跑測試，只紅一兩支、又是 ModuleNotFoundError 或找不到檔，先懷疑複本抄得不夠全：只抄 `wf/tools` 時 test_quiet 借不到 `proto8/py/tools/agent/kernel_gate/tests` 的 test_kernel_gate；只抄 `cpp` 和 `knowledge` 時 aos-llm 的 test_full 找不到 `proto8/py/tools/base/llm_fake`。wf/tools 的測試用 `git archive HEAD wf/tools proto8 | tar -x -C <複本>`（要在複本的 proto8 跑 install.py，測試跑的是裝好的 `bin/ lib/`）；cpp 的測試整個 `proto8` 一起抄；再經清環境腳本跑（06 第 2 條）。
 
 ## 乾淨複本的標準跑法：git archive＋疊檔、執行檔自己編、PATH 不撿到活樹的
 
@@ -58,9 +58,9 @@ ls -la bin                               # 時間要是剛剛
 
 1. `git archive HEAD proto8 | tar -x -C <新夾>`，再只把要交的檔 cp 上去；別人沒交的改動不會混進來。
 2. `env -i PATH=/usr/bin:/bin HOME=$HOME PYTHONDONTWRITEBYTECODE=1 TMPDIR=<新夾>/tmp python3 -m unittest discover -s <tests>`，或經自己的 clean.sh（它會換 cwd，`-s`、`-t` 一律給絕對路徑）。
-3. 乾淨複本不帶 `proto8/bin`（06 第 6 條）。要 bin 就用複本自己的原始碼編：在 `<複本>/proto8` 跑 `python3 install.py`（只寫複本自己的 `bin/`、`include/`、`cpp/build/`）；**不從別處抄 bin 進去**，交件信寫明 bin 從哪來。沒編的話改前改後都紅同一批，只看差異。
-4. PATH 不撿到 `~/.local/bin` 的舊執行檔：run.sh 把 PATH 換成「暫存樹的 `proto8/bin`、各 `cmd/*/bin`＋`/usr/bin:/bin`」（或在 bash 裡 `source <複本>/proto8/env.sh`）；會把 `~/.local/bin` 排最前的測試（wf 測試、test_daily）再給一個假 HOME，它的 `.local/bin` 連到暫存樹的 bin。
-5. `templates/tests` 從上層 discover 不會進 `agent-fsm` 子夾，要另外跑。
+3. 乾淨複本不帶 `proto8/bin`、`lib`、`include`（06 第 6 條）。用複本自己的原始碼裝：在 `<複本>/proto8` 跑 `python3 install.py`（只寫複本自己的 `bin/`、`lib/`、`include/`、`cpp/build/`）；**不從別處抄 bin、lib 進去**，交件信寫明從哪來。11-18 S3 起 Python 也只從 `lib/` 跑，沒裝就整片紅。
+4. PATH 不撿到 `~/.local/bin` 的舊執行檔：run.sh 把 PATH 換成「暫存樹的 `proto8/bin`＋`/usr/bin:/bin`」（或在 bash 裡 `export AOS_HOME=<複本>/proto8 && source $AOS_HOME/env.sh`；11-18 S6 起沒設 `AOS_HOME` 它只報錯）；會把 `~/.local/bin` 排最前的測試（wf 測試、test_daily）再給一個假 HOME，它的 `.local/bin` 連到暫存樹的 bin。
+5. `templates/tests` 從上層 discover 不會進 `agent-fsm` 子夾，要另外跑；`proto8/py/tests/apps/<名>/` 也不是套件，要逐夾跑。
 6. 改前、改後各一份複本，用同一支腳本逐夾跑、各出一份 SUMMARY，`diff` 兩份看多紅哪幾支；一個 commit 動幾十個檔時只接受「測試數變多且 OK」這種差異。
 7. commit 訊息裡的測試數字，在「真的要交的那個 commit」的 archive 上再跑一次才寫。
 

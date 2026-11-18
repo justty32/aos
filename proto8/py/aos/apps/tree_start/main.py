@@ -1,7 +1,7 @@
 # aos-tree-start - 起一棵樹的根（aos-tree-start root＝aos-exec root）；殼裡帶著 AOS_HOME 以外的 AOS_*（從別棵樹或 agent 的殼繼承來的）就拒絕，除非 --force（11-13 線瑣，agents-feedback T07）。
 # 為什麼要這支：11-13 15:24 在 eca_main 的殼起樹，AOS_STACK 沒清，根把那隻 agent 的 stack 當成自己的（gotchas/05）。aos-exec 本身分不出
 #   「起樹」與「樹裡的巢狀呼叫」（子項本來就帶 AOS_STACK），所以擋在明說要起樹的這支。只看名字、不印值（值可能是祕密或長路徑）。
-# 允許的只有 AOS_HOME（env.sh 清完會設它；範本 daemon-root 也要它）。檢查過了就 exec aos-exec（pid 不變，前景跑、Ctrl-C 照舊整棵停）。
+# 允許的只有 AOS_HOME（人設的，env.sh 清別的 AOS_* 時留著它；範本 daemon-root 也要它）。檢查過了就 exec aos-exec（pid 不變，前景跑、Ctrl-C 照舊整棵停）。
 import os
 import sys
 
@@ -19,9 +19,9 @@ tree as before); for the usual tree `aos-tree-start root` = `aos-exec root`. Bef
 other than AOS_HOME (AOS_STACK, AOS_DAEMON, AOS_WS, AOS_CLOCK ...) means this shell was started by
 another tree or an agent in one, and the new root would take that tree's stack or daemon as its own.
 Then it refuses and names the variables (never their values).
-Usual start:  source PROTO8/env.sh && cd ~/aos-home && aos-tree-start root
-(env.sh clears every AOS_*, sets AOS_HOME to that proto8 and puts its commands on PATH;
-from an agent's shell source it with bash, not zsh).
+Usual start:  cd ~/aos-home && source env.sh && aos-tree-start root
+(the tree's env.sh hands over to $AOS_HOME/env.sh, which needs AOS_HOME set, clears every other AOS_*
+and puts $AOS_HOME/bin on PATH; from an agent's shell source it with bash, not zsh).
 
 flags:
   --force     start anyway with the inherited variables (one warning line naming them)
@@ -49,14 +49,14 @@ def main():
     if names and not opts.get("force"):
         aos_flags.die(PROG, "EnvBad", "%s set in this shell (inherited from another tree or an agent's shell?): "
                       "the root would use them; clear every AOS_* except AOS_HOME first "
-                      "(source PROTO8/env.sh, in bash), or pass --force" % ", ".join(names))
+                      "(source env.sh, in bash), or pass --force" % ", ".join(names))
     if names:
         aos_flags.warn(PROG, "starting with inherited %s (--force)" % ", ".join(names))
     argv = ["aos-exec"] + rest
     try:
         os.execvp(argv[0], argv)
     except OSError as e:
-        aos_flags.die(PROG, "CommandMissing", "cannot run aos-exec: %s (source proto8/env.sh first)" % e.strerror)
+        aos_flags.die(PROG, "CommandMissing", "cannot run aos-exec: %s (source env.sh first)" % e.strerror)
 
 
 if __name__ == "__main__":

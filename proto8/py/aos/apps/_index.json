@@ -1,4 +1,7 @@
 {
+ "__init__.py": {
+  "description": "aos.apps - the Python commands (one package per command, formerly proto8/cmd/<command>/); bin/<command> runs aos.apps.<name>.main, see py/entries.jso…"
+ },
  "agent": {
   "description": "aos-agent：給人用的 agent 介面，ctl add／rm／起停睡醒、say／listen／chat、畫面、tools／llm／system／goal／hook 覆蓋層與搬家說明；要改人操作 agent 的指令時進去",
   "index": "agent/_index.json"

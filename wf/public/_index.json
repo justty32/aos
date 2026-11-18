@@ -60,7 +60,7 @@
   "description": "wf/public/權限與沙箱 — 換 uid、sudo 身分層、cgroup 的測法與坑"
  },
  "活樹旁邊.md": {
-  "description": "wf/public/活樹旁邊 — 存檔即生效的檔怎麼換、唯讀查看的界線、換樹當晚"
+  "description": "wf/public/活樹旁邊 — 哪些改動活樹當下就吃到（install.py、knowledge、frontend）、那種檔怎麼換、唯讀查看的界線、換樹當晚"
  },
  "派線與任務書.md": {
   "description": "wf/public/派線與任務書 — 派線前預掃、任務書要明講的事、禁區寫成唯一准用的做法、截止點、舊東西怎麼用、codex 年代的坑"

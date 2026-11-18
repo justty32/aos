@@ -15,7 +15,7 @@
 - **templates**＝複製出去用的 agent 範本，與掛在 daemon 上的 kernel 範本（`templates/kernel/`，11-17 從頂層 `kernel/` 併進來）。
 - **archive**＝不再維護、留著參考的東西（11-17 extras 解散時建）。
 
-**路徑規則一**（11-17 使用者裁「路徑-1 A」）：aos 的程式全住在 `AOS_HOME` 指的那個 proto8 裡；家裡的用自己的位置找鄰居，家外的（抄出去的範本格、工具、定義）只經 `AOS_HOME` 找進來，沒設就報 `HomeMissing`、不猜。每個視窗先 `source <proto8>/env.sh`。
+**路徑規則一**（11-17 使用者裁「路徑-1 A」）：aos 的程式全住在 `AOS_HOME` 指的那個 proto8 裡；家裡的用自己的位置找鄰居，家外的（抄出去的範本格、工具、定義）只經 `AOS_HOME` 找進來，沒設就報 `HomeMissing`、不猜。`AOS_HOME` 由人一台設一次（`env.sh` 不替你設，11-18 S6）；每個視窗先 `source $AOS_HOME/env.sh`，或在樹裡 `source env.sh`（起手範本帶的薄的那份，轉去家裡這份）。新使用者的安裝六步與更新五步在[重建步驟單](thinking/2026-11/17/重建步驟單.md)。
 
 | 資料夾 | 收什麼 |
 |---|---|
@@ -23,10 +23,10 @@
 | [cpp/](cpp/README.md) | aos-exec、aos-loop、aos-fsm、aos-daemon 等 C++ 專案（`cpp/Makefile` 一份編全家，nlohmann json 是收進 repo 的單檔 `cpp/third_party/nlohmann/json.hpp`；中間檔在 `cpp/build/`、`.a`／`.so` 裝進 `lib/`，都不進 git） |
 | [install.py](install.py) | 安裝：在 proto8 跑 `python3 install.py`（只用標準庫、Python ≥ 3.11）：先查相依（必需 g++ ≥ 10、gcc、make、ar；選配工具只列表不擋），清空再填 `bin/`（9 支 C++ 執行檔）、`lib/`（`py/` 的抄本加 C++ 函式庫）與 `include/`（公開標頭），log 在 `cpp/build/build.log`，另產 `cpp/compile_commands.json` 給 clangd；`--check` 只查相依。重跑＝全新安裝，C++ 沒改時幾秒 |
 | [py/aos/apps/](py/docs/05-commands.md) | Python 指令的本體（入口照 `py/entries.json` 裝進 `bin/`）：aos-agent、aos-daemon-ctl、aos-tools、aos-clock、aos-clock-register、aos-mailbox、aos-sweeper、aos-feedback、aos-eca（turn、screen）、aos-mcp、aos-mcp-launch（起外部 stdio MCP server）、aos-mcp-import（把外部 MCP 的工具凍結成一包）、aos-sandbox、aos-grow |
-| [env.sh](env.sh) | 每個視窗先 `source` 它：清掉 `AOS_*`、設 `AOS_HOME`、把這個家的 `bin/`（第一）、`frontend/bin` 放到 PATH 最前；`aos-exec` 不在時提示先跑 `python3 $AOS_HOME/install.py` |
+| [env.sh](env.sh) | 每個視窗先 `source $AOS_HOME/env.sh`（或樹裡那份薄的）：`AOS_HOME` 沒設就報一行 `EnvBad`、什麼都不改；清掉 `AOS_HOME` 以外的 `AOS_*`、把 `$AOS_HOME/bin`（第一）、`frontend/bin`（夾在才放）放到 PATH 最前；`aos-exec` 不在時提示先跑 `python3 $AOS_HOME/install.py` |
 | [frontend/](frontend/API.md) | 選配的網頁外掛：全景頁 `aos-frontend`（後端 Python 標準庫；v2 網頁原始碼在 `ui/v2/`，`dist/` 不進 git，要 Node 才建得出來，見 [ui/v2/README](frontend/ui/v2/README.md)）；aide 定義的差異檔 `aide-def/`、systemd 範例、測試也在這夾 |
 | [py/](py/README.md) | Python 原始碼（11-18 S3 前叫 `lib/`）：agent 用的工具在 `py/tools/`（底層原語 → 動 aos 的 → 整隻 agent）；機讀的協議定義在 [py/schema/](py/schema/README.md)；共用模組在一個套件 [py/aos/](py/aos/)（`aos.flags`、`aos.ws`、`aos.daemon_ctl` 等，說明在 [py/docs/04](py/docs/04-共用模組.md)）。安裝後的抄本在 `lib/`（不進 git，執行期認它） |
-| [templates/](templates/README.md) | agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent）等；kernel 範本在 [templates/kernel/](templates/kernel/README.md)：llm-kernel（問腦的那台）、daemon-kernel、procs-kernel（通用 kernel 的站的兩種掛法） |
+| [templates/](templates/README.md) | 起手範本 [start-api](templates/start-api/README.md)、[start-eca](templates/start-eca/README.md)（一包抄好一棵樹：根＋一隻 agent＋樹裡的 `env.sh`，`cp -r` 一行；11-18 S6）；agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent）等；kernel 範本在 [templates/kernel/](templates/kernel/README.md)：llm-kernel（問腦的那台）、daemon-kernel、procs-kernel（通用 kernel 的站的兩種掛法） |
 | [knowledge/](knowledge/README.md) | 出廠內容樹：普通資料夾＋`.json`，用一般檔案／json 工具讀；第一本是 `aos/`——給小模型的 aos 體系說明（英文） |
 | [archive/](archive/README.md) | 封存（11-17 重建：langs、tree-swap、aos-home；清單在它的 README） |
 | [thinking/](thinking/README.md) | 討論紀錄（使用者原文、決定、結論）；使用者自己的意見稿在 `thinking/user-advice/` |

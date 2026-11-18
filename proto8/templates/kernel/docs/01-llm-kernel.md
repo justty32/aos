@@ -26,7 +26,7 @@ llm-kernel/
 | `luna`、`terra`、`sol` | LiteLLM 的 `chatgpt-gpt-6-luna-low`、`chatgpt-gpt-6.1-terra`、`chatgpt-gpt-6.1-sol`（luna 沒有 6.1 版——ChatGPT 帳號的 codex 回 not supported；proxy 要有這幾個名字，`curl localhost:4000/v1/models` 看） | `sol` 有 `fixed.temperature` 0.2；`cost` high |
 | `fake`（預設） | `py/tools/base/llm_fake`：有工具先叫 `tool` 寫的那個（範本 `peek_now_time`，沒有就第一個）、再答「FAKE ANSWER to: …」 | `speed` fast、`cost` free |
 | `fake-demo-self`、`fake-demo-spawn` | `llm_fake`＋`script` 劇本（[03](03-feat-proto.md) 件 1、件 4） | 劇本裡的路徑寫 `{"$env": "AOS_HOME", "$path": "/templates/agent-fsm"}`：用到那組時解，`cp -r` 抄出去也指得對 |
-| `fake-demo-fast`、`fake-demo-slow` | `fake_slow`，每封 3 秒 | `slots` 1；`speed` fast／slow（[03](03-feat-proto.md) 件 3）；`fake_slow` 經 `$AOS_HOME/lib` 找 `aos_flags.py`（裝在 `proto8/lib/` 頂層，原始碼在 `proto8/py/`），複製出 repo 也對（要有 `AOS_HOME`） |
+| `fake-demo-fast`、`fake-demo-slow` | `fake_slow`，每封 3 秒 | `slots` 1；`speed` fast／slow（[03](03-feat-proto.md) 件 3）；`fake_slow` 經 `$AOS_HOME/lib` 找 `aos` 套件（`aos.flags`、`aos.tool_io`；裝在 `proto8/lib/aos/`，原始碼在 `proto8/py/aos/`），複製出 repo 也對（要有 `AOS_HOME`） |
 
 **包怎麼讀**（全文在 [kernel_llm docs/01](../../../py/tools/aos/kernel_llm/docs/01-用法.md)）：信與 agent 的 `llm.json` 只寫代號；kernel 自己看 `exec`／`slots`／`budget`／`speed` 與 `backend` 五個（拿掉後才交給 endpoint 函數），其餘（`url`、`model`、`fixed`、`script`、`delay_s`…）原樣交給函數。金鑰由端點小 proc 自己讀環境，kernel 不讀、不寫、不轉交。**`fixed` 是釘死的**：信的 `request` 寫了 `fixed` 裡的 key、或那包有 `model` 而信寫了 `model`＝那封回 `RequestBad`；換溫度、換模型＝換代號（多登記一包）。`cost`／`context`／`summary` 只給人與腦挑代號用，kernel 每拍寫進窗 `$AOS_STACK/endpoints.json`，`aos-llm ls` 印它。
 

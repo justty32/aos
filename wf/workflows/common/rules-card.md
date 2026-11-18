@@ -40,7 +40,7 @@
 2. 先清環境：aos 指令與測試一律經 bash 腳本 unset 所有 `AOS_*`。
 3. 暫存樹起在 `~/.aos/scratch/<線名-日期>/`。
 4. 收行程只准兩種（shutdown 自己的 stack、kill 自己記的 pid）；禁 `pkill`、`killall`。
-5. 改 repo＝改活樹（`proto8/cmd`、`lib/agent/*.py` 存檔即生效；編 C++ 先回報）。
+5. 改 `py/`、`cpp/` 要 `install.py` 之後才生效（活樹只跑 `bin/`、`lib/`；在 repo 裡跑 `install.py`＝換掉活樹那份，先回報；`knowledge/`、`frontend/` 存檔即生效）。
 6. 測試在 `git archive` 抄出的乾淨複本上跑。
 7. git：走 `commit-request`；不 `git add -A`／`.`；只動領地清單上的檔。
 8. 叫真模型只給真的小工作；不編理由、不繞限制。

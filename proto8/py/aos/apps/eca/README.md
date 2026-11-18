@@ -2,7 +2,7 @@
 
 ← [cmd](../../../docs/05-commands.md)｜範本：[templates/eca-claude](../../../../templates/docs/01-eca-claude.md)
 
-- `bin/aos-eca-turn`：答一輪——從 stack 的 queue 認領一批、交給 CLI 就收信、回答接進 history。說明在 [cmd/docs/01](../../../docs/05-commands/01-逐支說明.md#逐支說明)。
+- `bin/aos-eca-turn`：答一輪——從 stack 的 queue 認領一批、交給 CLI 就收信、回答接進 history。說明在 [05-commands/01](../../../docs/05-commands/01-逐支說明.md#逐支說明)。
   **畫面開著的 claude 身改走收件口**（[eca-a2a-notify](../../../../thinking/2026-11/13/eca-a2a-notify.md)，使用者 11-13「1.a2a這個按照建議。馬上送，eca他會自己處理。say/chat被當成不是使用者打的，我覺得可以，真的有要的話，就自己open進去說。」）：一批信不貼字，改往 Claude Code 這個 session 自己的收件口（cross-session messaging 的 Unix socket）寫，一封一個署名信封，畫面顯示「› Message from @名字: …」、CLI 自己告訴模型這則不是它的使用者打的。署名＝信 body 的 `name`（`aos-agent say`／`chat` 對 eca 寄時填，見 [aos-agent](../agent/README.md)），沒有＝`aos通知中心`（新信通知、時鐘信、goal 提醒、開場白、換台前情提要）；`name` 不接進 history。這條路不看 `--on-busy`：有人接在畫面上、正在跑一輪都照投（CLI 手上那步工具做完就讀到）；等回答時 queue 又來信也一封一封馬上投（`aos_eca/midturn.py`，slash 指令、hook 或 aos-post 出錯、投不出去、冷卻剛到那輪除外，那封留到下一輪）。socket 位置與有沒有收到靠畫面 hook 記在小格的 `a2a.json`、`a2a_acks.jsonl`（`py/aos/agentlib/cli_a2a.py`）；沒記到、投不出去、投了 30 秒沒回執＝退回貼字（後者這個畫面之後都貼，到下一次 SessionStart）。接線前開的畫面要關掉重開才換新路。關掉：定義的 `cli.json` 寫 `"a2a": false`。畫面沒開、codex 身、slash 指令、工具形照舊。
   **history 被改過＝下一輪開新 claude 對話**（self-family ⑩）：靠小格的 `.history_sum` 認出來，帶改過的紀錄過去；畫面開著不換。細節同上。
   **turn 死了外部 CLI 跟著收**（坑-52，Linux）：非互動起的 claude／codex 設了 `PR_SET_PDEATHSIG`＝SIGTERM，aos-eca-turn 被 `kill -9`／OOM（或它的 aos-loop 被殺、經 aos-inst 的 PDEATHSIG 連帶）時 CLI 收 SIGTERM，不留孤兒跟下一輪的 `--resume` 寫同一段對話；tmux 畫面裡的 CLI 不在此列（`cli_print.parent_death_term`）。
@@ -14,4 +14,4 @@
   **程式放哪**：`main_turn.py` 只留說明（檔頭中文 docstring）與跑 main，本體在同夾的套件（一輪的流程、交給 CLI 的前後（handoff，一般一輪與 slash 共用）、history、hook、認領信、等回答時又來的信（midturn）、slash、開場白各一檔，逐檔一句話見 code map）；入口 `bin/aos-eca-turn` 由 `install.py` 照 `py/entries.json` 生，跑的是 `lib/aos/apps/eca/main_turn.py`。
 **畫面延後關（C′ 主體）**：eca 範本的 `screen_linger_stop`（after_stop）在 `<stack>/<kind>/screen_close.json` 原子寫到期單，由畫面自己的 tmux 排程，daemon 關掉也照走。定義 `cli.json` 的 `screen_close_after_s` 是非負整數秒（預設 600，0＝當場 reap）；`screen_linger_start`（after_start）撤單。到期核 token、tmux 身分與本機 loop 身分，新的 loop 已起來就不關，不讀 daemon 表。有人接著看也照關；鎖忙每 30 秒再試，最多 10 次。兩格設 null 可停用；舊定義要另外補 hook。SIGKILL／OOM、停著才開畫面沒有 hook，第一批不處理；沒有 sweeper 後援。此主體先上線，直連 ctl stop 改延後的接線另為 B 包、須換樹與補既有定義 hook 後才啟用。
 
-- `bin/aos-eca-screen`：eca 的 screen 子介面身體（open／close／watch），人經 `aos-agent` 叫。說明在 [cmd/docs/05](../../../docs/05-commands/05-aos-llm與eca入口.md)。
+- `bin/aos-eca-screen`：eca 的 screen 子介面身體（open／close／watch），人經 `aos-agent` 叫。說明在 [05-commands/05](../../../docs/05-commands/05-aos-llm與eca入口.md)。

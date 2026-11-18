@@ -2,7 +2,7 @@
 
 ← [cmd](../../../docs/05-commands.md)
 
-`bin/aos-tools`（Python）管 tools.json：登記這隻 agent 能叫哪些工具、`call` 叫它們。`add` 成功印一行 `added NAME -> 絕對路徑 (寫進的檔: 存的原樣值)`（原樣值是 JSON，指示詞就印那段）、`rm` 每拿掉一個印一行 `removed NAME (寫進的檔)`；`aos-tools --help` 印頂層、`aos-tools 子命令 --help` 印那個子命令的英文說明。說明在 [cmd/docs/01](../../../docs/05-commands/01-逐支說明.md#逐支說明)；覆蓋（`$override`）見下段與 [aos-agent docs/03](../agent/docs/03-tools覆蓋層.md)。
+`bin/aos-tools`（Python）管 tools.json：登記這隻 agent 能叫哪些工具、`call` 叫它們。`add` 成功印一行 `added NAME -> 絕對路徑 (寫進的檔: 存的原樣值)`（原樣值是 JSON，指示詞就印那段）、`rm` 每拿掉一個印一行 `removed NAME (寫進的檔)`；`aos-tools --help` 印頂層、`aos-tools 子命令 --help` 印那個子命令的英文說明。說明在 [05-commands/01](../../../docs/05-commands/01-逐支說明.md#逐支說明)；覆蓋（`$override`）見下段與 [aos-agent docs/03](../agent/docs/03-tools覆蓋層.md)。
 
 **一段白話**（C-85）：aos-tools 管「工具通訊錄」（一份 JSON 檔）。`add 路徑` 記一個工具進去，`ls`／`get` 看有哪些，`rm` 拿掉，`call 名字 [JSON]` 叫一次。通訊錄可以寫一行 `"$override"` 指向另一份（或一串），意思是「以那份為底，照順序疊，後面蓋前面，我這份只記差異；值是 null 的那格不算工具」——每隻 agent 自己加減的工具就是這樣一份。工具要的環境變數可以直接記值（`--envs`），也可以記一個 env 檔的位置（`--env-file`），每次叫工具才去讀。
 

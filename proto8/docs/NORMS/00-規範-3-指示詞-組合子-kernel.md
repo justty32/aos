@@ -26,7 +26,7 @@
 ## kernel
 
 **[kernel](09-kernel.md)**（[(1) LLM kernel](09-kernel/01-N-42-1-LLM-kernel.md)、[(1) 能力包與份額](09-kernel/02-N-42-1-能力包與份額.md)、[(2) 通用 kernel](09-kernel/03-N-42-2-通用kernel.md)）
-- **N-42**（草稿）先做兩種 kernel，都基於 daemon：(1) 管 LLM 呼叫的；(2) 通用管理的（以 agent 作判斷）；兩種收進同一份通用 kernel 框架（現況：框架的骨架、掛 proc 那一包、hook 三個時機在 `lib/aos/kernel`，問腦總機在 `lib/aos/kernel_llm`，狀態查詢信由 `aos-agent ctl who` 問；新舊打架，11-14 的現況較晚）；`AOS_LLM_KERNEL` 與 `AOS_KERNEL` 維持兩個變數。
+- **N-42**（草稿）先做兩種 kernel，都基於 daemon：(1) 管 LLM 呼叫的；(2) 通用管理的（以 agent 作判斷）；兩種收進同一份通用 kernel 框架（現況：框架的骨架、掛 proc 那一包、hook 三個時機在 `py/tools/aos/kernel`，問腦總機在 `py/tools/aos/kernel_llm`，狀態查詢信由 `aos-agent ctl who` 問；新舊打架，11-14 的現況較晚）；`AOS_LLM_KERNEL` 與 `AOS_KERNEL` 維持兩個變數。
 - **N-42** (1)（細節照推薦或代定、可翻案）信帶請求、不帶單子：body＝`{"endpoint"?, "request", "priority"?}`、信封 `reply_to` 必有，回信 body＝`{"message", "usage", "model"}` 或 `{"error": {"code", "msg"}}`；kernel 照 `kernel.json`（`slots`、`budget`、`timeout_ms`、`exec`、`endpoints`、`endpoint`）跑 endpoint 函數，問腦掛成 daemon 的 proc；信箱固定 `$AOS_STACK/requests/`；`aos-llm`（`send`／`recv`／`ask`／`regret`）是基礎工具；`priority.deadline` 寫 ISO 8601（帶時區）或 epoch 秒（待裁網頁 條文-N4 選 A：照實作）。
 - **N-42** (1) 能力包（`fixed` 釘死，撞了回 `RequestBad`）；排程看級數＋aging、時限、包的 `speed`；額度到頂回 `BudgetMissing`、不替人降級；kernel 可以嵌套，每層逐封記 `ledger.jsonl`。
 - **N-42** (2) 通用 kernel 框架是一包方便零件、不是概念，手寫一個也算 kernel；下一站照三段找：`kernel.json` 的 `next` → `AOS_KERNEL`（指到自己就跳過）→ `AOS_DAEMON`（明寫的 `next` 指到自己＝設定錯，代定）；下一站不是從 `AOS_DAEMON` 來的又設了 `max_running`，就必須寫 `count_daemon`，沒寫＝`CfgBad`；hook 三個時機 `before_verdict`、`after_verdict`、`before_reply`；排隊（`queue`）、有序（`keep_ordered`、`reply_via_me`）都是選項、沒寫＝關；停／收／睡／醒不必過框架站；`aos-daemon-ctl` 一律直寄；ping 原樣轉寄。

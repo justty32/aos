@@ -16,7 +16,7 @@
 
 ## 驗收跑全套，不能只跑你改的那幾夾
 
-改了共用程式的契約（函式改名、讀表換入口、輸出格式變了），紅的常在**別的資料夾**：mock 舊函式或比對舊字串的測試（改 `cmd/aos-agent` 紅在 `cpp/aos-daemon/tests`；改 lib 的路徑格式紅在 `templates/tests`）。
+改了共用程式的契約（函式改名、讀表換入口、輸出格式變了），紅的常在**別的資料夾**：mock 舊函式或比對舊字串的測試（改 `py/aos/apps/agent`（aos-agent）紅在 `cpp/aos-daemon/tests`；改 lib 的路徑格式紅在 `templates/tests`）。
 
 1. 在 repo 外的乾淨複本（`git archive HEAD | tar -x`，cpp 的 bin 照 [pitfalls「標準跑法」](pitfalls.md) 用複本自己的原始碼編）把 proto8 底下**每一個** `tests` 夾都跑（`find proto8 -type d -name tests`），跑前清掉全部 `AOS_*`。
 2. 同一支腳本跑「main 原樣」與「main＋你的改動」兩次，逐夾比，只看**新出現的紅**；原本就紅的另列。
@@ -48,7 +48,7 @@
 - `cp S/f f.<線>-tmp && mv f.<線>-tmp f && cmp S/f f`。
 - 交前 `git log <底>..HEAD -- 檔`，或逐檔跟 HEAD 比、不一樣就擋（別人的 commit 會讓暫存樹落後）；落後的照上面「搬到已經往前走的 main」合。
 - 跟別線先講好「你的檔／我的檔」；同時要動同一檔就講好誰先交、誰後疊，不混進同一個 commit。
-- 會即時生效的檔（`proto8/cmd`、`lib/agent`）另有備份與順序的規矩，見 [活樹旁邊](活樹旁邊.md)。
+- 活樹當下就吃到的改動（在 repo 裡跑 `install.py`；活樹直接讀的 `proto8/knowledge`、`frontend`）另有備份與順序的規矩，見 [活樹旁邊](活樹旁邊.md)。
 
 ## 放行 commit：看三樣；放行的是看過的那一版
 

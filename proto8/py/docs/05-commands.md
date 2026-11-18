@@ -28,7 +28,7 @@
 > 這裡的 Python 支都用 `aos.flags`（`py/aos/flags.py`）的旗標解析 `parse`；完整說明在各支的檔頭 docstring。
 
 aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/bin/`（C++ 執行檔與 Python 入口，在 proto8 跑 `python3 install.py` 才有）放進 PATH。
-要一次放好：每個視窗先 `source proto8/env.sh`（清掉 `AOS_*`、設 `AOS_HOME`＝那個 proto8、把它的 `bin/`（第一）與 `frontend/bin`（選配的網頁外掛 aos-frontend，在 [proto8/frontend](../../frontend/API.md)）放到 PATH 最前，不往 `~/.local/bin` 放東西；`aos-exec` 不在時提示先跑 `python3 $AOS_HOME/install.py`）。舊的 `cmd/install.sh`（symlink 進 `~/.local/bin`）11-18 S5 收掉（題 X-4 A），由 `install.py` 取代。不在 Python user site 寫 `aos-proto8.pth`（使用者 11-15 裁「6.拿掉。」），複製出 repo 的程式要 import 共用模組，就設 `AOS_HOME`（共用模組只經 `$AOS_HOME/lib` 找）。
+要一次放好：一台設一次 `AOS_HOME`＝那個 proto8，每個視窗先 `source $AOS_HOME/env.sh`（或樹裡那份薄的 `env.sh`；`AOS_HOME` 沒設就報 `EnvBad`、不替你設；清掉 `AOS_HOME` 以外的 `AOS_*`、把 `$AOS_HOME/bin`（第一）與 `frontend/bin`（選配的網頁外掛 aos-frontend，在 [proto8/frontend](../../frontend/API.md)）放到 PATH 最前，不往 `~/.local/bin` 放東西；`aos-exec` 不在時提示先跑 `python3 $AOS_HOME/install.py`）。舊的 `cmd/install.sh`（symlink 進 `~/.local/bin`）11-18 S5 收掉（題 X-4 A），由 `install.py` 取代。不在 Python user site 寫 `aos-proto8.pth`（使用者 11-15 裁「6.拿掉。」），複製出 repo 的程式要 import 共用模組，就設 `AOS_HOME`（共用模組只經 `$AOS_HOME/lib` 找）。
 
 三扇門（[stdio-unify](../../thinking/2026-11/05/stdio-unify/README.md)）：這裡每支的錯誤行是 `程式: error: 代號 原因`（退 1）、提醒行是 `程式: warning: 句子`；`--help`＝英文說明到 stdout、退 0；不給參數／子命令＝`ArgumentsBad`；Ctrl-C 退 130、不吐 traceback；stdout 被對面先關（`| head -1`）退 141、不吐 traceback（用 `aos_flags.run` 包 main 的支；aos-sandbox 沒包，它除了 --dry-run 那行就直接 exec）（共用小函式在 `aos.flags`，見 [docs/02](05-commands/02-aos-clock與已定值.md)）。
 

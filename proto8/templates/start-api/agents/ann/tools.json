@@ -1,0 +1,11 @@
+{"$override": [{"$env": "AOS_HOME", "$path": "/lib/packs/look.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/change.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/delete.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/shell.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/gadgets.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/todo.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/self.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/mailbox.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/goal.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/json.json"},
+               {"$env": "AOS_HOME", "$path": "/lib/packs/index.json"}]}

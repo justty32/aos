@@ -37,7 +37,7 @@
 | 暫存樹的改動交回 main | 先 `git log <舊base>..HEAD -- <檔>`；衝突少 `patch -p1`，多就小 git 三方合併；整套測試再交。[patch-and-commit](patch-and-commit.md) |
 | 改了共用契約要驗收 | 每個 `tests` 夾都跑，改前改後各一次只看新紅；經 clean.sh 跑免得假綠。[patch-and-commit「驗收跑全套」](patch-and-commit.md) |
 | 在乾淨複本驗改動 | `git archive HEAD proto8` 再疊檔；`env -i …` 或 clean.sh；bin 用複本自己的原始碼編。[pitfalls「標準跑法」](pitfalls.md) |
-| 改存檔即生效的檔 | 備份 → 暫存檔再 `mv` → 被 import 的先換、每換一檔就 import → 先在乾淨複本預演。[活樹旁邊](活樹旁邊.md) |
+| 改活樹當下就吃到的檔（knowledge、frontend；在 repo 跑 install.py） | 備份 → 暫存檔再 `mv` → 被 import 的先換、每換一檔就 import → 先在乾淨複本預演。[活樹旁邊](活樹旁邊.md) |
 | 放行別人的 commit | 自己看實際 diff、測試結果行、備份等於 HEAD；放行信寫明看過哪一版。[patch-and-commit「放行」](patch-and-commit.md) |
 | 改到每隻 agent 都走的路 | 另派全新的審稿員：只給 diff、規格、邊界問題，只讀不跑。[審查與實測](審查與實測.md) |
 | 寫讀 daemon 表的程式 | 至少一條測試用真 daemon `ctl add` 掛出一列再讀；交件附那一列原樣。[審查與實測](審查與實測.md) |
