@@ -1,0 +1,1721 @@
+# eca-pi-bc-1118 未交的改動（家機 11-18 晚從總補丁分出，對 2b4320644 之後的 main）：pi 身乙案 rpc＋丙案畫面；git apply 套用
+diff --git a/proto8/py/aos/agentlib/cli_a2a.py b/proto8/py/aos/agentlib/cli_a2a.py
+index f9245ee0e..083024ecf 100644
+--- a/proto8/py/aos/agentlib/cli_a2a.py
++++ b/proto8/py/aos/agentlib/cli_a2a.py
+@@ -13,8 +13,12 @@ socket 本身沒有回話（實測 claude 2.1.323：連上、寫完、對方不
+ 畫面各顯示一則、UserPromptSubmit 各叫一次、合成一輪回答）。沒寫寄件人的一律署名 NOTIFY（機器通知：新信、時鐘信、goal 提醒、
+ 開場白、換台提要）；aos-agent say／chat 的信帶 body 的 name＝真正的寄件人。
+ 
++pi 身（11-18 eca-pi 丙案）：沒有 socket，改由 aos 的畫面外掛（pi_aos_screen.mjs）當收件口——a2a.json 記 {"inbox": 小格的 pi_inbox/}
++（畫面 hook 在 session_start 寫，note_inbox），aos 一封一個 .json（{"id", "text"}，不包信封、不署名，同 pi 非互動那條）寫進去（先寫暫存再改名），
++外掛每 0.5 秒收一次、刪檔、用 pi.sendUserMessage 送進對話（答題中＝steer），再叫 hook 記回執（同一份 a2a_acks.jsonl，note_acks）。
++
+ 一步關掉：定義的 cli.json 寫 "a2a": false（下一輪起那隻照舊貼字）；或把下面 ENABLED 改成 False（全部）。"""
+-import json, os, re, socket, stat, uuid
++import json, os, re, socket, stat, time, uuid
+ 
+ from aos.agentlib.cli_base import now
+ 
+@@ -80,6 +84,20 @@ def note_ack(cell, prompt):
+     return True
+ 
+ 
++def note_inbox(cell, path):
++    """pi 畫面 hook（session_start）：建收件夾、記進 a2a.json。"""
++    os.makedirs(path, exist_ok=True)
++    cell.write(STATE, json.dumps({"inbox": path}) + "\n")
++
++
++def note_acks(cell, ids):
++    """pi 畫面 hook（外掛送進對話之後）：每個 id 記一行回執。"""
++    with open(cell.file(ACKS), "a", encoding="utf-8") as f:
++        for ident in ids if isinstance(ids, list) else []:
++            if isinstance(ident, str):
++                f.write(json.dumps({"at": now(), "id": ident}) + "\n")
++
++
+ def forget(cell):
+     """開新畫面之前：上一個畫面留下的 socket 路徑與回執都不算數。"""
+     for name in (STATE, ACKS):
+@@ -98,9 +116,15 @@ def mark_off(cell, why):
+ 
+ 
+ def socket_path(cfg, cell):
+-    """這格現在能不能投：回 socket 路徑；不能＝None（沒開、不是 claude、cli.json 關掉、沒記到路徑、那裡不是 socket）。"""
+-    if not ENABLED or cfg.get("kind") != "claude" or cfg.get("a2a", True) is False:
++    """這格現在能不能投：回 socket 路徑（pi＝收件夾）；不能＝None（沒開、不是 claude／pi、cli.json 關掉、沒記到路徑、那裡不是 socket／資料夾）。"""
++    if not ENABLED or cfg.get("kind") not in ("claude", "pi") or cfg.get("a2a", True) is False:
+         return None
++    if cfg["kind"] == "pi":
++        try:
++            path = json.loads(cell.read(STATE) or "null").get("inbox")
++            return path if isinstance(path, str) and os.path.isdir(path) else None
++        except (ValueError, AttributeError):
++            return None
+     try:
+         path = json.loads(cell.read(STATE) or "null").get("socket")
+         if isinstance(path, str) and path and stat.S_ISSOCK(os.stat(path).st_mode):
+@@ -137,6 +161,32 @@ def acked(cell, offset, ids):
+ 
+ # ---- 投遞 ----
+ 
++def post(cfg, path, parts):
++    """投一批：claude＝包信封寫 socket（wire、deliver）；pi＝一封一個檔寫進收件夾（deliver_inbox）。回 [回執 id]；投不出去＝Undelivered。"""
++    if cfg.get("kind") == "pi":
++        return deliver_inbox(path, parts)
++    ids, data = wire(parts)
++    deliver(path, data)
++    return ids
++
++
++def deliver_inbox(path, parts):
++    """pi 的收件夾：一封一個 <時間>-<序>-<id>.json（{"id", "text"}），先寫 .tmp 再改名（外掛只讀 .json）。"""
++    ids, stamp = [], "%.6f" % time.time()
++    try:
++        for i, (_name, text) in enumerate(parts):
++            ident = uuid.uuid4().hex[:12]
++            tmp = os.path.join(path, ".%s.tmp" % ident)
++            with open(tmp, "w", encoding="utf-8") as f:
++                json.dump({"id": ident, "text": text}, f, ensure_ascii=False)
++            os.replace(tmp, os.path.join(path, "%s-%03d-%s.json" % (stamp, i, ident)))
++            ids.append(ident)
++    except OSError as e:
++        if not ids:
++            raise Undelivered("%s: %s" % (path, e.strerror or e))
++    return ids
++
++
+ def deliver(path, data):
+     """連上 socket、整批寫完、關掉。連不上或寫不進去＝Undelivered（呼叫者退回貼字）。"""
+     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+diff --git a/proto8/py/aos/agentlib/cli_ask.py b/proto8/py/aos/agentlib/cli_ask.py
+index 9a0a61cd6..f6cabf02a 100644
+--- a/proto8/py/aos/agentlib/cli_ask.py
++++ b/proto8/py/aos/agentlib/cli_ask.py
+@@ -1,4 +1,4 @@
+-# cli_ask.py - cli_session 問一輪：畫面開著往 CLI 的收件 socket 投署名訊息（live_a2a）或從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main
++# cli_ask.py - cli_session 問一輪：畫面開著往 CLI 的收件口（claude 的 socket、pi 外掛的收件夾）投信（live_a2a）或從 tmux 送字（live、type_line）、ask 挑兩條路、aos-eca-turn --one 的 call_main
+ import fcntl, json, os, re, shlex, signal, sys, time
+ 
+ from aos.agentlib import cli_a2a, cli_base
+@@ -43,9 +43,8 @@ def live_a2a(cfg, cell, parts, path, handed, deadline, more=None):
+     回答＝全部回執都到之後講完的那一輪；CLI 忙時信在手上那步工具做完才讀到，回答就是正在跑的那一輪的。中途加投的信若趕不上
+     那一輪、CLI 另開一輪答，第一則回執之後講完的各輪照順序用一個空行接成一段。"""
+     seen, offset = len(cell.turns()), cli_a2a.acks_size(cell)
+-    ids, data = cli_a2a.wire(parts)
+     try:
+-        cli_a2a.deliver(path, data)
++        ids = cli_a2a.post(cfg, path, parts)
+     except cli_a2a.Undelivered as e:
+         cli_base.warn("cannot deliver to the CLI's message socket (%s); typing into the screen instead" % e)
+         return "unsent", None
+@@ -72,9 +71,8 @@ def live_a2a(cfg, cell, parts, path, handed, deadline, more=None):
+             cli_base.die("CliFailed", "the screen closed before the turn finished")
+         late = more.take() if more and got else []           # 第一批有回執了才加投（沒回執要退回貼字時，不會有信只投了沒貼）
+         if late:
+-            new_ids, data = cli_a2a.wire(late)
+             try:
+-                cli_a2a.deliver(path, data)
++                new_ids = cli_a2a.post(cfg, path, late)
+             except cli_a2a.Undelivered as e:
+                 cli_base.warn("cannot deliver to the CLI's message socket (%s); those letters wait for the next turn" % e)
+                 more.unsent()
+@@ -182,9 +180,9 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None, re
+                 prompt = reseed(limit) + prompt
+             if cfg["kind"] == "claude":
+                 text = print_claude(cfg, cell, ws, stack, prompt, handed, sid, more)   # live_mail 開了才看 more（wake-1114）
+-            elif cfg["kind"] == "pi":                     # 11-18 eca-pi 甲案：一問一答，沒有畫面、沒有中途收信
++            elif cfg["kind"] == "pi":                     # 11-18 eca-pi 乙案：pi --mode rpc，等回答時又來的信 steer 進去（cli.json "live_mail": false 關）
+                 from aos.agentlib.cli_pi import print_pi
+-                text = print_pi(cfg, cell, ws, stack, prompt, handed, sid)
++                text = print_pi(cfg, cell, ws, stack, prompt, handed, sid, more)
+             else:
+                 text = print_codex(cfg, cell, ws, stack, prompt, handed, sid)
+         link_transcript(cell, cfg["kind"])               # 工具形也留（方向題 3）
+diff --git a/proto8/py/aos/agentlib/cli_cfg.py b/proto8/py/aos/agentlib/cli_cfg.py
+index d38a35750..5e35e4bab 100644
+--- a/proto8/py/aos/agentlib/cli_cfg.py
++++ b/proto8/py/aos/agentlib/cli_cfg.py
+@@ -10,7 +10,7 @@ from aos.agentlib.cli_mcp import external_servers
+ # aos 每次起 CLI 自己會加、cli.json 的 flags／print_flags 不准再寫的旗標（寫了＝CfgBad：在認領信之前就停，信留在 queue、不進冷卻）。
+ # codex exec 的這幾個不准重複（寫第二次 codex 退 2：cannot be used multiple times）；claude 的是輸出格式與接哪段對話，重寫會解不開輸出或接錯對話。
+ # 有宣告才加的（--mcp-config、--allowedTools、--append-system-prompt-file、--agents、codex 的 -c …）可重複，不擋。
+-# pi（11-18 eca-pi 甲案）：aos 自己帶 --mode json、--session-dir（小格的 pi-sessions/）、--session-id、--no-approve，接哪段對話與信不信任工作區的旗標也都歸 aos。
++# pi（11-18 eca-pi）：aos 自己帶 --mode rpc（畫面不帶）、--session-dir（小格的 pi-sessions/）、--session-id、--no-approve，接哪段對話與信不信任工作區的旗標也都歸 aos。
+ # claude 的 --settings 不能重複（11-13 實測：命令列上兩個 --settings 只有最後一個算數，前一個整個不見、沒有提醒；aos 自己那個接在後面），
+ # 所以也擋；要帶 CLI 自己的設定（hooks、permissions…）寫 cli.json 的 settings 鍵，aos 併進它那一個（cli_settings、cli_mcp.settings_argv）。
+ AOS_FLAGS = {"codex": ("--skip-git-repo-check", "--json", "-o", "--output-last-message"),
+diff --git a/proto8/py/aos/agentlib/cli_hook.py b/proto8/py/aos/agentlib/cli_hook.py
+index 9eb2ac8c2..db5d7d081 100644
+--- a/proto8/py/aos/agentlib/cli_hook.py
++++ b/proto8/py/aos/agentlib/cli_hook.py
+@@ -229,6 +229,31 @@ def codex_turns(sid):
+     return n
+ 
+ 
++def pi_hook(cell, p):
++    """pi 畫面外掛（pi_aos_screen.mjs）的回報（11-18 eca-pi 丙案）。回 (sid, 這輪的回答) 給 hook_main 照 Stop 記 turns；不是講完一輪＝None。
++    session_start：記收件夾（cli_a2a.note_inbox）；reason new（畫面打 /new）＝換 id、清 history；resume／fork＝只跟 id；startup＝等第一輪。
++    agent_start＝跟 id、寫 busy.txt；compact＝history 換成 pi 的摘要一則；ack＝記收件回執。"""
++    from aos.agentlib.cli_pi import INBOX, answer_of
++    event, sid = p.get("event"), p.get("session_id")
++    if event == "session_start":
++        cli_a2a.note_inbox(cell, cell.file(INBOX))
++        if p.get("reason") in ("new", "resume", "fork"):
++            follow_session("pi", cell, sid)
++        if p.get("reason") == "new":
++            clear_history(cell)
++    elif event == "agent_start":
++        follow_session("pi", cell, sid)
++        cell.write("busy.txt", now() + "\n")
++    elif event == "compact" and isinstance(p.get("summary"), str) and p["summary"].strip():
++        replace_history(cell, "compact", p["summary"].strip())
++    elif event == "ack":
++        cli_a2a.note_acks(cell, p.get("ids"))
++    elif event == "agent_settled":
++        msgs = p.get("messages")
++        return sid, answer_of([m for m in msgs if isinstance(m, dict)] if isinstance(msgs, list) else [])
++    return None
++
++
+ def hook_main(kind, cell_path, payload_arg=None):
+     """claude：stdin 一份 hook JSON（SessionStart／UserPromptSubmit／Stop）；codex：notify 把 JSON 放在最後一個參數。
+     對話 id 跟 session.txt 不同就改記（follow_session）；claude 的 SessionStart source clear＝clear_history（11-12 eca-slash）。
+@@ -239,7 +264,12 @@ def hook_main(kind, cell_path, payload_arg=None):
+         cell = Cell(cell_path)
+         raw = payload_arg if kind == "codex" else sys.stdin.read()
+         p = json.loads(raw)
+-        if kind == "claude":
++        if kind == "pi":
++            done = pi_hook(cell, p)
++            if done is None:
++                return
++            sid, text = done
++        elif kind == "claude":
+             event, sid = p.get("hook_event_name"), p.get("session_id")
+             a2a = payload_arg == cli_a2a.HOOK_MARK
+             if event == "SessionStart":                    # 11-12 eca-slash：開畫面、/clear、/compact、/resume 都會叫；/clear＝aos 的 history 跟著清
+diff --git a/proto8/py/aos/agentlib/cli_linger.py b/proto8/py/aos/agentlib/cli_linger.py
+index 8e7d7f539..140cf881a 100644
+--- a/proto8/py/aos/agentlib/cli_linger.py
++++ b/proto8/py/aos/agentlib/cli_linger.py
+@@ -11,7 +11,7 @@ import time
+ from aos.agentlib import cli_cell
+ 
+ ORDER = "screen_close.json"
+-KINDS = ("claude", "codex")
++KINDS = ("claude", "codex", "pi")
+ ENTRY = str(Path(__file__).resolve().parents[2] / "tools/agent/screen_linger/_entry")
+ 
+ 
+@@ -144,7 +144,7 @@ def reap(stack, kind, token):
+     signal.signal(signal.SIGTERM, signal.SIG_IGN)
+     signal.signal(signal.SIGHUP, signal.SIG_IGN)
+     if kind not in KINDS:
+-        raise ValueError("kind must be claude or codex")
++        raise ValueError("kind must be claude, codex or pi")
+     cell = cli_cell.Cell(os.path.join(stack, kind), make=False)
+     doc = read(cell.file(ORDER))
+     if doc.get("token") != token:
+diff --git a/proto8/py/aos/agentlib/cli_pi.py b/proto8/py/aos/agentlib/cli_pi.py
+index 275b64f73..f39f15660 100644
+--- a/proto8/py/aos/agentlib/cli_pi.py
++++ b/proto8/py/aos/agentlib/cli_pi.py
+@@ -1,23 +1,38 @@
+-# cli_pi.py - cli_session 的 pi 身（pi coding agent，11-18 eca-pi 甲案）：pi --mode json 一問一答、對話檔進小格、aos-mcp 經生成的外掛、/compact 走一次 pi --mode rpc
+-import json, os, shutil, subprocess, threading, uuid
++# cli_pi.py - cli_session 的 pi 身（pi coding agent，11-18 eca-pi）：起 pi 的整串、小格的兩支外掛、從事件讀回答；非互動一輪與 /compact 都走 pi --mode rpc（cli_pi_rpc）
++import json, os, shutil, sys, uuid
+ 
+ from aos.agentlib import cli_base
+ from aos.agentlib.cli_cell import PI_SESSIONS, drop_session, mark_session, transcripts
+ from aos.agentlib.cli_cfg import system_argv
+ from aos.agentlib.cli_mcp import _aos_server_args, mcp_env
+ 
+-# 11-18 實測 pi 1.5.2（使用者自己裝的那份，假 OpenAI 相容端點）：
+-# - 題目只給 stdin、不給參數＝stdin 就是題目（文件說「接在第一則題目前面」，沒有題目時就是它自己）。
++# 11-18 實測 pi 1.5.2（使用者自己裝的那份）：
+ # - --session-dir <小格>/pi-sessions --session-id <id>：第一次建 <時間>_<id>.jsonl（stderr 印一行 "No project session found …; creating"），
+-#   第二次同一個 id＝接著那段（送給模型的訊息變多），不是開新的。
+-# - 答完：最後一則 role assistant 的 message_end 是回答；之後還有 agent_end、agent_settled（以 agent_settled 為準，行程隨後結束）。
+-# - 模型那邊出錯（端點連不上等）pi 照樣退 0：最後一則 assistant 的 stopReason 是 "error"、errorMessage 寫原因；模型名不認得＝退 1、stderr 一行。
+-# - json 模式不認 /compact（當成一般題目交給模型）；壓縮要 --mode rpc 送 {"type": "compact"}，而且 stdin 要等到 response 才關
+-#   （先關 stdin＝pi 收工、壓縮被取消，回 "Compaction cancelled"）。
++#   第二次同一個 id＝接著那段；互動畫面同一招也是接著那段（session_start reason startup）。
++# - rpc（乙案，取代甲案的 --mode json）：{"type": "prompt"} 回 response disposition started；答完以 agent_settled 為準（agent_end 不是終點）。
++#   答題途中送 {"type": "steer"}＝回 response disposition queued、下一次叫模型之前以一則 user 送進去（工具做完那一步、或這段字講完之後再開一段），
++#   全部都在 agent_settled 之前送到；答題中再送 prompt＝success false "Agent is already processing"。rpc 不印 session 那行。
++# - 答案：一則 user（題目或中途的信）到下一則 user 之間，最後一則講完的 assistant（stopReason stop）的文字；中途的信各自一段，用空行接起來。
++# - 模型那邊出錯 pi 照樣退 0：最後一則 assistant 的 stopReason 是 "error"、errorMessage 寫原因；模型名不認得＝退 1、stderr 一行。
++# - compact：rpc 送 {"type": "compact"}，stdin 要等到 response 才關（先關＝pi 收工、壓縮被取消，回 "Compaction cancelled"）。
+ # - 沒有「這次起動用這份 MCP 設定」的旗標；-e <外掛檔> 的外掛呼叫 pi.registerMcpServer 可以（--no-approve 下照載，明寫的 -e 不受信任管）。
++# - 互動畫面：外掛拿得到 session_start（reason startup／new／resume／fork）、agent_start、agent_end（messages）、agent_settled、
++#   session_compact（compactionEntry.summary）；node:child_process 的 spawnSync 叫得動 aos 的 hook；pi.sendUserMessage(字, {deliverAs: "steer"})
++#   在答題中、不帶參數在閒著時，都把字送進對話（同 claude 畫面的收件口，cli_a2a 的 pi 分岔）。
+ # - 用量：message_end 的 message.usage {input, output, cacheRead, cacheWrite, totalTokens}；事件裡沒有 context 視窗大小。
+ 
+ EXTENSION = "pi-aos-mcp.mjs"                           # 小格裡 aos 每次起 pi 前重寫的外掛（只做一件事：登記 aos 那台 MCP）
++SCREEN_EXTENSION = "pi-aos-screen.mjs"                 # 開畫面時重寫的一行外掛：叫同層的 pi_aos_screen.mjs、帶這格的設定
++SCREEN_MODULE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pi_aos_screen.mjs")
++INBOX = "pi_inbox"                                     # 畫面開著時 aos 投信的資料夾（一封一個 .json；畫面外掛讀了就刪）
++
++
++def _write(cell, name, text):
++    try:
++        cell.write(name, text)
++    except OSError as e:
++        cli_base.die("WriteFailed", "cannot write %s: %s" % (cell.file(name), e))
++    return ["-e", cell.file(name)]
+ 
+ 
+ def extension_argv(cfg, cell, ws, stack):
+@@ -28,116 +43,116 @@ def extension_argv(cfg, cell, ws, stack):
+     args = _aos_server_args(cfg, ws, stack)
+     server = {"command": shutil.which("aos-mcp"), "args": args, "env": mcp_env(ws, stack), "exposure": "direct",
+               "description": "aos tools of this agent"}
+-    text = ("// written by aos (cli_pi.py) before each pi run; do not edit\n"
+-            "export default function (pi) { pi.registerMcpServer(\"aos\", %s); }\n" % json.dumps(server, ensure_ascii=False))
+-    try:
+-        cell.write(EXTENSION, text)
+-    except OSError as e:
+-        cli_base.die("WriteFailed", "cannot write %s: %s" % (cell.file(EXTENSION), e))
+-    return ["-e", cell.file(EXTENSION)]
++    return _write(cell, EXTENSION, "// written by aos (cli_pi.py) before each pi run; do not edit\n"
++                  "export default function (pi) { pi.registerMcpServer(\"aos\", %s); }\n" % json.dumps(server, ensure_ascii=False))
++
+ 
++def screen_extension_argv(cell, hook_script):
++    """開畫面用：小格寫一行外掛，import 同層的 pi_aos_screen.mjs、帶 {python, hook, cell, inbox}，回 ["-e", 它]。"""
++    conf = {"python": sys.executable, "hook": hook_script, "cell": cell.path, "inbox": cell.file(INBOX)}
++    return _write(cell, SCREEN_EXTENSION, "// written by aos (cli_pi.py) when it opens the screen; do not edit\n"
++                  "import run from %s;\nexport default function (pi) { run(pi, %s); }\n"
++                  % (json.dumps(SCREEN_MODULE), json.dumps(conf, ensure_ascii=False)))
+ 
+-def pi_argv(cfg, cell, ws, stack, mode, sid):
+-    """起 pi 的整串：pi --mode <mode> --no-approve --session-dir <小格>/pi-sessions --session-id <id> [flags] [print_flags] [-e 外掛] [system]。"""
++
++def pi_argv(cfg, cell, ws, stack, sid, mode="rpc"):
++    """起 pi 的整串。mode＝rpc：pi --mode rpc --no-approve --session-dir … --session-id <id> [flags] [print_flags] [-e 外掛] [system]；
++    mode＝None（畫面）：不帶 --mode 與 print_flags，sid 空＝不帶 --session-id（pi 自己開新的，畫面外掛回報 id）。"""
+     os.makedirs(cell.file(PI_SESSIONS), exist_ok=True)
+-    return (["pi", "--mode", mode, "--no-approve", "--session-dir", cell.file(PI_SESSIONS), "--session-id", sid]
+-            + cfg.get("flags", []) + cfg.get("print_flags", []) + extension_argv(cfg, cell, ws, stack) + system_argv(cfg))
++    head = ["pi"] + (["--mode", mode] if mode else []) + ["--no-approve", "--session-dir", cell.file(PI_SESSIONS)]
++    head += ["--session-id", sid] if sid else []
++    return head + cfg.get("flags", []) + (cfg.get("print_flags", []) if mode else []) + extension_argv(cfg, cell, ws, stack) + system_argv(cfg)
+ 
+ 
+-def last_assistant(lines):
+-    """事件流裡最後一則 role assistant 的 message_end 的 message；沒有＝None。"""
+-    out = None
++def message_text(msg):
++    parts = msg.get("content")
++    if isinstance(parts, str):
++        return parts
++    return "".join(p.get("text", "") for p in parts or [] if isinstance(p, dict) and p.get("type") == "text"
++                   and isinstance(p.get("text"), str))
++
++
++def messages_of(lines):
++    """事件流 → 依序每則 message_end 的 message（user、assistant；其他 role 略過）。"""
++    out = []
+     for line in lines:
+         try:
+             ev = json.loads(line)
+         except ValueError:
+             continue
+-        if isinstance(ev, dict) and ev.get("type") == "message_end":
+-            msg = ev.get("message")
+-            if isinstance(msg, dict) and msg.get("role") == "assistant":
+-                out = msg
++        msg = ev.get("message") if isinstance(ev, dict) and ev.get("type") == "message_end" else None
++        if isinstance(msg, dict) and msg.get("role") in ("user", "assistant"):
++            out.append(msg)
+     return out
+ 
+ 
+-def message_text(msg):
+-    parts = msg.get("content")
+-    if isinstance(parts, str):
+-        return parts
+-    return "".join(p.get("text", "") for p in parts or [] if isinstance(p, dict) and p.get("type") == "text"
+-                   and isinstance(p.get("text"), str))
++def answer_of(messages):
++    """回答：每則 user 之後到下一則 user 之前，最後一則講完（stopReason 不是 toolUse／error／aborted）又有字的 assistant；各段用空行接起來。
++    messages 也收畫面外掛給的瘦身版 {"role", "stopReason", "text"}。"""
++    parts, seg = [], None
++    for m in messages:
++        if m.get("role") == "user":
++            if seg:
++                parts.append(seg)
++            seg = None
++        elif m.get("role") == "assistant" and m.get("stopReason") not in ("toolUse", "error", "aborted"):
++            text = m["text"] if isinstance(m.get("text"), str) else message_text(m)
++            seg = text if text.strip() else seg
++    return "\n\n".join(parts + ([seg] if seg else []))
+ 
+ 
+ def _missing_hint(code):
+     return " (exit 127: pi, or the node it runs on, is not on PATH)" if code == 127 else ""
+ 
+ 
+-def print_pi(cfg, cell, ws, stack, prompt, handed=None, sid=None):
++def print_pi(cfg, cell, ws, stack, prompt, handed=None, sid=None, more=None):
+     """sid＝要接的對話（ask 已認過是這台的）；空＝開新對話：我們產 id、--session-id 給，交出去那一刻先寫 session.txt 與記號檔（同 claude）。
+-    沒給 sid（None）＝照舊讀 session.txt。題目從 stdin 進；事件一行一行接進 live.jsonl。回最後一則 assistant 的文字。"""
+-    from aos.agentlib.cli_print import run_claude_stream          # 通用的「起、stdin 給題目、邊讀邊寫 live.jsonl」
++    沒給 sid（None）＝照舊讀 session.txt。起一次 pi --mode rpc 送題目；more＝等回答時又來的信（midturn.More），cli.json 沒寫 "live_mail": false
++    就一封一封 steer 進去（乙案）。事件一行一行接進 live.jsonl。回 answer_of 的文字。"""
++    from aos.agentlib.cli_pi_rpc import run_pi_rpc
++    from aos.agentlib.cli_print import live_cap, parent_death_term, timeout_seconds
++    live = more is not None and cfg.get("live_mail", True) is not False
++    cap = live_cap(cfg) if live else None
+     sid = cell.read("session.txt") if sid is None else sid
+     new = "" if sid else str(uuid.uuid4())
+-    argv = pi_argv(cfg, cell, ws, stack, "json", sid or new)
++    argv = pi_argv(cfg, cell, ws, stack, sid or new)
+ 
+     def given():
+         if new:
+             mark_session("pi", cell, ws, new)
+         if handed:
+             handed()
+-    code, lines = run_claude_stream(argv, prompt, ws, cli_base.turn_timeout_ms(cfg), cell.file("live.jsonl"), given)
+-    msg = last_assistant(lines)
+-    bad = code != 0 or msg is None or msg.get("stopReason") in ("error", "aborted")
+-    if bad:
+-        if not transcripts("pi", sid or new, cell.path):           # 以為有、或第一輪就失敗而 pi 沒建檔：清掉，下一輪開新的（05、TS 9）
+-            drop_session(cell)
+-    if code != 0 or msg is None:
++    code, lines, refused = run_pi_rpc(argv, prompt, ws, timeout_seconds(cli_base.turn_timeout_ms(cfg)), cell.file("live.jsonl"),
++                                      given, more if live else None, cap, parent_death_term())
++    msgs = messages_of(lines)
++    last = next((m for m in reversed(msgs) if m.get("role") == "assistant"), None)
++    bad = refused or last is None or last.get("stopReason") in ("error", "aborted")
++    if bad and not transcripts("pi", sid or new, cell.path):       # 以為有、或第一輪就失敗而 pi 沒建檔：清掉，下一輪開新的（05、TS 9）
++        drop_session(cell)
++    if refused:
++        cli_base.die("CliFailed", "pi refused the prompt: %s" % refused)
++    if last is None:
+         cli_base.die("CliFailed", "pi exited %d with no answer in its output%s (its reason is on stderr)" % (code, _missing_hint(code)))
+     if bad:
+-        why = msg.get("errorMessage") if isinstance(msg.get("errorMessage"), str) else msg.get("stopReason")
+-        cli_base.die("CliFailed", "pi's answer ended with %s: %s" % (msg.get("stopReason"), str(why)[-300:]))
+-    return message_text(msg)
++        why = last.get("errorMessage") if isinstance(last.get("errorMessage"), str) else last.get("stopReason")
++        cli_base.die("CliFailed", "pi's answer ended with %s: %s" % (last.get("stopReason"), str(why)[-300:]))
++    return answer_of(msgs)
+ 
+ 
+ def compact(cfg, cell, ws, stack, instructions=None):
+     """非互動的 /compact：起一次 pi --mode rpc 接同一段對話，送 {"type": "compact"}（帶指示＝customInstructions），讀到 response 才關 stdin。
+     回 (True, 摘要) 或 (False, 原因)。事件也接進 live.jsonl。沒有對話＝(False, …)。"""
++    from aos.agentlib.cli_pi_rpc import rpc_once
++    from aos.agentlib.cli_print import timeout_seconds
+     sid = cell.read("session.txt")
+     if not sid:
+         return False, "no conversation yet, nothing to compact"
+-    argv = pi_argv(cfg, cell, ws, stack, "rpc", sid)
+     cmd = {"type": "compact", "id": "aos-compact"}
+     if instructions:
+         cmd["customInstructions"] = instructions
+-    try:
+-        p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, cwd=ws)
+-    except FileNotFoundError:
+-        cli_base.die("CliMissing", "pi is not on PATH")
+-    seconds = cli_base.turn_timeout_ms(cfg) / 1000 or None
+-    timer = threading.Timer(seconds, p.kill) if seconds else None
+-    if timer:
+-        timer.start()
+-    reply = None
+-    try:
+-        p.stdin.write(json.dumps(cmd) + "\n")
+-        p.stdin.flush()
+-        with open(cell.file("live.jsonl"), "a", encoding="utf-8") as live:
+-            for line in p.stdout:
+-                live.write(line)
+-                live.flush()
+-                try:
+-                    ev = json.loads(line)
+-                except ValueError:
+-                    continue
+-                if isinstance(ev, dict) and ev.get("type") == "response" and ev.get("id") == cmd["id"]:
+-                    reply = ev
+-                    break
+-        p.stdin.close()
+-        p.wait()
+-    finally:
+-        if timer:
+-            timer.cancel()
++    code, reply = rpc_once(pi_argv(cfg, cell, ws, stack, sid), cmd, ws, timeout_seconds(cli_base.turn_timeout_ms(cfg)), cell.file("live.jsonl"))
+     if reply is None:
+-        return False, "pi exited %d without answering the compact command%s" % (p.returncode, _missing_hint(p.returncode))
++        return False, "pi exited %d without answering the compact command%s" % (code, _missing_hint(code))
+     if not reply.get("success"):
+         return False, "pi did not compact: %s" % reply.get("error")
+     data = reply.get("data") if isinstance(reply.get("data"), dict) else {}
+diff --git a/proto8/py/aos/agentlib/cli_pi_rpc.py b/proto8/py/aos/agentlib/cli_pi_rpc.py
+new file mode 100644
+index 000000000..eeaca7d71
+--- /dev/null
++++ b/proto8/py/aos/agentlib/cli_pi_rpc.py
+@@ -0,0 +1,195 @@
++# cli_pi_rpc.py - pi 身非互動那條的 rpc 行程（11-18 eca-pi 乙案）：送題目、等回答時又來的信 steer 進去、agent_settled 之後收工；/compact 那一問一答
++import json, os, selectors, subprocess, threading, time
++
++from aos.agentlib import cli_base
++
++# 結構照 cli_stream.run_claude_stream_mid（claude 的 live_mail）：stdin 先不關，每次醒來（最多 0.5 秒）從 more 拿新信。
++# pi 的 rpc 比 claude 的 stream-json 好認：送出的每一則 user（題目、steer 進去的信）真的交給模型時，事件流有一則 role user 的 message_end；
++# 答完以 agent_settled 為準。所以：
++#   - 答題中（agent_start 之後、agent_end 之前）拿到的信＝{"type": "steer"}；agent_end 之後不 steer（pi 可能已經不會再讀 queue）。
++#   - agent_settled：還有 steer 了沒送到的（user message_end 比寫出去的少）＝clear_queue 拿回來；加上這時又來的信，有＝接成一則再送一次 prompt
++#     （這時 pi 閒著，prompt 會開新的一段），沒有＝關 stdin 讓 pi 收工。
++#   - 題目的 response 是 success false（例 pi 正在忙）＝refused，關 stdin。
++# 只用 LF 切行（文件：Node 的 readline 會在 U+2028 切錯，pi 只認 LF）。
++
++
++def run_pi_rpc(argv, prompt, ws, seconds, live_path, handed=None, more=None, cap=None, preexec_fn=None):
++    """起 pi --mode rpc、送題目、叫 handed，等到 agent_settled 又沒有新信就關 stdin。more＝有 take()／sent()／unsent() 的物件（midturn.More）；
++    拿到的每一項恰好叫一次 sent 或 unsent；cap＝{"letters", "seconds"}（cli_print.live_cap）。seconds＝None 不限時。
++    回 (結束碼, 全部行, refused＝題目被拒的原因或 None)。stderr 不攔、原樣透出（R10）。"""
++    try:
++        p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=ws, preexec_fn=preexec_fn)
++    except FileNotFoundError:
++        cli_base.die("CliMissing", "%s is not on PATH" % argv[0])
++    start = time.time()
++    deadline = None if seconds is None else start + seconds
++    st = {"open": True, "written": 0, "acked": 0, "mid": 0, "running": False, "n": 0, "refused": None, "clearing": None,
++          "steers": {}, "back": []}
++
++    def shut():
++        st["open"] = False
++        try:
++            p.stdin.close()
++        except OSError:
++            pass
++
++    def send(cmd):
++        st["n"] += 1
++        cmd = dict(cmd, id="aos-%d" % st["n"])
++        p.stdin.write((json.dumps(cmd, ensure_ascii=False) + "\n").encode("utf-8"))
++        p.stdin.flush()
++        return cmd["id"]
++
++    def take(limit):
++        """從 more 拿信到 limit 封或沒有為止；回 [內文]（每封已叫 sent；寫不出去的呼叫者自己處理）。"""
++        got = []
++        while (more is not None and st["open"] and st["mid"] < cap["letters"] and len(got) < limit
++               and time.time() - start < cap["seconds"] and (deadline is None or time.time() < deadline)):
++            items = more.take()
++            if not items:
++                break
++            for _name, content in items:
++                if st["mid"] >= cap["letters"]:
++                    more.unsent()
++                    continue
++                more.sent()
++                st["mid"] += 1
++                got.append(content)
++        return got
++
++    def steer():
++        if not st["running"]:
++            return
++        for content in take(1):
++            try:
++                st["steers"][send({"type": "steer", "message": content})] = content
++            except (BrokenPipeError, OSError):
++                shut()                                # 已經叫過 sent：信接進 history 了，這一封等於丟了（同 claude 管子斷）
++                return
++            st["written"] += 1
++
++    def settled():
++        if st["acked"] < st["written"]:              # steer 了還沒送到：拿回來，跟新信一起當下一段的題目
++            st["clearing"] = send({"type": "clear_queue"})
++            return
++        resend(take(cap["letters"]) if more is not None else [])
++
++    def resend(texts):
++        texts, st["back"] = [t for t in st["back"] + texts if t], []
++        if not texts or not st["open"]:
++            shut()
++            return
++        try:
++            send({"type": "prompt", "message": "\n\n".join(texts)})
++        except (BrokenPipeError, OSError):
++            shut()
++            return
++        st["written"] += 1
++
++    def seen(ev):
++        kind = ev.get("type")
++        if kind == "agent_start":
++            st["running"] = True
++        elif kind == "agent_end":
++            st["running"] = False
++        elif kind == "message_end" and isinstance(ev.get("message"), dict) and ev["message"].get("role") == "user":
++            st["acked"] += 1
++        elif kind == "response" and ev.get("command") == "steer" and ev.get("success") is False:
++            st["back"].append(st["steers"].get(ev.get("id"), ""))      # 沒收下的 steer：agent_settled 之後跟新信一起當題目再送
++            st["written"] -= 1
++        elif kind == "response" and ev.get("command") == "prompt" and ev.get("success") is False:
++            if ev.get("id") == "aos-1":
++                st["refused"] = str(ev.get("error") or "no reason given")
++            shut()                                    # 之後再送的那段被拒：那幾封已接進 history、這輪不會有它們的回答
++        elif kind == "response" and ev.get("id") == st["clearing"]:
++            st["clearing"] = None
++            data = ev.get("data") if isinstance(ev.get("data"), dict) else {}
++            back = [t for k in ("steering", "followUp") for t in data.get(k) or [] if isinstance(t, str)]
++            st["written"] = st["acked"]               # 拿回來的不再等它的 user 事件
++            resend(back + (take(cap["letters"]) if more is not None else []))
++        elif kind == "agent_settled" and st["open"]:
++            settled()
++
++    try:
++        send({"type": "prompt", "message": prompt})
++        st["written"] = 1
++    except (BrokenPipeError, OSError):
++        shut()
++    if handed:
++        handed()
++    timer = None if seconds is None else threading.Timer(seconds, p.kill)
++    if timer is not None:
++        timer.start()
++    lines, buf, fd = [], b"", p.stdout.fileno()
++    sel = selectors.DefaultSelector()
++    sel.register(fd, selectors.EVENT_READ)
++    try:
++        with open(live_path, "a", encoding="utf-8") as live:      # 只接不重寫（同 claude 的 live.jsonl）
++            def got(raw):
++                line = raw.decode("utf-8", errors="replace")
++                lines.append(line)
++                live.write(line)
++                live.flush()
++                try:
++                    ev = json.loads(line)
++                except ValueError:
++                    return
++                if isinstance(ev, dict):
++                    seen(ev)
++            while True:
++                if sel.select(0.5):
++                    chunk = os.read(fd, 65536)
++                    if not chunk:
++                        if buf:
++                            got(buf)
++                        break
++                    buf += chunk
++                    while b"\n" in buf:
++                        raw, buf = buf.split(b"\n", 1)
++                        got(raw + b"\n")
++                if st["open"] and more is not None:
++                    steer()
++        p.wait()
++    finally:
++        if timer is not None:
++            timer.cancel()
++        sel.close()
++        if st["open"]:
++            shut()
++        p.stdout.close()
++    if deadline is not None and time.time() > deadline:
++        cli_base.die("CliFailed", "%s did not finish within %d s" % (argv[0], seconds))
++    return p.returncode, lines, st["refused"]
++
++
++def rpc_once(argv, cmd, ws, seconds, live_path):
++    """起 pi --mode rpc、送一個指令、讀到它的 response（id 對得上）才關 stdin；回 (結束碼, response 或 None)。事件也接進 live.jsonl。"""
++    from aos.agentlib.cli_print import parent_death_term
++    try:
++        p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, cwd=ws, preexec_fn=parent_death_term())
++    except FileNotFoundError:
++        cli_base.die("CliMissing", "pi is not on PATH")
++    timer = threading.Timer(seconds, p.kill) if seconds else None
++    if timer:
++        timer.start()
++    reply = None
++    try:
++        p.stdin.write(json.dumps(cmd) + "\n")
++        p.stdin.flush()
++        with open(live_path, "a", encoding="utf-8") as live:
++            for line in p.stdout:
++                live.write(line)
++                live.flush()
++                try:
++                    ev = json.loads(line)
++                except ValueError:
++                    continue
++                if isinstance(ev, dict) and ev.get("type") == "response" and ev.get("id") == cmd.get("id"):
++                    reply = ev
++                    break
++        p.stdin.close()
++        p.wait()
++    finally:
++        if timer:
++            timer.cancel()
++    return p.returncode, reply
+diff --git a/proto8/py/aos/agentlib/cli_screen.py b/proto8/py/aos/agentlib/cli_screen.py
+index ce144cdf3..7c9d87b16 100644
+--- a/proto8/py/aos/agentlib/cli_screen.py
++++ b/proto8/py/aos/agentlib/cli_screen.py
+@@ -1,4 +1,4 @@
+-# cli_screen.py - cli_session 開畫面：tmux 裡起互動的 claude／codex（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供
++# cli_screen.py - cli_session 開畫面：tmux 裡起互動的 claude／codex／pi（start）與叫回畫面（open_cell）；attach／open 入口由 aos-agent 提供
+ import fcntl, json, os, shlex, sys, time
+ 
+ from aos.agentlib import cli_a2a, cli_base
+@@ -22,6 +22,7 @@ set -g status-left ''
+ set -g status-right ' Ctrl-] detach (the screen stays) | /exit or /quit inside to end '
+ set -g status-right-length 80
+ """
++PI_TMUX = "set -g extended-keys on\n"                  # pi 開場會提醒沒開這個（Shift+Enter 換行要它；11-18 實測 tmux 3.4）
+ 
+ 
+ def hook_cmd(kind, cell):
+@@ -45,9 +46,6 @@ def start(cfg, cell, ws, stack):
+ 
+ 
+ def _start(cfg, cell, ws, stack):
+-    if cfg["kind"] == "pi":                              # 11-18 eca-pi：pi 身先只做一問一答（甲案），畫面那條還沒接
+-        cli_base.die("ScreenBad", "kind pi has no screen yet: aos only runs pi --mode json (one answer per message); "
+-                                  "to look at its conversation read the cell's pi-sessions/ or live.jsonl")
+     sid = cell.read("session.txt")
+     if sid and not session_here(cfg, cell, ws, sid):     # 不是這台的（換台、搬位置、換帳號資料夾）：清掉、開新的（05）
+         drop_session(cell)
+@@ -64,6 +62,10 @@ def _start(cfg, cell, ws, stack):
+         argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack, ext) + system_argv(cfg) + settings_argv(cfg, hooks)
+         argv += ["--resume", sid] if sid else []
+         argv = exec_wrap(argv, spec)
++    elif cfg["kind"] == "pi":                            # 11-18 eca-pi 丙案：同一段對話（同 --session-dir／--session-id），aos 的畫面外掛回報每輪
++        from aos.agentlib.cli_pi import pi_argv, screen_extension_argv
++        argv = pi_argv(cfg, cell, ws, stack, sid, mode=None) + screen_extension_argv(cell, SELF)
++        argv += [] if "--tui-mode" in argv else ["--tui-mode", "regular"]   # 一般捲動：跳出再接回、tmux 往上捲都看得到前面的字
+     else:
+         if sid:
+             codex_note_compacts(cell, sid)                   # Q5：畫面開起來那刻壓過幾次＝基準，之後多出來的才跟上
+@@ -72,7 +74,7 @@ def _start(cfg, cell, ws, stack):
+         argv += ["-c", "notify=" + json.dumps(hook_cmd("codex", cell))]
+         argv = exec_wrap(argv, spec)
+     with open(cell.file("tmux.conf"), "w", encoding="utf-8") as f:
+-        f.write(TMUX_CONF)
++        f.write(TMUX_CONF + (PI_TMUX if cfg["kind"] == "pi" else ""))
+     for name in ("busy.txt",):
+         if os.path.exists(cell.file(name)):
+             os.remove(cell.file(name))
+diff --git a/proto8/py/aos/agentlib/cli_session.py b/proto8/py/aos/agentlib/cli_session.py
+index 0290a924c..f8dabba6b 100644
+--- a/proto8/py/aos/agentlib/cli_session.py
++++ b/proto8/py/aos/agentlib/cli_session.py
+@@ -102,11 +102,16 @@
+ # 父死子跟著死（11-10 坑-52，Linux）：非互動起的 CLI 設 PR_SET_PDEATHSIG＝SIGTERM——起它的這支（aos-eca-turn、claude／codex 工具）
+ #   被 kill -9／OOM，CLI 收 SIGTERM 收掉，不留孤兒拿著同一段對話跟下一輪的 --resume 撞；非 Linux 或載不到 libc 就不設。畫面（tmux）不在此列。
+ #
+-# pi 身（11-18 eca-pi 甲案，使用者「1.做成第三種。2.甲。3.先全開。」；本體 cli_pi）：只有非互動那條。每輪 pi --mode json --no-approve
+-#   --session-dir <小格>/pi-sessions --session-id <id>，題目從 stdin 進，第一輪 aos 產 id（同 claude，交出去那刻寫 session.txt），之後同一個 id＝續；
+-#   回答＝最後一則 assistant 的 message_end（stopReason error／aborted＝CliFailed，pi 這時照樣退 0）；事件接進 live.jsonl。
++# pi 身（11-18 eca-pi，使用者「1.做成第三種。2.甲。3.先全開。」，下午「接著做乙丙吧」；本體 cli_pi、cli_pi_rpc、pi_aos_screen.mjs）：
++#   非互動（乙案，取代甲案的 --mode json）：每輪 pi --mode rpc --no-approve --session-dir <小格>/pi-sessions --session-id <id>，題目一則 prompt，
++#   第一輪 aos 產 id（同 claude，交出去那刻寫 session.txt），之後同一個 id＝續；等回答時又來的信一封一則 steer（cli.json "live_mail": false 關），
++#   agent_settled 又沒新信才關 stdin；回答＝每段（題目、每封中途的信）最後講完的 assistant（stopReason error／aborted＝CliFailed，pi 這時照樣退 0）；
++#   事件接進 live.jsonl。/compact＝另起一次 rpc 送 compact。失敗不分暫時或永久（同 codex）。
+ #   aos 工具：pi 沒有「這次用這份 MCP 設定」的旗標，aos 每輪在小格寫 pi-aos-mcp.mjs（一行 pi.registerMcpServer("aos", …)）、-e 帶進去。
+-#   /compact＝另起一次 pi --mode rpc 送 compact。沒有畫面（範本不宣告 screen＝open 回 ScreenMissing；硬開＝cli_screen 的 ScreenBad）、沒有中途收信、失敗不分暫時或永久（同 codex）。
++#   畫面（丙案）：tmux 裡起互動的 pi（同 --session-dir、有對話就同 --session-id、--tui-mode regular），多帶一行外掛 pi-aos-screen.mjs（叫 lib 的
++#   pi_aos_screen.mjs）：session_start／agent_start／agent_settled／session_compact 叫 cli_session.py hook pi <小格>（cli_hook.pi_hook：跟 id、busy.txt、
++#   turns.jsonl、/new 清 history、壓縮換摘要）；畫面開著時 aos 的信寫進小格 pi_inbox/，外掛收了用 pi.sendUserMessage 送進對話（答題中＝steer）、
++#   記回執（cli_a2a 的 pi 分岔，同 claude 的收件口：不看有沒有人接著）；沒回執退回貼字。
+ #   權限照 pi 原樣全開（pi 不問、沒沙盒）；--no-approve 只擋工作區 .pi/ 的設定與外掛。帳號資料夾＝PI_CODING_AGENT_DIR 或 ~/.pi/agent。
+ #
+ # 放哪：proto8/py/aos/agentlib/cli_session.py；claude、codex 經 agent_tool.py 的 ask_cli 共用 ask，call_main 只給 aos-eca-turn --one；
+@@ -131,7 +136,7 @@ from aos.agentlib.cli_mcp import guard_main
+ 
+ if __name__ == "__main__":
+     if "--help" in sys.argv[1:2]:
+-        print("usage: cli_session.py hook claude|codex CELL [PAYLOAD]\n"
++        print("usage: cli_session.py hook claude|codex|pi CELL [PAYLOAD]\n"
+               "       cli_session.py guard\n"
+               "The hook the CLI's interactive screen calls after each turn (appends to CELL/turns.jsonl; never fails).\n"
+               "guard: claude PreToolUse hook (hook JSON on stdin); denies a subagent's call to the main agent's aos tools.\n"
+@@ -141,4 +146,4 @@ if __name__ == "__main__":
+     elif len(sys.argv) >= 4 and sys.argv[1] == "hook":
+         hook_main(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else None)
+     else:
+-        die("ArgumentsBad", "expected hook claude|codex CELL [PAYLOAD] (usage: cli_session.py hook claude|codex CELL [PAYLOAD]; see --help)")
++        die("ArgumentsBad", "expected hook claude|codex|pi CELL [PAYLOAD] (usage: cli_session.py hook claude|codex|pi CELL [PAYLOAD]; see --help)")
+diff --git a/proto8/py/aos/agentlib/context_use.py b/proto8/py/aos/agentlib/context_use.py
+index 84cb4197a..8218a8e20 100644
+--- a/proto8/py/aos/agentlib/context_use.py
++++ b/proto8/py/aos/agentlib/context_use.py
+@@ -27,7 +27,7 @@
+      claude 的輸入框有人打了字或看不出來（screen_slash.input_clear）＝也不打、信留著（不用 C-u 清，會吃掉人的字）；
+      否則 tmux send-keys 打字、0.5 秒後 Enter，等畫面的 hook 換掉 history（上限 120 秒）才回信，等不到只在回信裡說一句、不重打。
+   3. fsm 腦：<stack>/observed.jsonl 最後 256 KiB 裡最後一則有用量的 think；視窗用 window 參數，或 think/brain_wait.json 指的 kernel 公開的 endpoints.json。
+-  2b. pi 身（11-18 eca-pi；from_pi，排在 3 前面）：<stack>/pi/live.jsonl（pi --mode json 的事件，只接不重寫）最後一則 stopReason 不是 error／aborted 的
++  2b. pi 身（11-18 eca-pi；from_pi，排在 3 前面）：<stack>/pi/live.jsonl（非互動那條 pi --mode rpc 的事件，只接不重寫；畫面那條不寫這份）最後一則 stopReason 不是 error／aborted 的
+      assistant message_end 的 message.usage：input＋cacheRead＋cacheWrite＝那一刻的 context 大小；之後有成功的 compaction_end＝前面的不算。
+      pi 的事件沒有 context 視窗：視窗＝window 參數（hook 的 config.window），沒給＝None（explain 說要設 config.window）。
+   explain(stack, window=None) 回一行英文讀數或讀不到的原因，不印東西。codex 身目前沒有讀法＝None。
+diff --git a/proto8/py/aos/agentlib/pi_aos_screen.mjs b/proto8/py/aos/agentlib/pi_aos_screen.mjs
+new file mode 100644
+index 000000000..131c45032
+--- /dev/null
++++ b/proto8/py/aos/agentlib/pi_aos_screen.mjs
+@@ -0,0 +1,84 @@
++// pi_aos_screen.mjs - aos's extension for pi's interactive screen: reports turns to aos's hook and hands aos's letters to pi (11-18 eca-pi plan C)
++// Loaded through the one-line pi-aos-screen.mjs that cli_pi.py writes into the cell when it opens the screen:
++//   import run from "<this file>"; export default function (pi) { run(pi, {python, hook, cell, inbox}); }
++// Every report runs `python cli_session.py hook pi CELL` with one JSON object on stdin (cli_hook.pi_hook reads it):
++//   session_start {reason, session_id}  agent_start {session_id}  agent_settled {session_id, aborted, messages}
++//   compact {session_id, summary}  ack {ids}
++// messages are the run's messages from agent_end, cut down to {role, stopReason, text}. A failing hook never stops pi.
++// Letters: aos writes <inbox>/*.json ({id, text}); every 0.5 s they are read, deleted, joined with a blank line and sent with
++// pi.sendUserMessage (while a turn runs: deliverAs "steer", so the model reads them before its next call), then acked.
++import { spawnSync } from "node:child_process";
++import { readdirSync, readFileSync, unlinkSync } from "node:fs";
++
++function slim(messages) {
++  const out = [];
++  for (const m of Array.isArray(messages) ? messages : []) {
++    if (!m || (m.role !== "user" && m.role !== "assistant")) continue;
++    const parts = Array.isArray(m.content) ? m.content : [];
++    const text = typeof m.content === "string" ? m.content
++      : parts.filter((p) => p && p.type === "text" && typeof p.text === "string").map((p) => p.text).join("");
++    out.push({ role: m.role, stopReason: m.stopReason || null, text });
++  }
++  return out;
++}
++
++export default function run(pi, cfg) {
++  let ctx0 = null;
++  let run_messages = [];
++  const hook = (payload) => {
++    try {
++      spawnSync(cfg.python, [cfg.hook, "hook", "pi", cfg.cell], { input: JSON.stringify(payload), stdio: ["pipe", "ignore", "ignore"], timeout: 20000 });
++    } catch (e) { /* aos's bookkeeping must not break pi */ }
++  };
++  const sid = (ctx) => {
++    try { return ctx.sessionManager.getSessionId(); } catch (e) { return null; }
++  };
++  pi.on("session_start", async (event, ctx) => {
++    ctx0 = ctx;
++    hook({ event: "session_start", reason: event && event.reason, session_id: sid(ctx) });
++  });
++  pi.on("agent_start", async (_event, ctx) => {
++    ctx0 = ctx;
++    run_messages = [];
++    hook({ event: "agent_start", session_id: sid(ctx) });
++  });
++  pi.on("agent_end", async (event) => {
++    run_messages = run_messages.concat(slim(event && event.messages));
++  });
++  pi.on("agent_settled", async (event, ctx) => {
++    const messages = run_messages;
++    run_messages = [];
++    hook({ event: "agent_settled", session_id: sid(ctx), aborted: !!(event && event.aborted), messages });
++  });
++  pi.on("session_compact", async (event, ctx) => {
++    const entry = (event && event.compactionEntry) || {};
++    hook({ event: "compact", session_id: sid(ctx), summary: typeof entry.summary === "string" ? entry.summary : null });
++  });
++
++  const poll = () => {
++    let names = [];
++    try { names = readdirSync(cfg.inbox).filter((n) => n.endsWith(".json")).sort(); } catch (e) { return; }
++    if (!names.length || !ctx0) return;
++    const ids = [], texts = [];
++    for (const n of names) {
++      try {
++        const doc = JSON.parse(readFileSync(cfg.inbox + "/" + n, "utf8"));
++        unlinkSync(cfg.inbox + "/" + n);
++        if (doc && typeof doc.text === "string") { ids.push(doc.id); texts.push(doc.text); }
++      } catch (e) { /* half-written or already taken: next poll */ }
++    }
++    if (!texts.length) return;
++    const text = texts.join("\n\n");
++    let idle = true;
++    try { idle = ctx0.isIdle(); } catch (e) { idle = true; }
++    try {
++      if (idle) pi.sendUserMessage(text); else pi.sendUserMessage(text, { deliverAs: "steer" });
++    } catch (e) {
++      try { pi.sendUserMessage(text, { deliverAs: "steer" }); } catch (e2) { return; }
++    }
++    hook({ event: "ack", ids });
++  };
++  const timer = setInterval(poll, 500);
++  if (timer.unref) timer.unref();
++  pi.on("session_shutdown", async () => clearInterval(timer));
++}
+diff --git a/proto8/py/aos/apps/eca/main_screen.py b/proto8/py/aos/apps/eca/main_screen.py
+index 4ae476b15..2abd28aa6 100644
+--- a/proto8/py/aos/apps/eca/main_screen.py
++++ b/proto8/py/aos/apps/eca/main_screen.py
+@@ -218,6 +218,17 @@ def describe(ev):
+         return "  %s %s" % (item.get("type") or item.get("item_type"), (item.get("text") or item.get("command") or "")[:120])
+     if t == "turn.completed":
+         return "── end"
++    msg = ev.get("message") if t == "message_end" and isinstance(ev.get("message"), dict) else None   # pi（11-18 eca-pi）
++    if msg and msg.get("role") == "assistant":
++        text = "".join(c.get("text", "") for c in msg.get("content") or [] if isinstance(c, dict) and c.get("type") == "text")
++        return text.strip() or ("── error: %s" % msg.get("errorMessage") if msg.get("stopReason") == "error" else None)
++    if msg and msg.get("role") == "user":
++        text = "".join(c.get("text", "") for c in msg.get("content") or [] if isinstance(c, dict) and c.get("type") == "text")
++        return "  ✉ %s" % text.replace("\n", " ")[:120] if text.strip() else None
++    if t == "tool_execution_start":
++        return "  ▶ %s %s" % (ev.get("toolName"), json.dumps(ev.get("args"), ensure_ascii=False)[:120])
++    if t == "agent_settled":
++        return "── end"
+     return None
+ 
+ 
+@@ -290,7 +301,7 @@ def cmd_watch(eca, opts):
+                 s = describe(ev) if isinstance(ev, dict) else None
+                 if s:
+                     print(s, flush=True)
+-                if isinstance(ev, dict) and ev.get("type") in ("result", "turn.completed"):
++                if isinstance(ev, dict) and ev.get("type") in ("result", "turn.completed", "agent_settled"):
+                     return
+             why = None if end else gone(eca, stack, watch)   # 這一拍沒有新的整行才看
+             if why:
+diff --git a/proto8/py/aos/apps/eca/slash.py b/proto8/py/aos/apps/eca/slash.py
+index 2b8022391..bc1ebe2ab 100644
+--- a/proto8/py/aos/apps/eca/slash.py
++++ b/proto8/py/aos/apps/eca/slash.py
+@@ -24,8 +24,9 @@ from .screen_slash import SCREEN_ONLY, input_clear, screen_slash, typed_warning
+ # /goal（11-12 晚，使用者「eca還有一個slash command我很常用：/goal」「包括/goal clear」）只有它放寬成「以 /goal 開頭」（後面帶目標或 clear 等）；
+ # 實測 claude -p 認 /goal（`/goal 條件`＝設了就照跑一輪、`/goal clear`、`/goal` 查看；目標只活在那一次 claude -p 裡，下一次查看＝No goal set），
+ # codex exec 不認（當成題目），codex 畫面認 `/goal [<objective>|clear|edit|pause|resume]`。
+-# pi（11-18 eca-pi，實測 1.5.2）：pi --mode json 一個都不認（當成題目）。/compact＝起一次 pi --mode rpc 送 compact（cli_pi.compact）、
+-# history 換成它的摘要；/clear 同 codex（刪 session.txt、清 history）；/goal、/usage 回一句不支援；沒有畫面。
++# pi（11-18 eca-pi，實測 1.5.2）：非互動那條（rpc 的 prompt）不認 slash。/compact＝起一次 pi --mode rpc 送 compact（cli_pi.compact）、
++# history 換成它的摘要；/clear 同 codex（刪 session.txt、清 history）；/goal、/usage 回一句不支援。畫面開著：/compact 照打、/clear 打成 pi 的 /new，
++# aos 這邊靠畫面外掛跟上（session_compact、session_start new；同 claude 等 history 改完）。
+ 
+ SLASH = ("/clear", "/compact", "/status", "/usage", "/exit")
+ GOAL = "/goal"
+@@ -188,7 +189,7 @@ def on_screen(command, cfg, cell, stack, typed=None):
+     再 cli_hook.codex_sync_compact（history 換成從 replacement_history 撈出的對話；撈不到＝不動、回一句，Q5）。"""
+     before = history_bytes(stack)
+     sid = cell.read("session.txt")
+-    if cfg["kind"] != "claude" and command == "/compact" and sid:
++    if cfg["kind"] == "codex" and command == "/compact" and sid:
+         n0 = cli_hook.codex_note_compacts(cell, sid)            # Q5：打之前壓過幾次＝基準
+         cli_ask.type_line(cell, command)
+         deadline = time.time() + SCREEN_WAIT
+@@ -203,8 +204,11 @@ def on_screen(command, cfg, cell, stack, typed=None):
+         if got[0] == "unrecognized":
+             return note("/compact: typed into the open screen; codex compacted, but aos could not read the conversation out of it, so aos's history is left as it is")
+         return note("/compact: typed into the open screen; history replaced by the conversation codex kept (%d messages moved to history_removed.jsonl)" % got[1])
+-    cli_ask.type_line(cell, typed if typed and cfg["kind"] == "claude" else command)   # claude 畫面收 /compact 指示；codex 只打指令本身
+-    if cfg["kind"] != "claude":
++    if cfg["kind"] == "pi":                                  # pi 畫面：/compact 收指示；清對話的指令叫 /new
++        cli_ask.type_line(cell, "/new" if command == "/clear" else typed or command)
++    else:
++        cli_ask.type_line(cell, typed if typed and cfg["kind"] == "claude" else command)   # claude 畫面收 /compact 指示；codex 只打指令本身
++    if cfg["kind"] == "codex":
+         later = ("aos clears its history when the next answer comes from the new thread" if command == "/clear" else
+                  "there is no conversation yet, so there is nothing for aos to follow")
+         return note("%s: typed into the open screen; %s" % (command, later))
+@@ -214,7 +218,7 @@ def on_screen(command, cfg, cell, stack, typed=None):
+     if history_bytes(stack) == before:
+         return note("%s: typed into the open screen; aos's history did not change within %d s (check the screen: aos-agent open)"
+                     % (command, SCREEN_WAIT))
+-    done = "history moved to history_removed.jsonl" if command == "/clear" else "history replaced by claude's summary (the old messages are in history_removed.jsonl)"
++    done = "history moved to history_removed.jsonl" if command == "/clear" else "history replaced by %s's summary (the old messages are in history_removed.jsonl)" % cfg["kind"]
+     return note("%s: typed into the open screen; %s; conversation %s" % (command, done, cell.read("session.txt")))
+ 
+ 
+@@ -241,7 +245,9 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
+     cleared, hand = None, None
+     if command == GOAL:                                             # /goal …：CLI 自己的 goal，aos 只負責交到它手上
+         full = bodies[0]["content"].strip()
+-        if alive:
++        if kind == "pi":
++            text = note("/goal: pi has no /goal (it would read it as a plain question); nothing was sent")
++        elif alive:
+             if os.path.exists(cell.file("busy.txt")):
+                 return 0                                            # 不打斷正在跑的那輪
+             if kind == "claude" and not input_clear(cell):          # 輸入框有人打到一半（或看不出來）：不打、信留 cur/（repo-aos 11-16）
+@@ -256,8 +262,6 @@ def slash_turn(command, cfg, cell, template, ws, stack, box, good, bodies, on_bu
+             if got is None:
+                 return 0                                            # SessionBad：同一般一輪，信留 cur/
+             text = got.strip() or note("/goal: claude printed nothing")
+-        elif kind == "pi":
+-            text = note("/goal: pi has no /goal (it would read it as a plain question); nothing was sent")
+         else:
+             text = note("/goal: codex has /goal only on its screen (codex exec would read it as a plain question); "
+                         "open the screen (aos-agent open) and send it again")
+diff --git a/proto8/py/tests/apps/eca/fake_pi b/proto8/py/tests/apps/eca/fake_pi
+index 2e2876e97..a497af4e6 100755
+--- a/proto8/py/tests/apps/eca/fake_pi
++++ b/proto8/py/tests/apps/eca/fake_pi
+@@ -1,27 +1,28 @@
+ #!/usr/bin/env python3
+-# fake_pi - stand-in for the pi coding agent CLI in aos-eca tests: --mode json / --mode rpc compact, sessions as files, never calls a model
+-"""Usage: fake_pi --mode json --session-dir DIR --session-id ID [flags] < prompt
+-       fake_pi --mode rpc --session-dir DIR --session-id ID [flags]   (stdin: one {"type": "compact"} line)
++# fake_pi - stand-in for the pi coding agent CLI in aos-eca tests: --mode rpc (prompt, steer, clear_queue, compact, get_state) and the interactive screen with aos's screen extension
++"""Usage: fake_pi --mode rpc --session-dir DIR [--session-id ID] [flags]   (stdin: JSONL commands)
++       fake_pi --session-dir DIR [--session-id ID] [-e .../pi-aos-screen.mjs] [flags]   (interactive: one line typed = one prompt)
+        fake_pi --version
+ 
+-Shapes follow pi 1.5.2 as measured on 11-18: the session file is DIR/<time>_<ID>.jsonl; json mode prints a session line,
+-agent_start, message_end (user), message_end (assistant, usage), agent_end, agent_settled; the prompt is stdin.
+-A second run with the same ID appends to the same file (continues). The answer is "FAKE PI: <prompt>" (turn N in the file).
+-FAKE_CLI_FAIL=1: the assistant message ends with stopReason "error" and errorMessage "connect timeout", exit 0 (pi does that).
++Shapes follow pi 1.5.2 as measured on 11-18: the session file is DIR/<time>_<ID>.jsonl; a second run with the same ID continues it.
++rpc: prompt -> response {disposition started}, agent_start, message_end user, (FAKE_PI_DELAY seconds; steers queued meanwhile are
++delivered one by one as message_end user, each answered by its own assistant message), message_end assistant, agent_end, agent_settled.
++prompt while running -> response success false "Agent is already processing...". The answer is "FAKE PI: <text>".
++Interactive: without -e of aos's screen extension it only echoes; with it, it does what pi_aos_screen.mjs does: session_start,
++agent_start, agent_settled (messages), compact (/compact), session_start new (/new) through `python cli_session.py hook pi CELL`, and every
++0.2 s takes the inbox files (sent as one prompt when idle, delivered at the end of the running turn otherwise) and reports ack.
++FAKE_CLI_FAIL=1: the assistant message ends with stopReason "error" and errorMessage "connect timeout" (pi still exits 0).
+ FAKE_CLI_FAIL_SAVED=1 (with FAKE_CLI_FAIL=1): the session file is still created.
+ FAKE_CLI_EXIT=N: print nothing on stdout, one stderr line, exit N.
+ FAKE_CLI_COMPACT_FAIL=1: rpc compact answers success false, "Nothing to compact (session too small)".
+-FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": "..."} as one JSON line per call."""
+-import json, os, sys, time
++FAKE_CLI_LOG=FILE: append {"argv": [...], "stdin": [lines]} as one JSON line per run (written when the run ends)."""
++import json, os, re, select, subprocess, sys, time, uuid
+ 
+ argv = sys.argv[1:]
+ if "--version" in argv:
+     print("1.5.2")
+     sys.exit(0)
+-if "--help" in argv or "-h" in argv:
+-    print(__doc__)
+-    sys.exit(0)
+-VALUED = {"--mode", "--session-dir", "--session-id", "--model", "-e", "--append-system-prompt", "--provider"}
++VALUED = {"--mode", "--session-dir", "--session-id", "--model", "-e", "--append-system-prompt", "--provider", "--tui-mode"}
+ opts, it = {}, iter(argv)
+ for a in it:
+     if a in VALUED:
+@@ -34,25 +35,45 @@ def one(k):
+     return (opts.get(k) or [None])[-1]
+ 
+ 
+-mode, sdir, sid = one("--mode"), one("--session-dir"), one("--session-id")
+-if mode not in ("json", "rpc") or not sdir or not sid:
+-    sys.stderr.write("fake_pi: needs --mode json|rpc --session-dir DIR --session-id ID\n")
+-    sys.exit(2)
+-log = os.environ.get("FAKE_CLI_LOG")
+-if os.environ.get("FAKE_CLI_EXIT"):
++mode, sdir = one("--mode"), one("--session-dir")
++sid = one("--session-id") or str(uuid.uuid4())
++log, got_in = os.environ.get("FAKE_CLI_LOG"), []
++
++
++def write_log():
+     if log:
+         with open(log, "a", encoding="utf-8") as f:
+-            f.write(json.dumps({"argv": sys.argv, "stdin": ""}, ensure_ascii=False) + "\n")
++            f.write(json.dumps({"argv": sys.argv, "stdin": got_in}, ensure_ascii=False) + "\n")
++
++
++if mode not in ("rpc", None) or not sdir:
++    sys.stderr.write("fake_pi: needs [--mode rpc] --session-dir DIR\n")
++    sys.exit(2)
++if os.environ.get("FAKE_CLI_EXIT"):
++    write_log()
+     sys.stderr.write("fake_pi: failing on purpose\n")
+     sys.exit(int(os.environ["FAKE_CLI_EXIT"]))
+ os.makedirs(sdir, exist_ok=True)
+-found = [n for n in os.listdir(sdir) if n.endswith("_%s.jsonl" % sid)]
+-path = os.path.join(sdir, found[0] if found else "2026-11-18T00-00-00-000Z_%s.jsonl" % sid)
+ 
+ 
+-def emit(ev):
+-    sys.stdout.write(json.dumps(ev) + "\n")
+-    sys.stdout.flush()
++def session_path(ident):
++    found = [n for n in os.listdir(sdir) if n.endswith("_%s.jsonl" % ident)]
++    return os.path.join(sdir, found[0] if found else "2026-11-18T00-00-00-000Z_%s.jsonl" % ident)
++
++
++path = session_path(sid)
++fail = bool(os.environ.get("FAKE_CLI_FAIL"))
++if not os.path.exists(path):
++    sys.stderr.write("Warning: No project session found with id '%s'; creating a new session with that id.\n" % sid)
++    if not fail or os.environ.get("FAKE_CLI_FAIL_SAVED"):
++        with open(path, "a", encoding="utf-8") as f:
++            f.write(json.dumps({"type": "session", "id": sid, "cwd": os.getcwd()}) + "\n")
++
++
++def save(row):
++    if os.path.exists(path):
++        with open(path, "a", encoding="utf-8") as f:
++            f.write(json.dumps(row) + "\n")
+ 
+ 
+ def entries():
+@@ -62,51 +83,182 @@ def entries():
+         return [json.loads(l) for l in f if l.strip()]
+ 
+ 
+-def save(row):
+-    with open(path, "a", encoding="utf-8") as f:
+-        f.write(json.dumps(row) + "\n")
++def user(text):
++    return {"role": "user", "content": [{"type": "text", "text": text}]}
+ 
+ 
+-if mode == "rpc":
+-    line = sys.stdin.readline()
+-    if log:
+-        with open(log, "a", encoding="utf-8") as f:
+-            f.write(json.dumps({"argv": sys.argv, "stdin": line}, ensure_ascii=False) + "\n")
+-    cmd = json.loads(line)
+-    emit({"type": "compaction_start", "reason": "manual"})
+-    if os.environ.get("FAKE_CLI_COMPACT_FAIL"):
+-        emit({"id": cmd.get("id"), "type": "response", "command": "compact", "success": False,
+-              "error": "Nothing to compact (session too small)"})
+-    else:
+-        summary = "FAKE SUMMARY of %d entries" % len(entries())
+-        save({"type": "compaction", "summary": summary})
+-        emit({"type": "compaction_end", "reason": "manual", "result": {"summary": summary}, "aborted": False, "willRetry": False})
+-        emit({"id": cmd.get("id"), "type": "response", "command": "compact", "success": True,
+-              "data": {"summary": summary, "tokensBefore": 1000}})
+-    sys.stdin.read()                                    # pi stops when stdin closes
+-    sys.exit(0)
++def assistant(text):
++    turn = sum(1 for e in entries() if e.get("type") == "message") + 1
++    usage = {"input": 1000 + 10 * turn, "output": 7, "cacheRead": 50, "cacheWrite": 0, "totalTokens": 1057 + 10 * turn}
++    if fail:
++        return {"role": "assistant", "content": [], "usage": usage, "stopReason": "error", "errorMessage": "connect timeout"}
++    return {"role": "assistant", "content": [{"type": "text", "text": "FAKE PI: %s" % text}], "usage": usage, "stopReason": "stop"}
+ 
+-prompt = sys.stdin.read()
+-if log:
+-    with open(log, "a", encoding="utf-8") as f:
+-        f.write(json.dumps({"argv": sys.argv, "stdin": prompt}, ensure_ascii=False) + "\n")
+-fail = bool(os.environ.get("FAKE_CLI_FAIL"))
+-if not found:
+-    sys.stderr.write("Warning: No project session found with id '%s'; creating a new session with that id.\n" % sid)
+-    if not fail or os.environ.get("FAKE_CLI_FAIL_SAVED"):
+-        save({"type": "session", "id": sid, "cwd": os.getcwd()})
+-turn = sum(1 for e in entries() if e.get("type") == "message") + 1
+-emit({"type": "session", "version": 3, "id": sid, "timestamp": "2026-11-18T00:00:00.000Z", "cwd": os.getcwd()})
+-emit({"type": "agent_start"})
+-user = {"role": "user", "content": [{"type": "text", "text": prompt}], "timestamp": int(time.time() * 1000)}
+-emit({"type": "message_end", "message": user})
+-usage = {"input": 1000 + 10 * turn, "output": 7, "cacheRead": 50, "cacheWrite": 0, "totalTokens": 1057 + 10 * turn}
+-if fail:
+-    msg = {"role": "assistant", "content": [], "usage": usage, "stopReason": "error", "errorMessage": "connect timeout"}
+-else:
+-    msg = {"role": "assistant", "content": [{"type": "text", "text": "FAKE PI: %s" % prompt}], "usage": usage, "stopReason": "stop"}
+-    save({"type": "message", "message": user})
+-    save({"type": "message", "message": msg})
+-emit({"type": "message_end", "message": msg})
+-emit({"type": "agent_end", "messages": [user, msg], "willRetry": False})
+-emit({"type": "agent_settled", "aborted": False})
++
++def emit(ev):
++    sys.stdout.write(json.dumps(ev) + "\n")
++    sys.stdout.flush()
++
++
++BUF = {"data": b"", "eof": False}
++
++
++def read_line(wait):
++    """one stdin line (raw fd, own buffer: select on a buffered sys.stdin misses lines already read in); None = none within wait; "" = EOF."""
++    end = None if wait is None else time.time() + wait
++    while b"\n" not in BUF["data"] and not BUF["eof"]:
++        left = None if end is None else max(0, end - time.time())
++        if not select.select([0], [], [], left)[0]:
++            return None
++        chunk = os.read(0, 65536)
++        BUF["data"] += chunk
++        BUF["eof"] = not chunk
++    if b"\n" not in BUF["data"]:
++        line, BUF["data"] = BUF["data"], b""
++        return line.decode("utf-8", "replace")
++    line, BUF["data"] = BUF["data"].split(b"\n", 1)
++    return line.decode("utf-8", "replace") + "\n"
++
++
++def lines_until(deadline):
++    """stdin lines that come before deadline (None = one line, waiting as long as it takes); returns (lines, eof)."""
++    out = []
++    while True:
++        line = read_line(None if deadline is None else max(0, deadline - time.time()))
++        if line is None:
++            return out, False
++        if not line:
++            return out, True
++        got_in.append(line)
++        out.append(line)
++        if deadline is None:
++            return out, False
++
++
++def rpc():
++    queue, closed = [], False
++    delay = float(os.environ.get("FAKE_PI_DELAY", "0"))
++
++    def answer(text, messages):
++        msg = assistant(text)
++        save({"type": "message", "message": user(text)})
++        save({"type": "message", "message": msg})
++        emit({"type": "message_end", "message": msg})
++        messages += [user(text), msg]
++
++    def handle(cmd, running):
++        kind = cmd.get("type")
++        if kind == "prompt" and running:
++            emit({"id": cmd.get("id"), "type": "response", "command": "prompt", "success": False,
++                  "error": "Agent is already processing. Specify streamingBehavior ('steer' or 'followUp') to queue the message."})
++        elif kind in ("steer", "follow_up"):
++            queue.append(cmd.get("message", ""))
++            emit({"type": "queue_update", "steering": list(queue), "followUp": []})
++            emit({"id": cmd.get("id"), "type": "response", "command": kind, "success": True, "data": {"disposition": "queued"}})
++        elif kind == "clear_queue":
++            emit({"id": cmd.get("id"), "type": "response", "command": "clear_queue", "success": True,
++                  "data": {"steering": list(queue), "followUp": []}})
++            queue.clear()
++        elif kind == "get_state":
++            emit({"id": cmd.get("id"), "type": "response", "command": "get_state", "success": True,
++                  "data": {"sessionId": sid, "sessionFile": path, "isStreaming": running, "pendingMessageCount": len(queue)}})
++        elif kind == "compact":
++            emit({"type": "compaction_start", "reason": "manual"})
++            if os.environ.get("FAKE_CLI_COMPACT_FAIL"):
++                emit({"id": cmd.get("id"), "type": "response", "command": "compact", "success": False,
++                      "error": "Nothing to compact (session too small)"})
++            else:
++                summary = "FAKE SUMMARY of %d entries" % len(entries())
++                save({"type": "compaction", "summary": summary})
++                emit({"type": "compaction_end", "reason": "manual", "result": {"summary": summary}, "aborted": False, "willRetry": False})
++                emit({"id": cmd.get("id"), "type": "response", "command": "compact", "success": True,
++                      "data": {"summary": summary, "tokensBefore": 1000}})
++        elif kind == "prompt":
++            return cmd
++        return None
++
++    while not closed:
++        got, closed = lines_until(None)
++        for line in got:
++            cmd = handle(json.loads(line), False)
++            if not cmd:
++                continue
++            emit({"id": cmd.get("id"), "type": "response", "command": "prompt", "success": True, "data": {"disposition": "started"}})
++            emit({"type": "agent_start"})
++            emit({"type": "message_end", "message": user(cmd["message"])})
++            messages = []
++            later, closed = lines_until(time.time() + delay)
++            for l2 in later:
++                handle(json.loads(l2), True)
++            answer(cmd["message"], messages)
++            while queue and not fail:
++                text = queue.pop(0)
++                emit({"type": "queue_update", "steering": list(queue), "followUp": []})
++                emit({"type": "message_end", "message": user(text)})
++                answer(text, messages)
++            emit({"type": "agent_end", "messages": messages, "willRetry": False})
++            emit({"type": "agent_settled", "aborted": False})
++    write_log()
++
++
++def screen():
++    conf = None
++    for e in opts.get("-e") or []:
++        if e.endswith("pi-aos-screen.mjs"):
++            m = re.search(r"run\(pi, (\{.*\})\);", open(e, encoding="utf-8").read())
++            conf = json.loads(m.group(1)) if m else None
++    state = {"sid": sid, "busy": False}
++
++    def hook(payload):
++        if conf:
++            subprocess.run([conf["python"], conf["hook"], "hook", "pi", conf["cell"]], input=json.dumps(payload), text=True,
++                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
++
++    def turn(text):
++        hook({"event": "agent_start", "session_id": state["sid"]})
++        time.sleep(float(os.environ.get("FAKE_PI_DELAY", "0")))
++        msg = assistant(text)
++        save({"type": "message", "message": user(text)})
++        save({"type": "message", "message": msg})
++        print("FAKE PI: %s" % text, flush=True)
++        slim = [{"role": "user", "stopReason": None, "text": text},
++                {"role": "assistant", "stopReason": msg["stopReason"], "text": "".join(c["text"] for c in msg["content"])}]
++        hook({"event": "agent_settled", "session_id": state["sid"], "aborted": False, "messages": slim})
++
++    hook({"event": "session_start", "reason": "startup", "session_id": sid})
++    print("fake pi screen, session %s" % sid, flush=True)
++    while True:
++        line = read_line(0.2)
++        if line == "":
++            break
++        if line is not None:
++            text = line.strip().replace("\x1b[200~", "").replace("\x1b[201~", "")
++            got_in.append(text)
++            if text == "/quit":
++                break
++            if text.startswith("/compact"):
++                save({"type": "compaction", "summary": "FAKE SCREEN SUMMARY"})
++                hook({"event": "compact", "session_id": state["sid"], "summary": "FAKE SCREEN SUMMARY"})
++            elif text == "/new":
++                global path
++                state["sid"] = str(uuid.uuid4())
++                path = session_path(state["sid"])
++                hook({"event": "session_start", "reason": "new", "session_id": state["sid"]})
++            elif text:
++                turn(text)
++        inbox = conf and conf.get("inbox")
++        names = sorted(n for n in os.listdir(inbox) if n.endswith(".json")) if inbox and os.path.isdir(inbox) else []
++        if names:
++            docs = []
++            for n in names:
++                with open(os.path.join(inbox, n), encoding="utf-8") as f:
++                    docs.append(json.load(f))
++                os.remove(os.path.join(inbox, n))
++            text = "\n\n".join(d["text"] for d in docs)
++            got_in.append(text)
++            hook({"event": "ack", "ids": [d["id"] for d in docs]})
++            turn(text)
++    write_log()
++
++
++rpc() if mode == "rpc" else screen()
+diff --git a/proto8/py/tests/apps/eca/test_pi.py b/proto8/py/tests/apps/eca/test_pi.py
+index 30f4cc4a8..5733cfa0b 100644
+--- a/proto8/py/tests/apps/eca/test_pi.py
++++ b/proto8/py/tests/apps/eca/test_pi.py
+@@ -1,10 +1,11 @@
+-"""Test the pi kind of aos-eca-turn (11-18 eca-pi, plan A: pi --mode json one answer per message) with a fake pi CLI."""
++"""Test the pi kind of aos-eca-turn (11-18 eca-pi, plan B: one pi --mode rpc per batch, letters that come meanwhile steered in) with a fake pi CLI."""
+ import json
+ import os
+ from pathlib import Path
+ import subprocess
+ import sys
+ import tempfile
++import time
+ import unittest
+ 
+ sys.dont_write_bytecode = True
+@@ -12,7 +13,7 @@ HERE = Path(__file__).resolve().parent
+ REPO = HERE.parents[4]
+ TURN = REPO / "proto8" / "bin" / "aos-eca-turn"                       # the entry install.py writes
+ sys.path.insert(0, str(REPO / "proto8" / "py"))
+-from aos.agentlib import cli_cell, context_use  # noqa: E402
++from aos.agentlib import cli_cell, cli_pi, context_use  # noqa: E402
+ 
+ 
+ class PiBase(unittest.TestCase):
+@@ -95,11 +96,11 @@ class PiTurn(PiBase):
+         self.assertEqual(self.sid(), first)
+         c1, c2 = self.calls()
+         for c in (c1, c2):
+-            self.assertEqual(self.flag(c, "--mode"), "json")
++            self.assertEqual(self.flag(c, "--mode"), "rpc")
+             self.assertIn("--no-approve", c["argv"])
+             self.assertEqual(self.flag(c, "--session-dir"), str(self.cell / "pi-sessions"))
+             self.assertEqual(self.flag(c, "--session-id"), first)
+-        self.assertEqual(c2["stdin"], "again")
++        self.assertEqual(json.loads(c2["stdin"][0]), {"type": "prompt", "message": "again", "id": "aos-1"})
+         self.assertEqual([m["content"] for m in self.history()], ["hello", "FAKE PI: hello", "again", "FAKE PI: again"])
+         mark = json.loads((self.cell / ".session_home").read_text())
+         self.assertEqual(mark["home"], os.path.realpath(self.home / ".pi" / "agent"))
+@@ -155,7 +156,7 @@ class PiTurn(PiBase):
+         self.ok_turn()
+         rpc = self.calls()[-1]
+         self.assertEqual(self.flag(rpc, "--mode"), "rpc")
+-        self.assertEqual(json.loads(rpc["stdin"]), {"type": "compact", "id": "aos-compact", "customInstructions": "keep the names"})
++        self.assertEqual(json.loads(rpc["stdin"][0]), {"type": "compact", "id": "aos-compact", "customInstructions": "keep the names"})
+         self.assertEqual(self.sid(), sid)
+         rows = self.history()
+         self.assertIn("FAKE SUMMARY", rows[0]["content"])
+@@ -180,6 +181,44 @@ class PiTurn(PiBase):
+         self.ok_turn()
+         self.assertTrue(self.sid() and self.sid() != first)
+ 
++    def test_9_letter_during_the_answer_is_steered_in(self):
++        self.say("hello")
++        p = subprocess.Popen([str(TURN), "--on-empty", "idle", str(self.defn)], env=self.env(FAKE_PI_DELAY="2"),
++                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
++        time.sleep(0.8)
++        self.say("second")
++        out, err = p.communicate(timeout=60)
++        self.assertEqual(p.returncode, 0, err)
++        self.assertEqual([m["content"] for m in self.history()], ["hello", "second", "FAKE PI: hello\n\nFAKE PI: second"])
++        (call,) = self.calls()
++        sent = [json.loads(l) for l in call["stdin"]]
++        self.assertEqual([c["type"] for c in sent], ["prompt", "steer"])
++        self.assertEqual(sent[1]["message"], "second")
++        self.assertEqual(list((self.stack / "queue" / "new").iterdir()), [])
++
++    def test_10_live_mail_false_waits_for_the_next_turn(self):
++        self.write_cfg({"live_mail": False})
++        self.say("hello")
++        p = subprocess.Popen([str(TURN), "--on-empty", "idle", str(self.defn)], env=self.env(FAKE_PI_DELAY="1.5"),
++                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
++        time.sleep(0.6)
++        self.say("second")
++        p.communicate(timeout=60)
++        self.assertEqual([m["content"] for m in self.history()], ["hello", "FAKE PI: hello"])
++        self.ok_turn()
++        self.assertEqual([m["content"] for m in self.history()][2:], ["second", "FAKE PI: second"])
++
++
++class PiAnswer(unittest.TestCase):
++    def test_segments(self):
++        a = lambda text, stop="stop": {"role": "assistant", "stopReason": stop, "text": text}
++        u = {"role": "user", "text": "q"}
++        self.assertEqual(cli_pi.answer_of([u, a("", "toolUse"), a("one"), u, a("let me look", "toolUse"), a("two")]), "one\n\ntwo")
++        self.assertEqual(cli_pi.answer_of([u, a("x", "toolUse"), u, a("both")]), "both")       # steered in before it said anything
++        self.assertEqual(cli_pi.answer_of([u, a("half", "error")]), "")
++        full = {"role": "assistant", "stopReason": "stop", "content": [{"type": "thinking"}, {"type": "text", "text": "hi"}]}
++        self.assertEqual(cli_pi.answer_of([u, full]), "hi")
++
+ 
+ class PiCfg(PiBase):
+     def bad(self, more, words):
+diff --git a/proto8/py/tests/apps/eca/test_pi_screen.py b/proto8/py/tests/apps/eca/test_pi_screen.py
+new file mode 100644
+index 000000000..cebf817c2
+--- /dev/null
++++ b/proto8/py/tests/apps/eca/test_pi_screen.py
+@@ -0,0 +1,175 @@
++"""Test the pi kind's screen (11-18 eca-pi plan C: hook pi, the inbox in cli_a2a, a real tmux screen running fake_pi) and the rpc run loop."""
++import json
++import os
++from pathlib import Path
++import shutil
++import subprocess
++import sys
++import tempfile
++import time
++import unittest
++from unittest import mock
++
++sys.dont_write_bytecode = True
++HERE = Path(__file__).resolve().parent
++REPO = HERE.parents[4]
++SESSION = REPO / "proto8" / "py" / "aos" / "agentlib" / "cli_session.py"
++sys.path.insert(0, str(REPO / "proto8" / "py"))
++from aos.agentlib import cli_a2a, cli_ask, cli_base, cli_cell, cli_pi, cli_pi_rpc, cli_screen  # noqa: E402
++
++
++class Base(unittest.TestCase):
++    def setUp(self):
++        self.tmp = tempfile.TemporaryDirectory(prefix="t-pi-screen-")
++        self.addCleanup(self.tmp.cleanup)
++        t = Path(self.tmp.name)
++        self.t, self.ws, self.home, self.stack = t, t / "ws", t / "home", t / "stack"
++        for d in (self.ws, self.home, self.stack, t / "run", t / "bin"):
++            d.mkdir()
++        pi = t / "bin" / "pi"
++        pi.write_text('#!/bin/sh\nexec "%s" "%s" "$@"\n' % (sys.executable, HERE / "fake_pi"))
++        pi.chmod(0o755)
++        self.log = t / "cli_log.jsonl"
++        env = {"HOME": str(self.home), "XDG_RUNTIME_DIR": str(t / "run"), "FAKE_CLI_LOG": str(self.log),
++               "PATH": "%s:%s" % (t / "bin", os.environ.get("PATH", "")), "PYTHONDONTWRITEBYTECODE": "1"}
++        for patcher in (mock.patch.dict(os.environ, env), mock.patch.object(cli_base, "die", self.raise_die)):
++            patcher.start()
++            self.addCleanup(patcher.stop)
++        for k in [k for k in os.environ if k.startswith(("AOS_", "FAKE_PI_", "PI_", "TMUX"))]:
++            os.environ.pop(k)
++        self.cell = cli_cell.Cell(str(self.stack / "pi"))
++        self.cell.write("ws.txt", os.path.relpath(self.ws, self.cell.path) + "\n")
++        self.cell.write("stack.txt", os.path.relpath(self.stack, self.cell.path) + "\n")
++        self.cfg = {"kind": "pi", "flags": [], "timeout_ms": 20000}
++
++    @staticmethod
++    def raise_die(code, reason):
++        raise RuntimeError("%s %s" % (code, reason))
++
++    def hook(self, payload):
++        r = subprocess.run([sys.executable, str(SESSION), "hook", "pi", self.cell.path], input=json.dumps(payload),
++                           capture_output=True, text=True)
++        self.assertEqual(r.returncode, 0, r.stderr)
++
++    def history(self, rows=None):
++        p = self.stack / "history.jsonl"
++        if rows is not None:
++            p.write_text("".join(json.dumps(r) + "\n" for r in rows))
++        return [json.loads(l) for l in p.read_text().splitlines() if l.strip()] if p.exists() else []
++
++
++class Hook(Base):
++    def test_turn_start_and_end(self):
++        self.hook({"event": "session_start", "reason": "startup", "session_id": "s1"})
++        self.assertEqual(json.loads(self.cell.read("a2a.json")), {"inbox": self.cell.file("pi_inbox")})
++        self.assertTrue(os.path.isdir(self.cell.file("pi_inbox")))
++        self.assertEqual(self.cell.read("session.txt"), "")                 # startup: wait for the first turn
++        self.hook({"event": "agent_start", "session_id": "s1"})
++        self.assertEqual(self.cell.read("session.txt"), "s1")
++        self.assertTrue(os.path.exists(self.cell.file("busy.txt")))
++        msgs = [{"role": "user", "text": "q"}, {"role": "assistant", "stopReason": "toolUse", "text": ""},
++                {"role": "assistant", "stopReason": "stop", "text": "done"}]
++        self.hook({"event": "agent_settled", "session_id": "s1", "aborted": False, "messages": msgs})
++        self.assertEqual([t["text"] for t in self.cell.turns()], ["done"])
++        self.assertFalse(os.path.exists(self.cell.file("busy.txt")))
++        self.hook({"event": "ack", "ids": ["abc"]})
++        self.assertEqual(list(cli_a2a.acked(self.cell, 0, ["abc"])), ["abc"])
++
++    def test_new_clears_history_and_compact_replaces_it(self):
++        self.history([{"role": "user", "content": "a"}, {"role": "assistant", "content": "b"}])
++        self.hook({"event": "compact", "session_id": "s1", "summary": "short version"})
++        rows = self.history()
++        self.assertEqual(len(rows), 1)
++        self.assertIn("short version", rows[0]["content"])
++        self.hook({"event": "session_start", "reason": "new", "session_id": "s2"})
++        self.assertEqual(self.history(), [])
++        self.assertEqual(self.cell.read("session.txt"), "s2")
++        self.assertTrue((self.stack / "history_removed.jsonl").exists())
++
++    def test_inbox_post(self):
++        self.assertIsNone(cli_a2a.socket_path(self.cfg, self.cell))
++        cli_a2a.note_inbox(self.cell, self.cell.file("pi_inbox"))
++        path = cli_a2a.socket_path(self.cfg, self.cell)
++        self.assertEqual(path, self.cell.file("pi_inbox"))
++        self.assertIsNone(cli_a2a.socket_path(dict(self.cfg, a2a=False), self.cell))
++        ids = cli_a2a.post(self.cfg, path, [("ann", "one"), (None, "two")])
++        docs = [json.loads((Path(path) / n).read_text()) for n in sorted(os.listdir(path))]
++        self.assertEqual([(d["id"], d["text"]) for d in docs], list(zip(ids, ["one", "two"])))
++
++
++@unittest.skipUnless(shutil.which("tmux"), "needs tmux")
++class Screen(Base):
++    def setUp(self):
++        super().setUp()
++        self.addCleanup(lambda: cli_cell.close(self.cell))
++
++    def test_open_answer_through_inbox_and_by_typing(self):
++        self.cell.write("session.txt", "")
++        self.assertTrue(cli_screen.start(self.cfg, self.cell, str(self.ws), str(self.stack)))
++        deadline = time.time() + 10
++        while not cli_a2a.socket_path(self.cfg, self.cell) and time.time() < deadline:
++            time.sleep(0.1)
++        self.assertTrue(cli_a2a.socket_path(self.cfg, self.cell))
++        got = cli_ask.ask(self.cfg, self.cell, str(self.ws), str(self.ws), str(self.stack), "first\n\nsecond",
++                          parts=[("ann", "first"), (None, "second")])
++        self.assertEqual(got, "FAKE PI: first\n\nsecond")
++        sid = self.cell.read("session.txt")
++        self.assertTrue(sid)
++        self.assertEqual(cli_ask.ask(self.cfg, self.cell, str(self.ws), str(self.ws), str(self.stack), "typed in"), "FAKE PI: typed in")
++        self.assertEqual(self.cell.read("session.txt"), sid)
++        ext = Path(self.cell.file("pi-aos-screen.mjs")).read_text()
++        self.assertIn(json.dumps(cli_pi.SCREEN_MODULE), ext)
++        self.assertTrue(os.path.exists(cli_pi.SCREEN_MODULE))
++        self.assertIn("extended-keys on", Path(self.cell.file("tmux.conf")).read_text())
++
++    def test_start_resumes_the_same_session(self):
++        cli_cell.mark_session("pi", self.cell, str(self.ws), "known-id")
++        os.makedirs(self.cell.file("pi-sessions"))
++        Path(self.cell.file("pi-sessions"), "2026-11-18T00-00-00-000Z_known-id.jsonl").write_text('{"type": "session"}\n')
++        seen = []
++        with mock.patch.object(cli_cell.Cell, "tmux", side_effect=lambda *a, **kw: seen.append(a) or (_ for _ in ()).throw(FileNotFoundError())):
++            with self.assertRaises(RuntimeError):
++                cli_screen.start(self.cfg, self.cell, str(self.ws), str(self.stack))
++        argv = list(seen[-1])
++        self.assertEqual(argv[argv.index("--session-id") + 1], "known-id")
++        self.assertEqual(argv[argv.index("--tui-mode") + 1], "regular")
++        self.assertIn("--no-approve", argv)
++
++
++class Rpc(Base):
++    class More:
++        def __init__(self, letters, after=0):
++            self.letters, self.after, self.calls, self.log = list(letters), after, 0, []
++
++        def take(self):
++            self.calls += 1
++            return [(None, self.letters[0])] if self.letters and self.calls > self.after else []
++
++        def sent(self):
++            self.log.append(("sent", self.letters.pop(0)))
++
++        def unsent(self):
++            self.log.append(("unsent", self.letters.pop(0)))
++
++    def run_rpc(self, more, delay):
++        os.environ["FAKE_PI_DELAY"] = str(delay)
++        argv = cli_pi.pi_argv(self.cfg, self.cell, str(self.ws), str(self.stack), "rpc-id")
++        return cli_pi_rpc.run_pi_rpc(argv, "hello", str(self.ws), 30, self.cell.file("live.jsonl"), None, more, {"letters": 5, "seconds": 300})
++
++    def test_letter_after_settled_is_a_new_prompt(self):
++        more = self.More(["late"])                                        # steered in or sent after agent_settled: same answer
++        code, lines, refused = self.run_rpc(more, 0)
++        self.assertEqual((code, refused), (0, None))
++        self.assertEqual(cli_pi.answer_of(cli_pi.messages_of(lines)), "FAKE PI: hello\n\nFAKE PI: late")
++        self.assertEqual(more.log, [("sent", "late")])
++
++    def test_cap_sends_back_the_rest(self):
++        more = self.More(["a", "b", "c"])
++        code, lines, _ = cli_pi_rpc.run_pi_rpc(cli_pi.pi_argv(self.cfg, self.cell, str(self.ws), str(self.stack), "cap-id"), "hello",
++                                               str(self.ws), 30, self.cell.file("live.jsonl"), None, more, {"letters": 1, "seconds": 300})
++        self.assertEqual(more.log, [("sent", "a")])                       # b and c are never taken: they wait for the next turn
++        self.assertEqual(cli_pi.answer_of(cli_pi.messages_of(lines)), "FAKE PI: hello\n\nFAKE PI: a")
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/proto8/py/tools/agent/screen_linger/README.md b/proto8/py/tools/agent/screen_linger/README.md
+index fdd193f2c..192e75f85 100644
+--- a/proto8/py/tools/agent/screen_linger/README.md
++++ b/proto8/py/tools/agent/screen_linger/README.md
+@@ -1,6 +1,6 @@
+ # screen_linger：eca 停下後由畫面自己的 tmux 計時關閉，起來撤單。
+ 
+-由 after_start／after_stop hook 呼叫，stdin 的事件 stack 是 agent stack；不是 handler 的 AOS_STACK。claude、codex 兩種小格都處理。tmux 需要支援 run-shell -d（3.2 以上）。
++由 after_start／after_stop hook 呼叫，stdin 的事件 stack 是 agent stack；不是 handler 的 AOS_STACK。claude、codex、pi 三種小格都處理。tmux 需要支援 run-shell -d（3.2 以上）。
+ 
+ 定義 cli.json 的 screen_close_after_s 是非負整數秒，預設 600，0 寫單後當場 reap；設定在停下時讀一次。讀不了設定就 warning 並用 600。stack hooks.json 把 screen_linger_start／screen_linger_stop 都設 null 可完全停用自動關畫面。
+ 
+diff --git a/proto8/templates/eca-pi/README.md b/proto8/templates/eca-pi/README.md
+index 11f5e1459..e708a6510 100644
+--- a/proto8/templates/eca-pi/README.md
++++ b/proto8/templates/eca-pi/README.md
+@@ -1,16 +1,17 @@
+-Run the pi coding agent as an aos agent: one pi --mode json run per queue batch, answers appended to history.
++Run the pi coding agent as an aos agent: one pi --mode rpc run per queue batch (letters that come meanwhile are steered in), answers appended to history; aos-agent open shows pi's own screen.
+ 
+ 用 `cp -r $AOS_HOME/templates/eca-pi <目的資料夾>` 複製本範本（指回 proto8 的路徑都寫成 `{"$env": "AOS_HOME", …}`，抄到哪都能跑，這台要有 `AOS_HOME`），再掛進樹：`aos-agent -d .stack ctl add --auto-restart -w <工作區> <目的資料夾>`。完整用法、實測紀錄與限制見 [eca-pi 說明](../docs/03-eca-pi.md)；跟 claude 那份的共同部分（實例＝定義 × 工作區、hook、goal、slash 的大原則）見 [eca-claude 說明](../docs/01-eca-claude.md)。
+ 
+-**這份範本跟 `eca-claude` 差在哪**（使用者 11-18：「1.做成第三種。2.甲。3.先全開。」「6.開」）：
++**這份範本跟 `eca-claude` 差在哪**（使用者 11-18：「1.做成第三種。2.甲。3.先全開。」「6.開」，傍晚「pi coding agent要做畫面」「接著做乙丙吧」）：
+ 
+-- `cli.json` 是 `{"kind": "pi", "flags": [], "timeout_ms": 0}`：aos 每批信起一次 `pi --mode json --no-approve --session-dir $AOS_STACK/pi/pi-sessions --session-id <id>`，題目從 stdin 進；同一個 id 下一輪接著講。`--mode`、`--session*`、`--approve`／`--no-approve` 這些是 aos 自己加的，`flags` 裡寫了＝`CfgBad`。
+-- **要 `pi` 與 `node` 都在 PATH 上**：pi 的啟動檔是 `#!/usr/bin/env node`。用 nvm 裝 node 的機器，非互動殼常常找不到 node（退 127）；在樹的 `env.sh` 加一行 `export PATH="$HOME/.nvm/versions/node/<版本>/bin:$HOME/.local/bin:$PATH"`，見說明的「要先有的東西」。用的是使用者自己裝的那份 pi（11-18 使用者「算了，不要釘版吧，太麻煩了」）。
++- `cli.json` 是 `{"kind": "pi", "flags": [], "timeout_ms": 0}`：aos 每批信起一次 `pi --mode rpc --no-approve --session-dir $AOS_STACK/pi/pi-sessions --session-id <id>`，題目送一則 `prompt`；同一個 id 下一輪接著講。**回答途中又來的信**一封一則 `steer` 送進去（pi 在下一次叫模型之前讀到），回答是每段接起來；不要就在 `cli.json` 寫 `"live_mail": false`（上限 `live_mail_cap` 同 claude）。`--mode`、`--session*`、`--approve`／`--no-approve` 這些是 aos 自己加的，`flags` 裡寫了＝`CfgBad`。
++- **畫面**：`screen/` 跟 eca-claude 同一份，`aos-agent open` 在 tmux 裡起互動的 `pi`（同一個對話資料夾、同一個 id，`--tui-mode regular`），多帶一支 aos 的 pi 外掛：每講完一輪通知 aos（`turns.jsonl`）、畫面開著時 aos 的信經它送進對話。`Ctrl-]` 跳出、畫面留著；`aos-agent close` 關。`hooks.json` 帶 `screen_linger_start`／`screen_linger_stop`（停下後 `screen_close_after_s` 秒關畫面，預設 600，同 eca-claude）。
++- **要 `pi` 與 `node` 都在 PATH 上**：pi 的啟動檔是 `#!/usr/bin/env node`。用 nvm 裝 node 的機器，非互動殼常常找不到 node（退 127）；在樹的 `env.sh` 加一行 `export PATH="$HOME/.nvm/versions/node/<版本>/bin:$HOME/.local/bin:$PATH"`，見說明的「要先有的東西」。開畫面的那個殼也要有這兩個。用的是使用者自己裝的那份 pi（11-18 使用者「算了，不要釘版吧，太麻煩了」）。
+ - **模型**：`llm.json` 是 `{}`＝pi 自己的預設（`pi` 裡 `/login` 登 ChatGPT 訂閱時選的；使用者 11-18「我是打算拿它來代替codex」）。要指定就寫 `{"model": "供應商/id"}`（`pi --list-models` 列得出來）。改走 litellm proxy 之類的 OpenAI 相容端點，寫法在說明裡。
+-- **沒有 `screen/`**：pi 身先只做一問一答，`aos-agent open` 會回 `ScreenMissing`；也沒有 `screen_linger` 那兩格 hook、沒有 `compact_hook`（那是 Claude Code 的 hook）。
+-- **工具**：`tools.json` 跟 eca-claude 同一份（八包、34 支）。pi 沒有「這次用這份 MCP 設定」的旗標，aos 每輪在小格寫一支一行的外掛 `pi-aos-mcp.mjs`（只呼叫 `pi.registerMcpServer("aos", …)`），用 `-e` 帶進去；工具名 `mcp__aos__peek_now_time`…。檔案與指令交給 pi 自己的 read、bash、edit、write。
++- 沒有 `compact_hook`（那是 Claude Code 的 hook）。
++- **工具**：`tools.json` 跟 eca-claude 同一份（八包、34 支）。pi 沒有「這次用這份 MCP 設定」的旗標，aos 每輪在小格寫一支一行的外掛 `pi-aos-mcp.mjs`（只呼叫 `pi.registerMcpServer("aos", …)`），用 `-e` 帶進去（使用者 11-18「每輪生一行外掛，目前就先這樣」）；工具名 `mcp__aos__peek_now_time`…。檔案與指令交給 pi 自己的 read、bash、edit、write。
+ - **權限全開**（使用者「3.先全開」）：pi 從不問、沒有沙盒，bash 與寫檔用你這個帳號的權限照做。aos 只加 `--no-approve`（工作區 `.pi/` 裡的設定、MCP 檔、外掛一律不載）。aos 的 `before_tool` hook 只看得到 aos 的工具。
+-- **`hooks.json`** 只帶 `timer` 與 `mail_notify` 兩格（同 eca-claude）。沒放 `context_wrap`：pi 的事件沒有 context 視窗大小，要用就把 eca-claude 那格抄過來、`config` 加 `"window": <模型的視窗 token 數>`。`brain_notify` 只認 claude 的失敗代號，也沒放。
+-- **slash**：`/compact [指示]` 另起一次 `pi --mode rpc` 壓縮同一段對話、history 換成摘要；`/clear` 開新對話；`/goal`、`/usage` 回一句不支援。
++- **`hooks.json`** 帶 `screen_linger_start`、`screen_linger_stop`、`timer`、`mail_notify` 四格。沒放 `context_wrap`：pi 的事件沒有 context 視窗大小，要用就把 eca-claude 那格抄過來、`config` 加 `"window": <模型的視窗 token 數>`（預設要不要放，使用者還沒裁）。`brain_notify` 只認 claude 的失敗代號，也沒放。
++- **slash**：`/compact [指示]` 另起一次 `pi --mode rpc` 壓縮同一段對話、history 換成摘要（畫面開著＝打進畫面）；`/clear` 開新對話（畫面開著＝打 pi 的 `/new`）；`/goal`、`/usage` 回一句不支援。
+ 
+-`_entry` 起 `aos-loop`，`loop.json` 每格叫 `aos-eca-turn`（同 eca-claude）。`interfaces.json` 宣告工具、腦設定、history、hook 與 system 的位置（沒有 screen）。`_metainfo.json` 宣告估時 `cost.time_ms`（一輪約一分鐘，粗估）與 `llm` 資源；一輪的上限在 `cli.json` 與 `loop.json` 的 `timeout_ms`，兩個都是 0＝不限時。
++`_entry` 起 `aos-loop`，`loop.json` 每格叫 `aos-eca-turn`（同 eca-claude）。`interfaces.json` 宣告畫面、工具、腦設定、history、hook 與 system 的位置。`_metainfo.json` 宣告估時 `cost.time_ms`（一輪約一分鐘，粗估）與 `llm` 資源；一輪的上限在 `cli.json` 與 `loop.json` 的 `timeout_ms`，兩個都是 0＝不限時。
+diff --git a/proto8/templates/eca-pi/_metainfo.json b/proto8/templates/eca-pi/_metainfo.json
+index ec586b7c4..1d3ee4cc8 100644
+--- a/proto8/templates/eca-pi/_metainfo.json
++++ b/proto8/templates/eca-pi/_metainfo.json
+@@ -1,5 +1,5 @@
+ {
+- "summary": "Run the pi coding agent as an aos agent: one pi --mode json run per queue batch, answers appended to history.",
++ "summary": "Run the pi coding agent as an aos agent: one pi --mode rpc run per queue batch (letters that come meanwhile are steered in), answers appended to history; aos-agent open shows pi's own screen.",
+  "cost": {
+   "time_ms": 60000
+  },
+diff --git a/proto8/templates/eca-pi/hooks.json b/proto8/templates/eca-pi/hooks.json
+index 68c08e334..92e0448f8 100644
+--- a/proto8/templates/eca-pi/hooks.json
++++ b/proto8/templates/eca-pi/hooks.json
+@@ -1,6 +1,18 @@
+ {
+- "description": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added and on_clock in aos-eca-turn, after_start / after_stop from loop.json, and before_tool / after_tool only for aos tools called through aos-mcp; pi's own tools (read, bash, edit, write) are not seen. The stack copy of this file overrides it by name, null turns one off. The timer hook is a place to hang something every 5 minutes (on_clock, every_ms 300000, AOS_CLOCK); its handler does nothing. The mail_notify hook looks at your mailbox every minute (on_clock, every_ms 60000) and, only when new letters came, puts one message \"[aos] new_mail: N new letters from A, B. ...\" in your queue. There is no context_wrap entry: pi compacts by itself when the context fills up; to have aos warn first, add the context_wrap entry of templates/eca-claude with config {\"percent\": 35, \"window\": <the model's context window in tokens>} (pi's events carry no window).",
++ "description": "Hooks of this eca: aos functions run when an event happens. eca has before_queue, after_queue, brain_failed (CliFailed / ReplyMissing) and tool_added and on_clock in aos-eca-turn, after_start / after_stop from loop.json, and before_tool / after_tool only for aos tools called through aos-mcp; pi's own tools (read, bash, edit, write) and what a person types on the screen are not seen. The stack copy of this file overrides it by name, null turns one off. screen_linger_start cancels pending screen closures; screen_linger_stop closes screens after cli.json screen_close_after_s seconds (default 600, 0 immediately). Setting both to null leaves screens open indefinitely. The timer hook is a place to hang something every 5 minutes (on_clock, every_ms 300000, AOS_CLOCK); its handler does nothing. The mail_notify hook looks at your mailbox every minute (on_clock, every_ms 60000) and, only when new letters came, puts one message \"[aos] new_mail: N new letters from A, B. ...\" in your queue. There is no context_wrap entry: pi compacts by itself when the context fills up; to have aos warn first, add the context_wrap entry of templates/eca-claude with config {\"percent\": 35, \"window\": <the model's context window in tokens>} (pi's events carry no window).",
+  "hooks": {
++  "screen_linger_start": {
++   "event": "after_start",
++   "handler": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/screen_linger"},
++   "on_error": "continue",
++   "timeout_ms": 4000
++  },
++  "screen_linger_stop": {
++   "event": "after_stop",
++   "handler": {"$env": "AOS_HOME", "$path": "/lib/tools/agent/screen_linger"},
++   "on_error": "continue",
++   "timeout_ms": 4000
++  },
+   "timer": {
+    "event": "on_clock",
+    "every_ms": 300000,
+diff --git a/proto8/templates/eca-pi/interfaces.json b/proto8/templates/eca-pi/interfaces.json
+index 116a203bf..ca15fd034 100644
+--- a/proto8/templates/eca-pi/interfaces.json
++++ b/proto8/templates/eca-pi/interfaces.json
+@@ -1 +1 @@
+-{"aos-agent": {"tools": "tools.json", "llm": "llm.json", "llm_keys": ["model"], "history": "history.jsonl", "hooks": "hooks.json", "system": "system.txt"}}
++{"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json", "llm_keys": ["model"], "history": "history.jsonl", "hooks": "hooks.json", "system": "system.txt"}}
+diff --git a/proto8/templates/eca-pi/screen/_entry b/proto8/templates/eca-pi/screen/_entry
+new file mode 100644
+index 000000000..0d3e537ca
+--- /dev/null
++++ b/proto8/templates/eca-pi/screen/_entry
+@@ -0,0 +1 @@
++["aos-eca-screen", "--eca", ".."]
+diff --git a/proto8/templates/eca-pi/screen/interfaces.json b/proto8/templates/eca-pi/screen/interfaces.json
+new file mode 100644
+index 000000000..093d785b6
+--- /dev/null
++++ b/proto8/templates/eca-pi/screen/interfaces.json
+@@ -0,0 +1 @@
++{"aos-agent/screen": {}}
+diff --git a/proto8/templates/tests/test_eca_pi.py b/proto8/templates/tests/test_eca_pi.py
+index 432bc24e9..44dfa1fe1 100644
+--- a/proto8/templates/tests/test_eca_pi.py
++++ b/proto8/templates/tests/test_eca_pi.py
+@@ -1,4 +1,4 @@
+-# 驗 eca-pi 範本（11-18）：cli.json 讀得過、kind pi、沒有畫面子介面、工具登記檔跟 eca-claude 同一份、hook 格都驗得過。
++# 驗 eca-pi 範本（11-18）：cli.json 讀得過、kind pi、畫面子介面同 eca-claude、工具登記檔跟 eca-claude 同一份、hook 格都驗得過。
+ import json
+ import os
+ from pathlib import Path
+@@ -26,16 +26,20 @@ class EcaPiTemplate(unittest.TestCase):
+         self.assertNotIn("--model", cfg.get("flags", []))          # llm.json {} = pi's own default model
+         self.assertTrue(cfg["registry"].endswith("tools.json"))
+ 
+-    def test_no_screen_and_same_tools_as_eca_claude(self):
++    def test_screen_and_tools_same_as_eca_claude(self):
+         decl = json.loads((PI / "interfaces.json").read_text())["aos-agent"]
+-        self.assertNotIn("screen", decl)
+-        self.assertFalse((PI / "screen").exists())
++        self.assertEqual(decl["screen"], "screen")                 # 11-18 丙案：aos-agent open 開 pi 的畫面
++        for name in ("_entry", "interfaces.json"):
++            self.assertEqual((PI / "screen" / name).read_text(), (PROTO / "templates/eca-claude/screen" / name).read_text())
+         self.assertEqual((PI / "tools.json").read_text(), (PROTO / "templates/eca-claude/tools.json").read_text())
+         self.assertEqual((PI / "_entry").read_text(), (PROTO / "templates/eca-claude/_entry").read_text())
+ 
+     def test_hooks_validate(self):
+         table = json.loads((PI / "hooks.json").read_text())["hooks"]
+-        self.assertEqual(sorted(table), ["mail_notify", "timer"])
++        self.assertEqual(sorted(table), ["mail_notify", "screen_linger_start", "screen_linger_stop", "timer"])
++        claude = json.loads((PROTO / "templates/eca-claude/hooks.json").read_text())["hooks"]
++        for name in ("screen_linger_start", "screen_linger_stop"):
++            self.assertEqual(table[name], claude[name])
+         for entry in table.values():
+             hooks.validate_entry(entry)
+ 
+diff --git a/proto8/thinking/2026-11/18/eca-pi/04-接法選項與待裁.md b/proto8/thinking/2026-11/18/eca-pi/04-接法選項與待裁.md
+index 6fb606df7..1352f0464 100644
+--- a/proto8/thinking/2026-11/18/eca-pi/04-接法選項與待裁.md
++++ b/proto8/thinking/2026-11/18/eca-pi/04-接法選項與待裁.md
+@@ -63,3 +63,14 @@
+ - 6：開一份 `proto8/templates/eca-pi/`。
+ 
+ 施工線：eca-pi-impl-1118（11-18）。
++
++### 11-18 傍晚再裁（甲案交件之後）
++
++使用者原話（逐字）：「codex身留下，pi coding agent要做畫面，去吧。每輪生一行外掛，目前就先這樣。快滿時自動提醒壓縮？這啥？這是pi coding agent內建的機制，還是我們的35% hook？接著做乙丙吧。」
++
++- codex 那種身留著、不動。
++- aos 每輪生成一行外掛（`pi-aos-mcp.mjs`）給 pi 載入：維持現在的做法。
++- 接著做乙（非互動改成每輪一個 `pi --mode rpc`，回答途中收信）與丙（pi 要有畫面）。
++- 「快滿時自動提醒壓縮」那句他在問是什麼（頂層另外回答）；`context_wrap` 預設開不開**還沒裁**，施工線不動。
++
++施工線：eca-pi-bc-1118（11-18）。
+diff --git a/proto8/templates/README.md b/proto8/templates/README.md
+index 838dd9771..9e3d017bf 100644
+--- a/proto8/templates/README.md
++++ b/proto8/templates/README.md
+@@ -7,7 +7,7 @@
+ <a id="agent-meg記憶庫10-24"></a>
+ <a id="talkagent-之間寄信10-24"></a>
+ <a id="agent-gus小念頭10-24"></a>
+-複製出去用的 agent 範本，都用 `aos-agent ctl add` 掛（不給預設、要明寫資料夾）：`eca-claude`（外部 coding agent）、[`eca-pi`](eca-pi/README.md)（外部 coding agent 的 pi 身，一問一答、沒有畫面）、[`agent-fsm`](#agent-fsm)（aos 自己的 loop／fsm agent；問腦＝寄信給 [llm-kernel](kernel/docs/01-llm-kernel.md)）。兩個範本對外同形（`_entry`＝aos-loop、queue／history／ctl／state、同一份 `tools.json`、`--prompt` 開場白），對照表在 [thinking 11-04 loop-fsm-agent 02](../thinking/2026-11/04/loop-fsm-agent/02-跟-eca-對照.md)。
++複製出去用的 agent 範本，都用 `aos-agent ctl add` 掛（不給預設、要明寫資料夾）：`eca-claude`（外部 coding agent）、[`eca-pi`](eca-pi/README.md)（外部 coding agent 的 pi 身，每批一個 `pi --mode rpc`、回答途中收信、有畫面）、[`agent-fsm`](#agent-fsm)（aos 自己的 loop／fsm agent；問腦＝寄信給 [llm-kernel](kernel/docs/01-llm-kernel.md)）。兩個範本對外同形（`_entry`＝aos-loop、queue／history／ctl／state、同一份 `tools.json`、`--prompt` 開場白），對照表在 [thinking 11-04 loop-fsm-agent 02](../thinking/2026-11/04/loop-fsm-agent/02-跟-eca-對照.md)。
+ 
+ **開一棵新樹就抄起手範本**（使用者 11-17 裁 L-10 A，11-18 S6 做）：[`start-api`](start-api/README.md)（根＋llm kernel＋一隻 agent-fsm，假腦先試）、[`start-eca`](start-eca/README.md)（根＋一隻 eca-claude），`cp -r $AOS_HOME/templates/start-api ~/aos-home && cd ~/aos-home && source env.sh` 就能起；包裡的 `env.sh` 是薄的一份（`AOS_HOME` 沒設報錯，有就轉去 `$AOS_HOME/env.sh`），其餘是下面各範本的逐字抄本（`tests/test_start.py` 逐檔比對，改了原範本要同步抄過去）。
+ 

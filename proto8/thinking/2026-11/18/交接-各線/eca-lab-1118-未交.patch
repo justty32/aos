@@ -1,0 +1,425 @@
+# eca-lab-1118 未交的改動（家機 11-18 晚從總補丁分出，對 2b4320644 之後的 main）：小試驗教學 15、16、18 與目錄 13～19 列；git apply 套用
+diff --git a/proto8/thinking/2026-11/18/eca-claude-小試驗教學/15-aos-tools加新工具.md b/proto8/thinking/2026-11/18/eca-claude-小試驗教學/15-aos-tools加新工具.md
+new file mode 100644
+index 000000000..5a2d32eaa
+--- /dev/null
++++ b/proto8/thinking/2026-11/18/eca-claude-小試驗教學/15-aos-tools加新工具.md
+@@ -0,0 +1,161 @@
++這份教你自己寫一支最小的工具，用 aos-tools 這條路加給一隻活著的 eca-claude agent，再試改它、拿掉它、弄壞它，以及在 agent 停著時加工具會怎樣（試驗 15，11-18 在公司 WSL 用 haiku 實跑過）。
++← [目錄](README.md)
++
++使用者原話：「再來幾個試驗與教學：eca claude，然後我們用aos-loop方式控制其停止與繼續。然後在他停止的時候我們aos-say，還有用aos-tool給他添加新工具」。停止與繼續見 [13](13-aos-loop控制停止與繼續.md)，停著時 say 見 [14](14-停著時say.md)，這份只講加工具。
++
++## 結論
++
++- 指令名字是 **`aos-tools`**（有 s），沒有 `aos-tool`。它管一份「工具通訊錄」JSON 檔（`tools.json`）。程式在 `py/aos/apps/tools/`，今天拆成 `main`、`common`、`helps`、`registry`、`tooldef` 五個檔，但對外還是同一支指令。
++- **`aos-agent tools` 就是包著 `aos-tools` 的殼**：它替你找到「這隻 agent 自己那份」（`<stack>/tools.json`），再叫 `aos-tools --file 那份 …`。旗標跟 `aos-tools add` 一樣。
++- 工具夾最小只要兩個檔：**`_entry`**（可執行，從 stdin 讀 JSON、把結果印到 stdout）和 **`_tooldef.json`**（給模型看的說明與參數）。`_metainfo.json` 是選配。
++- **不用重起、不用 set-def**。加完下一句就叫得到，工具名是 `mcp__aos__<名>`。改工具的程式或說明也是下一句就生效。
++- 兩份 `tools.json`：
++  - **定義那份**（`agents/ann/tools.json`）：改了，用這份定義的每一隻都會變。
++  - **stack 那份**（`.stack/procs/ann/tools.json`）：只記這一隻自己加的、拿掉的。第一次 `aos-agent tools add` 時才建，裡面用 `"$override"` 指回定義那份，所以定義那份之後改的也看得到。
++- **停著時加**（`ctl stop` → `tools add` → `ctl start`）也行，起來第一句就叫得到。
++
++## 一步一步
++
++前提：樹照 [README 的「共同準備」](README.md#共同準備)起好、ann 掛著。下面都在視窗 C 的 `~/aos-home` 打。範例工具是 `linecount`，作用是數一個檔有幾行。
++
++**1. 做工具夾**
++
++```sh
++mkdir -p ~/my-tools/linecount && cd ~/my-tools/linecount
++```
++
++`_entry`（用編輯器建，存好後 `chmod +x _entry`）：
++
++```python
++#!/usr/bin/env python3
++# linecount - count the lines of one file (a minimal aos tool)
++import json, os, sys
++args = json.load(sys.stdin)
++path = os.path.join(os.environ.get("AOS_WS", "."), args["path"])
++with open(path) as f:
++    n = sum(1 for _ in f)
++print(json.dumps({"path": args["path"], "lines": n, "by": "linecount v1"}))
++```
++
++`_tooldef.json`：
++
++```json
++{"description": "Count the lines of one file. Returns JSON {path, lines, by}.",
++ "parameters": {"type": "object",
++                "properties": {"path": {"type": "string", "description": "file path relative to your workspace"}},
++                "required": ["path"]}}
++```
++
++`AOS_WS` 是 agent 的工作區，相對路徑從那裡算。`"by"` 那格只是為了證明「真的是這支工具回的」。
++
++**2. 先自己跑一次**
++
++```sh
++cd ~/aos-home && seq 1 37 > notes.txt && echo '{"path":"notes.txt"}' | AOS_WS=$PWD aos-exec ~/my-tools/linecount
++```
++
++會看到 `{"path": "notes.txt", "lines": 37, "by": "linecount v1"}`。這步不過，後面就不用試了。
++
++**3. 加給 ann（只給這一隻）**
++
++```sh
++aos-agent -t ann tools add ~/my-tools/linecount
++```
++
++```
++added linecount -> /home/你/my-tools/linecount (/home/你/aos-home/.stack/procs/ann/tools.json: "/home/你/my-tools/linecount")
++aos-agent: warning: created /home/你/aos-home/.stack/procs/ann/tools.json (it records only what this agent added or removed; later changes to the definition still show through; tools reset deletes it)
++```
++
++名字預設就是夾名。給絕對路徑就存絕對路徑，給相對路徑就存成「相對那份 tools.json」的寫法。`cat .stack/procs/ann/tools.json` 會看到：
++
++```json
++{"$override": "../../../agents/ann/tools.json",
++ "tools": {"linecount": {"path": "…/my-tools/linecount"}}}
++```
++
++**4. 確認有列出來**
++
++```sh
++aos-agent -t ann tools ls | grep linecount
++```
++
++會看到 `linecount	Count the lines of one file.`，stderr 另外有一行 `using this agent's …/tools.json`。要看路徑、寫在哪份，用 `ls -l`：`linecount	dir	/home/你/my-tools/linecount	…/.stack/procs/ann/tools.json#/tools/linecount	…`。
++
++直接用 aos-tools 看要自己指檔：`aos-tools --file .stack/procs/ann/tools.json ls`。不給 `--file` 就讀現在資料夾的 `./tools.json`，在樹根打會說找不到。
++
++**5. 讓 agent 真的叫它**
++
++```sh
++aos-agent -t ann ask --timeout-s 180 "Use your linecount tool on notes.txt and tell me exactly what it returned."
++```
++
++約 12 秒，回 `{"path": "notes.txt", "lines": 37, "by": "linecount v1"}`。`grep -o '"name":"mcp__aos__linecount"[^}]*}' .stack/procs/ann/claude/live.jsonl` 會看到 `"name":"mcp__aos__linecount","input":{"path":"notes.txt"}`。**沒有重起 agent**。
++
++## 改、拿掉、弄壞
++
++**改工具**：把 `_entry` 的 `v1` 改成 `v2`、說明改成 `(version 2)`，直接再問。回答變成 `"by": "linecount v2"`，它看到的說明也是新的。不用重載，因為每次叫工具都重新執行 `_entry`，工具清單也是每一輪重讀。
++
++**拿掉**：
++
++```sh
++aos-agent -t ann tools rm linecount
++```
++
++會看到 `removed linecount (…/.stack/procs/ann/tools.json: key deleted)`。再問它有沒有 `mcp__aos__linecount`，回 `No.`。拿掉定義那份也有的工具，會在 stack 那份寫成 `"名": null`，定義那份不動。`aos-agent -t ann tools reset -y` 會整份刪掉 stack 那份，回到只用定義那份。
++
++**加在定義那份**：
++
++```sh
++aos-tools --file agents/ann/tools.json add ~/my-tools/linecount
++```
++
++會看到 `added linecount -> … (agents/ann/tools.json: …)`。ann 有自己那份也看得到，因為它的 `$override` 指回這裡。
++
++**`_entry` 沒有 +x**（`chmod -x _entry`）：`tools ls` 照樣列出，叫的時候才失敗。agent 看到的是：
++
++```
++aos-mcp: error: CommandFailed linecount exited 1 with empty stdout
++[aos] tool: linecount stderr (last 2048 bytes at most):
++aos-exec: error: EntryBad bad entry: not executable (+x) and not JSON: /home/你/my-tools/linecount/_entry
++```
++
++**輸出不是 JSON**：沒關係。印 `notes has 37 lines` 這種純文字，照樣原文交給 agent。
++
++**工具自己報錯**（印 `linecount: error: FileMissing …`、退 1）：agent 收到那行錯，後面再附一段 `[aos] tool: linecount stderr …`。
++
++**`_tooldef.json` 壞掉**（不是 JSON）：
++
++```
++linecount	broken: ToolDefBad (its tool definition is broken); correct its path or take it off the list with rm linecount (get linecount shows the full error)
++```
++
++還會多一行 `aos-tools: warning: tool linecount skipped: …`，退出碼還是 0。agent 那邊這支直接消失，其他工具照常。
++
++## agent 停著時加工具
++
++```sh
++aos-agent -t ann ctl stop
++aos-agent -t ann tools add ~/my-tools/motto
++aos-agent -t ann ctl start
++```
++
++`motto` 是另一支只印一句固定話的工具（`_entry` 是 `#!/bin/sh`、`cat >/dev/null`、`echo "The owl flies at noon."`）。停著時 `tools add` 照樣成功，`tools ls` 也列得到。`ctl start` 會看到 `started (same stack); 0 queued letter(s) will be answered next`。之後問 `Call the motto tool`，回 `The owl flies at noon.`。
++
++## 讓 agent 自己加
++
++agent 手上有 `self_tools`。叫它「用 self_tools 加 `/home/你/my-tools/linecount`，同一輪接著叫它」，它加完就在同一輪叫成功了。加進的也是 stack 那份，存的是絕對路徑。
++
++## 常見卡點
++
++- 打成 `aos-tool`，找不到指令。要打 `aos-tools`。
++- 在樹根打 `aos-tools ls` 看不到 agent 的工具：它只讀 `./tools.json`。要用 `aos-agent -t ann tools ls`。
++- 同一段對話裡先答過「沒有這支」，之後工具加回去了，haiku 還是照前面的回答說沒有。其實那一輪的清單裡有（`live.jsonl` 的 `system/init` 列得到 `mcp__aos__linecount`）。跟它說一句「工具清單變了，再看一次」就會叫。
++
++## 發現的問題
++
++1. 資料夾工具的 `_entry` 沒有 +x，`tools ls` 不會標 broken，叫了才報 `EntryBad`。`_tooldef.json` 壞掉就會標 broken，兩種處理不一致。
++2. `aos-agent tools` 每個子指令都在 stderr 印一行 `using this agent's …` 或 `using the definition's …`，連單純 `ls` 也印。
++3. 工具照慣例把錯誤行同時印到 stdout 和 stderr，aos-mcp 兩段都交給 agent，所以 agent 看到同一行錯兩次。
++4. `EntryBad` 那段把工具夾的絕對路徑整條給了模型。
++5. 改了 `tools.json`、但不是 agent 自己用 `self_tools` 改的，這時不會通知 claude 清單變了。eca-claude 每一輪都重新列清單，所以下一輪就看得到。只是模型會被同一段對話裡自己先前的回答帶偏（見上面「常見卡點」最後一條）。
+diff --git a/proto8/thinking/2026-11/18/eca-claude-小試驗教學/16-手動讓eca-claude當kernel.md b/proto8/thinking/2026-11/18/eca-claude-小試驗教學/16-手動讓eca-claude當kernel.md
+new file mode 100644
+index 000000000..d4531b147
+--- /dev/null
++++ b/proto8/thinking/2026-11/18/eca-claude-小試驗教學/16-手動讓eca-claude當kernel.md
+@@ -0,0 +1,179 @@
++這份教你不用 `kernel_gate` 這類一鍵工具，手動把一隻 eca-claude agent 變成這棵樹的 kernel（別人掛、停 proc 的請求先送到它、由 claude 決定放不放），再退回普通 agent（試驗 16，11-18 在公司 WSL 用 haiku 實跑過）。
++← [目錄](README.md)
++
++使用者原話：「還有：eca claude，我們手動讓他成為kernel」
++
++## 結論
++
++- **kernel 在 aos 裡＝「請求寄到哪，那裡就是 kernel」**。掛、停、叫醒 proc 的請求寄到 `$AOS_KERNEL`；沒設就直接寄 daemon（daemon 來者不拒，是最簡單的 kernel）。問模型的 `AOS_LLM_KERNEL` 是另一回事（幫大家轉接模型的總機），這題講的是前者。
++- 範本 kernel（`templates/kernel/daemon-kernel`、`procs-kernel`）**不是 fsm＋llm**，是一支純程式「框架站」（`$AOS_HOME/lib/tools/aos/kernel`）：每跑一輪就照 `kernel.json` 收信、判、轉寄，沒有腦。
++- 讓 claude 當 kernel 的做法：**把同一支框架站掛在 ann 身上當 `on_clock` hook**，再加一支 `after_verdict` hook 把每封請求「先留著」並通知 ann；claude 用 Write 工具寫一個 `decisions/<信名>.json`（pass 或 refuse），站下一輪照辦。要準備的只有一個夾、三個檔，一行 `hook add`。
++- 別人怎麼指向它：寄件人的殼 `export AOS_KERNEL=…/hooks/gate/requests`；要整棵樹的 agent 都走它，寫進 `root/.env`、重起根。kernel.json 沒寫 `max_running`，所以 `count_daemon` 不用填。
++- **實測通了**：放行（`worker1` 掛上）、拒絕（寄件人看到 `AddRejected … NotNow <claude 寫的原因>`）、stop／start 也先問它、另一隻 eca（bob）在自己那一輪裡下 `ctl add` 一樣先到 ann。每封約 7～11 秒。
++- **代價**：ann 停著或正在想別的事時，站不跑，請求沒人理，寄件人等到逾時；`ctl ls` 只等 3 秒，常常 `KernelFailed`。ann 自己在一輪裡下 `ctl` 會等自己，一定逾時。
++
++## 先弄清楚：三種「kernel」
++
++| 叫法 | 是什麼 | 誰設、設成什麼 |
++|---|---|---|
++| daemon 本身 | 沒設 `AOS_KERNEL` 時請求直接進 daemon 的 ctl 信箱，照單全收 | 不用設 |
++| 框架站（範本 `daemon-kernel`／`procs-kernel`） | 一支程式，一輪一輪跑：白名單 `allowed`、上限 `max_running`、排隊 `queue`，放行的轉寄 daemon | 寄件人 `AOS_KERNEL=<站的 stack>/requests` |
++| llm kernel（範本 `llm-kernel`） | 問模型的總機，只收「問腦」的信 | `AOS_LLM_KERNEL`；eca-claude 自己叫 claude，用不到它 |
++
++判斷法：請求是「掛／停 proc」→ `AOS_KERNEL`；是「幫我問模型」→ `AOS_LLM_KERNEL`。範本 `daemon-kernel` 有 `max_running`、沒 `count_daemon`，原樣只能當最後一站（使用者 11-18 裁過不補）；這份的 `kernel.json` 不設上限，碰不到。
++
++## 一步一步
++
++前提：樹照 [README 的「共同準備」](README.md#共同準備)抄好、改成 haiku。起根改用 `cd ~/aos-home && source env.sh && aos-exec root`（視窗 A），ann 掛上去（視窗 C 那行）。下面都在 `~/aos-home` 打。
++
++**1. 建站的夾和設定**
++
++```sh
++mkdir -p ~/aos-home/gate && echo '{"hooks": {"hold": {"event": "after_verdict", "condition": "pass", "handler": "hold"}}}' > ~/aos-home/gate/kernel.json
++```
++
++意思：規則先判（這裡沒規則＝全部放行），放行的再交給 `hold` 這支 hook。
++
++**2. 寫 `gate/run`（叫框架站跑一輪）**
++
++```sh
++#!/bin/sh
++# run one round of the stock kernel station; its stack is this hook's cell ($AOS_STACK)
++exec aos-exec --stack "$AOS_STACK" "$AOS_HOME/lib/tools/aos/kernel" "$(dirname "$0")/kernel.json"
++```
++
++**3. 寫 `gate/hold`（留住請求、通知 ann）**
++
++```python
++#!/usr/bin/env python3
++# after_verdict hook: hold every request the rules let through (except table questions) and tell the agent once
++import json, os, subprocess, sys
++event = json.load(sys.stdin)
++body = event.get("body") if isinstance(event.get("body"), dict) else {}
++if event.get("decision") == "pass":
++    sys.exit(0)                      # somebody already decided: let the rules' verdict stand
++if body.get("procs_state_path") is True and [k for k in body if k.startswith("procs_")] == ["procs_state_path"]:
++    sys.exit(0)                      # table question: pass without asking
++cell = event["stack"]                # the station's stack = <agent stack>/hooks/gate
++agent = os.path.dirname(os.path.dirname(cell))
++text = ("[aos] gate: a request waits at your kernel station.\n"
++        "letter: %s\nfrom: %s\nrequest: %s\n"
++        "To let it through write {\"verdict\": \"pass\"} to %s/decisions/%s.json ; "
++        "to refuse write {\"verdict\": \"refuse\", \"error\": {\"code\": \"NotNow\", \"msg\": \"<one line for the sender>\"}} there."
++        % (event.get("letter"), event.get("sender"), json.dumps(body, ensure_ascii=False), cell, event.get("letter")))
++subprocess.run(["aos-post", "send", os.path.join(agent, "queue")],
++               input=json.dumps({"role": "user", "content": text}), text=True, stdout=subprocess.DEVNULL, check=False)
++print(json.dumps({"verdict": "hold"}))
++```
++
++```sh
++chmod +x ~/aos-home/gate/run ~/aos-home/gate/hold
++```
++
++`ctl ls` 這類「表在哪」的問題直接放行，不然每次看表都要等 claude。
++
++**4. 掛到 ann 身上**
++
++```sh
++aos-agent -d .stack -t ann hook add --event on_clock --every-cycles 1 --on-error continue --name gate gate/run
++```
++
++```
++added gate (…/.stack/procs/ann/hooks.json#/hooks/gate: {"event": "on_clock", "handler": "../../../gate/run", "every_cycles": 1, "on_error": "continue"})
++```
++
++幾秒後多出 `.stack/procs/ann/hooks/gate/requests/`，這就是 kernel 的收件信箱。定義夾 `agents/ann` 一個檔都沒動。
++
++**5. 跟 claude 講規則**
++
++```sh
++aos-agent -d .stack -t ann ask --timeout-s 180 "You are now the kernel gate of this tree. Messages that start with [aos] gate: are requests from other procs, held for you. Rule: let through a request only if every proc it adds or starts has a name starting with worker; refuse anything else with a one-line reason. Requests that only stop procs: let through. Decide by writing the JSON file the message names (use your Write tool). Reply now with one short sentence that you understood."
++```
++
++會看到 `Understood: I'll review each [aos] gate: request …`（約 12 秒）。
++
++**6. 寄件人指向它，試放行與拒絕**（另開一個殼）
++
++```sh
++export AOS_KERNEL=~/aos-home/.stack/procs/ann/hooks/gate/requests
++```
++
++```sh
++aos-agent -d .stack ctl add -n worker1 -w ws-w --timeout-s 150 $AOS_HOME/templates/agent-fsm
++```
++
++十來秒後印 `…/.stack/procs/worker1`，表上多一列 `worker1 running`。
++
++```sh
++aos-agent -d .stack ctl add -n evil2 -w ws-w --timeout-s 150 $AOS_HOME/templates/agent-fsm
++```
++
++```
++aos-agent: warning: routing via AOS_KERNEL=…/hooks/gate/requests
++aos-agent: error: AddRejected the add letter was refused: NotNow Refused: the request adds proc 'evil2', which is not named with a worker prefix.
++```
++
++退出碼 1，約 7 秒。ann 那邊收到的是一則 `[aos] gate: a request waits at your kernel station.` 加信名、寄件人、請求原文；它叫的是 `Write {"file_path": "…/hooks/gate/decisions/<信名>.json", "content": "{\"verdict\": \"refuse\", …}"}`。決定檔站用完就刪。
++
++**7. 其他請求**
++
++- `ctl stop worker1`、`ctl start worker1`：也各通知 ann 一次、它放行，各約 7～8 秒。
++- `say`：**不經 kernel**，直接進對方的 queue，0.2 秒。
++- `aos-agent ctl ls`（不帶 `-d`）：表的問題直接過，0.9 秒；帶 `-d .stack` 的 `ls` 是指名 daemon，根本不問 kernel。
++- 不設 `--timeout-s` 時 `ctl` 只等 30 秒；claude 每封 7～11 秒，平常來得及，忙的時候不一定。
++
++**8. 讓整棵樹都走它（root 的 `.env`）**
++
++先 `aos-daemon-ctl -d .stack shutdown`，在 `root/.env` 最後加一行：
++
++```sh
++AOS_KERNEL=${AOS_STACK}/procs/ann/hooks/gate/requests
++```
++
++再起根（視窗 A 的 `aos-exec root`），睡下的都自己醒。另掛一隻 eca `bob`（抄 `agents/ann`），叫它在自己那一輪用 Bash 打 `aos-agent ctl add -n badkid …` 和 `-n worker3 …`，它貼回來的是：
++
++```
++aos-agent: warning: routing via AOS_KERNEL=…/.stack/procs/ann/hooks/gate/requests
++aos-agent: error: AddRejected the add letter was refused: NotNow Refused: the request adds proc 'badkid', …
++aos-agent: warning: worker3 attached; the daemon chose its stack, …
++```
++
++agent 也照樣先過 ann。你自己的殼 `source env.sh` 不讀 `root/.env`，所以人打的指令照舊直達 daemon，除非你自己 export。ann 自己也繼承到指向自己的 `AOS_KERNEL`，站會認出是自己、跳過，放行的照樣轉給 daemon。
++
++## kernel 停著、在忙、壞掉時（實測）
++
++| 情況 | 寄件人看到 |
++|---|---|
++| ann 被 `aos-daemon-ctl -d .stack stop ann` 停掉 | `ctl add --timeout-s 10`：10 秒後 `DaemonFailed no result … letter withdrawn, it will not be applied`。`ctl ls`：3 秒後 `KernelFailed no reply from AOS_KERNEL=…` |
++| ann 正在答別的（寫一篇 400 字故事） | `ctl ls`：3.5 秒 `KernelFailed`。`ctl add`：等 ann 答完才輪到，23 秒才掛上 |
++| ann 自己在一輪裡下 `aos-agent ctl ls`／`ctl add`（root `.env` 指向自己時） | 等的是自己：`KernelFailed`，與 20 秒後 `DaemonFailed`。**當 kernel 的那隻自己不能用 `ctl`** |
++| `gate/kernel.json` 寫壞 | ann 照常活著，只是 `stderr.txt` 每秒一行 `kernel: error: CfgBad aos-directive exited 1`；請求沒人判，寄件人逾時。改回來下一輪就好 |
++
++ann 停著時要叫它回來：`aos-daemon-ctl -d .stack start ann`（這支永遠直寄 daemon，不經 kernel）。同一個 Linux 帳號下誰都能這樣繞過 kernel，要真擋得靠帳號權限。
++
++## 退回普通 agent
++
++```sh
++aos-agent -d .stack -t ann hook rm gate
++```
++
++```
++removed gate (…/.stack/procs/ann/hooks.json#/hooks/gate: deleted)
++```
++
++之後還寄到那個信箱的請求沒人理，10 秒後 `DaemonFailed`。所以還要把寄件人那邊拿掉：殼裡 `unset AOS_KERNEL`；寫進 `root/.env` 的把那行刪掉、重起根。實測刪掉、重起後，bob 再下 `ctl add -n worker6` 就沒有 `routing via`，直接印 stack。`gate/` 夾和 ann 的對話留著也無妨，要乾淨就跟 claude 說一聲它不再當門。
++
++## 做不到的部分／要補什麼
++
++- **沒辦法「快」**：claude 每封要 7～11 秒，而且一輪只判一件事；它在想別的、睡著、停著時整棵樹掛不了 proc。框架站本來是要快、要確定的（範本當 daemon 身體時每 300 ms 一輪）。適合當「少量、要人味判斷」的門，不適合當主要 kernel。（實測）
++- **ann 自己不能下 `ctl`**：要它也能掛 proc，ann 自己的環境得 `AOS_KERNEL` 指向別處或不設。這份沒試怎麼只給 ann 拿掉（例如給 ann 的定義放 `.env`），是推測的做法。
++- **claude 的判斷不保證照規則**：這次 haiku 全對（9 封），但它是讀字串做判斷；寄件人在請求裡多寫的字會原樣進它的對話（提示注入風險自己承擔，使用者 11-13 說過）。硬規則應寫成 `kernel.json` 的 `allowed`，讓站先擋，只把邊緣的留給 claude。（推測）
++- 一鍵版 `kernel_gate` 工具做的是同一件事（11-13 實跑過）；這份是拆開手做。
++- 沒試：拒絕 `stop` 時寄件人看到什麼（推測 `CtlRejected` 加原因）；加 `max_running` 後（照文件，下一站是 `$AOS_DAEMON` 時自動數那台，`count_daemon` 不用填）。
++
++## 發現的問題
++
++1. 經 kernel 逾時的錯誤行一律寫 `inspect adjacent …/hooks/gate/queue.json`，但「先留著」的站用的是 `hold.json`，`queue.json` 根本不存在，會指錯地方。
++2. `kernel.json` 不是合法 JSON 時，錯誤只寫 `CfgBad aos-directive exited 1`，看不出是哪個檔、哪裡壞；而且 ann 的 `stderr.txt` 每個時鐘週期重印一次（15 秒 16 行），不像 daemon 身體失敗那樣只在變化時印。
++3. 帶 `-d .stack` 的 `ctl add` 仍走 `AOS_KERNEL`，同樣帶 `-d` 的 `ctl ls` 卻不問 kernel；同一個旗標兩種意思，容易以為自己繞過或沒繞過 kernel。
++4. 經 kernel 掛上時有時印 stack 路徑、有時只印 `worker3 attached; the daemon chose its stack`（後者是不帶 `-d` 的時候），寄件人拿不到 stack 位置。
+diff --git a/proto8/thinking/2026-11/18/eca-claude-小試驗教學/18-agent出錯怎麼手動除錯.md b/proto8/thinking/2026-11/18/eca-claude-小試驗教學/18-agent出錯怎麼手動除錯.md
+new file mode 100644
+index 000000000..1a2eaaf8d
+--- /dev/null
++++ b/proto8/thinking/2026-11/18/eca-claude-小試驗教學/18-agent出錯怎麼手動除錯.md
+@@ -0,0 +1,48 @@
++這份大概講 aos agent 出錯時怎麼手動查：先看哪裡、常見原因、怎麼救（試驗 18，11-18 在公司 WSL 用 haiku 故意弄壞幾次對過）。
++← [目錄](README.md)
++
++使用者原話：「Hmmmm。還有，當aos agent出錯的時候，如何手動除錯。這個大概講一下就好」
++
++## 結論
++
++先 `aos-agent ctl ls -l` 看表和冷卻，再看那隻 stack 裡的 `stderr.txt` 結尾。表上那句原因常常只是「起不來」，**真正的原因幾乎都在 `stderr.txt` 最後幾行**。下面的指令都站在樹根 `~/aos-home` 打（`-d .stack` 可省，見 [02](02-預設stack與站在agent夾裡.md)）。各檔怎麼判讀見 [17](17-手動看agent狀態.md)。
++
++## 照這個順序查
++
++1. **找得到 daemon 嗎**：`aos-daemon-ctl ls`。報錯就是指錯地方，看下表第 3 列。
++2. **表上那列**：`aos-agent ctl ls -l`。`stopped` 加原因＝倒了；`COOLDOWN` 有值＝腦出錯在冷卻。
++3. **stderr 結尾**：`tail -5 .stack/procs/ann/stderr.txt`。找 `error:` 那行，第一個字是誰出錯，接著是代號。
++4. **信到哪了**：`ls .stack/procs/ann/queue/new` 看還沒被拿的；`cat .stack/procs/ann/letters.json` 看被丟掉的（`dropped`）。
++5. **冷卻**：`cat .stack/procs/ann/cooldown.json`（`code`、`reason`；成功一次就刪掉）。
++6. **還看不懂**：看視窗 A 的 log（每次 `running`／`done`／`stopped` 一行），或 `aos-agent -t ann open` 進畫面看 claude 本人說什麼。
++
++`stop_cause.json` 只記被 daemon 停的原因（`sleep`、`remove`、`shutdown`、`stuck`），出錯倒掉時沒有它，不用找。
++
++## 症狀表
++
++| 症狀 | 先看哪裡 | 實際看到的 | 怎麼救 |
++|---|---|---|---|
++| say 之後一直沒回 | `ctl ls`、`queue/new` | `AnswerMissing waited 5 s; 0000…3.… is not answered yet (the letter is in queue/new/)`；等的時候先有一行 warning `nothing is running ann now; it is stopped on the daemon table` | `aos-agent ctl start -t ann`，會說 `1 queued letter(s) will be answered next`，信不會掉，再 `listen --letter 名字` |
++| 起來就倒、連倒三次停住 | `ctl ls` 的原因 → `stderr.txt` | 表上：`failed to start: … aos-loop: error: RunFailed run 1: loop.json#/exec failed with exit code 1; restarted 3 times in a row, each exited within 3s; not restarting again`。`stderr.txt`：`aos-eca-turn: error: CfgBad …/cli.json: screen_close_after_s must be a non-negative integer` | 改好定義，`aos-agent ctl start bad`（掛的當下不檢查 `cli.json`，見 [03](03-自訂定義掛上去.md#故意弄壞)） |
++| 指錯地方 | 錯誤那行 | 夾不在：`DaemonMissing daemon folder not found: ../nope`；夾在但不是 daemon 的 stack（例如指到 `.stack/procs/ann`）：`StateMissing …/procs_state.json not found (daemon not started yet, or procs_state is off)`；名字打錯：`InstanceMissing annn is not on the daemon table …` | `-d` 指 daemon 的 stack（樹根的 `.stack`），`-t` 用 `ctl ls` 上的名字 |
++| 信被丟 | `letters.json` | `LetterDropped … will not be answered: ann dropped it (bad: it was not a valid message)`（往 queue 丟 `{"hello":1}`） | 內容要是 `{"role":"user","content":"…"}`，或直接用 `say`，見 [04](04-aos-post丟信.md) |
++| 腦出錯、進冷卻 | `ctl ls -l`、`cooldown.json`、`stderr.txt` 結尾 | `llm.json` 填不存在的模型：第一封 `LetterDropped … (failed: the agent failed after it was handed over)`；`cooldown.json` 的 `reason` 是 `claude exited 1: There's an issue with the selected model (claude-no-such-model). …`；`ctl ls -l` 有 `until 16:46 (1)` | 改好之後等冷卻到（30 秒、1 分、2 分…加倍），冷卻中寄的信會接著答；被丟的那封要重寄 |
++| eca 的 claude 自己出錯（用不認得的旗標模擬） | `stderr.txt` 結尾 | `cooldown.json` 只寫 `claude exited 1 with no result in its output:`，`stderr.txt` 才有 `error: unknown option '--no-such-flag'`；`open` 畫面則是 `cli_session: error: CliFailed claude exited right after starting (wrong session id?)` | 改 `cli.json`；沒登入、額度用完也是走這條（`CliFailed`），**沒實測** |
++| 畫面開著時卡在權限提問 | `aos-agent -t ann open` 進去看 | **沒實測**。照 [eca-claude 範本說明](../../../../templates/eca-claude/README.md)：範本是 `dontAsk`，不跳框；只有自己加了回 `ask` 的 hook、畫面又開著，才會跳框等人按，看起來像卡住 | 進畫面按掉，`Ctrl+\` 離開 |
++
++`claude` 不在 PATH 時代號是 `CliMissing … is not on PATH`（讀程式得知，**沒實測**；aos 叫的命令寫死是 `claude`，`cli.json` 不能換）。
++
++## 還是查不出來時，收集這幾個
++
++```sh
++cd ~/aos-home && S=.stack/procs/ann && aos-agent ctl ls -l > /tmp/dbg.txt; tail -50 $S/stderr.txt >> /tmp/dbg.txt; cat $S/letters.json $S/cooldown.json >> /tmp/dbg.txt; tail -5 $S/history.jsonl >> /tmp/dbg.txt
++```
++
++再加上視窗 A 最後幾十行、用的定義夾（`cli.json`、`llm.json`）。**不要貼** `claude/env.json`、`~/.claude.json`、`~/.claude/` 裡的東西，也不要貼任何金鑰；`history.jsonl` 有對話內容，貼之前自己看一眼。
++
++## 發現的問題
++
++1. **`cooldown.json` 的原因有時是空的**：旗標錯時 `reason` 只寫到 `with no result in its output:` 就沒了，真正的 `unknown option` 只在 `stderr.txt`。
++2. **listen 會誤報**：冷卻剛到、agent 正要重試那一刻，`listen` 報 `AnswerMissing … bad stopped on an error before answering: …(failure 2 in a row; cooldown until 16:47:34)`，引的是舊的錯；5 秒後同一封 `listen --letter` 就拿到 `OK`。
++3. **畫面那條的提示會誤導**：旗標錯時 `open` 說 `wrong session id?`，其實跟對話編號無關。
++4. 第一封碰上錯的信直接被丟（`failed`），不會留著等冷卻後重試，要自己重寄。`stderr.txt` 最後一行常是 `RunFailed` 或 `brain_notify: warning`，真的錯在前一兩行。
+diff --git a/proto8/thinking/2026-11/18/eca-claude-小試驗教學/README.md b/proto8/thinking/2026-11/18/eca-claude-小試驗教學/README.md
+index ccb082aef..e1dcbd0f9 100644
+--- a/proto8/thinking/2026-11/18/eca-claude-小試驗教學/README.md
++++ b/proto8/thinking/2026-11/18/eca-claude-小試驗教學/README.md
+@@ -20,6 +20,13 @@ eca-claude 小試驗教學的目錄：使用者 11-18 陸續提的疑問，一
+ | [10](10-aos-asuser.md) | 試 aos-asuser（不行就寫缺什麼、模擬假設） | 參數檢查都實跑過了。真換身分缺 `newuidmap`，要使用者自己 `sudo apt install uidmap`。裝好之後的步驟標成「預期，未實測」 |
+ | [11](11-aos-share.md) | aos-share 也試試看 | 檔案系統支援 ACL，`check` 能用。真的分享、收回缺 `setfacl`，要使用者自己 `sudo apt install acl uidmap`。裝好之後的步驟標成「預期，未實測」 |
+ | [12](12-沙箱asuser-share要裝什麼與WSL限制.md) | 沙箱、asuser、share 各要額外裝什麼、WSL 上有什麼限制（總覽） | 沒有新實測，整理自 09～11 與實機檢查。bwrap 有；要補 `s6`（沙箱上限、`aos-run`）、`uidmap`（asuser）、`acl`（share），sudo 要自己跑。不裝的替代路是 `--limits`、`systemd-run`＋`taskset` |
++| 13 | 用 aos-loop 控制 eca-claude 的停止與繼續 | **未完成**：做到一半，收手時被打斷，還沒有檔 |
++| 14 | 停著的時候 aos-say（正確名字是 `aos-agent say`） | **未完成**：做到一半，收手時被打斷，還沒有檔 |
++| [15](15-aos-tools加新工具.md) | 用 aos-tool（正確名字是 `aos-tools`）給它加新工具 | 工具夾只要 `_entry`（可執行）和 `_tooldef.json`。用 `aos-agent tools add` 加進這隻自己的 `tools.json`，下一句就看得到，名字是 `mcp__aos__<名>`，不用重起也不用 set-def |
++| [16](16-手動讓eca-claude當kernel.md) | 手動讓 eca-claude 成為 kernel | 掛一個 hook 跑框架站，把請求留下來交給 claude 判，再讓 `AOS_KERNEL` 指到它的收件信箱。add、stop 會先到它，被拒的一方看到 `AddRejected … NotNow`。每封要 7～11 秒，它停著或在忙時整棵樹都掛不了 proc |
++| 17 | 手動確認狀態（aos json view、信箱、queue…） | **未完成**：做到一半，收手時被打斷，還沒有檔 |
++| [18](18-agent出錯怎麼手動除錯.md) | agent 出錯時怎麼手動除錯（大概講） | 照六步查：表 → `ctl ls -l` → `stderr.txt` 結尾 → `queue/`、`letters.json` → `cooldown.json` → 畫面。表上的原因常常只寫「起不來」，真正的原因在 `stderr.txt` |
++| 19 | 手動幫它 compact | **未完成**：做到一半，收手時被打斷，還沒有檔 |
+ 
+ ## 共同準備
+ 

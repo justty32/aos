@@ -277,6 +277,66 @@
         "[user](workflows/common/user.md)"
       ],
       "since": "2026-11-17"
+    },
+    "pages-trial-1116": {
+      "title": "GitHub Pages 試上線版的剩項（11-16 晚換新頁）",
+      "status": "等使用者",
+      "flow": "",
+      "what": "使用者給桌面「aos · 新時代的軟體技術棧.html」（11-14 另存網頁），首頁＋docs/zh 14 個子頁上線，試上線版（使用者「先不要用正式版，不要讓搜索引擎收錄」：每頁 noindex、草稿條保留；9211e9c58、69dd79ea2、d5f47c890）。正式發佈時要做：拿掉 noindex 與草稿條、首頁原始碼註解「quotes not yet confirmed」、子頁「草稿入口」字樣、zh/examples 與 zh/reference 沒有入口、repo 無 LICENSE；其他段互動只看了 03。另：使用者放的 proto8/templates/tests/kits/_index.json 一直沒進 git（commit-request 當生成物不收、生成器又不產它）。家機裸開 Claude Code 掛了 aos MCP（local scope，~/.cache/aos-mcp-repo/，12 支唯讀工具）",
+      "next": "等使用者說正式發佈",
+      "see": [
+        "[首頁](../docs/index.html)"
+      ],
+      "since": "2026-11-16"
+    },
+    "kit-merge-1118": {
+      "title": "aos-kit 併進 aos-agent ctl --kit（kit-merge-1118，沒做完）",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-18「aos-kit也不用了，刪掉，功能整合進現有的。」選「併進 aos-agent ctl (Recommended)」。程式（ctl/kit.py、add／set-def 的 --kit、kits/review/tools.json、test_ctl_kit 8 支、test_kits +2）寫完，家機暫存複本全套測過；沒交，改動留在家機工作樹＋交接夾 kit-merge-1118-未交.patch（含 aos-kit 19 檔刪除；aos-kit 本體 dc4218e8a 先拿回讓 main 能裝）。剩：設計稿 18/aos-kit-併進ctl.md、試驗 08 與教學目錄註記、裁定記進 cpp-py-改名/08、日索引、假腦實操、grep aos-kit；三題待裁見 lines-1118-decide",
+      "next": "",
+      "see": [
+        "[交接](../proto8/thinking/2026-11/18/交接-各線/kit-merge-1118.md)",
+        "[交接-各線](../proto8/thinking/2026-11/18/交接-各線/README.md)"
+      ],
+      "since": "2026-11-18"
+    },
+    "eca-pi-bc-1118": {
+      "title": "pi 身乙案（rpc、回答途中收信）＋丙案（畫面）（eca-pi-bc-1118，沒做完）",
+      "status": "open",
+      "flow": "",
+      "what": "使用者 11-18「codex身留下，pi coding agent要做畫面，去吧。每輪生一行外掛，目前就先這樣。…接著做乙丙吧。」程式與測試（test_pi、test_pi_screen、test_eca_pi）寫完，家機暫存複本全套測過；沒交，改動留在家機工作樹＋交接夾 eca-pi-bc-1118-未交.patch。剩：templates/docs/03-eca-pi.md 整份（還是甲案）、knowledge cli/eca.json 的 #/pi、apps/eca/README 第 12 行、真 pi 整樹實跑（pi_aos_screen.mjs 沒在真 pi 上跑過）、已知限制",
+      "next": "",
+      "see": [
+        "[交接](../proto8/thinking/2026-11/18/交接-各線/eca-pi-bc-1118.md)",
+        "[交接-各線](../proto8/thinking/2026-11/18/交接-各線/README.md)"
+      ],
+      "since": "2026-11-18"
+    },
+    "eca-lab-1118": {
+      "title": "eca-claude 小試驗教學 13～19（eca-lab-1118，沒做完）",
+      "status": "open",
+      "flow": "",
+      "what": "15、16、18 寫完、13、14、17、19 被關機打斷沒檔（18 連到 17 是斷的）；目錄 README 的「共同準備」與 01～03 內文還寫 aos-tree-start（11-18 已拿掉）。沒交，改動留在家機工作樹＋交接夾 eca-lab-1118-未交.patch。使用者說 claude 額度不用省（haiku）、之後還會追加題目",
+      "next": "重派 13/14、17、19",
+      "see": [
+        "[交接](../proto8/thinking/2026-11/18/交接-各線/eca-lab-1118.md)",
+        "[交接-各線](../proto8/thinking/2026-11/18/交接-各線/README.md)"
+      ],
+      "since": "2026-11-18"
+    },
+    "lines-1118-decide": {
+      "title": "11-18 被打斷那幾條線留下的待裁題",
+      "status": "等使用者",
+      "flow": "",
+      "what": "cooldown-1118（已交 2b4320644）：listen 的字少了 aos-llm: error: 前綴、SendFailed 少了 aos-llm 原話可不可以；關畫面順手清到期單（set-def、ctl rm、aos-agent close 都清）要不要只限 set-def。rm-treestart-1118（已交 93e0acc0c）：跳過 source env.sh 直接打 aos-exec root 沒人擋殼裡別棵樹的 AOS_*——甲不補／乙補在 daemon-root 範本／丙補在 aos-exec。kit-merge-1118（沒交）：寫進 stack（現做法）還是像舊 aos-kit 就地改定義夾；eca 定義要不要也能套；換包要不要允許直接蓋（現在要先 reset）；套 kit 後 tools ls 那行誤導的提醒要不要修",
+      "next": "",
+      "see": [
+        "[cooldown 交接](../proto8/thinking/2026-11/18/交接-各線/cooldown-1118.md)",
+        "[rm-treestart 交接](../proto8/thinking/2026-11/18/交接-各線/rm-treestart-1118.md)",
+        "[kit-merge 交接](../proto8/thinking/2026-11/18/交接-各線/kit-merge-1118.md)"
+      ],
+      "since": "2026-11-18"
     }
   }
 }

@@ -1,0 +1,2236 @@
+# kit-merge-1118 未交的改動（家機 11-18 晚從總補丁分出，對 2b4320644 之後的 main）：aos-kit 併進 aos-agent ctl --kit，含 aos-kit 本體與測試 19 檔的刪除；git apply 套用
+diff --git a/proto8/knowledge/aos/kits.json b/proto8/knowledge/aos/kits.json
+index a369ca1de..fcc879f1d 100644
+--- a/proto8/knowledge/aos/kits.json
++++ b/proto8/knowledge/aos/kits.json
+@@ -1,6 +1,6 @@
+ {
+-  "_description": "# Kits: ready-made system text and tools for one agent role\n\nA kit is a system text plus a tool set for one role (gatherer, reviewer), laid over a new agent-fsm definition. Kits live in the templates folder, in `templates/kits/` next to `agent-fsm/`; `kits.json` there lists them. A kit is not a template of its own: you make an agent-fsm definition and copy the kit's files over it.\n\n- How to make an agent from a kit: aos/kits.json#/use.\n- How a kit's system text is built from layers: aos/kits.json#/layers.\n- Why a kit cuts tools, and what it leaves out: aos/kits.json#/tools.\n- What a kit does not enforce yet: aos/kits.json#/limits.\n",
+-  "use": "# Make an agent from a kit\n\n1. agent_def {\"op\": \"new\", \"template\": \"agent-fsm\", \"path\": \"defs/gather\"}\n2. Copy `templates/kits/gather/system.txt` and `templates/kits/gather/tools.json` over `defs/gather/system.txt` and `defs/gather/tools.json` (tools.json names its packs with {\"$env\": \"AOS_HOME\"}, so it works wherever it is copied).\n3. Set the brain in `defs/gather/llm.json` (aos/brain.json).\n4. agent_def {\"op\": \"check\", \"path\": \"defs/gather\"}: an empty problems list = ready.\n5. Start it with subagent add, and give it a brief: the one task, the paths it may read and write, what to deliver in out/, the finish condition (it copies that into its goal), and the knowledge folder path.\n\nFor a reviewer, take `system.txt` from `templates/kits/review/`; the tools are the same as gather. Several agents of one role can share one definition.\n",
++  "_description": "# Kits: ready-made system text and tools for one agent role\n\nA kit is a system text plus a tool set for one role (gatherer, reviewer), laid over a new agent-fsm definition. Kits live in the templates folder, in `templates/kits/` next to `agent-fsm/`; `kits.json` there lists them. A kit is not a template of its own: it is a folder with a system.txt and a tools.json. You make an agent-fsm definition and copy the kit's files over it (a person can instead give the folder to `aos-agent ctl add --kit`).\n\n- How to make an agent from a kit: aos/kits.json#/use.\n- How a kit's system text is built from layers: aos/kits.json#/layers.\n- Why a kit cuts tools, and what it leaves out: aos/kits.json#/tools.\n- What a kit does not enforce yet: aos/kits.json#/limits.\n",
++  "use": "# Make an agent from a kit\n\n1. agent_def {\"op\": \"new\", \"template\": \"agent-fsm\", \"path\": \"defs/gather\"}\n2. Copy `templates/kits/gather/system.txt` and `templates/kits/gather/tools.json` over `defs/gather/system.txt` and `defs/gather/tools.json` (tools.json names its packs with {\"$env\": \"AOS_HOME\"}, so it works wherever it is copied).\n3. Set the brain in `defs/gather/llm.json` (aos/brain.json).\n4. agent_def {\"op\": \"check\", \"path\": \"defs/gather\"}: an empty problems list = ready.\n5. Start it with subagent add, and give it a brief: the one task, the paths it may read and write, what to deliver in out/, the finish condition (it copies that into its goal), and the knowledge folder path.\n\nFor a reviewer, do the same with `templates/kits/review/` (its tools.json is the same as gather's). Several agents of one role can share one definition.\n\nA person attaching an agent from a shell does not copy: `aos-agent ctl add --kit KIT-FOLDER ...` (or `ctl set-def --kit KIT-FOLDER NAME DEF`) writes the kit's system.txt and tools.json into that agent's stack as its own copies, and leaves the definition as it is. Only agent-fsm definitions take a kit (an eca one is refused). `aos-agent system reset` and `aos-agent tools reset` drop the kit again.\n",
+   "layers": "# Layers of a kit's system text\n\nA system text has no include and no variables: it is sent whole on every brain call, so it is assembled once, when the definition is made, top to bottom:\n\n1. general: `kits/general.A.txt` (tier A = strong general models): start (self_state, read the knowledge base, goal set), workspace folder (notes.md, out/, trash/), work, report (one mailbox_send to the lead), stuck, notice board, stop.\n2. site (optional, not shipped): your own rules (who to report to, language, local don'ts, where the notice board is). Put it between general and role.\n3. role: `kits/roles/gather.txt` or `kits/roles/review.txt`.\n4. task: the brief, sent in the letter that starts the agent; not in system.txt.\n\ngeneral.A.txt has placeholders: `<KNOWLEDGE>` (path of the knowledge folder), `<BOARD>` (how to read a notice board: a command, or a file to read; drop the line if there is none), `<OWN_BOARD>` (how the agent posts who it waits for, or drop the line). The shipped `gather/system.txt` and `review/system.txt` say the brief names the knowledge folder, resolve BOARD to board_read (who = the one waited on, or \"user\" for the user's notice) and OWN_BOARD to board_wait (who and what when it stops to wait, done = true when the answer comes), and stay within 3,000 characters. If you change a layer, assemble again in the same order.\n",
+   "tools": "# Why a kit cuts tools\n\nEvery tool's definition is sent on every brain call, so the tool list is the biggest fixed cost, larger than the system text. Measured 2026-11-14 as sent: agent-fsm as shipped has 40 tools, about 50,500 characters; the gather kit had 24 tools, about 30,100 characters; board_read and board_wait were added after that (26 tools).\n\nThe gather tool set keeps look, change (only write, edit, mkdir), gadgets, todo, mailbox, comm (only board_read and board_wait; board_set, board_clear and board_ls are turned off), goal, json (read only), index and self_state. It leaves out shell, delete, events, subagent, def, jsonx and kernel_gate. self_tools, self_system, self_llm, self_history and self_ctl are turned off, so the agent cannot give itself back a tool or rewrite its own rules. How a single tool is turned off: aos/packs.json.\n",
+   "limits": "# What a kit does not enforce yet\n\n- Writing only in the workspace is a rule in the system text; file tools themselves do not stop a path outside it, and no hook enforces it yet.\n- Only a tier A general text and two roles (gatherer, reviewer) exist. A small model may skip parts of the start and stop rules (notes.md, the handoff).\n"
+diff --git a/proto8/py/aos/apps/agent/README.md b/proto8/py/aos/apps/agent/README.md
+index 396638b47..5c6a6aa0a 100644
+--- a/proto8/py/aos/apps/agent/README.md
++++ b/proto8/py/aos/apps/agent/README.md
+@@ -16,9 +16,9 @@
+ **ctl：掛上與管理**（使用者 11-05「我希望掛上和管理這塊，能夠放到aos-agent ctl這個子命令下。」）
+ 
+ ```
+-aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] [--limits JSON] [--envs K=V ...] [--parent P] [--notify-box B] [--dotenv-override] [--auto-restart] [--timeout-s 秒] [--on-queued fail|ok] XXX     掛一隻；等上表、印 stack（`--dotenv-override`＝經 `aos-exec --dotenv-override` 起：定義的 `.env` 可以蓋掉已經設了的變數，例 `PATH=${HOME}/bin:${PATH}`；記在表上那列的 exec、只管這一跳）
++aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] [--limits JSON] [--envs K=V ...] [--parent P] [--notify-box B] [--dotenv-override] [--auto-restart] [--kit KIT] [--timeout-s 秒] [--on-queued fail|ok] XXX     掛一隻；等上表、印 stack（`--dotenv-override`＝經 `aos-exec --dotenv-override` 起：定義的 `.env` 可以蓋掉已經設了的變數，例 `PATH=${HOME}/bin:${PATH}`；記在表上那列的 exec、只管這一跳；`--kit`＝套配給包，見下「--kit」）
+ aos-agent [--daemon D] ctl rm [--purge [--yes]] [--timeout-s 秒] 名字                       拔掉、stack 留著（cli-sweep Q3，使用者「兩支都留 stack，要刪另外說」；印 `removed X; stack S kept (…)`，同名同 `--stack` 再 `ctl add` 接著用；**改名**＝`ctl rm 舊名`（stack 留著）再 `ctl add -n 新名 -s <舊 stack> [-w <ws>] [--auto-restart] <定義>`，stack 資料夾不搬（路徑還是舊名，沒關係），中間寄給舊名的信會被退，用 `--envs` 掛的要把 `--envs` 再給一次）。`--purge` 才連 stack 一起刪（名字要明講；先關畫面，正在答＝SessionBad、什麼都不動；stack 是工作區、定義、daemon 資料夾、目前資料夾、家目錄、表上別隻的 stack 或在它們上層的不刪；終端裡先問 [y/N]）；`-y` 沒配 `--purge`＝`ArgumentsBad`；工作區（表上那列的 `ws`）已經不在不擋 `ctl rm`、`ctl set-def`：stderr 一行 `aos-agent: warning: the workspace of X is gone (…); closing its screen from its stack instead`，畫面改從 stack 關
+-aos-agent [--daemon D] ctl set-def [--timeout-s 秒] 名字 新定義               換定義＝停（等這一輪跑完）→拔（關畫面、stack 留著）→用同一個名字、stack、工作區、limits、auto_restart 掛回新定義（history、queue、信箱、自己那份覆蓋層都在 stack 裡）；表上馬上是新的、daemon 重啟也不掉；在跑的掛回就用新定義起（pid 換新），停著的還是停著、睡著的還是睡著；中間有一小段不在表上，這時寄給它的信會被退；停那步失敗或逾時＝什麼都沒拔，拔了之後掛回失敗＝錯誤行後面接手動接回的 `ctl add` 指令；對自己（`$AOS_STACK` 就是那隻的 stack）＝`ArgumentsBad`；`--envs` 掛的不收（先 rm 再 add `-s 舊 stack`）；stack 裡自己那份 tools 還疊在舊定義上＝提醒一行、不改寫
++aos-agent [--daemon D] ctl set-def [--kit KIT] [--timeout-s 秒] 名字 新定義               換定義＝停（等這一輪跑完）→拔（關畫面、stack 留著）→用同一個名字、stack、工作區、limits、auto_restart 掛回新定義（history、queue、信箱、自己那份覆蓋層都在 stack 裡）；表上馬上是新的、daemon 重啟也不掉；在跑的掛回就用新定義起（pid 換新），停著的還是停著、睡著的還是睡著；中間有一小段不在表上，這時寄給它的信會被退；停那步失敗或逾時＝什麼都沒拔，拔了之後掛回失敗＝錯誤行後面接手動接回的 `ctl add` 指令；對自己（`$AOS_STACK` 就是那隻的 stack）＝`ArgumentsBad`；`--envs` 掛的不收（先 rm 再 add `-s 舊 stack`）；stack 裡自己那份 tools 還疊在舊定義上＝提醒一行、不改寫
+ aos-agent [--daemon D] ctl ls [--json] [--long]                           列 daemon 表上全部：名字 狀態 工作區 queue 幾封（-l 多印健康欄，見下「ctl ls 看狀況」）
+ aos-agent [--daemon D] ctl start|stop|sleep|wake [名字|--target 名字] [--timeout-s 秒]   stop／sleep 另收 --no-wait；add／start／wake 另收 --on-queued fail|ok；stop 不關畫面（C′ B 包：eca 定義的 after_stop hook `screen_linger_stop` 照 `cli.json` 的 `screen_close_after_s` 延後關，預設 600 秒、0＝當場；期間又起來就不關；要馬上關用 `aos-agent close`）
+ aos-agent [--daemon D] ctl pause|resume [--target 名字]                    pause 另收 --no-wait
+@@ -57,6 +57,7 @@ aos-agent [--daemon D] goal [--target 名字] [get [-j]|set [-n N] 文字...（
+ - **ctl where**：不帶旗標＝`--stack`，印那隻的 stack 一行（同 `aos-daemon-ctl where --stack 名字`）；`--ws` 印它的工作區（表上那列的 `ws`；沒記＝`WsMissing`，那隻是沒給 `--ws` 直接用 aos-daemon-ctl 掛的）；兩個一起給＝`ArgumentsBad`（使用者 11-04 晚「aos agent的where，我希望默認是--stack，有需要再另外指定--ws。」）。
+ - **ctl who**（[feat-proto 件 1](../../../../thinking/2026-11/05/feat-proto/01-self-tools.md) 代定 1，使用者「讓agent給自己改tool」）：拿 `S`（`--stack S` ＞ `$AOS_STACK`；都沒有＝`StackMissing`）在 daemon 表（`aos-daemon-ctl ls --json`）裡找 `stack` 是 S 本身或 S 上層的那列，印名字；好幾列都包住 S＝取最深的；`--json` 印 `{"name", "stack", "ws", "def", "daemon", "parent", "notify_box"}`（`parent`＝誰要求掛了這隻、`notify_box`＝它該把回報寄到哪，字串或 null；照 [ok-devt-1114 05 定稿](../../../../thinking/2026-11/14/ok-devt-1114/05-定稿.md) 1.3 的順序讀：表上那列的同名欄 ＞ 那列啟動單子的 envs 裡的 `AOS_PARENT_STACK`／`AOS_NOTIFY_BOX`〔帶 `--envs` 掛的列，daemon 把 `launch.exec` 記成指到小格的指標：exec 型 `procs/<名>/exec.json#/exec`、loop 型 `procs/<名>/loop.json#/_entry`〔單子在同檔 `/exec`〕，從表所在的夾算；指到的檔讀不到＝null：經 `AOS_KERNEL` 問來的表被 kernel 刪減過〔沒有 `launch`〕、小格不在這台機器、跨 uid 沒有讀權限〕 ＞ 查的是自己時自己的環境變數，前一處有這個鍵〔含空字串＝明確沒有〕就不看後面；只取這兩個名字、不印別的 envs〔可能帶金鑰〕；是 add 時請求方寫的登記，不是證明。`daemon`＝這次讀的是哪台 daemon 的表，照 `--daemon` ＞ `$AOS_DAEMON` ＞ `./.stack` 找到的那個；fork、subagent 靠它知道 daemon 在哪，不自己讀 `$AOS_DAEMON`）。沒找到＝`InstanceMissing`；沒 daemon＝`DaemonMissing`。給工具用：工具的小格是 `<agent stack>/tools/<名>/`（P-17），工具裡 `aos-agent ctl who` 就認出「叫我的是哪隻」——只查表、不從路徑往上爬（C-52「經機制看上層」）；工具繼承 daemon 給的 `AOS_DAEMON`。（設了 `AOS_KERNEL`、又沒明給 `--daemon`＝先寄 `{"procs_state_path": true}` 問 kernel 表在哪、再讀那份；問不到＝`KernelFailed`，不退回讀 `AOS_DAEMON`〔[C-47](../../../../docs/CONCEPTS/04-kernel.md) ①，批 5 已實作；見下「設了 `AOS_KERNEL` 先問再讀」與 [docs/02](docs/02-已知限制.md)〕。這時 `--json` 的 `daemon` 欄是表檔所在的夾。）沒掛 daemon 直接 `aos-exec body.json` 跑的不支援（沒有表）。用它的工具：[py/tools/agent/self_tools](../../../docs/03-索引-agent等.md#索引agent)。
+ - **份額 `limits`**（[feat-proto 件 5](../../../../thinking/2026-11/05/feat-proto/05-資源份額.md) 代定 5，使用者「會想要限制特定aos proc所占用的資源」）：定義的宣告可寫 `"limits": {"mem_mb": 512, "cpu_s": 600}`（這隻建議的份額；key 同 aos-sandbox：`mem_mb`、`cpu_s`、`procs`、`file_mb`、`files` 是正整數，`user` 是帳號名字串），`ctl add --limits JSON` 整份蓋過宣告（`'{}'`＝不限）。key 不認、值不對＝`InterfaceBad`（宣告）／`ArgumentsBad`（`--limits`），不送信。真正擋的是 daemon（子行程裡 `setrlimit`／換帳號，等同 s6-softlimit；proc 自己不知道）：有宣告或 `--limits` 就原樣轉成 `aos-daemon-ctl add --limits JSON`（`'{}'` 也送＝蓋過 daemon.json 頂層的預設、不限）；比 daemon 自己的 hard 寬、`user` 但 daemon 不是 root＝那隻起不來（`ctl state` 的 `reason` 帶 `LimitBad …`）。`ctl state`：表上那列有 `limits`（daemon 寫的生效那份）就在 `def` 後多一行 `limits  mem_mb=512 cpu_s=600`，沒有不印。規則見 [aos-daemon docs/09](../../../../cpp/aos-daemon/docs/09-份額.md)。
++- **--kit**（使用者 11-18「aos-kit也不用了，刪掉，功能整合進現有的。」選「併進 aos-agent ctl」，[設計](../../../../thinking/2026-11/18/aos-kit-併進ctl.md)）：`ctl add --kit KIT`、`ctl set-def --kit KIT`，KIT＝配給包夾（裡面有 `system.txt`、`tools.json`，出廠的在 `$AOS_HOME/templates/kits/gather`、`review`）。兩個檔寫成這隻在 **stack 裡自己那份**（跟 `system set`、`tools add` 寫的是同一層），**定義夾不動**；agent-fsm 每格重讀，掛上就生效。先全查、什麼都還沒寫：包夾不在或缺檔＝`KitMissing`；定義有 `cli.json`（eca）、沒宣告 `system`／`tools`、tools 不是 JSON 物件＝`KitBad`；stack 裡已有自己那份而且內容不同＝`CopyExists`（一樣的就留著）。`ctl add` 在寄掛上信之前寫（daemon 拒收就收回；逾時說不準就留著、提醒一行），所以要知道 stack：`-s` 給的，或沒走 kernel 時的預設 `<daemon stack>/procs/<名>`；`--stack-json`、走 kernel 又沒 `-s`＝`ArgumentsBad`。`set-def` 在拔掉之後、掛回之前寫（掛不回去就收回）。stderr 一行說寫了哪些。拿掉或換別包之前：`aos-agent -t 名 system reset -y`、`aos-agent -t 名 tools reset -y`。
+ - **啟動環境**（K-6）：`ctl add --envs K=V` 可重複，透過啟動單子的 `envs` 在起這隻 agent 時帶入環境變數；沒給就不另加。單子裡的目標寫成 `{"$env": "AOS_DAEMON", "$path": 相對 daemon stack 的路徑}`（two-machines），不寫這台的絕對路徑：整棵樹搬到別的位置或別台、重起 daemon，這隻照樣起、拿得到 envs。**不要用 `--envs` 放秘密**（external-mcp 05 P1）：值明文寫進 `procs/<名>/exec.json`（644），`ctl add` 那一下也在 `ps` 命令列上；外部 MCP 的 token 改用 server 檔的 `env_file`（只記位置、起 CLI 那一刻才讀，見 [external-mcp 02](../../../../thinking/2026-11/12/external-mcp/02-設計.md)）。
+ - **parent 與 notify_box 的登記**（[ok-devt-1114 05 定稿](../../../../thinking/2026-11/14/ok-devt-1114/05-定稿.md) 1.2、1.7、修訂 1；第 1 期）：只有本來就帶 envs 的 add 才登記——`--envs`、`--parent P`、`--notify-box B` 任一個有給（subagent、fork 一律帶）——把 `AOS_PARENT_STACK`、`AOS_NOTIFY_BOX` 兩個都寫進啟動單子的 envs，沒有值寫空字串（蓋掉從 daemon 繼承的同名變數）。不帶 envs 的 add 一個字都不加，表上那一列跟以前逐欄相同（parent 查起來是 null，等第 2 期放到列上）。
+   - parent：`--parent` 或 `--envs AOS_PARENT_STACK=…` 明給的優先；沒給＝表上包住 `$AOS_STACK` 的最深那列的 stack（同 `ctl who`；從工具的小格 `tools/<名>`、hook 的小格 `hooks/<名>` 呼叫也是那隻 agent）；設了 `AOS_KERNEL` 就經 kernel 查表；沒有 `$AOS_STACK`、查不到＝空字串，不擋 add。
+diff --git a/proto8/py/aos/apps/agent/ctl/add.py b/proto8/py/aos/apps/agent/ctl/add.py
+index 3f64440ee..25f7f0341 100644
+--- a/proto8/py/aos/apps/agent/ctl/add.py
++++ b/proto8/py/aos/apps/agent/ctl/add.py
+@@ -7,13 +7,14 @@ import re
+ from ..common import bad_args, Agent, Fail, IFACE, call_dc, daemon_path, note, owner_row, row_named, table, via_kernel
+ from .shared import ctl_wait, need_table, queued_opt, timeout_opt
+ from ..decl import read_decl
++from . import kit as kit_mod
+ 
+ 
+ # ---------------------------------------------------------------- 子命令：動它的（步 5）
+ 
+ HELP = """aos-agent ctl add - attach one agent to the daemon
+ 
+-usage: aos-agent [--daemon D] ctl add [-n N] [-w WS | --ws-json J] [-s S | --stack-json J] [--path-json J] [--limits JSON] [--envs K=V ...] [--parent P] [--notify-box B] [--dotenv-override] [--auto-restart] [--timeout-s S] [--on-queued fail|ok] XXX
++usage: aos-agent [--daemon D] ctl add [-n N] [-w WS | --ws-json J] [-s S | --stack-json J] [--path-json J] [--limits JSON] [--envs K=V ...] [--parent P] [--notify-box B] [--dotenv-override] [--auto-restart] [--kit KIT] [--timeout-s S] [--on-queued fail|ok] XXX
+ 
+ XXX is the agent folder; it must declare aos-agent in interfaces.json. The letter goes
+ through $AOS_KERNEL when that is set (a warning line says so). Waits until the agent is on
+@@ -61,11 +62,16 @@ flags:
+                       --on-empty stop) would end, restart and end again until the daemon
+                       stops it after 3 quick exits. To turn it on later: aos-agent ctl rm N
+                       (keeps the stack unless --purge), then ctl add --auto-restart
++""" + kit_mod.HELP_FLAG + """
++                      The files are written before the add letter goes out (taken back if the
++                      daemon refuses it); so ctl add must know the stack: with $AOS_KERNEL set,
++                      or with --stack-json, give -s too (else ArgumentsBad)
+       --timeout-s S   seconds to wait for the daemon (default 30)
+       --on-queued MODE  fail or ok when still queued (default fail)
+   -h, --help          show this help
+ 
+-exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, DaemonMissing, DaemonFailed...).
++exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, DaemonMissing, DaemonFailed,
++  KitMissing, KitBad, CopyExists...).
+ """
+ 
+ def definition(arg, verb="add"):
+@@ -92,7 +98,7 @@ def cmd(argv):
+     try:
+         opts, rest = aos_flags.parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits", "--timeout-s": "timeout_s", "--on-queued": "on_queued",
+                                              "--ws-json": "ws_json", "--stack-json": "stack_json", "--path-json": "path_json",
+-                                             "--parent": "parent", "--notify-box": "notify_box"},
++                                             "--parent": "parent", "--notify-box": "notify_box", "--kit": "kit"},
+                                      switches={"--auto-restart": "auto_restart", "--dotenv-override": "dotenv_override"}, help=HELP, short=("-n", "-w", "-s"),
+                                      multi={"--envs": "envs"})
+     except aos_flags.Error as e:
+@@ -166,13 +172,19 @@ def cmd(argv):
+             raise bad_args(HELP, str(e)) from e
+         raise
+     if via_kernel():
+-        return add_via_kernel(name, entry_target, ws, stack, def_dir, limits, envs, opts, written, kept, secs, on_queued)
++        made = lay_kit(opts, xxx, stack, name, None)
++        try:
++            return add_via_kernel(name, entry_target, ws, stack, def_dir, limits, envs, opts, written, kept, secs, on_queued)
++        except Fail as e:
++            kit_mod.undo(made, e)
++            raise
+     need_table()
+     row = row_named(name)
+     if row is not None:
+         hint = {"stopped": "; it is stopped, to carry on: aos-agent ctl start --target %s" % name,
+                 "sleeping": "; it is asleep, to carry on: aos-agent ctl wake --target %s" % name}.get(row.get("phase"), "")
+         raise Fail("InstanceExists", "%s is already on the daemon; pick another name (--name), or first aos-agent ctl rm %s%s" % (name, name, hint))
++    made = lay_kit(opts, xxx, stack, name, daemon_path())
+     try:
+         _, request = call_dc(dc.add_letter, entry_target, daemon=daemon_path(),   # 11-10：--envs 的目標寫成相對 daemon stack 的指示詞，搬家照樣起
+                              **add_kwargs(name, ws, stack, def_dir, limits, envs, opts, written, kept))
+@@ -182,10 +194,30 @@ def cmd(argv):
+     except KeyboardInterrupt:                         # 11-04 夜邊緣實測：信已寄出，Ctrl-C 不撤；原本安靜退 130，人以為沒掛上
+         note("the add letter was sent, the daemon will still attach %s; if you do not want it, aos-agent ctl rm %s (check with aos-agent ctl ls)" % (name, name))
+         raise
++    except Fail as e:
++        kit_mod.undo(made, e)                         # --kit：確定沒掛上＝收回剛寫進 stack 的（逾時說不準、排隊中 --on-queued ok：留著）
++        raise
+     if row is not None:
+         print(Agent(name, row).stack)
+ 
+ 
++def lay_kit(opts, xxx, stack, name, daemon):
++    """--kit（11-18 aos-kit 併進 ctl）：寄 add 信之前把 kit 寫進它的 stack（agent 一起來就用得到）。stack 要拿得到：
++    -s 給的，或沒走 kernel 時 daemon 的預設 <daemon stack>/procs/<name>；--stack-json、走 kernel 又沒 -s＝ArgumentsBad。回寫了的路徑。"""
++    if opts.get("kit") is None:
++        return []
++    if isinstance(stack, str) and not isinstance(stack, dc.AsIs):
++        where = stack
++    elif stack is None and daemon:
++        where = os.path.join(daemon, "procs", name)
++    else:
++        raise bad_args(HELP, "--kit needs to know the stack: give -s STACK (with --stack-json, or through $AOS_KERNEL, ctl add cannot tell where it is)")
++    steps = kit_mod.plan(opts["kit"], xxx, where, name)
++    made = kit_mod.write(steps)
++    note(kit_mod.said(steps, opts["kit"], name))
++    return made
++
++
+ def add_kwargs(name, ws, stack, def_dir, limits, envs, opts, written, kept):
+     """dc.add_letter 除了目標與 daemon= 以外的參數，ctl add 兩條路（直寄 daemon、經 $AOS_KERNEL）與 set-def 共用一份：
+     加旗標只改這裡，不會一條路帶、一條路漏（wf/advices「ctl add 兩條路各自組參數」；0a3ffe5c4 曾漏 dotenv_override）。
+diff --git a/proto8/py/aos/apps/agent/ctl/kit.py b/proto8/py/aos/apps/agent/ctl/kit.py
+new file mode 100644
+index 000000000..9f0e34d3f
+--- /dev/null
++++ b/proto8/py/aos/apps/agent/ctl/kit.py
+@@ -0,0 +1,119 @@
++# aos/apps/agent/ctl/kit.py - ctl add／set-def 的 --kit：把 kit 夾的 system.txt、tools.json 寫成這隻 agent 在 stack 裡自己那份（定義不動），退回＝system reset、tools reset。
++# 使用者 11-18：「aos-kit也不用了，刪掉，功能整合進現有的。」選項框選「併進 aos-agent ctl (Recommended)」（thinking 2026-11/18/aos-kit-併進ctl.md）。
++# 為什麼寫 stack 不寫定義：system／tools 本來就有「stack 那份在＝蓋過定義那份」（aos-agent system set、tools add 寫的那層），
++#   agent-fsm 每格重讀；寫那裡＝不就地改使用者的定義夾、不用另存舊檔、退回用現成的 reset。
++import json
++import os
++from aos.declared_files import declared_files
++from ..common import Fail, note
++
++FILES = ("system", "tools")                     # 宣告鍵；kit 夾裡固定叫 system.txt、tools.json
++KIT_NAMES = {"system": "system.txt", "tools": "tools.json"}
++
++HELP_FLAG = """      --kit KIT       lay a kit over it: KIT is a kit folder holding system.txt and tools.json
++                      (shipped ones: $AOS_HOME/templates/kits/gather, .../review). They are written
++                      as the agent's own copies in its stack (as aos-agent system set and tools add
++                      do); the definition is not changed. Only for agent-fsm definitions (an eca
++                      one, with cli.json, = KitBad). An own copy already there and different =
++                      CopyExists, nothing written. To drop the kit later: aos-agent -t NAME system
++                      reset -y, then aos-agent -t NAME tools reset -y"""
++
++
++def read_bytes(path):
++    try:
++        with open(path, "rb") as f:
++            return f.read()
++    except OSError as e:
++        raise Fail("KitBad", "cannot read %s: %s" % (path, e.strerror or e))
++
++
++def plan(kit_arg, def_folder, stack, name):
++    """先全部檢查、什麼都不寫。回 [(宣告鍵, 內容, stack 裡的路徑, "create"|"unchanged")]。"""
++    kit = os.path.abspath(kit_arg)
++    if not os.path.isdir(kit):
++        raise Fail("KitMissing", "%s is not a folder (--kit takes a kit folder, e.g. $AOS_HOME/templates/kits/gather)" % kit_arg)
++    for key in FILES:
++        if not os.path.isfile(os.path.join(kit, KIT_NAMES[key])):
++            raise Fail("KitMissing", "%s has no %s (a kit folder holds system.txt and tools.json)" % (kit, KIT_NAMES[key]))
++    if os.path.exists(os.path.join(def_folder, "cli.json")):
++        raise Fail("KitBad", "%s is an eca definition (it has cli.json); kits are for agent-fsm definitions only "
++                   "(an eca CLI keeps its own built-in tools, so the kit's tool limits would not hold)" % def_folder)
++    try:
++        rels = declared_files(def_folder)
++    except ValueError as e:
++        raise Fail("InterfaceBad", str(e)) from e
++    missing = [k for k in FILES if k not in rels]
++    if missing:
++        raise Fail("KitBad", "%s does not declare %s in interfaces.json (a kit needs both system and tools, as in the agent-fsm template)"
++                   % (def_folder, " and ".join(missing)))
++    tools = read_bytes(os.path.join(kit, KIT_NAMES["tools"]))
++    try:
++        if not isinstance(json.loads(tools.decode("utf-8")), dict):
++            raise ValueError("not a JSON object")
++    except (ValueError, UnicodeError) as e:
++        raise Fail("KitBad", "%s is not a tools registry (a JSON object): %s" % (os.path.join(kit, KIT_NAMES["tools"]), e)) from e
++    new = {"system": read_bytes(os.path.join(kit, KIT_NAMES["system"])), "tools": tools}
++    steps = []
++    for key in FILES:
++        dest = os.path.join(stack, rels[key])
++        if os.path.isdir(dest):
++            raise Fail("KitBad", "%s is a folder" % dest)
++        if os.path.lexists(dest):
++            if read_bytes(dest) == new[key]:
++                steps.append((key, new[key], dest, "unchanged"))
++                continue
++            raise Fail("CopyExists", "%s already has its own %s in its stack (%s, from aos-agent %s or an earlier --kit); nothing written. "
++                       "To drop it first: aos-agent -t %s %s reset -y" % (name, rels[key], dest, "system set" if key == "system" else "tools add / rm",
++                                                                        name, key))
++        steps.append((key, new[key], dest, "create"))
++    return steps
++
++
++def write(steps):
++    """寫 create 那幾份（暫存檔再 link 上去：同名已出現＝不蓋、報錯）。回寫了的路徑（失敗時給 undo）。"""
++    made = []
++    try:
++        for key, data, dest, action in steps:
++            if action != "create":
++                continue
++            os.makedirs(os.path.dirname(dest), exist_ok=True)
++            tmp = os.path.join(os.path.dirname(dest), ".%s.kit.%d" % (os.path.basename(dest), os.getpid()))
++            with open(tmp, "wb") as f:
++                f.write(data)
++            try:
++                os.link(tmp, dest)
++            except FileExistsError:
++                raise Fail("CopyExists", "%s appeared meanwhile; nothing more written" % dest)
++            finally:
++                os.unlink(tmp)
++            made.append(dest)
++    except OSError as e:
++        undo(made)
++        raise Fail("WriteFailed", "cannot write the kit into the stack: %s" % (e.strerror or e)) from e
++    except Fail:
++        undo(made)
++        raise
++    return made
++
++
++UNSURE = ("WaitFailed", "DaemonFailed")         # 信寄出了、結果說不準（之後還可能掛上）：不收回
++
++
++def undo(made, err=None):
++    """掛不上時收回剛寫的（只收這次寫的；原本就在、內容相同的不動）。err 是說不準的那幾種＝留著、提醒一行。"""
++    if err is not None and getattr(err, "code", None) in UNSURE:
++        if made:
++            note("kept the kit files just written (%s): the daemon may still attach it" % ", ".join(made))
++        return
++    for p in made:
++        try:
++            os.unlink(p)
++        except OSError:
++            pass
++
++
++def said(steps, kit_arg, name):
++    """一行說明（stderr 的 warning 行；stdout 留給 ctl add 印 stack）。"""
++    parts = ["%s %s" % ("wrote" if a == "create" else "kept (same)", d) for _, _, d, a in steps]
++    return ("kit %s: %s, as %s's own copies (the definition is not changed; to drop the kit: "
++            "aos-agent -t %s system reset -y, aos-agent -t %s tools reset -y)" % (kit_arg, "; ".join(parts), name, name, name))
+diff --git a/proto8/py/aos/apps/agent/ctl/set_def.py b/proto8/py/aos/apps/agent/ctl/set_def.py
+index 22532ae73..d23e7eb97 100644
+--- a/proto8/py/aos/apps/agent/ctl/set_def.py
++++ b/proto8/py/aos/apps/agent/ctl/set_def.py
+@@ -8,11 +8,12 @@ from ..decl import close_screen_if_any, read_decl
+ from ..common import IFACE
+ from .shared import ctl_wait, need_table, timeout_opt, wait_for
+ from . import add, phase
++from . import kit as kit_mod
+ 
+ 
+ HELP = """aos-agent ctl set-def - give an agent another definition; its stack and workspace stay
+ 
+-usage: aos-agent [--daemon D] ctl set-def [--timeout-s S] NAME DEF
++usage: aos-agent [--daemon D] ctl set-def [--kit KIT] [--timeout-s S] NAME DEF
+ 
+ DEF is the new agent folder (checked like ctl add: it must declare aos-agent in interfaces.json).
+ set-def closes NAME's screen (an answering screen = SessionBad, nothing changed), stops it
+@@ -36,19 +37,25 @@ An agent attached with ctl add --envs cannot be changed this way (ArgumentsBad):
+ then ctl add --envs ... --stack ITS-STACK DEF. An agent cannot run set-def on itself (the
+ stop waits for this very round; ArgumentsBad): run it from outside.
+ 
++With --kit, the kit is written into NAME's stack after it is detached and before it is
++attached again (all checks first, so a bad kit changes nothing). To swap one kit for
++another, drop the old one first (system reset -y, tools reset -y), else CopyExists.
++
+ flags:
++""" + kit_mod.HELP_FLAG + """
+       --timeout-s S   seconds to wait for the daemon at each step (default 30)
+   -h, --help          show this help
+ 
+ exit codes: 0 set; 1 error (InstanceMissing, PathMissing, InterfaceMissing, InterfaceBad,
+-  ArgumentsBad, CtlRejected, AddRejected, SessionBad, WaitFailed, DaemonMissing...).
++  ArgumentsBad, CtlRejected, AddRejected, SessionBad, WaitFailed, DaemonMissing,
++  KitMissing, KitBad, CopyExists...).
+ """
+ 
+ KEEP_STOPPED = {"stopped", "stopping"}                # 原本停著或正在停的：掛回後還是停著（stopping＝已經有人要它停，代定照停）
+ 
+ 
+ def cmd(argv):
+-    opts, rest = parse(argv, {"--timeout-s": "timeout_s"}, help=HELP)
++    opts, rest = parse(argv, {"--timeout-s": "timeout_s", "--kit": "kit"}, help=HELP)
+     secs = timeout_opt(opts, HELP)
+     if len(rest) != 2:
+         raise bad_args(HELP, "set-def takes NAME and the new agent folder DEF")
+@@ -61,6 +68,7 @@ def cmd(argv):
+                        "aos-agent ctl rm %s, then ctl add ... --stack %s %s" % (a.name, a.name, a.stack, rest[1]))
+     if os.environ.get("AOS_STACK") and os.path.realpath(os.environ["AOS_STACK"]) == os.path.realpath(a.stack):
+         raise bad_args(HELP, "set-def cannot be used by %s on itself (the stop waits for this very round); run it from outside" % a.name)
++    kit_steps = kit_mod.plan(opts["kit"], xxx, a.stack, a.name) if opts.get("kit") is not None else None   # --kit：先全查，壞了什麼都還沒動
+     written = row.get("as_written") if isinstance(row.get("as_written"), dict) else {}
+     kept = {k for k in ("ws", "stack") if isinstance(written.get(k), str)}   # 當初打成絕對路徑的格照樣原樣存
+     if os.path.isabs(rest[1]):
+@@ -83,15 +91,21 @@ def cmd(argv):
+         with contextlib.redirect_stdout(io.StringIO()):
+             phase.cmd_stop(["--timeout-s", str(secs), a.name], look=True)
+     detach(a, secs, kernel)
++    made = []
+     try:
++        if kit_steps is not None:                     # 拔掉之後、掛回之前寫進 stack：掛回來的第一格就用 kit
++            made = kit_mod.write(kit_steps)
++            note(kit_mod.said(kit_steps, opts["kit"], a.name))
+         ctl_wait("set-def", request, lambda letter: row_named(a.name) or (None if kernel else add.rejected(letter)),
+                  "the daemon has not put %s back on the table yet" % a.name, "AddRejected", secs=secs, replied=kernel)
+         if kernel:
+             wait_for(lambda: row_named(a.name), "the daemon has not put %s back on the table yet" % a.name, secs)
+     except Fail as e:
++        kit_mod.undo(made, e)                         # 掛不回去＝收回剛寫的 kit（逾時說不準：留著）
+         raise Fail(e.code, "%s; %s was detached and is not on the table now; attach it again by hand: aos-agent ctl add -n %s -s %s -w %s%s %s"
+                    % (e, a.name, a.name, a.stack, a.ws, " --auto-restart" if row.get("auto_restart") else "", old_def or "OLD-DEF")) from e
+-    warn_own_tools(a, old_def, xxx)
++    if kit_steps is None:                             # 套了 kit＝stack 那份就是 kit 的，不是疊在舊定義上
++        warn_own_tools(a, old_def, xxx)
+     now = (row_named(a.name) or {}).get("def") or xxx
+     tail = {"sleeping": "it stays asleep; ctl wake (or a daemon restart) runs it",
+             "stopped": "it stays stopped; ctl start runs it",
+diff --git a/proto8/py/entries.json b/proto8/py/entries.json
+index 900f0c095..d29e29d26 100644
+--- a/proto8/py/entries.json
++++ b/proto8/py/entries.json
+@@ -12,7 +12,6 @@
+   "aos-feedback": "aos.apps.feedback.main",
+   "aos-grow": "aos.apps.grow.main",
+   "aos-json-view": "aos.apps.json_view.main",
+-  "aos-kit": "aos.apps.kit.main",
+   "aos-mailbox": "aos.apps.mailbox.main",
+   "aos-mcp": "aos.apps.mcp.main",
+   "aos-mcp-import": "aos.apps.mcp_import.main",
+diff --git a/proto8/py/tests/apps/agent/test_ctl_kit.py b/proto8/py/tests/apps/agent/test_ctl_kit.py
+new file mode 100644
+index 000000000..a254a6288
+--- /dev/null
++++ b/proto8/py/tests/apps/agent/test_ctl_kit.py
+@@ -0,0 +1,183 @@
++"""Test aos-agent ctl add / set-def --kit on a real aos-daemon: the kit's system.txt and tools.json become the agent's own copies in its stack, the definition is not changed; bad kits, eca definitions and clashing own copies are refused before anything changes."""
++import json
++import os
++from pathlib import Path
++import shutil
++import signal
++import subprocess
++import sys
++import tempfile
++import unittest
++from env_helper import until  # noqa: E402  同夾的共用零件
++
++
++sys.dont_write_bytecode = True
++PROTO = Path(__file__).resolve().parents[4]
++BIN = PROTO / "bin" / "aos-agent"
++KITS = PROTO / "templates" / "kits"
++ENV = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
++ENV["PATH"] = str(PROTO / "bin") + ":" + ENV["PATH"]
++ENV["PYTHONDONTWRITEBYTECODE"] = "1"
++
++
++class CtlKit(unittest.TestCase):
++    def setUp(self):
++        self.tmp = Path(os.path.realpath(tempfile.mkdtemp(prefix="ctl-kit-")))
++        self.d = self.tmp / "stack"
++        self.d.mkdir()
++        self.ws = self.tmp / "ws"
++        self.ws.mkdir()
++        (self.tmp / "daemon.json").write_text('{"interval_ms": 20, "procs": {}}\n')
++        self.defn = self.definition("fsmish")
++        self.err = open(self.tmp / "daemon.err", "w")
++        self.p = subprocess.Popen(["aos-daemon", str(self.tmp / "daemon.json")], cwd=self.tmp, env=dict(ENV, AOS_STACK=str(self.d)),
++                                  stdout=subprocess.DEVNULL, stderr=self.err)
++        until(lambda: (self.d / "state.json").exists())
++
++    def tearDown(self):
++        try:
++            self.p.send_signal(signal.SIGTERM)                 # only the daemon this test started
++            self.p.wait(timeout=20)
++        finally:
++            self.err.close()
++            root = str(self.tmp)
++            for pid in (int(n) for n in os.listdir("/proc") if n.isdigit()):   # leftovers: only by cwd inside this test's folder
++                try:
++                    cwd = os.readlink("/proc/%d/cwd" % pid)
++                except OSError:
++                    continue
++                if pid != os.getpid() and (cwd == root or cwd.startswith(root + os.sep)):
++                    try:
++                        os.kill(pid, signal.SIGKILL)
++                    except OSError:
++                        pass
++            shutil.rmtree(self.tmp, ignore_errors=True)
++
++    def definition(self, name, eca=False):
++        """A body declaring system and tools (as agent-fsm does) that records the system text it sees, then waits for ctl.json."""
++        d = self.tmp / name
++        d.mkdir()
++        (d / "interfaces.json").write_text(json.dumps({"aos-agent": {"tools": "tools.json", "system": "system.txt"}}))
++        (d / "tools.json").write_text('{"tools": {}}\n')
++        (d / "system.txt").write_text("stock system of %s\n" % name)
++        if eca:
++            (d / "cli.json").write_text('{"kind": "claude"}\n')
++        (d / "_entry").write_text('#!/bin/sh\nhead -c 40 "$AOS_STACK/system.txt" >> "$AOS_STACK/seen.txt" 2>/dev/null || echo none >> "$AOS_STACK/seen.txt"\n'
++                                  'while [ ! -e "$AOS_STACK/ctl.json" ]; do sleep 0.05; done\nrm -f "$AOS_STACK/ctl.json"\n')
++        (d / "_entry").chmod(0o755)
++        return d
++
++    def agent(self, *args):
++        return subprocess.run([str(BIN), "--daemon", str(self.d), *args], cwd=self.tmp, env=ENV, capture_output=True, text=True, timeout=90)
++
++    def code(self, r):
++        return r.stderr.strip().splitlines()[-1].split("error: ", 1)[1].split()[0] if "error: " in r.stderr else None
++
++    def rows(self):
++        try:
++            return json.loads((self.d / "procs_state.json").read_text())["procs"]
++        except (OSError, ValueError):
++            return {}
++
++    def stock(self):
++        self.assertEqual((self.defn / "system.txt").read_text(), "stock system of fsmish\n")
++        self.assertEqual((self.defn / "tools.json").read_text(), '{"tools": {}}\n')
++
++    def test_add_writes_own_copies_before_start(self):
++        r = self.agent("ctl", "add", "-n", "ann", "-w", str(self.ws), "--kit", str(KITS / "gather"), "fsmish")
++        self.assertEqual(r.returncode, 0, r.stderr)
++        st = self.d / "procs" / "ann"
++        self.assertEqual(r.stdout.strip(), str(st))
++        self.assertEqual((st / "system.txt").read_bytes(), (KITS / "gather" / "system.txt").read_bytes())
++        self.assertEqual((st / "tools.json").read_bytes(), (KITS / "gather" / "tools.json").read_bytes())
++        self.assertIn("kit ", r.stderr)
++        self.assertIn("system reset -y", r.stderr)
++        self.stock()
++        until(lambda: (st / "seen.txt").exists())
++        self.assertNotIn("stock system", (st / "seen.txt").read_text())     # the body saw the kit's text from its first start
++        g = self.agent("system", "--target", "ann", "get", "-l")
++        self.assertEqual(g.returncode, 0, g.stderr)
++        self.assertTrue(g.stdout.startswith("agent\t"), g.stdout)
++
++    def test_add_kit_missing_or_incomplete(self):
++        r = self.agent("ctl", "add", "-n", "ann", "--kit", str(self.tmp / "nope"), "fsmish")
++        self.assertEqual((r.returncode, self.code(r)), (1, "KitMissing"), r.stderr)
++        half = self.tmp / "half"
++        half.mkdir()
++        (half / "system.txt").write_text("x\n")
++        r = self.agent("ctl", "add", "-n", "ann", "--kit", str(half), "fsmish")
++        self.assertEqual((r.returncode, self.code(r)), (1, "KitMissing"), r.stderr)
++        (half / "tools.json").write_text("[]\n")
++        r = self.agent("ctl", "add", "-n", "ann", "--kit", str(half), "fsmish")
++        self.assertEqual((r.returncode, self.code(r)), (1, "KitBad"), r.stderr)
++        self.assertNotIn("ann", self.rows())
++        self.assertFalse((self.d / "procs" / "ann" / "system.txt").exists())
++
++    def test_add_eca_definition_refused(self):
++        self.definition("ecaish", eca=True)
++        r = self.agent("ctl", "add", "-n", "eve", "--kit", str(KITS / "gather"), "ecaish")
++        self.assertEqual((r.returncode, self.code(r)), (1, "KitBad"), r.stderr)
++        self.assertIn("eca", r.stderr)
++        self.assertNotIn("eve", self.rows())
++
++    def test_add_own_copy_clash(self):
++        st = self.tmp / "own"
++        st.mkdir()
++        (st / "system.txt").write_text("my own words\n")
++        r = self.agent("ctl", "add", "-n", "ann", "-s", str(st), "--kit", str(KITS / "gather"), "fsmish")
++        self.assertEqual((r.returncode, self.code(r)), (1, "CopyExists"), r.stderr)
++        self.assertEqual((st / "system.txt").read_text(), "my own words\n")
++        self.assertFalse((st / "tools.json").exists())
++        self.assertNotIn("ann", self.rows())
++
++    def test_add_same_copy_is_kept(self):
++        st = self.tmp / "own"
++        st.mkdir()
++        shutil.copy(KITS / "gather" / "system.txt", st / "system.txt")
++        r = self.agent("ctl", "add", "-n", "ann", "-s", str(st), "--kit", str(KITS / "gather"), "fsmish")
++        self.assertEqual(r.returncode, 0, r.stderr)
++        self.assertIn("kept (same)", r.stderr)
++        self.assertEqual((st / "tools.json").read_bytes(), (KITS / "gather" / "tools.json").read_bytes())
++
++    def test_add_stack_json_needs_plain_stack(self):
++        r = self.agent("ctl", "add", "-n", "ann", "--stack-json", json.dumps(str(self.tmp / "s2")), "--kit", str(KITS / "gather"), "fsmish")
++        self.assertEqual((r.returncode, self.code(r)), (1, "ArgumentsBad"), r.stderr)
++        self.assertIn("--kit needs to know the stack", r.stderr)
++
++    def test_set_def_kit_then_clash_then_reset(self):
++        r = self.agent("ctl", "add", "-n", "ann", "--auto-restart", "-w", str(self.ws), "fsmish")
++        self.assertEqual(r.returncode, 0, r.stderr)
++        st = self.d / "procs" / "ann"
++        until(lambda: (st / "seen.txt").exists())
++        r = self.agent("ctl", "set-def", "--kit", str(KITS / "review"), "ann", "fsmish")
++        self.assertEqual(r.returncode, 0, r.stderr)
++        self.assertEqual((st / "system.txt").read_bytes(), (KITS / "review" / "system.txt").read_bytes())
++        self.assertEqual((st / "tools.json").read_bytes(), (KITS / "review" / "tools.json").read_bytes())
++        self.assertNotIn("still overrides the old definition", r.stderr)
++        self.stock()
++        until(lambda: len((st / "seen.txt").read_text().splitlines()) >= 2)
++        self.assertEqual(self.rows()["ann"].get("phase"), "running")
++        # another kit over it: refused before anything is stopped
++        r = self.agent("ctl", "set-def", "--kit", str(KITS / "gather"), "ann", "fsmish")
++        self.assertEqual((r.returncode, self.code(r)), (1, "CopyExists"), r.stderr)
++        self.assertEqual(self.rows()["ann"].get("phase"), "running")
++        self.assertEqual((st / "system.txt").read_bytes(), (KITS / "review" / "system.txt").read_bytes())
++        # drop it with the existing reset commands, then the other kit goes on
++        for what in ("system", "tools"):
++            r = self.agent(what, "--target", "ann", "reset", "-y")
++            self.assertEqual(r.returncode, 0, r.stderr)
++        self.assertFalse((st / "system.txt").exists())
++        r = self.agent("ctl", "set-def", "--kit", str(KITS / "gather"), "ann", "fsmish")
++        self.assertEqual(r.returncode, 0, r.stderr)
++        self.assertEqual((st / "system.txt").read_bytes(), (KITS / "gather" / "system.txt").read_bytes())
++
++    def test_help_mentions_kit(self):
++        for sub in ("add", "set-def"):
++            r = self.agent("ctl", sub, "--help")
++            self.assertEqual(r.returncode, 0, r.stderr)
++            self.assertIn("--kit KIT", r.stdout)
++            self.assertIn("CopyExists", r.stdout)
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/proto8/templates/kits/README.md b/proto8/templates/kits/README.md
+index 9f8029e24..39b453e47 100644
+--- a/proto8/templates/kits/README.md
++++ b/proto8/templates/kits/README.md
+@@ -1,7 +1,7 @@
+ # kits
+ 
+ This folder holds kits: ready-made system texts and tool sets for one agent role, laid over the agent-fsm template.
+-A kit is not a template of its own; you copy its files over a new agent-fsm definition.
++A kit is not a template of its own: it is a folder with a `system.txt` and a `tools.json`, laid over an agent-fsm definition.
+ 
+ ## What a kit is
+ 
+@@ -10,7 +10,7 @@ A kit is the system text plus the tool set (and, later, hooks and brain settings
+ | kit | role | system | tools |
+ |---|---|---|---|
+ | gather | gatherer: finds facts with sources, does not design | [gather/system.txt](gather/system.txt) | [gather/tools.json](gather/tools.json) |
+-| review | reviewer: checks work against a brief, points out, does not fix | [review/system.txt](review/system.txt) | [gather/tools.json](gather/tools.json) (same) |
++| review | reviewer: checks work against a brief, points out, does not fix | [review/system.txt](review/system.txt) | [review/tools.json](review/tools.json) (the same file as gather's) |
+ 
+ [kits.json](kits.json) lists the same in machine-readable form.
+ 
+@@ -35,13 +35,31 @@ The shipped `gather/system.txt` and `review/system.txt` are general.A.txt with t
+ 
+ ## How to use
+ 
++A person, from a shell: give the kit folder to `aos-agent ctl add` or `ctl set-def` with `--kit`.
++
++```
++aos-agent ctl add --kit $AOS_HOME/templates/kits/gather -n gat -w . agents/ann
++aos-agent ctl set-def --kit $AOS_HOME/templates/kits/review ann agents/ann
++```
++
++The kit's two files are written into the agent's stack as its own copies (the layer that `aos-agent system set` and `aos-agent tools add` write); the definition folder is not changed, so several agents can share one definition with different kits. agent-fsm reads them on every brain call. Only agent-fsm definitions take a kit; an eca definition (with `cli.json`) is refused. An own copy that is already in the stack and different is refused too (`CopyExists`); to drop a kit, or before laying another one:
++
++```
++aos-agent -t ann system reset -y
++aos-agent -t ann tools reset -y
++```
++
++An agent, with its tools: make a definition and copy the kit's files over it.
++
+ ```
+ agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}
+ ```
+ 
+ Then copy `kits/gather/system.txt` and `kits/gather/tools.json` over the new definition's `system.txt` and `tools.json`, set the brain in its `llm.json` yourself, and run `agent_def check`.
+ 
+-For a reviewer, do the same but take `system.txt` from `kits/review/`; the tools are the same as gather.
++For a reviewer, do the same with `kits/review/`.
++
++A kit of your own is any folder with these two files. `tools.json` must name its packs with `{"$env": "AOS_HOME"}` or absolute paths (as the shipped ones do), not paths relative to the kit, because it is copied into the stack.
+ 
+ ## Why tools are cut
+ 
+diff --git a/proto8/templates/kits/gather/tools.json b/proto8/templates/kits/gather/tools.json
+index 05387141c..b603e5cc2 100644
+--- a/proto8/templates/kits/gather/tools.json
++++ b/proto8/templates/kits/gather/tools.json
+@@ -1,5 +1,5 @@
+ {
+- "description": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only board_read and board_wait; no shell, delete, events, subagent, def, jsonx or kernel_gate; self keeps only self_state, so the agent cannot lift its own limits.",
++ "description": "Tool set of the gather and review kits (gather/tools.json and review/tools.json are the same file, kept in step by tests/kits): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only board_read and board_wait; no shell, delete, events, subagent, def, jsonx or kernel_gate; self keeps only self_state, so the agent cannot lift its own limits.",
+  "$override": [
+   {
+    "$env": "AOS_HOME",
+diff --git a/proto8/templates/kits/kits.json b/proto8/templates/kits/kits.json
+index 73151a512..71d69c31e 100644
+--- a/proto8/templates/kits/kits.json
++++ b/proto8/templates/kits/kits.json
+@@ -1,5 +1,5 @@
+ {
+- "description": "Index of the kits in this folder: for each kit its role, folder, system text, tool set, model tiers it was written for, and whether it has a shell.",
++ "description": "Index of the kits in this folder: for each kit its role, folder (give it to aos-agent ctl add / set-def --kit), system text, tool set, model tiers it was written for, and whether it has a shell.",
+  "kits": {
+   "gather": {
+    "role": "gatherer",
+@@ -13,7 +13,7 @@
+    "role": "reviewer",
+    "dir": "review",
+    "system": "review/system.txt",
+-   "tools": "gather/tools.json",
++   "tools": "review/tools.json",
+    "tiers": ["A"],
+    "shell": false
+   }
+diff --git a/proto8/templates/kits/review/tools.json b/proto8/templates/kits/review/tools.json
+new file mode 100644
+index 000000000..b603e5cc2
+--- /dev/null
++++ b/proto8/templates/kits/review/tools.json
+@@ -0,0 +1,62 @@
++{
++ "description": "Tool set of the gather and review kits (gather/tools.json and review/tools.json are the same file, kept in step by tests/kits): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only board_read and board_wait; no shell, delete, events, subagent, def, jsonx or kernel_gate; self keeps only self_state, so the agent cannot lift its own limits.",
++ "$override": [
++  {
++   "$env": "AOS_HOME",
++   "$path": "/lib/packs/look.json"
++  },
++  {
++   "$env": "AOS_HOME",
++   "$path": "/lib/packs/change.json"
++  },
++  {
++   "$env": "AOS_HOME",
++   "$path": "/lib/packs/gadgets.json"
++  },
++  {
++   "$env": "AOS_HOME",
++   "$path": "/lib/packs/todo.json"
++  },
++  {
++   "$env": "AOS_HOME",
++   "$path": "/lib/packs/self.json"
++  },
++  {
++   "$env": "AOS_HOME",
++   "$path": "/lib/packs/mailbox.json"
++  },
++  {
++   "$env": "AOS_HOME",
++   "$path": "/lib/packs/comm.json"
++  },
++  {
++   "$env": "AOS_HOME",
++   "$path": "/lib/packs/goal.json"
++  },
++  {
++   "$env": "AOS_HOME",
++   "$path": "/lib/packs/json.json"
++  },
++  {
++   "$env": "AOS_HOME",
++   "$path": "/lib/packs/index.json"
++  }
++ ],
++ "tools": {
++  "copy": null,
++  "move": null,
++  "do_task": null,
++  "self_tools": null,
++  "self_llm": null,
++  "self_system": null,
++  "self_history": null,
++  "self_ctl": null,
++  "json_set": null,
++  "json_add": null,
++  "json_del": null,
++  "json_multi_set": null,
++  "board_set": null,
++  "board_clear": null,
++  "board_ls": null
++ }
++}
+diff --git a/proto8/templates/tests/kits/test_kits.py b/proto8/templates/tests/kits/test_kits.py
+index 9a5ac9562..59aa489b9 100644
+--- a/proto8/templates/tests/kits/test_kits.py
++++ b/proto8/templates/tests/kits/test_kits.py
+@@ -1,4 +1,4 @@
+-"""Check the public kits folder (templates/kits): English only, no site-specific wording, valid JSON with a description first, and each kit's system.txt equal to its assembled layers."""
++"""Check the public kits folder (templates/kits): English only, no site-specific wording, valid JSON with a description first, each kit folder holding system.txt and tools.json (for ctl --kit), and each kit's system.txt equal to its assembled layers."""
+ import json
+ import re
+ import unittest
+@@ -80,6 +80,22 @@ class TestKits(unittest.TestCase):
+                 self.assertIn(tier, data['tiers'], name)
+                 self.assertTrue((KITS / f'general.{tier}.txt').is_file(), tier)
+ 
++    def test_kit_folders_hold_both_files(self):
++        """aos-agent ctl add / set-def --kit takes a kit folder: system.txt and tools.json in it, named so in kits.json."""
++        data = json.loads((KITS / 'kits.json').read_text(encoding='utf-8'))
++        for name, kit in data['kits'].items():
++            self.assertEqual(kit['system'], kit['dir'] + '/system.txt', name)
++            self.assertEqual(kit['tools'], kit['dir'] + '/tools.json', name)
++        self.assertEqual((KITS / 'review' / 'tools.json').read_bytes(), (KITS / 'gather' / 'tools.json').read_bytes())
++
++    def test_tools_name_packs_by_env(self):
++        """The tools file is copied into a stack, so it must not point relative to the kit folder."""
++        for p in KITS.glob('*/tools.json'):
++            data = json.loads(p.read_text(encoding='utf-8'))
++            for item in data['$override']:
++                self.assertIsInstance(item, dict, str(p))
++                self.assertEqual(item.get('$env'), 'AOS_HOME', str(p))
++
+     def test_systems_are_assembled(self):
+         general = (KITS / 'general.A.txt').read_text(encoding='utf-8')
+         self.assertIn(STEP2_OLD, general)
+diff --git a/wf/tools/index_gen.json b/wf/tools/index_gen.json
+index f78883bbc..f6b180cb0 100644
+--- a/wf/tools/index_gen.json
++++ b/wf/tools/index_gen.json
+@@ -106,7 +106,7 @@
+   "out": "wf/knowledge/code-map/proto8",
+   "deps_out": "wf/knowledge/code-map/deps",
+   "data_files": {
+-   "*kits*/*.txt": "aos-kit 的提示詞片段（純文字，整份交給腦，不加檔頭）",
++   "*kits*/*.txt": "kit（配給包）的提示詞片段（純文字，整份交給腦，不加檔頭）",
+    "*system.txt": "agent 的系統提示詞（純文字，整份交給腦，不加檔頭）",
+    "*prompt.txt": "給腦的提示詞（純文字，整份交給腦，不加檔頭）",
+    "*VERSION": "版本號與來源（一行純文字）",
+diff --git a/wf/tools/index_gen_desc.json b/wf/tools/index_gen_desc.json
+index b9a9081aa..f615cecb9 100644
+--- a/wf/tools/index_gen_desc.json
++++ b/wf/tools/index_gen_desc.json
+@@ -20,7 +20,6 @@
+   "proto8/py/tests/apps/eca": "aos-eca-turn、aos-eca-screen 的測試（本體在 py/aos/apps/eca；多半經 bin/ 的入口當子行程跑）",
+   "proto8/py/tests/apps/feedback": "aos-feedback 的測試（本體在 py/aos/apps/feedback；多半經 bin/ 的入口當子行程跑）",
+   "proto8/py/tests/apps/json_view": "aos-json-view 的測試（本體在 py/aos/apps/json_view；多半經 bin/ 的入口當子行程跑）",
+-  "proto8/py/tests/apps/kit": "aos-kit 的測試（本體在 py/aos/apps/kit；多半經 bin/ 的入口當子行程跑）",
+   "proto8/py/tests/apps/mailbox": "aos-mailbox 的測試（本體在 py/aos/apps/mailbox；多半經 bin/ 的入口當子行程跑）",
+   "proto8/py/tests/apps/mcp": "aos-mcp 的測試（本體在 py/aos/apps/mcp；多半經 bin/ 的入口當子行程跑）",
+   "proto8/py/tests/apps/mcp_import": "aos-mcp-import 的測試（本體在 py/aos/apps/mcp_import；多半經 bin/ 的入口當子行程跑）",
+diff --git a/proto8/templates/README.md b/proto8/templates/README.md
+index 838dd9771..9e3d017bf 100644
+--- a/proto8/templates/README.md
++++ b/proto8/templates/README.md
+@@ -23,7 +23,7 @@
+ 
+ [`reviewer`](reviewer/README.md) 重用 agent-fsm 的格，讓 review_round 試降級並留下專精、差異化與退休建議，agent 讀結果、開處方。
+ 
+-[`kits`](kits/README.md) 不是範本，是**派 agent-fsm 時按角色用的配給包**：每包有拼好的 system 文字和一份 tools.json，蓋到 `agent_def new` 建出的 agent-fsm 定義上就能用（蒐集員 gather、審稿員 review）。檔案一律英文、中立；測試在 `tests/kits/`，給 agent 看的說明在知識庫 `aos/kits.json`。
++[`kits`](kits/README.md) 不是範本，是**派 agent-fsm 時按角色用的配給包**：每包有拼好的 system 文字和一份 tools.json，蓋到 `agent_def new` 建出的 agent-fsm 定義上就能用（蒐集員 gather、審稿員 review）；人從 shell 掛 agent 時用 `aos-agent ctl add --kit <包夾>`（或 `ctl set-def --kit`），寫成那隻在 stack 裡自己那份、定義夾不動。檔案一律英文、中立；測試在 `tests/kits/`，給 agent 看的說明在知識庫 `aos/kits.json`。
+ 
+ ## 分檔目錄
+ 
+diff --git a/proto8/py/aos/apps/kit/README.md b/proto8/py/aos/apps/kit/README.md
+deleted file mode 100644
+index 2c77fbc0e..000000000
+--- a/proto8/py/aos/apps/kit/README.md
++++ /dev/null
+@@ -1,83 +0,0 @@
+-# aos-kit
+-
+-`aos-kit` works with kits (see `templates/kits/README.md`): ready-made system texts and tool sets for one agent role, laid over the agent-fsm template. It lists the kits, assembles a kit's system text from its layers, checks that the shipped text is up to date, and lays a kit over an agent definition folder.
+-
+-```
+-aos-kit [--kits DIR] ls [-j]
+-aos-kit [--kits DIR] make KIT [--site FILE] [--set KEY=VALUE ...] [-o FILE]
+-aos-kit [--kits DIR] check KIT [-j]
+-aos-kit [--kits DIR] add KIT DEF [--site FILE] [--set KEY=VALUE ...] [--force]
+-```
+-
+-Examples:
+-
+-```sh
+-aos-kit ls
+-aos-kit make gather --site my-site.txt --set KNOWLEDGE=/srv/aos/knowledge -o /tmp/gather.txt
+-aos-kit check gather
+-aos-kit add gather defs/gather            # after agent_def new from the agent-fsm template
+-```
+-
+-`--kits DIR` is the kits folder (default `$AOS_HOME/templates/kits`); it may go before or after the subcommand.
+-
+-## The recipe: a make block in kits.json
+-
+-Each kit that `make`, `check` and `add` work with has a `make` block in its entry of `kits.json`:
+-
+-```json
+-"make": {
+- "layers": ["general.A.txt", "@site", "roles/gather.txt"],
+- "defaults": {"KNOWLEDGE_LINE": "2. Read ...", "BOARD_LINE": "BOARD: ...", "OWN_BOARD_LINE": "OWN BOARD: ..."},
+- "limit": 3000
+-}
+-```
+-
+-- `layers`: files relative to the kits folder, in order. `@site` is the `--site` file; with no `--site` it is left out.
+-- Joining: every layer but the last loses its trailing newlines; layers are joined by one blank line; the last layer is kept as it is (so the text ends the way the role file ends). An empty layer is skipped.
+-- `defaults`: values for placeholders, by name (A-Z, 0-9, `_`).
+-- `limit`: the most characters the text may have (optional).
+-
+-A kit without a `make` block can be listed but not made, checked or added (`MakeMissing`).
+-
+-## Placeholders
+-
+-A placeholder is `<NAME>` (capital letters, digits, `_`). The layers use `<KNOWLEDGE>`, `<BOARD>` and `<OWN_BOARD>`. Each line is filled on its own; for a placeholder on a line the first of these wins:
+-
+-1. `--set NAME_LINE=TEXT`: the whole line becomes TEXT.
+-2. `--set NAME=TEXT`: the placeholder is replaced in place.
+-3. the kit's default `NAME_LINE`: the whole line.
+-4. the kit's default `NAME`: in place.
+-
+-An empty value drops the line (`--set BOARD_LINE=` leaves the BOARD line out; `--set OWN_BOARD=` drops the `<OWN_BOARD>` line). When a line has several placeholders and one of them takes a whole-line value, the first such one replaces the line. Values are not scanned again for placeholders.
+-
+-The shipped `gather/system.txt` and `review/system.txt` are the whole-line defaults: step 2 of START, the BOARD line and the OWN BOARD line. With no `--site` and no `--set`, `aos-kit make gather` gives the shipped file byte for byte (the tests check this).
+-
+-## Commands
+-
+-- **ls**: one line per kit, `NAME TAB ROLE TAB TIERS TAB SYSTEM TAB TOOLS TAB RECIPE` (RECIPE is `make` when the kit has a make block, else `-`). `-j` gives `{"kits_dir", "kits": [{name, role, tiers, system, tools, make}]}`.
+-- **make**: prints the assembled text on stdout (exact bytes, no newline added), or writes it to `-o FILE` (temporary file, then rename) and prints one line. Warnings on stderr (exit stays 0): a placeholder is left, the text is over the limit, a `--set` key no layer uses.
+-- **check**: assembles with the kit's defaults and no site, then reports, one line per problem: a missing file (system, tools, a layer), `stale` (the shipped system file differs; the line of the first difference is given), `unresolved` placeholders (in the assembled text, and in the shipped file when it is stale), `too long` (over the limit), a tools file that is not JSON. Clean = `ok KIT (N chars, limit L)` and exit 0; else the problem lines on stdout and the error line `CheckFailed`. `-j` gives `{kit, ok, problems, chars, limit}`.
+-- **add**: lays the kit over an agent-fsm definition folder DEF:
+-  - DEF must be a folder with `interfaces.json`, else `DefMissing`.
+-  - Writes `DEF/system.txt` (assembled as in make, with `--site` and `--set`) and `DEF/tools.json` (a copy of the kit's tools file).
+-  - A `system.txt` or `tools.json` already in DEF must be the stock file of `$AOS_HOME/templates/agent-fsm`; otherwise it is refused with `FileChanged` (or `StockMissing` when there is no stock file to compare with, e.g. AOS_HOME not set), unless `--force`. A file that already has the kit's content is left as it is (`unchanged`).
+-  - Both files are checked before either is written. Each file that is replaced is first saved as `FILE.before-kit`; when that name is taken, `FILE.before-kit.2`, `.3` and so on. Nothing is deleted.
+-  - Prints one line per file saved or written, then which layers and tools file were used.
+-  - This version does not touch `hooks.json` or `llm.json`: set the brain in `llm.json` yourself, then run `agent_def check`.
+-
+-## Output and errors
+-
+-Output is English. Errors are one line on stderr, `aos-kit: error: CODE reason`, exit 1; warnings are `aos-kit: warning: sentence`. Codes: `ArgumentsBad`, `FlagUnknown`, `CommandUnknown`, `KitsMissing` (no kits folder or kits.json, or no `--kits` and no AOS_HOME), `KitsBad`, `JsonBad`, `KitUnknown`, `MakeMissing`, `RecipeBad`, `FileMissing`, `ReadFailed`, `WriteFailed`, `CheckFailed`, `DefMissing`, `FileChanged`, `StockMissing`.
+-
+-## Layout and tests
+-
+-- `bin/aos-kit`: thin launcher; finds `py/aos/flags.py` via `../../../lib` (the same home's `lib/`).
+-- `__init__.py`: flags, dispatch, printing. `recipe.py`: kits.json, make block, assembling, check. `add.py`: laying a kit over a definition. `main.py`: what `bin/aos-kit` (generated by install.py) runs.
+-- Python 3 standard library only.
+-- Tests: `python3 -m unittest discover -s proto8/py/tests/apps/kit -v`. They use `tests/fixtures/kits` (a copy of `templates/kits` with make blocks added; a test keeps it equal to the shipped files apart from the make blocks) and `tests/fixtures/kits-stale` (a kit whose system text is out of date). Temporary folders are kept; set `TMPDIR` to choose where they go.
+-
+-## Known limits
+-
+-- The shipped `templates/kits/kits.json` has no make blocks yet; until it does, `make`, `check` and `add` on the shipped kits stop with `MakeMissing`, and only `ls` works there.
+-- `add` compares with the stock agent-fsm files byte for byte; a definition made from an older template counts as edited (use `--force`; the old files are kept).
+-- Lengths are counted in characters, not bytes or tokens.
+diff --git a/proto8/py/aos/apps/kit/__init__.py b/proto8/py/aos/apps/kit/__init__.py
+deleted file mode 100644
+index d11adde1d..000000000
+--- a/proto8/py/aos/apps/kit/__init__.py
++++ /dev/null
+@@ -1,204 +0,0 @@
+-# aos/apps/kit/__init__.py - aos-kit body: parse flags, dispatch ls / make / check / add, print. Recipe logic is in recipe.py, writing a definition in add.py.
+-import json
+-import os
+-import sys
+-
+-from aos import flags as aos_flags
+-
+-from . import add as add_mod
+-from . import recipe
+-from .recipe import Fail
+-
+-PROG = 'aos-kit'
+-
+-HELP = """aos-kit - kits: ready-made system texts and tool sets for one agent role, laid over agent-fsm
+-
+-usage: aos-kit [--kits DIR] SUBCOMMAND [FLAGS...] [ARGS...]
+-       aos-kit SUBCOMMAND --help
+-
+-subcommands:
+-  ls      list the kits in DIR/kits.json
+-  make    assemble a kit's system text from its layers (general, site, role)
+-  check   compare a kit's shipped system text with its assembled layers
+-  add     lay a kit over an agent-fsm definition folder (system.txt, tools.json)
+-
+-flags:
+-  --kits DIR    the kits folder (default: $AOS_HOME/templates/kits)
+-  -h, --help    show this help
+-Flags may go anywhere after the name they belong to.
+-
+-exit codes: 0 ok; 1 error ("aos-kit: error: CODE reason" on stderr).
+-more: proto8/py/aos/apps/kit/README.md"""
+-
+-LS_HELP = """aos-kit ls - list the kits
+-
+-usage: aos-kit ls [--kits DIR] [-j]
+-
+-One line per kit: NAME TAB ROLE TAB TIERS TAB SYSTEM TAB TOOLS TAB RECIPE (make = has a make block, - = none).
+--j / --json gives {"kits_dir", "kits": [{name, role, tiers, system, tools, make}]}."""
+-
+-MAKE_HELP = """aos-kit make - assemble a kit's system text
+-
+-usage: aos-kit make KIT [--kits DIR] [--site FILE] [--set KEY=VALUE ...] [-o FILE]
+-
+-Layers come from the kit's make block in kits.json, in order (general, @site, role); @site is the
+---site file, left out when none is given. Placeholders <NAME> are filled per line; the first of these
+-wins: --set NAME_LINE=TEXT (replaces the whole line), --set NAME=TEXT (in place), the kit's default
+-NAME_LINE, the kit's default NAME. An empty value drops the line. Known names: KNOWLEDGE, BOARD, OWN_BOARD.
+-Prints the text on stdout, or writes it to FILE with -o / --output. Warns (does not fail) when a
+-placeholder is left or the text is over the kit's limit."""
+-
+-CHECK_HELP = """aos-kit check - check a kit
+-
+-usage: aos-kit check KIT [--kits DIR] [-j]
+-
+-Assembles the kit with its defaults (no site) and compares the result with the kit's shipped system
+-file. Problems: missing files, stale (the shipped file differs), unresolved <NAME> placeholders, length
+-over the kit's limit, a tools file that is not JSON. Prints "ok ..." and exits 0 when clean; else one
+-line per problem, then the error line CheckFailed (exit 1). -j = one JSON object {kit, ok, problems, chars, limit}."""
+-
+-ADD_HELP = """aos-kit add - lay a kit over an agent-fsm definition
+-
+-usage: aos-kit add KIT DEF [--kits DIR] [--site FILE] [--set KEY=VALUE ...] [--force]
+-
+-Writes DEF/system.txt (assembled as in make) and DEF/tools.json (copied from the kit). DEF must hold an
+-interfaces.json (else DefMissing). A system.txt or tools.json already in DEF must be the stock one of
+-$AOS_HOME/templates/agent-fsm, else it is refused (FileChanged; StockMissing when there is nothing to
+-compare with) unless --force. Each file that is replaced is first saved as FILE.before-kit (.before-kit.2,
+-.3 ... when taken; nothing is deleted). Checks both files before writing either. hooks.json and llm.json
+-are not touched: set the brain in llm.json yourself."""
+-
+-
+-def parse(argv, name, help_text, flags=None, switches=None, multi=None, short=None):
+-    try:
+-        return aos_flags.parse(argv, flags or {}, switches or {}, multi or {}, help=help_text, short=short)
+-    except aos_flags.Error as e:
+-        raise Fail(e.code, '%s (see aos-kit %s --help)' % (e, name))
+-
+-
+-ROOT = [{}]                                     # [opts of the top level]; aos_flags writes --kits given after the subcommand into it
+-
+-
+-def kits_dir():
+-    return ROOT[0].get('kits') or recipe.default_kits_dir()
+-
+-
+-def one_kit(rest, name, usage, count=1):
+-    if len(rest) != count:
+-        raise Fail('ArgumentsBad', '%s takes %s (usage: %s)' % (name, 'KIT' if count == 1 else 'KIT DEF', usage))
+-    return rest
+-
+-
+-def out(text):
+-    sys.stdout.buffer.write(text.encode('utf-8'))
+-    sys.stdout.flush()
+-
+-
+-def cmd_ls(argv):
+-    opts, rest = parse(argv, 'ls', LS_HELP, switches={'--json': 'json'}, short={'-j': '--json'})
+-    if rest:
+-        raise Fail('ArgumentsBad', 'ls takes no arguments (usage: aos-kit ls [--kits DIR] [-j])')
+-    d = kits_dir()
+-    data = recipe.load_kits(d)
+-    rows = []
+-    for name, kit in data['kits'].items():
+-        kit = kit if isinstance(kit, dict) else {}
+-        tiers = kit.get('tiers') if isinstance(kit.get('tiers'), list) else []
+-        rows.append({'name': name, 'role': kit.get('role'), 'tiers': tiers, 'system': kit.get('system'),
+-                     'tools': kit.get('tools'), 'make': isinstance(kit.get('make'), dict)})
+-    if opts.get('json'):
+-        out(json.dumps({'kits_dir': d, 'kits': rows}, ensure_ascii=False) + '\n')
+-        return 0
+-    for r in rows:
+-        out('\t'.join([r['name'], str(r['role'] or '-'), ','.join(map(str, r['tiers'])) or '-',
+-                       str(r['system'] or '-'), str(r['tools'] or '-'), 'make' if r['make'] else '-']) + '\n')
+-    return 0
+-
+-
+-def build(kit_name, opts):
+-    """Assemble for make and add; warn about what is left."""
+-    d = kits_dir()
+-    data = recipe.load_kits(d)
+-    kit = recipe.get_kit(data, kit_name, d)
+-    make = recipe.get_make(kit, kit_name)
+-    sets = recipe.parse_sets(opts.get('set'))
+-    built = recipe.assemble(d, make, site=opts.get('site'), sets=sets)
+-    for n in built['unresolved']:
+-        aos_flags.warn(PROG, 'placeholder <%s> is left in the text (give --set %s=... or --set %s_LINE=...)' % (n, n, n))
+-    if make['limit'] is not None and len(built['text']) > make['limit']:
+-        aos_flags.warn(PROG, 'the text is %d chars, over the limit %d of kit %s' % (len(built['text']), make['limit'], kit_name))
+-    for k in built['unused_sets']:
+-        aos_flags.warn(PROG, '--set %s is not used by any layer' % k)
+-    return d, kit, built
+-
+-
+-MAKE_FLAGS = {'--site': 'site', '--output': 'output'}
+-
+-
+-def cmd_make(argv):
+-    opts, rest = parse(argv, 'make', MAKE_HELP, flags=MAKE_FLAGS, multi={'--set': 'set'}, short={'-o': '--output'})
+-    (name,) = one_kit(rest, 'make', 'aos-kit make KIT [--site FILE] [--set KEY=VALUE ...] [-o FILE]')
+-    _, _, built = build(name, opts)
+-    if opts.get('output'):
+-        add_mod.write_over(opts['output'], built['text'].encode('utf-8'))
+-        print('wrote %s (%d chars, layers: %s)' % (opts['output'], len(built['text']), ' + '.join(built['layers'])))
+-    else:
+-        out(built['text'])
+-    return 0
+-
+-
+-def cmd_check(argv):
+-    opts, rest = parse(argv, 'check', CHECK_HELP, switches={'--json': 'json'}, short={'-j': '--json'})
+-    (name,) = one_kit(rest, 'check', 'aos-kit check KIT [--kits DIR] [-j]')
+-    d = kits_dir()
+-    res = recipe.check(d, recipe.load_kits(d), name)
+-    if opts.get('json'):
+-        out(json.dumps(res, ensure_ascii=False) + '\n')
+-    elif res['ok']:
+-        lim = ', limit %d' % res['limit'] if res['limit'] is not None else ', no limit'
+-        out('ok %s (%d chars%s)\n' % (name, res['chars'], lim))
+-    else:
+-        for p in res['problems']:
+-            out('%s: %s\n' % (name, p))
+-    if not res['ok']:
+-        n = len(res['problems'])
+-        raise Fail('CheckFailed', '%d problem%s in kit %s' % (n, '' if n == 1 else 's', name))
+-    return 0
+-
+-
+-def cmd_add(argv):
+-    opts, rest = parse(argv, 'add', ADD_HELP, flags={'--site': 'site'}, switches={'--force': 'force'},
+-                       multi={'--set': 'set'})
+-    name, defdir = one_kit(rest, 'add', 'aos-kit add KIT DEF [--site FILE] [--set KEY=VALUE ...] [--force]', 2)
+-    d, kit, built = build(name, opts)
+-    tools_rel = kit.get('tools')
+-    if not isinstance(tools_rel, str) or not tools_rel:
+-        raise Fail('KitsBad', 'kit %s has no "tools" file in kits.json' % name)
+-    new = {'system.txt': built['text'].encode('utf-8'),
+-           'tools.json': add_mod.read_bytes(os.path.join(d, tools_rel))}
+-    steps = add_mod.plan(defdir, new, force=bool(opts.get('force')), stock=add_mod.stock_dir())
+-    for line in add_mod.apply(defdir, new, steps):
+-        print(line)
+-    print('kit %s: system.txt from %s; tools.json from %s' % (name, ' + '.join(built['layers']), tools_rel))
+-    print('not touched: hooks.json, llm.json (set the brain in llm.json yourself, then run agent_def check)')
+-    return 0
+-
+-
+-SUBS = {'ls': cmd_ls, 'make': cmd_make, 'check': cmd_check, 'add': cmd_add}
+-
+-
+-def main():
+-    aos_flags.HELP = HELP
+-    try:
+-        opts, rest = aos_flags.parse(sys.argv[1:], {'--kits': 'kits'}, help=HELP, sub='root')
+-        ROOT[0] = opts
+-        if not rest:
+-            raise Fail('ArgumentsBad', 'missing subcommand (%s; see aos-kit --help)' % ', '.join(SUBS))
+-        if rest[0] not in SUBS:
+-            raise Fail('CommandUnknown', 'unknown subcommand %s (%s; see aos-kit --help)' % (rest[0], ', '.join(SUBS)))
+-        code = SUBS[rest[0]](rest[1:])
+-    except aos_flags.Error as e:
+-        aos_flags.die(PROG, e.code, e)
+-    except Fail as e:
+-        aos_flags.die(PROG, e.code, e)
+-    sys.exit(code or 0)
+diff --git a/proto8/py/aos/apps/kit/add.py b/proto8/py/aos/apps/kit/add.py
+deleted file mode 100644
+index 15168dff6..000000000
+--- a/proto8/py/aos/apps/kit/add.py
++++ /dev/null
+@@ -1,102 +0,0 @@
+-# aos/apps/kit/add.py - lay a kit over an agent-fsm definition: system.txt (assembled) and tools.json (copied); old files are kept as *.before-kit.
+-import os
+-
+-from .recipe import Fail
+-
+-FILES = ('system.txt', 'tools.json')
+-
+-
+-def read_bytes(path):
+-    try:
+-        with open(path, 'rb') as fh:
+-            return fh.read()
+-    except OSError as e:
+-        raise Fail('ReadFailed', 'cannot read %s: %s' % (path, e.strerror or e))
+-
+-
+-def stock_dir(env=None):
+-    """$AOS_HOME/templates/agent-fsm, or None when AOS_HOME is not set."""
+-    env = os.environ if env is None else env
+-    home = env.get('AOS_HOME')
+-    return os.path.join(home, 'templates', 'agent-fsm') if home else None
+-
+-
+-def backup_name(path):
+-    """path.before-kit, or path.before-kit.2, .3 ... when that is taken (a backup is never overwritten)."""
+-    name = path + '.before-kit'
+-    n = 1
+-    while os.path.lexists(name):
+-        n += 1
+-        name = '%s.before-kit.%d' % (path, n)
+-    return name
+-
+-
+-def write_new(path, data):
+-    """Create path; fail if it is there."""
+-    try:
+-        with open(path, 'xb') as fh:
+-            fh.write(data)
+-    except OSError as e:
+-        raise Fail('WriteFailed', 'cannot write %s: %s' % (path, e.strerror or e))
+-
+-
+-def write_over(path, data):
+-    """Write a temporary file next to path, then rename it over path."""
+-    tmp = '%s.tmp.%d' % (path, os.getpid())
+-    try:
+-        with open(tmp, 'xb') as fh:
+-            fh.write(data)
+-        os.replace(tmp, path)
+-    except OSError as e:
+-        raise Fail('WriteFailed', 'cannot write %s: %s' % (path, e.strerror or e))
+-
+-
+-def plan(defdir, new, force=False, stock=None):
+-    """Decide per file before writing anything. new = {name: bytes}. -> [(name, action)], action in
+-    create, replace, unchanged. A file that is there and differs from the stock agent-fsm one is refused
+-    (FileChanged) unless force; without a stock copy to compare with it is refused too (StockMissing)."""
+-    if not os.path.isdir(defdir):
+-        raise Fail('DefMissing', '%s is not a folder' % defdir)
+-    if not os.path.isfile(os.path.join(defdir, 'interfaces.json')):
+-        raise Fail('DefMissing', '%s has no interfaces.json (not an agent definition; make one from the agent-fsm template first)' % defdir)
+-    steps = []
+-    for name in FILES:
+-        path = os.path.join(defdir, name)
+-        if not os.path.lexists(path):
+-            steps.append((name, 'create'))
+-            continue
+-        if os.path.isdir(path):
+-            raise Fail('WriteFailed', '%s is a folder' % path)
+-        cur = read_bytes(path)
+-        if cur == new[name]:
+-            steps.append((name, 'unchanged'))
+-            continue
+-        if not force:
+-            ref = os.path.join(stock, name) if stock else None
+-            if ref is None or not os.path.isfile(ref):
+-                raise Fail('StockMissing', 'cannot tell whether %s is the stock agent-fsm file (%s); give --force to replace it anyway'
+-                           % (path, 'AOS_HOME is not set' if stock is None else 'no ' + ref))
+-            if cur != read_bytes(ref):
+-                raise Fail('FileChanged', '%s is not the stock agent-fsm %s (someone edited it); give --force to replace it '
+-                           '(the old one is kept as %s)' % (path, name, os.path.basename(backup_name(path))))
+-        steps.append((name, 'replace'))
+-    return steps
+-
+-
+-def apply(defdir, new, steps):
+-    """Back up, then write. -> lines saying what was done."""
+-    out = []
+-    for name, action in steps:
+-        if action == 'replace':
+-            path = os.path.join(defdir, name)
+-            bak = backup_name(path)
+-            write_new(bak, read_bytes(path))
+-            out.append('saved %s (the old %s)' % (bak, name))
+-    for name, action in steps:
+-        path = os.path.join(defdir, name)
+-        if action == 'unchanged':
+-            out.append('unchanged %s (already the kit\'s)' % path)
+-        else:
+-            write_over(path, new[name])
+-            out.append('wrote %s (%d bytes)' % (path, len(new[name])))
+-    return out
+diff --git a/proto8/py/aos/apps/kit/main.py b/proto8/py/aos/apps/kit/main.py
+deleted file mode 100644
+index bd7dda756..000000000
+--- a/proto8/py/aos/apps/kit/main.py
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# aos-kit - list kits, assemble a kit's system text from its layers, check the shipped text, lay a kit over an agent-fsm definition; run by bin/aos-kit (generated by install.py), the body is this package.
+-from aos import flags as aos_flags
+-from aos.apps.kit import main
+-
+-if __name__ == "__main__":
+-    aos_flags.run(main)
+diff --git a/proto8/py/aos/apps/kit/recipe.py b/proto8/py/aos/apps/kit/recipe.py
+deleted file mode 100644
+index 29a4af492..000000000
+--- a/proto8/py/aos/apps/kit/recipe.py
++++ /dev/null
+@@ -1,248 +0,0 @@
+-# aos/apps/kit/recipe.py - read kits.json and a kit's make block, assemble the system text from its layers, check a kit.
+-import json
+-import os
+-import re
+-
+-PLACEHOLDER = re.compile(r'<([A-Z][A-Z0-9_]*)>')
+-KEY = re.compile(r'[A-Z][A-Z0-9_]*$')
+-SITE = '@site'
+-
+-
+-class Fail(Exception):
+-    """One error line: code (e.g. KitUnknown) and reason."""
+-    def __init__(self, code, reason):
+-        super().__init__(reason)
+-        self.code = code
+-
+-
+-def read_text(path, what):
+-    try:
+-        with open(path, encoding='utf-8', newline='') as fh:
+-            return fh.read()
+-    except FileNotFoundError:
+-        raise Fail('FileMissing', '%s %s does not exist' % (what, path))
+-    except IsADirectoryError:
+-        raise Fail('FileMissing', '%s %s is a folder, not a file' % (what, path))
+-    except OSError as e:
+-        raise Fail('ReadFailed', 'cannot read %s %s: %s' % (what, path, e.strerror or e))
+-    except UnicodeError:
+-        raise Fail('ReadFailed', '%s %s is not UTF-8 text' % (what, path))
+-
+-
+-def default_kits_dir(env=None):
+-    env = os.environ if env is None else env
+-    home = env.get('AOS_HOME')
+-    if not home:
+-        raise Fail('KitsMissing', 'no --kits DIR and AOS_HOME is not set')
+-    return os.path.join(home, 'templates', 'kits')
+-
+-
+-def load_kits(kits_dir):
+-    """kits.json of kits_dir -> its dict (with a dict "kits")."""
+-    path = os.path.join(kits_dir, 'kits.json')
+-    if not os.path.isfile(path):
+-        raise Fail('KitsMissing', 'no kits.json in %s' % kits_dir)
+-    try:
+-        data = json.loads(read_text(path, 'kits index'))
+-    except ValueError:
+-        raise Fail('JsonBad', '%s is not valid JSON' % path)
+-    if not isinstance(data, dict) or not isinstance(data.get('kits'), dict):
+-        raise Fail('KitsBad', '%s has no "kits" object' % path)
+-    return data
+-
+-
+-def get_kit(data, name, kits_dir):
+-    kit = data['kits'].get(name)
+-    if kit is None:
+-        known = ', '.join(sorted(data['kits'])) or 'none'
+-        raise Fail('KitUnknown', 'no kit %s in %s (kits: %s)' % (name, os.path.join(kits_dir, 'kits.json'), known))
+-    if not isinstance(kit, dict):
+-        raise Fail('KitsBad', 'kit %s in kits.json is not an object' % name)
+-    return kit
+-
+-
+-def get_make(kit, name):
+-    """The kit's make block, checked: {"layers": [...], "defaults": {...}, "limit": N or None}."""
+-    make = kit.get('make')
+-    if make is None:
+-        raise Fail('MakeMissing', 'kit %s has no "make" block in kits.json' % name)
+-    if not isinstance(make, dict):
+-        raise Fail('RecipeBad', 'kit %s: "make" is not an object' % name)
+-    layers = make.get('layers')
+-    if not isinstance(layers, list) or not layers or not all(isinstance(x, str) and x for x in layers):
+-        raise Fail('RecipeBad', 'kit %s: make.layers must be a non-empty list of file names' % name)
+-    for x in layers:
+-        if x.startswith('@') and x != SITE:
+-            raise Fail('RecipeBad', 'kit %s: unknown layer %s (only %s is special)' % (name, x, SITE))
+-        if not x.startswith('@') and os.path.isabs(x):
+-            raise Fail('RecipeBad', 'kit %s: layer %s must be relative to the kits folder' % (name, x))
+-    defaults = make.get('defaults', {})
+-    if not isinstance(defaults, dict) or not all(isinstance(k, str) and KEY.match(k) and isinstance(v, str)
+-                                                 for k, v in defaults.items()):
+-        raise Fail('RecipeBad', 'kit %s: make.defaults must map NAME (A-Z, 0-9, _) to text' % name)
+-    limit = make.get('limit')
+-    if limit is not None and (not isinstance(limit, int) or isinstance(limit, bool) or limit <= 0):
+-        raise Fail('RecipeBad', 'kit %s: make.limit must be a positive whole number' % name)
+-    return {'layers': layers, 'defaults': defaults, 'limit': limit}
+-
+-
+-def parse_sets(items):
+-    """["KEY=VALUE", ...] -> {KEY: VALUE}; the last one of a key wins."""
+-    out = {}
+-    for item in items or ():
+-        key, eq, value = item.partition('=')
+-        if not eq or not KEY.match(key):
+-            raise Fail('ArgumentsBad', '--set takes KEY=VALUE with KEY in A-Z, 0-9, _ (got %r)' % item)
+-        out[key] = value
+-    return out
+-
+-
+-class Resolver:
+-    """Fills placeholders line by line. For a placeholder <NAME> on a line, the first of these wins:
+-    --set NAME_LINE (whole line), --set NAME (in place), default NAME_LINE (whole line), default NAME (in place).
+-    A whole-line value replaces the line; an empty one, or a line left blank by an empty value, drops the line."""
+-
+-    def __init__(self, sets, defaults):
+-        self.sets, self.defaults = sets, defaults
+-        self.used = set()
+-
+-    def lookup(self, name):
+-        for src in (self.sets, self.defaults):
+-            if name + '_LINE' in src:
+-                return 'line', src[name + '_LINE'], (src, name + '_LINE')
+-            if name in src:
+-                return 'inline', src[name], (src, name)
+-        return None
+-
+-    def line(self, text):
+-        """One line (no newline) -> the new line, or None to drop it."""
+-        found = [(m.group(1), self.lookup(m.group(1))) for m in PLACEHOLDER.finditer(text)]
+-        for name, hit in found:
+-            if hit and hit[0] == 'line':
+-                self._use(hit)
+-                return hit[1] if hit[1] != '' else None
+-        if not any(hit for _, hit in found):
+-            return text
+-
+-        def sub(m):
+-            hit = self.lookup(m.group(1))
+-            if hit is None:
+-                return m.group(0)
+-            self._use(hit)
+-            return hit[1]
+-        out = PLACEHOLDER.sub(sub, text)
+-        if out.strip() == '' and text.strip() != '':
+-            return None
+-        return out
+-
+-    def _use(self, hit):
+-        src, key = hit[2]
+-        if src is self.sets:
+-            self.used.add(key)
+-
+-    def text(self, text):
+-        lines = []
+-        for one in text.split('\n'):
+-            new = self.line(one)
+-            if new is not None:
+-                lines.append(new)
+-        return '\n'.join(lines)
+-
+-
+-def assemble(kits_dir, make, site=None, sets=None):
+-    """-> {"text", "layers" (the files used, in order), "unresolved" (names left), "unused_sets"}.
+-    Layers in recipe order; @site is the --site file, skipped when none is given. Every layer but the
+-    last loses its trailing newlines; layers are joined by one blank line; the last is kept as it is."""
+-    sets = sets or {}
+-    resolver = Resolver(sets, make['defaults'])
+-    parts, used = [], []
+-    for layer in make['layers']:
+-        if layer == SITE:
+-            if site is None:
+-                continue
+-            path, what = site, 'site layer'
+-        else:
+-            path, what = os.path.join(kits_dir, layer), 'layer'
+-        parts.append(resolver.text(read_text(path, what)))
+-        used.append(path if layer == SITE else layer)
+-    if not parts:
+-        raise Fail('RecipeBad', 'no layers to assemble')
+-    body = [p.rstrip('\n') for p in parts[:-1]] + [parts[-1]]
+-    last = len(body) - 1
+-    text = '\n\n'.join(p for i, p in enumerate(body) if i == last or p.strip() != '')
+-    return {'text': text, 'layers': used,
+-            'unresolved': sorted(set(PLACEHOLDER.findall(text))),
+-            'unused_sets': sorted(set(sets) - resolver.used)}
+-
+-
+-def first_difference(a, b):
+-    """1-based line number of the first line that differs."""
+-    la, lb = a.split('\n'), b.split('\n')
+-    for i, (x, y) in enumerate(zip(la, lb)):
+-        if x != y:
+-            return i + 1
+-    return min(len(la), len(lb)) + 1
+-
+-
+-def check(kits_dir, data, name):
+-    """-> {"kit", "ok", "problems": [str], "chars", "limit"}: the kit's files exist, its system file equals the
+-    assembled layers with defaults (no site), no placeholder is left, and both stay within the limit."""
+-    kit = get_kit(data, name, kits_dir)
+-    problems = []
+-    chars = limit = None
+-    files = {}
+-    for key in ('system', 'tools'):
+-        rel = kit.get(key)
+-        if not isinstance(rel, str) or not rel:
+-            problems.append('kits.json has no "%s" file for this kit' % key)
+-            continue
+-        path = os.path.join(kits_dir, rel)
+-        if not os.path.isfile(path):
+-            problems.append('missing: %s' % rel)
+-            continue
+-        files[key] = (rel, path)
+-    if 'tools' in files:
+-        try:
+-            json.loads(read_text(files['tools'][1], 'tools file'))
+-        except ValueError:
+-            problems.append('tools file %s is not valid JSON' % files['tools'][0])
+-        except Fail as e:
+-            problems.append(str(e))
+-    try:
+-        make = get_make(kit, name)
+-    except Fail as e:
+-        problems.append(str(e))
+-        make = None
+-    if make is not None:
+-        limit = make['limit']
+-        missing = [x for x in make['layers'] if x != SITE and not os.path.isfile(os.path.join(kits_dir, x))]
+-        for x in missing:
+-            problems.append('missing: %s (a layer)' % x)
+-        if not missing:
+-            try:
+-                built = assemble(kits_dir, make)
+-            except Fail as e:
+-                problems.append(str(e))
+-                built = None
+-            if built is not None:
+-                text = built['text']
+-                chars = len(text)
+-                for n in built['unresolved']:
+-                    problems.append('unresolved: <%s> is left in the assembled text' % n)
+-                if limit is not None and chars > limit:
+-                    problems.append('too long: the assembled text is %d chars, the limit is %d' % (chars, limit))
+-                if 'system' in files:
+-                    rel, path = files['system']
+-                    try:
+-                        shipped = read_text(path, 'system file')
+-                    except Fail as e:
+-                        problems.append(str(e))
+-                    else:
+-                        if shipped != text:
+-                            problems.append('stale: %s differs from the assembled layers (first difference at line %d); '
+-                                            'assemble it again with aos-kit make %s -o %s' % (rel, first_difference(shipped, text), name, path))
+-                            for n in sorted(set(PLACEHOLDER.findall(shipped))):
+-                                problems.append('unresolved: <%s> is left in %s' % (n, rel))
+-                            if limit is not None and len(shipped) > limit:
+-                                problems.append('too long: %s is %d chars, the limit is %d' % (rel, len(shipped), limit))
+-    return {'kit': name, 'ok': not problems, 'problems': problems, 'chars': chars, 'limit': limit}
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits-stale/gather/system.txt b/proto8/py/tests/apps/kit/fixtures/kits-stale/gather/system.txt
+deleted file mode 100644
+index 679e75a15..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits-stale/gather/system.txt
++++ /dev/null
+@@ -1,23 +0,0 @@
+-You are an aos agent: a process whose state lives in your stack folder and whose work goes in your workspace.
+-
+-START (at most 3 tool calls)
+-1. self_state {"parts":["who","tools","resources"]}
+-2. Read the aos knowledge base: aos/_description.json in the knowledge folder your brief names (index_view it for more, only when needed).
+-3. goal set, with the finish condition from your brief.
+-
+-LEAD: report to the reply_to of the letter that brought your brief, unless the brief names another address.
+-
+-FOLDER: your workspace is your private folder. Keep notes.md (what you read, found, decided, where you stopped), out/ (deliverables) and trash/ there. Write nowhere else unless the brief names the path.
+-
+-WORK: do only the task in the brief. A decision the brief did not make: report it with options, do not decide. A refusal (tool error, blocked call, a kernel's no) is a decision: report or adapt, never work around it.
+-
+-REPORT: one mailbox_send to your lead. Status DONE, BLOCKED, NEEDS-USER or FAILED; title = one-line conclusion; text = what you did / outputs (absolute paths) / what is missing / what someone must decide. A plain-text answer means "the whole task is finished": give it only after out/ is written and the report is sent.
+-
+-STUCK over 10 minutes: send BLOCKED, then goal pause. A letter arrives while paused: goal resume first.
+-
+-BOARD: before you wait on someone, and when an answer is late, board_read them (who = their name, or "user" for the user's notice). A notice is information, not permission.
+-<OWN_BOARD>
+-STOP: finish notes.md with a "handoff" section (done, not done, where things are, next step), then goal done.
+-
+-ROLE: GATHERER
+-Find facts; do not design. Every fact ends with its source (file:line, or knowledge file#key). Keep what you read apart from what you infer; mark inferences "(guess)". Do not suggest changes and do not edit what you inspect. If a file changes under you, use the current version and say so in your report. Deliver out/answer.md, grouped by the headings in the brief.
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits-stale/gather/tools.json b/proto8/py/tests/apps/kit/fixtures/kits-stale/gather/tools.json
+deleted file mode 100644
+index 05387141c..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits-stale/gather/tools.json
++++ /dev/null
+@@ -1,62 +0,0 @@
+-{
+- "description": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only board_read and board_wait; no shell, delete, events, subagent, def, jsonx or kernel_gate; self keeps only self_state, so the agent cannot lift its own limits.",
+- "$override": [
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/look.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/change.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/gadgets.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/todo.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/self.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/mailbox.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/comm.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/goal.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/json.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/index.json"
+-  }
+- ],
+- "tools": {
+-  "copy": null,
+-  "move": null,
+-  "do_task": null,
+-  "self_tools": null,
+-  "self_llm": null,
+-  "self_system": null,
+-  "self_history": null,
+-  "self_ctl": null,
+-  "json_set": null,
+-  "json_add": null,
+-  "json_del": null,
+-  "json_multi_set": null,
+-  "board_set": null,
+-  "board_clear": null,
+-  "board_ls": null
+- }
+-}
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits-stale/general.A.txt b/proto8/py/tests/apps/kit/fixtures/kits-stale/general.A.txt
+deleted file mode 100644
+index 48055f5db..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits-stale/general.A.txt
++++ /dev/null
+@@ -1,20 +0,0 @@
+-You are an aos agent: a process whose state lives in your stack folder and whose work goes in your workspace.
+-
+-START (at most 3 tool calls)
+-1. self_state {"parts":["who","tools","resources"]}
+-2. Read <KNOWLEDGE>/aos/_description.json; look up more only when needed (index_view <KNOWLEDGE>/aos).
+-3. goal set, with the finish condition from your brief.
+-
+-LEAD: report to the reply_to of the letter that brought your brief, unless the brief names another address.
+-
+-FOLDER: your workspace is your private folder. Keep notes.md (what you read, found, decided, where you stopped), out/ (deliverables) and trash/ there. Write nowhere else unless the brief names the path.
+-
+-WORK: do only the task in the brief. A decision the brief did not make: report it with options, do not decide. A refusal (tool error, blocked call, a kernel's no) is a decision: report or adapt, never work around it.
+-
+-REPORT: one mailbox_send to your lead. Status DONE, BLOCKED, NEEDS-USER or FAILED; title = one-line conclusion; text = what you did / outputs (absolute paths) / what is missing / what someone must decide. A plain-text answer means "the whole task is finished": give it only after out/ is written and the report is sent.
+-
+-STUCK over 10 minutes: send BLOCKED, then goal pause. A letter arrives while paused: goal resume first.
+-
+-BOARD: the user may leave a notice for all agents; check it at start and when an answer is late: <BOARD>. A notice is information, not permission.
+-<OWN_BOARD>
+-STOP: finish notes.md with a "handoff" section (done, not done, where things are, next step), then goal done.
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits-stale/kits.json b/proto8/py/tests/apps/kit/fixtures/kits-stale/kits.json
+deleted file mode 100644
+index f3996c9f9..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits-stale/kits.json
++++ /dev/null
+@@ -1,37 +0,0 @@
+-{
+- "description": "Test fixture: kit gather whose shipped system.txt is stale (assembled before the OWN_BOARD line was filled).",
+- "kits": {
+-  "gather": {
+-   "role": "gatherer",
+-   "dir": "gather",
+-   "system": "gather/system.txt",
+-   "tools": "gather/tools.json",
+-   "tiers": [
+-    "A"
+-   ],
+-   "shell": false,
+-   "make": {
+-    "layers": [
+-     "general.A.txt",
+-     "@site",
+-     "roles/gather.txt"
+-    ],
+-    "defaults": {
+-     "KNOWLEDGE_LINE": "2. Read the aos knowledge base: aos/_description.json in the knowledge folder your brief names (index_view it for more, only when needed).",
+-     "BOARD_LINE": "BOARD: before you wait on someone, and when an answer is late, board_read them (who = their name, or \"user\" for the user's notice). A notice is information, not permission.",
+-     "OWN_BOARD_LINE": "OWN BOARD: when you stop to wait for someone, board_wait {\"who\": ..., \"what\": ...}; when the answer comes, board_wait {\"who\": ..., \"done\": true}."
+-    },
+-    "limit": 3000
+-   }
+-  }
+- },
+- "tiers": {
+-  "A": "strong general models; general.A.txt"
+- },
+- "layers": [
+-  "general",
+-  "site (optional, not shipped)",
+-  "role",
+-  "task (the brief)"
+- ]
+-}
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits-stale/roles/gather.txt b/proto8/py/tests/apps/kit/fixtures/kits-stale/roles/gather.txt
+deleted file mode 100644
+index 82d0b6e13..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits-stale/roles/gather.txt
++++ /dev/null
+@@ -1,2 +0,0 @@
+-ROLE: GATHERER
+-Find facts; do not design. Every fact ends with its source (file:line, or knowledge file#key). Keep what you read apart from what you infer; mark inferences "(guess)". Do not suggest changes and do not edit what you inspect. If a file changes under you, use the current version and say so in your report. Deliver out/answer.md, grouped by the headings in the brief.
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits/README.md b/proto8/py/tests/apps/kit/fixtures/kits/README.md
+deleted file mode 100644
+index 9f8029e24..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits/README.md
++++ /dev/null
+@@ -1,63 +0,0 @@
+-# kits
+-
+-This folder holds kits: ready-made system texts and tool sets for one agent role, laid over the agent-fsm template.
+-A kit is not a template of its own; you copy its files over a new agent-fsm definition.
+-
+-## What a kit is
+-
+-A kit is the system text plus the tool set (and, later, hooks and brain settings) for one role. Kits shipped here:
+-
+-| kit | role | system | tools |
+-|---|---|---|---|
+-| gather | gatherer: finds facts with sources, does not design | [gather/system.txt](gather/system.txt) | [gather/tools.json](gather/tools.json) |
+-| review | reviewer: checks work against a brief, points out, does not fix | [review/system.txt](review/system.txt) | [gather/tools.json](gather/tools.json) (same) |
+-
+-[kits.json](kits.json) lists the same in machine-readable form.
+-
+-The `.txt` files have no description line at the top, because the whole text is sent to the model; this README describes them instead.
+-
+-## Layers
+-
+-A system text is assembled from layers, top to bottom:
+-
+-1. **general** - [general.A.txt](general.A.txt), for strong general models (tier A): start, folder, work, report, stop rules.
+-2. **site** (optional, not shipped) - your own layer: who to report to, local rules, language, where your notice board is.
+-3. **role** - [roles/gather.txt](roles/gather.txt), [roles/review.txt](roles/review.txt).
+-4. **task** - the brief, sent in the letter that starts the agent.
+-
+-Placeholders in general.A.txt:
+-
+-- `<KNOWLEDGE>` - path of the aos knowledge folder.
+-- `<BOARD>` - how to read a notice board (a command such as board_read, or a file to read). Leave the whole BOARD line out if your site has none.
+-- `<OWN_BOARD>` - a line saying how the agent posts who it waits for (board_wait), or remove the line.
+-
+-The shipped `gather/system.txt` and `review/system.txt` are general.A.txt with these defaults, then a blank line, then the role text: step 2 of START says to read `aos/_description.json` in the knowledge folder the brief names; the BOARD line says to board_read someone before waiting on them and when an answer is late (`"user"` for the user's notice); the `<OWN_BOARD>` line becomes an OWN BOARD line: board_wait with who and what when it stops to wait, board_wait with done = true when the answer comes. Each stays at or below 3,000 characters. If you change a layer, assemble again in the same order (tests/kits/test_kits.py checks this).
+-
+-## How to use
+-
+-```
+-agent_def {"op":"new","template":"agent-fsm","path":"defs/gather"}
+-```
+-
+-Then copy `kits/gather/system.txt` and `kits/gather/tools.json` over the new definition's `system.txt` and `tools.json`, set the brain in its `llm.json` yourself, and run `agent_def check`.
+-
+-For a reviewer, do the same but take `system.txt` from `kits/review/`; the tools are the same as gather.
+-
+-## Why tools are cut
+-
+-Tool descriptions are the biggest fixed cost of every brain call: they are sent each time. Measured 2026-11-14:
+-
+-| | tools | chars of the tool list sent | of which descriptions |
+-|---|---:|---:|---:|
+-| agent-fsm template as shipped | 55 | about 85,700 | about 37,000 |
+-| gather kit | 24 | about 30,100 | about 13,800 |
+-
+-Cutting tools saves far more than cutting the system text. board_read and board_wait were added after this measurement (now 26 tools).
+-
+-The gather tool set (26 tools) keeps reading, write/edit/mkdir, gadgets, todo, mailbox, board_read and board_wait (from the comm pack; board_set, board_clear and board_ls are turned off), goal, read-only json, index and self_state. It leaves out shell, delete, events, subagent, def, jsonx and kernel_gate. self_tools, self_system, self_llm, self_history and self_ctl are turned off, so the agent cannot lift its own limits.
+-
+-## Known limits
+-
+-- Writing only inside the workspace is a convention in the system text; no hook enforces it yet.
+-- board_read and board_wait run the `aos-comm` command, so it must be on PATH (`source "$AOS_HOME/env.sh"` puts `$AOS_HOME/bin` there); without it those two calls fail and the rest of the kit still works.
+-- Only tier A general text and two roles exist so far.
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits/gather/system.txt b/proto8/py/tests/apps/kit/fixtures/kits/gather/system.txt
+deleted file mode 100644
+index 744e93f9a..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits/gather/system.txt
++++ /dev/null
+@@ -1,23 +0,0 @@
+-You are an aos agent: a process whose state lives in your stack folder and whose work goes in your workspace.
+-
+-START (at most 3 tool calls)
+-1. self_state {"parts":["who","tools","resources"]}
+-2. Read the aos knowledge base: aos/_description.json in the knowledge folder your brief names (index_view it for more, only when needed).
+-3. goal set, with the finish condition from your brief.
+-
+-LEAD: report to the reply_to of the letter that brought your brief, unless the brief names another address.
+-
+-FOLDER: your workspace is your private folder. Keep notes.md (what you read, found, decided, where you stopped), out/ (deliverables) and trash/ there. Write nowhere else unless the brief names the path.
+-
+-WORK: do only the task in the brief. A decision the brief did not make: report it with options, do not decide. A refusal (tool error, blocked call, a kernel's no) is a decision: report or adapt, never work around it.
+-
+-REPORT: one mailbox_send to your lead. Status DONE, BLOCKED, NEEDS-USER or FAILED; title = one-line conclusion; text = what you did / outputs (absolute paths) / what is missing / what someone must decide. A plain-text answer means "the whole task is finished": give it only after out/ is written and the report is sent.
+-
+-STUCK over 10 minutes: send BLOCKED, then goal pause. A letter arrives while paused: goal resume first.
+-
+-BOARD: before you wait on someone, and when an answer is late, board_read them (who = their name, or "user" for the user's notice). A notice is information, not permission.
+-OWN BOARD: when you stop to wait for someone, board_wait {"who": ..., "what": ...}; when the answer comes, board_wait {"who": ..., "done": true}.
+-STOP: finish notes.md with a "handoff" section (done, not done, where things are, next step), then goal done.
+-
+-ROLE: GATHERER
+-Find facts; do not design. Every fact ends with its source (file:line, or knowledge file#key). Keep what you read apart from what you infer; mark inferences "(guess)". Do not suggest changes and do not edit what you inspect. If a file changes under you, use the current version and say so in your report. Deliver out/answer.md, grouped by the headings in the brief.
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits/gather/tools.json b/proto8/py/tests/apps/kit/fixtures/kits/gather/tools.json
+deleted file mode 100644
+index 05387141c..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits/gather/tools.json
++++ /dev/null
+@@ -1,62 +0,0 @@
+-{
+- "description": "Tool set of the gather kit (also used by the review kit): read, write (only in the workspace, by convention), mail, goal, and from the comm pack only board_read and board_wait; no shell, delete, events, subagent, def, jsonx or kernel_gate; self keeps only self_state, so the agent cannot lift its own limits.",
+- "$override": [
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/look.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/change.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/gadgets.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/todo.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/self.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/mailbox.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/comm.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/goal.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/json.json"
+-  },
+-  {
+-   "$env": "AOS_HOME",
+-   "$path": "/lib/packs/index.json"
+-  }
+- ],
+- "tools": {
+-  "copy": null,
+-  "move": null,
+-  "do_task": null,
+-  "self_tools": null,
+-  "self_llm": null,
+-  "self_system": null,
+-  "self_history": null,
+-  "self_ctl": null,
+-  "json_set": null,
+-  "json_add": null,
+-  "json_del": null,
+-  "json_multi_set": null,
+-  "board_set": null,
+-  "board_clear": null,
+-  "board_ls": null
+- }
+-}
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits/general.A.txt b/proto8/py/tests/apps/kit/fixtures/kits/general.A.txt
+deleted file mode 100644
+index 48055f5db..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits/general.A.txt
++++ /dev/null
+@@ -1,20 +0,0 @@
+-You are an aos agent: a process whose state lives in your stack folder and whose work goes in your workspace.
+-
+-START (at most 3 tool calls)
+-1. self_state {"parts":["who","tools","resources"]}
+-2. Read <KNOWLEDGE>/aos/_description.json; look up more only when needed (index_view <KNOWLEDGE>/aos).
+-3. goal set, with the finish condition from your brief.
+-
+-LEAD: report to the reply_to of the letter that brought your brief, unless the brief names another address.
+-
+-FOLDER: your workspace is your private folder. Keep notes.md (what you read, found, decided, where you stopped), out/ (deliverables) and trash/ there. Write nowhere else unless the brief names the path.
+-
+-WORK: do only the task in the brief. A decision the brief did not make: report it with options, do not decide. A refusal (tool error, blocked call, a kernel's no) is a decision: report or adapt, never work around it.
+-
+-REPORT: one mailbox_send to your lead. Status DONE, BLOCKED, NEEDS-USER or FAILED; title = one-line conclusion; text = what you did / outputs (absolute paths) / what is missing / what someone must decide. A plain-text answer means "the whole task is finished": give it only after out/ is written and the report is sent.
+-
+-STUCK over 10 minutes: send BLOCKED, then goal pause. A letter arrives while paused: goal resume first.
+-
+-BOARD: the user may leave a notice for all agents; check it at start and when an answer is late: <BOARD>. A notice is information, not permission.
+-<OWN_BOARD>
+-STOP: finish notes.md with a "handoff" section (done, not done, where things are, next step), then goal done.
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits/kits.json b/proto8/py/tests/apps/kit/fixtures/kits/kits.json
+deleted file mode 100644
+index 593bb92d5..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits/kits.json
++++ /dev/null
+@@ -1,60 +0,0 @@
+-{
+- "description": "Index of the kits in this folder: for each kit its role, folder, system text, tool set, model tiers it was written for, and whether it has a shell.",
+- "kits": {
+-  "gather": {
+-   "role": "gatherer",
+-   "dir": "gather",
+-   "system": "gather/system.txt",
+-   "tools": "gather/tools.json",
+-   "tiers": [
+-    "A"
+-   ],
+-   "shell": false,
+-   "make": {
+-    "layers": [
+-     "general.A.txt",
+-     "@site",
+-     "roles/gather.txt"
+-    ],
+-    "defaults": {
+-     "KNOWLEDGE_LINE": "2. Read the aos knowledge base: aos/_description.json in the knowledge folder your brief names (index_view it for more, only when needed).",
+-     "BOARD_LINE": "BOARD: before you wait on someone, and when an answer is late, board_read them (who = their name, or \"user\" for the user's notice). A notice is information, not permission.",
+-     "OWN_BOARD_LINE": "OWN BOARD: when you stop to wait for someone, board_wait {\"who\": ..., \"what\": ...}; when the answer comes, board_wait {\"who\": ..., \"done\": true}."
+-    },
+-    "limit": 3000
+-   }
+-  },
+-  "review": {
+-   "role": "reviewer",
+-   "dir": "review",
+-   "system": "review/system.txt",
+-   "tools": "gather/tools.json",
+-   "tiers": [
+-    "A"
+-   ],
+-   "shell": false,
+-   "make": {
+-    "layers": [
+-     "general.A.txt",
+-     "@site",
+-     "roles/review.txt"
+-    ],
+-    "defaults": {
+-     "KNOWLEDGE_LINE": "2. Read the aos knowledge base: aos/_description.json in the knowledge folder your brief names (index_view it for more, only when needed).",
+-     "BOARD_LINE": "BOARD: before you wait on someone, and when an answer is late, board_read them (who = their name, or \"user\" for the user's notice). A notice is information, not permission.",
+-     "OWN_BOARD_LINE": "OWN BOARD: when you stop to wait for someone, board_wait {\"who\": ..., \"what\": ...}; when the answer comes, board_wait {\"who\": ..., \"done\": true}."
+-    },
+-    "limit": 3000
+-   }
+-  }
+- },
+- "tiers": {
+-  "A": "strong general models; general.A.txt"
+- },
+- "layers": [
+-  "general",
+-  "site (optional, not shipped)",
+-  "role",
+-  "task (the brief)"
+- ]
+-}
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits/review/system.txt b/proto8/py/tests/apps/kit/fixtures/kits/review/system.txt
+deleted file mode 100644
+index cd71a497d..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits/review/system.txt
++++ /dev/null
+@@ -1,23 +0,0 @@
+-You are an aos agent: a process whose state lives in your stack folder and whose work goes in your workspace.
+-
+-START (at most 3 tool calls)
+-1. self_state {"parts":["who","tools","resources"]}
+-2. Read the aos knowledge base: aos/_description.json in the knowledge folder your brief names (index_view it for more, only when needed).
+-3. goal set, with the finish condition from your brief.
+-
+-LEAD: report to the reply_to of the letter that brought your brief, unless the brief names another address.
+-
+-FOLDER: your workspace is your private folder. Keep notes.md (what you read, found, decided, where you stopped), out/ (deliverables) and trash/ there. Write nowhere else unless the brief names the path.
+-
+-WORK: do only the task in the brief. A decision the brief did not make: report it with options, do not decide. A refusal (tool error, blocked call, a kernel's no) is a decision: report or adapt, never work around it.
+-
+-REPORT: one mailbox_send to your lead. Status DONE, BLOCKED, NEEDS-USER or FAILED; title = one-line conclusion; text = what you did / outputs (absolute paths) / what is missing / what someone must decide. A plain-text answer means "the whole task is finished": give it only after out/ is written and the report is sent.
+-
+-STUCK over 10 minutes: send BLOCKED, then goal pause. A letter arrives while paused: goal resume first.
+-
+-BOARD: before you wait on someone, and when an answer is late, board_read them (who = their name, or "user" for the user's notice). A notice is information, not permission.
+-OWN BOARD: when you stop to wait for someone, board_wait {"who": ..., "what": ...}; when the answer comes, board_wait {"who": ..., "done": true}.
+-STOP: finish notes.md with a "handoff" section (done, not done, where things are, next step), then goal done.
+-
+-ROLE: REVIEWER
+-Check the work against the plan or brief, item by item: right, wrong, or cannot tell, each with evidence (file:line, or command and output). Point out, do not fix. Mark each finding must-fix, should-fix or note. Judge only against what the brief asks; do not add requirements. Deliver out/review.md.
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits/roles/gather.txt b/proto8/py/tests/apps/kit/fixtures/kits/roles/gather.txt
+deleted file mode 100644
+index 82d0b6e13..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits/roles/gather.txt
++++ /dev/null
+@@ -1,2 +0,0 @@
+-ROLE: GATHERER
+-Find facts; do not design. Every fact ends with its source (file:line, or knowledge file#key). Keep what you read apart from what you infer; mark inferences "(guess)". Do not suggest changes and do not edit what you inspect. If a file changes under you, use the current version and say so in your report. Deliver out/answer.md, grouped by the headings in the brief.
+diff --git a/proto8/py/tests/apps/kit/fixtures/kits/roles/review.txt b/proto8/py/tests/apps/kit/fixtures/kits/roles/review.txt
+deleted file mode 100644
+index 9f1f0f645..000000000
+--- a/proto8/py/tests/apps/kit/fixtures/kits/roles/review.txt
++++ /dev/null
+@@ -1,2 +0,0 @@
+-ROLE: REVIEWER
+-Check the work against the plan or brief, item by item: right, wrong, or cannot tell, each with evidence (file:line, or command and output). Point out, do not fix. Mark each finding must-fix, should-fix or note. Judge only against what the brief asks; do not add requirements. Deliver out/review.md.
+diff --git a/proto8/py/tests/apps/kit/test_kit.py b/proto8/py/tests/apps/kit/test_kit.py
+deleted file mode 100644
+index d07f12b27..000000000
+--- a/proto8/py/tests/apps/kit/test_kit.py
++++ /dev/null
+@@ -1,315 +0,0 @@
+-"""Test aos-kit ls / make / check / add against fixture kit folders (a copy of templates/kits with make blocks) and a scratch copy of the agent-fsm template."""
+-import json
+-import os
+-from pathlib import Path
+-import re
+-import shutil
+-import subprocess
+-import sys
+-import tempfile
+-import unittest
+-
+-sys.dont_write_bytecode = True
+-PROTO = Path(__file__).resolve().parents[4]
+-KIT_CMD = PROTO / 'py' / 'aos' / 'apps' / 'kit'
+-KIT_TESTS = PROTO / 'py' / 'tests' / 'apps' / 'kit'
+-BIN = PROTO / 'bin' / 'aos-kit'
+-SHIPPED = PROTO / 'templates' / 'kits'
+-AGENT_FSM = PROTO / 'templates' / 'agent-fsm'
+-FIX = Path(__file__).resolve().parent / 'fixtures'
+-KITS = FIX / 'kits'
+-STALE = FIX / 'kits-stale'
+-CJK = re.compile('[\u2e80-\u9fff\uf900-\ufaff\uff00-\uffef\u3000-\u303f]')
+-
+-
+-class Kit(unittest.TestCase):
+-    def setUp(self):
+-        # temporary folders are kept (nothing is deleted); point TMPDIR where they should go
+-        self.tmp = Path(tempfile.mkdtemp(prefix='aos-kit-'))
+-        self.home = self.tmp / 'aoshome'
+-        shutil.copytree(AGENT_FSM, self.home / 'templates' / 'agent-fsm')
+-        self.env = {k: v for k, v in os.environ.items() if not k.startswith('AOS_')}
+-        self.env.update(PYTHONDONTWRITEBYTECODE='1', AOS_HOME=str(self.home))
+-
+-    def run_k(self, *args, env=None):
+-        return subprocess.run([sys.executable, str(BIN)] + [str(a) for a in args], stdin=subprocess.DEVNULL,
+-                              capture_output=True, env=env or self.env, cwd=str(self.tmp), timeout=60)
+-
+-    def ok(self, *args, **kw):
+-        r = self.run_k(*args, **kw)
+-        self.assertEqual(r.returncode, 0, (args, r.stdout, r.stderr))
+-        return r
+-
+-    def fails(self, code, *args, **kw):
+-        r = self.run_k(*args, **kw)
+-        self.assertEqual(r.returncode, 1, (args, r.stdout, r.stderr))
+-        err = r.stderr.decode()
+-        self.assertTrue(err.startswith('aos-kit: error: %s ' % code), (args, err))
+-        self.assertEqual(err.count('\n'), 1, err)
+-        return r
+-
+-    def kits_copy(self, src=KITS):
+-        dst = self.tmp / ('kits-%d' % len(list(self.tmp.glob('kits-*'))))
+-        shutil.copytree(src, dst)
+-        return dst
+-
+-    def edit_kits(self, d, fn):
+-        p = d / 'kits.json'
+-        data = json.loads(p.read_text())
+-        fn(data)
+-        p.write_text(json.dumps(data))
+-
+-    def new_def(self):
+-        d = self.tmp / ('def-%d' % len(list(self.tmp.glob('def-*'))))
+-        shutil.copytree(AGENT_FSM, d)
+-        return d
+-
+-    # --- the fixture stays a faithful copy of the shipped kits -----------------------------------
+-
+-    def test_fixture_matches_shipped(self):
+-        for p in sorted(SHIPPED.rglob('*')):
+-            if p.is_file() and '__pycache__' not in p.parts and p.name != 'kits.json':
+-                rel = p.relative_to(SHIPPED)
+-                self.assertEqual((KITS / rel).read_bytes(), p.read_bytes(), str(rel))
+-        fix = json.loads((KITS / 'kits.json').read_text())
+-        for kit in fix['kits'].values():
+-            self.assertIn('make', kit)
+-            kit.pop('make')
+-        self.assertEqual(fix, json.loads((SHIPPED / 'kits.json').read_text()))
+-
+-    # --- make ------------------------------------------------------------------------------------
+-
+-    def test_make_reproduces_shipped_bytes(self):
+-        for kit in ('gather', 'review'):
+-            r = self.ok('make', kit, '--kits', KITS)
+-            self.assertEqual(r.stdout, (SHIPPED / kit / 'system.txt').read_bytes(), kit)
+-            self.assertEqual(r.stderr, b'', kit)
+-
+-    def test_make_output_file(self):
+-        out = self.tmp / 'gather.txt'
+-        r = self.ok('--kits', KITS, 'make', 'gather', '-o', out)
+-        self.assertEqual(out.read_bytes(), (SHIPPED / 'gather' / 'system.txt').read_bytes())
+-        self.assertIn(b'wrote ', r.stdout)
+-        self.ok('make', 'review', '--kits', KITS, '--output', out)
+-        self.assertEqual(out.read_bytes(), (SHIPPED / 'review' / 'system.txt').read_bytes())
+-
+-    def test_make_set_and_site(self):
+-        site = self.tmp / 'site.txt'
+-        site.write_text('SITE: write reports in English.\n\n\n')
+-        r = self.ok('make', 'gather', '--kits', KITS, '--site', site, '--set', 'KNOWLEDGE=/k',
+-                    '--set', 'BOARD_LINE=', '--set', 'OWN_BOARD_LINE=OWN: none.')
+-        text = r.stdout.decode()
+-        self.assertIn('2. Read /k/aos/_description.json; look up more only when needed (index_view /k/aos).\n', text)
+-        self.assertNotIn('BOARD:', text)
+-        self.assertIn('\nOWN: none.\nSTOP:', text)
+-        role = (KITS / 'roles' / 'gather.txt').read_text()
+-        self.assertTrue(text.endswith('goal done.\n\nSITE: write reports in English.\n\n' + role), text[-600:])
+-        self.assertNotIn('<', text.replace('<=', ''))
+-
+-    def test_make_set_inline_beats_default_line(self):
+-        r = self.ok('make', 'gather', '--kits', KITS, '--set', 'BOARD=board_read {"who": "user"}')
+-        self.assertIn('check it at start and when an answer is late: board_read {"who": "user"}. A notice', r.stdout.decode())
+-
+-    def test_make_drop_line_with_empty_inline(self):
+-        r = self.ok('make', 'gather', '--kits', KITS, '--set', 'OWN_BOARD=')
+-        text = r.stdout.decode()
+-        self.assertNotIn('OWN BOARD', text)
+-        self.assertIn('not permission.\nSTOP:', text)
+-
+-    def test_make_warnings(self):
+-        d = self.kits_copy()
+-
+-        def fn(data):
+-            mk = data['kits']['gather']['make']
+-            del mk['defaults']['BOARD_LINE']
+-            mk['limit'] = 100
+-        self.edit_kits(d, fn)
+-        r = self.ok('make', 'gather', '--kits', d, '--set', 'NOPE=1')
+-        err = r.stderr.decode()
+-        self.assertIn('aos-kit: warning: placeholder <BOARD> is left', err)
+-        self.assertIn('over the limit 100', err)
+-        self.assertIn('--set NOPE is not used', err)
+-        self.assertIn(b'<BOARD>', r.stdout)
+-
+-    def test_make_errors(self):
+-        self.fails('ArgumentsBad', 'make', '--kits', KITS)
+-        self.fails('ArgumentsBad', 'make', 'gather', '--kits', KITS, '--set', 'lower=x')
+-        self.fails('ArgumentsBad', 'make', 'gather', '--kits', KITS, '--set', 'NOEQUALS')
+-        self.fails('KitUnknown', 'make', 'nope', '--kits', KITS)
+-        self.fails('MakeMissing', 'make', 'gather', '--kits', SHIPPED)
+-        self.fails('FileMissing', 'make', 'gather', '--kits', KITS, '--site', self.tmp / 'no-site.txt')
+-        self.fails('KitsMissing', 'make', 'gather', '--kits', self.tmp)
+-        env = dict(self.env)
+-        env.pop('AOS_HOME')
+-        self.fails('KitsMissing', 'make', 'gather', env=env)
+-        d = self.kits_copy()
+-        self.edit_kits(d, lambda data: data['kits']['gather']['make'].update(layers=['general.A.txt', '@other']))
+-        self.fails('RecipeBad', 'make', 'gather', '--kits', d)
+-        (d / 'kits.json').write_text('{not json')
+-        self.fails('JsonBad', 'make', 'gather', '--kits', d)
+-
+-    def test_default_kits_dir_is_aos_home(self):
+-        shutil.copytree(KITS, self.home / 'templates' / 'kits')
+-        r = self.ok('make', 'gather')
+-        self.assertEqual(r.stdout, (SHIPPED / 'gather' / 'system.txt').read_bytes())
+-
+-    # --- ls --------------------------------------------------------------------------------------
+-
+-    def test_ls(self):
+-        r = self.ok('ls', '--kits', KITS)
+-        self.assertEqual(r.stdout.decode().splitlines(), [
+-            'gather\tgatherer\tA\tgather/system.txt\tgather/tools.json\tmake',
+-            'review\treviewer\tA\treview/system.txt\tgather/tools.json\tmake'])
+-        r = self.ok('--kits', SHIPPED, 'ls', '-j')
+-        data = json.loads(r.stdout)
+-        self.assertEqual([k['name'] for k in data['kits']], ['gather', 'review'])
+-        self.assertFalse(any(k['make'] for k in data['kits']))
+-        self.fails('ArgumentsBad', 'ls', 'extra', '--kits', KITS)
+-
+-    # --- check -----------------------------------------------------------------------------------
+-
+-    def test_check_clean(self):
+-        for kit in ('gather', 'review'):
+-            r = self.ok('check', kit, '--kits', KITS)
+-            self.assertTrue(r.stdout.startswith(b'ok %s (' % kit.encode()), r.stdout)
+-            self.assertIn(b'limit 3000', r.stdout)
+-        r = self.ok('check', 'gather', '--kits', KITS, '-j')
+-        self.assertEqual(json.loads(r.stdout), {'kit': 'gather', 'ok': True, 'problems': [], 'chars': 2156, 'limit': 3000})
+-
+-    def test_check_stale_fixture(self):
+-        r = self.fails('CheckFailed', 'check', 'gather', '--kits', STALE)
+-        out = r.stdout.decode()
+-        self.assertIn('gather: stale: gather/system.txt differs from the assembled layers (first difference at line 19)', out)
+-        self.assertIn('gather: unresolved: <OWN_BOARD> is left in gather/system.txt', out)
+-        r = self.run_k('check', 'gather', '--kits', STALE, '--json')
+-        self.assertEqual(r.returncode, 1)
+-        self.assertFalse(json.loads(r.stdout)['ok'])
+-
+-    def test_check_shipped_has_no_make_yet(self):
+-        r = self.fails('CheckFailed', 'check', 'gather', '--kits', SHIPPED)
+-        self.assertIn(b'no "make" block', r.stdout)
+-
+-    def test_check_problems(self):
+-        d = self.kits_copy()
+-
+-        def fn(data):
+-            mk = data['kits']['gather']['make']
+-            mk['limit'] = 1000
+-            del mk['defaults']['KNOWLEDGE_LINE']
+-        self.edit_kits(d, fn)
+-        r = self.fails('CheckFailed', 'check', 'gather', '--kits', d)
+-        out = r.stdout.decode()
+-        self.assertIn('unresolved: <KNOWLEDGE> is left in the assembled text', out)
+-        self.assertIn('too long: the assembled text is', out)
+-        self.assertIn('too long: gather/system.txt is 2156 chars, the limit is 1000', out)
+-        self.assertIn('stale:', out)
+-
+-        d = self.kits_copy()
+-        os.rename(d / 'roles' / 'review.txt', d / 'roles' / 'review.moved')
+-        (d / 'gather' / 'tools.json').write_text('{bad')
+-        r = self.fails('CheckFailed', 'check', 'review', '--kits', d)
+-        out = r.stdout.decode()
+-        self.assertIn('review: missing: roles/review.txt (a layer)', out)
+-        self.assertIn('tools file gather/tools.json is not valid JSON', out)
+-
+-        d = self.kits_copy()
+-        os.rename(d / 'review' / 'system.txt', d / 'review' / 'system.moved')
+-        r = self.fails('CheckFailed', 'check', 'review', '--kits', d)
+-        self.assertIn(b'missing: review/system.txt', r.stdout)
+-        self.fails('KitUnknown', 'check', 'nope', '--kits', KITS)
+-
+-    # --- add -------------------------------------------------------------------------------------
+-
+-    def test_add_over_stock(self):
+-        d = self.new_def()
+-        hooks, llm = (d / 'hooks.json').read_bytes(), (d / 'llm.json').read_bytes()
+-        r = self.ok('add', 'gather', d, '--kits', KITS)
+-        out = r.stdout.decode()
+-        self.assertEqual((d / 'system.txt').read_bytes(), (SHIPPED / 'gather' / 'system.txt').read_bytes())
+-        self.assertEqual((d / 'tools.json').read_bytes(), (SHIPPED / 'gather' / 'tools.json').read_bytes())
+-        self.assertEqual((d / 'system.txt.before-kit').read_bytes(), (AGENT_FSM / 'system.txt').read_bytes())
+-        self.assertEqual((d / 'tools.json.before-kit').read_bytes(), (AGENT_FSM / 'tools.json').read_bytes())
+-        self.assertIn('saved %s' % (d / 'system.txt.before-kit'), out)
+-        self.assertIn('wrote %s' % (d / 'tools.json'), out)
+-        self.assertIn('not touched: hooks.json, llm.json', out)
+-        self.assertEqual((d / 'hooks.json').read_bytes(), hooks)
+-        self.assertEqual((d / 'llm.json').read_bytes(), llm)
+-        self.assertEqual(sorted(p.name for p in d.iterdir() if '.tmp.' in p.name), [])
+-
+-        # same kit again: nothing to do, no new backup
+-        r = self.ok('add', 'gather', d, '--kits', KITS)
+-        self.assertIn('unchanged %s' % (d / 'system.txt'), r.stdout.decode())
+-        self.assertFalse((d / 'system.txt.before-kit.2').exists())
+-
+-        # another kit: system.txt is no longer stock -> refused, nothing written
+-        self.fails('FileChanged', 'add', 'review', d, '--kits', KITS)
+-        self.assertEqual((d / 'system.txt').read_bytes(), (SHIPPED / 'gather' / 'system.txt').read_bytes())
+-        r = self.ok('add', 'review', d, '--kits', KITS, '--force')
+-        self.assertEqual((d / 'system.txt').read_bytes(), (SHIPPED / 'review' / 'system.txt').read_bytes())
+-        self.assertEqual((d / 'system.txt.before-kit.2').read_bytes(), (SHIPPED / 'gather' / 'system.txt').read_bytes())
+-        self.assertEqual((d / 'system.txt.before-kit').read_bytes(), (AGENT_FSM / 'system.txt').read_bytes())
+-        self.assertIn('unchanged %s' % (d / 'tools.json'), r.stdout.decode())
+-
+-    def test_add_refuses_edited_file(self):
+-        d = self.new_def()
+-        (d / 'system.txt').write_text('my own system text\n')
+-        r = self.fails('FileChanged', 'add', 'gather', d, '--kits', KITS)
+-        self.assertIn(b'is not the stock agent-fsm system.txt', r.stderr)
+-        self.assertEqual((d / 'tools.json').read_bytes(), (AGENT_FSM / 'tools.json').read_bytes())
+-        self.assertFalse((d / 'tools.json.before-kit').exists())
+-        self.assertFalse((d / 'system.txt.before-kit').exists())
+-        self.ok('add', 'gather', d, '--kits', KITS, '--force')
+-        self.assertEqual((d / 'system.txt.before-kit').read_text(), 'my own system text\n')
+-
+-    def test_add_new_files_and_site(self):
+-        d = self.tmp / 'bare'
+-        d.mkdir()
+-        shutil.copyfile(AGENT_FSM / 'interfaces.json', d / 'interfaces.json')
+-        site = self.tmp / 'site.txt'
+-        site.write_text('SITE: local rules.\n')
+-        r = self.ok('add', 'gather', d, '--kits', KITS, '--site', site, '--set', 'KNOWLEDGE=/k')
+-        self.assertNotIn(b'saved', r.stdout)
+-        text = (d / 'system.txt').read_text()
+-        self.assertIn('SITE: local rules.', text)
+-        self.assertIn('/k/aos/_description.json', text)
+-        self.assertFalse((d / 'system.txt.before-kit').exists())
+-
+-    def test_add_errors(self):
+-        self.fails('DefMissing', 'add', 'gather', self.tmp / 'nowhere', '--kits', KITS)
+-        empty = self.tmp / 'empty'
+-        empty.mkdir()
+-        self.fails('DefMissing', 'add', 'gather', empty, '--kits', KITS)
+-        self.assertEqual(list(empty.iterdir()), [])
+-        self.fails('ArgumentsBad', 'add', 'gather', '--kits', KITS)
+-        self.fails('MakeMissing', 'add', 'gather', self.new_def(), '--kits', SHIPPED)
+-        d = self.new_def()
+-        env = dict(self.env)
+-        env.pop('AOS_HOME')
+-        self.fails('StockMissing', 'add', 'gather', d, '--kits', KITS, env=env)
+-        self.assertEqual((d / 'system.txt').read_bytes(), (AGENT_FSM / 'system.txt').read_bytes())
+-        self.ok('add', 'gather', d, '--kits', KITS, '--force', env=env)
+-        self.assertTrue((d / 'system.txt.before-kit').exists())
+-
+-    # --- the command line ------------------------------------------------------------------------
+-
+-    def test_cli(self):
+-        r = self.ok('--help')
+-        self.assertIn(b'usage: aos-kit', r.stdout)
+-        for sub in ('ls', 'make', 'check', 'add'):
+-            r = self.ok(sub, '--help')
+-            self.assertIn(b'usage: aos-kit ' + sub.encode(), r.stdout)
+-        self.fails('ArgumentsBad')
+-        self.fails('CommandUnknown', 'nope')
+-        self.fails('FlagUnknown', 'ls', '--nope')
+-
+-    def test_product_files_english(self):
+-        files = [p for d in (KIT_CMD, KIT_TESTS) for p in d.rglob('*') if p.is_file() and '__pycache__' not in p.parts]
+-        self.assertTrue(len(files) > 10)
+-        for p in files:
+-            text = p.read_text(encoding='utf-8')
+-            m = CJK.search(text)
+-            self.assertIsNone(m, '%s: CJK char %r' % (p, m.group() if m else ''))
+-
+-
+-if __name__ == '__main__':
+-    unittest.main()

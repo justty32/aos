@@ -12,18 +12,24 @@
 
 本檔沒有條目時，hook 改印 [progress.json](progress.json) 的 open 條目。
 
-## 2026-11-18 17:00 關機前（公司 Windows 機）——有五條線被關機打斷
+## 2026-11-18 晚（家機）——關機打斷的五條線已分件：兩條交了、三條程式寫完但沒做完，留在工作樹
 
-**先看這個**：使用者 17:00 關機，五條線做到一半被打斷，**工作樹有約 100 個檔未交、五條線混在一起**。各線的交接在 `proto8/thinking/2026-11/18/交接-各線/<線名>.md`（關機前叫它們寫的；哪條沒寫出來，就只能從工作樹 `git status`／`git diff` 與 WSL 暫存夾 `~/.aos/scratch/<線名>/` 還原）。**不要整包 commit**——先照各線清單分清楚、在 WSL 暫存複本跑測試，再分件交。已推到 `205417c65`（之後只有交接檔）。
+**先看這個**：公司機 17:00 關機留下的總補丁（`proto8/thinking/2026-11/18/交接-各線/工作樹未交改動-1118.patch`）家機已套進工作樹、照各線交接分件。**main 現在裝得起來**（關機前那兩筆交接 commit 把 aos-kit、aos-tree-start 的刪除誤帶進去、`py/entries.json` 還列著它們，`install.py` 報 EntriesBad；已修）。已交（都沒 push）：
+- `dc4218e8a` 修補：aos-kit 本體與測試 19 檔從 7deb30b3c 前一版拿回（kit-merge 沒做完，先回到能裝）、entries.json 拿掉 aos-tree-start、`wf/tools/codemap_lib.py` 的檔頭判讀不再把「pi coding agent」當編碼宣告跳過（這個讓 index_gen 報 DescMissing cli_pi.py、commit-request 一件都交不進）。
+- `93e0acc0c` rm-treestart-1118 做完。
+- `2b4320644` cooldown-1118 做完（件 A 冷卻檔多 retry／error 兩欄；件 B 三小修）。
+- 這筆之後的收尾 commit：本檔、`wf/progress.json`、三條未完線的補丁、日索引補 aos-llm 調查那列。
 
-**授權**：頂層只調度（普通工作 opus、雜活 sonnet、規劃 fable），agent 開工前讀 AGENTS.md、規矩卡、`proto8/knowledge/aos/_description.json`。push 要再問。前端先不動。
+**三條沒做完的**（程式寫完、在家機暫存複本全套測試都過，但各自的文件／收尾沒做，照「不硬補」沒交）：改動**留在工作樹**，另各存一份補丁在交接夾 `<線名>-未交.patch`（對 `2b4320644` 之後的 main，乾淨 clone 上 `git apply` 套得上）。工作樹跟補丁只差一處：kit-merge 要刪的 aos-kit 19 檔在工作樹裡還在（修補拿回的；不刪檔）。
+1. `kit-merge-1118`：剩設計稿 `18/aos-kit-併進ctl.md`（程式檔頭與 README 已先連過去）、試驗 08 與教學目錄 08 列各加一句、裁定逐字記進 `cpp-py-改名/08-要裁的題.md`、日索引、假腦實操、最後 `grep -rn aos-kit`；交時連同 aos-kit 19 檔刪除一起交。
+2. `eca-pi-bc-1118`：剩文件 `templates/docs/03-eca-pi.md`（還是甲案）、knowledge `cli/eca.json` 的 `#/pi`、`apps/eca/README.md` 第 12 行；真 pi 整樹實跑（`pi_aos_screen.mjs` 沒在真 pi 上跑過）；已知限制要寫。
+3. `eca-lab-1118`：15、16、18 寫完；13、14、17、19 要重派（18 連到 17 的連結現在是斷的）；README「共同準備」與 01～03 內文還寫 `aos-tree-start`。
 
-**被打斷的五條線**（都沒 commit）：
-1. `cooldown-1118`：腦出錯的原因寫進 `cooldown.json`（使用者裁「寫進狀態檔」；無限慢重試「維持現在」、代號 AnswerMissing「不換」）＋三小修（重建步驟單「再起」視窗 B 補 `source env.sh`；set-def 對停著／睡著的做完 `ctl ls` 工作區欄變 `-`；set-def 後 `screen_close.json` 沒清）。狀態顯示跑完但沒收到回報。動到 agent-fsm、`apps/agent/hints.py`、`ctl` 的 set_def／ls、`cpp/aos-daemon`（reconcile.cpp、test_lifecycle、docs/03）、NORMS 附錄 4、knowledge `brain.json`、重建步驟單。
-2. `eca-pi-bc-1118`：pi 身做乙案（`pi --mode rpc`，回答途中收信）＋丙案（tmux 畫面＋一支 aos 的 pi 外掛在 `agent_settled` 通知 aos）。使用者：「codex身留下，pi coding agent要做畫面，去吧。每輪生一行外掛，目前就先這樣。…接著做乙丙吧。」甲案已交 `971116be6`。動 `agentlib/cli_*.py`、`apps/eca/`、`templates/eca-pi/`（已出現 screen 夾、interfaces.json）。
-3. `rm-treestart-1118`：刪 `aos-tree-start`（使用者：「aos-tree-start這東西就不用了吧，刪掉。」），全 repo 改成 `aos-exec` 寫法。動 `py/entries.json`、兩份起手範本 README／env.sh、docs、步驟單。
-4. `kit-merge-1118`：刪 `aos-kit`、功能併進 `aos-agent ctl`（使用者：「aos-kit也不用了，刪掉，功能整合進現有的。」選項框「併進 aos-agent ctl (Recommended)」）。動 `apps/agent/ctl/`、`templates/kits/`、kit 測試。
-5. `eca-lab-1118`：小試驗教學 13～19（13 aos-loop 停／續、14 停著時 say、15 aos-tools 加工具、16 手動讓 eca-claude 當 kernel、17 手動看狀態（含「aos json view」）、18 出錯時手動除錯（要短）、19 手動 compact）。關機前 15、16 兩份已寫出，其餘未知。01～12 已交。使用者說 claude 額度不用省（haiku）、之後還會追加題目。
+**測試（家機，`~/.aos/scratch/home-1118b/`，乾淨複本各自 install.py）**：改前（HEAD＋拿回兩支）2760 支、交的兩線 2766 支、五條全上 2766 支（kit +8、pi +10、aos-kit 舊測試 20 支拿掉）。三份唯一的紅都跟這五條無關：`image-move-check` 等 worker 逾時（CheckFailed）每份都紅；`cpp/aos-loop` 的 `test_cause_sigint_ignores_file` 在兩份並行跑時紅、單跑那份綠（負載下不穩）。另外 `py/tests` 有支測試會留下 `/tmp/kernel-state-path-*` 的 daemon（家機跑舊 HEAD 時抓到一隻，已用它自己的 stack shutdown）。
+
+**要使用者裁的**（各線交接檔有原文）：cooldown——listen 的字少了 `aos-llm: error:` 前綴、SendFailed 少了 aos-llm 原話可不可以；關畫面順手清到期單要不要只限 set-def。rm-treestart——跳過 `source env.sh` 直接打 `aos-exec root` 沒人擋（甲不補／乙補在 daemon-root 範本／丙補在 aos-exec）。kit-merge——寫進 stack（現做法）還是像舊 aos-kit 改定義夾；eca 定義要不要也能套；換包要不要允許直接蓋。另：`proto8/templates/tests/kits/_index.json`（使用者自己放的，生成器不產它、commit-request 也不收）還是沒進 git 的檔；`proto8/impls/` 底下 12 個舊 `.a`／`.so`（改名前的建置產物，現在沒人管）也沒動。
+
+**授權**：頂層只調度（普通工作 opus、雜活 sonnet、規劃 fable），agent 開工前讀 AGENTS.md、規矩卡、`proto8/knowledge/aos/_description.json`。push 要再問（頂層說今晚 23:00 一次 push）。前端先不動。家機本地 main 原本超前 origin 那一筆 `abed65ecd`（SESSION-LOG 記 11-16 晚 Pages 剩項）沒 rebase，改寫成 progress.json 的 `pages-trial-1116`；原 commit 留了 tag `home-local-abed65ecd-1118`。
 
 **今天已交已推的重點**（細節看 `git log --since=2026-11-18`）：S3～S7 改名收尾、code map 依賴表、沙箱帶整個家且家先認 `AOS_HOME`、set-def 新做法與 `ctl stop` 延後關、收尾線四項裁定、清紅測試（36→0，缺環境的改跳過）、`stop_cause.json` 不進 git、listen／ask 出錯帶理由、eca 第三種身 pi 甲案、小試驗教學 01～12、沙箱隔離實機檢查、下午改動獨立驗證、litellm 說明、aos-llm 去留調查。
 
@@ -36,4 +42,4 @@
 
 **還沒問／沒裁的**：沙箱實機檢查的落差（起手範本擺法讓沙箱碰得到 daemon 的 stack〔嚴重〕、開網路的沙箱連得到宿主本機服務、WSL 的 DNS 要綁 `/mnt/wsl/resolv.conf`）；litellm 版本要不要退 `1.106.x`、要不要長駐；hook_run 把 aos-directive 錯誤行照轉 stderr 要不要改回；`--restart` 已拿掉與沙箱兩個代定細節他沒反對。
 
-**機器狀態**：公司 WSL 沒有 aos（等使用者另開 session 照 `proto8/thinking/2026-11/18/公司WSL-重建試跑紀錄.md` 重建）。`~/.aos/scratch/` 有今天各線的暫存（關機後行程都沒了，夾還在）。桌面 `aos-全景-1118` 沒人眼看過。家機重建沒做。
+**機器狀態**：公司 WSL 沒有 aos（等使用者另開 session 照 `proto8/thinking/2026-11/18/公司WSL-重建試跑紀錄.md` 重建）。`~/.aos/scratch/` 有今天各線的暫存（關機後行程都沒了，夾還在）。桌面 `aos-全景-1118` 沒人眼看過。家機重建沒做；家機這輪的測試複本與腳本在 `~/.aos/scratch/home-1118b/`（`tests.sh <夾名>` 跑全套、`logs-<夾名>/summary.txt`），行程都收了。
