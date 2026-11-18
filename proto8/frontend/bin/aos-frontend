@@ -1067,6 +1067,7 @@ def relay_send(home, body, sender_stack):
         raise Fail("RelayMissing", "no relay mailbox at %s (aos-frontend init)" % home.mailbox)
     env = dict(os.environ)
     env["AOS_STACK"] = sender_stack  # sender = the aide's own stack (the hook's AOS_STACK is its hook cell)
+    env.pop("AOS_WS", None)  # aos-post takes $AOS_WS before $AOS_STACK; the hook has the aide's workspace there
     try:
         p = subprocess.run(["aos-post", "send", "--reply-to", home.mailbox, home.mailbox],
                            input=json.dumps(body, ensure_ascii=False), capture_output=True, text=True,

@@ -97,7 +97,8 @@ class Phase1(unittest.TestCase):
     def tick(self):
         ev = {"event": "on_clock", "hook": "aide_tick", "stack": self.aide, "clock": "x", "cycle": 60,
               "interval_ms": 1000, "first": False, "last_cycle": 0, "missed": 0}
-        p = self.view("aide-tick", stdin=json.dumps(ev))
+        # A real hook also has AOS_WS (the aide's workspace, often a shared one): the sender must still be the stack.
+        p = self.view("aide-tick", stdin=json.dumps(ev), env={"AOS_WS": self.tmp})
         self.assertEqual(p.returncode, 0, p.stderr)
         return p.stdout
 
