@@ -1,0 +1,51 @@
+{
+ "README.md": {
+  "description": "proto8 討論紀錄：2026-11-18"
+ },
+ "aos-compile-1118": {
+  "description": "「用 Python 寫、編譯成 aos 資料夾＋JSON」調查（11-18）：一個文字檔能不能描述整個 aos 程式，以及停在某條指令看資源"
+ },
+ "aos-kit-併進ctl.md": {
+  "description": "aos-kit 併進 aos-agent ctl"
+ },
+ "aos-llm-去留調查": {
+  "description": "aos-llm 去留調查（11-18）：還要不要它、要不要改 Python"
+ },
+ "default-stack-1118": {
+  "description": "預設 stack 調查（11-18）：cd 到 agent 的夾裡能不能直接 say"
+ },
+ "eca-claude-小試驗教學": {
+  "description": "目錄",
+  "index": "eca-claude-小試驗教學/_index.json"
+ },
+ "eca-pi": {
+  "description": "eca-pi：把 pi coding agent 接成第三種 eca 行不行、怎麼接（純研究，沒改程式、沒安裝）"
+ },
+ "linux-as-hw-1118": {
+  "description": "「aos 的硬體就是 Linux」調查（11-18）：排程以外，Linux 還給了哪些旋鈕與門鎖，aos 碰了多少"
+ },
+ "litellm-proxy-接gpt帳號.md": {
+  "description": "litellm proxy 接 GPT 帳號（公司 WSL）：查了什麼、裝了什麼、怎麼起、還差哪一步"
+ },
+ "litellm-供應鏈與選版.md": {
+  "description": "litellm 供應鏈事故查證與選版：查到的事故、選 1.109.1 的理由、雜湊怎麼驗"
+ },
+ "sbx-fix-1118.md": {
+  "description": "先講結論"
+ },
+ "verify-night-1118.md": {
+  "description": "先講結論"
+ },
+ "下午改動-獨立驗證.md": {
+  "description": "先講結論"
+ },
+ "交接-各線": {
+  "description": "11-18 關機前各線交接"
+ },
+ "公司WSL-重建試跑紀錄.md": {
+  "description": "先講結論"
+ },
+ "沙箱隔離-實機檢查.md": {
+  "description": "沙箱隔離實機檢查（不用模型的那一半，公司 WSL，HEAD `71df48e88`）"
+ }
+}
