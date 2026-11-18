@@ -131,13 +131,13 @@
       "since": "2026-11-18"
     },
     "two-machines-t7-1-7": {
-      "title": "two-machines T7 第 1～7 步（待派工）",
-      "status": "open",
+      "title": "two-machines T7 第 1～7 步：家機已跑，剩一題要裁",
+      "status": "等使用者",
       "flow": "",
-      "what": "還沒人跑（git log 沒有紀錄）：真 claude／codex 找不到對話時的反應（A02～A07）、eca 換台、memory 那題；要真模型（小額度），agent 可在暫存樹自己跑；步驟是 11-10 寫的，先對到現況（例如 `copy-out` 已改成 `cp -r $AOS_HOME/templates/…`）；第 8、9 步見上一條",
-      "next": "",
+      "what": "11-18 晚線 t7-home-1118 在家機用真 claude（haiku）跑完第 1～4、6、7 步：1、2、4、6 過；3 不符預期（claude 2.1.327 換資料夾也接得回，aos 比它嚴、只是保守，沒改）；7 發現 claude 用的是 Claude Code 自己的自動記憶（~/.claude/projects/…/memory/，不在樹裡、換台帶不走），要不要在 eca-claude 範本關掉等使用者裁；第 5 步 codex 跳過（使用者打算拿 pi 代替）",
+      "next": "使用者裁自動記憶那題；第 8、9 步見上一條（那兩步內文要先照現況改）",
       "see": [
-        "[14-真機驗證](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md)"
+        "[14-真機驗證 家機實跑結果](../proto8/thinking/2026-11/10/two-machines/14-真機驗證.md#家機實跑結果11-18-晚線-t7-home-1118)"
       ],
       "since": "2026-11-18"
     },
